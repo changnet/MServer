@@ -2,8 +2,8 @@
 
 #include <execinfo.h>    /* for backtrace */
 
-int g_counter = 0;
-int g_counters = 0;
+uint32 g_counter  = 0;
+uint32 g_counters = 0;
 
 void *operator new(size_t size)
 {
@@ -46,7 +46,7 @@ void back_trace(void)
     free(strings);
 }
 
-void OnExit()
+void onexit()
 {
     DEBUG( "new counter:%d    ----   new[] counter:%d\n",g_counter,g_counters );
     back_trace();

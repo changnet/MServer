@@ -35,6 +35,6 @@
 #endif
 
 /* will be call while process exit */
-extern void OnExit();
+extern void onexit();
 
 #endif  /* __GOLBAL_H__ */

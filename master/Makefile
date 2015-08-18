@@ -16,8 +16,9 @@ TARGET = $(ODIR)/Master
 MKDIR = mkdir -p
 
 #wildcard : 扩展通配符
-#notdir ： 去除路径
-#patsubst ：替换通配符
+#notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
+#patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
+#         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o main.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
