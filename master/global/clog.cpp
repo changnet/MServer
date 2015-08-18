@@ -1,32 +1,97 @@
 #include "clog.h"
 
+#include "global.h"
+
+const char *cdebug_file()
+{
+    const uint32 size = 128;
+    static char file[size];
+    snprintf( file,size,"%s[%d]",CDEBUG_FILE,getpid() );
+
+    return file;    /* return static pointer */
+}
+
+const char *cerror_file()
+{
+    const uint32 size = 128;
+    static char file[size];
+    snprintf( file,size,"%s[%d]",CERROR_FILE,getpid() );
+
+    return file;    /* return static pointer */
+}
+
 void cdebug_log( const char *format,... )
 {
-    static char pfile[128] = clog_file_name
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
+    static const char *pfile = cdebug_file();
 
+    time_t rawtime;
+    time( &rawtime );
     struct tm *ntm;
-    ntm = localtime(&tv.tv_sec);
+    ntm = localtime( &rawtime );
 
-    FILE * pf = fopen(pfile, "a+");
-    if(pf)
+    FILE * pf = fopen(pfile, "ab+");
+    if ( !pf )
     {
-        fprintf(pf, "[%04d-%02d-%02d %02d:%02d:%02d.%03ld] %s\n",(ntm->tm_year + 1900) ,(ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min, ntm->tm_sec, (tv.tv_usec / 1000), plog);
-        fclose(pf);
+        perror("cdebug_log");
+        fprintf(stderr, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
+            (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
+             ntm->tm_sec);
+
+        va_list args;
         va_start(args,format);
-vfprintf(buf,format,args);
-va_end(args);
+        vfprintf(stderr,format,args);
+        va_end(args);
+
+        return;
     }
-    else
-    {
-        printf("write_simple_log file %s ,conntent = %s,errno=%d\n",pfile,plog,errno);
-    }
+
+    fprintf(pf, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
+        (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
+         ntm->tm_sec);
+
+    va_list args;
+    va_start(args,format);
+    vfprintf(pf,format,args);
+    va_end(args);
+
+    fclose(pf);
 }
 
 void cerror_log( const char *format,... )
 {
-    
+    static const char *pfile = cerror_file();
+
+    time_t rawtime;
+    time( &rawtime );
+    struct tm *ntm;
+    ntm = localtime( &rawtime );
+
+    FILE * pf = fopen(pfile, "ab+");
+    if ( !pf )
+    {
+        perror("cdebug_log");
+        fprintf(stderr, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
+            (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
+             ntm->tm_sec);
+
+        va_list args;
+        va_start(args,format);
+        vfprintf(stderr,format,args);
+        va_end(args);
+
+        return;
+    }
+
+    fprintf(pf, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
+        (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
+         ntm->tm_sec);
+
+    va_list args;
+    va_start(args,format);
+    vfprintf(pf,format,args);
+    va_end(args);
+
+    fclose(pf);
 }
 
 void clog( const char *path,const char *msg )

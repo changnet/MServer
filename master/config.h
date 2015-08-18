@@ -13,4 +13,7 @@
 /* cdebug_log file name */
 #define CDEBUG_FILE    "cdebuglog"
 
+/* cerror_log file name */
+#define CERROR_FILE    "cerrorlog"
+
 #endif /* __CONFIG_H__ */
