@@ -7,6 +7,9 @@
 /* write log file with macro LDEBUG */
 #define _LDEBUG_
 
+/* write error log */
+#define _ERROR_
+
 /* do PDEBUG and LDEBUG both */
 #define _DEBUG_
 
@@ -15,5 +18,8 @@
 
 /* cerror_log file name */
 #define CERROR_FILE    "cerrorlog"
+
+/* is assert work ? */
+//#define NDEBUG
 
 #endif /* __CONFIG_H__ */

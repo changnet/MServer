@@ -10,6 +10,10 @@
 #include <sys/types.h> /* linux sys types like pid_t */
 
 #include "../config.h" /* config paramter */
+/* assert with error msg,third parted code not include this file will work fine
+   with old assert.
+*/
+#include "assert.h"
 #include "types.h"     /* base data type */
 #include "clog.h"      /* log function */
 
@@ -34,7 +38,16 @@
     #define DEBUG(...)
 #endif
 
-/* will be call while process exit */
+/* do not define ERROR,conflict with libev */
+#ifdef _ERROR_
+    #define ELOG(...)    cerror_log( __VA_ARGS__ )
+#else
+    #define ELOG(...)
+#endif
+
+#define FATAL(...)    do{PDEBUG(__VA_ARGS__);ELOG(__VA_ARGS__);}while(0)
+
+/* will be called while process exit */
 extern void onexit();
 
 #endif  /* __GOLBAL_H__ */
