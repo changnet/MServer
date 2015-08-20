@@ -462,7 +462,24 @@ namespace ev {
         /* timers_reschedule (loop, rtmn_diff - odiff) */
     }
 
-    void ev_loop::ev_invoke_pending();
-    void ev_loop::clear_pending( ev_watcher *w );
+    void ev_loop::ev_invoke_pending()
+    {
+        while (pendingcnt)
+          {
+            ANPENDING *p = pendings + --pendingcnt;
+      
+            p->w->pending = 0;
+            EV_CB_INVOKE (p->w, p->events);
+          }
+    }
+    void ev_loop::clear_pending( ev_watcher *w )
+    {
+        if (w->pending)
+          {
+            /* point to a common empty watcher */
+            pendings [w->pending - 1].w = (W)&pending_w;
+            w->pending = 0;
+          }
+    }
 
 }    /* end of namespace ev */
