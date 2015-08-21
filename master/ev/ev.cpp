@@ -472,6 +472,7 @@ namespace ev {
             EV_CB_INVOKE (p->w, p->events);
           }
     }
+
     void ev_loop::clear_pending( ev_watcher *w )
     {
         if (w->pending)
@@ -480,6 +481,97 @@ namespace ev {
             pendings [w->pending - 1].w = (W)&pending_w;
             w->pending = 0;
           }
+    }
+
+    void ev_loop::ev_io_start( ev_io *w )
+    {
+        int fd = w->fd;
+        array_needsize (ANFD, anfds, anfdmax, fd + 1, array_init_zero);
+      
+        assert (("libev: ev_io_start called with duplicate fd", anfds[fd].w == 0));
+        anfds[fd].w = (W)w;
+      
+        fd_change (fd, w->events & EV__IOFDSET | EV_ANFD_REIFY);
+        w->events &= ~EV__IOFDSET;
+    }
+
+    void ev_loop::ev_io_stop( ev_io *w )
+    {
+        
+    }
+
+    void ev_loop::ev_timer_start( ev_timer *w )
+    {
+        
+    }
+
+    void ev_loop::ev_timer_start( ev_timer *w )
+    {
+        
+    }
+
+    void ev_io::start() EV_THROW
+    {
+        if (expect_false (is_active ()))
+          return;
+
+        assert ("libev: ev_io::start call without loop",loop);
+        assert ("libev: ev_io::start called with negative fd", fd >= 0);
+        assert ("libev: ev_io::start called with illegal event mask", !(events & (~(EV__IOFDSET | EV_READ | EV_WRITE))));
+
+        active = 1;
+
+        loop->ev_io_start( this );
+    }
+
+    void ev_io::stop() EV_THROW
+    {
+        loop->clear_pending (loop, w);
+        if (expect_false (!is_active ()))
+          return;
+
+        assert ("libev: ev_io::stop called with illegal fd (must stay constant after start!)", fd >= 0 && fd < anfdmax));
+      
+        anfds[fd].w = 0;
+        active = 0;
+      
+        loop->fd_change (fd, EV_ANFD_REIFY);
+    }
+
+    void ev_timer::start() EV_THROW
+    {
+        if (expect_false (is_active ()))
+          return;
+      
+        at += mn_now;
+      
+        assert ("libev: ev_timer_start called with negative timer repeat value", repeat >= 0.);
+      
+        ++(loop->timercnt);
+        active = loop->timercnt + HEAP0 - 1;
+        array_needsize (ANHE, loop->timers, loop->timermax, active + 1, EMPTY2);
+        loop->timers [active] = this;
+        upheap (loop->timers, active);
+      
+        /*assert (("libev: internal timer heap corruption", timers [ev_active (w)] == (WT)w));*/
+    }
+
+    void ev_timer::stop() EV_THROW
+    {
+        assert ("libev: internal timer heap corruption", loop->timers [active] == this);
+    
+        --(loop->timercnt);
+    
+        if (expect_true (active < (loop->timercnt) + HEAP0))
+          {
+            loop->timers [active] = timers [timercnt + HEAP0];
+            adjustheap (timers, timercnt, active);
+          }
+      }
+    
+      ev_at (w) -= mn_now;
+    
+      ev_stop (loop, (W)w);
     }
 
 }    /* end of namespace ev */

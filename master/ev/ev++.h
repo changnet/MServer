@@ -189,6 +189,29 @@ namespace ev
           start ();
         }
 
+    };
+
+    /* invoked after a specific time, repeatable (based on monotonic clock) */
+    /* revent EV_TIMEOUT */
+    struct ev_timer : ev_watcher
+    {
+        ev_tstamp at;     /* private */
+        ev_tstamp repeat; /* rw */
+
+        using ev_watcher::set;
+        void start() EV_THROW;
+        void stop() EV_THROW;
+
+        explicit ev_timer( struct ev_loop *loop )
+            : ev_watcher( loop )
+        {
+        }
+
+        ~ev_timer() EV_THROW
+        {
+            //TODO stop();
+        }
+        
         void set (ev_tstamp after, ev_tstamp repeat = 0.) throw ()
         {
           int active = is_active ();
@@ -211,28 +234,6 @@ namespace ev
         ev_tstamp remaining ()
         {
           return ev_timer_remaining (loop, static_cast<ev_timer *>(this));
-        }
-    };
-
-    /* invoked after a specific time, repeatable (based on monotonic clock) */
-    /* revent EV_TIMEOUT */
-    struct ev_timer : ev_watcher
-    {
-        ev_tstamp at;     /* private */
-        ev_tstamp repeat; /* rw */
-
-        using ev_watcher::set;
-        void start() EV_THROW;
-        void stop() EV_THROW;
-
-        explicit ev_timer( struct ev_loop *loop )
-            : ev_watcher( loop )
-        {
-        }
-
-        ~ev_timer() EV_THROW
-        {
-            //TODO stop();
         }
     };
 
