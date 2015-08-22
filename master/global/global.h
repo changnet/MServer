@@ -38,14 +38,26 @@
     #define DEBUG(...)
 #endif
 
-/* do not define ERROR,conflict with libev */
 #ifdef _ERROR_
-    #define ELOG(...)    cerror_log( __VA_ARGS__ )
+    #define ERROR(...)    do{PDEBUG(__VA_ARGS__);cerror_log( __VA_ARGS__ );}while(0)
 #else
-    #define ELOG(...)
+    #define ERROR(...)
 #endif
 
-#define FATAL(...)    do{PDEBUG(__VA_ARGS__);ELOG(__VA_ARGS__);}while(0)
+/* terminated without destroying any object and without calling any of the functions passed to atexit or at_quick_exit */
+#define FATAL(...)    do{PDEBUG(__VA_ARGS__);ELOG(__VA_ARGS__);::abort();}while(0)
+
+extern void __log_assert_fail (const char *__assertion, const char *__file,
+           unsigned int __line, const char *__function)
+     __THROW __attribute__ ((__noreturn__));
+
+/* This prints an "log assertion failed" message and return.  */
+#define log_assert(why,expr)     \
+        if ( !(expr) )           \
+        {                        \
+            __log_assert_fail (__STRING((why,expr)), __FILE__, __LINE__, __ASSERT_FUNCTION));\
+            return;              \
+        }
 
 /* will be called while process exit */
 extern void onexit();

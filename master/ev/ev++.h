@@ -29,14 +29,20 @@ namespace ev
     /* eventmask, revents, events... */
     enum
     {
-        UNDEF    = (int)0xFFFFFFFF, /* guaranteed to be invalid */
-        NONE     =            0x00, /* no events */
-        READ     =            0x01, /* ev_io detected read will not block */
-        WRITE    =            0x02, /* ev_io detected write will not block */
-        TIMER    =      0x00000100, /* timer timed out */
-        _IOFDSET =            0x80, /* internal use only */
-#   undef ERROR // some systems stupidly #define ERROR
-        ERROR    = (int)0x80000000  /* sent when an error occurs */
+        EV_UNDEF    = (int)0xFFFFFFFF, /* guaranteed to be invalid */
+        EV_NONE     =            0x00, /* no events */
+        EV_READ     =            0x01, /* ev_io detected read will not block */
+        EV_WRITE    =            0x02, /* ev_io detected write will not block */
+        EV_TIMER    =      0x00000100, /* timer timed out */
+        EV_ERROR    = (int)0x80000000  /* sent when an error occurs */
+    };
+    
+    /* fd mask */
+    enum
+    {
+        EV_FDUNDEF    = 0x00,
+        EV_FDADD      = 0x01,
+        EV_FDMODFY    = 0x02,
     };
 
     /*
@@ -311,8 +317,6 @@ namespace ev
         volatile bool loop_done;  /* loop break flag */
         int backend_fd;
         ev_tstamp backend_mintime; /* assumed typical timer resolution */
-        void (*backend_modify)(EV_P, int fd, int oev, int nev);
-        void (*backend_poll)(EV_P, ev_tstamp timeout);
 
         ANFD *anfds;
         int anfdmax;

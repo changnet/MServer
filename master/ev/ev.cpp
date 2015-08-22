@@ -52,7 +52,7 @@ namespace ev {
 
     static void *(*alloc)(void *ptr, long size) EV_THROW = ev_realloc_emul;
 
-    inline_speed void *
+    inline void *
     ev_realloc (void *ptr, long size)
     {
       ptr = alloc (ptr, size);
@@ -202,7 +202,7 @@ namespace ev {
     #define UPHEAP_DONE(p,k) (!(p))
     
     /* away from the root */
-    inline_speed void
+    inline void
     downheap (ANHE *heap, int N, int k)
     {
       ANHE he = heap [k];
@@ -231,7 +231,7 @@ namespace ev {
     }
     
     /* towards the root */
-    inline_speed void
+    inline void
     upheap (ANHE *heap, int k)
     {
       ANHE he = heap [k];
@@ -294,18 +294,18 @@ namespace ev {
                   if (ev_at (w) < mn_now)
                     ev_at (w) = mn_now;
     
-                  assert (("libev: negative ev_timer repeat value found while processing timers", w->repeat > 0.));
+                  assert ("libev: negative ev_timer repeat value found while processing timers", w->repeat > 0.);
     
                   downheap (timers, timercnt, HEAP0);
                 }
               else
-                ev_timer_stop (loop, w); /* nonrepeating: stop timer */
+                w->stop(); /* nonrepeating: stop timer */
     
-              feed_reverse (loop, (W)w);
+              feed_reverse (w);
             }
           while (timercnt && ANHE_at (timers [HEAP0]) < mn_now);
     
-          feed_reverse_done (loop, EV_TIMER);
+          feed_reverse_done (EV_TIMER);
         }
     }
     
@@ -386,7 +386,7 @@ namespace ev {
               }
       
             if (o_reify & _IOFDSET)
-              backend_modify (fd, o_events, anfd->events);
+              epoll_modify (fd, o_events, anfd->events);
           }
       
         fdchangecnt = 0;
@@ -477,8 +477,7 @@ namespace ev {
     {
         if (w->pending)
           {
-            /* point to a common empty watcher */
-            pendings [w->pending - 1].w = (W)&pending_w;
+            pendings [w->pending - 1].w = 0;
             w->pending = 0;
           }
     }
@@ -488,26 +487,61 @@ namespace ev {
         int fd = w->fd;
         array_needsize (ANFD, anfds, anfdmax, fd + 1, array_init_zero);
       
-        assert (("libev: ev_io_start called with duplicate fd", anfds[fd].w == 0));
+        assert ("libev: ev_io_start called with duplicate fd", anfds[fd].w == 0);
         anfds[fd].w = (W)w;
       
-        fd_change (fd, w->events & EV__IOFDSET | EV_ANFD_REIFY);
-        w->events &= ~EV__IOFDSET;
+        fd_change (fd, w->events & _IOFDSET | EV_ANFD_REIFY);
+        w->events &= ~_IOFDSET;
     }
 
     void ev_loop::ev_io_stop( ev_io *w )
     {
-        
+        clear_pending (w);
+        if (expect_false (!w->is_active ()))
+          return;
+      
+        assert (("libev: ev_io_stop called with illegal fd (must stay constant after start!)", w->fd >= 0 && w->fd < anfdmax));
+      
+        anfds[w->fd].w = 0;
+        w->active = 0;
+      
+        fd_change (w->fd, EV_ANFD_REIFY);
     }
 
     void ev_loop::ev_timer_start( ev_timer *w )
     {
-        
+        ++timercnt;
+        w->active = timercnt + HEAP0 - 1;
+        array_needsize (ANHE, timers, timermax, w->active + 1, EMPTY2);
+        ANHE_w (timers [w->active ]) = (WT)w;
+        upheap (timers, w->active );
+
+        /*assert (("libev: internal timer heap corruption", timers [ev_active (w)] == (WT)w));*/
     }
 
     void ev_loop::ev_timer_start( ev_timer *w )
     {
-        
+        clear_pending (w);
+        if (expect_false (!w->is_active ()))
+          return;
+      
+        {
+          int active = w->active;
+      
+          assert (("libev: internal timer heap corruption", ANHE_w (timers [active]) == (WT)w));
+      
+          --timercnt;
+      
+          if (expect_true (active < timercnt + HEAP0))
+            {
+              timers [active] = timers [timercnt + HEAP0];
+              adjustheap (timers, timercnt, active);
+            }
+        }
+      
+        w->at -= mn_now;
+      
+        w->active = 0;
     }
 
     void ev_io::start() EV_THROW
@@ -526,52 +560,193 @@ namespace ev {
 
     void ev_io::stop() EV_THROW
     {
-        loop->clear_pending (loop, w);
-        if (expect_false (!is_active ()))
-          return;
-
-        assert ("libev: ev_io::stop called with illegal fd (must stay constant after start!)", fd >= 0 && fd < anfdmax));
-      
-        anfds[fd].w = 0;
-        active = 0;
-      
-        loop->fd_change (fd, EV_ANFD_REIFY);
+        loop->ev_io_stop( this );
     }
 
     void ev_timer::start() EV_THROW
     {
         if (expect_false (is_active ()))
           return;
-      
+
         at += mn_now;
-      
+
         assert ("libev: ev_timer_start called with negative timer repeat value", repeat >= 0.);
-      
-        ++(loop->timercnt);
-        active = loop->timercnt + HEAP0 - 1;
-        array_needsize (ANHE, loop->timers, loop->timermax, active + 1, EMPTY2);
-        loop->timers [active] = this;
-        upheap (loop->timers, active);
-      
-        /*assert (("libev: internal timer heap corruption", timers [ev_active (w)] == (WT)w));*/
+
+        loop->ev_timer_start( this );
     }
 
     void ev_timer::stop() EV_THROW
     {
-        assert ("libev: internal timer heap corruption", loop->timers [active] == this);
-    
-        --(loop->timercnt);
-    
-        if (expect_true (active < (loop->timercnt) + HEAP0))
-          {
-            loop->timers [active] = timers [timercnt + HEAP0];
-            adjustheap (timers, timercnt, active);
-          }
-      }
-    
-      ev_at (w) -= mn_now;
-    
-      ev_stop (loop, (W)w);
+        loop->ev_timer_stop( this );
     }
 
+    /*
+     * general notes about epoll:
+     *
+     * a) epoll silently removes fds from the fd set. as nothing tells us
+     *    that an fd has been removed otherwise, we have to continually
+     *    "rearm" fds that we suspect *might* have changed (same
+     *    problem with kqueue, but much less costly there).
+     * b) the fact that ADD != MOD creates a lot of extra syscalls due to a)
+     *    and seems not to have any advantage.
+     * c) the inability to handle fork or file descriptors (think dup)
+     *    limits the applicability over poll, so this is not a generic
+     *    poll replacement.
+     * d) epoll doesn't work the same as select with many file descriptors
+     *    (such as files). while not critical, no other advanced interface
+     *    seems to share this (rather non-unixy) limitation.
+     * e) epoll claims to be embeddable, but in practise you never get
+     *    a ready event for the epoll fd (broken: <=2.6.26, working: >=2.6.32).
+     * f) epoll_ctl returning EPERM means the fd is always ready.
+     *
+     * lots of "weird code" and complication handling in this file is due
+     * to these design problems with epoll, as we try very hard to avoid
+     * epoll_ctl syscalls for common usage patterns and handle the breakage
+     * ensuing from receiving events for closed and otherwise long gone
+     * file descriptors.
+     */
+
+    #include <sys/epoll.h>
+
+    void
+    ev_loop::epoll_modify (int fd, int oev, int nev)
+    {
+      struct epoll_event ev;
+      unsigned char oldmask;
+
+      /*
+       * we handle EPOLL_CTL_DEL by ignoring it here
+       * on the assumption that the fd is gone anyways
+       * if that is wrong, we have to handle the spurious
+       * event in epoll_poll.
+       * if the fd is added again, we try to ADD it, and, if that
+       * fails, we assume it still has the same eventmask.
+       */
+      if (!nev)
+        return;
+
+      oldmask = anfds [fd].emask;
+      anfds [fd].emask = nev;
+
+      ev.data.fd = fd
+      ev.events   = (nev & EV_READ  ? EPOLLIN  : 0)
+                  | (nev & EV_WRITE ? EPOLLOUT : 0);
+
+      if (expect_true (!epoll_ctl (backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev)))
+        return;
+
+      if (expect_true (errno == ENOENT))
+        {
+          /* if ENOENT then the fd went away, so try to do the right thing */
+          if (!nev)
+            goto dec_egen;
+
+          if (!epoll_ctl (backend_fd, EPOLL_CTL_ADD, fd, &ev))
+            return;
+        }
+      else if (expect_true (errno == EEXIST))
+        {
+          /* EEXIST means we ignored a previous DEL, but the fd is still active */
+          /* if the kernel mask is the same as the new mask, we assume it hasn't changed */
+          if (oldmask == nev)
+            goto dec_egen;
+
+          if (!epoll_ctl (backend_fd, EPOLL_CTL_MOD, fd, &ev))
+            return;
+        }
+
+      fd_kill (fd); /* can't not handle this fd,maybe file fd */
+    }
+
+    static void
+    epoll_poll (EV_P, ev_tstamp timeout)
+    {
+      int i;
+      int eventcnt;
+
+      /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
+      /* the default libev max wait time, however. */
+      eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, timeout * 1e3);
+
+      if (expect_false (eventcnt < 0))
+        {
+          if (errno != EINTR)
+            ev_syserr ("(libev) epoll_wait");
+
+          return;
+        }
+
+      for (i = 0; i < eventcnt; ++i)
+        {
+          struct epoll_event *ev = epoll_events + i;
+
+          int fd = ev->data.fd;
+          int want = anfds [fd].events;
+          int got  = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
+                   | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
+
+          if (expect_false (got & ~want))
+            {
+              anfds [fd].emask = want;
+
+              /*
+               * we received an event but are not interested in it, try mod or del
+               * this often happens because we optimistically do not unregister fds
+               * when we are no longer interested in them, but also when we get spurious
+               * notifications for fds from another process. this is partially handled
+               * above with the gencounter check (== our fd is not the event fd), and
+               * partially here, when epoll_ctl returns an error (== a child has the fd
+               * but we closed it).
+               */
+              ev->events = (want & EV_READ  ? EPOLLIN  : 0)
+                         | (want & EV_WRITE ? EPOLLOUT : 0);
+
+              /* pre-2.6.9 kernels require a non-null pointer with EPOLL_CTL_DEL, */
+              /* which is fortunately easy to do for us. */
+              if (epoll_ctl (backend_fd, want ? EPOLL_CTL_MOD : EPOLL_CTL_DEL, fd, ev))
+                {
+                  continue;
+                }
+            }
+
+          fd_event (loop, fd, got);
+        }
+
+      /* if the receive array was full, increase its size */
+      if (expect_false (eventcnt == epoll_eventmax))
+        {
+          ev_free (epoll_events);
+          epoll_eventmax = array_nextsize (sizeof (struct epoll_event), epoll_eventmax, epoll_eventmax + 1);
+          epoll_events = (struct epoll_event *)ev_malloc (sizeof (struct epoll_event) * epoll_eventmax);
+        }
+    }
+
+    int inline_size
+    ev_loop::epoll_init ()
+    {
+    #ifdef EPOLL_CLOEXEC
+      backend_fd = epoll_create1 (EPOLL_CLOEXEC);
+
+      if (backend_fd < 0 && (errno == EINVAL || errno == ENOSYS))
+    #endif
+        backend_fd = epoll_create (256);
+
+      if (backend_fd < 0)
+        return 0;
+
+      fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
+
+      backend_mintime = 1e-3; /* epoll does sometimes return early, this is just to avoid the worst */
+
+      epoll_eventmax = 64; /* initial number of events receivable per poll */
+      epoll_events = (struct epoll_event *)ev_malloc (sizeof (struct epoll_event) * epoll_eventmax);
+      
+      return 1;
+    }
+
+    void inline
+    ev_loop::epoll_destroy ()
+    {
+      ev_free (epoll_events);
+    }
 }    /* end of namespace ev */
