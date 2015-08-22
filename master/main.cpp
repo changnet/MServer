@@ -1,8 +1,9 @@
 #include "config.h"              /* must be first include */
 #include "global/global.h"
-#include "ev/ev++.h"
+#include "ev/ev.h"
 
 /* test class */
+/*
 class CTest
 {
 private:
@@ -32,7 +33,7 @@ public:
 
     void timer_cb(ev::timer &w,int revents)
     {
-        if ( ev::ERROR & revents ) /* ev error */
+        if ( ev::ERROR & revents ) // ev error
         {
             std::cerr << "ev error" << std::endl;
             w.stop();
@@ -46,25 +47,28 @@ public:
     {
         m_io.set( loop );
         m_io.set<CTest,&CTest::io_cb>(this);
-        m_io.start( /*STDIN_FILENO*/ 0,ev::READ );
+        m_io.start( 0,ev::READ );
         
         m_timer.set(loop);
         m_timer.set<CTest,&CTest::timer_cb>(this);
         m_timer.start( 5,1 );
     }
 };
-
+*/
 int main()
 {
     atexit(onexit);
 
-    assert( "no need to do this",99 == 33 );
-    struct ev_loop *loop = ev_loop_new();
-    CTest t(loop);
+    //assert( "no need to do this",99 == 33 );
+    //struct ev_loop *loop = ev_loop_new();
+    //CTest t(loop);
 
+    ev_loop loop;
     //t.start();
 
-    //ev_run(loop);
+    loop.run();
 
+    log_assert( "test",0 == 999 );
+    std::cout << "done ..." << std::endl;
     return 0;
 }

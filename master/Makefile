@@ -9,7 +9,7 @@ CFLAGS = -pipe -Wall -g
 LFLAGS = -rdynamic
 OPTIMIZE = -O2
 CC = g++
-INC = 
+INC =
 ODIR = bin
 SDIR = ./
 TARGET = $(ODIR)/Master
@@ -19,7 +19,7 @@ MKDIR = mkdir -p
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global.o clog.o ev.o main.o
+_OBJS = global.o clog.o ev.o ev_watcher.o main.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -30,7 +30,7 @@ $(ODIR)/%.o: $(SDIR)/global/%.cpp
 $(ODIR)/%.o: $(SDIR)/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -o $@ $<
 
-$(ODIR)/%.o: $(SDIR)/ev/%.c
+$(ODIR)/%.o: $(SDIR)/ev/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖

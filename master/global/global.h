@@ -48,16 +48,13 @@
 #define FATAL(...)    do{PDEBUG(__VA_ARGS__);ELOG(__VA_ARGS__);::abort();}while(0)
 
 extern void __log_assert_fail (const char *__assertion, const char *__file,
-           unsigned int __line, const char *__function)
-     __THROW __attribute__ ((__noreturn__));
+           unsigned int __line, const char *__function);
 
 /* This prints an "log assertion failed" message and return.  */
-#define log_assert(why,expr)     \
-        if ( !(expr) )           \
-        {                        \
-            __log_assert_fail (__STRING((why,expr)), __FILE__, __LINE__, __ASSERT_FUNCTION));\
-            return;              \
-        }
+#define log_assert(why,expr)                \
+  ((expr)                                   \
+   ? __ASSERT_VOID_CAST (0)                 \
+   : __log_assert_fail (__STRING((why,expr)), __FILE__, __LINE__, __ASSERT_FUNCTION))
 
 /* will be called while process exit */
 extern void onexit();
