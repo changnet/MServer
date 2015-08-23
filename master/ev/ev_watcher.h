@@ -6,14 +6,14 @@
 class ev_loop;
 
 ////////////////////////////////////////////////////////////////////////////////
-template<class watcher>
+/* 公共基类以实现多态 */
 class ev_watcher
 {
 public:
     int32 active;
     int32 pending;
     void *data;
-    void (*cb)(watcher *w, int32 revents);
+    void (*cb)(ev_watcher *w, int32 revents);
     ev_loop *loop;
 public:
     explicit ev_watcher( ev_loop *_loop)
@@ -22,6 +22,18 @@ public:
         active  = 0;
         pending = 0;
         data    = NULL;
+        cb      = NULL;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+template<class watcher>
+class ev_base : public ev_watcher
+{
+public:
+    explicit ev_base( ev_loop *_loop)
+        : ev_watcher (_loop)
+    {
     }
 
     void set( ev_loop *_loop )
@@ -29,7 +41,7 @@ public:
         loop = _loop;
     }
 
-    void set_(const void *data, void (*cb)(watcher *w, int revents))
+    void set_(const void *data, void (*cb)(ev_watcher *w, int revents))
     {
         this->data = (void *)data;
         this->cb   = cb;
@@ -39,7 +51,7 @@ public:
     {
         return active;
     }
-    
+
     // function callback(no object)
     template<void (*function)(watcher &w, int32)>
     void set (void *data = 0)
@@ -48,7 +60,7 @@ public:
     }
 
     template<void (*function)(watcher &w, int32)>
-    static void function_thunk (watcher *w, int32 revents)
+    static void function_thunk (ev_watcher *w, int32 revents)
     {
       function
         (*static_cast<watcher *>(w), revents);
@@ -62,7 +74,7 @@ public:
     }
 
     template<class K, void (K::*method)(watcher &w, int32)>
-    static void method_thunk (watcher *w, int32 revents)
+    static void method_thunk (ev_watcher *w, int32 revents)
     {
       (static_cast<K *>(w->data)->*method)
         (*static_cast<watcher *>(w), revents);
@@ -70,18 +82,20 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ev_io : public ev_watcher<ev_io>
+class ev_io : public ev_base<ev_io>
 {
 public:
     int32 fd;
     int32 events;
 
 public:
-    using ev_watcher::set;
+    using ev_base::set;
 
     explicit ev_io( ev_loop *loop = 0 )
-        : ev_watcher ( loop )
+        : ev_base ( loop )
     {
+        fd     = -1;
+        events = 0;
     }
 
     ~ev_io()
@@ -92,6 +106,11 @@ public:
 
     void start()
     {
+        assert( "ev_io::start with NULL loop",loop );
+        assert( "ev_io::start without event",events );
+        assert( "ev_io::start without callback",cb );
+        assert( "ev_io::start with negative fd",fd >= 0 );
+
         this->cb( this,0 );
     }
 
@@ -131,18 +150,20 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ev_timer : public ev_watcher<ev_timer>
+class ev_timer : public ev_base<ev_timer>
 {
 public:
     ev_tstamp at;
     ev_tstamp repeat;
 
 public:
-    using ev_watcher::set;
+    using ev_base::set;
 
     explicit ev_timer( ev_loop *loop = 0 )
-        : ev_watcher ( loop )
+        : ev_base ( loop )
     {
+        at     = 0.;
+        repeat = 0.;
     }
 
     ~ev_timer()
@@ -153,6 +174,11 @@ public:
     
     void start()
     {
+        assert( "ev_timer::start with NULL loop",loop );
+        assert( "ev_timer::start with negative after",at >= 0. );
+        assert( "ev_timer::start with negative repeat",repeat >= 0. );
+        assert( "ev_timer::start without callback",cb );
+
         this->cb( this,0 );
     }
     

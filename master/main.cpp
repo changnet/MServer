@@ -55,6 +55,19 @@ public:
     }
 };
 
+
+void io_cb_ex(ev_io &w,int revents)
+{
+    if ( EV_ERROR & revents )
+    {
+        std::cerr << "ev error" << std::endl;
+        w.stop();
+        return;
+    }
+    
+    std::cout << "io_cb_ex ... " << std::endl;
+}
+
 int main()
 {
     //atexit(onexit);
@@ -65,6 +78,10 @@ int main()
     ev_loop loop;
     CTest t( &loop );
     t.start();
+    ev_io io;
+    io.set( &loop );
+    io.set<io_cb_ex>();
+    io.start( 0,EV_WRITE );
 
     loop.run();
 
