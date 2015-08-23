@@ -8,6 +8,10 @@ class ev_loop
 {
 public:
     void run();
+    void done();
+
+private:
+    volatile bool loop_done;
 };
 
 #endif /* __EV_H__ */

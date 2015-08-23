@@ -3,14 +3,14 @@
 #include "ev/ev.h"
 
 /* test class */
-/*
+
 class CTest
 {
 private:
-    ev::io    m_io;
-    ev::timer m_timer;
+    ev_io    m_io;
+    ev_timer m_timer;
     
-    ev::loop_ref loop;
+    ev_loop *loop;
 public:
     explicit CTest( ev_loop *loop)
     : loop(loop)
@@ -18,9 +18,9 @@ public:
         
     }
 
-    void io_cb(ev::io &w,int revents)
+    void io_cb(ev_io &w,int revents)
     {
-        if ( ev::ERROR & revents )
+        if ( EV_ERROR & revents )
         {
             std::cerr << "ev error" << std::endl;
             w.stop();
@@ -28,12 +28,12 @@ public:
         }
         
         std::cout << "io_cb ... break" << std::endl;
-        loop.break_loop();
+        loop->done();
     }
 
-    void timer_cb(ev::timer &w,int revents)
+    void timer_cb(ev_timer &w,int revents)
     {
-        if ( ev::ERROR & revents ) // ev error
+        if ( EV_ERROR & revents ) // ev error
         {
             std::cerr << "ev error" << std::endl;
             w.stop();
@@ -47,28 +47,28 @@ public:
     {
         m_io.set( loop );
         m_io.set<CTest,&CTest::io_cb>(this);
-        m_io.start( 0,ev::READ );
+        m_io.start( 0,EV_READ );
         
         m_timer.set(loop);
         m_timer.set<CTest,&CTest::timer_cb>(this);
         m_timer.start( 5,1 );
     }
 };
-*/
+
 int main()
 {
-    atexit(onexit);
+    //atexit(onexit);
 
     //assert( "no need to do this",99 == 33 );
     //struct ev_loop *loop = ev_loop_new();
-    //CTest t(loop);
 
     ev_loop loop;
-    //t.start();
+    CTest t( &loop );
+    t.start();
 
     loop.run();
 
-    log_assert( "test",0 == 999 );
+    log_assert( "test",0 == 999,0 );
     std::cout << "done ..." << std::endl;
     return 0;
 }

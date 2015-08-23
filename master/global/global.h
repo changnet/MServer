@@ -50,11 +50,16 @@
 extern void __log_assert_fail (const char *__assertion, const char *__file,
            unsigned int __line, const char *__function);
 
-/* This prints an "log assertion failed" message and return.  */
-#define log_assert(why,expr)                \
-  ((expr)                                   \
-   ? __ASSERT_VOID_CAST (0)                 \
-   : __log_assert_fail (__STRING((why,expr)), __FILE__, __LINE__, __ASSERT_FUNCTION))
+/* This prints an "log assertion failed" message and return,not abort.  */
+#define log_assert(why,expr,...)                         \
+    do{                                                  \
+        if ( !(expr) )                                   \
+        {                                                \
+            __log_assert_fail (__STRING((why,expr)),     \
+                __FILE__, __LINE__, __ASSERT_FUNCTION);  \
+            return __VA_ARGS__;                          \
+        }                                                \
+    }while (0)
 
 /* will be called while process exit */
 extern void onexit();
