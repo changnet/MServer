@@ -13,12 +13,15 @@ public:
     int32 active;
     int32 pending;
     void *data;
-    void (*cb)(ev_loop *loop, ev_watcher *w, int32 revents);
+    void (*cb)(watcher *w, int32 revents);
     ev_loop *loop;
 public:
     explicit ev_watcher( ev_loop *_loop)
         : loop (_loop)
     {
+        active  = 0;
+        pending = 0;
+        data    = NULL;
     }
 
     void set( ev_loop *_loop )
@@ -26,7 +29,7 @@ public:
         loop = _loop;
     }
 
-    void set_ (const void *data, void (*cb)(struct ev_loop *loop, ev_watcher *w, int revents))
+    void set_(const void *data, void (*cb)(watcher *w, int revents))
     {
         this->data = (void *)data;
         this->cb   = cb;
@@ -45,7 +48,7 @@ public:
     }
 
     template<void (*function)(watcher &w, int32)>
-    static void function_thunk (ev_loop *loop, ev_watcher *w, int32 revents)
+    static void function_thunk (watcher *w, int32 revents)
     {
       function
         (*static_cast<watcher *>(w), revents);
@@ -59,7 +62,7 @@ public:
     }
 
     template<class K, void (K::*method)(watcher &w, int32)>
-    static void method_thunk (ev_loop *loop, ev_watcher *w, int32 revents)
+    static void method_thunk (watcher *w, int32 revents)
     {
       (static_cast<K *>(w->data)->*method)
         (*static_cast<watcher *>(w), revents);
@@ -89,7 +92,7 @@ public:
 
     void start()
     {
-        
+        this->cb( this,0 );
     }
 
     void stop()
@@ -150,7 +153,7 @@ public:
     
     void start()
     {
-        
+        this->cb( this,0 );
     }
     
     void stop()
