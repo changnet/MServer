@@ -1,4 +1,3 @@
-#include "config.h"              /* must be first include */
 #include "global/global.h"
 #include "ev/ev.h"
 

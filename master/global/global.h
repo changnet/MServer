@@ -8,6 +8,8 @@
 #include <cstdarg>     /* va_start va_end ... */
 #include <unistd.h>    /* POSIX api */
 #include <sys/types.h> /* linux sys types like pid_t */
+#include <cstring>     /* memset memcpy */
+#include <cerrno>      /* errno */
 
 #include "../config.h" /* config paramter */
 /* assert with error msg,third parted code not include this file will work fine

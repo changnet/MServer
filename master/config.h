@@ -22,4 +22,7 @@
 /* is assert work ? */
 //#define NDEBUG
 
+/* epoll max events one poll */
+#define EPOLL_MAXEV    8192
+
 #endif /* __CONFIG_H__ */

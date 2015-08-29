@@ -2,8 +2,7 @@
 #define __EV_WATCHER_H__
 
 #include "ev_def.h"
-
-class ev_loop;
+#include "ev.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 /* 公共基类以实现多态 */
@@ -110,8 +109,10 @@ public:
         assert( "ev_io::start without event",events );
         assert( "ev_io::start without callback",cb );
         assert( "ev_io::start with negative fd",fd >= 0 );
+        assert( "ev_io::start a active watcher",!active );
 
-        this->cb( this,0 );
+        active = 1;
+        loop->io_start( this );
     }
 
     void stop()
