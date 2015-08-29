@@ -6,6 +6,9 @@
  *   写事件)，可能会导致这个事件丢失，尤其是使用ET模式时。
  * 3.采用pending、fdchanges、anfds队列，同时要保证在处理pending时(此时会触发很多事件)，不会
  *   导致其他数据指针悬空(比如delete某个watcher导致anfds指针悬空)。
+ * 4.与libev的自动调整不同，单次poll的事件数量是固定的。因此，当io事件很多时，可能会导致
+ *   epoll_wait数组一次装不下，可以有某个fd永远未被读取(ET模式下将会导致下次不再触发)。
+ *   这时需要调整事件大小，重新编译。
  */
 
 
@@ -49,6 +52,9 @@ public:
     void io_start( ev_io *w );
     void io_stop( ev_io *w );
 
+    static ev_tstamp get_time();
+    static ev_tstamp get_clock();
+    ev_tstamp ev_now();
 private:
     volatile bool loop_done;
     ANFD *anfds;
@@ -66,11 +72,18 @@ private:
     int32 backend_fd;
     epoll_event epoll_events[EPOLL_MAXEV];
     ev_tstamp backend_mintime;
+    
+    ev_tstamp ev_rt_now;
+    ev_tstamp now_floor; /* last time we refreshed rt_time */
+    ev_tstamp mn_now;    /* monotonic clock "now" */
+    ev_tstamp rtmn_diff; /* difference realtime - monotonic time */
 private:
     void fd_change( int32 fd );
     void fd_reify();
     void backend_init();
     void backend_modify( int32 fd,int32 events,ANFD *anfd );
+    void time_update();
+    void backend_poll( ev_tstamp timeout );
 };
 
 #endif /* __EV_H__ */

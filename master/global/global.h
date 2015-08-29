@@ -22,6 +22,10 @@
 /* Qt style unused paramter handler */
 #define UNUSED(x) (void)x
 
+/* 分支预测，汇编优化。逻辑上不会改变cond的值 */
+#define expect_false(cond) __builtin_expect (!!(cond),0)
+#define expect_true(cond)  __builtin_expect (!!(cond),1)
+
 #ifdef _PDEBUG_
     #define PDEBUG(...)    printf( __VA_ARGS__ )
 #else
@@ -47,7 +51,7 @@
 #endif
 
 /* terminated without destroying any object and without calling any of the functions passed to atexit or at_quick_exit */
-#define FATAL(...)    do{PDEBUG(__VA_ARGS__);ELOG(__VA_ARGS__);::abort();}while(0)
+#define FATAL(...)    do{PDEBUG(__VA_ARGS__);ERROR(__VA_ARGS__);::abort();}while(0)
 
 extern void __log_assert_fail (const char *__assertion, const char *__file,
            unsigned int __line, const char *__function);

@@ -1,5 +1,6 @@
 #include "global/global.h"
 #include "ev/ev.h"
+#include "ev/ev_watcher.h"
 
 /* test class */
 
@@ -75,16 +76,17 @@ int main()
     //struct ev_loop *loop = ev_loop_new();
 
     ev_loop loop;
+    loop.init();
+
     CTest t( &loop );
     t.start();
-    ev_io io;
-    io.set( &loop );
-    io.set<io_cb_ex>();
-    io.start( 0,EV_WRITE );
+    // ev_io io;
+    // io.set( &loop );
+    // io.set<io_cb_ex>();
+    // io.start( 0,EV_WRITE );
 
     loop.run();
 
-    log_assert( "test",0 == 999,0 );
     std::cout << "done ..." << std::endl;
     return 0;
 }
