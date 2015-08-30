@@ -26,6 +26,16 @@
 #define array_zero(base,size)    \
     memset ((void *)(base), 0, sizeof (*(base)) * (size))
 
+/*
+ * the heap functions want a real array index. array index 0 is guaranteed to not
+ * be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP gives
+ * the branching factor of the d-tree.
+ */
+
+#define HEAP0 1
+#define HPARENT(k) ((k) >> 1)
+#define UPHEAP_DONE(p,k) (!(p))
+
 ev_loop::ev_loop()
 {
     anfds = NULL;
@@ -39,6 +49,12 @@ ev_loop::ev_loop()
     fdchanges = NULL;
     fdchangemax = 0;
     fdchangecnt = 0;
+    
+    timers = NULL;
+    timermax = 0;
+    timercnt = 0;
+    
+    backend_fd = -1;
 }
 
 ev_loop::~ev_loop()
@@ -61,6 +77,12 @@ ev_loop::~ev_loop()
         fdchanges = NULL;
     }
     
+    if ( timers )
+    {
+        delete []timers;
+        timers = NULL;
+    }
+    
     if ( backend_fd >= 0 )
     {
         ::close( backend_fd );
@@ -70,7 +92,7 @@ ev_loop::~ev_loop()
 
 void ev_loop::init()
 {
-    assert( "loop duplicate init",!anfds && !pendings && !fdchanges );
+    assert( "loop duplicate init",!anfds && !pendings && !fdchanges && !timers );
 
     anfds = new ANFD[EV_CHUNK];
     anfdmax = EV_CHUNK;
@@ -82,13 +104,14 @@ void ev_loop::init()
     fdchanges = new ANCHANGE[EV_CHUNK];
     fdchangemax = EV_CHUNK;
     
+    timers = new ANHE[EV_CHUNK];
+    timermax = EV_CHUNK;
+    
     ev_rt_now          = get_time ();
     mn_now             = get_clock ();
     now_floor          = mn_now;
     rtmn_diff          = ev_rt_now - mn_now;
-  
-    backend_fd         = -1;
-    
+
     backend_init();
 }
 
@@ -111,11 +134,11 @@ void ev_loop::run()
             
             waittime = MAX_BLOCKTIME;
             
-            //if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
-            //{
-            //    ev_tstamp to = ANHE_at (timers [HEAP0]) - mn_now;
-            //    if (waittime > to) waittime = to;
-            //}
+            if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
+            {
+               ev_tstamp to = (timers [HEAP0])->at - mn_now;
+               if (waittime > to) waittime = to;
+            }
     
             /* at this point, we NEED to wait, so we have to ensure */
             /* to pass a minimum nonzero value to the backend */
@@ -129,7 +152,7 @@ void ev_loop::run()
         }
 
         /* queue pending timers and reschedule them */
-        //timers_reify (); /* relative timers called last */
+        timers_reify (); /* relative timers called last */
   
         invoke_pending ();
     }    /* while */
@@ -140,7 +163,7 @@ void ev_loop::done()
     loop_done = true;
 }
 
-void ev_loop::io_start( ev_io *w )
+int32 ev_loop::io_start( ev_io *w )
 {
     assert( "loop uninit",anfdmax|pendingmax|fdchangemax );
 
@@ -157,14 +180,16 @@ void ev_loop::io_start( ev_io *w )
     anfd->reify = anfd->emask ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
 
     fd_change( fd );
+
+    return 1;
 }
 
-void ev_loop::io_stop( ev_io *w )
+int32 ev_loop::io_stop( ev_io *w )
 {
     clear_pending( w );
     
     if ( expect_false(!w->is_active()) )
-        return;
+        return 0;
         
     int32 fd = w->fd;
     assert( "illegal fd (must stay constant after start!)", fd >= 0 && uint32(fd) < anfdmax );
@@ -172,8 +197,10 @@ void ev_loop::io_stop( ev_io *w )
     ANFD *anfd = anfds + fd;
     anfd->w = 0;
     anfd->reify = anfd->emask ? EPOLL_CTL_DEL : 0;
-    
+
     fd_change( fd );
+
+    return 0;
 }
 
 void ev_loop::fd_change( int32 fd )
@@ -405,4 +432,135 @@ void ev_loop::clear_pending( ev_watcher *w )
         pendings [w->pending - 1].w = 0;
         w->pending = 0;
     }
+}
+
+void ev_loop::timers_reify()
+{
+    while (timercnt && (timers [HEAP0])->at < mn_now)
+    {
+        ev_timer *w = timers [HEAP0];
+  
+        assert( "libev: inactive timer on timer heap detected", w->is_active () );
+  
+        /* first reschedule or stop timer */
+        if (w->repeat)
+        {
+            w->at += w->repeat;
+            if ( w->at < mn_now )
+                w->at = mn_now;
+
+            assert ( "libev: negative ev_timer repeat value found while processing timers", w->repeat > 0. );
+
+            down_heap (timers, timercnt, HEAP0);
+        }
+        else
+            timer_stop ( w ); /* nonrepeating: stop timer */
+  
+        feed_event ( w,EV_TIMER );
+    }
+}
+
+int32 ev_loop::timer_start( ev_timer *w )
+{
+    w->at += mn_now;
+  
+    assert ( "libev: ev_timer_start called with negative timer repeat value", w->repeat >= 0. );
+  
+    ++timercnt;
+    int32 active = timercnt + HEAP0 - 1;
+    array_resize ( ANHE, timers, timermax, uint32(active + 1), EMPTY );
+    timers [active] = w;
+    up_heap( timers, active );
+  
+    assert ( "libev: internal timer heap corruption", timers [active] == w );
+    
+    return active;
+}
+
+int32 ev_loop::timer_stop( ev_timer *w )
+{
+    clear_pending( w );
+    if ( expect_false(!w->is_active()) )
+        return 0;
+
+    {
+        int32 active = w->active;
+
+        assert( "libev: internal timer heap corruption", timers [active] == w );
+
+        --timercnt;
+
+        if (expect_true ((uint32)active < timercnt + HEAP0))
+        {
+            timers [active] = timers [timercnt + HEAP0];
+            adjust_heap (timers, timercnt, active);
+        }
+    }
+
+    w->at -= mn_now;
+
+    return 0;
+}
+
+void ev_loop::down_heap( ANHE *heap,int32 N,int32 k )
+{
+    ANHE he = heap [k];
+  
+    for (;;)
+    {
+        int c = k << 1;
+  
+        if (c >= N + HEAP0)
+            break;
+  
+        c += c + 1 < N + HEAP0 && (heap [c])->at > (heap [c + 1])->at
+             ? 1 : 0;
+  
+        if ( he->at <= (heap [c])->at )
+            break;
+  
+        heap [k] = heap [c];
+        (heap [k])->active = k;
+  
+        k = c;
+    }
+  
+    heap [k] = he;
+    he->active = k;
+}
+
+void ev_loop::up_heap( ANHE *heap,int32 k )
+{
+    ANHE he = heap [k];
+  
+    for (;;)
+    {
+        int p = HPARENT (k);
+  
+        if ( UPHEAP_DONE (p, k) || (heap [p])->at <= he->at )
+            break;
+  
+        heap [k] = heap [p];
+        (heap [k])->active = k;
+        k = p;
+    }
+  
+    heap [k] = he;
+    he->active = k;
+}
+
+void ev_loop::adjust_heap( ANHE *heap,int32 N,int32 k )
+{
+    if (k > HEAP0 && (heap [k])->at <= (heap [HPARENT (k)])->at)
+        up_heap (heap, k);
+    else
+        down_heap (heap, N, k);
+}
+
+void ev_loop::reheap( ANHE *heap,int32 N )
+{
+    /* we don't use floyds algorithm, upheap is simpler and is more cache-efficient */
+    /* also, this is easy to implement and correct for both 2-heaps and 4-heaps */
+    for (int32 i = 0; i < N; ++i)
+        up_heap (heap, i + HEAP0);
 }

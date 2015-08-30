@@ -38,12 +38,7 @@ typedef struct
 } ANPENDING;
 
 /* timer heap element */
-typedef struct
-{
-    ev_timer *w;
-    ev_tstamp at;
-}ANHE;
-
+typedef ev_timer *ANHE;
 typedef int32 ANCHANGE;
 
 class ev_loop
@@ -56,9 +51,12 @@ public:
     void run();
     void done();
     
-    void io_start( ev_io *w );
-    void io_stop( ev_io *w );
+    int32 io_start( ev_io *w );
+    int32 io_stop( ev_io *w );
 
+    int32 timer_start( ev_timer *w );
+    int32 timer_stop( ev_timer *w );
+    
     static ev_tstamp get_time();
     static ev_tstamp get_clock();
     ev_tstamp ev_now();
@@ -99,6 +97,11 @@ private:
     void feed_event( ev_watcher *w,int32 revents );
     void invoke_pending();
     void clear_pending( ev_watcher *w );
+    void timers_reify();
+    void down_heap( ANHE *heap,int32 N,int32 k );
+    void up_heap( ANHE *heap,int32 k );
+    void adjust_heap( ANHE *heap,int32 N,int32 k );
+    void reheap( ANHE *heap,int32 N );
 };
 
 #endif /* __EV_H__ */

@@ -111,14 +111,12 @@ public:
         assert( "ev_io::start with negative fd",fd >= 0 );
         assert( "ev_io::start a active watcher",!active );
 
-        active = true;
-        loop->io_start( this );
+        active = loop->io_start( this );
     }
 
     void stop()
     {
-        loop->io_stop( this );
-        active = false;
+        active = loop->io_stop( this );
     }
 
     void set( int32 fd,int32 events )
@@ -180,13 +178,14 @@ public:
         assert( "ev_timer::start with negative after",at >= 0. );
         assert( "ev_timer::start with negative repeat",repeat >= 0. );
         assert( "ev_timer::start without callback",cb );
+        assert( "start a active timer",!active );
 
-        this->cb( this,0 );
+        active = loop->timer_start( this );
     }
     
     void stop()
     {
-        
+        active = loop->timer_stop( this );
     }
 
     void set( ev_tstamp after,ev_tstamp repeat = 0. )
