@@ -37,6 +37,13 @@ typedef struct
   int events; /* the pending event set for the given watcher */
 } ANPENDING;
 
+/* timer heap element */
+typedef struct
+{
+    ev_timer *w;
+    ev_tstamp at;
+}ANHE;
+
 typedef int32 ANCHANGE;
 
 class ev_loop
@@ -69,6 +76,10 @@ private:
     uint32 fdchangemax;
     uint32 fdchangecnt;
     
+    ANHE *timers;
+    uint32 timermax;
+    uint32 timercnt;
+    
     int32 backend_fd;
     epoll_event epoll_events[EPOLL_MAXEV];
     ev_tstamp backend_mintime;
@@ -84,6 +95,10 @@ private:
     void backend_modify( int32 fd,int32 events,ANFD *anfd );
     void time_update();
     void backend_poll( ev_tstamp timeout );
+    void fd_event( int32 fd,int32 revents );
+    void feed_event( ev_watcher *w,int32 revents );
+    void invoke_pending();
+    void clear_pending( ev_watcher *w );
 };
 
 #endif /* __EV_H__ */

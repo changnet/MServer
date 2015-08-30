@@ -18,7 +18,7 @@ public:
     explicit ev_watcher( ev_loop *_loop)
         : loop (_loop)
     {
-        active  = 0;
+        active  = false;
         pending = 0;
         data    = NULL;
         cb      = NULL;
@@ -111,13 +111,14 @@ public:
         assert( "ev_io::start with negative fd",fd >= 0 );
         assert( "ev_io::start a active watcher",!active );
 
-        active = 1;
+        active = true;
         loop->io_start( this );
     }
 
     void stop()
     {
-        
+        loop->io_stop( this );
+        active = false;
     }
 
     void set( int32 fd,int32 events )

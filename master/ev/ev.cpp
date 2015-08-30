@@ -131,7 +131,7 @@ void ev_loop::run()
         /* queue pending timers and reschedule them */
         //timers_reify (); /* relative timers called last */
   
-        //ev_invoke_pending (loop);
+        invoke_pending ();
     }    /* while */
 }
 
@@ -159,6 +159,23 @@ void ev_loop::io_start( ev_io *w )
     fd_change( fd );
 }
 
+void ev_loop::io_stop( ev_io *w )
+{
+    clear_pending( w );
+    
+    if ( expect_false(!w->is_active()) )
+        return;
+        
+    int32 fd = w->fd;
+    assert( "illegal fd (must stay constant after start!)", fd >= 0 && uint32(fd) < anfdmax );
+    
+    ANFD *anfd = anfds + fd;
+    anfd->w = 0;
+    anfd->reify = anfd->emask ? EPOLL_CTL_DEL : 0;
+    
+    fd_change( fd );
+}
+
 void ev_loop::fd_change( int32 fd )
 {
     ++fdchangecnt;
@@ -172,9 +189,13 @@ void ev_loop::fd_reify()
     {
         int32 fd     = fdchanges[i];
         ANFD *anfd   = anfds + fd;
-        
+
         switch ( anfd->reify )
         {
+        case 0             : /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
+            ERROR("please avoid this fd situation,control your watcher");
+            continue;
+            break;
         case EPOLL_CTL_ADD :
         case EPOLL_CTL_MOD :
         {
@@ -294,7 +315,7 @@ void ev_loop::time_update()
     /* loop a few times, before making important decisions.
      * on the choice of "4": one iteration isn't enough,
      * in case we get preempted during the calls to
-     * ev_time and get_clock. a second call is almost guaranteed
+     * get_time and get_clock. a second call is almost guaranteed
      * to succeed in that case, though. and looping a few more times
      * doesn't hurt either as we only do this on time-jumps or
      * in the unlikely event of having been preempted here.
@@ -334,10 +355,54 @@ void ev_loop::backend_poll( ev_tstamp timeout )
 
         int fd = ev->data.fd;
         int got  = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
-                  | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
+                 | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
 
         assert( "catch not interested event",got & anfds[fd].emask );
 
-        //fd_event (loop, fd, got);
+        fd_event ( fd, got );
+    }
+}
+
+void ev_loop::fd_event( int32 fd,int32 revents )
+{
+    ANFD *anfd = anfds + fd;
+    assert( "fd event no watcher",anfd->w );
+    feed_event( anfd->w,revents );
+}
+
+void ev_loop::feed_event( ev_watcher *w,int32 revents )
+{
+    if ( expect_false(w->pending) )
+        pendings[w->pending - 1].events |= revents;
+    else
+    {
+        w->pending = ++pendingcnt;
+        array_resize( ANPENDING,pendings,pendingmax,pendingcnt,EMPTY );
+        pendings[w->pending - 1].w      = w;
+        pendings[w->pending - 1].events = revents;
+    }
+}
+
+void ev_loop::invoke_pending()
+{
+    while (pendingcnt)
+    {
+        ANPENDING *p = pendings + --pendingcnt;
+  
+        ev_watcher *w = p->w;
+        if ( expect_true(w) ) /* 调用了clear_pending */
+        {
+            w->pending = 0;
+            w->cb( w,p->events );
+        }
+    }
+}
+
+void ev_loop::clear_pending( ev_watcher *w )
+{
+    if (w->pending)
+    {
+        pendings [w->pending - 1].w = 0;
+        w->pending = 0;
     }
 }

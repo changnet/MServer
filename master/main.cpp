@@ -28,7 +28,7 @@ public:
         }
         
         std::cout << "io_cb ... break" << std::endl;
-        loop->done();
+        w.stop();
     }
 
     void timer_cb(ev_timer &w,int revents)
@@ -48,6 +48,8 @@ public:
         m_io.set( loop );
         m_io.set<CTest,&CTest::io_cb>(this);
         m_io.start( 0,EV_READ );
+        m_io.stop();
+        m_io.start();
         
         m_timer.set(loop);
         m_timer.set<CTest,&CTest::timer_cb>(this);
