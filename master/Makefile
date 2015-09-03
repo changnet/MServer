@@ -12,6 +12,7 @@ CC = g++
 INC =
 ODIR = bin
 SDIR = ./
+TEST_DIR = ../test
 TARGET = $(ODIR)/Master
 MKDIR = mkdir -p
 
@@ -19,7 +20,7 @@ MKDIR = mkdir -p
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global.o clog.o ev.o main.o
+_OBJS = global.o clog.o ev.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -39,8 +40,10 @@ $(ODIR)/%.o: $(SDIR)/ev/%.cpp
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
 all: DIRS $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TARGET)  $(OBJS)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TARGET)  $(OBJS) main.cpp
 
+test: DIRS $(OBJS)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TEST_DIR)/bench  $(OBJS) $(TEST_DIR)/bench.c
 DIRS:
 	$(MKDIR) $(ODIR)
 

@@ -14,9 +14,9 @@
         {                                       \
             size *= 2;                          \
         }                                       \
-        type *tmp = (type *)new type[size];     \
+        type *tmp = new type[size];             \
         init( tmp,sizeof(type)*size );          \
-        memcpy( base,tmp,sizeof(type)*cur );    \
+        memcpy( tmp,base,sizeof(type)*cur );    \
         delete []base;                          \
         base = tmp;                             \
         cur = size;                             \
@@ -24,7 +24,7 @@
     
 #define EMPTY(base,size)
 #define array_zero(base,size)    \
-    memset ((void *)(base), 0, sizeof (*(base)) * (size))
+    memset ((void *)(base), 0, size)
 
 /*
  * the heap functions want a real array index. array index 0 is guaranteed to not
@@ -311,10 +311,18 @@ ev_tstamp ev_loop::get_time()
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
+/*
+ * 获取当前时钟
+ * CLOCK_REALTIME: 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。
+ * CLOCK_REALTIME_COARSE: 系统实时时间，比起CLOCK_REALTIME有更快的获取速度，更低一些的精确度。
+ * CLOCK_MONOTONIC: 从系统启动这一刻开始计时，即使系统时间被用户改变，也不受影响。系统休眠时不会计时。受adjtime和NTP影响。
+ * CLOCK_MONOTONIC_COARSE: 如同CLOCK_MONOTONIC，但有更快的获取速度和更低一些的精确度。受NTP影响。
+ * CLOCK_MONOTONIC_RAW: 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
+ * CLOCK_BOOTTIME: 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
+ */
 ev_tstamp ev_loop::get_clock()
 {
     struct timespec ts;
-    //linux kernel >= 2.6.39,otherwise CLOCK_REALTIME instead
     clock_gettime (CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
@@ -449,14 +457,14 @@ void ev_loop::timers_reify()
             if ( w->at < mn_now )
                 w->at = mn_now;
 
-            assert ( "libev: negative ev_timer repeat value found while processing timers", w->repeat > 0. );
+            assert( "libev: negative ev_timer repeat value found while processing timers", w->repeat > 0. );
 
-            down_heap (timers, timercnt, HEAP0);
+            down_heap(timers, timercnt, HEAP0);
         }
         else
-            timer_stop ( w ); /* nonrepeating: stop timer */
+            w->stop(); /* nonrepeating: stop timer */
   
-        feed_event ( w,EV_TIMER );
+        feed_event( w,EV_TIMER );
     }
 }
 
@@ -493,7 +501,7 @@ int32 ev_loop::timer_stop( ev_timer *w )
         if (expect_true ((uint32)active < timercnt + HEAP0))
         {
             timers [active] = timers [timercnt + HEAP0];
-            adjust_heap (timers, timercnt, active);
+            adjust_heap(timers, timercnt, active);
         }
     }
 

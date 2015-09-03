@@ -1,7 +1,10 @@
 
-#include "../master/ev/ev.h"
-#include "../master/ev/ev_watcher.h"
+#include <ev++.h>
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,15 +13,14 @@
 
 static int *pipes;
 static int num_pipes, num_active,num_read;
-static struct ev_io *evio;
-ev_loop *loop;
+static ev::io *evio;
 
 #define BUFF_LEN  16
 
 const char *str = "e";
 const int str_len = strlen(str);
 
-void read_cb(struct ev_io &w, int revents)
+void read_cb(ev::io &w, int revents)
 {
   char buf[BUFF_LEN];
   int ret = read( w.fd,buf,BUFF_LEN );
@@ -31,7 +33,7 @@ void read_cb(struct ev_io &w, int revents)
   num_read ++;
   if ( num_read == num_active )
   {
-	  loop->done();
+	  ev_break(EV_DEFAULT,ev::ALL);
   }
 }
 
@@ -53,7 +55,7 @@ void run_once()
 	}
 
 	clock_t start = clock();
-	loop->run();
+	ev_run(EV_DEFAULT);
 	clock_t stop = clock();
 	
 	printf( "time cost %f\n",float(stop-start)/CLOCKS_PER_SEC );
@@ -70,11 +72,8 @@ int main (int argc, char **argv)
 	{
 		perror("setrlimit");
 	}
-	
-	loop = new ev_loop();
-	loop->init();
 
-	evio  = new ev_io[num_pipes];
+	evio  = new ev::io[num_pipes];
 	pipes = new int[num_pipes*2];
 	
 	//创建对应数量的pipe
@@ -93,9 +92,8 @@ int main (int argc, char **argv)
 			exit(1);
 		}
 	
-		ev_io *w = &(evio[i]);
+		ev::io *w = &(evio[i]);
 		w->set<read_cb>();
-		w->set( loop );
 		w->start( *cp,EV_READ );  //监听读端口，待会从写端口写入数据
 	}
 

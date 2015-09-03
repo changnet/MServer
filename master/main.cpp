@@ -53,7 +53,7 @@ public:
         
         m_timer.set(loop);
         m_timer.set<CTest,&CTest::timer_cb>(this);
-        m_timer.start( 5,1 );
+        m_timer.start( 5 );
     }
 };
 
