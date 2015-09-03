@@ -40,6 +40,8 @@ public:
             return;
         }
 
+        ERROR("func this");
+        DEBUG("try this");
         std::cout << "timer_cb ..." << std::endl;
     }
 
@@ -74,7 +76,7 @@ int main()
 {
     //atexit(onexit);
 
-    //assert( "no need to do this",99 == 33 );
+    //log_assert( "no need to do this",99 == 33,0 );
     //struct ev_loop *loop = ev_loop_new();
 
     ev_loop loop;

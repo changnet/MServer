@@ -4,6 +4,7 @@
 
 uint32 g_counter  = 0;
 uint32 g_counters = 0;
+time_t _start_tm = time(0);
 
 void *operator new(size_t size)
 {

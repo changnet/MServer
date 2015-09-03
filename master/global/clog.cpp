@@ -2,27 +2,23 @@
 
 #include "global.h"
 
-const char *cdebug_file()
+const char *clog_file_name( const char *name )
 {
     const uint32 size = 128;
     static char file[size];
-    snprintf( file,size,"%s[%d]",CDEBUG_FILE,getpid() );
-
-    return file;    /* return static pointer */
-}
-
-const char *cerror_file()
-{
-    const uint32 size = 128;
-    static char file[size];
-    snprintf( file,size,"%s[%d]",CERROR_FILE,getpid() );
+    
+    struct tm* tminfo = localtime( &_start_tm );
+    
+    snprintf( file,size,"%s[%d]%04d-%02d-%02d %02d:%02d:%02d",name,
+        getpid(),tminfo->tm_year + 1900,tminfo->tm_mon + 1, tminfo->tm_mday,
+        tminfo->tm_hour, tminfo->tm_min,tminfo->tm_sec);
 
     return file;    /* return static pointer */
 }
 
 void cdebug_log( const char *format,... )
 {
-    static const char *pfile = cdebug_file();
+    static const char *pfile = clog_file_name( CDEBUG_FILE );
 
     time_t rawtime;
     time( &rawtime );
@@ -59,7 +55,7 @@ void cdebug_log( const char *format,... )
 
 void cerror_log( const char *format,... )
 {
-    static const char *pfile = cerror_file();
+    static const char *pfile = clog_file_name( CERROR_FILE );
 
     time_t rawtime;
     time( &rawtime );

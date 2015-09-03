@@ -69,5 +69,6 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 
 /* will be called while process exit */
 extern void onexit();
+extern time_t _start_tm;
 
 #endif  /* __GOLBAL_H__ */
