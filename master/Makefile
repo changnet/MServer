@@ -41,7 +41,7 @@ $(ODIR)/%.o: $(SDIR)/ev/%.cpp
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
 all: DIRS $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TARGET)  $(OBJS) main.cpp
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -o $(TARGET)  $(OBJS) main.cpp -llua -ldl
 
 test: DIRS $(OBJS)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TEST_DIR)/bench  $(OBJS) $(TEST_DIR)/bench.c

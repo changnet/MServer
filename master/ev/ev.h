@@ -47,7 +47,7 @@ public:
     ev_loop();
     ~ev_loop();
 
-    void init();
+    bool init();
     void run();
     void done();
     
@@ -89,7 +89,7 @@ private:
 private:
     void fd_change( int32 fd );
     void fd_reify();
-    void backend_init();
+    bool backend_init();
     void backend_modify( int32 fd,int32 events,ANFD *anfd );
     void time_update();
     void backend_poll( ev_tstamp timeout );

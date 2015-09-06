@@ -22,8 +22,7 @@ void cdebug_log( const char *format,... )
 
     time_t rawtime;
     time( &rawtime );
-    struct tm *ntm;
-    ntm = localtime( &rawtime );
+    struct tm *ntm = localtime( &rawtime );
 
     FILE * pf = fopen(pfile, "ab+");
     if ( !pf )
@@ -59,8 +58,7 @@ void cerror_log( const char *format,... )
 
     time_t rawtime;
     time( &rawtime );
-    struct tm *ntm;
-    ntm = localtime( &rawtime );
+    struct tm *ntm = localtime( &rawtime );
 
     FILE * pf = fopen(pfile, "ab+");
     if ( !pf )
@@ -90,7 +88,25 @@ void cerror_log( const char *format,... )
     fclose(pf);
 }
 
-void clog( const char *path,const char *msg )
+void clog( const char *path,const char *format,... )
 {
-    
+    FILE * pf = fopen(path, "ab+");
+    if ( !pf )
+    {
+        perror("clog");
+
+        va_list args;
+        va_start(args,format);
+        vfprintf(stderr,format,args);
+        va_end(args);
+
+        return;
+    }
+
+    va_list args;
+    va_start(args,format);
+    vfprintf(pf,format,args);
+    va_end(args);
+
+    fclose(pf);
 }

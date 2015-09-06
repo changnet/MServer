@@ -90,7 +90,7 @@ ev_loop::~ev_loop()
     }
 }
 
-void ev_loop::init()
+bool ev_loop::init()
 {
     assert( "loop duplicate init",!anfds && !pendings && !fdchanges && !timers );
 
@@ -112,7 +112,7 @@ void ev_loop::init()
     now_floor          = mn_now;
     rtmn_diff          = ev_rt_now - mn_now;
 
-    backend_init();
+    return backend_init();
 }
 
 void ev_loop::run()
@@ -288,7 +288,7 @@ void ev_loop::backend_modify( int32 fd,int32 events,ANFD *anfd )
     }
 }
 
-void ev_loop::backend_init()
+bool ev_loop::backend_init()
 {
 #ifdef EPOLL_CLOEXEC
     backend_fd = epoll_create1 (EPOLL_CLOEXEC);
@@ -297,11 +297,14 @@ void ev_loop::backend_init()
 #endif
     backend_fd = epoll_create (256);
 
-    assert( "ev_loop::backend_init failed",backend_fd > 0 );
+    if ( backend_fd < 0 )
+        return false;
 
     fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
 
     backend_mintime = 1e-3; /* epoll does sometimes return early, this is just to avoid the worst */
+
+    return true;
 }
 
 ev_tstamp ev_loop::get_time()

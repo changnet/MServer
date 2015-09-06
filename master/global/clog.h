@@ -3,6 +3,6 @@
 
 extern void cdebug_log( const char *format,... );
 extern void cerror_log( const char *format,... );
-extern void clog( const char *path,const char *msg );
+extern void clog( const char *path,const char *format,... );
 
 #endif  /* __CLOG_H__ */

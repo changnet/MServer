@@ -10,6 +10,7 @@
 #include <sys/types.h> /* linux sys types like pid_t */
 #include <cstring>     /* memset memcpy */
 #include <cerrno>      /* errno */
+#include <limits.h>    /* PATH_MAX */
 
 #include "../config.h" /* config paramter */
 /* assert with error msg,third parted code not include this file will work fine
@@ -50,6 +51,12 @@
     #define ERROR(...)
 #endif
 
+#ifdef _RUNTIME_
+    #define RUNTIME(...)    do{PDEBUG(__VA_ARGS__);clog( CRUNTIME_FILE,__VA_ARGS__ );}while(0)
+#else
+    #define RUNTIME(...)
+#endif
+
 /* terminated without destroying any object and without calling any of the functions passed to atexit or at_quick_exit */
 #define FATAL(...)    do{PDEBUG(__VA_ARGS__);ERROR(__VA_ARGS__);::abort();}while(0)
 
@@ -69,6 +76,12 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 
 /* will be called while process exit */
 extern void onexit();
+/* will be called while allocate memory failed with new */
+extern void new_fail();
+
+extern char cwd[PATH_MAX];    /* current work dir */
+extern char spath[PATH_MAX];  /* server path */
+extern int32 sid;             /* server id */
 extern time_t _start_tm;
 
 #endif  /* __GOLBAL_H__ */

@@ -4,6 +4,10 @@
 
 uint32 g_counter  = 0;
 uint32 g_counters = 0;
+
+char cwd[PATH_MAX] = {0};    /* current work dir */
+char spath[PATH_MAX] = {0};  /* server path */
+int32 sid = 0;               /* server id */
 time_t _start_tm = time(0);
 
 void *operator new(size_t size)
@@ -49,8 +53,14 @@ void back_trace(void)
 
 void onexit()
 {
-    DEBUG( "new counter:%d    ----   new[] counter:%d\n",g_counter,g_counters );
-    back_trace();
+    //DEBUG( "new counter:%d    ----   new[] counter:%d\n",g_counter,g_counters );
+    //back_trace();
+}
+
+void new_fail()
+{
+    ERROR( "no more memory!!!" );
+    ::abort();
 }
 
 /* test.cpp:40: int main(): log assertion `("wrong",0)' failed. */
