@@ -1,15 +1,27 @@
 #include "clog.h"
-
 #include "global.h"
 
-const char *clog_file_name( const char *name )
+/* win下不能创建带:的文件,故时间_分开 */
+const char *debug_file( )
 {
-    const uint32 size = 128;
-    static char file[size];
+    static char file[PATH_MAX];
     
     struct tm* tminfo = localtime( &_start_tm );
     
-    snprintf( file,size,"%s[%d]%04d-%02d-%02d %02d:%02d:%02d",name,
+    snprintf( file,PATH_MAX,"%s[%d]%04d-%02d-%02d#%02d_%02d_%02d",CDEBUG_FILE,
+        getpid(),tminfo->tm_year + 1900,tminfo->tm_mon + 1, tminfo->tm_mday,
+        tminfo->tm_hour, tminfo->tm_min,tminfo->tm_sec);
+
+    return file;    /* return static pointer */
+}
+
+const char *error_file( )
+{
+    static char file[PATH_MAX];
+    
+    struct tm* tminfo = localtime( &_start_tm );
+    
+    snprintf( file,PATH_MAX,"%s[%d]%04d-%02d-%02d#%02d_%02d_%02d",CERROR_FILE,
         getpid(),tminfo->tm_year + 1900,tminfo->tm_mon + 1, tminfo->tm_mday,
         tminfo->tm_hour, tminfo->tm_min,tminfo->tm_sec);
 
@@ -18,7 +30,7 @@ const char *clog_file_name( const char *name )
 
 void cdebug_log( const char *format,... )
 {
-    static const char *pfile = clog_file_name( CDEBUG_FILE );
+    static const char *pfile = debug_file();
 
     time_t rawtime;
     time( &rawtime );
@@ -54,7 +66,7 @@ void cdebug_log( const char *format,... )
 
 void cerror_log( const char *format,... )
 {
-    static const char *pfile = clog_file_name( CERROR_FILE );
+    static const char *pfile = error_file();
 
     time_t rawtime;
     time( &rawtime );
@@ -63,7 +75,7 @@ void cerror_log( const char *format,... )
     FILE * pf = fopen(pfile, "ab+");
     if ( !pf )
     {
-        perror("cdebug_log");
+        perror("cerror_log");
         fprintf(stderr, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
             (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
              ntm->tm_sec);

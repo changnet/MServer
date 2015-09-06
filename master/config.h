@@ -25,6 +25,9 @@
 /* runtime file name */
 #define CRUNTIME_FILE  "cruntimelog"
 
+/* lua enterance file */
+#define LUA_ENTERANCE    "main.lua"
+
 /* is assert work ? */
 //#define NDEBUG
 
