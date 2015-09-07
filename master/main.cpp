@@ -85,8 +85,8 @@ void runtime_start()
     time_t rawtime;
     time( &rawtime );
     struct tm *ntm = localtime( &rawtime );
-    RUNTIME( "process run as '%s %d' %lubit at %04d-%02d-%02d %02d:%02d:%02d\n",
-        spath,sid,8*sizeof(void *),(ntm->tm_year + 1900),(ntm->tm_mon + 1), 
+    RUNTIME( "process[%d] run as '%s %d' %lubit at %04d-%02d-%02d %02d:%02d:%02d\n",
+        getpid(),spath,sid,8*sizeof(void *),(ntm->tm_year + 1900),(ntm->tm_mon + 1), 
         ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec);
     RUNTIME( "lua version:%s\n",LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "." LUA_VERSION_RELEASE );
     RUNTIME( "linux:%s %s\n",buf.release,buf.version );
@@ -99,8 +99,8 @@ void runtime_stop()
     time( &rawtime );
     struct tm *ntm = localtime( &rawtime );
     
-    RUNTIME( "process '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d\n",
-        spath,sid,(ntm->tm_year + 1900),(ntm->tm_mon + 1), 
+    RUNTIME( "process[%d] '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d\n",
+        getpid(),spath,sid,(ntm->tm_year + 1900),(ntm->tm_mon + 1), 
         ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec);
 }
 
@@ -126,7 +126,7 @@ void lua_init( lua_State *L )
     const char *old_path = lua_tostring(L, -1);
 
     char new_path[PATH_MAX] = {0};
-    if ( snprintf( new_path,PATH_MAX,"%s;%s",old_path,cwd ) >= PATH_MAX )
+    if ( snprintf( new_path,PATH_MAX,"%s;%s/?.lua",old_path,cwd ) >= PATH_MAX )
     {
         ERROR( "lua init,path overflow\n" );
         lua_close( L );
@@ -171,7 +171,7 @@ int32 main( int32 argc,char **argv )
     lua_init(L);
 
     runtime_start();
-    
+
     //CTest t( &loop );
     //t.start();
     // ev_io io;
