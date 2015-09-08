@@ -6,4 +6,4 @@ print(package.path)
 local Player = require "lua.module.player.player"
 local obj_player = Player(998756)
 print( obj_player:get_pid() )
-vd( package.loaded )
+vd( oo.metatableof("lctest") )

@@ -72,6 +72,21 @@ void io_cb_ex(ev_io &w,int revents)
     std::cout << "io_cb_ex ... " << std::endl;
 }
 
+#include "lua_cpp/lclass.h"
+    class lctest
+    {
+    public:
+        lctest( lua_State *L){};
+        void show()
+        {
+            std::cout << "show test" << std::endl;
+        }
+        
+        static const char *classname;
+    };
+    
+    const char *lctest::classname = "lctest";
+
 /* 记录进程启动信息 */
 void runtime_start()
 {
@@ -180,6 +195,7 @@ int32 main( int32 argc,char **argv )
     // io.start( 0,EV_WRITE );
 
     //loop.run();
+    
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua/%s/%s",spath,LUA_ENTERANCE );
     if ( luaL_dofile(L,script_path) )
@@ -187,6 +203,12 @@ int32 main( int32 argc,char **argv )
         const char *err_msg = lua_tostring(L,-1);
         ERROR( "load lua enterance file error:%s\n",err_msg );
     }
+        lclass<lctest> lc(L);
+        if ( luaL_dofile(L,script_path) )
+        {
+            const char *err_msg = lua_tostring(L,-1);
+            ERROR( "load lua enterance file error:%s\n",err_msg );
+        }
     lua_gc(L, LUA_GCCOLLECT, 0);
     lua_close(L);
 

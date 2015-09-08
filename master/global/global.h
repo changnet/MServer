@@ -58,7 +58,7 @@
 #endif
 
 /* terminated without destroying any object and without calling any of the functions passed to atexit or at_quick_exit */
-#define FATAL(...)    do{PDEBUG(__VA_ARGS__);ERROR(__VA_ARGS__);::abort();}while(0)
+#define FATAL(...)    do{ERROR(__VA_ARGS__);::abort();}while(0)
 
 extern void __log_assert_fail (const char *__assertion, const char *__file,
            unsigned int __line, const char *__function);

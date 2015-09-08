@@ -19,7 +19,7 @@ local class_base = {}  --默认基类
 function class_base:__init()
 end
 
--- isa operator
+-- isa operator(是否从某个类继承而来或者就是该类)
 function class_base:isa(clz)
     local c = classof(self)
     while c and c ~= class_base do
@@ -29,32 +29,11 @@ function class_base:isa(clz)
     return false
 end
 --******************************************************************************
-
+-- 创建lua对象
 local function new(clz, ...)
     local obj = {}
-    local mt = rawget(clz, "_mt")
-    if not mt then
-        mt = {
-            __index        = clz,
-            __tostring    = clz.__tostring,
-            __add        = clz.__add,
-            __sub        = clz.__sub,
-            __mul        = clz.__mul,
-            __div        = clz.__div,
-            __mod        = clz.__mod,
-            __pow        = clz.__pow,
-            __unm        = clz.__unm,
-            __concat    = clz.__concat,
-            __len        = clz.__len,
-            __eq        = clz.__eq,
-            __lt        = clz.__lt,
-            __le        = clz.__le,
-            __call        = clz.__call,
-            __gc        = clz.__gc,
-        }
-        rawset(clz, "_mt", mt)
-    end
-    setmetatable(obj, mt)
+
+    setmetatable(obj, clz)
     obj:__init(...)
 
     if check_flag then                  --check
@@ -66,43 +45,88 @@ local function new(clz, ...)
     return obj
 end
 
+--创建c对象
+local function cnew(clz)
+    local obj = clz:__init() -- 在底层返回一个full userdata
+    setmetatable(obj, clz)   -- 设置其metatable
+
+    if check_flag then                  --check
+        local name = name_class_l[clz] or "none"
+        obj_list[obj] = name
+        obj_count_l[name] = (obj_count_l[name] or 0) + 1
+    end
+    
+    return obj
+end
 --******************************************************************************
+-- 声明lua对象
 function oo.class(super, name)
     local clz = {}
     if type(name) == "string" then
-        local class_name = name..'__'
-        if class_list[class_name] ~= nil then
-            clz = class_list[class_name]
-            for k,v in pairs(clz) do
+        if class_list[name] ~= nil then
+            clz = class_list[name]
+            for k,v in pairs(clz) do  --这是热更的关键
                 clz[k] = nil
             end
         else
-            class_list[class_name] = clz
+            class_list[name] = clz
         end
 
         if check_flag then                     --check
-            name_class_l[clz] = class_name
+            name_class_l[clz] = name
         end
     end
 
     super = super or class_base
     rawset(clz, "__super", super)
+    rawset(clz, "__index",clz)    --让自己成为一个metatable
     setmetatable(clz, {__index = super, __call = new})
     return clz
 end
 
+-- 声明c对象(super_name多数情况下为nil)
+function oo.cclass(super_name, name)
+    local clz = {}
+    if type(name) == "string" then
+        if class_list[name] ~= nil then
+            clz = class_list[name]
+            for k,v in pairs(clz) do  --这是热更的关键
+                clz[k] = nil
+            end
+        else
+            class_list[name] = clz
+        end
+
+        if check_flag then                     --check
+            name_class_l[clz] = name
+        end
+    end
+
+    local super = class_list[super_name] or class_base
+    rawset(clz, "__super", super)
+    rawset(clz, "__index",clz)    --让自己成为一个metatable
+    setmetatable(clz, {__index = super, __call = cnew})
+    return clz
+end
+
+-- 获取基类元表
 function oo.superclassof(clz)
     return rawget(clz, "__super")
 end
 
+-- 获取当前类元表
 function oo.classof(ob)
     return getmetatable(ob).__index
 end
 
-function oo.instanceof(ob, clz)
-    return ((ob.isa and ob:isa(clz)) == true)
+-- 获取某个类的元表
+function oo.metatableof(name)
+    vd(class_list)
+    print("====================================================")
+    return class_list[name]
 end
 
+-- 内存检查
 function oo.check(log_func)
     collectgarbage("collect")
     
