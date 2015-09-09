@@ -76,10 +76,10 @@ void io_cb_ex(ev_io &w,int revents)
     class lctest
     {
     public:
-        lctest( lua_State *L){};
-        void show()
+        int show( lua_State* L)
         {
-            std::cout << "show test" << std::endl;
+            std::cout << "show test:" << lua_gettop(L) << std::endl;
+            return 0;
         }
         
         static const char *classname;
@@ -133,7 +133,7 @@ void parse_args( int32 argc,char **argv,char *spath,int32 *psid )
 }
 
 /* 初始化lua环境 */
-void lua_init( lua_State *L )
+void lua_initenv( lua_State *L )
 {
     /* 把当前工作目录加到lua的path */
     lua_getglobal(L, "package");
@@ -152,6 +152,24 @@ void lua_init( lua_State *L )
     lua_pushstring(L, new_path);
     lua_setfield(L, -2, "path");
     lua_pop(L, 1);
+
+    /* 预加载一些lua脚本以初始化环境 */
+    char preload_path[PATH_MAX];
+    snprintf( preload_path,PATH_MAX,"lua/%s/%s",spath,LUA_PRELOAD );
+    if ( !access(preload_path,F_OK|R_OK) ) /* on success zero is returned */
+    {
+        if ( luaL_dofile(L,preload_path) )
+        {
+            const char *err_msg = lua_tostring(L,-1);
+            FATAL( "load lua preload file error:%s\n",err_msg );
+            return;
+        }
+        /* remove all elements from stack incase preload file return something */
+        lua_settop( L,0 );
+    }
+
+    /* when debug,make sure lua stack clean after init */
+    assert( "lua stack not clean after init",0 == lua_gettop(L) );
 }
 
 int32 main( int32 argc,char **argv )
@@ -183,7 +201,7 @@ int32 main( int32 argc,char **argv )
         exit( 1 );
     }
     luaL_openlibs(L);
-    lua_init(L);
+    lua_initenv(L);
 
     runtime_start();
 
@@ -195,7 +213,13 @@ int32 main( int32 argc,char **argv )
     // io.start( 0,EV_WRITE );
 
     //loop.run();
-    
+    lclass<lctest> lc(L);
+    lc.def<&lctest::show>("show");
+    lc.set("S_OK",2);
+    lctest *lobj = new lctest();
+    lclass<lctest>::push(L,lobj,true);
+    lua_setglobal(L,"lobj");
+            
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua/%s/%s",spath,LUA_ENTERANCE );
     if ( luaL_dofile(L,script_path) )
@@ -203,12 +227,8 @@ int32 main( int32 argc,char **argv )
         const char *err_msg = lua_tostring(L,-1);
         ERROR( "load lua enterance file error:%s\n",err_msg );
     }
-        lclass<lctest> lc(L);
-        if ( luaL_dofile(L,script_path) )
-        {
-            const char *err_msg = lua_tostring(L,-1);
-            ERROR( "load lua enterance file error:%s\n",err_msg );
-        }
+
+    assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
     lua_gc(L, LUA_GCCOLLECT, 0);
     lua_close(L);
 

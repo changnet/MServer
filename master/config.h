@@ -28,6 +28,9 @@
 /* lua enterance file */
 #define LUA_ENTERANCE    "main.lua"
 
+/* lua preload file */
+#define LUA_PRELOAD     "preload.lua"
+
 /* is assert work ? */
 //#define NDEBUG
 

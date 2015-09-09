@@ -24,7 +24,7 @@ function var_dump(data, max_level, prefix)
         local prefix_next = prefix .. "    "
         print(prefix .. "{")
         for k,v in pairs(data) do
-            io.stdout:write(prefix_next .. k .. " = ")
+            io.stdout:write(prefix_next .. tostring(k) .. " = ")
             if type(v) ~= "table" or (type(max_level) == "number" and max_level <= 1) then
                 print(v)
             else

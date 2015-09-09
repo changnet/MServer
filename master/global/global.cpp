@@ -53,7 +53,7 @@ void back_trace(void)
 
 void onexit()
 {
-    //DEBUG( "new counter:%d    ----   new[] counter:%d\n",g_counter,g_counters );
+    PDEBUG( "new counter:%d    ----   new[] counter:%d\n",g_counter,g_counters );
     //back_trace();
 }
 

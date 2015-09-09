@@ -48,7 +48,6 @@ end
 --创建c对象
 local function cnew(clz)
     local obj = clz:__init() -- 在底层返回一个full userdata
-    setmetatable(obj, clz)   -- 设置其metatable
 
     if check_flag then                  --check
         local name = name_class_l[clz] or "none"
@@ -121,8 +120,6 @@ end
 
 -- 获取某个类的元表
 function oo.metatableof(name)
-    vd(class_list)
-    print("====================================================")
     return class_list[name]
 end
 

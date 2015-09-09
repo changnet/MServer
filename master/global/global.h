@@ -82,6 +82,6 @@ extern void new_fail();
 extern char cwd[PATH_MAX];    /* current work dir */
 extern char spath[PATH_MAX];  /* server path */
 extern int32 sid;             /* server id */
-extern time_t _start_tm;
+extern time_t _start_tm;      /* process start timestamp */
 
 #endif  /* __GOLBAL_H__ */
