@@ -81,7 +81,9 @@ public:
         return set_classtable(L,gc);
     }
     
+    /* 提供两种不同的注册函数 */
     typedef int32 (T::*pf_t)(lua_State*);
+    typedef int32 (T::*pf_t_ex)();
 
     /* 注册函数,const char* func_name 就是注册到lua中的函数名字 */
     template <pf_t pf>
@@ -97,6 +99,26 @@ public:
         lua_pop(L, 1); /* drop field */
 
         lua_pushcfunction(L, &fun_thunk<pf>);
+        lua_setfield(L, -2, func_name);
+
+        lua_pop(L, 1); /* drop class metatable */
+
+        return *this;
+    }
+    
+    template <pf_t_ex pf>
+    lclass<T>& def(const char* func_name)
+    {
+        get_classtable(L);
+
+        lua_getfield(L, -1, func_name);
+        if ( !lua_isnil(L, -1) )
+        {
+            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+        }
+        lua_pop(L, 1); /* drop field */
+
+        lua_pushcfunction(L, &fun_thunk_ex<pf>);
         lua_setfield(L, -2, func_name);
 
         lua_pop(L, 1); /* drop class metatable */
@@ -273,6 +295,26 @@ private:
         lua_pop(L, 1);
 
         return ((*ptr)->*pf)(L);
+    }
+    
+    template <pf_t_ex pf>
+    static int fun_thunk_ex(lua_State* L)
+    {
+        if ( expect_false(!lua_isuserdata(L, 1)) ) return 0;
+
+        T** ptr = (T**)lua_touserdata(L, -1);/* get 'self', or if you prefer, 'this' */
+        if ( expect_false(ptr == NULL || *ptr == NULL) )
+        {
+            luaL_error(L, "%s calling method with null pointer", classname);
+            FATAL( "%s calling method with null pointer", classname );
+            return 0;
+        }
+        
+        /* remove self so member function args start at index 1 */
+        lua_pop(L, 1);
+        ((*ptr)->*pf)();
+
+        return 0;
     }
 private:
     lua_State *L;

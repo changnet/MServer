@@ -82,6 +82,11 @@ void io_cb_ex(ev_io &w,int revents)
             return 0;
         }
         
+        int say()
+        {
+            std::cout << "say test" << std::endl;
+            return 0;
+        }
     };
     
 
@@ -213,6 +218,7 @@ int32 main( int32 argc,char **argv )
     //loop.run();
     lclass<lctest> lc(L,"lctest");
     lc.def<&lctest::show>("show");
+    lc.def<&lctest::say>("say");
     lc.set("S_OK",2);
     lctest *lobj = new lctest();
     lclass<lctest>::push(L,lobj,true);
