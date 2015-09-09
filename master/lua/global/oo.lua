@@ -105,6 +105,11 @@ function oo.cclass(super_name, name)
     rawset(clz, "__super", super)
     rawset(clz, "__index",clz)    --让自己成为一个metatable
     setmetatable(clz, {__index = super, __call = cnew})
+    
+    -- set loaded and preload so you can require xxx,but not expose class to global
+    package.loaded[name]  = clz
+    package.preload[name] = clz
+    
     return clz
 end
 

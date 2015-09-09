@@ -10,7 +10,6 @@ vd( getmetatable(lobj) )
 lobj:show()
 print( lobj.S_OK )
 
-package.loaded["lctest"] = oo.metatableof("lctest")
 local lctest = require "lctest"
 local _lobj = lctest()
 

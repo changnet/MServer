@@ -82,10 +82,8 @@ void io_cb_ex(ev_io &w,int revents)
             return 0;
         }
         
-        static const char *classname;
     };
     
-    const char *lctest::classname = "lctest";
 
 /* 记录进程启动信息 */
 void runtime_start()
@@ -213,7 +211,7 @@ int32 main( int32 argc,char **argv )
     // io.start( 0,EV_WRITE );
 
     //loop.run();
-    lclass<lctest> lc(L);
+    lclass<lctest> lc(L,"lctest");
     lc.def<&lctest::show>("show");
     lc.set("S_OK",2);
     lctest *lobj = new lctest();
