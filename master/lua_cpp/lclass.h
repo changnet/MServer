@@ -283,7 +283,7 @@ private:
     {
         if ( expect_false(!lua_isuserdata(L, 1)) ) return 0;
 
-        T** ptr = (T**)lua_touserdata(L, -1);/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
             luaL_error(L, "%s calling method with null pointer", classname);
@@ -302,7 +302,7 @@ private:
     {
         if ( expect_false(!lua_isuserdata(L, 1)) ) return 0;
 
-        T** ptr = (T**)lua_touserdata(L, -1);/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
             luaL_error(L, "%s calling method with null pointer", classname);

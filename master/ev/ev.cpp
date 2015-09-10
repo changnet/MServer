@@ -160,7 +160,7 @@ int32 ev_loop::run()
     return 0;
 }
 
-int32 ev_loop::done()
+int32 ev_loop::quit()
 {
     loop_done = true;
     

@@ -6,14 +6,14 @@
 int luaopen_ev (lua_State *L)
 {
     lclass<backend> lc(L,"ev");
-    lc.def<&backend::run>("run");
-    lc.def<&backend::done>("done");
-    lc.def<&backend::now>("now");
+    lc.def<&backend::run> ("run");
+    lc.def<&backend::now> ("now");
+    lc.def<&backend::quit>("quit");
+    lc.def<&backend::listen>("listen");
     lc.set( "EV_READ",EV_READ );
     lc.set( "EV_WRITE",EV_WRITE );
     lc.set( "EV_TIMER",EV_TIMER );
     lc.set( "EV_ERROR",EV_ERROR );
-    std::cout << EV_TIMER << "  " << EV_ERROR << std::endl;
 
     return 0;
 }
@@ -21,7 +21,8 @@ int luaopen_ev (lua_State *L)
 ////////////////////////////////////////////////////////////////////////////////
 static int util_md5( lua_State *L )
 {
-    return 0;
+    lua_pushstring( L,"mde35dfafefsxee4r3" );
+    return 1;
 }
 
 static const luaL_Reg utillib[] =

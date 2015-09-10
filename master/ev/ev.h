@@ -49,7 +49,7 @@ public:
 
     bool init();
     int32 run();
-    int32 done();
+    int32 quit();
     
     int32 io_start( ev_io *w );
     int32 io_stop( ev_io *w );
