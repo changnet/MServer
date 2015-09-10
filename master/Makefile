@@ -21,7 +21,7 @@ MKDIR = mkdir -p
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global.o clog.o ev.o
+_OBJS = global.o clog.o ev.o lenv.o backend.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -38,6 +38,9 @@ $(ODIR)/%.o: $(SDIR)/ev/%.cpp
 $(ODIR)/%.o: $(SDIR)/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
+$(ODIR)/%.o: $(SDIR)/lua_cpp/%.cpp
+	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+
 $(ODIR)/%.o: $(TEST_DIR)/bench.c
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
@@ -51,6 +54,7 @@ all: DIRS $(OBJS) $(ODIR)/main.o
 
 test: DIRS $(OBJS) $(ODIR)/bench.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TEST_DIR)/bench  $(OBJS) $(ODIR)/bench.o
+
 DIRS:
 	$(MKDIR) $(ODIR)
 

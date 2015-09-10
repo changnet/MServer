@@ -1,6 +1,9 @@
 #include "global/global.h"
 #include "ev/ev.h"
 #include "ev/ev_watcher.h"
+#include "lua_cpp/lenv.h"
+#include "lua_cpp/lclass.h"
+#include "lua_cpp/backend.h"
 #include <lua.hpp>
 #include <sys/utsname.h> /* for uname */
 
@@ -72,24 +75,6 @@ void io_cb_ex(ev_io &w,int revents)
     std::cout << "io_cb_ex ... " << std::endl;
 }
 
-#include "lua_cpp/lclass.h"
-    class lctest
-    {
-    public:
-        int show( lua_State* L)
-        {
-            std::cout << "show test:" << lua_gettop(L) << std::endl;
-            return 0;
-        }
-        
-        int say()
-        {
-            std::cout << "say test" << std::endl;
-            return 0;
-        }
-    };
-    
-
 /* 记录进程启动信息 */
 void runtime_start()
 {
@@ -135,45 +120,6 @@ void parse_args( int32 argc,char **argv,char *spath,int32 *psid )
     *psid = atoi( argv[2] );
 }
 
-/* 初始化lua环境 */
-void lua_initenv( lua_State *L )
-{
-    /* 把当前工作目录加到lua的path */
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "path");
-    const char *old_path = lua_tostring(L, -1);
-
-    char new_path[PATH_MAX] = {0};
-    if ( snprintf( new_path,PATH_MAX,"%s;%s/?.lua",old_path,cwd ) >= PATH_MAX )
-    {
-        ERROR( "lua init,path overflow\n" );
-        lua_close( L );
-        exit( 1 );
-    }
-
-    lua_pop(L, 1);
-    lua_pushstring(L, new_path);
-    lua_setfield(L, -2, "path");
-    lua_pop(L, 1);
-
-    /* 预加载一些lua脚本以初始化环境 */
-    char preload_path[PATH_MAX];
-    snprintf( preload_path,PATH_MAX,"lua/%s/%s",spath,LUA_PRELOAD );
-    if ( !access(preload_path,F_OK|R_OK) ) /* on success zero is returned */
-    {
-        if ( luaL_dofile(L,preload_path) )
-        {
-            const char *err_msg = lua_tostring(L,-1);
-            FATAL( "load lua preload file error:%s\n",err_msg );
-            return;
-        }
-        /* remove all elements from stack incase preload file return something */
-        lua_settop( L,0 );
-    }
-
-    /* when debug,make sure lua stack clean after init */
-    assert( "lua stack not clean after init",0 == lua_gettop(L) );
-}
 
 int32 main( int32 argc,char **argv )
 {
@@ -208,6 +154,11 @@ int32 main( int32 argc,char **argv )
 
     runtime_start();
 
+    class backend _backend;
+    _backend.set( &loop,L );
+    
+    lclass<backend>::push( L,&_backend,false );
+    lua_setglobal( L,"ev" );
     //CTest t( &loop );
     //t.start();
     // ev_io io;
@@ -216,13 +167,6 @@ int32 main( int32 argc,char **argv )
     // io.start( 0,EV_WRITE );
 
     //loop.run();
-    lclass<lctest> lc(L,"lctest");
-    lc.def<&lctest::show>("show");
-    lc.def<&lctest::say>("say");
-    lc.set("S_OK",2);
-    lctest *lobj = new lctest();
-    lclass<lctest>::push(L,lobj,true);
-    lua_setglobal(L,"lobj");
             
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua/%s/%s",spath,LUA_ENTERANCE );

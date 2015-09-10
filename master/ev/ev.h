@@ -48,8 +48,8 @@ public:
     ~ev_loop();
 
     bool init();
-    void run();
-    void done();
+    int32 run();
+    int32 done();
     
     int32 io_start( ev_io *w );
     int32 io_stop( ev_io *w );

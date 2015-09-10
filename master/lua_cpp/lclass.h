@@ -81,7 +81,7 @@ public:
         return set_classtable(L,gc);
     }
     
-    /* 提供两种不同的注册函数 */
+    /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
     typedef int32 (T::*pf_t)(lua_State*);
     typedef int32 (T::*pf_t_ex)();
 
@@ -312,9 +312,8 @@ private:
         
         /* remove self so member function args start at index 1 */
         lua_pop(L, 1);
-        ((*ptr)->*pf)();
 
-        return 0;
+        return ((*ptr)->*pf)();
     }
 private:
     lua_State *L;

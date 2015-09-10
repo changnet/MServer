@@ -115,7 +115,7 @@ bool ev_loop::init()
     return backend_init();
 }
 
-void ev_loop::run()
+int32 ev_loop::run()
 {
     assert( "backend uninit",backend_fd >= 0 );
 
@@ -156,11 +156,15 @@ void ev_loop::run()
   
         invoke_pending ();
     }    /* while */
+    
+    return 0;
 }
 
-void ev_loop::done()
+int32 ev_loop::done()
 {
     loop_done = true;
+    
+    return 0;
 }
 
 int32 ev_loop::io_start( ev_io *w )
