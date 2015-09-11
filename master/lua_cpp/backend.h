@@ -40,17 +40,28 @@ public:
     }
 
 private:
+    typedef struct
+    {
+        ev_io *w;
+        int32 cb;  /* lua luaL_ref index */
+    }ANIO;  /* AN = array node */
+    
+    typedef struct
+    {
+        ev_timer *w;
+        int32 cb;
+    }ANTIMER;
+
+    typedef ev_timer *ptimer;
+
     class ev_loop *loop;
     lua_State *L;
     
-    typedef ev_io *pio;
-    typedef ev_timer *ptimer;
-
-    pio *iolist;
+    ANIO *iolist;
     int32 iolistmax;
     int32 iolistcnt;
 
-    ptimer *timerlist;
+    ANTIMER *timerlist;
     int32 timerlistmax;
     int32 timerlistcnt;
 };

@@ -40,7 +40,6 @@ ev_loop::ev_loop()
 {
     anfds = NULL;
     anfdmax = 0;
-    anfdcnt = 0;
     
     pendings = NULL;
     pendingmax = 0;

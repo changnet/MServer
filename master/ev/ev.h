@@ -64,7 +64,6 @@ private:
     volatile bool loop_done;
     ANFD *anfds;
     uint32 anfdmax;
-    uint32 anfdcnt;
     
     ANPENDING *pendings;
     uint32 pendingmax;

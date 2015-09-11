@@ -9,7 +9,13 @@ vd( getmetatable(ev) )
 print( ev,ev:now() )
 print( util.md5() )
 
-local ev_io = ev:listen("0.0.0.0",9997)
+local t = {}
+t.cb = 
+function ()
+    print("cb =======================")
+end
+
+local ev_io = ev:listen("0.0.0.0",9997,t.cb)
 print( ev_io )
 if not ev_io then
     print("listen fail")

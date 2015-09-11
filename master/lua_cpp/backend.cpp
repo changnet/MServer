@@ -2,7 +2,7 @@
 
 #define ARRAY_CHUNK    2048
 
-#define array_resize(type,base,cur,cnt)    \
+#define array_resize(type,base,cur,cnt,init)    \
     if ( expect_false((cnt) > (cur)) )          \
     {                                           \
         int32 size = cur;                       \
@@ -11,46 +11,55 @@
             size *= 2;                          \
         }                                       \
         type *tmp = new type[size];             \
+        init( tmp,sizeof(type)*size );          \
         memcpy( tmp,base,sizeof(type)*cur );    \
         delete []base;                          \
         base = tmp;                             \
         cur = size;                             \
     }
 
+#define EMPTY(base,size)
+#define array_zero(base,size)    \
+    memset ((void *)(base), 0, size)
+
 backend::backend()
 {
     loop = NULL;
     L    = NULL;
     
-    iolist = new pio[ARRAY_CHUNK];
+    iolist = new ANIO[ARRAY_CHUNK];
     iolistmax = ARRAY_CHUNK;
-    iolistcnt = 0;
 
-    timerlist = new ptimer[ARRAY_CHUNK];
+    timerlist = new ANTIMER[ARRAY_CHUNK];
     timerlistmax = ARRAY_CHUNK;
     timerlistcnt = 0;
 }
 
 backend::~backend()
 {
-    while ( iolistcnt-- )
+    ev_io *w = NULL;
+    while ( iolistmax-- )
     {
-        ev_io *w = iolist[iolistcnt];
-        w->stop();
-        delete w;
+        ANIO *anio = iolist + iolistmax;
+        if ( (w = anio->w) )
+        {
+            luaL_unref( L,LUA_REGISTRYINDEX,anio->cb );
+            (anio->w)->stop();
+            delete w;
+        }
     }
     
     while ( timerlistcnt-- )
     {
-        ev_timer *w = timerlist[timerlistcnt];
-        w->stop();
-        delete w;
+        // TODO
+        // ANTIMER*antimer = timerlist + timerlistcnt;
+        // w->stop();
+        // delete w;
     }
     
     delete []iolist;
     iolist = NULL;
     iolistmax = 0;
-    iolistcnt = 0;
     
     delete []timerlist;
     timerlist = NULL;
@@ -86,9 +95,14 @@ int32 backend::now()
 /* 监听端口 */
 int32 backend::listen()
 {
-    std::cout << lua_gettop(L) << std::endl;
     const char *addr = luaL_checkstring( L,1 );
     int32 port = luaL_checkinteger( L,2 );
+    if ( !lua_isfunction( L,3 ) )
+    {
+        luaL_error( L,"third argument,function expect" );
+        lua_pushnil(L);
+        return 1;
+    }
 
     int32 fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if ( fd < 0 )
@@ -150,11 +164,15 @@ int32 backend::listen()
     w->set( loop );
     w->set<backend,&backend::listen_cb>( this );
     w->start( fd,EV_READ );
+
+    lua_pushvalue( L,-1 ); /* 把函数复制一份 */
+    /* pops a value from the stack, stores it into the registry with a fresh integer key, and returns that key */
+    int32 ref = luaL_ref( L,LUA_REGISTRYINDEX );
+    array_resize( ANIO,iolist,iolistmax,fd + 1,array_zero );
     
-    /* iolistcnt 从0开始 */
-    ++iolistcnt;
-    array_resize( pio,iolist,iolistmax,iolistcnt );
-    iolist[iolistcnt-1] = w;
+    assert( "dirty watcher detected!!\n",!(iolist[fd].w) );
+    iolist[fd].w  = w;
+    iolist[fd].cb = ref;
 
     lua_pushlightuserdata( L,(void*)w );
     return 1;
@@ -163,6 +181,15 @@ int32 backend::listen()
 /* 监听回调 */
 void backend::listen_cb( ev_io &w,int revents )
 {
+    int32 fd = w.fd;
+    int32 ref = iolist[fd].cb;
+    
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+    if ( expect_false( LUA_OK != lua_pcall(L,0,0,0) ) )
+    {
+        FATAL( "listen_cb fail:%s\n",lua_tostring(L,-1) );
+        return;
+    }
 }
 
 /*
