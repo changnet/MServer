@@ -17,11 +17,14 @@ class backend
 {
 public:
     explicit backend();
+    ~backend();
 
     int32 run ();
     int32 quit();
     int32 now ();
     int32 listen();
+    void listen_cb( ev_io &w,int revents );
+    void connect_cb( ev_io &w,int32 revents );
 
     void set( ev_loop *loop,lua_State *L );
     

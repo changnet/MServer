@@ -292,7 +292,7 @@ private:
         }
         
         /* remove self so member function args start at index 1 */
-        lua_pop(L, 1);
+        lua_remove(L, 1);
 
         return ((*ptr)->*pf)(L);
     }
@@ -311,7 +311,7 @@ private:
         }
         
         /* remove self so member function args start at index 1 */
-        lua_pop(L, 1);
+        lua_remove(L, 1);
 
         return ((*ptr)->*pf)();
     }

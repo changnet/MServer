@@ -1,9 +1,61 @@
 #include "backend.h"
 
+#define ARRAY_CHUNK    2048
+
+#define array_resize(type,base,cur,cnt)    \
+    if ( expect_false((cnt) > (cur)) )          \
+    {                                           \
+        int32 size = cur;                       \
+        while ( size < cnt )                    \
+        {                                       \
+            size *= 2;                          \
+        }                                       \
+        type *tmp = new type[size];             \
+        memcpy( tmp,base,sizeof(type)*cur );    \
+        delete []base;                          \
+        base = tmp;                             \
+        cur = size;                             \
+    }
+
 backend::backend()
 {
     loop = NULL;
     L    = NULL;
+    
+    iolist = new pio[ARRAY_CHUNK];
+    iolistmax = ARRAY_CHUNK;
+    iolistcnt = 0;
+
+    timerlist = new ptimer[ARRAY_CHUNK];
+    timerlistmax = ARRAY_CHUNK;
+    timerlistcnt = 0;
+}
+
+backend::~backend()
+{
+    while ( iolistcnt-- )
+    {
+        ev_io *w = iolist[iolistcnt];
+        w->stop();
+        delete w;
+    }
+    
+    while ( timerlistcnt-- )
+    {
+        ev_timer *w = timerlist[timerlistcnt];
+        w->stop();
+        delete w;
+    }
+    
+    delete []iolist;
+    iolist = NULL;
+    iolistmax = 0;
+    iolistcnt = 0;
+    
+    delete []timerlist;
+    timerlist = NULL;
+    timerlistmax = 0;
+    timerlistcnt = 0;
 }
 
 void backend::set( ev_loop *loop,lua_State *L )
@@ -42,7 +94,7 @@ int32 backend::listen()
     if ( fd < 0 )
     {
         luaL_error( L,"create socket fail" );
-        lua_pushboolean( L,0 );
+        lua_pushnil(L);
         return 1;
     }
     
@@ -58,7 +110,7 @@ int32 backend::listen()
     {
         close( fd );
         luaL_error( L,"setsockopt SO_REUSEADDR fail" );
-        lua_pushboolean( L,0 );
+        lua_pushnil(L);
         return 1;
     }
     
@@ -66,7 +118,7 @@ int32 backend::listen()
     {
         close( fd );
         luaL_error( L,"set socket noblock fail" );
-        lua_pushboolean( L,0 );
+        lua_pushnil(L);
         return 1;
     }
 
@@ -81,7 +133,7 @@ int32 backend::listen()
         close( fd );
 
         luaL_error( L,"bind socket fail" );
-        lua_pushboolean( L,0 );
+        lua_pushnil(L);
         return 1;
     }
 
@@ -90,10 +142,39 @@ int32 backend::listen()
         close( fd );
         luaL_error( L,"listen fail" );
         
-        lua_pushboolean( L,0 );
+        lua_pushnil(L);
         return 1;
     }
 
-    lua_pushboolean( L,1 );
+    ev_io *w = new ev_io();
+    w->set( loop );
+    w->set<backend,&backend::listen_cb>( this );
+    w->start( fd,EV_READ );
+    
+    /* iolistcnt 从0开始 */
+    ++iolistcnt;
+    array_resize( pio,iolist,iolistmax,iolistcnt );
+    iolist[iolistcnt-1] = w;
+
+    lua_pushlightuserdata( L,(void*)w );
     return 1;
+}
+
+/* 监听回调 */
+void backend::listen_cb( ev_io &w,int revents )
+{
+}
+
+/*
+ * connect回调
+ * man connect
+ * It is possible to select(2) or poll(2) for completion by selecting the socket
+ * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to 
+ * read the SO_ERROR option at level SOL_SOCKET to determine whether connect() 
+ * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one 
+ * of  the  usual  error  codes  listed  here,explaining the reason for the failure)
+ */
+void backend::connect_cb( ev_io &w,int32 revents )
+{
+
 }
