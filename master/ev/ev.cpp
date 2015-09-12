@@ -234,12 +234,12 @@ void ev_loop::fd_reify()
                但只要event不变，则不需要更改epoll */
             if ( anfd->emask == events ) /* no reification */
                 continue;
-            backend_modify( fd,events,anfd );
+            backend_modify( fd,events,anfd->reify );
             anfd->emask = events;
         }break;
         case EPOLL_CTL_DEL :
             /* 此时watcher可能已被delete */
-            backend_modify( fd,0,anfd );
+            backend_modify( fd,0,anfd->reify );
             anfd->emask = 0;
             break;
         default :
@@ -251,7 +251,14 @@ void ev_loop::fd_reify()
     fdchangecnt = 0;
 }
 
-void ev_loop::backend_modify( int32 fd,int32 events,ANFD *anfd )
+/* event loop 只是监听fd，不负责fd的打开或者关闭。
+ * 但是，如果一个fd被关闭，epoll会自动解除监听，而我们并不知道它是否已解除。
+ * 因此，在处理EPOLL_CTL_DEL时，返回EBADF表明是自动解除。或者在epoll_ctl之前
+ * 调用fcntl(fd,F_GETFD)判断fd是否被关闭，但效率与直接调用epoll_ctl一样。
+ * libev和libevent均采用类似处理方法。但它们由于考虑dup、fork、thread等特性，
+ * 处理更为复杂。
+ */
+void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
 {
     struct epoll_event ev;
     
@@ -262,12 +269,14 @@ void ev_loop::backend_modify( int32 fd,int32 events,ANFD *anfd )
     /* The default behavior for epoll is Level Triggered. */
     /* LT同时支持block和no-block，持续通知 */
     /* ET只支持no-block，一个事件只通知一次 */
-    if ( expect_true (!epoll_ctl(backend_fd,anfd->reify,fd,&ev)) )
+    if ( expect_true (!epoll_ctl(backend_fd,reify,fd,&ev)) )
         return;
 
     switch ( errno )
     {
     case EBADF  :
+        if ( EPOLL_CTL_DEL == reify )
+            return;
         assert ( "ev_loop::backend_modify EBADF",false );
         break;
     case EEXIST :
@@ -331,11 +340,6 @@ ev_tstamp ev_loop::get_clock()
     struct timespec ts;
     clock_gettime (CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec * 1e-9;
-}
-
-ev_tstamp ev_loop::ev_now()
-{
-    return ev_rt_now;
 }
 
 void ev_loop::time_update()

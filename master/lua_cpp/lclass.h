@@ -70,7 +70,7 @@ public:
         assert( "push null obj",obj );
 
         /* 这里只是创建一个指针给lua管理，可以换用placement new把整个对象的
-           内存都给lua管理 
+           内存都给lua管理
         */
         T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
@@ -281,7 +281,11 @@ private:
     template <pf_t pf>
     static int fun_thunk(lua_State* L)
     {
-        if ( expect_false(!lua_isuserdata(L, 1)) ) return 0;
+        if ( expect_false(!lua_isuserdata(L, 1)) )
+        {
+            luaL_error( L,"fun_thunk userdata expected" );
+            return 0;
+        }
 
         T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
@@ -300,7 +304,11 @@ private:
     template <pf_t_ex pf>
     static int fun_thunk_ex(lua_State* L)
     {
-        if ( expect_false(!lua_isuserdata(L, 1)) ) return 0;
+        if ( expect_false(!lua_isuserdata(L, 1)) )
+        {
+            luaL_error( L,"fun_thunk_ex userdata expected" );
+            return 0;
+        }
 
         T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )

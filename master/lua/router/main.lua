@@ -9,15 +9,18 @@ vd( getmetatable(ev) )
 print( ev,ev:now() )
 print( util.md5() )
 
+local ev_io = nil
+
 local t = {}
-t.cb = 
-function ()
-    print("cb =======================")
+t.cb =
+function ( conn )
+    print( "cb =======================",conn )
+    ev:io_kill( ev_io )
 end
 
-local ev_io = ev:listen("0.0.0.0",9997,t.cb)
-print( ev_io )
-if not ev_io then
-    print("listen fail")
-end
+
+ev_io = ev:listen("0.0.0.0",9997,t.cb)
+
+print("listen " .. ev_io )
+
 ev:run()

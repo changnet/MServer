@@ -27,8 +27,8 @@ backend::backend()
     loop = NULL;
     L    = NULL;
     
-    iolist = new ANIO[ARRAY_CHUNK];
-    iolistmax = ARRAY_CHUNK;
+    anios = new ANIO[ARRAY_CHUNK];
+    aniomax = ARRAY_CHUNK;
 
     timerlist = new ANTIMER[ARRAY_CHUNK];
     timerlistmax = ARRAY_CHUNK;
@@ -37,15 +37,15 @@ backend::backend()
 
 backend::~backend()
 {
-    ev_io *w = NULL;
-    while ( iolistmax-- )
+    while ( aniomax-- )
     {
-        ANIO *anio = iolist + iolistmax;
-        if ( (w = anio->w) )
+        ANIO anio = anios[aniomax];
+        if ( anio )
         {
-            luaL_unref( L,LUA_REGISTRYINDEX,anio->cb );
-            (anio->w)->stop();
-            delete w;
+            anio->stop( L );
+            
+            delete anio;
+            anios[aniomax] = NULL;
         }
     }
     
@@ -57,9 +57,9 @@ backend::~backend()
         // delete w;
     }
     
-    delete []iolist;
-    iolist = NULL;
-    iolistmax = 0;
+    delete []anios;
+    anios = NULL;
+    aniomax = 0;
     
     delete []timerlist;
     timerlist = NULL;
@@ -88,7 +88,7 @@ int32 backend::quit()
 /* 获取当前时间戳 */
 int32 backend::now()
 {
-    lua_pushinteger( L,999 );
+    lua_pushinteger( L,loop->now() );
     return 1;
 }
 
@@ -160,35 +160,90 @@ int32 backend::listen()
         return 1;
     }
 
-    ev_io *w = new ev_io();
+    ev_socket *w = new ev_socket();
     w->set( loop );
     w->set<backend,&backend::listen_cb>( this );
     w->start( fd,EV_READ );
 
     lua_pushvalue( L,-1 ); /* 把函数复制一份 */
     /* pops a value from the stack, stores it into the registry with a fresh integer key, and returns that key */
-    int32 ref = luaL_ref( L,LUA_REGISTRYINDEX );
-    array_resize( ANIO,iolist,iolistmax,fd + 1,array_zero );
+    w->ref = luaL_ref( L,LUA_REGISTRYINDEX );
+    array_resize( ANIO,anios,aniomax,fd + 1,array_zero );
     
-    assert( "dirty watcher detected!!\n",!(iolist[fd].w) );
-    iolist[fd].w  = w;
-    iolist[fd].cb = ref;
+    assert( "listen,dirty ANIO detected!!\n",!(anios[fd]) );
+    anios[fd] = w;
 
-    lua_pushlightuserdata( L,(void*)w );
+    lua_pushinteger( L,fd );
     return 1;
+}
+
+/* 从lua层停止一个io watcher */
+int32 backend::io_kill()
+{
+    int32 fd = luaL_checkinteger( L,1 );
+    if ( (fd > aniomax - 1) || !anios[fd] )
+    {
+        luaL_error( L,"io_kill got illegal fd" );
+        return 0;
+    }
+
+    ev_socket *w = anios[fd];
+    anios[fd] = NULL;
+    w->stop( L );
+
+    return 0;
 }
 
 /* 监听回调 */
 void backend::listen_cb( ev_io &w,int revents )
 {
-    int32 fd = w.fd;
-    int32 ref = iolist[fd].cb;
-    
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-    if ( expect_false( LUA_OK != lua_pcall(L,0,0,0) ) )
+    if ( EV_ERROR & revents )
     {
-        FATAL( "listen_cb fail:%s\n",lua_tostring(L,-1) );
+        FATAL( "listen_cb libev error,abort .. \n" );
         return;
+    }
+
+    ev_socket *s = static_cast<ev_socket *>(&w);
+    int32 fd  = s->fd;
+    int32 ref = s->ref;
+    
+    while ( s->is_active() )
+    {
+        struct sockaddr_in addr;
+        memset( &addr, 0, sizeof(struct sockaddr_in));
+        socklen_t len = sizeof(struct sockaddr_in);
+
+        int32 new_fd = ::accept( fd,(struct sockaddr*)&addr,&len );
+        if ( new_fd < 0 )
+        {
+            if ( EAGAIN != errno && EWOULDBLOCK != errno )
+            {
+                FATAL( "accept fail:%s\n",strerror(errno) );
+                return;
+            }
+            
+            break;  /* 所有等待的连接已处理完 */
+        }
+
+        noblock( new_fd );
+
+        ev_socket *_w = new ev_socket();
+        _w->fd  = new_fd;
+        _w->ref = 0;
+        memcpy( &(_w->addr),&addr,len );
+        
+        array_resize( ANIO,anios,aniomax,new_fd + 1,array_zero );
+        
+        assert( "accept,dirty ANIO detected!!\n",!(anios[new_fd]) );
+        anios[new_fd] = _w;
+        
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+        lua_pushinteger( L,new_fd );
+        if ( expect_false( LUA_OK != lua_pcall(L,1,0,0) ) )
+        {
+            FATAL( "listen_cb fail:%s\n",lua_tostring(L,-1) );
+            return;
+        }
     }
 }
 
@@ -196,12 +251,17 @@ void backend::listen_cb( ev_io &w,int revents )
  * connect回调
  * man connect
  * It is possible to select(2) or poll(2) for completion by selecting the socket
- * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to 
- * read the SO_ERROR option at level SOL_SOCKET to determine whether connect() 
- * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one 
+ * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to
+ * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
+ * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
  * of  the  usual  error  codes  listed  here,explaining the reason for the failure)
  */
 void backend::connect_cb( ev_io &w,int32 revents )
 {
 
+}
+
+int32 backend::io_start()
+{
+    return 0;
 }

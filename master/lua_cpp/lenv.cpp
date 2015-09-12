@@ -10,6 +10,7 @@ int luaopen_ev (lua_State *L)
     lc.def<&backend::now> ("now");
     lc.def<&backend::quit>("quit");
     lc.def<&backend::listen>("listen");
+    lc.def<&backend::io_kill>("io_kill");
     lc.set( "EV_READ",EV_READ );
     lc.set( "EV_WRITE",EV_WRITE );
     lc.set( "EV_TIMER",EV_TIMER );

@@ -11,7 +11,7 @@
 
 #include "../global/global.h"
 #include "../ev/ev.h"
-#include "../ev/ev_watcher.h"
+#include "lev.h"
 
 class backend
 {
@@ -25,6 +25,9 @@ public:
     int32 listen();
     void listen_cb( ev_io &w,int revents );
     void connect_cb( ev_io &w,int32 revents );
+    int32 io_kill();
+    int32 io_start();
+    int32 timer_kill();
 
     void set( ev_loop *loop,lua_State *L );
     
@@ -38,28 +41,21 @@ public:
 
         return fcntl( fd, F_SETFL, flags);
     }
-
 private:
-    typedef struct
-    {
-        ev_io *w;
-        int32 cb;  /* lua luaL_ref index */
-    }ANIO;  /* AN = array node */
     
     typedef struct
     {
         ev_timer *w;
-        int32 cb;
+        int32 ref;
     }ANTIMER;
 
-    typedef ev_timer *ptimer;
+    typedef ev_socket *ANIO;/* AN = array node */
 
     class ev_loop *loop;
     lua_State *L;
     
-    ANIO *iolist;
-    int32 iolistmax;
-    int32 iolistcnt;
+    ANIO *anios;
+    int32 aniomax;
 
     ANTIMER *timerlist;
     int32 timerlistmax;

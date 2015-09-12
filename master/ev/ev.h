@@ -59,7 +59,10 @@ public:
     
     static ev_tstamp get_time();
     static ev_tstamp get_clock();
-    ev_tstamp ev_now();
+    inline ev_tstamp now()
+    {
+        return ev_rt_now;
+    }
 private:
     volatile bool loop_done;
     ANFD *anfds;
@@ -89,7 +92,7 @@ private:
     void fd_change( int32 fd );
     void fd_reify();
     bool backend_init();
-    void backend_modify( int32 fd,int32 events,ANFD *anfd );
+    void backend_modify( int32 fd,int32 events,int32 reify );
     void time_update();
     void backend_poll( ev_tstamp timeout );
     void fd_event( int32 fd,int32 revents );
