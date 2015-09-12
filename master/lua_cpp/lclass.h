@@ -6,6 +6,10 @@
  *
  * 本代码使用gc控制的原因是交给lua控制的只是一个对象指针，对象内存仍由c层管理。这样
  * 在lua层中的指针被销毁，对象仍能在c层继续使用。又或者push的对象不是new出来的。
+ *
+ * light userdata是有metatable的，但是全局共用一个。所以，如果需要把light userdata
+ * 传到lua层，是没法确认其类型的。执行强转时容易coredump。需要设计一个全局metatable，
+ * 以light userdata为key,v为类型来确定类型。
  */
 
 /* 注册struct、class到lua，适用于在lua创建c、c++对象 */
@@ -21,47 +25,25 @@ public:
         :L(L)
     {
         classname = _classname;
-        /* lua 5.3的get函数基本返回类型，而5.1基本为void。需要另外调用check函数 */
-        lua_getglobal( L,"oo" );
-        if ( expect_false(!lua_istable( L,-1 ))  )
+        /* lua 5.3的get函数基本返回类型，而5.1基本为void。需要另外调用is函数 */
+        
+        if ( 0 == luaL_newmetatable( L,classname ) )
         {
-            FATAL( "unable to get lua script oo\n" );
+            FATAL( "dumplicate define class %s\n",classname );
             return;
         }
 
-        lua_getfield(L,-1,"cclass");
-        if ( expect_false(!lua_isfunction( L,-1 )) )
-        {
-            FATAL( "unable to get function 'class' in lua script\n" );
-            return;
-        }
-        
-        lua_pushstring( L,super ); /* If s is NULL, pushes nil and returns NULL */
-        lua_pushstring( L,classname ); /* third argument as class name */
-        
-        /* call oo.cclass( self,super,T::className ) */
-        if ( expect_false( LUA_OK != lua_pcall(L,2,1,0) ) )
-        {
-            FATAL( "call oo.class fail:%s\n",lua_tostring(L,-1) );
-            return;
-        }
-        /* oo.cclass should return a table on stack now,the original metatable */
-        lua_pushcfunction(L, init);
-        lua_setfield(L, -2, "__init");
-        
+        lua_pushcfunction(L, cnew);
+        lua_setfield(L, -2, "__call");
+
         lua_pushcfunction(L, gc);
         lua_setfield(L, -2, "__gc");
-        
-        lua_pushstring(L, classname);
-        lua_setfield(L, -2, "_name_");
-        
+
         lua_pushcfunction(L, tostring);
         lua_setfield(L, -2, "__tostring");
-        
+
         /* metatable as value and pop metatable */
-        lua_setfield(L, -2, "__index");
-        
-        lua_pop(L,1);/* pop oo from stack */
+        lua_setfield(L, -1, "__index");
     }
     
     /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete */
@@ -75,10 +57,26 @@ public:
         T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
 
-        get_classtable(L);
-        /* metatable on stack now,even it maybe nil */
+        luaL_getmetatable( L,classname );
+        /* metatable on stack now,can not be nil */
 
-        return set_classtable(L,gc);
+        /* 如果不自动gc，则需要在metatable中设置一张名为_notgc的表。以userdata
+           weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的
+        */
+        if ( !gc )
+        {
+            subtable(L, 2, "_notgc", "k");
+
+            lua_pushvalue(L,1);  /* 复制userdata到栈顶 */
+            lua_pushboolean(L,0); /* do not delete memory */
+            lua_settable(L,-3);  /* _notgc[userdata] = 1 and pop _notgc table*/
+
+            lua_pop(L, 1); /* drop _notgc out of stack */
+        }
+
+        lua_setmetatable( L,-2 );
+        init( L );
+        return 1;
     }
     
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
@@ -89,7 +87,7 @@ public:
     template <pf_t pf>
     lclass<T>& def(const char* func_name)
     {
-        get_classtable(L);
+        luaL_getmetatable( L,classname );
 
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
@@ -109,7 +107,7 @@ public:
     template <pf_t_ex pf>
     lclass<T>& def(const char* func_name)
     {
-        get_classtable(L);
+        luaL_getmetatable( L,classname );
 
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
@@ -129,7 +127,7 @@ public:
     /* 注册变量,通常用于设置宏定义、枚举 */
     lclass<T>& set(const char* val_name, int32 val)
     {
-        get_classtable(L);
+        luaL_getmetatable( L,classname );
 
         lua_getfield(L, -1, val_name);
         if(!lua_isnil(L, -1))
@@ -146,8 +144,8 @@ public:
         return *this;
     }
 private:
-    /* 初始化函数，在lua中的__init */
-    static int init(lua_State* L)
+    /* 创建c对象 */
+    static int cnew(lua_State* L)
     {
         T* obj = new T();
         
@@ -157,21 +155,46 @@ private:
         /* 把新创建的userdata和元表交换堆栈位置 */
         lua_insert(L,1);
 
-        /* lua无法给userdata设metatable */
-        return set_classtable( L,true );
+        /* lua无法更改userdata的metatable */
+        lua_setmetatable(L, -2);
+        
+        init( L );
+        return 1;
+    }
+    
+    /* 在创建或push一个c对象时，需要调用oo.cinit来统计.如果不需要，则此函数可以不用 */
+    static int init(lua_State *L)
+    {
+        lua_getglobal( L,"oo" );
+        if ( expect_false(!lua_istable( L,-1 ))  )
+        {
+            luaL_error( L,"unable to get lua script oo" );
+            return 0;
+        }
+
+        lua_getfield(L,-1,"cinit");
+        if ( expect_false(!lua_isfunction( L,-1 )) )
+        {
+            luaL_error( L,"unable to get function 'cinit' in lua script" );
+            return 0;
+        }
+
+        lua_remove( L,-2 );  /* drop oo */
+        lua_pushvalue( L,1 );
+        /* call oo.cinit( cobj ) */
+        if ( expect_false( LUA_OK != lua_pcall(L,1,0,0) ) )
+        {
+            luaL_error( L,"call oo.cinit fail:%s",lua_tostring(L,-1) );
+            return 0;
+        }
+
+        return 0;
     }
     
     /* 元方法,__tostring */
     static int tostring(lua_State* L)
     {
-        if( !lua_isuserdata(L, 1) )
-        {
-            luaL_error( L,"unable to call %s::tostring,userdata expected",classname );
-            ERROR( "unable to call %s:tostring,userdata expected\n",classname );
-            return 0;
-        }
-
-        T** ptr = (T**)lua_touserdata(L, -1);
+        T** ptr = (T**)luaL_checkudata(L, 1,classname);
         if(ptr != NULL)
         {
             lua_pushfstring(L, "%s: %p", classname, *ptr);
@@ -193,7 +216,7 @@ private:
                 return 0;
         }
 
-        T** ptr = (T**)lua_touserdata(L, 1);
+        T** ptr = (T**)luaL_checkudata(L, 1,classname);
         if ( *ptr != NULL )
             delete *ptr;
         *ptr = NULL;
@@ -228,79 +251,10 @@ private:
         }
     }
     
-    /* 将当前类的元表压栈 */
-    static int get_classtable(lua_State* L)
-    {
-        lua_getglobal(L, "oo");
-        if ( expect_false(!lua_istable( L,lua_gettop(L) ))  )
-        {
-            FATAL( "get_classtable unable to get lua script oo\n" );
-            return 0;
-        }
-
-        lua_getfield(L, -1, "metatableof");
-        if ( expect_false(!lua_isfunction( L,lua_gettop(L) ))  )
-        {
-            FATAL( "get_classtable can not get class metatable(metatableof)\n" );
-            return 0;
-        }
-
-        lua_pushstring( L,classname ); /* third argument as class name */
-        if ( expect_false( LUA_OK != lua_pcall(L,1,1,0) ) )
-        {
-            FATAL( "call oo.metatableof fail:%s\n",lua_tostring(L,-1) );
-            return 0;
-        }
-        
-        lua_remove( L,-2 ); /* drop oo */
-        return 1;
-    }
-    
-    /* 设置压栈对象的metatable */
-    static int set_classtable(lua_State *L,bool gc)
-    {
-        /* 如果不自动gc，则需要在metatable中设置一张名为_notgc的表。以userdata为key的
-        weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的 */
-        if ( !gc )
-        {
-            subtable(L, 2, "_notgc", "k");
-
-            lua_pushvalue(L,1);  /* 复制userdata到栈顶 */
-            lua_pushboolean(L,0); /* do not delete memory */
-            lua_settable(L,-3);  /* _notgc[userdata] = 1 and pop _notgc table*/
-            
-            lua_pop(L, 1); /* drop _notgc out of stack */
-        }
-
-        /* 此时又是metatable在栈顶 */
-        lua_setmetatable(L, 1); /* 共享预先生成的元表并弹出metatable */
-
-        return 1;
-    }
-    
     template <pf_t pf>
     static int fun_thunk(lua_State* L)
     {
-        if ( expect_false(!lua_isuserdata(L, 1)) )
-        {
-            luaL_error( L,"fun_thunk userdata expected" );
-            return 0;
-        }
-        
-        if ( LUA_TNIL == luaL_getmetafield( L,1,"_name_" ) )
-        {
-            luaL_error( L,"fun_thunk,%s expected",classname );
-            return 0;
-        }
-        const char *name = lua_tostring( L,-1 );
-        if ( 0 != strcmp( name,classname ) )
-        {
-            luaL_error( L,"fun_thunk,%s expected,got %s",classname,name );
-            return 0;
-        }
-        lua_pop( L,1 );  /*drop _name_ */
-
-        T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)luaL_checkudata( L, 1,classname );/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
             luaL_error(L, "%s calling method with null pointer", classname);
@@ -317,26 +271,7 @@ private:
     template <pf_t_ex pf>
     static int fun_thunk_ex(lua_State* L)
     {
-        if ( expect_false(!lua_isuserdata(L, 1)) )
-        {
-            luaL_error( L,"fun_thunk_ex userdata expected" );
-            return 0;
-        }
-        
-        if ( LUA_TNIL == luaL_getmetafield( L,1,"_name_" ) )
-        {
-            luaL_error( L,"fun_thunk,%s expected",classname );
-            return 0;
-        }
-        const char *name = lua_tostring( L,-1 );
-        if ( 0 != strcmp( name,classname ) )
-        {
-            luaL_error( L,"fun_thunk,%s expected,got %s",classname,name );
-            return 0;
-        }
-        lua_pop( L,1 );  /*drop _name_ */
-
-        T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)luaL_checkudata(L, 1,classname);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
             luaL_error(L, "%s calling method with null pointer", classname);

@@ -29,9 +29,11 @@ backend::backend()
     
     anios = new ANIO[ARRAY_CHUNK];
     aniomax = ARRAY_CHUNK;
+    array_zero(anios,sizeof(ANIO)*ARRAY_CHUNK);
 
     timerlist = new ANTIMER[ARRAY_CHUNK];
     timerlistmax = ARRAY_CHUNK;
+    array_zero(anios,sizeof(ANIO)*ARRAY_CHUNK);
     timerlistcnt = 0;
 }
 
@@ -43,12 +45,12 @@ backend::~backend()
         if ( anio )
         {
             anio->stop( L );
-            
+
             delete anio;
             anios[aniomax] = NULL;
         }
     }
-    
+
     while ( timerlistcnt-- )
     {
         // TODO

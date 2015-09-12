@@ -45,17 +45,13 @@ local function new(clz, ...)
     return obj
 end
 
---创建c对象
-local function cnew(clz)
-    local obj = clz:__init() -- 在底层返回一个full userdata
-
+--创建c对象会调用此函数(主要是用来统计)
+function oo.cinit(cobj)
     if check_flag then                  --check
-        local name = name_class_l[clz] or "none"
-        obj_list[obj] = name
+        local name = cobj.__name or "none_cobj"
+        obj_list[cobj] = name
         obj_count_l[name] = (obj_count_l[name] or 0) + 1
     end
-    
-    return obj
 end
 --******************************************************************************
 -- 声明lua对象
@@ -83,37 +79,7 @@ function oo.class(super, name)
     return clz
 end
 
--- 声明c对象(super_name多数情况下为nil)
-function oo.cclass(super_name, name)
-    local clz = {}
-    if type(name) == "string" then
-        if class_list[name] ~= nil then
-            clz = class_list[name]
-            for k,v in pairs(clz) do  --这是热更的关键
-                clz[k] = nil
-            end
-        else
-            class_list[name] = clz
-        end
-
-        if check_flag then                     --check
-            name_class_l[clz] = name
-        end
-    end
-
-    local super = class_list[super_name] or class_base
-    rawset(clz, "__super", super)
-    rawset(clz, "__index",clz)    --让自己成为一个metatable
-    setmetatable(clz, {__index = super, __call = cnew})
-    
-    -- set loaded and preload so you can require xxx,but not expose class to global
-    package.loaded[name]  = clz
-    package.preload[name] = clz
-    
-    return clz
-end
-
--- 获取基类元表
+-- 获取基类元表(clz是元表而不是对象)
 function oo.superclassof(clz)
     return rawget(clz, "__super")
 end
@@ -132,25 +98,26 @@ end
 function oo.check(log_func)
     collectgarbage("collect")
     
-    local c = 0
+    local obj_size = 0
     local list = {}
-    for k,nm in pairs(obj_list) do
-        c = c + 1
-        list[nm] = (list[nm] or 0) + 1
+    for obj,name in pairs(obj_list) do
+        obj_size = obj_size + 1
+        list[name] = (list[name] or 0) + 1
     end
 
     check_count = check_count + 1
-    local str = string.format("$$$$$$$$$$$$$$$$$$$$$$$$obj size is %d, count is %d\n", c, check_count)
-    for nm,cn in pairs(obj_count_l) do
-        if list[nm] ~= nil and list[nm] > 1 then
-            str = str .. string.format("\t\t%s create %d time,now exist %d!\n", nm, cn, list[nm] or 0)
+    local str = string.format("obj size is %d, check times is %d\n", obj_size, check_count)
+    for name,ts in pairs(obj_count_l) do
+
+        if list[name] and list[name] > 1 then
+            str = string.format("%s%s create %d time,now exist %d!\n",str,name,ts,list[name] or 0)
         end
     end
 
     if log_func ~= nil then
         log_func(str)
     else
-        print(str, string.len(str))
+        print(str)
     end
 end
 
