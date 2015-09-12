@@ -6,6 +6,7 @@ local obj_player = Player(998756)
 print( obj_player:get_pid() )
 
 vd( getmetatable(ev) )
+print( util )
 print( ev,ev:now() )
 print( util.md5() )
 

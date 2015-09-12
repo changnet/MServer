@@ -286,6 +286,19 @@ private:
             luaL_error( L,"fun_thunk userdata expected" );
             return 0;
         }
+        
+        if ( LUA_TNIL == luaL_getmetafield( L,1,"_name_" ) )
+        {
+            luaL_error( L,"fun_thunk,%s expected",classname );
+            return 0;
+        }
+        const char *name = lua_tostring( L,-1 );
+        if ( 0 != strcmp( name,classname ) )
+        {
+            luaL_error( L,"fun_thunk,%s expected,got %s",classname,name );
+            return 0;
+        }
+        lua_pop( L,1 );  /*drop _name_ */
 
         T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
@@ -309,6 +322,19 @@ private:
             luaL_error( L,"fun_thunk_ex userdata expected" );
             return 0;
         }
+        
+        if ( LUA_TNIL == luaL_getmetafield( L,1,"_name_" ) )
+        {
+            luaL_error( L,"fun_thunk,%s expected",classname );
+            return 0;
+        }
+        const char *name = lua_tostring( L,-1 );
+        if ( 0 != strcmp( name,classname ) )
+        {
+            luaL_error( L,"fun_thunk,%s expected,got %s",classname,name );
+            return 0;
+        }
+        lua_pop( L,1 );  /*drop _name_ */
 
         T** ptr = (T**)lua_touserdata(L, 1);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
