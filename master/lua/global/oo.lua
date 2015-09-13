@@ -45,14 +45,6 @@ local function new(clz, ...)
     return obj
 end
 
---创建c对象会调用此函数(主要是用来统计)
-function oo.cinit(cobj)
-    if check_flag then                  --check
-        local name = cobj.__name or "none_cobj"
-        obj_list[cobj] = name
-        obj_count_l[name] = (obj_count_l[name] or 0) + 1
-    end
-end
 --******************************************************************************
 -- 声明lua对象
 function oo.class(super, name)
@@ -95,7 +87,7 @@ function oo.metatableof(name)
 end
 
 -- 内存检查
-function oo.check(log_func)
+function oo.check()
     collectgarbage("collect")
     
     local obj_size = 0
@@ -108,17 +100,11 @@ function oo.check(log_func)
     check_count = check_count + 1
     local str = string.format("obj size is %d, check times is %d\n", obj_size, check_count)
     for name,ts in pairs(obj_count_l) do
-
-        if list[name] and list[name] > 1 then
-            str = string.format("%s%s create %d time,now exist %d!\n",str,name,ts,list[name] or 0)
+        if list[name] and list[name] > 0 then
+            str = str .. string.format("\t%s create %d time,now exist %d!\n",name,ts,list[name] or 0)
         end
     end
-
-    if log_func ~= nil then
-        log_func(str)
-    else
-        print(str)
-    end
+    print( str )
 end
 
 return oo

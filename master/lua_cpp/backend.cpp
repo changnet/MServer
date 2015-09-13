@@ -24,9 +24,11 @@
 
 backend::backend()
 {
-    loop = NULL;
-    L    = NULL;
-    
+    assert( "you can't create a backend without event loop and lua state",false );
+}
+backend::backend( ev_loop *loop,lua_State *L )
+    : loop(loop),L(L)
+{
     anios = new ANIO[ARRAY_CHUNK];
     aniomax = ARRAY_CHUNK;
     array_zero(anios,sizeof(ANIO)*ARRAY_CHUNK);
@@ -67,12 +69,6 @@ backend::~backend()
     timerlist = NULL;
     timerlistmax = 0;
     timerlistcnt = 0;
-}
-
-void backend::set( ev_loop *loop,lua_State *L )
-{
-    this->loop = loop;
-    this->L    = L;
 }
 
 int32 backend::run()

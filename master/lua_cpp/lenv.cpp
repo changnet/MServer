@@ -5,7 +5,7 @@
 #include "backend.h"
 int luaopen_ev (lua_State *L)
 {
-    lclass<backend> lc(L,"ev");
+    lclass<backend> lc(L,"eventloop");
     lc.def<&backend::run> ("run");
     lc.def<&backend::now> ("now");
     lc.def<&backend::quit>("quit");

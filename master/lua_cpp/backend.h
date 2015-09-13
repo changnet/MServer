@@ -17,6 +17,7 @@ class backend
 {
 public:
     explicit backend();
+    explicit backend( ev_loop *loop,lua_State *L );
     ~backend();
 
     int32 run ();
@@ -28,8 +29,6 @@ public:
     int32 io_kill();
     int32 io_start();
     int32 timer_kill();
-
-    void set( ev_loop *loop,lua_State *L );
     
     static inline int32 noblock( int32 fd )
     {

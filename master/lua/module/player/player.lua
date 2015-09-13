@@ -4,7 +4,7 @@
 
 --玩家对象
 
-local Player = oo.class( nil,"Player" )
+local Player = oo.class( nil,... )
 
 --构造函数
 function Player:__init( pid )

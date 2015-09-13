@@ -7,74 +7,6 @@
 #include <lua.hpp>
 #include <sys/utsname.h> /* for uname */
 
-class CTest
-{
-private:
-    ev_io    m_io;
-    ev_timer m_timer;
-    
-    ev_loop *loop;
-public:
-    explicit CTest( ev_loop *loop)
-    : loop(loop)
-    {
-        
-    }
-
-    void io_cb(ev_io &w,int revents)
-    {
-        if ( EV_ERROR & revents )
-        {
-            std::cerr << "ev error" << std::endl;
-            w.stop();
-            return;
-        }
-        
-        std::cout << "io_cb ... break" << std::endl;
-        w.stop();
-    }
-
-    void timer_cb(ev_timer &w,int revents)
-    {
-        if ( EV_ERROR & revents ) // ev error
-        {
-            std::cerr << "ev error" << std::endl;
-            w.stop();
-            return;
-        }
-
-        ERROR("func this");
-        DEBUG("try this");
-        std::cout << "timer_cb ..." << std::endl;
-    }
-
-    void start()
-    {
-        m_io.set( loop );
-        m_io.set<CTest,&CTest::io_cb>(this);
-        m_io.start( 0,EV_READ );
-        m_io.stop();
-        m_io.start();
-        
-        m_timer.set(loop);
-        m_timer.set<CTest,&CTest::timer_cb>(this);
-        m_timer.start( 5 );
-    }
-};
-
-
-void io_cb_ex(ev_io &w,int revents)
-{
-    if ( EV_ERROR & revents )
-    {
-        std::cerr << "ev error" << std::endl;
-        w.stop();
-        return;
-    }
-    
-    std::cout << "io_cb_ex ... " << std::endl;
-}
-
 /* 记录进程启动信息 */
 void runtime_start()
 {
@@ -154,20 +86,12 @@ int32 main( int32 argc,char **argv )
 
     runtime_start();
 
-    class backend *_backend = new backend();
-    _backend->set( loop,L );
+    class backend *_backend = new backend(loop,L);
     
     lclass<backend>::push( L,_backend,false );
     lua_setglobal( L,"ev" );
-    //CTest t( &loop );
-    //t.start();
-    // ev_io io;
-    // io.set( &loop );
-    // io.set<io_cb_ex>();
-    // io.start( 0,EV_WRITE );
 
-    //loop.run();
-            
+    /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua/%s/%s",spath,LUA_ENTERANCE );
     if ( luaL_dofile(L,script_path) )

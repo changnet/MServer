@@ -33,9 +33,6 @@ public:
             return;
         }
 
-        lua_pushcfunction(L, cnew);
-        lua_setfield(L, -2, "__call");
-
         lua_pushcfunction(L, gc);
         lua_setfield(L, -2, "__gc");
 
@@ -43,7 +40,25 @@ public:
         lua_setfield(L, -2, "__tostring");
 
         /* metatable as value and pop metatable */
-        lua_setfield(L, -1, "__index");
+        lua_pushvalue( L,-1 );
+        lua_setfield(L, -2, "__index");
+        
+        lua_newtable( L );
+        lua_pushcfunction(L, cnew);
+        lua_setfield(L, -2, "__call");
+        lua_setmetatable( L,-2 );
+        
+        lua_getfield( L,LUA_REGISTRYINDEX,"_LOADED" );
+        if ( !lua_istable( L ,-1 ) )
+        {
+            FATAL( "define class before lua openlibs" );
+            return;
+        }
+
+        lua_pushvalue( L,1 );
+        lua_setfield( L,-2,classname );
+        
+        lua_settop( L,0 );
     }
     
     /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete */
@@ -74,9 +89,7 @@ public:
             lua_pop(L, 1); /* drop _notgc out of stack */
         }
 
-        lua_setmetatable( L,-2 );
-        init( L );
-        return 1;
+        return lua_setmetatable( L,-2 );
     }
     
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
@@ -156,39 +169,8 @@ private:
         lua_insert(L,1);
 
         /* lua无法更改userdata的metatable */
-        lua_setmetatable(L, -2);
-        
-        init( L );
-        return 1;
-    }
-    
-    /* 在创建或push一个c对象时，需要调用oo.cinit来统计.如果不需要，则此函数可以不用 */
-    static int init(lua_State *L)
-    {
-        lua_getglobal( L,"oo" );
-        if ( expect_false(!lua_istable( L,-1 ))  )
-        {
-            luaL_error( L,"unable to get lua script oo" );
-            return 0;
-        }
 
-        lua_getfield(L,-1,"cinit");
-        if ( expect_false(!lua_isfunction( L,-1 )) )
-        {
-            luaL_error( L,"unable to get function 'cinit' in lua script" );
-            return 0;
-        }
-
-        lua_remove( L,-2 );  /* drop oo */
-        lua_pushvalue( L,1 );
-        /* call oo.cinit( cobj ) */
-        if ( expect_false( LUA_OK != lua_pcall(L,1,0,0) ) )
-        {
-            luaL_error( L,"call oo.cinit fail:%s",lua_tostring(L,-1) );
-            return 0;
-        }
-
-        return 0;
+        return lua_setmetatable(L, -2);
     }
     
     /* 元方法,__tostring */
@@ -278,7 +260,7 @@ private:
             FATAL( "%s calling method with null pointer", classname );
             return 0;
         }
-        
+
         /* remove self so member function args start at index 1 */
         lua_remove(L, 1);
 
