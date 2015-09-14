@@ -11,6 +11,8 @@ int luaopen_ev (lua_State *L)
     lc.def<&backend::quit>("quit");
     lc.def<&backend::listen>("listen");
     lc.def<&backend::io_kill>("io_kill");
+    lc.def<&backend::set_net_ref>("set_net_ref");
+    lc.def<&backend::fd_address>("fd_address");
     lc.set( "EV_READ",EV_READ );
     lc.set( "EV_WRITE",EV_WRITE );
     lc.set( "EV_TIMER",EV_TIMER );
@@ -56,25 +58,10 @@ void lua_initenv( lua_State *L )
         exit( 1 );
     }
 
-    lua_pop(L, 1);
+    lua_pop(L, 1);    /* drop old path field */
     lua_pushstring(L, new_path);
     lua_setfield(L, -2, "path");
-    lua_pop(L, 1);
-
-    /* 预加载一些lua脚本以初始化环境 */
-    char preload_path[PATH_MAX];
-    snprintf( preload_path,PATH_MAX,"lua/%s/%s",spath,LUA_PRELOAD );
-    if ( !access(preload_path,F_OK|R_OK) ) /* on success zero is returned */
-    {
-        if ( luaL_dofile(L,preload_path) )
-        {
-            const char *err_msg = lua_tostring(L,-1);
-            FATAL( "load lua preload file error:%s\n",err_msg );
-            return;
-        }
-        /* remove all elements from stack incase preload file return something */
-        lua_settop( L,0 );
-    }
+    lua_pop(L, 1);   /* drop package table */
 
     luaL_requiref(L, "util", luaopen_util, 1);
     lua_pop(L, 1);  /* remove lib */

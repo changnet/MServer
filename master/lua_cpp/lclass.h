@@ -236,7 +236,7 @@ private:
     template <pf_t pf>
     static int fun_thunk(lua_State* L)
     {
-        T** ptr = (T**)luaL_checkudata( L, 1,classname );/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)luaL_checkudata( L, 1, classname );/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
             luaL_error(L, "%s calling method with null pointer", classname);
@@ -253,7 +253,7 @@ private:
     template <pf_t_ex pf>
     static int fun_thunk_ex(lua_State* L)
     {
-        T** ptr = (T**)luaL_checkudata(L, 1,classname);/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)luaL_checkudata(L, 1, classname);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
             luaL_error(L, "%s calling method with null pointer", classname);

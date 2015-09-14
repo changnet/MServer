@@ -11,7 +11,7 @@
 
 #include "../global/global.h"
 #include "../ev/ev.h"
-#include "lev.h"
+#include "../ev/ev_watcher.h"
 
 class backend
 {
@@ -24,11 +24,14 @@ public:
     int32 quit();
     int32 now ();
     int32 listen();
-    void listen_cb( ev_io &w,int revents );
-    void connect_cb( ev_io &w,int32 revents );
     int32 io_kill();
-    int32 io_start();
     int32 timer_kill();
+    int32 set_net_ref();
+    int32 fd_address();
+    
+    void listen_cb( ev_io &w,int revents );
+    void read_cb( ev_io &w,int revents );
+    void connect_cb( ev_io &w,int32 revents );
     
     static inline int32 noblock( int32 fd )
     {
@@ -40,15 +43,23 @@ public:
 
         return fcntl( fd, F_SETFL, flags);
     }
+
 private:
-    
+    typedef enum
+    {
+        NEV_ACCEPT     = 1,
+        NEV_READ       = 2,
+        NEV_DISCONNECT = 3,
+        NEV_CONNECTED  = 4,
+    }NETEV;
+
     typedef struct
     {
         ev_timer *w;
         int32 ref;
     }ANTIMER;
 
-    typedef ev_socket *ANIO;/* AN = array node */
+    typedef ev_io *ANIO;/* AN = array node */
 
     class ev_loop *loop;
     lua_State *L;
@@ -59,6 +70,10 @@ private:
     ANTIMER *timerlist;
     int32 timerlistmax;
     int32 timerlistcnt;
+    
+    /* lua层网络回调 */
+    int32 net_cb;
+    int32 net_self;
 };
 
 #endif /* __BACKEND_H__ */

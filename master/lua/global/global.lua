@@ -42,3 +42,100 @@ function vd(data, max_level)
     var_dump(data, max_level or 20)
     recursion = {}  --释放内存
 end
+
+-- 时间字符串。用的不是ev:now()，故只能用于错误打印，不能用于游戏逻辑
+local function time_str()
+    return os.date("%Y-%m-%d %H:%M:%S", os.time())
+end
+
+local function lualog (...)
+    print(string.format(...))
+end
+
+local function writeTrackFileLog(debug_traceback)
+    local file = io.open("lua_crash.txt","a+")
+    file:write("LUA TRACK:" .. tostring(msg))
+    file:write("\r\n")
+    file:write(debug_traceback)
+    file:write("\r\n")
+    file:close()
+end
+
+local function writeErrorLog(msg)
+    local file = io.open("lua_error.txt","a+")
+    file:write(msg)
+    file:write("\r\n")
+    file:close()
+end
+
+-- for CCLuaEngine traceback
+function __G__TRACKBACK__(msg)
+    local debug_traceback = debug.traceback()
+    lualog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!LUA ERROR: " .. tostring(msg) .. "\n")
+    lualog(debug_traceback)
+    writeTrackFileLog(debug_traceback)
+end
+
+--只打印不写入文件(参数不能带有nil参数,不能带有table,带有table的可以先用json.encode转成string)
+function PLOG(...)
+    local temp = {...}
+
+    if table.size(temp) == 0 then
+        print("PLOG can set nil")
+        return 
+    end
+
+    local is_t = false
+    local str = ""
+    for _,v in ipairs(temp) do
+        if type(v) == "table" then
+            is_t = true
+            local st = Json.encode(v)
+            str = str .. "_" .. st
+        else
+            str = str .. "_" .. v
+        end
+    end
+
+    if is_t == true then
+        str = "<<< Lua >>>--------------------" .. "PLOG can not have lua table or nil [" .. str .. "]"
+        print(str)
+        writeErrorLog(str)
+        return 
+    end
+
+    print("<<< Lua >>>--------------------" .. string.format(...))
+end
+
+--错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
+function ELOG(...)
+    local temp = {...}
+
+    if table.size(temp) == 0 then
+        print("PLOG can set nil")
+        return 
+    end
+    
+    local is_t = false
+    local str = ""
+    for _,v in ipairs(temp) do
+        if type(v) == "table" then
+            is_t = true
+            local st = Json.encode(v)
+            str = str .. "_" .. st
+        else
+            str = str .. "_" .. v
+        end
+    end
+
+    if is_t == true then
+        str = "<<< Lua >>>--------------------" .. "PLOG can not have lua table or nil object >>" .. str
+        print(str)
+        writeErrorLog(str)
+        return 
+    end
+
+    local ss = "<<< LUA ERROR >>>--------------------" .. time_str() .. " " .. string.format(...)
+    print(ss)
+    writeErrorLog(ss)
+end
