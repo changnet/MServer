@@ -6,7 +6,8 @@ local listen = require "lua.net.listener"
 local net_mgr = require "lua.net.netmgr"
 
 local function main()
-    ev:set_net_ref( net_mgr,net_mgr.event_cb )
+    ev:set_net_ref( net_mgr,net_mgr.accept_event,net_mgr.read_event,
+        net_mgr.disconnect_event,net_mgr.connected_event )
 
     listen:listen( "0.0.0.0",9997 )
     net_mgr:push( listen )

@@ -13,6 +13,7 @@ end
 
 -- 断开事件
 function Client_net:on_disconnect()
+    PLOG( "i am quit %d",self.fd )
 end
 
 -- 读事件

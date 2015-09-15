@@ -11,7 +11,7 @@
 
 #include "../global/global.h"
 #include "../ev/ev.h"
-#include "../ev/ev_watcher.h"
+#include "../net/socket.h"
 
 class backend
 {
@@ -45,21 +45,13 @@ public:
     }
 
 private:
-    typedef enum
-    {
-        NEV_ACCEPT     = 1,
-        NEV_READ       = 2,
-        NEV_DISCONNECT = 3,
-        NEV_CONNECTED  = 4,
-    }NETEV;
-
     typedef struct
     {
         ev_timer *w;
         int32 ref;
     }ANTIMER;
 
-    typedef ev_io *ANIO;/* AN = array node */
+    typedef class socket *ANIO;/* AN = array node */
 
     class ev_loop *loop;
     lua_State *L;
@@ -72,7 +64,10 @@ private:
     int32 timerlistcnt;
     
     /* lua层网络回调 */
-    int32 net_cb;
+    int32 net_accept;
+    int32 net_read;
+    int32 net_disconnect;
+    int32 net_connected;
     int32 net_self;
 };
 

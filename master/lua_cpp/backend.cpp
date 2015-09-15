@@ -22,6 +22,10 @@
 #define array_zero(base,size)    \
     memset ((void *)(base), 0, size)
 
+#define LUA_UNREF(x)                            \
+    if ( x > 0 )                                \
+        luaL_unref( L,LUA_REGISTRYINDEX,x );
+
 backend::backend()
 {
     assert( "you can't create a backend without event loop and lua state",false );
@@ -29,8 +33,11 @@ backend::backend()
 backend::backend( ev_loop *loop,lua_State *L )
     : loop(loop),L(L)
 {
-    net_cb   = 0;
-    net_self = 0;
+    net_accept     = 0;
+    net_read       = 0;
+    net_disconnect = 0;
+    net_connected  = 0;
+    net_self       = 0;
 
     anios = new ANIO[ARRAY_CHUNK];
     aniomax = ARRAY_CHUNK;
@@ -72,6 +79,13 @@ backend::~backend()
     timerlist = NULL;
     timerlistmax = 0;
     timerlistcnt = 0;
+    
+    /* lua source code 'ref = (int)lua_rawlen(L, t) + 1' make sure ref > 0 */
+    LUA_UNREF( net_accept );
+    LUA_UNREF( net_read );
+    LUA_UNREF( net_disconnect );
+    LUA_UNREF( net_connected );
+    LUA_UNREF( net_self );
 }
 
 int32 backend::run()
@@ -155,15 +169,15 @@ int32 backend::listen()
         return 1;
     }
 
-    ev_io *w = new ev_io();
-    w->set( loop );
-    w->set<backend,&backend::listen_cb>( this );
-    w->start( fd,EV_READ );
+    class socket *_socket = new class socket();
+    (_socket->w).set( loop );
+    (_socket->w).set<backend,&backend::listen_cb>( this );
+    (_socket->w).start( fd,EV_READ );
 
     array_resize( ANIO,anios,aniomax,fd + 1,array_zero );
     
     assert( "listen,dirty ANIO detected!!\n",!(anios[fd]) );
-    anios[fd] = w;
+    anios[fd] = _socket;
 
     lua_pushinteger( L,fd );
     return 1;
@@ -179,9 +193,9 @@ int32 backend::io_kill()
         return 0;
     }
 
-    ev_io *w = anios[fd];
+    class socket *s = anios[fd];
     anios[fd] = NULL;
-    w->stop();
+    s->stop();
     ::close( fd );
 
     return 0;
@@ -212,12 +226,11 @@ void backend::listen_cb( ev_io &w,int revents )
 
         assert( "accept,dirty ANIO detected!!\n",!(anios[new_fd]) );
 
-        lua_rawgeti(L, LUA_REGISTRYINDEX, net_cb);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, net_accept);
         lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
         lua_pushinteger( L,w.fd );
-        lua_pushinteger( L,NEV_ACCEPT );
         lua_pushinteger( L,new_fd );
-        if ( expect_false( LUA_OK != lua_pcall(L,4,0,0) ) )
+        if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
         {
             ::close( new_fd );
             ERROR( "listen_cb fail:%s\n",lua_tostring(L,-1) );
@@ -226,13 +239,13 @@ void backend::listen_cb( ev_io &w,int revents )
 
         noblock( new_fd );
         /* 直接进入监听 */
-        ev_io *_w = new ev_io();
-        _w->set( loop );
-        _w->set<backend,&backend::read_cb>( this );
-        _w->start( new_fd,EV_READ );
+        class socket *_socket = new class socket();
+        (_socket->w).set( loop );
+        (_socket->w).set<backend,&backend::read_cb>( this );
+        (_socket->w).start( new_fd,EV_READ );
         
         array_resize( ANIO,anios,aniomax,new_fd + 1,array_zero );
-        anios[new_fd] = _w;
+        anios[new_fd] = _socket;
     }
 }
 
@@ -265,53 +278,48 @@ void backend::read_cb( ev_io &w,int revents )
         char buff[256];  // TODO
         int32 ret = read( fd,buff,256 );
 
-        if ( ret < 0 )  //error
+        if ( ret < 0 )  /* error */
         {
             if ( EAGAIN == errno || EWOULDBLOCK == errno )
                 break;
 
-            w.stop();
-            ::close( fd );
+            anios[fd]->stop();
             delete anios[fd];
             anios[fd] = NULL;
 
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_cb);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, net_disconnect);
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
             lua_pushinteger( L,fd );
-            lua_pushinteger( L,NEV_DISCONNECT );
-            if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
+            if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
             {
                 ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
                 return;
             }
             break;
         }
-        else if ( 0 == ret ) //disconnect
+        else if ( 0 == ret ) /* disconnect */
         {
-            w.stop();
-            ::close( fd );
+            anios[fd]->stop();
             delete anios[fd];
             anios[fd] = NULL;
             
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_cb);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, net_disconnect);
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
             lua_pushinteger( L,fd );
-            lua_pushinteger( L,NEV_DISCONNECT );
-            if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
+            if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
             {
                 ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
                 return;
             }
             break;
         }
-        else    //read data
+        else    /* read data */
         {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_cb);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, net_read);
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
             lua_pushinteger( L,fd );
-            lua_pushinteger( L,NEV_READ );
             lua_pushstring( L,buff );
-            if ( expect_false( LUA_OK != lua_pcall(L,4,0,0) ) )
+            if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
             {
                 ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
                 return;
@@ -323,15 +331,20 @@ void backend::read_cb( ev_io &w,int revents )
 /* 设置lua层网络事件回调 */
 int32 backend::set_net_ref()
 {
-    if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) )
+    if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) || 
+        !lua_isfunction( L,3 ) || !lua_isfunction( L,4 ) || 
+        !lua_isfunction( L,5 ) )
     {
-        FATAL( "set_net_ref,argument illegal.expect table and function" );
+        luaL_error( L,"set_net_ref,argument illegal.expect table and function\n" );
         return 0;
     }
 
-    net_cb   = luaL_ref( L,LUA_REGISTRYINDEX );
-    net_self = luaL_ref( L,LUA_REGISTRYINDEX );
-    
+    net_connected  = luaL_ref( L,LUA_REGISTRYINDEX );
+    net_disconnect = luaL_ref( L,LUA_REGISTRYINDEX );
+    net_read       = luaL_ref( L,LUA_REGISTRYINDEX );
+    net_accept     = luaL_ref( L,LUA_REGISTRYINDEX );
+    net_self       = luaL_ref( L,LUA_REGISTRYINDEX );
+
     return 0;
 }
 
