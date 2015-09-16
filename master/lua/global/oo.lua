@@ -2,16 +2,17 @@
 
 oo = {}
 
-local name_class_l = {}       --类列表
-local obj_list     = {}       --对象列表
+local name_class_l = {}       -- 类列表，类为k，name为v
+local class_list   = {}       -- 类列表，name为k，类为v
+local obj_list     = {}       -- 已创建对象列表，对象为k，name为value
+local singleton    = {}       -- 单例，类为k，v为实例
 
-local class_list  = {}        --类列表
-local obj_count_l = {}        --对象创建次数列表
-local check_count = 0         --check调用次数
-local check_flag  = true      --是否记录数据
+local obj_count_l = {}        -- 对象创建次数列表
+local check_count = 0         -- check调用次数
+local check_flag  = true      -- 是否记录数据
 
 setmetatable(obj_list, {["__mode"]='k'})
-
+setmetatable(singleton, {["__mode"]='v'})
 
 --******************************************************************************
 local class_base = {}  --默认基类
@@ -45,8 +46,17 @@ local function new(clz, ...)
     return obj
 end
 
+-- 创建单例
+local function new_singleton( clz,... )
+    if not singleton[clz] then
+        singleton[clz] = new( clz,... )
+    end
+    
+    return singleton[clz]
+end
+
 --******************************************************************************
--- 声明lua对象
+-- 声明lua类
 function oo.class(super, name)
     local clz = {}
     if type(name) == "string" then
@@ -71,6 +81,34 @@ function oo.class(super, name)
     return clz
 end
 
+-- 声明lua单例类
+function oo.singleton(super, name)
+    local clz = {}
+    if type(name) == "string" then
+        if class_list[name] ~= nil then
+            clz = class_list[name]
+            for k,v in pairs(clz) do  --这是热更的关键
+                clz[k] = nil
+            end
+        else
+            class_list[name] = clz
+        end
+
+        if check_flag then                     --check
+            name_class_l[clz] = name
+        end
+    end
+
+    super = super or class_base
+    rawset(clz, "__super", super)
+    rawset(clz, "__index",clz)       --让自己成为一个metatable
+    rawset(clz, "__singleton",true)
+    setmetatable(clz, {__index = super, __call = new_singleton})
+    return clz
+end
+
+--******************************************************************************
+
 -- 获取基类元表(clz是元表而不是对象)
 function oo.superclassof(clz)
     return rawget(clz, "__super")
@@ -87,7 +125,7 @@ function oo.metatableof(name)
 end
 
 -- 内存检查
-function oo.check()
+function oo.check( log_func )
     collectgarbage("collect")
     
     local obj_size = 0
@@ -104,7 +142,12 @@ function oo.check()
             str = str .. string.format("\t%s create %d time,now exist %d!\n",name,ts,list[name] or 0)
         end
     end
-    print( str )
+    
+    if log_func then
+        log_func( str )
+    else
+        print( str )
+    end
 end
 
 return oo

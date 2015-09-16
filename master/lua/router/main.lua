@@ -12,6 +12,7 @@ local function main()
     listen:listen( "0.0.0.0",9997 )
     net_mgr:push( listen )
 
+    oo.check()
     ev:run()
 end
 

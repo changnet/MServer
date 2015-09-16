@@ -4,7 +4,7 @@
 
 -- 网络事件管理
 
-local Net_mgr = oo.class( nil,... )
+local Net_mgr = oo.singleton( nil,... )
 
 -- 构造函数
 function Net_mgr:__init()

@@ -139,3 +139,14 @@ function ELOG(...)
     print(ss)
     writeErrorLog(ss)
 end
+
+-- 热更函数接口
+function require_ex( path )
+    --[[
+    单例对象返回一个实例，此实例此时不一定有其他引用。故需要_instance来引用以防被销毁
+    重新require后实例会成为upvalue，不会被销毁
+    ]]
+    local _instance = package.loaded[path]
+    package.loaded[path] = nil
+    return require(path)
+end
