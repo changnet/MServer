@@ -51,8 +51,9 @@ backend::backend( ev_loop *loop,lua_State *L )
 
 backend::~backend()
 {
-    while ( aniomax-- )
+    while ( aniomax > 0 )
     {
+        --aniomax;
         ANIO anio = anios[aniomax];
         if ( anio )
         {
@@ -63,8 +64,9 @@ backend::~backend()
         }
     }
 
-    while ( timerlistcnt-- )
+    while ( timerlistcnt > 0 )
     {
+        --timerlistcnt;
         // TODO
         // ANTIMER*antimer = timerlist + timerlistcnt;
         // w->stop();
