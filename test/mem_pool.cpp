@@ -9,7 +9,7 @@
 #define CHUNK_SIZE    8
 
 /*
-2G ubuntu vm
+2G ubuntu vm 10000times
 
 xzc@xzc-VirtualBox:~/code/pool$ ./main
 my pool run:0.035874
@@ -25,6 +25,34 @@ xzc@xzc-VirtualBox:~/code/pool$ ./main
 boost run:8.50574
 xzc@xzc-VirtualBox:~/code/pool$ ./main
 boost run:8.48862
+
+std run:0.004238
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+std run:0.003537
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+std run:0.00356
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+std run:0.003925
+
+second times,use cache
+my pool run:0.000949
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+my pool run:0.001046
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+my pool run:0.001133
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+my pool run:0.001005
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+my pool run:0.001074
+
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+boost run:2.14777
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+boost run:2.15328
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+boost run:2.15201
+xzc@xzc-VirtualBox:~/code/pool$ ./main
+boost run:2.15536
 
 boost list[3][i] = pool.ordered_malloc( 4 ) 分配失败
 */
