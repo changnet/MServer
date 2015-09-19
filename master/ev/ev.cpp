@@ -6,25 +6,6 @@
 #define EV_CHUNK    2048
 #define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
 #define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */
-#define array_resize(type,base,cur,cnt,init)    \
-    if ( expect_false((cnt) > (cur)) )          \
-    {                                           \
-        uint32 size = cur;                      \
-        while ( size < cnt )                    \
-        {                                       \
-            size *= 2;                          \
-        }                                       \
-        type *tmp = new type[size];             \
-        init( tmp,sizeof(type)*size );          \
-        memcpy( tmp,base,sizeof(type)*cur );    \
-        delete []base;                          \
-        base = tmp;                             \
-        cur = size;                             \
-    }
-    
-#define EMPTY(base,size)
-#define array_zero(base,size)    \
-    memset ((void *)(base), 0, size)
 
 /*
  * the heap functions want a real array index. array index 0 is guaranteed to not
@@ -92,19 +73,6 @@ ev_loop::~ev_loop()
 bool ev_loop::init()
 {
     assert( "loop duplicate init",!anfds && !pendings && !fdchanges && !timers );
-
-    anfds = new ANFD[EV_CHUNK];
-    anfdmax = EV_CHUNK;
-    memset( anfds,0,sizeof(ANFD)*anfdmax );
-    
-    pendings = new ANPENDING[EV_CHUNK];
-    pendingmax = EV_CHUNK;
-    
-    fdchanges = new ANCHANGE[EV_CHUNK];
-    fdchangemax = EV_CHUNK;
-    
-    timers = new ANHE[EV_CHUNK];
-    timermax = EV_CHUNK;
     
     ev_rt_now          = get_time ();
     mn_now             = get_clock ();
@@ -168,8 +136,6 @@ int32 ev_loop::quit()
 
 int32 ev_loop::io_start( ev_io *w )
 {
-    assert( "loop uninit",anfdmax|pendingmax|fdchangemax );
-
     int32 fd = w->fd;
 
     array_resize( ANFD,anfds,anfdmax,uint32(fd + 1),array_zero );

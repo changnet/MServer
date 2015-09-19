@@ -2,26 +2,6 @@
 
 #define ARRAY_CHUNK    2048
 
-#define array_resize(type,base,cur,cnt,init)    \
-    if ( expect_false((cnt) > (cur)) )          \
-    {                                           \
-        int32 size = cur;                       \
-        while ( size < cnt )                    \
-        {                                       \
-            size *= 2;                          \
-        }                                       \
-        type *tmp = new type[size];             \
-        init( tmp,sizeof(type)*size );          \
-        memcpy( tmp,base,sizeof(type)*cur );    \
-        delete []base;                          \
-        base = tmp;                             \
-        cur = size;                             \
-    }
-
-#define EMPTY(base,size)
-#define array_zero(base,size)    \
-    memset ((void *)(base), 0, size)
-
 #define LUA_UNREF(x)                            \
     if ( x > 0 )                                \
         luaL_unref( L,LUA_REGISTRYINDEX,x );
@@ -39,13 +19,11 @@ backend::backend( ev_loop *loop,lua_State *L )
     net_connected  = 0;
     net_self       = 0;
 
-    anios = new ANIO[ARRAY_CHUNK];
-    aniomax = ARRAY_CHUNK;
-    array_zero(anios,sizeof(ANIO)*ARRAY_CHUNK);
+    anios = NULL;
+    aniomax = 0;
 
-    timerlist = new ANTIMER[ARRAY_CHUNK];
-    timerlistmax = ARRAY_CHUNK;
-    array_zero(anios,sizeof(ANIO)*ARRAY_CHUNK);
+    timerlist = NULL;
+    timerlistmax = 0;
     timerlistcnt = 0;
 }
 

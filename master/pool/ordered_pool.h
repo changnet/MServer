@@ -1,37 +1,15 @@
 #ifndef __ORDERED_POOL_H__
 #define __ORDERED_POOL_H__
 
-/* 等长内存池，参考了boost内存池(boolst/pool/pool.hpp)
- * 0.这不是一个通用的内存池，是专门处理char缓存的。(new、delete不太好处理void)
+/* 等长内存池，参考了boost内存池(boolst/pool/pool.hpp).分配的内存只能是ordered_size
+ * 的n倍。每一个n都形成一个空闲链表，利用率比boost低。
  * 1.分配出去的内存不再受池的管理
  * 2.所有内存在池销毁时会释放(包括未归还的)
  * 3.没有约束内存对齐。因此用的是系统默认对齐，在linux 32/64bit应该是OK的
- * 4.最小内存块不能小于一个指针长度
+ * 4.最小内存块不能小于一个指针长度(4/8 bytes)
  */
 
-#include <cstring>
-#include <iostream>
-
-typedef unsigned int uint32;
-
-#define array_resize(type,base,cur,cnt,init)    \
-    if ( (cnt) > (cur) )                        \
-    {                                           \
-        uint32 size = cur > 0 ? cur : 1;        \
-        while ( size < cnt )                    \
-        {                                       \
-            size *= 2;                          \
-        }                                       \
-        type *tmp = new type[size];             \
-        init( tmp,sizeof(type)*size );          \
-        memcpy( tmp,base,sizeof(type)*cur );    \
-        delete []base;                          \
-        base = tmp;                             \
-        cur = size;                             \
-    }
-
-#define array_zero(base,size)    \
-    memset ((void *)(base), 0, size)
+#include "../global/global.h"
 
 template<uint32 ordered_size,uint32 chunk_size = 512>
 class ordered_pool
@@ -45,10 +23,10 @@ public:
 private:
     typedef void * NODE;
 
-    NODE *anpts;
+    NODE *anpts;    /* 空闲内存块链表数组,倍数n为下标 */
     uint32 anptmax;
     
-    void *block_list;
+    void *block_list; /* 从系统分配的内存块链表 */
 
     /* 一块内存的指针是ptr,这块内存的前几个字节储存了下一块内存的指针地址
      * 即ptr可以看作是指针的指针
@@ -82,7 +60,7 @@ template<uint32 ordered_size,uint32 chunk_size>
 ordered_pool<ordered_size,chunk_size>::ordered_pool()
     : anpts(NULL),anptmax(0),block_list(NULL)
 {
-    // TODO　assert( "ordered size less then sizeof(void *)",ordered_size >= sizeof(void *) )
+    assert( "ordered size less then sizeof(void *)",ordered_size >= sizeof(void *) );
 }
 
 template<uint32 ordered_size,uint32 chunk_size>
@@ -106,8 +84,8 @@ ordered_pool<ordered_size,chunk_size>::~ordered_pool()
 template<uint32 ordered_size,uint32 chunk_size>
 char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
 {
-    // TODO assert( "ordered_malloc n <= 0",n > 0 );
-    array_resize( NODE,anpts,anptmax,n,array_zero );
+    assert( "ordered_malloc n <= 0",n > 0 );
+    array_resize( NODE,anpts,anptmax,n+1,array_zero );
     void *ptr = anpts[n];
     if ( ptr )
     {
@@ -121,13 +99,14 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
     uint32 partition_sz = n*ordered_size;
     uint32 block_size = sizeof(void *) + chunk_size*partition_sz;
     char *block = new char[block_size];
-    
+
     /* 分配出来的内存，预留一个指针的位置在首部，用作链表将所有从系统获取的
      * 内存串起来
      */
     nextof( block ) = block_list;
     block_list = block;
     
+    /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
     segregate( block + sizeof(void *) + partition_sz,partition_sz,
         chunk_size - 1,n );
     return block + sizeof(void *);
@@ -136,7 +115,7 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
 template<uint32 ordered_size,uint32 chunk_size>
 void ordered_pool<ordered_size,chunk_size>::ordered_free( char * const ptr,uint32 n )
 {
-    // TODO assert( "illegal ordered free",anptmax >= n );
+    assert( "illegal ordered free",anptmax >= n && ptr );
     nextof( ptr ) = anpts[n];
     anpts[n] = ptr;
 }

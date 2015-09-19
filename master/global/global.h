@@ -74,6 +74,27 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
         }                                                \
     }while (0)
 
+#define array_resize(type,base,cur,cnt,init)        \
+    if ( (cnt) > (cur) )                            \
+    {                                               \
+        uint32 size = cur > 0 ? cur : 2;            \
+        while ( size < (uint32)cnt )                \
+        {                                           \
+            size *= 2;                              \
+        }                                           \
+        type *tmp = new type[size];                 \
+        init( tmp,sizeof(type)*size );              \
+        if ( cur > 0)                               \
+            memcpy( tmp,base,sizeof(type)*cur );    \
+        delete []base;                              \
+        base = tmp;                                 \
+        cur = size;                                 \
+    }
+
+#define EMPTY(base,size)
+#define array_zero(base,size)    \
+    memset ((void *)(base), 0, size)
+
 /* will be called while process exit */
 extern void onexit();
 /* will be called while allocate memory failed with new */
