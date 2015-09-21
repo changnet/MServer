@@ -1,7 +1,5 @@
 #include "backend.h"
 
-#define ARRAY_CHUNK    2048
-
 #define LUA_UNREF(x)                            \
     if ( x > 0 )                                \
         luaL_unref( L,LUA_REGISTRYINDEX,x );
@@ -35,7 +33,7 @@ backend::~backend()
         ANIO anio = anios[aniomax];
         if ( anio )
         {
-            anio->stop();
+            anio->close();
 
             delete anio;
             anios[aniomax] = NULL;
@@ -47,7 +45,7 @@ backend::~backend()
         --timerlistcnt;
         // TODO
         // ANTIMER*antimer = timerlist + timerlistcnt;
-        // w->stop();
+        // w->close();
         // delete w;
     }
     
@@ -175,8 +173,7 @@ int32 backend::io_kill()
 
     class socket *s = anios[fd];
     anios[fd] = NULL;
-    s->stop();
-    ::close( fd );
+    s->close();
 
     return 0;
 }
@@ -263,7 +260,7 @@ void backend::read_cb( ev_io &w,int revents )
             if ( EAGAIN == errno || EWOULDBLOCK == errno )
                 break;
 
-            anios[fd]->stop();
+            anios[fd]->close();
             delete anios[fd];
             anios[fd] = NULL;
 
@@ -279,7 +276,7 @@ void backend::read_cb( ev_io &w,int revents )
         }
         else if ( 0 == ret ) /* disconnect */
         {
-            anios[fd]->stop();
+            anios[fd]->close();
             delete anios[fd];
             anios[fd] = NULL;
             

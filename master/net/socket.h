@@ -12,7 +12,7 @@ public:
     buffer _recv;
     buffer _send;
 public:
-    inline void stop()
+    inline void close()
     {
         ::close( w.fd );
         w.stop();

@@ -77,7 +77,7 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define array_resize(type,base,cur,cnt,init)        \
     if ( (cnt) > (cur) )                            \
     {                                               \
-        uint32 size = cur > 0 ? cur : 2;            \
+        uint32 size = cur > 0 ? cur : 16;           \
         while ( size < (uint32)cnt )                \
         {                                           \
             size *= 2;                              \

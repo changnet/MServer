@@ -3,7 +3,6 @@
 #include "ev.h"
 #include "ev_watcher.h"
 
-#define EV_CHUNK    2048
 #define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
 #define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */
 
