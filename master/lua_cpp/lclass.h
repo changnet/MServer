@@ -21,7 +21,7 @@ template<class T>
 class lclass
 {
 public:
-    lclass( lua_State *L,const char *_classname,const char *super = NULL )
+    lclass( lua_State *L,const char *_classname )
         :L(L)
     {
         classname = _classname;
