@@ -24,8 +24,9 @@ function Net_mgr:accept_event( fd,... )
         ELOG( "event_cb no connnect object found" )
         return
     end
-    
-    xpcall( conn.on_accept,__G__TRACKBACK__,conn,... )
+
+    local result,sk = xpcall( conn.on_accept,__G__TRACKBACK__,conn,... )
+    return sk
 end
 
 -- read事件

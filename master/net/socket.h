@@ -8,16 +8,27 @@
 class socket
 {
 public:
+    typedef enum
+    {
+        SK_ERROR   = 0,
+        SK_SERVER  = 1,
+        SK_CLIENT  = 2,
+    }SOCKET_TYPE;
+
     ev_io w;
     buffer _recv;
     buffer _send;
+    SOCKET_TYPE _type;
+
 public:
-    inline void close()
+    socket();
+    ~socket();
+    
+    inline void set_type(SOCKET_TYPE ty )
     {
-        ::close( w.fd );
-        w.stop();
-        /* TODO buff deallocate */
+        _type = ty;
     }
+
 };
 
 #endif /* __SOCKET_H__ */

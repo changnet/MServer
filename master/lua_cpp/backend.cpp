@@ -33,8 +33,6 @@ backend::~backend()
         ANIO anio = anios[aniomax];
         if ( anio )
         {
-            anio->close();
-
             delete anio;
             anios[aniomax] = NULL;
         }
@@ -109,7 +107,7 @@ int32 backend::listen()
      */
     if ( setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,(char *) &optval, sizeof(optval)) < 0 )
     {
-        close( fd );
+        ::close( fd );
         luaL_error( L,"setsockopt SO_REUSEADDR fail" );
         lua_pushnil(L);
         return 1;
@@ -117,7 +115,7 @@ int32 backend::listen()
     
     if ( noblock( fd ) < 0 )
     {
-        close( fd );
+        ::close( fd );
         luaL_error( L,"set socket noblock fail" );
         lua_pushnil(L);
         return 1;
@@ -131,7 +129,7 @@ int32 backend::listen()
 
     if ( ::bind( fd, (struct sockaddr *) & sk_socket,sizeof(sk_socket)) < 0 )
     {
-        close( fd );
+        ::close( fd );
 
         luaL_error( L,"bind socket fail" );
         lua_pushnil(L);
@@ -140,7 +138,7 @@ int32 backend::listen()
 
     if ( ::listen( fd, 256 ) < 0 )
     {
-        close( fd );
+        ::close( fd );
         luaL_error( L,"listen fail" );
         
         lua_pushnil(L);
@@ -162,6 +160,7 @@ int32 backend::listen()
 }
 
 /* 从lua层停止一个io watcher */
+/* TODO 这里应该是io_death，然后放到一个changne list待处理 */
 int32 backend::io_kill()
 {
     int32 fd = luaL_checkinteger( L,1 );
@@ -171,9 +170,8 @@ int32 backend::io_kill()
         return 0;
     }
 
-    class socket *s = anios[fd];
+    delete anios[fd];
     anios[fd] = NULL;
-    s->close();
 
     return 0;
 }
@@ -186,7 +184,7 @@ void backend::listen_cb( ev_io &w,int revents )
         FATAL( "listen_cb libev error,abort .. \n" );
         return;
     }
-    
+
     while ( w.is_active() )
     {
         int32 new_fd = ::accept( w.fd,NULL,NULL );
@@ -207,16 +205,36 @@ void backend::listen_cb( ev_io &w,int revents )
         lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
         lua_pushinteger( L,w.fd );
         lua_pushinteger( L,new_fd );
-        if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
+        if ( expect_false( LUA_OK != lua_pcall(L,3,1,0) ) )
         {
             ::close( new_fd );
-            ERROR( "listen_cb fail:%s\n",lua_tostring(L,-1) );
+            ERROR( "listen cb call accept handler fail:%s\n",lua_tostring(L,-1) );
+            return;
+        }
+        
+        if ( !lua_isinteger(L, -1) )
+        {
+            ::close( new_fd );
+            ERROR( "function `on_accept' must return a number,got %s\n",
+                lua_typename(L, lua_type(L, -1)) );
+
             return;
         }
 
+        socket::SOCKET_TYPE sk = static_cast<socket::SOCKET_TYPE>
+            ( lua_tonumber(L, -1) );
+        lua_pop(L, 1);  /* pop returned value */
+        if ( socket::SK_ERROR == sk )
+        {
+            ERROR( "lua accept socket return socket error" );
+            ::close( new_fd );
+            return;
+        }
+        
         noblock( new_fd );
         /* 直接进入监听 */
         class socket *_socket = new class socket();
+        _socket->set_type( sk );
         (_socket->w).set( loop );
         (_socket->w).set<backend,&backend::read_cb>( this );
         (_socket->w).start( new_fd,EV_READ );
@@ -252,15 +270,14 @@ void backend::read_cb( ev_io &w,int revents )
     int32 fd = w.fd;
     while ( true )
     {
-        char buff[256];  // TODO
-        int32 ret = read( fd,buff,256 );
+        class socket *_socket = anios[fd];
+        int32 ret = _socket->_recv.recv( fd );
 
         if ( ret < 0 )  /* error */
         {
             if ( EAGAIN == errno || EWOULDBLOCK == errno )
                 break;
 
-            anios[fd]->close();
             delete anios[fd];
             anios[fd] = NULL;
 
@@ -276,7 +293,6 @@ void backend::read_cb( ev_io &w,int revents )
         }
         else if ( 0 == ret ) /* disconnect */
         {
-            anios[fd]->close();
             delete anios[fd];
             anios[fd] = NULL;
             
@@ -295,7 +311,7 @@ void backend::read_cb( ev_io &w,int revents )
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_read);
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
             lua_pushinteger( L,fd );
-            lua_pushstring( L,buff );
+            lua_pushstring( L,(_socket->_recv)._buff );
             if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
             {
                 ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
@@ -308,8 +324,8 @@ void backend::read_cb( ev_io &w,int revents )
 /* 设置lua层网络事件回调 */
 int32 backend::set_net_ref()
 {
-    if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) || 
-        !lua_isfunction( L,3 ) || !lua_isfunction( L,4 ) || 
+    if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) ||
+        !lua_isfunction( L,3 ) || !lua_isfunction( L,4 ) ||
         !lua_isfunction( L,5 ) )
     {
         luaL_error( L,"set_net_ref,argument illegal.expect table and function\n" );
@@ -338,7 +354,7 @@ int32 backend::fd_address()
     {
         luaL_error( L,"getpeername error: %s",strerror(errno) );
          return 0;
-    } 
+    }
     
     lua_pushstring( L,inet_ntoa(addr.sin_addr) );
     return 1;

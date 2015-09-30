@@ -71,7 +71,7 @@ end
 -- for CCLuaEngine traceback
 function __G__TRACKBACK__(msg)
     local debug_traceback = debug.traceback()
-    lualog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!LUA ERROR: " .. tostring(msg) .. "\n")
+    lualog("LUA ERROR: " .. tostring(msg) .. "\n")
     lualog(debug_traceback)
     writeTrackFileLog(debug_traceback)
 end
@@ -82,7 +82,7 @@ function PLOG(...)
 
     if table.size(temp) == 0 then
         print("PLOG can set nil")
-        return 
+        return
     end
 
     local is_t = false
@@ -101,7 +101,7 @@ function PLOG(...)
         str = "<<< Lua >>>--------------------" .. "PLOG can not have lua table or nil [" .. str .. "]"
         print(str)
         writeErrorLog(str)
-        return 
+        return
     end
 
     print("<<< Lua >>>--------------------" .. string.format(...))
@@ -113,7 +113,7 @@ function ELOG(...)
 
     if table.size(temp) == 0 then
         print("PLOG can set nil")
-        return 
+        return
     end
     
     local is_t = false
@@ -132,7 +132,7 @@ function ELOG(...)
         str = "<<< Lua >>>--------------------" .. "PLOG can not have lua table or nil object >>" .. str
         print(str)
         writeErrorLog(str)
-        return 
+        return
     end
 
     local ss = "<<< LUA ERROR >>>--------------------" .. time_str() .. " " .. string.format(...)

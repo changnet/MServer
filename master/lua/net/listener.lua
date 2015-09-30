@@ -22,6 +22,8 @@ end
 function Listener:on_accept( fd )
     local conn = Client_net( fd )
     net_mgr:push( conn )
+
+    return ev.SK_CLIENT,99,77
 end
 
 local listen = Listener()

@@ -5,6 +5,10 @@ require "lua.global.table"
 local listen = require "lua.net.listener"
 local net_mgr = require "lua.net.netmgr"
 
+function test()
+    return 998
+end
+
 local function main()
     ev:set_net_ref( net_mgr,net_mgr.accept_event,net_mgr.read_event,
         net_mgr.disconnect_event,net_mgr.connected_event )

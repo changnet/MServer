@@ -143,6 +143,7 @@ function oo.check( log_func )
         end
     end
     
+    str = str .. "check done ... \n"
     if log_func then
         log_func( str )
     else
