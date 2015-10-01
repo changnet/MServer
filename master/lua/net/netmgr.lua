@@ -9,7 +9,6 @@ local Net_mgr = oo.singleton( nil,... )
 -- 构造函数
 function Net_mgr:__init()
     self.conn = {}
-    setmetatable( self.conn,{ __mode = "v" } )  --保证连接对象能被释放
 end
 
 -- push一个连接对象
@@ -17,11 +16,16 @@ function Net_mgr:push( conn )
     self.conn[conn.fd] = conn
 end
 
+-- pop 一个连接对象
+function Net_mgr:pop( conn )
+    self.conn[conn.fd] = nil
+end
+
 -- accept事件
 function Net_mgr:accept_event( fd,... )
     local conn = self.conn[fd]
     if not conn then
-        ELOG( "event_cb no connnect object found" )
+        ELOG( "accept no connnect object found" )
         return
     end
 
@@ -33,7 +37,7 @@ end
 function Net_mgr:read_event( fd,... )
     local conn = self.conn[fd]
     if not conn then
-        ELOG( "event_cb no connnect object found" )
+        ELOG( "read no connnect object found" )
         return
     end
     
@@ -44,7 +48,7 @@ end
 function Net_mgr:disconnect_event( fd,... )
     local conn = self.conn[fd]
     if not conn then
-        ELOG( "event_cb no connnect object found" )
+        ELOG( "disconnect no connnect object found" )
         return
     end
     
@@ -55,7 +59,7 @@ end
 function Net_mgr:connected_event( fd,... )
     local conn = self.conn[fd]
     if not conn then
-        ELOG( "event_cb no connnect object found" )
+        ELOG( "connected_ no connnect object found" )
         return
     end
     

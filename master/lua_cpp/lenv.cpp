@@ -12,6 +12,7 @@ int luaopen_ev (lua_State *L)
     lc.def<&backend::quit>("quit");
     lc.def<&backend::listen>("listen");
     lc.def<&backend::connect>("connect");
+    lc.def<&backend::raw_send>("raw_send");
     lc.def<&backend::io_kill>("io_kill");
     lc.def<&backend::set_net_ref>("set_net_ref");
     lc.def<&backend::fd_address>("fd_address");

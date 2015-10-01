@@ -23,10 +23,15 @@ public:
     int32 run ();
     int32 quit();
     int32 now ();
+    
     int32 listen();
     int32 connect();
+    int32 send();
+    int32 raw_send();
+    
     int32 io_kill();
     int32 timer_kill();
+    
     int32 set_net_ref();
     int32 fd_address();
     

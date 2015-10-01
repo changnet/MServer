@@ -4,6 +4,8 @@
 
 -- 单个客户端连接
 
+local net_mgr = require "lua.net.netmgr"
+
 local Client_net = oo.class ( nil,... )
 
 -- 构造函数
@@ -13,6 +15,7 @@ end
 
 -- 断开事件
 function Client_net:on_disconnect()
+    net_mgr:pop( self )
     PLOG( "i am quit %d",self.fd )
 end
 

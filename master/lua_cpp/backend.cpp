@@ -166,7 +166,7 @@ int32 backend::listen()
 int32 backend::io_kill()
 {
     int32 fd = luaL_checkinteger( L,1 );
-    if ( (fd > aniomax - 1) || !anios[fd] )
+    if ( fd < 0 || (fd > aniomax - 1) || !anios[fd] )
     {
         luaL_error( L,"io_kill got illegal fd" );
         return 0;
@@ -200,8 +200,6 @@ void backend::listen_cb( ev_io &w,int revents )
             
             break;  /* 所有等待的连接已处理完 */
         }
-
-        assert( "accept,dirty ANIO detected!!\n",!(anios[new_fd]) );
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, net_accept);
         lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
@@ -242,6 +240,7 @@ void backend::listen_cb( ev_io &w,int revents )
         (_socket->w).start( new_fd,EV_READ );
         
         array_resize( ANIO,anios,aniomax,new_fd + 1,array_zero );
+        assert( "accept,dirty ANIO detected!!\n",!(anios[new_fd]) );
         anios[new_fd] = _socket;
     }
 }
@@ -282,18 +281,19 @@ void backend::connect_cb( ev_io &w,int32 revents )
     lua_rawgeti(L, LUA_REGISTRYINDEX, net_connected);
     lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
     lua_pushinteger( L,fd );
-    lua_pushboolean( L,!errno );
+    lua_pushboolean( L,!error );
     if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
     {
         ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
         // DON NOT return;
     }
 
-    if ( errno )  /* 连接失败 */
+    if ( error )  /* 连接失败 */
     {
         delete anios[fd];
         anios[fd] = NULL;
 
+        ERROR( "connect unsuccess:%s\n",strerror(error) );
         return;
     }
 
@@ -500,4 +500,44 @@ int32 backend::connect()
 
     lua_pushinteger( L,fd );
     return 1;
+}
+
+/* 发送数据 */
+int32 backend::send()
+{
+    /* TODO
+     * 发送数据要先把数据放到缓冲区，然后加入send列表，最后在epoll循环中发送，等待
+     * ev整合到backend中才处理
+     * 现在只是处理字符串
+     */
+     return 0;
+}
+
+/* 发送原始数据，二进制或字符串 */
+int32 backend::raw_send()
+{
+    int32 fd = luaL_checkinteger( L,1 );
+    
+    size_t len = 0;
+    const char *sz = luaL_checklstring( L,2,&len );
+    
+    if ( !sz || len <= 0 )
+    {
+        luaL_error( L,"raw_send nothing to send" );
+        return 0;
+    }
+    
+    if ( fd < 0 || fd >= aniomax || !anios[fd] )
+    {
+        luaL_error( L,"raw_send illegal fd" );
+        return 0;
+    }
+    
+    class socket *_socket = anios[fd];
+    /* TODO protobuf处理，再经server_deparse序列化到send buffer，放到send list */
+    _socket->_send.append( sz,len );
+    _socket->_send.send( fd );
+    //buffer_process::server_deparse( _socket)
+    
+    return 0;
 }
