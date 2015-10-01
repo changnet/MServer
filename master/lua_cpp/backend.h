@@ -45,6 +45,9 @@ public:
     }
 
 private:
+    void packet_parse( int32 fd,class socket *_socket );
+
+private:
     typedef struct
     {
         ev_timer *w;

@@ -8,11 +8,12 @@
  * 1.游戏的通信包一般都很小，reserved出现的概率很小。偶尔出现，memcpy的效率也是可以接受的
  * 2.缓冲区可能出现边读取边接收，边发送边写入的情况。因此，当前面的协议未读取完，又接收到新的
  *   协议，或者前面的数据未发送完，又写入新的数据，会造成前面一段缓冲区悬空，没法利用。旧框架
- *   的办法是每读取完或发送完一个数据包，就用memmove把后面的数据往前面移动，这在粘包频繁出现
- *   的情况下效率很低(进程间的socket粘包很严重)。因此，我们忽略前面的悬空缓冲区，直到我们需
- *   要调整内存时，才用memmove移动内存。
+ *   的办法是每读取完或发送完一轮数据包，就用memmove把后面的数据往前面移动，这在粘包频繁出现
+ *   并且包不完整的情况下效率很低(进程间的socket粘包很严重)。因此，我们忽略前面的悬空缓冲区，
+ *   直到我们需要调整内存时，才用memmove移动内存。
  */
 
+class buffer_process;
 class buffer
 {
 public:
@@ -45,12 +46,49 @@ public:
 
         return len;
     }
+    
+    /* 清理缓冲区 */
+    inline void clear()
+    {
+        _pos = _size = 0;
+    }
+    
+    /* 有效数据大小 */
+    inline uint32 data_size()
+    {
+        return _size - _pos;
+    }
+    
+    /* 悬空区移动 */
+    inline void moveon( int32 _mv )
+    {
+        _pos += _mv;
+    }
+    
+    /* 数据区大小 */
+    inline uint32 size()
+    {
+        return _size;
+    }
+    
+    /* 总大小 */
+    inline uint32 length()
+    {
+        return _len;
+    }
+    
+    /* 悬空区大小 */
+    inline uint32 empty_head_size()
+    {
+        return _pos;
+    }
+
+    friend class buffer_process;
+private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
     uint32 _len;     /* 缓冲区总大小 */
     uint32 _pos;     /* 悬空区大小 */
-private:
-
     static class ordered_pool<BUFFER_CHUNK> allocator;
     
     /* 内存扩展,处理两种情况：

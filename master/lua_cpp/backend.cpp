@@ -1,4 +1,6 @@
 #include "backend.h"
+#include "../net/buffer_process.h"
+#include "../net/packet.h"
 
 #define LUA_UNREF(x)                            \
     if ( x > 0 )                                \
@@ -308,17 +310,56 @@ void backend::read_cb( ev_io &w,int revents )
         }
         else    /* read data */
         {
+            packet_parse( fd,_socket );
+        }
+    }
+}
+
+/* 网络包解析 */
+void backend::packet_parse( int32 fd,class socket *_socket )
+{
+    parse_func pft = NULL;
+    if ( socket::SK_SERVER == _socket->_type )
+    {
+        pft = buffer_process::server_parse;
+    }
+    else
+    {
+        pft = buffer_process::client_parse;
+    }
+    
+    struct packet _packet;
+    
+    /* TODO 这里可能会出现在一个逻辑里面把当前socket给关闭甚至delete掉
+     * 因此这里需要同时检测当前socket是否还存活
+     */
+    while ( _socket->_recv.data_size() > 0 )
+    {
+        int32 result = pft( _socket->_recv,_packet );
+        if ( result > 0 )
+        {
+            /* TODO 包自动转发，protobuf协议解析 */
+            _socket->_recv.moveon( result );
+
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_read);
             lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
             lua_pushinteger( L,fd );
-            lua_pushstring( L,(_socket->_recv)._buff );
+            lua_pushstring( L,_packet.pkt );
             if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
             {
                 ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
                 return;
             }
         }
+        else
+            break;
     }
+    
+    assert( "buffer over boundary",_socket->_recv.data_size() >= 0 &&
+        _socket->_recv.size() < _socket->_recv.length() );
+    /* 缓冲区为空，尝试清理悬空区 */
+    if ( 0 == _socket->_recv.data_size() )
+        _socket->_recv.clear();
 }
 
 /* 设置lua层网络事件回调 */

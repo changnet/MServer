@@ -21,7 +21,7 @@ MKDIR = mkdir -p
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global.o clog.o ev.o lenv.o backend.o buffer.o socket.o
+_OBJS = global.o clog.o ev.o lenv.o backend.o buffer.o socket.o buffer_process.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
