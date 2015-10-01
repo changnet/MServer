@@ -91,7 +91,7 @@ int32 backend::listen()
     const char *addr = luaL_checkstring( L,1 );
     int32 port = luaL_checkinteger( L,2 );
 
-    int32 fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 )
     {
         luaL_error( L,"create socket fail" );
@@ -217,15 +217,15 @@ void backend::listen_cb( ev_io &w,int revents )
         if ( !lua_isinteger(L, -1) )
         {
             ::close( new_fd );
-            ERROR( "function `on_accept' must return a number,got %s\n",
+            ERROR( "function `on_accept' must return a socket type,got %s\n",
                 lua_typename(L, lua_type(L, -1)) );
-
+            lua_pop( L,1 );
             return;
         }
 
         socket::SOCKET_TYPE sk = static_cast<socket::SOCKET_TYPE>
             ( lua_tonumber(L, -1) );
-        lua_pop(L, 1);  /* pop returned value */
+        lua_pop(L, -1);  /* pop returned value */
         if ( socket::SK_ERROR == sk )
         {
             ERROR( "lua accept socket return socket error" );
@@ -254,10 +254,54 @@ void backend::listen_cb( ev_io &w,int revents )
  * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
  * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
  * of  the  usual  error  codes  listed  here,explaining the reason for the failure)
+ * 1）连接成功建立时，socket 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
+ * 2）连接建立失败时，socket 描述字既可读又可写。 （由于有未决的错误，从而可读又可写）
  */
 void backend::connect_cb( ev_io &w,int32 revents )
 {
+    if ( EV_ERROR & revents )
+    {
+        FATAL( "connect_cb libev error,abort .. \n" );
+        return;
+    }
+    
+    int32 fd = w.fd;
+    
+    int32 error   = 0;
+    socklen_t len = sizeof (error);
+    if ( getsockopt( fd, SOL_SOCKET, SO_ERROR, &error, &len ) < 0 )
+    {
+        ERROR( "connect cb getsockopt error:%s\n",strerror(errno) );
+        
+        delete anios[fd];
+        anios[fd] = NULL;
+        
+        return;
+    }
+    
+    lua_rawgeti(L, LUA_REGISTRYINDEX, net_connected);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
+    lua_pushinteger( L,fd );
+    lua_pushboolean( L,!errno );
+    if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
+    {
+        ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
+        // DON NOT return;
+    }
 
+    if ( errno )  /* 连接失败 */
+    {
+        delete anios[fd];
+        anios[fd] = NULL;
+
+        return;
+    }
+
+    class socket *_socket = anios[fd];
+    (_socket->w).stop();   /* 先stop再设置消耗要小一些 */
+    (_socket->w).set<backend,&backend::read_cb>( this );
+    (_socket->w).set( EV_READ ); /* 将之前的write改为read */
+    (_socket->w).start();
 }
 
 /* 读回调 */
@@ -398,5 +442,62 @@ int32 backend::fd_address()
     }
     
     lua_pushstring( L,inet_ntoa(addr.sin_addr) );
+    return 1;
+}
+
+/* 主动tcp连接 ev:connect( "127.0.0.1",9999,ev.SK_SERVER )*/
+int32 backend::connect()
+{
+    const char *addr = luaL_checkstring( L,1 );
+    const int32 port = luaL_checkinteger( L,2 );
+    const socket::SOCKET_TYPE sk = static_cast<socket::SOCKET_TYPE>(
+        luaL_optinteger( L,3,socket::SK_SERVER ) );
+
+    int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if ( fd < 0 )
+    {
+        luaL_error( L,"create socket fail" );
+        lua_pushnil(L);
+        return 1;
+    }
+
+
+    if ( noblock( fd ) < 0 )
+    {
+        ::close( fd );
+        luaL_error( L,"connect set socket noblock fail" );
+        lua_pushnil(L);
+        return 1;
+    }
+
+    struct sockaddr_in sk_socket;
+    memset( &sk_socket,0,sizeof(sk_socket) );
+    sk_socket.sin_family = AF_INET;
+    sk_socket.sin_addr.s_addr = inet_addr(addr);
+    sk_socket.sin_port = htons( port );
+
+    /* 三次握手是需要一些时间的，内核中对connect的超时限制是75秒 */
+    if ( ::connect( fd, (struct sockaddr *) & sk_socket,sizeof(sk_socket)) < 0
+        && errno != EINPROGRESS )
+    {
+        ::close( fd );
+
+        luaL_error( L,"bind socket fail" );
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    class socket *_socket = new class socket();
+    _socket->set_type( sk );
+    (_socket->w).set( loop );
+    (_socket->w).set<backend,&backend::connect_cb>( this );
+    (_socket->w).start( fd,EV_WRITE ); /* write事件 */
+
+    array_resize( ANIO,anios,aniomax,fd + 1,array_zero );
+
+    assert( "connect,dirty ANIO detected!!\n",!(anios[fd]) );
+    anios[fd] = _socket;
+
+    lua_pushinteger( L,fd );
     return 1;
 }
