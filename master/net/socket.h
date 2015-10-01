@@ -1,6 +1,11 @@
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
 
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>  /* htons */
+
 #include "../global/global.h"
 #include "../ev/ev_watcher.h"
 #include "buffer.h"
@@ -29,6 +34,9 @@ public:
         _type = ty;
     }
 
+    static int32 non_block( int32 fd );
+    static int32 keep_alive( int32 fd );
+    static int32 user_timeout( int32 fd );
 };
 
 #endif /* __SOCKET_H__ */

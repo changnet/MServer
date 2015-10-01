@@ -6,10 +6,23 @@
     if ( x > 0 )                                \
         luaL_unref( L,LUA_REGISTRYINDEX,x );
 
+#ifdef TCP_KEEP_ALIVE
+# define KEEP_ALIVE(x)    socket::keep_alive(x)
+#else
+# define KEEP_ALIVE(x)
+#endif
+
+#ifdef _TCP_USER_TIMEOUT
+# define USER_TIMEOUT(x)    socket::user_timeout(x)
+#else
+# define USER_TIMEOUT(x)
+#endif
+
 backend::backend()
 {
     assert( "you can't create a backend without event loop and lua state",false );
 }
+
 backend::backend( ev_loop *loop,lua_State *L )
     : loop(loop),L(L)
 {
@@ -115,10 +128,10 @@ int32 backend::listen()
         return 1;
     }
     
-    if ( noblock( fd ) < 0 )
+    if ( socket::non_block( fd ) < 0 )
     {
         ::close( fd );
-        luaL_error( L,"set socket noblock fail" );
+        luaL_error( L,"listen set socket non-block fail" );
         lua_pushnil(L);
         return 1;
     }
@@ -231,7 +244,9 @@ void backend::listen_cb( ev_io &w,int revents )
             return;
         }
         
-        noblock( new_fd );
+        socket::non_block( new_fd );
+        KEEP_ALIVE( new_fd );
+        USER_TIMEOUT( new_fd );
         /* 直接进入监听 */
         class socket *_socket = new class socket();
         _socket->set_type( sk );
@@ -296,6 +311,9 @@ void backend::connect_cb( ev_io &w,int32 revents )
         ERROR( "connect unsuccess:%s\n",strerror(error) );
         return;
     }
+
+    KEEP_ALIVE( fd );
+    USER_TIMEOUT( fd );
 
     class socket *_socket = anios[fd];
     (_socket->w).stop();   /* 先stop再设置消耗要小一些 */
@@ -462,10 +480,10 @@ int32 backend::connect()
     }
 
 
-    if ( noblock( fd ) < 0 )
+    if ( socket::non_block( fd ) < 0 )
     {
         ::close( fd );
-        luaL_error( L,"connect set socket noblock fail" );
+        luaL_error( L,"connect set socket non-block fail" );
         lua_pushnil(L);
         return 1;
     }

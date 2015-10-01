@@ -40,4 +40,18 @@
 /* buffer chunk size for socket recv or send */
 #define BUFFER_CHUNK    8192
 
+//////////////////////////////TCP KEEP ALIVE////////////////////////////////////
+/* 是否开启tcp keepalive，一旦开启，所有accept、connect的socket都会启用 */
+#define TCP_KEEP_ALIVE
+
+#ifdef TCP_KEEP_ALIVE
+# define KEEP_ALIVE_TIME        60    //无通信后60s开始发送
+# define KEEP_ALIVE_INTERVAL    10    //间隔10s发送
+# define KEEP_ALIVE_PROBES      5     //总共发送5次
+#endif
+//////////////////////////////TCP KEEP ALIVE////////////////////////////////////
+
+/* 是否开启 TCP_USER_TIMEOUT,一旦开启，所有accept、connect的socket都会启用,内核2.6.37 */
+#define _TCP_USER_TIMEOUT    60000    //TCP_USER_TIMEOUT,milliseconds
+
 #endif /* __CONFIG_H__ */

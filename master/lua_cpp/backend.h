@@ -4,10 +4,6 @@
 /* 后台工作类 */
 
 #include <lua.hpp>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>  /* htons */
 
 #include "../global/global.h"
 #include "../ev/ev.h"
@@ -39,17 +35,6 @@ public:
     void read_cb( ev_io &w,int revents );
     void connect_cb( ev_io &w,int32 revents );
     
-    static inline int32 noblock( int32 fd )
-    {
-        int32 flags = fcntl( fd, F_GETFL, 0 ); //get old status
-        if ( flags == -1 )
-            return -1;
-
-        flags |= O_NONBLOCK;
-
-        return fcntl( fd, F_SETFL, flags);
-    }
-
 private:
     void packet_parse( int32 fd,class socket *_socket );
 
