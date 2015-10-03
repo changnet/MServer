@@ -38,9 +38,9 @@ backend::backend( lua_State *L )
     anios = NULL;
     aniomax =  0;
     
-    sendings = NULL;
-    sendingmax =  0;
-    sendingcnt =  0;
+    ansendings = NULL;
+    ansendingmax =  0;
+    ansendingcnt =  0;
 
     antimers = NULL;
     antimermax =  0;
@@ -72,11 +72,11 @@ backend::~backend()
     anios = NULL;
     aniomax = 0;
     
-    if ( sendings )
-        delete []sendings;
-    sendings = NULL;
-    sendingcnt =  0;
-    sendingmax =  0;
+    if ( ansendings )
+        delete []ansendings;
+    ansendings = NULL;
+    ansendingcnt =  0;
+    ansendingmax =  0;
     
     if ( antimers )
         delete []antimers;
@@ -133,6 +133,7 @@ int32 backend::run()
         timers_reify (); /* relative timers called last */
   
         invoke_pending ();
+        invoke_sending ();
     }    /* while */
     
     return 0;
@@ -590,9 +591,12 @@ int32 backend::raw_send()
 {
     int32 fd = luaL_checkinteger( L,1 );
     
-    size_t len = 0;
-    const char *sz = luaL_checklstring( L,2,&len );
-    
+    /* 不要用luaL_checklstring，它给出的长度不包含字符串结束符\0，而我们不知道lua发送的
+     * 是字符串还是二进制，因此在lua层要传入一个长度，默认为字符串，由optional取值
+     */
+    const char *sz = luaL_checkstring( L,2 );
+    const int32 len = luaL_optinteger( L,3,strlen(sz)+1 );
+
     if ( !sz || len <= 0 )
     {
         luaL_error( L,"raw_send nothing to send" );
@@ -606,10 +610,76 @@ int32 backend::raw_send()
     }
     
     class socket *_socket = anios[fd];
-    /* TODO protobuf处理，再经server_deparse序列化到send buffer，放到send list */
+
+    /* raw_send是一个原始的发送函数,数据不经过协议处理(不经protobuf
+     * 处理，不包含协议号...)，可以发送二进制或字符串。
+     * 比如把战报写到文件，读出来后可以直接用此函数发送
+     * 又或者向php发送json字符串
+     */
     _socket->_send.append( sz,len );
-    _socket->_send.send( fd );
-    //buffer_process::server_deparse( _socket)
+    slist_add( fd,_socket );  /* 放到发送队列，最后一次发送 */
     
     return 0;
+}
+
+/* 加入到发送列表 */
+void backend::slist_add( int32 fd,class socket *_socket )
+{
+    if ( _socket->sending )  /* 已经标记为发送，无需再标记 */
+        return;
+
+    // 0位是空的，不使用
+    ++ansendingcnt;
+    array_resize( ANSENDING,ansendings,ansendingmax,ansendingcnt + 1,EMPTY );
+    ansendings[ansendingcnt] = fd;
+    
+    _socket->sending = ansendingcnt;
+}
+
+/* 把数据攒到一起，一次发送
+ * 发处是：把包整合，减少发送次，提高效率
+ * 坏处是：如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
+ * 然而，游戏中包多，但数据量不大
+ */
+void backend::invoke_sending()
+{
+    if ( ansendingcnt <= 0 )
+        return;
+
+    int32 fd   = 0;
+    int32 empty = 0;
+    int32 empty_max = 0;
+    class socket *_socket = NULL;
+    
+    /* 这里使用一个数组来管理要发送数据的socket。还有一种更简单粗暴的方法是每次都遍历所有
+     * socket，如果有数据在缓冲区则发送，这种方法在多链接，低活跃场景中效率不高。
+     */
+    for ( int32 i = 1;i <= ansendingcnt;i ++ )/* 0位是空的，不使用 */
+    {
+        if ( !(fd = ansendings[i]) || !(_socket = anios[fd]) || !_socket->sending )
+        {
+            ERROR( "invoke sending empty socket" );
+            ++empty;
+            empty_max = i;
+            continue;
+        }
+        
+        _socket->_send.send( fd );
+        if ( _socket->_send.data_size() <= 0 )
+        {
+            _socket->sending = 0;   /* 去除发送标识 */
+            _socket->_send.clear(); /* 去除悬空区 */
+            ++empty;
+            empty_max = i;
+        }
+        else if ( empty )  /* 将发送数组向前移动，防止中间留空 */
+        {
+            int32 empty_min = empty_max - empty + 1;
+            _socket->sending = empty_min;
+            --empty;
+        }
+    }
+
+    ansendingcnt -= empty;
+    assert( "invoke sending sending counter fail",ansendingcnt >= 0 && ansendingcnt < ansendingmax );
 }

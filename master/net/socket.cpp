@@ -4,7 +4,8 @@
 
 socket::socket()
 {
-    _type = SK_ERROR;
+    _type   = SK_ERROR;
+    sending = 0;
 }
 
 socket::~socket()
@@ -14,6 +15,8 @@ socket::~socket()
     
     w.stop();
     w.fd = -1;
+    
+    sending = 0;
 }
 
 int32 socket::non_block( int32 fd )

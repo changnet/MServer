@@ -21,6 +21,7 @@ public:
     }SOCKET_TYPE;
 
     ev_io w;
+    int32 sending;
     buffer _recv;
     buffer _send;
     SOCKET_TYPE _type;
