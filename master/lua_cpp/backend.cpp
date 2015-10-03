@@ -387,48 +387,27 @@ void backend::read_cb( ev_io &w,int revents )
     }
     
     int32 fd = w.fd;
+    /* TODO _socket是否被关闭 */
     while ( true )
     {
         class socket *_socket = anios[fd];
         int32 ret = _socket->_recv.recv( fd );
 
-        if ( ret < 0 )  /* error */
+        /* disconnect or error */
+        if ( 0 == ret )
         {
-            if ( EAGAIN == errno || EWOULDBLOCK == errno )
-                break;
-
-            delete anios[fd];
-            anios[fd] = NULL;
-
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_disconnect);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
-            lua_pushinteger( L,fd );
-            if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
-            {
-                ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
-                return;
-            }
+            socket_disconect( fd );
             break;
         }
-        else if ( 0 == ret ) /* disconnect */
+        else if ( ret < 0 )
         {
-            delete anios[fd];
-            anios[fd] = NULL;
-            
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_disconnect);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
-            lua_pushinteger( L,fd );
-            if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
-            {
-                ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
-                return;
-            }
+            if ( EAGAIN != errno && EWOULDBLOCK != errno )
+                socket_disconect( fd );
             break;
         }
-        else    /* read data */
-        {
-            packet_parse( fd,_socket );
-        }
+  
+        /* read data */
+        packet_parse( fd,_socket );
     }
 }
 
@@ -656,15 +635,32 @@ void backend::invoke_sending()
      */
     for ( int32 i = 1;i <= ansendingcnt;i ++ )/* 0位是空的，不使用 */
     {
-        if ( !(fd = ansendings[i]) || !(_socket = anios[fd]) || !_socket->sending )
+        if ( !(fd = ansendings[i]) || !(_socket = anios[fd]) )
         {
+            /* 假如socket发送了很大的数据并直接关闭socket。一次event loop无法发送完数据，
+             * socket会被强制关闭。此时就会出现anios[fd] = NULL。考虑到这种情况在游戏中
+             * 并不常见，可当异常处理
+             */
             ERROR( "invoke sending empty socket" );
             ++empty;
             empty_max = i;
             continue;
         }
         
-        _socket->_send.send( fd );
+        assert( "invoke sending index not match",i == _socket->sending );
+
+        /* 处理发送 */
+        int32 ret = _socket->_send.send( fd );
+        if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
+        {
+            ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
+            socket_disconect( fd );
+            ++empty;
+            empty_max = i;
+            continue;
+        }
+        
+        /* 处理sendings移动 */
         if ( _socket->_send.data_size() <= 0 )
         {
             _socket->sending = 0;   /* 去除发送标识 */
@@ -678,8 +674,24 @@ void backend::invoke_sending()
             _socket->sending = empty_min;
             --empty;
         }
+        /* 数据未发送完，也不需要移动，则do nothing */
     }
 
     ansendingcnt -= empty;
     assert( "invoke sending sending counter fail",ansendingcnt >= 0 && ansendingcnt < ansendingmax );
+}
+
+/* socket 断开事件，通知lua层 */
+void backend::socket_disconect( int32 fd )
+{
+    delete anios[fd];
+    anios[fd] = NULL;
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, net_disconnect);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
+    lua_pushinteger( L,fd );
+    if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
+    {
+        ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
+    }
 }

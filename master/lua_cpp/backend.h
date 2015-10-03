@@ -51,6 +51,7 @@ private:
     void packet_parse( int32 fd,class socket *_socket );
     void slist_add( int32 fd,class socket *_socket );
     void invoke_sending();
+    void socket_disconect( int32 fd );
 
 private:
     typedef struct
