@@ -21,7 +21,8 @@ end
 
 -- 读事件
 function Client_net:on_read( pkt )
-    vd( pkt )
+    print( pkt,"quit now " .. self.fd )
+    ev:io_kill( self.fd )
 end
 
 return Client_net

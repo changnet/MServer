@@ -50,7 +50,9 @@ public:
 private:
     void packet_parse( int32 fd,class socket *_socket );
     void slist_add( int32 fd,class socket *_socket );
+    void dlist_add( int32 fd );
     void invoke_sending();
+    void invoke_delete();
     void socket_disconect( int32 fd );
 
 private:
@@ -62,6 +64,7 @@ private:
 
     typedef class socket *ANIO;/* AN = array node */
     typedef int32 ANSENDING;
+    typedef int32 ANDELETE;
 
     class ev_loop *loop;
     lua_State *L;
@@ -74,6 +77,11 @@ private:
     ANSENDING *ansendings;
     int32 ansendingmax;
     int32 ansendingcnt;
+    
+    /* 待关闭socket队列 */
+    ANDELETE *andeletes;
+    int32 andeletemax;
+    int32 andeletecnt;
 
     /* timer 管理队列 */
     ANTIMER *antimers;

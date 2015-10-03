@@ -41,6 +41,10 @@ backend::backend( lua_State *L )
     ansendings = NULL;
     ansendingmax =  0;
     ansendingcnt =  0;
+    
+    andeletes = NULL;
+    andeletemax =  0;
+    andeletecnt =  0;
 
     antimers = NULL;
     antimermax =  0;
@@ -67,29 +71,33 @@ backend::~backend()
 
     }
     
-    if ( anios )
-        delete []anios;
+    if ( anios ) delete []anios;
     anios = NULL;
     aniomax = 0;
     
-    if ( ansendings )
-        delete []ansendings;
+    if ( ansendings ) delete []ansendings;
     ansendings = NULL;
     ansendingcnt =  0;
     ansendingmax =  0;
     
-    if ( antimers )
-        delete []antimers;
+    if ( andeletes ) delete []andeletes;
+    andeletes = NULL;
+    andeletemax =  0;
+    andeletecnt =  0;
+    
+    if ( antimers ) delete []antimers;
     antimers = NULL;
     antimermax = 0;
     antimercnt = 0;
     
-    /* lua source code 'ref = (int)lua_rawlen(L, t) + 1' make sure ref > 0 */
-    LUA_UNREF( net_accept );
-    LUA_UNREF( net_read );
-    LUA_UNREF( net_disconnect );
-    LUA_UNREF( net_connected );
-    LUA_UNREF( net_self );
+    /* lua source code 'ref = (int)lua_rawlen(L, t) + 1' make sure ref > 0
+     * 释放lua变量引用，不然lua无法释放内存
+     */
+    if ( net_accept )     LUA_UNREF( net_accept );
+    if ( net_read )       LUA_UNREF( net_read );
+    if ( net_disconnect ) LUA_UNREF( net_disconnect );
+    if ( net_connected )  LUA_UNREF( net_connected );
+    if ( net_self )       LUA_UNREF( net_self );
 }
 
 /* 因为要加入lua gc等，必须重写基类事件循环函数 */
@@ -134,6 +142,7 @@ int32 backend::run()
   
         invoke_pending ();
         invoke_sending ();
+        invoke_delete  (); /* after sending */
     }    /* while */
     
     return 0;
@@ -230,7 +239,6 @@ int32 backend::listen()
 }
 
 /* 从lua层停止一个io watcher */
-/* TODO 这里应该是io_death，然后放到一个changne list待处理 */
 int32 backend::io_kill()
 {
     int32 fd = luaL_checkinteger( L,1 );
@@ -240,8 +248,7 @@ int32 backend::io_kill()
         return 0;
     }
 
-    delete anios[fd];
-    anios[fd] = NULL;
+    dlist_add( fd );
 
     return 0;
 }
@@ -693,5 +700,33 @@ void backend::socket_disconect( int32 fd )
     if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
     {
         ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
+    }
+}
+
+/* 把待关闭socket放到队列 */
+void backend::dlist_add( int32 fd )
+{
+    /* 这里不在socket上设置删除标识，如果多次kill一个socket，后果自负 */
+    ++andeletecnt;
+    array_resize( ANDELETE,andeletes,andeletemax,andeletecnt + 1,EMPTY );
+    andeletes[andeletecnt] = fd;
+}
+
+/* 关闭需要关闭的socket */
+void backend::invoke_delete()
+{
+    while ( andeletecnt )
+    {
+        int32 fd = andeletes[andeletecnt];
+        --andeletecnt;
+        if ( !anios[fd] )
+        {
+            ERROR( "invoke delete empty socket,maybe double kill" );
+            continue;
+        }
+        
+        /* andeletes是处理主动关闭队列的，因此无需调用socket_disconect告知lua */
+        delete anios[fd];
+        anios[fd] = NULL;
     }
 }
