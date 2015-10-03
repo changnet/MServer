@@ -1,4 +1,5 @@
 #include "backend.h"
+#include "../ev/ev_def.h"
 #include "../net/buffer_process.h"
 #include "../net/packet.h"
 
@@ -23,9 +24,11 @@ backend::backend()
     assert( "you can't create a backend without event loop and lua state",false );
 }
 
-backend::backend( ev_loop *loop,lua_State *L )
-    : loop(loop),L(L)
+backend::backend( lua_State *L )
+    : L(L)
 {
+    loop = static_cast<class ev_loop *>( this );
+
     net_accept     = 0;
     net_read       = 0;
     net_disconnect = 0;
@@ -33,11 +36,15 @@ backend::backend( ev_loop *loop,lua_State *L )
     net_self       = 0;
 
     anios = NULL;
-    aniomax = 0;
+    aniomax =  0;
+    
+    sendings = NULL;
+    sendingmax =  0;
+    sendingcnt =  0;
 
-    timerlist = NULL;
-    timerlistmax = 0;
-    timerlistcnt = 0;
+    antimers = NULL;
+    antimermax =  0;
+    antimercnt =  0;
 }
 
 backend::~backend()
@@ -53,23 +60,29 @@ backend::~backend()
         }
     }
 
-    while ( timerlistcnt > 0 )
+    while ( antimercnt > 0 )
     {
-        --timerlistcnt;
+        --antimercnt;
         // TODO
-        // ANTIMER*antimer = timerlist + timerlistcnt;
-        // w->close();
-        // delete w;
+
     }
     
-    delete []anios;
+    if ( anios )
+        delete []anios;
     anios = NULL;
     aniomax = 0;
     
-    delete []timerlist;
-    timerlist = NULL;
-    timerlistmax = 0;
-    timerlistcnt = 0;
+    if ( sendings )
+        delete []sendings;
+    sendings = NULL;
+    sendingcnt =  0;
+    sendingmax =  0;
+    
+    if ( antimers )
+        delete []antimers;
+    antimers = NULL;
+    antimermax = 0;
+    antimercnt = 0;
     
     /* lua source code 'ref = (int)lua_rawlen(L, t) + 1' make sure ref > 0 */
     LUA_UNREF( net_accept );
@@ -79,22 +92,63 @@ backend::~backend()
     LUA_UNREF( net_self );
 }
 
+/* 因为要加入lua gc等，必须重写基类事件循环函数 */
 int32 backend::run()
 {
-    loop->run();
+    assert( "backend uninit",backend_fd >= 0 );
+
+    loop_done = false;
+    while ( !loop_done )
+    {
+        fd_reify();/* update fd-related kernel structures */
+        
+        /* calculate blocking time */
+        {
+            ev_tstamp waittime  = 0.;
+            
+            
+            /* update time to cancel out callback processing overhead */
+            time_update ();
+            
+            waittime = MAX_BLOCKTIME;
+            
+            if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
+            {
+               ev_tstamp to = (timers [HEAP0])->at - mn_now;
+               if (waittime > to) waittime = to;
+            }
+    
+            /* at this point, we NEED to wait, so we have to ensure */
+            /* to pass a minimum nonzero value to the backend */
+            if (expect_false (waittime < backend_mintime))
+                waittime = backend_mintime;
+
+            backend_poll ( waittime );
+
+            /* update ev_rt_now, do magic */
+            time_update ();
+        }
+
+        /* queue pending timers and reschedule them */
+        timers_reify (); /* relative timers called last */
+  
+        invoke_pending ();
+    }    /* while */
+    
     return 0;
 }
 
-int32 backend::quit()
+/* 退出循环 */
+int32 backend::exit()
 {
     loop->quit();
     return 0;
 }
 
 /* 获取当前时间戳 */
-int32 backend::now()
+int32 backend::time()
 {
-    lua_pushinteger( L,loop->now() );
+    lua_pushinteger( L,ev_rt_now );
     return 1;
 }
 

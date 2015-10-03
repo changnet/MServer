@@ -4,6 +4,19 @@
 #include <stdexcept>
 #include "../global/global.h"
 
+#define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
+#define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */
+
+/*
+ * the heap functions want a real array index. array index 0 is guaranteed to not
+ * be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP gives
+ * the branching factor of the d-tree.
+ */
+
+#define HEAP0 1
+#define HPARENT(k) ((k) >> 1)
+#define UPHEAP_DONE(p,k) (!(p))
+
 typedef double ev_tstamp;
 
 /* eventmask, revents, events... */

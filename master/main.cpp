@@ -1,6 +1,4 @@
 #include "global/global.h"
-#include "ev/ev.h"
-#include "ev/ev_watcher.h"
 #include "lua_cpp/lenv.h"
 #include "lua_cpp/lclass.h"
 #include "lua_cpp/backend.h"
@@ -66,14 +64,6 @@ int32 main( int32 argc,char **argv )
     atexit(onexit);
     std::set_new_handler( new_fail );
 
-    /* 初始化event loop */
-    ev_loop *loop = new ev_loop();
-    if ( !loop->init() )
-    {
-        ERROR( "ev loop init fail\n" );
-        exit( 1 );
-    }
-
     /* 初始化lua */
     lua_State* L = luaL_newstate();
     if ( !L )
@@ -86,7 +76,7 @@ int32 main( int32 argc,char **argv )
 
     runtime_start();
 
-    class backend *_backend = new backend(loop,L);
+    class backend *_backend = new backend(L);
     
     lclass<backend>::push( L,_backend,false );
     lua_setglobal( L,"ev" );
@@ -100,8 +90,8 @@ int32 main( int32 argc,char **argv )
         ERROR( "load lua enterance file error:%s\n",err_msg );
     }
 
-    delete _backend; /* backend依赖于loop及L，故要先关闭销毁 */
-    delete loop;
+    delete _backend; /* backend依赖于L，故要先关闭销毁 */
+
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
     lua_gc(L, LUA_GCCOLLECT, 0);
     lua_close(L);

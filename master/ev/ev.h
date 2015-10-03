@@ -16,7 +16,8 @@
 #define __EV_H__
 
 #include <sys/epoll.h>
-#include "ev_def.h"
+
+typedef double ev_tstamp;
 
 class ev_watcher;
 class ev_io;
@@ -47,7 +48,6 @@ public:
     ev_loop();
     ~ev_loop();
 
-    bool init();
     int32 run();
     int32 quit();
     
@@ -63,7 +63,7 @@ public:
     {
         return ev_rt_now;
     }
-private:
+protected:
     volatile bool loop_done;
     ANFD *anfds;
     uint32 anfdmax;
@@ -88,10 +88,10 @@ private:
     ev_tstamp now_floor; /* last time we refreshed rt_time */
     ev_tstamp mn_now;    /* monotonic clock "now" */
     ev_tstamp rtmn_diff; /* difference realtime - monotonic time */
-private:
+protected:
     void fd_change( int32 fd );
     void fd_reify();
-    bool backend_init();
+    void backend_init();
     void backend_modify( int32 fd,int32 events,int32 reify );
     void time_update();
     void backend_poll( ev_tstamp timeout );

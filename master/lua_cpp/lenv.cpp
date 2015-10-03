@@ -3,13 +3,14 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 #include "backend.h"
+#include "../ev/ev_def.h"
 #include "../net/socket.h"
 int luaopen_ev (lua_State *L)
 {
     lclass<backend> lc(L,"eventloop");
     lc.def<&backend::run> ("run");
-    lc.def<&backend::now> ("now");
-    lc.def<&backend::quit>("quit");
+    lc.def<&backend::time> ("time");
+    lc.def<&backend::exit>("exit");
     lc.def<&backend::listen>("listen");
     lc.def<&backend::connect>("connect");
     lc.def<&backend::raw_send>("raw_send");

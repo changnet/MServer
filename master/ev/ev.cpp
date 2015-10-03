@@ -1,20 +1,8 @@
 #include <fcntl.h>
 
+#include "ev_def.h"
 #include "ev.h"
 #include "ev_watcher.h"
-
-#define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
-#define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */
-
-/*
- * the heap functions want a real array index. array index 0 is guaranteed to not
- * be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP gives
- * the branching factor of the d-tree.
- */
-
-#define HEAP0 1
-#define HPARENT(k) ((k) >> 1)
-#define UPHEAP_DONE(p,k) (!(p))
 
 ev_loop::ev_loop()
 {
@@ -33,7 +21,12 @@ ev_loop::ev_loop()
     timermax = 0;
     timercnt = 0;
     
-    backend_fd = -1;
+    ev_rt_now          = get_time ();
+    mn_now             = get_clock ();
+    now_floor          = mn_now;
+    rtmn_diff          = ev_rt_now - mn_now;
+
+    backend_init();
 }
 
 ev_loop::~ev_loop()
@@ -67,18 +60,6 @@ ev_loop::~ev_loop()
         ::close( backend_fd );
         backend_fd = -1;
     }
-}
-
-bool ev_loop::init()
-{
-    assert( "loop duplicate init",!anfds && !pendings && !fdchanges && !timers );
-    
-    ev_rt_now          = get_time ();
-    mn_now             = get_clock ();
-    now_floor          = mn_now;
-    rtmn_diff          = ev_rt_now - mn_now;
-
-    return backend_init();
 }
 
 int32 ev_loop::run()
@@ -265,7 +246,7 @@ void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
     }
 }
 
-bool ev_loop::backend_init()
+void ev_loop::backend_init()
 {
 #ifdef EPOLL_CLOEXEC
     backend_fd = epoll_create1 (EPOLL_CLOEXEC);
@@ -274,14 +255,14 @@ bool ev_loop::backend_init()
 #endif
     backend_fd = epoll_create (256);
 
-    if ( backend_fd < 0 )
-        return false;
+    if ( backend_fd < 0 || fcntl (backend_fd, F_SETFD, FD_CLOEXEC) < 0 )
+    {
+        FATAL( "libev backend init fail:%s",strerror(errno) );
+        return;
+    }
 
-    fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
-
-    backend_mintime = 1e-3; /* epoll does sometimes return early, this is just to avoid the worst */
-
-    return true;
+    /* epoll does sometimes return early, this is just to avoid the worst */
+    backend_mintime = 1e-3;
 }
 
 ev_tstamp ev_loop::get_time()
