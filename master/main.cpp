@@ -1,5 +1,5 @@
 #include "global/global.h"
-#include "lua_cpp/lenv.h"
+#include "lua_cpp/lcpplib.h"
 #include "lua_cpp/lclass.h"
 #include "lua_cpp/backend.h"
 #include <lua.hpp>
@@ -72,7 +72,7 @@ int32 main( int32 argc,char **argv )
         exit( 1 );
     }
     luaL_openlibs(L);
-    lua_initenv(L);
+    luacpp_init(L);
 
     runtime_start();
 

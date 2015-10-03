@@ -1,4 +1,4 @@
-#include "lenv.h"
+#include "lcpplib.h"
 #include "lclass.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ int luaopen_util (lua_State *L)
 
 ////////////////////////////////////////////////////////////////////////////////
 /* 初始化lua环境 */
-void lua_initenv( lua_State *L )
+void luacpp_init( lua_State *L )
 {
     /* 把当前工作目录加到lua的path */
     lua_getglobal(L, "package");

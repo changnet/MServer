@@ -4,8 +4,8 @@
 #include <lua.hpp>
 #include "../global/global.h"
 
-/* lua环境初始化头文件 */
+/* lua cpp库初始化头文件 */
 
-void lua_initenv( lua_State *L );
+void luacpp_init( lua_State *L );
 
 #endif /* __LENV_H__ */
