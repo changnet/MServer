@@ -34,6 +34,9 @@ backend::backend( lua_State *L )
     net_disconnect = 0;
     net_connected  = 0;
     net_self       = 0;
+    
+    timer_do   = 0;
+    timer_self = 0;
 
     anios = NULL;
     aniomax =  0;
@@ -45,10 +48,14 @@ backend::backend( lua_State *L )
     andeletes = NULL;
     andeletemax =  0;
     andeletecnt =  0;
+    
+    antimerids = NULL;
+    antimeridmax =  0;
+    antimeridcnt =  0;
+    timeridmax   =  0;
 
     antimers = NULL;
     antimermax =  0;
-    antimercnt =  0;
 }
 
 backend::~backend()
@@ -64,9 +71,9 @@ backend::~backend()
         }
     }
 
-    while ( antimercnt > 0 )
+    while ( antimermax > 0 )
     {
-        --antimercnt;
+        --antimermax;
         // TODO
 
     }
@@ -85,19 +92,27 @@ backend::~backend()
     andeletemax =  0;
     andeletecnt =  0;
     
+    if ( antimerids ) delete []antimerids;
+    antimerids = NULL;
+    antimeridmax =  0;
+    antimeridcnt =  0;
+    timeridmax   =  0;
+    
     if ( antimers ) delete []antimers;
     antimers = NULL;
     antimermax = 0;
-    antimercnt = 0;
     
     /* lua source code 'ref = (int)lua_rawlen(L, t) + 1' make sure ref > 0
      * 释放lua变量引用，不然lua无法释放内存
      */
-    if ( net_accept )     LUA_UNREF( net_accept );
-    if ( net_read )       LUA_UNREF( net_read );
-    if ( net_disconnect ) LUA_UNREF( net_disconnect );
-    if ( net_connected )  LUA_UNREF( net_connected );
-    if ( net_self )       LUA_UNREF( net_self );
+    LUA_UNREF( net_accept );
+    LUA_UNREF( net_read );
+    LUA_UNREF( net_disconnect );
+    LUA_UNREF( net_connected );
+    LUA_UNREF( net_self );
+    
+    LUA_UNREF( timer_do );
+    LUA_UNREF( timer_self );
 }
 
 /* 因为要加入lua gc等，必须重写基类事件循环函数 */
@@ -171,9 +186,7 @@ int32 backend::listen()
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 )
     {
-        luaL_error( L,"create socket fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"create socket fail:%s",strerror(errno) );
     }
     
     int32 optval = 1;
@@ -187,17 +200,13 @@ int32 backend::listen()
     if ( setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,(char *) &optval, sizeof(optval)) < 0 )
     {
         ::close( fd );
-        luaL_error( L,"setsockopt SO_REUSEADDR fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"setsockopt SO_REUSEADDR fail:%s",strerror(errno) );
     }
     
     if ( socket::non_block( fd ) < 0 )
     {
         ::close( fd );
-        luaL_error( L,"listen set socket non-block fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"listen set socket non-block fail:%s",strerror(errno) );
     }
 
     struct sockaddr_in sk_socket;
@@ -210,18 +219,13 @@ int32 backend::listen()
     {
         ::close( fd );
 
-        luaL_error( L,"bind socket fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"bind socket fail:%s",strerror(errno) );
     }
 
     if ( ::listen( fd, 256 ) < 0 )
     {
         ::close( fd );
-        luaL_error( L,"listen fail" );
-        
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"listen fail:%s",strerror(errno) );
     }
 
     class socket *_socket = new class socket();
@@ -244,8 +248,7 @@ int32 backend::io_kill()
     int32 fd = luaL_checkinteger( L,1 );
     if ( fd < 0 || (fd > aniomax - 1) || !anios[fd] )
     {
-        luaL_error( L,"io_kill got illegal fd" );
-        return 0;
+        return luaL_error( L,"io_kill got illegal fd" );
     }
 
     dlist_add( fd );
@@ -254,13 +257,9 @@ int32 backend::io_kill()
 }
 
 /* 监听回调 */
-void backend::listen_cb( ev_io &w,int revents )
+void backend::listen_cb( ev_io &w,int32 revents )
 {
-    if ( EV_ERROR & revents )
-    {
-        FATAL( "listen_cb libev error,abort .. \n" );
-        return;
-    }
+    assert( "libev listen cb  error",!(EV_ERROR & revents) );
 
     while ( w.is_active() )
     {
@@ -335,11 +334,7 @@ void backend::listen_cb( ev_io &w,int revents )
  */
 void backend::connect_cb( ev_io &w,int32 revents )
 {
-    if ( EV_ERROR & revents )
-    {
-        FATAL( "connect_cb libev error,abort .. \n" );
-        return;
-    }
+    assert( "libev connect cb error",!(EV_ERROR & revents) );
     
     int32 fd = w.fd;
     
@@ -385,19 +380,15 @@ void backend::connect_cb( ev_io &w,int32 revents )
 }
 
 /* 读回调 */
-void backend::read_cb( ev_io &w,int revents )
+void backend::read_cb( ev_io &w,int32 revents )
 {
-    if ( EV_ERROR & revents )
-    {
-        FATAL( "listen_cb libev error,abort .. \n" );
-        return;
-    }
+    assert( "libev read cb error",!(EV_ERROR & revents) );
     
     int32 fd = w.fd;
-    /* TODO _socket是否被关闭 */
-    while ( true )
+    class socket *_socket = anios[fd];
+    /* _socket是否被关闭 */
+    while ( w.is_active() )
     {
-        class socket *_socket = anios[fd];
         int32 ret = _socket->_recv.recv( fd );
 
         /* disconnect or error */
@@ -433,9 +424,6 @@ void backend::packet_parse( int32 fd,class socket *_socket )
     
     struct packet _packet;
     
-    /* TODO 这里可能会出现在一个逻辑里面把当前socket给关闭甚至delete掉
-     * 因此这里需要同时检测当前socket是否还存活
-     */
     while ( _socket->_recv.data_size() > 0 )
     {
         int32 result = pft( _socket->_recv,_packet );
@@ -472,8 +460,7 @@ int32 backend::set_net_ref()
         !lua_isfunction( L,3 ) || !lua_isfunction( L,4 ) ||
         !lua_isfunction( L,5 ) )
     {
-        luaL_error( L,"set_net_ref,argument illegal.expect table and function\n" );
-        return 0;
+        return luaL_error( L,"set_net_ref,argument illegal.expect table and function" );
     }
 
     net_connected  = luaL_ref( L,LUA_REGISTRYINDEX );
@@ -496,8 +483,7 @@ int32 backend::fd_address()
     
     if ( getpeername(fd, (struct sockaddr *)&addr, &len) < 0 )
     {
-        luaL_error( L,"getpeername error: %s",strerror(errno) );
-         return 0;
+        return luaL_error( L,"getpeername error: %s",strerror(errno) );
     }
     
     lua_pushstring( L,inet_ntoa(addr.sin_addr) );
@@ -515,18 +501,14 @@ int32 backend::connect()
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 )
     {
-        luaL_error( L,"create socket fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"create socket fail:%s",strerror(errno) );
     }
 
 
     if ( socket::non_block( fd ) < 0 )
     {
         ::close( fd );
-        luaL_error( L,"connect set socket non-block fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"connect set socket non-block fail:%s",strerror(errno) );
     }
 
     struct sockaddr_in sk_socket;
@@ -541,9 +523,7 @@ int32 backend::connect()
     {
         ::close( fd );
 
-        luaL_error( L,"bind socket fail" );
-        lua_pushnil(L);
-        return 1;
+        return luaL_error( L,"connect socket fail:%s",strerror(errno) );
     }
     
     class socket *_socket = new class socket();
@@ -585,14 +565,12 @@ int32 backend::raw_send()
 
     if ( !sz || len <= 0 )
     {
-        luaL_error( L,"raw_send nothing to send" );
-        return 0;
+        return luaL_error( L,"raw_send nothing to send" );
     }
     
     if ( fd < 0 || fd >= aniomax || !anios[fd] )
     {
-        luaL_error( L,"raw_send illegal fd" );
-        return 0;
+        return luaL_error( L,"raw_send illegal fd" );
     }
     
     class socket *_socket = anios[fd];
@@ -609,7 +587,7 @@ int32 backend::raw_send()
 }
 
 /* 加入到发送列表 */
-void backend::slist_add( int32 fd,class socket *_socket )
+inline void backend::slist_add( int32 fd,class socket *_socket )
 {
     if ( _socket->sending )  /* 已经标记为发送，无需再标记 */
         return;
@@ -623,7 +601,7 @@ void backend::slist_add( int32 fd,class socket *_socket )
 }
 
 /* 把数据攒到一起，一次发送
- * 发处是：把包整合，减少发送次，提高效率
+ * 发处是：把包整合，减少发送次数，提高效率
  * 坏处是：如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
  * 然而，游戏中包多，但数据量不大
  */
@@ -729,4 +707,106 @@ void backend::invoke_delete()
         delete anios[fd];
         anios[fd] = NULL;
     }
+}
+
+/* 把空闲的timer id放到队列 */
+inline void backend::ilist_add( uint32 id )
+{
+    ++antimeridcnt;
+    array_resize( ANTIMERID,antimerids,antimeridmax,antimeridcnt + 1,EMPTY );
+    antimerids[antimeridcnt] = id;
+}
+
+/* 创建一个新的timer */
+int32 backend::timer_start()
+{
+    double after  = luaL_checknumber( L,1 );
+    double repeat = luaL_optnumber( L,2,0. );
+    if ( after < 0. || repeat < 0. )
+    {
+        luaL_error( L,"timer start got negative argument" );
+        return 0;
+    }
+    
+    ev_timer *timer = new ev_timer();
+    timer->set( loop );
+    timer->set<backend,&backend::timer_cb>( this );
+    timer->start( after,repeat );
+    
+    /* 取得timer id
+     * 如果有空闲的，则使用，无则自增
+     */
+    uint32 identity = 0;
+    if ( antimeridcnt )
+    {
+        identity = antimerids[antimeridcnt];
+        -- antimeridcnt;
+    }
+    else
+        identity = ++ timeridmax;
+
+    timer->set( identity );
+    
+    array_resize( ANTIMER,antimers,antimermax,static_cast<int32>(identity + 1),array_zero );
+    antimers[identity]  = timer;
+    
+    lua_pushinteger( L,identity );
+    return 1;
+}
+
+/* 定时器回调 */
+void backend::timer_cb( ev_timer &w,int32 revents )
+{
+    assert( "libev timer cb error",!(EV_ERROR & revents) );
+    
+    uint32 id = w.identity;
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, timer_do);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, timer_self);
+    lua_pushinteger( L,id );
+    if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
+    {
+        ERROR( "timer call lua fail:%s\n",lua_tostring(L,-1) );
+    }
+    
+    /* 注意lua中可能调用timer_kill来终止当前timer，故需要检测antimers[id]
+     * 先回调，再杀死。如果先杀死，再回调，id重用可能会造成一些混乱
+     */
+    if ( antimers[id] && !w.is_active() ) /* 非循环timer，自动终止 */
+    {
+        delete antimers[id];
+        antimers[id] = NULL;
+        
+        ilist_add( id );  /* 回收id */
+    }
+}
+
+/* 从lua层终止定时器 */
+int32 backend::timer_kill()
+{
+    int32 id = luaL_checkinteger( L,1 );
+    if ( id < 0 || id > (antimermax - 1) || !antimers[id] )
+    {
+        return luaL_error( L,"timer kill illegal id,is it a one way timer ?" );
+    }
+    
+    delete antimers[id];
+    antimers[id] = NULL;
+    ilist_add( id );
+    
+    return 0;
+}
+
+/* 设置timer回调引用 */
+int32 backend::set_timer_ref()
+{
+    if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) )
+    {
+        return luaL_error( L,"set_timer_ref,argument illegal" );
+    }
+
+    timer_self  = luaL_ref( L,LUA_REGISTRYINDEX );
+    timer_do    = luaL_ref( L,LUA_REGISTRYINDEX );
+    
+    return 0;
 }

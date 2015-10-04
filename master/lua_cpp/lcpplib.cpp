@@ -17,6 +17,10 @@ int luaopen_ev (lua_State *L)
     lc.def<&backend::io_kill>("io_kill");
     lc.def<&backend::set_net_ref>("set_net_ref");
     lc.def<&backend::fd_address>("fd_address");
+    lc.def<&backend::timer_start>("timer_start");
+    lc.def<&backend::timer_kill>("timer_kill");
+    lc.def<&backend::set_timer_ref>("set_timer_ref");
+
     lc.set( "EV_READ",EV_READ );
     lc.set( "EV_WRITE",EV_WRITE );
     lc.set( "EV_TIMER",EV_TIMER );

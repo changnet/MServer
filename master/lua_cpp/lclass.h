@@ -239,9 +239,7 @@ private:
         T** ptr = (T**)luaL_checkudata( L, 1, classname );/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
-            luaL_error(L, "%s calling method with null pointer", classname);
-            FATAL( "%s calling method with null pointer", classname );
-            return 0;
+            return luaL_error(L, "%s calling method with null pointer", classname);
         }
         
         /* remove self so member function args start at index 1 */
@@ -256,9 +254,7 @@ private:
         T** ptr = (T**)luaL_checkudata(L, 1, classname);/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
-            luaL_error(L, "%s calling method with null pointer", classname);
-            FATAL( "%s calling method with null pointer", classname );
-            return 0;
+            return luaL_error(L, "%s calling method with null pointer", classname);
         }
 
         /* remove self so member function args start at index 1 */

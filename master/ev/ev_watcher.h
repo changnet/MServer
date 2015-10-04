@@ -152,6 +152,7 @@ public:
 class ev_timer : public ev_base<ev_timer>
 {
 public:
+    uint32 identity;
     ev_tstamp at;
     ev_tstamp repeat;
 
@@ -161,8 +162,9 @@ public:
     explicit ev_timer( ev_loop *loop = 0 )
         : ev_base ( loop )
     {
-        at     = 0.;
-        repeat = 0.;
+        identity = 0;
+        at       = 0.;
+        repeat   = 0.;
     }
 
     ~ev_timer()
@@ -185,6 +187,11 @@ public:
     void stop()
     {
         active = loop->timer_stop( this );
+    }
+    
+    void set( uint32 id )
+    {
+        identity = id;
     }
 
     void set( ev_tstamp after,ev_tstamp repeat = 0. )

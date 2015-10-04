@@ -38,33 +38,33 @@ public:
     int32 raw_send();
     
     int32 io_kill();
+    int32 timer_start();
     int32 timer_kill();
     
     int32 set_net_ref();
+    int32 set_timer_ref();
     int32 fd_address();
-    
-    void listen_cb( ev_io &w,int revents );
-    void read_cb( ev_io &w,int revents );
-    void connect_cb( ev_io &w,int32 revents );
     
 private:
     void packet_parse( int32 fd,class socket *_socket );
     void slist_add( int32 fd,class socket *_socket );
     void dlist_add( int32 fd );
+    void ilist_add( uint32 id );
     void invoke_sending();
     void invoke_delete();
     void socket_disconect( int32 fd );
+    
+    void listen_cb( ev_io &w,int32 revents );
+    void read_cb( ev_io &w,int32 revents );
+    void connect_cb( ev_io &w,int32 revents );
+    void timer_cb( ev_timer &w,int32 revents );
 
 private:
-    typedef struct
-    {
-        ev_timer *w;
-        uint32 id;
-    }ANTIMER;
-
     typedef class socket *ANIO;/* AN = array node */
+    typedef class ev_timer *ANTIMER;
     typedef int32 ANSENDING;
     typedef int32 ANDELETE;
+    typedef uint32 ANTIMERID;
 
     class ev_loop *loop;
     lua_State *L;
@@ -82,18 +82,27 @@ private:
     ANDELETE *andeletes;
     int32 andeletemax;
     int32 andeletecnt;
+    
+    /* timer id管理 */
+    ANTIMERID *antimerids;
+    int32 antimeridmax;
+    int32 antimeridcnt;
+    uint32 timeridmax;
 
     /* timer 管理队列 */
     ANTIMER *antimers;
     int32 antimermax;
-    int32 antimercnt;
     
-    /* lua层网络回调 */
+    /* lua层网络回调ref */
     int32 net_accept;
     int32 net_read;
     int32 net_disconnect;
     int32 net_connected;
     int32 net_self;
+    
+    /* lua层定时器回调 */
+    int32 timer_do;
+    int32 timer_self;
 };
 
 #endif /* __BACKEND_H__ */
