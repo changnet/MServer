@@ -2,19 +2,24 @@ require "lua.global.global"
 require "lua.global.oo"
 require "lua.global.table"
 
-local listen = require "lua.net.listener"
+local client_mgr = require "lua.net.clientmgr"
 local net_mgr = require "lua.net.netmgr"
+local timer_mgr = require "lua.timer.timermgr"
 
-function test()
-    return 998
+local id = nil
+local cnt = 0
+
+function t( a,b,c )
+    print( a,b,c)
+    cnt = cnt + 1
+    if cnt >= 10 then
+        timer_mgr:stop( id )
+    end
 end
 
 local function main()
-    ev:set_net_ref( net_mgr,net_mgr.accept_event,net_mgr.read_event,
-        net_mgr.disconnect_event,net_mgr.connected_event )
-
-    listen:listen( "0.0.0.0",9997 )
-    net_mgr:push( listen )
+    client_mgr:listen( "0.0.0.0",9997 )
+    id = timer_mgr:start( 1,t,1,5,90 )
 
     oo.check()
     ev:run()

@@ -720,9 +720,8 @@ inline void backend::ilist_add( uint32 id )
 /* 创建一个新的timer */
 int32 backend::timer_start()
 {
-    double after  = luaL_checknumber( L,1 );
-    double repeat = luaL_optnumber( L,2,0. );
-    if ( after < 0. || repeat < 0. )
+    double repeat  = luaL_checknumber( L,1 );
+    if ( repeat < 0. )
     {
         luaL_error( L,"timer start got negative argument" );
         return 0;
@@ -731,7 +730,7 @@ int32 backend::timer_start()
     ev_timer *timer = new ev_timer();
     timer->set( loop );
     timer->set<backend,&backend::timer_cb>( this );
-    timer->start( after,repeat );
+    timer->start( repeat,repeat );
     
     /* 取得timer id
      * 如果有空闲的，则使用，无则自增
@@ -772,13 +771,14 @@ void backend::timer_cb( ev_timer &w,int32 revents )
     /* 注意lua中可能调用timer_kill来终止当前timer，故需要检测antimers[id]
      * 先回调，再杀死。如果先杀死，再回调，id重用可能会造成一些混乱
      */
-    if ( antimers[id] && !w.is_active() ) /* 非循环timer，自动终止 */
-    {
-        delete antimers[id];
-        antimers[id] = NULL;
-        
-        ilist_add( id );  /* 回收id */
-    }
+    // if ( antimers[id] && !w.is_active() ) /* 非循环timer，自动终止 */
+    // {
+    //     delete antimers[id];
+    //     antimers[id] = NULL;
+    //
+    //     ilist_add( id );  /* 回收id */
+    // }
+    /* 不允许单次定时器，虽然支持。会造成lua层的一些自动销毁工作。如果需要单次，请手动销毁 */
 }
 
 /* 从lua层终止定时器 */
@@ -805,8 +805,8 @@ int32 backend::set_timer_ref()
         return luaL_error( L,"set_timer_ref,argument illegal" );
     }
 
-    timer_self  = luaL_ref( L,LUA_REGISTRYINDEX );
     timer_do    = luaL_ref( L,LUA_REGISTRYINDEX );
+    timer_self  = luaL_ref( L,LUA_REGISTRYINDEX );
     
     return 0;
 }

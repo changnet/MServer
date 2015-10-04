@@ -8,6 +8,8 @@ local Net_mgr = oo.singleton( nil,... )
 
 -- 构造函数
 function Net_mgr:__init()
+    ev:set_net_ref( self,self.accept_event,self.read_event,
+        self.disconnect_event,self.connected_event )
     self.conn = {}
 end
 
@@ -29,39 +31,27 @@ function Net_mgr:accept_event( fd,... )
         return
     end
 
-    local result,sk = xpcall( conn.on_accept,__G__TRACKBACK__,conn,... )
-    return sk
+    xpcall( conn.on_accept,__G__TRACKBACK__,conn,... )
+    return conn.sk
 end
 
 -- read事件
 function Net_mgr:read_event( fd,... )
     local conn = self.conn[fd]
-    if not conn then
-        ELOG( "read no connnect object found" )
-        return
-    end
-    
+
     xpcall( conn.on_read,__G__TRACKBACK__,conn,... )
 end
 
 -- disconnect事件
 function Net_mgr:disconnect_event( fd,... )
     local conn = self.conn[fd]
-    if not conn then
-        ELOG( "disconnect no connnect object found" )
-        return
-    end
-    
+
     xpcall( conn.on_disconnect,__G__TRACKBACK__,conn,... )
 end
 
 -- connected事件
 function Net_mgr:connected_event( fd,... )
     local conn = self.conn[fd]
-    if not conn then
-        ELOG( "connected_ no connnect object found" )
-        return
-    end
     
     xpcall( conn.on_connected,__G__TRACKBACK__,conn,... )
 end
