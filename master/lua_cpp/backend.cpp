@@ -386,27 +386,29 @@ void backend::read_cb( ev_io &w,int32 revents )
     
     int32 fd = w.fd;
     class socket *_socket = anios[fd];
-    /* _socket是否被关闭 */
-    while ( w.is_active() )
-    {
-        int32 ret = _socket->_recv.recv( fd );
+    /* 就游戏中的绝大多数消息而言，一次recv就能接收完成，不需要while接收直到出错。而且
+     * 当前设定的缓冲区与socket一致(8192)，socket缓冲区几乎不可能还有数据，不需要多调用
+     * 一次recv。退一步，假如还有数据，则epoll当前为LT模式，下一次回调再次读取
+     * 如果启用while,需要检测_socket是否被关闭
+     */
+    /* while ( w.is_active() ) */
+    int32 ret = _socket->_recv.recv( fd );
 
-        /* disconnect or error */
-        if ( 0 == ret )
-        {
-            socket_disconect( fd );
-            break;
-        }
-        else if ( ret < 0 )
-        {
-            if ( EAGAIN != errno && EWOULDBLOCK != errno )
-                socket_disconect( fd );
-            break;
-        }
-  
-        /* read data */
-        packet_parse( fd,_socket );
+    /* disconnect or error */
+    if ( 0 == ret )
+    {
+        socket_disconect( fd );
+        return;
     }
+    else if ( ret < 0 )
+    {
+        if ( EAGAIN != errno && EWOULDBLOCK != errno )
+            socket_disconect( fd );
+        return;
+    }
+  
+    /* read data */
+    packet_parse( fd,_socket );
 }
 
 /* 网络包解析 */
@@ -427,6 +429,7 @@ void backend::packet_parse( int32 fd,class socket *_socket )
     while ( _socket->_recv.data_size() > 0 )
     {
         int32 result = pft( _socket->_recv,_packet );
+
         if ( result > 0 )
         {
             /* TODO 包自动转发，protobuf协议解析 */
@@ -445,9 +448,9 @@ void backend::packet_parse( int32 fd,class socket *_socket )
         else
             break;
     }
-    
+
     assert( "buffer over boundary",_socket->_recv.data_size() >= 0 &&
-        _socket->_recv.size() < _socket->_recv.length() );
+        _socket->_recv.size() <= _socket->_recv.length() );
     /* 缓冲区为空，尝试清理悬空区 */
     if ( 0 == _socket->_recv.data_size() )
         _socket->_recv.clear();
@@ -461,6 +464,11 @@ int32 backend::set_net_ref()
         !lua_isfunction( L,5 ) )
     {
         return luaL_error( L,"set_net_ref,argument illegal.expect table and function" );
+    }
+    
+    if ( net_connected || net_disconnect || net_read || net_accept || net_self )
+    {
+        return luaL_error( L,"dumplicate set net ref" );
     }
 
     net_connected  = luaL_ref( L,LUA_REGISTRYINDEX );
@@ -636,6 +644,7 @@ void backend::invoke_sending()
 
         /* 处理发送 */
         int32 ret = _socket->_send.send( fd );
+
         if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
         {
             ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
@@ -803,6 +812,11 @@ int32 backend::set_timer_ref()
     if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) )
     {
         return luaL_error( L,"set_timer_ref,argument illegal" );
+    }
+    
+    if ( timer_do || timer_self )
+    {
+        return luaL_error( L,"dumplicate set timer ref" );
     }
 
     timer_do    = luaL_ref( L,LUA_REGISTRYINDEX );

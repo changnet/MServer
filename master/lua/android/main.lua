@@ -2,17 +2,18 @@ require "lua.global.global"
 require "lua.global.oo"
 require "lua.global.table"
 
+math.randomseed( ev:time() )
 local net_mgr = require "lua.net.netmgr"
-local Client = require "lua.android.net.client"
+local Android = require "lua.android.playerdata.android"
 
 local function main()
-    ev:set_net_ref( net_mgr,net_mgr.accept_event,net_mgr.read_event,
-        net_mgr.disconnect_event,net_mgr.connected_event )
-
-    for i = 0,100 do
-        local client = Client()
-        client:connect( "127.0.0.1",9997 )
-        net_mgr:push( client )
+    local androids = {}
+    
+    for i = 1,900 do
+        local android = Android(i)
+        android:born( "127.0.0.1",9997 )
+        
+        table.insert( androids,android )
     end
 
     oo.check()

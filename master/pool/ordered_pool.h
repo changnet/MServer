@@ -39,6 +39,10 @@ private:
     
     /* 把从系统获取的内存分成小块存到链表中
      * 这些内存块都是空的，故在首部创建一个指针，存放指向下一块空闲内存的地址
+     * @ptr           内存块起始地址
+     * @partition_sz  单块内存大小
+     * @npartition    单块内存数量
+     * @n             等长系数
      */
     inline void *segregate( void * const ptr,uint32 partition_sz,
         uint32 npartition,uint32 n )
@@ -97,7 +101,9 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
      * 不用指数增长方式因为内存分配过大可能会失败
      */
     uint32 partition_sz = n*ordered_size;
-    uint32 block_size = sizeof(void *) + chunk_size*partition_sz;
+    assert( "buffer overflow",UINT_MAX/partition_sz > chunk_size );
+
+    uint64 block_size = sizeof(void *) + chunk_size*partition_sz;
     char *block = new char[block_size];
 
     /* 分配出来的内存，预留一个指针的位置在首部，用作链表将所有从系统获取的

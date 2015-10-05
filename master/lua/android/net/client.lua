@@ -14,26 +14,21 @@ function Client:connect( ip,port )
         ELOG( "connect fail ... " )
         return
     end
+    
+    net_mgr:push( self )
 end
 
 function Client:on_connected( result )
-    if not result then
-        ELOG( "connect unsuccess" )
-        return
-    end
-    
-    print( "connect establish",self.fd )
-    ev:raw_send( self.fd,"你好啊,我是" .. self.fd )
+    self.obj:alive( result )
 end
 
 function Client:on_read( pkt )
-    print( pkt )
-    
+    self.obj:talk_msg( pkt )
 end
 
 function Client:on_disconnect()
-    print( "i am quit",self.fd )
-    net_mgr:pop( self )
+    self.obj:die()
 end
+
 
 return Client
