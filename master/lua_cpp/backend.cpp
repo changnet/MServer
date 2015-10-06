@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include "backend.h"
 #include "../ev/ev_def.h"
 #include "../net/buffer_process.h"
@@ -18,6 +20,8 @@
 #else
 # define USER_TIMEOUT(x)
 #endif
+
+uint32 backend::sig_mask = 0;
 
 backend::backend()
 {
@@ -56,6 +60,8 @@ backend::backend( lua_State *L )
 
     antimers = NULL;
     antimermax =  0;
+    
+    sig_ref = 0;
 }
 
 backend::~backend()
@@ -113,6 +119,7 @@ backend::~backend()
     
     LUA_UNREF( timer_do );
     LUA_UNREF( timer_self );
+    LUA_UNREF( sig_ref );
 }
 
 /* 因为要加入lua gc等，必须重写基类事件循环函数 */
@@ -121,6 +128,7 @@ int32 backend::run()
     assert( "backend uninit",backend_fd >= 0 );
 
     loop_done = false;
+    lua_gc(L, LUA_GCSTOP, 0); /* 用自己的策略控制gc */
     while ( !loop_done )
     {
         fd_reify();/* update fd-related kernel structures */
@@ -143,7 +151,8 @@ int32 backend::run()
     
             /* at this point, we NEED to wait, so we have to ensure */
             /* to pass a minimum nonzero value to the backend */
-            if (expect_false (waittime < backend_mintime))
+            /* 如果还有数据未发送，也只休眠最小时间 */
+            if (expect_false (waittime < backend_mintime || ansendingcnt > 0))
                 waittime = backend_mintime;
 
             backend_poll ( waittime );
@@ -158,6 +167,9 @@ int32 backend::run()
         invoke_pending ();
         invoke_sending ();
         invoke_delete  (); /* after sending */
+        invoke_signal  ();
+        
+        lua_gc(L, LUA_GCSTEP, 100);
     }    /* while */
     
     return 0;
@@ -822,5 +834,72 @@ int32 backend::set_timer_ref()
     timer_do    = luaL_ref( L,LUA_REGISTRYINDEX );
     timer_self  = luaL_ref( L,LUA_REGISTRYINDEX );
     
+    return 0;
+}
+
+/* 处理信号 */
+void backend::sig_handler( int32 signum )
+{
+    sig_mask |= ( 1 << signum );
+}
+
+/* 触发信号 */
+void backend::invoke_signal()
+{
+    int signum = 0;
+    while (sig_mask != 0)
+    {
+        if (sig_mask & 1)
+        {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, sig_ref);
+            lua_pushinteger( L,signum );
+            if ( expect_false( LUA_OK != lua_pcall(L,1,0,0) ) )
+            {
+                ERROR( "signal call lua fail:%s\n",lua_tostring(L,-1) );
+            }
+        }
+        ++signum;
+        sig_mask = (sig_mask >> 1);
+    }
+
+    sig_mask = 0;
+}
+
+/* 设置signal回调引用 */
+int32 backend::set_signal_ref()
+{
+    if ( !lua_isfunction( L,1 ) )
+    {
+        return luaL_error( L,"set_signal_ref,argument illegal,expect function" );
+    }
+    
+    if ( sig_ref )
+    {
+        return luaL_error( L,"dumplicate set signal ref" );
+    }
+
+    sig_ref = luaL_ref( L,LUA_REGISTRYINDEX );
+
+    return 0;
+}
+
+/* 监听信号 */
+int32 backend::signal()
+{
+    int32 sig = luaL_checkinteger(L, 1);
+    int32 sig_action = luaL_optinteger( L,2,-1);
+    if (sig < 1 || sig > 31 )
+    {
+        return luaL_error( L,"illegal signal id:%d",sig );
+    }
+
+    /* check /usr/include/bits/signum.h for more */
+    if ( 0 == sig_action )
+        ::signal( sig,SIG_DFL );
+    else if ( 1 == sig_action )
+        ::signal( sig,SIG_IGN );
+    else
+        ::signal( sig, sig_handler );
+
     return 0;
 }

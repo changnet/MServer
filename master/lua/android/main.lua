@@ -5,6 +5,7 @@ require "lua.global.table"
 math.randomseed( ev:time() )
 local net_mgr = require "lua.net.netmgr"
 local Android = require "lua.android.playerdata.android"
+require "lua.signal.signal"
 
 local function main()
     local androids = {}

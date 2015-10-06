@@ -43,6 +43,9 @@ public:
     
     int32 set_net_ref();
     int32 set_timer_ref();
+    int32 set_signal_ref();
+    
+    int32 signal();
     int32 fd_address();
     
 private:
@@ -58,6 +61,9 @@ private:
     void read_cb( ev_io &w,int32 revents );
     void connect_cb( ev_io &w,int32 revents );
     void timer_cb( ev_timer &w,int32 revents );
+    
+    static void sig_handler( int32 signum );
+    void invoke_signal();
 
 private:
     typedef class socket *ANIO;/* AN = array node */
@@ -103,6 +109,9 @@ private:
     /* lua层定时器回调 */
     int32 timer_do;
     int32 timer_self;
+    
+    int32 sig_ref;
+    static uint32 sig_mask;
 };
 
 #endif /* __BACKEND_H__ */
