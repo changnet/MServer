@@ -1,5 +1,6 @@
 #include "global/global.h"
 #include "lua_cpp/lcpplib.h"
+#include "net/buffer.h"
 #include "lua_cpp/lclass.h"
 #include "lua_cpp/backend.h"
 #include <lua.hpp>
@@ -91,6 +92,7 @@ int32 main( int32 argc,char **argv )
     }
 
     delete _backend; /* backend依赖于L，故要先关闭销毁 */
+    buffer::allocator.purge();
 
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
     lua_gc(L, LUA_GCCOLLECT, 0);

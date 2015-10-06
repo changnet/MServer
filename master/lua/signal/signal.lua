@@ -55,7 +55,7 @@
 #define SIGUNUSED	31
 ]]
 
---
+-- 信号处理逻辑并不经常改变，因此这里不采用oo.class来处理，热更可能有点问题
 
 function sig_handler( signum )
     ev:exit();

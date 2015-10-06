@@ -20,6 +20,7 @@ public:
 
     char *ordered_malloc( uint32 n = 1 );
     void ordered_free  ( char * const ptr,uint32 n );
+    void purge();
 private:
     typedef void * NODE;
 
@@ -118,12 +119,28 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
     return block + sizeof(void *);
 }
 
+/* 归还内存 */
 template<uint32 ordered_size,uint32 chunk_size>
 void ordered_pool<ordered_size,chunk_size>::ordered_free( char * const ptr,uint32 n )
 {
     assert( "illegal ordered free",anptmax >= n && ptr );
     nextof( ptr ) = anpts[n];
     anpts[n] = ptr;
+}
+
+/* 释放从系统申请的内存，包括已经分配出去的，慎用 */
+template<uint32 ordered_size,uint32 chunk_size>
+void ordered_pool<ordered_size,chunk_size>::purge()
+{
+    while ( block_list )
+    {
+        char *_ptr = static_cast<char *>(block_list);
+        block_list = nextof( block_list );
+        
+        delete []_ptr;
+    }
+    
+    block_list = NULL;
 }
 
 #endif /* __ORDERED_POOL_H__ */

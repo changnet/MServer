@@ -84,12 +84,13 @@ public:
     }
 
     friend class buffer_process;
+    
+    static class ordered_pool<BUFFER_CHUNK> allocator;
 private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
     uint32 _len;     /* 缓冲区总大小 */
     uint32 _pos;     /* 悬空区大小 */
-    static class ordered_pool<BUFFER_CHUNK> allocator;
     
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长
