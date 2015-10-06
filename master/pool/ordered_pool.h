@@ -83,6 +83,8 @@ ordered_pool<ordered_size,chunk_size>::~ordered_pool()
         
         delete []_ptr;
     }
+    
+    block_list = NULL;
 }
 
 /* 分配N*ordered_size内存 */
@@ -132,6 +134,11 @@ void ordered_pool<ordered_size,chunk_size>::ordered_free( char * const ptr,uint3
 template<uint32 ordered_size,uint32 chunk_size>
 void ordered_pool<ordered_size,chunk_size>::purge()
 {
+    if ( anpts )
+        delete []anpts;
+    anpts   = NULL;
+    anptmax = 0;
+
     while ( block_list )
     {
         char *_ptr = static_cast<char *>(block_list);
