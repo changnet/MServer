@@ -11,6 +11,7 @@ OPTIMIZE = -O2
 CC = g++
 INC = ./deps/include
 LIB = ./deps/lib
+LLIB = -llua -ldl -lrt
 ODIR = bin
 SDIR = ./
 TEST_DIR = ../test
@@ -54,7 +55,7 @@ $(ODIR)/%.o: $(TEST_DIR)/bench.c
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
 all: DIRS $(OBJS) $(ODIR)/main.o
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o -llua -ldl
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
 test: DIRS $(OBJS) $(ODIR)/bench.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TEST_DIR)/bench  $(OBJS) $(ODIR)/bench.o

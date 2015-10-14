@@ -87,10 +87,10 @@ public:
     int32 events;
 
 public:
-    using ev_base::set;
+    using ev_base<ev_io>::set;
 
     explicit ev_io( ev_loop *loop = 0 )
-        : ev_base ( loop )
+        : ev_base<ev_io> ( loop )
     {
         fd     = -1;
         events = 0;
@@ -157,10 +157,10 @@ public:
     ev_tstamp repeat;
 
 public:
-    using ev_base::set;
+    using ev_base<ev_timer>::set;
 
     explicit ev_timer( ev_loop *loop = 0 )
-        : ev_base ( loop )
+        : ev_base<ev_timer> ( loop )
     {
         identity = 0;
         at       = 0.;
