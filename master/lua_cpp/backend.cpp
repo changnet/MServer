@@ -69,10 +69,9 @@ backend::~backend()
     while ( aniomax > 0 )
     {
         --aniomax;
-        ANIO anio = anios[aniomax];
-        if ( anio )
+        if ( anios[aniomax] )
         {
-            delete anio;
+            delete anios[aniomax];
             anios[aniomax] = NULL;
         }
     }
@@ -80,8 +79,11 @@ backend::~backend()
     while ( antimermax > 0 )
     {
         --antimermax;
-        // TODO
-
+        if ( antimers[antimermax] )
+        {
+            delete antimers[antimermax];
+            antimers[antimermax] = NULL;
+        }
     }
     
     if ( anios ) delete []anios;
@@ -764,6 +766,7 @@ int32 backend::timer_start()
     }
     else
         identity = ++ timeridmax;
+    assert( "timer id over flow",identity < INT_MAX - 1 );
 
     timer->set( identity );
     
