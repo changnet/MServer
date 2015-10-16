@@ -3,6 +3,7 @@
 #include "net/buffer.h"
 #include "lua_cpp/lclass.h"
 #include "lua_cpp/backend.h"
+#include "mysql/sql.h"
 #include <lua.hpp>
 #include <sys/utsname.h> /* for uname */
 
@@ -82,6 +83,9 @@ int32 main( int32 argc,char **argv )
     lclass<backend>::push( L,_backend,false );
     lua_setglobal( L,"ev" );
 
+    class sql _sql;
+    _sql.start( "127.0.0.1",3306,"xzc","111","test" );
+
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua/%s/%s",spath,LUA_ENTERANCE );
@@ -93,6 +97,7 @@ int32 main( int32 argc,char **argv )
 
     delete _backend; /* backend依赖于L，故要先关闭销毁 */
     buffer::allocator.purge();
+    sql::purge();
 
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
     lua_gc(L, LUA_GCCOLLECT, 0);

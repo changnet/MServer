@@ -99,6 +99,7 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 extern void onexit();
 /* will be called while allocate memory failed with new */
 extern void new_fail();
+extern void signal_block();
 
 extern char cwd[PATH_MAX];    /* current work dir */
 extern char spath[PATH_MAX];  /* server path */

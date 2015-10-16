@@ -1,5 +1,14 @@
 #MServer
 
+#compile
+ubuntu 14.04
+    1)sudo apt-get install libmysqlclient-dev
+      The following NEW packages will be installed:
+        libmysqlclient-dev libmysqlclient18 mysql-common
+    2)sudo apt-get install lua53
+    3) cd MServer/master & make
+
+
 #what had done
 1. rewrite libev core
 2. cpp binding with lua
