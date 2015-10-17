@@ -23,7 +23,7 @@ MKDIR = mkdir -p
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o lcpplib.o backend.o buffer.o socket.o \
-	buffer_process.o sql.o
+	buffer_process.o sql.o thread.o thread_mgr.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -47,6 +47,9 @@ $(ODIR)/%.o: $(SDIR)/net/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mysql/%.cpp
+	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+
+$(ODIR)/%.o: $(SDIR)/thread/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(TEST_DIR)/bench.c

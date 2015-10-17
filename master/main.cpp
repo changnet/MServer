@@ -4,6 +4,7 @@
 #include "lua_cpp/lclass.h"
 #include "lua_cpp/backend.h"
 #include "mysql/sql.h"
+#include "thread/thread_mgr.h"
 #include <lua.hpp>
 #include <sys/utsname.h> /* for uname */
 
@@ -75,6 +76,8 @@ int32 main( int32 argc,char **argv )
     }
     luaL_openlibs(L);
     luacpp_init(L);
+    
+    sql::library_init();
 
     runtime_start();
 
@@ -85,6 +88,7 @@ int32 main( int32 argc,char **argv )
 
     class sql _sql;
     _sql.start( "127.0.0.1",3306,"xzc","111","test" );
+    thread_mgr::instance()->push( &_sql );
 
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
@@ -94,10 +98,13 @@ int32 main( int32 argc,char **argv )
         const char *err_msg = lua_tostring(L,-1);
         ERROR( "load lua enterance file error:%s\n",err_msg );
     }
+    
+    thread_mgr::instance()->clear();
 
     delete _backend; /* backend依赖于L，故要先关闭销毁 */
     buffer::allocator.purge();
-    sql::purge();
+    sql::library_end();
+    thread_mgr::uninstance();
 
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
     lua_gc(L, LUA_GCCOLLECT, 0);
