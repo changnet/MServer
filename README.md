@@ -16,9 +16,9 @@ ubuntu 14.04
 #TODO
 1. socket
 2. thread
-3. callback
+3. callback(socketpair pipe eventfd(best))
 4. mysql、mongodb
-5. 
+5. http(http-parser、libcurl)
 6. protobuf、platbuffer
 7. astar、rsa、zlib、md5、uuid
 8. ps -o 测试缺页中断
