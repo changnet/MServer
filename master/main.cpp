@@ -87,7 +87,7 @@ int32 main( int32 argc,char **argv )
     lua_setglobal( L,"ev" );
 
     class sql _sql;
-    _sql.start( "127.0.0.1",3306,"xzc","111","test" );
+    _sql.start( "192.168.1.23",3306,"root","123456","xzc_mudrv" );
     thread_mgr::instance()->push( &_sql );
 
     /* 加载程序入口脚本 */
