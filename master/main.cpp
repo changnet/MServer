@@ -99,16 +99,17 @@ int32 main( int32 argc,char **argv )
         ERROR( "load lua enterance file error:%s\n",err_msg );
     }
     
-    thread_mgr::instance()->clear();
-
-    delete _backend; /* backend依赖于L，故要先关闭销毁 */
-    buffer::allocator.purge();
-    sql::library_end();
-    thread_mgr::uninstance();
-
+    /* lua可能持有userdata，故要先关闭销毁 */
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
     lua_gc(L, LUA_GCCOLLECT, 0);
     lua_close(L);
+
+    thread_mgr::instance()->clear();
+
+    delete _backend;
+    buffer::allocator.purge();
+    sql::library_end();
+    thread_mgr::uninstance();
 
     runtime_stop();
     return 0;

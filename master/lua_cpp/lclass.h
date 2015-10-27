@@ -61,7 +61,11 @@ public:
         lua_settop( L,0 );
     }
     
-    /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete */
+    /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete
+     * 由于此函数为static，但却依赖classname，而classname在构造函数中传入。
+     * 因此，当调用类似lclass<lsocket>::push( L,_backend,false );的代码时，
+     * 请保证你之前已注册对应的类，否则metatable将为nil
+     */
     static int push(lua_State *L, T *obj, bool gc = false)
     {
         assert( "push null obj",obj );
@@ -137,6 +141,45 @@ public:
         return *this;
     }
     
+    /* 用于定义类的static函数 */
+    lclass<T>& def(const char* func_name,pf_t pf)
+    {
+        luaL_getmetatable( L,classname );
+
+        lua_getfield(L, -1, func_name);
+        if ( !lua_isnil(L, -1) )
+        {
+            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+        }
+        lua_pop(L, 1); /* drop field */
+
+        lua_pushcfunction(L, pf);
+        lua_setfield(L, -2, func_name);
+
+        lua_pop(L, 1); /* drop class metatable */
+
+        return *this;
+    }
+    
+    lclass<T>& def(const char* func_name,pf_t_ex pf)
+    {
+        luaL_getmetatable( L,classname );
+
+        lua_getfield(L, -1, func_name);
+        if ( !lua_isnil(L, -1) )
+        {
+            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+        }
+        lua_pop(L, 1); /* drop field */
+
+        lua_pushcfunction(L, pf);
+        lua_setfield(L, -2, func_name);
+
+        lua_pop(L, 1); /* drop class metatable */
+
+        return *this;
+    }
+    
     /* 注册变量,通常用于设置宏定义、枚举 */
     lclass<T>& set(const char* val_name, int32 val)
     {
@@ -160,7 +203,7 @@ private:
     /* 创建c对象 */
     static int cnew(lua_State* L)
     {
-        T* obj = new T();
+        T* obj = new T( L );
         
         T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;

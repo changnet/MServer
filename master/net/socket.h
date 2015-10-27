@@ -18,6 +18,8 @@ public:
         SK_ERROR   = 0,
         SK_SERVER  = 1,
         SK_CLIENT  = 2,
+        SK_LISTEN  = 3,
+        SK_HTTP    = 4
     }SOCKET_TYPE;
 
     ev_io w;
@@ -28,8 +30,13 @@ public:
 
 public:
     socket();
-    ~socket();
+    virtual ~socket();
     
+    inline fd()
+    {
+        return w.fd
+    }
+
     inline void set_type(SOCKET_TYPE ty )
     {
         _type = ty;
