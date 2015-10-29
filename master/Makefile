@@ -40,7 +40,7 @@ $(ODIR)/%.o: $(SDIR)/ev/%.cpp
 $(ODIR)/%.o: $(SDIR)/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
-$(ODIR)/%.o: $(SDIR)/lua_cpp/%.cpp
+$(ODIR)/%.o: $(SDIR)/lua/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/net/%.cpp

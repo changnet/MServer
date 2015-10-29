@@ -33,10 +33,15 @@ public:
     
     int32 signal();
 private:
+    explicit leventloop( lua_State *L );
+    ~leventloop();
+
     static void sig_handler( int32 signum );
     void invoke_signal();
 private:
     lua_State *L;
+    static uint32 sig_mask;
+    static class leventloop *_loop;
 };
 
 #endif /* __LEVENTLOOP_H__ */

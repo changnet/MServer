@@ -1,8 +1,8 @@
 #include "global/global.h"
-#include "lua_cpp/lcpplib.h"
+#include "lua/lcpplib.h"
 #include "net/buffer.h"
-#include "lua_cpp/lclass.h"
-#include "lua_cpp/backend.h"
+#include "lua/lclass.h"
+#include "lua/backend.h"
 #include "mysql/sql.h"
 #include "thread/thread_mgr.h"
 #include <lua.hpp>

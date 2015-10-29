@@ -12,6 +12,7 @@ public:
 
     int32 send();
     int32 kill();
+    int32 address ();
     int32 listen  ();
     int32 connect ();
     int32 raw_send();

@@ -12,6 +12,9 @@ public:
     static socket_mgr *instance();
     static void uninstance();
     
+    void invoke_sending();
+    void invoke_delete();
+    
     friend class socket;
 private:
     void push( const class socket *s );

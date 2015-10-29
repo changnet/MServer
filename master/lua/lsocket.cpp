@@ -1,6 +1,6 @@
 #include "lsocket.h"
 #include "socket_mgr.h"
-#include "../lua_cpp/leventloop.h"
+#include "../lua/leventloop.h"
 
 int32 lsocket::ref_self       = 0;
 int32 lsocket::ref_read       = 0;
@@ -398,4 +398,19 @@ void lsocket::packet_parse()
     /* 缓冲区为空，尝试清理悬空区 */
     if ( 0 == _recv.data_size() )
         _recv.clear();
+}
+
+int32 lsocket::address()
+{
+    struct sockaddr_in addr;
+    memset( &addr, 0, sizeof(struct sockaddr_in));
+    socklen_t len = sizeof(struct sockaddr_in);
+    
+    if ( getpeername( w.fd, (struct sockaddr *)&addr, &len) < 0 )
+    {
+        return luaL_error( L,"getpeername error: %s",strerror(errno) );
+    }
+    
+    lua_pushstring( L,inet_ntoa(addr.sin_addr) );
+    return 1;
 }
