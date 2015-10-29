@@ -4,9 +4,9 @@
 
 -- 机器人对象
 
-local Client = require "lua.android.net.client"
-local timer_mgr = require "lua.timer.timermgr"
-
+--local Client = require "lua.android.net.client"
+-- local timer_mgr = require "lua.timer.timermgr"
+local Socket = require "Socket"
 local Android = oo.class( nil,... )
 
 local words   = { "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o",
@@ -30,11 +30,15 @@ end
 
 -- 连接服务器
 function Android:born( ip,port )
-    self.conn = Client( )
+    local conn = Socket()
+    conn:set_self( self )
+    conn:set_read( self.talk_msg )
+    conn:set_connected( self.alive )
+    conn:set_disconnected( self.die() )
     
-    self.conn:connect( ip,port )
+    self.conn:connect( ip,port,Socket.CLIENT )
     
-    self.conn.obj = self
+    self.conn = conn
 end
 
 -- 连接成功
@@ -43,12 +47,14 @@ function Android:alive( result )
         ELOG( "android born fail:" .. self.pid )
     end
     
-    self.timer = timer_mgr:start( 1,self.talk,self )
+    self:talk()
+    --self.timer = timer_mgr:start( 1,self.talk,self )
 end
 
 -- 断开连接
 function Android:die()
-    timer_mgr:stop( self.timer )
+    --timer_mgr:stop( self.timer )
+    PLOG( "android die " .. self.pid )
 end
 
 -- 收到消息
@@ -69,8 +75,8 @@ end
 function Android:talk()
     local str = string.sub( example,-math.random(max_word) )
     self.last_msg = str
-print( "talk ..." )
-    ev:raw_send( self.conn.fd,str )
+    print( "talk ..." )
+    self.conn:raw_send( str )
 end
 
 return Android

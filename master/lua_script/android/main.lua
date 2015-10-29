@@ -1,11 +1,11 @@
-require "lua.global.global"
-require "lua.global.oo"
-require "lua.global.table"
+require "global.global"
+require "global.oo"
+require "global.table"
 
 math.randomseed( ev:time() )
-local net_mgr = require "lua.net.netmgr"
-local Android = require "lua.android.playerdata.android"
-require "lua.signal.signal"
+
+local Android = require "android.playerdata.android"
+require "signal.signal"
 
 local function main()
     local androids = {}

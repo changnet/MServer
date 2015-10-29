@@ -16,4 +16,20 @@ function Player:get_pid()
     return self.pid
 end
 
+function Player:set_conn( conn )
+    conn:set_self( self )
+    conn:set_read( self.on_read )
+    conn:set_disconnected( self.disconect )
+    self.conn = conn
+end
+
+function Player:on_read( pkt )
+    self.conn:raw_send( pkt )
+end
+
+function Player:on_disconnect()
+    PLOG( "leaving ... " .. self.conn:fd() )
+    self.conn = nil
+end
+
 return Player
