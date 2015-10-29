@@ -19,7 +19,11 @@ public:
     int32 connect ();
     int32 raw_send();
     
-    static int32 callback_ref( lua_State *L );
+    int32 set_self();
+    int32 set_read();
+    int32 set_accept();
+    int32 set_connected();
+    int32 set_disconnected();
     
     void read_cb   ( ev_io &w,int32 revents );
     void listen_cb ( ev_io &w,int32 revents );
@@ -28,14 +32,11 @@ private:
     void on_disconnect();
     void packet_parse();
 private:
-    /* static导致所有socket在lua层只能使用同一个回调，并且只能有一个lua_State
-     * 但如果不这样，需要每个socket保存多个ref,将会导致lua注册表增大
-     */
-    static int32 ref_self;
-    static int32 ref_read;
-    static int32 ref_accept;
-    static int32 ref_disconnect;
-    static int32 ref_connected;
+    int32 ref_self;
+    int32 ref_read;
+    int32 ref_accept;
+    int32 ref_disconnect;
+    int32 ref_connected;
 
     lua_State *L;
 };

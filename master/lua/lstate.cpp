@@ -1,8 +1,8 @@
 #include "lstate.h"
 #include "lclass.h"
+#include "lsocket.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
-#include "../net/socket.h"
 
 class lstate *lstate::_state = NULL;
 class lstate *lstate::instance()
@@ -44,6 +44,7 @@ lstate::~lstate()
 
 int luaopen_ev( lua_State *L );
 int luaopen_util( lua_State *L );
+int luaopen_socket( lua_State *L );
 
 void lstate::open_cpp()
 {
@@ -69,6 +70,7 @@ void lstate::open_cpp()
     lua_pop(L, 1);  /* remove lib */
 
     luaopen_ev(L);
+    luaopen_socket(L);
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );
@@ -92,6 +94,29 @@ int luaopen_ev( lua_State *L )
     lc.set( "SK_SERVER",socket::SK_SERVER );
     lc.set( "SK_CLIENT",socket::SK_CLIENT );
 
+    return 0;
+}
+
+int luaopen_socket( lua_State *L )
+{
+    lclass<lsocket> lc(L,"Socket");
+    lc.def<&lsocket::send>("send");
+    lc.def<&lsocket::kill>("kill");
+    lc.def<&lsocket::listen> ("listen");
+    lc.def<&lsocket::address>("address");
+    lc.def<&lsocket::connect>("connect");
+    lc.def<&lsocket::raw_send>("raw_send");
+    lc.def<&lsocket::set_self>("set_self");
+    lc.def<&lsocket::set_read>("set_read");
+    lc.def<&lsocket::set_accept>("set_accept");
+    lc.def<&lsocket::set_connected>("set_connected");
+    lc.def<&lsocket::set_disconnected>("set_disconnected");
+    
+    lc.set( "ERROR" ,socket::SK_ERROR  );
+    lc.set( "SERVER",socket::SK_SERVER );
+    lc.set( "CLIENT",socket::SK_CLIENT );
+    lc.set( "LISTEN",socket::SK_LISTEN );
+    lc.set( "HTTP"  ,socket::SK_HTTP   );
 
     return 0;
 }
