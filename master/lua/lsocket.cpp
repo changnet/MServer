@@ -1,6 +1,9 @@
 #include "lsocket.h"
-#include "socket_mgr.h"
+#include "../net/socket_mgr.h"
 #include "../lua/leventloop.h"
+#include "../lua/lclass.h"
+#include "../net/buffer_process.h"
+#include "../net/packet.h"
 
 int32 lsocket::ref_self       = 0;
 int32 lsocket::ref_read       = 0;
@@ -172,7 +175,7 @@ int32 lsocket::raw_send()
         return luaL_error( L,"raw_send nothing to send" );
     }
     
-    if ( w.fd < 0 || w.fd >= aniomax || !anios[fd] )
+    if ( w.fd < 0 )
     {
         return luaL_error( L,"raw_send illegal fd" );
     }
@@ -183,12 +186,12 @@ int32 lsocket::raw_send()
      * 又或者向php发送json字符串
      */
     this->_send.append( sz,len );
-    socket_mgr::instance()->pending_send( fd,this )  /* 放到发送队列，最后一次发送 */
+    socket_mgr::instance()->pending_send( w.fd,static_cast<class socket*>(this) );  /* 放到发送队列，最后一次发送 */
     
     return 0;
 }
 
-int32 lsocket::callback_ref()
+int32 lsocket::callback_ref( lua_State *L )
 {
     if ( !lua_istable( L,1 ) || !lua_isfunction( L,2 ) ||
         !lua_isfunction( L,3 ) || !lua_isfunction( L,4 ) ||
@@ -234,7 +237,7 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
         class lsocket *_socket = new class lsocket( L );
         _socket->set_type( _type );
         (_socket->w).set( loop );
-        (_socket->w).set<backend,&backend::read_cb>( this );
+        (_socket->w).set<lsocket,&lsocket::read_cb>( this );
         (_socket->w).start( new_fd,EV_READ );  /* 这里会设置fd */
         
         mgr->push( _socket );
@@ -271,13 +274,13 @@ void lsocket::read_cb( ev_io &w,int32 revents )
     /* disconnect or error */
     if ( 0 == ret )
     {
-        socket_disconect();
+        on_disconnect();
         return;
     }
     else if ( ret < 0 )
     {
         if ( EAGAIN != errno && EWOULDBLOCK != errno )
-            socket_disconect();
+            on_disconnect();
         return;
     }
   
@@ -312,8 +315,8 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
         // DON NOT return
     }
     
-    lua_rawgeti(L, LUA_REGISTRYINDEX, net_connected);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connected);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
     lua_pushinteger( L,fd );
     lua_pushboolean( L,!error );
     if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
@@ -337,13 +340,13 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
     w.start();
 }
 
-void lsocket::socket_disconect()
+void lsocket::on_disconnect()
 {
     ::close( w.fd ); /* 关闭fd，但不要delete */
     
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-    lua_pushinteger( L,fd );
+    lua_pushinteger( L,w.fd );
     if ( expect_false( LUA_OK != lua_pcall(L,2,0,0) ) )
     {
         ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
@@ -363,7 +366,7 @@ void lsocket::packet_parse()
     }
     else
     {
-        socket_disconect();
+        on_disconnect();
         ERROR( "packet parse unhandle type" );
         return;
     }
@@ -379,9 +382,9 @@ void lsocket::packet_parse()
             /* TODO 包自动转发，protobuf协议解析 */
             _recv.moveon( result );
 
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_read);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, net_self);
-            lua_pushinteger( L,fd );
+            lua_rawgeti(L, LUA_REGISTRYINDEX, ref_read);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
+            lua_pushinteger( L,w.fd );
             lua_pushstring( L,_packet.pkt );
             if ( expect_false( LUA_OK != lua_pcall(L,3,0,0) ) )
             {

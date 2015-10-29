@@ -9,20 +9,25 @@ class socket;
 class socket_mgr
 {
 public:
-    static socket_mgr *instance();
+    static class socket_mgr *instance();
     static void uninstance();
     
     void invoke_sending();
     void invoke_delete();
-    
-    friend class socket;
-private:
-    void push( const class socket *s );
+
+    void push( class socket *s );
     class socket *pop( int32 fd );
-    
+
     void pending_send( int32 fd,class socket *s );
-    void pending_del( int32 fd,class socket *s );
+    void pending_del( int32 fd );
+    inline int32 pending_size()
+    {
+        return ansendingcnt;
+    }
 private:
+    socket_mgr();
+    ~socket_mgr();
+
     typedef class socket *ANIO;/* AN = array node */
     typedef int32 ANSENDING;
     typedef int32 ANDELETE;

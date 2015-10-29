@@ -1,15 +1,15 @@
-require "lua.global.global"
-require "lua.global.oo"
-require "lua.global.table"
+require "global.global"
+require "global.oo"
+require "global.table"
 
-local client_mgr = require "lua.net.clientmgr"
-local net_mgr = require "lua.net.netmgr"
-local timer_mgr = require "lua.timer.timermgr"
-require "lua.signal.signal"
+-- local client_mgr = require "net.clientmgr"
+-- local net_mgr = require "net.netmgr"
+-- local timer_mgr = require "timer.timermgr"
+require "signal.signal"
 
 local function main()
-    client_mgr:listen( "0.0.0.0",9997 )
-
+    --client_mgr:listen( "0.0.0.0",9997 )
+    print( "time:",ev:time() )
     oo.check()
     ev:run()
 end

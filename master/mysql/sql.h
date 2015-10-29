@@ -4,6 +4,7 @@
 #include <mysql/mysql.h>
 #include "../global/global.h"
 #include "../thread/thread.h"
+#include "../ev/ev_watcher.h"
 
 #define SQL_VAR_LEN 64
 

@@ -27,19 +27,22 @@ public:
     static leventloop *instance();
     static void uninstance();
     
+    explicit leventloop( lua_State *L );
+    ~leventloop();
+    
     int32 exit();
     int32 run ();
     int32 time();
     
     int32 signal();
+    int32 set_signal_ref();
 private:
-    explicit leventloop( lua_State *L );
-    ~leventloop();
-
+    explicit leventloop( lua_State *L,bool singleton );
     static void sig_handler( int32 signum );
     void invoke_signal();
 private:
     lua_State *L;
+    int32 sig_ref;
     static uint32 sig_mask;
     static class leventloop *_loop;
 };

@@ -3,6 +3,8 @@
 
 #include <lua.hpp>
 #include "../net/socket.h"
+#include "../ev/ev_def.h"
+#include "../ev/ev_watcher.h"
 
 class lsocket : public socket
 {
@@ -17,12 +19,13 @@ public:
     int32 connect ();
     int32 raw_send();
     
-    static int32 callback_ref();
+    static int32 callback_ref( lua_State *L );
     
-    void listen_cb( ev_io &w,int32 revents );
-    void read_cb( ev_io &w,int32 revents );
+    void read_cb   ( ev_io &w,int32 revents );
+    void listen_cb ( ev_io &w,int32 revents );
+    void connect_cb( ev_io &w,int32 revents );
 private:
-    void socket_disconect();
+    void on_disconnect();
     void packet_parse();
 private:
     /* static导致所有socket在lua层只能使用同一个回调，并且只能有一个lua_State

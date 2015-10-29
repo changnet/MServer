@@ -10,6 +10,18 @@
 #include "../ev/ev_watcher.h"
 #include "buffer.h"
 
+#ifdef TCP_KEEP_ALIVE
+# define KEEP_ALIVE(x)    socket::keep_alive(x)
+#else
+# define KEEP_ALIVE(x)
+#endif
+
+#ifdef _TCP_USER_TIMEOUT
+# define USER_TIMEOUT(x)    socket::user_timeout(x)
+#else
+# define USER_TIMEOUT(x)
+#endif
+
 class socket
 {
 public:
@@ -32,9 +44,9 @@ public:
     socket();
     virtual ~socket();
     
-    inline fd()
+    inline int32 fd() const
     {
-        return w.fd
+        return w.fd;
     }
 
     inline void set_type(SOCKET_TYPE ty )
@@ -42,6 +54,7 @@ public:
         _type = ty;
     }
 
+    void on_disconnect() {}
     static int32 non_block( int32 fd );
     static int32 keep_alive( int32 fd );
     static int32 user_timeout( int32 fd );

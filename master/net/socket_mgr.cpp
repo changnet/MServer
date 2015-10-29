@@ -65,9 +65,9 @@ void socket_mgr::push( class socket *s )
     int32 fd = s->fd();
     assert( "push a invalid socket",fd > 0 ); // 0是有效fd，但不可能是socket
     
-    array_resize( ANIO,anios,aniomax,new_fd + 1,array_zero );
-    assert( "dirty ANIO detected!!\n",!(anios[new_fd]) );
-    anios[new_fd] = _socket;
+    array_resize( ANIO,anios,aniomax,fd + 1,array_zero );
+    assert( "dirty ANIO detected!!\n",!(anios[fd]) );
+    anios[fd] = s;
 }
 
 class socket * socket_mgr::pop( int32 fd )
@@ -141,7 +141,7 @@ void socket_mgr::invoke_sending()
         if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
         {
             ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
-            socket_disconect( fd );
+            _socket->on_disconnect();
             ++empty;
             empty_max = i;
             continue;
@@ -180,7 +180,7 @@ void socket_mgr::invoke_delete()
             continue;
         }
         
-        /* andeletes是处理主动关闭队列的，因此无需调用socket_disconect告知lua */
+        /* andeletes是处理主动关闭队列的，因此无需调用on_disconect告知lua */
         delete anios[fd];
         anios[fd] = NULL;
     }

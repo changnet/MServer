@@ -4,7 +4,7 @@
 
 -- 单个客户端连接
 
-local net_mgr = require "lua.net.netmgr"
+local net_mgr = require "net.netmgr"
 
 local Client_net = oo.class ( nil,... )
 

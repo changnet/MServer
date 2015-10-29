@@ -69,6 +69,7 @@ public:
     static int push(lua_State *L, T *obj, bool gc = false)
     {
         assert( "push null obj",obj );
+        assert( "class not regist yet",classname );
 
         /* 这里只是创建一个指针给lua管理，可以换用placement new把整个对象的
            内存都给lua管理

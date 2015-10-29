@@ -1,11 +1,11 @@
 #include "global/global.h"
-#include "lua/lcpplib.h"
 #include "net/buffer.h"
 #include "lua/lclass.h"
-#include "lua/backend.h"
+#include "lua/lstate.h"
+#include "lua/leventloop.h"
 #include "mysql/sql.h"
 #include "thread/thread_mgr.h"
-#include <lua.hpp>
+#include "net/socket_mgr.h"
 #include <sys/utsname.h> /* for uname */
 
 /* 记录进程启动信息 */
@@ -67,49 +67,40 @@ int32 main( int32 argc,char **argv )
     atexit(onexit);
     std::set_new_handler( new_fail );
 
-    /* 初始化lua */
-    lua_State* L = luaL_newstate();
-    if ( !L )
-    {
-        ERROR( "lua new state fail\n" );
-        exit( 1 );
-    }
-    luaL_openlibs(L);
-    luacpp_init(L);
-    
     sql::library_init();
 
     runtime_start();
 
-    class backend *_backend = new backend(L);
-    
-    lclass<backend>::push( L,_backend,false );
+    class lstate *_lstate = lstate::instance();
+    lua_State *L = _lstate->state();
+    class leventloop *_loop = leventloop::instance();
+
+    lclass<leventloop>::push( L,_loop,false );
     lua_setglobal( L,"ev" );
 
-    class sql _sql;
-    _sql.start( "192.168.1.23",3306,"root","123456","xzc_mudrv" );
-    thread_mgr::instance()->push( &_sql );
+    //class sql _sql;
+    //_sql.start( "192.168.1.23",3306,"root","123456","xzc_mudrv" );
+    //thread_mgr::instance()->push( &_sql );
 
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
-    snprintf( script_path,PATH_MAX,"lua/%s/%s",spath,LUA_ENTERANCE );
+    snprintf( script_path,PATH_MAX,"lua_script/%s/%s",spath,LUA_ENTERANCE );
     if ( luaL_dofile(L,script_path) )
     {
         const char *err_msg = lua_tostring(L,-1);
         ERROR( "load lua enterance file error:%s\n",err_msg );
     }
-    
+
     /* lua可能持有userdata，故要先关闭销毁 */
-    assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
-    lua_gc(L, LUA_GCCOLLECT, 0);
-    lua_close(L);
-
-    thread_mgr::instance()->clear();
-
-    delete _backend;
+    thread_mgr::instance()->clear(); /* 关闭其他线程 */
+    socket_mgr::uninstance();        /* 关闭所有网络连接(强制) */
+    thread_mgr::uninstance();        /* 清理线程管理数据 */
+    leventloop::uninstance();        /* 关闭主事件循环 */
+    lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
+    
+    /* 清除静态数据，以免影响内存检测 */
     buffer::allocator.purge();
     sql::library_end();
-    thread_mgr::uninstance();
 
     runtime_stop();
     return 0;
