@@ -93,10 +93,12 @@ int32 main( int32 argc,char **argv )
 
     /* lua可能持有userdata，故要先关闭销毁 */
     thread_mgr::instance()->clear(); /* 关闭其他线程 */
+    _loop->finalize();               /* 优先解除lua_State依赖 */
+    lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
+    leventloop::uninstance();        /* 关闭主事件循环 */
+
     socket_mgr::uninstance();        /* 关闭所有网络连接(强制) */
     thread_mgr::uninstance();        /* 清理线程管理数据 */
-    leventloop::uninstance();        /* 关闭主事件循环 */
-    lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
     
     /* 清除静态数据，以免影响内存检测 */
     buffer::allocator.purge();

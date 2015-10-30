@@ -23,12 +23,13 @@ function Client_mgr:listen( ip,port )
         ELOG( "listen fail" )
         return
     end
-    
+
     self.conn = conn
 end
 
 -- 连接事件
 function Client_mgr:on_accept( conn )
+    PLOG( "on accept ")
     local fd = conn:fd()
     local addr = conn:address()
     

@@ -35,13 +35,18 @@ socket_mgr::socket_mgr()
 
 socket_mgr::~socket_mgr()
 {
-    while ( aniomax > 0 )
+    int32 iomax = aniomax;
+    while ( iomax > 0 )
     {
-        --aniomax;
-        if ( anios[aniomax] )
+        --iomax;
+        if ( anios[iomax] )
         {
-            delete anios[aniomax];
-            anios[aniomax] = NULL;
+            /* TODO delete会触发lsocket的析构，从而调用socket_mgr的pop
+             * 可能有更好的办法解耦
+             */
+            anios[iomax]->close();
+            delete anios[iomax];
+            anios[iomax] = NULL;
         }
     }
     
@@ -181,6 +186,7 @@ void socket_mgr::invoke_delete()
         }
         
         /* andeletes是处理主动关闭队列的，因此无需调用on_disconect告知lua */
+        anios[fd]->close();
         delete anios[fd];
         anios[fd] = NULL;
     }

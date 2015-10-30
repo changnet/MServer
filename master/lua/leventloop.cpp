@@ -44,6 +44,12 @@ leventloop::leventloop( lua_State *L,bool singleton )
 
 leventloop::~leventloop()
 {
+    /* 保证此处不再依赖lua_State */
+    assert( "lua ref not release",0 == sig_ref );
+}
+
+void leventloop::finalize()
+{
     LUA_UNREF( sig_ref );
 }
 

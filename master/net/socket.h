@@ -44,6 +44,8 @@ public:
     socket();
     virtual ~socket();
     
+    void close();
+    
     inline int32 fd() const
     {
         return w.fd;

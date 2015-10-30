@@ -22,7 +22,7 @@ lsocket::~lsocket()
     {
         socket_mgr::instance()->pop( w.fd );
     }
-    
+
     /* 释放引用，如果有内存问题，可查一下这个地方 */
     LUA_UNREF( ref_self       );
     LUA_UNREF( ref_read       );
@@ -338,7 +338,10 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
 
 void lsocket::on_disconnect()
 {
-    ::close( w.fd ); /* 关闭fd，但不要delete */
+    socket::close(); /* 关闭fd，但不要delete */
+    
+    /* fd close一定要从mgr pop,不然fd一旦重用，将会造成麻烦 */
+    socket_mgr::instance()->pop( w.fd );
     
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
     int32 param = 0;

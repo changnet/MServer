@@ -17,6 +17,7 @@ function Player:get_pid()
 end
 
 function Player:set_conn( conn )
+    PLOG( "set conn=================" )
     conn:set_self( self )
     conn:set_read( self.on_read )
     conn:set_disconnected( self.disconect )

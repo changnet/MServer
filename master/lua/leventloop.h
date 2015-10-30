@@ -36,6 +36,8 @@ public:
     
     int32 signal();
     int32 set_signal_ref();
+    
+    void finalize();
 private:
     explicit leventloop( lua_State *L,bool singleton );
     static void sig_handler( int32 signum );

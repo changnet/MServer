@@ -10,11 +10,18 @@ socket::socket()
 
 socket::~socket()
 {
-    if ( w.fd >= 0 )
-        ::close( w.fd );
+    this->close();
+}
+
+void socket::close()
+{
+    if ( w.fd < 0 )
+        return;
+
+    ::close( w.fd );
     
-    w.stop();
-    w.fd = -1;
+    w.stop ();
+    w.fd = -1; /* must after stop */
     
     sending = 0;
 }

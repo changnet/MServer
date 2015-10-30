@@ -37,7 +37,11 @@ lstate::lstate()
 lstate::~lstate()
 {
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
-    lua_gc(L, LUA_GCCOLLECT, 0);
+    
+    /* Destroys all objects in the given Lua state (calling the corresponding
+     * garbage-collection metamethods, if any) and frees all dynamic memory used
+     * by this state
+     */
     lua_close(L);
     L = NULL;
 }

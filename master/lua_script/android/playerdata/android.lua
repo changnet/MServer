@@ -34,10 +34,10 @@ function Android:born( ip,port )
     conn:set_self( self )
     conn:set_read( self.talk_msg )
     conn:set_connected( self.alive )
-    conn:set_disconnected( self.die() )
+    conn:set_disconnected( self.die )
     
-    self.conn:connect( ip,port,Socket.CLIENT )
-    
+    conn:connect( ip,port,Socket.CLIENT )
+    PLOG( "born =============================" )
     self.conn = conn
 end
 
@@ -45,9 +45,10 @@ end
 function Android:alive( result )
     if not result then
         ELOG( "android born fail:" .. self.pid )
+        return
     end
     
-    self:talk()
+    --self:talk()
     --self.timer = timer_mgr:start( 1,self.talk,self )
 end
 
