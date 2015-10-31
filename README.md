@@ -36,3 +36,5 @@ ubuntu 14.04
 1. socket内存既是lua管理的，但却在socket_mgr中delete，造成冲突。由此也导致pending_del无效（因此lua可能把它置空）
 2. lua_State、leventloop等相互依赖，不好uninstance
 3. conected_cb失败时，fd > 0,但却未push到socket_mgr，析构时pop失败
+4. C层回调lua层失败出现：fd unreify:please avoid this fd situation,control your watcher
+5. lclass push true false 测试 

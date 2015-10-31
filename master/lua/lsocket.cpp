@@ -28,6 +28,11 @@ lsocket::~lsocket()
 /* 发送数据 */
 int32 lsocket::send()
 {
+    if ( w.fd < 0 )
+    {
+        return luaL_error( L,"raw_send illegal fd" );
+    }
+    
     /* TODO
      * 发送数据要先把数据放到缓冲区，然后加入send列表，最后在epoll循环中发送，等待
      * ev整合到backend中才处理
@@ -220,7 +225,7 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
         class lsocket *_socket = new class lsocket( L );
         _socket->set_type( _type );
         (_socket->w).set( loop );
-        (_socket->w).set<lsocket,&lsocket::read_cb>( this );
+        (_socket->w).set<lsocket,&lsocket::read_cb>( _socket );
         (_socket->w).start( new_fd,EV_READ );  /* 这里会设置fd */
         
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_accept);
@@ -307,12 +312,13 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
     lua_pushboolean( L,!error );
     if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
     {
-        ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
+        ERROR( "connect_cb call lua fail:%s\n",lua_tostring(L,-1) );
         // DON NOT return
     }
 
     if ( error )  /* 连接失败 */
     {
+        socket::close();
         ERROR( "connect unsuccess:%s\n",strerror(error) ); // not errno
         return;
     }
@@ -337,7 +343,7 @@ void lsocket::on_disconnect()
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
         param ++;
     }
-    if ( expect_false( LUA_OK != lua_pcall(L,0,0,0) ) )
+    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
     {
         ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
     }
@@ -419,7 +425,7 @@ int32 lsocket::set_self()
         return luaL_error( L,"set_self,argument illegal.expect table" );
     }
 
-    ref_self = luaL_ref( L,LUA_REGISTRYINDEX );
+    LUA_REF( ref_self );
     
     return 0;
 }
@@ -431,7 +437,7 @@ int32 lsocket::set_read()
         return luaL_error( L,"set_read,argument illegal.expect function" );
     }
 
-    ref_read = luaL_ref( L,LUA_REGISTRYINDEX );
+    LUA_REF( ref_read );
 
     return 0;
 }
@@ -443,7 +449,7 @@ int32 lsocket::set_accept()
         return luaL_error( L,"set_accept,argument illegal.expect function" );
     }
 
-    ref_accept = luaL_ref( L,LUA_REGISTRYINDEX );
+    LUA_REF( ref_accept );
 
     return 0;
 }
@@ -455,7 +461,7 @@ int32 lsocket::set_connected()
         return luaL_error( L,"set_connected,argument illegal.expect function" );
     }
 
-    ref_connected = luaL_ref( L,LUA_REGISTRYINDEX );
+    LUA_REF( ref_connected );
 
     return 0;
 }
@@ -467,7 +473,7 @@ int32 lsocket::set_disconnected()
         return luaL_error( L,"set_disconnected,argument illegal.expect function" );
     }
 
-    ref_disconnect = luaL_ref( L,LUA_REGISTRYINDEX );
+    LUA_REF( ref_disconnect );
 
     return 0;
 }

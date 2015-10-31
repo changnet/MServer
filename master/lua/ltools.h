@@ -1,6 +1,10 @@
 #ifndef __LTOOLS_H__
 #define __LTOOLS_H__
 
+#define LUA_REF(x)                         \
+    if ( x )    LUA_UNREF(x);              \
+    x = luaL_ref( L,LUA_REGISTRYINDEX )
+
 #define LUA_UNREF(x)                                                 \
     do                                                               \
     {                                                                \

@@ -93,10 +93,6 @@ int luaopen_ev( lua_State *L )
     lc.set( "EV_WRITE",EV_WRITE );
     lc.set( "EV_TIMER",EV_TIMER );
     lc.set( "EV_ERROR",EV_ERROR );
-    
-    lc.set( "SK_ERROR",socket::SK_ERROR );
-    lc.set( "SK_SERVER",socket::SK_SERVER );
-    lc.set( "SK_CLIENT",socket::SK_CLIENT );
 
     return 0;
 }

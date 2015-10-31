@@ -31,11 +31,9 @@ end
 
 -- 连接事件
 function Client_mgr:on_accept( conn )
-    vd( conn )
-    PLOG( "on accept ")
     local fd = conn:file_description()
     local addr = conn:address()
-    
+
     self.id = self.id + 1
     local pid = self.id
     local player = Player( pid )

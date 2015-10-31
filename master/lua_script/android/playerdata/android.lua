@@ -46,7 +46,7 @@ function Android:alive( result )
         ELOG( "android born fail:" .. self.pid )
         return
     end
-    
+
     self:talk()
     --self.timer = timer_mgr:start( 1,self.talk,self )
 end
@@ -59,7 +59,6 @@ end
 
 -- 收到消息
 function Android:talk_msg( pkt )
-
     if self.last_msg ~= pkt then
         ELOG( "android msg error")
         
@@ -69,6 +68,7 @@ function Android:talk_msg( pkt )
     end
 
     self.last_msg = nil
+    self:talk()
 end
 
 -- 发送消息

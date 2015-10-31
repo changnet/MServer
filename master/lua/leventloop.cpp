@@ -185,7 +185,7 @@ int32 leventloop::set_signal_ref()
         LUA_UNREF( sig_ref );
     }
 
-    sig_ref = luaL_ref( L,LUA_REGISTRYINDEX );
+    LUA_REF( sig_ref );
 
     return 0;
 }
