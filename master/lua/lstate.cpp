@@ -115,6 +115,7 @@ int luaopen_socket( lua_State *L )
     lc.def<&lsocket::set_accept>("set_accept");
     lc.def<&lsocket::set_connected>("set_connected");
     lc.def<&lsocket::set_disconnected>("set_disconnected");
+    lc.def<&lsocket::file_description>("file_description");
     
     lc.set( "ERROR" ,socket::SK_ERROR  );
     lc.set( "SERVER",socket::SK_SERVER );

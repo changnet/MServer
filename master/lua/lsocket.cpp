@@ -1,6 +1,5 @@
 #include "lsocket.h"
 #include "ltools.h"
-#include "../net/socket_mgr.h"
 #include "../lua/leventloop.h"
 #include "../lua/lclass.h"
 #include "../net/buffer_process.h"
@@ -18,11 +17,6 @@ lsocket::lsocket( lua_State *L )
 
 lsocket::~lsocket()
 {
-    if ( w.fd > 0 )
-    {
-        socket_mgr::instance()->pop( w.fd );
-    }
-
     /* 释放引用，如果有内存问题，可查一下这个地方 */
     LUA_UNREF( ref_self       );
     LUA_UNREF( ref_read       );
@@ -44,11 +38,18 @@ int32 lsocket::send()
 
 int32 lsocket::kill()
 {
-    if ( w.fd > 0 )
+    if ( sending > 0 )
     {
-        socket_mgr::instance()->pending_del( w.fd );
+        leventloop::instance()->remove_sending( sending );
     }
     
+    if ( _send.data_size() > 0 ) /* 尝试把缓冲区的数据直接发送 */
+    {
+        _send.send( w.fd );
+    }
+    
+    socket::close();
+
     return 0;
 }
 
@@ -112,8 +113,6 @@ int32 lsocket::listen()
     w.set( loop );
     w.set<lsocket,&lsocket::listen_cb>( this );
     w.start( fd,EV_READ );
-    
-    socket_mgr::instance()->push( this );
 
     lua_pushinteger( L,fd );
     return 1;
@@ -160,8 +159,6 @@ int32 lsocket::connect()
     w.set<lsocket,&lsocket::connect_cb>( this );
     w.start( fd,EV_WRITE ); /* write事件 */
 
-    socket_mgr::instance()->push( this );
-
     lua_pushinteger( L,fd );
     return 1;
 }
@@ -191,7 +188,7 @@ int32 lsocket::raw_send()
      * 又或者向php发送json字符串
      */
     this->_send.append( sz,len );
-    socket_mgr::instance()->pending_send( w.fd,static_cast<class socket*>(this) );  /* 放到发送队列，最后一次发送 */
+    leventloop::instance()->pending_send( static_cast<class socket*>(this) );  /* 放到发送队列，最后一次发送 */
     
     return 0;
 }
@@ -200,7 +197,6 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
 {
     assert( "libev listen cb  error",!(EV_ERROR & revents) );
 
-    class socket_mgr *mgr = socket_mgr::instance();
     class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
     while ( w.is_active() )
     {
@@ -227,12 +223,6 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
         (_socket->w).set<lsocket,&lsocket::read_cb>( this );
         (_socket->w).start( new_fd,EV_READ );  /* 这里会设置fd */
         
-        mgr->push( _socket );
-        /* 先push到mgr管理。userdata push到lua栈后,假如调用lua失败，userdata将
-         * 会被gc，触发析构函数，那时会尝试从mgr pop并关闭socket
-         */
-        
-        
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_accept);
         int32 param = 1;
         if ( ref_self )
@@ -240,7 +230,7 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
             lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
             param ++;
         }
-        lclass<lsocket>::push( L,_socket,false );
+        lclass<lsocket>::push( L,_socket,true );
         if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
         {
             ERROR( "listen cb call accept handler fail:%s\n",lua_tostring(L,-1) );
@@ -339,9 +329,6 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
 void lsocket::on_disconnect()
 {
     socket::close(); /* 关闭fd，但不要delete */
-    
-    /* fd close一定要从mgr pop,不然fd一旦重用，将会造成麻烦 */
-    socket_mgr::instance()->pop( w.fd );
     
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
     int32 param = 0;
@@ -477,10 +464,16 @@ int32 lsocket::set_disconnected()
 {
     if ( !lua_isfunction( L,1 ) )
     {
-        return luaL_error( L,"set_read,argument illegal.expect function" );
+        return luaL_error( L,"set_disconnected,argument illegal.expect function" );
     }
 
     ref_disconnect = luaL_ref( L,LUA_REGISTRYINDEX );
 
     return 0;
+}
+
+int32 lsocket::file_description()
+{
+    lua_pushinteger( L,w.fd );
+    return 1;
 }

@@ -1,6 +1,7 @@
 #include <netinet/tcp.h>    /* for keep-alive */
 
 #include "socket.h"
+#include "../lua/leventloop.h"
 
 socket::socket()
 {
@@ -15,15 +16,18 @@ socket::~socket()
 
 void socket::close()
 {
-    if ( w.fd < 0 )
-        return;
+    if ( sending )
+    {
+        leventloop::instance()->remove_sending( sending );
+        sending = 0;
+    }
 
-    ::close( w.fd );
-    
-    w.stop ();
-    w.fd = -1; /* must after stop */
-    
-    sending = 0;
+    if ( w.fd > 0 )
+    {
+        ::close( w.fd );
+        w.stop ();
+        w.fd = -1; /* must after stop */
+    }
 }
 
 int32 socket::non_block( int32 fd )

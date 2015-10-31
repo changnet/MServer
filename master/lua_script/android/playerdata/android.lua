@@ -37,7 +37,6 @@ function Android:born( ip,port )
     conn:set_disconnected( self.die )
     
     conn:connect( ip,port,Socket.CLIENT )
-    PLOG( "born =============================" )
     self.conn = conn
 end
 
@@ -48,7 +47,7 @@ function Android:alive( result )
         return
     end
     
-    --self:talk()
+    self:talk()
     --self.timer = timer_mgr:start( 1,self.talk,self )
 end
 

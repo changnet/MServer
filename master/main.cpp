@@ -5,7 +5,6 @@
 #include "lua/leventloop.h"
 #include "mysql/sql.h"
 #include "thread/thread_mgr.h"
-#include "net/socket_mgr.h"
 #include <sys/utsname.h> /* for uname */
 
 /* 记录进程启动信息 */
@@ -97,7 +96,6 @@ int32 main( int32 argc,char **argv )
     lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
     leventloop::uninstance();        /* 关闭主事件循环 */
 
-    socket_mgr::uninstance();        /* 关闭所有网络连接(强制) */
     thread_mgr::uninstance();        /* 清理线程管理数据 */
     
     /* 清除静态数据，以免影响内存检测 */

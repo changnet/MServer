@@ -39,6 +39,10 @@ leventloop::leventloop( lua_State *L,bool singleton )
     assert( "leventloop is singleton",!_loop );
     
     UNUSED( singleton );
+    
+    ansendings = NULL;
+    ansendingmax =  0;
+    ansendingcnt =  0;
     sig_ref = 0;
 }
 
@@ -46,6 +50,11 @@ leventloop::~leventloop()
 {
     /* 保证此处不再依赖lua_State */
     assert( "lua ref not release",0 == sig_ref );
+    
+    if ( ansendings ) delete []ansendings;
+    ansendings = NULL;
+    ansendingcnt =  0;
+    ansendingmax =  0;
 }
 
 void leventloop::finalize()
@@ -66,7 +75,6 @@ int32 leventloop::run ()
 
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 用自己的策略控制gc */
-    class socket_mgr *s_mgr = socket_mgr::instance();
 
     while ( !loop_done )
     {
@@ -91,7 +99,7 @@ int32 leventloop::run ()
             /* at this point, we NEED to wait, so we have to ensure */
             /* to pass a minimum nonzero value to the backend */
             /* 如果还有数据未发送，也只休眠最小时间 */
-            if (expect_false (waittime < backend_mintime || s_mgr->pending_size() > 0))
+            if (expect_false (waittime < backend_mintime || ansendingcnt > 0))
                 waittime = backend_mintime;
 
             backend_poll ( waittime );
@@ -104,8 +112,7 @@ int32 leventloop::run ()
         timers_reify (); /* relative timers called last */
   
         invoke_pending ();
-        s_mgr->invoke_sending ();
-        s_mgr->invoke_delete  (); /* after sending */
+        invoke_sending ();
         invoke_signal  ();
         
         lua_gc(L, LUA_GCSTEP, 100);
@@ -181,4 +188,80 @@ int32 leventloop::set_signal_ref()
     sig_ref = luaL_ref( L,LUA_REGISTRYINDEX );
 
     return 0;
+}
+
+void leventloop::pending_send( class socket *s  )
+{
+    assert( "double pending send",0 == s->sending );
+    // 0位是空的，不使用
+    ++ansendingcnt;
+    array_resize( ANSENDING,ansendings,ansendingmax,ansendingcnt + 1,EMPTY );
+    ansendings[ansendingcnt] = s;
+    
+    s->sending = ansendingcnt;
+}
+
+void leventloop::remove_sending( int32 sending )
+{
+    assert( "illegal remove sending" ,sending > 0 && sending < ansendingmax );
+    
+    ansendings[sending] = NULL;
+}
+
+/* 把数据攒到一起，一次发送
+ * 好处是：把包整合，减少发送次数，提高效率
+ * 坏处是：需要多一个数组管理；如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
+ * 然而，游戏中包多，但数据量不大
+ */
+void leventloop::invoke_sending()
+{
+    if ( ansendingcnt <= 0 )
+        return;
+
+    int32 empty = 0;
+    int32 empty_max = 0;
+    class socket *_socket = NULL;
+
+    for ( int32 i = 1;i <= ansendingcnt;i ++ )/* 0位是空的，不使用 */
+    {
+        if ( !(_socket = ansendings[i]) ) /* 可能调用了remove_sending */
+        {
+            ++empty;
+            empty_max = i;
+            continue;
+        }
+        
+        assert( "invoke sending index not match",i == _socket->sending );
+
+        /* 处理发送 */
+        int32 ret = _socket->_send.send( _socket->fd() );
+
+        if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
+        {
+            ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
+            _socket->on_disconnect();
+            ++empty;
+            empty_max = i;
+            continue;
+        }
+        
+        /* 处理sendings移动 */
+        if ( _socket->_send.data_size() <= 0 )
+        {
+            _socket->sending = 0;   /* 去除发送标识 */
+            _socket->_send.clear(); /* 去除悬空区 */
+            ++empty;
+            empty_max = i;
+        }
+        else if ( empty )  /* 将发送数组向前移动，防止中间留空 */
+        {
+            int32 empty_min = empty_max - empty + 1;
+            _socket->sending = empty_min;
+            --empty;
+        }
+        /* 数据未发送完，也不需要移动，则do nothing */
+    }
+
+    ansendingcnt -= empty;
+    assert( "invoke sending sending counter fail",ansendingcnt >= 0 && ansendingcnt < ansendingmax );
 }

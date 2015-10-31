@@ -17,10 +17,9 @@ function Player:get_pid()
 end
 
 function Player:set_conn( conn )
-    PLOG( "set conn=================" )
     conn:set_self( self )
     conn:set_read( self.on_read )
-    conn:set_disconnected( self.disconect )
+    conn:set_disconnected( self.on_disconnect )
     self.conn = conn
 end
 
@@ -29,7 +28,7 @@ function Player:on_read( pkt )
 end
 
 function Player:on_disconnect()
-    PLOG( "leaving ... " .. self.conn:fd() )
+    PLOG( "leaving ... " .. self.conn:file_description() )
     self.conn = nil
 end
 

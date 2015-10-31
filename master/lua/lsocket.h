@@ -25,6 +25,8 @@ public:
     int32 set_connected();
     int32 set_disconnected();
     
+    int32 file_description();
+    
     void read_cb   ( ev_io &w,int32 revents );
     void listen_cb ( ev_io &w,int32 revents );
     void connect_cb( ev_io &w,int32 revents );

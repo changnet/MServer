@@ -169,7 +169,7 @@ void ev_loop::fd_reify()
         switch ( anfd->reify )
         {
         case 0             : /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
-            ERROR("please avoid this fd situation,control your watcher");
+            ERROR("fd unreify:please avoid this fd situation,control your watcher\n");
             continue;
             break;
         case EPOLL_CTL_ADD :
