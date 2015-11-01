@@ -3,7 +3,6 @@
 #include "leventloop.h"
 #include "lstate.h"
 #include "ltools.h"
-#include "../net/socket_mgr.h"
 #include "../ev/ev_def.h"
 
 uint32 leventloop::sig_mask = 0;
@@ -218,20 +217,18 @@ void leventloop::invoke_sending()
     if ( ansendingcnt <= 0 )
         return;
 
-    int32 empty = 0;
-    int32 empty_max = 0;
+    int32 pos = 0;
     class socket *_socket = NULL;
 
     for ( int32 i = 1;i <= ansendingcnt;i ++ )/* 0位是空的，不使用 */
     {
         if ( !(_socket = ansendings[i]) ) /* 可能调用了remove_sending */
         {
-            ++empty;
-            empty_max = i;
             continue;
         }
 
         assert( "invoke sending index not match",i == _socket->sending );
+        assert( "invoke sending:nothing to send",_socket->_send.data_size() > 0 );
 
         /* 处理发送 */
         int32 ret = _socket->_send.send( _socket->fd() );
@@ -241,28 +238,29 @@ void leventloop::invoke_sending()
             /* 如果此时对端关闭，则会触发connection reset by peer */
             ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
             _socket->on_disconnect();
-            ++empty;
-            empty_max = i;
+
             continue;
         }
 
-        /* 处理sendings移动 */
+        /* 发送完毕，处理一下socket标识 */
         if ( _socket->_send.data_size() <= 0 )
         {
             _socket->sending = 0;   /* 去除发送标识 */
             _socket->_send.clear(); /* 去除悬空区 */
-            ++empty;
-            empty_max = i;
+
+            continue;
         }
-        else if ( empty )  /* 将发送数组向前移动，防止中间留空 */
+
+        /* 还有数据，处理sendings数组移动，防止中间留空 */
+        if ( i > pos + 1 )
         {
-            int32 empty_min = empty_max - empty + 1;
-            _socket->sending = empty_min;
-            --empty;
+            ++pos;
+            ansendings[pos]  = _socket;
+            _socket->sending = pos;
         }
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 
-    ansendingcnt -= empty;
+    ansendingcnt = pos;
     assert( "invoke sending sending counter fail",ansendingcnt >= 0 && ansendingcnt < ansendingmax );
 }

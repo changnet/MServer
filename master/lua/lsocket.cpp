@@ -49,11 +49,6 @@ int32 lsocket::kill()
 {
     if ( !w.is_active() ) return 0;
 
-    if ( sending > 0 )
-    {
-        leventloop::instance()->remove_sending( sending );
-    }
-
     if ( _send.data_size() > 0 ) /* 尝试把缓冲区的数据直接发送 */
     {
         _send.send( w.fd );
@@ -290,7 +285,10 @@ void lsocket::read_cb( ev_io &w,int32 revents )
     else if ( ret < 0 )
     {
         if ( EAGAIN != errno && EWOULDBLOCK != errno )
+        {
+            ERROR( "socket read_cb error:%s\n",strerror(errno) );
             on_disconnect();
+        }
         return;
     }
 

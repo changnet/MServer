@@ -18,15 +18,15 @@ public:
     int32 listen  ();
     int32 connect ();
     int32 raw_send();
-    
+
     int32 set_self();
     int32 set_read();
     int32 set_accept();
     int32 set_connected();
     int32 set_disconnected();
-    
+
     int32 file_description();
-    
+
     void read_cb   ( ev_io &w,int32 revents );
     void listen_cb ( ev_io &w,int32 revents );
     void connect_cb( ev_io &w,int32 revents );
