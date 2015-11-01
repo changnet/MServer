@@ -9,11 +9,11 @@ require "signal.signal"
 
 local function main()
     local androids = {}
-    
-    for i = 1,1 do
+
+    for i = 1,1024 do
         local android = Android(i)
         android:born( "127.0.0.1",9997 )
-        
+
         table.insert( androids,android )
     end
 

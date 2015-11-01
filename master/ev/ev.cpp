@@ -436,7 +436,7 @@ int32 ev_loop::timer_start( ev_timer *w )
     timers [active] = w;
     up_heap( timers, active );
 
-    assert ( "libev: internal timer heap corruption", timers [active] == w );
+    assert ( "libev: internal timer heap corruption", timers [w->active] == w );
 
     return active;
 }

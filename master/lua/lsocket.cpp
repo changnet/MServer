@@ -17,22 +17,26 @@ lsocket::lsocket( lua_State *L )
 
 lsocket::~lsocket()
 {
+    socket::close(); /* lsocket的内存由lua控制，保证在释放socket时一定会关闭 */
+
     /* 释放引用，如果有内存问题，可查一下这个地方 */
     LUA_UNREF( ref_self       );
     LUA_UNREF( ref_read       );
     LUA_UNREF( ref_accept     );
     LUA_UNREF( ref_connected  );
     LUA_UNREF( ref_disconnect );
+
+    assert( "socket not clean",0 == sending && (!w.is_active()) );
 }
 
 /* 发送数据 */
 int32 lsocket::send()
 {
-    if ( w.fd < 0 )
+    if ( !w.is_active() )
     {
-        return luaL_error( L,"raw_send illegal fd" );
+        return luaL_error( L,"socket not valid" );
     }
-    
+
     /* TODO
      * 发送数据要先把数据放到缓冲区，然后加入send列表，最后在epoll循环中发送，等待
      * ev整合到backend中才处理
@@ -43,16 +47,18 @@ int32 lsocket::send()
 
 int32 lsocket::kill()
 {
+    if ( !w.is_active() ) return 0;
+
     if ( sending > 0 )
     {
         leventloop::instance()->remove_sending( sending );
     }
-    
+
     if ( _send.data_size() > 0 ) /* 尝试把缓冲区的数据直接发送 */
     {
         _send.send( w.fd );
     }
-    
+
     socket::close();
 
     return 0;
@@ -60,6 +66,11 @@ int32 lsocket::kill()
 
 int32 lsocket::listen()
 {
+    if ( w.is_active() )
+    {
+        return luaL_error( L,"listen:socket already active");
+    }
+
     const char *addr = luaL_checkstring( L,1 );
     int32 port = luaL_checkinteger( L,2 );
     _type = static_cast<socket::SOCKET_TYPE>( luaL_checkinteger( L, 3 ) );
@@ -70,7 +81,7 @@ int32 lsocket::listen()
         lua_pushnil( L );
         return 1;
     }
-    
+
     int32 optval = 1;
     /*
      * enable address reuse.it will help when the socket is in TIME_WAIT status.
@@ -85,7 +96,7 @@ int32 lsocket::listen()
         lua_pushnil( L );
         return 1;
     }
-    
+
     if ( socket::non_block( fd ) < 0 )
     {
         ::close( fd );
@@ -125,6 +136,11 @@ int32 lsocket::listen()
 
 int32 lsocket::connect()
 {
+    if ( w.is_active() )
+    {
+        return luaL_error( L,"connect:socket already active");
+    }
+
     const char *addr = luaL_checkstring( L,1 );
     const int32 port = luaL_checkinteger( L,2 );
     _type = static_cast<socket::SOCKET_TYPE>( luaL_checkinteger( L,3 ) );
@@ -158,7 +174,7 @@ int32 lsocket::connect()
         lua_pushnil( L );
         return 1;
     }
-    
+
     class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
     w.set( loop );
     w.set<lsocket,&lsocket::connect_cb>( this );
@@ -171,6 +187,11 @@ int32 lsocket::connect()
 /* 发送原始数据，二进制或字符串 */
 int32 lsocket::raw_send()
 {
+    if ( !w.is_active() )
+    {
+        return luaL_error( L,"raw_send:socket not valid");
+    }
+
     /* 不要用luaL_checklstring，它给出的长度不包含字符串结束符\0，而我们不知道lua发送的
      * 是字符串还是二进制，因此在lua层要传入一个长度，默认为字符串，由optional取值
      */
@@ -181,11 +202,8 @@ int32 lsocket::raw_send()
     {
         return luaL_error( L,"raw_send nothing to send" );
     }
-    
-    if ( w.fd < 0 )
-    {
-        return luaL_error( L,"raw_send illegal fd" );
-    }
+
+    assert( "raw_send illegal fd",w.fd > 0 );
 
     /* raw_send是一个原始的发送函数,数据不经过协议处理(不经protobuf
      * 处理，不包含协议号...)，可以发送二进制或字符串。
@@ -194,7 +212,7 @@ int32 lsocket::raw_send()
      */
     this->_send.append( sz,len );
     leventloop::instance()->pending_send( static_cast<class socket*>(this) );  /* 放到发送队列，最后一次发送 */
-    
+
     return 0;
 }
 
@@ -213,7 +231,7 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
                 FATAL( "accept fail:%s\n",strerror(errno) );
                 return;
             }
-            
+
             break;  /* 所有等待的连接已处理完 */
         }
 
@@ -227,7 +245,7 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
         (_socket->w).set( loop );
         (_socket->w).set<lsocket,&lsocket::read_cb>( _socket );
         (_socket->w).start( new_fd,EV_READ );  /* 这里会设置fd */
-        
+
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_accept);
         int32 param = 1;
         if ( ref_self )
@@ -247,7 +265,7 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
 void lsocket::read_cb( ev_io &w,int32 revents )
 {
     assert( "libev read cb error",!(EV_ERROR & revents) );
-    
+
     int32 fd = w.fd;
 
     /* 就游戏中的绝大多数消息而言，一次recv就能接收完成，不需要while接收直到出错。而且
@@ -270,7 +288,7 @@ void lsocket::read_cb( ev_io &w,int32 revents )
             on_disconnect();
         return;
     }
-  
+
     /* read data */
     packet_parse();
 }
@@ -289,9 +307,9 @@ void lsocket::read_cb( ev_io &w,int32 revents )
 void lsocket::connect_cb( ev_io &w,int32 revents )
 {
     assert( "libev connect cb error",!(EV_ERROR & revents) );
-    
+
     int32 fd = w.fd;
-    
+
     int32 error   = 0;
     socklen_t len = sizeof (error);
     if ( getsockopt( fd, SOL_SOCKET, SO_ERROR, &error, &len ) < 0 )
@@ -301,7 +319,7 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
         error = errno;
         // DON NOT return
     }
-    
+
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connected);
     int32 param = 1;
     if ( ref_self )
@@ -334,8 +352,6 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
 
 void lsocket::on_disconnect()
 {
-    socket::close(); /* 关闭fd，但不要delete */
-    
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
     int32 param = 0;
     if ( ref_self )
@@ -346,7 +362,13 @@ void lsocket::on_disconnect()
     if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
     {
         ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
+        // DO NOT RETURN
     }
+
+    /* 关闭fd，但不要delete
+     * 先回调lua，再close.lua可能会调用一些函数，如取fd
+     */
+    socket::close();
 }
 
 void lsocket::packet_parse()
@@ -366,9 +388,9 @@ void lsocket::packet_parse()
         ERROR( "packet parse unhandle type" );
         return;
     }
-    
+
     struct packet _packet;
-    
+
     while ( _recv.data_size() > 0 )
     {
         int32 result = pft( _recv,_packet );
@@ -405,15 +427,20 @@ void lsocket::packet_parse()
 
 int32 lsocket::address()
 {
+    if ( !w.is_active() )
+    {
+        return luaL_error( L,"listen:socket already active");
+    }
+
     struct sockaddr_in addr;
     memset( &addr, 0, sizeof(struct sockaddr_in));
     socklen_t len = sizeof(struct sockaddr_in);
-    
+
     if ( getpeername( w.fd, (struct sockaddr *)&addr, &len) < 0 )
     {
         return luaL_error( L,"getpeername error: %s",strerror(errno) );
     }
-    
+
     lua_pushstring( L,inet_ntoa(addr.sin_addr) );
     return 1;
 }
@@ -426,7 +453,7 @@ int32 lsocket::set_self()
     }
 
     LUA_REF( ref_self );
-    
+
     return 0;
 }
 

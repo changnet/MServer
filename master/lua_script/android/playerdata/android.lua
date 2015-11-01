@@ -25,6 +25,8 @@ local example = table.concat( word )
 -- 构造函数
 function Android:__init( pid )
     self.pid = pid
+    self.send = 0
+    self.recv = 0
 end
 
 -- 连接服务器
@@ -59,14 +61,17 @@ end
 function Android:die()
     self.timer:stop()
     self.conn:kill()
+
+    self.timer = nil
+    self.conn = nil
     PLOG( "android die " .. self.pid )
 end
 
 -- 收到消息
 function Android:talk_msg( pkt )
+    self.recv = self.recv + 1
     if self.last_msg ~= pkt then
-        ELOG( "android msg error")
-
+        ELOG( "android msg error,%s\n%s",self.last_msg,pkt )
         self:die()
         return
     end
@@ -76,10 +81,16 @@ end
 
 -- 发送消息
 function Android:talk()
+    if self.send ~= self.recv then
+        PLOG( "wait,expect %d,got %d",self.send,self.recv )
+        return
+    end
     local str = string.sub( example,-math.random(max_word) )
     self.last_msg = str
-    print( "talk ..." )
+
+    self.send = self.send + 1
     self.conn:raw_send( str )
+    print( "talk " .. self.pid )
 end
 
 return Android
