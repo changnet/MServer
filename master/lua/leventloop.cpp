@@ -17,7 +17,7 @@ class leventloop *leventloop::instance()
         assert( "NULL lua state",L );
         _loop = new leventloop( L,true );
     }
-    
+
     return _loop;
 }
 
@@ -37,9 +37,9 @@ leventloop::leventloop( lua_State *L,bool singleton )
     : L (L)
 {
     assert( "leventloop is singleton",!_loop );
-    
+
     UNUSED( singleton );
-    
+
     ansendings = NULL;
     ansendingmax =  0;
     ansendingcnt =  0;
@@ -50,7 +50,7 @@ leventloop::~leventloop()
 {
     /* 保证此处不再依赖lua_State */
     assert( "lua ref not release",0 == sig_ref );
-    
+
     if ( ansendings ) delete []ansendings;
     ansendings = NULL;
     ansendingcnt =  0;
@@ -79,23 +79,23 @@ int32 leventloop::run ()
     while ( !loop_done )
     {
         fd_reify();/* update fd-related kernel structures */
-        
+
         /* calculate blocking time */
         {
             ev_tstamp waittime  = 0.;
-            
-            
+
+
             /* update time to cancel out callback processing overhead */
             time_update ();
-            
+
             waittime = MAX_BLOCKTIME;
-            
+
             if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
             {
                ev_tstamp to = (timers [HEAP0])->at - mn_now;
                if (waittime > to) waittime = to;
             }
-    
+
             /* at this point, we NEED to wait, so we have to ensure */
             /* to pass a minimum nonzero value to the backend */
             /* 如果还有数据未发送，也只休眠最小时间 */
@@ -110,14 +110,14 @@ int32 leventloop::run ()
 
         /* queue pending timers and reschedule them */
         timers_reify (); /* relative timers called last */
-  
+
         invoke_pending ();
         invoke_sending ();
         invoke_signal  ();
-        
+
         lua_gc(L, LUA_GCSTEP, 100);
     }    /* while */
-    
+
     return 0;
 }
 
@@ -179,7 +179,7 @@ int32 leventloop::set_signal_ref()
     {
         return luaL_error( L,"set_signal_ref,argument illegal,expect function" );
     }
-    
+
     if ( sig_ref )
     {
         LUA_UNREF( sig_ref );
@@ -197,14 +197,14 @@ void leventloop::pending_send( class socket *s  )
     ++ansendingcnt;
     array_resize( ANSENDING,ansendings,ansendingmax,ansendingcnt + 1,EMPTY );
     ansendings[ansendingcnt] = s;
-    
+
     s->sending = ansendingcnt;
 }
 
 void leventloop::remove_sending( int32 sending )
 {
     assert( "illegal remove sending" ,sending > 0 && sending < ansendingmax );
-    
+
     ansendings[sending] = NULL;
 }
 
@@ -230,7 +230,7 @@ void leventloop::invoke_sending()
             empty_max = i;
             continue;
         }
-        
+
         assert( "invoke sending index not match",i == _socket->sending );
 
         /* 处理发送 */
@@ -238,13 +238,14 @@ void leventloop::invoke_sending()
 
         if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
         {
+            /* 如果此时对端关闭，则会触发connection reset by peer */
             ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
             _socket->on_disconnect();
             ++empty;
             empty_max = i;
             continue;
         }
-        
+
         /* 处理sendings移动 */
         if ( _socket->_send.data_size() <= 0 )
         {

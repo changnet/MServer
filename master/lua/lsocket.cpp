@@ -256,6 +256,11 @@ void lsocket::listen_cb( ev_io &w,int32 revents )
         lclass<lsocket>::push( L,_socket,true );
         if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
         {
+            /* 如果失败，会出现几种情况：
+             * 1) lua能够引用socket，只是lua其他逻辑出错
+             * 2) lua不能引用socket，导致lua层gc时会销毁socket,ev还来不及fd_reify，又
+             *    将此fd删除，触发一个错误
+             */
             ERROR( "listen cb call accept handler fail:%s\n",lua_tostring(L,-1) );
             return;
         }
@@ -270,10 +275,10 @@ void lsocket::read_cb( ev_io &w,int32 revents )
 
     /* 就游戏中的绝大多数消息而言，一次recv就能接收完成，不需要while接收直到出错。而且
      * 当前设定的缓冲区与socket一致(8192)，socket缓冲区几乎不可能还有数据，不需要多调用
-     * 一次recv。退一步，假如还有数据，则epoll当前为LT模式，下一次回调再次读取
-     * 如果启用while,需要检测_socket是否被关闭
+     * 一次recv。退一步，假如还有数据，epoll当前为LT模式，下一次回调再次读取
+     * 如果启用while,需要检测_socket在lua层逻辑中是否被关闭
      */
-    /* while ( w.is_active() ) */
+
     int32 ret = _recv.recv( fd );
 
     /* disconnect or error */
