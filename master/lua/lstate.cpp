@@ -1,5 +1,6 @@
 #include "lstate.h"
 #include "lclass.h"
+#include "ltimer.h"
 #include "lsocket.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
@@ -11,7 +12,7 @@ class lstate *lstate::instance()
     {
         _state = new lstate();
     }
-    
+
     return _state;
 }
 
@@ -37,7 +38,7 @@ lstate::lstate()
 lstate::~lstate()
 {
     assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
-    
+
     /* Destroys all objects in the given Lua state (calling the corresponding
      * garbage-collection metamethods, if any) and frees all dynamic memory used
      * by this state
@@ -46,9 +47,10 @@ lstate::~lstate()
     L = NULL;
 }
 
-int luaopen_ev( lua_State *L );
-int luaopen_util( lua_State *L );
+int luaopen_ev    ( lua_State *L );
+int luaopen_util  ( lua_State *L );
 int luaopen_socket( lua_State *L );
+int luaopen_timer ( lua_State *L );
 
 void lstate::open_cpp()
 {
@@ -75,6 +77,7 @@ void lstate::open_cpp()
 
     luaopen_ev(L);
     luaopen_socket(L);
+    luaopen_timer (L);
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );
@@ -112,12 +115,24 @@ int luaopen_socket( lua_State *L )
     lc.def<&lsocket::set_connected>("set_connected");
     lc.def<&lsocket::set_disconnected>("set_disconnected");
     lc.def<&lsocket::file_description>("file_description");
-    
+
     lc.set( "ERROR" ,socket::SK_ERROR  );
     lc.set( "SERVER",socket::SK_SERVER );
     lc.set( "CLIENT",socket::SK_CLIENT );
     lc.set( "LISTEN",socket::SK_LISTEN );
     lc.set( "HTTP"  ,socket::SK_HTTP   );
+
+    return 0;
+}
+
+int luaopen_timer ( lua_State *L )
+{
+    lclass<ltimer> lc(L,"Timer");
+    lc.def<&ltimer::start> ( "start"  );
+    lc.def<&ltimer::stop>  ( "stop"   );
+    lc.def<&ltimer::active>( "active" );
+    lc.def<&ltimer::set_self>( "set_self" );
+    lc.def<&ltimer::set_callback>( "set_callback" );
 
     return 0;
 }

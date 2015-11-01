@@ -8,19 +8,19 @@ ev_loop::ev_loop()
 {
     anfds = NULL;
     anfdmax = 0;
-    
+
     pendings = NULL;
     pendingmax = 0;
     pendingcnt = 0;
-    
+
     fdchanges = NULL;
     fdchangemax = 0;
     fdchangecnt = 0;
-    
+
     timers = NULL;
     timermax = 0;
     timercnt = 0;
-    
+
     ev_rt_now          = get_time ();
     mn_now             = get_clock ();
     now_floor          = mn_now;
@@ -36,25 +36,25 @@ ev_loop::~ev_loop()
         delete []anfds;
         anfds = NULL;
     }
-    
+
     if ( pendings )
     {
         delete []pendings;
         pendings = NULL;
     }
-    
+
     if ( fdchanges )
     {
         delete []fdchanges;
         fdchanges = NULL;
     }
-    
+
     if ( timers )
     {
         delete []timers;
         timers = NULL;
     }
-    
+
     if ( backend_fd >= 0 )
     {
         ::close( backend_fd );
@@ -70,23 +70,23 @@ int32 ev_loop::run()
     while ( !loop_done )
     {
         fd_reify();/* update fd-related kernel structures */
-        
+
         /* calculate blocking time */
         {
             ev_tstamp waittime  = 0.;
-            
-            
+
+
             /* update time to cancel out callback processing overhead */
             time_update ();
-            
+
             waittime = MAX_BLOCKTIME;
-            
+
             if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
             {
                ev_tstamp to = (timers [HEAP0])->at - mn_now;
                if (waittime > to) waittime = to;
             }
-    
+
             /* at this point, we NEED to wait, so we have to ensure */
             /* to pass a minimum nonzero value to the backend */
             if (expect_false (waittime < backend_mintime))
@@ -100,17 +100,17 @@ int32 ev_loop::run()
 
         /* queue pending timers and reschedule them */
         timers_reify (); /* relative timers called last */
-  
+
         invoke_pending ();
     }    /* while */
-    
+
     return 0;
 }
 
 int32 ev_loop::quit()
 {
     loop_done = true;
-    
+
     return 0;
 }
 
@@ -136,13 +136,13 @@ int32 ev_loop::io_start( ev_io *w )
 int32 ev_loop::io_stop( ev_io *w )
 {
     clear_pending( w );
-    
+
     if ( expect_false(!w->is_active()) )
         return 0;
-        
+
     int32 fd = w->fd;
     assert( "illegal fd (must stay constant after start!)", fd >= 0 && uint32(fd) < anfdmax );
-    
+
     ANFD *anfd = anfds + fd;
     anfd->w = 0;
     anfd->reify = anfd->emask ? EPOLL_CTL_DEL : 0;
@@ -193,7 +193,7 @@ void ev_loop::fd_reify()
             return;
         }
     }
-    
+
     fdchangecnt = 0;
 }
 
@@ -207,7 +207,7 @@ void ev_loop::fd_reify()
 void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
 {
     struct epoll_event ev;
-    
+
     ev.data.fd = fd;
     ev.events  = (events & EV_READ  ? EPOLLIN  : 0)
                | (events & EV_WRITE ? EPOLLOUT : 0);
@@ -291,7 +291,7 @@ ev_tstamp ev_loop::get_clock()
 void ev_loop::time_update()
 {
     mn_now = get_clock ();
-    
+
     /* only fetch the realtime clock every 0.5*MIN_TIMEJUMP seconds */
     /* interpolate in the meantime */
     if ( mn_now - now_floor < MIN_TIMEJUMP * .5 )
@@ -317,7 +317,7 @@ void ev_loop::time_update()
 
         if ( expect_true (mn_now - now_floor < MIN_TIMEJUMP * .5) )
             return; /* all is well */
-  
+
         ev_rt_now = get_time ();
         mn_now    = get_clock ();
         now_floor = mn_now;
@@ -379,7 +379,7 @@ void ev_loop::invoke_pending()
     while (pendingcnt)
     {
         ANPENDING *p = pendings + --pendingcnt;
-  
+
         ev_watcher *w = p->w;
         if ( expect_true(w) ) /* 调用了clear_pending */
         {
@@ -403,9 +403,9 @@ void ev_loop::timers_reify()
     while (timercnt && (timers [HEAP0])->at < mn_now)
     {
         ev_timer *w = timers [HEAP0];
-  
+
         assert( "libev: inactive timer on timer heap detected", w->is_active () );
-  
+
         /* first reschedule or stop timer */
         if (w->repeat)
         {
@@ -419,7 +419,7 @@ void ev_loop::timers_reify()
         }
         else
             w->stop(); /* nonrepeating: stop timer */
-  
+
         feed_event( w,EV_TIMER );
     }
 }
@@ -427,17 +427,17 @@ void ev_loop::timers_reify()
 int32 ev_loop::timer_start( ev_timer *w )
 {
     w->at += mn_now;
-  
+
     assert ( "libev: ev_timer_start called with negative timer repeat value", w->repeat >= 0. );
-  
+
     ++timercnt;
     int32 active = timercnt + HEAP0 - 1;
     array_resize ( ANHE, timers, timermax, uint32(active + 1), EMPTY );
     timers [active] = w;
     up_heap( timers, active );
-  
+
     assert ( "libev: internal timer heap corruption", timers [active] == w );
-    
+
     return active;
 }
 
@@ -469,26 +469,26 @@ int32 ev_loop::timer_stop( ev_timer *w )
 void ev_loop::down_heap( ANHE *heap,int32 N,int32 k )
 {
     ANHE he = heap [k];
-  
+
     for (;;)
     {
         int c = k << 1;
-  
+
         if (c >= N + HEAP0)
             break;
-  
+
         c += c + 1 < N + HEAP0 && (heap [c])->at > (heap [c + 1])->at
              ? 1 : 0;
-  
+
         if ( he->at <= (heap [c])->at )
             break;
-  
+
         heap [k] = heap [c];
         (heap [k])->active = k;
-  
+
         k = c;
     }
-  
+
     heap [k] = he;
     he->active = k;
 }
@@ -496,19 +496,19 @@ void ev_loop::down_heap( ANHE *heap,int32 N,int32 k )
 void ev_loop::up_heap( ANHE *heap,int32 k )
 {
     ANHE he = heap [k];
-  
+
     for (;;)
     {
         int p = HPARENT (k);
-  
+
         if ( UPHEAP_DONE (p, k) || (heap [p])->at <= he->at )
             break;
-  
+
         heap [k] = heap [p];
         (heap [k])->active = k;
         k = p;
     }
-  
+
     heap [k] = he;
     he->active = k;
 }

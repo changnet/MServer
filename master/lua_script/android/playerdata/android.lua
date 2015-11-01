@@ -4,9 +4,8 @@
 
 -- 机器人对象
 
---local Client = require "lua.android.net.client"
--- local timer_mgr = require "lua.timer.timermgr"
-local Socket = require "Socket"
+local Timer   = require "Timer"
+local Socket  = require "Socket"
 local Android = oo.class( nil,... )
 
 local words   = { "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o",
@@ -35,7 +34,7 @@ function Android:born( ip,port )
     conn:set_read( self.talk_msg )
     conn:set_connected( self.alive )
     conn:set_disconnected( self.die )
-    
+
     conn:connect( ip,port,Socket.CLIENT )
     self.conn = conn
 end
@@ -47,13 +46,19 @@ function Android:alive( result )
         return
     end
 
-    self:talk()
-    --self.timer = timer_mgr:start( 1,self.talk,self )
+
+    local timer = Timer()
+    timer:set_self( self )
+    timer:set_callback( self.talk )
+    timer:start( 0,1 )
+
+    self.timer = timer
 end
 
 -- 断开连接
 function Android:die()
-    --timer_mgr:stop( self.timer )
+    self.timer:stop()
+    self.conn:kill()
     PLOG( "android die " .. self.pid )
 end
 
@@ -61,14 +66,12 @@ end
 function Android:talk_msg( pkt )
     if self.last_msg ~= pkt then
         ELOG( "android msg error")
-        
+
         self:die()
-        ev:io_kill( self.conn.fd )
         return
     end
 
     self.last_msg = nil
-    self:talk()
 end
 
 -- 发送消息

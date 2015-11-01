@@ -23,7 +23,7 @@ MKDIR = mkdir -p
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
-	buffer_process.o sql.o thread.o thread_mgr.o
+	buffer_process.o sql.o thread.o thread_mgr.o ltimer.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代

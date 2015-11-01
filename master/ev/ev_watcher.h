@@ -22,7 +22,7 @@ public:
         data    = NULL;
         cb      = NULL;
     }
-    
+
     virtual ~ev_watcher(){}
 };
 
@@ -35,6 +35,8 @@ public:
         : ev_watcher (_loop)
     {
     }
+
+    virtual ~ev_base(){}
 
     void set( ev_loop *_loop )
     {
@@ -65,7 +67,7 @@ public:
       function
         (*static_cast<watcher *>(w), revents);
     }
-    
+
     // method callback
     template<class K, void (K::*method)(watcher &w, int32)>
     void set (K *object)
@@ -154,7 +156,6 @@ public:
 class ev_timer : public ev_base<ev_timer>
 {
 public:
-    uint32 identity;
     ev_tstamp at;
     ev_tstamp repeat;
 
@@ -164,7 +165,6 @@ public:
     explicit ev_timer( ev_loop *loop = 0 )
         : ev_base<ev_timer> ( loop )
     {
-        identity = 0;
         at       = 0.;
         repeat   = 0.;
     }
@@ -174,7 +174,7 @@ public:
         /* TODO stop ?? */
         stop();
     }
-    
+
     void start()
     {
         assert( "ev_timer::start with NULL loop",loop );
@@ -185,21 +185,16 @@ public:
 
         active = loop->timer_start( this );
     }
-    
+
     void stop()
     {
         active = loop->timer_stop( this );
-    }
-    
-    void set( uint32 id )
-    {
-        identity = id;
     }
 
     void set( ev_tstamp after,ev_tstamp repeat = 0. )
     {
         int32 old_active = active;
-        
+
         if ( old_active ) stop();
 
         this->at     = after;
@@ -207,7 +202,7 @@ public:
 
         if ( old_active ) start();
     }
-    
+
     void start( ev_tstamp after,ev_tstamp repeat = 0. )
     {
         set( after,repeat );
