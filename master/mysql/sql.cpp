@@ -32,11 +32,10 @@ sql::sql()
 
 sql::~sql()
 {
-    assert( "sql thread not clean",NULL == conn );
+    assert( "sql not clean",NULL == conn );
 }
 
-/* 线程启动函数 */
-bool sql::start( const char *_ip,const int32 _port,const char *_usr,
+void sql::set( const char *_ip,const int32 _port,const char *_usr,
     const char *_pwd,const char *_db )
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
@@ -45,13 +44,14 @@ bool sql::start( const char *_ip,const int32 _port,const char *_usr,
     snprintf( usr,SQL_VAR_LEN,"%s",_usr );
     snprintf( pwd,SQL_VAR_LEN,"%s",_pwd );
     snprintf( db ,SQL_VAR_LEN,"%s",_db  );
-
-    return thread::start();
 }
 
 /* 线程主逻辑 */
 void sql::routine()
 {
+    assert( "mysql connection not clean",NULL == conn );
+    assert( "fd not valid",fd[0] > -1 && fd[1] > -1 );
+
     mysql_thread_init();
     conn = mysql_init( NULL );
     if ( !conn )
@@ -94,15 +94,17 @@ void sql::routine()
         return;
     }
 
-    uint32 cnt = 0;
-    while ( _run && cnt < 6 )
+    while ( _run )
     {
-        ++cnt;
         if ( mysql_ping( conn ) )
         {
             ERROR( "mysql ping fail:%s\n",mysql_error( conn ) );
             continue;
         }
+        
+        uint64 event = 0;
+        int32 sz = read( fd[1],&event,sizeof(uint64) ); /* 阻塞 */
+        if 
 
         const char *statement = "SELECT * FROM society_join_log limit 1;";
         
@@ -162,8 +164,6 @@ void sql::routine()
             ERROR( "mysql store result fail:%s\n",mysql_error( conn ) );
             ERROR( "sql not have result:%s\n",statement );
         }
-        
-        sleep( 1 );
     }
     
     mysql_close( conn );

@@ -8,7 +8,7 @@ class thread
 {
 public:
     thread();
-    ~thread();
+    virtual ~thread();
     
     bool start();
     void stop ();
