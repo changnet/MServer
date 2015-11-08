@@ -12,12 +12,14 @@ class sql
 public:
     sql();
     ~sql();
-    
+
     bool set( const char *_ip,const int32 _port,const char *_usr,
         const char *_pwd,const char *db );
-    
+
+    int32 ping     ();
     bool connect   ();
     void disconnect();
+    const char *error();
 
     static void library_init();
     static void library_end (); /* 释放sql库，仅在程序不再使用sql时调用 */

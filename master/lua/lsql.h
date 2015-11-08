@@ -22,12 +22,19 @@ public:
     int32 select();
     int32 insert();
 private:
+    enum
+    {
+        ERR  = -1,
+        EXIT = 0 ,
+        READ = 1
+    }
+private:
     void routine();
     void sql_cb( ev_io &w,int32 revents );
 private:
-    int32 fd[2]    ;
-    lua_State *L   ;
-    class sql *_sql;
+    int32 fd[2]   ;
+    lua_State *L  ;
+    class sql _sql;
 };
 
 #endif /* __LSQL_H__ */
