@@ -93,9 +93,9 @@ bool sql::connect()
     return true;
 }
 
-void sql::stop()
+void sql::disconnect()
 {
-    assert( "try to stop a inactive mysql connection",conn );
+    assert( "try to disconnect a inactive mysql connection",conn );
     if ( !conn ) return;
 
     mysql_close( conn );
@@ -113,4 +113,69 @@ const char *sql::error()
 {
     assert( "try to get error from a inactive mysql connection",conn );
     return mysql_error( conn );
+}
+
+int32 sql::query( const char *stmt )
+{
+    assert( "sql query,connection not valid",conn );
+
+    /* Client error message numbers are listed in the MySQL errmsg.h header
+     * file. Server error message numbers are listed in mysqld_error.h
+     */
+    if ( mysql_real_query( conn,stmt,strlen(stmt) ) )
+    {
+        int32 err = mysql_errno( conn );
+        if ( CR_SERVER_LOST == err || CR_SERVER_GONE_ERROR == err )
+        {
+            /* reconnect and try again */
+            if ( mysql_ping( conn ) )
+            {
+                return mysql_errno( conn );
+            }
+
+            if ( mysql_real_query( conn,stmt,strlen(stmt) ) )
+            {
+                return mysql_error( conn );
+            }
+        }
+        else
+        {
+            return mysql_error( conn );
+        }
+    }
+    
+    return 0; /* same as mysql_real_query,return 0 if success */
+}
+
+MYSQL_RES *sql::result()
+{
+    assert( "sql result,connection not valid",conn );
+    /* returns a null pointer if the statement did not return a result set
+     * (for example, if it was an INSERT statement).An empty result set is
+     * returned if there are no rows returned. (An empty result set differs
+     * from a null pointer as a return value.)
+     */
+    MYSQL_RES *res = mysql_store_result( conn );
+    if ( res )
+    {
+                MYSQL_ROW row;
+                uint32 sz = mysql_num_fields(res);
+                while ( (row = mysql_fetch_row(res)) )
+                {
+                    char tmp[1024];
+                    for ( uint32 i = 0;i < sz;i ++ )
+                    {
+                        snprintf( tmp,1024,"%s",row[i] );
+                        PDEBUG( "result:%s\n",tmp );
+                    }
+                }
+                mysql_free_result( res );
+    }
+    else
+    {
+        ERROR( "mysql store result fail:%s\n",mysql_error( conn ) );
+        ERROR( "sql not have result:%s\n",statement );
+    }
+    
+    return NULL;
 }

@@ -20,6 +20,8 @@ public:
     bool connect   ();
     void disconnect();
     const char *error();
+    MYSQL_RES *result();
+    int32 query( const char *stmt );
 
     static void library_init();
     static void library_end (); /* 释放sql库，仅在程序不再使用sql时调用 */

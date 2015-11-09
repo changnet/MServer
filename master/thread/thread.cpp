@@ -2,7 +2,8 @@
 
 thread::thread()
 {
-    _run = false;
+    _run  = false;
+    _join = false;
     thread_t = 0;
     
     int32 rv = pthread_mutex_init( &mutex,NULL );
@@ -15,6 +16,8 @@ thread::thread()
 
 thread::~thread()
 {
+    if ( !_join ) pthread_detach( pthread_self() );
+
     int32 rv = pthread_mutex_destroy( &mutex );
     if ( 0 != rv )
     {
@@ -70,6 +73,7 @@ void thread::join()
 {
     assert( "thread join zero thread id", 0 != thread_t );
 
+    _join = true;
     int32 rv = pthread_join( thread_t,NULL );
     if ( rv )
     {

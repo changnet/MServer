@@ -20,6 +20,7 @@ protected:
     static void *start_routine( void *arg );
 protected:
     volatile bool _run;
+    volatile bool _join;
     pthread_t thread_t;
     pthread_mutex_t mutex;
 };

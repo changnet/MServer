@@ -33,3 +33,4 @@ ubuntu 14.04
 15. 测试查询大量结果导致out of memory后线程能否恢复
 16. 为lua提供LRU、LFU、优先队列、大小堆等常用数据
 #TOSOLVE
+1. thread 当前有lua控制，需要重新设计join(把join暴露给Sql，自己退出时在主线程调join)
