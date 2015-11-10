@@ -2,6 +2,7 @@
 #define __SQL_H__
 
 #include <mysql/mysql.h>
+#include "sql_result.h"
 #include "../global/global.h"
 
 

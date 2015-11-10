@@ -20,7 +20,7 @@ ubuntu 14.04
 4. mysql、mongodb
 5. http(http-parser、libcurl)
 6. protobuf、platbuffer
-7. astar、rsa、zlib、md5、uuid
+7. astar、rsa、zlib、md5、uuid、cjson
 8. ps -o 测试缺页中断
 9. dump内存情况，包含内存碎片
 10. 底层包自动转发
