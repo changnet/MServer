@@ -1,48 +1,18 @@
 #ifndef __SQL_RESULT_H__
 #define __SQL_RESULT_H__
 
+/* db结果存储，实际就是把MYSQL_RES按自己的方式实现一遍
+ * mysql的结果通过socket传输，因此只能取到char类型自己转换
+ * 1.子线程将数据转换为对应类型，主线程直接使用。
+ * 2.所有数据原封不动以char存储，主线程自己转换
+ * 方案1中主线程省去转换时间，但需要用union将double、char混合存储，对以后做cache很不
+ * 利。况且atoi之类的转换函数效率并不算太低，因此采用方案1
+ */
+
 #include <mysql.h>
 #include "../global/global.h"
 
 #define SQL_FIELD_LEN    64
-
-/* POD类型
- * 不要有构造、析构、虚函数
- * 请手动申请、释放内存
- */
-struct sql_char
-{
-    char *_data;
-    size_t _size;
-    
-    void set( const char *data,size_t size )
-    {
-        memcpy( _data,data,size );
-        _size = size;
-    }
-    
-    void malloc( size_t size )
-    {
-        _data = new char[size];
-    }
-    
-    void free()
-    {
-        delete []_dadta;
-    }
-}
-
-/* 每个col中field值
- * 这里的类型是需要转换为lua类型的(>=5.3),因此不细分为c类型
- * union只允许POD类型,sql_char这些类型得处理特殊
- */
-union sql_col
-{
-    double _double;  /* double float */
-    int64  _int64 ;  /* int8 int16 int32 int64 */
-    uint64 _uint64;  /* uint8 uint16 uint32 uint64 */
-    sql_char _char;  /* char string blob */
-};
 
 /*
 enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
@@ -75,9 +45,43 @@ struct sql_field
     enum_field_types    type; /* define in mysql_com.h */
 };
 
+struct sql_col
+{
+    size_t _size;
+    char *_value;
+    
+    explicit sql_col( const char *value,size_t size )
+    {
+        _size  = size;
+        _value = new char[_size];
+        
+        memcpy( _value,value,_size );
+    }
+    
+    ~sql_col()
+    {
+        if ( _value ) delete _value;
+        _value = NULL;
+        _siZe  = 0
+    }
+}
+
 struct sql_row
 {
     std::vector<sql_col *> cols;
+    
+    sql_row() {}
+    ~sql_row()
+    {
+        std::vector<sql_col *>::iterator itr = cols.begin();
+        while ( itr != cols.end() )
+        {
+            if ( *itr ) delete *itr;  // 可能是NULL
+            ++itr;
+        }
+        
+        cols.clear();
+    }
 };
 
 struct sql_res
@@ -95,9 +99,17 @@ struct sql_res
     
     ~sql_res()
     {
-        /* 释放内存 */
-        num_rows = 0;
-        num_cols = 0;
+        std::vector<sql_row *>::iterator itr = rows.begin();
+        while ( itr != rows.end() )
+        {
+            delete *itr;
+            ++itr;
+        }
+
+        fields.clear();
+        rows.clear  ();
+        num_rows =   0;
+        num_cols =   0;
     }
 };
 

@@ -147,35 +147,31 @@ int32 sql::query( const char *stmt )
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
-MYSQL_RES *sql::result()
+int32 sql::result( sql::sql_res **_res )
 {
     assert( "sql result,connection not valid",conn );
-    /* returns a null pointer if the statement did not return a result set
-     * (for example, if it was an INSERT statement).An empty result set is
-     * returned if there are no rows returned. (An empty result set differs
-     * from a null pointer as a return value.)
+
+    /* mysql_store_result() returns a null pointer if the statement did not 
+     * return a result set (for example, if it was an INSERT statement).
+     * also returns a null pointer if reading of the result set
+     * failed. You can check whether an error occurred by checking whether
+     * mysql_error() returns a nonempty string, mysql_errno() returns nonzero
      */
     MYSQL_RES *res = mysql_store_result( conn );
     if ( res )
     {
-                MYSQL_ROW row;
-                uint32 sz = mysql_num_fields(res);
-                while ( (row = mysql_fetch_row(res)) )
-                {
-                    char tmp[1024];
-                    for ( uint32 i = 0;i < sz;i ++ )
-                    {
-                        snprintf( tmp,1024,"%s",row[i] );
-                        PDEBUG( "result:%s\n",tmp );
-                    }
-                }
-                mysql_free_result( res );
+        MYSQL_ROW row;
+        uint32 num_fields = mysql_num_fields(res);
+        uint32 lengths = mysql_fetch_lengths(result);
+        while ( (row = mysql_fetch_row(res)) )
+        {
+            for ( uint32 i = 0;i < num_fields;i ++ )
+            {
+                PDEBUG( "result:%d--%s\n",lengths[i],row[i] );
+            }
+        }
+        mysql_free_result( res );
     }
-    else
-    {
-        ERROR( "mysql store result fail:%s\n",mysql_error( conn ) );
-        ERROR( "sql not have result:%s\n",statement );
-    }
-    
-    return NULL;
+
+    return mysql_error( conn );
 }

@@ -1,9 +1,11 @@
+#include "lsql.h"
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
 #include "lsocket.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
+
 
 class lstate *lstate::_state = NULL;
 class lstate *lstate::instance()
@@ -47,10 +49,11 @@ lstate::~lstate()
     L = NULL;
 }
 
-int luaopen_ev    ( lua_State *L );
-int luaopen_util  ( lua_State *L );
-int luaopen_socket( lua_State *L );
-int luaopen_timer ( lua_State *L );
+int32 luaopen_ev    ( lua_State *L );
+int32 luaopen_util  ( lua_State *L );
+int32 luaopen_socket( lua_State *L );
+int32 luaopen_timer ( lua_State *L );
+int32 luaopen_sql   ( lua_State *L );
 
 void lstate::open_cpp()
 {
@@ -75,15 +78,16 @@ void lstate::open_cpp()
     luaL_requiref(L, "util", luaopen_util, 1);
     lua_pop(L, 1);  /* remove lib */
 
-    luaopen_ev(L);
+    luaopen_ev    (L);
     luaopen_socket(L);
     luaopen_timer (L);
+    luaopen_sql   (L);
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );
 }
 
-int luaopen_ev( lua_State *L )
+int32 luaopen_ev( lua_State *L )
 {
     lclass<leventloop> lc(L,"Eventloop");
     lc.def<&leventloop::run>   ("run");
@@ -100,7 +104,7 @@ int luaopen_ev( lua_State *L )
     return 0;
 }
 
-int luaopen_socket( lua_State *L )
+int32 luaopen_socket( lua_State *L )
 {
     lclass<lsocket> lc(L,"Socket");
     lc.def<&lsocket::send>("send");
@@ -125,7 +129,7 @@ int luaopen_socket( lua_State *L )
     return 0;
 }
 
-int luaopen_timer ( lua_State *L )
+int32 luaopen_timer ( lua_State *L )
 {
     lclass<ltimer> lc(L,"Timer");
     lc.def<&ltimer::start> ( "start"  );
@@ -137,7 +141,21 @@ int luaopen_timer ( lua_State *L )
     return 0;
 }
 
-static int util_md5( lua_State *L )
+int32 luaopen_sql( lua_State *L )
+{
+    lclass<lsql> lc(L,"Sql");
+    lc.def<&lsql::start> ( "start" );
+    lc.def<&lsql::stop>  ( "stop"  );
+    lc.def<&lsql::join>  ( "join"  );
+
+    lc.def<&lsql::call>   ( "call"   );
+    lc.def<&lsql::update> ( "update" );
+    lc.def<&lsql::delete> ( "delete" );
+    lc.def<&lsql::select> ( "select" );
+    lc.def<&lsql::insert> ( "insert" );
+}
+
+static int32 util_md5( lua_State *L )
 {
     lua_pushstring( L,"mde35dfafefsxee4r3" );
     return 1;
@@ -150,7 +168,7 @@ static const luaL_Reg utillib[] =
 };
 
 
-int luaopen_util( lua_State *L )
+int32 luaopen_util( lua_State *L )
 {
   luaL_newlib(L, utillib);
   return 1;

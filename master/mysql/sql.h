@@ -2,7 +2,6 @@
 #define __SQL_H__
 
 #include <mysql/mysql.h>
-#include "sql_result.h"
 #include "../global/global.h"
 
 
@@ -11,6 +10,8 @@
 class sql
 {
 public:
+    #include "sql_result.h"
+public:
     sql();
     ~sql();
 
@@ -18,10 +19,10 @@ public:
         const char *_pwd,const char *db );
 
     int32 ping     ();
+    int32 result   ();
     bool connect   ();
     void disconnect();
     const char *error();
-    MYSQL_RES *result();
     int32 query( const char *stmt );
 
     static void library_init();

@@ -1,9 +1,6 @@
 #include "lsql.h"
 #include "../net/socket.h"
 
-#include <sys/types.h>          /* See NOTES */
-#include <sys/socket.h>
-
 #define notify(x)    \
     int8 val = static_cast<int8>(x); \
     ::write( fd[0],&x,sizeof(int8) )
@@ -72,13 +69,19 @@ void lsql::routine()
     int32 ets = 0;
     while ( _run )
     {
+        /* 即使无查询，也定时ping服务器保持连接 */
         if ( _sql.ping() )
         {
-            if ( ets < 10 ) continue;
+            ++ets;
+            if ( ets < 10 )
+            {
+                usleep(ets*1E6); // 1s
+                continue;
+            }
 
             ERROR( "mysql ping %d times still fail:%s\n",ets,_sql.error() );
             notify( ERR );
-            return;
+            break;  // ping fail too many times,thread exit
         }
 
         ets = 0;
@@ -86,15 +89,67 @@ void lsql::routine()
         int32 sz = read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
         if ( sz < 0 )
         {
+            /* errno variable is thread save */
+            if ( errno == EAGAIN || errno == EWOULDBLOCK )
+            {
+                continue;  // just timeout
+            }
+
             ERROR( "socketpair broken,sql thread exit" );
+            notify( ERR );
+            break;
         }
 
-        ERROR( "mysql requery fail:%s\n",mysql_error( conn ) );
-        ERROR( "sql not exec:%s\n",stmt );
-        
+        char *stmt = "select * from create_char_log";
+        if ( _sql.query ( stmt ) )
+        {
+            ERROR( "sql query error:%s\n",_sql.error() );
+            ERROR( "[sql not exec]:%s\n",stmt );
+            continue;
+        }
+
+        sql::sql_res *res = NULL;
+        if ( _sql.result( res ) )
+        {
+            ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
+            continue;
+        }
+    }
     mysql_thread_end();
 }
 
 int32 lsql::stop()
 {
+    return 0;
+}
+
+int32 lsql::join()
+{
+    return 0;
+}
+
+
+int32 lsql::call()
+{
+    return 0;
+}
+
+int32 lsql::update()
+{
+    return 0;
+}
+
+int32 lsql::delete()
+{
+    return 0;
+}
+
+int32 lsql::select()
+{
+    return 0;
+}
+
+int32 lsql::insert()
+{
+    return 0;
 }

@@ -15,6 +15,7 @@ public:
 
     int32 start();
     int32 stop ();
+    int32 join ();
 
     int32 call  ();
     int32 update();
