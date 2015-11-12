@@ -4,7 +4,6 @@
 #include "lua/lstate.h"
 #include "lua/leventloop.h"
 #include "mysql/sql.h"
-#include "thread/thread_mgr.h"
 #include <sys/utsname.h> /* for uname */
 
 /* 记录进程启动信息 */
@@ -91,12 +90,9 @@ int32 main( int32 argc,char **argv )
     }
 
     /* lua可能持有userdata，故要先关闭销毁 */
-    thread_mgr::instance()->clear(); /* 关闭其他线程 */
     _loop->finalize();               /* 优先解除lua_State依赖 */
     lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
     leventloop::uninstance();        /* 关闭主事件循环 */
-
-    thread_mgr::uninstance();        /* 清理线程管理数据 */
     
     /* 清除静态数据，以免影响内存检测 */
     buffer::allocator.purge();

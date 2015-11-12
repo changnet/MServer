@@ -11,7 +11,7 @@ class lsql : public thread
 {
 public:
     explicit lsql( lua_State *L );
-    ~lsql()
+    ~lsql();
 
     int32 start();
     int32 stop ();
@@ -19,7 +19,7 @@ public:
 
     int32 call  ();
     int32 update();
-    int32 delete();
+    int32 delete1();
     int32 select();
     int32 insert();
 private:
@@ -28,7 +28,7 @@ private:
         ERR  = -1,
         EXIT = 0 ,
         READ = 1
-    }
+    };
 private:
     void routine();
     void sql_cb( ev_io &w,int32 revents );

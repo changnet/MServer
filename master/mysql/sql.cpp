@@ -135,19 +135,19 @@ int32 sql::query( const char *stmt )
 
             if ( mysql_real_query( conn,stmt,strlen(stmt) ) )
             {
-                return mysql_error( conn );
+                return mysql_errno( conn );
             }
         }
         else
         {
-            return mysql_error( conn );
+            return mysql_errno( conn );
         }
     }
     
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
-int32 sql::result( sql::sql_res **_res )
+int32 sql::result( sql_res **_res )
 {
     assert( "sql result,connection not valid",conn );
 
@@ -162,16 +162,18 @@ int32 sql::result( sql::sql_res **_res )
     {
         MYSQL_ROW row;
         uint32 num_fields = mysql_num_fields(res);
-        uint32 lengths = mysql_fetch_lengths(result);
+        size_t *lengths = mysql_fetch_lengths(res);
         while ( (row = mysql_fetch_row(res)) )
         {
             for ( uint32 i = 0;i < num_fields;i ++ )
             {
-                PDEBUG( "result:%d--%s\n",lengths[i],row[i] );
+                PDEBUG( "result:%lu--%s\n",lengths[i],row[i] );
             }
         }
         mysql_free_result( res );
+        
+        return 0; /* success */
     }
 
-    return mysql_error( conn );
+    return mysql_errno( conn );
 }

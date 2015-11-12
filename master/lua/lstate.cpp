@@ -147,12 +147,14 @@ int32 luaopen_sql( lua_State *L )
     lc.def<&lsql::start> ( "start" );
     lc.def<&lsql::stop>  ( "stop"  );
     lc.def<&lsql::join>  ( "join"  );
-
+    
     lc.def<&lsql::call>   ( "call"   );
     lc.def<&lsql::update> ( "update" );
-    lc.def<&lsql::delete> ( "delete" );
+    lc.def<&lsql::delete1> ( "delete" );
     lc.def<&lsql::select> ( "select" );
     lc.def<&lsql::insert> ( "insert" );
+    
+    return 0;
 }
 
 static int32 util_md5( lua_State *L )

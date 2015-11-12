@@ -235,7 +235,6 @@ void leventloop::invoke_sending()
 
         if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
         {
-            /* 如果此时对端关闭，则会触发connection reset by peer */
             ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
             _socket->on_disconnect();
 

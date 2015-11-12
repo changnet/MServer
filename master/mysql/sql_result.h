@@ -9,7 +9,8 @@
  * 利。况且atoi之类的转换函数效率并不算太低，因此采用方案1
  */
 
-#include <mysql.h>
+#include <vector>
+#include <mysql/mysql.h>
 #include "../global/global.h"
 
 #define SQL_FIELD_LEN    64
@@ -62,9 +63,9 @@ struct sql_col
     {
         if ( _value ) delete _value;
         _value = NULL;
-        _siZe  = 0
+        _size  = 0;
     }
-}
+};
 
 struct sql_row
 {
@@ -86,8 +87,8 @@ struct sql_row
 
 struct sql_res
 {
-    int num_rows;
-    int num_cols;
+    int32 num_rows;
+    int32 num_cols;
     std::vector<sql_field> fields;
     std::vector<sql_row *> rows  ;
     

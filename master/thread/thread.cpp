@@ -58,7 +58,8 @@ void *thread::start_routine( void *arg )
 
     _thread->_run = true;
     _thread->routine();
-    
+    _thread->_run = false;
+
     return NULL;
 }
 

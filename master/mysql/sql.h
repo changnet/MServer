@@ -1,29 +1,25 @@
 #ifndef __SQL_H__
 #define __SQL_H__
 
-#include <mysql/mysql.h>
-#include "../global/global.h"
-
+#include "sql_result.h"
 
 #define SQL_VAR_LEN 64
 
 class sql
 {
 public:
-    #include "sql_result.h"
-public:
-    sql();
+    sql ();
     ~sql();
 
-    bool set( const char *_ip,const int32 _port,const char *_usr,
+    void set( const char *_ip,const int32 _port,const char *_usr,
         const char *_pwd,const char *db );
 
     int32 ping     ();
-    int32 result   ();
     bool connect   ();
     void disconnect();
     const char *error();
     int32 query( const char *stmt );
+    int32 result ( sql_res **_res );
 
     static void library_init();
     static void library_end (); /* 释放sql库，仅在程序不再使用sql时调用 */

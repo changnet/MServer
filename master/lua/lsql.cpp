@@ -1,9 +1,15 @@
 #include "lsql.h"
 #include "../net/socket.h"
 
-#define notify(x)    \
-    int8 val = static_cast<int8>(x); \
-    ::write( fd[0],&x,sizeof(int8) )
+#define notify(x)                                              \
+    do {                                                       \
+        int8 val = static_cast<int8>(x);                       \
+        int32 sz = ::write( fd[0],&val,sizeof(int8) );         \
+        if ( sz != sizeof(int8) )                              \
+        {                                                      \
+            ERROR( "lsql notify error:%s\n",strerror(errno) ); \
+        }                                                      \
+    }while(0)
 
 lsql::lsql( lua_State *L )
     : L (L)
@@ -27,7 +33,7 @@ int32 lsql::start()
     }
 
     const char *ip   = luaL_checkstring  ( L,1 );
-    const int32 port = luaL_checkInterger( L,2 );
+    const int32 port = luaL_checkinteger ( L,2 );
     const char *usr  = luaL_checkstring  ( L,3 );
     const char *pwd  = luaL_checkstring  ( L,4 );
     const char *db   = luaL_checkstring  ( L,5 );
@@ -39,12 +45,13 @@ int32 lsql::start()
     if ( socketpair( AF_UNIX, SOCK_STREAM,IPPROTO_IP,fd ) < 0 )
     {
         FATAL( "socketpair fail:%s\n",strerror(errno) );
-        return;
+        return luaL_error( L,"socket pair fail" );
     }
 
     socket::non_block( fd[0] );    /* fd[1] need to be block */
 
-    return thread::start();
+    thread::start();
+    return 0;
 }
 
 void lsql::routine()
@@ -96,11 +103,11 @@ void lsql::routine()
             }
 
             ERROR( "socketpair broken,sql thread exit" );
-            notify( ERR );
+            // socket error,can't notify( ERR );
             break;
         }
 
-        char *stmt = "select * from create_char_log";
+        const char *stmt = "select * from create_char_log";
         if ( _sql.query ( stmt ) )
         {
             ERROR( "sql query error:%s\n",_sql.error() );
@@ -108,8 +115,8 @@ void lsql::routine()
             continue;
         }
 
-        sql::sql_res *res = NULL;
-        if ( _sql.result( res ) )
+        sql_res *res = NULL;
+        if ( _sql.result( &res ) )
         {
             ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
             continue;
@@ -139,7 +146,7 @@ int32 lsql::update()
     return 0;
 }
 
-int32 lsql::delete()
+int32 lsql::delete1()
 {
     return 0;
 }
@@ -152,4 +159,9 @@ int32 lsql::select()
 int32 lsql::insert()
 {
     return 0;
+}
+
+void sql_cb( ev_io &w,int32 revents )
+{
+    
 }
