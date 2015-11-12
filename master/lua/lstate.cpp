@@ -149,8 +149,8 @@ int32 luaopen_sql( lua_State *L )
     lc.def<&lsql::join>  ( "join"  );
     
     lc.def<&lsql::call>   ( "call"   );
+    lc.def<&lsql::del>    ( "delete" );
     lc.def<&lsql::update> ( "update" );
-    lc.def<&lsql::delete1> ( "delete" );
     lc.def<&lsql::select> ( "select" );
     lc.def<&lsql::insert> ( "insert" );
     

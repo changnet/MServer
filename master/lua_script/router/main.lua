@@ -3,13 +3,14 @@ require "global.oo"
 require "global.table"
 
 local client_mgr = require "net.client_mgr"
--- local net_mgr = require "net.netmgr"
--- local timer_mgr = require "timer.timermgr"
+local Sql = require "Sql"
 require "signal.signal"
 
 local function main()
     client_mgr:listen( "0.0.0.0",9997 )
 
+    local sql = Sql();
+    
     oo.check()
     ev:run()
 end

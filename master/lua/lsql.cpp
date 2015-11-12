@@ -1,10 +1,10 @@
 #include "lsql.h"
 #include "../net/socket.h"
 
-#define notify(x)                                              \
+#define notify(s,x)                                             \
     do {                                                       \
         int8 val = static_cast<int8>(x);                       \
-        int32 sz = ::write( fd[0],&val,sizeof(int8) );         \
+        int32 sz = ::write( s,&val,sizeof(int8) );             \
         if ( sz != sizeof(int8) )                              \
         {                                                      \
             ERROR( "lsql notify error:%s\n",strerror(errno) ); \
@@ -20,6 +20,8 @@ lsql::lsql( lua_State *L )
 
 lsql::~lsql()
 {
+    assert( "sql thread not exit", !_run );
+
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
 }
@@ -62,7 +64,7 @@ void lsql::routine()
     if ( !_sql.connect() )
     {
         mysql_thread_end();
-        notify( ERR );
+        notify( fd[1],ERR );
         return;
     }
 
@@ -87,7 +89,7 @@ void lsql::routine()
             }
 
             ERROR( "mysql ping %d times still fail:%s\n",ets,_sql.error() );
-            notify( ERR );
+            notify( fd[1],ERR );
             break;  // ping fail too many times,thread exit
         }
 
@@ -127,11 +129,20 @@ void lsql::routine()
 
 int32 lsql::stop()
 {
+    if ( !thread::_run )
+    {
+        return luaL_error( "try to stop a inactive sql thread" );
+    }
+    notify( fd[0],EXIT );
+
     return 0;
 }
 
+/* 此函数可能会阻塞 */
 int32 lsql::join()
 {
+    thread::join();
+
     return 0;
 }
 
@@ -146,7 +157,7 @@ int32 lsql::update()
     return 0;
 }
 
-int32 lsql::delete1()
+int32 lsql::del()
 {
     return 0;
 }

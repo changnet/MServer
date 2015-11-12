@@ -18,8 +18,8 @@ public:
     int32 join ();
 
     int32 call  ();
+    int32 del   ();
     int32 update();
-    int32 delete1();
     int32 select();
     int32 insert();
 private:
