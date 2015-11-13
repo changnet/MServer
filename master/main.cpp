@@ -76,10 +76,6 @@ int32 main( int32 argc,char **argv )
     lclass<leventloop>::push( L,_loop,false );
     lua_setglobal( L,"ev" );
 
-    //class sql _sql;
-    //_sql.start( "192.168.1.23",3306,"root","123456","xzc_mudrv" );
-    //thread_mgr::instance()->push( &_sql );
-
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua_script/%s/%s",spath,LUA_ENTERANCE );

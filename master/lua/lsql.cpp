@@ -1,5 +1,6 @@
 #include "lsql.h"
 #include "../net/socket.h"
+#include "../thread/auto_mutex.h"
 
 #define notify(s,x)                                             \
     do {                                                       \
@@ -24,6 +25,8 @@ lsql::~lsql()
 
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
+    
+    allocator:purge();
 }
 
 /* 连接mysql并启动线程 */
@@ -51,6 +54,10 @@ int32 lsql::start()
     }
 
     socket::non_block( fd[0] );    /* fd[1] need to be block */
+    class ev_loop *loop = static_cast<ev_loop *>( leventloop::instance() );
+    watcher.set( loop );
+    watcher.set<lsql,&lsql::sql_cb>( this );
+    watcher.start( fd[0],EV_READ );
 
     thread::start();
     return 0;
@@ -105,7 +112,7 @@ void lsql::routine()
             }
 
             ERROR( "socketpair broken,sql thread exit" );
-            // socket error,can't notify( ERR );
+            // socket error,can't notify( fd[1],ERR );
             break;
         }
 
@@ -113,7 +120,7 @@ void lsql::routine()
         if ( _sql.query ( stmt ) )
         {
             ERROR( "sql query error:%s\n",_sql.error() );
-            ERROR( "[sql not exec]:%s\n",stmt );
+            ERROR( "sql not exec:%s\n",stmt );
             continue;
         }
 
@@ -131,7 +138,7 @@ int32 lsql::stop()
 {
     if ( !thread::_run )
     {
-        return luaL_error( "try to stop a inactive sql thread" );
+        return luaL_error( L,"try to stop a inactive sql thread" );
     }
     notify( fd[0],EXIT );
 
@@ -164,6 +171,29 @@ int32 lsql::del()
 
 int32 lsql::select()
 {
+    size_t size = 0;
+    const char *stmt = luaL_checkstring( L,1,&size );
+    if ( !stmt || size <= 0 )
+    {
+        return luaL_error( L,"sql select,empty sql statement" );
+    }
+    
+    struct sql_query query;
+    query.type = SELECT;
+    query.size = size;
+    
+    query.stmt.size  = make_size( size );
+    
+    {
+        class auto_mutex( &mutex );
+
+        query.stmt.value = allocator.ordered_malloc( query.stmt.size );
+        memcpy( query.stmt.value,stmt,size );
+
+        _query.push_back( query );
+    }
+
+    notify( fd[0],READ );
     return 0;
 }
 

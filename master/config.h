@@ -40,6 +40,9 @@
 /* buffer chunk size for socket recv or send */
 #define BUFFER_CHUNK    8192
 
+/* sql buffer chunk size */
+#define SQL_CHUNK    64
+
 //////////////////////////////TCP KEEP ALIVE////////////////////////////////////
 /* 是否开启tcp keepalive，一旦开启，所有accept、connect的socket都会启用 */
 #define TCP_KEEP_ALIVE

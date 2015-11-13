@@ -1,9 +1,7 @@
 #ifndef __SQL_H__
 #define __SQL_H__
 
-#include "sql_result.h"
-
-#define SQL_VAR_LEN 64
+#include "sql_def.h"
 
 class sql
 {

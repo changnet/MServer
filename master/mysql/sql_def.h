@@ -14,6 +14,7 @@
 #include "../global/global.h"
 
 #define SQL_FIELD_LEN    64
+#define SQL_VAR_LEN      64
 
 /*
 enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
@@ -46,43 +47,21 @@ struct sql_field
     enum_field_types    type; /* define in mysql_com.h */
 };
 
+struct sql_char
+{
+    size_t size;
+    char *value;
+};
+
 struct sql_col
 {
-    size_t _size;
-    char *_value;
-    
-    explicit sql_col( const char *value,size_t size )
-    {
-        _size  = size;
-        _value = new char[_size];
-        
-        memcpy( _value,value,_size );
-    }
-    
-    ~sql_col()
-    {
-        if ( _value ) delete _value;
-        _value = NULL;
-        _size  = 0;
-    }
+    size_t size;
+    sql_char value;
 };
 
 struct sql_row
 {
-    std::vector<sql_col *> cols;
-    
-    sql_row() {}
-    ~sql_row()
-    {
-        std::vector<sql_col *>::iterator itr = cols.begin();
-        while ( itr != cols.end() )
-        {
-            if ( *itr ) delete *itr;  // 可能是NULL
-            ++itr;
-        }
-        
-        cols.clear();
-    }
+    std::vector<sql_col> cols;
 };
 
 struct sql_res
@@ -90,7 +69,7 @@ struct sql_res
     int32 num_rows;
     int32 num_cols;
     std::vector<sql_field> fields;
-    std::vector<sql_row *> rows  ;
+    std::vector<sql_row *> rows  ;/* 存指针，对象拷贝代价太大 */
     
     sql_res()
     {
@@ -112,6 +91,22 @@ struct sql_res
         num_rows =   0;
         num_cols =   0;
     }
+};
+
+enum sql_type
+{
+    CALL   = 1,
+    DELETE = 2,
+    UPDATE = 3,
+    SELECT = 4,
+    INSERT = 5,
+};
+
+struct sql_query
+{
+    sql_type type;
+    size_t   size;
+    sql_char stmt;
 };
 
 #endif /* __SQL_RESULT_H__ */

@@ -115,14 +115,14 @@ const char *sql::error()
     return mysql_error( conn );
 }
 
-int32 sql::query( const char *stmt )
+int32 sql::query( const char *stmt,size_t size )
 {
     assert( "sql query,connection not valid",conn );
 
     /* Client error message numbers are listed in the MySQL errmsg.h header
      * file. Server error message numbers are listed in mysqld_error.h
      */
-    if ( mysql_real_query( conn,stmt,strlen(stmt) ) )
+    if ( mysql_real_query( conn,stmt,size ) )
     {
         int32 err = mysql_errno( conn );
         if ( CR_SERVER_LOST == err || CR_SERVER_GONE_ERROR == err )

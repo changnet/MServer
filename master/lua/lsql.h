@@ -6,6 +6,7 @@
 #include "../thread/thread.h"
 #include "../ev/ev_watcher.h"
 #include "../mysql/sql.h"
+#include "../pool/ordered_pool.h"
 
 class lsql : public thread
 {
@@ -32,10 +33,27 @@ private:
 private:
     void routine();
     void sql_cb( ev_io &w,int32 revents );
+    
+    /* 获取一个合适的buff
+     * sql字段通过小于64(包括uuid、md5)
+     */
+    inline size_t make_size( size_t size )
+    {
+        size_t _size = SQL_CHUNK;
+        while ( base < size ) _size <<= 1;
+        
+        return _size;
+    }
 private:
     int32 fd[2]   ;
     lua_State *L  ;
     class sql _sql;
+    ev_io watcher ;
+
+    std::vector<const sql_query> _query ;
+    std::vector<const sql_res *> _result;
+    
+    class ordered_pool<SQL_CHUNK> allocator;
 };
 
 #endif /* __LSQL_H__ */
