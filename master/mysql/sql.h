@@ -16,8 +16,8 @@ public:
     bool connect   ();
     void disconnect();
     const char *error();
-    int32 query( const char *stmt );
     int32 result ( sql_res **_res );
+    int32 query( const char *stmt,size_t size );
 
     static void library_init();
     static void library_end (); /* 释放sql库，仅在程序不再使用sql时调用 */

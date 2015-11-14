@@ -23,6 +23,16 @@ public:
     int32 update();
     int32 select();
     int32 insert();
+    
+    /*
+    START TRANSACTION [WITH CONSISTENT SNAPSHOT]
+    BEGIN [WORK]
+    COMMIT [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
+    ROLLBACK [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
+    */
+    int32 begin();
+    int32 commit();
+    int32 rollback();
 private:
     enum
     {
@@ -32,6 +42,7 @@ private:
     };
 private:
     void routine();
+    void do_sql ();
     void sql_cb( ev_io &w,int32 revents );
     
     /* 获取一个合适的buff
@@ -40,7 +51,7 @@ private:
     inline size_t make_size( size_t size )
     {
         size_t _size = SQL_CHUNK;
-        while ( base < size ) _size <<= 1;
+        while ( _size < size ) _size <<= 1;
         
         return _size;
     }
@@ -50,8 +61,8 @@ private:
     class sql _sql;
     ev_io watcher ;
 
-    std::vector<const sql_query> _query ;
-    std::vector<const sql_res *> _result;
+    std::vector<sql_query> _query ;
+    std::vector<sql_res *> _result;
     
     class ordered_pool<SQL_CHUNK> allocator;
 };

@@ -1,4 +1,6 @@
 #include "lsql.h"
+#include "leventloop.h"
+#include "../ev/ev_def.h"
 #include "../net/socket.h"
 #include "../thread/auto_mutex.h"
 
@@ -26,7 +28,7 @@ lsql::~lsql()
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
     
-    allocator:purge();
+    allocator.purge();
 }
 
 /* 连接mysql并启动线程 */
@@ -115,23 +117,77 @@ void lsql::routine()
             // socket error,can't notify( fd[1],ERR );
             break;
         }
+        
+        switch ( event )
+        {
+            case EXIT : thread::stop();break;
+            case ERR  : assert( "main thread should never tell err",false );break;
+            case READ : break;
+        }
 
-        const char *stmt = "select * from create_char_log";
-        if ( _sql.query ( stmt ) )
+
+    }
+    mysql_thread_end();
+}
+
+void lsql::do_sql()
+{
+    
+    while ( true )
+    {
+        pthread_mutex_lock( &mutex );
+        if ( _query.empty() )
+        {
+            pthread_mutex_unlock( &mutex );
+            return;
+        }
+        
+        /* 这里虽然会产生一次拷贝，但并不太影响效率 */
+        struct sql_query query = _query.front();
+        _query.pop_front();
+        pthread_mutex_unlock( &mutex );
+
+        const char *stmt = query.stmt.value;
+        assert( "empty sql statement",stmt && query.size > 0 );
+        
+        if ( _sql.query ( stmt,query.size ) )
         {
             ERROR( "sql query error:%s\n",_sql.error() );
             ERROR( "sql not exec:%s\n",stmt );
+            
+            pthread_mutex_lock( &mutex );
+            allocator.ordered_free( stmt,query.stmt.size );
+            pthread_mutex_unlock( &mutex );
             continue;
         }
-
+        
         sql_res *res = NULL;
         if ( _sql.result( &res ) )
         {
             ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
+            
+            pthread_mutex_lock( &mutex );
+            allocator.ordered_free( stmt,query.stmt.size );
+            pthread_mutex_unlock( &mutex );
+            
             continue;
         }
+        
+        switch ( query.type )
+        {
+            CALL   : /* fallthrough */
+            DELETE : /* fallthrough */
+            UPDATE : /* fallthrough */
+            INSERT : /* fallthrough */
+                if ( res )
+                {
+                    ERROR( "sql(type:%d) should not have result",query.type );
+                }break;
+            SELECT :
+                break;
+        }
+        
     }
-    mysql_thread_end();
 }
 
 int32 lsql::stop()
@@ -172,7 +228,7 @@ int32 lsql::del()
 int32 lsql::select()
 {
     size_t size = 0;
-    const char *stmt = luaL_checkstring( L,1,&size );
+    const char *stmt = luaL_checklstring( L,1,&size );
     if ( !stmt || size <= 0 )
     {
         return luaL_error( L,"sql select,empty sql statement" );
@@ -185,7 +241,7 @@ int32 lsql::select()
     query.stmt.size  = make_size( size );
     
     {
-        class auto_mutex( &mutex );
+        class auto_mutex _auto_mutex( &mutex );
 
         query.stmt.value = allocator.ordered_malloc( query.stmt.size );
         memcpy( query.stmt.value,stmt,size );
@@ -202,7 +258,7 @@ int32 lsql::insert()
     return 0;
 }
 
-void sql_cb( ev_io &w,int32 revents )
+void lsql::sql_cb( ev_io &w,int32 revents )
 {
     
 }
