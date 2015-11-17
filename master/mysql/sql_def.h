@@ -47,21 +47,28 @@ struct sql_field
     enum_field_types    type; /* define in mysql_com.h */
 };
 
-struct sql_char
+struct sql_col
 {
     size_t size;
     char *value;
 };
 
-struct sql_col
-{
-    size_t size;
-    sql_char value;
-};
-
 struct sql_row
 {
-    std::vector<sql_col> cols;
+    std::vector<sql_col *> cols;
+    
+    sql_row() {}
+    ~sql_row()
+    {
+        std::vector<sql_col *>::iterator itr = cols.begin();
+        while ( itr != cols.end() )
+        {
+            delete *itr;
+            ++itr;
+        }
+        
+        cols.clear();
+    }
 };
 
 struct sql_res
@@ -104,9 +111,25 @@ enum sql_type
 
 struct sql_query
 {
+    explicit sql_query( sql_type _type,size_t _size,const char *_stmt )
+    {
+        type = _type;
+        size = _size;
+        PDEBUG( "sql query call ..." );
+        stmt = new char[size];
+        memcpy( stmt,_stmt,size );
+    }
+
+    ~sql_query()
+    {
+        if ( stmt ) delete stmt;
+        size = 0;
+        PDEBUG( "sql query destruct call ..." );
+    }
+
     sql_type type;
     size_t   size;
-    sql_char stmt;
+    char    *stmt;
 };
 
 #endif /* __SQL_RESULT_H__ */

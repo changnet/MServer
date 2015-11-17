@@ -34,3 +34,4 @@ ubuntu 14.04
 16. 为lua提供LRU、LFU、优先队列、大小堆等常用数据
 #TOSOLVE
 1. thread 当前有lua控制，需要重新设计join(把join暴露给Sql，自己退出时在主线程调join)
+2. packet_parse中还需要解决自杀问题(把on_read事件给lua，在lua中调用packet_parse)

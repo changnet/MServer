@@ -121,11 +121,11 @@ void lsql::routine()
         switch ( event )
         {
             case EXIT : thread::stop();break;
-            case ERR  : assert( "main thread should never tell err",false );break;
+            case ERR  : assert( "main thread should never nofity err",false );break;
             case READ : break;
         }
 
-
+        do_sql(); /* 即使EXIT，也要将未完成的sql写入 */
     }
     mysql_thread_end();
 }
@@ -142,12 +142,10 @@ void lsql::do_sql()
             return;
         }
         
-        /* 这里虽然会产生一次拷贝，但并不太影响效率 */
-        struct sql_query query = _query.front();
-        _query.pop_front();
+        struct sql_query &query = _query.front();
         pthread_mutex_unlock( &mutex );
 
-        const char *stmt = query.stmt.value;
+        const char *stmt = query.stmt;
         assert( "empty sql statement",stmt && query.size > 0 );
         
         if ( _sql.query ( stmt,query.size ) )
@@ -156,7 +154,7 @@ void lsql::do_sql()
             ERROR( "sql not exec:%s\n",stmt );
             
             pthread_mutex_lock( &mutex );
-            allocator.ordered_free( stmt,query.stmt.size );
+            _query.pop();
             pthread_mutex_unlock( &mutex );
             continue;
         }
@@ -167,7 +165,7 @@ void lsql::do_sql()
             ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
             
             pthread_mutex_lock( &mutex );
-            allocator.ordered_free( stmt,query.stmt.size );
+            _query.pop();
             pthread_mutex_unlock( &mutex );
             
             continue;
@@ -184,6 +182,7 @@ void lsql::do_sql()
                     ERROR( "sql(type:%d) should not have result",query.type );
                 }break;
             SELECT :
+                assert( "select result never be NULL",res );
                 break;
         }
         
@@ -233,20 +232,11 @@ int32 lsql::select()
     {
         return luaL_error( L,"sql select,empty sql statement" );
     }
-    
-    struct sql_query query;
-    query.type = SELECT;
-    query.size = size;
-    
-    query.stmt.size  = make_size( size );
-    
+
+    struct sql_query query( SELECT,size,stmt );
     {
         class auto_mutex _auto_mutex( &mutex );
-
-        query.stmt.value = allocator.ordered_malloc( query.stmt.size );
-        memcpy( query.stmt.value,stmt,size );
-
-        _query.push_back( query );
+        _query.push( query );
     }
 
     notify( fd[0],READ );
