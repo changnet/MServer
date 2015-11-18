@@ -51,24 +51,38 @@ struct sql_col
 {
     size_t size;
     char *value;
+    
+    sql_col()
+    {
+        size  = 0;
+        value = NULL;
+    }
+    
+    ~sql_col()
+    {
+        if ( value ) delete value;
+        
+        size  = 0;
+        value = NULL;
+    }
+
+    void set( const char *_value,size_t _size)
+    {
+        assert ( "sql col not clean",0 == size && !value );
+        if ( !_value || 0 >= _size ) return;  /* 结果为NULL */
+        
+        size = _size;  /* 注意没加1 */
+        value = new char[_size+1];
+        
+        /* 无论何种数据类型(包括寸进制)，都统一加\0 */
+        memcpy( value,_value,_size );
+        value[_size] = '\0';
+    }
 };
 
 struct sql_row
 {
-    std::vector<sql_col *> cols;
-    
-    sql_row() {}
-    ~sql_row()
-    {
-        std::vector<sql_col *>::iterator itr = cols.begin();
-        while ( itr != cols.end() )
-        {
-            delete *itr;
-            ++itr;
-        }
-        
-        cols.clear();
-    }
+    std::vector<sql_col> cols;
 };
 
 struct sql_res
@@ -76,28 +90,28 @@ struct sql_res
     int32 num_rows;
     int32 num_cols;
     std::vector<sql_field> fields;
-    std::vector<sql_row *> rows  ;/* 存指针，对象拷贝代价太大 */
-    
-    sql_res()
-    {
-        num_rows = 0;
-        num_cols = 0;
-    }
-    
-    ~sql_res()
-    {
-        std::vector<sql_row *>::iterator itr = rows.begin();
-        while ( itr != rows.end() )
-        {
-            delete *itr;
-            ++itr;
-        }
-
-        fields.clear();
-        rows.clear  ();
-        num_rows =   0;
-        num_cols =   0;
-    }
+    std::vector<sql_row  > rows  ;
+    // 
+    // sql_res()
+    // {
+    //     num_rows = 0;
+    //     num_cols = 0;
+    // }
+    // 
+    // ~sql_res()
+    // {
+    //     std::vector<sql_row *>::iterator itr = rows.begin();
+    //     while ( itr != rows.end() )
+    //     {
+    //         delete *itr;
+    //         ++itr;
+    //     }
+    // 
+    //     fields.clear();
+    //     rows.clear  ();
+    //     num_rows =   0;
+    //     num_cols =   0;
+    // }
 };
 
 enum sql_type

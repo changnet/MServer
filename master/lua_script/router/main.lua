@@ -11,6 +11,7 @@ local function main()
 
     local sql = Sql();
     sql:start( "192.168.1.23",3306,"root","123456","xzc_mudrv" )
+    sql:select( "select * from login_log limit 1" )
 
     oo.check()
     ev:run()

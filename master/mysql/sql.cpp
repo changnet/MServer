@@ -147,7 +147,7 @@ int32 sql::query( const char *stmt,size_t size )
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
-int32 sql::result( sql_res **_res )
+int32 sql::result( struct sql_res **_res )
 {
     assert( "sql result,connection not valid",conn );
 
@@ -160,14 +160,46 @@ int32 sql::result( sql_res **_res )
     MYSQL_RES *res = mysql_store_result( conn );
     if ( res )
     {
+        uint32 num_fields = mysql_num_fields( res );
+        uint32 num_rows   = mysql_num_rows  ( res );
+        assert( "mysql result field count zero",num_fields > 0 );
+        assert( "mysql result row count zero",num_rows > 0 );
+
+        *_res = new sql_res();
+        (*_res)->num_rows = num_rows;
+        (*_res)->num_cols = num_fields;
+        (*_res)->fields.resize( num_fields );
+        (*_res)->rows.resize( num_rows );
+
+        uint32 index = 0;
+        MYSQL_FIELD *field;
+        while( (field = mysql_fetch_field( res )) )
+        {
+            PDEBUG("field name %s,type %d\n", field->name,field->type);
+            
+            assert( "fetch field more than field count",index < num_fields );
+            (*_res)->fields[index].type = field->type;
+            snprintf( (*_res)->fields[index].name,SQL_FIELD_LEN,"%s",field->name );
+            
+            ++index;
+        }
+
         MYSQL_ROW row;
-        uint32 num_fields = mysql_num_fields(res);
-        size_t *lengths = mysql_fetch_lengths(res);
+        
+        index = 0;
         while ( (row = mysql_fetch_row(res)) )
         {
+            struct sql_row &_row = (*_res)->rows[index];
+            _row.cols.resize( num_fields );
+
+            /* mysql_fetch_lengths() is valid only for the current row of the
+             * result set
+             */
+            size_t *lengths = mysql_fetch_lengths(res);
             for ( uint32 i = 0;i < num_fields;i ++ )
             {
                 PDEBUG( "result:%lu--%s\n",lengths[i],row[i] );
+                _row.cols[i].set( row[i],lengths[i] );
             }
         }
         mysql_free_result( res );

@@ -27,8 +27,6 @@ lsql::~lsql()
 
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
-    
-    allocator.purge();
 }
 
 /* 连接mysql并启动线程 */
@@ -104,7 +102,7 @@ void lsql::routine()
 
         ets = 0;
         int8 event = 0;
-        int32 sz = read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
+        int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
         if ( sz < 0 )
         {
             /* errno variable is thread save */
@@ -142,20 +140,19 @@ void lsql::do_sql()
             return;
         }
         
-        struct sql_query &query = _query.front();
+        struct sql_query *query = _query.front();
+        _query.pop();
         pthread_mutex_unlock( &mutex );
 
-        const char *stmt = query.stmt;
-        assert( "empty sql statement",stmt && query.size > 0 );
+        const char *stmt = query->stmt;
+        assert( "empty sql statement",stmt && query->size > 0 );
         
-        if ( _sql.query ( stmt,query.size ) )
+        if ( _sql.query ( stmt,query->size ) )
         {
             ERROR( "sql query error:%s\n",_sql.error() );
             ERROR( "sql not exec:%s\n",stmt );
             
-            pthread_mutex_lock( &mutex );
-            _query.pop();
-            pthread_mutex_unlock( &mutex );
+            delete query;
             continue;
         }
         
@@ -164,26 +161,23 @@ void lsql::do_sql()
         {
             ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
             
-            pthread_mutex_lock( &mutex );
-            _query.pop();
-            pthread_mutex_unlock( &mutex );
-            
+            delete query;
             continue;
         }
         
-        switch ( query.type )
+        switch ( query->type )
         {
-            CALL   : /* fallthrough */
-            DELETE : /* fallthrough */
-            UPDATE : /* fallthrough */
-            INSERT : /* fallthrough */
-                if ( res )
-                {
-                    ERROR( "sql(type:%d) should not have result",query.type );
-                }break;
-            SELECT :
-                assert( "select result never be NULL",res );
+            case CALL   : if ( res ) ERROR( "sql call   should not have result" );break;
+            case DELETE : if ( res ) ERROR( "sql delete should not have result" );break;
+            case UPDATE : if ( res ) ERROR( "sql update should not have result" );break;
+            case INSERT : if ( res ) ERROR( "sql insert should not have result" );break;
+            case SELECT :
+                pthread_mutex_lock( &mutex );
+                _result.push( res );
+                pthread_mutex_unlock( &mutex );
+                notify( fd[1],READ );
                 break;
+            default: assert( "unknow sql type",false );break;
         }
         
     }
@@ -233,7 +227,7 @@ int32 lsql::select()
         return luaL_error( L,"sql select,empty sql statement" );
     }
 
-    struct sql_query query( SELECT,size,stmt );
+    struct sql_query *query = new sql_query( SELECT,size,stmt );
     {
         class auto_mutex _auto_mutex( &mutex );
         _query.push( query );
@@ -250,5 +244,34 @@ int32 lsql::insert()
 
 void lsql::sql_cb( ev_io &w,int32 revents )
 {
+    int8 event = 0;
+    int32 sz = ::read( w.fd,&event,sizeof(int8) );
+    if ( sz < 0 )
+    {
+        if ( errno == EAGAIN || errno == EWOULDBLOCK )
+        {
+            assert( "non-block socket,should not happen",false );
+            return;
+        }
+        
+        
+    }
+    else if ( 0 == sz )
+    {
+        assert( "sql socketpair should not close",false);
+        return;
+    }
+    else if ( sizeof(int8) != sz )
+    {
+        assert( "package incomplete,should not happen",false );
+        return;
+    }
     
+    switch ( event )
+    {
+        case EXIT :
+        case ERR  :
+        case READ : break;
+        default   : assert( "unknow sql event",false );break;
+    }
 }
