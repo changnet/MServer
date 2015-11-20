@@ -4,7 +4,7 @@
 #include "../net/socket.h"
 #include "../thread/auto_mutex.h"
 
-#define notify(s,x)                                             \
+#define notify(s,x)                                            \
     do {                                                       \
         int8 val = static_cast<int8>(x);                       \
         int32 sz = ::write( s,&val,sizeof(int8) );             \
@@ -12,6 +12,22 @@
         {                                                      \
             ERROR( "lsql notify error:%s\n",strerror(errno) ); \
         }                                                      \
+    }while(0)
+
+#define invoke_cb( r )                                         \
+    do {                                                       \
+        if ( query->callback )                                 \
+        {                                                      \
+            sql_result result;                                 \
+            result.id  = query->id;                            \
+            result.err = _sql.get_errno();                     \
+            result.res = r;                                    \
+            pthread_mutex_lock( &mutex );                      \
+            _result.push( result );                            \
+            pthread_mutex_unlock( &mutex );                    \
+            notify( fd[1],READ );                              \
+        }                                                      \
+        delete query;                                          \
     }while(0)
 
 lsql::lsql( lua_State *L )
@@ -152,34 +168,20 @@ void lsql::do_sql()
             ERROR( "sql query error:%s\n",_sql.error() );
             ERROR( "sql not exec:%s\n",stmt );
             
-            delete query;
+            invoke_cb( NULL );
             continue;
         }
         
-        sql_res *res = NULL;
+        struct sql_res *res = NULL;
         if ( _sql.result( &res ) )
         {
             ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
             
-            delete query;
+            invoke_cb( res );
             continue;
         }
         
-        switch ( query->type )
-        {
-            case CALL   : if ( res ) ERROR( "sql call   should not have result" );break;
-            case DELETE : if ( res ) ERROR( "sql delete should not have result" );break;
-            case UPDATE : if ( res ) ERROR( "sql update should not have result" );break;
-            case INSERT : if ( res ) ERROR( "sql insert should not have result" );break;
-            case SELECT :
-                pthread_mutex_lock( &mutex );
-                _result.push( res );
-                pthread_mutex_unlock( &mutex );
-                notify( fd[1],READ );
-                break;
-            default: assert( "unknow sql type",false );break;
-        }
-        
+        invoke_cb( res );
     }
 }
 
@@ -221,13 +223,16 @@ int32 lsql::del()
 int32 lsql::select()
 {
     size_t size = 0;
-    const char *stmt = luaL_checklstring( L,1,&size );
+    int32 id = luaL_checkinteger( L,1 );
+    const char *stmt = luaL_checklstring( L,2,&size );
     if ( !stmt || size <= 0 )
     {
         return luaL_error( L,"sql select,empty sql statement" );
     }
+    
+    int32 callback = lua_toboolean( L,3 );
 
-    struct sql_query *query = new sql_query( SELECT,size,stmt );
+    struct sql_query *query = new sql_query( id,callback,size,stmt );
     {
         class auto_mutex _auto_mutex( &mutex );
         _query.push( query );

@@ -16,6 +16,7 @@ public:
     bool connect   ();
     void disconnect();
     const char *error();
+    int32 get_errno  ();
     int32 result ( sql_res **_res );
     int32 query( const char *stmt,size_t size );
 

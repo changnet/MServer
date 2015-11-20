@@ -44,7 +44,6 @@ private:
     void routine();
     void do_sql ();
     void sql_cb( ev_io &w,int32 revents );
-
 private:
     int32 fd[2]   ;
     lua_State *L  ;
@@ -52,7 +51,7 @@ private:
     ev_io watcher ;
 
     std::queue<sql_query *> _query ;
-    std::queue<sql_res   *> _result;
+    std::queue<sql_result > _result;
 };
 
 #endif /* __LSQL_H__ */

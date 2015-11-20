@@ -165,6 +165,7 @@ int32 sql::result( struct sql_res **_res )
         assert( "mysql result field count zero",num_fields > 0 );
         assert( "mysql result row count zero",num_rows > 0 );
 
+        /* 注意使用resize来避免内存重新分配以及push_back产生的拷贝消耗 */
         *_res = new sql_res();
         (*_res)->num_rows = num_rows;
         (*_res)->num_cols = num_fields;
@@ -207,5 +208,11 @@ int32 sql::result( struct sql_res **_res )
         return 0; /* success */
     }
 
+    return mysql_errno( conn );
+}
+
+int32 sql::get_errno()
+{
+    assert( "sql get_errno,connection not valid",conn );
     return mysql_errno( conn );
 }

@@ -12,15 +12,32 @@ char spath[PATH_MAX] = {0};  /* server path */
 int32 sid = 0;               /* server id */
 time_t _start_tm = time(0);
 
+#ifdef _MEM_DEBUG_
+pthread_mutex_t &counter_mutex()
+{
+    static pthread_mutex_t _mutex;
+    assert( "global memory counter mutex error",
+        0 == pthread_mutex_init( &_mutex,NULL ) );
+    return _mutex;
+}
+
+pthread_mutex_t &_mem_mutex_ = counter_mutex();
+
 void *operator new(size_t size)
 {
+    pthread_mutex_lock( &_mem_mutex_ );
     ++g_counter;
+    pthread_mutex_unlock( &_mem_mutex_ );
+
     return ::malloc(size);
 }
 
 void operator delete(void* ptr)
 {
+    pthread_mutex_lock( &_mem_mutex_ );
     --g_counter;
+    pthread_mutex_unlock( &_mem_mutex_ );
+
     ::free(ptr);
 }
 
@@ -35,6 +52,7 @@ void operator delete[](void* ptr)
     --g_counters;
     ::free(ptr);
 }
+#endif /* _MEM_DEBUG_ */
 
 /* -rdynamic need while linking. to a file,try backtrace_symbols_fd */
 void back_trace(void)

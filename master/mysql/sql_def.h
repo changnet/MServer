@@ -91,45 +91,23 @@ struct sql_res
     int32 num_cols;
     std::vector<sql_field> fields;
     std::vector<sql_row  > rows  ;
-    // 
-    // sql_res()
-    // {
-    //     num_rows = 0;
-    //     num_cols = 0;
-    // }
-    // 
-    // ~sql_res()
-    // {
-    //     std::vector<sql_row *>::iterator itr = rows.begin();
-    //     while ( itr != rows.end() )
-    //     {
-    //         delete *itr;
-    //         ++itr;
-    //     }
-    // 
-    //     fields.clear();
-    //     rows.clear  ();
-    //     num_rows =   0;
-    //     num_cols =   0;
-    // }
 };
 
-enum sql_type
+struct sql_result
 {
-    CALL   = 1,
-    DELETE = 2,
-    UPDATE = 3,
-    SELECT = 4,
-    INSERT = 5,
+    int32 id;
+    int32 err;
+    struct sql_res *res;
 };
 
 struct sql_query
 {
-    explicit sql_query( sql_type _type,size_t _size,const char *_stmt )
+    explicit sql_query( int32 _id,int32 _callback,size_t _size,const char *_stmt )
     {
-        type = _type;
+        id   = _id;
         size = _size;
-        PDEBUG( "sql query call ..." );
+        callback = _callback;
+
         stmt = new char[size];
         memcpy( stmt,_stmt,size );
     }
@@ -137,13 +115,17 @@ struct sql_query
     ~sql_query()
     {
         if ( stmt ) delete stmt;
-        size = 0;
-        PDEBUG( "sql query destruct call ..." );
+        
+        id       = 0;
+        size     = 0;
+        callback = 0;
+        
     }
 
-    sql_type type;
-    size_t   size;
-    char    *stmt;
+    int32 id;
+    int32 callback;
+    size_t    size;
+    char     *stmt;
 };
 
 #endif /* __SQL_RESULT_H__ */
