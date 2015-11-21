@@ -335,5 +335,13 @@ int32 lsql::error_callback()
 
 int32 lsql::get_result()
 {
+    if ( _result.empty() )
+    {
+        lua_pushnil( L );
+    }
     
+    struct sql_result &r = _result.front()
+    
+    
+    return 1;
 }
