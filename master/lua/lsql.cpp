@@ -1,4 +1,5 @@
 #include "lsql.h"
+#include "ltools.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
@@ -35,6 +36,10 @@ lsql::lsql( lua_State *L )
 {
     fd[0] = -1;
     fd[1] = -1;
+    
+    ref_self  = 0;
+    ref_read  = 0;
+    ref_error = 0;
 }
 
 lsql::~lsql()
@@ -43,6 +48,10 @@ lsql::~lsql()
 
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
+    
+    LUA_UNREF( ref_self  );
+    LUA_UNREF( ref_read  );
+    LUA_UNREF( ref_error );
 }
 
 /* 连接mysql并启动线程 */
@@ -204,23 +213,7 @@ int32 lsql::join()
     return 0;
 }
 
-
-int32 lsql::call()
-{
-    return 0;
-}
-
-int32 lsql::update()
-{
-    return 0;
-}
-
-int32 lsql::del()
-{
-    return 0;
-}
-
-int32 lsql::select()
+int32 lsql::do_sql()
 {
     size_t size = 0;
     int32 id = luaL_checkinteger( L,1 );
@@ -242,11 +235,6 @@ int32 lsql::select()
     return 0;
 }
 
-int32 lsql::insert()
-{
-    return 0;
-}
-
 void lsql::sql_cb( ev_io &w,int32 revents )
 {
     int8 event = 0;
@@ -259,7 +247,9 @@ void lsql::sql_cb( ev_io &w,int32 revents )
             return;
         }
         
-        
+        ERROR( "sql socket error:%s\n",strerror(errno) );
+        assert( "sql socket broken",false );
+        return;
     }
     else if ( 0 == sz )
     {
@@ -274,9 +264,76 @@ void lsql::sql_cb( ev_io &w,int32 revents )
     
     switch ( event )
     {
-        case EXIT :
-        case ERR  :
-        case READ : break;
+        case EXIT : assert( "sql thread should not exit itself",false );break;
+        case ERR  : 
+        {
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
+            int32 param = 0;
+            if ( ref_self )
+            {
+                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+                param ++;
+            }
+            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            {
+                ERROR( "sql error call back fail:%s\n",lua_tostring(L,-1) );
+            }
+        }break;
+        case READ : 
+        {
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
+            int32 param = 0;
+            if ( ref_self )
+            {
+                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+                param ++;
+            }
+            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            {
+                ERROR( "sql error call back fail:%s\n",lua_tostring(L,-1) );
+            }
+        }break;
         default   : assert( "unknow sql event",false );break;
     }
+}
+
+int32 lsql::read_callback()
+{
+    if ( !lua_isfunction(L,1) )
+    {
+        return luaL_error( L,"sql set read,argument #1 expect function" );
+    }
+
+    LUA_REF( ref_read );
+    
+    return 0;
+}
+
+int32 lsql::self_callback()
+{
+    if ( !lua_istable(L,1) )
+    {
+        return luaL_error( L,"sql set self,argument #1 expect table" );
+    }
+
+    LUA_REF( ref_self );
+    
+    return 0;
+}
+
+int32 lsql::error_callback()
+{
+    if ( !lua_isfunction(L,1) )
+    {
+        return luaL_error( L,"sql set error,argument #1 expect function" );
+    }
+
+    LUA_REF( ref_error );
+    
+    return 0;
+}
+
+int32 lsql::get_result()
+{
+    
 }

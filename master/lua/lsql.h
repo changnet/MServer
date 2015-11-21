@@ -18,21 +18,12 @@ public:
     int32 stop ();
     int32 join ();
 
-    int32 call  ();
-    int32 del   ();
-    int32 update();
-    int32 select();
-    int32 insert();
+    int32 do_sql    ();
+    int32 get_result();
     
-    /*
-    START TRANSACTION [WITH CONSISTENT SNAPSHOT]
-    BEGIN [WORK]
-    COMMIT [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
-    ROLLBACK [WORK] [AND [NO] CHAIN] [[NO] RELEASE]
-    */
-    int32 begin();
-    int32 commit();
-    int32 rollback();
+    int32 self_callback ();
+    int32 read_callback ();
+    int32 error_callback();
 private:
     enum
     {
@@ -49,6 +40,10 @@ private:
     lua_State *L  ;
     class sql _sql;
     ev_io watcher ;
+    
+    int32 ref_self;
+    int32 ref_read;
+    int32 ref_error;
 
     std::queue<sql_query *> _query ;
     std::queue<sql_result > _result;

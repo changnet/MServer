@@ -2,11 +2,11 @@
 
 #compile
 ubuntu 14.04
-    1)sudo apt-get install libmysqlclient-dev
-      The following NEW packages will be installed:
-        libmysqlclient-dev libmysqlclient18 mysql-common
-    2)sudo apt-get install lua53
-    3) cd MServer/master & make
+    1)sudo apt-get install libmysqlclient-dev  
+      The following NEW packages will be installed:  
+        libmysqlclient-dev libmysqlclient18 mysql-common  
+    2)sudo apt-get install lua53  
+    3) cd MServer/master & make  
 
 
 #what had done
@@ -36,4 +36,3 @@ ubuntu 14.04
 1. thread 当前有lua控制，需要重新设计join(把join暴露给Sql，自己退出时在主线程调join)
 2. packet_parse中还需要解决自杀问题(把on_read事件给lua，在lua中调用packet_parse)
 3. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
-4. socket被关闭是未尝试将数据发送，或者提供一个flush接口到lua层
