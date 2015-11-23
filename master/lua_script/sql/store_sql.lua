@@ -26,7 +26,10 @@ end
 function Store_sql:on_result()
     local id,err,result = self._sql_:get_result()
     while id do
+        print( id,err,"=====================================================" )
+        vd( result )
         local callback = self.query[id]
+        self.query[id] = nil
         if not callback then
             ELOG( "sql result not handle" )
         else
@@ -37,12 +40,20 @@ function Store_sql:on_result()
     end
 end
 
-function Store_sql:start()
-    self._sql_:start( "127.0.0.1",3306,"test","test","mudrv_xzc" )
+function Store_sql:start( ip,port,usr,pwd,db )
+    self._sql_:start( ip,port,usr,pwd,db )
+end
+
+function Store_sql:stop()
+    self._sql_:stop()
+    self._sql_:join()
 end
 
 function Store_sql:do_sql( sql,callback,... )
+    local next_id = self.next_id
+    self.next_id = self.next_id + 1
     self._sql_:do_sql( next_id,sql,callback )
+    
     if callback then
         local args = { ... }
         self.query[next_id] = function()

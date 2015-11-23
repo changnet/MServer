@@ -60,7 +60,7 @@ struct sql_col
     
     ~sql_col()
     {
-        if ( value ) delete value;
+        if ( value ) delete []value;
         
         size  = 0;
         value = NULL;
@@ -84,11 +84,12 @@ struct sql_row
 {
     std::vector<sql_col> cols;
 };
+//typedef std::vector<sql_col> sql_row;
 
 struct sql_res
 {
-    int32 num_rows;
-    int32 num_cols;
+    uint32 num_rows;
+    uint32 num_cols;
     std::vector<sql_field> fields;
     std::vector<sql_row  > rows  ;
 };
@@ -114,7 +115,7 @@ struct sql_query
 
     ~sql_query()
     {
-        if ( stmt ) delete stmt;
+        if ( stmt ) delete []stmt;
         
         id       = 0;
         size     = 0;

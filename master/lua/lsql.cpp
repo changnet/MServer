@@ -148,12 +148,14 @@ void lsql::routine()
             case READ : break;
         }
 
-        do_sql(); /* 即使EXIT，也要将未完成的sql写入 */
+        invoke_sql(); /* 即使EXIT，也要将未完成的sql写入 */
     }
+    
+    _sql.disconnect() ;
     mysql_thread_end();
 }
 
-void lsql::do_sql()
+void lsql::invoke_sql()
 {
     
     while ( true )
@@ -180,7 +182,7 @@ void lsql::do_sql()
             invoke_cb( NULL );
             continue;
         }
-        
+
         struct sql_res *res = NULL;
         if ( _sql.result( &res ) )
         {
@@ -335,13 +337,87 @@ int32 lsql::error_callback()
 
 int32 lsql::get_result()
 {
+    pthread_mutex_lock( &mutex );
     if ( _result.empty() )
     {
+        pthread_mutex_unlock( &mutex );
         lua_pushnil( L );
+        return 1;
     }
     
-    struct sql_result &r = _result.front()
+    struct sql_result r = _result.front();
+    _result.pop();
+    pthread_mutex_unlock( &mutex );
+
+    lua_pushinteger( L,r.id );
+    lua_pushinteger( L,r.err );
+    if ( r.res )
+    {
+        result_encode( r.res );
+        
+        delete r.res;
+        return 3;
+    }
     
+    return 2;
+}
+
+/* 将mysql结果集转换为lua table */
+void lsql::result_encode( struct sql_res *res )
+{
+    assert( "sql result over boundary",res->num_cols == res->fields.size() &&
+        res->num_rows == res->rows.size() );
     
-    return 1;
+    lua_createtable( L,res->num_rows,0 ); /* 创建数组，元素个数为num_rows */
+    
+    std::vector<sql_field> &fields = res->fields;
+    std::vector<sql_row  > &rows   = res->rows;
+    for ( uint32 row = 0;row < res->num_rows;row ++ )
+    {
+        lua_pushinteger( L,row + 1 ); /* lua table从1开始 */
+        lua_createtable( L,0,res->num_cols ); /* 创建hash表，元素个数为num_cols */
+        
+        std::vector<sql_col> &cols = rows[row].cols;
+        for ( uint32 col = 0;col < res->num_cols;col ++ )
+        {
+            assert( "sql result column over boundary",res->num_cols == cols.size() );
+            
+            lua_pushstring( L,fields[col].name );
+            switch ( fields[col].type )
+            {
+                case MYSQL_TYPE_TINY      :
+                case MYSQL_TYPE_SHORT     :
+                case MYSQL_TYPE_LONG      :
+                case MYSQL_TYPE_TIMESTAMP :
+                case MYSQL_TYPE_INT24     :
+                    lua_pushinteger( L,static_cast<LUA_INTEGER>(atoi(cols[col].value)) );
+                    break;
+                case MYSQL_TYPE_LONGLONG  :
+                        lua_pushinteger( L,static_cast<LUA_INTEGER>(atoll(cols[col].value)) );
+                        break;
+                case MYSQL_TYPE_FLOAT   :
+                case MYSQL_TYPE_DOUBLE  :
+                case MYSQL_TYPE_DECIMAL :
+                    lua_pushnumber( L,static_cast<LUA_NUMBER>(atof(cols[col].value)) );
+                    break;
+                case MYSQL_TYPE_VARCHAR     :
+                case MYSQL_TYPE_TINY_BLOB   :
+                case MYSQL_TYPE_MEDIUM_BLOB :
+                case MYSQL_TYPE_LONG_BLOB   :
+                case MYSQL_TYPE_BLOB        :
+                case MYSQL_TYPE_VAR_STRING  :
+                case MYSQL_TYPE_STRING      :
+                    lua_pushlstring( L,cols[col].value,cols[col].size );
+                    break;
+                default :
+                    lua_pushnil( L );
+                    ERROR( "unknow mysql type:%d\n",fields[col].type );
+                    break;
+            }
+            
+            lua_rawset( L, -3 );
+        }
+        
+        lua_rawset( L, -3 );
+    }
 }

@@ -33,8 +33,9 @@ private:
     };
 private:
     void routine();
-    void do_sql ();
+    void invoke_sql ();
     void sql_cb( ev_io &w,int32 revents );
+    void result_encode( struct sql_res *res );
 private:
     int32 fd[2]   ;
     lua_State *L  ;

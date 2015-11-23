@@ -148,11 +148,11 @@ int32 luaopen_sql( lua_State *L )
     lc.def<&lsql::stop>  ( "stop"  );
     lc.def<&lsql::join>  ( "join"  );
     
-    lc.def<&lsql::call>   ( "call"   );
-    lc.def<&lsql::del>    ( "delete" );
-    lc.def<&lsql::update> ( "update" );
-    lc.def<&lsql::select> ( "select" );
-    lc.def<&lsql::insert> ( "insert" );
+    lc.def<&lsql::do_sql>         ( "do_sql"         );
+    lc.def<&lsql::get_result>     ( "get_result"     );
+    lc.def<&lsql::self_callback > ( "self_callback"  );
+    lc.def<&lsql::read_callback > ( "read_callback"  );
+    lc.def<&lsql::error_callback> ( "error_callback" );
     
     return 0;
 }

@@ -176,8 +176,6 @@ int32 sql::result( struct sql_res **_res )
         MYSQL_FIELD *field;
         while( (field = mysql_fetch_field( res )) )
         {
-            PDEBUG("field name %s,type %d\n", field->name,field->type);
-            
             assert( "fetch field more than field count",index < num_fields );
             (*_res)->fields[index].type = field->type;
             snprintf( (*_res)->fields[index].name,SQL_FIELD_LEN,"%s",field->name );
@@ -199,9 +197,10 @@ int32 sql::result( struct sql_res **_res )
             size_t *lengths = mysql_fetch_lengths(res);
             for ( uint32 i = 0;i < num_fields;i ++ )
             {
-                PDEBUG( "result:%lu--%s\n",lengths[i],row[i] );
                 _row.cols[i].set( row[i],lengths[i] );
             }
+            
+            ++index;
         }
         mysql_free_result( res );
         
