@@ -68,8 +68,8 @@ bool sql::connect()
          mysql_options( conn, MYSQL_OPT_READ_TIMEOUT, &read_timeout ) ||
          mysql_options( conn, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout ) ||
          mysql_options( conn, MYSQL_OPT_RECONNECT, &reconnect ) ||
-         mysql_options( conn, MYSQL_SET_CHARSET_NAME , "utf8" ) ||
-         mysql_options( conn, MYSQL_INIT_COMMAND,"SET autocommit=0" )
+         mysql_options( conn, MYSQL_SET_CHARSET_NAME , "utf8" )
+        /*|| mysql_options( conn, MYSQL_INIT_COMMAND,"SET autocommit=0" ) */
         )
     {
         ERROR( "mysql option fail:%s\n",mysql_error( conn ) );
@@ -156,14 +156,22 @@ int32 sql::result( struct sql_res **_res )
      * also returns a null pointer if reading of the result set
      * failed. You can check whether an error occurred by checking whether
      * mysql_error() returns a nonempty string, mysql_errno() returns nonzero
+     * it does not do any harm or cause any notable performance degradation if
+     * you call mysql_store_result() in all cases(INSERT,UPDATE ...)
      */
     MYSQL_RES *res = mysql_store_result( conn );
     if ( res )
     {
-        uint32 num_fields = mysql_num_fields( res );
         uint32 num_rows   = mysql_num_rows  ( res );
+        if ( 0 >= num_rows ) /* we got empty set */
+        {
+            mysql_free_result( res );
+            
+            return 0; /* success */
+        }
+
+        uint32 num_fields = mysql_num_fields( res );
         assert( "mysql result field count zero",num_fields > 0 );
-        assert( "mysql result row count zero",num_rows > 0 );
 
         /* 注意使用resize来避免内存重新分配以及push_back产生的拷贝消耗 */
         *_res = new sql_res();

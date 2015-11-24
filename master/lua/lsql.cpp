@@ -28,6 +28,7 @@
             pthread_mutex_unlock( &mutex );                    \
             notify( fd[1],READ );                              \
         }                                                      \
+        else assert( "sql should not have result",!r );        \
         delete query;                                          \
     }while(0)
 

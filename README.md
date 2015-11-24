@@ -1,12 +1,16 @@
 #MServer
 
 #compile
-ubuntu 14.04
+OpenSSL is required for authentication or for SSL connections to MongoDB. Kerberos or LDAP support requires Cyrus SASL.  
+
+ubuntu 14.04  
     1)sudo apt-get install libmysqlclient-dev  
       The following NEW packages will be installed:  
         libmysqlclient-dev libmysqlclient18 mysql-common  
     2)sudo apt-get install lua53  
-    3) cd MServer/master & make  
+    3)sudo apt-get install pkg-config libssl-dev libsasl2-dev  
+    4)install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)
+    5) cd MServer/master & make  
 
 
 #what had done
