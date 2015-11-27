@@ -9,22 +9,24 @@ ubuntu 14.04
         libmysqlclient-dev libmysqlclient18 mysql-common  
     2)sudo apt-get install lua53  
     3)sudo apt-get install pkg-config libssl-dev libsasl2-dev  
-    4)install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)
+    4)install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)  
     5) cd MServer/master & make  
 
 
 #what had done
 1. rewrite libev core
 2. cpp binding with lua
+3. 自定义socket内存池
+4. 基于mysql c connector封装mysql lua模块
 
 #TODO
 1. socket
 2. thread
-3. callback(socketpair pipe eventfd(best))
+3. callback(socketpair pipe eventfd)
 4. mysql、mongodb
 5. http(http-parser、libcurl)
 6. protobuf、platbuffer
-7. astar、rsa、zlib、md5、uuid、cjson
+7. astar、rsa、zlib、md5、uuid、cjson、xml
 8. ps -o 测试缺页中断
 9. dump内存情况，包含内存碎片
 10. 底层包自动转发

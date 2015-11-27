@@ -383,6 +383,8 @@ void lsql::result_encode( struct sql_res *res )
         {
             assert( "sql result column over boundary",res->num_cols == cols.size() );
             
+            if ( !cols[col].value ) continue;  /* 值为NULL */
+            
             lua_pushstring( L,fields[col].name );
             switch ( fields[col].type )
             {
@@ -394,8 +396,8 @@ void lsql::result_encode( struct sql_res *res )
                     lua_pushinteger( L,static_cast<LUA_INTEGER>(atoi(cols[col].value)) );
                     break;
                 case MYSQL_TYPE_LONGLONG  :
-                        lua_pushinteger( L,static_cast<LUA_INTEGER>(atoll(cols[col].value)) );
-                        break;
+                    lua_pushinteger( L,static_cast<LUA_INTEGER>(atoll(cols[col].value)) );
+                    break;
                 case MYSQL_TYPE_FLOAT   :
                 case MYSQL_TYPE_DOUBLE  :
                 case MYSQL_TYPE_DECIMAL :
