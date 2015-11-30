@@ -158,20 +158,15 @@ void lsql::routine()
 
 void lsql::invoke_sql()
 {
-    PDEBUG( "enter invoke_sql at:%ld",time(0) );
-    clock_t t = clock();
-    int32 cnt = 0;
     while ( true )
     {
         pthread_mutex_lock( &mutex );
         if ( _query.empty() )
         {
             pthread_mutex_unlock( &mutex );
-            clock_t e = clock();
-            PDEBUG( "query %d cost %f,leveing at %ld",cnt,float(e-t)/CLOCKS_PER_SEC,time(0) );
             return;
         }
-        cnt ++;
+
         struct sql_query *query = _query.front();
         _query.pop();
         pthread_mutex_unlock( &mutex );
