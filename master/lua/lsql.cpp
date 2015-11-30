@@ -158,16 +158,20 @@ void lsql::routine()
 
 void lsql::invoke_sql()
 {
-    
+    PDEBUG( "enter invoke_sql at:%ld",time(0) );
+    clock_t t = clock();
+    int32 cnt = 0;
     while ( true )
     {
         pthread_mutex_lock( &mutex );
         if ( _query.empty() )
         {
             pthread_mutex_unlock( &mutex );
+            clock_t e = clock();
+            PDEBUG( "query %d cost %f,leveing at %ld",cnt,float(e-t)/CLOCKS_PER_SEC,time(0) );
             return;
         }
-        
+        cnt ++;
         struct sql_query *query = _query.front();
         _query.pop();
         pthread_mutex_unlock( &mutex );
@@ -228,13 +232,21 @@ int32 lsql::do_sql()
     
     int32 callback = lua_toboolean( L,3 );
 
+    bool _notify = false;
     struct sql_query *query = new sql_query( id,callback,size,stmt );
     {
         class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
         _query.push( query );
     }
 
-    notify( fd[0],READ );
+    /* 子线程的socket是阻塞的。主线程检测到子线程正常处理sql则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
     return 0;
 }
 

@@ -24,10 +24,12 @@ local function main()
 
     g_store_sql:start( "192.168.1.23",3306,"root","123456","xzc_mudrv" )
     
-    -- for i = 1,100000 do
-        local str = string.format( 'insert into new_table (name,money,gold) values ("xzc",1236547896,896523125.88987)' )
+    g_store_sql:do_sql( "START TRANSACTION" )
+    for i = 1,102400 do
+        local str = string.format( 'insert into new_table (name,money,gold) values ("xzc%d",1236547896,896523125.88987)',i )
         g_store_sql:do_sql(str)
-    -- end
+    end
+    g_store_sql:do_sql( "COMMIT" )
     --g_store_sql:do_sql( "select * from new_table limit 10",sql_cb )
 
     oo.check()
