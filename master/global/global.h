@@ -13,6 +13,7 @@
 #include <limits.h>    /* PATH_MAX */
 
 #include "../config.h" /* config paramter */
+
 /* assert with error msg,third parted code not include this file will work fine
    with old assert.
 */

@@ -5,13 +5,14 @@ MAKE = make
 #-Wl,rpath 指定运行时库文件(so)路径，便携程序可用
 #-w 关闭所有告警
 #-rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace() （这一系列函数使用.dynsym表内符号）这样的函数使用。
+#如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
 CFLAGS = -pipe -Wall -g
 LFLAGS = -rdynamic
 OPTIMIZE = -O2
 CC = g++
 INC = ./deps/include
-LIB = ./deps/lib
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r
+LIB = ./deps/lib -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
+LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -L/usr/local/lib -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0
 ODIR = bin
 SDIR = ./
 TEST_DIR = ../test
@@ -23,7 +24,7 @@ MKDIR = mkdir -p
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
-	buffer_process.o sql.o thread.o ltimer.o lsql.o
+	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -50,6 +51,9 @@ $(ODIR)/%.o: $(SDIR)/mysql/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/thread/%.cpp
+	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+
+$(ODIR)/%.o: $(SDIR)/mongo/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(TEST_DIR)/bench.c

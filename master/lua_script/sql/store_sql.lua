@@ -26,8 +26,6 @@ end
 function Store_sql:on_result()
     local id,err,result = self._sql_:get_result()
     while id do
-        print( id,err,"=====================================================",result,"==" )
-        vd( result )
         local callback = self.query[id]
         self.query[id] = nil
         if not callback then
@@ -35,9 +33,6 @@ function Store_sql:on_result()
         else
             callback()
         end
-        
-        result.t = nil
-        vd( result )
 
         id,result = self._sql_:get_result()
     end

@@ -4,6 +4,7 @@
 #include "lua/lstate.h"
 #include "lua/leventloop.h"
 #include "mysql/sql.h"
+#include "mongo/mongo.h"
 #include <sys/utsname.h> /* for uname */
 
 /* 记录进程启动信息 */
@@ -66,6 +67,7 @@ int32 main( int32 argc,char **argv )
     std::set_new_handler( new_fail );
 
     sql::library_init();
+    mongo::init();
 
     runtime_start();
 
@@ -76,6 +78,12 @@ int32 main( int32 argc,char **argv )
     lclass<leventloop>::push( L,_loop,false );
     lua_setglobal( L,"ev" );
 
+    class mongo _mongo;
+    _mongo.set( "127.0.0.1",27013,"test","test","xzc_test" );
+    _mongo.connect();
+    assert( "connect err",true );
+    _mongo.disconnect();
+    
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua_script/%s/%s",spath,LUA_ENTERANCE );
@@ -93,6 +101,7 @@ int32 main( int32 argc,char **argv )
     /* 清除静态数据，以免影响内存检测 */
     buffer::allocator.purge();
     sql::library_end();
+    mongo::cleanup();
 
     runtime_stop();
     return 0;
