@@ -4,11 +4,19 @@
 
 --常用的全局函数
 
+local function to_readable( val )
+    if type(val) == "string" then
+        return "\"" .. val .. "\""
+    end
+    
+    return val
+end
+
 --- @param data 要打印的字符串
 --- @param [max_level] table要展开打印的计数，默认nil表示全部展开
 --- @param [prefix] 用于在递归时传递缩进，该参数不供用户使用于
 local recursion = {}
-function var_dump(data, max_level, prefix)
+local function var_dump(data, max_level, prefix)
     if type(prefix) ~= "string" then
         prefix = ""
     end
@@ -24,9 +32,9 @@ function var_dump(data, max_level, prefix)
         local prefix_next = prefix .. "    "
         print(prefix .. "{")
         for k,v in pairs(data) do
-            io.stdout:write(prefix_next .. tostring(k) .. " = ")
+            io.stdout:write(prefix_next .. tostring( to_readable(k) ) .. " = ")
             if type(v) ~= "table" or (type(max_level) == "number" and max_level <= 1) then
-                print(v)
+                print( to_readable(v) )
             else
                 var_dump(v, max_level - 1, prefix_next)
             end
