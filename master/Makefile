@@ -10,9 +10,9 @@ CFLAGS = -pipe -Wall -g
 LFLAGS = -rdynamic
 OPTIMIZE = -O2
 CC = g++
-INC = ./deps/include
-LIB = ./deps/lib -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -L/usr/local/lib -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0
+INC = -I./deps/include -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
+LIB = -L./deps/lib -L/usr/local/lib
+LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0
 ODIR = bin
 SDIR = ./
 TEST_DIR = ../test
@@ -30,34 +30,34 @@ OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 #Makefile中，要使用tab键，不能用空格替代
 
 $(ODIR)/%.o: $(SDIR)/global/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/ev/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/lua/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/net/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mysql/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/thread/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 $(ODIR)/%.o: $(TEST_DIR)/bench.c
-	$(CC) $(CFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖
 #$^ 所有的依赖目标的集合。以空格分隔。如果在依赖目标中有多个重复的,那个这个变量会去除重复的依赖目标,只保留一份。
@@ -65,7 +65,7 @@ $(ODIR)/%.o: $(TEST_DIR)/bench.c
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
 all: DIRS $(OBJS) $(ODIR)/main.o
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -I$(INC) -L$(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
 test: DIRS $(OBJS) $(ODIR)/bench.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TEST_DIR)/bench  $(OBJS) $(ODIR)/bench.o

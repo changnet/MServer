@@ -4,7 +4,10 @@
 
 -- 增加部分常用table函数
 
---不计算Key为nil的情况
+--[[
+不计算Key为nil的情况
+如果使用了rawset,value可能为nil
+]]
 table.size = function(o)
     local ret = 0
     local k,v
@@ -27,6 +30,6 @@ table.clear = function(o)
     end
 end
 
-table.is_empty = function(t)
+table.empty = function(t)
     return _G.next(t) == nil
 end
