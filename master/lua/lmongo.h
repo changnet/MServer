@@ -7,18 +7,18 @@
 #include "../ev/ev_watcher.h"
 #include "../mongo/mongo.h"
 
-class lmongo
+class lmongo : public thread
 {
 public:
     explicit lmongo( lua_State *L );
-    lmongo();
+    ~lmongo();
     
     int32 start();
     int32 stop ();
     int32 join ();
 
-    int32 do_sql    ();
-    int32 get_result();
+    int32 count    ();
+    int32 next_result();
     
     int32 self_callback ();
     int32 read_callback ();
@@ -38,7 +38,24 @@ public:
     ensureindex
     */
 private:
+    enum
+    {
+        ERR  = -1,
+        EXIT = 0 ,
+        READ = 1
+    };
+private:
+    void routine();
+    void mongo_cb( ev_io &w,int32 revents );
+private:
+    int32 fd[2]  ;
+    lua_State *L ;
+    ev_io watcher;
+    class mongo _mongo;
     
+    int32 ref_self;
+    int32 ref_read;
+    int32 ref_error;
 };
 
 #endif /* __LMONGO_H__ */

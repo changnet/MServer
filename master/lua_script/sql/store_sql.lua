@@ -24,7 +24,7 @@ function Store_sql:on_error()
 end
 
 function Store_sql:on_result()
-    local id,err,result = self._sql_:get_result()
+    local id,err,result = self._sql_:next_result()
     while id do
         local callback = self.query[id]
         self.query[id] = nil

@@ -75,7 +75,7 @@ int32 lsql::start()
      */
     if ( socketpair( AF_UNIX, SOCK_STREAM,IPPROTO_IP,fd ) < 0 )
     {
-        FATAL( "socketpair fail:%s\n",strerror(errno) );
+        ERROR( "sql socketpair fail:%s\n",strerror(errno) );
         return luaL_error( L,"socket pair fail" );
     }
 
@@ -217,6 +217,11 @@ int32 lsql::join()
 
 int32 lsql::do_sql()
 {
+    if ( !thread::_run )
+    {
+        return luaL_error( L,"sql thread not active" );
+    }
+
     size_t size = 0;
     int32 id = luaL_checkinteger( L,1 );
     const char *stmt = luaL_checklstring( L,2,&size );
@@ -343,7 +348,7 @@ int32 lsql::error_callback()
     return 0;
 }
 
-int32 lsql::get_result()
+int32 lsql::next_result()
 {
     pthread_mutex_lock( &mutex );
     if ( _result.empty() )

@@ -90,3 +90,16 @@ int32 mongo::ping()
    
    return 1;
 }
+
+int64 mongo::count( const char *_collection,bson_error_t &_err,bson_t *query,
+    int64 skip,int64 limit )
+{
+    assert( "mongo count,inactivity connection",conn );
+    mongoc_collection_t *collection = mongoc_client_get_collection( conn, db,
+        _collection );
+    int64 count = mongoc_collection_count (collection, MONGOC_QUERY_NONE, query,
+        skip, limit, NULL, &_err );
+    
+    mongoc_collection_destroy ( collection );
+    return count; /* 如果失败，返回-1 */
+}

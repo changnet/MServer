@@ -19,7 +19,7 @@ public:
     int32 join ();
 
     int32 do_sql    ();
-    int32 get_result();
+    int32 next_result();
     
     int32 self_callback ();
     int32 read_callback ();

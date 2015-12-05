@@ -1,4 +1,5 @@
 #include "lsql.h"
+#include "lmongo.h"
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
@@ -54,6 +55,7 @@ int32 luaopen_util  ( lua_State *L );
 int32 luaopen_socket( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
+int32 luaopen_mongo ( lua_State *L );
 
 void lstate::open_cpp()
 {
@@ -82,6 +84,7 @@ void lstate::open_cpp()
     luaopen_socket(L);
     luaopen_timer (L);
     luaopen_sql   (L);
+    luaopen_mongo (L);
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );
@@ -149,10 +152,26 @@ int32 luaopen_sql( lua_State *L )
     lc.def<&lsql::join>  ( "join"  );
     
     lc.def<&lsql::do_sql>         ( "do_sql"         );
-    lc.def<&lsql::get_result>     ( "get_result"     );
+    lc.def<&lsql::next_result>    ( "next_result"    );
     lc.def<&lsql::self_callback > ( "self_callback"  );
     lc.def<&lsql::read_callback > ( "read_callback"  );
     lc.def<&lsql::error_callback> ( "error_callback" );
+    
+    return 0;
+}
+
+int32 luaopen_mongo( lua_State *L )
+{
+    lclass<lmongo> lc(L,"Mongo");
+    lc.def<&lmongo::start> ( "start" );
+    lc.def<&lmongo::stop>  ( "stop"  );
+    lc.def<&lmongo::join>  ( "join"  );
+    
+    lc.def<&lmongo::count>          ( "count"         );
+    lc.def<&lmongo::next_result>    ( "next_result"    );
+    lc.def<&lmongo::self_callback > ( "self_callback"  );
+    lc.def<&lmongo::read_callback > ( "read_callback"  );
+    lc.def<&lmongo::error_callback> ( "error_callback" );
     
     return 0;
 }
