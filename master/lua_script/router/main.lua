@@ -3,19 +3,18 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
-local client_mgr = require "net.client_mgr"
-local Store_sql = require "sql.store_sql"
+local client_mgr  = require "net.client_mgr"
+local Store_sql   = require "sql.store_sql"
+local Store_mongo = require "mongo.store_mongo"
 
 local function sig_handler( signum )
+    g_store_mongo:stop()
     g_store_sql:stop()
     ev:exit()
 end
 
-local function sql_cb()
-    print( "sql callback ========================================" )
-end
-
 g_store_sql = Store_sql()
+g_store_mongo = Store_mongo()
 local function main()
     ev:set_signal_ref( sig_handler )
     ev:signal( 2 );
@@ -24,6 +23,8 @@ local function main()
     client_mgr:listen( "0.0.0.0",9997 )
 
     g_store_sql:start( "192.168.1.23",3306,"root","123456","xzc_mudrv" )
+    g_store_mongo:start( "127.0.0.1",27013,"test","test","xzc_test" )
+    g_store_mongo:count( "item" )
     -- for i = 1,102400 do
     --     local str = string.format("insert into new_table (name,money,gold) values \
     --         ('xzc%d',%d,%d)",i,i*10,i*100 );

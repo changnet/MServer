@@ -59,7 +59,7 @@ void mongo::disconnect()
     conn = NULL;
 }
 
-int32 mongo::ping()
+int32 mongo::ping( bson_error_t *error )
 {
     assert( "try to ping a inactive mongo",conn );
 
@@ -81,10 +81,9 @@ int32 mongo::ping()
         return 0;
     }
    
-   /* bson_error_t error;
-    * (mongoc_cursor_error(cursor, &error))
-    * fprintf(stderr, "Ping failure: %s\n", error.message);
-    */
+    /* get the error */
+    mongoc_cursor_error( cursor, error );
+    
    mongoc_cursor_destroy( cursor );
    bson_destroy( &ping );
    

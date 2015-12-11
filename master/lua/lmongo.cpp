@@ -73,7 +73,7 @@ int32 lmongo::stop()
 {
     if ( !thread::_run )
     {
-        return luaL_error( L,"try to stop a inactive sql thread" );
+        return luaL_error( L,"try to stop a inactive mongo thread" );
     }
     notify( fd[0],EXIT );
 
@@ -89,6 +89,57 @@ int32 lmongo::join()
 
 void lmongo::routine()
 {
+    assert( "mongo fd not valid",fd[1] > -1 );
+
+    if ( _mongo.connect() )
+    {
+        nofity( fd[1],ERR );
+        return;
+    }
+
+    //--设置超时
+    timeval tm;
+    tm.tv_sec  = 5;
+    tm.tv_usec = 0;
+    setsockopt(fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
+    setsockopt(fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
+
+    while ( thread::_run )
+    {
+        bson_error_t err;
+        if ( _mongo.ping( &err ) )
+        {
+            ERROR( "mongo ping error(%d):%s\n",err.code,err.message );
+            nofity( fd[1],ERR );
+            break;
+        }
+        
+        int8 event = 0;
+        int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
+        if ( sz < 0 )
+        {
+            /* errno variable is thread save */
+            if ( errno == EAGAIN || errno == EWOULDBLOCK )
+            {
+                continue;  // just timeout
+            }
+
+            ERROR( "socketpair broken,mongo thread exit" );
+            // socket error,can't notify( fd[1],ERR );
+            break;
+        }
+        
+        switch ( event )
+        {
+            case EXIT : thread::stop();break;
+            case ERR  : assert( "main thread should never nofity err",false );break;
+            case READ : break;
+        }
+        
+        invoke_command();
+    }
+    
+    _mongo.disconnect();
 }
 
 void lmongo::mongo_cb( ev_io &w,int32 revents )
@@ -154,4 +205,8 @@ int32 lmongo::read_callback ()
 int32 lmongo::error_callback()
 {
     return 0;
+}
+
+void lmongo::invoke_command()
+{
 }

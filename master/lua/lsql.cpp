@@ -117,7 +117,7 @@ void lsql::routine()
             ++ets;
             if ( ets < 10 )
             {
-                usleep(ets*1E6); // 1s
+                usleep(ets*1E6); // ets*1s
                 continue;
             }
 

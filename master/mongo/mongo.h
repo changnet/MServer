@@ -25,7 +25,7 @@ public:
     
     int64 count( const char *_collection,bson_error_t &_err,bson_t *query = NULL,
         int64 skip = 0,int64 limit = 0 );
-    int32 ping();
+    int32 ping( bson_error_t *error = NULL );
     int32 connect();
     void disconnect();
 private:

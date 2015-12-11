@@ -6,6 +6,7 @@
 #include "../thread/thread.h"
 #include "../ev/ev_watcher.h"
 #include "../mongo/mongo.h"
+#include "../mongo/mongo_def.h"
 
 class lmongo : public thread
 {
@@ -35,7 +36,7 @@ public:
     delete
     delete_all
     select_raw
-    ensureindex
+    ensureindex --> create_index
     */
 private:
     enum
@@ -46,6 +47,7 @@ private:
     };
 private:
     void routine();
+    void invoke_command();
     void mongo_cb( ev_io &w,int32 revents );
 private:
     int32 fd[2]  ;
@@ -56,6 +58,9 @@ private:
     int32 ref_self;
     int32 ref_read;
     int32 ref_error;
+    
+    std::queue<mongo_query *> _query ;
+    std::queue<mongo_result > _result;
 };
 
 #endif /* __LMONGO_H__ */
