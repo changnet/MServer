@@ -2,6 +2,7 @@
 #include "ltools.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
+#include "../thread/auto_mutex.h"
 
 #define notify(s,x)                                            \
     do {                                                       \
@@ -18,7 +19,7 @@ lmongo::lmongo( lua_State *L )
 {
     fd[0] = -1;
     fd[1] = -1;
-    
+
     ref_self  = 0;
     ref_read  = 0;
     ref_error = 0;
@@ -30,7 +31,7 @@ lmongo::~lmongo()
 
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
-    
+
     LUA_UNREF( ref_self  );
     LUA_UNREF( ref_read  );
     LUA_UNREF( ref_error );
@@ -93,7 +94,7 @@ void lmongo::routine()
 
     if ( _mongo.connect() )
     {
-        nofity( fd[1],ERR );
+        notify( fd[1],ERR );
         return;
     }
 
@@ -110,10 +111,10 @@ void lmongo::routine()
         if ( _mongo.ping( &err ) )
         {
             ERROR( "mongo ping error(%d):%s\n",err.code,err.message );
-            nofity( fd[1],ERR );
+            notify( fd[1],ERR );
             break;
         }
-        
+
         int8 event = 0;
         int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
         if ( sz < 0 )
@@ -128,17 +129,17 @@ void lmongo::routine()
             // socket error,can't notify( fd[1],ERR );
             break;
         }
-        
+
         switch ( event )
         {
             case EXIT : thread::stop();break;
-            case ERR  : assert( "main thread should never nofity err",false );break;
+            case ERR  : assert( "main thread should never notify err",false );break;
             case READ : break;
         }
-        
+
         invoke_command();
     }
-    
+
     _mongo.disconnect();
 }
 
@@ -152,12 +153,18 @@ int32 lmongo::count()
     {
         return luaL_error( L,"mongo thread not active" );
     }
-    
-    const char *collection = luaL_checkstring( L,1 );
-    const char *str_query  = luaL_optstring( L,2,NULL );
-    int64 skip  = luaL_optinteger( L,3,0 );
-    int64 limit = luaL_optinteger( L,4,0 );
-    
+
+    int32 id = luaL_checkinteger( L,1 );
+    const char *collection = luaL_checkstring( L,2 );
+    if ( !collection )
+    {
+        return luaL_error( L,"mongo count:collection not specify" );
+    }
+
+    const char *str_query  = luaL_optstring( L,3,NULL );
+    int64 skip  = luaL_optinteger( L,4,0 );
+    int64 limit = luaL_optinteger( L,5,0 );
+
     bson_t *query = NULL;
     if ( str_query )
     {
@@ -170,20 +177,26 @@ int32 lmongo::count()
             return luaL_error( L,"mongo count convert query to bson err" );
         }
     }
-    
-    // TODO 放到query队列
-    bson_error_t err;
-    int64 count = _mongo.count( collection,err,query,skip,limit );
-    
-    if ( query ) bson_destroy( query );
-    
-    if ( count < 0 )
+
+    struct mongo_query *_mq = new mongo_query();
+    _mq->set( id,1 );  /* count必须有返回 */
+    _mq->set( collection,query,skip,limit );
+
+    bool _notify = false;
     {
-        ERROR( "mongo count error:%s\n",err.message );
-        return luaL_error( L,"mongo count error" );
+        class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
+        _query.push( _mq );
     }
-    
-    PDEBUG( "count is %ld\n",count );
+
+    /* 子线程的socket是阻塞的。主线程检测到子线程正常处理sql则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
+
     return 0;
 }
 

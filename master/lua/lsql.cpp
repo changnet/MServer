@@ -37,7 +37,7 @@ lsql::lsql( lua_State *L )
 {
     fd[0] = -1;
     fd[1] = -1;
-    
+
     ref_self  = 0;
     ref_read  = 0;
     ref_error = 0;
@@ -49,7 +49,7 @@ lsql::~lsql()
 
     if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
     if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
-    
+
     LUA_UNREF( ref_self  );
     LUA_UNREF( ref_read  );
     LUA_UNREF( ref_error );
@@ -141,17 +141,17 @@ void lsql::routine()
             // socket error,can't notify( fd[1],ERR );
             break;
         }
-        
+
         switch ( event )
         {
             case EXIT : thread::stop();break;
-            case ERR  : assert( "main thread should never nofity err",false );break;
+            case ERR  : assert( "main thread should never notify err",false );break;
             case READ : break;
         }
 
         invoke_sql(); /* 即使EXIT，也要将未完成的sql写入 */
     }
-    
+
     _sql.disconnect() ;
     mysql_thread_end();
 }
@@ -173,12 +173,12 @@ void lsql::invoke_sql()
 
         const char *stmt = query->stmt;
         assert( "empty sql statement",stmt && query->size > 0 );
-        
+
         if ( _sql.query ( stmt,query->size ) )
         {
             ERROR( "sql query error:%s\n",_sql.error() );
             ERROR( "sql not exec:%s\n",stmt );
-            
+
             invoke_cb( NULL );
             continue;
         }
@@ -187,11 +187,11 @@ void lsql::invoke_sql()
         if ( _sql.result( &res ) )
         {
             ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
-            
+
             invoke_cb( res );
             continue;
         }
-        
+
         invoke_cb( res );
     }
 }
@@ -229,7 +229,7 @@ int32 lsql::do_sql()
     {
         return luaL_error( L,"sql select,empty sql statement" );
     }
-    
+
     int32 callback = lua_toboolean( L,3 );
 
     bool _notify = false;
@@ -261,7 +261,7 @@ void lsql::sql_cb( ev_io &w,int32 revents )
             assert( "non-block socket,should not happen",false );
             return;
         }
-        
+
         ERROR( "sql socket error:%s\n",strerror(errno) );
         assert( "sql socket broken",false );
         return;
@@ -276,11 +276,11 @@ void lsql::sql_cb( ev_io &w,int32 revents )
         assert( "package incomplete,should not happen",false );
         return;
     }
-    
+
     switch ( event )
     {
         case EXIT : assert( "sql thread should not exit itself",false );break;
-        case ERR  : 
+        case ERR  :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
             int32 param = 0;
@@ -294,7 +294,7 @@ void lsql::sql_cb( ev_io &w,int32 revents )
                 ERROR( "sql error call back fail:%s\n",lua_tostring(L,-1) );
             }
         }break;
-        case READ : 
+        case READ :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
             int32 param = 0;
@@ -320,7 +320,7 @@ int32 lsql::read_callback()
     }
 
     LUA_REF( ref_read );
-    
+
     return 0;
 }
 
@@ -332,7 +332,7 @@ int32 lsql::self_callback()
     }
 
     LUA_REF( ref_self );
-    
+
     return 0;
 }
 
@@ -344,7 +344,7 @@ int32 lsql::error_callback()
     }
 
     LUA_REF( ref_error );
-    
+
     return 0;
 }
 
@@ -357,7 +357,7 @@ int32 lsql::next_result()
         lua_pushnil( L );
         return 1;
     }
-    
+
     struct sql_result r = _result.front();
     _result.pop();
     pthread_mutex_unlock( &mutex );
@@ -367,11 +367,11 @@ int32 lsql::next_result()
     if ( r.res )
     {
         result_encode( r.res );
-        
+
         delete r.res;
         return 3;
     }
-    
+
     return 2;
 }
 
@@ -380,23 +380,23 @@ void lsql::result_encode( struct sql_res *res )
 {
     assert( "sql result over boundary",res->num_cols == res->fields.size() &&
         res->num_rows == res->rows.size() );
-    
+
     lua_createtable( L,res->num_rows,0 ); /* 创建数组，元素个数为num_rows */
-    
+
     std::vector<sql_field> &fields = res->fields;
     std::vector<sql_row  > &rows   = res->rows;
     for ( uint32 row = 0;row < res->num_rows;row ++ )
     {
         lua_pushinteger( L,row + 1 ); /* lua table从1开始 */
         lua_createtable( L,0,res->num_cols ); /* 创建hash表，元素个数为num_cols */
-        
+
         std::vector<sql_col> &cols = rows[row].cols;
         for ( uint32 col = 0;col < res->num_cols;col ++ )
         {
             assert( "sql result column over boundary",res->num_cols == cols.size() );
-            
+
             if ( !cols[col].value ) continue;  /* 值为NULL */
-            
+
             lua_pushstring( L,fields[col].name );
             switch ( fields[col].type )
             {
@@ -429,10 +429,10 @@ void lsql::result_encode( struct sql_res *res )
                     ERROR( "unknow mysql type:%d\n",fields[col].type );
                     break;
             }
-            
+
             lua_rawset( L, -3 );
         }
-        
+
         lua_rawset( L, -3 );
     }
 }

@@ -67,6 +67,11 @@ int32 lsocket::listen()
     }
 
     const char *addr = luaL_checkstring( L,1 );
+    if ( !addr )
+    {
+        return luaL_error( L,"listen:address not specify" );
+    }
+
     int32 port = luaL_checkinteger( L,2 );
     _type = static_cast<socket::SOCKET_TYPE>( luaL_checkinteger( L, 3 ) );
 
@@ -137,6 +142,11 @@ int32 lsocket::connect()
     }
 
     const char *addr = luaL_checkstring( L,1 );
+    if ( !addr )
+    {
+        return luaL_error( L,"connect:address not specify" );
+    }
+
     const int32 port = luaL_checkinteger( L,2 );
     _type = static_cast<socket::SOCKET_TYPE>( luaL_checkinteger( L,3 ) );
 
