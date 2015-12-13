@@ -13,18 +13,18 @@ class lmongo : public thread
 public:
     explicit lmongo( lua_State *L );
     ~lmongo();
-    
+
     int32 start();
     int32 stop ();
     int32 join ();
 
     int32 count    ();
     int32 next_result();
-    
+
     int32 self_callback ();
     int32 read_callback ();
     int32 error_callback();
-    
+
     /*
     http://api.mongodb.org/c/current/mongoc_collection_t.html
     find_and_modify
@@ -54,13 +54,13 @@ private:
     lua_State *L ;
     ev_io watcher;
     class mongo _mongo;
-    
+
     int32 ref_self;
     int32 ref_read;
     int32 ref_error;
-    
-    std::queue<mongo_query *> _query ;
-    std::queue<mongo_result > _result;
+
+    std::queue<mongons::query *> _query ;
+    std::queue<mongons::result > _result;
 };
 
 #endif /* __LMONGO_H__ */

@@ -5,14 +5,15 @@
 -- mysql数据存储处理
 
 local Sql = require "Sql"
+local LIMIT = require "global.limit"
 
 local Store_sql = oo.class( nil,... )
 
 function Store_sql:__init()
-    self.next_id = 1
+    self._next_id = 0
     self.query   = {}
     self._sql_   = Sql()
-    
+
     self._sql_:self_callback( self )
     self._sql_:read_callback( self.on_result )
     self._sql_:error_callback( self.on_error )
@@ -21,6 +22,18 @@ end
 function Store_sql:on_error()
     ELOG( "store sql error,system exit ..." )
     -- TODO exit
+end
+
+--[[
+底层id类型为int32，需要防止越界
+]]
+function Store_sql:next_id()
+    if self._next_id >= LIMIT.INT32_MAX then
+        self._next_id = 0
+    end
+
+    self._next_id = self._next_id + 1
+    return self._next_id
 end
 
 function Store_sql:on_result()
@@ -48,13 +61,12 @@ function Store_sql:stop()
 end
 
 function Store_sql:do_sql( sql,callback,... )
-    local next_id = self.next_id
-    self.next_id = self.next_id + 1
-    self._sql_:do_sql( next_id,sql,callback )
-    
+    local id = self:next_id()
+    self._sql_:do_sql( id,sql,callback )
+
     if callback then
         local args = { ... }
-        self.query[next_id] = function()
+        self.query[id] = function()
             xpcall( callback,__G__TRACKBACK__,table.unpack(args) )
         end
     end

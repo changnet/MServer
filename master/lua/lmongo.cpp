@@ -178,8 +178,8 @@ int32 lmongo::count()
         }
     }
 
-    struct mongo_query *_mq = new mongo_query();
-    _mq->set( id,1 );  /* count必须有返回 */
+    struct mongons::query *_mq = new mongons::query();
+    _mq->set( id,1,mongons::COUNT );  /* count必须有返回 */
     _mq->set( collection,query,skip,limit );
 
     bool _notify = false;

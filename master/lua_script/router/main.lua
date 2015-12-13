@@ -23,7 +23,7 @@ local function main()
     client_mgr:listen( "0.0.0.0",9997 )
 
     g_store_sql:start( "192.168.1.23",3306,"root","123456","xzc_mudrv" )
-    g_store_mongo:start( "127.0.0.1",27013,"test","test","xzc_test" )
+    g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )
     g_store_mongo:count( "item" )
     -- for i = 1,102400 do
     --     local str = string.format("insert into new_table (name,money,gold) values \

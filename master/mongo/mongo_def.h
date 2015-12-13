@@ -10,71 +10,83 @@
 
 #define MONGO_VAR_LEN    64
 
-struct mongo_query
+namespace mongons
 {
-    int32 id;
-    int32 callback;
-    char collection[MONGO_VAR_LEN];
-    int64 skip;
-    int64 limit;
-    bool _remove;
-    bool upsert;
-    bool _new;
-    bson_t *query;
-    bson_t *fields;
-    bson_t *sort;
-    bson_t *update;
-
-    mongo_query()
+    enum query_type
     {
-        id            = 0;
-        callback      = false;
-        collection[0] = '\0';
-        skip          = 0;
-        limit         = 0;
-        _remove       = false;
-        upsert        = false;
-        _new          = false;
-        query         = NULL;
-        fields        = NULL;
-        sort          = NULL;
-        update        = NULL;
-    }
+        NONE   = 0,
+        COUNT  = 1,
+    };
 
-    ~mongo_query()
+    struct query
     {
-        if ( query  ) bson_destroy( query  );
-        if ( fields ) bson_destroy( fields );
-        if ( sort   ) bson_destroy( sort   );
-        if ( update ) bson_destroy( update );
+        int32 _id;
+        query_type _ty;
+        int32 _callback;
+        char _collection[MONGO_VAR_LEN];
+        int64 _skip;
+        int64 _limit;
+        bool _remove;
+        bool _upsert;
+        bool _new;
+        bson_t *_query;
+        bson_t *_fields;
+        bson_t *_sort;
+        bson_t *_update;
 
-        query         = NULL;
-        fields        = NULL;
-        sort          = NULL;
-        update        = NULL;
-    }
+        query()
+        {
+            _ty            = NONE;
+            _id            = 0;
+            _callback      = false;
+            _collection[0] = '\0';
+            _skip          = 0;
+            _limit         = 0;
+            _remove        = false;
+            _upsert        = false;
+            _new           = false;
+            _query         = NULL;
+            _fields        = NULL;
+            _sort          = NULL;
+            _update        = NULL;
+        }
 
-    void set( int32 _id,int32 _callback )
+        ~query()
+        {
+            if ( _query  ) bson_destroy( _query  );
+            if ( _fields ) bson_destroy( _fields );
+            if ( _sort   ) bson_destroy( _sort   );
+            if ( _update ) bson_destroy( _update );
+
+            _query         = NULL;
+            _fields        = NULL;
+            _sort          = NULL;
+            _update        = NULL;
+        }
+
+        void set( int32 _id_,int32 _callback_,query_type _ty_ )
+        {
+            _ty       = _ty_;
+            _id       = _id_;
+            _callback = _callback_;
+        }
+
+        void set( const char *_collection_,bson_t *_query_ = NULL,
+            int64 _skip_ = 0,int64 _limit_ = 0 )
+            {
+                snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+                _query = _query_;
+                _skip  = _skip_;
+                _limit = _limit_;
+            }
+    };
+
+    struct result
     {
-        id       = _id;
-        callback = _callback;
-    }
-
-    void set( const char *_collection,bson_t *_query = NULL,int64 _skip = 0,
-        int64 _limit = 0 )
-    {
-        snprintf( collection,MONGO_VAR_LEN,"%s",_collection );
-        query = _query;
-        skip  = _skip;
-        limit = _limit;
-    }
-};
-
-struct mongo_result
-{
-    int64 id;
-    int32 err;
-    bson_t *result;
-};
+        int64 id;
+        int32 err;
+        bson_t *result;
+    };
+}   /* namespace mongo */
 
 #endif /* __MONGO_DEF_H__ */
