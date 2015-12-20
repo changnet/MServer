@@ -4,14 +4,14 @@
 #include "../ev/ev_def.h"
 #include "../thread/auto_mutex.h"
 
-#define notify(s,x)                                            \
-    do {                                                       \
-        int8 val = static_cast<int8>(x);                       \
-        int32 sz = ::write( s,&val,sizeof(int8) );             \
-        if ( sz != sizeof(int8) )                              \
-        {                                                      \
-            ERROR( "lsql notify error:%s\n",strerror(errno) ); \
-        }                                                      \
+#define notify(s,x)                                              \
+    do {                                                         \
+        int8 val = static_cast<int8>(x);                         \
+        int32 sz = ::write( s,&val,sizeof(int8) );               \
+        if ( sz != sizeof(int8) )                                \
+        {                                                        \
+            ERROR( "lmongo notify error:%s\n",strerror(errno) ); \
+        }                                                        \
     }while(0)
 
 lmongo::lmongo( lua_State *L )
@@ -145,6 +145,69 @@ void lmongo::routine()
 
 void lmongo::mongo_cb( ev_io &w,int32 revents )
 {
+    int8 event = 0;
+    int32 sz = ::read( w.fd,&event,sizeof(int8) );
+    if ( sz < 0 )
+    {
+        if ( errno == EAGAIN || errno == EWOULDBLOCK )
+        {
+            assert( "non-block socket,should not happen",false );
+            return;
+        }
+
+        ERROR( "mongo socket error:%s\n",strerror(errno) );
+        assert( "mongo socket broken",false );
+        abort();  /* for release */
+        return;
+    }
+    else if ( 0 == sz )
+    {
+        ERROR( "mongo socketpair close,system abort\n" );
+        assert( "mongo socketpair should not close",false);
+        abort();  /* for release */
+        return;
+    }
+    else if ( sizeof(int8) != sz )
+    {
+        ERROR( "mongo socketpair package incomplete,system abort\n" );
+        assert( "package incomplete,should not happen",false );
+        abort();  /* for release */
+        return;
+    }
+
+    switch ( event )
+    {
+        case EXIT : assert( "mongo thread should not exit itself",false );abort();break;
+        case ERR  :
+        {
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
+            int32 param = 0;
+            if ( ref_self )
+            {
+                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+                param ++;
+            }
+            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            {
+                ERROR( "mongo error call back fail:%s\n",lua_tostring(L,-1) );
+            }
+        }break;
+        case READ :
+        {
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
+            int32 param = 0;
+            if ( ref_self )
+            {
+                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+                param ++;
+            }
+            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            {
+                ERROR( "mongo error call back fail:%s\n",lua_tostring(L,-1) );
+            }
+        }break;
+        default   : assert( "unknow mongo event",false );break;
+    }
 }
 
 int32 lmongo::count()
@@ -192,7 +255,7 @@ int32 lmongo::count()
         _query.push( _mq );
     }
 
-    /* 子线程的socket是阻塞的。主线程检测到子线程正常处理sql则无需告知。防止
+    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
     if (_notify) notify( fd[0],READ );
@@ -202,7 +265,30 @@ int32 lmongo::count()
 
 int32 lmongo::next_result()
 {
-    return 0;
+    pthread_mutex_lock( &mutex );
+    if ( _result.empty() )
+    {
+        pthread_mutex_unlock( &mutex );
+        return 0;
+    }
+
+    struct mongons::result *rt = _result.front();
+    _result.pop();
+    pthread_mutex_unlock( &mutex );
+
+    lua_pushinteger( L,rt->.id );
+    lua_pushinteger( L,rt->err );
+
+    int32 rv = 2;
+    if ( rt->data )
+    {
+        result_encode( rt->data )
+        rv = 3;
+    }
+
+    delete rt;
+
+    return rv;
 }
 
 int32 lmongo::self_callback ()
@@ -222,4 +308,91 @@ int32 lmongo::error_callback()
 
 void lmongo::invoke_command()
 {
+    while ( true )
+    {
+        pthread_mutex_lock( &mutex );
+        if ( _query.empty() )
+        {
+            pthread_mutex_unlock( &mutex );
+            return;
+        }
+
+        struct mongons::query *mq = _query.front();
+        _query.pop();
+        pthread_mutex_unlock( &mutex );
+
+        struct mongons::result *res = NULL;
+        switch( mq->_ty )
+        {
+            case mongons::COUNT : res = _mongo.count( mq );break;
+            default:
+                ERROR( "unknow handle mongo command type:%d\n",mq->ty );
+                delete mq;
+                continue;
+                break;
+        }
+
+        if ( mq->callback )
+        {
+            assert( "mongo res NULL",res );
+            pthread_mutex_lock( &mutex );
+            _result.push( res );
+            pthread_mutex_unlock( &mutex );
+            notify( fd[1],READ );
+        }
+        else
+        {
+            assert( "this mongo query should not have result",!res );
+        }
+
+        delete mq;
+        mq = NULL;
+    }
+}
+
+/* 将一个bson结构转换为lua且并存放在堆栈上
+ * {
+ * BSON_TYPE_EOD           = 0x00,
+ * BSON_TYPE_DOUBLE        = 0x01,
+ * BSON_TYPE_UTF8          = 0x02,
+ * BSON_TYPE_DOCUMENT      = 0x03,
+ * BSON_TYPE_ARRAY         = 0x04,
+ * BSON_TYPE_BINARY        = 0x05,
+ * BSON_TYPE_UNDEFINED     = 0x06,
+ * BSON_TYPE_OID           = 0x07,
+ * BSON_TYPE_BOOL          = 0x08,
+ * BSON_TYPE_DATE_TIME     = 0x09,
+ * BSON_TYPE_NULL          = 0x0A,
+ * BSON_TYPE_REGEX         = 0x0B,
+ * BSON_TYPE_DBPOINTER     = 0x0C,
+ * BSON_TYPE_CODE          = 0x0D,
+ * BSON_TYPE_SYMBOL        = 0x0E,
+ * BSON_TYPE_CODEWSCOPE    = 0x0F,
+ * BSON_TYPE_INT32         = 0x10,
+ * BSON_TYPE_TIMESTAMP     = 0x11,
+ * BSON_TYPE_INT64         = 0x12,
+ * BSON_TYPE_MAXKEY        = 0x7F,
+ * BSON_TYPE_MINKEY        = 0xFF,
+ * } bson_type_t;
+*/
+void lmongo:result_encode( bson_t *doc )
+{
+    bson_iter_t iter;
+
+    if ( !bson_iter_init( &iter, doc ) )
+    {
+        ERROR( "mongo encode result,bson init error" );
+        lua_pushnil( L );
+        return;
+    }
+
+   while ( bson_iter_next( &iter ) )
+   {
+      const char *key = bson_iter_key( &iter ) );
+      switch ( bson_iter_type( &itr ) )
+      {
+
+      }
+   }
+}
 }

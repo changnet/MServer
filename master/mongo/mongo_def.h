@@ -15,7 +15,7 @@ namespace mongons
     enum query_type
     {
         NONE   = 0,
-        COUNT  = 1,
+        COUNT  = 1
     };
 
     struct query
@@ -73,19 +73,35 @@ namespace mongons
 
         void set( const char *_collection_,bson_t *_query_ = NULL,
             int64 _skip_ = 0,int64 _limit_ = 0 )
-            {
-                snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
-                _query = _query_;
-                _skip  = _skip_;
-                _limit = _limit_;
-            }
+        {
+            snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+            _query = _query_;
+            _skip  = _skip_;
+            _limit = _limit_;
+        }
     };
 
     struct result
     {
-        int64 id;
+        int32 id;
         int32 err;
-        bson_t *result;
+        bson_t *data;
+
+        result()
+        {
+            id    = 0;
+            err   = 0;
+            data  = NULL;
+        }
+
+        ~result()
+        {
+            if ( data ) bson_destroy( data );
+
+            id    = 0;
+            err   = 0;
+            data  = NULL;
+        }
     };
 }   /* namespace mongo */
 
