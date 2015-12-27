@@ -28,7 +28,7 @@
             pthread_mutex_unlock( &mutex );                    \
             notify( fd[1],READ );                              \
         }                                                      \
-        else assert( "sql should not have result",!r );        \
+        else {assert( "sql should not have result",!r );}      \
         delete query;                                          \
     }while(0)
 
@@ -264,22 +264,27 @@ void lsql::sql_cb( ev_io &w,int32 revents )
 
         ERROR( "sql socket error:%s\n",strerror(errno) );
         assert( "sql socket broken",false );
+        abort();  /* for release */
         return;
     }
     else if ( 0 == sz )
     {
+        ERROR( "sql socketpair close,system abort\n" );
         assert( "sql socketpair should not close",false);
+        abort();  /* for release */
         return;
     }
     else if ( sizeof(int8) != sz )
     {
+        ERROR( "sql socketpair package incomplete,system abort\n" );
         assert( "package incomplete,should not happen",false );
+        abort();  /* for release */
         return;
     }
 
     switch ( event )
     {
-        case EXIT : assert( "sql thread should not exit itself",false );break;
+        case EXIT : assert( "sql thread should not exit itself",false );abort();break;
         case ERR  :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );

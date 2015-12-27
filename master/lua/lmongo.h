@@ -59,8 +59,8 @@ private:
     int32 ref_read;
     int32 ref_error;
 
-    std::queue<mongons::query *> _query ;
-    std::queue<mongons::result > _result;
+    std::queue<mongons::query  *> _query ;
+    std::queue<mongons::result *> _result;
 };
 
 #endif /* __LMONGO_H__ */
