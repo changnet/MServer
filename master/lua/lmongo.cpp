@@ -276,13 +276,13 @@ int32 lmongo::next_result()
     _result.pop();
     pthread_mutex_unlock( &mutex );
 
-    lua_pushinteger( L,rt->.id );
+    lua_pushinteger( L,rt->id );
     lua_pushinteger( L,rt->err );
 
     int32 rv = 2;
     if ( rt->data )
     {
-        result_encode( rt->data )
+        result_encode( rt->data );
         rv = 3;
     }
 
@@ -326,13 +326,13 @@ void lmongo::invoke_command()
         {
             case mongons::COUNT : res = _mongo.count( mq );break;
             default:
-                ERROR( "unknow handle mongo command type:%d\n",mq->ty );
+                ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
                 delete mq;
                 continue;
                 break;
         }
 
-        if ( mq->callback )
+        if ( mq->_callback )
         {
             assert( "mongo res NULL",res );
             pthread_mutex_lock( &mutex );
@@ -351,6 +351,7 @@ void lmongo::invoke_command()
 }
 
 /* 将一个bson结构转换为lua且并存放在堆栈上
+ * https://docs.mongodb.org/v3.0/reference/bson-types/
  * {
  * BSON_TYPE_EOD           = 0x00,
  * BSON_TYPE_DOUBLE        = 0x01,
@@ -375,7 +376,88 @@ void lmongo::invoke_command()
  * BSON_TYPE_MINKEY        = 0xFF,
  * } bson_type_t;
 */
-void lmongo:result_encode( bson_t *doc )
+void lmongo::bson_encode( bson_iter_t &iter )
+{
+    lua_newtable( L );
+    while ( bson_iter_next( &iter ) )
+    {
+        const char *key = bson_iter_key( &iter );
+        switch ( bson_iter_type( &iter ) )
+        {
+            case BSON_TYPE_DOUBLE    :
+            {
+                /* 由程序员保证lua版本支持double,否则将强制转换 */
+                double val = bson_iter_double( &iter );
+                lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
+            }break;
+            case BSON_TYPE_DOCUMENT  : /* fall though */
+            case BSON_TYPE_ARRAY     :
+            {
+                bson_iter_t sub_iter;
+                if ( !bson_iter_recurse( &iter, &sub_iter ) )
+                {
+                    ERROR( "bson iter recurse error\n" );
+                    return;
+                }
+                bson_encode( iter );
+            }break;
+            case BSON_TYPE_BINARY    :
+            {
+                const char *val  = NULL;
+                uint32 len = 0;
+                bson_iter_binary( &iter,NULL,&len,reinterpret_cast<const uint8_t **>(&val) );
+                lua_pushlstring( L,val,len );
+            }break;
+            case BSON_TYPE_UTF8      :
+            {
+                uint32 len = 0;
+                const char *val = bson_iter_utf8( &iter,&len );
+                lua_pushlstring( L,val,len );
+            }break;
+            case BSON_TYPE_OID       :
+            {
+                const bson_oid_t *oid = bson_iter_oid ( &iter );
+                
+                char str[25];  /* bson api make it 25 */
+                bson_oid_to_string( oid, str );
+                lua_pushstring( L,str );
+            }break;
+            case BSON_TYPE_BOOL      :
+            {
+                bool val = bson_iter_bool( &iter );
+                lua_pushboolean( L,val );
+            }break;
+            case BSON_TYPE_NULL      :
+                /* NULL == nil in lua */
+                continue;
+                break;
+            case BSON_TYPE_INT32     :
+            {
+                int32 val = bson_iter_int32( &iter );
+                lua_pushinteger( L,val );
+            }break;
+            case BSON_TYPE_DATE_TIME :
+            {
+                /* 如果lua版本不支持，将被强制转换 */
+                int64 val = bson_iter_date_time( &iter );
+                lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
+            }break;
+            case BSON_TYPE_INT64     :
+            {
+                int64 val = bson_iter_int64( &iter );
+                lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
+            }break;
+            default :
+                ERROR( "unknow bson type:%d\n",bson_iter_type( &iter ) );
+                continue;
+                break;
+            
+            lua_setfield( L,-2,key );
+        }
+    }
+}
+
+void lmongo::result_encode( bson_t *doc )
 {
     bson_iter_t iter;
 
@@ -386,13 +468,5 @@ void lmongo:result_encode( bson_t *doc )
         return;
     }
 
-   while ( bson_iter_next( &iter ) )
-   {
-      const char *key = bson_iter_key( &iter ) );
-      switch ( bson_iter_type( &itr ) )
-      {
-
-      }
-   }
-}
+    bson_encode( iter );
 }

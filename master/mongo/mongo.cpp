@@ -101,12 +101,12 @@ struct mongons::result *mongo::count( struct mongons::query *mq )
 
     bson_error_t _err;
     int64 count = mongoc_collection_count (collection, MONGOC_QUERY_NONE,
-        mq->query, mq->skip, mq->limit, NULL, &_err );
+        mq->_query, mq->_skip, mq->_limit, NULL, &_err );
 
     mongoc_collection_destroy ( collection );
 
     struct mongons::result *result = new mongons::result();
-    result->id = mq->id;
+    result->id = mq->_id;
 
     if ( count < 0 )    /* 如果失败，返回-1 */
     {

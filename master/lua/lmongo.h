@@ -49,6 +49,8 @@ private:
     void routine();
     void invoke_command();
     void mongo_cb( ev_io &w,int32 revents );
+    void result_encode( bson_t *doc );
+    void bson_encode( bson_iter_t &iter );
 private:
     int32 fd[2]  ;
     lua_State *L ;
