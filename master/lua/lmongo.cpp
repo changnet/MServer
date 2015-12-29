@@ -243,7 +243,7 @@ int32 lmongo::count()
 
     struct mongons::query *_mq = new mongons::query();
     _mq->set( id,1,mongons::COUNT );  /* count必须有返回 */
-    _mq->set( collection,query,skip,limit );
+    _mq->set( collection,query,NULL,skip,limit );
 
     bool _notify = false;
     {
@@ -490,4 +490,72 @@ void lmongo::result_encode( bson_t *doc )
     }
 
     bson_encode( iter );
+}
+
+/* find( id,collection,query,fields,skip,limit) */
+int32 lmongo::find()
+{
+    if ( !thread::_run )
+    {
+        return luaL_error( L,"mongo thread not active" );
+    }
+
+    int32 id = luaL_checkinteger( L,1 );
+    const char *collection = luaL_checkstring( L,2 );
+    if ( !collection )
+    {
+        return luaL_error( L,"mongo find:collection not specify" );
+    }
+
+    const char *str_query  = luaL_optstring( L,3,NULL );
+    const char *str_fields = luaL_optstring( L,4,NULL );
+    int64 skip  = luaL_optinteger( L,5,0 );
+    int64 limit = luaL_optinteger( L,6,0 );
+
+    bson_t *query = NULL;
+    if ( str_query )
+    {
+        bson_error_t _err;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
+            -1,&_err );
+        if ( !query )
+        {
+            ERROR( "mongo find convert query to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo find convert query to bson err" );
+        }
+    }
+    
+    bson_t *fields = NULL;
+    if ( str_fields )
+    {
+        bson_error_t _err;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_fields),
+            -1,&_err );
+        if ( !query )
+        {
+            ERROR( "mongo find convert fields to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo find convert fields to bson err" );
+        }
+    }
+
+    struct mongons::query *_mq = new mongons::query();
+    _mq->set( id,1,mongons::FIND );  /* count必须有返回 */
+    _mq->set( collection,query,fields,skip,limit );
+
+    bool _notify = false;
+    {
+        class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
+        _query.push( _mq );
+    }
+
+    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
+
+    return 0;
 }

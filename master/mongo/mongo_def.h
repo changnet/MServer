@@ -15,7 +15,8 @@ namespace mongons
     enum query_type
     {
         NONE   = 0,
-        COUNT  = 1
+        COUNT  = 1,
+        FIND   = 2
     };
 
     struct query
@@ -72,12 +73,13 @@ namespace mongons
         }
 
         void set( const char *_collection_,bson_t *_query_ = NULL,
-            int64 _skip_ = 0,int64 _limit_ = 0 )
+            bson_t *_fields_ = NULL,int64 _skip_ = 0,int64 _limit_ = 0 )
         {
             snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
-            _query = _query_;
-            _skip  = _skip_;
-            _limit = _limit_;
+            _query  = _query_;
+            _fields = _fields_;
+            _skip   = _skip_;
+            _limit  = _limit_;
         }
     };
 

@@ -18,6 +18,7 @@ public:
     int32 stop ();
     int32 join ();
 
+    int32 find     ();
     int32 count    ();
     int32 next_result();
 
