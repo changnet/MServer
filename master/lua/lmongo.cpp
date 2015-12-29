@@ -293,16 +293,37 @@ int32 lmongo::next_result()
 
 int32 lmongo::self_callback ()
 {
+    if ( !lua_istable(L,1) )
+    {
+        return luaL_error( L,"mongo set self,argument #1 expect table" );
+    }
+
+    LUA_REF( ref_self );
+
     return 0;
 }
 
 int32 lmongo::read_callback ()
 {
+    if ( !lua_isfunction(L,1) )
+    {
+        return luaL_error( L,"mongo set read,argument #1 expect function" );
+    }
+
+    LUA_REF( ref_read );
+
     return 0;
 }
 
 int32 lmongo::error_callback()
 {
+    if ( !lua_isfunction(L,1) )
+    {
+        return luaL_error( L,"mongo set error,argument #1 expect function" );
+    }
+
+    LUA_REF( ref_error );
+
     return 0;
 }
 
@@ -448,12 +469,12 @@ void lmongo::bson_encode( bson_iter_t &iter )
                 lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
             }break;
             default :
+            {
                 ERROR( "unknow bson type:%d\n",bson_iter_type( &iter ) );
                 continue;
-                break;
-            
-            lua_setfield( L,-2,key );
+            }break;
         }
+        lua_setfield( L,-2,key );
     }
 }
 

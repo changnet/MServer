@@ -50,7 +50,14 @@ int32 mongo::connect()
      * ping保证连接通畅
      * 默认10s超时
      */
-    return ping();
+    bson_error_t err;
+    if ( ping( &err ) )
+    {
+        ERROR( "mongo connect,ping fail(%d):%s\n",err.code,err.message );
+        return 1;
+    }
+
+    return 0;
 }
 
 void mongo::disconnect()
@@ -65,7 +72,7 @@ int32 mongo::ping( bson_error_t *error )
 
     bson_t ping;
     bson_init( &ping );
-    bson_append_int32(&ping, "ping", 1, 1);
+    bson_append_int32(&ping, "ping", -1, 1);
     mongoc_database_t * database = mongoc_client_get_database( conn, db );
 
     /* cursor总是需要释放 */
@@ -84,8 +91,8 @@ int32 mongo::ping( bson_error_t *error )
     /* get the error */
     mongoc_cursor_error( cursor, error );
 
-   mongoc_cursor_destroy( cursor );
-   bson_destroy( &ping );
+    mongoc_cursor_destroy( cursor );
+    bson_destroy( &ping );
 
    return 1;
 }

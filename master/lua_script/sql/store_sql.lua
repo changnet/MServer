@@ -5,7 +5,7 @@
 -- mysql数据存储处理
 
 local Sql = require "Sql"
-local LIMIT = require "global.limit"
+local LIMIT = require "global.limits"
 
 local Store_sql = oo.class( nil,... )
 

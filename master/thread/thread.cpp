@@ -36,6 +36,7 @@ bool thread::start()
         return false;
     }
     
+    _run = true;
     return true;
 }
 
@@ -56,7 +57,6 @@ void *thread::start_routine( void *arg )
     
     signal_block();  /* 子线程不处理外部信号 */
 
-    _thread->_run = true;
     _thread->routine();
     _thread->_run = false;
 

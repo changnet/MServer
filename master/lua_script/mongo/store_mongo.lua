@@ -5,6 +5,8 @@
 -- mongo db 数据存储
 
 local Mongo = require "Mongo"
+local LIMIT = require "global.limits"
+
 local Store_mongo = oo.class( nil,... )
 
 function Store_mongo:__init()
@@ -18,6 +20,7 @@ end
 
 --[[
 底层id类型为int32，需要防止越界
+lua至少为float
 ]]
 function Store_mongo:next_id()
     if self._next_id >= LIMIT.INT32_MAX then
@@ -33,6 +36,9 @@ function Store_mongo:on_error()
 end
 
 function Store_mongo:on_result()
+    local id,err,info = self._mongo:next_result()
+    print( "mongo result ",id,err )
+    vd( info )
 end
 
 function Store_mongo:start( ip,port,usr,pwd,db )

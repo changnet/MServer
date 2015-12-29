@@ -62,8 +62,11 @@ end
 
 local function writeTrackFileLog(debug_traceback)
     local file = io.open("lua_crash.txt","a+")
-    file:write("LUA TRACK:" .. tostring(msg))
-    file:write("\r\n")
+    if not file then -- 无写入权限...
+        print(debug_traceback)
+        return
+    end
+
     file:write(debug_traceback)
     file:write("\r\n")
     file:close()
