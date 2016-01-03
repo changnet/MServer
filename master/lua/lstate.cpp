@@ -150,13 +150,13 @@ int32 luaopen_sql( lua_State *L )
     lc.def<&lsql::start> ( "start" );
     lc.def<&lsql::stop>  ( "stop"  );
     lc.def<&lsql::join>  ( "join"  );
-    
+
     lc.def<&lsql::do_sql>         ( "do_sql"         );
     lc.def<&lsql::next_result>    ( "next_result"    );
     lc.def<&lsql::self_callback > ( "self_callback"  );
     lc.def<&lsql::read_callback > ( "read_callback"  );
     lc.def<&lsql::error_callback> ( "error_callback" );
-    
+
     return 0;
 }
 
@@ -166,13 +166,14 @@ int32 luaopen_mongo( lua_State *L )
     lc.def<&lmongo::start> ( "start" );
     lc.def<&lmongo::stop>  ( "stop"  );
     lc.def<&lmongo::join>  ( "join"  );
-    
+
     lc.def<&lmongo::count>          ( "count"         );
+    lc.def<&lmongo::find>           ( "find"          );
     lc.def<&lmongo::next_result>    ( "next_result"    );
     lc.def<&lmongo::self_callback > ( "self_callback"  );
     lc.def<&lmongo::read_callback > ( "read_callback"  );
     lc.def<&lmongo::error_callback> ( "error_callback" );
-    
+
     return 0;
 }
 

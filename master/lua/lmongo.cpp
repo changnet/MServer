@@ -346,6 +346,7 @@ void lmongo::invoke_command()
         switch( mq->_ty )
         {
             case mongons::COUNT : res = _mongo.count( mq );break;
+            case mongons::FIND  : res = _mongo.find ( mq );break;
             default:
                 ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
                 delete mq;
@@ -420,7 +421,7 @@ void lmongo::bson_encode( bson_iter_t &iter )
                     ERROR( "bson iter recurse error\n" );
                     return;
                 }
-                bson_encode( iter );
+                bson_encode( sub_iter );
             }break;
             case BSON_TYPE_BINARY    :
             {
@@ -438,7 +439,7 @@ void lmongo::bson_encode( bson_iter_t &iter )
             case BSON_TYPE_OID       :
             {
                 const bson_oid_t *oid = bson_iter_oid ( &iter );
-                
+
                 char str[25];  /* bson api make it 25 */
                 bson_oid_to_string( oid, str );
                 lua_pushstring( L,str );
@@ -524,7 +525,11 @@ int32 lmongo::find()
             return luaL_error( L,"mongo find convert query to bson err" );
         }
     }
-    
+    else
+    {
+        query = bson_new(); /* find函数不允许query为NULL */
+    }
+
     bson_t *fields = NULL;
     if ( str_fields )
     {

@@ -55,4 +55,9 @@ function Store_mongo:count( collection,query,skip,limit )
     return self._mongo:count( id,collection,query,skip,limit )
 end
 
+function Store_mongo:find( collection,query,fields,skip,limit )
+    local id = self:next_id()
+    return self._mongo:find( id,collection,query,fields,skip,limit )
+end
+
 return Store_mongo

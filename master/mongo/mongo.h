@@ -20,6 +20,7 @@ public:
     void disconnect();
 
     struct mongons::result *count( struct mongons::query *mq );
+    struct mongons::result *find ( struct mongons::query *mq );
 private:
     int32 port;
     char ip [MONGO_VAR_LEN];

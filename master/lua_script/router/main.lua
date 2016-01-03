@@ -9,7 +9,7 @@ local Store_mongo = require "mongo.store_mongo"
 
 local function sig_handler( signum )
     g_store_mongo:stop()
-    g_store_sql:stop()
+    --g_store_sql:stop()
     ev:exit()
 end
 
@@ -22,9 +22,10 @@ local function main()
 
     client_mgr:listen( "0.0.0.0",9997 )
 
-    g_store_sql:start( "192.168.1.23",3306,"root","123456","xzc_mudrv" )
+    --g_store_sql:start( "127.0.0.1",3306,"root","123456","xzc_mudrv" )
     g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )
     g_store_mongo:count( "item" )
+    g_store_mongo:find( "item" )
     -- for i = 1,102400 do
     --     local str = string.format("insert into new_table (name,money,gold) values \
     --         ('xzc%d',%d,%d)",i,i*10,i*100 );
