@@ -243,7 +243,7 @@ int32 lmongo::count()
 
     struct mongons::query *_mq = new mongons::query();
     _mq->set( id,1,mongons::COUNT );  /* count必须有返回 */
-    _mq->set( collection,query,NULL,skip,limit );
+    _mq->set_count( collection,query,skip,limit );
 
     bool _notify = false;
     {
@@ -345,8 +345,9 @@ void lmongo::invoke_command()
         struct mongons::result *res = NULL;
         switch( mq->_ty )
         {
-            case mongons::COUNT : res = _mongo.count( mq );break;
-            case mongons::FIND  : res = _mongo.find ( mq );break;
+            case mongons::COUNT       : res = _mongo.count( mq );break;
+            case mongons::FIND        : res = _mongo.find ( mq );break;
+            case mongons::FIND_MODIFY : res = _mongo.find_and_modify( mq );break;
             default:
                 ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
                 delete mq;
@@ -398,7 +399,7 @@ void lmongo::invoke_command()
  * BSON_TYPE_MINKEY        = 0xFF,
  * } bson_type_t;
 */
-void lmongo::bson_encode( bson_iter_t &iter )
+void lmongo::bson_encode( bson_iter_t &iter,bool is_array )
 {
     lua_newtable( L );
     while ( bson_iter_next( &iter ) )
@@ -412,16 +413,25 @@ void lmongo::bson_encode( bson_iter_t &iter )
                 double val = bson_iter_double( &iter );
                 lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
             }break;
-            case BSON_TYPE_DOCUMENT  : /* fall though */
+            case BSON_TYPE_DOCUMENT  :
+            {
+                bson_iter_t sub_iter;
+                if ( !bson_iter_recurse( &iter, &sub_iter ) )
+                {
+                    ERROR( "bson document iter recurse error\n" );
+                    return;
+                }
+                bson_encode( sub_iter );
+            }break;
             case BSON_TYPE_ARRAY     :
             {
                 bson_iter_t sub_iter;
                 if ( !bson_iter_recurse( &iter, &sub_iter ) )
                 {
-                    ERROR( "bson iter recurse error\n" );
+                    ERROR( "bson iter array recurse error\n" );
                     return;
                 }
-                bson_encode( sub_iter );
+                bson_encode( sub_iter,true );
             }break;
             case BSON_TYPE_BINARY    :
             {
@@ -475,7 +485,19 @@ void lmongo::bson_encode( bson_iter_t &iter )
                 continue;
             }break;
         }
-        lua_setfield( L,-2,key );
+
+        if ( is_array )
+        {
+            /* lua array index start from 1
+             * lua_rawseti:Array Manipulation
+             */
+            lua_rawseti( L,-2,strtol(key,NULL,10) + 1 );
+        }
+        else
+        {
+            /* no lua_rawsetfield ?? */
+            lua_setfield( L,-2,key );
+        }
     }
 }
 
@@ -534,9 +556,9 @@ int32 lmongo::find()
     if ( str_fields )
     {
         bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_fields),
+        fields = bson_new_from_json( reinterpret_cast<const uint8 *>(str_fields),
             -1,&_err );
-        if ( !query )
+        if ( !fields )
         {
             ERROR( "mongo find convert fields to bson err:%s\n",_err.message );
             return luaL_error( L,"mongo find convert fields to bson err" );
@@ -545,12 +567,118 @@ int32 lmongo::find()
 
     struct mongons::query *_mq = new mongons::query();
     _mq->set( id,1,mongons::FIND );  /* count必须有返回 */
-    _mq->set( collection,query,fields,skip,limit );
+    _mq->set_find( collection,query,fields,skip,limit );
 
     bool _notify = false;
     {
         class auto_mutex _auto_mutex( &mutex );
         if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
+        _query.push( _mq );
+    }
+
+    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
+
+    return 0;
+}
+
+
+/* find( id,collection,query,sort,update,fields,remove,upsert,new ) */
+int32 lmongo::find_and_modify()
+{
+    if ( !thread::_run )
+    {
+        return luaL_error( L,"mongo thread not active" );
+    }
+
+    int32 id = luaL_checkinteger( L,1 );
+    const char *collection = luaL_checkstring( L,2 );
+    if ( !collection )
+    {
+        return luaL_error( L,"mongo find_and_modify:collection not specify" );
+    }
+
+    const char *str_query  = luaL_optstring( L,3,NULL );
+    const char *str_sort   = luaL_optstring( L,4,NULL );
+    const char *str_update = luaL_optstring( L,5,NULL );
+    const char *str_fields = luaL_optstring( L,6,NULL );
+    bool _remove  = lua_toboolean( L,7 );
+    bool _upsert  = lua_toboolean( L,8 );
+    bool _new     = lua_toboolean( L,9 );
+
+    bson_t *query = NULL;
+    if ( str_query )
+    {
+        bson_error_t _err;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
+            -1,&_err );
+        if ( !query )
+        {
+            ERROR( "mongo find_and_modify convert query to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo find_and_modify convert query to bson err" );
+        }
+    }
+    else
+    {
+        query = bson_new();  /* find_and_modify函数不允许query为NULL */
+    }
+
+    bson_t *sort = NULL;
+    if ( str_sort )
+    {
+        bson_error_t _err;
+        sort = bson_new_from_json( reinterpret_cast<const uint8 *>(str_sort),
+            -1,&_err );
+        if ( !sort )
+        {
+            ERROR( "mongo find_and_modify convert sort to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo find_and_modify convert sort to bson err" );
+        }
+    }
+
+    bson_t *update = NULL;
+    if ( str_update )
+    {
+        bson_error_t _err;
+        update = bson_new_from_json( reinterpret_cast<const uint8 *>(str_update),
+            -1,&_err );
+        if ( !update )
+        {
+            ERROR( "mongo find_and_modify convert update to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo find_and_modify convert update to bson err" );
+        }
+    }
+    else
+    {
+        update = bson_new();  /* update can't be NULL */
+    }
+
+    bson_t *fields = NULL;
+    if ( str_fields )
+    {
+        bson_error_t _err;
+        fields = bson_new_from_json( reinterpret_cast<const uint8 *>(str_fields),
+            -1,&_err );
+        if ( !fields )
+        {
+            ERROR( "mongo find_and_modify convert fields to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo find_and_modify convert fields to bson err" );
+        }
+    }
+
+    struct mongons::query *_mq = new mongons::query();
+    _mq->set( id,1,mongons::FIND_MODIFY );
+    _mq->set_find_modify( collection,query,sort,update,fields,_remove,_upsert,_new );
+
+    bool _notify = false;
+    {
+        class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )   /* 不要使用_query.size() */
         {
             _notify = true;
         }

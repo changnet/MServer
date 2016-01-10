@@ -21,6 +21,13 @@ local function main()
     ev:signal( 15 );
 
     client_mgr:listen( "0.0.0.0",9997 )
+    local a = 9
+    local b = 9.0
+    print( a == b,b )
+    local t = {}
+    t[a] = 99
+    t[b] = 100
+    vd( t )
 
     --g_store_sql:start( "127.0.0.1",3306,"root","123456","xzc_mudrv" )
     g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )

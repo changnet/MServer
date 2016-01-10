@@ -14,9 +14,10 @@ namespace mongons
 {
     enum query_type
     {
-        NONE   = 0,
-        COUNT  = 1,
-        FIND   = 2
+        NONE        = 0,
+        COUNT       = 1,
+        FIND        = 2,
+        FIND_MODIFY = 3
     };
 
     struct query
@@ -72,7 +73,16 @@ namespace mongons
             _callback = _callback_;
         }
 
-        void set( const char *_collection_,bson_t *_query_ = NULL,
+        void set_count( const char *_collection_,bson_t *_query_,
+            int64 _skip_ = 0,int64 _limit_ = 0 )
+        {
+            snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+            _query  = _query_;
+            _skip   = _skip_;
+            _limit  = _limit_;
+        }
+
+        void set_find( const char *_collection_,bson_t *_query_,
             bson_t *_fields_ = NULL,int64 _skip_ = 0,int64 _limit_ = 0 )
         {
             snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
@@ -80,6 +90,20 @@ namespace mongons
             _fields = _fields_;
             _skip   = _skip_;
             _limit  = _limit_;
+        }
+
+        void set_find_modify( const char *_collection_,bson_t *_query_,
+            bson_t *_sort_,bson_t *_update_,bson_t *_fields_ = NULL,
+            bool _remove_ = false,bool _upsert_ = false,bool _new_ = false )
+        {
+            snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+            _query  = _query_ ;
+            _sort   = _sort_  ;
+            _update = _update_;
+            _fields = _fields_;
+            _remove = _remove_;
+            _upsert = _upsert_;
+            _new    = _new_   ;
         }
     };
 

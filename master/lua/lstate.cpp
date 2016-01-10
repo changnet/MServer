@@ -167,12 +167,13 @@ int32 luaopen_mongo( lua_State *L )
     lc.def<&lmongo::stop>  ( "stop"  );
     lc.def<&lmongo::join>  ( "join"  );
 
-    lc.def<&lmongo::count>          ( "count"         );
-    lc.def<&lmongo::find>           ( "find"          );
-    lc.def<&lmongo::next_result>    ( "next_result"    );
-    lc.def<&lmongo::self_callback > ( "self_callback"  );
-    lc.def<&lmongo::read_callback > ( "read_callback"  );
-    lc.def<&lmongo::error_callback> ( "error_callback" );
+    lc.def<&lmongo::count>           ( "count"           );
+    lc.def<&lmongo::find>            ( "find"            );
+    lc.def<&lmongo::find_and_modify> ( "find_and_modify" );
+    lc.def<&lmongo::next_result>     ( "next_result"     );
+    lc.def<&lmongo::self_callback >  ( "self_callback"   );
+    lc.def<&lmongo::read_callback >  ( "read_callback"   );
+    lc.def<&lmongo::error_callback>  ( "error_callback"  );
 
     return 0;
 }

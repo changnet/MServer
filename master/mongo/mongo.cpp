@@ -192,3 +192,33 @@ struct mongons::result *mongo::find ( struct mongons::query *mq )
 
     return result;
 }
+
+struct mongons::result *mongo::find_and_modify ( struct mongons::query *mq )
+{
+    assert( "mongo find_and_modify,inactivity connection",conn );
+    assert( "mongo find_and_modify,empty query",mq );
+
+    mongoc_collection_t *collection = mongoc_client_get_collection( conn, db,
+        mq->_collection );
+
+    struct mongons::result *result = new mongons::result();
+    result->data = bson_new();
+    result->id = mq->_id;
+
+    bson_error_t err;
+    bool rl = mongoc_collection_find_and_modify( collection,mq->_query,
+        mq->_sort,mq->_update,mq->_fields,mq->_remove, mq->_upsert,
+        mq->_new, result->data, &err );
+
+    if ( !rl )
+    {
+        bson_destroy( result->data );
+        result->err  = err.code;
+        result->data = NULL;
+        ERROR( "mongo find_and_modify error:%s\n",err.message );
+        return result;
+    }
+    mongoc_collection_destroy ( collection );
+
+    return result;
+}

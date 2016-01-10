@@ -21,6 +21,7 @@ public:
     int32 find     ();
     int32 count    ();
     int32 next_result();
+    int32 find_and_modify();
 
     int32 self_callback ();
     int32 read_callback ();
@@ -51,7 +52,7 @@ private:
     void invoke_command();
     void mongo_cb( ev_io &w,int32 revents );
     void result_encode( bson_t *doc );
-    void bson_encode( bson_iter_t &iter );
+    void bson_encode( bson_iter_t &iter,bool is_array = false );
 private:
     int32 fd[2]  ;
     lua_State *L ;
