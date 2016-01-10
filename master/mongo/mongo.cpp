@@ -222,3 +222,25 @@ struct mongons::result *mongo::find_and_modify ( struct mongons::query *mq )
 
     return result;
 }
+
+int32 mongo::insert( struct mongons::query *mq )
+{
+    assert( "mongo insert,inactivity connection",conn );
+    assert( "mongo insert,empty query",mq );
+
+    mongoc_collection_t *collection = mongoc_client_get_collection( conn, db,
+        mq->_collection );
+
+    bson_error_t _err;
+    bool rl = mongoc_collection_insert (collection, MONGOC_QUERY_NONE,
+        mq->_query, NULL, &_err );
+
+    mongoc_collection_destroy ( collection );
+
+    if ( !rl )    /* 失败 */
+    {
+        ERROR( "mongo insert error:%s\n",_err.message );
+    }
+
+    return _err.code
+}

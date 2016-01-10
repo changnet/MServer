@@ -33,6 +33,7 @@ local function main()
     g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )
     g_store_mongo:count( "item" )
     g_store_mongo:find( "item" )
+    g_store_mongo:find_and_modify( "item",'{"_id":2009}',nil,'{"$set":{"amount":90}}' )
     -- for i = 1,102400 do
     --     local str = string.format("insert into new_table (name,money,gold) values \
     --         ('xzc%d',%d,%d)",i,i*10,i*100 );

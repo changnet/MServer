@@ -60,4 +60,9 @@ function Store_mongo:find( collection,query,fields,skip,limit )
     return self._mongo:find( id,collection,query,fields,skip,limit )
 end
 
+function Store_mongo:find_and_modify( collection,query,sort,fields,remove,upsert,new )
+    local id = self:next_id()
+    return self._mongo:find_and_modify( id,collection,query,sort,fields,remove,upsert,new )
+end
+
 return Store_mongo

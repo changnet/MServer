@@ -401,6 +401,12 @@ void lmongo::invoke_command()
 */
 void lmongo::bson_encode( bson_iter_t &iter,bool is_array )
 {
+    if ( lua_checkstack(L,3) )
+    {
+        ERROR( "bson_encode lua stack overflow\n" );
+        return;
+    }
+
     lua_newtable( L );
     while ( bson_iter_next( &iter ) )
     {
@@ -691,4 +697,194 @@ int32 lmongo::find_and_modify()
     if (_notify) notify( fd[0],READ );
 
     return 0;
+}
+
+/* insert( id,collections,info ) */
+int32 lmongo::insert()
+{
+    if ( !thread::_run )
+    {
+        return luaL_error( L,"mongo thread not active" );
+    }
+
+    int32 id = luaL_checkinteger( L,1 );
+    const char *collection = luaL_checkstring( L,2 );
+    if ( !collection )
+    {
+        return luaL_error( L,"mongo insert:collection not specify" );
+    }
+
+    bson_t *query = NULL;
+    if ( lua_istable( L,3 ) )
+    {
+        query = lua_encode( 3 );
+    }
+    else if ( lua_isstring( L,3 ) )
+    {
+        const char str_query = lua_tostring( L,3 );
+        bson_error_t _err;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
+            -1,&_err );
+        if ( !query )
+        {
+            ERROR( "mongo insert convert find to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo insert convert find to bson err" );
+        }
+    }
+    else
+    {
+        return luaL_error( L,"mongo insert argument #3 expect table or json string" );
+    }
+
+    if ( !query ) return luaL_error( "mongo insert query encode fail" );
+
+    struct mongons::query *_mq = new mongons::query();
+    _mq->set( id,0,mongons::INSERT );
+    _mq->set_insert( collection,query );
+
+    bool _notify = false;
+    {
+        class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
+        _query.push( _mq );
+    }
+
+    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
+
+    return 0;
+}
+
+/* #define LUA_TNONE		(-1)
+ *
+ * #define LUA_TNIL		0
+ * #define LUA_TBOOLEAN		1
+ * #define LUA_TLIGHTUSERDATA	2
+ * #define LUA_TNUMBER		3
+ * #define LUA_TSTRING		4
+ * #define LUA_TTABLE		5
+ * #define LUA_TFUNCTION		6
+ * #define LUA_TUSERDATA		7
+ * #define LUA_NUMTAGS		9
+ */
+bool lmongo::lua_key_encode( char *key,int32 len,int32 index )
+{
+    int32 ty = lua_type( L,index );
+    switch ( ty )
+    {
+        case LUA_TBOOLEAN :
+        {
+            snprintf( key,len,"%d",lua_toboolean( L,index ) );
+        }break;
+        case LUA_TNUMBER  :
+        {
+            if ( lua_isinteger( L,index ) )
+                snprintf( key,len,"%d",lua_tointeger( L,index ) );
+            else
+                snprintf( key,len,"%f",lua_tonumber( L,index ) );
+        }break;
+        case LUA_TSTRING :
+        {
+            snprintf( key,len,"%s",lua_tostring( L,index ) );
+        }break;
+        default :
+        {
+            ERROR( "lua_key_encode can not convert %s to bson key\n",
+                lua_typename(L,ty) );
+            return false;
+        }break;
+    }
+
+
+    return true;
+}
+
+bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
+{
+    int32 ty = lua_type( L,index );
+    switch ( ty )
+    {
+        case LUA_TBOOLEAN :
+        {
+            int32 val = lua_toboolean( L,index );
+            BSON_APPEND_BOOL( doc,key,val );
+        }break;
+        case LUA_TNUMBER :
+        {
+            if ( lua_isinteger( L,index ) )
+            {
+                /* 有可能是int32，也可能是int64 */
+                int64 val = lua_tointeger( L,index );
+                BSON_APPEND_INT64( doc,key,val );
+            }
+            else
+            {
+                double val = lua_tonumber( L,index );
+                BSON_APPEND_DOUBLE( doc,key,val );
+            }
+        }break;
+        case LUA_TSTRING :
+        {
+            const char *val = lua_tostring( L,index );
+            BSON_APPEND_UTF8( doc,key,val );
+        }break;
+        case LUA_TTABLE
+        {
+            bson_t sub_doc = lua_encode( index );
+            if ( !sub_doc )
+            {
+                ERROR( "lua_val_encode sub bson encode fail\n" );
+                return false;
+            }
+
+            /* TODO is array ? BSON_APPEND_ARRAY */
+            BSON_APPEND_DOCUMENT( doc,key,sub_doc );
+        }break;
+        default :
+        {
+            ERROR( "lua_val_encode can not convert %s to bson value\n",
+                lua_typename(L,ty) );
+            return false;
+        }break;
+    }
+
+    return true;
+}
+
+/* 注意两点:
+ * 1).可能有递归，操作lua栈时尽量使用正数栈位置
+ * 2).lua table可能有很多重，要防止栈溢出
+ */
+bson_t *lmongo::lua_encode( int32 index )
+{
+    /* 遍历一个table至少需要2个栈位置 */
+    if ( lua_checkstack( L,2 ) )
+    {
+        ERROR( "lua_encode stack overflow\n" );
+        return NULL;
+    }
+
+    bson_t *doc = bson_new();
+    lua_pushnil(L);  /* first key */
+    while ( lua_next(L, index) != 0 )
+    {
+        char key[MONGO_VAR_LEN];
+        /* 'key' (at index -2) and 'value' (at index -1) */
+        if ( !lua_key_encode( key,MONGO_VAR_LEN,index + 1 ) || !lua_val_encode( doc,key,index + 2 ) )
+        {
+            bson_destroy( doc );
+            ERROR( "lua_encode fail" );
+            return NULL;
+        }
+
+         /* removes 'value'; keeps 'key' for next iteration */
+         lua_pop(L, 1);
+    }
+
+    return doc;
 }

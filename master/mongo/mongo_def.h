@@ -17,7 +17,8 @@ namespace mongons
         NONE        = 0,
         COUNT       = 1,
         FIND        = 2,
-        FIND_MODIFY = 3
+        FIND_MODIFY = 3,
+        INSERT      = 4
     };
 
     struct query
@@ -104,6 +105,12 @@ namespace mongons
             _remove = _remove_;
             _upsert = _upsert_;
             _new    = _new_   ;
+        }
+
+        void set_insert( const char *_collection_,bson_t _query )
+        {
+            snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+            _query  = _query_ ;
         }
     };
 
