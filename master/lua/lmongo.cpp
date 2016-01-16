@@ -349,6 +349,7 @@ void lmongo::invoke_command()
             case mongons::FIND        : res = _mongo.find ( mq );break;
             case mongons::FIND_MODIFY : res = _mongo.find_and_modify( mq );break;
             case mongons::INSERT      : _mongo.insert( mq );break;
+            case mongons::UPDATE      : _mongo.update( mq );break;
             default:
                 ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
                 delete mq;
@@ -780,7 +781,7 @@ int32 lmongo::insert()
  */
 bool lmongo::lua_key_encode( char *key,int32 len,int32 index,int32 &array_index,
     int32 is_array )
-{
+{PDEBUG( "at key lua stack top is %d,key pos is %d\n",lua_gettop(L),index );
     int32 ty = lua_type( L,index );
     if ( is_array )  /* 当指定为数组时，使用自己的数组下标而不是lua的值 */
     {
@@ -886,7 +887,7 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
  * 2).lua table可能有很多重，要防止栈溢出
  */
 int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
-{
+{PDEBUG( "lua stack top is %d\n",lua_gettop(L) );
     /* 遍历一个table至少需要2个栈位置 */
     if ( !lua_checkstack( L,2 ) )
     {
@@ -897,17 +898,18 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
     int32 array_index = 0;
     int32 is_array    = lua_isarray( L,index );
 
+    int32 stack_top = lua_gettop( L ); /* 要encode的table不一定在栈顶 */
     bson_t *doc = bson_new();
     lua_pushnil(L);  /* first key */
     while ( lua_next(L, index) != 0 )
     {
         char key[MONGO_VAR_LEN];
         /* 'key' (at index -2) and 'value' (at index -1) */
-        if ( !lua_key_encode( key,MONGO_VAR_LEN,index + 1,array_index,is_array )
-            || !lua_val_encode( doc,key,index + 2 ) )
+        if ( !lua_key_encode( key,MONGO_VAR_LEN,stack_top + 1,array_index,is_array )
+            || !lua_val_encode( doc,key,stack_top + 2 ) )
         {
             bson_destroy( doc );
-            ERROR( "lua_encode fail" );
+            ERROR( "lua_encode fail\n" );
             return -1;
         }
 
@@ -915,6 +917,101 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
          lua_pop(L, 1);
     }
 
+    assert( "lua_encode stack dirty",stack_top == lua_gettop(L) );
     *pdoc = doc;
     return is_array;
+}
+
+
+/* update( id,collections,query,update,upsert,multi ) */
+int32 lmongo::update()
+{
+    if ( !thread::_run )
+    {
+        return luaL_error( L,"mongo thread not active" );
+    }
+
+    int32 id = luaL_checkinteger( L,1 );
+    const char *collection = luaL_checkstring( L,2 );
+    if ( !collection )
+    {
+        return luaL_error( L,"mongo update:collection not specify" );
+    }
+
+    bson_t *query = NULL;
+    if ( lua_istable( L,3 ) )
+    {
+        if ( lua_encode( 3,&query ) < 0 || !query )
+        {
+            return luaL_error( L,"mongo update:lua_encode argument#3 error" );
+        }
+    }
+    else if ( lua_isstring( L,3 ) )
+    {
+        const char *str_query = lua_tostring( L,3 );
+        bson_error_t _err;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
+            -1,&_err );
+        if ( !query )
+        {
+            ERROR( "mongo update convert argument#3 to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo update convert argument#3 to bson err" );
+        }
+    }
+    else
+    {
+        return luaL_error( L,"mongo update argument #3 expect table or json string" );
+    }
+
+    bson_t *update = NULL;
+    if ( lua_istable( L,4 ) )
+    {
+        if ( lua_encode( 4,&update ) < 0 || !update )
+        {
+            return luaL_error( L,"mongo update:lua_encode argument#4 error" );
+        }
+    }
+    else if ( lua_isstring( L,4 ) )
+    {
+        const char *str_update = lua_tostring( L,4 );
+        bson_error_t _err;
+        update = bson_new_from_json( reinterpret_cast<const uint8 *>(str_update),
+            -1,&_err );
+        if ( !update )
+        {
+            bson_destroy( query );
+            ERROR( "mongo update convert argument#4 to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo update convert argument#4 to bson err" );
+        }
+    }
+    else
+    {
+        bson_destroy( query );
+        return luaL_error( L,"mongo update argument #4 expect table or json string" );
+    }
+
+    int32 upsert = lua_toboolean( L,5 );
+    int32 multi  = lua_toboolean( L,6 );
+
+    assert( "mongo update query or update empty",query && update );
+    struct mongons::query *_mq = new mongons::query();
+    _mq->set( id,0,mongons::UPDATE );
+    _mq->set_update( collection,query,update,upsert,multi );
+
+    bool _notify = false;
+    {
+        class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
+        _query.push( _mq );
+    }
+
+    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
+
+    return 0;
 }

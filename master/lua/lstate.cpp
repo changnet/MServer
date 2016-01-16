@@ -170,6 +170,7 @@ int32 luaopen_mongo( lua_State *L )
     lc.def<&lmongo::count>           ( "count"           );
     lc.def<&lmongo::find>            ( "find"            );
     lc.def<&lmongo::insert>          ( "insert"          );
+    lc.def<&lmongo::update>          ( "update"          );
     lc.def<&lmongo::find_and_modify> ( "find_and_modify" );
     lc.def<&lmongo::next_result>     ( "next_result"     );
     lc.def<&lmongo::self_callback >  ( "self_callback"   );

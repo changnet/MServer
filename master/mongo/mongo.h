@@ -19,9 +19,10 @@ public:
     int32 connect();
     void disconnect();
 
+    int32 insert ( struct mongons::query *mq );
+    int32 update ( struct mongons::query *mq );
     struct mongons::result *count( struct mongons::query *mq );
     struct mongons::result *find ( struct mongons::query *mq );
-    int32 insert ( struct mongons::query *mq );
     struct mongons::result *find_and_modify( struct mongons::query *mq );
 
 private:

@@ -70,4 +70,9 @@ function Store_mongo:insert( collection,info )
     return self._mongo:insert( id,collection,info )
 end
 
+function Store_mongo:update( collection,query,info,upsert,multi )
+    local id = self:next_id()
+    return self._mongo:update( id,collection,query,info,upsert,multi )
+end
+
 return Store_mongo

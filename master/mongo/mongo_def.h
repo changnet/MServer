@@ -18,7 +18,8 @@ namespace mongons
         COUNT       = 1,
         FIND        = 2,
         FIND_MODIFY = 3,
-        INSERT      = 4
+        INSERT      = 4,
+        UPDATE      = 5
     };
 
     struct query
@@ -36,6 +37,7 @@ namespace mongons
         bson_t *_fields;
         bson_t *_sort;
         bson_t *_update;
+        int32 _flags;
 
         query()
         {
@@ -52,6 +54,7 @@ namespace mongons
             _fields        = NULL;
             _sort          = NULL;
             _update        = NULL;
+            _flags         = 0;
         }
 
         ~query()
@@ -111,6 +114,17 @@ namespace mongons
         {
             snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
             _query  = _query_ ;
+        }
+
+        void set_update( const char *_collection_,bson_t *_query_,
+            bson_t *_update_,int32 _upsert_,int32 _multi_)
+        {
+            snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+            _query  = _query_ ;
+            _update = _update_;
+
+            _flags = (_upsert_ ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE ) |
+                     ( _multi_ ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE );
         }
     };
 
