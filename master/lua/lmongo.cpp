@@ -350,6 +350,7 @@ void lmongo::invoke_command()
             case mongons::FIND_MODIFY : res = _mongo.find_and_modify( mq );break;
             case mongons::INSERT      : _mongo.insert( mq );break;
             case mongons::UPDATE      : _mongo.update( mq );break;
+            case mongons::REMOVE      : _mongo.remove( mq );break;
             default:
                 ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
                 delete mq;
@@ -922,7 +923,6 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
     return is_array;
 }
 
-
 /* update( id,collections,query,update,upsert,multi ) */
 int32 lmongo::update()
 {
@@ -997,6 +997,71 @@ int32 lmongo::update()
     struct mongons::query *_mq = new mongons::query();
     _mq->set( id,0,mongons::UPDATE );
     _mq->set_update( collection,query,update,upsert,multi );
+
+    bool _notify = false;
+    {
+        class auto_mutex _auto_mutex( &mutex );
+        if ( _query.empty() )  /* 不要使用_query.size() */
+        {
+            _notify = true;
+        }
+        _query.push( _mq );
+    }
+
+    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
+     * 子线程socket缓冲区满造成Resource temporarily unavailable
+     */
+    if (_notify) notify( fd[0],READ );
+
+    return 0;
+}
+
+/* remove( id,collections,query,multi ) */
+int32 lmongo::remove()
+{
+    if ( !thread::_run )
+    {
+        return luaL_error( L,"mongo thread not active" );
+    }
+
+    int32 id = luaL_checkinteger( L,1 );
+    const char *collection = luaL_checkstring( L,2 );
+    if ( !collection )
+    {
+        return luaL_error( L,"mongo remove:collection not specify" );
+    }
+
+    bson_t *query = NULL;
+    if ( lua_istable( L,3 ) )
+    {
+        if ( lua_encode( 3,&query ) < 0 || !query )
+        {
+            return luaL_error( L,"mongo remove:lua_encode argument#3 error" );
+        }
+    }
+    else if ( lua_isstring( L,3 ) )
+    {
+        const char *str_query = lua_tostring( L,3 );
+        bson_error_t _err;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
+            -1,&_err );
+        if ( !query )
+        {
+            ERROR( "mongo remove convert argument#3 to bson err:%s\n",_err.message );
+            return luaL_error( L,"mongo remove convert argument#3 to bson err" );
+        }
+    }
+    else
+    {
+        return luaL_error( L,"mongo remove argument #3 expect table or json string" );
+    }
+
+    int32 multi  = lua_toboolean( L,6 );
+
+    assert( "mongo remove query empty",query );
+    struct mongons::query *_mq = new mongons::query();
+    _mq->set( id,0,mongons::REMOVE );
+    _mq->set_remove( collection,query,multi );
 
     bool _notify = false;
     {

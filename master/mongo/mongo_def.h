@@ -19,7 +19,8 @@ namespace mongons
         FIND        = 2,
         FIND_MODIFY = 3,
         INSERT      = 4,
-        UPDATE      = 5
+        UPDATE      = 5,
+        REMOVE      = 6
     };
 
     struct query
@@ -125,6 +126,14 @@ namespace mongons
 
             _flags = (_upsert_ ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE ) |
                      ( _multi_ ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE );
+        }
+
+        void set_remove( const char *_collection_,bson_t *_query_,int32 _multi_)
+        {
+            snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
+            _query  = _query_ ;
+
+            _flags = _multi_ ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
         }
     };
 

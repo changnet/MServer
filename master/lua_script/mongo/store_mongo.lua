@@ -75,4 +75,9 @@ function Store_mongo:update( collection,query,info,upsert,multi )
     return self._mongo:update( id,collection,query,info,upsert,multi )
 end
 
+function Store_mongo:remove( collection,query,multi )
+    local id = self:next_id()
+    return self._mongo:remove( id,collection,query,multi )
+end
+
 return Store_mongo

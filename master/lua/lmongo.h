@@ -22,6 +22,7 @@ public:
     int32 count    ();
     int32 insert   ();
     int32 update   ();
+    int32 remove   ();
     int32 next_result();
     int32 find_and_modify();
 

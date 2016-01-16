@@ -266,3 +266,25 @@ int32 mongo::update( struct mongons::query *mq )
 
     return _err.code;
 }
+
+int32 mongo::remove( struct mongons::query *mq )
+{
+    assert( "mongo remove,inactivity connection",conn );
+    assert( "mongo remove,empty query",mq );
+
+    mongoc_collection_t *collection = mongoc_client_get_collection( conn, db,
+        mq->_collection );
+
+    bson_error_t _err;
+    bool rl = mongoc_collection_remove (collection, (mongoc_remove_flags_t)mq->_flags,
+        mq->_query, NULL, &_err );
+
+    mongoc_collection_destroy ( collection );
+
+    if ( !rl )    /* 失败 */
+    {
+        ERROR( "mongo remove error:%s\n",_err.message );
+    }
+
+    return _err.code;
+}

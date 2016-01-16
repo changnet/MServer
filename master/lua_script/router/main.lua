@@ -29,12 +29,13 @@ local function main()
     g_store_mongo:find_and_modify( "item",'{"_id":2009}',nil,'{"$set":{"amount":90}}' )
 
     local info = {}
-    --info._id  = "sfssf2434341"
     info.amount = 889
     info.ext    = "OK"
     info.list = table.array( {1,2,3,4,5,6,7,99,"abc",true,false} )
 
-    g_store_mongo:update( "item",'{}',info,true,true )
+    local query = {}
+    query._id   = 123456781
+    g_store_mongo:remove( "item",query )
     -- for i = 1,102400 do
     --     local str = string.format("insert into new_table (name,money,gold) values \
     --         ('xzc%d',%d,%d)",i,i*10,i*100 );
