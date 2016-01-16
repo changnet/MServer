@@ -65,4 +65,9 @@ function Store_mongo:find_and_modify( collection,query,sort,fields,remove,upsert
     return self._mongo:find_and_modify( id,collection,query,sort,fields,remove,upsert,new )
 end
 
+function Store_mongo:insert( collection,info )
+    local id = self:next_id()
+    return self._mongo:insert( id,collection,info )
+end
+
 return Store_mongo

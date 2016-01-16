@@ -348,6 +348,7 @@ void lmongo::invoke_command()
             case mongons::COUNT       : res = _mongo.count( mq );break;
             case mongons::FIND        : res = _mongo.find ( mq );break;
             case mongons::FIND_MODIFY : res = _mongo.find_and_modify( mq );break;
+            case mongons::INSERT      : _mongo.insert( mq );break;
             default:
                 ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
                 delete mq;
@@ -401,7 +402,7 @@ void lmongo::invoke_command()
 */
 void lmongo::bson_encode( bson_iter_t &iter,bool is_array )
 {
-    if ( lua_checkstack(L,3) )
+    if ( !lua_checkstack(L,3) )
     {
         ERROR( "bson_encode lua stack overflow\n" );
         return;
@@ -476,14 +477,16 @@ void lmongo::bson_encode( bson_iter_t &iter,bool is_array )
             }break;
             case BSON_TYPE_DATE_TIME :
             {
-                /* 如果lua版本不支持，将被强制转换 */
+                /* A 64-bit integer containing the number of milliseconds since
+                 * the UNIX epoch
+                 */
                 int64 val = bson_iter_date_time( &iter );
-                lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
+                lua_pushint64( L,val );
             }break;
             case BSON_TYPE_INT64     :
             {
                 int64 val = bson_iter_int64( &iter );
-                lua_pushnumber( L,static_cast<LUA_NUMBER>(val) );
+                lua_pushint64( L,val );
             }break;
             default :
             {
@@ -721,7 +724,7 @@ int32 lmongo::insert()
     }
     else if ( lua_isstring( L,3 ) )
     {
-        const char str_query = lua_tostring( L,3 );
+        const char *str_query = lua_tostring( L,3 );
         bson_error_t _err;
         query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
             -1,&_err );
@@ -736,7 +739,7 @@ int32 lmongo::insert()
         return luaL_error( L,"mongo insert argument #3 expect table or json string" );
     }
 
-    if ( !query ) return luaL_error( "mongo insert query encode fail" );
+    if ( !query ) return luaL_error( L,"mongo insert query encode fail" );
 
     struct mongons::query *_mq = new mongons::query();
     _mq->set( id,0,mongons::INSERT );
@@ -784,9 +787,9 @@ bool lmongo::lua_key_encode( char *key,int32 len,int32 index )
         case LUA_TNUMBER  :
         {
             if ( lua_isinteger( L,index ) )
-                snprintf( key,len,"%d",lua_tointeger( L,index ) );
+                snprintf( key,len,LUA_INTEGER_FMT,lua_tointeger( L,index ) );
             else
-                snprintf( key,len,"%f",lua_tonumber( L,index ) );
+                snprintf( key,len,LUA_NUMBER_FMT,lua_tonumber( L,index ) );
         }break;
         case LUA_TSTRING :
         {
@@ -820,7 +823,10 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
             {
                 /* 有可能是int32，也可能是int64 */
                 int64 val = lua_tointeger( L,index );
-                BSON_APPEND_INT64( doc,key,val );
+                if ( is_32bit( val ) )
+                    BSON_APPEND_INT32( doc,key,val );
+                else
+                    BSON_APPEND_INT64( doc,key,val );
             }
             else
             {
@@ -833,9 +839,9 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
             const char *val = lua_tostring( L,index );
             BSON_APPEND_UTF8( doc,key,val );
         }break;
-        case LUA_TTABLE
+        case LUA_TTABLE :
         {
-            bson_t sub_doc = lua_encode( index );
+            bson_t *sub_doc = lua_encode( index );
             if ( !sub_doc )
             {
                 ERROR( "lua_val_encode sub bson encode fail\n" );
@@ -863,7 +869,7 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
 bson_t *lmongo::lua_encode( int32 index )
 {
     /* 遍历一个table至少需要2个栈位置 */
-    if ( lua_checkstack( L,2 ) )
+    if ( !lua_checkstack( L,2 ) )
     {
         ERROR( "lua_encode stack overflow\n" );
         return NULL;

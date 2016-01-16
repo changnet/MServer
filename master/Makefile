@@ -6,9 +6,9 @@ MAKE = make
 #-w 关闭所有告警
 #-rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace() （这一系列函数使用.dynsym表内符号）这样的函数使用。
 #如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
-CFLAGS = -pipe -Wall -g
+CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
-OPTIMIZE = -O2
+OPTIMIZE =
 CC = g++
 INC = -I./deps/include -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
 LIB = -L./deps/lib -L/usr/local/lib

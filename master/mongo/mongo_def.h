@@ -107,7 +107,7 @@ namespace mongons
             _new    = _new_   ;
         }
 
-        void set_insert( const char *_collection_,bson_t _query )
+        void set_insert( const char *_collection_,bson_t *_query_ )
         {
             snprintf( _collection,MONGO_VAR_LEN,"%s",_collection_ );
             _query  = _query_ ;

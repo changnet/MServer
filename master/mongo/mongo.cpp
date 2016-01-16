@@ -232,7 +232,7 @@ int32 mongo::insert( struct mongons::query *mq )
         mq->_collection );
 
     bson_error_t _err;
-    bool rl = mongoc_collection_insert (collection, MONGOC_QUERY_NONE,
+    bool rl = mongoc_collection_insert (collection, MONGOC_INSERT_NONE,
         mq->_query, NULL, &_err );
 
     mongoc_collection_destroy ( collection );
@@ -242,5 +242,5 @@ int32 mongo::insert( struct mongons::query *mq )
         ERROR( "mongo insert error:%s\n",_err.message );
     }
 
-    return _err.code
+    return _err.code;
 }

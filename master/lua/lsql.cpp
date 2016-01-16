@@ -413,7 +413,7 @@ void lsql::result_encode( struct sql_res *res )
                     lua_pushinteger( L,static_cast<LUA_INTEGER>(atoi(cols[col].value)) );
                     break;
                 case MYSQL_TYPE_LONGLONG  :
-                    lua_pushinteger( L,static_cast<LUA_INTEGER>(atoll(cols[col].value)) );
+                    lua_pushint64( L,atoll(cols[col].value) );
                     break;
                 case MYSQL_TYPE_FLOAT   :
                 case MYSQL_TYPE_DOUBLE  :
