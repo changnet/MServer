@@ -720,7 +720,10 @@ int32 lmongo::insert()
     bson_t *query = NULL;
     if ( lua_istable( L,3 ) )
     {
-        query = lua_encode( 3 );
+        if ( lua_encode( 3,&query ) < 0 )
+        {
+            return luaL_error( L,"mongo insert:lua_encode error" );
+        }
     }
     else if ( lua_isstring( L,3 ) )
     {
@@ -775,14 +778,24 @@ int32 lmongo::insert()
  * #define LUA_TUSERDATA		7
  * #define LUA_NUMTAGS		9
  */
-bool lmongo::lua_key_encode( char *key,int32 len,int32 index )
+bool lmongo::lua_key_encode( char *key,int32 len,int32 index,int32 &array_index,
+    int32 is_array )
 {
     int32 ty = lua_type( L,index );
+    if ( is_array )  /* 当指定为数组时，使用自己的数组下标而不是lua的值 */
+    {
+        snprintf( key,len,"%d",array_index );
+        array_index ++;
+
+        return true;
+    }
+
     switch ( ty )
     {
         case LUA_TBOOLEAN :
         {
             snprintf( key,len,"%d",lua_toboolean( L,index ) );
+            is_array = false;
         }break;
         case LUA_TNUMBER  :
         {
@@ -794,6 +807,7 @@ bool lmongo::lua_key_encode( char *key,int32 len,int32 index )
         case LUA_TSTRING :
         {
             snprintf( key,len,"%s",lua_tostring( L,index ) );
+            is_array = false;
         }break;
         default :
         {
@@ -802,7 +816,6 @@ bool lmongo::lua_key_encode( char *key,int32 len,int32 index )
             return false;
         }break;
     }
-
 
     return true;
 }
@@ -823,7 +836,7 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
             {
                 /* 有可能是int32，也可能是int64 */
                 int64 val = lua_tointeger( L,index );
-                if ( is_32bit( val ) )
+                if ( lua_isbit32( val ) )
                     BSON_APPEND_INT32( doc,key,val );
                 else
                     BSON_APPEND_INT64( doc,key,val );
@@ -841,15 +854,21 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
         }break;
         case LUA_TTABLE :
         {
-            bson_t *sub_doc = lua_encode( index );
-            if ( !sub_doc )
+            bson_t *sub_doc = NULL;
+            int32 rl = lua_encode( index,&sub_doc );
+            if ( rl < 0 )
             {
                 ERROR( "lua_val_encode sub bson encode fail\n" );
                 return false;
             }
 
-            /* TODO is array ? BSON_APPEND_ARRAY */
-            BSON_APPEND_DOCUMENT( doc,key,sub_doc );
+            assert( "lua sub encode fail",sub_doc );
+
+            if ( rl )
+                BSON_APPEND_ARRAY( doc,key,sub_doc );
+            else
+                BSON_APPEND_DOCUMENT( doc,key,sub_doc );
+
         }break;
         default :
         {
@@ -866,14 +885,17 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
  * 1).可能有递归，操作lua栈时尽量使用正数栈位置
  * 2).lua table可能有很多重，要防止栈溢出
  */
-bson_t *lmongo::lua_encode( int32 index )
+int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
 {
     /* 遍历一个table至少需要2个栈位置 */
     if ( !lua_checkstack( L,2 ) )
     {
         ERROR( "lua_encode stack overflow\n" );
-        return NULL;
+        return -1;
     }
+
+    int32 array_index = 0;
+    int32 is_array    = lua_isarray( L,index );
 
     bson_t *doc = bson_new();
     lua_pushnil(L);  /* first key */
@@ -881,16 +903,18 @@ bson_t *lmongo::lua_encode( int32 index )
     {
         char key[MONGO_VAR_LEN];
         /* 'key' (at index -2) and 'value' (at index -1) */
-        if ( !lua_key_encode( key,MONGO_VAR_LEN,index + 1 ) || !lua_val_encode( doc,key,index + 2 ) )
+        if ( !lua_key_encode( key,MONGO_VAR_LEN,index + 1,array_index,is_array )
+            || !lua_val_encode( doc,key,index + 2 ) )
         {
             bson_destroy( doc );
             ERROR( "lua_encode fail" );
-            return NULL;
+            return -1;
         }
 
          /* removes 'value'; keeps 'key' for next iteration */
          lua_pop(L, 1);
     }
 
-    return doc;
+    *pdoc = doc;
+    return is_array;
 }

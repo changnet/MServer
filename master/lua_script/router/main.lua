@@ -29,8 +29,9 @@ local function main()
     g_store_mongo:find_and_modify( "item",'{"_id":2009}',nil,'{"$set":{"amount":90}}' )
 
     local info = {}
-    info.id  = 684748
+    info.id  = "sfssf2434341"
     info.amount = 888
+    info.list = table.array( {1,2,3,4,5,6,7,99,"abc",true,false} )
 
     g_store_mongo:insert( "item",info )
     -- for i = 1,102400 do
