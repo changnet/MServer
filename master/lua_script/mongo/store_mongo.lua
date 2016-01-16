@@ -80,4 +80,5 @@ function Store_mongo:remove( collection,query,multi )
     return self._mongo:remove( id,collection,query,multi )
 end
 
+-- 不提供索引函数，请开服使用脚本创建索引。见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/
 return Store_mongo

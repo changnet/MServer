@@ -29,20 +29,6 @@ public:
     int32 self_callback ();
     int32 read_callback ();
     int32 error_callback();
-
-    /*
-    http://api.mongodb.org/c/current/mongoc_collection_t.html
-    find_and_modify
-    count
-    select
-    select_one
-    insert
-    update
-    delete
-    delete_all
-    select_raw
-    ensureindex --> create_index
-    */
 private:
     enum
     {
