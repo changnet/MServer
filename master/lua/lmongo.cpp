@@ -571,6 +571,7 @@ int32 lmongo::find()
             -1,&_err );
         if ( !fields )
         {
+            bson_destroy( query );
             ERROR( "mongo find convert fields to bson err:%s\n",_err.message );
             return luaL_error( L,"mongo find convert fields to bson err" );
         }
@@ -647,6 +648,7 @@ int32 lmongo::find_and_modify()
             -1,&_err );
         if ( !sort )
         {
+            bson_destroy( query );
             ERROR( "mongo find_and_modify convert sort to bson err:%s\n",_err.message );
             return luaL_error( L,"mongo find_and_modify convert sort to bson err" );
         }
@@ -660,6 +662,8 @@ int32 lmongo::find_and_modify()
             -1,&_err );
         if ( !update )
         {
+            bson_destroy( query );
+            if ( sort ) bson_destroy( sort );
             ERROR( "mongo find_and_modify convert update to bson err:%s\n",_err.message );
             return luaL_error( L,"mongo find_and_modify convert update to bson err" );
         }
@@ -677,6 +681,9 @@ int32 lmongo::find_and_modify()
             -1,&_err );
         if ( !fields )
         {
+            bson_destroy( query );
+            if ( sort ) bson_destroy( sort );
+            bson_destroy( update );
             ERROR( "mongo find_and_modify convert fields to bson err:%s\n",_err.message );
             return luaL_error( L,"mongo find_and_modify convert fields to bson err" );
         }
@@ -968,6 +975,7 @@ int32 lmongo::update()
     {
         if ( lua_encode( 4,&update ) < 0 || !update )
         {
+            bson_destroy( query );
             return luaL_error( L,"mongo update:lua_encode argument#4 error" );
         }
     }
