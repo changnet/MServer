@@ -168,6 +168,9 @@ bool lhttp_socket::is_message_complete()
 {
     assert( "http socket is_message_complete empty",_recv.data_size() > 0 );
 
+    // TODO http_parser_execute
+    // if ( _parser->upgrade )
+
     return _state == PARSE_DONE;
 }
 

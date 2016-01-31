@@ -110,7 +110,7 @@ int32 luaopen_ev( lua_State *L )
 int32 luaopen_http_socket( lua_State *L )
 {
     lclass<lhttp_socket> lc(L,"Http_socket");
-    lc.def<&lhttp_socket::send>("send");
+    // lc.def<&lhttp_socket::send>("send");
     // lc.def<&lhttp_socket::kill>("kill");
     // lc.def<&lhttp_socket::listen> ("listen");
     // lc.def<&lhttp_socket::address>("address");
