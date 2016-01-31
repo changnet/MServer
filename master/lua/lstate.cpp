@@ -109,25 +109,19 @@ int32 luaopen_ev( lua_State *L )
 
 int32 luaopen_socket( lua_State *L )
 {
-    lclass<lsocket> lc(L,"Socket");
-    lc.def<&lsocket::send>("send");
-    lc.def<&lsocket::kill>("kill");
-    lc.def<&lsocket::listen> ("listen");
-    lc.def<&lsocket::address>("address");
-    lc.def<&lsocket::connect>("connect");
-    lc.def<&lsocket::raw_send>("raw_send");
-    lc.def<&lsocket::set_self>("set_self");
-    lc.def<&lsocket::set_read>("set_read");
-    lc.def<&lsocket::set_accept>("set_accept");
-    lc.def<&lsocket::set_connected>("set_connected");
-    lc.def<&lsocket::set_disconnected>("set_disconnected");
-    lc.def<&lsocket::file_description>("file_description");
-
-    lc.set( "ERROR" ,socket::SK_ERROR  );
-    lc.set( "SERVER",socket::SK_SERVER );
-    lc.set( "CLIENT",socket::SK_CLIENT );
-    lc.set( "LISTEN",socket::SK_LISTEN );
-    lc.set( "HTTP"  ,socket::SK_HTTP   );
+    // lclass<lsocket> lc(L,"Socket");
+    // lc.def<&lsocket::send>("send");
+    // lc.def<&lsocket::kill>("kill");
+    // lc.def<&lsocket::listen> ("listen");
+    // lc.def<&lsocket::address>("address");
+    // lc.def<&lsocket::connect>("connect");
+    // lc.def<&lsocket::raw_send>("raw_send");
+    // lc.def<&lsocket::set_self>("set_self");
+    // lc.def<&lsocket::set_read>("set_read");
+    // lc.def<&lsocket::set_accept>("set_accept");
+    // lc.def<&lsocket::set_connected>("set_connected");
+    // lc.def<&lsocket::set_disconnected>("set_disconnected");
+    // lc.def<&lsocket::file_description>("file_description");
 
     return 0;
 }

@@ -5,7 +5,6 @@
 
 socket::socket()
 {
-    _type   = SK_ERROR;
     sending = 0;
 }
 

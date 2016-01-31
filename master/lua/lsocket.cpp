@@ -1,17 +1,14 @@
 #include "lsocket.h"
 #include "ltools.h"
-#include "../lua/leventloop.h"
-#include "../lua/lclass.h"
-#include "../net/buffer_process.h"
-#include "../net/packet.h"
+#include "leventloop.h"
 
 lsocket::lsocket( lua_State *L )
     : L(L)
 {
     ref_self       = 0;
-    ref_read       = 0;
-    ref_accept     = 0;
-    ref_connected  = 0;
+    ref_message    = 0;
+    ref_acception  = 0;
+    ref_connection = 0;
     ref_disconnect = 0;
 }
 
@@ -21,28 +18,12 @@ lsocket::~lsocket()
 
     /* 释放引用，如果有内存问题，可查一下这个地方 */
     LUA_UNREF( ref_self       );
-    LUA_UNREF( ref_read       );
-    LUA_UNREF( ref_accept     );
-    LUA_UNREF( ref_connected  );
+    LUA_UNREF( ref_message    );
+    LUA_UNREF( ref_acception  );
+    LUA_UNREF( ref_connection );
     LUA_UNREF( ref_disconnect );
 
     assert( "socket not clean",0 == sending && (!w.is_active()) );
-}
-
-/* 发送数据 */
-int32 lsocket::send()
-{
-    if ( !w.is_active() )
-    {
-        return luaL_error( L,"socket not valid" );
-    }
-
-    /* TODO
-     * 发送数据要先把数据放到缓冲区，然后加入send列表，最后在epoll循环中发送，等待
-     * ev整合到backend中才处理
-     * 现在只是处理字符串
-     */
-     return 0;
 }
 
 int32 lsocket::kill()
@@ -73,7 +54,6 @@ int32 lsocket::listen()
     }
 
     int32 port = luaL_checkinteger( L,2 );
-    _type = static_cast<socket::SOCKET_TYPE>( luaL_checkinteger( L, 3 ) );
 
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 )
@@ -148,7 +128,6 @@ int32 lsocket::connect()
     }
 
     const int32 port = luaL_checkinteger( L,2 );
-    _type = static_cast<socket::SOCKET_TYPE>( luaL_checkinteger( L,3 ) );
 
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 )
@@ -156,7 +135,6 @@ int32 lsocket::connect()
         lua_pushnil( L );
         return 1;
     }
-
 
     if ( socket::non_block( fd ) < 0 )
     {
@@ -190,7 +168,7 @@ int32 lsocket::connect()
 }
 
 /* 发送原始数据，二进制或字符串 */
-int32 lsocket::raw_send()
+int32 lsocket::send()
 {
     if ( !w.is_active() )
     {
@@ -221,58 +199,7 @@ int32 lsocket::raw_send()
     return 0;
 }
 
-void lsocket::listen_cb( ev_io &w,int32 revents )
-{
-    assert( "libev listen cb  error",!(EV_ERROR & revents) );
-
-    class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
-    while ( w.is_active() )
-    {
-        int32 new_fd = ::accept( w.fd,NULL,NULL );
-        if ( new_fd < 0 )
-        {
-            if ( EAGAIN != errno && EWOULDBLOCK != errno )
-            {
-                FATAL( "accept fail:%s\n",strerror(errno) );
-                return;
-            }
-
-            break;  /* 所有等待的连接已处理完 */
-        }
-
-        socket::non_block( new_fd );
-        KEEP_ALIVE( new_fd );
-        USER_TIMEOUT( new_fd );
-
-        /* 直接进入监听 */
-        class lsocket *_socket = new class lsocket( L );
-        _socket->set_type( _type );
-        (_socket->w).set( loop );
-        (_socket->w).set<lsocket,&lsocket::read_cb>( _socket );
-        (_socket->w).start( new_fd,EV_READ );  /* 这里会设置fd */
-
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_accept);
-        int32 param = 1;
-        if ( ref_self )
-        {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-            param ++;
-        }
-        lclass<lsocket>::push( L,_socket,true );
-        if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
-        {
-            /* 如果失败，会出现几种情况：
-             * 1) lua能够引用socket，只是lua其他逻辑出错
-             * 2) lua不能引用socket，导致lua层gc时会销毁socket,ev还来不及fd_reify，又
-             *    将此fd删除，触发一个错误
-             */
-            ERROR( "listen cb call accept handler fail:%s\n",lua_tostring(L,-1) );
-            return;
-        }
-    }
-}
-
-void lsocket::read_cb( ev_io &w,int32 revents )
+void lsocket::message_cb( ev_io &w,int32 revents )
 {
     assert( "libev read cb error",!(EV_ERROR & revents) );
 
@@ -296,14 +223,141 @@ void lsocket::read_cb( ev_io &w,int32 revents )
     {
         if ( EAGAIN != errno && EWOULDBLOCK != errno )
         {
-            ERROR( "socket read_cb error:%s\n",strerror(errno) );
+            ERROR( "socket message_cb error:%s\n",strerror(errno) );
             on_disconnect();
         }
         return;
     }
 
-    /* read data */
-    packet_parse();
+    message_notify();
+}
+
+void lsocket::on_disconnect()
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
+    int32 param = 0;
+    if ( ref_self )
+    {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
+        param ++;
+    }
+    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+    {
+        ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
+        // DO NOT RETURN
+    }
+
+    /* 关闭fd，但不要delete
+     * 先回调lua，再close.lua可能会调用一些函数，如取fd
+     */
+    socket::close();
+}
+
+/* 此框架中，socket的内存由lua管理，无法预知lua会何时释放内存
+ * 因此不要在C++层while去解析协议
+ */
+void lsocket::message_notify()
+{
+    if ( !is_message_complete() ) return;
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_message);
+    int32 param = 0;
+    if ( ref_self )
+    {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
+        param ++;
+    }
+    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+    {
+        ERROR( "message_notify fail:%s\n",lua_tostring(L,-1) );
+        return;
+    }
+}
+
+int32 lsocket::address()
+{
+    if ( !w.is_active() )
+    {
+        return luaL_error( L,"listen:socket already active");
+    }
+
+    struct sockaddr_in addr;
+    memset( &addr, 0, sizeof(struct sockaddr_in));
+    socklen_t len = sizeof(struct sockaddr_in);
+
+    if ( getpeername( w.fd, (struct sockaddr *)&addr, &len) < 0 )
+    {
+        return luaL_error( L,"getpeername error: %s",strerror(errno) );
+    }
+
+    lua_pushstring( L,inet_ntoa(addr.sin_addr) );
+    return 1;
+}
+
+int32 lsocket::set_self_ref()
+{
+    if ( !lua_istable( L,1 ) )
+    {
+        return luaL_error( L,"set_self_ref,argument illegal.expect table" );
+    }
+
+    LUA_REF( ref_self );
+
+    return 0;
+}
+
+int32 lsocket::set_on_message()
+{
+    if ( !lua_isfunction( L,1 ) )
+    {
+        return luaL_error( L,"set_on_message,argument illegal.expect function" );
+    }
+
+    LUA_REF( ref_message );
+
+    return 0;
+}
+
+int32 lsocket::set_on_acception()
+{
+    if ( !lua_isfunction( L,1 ) )
+    {
+        return luaL_error( L,"set_on_acception,argument illegal.expect function" );
+    }
+
+    LUA_REF( ref_acception );
+
+    return 0;
+}
+
+int32 lsocket::set_on_connection()
+{
+    if ( !lua_isfunction( L,1 ) )
+    {
+        return luaL_error( L,"set_on_connection,argument illegal.expect function" );
+    }
+
+    LUA_REF( ref_connection );
+
+    return 0;
+}
+
+int32 lsocket::set_on_disconnect()
+{
+    if ( !lua_isfunction( L,1 ) )
+    {
+        return luaL_error( L,"set_on_disconnect,argument illegal.expect function" );
+    }
+
+    LUA_REF( ref_disconnect );
+
+    return 0;
+}
+
+int32 lsocket::file_description()
+{
+    lua_pushinteger( L,w.fd );
+    return 1;
 }
 
 /*
@@ -317,7 +371,7 @@ void lsocket::read_cb( ev_io &w,int32 revents )
  * 1）连接成功建立时，socket 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
  * 2）连接建立失败时，socket 描述字既可读又可写。 （由于有未决的错误，从而可读又可写）
  */
-void lsocket::connect_cb( ev_io &w,int32 revents )
+void lsocket::connect_cb ( ev_io &w,int32 revents )
 {
     assert( "libev connect cb error",!(EV_ERROR & revents) );
 
@@ -333,7 +387,7 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
         // DON NOT return
     }
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connected);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connection);
     int32 param = 1;
     if ( ref_self )
     {
@@ -358,168 +412,7 @@ void lsocket::connect_cb( ev_io &w,int32 revents )
     USER_TIMEOUT( fd );
 
     w.stop();   /* 先stop再设置消耗要小一些 */
-    w.set<lsocket,&lsocket::read_cb>( this );
+    w.set<lsocket,&lsocket::message_cb>( this );
     w.set( EV_READ ); /* 将之前的write改为read */
     w.start();
-}
-
-void lsocket::on_disconnect()
-{
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
-    int32 param = 0;
-    if ( ref_self )
-    {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-        param ++;
-    }
-    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
-    {
-        ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
-        // DO NOT RETURN
-    }
-
-    /* 关闭fd，但不要delete
-     * 先回调lua，再close.lua可能会调用一些函数，如取fd
-     */
-    socket::close();
-}
-
-void lsocket::packet_parse()
-{
-    parse_func pft = NULL;
-    if ( socket::SK_SERVER == _type )
-    {
-        pft = buffer_process::server_parse;
-    }
-    else if ( socket::SK_CLIENT == _type)
-    {
-        pft = buffer_process::client_parse;
-    }
-    else
-    {
-        on_disconnect();
-        ERROR( "packet parse unhandle type" );
-        return;
-    }
-
-    struct packet _packet;
-
-    while ( _recv.data_size() > 0 )
-    {
-        int32 result = pft( _recv,_packet );
-
-        if ( result > 0 )
-        {
-            /* TODO 包自动转发，protobuf协议解析 */
-            _recv.moveon( result );
-
-            lua_rawgeti(L, LUA_REGISTRYINDEX, ref_read);
-            int32 param = 1;
-            if ( ref_self )
-            {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-                param ++;
-            }
-            lua_pushstring( L,_packet.pkt );
-            if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
-            {
-                ERROR( "read_cb fail:%s\n",lua_tostring(L,-1) );
-                return;
-            }
-        }
-        else
-            break;
-    }
-
-    assert( "buffer over boundary",_recv.data_size() >= 0 &&
-        _recv.size() <= _recv.length() );
-    /* 缓冲区为空，尝试清理悬空区 */
-    if ( 0 == _recv.data_size() )
-        _recv.clear();
-}
-
-int32 lsocket::address()
-{
-    if ( !w.is_active() )
-    {
-        return luaL_error( L,"listen:socket already active");
-    }
-
-    struct sockaddr_in addr;
-    memset( &addr, 0, sizeof(struct sockaddr_in));
-    socklen_t len = sizeof(struct sockaddr_in);
-
-    if ( getpeername( w.fd, (struct sockaddr *)&addr, &len) < 0 )
-    {
-        return luaL_error( L,"getpeername error: %s",strerror(errno) );
-    }
-
-    lua_pushstring( L,inet_ntoa(addr.sin_addr) );
-    return 1;
-}
-
-int32 lsocket::set_self()
-{
-    if ( !lua_istable( L,1 ) )
-    {
-        return luaL_error( L,"set_self,argument illegal.expect table" );
-    }
-
-    LUA_REF( ref_self );
-
-    return 0;
-}
-
-int32 lsocket::set_read()
-{
-    if ( !lua_isfunction( L,1 ) )
-    {
-        return luaL_error( L,"set_read,argument illegal.expect function" );
-    }
-
-    LUA_REF( ref_read );
-
-    return 0;
-}
-
-int32 lsocket::set_accept()
-{
-    if ( !lua_isfunction( L,1 ) )
-    {
-        return luaL_error( L,"set_accept,argument illegal.expect function" );
-    }
-
-    LUA_REF( ref_accept );
-
-    return 0;
-}
-
-int32 lsocket::set_connected()
-{
-    if ( !lua_isfunction( L,1 ) )
-    {
-        return luaL_error( L,"set_connected,argument illegal.expect function" );
-    }
-
-    LUA_REF( ref_connected );
-
-    return 0;
-}
-
-int32 lsocket::set_disconnected()
-{
-    if ( !lua_isfunction( L,1 ) )
-    {
-        return luaL_error( L,"set_disconnected,argument illegal.expect function" );
-    }
-
-    LUA_REF( ref_disconnect );
-
-    return 0;
-}
-
-int32 lsocket::file_description()
-{
-    lua_pushinteger( L,w.fd );
-    return 1;
 }

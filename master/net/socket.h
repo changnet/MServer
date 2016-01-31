@@ -25,35 +25,20 @@
 class socket
 {
 public:
-    typedef enum
-    {
-        SK_ERROR   = 0,
-        SK_SERVER  = 1,
-        SK_CLIENT  = 2,
-        SK_LISTEN  = 3,
-        SK_HTTP    = 4
-    }SOCKET_TYPE;
-
     ev_io w;
     int32 sending;
     buffer _recv;
     buffer _send;
-    SOCKET_TYPE _type;
 
 public:
     socket();
     virtual ~socket();
-    
+
     void close();
-    
+
     inline int32 fd() const
     {
         return w.fd;
-    }
-
-    inline void set_type(SOCKET_TYPE ty )
-    {
-        _type = ty;
     }
 
     void on_disconnect() {}
