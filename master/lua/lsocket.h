@@ -34,7 +34,6 @@ public:
     virtual void listen_cb  ( ev_io &w,int32 revents ) = 0;
 private:
     void on_disconnect();
-    void message_notify();
 protected:
     int32 ref_self;
     int32 ref_message;

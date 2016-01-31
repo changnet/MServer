@@ -1,8 +1,7 @@
 #ifndef __HTTP_SOCKET_H__
 #define __HTTP_SOCKET_H__
 
-#include <map>
-#include <http_parser.h>  /* deps/include */
+
 #include "socket.h"
 
 /* http协议并不那么严谨。至少部分字段可有可无，甚至content length也可以没有。
@@ -15,14 +14,7 @@
 
 class http_socket : public socket
 {
-public:
-    int32 get_head_field();
-    int32 get_url();
-    int32 get_body();
-private:
-    std::string _url;
-    std::string _body;
-    std::map< std::string,std::string > _head_field;
+
 };
 
 #endif /* __HTTP_SOCKET_H__ */

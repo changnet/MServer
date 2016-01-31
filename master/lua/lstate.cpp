@@ -3,7 +3,7 @@
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
-#include "lsocket.h"
+#include "lhttp_socket.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
 
@@ -52,7 +52,7 @@ lstate::~lstate()
 
 int32 luaopen_ev    ( lua_State *L );
 int32 luaopen_util  ( lua_State *L );
-int32 luaopen_socket( lua_State *L );
+int32 luaopen_http_socket( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
@@ -81,7 +81,7 @@ void lstate::open_cpp()
     lua_pop(L, 1);  /* remove lib */
 
     luaopen_ev    (L);
-    luaopen_socket(L);
+    luaopen_http_socket(L);
     luaopen_timer (L);
     luaopen_sql   (L);
     luaopen_mongo (L);
@@ -107,21 +107,20 @@ int32 luaopen_ev( lua_State *L )
     return 0;
 }
 
-int32 luaopen_socket( lua_State *L )
+int32 luaopen_http_socket( lua_State *L )
 {
-    // lclass<lsocket> lc(L,"Socket");
-    // lc.def<&lsocket::send>("send");
-    // lc.def<&lsocket::kill>("kill");
-    // lc.def<&lsocket::listen> ("listen");
-    // lc.def<&lsocket::address>("address");
-    // lc.def<&lsocket::connect>("connect");
-    // lc.def<&lsocket::raw_send>("raw_send");
-    // lc.def<&lsocket::set_self>("set_self");
-    // lc.def<&lsocket::set_read>("set_read");
-    // lc.def<&lsocket::set_accept>("set_accept");
-    // lc.def<&lsocket::set_connected>("set_connected");
-    // lc.def<&lsocket::set_disconnected>("set_disconnected");
-    // lc.def<&lsocket::file_description>("file_description");
+    lclass<lhttp_socket> lc(L,"Http_socket");
+    lc.def<&lhttp_socket::send>("send");
+    // lc.def<&lhttp_socket::kill>("kill");
+    // lc.def<&lhttp_socket::listen> ("listen");
+    // lc.def<&lhttp_socket::address>("address");
+    // lc.def<&lhttp_socket::connect>("connect");
+    // lc.def<&lhttp_socket::set_self_ref>("set_self_ref");
+    // lc.def<&lhttp_socket::set_on_message>("set_on_message");
+    // lc.def<&lhttp_socket::set_on_acception>("set_on_acception");
+    // lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
+    // lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
+    // lc.def<&lhttp_socket::file_description>("file_description");
 
     return 0;
 }

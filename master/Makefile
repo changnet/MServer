@@ -30,6 +30,9 @@ OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
 
+$(ODIR)/lhttp_socket.o: ./deps/include/http_parser.c $(SDIR)/lua/lhttp_socket.cpp
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+
 $(ODIR)/%.o: $(SDIR)/global/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
 

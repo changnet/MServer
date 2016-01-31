@@ -229,7 +229,23 @@ void lsocket::message_cb( ev_io &w,int32 revents )
         return;
     }
 
-    message_notify();
+    /* 此框架中，socket的内存由lua管理，无法预知lua会何时释放内存
+     * 因此不要在C++层用while去解析协议
+     */
+    if ( !is_message_complete() ) return;
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_message);
+    int32 param = 0;
+    if ( ref_self )
+    {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
+        param ++;
+    }
+    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+    {
+        ERROR( "message_notify fail:%s\n",lua_tostring(L,-1) );
+        return;
+    }
 }
 
 void lsocket::on_disconnect()
@@ -251,27 +267,6 @@ void lsocket::on_disconnect()
      * 先回调lua，再close.lua可能会调用一些函数，如取fd
      */
     socket::close();
-}
-
-/* 此框架中，socket的内存由lua管理，无法预知lua会何时释放内存
- * 因此不要在C++层while去解析协议
- */
-void lsocket::message_notify()
-{
-    if ( !is_message_complete() ) return;
-
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_message);
-    int32 param = 0;
-    if ( ref_self )
-    {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-        param ++;
-    }
-    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
-    {
-        ERROR( "message_notify fail:%s\n",lua_tostring(L,-1) );
-        return;
-    }
 }
 
 int32 lsocket::address()

@@ -14,16 +14,14 @@ ubuntu 14.04
 
 
 #what had done
-1. rewrite libev core
-2. cpp binding with lua
+1. 重写libev,仅保留io、timer
+2. C++与lua交互封装
 3. 自定义socket内存池
 4. 基于mysql c connector封装mysql lua模块
+5. 基于mongo c driver封装mongodb lua模块
+6. 基于http-parser的http (client/server)模块
 
 #TODO
-1. socket
-2. thread
-3. callback(socketpair pipe eventfd)
-4. mysql、mongodb
 5. http(http-parser、libcurl)
 6. protobuf、platbuffer
 7. astar、rsa、zlib、md5、uuid、cjson、xml
@@ -32,14 +30,8 @@ ubuntu 14.04
 10. 底层包自动转发
 11. 关键字过滤(全文检索算法)
 12. 寻路算法
-13. 将socket、timer从ev分离成独立库，从lua传入ev或者底层做单例instance获取，还是要
-    实现socket自杀的情况
-14. 主线程要定时判断子线程是否退出(子线程可能做不到任何情况下都通知，可以考虑fd关闭
-    消息，需要测试)
 15. 测试查询大量结果导致out of memory后线程能否恢复
 16. 为lua提供LRU、LFU、优先队列、大小堆等常用数据
 #TOSOLVE
-1. thread 当前有lua控制，需要重新设计join(把join暴露给Sql，自己退出时在主线程调join)
-2. packet_parse中还需要解决自杀问题(把on_read事件给lua，在lua中调用packet_parse),
-   accept同样需要处理此问题
+1. lsocket不再继承socket，改用组合方式
 3. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确

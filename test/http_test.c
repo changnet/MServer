@@ -84,10 +84,11 @@ int main(){
 				  "\r\n"
 				  "hello";
 
-	char buf1[] = "GET /demo  HTTP/1.1\r\nHost: www.baidu.com\r\n\r\n";
-	int cut = 6;
-	http_parser_execute(&parser,&settings,buf1,cut);
-	http_parser_execute(&parser,&settings,buf1+cut,strlen(buf1)-cut);
+	char buf1[] = "GET /demo  HTTP/1.1\r\nHo";
+	int cut = 25;
+	http_parser_execute(&parser,&settings,buf1,strlen(buf1));
+	char buf2[] = "st: www.baidu.com\r\n\r\n";
+	http_parser_execute(&parser,&settings,buf2,strlen(buf2));
 	// http_parser_execute(&parser,&settings,buf,strlen("GET /demo HTTP/1.1\r\n"));
 	// http_parser_execute(&parser,&settings,buf+strlen("GET /demo HTTP/1.1\r\n"),sizeof(buf) - strlen("GET /demo HTTP/1.1\r\n"));
 

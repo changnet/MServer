@@ -11,7 +11,7 @@ int32 buffer_process::server_parse( class buffer &_buffer,struct packet &_packet
         if ( '\0' == *(_buffer._buff + i) )
         {
             _packet.pkt = _buffer._buff + _buffer._pos;
-            
+
             return strlen(_packet.pkt)+1;
         }
     }
@@ -26,7 +26,22 @@ int32 buffer_process::client_parse( class buffer &_buffer,struct packet &_packet
         if ( '\0' == *(_buffer._buff + i) )
         {
             _packet.pkt = _buffer._buff + _buffer._pos;
-            
+
+            return strlen(_packet.pkt)+1;
+        }
+    }
+
+    return 0;
+}
+
+int32 buffer_process::http_parse( class buffer &_buffer,struct packet &_packet )
+{
+    for ( uint32 i = _buffer._pos;i < _buffer._size;i ++ )
+    {
+        if ( '\0' == *(_buffer._buff + i) )
+        {
+            _packet.pkt = _buffer._buff + _buffer._pos;
+
             return strlen(_packet.pkt)+1;
         }
     }
