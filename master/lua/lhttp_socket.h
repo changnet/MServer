@@ -50,6 +50,7 @@ private:
 
 private:
     enum parse_state _state;
+    bool _upgrade;
     http_parser *_parser;
     std::string _url;
     std::string _body;

@@ -110,17 +110,17 @@ int32 luaopen_ev( lua_State *L )
 int32 luaopen_http_socket( lua_State *L )
 {
     lclass<lhttp_socket> lc(L,"Http_socket");
-    //lc.def<&lhttp_socket::send>("send");
-    // lc.def<&lhttp_socket::kill>("kill");
-    // lc.def<&lhttp_socket::listen> ("listen" );
-    // lc.def<&lhttp_socket::address>("address");
-    // lc.def<&lhttp_socket::connect>("connect");
-    // lc.def<&lhttp_socket::set_self_ref>     ("set_self_ref"     );
-    // lc.def<&lhttp_socket::set_on_message>   ("set_on_message"   );
-    // lc.def<&lhttp_socket::set_on_acception> ("set_on_acception" );
-    // lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
-    // lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
-    // lc.def<&lhttp_socket::file_description> ("file_description" );
+    lc.def<&lhttp_socket::send>("send");
+    lc.def<&lhttp_socket::kill>("kill");
+    lc.def<&lhttp_socket::listen> ("listen" );
+    lc.def<&lhttp_socket::address>("address");
+    lc.def<&lhttp_socket::connect>("connect");
+    lc.def<&lhttp_socket::set_self_ref>     ("set_self_ref"     );
+    lc.def<&lhttp_socket::set_on_message>   ("set_on_message"   );
+    lc.def<&lhttp_socket::set_on_acception> ("set_on_acception" );
+    lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
+    lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
+    lc.def<&lhttp_socket::file_description> ("file_description" );
 
     return 0;
 }

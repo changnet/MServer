@@ -92,8 +92,9 @@ static http_parser_settings settings = {
 lhttp_socket::lhttp_socket( lua_State *L )
     : lsocket( L )
 {
-    _parser = NULL;
-    _state  = PARSE_NONE;
+    _parser  = NULL;
+    _state   = PARSE_NONE;
+    _upgrade = false;
     //HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
     enum http_parser_type ty = static_cast<enum http_parser_type>(
         luaL_checkinteger( L,1 ) );
@@ -166,10 +167,22 @@ void lhttp_socket::listen_cb( ev_io &w,int32 revents )
 
 bool lhttp_socket::is_message_complete()
 {
-    assert( "http socket is_message_complete empty",_recv.data_size() > 0 );
+    uint32 dsize = _recv.data_size();
+    assert( "http socket is_message_complete empty",dsize > 0 );
 
-    // TODO http_parser_execute
-    // if ( _parser->upgrade )
+    int32 nparsed = http_parser_execute( _parser,&settings,
+        _recv._buff + _recv._pos,dsize );
+    
+    /* web_socket报文，暂时不用回调到上层，返回false等待数据报文 */
+    if ( _parser->upgrade )
+    {
+        _upgrade = true;
+        return false;
+    }
+    else if ( nparsed != dsize )  /* error */
+    {
+        return false;
+    }
 
     return _state == PARSE_DONE;
 }
