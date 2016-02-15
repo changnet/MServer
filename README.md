@@ -33,5 +33,5 @@ ubuntu 14.04
 15. 测试查询大量结果导致out of memory后线程能否恢复
 16. 为lua提供LRU、LFU、优先队列、大小堆等常用数据
 #TOSOLVE
-1. lsocket不再继承socket，改用组合方式
+1. lsocket不再继承socket，改用组合方式(message_cb需要使用ev_io)
 3. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确

@@ -227,14 +227,14 @@ int32 lhttp_socket::get_head_field()
 
 int32 lhttp_socket::get_url()
 {
-    lua_pushstring( _url.c_str() );
+    lua_pushstring( L,_url.c_str() );
 
     return 1;
 }
 
 int32 lhttp_socket::get_body()
 {
-    lua_pushstring( _body.c_str() );
+    lua_pushstring( L,_body.c_str() );
 
     return 1;
 }
@@ -246,7 +246,7 @@ int32 lhttp_socket::get_method()
         return luaL_error( L,"http socket get method uninit socket");
     }
 
-    const char *method = http_method_str( _parser->method );
+    const char *method = http_method_str( static_cast<enum http_method>(_parser->method) );
     lua_pushstring( L,method );
 
     return 1;

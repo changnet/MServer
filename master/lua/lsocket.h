@@ -19,13 +19,12 @@ public:
     int32 listen  ();
     int32 connect ();
 
-    int32 set_self_ref();
+    int32 set_self_ref  ();
     int32 set_on_message();
-    int32 set_on_acception();
+    int32 set_on_acception ();
     int32 set_on_connection();
     int32 set_on_disconnect();
-
-    int32 file_description();
+    int32 file_description ();
 
     void message_cb ( ev_io &w,int32 revents );
     void connect_cb ( ev_io &w,int32 revents );
