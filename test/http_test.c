@@ -75,7 +75,7 @@ int main(){
         .on_message_complete = on_message_complete,
     };
     http_parser parser;
-    http_parser_init(&parser, HTTP_REQUEST);
+    http_parser_init(&parser, HTTP_BOTH);
 
 
     char buff[] = "GET /demo HTTP/1.1\r\n"

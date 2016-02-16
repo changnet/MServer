@@ -188,7 +188,7 @@ int32 lsocket::send()
 
     assert( "raw_send illegal fd",w.fd > 0 );
 
-    /* raw_send是一个原始的发送函数,数据不经过协议处理(不经protobuf
+    /* 原始的发送函数,数据不经过协议处理(不经protobuf
      * 处理，不包含协议号...)，可以发送二进制或字符串。
      * 比如把战报写到文件，读出来后可以直接用此函数发送
      * 又或者向php发送json字符串

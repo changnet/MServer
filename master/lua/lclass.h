@@ -204,17 +204,21 @@ private:
     /* 创建c对象 */
     static int cnew(lua_State* L)
     {
+        /* lua调用__call,第一个参数是该元表所属的table.取构造函数参数要注意 */
         T* obj = new T( L );
-        
+
+        lua_settop( L,1 ); /* 清除所有构造函数参数,只保留元表 */
+
         T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
-        
+
         /* 把新创建的userdata和元表交换堆栈位置 */
         lua_insert(L,1);
 
-        /* lua无法更改userdata的metatable */
+        /* 弹出元表,并把元表设置为userdata的元表 */
+        lua_setmetatable(L, -2);
 
-        return lua_setmetatable(L, -2);
+        return 1;
     }
     
     /* 元方法,__tostring */

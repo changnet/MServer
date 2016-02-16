@@ -14,6 +14,8 @@
  */
 
 class buffer_process;
+class lhttp_socket;
+
 class buffer
 {
 public:
@@ -84,6 +86,7 @@ public:
     }
 
     friend class buffer_process;
+    friend class lhttp_socket;
     
     static class ordered_pool<BUFFER_CHUNK> allocator;
 private:

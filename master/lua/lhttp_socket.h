@@ -2,8 +2,9 @@
 #define __LHTTP_SOCKET_H__
 
 #include <map>
-#include <http_parser.h>  /* file at deps/include */
 #include "lsocket.h"
+
+struct http_parser;
 
 class lhttp_socket : public lsocket
 {

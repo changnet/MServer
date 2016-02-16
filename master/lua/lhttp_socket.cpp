@@ -1,3 +1,4 @@
+#include <http_parser.h>  /* file at deps/include */
 #include "lhttp_socket.h"
 #include "lclass.h"
 #include "leventloop.h"
@@ -95,17 +96,10 @@ lhttp_socket::lhttp_socket( lua_State *L )
     _parser  = NULL;
     _state   = PARSE_NONE;
     _upgrade = false;
-    //HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
-    enum http_parser_type ty = static_cast<enum http_parser_type>(
-        luaL_checkinteger( L,1 ) );
-    if ( HTTP_REQUEST != ty && HTTP_RESPONSE != ty && HTTP_BOTH != ty )
-    {
-        luaL_error( L,"http socket parser type error" );
-        return;
-    }
 
+    //HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
     _parser = new struct http_parser();
-    http_parser_init( _parser,ty );
+    http_parser_init( _parser,HTTP_BOTH );
     _parser->data = this;
 }
 
@@ -173,13 +167,13 @@ bool lhttp_socket::is_message_complete()
     int32 nparsed = http_parser_execute( _parser,&settings,
         _recv._buff + _recv._pos,dsize );
     
-    /* web_socket报文，暂时不用回调到上层，返回false等待数据报文 */
+    /* web_socket报文,暂时不用回调到上层.无论当前报文是否结束,返回false等待数据报文 */
     if ( _parser->upgrade )
     {
         _upgrade = true;
         return false;
     }
-    else if ( nparsed != dsize )  /* error */
+    else if ( nparsed != (int32)dsize )  /* error */
     {
         return false;
     }

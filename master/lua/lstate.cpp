@@ -7,7 +7,6 @@
 #include "leventloop.h"
 #include "../ev/ev_def.h"
 
-
 class lstate *lstate::_state = NULL;
 class lstate *lstate::instance()
 {
@@ -121,6 +120,12 @@ int32 luaopen_http_socket( lua_State *L )
     lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
     lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
     lc.def<&lhttp_socket::file_description> ("file_description" );
+    
+    lc.def<&lhttp_socket::get_url>   ("get_url");
+    lc.def<&lhttp_socket::get_body>  ("get_body" );
+    lc.def<&lhttp_socket::get_method>("get_method");
+    lc.def<&lhttp_socket::get_status>("get_status");
+    lc.def<&lhttp_socket::get_head_field>("get_head_field");
 
     return 0;
 }
