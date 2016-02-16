@@ -3,10 +3,8 @@
 
 #include <lua.hpp>
 #include "../net/socket.h"
-#include "../ev/ev_def.h"
-#include "../ev/ev_watcher.h"
 
-class lsocket : public socket
+class lsocket :
 {
 protected:
     explicit lsocket( lua_State *L );
@@ -26,11 +24,11 @@ public:
     int32 set_on_disconnect();
     int32 file_description ();
 
-    void message_cb ( ev_io &w,int32 revents );
-    void connect_cb ( ev_io &w,int32 revents );
+    void message_cb ( int32 revents );
+    void connect_cb ( int32 revents );
 
     virtual bool is_message_complete() = 0;
-    virtual void listen_cb  ( ev_io &w,int32 revents ) = 0;
+    virtual void listen_cb  ( int32 revents ) = 0;
 private:
     void on_disconnect();
 protected:
@@ -41,6 +39,7 @@ protected:
     int32 ref_connection;
 
     lua_State *L;
+    socket _socket;
 };
 
 #endif /* __LSOCKET_H__ */

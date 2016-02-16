@@ -25,26 +25,41 @@
 class socket
 {
 public:
-    ev_io w;
-    int32 sending;
-    buffer _recv;
-    buffer _send;
-
-public:
     socket();
     virtual ~socket();
 
-    void close();
+    inline bool active() const { return _w.is_active(); }
+    inline int32 fd() const { return _w.fd; }
 
-    inline int32 fd() const
-    {
-        return w.fd;
-    }
-
-    void on_disconnect() {}
     static int32 non_block( int32 fd );
     static int32 keep_alive( int32 fd );
     static int32 user_timeout( int32 fd );
+    
+    void stop ();
+    void start( int32 fd,int32 events );
+    inline void io_cb( ev_io &w,int32 revents ) { this->_method( revents ); }
+    
+    template<class K, void (K::*method)(int32)>
+    void set (K *object)
+    {
+        this->_this   = object;
+        this->_method = method_thunk<K, method>;
+    }
+private:
+    ev_io _w;
+    int32 _sending;
+    buffer _recv;
+    buffer _send;
+    
+    /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
+    void *_this;
+    void (*_method)(int32 revents);
+    
+    template<class K, void (K::*method)(int32)>
+    void method_thunk (int32 revents)
+    {
+      (static_cast<K *>(this->_this)->*method)(revents);
+    }
 };
 
 #endif /* __SOCKET_H__ */

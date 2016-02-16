@@ -5,28 +5,33 @@
 
 socket::socket()
 {
-    sending = 0;
+    _sending = 0;
 }
 
 socket::~socket()
 {
-    this->close();
+    assert( "socket not clean",0 == _sending && -1 == _w.fd );
 }
 
-void socket::close()
+void socket::stop()
 {
-    if ( sending )
+    if ( _sending )
     {
-        leventloop::instance()->remove_sending( sending );
-        sending = 0;
+        leventloop::instance()->remove_sending( _sending );
+        _sending = 0;
+        
+        _send.send( _w.fd );  /* flush data before close */
     }
 
-    if ( w.fd > 0 )
+    if ( _w.fd > 0 )
     {
-        ::close( w.fd );
-        w.stop ();
-        w.fd = -1; /* must after stop */
+        ::close( _w.fd );
+        _w.stop ();
+        _w.fd = -1; /* must after stop */
     }
+    
+    _recv.clear();
+    _send.clear();
 }
 
 int32 socket::non_block( int32 fd )
@@ -100,4 +105,14 @@ int32 socket::user_timeout( int32 fd )
 #else
     return 0;
 #endif
+}
+
+void socket::start( int32 fd,int32 events )
+{
+    assert( "socket start,dirty buffer",0 == _send.data_size() && 0 == _send.data_size() );
+
+    class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
+    _w.set( loop );
+    _w.set<socket,&socket::io_cb>( this );
+    _w.start( fd,events );
 }

@@ -1,6 +1,7 @@
 #include "lsocket.h"
 #include "ltools.h"
 #include "leventloop.h"
+#include "../ev/ev_def.h"
 
 lsocket::lsocket( lua_State *L )
     : L(L)
@@ -14,7 +15,7 @@ lsocket::lsocket( lua_State *L )
 
 lsocket::~lsocket()
 {
-    socket::close(); /* lsocket的内存由lua控制，保证在释放socket时一定会关闭 */
+    _socket::stop(); /* lsocket的内存由lua控制，保证在释放socket时一定会关闭 */
 
     /* 释放引用，如果有内存问题，可查一下这个地方 */
     LUA_UNREF( ref_self       );
@@ -22,27 +23,20 @@ lsocket::~lsocket()
     LUA_UNREF( ref_acception  );
     LUA_UNREF( ref_connection );
     LUA_UNREF( ref_disconnect );
-
-    assert( "socket not clean",0 == sending && (!w.is_active()) );
 }
 
+/* 仅关闭socket，但不销毁内存 */
 int32 lsocket::kill()
 {
-    if ( !w.is_active() ) return 0;
-
-    if ( _send.data_size() > 0 ) /* 尝试把缓冲区的数据直接发送 */
-    {
-        _send.send( w.fd );
-    }
-
-    socket::close();
+    /* stop尝试把缓冲区的数据直接发送 */
+    _socket::stop();
 
     return 0;
 }
 
 int32 lsocket::listen()
 {
-    if ( w.is_active() )
+    if ( _socket.active() )
     {
         return luaL_error( L,"listen:socket already active");
     }
@@ -105,10 +99,8 @@ int32 lsocket::listen()
         return 1;
     }
 
-    class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
-    w.set( loop );
-    w.set<lsocket,&lsocket::listen_cb>( this );
-    w.start( fd,EV_READ );
+    _socket.set<lsocket,&lsocket::listen_cb>( this );
+    _socket.start( fd,EV_READ );
 
     lua_pushinteger( L,fd );
     return 1;
@@ -116,7 +108,7 @@ int32 lsocket::listen()
 
 int32 lsocket::connect()
 {
-    if ( w.is_active() )
+    if ( _socket.active() )
     {
         return luaL_error( L,"connect:socket already active");
     }
