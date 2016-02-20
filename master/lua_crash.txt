@@ -1,0 +1,59 @@
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.insert'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.update'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.update'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.update'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.update'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.update'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	[C]: in function 'Mongo.update'
+	.../sf_code/MServer/master/lua_script/mongo/store_mongo.lua:75: in function 'mongo.store_mongo.update'
+	lua_script/router/main.lua:36: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:47: in main chunk
+stack traceback:
+	/media/sf_code/MServer/master/lua_script/global/global.lua:84: in function '__G__TRACKBACK__'
+	lua_script/router/main.lua:37: in function <lua_script/router/main.lua:18>
+	[C]: in function 'xpcall'
+	lua_script/router/main.lua:48: in main chunk

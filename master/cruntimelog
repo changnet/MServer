@@ -1,0 +1,83 @@
+process[4384] run as 'router 1' 64bit at 2016-01-16 18:54:09
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4384] 'router 1' stop at 2016-01-16 20:15:48
+process[4405] run as 'router 1' 64bit at 2016-01-16 20:15:49
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4405] 'router 1' stop at 2016-01-16 20:15:52
+process[4409] run as 'router 1' 64bit at 2016-01-16 20:15:55
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4409] 'router 1' stop at 2016-01-16 20:16:07
+process[4555] run as 'router 1' 64bit at 2016-01-16 21:46:39
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4559] run as 'router 1' 64bit at 2016-01-16 21:47:29
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4563] run as 'router 1' 64bit at 2016-01-16 21:48:10
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4567] run as 'router 1' 64bit at 2016-01-16 21:48:38
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4626] run as 'router 1' 64bit at 2016-01-16 21:54:35
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4689] run as 'router 1' 64bit at 2016-01-16 21:59:24
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4701] run as 'router 1' 64bit at 2016-01-16 22:01:45
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4718] run as 'router 1' 64bit at 2016-01-16 22:07:31
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4777] run as 'router 1' 64bit at 2016-01-16 22:12:56
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4777] 'router 1' stop at 2016-01-16 22:13:18
+process[4836] run as 'router 1' 64bit at 2016-01-16 22:16:40
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4836] 'router 1' stop at 2016-01-16 22:16:56
+process[4843] run as 'router 1' 64bit at 2016-01-16 22:17:51
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4843] 'router 1' stop at 2016-01-16 22:17:59
+process[4847] run as 'router 1' 64bit at 2016-01-16 22:18:10
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4847] 'router 1' stop at 2016-01-16 22:18:31
+process[4851] run as 'router 1' 64bit at 2016-01-16 22:18:33
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4851] 'router 1' stop at 2016-01-16 22:19:39
+process[4855] run as 'router 1' 64bit at 2016-01-16 22:19:42
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4855] 'router 1' stop at 2016-01-16 22:19:49
+process[4949] run as 'router 1' 64bit at 2016-01-16 22:35:35
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4952] run as 'router 1' 64bit at 2016-01-16 22:35:49
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4952] 'router 1' stop at 2016-01-16 22:37:07
+process[4956] run as 'router 1' 64bit at 2016-01-16 22:37:09
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4956] 'router 1' stop at 2016-01-16 22:37:17
+process[4960] run as 'router 1' 64bit at 2016-01-16 22:37:33
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4960] 'router 1' stop at 2016-01-16 22:37:36
+process[4964] run as 'router 1' 64bit at 2016-01-16 22:37:54
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4964] 'router 1' stop at 2016-01-16 22:38:05
+process[4968] run as 'router 1' 64bit at 2016-01-16 22:38:38
+lua version:5.3.1
+linux:3.2.0-4-amd64 #1 SMP Debian 3.2.57-3+deb7u2
+process[4968] 'router 1' stop at 2016-01-16 22:38:47
