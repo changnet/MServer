@@ -1,37 +1,33 @@
-#MServer
-
-#compile
-OpenSSL is required for authentication or for SSL connections to MongoDB. Kerberos or LDAP support requires Cyrus SASL.  
-
-ubuntu 14.04  
-    1)sudo apt-get install libmysqlclient-dev  
-      The following NEW packages will be installed:  
-        libmysqlclient-dev libmysqlclient18 mysql-common  
-    2)sudo apt-get install lua53  
-    3)sudo apt-get install pkg-config libssl-dev libsasl2-dev  
-    4)install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)  
-    5) cd MServer/master & make  
+MServer
+=========
+Mserver是一个基于节点的多进程游戏服务器。每一个节点为一个进程，使用相同的底层(master)来启动进程，通过加载不同的lua脚本实现不同的功能。节点之间通过
+tcp进行通信。master使用C++编写，提供了游戏中高性能，高稳定性，脚本不方便完成的组件，包括MySQL、MongoDB、Socket、C++脚本交互、协议序列化、日志等。
+用户通常不需要修改底层，只需要编写lua脚本，即可完成游戏服务器。MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用户可根据自己的习惯继续
+使用传统的异步回调或者利用lua的coroutine将异步转为同步。
 
 
-#what had done
-1. 重写libev,仅保留io、timer
-2. C++与lua交互封装
-3. 自定义socket内存池
-4. 基于mysql c connector封装mysql lua模块
-5. 基于mongo c driver封装mongodb lua模块
-6. 基于http-parser的http (client/server)模块
+编译安装:
+代码在ubuntu 14.04、debian 7、centos 6中测试。下面以ubuntu 14.04安装为例:
 
-#TODO
-5. http(http-parser、libcurl)
-6. protobuf、platbuffer
-7. astar、rsa、zlib、md5、uuid、cjson、xml
-8. ps -o 测试缺页中断
-9. dump内存情况，包含内存碎片
-10. 底层包自动转发
-11. 关键字过滤(全文检索算法)
-12. 寻路算法
-15. 测试查询大量结果导致out of memory后线程能否恢复
-16. 为lua提供LRU、LFU、优先队列、大小堆等常用数据
-#TOSOLVE
-1. lsocket不再继承socket，改用组合方式(message_cb需要使用ev_io)
-3. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
+ *sudo apt-get install libmysqlclient-dev
+ *sudo apt-get install lua53
+ *sudo apt-get install pkg-config libssl-dev libsasl2-dev
+ *install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)
+ *cd MServer/master & make
+
+
+组件:
+所有组件均提供对应的lua接口，用户只需要在lua调用对应的接口即可使用组件。
+
+ *重写libev,仅保留io、timer，重写信号处理
+ *C++与lua交互封装
+ *非阻塞socket,自定义socket内存池
+ *基于mysql c connector封装mysql，支持lua table直接转换
+ *基于mongo c driver封装mongodb，支持lua table直接转换
+ *基于http-parser的http (client/server)通信模块
+
+待实现组件:
+ *protobuf、platbuffer
+ *astar、rsa、zlib、md5、uuid、cjson、xml
+ *为lua提供LRU、LFU、优先队列、大小堆等常用数据结构
+
