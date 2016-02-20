@@ -6,7 +6,8 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
 户不需要修改底层，只需要编写lua脚本，即可完成一个高效稳定的游戏服务器，并且可以通过增加节点来提高承载。
 
 
-编译安装:
+编译安装
+--------
 
 代码在ubuntu 14.04、debian 7、centos 6中测试。下面以ubuntu 14.04安装为例:
 
@@ -17,7 +18,8 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * cd MServer/master & make
 
 
-组件:
+组件
+----
 
 所有组件均提供对应的lua接口，用户只需要在lua调用对应的接口即可使用组件。
 
@@ -30,13 +32,14 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * 基于http-parser的http (client/server)通信模块
 
 待实现组件:
+-----------
 
  * protobuf、platbuffer
  * astar、rsa、zlib、md5、uuid、cjson、xml
  * 为lua提供LRU、LFU、优先队列、大小堆等常用数据结构
 
 使用本服务器构建的服务器架构
-===========================
+---------------------------
 
 ![架构](https://github.com/changnet/MServer/blob/master/picture/server%20frame.png)
 
