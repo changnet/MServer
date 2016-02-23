@@ -38,9 +38,13 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * astar、rsa、zlib、md5、uuid、cjson、xml
  * 为lua提供LRU、LFU、优先队列、大小堆等常用数据结构
 
+单个节点master架构
+------------------
+![节点架构](https://github.com/changnet/MServer/blob/master/picture/master.png)
+
 使用本服务器构建的架构
 ---------------------
 
-![架构](https://github.com/changnet/MServer/blob/master/picture/server%20frame.png)
+![全服架构](https://github.com/changnet/MServer/blob/master/picture/server%20frame.png)
 
 
