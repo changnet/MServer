@@ -4,7 +4,7 @@
 #include <lua.hpp>
 #include "../net/socket.h"
 
-class lsocket :
+class lsocket
 {
 protected:
     explicit lsocket( lua_State *L );
@@ -39,7 +39,7 @@ protected:
     int32 ref_connection;
 
     lua_State *L;
-    socket _socket;
+    class socket _socket;
 };
 
 #endif /* __LSOCKET_H__ */

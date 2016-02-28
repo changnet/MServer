@@ -33,11 +33,13 @@ end
 
 function Http_client:on_message()
     local body = self.conn:get_body()
-    
-    PLOG( "http message start ====================================" )
+
+    PLOG( "http message start ==============================" )
     vd( body )
-    PLOG( "http message end   ====================================" )
-    
+    vd( self.conn:get_url() )
+    vd( self.conn:get_head_field("host") )
+    PLOG( "http message end   ===============================" )
+
     local data = '{ "data":{"ext":1,"password":"test"} }'
     local header = string.format( http_response_head,data:len(),data )
 

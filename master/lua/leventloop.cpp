@@ -189,15 +189,14 @@ int32 leventloop::set_signal_ref()
     return 0;
 }
 
-void leventloop::pending_send( class socket *s  )
+int32 leventloop::pending_send( class socket *s  )
 {
-    assert( "double pending send",0 == s->sending );
     // 0位是空的，不使用
     ++ansendingcnt;
     array_resize( ANSENDING,ansendings,ansendingmax,ansendingcnt + 1,EMPTY );
     ansendings[ansendingcnt] = s;
 
-    s->sending = ansendingcnt;
+    return ansendingcnt;
 }
 
 void leventloop::remove_sending( int32 sending )
@@ -227,16 +226,15 @@ void leventloop::invoke_sending()
             continue;
         }
 
-        assert( "invoke sending index not match",i == _socket->sending );
-        assert( "invoke sending:nothing to send",_socket->_send.data_size() > 0 );
+        assert( "invoke sending index not match",i == _socket->_sending );
 
         /* 处理发送 */
-        int32 ret = _socket->_send.send( _socket->fd() );
+        int32 ret = _socket->send();
 
         if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
         {
             ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
-            _socket->on_disconnect();
+            _socket->stop();
 
             continue;
         }
@@ -244,7 +242,7 @@ void leventloop::invoke_sending()
         /* 发送完毕，处理一下socket标识 */
         if ( _socket->_send.data_size() <= 0 )
         {
-            _socket->sending = 0;   /* 去除发送标识 */
+            _socket->_sending = 0;   /* 去除发送标识 */
             _socket->_send.clear(); /* 去除悬空区 */
 
             continue;
@@ -255,7 +253,7 @@ void leventloop::invoke_sending()
         {
             ++pos;
             ansendings[pos]  = _socket;
-            _socket->sending = pos;
+            _socket->_sending = pos;
         }
         /* 数据未发送完，也不需要移动，则do nothing */
     }

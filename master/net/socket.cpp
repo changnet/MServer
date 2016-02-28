@@ -19,7 +19,7 @@ void socket::stop()
     {
         leventloop::instance()->remove_sending( _sending );
         _sending = 0;
-        
+
         _send.send( _w.fd );  /* flush data before close */
     }
 
@@ -29,7 +29,7 @@ void socket::stop()
         _w.stop ();
         _w.fd = -1; /* must after stop */
     }
-    
+
     _recv.clear();
     _send.clear();
 }
@@ -115,4 +115,121 @@ void socket::start( int32 fd,int32 events )
     _w.set( loop );
     _w.set<socket,&socket::io_cb>( this );
     _w.start( fd,events );
+}
+
+int32 socket::connect( const char *host,int32 port )
+{
+    int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if ( fd < 0 || non_block( fd ) < 0 )
+    {
+        return -1;
+    }
+
+    struct sockaddr_in sk_socket;
+    memset( &sk_socket,0,sizeof(sk_socket) );
+    sk_socket.sin_family = AF_INET;
+    sk_socket.sin_addr.s_addr = inet_addr(host);
+    sk_socket.sin_port = htons( port );
+
+    /* 三次握手是需要一些时间的，内核中对connect的超时限制是75秒 */
+    if ( ::connect( fd, (struct sockaddr *) & sk_socket,sizeof(sk_socket)) < 0
+        && errno != EINPROGRESS )
+    {
+        ::close( fd );
+
+        return -1;
+    }
+
+    return fd;
+}
+
+int32 socket::validate()
+{
+    int32 err   = 0;
+    socklen_t len = sizeof (err);
+    if ( getsockopt( _w.fd, SOL_SOCKET, SO_ERROR, &err, &len ) < 0 )
+    {
+        return errno;
+    }
+
+    return err;
+}
+
+const char *socket::address()
+{
+    if ( _w.fd < 0 ) return NULL;
+
+    struct sockaddr_in addr;
+    memset( &addr, 0, sizeof(struct sockaddr_in));
+    socklen_t len = sizeof(struct sockaddr_in);
+
+    if ( getpeername( _w.fd, (struct sockaddr *)&addr, &len) < 0 )
+    {
+        ERROR( "socket::address getpeername error: %s\n",strerror(errno) );
+        return NULL;
+    }
+
+    return inet_ntoa(addr.sin_addr);
+}
+
+void socket::append( const char *data,uint32 len )
+{
+    _send.append( data,len );
+
+    if ( 0 != _sending ) return; // 已经在发送队列
+
+    _sending = leventloop::instance()->pending_send( this );  /* 放到发送队列，最后一次发送 */
+}
+
+int32 socket::listen( const char *host,int32 port )
+{
+    int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if ( fd < 0 )
+    {
+        return -1;
+    }
+
+    int32 optval = 1;
+    /*
+     * enable address reuse.it will help when the socket is in TIME_WAIT status.
+     * for example:
+     *     server crash down and the socket is still in TIME_WAIT status.if try
+     * to restart server immediately,you need to reuse address.but note you may
+     * receive the old data from last time.
+     */
+    if ( setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,(char *) &optval, sizeof(optval)) < 0 )
+    {
+        ::close( fd );
+
+        return -1;
+    }
+
+    if ( non_block( fd ) < 0 )
+    {
+        ::close( fd );
+
+        return -1;
+    }
+
+    struct sockaddr_in sk_socket;
+    memset( &sk_socket,0,sizeof(sk_socket) );
+    sk_socket.sin_family = AF_INET;
+    sk_socket.sin_addr.s_addr = inet_addr(host);
+    sk_socket.sin_port = htons( port );
+
+    if ( ::bind( fd, (struct sockaddr *) & sk_socket,sizeof(sk_socket)) < 0 )
+    {
+        ::close( fd );
+
+        return -1;
+    }
+
+    if ( ::listen( fd, 256 ) < 0 )
+    {
+        ::close( fd );
+
+        return -1;
+    }
+
+    return fd;
 }
