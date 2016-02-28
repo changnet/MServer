@@ -404,6 +404,12 @@ void lmongo::invoke_command()
 */
 void lmongo::bson_encode( bson_iter_t &iter,bool is_array )
 {
+    if ( lua_gettop(L) > 10240 )
+    {
+        ERROR( "bson_encode lua stack too deep" );
+        return;
+    }
+
     if ( !lua_checkstack(L,3) )
     {
         ERROR( "bson_encode lua stack overflow\n" );
@@ -895,7 +901,12 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
  * 2).lua table可能有很多重，要防止栈溢出
  */
 int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
-{PDEBUG( "lua stack top is %d\n",lua_gettop(L) );
+{
+    if ( lua_gettop(L) > 10240 )
+    {
+        ERROR( "lua_encode stack too deep" );
+        return -1;
+    }
     /* 遍历一个table至少需要2个栈位置 */
     if ( !lua_checkstack( L,2 ) )
     {
