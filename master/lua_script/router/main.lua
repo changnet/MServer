@@ -2,6 +2,7 @@ require "global.global"
 require "global.oo"
 require "global.table"
 require "global.string"
+json = require "global.json"
 
 local Store_sql   = require "sql.store_sql"
 local Store_mongo = require "mongo.store_mongo"
