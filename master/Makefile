@@ -19,6 +19,8 @@ TEST_DIR = ../test
 TARGET = $(ODIR)/master
 MKDIR = mkdir -p
 
+.PHONY: all clean
+
 #wildcard : 扩展通配符
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
