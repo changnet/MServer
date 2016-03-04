@@ -7,6 +7,7 @@ json = require "lua_parson"
 local Store_sql   = require "sql.store_sql"
 local Store_mongo = require "mongo.store_mongo"
 local Http_mgr    = require "http.http_mgr"
+local Http_client = require "http.http_client"
 
 local function sig_handler( signum )
     --g_store_mongo:stop()
@@ -23,6 +24,8 @@ local function main()
     ev:signal( 15 );
 
     g_http_mgr:listen( "0.0.0.0",8887 )
+    local hc = Http_client()
+    hc:connect( "192.168.1.123",19777 )
 
     --g_store_sql:start( "127.0.0.1",3306,"root","123456","xzc_mudrv" )
     --g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )

@@ -2,6 +2,7 @@
 -- 2016-02-16
 -- xzc
 
+local Http_socket = require "Http_socket"
 local Http_client = oo.class( nil,... )
 
 --[[
@@ -51,6 +52,22 @@ function Http_client:on_disconnect()
     self.conn = nil
     -- TODO 这里要从mgr删除client
     PLOG( "http client disconnect:%d",fd )
+end
+
+function Http_client:connect( ip,port )
+    local conn = Http_socket()
+    conn:connect( ip,port )
+    
+    conn:set_self_ref( self )
+    conn:set_on_message( self.on_message )
+    conn:set_on_disconnect( self.on_disconnect )
+    conn:set_on_connection( self.on_connection )
+    self.conn = conn
+end
+
+function Http_client:on_connection()
+    print( "connect ok" )
+    self.conn:send( "hello world" )
 end
 
 return Http_client
