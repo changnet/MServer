@@ -10,9 +10,9 @@ CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
 OPTIMIZE =
 CC = g++
-INC = -I./deps/include -I./deps/lua_parson -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
-LIB = -L./deps/lib -L/usr/local/lib -L./deps/lua_parson
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson
+INC = -I./deps/http-parser -I./deps/lua_parson -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
+LIB = -L./deps/lib -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser
+LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser
 ODIR = bin
 SDIR = ./
 TEST_DIR = ../test
@@ -27,7 +27,7 @@ MKDIR = mkdir -p
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o http_parser.o
+	lstream_socket.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -69,6 +69,7 @@ $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
 #$? 表示比目标还要新的依赖文件列表
 all: DIRS $(OBJS) $(ODIR)/main.o
 	$(MAKE) -C deps/lua_parson all
+	$(MAKE) -C deps/http-parser package
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
 DIRS:
@@ -76,4 +77,5 @@ DIRS:
 
 clean:
 	$(MAKE) -C deps/lua_parson clean
+	$(MAKE) -C deps/http-parser clean
 	rm -rf $(ODIR)/*
