@@ -27,6 +27,8 @@ local function main()
     local hc = Http_client()
     hc:connect( "192.168.1.123",19777 )
 
+    vd( json.decode("[1,2,3,4,5,6,7,0]"))
+
     --g_store_sql:start( "127.0.0.1",3306,"root","123456","xzc_mudrv" )
     --g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )
 

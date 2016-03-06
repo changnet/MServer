@@ -1,3 +1,4 @@
+#include <lparson.h>
 #include "lsql.h"
 #include "lmongo.h"
 #include "lstate.h"
@@ -105,6 +106,9 @@ void lstate::open_cpp()
     luaL_requiref(L, "util", luaopen_util, 1);
     lua_pop(L, 1);  /* remove lib */
 
+    luaL_requiref(L, "lua_parson", luaopen_lua_parson, 1);
+    lua_pop(L, 1);  /* remove lib */
+
     luaopen_ev    (L);
     luaopen_http_socket(L);
     luaopen_timer (L);
@@ -146,7 +150,7 @@ int32 luaopen_http_socket( lua_State *L )
     lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
     lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
     lc.def<&lhttp_socket::file_description> ("file_description" );
-    
+
     lc.def<&lhttp_socket::get_url>   ("get_url");
     lc.def<&lhttp_socket::get_body>  ("get_body" );
     lc.def<&lhttp_socket::get_method>("get_method");
