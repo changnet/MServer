@@ -19,15 +19,13 @@ TEST_DIR = ../test
 TARGET = $(ODIR)/master
 MKDIR = mkdir -p
 
-.PHONY: all clean test
-
 #wildcard : 扩展通配符
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o
+	lstream_socket.o lutil.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -68,14 +66,22 @@ $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
 all: DIRS $(OBJS) $(ODIR)/main.o
-	$(MAKE) -C deps/lua_parson all
-	$(MAKE) -C deps/http-parser package
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
 DIRS:
 	$(MKDIR) $(ODIR)
 
 clean:
+	rm -rf $(ODIR)/*
+
+clean_all:
 	$(MAKE) -C deps/lua_parson clean
 	$(MAKE) -C deps/http-parser clean
 	rm -rf $(ODIR)/*
+
+build_all:
+	$(MAKE) -C deps/lua_parson all
+	$(MAKE) -C deps/http-parser package
+	$(MAKE) -C . all
+
+.PHONY: all clean test clean_all build_all

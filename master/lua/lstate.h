@@ -1,15 +1,16 @@
 #ifndef __LSTATE_H__
 #define __LSTATE_H__
 
-#include <lua.hpp>
 #include "../global/global.h"
+
+struct lua_State;
 
 class lstate
 {
 public:
     static class lstate *instance();
     static void uninstance();
-    
+
     inline lua_State *state()
     {
         return L;

@@ -1,12 +1,14 @@
+#include <lua.hpp>
 #include <lparson.h>
+
 #include "lsql.h"
+#include "lutil.h"
 #include "lmongo.h"
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
 #include "lhttp_socket.h"
 #include "leventloop.h"
-#include "../ev/ev_def.h"
 
 class lstate *lstate::_state = NULL;
 class lstate *lstate::instance()
@@ -51,7 +53,6 @@ lstate::~lstate()
 }
 
 int32 luaopen_ev    ( lua_State *L );
-int32 luaopen_util  ( lua_State *L );
 int32 luaopen_http_socket( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
@@ -110,10 +111,10 @@ void lstate::open_cpp()
     lua_pop(L, 1);  /* remove lib */
 
     luaopen_ev    (L);
-    luaopen_http_socket(L);
-    luaopen_timer (L);
     luaopen_sql   (L);
+    luaopen_timer (L);
     luaopen_mongo (L);
+    luaopen_http_socket(L);
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );
@@ -127,11 +128,6 @@ int32 luaopen_ev( lua_State *L )
     lc.def<&leventloop::exit>  ("exit");
     lc.def<&leventloop::signal>("signal");
     lc.def<&leventloop::set_signal_ref>("set_signal_ref");
-
-    lc.set( "EV_READ",EV_READ );
-    lc.set( "EV_WRITE",EV_WRITE );
-    lc.set( "EV_TIMER",EV_TIMER );
-    lc.set( "EV_ERROR",EV_ERROR );
 
     return 0;
 }
@@ -207,23 +203,4 @@ int32 luaopen_mongo( lua_State *L )
     lc.def<&lmongo::error_callback>  ( "error_callback"  );
 
     return 0;
-}
-
-static int32 util_md5( lua_State *L )
-{
-    lua_pushstring( L,"mde35dfafefsxee4r3" );
-    return 1;
-}
-
-static const luaL_Reg utillib[] =
-{
-    {"md5", util_md5},
-    {NULL, NULL}
-};
-
-
-int32 luaopen_util( lua_State *L )
-{
-  luaL_newlib(L, utillib);
-  return 1;
 }
