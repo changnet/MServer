@@ -142,12 +142,14 @@ namespace mongons
         int32 id;
         int32 err;
         bson_t *data;
+        enum query_type ty;
 
         result()
         {
             id    = 0;
             err   = 0;
             data  = NULL;
+            ty    = NONE;
         }
 
         ~result()
@@ -157,6 +159,7 @@ namespace mongons
             id    = 0;
             err   = 0;
             data  = NULL;
+            ty    = NONE;
         }
     };
 }   /* namespace mongo */

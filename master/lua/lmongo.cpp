@@ -282,7 +282,7 @@ int32 lmongo::next_result()
     int32 rv = 2;
     if ( rt->data )
     {
-        result_encode( rt->data );
+        result_encode( rt->data,rt->ty == mongons::FIND );
         rv = 3;
     }
 
@@ -518,7 +518,7 @@ void lmongo::bson_encode( bson_iter_t &iter,bool is_array )
     }
 }
 
-void lmongo::result_encode( bson_t *doc )
+void lmongo::result_encode( bson_t *doc,bool is_array )
 {
     bson_iter_t iter;
 
@@ -529,7 +529,7 @@ void lmongo::result_encode( bson_t *doc )
         return;
     }
 
-    bson_encode( iter );
+    bson_encode( iter,is_array );
 }
 
 /* find( id,collection,query,fields,skip,limit) */
