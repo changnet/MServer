@@ -85,6 +85,7 @@ int32 mongo::ping( bson_error_t *error )
         mongoc_cursor_destroy( cursor );
         bson_destroy( &ping );
 
+        mongoc_database_destroy( database );
         return 0;
     }
 
@@ -93,6 +94,7 @@ int32 mongo::ping( bson_error_t *error )
 
     mongoc_cursor_destroy( cursor );
     bson_destroy( &ping );
+    mongoc_database_destroy( database );
 
    return 1;
 }

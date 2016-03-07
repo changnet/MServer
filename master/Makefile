@@ -84,4 +84,7 @@ build_all:
 	$(MAKE) -C deps/http-parser package
 	$(MAKE) -C . all
 
+test:
+	valgrind --leak-check=full bin/master test 1
+
 .PHONY: all clean test clean_all build_all

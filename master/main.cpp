@@ -77,12 +77,6 @@ int32 main( int32 argc,char **argv )
 
     lclass<leventloop>::push( L,_loop,false );
     lua_setglobal( L,"ev" );
-
-    // class mongo _mongo;
-    // _mongo.set( "127.0.0.1",27013,"test","test","xzc_test" );
-    // _mongo.connect();
-    // assert( "connect err",true );
-    // _mongo.disconnect();
     
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
