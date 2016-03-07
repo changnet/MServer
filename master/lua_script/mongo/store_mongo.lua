@@ -16,6 +16,8 @@ function Store_mongo:__init()
     self._mongo:self_callback( self )
     self._mongo:read_callback( self.on_result )
     self._mongo:error_callback( self.on_error )
+    
+    self.cb = {}
 end
 
 --[[
@@ -37,12 +39,15 @@ end
 
 function Store_mongo:on_result()
     local id,err,info = self._mongo:next_result()
-    print( "mongo result ",id,err )
-    vd( info )
+    if self.cb[id] then
+        xpcall( self.cb[id],__G__TRACKBACK__,err,info )
+    else
+        ELOG( "mongo result no call back found" )
+    end
 end
 
 function Store_mongo:start( ip,port,usr,pwd,db )
-    self._mongo:start( ip,port,usr,pwd,db )
+    return self._mongo:start( ip,port,usr,pwd,db )
 end
 
 function Store_mongo:stop()
@@ -50,18 +55,21 @@ function Store_mongo:stop()
     self._mongo:join()
 end
 
-function Store_mongo:count( collection,query,skip,limit )
+function Store_mongo:count( cb,collection,query,skip,limit )
     local id = self:next_id()
+    self.cb[id] = cb
     return self._mongo:count( id,collection,query,skip,limit )
 end
 
-function Store_mongo:find( collection,query,fields,skip,limit )
+function Store_mongo:find( cb,collection,query,fields,skip,limit )
     local id = self:next_id()
+    self.cb[id] = cb
     return self._mongo:find( id,collection,query,fields,skip,limit )
 end
 
-function Store_mongo:find_and_modify( collection,query,sort,fields,remove,upsert,new )
+function Store_mongo:find_and_modify( cb,collection,query,sort,fields,remove,upsert,new )
     local id = self:next_id()
+    self.cb[id] = cb
     return self._mongo:find_and_modify( id,collection,query,sort,fields,remove,upsert,new )
 end
 
@@ -81,4 +89,9 @@ function Store_mongo:remove( collection,query,multi )
 end
 
 -- 不提供索引函数，请开服使用脚本创建索引。见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/
+--[[
+db.collection.getIndexes() 查看已有索引
+db.collection.dropIndex( name ) 删除索引
+db.collection.createIndex( {amount:1} ) 创建索引
+]]
 return Store_mongo
