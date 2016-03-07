@@ -1,8 +1,9 @@
 #ifndef __LTOOLS_H__
 #define __LTOOLS_H__
 
+#include <cmath>
+#include <lua.hpp>
 #include "../global/global.h"
-#include <lua.h>
 
 #define LUA_REF(x)                         \
     if ( x )    LUA_UNREF(x);              \
@@ -30,23 +31,73 @@ static inline void lua_pushint64( lua_State *L,int64 v )
 }
 
 /* 判断一个table是否为数组
- * 1).判断key是否为number并且从1增长
- * 2).由程序员在元表指定__array为true
- * 方法1需要遍历，不太准确(map也有可能以数字为key).但无需要额外指定元表字段.而且bson也
- * 只能以string为key。方法2准确高效，但需要额外指定元表字段
+ * 1).key全为int并且小于等于INT_MAX则为数组
+ * 2).在元表指定__array为true则为数组
  */
-static inline int32 lua_isarray( lua_State *L,int32 index )
+static inline int32 lua_isarray( lua_State *L,int32 index,int32 *array,
+    int32 *max_index )
 {
-    if ( !luaL_getmetafield(L, index, "__array") ) return false;
+    double key = 0;
+    assert( "lua_isarray empty input argument",array && max_index );
 
-    if ( LUA_TBOOLEAN != lua_type( L,-1) || !lua_toboolean( L,-1 ) )
+    /* set default value */
+    *array = 0;
+    *max_index = -1;
+
+    if ( luaL_getmetafield( L,index,"__array" ) )
     {
-        lua_pop( L,1 );
-        return 0;
+        if ( LUA_TNIL != lua_type( L,-1 ) )
+        {
+            if ( lua_toboolean( L,-1 ) )
+                *array = 1;
+            else
+            {
+                lua_pop( L,1 );
+                return 0;  /* it's object,use default value */
+            }
+        }
+
+        lua_pop( L,1 );    /* pop metafield value */
     }
 
-    lua_pop( L,1 );
-    return 1;
+    /* get max array index */
+    lua_pushnil( L );
+    while ( lua_next( L,index ) != 0 )
+    {
+        /* stack status:table, key, value */
+        /* array index must be interger and >= 1 */
+        if ( lua_type( L, -2 ) != LUA_TNUMBER )
+        {
+            *max_index = -1;
+            lua_pop( L,2 ); /* pop both key and value */
+            return 0;
+        }
+
+        key = lua_tonumber( L, -2 );
+        if ( floor(key) != key || key < 1 )
+        {
+            *max_index = -1;
+            lua_pop( L,2 );
+            return 0;
+        }
+
+        if ( key > INT_MAX ) /* array index over INT_MAX,must be object */
+        {
+            *array = 0;
+            *max_index = -1;
+            lua_pop( L,2 );
+
+            return 0;
+        }
+
+        if ( key > *max_index ) *max_index = (int)key;
+
+        lua_pop( L, 1 );
+    }
+
+    if ( *max_index > 0 ) *array = 1;
+
+    return 0;
 }
 
 #endif /* __LTOOLS_H__ */

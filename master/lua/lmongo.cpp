@@ -795,7 +795,7 @@ int32 lmongo::insert()
  */
 bool lmongo::lua_key_encode( char *key,int32 len,int32 index,int32 &array_index,
     int32 is_array )
-{PDEBUG( "at key lua stack top is %d,key pos is %d\n",lua_gettop(L),index );
+{
     int32 ty = lua_type( L,index );
     if ( is_array )  /* 当指定为数组时，使用自己的数组下标而不是lua的值 */
     {
@@ -840,6 +840,10 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
     int32 ty = lua_type( L,index );
     switch ( ty )
     {
+        case LUA_TNIL :
+        {
+            BSON_APPEND_NULL( doc,key );
+        }break;
         case LUA_TBOOLEAN :
         {
             int32 val = lua_toboolean( L,index );
@@ -914,26 +918,118 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
         return -1;
     }
 
-    int32 array_index = 0;
-    int32 is_array    = lua_isarray( L,index );
+    int32 max_index = -1;
+    int32 is_array  =  0;
+    if ( lua_isarray( L,index,&is_array,&max_index ) < 0 )
+    {
+        ERROR( "lua_isarray error\n" );
+        return -1;
+    }
 
     int32 stack_top = lua_gettop( L ); /* 要encode的table不一定在栈顶 */
     bson_t *doc = bson_new();
-    lua_pushnil(L);  /* first key */
-    while ( lua_next(L, index) != 0 )
+    
+    if ( is_array )   /* encode array */
     {
-        char key[MONGO_VAR_LEN];
-        /* 'key' (at index -2) and 'value' (at index -1) */
-        if ( !lua_key_encode( key,MONGO_VAR_LEN,stack_top + 1,array_index,is_array )
-            || !lua_val_encode( doc,key,stack_top + 2 ) )
+        if ( max_index > 0 )
         {
-            bson_destroy( doc );
-            ERROR( "lua_encode fail\n" );
-            return -1;
+            char key[MONGO_VAR_LEN] = { 0 };
+            int32 cur_index = 0;
+            /* lua array start from 1 */
+            for ( cur_index = 0;cur_index < max_index;cur_index ++ )
+            {
+                snprintf( key,MONGO_VAR_LEN,"%d",cur_index );
+                lua_rawgeti( L, index, cur_index + 1 );
+                if ( !lua_val_encode( doc,key,stack_top + 1 ) )
+                {
+                    lua_pop( L,1 );
+                    bson_destroy( doc );
+                    ERROR( "lua val encode fail\n" );
+                    return -1;
+                }
+                
+                lua_pop( L,1 );
+            }
         }
+        else  /* 强制指定为array,但key不合法,需要自己构造key */
+        {
+            int32 cur_index = 0;
+            char key[MONGO_VAR_LEN] = { 0 };
 
-         /* removes 'value'; keeps 'key' for next iteration */
-         lua_pop(L, 1);
+            lua_pushnil( L );
+            while ( lua_next( L,index) != 0 )
+            {
+                snprintf( key,MONGO_VAR_LEN,"%d",cur_index );
+                if ( !lua_val_encode( doc,key,stack_top + 2 ) )
+                {
+                    lua_pop( L,2 );
+                    bson_destroy( doc );
+                    ERROR( "lua val encode fail\n" );
+                    return -1;
+                }
+                
+                lua_pop( L,1 );
+            }
+        }
+    }
+    else   /* encode object */
+    {
+        lua_pushnil(L);  /* first key */
+        while ( lua_next(L, index) != 0 )
+        {
+            char key[MONGO_VAR_LEN] = { 0 };
+            /* 'key' (at index -2) and 'value' (at index -1) */
+            const char *pkey = NULL;
+            switch ( lua_type( L,-2 ) )
+            {
+                case LUA_TBOOLEAN :
+                {
+                    if ( lua_toboolean( L,-2 ) )
+                        snprintf( key,MONGO_VAR_LEN,"true" );
+                    else
+                        snprintf( key,MONGO_VAR_LEN,"false" );
+                    pkey = key;
+                }break;
+                case LUA_TNUMBER  :
+                {
+                    if ( lua_isinteger( L,-2 ) )
+                        snprintf( key,MONGO_VAR_LEN,LUA_INTEGER_FMT,lua_tointeger( L,-2 ) );
+                    else
+                        snprintf( key,MONGO_VAR_LEN,LUA_NUMBER_FMT,lua_tonumber( L,-2 ) );
+                    pkey = key;
+                }break;
+                case LUA_TSTRING :
+                {
+                    size_t len = 0;
+                    pkey = lua_tolstring( L,-2,&len );
+                    if ( len > MONGO_VAR_LEN - 1 )
+                    {
+                        ERROR( "lua table string key too long\n" );
+                        lua_pop( L,2 );
+                        return -1;
+                    }
+                }break;
+                default :
+                {
+                    ERROR( "lua_key_encode can not convert %s to bson key\n",
+                        lua_typename( L,lua_type( L,-2 ) ) );
+                    lua_pop( L,2 );
+                    return -1;
+                }break;
+            }
+            
+            assert( "lua key encode fail",pkey );
+            if ( !lua_val_encode( doc,pkey,stack_top + 2 ) )
+            {
+                lua_pop( L,2 );
+                bson_destroy( doc );
+                ERROR( "lua val encode object fail\n" );
+                return -1;
+            }
+
+            /* removes 'value'; keeps 'key' for next iteration */
+            lua_pop(L, 1);
+        }
     }
 
     assert( "lua_encode stack dirty",stack_top == lua_gettop(L) );
