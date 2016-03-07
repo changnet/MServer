@@ -207,6 +207,7 @@ void ev_loop::fd_reify()
 void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
 {
     struct epoll_event ev;
+    memset( &ev,0,sizeof(ev) ); /* valgrind Syscall param epoll_ctl(event) points to uninitialised byte(s) */
 
     ev.data.fd = fd;
     ev.events  = (events & EV_READ  ? EPOLLIN  : 0)
