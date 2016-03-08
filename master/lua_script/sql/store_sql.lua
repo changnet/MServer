@@ -44,10 +44,10 @@ function Store_sql:on_result()
         if not callback then
             ELOG( "sql result not handle" )
         else
-            callback()
+            callback( err,result )
         end
 
-        id,result = self._sql_:get_result()
+        id,result = self._sql_:next_result()
     end
 end
 
@@ -60,15 +60,12 @@ function Store_sql:stop()
     self._sql_:join()
 end
 
-function Store_sql:do_sql( sql,callback,... )
+function Store_sql:do_sql( sql,callback )
     local id = self:next_id()
     self._sql_:do_sql( id,sql,callback )
 
     if callback then
-        local args = { ... }
-        self.query[id] = function()
-            xpcall( callback,__G__TRACKBACK__,table.unpack(args) )
-        end
+        self.query[id] = callback
     end
 end
 

@@ -200,7 +200,8 @@ int32 lsql::stop()
 {
     if ( !thread::_run )
     {
-        return luaL_error( L,"try to stop a inactive sql thread" );
+        ERROR( "try to stop a inactive sql thread" );
+        return 0;
     }
     notify( fd[0],EXIT );
 

@@ -74,7 +74,8 @@ int32 lmongo::stop()
 {
     if ( !thread::_run )
     {
-        return luaL_error( L,"try to stop a inactive mongo thread" );
+        ERROR( "try to stop a inactive mongo thread" );
+        return 0;
     }
     notify( fd[0],EXIT );
 
