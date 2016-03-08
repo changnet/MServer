@@ -25,13 +25,6 @@ public:
     int32 read_callback ();
     int32 error_callback();
 private:
-    enum
-    {
-        ERR  = -1,
-        EXIT = 0 ,
-        READ = 1
-    };
-private:
     void routine();
     void invoke_sql ();
     void sql_cb( ev_io &w,int32 revents );
