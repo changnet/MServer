@@ -12,6 +12,9 @@ public:
     explicit llog( lua_State *L );
     ~llog();
     
+    int32 join ();
+    int32 stop ();
+    int32 start();
     int32 write();
 private:
     void routine();
