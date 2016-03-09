@@ -32,6 +32,10 @@ if server start fail,check:
 /var/log/mysql.log
 /var/log/syslog
 ]]
+
+local Store_sql   = require "sql.store_sql"
+g_store_sql   = Store_sql()
+
 g_store_sql:start( "127.0.0.1",3306,"test","test","mudrv" )
 
 

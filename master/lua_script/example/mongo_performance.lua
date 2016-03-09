@@ -4,6 +4,9 @@
 
 -- mongo db 测试用例
 
+local Store_mongo = require "mongo.store_mongo"
+g_store_mongo = Store_mongo()
+
 local json = require "lua_parson"
 g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )
 

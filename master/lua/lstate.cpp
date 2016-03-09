@@ -1,6 +1,7 @@
 #include <lua.hpp>
 #include <lparson.h>
 
+#include "llog.h"
 #include "lsql.h"
 #include "lutil.h"
 #include "lmongo.h"
@@ -53,10 +54,11 @@ lstate::~lstate()
 }
 
 int32 luaopen_ev    ( lua_State *L );
-int32 luaopen_http_socket( lua_State *L );
-int32 luaopen_timer ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
+int32 luaopen_log   ( lua_State *L );
+int32 luaopen_timer ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
+int32 luaopen_http_socket( lua_State *L );
 
 void lstate::set_lua_path()
 {
@@ -112,6 +114,7 @@ void lstate::open_cpp()
 
     luaopen_ev    (L);
     luaopen_sql   (L);
+    luaopen_log   (L);
     luaopen_timer (L);
     luaopen_mongo (L);
     luaopen_http_socket(L);
@@ -201,6 +204,17 @@ int32 luaopen_mongo( lua_State *L )
     lc.def<&lmongo::self_callback >  ( "self_callback"   );
     lc.def<&lmongo::read_callback >  ( "read_callback"   );
     lc.def<&lmongo::error_callback>  ( "error_callback"  );
+
+    return 0;
+}
+
+int32 luaopen_log( lua_State *L )
+{
+    lclass<llog> lc(L,"Log");
+    lc.def<&llog::stop>  ("stop");
+    lc.def<&llog::join>  ("join");
+    lc.def<&llog::start> ("start");
+    lc.def<&llog::write> ("write");
 
     return 0;
 }

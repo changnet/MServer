@@ -4,20 +4,16 @@ require "global.table"
 require "global.string"
 json = require "lua_parson"
 
-local Store_sql   = require "sql.store_sql"
-local Store_mongo = require "mongo.store_mongo"
 local Http_mgr    = require "http.http_mgr"
 local Http_client = require "http.http_client"
 
 local function sig_handler( signum )
-    --if g_store_mongo then g_store_mongo:stop() end
+    if g_store_mongo then g_store_mongo:stop() end
     if g_store_sql then g_store_sql:stop() end
-
+    if g_log_mgr then g_log_mgr:stop();g_log_mgr:join() end
     ev:exit()
 end
 
-g_store_sql   = Store_sql()
-g_store_mongo = Store_mongo()
 g_http_mgr    = Http_mgr()
 local function main()
     ev:set_signal_ref( sig_handler )
@@ -26,7 +22,8 @@ local function main()
 
     require "example.code_performance"
     --require "example.mongo_performance"
-    require "example.mysql_performance"
+    --require "example.mysql_performance"
+    require "example.log_performance"
 
     g_http_mgr:listen( "0.0.0.0",8887 )
 

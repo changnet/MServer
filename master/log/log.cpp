@@ -4,6 +4,7 @@ log_file::log_file()
 {
     _ts = 0;
     _queue   = NULL;
+    _flush   = NULL;
     _name[0] = '\0';
 }
 
@@ -50,7 +51,7 @@ void log_file::push( time_t tm,const char *name,const char *str,size_t len )
 
     /* 自动换行 */
     static const char * const log_tail = "\n\0";
-    static const size_t tail_len = strlen( log_tail );
+    static const size_t tail_len = strlen( log_tail ) + 1;
     
     /* 截断太长的日志 */
     if ( LOG_MAX_LENGTH < len + tail_len + tm_len )
@@ -63,7 +64,7 @@ void log_file::push( time_t tm,const char *name,const char *str,size_t len )
     char *_str = new char[mc];
     memcpy( _str,tm_str,tm_len );
     memcpy( _str + tm_len,str,len );
-    memcpy( _str + len,log_tail,tail_len );
+    memcpy( _str + tm_len + len,log_tail,tail_len );
     
     if ( !_queue ) _queue = new std::queue<const char *>();
     
@@ -132,6 +133,8 @@ class log_file *log::get_log_file( int32 ts )
         {
             return &lf;
         }
+        
+        ++itr;
     }
     
     return NULL;
@@ -163,7 +166,10 @@ void log::remove_empty( int32 ts )
             {
                 _map.erase( itr );
                 rfl = true;
+                break;
             }
+            
+            ++itr;
         }
     }
 }
