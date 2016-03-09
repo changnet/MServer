@@ -84,12 +84,10 @@ void llog::routine()
             }
         }
         
-        if ( !wfl ) /* 系统空闲,清理不必要的缓存 */
-        {
-            pthread_mutex_lock( &mutex );
-            _log.remove_empty( wts );
-            pthread_mutex_unlock( &mutex );
-        }
+        /* 清理不必要的缓存 */
+        pthread_mutex_lock( &mutex );
+        _log.remove_empty( wts );
+        pthread_mutex_unlock( &mutex );
         
         ++wts;
     }
