@@ -215,6 +215,7 @@ int32 luaopen_log( lua_State *L )
     lc.def<&llog::join>  ("join");
     lc.def<&llog::start> ("start");
     lc.def<&llog::write> ("write");
+    lc.def<&llog::mkdir_p> ("mkdir_p");
 
     return 0;
 }

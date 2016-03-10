@@ -109,3 +109,18 @@ void llog::routine()
     }
     pthread_mutex_unlock( &mutex );
 }
+
+int32 llog::mkdir_p( lua_State *L )
+{
+    const char *path = luaL_checkstring( L,1 );
+    if ( !log::mkdir_p( path ) )
+    {
+        lua_pushboolean( L,0 );
+    }
+    else
+    {
+        lua_pushboolean( L,1 );
+    }
+    
+    return 1;
+}

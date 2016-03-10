@@ -16,6 +16,7 @@ public:
     int32 stop ();
     int32 start();
     int32 write();
+    static int32 mkdir_p( lua_State *L );
 private:
     void routine();
 private:

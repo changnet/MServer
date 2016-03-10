@@ -1,3 +1,6 @@
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "log.h"
 
 log_file::log_file()
@@ -172,4 +175,33 @@ void log::remove_empty( int32 ts )
             ++itr;
         }
     }
+}
+
+/* same as mkdir -p path */
+bool log::mkdir_p( const char *path )
+{
+    assert( "mkdir_p:null path",path );
+
+    char dir_path[PATH_MAX];
+    int32 len = strlen( path );
+
+    for ( int32 i = 0; i <= len && i < PATH_MAX; i++ )
+    {
+        dir_path[i] = *( path + i );
+        if ( ('\0' == dir_path[i] || dir_path[i] == '/') && i > 0)
+        {
+            dir_path[i]='\0';
+            if ( ::access(dir_path, F_OK) < 0 ) /* test if file already exist */
+            {
+                if ( ::mkdir( dir_path, S_IRWXU ) < 0 )
+                {
+                    ERROR( "mkdir -p %s fail:%s", dir_path, strerror(errno) );
+                    return false;
+                }
+            }
+            dir_path[i]='/';
+        }
+    }
+
+    return true;
 }

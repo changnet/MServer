@@ -100,6 +100,7 @@ public:
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
     typedef int32 (T::*pf_t)(lua_State*);
     typedef int32 (T::*pf_t_ex)();
+    typedef int32 (*pf_st_t)(lua_State*);
 
     /* 注册函数,const char* func_name 就是注册到lua中的函数名字 */
     template <pf_t pf>
@@ -143,7 +144,8 @@ public:
     }
     
     /* 用于定义类的static函数 */
-    lclass<T>& def(const char* func_name,pf_t pf)
+    template <pf_st_t pf>
+    lclass<T>& def(const char* func_name)
     {
         luaL_getmetatable( L,classname );
 

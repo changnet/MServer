@@ -28,6 +28,7 @@ class log
 {
 public:
     void remove_empty( int32 ts );
+    static bool mkdir_p( const char *path );
     class log_file *get_log_file( int32 ts );
     int32 write( time_t tm,const char *name,const char *str,size_t len = -1 );
 private:
