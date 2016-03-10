@@ -110,7 +110,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -130,7 +130,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -150,7 +150,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -169,7 +169,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -189,7 +189,7 @@ public:
         lua_getfield(L, -1, val_name);
         if(!lua_isnil(L, -1))
         {
-            ERROR( "dumplicate set variable %s:%s\n",classname,val_name );
+            ERROR( "dumplicate set variable %s:%s",classname,val_name );
         }
         lua_pop(L, 1);/* drop field */
 

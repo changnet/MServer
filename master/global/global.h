@@ -29,7 +29,7 @@
 #define expect_true(cond)  __builtin_expect (!!(cond),1)
 
 #ifdef _PDEBUG_
-    #define PDEBUG(...)    fprintf( stderr,__VA_ARGS__ )
+    #define PDEBUG(fmt,...)    fprintf( stderr,fmt "\n",##__VA_ARGS__ )
 #else
     #define PDEBUG(...)
 #endif

@@ -151,7 +151,7 @@ void lhttp_socket::listen_cb( int32 revents )
              * 2) lua不能引用socket，导致lua层gc时会销毁socket,ev还来不及fd_reify，又
              *    将此fd删除，触发一个错误
              */
-            ERROR( "listen cb call accept handler fail:%s\n",lua_tostring(L,-1) );
+            ERROR( "listen cb call accept handler fail:%s",lua_tostring(L,-1) );
             return;
         }
     }
@@ -175,7 +175,7 @@ bool lhttp_socket::is_message_complete()
     else if ( nparsed != (int32)dsize )  /* error */
     {
         int32 no = _parser->http_errno;
-        ERROR( "http socket parse error(%d):%s\n",no,http_errno_name(static_cast<enum http_errno>(no)) );
+        ERROR( "http socket parse error(%d):%s",no,http_errno_name(static_cast<enum http_errno>(no)) );
 
         /* on_disconnect 或者 等待上层心跳超时或对方关闭socket */
         return false;

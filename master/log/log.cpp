@@ -37,7 +37,7 @@ void log_file::push( time_t tm,const char *name,const char *str,size_t len )
     
     if ( len <= 0 )
     {
-        ERROR( "empty log content\n" );
+        ERROR( "log file empty log content" );
         return;
     }
     

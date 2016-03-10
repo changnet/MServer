@@ -48,6 +48,8 @@ void cdebug_log( const char *format,... )
         va_start(args,format);
         vfprintf(stderr,format,args);
         va_end(args);
+        
+        fprintf( stderr,"\n" );
 
         return;
     }
@@ -60,6 +62,8 @@ void cdebug_log( const char *format,... )
     va_start(args,format);
     vfprintf(pf,format,args);
     va_end(args);
+    
+    fprintf( pf,"\n" );
 
     fclose(pf);
 }
@@ -84,6 +88,8 @@ void cerror_log( const char *format,... )
         va_start(args,format);
         vfprintf(stderr,format,args);
         va_end(args);
+        
+        fprintf( stderr,"\n" );
 
         return;
     }
@@ -96,6 +102,8 @@ void cerror_log( const char *format,... )
     va_start(args,format);
     vfprintf(pf,format,args);
     va_end(args);
+    
+    fprintf( pf,"\n" );
 
     fclose(pf);
 }
@@ -111,6 +119,8 @@ void clog( const char *path,const char *format,... )
         va_start(args,format);
         vfprintf(stderr,format,args);
         va_end(args);
+        
+        fprintf( stderr,"\n" );
 
         return;
     }
@@ -119,6 +129,8 @@ void clog( const char *path,const char *format,... )
     va_start(args,format);
     vfprintf(pf,format,args);
     va_end(args);
+    
+    fprintf( pf,"\n" );
 
     fclose(pf);
 }

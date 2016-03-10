@@ -162,7 +162,7 @@ void leventloop::invoke_signal()
             lua_pushinteger( L,signum );
             if ( expect_false( LUA_OK != lua_pcall(L,1,0,0) ) )
             {
-                ERROR( "signal call lua fail:%s\n",lua_tostring(L,-1) );
+                ERROR( "signal call lua fail:%s",lua_tostring(L,-1) );
             }
         }
         ++signum;
@@ -233,7 +233,7 @@ void leventloop::invoke_sending()
 
         if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
         {
-            ERROR( "invoke sending unsuccess:%s\n",strerror(errno) );
+            ERROR( "invoke sending unsuccess:%s",strerror(errno) );
             _socket->stop();
 
             continue;

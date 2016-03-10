@@ -169,7 +169,7 @@ void ev_loop::fd_reify()
         switch ( anfd->reify )
         {
         case 0             : /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
-            ERROR("fd unreify:please avoid this fd situation,control your watcher\n");
+            ERROR("fd unreify:please avoid this fd situation,control your watcher");
             continue;
             break;
         case EPOLL_CTL_ADD :
@@ -227,7 +227,7 @@ void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
         assert ( "ev_loop::backend_modify EBADF",false );
         break;
     case EEXIST :
-        ERROR( "ev_loop::backend_modify EEXIST\n" );
+        ERROR( "ev_loop::backend_modify EEXIST" );
         break;
     case EINVAL :
         assert ( "ev_loop::backend_modify EINVAL",false );
