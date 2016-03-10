@@ -34,7 +34,7 @@ void runtime_stop()
     time( &rawtime );
     struct tm *ntm = localtime( &rawtime );
     
-    RUNTIME( "process[%d] '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d\n",
+    RUNTIME( "process[%d] '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d",
         getpid(),spath,sid,(ntm->tm_year + 1900),(ntm->tm_mon + 1),
         ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec);
 }
@@ -44,7 +44,7 @@ void parse_args( int32 argc,char **argv,char *spath,int32 *psid )
 {
     if (argc < 3)
     {
-        ERROR( "parse arguments fail,terminated ...\n" );
+        ERROR( "parse arguments fail,terminated ..." );
         exit( 1 );
     }
 

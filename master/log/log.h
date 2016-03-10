@@ -7,7 +7,6 @@
 
 #include "../global/global.h"
 
-class log;
 class log_file
 {
 public:
