@@ -1,6 +1,7 @@
 #include "ltimer.h"
 #include "ltools.h"
 #include "leventloop.h"
+#include "../ev/ev_def.h"
 
 ltimer::ltimer( lua_State *L )
     :L (L)

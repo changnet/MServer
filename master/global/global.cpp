@@ -73,7 +73,7 @@ void back_trace(void)
 
 void onexit()
 {
-    PDEBUG( "new counter:%d    ----   new[] counter:%d\n",g_counter,g_counters );
+    PDEBUG( "new counter:%d    ----   new[] counter:%d",g_counter,g_counters );
     //back_trace();
 }
 
@@ -87,7 +87,7 @@ void new_fail()
 void __log_assert_fail (const char *__assertion, const char *__file,
            unsigned int __line, const char *__function)
 {
-    ERROR( "%s:%d:%s:log assertion '%s' failed\n",__file,__line,__function,__assertion );
+    ERROR( "%s:%d:%s:log assertion '%s' failed",__file,__line,__function,__assertion );
 }
 
 /* 信号阻塞

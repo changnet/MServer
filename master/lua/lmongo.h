@@ -30,17 +30,10 @@ public:
     int32 read_callback ();
     int32 error_callback();
 private:
-    enum
-    {
-        ERR  = -1,
-        EXIT = 0 ,
-        READ = 1
-    };
-private:
     void routine();
     void invoke_command();
     void mongo_cb( ev_io &w,int32 revents );
-    void result_encode( bson_t *doc );
+    void result_encode( bson_t *doc,bool is_array );
     int32 lua_encode( int32 index,bson_t **pdoc );
     bool lua_key_encode( char *key,int32 len,int32 index,int32 &array_index,
         int32 is_array );

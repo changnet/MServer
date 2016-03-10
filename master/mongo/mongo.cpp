@@ -85,6 +85,7 @@ int32 mongo::ping( bson_error_t *error )
         mongoc_cursor_destroy( cursor );
         bson_destroy( &ping );
 
+        mongoc_database_destroy( database );
         return 0;
     }
 
@@ -93,6 +94,7 @@ int32 mongo::ping( bson_error_t *error )
 
     mongoc_cursor_destroy( cursor );
     bson_destroy( &ping );
+    mongoc_database_destroy( database );
 
    return 1;
 }
@@ -113,6 +115,7 @@ struct mongons::result *mongo::count( struct mongons::query *mq )
 
     struct mongons::result *result = new mongons::result();
     result->id = mq->_id;
+    result->ty = mq->_ty;
 
     if ( count < 0 )    /* 如果失败，返回-1 */
     {
@@ -146,6 +149,7 @@ struct mongons::result *mongo::find ( struct mongons::query *mq )
 
     struct mongons::result *result = new mongons::result();
     result->id = mq->_id;
+    result->ty = mq->_ty;
 
     int32 index = 0;
     bson_t *doc = bson_new();
@@ -204,6 +208,7 @@ struct mongons::result *mongo::find_and_modify ( struct mongons::query *mq )
     struct mongons::result *result = new mongons::result();
     result->data = bson_new();
     result->id = mq->_id;
+    result->ty = mq->_ty;
 
     bson_error_t err;
     bool rl = mongoc_collection_find_and_modify( collection,mq->_query,

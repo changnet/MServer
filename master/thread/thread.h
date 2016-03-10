@@ -15,6 +15,13 @@ public:
     
     pthread_t get_id();
     void join();
+public:
+    enum
+    {
+        ERR  = -1,
+        EXIT = 0 ,
+        READ = 1
+    };
 protected:
     virtual void routine() = 0;
     static void *start_routine( void *arg );

@@ -25,21 +25,21 @@ public:
     int32 get_method();
     int32 get_status();
 
-    void listen_cb( ev_io &w,int32 revents );
+    void listen_cb( int32 revents );
 
     void set_state( enum parse_state st );
     void append_url( const char *at,size_t len );
     void append_body( const char *at,size_t len );
     void append_cur_field( const char *at,size_t len );
     void append_cur_value( const char *at,size_t len );
-    
+
     /* 以下函数因为lua粘合层的写法限制，需要在子类覆盖，不然无法注册 */
     int32 send   () { return lsocket::send(); }
     int32 kill   () { return lsocket::kill(); }
     int32 address() { return lsocket::address(); }
     int32 listen () { return lsocket::listen (); }
     int32 connect() { return lsocket::connect(); }
-    
+
     int32 set_self_ref  () { return lsocket::set_self_ref  (); }
     int32 set_on_message() { return lsocket::set_on_message(); }
     int32 set_on_acception () { return lsocket::set_on_acception (); }

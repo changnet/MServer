@@ -8,7 +8,7 @@
 #include "../global/global.h"
 #include "../ev/ev.h"
 #include "../ev/ev_watcher.h"
-#include "lsocket.h"
+#include "../net/socket.h"
 
 class leventloop : public ev_loop
 {
@@ -27,7 +27,7 @@ public:
     int32 set_signal_ref();
 
     void finalize();
-    void pending_send( class socket *s );
+    int32 pending_send( class socket *s );
     void remove_sending( int32 sending );
 private:
     explicit leventloop( lua_State *L,bool singleton );

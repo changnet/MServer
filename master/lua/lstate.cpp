@@ -1,11 +1,15 @@
+#include <lua.hpp>
+#include <lparson.h>
+
+#include "llog.h"
 #include "lsql.h"
+#include "lutil.h"
 #include "lmongo.h"
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
 #include "lhttp_socket.h"
 #include "leventloop.h"
-#include "../ev/ev_def.h"
 
 class lstate *lstate::_state = NULL;
 class lstate *lstate::instance()
@@ -50,15 +54,14 @@ lstate::~lstate()
 }
 
 int32 luaopen_ev    ( lua_State *L );
-int32 luaopen_util  ( lua_State *L );
-int32 luaopen_http_socket( lua_State *L );
-int32 luaopen_timer ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
+int32 luaopen_log   ( lua_State *L );
+int32 luaopen_timer ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
+int32 luaopen_http_socket( lua_State *L );
 
-void lstate::open_cpp()
+void lstate::set_lua_path()
 {
-    /* 把当前工作目录加到lua的path */
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "path");
     const char *old_path = lua_tostring(L, -1);
@@ -66,7 +69,7 @@ void lstate::open_cpp()
     char new_path[PATH_MAX] = {0};
     if ( snprintf( new_path,PATH_MAX,"%s;%s/lua_script/?.lua",old_path,cwd ) >= PATH_MAX )
     {
-        ERROR( "lua init,path overflow\n" );
+        ERROR( "lua init,lua path overflow\n" );
         lua_close( L );
         exit( 1 );
     }
@@ -75,15 +78,46 @@ void lstate::open_cpp()
     lua_pushstring(L, new_path);
     lua_setfield(L, -2, "path");
     lua_pop(L, 1);   /* drop package table */
+}
+
+void lstate::set_c_path()
+{
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "cpath");
+    const char *old_path = lua_tostring(L, -1);
+
+    char new_path[PATH_MAX] = {0};
+    if ( snprintf( new_path,PATH_MAX,"%s;%s/c_module/?.so",old_path,cwd ) >= PATH_MAX )
+    {
+        ERROR( "lua init,c path overflow\n" );
+        lua_close( L );
+        exit( 1 );
+    }
+
+    lua_pop(L, 1);    /* drop old path field */
+    lua_pushstring(L, new_path);
+    lua_setfield(L, -2, "cpath");
+    lua_pop(L, 1);   /* drop package table */
+}
+
+void lstate::open_cpp()
+{
+    /* 把当前工作目录加到lua的path */
+    set_c_path();
+    set_lua_path();
 
     luaL_requiref(L, "util", luaopen_util, 1);
     lua_pop(L, 1);  /* remove lib */
 
+    luaL_requiref(L, "lua_parson", luaopen_lua_parson, 1);
+    lua_pop(L, 1);  /* remove lib */
+
     luaopen_ev    (L);
-    luaopen_http_socket(L);
-    luaopen_timer (L);
     luaopen_sql   (L);
+    luaopen_log   (L);
+    luaopen_timer (L);
     luaopen_mongo (L);
+    luaopen_http_socket(L);
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );
@@ -97,11 +131,6 @@ int32 luaopen_ev( lua_State *L )
     lc.def<&leventloop::exit>  ("exit");
     lc.def<&leventloop::signal>("signal");
     lc.def<&leventloop::set_signal_ref>("set_signal_ref");
-
-    lc.set( "EV_READ",EV_READ );
-    lc.set( "EV_WRITE",EV_WRITE );
-    lc.set( "EV_TIMER",EV_TIMER );
-    lc.set( "EV_ERROR",EV_ERROR );
 
     return 0;
 }
@@ -120,7 +149,7 @@ int32 luaopen_http_socket( lua_State *L )
     lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
     lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
     lc.def<&lhttp_socket::file_description> ("file_description" );
-    
+
     lc.def<&lhttp_socket::get_url>   ("get_url");
     lc.def<&lhttp_socket::get_body>  ("get_body" );
     lc.def<&lhttp_socket::get_method>("get_method");
@@ -179,21 +208,14 @@ int32 luaopen_mongo( lua_State *L )
     return 0;
 }
 
-static int32 util_md5( lua_State *L )
+int32 luaopen_log( lua_State *L )
 {
-    lua_pushstring( L,"mde35dfafefsxee4r3" );
-    return 1;
-}
+    lclass<llog> lc(L,"Log");
+    lc.def<&llog::stop>  ("stop");
+    lc.def<&llog::join>  ("join");
+    lc.def<&llog::start> ("start");
+    lc.def<&llog::write> ("write");
+    lc.def<&llog::mkdir_p> ("mkdir_p");
 
-static const luaL_Reg utillib[] =
-{
-    {"md5", util_md5},
-    {NULL, NULL}
-};
-
-
-int32 luaopen_util( lua_State *L )
-{
-  luaL_newlib(L, utillib);
-  return 1;
+    return 0;
 }

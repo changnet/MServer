@@ -10,9 +10,9 @@ CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
 OPTIMIZE =
 CC = g++
-INC = -I./deps/include -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
-LIB = -L./deps/lib -L/usr/local/lib
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0
+INC = -I./deps/http-parser -I./deps/lua_parson -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
+LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser
+LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser
 ODIR = bin
 SDIR = ./
 TEST_DIR = ../test
@@ -25,43 +25,44 @@ MKDIR = mkdir -p
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o http_parser.o
+	lstream_socket.o lutil.o log.o llog.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
 
 $(ODIR)/%.o: $(SDIR)/deps/include/%.c
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/global/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/ev/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+
+$(ODIR)/%.o: $(SDIR)/log/%.cpp
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/lua/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/net/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mysql/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/thread/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
-
-$(ODIR)/%.o: $(TEST_DIR)/bench.c
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖
 #$^ 所有的依赖目标的集合。以空格分隔。如果在依赖目标中有多个重复的,那个这个变量会去除重复的依赖目标,只保留一份。
@@ -71,13 +72,23 @@ $(ODIR)/%.o: $(TEST_DIR)/bench.c
 all: DIRS $(OBJS) $(ODIR)/main.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
-test: DIRS $(OBJS) $(ODIR)/bench.o
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) -o $(TEST_DIR)/bench  $(OBJS) $(ODIR)/bench.o
-
 DIRS:
 	$(MKDIR) $(ODIR)
 
-.PHONY: clean
-
 clean:
-	rm -rf $(ODIR)
+	rm -rf $(ODIR)/*
+
+clean_all:
+	$(MAKE) -C deps/lua_parson clean
+	$(MAKE) -C deps/http-parser clean
+	rm -rf $(ODIR)/*
+
+build_all:
+	$(MAKE) -C deps/lua_parson all
+	$(MAKE) -C deps/http-parser package
+	$(MAKE) -C . all
+
+test:
+	valgrind --leak-check=full bin/master test 1
+
+.PHONY: all clean test clean_all build_all

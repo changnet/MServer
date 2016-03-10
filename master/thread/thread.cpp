@@ -29,14 +29,17 @@ thread::~thread()
 /* 开始线程 */
 bool thread::start()
 {
+    /* 为了防止子线程创建比主线程运行更快，需要先设置标识 */
+    _run = true;
+
     /* 创建线程 */
     if ( pthread_create( &thread_t,NULL,thread::start_routine,(void *)this ) )
     {
+        _run = false;
         ERROR( "thread start,create fail:%s\n",strerror(errno) );
         return false;
     }
     
-    _run = true;
     return true;
 }
 

@@ -9,7 +9,7 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
 编译安装
 --------
 
-代码在ubuntu 14.04、debian 7、centos 6中测试。下面以ubuntu 14.04安装为例:
+代码在ubuntu 14.04、debian 7中测试。下面以ubuntu 14.04安装为例:
 
  * sudo apt-get install libmysqlclient-dev
  * sudo apt-get install lua53
@@ -30,12 +30,14 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * 基于mysql c connector封装mysql，支持lua table直接转换
  * 基于mongo c driver封装mongodb，支持lua table直接转换
  * 基于http-parser的http (client/server)通信模块
+ * 基于parson的lua json解析模块
+ * 多线程缓冲日志
 
 待实现组件:
 -----------
 
- * protobuf、platbuffer
- * astar、rsa、zlib、md5、uuid、cjson、xml
+ * protobuf、flatbuffer
+ * astar、rsa、zlib、md5、uuid、xml
  * 为lua提供LRU、LFU、优先队列、大小堆等常用数据结构
 
 单个节点master架构

@@ -20,11 +20,11 @@ void runtime_start()
     time_t rawtime;
     time( &rawtime );
     struct tm *ntm = localtime( &rawtime );
-    RUNTIME( "process[%d] run as '%s %d' %lubit at %04d-%02d-%02d %02d:%02d:%02d\n",
+    RUNTIME( "process[%d] run as '%s %d' %lubit at %04d-%02d-%02d %02d:%02d:%02d",
         getpid(),spath,sid,8*sizeof(void *),(ntm->tm_year + 1900),(ntm->tm_mon + 1),
         ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec);
-    RUNTIME( "lua version:%s\n",LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "." LUA_VERSION_RELEASE );
-    RUNTIME( "linux:%s %s\n",buf.release,buf.version );
+    RUNTIME( "lua version:%s",LUA_VERSION_MAJOR "." LUA_VERSION_MINOR "." LUA_VERSION_RELEASE );
+    RUNTIME( "linux:%s %s",buf.release,buf.version );
 }
 
 /* 记录进程关闭信息 */
@@ -34,7 +34,7 @@ void runtime_stop()
     time( &rawtime );
     struct tm *ntm = localtime( &rawtime );
     
-    RUNTIME( "process[%d] '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d\n",
+    RUNTIME( "process[%d] '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d",
         getpid(),spath,sid,(ntm->tm_year + 1900),(ntm->tm_mon + 1),
         ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec);
 }
@@ -44,7 +44,7 @@ void parse_args( int32 argc,char **argv,char *spath,int32 *psid )
 {
     if (argc < 3)
     {
-        ERROR( "parse arguments fail,terminated ...\n" );
+        ERROR( "parse arguments fail,terminated ..." );
         exit( 1 );
     }
 
@@ -77,12 +77,6 @@ int32 main( int32 argc,char **argv )
 
     lclass<leventloop>::push( L,_loop,false );
     lua_setglobal( L,"ev" );
-
-    // class mongo _mongo;
-    // _mongo.set( "127.0.0.1",27013,"test","test","xzc_test" );
-    // _mongo.connect();
-    // assert( "connect err",true );
-    // _mongo.disconnect();
     
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];

@@ -1,0 +1,39 @@
+{
+    "sparse": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "number ten"
+    ],
+    "force_object": {
+        "1": "USA",
+        "2": "UK",
+        "3": "CH"
+    },
+    "empty_array": [],
+    "employees": [
+        {
+            "firstName": "Bill",
+            "lastName": "Gates"
+        },
+        {
+            "firstName": "George",
+            "lastName": "Bush"
+        },
+        {
+            "firstName": "Thomas",
+            "lastName": "Carter"
+        }
+    ],
+    "force_array": [
+        "123456789",
+        "987654321"
+    ],
+    "empty_object": {}
+}

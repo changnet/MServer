@@ -100,6 +100,7 @@ public:
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
     typedef int32 (T::*pf_t)(lua_State*);
     typedef int32 (T::*pf_t_ex)();
+    typedef int32 (*pf_st_t)(lua_State*);
 
     /* 注册函数,const char* func_name 就是注册到lua中的函数名字 */
     template <pf_t pf>
@@ -110,7 +111,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -130,7 +131,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -143,14 +144,15 @@ public:
     }
     
     /* 用于定义类的static函数 */
-    lclass<T>& def(const char* func_name,pf_t pf)
+    template <pf_st_t pf>
+    lclass<T>& def(const char* func_name)
     {
         luaL_getmetatable( L,classname );
 
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -169,7 +171,7 @@ public:
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s\n",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -189,7 +191,7 @@ public:
         lua_getfield(L, -1, val_name);
         if(!lua_isnil(L, -1))
         {
-            ERROR( "dumplicate set variable %s:%s\n",classname,val_name );
+            ERROR( "dumplicate set variable %s:%s",classname,val_name );
         }
         lua_pop(L, 1);/* drop field */
 

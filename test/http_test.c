@@ -1,8 +1,9 @@
-#include "http_parser.h"
+#include <http_parser.h>
+
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h> /* rand */
+#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
@@ -13,7 +14,7 @@ int on_message_begin (http_parser *parser){
 }
 
 int on_url(http_parser *parser, const char *at, size_t length){
-    char *url = calloc(1,length+1);
+    char *url = (char*)calloc(1,length+1);
     memcpy(url,at,length);
     url[length] = 0;
     printf("on_url:%s\n",url);
@@ -21,7 +22,7 @@ int on_url(http_parser *parser, const char *at, size_t length){
 }
 
 int on_status(http_parser *parser, const char *at, size_t length){
-    char *status = calloc(1,length+1);
+    char *status = (char*)calloc(1,length+1);
     memcpy(status,at,length);
     status[length] = 0;
     printf("on_status:%s\n",status);
@@ -29,7 +30,7 @@ int on_status(http_parser *parser, const char *at, size_t length){
 }
 
 int on_header_field(http_parser *parser, const char *at, size_t length){
-    char *field = calloc(1,length+1);
+    char *field = (char*)calloc(1,length+1);
     memcpy(field,at,length);
     field[length] = 0;
     printf("on_header_field:%s\n",field);
@@ -37,7 +38,7 @@ int on_header_field(http_parser *parser, const char *at, size_t length){
 }
 
 int on_header_value(http_parser *parser, const char *at, size_t length){
-    char *value = calloc(1,length+1);
+    char *value = (char*)calloc(1,length+1);
     memcpy(value,at,length);
     value[length] = 0;
     printf("on_header_value:%s\n",value);
@@ -50,7 +51,7 @@ int on_headers_complete(http_parser *parser){
 }
 
 int on_body(http_parser *parser, const char *at, size_t length){
-    char *body = calloc(1,length+1);
+    char *body = (char*)calloc(1,length+1);
     memcpy(body,at,length);
     body[length] = 0;
     printf("on_body:%s\n",body);

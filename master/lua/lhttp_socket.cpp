@@ -1,7 +1,7 @@
 #include <http_parser.h>  /* file at deps/include */
 #include "lhttp_socket.h"
 #include "lclass.h"
-#include "leventloop.h"
+#include "../ev/ev_def.h"
 
 int32 on_message_begin( http_parser *parser )
 {
@@ -109,19 +109,18 @@ lhttp_socket::~lhttp_socket()
     _parser = NULL;
 }
 
-void lhttp_socket::listen_cb( ev_io &w,int32 revents )
+void lhttp_socket::listen_cb( int32 revents )
 {
     assert( "libev listen cb  error",!(EV_ERROR & revents) );
 
-    class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
-    while ( w.is_active() )
+    while ( _socket.active() )
     {
-        int32 new_fd = ::accept( w.fd,NULL,NULL );
+        int32 new_fd = _socket.accept();
         if ( new_fd < 0 )
         {
             if ( EAGAIN != errno && EWOULDBLOCK != errno )
             {
-                FATAL( "accept fail:%s\n",strerror(errno) );
+                FATAL( "http_socket::accept fail:%s\n",strerror(errno) );
                 return;
             }
 
@@ -133,10 +132,9 @@ void lhttp_socket::listen_cb( ev_io &w,int32 revents )
         USER_TIMEOUT( new_fd );
 
         /* 直接进入监听 */
-        class lhttp_socket *_socket = new class lhttp_socket( L );
-        (_socket->w).set( loop );
-        (_socket->w).set<lsocket,&lsocket::message_cb>( _socket );
-        (_socket->w).start( new_fd,EV_READ );  /* 这里会设置fd */
+        class lhttp_socket *_s = new class lhttp_socket( L );
+        (_s->_socket).set<lsocket,&lsocket::message_cb>( _s );
+        (_s->_socket).start( new_fd,EV_READ );  /* 这里会设置fd */
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_acception);
         int32 param = 1;
@@ -145,7 +143,7 @@ void lhttp_socket::listen_cb( ev_io &w,int32 revents )
             lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
             param ++;
         }
-        lclass<lhttp_socket>::push( L,_socket,true );
+        lclass<lhttp_socket>::push( L,_s,true );
         if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
         {
             /* 如果失败，会出现几种情况：
@@ -153,7 +151,7 @@ void lhttp_socket::listen_cb( ev_io &w,int32 revents )
              * 2) lua不能引用socket，导致lua层gc时会销毁socket,ev还来不及fd_reify，又
              *    将此fd删除，触发一个错误
              */
-            ERROR( "listen cb call accept handler fail:%s\n",lua_tostring(L,-1) );
+            ERROR( "listen cb call accept handler fail:%s",lua_tostring(L,-1) );
             return;
         }
     }
@@ -161,12 +159,13 @@ void lhttp_socket::listen_cb( ev_io &w,int32 revents )
 
 bool lhttp_socket::is_message_complete()
 {
-    uint32 dsize = _recv.data_size();
+    class buffer *_recv = _socket.get_recv_buffer();
+    uint32 dsize = _recv->data_size();
     assert( "http socket is_message_complete empty",dsize > 0 );
 
-    int32 nparsed = http_parser_execute( _parser,&settings,
-        _recv._buff + _recv._pos,dsize );
-    
+    int32 nparsed = http_parser_execute( _parser,&settings,_recv->buff_pointer(),dsize );
+
+    _recv->clear(); // http_parser不需要旧缓冲区
     /* web_socket报文,暂时不用回调到上层.无论当前报文是否结束,返回false等待数据报文 */
     if ( _parser->upgrade )
     {
@@ -175,6 +174,10 @@ bool lhttp_socket::is_message_complete()
     }
     else if ( nparsed != (int32)dsize )  /* error */
     {
+        int32 no = _parser->http_errno;
+        ERROR( "http socket parse error(%d):%s",no,http_errno_name(static_cast<enum http_errno>(no)) );
+
+        /* on_disconnect 或者 等待上层心跳超时或对方关闭socket */
         return false;
     }
 

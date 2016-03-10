@@ -14,16 +14,15 @@
  */
 
 class buffer_process;
-class lhttp_socket;
 
 class buffer
 {
 public:
     buffer();
     ~buffer();
-    
+
     void append( const char *data,uint32 len );
-    
+
     /* 从socket读取数据 */
     inline int32 recv( int32 fd )
     {
@@ -33,68 +32,73 @@ public:
         {
             _size += len;
         }
-        
+
         return len;
     }
-    
+
     /* 发送数据 */
     inline int32 send( int32 fd )
     {
         assert( "buff send without data",_size - _pos > 0 );
-        
+
         int32 len = ::write( fd,_buff + _pos,_size - _pos );
         if ( len > 0 )
             _pos += len;
 
         return len;
     }
-    
+
     /* 清理缓冲区 */
     inline void clear()
     {
         _pos = _size = 0;
     }
-    
+
     /* 有效数据大小 */
     inline uint32 data_size()
     {
         return _size - _pos;
     }
-    
+
     /* 悬空区移动 */
     inline void moveon( int32 _mv )
     {
         _pos += _mv;
     }
-    
+
     /* 数据区大小 */
     inline uint32 size()
     {
         return _size;
     }
-    
+
     /* 总大小 */
     inline uint32 length()
     {
         return _len;
     }
-    
+
     /* 悬空区大小 */
     inline uint32 empty_head_size()
     {
         return _pos;
     }
 
+    /* 有效的缓冲区指针 */
+    const char *buff_pointer()
+    {
+        return _buff + _pos;
+    }
+
     friend class buffer_process;
-    friend class lhttp_socket;
-    
+
     static class ordered_pool<BUFFER_CHUNK> allocator;
 private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
     uint32 _len;     /* 缓冲区总大小 */
     uint32 _pos;     /* 悬空区大小 */
-    
+
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长
      * 2.已知大小(发送数据时)，指数增长到合适大小
@@ -103,24 +107,24 @@ private:
     {
         if ( _len - _size > bytes ) /* 不能等于0,刚好用完也申请 */
             return;
-        
+
         if ( _pos )    /* 解决悬空区 */
         {
             assert( "reserved memmove error",_size > _pos );
             memmove( _buff,_buff + _pos,_size - _pos );
             _size -= _pos;
             _pos   = 0;
-            
+
             reserved( bytes );
         }
-        
+
         uint32 new_len = _len  ? _len  : BUFFER_CHUNK;
         uint32 _bytes  = bytes ? bytes : BUFFER_CHUNK;
         while ( new_len - _size < _bytes )
         {
             new_len *= 2;  /* 通用算法：指数增加 */
         }
-        
+
         /* 像STL一样把旧内存拷到新内存 */
         char *new_buff = allocator.ordered_malloc( new_len/BUFFER_CHUNK );
 

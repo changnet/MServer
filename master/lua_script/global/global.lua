@@ -4,11 +4,13 @@
 
 --常用的全局函数
 
+local util = require "util"
+
 local function to_readable( val )
     if type(val) == "string" then
         return "\"" .. val .. "\""
     end
-    
+
     return val
 end
 
@@ -126,7 +128,7 @@ function ELOG(...)
         print("PLOG can set nil")
         return
     end
-    
+
     local is_t = false
     local str = ""
     for _,v in ipairs(temp) do
@@ -160,4 +162,24 @@ function require_ex( path )
     local _instance = package.loaded[path]
     package.loaded[path] = nil
     return require(path)
+end
+
+--测试时间,耗时打印
+local _sec, _usec
+function f_tm_start()
+    _sec, _usec = util.timeofday()
+end
+
+--[[
+1秒＝1000毫秒，
+1毫秒＝1000微秒，
+1微妙＝1000纳秒，
+1纳秒＝1000皮秒。
+秒用s表现,毫秒用ms,微秒用μs表示，纳秒用ns表示，皮秒用ps表示
+]]
+function f_tm_stop(...)
+    local sec,usec = util.timeofday()
+    assert( sec >= _sec,"time jump" )
+    local temp =  math.floor( (sec-_sec)*1000000 + usec - _usec )
+    print(...,temp,"microsecond")
 end

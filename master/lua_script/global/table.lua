@@ -38,11 +38,12 @@ end
 将一个table指定为数组
 此函数与底层bson解析有关，非通用函数
 ]]
-table.array = function(t)
+table.array = function(t,sparse)
     local _t = t or {}
     local mt = getmetatable( _t ) or {}
     rawset( mt,"__array",true )
-    setmetatable( _t,mt )
+    if sparse then rawset( mt,"__sparse",true ) end
 
+    setmetatable( _t,mt )
     return _t
 end
