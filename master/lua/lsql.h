@@ -5,7 +5,6 @@
 #include <queue>
 #include "../global/global.h"
 #include "../thread/thread.h"
-#include "../ev/ev_watcher.h"
 #include "../mysql/sql.h"
 
 class lsql : public thread
@@ -16,7 +15,6 @@ public:
 
     int32 start();
     int32 stop ();
-    int32 join ();
 
     int32 do_sql    ();
     int32 next_result();
@@ -25,15 +23,19 @@ public:
     int32 read_callback ();
     int32 error_callback();
 private:
-    void routine();
-    void invoke_sql ();
-    void sql_cb( ev_io &w,int32 revents );
+    bool cleanup();
+    bool initlization();
+
+    void invoke_sql ( bool cb = true );
+    void invoke_cb( struct sql_res *res );
+
+    void routine( notify_t msg );
+    void notification( notify_t msg );
+
     void result_encode( struct sql_res *res );
 private:
-    int32 fd[2]   ;
     lua_State *L  ;
     class sql _sql;
-    ev_io watcher ;
     
     int32 ref_self;
     int32 ref_read;

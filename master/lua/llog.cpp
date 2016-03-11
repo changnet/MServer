@@ -4,18 +4,12 @@
 llog::llog( lua_State *L )
     : L ( L )
 {
+    _wts = 0;
 }
 
 llog::~llog()
 {
     assert( "log thread not exit yet",!_run );
-}
-
-int32 llog::join ()
-{
-    thread::join();
-
-    return 0;
 }
 
 int32 llog::stop ()
@@ -26,15 +20,17 @@ int32 llog::stop ()
         return 0;
     }
 
-    /* 子线程只读不写，因此不需要加锁 */
-    _run = false;
+    thread::stop();
 
     return 0;
 }
 
 int32 llog::start()
 {
-    thread::start();
+    /* 设定多少秒写入一次 */
+    int32 sec  = luaL_optinteger( L,1,5 );
+    int32 usec = luaL_optinteger( L,2,0 );
+    thread::start( sec,usec );
 
     return 0;
 }
@@ -49,65 +45,76 @@ int32 llog::write()
     size_t len = 0;
     const char *name = luaL_checkstring( L,1 );
     const char *str  = luaL_checklstring( L,2,&len );
-    
+
     class leventloop *ev = leventloop::instance();
     
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
+    lock();
     _log.write( ev->now(),name,str,len );
+    unlock();
+
     return 0;
 }
 
-void llog::routine()
+void llog::routine( notify_t msg )
 {
-    assert( "log run flag not set",_run );
-
-    int32 sts = 0;  /* sleep times */
-    int32 wts = 0;  /* write times */
-    while( _run )
+    switch ( msg )
     {
-        usleep( 1E5 ); /* 1E6 = 1s */
-        if ( ++sts < 50 ) continue;
-
-        sts = 0;
-        bool wfl = true;
-        while ( wfl )
-        {
-            wfl = false;
-            pthread_mutex_lock( &mutex );
-            class log_file *plf = _log.get_log_file( wts );
-            pthread_mutex_unlock( &mutex );
-
-            if ( plf )
-            {
-                plf->flush(); /* 写入磁盘 */
-                wfl = true;
-            }
-        }
-        
-        /* 清理不必要的缓存 */
-        pthread_mutex_lock( &mutex );
-        _log.remove_empty( wts );
-        pthread_mutex_unlock( &mutex );
-        
-        ++wts;
+        case ERROR : 
+            assert( "main thread shold not notify error",false );
+            return;
+            break ;
+        case EXIT  : return;break;
+        case NONE  : break;
+        case MSG   :
+            assert( "log thread do't need msg notify",false );
+            return;
+            break ;
     }
-    
-    /* 线程终止，所有日志入磁盘 */
-    /* 不应该再有新日志进来，可以全程锁定 */
-    ++wts;
+
     bool wfl = true;
-    pthread_mutex_lock( &mutex );
     while ( wfl )
     {
         wfl = false;
-        class log_file *plf = _log.get_log_file( wts );
+
+        lock();
+        class log_file *plf = _log.get_log_file( _wts );
+        unlock();
+
         if ( plf )
         {
             plf->flush(); /* 写入磁盘 */
             wfl = true;
         }
     }
-    pthread_mutex_unlock( &mutex );
+
+    /* 清理不必要的缓存 */
+    lock();
+    _log.remove_empty( _wts );
+    unlock();
+
+    ++_wts;
+}
+
+bool llog::cleanup()
+{
+    /* 线程终止，所有日志入磁盘 */
+    /* 不应该再有新日志进来，可以全程锁定 */
+    ++_wts;
+    bool wfl = true;
+    
+    lock();
+    while ( wfl )
+    {
+        wfl = false;
+        class log_file *plf = _log.get_log_file( _wts );
+        if ( plf )
+        {
+            plf->flush(); /* 写入磁盘 */
+            wfl = true;
+        }
+    }
+    unlock();
 }
 
 int32 llog::mkdir_p( lua_State *L )

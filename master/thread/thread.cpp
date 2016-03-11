@@ -1,10 +1,13 @@
 #include "thread.h"
+#include "../net/socket.h"
 
 thread::thread()
 {
+    fd[0] = -1 ;
+    fd[1] = -1 ;
+    _thread = 0;
     _run  = false;
     _join = false;
-    thread_t = 0;
     
     int32 rv = pthread_mutex_init( &mutex,NULL );
     if ( 0 != rv )
@@ -16,6 +19,10 @@ thread::thread()
 
 thread::~thread()
 {
+    assert( "thread still running",!_run );
+    assert( "io watcher not close",!_watcher.is_active() );
+    assert( "socket pair not close", -1 == fd[0] && -1 == fd[1] );
+
     if ( !_join ) pthread_detach( pthread_self() );
 
     int32 rv = pthread_mutex_destroy( &mutex );
@@ -27,18 +34,43 @@ thread::~thread()
 }
 
 /* 开始线程 */
-bool thread::start()
+bool thread::start( int32 sec,int32 usec )
 {
+    /* fd[0]  父进程
+     * fd[1]  子线程
+     */
+    if ( socketpair( AF_UNIX, SOCK_STREAM,IPPROTO_IP,_fd ) < 0 )
+    {
+        ERROR( "socketpair fail:%s",strerror(errno) );
+        return false;
+    }
+    socket::non_block( _fd[0] );    /* 主线程fd需要为非阻塞并加入到主循环监听 */
+    
+    /* 子线程设置一个超时，阻塞就可以了，没必要用poll(fd太大，不允许使用select) */
+    struct timeval tm;
+    tm.tv_sec  = sec;
+    tm.tv_usec = usec;
+    setsockopt(fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
+    setsockopt(fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
+    
     /* 为了防止子线程创建比主线程运行更快，需要先设置标识 */
     _run = true;
 
     /* 创建线程 */
-    if ( pthread_create( &thread_t,NULL,thread::start_routine,(void *)this ) )
+    if ( pthread_create( &_thread,NULL,thread::start_routine,(void *)this ) )
     {
         _run = false;
-        ERROR( "thread start,create fail:%s\n",strerror(errno) );
+        ::close( fd[0] );
+        ::close( fd[1] );
+        
+        ERROR( "thread start,create fail:%s",strerror(errno) );
         return false;
     }
+    
+    class ev_loop *loop = static_cast<ev_loop *>( leventloop::instance() );
+    _watcher.set( loop );
+    _watcher.set<thread,&thread::io_cb>( this );
+    _watcher.start( _fd[0],EV_READ );
     
     return true;
 }
@@ -46,10 +78,30 @@ bool thread::start()
 /* 终止线程 */
 void thread::stop()
 {
-    /* 只读不写，仅在程序结束时由主线程单一调用，暂不加锁 */
-    //pthread_mutex_lock( &mutex );
+    if ( !_run )
+    {
+        ERROR( "try to stop a inactive thread" );
+        return;
+    }
+
+    assert( "thread join zero thread id", 0 != _thread );
+
     _run = false;
-    //pthread_mutex_unlock( &mutex );
+    notify_child( EXIT );
+    int32 rv = pthread_join( _thread,NULL );
+    if ( rv )
+    {
+        /* On success, pthread_join() returns 0; on error, it returns an error
+         * number.errno is not use.
+         * not strerror(errno)
+         */
+        FATAL( "thread join fail:%s\n",strerror(rv) );
+    }
+    _join = true;
+    
+    if ( _watcher.is_active() ) _watcher.stop();
+    if ( _fd[0] >= 0 ) { ::close( _fd[0] );_fd[0] = -1; }
+    if ( _fd[1] >= 0 ) { ::close( _fd[1] );_fd[1] = -1; }
 }
 
 /* 线程入口函数 */
@@ -60,8 +112,42 @@ void *thread::start_routine( void *arg )
     
     signal_block();  /* 子线程不处理外部信号 */
 
-    _thread->routine();
-    _thread->_run = false;
+    if ( !_thread->initlization() )  /* 初始化 */
+    {
+        ERROR( "thread initlization fail" );
+        return NULL;
+    }
+    
+    while ( _run )
+    {
+        int8 event = 0;
+        int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
+        if ( sz < 0 )
+        {
+            /* errno variable is thread save */
+            if ( errno == EAGAIN || errno == EWOULDBLOCK )
+            {
+                _thread->routine( NONE );
+                continue;  // just timeout
+            }
+
+            ERROR( "socketpair broken,thread exit" );
+            // socket error,can't notify( fd[0],ERROR );
+            break;
+        }
+        else if ( 0 == sz )
+        {
+            ERROR( "socketpair close,thread exit" );
+            break;
+        }
+        _thread->routine( static_cast<notify_t>(event) );
+    }
+    
+    if ( !_thread->cleanup() )  /* 清理 */
+    {
+        ERROR( "thread cleanup fail" );
+        return NULL;
+    }
 
     return NULL;
 }
@@ -69,23 +155,71 @@ void *thread::start_routine( void *arg )
 /* 获取线程id */
 pthread_t thread::get_id()
 {
-    return thread_t;
+    return _thread;
 }
 
-/* 等待当前线程结束 */
-void thread::join()
+bool thread::initlization()
 {
-    assert( "thread join zero thread id", 0 != thread_t );
+    return true;
+}
 
-    _join = true;
-    int32 rv = pthread_join( thread_t,NULL );
-    if ( rv )
+bool thread::cleanup()
+{
+    return true;
+}
+
+void thread::notify_child( notify_t msg )
+{
+    assert( "notify_child:socket pair not open",_fd[1] >= 0 );
+    
+    int8 val = static_cast<int8>(msg);
+    int32 sz = ::write( _fd[1],&val,sizeof(int8) );
+    if ( sz != sizeof(int8) )
     {
-        /* On success, pthread_join() returns 0; on error, it returns an error
-         * number.errno is not use.
-         * not strerror(errno)
-         */
-        FATAL( "thread join fail:%s\n",strerror(rv) );
+        ERROR( "notify child error:%s",strerror(errno) );
+    }  
+}
+
+void thread::notify_parent( notify_t msg )
+{
+    assert( "notify_parent:socket pair not open",_fd[0] >= 0 );
+    
+    int8 val = static_cast<int8>(msg);
+    int32 sz = ::write( _fd[0],&val,sizeof(int8) );
+    if ( sz != sizeof(int8) )
+    {
+        ERROR( "notify child error:%s",strerror(errno) );
+    }  
+}
+
+void thread::io_cb( ev_io &w,int32 revents )
+{
+    int8 event = 0;
+    int32 sz = ::read( _fd[0],&event,sizeof(int8) );
+    if ( sz < 0 )
+    {
+        if ( errno == EAGAIN || errno == EWOULDBLOCK )
+        {
+            assert( "non-block socket,should not happen",false );
+            return;
+        }
+
+        FATAL( "thread socket pair broken:%s",strerror(errno) );
+
         return;
     }
+    else if ( 0 == sz )
+    {
+        if ( _run ) FATAL( "thread socketpair should not close" );
+
+        return;
+    }
+    else if ( sizeof(int8) != sz )
+    {
+        FATAL( "socketpair package incomplete,should not happen" );
+
+        return;
+    }
+    
+    this->notification( static_cast<notify_t>(event) );
 }

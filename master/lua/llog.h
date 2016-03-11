@@ -12,14 +12,16 @@ public:
     explicit llog( lua_State *L );
     ~llog();
     
-    int32 join ();
     int32 stop ();
     int32 start();
     int32 write();
     static int32 mkdir_p( lua_State *L );
 private:
-    void routine();
+    bool cleanup();
+    void routine( notify_t msg );
+    void notification( notify_t msg );
 private:
+    int32 _wts;
     class log _log;
     lua_State *L  ;
 };

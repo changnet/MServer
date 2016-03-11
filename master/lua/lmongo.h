@@ -16,7 +16,6 @@ public:
 
     int32 start();
     int32 stop ();
-    int32 join ();
 
     int32 find     ();
     int32 count    ();
@@ -30,7 +29,10 @@ public:
     int32 read_callback ();
     int32 error_callback();
 private:
-    void routine();
+    bool cleanup();
+    bool initlization();
+    void routine( notify_t msg );
+    void notification( notify_t msg );
     void invoke_command();
     void mongo_cb( ev_io &w,int32 revents );
     void result_encode( bson_t *doc,bool is_array );
@@ -40,9 +42,7 @@ private:
     bool lua_val_encode( bson_t *doc,const char *key,int32 index );
     void bson_encode( bson_iter_t &iter,bool is_array = false );
 private:
-    int32 fd[2]  ;
     lua_State *L ;
-    ev_io watcher;
     class mongo _mongo;
 
     int32 ref_self;

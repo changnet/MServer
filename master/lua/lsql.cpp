@@ -1,43 +1,9 @@
 #include "lsql.h"
 #include "ltools.h"
-#include "leventloop.h"
-#include "../ev/ev_def.h"
-#include "../net/socket.h"
-#include "../thread/auto_mutex.h"
-
-#define notify(s,x)                                            \
-    do {                                                       \
-        int8 val = static_cast<int8>(x);                       \
-        int32 sz = ::write( s,&val,sizeof(int8) );             \
-        if ( sz != sizeof(int8) )                              \
-        {                                                      \
-            ERROR( "lsql notify error:%s\n",strerror(errno) ); \
-        }                                                      \
-    }while(0)
-
-#define invoke_cb( r )                                         \
-    do {                                                       \
-        if ( query->callback )                                 \
-        {                                                      \
-            sql_result result;                                 \
-            result.id  = query->id;                            \
-            result.err = _sql.get_errno();                     \
-            result.res = r;                                    \
-            pthread_mutex_lock( &mutex );                      \
-            _result.push( result );                            \
-            pthread_mutex_unlock( &mutex );                    \
-            notify( fd[1],READ );                              \
-        }                                                      \
-        else {assert( "sql should not have result",!r );}      \
-        delete query;                                          \
-    }while(0)
 
 lsql::lsql( lua_State *L )
     : L (L)
 {
-    fd[0] = -1;
-    fd[1] = -1;
-
     ref_self  = 0;
     ref_read  = 0;
     ref_error = 0;
@@ -45,11 +11,6 @@ lsql::lsql( lua_State *L )
 
 lsql::~lsql()
 {
-    assert( "sql thread not exit", !_run );
-
-    if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
-    if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
-
     LUA_UNREF( ref_self  );
     LUA_UNREF( ref_read  );
     LUA_UNREF( ref_error );
@@ -70,93 +31,39 @@ int32 lsql::start()
     const char *db   = luaL_checkstring  ( L,5 );
 
     _sql.set( ip,port,usr,pwd,db );
-    /* fd[0]  父进程
-     * fd[1]  子线程
-     */
-    if ( socketpair( AF_UNIX, SOCK_STREAM,IPPROTO_IP,fd ) < 0 )
-    {
-        ERROR( "sql socketpair fail:%s\n",strerror(errno) );
-        return luaL_error( L,"socket pair fail" );
-    }
 
-    socket::non_block( fd[0] );    /* fd[1] need to be block */
-    class ev_loop *loop = static_cast<ev_loop *>( leventloop::instance() );
-    watcher.set( loop );
-    watcher.set<lsql,&lsql::sql_cb>( this );
-    watcher.start( fd[0],EV_READ );
-
-    thread::start();
+    thread::start( 10 );  /* 10s ping一下mysql */
     return 0;
 }
 
-void lsql::routine()
+void lsql::routine( notify_t msg )
 {
-    assert( "fd not valid",fd[1] > -1 );
-
-    mysql_thread_init();
-    if ( !_sql.connect() )
+    int32 ping = 0
+    int32 ets  = 0;
+    /* 即使无查询，也定时ping服务器保持连接 */
+    while ( ets < 10 && ( ping = _sql.ping() ) )
     {
-        mysql_thread_end();
-        notify( fd[1],ERR );
+        ++ets;
+        usleep(ets*1E6); // ets*1s
+    }
+
+    if ( ping )
+    {
+        ERROR( "mysql ping %d times still fail:%s",ets,_sql.error() );
+        notify_parent( ERROR );
         return;
     }
-
-    //--设置超时
-    timeval tm;
-    tm.tv_sec  = 5;
-    tm.tv_usec = 0;
-    setsockopt(fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
-    setsockopt(fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
-
-    int32 ets = 0;
-    while ( _run )
+    
+    switch ( msg )
     {
-        /* 即使无查询，也定时ping服务器保持连接 */
-        if ( _sql.ping() )
-        {
-            ++ets;
-            if ( ets < 10 )
-            {
-                usleep(ets*1E6); // ets*1s
-                continue;
-            }
-
-            ERROR( "mysql ping %d times still fail:%s\n",ets,_sql.error() );
-            notify( fd[1],ERR );
-            break;  // ping fail too many times,thread exit
-        }
-
-        ets = 0;
-        int8 event = 0;
-        int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
-        if ( sz < 0 )
-        {
-            /* errno variable is thread save */
-            if ( errno == EAGAIN || errno == EWOULDBLOCK )
-            {
-                continue;  // just timeout
-            }
-
-            ERROR( "socketpair broken,sql thread exit" );
-            // socket error,can't notify( fd[1],ERR );
-            break;
-        }
-
-        switch ( event )
-        {
-            case EXIT : thread::stop();break;
-            case ERR  : assert( "main thread should never notify err",false );break;
-            case READ : break;
-        }
-
-        invoke_sql(); /* 即使EXIT，也要将未完成的sql写入 */
+        case ERROR : assert( "main thread should never notify error",false );break;
+        case NONE  : break; /* just timeout */
+        case EXIT  : break; /* do nothing,auto exit */
+        case READ  : invoke_sql();break;
     }
-
-    _sql.disconnect() ;
-    mysql_thread_end();
 }
 
-void lsql::invoke_sql()
+void lsql::invoke_sql( bool cb )
 {
     while ( true )
     {
@@ -176,42 +83,36 @@ void lsql::invoke_sql()
 
         if ( _sql.query ( stmt,query->size ) )
         {
-            ERROR( "sql query error:%s\n",_sql.error() );
-            ERROR( "sql not exec:%s\n",stmt );
-
-            invoke_cb( NULL );
+            ERROR( "sql query error:%s",_sql.error() );
+            ERROR( "sql will not exec:%s",stmt );
+            
+            invoke_cb( cb,query,NULL );
             continue;
         }
-
+        
+        /* 关服时不需要回调了 */
+        if ( !cb )
+        {
+            invoke_cb( cb,query,NULL );
+            continue;
+        }
+        
         struct sql_res *res = NULL;
         if ( _sql.result( &res ) )
         {
-            ERROR( "sql result error[%s]:%s\n",stmt,_sql.error() );
+            ERROR( "sql result error[%s]:%s",stmt,_sql.error() );
 
-            invoke_cb( res );
+            invoke_cb( cb,query,NULL );
             continue;
         }
 
-        invoke_cb( res );
+        invoke_cb( cb,query,res );
     }
 }
 
 int32 lsql::stop()
 {
-    if ( !thread::_run )
-    {
-        ERROR( "try to stop a inactive sql thread" );
-        return 0;
-    }
-    notify( fd[0],EXIT );
-
-    return 0;
-}
-
-/* 此函数可能会阻塞 */
-int32 lsql::join()
-{
-    thread::join();
+    thread::stop();
 
     return 0;
 }
@@ -247,46 +148,17 @@ int32 lsql::do_sql()
     /* 子线程的socket是阻塞的。主线程检测到子线程正常处理sql则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
+
     return 0;
 }
 
-void lsql::sql_cb( ev_io &w,int32 revents )
+void lsql::notification( notify_t msg )
 {
-    int8 event = 0;
-    int32 sz = ::read( w.fd,&event,sizeof(int8) );
-    if ( sz < 0 )
+    switch ( msg )
     {
-        if ( errno == EAGAIN || errno == EWOULDBLOCK )
-        {
-            assert( "non-block socket,should not happen",false );
-            return;
-        }
-
-        ERROR( "sql socket error:%s\n",strerror(errno) );
-        assert( "sql socket broken",false );
-        abort();  /* for release */
-        return;
-    }
-    else if ( 0 == sz )
-    {
-        ERROR( "sql socketpair close,system abort\n" );
-        assert( "sql socketpair should not close",false);
-        abort();  /* for release */
-        return;
-    }
-    else if ( sizeof(int8) != sz )
-    {
-        ERROR( "sql socketpair package incomplete,system abort\n" );
-        assert( "package incomplete,should not happen",false );
-        abort();  /* for release */
-        return;
-    }
-
-    switch ( event )
-    {
-        case EXIT : assert( "sql thread should not exit itself",false );abort();break;
-        case ERR  :
+        case EXIT  : assert( "sql thread should not exit itself",false );abort();break;
+        case ERROR :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
             int32 param = 0;
@@ -300,7 +172,7 @@ void lsql::sql_cb( ev_io &w,int32 revents )
                 ERROR( "sql error call back fail:%s\n",lua_tostring(L,-1) );
             }
         }break;
-        case READ :
+        case MSG :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
             int32 param = 0;
@@ -441,4 +313,58 @@ void lsql::result_encode( struct sql_res *res )
 
         lua_rawset( L, -3 );
     }
+}
+
+bool lsql::cleanup()
+{
+    if ( _sql.ping() )
+    {
+        ERROR( "mysql ping fail at cleanup,data may lost:%s",_sql.error() );
+        /* TODO write to file ? */
+    }
+    else
+    {
+        invoke_sql( false );
+    }
+
+    _sql.disconnect() ;
+    mysql_thread_end();
+    
+    return true;
+}
+
+bool lsql::initlization()
+{
+    mysql_thread_init();
+    if ( !_sql.connect() )
+    {
+        mysql_thread_end();
+        notify_parent( ERROR );
+        return false;
+    }
+    
+    return true;
+}
+
+void lsql::invoke_cb( bool cb,struct sql_query *query,struct sql_res *res )
+{
+    if ( cb && query->callback )
+    {
+        sql_result result;
+        result.id  = query->id;
+        result.err = _sql.get_errno();
+        result.res = res;
+
+        lock();
+        _result.push( result );
+        unlock();
+
+        notify_parent( MSG );
+        
+        delete query;
+        return;
+    }
+    
+    assert( "this sql should not have result",!res );
+    delete query;
 }

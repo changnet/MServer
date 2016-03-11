@@ -1,25 +1,9 @@
 #include "lmongo.h"
 #include "ltools.h"
-#include "leventloop.h"
-#include "../ev/ev_def.h"
-#include "../thread/auto_mutex.h"
-
-#define notify(s,x)                                              \
-    do {                                                         \
-        int8 val = static_cast<int8>(x);                         \
-        int32 sz = ::write( s,&val,sizeof(int8) );               \
-        if ( sz != sizeof(int8) )                                \
-        {                                                        \
-            ERROR( "lmongo notify error:%s\n",strerror(errno) ); \
-        }                                                        \
-    }while(0)
 
 lmongo::lmongo( lua_State *L )
     :L (L)
 {
-    fd[0] = -1;
-    fd[1] = -1;
-
     ref_self  = 0;
     ref_read  = 0;
     ref_error = 0;
@@ -27,11 +11,6 @@ lmongo::lmongo( lua_State *L )
 
 lmongo::~lmongo()
 {
-    assert( "mongo thread not exit", !_run );
-
-    if ( fd[0] > -1 ) ::close( fd[0] ); fd[0] = -1;
-    if ( fd[1] > -1 ) ::close( fd[1] ); fd[1] = -1;
-
     LUA_UNREF( ref_self  );
     LUA_UNREF( ref_read  );
     LUA_UNREF( ref_error );
@@ -51,94 +30,69 @@ int32 lmongo::start()
     const char *db   = luaL_checkstring  ( L,5 );
 
     _mongo.set( ip,port,usr,pwd,db );
-    /* fd[0]  父进程
-     * fd[1]  子线程
-     */
-    if ( socketpair( AF_UNIX, SOCK_STREAM,IPPROTO_IP,fd ) < 0 )
-    {
-        ERROR( "mongo socketpair fail:%s\n",strerror(errno) );
-        return luaL_error( L,"socket pair fail" );
-    }
+    thread::start( 10 );
 
-    socket::non_block( fd[0] );    /* fd[1] need to be block */
-    class ev_loop *loop = static_cast<ev_loop *>( leventloop::instance() );
-    watcher.set( loop );
-    watcher.set<lmongo,&lmongo::mongo_cb>( this );
-    watcher.start( fd[0],EV_READ );
-
-    thread::start();
     return 0;
 }
 
 int32 lmongo::stop()
 {
-    if ( !thread::_run )
-    {
-        ERROR( "try to stop a inactive mongo thread" );
-        return 0;
-    }
-    notify( fd[0],EXIT );
+    thread::stop();
 
     return 0;
 }
 
-int32 lmongo::join()
+bool lmongo::initlization()
 {
-    thread::join();
-
-    return 0;
-}
-
-void lmongo::routine()
-{
-    assert( "mongo fd not valid",fd[1] > -1 );
-
     if ( _mongo.connect() )
     {
-        notify( fd[1],ERR );
+        ERROR( "mongo connect fail" );
+        return false;
+    }
+    
+    return true;
+}
+
+void lmongo::routine( notify_t msg )
+{
+    int32 ping = 0
+    int32 ets  = 0;
+    
+    bson_error_t err;
+    while ( ets < 10 && ( ping = _mongo.ping( &err ) ) )
+    {
+        ++ets;
+        usleep(ets*1E6); // ets*1s
+    }
+
+    if ( ping )
+    {
+        ERROR( "mongo ping error(%d):%s\n",err.code,err.message );
+        notify_parent( ERROR );
         return;
     }
 
-    //--设置超时
-    timeval tm;
-    tm.tv_sec  = 5;
-    tm.tv_usec = 0;
-    setsockopt(fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
-    setsockopt(fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
-
-    while ( thread::_run )
+    switch ( msg )
     {
-        bson_error_t err;
-        if ( _mongo.ping( &err ) )
-        {
-            ERROR( "mongo ping error(%d):%s\n",err.code,err.message );
-            notify( fd[1],ERR );
-            break;
-        }
+        case ERROR : assert( "main thread should never notify error",false );break;
+        case NONE  : break; /* just timeout */
+        case EXIT  : break; /* do nothing,auto exit */
+        case READ  : invoke_command();break;
+    }
+}
 
-        int8 event = 0;
-        int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
-        if ( sz < 0 )
-        {
-            /* errno variable is thread save */
-            if ( errno == EAGAIN || errno == EWOULDBLOCK )
-            {
-                continue;  // just timeout
-            }
-
-            ERROR( "socketpair broken,mongo thread exit" );
-            // socket error,can't notify( fd[1],ERR );
-            break;
-        }
-
-        switch ( event )
-        {
-            case EXIT : thread::stop();break;
-            case ERR  : assert( "main thread should never notify err",false );break;
-            case READ : break;
-        }
-
-        invoke_command();
+bool lmongo::cleanup()
+{
+    bson_error_t err;
+    if ( _mongo.ping( &err ) )
+    {
+        ERROR( "mongo ping fail at cleanup,data may lost(%d):%s",err.code,
+            err.message );
+        /* TODO write to file */
+    }
+    else
+    {
+        invoke_command( false );
     }
 
     _mongo.disconnect();
