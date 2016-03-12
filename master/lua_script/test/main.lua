@@ -10,7 +10,7 @@ local Http_client = require "http.http_client"
 local function sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
     if g_store_sql then g_store_sql:stop() end
-    if g_log_mgr then g_log_mgr:stop();g_log_mgr:join() end
+    if g_log_mgr then g_log_mgr:stop(); end
     ev:exit()
 end
 

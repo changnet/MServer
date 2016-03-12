@@ -27,7 +27,7 @@ private:
     bool initlization();
 
     void invoke_sql ( bool cb = true );
-    void invoke_cb( struct sql_res *res );
+    void invoke_cb( bool cb,struct sql_query *query,struct sql_res *res );
 
     void routine( notify_t msg );
     void notification( notify_t msg );

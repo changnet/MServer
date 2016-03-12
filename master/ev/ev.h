@@ -16,6 +16,7 @@
 #define __EV_H__
 
 #include <sys/epoll.h>
+#include "../global/global.h"
 
 typedef double ev_tstamp;
 

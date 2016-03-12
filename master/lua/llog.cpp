@@ -9,12 +9,11 @@ llog::llog( lua_State *L )
 
 llog::~llog()
 {
-    assert( "log thread not exit yet",!_run );
 }
 
 int32 llog::stop ()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         ERROR( "try to stop a inactive log thread" );
         return 0;
@@ -37,7 +36,7 @@ int32 llog::start()
 
 int32 llog::write()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"log thread inactive" );
     }
@@ -115,6 +114,8 @@ bool llog::cleanup()
         }
     }
     unlock();
+    
+    return true;
 }
 
 int32 llog::mkdir_p( lua_State *L )

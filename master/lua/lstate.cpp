@@ -176,7 +176,6 @@ int32 luaopen_sql( lua_State *L )
     lclass<lsql> lc(L,"Sql");
     lc.def<&lsql::start> ( "start" );
     lc.def<&lsql::stop>  ( "stop"  );
-    lc.def<&lsql::join>  ( "join"  );
 
     lc.def<&lsql::do_sql>         ( "do_sql"         );
     lc.def<&lsql::next_result>    ( "next_result"    );
@@ -192,7 +191,6 @@ int32 luaopen_mongo( lua_State *L )
     lclass<lmongo> lc(L,"Mongo");
     lc.def<&lmongo::start> ( "start" );
     lc.def<&lmongo::stop>  ( "stop"  );
-    lc.def<&lmongo::join>  ( "join"  );
 
     lc.def<&lmongo::count>           ( "count"           );
     lc.def<&lmongo::find>            ( "find"            );
@@ -212,7 +210,6 @@ int32 luaopen_log( lua_State *L )
 {
     lclass<llog> lc(L,"Log");
     lc.def<&llog::stop>  ("stop");
-    lc.def<&llog::join>  ("join");
     lc.def<&llog::start> ("start");
     lc.def<&llog::write> ("write");
     lc.def<&llog::mkdir_p> ("mkdir_p");

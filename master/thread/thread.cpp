@@ -1,15 +1,17 @@
 #include "thread.h"
+#include "../ev/ev_def.h"
 #include "../net/socket.h"
+#include "../lua/leventloop.h"
 
 thread::thread()
 {
-    fd[0] = -1 ;
-    fd[1] = -1 ;
+    _fd[0] = -1 ;
+    _fd[1] = -1 ;
     _thread = 0;
     _run  = false;
     _join = false;
     
-    int32 rv = pthread_mutex_init( &mutex,NULL );
+    int32 rv = pthread_mutex_init( &_mutex,NULL );
     if ( 0 != rv )
     {
         FATAL( "pthread_mutex_init error:%s\n",strerror(errno) );
@@ -21,11 +23,11 @@ thread::~thread()
 {
     assert( "thread still running",!_run );
     assert( "io watcher not close",!_watcher.is_active() );
-    assert( "socket pair not close", -1 == fd[0] && -1 == fd[1] );
+    assert( "socket pair not close", -1 == _fd[0] && -1 == _fd[1] );
 
     if ( !_join ) pthread_detach( pthread_self() );
 
-    int32 rv = pthread_mutex_destroy( &mutex );
+    int32 rv = pthread_mutex_destroy( &_mutex );
     if ( 0 != rv )
     {
         FATAL( "pthread_mutex_destroy error:%s\n",strerror(errno) );
@@ -50,8 +52,8 @@ bool thread::start( int32 sec,int32 usec )
     struct timeval tm;
     tm.tv_sec  = sec;
     tm.tv_usec = usec;
-    setsockopt(fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
-    setsockopt(fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
+    setsockopt(_fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
+    setsockopt(_fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
     
     /* 为了防止子线程创建比主线程运行更快，需要先设置标识 */
     _run = true;
@@ -60,8 +62,8 @@ bool thread::start( int32 sec,int32 usec )
     if ( pthread_create( &_thread,NULL,thread::start_routine,(void *)this ) )
     {
         _run = false;
-        ::close( fd[0] );
-        ::close( fd[1] );
+        ::close( _fd[0] );
+        ::close( _fd[1] );
         
         ERROR( "thread start,create fail:%s",strerror(errno) );
         return false;
@@ -104,6 +106,34 @@ void thread::stop()
     if ( _fd[1] >= 0 ) { ::close( _fd[1] );_fd[1] = -1; }
 }
 
+void thread::do_routine()
+{
+    while ( _run )
+    {
+        int8 event = 0;
+        int32 sz = ::read( _fd[1],&event,sizeof(int8) ); /* 阻塞 */
+        if ( sz < 0 )
+        {
+            /* errno variable is thread save */
+            if ( errno == EAGAIN || errno == EWOULDBLOCK )
+            {
+                this->routine( NONE );
+                continue;  // just timeout
+            }
+
+            ERROR( "socketpair broken,thread exit" );
+            // socket error,can't notify( fd[0],ERROR );
+            break;
+        }
+        else if ( 0 == sz )
+        {
+            ERROR( "socketpair close,thread exit" );
+            break;
+        }
+        this->routine( static_cast<notify_t>(event) );
+    }
+}
+
 /* 线程入口函数 */
 void *thread::start_routine( void *arg )
 {
@@ -118,30 +148,7 @@ void *thread::start_routine( void *arg )
         return NULL;
     }
     
-    while ( _run )
-    {
-        int8 event = 0;
-        int32 sz = ::read( fd[1],&event,sizeof(int8) ); /* 阻塞 */
-        if ( sz < 0 )
-        {
-            /* errno variable is thread save */
-            if ( errno == EAGAIN || errno == EWOULDBLOCK )
-            {
-                _thread->routine( NONE );
-                continue;  // just timeout
-            }
-
-            ERROR( "socketpair broken,thread exit" );
-            // socket error,can't notify( fd[0],ERROR );
-            break;
-        }
-        else if ( 0 == sz )
-        {
-            ERROR( "socketpair close,thread exit" );
-            break;
-        }
-        _thread->routine( static_cast<notify_t>(event) );
-    }
+    _thread->do_routine();
     
     if ( !_thread->cleanup() )  /* 清理 */
     {
@@ -173,7 +180,7 @@ void thread::notify_child( notify_t msg )
     assert( "notify_child:socket pair not open",_fd[1] >= 0 );
     
     int8 val = static_cast<int8>(msg);
-    int32 sz = ::write( _fd[1],&val,sizeof(int8) );
+    int32 sz = ::write( _fd[0],&val,sizeof(int8) );
     if ( sz != sizeof(int8) )
     {
         ERROR( "notify child error:%s",strerror(errno) );
@@ -185,7 +192,7 @@ void thread::notify_parent( notify_t msg )
     assert( "notify_parent:socket pair not open",_fd[0] >= 0 );
     
     int8 val = static_cast<int8>(msg);
-    int32 sz = ::write( _fd[0],&val,sizeof(int8) );
+    int32 sz = ::write( _fd[1],&val,sizeof(int8) );
     if ( sz != sizeof(int8) )
     {
         ERROR( "notify child error:%s",strerror(errno) );

@@ -57,7 +57,6 @@ end
 
 function Store_sql:stop()
     self._sql_:stop()
-    self._sql_:join()
 end
 
 function Store_sql:do_sql( sql,callback )

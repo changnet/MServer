@@ -18,7 +18,7 @@ lmongo::~lmongo()
 
 int32 lmongo::start()
 {
-    if ( _run )
+    if ( active() )
     {
         return luaL_error( L,"mongo thread already active" );
     }
@@ -55,7 +55,7 @@ bool lmongo::initlization()
 
 void lmongo::routine( notify_t msg )
 {
-    int32 ping = 0
+    int32 ping = 0;
     int32 ets  = 0;
     
     bson_error_t err;
@@ -67,7 +67,7 @@ void lmongo::routine( notify_t msg )
 
     if ( ping )
     {
-        ERROR( "mongo ping error(%d):%s\n",err.code,err.message );
+        ERROR( "mongo ping error(%d):%s",err.code,err.message );
         notify_parent( ERROR );
         return;
     }
@@ -77,7 +77,7 @@ void lmongo::routine( notify_t msg )
         case ERROR : assert( "main thread should never notify error",false );break;
         case NONE  : break; /* just timeout */
         case EXIT  : break; /* do nothing,auto exit */
-        case READ  : invoke_command();break;
+        case MSG   : invoke_command();break;
     }
 }
 
@@ -96,44 +96,15 @@ bool lmongo::cleanup()
     }
 
     _mongo.disconnect();
+    
+    return true;
 }
 
-void lmongo::mongo_cb( ev_io &w,int32 revents )
+void lmongo::notification( notify_t msg )
 {
-    int8 event = 0;
-    int32 sz = ::read( w.fd,&event,sizeof(int8) );
-    if ( sz < 0 )
+    switch ( msg )
     {
-        if ( errno == EAGAIN || errno == EWOULDBLOCK )
-        {
-            assert( "non-block socket,should not happen",false );
-            return;
-        }
-
-        ERROR( "mongo socket error:%s\n",strerror(errno) );
-        assert( "mongo socket broken",false );
-        abort();  /* for release */
-        return;
-    }
-    else if ( 0 == sz )
-    {
-        ERROR( "mongo socketpair close,system abort\n" );
-        assert( "mongo socketpair should not close",false);
-        abort();  /* for release */
-        return;
-    }
-    else if ( sizeof(int8) != sz )
-    {
-        ERROR( "mongo socketpair package incomplete,system abort\n" );
-        assert( "package incomplete,should not happen",false );
-        abort();  /* for release */
-        return;
-    }
-
-    switch ( event )
-    {
-        case EXIT : assert( "mongo thread should not exit itself",false );abort();break;
-        case ERR  :
+        case ERROR :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
             int32 param = 0;
@@ -144,10 +115,12 @@ void lmongo::mongo_cb( ev_io &w,int32 revents )
             }
             if ( LUA_OK != lua_pcall( L,param,0,0 ) )
             {
-                ERROR( "mongo error call back fail:%s\n",lua_tostring(L,-1) );
+                ERROR( "mongo error call back fail:%s",lua_tostring(L,-1) );
             }
         }break;
-        case READ :
+        case NONE : break;
+        case EXIT : assert( "mongo thread should not exit itself",false );abort();break;
+        case MSG  :
         {
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
             int32 param = 0;
@@ -158,7 +131,7 @@ void lmongo::mongo_cb( ev_io &w,int32 revents )
             }
             if ( LUA_OK != lua_pcall( L,param,0,0 ) )
             {
-                ERROR( "mongo error call back fail:%s\n",lua_tostring(L,-1) );
+                ERROR( "mongo error call back fail:%s",lua_tostring(L,-1) );
             }
         }break;
         default   : assert( "unknow mongo event",false );break;
@@ -167,7 +140,7 @@ void lmongo::mongo_cb( ev_io &w,int32 revents )
 
 int32 lmongo::count()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
@@ -201,35 +174,35 @@ int32 lmongo::count()
     _mq->set_count( collection,query,skip,limit );
 
     bool _notify = false;
+
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )  /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( _mq );
+        _notify = true;
     }
+    _query.push( _mq );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
 
     return 0;
 }
 
 int32 lmongo::next_result()
 {
-    pthread_mutex_lock( &mutex );
+    lock();
     if ( _result.empty() )
     {
-        pthread_mutex_unlock( &mutex );
+        unlock();
         return 0;
     }
 
     struct mongons::result *rt = _result.front();
     _result.pop();
-    pthread_mutex_unlock( &mutex );
+    unlock();
 
     lua_pushinteger( L,rt->id );
     lua_pushinteger( L,rt->err );
@@ -282,20 +255,20 @@ int32 lmongo::error_callback()
     return 0;
 }
 
-void lmongo::invoke_command()
+void lmongo::invoke_command( bool cb )
 {
     while ( true )
     {
-        pthread_mutex_lock( &mutex );
+        lock();
         if ( _query.empty() )
         {
-            pthread_mutex_unlock( &mutex );
+            unlock();
             return;
         }
 
         struct mongons::query *mq = _query.front();
         _query.pop();
-        pthread_mutex_unlock( &mutex );
+        unlock();
 
         struct mongons::result *res = NULL;
         switch( mq->_ty )
@@ -313,17 +286,17 @@ void lmongo::invoke_command()
                 break;
         }
 
-        if ( mq->_callback )
+        if ( cb && mq->_callback )
         {
             assert( "mongo res NULL",res );
-            pthread_mutex_lock( &mutex );
+            lock();
             _result.push( res );
-            pthread_mutex_unlock( &mutex );
-            notify( fd[1],READ );
+            unlock();
+            notify_parent( MSG );
         }
         else
         {
-            assert( "this mongo query should not have result",!res );
+            if ( res ) delete res; /* 关服时不需要回调 */
         }
 
         delete mq;
@@ -490,7 +463,7 @@ void lmongo::result_encode( bson_t *doc,bool is_array )
 /* find( id,collection,query,fields,skip,limit) */
 int32 lmongo::find()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
@@ -543,19 +516,19 @@ int32 lmongo::find()
     _mq->set_find( collection,query,fields,skip,limit );
 
     bool _notify = false;
+
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )  /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( _mq );
+        _notify = true;
     }
+    _query.push( _mq );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
 
     return 0;
 }
@@ -564,7 +537,7 @@ int32 lmongo::find()
 /* find( id,collection,query,sort,update,fields,remove,upsert,new ) */
 int32 lmongo::find_and_modify()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
@@ -655,19 +628,19 @@ int32 lmongo::find_and_modify()
     _mq->set_find_modify( collection,query,sort,update,fields,_remove,_upsert,_new );
 
     bool _notify = false;
+
+    lock();
+    if ( _query.empty() )   /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )   /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( _mq );
+        _notify = true;
     }
+    _query.push( _mq );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
 
     return 0;
 }
@@ -675,7 +648,7 @@ int32 lmongo::find_and_modify()
 /* insert( id,collections,info ) */
 int32 lmongo::insert()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
@@ -719,19 +692,19 @@ int32 lmongo::insert()
     _mq->set_insert( collection,query );
 
     bool _notify = false;
+
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )  /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( _mq );
+        _notify = true;
     }
+    _query.push( _mq );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
 
     return 0;
 }
@@ -995,7 +968,7 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
 /* update( id,collections,query,update,upsert,multi ) */
 int32 lmongo::update()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
@@ -1069,19 +1042,19 @@ int32 lmongo::update()
     _mq->set_update( collection,query,update,upsert,multi );
 
     bool _notify = false;
+    
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )  /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( _mq );
+        _notify = true;
     }
+    _query.push( _mq );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
 
     return 0;
 }
@@ -1089,7 +1062,7 @@ int32 lmongo::update()
 /* remove( id,collections,query,multi ) */
 int32 lmongo::remove()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
@@ -1134,19 +1107,19 @@ int32 lmongo::remove()
     _mq->set_remove( collection,query,multi );
 
     bool _notify = false;
+
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )  /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( _mq );
+        _notify = true;
     }
+    _query.push( _mq );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if (_notify) notify( fd[0],READ );
+    if ( _notify ) notify_child( MSG );
 
     return 0;
 }

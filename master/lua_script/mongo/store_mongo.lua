@@ -52,7 +52,6 @@ end
 
 function Store_mongo:stop()
     self._mongo:stop()
-    self._mongo:join()
 end
 
 function Store_mongo:count( cb,collection,query,skip,limit )

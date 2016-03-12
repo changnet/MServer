@@ -2,7 +2,6 @@
 #define __EV_DEF_H__
 
 #include <stdexcept>
-#include "../global/global.h"
 
 #define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
 #define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */

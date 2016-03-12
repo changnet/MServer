@@ -19,7 +19,7 @@ public:
 private:
     bool cleanup();
     void routine( notify_t msg );
-    void notification( notify_t msg );
+    void notification( notify_t msg ) {}
 private:
     int32 _wts;
     class log _log;

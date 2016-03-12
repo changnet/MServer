@@ -19,7 +19,7 @@ lsql::~lsql()
 /* 连接mysql并启动线程 */
 int32 lsql::start()
 {
-    if ( _run )
+    if ( active() )
     {
         return luaL_error( L,"sql thread already active" );
     }
@@ -38,7 +38,7 @@ int32 lsql::start()
 
 void lsql::routine( notify_t msg )
 {
-    int32 ping = 0
+    int32 ping = 0;
     int32 ets  = 0;
     /* 即使无查询，也定时ping服务器保持连接 */
     while ( ets < 10 && ( ping = _sql.ping() ) )
@@ -59,7 +59,7 @@ void lsql::routine( notify_t msg )
         case ERROR : assert( "main thread should never notify error",false );break;
         case NONE  : break; /* just timeout */
         case EXIT  : break; /* do nothing,auto exit */
-        case READ  : invoke_sql();break;
+        case MSG   : invoke_sql();break;
     }
 }
 
@@ -67,16 +67,16 @@ void lsql::invoke_sql( bool cb )
 {
     while ( true )
     {
-        pthread_mutex_lock( &mutex );
+        lock();
         if ( _query.empty() )
         {
-            pthread_mutex_unlock( &mutex );
+            unlock();
             return;
         }
 
         struct sql_query *query = _query.front();
         _query.pop();
-        pthread_mutex_unlock( &mutex );
+        unlock();
 
         const char *stmt = query->stmt;
         assert( "empty sql statement",stmt && query->size > 0 );
@@ -119,7 +119,7 @@ int32 lsql::stop()
 
 int32 lsql::do_sql()
 {
-    if ( !thread::_run )
+    if ( !active() )
     {
         return luaL_error( L,"sql thread not active" );
     }
@@ -136,14 +136,14 @@ int32 lsql::do_sql()
 
     bool _notify = false;
     struct sql_query *query = new sql_query( id,callback,size,stmt );
+
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
     {
-        class auto_mutex _auto_mutex( &mutex );
-        if ( _query.empty() )  /* 不要使用_query.size() */
-        {
-            _notify = true;
-        }
-        _query.push( query );
+        _notify = true;
     }
+    _query.push( query );
+    unlock();
 
     /* 子线程的socket是阻塞的。主线程检测到子线程正常处理sql则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
@@ -228,17 +228,17 @@ int32 lsql::error_callback()
 
 int32 lsql::next_result()
 {
-    pthread_mutex_lock( &mutex );
+    lock();
     if ( _result.empty() )
     {
-        pthread_mutex_unlock( &mutex );
+        unlock();
         lua_pushnil( L );
         return 1;
     }
 
     struct sql_result r = _result.front();
     _result.pop();
-    pthread_mutex_unlock( &mutex );
+    unlock();
 
     lua_pushinteger( L,r.id );
     lua_pushinteger( L,r.err );
