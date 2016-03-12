@@ -11,6 +11,10 @@ local json = require "lua_parson"
 g_store_mongo:start( "127.0.0.1",27013,"test","test","mudrv" )
 
 local collection = "item"
+
+--[[
+默认配置下大概为10000条/s
+]]
 local max_insert = 100000
 
 print( "start insert ",max_insert,"to mongo db with lua table" )

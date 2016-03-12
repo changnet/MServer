@@ -22,8 +22,8 @@ local function main()
 
     require "example.code_performance"
     --require "example.mongo_performance"
-    --require "example.mysql_performance"
-    require "example.log_performance"
+    require "example.mysql_performance"
+    --require "example.log_performance"
 
     g_http_mgr:listen( "0.0.0.0",8887 )
 

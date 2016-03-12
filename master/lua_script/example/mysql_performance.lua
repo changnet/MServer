@@ -39,9 +39,17 @@ g_store_sql   = Store_sql()
 g_store_sql:start( "127.0.0.1",3306,"test","test","mudrv" )
 
 
-local max_insert = 10
+local max_insert = 100000
 
 print( "insert mysql",max_insert )
+
+--[[
+默认配置下：30条/s
+当作一个事务，100000总共花4s
+innodb_flush_log_at_trx_commit = 0,不用事务，100000总共7s
+]]
+
+--g_store_sql:do_sql( "START TRANSACTION" )
 
 -- desc是mysql关键字，因此需要加``
 for i = 1,max_insert do
@@ -49,6 +57,8 @@ for i = 1,max_insert do
         i,"just test item",i*10 )
     g_store_sql:do_sql( str )
 end
+
+--g_store_sql:do_sql( "COMMIT" )
 
 local str = "update item set amount = 99999999 where id = 1"
 g_store_sql:do_sql( str )
