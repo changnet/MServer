@@ -49,7 +49,7 @@ bool lmongo::initlization()
         ERROR( "mongo connect fail" );
         return false;
     }
-    
+
     return true;
 }
 
@@ -57,7 +57,7 @@ void lmongo::routine( notify_t msg )
 {
     int32 ping = 0;
     int32 ets  = 0;
-    
+
     bson_error_t err;
     while ( ets < 10 && ( ping = _mongo.ping( &err ) ) )
     {
@@ -96,7 +96,7 @@ bool lmongo::cleanup()
     }
 
     _mongo.disconnect();
-    
+
     return true;
 }
 
@@ -663,7 +663,7 @@ int32 lmongo::insert()
     bson_t *query = NULL;
     if ( lua_istable( L,3 ) )
     {
-        if ( lua_encode( 3,&query ) < 0 )
+        if ( !( query = lua_encode( 3 ) ) )
         {
             return luaL_error( L,"mongo insert:lua_encode error" );
         }
@@ -801,21 +801,19 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
         }break;
         case LUA_TTABLE :
         {
-            bson_t *sub_doc = NULL;
-            int32 rl = lua_encode( index,&sub_doc );
-            if ( rl < 0 )
+            int32 is_array = 0;
+            bson_t *sub_doc = lua_encode( index,&is_array );
+            if ( !sub_doc )
             {
                 ERROR( "lua_val_encode sub bson encode fail\n" );
                 return false;
             }
 
-            assert( "lua sub encode fail",sub_doc );
-
-            if ( rl )
+            if ( is_array )
                 BSON_APPEND_ARRAY( doc,key,sub_doc );
             else
                 BSON_APPEND_DOCUMENT( doc,key,sub_doc );
-
+            bson_destroy( sub_doc );
         }break;
         default :
         {
@@ -832,32 +830,32 @@ bool lmongo::lua_val_encode( bson_t *doc,const char *key,int32 index )
  * 1).可能有递归，操作lua栈时尽量使用正数栈位置
  * 2).lua table可能有很多重，要防止栈溢出
  */
-int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
+bson_t *lmongo::lua_encode( int32 index,int32 *is_array )
 {
     if ( lua_gettop(L) > 10240 )
     {
         ERROR( "lua_encode stack too deep" );
-        return -1;
+        return NULL;
     }
     /* 遍历一个table至少需要2个栈位置 */
     if ( !lua_checkstack( L,2 ) )
     {
         ERROR( "lua_encode stack overflow\n" );
-        return -1;
+        return NULL;
     }
 
-    int32 max_index = -1;
-    int32 is_array  =  0;
-    if ( lua_isarray( L,index,&is_array,&max_index ) < 0 )
+    int32 max_index  = -1;
+    int32 _is_array  =  0;
+    if ( lua_isarray( L,index,&_is_array,&max_index ) < 0 )
     {
         ERROR( "lua_isarray error\n" );
-        return -1;
+        return NULL;
     }
 
     int32 stack_top = lua_gettop( L ); /* 要encode的table不一定在栈顶 */
     bson_t *doc = bson_new();
-    
-    if ( is_array )   /* encode array */
+
+    if ( _is_array )   /* encode array */
     {
         if ( max_index > 0 )
         {
@@ -873,9 +871,9 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
                     lua_pop( L,1 );
                     bson_destroy( doc );
                     ERROR( "lua val encode fail\n" );
-                    return -1;
+                    return NULL;
                 }
-                
+
                 lua_pop( L,1 );
             }
         }
@@ -893,9 +891,9 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
                     lua_pop( L,2 );
                     bson_destroy( doc );
                     ERROR( "lua val encode fail\n" );
-                    return -1;
+                    return NULL;
                 }
-                
+
                 lua_pop( L,1 );
             }
         }
@@ -932,27 +930,29 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
                     pkey = lua_tolstring( L,-2,&len );
                     if ( len > MONGO_VAR_LEN - 1 )
                     {
-                        ERROR( "lua table string key too long\n" );
+                        bson_destroy( doc );
                         lua_pop( L,2 );
-                        return -1;
+                        ERROR( "lua table string key too long\n" );
+                        return NULL;
                     }
                 }break;
                 default :
                 {
+                    bson_destroy( doc );
+                    lua_pop( L,2 );
                     ERROR( "lua_key_encode can not convert %s to bson key\n",
                         lua_typename( L,lua_type( L,-2 ) ) );
-                    lua_pop( L,2 );
-                    return -1;
+                    return NULL;
                 }break;
             }
-            
+
             assert( "lua key encode fail",pkey );
             if ( !lua_val_encode( doc,pkey,stack_top + 2 ) )
             {
                 lua_pop( L,2 );
                 bson_destroy( doc );
                 ERROR( "lua val encode object fail\n" );
-                return -1;
+                return NULL;
             }
 
             /* removes 'value'; keeps 'key' for next iteration */
@@ -961,8 +961,10 @@ int32 lmongo::lua_encode( int32 index,bson_t **pdoc )
     }
 
     assert( "lua_encode stack dirty",stack_top == lua_gettop(L) );
-    *pdoc = doc;
-    return is_array;
+
+    if ( is_array ) *is_array = _is_array;
+
+    return doc;
 }
 
 /* update( id,collections,query,update,upsert,multi ) */
@@ -983,7 +985,7 @@ int32 lmongo::update()
     bson_t *query = NULL;
     if ( lua_istable( L,3 ) )
     {
-        if ( lua_encode( 3,&query ) < 0 || !query )
+        if ( !( query = lua_encode( 3 ) ) )
         {
             return luaL_error( L,"mongo update:lua_encode argument#3 error" );
         }
@@ -1008,7 +1010,7 @@ int32 lmongo::update()
     bson_t *update = NULL;
     if ( lua_istable( L,4 ) )
     {
-        if ( lua_encode( 4,&update ) < 0 || !update )
+        if ( !( update = lua_encode( 4 ) ) )
         {
             bson_destroy( query );
             return luaL_error( L,"mongo update:lua_encode argument#4 error" );
@@ -1042,7 +1044,7 @@ int32 lmongo::update()
     _mq->set_update( collection,query,update,upsert,multi );
 
     bool _notify = false;
-    
+
     lock();
     if ( _query.empty() )  /* 不要使用_query.size() */
     {
@@ -1077,7 +1079,7 @@ int32 lmongo::remove()
     bson_t *query = NULL;
     if ( lua_istable( L,3 ) )
     {
-        if ( lua_encode( 3,&query ) < 0 || !query )
+        if ( !( query = lua_encode( 3 ) ) )
         {
             return luaL_error( L,"mongo remove:lua_encode argument#3 error" );
         }

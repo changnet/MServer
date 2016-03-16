@@ -35,7 +35,7 @@ private:
     void notification( notify_t msg );
     void invoke_command( bool cb = true );
     void result_encode( bson_t *doc,bool is_array );
-    int32 lua_encode( int32 index,bson_t **pdoc );
+    bson_t *lua_encode( int32 index,int32 *is_array = NULL );
     bool lua_key_encode( char *key,int32 len,int32 index,int32 &array_index,
         int32 is_array );
     bool lua_val_encode( bson_t *doc,const char *key,int32 index );

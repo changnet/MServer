@@ -50,7 +50,7 @@ for i = max_insert + 1,max_insert*2 do
     data.object = { name = "xzc",{9,8,7,6,5,4,3,2,1} }
     data.desc   = "test item"
     data.op_time = ev:time()
-    
+
     local str = json.encode( data )
     g_store_mongo:insert( collection,str )
 end
