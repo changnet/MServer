@@ -8,14 +8,13 @@ MAKE = make
 #如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
 CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
-OPTIMIZE =
+OPTIMIZE = -O0
 CC = g++
 INC = -I./deps/http-parser -I./deps/lua_parson -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
 LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser
 LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser
 ODIR = bin
 SDIR = ./
-TEST_DIR = ../test
 TARGET = $(ODIR)/master
 MKDIR = mkdir -p
 
@@ -25,13 +24,10 @@ MKDIR = mkdir -p
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o lutil.o log.o llog.o
+	lstream_socket.o lutil.o log.o llog.o main.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
-
-$(ODIR)/%.o: $(SDIR)/deps/include/%.c
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/global/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
@@ -69,10 +65,11 @@ $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
 #$@ 目标文件的名称x
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
-all: DIRS $(OBJS) $(ODIR)/main.o
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
-DIRS:
+all: dir $(OBJS)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
+
+dir:
 	$(MKDIR) $(ODIR)
 
 clean:
@@ -91,4 +88,4 @@ build_all:
 test:
 	valgrind --leak-check=full bin/master test 1
 
-.PHONY: all clean test clean_all build_all
+.PHONY: all clean test clean_all build_all dir
