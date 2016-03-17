@@ -86,6 +86,6 @@ build_all:
 	$(MAKE) -C . all
 
 test:
-	valgrind --leak-check=full bin/master test 1
+	valgrind --leak-check=full --show-leak-kinds=all --suppressions=valgrind.suppressions bin/master test 1
 
 .PHONY: all clean test clean_all build_all dir
