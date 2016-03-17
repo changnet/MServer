@@ -1,6 +1,8 @@
 lua_parson
 ==========
 
+[![Build Status](https://travis-ci.org/changnet/lua_parson.svg?branch=master)](https://travis-ci.org/changnet/lua_parson)
+
 A lua json encode/decode c module base on parson.  
 See more about parson at https://github.com/kgabis/parson
 
@@ -11,8 +13,10 @@ Installation
  * Run 'git clone https://github.com/changnet/lua_parson.git'
  * Run 'cd lua_parson'
  * Run 'make'
- * Run 'lua test.lua' to test
- * Copy lua_parson.so to your lua project c module directory
+ * Run 'make test' to test
+ * Copy lua_parson.so to your lua project's c module directory
+
+or embed to your project
 
 Api
 -----
@@ -48,40 +52,40 @@ See 'test.lua'
 
 ```lua
 {
-    empty_object = 
+    empty_object =
     {
     }
-    employees = 
+    employees =
     {
-        [1] = 
+        [1] =
         {
             firstName = "Bill"
             lastName = "Gates"
         }
-        [2] = 
+        [2] =
         {
             firstName = "George"
             lastName = "Bush"
         }
-        [3] = 
+        [3] =
         {
             firstName = "Thomas"
             lastName = "Carter"
         }
     }
-    empty_array = 
+    empty_array =
     {
     }
-    force_array = 
+    force_array =
     {
         [1] = 987654321
         [2] = 123456789
     }
-    sparse = 
+    sparse =
     {
         [10] = "number ten"
     }
-    force_object = 
+    force_object =
     {
         ["3"] = "CH"
         ["2"] = "UK"
@@ -89,5 +93,3 @@ See 'test.lua'
     }
 }
 ```
-
-

@@ -14,7 +14,7 @@ RANLIB= ranlib
 BUILD_CFLAGS =      -I$(LUA_INCLUDE_DIR) $(LUA_PARSON_CFLAGS)
 OBJS =              parson.o lparson.o
 
-.PHONY: all clean
+.PHONY: all clean test
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(BUILD_CFLAGS) -o $@ $<
@@ -27,6 +27,9 @@ $(TARGET_SO): $(OBJS)
 $(TARGET_A): $(OBJS)
 	$(AR) $@ $(OBJS)
 	$(RANLIB) $@
+
+test:
+	lua test.lua
 
 clean:
 	rm -f *.o $(TARGET_SO) $(TARGET_A)
