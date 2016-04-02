@@ -1,5 +1,6 @@
 #include <lua.hpp>
 #include <lparson.h>
+#include <lrapidxml.hpp>
 
 #include "llog.h"
 #include "lsql.h"
@@ -110,6 +111,9 @@ void lstate::open_cpp()
     lua_pop(L, 1);  /* remove lib */
 
     luaL_requiref(L, "lua_parson", luaopen_lua_parson, 1);
+    lua_pop(L, 1);  /* remove lib */
+
+    luaL_requiref(L, "lua_rapidxml", luaopen_lua_rapidxml, 1);
     lua_pop(L, 1);  /* remove lib */
 
     luaopen_ev    (L);

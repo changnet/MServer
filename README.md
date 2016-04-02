@@ -32,6 +32,7 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * 基于http-parser的http (client/server)通信模块
  * 基于parson的lua json解析模块
  * 多线程缓冲日志
+ * lua_rapidxml，xml解析模块
 
 待实现组件:
 -----------

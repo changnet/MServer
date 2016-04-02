@@ -10,9 +10,9 @@ CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
 OPTIMIZE = -O0
 CC = g++
-INC = -I./deps/http-parser -I./deps/lua_parson -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
-LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser
+INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
+LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml
+LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser -llua_rapidxml
 ODIR = bin
 SDIR = ./
 TARGET = $(ODIR)/master
@@ -77,11 +77,13 @@ clean:
 
 clean_all:
 	$(MAKE) -C deps/lua_parson clean
+	$(MAKE) -C deps/lua_rapidxml clean
 	$(MAKE) -C deps/http-parser clean
 	rm -rf $(ODIR)/*
 
 build_all:
 	$(MAKE) -C deps/lua_parson all
+	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package
 	$(MAKE) -C . all
 

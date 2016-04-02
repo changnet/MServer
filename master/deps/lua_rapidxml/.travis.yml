@@ -1,0 +1,13 @@
+# ref: http://docs.travis-ci.com/user/build-configuration
+
+language: cpp
+
+before_install:
+    - wget "http://www.lua.org/ftp/lua-5.3.2.tar.gz" && tar xzf lua-5.3.2.tar.gz && cd lua-5.3.2 && sudo make linux test install;
+
+install:
+    - cd $TRAVIS_BUILD_DIR
+    - make all
+
+script:
+    - make test
