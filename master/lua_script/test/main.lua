@@ -2,6 +2,7 @@ require "global.global"
 require "global.oo"
 require "global.table"
 require "global.string"
+require "obj_counter"
 json = require "lua_parson"
 
 local Http_mgr    = require "http.http_mgr"
@@ -28,7 +29,9 @@ local function main()
 
     g_http_mgr:listen( "0.0.0.0",8887 )
 
+    print( obj_counter.obj_count("Http_socket") )
     oo.check()
+    vd( obj_counter.dump() )
     ev:run()
 end
 

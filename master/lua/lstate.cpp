@@ -11,6 +11,10 @@
 #include "ltimer.h"
 #include "lhttp_socket.h"
 #include "leventloop.h"
+#include "lobj_counter.h"
+
+#define LUA_LIB_OPEN( name,func ) \
+    do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
 
 class lstate *lstate::_state = NULL;
 class lstate *lstate::instance()
@@ -107,21 +111,23 @@ void lstate::open_cpp()
     set_c_path();
     set_lua_path();
 
-    luaL_requiref(L, "util", luaopen_util, 1);
-    lua_pop(L, 1);  /* remove lib */
+    /* ============================库方式调用================================== */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    LUA_LIB_OPEN("util", luaopen_util);
+    LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
+    LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
+    LUA_LIB_OPEN("obj_counter", luaopen_obj_counter);
+    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 
-    luaL_requiref(L, "lua_parson", luaopen_lua_parson, 1);
-    lua_pop(L, 1);  /* remove lib */
-
-    luaL_requiref(L, "lua_rapidxml", luaopen_lua_rapidxml, 1);
-    lua_pop(L, 1);  /* remove lib */
-
+    /* ============================对象方式调用================================ */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_ev    (L);
     luaopen_sql   (L);
     luaopen_log   (L);
     luaopen_timer (L);
     luaopen_mongo (L);
     luaopen_http_socket(L);
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */
     assert( "lua stack not clean after init", 0 == lua_gettop(L) );

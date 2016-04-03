@@ -43,8 +43,13 @@
 /* sql buffer chunk size */
 #define SQL_CHUNK    64
 
+/* log file config */
 #define LOG_MIN_CHUNK      64
 #define LOG_MAX_LENGTH     10240
+
+/* count C++ object which push to lua */
+#define OBJ_COUNTER
+
 //////////////////////////////TCP KEEP ALIVE////////////////////////////////////
 /* 是否开启tcp keepalive，一旦开启，所有accept、connect的socket都会启用 */
 #define TCP_KEEP_ALIVE

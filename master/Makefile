@@ -24,7 +24,7 @@ MKDIR = mkdir -p
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o lutil.o log.o llog.o main.o
+	lstream_socket.o lutil.o log.o llog.o lobj_counter.o main.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代

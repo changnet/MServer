@@ -14,8 +14,17 @@
 
 /* 注册struct、class到lua，适用于在lua创建c、c++对象 */
 
-#include "../global/global.h"
 #include <lua.hpp>
+#include "lobj_counter.h"
+#include "../global/global.h"
+
+#ifdef OBJ_COUNTER
+# define OBJ_ADD_COUNT(name) do{ obj_counter::instance()->add_count(name); }while(0)
+# define OBJ_DEC_COUNT(name) do{ obj_counter::instance()->dec_count(name); }while(0)
+#else
+# define OBJ_ADD_COUNT(name)
+# define OBJ_DEC_COUNT(name)
+#endif /* OBJ_COUNTER */
 
 template<class T>
 class lclass
@@ -26,7 +35,7 @@ public:
     {
         classname = _classname;
         /* lua 5.3的get函数基本返回类型，而5.1基本为void。需要另外调用is函数 */
-        
+
         if ( 0 == luaL_newmetatable( L,classname ) )
         {
             FATAL( "dumplicate define class %s\n",classname );
@@ -42,12 +51,12 @@ public:
         /* metatable as value and pop metatable */
         lua_pushvalue( L,-1 );
         lua_setfield(L, -2, "__index");
-        
+
         lua_newtable( L );
         lua_pushcfunction(L, cnew);
         lua_setfield(L, -2, "__call");
         lua_setmetatable( L,-2 );
-        
+
         lua_getfield( L,LUA_REGISTRYINDEX,"_LOADED" );
         if ( !lua_istable( L ,-1 ) )
         {
@@ -57,10 +66,10 @@ public:
 
         lua_pushvalue( L,1 );
         lua_setfield( L,-2,classname );
-        
+
         lua_settop( L,0 );
     }
-    
+
     /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete
      * 由于此函数为static，但却依赖classname，而classname在构造函数中传入。
      * 因此，当调用类似lclass<lsocket>::push( L,_backend,false );的代码时，
@@ -77,11 +86,13 @@ public:
         T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
 
+        OBJ_ADD_COUNT( classname );
+
         luaL_getmetatable( L,classname );
         /* metatable on stack now,can not be nil */
 
         /* 如果不自动gc，则需要在metatable中设置一张名为_notgc的表。以userdata
-           weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的
+           为key的weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的
         */
         if ( !gc )
         {
@@ -96,7 +107,7 @@ public:
 
         return lua_setmetatable( L,-2 );
     }
-    
+
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
     typedef int32 (T::*pf_t)(lua_State*);
     typedef int32 (T::*pf_t_ex)();
@@ -122,7 +133,7 @@ public:
 
         return *this;
     }
-    
+
     template <pf_t_ex pf>
     lclass<T>& def(const char* func_name)
     {
@@ -142,7 +153,7 @@ public:
 
         return *this;
     }
-    
+
     /* 用于定义类的static函数 */
     template <pf_st_t pf>
     lclass<T>& def(const char* func_name)
@@ -163,7 +174,7 @@ public:
 
         return *this;
     }
-    
+
     lclass<T>& def(const char* func_name,pf_t_ex pf)
     {
         luaL_getmetatable( L,classname );
@@ -182,7 +193,7 @@ public:
 
         return *this;
     }
-    
+
     /* 注册变量,通常用于设置宏定义、枚举 */
     lclass<T>& set(const char* val_name, int32 val)
     {
@@ -220,9 +231,11 @@ private:
         /* 弹出元表,并把元表设置为userdata的元表 */
         lua_setmetatable(L, -2);
 
+        OBJ_ADD_COUNT( classname );
+
         return 1;
     }
-    
+
     /* 元方法,__tostring */
     static int tostring(lua_State* L)
     {
@@ -238,6 +251,8 @@ private:
     /* gc函数 */
     static int gc(lua_State* L)
     {
+        OBJ_DEC_COUNT( classname );
+
         if ( luaL_getmetafield(L, 1, "_notgc") )
         {
             /* 以userdata为key取值。如果未设置该userdata的_notgc值，则将会取得nil */
@@ -255,7 +270,7 @@ private:
 
         return 0;
     }
-    
+
     //创建弱表
     static void weaktable(lua_State *L, const char *mode)
     {
@@ -282,7 +297,7 @@ private:
             lua_settable(L, tindex);   /* set t[name] */
         }
     }
-    
+
     template <pf_t pf>
     static int fun_thunk(lua_State* L)
     {
@@ -291,13 +306,13 @@ private:
         {
             return luaL_error(L, "%s calling method with null pointer", classname);
         }
-        
+
         /* remove self so member function args start at index 1 */
         lua_remove(L, 1);
 
         return ((*ptr)->*pf)(L);
     }
-    
+
     template <pf_t_ex pf>
     static int fun_thunk_ex(lua_State* L)
     {

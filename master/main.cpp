@@ -6,6 +6,7 @@
 #include "mysql/sql.h"
 #include "mongo/mongo.h"
 #include <sys/utsname.h> /* for uname */
+#include "lua/lobj_counter.h"
 
 /* 记录进程启动信息 */
 void runtime_start()
@@ -33,7 +34,7 @@ void runtime_stop()
     time_t rawtime;
     time( &rawtime );
     struct tm *ntm = localtime( &rawtime );
-    
+
     RUNTIME( "process[%d] '%s %d' stop at %04d-%02d-%02d %02d:%02d:%02d",
         getpid(),spath,sid,(ntm->tm_year + 1900),(ntm->tm_mon + 1),
         ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec);
@@ -77,7 +78,7 @@ int32 main( int32 argc,char **argv )
 
     lclass<leventloop>::push( L,_loop,false );
     lua_setglobal( L,"ev" );
-    
+
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua_script/%s/%s",spath,LUA_ENTERANCE );
@@ -91,7 +92,11 @@ int32 main( int32 argc,char **argv )
     _loop->finalize();               /* 优先解除lua_State依赖 */
     lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
     leventloop::uninstance();        /* 关闭主事件循环 */
-    
+
+    assert( "c++ object push to lua not release",
+        obj_counter::instance()->final_check() );
+    obj_counter::uninstance();       /* 关闭计数 */
+
     /* 清除静态数据，以免影响内存检测 */
     buffer::allocator.purge();
     sql::library_end();
