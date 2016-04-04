@@ -1,4 +1,7 @@
-*.a       # 忽略所有 .a 结尾的文件
-*.o       # 忽略所有 .o 结尾的文件
+*.a
+*.o
+*.so
+
+master/bin
 master/cruntimelog
-master/bin      # 忽略 bin 目录下的所有文件
+master/cerrorlog*
