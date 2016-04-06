@@ -17,17 +17,18 @@ struct protocol
 {
     typedef enum
     {
-        PT_NONE   = 0,
-        PT_INT8   = 1,
-        PT_UINT8  = 2,
-        PT_INT16  = 3,
-        PT_UINT16 = 4,
-        PT_INT32  = 5,
-        PT_UINT32 = 6,
-        PT_INT64  = 7,
-        PT_UINT64 = 8,
-        PT_STRING = 9,
-        PT_ARRAY  = 10
+        NONE   =  0,
+        INT8   =  1,
+        UINT8  =  2,
+        INT16  =  3,
+        UINT16 =  4,
+        INT32  =  5,
+        UINT32 =  6,
+        INT64  =  7,
+        UINT64 =  8,
+        STRING =  9,
+        BINARY = 10,
+        ARRAY  = 11
     } protocol_t;
 
     protocol_t type;
