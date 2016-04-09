@@ -1,18 +1,25 @@
 MAKE = make
-#-pipe 使用pipe而不是临时文件，对代码无影响
-#-Wall This enables all the warnings
-#-g gdb debug option
-#-Wl,rpath 指定运行时库文件(so)路径，便携程序可用
-#-w 关闭所有告警
-#-rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace() （这一系列函数使用.dynsym表内符号）这样的函数使用。
-#如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
+# -pipe 使用pipe而不是临时文件，对代码无影响
+# -Wall This enables all the warnings
+# -g gdb debug option
+# -Wl,rpath 指定运行时库文件(so)路径，便携程序可用
+# -w 关闭所有告警
+# -rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外
+#    部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace()
+#    (这一系列函数使用.dynsym表内符号)这样的函数使用。
+# 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
+# mysql库根据安装方法不同，位置可能在/usr/local/mysql/,也可能在其他地方
 CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
 OPTIMIZE = -O0
-CC = g++
-INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
-LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser -llua_rapidxml
+# -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
+# https://gcc.gnu.org/projects/cxx-status.html
+CC = g++ -std=c++03
+INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
+	-I/usr/local/include/libbson-1.0 -I/usr/local/mysql/include
+LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml -L/usr/local/mysql/lib
+LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
+	-lhttp_parser -llua_rapidxml
 ODIR = bin
 SDIR = ./
 TARGET = $(ODIR)/master
@@ -24,7 +31,7 @@ MKDIR = mkdir -p
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o lutil.o log.o llog.o lobj_counter.o main.o
+	lstream_socket.o lutil.o log.o llog.o lobj_counter.o main.o stream.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -58,6 +65,9 @@ $(ODIR)/%.o: $(SDIR)/thread/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+
+$(ODIR)/%.o: $(SDIR)/stream/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖

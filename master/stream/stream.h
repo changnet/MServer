@@ -11,7 +11,7 @@ namespace std
 }
 #endif
 
-#include "../global/global/h"
+#include "../global/global.h"
 
 struct protocol
 {
@@ -59,7 +59,7 @@ public:
 public:
     class io
     {
-        explicit io( const char *buffer,uint32 size )
+        explicit io( char *buffer,uint32 size )
             : _buffer(buffer),_size(size),_offset(0)
         {
             assert( "stream:illeage io buffer",_buffer && _size > 0 );
@@ -67,15 +67,19 @@ public:
         public:
 #if defined(__i386__) || defined(__x86_64__)
 
-/* LDR/STR ¶ÔÓ¦»ã±àÖ¸ÁîLDR/STR */
-# define LDR(_dest,_src,_t) _dest = (*reinterpret_cast<const _t *>(_p))
+/* LDR/STR å¯¹åº”æ±‡ç¼–æŒ‡ä»¤LDR/STR */
+/* !!! unaligned access,éƒ¨åˆ†arm cpuä¸æ”¯æŒ !!! */
+# define LDR(from,to,type) (to = (*reinterpret_cast<const type *>(from)))
+# define STR(to,from,type) ((*reinterpret_cast<type *>(to)) = from)
 
 #else
 
-# define LDR(_dest,_src,_t) memcpy( &_dest,_src,sizeof t )
+/* memcpy åœ¨æ‰€æœ‰å¹³å°ä¸Šéƒ½æ˜¯å®‰å…¨çš„ï¼Œä½†æ•ˆç‡ç¨æ…¢ */
+# define LDR(from,to,type) (memcpy( &to,from,sizeof type ))
+# define STR(to,from,type) (memcpy( to,&from,sizeof type ))
 
 #endif
-            inline operator_t &operator >> ( int8 &val )
+            inline io &operator >> ( int8 &val )
             {
                 static uint32 offset = sizeof( int8 );
                 if ( _offset + offset > _size ) /* overflow */
@@ -84,18 +88,13 @@ public:
                     return *this;
                 }
 
-                /* val = *reinterpret_cast<const int8*>( buffer + _offset );
-                 * Ê¹ÓÃreinterpret_castËÙ¶È¸ü¿ì£¬µ«¿ÉÄÜ»á³öÏÖÄÚ´æ¶ÔÆëÎÊÌâ£¬ÓÈÆäÊÇ
-                 * ÔÚ±àÒëÊ±Ö¸¶¨ÁË¶ÔÆëµÄÇé¿öÏÂ£¬ÀàĞÍÇ¿ÖÆ×ª»»ºóµ¼ÖÂ±àÒëÆ÷
-                 * memcpy ÔÚO3ÓÅ»¯ÏÂËÙ¶ÈÓëreinterpret_cast»ù±¾Ïàµ±
-                 */
-                memcpy( &val,buffer + _offset,offset );
+                LDR( _buffer + _offset,val,int8 );
                 _offset += offset;
 
                 return *this;
             }
 
-            inline operator_t &operator << ( int8 &val )
+            inline io &operator << ( int8 &val )
             {
                 static uint32 offset = sizeof( int8 );
                 if ( _offset + offset > _size )
@@ -104,21 +103,42 @@ public:
                     return *this;
                 }
 
+                STR( _buffer + _offset,val,int8 );
+                _offset += offset;
 
+                return *this;
             }
 #undef LDR
 #undef STR
         private:
-            /* Ìá¹©Ò»¸öÉùÃ÷µÄÄ£°å·ÀÖ¹Î´ÖªÀàĞÍ×öÒşÊ½×ª»» */
-            template <typename T> operator_t& operator >> ( T& val );
-            template <typename T> operator_t& operator << ( T& val );
+            /* å£°æ˜æ¨¡æ¿ï¼Œä½†ä¸å®ç°ã€‚é˜²æ­¢å…¶ä»–ç±»å‹å¼ºè½¬ */
+            template <typename T> io& operator >> ( T& val );
+            template <typename T> io& operator << ( T& val );
 
-            const char *_buffer;
-            const uint32 _size ;
+            char * const _buffer;
+            uint32 const _size ;
             uint32 _offset;
     };
 private:
-    std::map< std::pair<int32,int32>,struct protocol > _protocol;
+    /* å¯¹äºåˆ¶å®šåè®®ï¼Œ16+16=32bitå·²è¶³å¤Ÿ */
+    typedef std::pair<uint16,uint16> pair_key_t;
+    struct pair_hash
+    {
+        uint32 operator () (const pair_key_t& pk) const
+        {
+            return (0xffff0000 & (pk.first << 16)) | (0x0000ffff & pk.second);
+        }
+    };
+
+    struct pair_equal
+    {
+        bool operator () (const pair_key_t& a, const pair_key_t& b) const
+        {
+            return a.first == b.first && a.second == b.second;
+        }
+    };
+
+    std::unordered_map< pair_key_t,struct protocol,pair_hash,pair_equal > _protocol;
 };
 
 #endif /* __STREAM_H__ */
