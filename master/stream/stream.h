@@ -79,37 +79,59 @@ public:
 # define STR(to,from,type) (memcpy( to,&from,sizeof type ))
 
 #endif
-            inline io &operator >> ( int8 &val )
-            {
-                static uint32 offset = sizeof( int8 );
-                if ( _offset + offset > _size ) /* overflow */
-                {
-                    assert( "stream:io read int8 overflow",false );
-                    return *this;
-                }
 
-                LDR( _buffer + _offset,val,int8 );
-                _offset += offset;
-
-                return *this;
+#define OPERATOR_OUT(type)                                             \
+            inline io &operator >> ( type &val )                       \
+            {                                                          \
+                static uint32 offset = sizeof( type );                 \
+                if ( _offset + offset > _size ) /* overflow */         \
+                {                                                      \
+                    val = 0;                                           \
+                    assert( "stream:io read overflow",false );         \
+                    return *this;                                      \
+                }                                                      \
+                                                                       \
+                LDR( _buffer + _offset,val,type );                     \
+                _offset += offset;                                     \
+                                                                       \
+                return *this;                                          \
             }
 
-            inline io &operator << ( int8 &val )
-            {
-                static uint32 offset = sizeof( int8 );
-                if ( _offset + offset > _size )
-                {
-                    assert( "stream::io write int8 overflow",false );
-                    return *this;
-                }
-
-                STR( _buffer + _offset,val,int8 );
-                _offset += offset;
-
-                return *this;
+#define OPERATOR_IN(type)                                              \
+            inline io &operator << ( type &val )                       \
+            {                                                          \
+                static uint32 offset = sizeof( type );                 \
+                if ( _offset + offset > _size )                        \
+                {                                                      \
+                    assert( "stream::io write overflow",false );       \
+                    return *this;                                      \
+                }                                                      \
+                                                                       \
+                STR( _buffer + _offset,val,type );                     \
+                _offset += offset;                                     \
+                                                                       \
+                return *this;                                          \
             }
+
+            /* 这里实现了所有可以操作的类型，之所以不使用模板，是为了防止隐式转换 */
+            OPERATOR_OUT(int8)
+            OPERATOR_IN(uint8)
+            OPERATOR_OUT(int16)
+            OPERATOR_IN(uint16)
+            OPERATOR_OUT(int32)
+            OPERATOR_IN(uint32)
+            OPERATOR_OUT(int64)
+            OPERATOR_IN(uint64)
+#undef OPERATOR_IN
+#undef OPERATOR_OUT
 #undef LDR
 #undef STR
+
+        /* 对string类型的操作 */
+        inline int32 read_string( char *const ptr,const int32 len )
+        {
+
+        }
         private:
             /* 声明模板，但不实现。防止其他类型强转 */
             template <typename T> io& operator >> ( T& val );
@@ -138,7 +160,8 @@ private:
         }
     };
 
-    std::unordered_map< pair_key_t,struct protocol,pair_hash,pair_equal > _protocol;
+    typedef std::unordered_map< pair_key_t,struct protocol,pair_hash,pair_equal > unordered_map_t;
+     unordered_map_t _protocol;
 };
 
 #endif /* __STREAM_H__ */
