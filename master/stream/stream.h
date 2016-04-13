@@ -13,6 +13,15 @@ namespace std
 
 #include "../global/global.h"
 
+/*
+stream只做流协议解析
+另一种方法是做lbuffer,那么read、write、reserver在buffer做就行了，不需要stream.注意设定一个最大buffer值
+那么要把buffer改成纯buffer类，把recv、send放到socket，(这时又怎样访问buffer指针呢？buffer变量设计为public)
+
+leventloop与socket之前的耦合过高，直接访问了socket的buffer、sending标志位，看能不能优化一下
+把三级socket、lsocket、http_socket改为继承，设计并完成stream_socket
+*/
+
 struct protocol
 {
     typedef enum
@@ -80,66 +89,54 @@ public:
 
 #endif
 
-#define OPERATOR_OUT(type)                                             \
-            inline io &operator >> ( type &val )                       \
-            {                                                          \
-                static uint32 offset = sizeof( type );                 \
-                if ( _offset + offset > _size ) /* overflow */         \
-                {                                                      \
-                    val = 0;                                           \
-                    assert( "stream:io read overflow",false );         \
-                    return *this;                                      \
-                }                                                      \
-                                                                       \
-                LDR( _buffer + _offset,val,type );                     \
-                _offset += offset;                                     \
-                                                                       \
-                return *this;                                          \
-            }
+#define DEFINE_READ_FUNCTION(type)                                     \
+        inline int32 read_##type( char* const buffer,type &val ) \
+        {                                                              \
 
-#define OPERATOR_IN(type)                                              \
-            inline io &operator << ( type &val )                       \
-            {                                                          \
-                static uint32 offset = sizeof( type );                 \
-                if ( _offset + offset > _size )                        \
-                {                                                      \
-                    assert( "stream::io write overflow",false );       \
-                    return *this;                                      \
-                }                                                      \
-                                                                       \
-                STR( _buffer + _offset,val,type );                     \
-                _offset += offset;                                     \
-                                                                       \
-                return *this;                                          \
-            }
+            LDR( buffer,val,type );                           \
+            return sizeof( type );
+        }
 
-            /* 这里实现了所有可以操作的类型，之所以不使用模板，是为了防止隐式转换 */
-            OPERATOR_OUT(int8)
-            OPERATOR_IN(uint8)
-            OPERATOR_OUT(int16)
-            OPERATOR_IN(uint16)
-            OPERATOR_OUT(int32)
-            OPERATOR_IN(uint32)
-            OPERATOR_OUT(int64)
-            OPERATOR_IN(uint64)
-#undef OPERATOR_IN
-#undef OPERATOR_OUT
+#define DEFINE_WRITE_FUNCTION(type)                                     \
+        inline int32 write_##type( char* const buffer,const type &val ) \
+        {
+            STR( buffer,val,type );
+            return sizeof( type );
+        }
+
+        /* 具体实现每一个基本类型的操作
+         * 不用模板是为了防止传入size_t这种32/64平台相关的类型
+         * 或者发生隐式强制转换导致数据错误
+         * 尤其是使用了reinterpret_cast
+         */
+        DEFINE_READ_FUNCTION(  int8  );
+        DEFINE_READ_FUNCTION( uint8  );
+        DEFINE_READ_FUNCTION(  int16 );
+        DEFINE_READ_FUNCTION( uint16 );
+        DEFINE_READ_FUNCTION(  int32 );
+        DEFINE_READ_FUNCTION( uint32 );
+        DEFINE_READ_FUNCTION(  int64 );
+        DEFINE_READ_FUNCTION( uint64 );
+
+        DEFINE_WRITE_FUNCTION(  int8  );
+        DEFINE_WRITE_FUNCTION( uint8  );
+        DEFINE_WRITE_FUNCTION(  int16 );
+        DEFINE_WRITE_FUNCTION( uint16 );
+        DEFINE_WRITE_FUNCTION(  int32 );
+        DEFINE_WRITE_FUNCTION( uint32 );
+        DEFINE_WRITE_FUNCTION(  int64 );
+        DEFINE_WRITE_FUNCTION( uint64 );
+
 #undef LDR
 #undef STR
+#undef DEFINE_READ_FUNCTION
+#undef DEFINE_WRITE_FUNCTION
 
         /* 对string类型的操作 */
-        inline int32 read_string( char *const ptr,const int32 len )
+        inline int32 read_string( char* const buffer,const int32 len )
         {
 
         }
-        private:
-            /* 声明模板，但不实现。防止其他类型强转 */
-            template <typename T> io& operator >> ( T& val );
-            template <typename T> io& operator << ( T& val );
-
-            char * const _buffer;
-            uint32 const _size ;
-            uint32 _offset;
     };
 private:
     /* 对于制定协议，16+16=32bit已足够 */
