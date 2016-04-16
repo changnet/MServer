@@ -29,17 +29,18 @@
 #endif
 
 #define DEFINE_READ_FUNCTION(type)                                     \
-        inline type read_##type()                                      \
+        inline type read_##type( int32 *perr = 0 )                     \
         {                                                              \
             if ( data_size() >= sizeof(type) )                         \
             {                                                          \
-                /* not assert */                                       \
-                ERROR( "read_"#type" overflow" );                      \
+                if ( perr ) *perr = -1;                                \
+                ERROR( "read_"#type" buffer overflow" );               \
                 return 0;                                              \
             }                                                          \
             type val = 0;                                              \
             LDR( _buff + _pos,val,type );                              \
             _pos += sizeof(type);                                      \
+            if ( perr ) *perr = 0;                                     \
             return val;                                                \
         }
 
@@ -166,6 +167,12 @@ public:
         if ( !ptr ) return str_len;
 
         if ( str_len <= 0 || len < str_len ) return -1;
+        if ( data_size() < str_len )
+        {
+            /* 不要用assert，不然别人随意用工具发个非法数据服务器就当了 */
+            ERROR( "read_string buffer overflow" );
+            return -2;
+        }
 
         memcpy( ptr,_buff + _pos,str_len );
         return str_len;
