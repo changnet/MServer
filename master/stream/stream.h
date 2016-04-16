@@ -68,11 +68,6 @@ public:
 public:
     class io
     {
-        explicit io( char *buffer,uint32 size )
-            : _buffer(buffer),_size(size),_offset(0)
-        {
-            assert( "stream:illeage io buffer",_buffer && _size > 0 );
-        }
         public:
 #if defined(__i386__) || defined(__x86_64__)
 
@@ -90,18 +85,17 @@ public:
 #endif
 
 #define DEFINE_READ_FUNCTION(type)                                     \
-        inline int32 read_##type( char* const buffer,type &val ) \
+        inline int32 read_##type( char* const buffer,type &val )       \
         {                                                              \
-
-            LDR( buffer,val,type );                           \
-            return sizeof( type );
+            LDR( buffer,val,type );                                    \
+            return sizeof( type );                                     \
         }
 
 #define DEFINE_WRITE_FUNCTION(type)                                     \
         inline int32 write_##type( char* const buffer,const type &val ) \
-        {
-            STR( buffer,val,type );
-            return sizeof( type );
+        {                                                               \
+            STR( buffer,val,type );                                     \
+            return sizeof( type );                                      \
         }
 
         /* 具体实现每一个基本类型的操作

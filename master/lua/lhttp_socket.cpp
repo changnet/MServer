@@ -113,9 +113,9 @@ void lhttp_socket::listen_cb( int32 revents )
 {
     assert( "libev listen cb  error",!(EV_ERROR & revents) );
 
-    while ( _socket.active() )
+    while ( socket::active() )
     {
-        int32 new_fd = _socket.accept();
+        int32 new_fd = socket::accept();
         if ( new_fd < 0 )
         {
             if ( EAGAIN != errno && EWOULDBLOCK != errno )
@@ -133,8 +133,8 @@ void lhttp_socket::listen_cb( int32 revents )
 
         /* 直接进入监听 */
         class lhttp_socket *_s = new class lhttp_socket( L );
-        (_s->_socket).set<lsocket,&lsocket::message_cb>( _s );
-        (_s->_socket).start( new_fd,EV_READ );  /* 这里会设置fd */
+        _s->socket::set<lsocket,&lsocket::message_cb>( _s );
+        _s->socket::start( new_fd,EV_READ );  /* 这里会设置fd */
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_acception);
         int32 param = 1;
@@ -159,13 +159,12 @@ void lhttp_socket::listen_cb( int32 revents )
 
 bool lhttp_socket::is_message_complete()
 {
-    class buffer *_recv = _socket.get_recv_buffer();
-    uint32 dsize = _recv->data_size();
+    uint32 dsize = _recv.data_size();
     assert( "http socket is_message_complete empty",dsize > 0 );
 
-    int32 nparsed = http_parser_execute( _parser,&settings,_recv->buff_pointer(),dsize );
+    int32 nparsed = http_parser_execute( _parser,&settings,_recv.buff_pointer(),dsize );
 
-    _recv->clear(); // http_parser不需要旧缓冲区
+    _recv.clear(); // http_parser不需要旧缓冲区
     /* web_socket报文,暂时不用回调到上层.无论当前报文是否结束,返回false等待数据报文 */
     if ( _parser->upgrade )
     {

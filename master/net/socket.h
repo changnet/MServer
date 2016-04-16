@@ -24,6 +24,10 @@
 
 class leventloop;
 
+/* 网络socket连接类
+ * 这里封装了基本的网络操作
+ * ev_io、eventloop、getsockopt这类操作都不再给子类或外部调用
+ */
 class socket
 {
 public:
@@ -55,17 +59,16 @@ public:
     inline int32 send() { return _send.send(_w.fd); }
     inline void set( int32 revents ) { _w.set(revents); }
     inline bool active() const { return _w.is_active(); }
-    inline class buffer *get_recv_buffer() { return &_recv; }
-    inline class buffer *get_send_buffer() { return &_send; }
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)( revents ); }
 
     friend class leventloop;
-private:
-    ev_io _w;
+protected:
     int32 _sending;
     buffer _recv;
     buffer _send;
+private:
+    ev_io _w;
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;

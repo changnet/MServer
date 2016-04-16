@@ -14,7 +14,7 @@ lsocket::lsocket( lua_State *L )
 
 lsocket::~lsocket()
 {
-    _socket.stop(); /* lsocket的内存由lua控制，保证在释放socket时一定会关闭 */
+    socket::stop(); /* lsocket的内存由lua控制，保证在释放socket时一定会关闭 */
 
     /* 释放引用，如果有内存问题，可查一下这个地方 */
     LUA_UNREF( ref_self       );
@@ -28,14 +28,14 @@ lsocket::~lsocket()
 int32 lsocket::kill()
 {
     /* stop尝试把缓冲区的数据直接发送 */
-    _socket.stop();
+    socket::stop();
 
     return 0;
 }
 
 int32 lsocket::listen()
 {
-    if ( _socket.active() )
+    if ( socket::active() )
     {
         return luaL_error( L,"listen:socket already active");
     }
@@ -47,15 +47,15 @@ int32 lsocket::listen()
     }
 
     int32 port = luaL_checkinteger( L,2 );
-    int32 fd = _socket.listen( host,port );
+    int32 fd = socket::listen( host,port );
     if ( fd < 0 )
     {
         ERROR( "socket listen fail:%s\n",strerror(errno) );
         return 0;
     }
 
-    _socket.set<lsocket,&lsocket::listen_cb>( this );
-    _socket.start( fd,EV_READ );
+    socket::set<lsocket,&lsocket::listen_cb>( this );
+    socket::start( fd,EV_READ );
 
     lua_pushinteger( L,fd );
     return 1;
@@ -63,7 +63,7 @@ int32 lsocket::listen()
 
 int32 lsocket::connect()
 {
-    if ( _socket.active() )
+    if ( socket::active() )
     {
         return luaL_error( L,"connect:socket already active");
     }
@@ -76,15 +76,15 @@ int32 lsocket::connect()
 
     int32 port = luaL_checkinteger( L,2 );
 
-    int32 fd = _socket.connect( host,port );
+    int32 fd = socket::connect( host,port );
     if ( fd < 0 )
     {
         ERROR( "socket connect fail:%s\n",strerror(errno) );
         return 0;
     }
 
-    _socket.set<lsocket,&lsocket::connect_cb>( this );
-    _socket.start( fd,EV_WRITE ); /* write事件 */
+    socket::set<lsocket,&lsocket::connect_cb>( this );
+    socket::start( fd,EV_WRITE ); /* write事件 */
 
     lua_pushinteger( L,fd );
     return 1;
@@ -93,7 +93,7 @@ int32 lsocket::connect()
 /* 发送原始数据，二进制或字符串 */
 int32 lsocket::send()
 {
-    if ( !_socket.active() )
+    if ( !socket::active() )
     {
         return luaL_error( L,"socket::send not valid");
     }
@@ -106,7 +106,7 @@ int32 lsocket::send()
         return luaL_error( L,"socket::send nothing to send" );
     }
 
-    _socket.append( sz,len );
+    socket::append( sz,len );
 
     return 0;
 }
@@ -121,7 +121,7 @@ void lsocket::message_cb( int32 revents )
      * 如果启用while,需要检测_socket在lua层逻辑中是否被关闭，防止自杀的情况
      */
 
-    int32 ret = _socket.recv();
+    int32 ret = socket::recv();
 
     /* disconnect or error */
     if ( 0 == ret )
@@ -176,17 +176,17 @@ void lsocket::on_disconnect()
     /* 关闭fd，但不要delete
      * 先回调lua，再close.lua可能会调用一些函数，如取fd
      */
-    _socket.stop();
+    socket::stop();
 }
 
 int32 lsocket::address()
 {
-    if ( !_socket.active() )
+    if ( !socket::active() )
     {
         return luaL_error( L,"socket::address not a active socket" );
     }
 
-    lua_pushstring( L,_socket.address() );
+    lua_pushstring( L,socket::address() );
     return 1;
 }
 
@@ -252,7 +252,7 @@ int32 lsocket::set_on_disconnect()
 
 int32 lsocket::file_description()
 {
-    lua_pushinteger( L,_socket.fd() );
+    lua_pushinteger( L,socket::fd() );
     return 1;
 }
 
@@ -271,7 +271,7 @@ void lsocket::connect_cb ( int32 revents )
 {
     assert( "libev connect cb error",!(EV_ERROR & revents) );
 
-    int32 err = _socket.validate();
+    int32 err = socket::validate();
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connection);
     int32 param = 1;
@@ -289,14 +289,14 @@ void lsocket::connect_cb ( int32 revents )
 
     if ( err )  /* 连接失败 */
     {
-        _socket.stop();
+        socket::stop();
         ERROR( "socket connect unsuccess:%s\n",strerror(err) ); // not errno
         return;
     }
 
-    KEEP_ALIVE( _socket.fd() );
-    USER_TIMEOUT( _socket.fd() );
+    KEEP_ALIVE( socket::fd() );
+    USER_TIMEOUT( socket::fd() );
 
-    _socket.set<lsocket,&lsocket::message_cb>( this );
-    _socket.set( EV_READ ); /* 将之前的write改为read */
+    socket::set<lsocket,&lsocket::message_cb>( this );
+    socket::set( EV_READ ); /* 将之前的write改为read */
 }
