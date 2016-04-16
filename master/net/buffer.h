@@ -13,6 +13,40 @@
  *   直到我们需要调整内存时，才用memmove移动内存。
  */
 
+#if defined(__i386__) || defined(__x86_64__)
+
+/* LDR/STR 对应汇编指令LDR/STR */
+/* !!! unaligned access,部分arm cpu不支持 !!! */
+# define LDR(from,to,type) (to = (*reinterpret_cast<const type *>(from)))
+# define STR(to,from,type) ((*reinterpret_cast<type *>(to)) = from)
+
+#else
+
+/* memcpy 在所有平台上都是安全的，但效率稍慢 */
+# define LDR(from,to,type) (memcpy( &to,from,sizeof type ))
+# define STR(to,from,type) (memcpy( to,&from,sizeof type ))
+
+#endif
+
+#define DEFINE_READ_FUNCTION(type)                                     \
+        inline type read_##type()                                      \
+        {                                                              \
+            assert( "read_"#type" buffer overflow",                    \
+                data_size() >= sizeof(type) );                         \
+            type val = 0;                                              \
+            LDR( _buff + _pos,val,type );                              \
+            return val;                                                \
+        }
+
+#define DEFINE_WRITE_FUNCTION(type)                                     \
+        inline int32 write_##type( const type &val )                    \
+        {                                                               \
+            reserved( sizeof(type) );                                   \
+            STR( _buff + _pos,val,type );                               \
+            _size += sizeof(type);                                      \
+            return sizeof( type );                                      \
+        }
+
 class buffer_process;
 
 class buffer
@@ -93,6 +127,35 @@ public:
     friend class buffer_process;
 
     static class ordered_pool<BUFFER_CHUNK> allocator;
+public:
+    /* 具体实现每一个基本类型的操作
+     * 不用模板是为了防止传入size_t这种32/64平台相关的类型
+     * 或者发生隐式强制转换导致数据错误
+     * 尤其是使用了reinterpret_cast
+     */
+    DEFINE_READ_FUNCTION(  int8  );
+    DEFINE_READ_FUNCTION( uint8  );
+    DEFINE_READ_FUNCTION(  int16 );
+    DEFINE_READ_FUNCTION( uint16 );
+    DEFINE_READ_FUNCTION(  int32 );
+    DEFINE_READ_FUNCTION( uint32 );
+    DEFINE_READ_FUNCTION(  int64 );
+    DEFINE_READ_FUNCTION( uint64 );
+
+    DEFINE_WRITE_FUNCTION(  int8  );
+    DEFINE_WRITE_FUNCTION( uint8  );
+    DEFINE_WRITE_FUNCTION(  int16 );
+    DEFINE_WRITE_FUNCTION( uint16 );
+    DEFINE_WRITE_FUNCTION(  int32 );
+    DEFINE_WRITE_FUNCTION( uint32 );
+    DEFINE_WRITE_FUNCTION(  int64 );
+    DEFINE_WRITE_FUNCTION( uint64 );
+
+    /* 对string类型的操作 */
+    inline int32 read_string( char* const ptr,const int32 len )
+    {
+        return 0;
+    }
 private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
@@ -105,6 +168,7 @@ private:
      */
     inline void reserved( uint32 bytes = 0 )
     {
+        assert( "max buffer overflow",BUFFER_MAX >= _len );
         if ( _len - _size > bytes ) /* 不能等于0,刚好用完也申请 */
             return;
 
@@ -138,5 +202,10 @@ private:
         _len  = new_len;
     }
 };
+
+#undef LDR
+#undef STR
+#undef DEFINE_READ_FUNCTION
+#undef DEFINE_WRITE_FUNCTION
 
 #endif /* __BUFFER_H__ */

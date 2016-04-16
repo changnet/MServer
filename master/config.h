@@ -39,6 +39,7 @@
 
 /* buffer chunk size for socket recv or send */
 #define BUFFER_CHUNK    8192
+#define BUFFER_MAX      65536
 
 /* sql buffer chunk size */
 #define SQL_CHUNK    64
