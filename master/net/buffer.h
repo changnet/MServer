@@ -31,8 +31,12 @@
 #define DEFINE_READ_FUNCTION(type)                                     \
         inline type read_##type()                                      \
         {                                                              \
-            assert( "read_"#type" buffer overflow",                    \
-                data_size() >= sizeof(type) );                         \
+            if ( data_size() >= sizeof(type) )                         \
+            {                                                          \
+                /* not assert */                                       \
+                ERROR( "read_"#type" overflow" );                      \
+                return 0;                                              \
+            }                                                          \
             type val = 0;                                              \
             LDR( _buff + _pos,val,type );                              \
             return val;                                                \
@@ -154,7 +158,11 @@ public:
     /* 对string类型的操作 */
     inline int32 read_string( char* const ptr,const int32 len )
     {
-        return 0;
+        uint16 str_len = read_uint16();
+        if ( str_len <= 0 || len < str_len ) return -1;
+
+        memcpy( ptr,_buff + _pos,str_len );
+        return str_len;
     }
 private:
     char  *_buff;    /* 缓冲区指针 */
