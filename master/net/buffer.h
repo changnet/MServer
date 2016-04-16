@@ -39,16 +39,17 @@
             }                                                          \
             type val = 0;                                              \
             LDR( _buff + _pos,val,type );                              \
+            _pos += sizeof(type);                                      \
             return val;                                                \
         }
 
-#define DEFINE_WRITE_FUNCTION(type)                                     \
-        inline int32 write_##type( const type &val )                    \
-        {                                                               \
-            reserved( sizeof(type) );                                   \
-            STR( _buff + _pos,val,type );                               \
-            _size += sizeof(type);                                      \
-            return sizeof( type );                                      \
+#define DEFINE_WRITE_FUNCTION(type)                                    \
+        inline int32 write_##type( const type &val )                   \
+        {                                                              \
+            reserved( sizeof(type) );                                  \
+            STR( _buff + _size,val,type );                             \
+            _size += sizeof(type);                                     \
+            return sizeof( type );                                     \
         }
 
 class buffer_process;
@@ -155,14 +156,31 @@ public:
     DEFINE_WRITE_FUNCTION(  int64 );
     DEFINE_WRITE_FUNCTION( uint64 );
 
-    /* 对string类型的操作 */
+    /* 读取字符串
+     * 如果参数ptr为NULL，则返回字符串长度。否则复制字符串到ptr
+     * 字符串结束符0不会自动加上
+     */
     inline int32 read_string( char* const ptr,const int32 len )
     {
         uint16 str_len = read_uint16();
+        if ( !ptr ) return str_len;
+
         if ( str_len <= 0 || len < str_len ) return -1;
 
         memcpy( ptr,_buff + _pos,str_len );
         return str_len;
+    }
+
+    /* 写入字符串 */
+    inline int32 write_string( const char *ptr,const int32 len )
+    {
+        assert( "write_string illeage argument",ptr && len > 0 );
+
+        reserved( len );
+        memcpy( _buff + _size,ptr,len );
+        _size += len;
+
+        return 0;
     }
 private:
     char  *_buff;    /* 缓冲区指针 */
