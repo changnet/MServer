@@ -14,7 +14,7 @@ LFLAGS = -rdynamic
 OPTIMIZE = -O0
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 # https://gcc.gnu.org/projects/cxx-status.html
-CC = g++ -std=c++03
+CC = g++ -std=c++11
 INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
 	-I/usr/local/include/libbson-1.0
 LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml

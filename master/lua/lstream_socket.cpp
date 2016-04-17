@@ -1,7 +1,21 @@
 #include "lstream_socket.h"
 
+#include "ltools.h"
 #include "lclass.h"
 #include "../ev/ev_def.h"
+
+#define DEFINE_STREAM_READ_FUNCTION(type)                           \
+    int32 lstream_socket::read_##type()                             \
+    {                                                               \
+        int32 *perr = 0;                                            \
+        type val = _recv.read_##type( perr );                       \
+        if ( perr < 0 )                                             \
+        {                                                           \
+            return luaL_error( L,"read_"#type" buffer overflow" );  \
+        }                                                           \
+        lua_pushinteger( L,val );                                   \
+        return 1;                                                   \
+    }
 
 lstream_socket::lstream_socket( lua_State *L )
     : lsocket(L)
@@ -13,9 +27,41 @@ lstream_socket::~lstream_socket()
 {
 }
 
-int32 lstream_socket::read_int8()
-{
+DEFINE_STREAM_READ_FUNCTION( int8   )
+DEFINE_STREAM_READ_FUNCTION( uint8  )
+DEFINE_STREAM_READ_FUNCTION( int16  )
+DEFINE_STREAM_READ_FUNCTION( uint16 )
+DEFINE_STREAM_READ_FUNCTION( int32  )
+DEFINE_STREAM_READ_FUNCTION( uint32 )
+DEFINE_STREAM_READ_FUNCTION( float  )
+DEFINE_STREAM_READ_FUNCTION( double )
 
+int32 lstream_socket::read_int64()
+{
+    int32 *perr = 0;
+
+    int64 val = _recv.read_int64( perr );
+    if ( perr < 0 )
+    {
+        return luaL_error( L,"read_int64 buffer overflow" );
+    }
+
+    lua_pushint64( L,val );
+    return 1;
+}
+
+int32 lstream_socket::read_uint64()
+{
+    int32 *perr = 0;
+
+    uint64 val = _recv.read_uint64( perr );
+    if ( perr < 0 )
+    {
+        return luaL_error( L,"read_uint64 buffer overflow" );
+    }
+
+    lua_pushint64( L,val );
+    return 1;
 }
 
 int32 lstream_socket::is_message_complete()

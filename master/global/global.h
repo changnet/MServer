@@ -17,8 +17,8 @@
 /* assert with error msg,third parted code not include this file will work fine
    with old assert.
 */
-#include "assert.h"
 #include "types.h"     /* base data type */
+#include "assert.h"
 #include "clog.h"      /* log function */
 
 /* Qt style unused paramter handler */

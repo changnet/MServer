@@ -17,6 +17,8 @@ public:
     int32 read_uint32();
     int32 read_int64 ();
     int32 read_uint64();
+    int32 read_float ();
+    int32 read_double();
     int32 read_string();
 
     int32 write_int8  ();
@@ -27,6 +29,8 @@ public:
     int32 write_uint32();
     int32 write_int64 ();
     int32 write_uint64();
+    int32 write_float ();
+    int32 write_double();
     int32 write_string();
 
     int32 pack_client();

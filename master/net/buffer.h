@@ -34,7 +34,6 @@
             if ( data_size() >= sizeof(type) )                         \
             {                                                          \
                 if ( perr ) *perr = -1;                                \
-                ERROR( "read_"#type" buffer overflow" );               \
                 return 0;                                              \
             }                                                          \
             type val = 0;                                              \
@@ -147,6 +146,8 @@ public:
     DEFINE_READ_FUNCTION( uint32 );
     DEFINE_READ_FUNCTION(  int64 );
     DEFINE_READ_FUNCTION( uint64 );
+    DEFINE_READ_FUNCTION(  float );
+    DEFINE_READ_FUNCTION( double );
 
     DEFINE_WRITE_FUNCTION(  int8  );
     DEFINE_WRITE_FUNCTION( uint8  );
@@ -156,6 +157,8 @@ public:
     DEFINE_WRITE_FUNCTION( uint32 );
     DEFINE_WRITE_FUNCTION(  int64 );
     DEFINE_WRITE_FUNCTION( uint64 );
+    DEFINE_WRITE_FUNCTION(  float );
+    DEFINE_WRITE_FUNCTION( double );
 
     /* 读取字符串
      * 如果参数ptr为NULL，则返回字符串长度。否则复制字符串到ptr
@@ -169,8 +172,6 @@ public:
         if ( str_len <= 0 || len < str_len ) return -1;
         if ( data_size() < str_len )
         {
-            /* 不要用assert，不然别人随意用工具发个非法数据服务器就当了 */
-            ERROR( "read_string buffer overflow" );
             return -2;
         }
 
