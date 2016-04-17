@@ -100,6 +100,8 @@ int32 lsocket::send()
 
     size_t len = 0;
     const char *sz = luaL_checklstring( L,1,&len );
+    /* 允许指定发送的长度 */
+    len = luaL_optinteger( L,2,len );
 
     if ( !sz || len <= 0 )
     {
@@ -142,7 +144,13 @@ void lsocket::message_cb( int32 revents )
     /* 此框架中，socket的内存由lua管理，无法预知lua会何时释放内存
      * 因此不要在C++层用while去解析协议
      */
-    if ( !is_message_complete() ) return;
+    int32 complete = is_message_complete();
+    if ( complete < 0 )  //error
+    {
+        on_disconnect();
+        return;
+    }
+    else if ( 0 == complete ) return;
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_message);
     int32 param = 0;

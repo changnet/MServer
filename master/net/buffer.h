@@ -29,7 +29,7 @@
 #endif
 
 #define DEFINE_READ_FUNCTION(type)                                     \
-        inline type read_##type( int32 *perr = 0 )                     \
+        inline type read_##type( int32 *perr = 0,bool move = true )    \
         {                                                              \
             if ( data_size() >= sizeof(type) )                         \
             {                                                          \
@@ -39,7 +39,7 @@
             }                                                          \
             type val = 0;                                              \
             LDR( _buff + _pos,val,type );                              \
-            _pos += sizeof(type);                                      \
+            if ( move ) _pos += sizeof(type);                          \
             if ( perr ) *perr = 0;                                     \
             return val;                                                \
         }
@@ -161,7 +161,7 @@ public:
      * 如果参数ptr为NULL，则返回字符串长度。否则复制字符串到ptr
      * 字符串结束符0不会自动加上
      */
-    inline int32 read_string( char* const ptr,const int32 len )
+    inline int32 read_string( char* &ptr,const int32 len,bool move = true )
     {
         uint16 str_len = read_uint16();
         if ( !ptr ) return str_len;
@@ -174,14 +174,21 @@ public:
             return -2;
         }
 
-        memcpy( ptr,_buff + _pos,str_len );
+        if ( move )
+        {
+            memcpy( ptr,_buff + _pos,str_len );
+            _pos += str_len;
+        }
+        else
+            ptr = _buff + _pos;
+
         return str_len;
     }
 
     /* 写入字符串 */
     inline int32 write_string( const char *ptr,const int32 len )
     {
-        assert( "write_string illeage argument",ptr && len > 0 );
+        assert( "write_string illegal argument",ptr && len > 0 );
 
         reserved( len );
         memcpy( _buff + _size,ptr,len );

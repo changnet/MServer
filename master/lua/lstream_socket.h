@@ -6,31 +6,51 @@
 class lstream_socket :public lsocket
 {
 public:
-    // int32 next_message()
-    // {
-    //     struct packet _packet;
-    //
-    //     while ( _recv.data_size() > 0 )
-    //     {
-    //         int32 result = pft( _recv,_packet );
-    //
-    //         if ( result > 0 )
-    //         {
-    //             /* TODO 包自动转发，protobuf协议解析 */
-    //             _recv.moveon( result );
-    //
-    //
-    //         }
-    //         else
-    //             break;
-    //     }
-    //
-    //     assert( "buffer over boundary",_recv.data_size() >= 0 &&
-    //         _recv.size() <= _recv.length() );
-    //     /* 缓冲区为空，尝试清理悬空区 */
-    //     if ( 0 == _recv.data_size() )
-    //         _recv.clear();
-    // }
+    ~lstream_socket();
+    explicit lstream_socket( lua_State *L );
+
+    int32 read_int8  ();
+    int32 read_uint8 ();
+    int32 read_int16 ();
+    int32 read_uint16();
+    int32 read_int32 ();
+    int32 read_uint32();
+    int32 read_int64 ();
+    int32 read_uint64();
+    int32 read_string();
+
+    int32 write_int8  ();
+    int32 write_uint8 ();
+    int32 write_int16 ();
+    int32 write_uint16();
+    int32 write_int32 ();
+    int32 write_uint32();
+    int32 write_int64 ();
+    int32 write_uint64();
+    int32 write_string();
+
+    int32 pack_client();
+    int32 unpack_client();
+
+    int32 pack_server();
+    int32 unpack_server();
+public:
+    void listen_cb  ( int32 revents );
+    /* 以下函数因为lua粘合层的写法限制，需要在子类覆盖，不然无法注册 */
+    inline int32 send   () { return lsocket::send(); }
+    inline int32 kill   () { return lsocket::kill(); }
+    inline int32 address() { return lsocket::address(); }
+    inline int32 listen () { return lsocket::listen (); }
+    inline int32 connect() { return lsocket::connect(); }
+
+    inline int32 set_self_ref  () { return lsocket::set_self_ref  (); }
+    inline int32 set_on_message() { return lsocket::set_on_message(); }
+    inline int32 set_on_acception () { return lsocket::set_on_acception (); }
+    inline int32 set_on_connection() { return lsocket::set_on_connection(); }
+    inline int32 set_on_disconnect() { return lsocket::set_on_disconnect(); }
+    inline int32 file_description () { return lsocket::file_description (); }
+private:
+    int32 is_message_complete();
 };
 
 #endif /* __LSTREAM_SOCKET_H__ */

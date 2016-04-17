@@ -47,7 +47,7 @@ public:
     inline int32 set_on_disconnect() { return lsocket::set_on_disconnect(); }
     inline int32 file_description () { return lsocket::file_description (); }
 private:
-    bool is_message_complete();
+    int32 is_message_complete();
 
 private:
     enum parse_state _state;

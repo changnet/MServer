@@ -157,7 +157,7 @@ void lhttp_socket::listen_cb( int32 revents )
     }
 }
 
-bool lhttp_socket::is_message_complete()
+int32 lhttp_socket::is_message_complete()
 {
     uint32 dsize = _recv.data_size();
     assert( "http socket is_message_complete empty",dsize > 0 );
@@ -169,18 +169,18 @@ bool lhttp_socket::is_message_complete()
     if ( _parser->upgrade )
     {
         _upgrade = true;
-        return false;
+        return 0;
     }
     else if ( nparsed != (int32)dsize )  /* error */
     {
         int32 no = _parser->http_errno;
-        ERROR( "http socket parse error(%d):%s",no,http_errno_name(static_cast<enum http_errno>(no)) );
+        ERROR( "http socket parse error(%d):%s",no,
+            http_errno_name(static_cast<enum http_errno>(no)) );
 
-        /* on_disconnect 或者 等待上层心跳超时或对方关闭socket */
-        return false;
+        return -1;
     }
 
-    return _state == PARSE_DONE;
+    return (_state == PARSE_DONE ? 1 : 0);
 }
 
 void lhttp_socket::set_state( enum parse_state st )

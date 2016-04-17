@@ -27,7 +27,7 @@ public:
     void message_cb ( int32 revents );
     void connect_cb ( int32 revents );
 
-    virtual bool is_message_complete() = 0;
+    virtual int32 is_message_complete() = 0;
     virtual void listen_cb  ( int32 revents ) = 0;
 private:
     void on_disconnect();

@@ -3,9 +3,10 @@
 #include "buffer.h"
 
 /* 返回整个包的大小，包括协议号、包体等 */
+/*
 int32 buffer_process::server_parse( class buffer &_buffer,struct packet &_packet )
 {
-    /* TODO 现在还没定义具体的消息包，暂时按字符串处理 */
+    // TODO 现在还没定义具体的消息包，暂时按字符串处理
     for ( uint32 i = _buffer._pos;i < _buffer._size;i ++ )
     {
         if ( '\0' == *(_buffer._buff + i) )
@@ -48,3 +49,4 @@ int32 buffer_process::http_parse( class buffer &_buffer,struct packet &_packet )
 
     return 0;
 }
+*/
