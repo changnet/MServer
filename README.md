@@ -40,6 +40,7 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * protobuf、flatbuffer
  * astar、rsa、zlib、md5、uuid、xml
  * 为lua提供LRU、LFU、优先队列、大小堆等常用数据结构
+ * https_socket(基于openssl(libssl-dev))
 
 单个节点master架构
 ------------------

@@ -1,9 +1,9 @@
--- http_client.lua
+-- http_server_connection.lua
 -- 2016-02-16
 -- xzc
 
 local Http_socket = require "Http_socket"
-local Http_client = oo.class( nil,... )
+local Http_server_connection = oo.class( nil,... )
 
 --[[
 HTTP/1.1 200 OK
@@ -21,10 +21,10 @@ Connection: Closed
 ]]
 local http_response_head = "HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s"
 
-function Http_client:__init()
+function Http_server_connection:__init()
 end
 
-function Http_client:set_conn( conn )
+function Http_server_connection:set_conn( conn )
     conn:set_self_ref( self )
     conn:set_on_message( self.on_message )
     conn:set_on_disconnect( self.on_disconnect )
@@ -32,14 +32,13 @@ function Http_client:set_conn( conn )
     self.conn = conn
 end
 
-function Http_client:on_message()
+function Http_server_connection:on_message()
     local body = self.conn:get_body()
 
-    PLOG( "http message start ==============================" )
     vd( body )
     vd( self.conn:get_url() )
     vd( self.conn:get_head_field("host") )
-    PLOG( "http message end   ===============================" )
+
 
     local data = '{ "data":{"ext":1,"password":"test"} }'
     local header = string.format( http_response_head,data:len(),data )
@@ -47,17 +46,18 @@ function Http_client:on_message()
     self.conn:send( header )
 end
 
-function Http_client:on_disconnect()
+function Http_server_connection:on_disconnect()
     local fd  = self.conn:file_description()
     self.conn = nil
-    -- TODO 这里要从mgr删除client
-    PLOG( "http client disconnect:%d",fd )
+
+    g_http_server_mgr:remove_connection( fd );
+    PLOG( "http server connection disconnect:%d",fd )
 end
 
-function Http_client:connect( ip,port )
+function Http_server_connection:connect( ip,port )
     local conn = Http_socket()
     conn:connect( ip,port )
-    
+
     conn:set_self_ref( self )
     conn:set_on_message( self.on_message )
     conn:set_on_disconnect( self.on_disconnect )
@@ -65,9 +65,9 @@ function Http_client:connect( ip,port )
     self.conn = conn
 end
 
-function Http_client:on_connection()
+function Http_server_connection:on_connection()
     print( "connect ok" )
     self.conn:send( "hello world" )
 end
 
-return Http_client
+return Http_server_connection
