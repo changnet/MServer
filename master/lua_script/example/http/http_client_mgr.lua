@@ -26,7 +26,7 @@ function Http_client_mgr:remove_connection( fd )
         local sec,usec = util.timeofday()
 
         print( "http client test done,cost",
-        math.floor( (self.sec-sec)*1000000 + self.usec - usec ),
+        math.floor( (sec-self.sec)*1000000 + usec - self.usec ),
             "microsecond" )
     end
 end

@@ -5,12 +5,7 @@
 local Http_socket = require "Http_socket"
 local Http_client_connection = oo.class( nil,... )
 
-local get_str = [==[
-GET /default.htm HTTP/1.1\r\n
-Host: 127.0.0.1\r\n
-Accept: */*\r\n
-\r\n
-]==]
+local get_str = "GET /default.htm HTTP/1.1\r\nHost: 127.0.0.1\r\nAccept: */*\r\n\r\n"
 
 local http_response_head = "HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s"
 
@@ -29,7 +24,6 @@ function Http_client_connection:on_message()
     local body = self.conn:get_body()
 
     local data = '{ "data":{"ext":1,"password":"test"} }'
-    print( body )
     if body ~= data then
         PLOG( "client assert error" )
     end
