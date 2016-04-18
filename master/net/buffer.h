@@ -161,27 +161,47 @@ public:
     DEFINE_WRITE_FUNCTION( double );
 
     /* 读取字符串
-     * 如果参数ptr为NULL，则返回字符串长度。否则复制字符串到ptr
+     * 如果参数ptr为NULL，则只返回字符串长度。
      * 字符串结束符0不会自动加上
      */
-    inline int32 read_string( char* &ptr,const int32 len,bool move = true )
+    inline int32 read_string( char* const ptr = NULL,const int32 len = 0,
+        bool move = true )
     {
-        uint16 str_len = read_uint16();
+        int32 *perr = 0;
+        uint16 str_len = read_uint16( perr,move );
+        if ( *perr < 0 ) return *perr;
         if ( !ptr ) return str_len;
 
-        if ( str_len <= 0 || len < str_len ) return -1;
-        if ( data_size() < str_len )
+        uint32 dsize = data_size();
+        if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
         {
-            return -2;
+            return -1;
         }
 
-        if ( move )
+        if ( str_len <= 0 || len < str_len ) return -1;
+        memcpy( ptr,_buff + _pos,str_len );
+
+        if ( move ) _pos += str_len;
+        return str_len;
+    }
+
+    /* 取字符串地址并返回字符串长度
+     * 注意取得的地址生命周期
+     */
+    inline int32 read_string( char **ptr,bool move = true )
+    {
+        int32 *perr = 0;
+        uint16 str_len = read_uint16( perr,move );
+        if ( *perr < 0 ) return *perr;
+
+        uint32 dsize = data_size();
+        if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
         {
-            memcpy( ptr,_buff + _pos,str_len );
-            _pos += str_len;
+            return -1;
         }
-        else
-            ptr = _buff + _pos;
+
+        *ptr = _buff + _pos;
+        if ( move ) _pos += str_len;
 
         return str_len;
     }

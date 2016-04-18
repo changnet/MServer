@@ -9,9 +9,10 @@
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
-#include "lhttp_socket.h"
 #include "leventloop.h"
+#include "lhttp_socket.h"
 #include "lobj_counter.h"
+#include "lstream_socket.h"
 
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
@@ -64,6 +65,7 @@ int32 luaopen_log   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
 int32 luaopen_http_socket( lua_State *L );
+int32 luaopen_stream_socket( lua_State *L );
 
 void lstate::set_lua_path()
 {
@@ -223,6 +225,48 @@ int32 luaopen_log( lua_State *L )
     lc.def<&llog::start> ("start");
     lc.def<&llog::write> ("write");
     lc.def<&llog::mkdir_p> ("mkdir_p");
+
+    return 0;
+}
+
+int32 luaopen_stream_socket( lua_State *L )
+{
+    lclass<lstream_socket> lc(L,"Stream_socket");
+    lc.def<&lstream_socket::send>("send");
+    lc.def<&lstream_socket::kill>("kill");
+    lc.def<&lstream_socket::listen> ("listen" );
+    lc.def<&lstream_socket::address>("address");
+    lc.def<&lstream_socket::connect>("connect");
+    lc.def<&lstream_socket::set_self_ref>     ("set_self_ref"     );
+    lc.def<&lstream_socket::set_on_message>   ("set_on_message"   );
+    lc.def<&lstream_socket::set_on_acception> ("set_on_acception" );
+    lc.def<&lstream_socket::set_on_connection>("set_on_connection");
+    lc.def<&lstream_socket::set_on_disconnect>("set_on_disconnect");
+    lc.def<&lstream_socket::file_description> ("file_description" );
+
+    lc.def<&lstream_socket::read_int8  >   ("read_int8"   );
+    lc.def<&lstream_socket::read_uint8 >   ("read_uint8"  );
+    lc.def<&lstream_socket::read_int16 >   ("read_int16"  );
+    lc.def<&lstream_socket::read_uint16>   ("read_uint16" );
+    lc.def<&lstream_socket::read_int32 >   ("read_int32"  );
+    lc.def<&lstream_socket::read_uint32>   ("read_uint32" );
+    lc.def<&lstream_socket::read_int64 >   ("read_int64"  );
+    lc.def<&lstream_socket::read_uint64>   ("read_uint64" );
+    lc.def<&lstream_socket::read_float >   ("read_float"  );
+    lc.def<&lstream_socket::read_double>   ("read_double" );
+    lc.def<&lstream_socket::read_string>   ("read_string" );
+
+    lc.def<&lstream_socket::write_int8  >   ("write_int8"   );
+    lc.def<&lstream_socket::write_uint8 >   ("write_uint8"  );
+    lc.def<&lstream_socket::write_int16 >   ("write_int16"  );
+    lc.def<&lstream_socket::write_uint16>   ("write_uint16" );
+    lc.def<&lstream_socket::write_int32 >   ("write_int32"  );
+    lc.def<&lstream_socket::write_uint32>   ("write_uint32" );
+    lc.def<&lstream_socket::write_int64 >   ("write_int64"  );
+    lc.def<&lstream_socket::write_uint64>   ("write_uint64" );
+    lc.def<&lstream_socket::write_float >   ("write_float"  );
+    lc.def<&lstream_socket::write_double>   ("write_double" );
+    lc.def<&lstream_socket::write_string>   ("write_string" );
 
     return 0;
 }
