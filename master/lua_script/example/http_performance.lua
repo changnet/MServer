@@ -48,6 +48,21 @@ function Http_url_connection:connect( ip,port )
     return conn:file_description()
 end
 
+local str_tb =
+{
+    'GET / HTTP/1.1\r\n',
+    'Host: www.baidu.com\r\n',
+    'Connection: keep-alive\r\n',
+    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n',
+    'Upgrade-Insecure-Requests: 1\r\n',
+    --'User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)'
+    --'User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36\r\n',
+    'Accept-Encoding: gzip, deflate, sdch\r\n',
+    'Accept-Language: zh-CN,zh;q=0.8\r\n\r\n',
+}
+
+--local str = table.concat( str_tb )
+
 function Http_url_connection:on_connection()
     print( "url connect ok" )
     local str = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nConnection: close\r\nAccept: */*\r\n\r\n";
@@ -59,5 +74,14 @@ local ip1,ip2 = util.gethostbyname( "www.baidu.com" )
 
 local url = Http_url_connection()
 
+--[[
+1.部分网站是需要User-Agent才会返回数据的，不同的User-Agent导致返回不同的数据
+2.有时候收到301、302返回的，需要从头部取出Location进行跳转。如www.bing.com是不存在的，
+  应该是cn.bing.com才有返回
+3.很多网站收到的是二进制压缩包，chrome会进行解压的，但这里不行。这时get_body通常都拿不
+  到数据，但底层是有收到数据的，头部有Content-Encoding: gzip、
+  Transfer-Encoding: chunked字段。
+  cn.bing.com、www.163.com、www.oschina.net都是这样，但www.baidu.com不压缩
+]]
 -- connect是不支持域名解析的，只能写ip
 url:connect( ip1,80 )
