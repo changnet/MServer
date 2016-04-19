@@ -46,6 +46,12 @@ static int32 gethost( lua_State *L )
             char **pptr = hptr->h_addr_list;
             for( ;*pptr != NULL; pptr++ )
             {
+                if ( lua_gettop( L ) > 256 )
+                {
+                    ERROR( "too many ip found,truncate" );
+                    return return_value;
+                }
+                lua_checkstack( L,1 );
                 const char *host = inet_ntop( hptr->h_addrtype, *pptr, dst,
                     sizeof(dst) );
                 if ( !host )
