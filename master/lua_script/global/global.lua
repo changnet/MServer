@@ -58,99 +58,48 @@ local function time_str()
     return os.date("%Y-%m-%d %H:%M:%S", os.time())
 end
 
-local function lualog (...)
-    print(string.format(...))
-end
-
-local function writeTrackFileLog(debug_traceback)
-    local file = io.open("lua_crash.txt","a+")
+local function write_log_file( file,log )
+    local file = io.open( file,"a+" )
     if not file then -- 无写入权限...
-        print(debug_traceback)
         return
     end
 
-    file:write(debug_traceback)
-    file:write("\r\n")
+    file:write( log )
+    file:write( "\r\n" )
     file:close()
 end
 
-local function writeErrorLog(msg)
-    local file = io.open("lua_error.txt","a+")
-    file:write(msg)
-    file:write("\r\n")
-    file:close()
+function __G__TRACKBACK__( msg )
+    local stack_trace = debug.traceback()
+    local info_table = { "lua crash: ",tostring(msg),"\n",stack_trace }
+    local str = table.concat( info_table )
+
+    print( str )
+    write_log_file( "lua_crash.txt",str )
 end
 
--- for CCLuaEngine traceback
-function __G__TRACKBACK__(msg)
-    local debug_traceback = debug.traceback()
-    lualog("LUA ERROR: " .. tostring(msg) .. "\n")
-    lualog(debug_traceback)
-    writeTrackFileLog(debug_traceback)
-end
-
---只打印不写入文件(参数不能带有nil参数,不能带有table,带有table的可以先用json.encode转成string)
-function PLOG(...)
-    local temp = {...}
-
-    if table.size(temp) == 0 then
-        print("PLOG can set nil")
-        return
+--只打印不写入文件
+function PLOG( fmt,... )
+    -- 默认为c方式的print字符串格式化打印方式
+    if "string" == type( fmt ) then
+        print( "[ lua print: ]" .. string.format( fmt,... ) )
+    else
+        print( "[ lua print: ]",fmt,... )
     end
-
-    local is_t = false
-    local str = ""
-    for _,v in ipairs(temp) do
-        if type(v) == "table" then
-            is_t = true
-            local st = Json.encode(v)
-            str = str .. "_" .. st
-        else
-            str = str .. "_" .. v
-        end
-    end
-
-    if is_t == true then
-        str = "<<< Lua >>>--------------------" .. "PLOG can not have lua table or nil [" .. str .. "]"
-        print(str)
-        writeErrorLog(str)
-        return
-    end
-
-    print("<<< Lua >>>--------------------" .. string.format(...))
 end
 
 --错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function ELOG(...)
-    local temp = {...}
-
-    if table.size(temp) == 0 then
-        print("PLOG can set nil")
-        return
+function ELOG( fmt,... )
+    local info_table = nil
+    if "string" == type( fmt ) then
+        info_table = { "[lua error ",time_str(),"] ",string.format( fmt,... ) }
+    else
+        info_table = { "[lua error ",time_str(),"] ",fmt,... }
     end
 
-    local is_t = false
-    local str = ""
-    for _,v in ipairs(temp) do
-        if type(v) == "table" then
-            is_t = true
-            local st = Json.encode(v)
-            str = str .. "_" .. st
-        else
-            str = str .. "_" .. v
-        end
-    end
-
-    if is_t == true then
-        str = "<<< Lua >>>--------------------" .. "PLOG can not have lua table or nil object >>" .. str
-        print(str)
-        writeErrorLog(str)
-        return
-    end
-
-    local ss = "<<< LUA ERROR >>>--------------------" .. time_str() .. " " .. string.format(...)
+    local ss = table.concat( info_table )
     print(ss)
-    writeErrorLog(ss)
+    write_log_file( "lua_error.txt",ss )
 end
 
 -- 热更函数接口
