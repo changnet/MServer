@@ -31,7 +31,7 @@
 #define DEFINE_READ_FUNCTION(type)                                     \
         inline type read_##type( int32 *perr = 0,bool move = true )    \
         {                                                              \
-            if ( data_size() >= sizeof(type) )                         \
+            if ( data_size() < sizeof(type) )                          \
             {                                                          \
                 if ( perr ) *perr = -1;                                \
                 return 0;                                              \
@@ -167,9 +167,9 @@ public:
     inline int32 read_string( char* const ptr = NULL,const int32 len = 0,
         bool move = true )
     {
-        int32 *perr = 0;
-        uint16 str_len = read_uint16( perr,move );
-        if ( *perr < 0 ) return *perr;
+        int32 err = 0;
+        uint16 str_len = read_uint16( &err,move );
+        if ( err < 0 ) return err;
         if ( !ptr ) return str_len;
 
         uint32 dsize = data_size();
@@ -190,9 +190,9 @@ public:
      */
     inline int32 read_string( char **ptr,bool move = true )
     {
-        int32 *perr = 0;
-        uint16 str_len = read_uint16( perr,move );
-        if ( *perr < 0 ) return *perr;
+        int32 err = 0;
+        uint16 str_len = read_uint16( &err,move );
+        if ( err < 0 ) return err;
 
         uint32 dsize = data_size();
         if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
@@ -210,6 +210,9 @@ public:
     inline int32 write_string( const char *ptr,const int32 len )
     {
         assert( "write_string illegal argument",ptr && len > 0 );
+
+        uint16 str_len = static_cast<uint16>( len );
+        write_uint16( str_len );
 
         reserved( len );
         memcpy( _buff + _size,ptr,len );

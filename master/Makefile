@@ -98,6 +98,12 @@ build_all:
 	$(MAKE) -C . all
 
 test:
+	./bin/master test 1
+
+memcheck:
 	valgrind --leak-check=full --show-leak-kinds=all --suppressions=valgrind.suppressions bin/master test 1
 
-.PHONY: all clean test clean_all build_all dir
+callgrind:
+	valgrind --tool=callgrind ./bin/master test 1
+
+.PHONY: all clean test clean_all build_all dir memcheck callgrind

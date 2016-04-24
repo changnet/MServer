@@ -16,7 +16,6 @@ local LIMIT =
     UINT16_MAX    = (65535),
     UINT32_MAX    = (4294967295),
     --UINT64_MAX    = ((18446744073709551615)),
-    T = 999,
 }
 
 return oo.define( LIMIT,... )

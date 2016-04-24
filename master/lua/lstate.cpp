@@ -129,6 +129,7 @@ void lstate::open_cpp()
     luaopen_timer (L);
     luaopen_mongo (L);
     luaopen_http_socket(L);
+    luaopen_stream_socket(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */

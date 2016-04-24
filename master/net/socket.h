@@ -67,6 +67,8 @@ protected:
     int32 _sending;
     buffer _recv;
     buffer _send;
+
+    void pending_send();
 private:
     ev_io _w;
 

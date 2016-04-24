@@ -28,6 +28,7 @@
         const type val = function( L,1 );                           \
                                                                     \
         _send.write_##type( val );                                  \
+        socket::pending_send();                                     \
                                                                     \
         return 0;                                                   \
     }
@@ -105,8 +106,10 @@ int32 lstream_socket::is_message_complete()
     if ( size < sizeof(uint16) ) return 0;
 
     uint16 plt = _recv.read_uint16( 0,false );
+    if ( size < sizeof(uint16) + plt ) return 0;
 
-    return (size < sizeof(uint16) + plt) ? 0 : 1;
+    _recv.moveon( sizeof(uint16) );
+    return  1;
 }
 
 void lstream_socket::listen_cb( int32 revents )
