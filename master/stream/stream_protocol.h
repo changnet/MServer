@@ -1,5 +1,5 @@
-#ifndef __STREAM_H__
-#define __STREAM_H__
+#ifndef __STREAM_PROTOCOL_H__
+#define __STREAM_PROTOCOL_H__
 
 #if(__cplusplus >= 201103L)
 # include <unordered_map>
@@ -22,31 +22,48 @@ leventloop与socket之前的耦合过高，直接访问了socket的buffer、send
 把三级socket、lsocket、http_socket改为继承，设计并完成stream_socket
 */
 
-struct protocol
+/* 协议中变量名最大长度 */
+#define MAX_STREAM_PROTOCOL_KEY 32
+
+class stream_protocol
 {
-    typedef enum
+public:
+    struct node
     {
-        NONE   =  0,
-        INT8   =  1,
-        UINT8  =  2,
-        INT16  =  3,
-        UINT16 =  4,
-        INT32  =  5,
-        UINT32 =  6,
-        INT64  =  7,
-        UINT64 =  8,
-        STRING =  9,
-        BINARY = 10,
-        ARRAY  = 11
-    } protocol_t;
+        typedef enum
+        {
+            NONE   =  0,
+            INT8   =  1,
+            UINT8  =  2,
+            INT16  =  3,
+            UINT16 =  4,
+            INT32  =  5,
+            UINT32 =  6,
+            INT64  =  7,
+            UINT64 =  8,
+            STRING =  9,
+            BINARY = 10,
+            ARRAY  = 11
+        } node_t;
 
-    protocol_t type;
-    struct protocol *next;
-    struct protocol *child;
-};
+        node_t _type;
+        struct node *_next;
+        struct node *_child;
+        char _name[MAX_STREAM_PROTOCOL_KEY];
 
-class stream
-{
+        node()
+        {
+            _type = NONE;
+            _next = NULL;
+            _child = NULL:
+            memset( _name,0,MAX_STREAM_PROTOCOL_KEY );
+        }
+
+        ~node()
+        {
+            
+        }
+    };
 public:
     int32 protocol_end();
     int32 protocol_begin( int32 mod,int32 func );
@@ -85,7 +102,7 @@ private:
     };
 
     typedef std::unordered_map< pair_key_t,struct protocol,pair_hash,pair_equal > unordered_map_t;
-     unordered_map_t _protocol;
+    unordered_map_t _protocol;
 };
 
-#endif /* __STREAM_H__ */
+#endif /* __STREAM_PROTOCOL_H__ */
