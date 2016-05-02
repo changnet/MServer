@@ -22,6 +22,9 @@ leventloop与socket之前的耦合过高，直接访问了socket的buffer、send
 把三级socket、lsocket、http_socket改为继承，设计并完成stream_socket
 */
 
+/* 协议中数组最大递归 */
+#define MAX_RECURSION_ARRAY 8
+
 /* 协议中变量名最大长度 */
 #define MAX_STREAM_PROTOCOL_KEY 32
 
@@ -55,18 +58,38 @@ public:
         {
             _type = NONE;
             _next = NULL;
-            _child = NULL:
+            _child = NULL;
             memset( _name,0,MAX_STREAM_PROTOCOL_KEY );
         }
 
         ~node()
         {
-            
+            if ( _child ) delete _child;
+            if ( _next  ) delete _next;
+
+            _child = NULL;
+            _next  = NULL;
         }
     };
+private:
+    struct protocol
+    {
+        /* 记录当前正在操作的协议信息 */
+        uint16 _mod;
+        uint16 _func;
+        int32 _index;
+        struct node *_node;
+        struct node *_array[MAX_RECURSION_ARRAY];
+
+        void init( uint16 mod = 0,uint16 func = 0 );
+        void append( const char *key,node::node_t type );
+    };
 public:
+    stream_protocol();
+    ~stream_protocol();
+
     int32 protocol_end();
-    int32 protocol_begin( int32 mod,int32 func );
+    int32 protocol_begin( uint16 mod,uint16 func );
 
     int32 tag_int8 ( const char *key );
     int32 tag_int16( const char *key );
@@ -101,7 +124,11 @@ private:
         }
     };
 
-    typedef std::unordered_map< pair_key_t,struct protocol,pair_hash,pair_equal > unordered_map_t;
+    /* 记录当前正在操作的节点 */
+    bool _taging;
+    struct protocol _cur_protocol;
+
+    typedef std::unordered_map< pair_key_t,struct node,pair_hash,pair_equal > unordered_map_t;
     unordered_map_t _protocol;
 };
 

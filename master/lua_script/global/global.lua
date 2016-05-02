@@ -82,9 +82,9 @@ end
 function PLOG( fmt,... )
     -- 默认为c方式的print字符串格式化打印方式
     if "string" == type( fmt ) then
-        print( "[ lua print: ]" .. string.format( fmt,... ) )
+        print( "[lua print:]" .. string.format( fmt,... ) )
     else
-        print( "[ lua print: ]",fmt,... )
+        print( "[lua print:]",fmt,... )
     end
 end
 

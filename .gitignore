@@ -5,3 +5,5 @@
 master/bin
 master/cruntimelog
 master/cerrorlog*
+master/lua_crash.txt
+master/lua_error.txt
