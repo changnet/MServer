@@ -32,3 +32,11 @@ style guide -- 代码规范
 7.禁止使用魔数
     禁止在代码中使用数字(0、1这特殊的数字除外)。
     C++中使用宏定义，lua中在header文件中定义
+
+8.if如果不能写在一行(>80)，则必须有{}，即使只有一个语句
+    如：
+    if ( !run ) return;
+    if ( number > config )
+    {
+        call_function( number,get_param(config),is_call( number ) );
+    }
