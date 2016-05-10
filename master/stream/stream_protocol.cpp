@@ -1,44 +1,54 @@
 #include "stream_protocol.h"
 
-void stream_protocol::protocol::init( uint16 mod,uint16 func )
+void stream_protocol::init( )
 {
-    _mod   = mod;
-    _func  = func;
-    _index = 0;
-    _node  = NULL;
-    memset( _array,0,sizeof(_array) );
+    _cur_protocol._mod   = -1;
+    _cur_protocol._func  = -1;
+    _cur_protocol._index = 0;
+    _cur_protocol._node  = NULL;
+    _cur_protocol._tail  = NULL;
+    memset( _cur_protocol._array,0,sizeof(_cur_protocol._array) );
+}
+
+void stream_protocol::append( const char *key,node::node_t type )
+{
+    struct node *nd = new node( type );
+    if ( _cur_protocol._tail )
+    {
+        _cur_protocol._tail->_next = nd;
+    }
+    else
+    {
+        _cur_protocol._node = nd;
+    }
+    _cur_protocol._tail = nd;
 }
 
 stream_protocol::stream_protocol()
 {
-    _taging = false;
+    _tagging = false;
 }
 
 stream_protocol::~stream_protocol()
 {
-    assert( "protocol tag not clean",!_taging );
+    assert( "protocol tag not clean",!_tagging );
 }
 
 int32 stream_protocol::protocol_end()
 {
-    assert( "protocol_end call error",!_taging );
+    assert( "protocol_end call error",!_tagging );
 
-    _taging = false;
-    if ( NULL == _cur_protocol._node )
-    {
-        assert( "protocol_end:empty protocol",false );
-        return -1;
-    }
+    _tagging = false;
 
     _protocol.insert( std::make_pair(std::make_pair(_cur_protocol._mod,
-        _cur_protocol._func),_cur_protocol._node) )
+        _cur_protocol._func),_cur_protocol._node) );
 
     return 0;
 }
 
 int32 stream_protocol::protocol_begin( uint16 mod,uint16 func )
 {
-    assert( "protocol_begin:last protocol not end",!_taging );
+    assert( "protocol_begin:last protocol not end",!_tagging );
 
     unordered_map_t::iterator itr = _protocol.find( std::make_pair(mod,func) );
     if ( itr != _protocol.end() )
@@ -47,8 +57,8 @@ int32 stream_protocol::protocol_begin( uint16 mod,uint16 func )
         return -1;
     }
 
-    _taging = true;
-    _cur_protocol.init( mod,func );
+    _tagging = true;
+    this->init();
 
     return 0;
 }

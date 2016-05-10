@@ -1,5 +1,5 @@
 #include "sql.h"
-#include <mysql/errmsg.h>
+#include <errmsg.h>
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
  * thread-safe, so call it before threads are created, or protect the call with
@@ -143,7 +143,7 @@ int32 sql::query( const char *stmt,size_t size )
             return mysql_errno( conn );
         }
     }
-    
+
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
@@ -151,7 +151,7 @@ int32 sql::result( struct sql_res **_res )
 {
     assert( "sql result,connection not valid",conn );
 
-    /* mysql_store_result() returns a null pointer if the statement did not 
+    /* mysql_store_result() returns a null pointer if the statement did not
      * return a result set (for example, if it was an INSERT statement).
      * also returns a null pointer if reading of the result set
      * failed. You can check whether an error occurred by checking whether
@@ -166,7 +166,7 @@ int32 sql::result( struct sql_res **_res )
         if ( 0 >= num_rows ) /* we got empty set */
         {
             mysql_free_result( res );
-            
+
             return 0; /* success */
         }
 
@@ -187,12 +187,12 @@ int32 sql::result( struct sql_res **_res )
             assert( "fetch field more than field count",index < num_fields );
             (*_res)->fields[index].type = field->type;
             snprintf( (*_res)->fields[index].name,SQL_FIELD_LEN,"%s",field->name );
-            
+
             ++index;
         }
 
         MYSQL_ROW row;
-        
+
         index = 0;
         while ( (row = mysql_fetch_row(res)) )
         {
@@ -207,11 +207,11 @@ int32 sql::result( struct sql_res **_res )
             {
                 _row.cols[i].set( row[i],lengths[i] );
             }
-            
+
             ++index;
         }
         mysql_free_result( res );
-        
+
         return 0; /* success */
     }
 

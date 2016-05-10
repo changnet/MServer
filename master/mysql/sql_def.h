@@ -10,7 +10,7 @@
  */
 
 #include <vector>
-#include <mysql/mysql.h>
+#include <mysql.h>
 #include "../global/global.h"
 
 #define SQL_FIELD_LEN    64
@@ -51,17 +51,17 @@ struct sql_col
 {
     size_t size;
     char *value;
-    
+
     sql_col()
     {
         size  = 0;
         value = NULL;
     }
-    
+
     ~sql_col()
     {
         if ( value ) delete []value;
-        
+
         size  = 0;
         value = NULL;
     }
@@ -70,10 +70,10 @@ struct sql_col
     {
         assert ( "sql col not clean",0 == size && !value );
         if ( !_value || 0 >= _size ) return;  /* 结果为NULL */
-        
+
         size = _size;  /* 注意没加1 */
         value = new char[_size+1];
-        
+
         /* 无论何种数据类型(包括寸进制)，都统一加\0 */
         memcpy( value,_value,_size );
         value[_size] = '\0';
@@ -116,11 +116,11 @@ struct sql_query
     ~sql_query()
     {
         if ( stmt ) delete []stmt;
-        
+
         id       = 0;
         size     = 0;
         callback = 0;
-        
+
     }
 
     int32 id;

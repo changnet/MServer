@@ -45,8 +45,7 @@ public:
             INT64  =  7,
             UINT64 =  8,
             STRING =  9,
-            BINARY = 10,
-            ARRAY  = 11
+            ARRAY  = 10
         } node_t;
 
         node_t _type;
@@ -54,9 +53,9 @@ public:
         struct node *_child;
         char _name[MAX_STREAM_PROTOCOL_KEY];
 
-        node()
+        explicit node( node_t type )
         {
-            _type = NONE;
+            _type = type;
             _next = NULL;
             _child = NULL;
             memset( _name,0,MAX_STREAM_PROTOCOL_KEY );
@@ -72,18 +71,19 @@ public:
         }
     };
 private:
-    struct protocol
+    struct
     {
         /* 记录当前正在操作的协议信息 */
         uint16 _mod;
         uint16 _func;
         int32 _index;
         struct node *_node;
+        struct node *_tail;
         struct node *_array[MAX_RECURSION_ARRAY];
+    } _cur_protocol;
 
-        void init( uint16 mod = 0,uint16 func = 0 );
-        void append( const char *key,node::node_t type );
-    };
+    void init();
+    void append( const char *key,node::node_t type );
 public:
     stream_protocol();
     ~stream_protocol();
@@ -125,10 +125,9 @@ private:
     };
 
     /* 记录当前正在操作的节点 */
-    bool _taging;
-    struct protocol _cur_protocol;
+    bool _tagging;
 
-    typedef std::unordered_map< pair_key_t,struct node,pair_hash,pair_equal > unordered_map_t;
+    typedef std::unordered_map< pair_key_t,struct node *,pair_hash,pair_equal > unordered_map_t;
     unordered_map_t _protocol;
 };
 

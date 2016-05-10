@@ -8,7 +8,7 @@ MAKE = make
 #    部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace()
 #    (这一系列函数使用.dynsym表内符号)这样的函数使用。
 # 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
-# mysql库根据安装方法不同，位置可能在/usr/include/mysql,或者/usr/local/mysql/include
+# mysql库根据安装方法不同，位置不本样，可用mysql_config查看
 CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
 OPTIMIZE = -O0
@@ -16,7 +16,7 @@ OPTIMIZE = -O0
 # https://gcc.gnu.org/projects/cxx-status.html
 CC = g++ -std=c++03
 INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
-	-I/usr/local/include/libbson-1.0
+	-I/usr/local/include/libbson-1.0 -I/usr/include/mysql
 LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml
 LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
 	-lhttp_parser -llua_rapidxml
