@@ -54,12 +54,12 @@ public:
         struct node *_child;
         char _name[MAX_STREAM_PROTOCOL_KEY];
 
-        explicit node( node_t type )
+        explicit node( const char* name,node_t type )
         {
             _type = type;
             _next = NULL;
             _child = NULL;
-            memset( _name,0,MAX_STREAM_PROTOCOL_KEY );
+            snprintf( _name,MAX_STREAM_PROTOCOL_KEY,"%s",name );
         }
 
         ~node()

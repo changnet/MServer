@@ -9,6 +9,9 @@ local Stream = require "Stream"
 local stream = Stream()
 
 stream:protocol_begin( 1,1 )
+stream:tag( "id",1 )
+stream:tag( "cnt",2 )
+stream:tag( "ty",3 )
 stream:protocol_end()
 
 stream:dump( 1,1 )

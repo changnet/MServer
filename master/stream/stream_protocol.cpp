@@ -14,7 +14,7 @@ void stream_protocol::init( uint16 mod,uint16 func )
 
 void stream_protocol::append( const char *key,node::node_t type )
 {
-    struct node *nd = new node( type );
+    struct node *nd = new node( key,type );
     if ( _cur_protocol._tail )
     {
         _cur_protocol._tail->_next = nd;
@@ -133,13 +133,14 @@ void stream_protocol::print_node( const struct node *nd,int32 indent )
 {
     static const char* name[] = { "NONE","INT8","UINT8","INT16","UINT16","INT32",
         "UINT32","INT64","UINT64","STRING","ARRAY" };
+    static const int32 sz = sizeof(name)/sizeof(char*);
     /* print_indent*/
     for (int i = 0;i < indent;i ++ ) std::cout << " ";
 
-    assert( "node array over boundary",nd->_type > sizeof(name) );
+    assert( "node array over boundary",nd->_type < sz );
     std::cout << std::setw(16) << std::left << nd->_name;
-    std::cout << std::setw(16) << std::left << nd->_type << ":";
-    std::cout << name[nd->_type];
+    std::cout << std::setw(2) << std::left << nd->_type << ":";
+    std::cout << std::setw(0) << name[nd->_type];
 
     std::cout << std::endl;
 
