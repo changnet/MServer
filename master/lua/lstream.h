@@ -2,13 +2,19 @@
 #define __LSTREAM_H__
 
 #include <lua.hpp>
+#include "../stream/stream_protocol.h"
 
 class lstream
 {
+public:
+    ~lstream();
+    explicit lstream( lua_State *L );
 public: /* lua interface */
     int protocol_end();
     int protocol_begin();
 
+    int tag();
+    int dump();
     int tag_int8 ();
     int tag_int16();
     int tag_int32();
@@ -57,6 +63,9 @@ public: /* c++ interface */
     int pack_buffer( int mod,int func,const char *buffer,unsigned int size );
     /* convert binary stream buffer into a lua table */
     int unpack_buffer( int mod,int func,const char *buffer,unsigned int size );
+private:
+    lua_State *L;
+    class stream_protocol _stream;
 };
 
 #endif /* __LSTREAM_H__ */

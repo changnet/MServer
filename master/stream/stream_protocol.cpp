@@ -1,9 +1,11 @@
+#include <iomanip>
+
 #include "stream_protocol.h"
 
-void stream_protocol::init( )
+void stream_protocol::init( uint16 mod,uint16 func )
 {
-    _cur_protocol._mod   = -1;
-    _cur_protocol._func  = -1;
+    _cur_protocol._mod   = mod;
+    _cur_protocol._func  = func;
     _cur_protocol._index = 0;
     _cur_protocol._node  = NULL;
     _cur_protocol._tail  = NULL;
@@ -31,12 +33,20 @@ stream_protocol::stream_protocol()
 
 stream_protocol::~stream_protocol()
 {
+    unordered_map_t::iterator itr = _protocol.begin();
+    while ( itr != _protocol.end() )
+    {
+        if ( itr->second ) delete itr->second;
+        ++itr;
+    }
+    _protocol.clear();
+
     assert( "protocol tag not clean",!_tagging );
 }
 
 int32 stream_protocol::protocol_end()
 {
-    assert( "protocol_end call error",!_tagging );
+    assert( "protocol_end call error",_tagging );
 
     _tagging = false;
 
@@ -58,7 +68,7 @@ int32 stream_protocol::protocol_begin( uint16 mod,uint16 func )
     }
 
     _tagging = true;
-    this->init();
+    this->init( mod,func );
 
     return 0;
 }
@@ -116,4 +126,48 @@ int32 stream_protocol::tag_array_end()
 int32 stream_protocol::tag_array_begin( const char *key )
 {
     return 0;
+}
+
+/* 调试函数，打印一个协议节点数据 */
+void stream_protocol::print_node( const struct node *nd,int32 indent )
+{
+    static const char* name[] = { "NONE","INT8","UINT8","INT16","UINT16","INT32",
+        "UINT32","INT64","UINT64","STRING","ARRAY" };
+    /* print_indent*/
+    for (int i = 0;i < indent;i ++ ) std::cout << " ";
+
+    assert( "node array over boundary",nd->_type > sizeof(name) );
+    std::cout << std::setw(16) << std::left << nd->_name;
+    std::cout << std::setw(16) << std::left << nd->_type << ":";
+    std::cout << name[nd->_type];
+
+    std::cout << std::endl;
+
+    if ( nd->_child ) print_node( nd->_child,indent + 1 );
+    if ( nd->_next  ) print_node( nd->_next,indent );
+}
+
+/* 调试函数，打印一个协议数据 */
+void stream_protocol::dump( uint16 mod,uint16 func )
+{
+    std::cout << "start dump protocol(" << mod << "-" << func
+        << ") >>>>>>>>>>>" << std::endl;
+    unordered_map_t::iterator itr = _protocol.find( std::make_pair(mod,func) );
+    if ( itr == _protocol.end() )
+    {
+        std::cout << "no such protocol !!!" << std::endl;
+    }
+    else
+    {
+        struct node *nd = itr->second;
+        if ( !nd )
+        {
+            std::cout << "empty protocol !!!" << std::endl;
+        }
+        else
+        {
+            print_node( nd,0 );
+        }
+    }
+    std::cout << "dump end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 }

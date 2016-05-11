@@ -9,6 +9,7 @@
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
+#include "lstream.h"
 #include "leventloop.h"
 #include "lhttp_socket.h"
 #include "lobj_counter.h"
@@ -64,6 +65,7 @@ int32 luaopen_sql   ( lua_State *L );
 int32 luaopen_log   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
+int32 luaopen_stream( lua_State *L );
 int32 luaopen_http_socket( lua_State *L );
 int32 luaopen_stream_socket( lua_State *L );
 
@@ -128,6 +130,7 @@ void lstate::open_cpp()
     luaopen_log   (L);
     luaopen_timer (L);
     luaopen_mongo (L);
+    luaopen_stream(L);
     luaopen_http_socket(L);
     luaopen_stream_socket(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
@@ -268,6 +271,17 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::write_float >   ("write_float"  );
     lc.def<&lstream_socket::write_double>   ("write_double" );
     lc.def<&lstream_socket::write_string>   ("write_string" );
+
+    return 0;
+}
+
+int32 luaopen_stream( lua_State *L )
+{
+    lclass<lstream> lc(L,"Stream");
+    lc.def<&lstream::tag> ( "tag" );
+    lc.def<&lstream::dump> ( "dump" );
+    lc.def<&lstream::protocol_end  >  ( "protocol_end"  );
+    lc.def<&lstream::protocol_begin>  ( "protocol_begin"  );
 
     return 0;
 }

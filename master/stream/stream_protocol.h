@@ -45,7 +45,8 @@ public:
             INT64  =  7,
             UINT64 =  8,
             STRING =  9,
-            ARRAY  = 10
+            ARRAY  = 10,
+            TMAX
         } node_t;
 
         node_t _type;
@@ -82,11 +83,14 @@ private:
         struct node *_array[MAX_RECURSION_ARRAY];
     } _cur_protocol;
 
-    void init();
-    void append( const char *key,node::node_t type );
+    void init( uint16 mod,uint16 func );
+    void print_node( const struct node *nd,int32 indent );
 public:
     stream_protocol();
     ~stream_protocol();
+
+    void dump( uint16 mod,uint16 func );
+    void append( const char *key,node::node_t type );
 
     int32 protocol_end();
     int32 protocol_begin( uint16 mod,uint16 func );
