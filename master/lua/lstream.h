@@ -15,17 +15,6 @@ public: /* lua interface */
 
     int tag();
     int dump();
-    int tag_int8 ();
-    int tag_int16();
-    int tag_int32();
-    int tag_int64();
-
-    int tag_uint8 ();
-    int tag_uint16();
-    int tag_uint32();
-    int tag_uint64();
-
-    int tag_string();
 
     int tag_array_end();
     int tag_array_begin();

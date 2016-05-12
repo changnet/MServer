@@ -79,7 +79,7 @@ private:
         uint16 _func;
         int32 _index;
         struct node *_node;
-        struct node *_tail;
+        struct node **_cur;
         struct node *_array[MAX_RECURSION_ARRAY];
     } _cur_protocol;
 
@@ -94,18 +94,6 @@ public:
 
     int32 protocol_end();
     int32 protocol_begin( uint16 mod,uint16 func );
-
-    int32 tag_int8 ( const char *key );
-    int32 tag_int16( const char *key );
-    int32 tag_int32( const char *key );
-    int32 tag_int64( const char *key );
-
-    int32 tag_uint8 ( const char *key );
-    int32 tag_uint16( const char *key );
-    int32 tag_uint32( const char *key );
-    int32 tag_uint64( const char *key );
-
-    int32 tag_string( const char * key );
 
     int32 tag_array_end();
     int32 tag_array_begin( const char *key );

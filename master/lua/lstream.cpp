@@ -49,3 +49,18 @@ int32 lstream::dump()
 
     return 0;
 }
+
+int lstream::tag_array_end()
+{
+    _stream.tag_array_end();
+    return 0;
+}
+
+int lstream::tag_array_begin()
+{
+    const char *key = luaL_checkstring( L,1 );
+
+    _stream.tag_array_begin( key );
+
+    return 0;
+}

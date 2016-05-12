@@ -280,6 +280,8 @@ int32 luaopen_stream( lua_State *L )
     lclass<lstream> lc(L,"Stream");
     lc.def<&lstream::tag> ( "tag" );
     lc.def<&lstream::dump> ( "dump" );
+    lc.def<&lstream::tag_array_end  >  ( "tag_array_end"  );
+    lc.def<&lstream::tag_array_begin>  ( "tag_array_begin"  );
     lc.def<&lstream::protocol_end  >  ( "protocol_end"  );
     lc.def<&lstream::protocol_begin>  ( "protocol_begin"  );
 

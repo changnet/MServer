@@ -2,30 +2,6 @@
 
 #include "stream_protocol.h"
 
-void stream_protocol::init( uint16 mod,uint16 func )
-{
-    _cur_protocol._mod   = mod;
-    _cur_protocol._func  = func;
-    _cur_protocol._index = 0;
-    _cur_protocol._node  = NULL;
-    _cur_protocol._tail  = NULL;
-    memset( _cur_protocol._array,0,sizeof(_cur_protocol._array) );
-}
-
-void stream_protocol::append( const char *key,node::node_t type )
-{
-    struct node *nd = new node( key,type );
-    if ( _cur_protocol._tail )
-    {
-        _cur_protocol._tail->_next = nd;
-    }
-    else
-    {
-        _cur_protocol._node = nd;
-    }
-    _cur_protocol._tail = nd;
-}
-
 stream_protocol::stream_protocol()
 {
     _tagging = false;
@@ -42,6 +18,92 @@ stream_protocol::~stream_protocol()
     _protocol.clear();
 
     assert( "protocol tag not clean",!_tagging );
+}
+
+void stream_protocol::init( uint16 mod,uint16 func )
+{
+    _cur_protocol._mod   = mod;
+    _cur_protocol._func  = func;
+    _cur_protocol._index = -1;
+    _cur_protocol._node  = NULL;
+    _cur_protocol._cur   = NULL;
+    memset( _cur_protocol._array,0,sizeof(_cur_protocol._array) );
+}
+
+/* 添加一个节点 */
+void stream_protocol::append( const char *key,node::node_t type )
+{
+    if ( node::ARRAY == type )
+    {
+        ERROR( "stream_protocol::append can't not append array,call tag_array" );
+        assert( "stream_protocol::append can't not append array,call tag_array",false );
+        return;
+    }
+
+    /* 加到链表尾，表头是包含有效数据 */
+    struct node *nd = new node( key,type );
+    if ( _cur_protocol._cur )
+    {
+        *(_cur_protocol._cur) = nd;
+    }
+    else
+    {
+        _cur_protocol._node = nd;
+    }
+    _cur_protocol._cur = &(nd->_next);
+}
+
+int32 stream_protocol::tag_array_end()
+{
+    if ( _cur_protocol._index < 0 )
+    {
+        ERROR( "illegal call array end" );
+        assert( "illegal call array end",false );
+        return -1;
+    }
+
+    assert( "array index error",_cur_protocol._index >= 0
+        && _cur_protocol._index < MAX_RECURSION_ARRAY );
+
+    struct node *nd = _cur_protocol._array[_cur_protocol._index];
+    _cur_protocol._array[_cur_protocol._index] = NULL;
+    --_cur_protocol._index;
+
+    /* 恢复主链表 */
+    assert( "stream_protocol array error",nd );
+    _cur_protocol._cur = &(nd->_next);
+
+    return 0;
+}
+
+int32 stream_protocol::tag_array_begin( const char *key )
+{
+    if ( _cur_protocol._index + 1 >= MAX_RECURSION_ARRAY )
+    {
+        ERROR( "stream_protocol array recursion too deep" );
+        assert( "stream_protocol array recursion too deep",false );
+        return -1;
+    }
+
+    ++_cur_protocol._index;
+    assert( "array index error",_cur_protocol._index >= 0
+        && _cur_protocol._index < MAX_RECURSION_ARRAY );
+
+    struct node *nd = new node( key,node::ARRAY );
+    if ( _cur_protocol._cur )
+    {
+        (*_cur_protocol._cur)->_next = nd;
+    }
+    else
+    {
+        _cur_protocol._node = nd;
+    }
+
+    /* 记录主链表尾 */
+    _cur_protocol._array[_cur_protocol._index] = nd;
+    _cur_protocol._cur = &(nd->_child);
+
+    return 0;
 }
 
 int32 stream_protocol::protocol_end()
@@ -73,61 +135,6 @@ int32 stream_protocol::protocol_begin( uint16 mod,uint16 func )
     return 0;
 }
 
-int32 stream_protocol::tag_int8 ( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_int16( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_int32( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_int64( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_uint8 ( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_uint16( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_uint32( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_uint64( const char *key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_string( const char * key )
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_array_end()
-{
-    return 0;
-}
-
-int32 stream_protocol::tag_array_begin( const char *key )
-{
-    return 0;
-}
-
 /* 调试函数，打印一个协议节点数据 */
 void stream_protocol::print_node( const struct node *nd,int32 indent )
 {
@@ -135,7 +142,7 @@ void stream_protocol::print_node( const struct node *nd,int32 indent )
         "UINT32","INT64","UINT64","STRING","ARRAY" };
     static const int32 sz = sizeof(name)/sizeof(char*);
     /* print_indent*/
-    for (int i = 0;i < indent;i ++ ) std::cout << " ";
+    for (int i = 0;i < indent*4;i ++ ) std::cout << " ";
 
     assert( "node array over boundary",nd->_type < sz );
     std::cout << std::setw(16) << std::left << nd->_name;

@@ -8,7 +8,7 @@ MAKE = make
 #    部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace()
 #    (这一系列函数使用.dynsym表内符号)这样的函数使用。
 # 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
-# mysql库根据安装方法不同，位置不本样，可用mysql_config查看
+# mysql库根据安装方法不同，位置不本样，可用mysql_config查看(新版本-lmysqlclient_r与-lmysqlclient是一样的)
 CFLAGS = -pipe -Wall -g3
 LFLAGS = -rdynamic
 OPTIMIZE = -O0
