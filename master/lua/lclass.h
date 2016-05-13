@@ -217,6 +217,11 @@ private:
     /* 创建c对象 */
     static int cnew(lua_State* L)
     {
+        /* 优先计数，在构造函数调用luaL_error执行longjump导致内存泄漏
+         * 这里至少能统计到
+         */
+        OBJ_ADD_COUNT( classname );
+
         /* lua调用__call,第一个参数是该元表所属的table.取构造函数参数要注意 */
         T* obj = new T( L );
 
@@ -230,8 +235,6 @@ private:
 
         /* 弹出元表,并把元表设置为userdata的元表 */
         lua_setmetatable(L, -2);
-
-        OBJ_ADD_COUNT( classname );
 
         return 1;
     }
