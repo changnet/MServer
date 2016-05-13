@@ -1,0 +1,66 @@
+luaL_error do a longjump
+
+http://marcusirven.com/blog/2009/02/19/dangers-of-lua_error-when-using-c++.html
+
+Dangers of lua_error when using C++
+By default Lua uses longjmp when lua_error or luaL_error is called, this can produce subtle bugs or memory leaks in C++ if you are not careful.
+
+Take the following code, which simply calls the foo function which creates an object on the stack and throws an error:
+
+   1  #include <iostream>
+   2  
+   3  extern "C" {
+   4      #include "lua.h"
+   5      #include "lualib.h"
+   6      #include "lauxlib.h"
+   7  }
+   8  
+   9  class Obj {
+  10  public:
+  11      Obj() {
+  12          std::cout << "object create" << std::endl;
+  13      }
+  14  
+  15      ~Obj() {
+  16          std::cout << "object destroy" << std::endl;
+  17      }
+  18  };
+  19  
+  20  int foo(lua_State*L) {
+  21      Obj obj;
+  22      return luaL_error(L, "error in foo");   
+  23  }
+  24  
+  25  
+  26  int main(int argc, char** argv) {
+  27      lua_State* L = lua_open();
+  28  
+  29      lua_pushcfunction(L, foo);
+  30      int r = lua_pcall(L, 0,0,0);
+  31  
+  32      if (r == LUA_ERRRUN) {
+  33          std::cout << lua_tostring(L, -1) << std::endl;
+  34      }
+  35  
+  36      lua_close(L);
+  37      return 0;
+  38  }
+When compiled against the default build of the Lua library and run you get the following output:
+
+$ g++ main.cpp -llua -o example
+$ ./example 
+object create
+error in foo
+Notice the destructor was never called on obj. However if you build Lua as C++ then lua_error() will be implemented using C++ exceptions which will cause the stack to clean up as expected.
+
+On my Mac I built Lua as C++ with the following command:
+
+make macosx -e CC=g++
+I’ve built Lua on Windows as C++ as well, in Visual Studio there is a setting to compile sources as C++ rather than by file extensions which is the default. Now when building and running you get the output you would expected:
+
+$ g++ main.cpp -llua -o example
+$ ./example
+object create
+object destroy
+error in foo
+One other thing to note is that the extern “C” around the Lua includes is no longer needed after building the Lua library as C++. If you can’t rebuild the Lua library for some reason or another than you just need to be aware and make sure everything is cleaned up before calling lua_error() or luaL_error().
