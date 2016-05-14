@@ -147,15 +147,13 @@ void stream_protocol::print_node( const struct node *nd,int32 indent )
 {
     static const char* name[] = { "NONE","INT8","UINT8","INT16","UINT16","INT32",
         "UINT32","INT64","UINT64","STRING","ARRAY" };
+
     static const int32 sz = sizeof(name)/sizeof(char*);
+    assert( "node array over boundary",nd->_type < sz );
+
     /* print_indent*/
     for (int i = 0;i < indent*4;i ++ ) std::cout << " ";
-
-    assert( "node array over boundary",nd->_type < sz );
-    std::cout << std::setw(16) << std::left << nd->_name;
-    std::cout << std::setw(2) << std::left << nd->_type << ":";
-    std::cout << std::setw(0) << name[nd->_type];
-
+    std::cout << nd->_name << nd->_type << ":" << name[nd->_type];
     std::cout << std::endl;
 
     if ( nd->_child ) print_node( nd->_child,indent + 1 );
@@ -165,8 +163,8 @@ void stream_protocol::print_node( const struct node *nd,int32 indent )
 /* 调试函数，打印一个协议数据 */
 void stream_protocol::dump( uint16 mod,uint16 func )
 {
-    std::cout << "start dump protocol(" << mod << "-" << func
-        << ") >>>>>>>>>>>" << std::endl;
+    std::cout << "start dump protocol:" << mod << "-" << func << std::endl;
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
     unordered_map_t::iterator itr = _protocol.find( std::make_pair(mod,func) );
     if ( itr == _protocol.end() )
     {
@@ -184,7 +182,7 @@ void stream_protocol::dump( uint16 mod,uint16 func )
             print_node( nd,0 );
         }
     }
-    std::cout << "dump end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+    std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 }
 
 struct stream_protocol::node *stream_protocol::find( uint16 mod,uint16 func )
