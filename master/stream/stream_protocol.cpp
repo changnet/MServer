@@ -69,8 +69,15 @@ int32 stream_protocol::tag_array_end()
     _cur_protocol._array[_cur_protocol._index] = NULL;
     --_cur_protocol._index;
 
-    /* 恢复主链表 */
     assert( "stream_protocol array error",nd );
+    if ( !nd->_child )
+    {
+        ERROR( "empty array is not allowed" )
+        assert( "empty array is not allowed",false );
+        return -1;
+    }
+
+    /* 恢复主链表 */
     _cur_protocol._cur = &(nd->_next);
 
     return 0;
@@ -178,4 +185,15 @@ void stream_protocol::dump( uint16 mod,uint16 func )
         }
     }
     std::cout << "dump end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+}
+
+struct stream_protocol::node *stream_protocol::find( uint16 mod,uint16 func )
+{
+    unordered_map_t::iterator itr = _protocol.find( std::make_pair(mod,func) );
+    if ( itr == _protocol.end() )
+    {
+        return (struct node *)-1; /* not NULL,empty protocol can be NULL */
+    }
+
+    return itr->second;
 }

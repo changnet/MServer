@@ -50,15 +50,17 @@ public:
         } node_t;
 
         node_t _type;
+        uint8 _optional;
         struct node *_next;
         struct node *_child;
         char _name[MAX_STREAM_PROTOCOL_KEY];
 
-        explicit node( const char* name,node_t type )
+        explicit node( const char* name,node_t type,uint8 opt = 0 )
         {
             _type = type;
             _next = NULL;
             _child = NULL;
+            _optional = opt;
             snprintf( _name,MAX_STREAM_PROTOCOL_KEY,"%s",name );
         }
 
@@ -90,6 +92,7 @@ public:
     ~stream_protocol();
 
     void dump( uint16 mod,uint16 func );
+    struct node *find( uint16 mod,uint16 func );
     void append( const char *key,node::node_t type );
 
     int32 protocol_end();

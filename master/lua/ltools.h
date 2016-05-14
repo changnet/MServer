@@ -100,4 +100,37 @@ static inline int32 lua_isarray( lua_State *L,int32 index,int32 *array,
     return 0;
 }
 
+/* 调试函数，打印当前lua 虚拟机栈 */
+static void stack_dump ( lua_State *L )
+{
+    int i;
+    int top = lua_gettop( L );
+    for ( i = 1; i <= top; i++ )
+    {  /* repeat for each level */
+        int t = lua_type(L, i);
+        switch ( t )
+        {
+
+        case LUA_TSTRING:  /* strings */
+            printf("`%s'", lua_tostring(L, i));
+            break;
+
+        case LUA_TBOOLEAN:  /* booleans */
+            printf(lua_toboolean(L, i) ? "true" : "false");
+            break;
+
+        case LUA_TNUMBER:  /* numbers */
+            printf("%g", lua_tonumber(L, i));
+            break;
+
+        default:  /* other values */
+            printf("%s", lua_typename(L, t));
+            break;
+
+        }
+        printf("  ");  /* put a separator */
+    }
+    printf("\n");  /* end the listing */
+}
+
 #endif /* __LTOOLS_H__ */

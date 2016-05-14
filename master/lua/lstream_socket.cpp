@@ -2,6 +2,7 @@
 
 #include "ltools.h"
 #include "lclass.h"
+#include "lstream.h"
 #include "../ev/ev_def.h"
 
 #define DEFINE_STREAM_READ_FUNCTION(type,function)                  \
@@ -158,4 +159,92 @@ void lstream_socket::listen_cb( int32 revents )
             return;
         }
     }
+}
+
+
+/* luaL_checkstack luaL_error 做了longjump,如果失败，这个函数不会返回 */
+/* !!! 请保证所有对缓冲区的修改能自动回滚 !!! */
+void pack_node( const struct stream_protocol::node *nd,int32 index )
+{
+    if ( !nd )    return; /* empty protocol */
+
+    if ( lua_gettop( L ) > 256 )
+    {
+        return luaL_error( L,"protocol recursion too deep,stack overflow" );
+        return -1;
+    }
+    luaL_checkstack( L,2,"protocol recursion too deep,stack overflow" );
+
+    const struct stream_protocol::node *tmp = nd;
+    while( tmp )
+    {
+        lua_pushstring( L,tmp->_name );
+        lua_rawget( L,index );
+
+        if ( tmp->_optional && lua_isnil(L,-1 ) )
+        {
+            tmp = tmp->_next;
+            continue; /* optional field */
+        }
+
+        switch( tmp->_type )
+        {
+            case stream_protocol::node::INT8:
+            {
+                if ( !lua_isinteger( L,-1 ) )
+                {
+                    return luaL_error( L,"field %s expect integer,got %s",
+                        tmp->_name,lua_typename(L, lua_type(L, -1)) );
+                }
+                int32 val = lua_tointeger( L,-1 );
+                if ( val < INT8_MIN || val > INT8_MAX )
+                {
+                    return luaL_error( L,"field %s out range of int8:%d",tmp->_name,val );
+                }
+                _send.write_int8( val );
+            }break;
+            case stream_protocol::node::INT8:
+            {
+                if ( !lua_istable( L,-1 ) )
+                {
+                    return luaL_error( L,"field %s expect table,got %s",
+                        tmp->_name,lua_typename(L, lua_type(L, -1)) );
+                }
+
+                uint16 count = 0;
+                _send.write_uint16( count );  /* 先占据数组长度的位置 */
+                char *vpos = _send.get_virtual_pos();
+
+                lua_pushnil( L );
+                while ( lua_next( L,-2 ) )
+                {
+                    pack_node( tmp->_child,lua_gettop(L) ); /* lua_gettop(L) not -1 */
+
+                    lua_pop( L,1 );
+                    ++count;
+                }
+                _send.update_virtual_pos( vpos,count ); /* 更新数组长度 */
+            }break;
+        }
+
+        tmp = tmp->_next;
+    }
+}
+
+int32 lstream_socket::pack_client()
+{
+    class lstream **stream = static_cast<class lstream **>(
+        luaL_checkudata( L, 1, "Stream" ) );
+    uint16 mod  = static_cast<uint16>( luaL_checkinteger( L,2 ) );
+    uint16 func = static_cast<uint16>( luaL_checkinteger( L,3 ) );
+
+    luaL_checktype( L,4,LUA_TTABLE );
+
+    const struct stream_protocol::node *nd = (*stream)->find( mod,func );
+    if ( (struct stream_protocol::node *)-1 == nd )
+    {
+        return luaL_error( L,"lstream_socket::pack_client no such protocol" );
+    }
+
+    return 0;
 }

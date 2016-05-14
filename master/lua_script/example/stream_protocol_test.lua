@@ -18,3 +18,10 @@ stream:tag( "day",3 )
 stream:protocol_end()
 
 stream:dump( 1,1 )
+
+-- 临时调试
+local Stream_socket = require "Stream_socket"
+local socket = Stream_socket()
+
+local packet = {}
+socket:pack_client( stream,1,1,packet )

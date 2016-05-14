@@ -71,7 +71,7 @@ end
 
 function __G__TRACKBACK__( msg )
     local stack_trace = debug.traceback()
-    local info_table = { "lua crash: ",tostring(msg),"\n",stack_trace }
+    local info_table = { "[lua crash ",time_str(),"] ",tostring(msg),"\n",stack_trace }
     local str = table.concat( info_table )
 
     print( str )

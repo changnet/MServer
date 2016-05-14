@@ -48,6 +48,10 @@ public: /* lua interface */
     /* allocate a buffer and push it to lua stack as userdata */
     static int allocate( lua_State *L );
 public: /* c++ interface */
+    inline class stream_protocol::node *find( uint16 mod,uint16 func )
+    {
+        return _stream.find( mod,func );
+    }
     /* convert a lua table into binary stream buffer */
     int pack_buffer( int mod,int func,const char *buffer,unsigned int size );
     /* convert binary stream buffer into a lua table */
