@@ -97,6 +97,14 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
         }break;
         case stream_protocol::node::ARRAY:
         {
+            uint16 count = 0;
+            int32 stack_type = lua_type( L,index );
+            if ( LUA_TNIL == stack_type )
+            {
+                /* 如果是空数组，可以不写对应字段 */
+                _send.write( count );
+                return 0;
+            }
             if ( !lua_istable( L,index ) )
             {
                 return luaL_error( L,"field %s expect table,got %s",
@@ -111,7 +119,6 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
             }
             luaL_checkstack( L,2,"stream array recursion too deep,stack overflow" );
 
-            uint16 count = 0;
             char *vp = _send.virtual_buffer();
             _send.write( count );  /* 先占据数组长度的位置 */
 
@@ -175,7 +182,7 @@ int32 lstream_socket::pack_node( const struct stream_protocol::node *nd,int32 in
             continue; /* optional field */
         }
 
-        pack_element( tmp,top );
+        pack_element( tmp,top + 1 );
         tmp = tmp->_next;
     }
 
