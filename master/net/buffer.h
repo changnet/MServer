@@ -28,30 +28,6 @@
 
 #endif
 
-#define DEFINE_READ_FUNCTION(type)                                     \
-        inline type read_##type( int32 *perr = 0,bool move = true )    \
-        {                                                              \
-            if ( data_size() < sizeof(type) )                          \
-            {                                                          \
-                if ( perr ) *perr = -1;                                \
-                return 0;                                              \
-            }                                                          \
-            type val = 0;                                              \
-            LDR( _buff + _pos,val,type );                              \
-            if ( move ) _pos += sizeof(type);                          \
-            if ( perr ) *perr = 0;                                     \
-            return val;                                                \
-        }
-
-#define DEFINE_WRITE_FUNCTION(type)                                    \
-        inline int32 write_##type( const type &val )                   \
-        {                                                              \
-            reserved( sizeof(type) );                                  \
-            STR( _buff + _size,val,type );                             \
-            _size += sizeof(type);                                     \
-            return sizeof( type );                                     \
-        }
-
 class buffer_process;
 
 class buffer
@@ -129,102 +105,122 @@ public:
         return _buff + _pos;
     }
 
+    /* 当前缓冲区指针(包含虚拟数据) */
+    char *virtual_buffer()
+    {
+        return _buff + _pos + _size + _vsz;
+    }
+
+    /* 清除虚拟数据 */
+    void virtual_zero()
+    {
+        _vsz = 0;
+    }
+
+    /* 虚拟数据转换为缓冲区数据 */
+    void virtual_flush()
+    {
+        _size += _vsz;
+    }
+
     friend class buffer_process;
 
     static class ordered_pool<BUFFER_CHUNK> allocator;
 public:
-    /* 具体实现每一个基本类型的操作
-     * 不用模板是为了防止传入size_t这种32/64平台相关的类型
-     * 或者发生隐式强制转换导致数据错误
-     * 尤其是使用了reinterpret_cast
-     */
-    DEFINE_READ_FUNCTION(  int8  );
-    DEFINE_READ_FUNCTION( uint8  );
-    DEFINE_READ_FUNCTION(  int16 );
-    DEFINE_READ_FUNCTION( uint16 );
-    DEFINE_READ_FUNCTION(  int32 );
-    DEFINE_READ_FUNCTION( uint32 );
-    DEFINE_READ_FUNCTION(  int64 );
-    DEFINE_READ_FUNCTION( uint64 );
-    DEFINE_READ_FUNCTION(  float );
-    DEFINE_READ_FUNCTION( double );
+    template< class T >
+    int32 write( const T &val )
+    {
+        static int32 sz = sizeof(T);
+        reserved( sz );
 
-    DEFINE_WRITE_FUNCTION(  int8  );
-    DEFINE_WRITE_FUNCTION( uint8  );
-    DEFINE_WRITE_FUNCTION(  int16 );
-    DEFINE_WRITE_FUNCTION( uint16 );
-    DEFINE_WRITE_FUNCTION(  int32 );
-    DEFINE_WRITE_FUNCTION( uint32 );
-    DEFINE_WRITE_FUNCTION(  int64 );
-    DEFINE_WRITE_FUNCTION( uint64 );
-    DEFINE_WRITE_FUNCTION(  float );
-    DEFINE_WRITE_FUNCTION( double );
+        STR( _buff + _size + _vsz,val,T );
+        _vsz += sz;
+
+        return sz;
+    }
+
+    /* 写入字符串或二进制 */
+    inline int32 write( const char *ptr,const int32 len )
+    {
+        assert( "write_string illegal argument",ptr && len > 0 );
+
+        uint16 str_len = static_cast<uint16>( len );
+        assert( "string length over UINT16_MAX",str_len == len );
+
+        write( str_len ); /* 先写入长度 */
+        reserved( len );
+        memcpy( _buff + _size + _vsz,ptr,len );
+        _vsz += len;
+
+        return len;
+    }
+
+    template < class T >
+    int32 read( T &val,bool move = true )
+    {
+        if ( data_size() < sizeof(T) )
+        {
+            return -1;
+        }
+
+        LDR( _buff + _pos,val,T );
+
+        if ( move ) _pos += sizeof(T);
+
+        return sizeof(T);
+    }
 
     /* 读取字符串
      * 如果参数ptr为NULL，则只返回字符串长度。
      * 字符串结束符0不会自动加上
      */
-    inline int32 read_string( char* const ptr = NULL,const int32 len = 0,
-        bool move = true )
-    {
-        int32 err = 0;
-        uint16 str_len = read_uint16( &err,move );
-        if ( err < 0 ) return err;
-        if ( !ptr ) return str_len;
-
-        uint32 dsize = data_size();
-        if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
-        {
-            return -1;
-        }
-
-        if ( str_len <= 0 || len < str_len ) return -1;
-        memcpy( ptr,_buff + _pos,str_len );
-
-        if ( move ) _pos += str_len;
-        return str_len;
-    }
+    // inline int32 read_string( char* const ptr = NULL,const int32 len = 0,
+    //     bool move = true )
+    // {
+        // uint16 str_len = 0;
+        //
+        // if ( read( str_len,move ) < 0 ) return -1;
+        // if ( !ptr ) return str_len;
+        //
+        // uint32 dsize = data_size();
+        // if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
+        // {
+        //     return -1;
+        // }
+        //
+        // if ( str_len <= 0 || len < str_len ) return -1;
+        // memcpy( ptr,_buff + _pos,str_len );
+        //
+        // if ( move ) _pos += str_len;
+        // return str_len;
+    // }
 
     /* 取字符串地址并返回字符串长度
      * 注意取得的地址生命周期
      */
-    inline int32 read_string( char **ptr,bool move = true )
-    {
-        int32 err = 0;
-        uint16 str_len = read_uint16( &err,move );
-        if ( err < 0 ) return err;
-
-        uint32 dsize = data_size();
-        if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
-        {
-            return -1;
-        }
-
-        *ptr = _buff + _pos;
-        if ( move ) _pos += str_len;
-
-        return str_len;
-    }
-
-    /* 写入字符串 */
-    inline int32 write_string( const char *ptr,const int32 len )
-    {
-        assert( "write_string illegal argument",ptr && len > 0 );
-
-        uint16 str_len = static_cast<uint16>( len );
-        write_uint16( str_len );
-
-        reserved( len );
-        memcpy( _buff + _size,ptr,len );
-        _size += len;
-
-        return 0;
-    }
+    // inline int32 read_string( char **ptr,bool move = true )
+    // {
+    //     int32 err = 0;
+    //     uint16 str_len = read_uint16( &err,move );
+    //     if ( err < 0 ) return err;
+    //
+    //     uint32 dsize = data_size();
+    //     if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
+    //     {
+    //         return -1;
+    //     }
+    //
+    //     *ptr = _buff + _pos;
+    //     if ( move ) _pos += str_len;
+    //
+    //     return str_len;
+    // }
 private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
     uint32 _len;     /* 缓冲区总大小 */
     uint32 _pos;     /* 悬空区大小 */
+    uint32 _vsz;     /* 虚拟数据大小 */
 
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长

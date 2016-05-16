@@ -250,30 +250,6 @@ int32 luaopen_stream_socket( lua_State *L )
 
     lc.def<&lstream_socket::pack_client  >   ("pack_client"   );
 
-    lc.def<&lstream_socket::read_int8  >   ("read_int8"   );
-    lc.def<&lstream_socket::read_uint8 >   ("read_uint8"  );
-    lc.def<&lstream_socket::read_int16 >   ("read_int16"  );
-    lc.def<&lstream_socket::read_uint16>   ("read_uint16" );
-    lc.def<&lstream_socket::read_int32 >   ("read_int32"  );
-    lc.def<&lstream_socket::read_uint32>   ("read_uint32" );
-    lc.def<&lstream_socket::read_int64 >   ("read_int64"  );
-    lc.def<&lstream_socket::read_uint64>   ("read_uint64" );
-    lc.def<&lstream_socket::read_float >   ("read_float"  );
-    lc.def<&lstream_socket::read_double>   ("read_double" );
-    lc.def<&lstream_socket::read_string>   ("read_string" );
-
-    lc.def<&lstream_socket::write_int8  >   ("write_int8"   );
-    lc.def<&lstream_socket::write_uint8 >   ("write_uint8"  );
-    lc.def<&lstream_socket::write_int16 >   ("write_int16"  );
-    lc.def<&lstream_socket::write_uint16>   ("write_uint16" );
-    lc.def<&lstream_socket::write_int32 >   ("write_int32"  );
-    lc.def<&lstream_socket::write_uint32>   ("write_uint32" );
-    lc.def<&lstream_socket::write_int64 >   ("write_int64"  );
-    lc.def<&lstream_socket::write_uint64>   ("write_uint64" );
-    lc.def<&lstream_socket::write_float >   ("write_float"  );
-    lc.def<&lstream_socket::write_double>   ("write_double" );
-    lc.def<&lstream_socket::write_string>   ("write_string" );
-
     return 0;
 }
 

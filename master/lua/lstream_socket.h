@@ -1,6 +1,7 @@
 #ifndef __LSTREAM_SOCKET_H__
 #define __LSTREAM_SOCKET_H__
 
+#include "lstream.h"
 #include "lsocket.h"
 
 class lstream_socket :public lsocket
@@ -8,30 +9,6 @@ class lstream_socket :public lsocket
 public:
     ~lstream_socket();
     explicit lstream_socket( lua_State *L );
-
-    int32 read_int8  ();
-    int32 read_uint8 ();
-    int32 read_int16 ();
-    int32 read_uint16();
-    int32 read_int32 ();
-    int32 read_uint32();
-    int32 read_int64 ();
-    int32 read_uint64();
-    int32 read_float ();
-    int32 read_double();
-    int32 read_string();
-
-    int32 write_int8  ();
-    int32 write_uint8 ();
-    int32 write_int16 ();
-    int32 write_uint16();
-    int32 write_int32 ();
-    int32 write_uint32();
-    int32 write_int64 ();
-    int32 write_uint64();
-    int32 write_float ();
-    int32 write_double();
-    int32 write_string();
 
     int32 pack_client();
     int32 unpack_client();
@@ -55,6 +32,9 @@ public:
     inline int32 file_description () { return lsocket::file_description (); }
 private:
     int32 is_message_complete();
+
+    int32 pack_node( const struct stream_protocol::node *nd,int32 index );
+    int32 pack_element( const struct stream_protocol::node *nd,int32 index );
 };
 
 #endif /* __LSTREAM_SOCKET_H__ */

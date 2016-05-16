@@ -4,10 +4,11 @@ class ordered_pool<BUFFER_CHUNK> buffer::allocator;
 
 buffer::buffer()
 {
-    _buff = NULL;
-    _size = 0;
-    _len  = 0;
-    _pos  = 0;
+    _buff  = NULL;
+    _size  = 0;
+    _len   = 0;
+    _pos   = 0;
+    _vsz   = 0;
 }
 
 buffer::~buffer()
@@ -16,11 +17,12 @@ buffer::~buffer()
     {
         allocator.ordered_free( _buff,_len/BUFFER_CHUNK );
     }
-    
+
     _buff = NULL;
     _size = 0;
     _len  = 0;
     _pos  = 0;
+    _vsz  = 0;
 }
 
 /* 追加数据 */

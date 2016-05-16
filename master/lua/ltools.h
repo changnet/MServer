@@ -101,7 +101,7 @@ static inline int32 lua_isarray( lua_State *L,int32 index,int32 *array,
 }
 
 /* 调试函数，打印当前lua 虚拟机栈 */
-static void stack_dump ( lua_State *L )
+static inline void stack_dump ( lua_State *L )
 {
     int i;
     int top = lua_gettop( L );

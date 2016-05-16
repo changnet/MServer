@@ -72,7 +72,7 @@ int32 stream_protocol::tag_array_end()
     assert( "stream_protocol array error",nd );
     if ( !nd->_child )
     {
-        ERROR( "empty array is not allowed" )
+        ERROR( "empty array is not allowed" );
         assert( "empty array is not allowed",false );
         return -1;
     }
@@ -151,7 +151,7 @@ void stream_protocol::print_node( const struct node *nd,int32 indent )
     static const int32 sz = sizeof(name)/sizeof(char*);
     assert( "node array over boundary",nd->_type < sz );
 
-    /* print_indent*/
+    /* print_indent */
     for (int i = 0;i < indent*4;i ++ ) std::cout << " ";
     std::cout << nd->_name << nd->_type << ":" << name[nd->_type];
     std::cout << std::endl;
