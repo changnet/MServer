@@ -6,10 +6,20 @@ require "global.global"
 local json = require "lua_parson"
 local xml = require "lua_rapidxml"
 
+local js = [==[
+{
+    "name":"xzc",
+    "chinese":"中文",
+    "emoji":[ "\ue513","\u2600","\u2601","\u2614" ]
+}
+]==]
+
 f_tm_start()
-local json_tb = json.decode("[1,2,3,4,5,6,7,0]")
+local json_tb = json.decode( js )
 f_tm_stop( "json decode cost")
 vd( json_tb )
+
+--json.encode_to_file( json_tb,"json_test.json",true )
 
 local xml_str = [==[
 <DEMDataSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.nemsis.org http://nemsis.org/media/nemsis_v3/release-3.4.0/XSDs/NEMSIS_XSDs/DEMDataSet_v3.xsd" xmlns="http://www.nemsis.org">

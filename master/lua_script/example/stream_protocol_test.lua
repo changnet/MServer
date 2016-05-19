@@ -24,4 +24,6 @@ local Stream_socket = require "Stream_socket"
 local socket = Stream_socket()
 
 local packet = {}
+packet.day = 5
+packet.award = {}
 socket:pack_client( stream,1,1,packet )

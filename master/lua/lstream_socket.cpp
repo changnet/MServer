@@ -85,13 +85,15 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
         {
             if ( !lua_isinteger( L,index ) )
             {
-                return luaL_error( L,"field %s expect integer,got %s",
+                ERROR( "field %s expect integer,got %s",
                     nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
             }
             int32 val = lua_tointeger( L,index );
             if ( val < SCHAR_MIN || val > SCHAR_MAX )
             {
-                return luaL_error( L,"field %s out range of int8:%d",nd->_name,val );
+                ERROR( "field %s out range of int8:%d",nd->_name,val );
+                return -1;
             }
             _send.write( static_cast<uint8>(val) );
         }break;
@@ -107,14 +109,15 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
             }
             if ( !lua_istable( L,index ) )
             {
-                return luaL_error( L,"field %s expect table,got %s",
+                ERROR( "field %s expect table,got %s",
                     nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
             }
 
             int32 top = lua_gettop(L);
             if ( top > 256 )
             {
-                return luaL_error( L,"stream array recursion too deep,stack overflow" );
+                ERROR( "stream array recursion too deep,stack overflow" );
                 return -1;
             }
             luaL_checkstack( L,2,"stream array recursion too deep,stack overflow" );
@@ -128,20 +131,31 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
                 const struct stream_protocol::node *child = nd->_child;
                 if ( lua_istable( L,top + 2 ) )
                 {
-                    /* { {id=99,cnt=1},{id=98,cnt=2} } 这种复杂写法 */
-                    pack_node( child,top + 2 ); /* lua_gettop(L) not -1 */
+                    /* { {id=99,cnt=1},{id=98,cnt=2} } 带key复杂写法 */
+                    /* lua_gettop(L) not -1 */
+                    if ( pack_node( child,top + 2 ) < 0 )
+                    {
+                        lua_pop( L,2 );
+                        ERROR( "pack_node %s fail",nd->_name );
+                        return -1;
+                    }
                 }
                 else
                 {
-                    /* { 99,98,97,96 } 这种只有一个字段的简单数组写法 */
+                    /* { 99,98,97,96 } 只有一个字段的简单数组写法 */
                     if ( child->_next )
                     {
-                        return luaL_error( L,
-                            "array has more than one field,element must be table",
-                            false );
+                        ERROR( "field %s(it's a array) has more than one field,"
+                            "element must be table",nd->_name );
+                        return -1;
                     }
 
-                    pack_element( child,top + 2 );
+                    if ( pack_element( child,top + 2 ) < 0 )
+                    {
+                        lua_pop( L,2 );
+                        ERROR( "pack_element %s fail",nd->_name );
+                        return -1;
+                    }
                 }
 
                 lua_pop( L,1 );
@@ -182,7 +196,13 @@ int32 lstream_socket::pack_node( const struct stream_protocol::node *nd,int32 in
             continue; /* optional field */
         }
 
-        pack_element( tmp,top + 1 );
+        if ( pack_element( tmp,top + 1 ) < 0 )
+        {
+            ERROR( "pack_node %s fail",tmp->_name );
+            return -1;
+        }
+
+        lua_pop( L,1 ); /* pop last value */
         tmp = tmp->_next;
     }
 
@@ -208,7 +228,12 @@ int32 lstream_socket::pack_client()
     _send.write( mod );
     _send.write( func );
 
-    pack_node( nd,4 ); /* 这个函数出错不会返回，缓冲区需要能够自动回溯 */
+     /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
+    if ( pack_node( nd,4 ) < 0 )
+    {
+        ERROR( "pack_client protocol %d-%d fail",mod,func );
+        return luaL_error( L,"pack_client protocol %d-%d fail",mod,func );
+    }
     _send.virtual_flush();
 
     return 0;
