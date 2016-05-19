@@ -136,7 +136,6 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
                     if ( pack_node( child,top + 2 ) < 0 )
                     {
                         lua_pop( L,2 );
-                        ERROR( "pack_node %s fail",nd->_name );
                         return -1;
                     }
                 }
@@ -153,7 +152,6 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
                     if ( pack_element( child,top + 2 ) < 0 )
                     {
                         lua_pop( L,2 );
-                        ERROR( "pack_element %s fail",nd->_name );
                         return -1;
                     }
                 }

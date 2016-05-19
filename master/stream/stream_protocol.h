@@ -92,14 +92,17 @@ public:
     ~stream_protocol();
 
     void dump( uint16 mod,uint16 func );
+    int32 check_dumplicate( const char *key );
     struct node *find( uint16 mod,uint16 func );
-    void append( const char *key,node::node_t type );
+    void append( const char *key,node::node_t type,uint8 opt = 0 );
 
     int32 protocol_end();
     int32 protocol_begin( uint16 mod,uint16 func );
 
     int32 tag_array_end();
-    int32 tag_array_begin( const char *key );
+    int32 tag_array_begin( const char *key,uint8 opt = 0 );
+
+    inline bool is_tagging() { return _tagging; }
 private:
     /* 对于制定协议，16+16=32bit已足够 */
     typedef std::pair<uint16,uint16> pair_key_t;

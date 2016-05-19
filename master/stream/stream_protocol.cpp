@@ -31,7 +31,7 @@ void stream_protocol::init( uint16 mod,uint16 func )
 }
 
 /* 添加一个节点 */
-void stream_protocol::append( const char *key,node::node_t type )
+void stream_protocol::append( const char *key,node::node_t type,uint8 opt )
 {
     if ( node::ARRAY == type )
     {
@@ -42,6 +42,8 @@ void stream_protocol::append( const char *key,node::node_t type )
 
     /* 加到链表尾，表头是包含有效数据 */
     struct node *nd = new node( key,type );
+    nd->_optional = opt;
+
     if ( _cur_protocol._cur )
     {
         *(_cur_protocol._cur) = nd;
@@ -83,7 +85,7 @@ int32 stream_protocol::tag_array_end()
     return 0;
 }
 
-int32 stream_protocol::tag_array_begin( const char *key )
+int32 stream_protocol::tag_array_begin( const char *key,uint8 opt )
 {
     if ( _cur_protocol._index + 1 >= MAX_RECURSION_ARRAY )
     {
@@ -97,9 +99,11 @@ int32 stream_protocol::tag_array_begin( const char *key )
         && _cur_protocol._index < MAX_RECURSION_ARRAY );
 
     struct node *nd = new node( key,node::ARRAY );
+    nd->_optional = opt;
+
     if ( _cur_protocol._cur )
     {
-        (*_cur_protocol._cur)->_next = nd;
+        *(_cur_protocol._cur) = nd;
     }
     else
     {
@@ -109,6 +113,30 @@ int32 stream_protocol::tag_array_begin( const char *key )
     /* 记录主链表尾 */
     _cur_protocol._array[_cur_protocol._index] = nd;
     _cur_protocol._cur = &(nd->_child);
+
+    return 0;
+}
+
+int32 stream_protocol::check_dumplicate( const char *key )
+{
+    if ( !_cur_protocol._node ) return 0;
+
+    struct node *nd = NULL;
+    if ( _cur_protocol._index >= 0 )
+    {
+        nd = (_cur_protocol._array[_cur_protocol._index])->_child;
+    }
+    else
+    {
+        nd = _cur_protocol._node;
+    }
+
+    while ( nd )
+    {
+        if ( 0 == strcmp( nd->_name,key ) ) return 1;
+
+        nd = nd->_next;
+    }
 
     return 0;
 }
@@ -153,10 +181,21 @@ void stream_protocol::print_node( const struct node *nd,int32 indent )
 
     /* print_indent */
     for (int i = 0;i < indent*4;i ++ ) std::cout << " ";
-    std::cout << nd->_name << nd->_type << ":" << name[nd->_type];
+    std::cout << nd->_name << " = " << nd->_type << ":" << name[nd->_type];
+    if ( nd->_optional ) std::cout << ":optional";
     std::cout << std::endl;
 
-    if ( nd->_child ) print_node( nd->_child,indent + 1 );
+    if ( nd->_child )
+    {
+        for (int i = 0;i < indent*4;i ++ ) std::cout << " ";
+        std::cout << "{" << std::endl;
+
+        print_node( nd->_child,indent + 1 );
+
+        for (int i = 0;i < indent*4;i ++ ) std::cout << " ";
+        std::cout << "}" << std::endl;
+    }
+
     if ( nd->_next  ) print_node( nd->_next,indent );
 }
 

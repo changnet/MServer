@@ -14,7 +14,13 @@ stream:tag_array_begin( "award" )
     stream:tag( "cnt",1 )
     stream:tag( "ty",1 )
 stream:tag_array_end()
-stream:tag( "day",1 )
+
+stream:tag( "day",1,9000000000 )
+
+stream:tag_array_begin( "weeks",true )
+    stream:tag( "id",1,false )
+stream:tag_array_end()
+
 stream:protocol_end()
 
 stream:dump( 1,1 )
@@ -25,5 +31,9 @@ local socket = Stream_socket()
 
 local packet = {}
 packet.day = 5
-packet.award = {}
+packet.award =
+{
+    { id = 9,cnt = 6,ty = 7 }
+}
+
 socket:pack_client( stream,1,1,packet )
