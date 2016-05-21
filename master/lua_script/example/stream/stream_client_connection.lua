@@ -2,6 +2,7 @@
 -- 2016-04-24
 -- xzc
 
+local clt_stream_mgr = require "example.stream.client_stream_mgr"
 local Stream_socket = require "Stream_socket"
 local Stream_client_connection = oo.class( nil,... )
 
@@ -18,20 +19,17 @@ function Stream_client_connection:connect( ip,port )
 end
 
 function Stream_client_connection:send_test()
-    -- 各个类型的大小见limits.lua
-    local str = "hello world"
-    local len = (8*2 + 16*2 + 32*2 + 64*2 + 16)/8 + str:len()
-    print( len )
-    self.conn:write_uint16( len )
-    self.conn:write_int8( 127 )
-    self.conn:write_uint8( 255 )
-    self.conn:write_int16( 32767 )
-    self.conn:write_uint16( 65535 )
-    self.conn:write_int32( 2147483647 )
-    self.conn:write_uint32( 4294967295 )
-    self.conn:write_int64( (9223372036854775807)-1 )
-    self.conn:write_uint64( 18446744073709551615 )
-    self.conn:write_string( str )
+    local stream = clt_stream_mgr:get_stream()
+
+    local packet = {}
+    packet.day = 5
+    packet.award =
+    {
+        { id = 9,cnt = 6,ty = 7 }
+    }
+    packet.weeks = { 0,1,2,3,4,5,6 }
+
+    self.conn:packet_client( 1,1,0,packet )
 end
 
 function Stream_client_connection:on_connection( status )

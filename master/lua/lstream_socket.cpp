@@ -249,6 +249,7 @@ int32 lstream_socket::pack_client()
     _send.update_virtual_buffer( vp,size );
 
     _send.virtual_flush();
+    this->pending_send();
 
     return 0;
 }

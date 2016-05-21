@@ -2,6 +2,8 @@
 -- 2016-04-24
 -- xzc
 
+local srv_stream_mgr = require "example.stream.server_stream_mgr"
+
 local Stream_server_connection = oo.class( nil,... )
 
 function Stream_server_connection:__init( conn )
@@ -13,7 +15,9 @@ function Stream_server_connection:__init( conn )
 end
 
 function Stream_server_connection:on_message()
-    local mod,func,packet = self.conn:unpack_client( )
+    local stream = srv_stream_mgr:get_stream()
+
+    local mod,func,packet = self.conn:unpack_client( stream )
     print( mod,func )
     vd( packet )
 end
