@@ -13,20 +13,9 @@ function Stream_server_connection:__init( conn )
 end
 
 function Stream_server_connection:on_message()
-    local i8 = self.conn:read_int8()
-    local u8 = self.conn:read_uint8()
-    local i16 = self.conn:read_int16()
-    local u16 = self.conn:read_uint16()
-    local i32 = self.conn:read_int32()
-    local u32 = self.conn:read_uint32()
-    local i64 = self.conn:read_int64()
-    local u64 = self.conn:read_uint64()
-    local str = self.conn:read_string()
-
-    print( i8,u8,i16,u16 )
-    print( i32,u32,i64 )
-    print( string.format("%u",u64) )
-    print( str )
+    local mod,func,packet = self.conn:unpack_client( )
+    print( mod,func )
+    vd( packet )
 end
 
 function Stream_server_connection:on_disconnect()

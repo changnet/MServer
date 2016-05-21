@@ -1,0 +1,24 @@
+base types:
+1. int8: signed char -- 8bit
+2. uint8: unsigned char -- 8bit
+3. int16: signed short -- 16bit
+4. uint16: unsigned short -- 16bit
+5. int32: signed int -- 32bit
+6. uint32: unsigned int -- 32bit
+7. int64: int64_t -- 64bit
+8. uint64: uint64_t -- 64bit
+9. string: uint16( length ) + char[] ( length not include \0 )
+10. array: uint16( size ) + elements
+
+float
+double
+
+stream format:
+
+S -->> C
+uint16(length) + uint16(mod) + uint16(func) + uint16[errno] + content
+length not include itself
+
+C -->> S
+uint16(length) + uint16(mod) + uint16(func) + content
+length not include itself

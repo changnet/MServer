@@ -249,6 +249,7 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::file_description> ("file_description" );
 
     lc.def<&lstream_socket::pack_client  >   ("pack_client"   );
+    lc.def<&lstream_socket::unpack_client  >   ("unpack_client"   );
 
     return 0;
 }

@@ -33,6 +33,7 @@ public:
 private:
     int32 is_message_complete();
 
+    int32 unpack_node( const struct stream_protocol::node *nd );
     int32 pack_node( const struct stream_protocol::node *nd,int32 index );
     int32 pack_element( const struct stream_protocol::node *nd,int32 index );
 };

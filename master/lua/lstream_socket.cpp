@@ -20,10 +20,14 @@ int32 lstream_socket::is_message_complete()
     if ( size < sizeof(uint16) ) return 0;
 
     uint16 plt = 0;
-    _recv.read( plt,false );
+    if ( _recv.read( plt,false ) < 0 )
+    {
+        ERROR( "is_message_complete read length error" );
+        return 0;
+    }
+
     if ( size < sizeof(uint16) + plt ) return 0;
 
-    _recv.moveon( sizeof(uint16) );
     return  1;
 }
 
@@ -159,7 +163,7 @@ int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32
                 lua_pop( L,1 );
                 ++count;
             }
-            memcpy( vp,&count,sizeof(uint16) ); // 更新数组长度
+            _send.update_virtual_buffer( vp,count ); // 更新数组长度
         }break;
         default :
             FATAL( "unknow stream protocol type:%d",nd->_type );
@@ -213,26 +217,147 @@ int32 lstream_socket::pack_client()
         luaL_checkudata( L, 1, "Stream" ) );
     uint16 mod  = static_cast<uint16>( luaL_checkinteger( L,2 ) );
     uint16 func = static_cast<uint16>( luaL_checkinteger( L,3 ) );
+    uint16 eno  = static_cast<uint16>( luaL_checkinteger( L,4 ) );
 
-    luaL_checktype( L,4,LUA_TTABLE );
+    luaL_checktype( L,5,LUA_TTABLE );
 
     const struct stream_protocol::node *nd = (*stream)->find( mod,func );
     if ( (struct stream_protocol::node *)-1 == nd )
     {
-        return luaL_error( L,"lstream_socket::pack_client no such protocol" );
+        return luaL_error( L,
+            "lstream_socket::pack_client no such protocol %d-%d",mod,func );
     }
 
     _send.virtual_zero();
+
+    uint16 size = 0;
+    char *vp = _send.virtual_buffer();
+    _send.write( size );
+
     _send.write( mod );
     _send.write( func );
+    _send.write( eno  );
 
      /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
-    if ( pack_node( nd,4 ) < 0 )
+    if ( pack_node( nd,5 ) < 0 )
     {
         ERROR( "pack_client protocol %d-%d fail",mod,func );
         return luaL_error( L,"pack_client protocol %d-%d fail",mod,func );
     }
+
+    size = static_cast<uint16>( _send.virtual_size() );
+    _send.update_virtual_buffer( vp,size );
+
     _send.virtual_flush();
 
     return 0;
+}
+
+/* 网络数据不可信，这些数据可能来自非法客户端，有很大机率出错
+ * 这个接口少调用luaL_error，尽量保证能返回到lua层处理异常
+ * 否则可能导致协议分发接口while循环中止，无法断开非法链接
+ */
+int32 lstream_socket::unpack_client()
+{
+    class lstream **stream = static_cast<class lstream **>(
+            luaL_checkudata( L, 1, "Stream" ) );
+
+    uint16 size = 0;
+    if ( _recv.read( size ) < 0 )
+    {
+        ERROR( "unpack_client:read size error" );
+        return 0;
+    }
+
+    uint16 mod  = 0;
+    uint16 func = 0;
+
+    if ( _recv.read( mod ) < 0 || _recv.read( func ) < 0 )
+    {
+        ERROR( "unpack_client:read module or function error:%d-%d",mod,func );
+        return 0;
+    }
+
+    const struct stream_protocol::node *nd = (*stream)->find( mod,func );
+    if ( (struct stream_protocol::node *)-1 == nd )
+    {
+        ERROR( "lstream_socket::unpack_client no such protocol:%d-%d",mod,func );
+        return 0;
+    }
+
+    lua_pushinteger( L,mod );
+    lua_pushinteger( L,func );
+
+    if ( unpack_node( nd ) < 0 )
+    {
+        ERROR( "unpack_client: protocol %d-%d error",mod,func );
+        return 0;
+    }
+
+    return 3;
+}
+
+int32 lstream_socket::unpack_node( const struct stream_protocol::node *nd )
+{
+    /* empty protocol,push nil instead of empty table */
+    if ( !nd ) return 0;
+
+    if ( lua_gettop( L ) > 256 )
+    {
+        ERROR( "lstream_socket::unpack_node stack over max" );
+        return -1;
+    }
+
+    luaL_checkstack( L,3,"protocol recursion too deep,stack overflow" );
+
+    lua_newtable( L );
+    int32 top = lua_gettop( L );
+    while ( nd )
+    {
+        const char * key = nd->_name;
+        lua_pushstring( L,key );
+
+        switch( nd->_type )
+        {
+            case stream_protocol::node::INT8:
+            {
+                int8 val = 0;
+                if ( _recv.read( val ) < 0 )
+                {
+                    lua_pop( L,2 );
+                    ERROR( "lstream_socket::unpack_node read int8 error" );
+                    return -1;
+                }
+                lua_pushinteger( L,val );
+            }break;
+            case stream_protocol::node::ARRAY:
+            {
+                assert( "empty array found",nd->_child );
+                uint16 size = 0;
+                if ( _recv.read( size ) < 0 )
+                {
+                    lua_pop( L,2 );
+                    ERROR( "lstream_socket::unpack_node read array size error" );
+                    return -1;
+                }
+
+                for ( int i = 0;i < size;i ++ )
+                {
+                    if ( unpack_node( nd->_child ) < 0 )
+                    {
+                        lua_pop( L,2 );
+                        return -1;
+                    }
+                }
+            }break;
+            default:
+                FATAL( "lstream_socket::unpack_node unknow type:%d",nd->_type );
+                return -1;
+                break;
+        }
+
+        lua_rawset( L,top );
+    }
+
+    return 1;
 }

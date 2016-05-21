@@ -35,5 +35,9 @@ packet.award =
 {
     { id = 9,cnt = 6,ty = 7 }
 }
+packet.weeks = { 0,1,2,3,4,5,6 }
 
-socket:pack_client( stream,1,1,packet )
+socket:pack_client( stream,1,1,0,packet )
+local mod,func,pack = socket:unpack_client( stream )
+print( mod,func,pack )
+vd( pack )

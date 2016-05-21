@@ -62,7 +62,7 @@ valgrind测试
 
 #TODO
 1. protobuf、platbuffer
-2. astar、rsa、zlib、md5、uuid、cjson、xml
+2. astar、rsa、zlib、md5、uuid
 3. ps -o 测试缺页中断
 4. dump内存情况，包含内存碎片
 5. 底层包自动转发机制
@@ -80,3 +80,7 @@ valgrind测试
    将bind等函数全封装在socket，因此要重新封装connect,check_connect,listen,accept_one  
 2. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
 3. http server/client 压测
+4. 协议分发接口注意不要调用luaL_error，不然会把lua层的while中断
+5. buffer的大小BUFFER_MAX客户端、服务器分开限制,recv、send时处理异常
+6. ordered_pool增加分配64M服务器大内存接口，指定预分配块数
+7. unpack接口在解包数据错误时如何保证缓冲区的正确性

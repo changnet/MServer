@@ -28,6 +28,20 @@
 #define expect_false(cond) __builtin_expect (!!(cond),0)
 #define expect_true(cond)  __builtin_expect (!!(cond),1)
 
+#ifdef _PFILETIME_
+    #define PFILETIME(f)                                             \
+    do{                                                              \
+        ::time_t rawtime;                                            \
+        ::time( &rawtime );                                          \
+        struct tm *ntm = ::localtime( &rawtime );                    \
+        fprintf(stderr, "[%s %04d-%02d-%02d %02d:%02d:%02d] ",       \
+            f,(ntm->tm_year + 1900),(ntm->tm_mon + 1), ntm->tm_mday, \
+            ntm->tm_hour, ntm->tm_min,ntm->tm_sec);                  \
+    }while(0)
+#else
+    #define PFILETIME(f)
+#endif
+
 #ifdef _PDEBUG_
     #define PDEBUG(fmt,...)    fprintf( stderr,fmt "\n",##__VA_ARGS__ )
 #else
@@ -47,7 +61,7 @@
 #endif
 
 #ifdef _ERROR_
-    #define ERROR(...)    do{PDEBUG(__VA_ARGS__);cerror_log( __VA_ARGS__ );}while(0)
+    #define ERROR(...)    do{PFILETIME("c++ error");PDEBUG(__VA_ARGS__);cerror_log( __VA_ARGS__ );}while(0)
 #else
     #define ERROR(...)
 #endif

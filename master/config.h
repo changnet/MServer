@@ -4,6 +4,9 @@
 /* enable memeory debug */
 #define _MEM_DEBUG_
 
+/* print file and time when C++ error */
+#define _PFILETIME_
+
 /* print info to stdout with macro PDEBUG */
 #define _PDEBUG_
 

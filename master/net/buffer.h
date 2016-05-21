@@ -108,20 +108,25 @@ public:
     /* 当前缓冲区指针(包含虚拟数据) */
     char *virtual_buffer()
     {
+        reserved();
         return _buff + _pos + _size + _vsz;
     }
 
-    /* 清除虚拟数据 */
-    void virtual_zero()
+    /* 更新冲区某个位置内存数据 */
+    template< class T>
+    inline void update_virtual_buffer( char *pos,T &val )
     {
-        _vsz = 0;
+        memcpy( pos,&val,sizeof(T) );
     }
 
+    /* 清除虚拟数据 */
+    inline void virtual_zero() { _vsz = 0; }
+
+    /* 虚拟数据长度 */
+    inline uint32 virtual_size() { return _vsz; }
+
     /* 虚拟数据转换为缓冲区数据 */
-    void virtual_flush()
-    {
-        _size += _vsz;
-    }
+    inline void virtual_flush() { _size += _vsz; }
 
     friend class buffer_process;
 
