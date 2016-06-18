@@ -12,7 +12,7 @@ local PORT = 8887
 g_http_server_mgr = Http_server_mgr()
 g_http_client_mgr = Http_client_mgr()
 
---g_http_server_mgr:listen( IP,PORT )
+g_http_server_mgr:listen( IP,PORT )
 --g_http_client_mgr:start( 10,IP,PORT )
 
 local Http_url_connection = oo.class( nil,"example.Http_url_connection" )
@@ -64,13 +64,14 @@ local str_tb =
 --local str = table.concat( str_tb )
 
 function Http_url_connection:on_connection()
-    print( "url connect ok" )
-    local str = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nConnection: close\r\nAccept: */*\r\n\r\n";
+    PLOG( "url connect ok" )
+    --local str = "GET /redis_test.php?data=data=1|ABC||YY|2016-03-29%2010:42:25|1|你好|吗 HTTP/1.1\r\nHost: mytest.com\r\nConnection: close\r\nAccept: */*\r\n\r\n";
+    local str = "GET /redis_test.php?data=%E4%BD%A0%E5%8F%B7%E6%98%AF%E5%90%A6%7C%E4%BD%A0%E7%8E%A9%E5%84%BF HTTP/1.1\r\nUser-Agent: curl/7.26.0\r\nHost: mytest.com\r\nAccept: */*\r\n\r\n"
     self.conn:send( str )
 end
 
 -- 阻塞获取，考虑到服务器起服后连后台域名解析并不常用，不提供多线程
-local ip1,ip2 = util.gethostbyname( "www.baidu.com" )
+local ip1,ip2 = util.gethostbyname( "mytest.com" )
 
 local url = Http_url_connection()
 

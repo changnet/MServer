@@ -22,9 +22,9 @@ local function main()
     -- require "example.mongo_performance"
     -- require "example.mysql_performance"
     -- require "example.log_performance"
-    -- require "example.http_performance"
+    require "example.http_performance"
     -- require "example.stream_performance"
-    require "example.stream_protocol_test"
+    -- require "example.stream_protocol_test"
 
     print( obj_counter.obj_count("Http_socket") )
     oo.check()
