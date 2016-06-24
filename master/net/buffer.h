@@ -105,28 +105,24 @@ public:
         return _buff + _pos;
     }
 
-    /* 当前缓冲区指针(包含虚拟数据) */
-    char *virtual_buffer()
+    /* 在缓冲区上创建一个协议头 */
+    template< class T >
+    T *allocate_header( T *dummy = NULL )
     {
-        reserved();
-        return _buff + _pos + _size + _vsz;
+        reserved( sizeof(T) );
+        dummy = new( _buff + _size ) T();
+
+        return dummy;
     }
 
-    /* 更新冲区某个位置内存数据 */
-    template< class T>
-    inline void update_virtual_buffer( char *pos,T &val )
+    /* 创建一个数组头 */
+    array_header *allocate_array()
     {
-        memcpy( pos,&val,sizeof(T) );
+        reserved( sizeof(array_header) );
+        array_header *header = new( _buff + _size ) array_header();
+
+        return header;
     }
-
-    /* 清除虚拟数据 */
-    inline void virtual_zero() { _vsz = 0; }
-
-    /* 虚拟数据长度 */
-    inline uint32 virtual_size() { return _vsz; }
-
-    /* 虚拟数据转换为缓冲区数据 */
-    inline void virtual_flush() { _size += _vsz; }
 
     friend class buffer_process;
 
@@ -175,57 +171,11 @@ public:
         return sizeof(T);
     }
 
-    /* 读取字符串
-     * 如果参数ptr为NULL，则只返回字符串长度。
-     * 字符串结束符0不会自动加上
-     */
-    // inline int32 read_string( char* const ptr = NULL,const int32 len = 0,
-    //     bool move = true )
-    // {
-        // uint16 str_len = 0;
-        //
-        // if ( read( str_len,move ) < 0 ) return -1;
-        // if ( !ptr ) return str_len;
-        //
-        // uint32 dsize = data_size();
-        // if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
-        // {
-        //     return -1;
-        // }
-        //
-        // if ( str_len <= 0 || len < str_len ) return -1;
-        // memcpy( ptr,_buff + _pos,str_len );
-        //
-        // if ( move ) _pos += str_len;
-        // return str_len;
-    // }
-
-    /* 取字符串地址并返回字符串长度
-     * 注意取得的地址生命周期
-     */
-    // inline int32 read_string( char **ptr,bool move = true )
-    // {
-    //     int32 err = 0;
-    //     uint16 str_len = read_uint16( &err,move );
-    //     if ( err < 0 ) return err;
-    //
-    //     uint32 dsize = data_size();
-    //     if ( ( move ? dsize : dsize-sizeof(uint16) ) < str_len )
-    //     {
-    //         return -1;
-    //     }
-    //
-    //     *ptr = _buff + _pos;
-    //     if ( move ) _pos += str_len;
-    //
-    //     return str_len;
-    // }
 private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
     uint32 _len;     /* 缓冲区总大小 */
     uint32 _pos;     /* 悬空区大小 */
-    uint32 _vsz;     /* 虚拟数据大小 */
 
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长
@@ -270,7 +220,5 @@ private:
 
 #undef LDR
 #undef STR
-#undef DEFINE_READ_FUNCTION
-#undef DEFINE_WRITE_FUNCTION
 
 #endif /* __BUFFER_H__ */
