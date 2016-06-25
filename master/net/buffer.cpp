@@ -8,7 +8,6 @@ buffer::buffer()
     _size  = 0;
     _len   = 0;
     _pos   = 0;
-    _vsz   = 0;
 }
 
 buffer::~buffer()
@@ -22,7 +21,6 @@ buffer::~buffer()
     _size = 0;
     _len  = 0;
     _pos  = 0;
-    _vsz  = 0;
 }
 
 /* 追加数据 */

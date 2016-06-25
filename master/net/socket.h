@@ -54,9 +54,33 @@ public:
         this->_method = &socket::method_thunk<K, method>;
     }
 
+    inline int32 recv()
+    {
+        _recv.reserved();
+
+        assert( "socket recv buffer length <= 0",_recv._len - _recv._size > 0 );
+        int32 len = ::read( _w.fd,_recv._buff + recv._size,_recv._len - _recv._size );
+        if ( len > 0 )
+        {
+            recv._size += len;
+        }
+        return len;
+    }
+
+    inline int32 send()
+    {
+        assert( "buff send without data",_send._size - _send._pos > 0 );
+
+        int32 len = ::write( _w.fd,_send._buff + _send._pos,_send._size - _send._pos );
+        if ( len > 0 )
+        {
+            _send._pos += len;
+        }
+
+        return len;
+    }
+
     inline int32 fd() const { return _w.fd; }
-    inline int32 recv() { return _recv.recv(_w.fd); }
-    inline int32 send() { return _send.send(_w.fd); }
     inline void set( int32 revents ) { _w.set(revents); }
     inline bool active() const { return _w.is_active(); }
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }

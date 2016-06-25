@@ -827,6 +827,6 @@ local xml_str = [==[
 ]==]
 
 f_tm_start()
-local xml_tb = xml.decode( xml_str )
+local xml_tb = xml.decode_from_file( "arena.xml" )
 f_tm_stop( "xml decode cost")
 -- vd( xml_tb )
