@@ -51,24 +51,28 @@ int decode_node( lua_State *L,rapidxml::xml_node<> *node,char *msg )
                 lua_rawset( L,-3 );
 
                 /* element value */
-                lua_pushstring( L,VALUE_KEY );
-                rapidxml::xml_node<> *sub_node = child->first_node();
-                if ( sub_node->next_sibling() || rapidxml::node_element == sub_node->type() )
+                /* <oppn id="1" rk_min="2896" rk_max="2910"/> has no value */
+                if ( child->value_size() != 0 || child->first_node() )
                 {
-                    if ( decode_node( L,sub_node,msg ) < 0 )
+                    lua_pushstring( L,VALUE_KEY );
+                    rapidxml::xml_node<> *sub_node = child->first_node();
+                    if ( sub_node->next_sibling() || rapidxml::node_element == sub_node->type() )
                     {
-                        lua_settop( L,top );
-                        return -1;
+                        if ( decode_node( L,sub_node,msg ) < 0 )
+                        {
+                            lua_settop( L,top );
+                            return -1;
+                        }
                     }
+                    else
+                    {
+                        /* if value only contain one value,decode as string,not a table */
+                        assert( rapidxml::node_data == sub_node->type() ||
+                            rapidxml::node_cdata == sub_node->type() );
+                        lua_pushlstring( L,sub_node->value(),sub_node->value_size() );
+                    }
+                    lua_rawset( L,-3 );
                 }
-                else
-                {
-                    /* if value only contain one value,decode as string,not a table */
-                    assert( rapidxml::node_data == sub_node->type() ||
-                        rapidxml::node_cdata == sub_node->type() );
-                    lua_pushlstring( L,sub_node->value(),sub_node->value_size() );
-                }
-                lua_rawset( L,-3 );
 
                 /* attribute */
                 rapidxml::xml_attribute<> *attr = child->first_attribute();
@@ -220,6 +224,7 @@ int encode_node( lua_State *L,int index,rapidxml::xml_document<> *doc,
     while ( 0 != lua_next( L,index ) )
     {
         rapidxml::xml_node<> *child = 0;
+        /* if type is number or string,this node is data_node */
         switch( lua_type( L,-1 ) )
         {
             case LUA_TNUMBER :
@@ -259,7 +264,7 @@ int encode_node( lua_State *L,int index,rapidxml::xml_document<> *doc,
                 continue;
             }break;
             case LUA_TTABLE :
-                /* node have name and value,do nothing here */
+                /* element node,deal with it later */
                 break;
             default :
                 lua_settop( L,top );
@@ -286,9 +291,9 @@ int encode_node( lua_State *L,int index,rapidxml::xml_document<> *doc,
         switch ( lua_type( L,-1 ) )
         {
             case LUA_TNIL :
-                lua_settop( L,top );
-                MARK_ERROR( msg,"xml encode fail","no value was specified" );
-                return -1;
+                /* childless node,has no value and child node */
+                child = doc->allocate_node( rapidxml::node_element,name,0,
+                name_len,0 );
                 break;
             case LUA_TNUMBER :
             {

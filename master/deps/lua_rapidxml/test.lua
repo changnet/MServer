@@ -57,6 +57,7 @@ local xml_str = [==[
     <e>quotation mark(&quot;)</e>
 </entity>
 <note>rapid is a <b>fast</b> xml parse library.</note>
+<childless name="childless node test"/>
 ]==]
 
 local xml_tb = xml.decode( xml_str )

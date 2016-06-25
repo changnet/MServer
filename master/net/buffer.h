@@ -40,13 +40,14 @@ public:
     inline void reserved( uint32 bytes = 0,uint32 vsz = 0 )
     {
         assert( "max buffer overflow",BUFFER_MAX >= _len );
-        if ( _len - _size > bytes ) /* 不能等于0,刚好用完也申请 */
-            return;
 
         uint32 size = _size + vsz;
+        if ( _len - size > bytes ) /* 不能等于0,刚好用完也申请 */
+            return;
+
         if ( _pos )    /* 解决悬空区 */
         {
-            assert( "reserved memmove error",_size > _pos );
+            assert( "reserved memmove error",_size > _pos && size <= _len );
             memmove( _buff,_buff + _pos,size - _pos );
             _size -= _pos;
             _pos   = 0;
