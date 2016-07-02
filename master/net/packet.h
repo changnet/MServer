@@ -8,6 +8,7 @@
 
 typedef uint16 array_header;
 typedef uint16 packet_length;
+typedef uint16 string_header;
 
 /* 客户端发往服务器 */
 struct c2s_header
@@ -53,44 +54,65 @@ struct s2s_header
 
 #endif
 
+#include "lstream.h"
+
+struct lua_State;
 class stream_packet
 {
 public:
-    explicit stream_packet( class buffer *buff )
-        : _buff( buff )
+    explicit stream_packet( class buffer *buff,lua_State *L )
+        : _buff( buff ),L(L)
     {
         _length = 0;
     }
-    void flush();
 
-    T *operator T*();
+    inline void flush();
+    {
+        assert( "stream packet overflow",_length < UINT16_MAX );
+        memcpy( _buff + _buff._size,_length,sizeof(packet_length) );
+        _buff._size += _length;
+    }
+
+    /* 强制转换为s2c_header s2s_header等 */
+    T *operator T*()
+    {
+        assert( "stream_packet header error",_buff._size + sizeof(T) <= _buff._len );
+
+        return reinterpret_cast<T *>( _buff._size );
+    }
 public:
+    /* 写入一个基础变量，返回在packet处的位置 */
     template< class T >
     int32 write( const T &val )
     {
-        static int32 sz = sizeof(T);
-        reserved( sz );
+        _buff.reserved( sizeof(T),_length );
 
-        STR( _buff + _size + _vsz,val,T );
-        _vsz += sz;
+        int32 pos = _length
+        STR( _buff + _buff._size + _length,val,T );
+        _length += sizeof(T);
 
-        return sz;
+        return pos;
     }
 
-    /* 写入字符串或二进制 */
+    /* 写入字符串(二进制也当作字符串处理) */
     inline int32 write( const char *ptr,const int32 len )
     {
         assert( "write_string illegal argument",ptr && len > 0 );
 
-        uint16 str_len = static_cast<uint16>( len );
-        assert( "string length over UINT16_MAX",str_len == len );
+        string_header header = static_cast<uint16>( len );
+        assert( "string length over UINT16_MAX",header == len );
 
-        write( str_len ); /* 先写入长度 */
-        reserved( len );
-        memcpy( _buff + _size + _vsz,ptr,len );
-        _vsz += len;
+        _buff.reserved( sizeof(string_header) + len,_length );
+        int32 pos = _length;
 
-        return len;
+        /* 先写入长度 */
+        STR( _buff + _buff._size + _length,header,string_header );
+        _length += sizeof(string_header);
+
+        memcpy( _buff + _buff._size + _length,ptr,len );
+        _length += len;
+
+        return pos;
     }
 
     template < class T >
@@ -107,9 +129,21 @@ public:
 
         return sizeof(T);
     }
+
+    template < class T >
+    void update_buffer( uint32 pos,const T &val )
+    {
+        assert( "update_buffer:pos illegal",pos < _length && pos + sizeof(T) <= _length );
+        memcpy( _buff + _buff._size + pos,&val,sizeof(T) );
+    }
 private:
+    lua_State *L;
     uint32 _length;
     class buffer *_buff;
+
+    int32 unpack_node( const struct stream_protocol::node *nd );
+    int32 pack_node( const struct stream_protocol::node *nd,int32 index );
+    int32 pack_element( const struct stream_protocol::node *nd,int32 index );
 };
 
 #undef LDR

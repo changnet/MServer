@@ -1,7 +1,6 @@
 #ifndef __LSTREAM_SOCKET_H__
 #define __LSTREAM_SOCKET_H__
 
-#include "lstream.h"
 #include "lsocket.h"
 
 class lstream_socket :public lsocket
@@ -32,10 +31,6 @@ public:
     inline int32 file_description () { return lsocket::file_description (); }
 private:
     int32 is_message_complete();
-
-    int32 unpack_node( const struct stream_protocol::node *nd );
-    int32 pack_node( const struct stream_protocol::node *nd,int32 index );
-    int32 pack_element( const struct stream_protocol::node *nd,int32 index );
 };
 
 #endif /* __LSTREAM_SOCKET_H__ */
