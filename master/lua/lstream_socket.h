@@ -9,7 +9,9 @@ public:
     ~lstream_socket();
     explicit lstream_socket( lua_State *L );
 
-    int32 pack_client();
+    int32 s2c_send();
+    int32 s2s_send();
+    int32 c2s_send();
     int32 unpack_client();
 
     int32 pack_server();

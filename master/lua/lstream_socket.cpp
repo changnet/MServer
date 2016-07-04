@@ -2,6 +2,7 @@
 
 #include "ltools.h"
 #include "lclass.h"
+#include "net/packet.h"
 #include "../ev/ev_def.h"
 
 lstream_socket::lstream_socket( lua_State *L )
@@ -16,19 +17,7 @@ lstream_socket::~lstream_socket()
 
 int32 lstream_socket::is_message_complete()
 {
-    uint32 size = _recv.data_size();
-    if ( size < sizeof(uint16) ) return 0;
-
-    uint16 plt = 0;
-    if ( _recv.read( plt,false ) < 0 )
-    {
-        ERROR( "is_message_complete read length error" );
-        return 0;
-    }
-
-    if ( size < sizeof(uint16) + plt ) return 0;
-
-    return  1;
+    return stream_packet::is_complete( _recv );
 }
 
 void lstream_socket::listen_cb( int32 revents )
@@ -79,139 +68,7 @@ void lstream_socket::listen_cb( int32 revents )
     }
 }
 
-int32 lstream_socket::pack_element( const struct stream_protocol::node *nd,int32 index )
-{
-    assert( "stream_socket::pack_element NULL node",nd );
-
-    switch( nd->_type )
-    {
-        case stream_protocol::node::INT8:
-        {
-            if ( !lua_isinteger( L,index ) )
-            {
-                ERROR( "field %s expect integer,got %s",
-                    nd->_name,lua_typename(L, lua_type(L, index)) );
-                return -1;
-            }
-            int32 val = lua_tointeger( L,index );
-            if ( val < SCHAR_MIN || val > SCHAR_MAX )
-            {
-                ERROR( "field %s out range of int8:%d",nd->_name,val );
-                return -1;
-            }
-            _send.write( static_cast<uint8>(val) );
-        }break;
-        case stream_protocol::node::ARRAY:
-        {
-            uint16 count = 0;
-            int32 stack_type = lua_type( L,index );
-            if ( LUA_TNIL == stack_type )
-            {
-                /* 如果是空数组，可以不写对应字段 */
-                _send.write( count );
-                return 0;
-            }
-            if ( !lua_istable( L,index ) )
-            {
-                ERROR( "field %s expect table,got %s",
-                    nd->_name,lua_typename(L, lua_type(L, index)) );
-                return -1;
-            }
-
-            int32 top = lua_gettop(L);
-            if ( top > 256 )
-            {
-                ERROR( "stream array recursion too deep,stack overflow" );
-                return -1;
-            }
-            luaL_checkstack( L,2,"stream array recursion too deep,stack overflow" );
-
-            char *vp = _send.virtual_buffer();
-            _send.write( count );  /* 先占据数组长度的位置 */
-
-            lua_pushnil( L );
-            while ( lua_next( L,index ) )
-            {
-                const struct stream_protocol::node *child = nd->_child;
-                if ( lua_istable( L,top + 2 ) )
-                {
-                    /* { {id=99,cnt=1},{id=98,cnt=2} } 带key复杂写法 */
-                    /* lua_gettop(L) not -1 */
-                    if ( pack_node( child,top + 2 ) < 0 )
-                    {
-                        lua_pop( L,2 );
-                        return -1;
-                    }
-                }
-                else
-                {
-                    /* { 99,98,97,96 } 只有一个字段的简单数组写法 */
-                    if ( child->_next )
-                    {
-                        ERROR( "field %s(it's a array) has more than one field,"
-                            "element must be table",nd->_name );
-                        return -1;
-                    }
-
-                    if ( pack_element( child,top + 2 ) < 0 )
-                    {
-                        lua_pop( L,2 );
-                        return -1;
-                    }
-                }
-
-                lua_pop( L,1 );
-                ++count;
-            }
-            _send.update_virtual_buffer( vp,count ); // 更新数组长度
-        }break;
-        default :
-            FATAL( "unknow stream protocol type:%d",nd->_type );
-            break;
-    }
-
-    return 0;
-}
-
-/* luaL_checkstack luaL_error 做了longjump,如果失败，这个函数不会返回 */
-/* !!! 请保证所有对缓冲区的修改能自动回滚 !!! */
-int32 lstream_socket::pack_node( const struct stream_protocol::node *nd,int32 index )
-{
-    if ( !nd )    return 0; /* empty protocol */
-
-    int32 top = lua_gettop( L );
-    if ( top > 256 )
-    {
-        return luaL_error( L,"protocol recursion too deep,stack overflow" );
-    }
-    luaL_checkstack( L,1,"protocol recursion too deep,stack overflow" );
-
-    const struct stream_protocol::node *tmp = nd;
-    while( tmp )
-    {
-        lua_pushstring( L,tmp->_name );
-        lua_rawget( L,index );
-
-        if ( tmp->_optional && lua_isnil(L,-1 ) )
-        {
-            tmp = tmp->_next;
-            continue; /* optional field */
-        }
-
-        if ( pack_element( tmp,top + 1 ) < 0 )
-        {
-            ERROR( "pack_node %s fail",tmp->_name );
-            return -1;
-        }
-
-        lua_pop( L,1 ); /* pop last value */
-        tmp = tmp->_next;
-    }
-
-    return 0;
-}
-
-int32 lstream_socket::pack_client()
+int32 lstream_socket::s2c_send()
 {
     class lstream **stream = static_cast<class lstream **>(
         luaL_checkudata( L, 1, "Stream" ) );
@@ -225,31 +82,26 @@ int32 lstream_socket::pack_client()
     if ( (struct stream_protocol::node *)-1 == nd )
     {
         return luaL_error( L,
-            "lstream_socket::pack_client no such protocol %d-%d",mod,func );
+            "lstream_socket::s2c_send no such protocol %d-%d",mod,func );
     }
 
-    _send.virtual_zero();
+    if ( _send.length() > xxx )
+    {
+        return luaL_error( L,"lstream_socket::s2c_send buffer too large" );
+    }
 
-    uint16 size = 0;
-    char *vp = _send.virtual_buffer();
-    _send.write( size );
-
-    _send.write( mod );
-    _send.write( func );
-    _send.write( eno  );
+    struct s2c_header header;
+    header._mod   = mod;
+    header._func  = func;
+    header._errno = eno;
 
      /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
-    if ( pack_node( nd,5 ) < 0 )
+    class stream_packet packet( _send,L );
+    if ( packet.pack( header,nd,5 ) < 0 )
     {
         ERROR( "pack_client protocol %d-%d fail",mod,func );
         return luaL_error( L,"pack_client protocol %d-%d fail",mod,func );
     }
-
-    size = static_cast<uint16>( _send.virtual_size() );
-    _send.update_virtual_buffer( vp,size );
-
-    _send.virtual_flush();
-    this->pending_send();
 
     return 0;
 }
@@ -296,69 +148,4 @@ int32 lstream_socket::unpack_client()
     }
 
     return 3;
-}
-
-int32 lstream_socket::unpack_node( const struct stream_protocol::node *nd )
-{
-    /* empty protocol,push nil instead of empty table */
-    if ( !nd ) return 0;
-
-    if ( lua_gettop( L ) > 256 )
-    {
-        ERROR( "lstream_socket::unpack_node stack over max" );
-        return -1;
-    }
-
-    luaL_checkstack( L,3,"protocol recursion too deep,stack overflow" );
-
-    lua_newtable( L );
-    int32 top = lua_gettop( L );
-    while ( nd )
-    {
-        const char * key = nd->_name;
-        lua_pushstring( L,key );
-
-        switch( nd->_type )
-        {
-            case stream_protocol::node::INT8:
-            {
-                int8 val = 0;
-                if ( _recv.read( val ) < 0 )
-                {
-                    lua_pop( L,2 );
-                    ERROR( "lstream_socket::unpack_node read int8 error" );
-                    return -1;
-                }
-                lua_pushinteger( L,val );
-            }break;
-            case stream_protocol::node::ARRAY:
-            {
-                assert( "empty array found",nd->_child );
-                uint16 size = 0;
-                if ( _recv.read( size ) < 0 )
-                {
-                    lua_pop( L,2 );
-                    ERROR( "lstream_socket::unpack_node read array size error" );
-                    return -1;
-                }
-
-                for ( int i = 0;i < size;i ++ )
-                {
-                    if ( unpack_node( nd->_child ) < 0 )
-                    {
-                        lua_pop( L,2 );
-                        return -1;
-                    }
-                }
-            }break;
-            default:
-                FATAL( "lstream_socket::unpack_node unknow type:%d",nd->_type );
-                return -1;
-                break;
-        }
-
-        lua_rawset( L,top );
-    }
-
-    return 1;
 }

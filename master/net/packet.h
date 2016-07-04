@@ -54,9 +54,11 @@ struct s2s_header
 
 #endif
 
-#include "lstream.h"
+#include "net/buffer.h"
 
 struct lua_State;
+struct stream_protocol;
+
 class stream_packet
 {
 public:
@@ -65,13 +67,7 @@ public:
     {
         _length = 0;
     }
-
-    inline void flush();
-    {
-        assert( "stream packet overflow",_length < UINT16_MAX );
-        memcpy( _buff + _buff._size,_length,sizeof(packet_length) );
-        _buff._size += _length;
-    }
+    ~stream_packet() {}
 
     /* 强制转换为s2c_header s2s_header等 */
     T *operator T*()
@@ -80,7 +76,23 @@ public:
 
         return reinterpret_cast<T *>( _buff._size );
     }
-public:
+
+    static inline int is_complete( const class buffer *buff )
+    {
+        uint32 size = _recv.data_size();
+        if ( size < sizeof(packet_length) ) return 0;
+
+        packet_length plt = 0;
+        LDR( _buff + _pos,plt,T );
+
+        if ( size < sizeof(uint16) + plt ) return 0;
+
+        return  1;
+    }
+
+    template< class T >
+    int pack( T &header,const struct stream_protocol *proto,int index );
+private:
     /* 写入一个基础变量，返回在packet处的位置 */
     template< class T >
     int32 write( const T &val )
@@ -116,25 +128,15 @@ public:
     }
 
     template < class T >
-    int32 read( T &val,bool move = true )
+    int32 read( T &val )
     {
-        if ( data_size() < sizeof(T) )
-        {
-            return -1;
-        }
+        if ( data_size() < sizeof(T) ){ return -1; }
 
         LDR( _buff + _pos,val,T );
 
-        if ( move ) _pos += sizeof(T);
+        _pos += sizeof(T);
 
         return sizeof(T);
-    }
-
-    template < class T >
-    void update_buffer( uint32 pos,const T &val )
-    {
-        assert( "update_buffer:pos illegal",pos < _length && pos + sizeof(T) <= _length );
-        memcpy( _buff + _buff._size + pos,&val,sizeof(T) );
     }
 private:
     lua_State *L;
