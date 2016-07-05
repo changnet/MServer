@@ -110,7 +110,7 @@ int32 lstream_socket::s2c_send()
  * 这个接口少调用luaL_error，尽量保证能返回到lua层处理异常
  * 否则可能导致协议分发接口while循环中止，无法断开非法链接
  */
-int32 lstream_socket::unpack_client()
+int32 lstream_socket::c2s_recv()
 {
     class lstream **stream = static_cast<class lstream **>(
             luaL_checkudata( L, 1, "Stream" ) );

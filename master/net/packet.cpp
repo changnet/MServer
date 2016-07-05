@@ -1,6 +1,7 @@
 #include <lua.hpp>
 
 #include "packet.h"
+#include "stream/stream_protocol.h"
 
 template< class T >
 int stream_packet::pack( T &header,const struct stream_protocol *proto,int index )

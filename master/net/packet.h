@@ -69,14 +69,6 @@ public:
     }
     ~stream_packet() {}
 
-    /* 强制转换为s2c_header s2s_header等 */
-    T *operator T*()
-    {
-        assert( "stream_packet header error",_buff._size + sizeof(T) <= _buff._len );
-
-        return reinterpret_cast<T *>( _buff._size );
-    }
-
     static inline int is_complete( const class buffer *buff )
     {
         uint32 size = _recv.data_size();
