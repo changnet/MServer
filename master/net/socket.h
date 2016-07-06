@@ -59,10 +59,10 @@ public:
         _recv.reserved();
 
         assert( "socket recv buffer length <= 0",_recv._len - _recv._size > 0 );
-        int32 len = ::read( _w.fd,_recv._buff + recv._size,_recv._len - _recv._size );
+        int32 len = ::read( _w.fd,_recv._buff + _recv._size,_recv._len - _recv._size );
         if ( len > 0 )
         {
-            recv._size += len;
+            _recv._size += len;
         }
         return len;
     }
@@ -91,6 +91,7 @@ protected:
     int32 _sending;
     buffer _recv;
     buffer _send;
+    uint32 _max_buff;
 
     void pending_send();
 private:

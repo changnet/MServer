@@ -1,24 +1,6 @@
 #include <lua.hpp>
 
 #include "packet.h"
-#include "stream/stream_protocol.h"
-
-template< class T >
-int stream_packet::pack( T &header,const struct stream_protocol *proto,int index )
-{
-    assert( "empty packet",_buff && L );
-    write( header );
-
-    if ( pack_node( proto,index) < 0 ) return -1;
-
-    assert( "packet length zero",_length > 0 );
-
-    /* 更新缓冲区结构 */
-    memcpy( _buff + _buff._size,_length,sizeof(packet_length) );
-    _buff._size += _length;
-
-    return 0;
-}
 
 int32 stream_packet::unpack_node( const struct stream_protocol::node *nd )
 {
@@ -45,7 +27,7 @@ int32 stream_packet::unpack_node( const struct stream_protocol::node *nd )
             case stream_protocol::node::INT8:
             {
                 int8 val = 0;
-                if ( _recv.read( val ) < 0 )
+                if ( read( val ) < 0 )
                 {
                     lua_pop( L,2 );
                     ERROR( "stream_packet::unpack_node read int8 error" );
@@ -56,8 +38,8 @@ int32 stream_packet::unpack_node( const struct stream_protocol::node *nd )
             case stream_protocol::node::ARRAY:
             {
                 assert( "empty array found",nd->_child );
-                uint16 size = 0;
-                if ( _recv.read( size ) < 0 )
+                array_header size = 0;
+                if ( read( size ) < 0 )
                 {
                     lua_pop( L,2 );
                     ERROR( "stream_packet::unpack_node read array size error" );
@@ -173,8 +155,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
             luaL_checkstack( L,2,"stream array recursion too deep,stack overflow" );
 
             /* 先占据数组长度的位置 */
-            uint32 length = _length;
-            _send.write( count );
+            uint32 pos = write( count );
 
             lua_pushnil( L );
             while ( lua_next( L,index ) )
@@ -211,7 +192,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                 ++count;
             }
             // 更新数组长度
-            memcpy( _buff._size + length,count,sizeof(array_header) );
+            memcpy( _buff + _buff->_size + pos,&count,sizeof(array_header) );
         }break;
         default :
             FATAL( "unknow stream protocol type:%d",nd->_type );

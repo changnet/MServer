@@ -25,13 +25,13 @@ public:
     inline void clear() { _pos = _size = 0; }
 
     /* 有效数据大小 */
-    inline uint32 data_size() { return _size - _pos; }
+    inline uint32 data_size() const { return _size - _pos; }
 
     /* 总大小 */
-    inline uint32 length() { return _len; }
+    inline uint32 length() const { return _len; }
 
     /* 有效的缓冲区指针 */
-    operator char *() { return _buff + _pos };
+    operator char *() { return _buff + _pos; }
 public:
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长

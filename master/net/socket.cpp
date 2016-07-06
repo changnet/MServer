@@ -6,6 +6,7 @@
 socket::socket()
 {
     _sending = 0;
+    _max_buff = 0;
 }
 
 socket::~socket()
@@ -20,7 +21,7 @@ void socket::stop()
         leventloop::instance()->remove_sending( _sending );
         _sending = 0;
 
-        _send.send( _w.fd );  /* flush data before close */
+        send();  /* flush data before close */
     }
 
     if ( _w.fd > 0 )

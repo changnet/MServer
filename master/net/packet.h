@@ -4,6 +4,8 @@
 /* 网络通信消息包头格式定义
  */
 
+#include "../global/global.h"
+
 #pragma pack (push, 1)
 
 typedef uint16 array_header;
@@ -54,28 +56,27 @@ struct s2s_header
 
 #endif
 
-#include "net/buffer.h"
+#include "../net/buffer.h"
+#include "../stream/stream_protocol.h"
 
 struct lua_State;
-struct stream_protocol;
 
 class stream_packet
 {
 public:
     explicit stream_packet( class buffer *buff,lua_State *L )
-        : _buff( buff ),L(L)
+        : L(L),_length(0),_buff( buff )
     {
-        _length = 0;
     }
     ~stream_packet() {}
 
-    static inline int is_complete( const class buffer *buff )
+    static inline int32 is_complete( const class buffer *buff )
     {
-        uint32 size = _recv.data_size();
+        uint32 size = buff->data_size();
         if ( size < sizeof(packet_length) ) return 0;
 
         packet_length plt = 0;
-        LDR( _buff + _pos,plt,T );
+        LDR( (char*)buff,plt,packet_length );
 
         if ( size < sizeof(uint16) + plt ) return 0;
 
@@ -83,16 +84,19 @@ public:
     }
 
     template< class T >
-    int pack( T &header,const struct stream_protocol *proto,int index );
+    int pack( T &header,const struct stream_protocol::node *proto,int32 index );
+
+    template< class T >
+    int unpack( T &header,const struct stream_protocol::node *proto );
 private:
     /* 写入一个基础变量，返回在packet处的位置 */
     template< class T >
     int32 write( const T &val )
     {
-        _buff.reserved( sizeof(T),_length );
+        _buff->reserved( sizeof(T),_length );
 
-        int32 pos = _length
-        STR( _buff + _buff._size + _length,val,T );
+        int32 pos = _length;
+        STR( _buff + _buff->_size + _length,val,T );
         _length += sizeof(T);
 
         return pos;
@@ -106,14 +110,14 @@ private:
         string_header header = static_cast<uint16>( len );
         assert( "string length over UINT16_MAX",header == len );
 
-        _buff.reserved( sizeof(string_header) + len,_length );
+        _buff->reserved( sizeof(string_header) + len,_length );
         int32 pos = _length;
 
         /* 先写入长度 */
-        STR( _buff + _buff._size + _length,header,string_header );
+        STR( _buff + _buff->_size + _length,header,string_header );
         _length += sizeof(string_header);
 
-        memcpy( _buff + _buff._size + _length,ptr,len );
+        memcpy( _buff + _buff->_size + _length,ptr,len );
         _length += len;
 
         return pos;
@@ -122,11 +126,11 @@ private:
     template < class T >
     int32 read( T &val )
     {
-        if ( data_size() < sizeof(T) ){ return -1; }
+        if ( _buff->data_size() < sizeof(T) ){ return -1; }
 
-        LDR( _buff + _pos,val,T );
+        LDR( _buff + _buff->_pos - _length,val,T );
 
-        _pos += sizeof(T);
+        _length -= sizeof(T);
 
         return sizeof(T);
     }
@@ -142,5 +146,40 @@ private:
 
 #undef LDR
 #undef STR
+
+template< class T >
+int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int32 index )
+{
+    assert( "empty packet",_buff && L );
+    write( header );
+
+    if ( pack_node( proto,index) < 0 ) return -1;
+
+    assert( "packet length zero",_length > 0 );
+
+    /* 更新缓冲区结构 */
+    memcpy( _buff + _buff->_size,&_length,sizeof(packet_length) );
+    _buff->_size += _length;
+
+    return 0;
+}
+
+template< class T >
+int stream_packet::unpack( T &header,const struct stream_protocol::node *proto )
+{
+    int32 old_top = lua_gettop( L );
+
+    /* 先处理长度，这样即使在unpack_node中longjump也不会造成缓冲区数据错误 */
+    _length = header->_length;
+    (_buff->_pos) += sizeof( packet_length ) + _length;
+    if ( unpack_node( proto ) < 0 )
+    {
+        return -1;
+    }
+
+    assert( "unpack protocol stack dirty",old_top + 1 == lua_gettop( L ) );
+
+    return 0;
+}
 
 #endif /* __PACKET_H__ */

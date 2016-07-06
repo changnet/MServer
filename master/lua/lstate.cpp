@@ -248,8 +248,8 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::set_on_disconnect>("set_on_disconnect");
     lc.def<&lstream_socket::file_description> ("file_description" );
 
-    lc.def<&lstream_socket::pack_client  >   ("pack_client"   );
-    lc.def<&lstream_socket::unpack_client  >   ("unpack_client"   );
+    lc.def<&lstream_socket::s2c_send  >   ("s2c_send"   );
+    lc.def<&lstream_socket::c2s_recv  >   ("c2s_recv"   );
 
     return 0;
 }

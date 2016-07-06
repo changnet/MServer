@@ -2,7 +2,8 @@
 
 #include "ltools.h"
 #include "lclass.h"
-#include "net/packet.h"
+#include "lstream.h"
+#include "../net/packet.h"
 #include "../ev/ev_def.h"
 
 lstream_socket::lstream_socket( lua_State *L )
@@ -17,7 +18,7 @@ lstream_socket::~lstream_socket()
 
 int32 lstream_socket::is_message_complete()
 {
-    return stream_packet::is_complete( _recv );
+    return stream_packet::is_complete( &_recv );
 }
 
 void lstream_socket::listen_cb( int32 revents )
@@ -85,7 +86,7 @@ int32 lstream_socket::s2c_send()
             "lstream_socket::s2c_send no such protocol %d-%d",mod,func );
     }
 
-    if ( _send.length() > xxx )
+    if ( _send.length() > _max_buff )
     {
         return luaL_error( L,"lstream_socket::s2c_send buffer too large" );
     }
@@ -96,7 +97,7 @@ int32 lstream_socket::s2c_send()
     header._errno = eno;
 
      /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
-    class stream_packet packet( _send,L );
+    class stream_packet packet( &_send,L );
     if ( packet.pack( header,nd,5 ) < 0 )
     {
         ERROR( "pack_client protocol %d-%d fail",mod,func );
@@ -115,37 +116,34 @@ int32 lstream_socket::c2s_recv()
     class lstream **stream = static_cast<class lstream **>(
             luaL_checkudata( L, 1, "Stream" ) );
 
-    uint16 size = 0;
-    if ( _recv.read( size ) < 0 )
+    c2s_header *header = NULL;
+    if ( _recv.data_size() < sizeof(c2s_header) )
     {
-        ERROR( "unpack_client:read size error" );
+        ERROR( "c2s_recv:size error" );
         return 0;
     }
 
-    uint16 mod  = 0;
-    uint16 func = 0;
+    header = reinterpret_cast<c2s_header*>( (char *)_recv );
 
-    if ( _recv.read( mod ) < 0 || _recv.read( func ) < 0 )
-    {
-        ERROR( "unpack_client:read module or function error:%d-%d",mod,func );
-        return 0;
-    }
-
-    const struct stream_protocol::node *nd = (*stream)->find( mod,func );
+    const struct stream_protocol::node *nd = (*stream)->find( header->_mod,header->_func );
     if ( (struct stream_protocol::node *)-1 == nd )
     {
-        ERROR( "lstream_socket::unpack_client no such protocol:%d-%d",mod,func );
+        ERROR( "c2s_recv no such protocol:%d-%d",header->_mod,header->_func );
         return 0;
     }
 
-    lua_pushinteger( L,mod );
-    lua_pushinteger( L,func );
+    lua_pushinteger( L,header->_mod );
+    lua_pushinteger( L,header->_func );
 
-    if ( unpack_node( nd ) < 0 )
+    class stream_packet packet( &_recv,L );
+    if ( packet.unpack( header,nd ) < 0 )
     {
-        ERROR( "unpack_client: protocol %d-%d error",mod,func );
+        ERROR( "c2s_recv:unpack protocol %d-%d error",header->_mod,header->_func );
         return 0;
     }
+
+    /* 如果这时缓冲区刚好是空的，尽快处理悬空区，这时代价最小，不用拷贝内存 */
+    if ( _recv.data_size() <= 0 ) _recv.clear();
 
     return 3;
 }
