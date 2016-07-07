@@ -17,7 +17,7 @@ end
 function Stream_server_connection:on_message()
     local stream = srv_stream_mgr:get_stream()
 
-    local mod,func,packet = self.conn:unpack_client( stream )
+    local mod,func,packet = self.conn:c2s_recv( stream )
     print( mod,func )
     vd( packet )
 end

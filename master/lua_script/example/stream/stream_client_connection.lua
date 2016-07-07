@@ -29,7 +29,7 @@ function Stream_client_connection:send_test()
     }
     packet.weeks = { 0,1,2,3,4,5,6 }
 
-    self.conn:packet_client( 1,1,0,packet )
+    self.conn:c2s_send( stream,1,1,packet )
 end
 
 function Stream_client_connection:on_connection( status )
@@ -43,8 +43,10 @@ function Stream_client_connection:on_connection( status )
 end
 
 function Stream_client_connection:on_message()
-    local str = self.conn:read_string()
-    print( str )
+    local stream = clt_stream_mgr:get_stream()
+    local mod,func,packet = self.conn:s2c_recv( stream )
+    print( mod,func )
+    vd( packet )
 end
 
 function Stream_client_connection:on_disconnect()

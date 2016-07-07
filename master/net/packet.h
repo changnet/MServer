@@ -78,7 +78,8 @@ public:
         packet_length plt = 0;
         LDR( buff->data(),plt,packet_length );
 
-        if ( size < sizeof(uint16) + plt ) return 0;
+        /* 长度不包括本身 */
+        if ( size < sizeof(packet_length) + plt ) return 0;
 
         return  1;
     }
@@ -150,15 +151,20 @@ private:
 template< class T >
 int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int32 index )
 {
+    assert( "packet length dirty",0 == _length );
     assert( "empty packet",_buff && L );
-    write( header );
+
+    _buff->reserved( sizeof(T) );
+    memcpy( _buff->data(),&header,sizeof(T) );
+    _length += sizeof(T);
 
     if ( pack_node( proto,index) < 0 ) return -1;
 
-    assert( "packet length zero",_length > 0 );
+    /* 更新包长度，不包括自身长度 */
+    packet_length length = _length - sizeof(packet_length);
+    assert( "packet length zero",length > 0 );
 
-    /* 更新缓冲区结构 */
-    memcpy( _buff + _buff->_size,&_length,sizeof(packet_length) );
+    memcpy( _buff->_buff + _buff->_size,&length,sizeof(packet_length) );
     _buff->_size += _length;
 
     return 0;
@@ -177,7 +183,8 @@ int stream_packet::unpack( T &header,const struct stream_protocol::node *proto )
         return -1;
     }
 
-    assert( "unpack protocol stack dirty",old_top + 1 == lua_gettop( L ) );
+    assert( "unpack protocol stack dirty",
+        proto ? old_top + 1 == lua_gettop( L ) : old_top == lua_gettop( L ) );
 
     return 0;
 }

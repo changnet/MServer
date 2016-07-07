@@ -4,6 +4,8 @@
 
 -- 客户端二进制流协议管理
 
+local Stream = require "Stream"
+
 local Client_stream_mgr = oo.singleton( nil,... )
 
 function Client_stream_mgr:__init()
