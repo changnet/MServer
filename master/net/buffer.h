@@ -31,7 +31,10 @@ public:
     inline uint32 length() const { return _len; }
 
     /* 有效的缓冲区指针 */
-    operator char *() { return _buff + _pos; }
+    char *data() const { return _buff + _pos; }
+
+    /* 强制转换操作符 */
+    //operator char *() { return _buff; }
 public:
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长

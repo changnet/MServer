@@ -162,7 +162,7 @@ int32 lhttp_socket::is_message_complete()
     uint32 dsize = _recv.data_size();
     assert( "http socket is_message_complete empty",dsize > 0 );
 
-    int32 nparsed = http_parser_execute( _parser,&settings,(char *)_recv,dsize );
+    int32 nparsed = http_parser_execute( _parser,&settings,_recv.data(),dsize );
 
     _recv.clear(); // http_parser不需要旧缓冲区
     /* web_socket报文,暂时不用回调到上层.无论当前报文是否结束,返回false等待数据报文 */

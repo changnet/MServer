@@ -192,7 +192,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                 ++count;
             }
             // 更新数组长度
-            memcpy( _buff + _buff->_size + pos,&count,sizeof(array_header) );
+            memcpy( _buff->_buff + _buff->_size + pos,&count,sizeof(array_header) );
         }break;
         default :
             FATAL( "unknow stream protocol type:%d",nd->_type );

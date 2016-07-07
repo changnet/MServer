@@ -76,7 +76,7 @@ public:
         if ( size < sizeof(packet_length) ) return 0;
 
         packet_length plt = 0;
-        LDR( (char*)buff,plt,packet_length );
+        LDR( buff->data(),plt,packet_length );
 
         if ( size < sizeof(uint16) + plt ) return 0;
 
@@ -96,7 +96,7 @@ private:
         _buff->reserved( sizeof(T),_length );
 
         int32 pos = _length;
-        STR( _buff + _buff->_size + _length,val,T );
+        STR( _buff->_buff + _buff->_size + _length,val,T );
         _length += sizeof(T);
 
         return pos;
@@ -128,7 +128,7 @@ private:
     {
         if ( _buff->data_size() < sizeof(T) ){ return -1; }
 
-        LDR( _buff + _buff->_pos - _length,val,T );
+        LDR( _buff->_buff + _buff->_pos - _length,val,T );
 
         _length -= sizeof(T);
 

@@ -123,7 +123,7 @@ int32 lstream_socket::c2s_recv()
         return 0;
     }
 
-    header = reinterpret_cast<c2s_header*>( (char *)_recv );
+    header = reinterpret_cast<c2s_header*>( _recv.data() );
 
     const struct stream_protocol::node *nd = (*stream)->find( header->_mod,header->_func );
     if ( (struct stream_protocol::node *)-1 == nd )

@@ -21,6 +21,7 @@ function Http_url_connection:__init()
 end
 
 function Http_url_connection:on_message()
+    local url  = self.conn:get_url()
     local body = self.conn:get_body()
 
     print( body )
@@ -57,21 +58,20 @@ local str_tb =
     'Upgrade-Insecure-Requests: 1\r\n',
     --'User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)'
     --'User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36\r\n',
-    'Accept-Encoding: gzip, deflate, sdch\r\n',
+    --'Accept-Encoding: gzip, deflate, sdch\r\n',
     'Accept-Language: zh-CN,zh;q=0.8\r\n\r\n',
 }
 
---local str = table.concat( str_tb )
+local str = table.concat( str_tb )
 
 function Http_url_connection:on_connection()
-    PLOG( "url connect ok" )
-    --local str = "GET /redis_test.php?data=data=1|ABC||YY|2016-03-29%2010:42:25|1|你好|吗 HTTP/1.1\r\nHost: mytest.com\r\nConnection: close\r\nAccept: */*\r\n\r\n";
-    local str = "GET /redis_test.php?data=%E4%BD%A0%E5%8F%B7%E6%98%AF%E5%90%A6%7C%E4%BD%A0%E7%8E%A9%E5%84%BF HTTP/1.1\r\nUser-Agent: curl/7.26.0\r\nHost: mytest.com\r\nAccept: */*\r\n\r\n"
+    PLOG( "url connect ok!! GET send" )
+
     self.conn:send( str )
 end
 
 -- 阻塞获取，考虑到服务器起服后连后台域名解析并不常用，不提供多线程
-local ip1,ip2 = util.gethostbyname( "mytest.com" )
+local ip1,ip2 = util.gethostbyname( "www.baidu.com" )
 
 local url = Http_url_connection()
 
@@ -81,8 +81,8 @@ local url = Http_url_connection()
   应该是cn.bing.com才有返回
 3.很多网站收到的是二进制压缩包，chrome会进行解压的，但这里不行。这时get_body通常都拿不
   到数据，但底层是有收到数据的，头部有Content-Encoding: gzip、
-  Transfer-Encoding: chunked字段。
-  cn.bing.com、www.163.com、www.oschina.net都是这样，但www.baidu.com不压缩
+  Transfer-Encoding: chunked字段，部分网站通过设置Accept-Encoding可解决。
+  cn.bing.com、www.163.com、www.oschina.net都是返回二进制，但www.baidu.com不压缩
 ]]
 -- connect是不支持域名解析的，只能写ip
 url:connect( ip1,80 )
