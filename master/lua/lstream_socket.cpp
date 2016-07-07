@@ -140,7 +140,7 @@ int32 lstream_socket::c2s_recv()
     lua_pushinteger( L,header->_func );
 
     class stream_packet packet( &_recv,L );
-    if ( packet.unpack( header,nd ) < 0 )
+    if ( packet.unpack( *header,nd ) < 0 )
     {
         ERROR( "c2s_recv:unpack protocol %d-%d error",header->_mod,header->_func );
         return 0;
@@ -222,7 +222,7 @@ int32 lstream_socket::s2c_recv()
     lua_pushinteger( L,header->_func );
 
     class stream_packet packet( &_recv,L );
-    if ( packet.unpack( header,nd ) < 0 )
+    if ( packet.unpack( *header,nd ) < 0 )
     {
         ERROR( "s2c_recv:unpack protocol %d-%d error",header->_mod,header->_func );
         return 0;

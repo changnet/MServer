@@ -22,51 +22,64 @@ int32 stream_packet::unpack_node( const struct stream_protocol::node *nd )
         const char * key = nd->_name;
         lua_pushstring( L,key );
 
-        switch( nd->_type )
+        if ( unpack_element( nd ) < 0 )
         {
-            case stream_protocol::node::INT8:
-            {
-                int8 val = 0;
-                if ( read( val ) < 0 )
-                {
-                    lua_pop( L,2 );
-                    ERROR( "stream_packet::unpack_node read int8 error" );
-                    return -1;
-                }
-                lua_pushinteger( L,val );
-            }break;
-            case stream_protocol::node::ARRAY:
-            {
-                assert( "empty array found",nd->_child );
-                array_header size = 0;
-                if ( read( size ) < 0 )
-                {
-                    lua_pop( L,2 );
-                    ERROR( "stream_packet::unpack_node read array size error" );
-                    return -1;
-                }
-
-                for ( int i = 0;i < size;i ++ )
-                {
-                    if ( unpack_node( nd->_child ) < 0 )
-                    {
-                        lua_pop( L,2 );
-                        return -1;
-                    }
-                }
-            }break;
-            default:
-                FATAL( "stream_packet::unpack_node unknow type:%d",nd->_type );
-                return -1;
-                break;
+            lua_pop( L,2 );
+            return -1;
         }
 
         lua_rawset( L,top );
+        nd = nd->_next;
     }
 
     return 1;
 }
 
+int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
+{
+    assert( "unpack_element NULL node",nd );
+    switch( nd->_type )
+    {
+        case stream_protocol::node::INT8:
+        {
+            int8 val = 0;
+            if ( read( val ) < 0 )
+            {
+                ERROR( "stream_packet::unpack_element read int8 error" );
+                return -1;
+            }
+            lua_pushinteger( L,val );
+        }break;
+        case stream_protocol::node::ARRAY:
+        {
+            const struct stream_protocol::node *child = nd->_child;
+            assert( "empty array found",child );
+            array_header size = 0;
+            if ( read( size ) < 0 )
+            {
+                ERROR( "stream_packet::unpack_element read array size error" );
+                return -1;
+            }
+
+            lua_newtable( L );
+            for ( int i = 0;i < size;i ++ )
+            {
+                if ( unpack_element( child ) < 0 )
+                {
+                    lua_pop( L,2 );
+                    return -1;
+                }
+                child = child->_next;
+            }
+        }break;
+        default:
+            FATAL( "stream_packet::unpack_element unknow type:%d",nd->_type );
+            return -1;
+            break;
+    }
+
+    return 0;
+}
 
 /* luaL_checkstack luaL_error 做了longjump,如果失败，这个函数不会返回 */
 /* !!! 请保证所有对缓冲区的修改能自动回滚 !!! */

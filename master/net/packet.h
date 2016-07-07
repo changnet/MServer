@@ -127,9 +127,13 @@ private:
     template < class T >
     int32 read( T &val )
     {
-        if ( _buff->data_size() < sizeof(T) ){ return -1; }
+        const char *buff_pos = _buff->_buff + _buff->_pos - _length;
 
-        LDR( _buff->_buff + _buff->_pos - _length,val,T );
+        assert( "buffer over border",buff_pos > _buff->_buff );
+
+        if (  _length < sizeof(T) ){ return -1; }
+
+        LDR( buff_pos,val,T );
 
         _length -= sizeof(T);
 
@@ -141,6 +145,7 @@ private:
     class buffer *_buff;
 
     int32 unpack_node( const struct stream_protocol::node *nd );
+    int32 unpack_element( const struct stream_protocol::node *nd );
     int32 pack_node( const struct stream_protocol::node *nd,int32 index );
     int32 pack_element( const struct stream_protocol::node *nd,int32 index );
 };
@@ -176,8 +181,10 @@ int stream_packet::unpack( T &header,const struct stream_protocol::node *proto )
     int32 old_top = lua_gettop( L );
 
     /* 先处理长度，这样即使在unpack_node中longjump也不会造成缓冲区数据错误 */
-    _length = header->_length;
+    _length = header._length;
     (_buff->_pos) += sizeof( packet_length ) + _length;
+
+    _length -= sizeof( T ) - sizeof( packet_length );
     if ( unpack_node( proto ) < 0 )
     {
         return -1;
