@@ -52,8 +52,7 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
         }break;
         case stream_protocol::node::ARRAY:
         {
-            const struct stream_protocol::node *child = nd->_child;
-            assert( "empty array found",child );
+            assert( "empty array found",nd->_child );
             array_header size = 0;
             if ( read( size ) < 0 )
             {
@@ -61,15 +60,15 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
                 return -1;
             }
 
-            lua_newtable( L );
+            lua_createtable( L,size,0 );
             for ( int i = 0;i < size;i ++ )
             {
-                if ( unpack_element( child ) < 0 )
+                if ( unpack_node( nd->_child ) < 0 )
                 {
-                    lua_pop( L,2 );
+                    lua_pop( L,1 );
                     return -1;
                 }
-                child = child->_next;
+                lua_rawseti( L,-2,i + 1);
             }
         }break;
         default:
@@ -78,7 +77,7 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
             break;
     }
 
-    return 0;
+    return 1;
 }
 
 /* luaL_checkstack luaL_error 做了longjump,如果失败，这个函数不会返回 */
