@@ -15,13 +15,25 @@ OPTIMIZE = -O0
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 # https://gcc.gnu.org/projects/cxx-status.html
 CC = g++ -std=c++03
+
+#include path
 INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
-	-I/usr/local/include/libbson-1.0 -I/usr/include/mysql
-LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml
+	-I/usr/local/include/libbson-1.0 -I/usr/include/mysql -I./deps/aho-corasick
+
+#libaray path
+LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml \
+	-L./deps/aho-corasick
+
+#link libaray
 LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
-	-lhttp_parser -llua_rapidxml
+	-lhttp_parser -llua_rapidxml -lacism
+
+#output directory
 ODIR = bin
+
+#source directory
 SDIR = ./
+
 TARGET = $(ODIR)/master
 MKDIR = mkdir -p
 
@@ -32,7 +44,7 @@ MKDIR = mkdir -p
 _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o llog.o\
 	lstream_socket.o lutil.o log.o lobj_counter.o main.o stream_protocol.o\
-	lstream.o packet.o
+	lstream.o packet.o lacism.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 #Makefile中，要使用tab键，不能用空格替代
@@ -48,7 +60,6 @@ $(ODIR)/%.o: $(SDIR)/ev/%.cpp
 
 $(ODIR)/%.o: $(SDIR)/log/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
@@ -78,7 +89,7 @@ $(ODIR)/%.o: $(SDIR)/stream/%.cpp
 #$? 表示比目标还要新的依赖文件列表
 
 all: dir $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) deps/aho-corasick/msutil.o $(LLIB)
 
 dir:
 	$(MKDIR) $(ODIR)
@@ -90,12 +101,14 @@ clean_all:
 	$(MAKE) -C deps/lua_parson clean
 	$(MAKE) -C deps/lua_rapidxml clean
 	$(MAKE) -C deps/http-parser clean
+	$(MAKE) -C deps/aho-corasick clean
 	rm -rf $(ODIR)/*
 
 build_all:
 	$(MAKE) -C deps/lua_parson all
 	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package
+	$(MAKE) -C deps/aho-corasick all
 	$(MAKE) -C . all
 
 test:

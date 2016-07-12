@@ -11,16 +11,36 @@
  * 3)根据参数将_SYMBOL sym = ps.symv[(uint8_t)*cp++];中的*cp++转换为小写即可
  */
 
-#include <msutil.h>
+#include <lua.hpp>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <acism.h>
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #include "../global/global.h"
 
 class lacism
 {
 public:
+    ~lacism();
+    explicit lacism( lua_State *L );
+
     int32 scan(); /* 如果指定回调参数，则搜索到时调用回调函数 */
     int32 load_from_file();
+
+    static int32 on_match( int32 strnum, int32 textpos, MEMREF const *pattv );
+private:
+    lua_State *L;
+
+    MEMREF *_pattv;
+    ACISM *_psp;
 };
 
 #endif /* __LACISM_H__ */

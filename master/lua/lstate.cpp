@@ -9,6 +9,7 @@
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
+#include "lacism.h"
 #include "lstream.h"
 #include "leventloop.h"
 #include "lhttp_socket.h"
@@ -64,6 +65,7 @@ int32 luaopen_ev    ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
 int32 luaopen_log   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
+int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
 int32 luaopen_stream( lua_State *L );
 int32 luaopen_http_socket( lua_State *L );
@@ -129,6 +131,7 @@ void lstate::open_cpp()
     luaopen_sql   (L);
     luaopen_log   (L);
     luaopen_timer (L);
+    luaopen_acism (L);
     luaopen_mongo (L);
     luaopen_stream(L);
     luaopen_http_socket(L);
@@ -265,6 +268,16 @@ int32 luaopen_stream( lua_State *L )
     lc.def<&lstream::tag_array_begin>  ( "tag_array_begin"  );
     lc.def<&lstream::protocol_end  >  ( "protocol_end"  );
     lc.def<&lstream::protocol_begin>  ( "protocol_begin"  );
+
+    return 0;
+}
+
+int32 luaopen_acism( lua_State *L )
+{
+    lclass<lacism> lc(L,"Acism");
+
+    lc.def<&lacism::scan> ( "scan" );
+    lc.def<&lacism::load_from_file> ( "load_from_file" );
 
     return 0;
 }
