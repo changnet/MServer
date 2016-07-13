@@ -50,37 +50,37 @@ OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 #Makefile中，要使用tab键，不能用空格替代
 
 $(ODIR)/%.o: $(SDIR)/global/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/ev/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/log/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/lua/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/net/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mysql/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/thread/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/mongo/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 $(ODIR)/%.o: $(SDIR)/stream/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖
 #$^ 所有的依赖目标的集合。以空格分隔。如果在依赖目标中有多个重复的,那个这个变量会去除重复的依赖目标,只保留一份。
@@ -89,7 +89,7 @@ $(ODIR)/%.o: $(SDIR)/stream/%.cpp
 #$? 表示比目标还要新的依赖文件列表
 
 all: dir $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) deps/aho-corasick/msutil.o $(LLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
 
 dir:
 	$(MKDIR) $(ODIR)

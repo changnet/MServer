@@ -47,13 +47,13 @@ typedef int (ACISM_ACTION)(int strnum, int textpos, void *context);
 // *state should initially be (0).
 
 int acism_more(ACISM const*, MEMREF const text,
-                 ACISM_ACTION *fn, void *fndata, int *state);
+                 ACISM_ACTION *fn, void *fndata, int *state,int case_sensitive);
 
 static inline int acism_scan(ACISM const*psp, MEMREF const text,
-                               ACISM_ACTION *fn, void *fndata)
+                               ACISM_ACTION *fn, void *fndata,int case_sensitive)
 {
     int state = 0;
-    return acism_more(psp, text, fn, fndata, &state);
+    return acism_more(psp, text, fn, fndata, &state,case_sensitive);
 }
 
 void   acism_save(FILE*, ACISM const*);

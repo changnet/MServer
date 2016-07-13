@@ -1,5 +1,5 @@
 #include "msutil.h"
-#include <errno.h> 
+#include <errno.h>
 #include <fcntl.h> // open(2)
 #include "tap.h"
 #include "acism.h"
@@ -61,7 +61,7 @@ main(int argc, char **argv)
 
         int fd = open(argv[1], O_RDONLY);
         if (fd < 0) return fprintf(stderr, "acism_x: %s: cannot open: %s\n", argv[2], strerror(errno));
-        
+
         static char buf[1024*1024];
         MEMREF text = {buf, 0};
         int state = 0;
@@ -69,7 +69,7 @@ main(int argc, char **argv)
         if (argc > 3) matchfp = fopen(argv[3], "w");
         while (0 < (text.len = read(fd, buf, sizeof buf))) {
             t = tick();
-            (void)acism_more(psp, text, (ACISM_ACTION*)on_match, pattv, &state);
+            (void)acism_more(psp, text, (ACISM_ACTION*)on_match, pattv, &state,1);
             elapsed += tick() - t;
             putc('.', stderr);
         }

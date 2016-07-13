@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+//#include <msutil.h>
 #include <acism.h>
 
 #ifdef __cplusplus
@@ -26,21 +27,37 @@ extern "C" {
 
 #include "../global/global.h"
 
+typedef struct { char *ptr; size_t len; }	MEMBUF;
+
 class lacism
 {
 public:
     ~lacism();
     explicit lacism( lua_State *L );
 
-    int32 scan(); /* 如果指定回调参数，则搜索到时调用回调函数 */
+    int32 scan();
+    int32 replace();
     int32 load_from_file();
 
     static int32 on_match( int32 strnum, int32 textpos, MEMREF const *pattv );
 private:
+    /* 这几个函数在acism.h或msutil.h中都有类似的函数
+     * 重写原因如下:
+     * 1.原来的函数不支持大小写检测,slurp无法处理空文件...
+     * 2.在原代码上修改导致第三方库难升级维护
+     * 3.msutil根本就不在libacism.a中，需要改动makefile
+     * 4.大小写的处理是在acism.c上修改的，原因是_acism.h中的写法在C++中编译不过
+     */
+    int32 acism_slurp( const char *path );
+    MEMREF *acism_refsplit( char *text, char sep, int *pcount );
+private:
     lua_State *L;
 
-    MEMREF *_pattv;
     ACISM *_psp;
+    MEMBUF _patt;
+    int32 _loaded;
+    MEMREF *_pattv;
+    int32 _case_sensitive;
 };
 
 #endif /* __LACISM_H__ */
