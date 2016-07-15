@@ -139,8 +139,14 @@ int32 lacism::replace()
     _memrpl.rpl_len  = 0;
     _memrpl.text_pos = 0;
 
-    int32 textpos = acism_scan( _psp, text,
+    (void)acism_scan( _psp, text,
         (ACISM_ACTION*)lacism::on_replace, this, _case_sensitive );
+
+    if ( 0 == _memrpl.rpl_len )
+    {
+        lua_pushvalue( L,1 );
+        return 1;
+    }
 
     if ( _memrpl.text_pos < text.len )
     {
@@ -156,11 +162,6 @@ int32 lacism::replace()
 
         _memrpl.text_pos = text.len;
         _memrpl.rpl_len += str_len;
-    }
-
-    if ( textpos < 0 )
-    {
-        return luaL_error( L,"lacism::replace over max string length" );
     }
 
     lua_pushlstring( L,_memrpl.rpl_text,_memrpl.rpl_len );
