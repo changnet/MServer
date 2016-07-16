@@ -13,15 +13,6 @@ namespace std
 
 #include "../global/global.h"
 
-/*
-stream只做流协议解析
-另一种方法是做lbuffer,那么read、write、reserver在buffer做就行了，不需要stream.注意设定一个最大buffer值
-那么要把buffer改成纯buffer类，把recv、send放到socket，(这时又怎样访问buffer指针呢？buffer变量设计为public)
-
-leventloop与socket之前的耦合过高，直接访问了socket的buffer、sending标志位，看能不能优化一下
-把三级socket、lsocket、http_socket改为继承，设计并完成stream_socket
-*/
-
 /* 协议中数组最大递归 */
 #define MAX_RECURSION_ARRAY 8
 
@@ -46,6 +37,7 @@ public:
             UINT64 =  8,
             STRING =  9,
             ARRAY  = 10,
+            DOUBLE = 11,
             TMAX
         } node_t;
 

@@ -2,6 +2,22 @@
 
 #include "packet.h"
 
+#ifdef __i386__ /* __x86_64__ */
+    /* pack_element用int64检测传入的数据大小来判断是否越界，32bit系统可能有效率问题 */
+    #pragma message "32bit platform supported,but 64bit will be more efficient!"
+#endif
+
+#define READ_VALUE(T)                                                         \
+    do{                                                                       \
+        T val = 0;                                                            \
+        if ( read( val ) < 0 )                                                \
+        {                                                                     \
+            ERROR( "stream_packet::unpack_element read %s error",nd->_name ); \
+            return -1;                                                        \
+        }                                                                     \
+        lua_pushinteger( L,val );                                             \
+    }while(0)
+
 int32 stream_packet::unpack_node( const struct stream_protocol::node *nd )
 {
     /* empty protocol,push nil instead of empty table */
@@ -42,13 +58,56 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
     {
         case stream_protocol::node::INT8:
         {
-            int8 val = 0;
-            if ( read( val ) < 0 )
+            READ_VALUE( int8 );
+        }break;
+        case stream_protocol::node::UINT8:
+        {
+            READ_VALUE( uint8 );
+        }break;
+        case stream_protocol::node::INT16:
+        {
+            READ_VALUE( int16 );
+        }break;
+        case stream_protocol::node::UINT16:
+        {
+            READ_VALUE( uint16 );
+        }break;
+        case stream_protocol::node::INT32:
+        {
+            READ_VALUE( int32 );
+        }break;
+        case stream_protocol::node::UINT32:
+        {
+            READ_VALUE( uint32 );
+        }break;
+        case stream_protocol::node::INT64:
+        {
+            READ_VALUE( int64 );
+        }break;
+        case stream_protocol::node::UINT64:
+        {
+            READ_VALUE( uint64 );
+        }break;
+        case stream_protocol::node::DOUBLE:
+        {
+            READ_VALUE( double );
+        }break;
+        case stream_protocol::node::STRING:
+        {
+            string_header header = 0;
+            if ( read( header ) < 0 )
             {
-                ERROR( "stream_packet::unpack_element read int8 error" );
+                ERROR( "stream_packet::unpack_element read string header error" );
                 return -1;
             }
-            lua_pushinteger( L,val );
+
+            char *str = NULL;
+            if ( read( &str,header ) < 0 )
+            {
+                ERROR( "stream_packet::unpack_element read string error" );
+                return -1;
+            }
+            lua_pushlstring( L,str,header );
         }break;
         case stream_protocol::node::ARRAY:
         {
@@ -133,13 +192,146 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                     nd->_name,lua_typename(L, lua_type(L, index)) );
                 return -1;
             }
-            int32 val = lua_tointeger( L,index );
+            int64 val = lua_tointeger( L,index );
             if ( val < SCHAR_MIN || val > SCHAR_MAX )
             {
-                ERROR( "field %s out range of int8:%d",nd->_name,val );
+                ERROR( "field %s out range of int8:%ld",nd->_name,val );
+                return -1;
+            }
+            write( static_cast<int8>(val) );
+        }break;
+        case stream_protocol::node::UINT8:
+        {
+            if ( !lua_isinteger( L,index ) )
+            {
+                ERROR( "field %s expect integer,got %s",
+                    nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
+            }
+            int64 val = lua_tointeger( L,index );
+            if ( val < 0 || val > UCHAR_MAX )
+            {
+                ERROR( "field %s out range of uint8:%ld",nd->_name,val );
                 return -1;
             }
             write( static_cast<uint8>(val) );
+        }break;
+        case stream_protocol::node::INT16:
+        {
+            if ( !lua_isinteger( L,index ) )
+            {
+                ERROR( "field %s expect integer,got %s",
+                    nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
+            }
+            int64 val = lua_tointeger( L,index );
+            if ( val < SHRT_MIN || val > SHRT_MAX )
+            {
+                ERROR( "field %s out range of int16:%ld",nd->_name,val );
+                return -1;
+            }
+            write( static_cast<int16>(val) );
+        }break;
+        case stream_protocol::node::UINT16:
+        {
+            if ( !lua_isinteger( L,index ) )
+            {
+                ERROR( "field %s expect integer,got %s",
+                    nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
+            }
+            int64 val = lua_tointeger( L,index );
+            if ( val < 0 || val > USHRT_MAX )
+            {
+                ERROR( "field %s out range of uint16:%ld",nd->_name,val );
+                return -1;
+            }
+            write( static_cast<uint16>(val) );
+        }break;
+        case stream_protocol::node::INT32:
+        {
+            if ( !lua_isinteger( L,index ) )
+            {
+                ERROR( "field %s expect integer,got %s",
+                    nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
+            }
+            int64 val = lua_tointeger( L,index );
+            if ( val < INT_MIN || val > INT_MAX )
+            {
+                ERROR( "field %s out range of int32:%ld",nd->_name,val );
+                return -1;
+            }
+            write( static_cast<int32>(val) );
+        }break;
+        case stream_protocol::node::UINT32:
+        {
+            if ( !lua_isinteger( L,index ) )
+            {
+                ERROR( "field %s expect integer,got %s",
+                    nd->_name,lua_typename(L, lua_type(L, index)) );
+                return -1;
+            }
+            int64 val = lua_tointeger( L,index );
+            if ( val < 0 || val > UINT_MAX )
+            {
+                ERROR( "field %s out range of uint32:%ld",nd->_name,val );
+                return -1;
+            }
+            write( static_cast<uint32>(val) );
+        }break;
+        case stream_protocol::node::INT64:
+        {
+            /* lua 5.1 可能会用number来表示int64 */
+            if ( !lua_isnumber( L,index ) )
+            {
+                ERROR( "field %s expect number,got %s",
+                    nd->_name,lua_typename(L,lua_type(L,index)) );
+                return -1;
+            }
+            int64 val = static_cast<int64>( lua_tonumber( L,index ) );
+            write( static_cast<int64>(val) );
+        }break;
+        case stream_protocol::node::UINT64:
+        {
+            if ( !lua_isnumber( L,index ) )
+            {
+                ERROR( "field %s expect number,got %s",
+                    nd->_name,lua_typename(L,lua_type(L,index)) );
+                return -1;
+            }
+            uint64 val = static_cast<uint64>( lua_tonumber( L,index ) );
+            write( static_cast<uint64>(val) );
+        }break;
+        case stream_protocol::node::DOUBLE:
+        {
+            if ( !lua_isnumber( L,index ) )
+            {
+                ERROR( "field %s expect number,got %s",
+                    nd->_name,lua_typename(L,lua_type(L,index)) );
+                return -1;
+            }
+            double val = static_cast<double>( lua_tonumber( L,index ) );
+            write( static_cast<double>(val) );
+        }break;
+        case stream_protocol::node::STRING:
+        {
+            if ( !lua_isstring( L,index ) )
+            {
+                ERROR( "field %s expect string,got %s",
+                    nd->_name,lua_typename(L,lua_type(L,index)) );
+                return -1;
+            }
+
+            /* 这里允许发送二进制数据，不仅仅是以0结束的字符串 */
+            size_t len = 0;
+            const char *str = lua_tolstring( L,index,&len );
+            if ( len > USHRT_MAX )
+            {
+                ERROR( "field %s over max length",nd->_name );
+                return -1;
+            }
+            write( str,len );
         }break;
         case stream_protocol::node::ARRAY:
         {

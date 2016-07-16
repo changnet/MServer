@@ -108,7 +108,7 @@ private:
     {
         assert( "write_string illegal argument",ptr && len > 0 );
 
-        string_header header = static_cast<uint16>( len );
+        string_header header = static_cast<string_header>( len );
         assert( "string length over UINT16_MAX",header == len );
 
         _buff->reserved( sizeof(string_header) + len,_length );
@@ -138,6 +138,22 @@ private:
         _length -= sizeof(T);
 
         return sizeof(T);
+    }
+
+    int32 read( char **str,string_header header )
+    {
+        assert( "packet read string NULL pointer",str );
+        char *buff_pos = _buff->_buff + _buff->_pos - _length;
+
+        assert( "buffer over border",buff_pos > _buff->_buff );
+
+        if (  _length < header ){ return -1; }
+
+        *str = buff_pos;
+
+        _length -= header;
+
+        return header;
     }
 private:
     lua_State *L;

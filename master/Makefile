@@ -89,7 +89,7 @@ $(ODIR)/%.o: $(SDIR)/stream/%.cpp
 #$? 表示比目标还要新的依赖文件列表
 
 all: dir $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
 
 dir:
 	$(MKDIR) $(ODIR)
