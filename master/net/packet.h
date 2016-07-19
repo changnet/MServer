@@ -51,8 +51,8 @@ struct s2s_header
 #else
 
 /* memcpy 在所有平台上都是安全的，但效率稍慢 */
-# define LDR(from,to,type) (memcpy( &to,from,sizeof type ))
-# define STR(to,from,type) (memcpy( to,&from,sizeof type ))
+# define LDR(from,to,type) (memcpy( &to,from,sizeof(type) ))
+# define STR(to,from,type) (memcpy( to,&from,sizeof(type) ))
 
 #endif
 
@@ -104,7 +104,7 @@ private:
     }
 
     /* 写入字符串(二进制也当作字符串处理) */
-    inline int32 write( const char *ptr,const int32 len )
+    inline int32 write( const char *ptr,const size_t len )
     {
         assert( "write_string illegal argument",ptr && len > 0 );
 
@@ -115,10 +115,10 @@ private:
         int32 pos = _length;
 
         /* 先写入长度 */
-        STR( _buff + _buff->_size + _length,header,string_header );
+        STR( _buff->_buff + _buff->_size + _length,header,string_header );
         _length += sizeof(string_header);
 
-        memcpy( _buff + _buff->_size + _length,ptr,len );
+        memcpy( _buff->_buff + _buff->_size + _length,ptr,len );
         _length += len;
 
         return pos;

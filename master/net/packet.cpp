@@ -90,7 +90,13 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
         }break;
         case stream_protocol::node::DOUBLE:
         {
-            READ_VALUE( double );
+            double val = 0;
+            if ( read( val ) < 0 )
+            {
+                ERROR( "stream_packet::unpack_element read %s error",nd->_name );
+                return -1;
+            }
+            lua_pushnumber( L,val );
         }break;
         case stream_protocol::node::STRING:
         {

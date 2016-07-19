@@ -51,6 +51,9 @@ function Stream_client_connection:send_test()
     packet.string = "Stream_client_connection:send_test"
 
     self.conn:c2s_send( stream,1,1,packet )
+
+    print( string.format("double max %f",limits.DOUBLE_MAX) )
+    print( string.format("double min %f",limits.DOUBLE_MIN) )
 end
 
 function Stream_client_connection:on_connection( status )

@@ -20,6 +20,9 @@ function Stream_server_connection:on_message()
     local mod,func,packet = self.conn:c2s_recv( stream )
     print( mod,func )
     vd( packet )
+    print( string.format("uint64 max %u",packet.uint64_max) )
+    print( string.format("double max %f",packet.double_max) )
+    print( string.format("double min %f",packet.double_min) )
 end
 
 function Stream_server_connection:on_disconnect()
