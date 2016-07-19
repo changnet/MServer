@@ -47,6 +47,8 @@ _OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
 	lstream.o packet.o lacism.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
+DEPS := $(OBJS:.o=.d)
+
 #Makefile中，要使用tab键，不能用空格替代
 
 $(ODIR)/%.o: $(SDIR)/global/%.cpp
@@ -90,6 +92,9 @@ $(ODIR)/%.o: $(SDIR)/stream/%.cpp
 
 all: dir $(OBJS)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
+
+#The dash at the start of '-include' tells Make to continue when the .d file doesn't exist (e.g. on first compilation)
+-include $(DEPS)
 
 dir:
 	$(MKDIR) $(ODIR)

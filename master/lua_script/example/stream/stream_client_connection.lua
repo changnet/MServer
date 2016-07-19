@@ -6,6 +6,8 @@ local clt_stream_mgr = require "example.stream.client_stream_mgr"
 local Stream_socket = require "Stream_socket"
 local Stream_client_connection = oo.class( nil,... )
 
+local limits = require "global.limits"
+
 function Stream_client_connection:connect( ip,port )
     local conn = Stream_socket()
     conn:set_self_ref( self )
@@ -21,13 +23,32 @@ end
 function Stream_client_connection:send_test()
     local stream = clt_stream_mgr:get_stream()
 
-    local packet = {}
-    packet.day = 5
-    packet.award =
-    {
-        { id = 9,cnt = 6,ty = 7 }
-    }
-    packet.weeks = { 0,1,2,3,4,5,6 }
+    local numbs = {}
+    numbs.int8_max = limits.INT8_MAX
+    numbs.uint8_max = limits.UINT8_MAX
+    numbs.int16_max = limits.INT16_MAX
+    numbs.uint16_max = limits.UINT16_MAX
+    numbs.int32_max  = limits.INT32_MAX
+    numbs.uint32_max = limits.UINT32_MAX
+    numbs.int64_max = limits.INT64_MAX
+    numbs.uint64_max = limits.UINT64_MAX
+    numbs.double_max = limits.DOUBLE_MAX
+
+    numbs.int8_min = limits.INT8_MIN
+    numbs.uint8_min = 0
+    numbs.int16_min = limits.INT16_MIN
+    numbs.uint16_min = 0
+    numbs.int32_min  = limits.INT32_MIN
+    numbs.uint32_min = 0
+    numbs.int64_min = limits.INT64_MIN
+    numbs.uint64_min = 0
+    numbs.double_min = limits.DOUBLE_MIN
+
+    local packet = table.shallow_copy( numbs )
+
+    packet.single = { 0,1,2,3,4,5,6 }
+    packet.array = { numbs }
+    packet.string = "Stream_client_connection:send_test"
 
     self.conn:c2s_send( stream,1,1,packet )
 end

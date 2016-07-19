@@ -160,6 +160,7 @@ int32 stream_packet::pack_node( const struct stream_protocol::node *nd,int32 ind
 
         if ( tmp->_optional && lua_isnil(L,-1 ) )
         {
+            lua_pop( L,1 ); /* pop last value */
             tmp = tmp->_next;
             continue; /* optional field */
         }
@@ -174,6 +175,7 @@ int32 stream_packet::pack_node( const struct stream_protocol::node *nd,int32 ind
         tmp = tmp->_next;
     }
 
+    assert( "stream packet:pack node stack dirty",top == lua_gettop(L) );
     return 0;
 }
 
