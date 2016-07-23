@@ -47,13 +47,14 @@ function Stream_client_connection:send_test()
     local packet = table.shallow_copy( numbs )
 
     packet.single = { 0,1,2,3,4,5,6 }
-    packet.array = { numbs }
+    packet.array = {}
+    for i = 1,5 do
+        table.insert( packet.array,numbs )
+    end
     packet.string = "Stream_client_connection:send_test"
 
     self.conn:c2s_send( stream,1,1,packet )
-
-    print( string.format("double max %f",limits.DOUBLE_MAX) )
-    print( string.format("double min %f",limits.DOUBLE_MIN) )
+    self.conn:c2s_send( stream,1,1,packet )
 end
 
 function Stream_client_connection:on_connection( status )

@@ -328,6 +328,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                 ERROR( "out of buffer" ); return -1;
             }
 
+            int32 _cnt = 0;
             lua_pushnil( L );
             while ( lua_next( L,index ) )
             {
@@ -360,8 +361,13 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                 }
 
                 lua_pop( L,1 );
-                ++count;
+                if ( ++_cnt > USHRT_MAX )
+                {
+                    lua_pop( L,2 );
+                    ERROR( "too many array elements" );return -1;
+                }
             }
+            count = static_cast<array_header>(_cnt);
             // 更新数组长度
             memcpy( _buff->_buff + _buff->_size + pos,&count,sizeof(array_header) );
         }break;

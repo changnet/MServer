@@ -183,7 +183,7 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
         return -1;
     }
 
-    memcpy( _buff->data(),&header,sizeof(T) );
+    memcpy( _buff->_buff + _buff->_size,&header,sizeof(T) );
     _length += sizeof(T);
 
     if ( pack_node( proto,index) < 0 ) return -1;
