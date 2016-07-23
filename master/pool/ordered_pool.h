@@ -11,22 +11,22 @@
 
 #include "../global/global.h"
 
-template<uint32 ordered_size,uint32 chunk_size = 512>
+template<uint32 ordered_size>
 class ordered_pool
 {
 public:
     ordered_pool();
     ~ordered_pool();
 
-    char *ordered_malloc( uint32 n = 1 );
-    void ordered_free  ( char * const ptr,uint32 n );
     void purge();
+    void ordered_free  ( char * const ptr,uint32 n );
+    char *ordered_malloc( uint32 n = 1,uint32 chunk_size = 512 );
 private:
     typedef void * NODE;
 
     NODE *anpts;    /* 空闲内存块链表数组,倍数n为下标 */
     uint32 anptmax;
-    
+
     void *block_list; /* 从系统分配的内存块链表 */
 
     /* 一块内存的指针是ptr,这块内存的前几个字节储存了下一块内存的指针地址
@@ -37,7 +37,7 @@ private:
     {
         return *(static_cast<void **>(ptr));
     }
-    
+
     /* 把从系统获取的内存分成小块存到链表中
      * 这些内存块都是空的，故在首部创建一个指针，存放指向下一块空闲内存的地址
      * @ptr           内存块起始地址
@@ -48,6 +48,10 @@ private:
     inline void *segregate( void * const ptr,uint32 partition_sz,
         uint32 npartition,uint32 n )
     {
+        assert( "ordered_pool array over border",anptmax > n );
+        /* in case ordered_malloc new only one chunk */
+        if ( npartition <= 0 ) return anpts[n];
+
         char *last = static_cast<char *>(ptr);
         for ( uint32 i = 1;i < npartition;i ++ )
         {
@@ -61,15 +65,15 @@ private:
     }
 };
 
-template<uint32 ordered_size,uint32 chunk_size>
-ordered_pool<ordered_size,chunk_size>::ordered_pool()
+template<uint32 ordered_size>
+ordered_pool<ordered_size>::ordered_pool()
     : anpts(NULL),anptmax(0),block_list(NULL)
 {
     assert( "ordered size less then sizeof(void *)",ordered_size >= sizeof(void *) );
 }
 
-template<uint32 ordered_size,uint32 chunk_size>
-ordered_pool<ordered_size,chunk_size>::~ordered_pool()
+template<uint32 ordered_size>
+ordered_pool<ordered_size>::~ordered_pool()
 {
     if ( anpts )
         delete []anpts;
@@ -80,18 +84,18 @@ ordered_pool<ordered_size,chunk_size>::~ordered_pool()
     {
         char *_ptr = static_cast<char *>(block_list);
         block_list = nextof( block_list );
-        
+
         delete []_ptr;
     }
-    
+
     block_list = NULL;
 }
 
 /* 分配N*ordered_size内存 */
-template<uint32 ordered_size,uint32 chunk_size>
-char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
+template<uint32 ordered_size>
+char *ordered_pool<ordered_size>::ordered_malloc( uint32 n,uint32 chunk_size )
 {
-    assert( "ordered_malloc n <= 0",n > 0 );
+    assert( "ordered_malloc size <= 0",n > 0 && chunk_size > 0 );
     array_resize( NODE,anpts,anptmax,n+1,array_zero );
     void *ptr = anpts[n];
     if ( ptr )
@@ -99,7 +103,7 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
         anpts[n] = nextof( ptr );
         return static_cast<char *>(ptr);
     }
-    
+
     /* 每次固定申请chunk_size块大小为(n*ordered_size)内存
      * 不用指数增长方式因为内存分配过大可能会失败
      */
@@ -114,7 +118,7 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
      */
     nextof( block ) = block_list;
     block_list = block;
-    
+
     /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
     segregate( block + sizeof(void *) + partition_sz,partition_sz,
         chunk_size - 1,n );
@@ -122,8 +126,8 @@ char *ordered_pool<ordered_size,chunk_size>::ordered_malloc( uint32 n )
 }
 
 /* 归还内存 */
-template<uint32 ordered_size,uint32 chunk_size>
-void ordered_pool<ordered_size,chunk_size>::ordered_free( char * const ptr,uint32 n )
+template<uint32 ordered_size>
+void ordered_pool<ordered_size>::ordered_free( char * const ptr,uint32 n )
 {
     assert( "illegal ordered free",anptmax >= n && ptr );
     nextof( ptr ) = anpts[n];
@@ -131,8 +135,8 @@ void ordered_pool<ordered_size,chunk_size>::ordered_free( char * const ptr,uint3
 }
 
 /* 释放从系统申请的内存，包括已经分配出去的，慎用 */
-template<uint32 ordered_size,uint32 chunk_size>
-void ordered_pool<ordered_size,chunk_size>::purge()
+template<uint32 ordered_size>
+void ordered_pool<ordered_size>::purge()
 {
     if ( anpts )
         delete []anpts;
@@ -143,10 +147,10 @@ void ordered_pool<ordered_size,chunk_size>::purge()
     {
         char *_ptr = static_cast<char *>(block_list);
         block_list = nextof( block_list );
-        
+
         delete []_ptr;
     }
-    
+
     block_list = NULL;
 }
 

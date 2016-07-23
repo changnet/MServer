@@ -8,6 +8,10 @@ buffer::buffer()
     _size  = 0;
     _len   = 0;
     _pos   = 0;
+
+    /* 与客户端通信的默认设定 */
+    _max_buff = BUFFER_LARGE;
+    _min_buff = BUFFER_CHUNK;
 }
 
 buffer::~buffer()
@@ -24,9 +28,12 @@ buffer::~buffer()
 }
 
 /* 追加数据 */
-void buffer::append( const char *data,uint32 len )
+bool buffer::append( const char *data,uint32 len )
 {
-    reserved( len );
+    if ( !reserved( len ) ) return false;
+
     memcpy( _buff + _size,data,len );
     _size += len;
+
+    return true;
 }

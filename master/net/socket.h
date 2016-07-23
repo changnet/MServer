@@ -43,9 +43,10 @@ public:
 
     const char *address();
     void start( int32 fd,int32 events );
-    void append( const char *data,uint32 len );
     int32 listen( const char *host,int32 port );
     int32 connect( const char *host,int32 port );
+
+    bool append( const char *data,uint32 len ) __attribute__ ((warn_unused_result));
 
     template<class K, void (K::*method)(int32)>
     void set (K *object)
@@ -56,7 +57,7 @@ public:
 
     inline int32 recv()
     {
-        _recv.reserved();
+        if ( _recv.reserved() < 0 ) return -1;
 
         assert( "socket recv buffer length <= 0",_recv._len - _recv._size > 0 );
         int32 len = ::read( _w.fd,_recv._buff + _recv._size,_recv._len - _recv._size );
@@ -88,10 +89,9 @@ public:
 
     friend class leventloop;
 protected:
-    int32 _sending;
     buffer _recv;
     buffer _send;
-    uint32 _max_buff;
+    int32 _sending;
 
     void pending_send();
 private:

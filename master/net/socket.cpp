@@ -5,8 +5,7 @@
 
 socket::socket()
 {
-    _sending = 0;
-    _max_buff = 0;
+    _sending  = 0;
 }
 
 socket::~socket()
@@ -173,11 +172,13 @@ const char *socket::address()
     return inet_ntoa(addr.sin_addr);
 }
 
-void socket::append( const char *data,uint32 len )
+bool socket::append( const char *data,uint32 len )
 {
-    _send.append( data,len );
+    if ( !_send.append( data,len ) ) return false;
 
     pending_send();
+
+    return true;
 }
 
 int32 socket::listen( const char *host,int32 port )

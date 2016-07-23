@@ -42,7 +42,10 @@
 
 /* buffer chunk size for socket recv or send */
 #define BUFFER_CHUNK    8192
-#define BUFFER_MAX      65536
+/* 大型buffer缓冲区分界线，采用不同的内存分配策略 */
+#define BUFFER_LARGE    65535
+/* 小型buffer每次分配的chunk数量 */
+#define BUFFER_CHUNK_SIZE 512
 
 /* sql buffer chunk size */
 #define SQL_CHUNK    64
@@ -53,6 +56,9 @@
 
 /* count C++ object which push to lua */
 #define OBJ_COUNTER
+
+/* 单个包最大长度，与包头数据类型定义有关 */
+#define MAX_PACKET_LEN    65535
 
 //////////////////////////////TCP KEEP ALIVE////////////////////////////////////
 /* 是否开启tcp keepalive，一旦开启，所有accept、connect的socket都会启用 */

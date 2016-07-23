@@ -108,7 +108,10 @@ int32 lsocket::send()
         return luaL_error( L,"socket::send nothing to send" );
     }
 
-    socket::append( sz,len );
+    if ( !socket::append( sz,len ) )
+    {
+        return luaL_error( L,"socket::send out of buffer" );
+    }
 
     return 0;
 }
@@ -135,7 +138,7 @@ void lsocket::message_cb( int32 revents )
     {
         if ( EAGAIN != errno && EWOULDBLOCK != errno )
         {
-            ERROR( "socket message_cb error:%s\n",strerror(errno) );
+            ERROR( "socket recv error(maybe out of buffer):%s\n",strerror(errno) );
             on_disconnect();
         }
         return;

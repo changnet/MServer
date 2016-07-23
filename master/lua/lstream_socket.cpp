@@ -88,11 +88,6 @@ int32 lstream_socket::s2c_send()
         luaL_checktype( L,5,LUA_TTABLE );
     }
 
-    if ( _send.length() > _max_buff )
-    {
-        return luaL_error( L,"lstream_socket::s2c_send buffer too large" );
-    }
-
     struct s2c_header header;
     header._mod   = mod;
     header._func  = func;
@@ -152,7 +147,6 @@ int32 lstream_socket::c2s_recv()
     return 3;
 }
 
-
 int32 lstream_socket::c2s_send()
 {
     class lstream **stream = static_cast<class lstream **>(
@@ -169,11 +163,6 @@ int32 lstream_socket::c2s_send()
     else if ( nd )
     {
         luaL_checktype( L,4,LUA_TTABLE );
-    }
-
-    if ( _send.length() > _max_buff )
-    {
-        return luaL_error( L,"lstream_socket::s2c_send buffer too large" );
     }
 
     struct c2s_header header;

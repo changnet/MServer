@@ -92,9 +92,9 @@ public:
 private:
     /* 写入一个基础变量，返回在packet处的位置 */
     template< class T >
-    int32 write( const T &val )
+    int32 __attribute__ ((warn_unused_result)) write( const T &val )
     {
-        _buff->reserved( sizeof(T),_length );
+        if ( !_buff->reserved( sizeof(T),_length ) ) return -1;
 
         int32 pos = _length;
         STR( _buff->_buff + _buff->_size + _length,val,T );
@@ -104,6 +104,7 @@ private:
     }
 
     /* 写入字符串(二进制也当作字符串处理) */
+    __attribute__ ((warn_unused_result))
     inline int32 write( const char *ptr,const size_t len )
     {
         assert( "write_string illegal argument",ptr && len > 0 );
@@ -111,7 +112,7 @@ private:
         string_header header = static_cast<string_header>( len );
         assert( "string length over UINT16_MAX",header == len );
 
-        _buff->reserved( sizeof(string_header) + len,_length );
+        if ( !_buff->reserved( sizeof(string_header) + len,_length ) ) return -1;
         int32 pos = _length;
 
         /* 先写入长度 */
@@ -125,7 +126,7 @@ private:
     }
 
     template < class T >
-    int32 read( T &val )
+    int32 __attribute__ ((warn_unused_result)) read( T &val )
     {
         const char *buff_pos = _buff->_buff + _buff->_pos - _length;
 
@@ -140,6 +141,7 @@ private:
         return sizeof(T);
     }
 
+    __attribute__ ((warn_unused_result))
     int32 read( char **str,string_header header )
     {
         assert( "packet read string NULL pointer",str );
@@ -175,11 +177,22 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
     assert( "packet length dirty",0 == _length );
     assert( "empty packet",_buff && L );
 
-    _buff->reserved( sizeof(T) );
+    if ( !_buff->reserved( sizeof(T) ) )
+    {
+        ERROR( "packet out of buffer" );
+        return -1;
+    }
+
     memcpy( _buff->data(),&header,sizeof(T) );
     _length += sizeof(T);
 
     if ( pack_node( proto,index) < 0 ) return -1;
+
+    if ( _length > MAX_PACKET_LEN )
+    {
+        ERROR( "packet over max length" );
+        return -1;
+    }
 
     /* 更新包长度，不包括自身长度 */
     packet_length length = _length - sizeof(packet_length);
