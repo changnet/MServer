@@ -277,6 +277,7 @@ int32 luaopen_acism( lua_State *L )
     lclass<lacism> lc(L,"Acism");
 
     lc.def<&lacism::scan> ( "scan" );
+    lc.def<&lacism::replace> ( "replace" );
     lc.def<&lacism::load_from_file> ( "load_from_file" );
 
     return 0;

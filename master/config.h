@@ -68,4 +68,7 @@
 /* 是否开启 TCP_USER_TIMEOUT,一旦开启，所有accept、connect的socket都会启用,内核2.6.37 */
 #define _TCP_USER_TIMEOUT    60000    //TCP_USER_TIMEOUT,milliseconds
 
+/* acism 替换缓冲区默认大小 */
+#define ACISM_REPLACE_DEFAULT  2048
+
 #endif /* __CONFIG_H__ */

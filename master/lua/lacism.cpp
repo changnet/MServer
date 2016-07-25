@@ -13,6 +13,8 @@ lacism::lacism( lua_State *L )
 
     _patt.ptr = NULL;
     _patt.len = 0;
+
+    memset( &_memrpl,0,sizeof(MEMRPL) );
 }
 
 lacism::~lacism()
@@ -35,6 +37,12 @@ lacism::~lacism()
         acism_destroy(_psp);
         _psp = NULL;
     }
+
+    if ( _memrpl.rpl_text )
+    {
+        delete []_memrpl.rpl_text;
+        _memrpl.rpl_text = NULL;
+    }
 }
 
 /* 返回0,继续搜索
@@ -45,6 +53,39 @@ int32 lacism::on_match( int32 strnum, int32 textpos, MEMREF const *pattv )
     (void)strnum, (void)pattv;
 
     return textpos;
+}
+
+int32 lacism::on_replace( int32 strnum,int32 textpos,void *context )
+{
+    assert( "acism on_replace NULL context",context );
+
+    class lacism *acism = static_cast<class lacism *>(context);
+    return acism->do_replace( strnum,textpos );
+}
+
+int32 lacism::do_replace( int32 strnum,int32 textpos )
+{
+    assert( "acism do_replace buffer error",(size_t)textpos > _memrpl.text_pos );
+
+    size_t pattv_len = _pattv[strnum].len;
+    size_t str_len = textpos - pattv_len - _memrpl.text_pos;
+    size_t mem_len = str_len + _memrpl.word_len + _memrpl.rpl_len;
+
+    /* 必须是<=，防止mem_len为0的情况 */
+    if (  _memrpl.rpl_size <= mem_len ) _memrpl.reserved( mem_len );
+
+    assert( "acism do_replace buffer overflow",_memrpl.rpl_size >= mem_len );
+
+    memcpy( _memrpl.rpl_text + _memrpl.rpl_len,
+        _memrpl.text + _memrpl.text_pos,str_len);
+    _memrpl.rpl_len += str_len;
+
+    memcpy( _memrpl.rpl_text + _memrpl.rpl_len,_memrpl.word,_memrpl.word_len );
+    _memrpl.rpl_len += _memrpl.word_len;
+
+    _memrpl.text_pos = textpos;
+
+    return 0; /* continue replace */
 }
 
 /* 扫描关键字,扫描到其中一个即中止 */
@@ -71,6 +112,59 @@ int32 lacism::scan()
         (ACISM_ACTION*)lacism::on_match, _pattv,_case_sensitive );
 
     lua_pushinteger( L,textpos );
+    return 1;
+}
+
+/* 替换关键字 */
+int32 lacism::replace()
+{
+    if ( !_loaded )
+    {
+        return luaL_error( L,"no pattern load yet" );
+    }
+
+    MEMREF text   = {NULL, 0};
+
+    text.ptr = luaL_checklstring( L,1,&(text.len) );
+    _memrpl.word = luaL_checklstring( L,2,&(_memrpl.word_len) );
+
+    /* no worlds loaded */
+    if ( !_pattv || !_psp )
+    {
+        lua_pushvalue( L,1 );
+        return 1;
+    }
+
+    _memrpl.text     = text.ptr;
+    _memrpl.rpl_len  = 0;
+    _memrpl.text_pos = 0;
+
+    int32 textpos = acism_scan( _psp, text,
+        (ACISM_ACTION*)lacism::on_replace, this, _case_sensitive );
+
+    if ( _memrpl.text_pos < text.len )
+    {
+        size_t str_len = text.len - _memrpl.text_pos;
+        size_t mem_len = _memrpl.rpl_len + str_len;
+        if ( _memrpl.rpl_size <= mem_len )
+        {
+            _memrpl.reserved( mem_len );
+        }
+
+        memcpy( _memrpl.rpl_text + _memrpl.rpl_len,_memrpl.text + _memrpl.text_pos,
+            str_len );
+
+        _memrpl.text_pos = text.len;
+        _memrpl.rpl_len += str_len;
+    }
+
+    if ( textpos < 0 )
+    {
+        return luaL_error( L,"lacism::replace over max string length" );
+    }
+
+    lua_pushlstring( L,_memrpl.rpl_text,_memrpl.rpl_len );
+
     return 1;
 }
 

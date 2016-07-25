@@ -28,6 +28,34 @@ extern "C" {
 #include "../global/global.h"
 
 typedef struct { char *ptr; size_t len; }	MEMBUF;
+typedef struct
+{
+    int32 rpl_len;                          /* rpl的长度 */
+    size_t text_pos;                        /* 已替换部分相对于原字符串位置 */
+    size_t word_len;                        /* word的长度 */
+    size_t rpl_size;                        /* rpl的总长度 */
+    char *rpl_text;                         /* 替换后的字符串 */
+    const char *word;                       /* 替换为此字符串 */
+    const char *text;                       /* 原字符串 */
+
+    void reserved( size_t bytes )
+    {
+        size_t new_size = rpl_size ? rpl_size : ACISM_REPLACE_DEFAULT;
+        while ( new_size < bytes )
+        {
+            new_size *= 2;
+        }
+
+        const char *tmp = rpl_text;
+        rpl_text = new char[new_size];
+        if ( tmp )
+        {
+            memcpy( rpl_text,tmp,rpl_len );
+            delete []tmp;
+        }
+        rpl_size = new_size;
+    }
+} MEMRPL;
 
 class lacism
 {
@@ -39,7 +67,10 @@ public:
     int32 replace();
     int32 load_from_file();
 
+    int32 do_replace( int32 strnum,int32 textpos );
+
     static int32 on_match( int32 strnum, int32 textpos, MEMREF const *pattv );
+    static int32 on_replace( int32 strnum,int32 textpos,void *context );
 private:
     /* 这几个函数在acism.h或msutil.h中都有类似的函数
      * 重写原因如下:
@@ -57,6 +88,7 @@ private:
     MEMBUF _patt;
     int32 _loaded;
     MEMREF *_pattv;
+    MEMRPL _memrpl;
     int32 _case_sensitive;
 };
 
