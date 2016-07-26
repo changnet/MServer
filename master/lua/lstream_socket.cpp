@@ -115,11 +115,17 @@ int32 lstream_socket::c2s_recv()
     class lstream **stream = static_cast<class lstream **>(
             luaL_checkudata( L, 1, "Stream" ) );
 
+    if ( !stream_packet::is_complete( &_recv ) )
+    {
+        lua_pushinteger( L,0 );
+        return 1;
+    }
+
     c2s_header *header = NULL;
     if ( _recv.data_size() < sizeof(c2s_header) )
     {
-        ERROR( "c2s_recv:size error" );
-        return 0;
+        lua_pushinteger( L,0 );
+        return 1;
     }
 
     header = reinterpret_cast<c2s_header*>( _recv.data() );
@@ -128,9 +134,11 @@ int32 lstream_socket::c2s_recv()
     if ( (struct stream_protocol::node *)-1 == nd )
     {
         ERROR( "c2s_recv no such protocol:%d-%d",header->_mod,header->_func );
-        return 0;
+        lua_pushinteger( L,-1 );
+        return 1;
     }
 
+    lua_pushinteger( L,header->_length );
     lua_pushinteger( L,header->_mod );
     lua_pushinteger( L,header->_func );
 
@@ -138,13 +146,15 @@ int32 lstream_socket::c2s_recv()
     if ( packet.unpack( *header,nd ) < 0 )
     {
         ERROR( "c2s_recv:unpack protocol %d-%d error",header->_mod,header->_func );
-        return 0;
+
+        lua_pushinteger( L,-1 );
+        return 1;
     }
 
     /* 如果这时缓冲区刚好是空的，尽快处理悬空区，这时代价最小，不用拷贝内存 */
     if ( _recv.data_size() <= 0 ) _recv.clear();
 
-    return 3;
+    return 4;
 }
 
 int32 lstream_socket::c2s_send()
@@ -191,11 +201,17 @@ int32 lstream_socket::s2c_recv()
     class lstream **stream = static_cast<class lstream **>(
             luaL_checkudata( L, 1, "Stream" ) );
 
+    if ( !stream_packet::is_complete( &_recv ) )
+    {
+        lua_pushinteger( L,0 );
+        return 1;
+    }
+
     s2c_header *header = NULL;
     if ( _recv.data_size() < sizeof(s2c_header) )
     {
-        ERROR( "s2c_recv:size error" );
-        return 0;
+        lua_pushinteger( L,0 );
+        return 1;
     }
 
     header = reinterpret_cast<s2c_header*>( _recv.data() );
@@ -204,9 +220,11 @@ int32 lstream_socket::s2c_recv()
     if ( (struct stream_protocol::node *)-1 == nd )
     {
         ERROR( "s2c_recv:no such protocol:%d-%d",header->_mod,header->_func );
-        return 0;
+        lua_pushinteger( L,-1 );
+        return 1;
     }
 
+    lua_pushinteger( L,header->_length );
     lua_pushinteger( L,header->_mod );
     lua_pushinteger( L,header->_func );
 
@@ -214,11 +232,13 @@ int32 lstream_socket::s2c_recv()
     if ( packet.unpack( *header,nd ) < 0 )
     {
         ERROR( "s2c_recv:unpack protocol %d-%d error",header->_mod,header->_func );
-        return 0;
+
+        lua_pushinteger( L,-1 );
+        return 1;
     }
 
     /* 如果这时缓冲区刚好是空的，尽快处理悬空区，这时代价最小，不用拷贝内存 */
     if ( _recv.data_size() <= 0 ) _recv.clear();
 
-    return 3;
+    return 4;
 }

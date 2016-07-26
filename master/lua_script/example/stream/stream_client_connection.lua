@@ -53,8 +53,11 @@ function Stream_client_connection:send_test()
     end
     packet.string = "Stream_client_connection:send_test"
 
-    self.conn:c2s_send( stream,1,1,packet )
-    self.conn:c2s_send( stream,1,1,packet )
+    for i = 1,100 do
+        f_tm_start()
+        self.conn:c2s_send( stream,1,1,packet )
+        f_tm_stop( "stream packet send cost" )
+    end
 end
 
 function Stream_client_connection:on_connection( status )
