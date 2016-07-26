@@ -2,6 +2,7 @@
 #define __LHTTP_SOCKET_H__
 
 #include <map>
+#include <queue>
 #include "lsocket.h"
 
 struct http_parser;
@@ -9,25 +10,29 @@ struct http_parser;
 class lhttp_socket : public lsocket
 {
 public:
-    enum parse_state
+    struct http_info
     {
-        PARSE_NONE  = 0,
-        PARSE_PROC  = 1,
-        PARSE_DONE  = 2
+        uint32 _method;
+        uint32 _status_code;
+        std::string _url;
+        std::string _body;
+        std::map< std::string,std::string > _head_field;
     };
 public:
     ~lhttp_socket();
     explicit lhttp_socket( lua_State *L );
 
-    int32 get_head_field();
+    int32 next();
     int32 get_url();
     int32 get_body();
+    int32 is_upgrade();
     int32 get_method();
     int32 get_status();
+    int32 get_head_field();
 
+    void on_message_complete();
     void listen_cb( int32 revents );
 
-    void set_state( enum parse_state st );
     void append_url( const char *at,size_t len );
     void append_body( const char *at,size_t len );
     void append_cur_field( const char *at,size_t len );
@@ -48,16 +53,13 @@ public:
     inline int32 file_description () { return lsocket::file_description (); }
 private:
     int32 is_message_complete();
-
 private:
-    enum parse_state _state;
     bool _upgrade;
     http_parser *_parser;
-    std::string _url;
-    std::string _body;
     std::string _cur_field;
     std::string _old_field;
-    std::map< std::string,std::string > _head_field;
+    struct http_info *_cur_http;
+    std::queue<struct http_info *> _http;
 };
 
 #endif /* __LHTTP_SOCKET_H__ */

@@ -119,6 +119,8 @@ void socket::start( int32 fd,int32 events )
 
 int32 socket::connect( const char *host,int32 port )
 {
+    assert( "socket fd dirty",_w.fd < 0 );
+
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 || non_block( fd ) < 0 )
     {

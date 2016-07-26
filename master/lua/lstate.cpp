@@ -169,10 +169,12 @@ int32 luaopen_http_socket( lua_State *L )
     lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
     lc.def<&lhttp_socket::file_description> ("file_description" );
 
+    lc.def<&lhttp_socket::next>   ("next");
     lc.def<&lhttp_socket::get_url>   ("get_url");
     lc.def<&lhttp_socket::get_body>  ("get_body" );
     lc.def<&lhttp_socket::get_method>("get_method");
     lc.def<&lhttp_socket::get_status>("get_status");
+    lc.def<&lhttp_socket::is_upgrade>   ("is_upgrade");
     lc.def<&lhttp_socket::get_head_field>("get_head_field");
 
     return 0;

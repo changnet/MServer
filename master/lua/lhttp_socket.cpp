@@ -5,10 +5,7 @@
 
 int32 on_message_begin( http_parser *parser )
 {
-    assert( "on_message_begin empty parser",parser && (parser->data) );
-
-    class lhttp_socket *http_socket = static_cast<class lhttp_socket *>(parser->data);
-    http_socket->set_state( lhttp_socket::PARSE_PROC );
+    UNUSED( parser );
 
     return 0;
 }
@@ -73,7 +70,7 @@ int32 on_message_complete( http_parser *parser )
     assert( "on_message_complete empty parser",parser && (parser->data) );
 
     class lhttp_socket * http_socket = static_cast<class lhttp_socket *>(parser->data);
-    http_socket->set_state( lhttp_socket::PARSE_DONE );
+    http_socket->on_message_complete();
 
     return 0;
 }
@@ -93,9 +90,9 @@ static http_parser_settings settings = {
 lhttp_socket::lhttp_socket( lua_State *L )
     : lsocket( L )
 {
-    _parser  = NULL;
-    _state   = PARSE_NONE;
-    _upgrade = false;
+    _parser   = NULL;
+    _upgrade  = false;
+    _cur_http = NULL;
 
     //HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
     _parser = new struct http_parser();
@@ -107,6 +104,15 @@ lhttp_socket::~lhttp_socket()
 {
     if ( _parser ) delete _parser;
     _parser = NULL;
+
+    if ( _cur_http ) delete _cur_http;
+    _cur_http = NULL;
+
+    while ( !_http.empty() )
+    {
+        delete _http.front();
+        _http.pop();
+    }
 }
 
 void lhttp_socket::listen_cb( int32 revents )
@@ -162,6 +168,11 @@ int32 lhttp_socket::is_message_complete()
     uint32 dsize = _recv.data_size();
     assert( "http socket is_message_complete empty",dsize > 0 );
 
+    if ( !_cur_http )
+    {
+        _cur_http = new http_info();
+    }
+
     int32 nparsed = http_parser_execute( _parser,&settings,_recv.data(),dsize );
 
     _recv.clear(); // http_parser不需要旧缓冲区
@@ -180,22 +191,37 @@ int32 lhttp_socket::is_message_complete()
         return -1;
     }
 
-    return (_state == PARSE_DONE ? 1 : 0);
+    return ( _http.empty() ? 0 : 1 );
 }
 
-void lhttp_socket::set_state( enum parse_state st )
+void lhttp_socket::on_message_complete()
 {
-    _state = st;
+    assert( "no current http info",_cur_http );
+
+    _cur_http->_method = _parser->method;
+    _cur_http->_status_code = _parser->status_code;
+
+    _http.push( _cur_http );
+
+    _cur_field.clear();
+    _old_field.clear();
+
+    /* 需要重新申请一个http_info，因为web_socket可以同时发多个请求，而
+     * http_parser_execute会一直解析直到完成
+     */
+    _cur_http = new http_info();
 }
 
 void lhttp_socket::append_url( const char *at,size_t len )
 {
-    _url.append( at,len );
+    assert( "no current http info",_cur_http );
+    _cur_http->_url.append( at,len );
 }
 
 void lhttp_socket::append_body( const char *at,size_t len )
 {
-    _body.append( at,len );
+    assert( "no current http info",_cur_http );
+    _cur_http->_body.append( at,len );
 }
 
 void lhttp_socket::append_cur_field( const char *at,size_t len )
@@ -208,6 +234,8 @@ void lhttp_socket::append_cur_field( const char *at,size_t len )
 
 void lhttp_socket::append_cur_value( const char *at,size_t len )
 {
+    assert( "no current http info",_cur_http );
+
     /* 当前字段名已解析完，切换到旧字段 */
     if ( !_cur_field.empty() )
     {
@@ -215,15 +243,22 @@ void lhttp_socket::append_cur_value( const char *at,size_t len )
         _cur_field.clear();
     }
 
-    std::string &val = _head_field[_old_field];
+    std::string &val = _cur_http->_head_field[_old_field];
     val.append( at,len );
 }
 
 int32 lhttp_socket::get_head_field()
 {
+    if ( _http.empty() )
+    {
+        return 0;
+    }
+
     const char *field = luaL_checkstring( L,1 );
-    std::map<std::string,std::string>::iterator itr = _head_field.find( field );
-    if ( itr == _head_field.end() )
+
+    std::map<std::string,std::string> &head_field = _http.front()->_head_field;
+    std::map<std::string,std::string>::iterator itr = head_field.find( field );
+    if ( itr == head_field.end() )
     {
         return 0;
     }
@@ -236,26 +271,38 @@ int32 lhttp_socket::get_head_field()
 
 int32 lhttp_socket::get_url()
 {
-    lua_pushstring( L,_url.c_str() );
+    if ( _http.empty() )
+    {
+        return 0;
+    }
+
+    lua_pushstring( L,_http.front()->_url.c_str() );
 
     return 1;
 }
 
 int32 lhttp_socket::get_body()
 {
-    lua_pushstring( L,_body.c_str() );
+    if ( _http.empty() )
+    {
+        return 0;
+    }
+
+    lua_pushstring( L,_http.front()->_body.c_str() );
 
     return 1;
 }
 
 int32 lhttp_socket::get_method()
 {
-    if ( !_parser )
+    if ( _http.empty() )
     {
-        return luaL_error( L,"http socket get method uninit socket");
+        return 0;
     }
 
-    const char *method = http_method_str( static_cast<enum http_method>(_parser->method) );
+
+    const char *method = http_method_str(
+        static_cast<enum http_method>(_http.front()->_method) );
     lua_pushstring( L,method );
 
     return 1;
@@ -263,13 +310,41 @@ int32 lhttp_socket::get_method()
 
 int32 lhttp_socket::get_status()
 {
-    if ( !_parser )
+    if ( _http.empty() )
     {
-        return luaL_error( L,"http socket get method uninit socket");
+        return 0;
     }
 
-    int32 status_code = _parser->status_code;
+    int32 status_code = _http.front()->_status_code;
     lua_pushinteger( L,status_code );
+
+    return 1;
+}
+
+int32 lhttp_socket::next()
+{
+    int32 peek = lua_toboolean( L,1 ); /* socket MSG_PEEK */
+
+    if ( _http.empty() )
+    {
+        lua_pushboolean( L,0 );
+        return 1;
+    }
+
+    if ( !peek )
+    {
+        delete _http.front();
+        _http.pop();
+    }
+
+    lua_pushboolean( L,_http.size() );
+
+    return 1;
+}
+
+int32 lhttp_socket::is_upgrade()
+{
+    lua_pushboolean( L,_upgrade );
 
     return 1;
 }

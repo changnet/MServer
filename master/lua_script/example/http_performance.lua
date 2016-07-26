@@ -6,7 +6,7 @@ local Http_socket = require "Http_socket"
 local Http_server_mgr = require "example.http.http_server_mgr"
 local Http_client_mgr = require "example.http.http_client_mgr"
 
-local IP = "127.0.0.1"
+local IP = "0.0.0.0"
 local PORT = 8887
 
 g_http_server_mgr = Http_server_mgr()
@@ -85,4 +85,4 @@ local url = Http_url_connection()
   cn.bing.com、www.163.com、www.oschina.net都是返回二进制，但www.baidu.com不压缩
 ]]
 -- connect是不支持域名解析的，只能写ip
-url:connect( ip1,80 )
+--url:connect( ip1,80 )

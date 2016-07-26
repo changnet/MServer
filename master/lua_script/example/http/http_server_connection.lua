@@ -33,12 +33,13 @@ function Http_server_connection:set_conn( conn )
 end
 
 function Http_server_connection:on_message()
-    local body = self.conn:get_body()
+    repeat
+        local body = self.conn:get_body()
 
-    vd( body )
-    vd( self.conn:get_url() )
-    vd( self.conn:get_head_field("host") )
-
+        vd( body )
+        vd( self.conn:get_url() )
+        vd( self.conn:get_head_field("host") )
+    until not self.conn:next()
 
     local data = '{ "data":{"ext":1,"password":"test"} }'
     local header = string.format( http_response_head,data:len(),data )
