@@ -34,6 +34,7 @@ public:
     socket();
     virtual ~socket();
 
+    static int32 block( int32 fd );
     static int32 non_block( int32 fd );
     static int32 keep_alive( int32 fd );
     static int32 user_timeout( int32 fd );

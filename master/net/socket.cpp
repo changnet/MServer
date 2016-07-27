@@ -34,6 +34,17 @@ void socket::stop()
     _send.clear();
 }
 
+int32 socket::block( int32 fd )
+{
+    int32 flags = fcntl( fd, F_GETFL, 0 ); //get old status
+    if ( flags == -1 )
+        return -1;
+
+    flags &= ~O_NONBLOCK;
+
+    return fcntl( fd, F_SETFL, flags);
+}
+
 int32 socket::non_block( int32 fd )
 {
     int32 flags = fcntl( fd, F_GETFL, 0 ); //get old status
