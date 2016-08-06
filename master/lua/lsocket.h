@@ -19,6 +19,7 @@ public:
 
     int32 set_self_ref  ();
     int32 set_on_message();
+    int32 buffer_setting();
     int32 set_on_acception ();
     int32 set_on_connection();
     int32 set_on_disconnect();

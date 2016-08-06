@@ -48,7 +48,7 @@ function Stream_client_connection:send_test()
 
     packet.single = { 0,1,2,3,4,5,6 }
     packet.array = {}
-    for i = 1,500 do
+    for i = 1,5 do
         table.insert( packet.array,numbs )
     end
     packet.string = "Stream_client_connection:send_test"
@@ -63,6 +63,7 @@ end
 function Stream_client_connection:on_connection( status )
     local fd = self.conn:file_description()
     if status then
+        self.conn:buffer_setting( 8192,10*1024*1024)
         print( "client connection OK " .. fd )
         self:send_test()
     else

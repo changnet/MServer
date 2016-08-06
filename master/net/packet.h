@@ -193,7 +193,7 @@ private:
 
     void update_error( const char *fmt,... );
     void append_error( const char *str_err );
-    void update_error( int32 mod,int32 func,const char *function = __FUNCTION__ );
+    void update_backtrace( int32 mod,int32 func,const char *function );
 
     int32 unpack_node( const struct stream_protocol::node *nd );
     int32 unpack_element( const struct stream_protocol::node *nd );
@@ -213,7 +213,7 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
     if ( !_buff->reserved( sizeof(T) ) )
     {
         update_error( "out of buffer" );
-        update_error( header._mod,header._func );
+        update_backtrace( header._mod,header._func,__PRETTY_FUNCTION__ );
         return -1;
     }
 
@@ -222,14 +222,14 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
 
     if ( pack_node( proto,index) < 0 )
     {
-        update_error( header._mod,header._func );
+        update_backtrace( header._mod,header._func,__PRETTY_FUNCTION__ );
         return -1;
     }
 
     if ( _length > MAX_PACKET_LEN )
     {
         update_error( "packet over max length" );
-        update_error( header._mod,header._func );
+        update_backtrace( header._mod,header._func,__PRETTY_FUNCTION__ );
         return -1;
     }
 
@@ -259,7 +259,7 @@ int stream_packet::unpack( T &header,const struct stream_protocol::node *proto )
     int32 fction = header._func;
     if ( unpack_node( proto ) < 0 )
     {
-        update_error( module,fction );
+        update_backtrace( module,fction,__PRETTY_FUNCTION__ );
         return -1;
     }
 

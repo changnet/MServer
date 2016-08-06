@@ -400,10 +400,10 @@ void stream_packet::append_error( const char *str_err )
     _etor->_backtrace.push( str_err );
 }
 
-void stream_packet::update_error( int32 mod,int32 func,const char *function )
+void stream_packet::update_backtrace( int32 mod,int32 func,const char *function )
 {
     /* need to call update_error( const char *fmt,... ) first */
-    assert( "no error collector object found",_etor );
+    assert( "update_backtrace no error collector object found",_etor );
 
     _etor->_module   = mod;
     _etor->_func     = func;
@@ -421,7 +421,7 @@ const char *stream_packet::last_error()
     }
     else
     {
-        int len = snprintf( _etor->_message,err_len,"%s:at %s",
+        int len = snprintf( _etor->_message,err_len,"%s:\n\tat field:%s",
             _etor->_what,_etor->_backtrace.top().c_str() );
 
         int sz = len;
@@ -437,7 +437,8 @@ const char *stream_packet::last_error()
 
         /* error message incomplete,but may helps */
         if ( len < 0 ) return _etor->_message;
-        snprintf( _etor->_message + sz,err_len - sz," %s (%04d-%04d)",
+        snprintf( _etor->_message + sz,err_len - sz,
+            "\n\tat function:%s\n\tat protocol(%04d-%04d)",
             _etor->_function,_etor->_module,_etor->_func );
     }
 

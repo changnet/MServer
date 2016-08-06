@@ -164,6 +164,7 @@ int32 luaopen_http_socket( lua_State *L )
     lc.def<&lhttp_socket::connect>("connect");
     lc.def<&lhttp_socket::set_self_ref>     ("set_self_ref"     );
     lc.def<&lhttp_socket::set_on_message>   ("set_on_message"   );
+    lc.def<&lhttp_socket::buffer_setting>   ("buffer_setting"   );
     lc.def<&lhttp_socket::set_on_acception> ("set_on_acception" );
     lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
     lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
@@ -248,6 +249,7 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::connect>("connect");
     lc.def<&lstream_socket::set_self_ref>     ("set_self_ref"     );
     lc.def<&lstream_socket::set_on_message>   ("set_on_message"   );
+    lc.def<&lstream_socket::buffer_setting>   ("buffer_setting"   );
     lc.def<&lstream_socket::set_on_acception> ("set_on_acception" );
     lc.def<&lstream_socket::set_on_connection>("set_on_connection");
     lc.def<&lstream_socket::set_on_disconnect>("set_on_disconnect");

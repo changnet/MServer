@@ -311,3 +311,22 @@ void lsocket::connect_cb ( int32 revents )
     socket::set<lsocket,&lsocket::message_cb>( this );
     socket::set( EV_READ ); /* 将之前的write改为read */
 }
+
+int32 lsocket::buffer_setting()
+{
+    int min_buff = luaL_checkinteger( L,1 );
+    int max_buff = luaL_checkinteger( L,2 );
+
+    if ( min_buff <= 0 || max_buff <= 0 || max_buff <= min_buff )
+    {
+        return luaL_error( L,"illegal buffer setting" );
+    }
+
+    _recv._min_buff = min_buff;
+    _recv._max_buff = max_buff;
+
+    _send._min_buff = min_buff;
+    _send._max_buff = max_buff;
+
+    return 0;
+}
