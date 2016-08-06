@@ -12,8 +12,7 @@
         T val = 0;                                                            \
         if ( read( val ) < 0 )                                                \
         {                                                                     \
-            ERROR( "stream_packet::unpack_element read %s error",nd->_name ); \
-            return -1;                                                        \
+            update_error( "end of buffer" );return -1;                        \
         }                                                                     \
         lua_pushinteger( L,val );                                             \
     }while(0)
@@ -22,19 +21,19 @@
     do{                                                                       \
         if ( !lua_isinteger( L,index ) )                                      \
         {                                                                     \
-            ERROR( "field %s expect integer,got %s",                          \
-                nd->_name,lua_typename(L, lua_type(L, index)) );              \
+            update_error( "expect integer,got %s",lua_typename(L,             \
+                lua_type(L, index)) );                                        \
             return -1;                                                        \
         }                                                                     \
         int64 val = lua_tointeger( L,index );                                 \
         if ( val < min || val > max )                                         \
         {                                                                     \
-            ERROR( "field %s out range of "#T":%ld",nd->_name,val );          \
+            update_error( "out range of "#T":%ld",val );                      \
             return -1;                                                        \
         }                                                                     \
         if ( write( static_cast<T>(val) ) < 0 )                               \
         {                                                                     \
-            ERROR( "out of buffer" );                                         \
+            update_error( "out of buffer" );                                  \
             return -1;                                                        \
         }                                                                     \
     }while(0)
@@ -43,14 +42,15 @@
     do{                                                                       \
         if ( !lua_isnumber( L,index ) )                                       \
         {                                                                     \
-            ERROR( "field %s expect number,got %s",                           \
-                nd->_name,lua_typename(L,lua_type(L,index)) );                \
+            update_error( "expect number,got %s",                             \
+                lua_typename(L,lua_type(L,index)) );                          \
             return -1;                                                        \
         }                                                                     \
         T val = static_cast<T>( lua_tonumber( L,index ) );                    \
         if ( write( static_cast<T>(val) ) < 0 )                               \
         {                                                                     \
-            ERROR( "out of buffer" ); return -1;                              \
+            update_error( "out of buffer" );                                  \
+            return -1;                                                        \
         }                                                                     \
     }while(0)
 
@@ -61,7 +61,7 @@ int32 stream_packet::unpack_node( const struct stream_protocol::node *nd )
 
     if ( lua_gettop( L ) > 256 )
     {
-        ERROR( "stream_packet::unpack_node stack over max" );
+        update_error( "stack over max depth" );
         return -1;
     }
 
@@ -129,7 +129,7 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
             double val = 0;
             if ( read( val ) < 0 )
             {
-                ERROR( "stream_packet::unpack_element read %s error",nd->_name );
+                update_error( "end of buffer" );
                 return -1;
             }
             lua_pushnumber( L,val );
@@ -139,14 +139,14 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
             string_header header = 0;
             if ( read( header ) < 0 )
             {
-                ERROR( "stream_packet::unpack_element read string header error" );
+                update_error( "end of buffer while reading string header" );
                 return -1;
             }
 
             char *str = NULL;
             if ( read( &str,header ) < 0 )
             {
-                ERROR( "stream_packet::unpack_element read string error" );
+                update_error( "end of buffer while reading string" );
                 return -1;
             }
             lua_pushlstring( L,str,header );
@@ -157,7 +157,7 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
             array_header size = 0;
             if ( read( size ) < 0 )
             {
-                ERROR( "stream_packet::unpack_element read array size error" );
+                update_error( "end of buffer while reading array header" );
                 return -1;
             }
 
@@ -167,6 +167,8 @@ int32 stream_packet::unpack_element( const struct stream_protocol::node *nd )
                 if ( unpack_node( nd->_child ) < 0 )
                 {
                     lua_pop( L,1 );
+
+                    if ( nd->_child ) append_error( (nd->_child)->_name );
                     return -1;
                 }
                 lua_rawseti( L,-2,i + 1);
@@ -209,7 +211,7 @@ int32 stream_packet::pack_node( const struct stream_protocol::node *nd,int32 ind
 
         if ( pack_element( tmp,top + 1 ) < 0 )
         {
-            ERROR( "pack_node %s fail",tmp->_name );
+            append_error( tmp->_name );
             return -1;
         }
 
@@ -228,7 +230,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
 
     if ( _length >= MAX_PACKET_LEN )
     {
-        ERROR( "pack_element over max packet length" );
+        update_error( "over max packet length" );
         return -1;
     }
 
@@ -275,8 +277,8 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
         {
             if ( !lua_isstring( L,index ) )
             {
-                ERROR( "field %s expect string,got %s",
-                    nd->_name,lua_typename(L,lua_type(L,index)) );
+                update_error( "expect string,got %s",
+                    lua_typename(L,lua_type(L,index)) );
                 return -1;
             }
 
@@ -285,12 +287,12 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
             const char *str = lua_tolstring( L,index,&len );
             if ( len > USHRT_MAX )
             {
-                ERROR( "field %s over max length",nd->_name );
+                update_error( "over string length limits" );
                 return -1;
             }
             if ( write( str,len ) < 0 )
             {
-                ERROR( "out of buffer" ); return -1;
+                update_error( "out of buffer" ); return -1;
             }
         }break;
         case stream_protocol::node::ARRAY:
@@ -302,21 +304,21 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                 /* 如果是空数组，可以不写对应字段 */
                 if ( write( count ) < 0 )
                 {
-                    ERROR( "out of buffer" ); return -1;
+                    update_error( "out of buffer" ); return -1;
                 }
                 return 0;
             }
             if ( !lua_istable( L,index ) )
             {
-                ERROR( "field %s expect table,got %s",
-                    nd->_name,lua_typename(L, lua_type(L, index)) );
+                update_error( "expect table,got %s",
+                    lua_typename(L, lua_type(L, index)) );
                 return -1;
             }
 
             int32 top = lua_gettop(L);
             if ( top > 256 )
             {
-                ERROR( "stream array recursion too deep,stack overflow" );
+                update_error( "out of stack" );
                 return -1;
             }
             luaL_checkstack( L,2,"stream array recursion too deep,stack overflow" );
@@ -325,7 +327,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
             uint32 pos = write( count );
             if ( pos < 0 )
             {
-                ERROR( "out of buffer" ); return -1;
+                update_error( "out of buffer" ); return -1;
             }
 
             int32 _cnt = 0;
@@ -348,8 +350,8 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                     /* { 99,98,97,96 } 只有一个字段的简单数组写法 */
                     if ( child->_next )
                     {
-                        ERROR( "field %s(it's a array) has more than one field,"
-                            "element must be table",nd->_name );
+                        update_error( "expect table,got %s",
+                            lua_typename(L, lua_type(L, index)) );
                         return -1;
                     }
 
@@ -364,7 +366,7 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
                 if ( ++_cnt > USHRT_MAX )
                 {
                     lua_pop( L,2 );
-                    ERROR( "too many array elements" );return -1;
+                    update_error( "over array size limit" );return -1;
                 }
             }
             count = static_cast<array_header>(_cnt);
@@ -377,4 +379,67 @@ int32 stream_packet::pack_element( const struct stream_protocol::node *nd,int32 
     }
 
     return 0;
+}
+
+void stream_packet::update_error( const char *fmt,... )
+{
+    assert( "should not call twice",!_etor ); /* reused ?? not allow now */
+    if ( !_etor ) _etor = new error_collector();
+
+    /* seems much better than std::string or std::stringstream */
+    va_list args;
+    va_start( args, fmt );
+    vsnprintf( _etor->_what,err_len,fmt, args );
+    va_end (args);
+}
+
+void stream_packet::append_error( const char *str_err )
+{
+    assert( "append_error need to call update_error first",_etor );
+
+    _etor->_backtrace.push( str_err );
+}
+
+void stream_packet::update_error( int32 mod,int32 func,const char *function )
+{
+    /* need to call update_error( const char *fmt,... ) first */
+    assert( "no error collector object found",_etor );
+
+    _etor->_module   = mod;
+    _etor->_func     = func;
+    _etor->_function = function;
+}
+
+const char *stream_packet::last_error()
+{
+    if ( !_etor ) return NULL;
+
+    if ( _etor->_backtrace.empty() )
+    {
+        snprintf( _etor->_message,err_len,"%s:%s (%04d-%04d)",
+            _etor->_what,_etor->_function,_etor->_module,_etor->_func );
+    }
+    else
+    {
+        int len = snprintf( _etor->_message,err_len,"%s:at %s",
+            _etor->_what,_etor->_backtrace.top().c_str() );
+
+        int sz = len;
+        _etor->_backtrace.pop();
+        while ( len > 0 && (sz < err_len) && (!_etor->_backtrace.empty()) )
+        {
+            len = snprintf( _etor->_message + sz,err_len - sz,".%s",
+                _etor->_backtrace.top().c_str() );
+
+            sz += len; /* len may <0 here,but don't matter */
+            _etor->_backtrace.pop();
+        }
+
+        /* error message incomplete,but may helps */
+        if ( len < 0 ) return _etor->_message;
+        snprintf( _etor->_message + sz,err_len - sz," %s (%04d-%04d)",
+            _etor->_function,_etor->_module,_etor->_func );
+    }
+
+    return _etor->_message;
 }

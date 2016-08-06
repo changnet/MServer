@@ -4,6 +4,7 @@
 /* 网络通信消息包头格式定义
  */
 
+#include <stack>
 #include "../global/global.h"
 
 #pragma pack (push, 1)
@@ -67,8 +68,13 @@ public:
     explicit stream_packet( class buffer *buff,lua_State *L )
         : L(L),_length(0),_buff( buff )
     {
+        _etor = NULL;
     }
-    ~stream_packet() {}
+    ~stream_packet()
+    {
+        if ( _etor ) delete _etor;
+        _etor = NULL;
+    }
 
     static inline int32 is_complete( const class buffer *buff )
     {
@@ -89,6 +95,8 @@ public:
 
     template< class T >
     int unpack( T &header,const struct stream_protocol::node *proto );
+
+    const char *last_error();
 private:
     /* 写入一个基础变量，返回在packet处的位置 */
     template< class T >
@@ -158,9 +166,34 @@ private:
         return header;
     }
 private:
+    const static int32 err_len = 1024;
+    struct error_collector
+    {
+        int32 _func;
+        int32 _module;
+        char _what[err_len];
+        char _message[err_len];
+        const char *_function;
+        std::stack< std::string > _backtrace;
+
+        error_collector()
+        {
+            _func   = -1;
+            _module = -1;
+            _what[0] = 0;
+            _message[0] = 0;
+            _function = NULL;
+        }
+    };
+private:
     lua_State *L;
     uint32 _length;
     class buffer *_buff;
+    struct error_collector *_etor;
+
+    void update_error( const char *fmt,... );
+    void append_error( const char *str_err );
+    void update_error( int32 mod,int32 func,const char *function = __FUNCTION__ );
 
     int32 unpack_node( const struct stream_protocol::node *nd );
     int32 unpack_element( const struct stream_protocol::node *nd );
@@ -179,18 +212,24 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
 
     if ( !_buff->reserved( sizeof(T) ) )
     {
-        ERROR( "packet out of buffer" );
+        update_error( "out of buffer" );
+        update_error( header._mod,header._func );
         return -1;
     }
 
     memcpy( _buff->_buff + _buff->_size,&header,sizeof(T) );
     _length += sizeof(T);
 
-    if ( pack_node( proto,index) < 0 ) return -1;
+    if ( pack_node( proto,index) < 0 )
+    {
+        update_error( header._mod,header._func );
+        return -1;
+    }
 
     if ( _length > MAX_PACKET_LEN )
     {
-        ERROR( "packet over max length" );
+        update_error( "packet over max length" );
+        update_error( header._mod,header._func );
         return -1;
     }
 
@@ -214,8 +253,13 @@ int stream_packet::unpack( T &header,const struct stream_protocol::node *proto )
     (_buff->_pos) += sizeof( packet_length ) + _length;
 
     _length -= sizeof( T ) - sizeof( packet_length );
+
+    /* copy what we need,buffer maybe change when unpack_node */
+    int32 module = header._mod;
+    int32 fction = header._func;
     if ( unpack_node( proto ) < 0 )
     {
+        update_error( module,fction );
         return -1;
     }
 

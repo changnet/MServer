@@ -48,7 +48,7 @@ function Stream_client_connection:send_test()
 
     packet.single = { 0,1,2,3,4,5,6 }
     packet.array = {}
-    for i = 1,5 do
+    for i = 1,500 do
         table.insert( packet.array,numbs )
     end
     packet.string = "Stream_client_connection:send_test"

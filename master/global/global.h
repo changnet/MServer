@@ -43,7 +43,7 @@
 #endif
 
 #ifdef _PDEBUG_
-    #define PDEBUG(fmt,...)    fprintf( stderr,fmt "\n",##__VA_ARGS__ )
+    #define PDEBUG(...)    do{fprintf( stderr,__VA_ARGS__ );fprintf( stderr,"\n" );}while(0)
 #else
     #define PDEBUG(...)
 #endif

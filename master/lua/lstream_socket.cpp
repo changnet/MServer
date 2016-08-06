@@ -94,12 +94,23 @@ int32 lstream_socket::s2c_send()
     header._errno = eno;
 
      /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
-    class stream_packet packet( &_send,L );
-    if ( packet.pack( header,nd,5 ) < 0 )
+
+    int32 result = 0;
+    const char *str_err = NULL;
     {
-        ERROR( "pack_client protocol %d-%d fail",mod,func );
-        return luaL_error( L,"pack_client protocol %d-%d fail",mod,func );
+        class stream_packet packet( &_send,L );
+        if ( (result = packet.pack( header,nd,5 ) ) < 0 )
+        {
+            str_err = packet.last_error();
+            ERROR( str_err );
+        }
     }
+
+    /* stack-unwind和longjump冲突
+     * 调用luaL_error,需要用code-block保证packet析构函数能执行
+     * header这个不需要在析构函数里运行逻辑，无所谓
+     */
+    if ( result < 0 ) return luaL_error( L,str_err );
 
     pending_send();
 
@@ -145,7 +156,7 @@ int32 lstream_socket::c2s_recv()
     class stream_packet packet( &_recv,L );
     if ( packet.unpack( *header,nd ) < 0 )
     {
-        ERROR( "c2s_recv:unpack protocol %d-%d error",header->_mod,header->_func );
+        ERROR( packet.last_error() );
 
         lua_pushinteger( L,-1 );
         return 1;
@@ -179,13 +190,23 @@ int32 lstream_socket::c2s_send()
     header._mod   = mod;
     header._func  = func;
 
-     /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
-    class stream_packet packet( &_send,L );
-    if ( packet.pack( header,nd,4 ) < 0 )
+    /* 这个函数出错可能不会返回，缓冲区需要能够自动回溯 */
+    int result = 0;
+    const char *str_err = NULL;
     {
-        ERROR( "pack_client protocol %d-%d fail",mod,func );
-        return luaL_error( L,"pack_client protocol %d-%d fail",mod,func );
+        class stream_packet packet( &_send,L );
+        if ( (result = packet.pack( header,nd,4 ) ) < 0 )
+        {
+            str_err = packet.last_error();
+            ERROR( str_err );
+        }
     }
+
+    /* stack-unwind和longjump冲突
+     * 调用luaL_error,需要用code-block保证packet析构函数能执行
+     * header这个不需要在析构函数里运行逻辑，无所谓
+     */
+    if ( result < 0 ) return luaL_error( L,str_err );
 
     pending_send();
 
@@ -231,7 +252,7 @@ int32 lstream_socket::s2c_recv()
     class stream_packet packet( &_recv,L );
     if ( packet.unpack( *header,nd ) < 0 )
     {
-        ERROR( "s2c_recv:unpack protocol %d-%d error",header->_mod,header->_func );
+        ERROR( packet.last_error() );
 
         lua_pushinteger( L,-1 );
         return 1;
