@@ -31,57 +31,25 @@ LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-
 #output directory
 ODIR = bin
 
-#source directory
-SDIR = ./
-
 TARGET = $(ODIR)/master
-MKDIR = mkdir -p
 
 #wildcard : 扩展通配符
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
-	sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o llog.o\
-	lstream_socket.o lutil.o log.o lobj_counter.o main.o stream_protocol.o\
-	lstream.o packet.o lacism.o
-OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
+_OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
+	lua/lsocket.o lua/leventloop.o lua/lstate.o mysql/sql.o thread/thread.o\
+	lua/ltimer.o lua/lsql.o mongo/mongo.o lua/lmongo.o lua/lhttp_socket.o\
+	lua/llog.o lua/lstream_socket.o lua/lutil.o log/log.o lua/lobj_counter.o\
+	main.o stream/stream_protocol.o lua/lstream.o net/packet.o lua/lacism.o
+OBJS = $(addprefix $(ODIR)/,$(_OBJS))
 
 DEPS := $(OBJS:.o=.d)
 
 #Makefile中，要使用tab键，不能用空格替代
 
-$(ODIR)/%.o: $(SDIR)/global/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/ev/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/log/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/lua/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/net/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/mysql/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/thread/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/mongo/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/stream/%.cpp
+$(ODIR)/%.o: %.cpp
+	@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖
@@ -90,14 +58,12 @@ $(ODIR)/%.o: $(SDIR)/stream/%.cpp
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
 
-all: dir $(OBJS)
+all: $(OBJS)
+#@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
 
 #The dash at the start of '-include' tells Make to continue when the .d file doesn't exist (e.g. on first compilation)
 -include $(DEPS)
-
-dir:
-	$(MKDIR) $(ODIR)
 
 clean:
 	rm -rf $(ODIR)/*
