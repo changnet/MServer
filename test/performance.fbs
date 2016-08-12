@@ -1,0 +1,35 @@
+table element
+{
+	int8_min:byte;
+	int8_max:byte;
+	uint8_min:ubyte;
+	uint8_max:ubyte;
+
+	int16_min:short;
+	int16_max:short;
+	uint16_min:ushort;
+	uint16_max:ushort;
+
+	int32_min:int;
+	int32_max:int;
+	uint32_min:uint;
+	uint32_max:uint;
+
+	int64_min:long;
+	int64_max:long;
+	uint64_min:ulong;
+	uint64_max:ulong;
+
+	double_min:double;
+	double_max:double;
+	str:string;
+}
+
+table test
+{
+	el:[element];
+}
+
+root_type test;
+
+file_extension "bfbs";
