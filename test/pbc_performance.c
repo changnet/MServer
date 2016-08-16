@@ -133,3 +133,17 @@ main()
 // 1000000 为 time cost time cost 4.100000
 
 // 把此文件放到pbc的test目录，然后在pbc目录make即可
+
+
+// http://blog.codingnow.com/2014/07/sproto.html
+
+// 前面 mingw32 生成的代码在我的系统上有很大的性能问题，所以我用 mingw64 重新编译测试了一次：
+
+// 编码 1M 次	解码 1M 次	体积
+// sproto	2.15s	7.84s	83 bytes
+// sproto (nopack)	1.58s	6.93s	130 bytes
+// pbc-lua	6.94s	16.9s	69 bytes
+// lua-cjson	4.92s	8.30s	183 bytes
+
+// pbc与protobuf对比:
+// http://blog.codingnow.com/2011/12/pbc_lua_binding.html
