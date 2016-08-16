@@ -89,10 +89,14 @@ valgrind测试
 8. 在打包时，注意内存调整时未复制包缓冲区，如果其他数据结构保存过指针，也可能不对
 9. pack_node的错误信息能不能更详细
 
-rpc
+#rpc
 1.调用持久化，参考rabbitMQ
 2.可靠调用(有重试机制，对端需要处理重复请求)
 3.复杂参数传递(grpc、thrift、wildfly、dubbo),如果不用IDL,只能用bson
 4.服务发现(由于是去中心化，节点两两连接，用P2P注册就可以)
 5.异步返回(需要为每一次请求分配唯一id，这为实现第2点做准备)
 6.同步调用(由于链接也用于服务器的通信，不能阻塞服务器，这点不准备支持)
+
+#位置同步
+http://blog.codingnow.com/2006/04/sync.html  
+http://blog.codingnow.com/2012/03/dev_note_12.html
