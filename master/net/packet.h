@@ -4,7 +4,7 @@
 /* 网络通信消息包头格式定义
  */
 
-#include <stack>
+#include <vector>
 #include "../global/global.h"
 
 #pragma pack (push, 1)
@@ -174,7 +174,7 @@ private:
         char _what[err_len];
         char _message[err_len];
         const char *_function;
-        std::stack< std::string > _backtrace;
+        std::vector< std::string > _backtrace;
 
         error_collector()
         {
@@ -210,6 +210,7 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
     assert( "packet length dirty",0 == _length );
     assert( "empty packet",_buff && L );
 
+    _etor->_backtrace.clear(); // 其他数据可以不清，因为不会累积 */
     if ( !_buff->reserved( sizeof(T) ) )
     {
         update_error( "out of buffer" );
@@ -246,6 +247,7 @@ int stream_packet::pack( T &header,const struct stream_protocol::node *proto,int
 template< class T >
 int stream_packet::unpack( T &header,const struct stream_protocol::node *proto )
 {
+    _etor->_backtrace.clear(); // 其他数据可以不清，因为不会累积 */
     int32 old_top = lua_gettop( L );
 
     /* 先处理长度，这样即使在unpack_node中longjump也不会造成缓冲区数据错误 */

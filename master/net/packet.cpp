@@ -397,7 +397,7 @@ void stream_packet::append_error( const char *str_err )
 {
     assert( "append_error need to call update_error first",_etor );
 
-    _etor->_backtrace.push( str_err );
+    _etor->_backtrace.push_back( str_err );
 }
 
 void stream_packet::update_backtrace( int32 mod,int32 func,const char *function )
@@ -421,21 +421,19 @@ const char *stream_packet::last_error()
     }
     else
     {
-        int len = snprintf( _etor->_message,err_len,"%s:\n\tat field:%s",
-            _etor->_what,_etor->_backtrace.top().c_str() );
+        int len = snprintf( _etor->_message,err_len,"%s:\n\tat field:",_etor->_what );
 
         int sz = len;
-        _etor->_backtrace.pop();
-        while ( len > 0 && (sz < err_len) && (!_etor->_backtrace.empty()) )
+
+        std::vector< std::string >::reverse_iterator ritr = _etor->_backtrace.rbegin();
+        for ( ;ritr != _etor->_backtrace.rend() && len > 0 && sz < err_len;ritr ++ )
         {
             len = snprintf( _etor->_message + sz,err_len - sz,".%s",
-                _etor->_backtrace.top().c_str() );
-
-            sz += len; /* len may <0 here,but don't matter */
-            _etor->_backtrace.pop();
+                ritr->c_str() );
+            sz += len; /* len may <0 here,but doesn't matter */
         }
 
-        /* error message incomplete,but may helps */
+        /* error message out of buffer,but may helps */
         if ( len < 0 ) return _etor->_message;
         snprintf( _etor->_message + sz,err_len - sz,
             "\n\tat function:%s\n\tat protocol(%04d-%04d)",
