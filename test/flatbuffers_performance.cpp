@@ -181,7 +181,7 @@ int main()
   	assert( reflection::VerifySchemaBuffer(encode_verifier) );
 
 	const auto *schema = reflection::GetSchema(bfbsfile.c_str());
-	
+
 	const int max = 10;
 	clock_t start = clock();
 	for ( int i = 0;i < max;i ++ )
@@ -211,3 +211,12 @@ int main()
 //g++ -std=c++11 -g3 -o performance performance.cpp -I./include
 // 不加优化，100000次为3.09s
 // O2优化，100000为0.24s
+
+// lua版本
+// -g3 -O0 调试版
+// end simple encode benchmark test	100000 times elapsed time: 8.82
+// end simple decode benchmark test	100000 times elapsed time: 9.64
+
+// -O2优化版
+// end simple encode benchmark test	100000 times elapsed time: 0.80
+// end simple decode benchmark test	100000 times elapsed time: 1.50
