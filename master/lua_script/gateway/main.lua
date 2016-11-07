@@ -7,14 +7,14 @@ json = require "lua_parson"
 
 local argv = { ... }
 
-local function sig_handler( signum )
+function sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
-    if g_store_sql then g_store_sql:stop() end
-    if g_log_mgr then g_log_mgr:stop(); end
+    if   g_store_sql then   g_store_sql:stop() end
+    if     g_log_mgr then     g_log_mgr:stop() end
     ev:exit()
 end
 
-local function main()
+function main()
     ev:set_signal_ref( sig_handler )
     ev:signal( 2 );
     ev:signal( 15 );

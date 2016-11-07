@@ -19,17 +19,11 @@
 /* do PDEBUG and LDEBUG both */
 #define _DEBUG_
 
-/* do PDEBUG and write log to runtime */
-#define _RUNTIME_
-
 /* cdebug_log file name */
 #define CDEBUG_FILE    "cdebuglog"
 
 /* cerror_log file name */
 #define CERROR_FILE    "cerrorlog"
-
-/* runtime file name */
-#define CRUNTIME_FILE  "cruntimelog"
 
 /* lua enterance file */
 #define LUA_ENTERANCE    "main.lua"

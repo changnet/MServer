@@ -66,12 +66,6 @@
     #define ERROR(...)
 #endif
 
-#ifdef _RUNTIME_
-    #define RUNTIME(...)    do{PDEBUG(__VA_ARGS__);clog( CRUNTIME_FILE,__VA_ARGS__ );}while(0)
-#else
-    #define RUNTIME(...)
-#endif
-
 /* terminated without destroying any object and without calling any of the functions passed to atexit or at_quick_exit */
 #define FATAL(...)    do{ERROR(__VA_ARGS__);::abort();}while(0)
 
@@ -115,10 +109,5 @@ extern void onexit();
 /* will be called while allocate memory failed with new */
 extern void new_fail();
 extern void signal_block();
-
-extern char cwd[PATH_MAX];    /* current work dir */
-extern char spath[PATH_MAX];  /* server path */
-extern int32 sid;             /* server id */
-extern time_t _start_tm;      /* process start timestamp */
 
 #endif  /* __GOLBAL_H__ */

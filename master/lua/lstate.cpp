@@ -73,6 +73,14 @@ int32 luaopen_stream_socket( lua_State *L );
 
 void lstate::set_lua_path()
 {
+    /* 得到绝对工作路径,getcwd无法获取自启动程序的正确工作路径 */
+    char cwd[PATH_MAX] = {0};
+    if ( getcwd( cwd,PATH_MAX ) <= 0 )
+    {
+        ERROR( "get current working directory fail\n" );
+        exit( 1 );
+    }
+
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "path");
     const char *old_path = lua_tostring(L, -1);
@@ -93,6 +101,13 @@ void lstate::set_lua_path()
 
 void lstate::set_c_path()
 {
+    char cwd[PATH_MAX] = {0};
+    if ( getcwd( cwd,PATH_MAX ) <= 0 )
+    {
+        ERROR( "get current working directory fail\n" );
+        exit( 1 );
+    }
+    
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "cpath");
     const char *old_path = lua_tostring(L, -1);

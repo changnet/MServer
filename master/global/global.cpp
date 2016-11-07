@@ -7,11 +7,6 @@
 uint32 g_counter  = 0;
 uint32 g_counters = 0;
 
-char cwd[PATH_MAX] = {0};    /* current work dir */
-char spath[PATH_MAX] = {0};  /* server path */
-int32 sid = 0;               /* server id */
-time_t _start_tm = time(0);
-
 #ifdef _MEM_DEBUG_
 pthread_mutex_t &counter_mutex()
 {
