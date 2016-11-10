@@ -1,6 +1,7 @@
 #include <lua.hpp>
 #include <lparson.h>
 #include <lrapidxml.hpp>
+#include <lflatbuffers.hpp>
 
 #include "llog.h"
 #include "lsql.h"
@@ -107,7 +108,7 @@ void lstate::set_c_path()
         ERROR( "get current working directory fail\n" );
         exit( 1 );
     }
-    
+
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "cpath");
     const char *old_path = lua_tostring(L, -1);
@@ -138,6 +139,7 @@ void lstate::open_cpp()
     LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
     LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
     LUA_LIB_OPEN("obj_counter", luaopen_obj_counter);
+    LUA_LIB_OPEN("lua_flatbuffers",luaopen_lua_flatbuffers);
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 
     /* ============================对象方式调用================================ */

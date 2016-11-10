@@ -1,4 +1,6 @@
 MAKE = make
+CC = gcc
+CXX = g++
 # -pipe 使用pipe而不是临时文件，对代码无影响
 # -Wall This enables all the warnings
 # -g gdb debug option
@@ -9,24 +11,23 @@ MAKE = make
 #    (这一系列函数使用.dynsym表内符号)这样的函数使用。
 # 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
 # mysql库根据安装方法不同，位置不本样，可用mysql_config查看(新版本-lmysqlclient_r与-lmysqlclient是一样的)
-CFLAGS = -pipe -Wall -g3
-LFLAGS = -rdynamic
-OPTIMIZE = -O0
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 # https://gcc.gnu.org/projects/cxx-status.html
-CC = g++ -std=c++03
+CFLAGS = -std=c++11 -pipe -Wall -g3
+LFLAGS = -rdynamic
+OPTIMIZE = -O0
 
 #include path
-INC = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
-	-I/usr/local/include/libbson-1.0 -I/usr/include/mysql -I./deps/aho-corasick
+INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
+	-I/usr/local/include/libbson-1.0 -I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers
 
 #libaray path
-LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml \
-	-L./deps/aho-corasick
+LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml \
+	-L./deps/aho-corasick -L./deps/lua_flatbuffers
 
 #link libaray
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
-	-lhttp_parser -llua_rapidxml -lacism
+LIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
+	-lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers
 
 #output directory
 ODIR = bin
@@ -50,7 +51,7 @@ DEPS := $(OBJS:.o=.d)
 
 $(ODIR)/%.o: %.cpp
 	@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+	$(CXX) $(CFLAGS) $(OPTIMIZE) $(INC_PATH) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖
 #$^ 所有的依赖目标的集合。以空格分隔。如果在依赖目标中有多个重复的,那个这个变量会去除重复的依赖目标,只保留一份。
@@ -60,7 +61,7 @@ $(ODIR)/%.o: %.cpp
 
 all: $(OBJS)
 #@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB) -o $(TARGET)  $(OBJS) $(LLIB)
+	$(CXX) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB_PATH) -o $(TARGET)  $(OBJS) $(LIB)
 
 #The dash at the start of '-include' tells Make to continue when the .d file doesn't exist (e.g. on first compilation)
 -include $(DEPS)
@@ -73,6 +74,7 @@ clean_all:
 	$(MAKE) -C deps/lua_rapidxml clean
 	$(MAKE) -C deps/http-parser clean
 	$(MAKE) -C deps/aho-corasick clean
+	$(MAKE) -C deps/lua_flatbuffers clean
 	rm -rf $(ODIR)/*
 
 build_all:
@@ -80,6 +82,7 @@ build_all:
 	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package
 	$(MAKE) -C deps/aho-corasick all
+	$(MAKE) -C deps/lua_flatbuffers all
 	$(MAKE) -C . all
 
 test:

@@ -1,3 +1,5 @@
+#include <lflatbuffers.hpp>
+
 #include "lstream_socket.h"
 
 #include "ltools.h"
@@ -262,4 +264,37 @@ int32 lstream_socket::s2c_recv()
     if ( _recv.data_size() <= 0 ) _recv.clear();
 
     return 4;
+}
+
+/* s2c_flatbuffers_send( lfb,srv_msg,clt_msg,schema,object,tbl ) */
+int lstream_socket::s2c_flatbuffers_send()
+{
+    class lflatbuffers** lfb =
+        (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
+    if ( lfb == NULL || *lfb == NULL )
+    {
+        return luaL_error( L, "s2c_flatbuffers_send argument #1 expect lua_flatbuffers" );
+    }
+
+    int32 srv_msg = luaL_checkinteger( L,2 );
+    int32 clt_msg = luaL_checkinteger( L,3 );
+
+    const char *schema = luaL_checkstring( L,4 );
+    const char *object = luaL_checkstring( L,5 );
+
+    if ( !lua_istable( L,6 ) )
+    {
+        return luaL_error( L,
+            "s2c_flatbuffers_send argument #6 expect table,got %s",
+            lua_typename( L,lua_type(L,6) ) );
+    }
+
+    if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
+    {
+        return luaL_error( L,(*lfb)->last_error() );
+    }
+
+    size_t sz = 0;
+    const char *buffer = (*lfb)->get_buffer( sz );
+    return 0;
 }
