@@ -27,7 +27,7 @@ LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lu
 
 #link libaray
 LIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
-	-lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers
+	-lhttp_parser -llua_rapidxml -lacism -Wl,-dn -llua_flatbuffers -lflatbuffers -Wl,-dy
 
 #output directory
 ODIR = bin

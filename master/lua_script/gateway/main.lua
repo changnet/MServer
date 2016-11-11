@@ -4,7 +4,7 @@ require "global.table"
 require "global.string"
 
 local setting = require "gateway/setting"
-local network_mgr = require "network/nework_mgr"
+local network_mgr = require "network/network_mgr"
 
 local argv = { ... }
 
