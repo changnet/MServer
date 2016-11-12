@@ -19,7 +19,12 @@ public:
     buffer();
     ~buffer();
 
-    bool append( const char *data,uint32 len ) __attribute__ ((warn_unused_result));
+    bool append( const void *data,uint32 len ) __attribute__ ((warn_unused_result))
+    {
+        if ( !reserved( len ) ) return false;
+
+        __append( data,len );    return true;
+    }
 
     /* 清理缓冲区 */
     inline void clear() { _pos = _size = 0; }
@@ -33,8 +38,12 @@ public:
     /* 有效的缓冲区指针 */
     char *data() const { return _buff + _pos; }
 
-    /* 强制转换操作符 */
-    //operator char *() { return _buff; }
+    /* append data,but won't reserved */
+    void __append( const void *data,uint32 len )
+    {
+        assert( "buffer not reserved!",_len - _size >= len );
+        memcpy( _buff + _size,data,len );       _size += len;
+    }
 public:
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长

@@ -26,8 +26,10 @@ LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lu
 	-L./deps/aho-corasick -L./deps/lua_flatbuffers
 
 #link libaray
-LIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson \
-	-lhttp_parser -llua_rapidxml -lacism -Wl,-dn -llua_flatbuffers -lflatbuffers -Wl,-dy
+SHARED_LIB = -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0  \
+
+STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers -lflatbuffers \
+	-llua_parson
 
 #output directory
 ODIR = bin
@@ -42,7 +44,7 @@ _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 	lua/lsocket.o lua/leventloop.o lua/lstate.o mysql/sql.o thread/thread.o\
 	lua/ltimer.o lua/lsql.o mongo/mongo.o lua/lmongo.o lua/lhttp_socket.o\
 	lua/llog.o lua/lstream_socket.o lua/lutil.o log/log.o lua/lobj_counter.o\
-	main.o stream/stream_protocol.o lua/lstream.o net/packet.o lua/lacism.o
+	main.o lua/lacism.o
 OBJS = $(addprefix $(ODIR)/,$(_OBJS))
 
 DEPS := $(OBJS:.o=.d)
@@ -61,7 +63,7 @@ $(ODIR)/%.o: %.cpp
 
 all: $(OBJS)
 #@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
-	$(CXX) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB_PATH) -o $(TARGET)  $(OBJS) $(LIB)
+	$(CXX) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB_PATH) -o $(TARGET)  $(OBJS) $(SHARED_LIB) -Wl,-dn $(STATIC_LIB) -Wl,-dy
 
 #The dash at the start of '-include' tells Make to continue when the .d file doesn't exist (e.g. on first compilation)
 -include $(DEPS)

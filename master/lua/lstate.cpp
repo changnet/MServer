@@ -11,7 +11,6 @@
 #include "lclass.h"
 #include "ltimer.h"
 #include "lacism.h"
-#include "lstream.h"
 #include "leventloop.h"
 #include "lhttp_socket.h"
 #include "lobj_counter.h"
@@ -68,7 +67,6 @@ int32 luaopen_log   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
-int32 luaopen_stream( lua_State *L );
 int32 luaopen_http_socket( lua_State *L );
 int32 luaopen_stream_socket( lua_State *L );
 
@@ -150,7 +148,6 @@ void lstate::open_cpp()
     luaopen_timer (L);
     luaopen_acism (L);
     luaopen_mongo (L);
-    luaopen_stream(L);
     luaopen_http_socket(L);
     luaopen_stream_socket(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
@@ -272,23 +269,10 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::set_on_disconnect>("set_on_disconnect");
     lc.def<&lstream_socket::file_description> ("file_description" );
 
-    lc.def<&lstream_socket::s2c_send  >   ("s2c_send"   );
-    lc.def<&lstream_socket::c2s_send  >   ("c2s_send"   );
-    lc.def<&lstream_socket::s2c_recv  >   ("s2c_recv"   );
-    lc.def<&lstream_socket::c2s_recv  >   ("c2s_recv"   );
-
-    return 0;
-}
-
-int32 luaopen_stream( lua_State *L )
-{
-    lclass<lstream> lc(L,"Stream");
-    lc.def<&lstream::tag> ( "tag" );
-    lc.def<&lstream::dump> ( "dump" );
-    lc.def<&lstream::tag_array_end  >  ( "tag_array_end"  );
-    lc.def<&lstream::tag_array_begin>  ( "tag_array_begin"  );
-    lc.def<&lstream::protocol_end  >  ( "protocol_end"  );
-    lc.def<&lstream::protocol_begin>  ( "protocol_begin"  );
+    // lc.def<&lstream_socket::s2c_send  >   ("s2c_send"   );
+    // lc.def<&lstream_socket::c2s_send  >   ("c2s_send"   );
+    // lc.def<&lstream_socket::s2c_recv  >   ("s2c_recv"   );
+    // lc.def<&lstream_socket::c2s_recv  >   ("c2s_recv"   );
 
     return 0;
 }

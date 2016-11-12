@@ -9,14 +9,6 @@ public:
     ~lstream_socket();
     explicit lstream_socket( lua_State *L );
 
-    int32 s2c_send();
-    int32 s2s_send();
-    int32 c2s_send();
-
-    int32 s2c_recv();
-    int32 s2s_recv();
-    int32 c2s_recv();
-
     int s2c_flatbuffers_send();
 public:
     void listen_cb  ( int32 revents );

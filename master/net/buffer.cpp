@@ -26,14 +26,3 @@ buffer::~buffer()
     _len  = 0;
     _pos  = 0;
 }
-
-/* 追加数据 */
-bool buffer::append( const char *data,uint32 len )
-{
-    if ( !reserved( len ) ) return false;
-
-    memcpy( _buff + _size,data,len );
-    _size += len;
-
-    return true;
-}
