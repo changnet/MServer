@@ -5,6 +5,7 @@ require "global.string"
 
 local setting = require "gateway/setting"
 local network_mgr = require "network/network_mgr"
+local message_mgr = require "message/message_mgr"
 
 local argv = { ... }
 
@@ -20,8 +21,11 @@ function pre_init()
     local session = network_mgr:generate_srv_session(
         argv[2],tonumber(argv[3]),tonumber(argv[4]) )
 
-    if not network_mgr:srv_listen( setting.sip,setting.sport ) then
+    message_mgr:init_message()
 
+    if not network_mgr:srv_listen( setting.sip,setting.sport ) then
+        ELOG( "server listen fail,exit" )
+        os.exit( 1 )
     end
 end
 

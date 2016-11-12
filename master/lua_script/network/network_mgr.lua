@@ -45,6 +45,15 @@ function Network_mgr:srv_listen( ip,port )
     if not fd then return false end
 
     self.srv_listen = conn
+
+    return true
+end
+
+-- 处理服务器连接
+function Network_mgr:on_acception( conn )
+    local fd = conn:file_description()
+
+    print( "accept server socket " .. fd )
 end
 
 local network_mgr = Network_mgr()
