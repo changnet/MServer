@@ -1,0 +1,7 @@
+// 系统模块 协议定义
+
+table clt_broadcast
+{
+    sessions:[int] ;
+    data    :[byte];
+}

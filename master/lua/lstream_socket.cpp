@@ -75,14 +75,14 @@ void lstream_socket::listen_cb( int32 revents )
     }
 }
 
-/* s2c_flatbuffers_send( lfb,srv_msg,clt_msg,schema,object,tbl ) */
-int lstream_socket::s2c_flatbuffers_send()
+/* ssc_flatbuffers_send( lfb,srv_msg,clt_msg,schema,object,tbl ) */
+int lstream_socket::ssc_flatbuffers_send()
 {
     class lflatbuffers** lfb =
         (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
     if ( lfb == NULL || *lfb == NULL )
     {
-        return luaL_error( L, "s2c_flatbuffers_send argument #1 expect lua_flatbuffers" );
+        return luaL_error( L, "argument #1 expect lua_flatbuffers" );
     }
 
     int32 srv_msg = luaL_checkinteger( L,2 );
@@ -94,8 +94,7 @@ int lstream_socket::s2c_flatbuffers_send()
     if ( !lua_istable( L,6 ) )
     {
         return luaL_error( L,
-            "s2c_flatbuffers_send argument #6 expect table,got %s",
-            lua_typename( L,lua_type(L,6) ) );
+            "argument #6 expect table,got %s",lua_typename( L,lua_type(L,6) ) );
     }
 
     if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
@@ -127,5 +126,56 @@ int lstream_socket::s2c_flatbuffers_send()
     _send.__append( &s2ch,sizeof(struct s2c_header) );
     _send.__append( buffer,sz );
 
+    pending_send();
+    return 0;
+}
+
+
+/* sc_flatbuffers_send( lfb,clt_msg,schema,object,tbl ) */
+int lstream_socket::sc_flatbuffers_send()
+{
+    class lflatbuffers** lfb =
+        (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
+    if ( lfb == NULL || *lfb == NULL )
+    {
+        return luaL_error( L, "argument #1 expect lua_flatbuffers" );
+    }
+
+    int32 clt_msg = luaL_checkinteger( L,2 );
+
+    const char *schema = luaL_checkstring( L,3 );
+    const char *object = luaL_checkstring( L,4 );
+
+    if ( !lua_istable( L,5 ) )
+    {
+        return luaL_error( L,
+            "argument #5 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
+    }
+
+    if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
+    {
+        return luaL_error( L,(*lfb)->last_error() );
+    }
+
+    size_t sz = 0;
+    const char *buffer = (*lfb)->get_buffer( sz );
+    if ( sz > USHRT_MAX )
+    {
+        return luaL_error( L,"buffer size over USHRT_MAX" );
+    }
+
+    if ( !_send.reserved( sz + sizeof(struct s2c_header) + sizeof(struct s2s_header) ) )
+    {
+        return luaL_error( L,"out of socket buffer" );
+    }
+
+    struct s2c_header s2ch;
+    s2ch._length = static_cast<packet_length>( sz );
+    s2ch._cmd    = static_cast<uint16>  ( clt_msg );
+
+    _send.__append( &s2ch,sizeof(struct s2c_header) );
+    _send.__append( buffer,sz );
+
+    pending_send();
     return 0;
 }

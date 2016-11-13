@@ -22,6 +22,8 @@ function pre_init()
         argv[2],tonumber(argv[3]),tonumber(argv[4]) )
 
     message_mgr:init_message()
+    local fs = message_mgr:load_schema ()
+    PLOG( "gateway load flatbuffers schema:%d",fs )
 
     if not network_mgr:srv_listen( setting.sip,setting.sport ) then
         ELOG( "server listen fail,exit" )

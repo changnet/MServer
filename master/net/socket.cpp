@@ -250,6 +250,6 @@ int32 socket::listen( const char *host,int32 port )
 void socket::pending_send()
 {
     if ( 0 != _sending ) return; // 已经在发送队列
-    /* 放到发送队列，最后一次发送 */
+    /* 放到发送队列，一次发送 */
     _sending = leventloop::instance()->pending_send( this );
 }

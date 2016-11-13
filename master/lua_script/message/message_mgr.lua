@@ -22,8 +22,8 @@ function Message_mgr:__init()
 end
 
 -- 加载二进制flatbuffers schema文件
-function Message_mgr:load_schema( path )
-    return self.lfb:load_bfbs_path( path,"bfbs" )
+function Message_mgr:load_schema()
+    return self.lfb:load_bfbs_path( "fbs","bfbs" )
 end
 
 -- 初始化协议定义
