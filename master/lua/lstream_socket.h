@@ -9,8 +9,10 @@ public:
     ~lstream_socket();
     explicit lstream_socket( lua_State *L );
 
-    int sc_flatbuffers_send (); /* server to client */
-    int ssc_flatbuffers_send(); /* server to server to client */
+    int ss_flatbuffers_send  (); /* server to server */
+    int ss_flatbuffers_decode(); /* decode server to server message */
+    int sc_flatbuffers_send  (); /* server to client */
+    int ssc_flatbuffers_send (); /* server to server to client */
 public:
     void listen_cb  ( int32 revents );
     /* 以下函数因为lua粘合层的写法限制，需要在子类覆盖，不然无法注册 */

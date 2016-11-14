@@ -3,7 +3,7 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
-local setting = require "gateway/setting"
+local setting = require "world/setting"
 local network_mgr = require "network/network_mgr"
 local message_mgr = require "message/message_mgr"
 
@@ -23,7 +23,7 @@ function pre_init()
 
     message_mgr:init_message()
     local fs = message_mgr:load_schema()
-    PLOG( "gateway load flatbuffers schema:%d",fs )
+    PLOG( "world load flatbuffers schema:%d",fs )
 
     if not network_mgr:srv_listen( setting.sip,setting.sport ) then
         ELOG( "server listen fail,exit" )

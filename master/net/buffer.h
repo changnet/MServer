@@ -26,6 +26,14 @@ public:
         __append( data,len );    return true;
     }
 
+    inline void subtract( uint32 len )
+    {
+        _pos += len;
+        assert( "buffer subtract",_size >= _pos && _len >= _pos );
+
+        if ( _size == _pos ) _pos = _size = 0;
+    }
+
     /* 清理缓冲区 */
     inline void clear() { _pos = _size = 0; }
 
@@ -95,8 +103,8 @@ public:
 public:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
-    uint32 _len;     /* 缓冲区总大小 */
-    uint32 _pos;     /* 悬空区大小 */
+    uint32 _len ;    /* 缓冲区总大小 */
+    uint32 _pos ;    /* 悬空区大小 */
 
     uint32 _max_buff; /* 缓冲区最小值 */
     uint32 _min_buff; /* 缓冲区最大值 */
