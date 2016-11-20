@@ -14,8 +14,11 @@ local name_type =
 local Network_mgr = oo.singleton( nil,... )
 
 function Network_mgr:__init()
-    self.srv = {}
-    self.clt = {}
+    self.srv = {}  -- 已认证的服务器连接
+    self.clt = {}  -- 已认证的客户端连接
+
+    self.srv_conn = {} -- 未认证的服务器连接
+    self.clt_conn = {} -- 未认证的客户端连接
 
     self.srv_listen = nil
 end
@@ -39,7 +42,7 @@ end
 function Network_mgr:srv_listen( ip,port )
     local conn = Stream_socket()
     conn:set_self_ref( self )
-    conn:set_on_acception( Network_mgr.on_acception )
+    conn:set_on_acception( Network_mgr.on_srv_acception )
 
     local fd = conn:listen( ip,port )
     if not fd then return false end
@@ -50,10 +53,30 @@ function Network_mgr:srv_listen( ip,port )
 end
 
 -- 处理服务器连接
-function Network_mgr:on_acception( conn )
+function Network_mgr:on_srv_acception( conn )
     local fd = conn:file_description()
 
     print( "accept server socket " .. fd )
+end
+
+-- 主动连接其他服务器
+function Network_mgr:connect_srv( srvs )
+    for _,srv in pairs( srvs ) do
+        local conn = Stream_socket()
+        conn:set_self_ref( self )
+        conn:set_on_connection( self.on_srv_connected )
+        conn:set_on_disconnect( self.on_srv_disconnected )
+
+        local fd = conn:connect( srv.ip,srv.port )
+    end
+end
+
+-- 处理连接其他服务器成功
+function Network_mgr:on_srv_connected( )
+end
+
+-- 处理服务器断开
+function Network_mgr:on_srv_disconnected()
 end
 
 local network_mgr = Network_mgr()

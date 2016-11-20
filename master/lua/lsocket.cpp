@@ -50,7 +50,7 @@ int32 lsocket::listen()
     int32 fd = socket::listen( host,port );
     if ( fd < 0 )
     {
-        ERROR( "socket listen fail:%s\n",strerror(errno) );
+        luaL_error( L,strerror(errno) );
         return 0;
     }
 
@@ -79,7 +79,7 @@ int32 lsocket::connect()
     int32 fd = socket::connect( host,port );
     if ( fd < 0 )
     {
-        ERROR( "socket connect fail:%s\n",strerror(errno) );
+        luaL_error( L,strerror(errno) );
         return 0;
     }
 
