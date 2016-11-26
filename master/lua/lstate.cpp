@@ -261,6 +261,8 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::listen> ("listen" );
     lc.def<&lstream_socket::address>("address");
     lc.def<&lstream_socket::connect>("connect");
+    lc.def<&lstream_socket::srv_next>("srv_next");
+    lc.def<&lstream_socket::clt_next>("clt_next");
     lc.def<&lstream_socket::set_self_ref>     ("set_self_ref"     );
     lc.def<&lstream_socket::set_on_message>   ("set_on_message"   );
     lc.def<&lstream_socket::buffer_setting>   ("buffer_setting"   );

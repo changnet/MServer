@@ -75,6 +75,36 @@ void lstream_socket::listen_cb( int32 revents )
     }
 }
 
+/* get next server message */
+int lstream_socket::srv_next()
+{
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct s2s_header) ) return 0;
+
+    struct s2s_header *header =
+        reinterpret_cast<struct s2s_header *>( _recv.data() );
+
+    if ( sz < header->_length ) return 0;
+
+    lua_pushinteger( L,header->_cmd );
+    return 1;
+}
+
+/* get next client message */
+int lstream_socket::clt_next()
+{
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct c2s_header) ) return 0;
+
+    struct c2s_header *header =
+        reinterpret_cast<struct c2s_header *>( _recv.data() );
+
+    if ( sz < header->_length ) return 0;
+
+    lua_pushinteger( L,header->_cmd );
+    return 1;
+}
+
 /* ssc_flatbuffers_send( lfb,srv_msg,clt_msg,schema,object,tbl ) */
 int lstream_socket::ssc_flatbuffers_send()
 {

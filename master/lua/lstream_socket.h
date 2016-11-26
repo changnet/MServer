@@ -9,6 +9,9 @@ public:
     ~lstream_socket();
     explicit lstream_socket( lua_State *L );
 
+    int srv_next(); /* get next server message */
+    int clt_next(); /* get next client message */
+
     int ss_flatbuffers_send  (); /* server to server */
     int ss_flatbuffers_decode(); /* decode server to server message */
     int sc_flatbuffers_send  (); /* server to client */

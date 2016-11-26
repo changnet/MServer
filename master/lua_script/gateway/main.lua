@@ -31,12 +31,29 @@ function pre_init()
     end
 end
 
+function test()
+    local Srv_conn = require "network/srv_conn"
+
+    for i = 1,100000 do
+        local conn = Srv_conn()
+    end
+end
+
 function main()
     ev:set_signal_ref( sig_handler )
     ev:signal( 2 );
     ev:signal( 15 );
 
-    pre_init();
+    test()
+    collectgarbage( "collect" )
+    print( "before gc:",collectgarbage( "count" ) )
+    --pre_init();
+    test()
+    collectgarbage( "collect" )
+    print( "after gc:",collectgarbage( "count" ) )
+    test()
+    collectgarbage( "collect" )
+    print( "third gc:",collectgarbage( "count" ) )
 
     ev:run()
 end

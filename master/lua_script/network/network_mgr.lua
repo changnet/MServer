@@ -54,9 +54,11 @@ end
 
 -- 处理服务器连接
 function Network_mgr:on_srv_acception( conn )
-    local fd = conn:file_description()
+    local srv_conn = Srv_conn( conn )
+    self.srv_conn[srv_conn] = ev:time()
 
-    print( "accept server socket " .. fd )
+    local fd = conn:file_description()
+    print( "accept server connection",fd )
 end
 
 -- 主动连接其他服务器
