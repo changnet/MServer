@@ -231,7 +231,7 @@ int lstream_socket::ss_flatbuffers_send()
     if ( !lua_istable( L,5 ) )
     {
         return luaL_error( L,
-            "argument #6 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
+            "argument #5 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
     }
 
     if ( (*lfb)->encode( L,schema,object,5 ) < 0 )

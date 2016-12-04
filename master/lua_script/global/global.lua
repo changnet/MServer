@@ -60,9 +60,9 @@ end
 
 local function write_log_file( file,log )
     local file = io.open( file,"a+" )
-    if not file then -- 无写入权限...
-        return
-    end
+
+    -- 无写入权限...
+    if not file then return end
 
     file:write( log )
     file:write( "\r\n" )

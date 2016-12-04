@@ -44,16 +44,7 @@ function main()
     ev:signal( 2 );
     ev:signal( 15 );
 
-    test()
-    collectgarbage( "collect" )
-    print( "before gc:",collectgarbage( "count" ) )
-    --pre_init();
-    test()
-    collectgarbage( "collect" )
-    print( "after gc:",collectgarbage( "count" ) )
-    test()
-    collectgarbage( "collect" )
-    print( "third gc:",collectgarbage( "count" ) )
+    pre_init();
 
     ev:run()
 end

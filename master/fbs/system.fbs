@@ -3,12 +3,12 @@
 /* 服务器注册 */
 table ssregister
 {
-    session:[int];       // 服务器session id
-    timestamp:[int];     // 时间戳
+    session:int;         // 服务器session id
+    timestamp:int;       // 时间戳
     auth:string;         // 认证字符串
-    clt_msg:[int]        // 该服务器处理的客户端消息
-    srv_msg:[int]        // 该服务器处理的服务器消息
-    rpc_msg:[string]     // 该服务器处理的rpc消息
+    clt_msg:[int];       // 该服务器处理的客户端消息
+    srv_msg:[int];       // 该服务器处理的服务器消息
+    rpc_msg:[string];    // 该服务器处理的rpc消息
 }
 
 table ssbroadcast

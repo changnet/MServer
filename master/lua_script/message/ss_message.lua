@@ -13,7 +13,7 @@ local MODULE_SYSTEM = (0x00 << 8)
 
 local SS =
 {
-    CLT   = { MODULE_SYSTEM + 0x01 },     -- 收到gateway转的客户端包
+    CLT   = { MODULE_SYSTEM + 0x01 },     -- 收到另外一个srv转发的客户端包
     SRV   = { MODULE_SYSTEM + 0x02 },     -- 收到服务器之间通信包
     RPC   = { MODULE_SYSTEM + 0x03 },     -- rcp通信包
     REG   = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" }

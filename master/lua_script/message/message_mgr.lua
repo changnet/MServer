@@ -51,22 +51,23 @@ function Message_mgr:rpc_register( name,handler )
 end
 
 -- 分发服务器协议处理
-function Message_mgr:srv_dispatcher( msg,conn )
-    local srv = self.ss[msg]
-    if not srv then
-        return ELOG( "srv_dispatcher:message [%d] not define",msg )
+function Message_mgr:srv_dispatcher( cmd,conn )
+    local msg = self.ss[cmd]
+    if not msg then
+        return ELOG( "srv_dispatcher:message [%d] not define",cmd )
     end
 
-    local handler = srv.handler
+    local handler = msg.handler
     if not handler then
-        return ELOG( "srv_dispatcher:message [%d] define but no handler register",msg )
+        return ELOG( "srv_dispatcher:message [%d] define but no handler register",cmd )
     end
-
-    handler( srv,conn )
+    local pkt = conn:ss_flatbuffers_decode( self.lfb,cmd,msg[2],msg[3] )
+    vd( pkt )
+    -- return handler( conn,msg )
 end
 
 -- 处理来着gateway转发的客户端包
-function Message_mgr:clt_dispatcher( msg,conn )
+function Message_mgr:clt_dispatcher( conn,msg )
     local cmd,tbl = conn:scs_flatbuffers_decode( msg[2],msg[3] )
 
     local clt = self.cs[cmd]
@@ -79,7 +80,14 @@ function Message_mgr:clt_dispatcher( msg,conn )
         return ELOG( "clt_dispatcher:message [%d] define but no handler register",cmd )
     end
 
-    handler( tbl )
+    return handler( conn,tbl )
+end
+
+--发送服务器消息
+function Message_mgr:srv_send( conn,msg,pkt )
+    assert( msg,"srv_send nil message" )
+
+    conn.conn:ss_flatbuffers_send( self.lfb,msg[1],msg[2],msg[3],pkt )
 end
 
 local message_mgr = Message_mgr()

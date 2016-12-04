@@ -29,6 +29,7 @@ function pre_init()
         ELOG( "server listen fail,exit" )
         os.exit( 1 )
     end
+    network_mgr:connect_srv( setting.servers )
 end
 
 function main()
