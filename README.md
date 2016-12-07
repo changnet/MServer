@@ -77,12 +77,6 @@ valgrind测试
 9. arpg使用状态机来替换各种延时操作，而不要注册各种定时器，不能替换的使用二级定时器
 10. https://github.com/CloudFundoo/SSL-TLS-clientserver(polar ssl(mbed tls)实现https)
 #TOSOLVE
-1. lsocket不再继承socket，改用组合方式(message_cb需要使用ev_io,recv、send也在lsocket使用)  
-   message_cb、listen_cb、connect_cb再做一次模板特化  
-   重新封装原始start、stop、send、recv、is_active函数,sending变量  
-   ev不会再暴露给lsocket  
-   fd由lsocket产生传给socket  
-   将bind等函数全封装在socket，因此要重新封装connect,check_connect,listen,accept_one  
 2. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
 3. http server/client 压测
 4. 协议分发接口注意不要调用luaL_error，不然会把lua层的while中断
@@ -93,6 +87,7 @@ valgrind测试
 9. pack_node的错误信息能不能更详细
 10. 协议注册时，由各个进程在require时发送给router，这时router就可以记录协议号的目标进程，动态分发，不需要程序员指定。在拆分功能时不需要考虑协议分发
 11. socket仅收到协议号时，还未encode或者decode就出错，缓冲区未清会死循环
+12. lmongo与lua_bson库合并部分公用api
 #rpc
 1.调用持久化，参考rabbitMQ
 2.可靠调用(有重试机制，对端需要处理重复请求)

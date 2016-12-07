@@ -25,9 +25,13 @@ static inline int32 lua_isbit32(int64 v)
 static inline void lua_pushint64( lua_State *L,int64 v )
 {
     if ( v <= LUA_MAXINTEGER && v >= LUA_MININTEGER )
+    {
         lua_pushinteger( L,static_cast<LUA_INTEGER>(v) );
+    }
     else
+    {
         lua_pushnumber( L,static_cast<LUA_NUMBER>(v) );
+    }
 }
 
 /* 判断一个table是否为数组
@@ -49,7 +53,9 @@ static inline int32 lua_isarray( lua_State *L,int32 index,int32 *array,
         if ( LUA_TNIL != lua_type( L,-1 ) )
         {
             if ( lua_toboolean( L,-1 ) )
+            {
                 *array = 1;
+            }
             else
             {
                 lua_pop( L,1 );
@@ -69,23 +75,23 @@ static inline int32 lua_isarray( lua_State *L,int32 index,int32 *array,
         if ( lua_type( L, -2 ) != LUA_TNUMBER )
         {
             *max_index = -1;
-            lua_pop( L,2 ); /* pop both key and value */
-            return 0;
+            lua_pop( L,2 ) ; /* pop both key and value */
+            return        0;
         }
 
         key = lua_tonumber( L, -2 );
         if ( floor(key) != key || key < 1 )
         {
             *max_index = -1;
-            lua_pop( L,2 );
-            return 0;
+            lua_pop( L,2 ) ;
+            return        0;
         }
 
         if ( key > INT_MAX ) /* array index over INT_MAX,must be object */
         {
-            *array = 0;
+            *array = 0     ;
             *max_index = -1;
-            lua_pop( L,2 );
+            lua_pop( L,2 ) ;
 
             return 0;
         }
@@ -131,6 +137,28 @@ static inline void stack_dump ( lua_State *L )
         printf("  ");  /* put a separator */
     }
     printf("\n");  /* end the listing */
+}
+
+/* debug.traceback in c */
+static inline int traceback ( lua_State *L )
+{
+    const char * msg = lua_tostring( L, 1 );
+    if ( msg )
+    {
+        luaL_traceback( L, L, msg, 1 );
+    }
+    else
+    {
+        if ( !lua_isnoneornil(L, 1) ) /* is there an error object? */
+        {
+            if ( !luaL_callmeta(L, 1, "__tostring") )  /* try its 'tostring' metamethod */
+            {
+                lua_pushliteral( L, "(no error message)" );
+            }
+        }
+    }
+
+    return 1;
 }
 
 #endif /* __LTOOLS_H__ */
