@@ -153,14 +153,18 @@ void leventloop::sig_handler( int32 signum )
 
 void leventloop::invoke_signal()
 {
+    lua_pushcfunction(L,traceback);
+
     int signum = 0;
+    int32 top = lua_gettop(L);
     while (sig_mask != 0)
     {
         if (sig_mask & 1)
         {
+
             lua_rawgeti(L, LUA_REGISTRYINDEX, sig_ref);
             lua_pushinteger( L,signum );
-            if ( expect_false( LUA_OK != lua_pcall(L,1,0,0) ) )
+            if ( expect_false( LUA_OK != lua_pcall(L,1,0,top) ) )
             {
                 ERROR( "signal call lua fail:%s",lua_tostring(L,-1) );
             }
@@ -170,6 +174,7 @@ void leventloop::invoke_signal()
     }
 
     sig_mask = 0;
+    lua_remove(L,top); /* remove traceback */
 }
 
 int32 leventloop::set_signal_ref()

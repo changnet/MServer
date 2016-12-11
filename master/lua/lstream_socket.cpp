@@ -31,6 +31,9 @@ void lstream_socket::listen_cb( int32 revents )
 {
     assert( "libev listen cb  error",!(EV_ERROR & revents) );
 
+    lua_pushcfunction(L,traceback);
+
+    int32 top = lua_gettop(L);
     while ( socket::active() )
     {
         int32 new_fd = socket::accept();
@@ -55,14 +58,9 @@ void lstream_socket::listen_cb( int32 revents )
         _s->socket::start( new_fd,EV_READ );  /* 这里会设置fd */
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref_acception);
-        int32 param = 1;
-        if ( ref_self )
-        {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-            param ++;
-        }
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
         lclass<lstream_socket>::push( L,_s,true );
-        if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+        if ( expect_false( LUA_OK != lua_pcall(L,2,0,top) ) )
         {
             /* 如果失败，会出现几种情况：
              * 1) lua能够引用socket，只是lua其他逻辑出错.需要lua层处理此异常
@@ -70,9 +68,13 @@ void lstream_socket::listen_cb( int32 revents )
              *    将此fd删除，触发一个错误
              */
             ERROR( "listen cb call accept handler fail:%s",lua_tostring(L,-1) );
+            lua_pop(L,2); /* remove traceback and error message */
             return;
         }
+
     }
+
+    lua_pop(L,1); // remove traceback */
 }
 
 /* get next server message */

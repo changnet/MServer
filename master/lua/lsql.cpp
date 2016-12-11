@@ -53,7 +53,7 @@ void lsql::routine( notify_t msg )
         notify_parent( ERROR );
         return;
     }
-    
+
     switch ( msg )
     {
         case ERROR : assert( "main thread should never notify error",false );break;
@@ -85,18 +85,18 @@ void lsql::invoke_sql( bool cb )
         {
             ERROR( "sql query error:%s",_sql.error() );
             ERROR( "sql will not exec:%s",stmt );
-            
+
             invoke_cb( cb,query,NULL );
             continue;
         }
-        
+
         /* 关服时不需要回调了 */
         if ( !cb )
         {
             invoke_cb( cb,query,NULL );
             continue;
         }
-        
+
         struct sql_res *res = NULL;
         if ( _sql.result( &res ) )
         {
@@ -160,31 +160,27 @@ void lsql::notification( notify_t msg )
         case EXIT  : assert( "sql thread should not exit itself",false );abort();break;
         case ERROR :
         {
+            lua_pushcfunction( L,traceback );
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
-            int32 param = 0;
-            if ( ref_self )
-            {
-                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
-                param ++;
-            }
-            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+            if ( LUA_OK != lua_pcall( L,1,0,-3 ) )
             {
                 ERROR( "sql error call back fail:%s\n",lua_tostring(L,-1) );
+                lua_pop(L,1); /* remove error message */
             }
+            lua_pop(L,1); /* remove traceback */
         }break;
         case MSG :
         {
+            lua_pushcfunction( L,traceback );
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
-            int32 param = 0;
-            if ( ref_self )
-            {
-                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
-                param ++;
-            }
-            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+            if ( LUA_OK != lua_pcall( L,1,0,-3 ) )
             {
                 ERROR( "sql error call back fail:%s\n",lua_tostring(L,-1) );
+                lua_pop(L,1); /* remove error message */
             }
+            lua_pop(L,1); /* remove traceback */
         }break;
         default   : assert( "unknow sql event",false );break;
     }
@@ -329,7 +325,7 @@ bool lsql::cleanup()
 
     _sql.disconnect() ;
     mysql_thread_end();
-    
+
     return true;
 }
 
@@ -342,7 +338,7 @@ bool lsql::initlization()
         notify_parent( ERROR );
         return false;
     }
-    
+
     return true;
 }
 
@@ -360,11 +356,11 @@ void lsql::invoke_cb( bool cb,struct sql_query *query,struct sql_res *res )
         unlock();
 
         notify_parent( MSG );
-        
+
         delete query;
         return;
     }
-    
+
     assert( "this sql should not have result",!res );
     delete query;
 }

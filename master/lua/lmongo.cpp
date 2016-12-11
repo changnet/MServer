@@ -104,36 +104,38 @@ void lmongo::notification( notify_t msg )
 {
     switch ( msg )
     {
+        case NONE  : break;
         case ERROR :
         {
+            lua_pushcfunction( L,traceback );
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
-            int32 param = 0;
-            if ( ref_self )
-            {
-                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
-                param ++;
-            }
-            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+            if ( LUA_OK != lua_pcall( L,1,0,-3 ) )
             {
                 ERROR( "mongo error call back fail:%s",lua_tostring(L,-1) );
+                lua_pop(L,2); /* remove traceback and error message */
+            }
+            else
+            {
+                lua_pop(L,1); /* remove traceback */
             }
         }break;
-        case NONE : break;
-        case EXIT : assert( "mongo thread should not exit itself",false );abort();break;
         case MSG  :
         {
+            lua_pushcfunction( L,traceback );
             lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
-            int32 param = 0;
-            if ( ref_self )
-            {
-                lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
-                param ++;
-            }
-            if ( LUA_OK != lua_pcall( L,param,0,0 ) )
+            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
+            if ( LUA_OK != lua_pcall( L,1,0,-3 ) )
             {
                 ERROR( "mongo error call back fail:%s",lua_tostring(L,-1) );
+                lua_pop(L,2); /* remove traceback and error message */
+            }
+            else
+            {
+                lua_pop(L,1); /* remove traceback */
             }
         }break;
+        case EXIT : assert( "mongo thread should not exit itself",false );abort();break;
         default   : assert( "unknow mongo event",false );break;
     }
 }

@@ -76,16 +76,14 @@ void ltimer::callback( ev_timer &w,int32 revents )
 {
     assert( "libev timer cb error",!(EV_ERROR & revents) );
 
+    lua_pushcfunction(L,traceback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_callback);
-    int32 param = 0;
-    if ( ref_self )
-    {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-        ++param;
-    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
 
-    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+    if ( expect_false( LUA_OK != lua_pcall(L,1,0,-3) ) )
     {
         ERROR( "timer call lua fail:%s\n",lua_tostring(L,-1) );
+        lua_pop(L,1); /* remove error message traceback */
     }
+    lua_pop(L,1); /* remove traceback */
 }

@@ -63,6 +63,7 @@ function Message_mgr:srv_dispatcher( cmd,conn )
     end
     local pkt = conn:ss_flatbuffers_decode( self.lfb,cmd,msg[2],msg[3] )
     vd( pkt )
+    local a = nil + 1
     -- return handler( conn,msg )
 end
 

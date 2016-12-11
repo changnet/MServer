@@ -153,37 +153,36 @@ void lsocket::message_cb( int32 revents )
         on_disconnect();
         return;
     }
-    else if ( 0 == complete ) return;
 
+    if ( 0 == complete ) return;
+
+    lua_pushcfunction(L,traceback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_message);
-    int32 param = 0;
-    if ( ref_self )
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
+    if ( expect_false( LUA_OK != lua_pcall(L,1,0,-3) ) )
     {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-        param ++;
-    }
-    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
-    {
-        ERROR( "message_notify fail:%s\n",lua_tostring(L,-1) );
+        ERROR( "message callback fail:%s\n",lua_tostring(L,-1) );
+
+        lua_pop(L,2); /* remove error message and traceback */
         return;
     }
+
+    lua_pop(L,1); /* remove traceback */
 }
 
 void lsocket::on_disconnect()
 {
+    lua_pushcfunction(L,traceback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
-    int32 param = 0;
-    if ( ref_self )
-    {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-        param ++;
-    }
-    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
+    if ( expect_false( LUA_OK != lua_pcall(L,1,0,-3) ) )
     {
         ERROR( "socket disconect,call lua fail:%s\n",lua_tostring(L,-1) );
         // DO NOT RETURN
+        lua_pop(L,1); /* remove error message */
     }
 
+    lua_pop(L,1); /* remove traceback */
     /* 关闭fd，但不要delete
      * 先回调lua，再close.lua可能会调用一些函数，如取fd
      */
@@ -284,20 +283,18 @@ void lsocket::connect_cb ( int32 revents )
 
     int32 err = socket::validate();
 
+    lua_pushcfunction(L,traceback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connection);
-    int32 param = 1;
-    if ( ref_self )
-    {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-        param ++;
-    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
     lua_pushboolean( L,!err );
-    if ( expect_false( LUA_OK != lua_pcall(L,param,0,0) ) )
+    if ( expect_false( LUA_OK != lua_pcall(L,2,0,-4) ) )
     {
         ERROR( "connect_cb call lua fail:%s\n",lua_tostring(L,-1) );
+        lua_pop(L,1); /* remove error message */
         // DON NOT return
     }
 
+    lua_pop(L,1); /* remove traceback */
     if ( err )  /* 连接失败 */
     {
         socket::stop();
