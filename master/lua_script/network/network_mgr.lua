@@ -82,7 +82,7 @@ end
 
 -- 服务器认证
 function Network_mgr:srv_authenticate( conn,pkt )
-    vd( pkt )
+    self.srv_conn[conn] = nil
 end
 
 local network_mgr = Network_mgr()

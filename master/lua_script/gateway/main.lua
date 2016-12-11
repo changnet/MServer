@@ -9,7 +9,7 @@ local message_mgr = require "message/message_mgr"
 
 local argv = { ... }
 
-function sig_handler( signum )
+local function sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
     if   g_store_sql then   g_store_sql:stop() end
     if     g_log_mgr then     g_log_mgr:stop() end
@@ -17,7 +17,7 @@ function sig_handler( signum )
     ev:exit()
 end
 
-function pre_init()
+local function pre_init()
     local session = network_mgr:generate_srv_session(
         argv[2],tonumber(argv[3]),tonumber(argv[4]) )
 
@@ -31,15 +31,7 @@ function pre_init()
     end
 end
 
-function test()
-    local Srv_conn = require "network/srv_conn"
-
-    for i = 1,100000 do
-        local conn = Srv_conn()
-    end
-end
-
-function main()
+local function main()
     ev:set_signal_ref( sig_handler )
     ev:signal( 2 );
     ev:signal( 15 );

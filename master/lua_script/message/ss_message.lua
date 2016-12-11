@@ -14,9 +14,8 @@ local MODULE_SYSTEM = (0x00 << 8)
 local SS =
 {
     CLT   = { MODULE_SYSTEM + 0x01 },     -- 收到另外一个srv转发的客户端包
-    SRV   = { MODULE_SYSTEM + 0x02 },     -- 收到服务器之间通信包
-    RPC   = { MODULE_SYSTEM + 0x03 },     -- rcp通信包
-    REG   = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" }
+    RPC   = { MODULE_SYSTEM + 0x02 },     -- rcp通信包
+    REG   = { MODULE_SYSTEM + 0x03,"system.bfbs","ssregister" }
 
     -- 其他功能模块协议
     -- LOGIN = { MODULE_LOGIN + 0x01,"login,bfbs","clogin" },

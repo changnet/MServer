@@ -50,8 +50,15 @@ end
 function Message_mgr:rpc_register( name,handler )
 end
 
--- 分发服务器协议处理
+-- 分发服务器协议
 function Message_mgr:srv_dispatcher( cmd,conn )
+    if cmd == SS.CLT then
+        return clt_dispatcher( cmd,conn )
+    elseif cmd == SS.RPC then
+        return -- rpc_dispatcher( cmd,conn )
+    end
+
+    -- server to server message handle here
     local msg = self.ss[cmd]
     if not msg then
         return ELOG( "srv_dispatcher:message [%d] not define",cmd )
@@ -62,9 +69,7 @@ function Message_mgr:srv_dispatcher( cmd,conn )
         return ELOG( "srv_dispatcher:message [%d] define but no handler register",cmd )
     end
     local pkt = conn:ss_flatbuffers_decode( self.lfb,cmd,msg[2],msg[3] )
-    vd( pkt )
-    local a = nil + 1
-    -- return handler( conn,msg )
+    return handler( conn,pkt )
 end
 
 -- 处理来着gateway转发的客户端包
