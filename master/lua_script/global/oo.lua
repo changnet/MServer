@@ -142,6 +142,27 @@ function oo.define(_table, name)
 
     return _table
 end
+
+-- refer to a class,to solve circular require
+-- you must implement the class later.
+-- DO NOT refer a singleton or define.
+function oo.refer(name)
+    if type(name) ~= "string" then
+        error( "oo refer no name specify" )
+        return
+    end
+
+    -- if the class already implemented,return it
+    if class_list[name] ~= nil then
+        return class_list[name]
+    end
+
+    -- create a unimplemented class
+    local clz = {}
+    class_list[name] = clz
+
+    return clz
+end
 --******************************************************************************
 
 -- 获取基类元表(clz是元表而不是对象)

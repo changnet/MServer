@@ -3,9 +3,10 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
-local setting = require "world/setting"
+local setting     = require "world/setting"
 local network_mgr = require "network/network_mgr"
 local message_mgr = require "message/message_mgr"
+local Srv_conn    = require "network/srv_conn"
 
 local argv = { ... }
 

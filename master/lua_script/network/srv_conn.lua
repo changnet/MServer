@@ -2,6 +2,7 @@
 
 local Stream_socket = require "Stream_socket"
 local message_mgr = require "message/message_mgr"
+local network_mgr = require "network/network_mgr"
 
 local Srv_conn = oo.class( nil,... )
 
@@ -33,7 +34,6 @@ end
 
 -- 断开回调
 function Srv_conn:on_disconnected()
-    local network_mgr = require "network/network_mgr"
     return network_mgr:srv_disconnect( self )
 end
 

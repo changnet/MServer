@@ -1,7 +1,7 @@
 -- network_mgr 网络连接管理
 
 local Stream_socket = require "Stream_socket"
-local Srv_conn = require "network/srv_conn"
+local Srv_conn = oo.refer( "network/srv_conn" )
 
 -- 服务器名字转索引，不经常改。运维也不需要知道，暂时不做成配置
 local name_type =

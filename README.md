@@ -15,8 +15,10 @@ MySQL、MongoDB、日志采用了多线程，socket采用了非阻塞epoll，用
  * sudo apt-get install lua53
  * sudo apt-get install pkg-config libssl-dev libsasl2-dev
  * install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)
+ * download submodule: git submodule init and update
  * cd MServer/master & make
-
+ * update submodule: git submodule update
+ * update submodule from origin: git submodule foreach git pull origin master
 
 组件
 ----
@@ -88,6 +90,7 @@ valgrind测试
 10. 协议注册时，由各个进程在require时发送给router，这时router就可以记录协议号的目标进程，动态分发，不需要程序员指定。在拆分功能时不需要考虑协议分发
 11. socket仅收到协议号时，还未encode或者decode就出错，缓冲区未清会死循环
 12. lmongo与lua_bson库合并部分公用api
+13. lmysql、lmongo拆分出去，放到deps作为第三方依赖
 #rpc
 1.调用持久化，参考rabbitMQ
 2.可靠调用(有重试机制，对端需要处理重复请求)
