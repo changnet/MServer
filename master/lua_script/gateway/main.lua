@@ -38,7 +38,7 @@ local function main()
 
     pre_init();
 
-    ev:run()
+    ev:backend()
 end
 
 xpcall( main, __G__TRACKBACK__ )

@@ -67,7 +67,7 @@ int32 leventloop::exit()
     return 0;
 }
 
-int32 leventloop::run ()
+int32 leventloop::backend()
 {
     assert( "backend uninit",backend_fd >= 0 );
     assert( "lua state NULL",L );
@@ -75,49 +75,7 @@ int32 leventloop::run ()
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 用自己的策略控制gc */
 
-    while ( !loop_done )
-    {
-        fd_reify();/* update fd-related kernel structures */
-
-        /* calculate blocking time */
-        {
-            ev_tstamp waittime  = 0.;
-
-
-            /* update time to cancel out callback processing overhead */
-            time_update ();
-
-            waittime = MAX_BLOCKTIME;
-
-            if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
-            {
-               ev_tstamp to = (timers [HEAP0])->at - mn_now;
-               if (waittime > to) waittime = to;
-            }
-
-            /* at this point, we NEED to wait, so we have to ensure */
-            /* to pass a minimum nonzero value to the backend */
-            /* 如果还有数据未发送，也只休眠最小时间 */
-            if (expect_false (waittime < backend_mintime || ansendingcnt > 0))
-                waittime = backend_mintime;
-
-            backend_poll ( waittime );
-
-            /* update ev_rt_now, do magic */
-            time_update ();
-        }
-
-        /* queue pending timers and reschedule them */
-        timers_reify (); /* relative timers called last */
-
-        invoke_pending ();
-        invoke_sending ();
-        invoke_signal  ();
-
-        lua_gc(L, LUA_GCSTEP, 100);
-    }    /* while */
-
-    return 0;
+    return run(); /* this won't return until backend stop */
 }
 
 int32 leventloop::time()
@@ -264,5 +222,14 @@ void leventloop::invoke_sending()
     }
 
     ansendingcnt = pos;
-    assert( "invoke sending sending counter fail",ansendingcnt >= 0 && ansendingcnt < ansendingmax );
+    assert( "invoke sending sending counter fail",
+        ansendingcnt >= 0 && ansendingcnt < ansendingmax );
+}
+
+void leventloop::running()
+{
+    invoke_sending ();
+    invoke_signal  ();
+
+    lua_gc(L, LUA_GCSTEP, 100);
 }

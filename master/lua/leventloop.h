@@ -20,8 +20,8 @@ public:
     ~leventloop();
 
     int32 exit();
-    int32 run ();
     int32 time();
+    int32 backend();
 
     int32 signal();
     int32 set_signal_ref();
@@ -31,9 +31,16 @@ public:
     void remove_sending( int32 sending );
 private:
     explicit leventloop( lua_State *L,bool singleton );
-    static void sig_handler( int32 signum );
-    void invoke_signal();
+
+    void running();
+    void invoke_signal ();
     void invoke_sending();
+
+    ev_tstamp wait_time()
+    {
+        return ansendingcnt > 0 ? backend_mintime : ev_loop::wait_time();
+    }
+    static void sig_handler( int32 signum );
 private:
     typedef class socket *ANSENDING;
     /* 待发送队列 */

@@ -73,24 +73,10 @@ int32 ev_loop::run()
 
         /* calculate blocking time */
         {
-            ev_tstamp waittime  = 0.;
-
-
             /* update time to cancel out callback processing overhead */
             time_update ();
 
-            waittime = MAX_BLOCKTIME;
-
-            if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
-            {
-               ev_tstamp to = (timers [HEAP0])->at - mn_now;
-               if (waittime > to) waittime = to;
-            }
-
-            /* at this point, we NEED to wait, so we have to ensure */
-            /* to pass a minimum nonzero value to the backend */
-            if (expect_false (waittime < backend_mintime))
-                waittime = backend_mintime;
+            ev_tstamp waittime  = wait_time();
 
             backend_poll ( waittime );
 
@@ -102,6 +88,8 @@ int32 ev_loop::run()
         timers_reify (); /* relative timers called last */
 
         invoke_pending ();
+
+        running ();
     }    /* while */
 
     return 0;
@@ -528,4 +516,27 @@ void ev_loop::reheap( ANHE *heap,int32 N )
     /* also, this is easy to implement and correct for both 2-heaps and 4-heaps */
     for (int32 i = 0; i < N; ++i)
         up_heap (heap, i + HEAP0);
+}
+
+/* calculate blocking time */
+ev_tstamp ev_loop::wait_time()
+{
+    ev_tstamp waittime  = 0.;
+
+    waittime = MAX_BLOCKTIME;
+
+    if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
+    {
+        ev_tstamp to = (timers [HEAP0])->at - mn_now;
+        if (waittime > to) waittime = to;
+    }
+
+    /* at this point, we NEED to wait, so we have to ensure */
+    /* to pass a minimum nonzero value to the backend */
+    if (expect_false (waittime < backend_mintime))
+    {
+        waittime = backend_mintime;
+    }
+
+    return waittime;
 }
