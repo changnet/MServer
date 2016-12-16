@@ -143,8 +143,8 @@ function oo.define(_table, name)
     return _table
 end
 
--- refer to a class,to solve circular require
--- you must implement the class later.
+-- refer to a class,to solve circular require,like forward declare.
+-- you must implement the class and require it later some where else.
 -- DO NOT refer a singleton or define.
 function oo.refer(name)
     if type(name) ~= "string" then
