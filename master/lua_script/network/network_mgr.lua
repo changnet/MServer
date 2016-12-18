@@ -81,8 +81,39 @@ function Network_mgr:srv_disconnect( conn )
 end
 
 -- 服务器认证
-function Network_mgr:srv_authenticate( conn,pkt )
+function Network_mgr:srv_register( conn,pkt )
     self.srv_conn[conn] = nil
+
+    if pkt.auth ~= "====>>>>MD5<<<<====" then
+        ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
+        return false
+    end
+
+    if self.srv[pkt.session] then
+        ELOG( "Network_mgr:srv_register session conflict:%d",pkt.session )
+        return false
+    end
+
+    self.srv[pkt.session] = conn
+    return true
+end
+
+-- 发起认证
+function Network_mgr:invoke_register( conn,message_mgr )
+    local pkt =
+    {
+        session = Main.session,
+        timestamp = ev:time(),
+        auth = "====>>>>MD5<<<<====",
+        clt_msg = { 1,2,3 },
+        srv_msg = { 4,5,6 },
+        rpc_msg = { "abc","def" }
+    }
+
+    pkt.clt_cmd = message_mgr:clt_cmd()
+    pkt.srv_cmd = message_mgr:srv_cmd()
+
+    message_mgr:srv_send( conn,SS.REG,pkt )
 end
 
 local network_mgr = Network_mgr()

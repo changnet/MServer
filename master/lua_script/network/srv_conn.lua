@@ -10,7 +10,7 @@ function Srv_conn:__init( conn )
     conn = conn or Stream_socket()
 
     conn:set_self_ref( self )
-    conn:set_on_message( self.on_message )
+    conn:set_on_message( self.on_unauthorized_cmd )
     conn:set_on_disconnect( self.on_disconnected )
     conn:set_on_connection( self.on_connected )
 
@@ -20,6 +20,22 @@ end
 -- 主动发起链接
 function Srv_conn:connect( ip,port )
     return self.conn:connect( ip,port )
+end
+
+-- 处理未认证之前发的指令
+function Srv_conn:on_unauthorized_cmd()
+    local cmd = self.conn:srv_next()
+    if cmd ~= SS.REG[1] then
+        ELOG( "on_unauthorized_cmd illegal cmd:%d",cmd )
+        return
+    end
+
+    if not message_mgr:do_srv_register( self,network_mgr ) then
+        return
+    end
+
+    self.conn:set_on_message( self.on_message )
+    self:on_message()
 end
 
 -- 底层消息回调
@@ -45,18 +61,7 @@ function Srv_conn:on_connected( success )
         return
     end
 
-    local pkt =
-    {
-        session = 111,
-        timestamp = ev:time(),
-        auth = "adfsdkfsdf;asdf",
-        clt_msg = { 1,2,3 },
-        srv_msg = { 4,5,6 },
-        rpc_msg = { "abc","def" }
-    }
-    message_mgr:srv_send( self,SS.REG,pkt )
-
-    print( "connnect success" )
+    return network_mgr:invoke_register( self,message_mgr )
 end
 
 return Srv_conn

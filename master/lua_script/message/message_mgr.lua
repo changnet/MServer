@@ -18,6 +18,11 @@ function Message_mgr:__init()
         self.ss[ v[1] ] = v
     end
 
+    self.cs = {}
+    for _,v in pairs( CS or {} ) do
+        self.cs[ v[1] ] = v
+    end
+
     self.lfb = lua_flatbuffers()
 end
 
@@ -38,12 +43,12 @@ function Message_mgr:clt_register( msg,handler )
 end
 
 -- 注册服务器协议处理
-function Message_mgr:srv_register( msg,handler )
-    if not self.ss[msg[1]] then
+function Message_mgr:srv_register( cfg,handler )
+    if not self.ss[cfg[1]] then
         return error( "srv_register:message not define" )
     end
 
-    msg.handler = handler
+    cfg.handler = handler
 end
 
 -- 注册rpc处理
@@ -59,22 +64,22 @@ function Message_mgr:srv_dispatcher( cmd,conn )
     end
 
     -- server to server message handle here
-    local msg = self.ss[cmd]
-    if not msg then
+    local cfg = self.ss[cmd]
+    if not cfg then
         return ELOG( "srv_dispatcher:message [%d] not define",cmd )
     end
 
-    local handler = msg.handler
+    local handler = cfg.handler
     if not handler then
         return ELOG( "srv_dispatcher:message [%d] define but no handler register",cmd )
     end
-    local pkt = conn:ss_flatbuffers_decode( self.lfb,cmd,msg[2],msg[3] )
+    local pkt = conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
     return handler( conn,pkt )
 end
 
 -- 处理来着gateway转发的客户端包
-function Message_mgr:clt_dispatcher( conn,msg )
-    local cmd,tbl = conn:scs_flatbuffers_decode( msg[2],msg[3] )
+function Message_mgr:clt_dispatcher( conn,cfg )
+    local cmd,tbl = conn:scs_flatbuffers_decode( cfg[2],cfg[3] )
 
     local clt = self.cs[cmd]
     if not clt then
@@ -89,11 +94,59 @@ function Message_mgr:clt_dispatcher( conn,msg )
     return handler( conn,tbl )
 end
 
---发送服务器消息
-function Message_mgr:srv_send( conn,msg,pkt )
-    assert( msg,"srv_send nil message" )
+-- 发送服务器消息
+function Message_mgr:srv_send( conn,cfg,pkt )
+    assert( cfg,"srv_send nil message" )
 
-    conn.conn:ss_flatbuffers_send( self.lfb,msg[1],msg[2],msg[3],pkt )
+    conn.conn:ss_flatbuffers_send( self.lfb,cfg[1],cfg[2],cfg[3],pkt )
+end
+
+-- 获取当前进程处理的客户端协议
+function Message_mgr:clt_cmd()
+    local cmds = {}
+    for cmd,cfg in pairs( self.cs ) do
+        if cfg.handler then table.insert( cmds,cmd ) end
+    end
+
+    return cmds
+end
+
+-- 获取当前进程处理的服务端协议
+function Message_mgr:srv_cmd()
+    local cmds = {}
+    for cmd,cfg in pairs( self.ss ) do
+        if cfg.handler then table.insert( cmds,cmd ) end
+    end
+
+    return cmds
+end
+
+-- 服务器注册
+function Message_mgr:do_srv_register( conn,network_mgr )
+    local cfg = SS.REG
+    local pkt = conn.conn:ss_flatbuffers_decode( self.lfb,cfg[1],cfg[2],cfg[3] )
+    
+    if not network_mgr:srv_register( conn,pkt ) then return false end
+
+    for _,cmd in pairs( pkt.clt_cmd or {} ) do
+        local _cfg = self.cs[cmd]
+        assert( _cfg,"do_srv_register no such clt cmd" )
+        assert( _cfg,"do_srv_register clt cmd register conflict" )
+
+        _cfg.session = pkt.session
+    end
+
+    for _,cmd in pairs( pkt.srv_cmd or {} ) do
+        local _cfg = self.ss[cmd]
+        assert( _cfg,"do_srv_register no such srv cmd" )
+        assert( _cfg,"do_srv_register srv cmd register conflict" )
+
+        _cfg.session = pkt.session
+    end
+
+    PLOG( "server(%d) register succes",pkt.session )
+
+    return true
 end
 
 local message_mgr = Message_mgr()

@@ -9,4 +9,4 @@ end
 
 -- 这里注册系统模块的协议处理
 
-message_mgr:srv_register( SS.REG,srv_authenticate )
+-- message_mgr:srv_register( SS.REG,srv_authenticate )
