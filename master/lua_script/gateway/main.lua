@@ -3,12 +3,13 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
+Main = {}       -- store dynamic runtime info to global
+Main.argv = { ... }
+
 local setting     = require "gateway/setting"
 local network_mgr = require "network/network_mgr"
 local message_mgr = require "message/message_mgr"
 local Srv_conn    = require "network/srv_conn"
-
-local argv = { ... }
 
 local function sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
@@ -19,8 +20,8 @@ local function sig_handler( signum )
 end
 
 local function pre_init()
-    local session = network_mgr:generate_srv_session(
-        argv[2],tonumber(argv[3]),tonumber(argv[4]) )
+    Main.session = network_mgr:generate_srv_session(
+        Main.argv[2],tonumber(Main.argv[3]),tonumber(Main.argv[4]) )
 
     message_mgr:init_message()
     local fs = message_mgr:load_schema()

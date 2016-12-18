@@ -34,7 +34,7 @@ int32 ltimer::start()
     /* 理论上可以多次start而不影响，但会有性能上的消耗 */
     if ( timer.is_active() )
     {
-        return luaL_error( L,"double start timer" );
+        return luaL_error( L,"timer already start" );
     }
 
     class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
@@ -82,7 +82,7 @@ void ltimer::callback( ev_timer &w,int32 revents )
 
     if ( expect_false( LUA_OK != lua_pcall(L,1,0,-3) ) )
     {
-        ERROR( "timer call lua fail:%s\n",lua_tostring(L,-1) );
+        ERROR( "timer call back fail:%s\n",lua_tostring(L,-1) );
         lua_pop(L,1); /* remove error message traceback */
     }
     lua_pop(L,1); /* remove traceback */

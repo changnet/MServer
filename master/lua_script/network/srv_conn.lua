@@ -15,6 +15,7 @@ function Srv_conn:__init( conn )
     conn:set_on_connection( self.on_connected )
 
     self.conn = conn
+    self.auth = false
 end
 
 -- 主动发起链接
@@ -25,26 +26,22 @@ end
 -- 处理未认证之前发的指令
 function Srv_conn:on_unauthorized_cmd()
     local cmd = self.conn:srv_next()
-    if cmd ~= SS.REG[1] then
-        ELOG( "on_unauthorized_cmd illegal cmd:%d",cmd )
-        return
+    while cmd and not self.auth do
+        message_mgr:srv_unauthorized_dispatcher( cmd,self )
+
+        cmd = self.conn:srv_next()
     end
 
-    if not message_mgr:do_srv_register( self,network_mgr ) then
-        return
-    end
-
-    self.conn:set_on_message( self.on_message )
-    self:on_message()
+    if cmd then self:on_message() end
 end
 
 -- 底层消息回调
 function Srv_conn:on_message()
-    local msg = self.conn:srv_next()
-    while msg do
-        message_mgr:srv_dispatcher( msg,self.conn )
+    local cmd = self.conn:srv_next()
+    while cmd do
+        message_mgr:srv_dispatcher( cmd,self.conn )
 
-        msg = self.conn:srv_next()
+        cmd = self.conn:srv_next()
     end
 end
 
@@ -61,7 +58,14 @@ function Srv_conn:on_connected( success )
         return
     end
 
-    return network_mgr:invoke_register( self,message_mgr )
+    local pkt = network_mgr:register_pkt( message_mgr )
+    message_mgr:srv_send( self,SS.SYS_SYN,pkt )
+end
+
+-- 认证成功
+function Srv_conn:authorized()
+    self.auth = true
+    self.conn:set_on_message( self.on_message )
 end
 
 return Srv_conn

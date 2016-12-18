@@ -1,7 +1,8 @@
 -- network_mgr 网络连接管理
 
+local Timer         = require "Timer"
 local Stream_socket = require "Stream_socket"
-local Srv_conn = oo.refer( "network/srv_conn" )
+local Srv_conn      = oo.refer( "network/srv_conn" )
 
 -- 服务器名字转索引，不经常改。运维也不需要知道，暂时不做成配置
 local name_type =
@@ -22,6 +23,12 @@ function Network_mgr:__init()
     self.clt_conn = {} -- 未认证的客户端连接
 
     self.srv_listen = nil
+
+    self.timer = Timer()
+    self.timer:set_self( self )
+    self.timer:set_callback( self.do_timer )
+
+    self.timer:start( 5,5 )
 end
 
 -- 生成服务器session id
@@ -99,7 +106,7 @@ function Network_mgr:srv_register( conn,pkt )
 end
 
 -- 发起认证
-function Network_mgr:invoke_register( conn,message_mgr )
+function Network_mgr:register_pkt( message_mgr )
     local pkt =
     {
         session = Main.session,
@@ -113,7 +120,12 @@ function Network_mgr:invoke_register( conn,message_mgr )
     pkt.clt_cmd = message_mgr:clt_cmd()
     pkt.srv_cmd = message_mgr:srv_cmd()
 
-    message_mgr:srv_send( conn,SS.REG,pkt )
+    return pkt
+end
+
+-- 定时器回调
+function Network_mgr:do_timer()
+    print( "network do timer",ev:time() )
 end
 
 local network_mgr = Network_mgr()
