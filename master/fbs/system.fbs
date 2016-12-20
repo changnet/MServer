@@ -11,6 +11,11 @@ table ssregister
     rpc_cmd:[string];    // 该服务器处理的rpc指令
 }
 
+/* 服务器心跳 */
+struct ssbeat
+{
+}
+
 table ssbroadcast
 {
     sessions:[int] ;

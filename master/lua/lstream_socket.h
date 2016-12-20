@@ -2,6 +2,7 @@
 #define __LSTREAM_SOCKET_H__
 
 #include "lsocket.h"
+#include "lclass.h"
 
 class lstream_socket :public lsocket
 {
@@ -34,6 +35,13 @@ public:
     inline int32 file_description () { return lsocket::file_description (); }
 private:
     int32 is_message_complete();
+
+    const class lsocket *accept_new( int32 fd );
+
+    void push() const
+    {
+        lclass<lstream_socket>::push( L,this,true );
+    }
 };
 
 #endif /* __LSTREAM_SOCKET_H__ */

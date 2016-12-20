@@ -16,10 +16,33 @@ function Srv_conn:__init( conn )
 
     self.conn = conn
     self.auth = false
+    self.beat = 0
+    self.fchk = 0 -- fail check
+end
+
+-- timeout check
+function Srv_conn:check( check_time )
+    if self.beat < check_time then
+        self.fchk = self.fchk + 1
+
+        return self.fchk
+    end
+
+    self.fchk = 0
+    return 0
+end
+
+-- close
+function Srv_conn:close()
+    -- self.conn:kill() -- if socket still active
+    self.conn = nil -- release ref,so socket can be gc
 end
 
 -- 主动发起链接
 function Srv_conn:connect( ip,port )
+    self.ip   = ip
+    self.port = port
+
     return self.conn:connect( ip,port )
 end
 

@@ -61,14 +61,15 @@ int32 socket::non_block( int32 fd )
  * 2.它们消费了不必要的宽带，
  * 3.在以数据包计费的互联网上它们（额外）花费金钱。
  *
- * 在程序中表现为,当tcp检测到对端socket不再可用时(不能发出探测包,或探测包没有收到ACK的响应包),
- * select会返回socket可读,并且在recv时返回-1,同时置上errno为ETIMEDOUT.
+ * 在程序中表现为,当tcp检测到对端socket不再可用时(不能发出探测包,或探测包没有收到ACK的
+ * 响应包),select会返回socket可读,并且在recv时返回-1,同时置上errno为ETIMEDOUT.
  *
  * 但是，tcp自己的keepalive有这样的一个bug：
- *    正常情况下，连接的另一端主动调用colse关闭连接，tcp会通知，我们知道了该连接已经关闭。但是如果tcp连接的另一端突然掉线，
- * 或者重启断电，这个时候我们并不知道网络已经关闭。而此时，如果有发送数据失败，tcp会自动进行重传。重传包的优先级高于keepalive，
- * 那就意味着，我们的keepalive总是不能发送出去。 而此时，我们也并不知道该连接已经出错而中断。在较长时间的重传失败之后，
- * 我们才会知道。即我们在重传超时后才知道连接失败.
+ *    正常情况下，连接的另一端主动调用colse关闭连接，tcp会通知，我们知道了该连接已经关
+ * 闭。但是如果tcp连接的另一端突然掉线，或者重启断电，这个时候我们并不知道网络已经关闭。
+ * 而此时，如果有发送数据失败，tcp会自动进行重传。重传包的优先级高于keepalive，那就意
+ * 味着，我们的keepalive总是不能发送出去。 而此时，我们也并不知道该连接已经出错而中断。
+ * 在较长时间的重传失败之后，我们才会知道。即我们在重传超时后才知道连接失败.
  */
 int32 socket::keep_alive( int32 fd )
 {
@@ -76,7 +77,8 @@ int32 socket::keep_alive( int32 fd )
     int32 optlen = sizeof(optval);
     int32 ret    = 0;
 
-    ret = setsockopt( fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen ); //open keep alive
+    //open keep alive
+    ret = setsockopt( fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen );
     if ( 0 > ret )
         return ret;
 
@@ -120,7 +122,8 @@ int32 socket::user_timeout( int32 fd )
 
 void socket::start( int32 fd,int32 events )
 {
-    assert( "socket start,dirty buffer",0 == _send.data_size() && 0 == _send.data_size() );
+    assert( "socket start,dirty buffer",
+        0 == _send.data_size() && 0 == _send.data_size() );
 
     class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
     _w.set( loop );
@@ -150,7 +153,7 @@ int32 socket::connect( const char *host,int32 port )
     {
         ::close( fd );
 
-        return -1;
+        return     -1;
     }
 
     return fd;
@@ -210,18 +213,19 @@ int32 socket::listen( const char *host,int32 port )
      * to restart server immediately,you need to reuse address.but note you may
      * receive the old data from last time.
      */
-    if ( setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,(char *) &optval, sizeof(optval)) < 0 )
+    if ( setsockopt(fd, SOL_SOCKET,
+         SO_REUSEADDR,(char *) &optval, sizeof(optval)) < 0 )
     {
         ::close( fd );
 
-        return -1;
+        return     -1;
     }
 
     if ( non_block( fd ) < 0 )
     {
         ::close( fd );
 
-        return -1;
+        return     -1;
     }
 
     struct sockaddr_in sk_socket;
@@ -234,14 +238,14 @@ int32 socket::listen( const char *host,int32 port )
     {
         ::close( fd );
 
-        return -1;
+        return     -1;
     }
 
     if ( ::listen( fd, 256 ) < 0 )
     {
         ::close( fd );
 
-        return -1;
+        return     -1;
     }
 
     return fd;

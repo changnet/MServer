@@ -13,6 +13,9 @@ local name_type =
     example = 4
 }
 
+local ALIVE_INTERVAL   = 5
+local ALIVE_TIMES      = 5
+
 local Network_mgr = oo.singleton( nil,... )
 
 function Network_mgr:__init()
@@ -125,7 +128,13 @@ end
 
 -- 定时器回调
 function Network_mgr:do_timer()
-    print( "network do timer",ev:time() )
+    local check_time = ev:time() - ALIVE_INTERVAL
+    for session,srv_conn in pairs( self.srv ) do
+        if srv_conn:check( check_time ) > ALIVE_TIMES then
+            -- timeout
+            PLOG( "%#.8X server timerout",session )
+        end
+    end
 end
 
 local network_mgr = Network_mgr()

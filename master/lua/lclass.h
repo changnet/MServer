@@ -75,7 +75,7 @@ public:
      * 因此，当调用类似lclass<lsocket>::push( L,_backend,false );的代码时，
      * 请保证你之前已注册对应的类，否则metatable将为nil
      */
-    static int push(lua_State *L, T *obj, bool gc = false)
+    static int push(lua_State *L,const T *obj, bool gc = false)
     {
         assert( "push null obj",obj );
         assert( "class not regist yet",classname );
@@ -83,7 +83,7 @@ public:
         /* 这里只是创建一个指针给lua管理，可以换用placement new把整个对象的
            内存都给lua管理
         */
-        T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
+        const T** ptr = (const T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
 
         OBJ_ADD_COUNT( classname );

@@ -4,6 +4,7 @@
 #include <map>
 #include <queue>
 #include "lsocket.h"
+#include "lclass.h"
 
 struct http_parser;
 
@@ -54,6 +55,12 @@ public:
     inline int32 file_description () { return lsocket::file_description (); }
 private:
     int32 is_message_complete();
+    const class lsocket *accept_new( int32 fd );
+
+    void push() const
+    {
+        lclass<lhttp_socket>::push( L,this,true );
+    }
 private:
     bool _upgrade;
     http_parser *_parser;

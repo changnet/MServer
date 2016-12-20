@@ -6,10 +6,14 @@
 
 class lsocket : public socket
 {
-protected:
-    explicit lsocket( lua_State *L );
 public:
     virtual ~lsocket();
+
+    void message_cb ( int32 revents );
+    void connect_cb ( int32 revents );
+    void listen_cb  ( int32 revents );
+protected:
+    explicit lsocket( lua_State *L );
 
     int32 send();
     int32 kill();
@@ -25,11 +29,9 @@ public:
     int32 set_on_disconnect();
     int32 file_description ();
 
-    void message_cb ( int32 revents );
-    void connect_cb ( int32 revents );
-
+    virtual void push() const = 0;
     virtual int32 is_message_complete() = 0;
-    virtual void listen_cb  ( int32 revents ) = 0;
+    virtual const class lsocket *accept_new( int32 fd ) = 0;
 private:
     void on_disconnect();
 protected:
