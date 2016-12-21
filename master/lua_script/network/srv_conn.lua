@@ -86,8 +86,9 @@ function Srv_conn:on_connected( success )
 end
 
 -- 认证成功
-function Srv_conn:authorized()
+function Srv_conn:authorized( session )
     self.auth = true
+    self.session = session
     self.conn:set_on_message( self.on_message )
 end
 

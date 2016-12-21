@@ -172,6 +172,9 @@ void lsocket::message_cb( int32 revents )
 
 void lsocket::on_disconnect()
 {
+    /* close fd first,in case reconnect in lua callback */
+    socket::stop();
+
     lua_pushcfunction(L,traceback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_disconnect);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
@@ -183,10 +186,6 @@ void lsocket::on_disconnect()
     }
 
     lua_pop(L,1); /* remove traceback */
-    /* 关闭fd，但不要delete
-     * 先回调lua，再close.lua可能会调用一些函数，如取fd
-     */
-    socket::stop();
 }
 
 int32 lsocket::address()

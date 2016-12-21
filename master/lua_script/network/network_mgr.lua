@@ -85,9 +85,16 @@ function Network_mgr:connect_srv( srvs )
 end
 
 -- 服务器断开
-function Network_mgr:srv_disconnect( conn )
-    PLOG( "server disconnect" )
-    self.srv_conn[conn] = nil
+function Network_mgr:srv_disconnect( srv_conn )
+    if not srv_conn.auth then
+        srv_conn:close()
+        self.srv_conn[srv_conn] = nil
+    else
+        srv_conn:close()
+        self.srv[srv_conn.session] = nil
+    end
+
+    PLOG( "server(%#.8X) disconnect",srv_conn.session or 0 )
 end
 
 -- 服务器认证
