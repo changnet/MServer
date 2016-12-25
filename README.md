@@ -78,6 +78,8 @@ valgrind测试
 9. 为lua提供LRU、LFU、优先队列、大小堆等常用数据
 9. arpg使用状态机来替换各种延时操作，而不要注册各种定时器，不能替换的使用二级定时器
 10. https://github.com/CloudFundoo/SSL-TLS-clientserver(polar ssl(mbed tls)实现https)
+11. 如果使用coroutine，当前的热更机制是否能更新coroutine中的变量
+12. coroutine的应该，参考openrest的cosocket.https://moonbingbing.gitbooks.io/openresty-best-practices/content/ngx_lua/whats_cosocket.html
 #TOSOLVE
 2. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
 3. http server/client 压测
