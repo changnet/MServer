@@ -100,7 +100,8 @@ int lstream_socket::ssc_flatbuffers_send()
         return luaL_error( L,"buffer size over USHRT_MAX" );
     }
 
-    if ( !_send.reserved( sz + sizeof(struct s2c_header) + sizeof(struct s2s_header) ) )
+    if ( !_send.reserved( sz + 
+        sizeof(struct s2c_header) + sizeof(struct s2s_header) ) )
     {
         return luaL_error( L,"out of socket buffer" );
     }
@@ -111,8 +112,8 @@ int lstream_socket::ssc_flatbuffers_send()
     s2ch._cmd    = static_cast<uint16>  ( clt_msg );
 
     struct s2s_header s2sh;
-    s2sh._length = static_cast<packet_length>( sz +
-        sizeof(struct s2c_header) + sizeof(struct s2s_header) - sizeof(packet_length) );
+    s2sh._length = static_cast<packet_length>( sz + sizeof(struct s2c_header) 
+                        + sizeof(struct s2s_header) - sizeof(packet_length) );
     s2sh._cmd    = static_cast<uint16>  ( srv_msg );
 
     _send.__append( &s2sh,sizeof(struct s2s_header) );
@@ -157,7 +158,8 @@ int lstream_socket::sc_flatbuffers_send()
         return luaL_error( L,"buffer size over USHRT_MAX" );
     }
 
-    if ( !_send.reserved( sz + sizeof(struct s2c_header) + sizeof(struct s2s_header) ) )
+    if ( !_send.reserved( sz + 
+        sizeof(struct s2c_header) + sizeof(struct s2s_header) ) )
     {
         return luaL_error( L,"out of socket buffer" );
     }
@@ -224,7 +226,9 @@ int lstream_socket::ss_flatbuffers_send()
     return 0;
 }
 
-/* decode server to server message:ss_flatbuffers_decode( lfb,srv_msg,schema,object ) */
+/* decode server to server packet
+ * ss_flatbuffers_decode( lfb,srv_msg,schema,object )
+ */
 int lstream_socket::ss_flatbuffers_decode()
 {
     class lflatbuffers** lfb =
@@ -234,15 +238,15 @@ int lstream_socket::ss_flatbuffers_decode()
         return luaL_error( L, "argument #1 expect lua_flatbuffers" );
     }
 
-    int32 srv_msg = luaL_checkinteger( L,2 );
+    int32 srv_cmd = luaL_checkinteger( L,2 );
 
     const char *schema = luaL_checkstring( L,3 );
     const char *object = luaL_checkstring( L,4 );
 
     uint32 sz = _recv.data_size();
-    if ( sz < sizeof(s2s_header) )
+    if ( sz < sizeof(struct s2s_header) )
     {
-        return luaL_error( L, "incomplete message header" );
+        return luaL_error( L, "incomplete packet header" );
     }
 
     struct s2s_header *ph = reinterpret_cast<struct s2s_header *>(_recv.data());
@@ -251,14 +255,14 @@ int lstream_socket::ss_flatbuffers_decode()
     size_t len = ph->_length + sizeof( packet_length );
     if ( sz < len )
     {
-        return luaL_error( L, "incomplete message header" );
+        return luaL_error( L, "packet header broken" );
     }
 
     /* 协议号是否匹配 */
-    if ( srv_msg != ph->_cmd )
+    if ( srv_cmd != ph->_cmd )
     {
         return luaL_error( L,
-            "message valid fail,expect %d,got %d",srv_msg,ph->_cmd );
+            "cmd valid fail,expect %d,got %d",srv_cmd,ph->_cmd );
     }
 
     /* 删除buffer,避免luaL_error longjump影响 */
@@ -271,4 +275,107 @@ int lstream_socket::ss_flatbuffers_decode()
     }
 
     return 1;
+}
+
+
+/* decode client to  server packet
+ * ss_flatbuffers_decode( lfb,clt_cmd,schema,object )
+ */
+int lstream_socket::cs_flatbuffers_decode()
+{
+    class lflatbuffers** lfb =
+        (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
+    if ( lfb == NULL || *lfb == NULL )
+    {
+        return luaL_error( L, "argument #1 expect lua_flatbuffers" );
+    }
+
+    int32 clt_cmd = luaL_checkinteger( L,2 );
+
+    const char *schema = luaL_checkstring( L,3 );
+    const char *object = luaL_checkstring( L,4 );
+
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct c2s_header) )
+    {
+        return luaL_error( L, "incomplete message header" );
+    }
+
+    struct c2s_header *ph = reinterpret_cast<struct c2s_header *>(_recv.data());
+
+    /* 验证包长度，_length并不包含本身 */
+    size_t len = ph->_length + sizeof( packet_length );
+    if ( sz < len )
+    {
+        return luaL_error( L, "packet header broken" );
+    }
+
+    /* 协议号是否匹配 */
+    if ( clt_cmd != ph->_cmd )
+    {
+        return luaL_error( L,
+            "cmd valid fail,expect %d,got %d",clt_cmd,ph->_cmd );
+    }
+
+    /* 删除buffer,避免luaL_error longjump影响 */
+    _recv.subtract( len );
+    const char *buffer = _recv.data() + sizeof( struct c2s_header );
+
+    if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
+    {
+        return luaL_error( L,(*lfb)->last_error() );
+    }
+
+    return 1;
+}
+
+/* cs_flatbuffers_send( lfb,srv_cmd,schema,object,tbl ) */
+int lstream_socket::cs_flatbuffers_send()
+{
+    class lflatbuffers** lfb =
+        (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
+    if ( lfb == NULL || *lfb == NULL )
+    {
+        return luaL_error( L, "argument #1 expect lua_flatbuffers" );
+    }
+
+    int32 srv_cmd = luaL_checkinteger( L,2 );
+
+    const char *schema = luaL_checkstring( L,3 );
+    const char *object = luaL_checkstring( L,4 );
+
+    if ( !lua_istable( L,5 ) )
+    {
+        return luaL_error( L,
+            "argument #5 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
+    }
+
+    if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
+    {
+        return luaL_error( L,(*lfb)->last_error() );
+    }
+
+    size_t sz = 0;
+    const char *buffer = (*lfb)->get_buffer( sz );
+    if ( sz > USHRT_MAX )
+    {
+        return luaL_error( L,"buffer size over USHRT_MAX" );
+    }
+
+    if ( !_send.reserved( sz + 
+        sizeof(struct c2s_header) + sizeof(struct c2s_header) ) )
+    {
+        return luaL_error( L,"out of socket buffer" );
+    }
+
+    struct c2s_header c2sh;
+    c2sh._length = static_cast<packet_length>(
+        sz + sizeof(struct c2s_header) - sizeof(packet_length) );
+    c2sh._cmd    = static_cast<uint16>  ( srv_cmd );
+
+    _send.__append( &c2sh,sizeof(struct c2s_header) );
+    _send.__append( buffer,sz );
+
+    pending_send();
+    return 0;
 }
