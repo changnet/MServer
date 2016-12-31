@@ -12,3 +12,4 @@
 * clt_conn - 客户端与服务器之前网络连接
 * stream - 二进制流
 * cfg    - config简写，配置
+* android - 机器人

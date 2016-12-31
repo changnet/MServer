@@ -89,7 +89,7 @@ function Network_mgr:on_srv_acception( conn )
     PLOG( "accept server connection,fd:%d",fd )
 end
 
-function Network_mgr.on_clt_acception( conn )
+function Network_mgr:on_clt_acception( conn )
     local clt_conn = Clt_conn( conn )
     self.clt_conn[clt_conn] = ev:time()
 

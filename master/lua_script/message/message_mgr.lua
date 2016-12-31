@@ -3,7 +3,9 @@
 local lua_flatbuffers = require "lua_flatbuffers"
 
 -- 协议使用太频繁，放到全局变量
-SC,CS = require "message/sc_message"
+local sc = require "message/sc_message"
+SC,CS = sc[1],sc[2]
+
 SS    = require "message/ss_message"
 
 local SC = SC
@@ -40,13 +42,19 @@ function Message_mgr:init_message()
 end
 
 -- 注册客户端协议处理
-function Message_mgr:clt_register( msg,handler )
+function Message_mgr:clt_register( cfg,handler,noauth )
+    if not self.cs[cfg[1]] then
+        return error( "clt_register:cmd not define" )
+    end
+
+    cfg.handler = handler
+    cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 end
 
 -- 注册服务器协议处理
 function Message_mgr:srv_register( cfg,handler,noauth )
     if not self.ss[cfg[1]] then
-        return error( "srv_register:message not define" )
+        return error( "srv_register:cmd not define" )
     end
 
     cfg.handler = handler

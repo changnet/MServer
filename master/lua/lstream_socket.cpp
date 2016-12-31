@@ -344,7 +344,7 @@ int32 lstream_socket::cs_flatbuffers_decode()
     return 1;
 }
 
-/* cs_flatbuffers_send( lfb,srv_cmd,schema,object,tbl ) */
+/* cs_flatbuffers_send( lfb,srv_cmd,schema,object,pkt ) */
 int32 lstream_socket::cs_flatbuffers_send()
 {
     class lflatbuffers** lfb =
@@ -365,7 +365,7 @@ int32 lstream_socket::cs_flatbuffers_send()
             "argument #5 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
     }
 
-    if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
+    if ( (*lfb)->encode( L,schema,object,5 ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );
     }

@@ -1,0 +1,8 @@
+//玩家模块 协议定义
+
+table clogin
+{
+    sign:string;
+    account:string;
+    time:int;
+}
