@@ -10,6 +10,7 @@ local setting     = require "gateway/setting"
 local network_mgr = require "network/network_mgr"
 local message_mgr = require "message/message_mgr"
 local Srv_conn    = require "network/srv_conn"
+local Clt_conn    = require "network/clt_conn"
 
 local function sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
@@ -28,6 +29,11 @@ local function pre_init()
     PLOG( "gateway load flatbuffers schema:%d",fs )
 
     if not network_mgr:srv_listen( setting.sip,setting.sport ) then
+        ELOG( "server listen fail,exit" )
+        os.exit( 1 )
+    end
+
+    if not network_mgr:clt_listen( setting.cip,setting.cport ) then
         ELOG( "server listen fail,exit" )
         os.exit( 1 )
     end

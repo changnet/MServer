@@ -62,7 +62,7 @@ end
 function Srv_conn:on_message()
     local cmd = self.conn:srv_next()
     while cmd do
-        message_mgr:srv_dispatcher( cmd,self.conn )
+        message_mgr:srv_dispatcher( cmd,self )
 
         cmd = self.conn:srv_next()
     end

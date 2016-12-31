@@ -5,9 +5,9 @@
 return
 {
     sip     = "127.0.0.1", -- s2s监听ip
-    sport   = 40026,       -- s2s监听端口
+    sport   = 20001,       -- s2s监听端口
     servers =
     {
-        { ip = "127.0.0.1",port = 40025 }, -- gateway
+        { ip = "127.0.0.1",port = 10001 }, -- gateway
     }
 }

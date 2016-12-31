@@ -263,6 +263,7 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::connect>("connect");
     lc.def<&lstream_socket::srv_next>("srv_next");
     lc.def<&lstream_socket::clt_next>("clt_next");
+    lc.def<&lstream_socket::css_cmd >("css_cmd" );
     lc.def<&lstream_socket::set_self_ref>     ("set_self_ref"     );
     lc.def<&lstream_socket::set_on_message>   ("set_on_message"   );
     lc.def<&lstream_socket::buffer_setting>   ("buffer_setting"   );
@@ -277,6 +278,8 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::ssc_flatbuffers_send  > ("ssc_flatbuffers_send"  );
     lc.def<&lstream_socket::cs_flatbuffers_decode > ("cs_flatbuffers_decode" );
     lc.def<&lstream_socket::cs_flatbuffers_send   > ("cs_flatbuffers_send"   );
+    lc.def<&lstream_socket::css_flatbuffers_send  > ("css_flatbuffers_send"  );
+    lc.def<&lstream_socket::css_flatbuffers_decode> ("css_flatbuffers_decode");
 
     return 0;
 }

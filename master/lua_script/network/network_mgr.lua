@@ -3,6 +3,7 @@
 local Timer         = require "Timer"
 local Stream_socket = require "Stream_socket"
 local Srv_conn      = oo.refer( "network/srv_conn" )
+local Clt_conn      = oo.refer( "network/clt_conn" )
 
 -- 服务器名字转索引，不经常改。运维也不需要知道，暂时不做成配置
 local name_type =
@@ -64,6 +65,21 @@ function Network_mgr:srv_listen( ip,port )
     return true
 end
 
+--  监听服务器连接
+function Network_mgr:clt_listen( ip,port )
+    local conn = Stream_socket()
+    conn:set_self_ref( self )
+    conn:set_on_acception( Network_mgr.on_clt_acception )
+
+    local fd = conn:listen( ip,port )
+    if not fd then return false end
+
+    self.clt_listen = conn
+    PLOG( "client listen at %s:%d",ip,port )
+
+    return true
+end
+
 -- 处理服务器连接
 function Network_mgr:on_srv_acception( conn )
     local srv_conn = Srv_conn( conn )
@@ -71,6 +87,14 @@ function Network_mgr:on_srv_acception( conn )
 
     local fd = conn:file_description()
     PLOG( "accept server connection,fd:%d",fd )
+end
+
+function Network_mgr.on_clt_acception( conn )
+    local clt_conn = Clt_conn( conn )
+    self.clt_conn[clt_conn] = ev:time()
+
+    local fd = conn:file_description()
+    PLOG( "accept client connection,fd:%d",fd )
 end
 
 -- 主动连接其他服务器
@@ -142,6 +166,11 @@ function Network_mgr:do_timer()
             PLOG( "%#.8X server timerout",session )
         end
     end
+end
+
+-- 获取服务器连接
+function Network_mgr:get_srv_conn( session )
+    return self.srv[session]
 end
 
 local network_mgr = Network_mgr()

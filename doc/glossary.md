@@ -11,3 +11,4 @@
 * srv_conn - 服务器之间网络连接
 * clt_conn - 客户端与服务器之前网络连接
 * stream - 二进制流
+* cfg    - config简写，配置

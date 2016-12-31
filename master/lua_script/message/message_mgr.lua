@@ -9,6 +9,7 @@ SS    = require "message/ss_message"
 local SC = SC
 local CS = CS
 local SS = SS
+local network_mgr = require "network/network_mgr"
 
 local Message_mgr = oo.singleton( nil,... )
 
@@ -57,9 +58,9 @@ function Message_mgr:rpc_register( name,handler )
 end
 
 -- 分发服务器协议
-function Message_mgr:srv_dispatcher( cmd,conn )
+function Message_mgr:srv_dispatcher( cmd,srv_conn )
     if cmd == SS.CLT then
-        return clt_dispatcher( cmd,conn )
+        return clt_dispatcher( srv_conn )
     elseif cmd == SS.RPC then
         return -- rpc_dispatcher( cmd,conn )
     end
@@ -72,10 +73,12 @@ function Message_mgr:srv_dispatcher( cmd,conn )
 
     local handler = cfg.handler
     if not handler then
-        return ELOG( "srv_dispatcher:cmd [%d] define but no handler register",cmd )
+        return ELOG( 
+            "srv_dispatcher:cmd [%d] define but no handler register",cmd )
     end
-    local pkt = conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
-    return handler( conn,pkt )
+    local pkt = 
+        srv_conn.conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+    return handler( srv_conn,pkt )
 end
 
 -- 分发服务器协议
@@ -87,39 +90,77 @@ function Message_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
     end
 
     if not cfg.noauth then
-        return ELOG( "srv_unauthorized_dispatcher:trt to call auth cmd [%d]",cmd )
+        return ELOG( 
+            "srv_unauthorized_dispatcher:trt to call auth cmd [%d]",cmd )
     end
 
     local handler = cfg.handler
     if not handler then
-        return ELOG( "srv_unauthorized_dispatcher:cmd [%d] define but no handler register",cmd )
+        return ELOG( 
+            "srv_unauthorized:cmd [%d] define but no handler register",cmd )
     end
-    local pkt = srv_conn.conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+    local pkt = 
+        srv_conn.conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
     return handler( srv_conn,pkt )
 end
 
 -- 处理来着gateway转发的客户端包
-function Message_mgr:clt_dispatcher( conn,cfg )
-    local cmd,tbl = conn:scs_flatbuffers_decode( cfg[2],cfg[3] )
+function Message_mgr:clt_dispatcher( srv_conn )
+    local cmd = srv_conn.conn:css_cmd()
+    if not cmd then
+        return ELOG( "Message_mgr:clt_dispatcher no cmd found" )
+    end
 
-    local clt = self.cs[cmd]
-    if not clt then
+    local cfg = self.cs[cmd]
+    if not cfg then
         return ELOG( "clt_dispatcher:message [%d] not define",cmd )
     end
 
-    local handler = clt.handler
+    local handler = cfg.handler
     if not handler then
-        return ELOG( "clt_dispatcher:cmd [%d] define but no handler register",cmd )
+        return ELOG( 
+            "clt_dispatcher:cmd [%d] define but no handler register",cmd )
     end
 
-    return handler( conn,tbl )
+    local pkt = 
+        srv_conn.conn:css_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+    return handler( srv_conn,pkt )
+end
+
+-- 分发服务器协议
+function Message_mgr:clt_invoke( cmd,clt_conn )
+    -- client to server message handle here
+    local cfg = self.cs[cmd]
+    if not cfg then
+        return ELOG( "clt_invoke:cmd [%d] not define",cmd )
+    end
+
+    if not cfg.noauth then
+        return ELOG( "clt_invoke:try to call auth cmd [%d]",cmd )
+    end
+
+    local handler = cfg.handler
+    if handler then
+        --  如果存在handle，说明是在当前进程处理该协议
+        local pkt = 
+            clt_conn.conn:cs_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+        return handler( clt_conn,pkt )
+    end
+
+    -- 转发到其他服务器
+    local srv_conn = network_mgr:get_srv_conn( cfg.session )
+    if not srv_conn then
+        return ELOG( "clt_invoke:no handler found [%d]",cmd )
+    end
+
+    return srv_conn.conn:css_flatbuffers_send( SS.CLT,clt_conn.conn )
 end
 
 -- 发送服务器消息
-function Message_mgr:srv_send( conn,cfg,pkt )
+function Message_mgr:srv_send( srv_conn,cfg,pkt )
     assert( cfg,"srv_send no cmd specified" )
 
-    conn.conn:ss_flatbuffers_send( self.lfb,cfg[1],cfg[2],cfg[3],pkt )
+    srv_conn.conn:ss_flatbuffers_send( self.lfb,cfg[1],cfg[2],cfg[3],pkt )
 end
 
 -- 获取当前进程处理的客户端协议

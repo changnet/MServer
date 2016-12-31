@@ -10,18 +10,21 @@ public:
     ~lstream_socket();
     explicit lstream_socket( lua_State *L );
 
-    int srv_next(); /* get next server packet */
-    int clt_next(); /* get next client packet */
+    int32 srv_next(); /* get next server packet */
+    int32 clt_next(); /* get next client packet */
+    int32 css_cmd (); /* get client to server to server cmd */
 
-    int ss_flatbuffers_send  (); /* server to server */
-    int ss_flatbuffers_decode(); /* decode server to server packet */
-    int sc_flatbuffers_send  (); /* server to client */
-    int ssc_flatbuffers_send (); /* server to server to client */
-    int cs_flatbuffers_decode(); /* decode client to server packet */
-    int cs_flatbuffers_send  (); /* client to server */
+    int32 ss_flatbuffers_send   (); /* server to server */
+    int32 ss_flatbuffers_decode (); /* decode server to server packet */
+    int32 sc_flatbuffers_send   (); /* server to client */
+    int32 ssc_flatbuffers_send  (); /* server to server to client */
+    int32 cs_flatbuffers_decode (); /* decode client to server packet */
+    int32 cs_flatbuffers_send   (); /* client to server */
+    int32 css_flatbuffers_send  (); /* client to server to server */
+    int32 css_flatbuffers_decode(); /* decode client to server to server packet*/
 public:
     void listen_cb  ( int32 revents );
-    /* 以下函数因为lua粘合层的写法限制，需要在子类覆盖，不然无法注册 */
+    /* 以下函数因为lclass的写法限制，需要在子类覆盖，不然无法注册 */
     inline int32 send   () { return lsocket::send(); }
     inline int32 kill   () { return lsocket::kill(); }
     inline int32 address() { return lsocket::address(); }
