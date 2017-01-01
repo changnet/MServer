@@ -10,7 +10,8 @@ CXX = g++
 #    部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace()
 #    (这一系列函数使用.dynsym表内符号)这样的函数使用。
 # 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
-# mysql库根据安装方法不同，位置不本样，可用mysql_config查看(新版本-lmysqlclient_r与-lmysqlclient是一样的)
+# mysql库根据安装方法不同，位置不本样，可用mysql_config查看
+# (新版本-lmysqlclient_r与-lmysqlclient是一样的)
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 # https://gcc.gnu.org/projects/cxx-status.html
 CFLAGS = -std=c++11 -pipe -Wall -g3
@@ -18,18 +19,22 @@ LFLAGS = -rdynamic
 OPTIMIZE = -O0
 
 #include path
-INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml -I/usr/local/include/libmongoc-1.0 \
-	-I/usr/local/include/libbson-1.0 -I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers
+INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \
+	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
+	-I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers \
+	-I./deps/lua_bson
 
 #libaray path
-LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser -L./deps/lua_rapidxml \
-	-L./deps/aho-corasick -L./deps/lua_flatbuffers
+LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
+	-L./deps/lua_rapidxml -L./deps/aho-corasick -L./deps/lua_flatbuffers \
+	-L./deps/lua_bson
 
 #link libaray
-SHARED_LIB = -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0  \
+SHARED_LIB = -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto \
+	-lmongoc-1.0 -lbson-1.0
 
-STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers -lflatbuffers \
-	-llua_parson
+STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
+	-lflatbuffers -llua_parson -llua_bson
 
 #output directory
 ODIR = bin
@@ -71,21 +76,22 @@ all: $(OBJS)
 clean:
 	rm -rf $(ODIR)/*
 
-clean_all:
+cleansub:
 	$(MAKE) -C deps/lua_parson clean
 	$(MAKE) -C deps/lua_rapidxml clean
 	$(MAKE) -C deps/http-parser clean
 	$(MAKE) -C deps/aho-corasick clean
 	$(MAKE) -C deps/lua_flatbuffers clean
+	$(MAKE) -C deps/lua_bson clean
 	rm -rf $(ODIR)/*
 
-build_all:
+submodule:
 	$(MAKE) -C deps/lua_parson all
 	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package
 	$(MAKE) -C deps/aho-corasick all
 	$(MAKE) -C deps/lua_flatbuffers all
-	$(MAKE) -C . all
+	$(MAKE) -C deps/lua_bson all
 
 test:
 	./bin/master test 1

@@ -4,6 +4,7 @@
 #include <bson.h>
 #include <bcon.h>
 #include <mongoc.h>
+
 #include "../global/global.h"
 /* mongo db会覆盖assert，这里必须重新覆盖 */
 #include "../global/assert.h"

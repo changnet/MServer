@@ -75,7 +75,7 @@ g_store_mongo:update( collection,'{"_id":{"$lt":5}}','{"$set":{"amount":99999999
 
 -- db.collection.createIndex( {amount:1} ) 需要先去数据库创建索引，不然引起
 -- Overflow sort stage buffered data usage of 33598393 bytes exceeds internal limit of 33554432 bytes
--- 32M内存限制
+-- 32M内存限制(db.item.getIndexes()来验证索引是否存在)
 g_store_mongo:find( function( err,info )
         print( "now mongo ",collection,"find (orderby) return ",err )
         vd( info )

@@ -5,8 +5,6 @@ require "global.string"
 require "obj_counter"
 json = require "lua_parson"
 
-local argv = { ... }
-
 local function sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
     if g_store_sql then g_store_sql:stop() end
@@ -28,11 +26,10 @@ local function main()
     -- require "example.stream_performance"
     -- require "example.words_filter_performance"
 
-    vd( argv )
     print( obj_counter.obj_count("Http_socket") )
     oo.check()
     vd( obj_counter.dump() )
-    ev:run()
+    ev:backend()
 end
 
 xpcall( main, __G__TRACKBACK__ )

@@ -13,3 +13,6 @@
 [submodule "master/deps/http-parser"]
 	path = master/deps/http-parser
 	url = http://github.com/changnet/http-parser.git
+[submodule "master/deps/lua_bson"]
+	path = master/deps/lua_bson
+	url = http://github.com/changnet/lua_bson.git
