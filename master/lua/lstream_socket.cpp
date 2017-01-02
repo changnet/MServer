@@ -1,3 +1,4 @@
+#include <lbson.h>
 #include <lflatbuffers.hpp>
 
 #include "lstream_socket.h"
@@ -448,6 +449,18 @@ int32 lstream_socket::css_flatbuffers_send()
 
 /* css_flatbuffers_decode( lfb,srv_cmd,clt_conn ) */
 int32 lstream_socket::css_flatbuffers_decode()
+{
+    return 1;
+}
+
+int32 lstream_socket::rpc_send()
+{
+    int32 id = luaL_checkinteger( L,1 );
+    
+    return 0;
+}
+
+int32 lstream_socket::rpc_decode()
 {
     return 1;
 }

@@ -14,6 +14,9 @@ public:
     int32 clt_next(); /* get next client packet */
     int32 css_cmd (); /* get client to server to server cmd */
 
+    int32 rpc_send  (); /* send rpc packet */
+    int32 rpc_decode(); /* decode rpc packet */
+
     int32 ss_flatbuffers_send   (); /* server to server */
     int32 ss_flatbuffers_decode (); /* decode server to server packet */
     int32 sc_flatbuffers_send   (); /* server to client */

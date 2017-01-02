@@ -81,7 +81,9 @@ function oo.class(super, name)
 
     super = super or class_base
     rawset(clz, "__super", super)
-    rawset(clz, "__index",clz)    --让自己成为一个metatable
+    -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
+    rawset(clz, "__index",clz)
+    -- 设置自己的metatable为父类，这样才能调用父类函数
     setmetatable(clz, {__index = super, __call = new})
     return clz
 end
