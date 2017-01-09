@@ -16,8 +16,8 @@ local MODULE_SYSTEM = (0x00 << 8)
 local SS =
 {
     CLT       = { MODULE_SYSTEM + 0x01 },     -- 收到另外一个srv转发的客户端包
-    RPC_IVK   = { MODULE_SYSTEM + 0x02 },     -- rcp通信包
-    RPC_DPH   = { MODULE_SYSTEM + 0x03 },     -- rcp通信包
+    RPC_REQ   = { MODULE_SYSTEM + 0x02 },     -- rcp通信request包
+    RPC_RES   = { MODULE_SYSTEM + 0x03 },     -- rcp通信response包
 
     SYS_SYN = { MODULE_SYSTEM + 0x03,"system.bfbs","ssregister" },
     SYS_ACK = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" }

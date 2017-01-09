@@ -1,7 +1,7 @@
 -- rpc client and server
 
-local rpc_ivk = SS.RPC_IVK[1]
-local rpc_dph = SS.RPC_DPH[1]
+local rpc_req = SS.RPC_REQ[1]
+local rpc_res = SS.RPC_RES[1]
 
 local network_mgr = require "network/network_mgr"
 
@@ -35,12 +35,12 @@ function Rpc:invoke( name,... )
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
     end
 
-    return srv_conn.conn:rpc_send( rpc_ivk,id,... )
+    return srv_conn.conn:rpc_send( rpc_req,id,... )
 end
 
 -- 处理rpc请求
 function Rpc:dispatch( srv_conn )
-    local pkt = srv_conn.conn:rpc_decode( rpc_dph )
+    local pkt = srv_conn.conn:rpc_decode( rpc_res )
     local cfg = self.call[pkt.name]
     if not cfg then
         return error( string.format( "rpc:\"%s\" was not declared",name ) )

@@ -455,12 +455,81 @@ int32 lstream_socket::css_flatbuffers_decode()
 
 int32 lstream_socket::rpc_send()
 {
-    int32 id = luaL_checkinteger( L,1 );
-    
+    int32 rpc_cmd = luaL_checkinteger( L,1 );
+
+    struct error_collector ec;
+    ec.what[0] = 0;
+
+    bson_t *doc = lbs_do_encode_stack( L,1,&ec );
+    if ( !doc )
+    {
+        return luaL_error( L,ec.what );
+    }
+
+    const char *buffer = (const char *)bson_get_data( doc );
+
+    struct s2s_header s2sh;
+    s2sh._length = static_cast<packet_length>( doc->len +
+                        sizeof(struct s2s_header) - sizeof(packet_length) );
+    s2sh._cmd    = static_cast<uint16>  ( rpc_cmd );
+
+    _send.__append( &s2sh,sizeof(struct s2s_header) );
+    _send.__append( buffer,doc->len );
+
+    bson_destroy( doc );
+
+    pending_send();
     return 0;
 }
 
 int32 lstream_socket::rpc_decode()
 {
-    return 1;
+    int32 rpc_cmd = luaL_checkinteger( L,1 );
+
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct s2s_header) )
+    {
+        return luaL_error( L, "incomplete message header" );
+    }
+
+    struct s2s_header *ph = reinterpret_cast<struct s2s_header *>(_recv.data());
+
+    /* 验证包长度，_length并不包含本身 */
+    size_t len = ph->_length + sizeof( packet_length );
+    if ( sz < len )
+    {
+        return luaL_error( L, "packet header broken" );
+    }
+
+    /* 协议号是否匹配 */
+    if ( rpc_cmd != ph->_cmd )
+    {
+        return luaL_error( L,
+            "cmd valid fail,expect %d,got %d",rpc_cmd,ph->_cmd );
+    }
+
+    /* 删除buffer,避免luaL_error longjump影响 */
+    _recv.subtract( len );
+    const char *buffer = _recv.data() + sizeof( struct s2s_header );
+
+    bson_reader_t *reader = 
+        bson_reader_new_from_data( (const uint8_t *)buffer,sz );
+
+    const bson_t *doc = bson_reader_read( reader,NULL );
+    if ( !doc )
+    {
+        bson_reader_destroy( reader );
+        return luaL_error( L,"invalid bson buffer" );
+    }
+
+    struct error_collector ec;
+    ec.what[0] = 0;
+    int num = lbs_do_decode_stack( L,doc,&ec );
+    if ( num > 0 )
+    {
+        bson_reader_destroy( reader );
+        return num;
+    }
+
+    return luaL_error( L,ec.what );
 }
