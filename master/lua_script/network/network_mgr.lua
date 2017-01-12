@@ -60,7 +60,7 @@ function Network_mgr:srv_listen( ip,port )
     if not fd then return false end
 
     self.srv_listen = conn
-    PLOG( "server listen at %s:%d",ip,port )
+    PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
 
     return true
 end
@@ -121,6 +121,19 @@ function Network_mgr:srv_disconnect( srv_conn )
     PLOG( "server(%#.8X) disconnect",srv_conn.session or 0 )
 end
 
+-- 服务器连接回调
+function Network_mgr:srv_connected( srv_conn,success )
+    if not success then
+        srv_conn:close()
+        self.srv_conn[srv_conn] = nil
+        PLOG( "server connect(%s:%d) fail",srv_conn.ip,srv_conn.port )
+
+        return
+    end
+
+    PLOG( "server connect(%s:%d) establish",srv_conn.ip,srv_conn.port )
+end
+
 -- 服务器认证
 function Network_mgr:srv_register( conn,pkt )
     self.srv_conn[conn] = nil
@@ -143,6 +156,7 @@ end
 function Network_mgr:register_pkt( message_mgr )
     local pkt =
     {
+        name    = Main.srvname,
         session = Main.session,
         timestamp = ev:time(),
         auth = "====>>>>MD5<<<<====",

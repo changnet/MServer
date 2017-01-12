@@ -75,11 +75,9 @@ end
 
 -- connect回调
 function Srv_conn:on_connected( success )
-    if not success then
-        print( "connect fail" )
-        self.conn = nil
-        return
-    end
+    network_mgr:srv_connected( self,success )
+
+    if not success then return end
 
     local pkt = network_mgr:register_pkt( message_mgr )
     message_mgr:srv_send( self,SS.SYS_SYN,pkt )

@@ -52,13 +52,14 @@ function Message_mgr:clt_register( cfg,handler,noauth )
 end
 
 -- 注册服务器协议处理
-function Message_mgr:srv_register( cfg,handler,noauth )
+function Message_mgr:srv_register( cfg,handler,noreg,noauth )
     if not self.ss[cfg[1]] then
         return error( "srv_register:cmd not define" )
     end
 
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
+    cfg.noreg   = noreg   -- 此协议不需要注册到其他服务器
 end
 
 -- 注册rpc处理
@@ -185,7 +186,7 @@ end
 function Message_mgr:srv_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.ss ) do
-        if cfg.handler then table.insert( cmds,cmd ) end
+        if cfg.handler and not cfg.noreg then table.insert( cmds,cmd ) end
     end
 
     return cmds

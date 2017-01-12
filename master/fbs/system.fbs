@@ -3,6 +3,7 @@
 /* 服务器注册 */
 table ssregister
 {
+    name:string;         // 服务器名字
     session:int;         // 服务器session id
     timestamp:int;       // 时间戳
     auth:string;         // 认证字符串
