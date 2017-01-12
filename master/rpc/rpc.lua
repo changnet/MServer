@@ -20,8 +20,7 @@ function Rpc:declare( name,func )
     self.call[name].func = func
 end
 
--- client发起rpc调用
--- 回调 ？？也就是否有返回值
+-- client发起rpc调用(无返回值)
 -- rpc:invoke( "addExp",pid,exp )
 function Rpc:invoke( name,... )
     local cfg = self.call[name]
@@ -35,7 +34,24 @@ function Rpc:invoke( name,... )
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
     end
 
-    return srv_conn.conn:rpc_send( rpc_req,id,... )
+    return srv_conn.conn:rpc_send( rpc_req,0,... )
+end
+
+-- client发起rpc调用(有返回值)
+-- rpc:xinvoke( "addExp",callback,callback_param,pid,exp )
+function Rpc:xinvoke( name,callback,callback_param,... )
+    local cfg = self.call[name]
+    if not cfg then
+        return error( string.format( "rpc:\"%s\" was not declared",name ) )
+    end
+
+    local srv_conn = network_mgr:get_srv_conn( cfg.session )
+    if not srv_conn then
+        return error( string.format( 
+            "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
+    end
+
+    return srv_conn.conn:rpc_send( rpc_req,0,... )
 end
 
 -- 处理rpc请求
