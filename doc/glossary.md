@@ -13,3 +13,6 @@
 * stream - 二进制流
 * cfg    - config简写，配置
 * android - 机器人
+* guild   - 公会(帮派)
+* scene   - 场景
+* dungeon - 副本(或者直接叫fuben)
