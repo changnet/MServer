@@ -16,6 +16,7 @@ public:
 
     int32 rpc_send  (); /* send rpc packet */
     int32 rpc_decode(); /* decode rpc packet */
+    int32 rpc_call( int32 index,int32 oldtop,int32 rpc_res );
 
     int32 ss_flatbuffers_send   (); /* server to server */
     int32 ss_flatbuffers_decode (); /* decode server to server packet */

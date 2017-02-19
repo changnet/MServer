@@ -460,9 +460,10 @@ int32 lstream_socket::rpc_send()
     struct error_collector ec;
     ec.what[0] = 0;
 
-    bson_t *doc = lbs_do_encode_stack( L,1,&ec );
-    if ( !doc )
+    bson_t *doc = bson_new();
+    if ( 0 != lbs_do_encode_stack( L,doc,1,&ec ) )
     {
+        bson_destroy( doc );
         return luaL_error( L,ec.what );
     }
 
@@ -544,17 +545,18 @@ int32 lstream_socket::rpc_decode()
         return luaL_error( L,"rpc call miss unique_id should be integer" );
     }
 
-    rpc_call( oldtop );
+    rpc_call( 3,oldtop,rpc_res );
     return 0;
 }
 
-int32 lstream_socket::rpc_call( int32 index,int32 oldtop )
+int32 lstream_socket::rpc_call( int32 index,int32 oldtop,int32 rpc_res )
 {
+    // index is the position of rpc invoke function
     assert( "rpc call,invoke function "
-        "should below parameters in stack",index > oldtop );
+        "should below parameters in stack",index <= oldtop );
 
     int32 top = lua_gettop( L );
-    assert( "rpc call:too many parameters",top < 256 );
+    assert( "rpc call:too many parameters",top < 32 );
 
     int32 unique_id = lua_tointeger( L,oldtop + 2 );
 
@@ -562,21 +564,48 @@ int32 lstream_socket::rpc_call( int32 index,int32 oldtop )
     lua_pushcfunction( L,traceback );
     lua_insert( L,index );
 
-    int32 code = lua_pcall( L,index - oldtop,LUA_MULTRET,index );
+    int32 code = lua_pcall( L,top - index,LUA_MULTRET,index );
 
     /* have to response */
     if ( unique_id > 0 )
     {
-        int32 errno_code = 0;
-        int32 response_index = top + 1; /* + 1 == traceback */
-        if ( LUA_OK != code )
-        {
-            errno_code = -1;
-            response_index = lua_gettop( L );
-        }
+        bson_t *doc = bson_new();
+        BSON_APPEND_INT32( doc,"0",unique_id );
 
-        // TODO:build a document before lbs_do_encode_stack and append unique_id and errno
+        if ( LUA_OK == code )
+        {
+            BSON_APPEND_INT32( doc,"1",0 );
+
+            struct error_collector ec;
+            ec.what[0] = 0;
+            if ( 0 != lbs_do_encode_stack( L,doc,top + 1,&ec ) )
+            {
+                bson_destroy( doc );
+                return luaL_error( L,ec.what );
+            }
+
+        }
+        else
+        {
+            BSON_APPEND_INT32( doc,"1",-1 );
+        }
+        
+        const char *buffer = (const char *)bson_get_data( doc );
+
+        struct s2s_header s2sh;
+        s2sh._length = static_cast<packet_length>( doc->len +
+                        sizeof(struct s2s_header) - sizeof(packet_length) );
+        s2sh._cmd    = static_cast<uint16>  ( rpc_res );
+
+        _send.__append( &s2sh,sizeof(struct s2s_header) );
+        _send.__append( buffer,doc->len );
+
+        bson_destroy( doc );
+
+        pending_send();
     }
 
     if ( LUA_OK != code )  return luaL_error( L,lua_tostring(L,-1) );
+
+    return 0;
 }
