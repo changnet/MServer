@@ -485,6 +485,10 @@ int32 lstream_socket::rpc_send()
 int32 lstream_socket::rpc_decode()
 {
     int32 rpc_cmd = luaL_checkinteger( L,1 );
+    int32 rpc_res = luaL_checkinteger( L,2 );
+    /* the 3th one is a lua function to be invoked */
+    /* the last one is self,if there is one. */
+    int32 oldtop = lua_gettop( L );
 
     uint32 sz = _recv.data_size();
     if ( sz < sizeof(struct s2s_header) )
@@ -525,11 +529,54 @@ int32 lstream_socket::rpc_decode()
     struct error_collector ec;
     ec.what[0] = 0;
     int num = lbs_do_decode_stack( L,doc,&ec );
-    if ( num > 0 )
+
+    bson_reader_destroy( reader );
+    if ( num < 0 ) return luaL_error( L,ec.what );
+
+    /* the rpc call should have function name and unique_id */
+    if ( num < 2 )
     {
-        bson_reader_destroy( reader );
-        return num;
+        return luaL_error( L,"rpc call miss function name and unique_id" );
     }
 
-    return luaL_error( L,ec.what );
+    if ( !lua_isinteger( L,oldtop + 2) )
+    {
+        return luaL_error( L,"rpc call miss unique_id should be integer" );
+    }
+
+    rpc_call( oldtop );
+    return 0;
+}
+
+int32 lstream_socket::rpc_call( int32 index,int32 oldtop )
+{
+    assert( "rpc call,invoke function "
+        "should below parameters in stack",index > oldtop );
+
+    int32 top = lua_gettop( L );
+    assert( "rpc call:too many parameters",top < 256 );
+
+    int32 unique_id = lua_tointeger( L,oldtop + 2 );
+
+    /* set error call back function */
+    lua_pushcfunction( L,traceback );
+    lua_insert( L,index );
+
+    int32 code = lua_pcall( L,index - oldtop,LUA_MULTRET,index );
+
+    /* have to response */
+    if ( unique_id > 0 )
+    {
+        int32 errno_code = 0;
+        int32 response_index = top + 1; /* + 1 == traceback */
+        if ( LUA_OK != code )
+        {
+            errno_code = -1;
+            response_index = lua_gettop( L );
+        }
+
+        // TODO:build a document before lbs_do_encode_stack and append unique_id and errno
+    }
+
+    if ( LUA_OK != code )  return luaL_error( L,lua_tostring(L,-1) );
 }

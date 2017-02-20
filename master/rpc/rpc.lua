@@ -34,7 +34,7 @@ function Rpc:invoke( name,... )
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
     end
 
-    return srv_conn.conn:rpc_send( rpc_req,0,... )
+    return srv_conn.conn:rpc_send( rpc_req,name,0,... )
 end
 
 -- client发起rpc调用(有返回值)
@@ -54,15 +54,20 @@ function Rpc:xinvoke( name,callback,callback_param,... )
     return srv_conn.conn:rpc_send( rpc_req,0,... )
 end
 
--- 处理rpc请求
-function Rpc:dispatch( srv_conn )
-    local pkt = srv_conn.conn:rpc_decode( rpc_res )
+-- 底层回调，这样可以很方便地处理可变参而不需要用table来保存，减少gc压力
+function Rpc:raw_dispatch( name,... )
     local cfg = self.call[pkt.name]
     if not cfg then
         return error( string.format( "rpc:\"%s\" was not declared",name ) )
     end
 
-    cfg.func( table.unpack(pkt.param) )
+    return cfg.func( ... )
+end
+
+-- 处理rpc请求
+function Rpc:dispatch( srv_conn )
+    -- 底层直接调用rpc_send回复了，这样就不需要lua创建一个table来分解可变参
+    return srv_conn.conn:rpc_decode( rpc_req,rpc_res,self )
 end
 
 local rpc = Rpc()
