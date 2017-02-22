@@ -76,7 +76,7 @@ int32 on_message_complete( http_parser *parser )
 }
 
 /* http chunk应该用不到，暂不处理 */
-static struct http_parser_settings settings = 
+static const struct http_parser_settings settings = 
 {
     on_message_begin,
     on_url,
