@@ -4,6 +4,11 @@
 #include <signal.h>
 #include <pthread.h>
 
+#if __cplusplus < 201103L    /* < C++11 */
+    #define noexcept
+#else                       /* if support C++ 2011 */
+#endif
+
 uint32 g_counter  = 0;
 uint32 g_counters = 0;
 
@@ -27,7 +32,7 @@ void *operator new(size_t size)
     return ::malloc(size);
 }
 
-void operator delete(void* ptr)
+void operator delete(void* ptr) noexcept
 {
     pthread_mutex_lock( &_mem_mutex_ );
     --g_counter;
@@ -42,7 +47,7 @@ void *operator new[](size_t size)
     return ::malloc(size);
 }
 
-void operator delete[](void* ptr)
+void operator delete[](void* ptr) noexcept
 {
     --g_counters;
     ::free(ptr);

@@ -1,4 +1,4 @@
-#include <http_parser.h>  /* file at deps/include */
+#include <http_parser.h>
 #include "lhttp_socket.h"
 #include "ltools.h"
 #include "../ev/ev_def.h"
@@ -76,16 +76,20 @@ int32 on_message_complete( http_parser *parser )
 }
 
 /* http chunk应该用不到，暂不处理 */
-static http_parser_settings settings = {
-    .on_message_begin = on_message_begin,
-    .on_url = on_url,
-    .on_status = on_status,
-    .on_header_field = on_header_field,
-    .on_header_value = on_header_value,
-    .on_headers_complete = on_headers_complete,
-    .on_body = on_body,
-    .on_message_complete = on_message_complete,
+static struct http_parser_settings settings = 
+{
+    on_message_begin,
+    on_url,
+    on_status,
+    on_header_field,
+    on_header_value,
+    on_headers_complete,
+    on_body,
+    on_message_complete,
+
+    NULL,NULL
 };
+
 
 lhttp_socket::lhttp_socket( lua_State *L )
     : lsocket( L )
