@@ -79,10 +79,11 @@ void new_fail()
 }
 
 /* test.cpp:40: int main(): log assertion `("wrong",0)' failed. */
-void __log_assert_fail (const char *__assertion, const char *__file,
-           unsigned int __line, const char *__function)
+void __log_assert_fail (const char *__assertion,
+     const char *__file, unsigned int __line, const char *__function)
 {
-    ERROR( "%s:%d:%s:log assertion '%s' failed",__file,__line,__function,__assertion );
+    ERROR( "%s:%d:%s:log assertion '%s' failed",
+            __file,__line,__function,__assertion );
 }
 
 /* 信号阻塞

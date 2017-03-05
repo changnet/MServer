@@ -35,7 +35,8 @@ local function var_dump(data, max_level, prefix)
         print(prefix .. "{")
         for k,v in pairs(data) do
             io.stdout:write(prefix_next .. tostring( to_readable(k) ) .. " = ")
-            if type(v) ~= "table" or (type(max_level) == "number" and max_level <= 1) then
+            if type(v) ~= "table" or 
+                (type(max_level) == "number" and max_level <= 1) then
                 print( to_readable(v) )
             else
                 var_dump(v, max_level - 1, prefix_next)
@@ -55,7 +56,7 @@ end
 
 -- 时间字符串。用的不是ev:now()，故只能用于错误打印，不能用于游戏逻辑
 local function time_str()
-    return os.date("%Y-%m-%d %H:%M:%S", os.time())
+    return os.date("%m-%d %H:%M:%S", os.time())
 end
 
 local function write_log_file( file,log )
@@ -71,7 +72,7 @@ end
 
 function __G__TRACKBACK__( msg )
     local stack_trace = debug.traceback()
-    local info_table = { "[lua crash ",time_str(),"] ",tostring(msg),"\n",stack_trace }
+    local info_table = { "[LCRASH",time_str(),"] ",tostring(msg),"\n",stack_trace }
     local str = table.concat( info_table )
 
     print( str )
@@ -82,9 +83,9 @@ end
 function PLOG( fmt,... )
     -- 默认为c方式的print字符串格式化打印方式
     if "string" == type( fmt ) then
-        print( "[lua print " .. time_str() .. "]" .. string.format( fmt,... ) )
+        print( "[LINFO  " .. time_str() .. "]" .. string.format( fmt,... ) )
     else
-        print( "[lua print " .. time_str() .. "]",fmt,... )
+        print( "[LINFO  " .. time_str() .. "]",fmt,... )
     end
 end
 
@@ -92,9 +93,9 @@ end
 function ELOG( fmt,... )
     local info_table = nil
     if "string" == type( fmt ) then
-        info_table = { "[lua error ",time_str(),"] ",string.format( fmt,... ) }
+        info_table = { "[LERROR ",time_str(),"] ",string.format( fmt,... ) }
     else
-        info_table = { "[lua error ",time_str(),"] ",fmt,... }
+        info_table = { "[LERROR ",time_str(),"] ",fmt,... }
     end
 
     local ss = table.concat( info_table )
