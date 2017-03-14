@@ -34,8 +34,8 @@
         ::time_t rawtime;                                            \
         ::time( &rawtime );                                          \
         struct tm *ntm = ::localtime( &rawtime );                    \
-        fprintf(stderr, "[%s %04d-%02d-%02d %02d:%02d:%02d] ",       \
-            f,(ntm->tm_year + 1900),(ntm->tm_mon + 1), ntm->tm_mday, \
+        fprintf(stderr, "[%s %02d-%02d %02d:%02d:%02d] ",            \
+            f,(ntm->tm_mon + 1), ntm->tm_mday,                       \
             ntm->tm_hour, ntm->tm_min,ntm->tm_sec);                  \
     }while(0)
 #else
@@ -43,7 +43,8 @@
 #endif
 
 #ifdef _PDEBUG_
-    #define PDEBUG(...)    do{fprintf( stderr,__VA_ARGS__ );fprintf( stderr,"\n" );}while(0)
+    #define PDEBUG(...)    \
+        do{fprintf( stderr,__VA_ARGS__ );fprintf( stderr,"\n" );}while(0)
 #else
     #define PDEBUG(...)
 #endif
@@ -61,12 +62,16 @@
 #endif
 
 #ifdef _ERROR_
-    #define ERROR(...)    do{PFILETIME("c++ error");PDEBUG(__VA_ARGS__);cerror_log( __VA_ARGS__ );}while(0)
+    #define ERROR(...)         \
+        do{PFILETIME("CERROR");\
+        PDEBUG(__VA_ARGS__);cerror_log( __VA_ARGS__ );}while(0)
 #else
     #define ERROR(...)
 #endif
 
-/* terminated without destroying any object and without calling any of the functions passed to atexit or at_quick_exit */
+/* terminated without destroying any object and without calling any of the 
+ * functions passed to atexit or at_quick_exit
+ */
 #define FATAL(...)    do{ERROR(__VA_ARGS__);::abort();}while(0)
 
 extern void __log_assert_fail (const char *__assertion, const char *__file,

@@ -81,7 +81,8 @@ int32 log_file::flush()
     FILE * pf = fopen( _name, "ab+" );
     if ( !pf )  /* 无法打开文件，尝试写入stderr */
     {
-        fprintf( stderr, "can't open log file(%s):%s\n", _name,strerror(errno) );
+        fprintf( stderr, 
+            "can't open log file(%s):%s\n", _name,strerror(errno) );
         while( !_flush->empty() )
         {
             const char *str = _flush->front();
