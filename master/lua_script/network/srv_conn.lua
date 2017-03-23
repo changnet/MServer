@@ -1,7 +1,7 @@
 -- srv_conn server connection
 
 local Stream_socket = require "Stream_socket"
-local message_mgr = require "message/message_mgr"
+local command_mgr = require "command/command_mgr"
 local network_mgr = require "network/network_mgr"
 
 local Srv_conn = oo.class( nil,... )
@@ -10,7 +10,7 @@ function Srv_conn:__init( conn )
     conn = conn or Stream_socket()
 
     conn:set_self_ref( self )
-    conn:set_on_message( self.on_unauthorized_cmd )
+    conn:set_on_command( self.on_unauthorized_cmd )
     conn:set_on_disconnect( self.on_disconnected )
     conn:set_on_connection( self.on_connected )
 
@@ -50,19 +50,19 @@ end
 function Srv_conn:on_unauthorized_cmd()
     local cmd = self.conn:srv_next()
     while cmd and not self.auth do
-        message_mgr:srv_unauthorized_dispatcher( cmd,self )
+        command_mgr:srv_unauthorized_dispatcher( cmd,self )
 
         cmd = self.conn:srv_next()
     end
 
-    if cmd then self:on_message() end
+    if cmd then self:on_command() end
 end
 
 -- 底层消息回调
-function Srv_conn:on_message()
+function Srv_conn:on_command()
     local cmd = self.conn:srv_next()
     while cmd do
-        message_mgr:srv_dispatcher( cmd,self )
+        command_mgr:srv_dispatcher( cmd,self )
 
         cmd = self.conn:srv_next()
     end
@@ -79,15 +79,15 @@ function Srv_conn:on_connected( success )
 
     if not success then return end
 
-    local pkt = network_mgr:register_pkt( message_mgr )
-    message_mgr:srv_send( self,SS.SYS_SYN,pkt )
+    local pkt = network_mgr:register_pkt( command_mgr )
+    command_mgr:srv_send( self,SS.SYS_SYN,pkt )
 end
 
 -- 认证成功
 function Srv_conn:authorized( session )
     self.auth = true
     self.session = session
-    self.conn:set_on_message( self.on_message )
+    self.conn:set_on_command( self.on_command )
 end
 
 return Srv_conn

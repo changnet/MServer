@@ -7,7 +7,7 @@
 local Timer   = require "Timer"
 local Stream_socket  = require "Stream_socket"
 local lua_flatbuffers = require "lua_flatbuffers"
-local sc = require "message/sc_message"
+local sc = require "command/sc_command"
 
 local SC,CS = sc[1],sc[2]
 
@@ -27,7 +27,7 @@ end
 function Android:born( ip,port )
     local conn = Stream_socket()
     conn:set_self_ref( self )
-    conn:set_on_message( self.talk_msg )
+    conn:set_on_command( self.talk_msg )
     conn:set_on_connection( self.alive )
     conn:set_on_disconnect( self.die )
 

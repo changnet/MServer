@@ -13,7 +13,7 @@ Main.wait =
 
 local setting     = require "world/setting"
 local network_mgr = require "network/network_mgr"
-local message_mgr = require "message/message_mgr"
+local command_mgr = require "command/command_mgr"
 local Srv_conn    = require "network/srv_conn"
 
 function Main.sig_handler( signum )
@@ -39,8 +39,8 @@ function Main.init()
     Main.session = network_mgr:generate_srv_session(
         Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
-    message_mgr:init_message()
-    local fs = message_mgr:load_schema()
+    command_mgr:init_command()
+    local fs = command_mgr:load_schema()
     PLOG( "world load flatbuffers schema:%d",fs )
 
     if not network_mgr:srv_listen( setting.sip,setting.sport ) then

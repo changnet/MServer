@@ -24,4 +24,4 @@ local CS =
 }
 
 -- 使用oo的define功能让这两个表local后仍能热更
-return {oo.define( SC,"message_sc" ),oo.define( CS,"message_cs" )}
+return {oo.define( SC,"command_sc" ),oo.define( CS,"command_cs" )}

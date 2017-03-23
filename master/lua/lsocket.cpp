@@ -211,11 +211,11 @@ int32 lsocket::set_self_ref()
     return 0;
 }
 
-int32 lsocket::set_on_message()
+int32 lsocket::set_on_command()
 {
     if ( !lua_isfunction( L,1 ) )
     {
-        return luaL_error( L,"set_on_message,argument illegal.expect function" );
+        return luaL_error( L,"set_on_command,argument illegal.expect function" );
     }
 
     LUA_REF( ref_message );

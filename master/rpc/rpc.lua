@@ -54,7 +54,7 @@ function Rpc:xinvoke( name,callback,callback_param,... )
     return srv_conn.conn:rpc_send( rpc_req,0,... )
 end
 
--- 底层回调，这样可以很方便地处理可变参而不需要用table来保存，减少gc压力
+-- 底层回调，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
 function Rpc:raw_dispatch( name,... )
     local cfg = self.call[pkt.name]
     if not cfg then

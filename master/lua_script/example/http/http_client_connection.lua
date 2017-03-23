@@ -14,7 +14,7 @@ end
 
 function Http_client_connection:set_conn( conn )
     conn:set_self_ref( self )
-    conn:set_on_message( self.on_message )
+    conn:set_on_command( self.on_message )
     conn:set_on_disconnect( self.on_disconnect )
 
     self.conn = conn
@@ -46,7 +46,7 @@ function Http_client_connection:connect( ip,port )
     conn:connect( ip,port )
 
     conn:set_self_ref( self )
-    conn:set_on_message( self.on_message )
+    conn:set_on_command( self.on_message )
     conn:set_on_disconnect( self.on_disconnect )
     conn:set_on_connection( self.on_connection )
     self.conn = conn

@@ -3,19 +3,21 @@
 local lua_flatbuffers = require "lua_flatbuffers"
 
 -- 协议使用太频繁，放到全局变量
-local sc = require "message/sc_message"
+local sc = require "command/sc_command"
 SC,CS = sc[1],sc[2]
 
-SS    = require "message/ss_message"
+SS    = require "command/ss_command"
 
 local SC = SC
 local CS = CS
 local SS = SS
+
+local rpc = require "rpc/rpc"
 local network_mgr = require "network/network_mgr"
 
-local Message_mgr = oo.singleton( nil,... )
+local Command_mgr = oo.singleton( nil,... )
 
-function Message_mgr:__init()
+function Command_mgr:__init()
     self.ss = {}
     for _,v in pairs( SS ) do
         self.ss[ v[1] ] = v
@@ -30,19 +32,19 @@ function Message_mgr:__init()
 end
 
 -- 加载二进制flatbuffers schema文件
-function Message_mgr:load_schema()
+function Command_mgr:load_schema()
     return self.lfb:load_bfbs_path( "fbs","bfbs" )
 end
 
 -- 初始化协议定义
-function Message_mgr:init_message()
+function Command_mgr:init_command()
     -- 这个不能放在文件头部或者__init函数中require
-    -- 因为其他文件一般都需要引用message_mgr本身，造成循环require
-    require "message/message_header"
+    -- 因为其他文件一般都需要引用command_mgr本身，造成循环require
+    require "command/command_header"
 end
 
 -- 注册客户端协议处理
-function Message_mgr:clt_register( cfg,handler,noauth )
+function Command_mgr:clt_register( cfg,handler,noauth )
     if not self.cs[cfg[1]] then
         return error( "clt_register:cmd not define" )
     end
@@ -52,7 +54,7 @@ function Message_mgr:clt_register( cfg,handler,noauth )
 end
 
 -- 注册服务器协议处理
-function Message_mgr:srv_register( cfg,handler,noreg,noauth )
+function Command_mgr:srv_register( cfg,handler,noreg,noauth )
     if not self.ss[cfg[1]] then
         return error( "srv_register:cmd not define" )
     end
@@ -63,15 +65,15 @@ function Message_mgr:srv_register( cfg,handler,noreg,noauth )
 end
 
 -- 注册rpc处理
-function Message_mgr:rpc_register( name,handler )
+function Command_mgr:rpc_register( name,handler )
 end
 
 -- 分发服务器协议
-function Message_mgr:srv_dispatcher( cmd,srv_conn )
+function Command_mgr:srv_dispatcher( cmd,srv_conn )
     if cmd == SS.CLT then
         return clt_dispatcher( srv_conn )
     elseif cmd == SS.RPC then
-        return -- rpc_dispatcher( cmd,conn )
+        return rpc:dispatch( srv_conn )
     end
 
     -- server to server cmd handle here
@@ -91,8 +93,8 @@ function Message_mgr:srv_dispatcher( cmd,srv_conn )
 end
 
 -- 分发服务器协议
-function Message_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
-    -- server to server message handle here
+function Command_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
+    -- server to server command handle here
     local cfg = self.ss[cmd]
     if not cfg then
         return ELOG( "srv_unauthorized_dispatcher:cmd [%d] not define",cmd )
@@ -100,7 +102,7 @@ function Message_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
 
     if not cfg.noauth then
         return ELOG( 
-            "srv_unauthorized_dispatcher:trt to call auth cmd [%d]",cmd )
+            "srv_unauthorized_dispatcher:try to call auth cmd [%d]",cmd )
     end
 
     local handler = cfg.handler
@@ -114,15 +116,15 @@ function Message_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
 end
 
 -- 处理来着gateway转发的客户端包
-function Message_mgr:clt_dispatcher( srv_conn )
+function Command_mgr:clt_dispatcher( srv_conn )
     local cmd = srv_conn.conn:css_cmd()
     if not cmd then
-        return ELOG( "Message_mgr:clt_dispatcher no cmd found" )
+        return ELOG( "Command_mgr:clt_dispatcher no cmd found" )
     end
 
     local cfg = self.cs[cmd]
     if not cfg then
-        return ELOG( "clt_dispatcher:message [%d] not define",cmd )
+        return ELOG( "clt_dispatcher:command [%d] not define",cmd )
     end
 
     local handler = cfg.handler
@@ -137,8 +139,8 @@ function Message_mgr:clt_dispatcher( srv_conn )
 end
 
 -- 分发服务器协议
-function Message_mgr:clt_invoke( cmd,clt_conn )
-    -- client to server message handle here
+function Command_mgr:clt_invoke( cmd,clt_conn )
+    -- client to server command handle here
     local cfg = self.cs[cmd]
     if not cfg then
         return ELOG( "clt_invoke:cmd [%d] not define",cmd )
@@ -166,14 +168,14 @@ function Message_mgr:clt_invoke( cmd,clt_conn )
 end
 
 -- 发送服务器消息
-function Message_mgr:srv_send( srv_conn,cfg,pkt )
+function Command_mgr:srv_send( srv_conn,cfg,pkt )
     assert( cfg,"srv_send no cmd specified" )
 
     srv_conn.conn:ss_flatbuffers_send( self.lfb,cfg[1],cfg[2],cfg[3],pkt )
 end
 
 -- 获取当前进程处理的客户端协议
-function Message_mgr:clt_cmd()
+function Command_mgr:clt_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.cs ) do
         if cfg.handler then table.insert( cmds,cmd ) end
@@ -183,7 +185,7 @@ function Message_mgr:clt_cmd()
 end
 
 -- 获取当前进程处理的服务端协议
-function Message_mgr:srv_cmd()
+function Command_mgr:srv_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.ss ) do
         if cfg.handler and not cfg.noreg then table.insert( cmds,cmd ) end
@@ -193,7 +195,8 @@ function Message_mgr:srv_cmd()
 end
 
 -- 服务器注册
-function Message_mgr:do_srv_register( srv_conn,pkt )
+function Command_mgr:do_srv_register( srv_conn,pkt )
+    -- 记录该服务器所处理的cs指令
     for _,cmd in pairs( pkt.clt_cmd or {} ) do
         local _cfg = self.cs[cmd]
         assert( _cfg,"do_srv_register no such clt cmd" )
@@ -202,6 +205,7 @@ function Message_mgr:do_srv_register( srv_conn,pkt )
         _cfg.session = pkt.session
     end
 
+    -- 记录该服务器所处理的ss指令
     for _,cmd in pairs( pkt.srv_cmd or {} ) do
         local _cfg = self.ss[cmd]
         assert( _cfg,"do_srv_register no such srv cmd" )
@@ -210,9 +214,14 @@ function Message_mgr:do_srv_register( srv_conn,pkt )
         _cfg.session = pkt.session
     end
 
+    -- 记录该服务器所处理的rpc指令
+    for _,cmd in pairs( pkt.rpc_cmd or {} ) do
+
+    end
+
     return true
 end
 
-local message_mgr = Message_mgr()
+local command_mgr = Command_mgr()
 
-return message_mgr
+return command_mgr

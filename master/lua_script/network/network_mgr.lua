@@ -153,7 +153,7 @@ function Network_mgr:srv_register( conn,pkt )
 end
 
 -- 发起认证
-function Network_mgr:register_pkt( message_mgr )
+function Network_mgr:register_pkt( command_mgr )
     local pkt =
     {
         name    = Main.srvname,
@@ -165,8 +165,8 @@ function Network_mgr:register_pkt( message_mgr )
         rpc_msg = { "abc","def" }
     }
 
-    pkt.clt_cmd = message_mgr:clt_cmd()
-    pkt.srv_cmd = message_mgr:srv_cmd()
+    pkt.clt_cmd = command_mgr:clt_cmd()
+    pkt.srv_cmd = command_mgr:srv_cmd()
 
     return pkt
 end

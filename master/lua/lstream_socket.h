@@ -36,7 +36,7 @@ public:
     inline int32 connect() { return lsocket::connect(); }
 
     inline int32 set_self_ref  () { return lsocket::set_self_ref  (); }
-    inline int32 set_on_message() { return lsocket::set_on_message(); }
+    inline int32 set_on_command() { return lsocket::set_on_command(); }
     inline int32 buffer_setting() { return lsocket::buffer_setting(); }
     inline int32 set_on_acception () { return lsocket::set_on_acception (); }
     inline int32 set_on_connection() { return lsocket::set_on_connection(); }
