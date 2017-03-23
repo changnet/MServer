@@ -465,7 +465,7 @@ int32 lstream_socket::rpc_send()
     ec.what[0] = 0;
 
     bson_t *doc = bson_new();
-    if ( 0 != lbs_do_encode_stack( L,doc,1,&ec ) )
+    if ( 0 != lbs_do_encode_stack( L,doc,2,&ec ) ) // do not encode rpc_cmd
     {
         bson_destroy( doc );
         return luaL_error( L,ec.what );
@@ -557,8 +557,7 @@ int32 lstream_socket::rpc_decode()
         return luaL_error( L,"rpc call miss unique_id should be integer" );
     }
 
-    rpc_call( 3,oldtop,rpc_res );
-    return 0;
+    return rpc_call( 3,oldtop,rpc_res );
 }
 
 int32 lstream_socket::rpc_call( int32 index,int32 oldtop,int32 rpc_res )

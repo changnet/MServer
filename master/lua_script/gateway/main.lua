@@ -68,7 +68,7 @@ function Main.final_init()
     PLOG( "gateway server start OK" )
 
     local rpc = require "rpc/rpc"
-    rpc:xinvoke( "rpc_echo",Main.test,9,8,7,nil,9874651323.4568,"hello world" )
+    rpc:xinvoke( "rpc_echo",Main.test,nil,9,8,7,nil,9874651323.4568,"hello world" )
 end
 
 local function main()

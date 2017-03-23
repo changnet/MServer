@@ -61,11 +61,11 @@ function Rpc:xinvoke( name,callback,callback_param,... )
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
     end
 
-    return srv_conn.conn:rpc_send( RPC_REQ,0,... )
+    return srv_conn.conn:rpc_send( RPC_REQ,name,0,... )
 end
 
 -- 底层回调，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
-function Rpc:raw_dispatch( name,... )
+function Rpc:raw_dispatch( name,unique_id,... )
     print( "raw_dispatch ",name,... )
     local cfg = self.call[name]
     if not cfg then
