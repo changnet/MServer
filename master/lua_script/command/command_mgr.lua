@@ -12,6 +12,10 @@ local SC = SC
 local CS = CS
 local SS = SS
 
+local CLT_CMD = SS.CLT[1]
+local RPC_REQ = SS.RPC_REQ[1]
+local RPC_RES = SS.RPC_RES[1]
+
 local rpc = require "rpc/rpc"
 local network_mgr = require "network/network_mgr"
 
@@ -70,10 +74,15 @@ end
 
 -- 分发服务器协议
 function Command_mgr:srv_dispatcher( cmd,srv_conn )
-    if cmd == SS.CLT then
+    if cmd == CLT_CMD then
+        -- 客户端协议处理
         return clt_dispatcher( srv_conn )
-    elseif cmd == SS.RPC then
+    elseif cmd == RPC_REQ then
+        -- RPC请求
         return rpc:dispatch( srv_conn )
+    elseif cmd == RPC_RES then
+        -- RPC返回
+        return rpc:response( srv_conn )
     end
 
     -- server to server cmd handle here
@@ -89,7 +98,7 @@ function Command_mgr:srv_dispatcher( cmd,srv_conn )
     end
     local pkt = 
         srv_conn.conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
-    vd( pkt )
+
     return handler( srv_conn,pkt )
 end
 

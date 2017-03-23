@@ -137,7 +137,7 @@ end
 -- 服务器认证
 function Network_mgr:srv_register( conn,pkt )
     self.srv_conn[conn] = nil
-vd(pkt)
+
     if pkt.auth ~= "====>>>>MD5<<<<====" then
         ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
         return false

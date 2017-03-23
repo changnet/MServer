@@ -19,13 +19,15 @@ public:
     buffer();
     ~buffer();
 
-    bool append( const void *data,uint32 len ) __attribute__ ((warn_unused_result))
+    bool append( const void *data,uint32 len ) 
+        __attribute__ ((warn_unused_result))
     {
         if ( !reserved( len ) ) return false;
 
         __append( data,len );    return true;
     }
 
+    /* 减去缓冲区数据，此函数不要动缓冲区的数据，因为数据尚未处理 */
     inline void subtract( uint32 len )
     {
         _pos += len;
@@ -46,8 +48,8 @@ public:
     /* 有效的缓冲区指针 */
     char *data() const { return _buff + _pos; }
 
-    /* append data,but won't reserved */
-    void __append( const void *data,uint32 len )
+    /* raw append data,but won't reserved */
+    void __append( const void *data,const uint32 len )
     {
         assert( "buffer not reserved!",_len - _size >= len );
         memcpy( _buff + _size,data,len );       _size += len;
@@ -57,7 +59,8 @@ public:
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长
      * 2.已知大小(发送数据时)，指数增长到合适大小
      */
-    inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 ) __attribute__ ((warn_unused_result))
+    inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 ) 
+        __attribute__ ((warn_unused_result))
     {
         uint32 size = _size + vsz;
         if ( _len - size > bytes ) /* 不能等于0,刚好用完也申请 */
@@ -88,7 +91,8 @@ public:
         assert( "buffer chunk size error",0 == new_len%BUFFER_CHUNK );
 
         uint32 chunk_size = new_len >= BUFFER_LARGE ? 1 : BUFFER_CHUNK_SIZE;
-        char *new_buff = allocator.ordered_malloc( new_len/BUFFER_CHUNK,chunk_size );
+        char *new_buff = 
+            allocator.ordered_malloc( new_len/BUFFER_CHUNK,chunk_size );
 
         /* 像STL一样把旧内存拷到新内存 */
         if ( size ) memcpy( new_buff,_buff,size );
