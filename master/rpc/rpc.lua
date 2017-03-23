@@ -11,6 +11,7 @@ function Rpc:__init()
     self.call = {}
 end
 
+-- 声明一个rpc调用
 function Rpc:declare( name,func )
     if self.call[name] then
         return error( string.format( "rpc:conflicting declaration:%s",name ) )
@@ -18,6 +19,15 @@ function Rpc:declare( name,func )
 
     self.call[name] = {}
     self.call[name].func = func
+end
+
+-- 其他服务器注册rpc回调
+function Rpc:register( name,session )
+    assert( nil == self.call[name],
+        string.format( "rpc already exist:%s",name ) )
+    
+    self.call[name] = {}
+    self.call[name].session = session
 end
 
 -- client发起rpc调用(无返回值)
@@ -68,6 +78,17 @@ end
 function Rpc:dispatch( srv_conn )
     -- 底层直接调用rpc_send回复了，这样就不需要lua创建一个table来分解可变参
     return srv_conn.conn:rpc_decode( rpc_req,rpc_res,self )
+end
+
+-- 获取当前服务器的所有rpc调用
+function Rpc:rpc_cmd()
+    local cmds = {}
+
+    for name,cfg in pairs( self.call ) do
+        if cfg.func then table.insert( cmds,name ) end
+    end
+
+    return cmds
 end
 
 local rpc = Rpc()

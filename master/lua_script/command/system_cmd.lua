@@ -3,6 +3,8 @@ local SS = SS
 local command_mgr = require "command/command_mgr"
 local network_mgr = require "network/network_mgr"
 
+local rpc = require "rpc/rpc"
+
 -- 收到另一个服务器主动同步
 local function srv_syn( srv_conn,pkt )
     if not network_mgr:srv_register( srv_conn,pkt ) then return false end
@@ -33,3 +35,15 @@ end
 -- 这里注册系统模块的协议处理
 command_mgr:srv_register( SS.SYS_SYN,srv_syn,true,true )
 command_mgr:srv_register( SS.SYS_ACK,srv_ack,true,true )
+
+
+-------------- test rpc --------------------------------
+if Main.srvname == "world" then
+    function rpc_echo( ... )
+        print( "rpc echo",... )
+
+        return 1,2,3,"test",nil,9989986547.66589
+    end
+
+    rpc:declare( "rpc_echo",rpc_echo )
+end

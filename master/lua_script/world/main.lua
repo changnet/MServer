@@ -52,6 +52,7 @@ function Main.init()
 end
 
 function Main.final_init()
+    Main.ok = true
     PLOG( "world server start OK" )
 end
 

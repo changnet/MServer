@@ -89,6 +89,7 @@ function Command_mgr:srv_dispatcher( cmd,srv_conn )
     end
     local pkt = 
         srv_conn.conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+    vd( pkt )
     return handler( srv_conn,pkt )
 end
 
@@ -101,6 +102,7 @@ function Command_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
     end
 
     if not cfg.noauth then
+        assert( false,"no auth" )
         return ELOG( 
             "srv_unauthorized_dispatcher:try to call auth cmd [%d]",cmd )
     end
@@ -174,7 +176,7 @@ function Command_mgr:srv_send( srv_conn,cfg,pkt )
     srv_conn.conn:ss_flatbuffers_send( self.lfb,cfg[1],cfg[2],cfg[3],pkt )
 end
 
--- 获取当前进程处理的客户端协议
+-- 获取当前进程处理的客户端指令
 function Command_mgr:clt_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.cs ) do
@@ -184,7 +186,7 @@ function Command_mgr:clt_cmd()
     return cmds
 end
 
--- 获取当前进程处理的服务端协议
+-- 获取当前进程处理的服务端指令
 function Command_mgr:srv_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.ss ) do
@@ -194,15 +196,22 @@ function Command_mgr:srv_cmd()
     return cmds
 end
 
+-- 获取当前进程处理的rpc指令
+function Command_mgr:rpc_cmd()
+    return rpc:rpc_cmd()
+end
+
 -- 服务器注册
 function Command_mgr:do_srv_register( srv_conn,pkt )
+    local session = pkt.session
+
     -- 记录该服务器所处理的cs指令
     for _,cmd in pairs( pkt.clt_cmd or {} ) do
         local _cfg = self.cs[cmd]
         assert( _cfg,"do_srv_register no such clt cmd" )
         assert( _cfg,"do_srv_register clt cmd register conflict" )
 
-        _cfg.session = pkt.session
+        _cfg.session = session
     end
 
     -- 记录该服务器所处理的ss指令
@@ -211,12 +220,12 @@ function Command_mgr:do_srv_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register no such srv cmd" )
         assert( _cfg,"do_srv_register srv cmd register conflict" )
 
-        _cfg.session = pkt.session
+        _cfg.session = session
     end
 
     -- 记录该服务器所处理的rpc指令
     for _,cmd in pairs( pkt.rpc_cmd or {} ) do
-
+        rpc:register( cmd,session )
     end
 
     return true

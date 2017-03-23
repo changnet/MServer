@@ -264,6 +264,8 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::srv_next>("srv_next");
     lc.def<&lstream_socket::clt_next>("clt_next");
     lc.def<&lstream_socket::css_cmd >("css_cmd" );
+    lc.def<&lstream_socket::rpc_send >("rpc_send" );
+    lc.def<&lstream_socket::rpc_decode >("rpc_decode" );
     lc.def<&lstream_socket::set_self_ref>     ("set_self_ref"     );
     lc.def<&lstream_socket::set_on_command>   ("set_on_command"   );
     lc.def<&lstream_socket::buffer_setting>   ("buffer_setting"   );

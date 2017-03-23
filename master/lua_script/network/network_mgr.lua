@@ -137,7 +137,7 @@ end
 -- 服务器认证
 function Network_mgr:srv_register( conn,pkt )
     self.srv_conn[conn] = nil
-
+vd(pkt)
     if pkt.auth ~= "====>>>>MD5<<<<====" then
         ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
         return false
@@ -167,6 +167,7 @@ function Network_mgr:register_pkt( command_mgr )
 
     pkt.clt_cmd = command_mgr:clt_cmd()
     pkt.srv_cmd = command_mgr:srv_cmd()
+    pkt.rpc_cmd = command_mgr:rpc_cmd()
 
     return pkt
 end
@@ -177,7 +178,7 @@ function Network_mgr:do_timer()
     for session,srv_conn in pairs( self.srv ) do
         if srv_conn:check( check_time ) > ALIVE_TIMES then
             -- timeout
-            PLOG( "%#.8X server timerout",session )
+            PLOG( "%#.8X server timeout",session )
         end
     end
 end
