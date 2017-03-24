@@ -17,6 +17,7 @@ Socket、C++脚本交互、协议序列化、日志等。MySQL、MongoDB、日�
  * sudo apt-get install libmysqlclient-dev
  * sudo apt-get install lua53
  * sudo apt-get install pkg-config libssl-dev libsasl2-dev
+ * sudo apt-get install uuid-dev
  * install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)
  * download submodule: git submodule init and update
  * cd MServer/master & make

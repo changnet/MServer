@@ -69,6 +69,11 @@ function Main.final_init()
 
     local rpc = require "rpc/rpc"
     rpc:xinvoke( "rpc_echo",Main.test,nil,9,8,7,nil,9874651323.4568,"hello world" )
+
+    local util = require "util"
+    for i = 1,10 do
+        print( util.uuid() )
+    end
 end
 
 local function main()

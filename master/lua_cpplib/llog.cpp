@@ -1,5 +1,5 @@
 #include "llog.h"
-#include "../lua/leventloop.h"
+#include "../lua_cpplib/leventloop.h"
 
 llog::llog( lua_State *L )
     : L ( L )

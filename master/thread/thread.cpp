@@ -1,7 +1,7 @@
 #include "thread.h"
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
-#include "../lua/leventloop.h"
+#include "../lua_cpplib/leventloop.h"
 
 thread::thread()
 {

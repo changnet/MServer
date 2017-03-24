@@ -1,12 +1,12 @@
 #include "global/global.h"
 #include "net/buffer.h"
-#include "lua/lclass.h"
-#include "lua/lstate.h"
-#include "lua/leventloop.h"
+#include "lua_cpplib/lclass.h"
+#include "lua_cpplib/lstate.h"
+#include "lua_cpplib/leventloop.h"
 #include "mysql/sql.h"
 #include "mongo/mongo.h"
 #include <sys/utsname.h> /* for uname */
-#include "lua/lobj_counter.h"
+#include "lua_cpplib/lobj_counter.h"
 
 int32 main( int32 argc,char **argv )
 {

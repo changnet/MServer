@@ -1,7 +1,7 @@
 #include <netinet/tcp.h>    /* for keep-alive */
 
 #include "socket.h"
-#include "../lua/leventloop.h"
+#include "../lua_cpplib/leventloop.h"
 
 socket::socket()
 {

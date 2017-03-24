@@ -34,7 +34,7 @@ SHARED_LIB = -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto \
 	-lmongoc-1.0 -lbson-1.0
 
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
-	-lflatbuffers -llua_parson -llua_bson
+	-lflatbuffers -llua_parson -llua_bson -luuid
 
 #output directory
 ODIR = bin
@@ -46,10 +46,10 @@ TARGET = $(ODIR)/master
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
-	lua/lsocket.o lua/leventloop.o lua/lstate.o mysql/sql.o thread/thread.o\
-	lua/ltimer.o lua/lsql.o mongo/mongo.o lua/lmongo.o lua/lhttp_socket.o\
-	lua/llog.o lua/lstream_socket.o lua/lutil.o log/log.o lua/lobj_counter.o\
-	main.o lua/lacism.o
+	lua_cpplib/lsocket.o lua_cpplib/leventloop.o lua_cpplib/lstate.o mysql/sql.o thread/thread.o\
+	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o lua_cpplib/lhttp_socket.o\
+	lua_cpplib/llog.o lua_cpplib/lstream_socket.o lua_cpplib/lutil.o log/log.o lua_cpplib/lobj_counter.o\
+	main.o lua_cpplib/lacism.o
 OBJS = $(addprefix $(ODIR)/,$(_OBJS))
 
 DEPS := $(OBJS:.o=.d)
