@@ -72,7 +72,7 @@ function Main.final_init()
 
     local util = require "util"
     for i = 1,10 do
-        print( util.uuid() )
+        print( util.uuid_short() )
     end
 end
 
