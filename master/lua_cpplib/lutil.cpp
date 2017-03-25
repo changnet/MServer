@@ -138,15 +138,13 @@ static int32 uuid( lua_State *L )
     return 1;
 }
 
+/* 利用非标准base64编码uuid，产生一个22个字符串 */
 static int32 uuid_short( lua_State *L )
 {
     static const char *digest = 
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
     uuid_t u;
     uuid_generate(u);
-
-    char b[40] = { 0 };
-    uuid_unparse(u, b);
 
     /* typedef unsigned char uuid_t[16]
      * a8d99a61-0a06-4c20-b770-ac911432019e
@@ -191,7 +189,7 @@ static int32 uuid_short( lua_State *L )
     }
 
     // 余下的8bit，特殊处理
-    fragment = *uuid ++;
+    fragment = *uuid;
     val  = (fragment & 0x0fc) >> 2;
     *cur_char++ = digest[(int)val];
 
@@ -199,8 +197,8 @@ static int32 uuid_short( lua_State *L )
     val  = (fragment & 0x003);
     *cur_char = digest[(int)val];
 
-    lua_pushstring( L, b   );
     lua_pushstring( L, out );
+
     return 2;
 }
 
@@ -212,9 +210,9 @@ static int32 uuid_short_parse( lua_State *L )
         -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, // 16 ~ 31
         -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,-1, // 32 ~ 47
         52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1, // 48 ~ 63
-        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,23,14, // 64 ~ 79
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14, // 64 ~ 79
         15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63, // 80 ~ 95
-        -1,26,17,28,29,30,31,32,33,34,35,36,37,38,39,40, // 96 ~ 111
+        -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40, // 96 ~ 111
         41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1  // 112 ~ 127
     };
 

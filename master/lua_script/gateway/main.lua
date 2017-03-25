@@ -78,13 +78,6 @@ local function main()
 
     Main.init()
 
-    local util = require "util"
-    for i = 1,10 do
-        local o,s = util.uuid_short()
-        local u = util.uuid_short_parse(s)
-        print( i,o,s,u,o == u )
-    end
-
     ev:backend()
 end
 
