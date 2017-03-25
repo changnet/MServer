@@ -140,9 +140,8 @@ static int32 uuid( lua_State *L )
 
 static int32 uuid_short( lua_State *L )
 {
-    static char bits = 63; /* 11 11111 */
     static const char *digest = 
-            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+_";
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
     uuid_t u;
     uuid_generate(u);
 
@@ -155,22 +154,53 @@ static int32 uuid_short( lua_State *L )
      * 一个16进制字符(0~F)为0000~1111，可以表示4bit。128/4 = 32个字符(减去4个"-")
      * 一个64进制字符(0~_)为00 0000~11 1111,可以表示6bit。128/6 = 22个字符
      */
+    char val;
+    int pos = 0;
+    char fragment;
     char out[23] = { 0 };
     const char *uuid = reinterpret_cast<const char *>( u );
-    for ( int32 index = 0;index < 21;index ++ )
+
+    /* 3*8 = 4*6 = 24,128/24 = 5
+     * 64bit表示6bit，一个char为8bit，每次编码3个char，产生4个符。5次共编码120bit
+     */
+    char *cur_char = out;
+    for ( int32 index = 0;index < 5;index ++ )
     {
-        char val = (*(uuid + index * 6)) & bits;
-        
-        assert( "uuid_short",val >= 0 && val < 64 );
-        out[index] = digest[(int)val];
+
+        /* 1111 1100取高6bit，再右移2bit得到前6bit */
+        /* 0000 0011取低2bit，左移4bit存到val的2~3bit */
+        fragment = *uuid ++;
+        val  = (fragment & 0x0fc) >> 2;
+        *cur_char++ = digest[(int)val];
+        val  = (fragment & 0x003) << 4;
+
+        /* 1111 0000取高4bit，右移4bit得到低4bit，加上上一步val的高2bit，得6bit */
+        /* 0000 1111取低4bit，左移2bit暂存到val的2~5bit */
+        fragment = *uuid ++;
+        val |= (fragment & 0x0f0) >> 4;
+        *cur_char++ = digest[(int)val];
+        val  = (fragment & 0x00f) << 2;
+
+        /* 1100 0000先取高2bit，右移6bit，加上上一步val的高4bit,得6bit */
+        fragment = *uuid ++;
+        val |= (fragment & 0x0c0) >> 6;
+        *cur_char++ = digest[(int)val];
+        val  = (fragment & 0x03f) << 0;
+
+        /* 0011 1111 完整的低6bit */
+        *cur_char++ = digest[(int)val];
     }
 
-    /* 21*6 = 126,最后一次的时候只有2bit了，不足一个char */
-    char val = (*(uuid + 120)) & 0x3; /* 用00 00011来取最后两位的值 */
-    assert( "uuid_short",val >= 0 && val < 64 );
-    out[22] = digest[(int)val];
+    // 余下的8bit，特殊处理
+    fragment = *uuid ++;
+    val  = (fragment & 0x0fc) >> 2;
+    *cur_char++ = digest[(int)val];
 
-    lua_pushstring(L, b);
+    /* 最后一个只有2bit */
+    val  = (fragment & 0x003);
+    *cur_char = digest[(int)val];
+
+    lua_pushstring( L, b   );
     lua_pushstring( L, out );
     return 2;
 }
@@ -182,47 +212,60 @@ static int32 uuid_short_parse( lua_State *L )
         -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, //  0 ~ 15
         -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, // 16 ~ 31
         -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,-1, // 32 ~ 47
-         0, 1, 2, 3, 4, 5, 6, 7, 8, 9,-1,-1,-1,-1,-1,-1, // 48 ~ 63
-        -1,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50, // 64 ~ 79
-        51,52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,63, // 80 ~ 95
-        -1,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24, // 96 ~ 111
-        25,26,27,28,29,30,31,32,33,34,35,-1,-1,-1,-1,-1  // 112 ~ 127
-    }
+        52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1, // 48 ~ 63
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,23,14, // 64 ~ 79
+        15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,63, // 80 ~ 95
+        -1,26,17,28,29,30,31,32,33,34,35,36,37,38,39,40, // 96 ~ 111
+        41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1  // 112 ~ 127
+    };
 
     size_t len = 0;
     const char *str_uuid = lua_tolstring( L,1,&len );
 
     if ( len != 22 )
     {
-        return luaL_error( "invalid uuid short string" );
+        return luaL_error( L,"invalid uuid short string" );
     }
 
-    /* uuid为128bit
-     * base64一个字符表示6bit，需要替换21次，还差128-21*6=2bit
-     * 为了方便，我们直接使用char(8bit)来赋值，需要21*6 + 8 = 134bit
-     */
     uuid_t u;
     char *uuid = reinterpret_cast<char *>( u );
 
-    int ascii = int((*(str_uuid + 126)) & 0x3);
-    if ( ascii < 0 || ascii > 127 || digest[ascii] < 0 )
+    char fragment;
+    /* 每次取4个字符填充到3个char，5次填充20字符,120bit */
+    for ( int32 index = 0;index < 5;index ++ )
     {
-        return luaL_error( "invalid uuid short string" );
-    }
-    // 128-15*8 = 8,覆盖最后8bit，多出来的6bit在高位，下面会重新覆盖
-    *(uuid+15) = digest[ascii];
+        fragment = digest[(int)*str_uuid++];
+        // 0011 1111 填充高6bit
+        *uuid = (fragment & 0x03f) << 2;
 
-    for ( int32 index = 20;index >= 0;index -- )
-    {
-        ascii = (int)*(str_uuid + index);
-        if ( ascii < 0 || ascii > 127 || digest[ascii] < 0 )
-        {
-            return luaL_error( "invalid uuid short string" );
-        }
+        fragment = digest[(int)*str_uuid++];
+        // 0011 0000 取6bit中的高2bit，加上一步骤的6bit，填充完一个char
+        *uuid++ |= (fragment & 0x030) >> 4;
+        // 0000 1111 取剩余下4bit填充到一个新char的高4bit
+        *uuid    = (fragment & 0x00f) << 4;
 
-        int pos = index*6 - 2;
-        buff[]
+        fragment = digest[(int)*str_uuid++];
+        // 0011 1100 取6bit中的高4bit，加上一步骤的4bit，填充完一个char
+        *uuid++ |= (fragment & 0x03c) >> 2;
+        // 0000 0011 取剩余的2bit，填充到一个新char的高2bit
+        *uuid    = (fragment & 0x003) << 6;
+
+        fragment = digest[(int)*str_uuid++];
+        // 0011 1111 填充低6bit,加上一步骤的2bit，填充完一个char
+        *uuid++ |= (fragment & 0x03f);
     }
+
+    fragment = digest[(int)*str_uuid++];
+    // 0011 1111 填充高6bit
+    *uuid    = (fragment & 0x03f) << 2;
+
+    fragment = digest[(int)*str_uuid];
+    // 0000 0011 取剩余的2bit，填充到一个char的低2bit
+    *uuid   |= (fragment & 0x003);
+
+    char b[40] = { 0 };
+    uuid_unparse(u, b);
+    lua_pushstring(L, b);
 
     return 1;
 }
@@ -234,6 +277,7 @@ static const luaL_Reg utillib[] =
     {"timeofday", timeofday},
     {"uuid_short",uuid_short},
     {"gethostbyname", gethost},
+    {"uuid_short_parse",uuid_short_parse},
     {NULL, NULL}
 };
 

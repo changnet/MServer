@@ -69,11 +69,6 @@ function Main.final_init()
 
     local rpc = require "rpc/rpc"
     rpc:xinvoke( "rpc_echo",Main.test,nil,9,8,7,nil,9874651323.4568,"hello world" )
-
-    local util = require "util"
-    for i = 1,10 do
-        print( util.uuid_short() )
-    end
 end
 
 local function main()
@@ -82,6 +77,16 @@ local function main()
     ev:signal( 15 )
 
     Main.init()
+
+    local util = require "util"
+    for i = 1,1000000 do
+        local o,s = util.uuid_short()
+        local u = util.uuid_short_parse(s)
+        if ( u ~= o ) then
+            print( i,o,s,u )
+            return 
+        end
+    end
 
     ev:backend()
 end
