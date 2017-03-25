@@ -202,7 +202,7 @@ static int32 uuid_short( lua_State *L )
     return 2;
 }
 
-static int32 uuid_short_parse( lua_State *L )
+inline char uuid_short_char( lua_State *L,const char c )
 {
     static const char digest[] = 
     {
@@ -215,6 +215,18 @@ static int32 uuid_short_parse( lua_State *L )
         -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40, // 96 ~ 111
         41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1  // 112 ~ 127
     };
+
+    if ( c < 0 || c > 127 || digest[(int)c] < 0 )
+    {
+        return luaL_error( L,"invalid uuid short string" );
+    }
+
+    return digest[(int)c];
+}
+
+static int32 uuid_short_parse( lua_State *L )
+{
+
 
     size_t len = 0;
     const char *str_uuid = lua_tolstring( L,1,&len );
@@ -231,32 +243,32 @@ static int32 uuid_short_parse( lua_State *L )
     /* 每次取4个字符填充到3个char，5次填充20字符,120bit */
     for ( int32 index = 0;index < 5;index ++ )
     {
-        fragment = digest[(int)*str_uuid++];
+        fragment = uuid_short_char( L,*str_uuid++ );
         // 0011 1111 填充高6bit
         *uuid = (fragment & 0x03f) << 2;
 
-        fragment = digest[(int)*str_uuid++];
+        fragment = uuid_short_char( L,*str_uuid++ );
         // 0011 0000 取6bit中的高2bit，加上一步骤的6bit，填充完一个char
         *uuid++ |= (fragment & 0x030) >> 4;
         // 0000 1111 取剩余下4bit填充到一个新char的高4bit
         *uuid    = (fragment & 0x00f) << 4;
 
-        fragment = digest[(int)*str_uuid++];
+        fragment = uuid_short_char( L,*str_uuid++ );
         // 0011 1100 取6bit中的高4bit，加上一步骤的4bit，填充完一个char
         *uuid++ |= (fragment & 0x03c) >> 2;
         // 0000 0011 取剩余的2bit，填充到一个新char的高2bit
         *uuid    = (fragment & 0x003) << 6;
 
-        fragment = digest[(int)*str_uuid++];
+        fragment = uuid_short_char( L,*str_uuid++ );
         // 0011 1111 填充低6bit,加上一步骤的2bit，填充完一个char
         *uuid++ |= (fragment & 0x03f);
     }
 
-    fragment = digest[(int)*str_uuid++];
+    fragment = uuid_short_char( L,*str_uuid++ );
     // 0011 1111 填充高6bit
     *uuid    = (fragment & 0x03f) << 2;
 
-    fragment = digest[(int)*str_uuid];
+    fragment = uuid_short_char( L,*str_uuid );
     // 0000 0011 取剩余的2bit，填充到一个char的低2bit
     *uuid   |= (fragment & 0x003);
 
