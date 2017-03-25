@@ -199,7 +199,7 @@ static int32 uuid_short( lua_State *L )
 
     lua_pushstring( L, out );
 
-    return 2;
+    return 1;
 }
 
 inline char uuid_short_char( lua_State *L,const char c )
@@ -218,7 +218,7 @@ inline char uuid_short_char( lua_State *L,const char c )
 
     if ( c < 0 || c > 127 || digest[(int)c] < 0 )
     {
-        return luaL_error( L,"invalid uuid short string" );
+        return luaL_error( L,"uuid short string invalid character:%c",c );
     }
 
     return digest[(int)c];
