@@ -155,7 +155,6 @@ static int32 uuid_short( lua_State *L )
      * 一个64进制字符(0~_)为00 0000~11 1111,可以表示6bit。128/6 = 22个字符
      */
     char val;
-    int pos = 0;
     char fragment;
     char out[23] = { 0 };
     const char *uuid = reinterpret_cast<const char *>( u );
