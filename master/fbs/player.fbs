@@ -10,6 +10,11 @@ table clogin
     account:string; // 帐户
 }
 
+table slogin
+{
+    name:string; //   名字
+}
+
 // ping服务器
 struct cping
 {

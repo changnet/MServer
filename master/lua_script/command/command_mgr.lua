@@ -12,7 +12,7 @@ local SC = SC
 local CS = CS
 local SS = SS
 
-local CLT_CMD = SS.CLT[1]
+local CLT_CMD = SS.CLT_CMD[1]
 local RPC_REQ = SS.RPC_REQ[1]
 local RPC_RES = SS.RPC_RES[1]
 
@@ -191,7 +191,7 @@ function Command_mgr:clt_invoke( cmd,clt_conn )
         return ELOG( "clt_invoke:no handler found [%d]",cmd )
     end
 
-    return srv_conn.conn:css_flatbuffers_send( SS.CLT,clt_conn.conn )
+    return srv_conn.conn:css_flatbuffers_send( CLT_CMD,clt_conn.conn )
 end
 
 -- 发送服务器消息
@@ -199,6 +199,12 @@ function Command_mgr:srv_send( srv_conn,cfg,pkt )
     assert( cfg,"srv_send no cmd specified" )
 
     srv_conn.conn:ss_flatbuffers_send( self.lfb,cfg[1],cfg[2],cfg[3],pkt )
+end
+
+-- 发送客户端消息
+function Command_mgr:clt_send( clt_conn,cfg,pkt,errno )
+    return clt_conn.conn:sc_flatbuffers_send( 
+        self.lfb,cfg[1],cfg[2],cfg[3],errno or 0,pkt )
 end
 
 -- 获取当前进程处理的客户端指令

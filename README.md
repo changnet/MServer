@@ -86,6 +86,8 @@ valgrind测试
 11. 如果使用coroutine，当前的热更机制是否能更新coroutine中的变量
 12. coroutine的应用，参考openrest的cosocket.
 https://moonbingbing.gitbooks.io/openresty-best-practices/content/ngx_lua/whats_cosocket.html
+13. C++用packet.cpp来处理各种类型的协议发送。分别为packet_flatbuffers.cpp，packet_protobuf.cpp,packet_stream.cpp
+转发函数应该是通用的，css_flatbuffers_send这种命名应该改掉
 #TOSOLVE
 2. 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
 3. http server/client 压测

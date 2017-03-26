@@ -15,7 +15,7 @@ local MODULE_SYSTEM = (0x00 << 8) -- 0
 
 local SS =
 {
-    CLT       = { MODULE_SYSTEM + 0x01 },     -- 收到另外一个srv转发的客户端包
+    CLT_CMD   = { MODULE_SYSTEM + 0x01 },     -- 收到另外一个srv转发的客户端包
     RPC_REQ   = { MODULE_SYSTEM + 0x02 },     -- rcp通信request包
     RPC_RES   = { MODULE_SYSTEM + 0x03 },     -- rcp通信response包
 

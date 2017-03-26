@@ -141,7 +141,9 @@ int32 lstream_socket::ssc_flatbuffers_send()
     return 0;
 }
 
-/* sc_flatbuffers_send( lfb,clt_cmd,schema,object,tbl ) */
+/* 发送协议到客户端
+ * sc_flatbuffers_send( lfb,srv_cmd,schema,object,errno,pkt )
+ */
 int32 lstream_socket::sc_flatbuffers_send()
 {
     class lflatbuffers** lfb =
@@ -156,10 +158,12 @@ int32 lstream_socket::sc_flatbuffers_send()
     const char *schema = luaL_checkstring( L,3 );
     const char *object = luaL_checkstring( L,4 );
 
-    if ( !lua_istable( L,5 ) )
+    int32 _errno = luaL_checkinteger( L,5 );
+
+    if ( !lua_istable( L,6 ) )
     {
         return luaL_error( L,
-            "argument #5 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
+            "argument #6 expect table,got %s",lua_typename( L,lua_type(L,6) ) );
     }
 
     if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
@@ -184,6 +188,7 @@ int32 lstream_socket::sc_flatbuffers_send()
     s2ch._length = static_cast<packet_length>(
         sz + sizeof(struct s2c_header) - sizeof(packet_length) );
     s2ch._cmd    = static_cast<uint16>  ( clt_cmd );
+    s2ch._errno  = static_cast<uint16>  ( _errno  );
 
     _send.__append( &s2ch,sizeof(struct s2c_header) );
     _send.__append( buffer,sz );
@@ -412,7 +417,7 @@ int32 lstream_socket::css_flatbuffers_send()
     }
 
     class buffer &clt_recv = (*clt_conn)->_recv;
-   uint32 sz = clt_recv.data_size();
+    uint32 sz = clt_recv.data_size();
     if ( sz < sizeof(struct c2s_header) )
     {
         return luaL_error( L, "incomplete packet header" );

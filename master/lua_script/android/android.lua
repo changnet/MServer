@@ -102,7 +102,8 @@ function Android:on_ping( pkt )
 end
 
 -- 登录返回
-function Android:on_login( pkt )
+function Android:on_login( errno,pkt )
+    vd( pkt )
 end
 
 return Android

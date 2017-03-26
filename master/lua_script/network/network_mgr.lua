@@ -121,6 +121,11 @@ function Network_mgr:srv_disconnect( srv_conn )
     PLOG( "server(%#.8X) disconnect",srv_conn.session or 0 )
 end
 
+-- 客户端断开
+function Network_mgr:clt_disconnect( clt_conn )
+    ELOG( "TODO:Network_mgr:clt_disconnect" )
+end
+
 -- 服务器连接回调
 function Network_mgr:srv_connected( srv_conn,errno )
     if 0 ~= errno then
