@@ -1,8 +1,23 @@
 //玩家模块 协议定义
 
+// 登录
 table clogin
 {
-    sign:string;
-    account:string;
+    sid:int;        // 服务器id
+    time:int;       // 时间戳
+    plat:int;       // 平台id
+    sign:string;    // 签名
+    account:string; // 帐户
+}
+
+// ping服务器
+struct cping
+{
+    dummy:bool;
+}
+
+// 服务器回包
+struct sping
+{
     time:int;
 }

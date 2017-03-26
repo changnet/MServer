@@ -5,9 +5,20 @@ local command_mgr = require "command/command_mgr"
 local network_mgr = require "network/network_mgr"
 
 local function player_login( clt_conn,pkt )
-    vd( pkt )
+    clt_conn:authorized()
+
+    PLOG( "client authorized success:%s",pkt.account )
 end
 
+local function player_ping( clt_conn,pkt )
+    PLOG( "ping ====>>>> " )
+end
 
 -- 这里注册系统模块的协议处理
-command_mgr:clt_register( CS.PLAYER_LOGIN,player_login,true )
+if "gateway" == Main.srvname then
+    command_mgr:clt_register( CS.PLAYER_LOGIN,player_login,true )
+end
+
+if "world" == Main.srvname then
+    command_mgr:clt_register( CS.PLAYER_LOGIN,player_ping,true )
+end

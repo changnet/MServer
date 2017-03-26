@@ -75,7 +75,7 @@ function Network_mgr:clt_listen( ip,port )
     if not fd then return false end
 
     self.clt_listen = conn
-    PLOG( "client listen at %s:%d",ip,port )
+    PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
 
     return true
 end
@@ -122,8 +122,8 @@ function Network_mgr:srv_disconnect( srv_conn )
 end
 
 -- 服务器连接回调
-function Network_mgr:srv_connected( srv_conn,success )
-    if not success then
+function Network_mgr:srv_connected( srv_conn,errno )
+    if 0 ~= errno then
         srv_conn:close()
         self.srv_conn[srv_conn] = nil
         PLOG( "server connect(%s:%d) fail",srv_conn.ip,srv_conn.port )

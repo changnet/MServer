@@ -1,7 +1,12 @@
 require "global.global"
 require "global.oo"
 require "global.table"
-local Android = require "android/android"
+
+
+local android_mgr = require "android/android_mgr"
+
+require "android/android"
+require "android/android_cmd"
 
 math.randomseed( ev:time() )
 
@@ -14,8 +19,7 @@ local function main()
     ev:signal( 2 );
     ev:signal( 15 );
 
-    local android = Android( 1 )
-    android:born( "127.0.0.1",10002 )
+    android_mgr:start()
 
     ev:backend()
 end

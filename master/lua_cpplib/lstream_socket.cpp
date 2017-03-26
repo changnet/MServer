@@ -295,7 +295,6 @@ int32 lstream_socket::ss_flatbuffers_decode()
     return 1;
 }
 
-
 /* decode client to  server packet
  * ss_flatbuffers_decode( lfb,clt_cmd,schema,object )
  */
@@ -449,6 +448,61 @@ int32 lstream_socket::css_flatbuffers_send()
 
     pending_send();
     return 0;
+}
+
+
+/* decode server to client packet
+ * sc_flatbuffers_decode( lfb,srv_cmd,schema,object )
+ */
+int32 lstream_socket::sc_flatbuffers_decode()
+{
+    class lflatbuffers** lfb =
+        (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
+    if ( lfb == NULL || *lfb == NULL )
+    {
+        return luaL_error( L, "argument #1 expect lua_flatbuffers" );
+    }
+
+    int32 srv_cmd = luaL_checkinteger( L,2 );
+
+    const char *schema = luaL_checkstring( L,3 );
+    const char *object = luaL_checkstring( L,4 );
+
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct s2c_header) )
+    {
+        return luaL_error( L, "incomplete message header" );
+    }
+
+    struct s2c_header *ph = reinterpret_cast<struct s2c_header *>(_recv.data());
+
+    /* 验证包长度，_length并不包含本身 */
+    size_t len = ph->_length + sizeof( packet_length );
+    if ( sz < len )
+    {
+        return luaL_error( L, "packet header broken" );
+    }
+
+    /* 协议号是否匹配 */
+    if ( srv_cmd != ph->_cmd )
+    {
+        return luaL_error( L,
+            "cmd valid fail,expect %d,got %d",srv_cmd,ph->_cmd );
+    }
+
+    // 先取出数据指针，再subtract
+    const char *buffer = _recv.data() + sizeof( struct s2c_header );
+
+    /* 删除buffer,避免luaL_error longjump影响 */
+    _recv.subtract( len );
+
+    lua_pushinteger( L,ph->_errno );
+    if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
+    {
+        return luaL_error( L,(*lfb)->last_error() );
+    }
+
+    return 2;
 }
 
 /* css_flatbuffers_decode( lfb,srv_cmd,clt_conn ) */

@@ -277,6 +277,7 @@ int32 luaopen_stream_socket( lua_State *L )
     lc.def<&lstream_socket::ss_flatbuffers_send   > ("ss_flatbuffers_send"   );
     lc.def<&lstream_socket::ss_flatbuffers_decode > ("ss_flatbuffers_decode" );
     lc.def<&lstream_socket::sc_flatbuffers_send   > ("sc_flatbuffers_send"   );
+    lc.def<&lstream_socket::sc_flatbuffers_decode > ("sc_flatbuffers_decode" );
     lc.def<&lstream_socket::ssc_flatbuffers_send  > ("ssc_flatbuffers_send"  );
     lc.def<&lstream_socket::cs_flatbuffers_decode > ("cs_flatbuffers_decode" );
     lc.def<&lstream_socket::cs_flatbuffers_send   > ("cs_flatbuffers_send"   );

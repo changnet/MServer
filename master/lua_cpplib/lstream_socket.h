@@ -18,13 +18,14 @@ public:
     int32 rpc_decode(); /* decode rpc packet */
     int32 rpc_call( int32 index,int32 oldtop,int32 rpc_res );
 
-    int32 ss_flatbuffers_send   (); /* server to server */
+    int32 ss_flatbuffers_send   (); /* send server to server packet */
     int32 ss_flatbuffers_decode (); /* decode server to server packet */
-    int32 sc_flatbuffers_send   (); /* server to client */
-    int32 ssc_flatbuffers_send  (); /* server to server to client */
+    int32 sc_flatbuffers_send   (); /* send server to client packet */
+    int32 sc_flatbuffers_decode (); /* decode server to client packet */
+    int32 ssc_flatbuffers_send  (); /* send server to server to client packet*/
     int32 cs_flatbuffers_decode (); /* decode client to server packet */
-    int32 cs_flatbuffers_send   (); /* client to server */
-    int32 css_flatbuffers_send  (); /* client to server to server */
+    int32 cs_flatbuffers_send   (); /* send client to server packet*/
+    int32 css_flatbuffers_send  (); /* send client to server to server packet*/
     int32 css_flatbuffers_decode(); /* decode client to server to server packet*/
 public:
     void listen_cb  ( int32 revents );

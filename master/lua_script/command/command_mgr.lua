@@ -68,10 +68,6 @@ function Command_mgr:srv_register( cfg,handler,noreg,noauth )
     cfg.noreg   = noreg   -- 此协议不需要注册到其他服务器
 end
 
--- 注册rpc处理
-function Command_mgr:rpc_register( name,handler )
-end
-
 -- 分发服务器协议
 function Command_mgr:srv_dispatcher( cmd,srv_conn )
     if cmd == CLT_CMD then
@@ -126,7 +122,7 @@ function Command_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
     return handler( srv_conn,pkt )
 end
 
--- 处理来着gateway转发的客户端包
+-- 处理来自gateway转发的客户端包
 function Command_mgr:clt_dispatcher( srv_conn )
     local cmd = srv_conn.conn:css_cmd()
     if not cmd then
@@ -149,8 +145,9 @@ function Command_mgr:clt_dispatcher( srv_conn )
     return handler( srv_conn,pkt )
 end
 
--- 分发服务器协议
-function Command_mgr:clt_invoke( cmd,clt_conn )
+-- 客户端未认证连接指令
+-- TODO:指令来自未认证的连接，暂不考虑转发
+function Command_mgr:clt_unauthorized_cmd( cmd,clt_conn )
     -- client to server command handle here
     local cfg = self.cs[cmd]
     if not cfg then
@@ -159,6 +156,25 @@ function Command_mgr:clt_invoke( cmd,clt_conn )
 
     if not cfg.noauth then
         return ELOG( "clt_invoke:try to call auth cmd [%d]",cmd )
+    end
+
+    local handler = cfg.handler
+    if handler then
+        --  如果存在handle，说明是在当前进程处理该协议
+        local pkt = 
+            clt_conn.conn:cs_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+        return handler( clt_conn,pkt )
+    end
+
+    ELOG( "clt_unauthorized_cmd:no handler found [%d]",cmd )
+end
+
+-- 分发客户端指令
+function Command_mgr:clt_invoke( cmd,clt_conn )
+    -- client to server command handle here
+    local cfg = self.cs[cmd]
+    if not cfg then
+        return ELOG( "clt_invoke:cmd [%d] not define",cmd )
     end
 
     local handler = cfg.handler

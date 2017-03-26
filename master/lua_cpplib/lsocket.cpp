@@ -203,7 +203,8 @@ int32 lsocket::set_self_ref()
 {
     if ( !lua_istable( L,1 ) )
     {
-        return luaL_error( L,"set_self_ref,argument illegal.expect table" );
+        return luaL_error( L,
+            "argument #1 expect table,got %s",lua_typename( L,lua_type(L,1) ) );
     }
 
     LUA_REF( ref_self );
@@ -215,7 +216,9 @@ int32 lsocket::set_on_command()
 {
     if ( !lua_isfunction( L,1 ) )
     {
-        return luaL_error( L,"set_on_command,argument illegal.expect function" );
+        return luaL_error( L,
+            "argument #1 expect function,got %s",
+            lua_typename( L,lua_type(L,1) ) );
     }
 
     LUA_REF( ref_message );
@@ -227,7 +230,9 @@ int32 lsocket::set_on_acception()
 {
     if ( !lua_isfunction( L,1 ) )
     {
-        return luaL_error( L,"set_on_acception,argument illegal.expect function" );
+        return luaL_error( L,
+            "argument #1 expect function,got %s",
+            lua_typename( L,lua_type(L,1) ) );
     }
 
     LUA_REF( ref_acception );
@@ -239,7 +244,9 @@ int32 lsocket::set_on_connection()
 {
     if ( !lua_isfunction( L,1 ) )
     {
-        return luaL_error( L,"set_on_connection,argument illegal.expect function" );
+        return luaL_error( L,
+            "argument #1 expect function,got %s",
+            lua_typename( L,lua_type(L,1) ) );
     }
 
     LUA_REF( ref_connection );
@@ -251,7 +258,9 @@ int32 lsocket::set_on_disconnect()
 {
     if ( !lua_isfunction( L,1 ) )
     {
-        return luaL_error( L,"set_on_disconnect,argument illegal.expect function" );
+        return luaL_error( L,
+            "argument #1 expect function,got %s",
+            lua_typename( L,lua_type(L,1) ) );
     }
 
     LUA_REF( ref_disconnect );
@@ -285,7 +294,7 @@ void lsocket::connect_cb ( int32 revents )
     lua_pushcfunction(L,traceback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_connection);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref_self);
-    lua_pushboolean( L,!err );
+    lua_pushinteger( L,err );
     if ( expect_false( LUA_OK != lua_pcall(L,2,0,-4) ) )
     {
         ERROR( "connect_cb call lua fail:%s\n",lua_tostring(L,-1) );
@@ -297,7 +306,6 @@ void lsocket::connect_cb ( int32 revents )
     if ( err )  /* 连接失败 */
     {
         socket::stop();
-        ERROR( "socket connect unsuccess:%s\n",strerror(err) ); // not errno
         return;
     }
 

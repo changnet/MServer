@@ -279,11 +279,21 @@ static int32 uuid_short_parse( lua_State *L )
     return 1;
 }
 
+static int32 what_error( lua_State *L )
+{
+    int32 eno = luaL_checkinteger( L,1 );
+
+    lua_pushstring( L,strerror(eno) );
+
+    return 1;
+}
+
 static const luaL_Reg utillib[] =
 {
     {"md5", md5},
     {"uuid",uuid},
     {"timeofday", timeofday},
+    {"what_error",what_error},
     {"uuid_short",uuid_short},
     {"gethostbyname", gethost},
     {"uuid_short_parse",uuid_short_parse},

@@ -53,22 +53,15 @@ function Main.init()
     end
 end
 
-function Main.test( ... )
-    print( "main.test",... )
-end
-
 -- 最终初始化
 function Main.final_init()
     if not network_mgr:clt_listen( setting.cip,setting.cport ) then
-        ELOG( "server listen fail,exit" )
+        ELOG( "gateway client listen fail,exit" )
         os.exit( 1 )
     end
 
     Main.ok = true
     PLOG( "gateway server start OK" )
-
-    local rpc = require "rpc/rpc"
-    rpc:xinvoke( "rpc_echo",Main.test,nil,9,8,7,nil,9874651323.4568,"hello world" )
 end
 
 local function main()

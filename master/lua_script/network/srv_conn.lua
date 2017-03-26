@@ -74,10 +74,10 @@ function Srv_conn:on_disconnected()
 end
 
 -- connect回调
-function Srv_conn:on_connected( success )
-    network_mgr:srv_connected( self,success )
+function Srv_conn:on_connected( errno )
+    network_mgr:srv_connected( self,errno )
 
-    if not success then return end
+    if 0 ~=  errno then return end
 
     local pkt = network_mgr:register_pkt( command_mgr )
     command_mgr:srv_send( self,SS.SYS_SYN,pkt )
