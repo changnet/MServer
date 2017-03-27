@@ -72,7 +72,7 @@ end
 function Command_mgr:srv_dispatcher( cmd,srv_conn )
     if cmd == CLT_CMD then
         -- 客户端协议处理
-        return clt_dispatcher( srv_conn )
+        return self:clt_dispatcher( srv_conn )
     elseif cmd == RPC_REQ then
         -- RPC请求
         return rpc:dispatch( srv_conn )
