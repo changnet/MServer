@@ -23,7 +23,7 @@ function Clt_conn:on_unauthorized_cmd()
     while cmd and not self.auth do
         command_mgr:clt_unauthorized_cmd( cmd,self )
 
-        cmd = self.conn:clt_next()
+        cmd = self.conn:clt_next( cmd )
     end
 
     if cmd then self:on_command() end
@@ -35,7 +35,7 @@ function Clt_conn:on_command()
     while cmd do
         command_mgr:clt_invoke( cmd,self )
 
-        cmd = self.conn:clt_next()
+        cmd = self.conn:clt_next( cmd )
     end
 end
 

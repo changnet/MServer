@@ -52,7 +52,7 @@ function Srv_conn:on_unauthorized_cmd()
     while cmd and not self.auth do
         command_mgr:srv_unauthorized_dispatcher( cmd,self )
 
-        cmd = self.conn:srv_next()
+        cmd = self.conn:srv_next( cmd )
     end
 
     if cmd then self:on_command() end
@@ -64,7 +64,7 @@ function Srv_conn:on_command()
     while cmd do
         command_mgr:srv_dispatcher( cmd,self )
 
-        cmd = self.conn:srv_next()
+        cmd = self.conn:srv_next( cmd )
     end
 end
 

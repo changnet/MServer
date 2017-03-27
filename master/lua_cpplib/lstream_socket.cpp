@@ -24,7 +24,9 @@ int32 lstream_socket::is_message_complete()
 {
     uint32 sz = _recv.data_size();
     if ( sz < sizeof(packet_length) ) return 0;
-    return sz >= *(reinterpret_cast<packet_length *>(_recv.data())) ? 1 : 0;
+
+    packet_length len = *(reinterpret_cast<packet_length *>(_recv.data()));
+    return sz >= len + sizeof(packet_length) ? 1 : 0;
 }
 
 const class lsocket *lstream_socket::accept_new( int32 fd )
@@ -37,7 +39,7 @@ const class lsocket *lstream_socket::accept_new( int32 fd )
     return static_cast<class lsocket *>( _s );
 }
 
-/* get next server message */
+/* get next server command */
 int32 lstream_socket::srv_next()
 {
     uint32 sz = _recv.data_size();
@@ -46,13 +48,32 @@ int32 lstream_socket::srv_next()
     struct s2s_header *header =
         reinterpret_cast<struct s2s_header *>( _recv.data() );
 
-    if ( sz < header->_length + sizeof( packet_length ) ) return 0;
+    size_t len = PACKET_LENGTH( header );
+    if ( sz < len ) return 0;
+
+    /* 如果参数不为nil，则删除上一个指令 */
+    if ( !lua_isnoneornil( L,1 ) )
+    {
+        int32 cmd = luaL_checkinteger( L,1 );
+        if ( cmd != header->_cmd )
+        {
+            return luaL_error( L,"valid last command fail" );
+        }
+
+        _recv.subtract( len );
+
+        sz -= len;
+        if ( sz < sizeof(struct s2s_header) ) return 0;
+        header = reinterpret_cast<struct s2s_header *>( _recv.data() );
+
+        if ( sz < PACKET_LENGTH( header ) ) return 0;
+    }
 
     lua_pushinteger( L,header->_cmd );
     return 1;
 }
 
-/* get next client message */
+/* get next client command */
 int32 lstream_socket::clt_next()
 {
     uint32 sz = _recv.data_size();
@@ -61,7 +82,26 @@ int32 lstream_socket::clt_next()
     struct c2s_header *header =
         reinterpret_cast<struct c2s_header *>( _recv.data() );
 
-    if ( sz < header->_length + sizeof( packet_length ) ) return 0;
+    size_t len = PACKET_LENGTH( header );
+    if ( sz < len ) return 0;
+
+    /* 如果参数不为nil，则删除上一个指令 */
+    if ( !lua_isnoneornil( L,1 ) )
+    {
+        int32 cmd = luaL_checkinteger( L,1 );
+        if ( cmd != header->_cmd )
+        {
+            return luaL_error( L,"valid last command fail" );
+        }
+
+        _recv.subtract( len );
+
+        sz -= len;
+        if ( sz < sizeof(struct c2s_header) ) return 0;
+        header = reinterpret_cast<struct c2s_header *>( _recv.data() );
+
+        if ( sz < PACKET_LENGTH( header ) ) return 0;
+    }
 
     lua_pushinteger( L,header->_cmd );
     return 1;
@@ -286,11 +326,7 @@ int32 lstream_socket::ss_flatbuffers_decode()
             "cmd valid fail,expect %d,got %d",srv_cmd,ph->_cmd );
     }
 
-    // 先取出数据指针，再subtract
     const char *buffer = _recv.data() + sizeof( struct s2s_header );
-
-    /* 删除buffer,避免luaL_error longjump影响 */
-    _recv.subtract( len );
 
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
     {
@@ -320,7 +356,7 @@ int32 lstream_socket::cs_flatbuffers_decode()
     uint32 sz = _recv.data_size();
     if ( sz < sizeof(struct c2s_header) )
     {
-        return luaL_error( L, "incomplete message header" );
+        return luaL_error( L, "incomplete command header" );
     }
 
     struct c2s_header *ph = reinterpret_cast<struct c2s_header *>(_recv.data());
@@ -339,11 +375,7 @@ int32 lstream_socket::cs_flatbuffers_decode()
             "cmd valid fail,expect %d,got %d",clt_cmd,ph->_cmd );
     }
 
-    // 先取出数据指针，再subtract
     const char *buffer = _recv.data() + sizeof( struct c2s_header );
-
-    /* 删除buffer,避免luaL_error longjump影响 */
-    _recv.subtract( len );
 
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
     {
@@ -476,7 +508,7 @@ int32 lstream_socket::sc_flatbuffers_decode()
     uint32 sz = _recv.data_size();
     if ( sz < sizeof(struct s2c_header) )
     {
-        return luaL_error( L, "incomplete message header" );
+        return luaL_error( L, "incomplete command header" );
     }
 
     struct s2c_header *ph = reinterpret_cast<struct s2c_header *>(_recv.data());
@@ -495,11 +527,7 @@ int32 lstream_socket::sc_flatbuffers_decode()
             "cmd valid fail,expect %d,got %d",srv_cmd,ph->_cmd );
     }
 
-    // 先取出数据指针，再subtract
     const char *buffer = _recv.data() + sizeof( struct s2c_header );
-
-    /* 删除buffer,避免luaL_error longjump影响 */
-    _recv.subtract( len );
 
     lua_pushinteger( L,ph->_errno );
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
@@ -563,7 +591,7 @@ int32 lstream_socket::rpc_decode()
     uint32 sz = _recv.data_size();
     if ( sz < sizeof(struct s2s_header) )
     {
-        return luaL_error( L, "incomplete message header" );
+        return luaL_error( L, "incomplete command header" );
     }
 
     struct s2s_header *ph = reinterpret_cast<struct s2s_header *>(_recv.data());
@@ -582,11 +610,7 @@ int32 lstream_socket::rpc_decode()
             "cmd valid fail,expect %d,got %d",rpc_cmd,ph->_cmd );
     }
 
-    // 先取出数据指针，再subtract
     const char *buffer = _recv.data() + sizeof( struct s2s_header );
-
-    /* 删除buffer,避免luaL_error longjump影响 */
-    _recv.subtract( len );
 
     bson_reader_t *reader = 
         bson_reader_new_from_data( (const uint8_t *)buffer,sz );

@@ -226,8 +226,6 @@ inline char uuid_short_char( lua_State *L,const char c )
 
 static int32 uuid_short_parse( lua_State *L )
 {
-
-
     size_t len = 0;
     const char *str_uuid = lua_tolstring( L,1,&len );
 

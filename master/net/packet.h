@@ -4,8 +4,14 @@
 /* 网络通信消息包头格式定义
  */
 
-#include <vector>
 #include "../global/global.h"
+
+/* 根据一个header指针获取整个packet的长度(包括_length本身) */
+#define PACKET_LENGTH( h ) (h->_length + sizeof(packet_length))
+
+/* 根据一个header对象和buff长度填充header的_length字段 */
+#define PACKET_MAKE_LENGTH( h,l )   \
+    h->_length = static_cast<packet_length>(sizeof(h) + l - sizeof(packet_length))
 
 #pragma pack (push, 1)
 

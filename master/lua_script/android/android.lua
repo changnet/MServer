@@ -88,7 +88,7 @@ function Android:on_command()
     while cmd do
         android_mgr:cmd_dispatcher( cmd,self )
 
-        cmd = self.conn:clt_next()
+        cmd = self.conn:clt_next( cmd )
     end
 end
 
