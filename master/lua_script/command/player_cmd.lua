@@ -11,13 +11,15 @@ local function player_login( clt_conn,pkt )
 
     -- TODO
     clt_conn.pid = ev:time()
-    command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,{name="TODO"} )
+    command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,{name = "TODO"} )
 
     PLOG( "client authorized success:%s",pkt.account )
 end
 
-local function player_ping( clt_conn,pkt )
+local function player_ping( srv_conn,pkt )
     PLOG( "ping ====>>>> " )
+
+    command_mgr:ssc_send( srv_conn,SC.PLAYER_PING,1,{time = ev:time()} )
 end
 
 -- 这里注册系统模块的协议处理

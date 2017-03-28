@@ -60,30 +60,22 @@ function Command_mgr:clt_register( cfg,handler,noauth )
 end
 
 -- 注册服务器协议处理
-function Command_mgr:srv_register( cfg,handler,noreg,noauth )
+-- @noauth    -- 处理此协议时，不要求该链接可信
+-- @noreg     -- 此协议不需要注册到其他服务器
+-- @nounpack  -- 此协议不要自动解包
+function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
     if not self.ss[cfg[1]] then
         return error( "srv_register:cmd not define" )
     end
 
-    cfg.handler = handler
-    cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
-    cfg.noreg   = noreg   -- 此协议不需要注册到其他服务器
+    cfg.handler  = handler
+    cfg.noauth   = noauth
+    cfg.noreg    = noreg
+    cfg.nounpack = nounpack
 end
 
 -- 分发服务器协议
-function Command_mgr:srv_dispatcher( cmd,srv_conn )
-    if cmd == CLT_CMD then
-        -- 客户端协议处理
-        return self:clt_dispatcher( srv_conn )
-    elseif cmd == RPC_REQ then
-        -- RPC请求
-        return rpc:dispatch( srv_conn )
-    elseif cmd == RPC_RES then
-        -- RPC返回
-        return rpc:response( srv_conn )
-    end
-
-    -- server to server cmd handle here
+function Command_mgr:srv_dispatcher( cmd,pid,srv_conn )
     local cfg = self.ss[cmd]
     if not cfg then
         return ELOG( "srv_dispatcher:cmd [%d] not define",cmd )
@@ -94,6 +86,12 @@ function Command_mgr:srv_dispatcher( cmd,srv_conn )
         return ELOG( 
             "srv_dispatcher:cmd [%d] define but no handler register",cmd )
     end
+
+    -- 不需要解包的协议，可能是rpc等特殊的数据包
+    if cfg.nounpack then
+        return handler( srv_conn,pid )
+    end
+
     local pkt = 
         srv_conn.conn:ss_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
 
@@ -101,7 +99,7 @@ function Command_mgr:srv_dispatcher( cmd,srv_conn )
 end
 
 -- 分发服务器协议
-function Command_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
+function Command_mgr:srv_unauthorized_dispatcher( cmd,pid,srv_conn )
     -- server to server command handle here
     local cfg = self.ss[cmd]
     if not cfg then
@@ -125,26 +123,28 @@ function Command_mgr:srv_unauthorized_dispatcher( cmd,srv_conn )
 end
 
 -- 处理来自gateway转发的客户端包
-function Command_mgr:clt_dispatcher( srv_conn )
-    local cmd = srv_conn.conn:css_cmd()
-    if not cmd then
-        return ELOG( "Command_mgr:clt_dispatcher no cmd found" )
-    end
+function Command_mgr.css_dispatcher( self )
+    return function( srv_conn,pid )
+        local cmd = srv_conn.conn:css_cmd()
+        if not cmd then
+            return ELOG( "Command_mgr:css_dispatcher no cmd found" )
+        end
 
-    local cfg = self.cs[cmd]
-    if not cfg then
-        return ELOG( "clt_dispatcher:command [%d] not define",cmd )
-    end
+        local cfg = self.cs[cmd]
+        if not cfg then
+            return ELOG( "css_dispatcher:command [%d] not define",cmd )
+        end
 
-    local handler = cfg.handler
-    if not handler then
-        return ELOG( 
-            "clt_dispatcher:cmd [%d] define but no handler register",cmd )
-    end
+        local handler = cfg.handler
+        if not handler then
+            return ELOG( 
+                "css_dispatcher:cmd [%d] define but no handler register",cmd )
+        end
 
-    local pkt = 
-        srv_conn.conn:css_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
-    return handler( srv_conn,pkt )
+        local pkt = 
+            srv_conn.conn:css_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
+        return handler( srv_conn,pkt )
+    end
 end
 
 -- 客户端未认证连接指令
@@ -153,11 +153,11 @@ function Command_mgr:clt_unauthorized_cmd( cmd,clt_conn )
     -- client to server command handle here
     local cfg = self.cs[cmd]
     if not cfg then
-        return ELOG( "clt_invoke:cmd [%d] not define",cmd )
+        return ELOG( "clt_unauthorized_cmd:cmd [%d] not define",cmd )
     end
 
     if not cfg.noauth then
-        return ELOG( "clt_invoke:try to call auth cmd [%d]",cmd )
+        return ELOG( "clt_unauthorized_cmd:try to call auth cmd [%d]",cmd )
     end
 
     local handler = cfg.handler
@@ -195,6 +195,24 @@ function Command_mgr:clt_invoke( cmd,clt_conn )
 
     return srv_conn.conn:css_flatbuffers_send( 
             clt_conn.pid,CLT_CMD,clt_conn.conn )
+end
+
+-- 转发其他服务器数据包客到户端
+function Command_mgr.ssc_tansport( srv_conn,pid )
+    local clt_conn = network_mgr:get_clt_conn( pid )
+    if not clt_conn then
+        return ELOG( "Command_mgr:ssc_tansport no clt conn found" )
+    end
+
+    srv_conn.conn:css_flatbuffers_send( srv_cmd,clt_conn )
+end
+
+-- 发送数据包到gateway，再由它转发给客户端
+function Command_mgr:ssc_send( srv_conn,cfg,pid,pkt )
+    assert( cfg,"ssc_send no cmd specified" )
+
+    srv_conn.conn:ssc_flatbuffers_send( 
+        self.lfb,pid,CLT_CMD,cfg[1],cfg[2],cfg[3],pkt )
 end
 
 -- 发送服务器消息

@@ -23,6 +23,7 @@ public:
     int32 sc_flatbuffers_send   (); /* send server to client packet */
     int32 sc_flatbuffers_decode (); /* decode server to client packet */
     int32 ssc_flatbuffers_send  (); /* send server to server to client packet*/
+    int32 ssc_flatbuffers_decode(); /* decode server to server to client packet */
     int32 cs_flatbuffers_decode (); /* decode client to server packet */
     int32 cs_flatbuffers_send   (); /* send client to server packet*/
     int32 css_flatbuffers_send  (); /* send client to server to server packet*/

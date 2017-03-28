@@ -36,9 +36,19 @@ end
 command_mgr:srv_register( SS.SYS_SYN,srv_syn,true,true )
 command_mgr:srv_register( SS.SYS_ACK,srv_ack,true,true )
 
+command_mgr:srv_register( SS.RPC_REQ,rpc.dispatch,true,false,true )
+command_mgr:srv_register( SS.RPC_RES,rpc.response,true,false,true )
 
--------------- test rpc --------------------------------
+if Main.srvname == "gateway" then
+    command_mgr:srv_register( SS.CLT_CMD,command_mgr.ssc_tansport,true,false,true )
+end
+
+
 if Main.srvname == "world" then
+    command_mgr:srv_register( SS.CLT_CMD,
+        command_mgr.css_dispatcher( command_mgr ),true,false,true )
+
+    -------------- test rpc --------------------------------
     function rpc_echo( ... )
         print( "rpc echo",... )
 

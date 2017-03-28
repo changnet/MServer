@@ -48,11 +48,11 @@ end
 
 -- 处理未认证之前发的指令
 function Srv_conn:on_unauthorized_cmd()
-    local cmd = self.conn:srv_next()
+    local cmd,pid = self.conn:srv_next()
     while cmd and not self.auth do
-        command_mgr:srv_unauthorized_dispatcher( cmd,self )
+        command_mgr:srv_unauthorized_dispatcher( cmd,pid,self )
 
-        cmd = self.conn:srv_next( cmd )
+        cmd,pid = self.conn:srv_next( cmd )
     end
 
     if cmd then self:on_command() end
@@ -60,11 +60,11 @@ end
 
 -- 底层消息回调
 function Srv_conn:on_command()
-    local cmd = self.conn:srv_next()
+    local cmd,pid = self.conn:srv_next()
     while cmd do
-        command_mgr:srv_dispatcher( cmd,self )
+        command_mgr:srv_dispatcher( cmd,pid,self )
 
-        cmd = self.conn:srv_next( cmd )
+        cmd,pid = self.conn:srv_next( cmd )
     end
 end
 

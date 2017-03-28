@@ -70,7 +70,8 @@ int32 lstream_socket::srv_next()
     }
 
     lua_pushinteger( L,header->_cmd );
-    return 1;
+    lua_pushinteger( L,header->_pid );
+    return 2;
 }
 
 /* get next client command */
@@ -122,7 +123,9 @@ int32 lstream_socket::css_cmd()
     return 1;
 }
 
-/* ssc_flatbuffers_send( lfb,srv_cmd,clt_cmd,schema,object,tbl ) */
+/* 把客户端数据包发往gateway，再由gateway转发给客户端
+ * ssc_flatbuffers_send( lfb,pid,srv_cmd,clt_cmd,schema,object,tbl )
+ */
 int32 lstream_socket::ssc_flatbuffers_send()
 {
     class lflatbuffers** lfb =
@@ -132,19 +135,20 @@ int32 lstream_socket::ssc_flatbuffers_send()
         return luaL_error( L, "argument #1 expect lua_flatbuffers" );
     }
 
-    int32 srv_cmd = luaL_checkinteger( L,2 );
-    int32 clt_cmd = luaL_checkinteger( L,3 );
+    int32 pid     = luaL_checkinteger( L,2 );
+    int32 srv_cmd = luaL_checkinteger( L,3 );
+    int32 clt_cmd = luaL_checkinteger( L,4 );
 
-    const char *schema = luaL_checkstring( L,4 );
-    const char *object = luaL_checkstring( L,5 );
+    const char *schema = luaL_checkstring( L,5 );
+    const char *object = luaL_checkstring( L,6 );
 
-    if ( !lua_istable( L,6 ) )
+    if ( !lua_istable( L,7 ) )
     {
         return luaL_error( L,
-            "argument #6 expect table,got %s",lua_typename( L,lua_type(L,6) ) );
+            "argument #6 expect table,got %s",lua_typename( L,lua_type(L,7) ) );
     }
 
-    if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
+    if ( (*lfb)->encode( L,schema,object,7 ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );
     }
@@ -163,20 +167,20 @@ int32 lstream_socket::ssc_flatbuffers_send()
     }
 
     struct s2c_header s2ch;
-    s2ch._length = static_cast<packet_length>(
-        sz + sizeof(struct s2c_header) - sizeof(packet_length) );
+    s2ch._length = PACKET_MAKE_LENGTH( struct s2c_header,sz );
     s2ch._cmd    = static_cast<uint16>  ( clt_cmd );
 
     struct s2s_header s2sh;
-    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,sz );
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,PACKET_LENGTH( (&s2ch) ) );
     s2sh._cmd    = static_cast<uint16>  ( srv_cmd );
+    s2sh._pid    = pid;
 
     _send.__append( &s2sh,sizeof(struct s2s_header) );
     _send.__append( &s2ch,sizeof(struct s2c_header) );
     _send.__append( buffer,sz );
 
     pending_send();
-    return 0;
+    return       0;
 }
 
 /* 发送协议到客户端
@@ -433,7 +437,9 @@ int32 lstream_socket::cs_flatbuffers_send()
     return 0;
 }
 
-/* css_flatbuffers_send( pid,srv_cmd,clt_conn ) */
+/* 转发客户端数据包给另外一个服务器
+ * css_flatbuffers_send( pid,srv_cmd,clt_conn )
+ */
 int32 lstream_socket::css_flatbuffers_send()
 {
     int32 pid     = luaL_checkinteger( L,1 );
@@ -482,7 +488,7 @@ int32 lstream_socket::css_flatbuffers_send()
     _send.__append( clt_recv.data(),len );
 
     pending_send();
-    return 0;
+    return       0;
 }
 
 
@@ -536,7 +542,57 @@ int32 lstream_socket::sc_flatbuffers_decode()
     return 2;
 }
 
-/* css_flatbuffers_decode( lfb,srv_cmd,clt_conn ) */
+/* 将另一个服的包转发给客户端的
+ * ssc_flatbuffers_decode( srv_cmd,clt_conn )
+ */
+int32 lstream_socket::ssc_flatbuffers_decode()
+{
+    int32 srv_cmd = luaL_checkinteger( L,1 );
+
+    class lstream_socket** clt_conn =
+        (class lstream_socket**)luaL_checkudata( L, 2, "Stream_socket" );
+    if ( clt_conn == NULL || *clt_conn == NULL )
+    {
+        return luaL_error( L, "argument #2 expect Stream_socket" );
+    }
+
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct c2s_header) )
+    {
+        return luaL_error( L, "incomplete packet header" );
+    }
+
+    struct s2s_header *ph = 
+        reinterpret_cast<struct s2s_header *>(_recv.data());
+
+    /* 验证包长度，_length并不包含本身 */
+    size_t len = PACKET_LENGTH( ph );
+    if ( sz < len )
+    {
+        return luaL_error( L, "packet header broken" );
+    }
+
+    /* 协议号是否匹配 */
+    if ( srv_cmd != ph->_cmd )
+    {
+        return luaL_error( L,
+            "cmd valid fail,expect %d,got %d",srv_cmd,ph->_cmd );
+    }
+
+    if ( !(*clt_conn)->_send.reserved( len ) )
+    {
+        return luaL_error( L,"out of socket buffer" );
+    }
+
+    (*clt_conn)->_send.__append( _recv.data(),len );
+
+    (*clt_conn)->pending_send();
+    return                    0;
+}
+
+/* 解析其他服务器转发的客户端包
+ * css_flatbuffers_decode( lfb,srv_cmd,clt_conn )
+ */
 int32 lstream_socket::css_flatbuffers_decode()
 {
     return 1;
