@@ -3,7 +3,7 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
-Main = {}       -- store dynamic runtime info to global
+Main = {}
 Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
 
 -- 这个服务器需要等待其他服务器才能初始化完成
@@ -11,6 +11,12 @@ Main.wait =
 {
     world = 1, -- 等待一个world服OK
 }
+
+local Unique_id = require "global.unique_id"
+
+unique_id = Unique_id()
+Main.session = unique_id:srv_session(
+    Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
 local setting     = require "gateway/setting"
 local network_mgr = require "network/network_mgr"
@@ -40,8 +46,6 @@ end
 -- 初始化
 function Main.init()
     Main.starttime = ev:time()
-    Main.session = network_mgr:generate_srv_session(
-        Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
     command_mgr:init_command()
     local fs = command_mgr:load_schema()

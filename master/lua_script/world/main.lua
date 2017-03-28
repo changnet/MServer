@@ -11,6 +11,12 @@ Main.wait =
     gateway = 1,
 }
 
+local Unique_id = require "global.unique_id"
+
+unique_id = Unique_id()
+Main.session = unique_id:srv_session(
+    Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
+
 local setting     = require "world/setting"
 local network_mgr = require "network/network_mgr"
 local command_mgr = require "command/command_mgr"
@@ -36,8 +42,6 @@ end
 
 function Main.init()
     Main.starttime = ev:time()
-    Main.session = network_mgr:generate_srv_session(
-        Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
     command_mgr:init_command()
     local fs = command_mgr:load_schema()

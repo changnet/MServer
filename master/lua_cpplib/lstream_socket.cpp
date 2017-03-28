@@ -116,8 +116,7 @@ int32 lstream_socket::css_cmd()
     struct c2s_header *header = reinterpret_cast<struct c2s_header *>(
                              _recv.data() + sizeof(struct s2s_header) );
 
-    if ( sz < header->_length + 
-        sizeof(struct s2s_header) + sizeof( packet_length ) ) return 0;
+    if ( sz < sizeof(struct s2s_header) + PACKET_LENGTH( header ) ) return 0;
 
     lua_pushinteger( L,header->_cmd );
     return 1;
@@ -169,8 +168,7 @@ int32 lstream_socket::ssc_flatbuffers_send()
     s2ch._cmd    = static_cast<uint16>  ( clt_cmd );
 
     struct s2s_header s2sh;
-    s2sh._length = static_cast<packet_length>( sz + sizeof(struct s2c_header) 
-                        + sizeof(struct s2s_header) - sizeof(packet_length) );
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,sz );
     s2sh._cmd    = static_cast<uint16>  ( srv_cmd );
 
     _send.__append( &s2sh,sizeof(struct s2s_header) );
@@ -225,8 +223,7 @@ int32 lstream_socket::sc_flatbuffers_send()
     }
 
     struct s2c_header s2ch;
-    s2ch._length = static_cast<packet_length>(
-        sz + sizeof(struct s2c_header) - sizeof(packet_length) );
+    s2ch._length = PACKET_MAKE_LENGTH( struct s2c_header,sz );
     s2ch._cmd    = static_cast<uint16>  ( clt_cmd );
     s2ch._errno  = static_cast<uint16>  ( _errno  );
 
@@ -237,7 +234,7 @@ int32 lstream_socket::sc_flatbuffers_send()
     return 0;
 }
 
- /* server to server:ss_flatbuffers_send( lfb,cmd,schema,object,tbl ) */
+ /* server to server:ss_flatbuffers_send( lfb,pid,cmd,schema,object,tbl ) */
 int32 lstream_socket::ss_flatbuffers_send()
 {
     class lflatbuffers** lfb =
@@ -247,18 +244,19 @@ int32 lstream_socket::ss_flatbuffers_send()
         return luaL_error( L, "argument #1 expect lua_flatbuffers" );
     }
 
-    int32 srv_cmd = luaL_checkinteger( L,2 );
+    int32 pid     = luaL_checkinteger( L,2 );
+    int32 srv_cmd = luaL_checkinteger( L,3 );
 
-    const char *schema = luaL_checkstring( L,3 );
-    const char *object = luaL_checkstring( L,4 );
+    const char *schema = luaL_checkstring( L,4 );
+    const char *object = luaL_checkstring( L,5 );
 
-    if ( !lua_istable( L,5 ) )
+    if ( !lua_istable( L,6 ) )
     {
         return luaL_error( L,
-            "argument #5 expect table,got %s",lua_typename( L,lua_type(L,5) ) );
+            "argument #5 expect table,got %s",lua_typename( L,lua_type(L,6) ) );
     }
 
-    if ( (*lfb)->encode( L,schema,object,5 ) < 0 )
+    if ( (*lfb)->encode( L,schema,object,6 ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );
     }
@@ -276,9 +274,9 @@ int32 lstream_socket::ss_flatbuffers_send()
     }
 
     struct s2s_header s2sh;
-    s2sh._length = static_cast<packet_length>(
-        sz + sizeof(struct s2s_header) - sizeof(packet_length) );
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,sz );
     s2sh._cmd    = static_cast<uint16>  ( srv_cmd );
+    s2sh._pid    = pid;
 
     _send.__append( &s2sh,sizeof(struct s2s_header) );
     _send.__append( buffer,sz );
@@ -313,7 +311,7 @@ int32 lstream_socket::ss_flatbuffers_decode()
     struct s2s_header *ph = reinterpret_cast<struct s2s_header *>(_recv.data());
 
     /* 验证包长度，_length并不包含本身 */
-    size_t len = ph->_length + sizeof( packet_length );
+    size_t len = PACKET_LENGTH( ph );
     if ( sz < len )
     {
         return luaL_error( L, "packet header broken" );
@@ -425,8 +423,7 @@ int32 lstream_socket::cs_flatbuffers_send()
     }
 
     struct c2s_header c2sh;
-    c2sh._length = static_cast<packet_length>(
-        sz + sizeof(struct c2s_header) - sizeof(packet_length) );
+    c2sh._length = PACKET_MAKE_LENGTH( struct c2s_header,sz );
     c2sh._cmd    = static_cast<uint16>  ( srv_cmd );
 
     _send.__append( &c2sh,sizeof(struct c2s_header) );
@@ -436,13 +433,14 @@ int32 lstream_socket::cs_flatbuffers_send()
     return 0;
 }
 
-/* css_flatbuffers_send( srv_cmd,clt_conn ) */
+/* css_flatbuffers_send( pid,srv_cmd,clt_conn ) */
 int32 lstream_socket::css_flatbuffers_send()
 {
-    int32 srv_cmd = luaL_checkinteger( L,1 );
+    int32 pid     = luaL_checkinteger( L,1 );
+    int32 srv_cmd = luaL_checkinteger( L,2 );
 
     class lstream_socket** clt_conn =
-        (class lstream_socket**)luaL_checkudata( L, 2, "Stream_socket" );
+        (class lstream_socket**)luaL_checkudata( L, 3, "Stream_socket" );
     if ( clt_conn == NULL || *clt_conn == NULL )
     {
         return luaL_error( L, "argument #2 expect Stream_socket" );
@@ -459,7 +457,7 @@ int32 lstream_socket::css_flatbuffers_send()
         reinterpret_cast<struct c2s_header *>(clt_recv.data());
 
     /* 验证包长度，_length并不包含本身 */
-    size_t len = ph->_length + sizeof( packet_length );
+    size_t len = PACKET_LENGTH( ph );
     if ( sz < len )
     {
         return luaL_error( L, "packet header broken" );
@@ -476,9 +474,9 @@ int32 lstream_socket::css_flatbuffers_send()
     }
 
     struct s2s_header s2sh;
-    s2sh._length = static_cast<packet_length>( len
-                        + sizeof(struct s2s_header) - sizeof(packet_length) );
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
     s2sh._cmd    = static_cast<uint16>  ( srv_cmd );
+    s2sh._pid    = pid;
 
     _send.__append( &s2sh,sizeof(struct s2s_header) );
     _send.__append( clt_recv.data(),len );
@@ -514,7 +512,7 @@ int32 lstream_socket::sc_flatbuffers_decode()
     struct s2c_header *ph = reinterpret_cast<struct s2c_header *>(_recv.data());
 
     /* 验证包长度，_length并不包含本身 */
-    size_t len = ph->_length + sizeof( packet_length );
+    size_t len = PACKET_LENGTH( ph );
     if ( sz < len )
     {
         return luaL_error( L, "packet header broken" );

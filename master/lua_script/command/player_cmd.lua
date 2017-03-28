@@ -9,6 +9,8 @@ local network_mgr = require "network/network_mgr"
 local function player_login( clt_conn,pkt )
     clt_conn:authorized()
 
+    -- TODO
+    clt_conn.pid = ev:time()
     command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,{name="TODO"} )
 
     PLOG( "client authorized success:%s",pkt.account )

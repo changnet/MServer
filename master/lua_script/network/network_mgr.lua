@@ -5,15 +5,6 @@ local Stream_socket = require "Stream_socket"
 local Srv_conn      = oo.refer( "network/srv_conn" )
 local Clt_conn      = oo.refer( "network/clt_conn" )
 
--- 服务器名字转索引，不经常改。运维也不需要知道，暂时不做成配置
-local name_type =
-{
-    gateway = 1,
-    world   = 2,
-    test    = 3,
-    example = 4
-}
-
 local ALIVE_INTERVAL   = 5
 local ALIVE_TIMES      = 5
 
@@ -33,21 +24,6 @@ function Network_mgr:__init()
     self.timer:set_callback( self.do_timer )
 
     self.timer:start( 5,5 )
-end
-
--- 生成服务器session id
--- @name  服务器名称，如gateway、world...
--- @index 服务器索引，如可能有多个gateway，分别为1,2...
--- @srvid 服务器id，与运维相关。开了第N个服
-function Network_mgr:generate_srv_session( name,index,srvid )
-    local ty = name_type[name]
-
-    assert( ty,"server name type not define" )
-    assert( index < (1 << 24),"server index out of boundry" )
-    assert( srvid < (1 << 16),   "server id out of boundry" )
-
-    -- int32 ,8bits is ty,8bits is index,16bits is srvid
-    return (ty << 24) + (index <<16) + srvid
 end
 
 --  监听服务器连接

@@ -95,6 +95,7 @@ end
 -- 定时器事件
 function Android:do_timer()
     self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
 end
 
 -- ping返回
