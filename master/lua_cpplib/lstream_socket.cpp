@@ -39,7 +39,9 @@ const class lsocket *lstream_socket::accept_new( int32 fd )
     return static_cast<class lsocket *>( _s );
 }
 
-/* get next server command */
+/* 获取下一个服务器(s2s)指令
+ * 如果参数不为nil，则删除上一个指令
+ */
 int32 lstream_socket::srv_next()
 {
     uint32 sz = _recv.data_size();
@@ -74,7 +76,9 @@ int32 lstream_socket::srv_next()
     return 2;
 }
 
-/* get next client command */
+/* 获取下一个客户端(c2s)指令
+ * 如果参数不为nil，则删除上一个指令
+ */
 int32 lstream_socket::clt_next()
 {
     uint32 sz = _recv.data_size();
@@ -100,6 +104,43 @@ int32 lstream_socket::clt_next()
         sz -= len;
         if ( sz < sizeof(struct c2s_header) ) return 0;
         header = reinterpret_cast<struct c2s_header *>( _recv.data() );
+
+        if ( sz < PACKET_LENGTH( header ) ) return 0;
+    }
+
+    lua_pushinteger( L,header->_cmd );
+    return 1;
+}
+
+
+/* 获取下一个客户端(s2c)指令
+ * 如果参数不为nil，则删除上一个指令
+ */
+int32 lstream_socket::scmd_next()
+{
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct s2c_header) ) return 0;
+
+    struct s2c_header *header =
+        reinterpret_cast<struct s2c_header *>( _recv.data() );
+
+    size_t len = PACKET_LENGTH( header );
+    if ( sz < len ) return 0;
+
+    /* 如果参数不为nil，则删除上一个指令 */
+    if ( !lua_isnoneornil( L,1 ) )
+    {
+        int32 cmd = luaL_checkinteger( L,1 );
+        if ( cmd != header->_cmd )
+        {
+            return luaL_error( L,"valid last command fail" );
+        }
+
+        _recv.subtract( len );
+
+        sz -= len;
+        if ( sz < sizeof(struct s2c_header) ) return 0;
+        header = reinterpret_cast<struct s2c_header *>( _recv.data() );
 
         if ( sz < PACKET_LENGTH( header ) ) return 0;
     }
@@ -330,6 +371,7 @@ int32 lstream_socket::ss_flatbuffers_decode()
 
     const char *buffer = _recv.data() + sizeof( struct s2s_header );
 
+    len -= sizeof( struct s2s_header );
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );
@@ -379,6 +421,7 @@ int32 lstream_socket::cs_flatbuffers_decode()
 
     const char *buffer = _recv.data() + sizeof( struct c2s_header );
 
+    len -= sizeof( struct c2s_header );
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );
@@ -462,7 +505,6 @@ int32 lstream_socket::css_flatbuffers_send()
     struct c2s_header *ph = 
         reinterpret_cast<struct c2s_header *>(clt_recv.data());
 
-    /* 验证包长度，_length并不包含本身 */
     size_t len = PACKET_LENGTH( ph );
     if ( sz < len )
     {
@@ -534,6 +576,7 @@ int32 lstream_socket::sc_flatbuffers_decode()
     const char *buffer = _recv.data() + sizeof( struct s2c_header );
 
     lua_pushinteger( L,ph->_errno );
+    len -= sizeof( struct s2c_header );
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );
@@ -557,7 +600,7 @@ int32 lstream_socket::ssc_flatbuffers_decode()
     }
 
     uint32 sz = _recv.data_size();
-    if ( sz < sizeof(struct c2s_header) )
+    if ( sz < sizeof(struct s2s_header) + sizeof(struct s2c_header) )
     {
         return luaL_error( L, "incomplete packet header" );
     }
@@ -579,22 +622,77 @@ int32 lstream_socket::ssc_flatbuffers_decode()
             "cmd valid fail,expect %d,got %d",srv_cmd,ph->_cmd );
     }
 
+    len = len - sizeof(struct s2s_header);
     if ( !(*clt_conn)->_send.reserved( len ) )
     {
         return luaL_error( L,"out of socket buffer" );
     }
 
-    (*clt_conn)->_send.__append( _recv.data(),len );
+    (*clt_conn)->_send.__append( _recv.data() + sizeof(struct s2s_header),len );
 
     (*clt_conn)->pending_send();
     return                    0;
 }
 
 /* 解析其他服务器转发的客户端包
- * css_flatbuffers_decode( lfb,srv_cmd,clt_conn )
+ * css_flatbuffers_decode( lfb,clt_cmd,clt_conn )
  */
 int32 lstream_socket::css_flatbuffers_decode()
 {
+    class lflatbuffers** lfb =
+        (class lflatbuffers**)luaL_checkudata( L, 1, "lua_flatbuffers" );
+    if ( lfb == NULL || *lfb == NULL )
+    {
+        return luaL_error( L, "argument #1 expect lua_flatbuffers" );
+    }
+
+    int32 clt_cmd = luaL_checkinteger( L,2 );
+
+    const char *schema = luaL_checkstring( L,3 );
+    const char *object = luaL_checkstring( L,4 );
+
+    uint32 sz = _recv.data_size();
+    if ( sz < sizeof(struct s2s_header) + sizeof(struct c2s_header) )
+    {
+        return luaL_error( L, "incomplete command header" );
+    }
+
+    /* 先校验服务器包是否完整 */
+    struct s2s_header *sph = 
+        reinterpret_cast<struct s2s_header *>(_recv.data());
+    if ( sz < PACKET_LENGTH( sph ) )
+    {
+        return luaL_error( L, "packet header broken" );
+    }
+
+    /* 分离出客户端包 */
+    struct c2s_header *ph = 
+        reinterpret_cast<struct c2s_header *>(
+        _recv.data() + sizeof(struct s2s_header) );
+
+    /* 验证包长度，_length并不包含本身 */
+    size_t len = PACKET_LENGTH( ph );
+    if ( sz < len )
+    {
+        return luaL_error( L, "packet header broken" );
+    }
+
+    /* 协议号是否匹配 */
+    if ( clt_cmd != ph->_cmd )
+    {
+        return luaL_error( L,
+            "cmd valid fail,expect %d,got %d",clt_cmd,ph->_cmd );
+    }
+
+    const char *buffer = _recv.data() + 
+        sizeof(struct s2s_header) + sizeof(struct c2s_header);
+
+    len -= sizeof(struct c2s_header);
+    if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
+    {
+        return luaL_error( L,(*lfb)->last_error() );
+    }
+
     return 1;
 }
 

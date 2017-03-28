@@ -18,6 +18,7 @@ end
 
 local function player_ping( srv_conn,pkt )
     PLOG( "ping ====>>>> " )
+    vd( pkt )
 
     command_mgr:ssc_send( srv_conn,SC.PLAYER_PING,1,{time = ev:time()} )
 end

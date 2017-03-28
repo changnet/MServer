@@ -84,11 +84,11 @@ end
 
 -- 收到数据
 function Android:on_command()
-    local cmd = self.conn:clt_next()
+    local cmd = self.conn:scmd_next()
     while cmd do
         android_mgr:cmd_dispatcher( cmd,self )
 
-        cmd = self.conn:clt_next( cmd )
+        cmd = self.conn:scmd_next( cmd )
     end
 end
 
@@ -99,7 +99,8 @@ function Android:do_timer()
 end
 
 -- ping返回
-function Android:on_ping( pkt )
+function Android:on_ping( errno,pkt )
+    vd( pkt )
 end
 
 -- 登录返回

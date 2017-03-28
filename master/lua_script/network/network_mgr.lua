@@ -171,7 +171,7 @@ end
 
 -- 获取客户端连接
 function Network_mgr:get_clt_conn( pid )
-    for k,v in pairs( self.clt ) do
+    for k,v in pairs( self.clt_conn ) do
         return k
     end
 end

@@ -13,6 +13,7 @@ public:
     int32 srv_next(); /* get next server packet */
     int32 clt_next(); /* get next client packet */
     int32 css_cmd (); /* get client to server to server cmd */
+    int32 scmd_next();
 
     int32 rpc_send  (); /* send rpc packet */
     int32 rpc_decode(); /* decode rpc packet */

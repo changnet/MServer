@@ -204,7 +204,7 @@ function Command_mgr.ssc_tansport( srv_conn,pid )
         return ELOG( "Command_mgr:ssc_tansport no clt conn found" )
     end
 
-    srv_conn.conn:css_flatbuffers_send( srv_cmd,clt_conn )
+    srv_conn.conn:ssc_flatbuffers_decode( CLT_CMD,clt_conn.conn )
 end
 
 -- 发送数据包到gateway，再由它转发给客户端
