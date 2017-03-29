@@ -94,18 +94,25 @@ end
 
 -- 定时器事件
 function Android:do_timer()
-    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
-    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    -- self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
 end
 
 -- ping返回
 function Android:on_ping( errno,pkt )
-    vd( pkt )
+    local ts = self.ts or 1
+
+    if ts < 100000 then
+        self.ts = ts + 1
+        self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    else
+        f_tm_stop( "test done" )
+    end
 end
 
 -- 登录返回
 function Android:on_login( errno,pkt )
-    vd( pkt )
+    f_tm_start()
+    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
 end
 
 return Android
