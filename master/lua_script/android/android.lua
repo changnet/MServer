@@ -63,9 +63,9 @@ function Android:on_connect( errno )
         sid  = 1,
         time = ev:time(),
         plat = 999,
-        sign = "====>>>>md5<<<<====",
         account = string.format( "android_%d",self.pid )
     }
+    pkt.sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
 
     self:send_pkt( CS.PLAYER_LOGIN,pkt )
 end

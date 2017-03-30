@@ -1,5 +1,11 @@
 //玩家模块 协议定义
 
+table role
+{
+    pid:int; // 玩家id
+    name:string; // 角色名字
+}
+
 // 登录
 table clogin
 {
@@ -10,9 +16,23 @@ table clogin
     account:string; // 帐户
 }
 
+// 登录返回
 table slogin
 {
-    name:string; //   名字
+    roles:[role]; //  角色列表
+}
+
+// 创建角色
+table ccreate_role
+{
+    name:string; // 名字
+}
+
+// 创建角色返回
+table screate_role
+{
+    pid:int; // 玩家id
+    name:string; // 角色名字
 }
 
 // ping服务器

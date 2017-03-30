@@ -21,4 +21,13 @@ function Unique_id:srv_session( name,index,srvid )
     return (ty << 24) + (index <<16) + srvid
 end
 
+-- 解析session id
+function Unique_id:srv_session_parse( session )
+    local ty = session >> 24;
+    local index = (session >> 16) & 0xFF
+    local srvid = session & 0xFFFF
+
+    return ty,index,srvid
+end
+
 return Unique_id

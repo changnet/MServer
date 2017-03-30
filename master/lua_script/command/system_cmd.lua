@@ -15,7 +15,7 @@ local function srv_syn( srv_conn,pkt )
     local _pkt = network_mgr:register_pkt( command_mgr )
     command_mgr:srv_send( srv_conn,SS.SYS_ACK,_pkt )
 
-    PLOG( "server(%#.8X) register succes",pkt.session )
+    PLOG( "%s register succes",srv_conn:conn_name() )
 
     Main.one_wait_finish( pkt.name,1 )
 end
@@ -27,12 +27,23 @@ local function srv_ack( srv_conn,pkt )
 
     srv_conn:authorized( pkt.session )
 
-    PLOG( "server(%#.8X) register succes",pkt.session )
+    PLOG( "%s register succes",srv_conn:conn_name() )
 
     Main.one_wait_finish( pkt.name,1 )
 end
 
+-- 心跳包
+local function srv_beat( srv_conn,pkt )
+    if pkt.response then
+        command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = 1} )
+    end
+
+    -- 在这里不用更新自己的心跳，因为在on_command里已自动更新
+end
+
 -- 这里注册系统模块的协议处理
+command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true,false )
+
 command_mgr:srv_register( SS.SYS_SYN,srv_syn,true,true )
 command_mgr:srv_register( SS.SYS_ACK,srv_ack,true,true )
 

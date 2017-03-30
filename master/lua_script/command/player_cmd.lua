@@ -3,15 +3,19 @@
 local CS = CS
 local SC = SC
 
+local util = require "util"
 local command_mgr = require "command/command_mgr"
 local network_mgr = require "network/network_mgr"
 
 local function player_login( clt_conn,pkt )
-    clt_conn:authorized()
+    local sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
+    if sign ~= pkt.sign then
+        ELOG( "clt sign error:%s",pkt.account )
+        return
+    end
 
-    -- TODO
-    clt_conn.pid = ev:time()
-    command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,{name = "TODO"} )
+    clt_conn:authorized()
+    command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,{} )
 
     PLOG( "client authorized success:%s",pkt.account )
 end

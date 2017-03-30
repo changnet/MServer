@@ -13,4 +13,7 @@ SRV_NAME =
     example = 4
 }
 
+SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
+LOGIN_KEY = "409065b7570155637b95e38ca13542e0"
+
 return { ["SRV_NAME"] = SRV_NAME }

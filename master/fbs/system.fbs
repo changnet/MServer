@@ -15,11 +15,5 @@ table ssregister
 /* 服务器心跳 */
 struct ssbeat
 {
-    dummy:bool;
-}
-
-table ssbroadcast
-{
-    sessions:[int] ;
-    data    :[byte];
+    response:bool;
 }

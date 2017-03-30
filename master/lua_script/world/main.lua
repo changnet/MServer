@@ -17,9 +17,10 @@ unique_id = Unique_id()
 Main.session = unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
-local setting     = require "world/setting"
-local network_mgr = require "network/network_mgr"
-local command_mgr = require "command/command_mgr"
+setting     = require "world/setting"
+network_mgr = require "network/network_mgr"
+command_mgr = require "command/command_mgr"
+
 local Srv_conn    = require "network/srv_conn"
 
 function Main.sig_handler( signum )

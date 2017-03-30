@@ -1,12 +1,12 @@
 require "global.global"
 require "global.oo"
 require "global.table"
-
+require "global.define"
 
 local android_mgr = require "android/android_mgr"
 
-require "android/android"
-require "android/android_cmd"
+require "android.android"
+require "android.android_cmd"
 
 math.randomseed( ev:time() )
 

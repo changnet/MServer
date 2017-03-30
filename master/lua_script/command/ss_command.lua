@@ -20,7 +20,9 @@ local SS =
     RPC_RES   = { MODULE_SYSTEM + 0x03 },     -- rcp通信response包
 
     SYS_SYN = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" },
-    SYS_ACK = { MODULE_SYSTEM + 0x05,"system.bfbs","ssregister" }
+    SYS_ACK = { MODULE_SYSTEM + 0x05,"system.bfbs","ssregister" },
+
+    SYS_BEAT = { MODULE_SYSTEM + 0x06,"system.bfbs","ssbeat" }, -- 心跳包
 
     -- 其他功能模块协议
     -- LOGIN = { MODULE_LOGIN + 0x01,"login,bfbs","clogin" },

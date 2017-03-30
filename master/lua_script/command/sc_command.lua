@@ -18,13 +18,17 @@ local SC =
 {
     PLAYER_LOGIN = { MODULE_PLAYER + 0x01,"player.bfbs","slogin" },
     PLAYER_PING  = { MODULE_PLAYER + 0x02,"player.bfbs","sping" },
+    PLAYER_CREATE_ROLE = { MODULE_PLAYER + 0x03,"player.bfbs","screate_role" },
 }
 
 local CS =
 {
     PLAYER_LOGIN = { MODULE_PLAYER + 0x01,"player.bfbs","clogin" },
     PLAYER_PING  = { MODULE_PLAYER + 0x02,"player.bfbs","cping" },
+    PLAYER_CREATE_ROLE = { MODULE_PLAYER + 0x03,"player.bfbs","ccreate_role" },
 }
 
 -- 使用oo的define功能让这两个表local后仍能热更
-return {oo.define( SC,"command_sc" ),oo.define( CS,"command_cs" )}
+SC = oo.define( SC,"command_sc" )
+CS = oo.define( CS,"command_cs" )
+return {SC,CS}

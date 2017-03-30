@@ -1,5 +1,6 @@
 -- network_mgr 网络连接管理
 
+local util          = require "util"
 local Timer         = require "Timer"
 local Stream_socket = require "Stream_socket"
 local Srv_conn      = oo.refer( "network/srv_conn" )
@@ -51,7 +52,7 @@ function Network_mgr:clt_listen( ip,port )
     if not fd then return false end
 
     self.clt_listen = conn
-    PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
+    PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )
 
     return true
 end
@@ -94,7 +95,7 @@ function Network_mgr:srv_disconnect( srv_conn )
         self.srv[srv_conn.session] = nil
     end
 
-    PLOG( "server(%#.8X) disconnect",srv_conn.session or 0 )
+    PLOG( "%s disconnect",srv_conn:conn_name() )
 end
 
 -- 客户端断开
@@ -119,7 +120,8 @@ end
 function Network_mgr:srv_register( conn,pkt )
     self.srv_conn[conn] = nil
 
-    if pkt.auth ~= "====>>>>MD5<<<<====" then
+    local auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
+    if pkt.auth ~= auth then
         ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
         return false
     end
@@ -140,11 +142,8 @@ function Network_mgr:register_pkt( command_mgr )
         name    = Main.srvname,
         session = Main.session,
         timestamp = ev:time(),
-        auth = "====>>>>MD5<<<<====",
-        clt_msg = { 1,2,3 },
-        srv_msg = { 4,5,6 },
-        rpc_msg = { "abc","def" }
     }
+    pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
 
     pkt.clt_cmd = command_mgr:clt_cmd()
     pkt.srv_cmd = command_mgr:srv_cmd()
@@ -157,9 +156,12 @@ end
 function Network_mgr:do_timer()
     local check_time = ev:time() - ALIVE_INTERVAL
     for session,srv_conn in pairs( self.srv ) do
-        if srv_conn:check( check_time ) > ALIVE_TIMES then
+        local ts = srv_conn:check( check_time )
+        if ts > ALIVE_TIMES then
             -- timeout
-            PLOG( "%#.8X server timeout",session )
+            PLOG( "%s server timeout",srv_conn:conn_name() )
+        elseif ts > 0 then
+            command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = 1} )
         end
     end
 end

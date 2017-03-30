@@ -60,6 +60,8 @@ end
 
 -- 底层消息回调
 function Srv_conn:on_command()
+    self.beat = ev:time() -- 更新心跳
+
     local cmd,pid = self.conn:srv_next()
     while cmd do
         command_mgr:srv_dispatcher( cmd,pid,self )
@@ -88,6 +90,22 @@ function Srv_conn:authorized( session )
     self.auth = true
     self.session = session
     self.conn:set_on_command( self.on_command )
+end
+
+-- 获取该连接名称
+function Srv_conn:conn_name( session )
+    local ty,index,srvid = 
+        unique_id:srv_session_parse( session or self.session )
+
+    local name = ""
+    for _name,_ty in pairs( SRV_NAME ) do
+        if ty == _ty then
+            name = _name
+            break
+        end
+    end
+
+    return string.format( "%s(I%d.S%d)",name,index,srvid )
 end
 
 return Srv_conn
