@@ -59,16 +59,26 @@ end
 
 -- 处理服务器连接
 function Network_mgr:on_srv_acception( conn )
-    local srv_conn = Srv_conn( conn )
-    self.srv_conn[srv_conn] = ev:time()
+    local conn_id = unique_id:conn_id()
+    while self.srv_conn[conn_id] do
+        conn_id = unique_id:conn_id()
+    end
+
+    local srv_conn = Srv_conn( conn,conn_id )
+    self.srv_conn[conn_id] = srv_conn
 
     local fd = conn:file_description()
     PLOG( "accept server connection,fd:%d",fd )
 end
 
 function Network_mgr:on_clt_acception( conn )
-    local clt_conn = Clt_conn( conn )
-    self.clt_conn[clt_conn] = ev:time()
+    local conn_id = unique_id:conn_id()
+    while self.clt_conn[conn_id] do
+        conn_id = unique_id:conn_id()
+    end
+
+    local clt_conn = Clt_conn( conn,conn_id )
+    self.clt_conn[conn_id] = clt_conn
 
     local fd = conn:file_description()
     PLOG( "accept client connection,fd:%d",fd )
@@ -77,23 +87,24 @@ end
 -- 主动连接其他服务器
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
-        local srv_conn = Srv_conn()
+        local conn_id = unique_id:conn_id()
+        while self.srv_conn[conn_id] do
+            conn_id = unique_id:conn_id()
+        end
+
+        local srv_conn = Srv_conn( nil,conn_id )
         srv_conn:connect( srv.ip,srv.port )
 
-        self.srv_conn[srv_conn] = ev:time()
+        self.srv_conn[conn_id] = srv_conn
         PLOG( "server connect to %s:%d",srv.ip,srv.port )
     end
 end
 
 -- 服务器断开
 function Network_mgr:srv_disconnect( srv_conn )
-    if not srv_conn.auth then
-        srv_conn:close()
-        self.srv_conn[srv_conn] = nil
-    else
-        srv_conn:close()
-        self.srv[srv_conn.session] = nil
-    end
+    srv_conn:close()
+    self.srv_conn[srv_conn.conn_id] = nil
+    self.srv[srv_conn.session] = nil
 
     PLOG( "%s disconnect",srv_conn:conn_name() )
 end
@@ -107,8 +118,10 @@ end
 function Network_mgr:srv_connected( srv_conn,errno )
     if 0 ~= errno then
         srv_conn:close()
-        self.srv_conn[srv_conn] = nil
-        PLOG( "server connect(%s:%d) fail",srv_conn.ip,srv_conn.port )
+        self.srv_conn[srv_conn.conn_id] = nil
+        self.srv[srv_conn.session] = nil
+        PLOG( "server connect(%s:%d) fail:%s",
+            srv_conn.ip,srv_conn.port,util.what_error( errno ) )
 
         return
     end
@@ -118,8 +131,6 @@ end
 
 -- 服务器认证
 function Network_mgr:srv_register( conn,pkt )
-    self.srv_conn[conn] = nil
-
     local auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
     if pkt.auth ~= auth then
         ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
@@ -155,7 +166,7 @@ end
 -- 定时器回调
 function Network_mgr:do_timer()
     local check_time = ev:time() - ALIVE_INTERVAL
-    for session,srv_conn in pairs( self.srv ) do
+    for conn_id,srv_conn in pairs( self.srv_conn ) do
         local ts = srv_conn:check( check_time )
         if ts > ALIVE_TIMES then
             -- timeout

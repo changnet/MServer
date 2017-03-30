@@ -6,6 +6,11 @@ require "global.define"
 
 local Unique_id = oo.class( nil,... )
 
+-- 初始化
+function Unique_id:__init()
+    self.net_id_seed = 0
+end
+
 -- 生成服务器session id
 -- @name  服务器名称，如gateway、world...
 -- @index 服务器索引，如多个gateway，分别为1,2...
@@ -29,5 +34,17 @@ function Unique_id:srv_session_parse( session )
 
     return ty,index,srvid
 end
+
+-- 产生一个标识socket连接的id
+-- 只是简单的自增，如果用完，则循环
+-- 调用此函数时请自己检测id是否重复，如果重复则重新取一个
+function Unique_id:conn_id()
+    if self.net_id_seed >= 0xFFFFFFFF then self.net_id_seed = 0 end
+
+    self.net_id_seed = self.net_id_seed + 1
+
+    return self.net_id_seed
+end
+
 
 return Unique_id

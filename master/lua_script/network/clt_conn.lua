@@ -5,10 +5,11 @@ local network_mgr = require "network/network_mgr"
 
 local Clt_conn = oo.class( nil,... )
 
-function Clt_conn:__init( conn )
+function Clt_conn:__init( conn,conn_id )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
+    self.conn_id = conn_id
 
     conn:set_self_ref( self )
     conn:set_on_disconnect( self.on_disconnected  )

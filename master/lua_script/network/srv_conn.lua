@@ -6,7 +6,7 @@ local network_mgr = require "network/network_mgr"
 
 local Srv_conn = oo.class( nil,... )
 
-function Srv_conn:__init( conn )
+function Srv_conn:__init( conn,conn_id )
     conn = conn or Stream_socket()
 
     conn:set_self_ref( self )
@@ -18,6 +18,7 @@ function Srv_conn:__init( conn )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
+    self.conn_id = conn_id
 end
 
 -- timeout check
@@ -94,6 +95,9 @@ end
 
 -- 获取该连接名称
 function Srv_conn:conn_name( session )
+    -- 该服务器连接未经过认证
+    if 0 == session then return "unauthorized" end
+
     local ty,index,srvid = 
         unique_id:srv_session_parse( session or self.session )
 
