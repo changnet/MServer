@@ -16,16 +16,18 @@ local MODULE_BAG    = (0x02 << 8)
 
 local SC =
 {
-    PLAYER_LOGIN = { MODULE_PLAYER + 0x01,"player.bfbs","slogin" },
-    PLAYER_PING  = { MODULE_PLAYER + 0x02,"player.bfbs","sping" },
-    PLAYER_CREATE_ROLE = { MODULE_PLAYER + 0x03,"player.bfbs","screate_role" },
+    PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.bfbs","slogin" },
+    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.bfbs","sping" },
+    PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.bfbs","screate_role" },
+    PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.bfbs","senter_world" },
 }
 
 local CS =
 {
-    PLAYER_LOGIN = { MODULE_PLAYER + 0x01,"player.bfbs","clogin" },
-    PLAYER_PING  = { MODULE_PLAYER + 0x02,"player.bfbs","cping" },
-    PLAYER_CREATE_ROLE = { MODULE_PLAYER + 0x03,"player.bfbs","ccreate_role" },
+    PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.bfbs","clogin" },
+    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.bfbs","cping" },
+    PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.bfbs","ccreate_role" },
+    PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.bfbs","center_world" },
 }
 
 -- 使用oo的define功能让这两个表local后仍能热更

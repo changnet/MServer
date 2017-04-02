@@ -55,3 +55,8 @@ end
 function Clt_conn:close()
     self.conn = nil
 end
+
+-- 将该链接绑定一个角色
+function Clt_conn:bind_role( pid )
+    self.pid = pid
+end

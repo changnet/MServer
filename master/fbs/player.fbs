@@ -30,6 +30,18 @@ table screate_role
     name:string; // 角色名字
 }
 
+// 进入游戏
+struct center_world
+{
+    dummy:bool;
+}
+
+//
+struct senter_world
+{
+    dummy:bool;
+}
+
 // ping服务器
 struct cping
 {

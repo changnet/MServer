@@ -11,14 +11,19 @@ local function player_ping( srv_conn,pkt )
     g_command_mgr:ssc_send( srv_conn,SC.PLAYER_PING,1,{time = ev:time()} )
 end
 
+local function player_enter( srv_conn,pkt )
+    g_command_mgr:ssc_send( srv_conn,SC.PLAYER_ENTER,1,{dummy = 1} )
+end
+
 -- 这里注册系统模块的协议处理
 if "gateway" == Main.srvname then
     g_command_mgr:clt_register( CS.PLAYER_LOGIN,
         g_account_mgr.player_login(g_account_mgr),true )
-    g_command_mgr:clt_register( CS.PLAYER_CREATE_ROLE,
+    g_command_mgr:clt_register( CS.PLAYER_CREATE,
         g_account_mgr.create_role(g_account_mgr),true )
 end
 
 if "world" == Main.srvname then
     g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
+    g_command_mgr:clt_register( CS.PLAYER_ENTER,player_enter )
 end

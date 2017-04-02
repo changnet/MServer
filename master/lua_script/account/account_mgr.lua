@@ -61,6 +61,7 @@ function Account_mgr.player_login( self )
         self.conn_acc[conn_id] = role_info
 
         clt_conn:authorized()
+        clt_conn:bind_role( role_info.pid )
 
         -- 返回角色信息(如果没有角色，则pid和name都为nil)
         g_command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,role_info )
@@ -84,7 +85,7 @@ function Account_mgr.create_role( self )
             return
         end
 
-        -- TODO: 检测一个名字是否带有数据库非法字符和敏感字
+        -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
         -- TODO 如果没有角色，这里要到数据库创建
         self.seed = self.seed + 1
@@ -92,8 +93,9 @@ function Account_mgr.create_role( self )
 
         role_info.pid  = pid
         role_info.name = pkt.name
+        clt_conn:bind_role( pid )
 
-        g_command_mgr:clt_send( clt_conn,SC.PLAYER_CREATE_ROLE,role_info )
+        g_command_mgr:clt_send( clt_conn,SC.PLAYER_CREATE,role_info )
     end
 end
 

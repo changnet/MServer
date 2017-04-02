@@ -9,4 +9,5 @@ local Android = require "android/android"
 
 android_mgr:cmd_register( SC.PLAYER_LOGIN,Android.on_login )
 android_mgr:cmd_register( SC.PLAYER_PING,Android.on_ping )
-android_mgr:cmd_register( SC.PLAYER_CREATE_ROLE,Android.on_create_role )
+android_mgr:cmd_register( SC.PLAYER_CREATE,Android.on_create_role )
+android_mgr:cmd_register( SC.PLAYER_ENTER,Android.on_enter_world )

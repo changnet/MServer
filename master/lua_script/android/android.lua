@@ -114,14 +114,12 @@ function Android:on_login( errno,pkt )
     -- no role,create one now
     if not pkt.role or table.empty( pkt.role ) then
         local _pkt = { name = string.format( "android_%d",self.index ) }
-        self:send_pkt( CS.PLAYER_CREATE_ROLE,_pkt )
+        self:send_pkt( CS.PLAYER_CREATE,_pkt )
 
         return
     end
 
-    Android.enter_world()
-    -- f_tm_start()
-    -- self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    self:enter_world()
 end
 
 -- 创角返回
@@ -134,13 +132,22 @@ function Android:on_create_role( errno,pkt )
     self.pid  = pkt.pid
     self.name = pkt.name
 
+    self:enter_world()
+
     PLOG( "android_%d create role success,pid = %d,name = %s",
         self.index,self.pid,self.name )
 end
 
 -- 进入游戏
-function Android.enter_world()
+function Android:enter_world()
+    self:send_pkt( CS.PLAYER_ENTER,{ dummy = 1 } )
+end
 
+-- 确认进入游戏完成
+function Android:on_enter_world( errno,pkt )
+    PLOG( "%s enter world success",self.name )
+    f_tm_start()
+    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
 end
 
 return Android
