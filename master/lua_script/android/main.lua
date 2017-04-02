@@ -3,7 +3,7 @@ require "global.oo"
 require "global.table"
 require "global.define"
 
-local android_mgr = require "android/android_mgr"
+local g_android_mgr = require "android.android_mgr"
 
 require "android.android"
 require "android.android_cmd"
@@ -19,7 +19,7 @@ local function main()
     ev:signal( 2 );
     ev:signal( 15 );
 
-    android_mgr:start()
+    g_android_mgr:start()
 
     ev:backend()
 end

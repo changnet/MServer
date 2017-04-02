@@ -29,6 +29,9 @@ local CS =
 }
 
 -- 使用oo的define功能让这两个表local后仍能热更
-SC = oo.define( SC,"command_sc" )
-CS = oo.define( CS,"command_cs" )
+-- 这个表客户端也要用，不要在此文件使用oo.define，在外部使用即可
+-- SC = oo.define( _SC,"command_sc" )
+-- CS = oo.define( _CS,"command_cs" )
+
+
 return {SC,CS}

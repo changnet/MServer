@@ -3,7 +3,7 @@
 local RPC_REQ = SS.RPC_REQ[1]
 local RPC_RES = SS.RPC_RES[1]
 
-local network_mgr = require "network/network_mgr"
+local g_network_mgr = g_network_mgr
 
 local Rpc = oo.singleton( nil,... )
 
@@ -38,7 +38,7 @@ function Rpc:invoke( name,... )
         return error( string.format( "rpc:\"%s\" was not declared",name ) )
     end
 
-    local srv_conn = network_mgr:get_srv_conn( cfg.session )
+    local srv_conn = g_network_mgr:get_srv_conn( cfg.session )
     if not srv_conn then
         return error( string.format( 
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
@@ -55,7 +55,7 @@ function Rpc:xinvoke( name,callback,callback_param,... )
         return error( string.format( "rpc:\"%s\" was not declared",name ) )
     end
 
-    local srv_conn = network_mgr:get_srv_conn( cfg.session )
+    local srv_conn = g_network_mgr:get_srv_conn( cfg.session )
     if not srv_conn then
         return error( string.format( 
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )

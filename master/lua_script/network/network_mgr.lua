@@ -3,8 +3,8 @@
 local util          = require "util"
 local Timer         = require "Timer"
 local Stream_socket = require "Stream_socket"
-local Srv_conn      = oo.refer( "network/srv_conn" )
-local Clt_conn      = oo.refer( "network/clt_conn" )
+local Srv_conn      = oo.refer( "network.srv_conn" )
+local Clt_conn      = oo.refer( "network.clt_conn" )
 
 local ALIVE_INTERVAL   = 5
 local ALIVE_TIMES      = 5
@@ -59,9 +59,9 @@ end
 
 -- 处理服务器连接
 function Network_mgr:on_srv_acception( conn )
-    local conn_id = unique_id:conn_id()
+    local conn_id = g_unique_id:conn_id()
     while self.srv_conn[conn_id] do
-        conn_id = unique_id:conn_id()
+        conn_id = g_unique_id:conn_id()
     end
 
     local srv_conn = Srv_conn( conn,conn_id )
@@ -72,9 +72,9 @@ function Network_mgr:on_srv_acception( conn )
 end
 
 function Network_mgr:on_clt_acception( conn )
-    local conn_id = unique_id:conn_id()
+    local conn_id = g_unique_id:conn_id()
     while self.clt_conn[conn_id] do
-        conn_id = unique_id:conn_id()
+        conn_id = g_unique_id:conn_id()
     end
 
     local clt_conn = Clt_conn( conn,conn_id )
@@ -87,9 +87,9 @@ end
 -- 主动连接其他服务器
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
-        local conn_id = unique_id:conn_id()
+        local conn_id = g_unique_id:conn_id()
         while self.srv_conn[conn_id] do
-            conn_id = unique_id:conn_id()
+            conn_id = g_unique_id:conn_id()
         end
 
         local srv_conn = Srv_conn( nil,conn_id )
@@ -147,7 +147,7 @@ function Network_mgr:srv_register( conn,pkt )
 end
 
 -- 发起认证
-function Network_mgr:register_pkt( command_mgr )
+function Network_mgr:register_pkt( g_command_mgr )
     local pkt =
     {
         name    = Main.srvname,
@@ -156,9 +156,9 @@ function Network_mgr:register_pkt( command_mgr )
     }
     pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
 
-    pkt.clt_cmd = command_mgr:clt_cmd()
-    pkt.srv_cmd = command_mgr:srv_cmd()
-    pkt.rpc_cmd = command_mgr:rpc_cmd()
+    pkt.clt_cmd = g_command_mgr:clt_cmd()
+    pkt.srv_cmd = g_command_mgr:srv_cmd()
+    pkt.rpc_cmd = g_command_mgr:rpc_cmd()
 
     return pkt
 end
@@ -172,7 +172,7 @@ function Network_mgr:do_timer()
             -- timeout
             PLOG( "%s server timeout",srv_conn:conn_name() )
         elseif ts > 0 then
-            command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = 1} )
+            g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = 1} )
         end
     end
 end

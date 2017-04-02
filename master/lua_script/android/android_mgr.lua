@@ -1,9 +1,9 @@
 -- 机器人管理
 
-local sc = require "command/sc_command"
-SC,CS = sc[1],sc[2]
+local cmd = require "command.sc_command"
+SC,CS = cmd[1],cmd[2]
 
-local Android = oo.refer( "android/android" )
+local Android = oo.refer( "android.android" )
 local lua_flatbuffers = require "lua_flatbuffers"
 
 local Android_mgr = oo.class( nil,... )

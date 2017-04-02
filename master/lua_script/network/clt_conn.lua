@@ -1,7 +1,7 @@
 -- 客户端网络连接
 
-local command_mgr = require "command/command_mgr"
-local network_mgr = require "network/network_mgr"
+local g_command_mgr = g_command_mgr
+local g_network_mgr = g_network_mgr
 
 local Clt_conn = oo.class( nil,... )
 
@@ -22,7 +22,7 @@ end
 function Clt_conn:on_unauthorized_cmd()
     local cmd = self.conn:clt_next()
     while cmd and not self.auth do
-        command_mgr:clt_unauthorized_cmd( cmd,self )
+        g_command_mgr:clt_unauthorized_cmd( cmd,self )
 
         cmd = self.conn:clt_next( cmd )
     end
@@ -34,7 +34,7 @@ end
 function Clt_conn:on_command()
     local cmd = self.conn:clt_next()
     while cmd do
-        command_mgr:clt_invoke( cmd,self )
+        g_command_mgr:clt_invoke( cmd,self )
 
         cmd = self.conn:clt_next( cmd )
     end
@@ -42,7 +42,7 @@ end
 
 -- 连接断开处理
 function Clt_conn:on_disconnected()
-    return network_mgr:clt_disconnect( self )
+    return g_network_mgr:clt_disconnect( self )
 end
 
 -- 认证成功

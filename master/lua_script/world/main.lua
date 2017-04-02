@@ -3,6 +3,14 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
+-- 协议使用太频繁，放到全局变量
+require "command.ss_command"
+local CMD = require "command.sc_command"
+
+-- 使用oo的define功能让这两个表local后仍能热更
+SC = oo.define( CMD[1],"command_sc" )
+CS = oo.define( CMD[2],"command_cs" )
+
 Main = {}       -- store dynamic runtime info to global
 Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
 
@@ -13,15 +21,15 @@ Main.wait =
 
 local Unique_id = require "global.unique_id"
 
-unique_id = Unique_id()
-Main.session = unique_id:srv_session(
+g_unique_id = Unique_id()
+Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
-setting     = require "world/setting"
-network_mgr = require "network/network_mgr"
-command_mgr = require "command/command_mgr"
+g_setting     = require "world.setting"
+g_network_mgr = require "network.network_mgr"
+g_command_mgr = require "command.command_mgr"
 
-local Srv_conn    = require "network/srv_conn"
+local Srv_conn    = require "network.srv_conn"
 
 function Main.sig_handler( signum )
     if g_store_mongo then g_store_mongo:stop() end
@@ -44,16 +52,16 @@ end
 function Main.init()
     Main.starttime = ev:time()
 
-    command_mgr:init_command()
-    local fs = command_mgr:load_schema()
+    g_command_mgr:init_command()
+    local fs = g_command_mgr:load_schema()
     PLOG( "world load flatbuffers schema:%d",fs )
 
-    if not network_mgr:srv_listen( setting.sip,setting.sport ) then
+    if not g_network_mgr:srv_listen( g_setting.sip,g_setting.sport ) then
         ELOG( "world server listen fail,exit" )
         os.exit( 1 )
     end
 
-    network_mgr:connect_srv( setting.servers )
+    g_network_mgr:connect_srv( g_setting.servers )
 end
 
 function Main.final_init()

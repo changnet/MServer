@@ -1,8 +1,8 @@
 -- srv_conn server connection
 
 local Stream_socket = require "Stream_socket"
-local command_mgr = require "command/command_mgr"
-local network_mgr = require "network/network_mgr"
+local g_command_mgr = g_command_mgr
+local g_network_mgr = g_network_mgr
 
 local Srv_conn = oo.class( nil,... )
 
@@ -51,7 +51,7 @@ end
 function Srv_conn:on_unauthorized_cmd()
     local cmd,pid = self.conn:srv_next()
     while cmd and not self.auth do
-        command_mgr:srv_unauthorized_dispatcher( cmd,pid,self )
+        g_command_mgr:srv_unauthorized_dispatcher( cmd,pid,self )
 
         cmd,pid = self.conn:srv_next( cmd )
     end
@@ -65,7 +65,7 @@ function Srv_conn:on_command()
 
     local cmd,pid = self.conn:srv_next()
     while cmd do
-        command_mgr:srv_dispatcher( cmd,pid,self )
+        g_command_mgr:srv_dispatcher( cmd,pid,self )
 
         cmd,pid = self.conn:srv_next( cmd )
     end
@@ -73,17 +73,17 @@ end
 
 -- 断开回调
 function Srv_conn:on_disconnected()
-    return network_mgr:srv_disconnect( self )
+    return g_network_mgr:srv_disconnect( self )
 end
 
 -- connect回调
 function Srv_conn:on_connected( errno )
-    network_mgr:srv_connected( self,errno )
+    g_network_mgr:srv_connected( self,errno )
 
     if 0 ~=  errno then return end
 
-    local pkt = network_mgr:register_pkt( command_mgr )
-    command_mgr:srv_send( self,SS.SYS_SYN,pkt )
+    local pkt = g_network_mgr:register_pkt( g_command_mgr )
+    g_command_mgr:srv_send( self,SS.SYS_SYN,pkt )
 end
 
 -- 认证成功
@@ -99,7 +99,7 @@ function Srv_conn:conn_name( session )
     if 0 == session then return "unauthorized" end
 
     local ty,index,srvid = 
-        unique_id:srv_session_parse( session or self.session )
+        g_unique_id:srv_session_parse( session or self.session )
 
     local name = ""
     for _name,_ty in pairs( SRV_NAME ) do

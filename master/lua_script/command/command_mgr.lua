@@ -2,12 +2,6 @@
 
 local lua_flatbuffers = require "lua_flatbuffers"
 
--- 协议使用太频繁，放到全局变量
-local sc = require "command/sc_command"
-SC,CS = sc[1],sc[2]
-
-SS    = require "command/ss_command"
-
 local SC = SC
 local CS = CS
 local SS = SS
@@ -19,7 +13,7 @@ local RPC_RES = SS.RPC_RES[1]
 local SESSION = Main.session
 
 local rpc = require "rpc/rpc"
-local network_mgr = require "network/network_mgr"
+local g_network_mgr = g_network_mgr
 
 local Command_mgr = oo.singleton( nil,... )
 
@@ -46,6 +40,7 @@ end
 function Command_mgr:init_command()
     -- 这个不能放在文件头部或者__init函数中require
     -- 因为其他文件一般都需要引用command_mgr本身，造成循环require
+    -- FIXME 这个地方不能这样引用
     require "command/command_header"
 end
 
@@ -188,7 +183,7 @@ function Command_mgr:clt_invoke( cmd,clt_conn )
     end
 
     -- 转发到其他服务器
-    local srv_conn = network_mgr:get_srv_conn( cfg.session )
+    local srv_conn = g_network_mgr:get_srv_conn( cfg.session )
     if not srv_conn then
         return ELOG( "clt_invoke:no handler found [%d]",cmd )
     end
@@ -199,7 +194,7 @@ end
 
 -- 转发其他服务器数据包客到户端
 function Command_mgr.ssc_tansport( srv_conn,pid )
-    local clt_conn = network_mgr:get_clt_conn( pid )
+    local clt_conn = g_network_mgr:get_clt_conn( pid )
     if not clt_conn then
         return ELOG( "Command_mgr:ssc_tansport no clt conn found" )
     end
