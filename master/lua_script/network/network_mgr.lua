@@ -169,7 +169,7 @@ function Network_mgr:do_timer()
             -- timeout
             PLOG( "%s server timeout",srv_conn:conn_name() )
         elseif ts > 0 then
-            g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = 1} )
+            g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = true} )
         end
     end
 end

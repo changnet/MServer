@@ -100,10 +100,10 @@ end
 -- ping返回
 function Android:on_ping( errno,pkt )
     local ts = self.ts or 1
-
+    assert( pkt.time == ts )
     if ts < 100000 then
         self.ts = ts + 1
-        self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+        self:send_pkt( CS.PLAYER_PING,{dummy = self.ts} )
     else
         f_tm_stop( "test done" )
     end

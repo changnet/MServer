@@ -39,13 +39,13 @@ struct center_world
 //
 struct senter_world
 {
-    dummy:bool;
+    dummy:int;
 }
 
 // ping服务器
 struct cping
 {
-    dummy:bool;
+    dummy:int;
 }
 
 // 服务器回包
