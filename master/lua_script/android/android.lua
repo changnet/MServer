@@ -16,8 +16,8 @@ local SC,CS = sc[1],sc[2]
 local Android = oo.class( nil,... )
 
 -- 构造函数
-function Android:__init( pid )
-    self.pid = pid
+function Android:__init( index )
+    self.index = index
 end
 
 -- 发送数据包
@@ -47,8 +47,8 @@ end
 -- 连接成功
 function Android:on_connect( errno )
     if 0 ~= errno then
-        android_mgr:on_android_kill( self.pid )
-        ELOG( "android(%d) connect fail:%s",self.pid,util.what_error(errno) )
+        android_mgr:on_android_kill( self.index )
+        ELOG( "android(%d) connect fail:%s",self.index,util.what_error(errno) )
         return
     end
 
@@ -63,7 +63,7 @@ function Android:on_connect( errno )
         sid  = 1,
         time = ev:time(),
         plat = 999,
-        account = string.format( "android_%d",self.pid )
+        account = string.format( "android_%d",self.index )
     }
     pkt.sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
 
@@ -78,8 +78,8 @@ function Android:on_disconnect()
     self.timer = nil
     self.conn = nil
 
-    android_mgr:on_android_kill( self.pid )
-    PLOG( "android die " .. self.pid )
+    android_mgr:on_android_kill( self.index )
+    PLOG( "android die " .. self.index )
 end
 
 -- 收到数据
@@ -111,8 +111,36 @@ end
 
 -- 登录返回
 function Android:on_login( errno,pkt )
-    f_tm_start()
-    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    -- no role,create one now
+    if not pkt.role or table.empty( pkt.role ) then
+        local _pkt = { name = string.format( "android_%d",self.index ) }
+        self:send_pkt( CS.PLAYER_CREATE_ROLE,_pkt )
+
+        return
+    end
+
+    Android.enter_world()
+    -- f_tm_start()
+    -- self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+end
+
+-- 创角返回
+function Android:on_create_role( errno,pkt )
+    if 0 ~= errno then
+        PLOG( "android_%d unable to create role",self.index )
+        return
+    end
+
+    self.pid  = pkt.pid
+    self.name = pkt.name
+
+    PLOG( "android_%d create role success,pid = %d,name = %s",
+        self.index,self.pid,self.name )
+end
+
+-- 进入游戏
+function Android.enter_world()
+
 end
 
 return Android

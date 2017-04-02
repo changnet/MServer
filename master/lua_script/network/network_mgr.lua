@@ -6,9 +6,6 @@ local Stream_socket = require "Stream_socket"
 local Srv_conn      = oo.refer( "network.srv_conn" )
 local Clt_conn      = oo.refer( "network.clt_conn" )
 
-local ALIVE_INTERVAL   = 5
-local ALIVE_TIMES      = 5
-
 local Network_mgr = oo.singleton( nil,... )
 
 function Network_mgr:__init()
@@ -165,10 +162,10 @@ end
 
 -- 定时器回调
 function Network_mgr:do_timer()
-    local check_time = ev:time() - ALIVE_INTERVAL
+    local check_time = ev:time() - SRV_ALIVE_INTERVAL
     for conn_id,srv_conn in pairs( self.srv_conn ) do
         local ts = srv_conn:check( check_time )
-        if ts > ALIVE_TIMES then
+        if ts > SRV_ALIVE_TIMES then
             -- timeout
             PLOG( "%s server timeout",srv_conn:conn_name() )
         elseif ts > 0 then

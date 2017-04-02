@@ -2,8 +2,6 @@
 -- 2017-03-28
 -- xzc
 
-require "global.define"
-
 local Unique_id = oo.class( nil,... )
 
 -- 初始化
@@ -46,5 +44,14 @@ function Unique_id:conn_id()
     return self.net_id_seed
 end
 
+-- 产生一个玩家pid
+function Unique_id:player_id( srvid,seed )
+    local _srvid = srvid & 0xFF -- 保证为16bit
+    local _seed  = seed  & 0xFF
+
+    -- 一个int32类型，前16bit为srvid，后16bit为自增。自增数量放数据库
+    -- 合服后，必须取所有合服中最大值
+    return ( _srvid << 16 ) | _seed
+end
 
 return Unique_id

@@ -21,17 +21,17 @@ function Android_mgr:__init()
 end
 
 function Android_mgr:start()
-    for pid = 1,1 do
-        local android = Android( pid )
+    for index = 1,1 do
+        local android = Android( index )
 
         android:connect( "127.0.0.1",10002 )
 
-        self.android[pid] = android
+        self.android[index] = android
     end
 end
 
-function Android_mgr:on_android_kill( pid )
-    self.android[pid] = nil
+function Android_mgr:on_android_kill( index )
+    self.android[index] = nil
 end
 
 -- 指令分发

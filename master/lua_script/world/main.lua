@@ -3,6 +3,8 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
+require "global.define"
+
 -- 协议使用太频繁，放到全局变量
 require "command.ss_command"
 local CMD = require "command.sc_command"

@@ -3,6 +3,8 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
+require "global.define"
+
 -- 协议使用太频繁，放到全局变量
 require "command.ss_command"
 local CMD = require "command.sc_command"
@@ -30,6 +32,7 @@ Main.session = g_unique_id:srv_session(
 g_setting     = require "gateway.setting"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
+g_account_mgr = require "account.account_mgr"
 
 local Srv_conn    = require "network.srv_conn"
 local Clt_conn    = require "network.clt_conn"
