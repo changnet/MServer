@@ -42,13 +42,14 @@ function Account_mgr.player_login( self )
         local account = pkt.account
 
         if not self.account[sid] then self.account[sid] = {} end
-        if not self.account[sid][plat] then
-            self.account[sid][plat] = {}
-            self.account[sid][plat].sid     = sid
-            self.account[sid][plat].account = account
+        if not self.account[sid][plat] then self.account[sid][plat] = {} end
+        if not self.account[sid][plat][account] then
+            self.account[sid][plat][account] = {}
+            self.account[sid][plat][account].sid     = sid
+            self.account[sid][plat][account].account = account
         end
 
-        local role_info = self.account[sid][plat]
+        local role_info = self.account[sid][plat][account]
 
         -- 当前一个帐号只能登录一个角色
         if role_info.conn_id then

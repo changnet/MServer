@@ -20,6 +20,7 @@ local SC =
     PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.bfbs","sping" },
     PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.bfbs","screate_role" },
     PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.bfbs","senter_world" },
+    PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.bfbs","slogin_otherwhere" },
 }
 
 local CS =
@@ -28,6 +29,7 @@ local CS =
     PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.bfbs","cping" },
     PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.bfbs","ccreate_role" },
     PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.bfbs","center_world" },
+    PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.bfbs","clogin_otherwhere" },
 }
 
 -- 使用oo的define功能让这两个表local后仍能热更

@@ -43,7 +43,7 @@ struct center_world
     dummy:bool;
 }
 
-//
+// 进入游戏
 struct senter_world
 {
     dummy:int;
@@ -59,4 +59,10 @@ struct cping
 struct sping
 {
     time:int;
+}
+
+// 顶号
+struct slogin_otherwhere
+{
+    dummy:bool;
 }

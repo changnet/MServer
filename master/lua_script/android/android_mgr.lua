@@ -21,7 +21,7 @@ function Android_mgr:__init()
 end
 
 function Android_mgr:start()
-    for index = 1,1 do
+    for index = 1,20 do
         local android = Android( index )
 
         android:connect( "127.0.0.1",10002 )
