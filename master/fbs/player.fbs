@@ -6,7 +6,6 @@ struct ssplayer_offline
     pid:int;
 }
 
-
 // 登录
 table clogin
 {

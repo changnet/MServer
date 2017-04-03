@@ -30,6 +30,7 @@ Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
 g_setting     = require "gateway.setting"
+g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
 g_account_mgr = require "account.account_mgr"

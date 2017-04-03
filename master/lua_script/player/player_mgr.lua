@@ -30,6 +30,11 @@ function Player_mgr:on_player_offline( pkt )
     self.player[pid] = nil
 end
 
+-- 顶号
+function Player_mgr:on_login_otherwhere( pid )
+    PLOG( "player login other where,pid = %d",pid )
+end
+
 
 local player_mgr = Player_mgr()
 

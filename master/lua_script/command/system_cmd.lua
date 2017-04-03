@@ -3,7 +3,7 @@ local SS = SS
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 
-local rpc = require "rpc/rpc"
+local g_rpc = g_rpc
 
 -- 收到另一个服务器主动同步
 local function srv_syn( srv_conn,pkt )
@@ -47,8 +47,8 @@ g_command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true,false )
 g_command_mgr:srv_register( SS.SYS_SYN,srv_syn,true,true )
 g_command_mgr:srv_register( SS.SYS_ACK,srv_ack,true,true )
 
-g_command_mgr:srv_register( SS.RPC_REQ,rpc.dispatch,true,false,true )
-g_command_mgr:srv_register( SS.RPC_RES,rpc.response,true,false,true )
+g_command_mgr:srv_register( SS.RPC_REQ,g_rpc.dispatch,true,false,true )
+g_command_mgr:srv_register( SS.RPC_RES,g_rpc.response,true,false,true )
 
 if Main.srvname == "gateway" then
     g_command_mgr:srv_register( SS.CLT_CMD,g_command_mgr.ssc_tansport,true,false,true )
@@ -58,13 +58,4 @@ if Main.srvname == "world" then
     -- 用一个closure来保存self
     g_command_mgr:srv_register( SS.CLT_CMD,
         g_command_mgr.css_dispatcher( g_command_mgr ),true,false,true )
-
-    -------------- test rpc --------------------------------
-    function rpc_echo( ... )
-        print( "rpc echo",... )
-
-        return 1,2,3,"test",nil,9989986547.66589
-    end
-
-    rpc:declare( "rpc_echo",rpc_echo )
 end

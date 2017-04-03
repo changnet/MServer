@@ -12,7 +12,7 @@ local RPC_RES = SS.RPC_RES[1]
 
 local SESSION = Main.session
 
-local rpc = require "rpc/rpc"
+local g_rpc   = g_rpc
 local g_network_mgr = g_network_mgr
 
 local Command_mgr = oo.singleton( nil,... )
@@ -238,7 +238,7 @@ end
 
 -- 获取当前进程处理的rpc指令
 function Command_mgr:rpc_cmd()
-    return rpc:rpc_cmd()
+    return g_rpc:rpc_cmd()
 end
 
 -- 服务器注册
@@ -265,7 +265,7 @@ function Command_mgr:do_srv_register( srv_conn,pkt )
 
     -- 记录该服务器所处理的rpc指令
     for _,cmd in pairs( pkt.rpc_cmd or {} ) do
-        rpc:register( cmd,session )
+        g_rpc:register( cmd,session )
     end
 
     return true
