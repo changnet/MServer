@@ -1,5 +1,12 @@
 //玩家模块 协议定义
 
+/* 玩家断线 */
+struct ssplayer_offline
+{
+    pid:int;
+}
+
+
 // 登录
 table clogin
 {

@@ -15,6 +15,7 @@ function Account_mgr:__init()
     self.conn_acc = {} -- conn_id为key，帐号信息为value
 end
 
+-- 玩家登录
 function Account_mgr.player_login( self )
     return function( clt_conn,pkt )
         local sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
@@ -61,7 +62,10 @@ function Account_mgr.player_login( self )
         self.conn_acc[conn_id] = role_info
 
         clt_conn:authorized()
-        clt_conn:bind_role( role_info.pid )
+        if role_info.pid then
+            clt_conn:bind_role( role_info.pid )
+            g_network_mgr:set_clt_conn( role_info.pid,clt_conn )
+        end
 
         -- 返回角色信息(如果没有角色，则pid和name都为nil)
         g_command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,role_info )
@@ -94,9 +98,19 @@ function Account_mgr.create_role( self )
         role_info.pid  = pid
         role_info.name = pkt.name
         clt_conn:bind_role( pid )
+        g_network_mgr:set_clt_conn( pid,clt_conn )
 
         g_command_mgr:clt_send( clt_conn,SC.PLAYER_CREATE,role_info )
     end
+end
+
+-- 玩家下线
+function Account_mgr:role_offline( conn_id )
+    local role_info = self.conn_acc[conn_id]
+    if not role_info then return end -- 连接上来未登录就断线
+
+    role_info.conn_id = nil
+    self.conn_acc[conn_id] = nil
 end
 
 local g_account_mgr = Account_mgr()

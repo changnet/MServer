@@ -16,6 +16,10 @@ local function player_enter( srv_conn,pid,pkt )
     g_player_mgr:on_enter_world( pid,pkt )
 end
 
+local function player_offline( srv_conn,pkt )
+    g_player_mgr:on_player_offline( pkt )
+end
+
 -- 这里注册系统模块的协议处理
 if "gateway" == Main.srvname then
     g_command_mgr:clt_register( CS.PLAYER_LOGIN,
@@ -27,4 +31,5 @@ end
 if "world" == Main.srvname then
     g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
     g_command_mgr:clt_register( CS.PLAYER_ENTER,player_enter )
+    g_command_mgr:srv_register( SS.PLAYER_OFFLINE,player_offline )
 end

@@ -117,13 +117,15 @@ end
 -- 登录返回
 function Android:on_login( errno,pkt )
     -- no role,create one now
-    if not pkt.role or table.empty( pkt.role ) then
+    if 0 == pkt.pid then
         local _pkt = { name = string.format( "android_%d",self.index ) }
         self:send_pkt( CS.PLAYER_CREATE,_pkt )
 
         return
     end
 
+    self.pid  = pkt.pid
+    self.name = pkt.name
     self:enter_world()
 end
 

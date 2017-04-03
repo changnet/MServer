@@ -53,6 +53,7 @@ end
 
 -- 关闭连接(TODO: 暂时用设置nil方式释放引用)
 function Clt_conn:close()
+    self.pid  = nil
     self.conn = nil
 end
 
