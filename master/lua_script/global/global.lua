@@ -93,9 +93,9 @@ end
 function ELOG( fmt,... )
     local info_table = nil
     if "string" == type( fmt ) then
-        info_table = { "[LERROR ",time_str(),"] ",string.format( fmt,... ) }
+        info_table = { "[LERROR ",time_str(),"]",string.format( fmt,... ) }
     else
-        info_table = { "[LERROR ",time_str(),"] ",fmt,... }
+        info_table = { "[LERROR ",time_str(),"]",fmt,... }
     end
 
     local ss = table.concat( info_table )

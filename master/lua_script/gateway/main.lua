@@ -79,7 +79,7 @@ function Main.final_init()
     end
 
     Main.ok = true
-    PLOG( "gateway server start OK" )
+    PLOG( "gateway server(0x%.8X) start OK",Main.session )
 end
 
 local function main()

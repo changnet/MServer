@@ -695,7 +695,7 @@ int32 lstream_socket::css_flatbuffers_decode()
         return luaL_error( L,(*lfb)->last_error() );
     }
 
-    return 1;
+    return 2;
 }
 
 int32 lstream_socket::rpc_send()

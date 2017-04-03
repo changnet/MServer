@@ -9,11 +9,11 @@ local Clt_conn      = oo.refer( "network.clt_conn" )
 local Network_mgr = oo.singleton( nil,... )
 
 function Network_mgr:__init()
-    self.srv = {}  -- 已认证的服务器连接
-    self.clt = {}  -- 已认证的客户端连接
+    self.srv = {}  -- session为key，连接对象为value
+    self.clt = {}  -- pid为key，连接对象为value
 
-    self.srv_conn = {} -- 未认证的服务器连接
-    self.clt_conn = {} -- 未认证的客户端连接
+    self.srv_conn = {} -- conn_id为key，连接对象为value
+    self.clt_conn = {} -- conn_id为key，连接对象为value
 
     self.srv_listen = nil
 
@@ -132,6 +132,13 @@ function Network_mgr:srv_register( conn,pkt )
     if pkt.auth ~= auth then
         ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
         return false
+    end
+
+    local ty,index,srvid = g_unique_id:srv_session_parse( pkt.session )
+    if srvid ~= tonumber(Main.srvid) then
+        ELOG( "Network_mgr:srv_register srvid not match,expect %s,got %d",
+            Main.srvid,srvid )
+        return
     end
 
     if self.srv[pkt.session] then

@@ -30,6 +30,7 @@ Main.session = g_unique_id:srv_session(
 g_setting     = require "world.setting"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
+g_player_mgr  = require "player.player_mgr"
 
 require "command/command_header"
 
@@ -69,7 +70,7 @@ end
 
 function Main.final_init()
     Main.ok = true
-    PLOG( "world server start OK" )
+    PLOG( "world server(0x%.8X) start OK",Main.session )
 end
 
 local function main()
