@@ -34,6 +34,8 @@ g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
 g_account_mgr = require "account.account_mgr"
 
+require "command/command_header"
+
 local Srv_conn    = require "network.srv_conn"
 local Clt_conn    = require "network.clt_conn"
 
@@ -60,7 +62,6 @@ end
 function Main.init()
     Main.starttime = ev:time()
 
-    g_command_mgr:init_command()
     local fs = g_command_mgr:load_schema()
     PLOG( "gateway load flatbuffers schema:%d",fs )
 

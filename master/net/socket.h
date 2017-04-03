@@ -58,7 +58,7 @@ public:
 
     inline int32 recv()
     {
-        if ( _recv.reserved() < 0 ) return -1;
+        if ( !_recv.reserved() ) return -1; /* no more memory */
 
         assert( "socket recv buffer length <= 0",_recv._len - _recv._size > 0 );
         int32 len = ::read( _w.fd,_recv._buff + _recv._size,_recv._len - _recv._size );

@@ -36,14 +36,6 @@ function Command_mgr:load_schema()
     return self.lfb:load_bfbs_path( "fbs","bfbs" )
 end
 
--- 初始化协议定义
-function Command_mgr:init_command()
-    -- 这个不能放在文件头部或者__init函数中require
-    -- 因为其他文件一般都需要引用command_mgr本身，造成循环require
-    -- FIXME 这个地方不能这样引用
-    require "command/command_header"
-end
-
 -- 注册客户端协议处理
 function Command_mgr:clt_register( cfg,handler,noauth )
     if not self.cs[cfg[1]] then
@@ -136,9 +128,9 @@ function Command_mgr.css_dispatcher( self )
                 "css_dispatcher:cmd [%d] define but no handler register",cmd )
         end
 
-        local pkt = 
+        local pid,pkt = 
             srv_conn.conn:css_flatbuffers_decode( self.lfb,cmd,cfg[2],cfg[3] )
-        return handler( srv_conn,pkt )
+        return handler( srv_conn,pid,pkt )
     end
 end
 

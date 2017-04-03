@@ -34,7 +34,7 @@
         ::time_t rawtime;                                            \
         ::time( &rawtime );                                          \
         struct tm *ntm = ::localtime( &rawtime );                    \
-        fprintf(stderr, "[%s %02d-%02d %02d:%02d:%02d] ",            \
+        fprintf(stderr, "[%s %02d-%02d %02d:%02d:%02d]",             \
             f,(ntm->tm_mon + 1), ntm->tm_mday,                       \
             ntm->tm_hour, ntm->tm_min,ntm->tm_sec);                  \
     }while(0)

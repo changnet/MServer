@@ -688,6 +688,8 @@ int32 lstream_socket::css_flatbuffers_decode()
         sizeof(struct s2s_header) + sizeof(struct c2s_header);
 
     len -= sizeof(struct c2s_header);
+
+    lua_pushinteger( L,sph->_pid );
     if ( (*lfb)->decode( L,schema,object,buffer,len ) < 0 )
     {
         return luaL_error( L,(*lfb)->last_error() );

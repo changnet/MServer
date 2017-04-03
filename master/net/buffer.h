@@ -63,15 +63,14 @@ public:
         __attribute__ ((warn_unused_result))
     {
         uint32 size = _size + vsz;
-        if ( _len - size > bytes ) /* 不能等于0,刚好用完也申请 */
-            return true;
+        if ( _len - size > bytes ) return true;/* 不能等于0,刚好用完也申请 */
 
         if ( _pos )    /* 解决悬空区 */
         {
             assert( "reserved memmove error",_size > _pos && size <= _len );
             memmove( _buff,_buff + _pos,size - _pos );
             _size -= _pos;
-            _pos   = 0;
+            _pos   = 0   ;
 
             return reserved( bytes,vsz );
         }
@@ -100,9 +99,9 @@ public:
         if ( _len ) allocator.ordered_free( _buff,_len/BUFFER_CHUNK );
 
         _buff = new_buff;
-        _len  = new_len;
+        _len  = new_len ;
 
-        return true;
+        return      true;
     }
 public:
     char  *_buff;    /* 缓冲区指针 */

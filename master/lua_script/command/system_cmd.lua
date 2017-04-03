@@ -54,7 +54,6 @@ if Main.srvname == "gateway" then
     g_command_mgr:srv_register( SS.CLT_CMD,g_command_mgr.ssc_tansport,true,false,true )
 end
 
-
 if Main.srvname == "world" then
     -- 用一个closure来保存self
     g_command_mgr:srv_register( SS.CLT_CMD,

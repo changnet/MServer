@@ -31,6 +31,8 @@ g_setting     = require "world.setting"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
 
+require "command/command_header"
+
 local Srv_conn    = require "network.srv_conn"
 
 function Main.sig_handler( signum )
@@ -54,7 +56,6 @@ end
 function Main.init()
     Main.starttime = ev:time()
 
-    g_command_mgr:init_command()
     local fs = g_command_mgr:load_schema()
     PLOG( "world load flatbuffers schema:%d",fs )
 
