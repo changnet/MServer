@@ -6,6 +6,12 @@ struct ssplayer_offline
     pid:int;
 }
 
+// 玩家在其他地方登录
+struct ssplayer_otherwhere
+{
+    pid:int;
+}
+
 // 登录
 table clogin
 {

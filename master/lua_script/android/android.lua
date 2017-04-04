@@ -157,4 +157,9 @@ function Android:on_enter_world( errno,pkt )
     -- self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
 end
 
+-- 被顶号
+function Android:on_login_otherwhere( errno,pkt )
+    PLOG( "%s login other where",self.name )
+end
+
 return Android

@@ -20,8 +20,8 @@ local function player_offline( srv_conn,pkt )
     g_player_mgr:on_player_offline( pkt )
 end
 
-local function player_login_otherwhere( pid )
-    g_player_mgr:on_login_otherwhere( pid )
+local function player_login_otherwhere( srv_conn,pkt )
+    g_player_mgr:on_login_otherwhere( pkt.pid )
 end
 
 -- 这里注册系统模块的协议处理
@@ -33,9 +33,9 @@ if "gateway" == Main.srvname then
 end
 
 if "world" == Main.srvname then
-    g_rpc:declare( "login_otherwhere",player_login_otherwhere )
-
     g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
     g_command_mgr:clt_register( CS.PLAYER_ENTER,player_enter )
+
     g_command_mgr:srv_register( SS.PLAYER_OFFLINE,player_offline )
+    g_command_mgr:srv_register( SS.PLAYER_OTHERWHERE,player_login_otherwhere )
 end

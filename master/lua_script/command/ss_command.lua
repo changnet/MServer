@@ -25,6 +25,7 @@ local _SS =
     SYS_BEAT = { MODULE_SYSTEM + 0x06,"system.bfbs","ssbeat" }, -- 心跳包
 
     PLAYER_OFFLINE = { MODULE_PLAYER + 0x01,"player.bfbs","ssplayer_offline" }, -- 玩家下线
+    PLAYER_OTHERWHERE = { MODULE_PLAYER + 0x02,"player.bfbs","ssplayer_otherwhere" }, -- 玩家下线
 
     -- 其他功能模块协议
     -- LOGIN = { MODULE_LOGIN + 0x01,"login,bfbs","clogin" },

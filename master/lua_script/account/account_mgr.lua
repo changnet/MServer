@@ -51,11 +51,13 @@ function Account_mgr.player_login( self )
 
         local role_info = self.account[sid][plat][account]
 
-        -- 当前一个帐号只能登录一个角色
+        -- 当前一个帐号只能登录一个角色,处理顶号
         if role_info.conn_id then
-            -- TODO: 顶号
-            assert( false,"login again" )
-            return
+            self:login_otherwhere( role_info )
+
+            -- 下面开始替换连接
+            -- TODO 是否要等待其他服务器返回顶号处理成功再替换连接，防止新连接收到旧连接
+            -- 的数据，看游戏需要
         end
 
         -- 连接认证成功，将帐号和连接绑定。现在可以发送其他协议了
@@ -112,6 +114,23 @@ function Account_mgr:role_offline( conn_id )
 
     role_info.conn_id = nil
     self.conn_acc[conn_id] = nil
+end
+
+-- 帐号在其他地方登录
+function Account_mgr:login_otherwhere( role_info )
+    -- 告诉原连接被顶号
+    local _pkt = { dummy = 1 }
+    local old_conn = g_network_mgr:get_conn( role_info.conn_id )
+    g_command_mgr:clt_send( old_conn,SC.PLAYER_OTHER,_pkt )
+
+    -- 通知其他服务器玩家下线
+    if role_info.pid then
+        local pkt = { pid = role_info.pid }
+        g_command_mgr:srv_broadcast( SS.PLAYER_OTHERWHERE,pkt )
+    end
+
+    -- 关闭旧客户端连接
+    g_network_mgr:clt_close( old_conn )
 end
 
 local g_account_mgr = Account_mgr()

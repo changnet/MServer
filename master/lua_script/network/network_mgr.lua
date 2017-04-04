@@ -108,24 +108,27 @@ end
 
 -- 客户端断开
 function Network_mgr:clt_disconnect( clt_conn )
-    local pid = clt_conn.pid
+    local pid     = clt_conn.pid
+
     PLOG( "clt_disconnect,pid %d",pid or 0 )
 
     g_account_mgr:role_offline( clt_conn.conn_id )
-    clt_conn:close()
 
-    self.clt_conn[clt_conn.conn_id] = nil
+    self:clt_close( clt_conn )
     if pid then
-        self.clt[pid] = nil
-
         -- 通知其他服务器玩家下线
-        -- TODO 应该做个服务器广播
         local pkt = { pid = pid }
-        for _,srv_conn in pairs( self.srv ) do
-            g_command_mgr:srv_send( srv_conn,SS.PLAYER_OFFLINE,pkt )
-        end
+        g_command_mgr:srv_broadcast( SS.PLAYER_OFFLINE,pkt )
     end
 
+end
+
+-- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
+function Network_mgr:clt_close( clt_conn )
+    self.clt_conn[clt_conn.conn_id] = nil
+    if pid then self.clt[clt_conn.pid] = nil end
+
+    clt_conn:close()
 end
 
 -- 服务器连接回调
@@ -213,6 +216,11 @@ end
 -- 获取客户端连接
 function Network_mgr:get_clt_conn( pid )
     return self.clt[pid]
+end
+
+-- 根据conn_id获取连接
+function Network_mgr:get_conn( conn_id )
+    return self.clt_conn[conn_id] or self.srv_conn[conn_id]
 end
 
 local network_mgr = Network_mgr()
