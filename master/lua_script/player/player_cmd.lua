@@ -8,8 +8,8 @@ local g_network_mgr = g_network_mgr
 local g_player_mgr  = g_player_mgr
 
 
-local function player_ping( srv_conn,pkt )
-    g_command_mgr:ssc_send( srv_conn,SC.PLAYER_PING,1,{ time = pkt.dummy } )
+local function player_ping( srv_conn,pid,pkt )
+    g_command_mgr:ssc_send( srv_conn,SC.PLAYER_PING,pid,{ time = pkt.dummy } )
 end
 
 local function player_enter( srv_conn,pid,pkt )

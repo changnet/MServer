@@ -51,7 +51,8 @@ end
 function Srv_conn:on_unauthorized_cmd()
     local cmd,pid = self.conn:srv_next()
     while cmd and not self.auth do
-        g_command_mgr:srv_unauthorized_dispatcher( cmd,pid,self )
+        xpcall( g_command_mgr.srv_unauthorized_dispatcher,
+            __G__TRACKBACK__, g_command_mgr, cmd, pid, self )
 
         cmd,pid = self.conn:srv_next( cmd )
     end
@@ -65,7 +66,8 @@ function Srv_conn:on_command()
 
     local cmd,pid = self.conn:srv_next()
     while cmd do
-        g_command_mgr:srv_dispatcher( cmd,pid,self )
+        xpcall( g_command_mgr.srv_dispatcher,
+            __G__TRACKBACK__, g_command_mgr, cmd, pid, self )
 
         cmd,pid = self.conn:srv_next( cmd )
     end

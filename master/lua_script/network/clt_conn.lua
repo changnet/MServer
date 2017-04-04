@@ -22,7 +22,8 @@ end
 function Clt_conn:on_unauthorized_cmd()
     local cmd = self.conn:clt_next()
     while cmd and not self.auth do
-        g_command_mgr:clt_unauthorized_cmd( cmd,self )
+        xpcall( g_command_mgr.clt_unauthorized_cmd,
+            __G__TRACKBACK__, g_command_mgr, cmd, self )
 
         cmd = self.conn:clt_next( cmd )
     end
@@ -34,7 +35,8 @@ end
 function Clt_conn:on_command()
     local cmd = self.conn:clt_next()
     while cmd do
-        g_command_mgr:clt_invoke( cmd,self )
+        xpcall( g_command_mgr.clt_invoke,
+            __G__TRACKBACK__, g_command_mgr, cmd,self )
 
         cmd = self.conn:clt_next( cmd )
     end
