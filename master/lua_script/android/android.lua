@@ -103,7 +103,7 @@ function Android:on_ping( errno,pkt )
 
     if ts < 100000 then
         if pkt.time >= ts then
-            local max = 5
+            local max = 1
             self.ts = ts + max
             for i = 1,max do
                 self:send_pkt( CS.PLAYER_PING,{dummy = self.ts} )
