@@ -69,6 +69,23 @@ valgrind测试
  * mongo c driver中的sasl导致很多still reachable内存未释放，见
  https://github.com/mongodb/mongo-c-driver/blob/master/valgrind.suppressions
 
+压力测试
+-----------
+```C++
+// ping服务器
+struct cping
+{
+    dummy:int;
+}
+```
+clt --->>> gateway --->>> world --->>> gateway --->>> clt
+
+clt_num  times    sec  tps
+1        100000   10   10000
+
+20       100000   42   50000
+
+200      100000   340  58000
 
 #TODO
 1. protobuf、flatbuffers
