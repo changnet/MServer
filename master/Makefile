@@ -1,6 +1,6 @@
 MAKE = make
 CC = gcc
-CXX = g++
+CXX = g++ #clang++
 # -pipe 使用pipe而不是临时文件，对代码无影响
 # -Wall This enables all the warnings
 # -g gdb debug option
@@ -53,6 +53,7 @@ _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 OBJS = $(addprefix $(ODIR)/,$(_OBJS))
 
 DEPS := $(OBJS:.o=.d)
+OCFILE := $(_OBJS:.o=.cpp)
 
 #Makefile中，要使用tab键，不能用空格替代
 
@@ -101,5 +102,6 @@ memcheck:
 
 callgrind:
 	valgrind --tool=callgrind ./bin/master test 1 1
-
+oclint:
+	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(OCFILE)
 .PHONY: all clean test clean_all build_all dir memcheck callgrind
