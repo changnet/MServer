@@ -8,8 +8,8 @@
 #include "../global/global.h"
 #include "../ev/ev.h"
 #include "../ev/ev_watcher.h"
-#include "../net/socket.h"
 
+class socket;
 class leventloop : public ev_loop
 {
 public:

@@ -12,9 +12,8 @@
 #include "ltimer.h"
 #include "lacism.h"
 #include "leventloop.h"
-#include "lhttp_socket.h"
 #include "lobj_counter.h"
-#include "lstream_socket.h"
+#include "lnetwork_mgr.h"
 
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
@@ -67,8 +66,7 @@ int32 luaopen_log   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
-int32 luaopen_http_socket( lua_State *L );
-int32 luaopen_stream_socket( lua_State *L );
+int32 luaopen_network_mgr( lua_State *L );
 
 void lstate::set_lua_path()
 {
@@ -148,8 +146,9 @@ void lstate::open_cpp()
     luaopen_timer (L);
     luaopen_acism (L);
     luaopen_mongo (L);
-    luaopen_http_socket(L);
-    luaopen_stream_socket(L);
+    // luaopen_http_socket(L);
+    luaopen_network_mgr(L);
+    // luaopen_stream_socket(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */
@@ -168,6 +167,7 @@ int32 luaopen_ev( lua_State *L )
     return 0;
 }
 
+/*
 int32 luaopen_http_socket( lua_State *L )
 {
     lclass<lhttp_socket> lc(L,"Http_socket");
@@ -194,7 +194,7 @@ int32 luaopen_http_socket( lua_State *L )
 
     return 0;
 }
-
+*/
 int32 luaopen_timer ( lua_State *L )
 {
     lclass<ltimer> lc(L,"Timer");
@@ -253,6 +253,7 @@ int32 luaopen_log( lua_State *L )
     return 0;
 }
 
+/*
 int32 luaopen_stream_socket( lua_State *L )
 {
     lclass<lstream_socket> lc(L,"Stream_socket");
@@ -288,7 +289,7 @@ int32 luaopen_stream_socket( lua_State *L )
 
     return 0;
 }
-
+*/
 int32 luaopen_acism( lua_State *L )
 {
     lclass<lacism> lc(L,"Acism");
@@ -296,6 +297,15 @@ int32 luaopen_acism( lua_State *L )
     lc.def<&lacism::scan> ( "scan" );
     lc.def<&lacism::replace> ( "replace" );
     lc.def<&lacism::load_from_file> ( "load_from_file" );
+
+    return 0;
+}
+
+int32 luaopen_network_mgr( lua_State *L )
+{
+    lclass<lnetwork_mgr> lc(L,"Network_mgr");
+
+    lc.def<&lnetwork_mgr::set_cmd> ( "set_cmd" );
 
     return 0;
 }

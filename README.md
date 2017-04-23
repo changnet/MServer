@@ -112,6 +112,33 @@ L3 cache:              6144K
 NUMA node0 CPU(s):     0
 ```
 
+```shell
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                1
+On-line CPU(s) list:   0
+Thread(s) per core:    1
+Core(s) per socket:    1
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             AuthenticAMD
+CPU family:            21
+Model:                 16
+Stepping:              1
+CPU MHz:               1896.550
+BogoMIPS:              3793.10
+Hypervisor vendor:     KVM
+Virtualization type:   full
+L1d cache:             16K
+L1i cache:             64K
+L2 cache:              2048K
+NUMA node0 CPU(s):     0
+
+200      100000   1091  20000
+```
+
+
 #TODO
 1. protobuf、flatbuffers
 2. astar、rsa、zlib、md5、uuid

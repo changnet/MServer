@@ -3,7 +3,9 @@
 #include "leventloop.h"
 #include "lstate.h"
 #include "ltools.h"
+
 #include "../ev/ev_def.h"
+#include "../net/socket.h"
 
 uint32 leventloop::sig_mask = 0;
 class leventloop *leventloop::_loop = NULL;

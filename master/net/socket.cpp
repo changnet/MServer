@@ -1,11 +1,14 @@
 #include <netinet/tcp.h>    /* for keep-alive */
 
 #include "socket.h"
+#include "../ev/ev_def.h"
 #include "../lua_cpplib/leventloop.h"
 
-socket::socket()
+socket::socket( uint32 conn_id,conn_t conn_ty )
 {
     _sending  = 0;
+    _conn_id  = conn_id;
+    _conn_ty  = conn_ty;
 }
 
 socket::~socket()
@@ -247,6 +250,14 @@ int32 socket::listen( const char *host,int32 port )
 
         return     -1;
     }
+
+    set<socket,&socket::listen_cb>( this );
+
+    class ev_loop *loop = 
+        static_cast<class ev_loop *>( leventloop::instance() );
+    _w.set( loop );
+    _w.set<socket,&socket::io_cb>( this );
+    _w.start( fd,EV_READ );
 
     return fd;
 }

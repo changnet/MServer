@@ -31,13 +31,28 @@ class leventloop;
 class socket
 {
 public:
-    socket();
+    typedef enum
+    {
+        CNT_NONE = 0,  // invalid connection
+        CNT_CSCN = 1,  // c2s connection
+        CNT_SCCN = 2,  // s2c connection
+        CNT_SSCN = 3,  // s2s connection
+        CNT_HTTP = 4,  // http connection
+
+        CNT_MAXT       // max connection type
+    } conn_t;
+public:
     virtual ~socket();
+    explicit socket( uint32 conn_id,conn_t conn_ty );
 
     static int32 block( int32 fd );
     static int32 non_block( int32 fd );
     static int32 keep_alive( int32 fd );
     static int32 user_timeout( int32 fd );
+
+    virtual void message_cb ( int32 revents ) = 0;
+    virtual void connect_cb ( int32 revents ) = 0;
+    virtual void listen_cb  ( int32 revents ) = 0;
 
     void stop ();
     int32 validate();
@@ -47,7 +62,8 @@ public:
     int32 listen( const char *host,int32 port );
     int32 connect( const char *host,int32 port );
 
-    bool append( const char *data,uint32 len ) __attribute__ ((warn_unused_result));
+    bool __attribute__ ((warn_unused_result))
+        append( const char *data,uint32 len ) ;
 
     template<class K, void (K::*method)(int32)>
     void set (K *object)
@@ -61,7 +77,8 @@ public:
         if ( !_recv.reserved() ) return -1; /* no more memory */
 
         assert( "socket recv buffer length <= 0",_recv._len - _recv._size > 0 );
-        int32 len = ::read( _w.fd,_recv._buff + _recv._size,_recv._len - _recv._size );
+        int32 len = ::read( 
+            _w.fd,_recv._buff + _recv._size,_recv._len - _recv._size );
         if ( len > 0 )
         {
             _recv._size += len;
@@ -71,9 +88,10 @@ public:
 
     inline int32 send()
     {
-        assert( "buff send without data",_send._size - _send._pos > 0 );
+        assert( "buf send without data",_send._size - _send._pos > 0 );
 
-        int32 len = ::write( _w.fd,_send._buff + _send._pos,_send._size - _send._pos );
+        int32 len = ::write( 
+            _w.fd,_send._buff + _send._pos,_send._size - _send._pos );
         if ( len > 0 )
         {
             _send._pos += len;
@@ -92,7 +110,9 @@ public:
 protected:
     buffer _recv;
     buffer _send;
-    int32 _sending;
+    int32  _sending;
+    uint32 _conn_id;
+    conn_t _conn_ty;
 
     void pending_send();
 private:
