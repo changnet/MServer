@@ -17,9 +17,32 @@ void stream_socket::command_cb ()
 
 }
 
+/*
+ * connect回调
+ * man connect
+ * It is possible to select(2) or poll(2) for completion by selecting the socket
+ * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to
+ * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
+ * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
+ * of  the  usual  error  codes  listed  here,explaining the reason for the failure)
+ * 1）连接成功建立时，socket 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
+ * 2）连接建立失败时，socket 描述字既可读又可写。 （由于有未决的错误，从而可读又可写）
+ */
 void stream_socket::connect_cb ()
 {
+    int32 ecode = socket::validate();
 
+    lnetwork_mgr::instance()->connect_cb( _conn_id,ecode,"stream_socket_cb" );
+    if ( 0 != ecode )  /* 连接失败 */
+    {
+        socket::stop();
+        return        ;
+    }
+
+    KEEP_ALIVE( socket::fd() );
+    USER_TIMEOUT( socket::fd() );
+
+    socket::start();
 }
 
 void stream_socket::listen_cb  ()
@@ -47,6 +70,7 @@ void stream_socket::listen_cb  ()
         /* 新增的连接和监听的连接类型必须一样 */
         class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
 
-        network_mgr->accept_new( conn_id,new_sk );
+        network_mgr->accept_new( conn_id,new_sk,"stream_socket_new" );
+        new_sk->start();
     }
 }

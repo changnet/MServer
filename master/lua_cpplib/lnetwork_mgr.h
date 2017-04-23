@@ -5,6 +5,7 @@
 
 #include "../global/global.h"
 
+#include <vector>
 #if __cplusplus < 201103L    /* -std=gnu99 */
     #include <map>
     #define map_t    std::map
@@ -53,8 +54,10 @@ public:
     ~lnetwork_mgr();
     explicit lnetwork_mgr( lua_State *L );
 
+    /* 连接回调 */
+    void connect_cb( uint32 conn_id,int32 ecode,const char *cb );
     /* 新增连接 */
-    void accept_new( uint32 conn_id,class socket *new_sk );
+    void accept_new( uint32 conn_id,class socket *new_sk,const char *cb );
 
     /* 设置指令参数 */
     int32 set_cmd();
@@ -68,6 +71,8 @@ public:
     /* 获取connect_id */
     uint32 connect_id();
 private:
+    void delete_socket( uint32 conn_id );
+private:
     lua_State *L;
 
     int32 _session; /* 当前进程的session */
@@ -76,7 +81,7 @@ private:
     cmd_map_t _cmd_map;
     socket_map_t _socket_map;
 
-    int32 _deletecnt; /* 当前需要删除的socket数量 */
+    std::vector<uint32> _deleting;/* 异步删除的socket */
     static class lnetwork_mgr *_network_mgr;
 };
 

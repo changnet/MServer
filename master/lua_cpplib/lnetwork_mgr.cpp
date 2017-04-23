@@ -32,7 +32,7 @@ lnetwork_mgr::~lnetwork_mgr()
 }
 
 lnetwork_mgr::lnetwork_mgr( lua_State *L )
-    :L(L),_conn_seed(0),_deletecnt(0)
+    :L(L),_conn_seed(0)
 {
     assert( "lnetwork_mgr is singleton",NULL == _network_mgr );
 }
@@ -100,7 +100,7 @@ int32 lnetwork_mgr::close()
     /* 这里不能删除内存，因为脚本并不知道是否会再次访问此socket
      * 比如底层正在一个for循环里回调脚本时，就需要再次访问
      */
-    _deletecnt ++;
+    _deleting.push_back( conn_id );
 
     return 0;
 }
@@ -142,11 +142,12 @@ int32 lnetwork_mgr::listen()
 }
 
 /* 新增连接 */
-void lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
+void lnetwork_mgr::accept_new( 
+    uint32 conn_id,class socket *new_sk,const char *cb )
 {
     lua_pushcfunction( L,traceback );
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, 0);
+    lua_getglobal( L,cb );
     lua_pushinteger( L,conn_id );
 
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
@@ -156,9 +157,65 @@ void lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
          */
         delete new_sk;
         ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
         return;
     }
     lua_pop( L,1 ); /* remove traceback */
 
     _socket_map[conn_id] = new_sk;
+}
+
+int32 lnetwork_mgr::connect()
+{
+    const char *host = luaL_checkstring( L,1 );
+    if ( !host )
+    {
+        return luaL_error( L,"host not specify" );
+    }
+
+    int32 port      = luaL_checkinteger( L,2 );
+    int32 conn_type = luaL_checkinteger( L,3 );
+    if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAXT )
+    {
+        return luaL_error( L,"illegal connection type" );
+    }
+
+    uint32 conn_id = connect_id();
+    class socket *_socket = new class stream_socket( 
+        conn_id,static_cast<socket::conn_t>(conn_type) );
+
+    int32 fd = _socket->connect( host,port );
+    if ( fd < 0 )
+    {
+        delete _socket;
+        luaL_error( L,strerror(errno) );
+        return 0;
+    }
+
+    lua_pushinteger( L,conn_id );
+    return 1;
+}
+
+/* 连接回调 */
+void lnetwork_mgr::connect_cb( uint32 conn_id,int32 ecode,const char *cb )
+{
+    lua_pushcfunction( L,traceback );
+
+    lua_getglobal( L,cb );
+    lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,ecode   );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    {
+        /* 出错后，无法得知脚本能否继续处理此连接
+         * 为了防止死链，这里直接删除此连接
+         */
+        _deleting.push_back( conn_id );
+        ERROR( "connect_cb:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
 }

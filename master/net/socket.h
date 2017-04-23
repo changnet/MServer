@@ -55,10 +55,10 @@ public:
     virtual void listen_cb  () = 0;
 
     void stop ();
+    void start();
     int32 validate();
 
     const char *address();
-    void start( int32 fd,int32 events );
     int32 listen( const char *host,int32 port );
     int32 connect( const char *host,int32 port );
 
@@ -101,7 +101,6 @@ public:
     }
 
     inline int32 fd() const { return _w.fd; }
-    inline void set( int32 revents ) { _w.set(revents); }
     inline bool active() const { return _w.is_active(); }
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }

@@ -123,21 +123,27 @@ int32 socket::user_timeout( int32 fd )
 #endif
 }
 
-void socket::start( int32 fd,int32 events )
+/* 设置为开始读取数据
+ * 该socket之前可能已经activity
+ */
+void socket::start()
 {
     assert( "socket start,dirty buffer",
         0 == _send.data_size() && 0 == _send.data_size() );
 
-    class ev_loop *loop = static_cast<class ev_loop *>( leventloop::instance() );
-    _w.set( loop );
-    _w.set<socket,&socket::io_cb>( this );
-    _w.start( fd,events );
+    assert( "socket not invalid",_w.fd > 0 );
+
+    set<socket,&socket::command_cb>( this );
+    _w.set( EV_READ ); /* 将之前的write改为read */
+
+    if ( !_w.is_active() ) _w.start();
 }
 
 int32 socket::connect( const char *host,int32 port )
 {
     assert( "socket fd dirty",_w.fd < 0 );
 
+    // 创建新socket并设置为非阻塞
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 || non_block( fd ) < 0 )
     {
@@ -150,7 +156,7 @@ int32 socket::connect( const char *host,int32 port )
     sk_socket.sin_addr.s_addr = inet_addr(host);
     sk_socket.sin_port = htons( port );
 
-    /* 三次握手是需要一些时间的，内核中对connect的超时限制是75秒 */
+    /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
     if ( ::connect( fd, (struct sockaddr *) & sk_socket,sizeof(sk_socket)) < 0
         && errno != EINPROGRESS )
     {
@@ -158,6 +164,14 @@ int32 socket::connect( const char *host,int32 port )
 
         return     -1;
     }
+
+    set<socket,&socket::connect_cb>( this );
+
+    class ev_loop *loop = 
+        static_cast<class ev_loop *>( leventloop::instance() );
+    _w.set( loop );
+    _w.set<socket,&socket::io_cb>( this );
+    _w.start( fd,EV_WRITE );
 
     return fd;
 }
