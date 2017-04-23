@@ -50,9 +50,9 @@ public:
     static int32 keep_alive( int32 fd );
     static int32 user_timeout( int32 fd );
 
-    virtual void message_cb ( int32 revents ) = 0;
-    virtual void connect_cb ( int32 revents ) = 0;
-    virtual void listen_cb  ( int32 revents ) = 0;
+    virtual void command_cb () = 0;
+    virtual void connect_cb () = 0;
+    virtual void listen_cb  () = 0;
 
     void stop ();
     int32 validate();
@@ -65,7 +65,7 @@ public:
     bool __attribute__ ((warn_unused_result))
         append( const char *data,uint32 len ) ;
 
-    template<class K, void (K::*method)(int32)>
+    template<class K, void (K::*method)()>
     void set (K *object)
     {
         this->_this   = object;
@@ -104,7 +104,7 @@ public:
     inline void set( int32 revents ) { _w.set(revents); }
     inline bool active() const { return _w.is_active(); }
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
-    inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)( revents ); }
+    inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }
 
     friend class leventloop;
 protected:
@@ -120,12 +120,12 @@ private:
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;
-    void (socket::*_method)(int32 revents);
+    void (socket::*_method)();
 
-    template<class K, void (K::*method)(int32)>
-    void method_thunk (int32 revents)
+    template<class K, void (K::*method)()>
+    void method_thunk ()
     {
-      (static_cast<K *>(this->_this)->*method)(revents);
+      (static_cast<K *>(this->_this)->*method)();
     }
 };
 

@@ -53,6 +53,9 @@ public:
     ~lnetwork_mgr();
     explicit lnetwork_mgr( lua_State *L );
 
+    /* 新增连接 */
+    void accept_new( uint32 conn_id,class socket *new_sk );
+
     /* 设置指令参数 */
     int32 set_cmd();
 
@@ -61,7 +64,7 @@ public:
     int32 address ();
     int32 listen  ();
     int32 connect ();
-private:
+
     /* 获取connect_id */
     uint32 connect_id();
 private:

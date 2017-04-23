@@ -9,9 +9,9 @@ public:
     ~stream_socket();
     explicit stream_socket( uint32 conn_id,conn_t conn_ty );
 
-    void message_cb ( int32 revents );
-    void connect_cb ( int32 revents );
-    void listen_cb  ( int32 revents );
+    void command_cb ();
+    void connect_cb ();
+    void listen_cb  ();
 };
 
 #endif /* __STREAM_SOCKET_H__ */
