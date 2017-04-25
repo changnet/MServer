@@ -306,6 +306,8 @@ int32 luaopen_network_mgr( lua_State *L )
     lclass<lnetwork_mgr> lc(L,"Network_mgr");
 
     lc.def<&lnetwork_mgr::set_cmd> ( "set_cmd" );
+    lc.def<&lnetwork_mgr::listen> ( "listen" );
+    lc.def<&lnetwork_mgr::connect> ( "connect" );
 
     return 0;
 }

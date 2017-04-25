@@ -32,8 +32,9 @@ void stream_socket::connect_cb ()
 {
     int32 ecode = socket::validate();
 
-    lnetwork_mgr::instance()->connect_cb( _conn_id,ecode,"stream_socket_cb" );
-    if ( 0 != ecode )  /* 连接失败 */
+    bool ok = lnetwork_mgr::instance()
+        ->connect_cb( _conn_id,ecode,"stream_socket_cb" );
+    if ( 0 != ecode || !ok )  /* 连接失败或回调脚本失败 */
     {
         socket::stop();
         return        ;
@@ -70,7 +71,7 @@ void stream_socket::listen_cb  ()
         /* 新增的连接和监听的连接类型必须一样 */
         class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
 
-        network_mgr->accept_new( conn_id,new_sk,"stream_socket_new" );
-        new_sk->start();
+        bool ok = network_mgr->accept_new( conn_id,new_sk,"stream_socket_new" );
+        if ( ok ) new_sk->start( new_fd );
     }
 }

@@ -55,9 +55,9 @@ public:
     explicit lnetwork_mgr( lua_State *L );
 
     /* 连接回调 */
-    void connect_cb( uint32 conn_id,int32 ecode,const char *cb );
+    bool connect_cb( uint32 conn_id,int32 ecode,const char *cb );
     /* 新增连接 */
-    void accept_new( uint32 conn_id,class socket *new_sk,const char *cb );
+    bool accept_new( uint32 conn_id,class socket *new_sk,const char *cb );
 
     /* 设置指令参数 */
     int32 set_cmd();

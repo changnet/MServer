@@ -124,17 +124,30 @@ int32 socket::user_timeout( int32 fd )
 }
 
 /* 设置为开始读取数据
- * 该socket之前可能已经activity
+ * 该socket之前可能已经active
  */
-void socket::start()
+void socket::start( int32 fd )
 {
     assert( "socket start,dirty buffer",
         0 == _send.data_size() && 0 == _send.data_size() );
 
-    assert( "socket not invalid",_w.fd > 0 );
+    if ( fd > 0 && _w.fd > 0 )
+    {
+        assert( "socket already exist",false );
+    }
+    fd = fd > 0 ? fd : _w.fd;
+    assert( "socket not invalid",fd > 0 );
+
+    if ( fd > 0 ) // 新创建的socket
+    {
+        class ev_loop *loop = 
+            static_cast<class ev_loop *>( leventloop::instance() );
+        _w.set( loop );
+        _w.set<socket,&socket::io_cb>( this );
+    }
 
     set<socket,&socket::command_cb>( this );
-    _w.set( EV_READ ); /* 将之前的write改为read */
+    _w.set( fd,EV_READ ); /* 将之前的write改为read */
 
     if ( !_w.is_active() ) _w.start();
 }

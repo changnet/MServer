@@ -12,6 +12,14 @@ local function sig_handler( signum )
     ev:exit()
 end
 
+function stream_socket_new( conn_id )
+    print( "stream_socket_new",conn_id )
+end
+
+function stream_socket_cb( conn_id,errno )
+    print( "stream_socket_cb",conn_id,errno )
+end
+
 local function main()
     ev:set_signal_ref( sig_handler )
     ev:signal( 2 );
@@ -25,6 +33,9 @@ local function main()
     -- require "example.http_performance"
     -- require "example.stream_performance"
     -- require "example.words_filter_performance"
+
+    network_mgr:listen( "127.0.0.1",9999,1 )
+    network_mgr:connect( "127.0.0.1",9999,1 )
 
     print( obj_counter.obj_count("Http_socket") )
     oo.check()

@@ -142,7 +142,7 @@ int32 lnetwork_mgr::listen()
 }
 
 /* 新增连接 */
-void lnetwork_mgr::accept_new( 
+bool lnetwork_mgr::accept_new( 
     uint32 conn_id,class socket *new_sk,const char *cb )
 {
     lua_pushcfunction( L,traceback );
@@ -159,11 +159,13 @@ void lnetwork_mgr::accept_new(
         ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,1 ); /* remove traceback and error object */
-        return;
+        return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
 
     _socket_map[conn_id] = new_sk;
+
+    return true;
 }
 
 int32 lnetwork_mgr::connect()
@@ -198,7 +200,7 @@ int32 lnetwork_mgr::connect()
 }
 
 /* 连接回调 */
-void lnetwork_mgr::connect_cb( uint32 conn_id,int32 ecode,const char *cb )
+bool lnetwork_mgr::connect_cb( uint32 conn_id,int32 ecode,const char *cb )
 {
     lua_pushcfunction( L,traceback );
 
@@ -215,7 +217,9 @@ void lnetwork_mgr::connect_cb( uint32 conn_id,int32 ecode,const char *cb )
         ERROR( "connect_cb:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,1 ); /* remove traceback and error object */
-        return;
+        return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
+
+    return true;
 }

@@ -7,6 +7,7 @@
 #include "mongo/mongo.h"
 #include <sys/utsname.h> /* for uname */
 #include "lua_cpplib/lobj_counter.h"
+#include "lua_cpplib/lnetwork_mgr.h"
 
 int32 main( int32 argc,char **argv )
 {
@@ -22,12 +23,15 @@ int32 main( int32 argc,char **argv )
     sql::library_init();
     mongo::init();
 
-    class lstate *_lstate = lstate::instance();
-    lua_State *L = _lstate->state();
-    class leventloop *_loop = leventloop::instance();
+    lua_State *L = lstate::instance()->state();
 
-    lclass<leventloop>::push( L,_loop,false );
+    class leventloop *loop = leventloop::instance();
+    lclass<leventloop>::push( L,loop,false );
     lua_setglobal( L,"ev" );
+
+    class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    lclass<lnetwork_mgr>::push( L,network_mgr,false );
+    lua_setglobal( L,"network_mgr" );
 
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
@@ -55,10 +59,10 @@ int32 main( int32 argc,char **argv )
         return 1;
     }
 
-    /* lua可能持有userdata，故要先关闭销毁 */
-    _loop->finalize();               /* 优先解除lua_State依赖 */
-    lstate::uninstance();            /* 最后关闭lua，其他模块引用太多lua_State */
-    leventloop::uninstance();        /* 关闭主事件循环 */
+    loop->finalize          ();      /* 优先解除lua_State依赖 */
+    lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
+    lnetwork_mgr::uninstance();      /* 关闭网络管理 */
+    leventloop::uninstance  ();      /* 关闭主事件循环 */
 
     assert( "c++ object push to lua not release",
         obj_counter::instance()->final_check() );

@@ -55,7 +55,7 @@ public:
     virtual void listen_cb  () = 0;
 
     void stop ();
-    void start();
+    void start( int32 fd = 0);
     int32 validate();
 
     const char *address();
