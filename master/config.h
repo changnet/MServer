@@ -71,4 +71,7 @@
 /* acism 替换缓冲区默认大小 */
 #define ACISM_REPLACE_DEFAULT  2048
 
+/* 数据包解析方式 */
+#define FLATBUFFERS_PARSE
+
 #endif /* __CONFIG_H__ */

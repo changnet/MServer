@@ -12,6 +12,8 @@ public:
     void command_cb ();
     void connect_cb ();
     void listen_cb  ();
+private:
+    void process_packet();
 };
 
 #endif /* __STREAM_SOCKET_H__ */

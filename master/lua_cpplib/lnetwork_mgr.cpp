@@ -142,12 +142,11 @@ int32 lnetwork_mgr::listen()
 }
 
 /* 新增连接 */
-bool lnetwork_mgr::accept_new( 
-    uint32 conn_id,class socket *new_sk,const char *cb )
+bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
 {
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,cb );
+    lua_getglobal( L,"socket_accpet_new" );
     lua_pushinteger( L,conn_id );
 
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
@@ -200,11 +199,11 @@ int32 lnetwork_mgr::connect()
 }
 
 /* 连接回调 */
-bool lnetwork_mgr::connect_cb( uint32 conn_id,int32 ecode,const char *cb )
+bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
 {
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,cb );
+    lua_getglobal( L,"socket_connect" );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,ecode   );
 

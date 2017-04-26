@@ -1,5 +1,6 @@
 #include "stream_socket.h"
 
+#include "packet.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
 stream_socket::~stream_socket()
@@ -14,7 +15,22 @@ stream_socket::stream_socket( uint32 conn_id,conn_t conn_ty )
 
 void stream_socket::command_cb ()
 {
+    /* 在回调脚本时，可能被脚本关闭当前socket，这时就不要再处理数据了 */
+    while ( fd() > 0 )
+    {
+        uint32 sz = _recv.data_size();
+        if ( sz < sizeof(packet_length) ) return;
 
+        packet_length len = *(reinterpret_cast<packet_length *>(_recv.data()));
+
+        size_t data_len = len + sizeof(packet_length);
+        /* 验证数据包是否完整有效 */
+        if ( sz < data_len ) return;
+
+        process_packet(); /* 解析数据包 */
+
+        _recv.subtract( data_len ); /* 移除已处理的数据包 */
+    }
 }
 
 /*
@@ -32,8 +48,7 @@ void stream_socket::connect_cb ()
 {
     int32 ecode = socket::validate();
 
-    bool ok = lnetwork_mgr::instance()
-        ->connect_cb( _conn_id,ecode,"stream_socket_cb" );
+    bool ok = lnetwork_mgr::instance()->connect_new( _conn_id,ecode );
     if ( 0 != ecode || !ok )  /* 连接失败或回调脚本失败 */
     {
         socket::stop();
@@ -71,7 +86,25 @@ void stream_socket::listen_cb  ()
         /* 新增的连接和监听的连接类型必须一样 */
         class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
 
-        bool ok = network_mgr->accept_new( conn_id,new_sk,"stream_socket_new" );
+        bool ok = network_mgr->accept_new( conn_id,new_sk );
         if ( ok ) new_sk->start( new_fd );
+    }
+}
+
+/* 解析数据包 */
+void stream_socket::process_packet()
+{
+    /* 不同的链接，数据包不一样 */
+    switch( _conn_ty )
+    {
+        case CNT_CSCN : 
+        {
+            struct s2c_header *header =
+                reinterpret_cast<struct s2c_header *>( _recv.data() );
+            packet::parse_header( _recv.data(),header );
+        }break;
+        case CNT_SCCN : break;
+        case CNT_SSCN : break;
+        default : assert( "unknow socket connect type",false );return;
     }
 }

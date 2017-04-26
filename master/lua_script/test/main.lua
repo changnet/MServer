@@ -12,12 +12,12 @@ local function sig_handler( signum )
     ev:exit()
 end
 
-function stream_socket_new( conn_id )
-    print( "stream_socket_new",conn_id )
+function socket_accpet_new( conn_id )
+    print( "socket_accpet_new",conn_id )
 end
 
-function stream_socket_cb( conn_id,errno )
-    print( "stream_socket_cb",conn_id,errno )
+function socket_connect( conn_id,errno )
+    print( "socket_connect",conn_id,errno )
 end
 
 local function main()

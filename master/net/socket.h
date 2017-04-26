@@ -101,6 +101,8 @@ public:
     }
 
     inline int32 fd() const { return _w.fd; }
+    inline uint32 conn_id() { return _conn_id; }
+    inline conn_t conn_type() { return _conn_ty; }
     inline bool active() const { return _w.is_active(); }
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }
