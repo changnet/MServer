@@ -41,7 +41,7 @@ lnetwork_mgr::lnetwork_mgr( lua_State *L )
  * 之所以不用系统的文件描述符fd，是因为fd对于上层逻辑不可控。比如一个fd被释放，可能在多个进程
  * 之间还未处理完，此fd就被重用了。当前的连接id不太可能会在短时间内重用。
  */
-uint32 lnetwork_mgr::connect_id()
+uint32 lnetwork_mgr::generate_connect_id()
 {
     do
     {
@@ -123,7 +123,7 @@ int32 lnetwork_mgr::listen()
         return luaL_error( L,"illegal connection type" );
     }
 
-    uint32 conn_id = connect_id();
+    uint32 conn_id = generate_connect_id();
     class socket *_socket = new class stream_socket( 
         conn_id,static_cast<socket::conn_t>(conn_type) );
 
@@ -182,7 +182,7 @@ int32 lnetwork_mgr::connect()
         return luaL_error( L,"illegal connection type" );
     }
 
-    uint32 conn_id = connect_id();
+    uint32 conn_id = generate_connect_id();
     class socket *_socket = new class stream_socket( 
         conn_id,static_cast<socket::conn_t>(conn_type) );
 
@@ -221,4 +221,13 @@ bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
     lua_pop( L,1 ); /* remove traceback */
 
     return true;
+}
+
+/* 获取指令配置 */
+const cmd_cfg_t *lnetwork_mgr::get_cmd_cfg( int32 cmd )
+{
+    cmd_map_t::iterator itr = _cmd_map.find( cmd );
+    if ( itr == _cmd_map.end() ) return NULL;
+
+    return &(itr->second);
 }

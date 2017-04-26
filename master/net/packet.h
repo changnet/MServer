@@ -38,9 +38,10 @@ struct s2c_header
 struct s2s_header
 {
     packet_length _length; /* 包长度，不包含本身 */
-    uint16  _cmd  ; /* 8bit模块号,8bit功能号 */
+    uint16 _cmd   ; /* 8bit模块号,8bit功能号 */
     uint16 _errno ; /* 错误码 */
-    int32    _pid ; /* 玩家id */
+    int32  _pid   ; /* 玩家id */
+    uint16 _mask  ; /* 功能掩码 */
 };
 
 #pragma pack(pop)
@@ -48,8 +49,28 @@ struct s2s_header
 class packet
 {
 public:
+    typedef enum
+    {
+        PKT_NONE = 0,  // invalid
+        PKT_CSPK = 1,  // c2s packet
+        PKT_SCPK = 2,  // s2c packet
+        PKT_SSPK = 3,  // s2s packet
+        PKT_RPCP = 4,  // rpc packet
+        PKT_CBCP = 5,  // client broadcast packet
+        PKT_SBCP = 6,  // server broadcast packet
+
+        PKT_MAXT       // max packet type
+    } packet_t;
+public:
+    /* 外部解析接口 */
     static void parse_header( const char *buffer,const c2s_header *header );
     static void parse_header( const char *buffer,const s2c_header *header );
+    static void parse_header( const char *buffer,const s2s_header *header );
+private:
+    /* 内部解析接口，根据不同解析方式实现 */
+    static void do_parse_header( const char *buffer,const c2s_header *header );
+    static void do_parse_header( const char *buffer,const s2c_header *header );
+    static void do_parse_header( const char *buffer,const s2s_header *header );
 };
 
 #endif /* __PACKET_H__ */

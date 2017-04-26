@@ -82,7 +82,7 @@ void stream_socket::listen_cb  ()
         KEEP_ALIVE( new_fd );
         USER_TIMEOUT( new_fd );
 
-        uint32 conn_id = network_mgr->connect_id();
+        uint32 conn_id = network_mgr->generate_connect_id();
         /* 新增的连接和监听的连接类型必须一样 */
         class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
 
@@ -97,14 +97,24 @@ void stream_socket::process_packet()
     /* 不同的链接，数据包不一样 */
     switch( _conn_ty )
     {
-        case CNT_CSCN : 
+        case CNT_CSCN : /* 解析服务器发往客户端的包 */
         {
             struct s2c_header *header =
                 reinterpret_cast<struct s2c_header *>( _recv.data() );
             packet::parse_header( _recv.data(),header );
         }break;
-        case CNT_SCCN : break;
-        case CNT_SSCN : break;
+        case CNT_SCCN : /* 解析客户端发往服务器的包 */
+        {
+            struct c2s_header *header =
+                reinterpret_cast<struct c2s_header *>( _recv.data() );
+            packet::parse_header( _recv.data(),header );
+        }break;
+        case CNT_SSCN : /* 解析服务器发往服务器的包 */
+        {
+            struct s2s_header *header =
+                reinterpret_cast<struct s2s_header *>( _recv.data() );
+            packet::parse_header( _recv.data(),header );
+        }break;
         default : assert( "unknow socket connect type",false );return;
     }
 }

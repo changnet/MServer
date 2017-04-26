@@ -14,18 +14,6 @@
     #define map_t    std::unordered_map
 #endif
 
-typedef enum
-{
-    PKT_NONE = 0,  // invalid
-    PKT_CSPK = 1,  // c2s packet
-    PKT_SCPK = 2,  // s2c packet
-    PKT_SSPK = 3,  // s2s packet
-    PKT_RPCP = 4,  // rpc packet
-
-    PKT_MAXT       // max packet type
-} packet_t;
-
-
 #define MAX_SCHEMA_NAME  64
 
 /* _maks 设定掩码，按位
@@ -69,7 +57,11 @@ public:
     int32 connect ();
 
     /* 获取connect_id */
-    uint32 connect_id();
+    uint32 generate_connect_id();
+    /* 获取指令配置 */
+    const cmd_cfg_t *get_cmd_cfg( int32 cmd );
+    /* 获取当前服务器session */
+    int32 session() { return _session; }
 private:
     void delete_socket( uint32 conn_id );
 private:
