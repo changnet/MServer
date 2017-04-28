@@ -63,6 +63,9 @@ void packet::parse( const stream_socket *sk,const c2s_header *header )
         clt_forwarding( sk,header,cmd_cfg->_session );
         return;
     }
+
+    /* 在当前进程处理 */
+    do_parse( sk,header );
 }
 
 void packet::parse( const stream_socket *sk,const s2c_header *header )
