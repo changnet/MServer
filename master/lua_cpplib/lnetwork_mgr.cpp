@@ -231,3 +231,15 @@ const cmd_cfg_t *lnetwork_mgr::get_cmd_cfg( int32 cmd )
 
     return &(itr->second);
 }
+
+/* 通过session获取socket连接 */
+class socket *lnetwork_mgr::get_connection( int32 session )
+{
+    map_t<int32,uint32>::iterator itr = _session_map.find( session );
+    if ( itr == _session_map.end() ) return NULL;
+
+    socket_map_t::iterator sk_itr = _socket_map.find( itr->second );
+    if ( sk_itr == _socket_map.end() ) return NULL;
+
+    return sk_itr->second;
+}

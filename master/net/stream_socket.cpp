@@ -1,6 +1,5 @@
 #include "stream_socket.h"
 
-#include "packet.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
 stream_socket::~stream_socket()
@@ -99,21 +98,18 @@ void stream_socket::process_packet()
     {
         case CNT_CSCN : /* 解析服务器发往客户端的包 */
         {
-            struct s2c_header *header =
-                reinterpret_cast<struct s2c_header *>( _recv.data() );
-            packet::parse_header( _recv.data(),header );
+            packet::parse( this,
+                reinterpret_cast<struct s2c_header *>( _recv.data() ) );
         }break;
         case CNT_SCCN : /* 解析客户端发往服务器的包 */
         {
-            struct c2s_header *header =
-                reinterpret_cast<struct c2s_header *>( _recv.data() );
-            packet::parse_header( _recv.data(),header );
+            packet::parse( this,
+                reinterpret_cast<struct c2s_header *>( _recv.data() ) );
         }break;
         case CNT_SSCN : /* 解析服务器发往服务器的包 */
         {
-            struct s2s_header *header =
-                reinterpret_cast<struct s2s_header *>( _recv.data() );
-            packet::parse_header( _recv.data(),header );
+            packet::parse( this,
+                reinterpret_cast<struct s2s_header *>( _recv.data() ) );
         }break;
         default : assert( "unknow socket connect type",false );return;
     }

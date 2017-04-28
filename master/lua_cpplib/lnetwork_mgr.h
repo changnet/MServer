@@ -56,6 +56,9 @@ public:
     int32 listen  ();
     int32 connect ();
 
+    /* 通过session获取socket连接 */
+    class socket *get_connection( int32 session );
+
     /* 获取connect_id */
     uint32 generate_connect_id();
     /* 获取指令配置 */
@@ -74,6 +77,7 @@ private:
     socket_map_t _socket_map;
 
     std::vector<uint32> _deleting;/* 异步删除的socket */
+    map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
     static class lnetwork_mgr *_network_mgr;
 };
 

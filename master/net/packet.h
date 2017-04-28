@@ -18,6 +18,7 @@
 typedef uint16 array_header;
 typedef uint16 packet_length;
 typedef uint16 string_header;
+typedef int32  owner_t;
 
 /* 客户端发往服务器 */
 struct c2s_header
@@ -38,14 +39,15 @@ struct s2c_header
 struct s2s_header
 {
     packet_length _length; /* 包长度，不包含本身 */
-    uint16 _cmd   ; /* 8bit模块号,8bit功能号 */
-    uint16 _errno ; /* 错误码 */
-    int32  _pid   ; /* 玩家id */
-    uint16 _mask  ; /* 功能掩码 */
+    uint16  _cmd   ; /* 8bit模块号,8bit功能号 */
+    uint16  _errno ; /* 错误码 */
+    owner_t _owner ; /* 当前数据包所属id，通常为玩家id */
+    uint16  _mask  ; /* 功能掩码 */
 };
 
 #pragma pack(pop)
 
+class stream_socket;
 class packet
 {
 public:
@@ -63,14 +65,18 @@ public:
     } packet_t;
 public:
     /* 外部解析接口 */
-    static void parse_header( const char *buffer,const c2s_header *header );
-    static void parse_header( const char *buffer,const s2c_header *header );
-    static void parse_header( const char *buffer,const s2s_header *header );
+    static void parse( const stream_socket *sk,const c2s_header *header );
+    static void parse( const stream_socket *sk,const s2c_header *header );
+    static void parse( const stream_socket *sk,const s2s_header *header );
 private:
     /* 内部解析接口，根据不同解析方式实现 */
-    static void do_parse_header( const char *buffer,const c2s_header *header );
-    static void do_parse_header( const char *buffer,const s2c_header *header );
-    static void do_parse_header( const char *buffer,const s2s_header *header );
+    static void do_parse( const stream_socket *sk,const c2s_header *header );
+    static void do_parse( const stream_socket *sk,const s2c_header *header );
+    static void do_parse( const stream_socket *sk,const s2s_header *header );
+
+    /* 转客户端数据包 */
+    static void clt_forwarding( 
+        const stream_socket *sk,const c2s_header *header,int32 session );
 };
 
 #endif /* __PACKET_H__ */

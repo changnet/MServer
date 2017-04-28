@@ -1,4 +1,5 @@
 #include "packet.h"
+#include "stream_socket.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
 #if defined FLATBUFFERS_PARSE
@@ -11,22 +12,44 @@
     #error no header parse specify
 #endif
 
-void packet::forwarding( 
-    packet_t pkt,const char *buffer,size_t size,int32 session )
+/* 转客户端数据包 */
+void packet::clt_forwarding( 
+    const stream_socket *sk,const c2s_header *header,int32 session )
 {
+    class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    class socket *dest_sk  = network_mgr->get_connection( session );
+    if ( !dest_sk )
+    {
+        ERROR( "client packet forwarding "
+            "no destination found.cmd:%d",header->_cmd );
+        return;
+    }
+
+    size_t size = PACKET_LENGTH( header );
+    class buffer &send = dest_sk->send_buffer();
+    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
+    {
+        ERROR( "client packet forwarding,can not "
+            "reserved memory:%ld",int64(size + sizeof(struct s2s_header)) );
+        return;
+    }
+
     struct s2s_header s2sh;
     s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
-    s2sh._cmd    = static_cast<uint16>  ( srv_cmd );
-    s2sh._pid    = pid;
+    s2sh._cmd    = 0;
+    s2sh._mask   = PKT_CSPK;
+    s2sh._owner  = sk->get_owner();
 
-    _send.__append( &s2sh,sizeof(struct s2s_header) );
-    _send.__append( clt_recv.data(),len );
+    send.__append( &s2sh,sizeof(struct s2s_header) );
+    send.__append( header,size );
+
+    dest_sk->pending_send();
 }
 
 /* 解析客户端发往服务器的数据包 */
-void packet::parse_header( const char *buffer,const c2s_header *header )
+void packet::parse( const stream_socket *sk,const c2s_header *header )
 {
-    class lnetwork_mgr *network_mgr = lnetwork_mgr:instance();
+    class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
     const cmd_cfg_t *cmd_cfg = network_mgr->get_cmd_cfg( header->_cmd );
     if ( !cmd_cfg )
     {
@@ -37,17 +60,17 @@ void packet::parse_header( const char *buffer,const c2s_header *header )
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
     if ( cmd_cfg->_session != network_mgr->session() )
     {
-        forwarding( PKT_CSPK,buffer,PACKET_LENGTH( header ),cmd_cfg->_session );
+        clt_forwarding( sk,header,cmd_cfg->_session );
         return;
     }
 }
 
-void packet::parse_header( const char *buffer,const s2c_header *header )
+void packet::parse( const stream_socket *sk,const s2c_header *header )
 {
-    do_parse_header( buffer,header );
+    //do_parse( buffer,header );
 }
 
-void packet::parse_header( const char *buffer,const s2s_header *header )
+void packet::parse( const stream_socket *sk,const s2s_header *header )
 {
 
 }

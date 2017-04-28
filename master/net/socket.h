@@ -57,6 +57,7 @@ public:
     void stop ();
     void start( int32 fd = 0);
     int32 validate();
+    void pending_send();
 
     const char *address();
     int32 listen( const char *host,int32 port );
@@ -104,6 +105,8 @@ public:
     inline uint32 conn_id() { return _conn_id; }
     inline conn_t conn_type() { return _conn_ty; }
     inline bool active() const { return _w.is_active(); }
+    inline class buffer &recv_buffer() { return _recv; }
+    inline class buffer &send_buffer() { return _send; }
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }
 
@@ -114,8 +117,6 @@ protected:
     int32  _sending;
     uint32 _conn_id;
     conn_t _conn_ty;
-
-    void pending_send();
 private:
     ev_io _w;
 
