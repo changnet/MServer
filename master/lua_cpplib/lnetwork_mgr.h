@@ -53,6 +53,10 @@ public:
 
     /* 设置指令参数 */
     int32 set_cmd();
+    /* 设置(客户端)连接所有者 */
+    int32 set_owner();
+    /* 设置(服务器)连接session */
+    int32 set_session();
 
     /* 加载schema文件 */
     int32 load_schema();
@@ -67,8 +71,10 @@ public:
     int32 listen  ();
     int32 connect ();
 
-    /* 获取该连接所有者 */
+    /* 通过连接id查找所有者 */
     owner_t get_owner( uint32 conn_id );
+    /* 通过所有者查找连接id */
+    uint32 get_conn_id( owner_t owner );
 
     /* 通过session获取socket连接 */
     class socket *get_connection( int32 session );
@@ -98,7 +104,10 @@ private:
     socket_map_t _socket_map;
 
     std::vector<uint32> _deleting;/* 异步删除的socket */
-    map_t<owner_t,uint32> _owner_map; /* owner-conn_id 映射 */
+    /* owner-conn_id 映射,ssc数据包转发时需要 */
+    map_t<owner_t,uint32> _owner_map;
+    /* conn_id-owner 映射，css数据包转发时需要 */
+    map_t<uint32,owner_t> _conn_map;
     map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
     static class lnetwork_mgr *_network_mgr;
 };

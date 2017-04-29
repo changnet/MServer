@@ -236,10 +236,22 @@ const cmd_cfg_t *lnetwork_mgr::get_cmd_cfg( int32 cmd )
     return &(itr->second);
 }
 
-/* 获取该连接所有者 */
+/* 通过连接id查找所有者 */
 owner_t lnetwork_mgr::get_owner( uint32 conn_id )
 {
-    map_t<owner_t,uint32>::iterator itr = _owner_map.find( conn_id );
+    map_t<uint32,owner_t>::iterator itr = _conn_map.find( conn_id );
+    if ( itr == _conn_map.end() )
+    {
+        return 0;
+    }
+
+    return itr->second;
+}
+
+/* 通过所有者查找连接id */
+uint32 lnetwork_mgr::get_conn_id( owner_t owner )
+{
+    map_t<owner_t,uint32>::iterator itr = _owner_map.find( owner );
     if ( itr == _owner_map.end() )
     {
         return 0;
@@ -465,6 +477,63 @@ int32 lnetwork_mgr::send_s2c_packet()
         L,4,cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
 
     sk->pending_send();
+
+    return 0;
+}
+
+/* 设置(客户端)连接所有者 */
+int32 lnetwork_mgr::set_owner()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
+    owner_t owner  = luaL_checkinteger( L,2 );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"connnection not exist" );
+    }
+
+    const class socket *sk = itr->second;
+    if ( sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid connection" );
+    }
+
+    if ( socket::CNT_SCCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal connection type" );
+    }
+
+    _owner_map[owner]  = conn_id;
+    _conn_map[conn_id] = owner  ;
+
+    return 0;
+}
+
+/* 设置(服务器)连接session */
+int32 lnetwork_mgr::set_session()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
+    int32 session  = luaL_checkinteger( L,2 );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"connnection not exist" );
+    }
+
+    const class socket *sk = itr->second;
+    if ( sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid connection" );
+    }
+
+    if ( socket::CNT_SSCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal connection type" );
+    }
+
+    _session_map[session] = conn_id;
 
     return 0;
 }
