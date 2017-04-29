@@ -2,6 +2,7 @@
 
 #include "ltools.h"
 #include "lstate.h"
+#include "../net/packet.h"
 #include "../net/stream_socket.h"
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
@@ -167,6 +168,9 @@ bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
     return true;
 }
 
+/* 主动连接其他服务器
+ * network_mgr:connect( host,port,conn_type )
+ */
 int32 lnetwork_mgr::connect()
 {
     const char *host = luaL_checkstring( L,1 );
@@ -242,4 +246,15 @@ class socket *lnetwork_mgr::get_connection( int32 session )
     if ( sk_itr == _socket_map.end() ) return NULL;
 
     return sk_itr->second;
+}
+
+/* 加载schema文件 */
+int32 lnetwork_mgr::load_schema()
+{
+    const char *path = luaL_checkstring( L,1 );
+
+    int32 count = packet::instance()->load_schema( path );
+
+    lua_pushinteger( L,count );
+    return 1;
 }

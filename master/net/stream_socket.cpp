@@ -10,6 +10,7 @@ stream_socket::~stream_socket()
 stream_socket::stream_socket( uint32 conn_id,conn_t conn_ty )
     : socket( conn_id,conn_ty )
 {
+    _owner = 0;
 }
 
 void stream_socket::command_cb ()
@@ -98,17 +99,17 @@ void stream_socket::process_packet()
     {
         case CNT_CSCN : /* 解析服务器发往客户端的包 */
         {
-            packet::parse( this,
+            packet::instance()->parse( this,
                 reinterpret_cast<struct s2c_header *>( _recv.data() ) );
         }break;
         case CNT_SCCN : /* 解析客户端发往服务器的包 */
         {
-            packet::parse( this,
+            packet::instance()->parse( this,
                 reinterpret_cast<struct c2s_header *>( _recv.data() ) );
         }break;
         case CNT_SSCN : /* 解析服务器发往服务器的包 */
         {
-            packet::parse( this,
+            packet::instance()->parse( this,
                 reinterpret_cast<struct s2s_header *>( _recv.data() ) );
         }break;
         default : assert( "unknow socket connect type",false );return;

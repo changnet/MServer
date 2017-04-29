@@ -3,15 +3,19 @@
 
 /* 网络通信消息包头格式定义
  */
-
+#include <lflatbuffers.hpp>
+#include "../global/assert.h"
 #include "../global/global.h"
 
 /* 根据一个header指针获取整个packet的长度(包括_length本身) */
 #define PACKET_LENGTH( h ) (h->_length + sizeof(packet_length))
 
-/* 根据一个header和buff长度获取header的_length */
+/* 根据一个header和buff长度获取header的_length字段值 */
 #define PACKET_MAKE_LENGTH( h,l )   \
     static_cast<packet_length>(sizeof(h) + l - sizeof(packet_length))
+
+/* 根据一个header获取header后buffer的长度 */
+#define PACKET_BUFFER_LEN( h ) (h->_length - sizeof(h) + sizeof(packet_length))
 
 #pragma pack (push, 1)
 
@@ -64,19 +68,29 @@ public:
         PKT_MAXT       // max packet type
     } packet_t;
 public:
+    static void uninstance();
+    static class packet *instance();
+
+    /* 加载path目录下所有schema文件 */
+    int32 load_schema( const char *path );
+
     /* 外部解析接口 */
-    static void parse( const stream_socket *sk,const c2s_header *header );
-    static void parse( const stream_socket *sk,const s2c_header *header );
-    static void parse( const stream_socket *sk,const s2s_header *header );
+    void parse( const stream_socket *sk,const c2s_header *header );
+    void parse( const stream_socket *sk,const s2c_header *header );
+    void parse( const stream_socket *sk,const s2s_header *header );
 private:
+    void clt_command( const stream_socket *sk,const c2s_header *header );
     /* 内部解析接口，根据不同解析方式实现 */
-    static void do_parse( const stream_socket *sk,const c2s_header *header );
-    static void do_parse( const stream_socket *sk,const s2c_header *header );
-    static void do_parse( const stream_socket *sk,const s2s_header *header );
+    int32 do_parse( lua_State *L,const c2s_header *header );
+    void do_parse( const stream_socket *sk,const s2c_header *header );
+    void do_parse( const stream_socket *sk,const s2s_header *header );
 
     /* 转客户端数据包 */
-    static void clt_forwarding( 
+    void clt_forwarding( 
         const stream_socket *sk,const c2s_header *header,int32 session );
+private:
+    static class packet *_packet;
+    class lflatbuffers _lflatbuffers;
 };
 
 #endif /* __PACKET_H__ */

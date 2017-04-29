@@ -50,6 +50,9 @@ public:
     /* 设置指令参数 */
     int32 set_cmd();
 
+    /* 加载schema文件 */
+    int32 load_schema();
+
     int32 send ();
     int32 close();
     int32 address ();

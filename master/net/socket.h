@@ -102,8 +102,8 @@ public:
     }
 
     inline int32 fd() const { return _w.fd; }
-    inline uint32 conn_id() { return _conn_id; }
-    inline conn_t conn_type() { return _conn_ty; }
+    inline uint32 conn_id() const { return _conn_id; }
+    inline conn_t conn_type() const { return _conn_ty; }
     inline bool active() const { return _w.is_active(); }
     inline class buffer &recv_buffer() { return _recv; }
     inline class buffer &send_buffer() { return _send; }

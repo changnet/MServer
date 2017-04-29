@@ -12,6 +12,27 @@
     #error no header parse specify
 #endif
 
+class packet *packet::_packet = NULL;
+
+void packet::uninstance()
+{
+    if ( _packet )
+    {
+        delete _packet;
+    }
+    _packet = NULL;
+}
+
+class packet *packet::instance()
+{
+    if ( !_packet )
+    {
+        _packet = new class packet();
+    }
+
+    return _packet;
+}
+
 /* 转客户端数据包 */
 void packet::clt_forwarding( 
     const stream_socket *sk,const c2s_header *header,int32 session )
@@ -65,7 +86,7 @@ void packet::parse( const stream_socket *sk,const c2s_header *header )
     }
 
     /* 在当前进程处理 */
-    do_parse( sk,header );
+    clt_command( sk,header );
 }
 
 void packet::parse( const stream_socket *sk,const s2c_header *header )
@@ -76,4 +97,37 @@ void packet::parse( const stream_socket *sk,const s2c_header *header )
 void packet::parse( const stream_socket *sk,const s2s_header *header )
 {
 
+}
+
+int32 packet::load_schema( const char *path )
+{
+    return _lflatbuffers.load_bfbs_path( path );
+}
+
+/* 客户端数据包回调脚本 */
+void packet::clt_command( const stream_socket *sk,const c2s_header *header )
+{
+    lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal( L,"socket_command" );
+    lua_pushinteger( L,sk->conn_id() );
+    lua_pushinteger( L,sk->get_owner() );
+
+    int32 cnt = do_parse( L,header );
+    if ( cnt < 0 )
+    {
+        lua_pop( L,4 );
+        return;
+    }
+
+    if ( expect_false( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
+    {
+        ERROR( "clt_command:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
 }

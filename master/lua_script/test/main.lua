@@ -34,6 +34,8 @@ local function main()
     -- require "example.stream_performance"
     -- require "example.words_filter_performance"
 
+    local cnt = network_mgr:load_schema( "fbs" )
+    print( "load schema file:",cnt )
     network_mgr:listen( "127.0.0.1",9999,1 )
     network_mgr:connect( "127.0.0.1",9999,1 )
 
