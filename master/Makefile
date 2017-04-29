@@ -30,11 +30,11 @@ LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
 	-L./deps/lua_bson
 
 #link libaray
-SHARED_LIB = -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto \
+SHARED_LIB = -ldl -lrt -pthread -lsasl2 -lssl -lcrypto \
 	-lmongoc-1.0 -lbson-1.0
 
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
-	-lflatbuffers -llua_parson -llua_bson -luuid
+	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r
 
 #output directory
 ODIR = bin
