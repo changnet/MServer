@@ -10,7 +10,6 @@ stream_socket::~stream_socket()
 stream_socket::stream_socket( uint32 conn_id,conn_t conn_ty )
     : socket( conn_id,conn_ty )
 {
-    _owner = 0;
 }
 
 void stream_socket::command_cb ()
@@ -27,7 +26,8 @@ void stream_socket::command_cb ()
         /* 验证数据包是否完整有效 */
         if ( sz < data_len ) return;
 
-        process_packet(); /* 解析数据包 */
+        /* 解析数据包 */
+        lnetwork_mgr::instance()->command_new( _conn_id,_conn_ty,_recv );
 
         _recv.subtract( data_len ); /* 移除已处理的数据包 */
     }
@@ -88,30 +88,5 @@ void stream_socket::listen_cb  ()
 
         bool ok = network_mgr->accept_new( conn_id,new_sk );
         if ( ok ) new_sk->start( new_fd );
-    }
-}
-
-/* 解析数据包 */
-void stream_socket::process_packet()
-{
-    /* 不同的链接，数据包不一样 */
-    switch( _conn_ty )
-    {
-        case CNT_CSCN : /* 解析服务器发往客户端的包 */
-        {
-            packet::instance()->parse( this,
-                reinterpret_cast<struct s2c_header *>( _recv.data() ) );
-        }break;
-        case CNT_SCCN : /* 解析客户端发往服务器的包 */
-        {
-            packet::instance()->parse( this,
-                reinterpret_cast<struct c2s_header *>( _recv.data() ) );
-        }break;
-        case CNT_SSCN : /* 解析服务器发往服务器的包 */
-        {
-            packet::instance()->parse( this,
-                reinterpret_cast<struct s2s_header *>( _recv.data() ) );
-        }break;
-        default : assert( "unknow socket connect type",false );return;
     }
 }

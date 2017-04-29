@@ -51,7 +51,6 @@ struct s2s_header
 
 #pragma pack(pop)
 
-class stream_socket;
 class packet
 {
 public:
@@ -75,19 +74,8 @@ public:
     int32 load_schema( const char *path );
 
     /* 外部解析接口 */
-    void parse( const stream_socket *sk,const c2s_header *header );
-    void parse( const stream_socket *sk,const s2c_header *header );
-    void parse( const stream_socket *sk,const s2s_header *header );
-private:
-    void clt_command( const stream_socket *sk,const c2s_header *header );
-    /* 内部解析接口，根据不同解析方式实现 */
-    int32 do_parse( lua_State *L,const c2s_header *header );
-    void do_parse( const stream_socket *sk,const s2c_header *header );
-    void do_parse( const stream_socket *sk,const s2s_header *header );
-
-    /* 转客户端数据包 */
-    void clt_forwarding( 
-        const stream_socket *sk,const c2s_header *header,int32 session );
+    int32 parse( lua_State *L,
+        const char *schema,const char *object,const c2s_header *header );
 private:
     static class packet *_packet;
     class lflatbuffers _lflatbuffers;

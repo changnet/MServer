@@ -236,6 +236,18 @@ const cmd_cfg_t *lnetwork_mgr::get_cmd_cfg( int32 cmd )
     return &(itr->second);
 }
 
+/* 获取该连接所有者 */
+owner_t lnetwork_mgr::get_owner( uint32 conn_id )
+{
+    map_t<owner_t,uint32>::iterator itr = _owner_map.find( conn_id );
+    if ( itr == _owner_map.end() )
+    {
+        return 0;
+    }
+
+    return itr->second;
+}
+
 /* 通过session获取socket连接 */
 class socket *lnetwork_mgr::get_connection( int32 session )
 {
@@ -257,4 +269,173 @@ int32 lnetwork_mgr::load_schema()
 
     lua_pushinteger( L,count );
     return 1;
+}
+
+/* 新数据包 */
+void lnetwork_mgr::command_new( 
+    uint32 conn_id,socket::conn_t conn_ty,const buffer &recv )
+{
+    /* 不同的链接，数据包不一样 */
+    switch( conn_ty )
+    {
+        case socket::CNT_CSCN : /* 解析服务器发往客户端的包 */
+        {
+            process_command( conn_id,
+                reinterpret_cast<struct c2s_header *>( recv.data() ) );
+        }break;
+        case socket::CNT_SCCN : /* 解析客户端发往服务器的包 */
+        {
+        }break;
+        case socket::CNT_SSCN : /* 解析服务器发往服务器的包 */
+        {
+        }break;
+        default : assert( "unknow socket connect type",false );return;
+    }
+}
+
+void lnetwork_mgr::process_command( uint32 conn_id,const c2s_header *header )
+{
+    const cmd_cfg_t *cmd_cfg = get_cmd_cfg( header->_cmd );
+    if ( !cmd_cfg )
+    {
+        ERROR( "c2s cmd(%d) no cmd cfg found",header->_cmd );
+        return;
+    }
+
+    /* 这个指令不是在当前进程处理，自动转发到对应进程 */
+    if ( cmd_cfg->_session != session() )
+    {
+        clt_forwarding( conn_id,header,cmd_cfg->_session );
+        return;
+    }
+
+    /* 在当前进程处理 */
+    clt_command( conn_id,cmd_cfg->_schema,cmd_cfg->_object,header );
+}
+
+/* 转客户端数据包 */
+void lnetwork_mgr::clt_forwarding( 
+    uint32 conn_id,const c2s_header *header,int32 session )
+{
+    class socket *dest_sk  = get_connection( session );
+    if ( !dest_sk )
+    {
+        ERROR( "client packet forwarding "
+            "no destination found.cmd:%d",header->_cmd );
+        return;
+    }
+
+    size_t size = PACKET_LENGTH( header );
+    class buffer &send = dest_sk->send_buffer();
+    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
+    {
+        ERROR( "client packet forwarding,can not "
+            "reserved memory:%ld",int64(size + sizeof(struct s2s_header)) );
+        return;
+    }
+
+    struct s2s_header s2sh;
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
+    s2sh._cmd    = 0;
+    s2sh._mask   = packet::PKT_CSPK;
+    s2sh._owner  = get_owner( conn_id );
+
+    send.__append( &s2sh,sizeof(struct s2s_header) );
+    send.__append( header,size );
+
+    dest_sk->pending_send();
+}
+
+
+/* 客户端数据包回调脚本 */
+void lnetwork_mgr::clt_command( uint32 conn_id,
+    const char *schema,const char *object,const c2s_header *header )
+{
+    lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal( L,"socket_command" );
+    lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,get_owner( conn_id ) );
+
+    int32 cnt = packet::instance()->parse( L,schema,object,header );
+    if ( cnt < 0 )
+    {
+        lua_pop( L,4 );
+        return;
+    }
+
+    if ( expect_false( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
+    {
+        ERROR( "clt_command:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+}
+
+/* 发送c2s数据包
+ * network_mgr:send_c2s_packet( conn_id,cmd,pkt )
+ */
+int32 lnetwork_mgr::send_c2s_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    int32  cmd     = luaL_checkinteger( L,2 );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    cmd_map_t::iterator cmd_itr = _cmd_map.find( cmd );
+    if ( cmd_itr == _cmd_map.end() )
+    {
+        return luaL_error( L,"no command config found:%d",cmd );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_CSCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    //packet::instance()->send_c2s_packet( L,sk,&(cmd_itr->second),3 );
+
+/*
+    if ( _lflatbuffers.encode( L,cfg->_schema,cfg->_object,index ) < 0 )
+    {
+        return luaL_error( L,_lflatbuffers.last_error() );
+    }
+
+    size_t size = 0;
+    const char *buffer = _lflatbuffers.get_buffer( size );
+    if ( sz > MAX_PACKET_LEN )
+    {
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    class buffer &send = sk->send_buffer();
+    if ( !send.reserved( size + sizeof(struct c2s_header) ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    struct c2s_header c2sh;
+    c2sh._length = PACKET_MAKE_LENGTH( struct c2s_header,size );
+    c2sh._cmd    = static_cast<uint16>  ( cfg->_cmd );
+
+    send.__append( &c2sh,sizeof(struct c2s_header) );
+    send.__append( buffer,size );
+
+    sk->pending_send();
+*/
+    return 0;
 }

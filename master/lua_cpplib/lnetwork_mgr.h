@@ -3,6 +3,8 @@
 
 #include <lua.hpp>
 
+#include "../net/packet.h"
+#include "../net/socket.h"
 #include "../global/global.h"
 
 #include <vector>
@@ -20,16 +22,15 @@
  * 1bit: 解码方式:0 普通解码，1 unpack解码
  * 2bit: TODO:广播方式 ？？这个放到脚本
  */
-typedef struct
+struct cmd_cfg_t
 {
     int32 _cmd;
     int32 _mask;
     int32 _session;
     char _schema[MAX_SCHEMA_NAME];
     char _object[MAX_SCHEMA_NAME];
-} cmd_cfg_t;
+};
 
-class socket;
 class lnetwork_mgr
 {
 private:
@@ -46,6 +47,9 @@ public:
     bool connect_new( uint32 conn_id,int32 ecode );
     /* 新增连接 */
     bool accept_new( uint32 conn_id,class socket *new_sk );
+    /* 新数据包 */
+    void command_new( 
+        uint32 conn_id,socket::conn_t conn_ty,const buffer &recv );
 
     /* 设置指令参数 */
     int32 set_cmd();
@@ -53,11 +57,16 @@ public:
     /* 加载schema文件 */
     int32 load_schema();
 
-    int32 send ();
+    /* 发送c2s数据包 */
+    int32 send_c2s_packet();
+
     int32 close();
     int32 address ();
     int32 listen  ();
     int32 connect ();
+
+    /* 获取该连接所有者 */
+    owner_t get_owner( uint32 conn_id );
 
     /* 通过session获取socket连接 */
     class socket *get_connection( int32 session );
@@ -70,6 +79,13 @@ public:
     int32 session() { return _session; }
 private:
     void delete_socket( uint32 conn_id );
+    void process_command( uint32 conn_id,const c2s_header *header );
+    /* 转客户端数据包 */
+    void clt_forwarding( 
+        uint32 conn_id,const c2s_header *header,int32 session );
+    /* 客户端数据包回调脚本 */
+    void clt_command( uint32 conn_id,
+        const char *schema,const char *object,const c2s_header *header );
 private:
     lua_State *L;
 
@@ -80,6 +96,7 @@ private:
     socket_map_t _socket_map;
 
     std::vector<uint32> _deleting;/* 异步删除的socket */
+    map_t<owner_t,uint32> _owner_map; /* owner-conn_id 映射 */
     map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
     static class lnetwork_mgr *_network_mgr;
 };
