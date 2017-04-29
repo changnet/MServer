@@ -384,6 +384,12 @@ int32 lnetwork_mgr::send_c2s_packet()
     uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
     int32  cmd     = luaL_checkinteger( L,2 );
 
+    if ( !lua_istable( L,3 ) )
+    {
+        return luaL_error( L,
+            "argument #3 expect table,got %s",lua_typename( L,lua_type(L,3) ) );
+    }
+
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
     {
@@ -407,35 +413,58 @@ int32 lnetwork_mgr::send_c2s_packet()
         return luaL_error( L,"illegal socket connecte type" );
     }
 
-    //packet::instance()->send_c2s_packet( L,sk,&(cmd_itr->second),3 );
-
-/*
-    if ( _lflatbuffers.encode( L,cfg->_schema,cfg->_object,index ) < 0 )
-    {
-        return luaL_error( L,_lflatbuffers.last_error() );
-    }
-
-    size_t size = 0;
-    const char *buffer = _lflatbuffers.get_buffer( size );
-    if ( sz > MAX_PACKET_LEN )
-    {
-        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
-    }
-
-    class buffer &send = sk->send_buffer();
-    if ( !send.reserved( size + sizeof(struct c2s_header) ) )
-    {
-        return luaL_error( L,"can not reserved buffer" );
-    }
-
-    struct c2s_header c2sh;
-    c2sh._length = PACKET_MAKE_LENGTH( struct c2s_header,size );
-    c2sh._cmd    = static_cast<uint16>  ( cfg->_cmd );
-
-    send.__append( &c2sh,sizeof(struct c2s_header) );
-    send.__append( buffer,size );
+    const cmd_cfg_t &cfg = cmd_itr->second;
+    packet::instance()->unparse( 
+        L,3,cmd,cfg._schema,cfg._object,sk->send_buffer() );
 
     sk->pending_send();
-*/
+
+    return 0;
+}
+
+
+/* 发送s2c数据包
+ * network_mgr:send_s2c_packet( conn_id,cmd,errno,pkt )
+ */
+int32 lnetwork_mgr::send_s2c_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    int32 cmd      = luaL_checkinteger( L,2 );
+    int32 ecode    = luaL_checkinteger( L,3 );
+    if ( !lua_istable( L,4 ) )
+    {
+        return luaL_error( L,
+            "argument #4 expect table,got %s",lua_typename( L,lua_type(L,4) ) );
+    }
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    cmd_map_t::iterator cmd_itr = _cmd_map.find( cmd );
+    if ( cmd_itr == _cmd_map.end() )
+    {
+        return luaL_error( L,"no command config found:%d",cmd );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_CSCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    const cmd_cfg_t &cfg = cmd_itr->second;
+    packet::instance()->unparse( 
+        L,4,cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
+
+    sk->pending_send();
+
     return 0;
 }

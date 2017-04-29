@@ -31,3 +31,65 @@ int32 packet::parse( lua_State *L,
     return 1;
 }
 
+/* c2s打包接口 */
+int32 packet::unparse( lua_State *L,int32 index,
+    int32 cmd,const char *schema,const char *object,class buffer send )
+{
+    if ( _lflatbuffers.encode( L,schema,object,index ) < 0 )
+    {
+        return luaL_error( L,_lflatbuffers.last_error() );
+    }
+
+    size_t size = 0;
+    const char *buffer = _lflatbuffers.get_buffer( size );
+    if ( size > MAX_PACKET_LEN )
+    {
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    if ( !send.reserved( size + sizeof(struct c2s_header) ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    struct c2s_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct c2s_header,size );
+    hd._cmd    = static_cast<uint16>  ( cmd );
+
+    send.__append( &hd,sizeof(struct c2s_header) );
+    send.__append( buffer,size );
+
+    return 0;
+}
+
+/* s2c打包接口 */
+int32 packet::unparse( lua_State *L,int32 index,int32 cmd,
+    int32 ecode,const char *schema,const char *object,class buffer send )
+{
+    if ( _lflatbuffers.encode( L,schema,object,index ) < 0 )
+    {
+        return luaL_error( L,_lflatbuffers.last_error() );
+    }
+
+    size_t size = 0;
+    const char *buffer = _lflatbuffers.get_buffer( size );
+    if ( size > MAX_PACKET_LEN )
+    {
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    if ( !send.reserved( size + sizeof(struct s2c_header) ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    struct s2c_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
+    hd._cmd    = static_cast<uint16>  ( cmd );
+    hd._errno  = ecode;
+
+    send.__append( &hd,sizeof(struct s2c_header) );
+    send.__append( buffer,size );
+
+    return 0;
+}

@@ -59,6 +59,8 @@ public:
 
     /* 发送c2s数据包 */
     int32 send_c2s_packet();
+    /* 发送s2c数据包 */
+    int32 send_s2c_packet();
 
     int32 close();
     int32 address ();
