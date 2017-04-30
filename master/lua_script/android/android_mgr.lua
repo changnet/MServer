@@ -70,20 +70,20 @@ function cscn_connect_new( conn_id,ecode )
     android:on_connect()
 end
 
-function cscn_command_new( conn_id,cmd,errno,... )
+function sc_command_new( conn_id,cmd,errno,... )
     local android = android_mgr.conn[conn_id]
     if not android then
-        ELOG( "cscn_command_new no connect found" )
+        ELOG( "sc_command_new no connect found" )
     end
 
     local cfg = android_mgr.cmd[cmd]
     if not cfg then
-        ELOG( "cscn_command_new no such cmd:%d",cmd )
+        ELOG( "sc_command_new no such cmd:%d",cmd )
         return
     end
 
     if not cfg.handler then
-        ELOG( "cscn_command_new no handler found:%d",cmd )
+        ELOG( "sc_command_new no handler found:%d",cmd )
         return
     end
 

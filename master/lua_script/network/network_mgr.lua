@@ -158,7 +158,7 @@ function sscn_connect_new( conn_id,ecode )
 end
 
 -- 底层数据包回调
-function sscn_command_new( conn_id,session,cmd,errno,pkt )
+function ss_command_new( conn_id,session,cmd,errno,pkt )
     local conn = _network_mgr.srv_conn[conn_id]
     g_command_mgr:srv_dispatch( conn,cmd,pkt )
 end
@@ -184,9 +184,14 @@ function sccn_connect_del( conn_id )
 end
 
 -- 客户端数据包回调
-function sccn_command_new( conn_id,pid,cmd,... )
+function cs_command_new( conn_id,pid,cmd,... )
     local conn = _network_mgr.clt_conn[conn_id]
     g_command_mgr:clt_dispatch( conn,cmd,... )
+end
+
+-- 转发的客户端数据包
+function css_command_new( conn_id,pid,cmd,... )
+    print( "css_command_new",conn_id,pid,cmd,... )
 end
 
 return _network_mgr

@@ -23,15 +23,6 @@ const static char *CONNECT_EVENT[] =
     "http_connect_new", // CNT_HTTP
 };
 
-const static char *COMMAND_EVENT[] =
-{
-    NULL, // CNT_NONE
-    "cscn_command_new", // CNT_CSCN
-    "sccn_command_new", // CNT_SCCN
-    "sscn_command_new", // CNT_SSCN
-    "http_command_new", // CNT_HTTP
-};
-
 const static char *DELETE_EVENT[] =
 {
     NULL, // CNT_NONE
@@ -504,7 +495,7 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
                 ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
                 return;
             }
-            cs_command( conn_id,header->_owner,clt_cfg,clt_header );
+            cs_command( conn_id,header->_owner,clt_cfg,clt_header,true );
             return;
         }break;
         case packet::PKT_SSPK : break;// 服务器数据包放在后面处理
@@ -580,14 +571,14 @@ void lnetwork_mgr::clt_forwarding(
 }
 
 /* 数据包回调脚本 */
-void lnetwork_mgr::cs_command( uint32 conn_id,
-    owner_t owner,const cmd_cfg_t *cfg,const c2s_header *header )
+void lnetwork_mgr::cs_command( uint32 conn_id,owner_t owner,
+    const cmd_cfg_t *cfg,const c2s_header *header,bool forwarding )
 {
     lua_State *L = lstate::instance()->state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal( L,COMMAND_EVENT[socket::CNT_SCCN] );
+    lua_getglobal( L,forwarding ? "css_command_new" : "cs_command_new" );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,owner );
     lua_pushinteger( L,header->_cmd );
@@ -617,7 +608,7 @@ void lnetwork_mgr::sc_command(
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal( L,COMMAND_EVENT[socket::CNT_CSCN] );
+    lua_getglobal( L,"sc_command_new" );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
@@ -647,7 +638,7 @@ void lnetwork_mgr::ss_command(
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal( L,COMMAND_EVENT[socket::CNT_SSCN] );
+    lua_getglobal( L,"ss_command_new" );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,header->_owner );
     lua_pushinteger( L,header->_cmd );

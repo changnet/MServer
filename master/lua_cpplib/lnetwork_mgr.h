@@ -107,8 +107,8 @@ private:
     void clt_forwarding( 
         uint32 conn_id,const c2s_header *header,int32 session );
     /* 数据包回调脚本 */
-    void cs_command( uint32 conn_id,
-        owner_t owner,const cmd_cfg_t *cfg,const c2s_header *header );
+    void cs_command( uint32 conn_id,owner_t owner,
+        const cmd_cfg_t *cfg,const c2s_header *header,bool forwarding = false );
     void sc_command( uint32 conn_id,
         const cmd_cfg_t *cfg,const s2c_header *header );
     void ss_command( uint32 conn_id,
