@@ -43,10 +43,12 @@ public:
     ~lnetwork_mgr();
     explicit lnetwork_mgr( lua_State *L );
 
+    /* 连接断开 */
+    bool connect_del( uint32 conn_id,int32 conn_ty );
     /* 连接回调 */
-    bool connect_new( int32 conn_ty,uint32 conn_id,int32 ecode );
+    bool connect_new( uint32 conn_id,int32 conn_ty,int32 ecode );
     /* 新增连接 */
-    bool accept_new( int32 conn_ty,uint32 conn_id,class socket *new_sk );
+    bool accept_new( uint32 conn_id,int32 conn_ty,class socket *new_sk );
     /* 新数据包 */
     void command_new( 
         uint32 conn_id,socket::conn_t conn_ty,const buffer &recv );

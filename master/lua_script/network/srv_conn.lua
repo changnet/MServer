@@ -14,8 +14,8 @@ function Srv_conn:__init( conn_id )
 end
 
 -- 发送数据包
-function Srv_conn:send_pkt( cfg,ecode,pkt )
-    return network_mgr:send_s2s_packet( self.conn_id,cfg[1],ecode,pkt )
+function Srv_conn:send_pkt( cfg,pkt,ecode )
+    return network_mgr:send_s2s_packet( self.conn_id,cfg[1],ecode or 0,pkt )
 end
 
 -- timeout check
@@ -30,24 +30,10 @@ function Srv_conn:check( check_time )
     return 0
 end
 
--- 底层消息回调
-function Srv_conn:on_command()
-    self.beat = ev:time() -- 更新心跳
-
-    local cmd,pid = self.conn:srv_next()
-    while cmd do
-        xpcall( g_command_mgr.srv_dispatcher,
-            __G__TRACKBACK__, g_command_mgr, cmd, pid, self )
-
-        cmd,pid = self.conn:srv_next( cmd )
-    end
-end
-
 -- 认证成功
 function Srv_conn:authorized( session )
     self.auth = true
     self.session = session
-    self.conn:set_on_command( self.on_command )
 end
 
 -- 获取该连接名称

@@ -153,13 +153,23 @@ function sscn_connect_new( conn_id,ecode )
     local conn = _network_mgr.srv_conn[conn_id]
     PLOG( "server connect (%d) establish",conn_id)
 
-    conn:send_pkt( SS.SYS_SYN,0,g_command_mgr:command_pkt() )
+    conn:send_pkt( SS.SYS_SYN,g_command_mgr:command_pkt() )
 end
 
 -- 底层数据包回调
-function sscn_command_new( conn_id,session,pkt )
-    print( "sscn_command_new",conn_id,session,pkt )
-    vd( pkt )
+function sscn_command_new( conn_id,session,cmd,pkt )
+    local conn = _network_mgr.srv_conn[conn_id]
+    g_command_mgr:srv_dispatch( conn,cmd,pkt )
+end
+
+-- 底层连接断开回调
+function sscn_connect_del( conn_id )
+    local conn = _network_mgr.srv_conn[conn_id]
+
+    _network_mgr.srv[conn.session] = nil
+    _network_mgr.srv_conn[conn_id] = nil
+
+    PLOG( "%s connect del",conn:conn_name() )
 end
 
 return _network_mgr

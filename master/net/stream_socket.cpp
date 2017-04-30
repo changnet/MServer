@@ -17,11 +17,20 @@ void stream_socket::command_cb ()
     /* 在回调脚本时，可能被脚本关闭当前socket，这时就不要再处理数据了 */
 
     int32 ret = socket::recv();
-    if ( 0 == ret )  /* 主动断开 */
+    if ( 0 == ret )  /* 对方主动断开 */
     {
+        socket::stop();
+        lnetwork_mgr::instance()->connect_del( _conn_id,_conn_ty );
     }
     else if ( 0 > ret ) /* 出错 */
     {
+        if ( EAGAIN != errno && EWOULDBLOCK != errno )
+        {
+            socket::stop();
+            ERROR( "stream socket recv error:%s\n",strerror(errno) );
+            lnetwork_mgr::instance()->connect_del( _conn_id,_conn_ty );
+        }
+        return;
     }
 
     while ( fd() > 0 )
@@ -67,7 +76,7 @@ void stream_socket::connect_cb ()
 
     /* 连接失败或回调脚本失败,都会被lnetwork_mgr删除 */
     bool is_ok = 
-        lnetwork_mgr::instance()->connect_new( _conn_ty,_conn_id,ecode );
+        lnetwork_mgr::instance()->connect_new( _conn_id,_conn_ty,ecode );
 
     if ( !is_ok || 0 != ecode ) socket::stop ();
 }
@@ -97,7 +106,7 @@ void stream_socket::listen_cb  ()
         /* 新增的连接和监听的连接类型必须一样 */
         class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
 
-        bool ok = network_mgr->accept_new( _conn_ty,conn_id,new_sk );
+        bool ok = network_mgr->accept_new( conn_id,_conn_ty,new_sk );
         if ( ok ) new_sk->start( new_fd );
     }
 }

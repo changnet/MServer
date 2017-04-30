@@ -55,7 +55,6 @@ function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
     cfg.noreg    = noreg
     cfg.nounpack = nounpack
 
-    print( "set srv cmd",cfg[1],cfg[2],cfg[3],0,SESSION )
     network_mgr:set_srv_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
 end
 
@@ -75,10 +74,26 @@ function Command_mgr:command_pkt()
 
     return pkt
 end
--- ===========================================================================
+
+-- 发分服务器协议
+function Command_mgr:srv_dispatch( srv_conn,cmd,... )
+    local cfg = self.ss[cmd]
+
+    local handler = cfg.handler
+    if not cfg.handler then
+        return ELOG( "srv_dispatch:cmd [%d] no handle function found",cmd )
+    end
+
+    if not srv_conn.auth and not cfg.noauth then
+        return ELOG( "clt_dispatch:try to call auth cmd [%d]",cmd )
+    end
+
+    return handler( srv_conn,... )
+end
+
 -- 分发协议
 -- @owner 为连接对象，连接产生时一定存在
-function Command_mgr:clt_dispatch( owner,... )
+function Command_mgr:clt_dispatch( clt_conn,cmd,... )
     local cfg = self.cs[cmd]
 
     local handler = cfg.handler
@@ -86,11 +101,11 @@ function Command_mgr:clt_dispatch( owner,... )
         return ELOG( "clt_dispatch:cmd [%d] no handle function found",cmd )
     end
 
-    if not owner:auth() and not cfg.noauth then
+    if not clt_conn.auth and not cfg.noauth then
         return ELOG( "clt_dispatch:try to call auth cmd [%d]",cmd )
     end
 
-    return handler( owner,... )
+    return handler( clt_conn,... )
 end
 
 -- 获取当前进程处理的客户端指令
@@ -119,7 +134,7 @@ function Command_mgr:rpc_cmd()
 end
 
 -- 服务器注册
-function Command_mgr:do_srv_register( srv_conn,pkt )
+function Command_mgr:command_register( srv_conn,pkt )
     local session = pkt.session
 
     -- 记录该服务器所处理的cs指令
@@ -129,6 +144,7 @@ function Command_mgr:do_srv_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register clt cmd register conflict" )
 
         _cfg.session = session
+        network_mgr:set_clt_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
     end
 
     -- 记录该服务器所处理的ss指令
@@ -138,6 +154,7 @@ function Command_mgr:do_srv_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register srv cmd register conflict" )
 
         _cfg.session = session
+        network_mgr:set_srv_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
     end
 
     -- 记录该服务器所处理的rpc指令

@@ -8,12 +8,12 @@ local g_rpc = g_rpc
 -- 收到另一个服务器主动同步
 local function srv_syn( srv_conn,pkt )
     if not g_network_mgr:srv_register( srv_conn,pkt ) then return false end
-    if not g_command_mgr:do_srv_register( srv_conn,pkt  ) then return false end
+    if not g_command_mgr:command_register( srv_conn,pkt  ) then return false end
 
     srv_conn:authorized( pkt.session )
 
-    local _pkt = g_network_mgr:register_pkt( g_command_mgr )
-    g_command_mgr:srv_send( srv_conn,SS.SYS_ACK,_pkt )
+    local _pkt = g_command_mgr:command_pkt()
+    srv_conn:send_pkt( SS.SYS_ACK,_pkt )
 
     PLOG( "%s register succes",srv_conn:conn_name() )
 
@@ -23,7 +23,7 @@ end
 -- 自己主动同步对方，对方服务器返回同步信息
 local function srv_ack( srv_conn,pkt )
     if not g_network_mgr:srv_register( srv_conn,pkt ) then return false end
-    if not g_command_mgr:do_srv_register( srv_conn,pkt  ) then return false end
+    if not g_command_mgr:command_register( srv_conn,pkt  ) then return false end
 
     srv_conn:authorized( pkt.session )
 

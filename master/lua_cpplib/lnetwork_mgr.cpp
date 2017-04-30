@@ -32,6 +32,15 @@ const static char *COMMAND_EVENT[] =
     "http_command_new", // CNT_HTTP
 };
 
+const static char *DELETE_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_connect_del", // CNT_CSCN
+    "sccn_connect_del", // CNT_SCCN
+    "sscn_connect_del", // CNT_SSCN
+    "http_connect_del", // CNT_HTTP
+};
+
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
@@ -203,7 +212,7 @@ int32 lnetwork_mgr::listen()
 
 /* 新增连接 */
 bool lnetwork_mgr::accept_new( 
-    int32 conn_ty,uint32 conn_id,class socket *new_sk )
+    uint32 conn_id,int32 conn_ty,class socket *new_sk )
 {
     lua_pushcfunction( L,traceback );
 
@@ -264,7 +273,7 @@ int32 lnetwork_mgr::connect()
 }
 
 /* 连接回调 */
-bool lnetwork_mgr::connect_new( int32 conn_ty,uint32 conn_id,int32 ecode )
+bool lnetwork_mgr::connect_new( uint32 conn_id,int32 conn_ty,int32 ecode )
 {
     lua_pushcfunction( L,traceback );
 
@@ -286,6 +295,29 @@ bool lnetwork_mgr::connect_new( int32 conn_ty,uint32 conn_id,int32 ecode )
     lua_pop( L,1 ); /* remove traceback */
 
     if ( 0 != ecode ) _deleting.push_back( conn_id );
+
+    return true;
+}
+
+
+/* 断开回调 */
+bool lnetwork_mgr::connect_del( uint32 conn_id,int32 conn_ty )
+{
+    _deleting.push_back( conn_id );
+
+    lua_pushcfunction( L,traceback );
+
+    lua_getglobal( L,DELETE_EVENT[conn_ty] );
+    lua_pushinteger( L,conn_id );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
+    {
+        ERROR( "connect_del:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
+        return   false;
+    }
+    lua_pop( L,1 ); /* remove traceback */
 
     return true;
 }
@@ -514,6 +546,7 @@ void lnetwork_mgr::invoke_command( uint32 conn_id,
     lua_getglobal( L,COMMAND_EVENT[conn_ty] );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,owner );
+    lua_pushinteger( L,header->_cmd );
 
     int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
@@ -522,7 +555,7 @@ void lnetwork_mgr::invoke_command( uint32 conn_id,
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,2 + cnt,0,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
     {
         ERROR( "invoke_command:%s",lua_tostring( L,-1 ) );
 
