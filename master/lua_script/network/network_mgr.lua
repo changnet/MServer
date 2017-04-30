@@ -81,6 +81,7 @@ function Network_mgr:srv_register( conn,pkt )
     end
 
     self.srv[pkt.session] = conn
+    network_mgr:set_session( conn.conn_id,pkt.session )
     return true
 end
 
@@ -104,10 +105,12 @@ function Network_mgr:get_srv_conn( session )
 end
 
 -- 设置客户端连接
-function Network_mgr:set_clt_conn( pid,clt_conn )
+function Network_mgr:bind_role( pid,clt_conn )
     assert( "player already have a conn",nil == self.clt[pid] )
 
+    clt_conn:bind_role( pid )
     self.clt[pid] = clt_conn
+    network_mgr:set_owner( clt_conn.conn_id,pid )
 end
 
 -- 获取客户端连接
@@ -164,7 +167,7 @@ end
 function sscn_connect_del( conn_id )
     local conn = _network_mgr.srv_conn[conn_id]
 
-    _network_mgr.srv[conn.session] = nil
+    if conn.session then _network_mgr.srv[conn.session] = nil end
     _network_mgr.srv_conn[conn_id] = nil
 
     PLOG( "%s connect del",conn:conn_name() )

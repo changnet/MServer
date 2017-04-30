@@ -66,8 +66,7 @@ function Account_mgr.player_login( self )
 
         clt_conn:authorized()
         if role_info.pid then
-            clt_conn:bind_role( role_info.pid )
-            g_network_mgr:set_clt_conn( role_info.pid,clt_conn )
+            g_network_mgr:bind_role( role_info.pid,clt_conn )
         end
 
         -- 返回角色信息(如果没有角色，则pid和name都为nil)
@@ -100,8 +99,7 @@ function Account_mgr.create_role( self )
 
         role_info.pid  = pid
         role_info.name = pkt.name
-        clt_conn:bind_role( pid )
-        g_network_mgr:set_clt_conn( pid,clt_conn )
+        g_network_mgr:bind_role( pid,clt_conn )
 
         clt_conn:send_pkt( SC.PLAYER_CREATE,role_info )
     end

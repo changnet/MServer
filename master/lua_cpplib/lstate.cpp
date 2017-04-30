@@ -308,6 +308,9 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::load_schema> ( "load_schema" );
     lc.def<&lnetwork_mgr::set_curr_session> ( "set_curr_session" );
 
+    lc.def<&lnetwork_mgr::set_session> ( "set_session" );
+    lc.def<&lnetwork_mgr::set_owner>   ( "set_owner"   );
+
     lc.def<&lnetwork_mgr::set_cs_cmd> ( "set_cs_cmd" );
     lc.def<&lnetwork_mgr::set_ss_cmd> ( "set_ss_cmd" );
     lc.def<&lnetwork_mgr::set_sc_cmd> ( "set_sc_cmd" );

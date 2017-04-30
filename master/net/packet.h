@@ -14,8 +14,8 @@
 #define PACKET_MAKE_LENGTH( h,l )   \
     static_cast<packet_length>(sizeof(h) + l - sizeof(packet_length))
 
-/* 根据一个header获取header后buffer的长度 */
-#define PACKET_BUFFER_LEN( h ) (h->_length - sizeof(h) + sizeof(packet_length))
+/* 根据一个header指针获取header后buffer的长度 */
+#define PACKET_BUFFER_LEN( h ) (h->_length - sizeof(*h) + sizeof(packet_length))
 
 #pragma pack (push, 1)
 

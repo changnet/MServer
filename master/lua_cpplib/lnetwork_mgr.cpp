@@ -491,6 +491,31 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2c_header *header )
 /* 处理服务器之间数据包 */
 void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
 {
+    /* 先判断数据包类型 */
+    switch ( header->_mask )
+    {
+        case packet::PKT_CSPK : // 网关转发的客户端包
+        {
+            const struct c2s_header *clt_header = 
+                reinterpret_cast<const struct c2s_header *>( header + 1 );
+            const cmd_cfg_t *clt_cfg = get_cs_cmd( clt_header->_cmd );
+            if ( !clt_cfg )
+            {
+                ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
+                return;
+            }
+            cs_command( conn_id,header->_owner,clt_cfg,clt_header );
+            return;
+        }break;
+        case packet::PKT_SSPK : break;// 服务器数据包放在后面处理
+        default :
+        {
+            ERROR( "unknow server packet:"
+                "cmd %d,mask %d",header->_cmd,header->_mask );
+            return;
+        }
+    }
+
     const cmd_cfg_t *cmd_cfg = get_ss_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
@@ -518,32 +543,7 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
         return;
     }
 
-    /* 在当前进程处理 */
-    switch ( header->_mask )
-    {
-        case packet::PKT_CSPK : // 网关转发的客户端包
-        {
-            const struct c2s_header *clt_header = 
-                reinterpret_cast<const struct c2s_header *>( header + 1 );
-            const cmd_cfg_t *clt_cfg = get_cs_cmd( clt_header->_cmd );
-            if ( !cmd_cfg )
-            {
-                ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
-                return;
-            }
-            cs_command( conn_id,header->_owner,clt_cfg,clt_header );
-        }break;
-        case packet::PKT_SSPK : // 服务器数据包
-        {
-            ss_command( conn_id,cmd_cfg,header );
-        }break;
-        default :
-        {
-            ERROR( "unknow server packet:"
-                "cmd %d,mask %d",header->_cmd,header->_mask );
-            return;
-        }
-    }
+    ss_command( conn_id,cmd_cfg,header );
 }
 
 /* 转客户端数据包 */
@@ -595,7 +595,7 @@ void lnetwork_mgr::cs_command( uint32 conn_id,
     int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
     {
-        lua_pop( L,4 );
+        lua_pop( L,5 );
         return;
     }
 
@@ -625,7 +625,7 @@ void lnetwork_mgr::sc_command(
     int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
     {
-        lua_pop( L,4 );
+        lua_pop( L,5 );
         return;
     }
 
@@ -656,7 +656,7 @@ void lnetwork_mgr::ss_command(
     int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
     {
-        lua_pop( L,4 );
+        lua_pop( L,6 );
         return;
     }
 
