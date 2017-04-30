@@ -44,7 +44,7 @@ public:
     explicit lnetwork_mgr( lua_State *L );
 
     /* 连接回调 */
-    bool connect_new( uint32 conn_id,int32 ecode );
+    bool connect_new( int32 conn_ty,uint32 conn_id,int32 ecode );
     /* 新增连接 */
     bool accept_new( int32 conn_ty,uint32 conn_id,class socket *new_sk );
     /* 新数据包 */
@@ -57,6 +57,8 @@ public:
     int32 set_owner();
     /* 设置(服务器)连接session */
     int32 set_session();
+    /* 设置当前服务器的session */
+    int32 set_curr_session();
 
     /* 加载schema文件 */
     int32 load_schema();
@@ -65,6 +67,8 @@ public:
     int32 send_c2s_packet();
     /* 发送s2c数据包 */
     int32 send_s2c_packet();
+    /* 发送s2s数据包 */
+    int32 send_s2s_packet();
 
     int32 close();
     int32 address ();
@@ -81,10 +85,12 @@ public:
 
     /* 获取connect_id */
     uint32 generate_connect_id();
+    /* 通过conn_id获取session */
+    int32 get_session( uint32 conn_id );
     /* 获取指令配置 */
     const cmd_cfg_t *get_cmd_cfg( int32 cmd );
     /* 获取当前服务器session */
-    int32 session() { return _session; }
+    int32 curr_session() { return _session; }
 private:
     void delete_socket( uint32 conn_id );
     void process_command( uint32 conn_id,const c2s_header *header );
@@ -107,8 +113,10 @@ private:
     /* owner-conn_id 映射,ssc数据包转发时需要 */
     map_t<owner_t,uint32> _owner_map;
     /* conn_id-owner 映射，css数据包转发时需要 */
-    map_t<uint32,owner_t> _conn_map;
+    map_t<uint32,owner_t> _conn_owner_map;
+
     map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
+    map_t<uint32,owner_t> _conn_session_map; /* conn_id-session 映射 */
     static class lnetwork_mgr *_network_mgr;
 };
 

@@ -307,8 +307,11 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::listen> ( "listen" );
     lc.def<&lnetwork_mgr::connect> ( "connect" );
     lc.def<&lnetwork_mgr::load_schema> ( "load_schema" );
+    lc.def<&lnetwork_mgr::set_curr_session> ( "set_curr_session" );
+
     lc.def<&lnetwork_mgr::send_c2s_packet> ( "send_c2s_packet" );
     lc.def<&lnetwork_mgr::send_s2c_packet> ( "send_s2c_packet" );
+    lc.def<&lnetwork_mgr::send_s2s_packet> ( "send_s2s_packet" );
 
     lc.set( "CNT_NONE",socket::CNT_NONE );
     lc.set( "CNT_CSCN",socket::CNT_CSCN );

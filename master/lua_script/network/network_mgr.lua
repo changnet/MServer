@@ -41,22 +41,6 @@ function Network_mgr:clt_listen( ip,port )
     return true
 end
 
--- 底层accept回调
-function sscn_accept_new( conn_id )
-    local conn = Srv_conn( conn_id )
-    self.srv_conn[conn_id] = conn
-
-    PLOG( "accept server connection:%d",conn_id )
-end
-
--- 底层accept回调
-function sccn_accept_new( conn_id )
-    local conn = Clt_conn( conn_id )
-    self.clt_conn[conn_id] = conn
-
-    PLOG( "accept client connection:%d",conn_id )
-end
-
 -- 主动连接其他服务器
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
@@ -68,31 +52,7 @@ function Network_mgr:connect_srv( srvs )
     end
 end
 
--- 服务器断开
-function Network_mgr:srv_disconnect( srv_conn )
-    srv_conn:close()
-    self.srv_conn[srv_conn.conn_id] = nil
-    self.srv[srv_conn.session] = nil
-
-    PLOG( "%s disconnect",srv_conn:conn_name() )
-end
-
--- 客户端断开
-function Network_mgr:clt_disconnect( clt_conn )
-    local pid     = clt_conn.pid
-
-    PLOG( "clt_disconnect,pid %d",pid or 0 )
-
-    g_account_mgr:role_offline( clt_conn.conn_id )
-
-    self:clt_close( clt_conn )
-    if pid then
-        -- 通知其他服务器玩家下线
-        local pkt = { pid = pid }
-        g_command_mgr:srv_broadcast( SS.PLAYER_OFFLINE,pkt )
-    end
-
-end
+-- ============================================================================
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
 function Network_mgr:clt_close( clt_conn )
@@ -100,21 +60,6 @@ function Network_mgr:clt_close( clt_conn )
     if pid then self.clt[clt_conn.pid] = nil end
 
     clt_conn:close()
-end
-
--- 服务器连接回调
-function Network_mgr:srv_connected( srv_conn,errno )
-    if 0 ~= errno then
-        srv_conn:close()
-        self.srv_conn[srv_conn.conn_id] = nil
-        self.srv[srv_conn.session] = nil
-        PLOG( "server connect(%s:%d) fail:%s",
-            srv_conn.ip,srv_conn.port,util.what_error( errno ) )
-
-        return
-    end
-
-    PLOG( "server connect(%s:%d) establish",srv_conn.ip,srv_conn.port )
 end
 
 -- 服务器认证
@@ -160,16 +105,16 @@ end
 
 -- 定时器回调
 function Network_mgr:do_timer()
-    local check_time = ev:time() - SRV_ALIVE_INTERVAL
-    for conn_id,srv_conn in pairs( self.srv_conn ) do
-        local ts = srv_conn:check( check_time )
-        if ts > SRV_ALIVE_TIMES then
-            -- timeout
-            PLOG( "%s server timeout",srv_conn:conn_name() )
-        elseif ts > 0 then
-            g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = true} )
-        end
-    end
+    -- local check_time = ev:time() - SRV_ALIVE_INTERVAL
+    -- for conn_id,srv_conn in pairs( self.srv_conn ) do
+    --     local ts = srv_conn:check( check_time )
+    --     if ts > SRV_ALIVE_TIMES then
+    --         -- timeout
+    --         PLOG( "%s server timeout",srv_conn:conn_name() )
+    --     elseif ts > 0 then
+    --         g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = true} )
+    --     end
+    -- end
 end
 
 -- 获取服务器连接
@@ -194,6 +139,36 @@ function Network_mgr:get_conn( conn_id )
     return self.clt_conn[conn_id] or self.srv_conn[conn_id]
 end
 
-local network_mgr = Network_mgr()
+-- ============================================================================
 
-return network_mgr
+local _network_mgr = Network_mgr()
+
+-- 底层accept回调
+function sscn_accept_new( conn_id )
+    local conn = Srv_conn( conn_id )
+    _network_mgr.srv_conn[conn_id] = conn
+
+    PLOG( "accept server connection:%d",conn_id )
+end
+
+-- 底层accept回调
+function sccn_accept_new( conn_id )
+    local conn = Clt_conn( conn_id )
+    _network_mgr.clt_conn[conn_id] = conn
+
+    PLOG( "accept client connection:%d",conn_id )
+end
+
+-- 底层connect回调
+function sscn_connect_new( conn_id,ecode )
+    if 0 ~= ecode then
+        PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) );
+        _network_mgr.srv_conn[conn_id] = nil
+        return
+    end
+
+    local conn = _network_mgr.srv_conn[conn_id]
+    PLOG( "server connect (%d) establish",conn_id);
+end
+
+return _network_mgr

@@ -3,6 +3,7 @@
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 
+local network_mgr = network_mgr
 local Srv_conn = oo.class( nil,... )
 
 function Srv_conn:__init( conn_id )
@@ -10,6 +11,11 @@ function Srv_conn:__init( conn_id )
     self.beat = 0
     self.fchk = 0 -- fail check
     self.conn_id = conn_id
+end
+
+-- 发送数据包
+function Srv_conn:send_pkt( cfg,pkt )
+    return network_mgr:send_s2s_packet( self.conn_id,cfg[1],pkt )
 end
 
 -- timeout check
@@ -24,21 +30,6 @@ function Srv_conn:check( check_time )
     return 0
 end
 
--- close
-function Srv_conn:close()
-    -- self.conn:kill() -- if socket still active
-    self.conn = nil -- release ref,so socket can be gc
-end
-
--- 主动发起链接
-function Srv_conn:connect( ip,port )
-    self.ip   = ip
-    self.port = port
-
-    return self.conn:connect( ip,port )
-end
-
-
 -- 底层消息回调
 function Srv_conn:on_command()
     self.beat = ev:time() -- 更新心跳
@@ -50,21 +41,6 @@ function Srv_conn:on_command()
 
         cmd,pid = self.conn:srv_next( cmd )
     end
-end
-
--- 断开回调
-function Srv_conn:on_disconnected()
-    return g_network_mgr:srv_disconnect( self )
-end
-
--- connect回调
-function Srv_conn:on_connected( errno )
-    g_network_mgr:srv_connected( self,errno )
-
-    if 0 ~=  errno then return end
-
-    local pkt = g_network_mgr:register_pkt( g_command_mgr )
-    g_command_mgr:srv_send( self,SS.SYS_SYN,pkt )
 end
 
 -- 认证成功

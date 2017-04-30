@@ -46,7 +46,7 @@ struct s2s_header
     uint16  _cmd   ; /* 8bit模块号,8bit功能号 */
     uint16  _errno ; /* 错误码 */
     owner_t _owner ; /* 当前数据包所属id，通常为玩家id */
-    uint16  _mask  ; /* 功能掩码 */
+    uint16  _mask  ; /* 功能掩码，用于标识转发、广播，见packet_t */
 };
 
 #pragma pack(pop)
@@ -77,10 +77,13 @@ public:
     int32 parse( lua_State *L,
         const char *schema,const char *object,const c2s_header *header );
     /* c2s打包接口 */
-    int32 unparse( lua_State *L,int32 index,
+    int32 unparse_c2s( lua_State *L,int32 index,
         int32 cmd,const char *schema,const char *object,class buffer send );
-    /* s2x打包接口 */
-    int32 unparse( lua_State *L,int32 index,int32 cmd,
+    /* s2c打包接口 */
+    int32 unparse_s2c( lua_State *L,int32 index,int32 cmd,
+        int32 ecode,const char *schema,const char *object,class buffer send );
+    /* s2s打包接口 */
+    int32 unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
         int32 ecode,const char *schema,const char *object,class buffer send );
 private:
     static class packet *_packet;

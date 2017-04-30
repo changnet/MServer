@@ -48,7 +48,7 @@ void stream_socket::connect_cb ()
 {
     int32 ecode = socket::validate();
 
-    bool ok = lnetwork_mgr::instance()->connect_new( _conn_id,ecode );
+    bool ok = lnetwork_mgr::instance()->connect_new( _conn_ty,_conn_id,ecode );
     if ( 0 != ecode || !ok )  /* 连接失败或回调脚本失败 */
     {
         socket::stop();

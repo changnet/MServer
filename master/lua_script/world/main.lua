@@ -57,6 +57,7 @@ end
 
 function Main.init()
     Main.starttime = ev:time()
+    network_mgr:set_curr_session( Main.session )
 
     local fs = g_command_mgr:load_schema()
     PLOG( "world load flatbuffers schema:%d",fs )

@@ -14,6 +14,15 @@ const static char *ACCEPT_EVENT[] =
     "http_accept_new", // CNT_HTTP
 };
 
+const static char *CONNECT_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_connect_new", // CNT_CSCN
+    "sccn_connect_new", // CNT_SCCN
+    "sscn_connect_new", // CNT_SSCN
+    "http_connect_new", // CNT_HTTP
+};
+
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
@@ -46,10 +55,11 @@ lnetwork_mgr::~lnetwork_mgr()
         delete sk;
     }
 
-    _conn_map.clear();
     _owner_map.clear();
     _socket_map.clear();
     _session_map.clear();
+    _conn_owner_map.clear();
+    _conn_session_map.clear();
 }
 
 lnetwork_mgr::lnetwork_mgr( lua_State *L )
@@ -224,11 +234,11 @@ int32 lnetwork_mgr::connect()
 }
 
 /* 连接回调 */
-bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
+bool lnetwork_mgr::connect_new( int32 conn_ty,uint32 conn_id,int32 ecode )
 {
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,"socket_connect" );
+    lua_getglobal( L,CONNECT_EVENT[conn_ty] );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,ecode   );
 
@@ -238,7 +248,7 @@ bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
          * 为了防止死链，这里直接删除此连接
          */
         _deleting.push_back( conn_id );
-        ERROR( "connect_cb:%s",lua_tostring( L,-1 ) );
+        ERROR( "connect_new:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,1 ); /* remove traceback and error object */
         return   false;
@@ -260,8 +270,8 @@ const cmd_cfg_t *lnetwork_mgr::get_cmd_cfg( int32 cmd )
 /* 通过连接id查找所有者 */
 owner_t lnetwork_mgr::get_owner( uint32 conn_id )
 {
-    map_t<uint32,owner_t>::iterator itr = _conn_map.find( conn_id );
-    if ( itr == _conn_map.end() )
+    map_t<uint32,owner_t>::iterator itr = _conn_owner_map.find( conn_id );
+    if ( itr == _conn_owner_map.end() )
     {
         return 0;
     }
@@ -291,6 +301,15 @@ class socket *lnetwork_mgr::get_connection( int32 session )
     if ( sk_itr == _socket_map.end() ) return NULL;
 
     return sk_itr->second;
+}
+
+/* 通过conn_id获取session */
+int32 lnetwork_mgr::get_session( uint32 conn_id )
+{
+    map_t<uint32,int32>::iterator itr = _conn_session_map.find( conn_id );
+    if ( itr == _conn_session_map.end() ) return 0;
+
+    return itr->second;
 }
 
 /* 加载schema文件 */
@@ -336,7 +355,7 @@ void lnetwork_mgr::process_command( uint32 conn_id,const c2s_header *header )
     }
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if ( cmd_cfg->_session != session() )
+    if ( cmd_cfg->_session != curr_session() )
     {
         clt_forwarding( conn_id,header,cmd_cfg->_session );
         return;
@@ -447,7 +466,7 @@ int32 lnetwork_mgr::send_c2s_packet()
     }
 
     const cmd_cfg_t &cfg = cmd_itr->second;
-    packet::instance()->unparse( 
+    packet::instance()->unparse_c2s( 
         L,3,cmd,cfg._schema,cfg._object,sk->send_buffer() );
 
     sk->pending_send();
@@ -494,7 +513,7 @@ int32 lnetwork_mgr::send_s2c_packet()
     }
 
     const cmd_cfg_t &cfg = cmd_itr->second;
-    packet::instance()->unparse( 
+    packet::instance()->unparse_s2c( 
         L,4,cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
 
     sk->pending_send();
@@ -526,7 +545,7 @@ int32 lnetwork_mgr::set_owner()
     }
 
     _owner_map[owner]  = conn_id;
-    _conn_map[conn_id] = owner  ;
+    _conn_owner_map[conn_id] = owner;
 
     return 0;
 }
@@ -555,6 +574,62 @@ int32 lnetwork_mgr::set_session()
     }
 
     _session_map[session] = conn_id;
+    _conn_session_map[conn_id] = session;
 
+    return 0;
+}
+
+/* 发送s2s数据包
+ * network_mgr:send_s2s_packet( conn_id,session,cmd,errno,pkt )
+ */
+int32 lnetwork_mgr::send_s2s_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    int32 cmd      = luaL_checkinteger( L,2 );
+    int32 ecode    = luaL_checkinteger( L,3 );
+
+    int32 pkt_index = 4;
+    if ( !lua_istable( L,pkt_index ) )
+    {
+        return luaL_error( L,"argument #%d expect table,got %s",
+            pkt_index,lua_typename( L,lua_type(L,pkt_index) ) );
+    }
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    cmd_map_t::iterator cmd_itr = _cmd_map.find( cmd );
+    if ( cmd_itr == _cmd_map.end() )
+    {
+        return luaL_error( L,"no command config found:%d",cmd );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_SSCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    const cmd_cfg_t &cfg = cmd_itr->second;
+    packet::instance()->unparse_s2s( L,pkt_index,_session,
+        cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
+
+    sk->pending_send();
+
+    return 0;
+}
+
+/* 设置当前进程的session */
+int32 lnetwork_mgr::set_curr_session()
+{
+    _session = luaL_checkinteger( L,1 );
     return 0;
 }
