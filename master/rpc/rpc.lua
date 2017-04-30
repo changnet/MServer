@@ -1,8 +1,5 @@
 -- rpc client and server
 
-local RPC_REQ = SS.RPC_REQ[1]
-local RPC_RES = SS.RPC_RES[1]
-
 local g_network_mgr = g_network_mgr
 
 local Rpc = oo.singleton( nil,... )

@@ -1,7 +1,6 @@
 #include <lua.hpp>
 #include <lparson.h>
 #include <lrapidxml.hpp>
-#include <lflatbuffers.hpp>
 
 #include "llog.h"
 #include "lsql.h"
@@ -135,7 +134,6 @@ void lstate::open_cpp()
     LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
     LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
     LUA_LIB_OPEN("obj_counter", luaopen_obj_counter);
-    LUA_LIB_OPEN("lua_flatbuffers",luaopen_lua_flatbuffers);
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 
     /* ============================对象方式调用================================ */
@@ -311,6 +309,12 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::load_schema> ( "load_schema" );
     lc.def<&lnetwork_mgr::send_c2s_packet> ( "send_c2s_packet" );
     lc.def<&lnetwork_mgr::send_s2c_packet> ( "send_s2c_packet" );
+
+    lc.set( "CNT_NONE",socket::CNT_NONE );
+    lc.set( "CNT_CSCN",socket::CNT_CSCN );
+    lc.set( "CNT_SCCN",socket::CNT_SCCN );
+    lc.set( "CNT_SSCN",socket::CNT_SSCN );
+
 
     return 0;
 }

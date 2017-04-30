@@ -5,41 +5,17 @@ local g_network_mgr = g_network_mgr
 
 local Clt_conn = oo.class( nil,... )
 
-function Clt_conn:__init( conn,conn_id )
+function Clt_conn:__init( conn_ty )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
-    self.conn_id = conn_id
 
-    conn:set_self_ref( self )
-    conn:set_on_disconnect( self.on_disconnected  )
-    conn:set_on_command( self.on_unauthorized_cmd )
-
-    self.conn = conn
+    self.conn_ty = conn_ty
 end
 
--- 处理未认证之前发的指令
-function Clt_conn:on_unauthorized_cmd()
-    local cmd = self.conn:clt_next()
-    while cmd and not self.auth do
-        xpcall( g_command_mgr.clt_unauthorized_cmd,
-            __G__TRACKBACK__, g_command_mgr, cmd, self )
-
-        cmd = self.conn:clt_next( cmd )
-    end
-
-    if cmd then self:on_command() end
-end
-
--- 网络协议回调
-function Clt_conn:on_command()
-    local cmd = self.conn:clt_next()
-    while cmd do
-        xpcall( g_command_mgr.clt_invoke,
-            __G__TRACKBACK__, g_command_mgr, cmd,self )
-
-        cmd = self.conn:clt_next( cmd )
-    end
+-- 监听端口
+function Clt_conn:listen( ip,port )
+    self.conn_id = network_mgr:listen( ip,port,self.conn_ty )
 end
 
 -- 连接断开处理

@@ -2,10 +2,10 @@
 
 local util          = require "util"
 local Timer         = require "Timer"
-local Stream_socket = require "Stream_socket"
 local Srv_conn      = oo.refer( "network.srv_conn" )
 local Clt_conn      = oo.refer( "network.clt_conn" )
 
+local network_mgr = network_mgr
 local Network_mgr = oo.singleton( nil,... )
 
 function Network_mgr:__init()
@@ -26,27 +26,20 @@ end
 
 --  监听服务器连接
 function Network_mgr:srv_listen( ip,port )
-    local conn = Stream_socket()
-    conn:set_self_ref( self )
-    conn:set_on_acception( Network_mgr.on_srv_acception )
+    local conn = Srv_conn( network_mgr.CNT_SSCN )
 
-    local fd = conn:listen( ip,port )
-    if not fd then return false end
-
+    conn:listen( ip,port )
     self.srv_listen = conn
     PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
 
     return true
 end
 
---  监听服务器连接
+--  监听客户端连接
 function Network_mgr:clt_listen( ip,port )
-    local conn = Stream_socket()
-    conn:set_self_ref( self )
-    conn:set_on_acception( Network_mgr.on_clt_acception )
+    local conn = Clt_conn( network_mgr.CNT_SCCN )
 
-    local fd = conn:listen( ip,port )
-    if not fd then return false end
+    conn:listen( ip,port )
 
     self.clt_listen = conn
     PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )

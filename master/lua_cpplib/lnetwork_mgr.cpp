@@ -132,8 +132,7 @@ int32 lnetwork_mgr::listen()
     if ( fd < 0 )
     {
         delete _socket;
-        luaL_error( L,strerror(errno) );
-        return 0;
+        return luaL_error( L,strerror(errno) );
     }
 
     _socket_map[conn_id] = _socket;

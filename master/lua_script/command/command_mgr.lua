@@ -1,14 +1,8 @@
 -- 消息管理
 
-local lua_flatbuffers = require "lua_flatbuffers"
-
 local SC = SC
 local CS = CS
 local SS = SS
-
-local CLT_CMD = SS.CLT_CMD[1]
-local RPC_REQ = SS.RPC_REQ[1]
-local RPC_RES = SS.RPC_RES[1]
 
 local SESSION = Main.session
 
@@ -28,8 +22,6 @@ function Command_mgr:__init()
     for _,v in pairs( CS or {} ) do
         self.cs[ v[1] ] = v
     end
-
-    self.lfb = lua_flatbuffers()
 end
 
 -- 加载二进制flatbuffers schema文件
@@ -81,28 +73,6 @@ function Command_mgr:clt_dispatch( owner,... )
     end
 
     return handler( owner,... )
-end
-
--- 发送数据包到gateway，再由它转发给客户端
-function Command_mgr:ssc_send( srv_conn,cfg,pid,pkt )
-    assert( cfg,"ssc_send no cmd specified" )
-
-    srv_conn.conn:ssc_flatbuffers_send( 
-        self.lfb,pid,CLT_CMD,cfg[1],cfg[2],cfg[3],pkt )
-end
-
--- 发送服务器消息
-function Command_mgr:srv_send( srv_conn,cfg,pkt )
-    assert( cfg,"srv_send no cmd specified" )
-
-    srv_conn.conn:ss_flatbuffers_send( 
-        self.lfb,SESSION,cfg[1],cfg[2],cfg[3],pkt )
-end
-
--- 发送客户端消息
-function Command_mgr:clt_send( clt_conn,cfg,pkt,errno )
-    return clt_conn.conn:sc_flatbuffers_send( 
-        self.lfb,cfg[1],cfg[2],cfg[3],errno or 0,pkt )
 end
 
 -- 获取当前进程处理的客户端指令

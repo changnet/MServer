@@ -1,24 +1,15 @@
 -- srv_conn server connection
 
-local Stream_socket = require "Stream_socket"
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 
 local Srv_conn = oo.class( nil,... )
 
-function Srv_conn:__init( conn,conn_id )
-    conn = conn or Stream_socket()
-
-    conn:set_self_ref( self )
-    conn:set_on_command( self.on_unauthorized_cmd )
-    conn:set_on_disconnect( self.on_disconnected )
-    conn:set_on_connection( self.on_connected )
-
-    self.conn = conn
+function Srv_conn:__init( conn_ty )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
-    self.conn_id = conn_id
+    self.conn_ty = conn_ty
 end
 
 -- timeout check
@@ -31,6 +22,11 @@ function Srv_conn:check( check_time )
 
     self.fchk = 0
     return 0
+end
+
+-- 监听端口
+function Srv_conn:listen( ip,port )
+    self.conn_id = network_mgr:listen( ip,port,self.conn_ty )
 end
 
 -- close
@@ -47,18 +43,6 @@ function Srv_conn:connect( ip,port )
     return self.conn:connect( ip,port )
 end
 
--- 处理未认证之前发的指令
-function Srv_conn:on_unauthorized_cmd()
-    local cmd,pid = self.conn:srv_next()
-    while cmd and not self.auth do
-        xpcall( g_command_mgr.srv_unauthorized_dispatcher,
-            __G__TRACKBACK__, g_command_mgr, cmd, pid, self )
-
-        cmd,pid = self.conn:srv_next( cmd )
-    end
-
-    if cmd then self:on_command() end
-end
 
 -- 底层消息回调
 function Srv_conn:on_command()

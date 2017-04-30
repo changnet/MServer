@@ -46,16 +46,3 @@ g_command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true,false )
 
 g_command_mgr:srv_register( SS.SYS_SYN,srv_syn,true,true )
 g_command_mgr:srv_register( SS.SYS_ACK,srv_ack,true,true )
-
-g_command_mgr:srv_register( SS.RPC_REQ,g_rpc.dispatch,true,false,true )
-g_command_mgr:srv_register( SS.RPC_RES,g_rpc.response,true,false,true )
-
-if Main.srvname == "gateway" then
-    g_command_mgr:srv_register( SS.CLT_CMD,g_command_mgr.ssc_tansport,true,false,true )
-end
-
-if Main.srvname == "world" then
-    -- 用一个closure来保存self
-    g_command_mgr:srv_register( SS.CLT_CMD,
-        g_command_mgr.css_dispatcher( g_command_mgr ),true,false,true )
-end

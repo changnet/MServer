@@ -16,10 +16,6 @@ local MODULE_PLAYER = (0x01 << 8) -- 256
 
 local _SS =
 {
-    CLT_CMD   = { MODULE_SYSTEM + 0x01 },     -- 收到另外一个srv转发的客户端包
-    RPC_REQ   = { MODULE_SYSTEM + 0x02 },     -- rcp通信request包
-    RPC_RES   = { MODULE_SYSTEM + 0x03 },     -- rcp通信response包
-
     SYS_SYN  = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" },
     SYS_ACK  = { MODULE_SYSTEM + 0x05,"system.bfbs","ssregister" },
     SYS_BEAT = { MODULE_SYSTEM + 0x06,"system.bfbs","ssbeat" }, -- 心跳包
