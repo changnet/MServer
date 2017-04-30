@@ -64,7 +64,7 @@ public:
     int32 connect( const char *host,int32 port );
 
     bool __attribute__ ((warn_unused_result))
-        append( const char *data,uint32 len ) ;
+        append( const void *data,uint32 len ) ;
 
     template<class K, void (K::*method)()>
     void set (K *object)

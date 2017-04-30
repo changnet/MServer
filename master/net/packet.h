@@ -76,6 +76,9 @@ public:
     /* 外部解析接口 */
     int32 parse( lua_State *L,
         const char *schema,const char *object,const c2s_header *header );
+    int32 parse( lua_State *L,
+        const char *schema,const char *object,const s2s_header *header );
+
     /* c2s打包接口 */
     int32 unparse_c2s( lua_State *L,int32 index,
         int32 cmd,const char *schema,const char *object,class buffer send );

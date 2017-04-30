@@ -303,11 +303,13 @@ int32 luaopen_network_mgr( lua_State *L )
 {
     lclass<lnetwork_mgr> lc(L,"Network_mgr");
 
-    lc.def<&lnetwork_mgr::set_cmd> ( "set_cmd" );
     lc.def<&lnetwork_mgr::listen> ( "listen" );
     lc.def<&lnetwork_mgr::connect> ( "connect" );
     lc.def<&lnetwork_mgr::load_schema> ( "load_schema" );
     lc.def<&lnetwork_mgr::set_curr_session> ( "set_curr_session" );
+
+    lc.def<&lnetwork_mgr::set_clt_cmd> ( "set_clt_cmd" );
+    lc.def<&lnetwork_mgr::set_srv_cmd> ( "set_srv_cmd" );
 
     lc.def<&lnetwork_mgr::send_c2s_packet> ( "send_c2s_packet" );
     lc.def<&lnetwork_mgr::send_s2c_packet> ( "send_s2c_packet" );

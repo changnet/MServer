@@ -23,6 +23,15 @@ const static char *CONNECT_EVENT[] =
     "http_connect_new", // CNT_HTTP
 };
 
+const static char *COMMAND_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_command_new", // CNT_CSCN
+    "sccn_command_new", // CNT_SCCN
+    "sscn_command_new", // CNT_SSCN
+    "http_command_new", // CNT_HTTP
+};
+
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
@@ -83,10 +92,10 @@ uint32 lnetwork_mgr::generate_connect_id()
     return _conn_seed;
 }
 
-/* 设置某个指令的参数
- * network_mgr:set_cmd( cmd,schema,object[,mask,session] )
+/* 设置某个客户端指令的参数
+ * network_mgr:set_clt_cmd( cmd,schema,object[,mask,session] )
  */
-int32 lnetwork_mgr::set_cmd()
+int32 lnetwork_mgr::set_clt_cmd()
 {
     int32 cmd          = luaL_checkinteger( L,1 );
     const char *schema = luaL_checkstring ( L,2 );
@@ -94,7 +103,7 @@ int32 lnetwork_mgr::set_cmd()
     int32 mask         = luaL_optinteger  ( L,4,0 );
     int32 session      = luaL_optinteger  ( L,5,_session );
 
-    cmd_cfg_t &cfg = _cmd_map[cmd];
+    cmd_cfg_t &cfg = _clt_cmd_map[cmd];
     cfg._cmd     = cmd;
     cfg._mask    = mask;
     cfg._session = session;
@@ -105,6 +114,27 @@ int32 lnetwork_mgr::set_cmd()
     return 0;
 }
 
+/* 设置某个服务器指令的参数
+ * network_mgr:set_srv_cmd( cmd,schema,object[,mask,session] )
+ */
+int32 lnetwork_mgr::set_srv_cmd()
+{
+    int32 cmd          = luaL_checkinteger( L,1 );
+    const char *schema = luaL_checkstring ( L,2 );
+    const char *object = luaL_checkstring ( L,3 );
+    int32 mask         = luaL_optinteger  ( L,4,0 );
+    int32 session      = luaL_optinteger  ( L,5,_session );
+
+    cmd_cfg_t &cfg = _srv_cmd_map[cmd];
+    cfg._cmd     = cmd;
+    cfg._mask    = mask;
+    cfg._session = session;
+
+    snprintf( cfg._schema,MAX_SCHEMA_NAME,schema );
+    snprintf( cfg._object,MAX_SCHEMA_NAME,object );
+
+    return 0;
+}
 
 /* 仅关闭socket，但不销毁内存
  * network_mgr:close( conn_id )
@@ -258,11 +288,20 @@ bool lnetwork_mgr::connect_new( int32 conn_ty,uint32 conn_id,int32 ecode )
     return true;
 }
 
-/* 获取指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_cmd_cfg( int32 cmd )
+/* 获取客户端指令配置 */
+const cmd_cfg_t *lnetwork_mgr::get_clt_cmd( int32 cmd )
 {
-    cmd_map_t::iterator itr = _cmd_map.find( cmd );
-    if ( itr == _cmd_map.end() ) return NULL;
+    cmd_map_t::iterator itr = _clt_cmd_map.find( cmd );
+    if ( itr == _clt_cmd_map.end() ) return NULL;
+
+    return &(itr->second);
+}
+
+/* 获取服务端指令配置 */
+const cmd_cfg_t *lnetwork_mgr::get_srv_cmd( int32 cmd )
+{
+    cmd_map_t::iterator itr = _srv_cmd_map.find( cmd );
+    if ( itr == _srv_cmd_map.end() ) return NULL;
 
     return &(itr->second);
 }
@@ -340,6 +379,8 @@ void lnetwork_mgr::command_new(
         }break;
         case socket::CNT_SSCN : /* 解析服务器发往服务器的包 */
         {
+            process_command( conn_id,
+                reinterpret_cast<struct s2s_header *>( recv.data() ) );
         }break;
         default : assert( "unknow socket connect type",false );return;
     }
@@ -347,7 +388,7 @@ void lnetwork_mgr::command_new(
 
 void lnetwork_mgr::process_command( uint32 conn_id,const c2s_header *header )
 {
-    const cmd_cfg_t *cmd_cfg = get_cmd_cfg( header->_cmd );
+    const cmd_cfg_t *cmd_cfg = get_clt_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
         ERROR( "c2s cmd(%d) no cmd cfg found",header->_cmd );
@@ -355,14 +396,74 @@ void lnetwork_mgr::process_command( uint32 conn_id,const c2s_header *header )
     }
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if ( cmd_cfg->_session != curr_session() )
+    if ( cmd_cfg->_session != _session )
     {
         clt_forwarding( conn_id,header,cmd_cfg->_session );
         return;
     }
 
     /* 在当前进程处理 */
-    clt_command( conn_id,cmd_cfg->_schema,cmd_cfg->_object,header );
+    owner_t owner = get_owner( conn_id );
+    invoke_command( conn_id,socket::CNT_CSCN,owner,cmd_cfg,header );
+}
+
+void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
+{
+    const cmd_cfg_t *cmd_cfg = get_srv_cmd( header->_cmd );
+    if ( !cmd_cfg )
+    {
+        ERROR( "s2s cmd(%d) no cmd cfg found",header->_cmd );
+        return;
+    }
+
+    /* 这个指令不是在当前进程处理，自动转发到对应进程 */
+    if ( cmd_cfg->_session != _session )
+    {
+        class socket *dest_sk  = get_connection( cmd_cfg->_session );
+        if ( !dest_sk )
+        {
+            ERROR( "server packet forwarding "
+                "no destination found.cmd:%d",header->_cmd );
+            return;
+        }
+
+        bool is_ok = dest_sk->append( header,PACKET_LENGTH( header ) );
+        if ( !is_ok )
+        {
+            ERROR( "server packet forwrding "
+                "can not reserved memory:%ld",int64(PACKET_LENGTH( header )) );
+        }
+        return;
+    }
+
+    /* 在当前进程处理 */
+    switch ( header->_mask )
+    {
+        case packet::PKT_CSPK : // 网关转发的客户端包
+        {
+            const struct c2s_header *clt_header = 
+                reinterpret_cast<const struct c2s_header *>( header + 1 );
+            const cmd_cfg_t *clt_cfg = get_clt_cmd( clt_header->_cmd );
+            if ( !cmd_cfg )
+            {
+                ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
+                return;
+            }
+            invoke_command( conn_id,
+                header->_owner,socket::CNT_CSCN,clt_cfg,clt_header );
+        }break;
+        case packet::PKT_SSPK : // 服务器数据包
+        {
+            invoke_command( conn_id,
+                header->_owner,socket::CNT_SSCN,cmd_cfg,header );
+        }break;
+        default :
+        {
+            ERROR( "unknow server packet:"
+                "cmd %d,mask %d",header->_cmd,header->_mask );
+            return;
+        }
+    }
 }
 
 /* 转客户端数据包 */
@@ -399,19 +500,20 @@ void lnetwork_mgr::clt_forwarding(
 }
 
 
-/* 客户端数据包回调脚本 */
-void lnetwork_mgr::clt_command( uint32 conn_id,
-    const char *schema,const char *object,const c2s_header *header )
+/* 数据包回调脚本 */
+template<class T>
+void lnetwork_mgr::invoke_command( uint32 conn_id,
+    int32 conn_ty,owner_t owner,const cmd_cfg_t *cfg,const T *header )
 {
     lua_State *L = lstate::instance()->state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal( L,"socket_command" );
+    lua_getglobal( L,COMMAND_EVENT[conn_ty] );
     lua_pushinteger( L,conn_id );
-    lua_pushinteger( L,get_owner( conn_id ) );
+    lua_pushinteger( L,owner );
 
-    int32 cnt = packet::instance()->parse( L,schema,object,header );
+    int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
     {
         lua_pop( L,4 );
@@ -420,7 +522,7 @@ void lnetwork_mgr::clt_command( uint32 conn_id,
 
     if ( expect_false( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
     {
-        ERROR( "clt_command:%s",lua_tostring( L,-1 ) );
+        ERROR( "invoke_command:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,1 ); /* remove traceback and error object */
         return;
@@ -448,8 +550,8 @@ int32 lnetwork_mgr::send_c2s_packet()
         return luaL_error( L,"no such socket found" );
     }
 
-    cmd_map_t::iterator cmd_itr = _cmd_map.find( cmd );
-    if ( cmd_itr == _cmd_map.end() )
+    cmd_map_t::iterator cmd_itr = _clt_cmd_map.find( cmd );
+    if ( cmd_itr == _clt_cmd_map.end() )
     {
         return luaL_error( L,"no command config found:%d",cmd );
     }
@@ -495,8 +597,8 @@ int32 lnetwork_mgr::send_s2c_packet()
         return luaL_error( L,"no such socket found" );
     }
 
-    cmd_map_t::iterator cmd_itr = _cmd_map.find( cmd );
-    if ( cmd_itr == _cmd_map.end() )
+    cmd_map_t::iterator cmd_itr = _clt_cmd_map.find( cmd );
+    if ( cmd_itr == _clt_cmd_map.end() )
     {
         return luaL_error( L,"no command config found:%d",cmd );
     }
@@ -601,8 +703,8 @@ int32 lnetwork_mgr::send_s2s_packet()
         return luaL_error( L,"no such socket found" );
     }
 
-    cmd_map_t::iterator cmd_itr = _cmd_map.find( cmd );
-    if ( cmd_itr == _cmd_map.end() )
+    cmd_map_t::iterator cmd_itr = _clt_cmd_map.find( cmd );
+    if ( cmd_itr == _clt_cmd_map.end() )
     {
         return luaL_error( L,"no command config found:%d",cmd );
     }

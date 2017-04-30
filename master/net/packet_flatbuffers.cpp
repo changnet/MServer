@@ -1,6 +1,3 @@
-#include "../lua_cpplib/ltools.h"
-#include "../lua_cpplib/lstate.h"
-
 /* 加载该目录下的有schema文件 */
 int32 packet::load_schema( const char *path )
 {
@@ -10,8 +7,9 @@ int32 packet::load_schema( const char *path )
 /* 解析数据包
  * 返回push到栈上的参数数量
  */
-int32 packet::parse( lua_State *L,
-    const char *schema,const char *object,const c2s_header *header )
+template<class T>
+int32 raw_parse( lflatbuffers &_lflatbuffers,
+    lua_State *L,const char *schema,const char *object,const T *header )
 {
     int32 size = PACKET_BUFFER_LEN( header );
     if ( size <= 0 || size > MAX_PACKET_LEN )
@@ -29,6 +27,18 @@ int32 packet::parse( lua_State *L,
     }
 
     return 1;
+}
+
+int32 packet::parse( lua_State *L,
+    const char *schema,const char *object,const c2s_header *header )
+{
+    return raw_parse( _lflatbuffers,L,schema,object,header );
+}
+
+int32 packet::parse( lua_State *L,
+    const char *schema,const char *object,const s2s_header *header )
+{
+    return raw_parse( _lflatbuffers,L,schema,object,header );
 }
 
 /* c2s打包接口 */

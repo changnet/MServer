@@ -52,7 +52,8 @@ public:
         uint32 conn_id,socket::conn_t conn_ty,const buffer &recv );
 
     /* 设置指令参数 */
-    int32 set_cmd();
+    int32 set_clt_cmd();
+    int32 set_srv_cmd();
     /* 设置(客户端)连接所有者 */
     int32 set_owner();
     /* 设置(服务器)连接session */
@@ -88,25 +89,30 @@ public:
     /* 通过conn_id获取session */
     int32 get_session( uint32 conn_id );
     /* 获取指令配置 */
-    const cmd_cfg_t *get_cmd_cfg( int32 cmd );
+    const cmd_cfg_t *get_clt_cmd( int32 cmd );
+    const cmd_cfg_t *get_srv_cmd( int32 cmd );
     /* 获取当前服务器session */
     int32 curr_session() { return _session; }
 private:
     void delete_socket( uint32 conn_id );
     void process_command( uint32 conn_id,const c2s_header *header );
+    void process_command( uint32 conn_id,const s2s_header *header );
+
     /* 转客户端数据包 */
     void clt_forwarding( 
         uint32 conn_id,const c2s_header *header,int32 session );
-    /* 客户端数据包回调脚本 */
-    void clt_command( uint32 conn_id,
-        const char *schema,const char *object,const c2s_header *header );
+    /* 数据包回调脚本 */
+    template<class T>
+    void invoke_command( uint32 conn_id,int32 conn_ty,
+        owner_t owner,const cmd_cfg_t *cfg,const T *header );
 private:
     lua_State *L;
 
     int32 _session; /* 当前进程的session */
     uint32 _conn_seed; /* connect_id种子 */
 
-    cmd_map_t _cmd_map;
+    cmd_map_t _clt_cmd_map;
+    cmd_map_t _srv_cmd_map;
     socket_map_t _socket_map;
 
     std::vector<uint32> _deleting;/* 异步删除的socket */

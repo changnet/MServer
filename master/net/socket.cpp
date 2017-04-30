@@ -218,7 +218,7 @@ const char *socket::address()
     return inet_ntoa(addr.sin_addr);
 }
 
-bool socket::append( const char *data,uint32 len )
+bool socket::append( const void *data,uint32 len )
 {
     if ( !_send.append( data,len ) ) return false;
 

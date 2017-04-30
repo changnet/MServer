@@ -38,7 +38,7 @@ function Command_mgr:clt_register( cfg,handler,noauth )
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 
-    network_mgr:set_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
+    network_mgr:set_clt_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
 end
 
 -- 注册服务器协议处理
@@ -55,7 +55,7 @@ function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
     cfg.noreg    = noreg
     cfg.nounpack = nounpack
 
-    network_mgr:set_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
+    network_mgr:set_srv_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
 end
 
 -- 分发协议
