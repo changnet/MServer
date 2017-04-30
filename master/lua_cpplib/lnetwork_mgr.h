@@ -54,8 +54,9 @@ public:
         uint32 conn_id,socket::conn_t conn_ty,const buffer &recv );
 
     /* 设置指令参数 */
-    int32 set_clt_cmd();
-    int32 set_srv_cmd();
+    int32 set_cs_cmd();
+    int32 set_ss_cmd();
+    int32 set_sc_cmd();
     /* 设置(客户端)连接所有者 */
     int32 set_owner();
     /* 设置(服务器)连接session */
@@ -91,8 +92,9 @@ public:
     /* 通过conn_id获取session */
     int32 get_session( uint32 conn_id );
     /* 获取指令配置 */
-    const cmd_cfg_t *get_clt_cmd( int32 cmd );
-    const cmd_cfg_t *get_srv_cmd( int32 cmd );
+    const cmd_cfg_t *get_cs_cmd( int32 cmd );
+    const cmd_cfg_t *get_ss_cmd( int32 cmd );
+    const cmd_cfg_t *get_sc_cmd( int32 cmd );
     /* 获取当前服务器session */
     int32 curr_session() { return _session; }
 private:
@@ -104,17 +106,21 @@ private:
     void clt_forwarding( 
         uint32 conn_id,const c2s_header *header,int32 session );
     /* 数据包回调脚本 */
-    template<class T>
-    void invoke_command( uint32 conn_id,int32 conn_ty,
-        owner_t owner,const cmd_cfg_t *cfg,const T *header );
+    void cs_command( uint32 conn_id,
+        owner_t owner,const cmd_cfg_t *cfg,const c2s_header *header );
+    void sc_command( uint32 conn_id,
+        const cmd_cfg_t *cfg,const s2c_header *header );
+    void ss_command( uint32 conn_id,
+        const cmd_cfg_t *cfg,const s2s_header *header );
 private:
     lua_State *L;
 
     int32 _session; /* 当前进程的session */
     uint32 _conn_seed; /* connect_id种子 */
 
-    cmd_map_t _clt_cmd_map;
-    cmd_map_t _srv_cmd_map;
+    cmd_map_t _cs_cmd_map;
+    cmd_map_t _ss_cmd_map;
+    cmd_map_t _sc_cmd_map;
     socket_map_t _socket_map;
 
     std::vector<uint32> _deleting;/* 异步删除的socket */

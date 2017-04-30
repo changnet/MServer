@@ -22,6 +22,12 @@ function Command_mgr:__init()
     for _,v in pairs( CS or {} ) do
         self.cs[ v[1] ] = v
     end
+
+    -- 对于CS、SS数据包，在注册时设置
+    -- SC数据包只能全部设置
+    for _,v in pairs( SC ) do
+        network_mgr:set_sc_cmd( v[1],v[2],v[3],0,Main.session )
+    end
 end
 
 -- 加载二进制flatbuffers schema文件
@@ -38,7 +44,7 @@ function Command_mgr:clt_register( cfg,handler,noauth )
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 
-    network_mgr:set_clt_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
+    network_mgr:set_cs_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
 end
 
 -- 注册服务器协议处理
@@ -55,7 +61,7 @@ function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
     cfg.noreg    = noreg
     cfg.nounpack = nounpack
 
-    network_mgr:set_srv_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
+    network_mgr:set_ss_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
 end
 
 -- 本进程需要注册的指令
@@ -144,7 +150,7 @@ function Command_mgr:command_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register clt cmd register conflict" )
 
         _cfg.session = session
-        network_mgr:set_clt_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
+        network_mgr:set_cs_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
     end
 
     -- 记录该服务器所处理的ss指令
@@ -154,7 +160,7 @@ function Command_mgr:command_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register srv cmd register conflict" )
 
         _cfg.session = session
-        network_mgr:set_srv_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
+        network_mgr:set_ss_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
     end
 
     -- 记录该服务器所处理的rpc指令

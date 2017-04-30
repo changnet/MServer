@@ -5,6 +5,9 @@ SC,CS = sc[1],sc[2]
 
 local android_mgr = require "android.android_mgr"
 
+android_mgr:init_command( SC )
+android_mgr:init_command( CS )
+
 local Android = require "android.android"
 
 android_mgr:cmd_register( SC.PLAYER_LOGIN,Android.on_login )

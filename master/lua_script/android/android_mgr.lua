@@ -4,8 +4,8 @@ local cmd = require "command.sc_command"
 SC,CS = cmd[1],cmd[2]
 
 local Android = oo.refer( "android.android" )
-local lua_flatbuffers = require "lua_flatbuffers"
 
+local network_mgr = network_mgr
 local Android_mgr = oo.class( nil,... )
 
 function Android_mgr:__init()
@@ -15,9 +15,12 @@ function Android_mgr:__init()
     for _,v in pairs( SC or {} ) do
         self.cmd[ v[1] ] = v
     end
+end
 
-    self.lfb = lua_flatbuffers()
-    self.lfb:load_bfbs_path( "fbs","bfbs" )
+function Android_mgr:init_command( list )
+    for _,cfg in pairs( list ) do
+        network_mgr:set_cs_cmd( cfg[1],cfg[2],cfg[3],0,Main.session )
+    end
 end
 
 function Android_mgr:start()

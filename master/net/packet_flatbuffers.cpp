@@ -41,6 +41,12 @@ int32 packet::parse( lua_State *L,
     return raw_parse( _lflatbuffers,L,schema,object,header );
 }
 
+int32 packet::parse( lua_State *L,
+    const char *schema,const char *object,const s2c_header *header )
+{
+    return raw_parse( _lflatbuffers,L,schema,object,header );
+}
+
 /* c2s打包接口 */
 int32 packet::unparse_c2s( lua_State *L,int32 index,
     int32 cmd,const char *schema,const char *object,class buffer &send )
