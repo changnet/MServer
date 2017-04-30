@@ -5,11 +5,11 @@ local g_network_mgr = g_network_mgr
 
 local Srv_conn = oo.class( nil,... )
 
-function Srv_conn:__init( conn_ty )
+function Srv_conn:__init( conn_id )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
-    self.conn_ty = conn_ty
+    self.conn_id = conn_id
 end
 
 -- timeout check
@@ -22,11 +22,6 @@ function Srv_conn:check( check_time )
 
     self.fchk = 0
     return 0
-end
-
--- 监听端口
-function Srv_conn:listen( ip,port )
-    self.conn_id = network_mgr:listen( ip,port,self.conn_ty )
 end
 
 -- close

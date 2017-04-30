@@ -5,17 +5,12 @@ local g_network_mgr = g_network_mgr
 
 local Clt_conn = oo.class( nil,... )
 
-function Clt_conn:__init( conn_ty )
+function Clt_conn:__init( conn_id )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
 
-    self.conn_ty = conn_ty
-end
-
--- 监听端口
-function Clt_conn:listen( ip,port )
-    self.conn_id = network_mgr:listen( ip,port,self.conn_ty )
+    self.conn_id = conn_id
 end
 
 -- 连接断开处理

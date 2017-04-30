@@ -42,51 +42,28 @@ function Network_mgr:clt_listen( ip,port )
 end
 
 -- 底层accept回调
+function sscn_accept_new( conn_id )
+    local conn = Srv_conn( conn_id )
+    self.srv_conn[conn_id] = conn
+
+    PLOG( "accept server connection:%d",conn_id )
+end
+
+-- 底层accept回调
 function sccn_accept_new( conn_id )
-    local listen_conn = self.conn[listen_conn]
+    local conn = Clt_conn( conn_id )
+    self.clt_conn[conn_id] = conn
 
-
-end
-
--- 处理服务器连接
-function Network_mgr:on_srv_acception( conn )
-    local conn_id = g_unique_id:conn_id()
-    while self.srv_conn[conn_id] do
-        conn_id = g_unique_id:conn_id()
-    end
-
-    local srv_conn = Srv_conn( conn,conn_id )
-    self.srv_conn[conn_id] = srv_conn
-
-    local fd = conn:file_description()
-    PLOG( "accept server connection,fd:%d",fd )
-end
-
-function Network_mgr:on_clt_acception( conn )
-    local conn_id = g_unique_id:conn_id()
-    while self.clt_conn[conn_id] do
-        conn_id = g_unique_id:conn_id()
-    end
-
-    local clt_conn = Clt_conn( conn,conn_id )
-    self.clt_conn[conn_id] = clt_conn
-
-    local fd = conn:file_description()
-    PLOG( "accept client connection,fd:%d",fd )
+    PLOG( "accept client connection:%d",conn_id )
 end
 
 -- 主动连接其他服务器
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
-        local conn_id = g_unique_id:conn_id()
-        while self.srv_conn[conn_id] do
-            conn_id = g_unique_id:conn_id()
-        end
+        local conn_id = 
+            network_mgr:connect( srv.ip,srv.port,network_mgr.CNT_SSCN )
 
-        local srv_conn = Srv_conn( nil,conn_id )
-        srv_conn:connect( srv.ip,srv.port )
-
-        self.srv_conn[conn_id] = srv_conn
+        self.srv_conn[conn_id] = Srv_conn( conn_id )
         PLOG( "server connect to %s:%d",srv.ip,srv.port )
     end
 end
