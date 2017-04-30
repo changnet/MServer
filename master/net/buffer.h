@@ -103,6 +103,9 @@ public:
 
         return      true;
     }
+private:
+    buffer( const buffer & );
+    buffer &operator=( const buffer &);
 public:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */

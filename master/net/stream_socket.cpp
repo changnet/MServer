@@ -15,16 +15,25 @@ stream_socket::stream_socket( uint32 conn_id,conn_t conn_ty )
 void stream_socket::command_cb ()
 {
     /* 在回调脚本时，可能被脚本关闭当前socket，这时就不要再处理数据了 */
+
+    int32 ret = socket::recv();
+    if ( 0 == ret )  /* 主动断开 */
+    {
+    }
+    else if ( 0 > ret ) /* 出错 */
+    {
+    }
+
     while ( fd() > 0 )
     {
-        uint32 sz = _recv.data_size();
-        if ( sz < sizeof(packet_length) ) return;
+        uint32 size = _recv.data_size();
+        if ( size < sizeof(packet_length) ) return;
 
         packet_length len = *(reinterpret_cast<packet_length *>(_recv.data()));
 
         size_t data_len = len + sizeof(packet_length);
         /* 验证数据包是否完整有效 */
-        if ( sz < data_len ) return;
+        if ( size < data_len ) return;
 
         /* 解析数据包 */
         lnetwork_mgr::instance()->command_new( _conn_id,_conn_ty,_recv );
@@ -48,17 +57,19 @@ void stream_socket::connect_cb ()
 {
     int32 ecode = socket::validate();
 
-    bool ok = lnetwork_mgr::instance()->connect_new( _conn_ty,_conn_id,ecode );
-    if ( 0 != ecode || !ok )  /* 连接失败或回调脚本失败 */
+    if ( 0 == ecode )
     {
-        socket::stop();
-        return        ;
+        KEEP_ALIVE( socket::fd() );
+        USER_TIMEOUT( socket::fd() );
+
+        socket::start();
     }
 
-    KEEP_ALIVE( socket::fd() );
-    USER_TIMEOUT( socket::fd() );
+    /* 连接失败或回调脚本失败,都会被lnetwork_mgr删除 */
+    bool is_ok = 
+        lnetwork_mgr::instance()->connect_new( _conn_ty,_conn_id,ecode );
 
-    socket::start();
+    if ( !is_ok || 0 != ecode ) socket::stop ();
 }
 
 void stream_socket::listen_cb  ()

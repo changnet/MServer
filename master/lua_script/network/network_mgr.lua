@@ -86,23 +86,6 @@ function Network_mgr:srv_register( conn,pkt )
     return true
 end
 
--- 发起认证
-function Network_mgr:register_pkt( g_command_mgr )
-    local pkt =
-    {
-        name    = Main.srvname,
-        session = Main.session,
-        timestamp = ev:time(),
-    }
-    pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
-
-    pkt.clt_cmd = g_command_mgr:clt_cmd()
-    pkt.srv_cmd = g_command_mgr:srv_cmd()
-    pkt.rpc_cmd = g_command_mgr:rpc_cmd()
-
-    return pkt
-end
-
 -- 定时器回调
 function Network_mgr:do_timer()
     -- local check_time = ev:time() - SRV_ALIVE_INTERVAL
@@ -162,13 +145,21 @@ end
 -- 底层connect回调
 function sscn_connect_new( conn_id,ecode )
     if 0 ~= ecode then
-        PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) );
+        PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
         _network_mgr.srv_conn[conn_id] = nil
         return
     end
 
     local conn = _network_mgr.srv_conn[conn_id]
-    PLOG( "server connect (%d) establish",conn_id);
+    PLOG( "server connect (%d) establish",conn_id)
+
+    conn:send_pkt( SS.SYS_SYN,0,g_command_mgr:command_pkt() )
+end
+
+-- 底层数据包回调
+function sscn_command_new( conn_id,session,pkt )
+    print( "sscn_command_new",conn_id,session,pkt )
+    vd( pkt )
 end
 
 return _network_mgr

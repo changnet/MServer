@@ -43,7 +43,7 @@ int32 packet::parse( lua_State *L,
 
 /* c2s打包接口 */
 int32 packet::unparse_c2s( lua_State *L,int32 index,
-    int32 cmd,const char *schema,const char *object,class buffer send )
+    int32 cmd,const char *schema,const char *object,class buffer &send )
 {
     if ( _lflatbuffers.encode( L,schema,object,index ) < 0 )
     {
@@ -74,7 +74,7 @@ int32 packet::unparse_c2s( lua_State *L,int32 index,
 
 /* s2c打包接口 */
 int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
-    int32 ecode,const char *schema,const char *object,class buffer send )
+    int32 ecode,const char *schema,const char *object,class buffer &send )
 {
     if ( _lflatbuffers.encode( L,schema,object,index ) < 0 )
     {
@@ -107,7 +107,7 @@ int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
 
 /* s2s打包接口 */
 int32 packet::unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
-        int32 ecode,const char *schema,const char *object,class buffer send )
+        int32 ecode,const char *schema,const char *object,class buffer &send )
 {
     if ( _lflatbuffers.encode( L,schema,object,index ) < 0 )
     {

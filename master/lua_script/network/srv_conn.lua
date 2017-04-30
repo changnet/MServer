@@ -14,8 +14,8 @@ function Srv_conn:__init( conn_id )
 end
 
 -- 发送数据包
-function Srv_conn:send_pkt( cfg,pkt )
-    return network_mgr:send_s2s_packet( self.conn_id,cfg[1],pkt )
+function Srv_conn:send_pkt( cfg,ecode,pkt )
+    return network_mgr:send_s2s_packet( self.conn_id,cfg[1],ecode,pkt )
 end
 
 -- timeout check

@@ -285,6 +285,8 @@ bool lnetwork_mgr::connect_new( int32 conn_ty,uint32 conn_id,int32 ecode )
     }
     lua_pop( L,1 ); /* remove traceback */
 
+    if ( 0 != ecode ) _deleting.push_back( conn_id );
+
     return true;
 }
 
@@ -450,12 +452,12 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
                 return;
             }
             invoke_command( conn_id,
-                header->_owner,socket::CNT_CSCN,clt_cfg,clt_header );
+                socket::CNT_CSCN,header->_owner,clt_cfg,clt_header );
         }break;
         case packet::PKT_SSPK : // 服务器数据包
         {
             invoke_command( conn_id,
-                header->_owner,socket::CNT_SSCN,cmd_cfg,header );
+                socket::CNT_SSCN,header->_owner,cmd_cfg,header );
         }break;
         default :
         {
@@ -520,7 +522,7 @@ void lnetwork_mgr::invoke_command( uint32 conn_id,
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,2 + cnt,0,1 ) ) )
     {
         ERROR( "invoke_command:%s",lua_tostring( L,-1 ) );
 
@@ -682,7 +684,7 @@ int32 lnetwork_mgr::set_session()
 }
 
 /* 发送s2s数据包
- * network_mgr:send_s2s_packet( conn_id,session,cmd,errno,pkt )
+ * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
  */
 int32 lnetwork_mgr::send_s2s_packet()
 {
@@ -703,8 +705,8 @@ int32 lnetwork_mgr::send_s2s_packet()
         return luaL_error( L,"no such socket found" );
     }
 
-    cmd_map_t::iterator cmd_itr = _clt_cmd_map.find( cmd );
-    if ( cmd_itr == _clt_cmd_map.end() )
+    cmd_map_t::iterator cmd_itr = _srv_cmd_map.find( cmd );
+    if ( cmd_itr == _srv_cmd_map.end() )
     {
         return luaL_error( L,"no command config found:%d",cmd );
     }

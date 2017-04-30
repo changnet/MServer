@@ -55,9 +55,27 @@ function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
     cfg.noreg    = noreg
     cfg.nounpack = nounpack
 
+    print( "set srv cmd",cfg[1],cfg[2],cfg[3],0,SESSION )
     network_mgr:set_srv_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
 end
 
+-- 本进程需要注册的指令
+function Command_mgr:command_pkt()
+    local pkt =
+    {
+        name    = Main.srvname,
+        session = Main.session,
+        timestamp = ev:time(),
+    }
+    pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
+
+    pkt.clt_cmd = self:clt_cmd()
+    pkt.srv_cmd = self:srv_cmd()
+    pkt.rpc_cmd = self:rpc_cmd()
+
+    return pkt
+end
+-- ===========================================================================
 -- 分发协议
 -- @owner 为连接对象，连接产生时一定存在
 function Command_mgr:clt_dispatch( owner,... )
