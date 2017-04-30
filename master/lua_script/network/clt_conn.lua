@@ -1,8 +1,6 @@
 -- 客户端网络连接
 
-local g_command_mgr = g_command_mgr
-local g_network_mgr = g_network_mgr
-
+local network_mgr = network_mgr
 local Clt_conn = oo.class( nil,... )
 
 function Clt_conn:__init( conn_id )
@@ -13,21 +11,14 @@ function Clt_conn:__init( conn_id )
     self.conn_id = conn_id
 end
 
--- 连接断开处理
-function Clt_conn:on_disconnected()
-    return g_network_mgr:clt_disconnect( self )
+-- 发送数据包
+function Clt_conn:send_pkt( cfg,pkt,errno )
+    return network_mgr:send_s2c_packet( self.conn_id,cfg[1],errno or 0,pkt )
 end
 
 -- 认证成功
-function Clt_conn:authorized( pkt )
+function Clt_conn:authorized()
     self.auth = true
-    self.conn:set_on_command( self.on_command )
-end
-
--- 关闭连接(TODO: 暂时用设置nil方式释放引用)
-function Clt_conn:close()
-    self.pid  = nil
-    self.conn = nil
 end
 
 -- 将该链接绑定一个角色

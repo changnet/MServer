@@ -175,8 +175,7 @@ end
 -- TODO 底层要做个服务器广播
 function Command_mgr:srv_broadcast( cfg,pkt )
     for _,srv_conn in pairs( g_network_mgr.srv ) do
-        srv_conn.conn:ss_flatbuffers_send( 
-            self.lfb,SESSION,cfg[1],cfg[2],cfg[3],pkt )
+        srv_conn:send_pkt( cfg,pkt )
     end
 end
 

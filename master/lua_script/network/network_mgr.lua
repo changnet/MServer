@@ -58,8 +58,6 @@ end
 function Network_mgr:clt_close( clt_conn )
     self.clt_conn[clt_conn.conn_id] = nil
     if pid then self.clt[clt_conn.pid] = nil end
-
-    clt_conn:close()
 end
 
 -- 服务器认证
@@ -157,7 +155,7 @@ function sscn_connect_new( conn_id,ecode )
 end
 
 -- 底层数据包回调
-function sscn_command_new( conn_id,session,cmd,pkt )
+function sscn_command_new( conn_id,session,cmd,errno,pkt )
     local conn = _network_mgr.srv_conn[conn_id]
     g_command_mgr:srv_dispatch( conn,cmd,pkt )
 end
@@ -170,6 +168,22 @@ function sscn_connect_del( conn_id )
     _network_mgr.srv_conn[conn_id] = nil
 
     PLOG( "%s connect del",conn:conn_name() )
+end
+
+-- 客户端连接断开回调
+function sccn_connect_del( conn_id )
+    local conn = _network_mgr.clt_conn[conn_id]
+
+    if conn.pid then _network_mgr.clt[conn.pid] = nil end
+    _network_mgr.clt_conn[conn_id] = nil
+
+    PLOG( "client connect del:%d",conn_id )
+end
+
+-- 客户端数据包回调
+function sccn_command_new( conn_id,pid,cmd,... )
+    local conn = _network_mgr.clt_conn[conn_id]
+    g_command_mgr:clt_dispatch( conn,cmd,... )
 end
 
 return _network_mgr

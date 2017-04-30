@@ -71,7 +71,7 @@ function Account_mgr.player_login( self )
         end
 
         -- 返回角色信息(如果没有角色，则pid和name都为nil)
-        g_command_mgr:clt_send( clt_conn,SC.PLAYER_LOGIN,role_info )
+        clt_conn:send_pkt( SC.PLAYER_LOGIN,role_info )
 
         PLOG( "client authorized success:%s",pkt.account )
     end
@@ -103,7 +103,7 @@ function Account_mgr.create_role( self )
         clt_conn:bind_role( pid )
         g_network_mgr:set_clt_conn( pid,clt_conn )
 
-        g_command_mgr:clt_send( clt_conn,SC.PLAYER_CREATE,role_info )
+        clt_conn:send_pkt( SC.PLAYER_CREATE,role_info )
     end
 end
 
@@ -121,7 +121,7 @@ function Account_mgr:login_otherwhere( role_info )
     -- 告诉原连接被顶号
     local _pkt = { dummy = 1 }
     local old_conn = g_network_mgr:get_conn( role_info.conn_id )
-    g_command_mgr:clt_send( old_conn,SC.PLAYER_OTHER,_pkt )
+    old_conn:send_pkt( SC.PLAYER_OTHER,_pkt )
 
     -- 通知其他服务器玩家下线
     if role_info.pid then

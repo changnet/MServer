@@ -101,6 +101,7 @@ private:
     void delete_socket( uint32 conn_id );
     void process_command( uint32 conn_id,const c2s_header *header );
     void process_command( uint32 conn_id,const s2s_header *header );
+    void process_command( uint32 conn_id,const s2c_header *header );
 
     /* 转客户端数据包 */
     void clt_forwarding( 

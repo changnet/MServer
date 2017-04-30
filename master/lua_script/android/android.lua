@@ -6,52 +6,34 @@
 
 local util    = require "util"
 local Timer   = require "Timer"
-local Stream_socket  = require "Stream_socket"
-local android_mgr = require "android/android_mgr"
+local android_mgr = require "android.android_mgr"
 
 local sc = require "command/sc_command"
 
 local SC,CS = sc[1],sc[2]
 
+local network_mgr = network_mgr
 local Android = oo.class( nil,... )
 
 -- 构造函数
-function Android:__init( index )
-    self.index = index
-end
-
--- 发送数据包
-function Android:send_pkt( cfg,pkt )
-    return self.conn:cs_flatbuffers_send( 
-            android_mgr.lfb,cfg[1],cfg[2],cfg[3],pkt )
-end
-
--- 连接服务器
-function Android:connect( ip,port )
-    local conn = Stream_socket()
-    conn:set_self_ref( self )
-    conn:set_on_command( self.on_command )
-    conn:set_on_connection( self.on_connect )
-    conn:set_on_disconnect( self.on_disconnect )
-
-    conn:connect( ip,port )
-    self.conn = conn
+function Android:__init( index,conn_id )
+    self.index   = index
+    self.conn_id = conn_id
 
     self.timer = Timer()
     self.timer:set_self( self )
     self.timer:set_callback( self.do_timer )
 
-    self.timer:start( 5,5 )
+    -- self.timer:start( 5,5 )
+end
+
+-- 发送数据包
+function Android:send_pkt( cfg,pkt )
+    return network_mgr:send_c2s_packet( self.conn_id,cfg[1],pkt )
 end
 
 -- 连接成功
-function Android:on_connect( errno )
-    if 0 ~= errno then
-        android_mgr:on_android_kill( self.index )
-        ELOG( "android(%d) connect fail:%s",self.index,util.what_error(errno) )
-        return
-    end
-
+function Android:on_connect()
     -- sid:int;        // 服务器id
     -- time:int;       // 时间戳
     -- plat:int;       // 平台id
@@ -71,25 +53,11 @@ function Android:on_connect( errno )
 end
 
 -- 断开连接
-function Android:on_disconnect()
+function Android:on_die()
     self.timer:stop()
-    self.conn:kill()
-
     self.timer = nil
-    self.conn = nil
 
-    android_mgr:on_android_kill( self.index )
     PLOG( "android die " .. self.index )
-end
-
--- 收到数据
-function Android:on_command()
-    local cmd = self.conn:scmd_next()
-    while cmd do
-        android_mgr:cmd_dispatcher( cmd,self )
-
-        cmd = self.conn:scmd_next( cmd )
-    end
 end
 
 -- 定时器事件

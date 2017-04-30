@@ -437,10 +437,12 @@ void lnetwork_mgr::command_new(
         case socket::CNT_CSCN : /* 解析服务器发往客户端的包 */
         {
             process_command( conn_id,
-                reinterpret_cast<struct c2s_header *>( recv.data() ) );
+                reinterpret_cast<struct s2c_header *>( recv.data() ) );
         }break;
         case socket::CNT_SCCN : /* 解析客户端发往服务器的包 */
         {
+            process_command( conn_id,
+                reinterpret_cast<struct c2s_header *>( recv.data() ) );
         }break;
         case socket::CNT_SSCN : /* 解析服务器发往服务器的包 */
         {
@@ -451,6 +453,7 @@ void lnetwork_mgr::command_new(
     }
 }
 
+/* 处理客户端发给服务器数据包 */
 void lnetwork_mgr::process_command( uint32 conn_id,const c2s_header *header )
 {
     const cmd_cfg_t *cmd_cfg = get_cs_cmd( header->_cmd );
@@ -472,6 +475,20 @@ void lnetwork_mgr::process_command( uint32 conn_id,const c2s_header *header )
     cs_command( conn_id,owner,cmd_cfg,header );
 }
 
+/* 处理服务器发给客户端数据包 */
+void lnetwork_mgr::process_command( uint32 conn_id,const s2c_header *header )
+{
+    const cmd_cfg_t *cmd_cfg = get_sc_cmd( header->_cmd );
+    if ( !cmd_cfg )
+    {
+        ERROR( "s2c cmd(%d) no cmd cfg found",header->_cmd );
+        return;
+    }
+
+    sc_command( conn_id,cmd_cfg,header );
+}
+
+/* 处理服务器之间数据包 */
 void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
 {
     const cmd_cfg_t *cmd_cfg = get_ss_cmd( header->_cmd );
@@ -603,6 +620,7 @@ void lnetwork_mgr::sc_command(
     lua_getglobal( L,COMMAND_EVENT[socket::CNT_CSCN] );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,header->_cmd );
+    lua_pushinteger( L,header->_errno );
 
     int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
@@ -611,7 +629,7 @@ void lnetwork_mgr::sc_command(
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,2 + cnt,0,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
     {
         ERROR( "sc_command:%s",lua_tostring( L,-1 ) );
 
@@ -633,6 +651,7 @@ void lnetwork_mgr::ss_command(
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,header->_owner );
     lua_pushinteger( L,header->_cmd );
+    lua_pushinteger( L,header->_errno );
 
     int32 cnt = packet::instance()->parse( L,cfg->_schema,cfg->_object,header );
     if ( cnt < 0 )
@@ -641,7 +660,7 @@ void lnetwork_mgr::ss_command(
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
     {
         ERROR( "invoke_command:%s",lua_tostring( L,-1 ) );
 
@@ -730,7 +749,7 @@ int32 lnetwork_mgr::send_s2c_packet()
         return luaL_error( L,"invalid socket" );
     }
 
-    if ( socket::CNT_CSCN != sk->conn_type() )
+    if ( socket::CNT_SCCN != sk->conn_type() )
     {
         return luaL_error( L,"illegal socket connecte type" );
     }

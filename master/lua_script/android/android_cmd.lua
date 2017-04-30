@@ -5,8 +5,8 @@ SC,CS = sc[1],sc[2]
 
 local android_mgr = require "android.android_mgr"
 
-android_mgr:init_command( SC )
-android_mgr:init_command( CS )
+android_mgr:init_sc_command( SC )
+android_mgr:init_cs_command( CS )
 
 local Android = require "android.android"
 
