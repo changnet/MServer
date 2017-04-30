@@ -12,10 +12,11 @@ function Network_mgr:__init()
     self.srv = {}  -- session为key，连接对象为value
     self.clt = {}  -- pid为key，连接对象为value
 
-    self.srv_conn = {} -- conn_id为key，连接对象为value
-    self.clt_conn = {} -- conn_id为key，连接对象为value
+    self.srv_conn = {} -- conn_id为key，服务器连接对象为value
+    self.clt_conn = {} -- conn_id为key，客户端连接对象为value
 
-    self.srv_listen = nil
+    self.srv_listen = nil -- 监听服务器连接
+    self.clt_listen = nil -- 监听客户端连接
 
     self.timer = Timer()
     self.timer:set_self( self )
@@ -26,10 +27,7 @@ end
 
 --  监听服务器连接
 function Network_mgr:srv_listen( ip,port )
-    local conn = Srv_conn( network_mgr.CNT_SSCN )
-
-    conn:listen( ip,port )
-    self.srv_listen = conn
+    self.srv_listen = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
     PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
 
     return true
@@ -37,14 +35,17 @@ end
 
 --  监听客户端连接
 function Network_mgr:clt_listen( ip,port )
-    local conn = Clt_conn( network_mgr.CNT_SCCN )
-
-    conn:listen( ip,port )
-
-    self.clt_listen = conn
+    self.clt_listen = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )
 
     return true
+end
+
+-- 底层accept回调
+function sccn_accept_new( conn_id )
+    local listen_conn = self.conn[listen_conn]
+
+
 end
 
 -- 处理服务器连接

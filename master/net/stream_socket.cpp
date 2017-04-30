@@ -86,7 +86,7 @@ void stream_socket::listen_cb  ()
         /* 新增的连接和监听的连接类型必须一样 */
         class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
 
-        bool ok = network_mgr->accept_new( conn_id,new_sk );
+        bool ok = network_mgr->accept_new( _conn_ty,conn_id,new_sk );
         if ( ok ) new_sk->start( new_fd );
     }
 }

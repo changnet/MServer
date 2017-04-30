@@ -5,15 +5,23 @@
 #include "../net/packet.h"
 #include "../net/stream_socket.h"
 
+const static char *ACCEPT_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_accept_new", // CNT_CSCN
+    "sccn_accept_new", // CNT_SCCN
+    "sscn_accept_new", // CNT_SSCN
+    "http_accept_new", // CNT_HTTP
+};
+
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
 {
-    if ( _network_mgr )
-    {
-        delete _network_mgr;
-        _network_mgr = NULL;
-    }
+    packet::uninstance();
+
+    delete _network_mgr;
+    _network_mgr = NULL;
 }
 
 class lnetwork_mgr *lnetwork_mgr::instance()
@@ -30,6 +38,18 @@ class lnetwork_mgr *lnetwork_mgr::instance()
 
 lnetwork_mgr::~lnetwork_mgr()
 {
+    socket_map_t::iterator itr = _socket_map.begin();
+    for ( ;itr != _socket_map.end(); itr ++ )
+    {
+        class socket *sk = itr->second;
+        if ( sk ) sk->stop();
+        delete sk;
+    }
+
+    _conn_map.clear();
+    _owner_map.clear();
+    _socket_map.clear();
+    _session_map.clear();
 }
 
 lnetwork_mgr::lnetwork_mgr( lua_State *L )
@@ -142,11 +162,12 @@ int32 lnetwork_mgr::listen()
 }
 
 /* 新增连接 */
-bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
+bool lnetwork_mgr::accept_new( 
+    int32 conn_ty,uint32 conn_id,class socket *new_sk )
 {
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,"socket_accpet_new" );
+    lua_getglobal( L,ACCEPT_EVENT[conn_ty] );
     lua_pushinteger( L,conn_id );
 
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
@@ -197,6 +218,7 @@ int32 lnetwork_mgr::connect()
         return 0;
     }
 
+    _socket_map[conn_id] = _socket;
     lua_pushinteger( L,conn_id );
     return 1;
 }
