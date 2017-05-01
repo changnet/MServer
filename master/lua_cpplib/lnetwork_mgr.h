@@ -73,6 +73,8 @@ public:
     int32 send_s2c_packet();
     /* 发送s2s数据包 */
     int32 send_s2s_packet();
+    /* 跨服务器发送客户端数据包 */
+    int32 send_ssc_packet();
 
     int32 close();
     int32 address ();
@@ -102,6 +104,9 @@ private:
     void process_command( uint32 conn_id,const c2s_header *header );
     void process_command( uint32 conn_id,const s2s_header *header );
     void process_command( uint32 conn_id,const s2c_header *header );
+
+    void process_css_cmd( uint32 conn_id,const s2s_header *header );
+    void process_ssc_cmd( uint32 conn_id,const s2s_header *header );
 
     /* 转客户端数据包 */
     void clt_forwarding( 

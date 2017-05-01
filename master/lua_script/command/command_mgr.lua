@@ -98,7 +98,6 @@ function Command_mgr:srv_dispatch( srv_conn,cmd,... )
 end
 
 -- 分发协议
--- @owner 为连接对象，连接产生时一定存在
 function Command_mgr:clt_dispatch( clt_conn,cmd,... )
     local cfg = self.cs[cmd]
 
@@ -112,6 +111,22 @@ function Command_mgr:clt_dispatch( clt_conn,cmd,... )
     end
 
     return handler( clt_conn,... )
+end
+
+-- 分发网关转发的客户端协议
+function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
+    local cfg = self.cs[cmd]
+
+    local handler = cfg.handler
+    if not cfg.handler then
+        return ELOG( "clt_dispatch_ex:cmd [%d] no handle function found",cmd )
+    end
+
+    if not srv_conn.auth then
+        return ELOG( "clt_dispatch_ex:srv conn not auth,cmd [%d]",cmd )
+    end
+
+    return handler( srv_conn,pid,... )
 end
 
 -- 获取当前进程处理的客户端指令

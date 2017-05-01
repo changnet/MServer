@@ -479,26 +479,63 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2c_header *header )
     sc_command( conn_id,cmd_cfg,header );
 }
 
+/* 解析网关转发的客户端数据包 */
+void lnetwork_mgr::process_css_cmd( uint32 conn_id,const s2s_header *header )
+{
+    const struct c2s_header *clt_header = 
+        reinterpret_cast<const struct c2s_header *>( header + 1 );
+    const cmd_cfg_t *clt_cfg = get_cs_cmd( clt_header->_cmd );
+    if ( !clt_cfg )
+    {
+        ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
+        return;
+    }
+    cs_command( conn_id,header->_owner,clt_cfg,clt_header,true );
+}
+
+/* 解析其他服务器转发到网关的数据包 */
+void lnetwork_mgr::process_ssc_cmd( uint32 conn_id,const s2s_header *header )
+{
+    uint32 dest_conn = get_conn_id( header->_owner );
+    if ( !dest_conn ) // 客户端刚好断开或者当前进程不是网关 ?
+    {
+        ERROR( "ssc packet no clt connect found" );
+        return;
+    }
+    socket_map_t::iterator itr = _socket_map.find( dest_conn );
+    if ( itr == _socket_map.end() )
+    {
+        ERROR( "ssc packet no clt connect not exist" );
+        return;
+    }
+    class socket *sk = itr->second;
+    if ( socket::CNT_SCCN != sk->conn_type() )
+    {
+        ERROR( "ssc packet destination conn is not a clt" );
+        return;
+    }
+
+    class buffer &send = sk->send_buffer();
+    bool is_ok = send.append( header + 1,PACKET_BUFFER_LEN(header) );
+    if ( !is_ok )
+    {
+        ERROR( "ssc packet can not append buffer" );
+        return;
+    }
+    sk->pending_send();
+}
+
 /* 处理服务器之间数据包 */
 void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
 {
     /* 先判断数据包类型 */
     switch ( header->_mask )
     {
-        case packet::PKT_CSPK : // 网关转发的客户端包
-        {
-            const struct c2s_header *clt_header = 
-                reinterpret_cast<const struct c2s_header *>( header + 1 );
-            const cmd_cfg_t *clt_cfg = get_cs_cmd( clt_header->_cmd );
-            if ( !clt_cfg )
-            {
-                ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
-                return;
-            }
-            cs_command( conn_id,header->_owner,clt_cfg,clt_header,true );
-            return;
-        }break;
         case packet::PKT_SSPK : break;// 服务器数据包放在后面处理
+        // 网关转发的客户端包
+        case packet::PKT_CSPK : process_css_cmd( conn_id,header );return;
+        // 需要转发给客户端的数据包
+        case packet::PKT_SCPK : process_ssc_cmd( conn_id,header );return;
         default :
         {
             ERROR( "unknow server packet:"
@@ -864,5 +901,56 @@ int32 lnetwork_mgr::send_s2s_packet()
 int32 lnetwork_mgr::set_curr_session()
 {
     _session = luaL_checkinteger( L,1 );
+    return 0;
+}
+
+
+/* 在非网关发送客户端数据包
+ * conn_id必须为网关连接
+ * network_mgr:send_ssc_packet( conn_id,pid,cmd,errno,pkt )
+ */
+int32 lnetwork_mgr::send_ssc_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    owner_t owner  = luaL_checkinteger( L,2 );
+    int32 cmd      = luaL_checkinteger( L,3 );
+    int32 ecode    = luaL_checkinteger( L,4 );
+
+    int32 pkt_index = 5;
+    if ( !lua_istable( L,pkt_index ) )
+    {
+        return luaL_error( L,"argument #%d expect table,got %s",
+            pkt_index,lua_typename( L,lua_type(L,pkt_index) ) );
+    }
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    cmd_map_t::iterator cmd_itr = _sc_cmd_map.find( cmd );
+    if ( cmd_itr == _sc_cmd_map.end() )
+    {
+        return luaL_error( L,"no command config found:%d",cmd );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_SSCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    const cmd_cfg_t &cfg = cmd_itr->second;
+    packet::instance()->unparse_ssc( L,pkt_index,owner,
+        cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
+
+    sk->pending_send();
+
     return 0;
 }

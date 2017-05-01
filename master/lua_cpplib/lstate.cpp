@@ -318,6 +318,7 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::send_c2s_packet> ( "send_c2s_packet" );
     lc.def<&lnetwork_mgr::send_s2c_packet> ( "send_s2c_packet" );
     lc.def<&lnetwork_mgr::send_s2s_packet> ( "send_s2s_packet" );
+    lc.def<&lnetwork_mgr::send_ssc_packet> ( "send_ssc_packet" );
 
     lc.set( "CNT_NONE",socket::CNT_NONE );
     lc.set( "CNT_CSCN",socket::CNT_CSCN );

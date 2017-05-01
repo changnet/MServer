@@ -191,7 +191,8 @@ end
 
 -- 转发的客户端数据包
 function css_command_new( conn_id,pid,cmd,... )
-    print( "css_command_new",conn_id,pid,cmd,... )
+    local conn = _network_mgr.srv_conn[conn_id]
+    g_command_mgr:clt_dispatch_ex( conn,pid,cmd,... )
 end
 
 return _network_mgr
