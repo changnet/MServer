@@ -43,6 +43,9 @@ public:
     ~lnetwork_mgr();
     explicit lnetwork_mgr( lua_State *L );
 
+    /* 删除无效的连接 */
+    void invoke_delete();
+
     /* 连接断开 */
     bool connect_del( uint32 conn_id,int32 conn_ty );
     /* 连接回调 */

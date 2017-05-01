@@ -3,6 +3,7 @@
 #include "leventloop.h"
 #include "lstate.h"
 #include "ltools.h"
+#include "lnetwork_mgr.h"
 
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
@@ -232,6 +233,8 @@ void leventloop::running()
 {
     invoke_sending ();
     invoke_signal  ();
+
+    lnetwork_mgr::instance()->invoke_delete();
 
     lua_gc(L, LUA_GCSTEP, 100);
 }

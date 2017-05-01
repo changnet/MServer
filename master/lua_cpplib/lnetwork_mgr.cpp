@@ -77,6 +77,29 @@ lnetwork_mgr::lnetwork_mgr( lua_State *L )
     assert( "lnetwork_mgr is singleton",NULL == _network_mgr );
 }
 
+/* 删除无效的连接 */
+void lnetwork_mgr::invoke_delete()
+{
+    std::vector<uint32>::iterator itr = _deleting.begin();
+    for ( ;itr != _deleting.end();itr ++ )
+    {
+        socket_map_t::iterator sk_itr = _socket_map.find( *itr );
+        if ( sk_itr == _socket_map.end() )
+        {
+            ERROR( "no socket to delete" );
+            continue;
+        }
+
+        const class socket *sk = sk_itr->second;
+        assert( "delete socket illegal",NULL != sk && sk->fd() <= 0 );
+
+        delete sk;
+        _socket_map.erase( sk_itr );
+    }
+
+    _deleting.clear();
+}
+
 /* 产生一个唯一的连接id 
  * 之所以不用系统的文件描述符fd，是因为fd对于上层逻辑不可控。比如一个fd被释放，可能在多个进程
  * 之间还未处理完，此fd就被重用了。当前的连接id不太可能会在短时间内重用。

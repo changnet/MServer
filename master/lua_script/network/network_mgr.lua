@@ -57,7 +57,9 @@ end
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
 function Network_mgr:clt_close( clt_conn )
     self.clt_conn[clt_conn.conn_id] = nil
-    if pid then self.clt[clt_conn.pid] = nil end
+    if clt_conn.pid then self.clt[clt_conn.pid] = nil end
+
+    network_mgr:close( clt_conn.conn_id )
 end
 
 -- 服务器认证
@@ -177,8 +179,15 @@ end
 function sccn_connect_del( conn_id )
     local conn = _network_mgr.clt_conn[conn_id]
 
-    if conn.pid then _network_mgr.clt[conn.pid] = nil end
     _network_mgr.clt_conn[conn_id] = nil
+
+    g_account_mgr:role_offline( conn_id )
+
+    if conn.pid then
+        _network_mgr.clt[conn.pid] = nil
+        local pkt = { pid = conn.pid }
+        g_command_mgr:srv_broadcast( SS.PLAYER_OFFLINE,pkt )
+    end
 
     PLOG( "client connect del:%d",conn_id )
 end
