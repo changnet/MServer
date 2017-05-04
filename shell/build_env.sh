@@ -79,8 +79,8 @@ function build_flatbuffers()
     FBB_VER=1.6.0
     tar -zxvf flatbuffers-$FBB_VER.tar.gz
     cmake -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
-    cmake -C flatbuffers-$FBB_VER all
-    cmake -C flatbuffers-$FBB_VER install
+    make -C flatbuffers-$FBB_VER all
+    make -C flatbuffers-$FBB_VER install
     ldconfig -v
 
     rm -R flatbuffers-$FBB_VER
