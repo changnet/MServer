@@ -12,7 +12,7 @@ function build_base()
     apt-get install g++
     apt-get install make
 
-    # flatbuffers mongo may need this
+    # flatbuffers and mongo will need those to build
     apt-get install cmake
     apt-get install automake
 }
@@ -21,7 +21,7 @@ function build_base()
 function build_library()
 {
     apt-get install uuid-dev
-    apt-get install mysql-server
+    # apt-get install mysql-server
     apt-get install libmysqlclient-dev
     apt-get install libreadline6-dev
     apt-get install pkg-config libssl-dev libsasl2-dev
@@ -58,11 +58,26 @@ function build_mongo_driver()
     rm -R $PKGDIR/mongo-c-driver-1.6.2
 }
 
+FBB_VER=1.6.0
+function build_flatbuffers()
+{
+    cd $PKGDIR
+
+    tar -zxvf flatbuffers-$(FBB_VER).tar.gz
+    $(CMAKE) -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$(FBB_VER) -Bflatbuffers-$(FBB_VER)
+    $(MAKE) -C flatbuffers-$(FBB_VER) all
+    $(MAKE) -C flatbuffers-$(FBB_VER) install
+    ldconfig -v
+
+    rm -R flatbuffers-$(FBB_VER)
+    cd -
+}
+
 build_library
 build_lua
 build_mongo_driver
+build_flatbuffers 
 
-# TODO build flatbuffers
 
 # TODO build cppcheck
 # https://sourceforge.net/projects/cppcheck/files/cppcheck/1.78/cppcheck-1.78.tar.gz/download
