@@ -37,13 +37,14 @@ function build_lua()
 {
     cd $PKGDIR
 
-    tar -zxvf lua-5.3.1.tar.gz
-    cd lua-5.3.1
+    LUAVER=5.3.1
+    tar -zxvf lua-$(LUAVER).tar.gz
+    cd lua-$(LUAVER)
     make linux install
     make install
 
     cd -
-    rm -R $PKGDIR/lua-5.3.1
+    rm -R $PKGDIR/lua-$(LUAVER)
 }
 
 function build_mongo_driver()
@@ -54,35 +55,41 @@ function build_mongo_driver()
     # mongo-c-driver-1.2.1\src\libbson\configure
     cd $PKGDIR
 
-    tar -zxvf mongo-c-driver-1.6.2.tar.gz
-    cd mongo-c-driver-1.6.2
+    MONGOCVER=1.6.2
+    tar -zxvf mongo-c-driver-$(MONGOCVER).tar.gz
+    cd mongo-c-driver-$(MONGOCVER)
     ./configure --disable-automatic-init-and-cleanup
     make
     make install
 
     cd -
-    rm -R $PKGDIR/mongo-c-driver-1.6.2
+    rm -R $PKGDIR/mongo-c-driver-$(MONGOCVER)
 }
 
-FBB_VER=1.6.0
 function build_flatbuffers()
 {
     cd $PKGDIR
 
+    FBB_VER=1.6.0
     tar -zxvf flatbuffers-$(FBB_VER).tar.gz
-    $(CMAKE) -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$(FBB_VER) -Bflatbuffers-$(FBB_VER)
-    $(MAKE) -C flatbuffers-$(FBB_VER) all
-    $(MAKE) -C flatbuffers-$(FBB_VER) install
+    cmake -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$(FBB_VER) -Bflatbuffers-$(FBB_VER)
+    cmake -C flatbuffers-$(FBB_VER) all
+    cmake -C flatbuffers-$(FBB_VER) install
     ldconfig -v
 
     rm -R flatbuffers-$(FBB_VER)
     cd -
 }
 
-build_library
-build_lua
-build_mongo_driver
-build_flatbuffers 
+if [[ ! $1 ]];then
+    build_base
+    build_library
+    build_lua
+    build_mongo_driver
+    build_flatbuffers
+else
+    build_$1
+end
 
 
 # TODO build cppcheck
