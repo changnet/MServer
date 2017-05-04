@@ -89,7 +89,7 @@ if [[ ! $1 ]];then
     build_flatbuffers
 else
     build_$1
-end
+fi
 
 
 # TODO build cppcheck
