@@ -14,14 +14,12 @@ set -o pipefail
 function auto_apt_get()
 {
     echo "install $1 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-    auto_apt_get $1
+    apt-get -y install $1
 }
 
 # install base compile enviroment
 function build_base()
 {
-    echo "start building base >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-    
     auto_apt_get gcc
     auto_apt_get g++
     auto_apt_get make
