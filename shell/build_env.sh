@@ -11,26 +11,34 @@ PKGDIR=../package
 set -e
 set -o pipefail
 
+function auto_apt_get()
+{
+    echo "install $1 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+    auto_apt_get $1
+}
+
 # install base compile enviroment
 function build_base()
 {
-    apt-get install gcc
-    apt-get install g++
-    apt-get install make
+    echo "start building base >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+    
+    auto_apt_get gcc
+    auto_apt_get g++
+    auto_apt_get make
 
     # flatbuffers and mongo will need those to build
-    apt-get install cmake
-    apt-get install automake
+    auto_apt_get cmake
+    auto_apt_get automake
 }
 
 # install third party library
 function build_library()
 {
-    apt-get install uuid-dev
-    # apt-get install mysql-server
-    apt-get install libmysqlclient-dev
-    apt-get install libreadline6-dev
-    apt-get install pkg-config libssl-dev libsasl2-dev
+    auto_apt_get uuid-dev
+    # auto_apt_get mysql-server
+    auto_apt_get libmysqlclient-dev
+    auto_apt_get libreadline6-dev
+    auto_apt_get pkg-config libssl-dev libsasl2-dev
 }
 
 function build_lua()
@@ -38,13 +46,13 @@ function build_lua()
     cd $PKGDIR
 
     LUAVER=5.3.1
-    tar -zxvf lua-$(LUAVER).tar.gz
-    cd lua-$(LUAVER)
+    tar -zxvf lua-$LUAVER.tar.gz
+    cd lua-$LUAVER
     make linux install
     make install
 
     cd -
-    rm -R $PKGDIR/lua-$(LUAVER)
+    rm -R $PKGDIR/lua-$LUAVER
 }
 
 function build_mongo_driver()
@@ -56,14 +64,14 @@ function build_mongo_driver()
     cd $PKGDIR
 
     MONGOCVER=1.6.2
-    tar -zxvf mongo-c-driver-$(MONGOCVER).tar.gz
-    cd mongo-c-driver-$(MONGOCVER)
+    tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
+    cd mongo-c-driver-$MONGOCVER
     ./configure --disable-automatic-init-and-cleanup
     make
     make install
 
     cd -
-    rm -R $PKGDIR/mongo-c-driver-$(MONGOCVER)
+    rm -R $PKGDIR/mongo-c-driver-$MONGOCVER
 }
 
 function build_flatbuffers()
@@ -71,13 +79,13 @@ function build_flatbuffers()
     cd $PKGDIR
 
     FBB_VER=1.6.0
-    tar -zxvf flatbuffers-$(FBB_VER).tar.gz
-    cmake -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$(FBB_VER) -Bflatbuffers-$(FBB_VER)
-    cmake -C flatbuffers-$(FBB_VER) all
-    cmake -C flatbuffers-$(FBB_VER) install
+    tar -zxvf flatbuffers-$FBB_VER.tar.gz
+    cmake -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
+    cmake -C flatbuffers-$FBB_VER all
+    cmake -C flatbuffers-$FBB_VER install
     ldconfig -v
 
-    rm -R flatbuffers-$(FBB_VER)
+    rm -R flatbuffers-$FBB_VER
     cd -
 }
 
@@ -102,14 +110,14 @@ fi
 # make: pcre-config: Command not found
 # If you write HAVE_RULES=yes then pcre must be available. So you have two options:
 # 1. Remove HAVE_RULES=yes
-# 2. Install pcre(apt-get install libpcre3-dev)
+# 2. Install pcre(auto_apt_get libpcre3-dev)
 
 # TODO build oclint env
 # need debian8(>=gcc5)
 # edit /etc/apt/sources.list
 # deb-src http://mirrors.163.com/debian-security/ jessie/updates main non-free contrib
 # apt-get update
-# apt-get install g++-6
+# auto_apt_get g++-6
 # download https://github.com/oclint/oclint/releases
 # tar -zxvf xx.tar.gz
 # cd xxx
