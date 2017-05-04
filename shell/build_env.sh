@@ -5,6 +5,12 @@
 
 PKGDIR=../package
 
+# "set -e" will cause bash to exit with an error on any simple command. 
+# "set -o pipefail" will cause bash to exit with an error on any command 
+#  in a pipeline as well.
+set -e
+set -o pipefail
+
 # install base compile enviroment
 function build_base()
 {
