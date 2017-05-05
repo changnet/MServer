@@ -121,8 +121,8 @@ end
 -- 确认进入游戏完成
 function Android:on_enter_world( errno,pkt )
     PLOG( "%s enter world success",self.name )
-    -- f_tm_start()
-    -- self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    f_tm_start()
+    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
 end
 
 -- 被顶号

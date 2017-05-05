@@ -2,7 +2,7 @@
 
 # https://docs.docker.com/engine/installation/linux/ubuntu/
 
-$ sudo apt-get install \
+sudo apt-get install \
     apt-transport-https \
     ca-certificates \
     curl \
@@ -65,7 +65,7 @@ sudo docker run -it -h dev --net=host -v ~/github:/root/workspace debian:7 /bin/
 # MServer  lua_flatbuffers
 # root@dev:~/workspace# 
 
-# 挂载的目录权限是继承主系统的，ubuntu默认是不能运行sh文件的。debian则可以
+# 默认是没有运行权限的，需要加上
 root@dev:~/workspace/MServer/shell# ./build_env.sh
 bash: ./build_env.sh: Permission denied
 root@dev:~/workspace/MServer/shell# chmod +x *
