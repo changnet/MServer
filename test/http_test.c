@@ -7,12 +7,13 @@
 #include <string.h>
 #include <stdarg.h>
 
-
+// 开始解析报文，在url之前
 int on_message_begin (http_parser *parser){
     printf("on_message_begin\n");
     return 0;
 }
 
+// 解析到url数据，可能只是一部分
 int on_url(http_parser *parser, const char *at, size_t length){
     char *url = (char*)calloc(1,length+1);
     memcpy(url,at,length);

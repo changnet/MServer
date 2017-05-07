@@ -91,7 +91,7 @@ void stream_socket::listen_cb  ()
         {
             if ( EAGAIN != errno && EWOULDBLOCK != errno )
             {
-                ERROR( "hsocket::accept:%s\n",strerror(errno) );
+                ERROR( "stream socket::accept:%s\n",strerror(errno) );
                 return;
             }
 

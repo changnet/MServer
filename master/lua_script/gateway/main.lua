@@ -71,6 +71,11 @@ function Main.init()
         ELOG( "gateway server listen fail,exit" )
         os.exit( 1 )
     end
+
+    if not g_network_mgr:http_listen( g_setting.hip,g_setting.hport ) then
+        ELOG( "gateway http listen fail,exit" )
+        os.exit( 1 )
+    end
 end
 
 -- 最终初始化

@@ -1,5 +1,5 @@
 #include "packet.h"
-#include "stream_socket.h"
+#include "buffer.h"
 
 #if defined FLATBUFFERS_PARSE
     #include "packet_flatbuffers.cpp"
@@ -31,4 +31,3 @@ class packet *packet::instance()
 
     return _packet;
 }
-

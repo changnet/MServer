@@ -3,6 +3,7 @@
 #include "ltools.h"
 #include "lstate.h"
 #include "../net/packet.h"
+#include "../net/http_socket.h"
 #include "../net/stream_socket.h"
 
 const static char *ACCEPT_EVENT[] =
@@ -230,8 +231,17 @@ int32 lnetwork_mgr::listen()
     }
 
     uint32 conn_id = generate_connect_id();
-    class socket *_socket = new class stream_socket( 
-        conn_id,static_cast<socket::conn_t>(conn_type) );
+    class socket *_socket = NULL;
+    if ( conn_type == socket::CNT_HTTP )
+    {
+        _socket = new class http_socket( 
+            conn_id,static_cast<socket::conn_t>(conn_type) );
+    }
+    else
+    {
+        _socket = new class stream_socket( 
+            conn_id,static_cast<socket::conn_t>(conn_type) );
+    }
 
     int32 fd = _socket->listen( host,port );
     if ( fd < 0 )
@@ -974,6 +984,71 @@ int32 lnetwork_mgr::send_ssc_packet()
         cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
 
     sk->pending_send();
+
+    return 0;
+}
+
+/* 新http请求 */
+void lnetwork_mgr::http_command_new( const class socket *sk )
+{
+    assert( "not a http socket",socket::CNT_HTTP == sk->conn_type() );
+
+    const http_socket *http_sk = static_cast<const http_socket *>( sk );
+
+    lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    const struct http_socket::http_info &info = http_sk->get_http();
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal    ( L,"http_command_new" );
+    lua_pushinteger  ( L,http_sk->conn_id() );
+    lua_pushstring   ( L,info._url.c_str()  );
+    lua_pushstring   ( L,info._body.c_str() );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    {
+        ERROR( "http_command_new:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+}
+
+/* 发送http数据包 */
+int32 lnetwork_mgr::send_http_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+
+    size_t size = 0;
+    const char *content = luaL_checklstring( L,2,&size );
+    if ( !content || size == 0 )
+    {
+        return luaL_error( L,"invalid http content" );
+    }
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_HTTP != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    if ( !sk->append( content,size ) )
+    {
+        return luaL_error( L,"can not reserve memory" );
+    }
 
     return 0;
 }

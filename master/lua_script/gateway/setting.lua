@@ -8,4 +8,6 @@ return
     sport = 10001,       -- s2s监听端口
     cip   = "127.0.0.1", -- c2s监听ip
     cport = 10002,       -- s2s监听端口
+    hip   = "127.0.0.1", -- http监听ip
+    hport = 10003,       -- http监听端口
 }

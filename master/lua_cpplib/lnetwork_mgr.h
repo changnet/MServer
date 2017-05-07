@@ -53,6 +53,7 @@ public:
     /* 新增连接 */
     bool accept_new( uint32 conn_id,int32 conn_ty,class socket *new_sk );
     /* 新数据包 */
+    void http_command_new( const class socket *sk );
     void command_new( 
         uint32 conn_id,socket::conn_t conn_ty,const buffer &recv );
 
@@ -78,6 +79,8 @@ public:
     int32 send_s2s_packet();
     /* 跨服务器发送客户端数据包 */
     int32 send_ssc_packet();
+    /* 发送http数据包 */
+    int32 send_http_packet();
 
     int32 close();
     int32 address ();

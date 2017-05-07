@@ -46,7 +46,8 @@ TARGET = $(ODIR)/master
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
-	net/stream_socket.o lua_cpplib/leventloop.o lua_cpplib/lstate.o mysql/sql.o thread/thread.o\
+	net/stream_socket.o lua_cpplib/leventloop.o lua_cpplib/lstate.o \
+	mysql/sql.o thread/thread.o net/http_socket.o \
 	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o \
 	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lobj_counter.o\
 	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o net/packet.o main.o

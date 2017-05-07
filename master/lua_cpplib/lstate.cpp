@@ -316,15 +316,17 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::set_ss_cmd> ( "set_ss_cmd" );
     lc.def<&lnetwork_mgr::set_sc_cmd> ( "set_sc_cmd" );
 
-    lc.def<&lnetwork_mgr::send_c2s_packet> ( "send_c2s_packet" );
-    lc.def<&lnetwork_mgr::send_s2c_packet> ( "send_s2c_packet" );
-    lc.def<&lnetwork_mgr::send_s2s_packet> ( "send_s2s_packet" );
-    lc.def<&lnetwork_mgr::send_ssc_packet> ( "send_ssc_packet" );
+    lc.def<&lnetwork_mgr::send_c2s_packet > ( "send_c2s_packet"  );
+    lc.def<&lnetwork_mgr::send_s2c_packet > ( "send_s2c_packet"  );
+    lc.def<&lnetwork_mgr::send_s2s_packet > ( "send_s2s_packet"  );
+    lc.def<&lnetwork_mgr::send_ssc_packet > ( "send_ssc_packet"  );
+    lc.def<&lnetwork_mgr::send_http_packet> ( "send_http_packet" );
 
     lc.set( "CNT_NONE",socket::CNT_NONE );
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );
     lc.set( "CNT_SSCN",socket::CNT_SSCN );
+    lc.set( "CNT_HTTP",socket::CNT_HTTP );
 
 
     return 0;
