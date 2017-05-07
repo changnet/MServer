@@ -1,5 +1,5 @@
 -- uri.lua
--- 2015-12=21
+-- 2015-12-21
 -- xzc
 
 -- uri处理
@@ -68,3 +68,26 @@ end
 function Uri.decode( str )
     return string.gsub(str, '%%(%x%x)', function(h) return string.char(tonumber(h, 16)) end)
 end
+
+--[[
+str = /platform/pay?sid=99&money=200
+则返回 /platform/pay {sid = 99,money = 200}
+]]
+function Uri.parse( str )
+    local indices = string.find( str, "?", 1, true );
+
+    -- 没有问号，不带任何参数
+    if not indices then return str end
+
+    local url_str = string.sub( str,1,indices - 1 )
+    local field_str = string.sub( str,indices )
+
+    local fields = {}
+    for k, v in string.gmatch(field_str, "([%w%.%-_~%%]*)=([%w%.%-_~%%]*)") do
+        fields[k] = v
+    end
+
+    return url_str,fields
+end
+
+return Uri

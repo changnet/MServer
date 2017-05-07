@@ -1052,3 +1052,44 @@ int32 lnetwork_mgr::send_http_packet()
 
     return 0;
 }
+
+/* 获取http报文头数据 */
+int32 lnetwork_mgr::get_http_header()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_HTTP != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    const class http_socket *http_sk = 
+        static_cast<const class http_socket *>( sk );
+    const http_socket::http_info &info = http_sk->get_http();
+
+    lua_pushboolean( L,http_sk->upgrade() );
+    lua_pushinteger( L,http_sk->status()  );
+    lua_pushstring ( L,http_sk->method()  );
+
+    lua_newtable( L );
+    http_socket::head_map_t::const_iterator head_itr = info._head_field.begin();
+    for ( ;head_itr != info._head_field.end(); head_itr++ )
+    {
+        lua_pushstring( L,head_itr->second.c_str() );
+        lua_setfield  ( L,-2,head_itr->first.c_str() );
+    }
+
+    return 4;
+}

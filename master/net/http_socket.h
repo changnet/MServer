@@ -10,11 +10,12 @@ struct http_parser;
 class http_socket : public socket
 {
 public:
+    typedef std::map< std::string,std::string > head_map_t;
     struct http_info
     {
         std::string _url;
         std::string _body;
-        std::map< std::string,std::string > _head_field;
+        head_map_t _head_field;
     };
 public:
     ~http_socket();

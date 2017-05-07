@@ -71,6 +71,9 @@ public:
     /* 加载schema文件 */
     int32 load_schema();
 
+    /* 获取http报文头数据 */
+    int32 get_http_header();
+
     /* 发送c2s数据包 */
     int32 send_c2s_packet();
     /* 发送s2c数据包 */

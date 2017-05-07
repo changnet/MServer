@@ -41,14 +41,6 @@ function Network_mgr:clt_listen( ip,port )
     return true
 end
 
--- 监听http连接
-function Network_mgr:http_listen( ip,port )
-    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_HTTP )
-    PLOG( "%s listen for http at %s:%d",Main.srvname,ip,port )
-
-    return true
-end
-
 -- 主动连接其他服务器
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
@@ -210,25 +202,6 @@ end
 function css_command_new( conn_id,pid,cmd,... )
     local conn = _network_mgr.srv_conn[conn_id]
     g_command_mgr:clt_dispatch_ex( conn,pid,cmd,... )
-end
-
-function http_accept_new()
-    print( "http_accept_new" )
-end
-
-function http_connect_new()
-    print( "http_connect_new" )
-end
-
-function http_connect_del()
-    print( "http_connect_del" )
-end
-
--- http回调
-function http_command_new( conn_id,url,body )
-    print( "http command new",conn_id,url,body )
-    network_mgr:send_http_packet( conn_id,"hello world http" )
-    network_mgr:close( conn_id );
 end
 
 return _network_mgr

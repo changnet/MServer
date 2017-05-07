@@ -316,6 +316,8 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::set_ss_cmd> ( "set_ss_cmd" );
     lc.def<&lnetwork_mgr::set_sc_cmd> ( "set_sc_cmd" );
 
+    lc.def<&lnetwork_mgr::get_http_header> ( "get_http_header" );
+
     lc.def<&lnetwork_mgr::send_c2s_packet > ( "send_c2s_packet"  );
     lc.def<&lnetwork_mgr::send_s2c_packet > ( "send_s2c_packet"  );
     lc.def<&lnetwork_mgr::send_s2s_packet > ( "send_s2s_packet"  );
