@@ -119,6 +119,7 @@ private:
     void process_css_cmd( uint32 conn_id,const s2s_header *header );
     void process_ssc_cmd( uint32 conn_id,const s2s_header *header );
     void process_rpc_cmd( uint32 conn_id,const s2s_header *header );
+    void process_rpc_return( uint32 conn_id,const s2s_header *header );
 
     /* 转客户端数据包 */
     void clt_forwarding( 

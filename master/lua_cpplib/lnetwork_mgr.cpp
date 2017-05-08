@@ -2,7 +2,6 @@
 
 #include "ltools.h"
 #include "lstate.h"
-#include "../net/packet.h"
 #include "../net/http_socket.h"
 #include "../net/stream_socket.h"
 
@@ -570,6 +569,7 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
         // 需要转发给客户端的数据包
         case packet::PKT_SCPK : process_ssc_cmd( conn_id,header );return;
         case packet::PKT_RPCS : process_rpc_cmd( conn_id,header );return;
+        case packet::PKT_RPCR : process_rpc_return( conn_id,header );return;
         default :
         {
             ERROR( "unknow server packet:"
@@ -1127,6 +1127,7 @@ int32 lnetwork_mgr::send_rpc_packet()
     return 0;
 }
 
+/* 处理rpc调用 */
 void lnetwork_mgr::process_rpc_cmd( uint32 conn_id,const s2s_header *header )
 {
     lua_State *L = lstate::instance()->state();
@@ -1135,18 +1136,19 @@ void lnetwork_mgr::process_rpc_cmd( uint32 conn_id,const s2s_header *header )
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"rpc_command_new" );
     lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,header->_owner );
 
     int32 cnt = packet::instance()->parse( L,header );
-    if ( cnt <= 2 )
+    if ( cnt < 1 )
     {
-        lua_pop( L,3 + cnt );
-        ERROR( "rpc command too less argument,expect uinque_id and function" );
+        lua_pop( L,4 + cnt );
+        ERROR( "rpc command miss function name" );
         return;
     }
 
     int32 top = lua_gettop( L );
     int32 unique_id = static_cast<int32>( header->_owner );
-    int32 ecode = lua_pcall( L,3 + cnt,LUA_MULTRET,1 );
+    int32 ecode = lua_pcall( L,4 + cnt,LUA_MULTRET,1 );
     if ( unique_id > 0 )
     {
         socket_map_t::iterator itr = _socket_map.find( conn_id );
@@ -1167,4 +1169,29 @@ void lnetwork_mgr::process_rpc_cmd( uint32 conn_id,const s2s_header *header )
         ERROR( "rpc cmd error:%s",lua_tostring(L,-1) );
         return;
     }
+}
+
+/* 处理rpc返回 */
+void lnetwork_mgr::process_rpc_return( uint32 conn_id,const s2s_header *header )
+{
+    lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal( L,"rpc_command_return" );
+    lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,header->_owner );
+    lua_pushinteger( L,header->_errno );
+
+    int32 cnt = packet::instance()->parse( L,header );
+    if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
+    {
+        ERROR( "process_rpc_return:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,1 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+
+    return;
 }

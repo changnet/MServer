@@ -41,7 +41,7 @@ function Rpc:invoke( name,... )
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
     end
 
-    return srv_conn.conn:rpc_send( RPC_REQ,name,0,... )
+    return srv_conn:send_rpc( 0,name,... )
 end
 
 -- 发起rpc调用(有返回值)
@@ -58,29 +58,7 @@ function Rpc:xinvoke( name,callback,callback_param,... )
             "rpc:no connection to remote server:%s,%d",name,cfg.session ) )
     end
 
-    return srv_conn.conn:rpc_send( RPC_REQ,name,0,... )
-end
-
--- 底层回调，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
-function Rpc:raw_dispatch( name,unique_id,... )
-    print( "raw_dispatch ",name,... )
-    local cfg = self.call[name]
-    if not cfg then
-        return error( string.format( "rpc:\"%s\" was not declared",name ) )
-    end
-
-    return cfg.func( ... )
-end
-
--- 处理rpc请求
-function Rpc:dispatch( srv_conn )
-    -- 底层直接调用rpc_send回复了，这样就不需要lua创建一个table来分解可变参
-    return srv_conn.conn:rpc_decode( RPC_REQ,RPC_RES,Rpc.raw_dispatch,self )
-end
-
--- 处理rpc返回
-function Rpc:response( srv_conn )
-    PLOG( "Rpc:response ====>>>>>>>>>>>>>>>>>" )
+    return srv_conn:send_rpc( 0,name,... )
 end
 
 -- 获取当前服务器的所有rpc调用
@@ -95,5 +73,20 @@ function Rpc:rpc_cmd()
 end
 
 local rpc = Rpc()
+
+-- 底层回调，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
+function rpc_command_new( conn_id,rpc_id,name,... )
+    print( "raw_dispatch ",name,... )
+    local cfg = rpc.call[name]
+    if not cfg then
+        return error( string.format( "rpc:\"%s\" was not declared",name ) )
+    end
+
+    return cfg.func( ... )
+end
+
+function rpc_command_return ( conn_id,rpc_id,ecode,... )
+    PLOG( "Rpc:response ====>>>>>>>>>>>>>>>>>" )
+end
 
 return rpc
