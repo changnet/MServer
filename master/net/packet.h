@@ -3,8 +3,7 @@
 
 /* 网络通信消息包头格式定义
  */
-#include <lflatbuffers.hpp>
-#include "../global/assert.h"
+
 #include "../global/global.h"
 
 /* 根据一个header指针获取整个packet的长度(包括_length本身) */
@@ -51,6 +50,9 @@ struct s2s_header
 };
 
 #pragma pack(pop)
+
+struct lua_State;
+class lflatbuffers;
 
 class packet
 {
@@ -103,8 +105,11 @@ public:
     int32 unparse_rpc( lua_State *L,
         int32 unique_id,int32 ecode,int32 index,class buffer &send );
 private:
+    packet();
+    ~packet();
+private:
     static class packet *_packet;
-    class lflatbuffers _lflatbuffers;
+    class lflatbuffers  *_lflatbuffers;
 };
 
 #endif /* __PACKET_H__ */

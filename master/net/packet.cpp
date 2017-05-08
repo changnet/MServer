@@ -33,3 +33,15 @@ class packet *packet::instance()
 
     return _packet;
 }
+
+packet::packet()
+{
+    _lflatbuffers = new class lflatbuffers();
+}
+
+packet::~packet()
+{
+    delete _lflatbuffers;
+    _lflatbuffers = NULL;
+}
+
