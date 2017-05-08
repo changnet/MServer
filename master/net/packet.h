@@ -61,9 +61,10 @@ public:
         PKT_CSPK = 1,  // c2s packet
         PKT_SCPK = 2,  // s2c packet
         PKT_SSPK = 3,  // s2s packet
-        PKT_RPCP = 4,  // rpc packet
-        PKT_CBCP = 5,  // client broadcast packet
-        PKT_SBCP = 6,  // server broadcast packet
+        PKT_RPCS = 4,  // rpc send packet
+        PKT_RPCR = 5,  // rpc return packet
+        PKT_CBCP = 6,  // client broadcast packet
+        PKT_SBCP = 7,  // server broadcast packet
 
         PKT_MAXT       // max packet type
     } packet_t;
@@ -81,6 +82,7 @@ public:
         const char *schema,const char *object,const s2s_header *header );
     int32 parse( lua_State *L,
         const char *schema,const char *object,const s2c_header *header );
+    int32 parse( lua_State *L,const s2s_header *header );
 
     /* c2s打包接口 */
     int32 unparse_c2s( lua_State *L,int32 index,
@@ -94,6 +96,12 @@ public:
     /* ssc打包接口 */
     int32 unparse_ssc( lua_State *L,int32 index,owner_t owner,int32 cmd,
         int32 ecode,const char *schema,const char *object,class buffer &send );
+    /* rpc调用打包接口 */
+    int32 unparse_rpc( lua_State *L,
+        int32 unique_id,int32 index,class buffer &send );
+    /* rpc返回打包接口 */
+    int32 unparse_rpc( lua_State *L,
+        int32 unique_id,int32 ecode,int32 index,class buffer &send );
 private:
     static class packet *_packet;
     class lflatbuffers _lflatbuffers;

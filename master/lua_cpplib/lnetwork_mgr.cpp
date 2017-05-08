@@ -569,6 +569,7 @@ void lnetwork_mgr::process_command( uint32 conn_id,const s2s_header *header )
         case packet::PKT_CSPK : process_css_cmd( conn_id,header );return;
         // 需要转发给客户端的数据包
         case packet::PKT_SCPK : process_ssc_cmd( conn_id,header );return;
+        case packet::PKT_RPCS : process_rpc_cmd( conn_id,header );return;
         default :
         {
             ERROR( "unknow server packet:"
@@ -1092,4 +1093,78 @@ int32 lnetwork_mgr::get_http_header()
     }
 
     return 4;
+}
+
+/* 发送rpc数据包
+ * network_mgr:send_rpc_packet( conn_id,unique_id,name,param1,param2,param3 )
+ */
+int32 lnetwork_mgr::send_rpc_packet()
+{
+    uint32 conn_id  = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    int32 unique_id = luaL_checkinteger( L,1 );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        return luaL_error( L,"invalid socket" );
+    }
+
+    if ( socket::CNT_SSCN != sk->conn_type() )
+    {
+        return luaL_error( L,"illegal socket connecte type" );
+    }
+
+    packet::instance()->unparse_rpc( L,unique_id,1,sk->send_buffer() );
+
+    sk->pending_send();
+
+    return 0;
+}
+
+void lnetwork_mgr::process_rpc_cmd( uint32 conn_id,const s2s_header *header )
+{
+    lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal( L,"rpc_command_new" );
+    lua_pushinteger( L,conn_id );
+
+    int32 cnt = packet::instance()->parse( L,header );
+    if ( cnt <= 2 )
+    {
+        lua_pop( L,3 + cnt );
+        ERROR( "rpc command too less argument,expect uinque_id and function" );
+        return;
+    }
+
+    int32 top = lua_gettop( L );
+    int32 unique_id = static_cast<int32>( header->_owner );
+    int32 ecode = lua_pcall( L,3 + cnt,LUA_MULTRET,1 );
+    if ( unique_id > 0 )
+    {
+        socket_map_t::iterator itr = _socket_map.find( conn_id );
+        if ( itr == _socket_map.end() )
+        {
+            ERROR( "process_rpc_cmd no return socket found" );
+            return;
+        }
+
+        class socket *sk = itr->second;
+        packet::instance()->unparse_rpc( 
+            L,unique_id,ecode,top,sk->send_buffer() );
+        sk->pending_send();
+    }
+
+    if ( LUA_OK != ecode )
+    {
+        ERROR( "rpc cmd error:%s",lua_tostring(L,-1) );
+        return;
+    }
 }

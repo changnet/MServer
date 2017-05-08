@@ -11,6 +11,8 @@
     #error no header parse specify
 #endif
 
+#include "packet_rpc.cpp"
+
 class packet *packet::_packet = NULL;
 
 void packet::uninstance()
