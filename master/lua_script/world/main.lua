@@ -5,14 +5,6 @@ require "global.string"
 
 require "global.define"
 
--- 协议使用太频繁，放到全局变量
-require "command.ss_command"
-local CMD = require "command.sc_command"
-
--- 使用oo的define功能让这两个表local后仍能热更
-SC = oo.define( CMD[1],"command_sc" )
-CS = oo.define( CMD[2],"command_cs" )
-
 Main = {}       -- store dynamic runtime info to global
 Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
 
@@ -27,6 +19,7 @@ g_unique_id = Unique_id()
 Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
+g_command_pre = require "command.command_pre"
 g_setting     = require "world.setting"
 g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"

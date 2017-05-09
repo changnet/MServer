@@ -15,18 +15,12 @@ local Command_mgr = oo.singleton( nil,... )
 function Command_mgr:__init()
     self.ss = {}
     for _,v in pairs( SS ) do
-        self.ss[ v[1] ] = v
+        self.ss[ v ] = {}
     end
 
     self.cs = {}
-    for _,v in pairs( CS or {} ) do
-        self.cs[ v[1] ] = v
-    end
-
-    -- 对于CS、SS数据包，在注册时设置
-    -- SC数据包只能全部设置
-    for _,v in pairs( SC ) do
-        network_mgr:set_sc_cmd( v[1],v[2],v[3],0,Main.session )
+    for _,v in pairs( CS ) do
+        self.cs[ v ] = {}
     end
 end
 
@@ -36,23 +30,26 @@ function Command_mgr:load_schema()
 end
 
 -- 注册客户端协议处理
-function Command_mgr:clt_register( cfg,handler,noauth )
-    if not self.cs[cfg[1]] then
+function Command_mgr:clt_register( cmd,handler,noauth )
+    local cfg = self.cs[cmd]
+    if not cfg then
         return error( "clt_register:cmd not define" )
     end
 
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 
-    network_mgr:set_cs_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
+    local raw_cfg = g_command_pre:get_cs_cmd( cmd )
+    network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
 end
 
 -- 注册服务器协议处理
 -- @noauth    -- 处理此协议时，不要求该链接可信
 -- @noreg     -- 此协议不需要注册到其他服务器
 -- @nounpack  -- 此协议不要自动解包
-function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
-    if not self.ss[cfg[1]] then
+function Command_mgr:srv_register( cmd,handler,noreg,noauth,nounpack )
+    local cfg = self.ss[cmd]
+    if not cfg then
         return error( "srv_register:cmd not define" )
     end
 
@@ -61,7 +58,8 @@ function Command_mgr:srv_register( cfg,handler,noreg,noauth,nounpack )
     cfg.noreg    = noreg
     cfg.nounpack = nounpack
 
-    network_mgr:set_ss_cmd( cfg[1],cfg[2],cfg[3],0,SESSION )
+    local raw_cfg = g_command_pre:get_ss_cmd( cmd )
+    network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
 end
 
 -- 本进程需要注册的指令
@@ -165,7 +163,8 @@ function Command_mgr:command_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register clt cmd register conflict" )
 
         _cfg.session = session
-        network_mgr:set_cs_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
+        local raw_cfg = g_command_pre:get_cs_cmd( cmd )
+        network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,session )
     end
 
     -- 记录该服务器所处理的ss指令
@@ -175,7 +174,8 @@ function Command_mgr:command_register( srv_conn,pkt )
         assert( _cfg,"do_srv_register srv cmd register conflict" )
 
         _cfg.session = session
-        network_mgr:set_ss_cmd( _cfg[1],_cfg[2],_cfg[3],0,session )
+        local raw_cfg = g_command_pre:get_ss_cmd( cmd )
+        network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,session )
     end
 
     -- 记录该服务器所处理的rpc指令

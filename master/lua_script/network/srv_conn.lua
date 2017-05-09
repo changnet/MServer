@@ -14,13 +14,13 @@ function Srv_conn:__init( conn_id )
 end
 
 -- 发送数据包
-function Srv_conn:send_pkt( cfg,pkt,ecode )
-    return network_mgr:send_s2s_packet( self.conn_id,cfg[1],ecode or 0,pkt )
+function Srv_conn:send_pkt( cmd,pkt,ecode )
+    return network_mgr:send_s2s_packet( self.conn_id,cmd,ecode or 0,pkt )
 end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
-function Srv_conn:send_clt_pkt( pid,cfg,pkt,ecode )
-    return network_mgr:send_ssc_packet( self.conn_id,pid,cfg[1],ecode or 0,pkt )
+function Srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
+    return network_mgr:send_ssc_packet( self.conn_id,pid,cmd,ecode or 0,pkt )
 end
 
 -- timeout check
