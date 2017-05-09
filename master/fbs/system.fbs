@@ -17,3 +17,9 @@ struct ssbeat
 {
     response:bool;
 }
+
+/* 热更 */
+table sshot_swap
+{
+    module:[string]; // 需要热更的模块
+}

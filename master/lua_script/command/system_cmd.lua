@@ -41,8 +41,18 @@ local function srv_beat( srv_conn,pkt )
     -- 在这里不用更新自己的心跳，因为在on_command里已自动更新
 end
 
+-- 热更
+local function hot_swap( srv_conn,pkt )
+    local hs = require "http.hot_swap"
+    hs:swap( pkt.module or {} )
+
+    -- srv_conn:send_pkt( SS_SYS_HOT_SWAP,)
+end
+
 -- 这里注册系统模块的协议处理
 g_command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true,false )
+g_command_mgr:srv_register( SS.SYS_HOT_SWAP,hot_swap,true,false )
+
 
 g_command_mgr:srv_register( SS.SYS_SYN,srv_syn,true,true )
 g_command_mgr:srv_register( SS.SYS_ACK,srv_ack,true,true )

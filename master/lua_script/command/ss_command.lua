@@ -16,9 +16,10 @@ local MODULE_PLAYER = (0x01 << 8) -- 256
 
 local SS =
 {
-    SYS_SYN  = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" },
-    SYS_ACK  = { MODULE_SYSTEM + 0x05,"system.bfbs","ssregister" },
-    SYS_BEAT = { MODULE_SYSTEM + 0x06,"system.bfbs","ssbeat" }, -- 心跳包
+    SYS_SYN      = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" },
+    SYS_ACK      = { MODULE_SYSTEM + 0x05,"system.bfbs","ssregister" },
+    SYS_BEAT     = { MODULE_SYSTEM + 0x06,"system.bfbs","ssbeat" },        -- 心跳包
+    SYS_HOT_SWAP = { MODULE_SYSTEM + 0x07,"system.bfbs","sshot_swap" },    -- 热更
 
     PLAYER_OFFLINE = { MODULE_PLAYER + 0x01,"player.bfbs","ssplayer_offline" }, -- 玩家下线
     PLAYER_OTHERWHERE = { MODULE_PLAYER + 0x02,"player.bfbs","ssplayer_otherwhere" }, -- 玩家下线

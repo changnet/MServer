@@ -18,6 +18,14 @@ function Network_mgr:__init()
     self.srv_listen = nil -- 监听服务器连接
     self.clt_listen = nil -- 监听客户端连接
 
+    self.name_srv   = {}  -- 进程名为key，session为value
+
+    local index = tonumber( Main.srvindex )
+    local srvid = tonumber( Main.srvid )
+    for name,_ in pairs( SRV_NAME ) do
+        self.name_srv[name] = g_unique_id:srv_session( name,index,srvid )
+    end
+
     self.timer = Timer()
     self.timer:set_self( self )
     self.timer:set_callback( self.do_timer )
@@ -123,6 +131,22 @@ end
 -- 根据conn_id获取连接
 function Network_mgr:get_conn( conn_id )
     return self.clt_conn[conn_id] or self.srv_conn[conn_id]
+end
+
+-- 根据服务器名字发送
+function Network_mgr:srv_name_send( name,cmd,pkt,ecode )
+    local session = self.name_srv[name]
+    if not session then
+        return error( "no such server" )
+    end
+
+    local srv_conn = self.srv[session]
+    if not srv_conn then
+        ELOG( "srv_send no conn found:%d",cmd )
+        return
+    end
+
+    srv_conn:send_pkt( cmd,pkt,ecode )
 end
 
 -- ============================================================================
