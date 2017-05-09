@@ -209,4 +209,19 @@ function oo.check( log_func )
     end
 end
 
+-- 热更
+function oo.hot_swap( log_func )
+    log_func = log_func or print
+
+    for k,_ in pairs( class_list ) do
+        require_ex( k )
+        log_func( "hot swap " .. k )
+    end
+
+    for k,_ in pairs( const_define ) do
+        require_ex( k )
+        log_func( "hot swap " .. k )
+    end
+end
+
 return oo

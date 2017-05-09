@@ -5,13 +5,7 @@ require "global.string"
 
 require "global.define"
 
--- 协议使用太频繁，放到全局变量
-require "command.ss_command"
-local CMD = require "command.sc_command"
 
--- 使用oo的define功能让这两个表local后仍能热更
-SC = oo.define( CMD[1],"command_sc" )
-CS = oo.define( CMD[2],"command_cs" )
 
 
 Main = {}

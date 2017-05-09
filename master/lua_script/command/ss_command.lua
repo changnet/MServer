@@ -14,7 +14,7 @@
 local MODULE_SYSTEM = (0x00 << 8) -- 0
 local MODULE_PLAYER = (0x01 << 8) -- 256
 
-local _SS =
+local SS =
 {
     SYS_SYN  = { MODULE_SYSTEM + 0x04,"system.bfbs","ssregister" },
     SYS_ACK  = { MODULE_SYSTEM + 0x05,"system.bfbs","ssregister" },
@@ -26,8 +26,5 @@ local _SS =
     -- 其他功能模块协议
     -- LOGIN = { MODULE_LOGIN + 0x01,"login,bfbs","clogin" },
 }
-
--- 使用oo的define功能让local后仍能热更
-SS = oo.define( _SS,... )
 
 return SS

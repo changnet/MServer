@@ -10,8 +10,8 @@
 
 ]]
 
-local MODULE_PLAYER = (0x01 << 8)  -- 255
-local MODULE_BAG    = (0x02 << 8)  -- 
+local MODULE_PLAYER = (0x01 << 8)  -- 256
+local MODULE_BAG    = (0x02 << 8)  -- 512
 
 
 local SC =
