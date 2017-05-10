@@ -45,23 +45,14 @@ leventloop::leventloop( lua_State *L,bool singleton )
     ansendings = NULL;
     ansendingmax =  0;
     ansendingcnt =  0;
-    sig_ref = 0;
 }
 
 leventloop::~leventloop()
 {
-    /* 保证此处不再依赖lua_State */
-    assert( "lua ref not release",0 == sig_ref );
-
     if ( ansendings ) delete []ansendings;
     ansendings = NULL;
     ansendingcnt =  0;
     ansendingmax =  0;
-}
-
-void leventloop::finalize()
-{
-    LUA_UNREF( sig_ref );
 }
 
 int32 leventloop::exit()
@@ -122,8 +113,7 @@ void leventloop::invoke_signal()
     {
         if (sig_mask & 1)
         {
-
-            lua_rawgeti(L, LUA_REGISTRYINDEX, sig_ref);
+            lua_getglobal( L,"sig_handler" );
             lua_pushinteger( L,signum );
             if ( expect_false( LUA_OK != lua_pcall(L,1,0,top) ) )
             {
@@ -136,23 +126,6 @@ void leventloop::invoke_signal()
 
     sig_mask = 0;
     lua_remove(L,top); /* remove traceback */
-}
-
-int32 leventloop::set_signal_ref()
-{
-    if ( !lua_isfunction( L,1 ) )
-    {
-        return luaL_error( L,"set_signal_ref,argument illegal,expect function" );
-    }
-
-    if ( sig_ref )
-    {
-        LUA_UNREF( sig_ref );
-    }
-
-    LUA_REF( sig_ref );
-
-    return 0;
 }
 
 int32 leventloop::pending_send( class socket *s  )

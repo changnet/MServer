@@ -24,9 +24,7 @@ public:
     int32 backend();
 
     int32 signal();
-    int32 set_signal_ref();
 
-    void finalize();
     int32 pending_send( class socket *s );
     void remove_sending( int32 sending );
 private:
@@ -49,7 +47,6 @@ private:
     int32 ansendingcnt;
 
     lua_State *L;
-    int32 sig_ref;
     static uint32 sig_mask;
     static class leventloop *_loop;
 };

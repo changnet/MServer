@@ -160,7 +160,6 @@ int32 luaopen_ev( lua_State *L )
     lc.def<&leventloop::exit>   ("exit"   );
     lc.def<&leventloop::signal> ("signal" );
     lc.def<&leventloop::backend>("backend");
-    lc.def<&leventloop::set_signal_ref>("set_signal_ref");
 
     return 0;
 }

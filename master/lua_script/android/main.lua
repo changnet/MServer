@@ -10,12 +10,11 @@ require "android.android_cmd"
 
 math.randomseed( ev:time() )
 
-local function sig_handler( signum )
+function sig_handler( signum )
     ev:exit()
 end
 
 local function main()
-    ev:set_signal_ref( sig_handler )
     ev:signal( 2 );
     ev:signal( 15 );
 

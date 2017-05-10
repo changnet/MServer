@@ -59,7 +59,6 @@ int32 main( int32 argc,char **argv )
         return 1;
     }
 
-    loop->finalize          ();      /* 优先解除lua_State依赖 */
     lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
     leventloop::uninstance  ();      /* 关闭主事件循环 */
