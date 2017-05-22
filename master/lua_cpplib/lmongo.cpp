@@ -1,19 +1,16 @@
 #include "lmongo.h"
+
 #include "ltools.h"
+#include <lbson.h>
 
 lmongo::lmongo( lua_State *L )
     :L (L)
 {
-    ref_self  = 0;
-    ref_read  = 0;
-    ref_error = 0;
+    _dbid = luaL_checkinteger( L,2 );
 }
 
 lmongo::~lmongo()
 {
-    LUA_UNREF( ref_self  );
-    LUA_UNREF( ref_read  );
-    LUA_UNREF( ref_error );
 }
 
 int32 lmongo::start()
@@ -58,8 +55,7 @@ void lmongo::routine( notify_t msg )
     int32 ping = 0;
     int32 ets  = 0;
 
-    bson_error_t err;
-    while ( ets < 10 && ( ping = _mongo.ping( &err ) ) )
+    while ( ets < 10 && ( ping = _mongo.ping() ) )
     {
         ++ets;
         usleep(ets*1E6); // ets*1s
@@ -67,14 +63,13 @@ void lmongo::routine( notify_t msg )
 
     if ( ping )
     {
-        ERROR( "mongo ping error(%d):%s",err.code,err.message );
         notify_parent( ERROR );
         return;
     }
 
     switch ( msg )
     {
-        case ERROR : assert( "main thread should never notify error",false );break;
+        case ERROR : assert( "routine ERROR",false );break;
         case NONE  : break; /* just timeout */
         case EXIT  : break; /* do nothing,auto exit */
         case MSG   : invoke_command();break;
@@ -83,11 +78,9 @@ void lmongo::routine( notify_t msg )
 
 bool lmongo::cleanup()
 {
-    bson_error_t err;
-    if ( _mongo.ping( &err ) )
+    if ( _mongo.ping() )
     {
-        ERROR( "mongo ping fail at cleanup,data may lost(%d):%s",err.code,
-            err.message );
+        ERROR( "mongo ping fail at cleanup,data may lost" );
         /* TODO write to file */
     }
     else
@@ -104,40 +97,27 @@ void lmongo::notification( notify_t msg )
 {
     switch ( msg )
     {
-        case NONE  : break;
-        case ERROR :
-        {
-            lua_pushcfunction( L,traceback );
-            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_error );
-            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
-            if ( LUA_OK != lua_pcall( L,1,0,-3 ) )
-            {
-                ERROR( "mongo error call back fail:%s",lua_tostring(L,-1) );
-                lua_pop(L,2); /* remove traceback and error message */
-            }
-            else
-            {
-                lua_pop(L,1); /* remove traceback */
-            }
-        }break;
-        case MSG  :
-        {
-            lua_pushcfunction( L,traceback );
-            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_read );
-            lua_rawgeti( L,LUA_REGISTRYINDEX,ref_self );
-            if ( LUA_OK != lua_pcall( L,1,0,-3 ) )
-            {
-                ERROR( "mongo error call back fail:%s",lua_tostring(L,-1) );
-                lua_pop(L,2); /* remove traceback and error message */
-            }
-            else
-            {
-                lua_pop(L,1); /* remove traceback */
-            }
-        }break;
-        case EXIT : assert( "mongo thread should not exit itself",false );abort();break;
-        default   : assert( "unknow mongo event",false );break;
+        case MSG  : invoke_result();break;
+        default   : assert( "unhandle mongo event",false );break;
     }
+}
+
+void lmongo::push_query( const struct mongo_query *query )
+{
+    /* socket缓冲区大小是有限制的。如果query队列不为空，则表示已通知过子线程，无需再
+     * 次通知。避免写入socket缓冲区满造成Resource temporarily unavailable
+     */
+    bool _notify = false;
+
+    lock();
+    if ( _query.empty() )  /* 不要使用_query.size() */
+    {
+        _notify = true;
+    }
+    _query.push( query );
+    unlock();
+
+    if ( _notify ) notify_child( MSG );
 }
 
 int32 lmongo::count()
@@ -161,155 +141,152 @@ int32 lmongo::count()
     bson_t *query = NULL;
     if ( str_query )
     {
-        bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
-            -1,&_err );
+        bson_error_t error;
+        query = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_query),-1,&error );
         if ( !query )
         {
-            ERROR( "mongo count convert query to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo count convert query to bson err" );
+            return luaL_error( L,error.message );
         }
     }
 
-    struct mongons::query *_mq = new mongons::query();
-    _mq->set( id,1,mongons::COUNT );  /* count必须有返回 */
-    _mq->set_count( collection,query,skip,limit );
+    struct mongo_query *mongo_count = new mongo_query();
+    mongo_count->set( id,MQT_COUNT );  /* count必须有返回 */
+    mongo_count->set_count( collection,query,skip,limit );
 
-    bool _notify = false;
-
-    lock();
-    if ( _query.empty() )  /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
-    _query.push( _mq );
-    unlock();
-
-    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
-     * 子线程socket缓冲区满造成Resource temporarily unavailable
-     */
-    if ( _notify ) notify_child( MSG );
+    push_query( mongo_count );
 
     return 0;
 }
 
-int32 lmongo::next_result()
+const struct mongo_result *lmongo::pop_result()
 {
+    const struct mongo_result *res = NULL;
+
+    lock();
+    if ( !_result.empty() )
+    {
+        res = _result.front();
+        _result.pop();
+    }
+
+    unlock();
+
+    return res;
+}
+
+void lmongo::invoke_result()
+{
+    lua_pushcfunction( L,traceback );
+
+    const struct mongo_result *res = NULL;
+    while ( (res = pop_result()) )
+    {
+        lua_pushinteger( L,_dbid      );
+        lua_pushinteger( L,res->_qid   );
+        lua_pushinteger( L,res->_ecode );
+
+        int32 nargs = 3;
+        if ( res->_data )
+        {
+            struct error_collector error;
+            bson_type_t root_type = 
+                res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
+
+            if ( lbs_do_decode( L,res->_data,root_type,&error ) < 0 )
+            {
+                lua_pop( L,3 );
+                ERROR( "mongo result decode error:%s",error.what );
+
+                // 即使出错，也回调到脚本
+            }
+            else
+            {
+                nargs ++;
+            }
+        }
+
+        lua_getglobal( L,"mongodb_read_event" );
+        if ( LUA_OK != lua_pcall( L,nargs,0,1 ) )
+        {
+            ERROR( "mongo call back error:%s",lua_tostring( L,-1 ) );
+            lua_pop(L,1); /* remove error message */
+        }
+
+        delete res;
+    }
+}
+
+const struct mongo_query *lmongo::pop_query()
+{
+    const struct mongo_query *query = NULL;
+
+    lock();
+    if ( !_query.empty() )
+    {
+        query = _query.front();
+        _query.pop();
+    }
+
+    unlock();
+
+    return query;
+}
+
+/* 缓冲区大小有限，如果已经通知过了，则不需要重复通知 */
+void lmongo::push_result( const struct mongo_result *result )
+{
+    bool is_notify = false;
+
     lock();
     if ( _result.empty() )
     {
-        unlock();
-        return 0;
+        is_notify = true;
     }
-
-    struct mongons::result *rt = _result.front();
-    _result.pop();
+    _result.push( result );
     unlock();
 
-    lua_pushinteger( L,rt->id );
-    lua_pushinteger( L,rt->err );
+    if ( is_notify ) notify_parent( MSG );
+}
 
-    int32 rv = 2;
-    if ( rt->data )
+/* 在子线程触发查询命令
+ * is_return:是否需要返回结果,关闭线程时将不返回
+ */
+void lmongo::invoke_command( bool is_return )
+{
+    const struct mongo_query *query = NULL;
+    while ( (query = pop_query()) )
     {
-        struct error_collector ec;
-        bson_type_t root_type = 
-            rt->ty == mongons::FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
-        if ( lbs_do_decode( L,rt->data,root_type,&ec ) < 0 )
+        struct mongo_result *res = NULL;
+        switch( query->_mqt )
         {
-            // TODO:do not raise a error
-            luaL_error( L,"TODO: mongo result decode fail:%s",ec.what );
-        }
-        rv = 3;
-    }
-
-    delete rt;
-
-    return rv;
-}
-
-int32 lmongo::self_callback ()
-{
-    if ( !lua_istable(L,1) )
-    {
-        return luaL_error( L,"mongo set self,argument #1 expect table" );
-    }
-
-    LUA_REF( ref_self );
-
-    return 0;
-}
-
-int32 lmongo::read_callback ()
-{
-    if ( !lua_isfunction(L,1) )
-    {
-        return luaL_error( L,"mongo set read,argument #1 expect function" );
-    }
-
-    LUA_REF( ref_read );
-
-    return 0;
-}
-
-int32 lmongo::error_callback()
-{
-    if ( !lua_isfunction(L,1) )
-    {
-        return luaL_error( L,"mongo set error,argument #1 expect function" );
-    }
-
-    LUA_REF( ref_error );
-
-    return 0;
-}
-
-void lmongo::invoke_command( bool cb )
-{
-    while ( true )
-    {
-        lock();
-        if ( _query.empty() )
-        {
-            unlock();
-            return;
-        }
-
-        struct mongons::query *mq = _query.front();
-        _query.pop();
-        unlock();
-
-        struct mongons::result *res = NULL;
-        switch( mq->_ty )
-        {
-            case mongons::COUNT       : res = _mongo.count( mq );break;
-            case mongons::FIND        : res = _mongo.find ( mq );break;
-            case mongons::FIND_MODIFY : res = _mongo.find_and_modify( mq );break;
-            case mongons::INSERT      : _mongo.insert( mq );break;
-            case mongons::UPDATE      : _mongo.update( mq );break;
-            case mongons::REMOVE      : _mongo.remove( mq );break;
+            case MQT_COUNT  : res = _mongo.count( query );break;
+            case MQT_FIND   : res = _mongo.find ( query );break;
+            case MQT_FMOD   : res = _mongo.find_and_modify( query );break;
+            case MQT_INSERT : _mongo.insert( query );break;
+            case MQT_UPDATE : _mongo.update( query );break;
+            case MQT_REMOVE : _mongo.remove( query );break;
             default:
-                ERROR( "unknow handle mongo command type:%d\n",mq->_ty );
-                delete mq;
+            {
+                ERROR( "unknow handle mongo command type:%d\n",query->_mqt );
+                delete query;
                 continue;
-                break;
+            }break;
         }
 
-        if ( cb && mq->_callback )
+        /* 如果分配了qid，表示需要返回 */
+        if ( is_return && query->_qid > 0 )
         {
             assert( "mongo res NULL",res );
-            lock();
-            _result.push( res );
-            unlock();
-            notify_parent( MSG );
+            push_result( res );
         }
         else
         {
             if ( res ) delete res; /* 关服时不需要回调 */
         }
 
-        delete mq;
-        mq = NULL;
+        delete query;
+        query = NULL;
     }
 }
 
@@ -336,52 +313,34 @@ int32 lmongo::find()
     bson_t *query = NULL;
     if ( str_query )
     {
-        bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
-            -1,&_err );
-        if ( !query )
-        {
-            ERROR( "mongo find convert query to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo find convert query to bson err" );
-        }
+        bson_error_t error;
+        query = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_query),-1,&error );
+        if ( !query ) return luaL_error( L,"field query:%s",error.message );
     }
     else
     {
-        query = bson_new(); /* find函数不允许query为NULL */
+        query = bson_new(); /* find函数不允许query为NULL，但查询参数可以空 */
     }
 
     bson_t *fields = NULL;
     if ( str_fields )
     {
-        bson_error_t _err;
-        fields = bson_new_from_json( reinterpret_cast<const uint8 *>(str_fields),
-            -1,&_err );
+        bson_error_t error;
+        fields = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_fields),-1,&error );
         if ( !fields )
         {
             bson_destroy( query );
-            ERROR( "mongo find convert fields to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo find convert fields to bson err" );
+            return luaL_error( L,"field fields:%s",error.message );
         }
     }
 
-    struct mongons::query *_mq = new mongons::query();
-    _mq->set( id,1,mongons::FIND );  /* count必须有返回 */
-    _mq->set_find( collection,query,fields,skip,limit );
+    struct mongo_query *mongo_find = new mongo_query();
+    mongo_find->set( id,MQT_FIND );  /* count必须有返回 */
+    mongo_find->set_find( collection,query,fields,skip,limit );
 
-    bool _notify = false;
-
-    lock();
-    if ( _query.empty() )  /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
-    _query.push( _mq );
-    unlock();
-
-    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
-     * 子线程socket缓冲区满造成Resource temporarily unavailable
-     */
-    if ( _notify ) notify_child( MSG );
+    push_query( mongo_find );
 
     return 0;
 }
@@ -413,14 +372,10 @@ int32 lmongo::find_and_modify()
     bson_t *query = NULL;
     if ( str_query )
     {
-        bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
-            -1,&_err );
-        if ( !query )
-        {
-            ERROR( "mongo find_and_modify convert query to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo find_and_modify convert query to bson err" );
-        }
+        bson_error_t error;
+        query = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_query),-1,&error );
+        if ( !query ) return luaL_error( L,"query:%s",error.message );
     }
     else
     {
@@ -430,29 +385,27 @@ int32 lmongo::find_and_modify()
     bson_t *sort = NULL;
     if ( str_sort )
     {
-        bson_error_t _err;
-        sort = bson_new_from_json( reinterpret_cast<const uint8 *>(str_sort),
-            -1,&_err );
+        bson_error_t error;
+        sort = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_sort),-1,&error );
         if ( !sort )
         {
             bson_destroy( query );
-            ERROR( "mongo find_and_modify convert sort to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo find_and_modify convert sort to bson err" );
+            return luaL_error( L,"sort:%s",error.message );
         }
     }
 
     bson_t *update = NULL;
     if ( str_update )
     {
-        bson_error_t _err;
-        update = bson_new_from_json( reinterpret_cast<const uint8 *>(str_update),
-            -1,&_err );
+        bson_error_t error;
+        update = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_update),-1,&error );
         if ( !update )
         {
             bson_destroy( query );
             if ( sort ) bson_destroy( sort );
-            ERROR( "mongo find_and_modify convert update to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo find_and_modify convert update to bson err" );
+            return luaL_error( L,"update:%s",error.message );
         }
     }
     else
@@ -463,38 +416,24 @@ int32 lmongo::find_and_modify()
     bson_t *fields = NULL;
     if ( str_fields )
     {
-        bson_error_t _err;
-        fields = bson_new_from_json( reinterpret_cast<const uint8 *>(str_fields),
-            -1,&_err );
+        bson_error_t error;
+        fields = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_fields),-1,&error );
         if ( !fields )
         {
             bson_destroy( query );
             if ( sort ) bson_destroy( sort );
             bson_destroy( update );
-            ERROR( "mongo find_and_modify convert fields to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo find_and_modify convert fields to bson err" );
+            return luaL_error( L,"fields:%s",error.message );
         }
     }
 
-    struct mongons::query *_mq = new mongons::query();
-    _mq->set( id,1,mongons::FIND_MODIFY );
-    _mq->set_find_modify( collection,query,sort,update,fields,_remove,_upsert,_new );
+    struct mongo_query *mongo_fmod = new mongo_query();
+    mongo_fmod->set( id,MQT_FMOD );
+    mongo_fmod->set_find_modify( 
+        collection,query,sort,update,fields,_remove,_upsert,_new );
 
-    bool _notify = false;
-
-    lock();
-    if ( _query.empty() )   /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
-    _query.push( _mq );
-    unlock();
-
-    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
-     * 子线程socket缓冲区满造成Resource temporarily unavailable
-     */
-    if ( _notify ) notify_child( MSG );
-
+    push_query( mongo_fmod );
     return 0;
 }
 
@@ -514,51 +453,36 @@ int32 lmongo::insert()
     }
 
     bson_t *query = NULL;
-    struct error_collector ec;
-    if ( lua_istable( L,3 ) )
+    if ( lua_istable( L,3 ) ) // 自动将lua table 转化为bson
     {
-        if ( !( query = lbs_do_encode( L,3,NULL,&ec ) ) )
+        struct error_collector error;
+        if ( !( query = lbs_do_encode( L,3,NULL,&error ) ) )
         {
-            return luaL_error( L,"mongo insert:lbs_do_encode error" );
+            return luaL_error( L,"table to bson error:%s",error.what );
         }
     }
-    else if ( lua_isstring( L,3 ) )
+    else if ( lua_isstring( L,3 ) ) // json字符串
     {
         const char *str_query = lua_tostring( L,3 );
-        bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
-            -1,&_err );
+        bson_error_t error;
+        query = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_query),-1,&error );
         if ( !query )
         {
-            ERROR( "mongo insert convert find to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo insert convert find to bson err" );
+            return luaL_error( L,"json string:%s",error.message );
         }
     }
     else
     {
-        return luaL_error( L,"mongo insert argument #3 expect table or json string" );
+        return luaL_error( 
+            L,"mongo insert argument #3 expect table or json string" );
     }
 
-    if ( !query ) return luaL_error( L,"mongo insert query encode fail" );
+    struct mongo_query *mongo_insert = new mongo_query();
+    mongo_insert->set( id,MQT_INSERT );
+    mongo_insert->set_insert( collection,query );
 
-    struct mongons::query *_mq = new mongons::query();
-    _mq->set( id,0,mongons::INSERT );
-    _mq->set_insert( collection,query );
-
-    bool _notify = false;
-
-    lock();
-    if ( _query.empty() )  /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
-    _query.push( _mq );
-    unlock();
-
-    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
-     * 子线程socket缓冲区满造成Resource temporarily unavailable
-     */
-    if ( _notify ) notify_child( MSG );
+    push_query( mongo_insert );
 
     return 0;
 }
@@ -579,81 +503,66 @@ int32 lmongo::update()
     }
 
     bson_t *query = NULL;
-    struct error_collector ec;
     if ( lua_istable( L,3 ) )
     {
-        if ( !( query = lbs_do_encode( L,3,NULL,&ec ) ) )
+        struct error_collector error;
+        if ( !( query = lbs_do_encode( L,3,NULL,&error ) ) )
         {
-            return luaL_error( L,"mongo update:lbs_do_encode argument#3 error" );
+            return luaL_error( L,"field query table:%s",error.what );
         }
     }
     else if ( lua_isstring( L,3 ) )
     {
         const char *str_query = lua_tostring( L,3 );
-        bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
-            -1,&_err );
+        bson_error_t error;
+        query = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_query),-1,&error );
         if ( !query )
         {
-            ERROR( "mongo update convert argument#3 to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo update convert argument#3 to bson err" );
+            return luaL_error( L,"field query json string:%s",error.message );
         }
     }
     else
     {
-        return luaL_error( L,"mongo update argument #3 expect table or json string" );
+        return luaL_error( L,"argument #3 expect table or json string" );
     }
 
     bson_t *update = NULL;
     if ( lua_istable( L,4 ) )
     {
-        if ( !( update = lbs_do_encode( L,4,NULL,&ec ) ) )
+        struct error_collector error;
+        if ( !( update = lbs_do_encode( L,4,NULL,&error ) ) )
         {
             bson_destroy( query );
-            return luaL_error( L,"mongo update:lbs_do_encode argument#4 error" );
+            return luaL_error( L,"field update table:%s",error.what );
         }
     }
     else if ( lua_isstring( L,4 ) )
     {
         const char *str_update = lua_tostring( L,4 );
-        bson_error_t _err;
-        update = bson_new_from_json( reinterpret_cast<const uint8 *>(str_update),
-            -1,&_err );
+        bson_error_t error;
+        update = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_update),-1,&error );
         if ( !update )
         {
             bson_destroy( query );
-            ERROR( "mongo update convert argument#4 to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo update convert argument#4 to bson err" );
+            return luaL_error( L,"field update json string:%s",error.message );
         }
     }
     else
     {
         bson_destroy( query );
-        return luaL_error( L,"mongo update argument #4 expect table or json string" );
+        return luaL_error( L,"argument #4 expect table or json string" );
     }
 
     int32 upsert = lua_toboolean( L,5 );
     int32 multi  = lua_toboolean( L,6 );
 
-    assert( "mongo update query or update empty",query && update );
-    struct mongons::query *_mq = new mongons::query();
-    _mq->set( id,0,mongons::UPDATE );
-    _mq->set_update( collection,query,update,upsert,multi );
+    struct mongo_query *mongo_update = new mongo_query();
+    mongo_update->set( id,MQT_UPDATE );
+    mongo_update->set_update( collection,query,update,upsert,multi );
 
-    bool _notify = false;
-
-    lock();
-    if ( _query.empty() )  /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
-    _query.push( _mq );
-    unlock();
-
-    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
-     * 子线程socket缓冲区满造成Resource temporarily unavailable
-     */
-    if ( _notify ) notify_child( MSG );
+    push_query( mongo_update );
 
     return 0;
 }
@@ -674,52 +583,36 @@ int32 lmongo::remove()
     }
 
     bson_t *query = NULL;
-    struct error_collector ec;
     if ( lua_istable( L,3 ) )
     {
-        if ( !( query = lbs_do_encode( L,3,NULL,&ec ) ) )
+        struct error_collector error;
+        if ( !( query = lbs_do_encode( L,3,NULL,&error ) ) )
         {
-            return luaL_error( L,"mongo remove:lbs_do_encode argument#3 error" );
+            return luaL_error( L,"table:%s",error.what );
         }
     }
     else if ( lua_isstring( L,3 ) )
     {
         const char *str_query = lua_tostring( L,3 );
-        bson_error_t _err;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),
-            -1,&_err );
+        bson_error_t error;
+        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),-1,&error );
         if ( !query )
         {
-            ERROR( "mongo remove convert argument#3 to bson err:%s\n",_err.message );
-            return luaL_error( L,"mongo remove convert argument#3 to bson err" );
+            return luaL_error( L,"json string:%s",error.message );
         }
     }
     else
     {
-        return luaL_error( L,"mongo remove argument #3 expect table or json string" );
+        return luaL_error( L,"argument #3 expect table or json string" );
     }
 
     int32 multi  = lua_toboolean( L,6 );
 
-    assert( "mongo remove query empty",query );
-    struct mongons::query *_mq = new mongons::query();
-    _mq->set( id,0,mongons::REMOVE );
-    _mq->set_remove( collection,query,multi );
+    struct mongo_query *mongo_remove = new mongo_query();
+    mongo_remove->set( id,MQT_REMOVE );
+    mongo_remove->set_remove( collection,query,multi );
 
-    bool _notify = false;
-
-    lock();
-    if ( _query.empty() )  /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
-    _query.push( _mq );
-    unlock();
-
-    /* 子线程的socket是阻塞的。主线程检测到子线程正在处理指令则无需告知。防止
-     * 子线程socket缓冲区满造成Resource temporarily unavailable
-     */
-    if ( _notify ) notify_child( MSG );
+    push_query( mongo_remove );
 
     return 0;
 }

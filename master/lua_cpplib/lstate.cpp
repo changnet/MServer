@@ -231,10 +231,6 @@ int32 luaopen_mongo( lua_State *L )
     lc.def<&lmongo::update>          ( "update"          );
     lc.def<&lmongo::remove>          ( "remove"          );
     lc.def<&lmongo::find_and_modify> ( "find_and_modify" );
-    lc.def<&lmongo::next_result>     ( "next_result"     );
-    lc.def<&lmongo::self_callback >  ( "self_callback"   );
-    lc.def<&lmongo::read_callback >  ( "read_callback"   );
-    lc.def<&lmongo::error_callback>  ( "error_callback"  );
 
     return 0;
 }

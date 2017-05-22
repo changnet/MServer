@@ -26,8 +26,8 @@ public:
         MSG    =  2
     }notify_t;
 protected:
-    virtual bool cleanup();       /* 子线程清理 */
-    virtual bool initlization();  /* 子线程初始化 */
+    virtual bool cleanup() = 0;       /* 子线程清理 */
+    virtual bool initlization() = 0;  /* 子线程初始化 */
     
     void notify_child( notify_t msg );     /* 通知子线程 */
     void notify_parent( notify_t msg );     /* 通知主线程 */

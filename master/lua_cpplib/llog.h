@@ -20,6 +20,8 @@ private:
     bool cleanup();
     void routine( notify_t msg );
     void notification( notify_t msg ) {}
+
+    bool initlization() { return true; }
 private:
     int32 _wts;
     class log _log;

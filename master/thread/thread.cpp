@@ -52,8 +52,10 @@ bool thread::start( int32 sec,int32 usec )
     struct timeval tm;
     tm.tv_sec  = sec;
     tm.tv_usec = usec;
-    setsockopt(_fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval));
-    setsockopt(_fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval));
+    setsockopt(
+        _fd[1], SOL_SOCKET, SO_RCVTIMEO, &tm.tv_sec,sizeof(struct timeval) );
+    setsockopt(
+        _fd[1], SOL_SOCKET, SO_SNDTIMEO, &tm.tv_sec, sizeof(struct timeval) );
     
     /* 为了防止子线程创建比主线程运行更快，需要先设置标识 */
     _run = true;
@@ -163,16 +165,6 @@ void *thread::start_routine( void *arg )
 pthread_t thread::get_id()
 {
     return _thread;
-}
-
-bool thread::initlization()
-{
-    return true;
-}
-
-bool thread::cleanup()
-{
-    return true;
 }
 
 void thread::notify_child( notify_t msg )
