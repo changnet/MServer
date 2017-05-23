@@ -14,14 +14,16 @@ end
 function Mongodb_mgr:new( ip,port,usr,pwd,db )
     self.dbid = self.dbid + 1
 
-     local db = Mongodb( self.dbid )
-     db:start( ip,port,usr,pwd,db )
+     local mongodb = Mongodb( self.dbid )
+     mongodb:start( ip,port,usr,pwd,db )
 
-     self.mongodb[dbid] = db
+     self.mongodb[self.dbid] = mongodb
+
+     return mongodb
 end
 
 -- 断开所有db(阻塞)
-function Mongodb_mgr.stop()
+function Mongodb_mgr:stop()
     for _,db in pairs( self.mongodb ) do
         db:stop()
     end

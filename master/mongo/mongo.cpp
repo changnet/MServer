@@ -17,7 +17,7 @@ mongo::mongo()
 
 mongo::~mongo()
 {
-    assert( "mongo db not clean yet",!_conn );
+    assert( "mongo db not clean yet",NULL == _conn );
 }
 
 void mongo::set( const char *ip,
@@ -49,7 +49,11 @@ int32 mongo::connect()
     /* mongoc_client_new只是创建一个对象，并没有connect,ping保证连接通畅
      * 默认10s超时.超服时阻塞,应该可以接受.
      */
-    if ( ping() ) return 1;
+    if ( ping() )
+    {
+        disconnect();
+        return     1;
+    }
 
     return 0;
 }
