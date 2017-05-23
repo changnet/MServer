@@ -85,15 +85,12 @@ struct mongo_query
         _limit  = limit;
     }
 
-    void set_find( const char *clt,
-        bson_t *query,bson_t *fields = NULL,int64 skip = 0,int64 limit = 0 )
+    void set_find( const char *clt,bson_t *query,bson_t *fields = NULL )
     {
         snprintf( _clt,MONGO_VAR_LEN,"%s",clt );
 
         _query  = query ;
         _fields = fields;
-        _skip   = skip  ;
-        _limit  = limit ;
     }
 
     void set_find_modify( const char *clt,bson_t *query,

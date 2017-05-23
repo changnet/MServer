@@ -144,8 +144,8 @@ struct mongo_result *mongo::find ( const struct mongo_query *mq )
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
     mongoc_cursor_t *cursor = 
-        mongoc_collection_find( collection, MONGOC_QUERY_NONE, 
-        mq->_skip, mq->_limit, 0, mq->_query, mq->_fields, NULL );
+        mongoc_collection_find_with_opts( 
+        collection, mq->_query, mq->_fields, NULL );
 
     struct mongo_result *result = new mongo_result();
     result->_qid = mq->_qid;

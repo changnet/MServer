@@ -290,7 +290,7 @@ void lmongo::invoke_command( bool is_return )
     }
 }
 
-/* find( id,collection,query,fields,skip,limit) */
+/* find( id,collection,query,fields ) */
 int32 lmongo::find()
 {
     if ( !active() )
@@ -306,9 +306,7 @@ int32 lmongo::find()
     }
 
     const char *str_query  = luaL_optstring( L,3,NULL );
-    const char *str_fields = luaL_optstring( L,4,NULL );
-    int64 skip  = luaL_optinteger( L,5,0 );
-    int64 limit = luaL_optinteger( L,6,0 );
+    const char *str_opts = luaL_optstring( L,4,NULL );
 
     bson_t *query = NULL;
     if ( str_query )
@@ -323,22 +321,22 @@ int32 lmongo::find()
         query = bson_new(); /* find函数不允许query为NULL，但查询参数可以空 */
     }
 
-    bson_t *fields = NULL;
-    if ( str_fields )
+    bson_t *opts = NULL;
+    if ( str_opts )
     {
         bson_error_t error;
-        fields = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_fields),-1,&error );
-        if ( !fields )
+        opts = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(str_opts),-1,&error );
+        if ( !opts )
         {
             bson_destroy( query );
-            return luaL_error( L,"field fields:%s",error.message );
+            return luaL_error( L,"field opts:%s",error.message );
         }
     }
 
     struct mongo_query *mongo_find = new mongo_query();
     mongo_find->set( id,MQT_FIND );  /* count必须有返回 */
-    mongo_find->set_find( collection,query,fields,skip,limit );
+    mongo_find->set_find( collection,query,opts );
 
     push_query( mongo_find );
 
