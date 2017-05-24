@@ -30,8 +30,9 @@ function Mongodb:get_next_id()
 end
 
 function Mongodb:read_event( qid,ecode,res )
-    if self.cb[id] then
+    if self.cb[qid] then
         xpcall( self.cb[qid],__G__TRACKBACK__,ecode,res )
+        self.cb[qid] = nil
     else
         ELOG( "mongo result no call back found" )
     end

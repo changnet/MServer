@@ -27,7 +27,7 @@ int32 lmongo::start()
     const char *db   = luaL_checkstring  ( L,5 );
 
     _mongo.set( ip,port,usr,pwd,db );
-    thread::start( 10 );
+    thread::start( 5 );
 
     return 0;
 }
@@ -52,28 +52,12 @@ bool lmongo::initlization()
 
 void lmongo::routine( notify_t msg )
 {
-    int32 ping = 0;
-    int32 ets  = 0;
+    /* 如果某段时间连不上，只能由下次超时后触发
+     * 超时时间由thread::start参数设定
+     */
+    if ( _mongo.ping() ) return;
 
-    while ( ets < 10 && ( ping = _mongo.ping() ) )
-    {
-        ++ets;
-        usleep(ets*1E6); // ets*1s
-    }
-
-    if ( ping )
-    {
-        notify_parent( ERROR );
-        return;
-    }
-
-    switch ( msg )
-    {
-        case ERROR : assert( "routine ERROR",false );break;
-        case NONE  : break; /* just timeout */
-        case EXIT  : break; /* do nothing,auto exit */
-        case MSG   : invoke_command();break;
-    }
+    invoke_command();
 }
 
 bool lmongo::cleanup()
@@ -98,6 +82,7 @@ void lmongo::notification( notify_t msg )
     switch ( msg )
     {
         case MSG  : invoke_result();break;
+        case ERROR: ERROR( "mongo thread error" );break;
         default   : assert( "unhandle mongo event",false );break;
     }
 }
@@ -182,6 +167,8 @@ void lmongo::invoke_result()
     const struct mongo_result *res = NULL;
     while ( (res = pop_result()) )
     {
+        lua_getglobal( L,"mongodb_read_event" );
+
         lua_pushinteger( L,_dbid      );
         lua_pushinteger( L,res->_qid   );
         lua_pushinteger( L,res->_ecode );
@@ -195,7 +182,7 @@ void lmongo::invoke_result()
 
             if ( lbs_do_decode( L,res->_data,root_type,&error ) < 0 )
             {
-                lua_pop( L,3 );
+                lua_pop( L,4 );
                 ERROR( "mongo result decode error:%s",error.what );
 
                 // 即使出错，也回调到脚本
@@ -206,7 +193,6 @@ void lmongo::invoke_result()
             }
         }
 
-        lua_getglobal( L,"mongodb_read_event" );
         if ( LUA_OK != lua_pcall( L,nargs,0,1 ) )
         {
             ERROR( "mongo call back error:%s",lua_tostring( L,-1 ) );

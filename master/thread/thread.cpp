@@ -84,7 +84,7 @@ void thread::stop()
 {
     if ( !_run )
     {
-        ERROR( "try to stop a inactive thread" );
+        ERROR( "thread::stop:thread not running" );
         return;
     }
 
@@ -92,14 +92,14 @@ void thread::stop()
 
     _run = false;
     notify_child( EXIT );
-    int32 rv = pthread_join( _thread,NULL );
-    if ( rv )
+    int32 ecode = pthread_join( _thread,NULL );
+    if ( ecode )
     {
         /* On success, pthread_join() returns 0; on error, it returns an error
          * number.errno is not use.
          * not strerror(errno)
          */
-        FATAL( "thread join fail:%s\n",strerror(rv) );
+        FATAL( "thread join fail:%s\n",strerror( ecode ) );
     }
     _join = true;
     
@@ -110,7 +110,7 @@ void thread::stop()
 
 void thread::do_routine()
 {
-    while ( _run )
+    while ( true )
     {
         int8 event = 0;
         int32 sz = ::read( _fd[1],&event,sizeof(int8) ); /* 阻塞 */
@@ -133,6 +133,11 @@ void thread::do_routine()
             break;
         }
         this->routine( static_cast<notify_t>(event) );
+
+        if ( EXIT == static_cast<notify_t>(event) )
+        {
+            break;
+        }
     }
 }
 
