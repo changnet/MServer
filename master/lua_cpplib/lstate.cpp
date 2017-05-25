@@ -164,34 +164,6 @@ int32 luaopen_ev( lua_State *L )
     return 0;
 }
 
-/*
-int32 luaopen_http_socket( lua_State *L )
-{
-    lclass<lhttp_socket> lc(L,"Http_socket");
-    lc.def<&lhttp_socket::send>("send");
-    lc.def<&lhttp_socket::kill>("kill");
-    lc.def<&lhttp_socket::listen> ("listen" );
-    lc.def<&lhttp_socket::address>("address");
-    lc.def<&lhttp_socket::connect>("connect");
-    lc.def<&lhttp_socket::set_self_ref>     ("set_self_ref"     );
-    lc.def<&lhttp_socket::set_on_command>   ("set_on_command"   );
-    lc.def<&lhttp_socket::buffer_setting>   ("buffer_setting"   );
-    lc.def<&lhttp_socket::set_on_acception> ("set_on_acception" );
-    lc.def<&lhttp_socket::set_on_connection>("set_on_connection");
-    lc.def<&lhttp_socket::set_on_disconnect>("set_on_disconnect");
-    lc.def<&lhttp_socket::file_description> ("file_description" );
-
-    lc.def<&lhttp_socket::next>   ("next");
-    lc.def<&lhttp_socket::get_url>   ("get_url");
-    lc.def<&lhttp_socket::get_body>  ("get_body" );
-    lc.def<&lhttp_socket::get_method>("get_method");
-    lc.def<&lhttp_socket::get_status>("get_status");
-    lc.def<&lhttp_socket::is_upgrade>   ("is_upgrade");
-    lc.def<&lhttp_socket::get_head_field>("get_head_field");
-
-    return 0;
-}
-*/
 int32 luaopen_timer ( lua_State *L )
 {
     lclass<ltimer> lc(L,"Timer");
@@ -210,11 +182,7 @@ int32 luaopen_sql( lua_State *L )
     lc.def<&lsql::start> ( "start" );
     lc.def<&lsql::stop>  ( "stop"  );
 
-    lc.def<&lsql::do_sql>         ( "do_sql"         );
-    lc.def<&lsql::next_result>    ( "next_result"    );
-    lc.def<&lsql::self_callback > ( "self_callback"  );
-    lc.def<&lsql::read_callback > ( "read_callback"  );
-    lc.def<&lsql::error_callback> ( "error_callback" );
+    lc.def<&lsql::do_sql> ( "do_sql" );
 
     return 0;
 }
@@ -246,43 +214,6 @@ int32 luaopen_log( lua_State *L )
     return 0;
 }
 
-/*
-int32 luaopen_stream_socket( lua_State *L )
-{
-    lclass<lstream_socket> lc(L,"Stream_socket");
-    lc.def<&lstream_socket::send>("send");
-    lc.def<&lstream_socket::kill>("kill");
-    lc.def<&lstream_socket::listen> ("listen" );
-    lc.def<&lstream_socket::address>("address");
-    lc.def<&lstream_socket::connect>("connect");
-    lc.def<&lstream_socket::srv_next>("srv_next");
-    lc.def<&lstream_socket::clt_next>("clt_next");
-    lc.def<&lstream_socket::css_cmd >("css_cmd" );
-    lc.def<&lstream_socket::rpc_send >("rpc_send" );
-    lc.def<&lstream_socket::scmd_next>("scmd_next");
-    lc.def<&lstream_socket::rpc_decode >("rpc_decode" );
-    lc.def<&lstream_socket::set_self_ref>     ("set_self_ref"     );
-    lc.def<&lstream_socket::set_on_command>   ("set_on_command"   );
-    lc.def<&lstream_socket::buffer_setting>   ("buffer_setting"   );
-    lc.def<&lstream_socket::set_on_acception> ("set_on_acception" );
-    lc.def<&lstream_socket::set_on_connection>("set_on_connection");
-    lc.def<&lstream_socket::set_on_disconnect>("set_on_disconnect");
-    lc.def<&lstream_socket::file_description> ("file_description" );
-
-    lc.def<&lstream_socket::ss_flatbuffers_send   > ("ss_flatbuffers_send"   );
-    lc.def<&lstream_socket::ss_flatbuffers_decode > ("ss_flatbuffers_decode" );
-    lc.def<&lstream_socket::sc_flatbuffers_send   > ("sc_flatbuffers_send"   );
-    lc.def<&lstream_socket::sc_flatbuffers_decode > ("sc_flatbuffers_decode" );
-    lc.def<&lstream_socket::ssc_flatbuffers_send  > ("ssc_flatbuffers_send"  );
-    lc.def<&lstream_socket::ssc_flatbuffers_decode> ("ssc_flatbuffers_decode");
-    lc.def<&lstream_socket::cs_flatbuffers_decode > ("cs_flatbuffers_decode" );
-    lc.def<&lstream_socket::cs_flatbuffers_send   > ("cs_flatbuffers_send"   );
-    lc.def<&lstream_socket::css_flatbuffers_send  > ("css_flatbuffers_send"  );
-    lc.def<&lstream_socket::css_flatbuffers_decode> ("css_flatbuffers_decode");
-
-    return 0;
-}
-*/
 int32 luaopen_acism( lua_State *L )
 {
     lclass<lacism> lc(L,"Acism");

@@ -1,14 +1,6 @@
 #ifndef __SQL_RESULT_H__
 #define __SQL_RESULT_H__
 
-/* db结果存储，实际就是把MYSQL_RES按自己的方式实现一遍
- * mysql的结果通过socket传输，因此只能取到char类型自己转换
- * 1.子线程将数据转换为对应类型，主线程直接使用。
- * 2.所有数据原封不动以char存储，主线程自己转换
- * 方案1中主线程省去转换时间，但需要用union将double、char混合存储，对以后做cache很不
- * 利。况且atoi之类的转换函数效率并不算太低，因此采用方案1
- */
-
 #include <vector>
 #include <mysql.h>
 #include "../global/global.h"
@@ -43,90 +35,90 @@ enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
 */
 struct sql_field
 {
-    char name[SQL_FIELD_LEN];
-    enum_field_types    type; /* define in mysql_com.h */
+    char _name[SQL_FIELD_LEN];
+    enum_field_types    _type; /* define in mysql_com.h */
 };
 
 struct sql_col
 {
-    size_t size;
-    char *value;
+    size_t _size;
+    char *_value;
 
     sql_col()
     {
-        size  = 0;
-        value = NULL;
+        _size  = 0;
+        _value = NULL;
     }
 
     ~sql_col()
     {
-        if ( value ) delete []value;
+        if ( _value ) delete []_value;
 
-        size  = 0;
-        value = NULL;
+        _size  = 0;
+        _value = NULL;
     }
 
-    void set( const char *_value,size_t _size)
+    void set( const char *value,size_t size)
     {
-        assert ( "sql col not clean",0 == size && !value );
-        if ( !_value || 0 >= _size ) return;  /* 结果为NULL */
+        assert ( "sql col not clean",0 == _size && !_value );
+        if ( !value || 0 >= size ) return;  /* 结果为NULL */
 
-        size = _size;  /* 注意没加1 */
-        value = new char[_size+1];
+        _size = _size;  /* 注意没加1 */
+        _value = new char[size+1];
 
-        /* 无论何种数据类型(包括寸进制)，都统一加\0 */
-        memcpy( value,_value,_size );
-        value[_size] = '\0';
+        /* 无论何种数据类型(包括寸进制)，都统一加\0
+         * 方便后面转换为int之类时可以直接atoi
+         */
+        memcpy( _value,value,size );
+        _value[size]         = '\0';
     }
 };
 
 struct sql_row
 {
-    std::vector<sql_col> cols;
+    std::vector<sql_col> _cols;
 };
-//typedef std::vector<sql_col> sql_row;
 
 struct sql_res
 {
-    uint32 num_rows;
-    uint32 num_cols;
-    std::vector<sql_field> fields;
-    std::vector<sql_row  > rows  ;
+    uint32 _num_rows;  // 行数
+    uint32 _num_cols;  // 列数
+    std::vector<sql_field> _fields; // 字段名
+    std::vector<sql_row  > _rows  ; // 行数据
 };
 
+/* 查询结果 */
 struct sql_result
 {
-    int32 id;
-    int32 err;
-    struct sql_res *res;
+    int32 _id;      /* 标记查询的id，用于回调 */
+    int32 _ecode;
+    struct sql_res *_res;
 };
 
+/* 查询请求 */
 struct sql_query
 {
-    explicit sql_query( int32 _id,int32 _callback,size_t _size,const char *_stmt )
+    explicit sql_query( int32 id,size_t size,const char *stmt )
     {
-        id   = _id;
-        size = _size;
-        callback = _callback;
+        _id   = _id;
+        _size = _size;
 
-        stmt = new char[size];
-        memcpy( stmt,_stmt,size );
+        _stmt = new char[size];
+        memcpy( _stmt,stmt,size );
     }
 
     ~sql_query()
     {
-        if ( stmt ) delete []stmt;
+        if ( _stmt ) delete []_stmt;
 
-        id       = 0;
-        size     = 0;
-        callback = 0;
-
+        _id       = 0;
+        _size     = 0;
+        _stmt     = NULL;
     }
 
-    int32 id;
-    int32 callback;
-    size_t    size;
-    char     *stmt;
+    int32  _id;
+    size_t _size;
+    char  *_stmt;
 };
 
 #endif /* __SQL_RESULT_H__ */

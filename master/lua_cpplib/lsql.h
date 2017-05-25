@@ -16,33 +16,34 @@ public:
     int32 start();
     int32 stop ();
 
-    int32 do_sql    ();
-    int32 next_result();
-    
-    int32 self_callback ();
-    int32 read_callback ();
-    int32 error_callback();
+    int32 do_sql();
 private:
     bool cleanup();
     bool initlization();
 
-    void invoke_sql ( bool cb = true );
-    void invoke_cb( bool cb,struct sql_query *query,struct sql_res *res );
+    void invoke_result();
+
+    void invoke_sql ( bool is_return = true );
+    void push_result( int32 id,struct sql_res *res );
 
     void routine( notify_t msg );
     void notification( notify_t msg );
 
-    void result_encode( struct sql_res *res );
+    int32 mysql_to_lua( const struct sql_res *res );
+    int32 field_to_lua( 
+        const struct sql_field &field,const struct sql_col &col );
+
+    const struct sql_query *pop_query();
+    void push_query( const struct sql_query *query );
+    int32 pop_result( struct sql_result res );
 private:
     lua_State *L  ;
     class sql _sql;
-    
-    int32 ref_self;
-    int32 ref_read;
-    int32 ref_error;
 
-    std::queue<sql_query *> _query ;
-    std::queue<sql_result > _result;
+    int32 _dbid;
+
+    std::queue<struct sql_result > _result;
+    std::queue<const struct sql_query *> _query ;
 };
 
 #endif /* __LSQL_H__ */
