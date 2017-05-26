@@ -167,11 +167,10 @@ int32 luaopen_ev( lua_State *L )
 int32 luaopen_timer ( lua_State *L )
 {
     lclass<ltimer> lc(L,"Timer");
-    lc.def<&ltimer::start> ( "start"  );
+    lc.def<&ltimer::set>   ( "set"    );
     lc.def<&ltimer::stop>  ( "stop"   );
+    lc.def<&ltimer::start> ( "start"  );
     lc.def<&ltimer::active>( "active" );
-    lc.def<&ltimer::set_self>( "set_self" );
-    lc.def<&ltimer::set_callback>( "set_callback" );
 
     return 0;
 }

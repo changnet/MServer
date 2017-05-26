@@ -13,14 +13,6 @@ function sig_handler( signum )
     ev:exit()
 end
 
-function socket_accpet_new( conn_id )
-    print( "socket_accpet_new",conn_id )
-end
-
-function socket_connect( conn_id,errno )
-    print( "socket_connect",conn_id,errno )
-end
-
 local function main()
     ev:signal( 2 );
     ev:signal( 15 );
@@ -28,7 +20,7 @@ local function main()
     -- require "example.code_performance"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
-    require "example.mysql_performance"
+    -- require "example.mysql_performance"
     -- require "example.log_performance"
     -- require "example.http_performance"
     -- require "example.stream_performance"
