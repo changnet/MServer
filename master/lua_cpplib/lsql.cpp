@@ -155,7 +155,7 @@ void lsql::notification( notify_t msg )
     }
 }
 
-int32 lsql::pop_result( struct sql_result res )
+int32 lsql::pop_result( struct sql_result &res )
 {
     lock();
     if ( _result.empty() )

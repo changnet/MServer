@@ -4,8 +4,8 @@
 
 -- mongo db 测试用例
 
-g_db_mgr = require "mongodb.mongodb_mgr"
-g_mongodb = g_db_mgr:new( "127.0.0.1",27013,"test","test","mudrv" )
+g_mongodb_mgr = require "mongodb.mongodb_mgr"
+g_mongodb = g_mongodb_mgr:new( "127.0.0.1",27013,"test","test","mudrv" )
 
 local max_insert = 100000
 local collection = "item"
@@ -14,6 +14,11 @@ local json = require "lua_parson"
 local Mongo_performan = {}
 
 --[[
+    mongo 127.0.0.1:27013
+    use admin
+    db.createUser( {user:"xzc",pwd:"1",roles:["userAdminAnyDatabase","dbAdminAnyDatabase"]} )
+    use mudrv
+    db.createUser( {user:"test",pwd:"test",roles:["dbOwner","userAdmin","readWrite"]} )
 测试插入数据，默认配置下大概为10000条/s
 ]]
 function Mongo_performan:table_insert_test()

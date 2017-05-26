@@ -35,7 +35,7 @@ private:
 
     const struct sql_query *pop_query();
     void push_query( const struct sql_query *query );
-    int32 pop_result( struct sql_result res );
+    int32 pop_result( struct sql_result &res );
 private:
     lua_State *L  ;
     class sql _sql;

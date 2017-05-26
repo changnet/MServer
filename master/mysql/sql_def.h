@@ -63,7 +63,7 @@ struct sql_col
         assert ( "sql col not clean",0 == _size && !_value );
         if ( !value || 0 >= size ) return;  /* 结果为NULL */
 
-        _size = _size;  /* 注意没加1 */
+        _size  = size;  /* 注意没加1 */
         _value = new char[size+1];
 
         /* 无论何种数据类型(包括寸进制)，都统一加\0
@@ -100,8 +100,8 @@ struct sql_query
 {
     explicit sql_query( int32 id,size_t size,const char *stmt )
     {
-        _id   = _id;
-        _size = _size;
+        _id   = id;
+        _size = size;
 
         _stmt = new char[size];
         memcpy( _stmt,stmt,size );

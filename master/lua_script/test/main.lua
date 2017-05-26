@@ -6,8 +6,9 @@ require "obj_counter"
 json = require "lua_parson"
 
 function sig_handler( signum )
-    if g_db_mgr then g_db_mgr:stop() end
-    if g_store_sql then g_store_sql:stop() end
+    if g_mysql_mgr   then g_mysql_mgr:stop()   end
+    if g_mongodb_mgr then g_mongodb_mgr:stop() end
+
     if g_log_mgr then g_log_mgr:stop(); end
     ev:exit()
 end
@@ -26,8 +27,8 @@ local function main()
 
     -- require "example.code_performance"
     -- require "example.mt_performance"
-    require "example.mongo_performance"
-    -- require "example.mysql_performance"
+    -- require "example.mongo_performance"
+    require "example.mysql_performance"
     -- require "example.log_performance"
     -- require "example.http_performance"
     -- require "example.stream_performance"
