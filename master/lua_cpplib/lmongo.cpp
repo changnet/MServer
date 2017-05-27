@@ -79,11 +79,17 @@ bool lmongo::cleanup()
 
 void lmongo::notification( notify_t msg )
 {
-    switch ( msg )
+    if ( MSG == msg )
     {
-        case MSG  : invoke_result();break;
-        case ERROR: ERROR( "mongo thread error" );break;
-        default   : assert( "unhandle mongo event",false );break;
+        invoke_result();
+    }
+    else if ( ERROR == msg )
+    {
+        ERROR( "mongo thread error" );
+    }
+    else
+    {
+        assert( "unhandle mongo event",false );
     }
 }
 
@@ -257,7 +263,7 @@ void lmongo::invoke_command( bool is_return )
                 ERROR( "unknow handle mongo command type:%d\n",query->_mqt );
                 delete query;
                 continue;
-            }break;
+            }
         }
 
         /* 如果分配了qid，表示需要返回 */
@@ -268,7 +274,7 @@ void lmongo::invoke_command( bool is_return )
         }
         else
         {
-            if ( res ) delete res; /* 关服时不需要回调 */
+            delete res; /* 关服时不需要回调 */
         }
 
         delete query;

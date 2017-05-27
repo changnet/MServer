@@ -57,19 +57,8 @@ int32 llog::write()
 
 void llog::routine( notify_t msg )
 {
-    switch ( msg )
-    {
-        case ERROR : 
-            assert( "main thread shold not notify error",false );
-            return;
-            break ;
-        case EXIT  : return;break;
-        case NONE  : break;
-        case MSG   :
-            assert( "log thread do't need msg notify",false );
-            return;
-            break ;
-    }
+    // none 是超时
+    if ( NONE != msg ) return;
 
     bool wfl = true;
     while ( wfl )
@@ -121,13 +110,13 @@ bool llog::cleanup()
 int32 llog::mkdir_p( lua_State *L )
 {
     const char *path = luaL_checkstring( L,1 );
-    if ( !log::mkdir_p( path ) )
+    if ( log::mkdir_p( path ) )
     {
-        lua_pushboolean( L,0 );
+        lua_pushboolean( L,1 );
     }
     else
     {
-        lua_pushboolean( L,1 );
+        lua_pushboolean( L,0 );
     }
     
     return 1;

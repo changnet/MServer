@@ -36,9 +36,9 @@ void log_file::push( time_t tm,const char *name,const char *str,size_t len )
         snprintf( _name,PATH_MAX,"%s",name );
     }
 
-    if ( len < 0 ) len = strlen( str );
+    if ( len == 0 ) len = strlen( str );
     
-    if ( len <= 0 )
+    if ( len == 0 )
     {
         ERROR( "log file empty log content" );
         return;

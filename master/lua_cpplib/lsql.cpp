@@ -70,7 +70,7 @@ void lsql::invoke_sql( bool is_return )
         assert( "empty sql statement",stmt && query->_size > 0 );
 
         struct sql_res *res = NULL;
-        if ( expect_false( _sql.query ( stmt,query->_size ) ) )
+        if ( expect_false( _sql.query( stmt,query->_size ) ) )
         {
             ERROR( "sql query error:%s",_sql.error() );
             ERROR( "sql will not exec:%s",stmt );
@@ -147,11 +147,17 @@ int32 lsql::do_sql()
 
 void lsql::notification( notify_t msg )
 {
-    switch ( msg )
+    if ( MSG == msg )
     {
-        case ERROR : ERROR( "sql thread error" );break;
-        case MSG   : invoke_result();break;
-        default    : assert( "unknow sql event",false );break;
+        invoke_result();
+    }
+    else if ( ERROR == msg )
+    {
+        ERROR( "sql thread error" );
+    }
+    else
+    {
+        assert( "unknow sql event",false );
     }
 }
 

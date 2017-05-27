@@ -34,7 +34,7 @@ SHARED_LIB = -ldl -lrt -pthread -lsasl2 -lssl -lcrypto \
 	-lmongoc-1.0 -lbson-1.0
 
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
-	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r
+	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz
 
 #output directory
 ODIR = bin
@@ -103,6 +103,11 @@ memcheck:
 
 callgrind:
 	valgrind --tool=callgrind ./bin/master test 1 1
+
+# http://oclint-docs.readthedocs.io/en/stable/rules/
 oclint:
-	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(OCFILE)
+	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(OCFILE) \
+	-disable-rule=LongLine -disable-rule=ShortVariableName \
+	-disable-rule=UselessParentheses -disable-rule=DoubleNegative \
+	-disable-rule=MultipleUnaryOperator
 .PHONY: all clean test clean_all build_all dir memcheck callgrind

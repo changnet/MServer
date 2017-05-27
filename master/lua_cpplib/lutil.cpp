@@ -40,42 +40,34 @@ static int32 gethost( lua_State *L )
         return 0;
     }
 
-    switch( hptr->h_addrtype )
+    if ( hptr->h_addrtype != AF_INET && hptr->h_addrtype != AF_INET6 )
     {
-        case AF_INET:
-        case AF_INET6:
-        {
-            int32 return_value = 0;
-            char dst[INET6_ADDRSTRLEN];
-            char **pptr = hptr->h_addr_list;
-            for( ;*pptr != NULL; pptr++ )
-            {
-                if ( lua_gettop( L ) > 256 )
-                {
-                    ERROR( "too many ip found,truncate" );
-                    return return_value;
-                }
-                lua_checkstack( L,1 );
-                const char *host = inet_ntop( hptr->h_addrtype, *pptr, dst,
-                    sizeof(dst) );
-                if ( !host )
-                {
-                    ERROR( "gethostbyname inet_ntop error(%d):%s",errno,
-                        strerror(errno) );
-                    return return_value;
-                }
-
-                lua_pushstring( L,host );
-                ++return_value;
-            }
-            return return_value;
-        }break;
-        default:
-            return luaL_error( L,"gethostbyname unknow address type" );
-            break;
+        return luaL_error( L,"gethostbyname unknow address type" );
     }
 
-    return 0;
+    int32 return_value = 0;
+    char dst[INET6_ADDRSTRLEN];
+    char **pptr = hptr->h_addr_list;
+    for( ;*pptr != NULL; pptr++ )
+    {
+        if ( lua_gettop( L ) > 256 )
+        {
+            ERROR( "too many ip found,truncate" );
+            return return_value;
+        }
+        lua_checkstack( L,1 );
+        const char *host = 
+            inet_ntop( hptr->h_addrtype, *pptr, dst,sizeof(dst) );
+        if ( !host )
+        {
+            ERROR( "gethostbyname "
+                "inet_ntop error(%d):%s",errno,strerror(errno) );
+            return return_value;
+        }
+        lua_pushstring( L,host );
+        ++return_value;
+    }
+    return return_value;
 }
 
 /* md5

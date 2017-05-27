@@ -131,8 +131,8 @@ int32 lnetwork_mgr::set_cs_cmd()
     cfg._mask    = mask;
     cfg._session = session;
 
-    snprintf( cfg._schema,MAX_SCHEMA_NAME,schema );
-    snprintf( cfg._object,MAX_SCHEMA_NAME,object );
+    snprintf( cfg._schema,MAX_SCHEMA_NAME,"%s",schema );
+    snprintf( cfg._object,MAX_SCHEMA_NAME,"%s",object );
 
     return 0;
 }
@@ -153,8 +153,8 @@ int32 lnetwork_mgr::set_ss_cmd()
     cfg._mask    = mask;
     cfg._session = session;
 
-    snprintf( cfg._schema,MAX_SCHEMA_NAME,schema );
-    snprintf( cfg._object,MAX_SCHEMA_NAME,object );
+    snprintf( cfg._schema,MAX_SCHEMA_NAME,"%s",schema );
+    snprintf( cfg._object,MAX_SCHEMA_NAME,"%s",object );
 
     return 0;
 }
@@ -175,8 +175,8 @@ int32 lnetwork_mgr::set_sc_cmd()
     cfg._mask    = mask;
     cfg._session = session;
 
-    snprintf( cfg._schema,MAX_SCHEMA_NAME,schema );
-    snprintf( cfg._object,MAX_SCHEMA_NAME,object );
+    snprintf( cfg._schema,MAX_SCHEMA_NAME,"%s",schema );
+    snprintf( cfg._object,MAX_SCHEMA_NAME,"%s",object );
 
     return 0;
 }

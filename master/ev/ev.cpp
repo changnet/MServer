@@ -21,39 +21,30 @@ ev_loop::ev_loop()
     timermax = 0;
     timercnt = 0;
 
-    ev_rt_now          = get_time ();
-    mn_now             = get_clock ();
-    now_floor          = mn_now;
-    rtmn_diff          = ev_rt_now - mn_now;
+    ev_rt_now = get_time ();
+    mn_now    = get_clock ();
+    now_floor = mn_now;
+    rtmn_diff = ev_rt_now - mn_now;
 
     backend_init();
 }
 
 ev_loop::~ev_loop()
 {
-    if ( anfds )
-    {
-        delete []anfds;
-        anfds = NULL;
-    }
+    /* it's safe to delete NULL pointer,
+     * and to avoid oclint error:unnecessary null check for dealloc
+     */
+    delete []anfds;
+    anfds = NULL;
 
-    if ( pendings )
-    {
-        delete []pendings;
-        pendings = NULL;
-    }
+    delete []pendings;
+    pendings = NULL;
 
-    if ( fdchanges )
-    {
-        delete []fdchanges;
-        fdchanges = NULL;
-    }
+    delete []fdchanges;
+    fdchanges = NULL;
 
-    if ( timers )
-    {
-        delete []timers;
-        timers = NULL;
-    }
+    delete []timers;
+    timers = NULL;
 
     if ( backend_fd >= 0 )
     {
@@ -125,11 +116,11 @@ int32 ev_loop::io_stop( ev_io *w )
 {
     clear_pending( w );
 
-    if ( expect_false(!w->is_active()) )
-        return 0;
+    if ( expect_false(!w->is_active()) ) return 0;
 
     int32 fd = w->fd;
-    assert( "illegal fd (must stay constant after start!)", fd >= 0 && uint32(fd) < anfdmax );
+    assert( "illegal fd (must stay "
+        "constant after start!)", fd >= 0 && uint32(fd) < anfdmax );
 
     ANFD *anfd = anfds + fd;
     anfd->w = 0;
@@ -157,17 +148,18 @@ void ev_loop::fd_reify()
         switch ( anfd->reify )
         {
         case 0             : /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
-            ERROR("fd unreify:please avoid this fd situation,control your watcher");
-            continue;
-            break;
+            ERROR("fd unreify:please avoid "
+                "this fd situation,control your watcher");
+            continue; // break;
         case EPOLL_CTL_ADD :
         case EPOLL_CTL_MOD :
         {
             int32 events = (anfd->w)->events;
             /* 允许一个fd在一次loop中不断地del，再add，或者多次mod。
-               但只要event不变，则不需要更改epoll */
-            if ( anfd->emask == events ) /* no reification */
-                continue;
+             * 但只要event不变，则不需要更改epoll
+             */
+            if ( anfd->emask == events ) continue;/* no reification */
+
             backend_modify( fd,events,anfd->reify );
             anfd->emask = events;
         }break;
@@ -195,7 +187,8 @@ void ev_loop::fd_reify()
 void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
 {
     struct epoll_event ev;
-    memset( &ev,0,sizeof(ev) ); /* valgrind Syscall param epoll_ctl(event) points to uninitialised byte(s) */
+    /* valgrind: uninitialised byte(s) */
+    memset( &ev,0,sizeof(ev) );
 
     ev.data.fd = fd;
     ev.events  = (events & EV_READ  ? EPOLLIN  : 0)
@@ -204,14 +197,12 @@ void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
     /* The default behavior for epoll is Level Triggered. */
     /* LT同时支持block和no-block，持续通知 */
     /* ET只支持no-block，一个事件只通知一次 */
-    if ( expect_true (!epoll_ctl(backend_fd,reify,fd,&ev)) )
-        return;
+    if ( expect_true (!epoll_ctl(backend_fd,reify,fd,&ev)) ) return;
 
     switch ( errno )
     {
     case EBADF  :
-        if ( EPOLL_CTL_DEL == reify )
-            return;
+        if ( EPOLL_CTL_DEL == reify ) return;
         assert ( "ev_loop::backend_modify EBADF",false );
         break;
     case EEXIST :
@@ -231,6 +222,9 @@ void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
         break;
     case EPERM  :
         assert ( "ev_loop::backend_modify EPERM",false );
+        break;
+    default     :
+        ERROR( "unknow ev_loop error" );
         break;
     }
 }
@@ -305,7 +299,9 @@ void ev_loop::time_update()
         rtmn_diff = ev_rt_now - mn_now;
 
         if ( expect_true (mn_now - now_floor < MIN_TIMEJUMP * .5) )
+        {
             return; /* all is well */
+        }
 
         ev_rt_now = get_time ();
         mn_now    = get_clock ();
@@ -318,13 +314,17 @@ void ev_loop::time_update()
 
 void ev_loop::backend_poll( ev_tstamp timeout )
 {
-    /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
-    /* the default libev max wait time, however. */
-    int32 eventcnt = epoll_wait (backend_fd, epoll_events, EPOLL_MAXEV, timeout * 1e3);
+    /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, 
+     * which is below the default libev max wait time, however.
+     */
+    int32 eventcnt = epoll_wait(
+        backend_fd, epoll_events, EPOLL_MAXEV, timeout * 1e3);
     if (expect_false (eventcnt < 0))
     {
         if ( errno != EINTR )
+        {
             FATAL( "ev_loop::backend_poll epoll wait errno(%d)",errno );
+        }
 
         return;
     }
@@ -353,7 +353,9 @@ void ev_loop::fd_event( int32 fd,int32 revents )
 void ev_loop::feed_event( ev_watcher *w,int32 revents )
 {
     if ( expect_false(w->pending) )
+    {
         pendings[w->pending - 1].events |= revents;
+    }
     else
     {
         w->pending = ++pendingcnt;
@@ -393,7 +395,7 @@ void ev_loop::timers_reify()
     {
         ev_timer *w = timers [HEAP0];
 
-        assert( "libev: inactive timer on timer heap detected", w->is_active () );
+        assert( "libev: invalid timer detected", w->is_active () );
 
         /* first reschedule or stop timer */
         if (w->repeat)
@@ -402,12 +404,14 @@ void ev_loop::timers_reify()
             if ( w->at < mn_now )
                 w->at = mn_now;
 
-            assert( "libev: negative ev_timer repeat value found while processing timers", w->repeat > 0. );
+            assert( "libev: negative ev_timer repeat value", w->repeat > 0. );
 
             down_heap(timers, timercnt, HEAP0);
         }
         else
+        {
             w->stop(); /* nonrepeating: stop timer */
+        }
 
         feed_event( w,EV_TIMER );
     }
@@ -417,7 +421,7 @@ int32 ev_loop::timer_start( ev_timer *w )
 {
     w->at += mn_now;
 
-    assert ( "libev: ev_timer_start called with negative timer repeat value", w->repeat >= 0. );
+    assert ( "libev: negative repeat value", w->repeat >= 0. );
 
     ++timercnt;
     int32 active = timercnt + HEAP0 - 1;
@@ -433,8 +437,7 @@ int32 ev_loop::timer_start( ev_timer *w )
 int32 ev_loop::timer_stop( ev_timer *w )
 {
     clear_pending( w );
-    if ( expect_false(!w->is_active()) )
-        return 0;
+    if ( expect_false(!w->is_active()) ) return 0;
 
     {
         int32 active = w->active;
@@ -463,14 +466,11 @@ void ev_loop::down_heap( ANHE *heap,int32 N,int32 k )
     {
         int c = k << 1;
 
-        if (c >= N + HEAP0)
-            break;
+        if (c >= N + HEAP0) break;
 
-        c += c + 1 < N + HEAP0 && (heap [c])->at > (heap [c + 1])->at
-             ? 1 : 0;
+        c += c + 1 < N + HEAP0 && (heap [c])->at > (heap [c + 1])->at ? 1 : 0;
 
-        if ( he->at <= (heap [c])->at )
-            break;
+        if ( he->at <= (heap [c])->at ) break;
 
         heap [k] = heap [c];
         (heap [k])->active = k;
@@ -490,8 +490,7 @@ void ev_loop::up_heap( ANHE *heap,int32 k )
     {
         int p = HPARENT (k);
 
-        if ( UPHEAP_DONE (p, k) || (heap [p])->at <= he->at )
-            break;
+        if ( UPHEAP_DONE (p, k) || (heap [p])->at <= he->at ) break;
 
         heap [k] = heap [p];
         (heap [k])->active = k;
@@ -505,17 +504,25 @@ void ev_loop::up_heap( ANHE *heap,int32 k )
 void ev_loop::adjust_heap( ANHE *heap,int32 N,int32 k )
 {
     if (k > HEAP0 && (heap [k])->at <= (heap [HPARENT (k)])->at)
+    {
         up_heap (heap, k);
+    }
     else
+    {
         down_heap (heap, N, k);
+    }
 }
 
 void ev_loop::reheap( ANHE *heap,int32 N )
 {
-    /* we don't use floyds algorithm, upheap is simpler and is more cache-efficient */
-    /* also, this is easy to implement and correct for both 2-heaps and 4-heaps */
+    /* we don't use floyds algorithm, upheap is simpler and is more 
+     * cache-efficient also, this is easy to implement and correct 
+     * for both 2-heaps and 4-heaps
+     */
     for (int32 i = 0; i < N; ++i)
+    {
         up_heap (heap, i + HEAP0);
+    }
 }
 
 /* calculate blocking time */
@@ -525,7 +532,7 @@ ev_tstamp ev_loop::wait_time()
 
     waittime = MAX_BLOCKTIME;
 
-    if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免睡过头 */
+    if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
     {
         ev_tstamp to = (timers [HEAP0])->at - mn_now;
         if (waittime > to) waittime = to;
