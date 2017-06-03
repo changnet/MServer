@@ -147,6 +147,8 @@ function build_mongodb()
     append_to_file $MONGODCONF '   port: 27013'
     append_to_file $MONGODCONF 'setParameter:'
     append_to_file $MONGODCONF '   enableLocalhostAuthBypass: false'
+    append_to_file $MONGODCONF 'security:'
+    append_to_file $MONGODCONF '   authorization: enabled'
 
     # start mongo service using /etc/mongod.conf
     service mongod start
