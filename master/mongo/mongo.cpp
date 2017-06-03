@@ -47,13 +47,10 @@ int32 mongo::connect()
     }
 
     /* mongoc_client_new只是创建一个对象，并没有connect,ping保证连接通畅
-     * 默认10s超时.超服时阻塞,应该可以接受.
+     * 默认10s超时.超服时阻塞,应该可以接受.尝试ping一下，即使失败也不处理
+     * 需要关注日志。
      */
-    if ( ping() )
-    {
-        disconnect();
-        return     1;
-    }
+    ping();
 
     return 0;
 }
