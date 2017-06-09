@@ -22,19 +22,19 @@ OPTIMIZE = -O0
 INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \
 	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
 	-I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers \
-	-I./deps/lua_bson
+	-I./deps/lua_bson -I./deps/pbc
 
 #libaray path
 LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
 	-L./deps/lua_rapidxml -L./deps/aho-corasick -L./deps/lua_flatbuffers \
-	-L./deps/lua_bson
+	-L./deps/lua_bson -L./deps/pbc/build
 
 #link libaray
 SHARED_LIB = -ldl -lrt -pthread -lsasl2 -lssl -lcrypto \
 	-lmongoc-1.0 -lbson-1.0
 
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
-	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz
+	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz -lpbc
 
 #output directory
 ODIR = bin
@@ -85,6 +85,7 @@ cleansub:
 	$(MAKE) -C deps/aho-corasick clean
 	$(MAKE) -C deps/lua_flatbuffers clean
 	$(MAKE) -C deps/lua_bson clean
+	$(MAKE) -C deps/pbc clean
 	rm -rf $(ODIR)/*
 
 submodule:
@@ -94,6 +95,7 @@ submodule:
 	$(MAKE) -C deps/aho-corasick all
 	$(MAKE) -C deps/lua_flatbuffers all
 	$(MAKE) -C deps/lua_bson all
+	$(MAKE) -C deps/pbc all
 
 test:
 	./bin/master test 1

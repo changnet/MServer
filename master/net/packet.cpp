@@ -2,6 +2,7 @@
 #include "buffer.h"
 
 #if defined FLATBUFFERS_PARSE
+    #define decoder_t lflatbuffers
     #include "packet_flatbuffers.cpp"
 #elif defined PROTOBUF_PARSE
     #include "packet_protobuf.cpp"
@@ -36,12 +37,13 @@ class packet *packet::instance()
 
 packet::packet()
 {
-    _lflatbuffers = new class lflatbuffers();
+    _decoder = new decoder_t();
 }
 
 packet::~packet()
 {
-    delete _lflatbuffers;
-    _lflatbuffers = NULL;
+    /* delete一个void指针不会调用析构函数 */
+    delete (decoder_t *)_decoder;
+    _decoder              = NULL;
 }
 

@@ -52,7 +52,6 @@ struct s2s_header
 #pragma pack(pop)
 
 struct lua_State;
-class lflatbuffers;
 
 class packet
 {
@@ -108,8 +107,8 @@ private:
     packet();
     ~packet();
 private:
+    void  *_decoder;
     static class packet *_packet;
-    class lflatbuffers  *_lflatbuffers;
 };
 
 #endif /* __PACKET_H__ */

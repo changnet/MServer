@@ -16,3 +16,6 @@
 [submodule "master/deps/lua_bson"]
 	path = master/deps/lua_bson
 	url = http://github.com/changnet/lua_bson.git
+[submodule "master/deps/pbc"]
+	path = master/deps/pbc
+	url = https://github.com/changnet/pbc.git

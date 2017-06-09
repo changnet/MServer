@@ -1,10 +1,12 @@
 #include <lflatbuffers.hpp>
 #include "../global/assert.h"
 
+#define DECODER ((lflatbuffers *)_decoder)
+
 /* 加载该目录下的有schema文件 */
 int32 packet::load_schema( const char *path )
 {
-    return _lflatbuffers->load_bfbs_path( path );
+    return DECODER->load_bfbs_path( path );
 }
 
 /* 解析数据包
@@ -35,32 +37,32 @@ int32 raw_parse( lflatbuffers *_lflatbuffers,
 int32 packet::parse( lua_State *L,
     const char *schema,const char *object,const c2s_header *header )
 {
-    return raw_parse( _lflatbuffers,L,schema,object,header );
+    return raw_parse( DECODER,L,schema,object,header );
 }
 
 int32 packet::parse( lua_State *L,
     const char *schema,const char *object,const s2s_header *header )
 {
-    return raw_parse( _lflatbuffers,L,schema,object,header );
+    return raw_parse( DECODER,L,schema,object,header );
 }
 
 int32 packet::parse( lua_State *L,
     const char *schema,const char *object,const s2c_header *header )
 {
-    return raw_parse( _lflatbuffers,L,schema,object,header );
+    return raw_parse( DECODER,L,schema,object,header );
 }
 
 /* c2s打包接口 */
 int32 packet::unparse_c2s( lua_State *L,int32 index,
     int32 cmd,const char *schema,const char *object,class buffer &send )
 {
-    if ( _lflatbuffers->encode( L,schema,object,index ) < 0 )
+    if ( DECODER->encode( L,schema,object,index ) < 0 )
     {
-        return luaL_error( L,_lflatbuffers->last_error() );
+        return luaL_error( L,DECODER->last_error() );
     }
 
     size_t size = 0;
-    const char *buffer = _lflatbuffers->get_buffer( size );
+    const char *buffer = DECODER->get_buffer( size );
     if ( size > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
@@ -85,13 +87,13 @@ int32 packet::unparse_c2s( lua_State *L,int32 index,
 int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
     int32 ecode,const char *schema,const char *object,class buffer &send )
 {
-    if ( _lflatbuffers->encode( L,schema,object,index ) < 0 )
+    if ( DECODER->encode( L,schema,object,index ) < 0 )
     {
-        return luaL_error( L,_lflatbuffers->last_error() );
+        return luaL_error( L,DECODER->last_error() );
     }
 
     size_t size = 0;
-    const char *buffer = _lflatbuffers->get_buffer( size );
+    const char *buffer = DECODER->get_buffer( size );
     if ( size > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
@@ -118,13 +120,13 @@ int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
 int32 packet::unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
         int32 ecode,const char *schema,const char *object,class buffer &send )
 {
-    if ( _lflatbuffers->encode( L,schema,object,index ) < 0 )
+    if ( DECODER->encode( L,schema,object,index ) < 0 )
     {
-        return luaL_error( L,_lflatbuffers->last_error() );
+        return luaL_error( L,DECODER->last_error() );
     }
 
     size_t size = 0;
-    const char *buffer = _lflatbuffers->get_buffer( size );
+    const char *buffer = DECODER->get_buffer( size );
     if ( size > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
@@ -152,13 +154,13 @@ int32 packet::unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
 int32 packet::unparse_ssc( lua_State *L,int32 index,owner_t owner,int32 cmd,
         int32 ecode,const char *schema,const char *object,class buffer &send )
 {
-    if ( _lflatbuffers->encode( L,schema,object,index ) < 0 )
+    if ( DECODER->encode( L,schema,object,index ) < 0 )
     {
-        return luaL_error( L,_lflatbuffers->last_error() );
+        return luaL_error( L,DECODER->last_error() );
     }
 
     size_t size = 0;
-    const char *buffer = _lflatbuffers->get_buffer( size );
+    const char *buffer = DECODER->get_buffer( size );
     if ( size > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
