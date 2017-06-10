@@ -5,6 +5,7 @@
     #define decoder_t lflatbuffers
     #include "packet_flatbuffers.cpp"
 #elif defined PROTOBUF_PARSE
+    #define decoder_t lprotobuf
     #include "packet_protobuf.cpp"
 #elif defined STREAM_PARSE
     #include "packet_stream.cpp"
