@@ -343,24 +343,46 @@ int32 lprotobuf::encode_field( lua_State *L,
 int32 lprotobuf::raw_encode_field( lua_State *L,
     struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key )
 {
+#define LUAL_CHECK( TYPE )    \
+    if ( !lua_is##TYPE( L,index ) ){    \
+        ERROR( "protobuf encode field(%s) expect "#TYPE",got %s",    \
+                    key,lua_typename(L, lua_type(L, index + 1)) );   \
+        return -1;    \
+    }
+
     switch( type )
     {
-    case PBC_INT     :
+    case PBC_INT  : case PBC_FIXED32 :
+    case PBC_UINT : case PBC_FIXED64 : case PBC_INT64 :
     {
-        int64 val = (int64_t)( luaL_checkinteger( L,index ) );
-        uint32 hi = (uint32_t)( val >> 32 );
-        pbc_wmessage_integer( wmsg, key, (uint32_t)val, hi );
+        LUAL_CHECK( integer )
+        int64 val = (int64)( lua_tointeger( L,index ) );
+        uint32 hi = (uint32)( val >> 32 );
+        pbc_wmessage_integer( wmsg, key, (uint32)val, hi );
     }break;
     case PBC_REAL    :
     {
-        double val = luaL_checknumber( L,index );
+        LUAL_CHECK( number )
+        double val = lua_tonumber( L,index );
         pbc_wmessage_real( wmsg, key, val );
     }break;
-    case PBC_STRING  :
+    case PBC_BOOL :
     {
+        int32 val = lua_toboolean( L,index );
+        pbc_wmessage_integer( wmsg, key, (uint32)val, 0 );
+    }break;
+    case PBC_ENUM :
+    {
+        LUAL_CHECK( integer )
+        int32 val = lua_tointeger( L,index );
+        pbc_wmessage_integer( wmsg, key, (uint32)val, 0 );
+    }break;
+    case PBC_STRING  : case PBC_BYTES :
+    {
+        LUAL_CHECK( string )
         size_t len = 0;
-        const char * val = luaL_checklstring(L,index,&len);
-        if ( pbc_wmessage_string( wmsg, key, val, (int)len ) )
+        const char * val = lua_tolstring( L,index,&len );
+        if ( pbc_wmessage_string( wmsg, key, val, (int32)len ) )
         {
             ERROR( "field(%s) write string error",key );
             return -1;
@@ -368,14 +390,16 @@ int32 lprotobuf::raw_encode_field( lua_State *L,
     }break;
     case PBC_MESSAGE :
     {
+        LUAL_CHECK( table )
         struct pbc_wmessage *submsg = pbc_wmessage_message( wmsg, key );
         return raw_encode( L,submsg,key,index );
     }break;
     default:
         ERROR( "unknow protobuf type" );return -1;
     }
-
     return 0;
+
+#undef LUAL_CHECK
 }
 
 int32 lprotobuf::raw_encode( lua_State *L,
