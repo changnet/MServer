@@ -33,13 +33,14 @@ public:
     ~lprotobuf();
     lprotobuf ();
 
-    void dele_message();
+    void del_message();
 
-    int32 decode( lua_State *L,const char *object,int32 index );
     int32 encode( lua_State *L,const char *object,int32 index );
+    int32 decode( 
+        lua_State *L,const char *object,const char *buffer,size_t size );
 
     const char *last_error();
-    const char *get_buffer( size_t &size );
+    void get_buffer( struct pbc_slice &slice );
 
     int32 load_file( const char *paeth );
     int32 load_path( const char *path,const char *suffix = "pb" );
@@ -50,6 +51,10 @@ private:
         struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key );
     int32 raw_encode_field( lua_State *L,
         struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key );
+
+    int32 raw_decode( lua_State *L,struct pbc_rmessage *msg );
+    int32 decode_field( lua_State *L,
+        struct pbc_rmessage *msg,const char *key,int32 type,int32 idx );
 private:
     struct pbc_env *_env;
     struct pbc_wmessage *_write_msg;
@@ -70,7 +75,7 @@ lprotobuf::~lprotobuf()
     _env = NULL;
 }
 
-void lprotobuf::dele_message()
+void lprotobuf::del_message()
 {
     if ( _write_msg ) pbc_wmessage_delete( _write_msg );
     _write_msg = NULL;
@@ -170,13 +175,128 @@ const char *lprotobuf::last_error()
     return pbc_error( _env );
 }
 
-const char *lprotobuf::get_buffer( size_t &size )
+void lprotobuf::get_buffer( struct pbc_slice &slice )
 {
-    return NULL;
+    assert( "no write message found",_write_msg );
+
+
+    pbc_wmessage_buffer( _write_msg,&slice );
 }
 
-int32 lprotobuf::decode( lua_State *L,const char *object,int32 index )
+int32 lprotobuf::decode( 
+    lua_State *L,const char *object,const char *buffer,size_t size )
 {
+    struct pbc_slice slice;
+    slice.len = static_cast<int32>( size );
+    slice.buffer = const_cast<char *>( buffer );
+
+    struct pbc_rmessage * msg = pbc_rmessage_new( _env,object,&slice );
+    if ( !msg )
+    {
+        ERROR( "protobuf decode:%s",last_error() );
+        return -1;
+    }
+
+    int32 ecode = raw_decode( L,msg );
+    pbc_rmessage_delete( msg );
+
+    return ecode;
+}
+
+int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
+{
+    int type = 0;
+    const char *key = NULL;
+
+    if ( !lua_checkstack( L,3 ) )
+    {
+        ERROR( "protobuf decode stack overflow" );
+        return -1;
+    }
+    int32 top = lua_gettop( L );
+
+    lua_newtable( L );
+
+    while( true )
+    {
+        type = pbc_rmessage_next( msg, &key );
+        if ( key == NULL ) break;
+
+        if ( type & PBC_REPEATED )
+        {
+            lua_newtable( L );
+            int32 raw_type = (type & ~PBC_REPEATED);
+            int size = pbc_rmessage_size( msg, key );
+            for ( int idx = 0;idx < size;idx ++ )
+            {
+                if ( decode_field( L,msg,key,raw_type,idx ) < 0 )
+                {
+                    lua_settop( L,top );
+                    return           -1;
+                }
+            }
+        }
+        else
+        {
+            if ( decode_field( L,msg,key,type,0 ) < 0 )
+            {
+                lua_settop( L,top );
+                return           -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int32 lprotobuf::decode_field( lua_State *L,
+    struct pbc_rmessage *msg,const char *key,int32 type,int32 idx )
+{
+    switch( type )
+    {
+    case PBC_INT  : case PBC_FIXED32 :
+    case PBC_UINT : case PBC_FIXED64 : case PBC_INT64 :
+    {
+        uint32_t hi,low;
+        low = pbc_rmessage_integer( msg,key,idx,&hi );
+        int64 val = (int64)((uint64)hi << 32 | (uint64)low);
+        lua_pushinteger( L,val );
+    }break;
+    case PBC_REAL :
+    {
+        double val = pbc_rmessage_integer( msg, key, idx, NULL );
+        lua_pushnumber( L,val );
+    }break;
+    case PBC_BOOL :
+    {
+        uint32 val = pbc_rmessage_integer( msg,key,idx,NULL );
+        lua_pushboolean( L,val );
+    }break;
+    case PBC_ENUM :
+    {
+        uint32 val = pbc_rmessage_integer( msg,key,idx,NULL );
+        lua_pushinteger( L,val );
+    }break;
+    case PBC_STRING : case PBC_BYTES :
+    {
+        int32 size = 0;
+        const char *bytes = pbc_rmessage_string( msg,key,idx,&size );
+        lua_pushlstring( L,bytes,size );
+    }break;
+    case PBC_MESSAGE :
+    {
+        struct pbc_rmessage *submsg = pbc_rmessage_message( msg,key,idx );
+        if ( !submsg )
+        {
+            ERROR( "protobuf decode sub message not found:%s",key );
+            return -1;
+        }
+        return raw_decode( L,msg );
+    }break;
+    default :
+        ERROR( "protobuf decode unknow type" ); return -1;
+    }
+
     return 0;
 }
 
@@ -314,28 +434,43 @@ int32 packet::load_schema( const char *path )
 }
 
 template<class T>
-int32 raw_parse( lprotobuf *_lprotobuf,
-    lua_State *L,const char *schema,const char *object,const T *header )
+int32 raw_parse( 
+    lprotobuf *_lprotobuf,lua_State *L,const char *object,const T *header )
 {
+    int32 size = PACKET_BUFFER_LEN( header );
+    if ( size <= 0 || size > MAX_PACKET_LEN )
+    {
+        ERROR( "illegal packet buffer length" );
+        return -1;
+    }
+
+    /* 去掉header内容 */
+    const char *buffer = reinterpret_cast<const char *>( header + 1 );
+    if ( _lprotobuf->decode( L,object,buffer,size ) < 0 )
+    {
+        ERROR( "decode cmd(%d):%s",header->_cmd,_lprotobuf->last_error() );
+        return -1;
+    }
+
     return 1;
 }
 
 int32 packet::parse( lua_State *L,
     const char *schema,const char *object,const c2s_header *header )
 {
-    return raw_parse( DECODER,L,schema,object,header );
+    return raw_parse( DECODER,L,object,header );
 }
 
 int32 packet::parse( lua_State *L,
     const char *schema,const char *object,const s2s_header *header )
 {
-    return raw_parse( DECODER,L,schema,object,header );
+    return raw_parse( DECODER,L,object,header );
 }
 
 int32 packet::parse( lua_State *L,
     const char *schema,const char *object,const s2c_header *header )
 {
-    return raw_parse( DECODER,L,schema,object,header );
+    return raw_parse( DECODER,L,object,header );
 }
 
 /* c2s打包接口 */
@@ -347,24 +482,25 @@ int32 packet::unparse_c2s( lua_State *L,int32 index,
         return luaL_error( L,DECODER->last_error() );
     }
 
-    size_t size = 0;
-    const char *buffer = DECODER->get_buffer( size );
-    if ( size > MAX_PACKET_LEN )
+    struct pbc_slice slice;
+    DECODER->get_buffer( slice );
+    if ( slice.len > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    if ( !send.reserved( size + sizeof(struct c2s_header) ) )
+    if ( !send.reserved( slice.len + sizeof(struct c2s_header) ) )
     {
         return luaL_error( L,"can not reserved buffer" );
     }
 
     struct c2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct c2s_header,size );
+    hd._length = PACKET_MAKE_LENGTH( struct c2s_header,slice.len );
     hd._cmd    = static_cast<uint16>  ( cmd );
 
     send.__append( &hd,sizeof(struct c2s_header) );
-    send.__append( buffer,size );
+    send.__append( slice.buffer,slice.len );
+    DECODER->del_message();
 
     return 0;
 }
@@ -378,25 +514,26 @@ int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
         return luaL_error( L,DECODER->last_error() );
     }
 
-    size_t size = 0;
-    const char *buffer = DECODER->get_buffer( size );
-    if ( size > MAX_PACKET_LEN )
+    struct pbc_slice slice;
+    DECODER->get_buffer( slice );
+    if ( slice.len > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    if ( !send.reserved( size + sizeof(struct s2c_header) ) )
+    if ( !send.reserved( slice.len + sizeof(struct s2c_header) ) )
     {
         return luaL_error( L,"can not reserved buffer" );
     }
 
     struct s2c_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
+    hd._length = PACKET_MAKE_LENGTH( struct s2c_header,slice.len );
     hd._cmd    = static_cast<uint16>  ( cmd );
     hd._errno  = ecode;
 
     send.__append( &hd,sizeof(struct s2c_header) );
-    send.__append( buffer,size );
+    send.__append( slice.buffer,slice.len );
+    DECODER->del_message();
 
     return 0;
 }
@@ -411,27 +548,28 @@ int32 packet::unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
         return luaL_error( L,DECODER->last_error() );
     }
 
-    size_t size = 0;
-    const char *buffer = DECODER->get_buffer( size );
-    if ( size > MAX_PACKET_LEN )
+    struct pbc_slice slice;
+    DECODER->get_buffer( slice );
+    if ( slice.len > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
+    if ( !send.reserved( slice.len + sizeof(struct s2s_header) ) )
     {
         return luaL_error( L,"can not reserved buffer" );
     }
 
     struct s2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
+    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,slice.len );
     hd._cmd    = static_cast<uint16>  ( cmd );
     hd._errno  = ecode;
     hd._owner  = session;
     hd._mask   = PKT_SSPK;
 
     send.__append( &hd,sizeof(struct s2s_header) );
-    send.__append( buffer,size );
+    send.__append( slice.buffer,slice.len );
+    DECODER->del_message();
 
     return 0;
 }
@@ -445,22 +583,22 @@ int32 packet::unparse_ssc( lua_State *L,int32 index,owner_t owner,int32 cmd,
         return luaL_error( L,DECODER->last_error() );
     }
 
-    size_t size = 0;
-    const char *buffer = DECODER->get_buffer( size );
-    if ( size > MAX_PACKET_LEN )
+    struct pbc_slice slice;
+    DECODER->get_buffer( slice );
+    if ( slice.len > MAX_PACKET_LEN )
     {
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
     if ( !send.reserved( 
-        size + sizeof(struct s2s_header) + sizeof(struct s2c_header) ) )
+        slice.len + sizeof(struct s2s_header) + sizeof(struct s2c_header) ) )
     {
         return luaL_error( L,"can not reserved buffer" );
     }
 
     /* 先构造客户端收到的数据包 */
     struct s2c_header chd;
-    chd._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
+    chd._length = PACKET_MAKE_LENGTH( struct s2c_header,slice.len );
     chd._cmd    = static_cast<uint16>  ( cmd );
     chd._errno  = ecode;
 
@@ -474,7 +612,8 @@ int32 packet::unparse_ssc( lua_State *L,int32 index,owner_t owner,int32 cmd,
 
     send.__append( &hd ,sizeof(struct s2s_header) );
     send.__append( &chd,sizeof(struct s2c_header) );
-    send.__append( buffer,size );
+    send.__append( slice.buffer,slice.len );
+    DECODER->del_message();
 
     return 0;
 }
