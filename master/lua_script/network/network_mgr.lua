@@ -26,11 +26,9 @@ function Network_mgr:__init()
         self.name_srv[name] = g_unique_id:srv_session( name,index,srvid )
     end
 
-    self.timer = Timer()
-    self.timer:set_self( self )
-    self.timer:set_callback( self.do_timer )
+    self.timer = g_timer_mgr:new_timer( self,10,5 )
 
-    self.timer:start( 5,5 )
+    g_timer_mgr:start_timer( self.timer )
 end
 
 --  监听服务器连接
@@ -96,17 +94,18 @@ function Network_mgr:srv_register( conn,pkt )
 end
 
 -- 定时器回调
+local pkt = {response = true}
 function Network_mgr:do_timer()
-    -- local check_time = ev:time() - SRV_ALIVE_INTERVAL
-    -- for conn_id,srv_conn in pairs( self.srv_conn ) do
-    --     local ts = srv_conn:check( check_time )
-    --     if ts > SRV_ALIVE_TIMES then
-    --         -- timeout
-    --         PLOG( "%s server timeout",srv_conn:conn_name() )
-    --     elseif ts > 0 then
-    --         g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = true} )
-    --     end
-    -- end
+    local check_time = ev:time() - SRV_ALIVE_INTERVAL
+    for conn_id,srv_conn in pairs( self.srv_conn ) do
+        local ts = srv_conn:check( check_time )
+        if ts > SRV_ALIVE_TIMES then
+            -- timeout
+            PLOG( "%s server timeout",srv_conn:conn_name() )
+        elseif ts > 0 then
+            srv_conn:send_pkt( SS.SYS_BEAT,pkt )
+        end
+    end
 end
 
 -- 获取服务器连接

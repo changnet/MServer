@@ -1,19 +1,19 @@
 //玩家模块 协议定义
 
 /* 玩家断线 */
-struct ssplayer_offline
+struct SSPlayerOffline
 {
     pid:int;
 }
 
 // 玩家在其他地方登录
-struct ssplayer_otherwhere
+struct SSPlayerOtherWhere
 {
     pid:int;
 }
 
 // 登录
-table clogin
+table CLogin
 {
     sid:int;        // 服务器id
     time:int;       // 时间戳
@@ -23,51 +23,47 @@ table clogin
 }
 
 // 登录返回
-table slogin
+table SLogin
 {
     pid:int; // 玩家id
     name:string; // 角色名字
 }
 
 // 创建角色
-table ccreate_role
+table CCreateRole
 {
     name:string; // 名字
 }
 
 // 创建角色返回
-table screate_role
+table SCreateRole
 {
     pid:int; // 玩家id
     name:string; // 角色名字
 }
 
 // 进入游戏
-struct center_world
+table CEnterWorld
 {
-    dummy:bool;
 }
 
 // 进入游戏
-struct senter_world
+table SEnterWorld
 {
-    dummy:int;
 }
 
 // ping服务器
-struct cping
+table CPing
 {
-    dummy:int;
 }
 
 // 服务器回包
-struct sping
+struct SPing
 {
     time:int;
 }
 
 // 顶号
-struct slogin_otherwhere
+table SLoginOtherWhere
 {
-    dummy:bool;
 }

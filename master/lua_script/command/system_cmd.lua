@@ -33,9 +33,10 @@ local function srv_ack( srv_conn,pkt )
 end
 
 -- 心跳包
+local pkt = {response = false}
 local function srv_beat( srv_conn,pkt )
     if pkt.response then
-        g_command_mgr:srv_send( srv_conn,SS.SYS_BEAT,{response = false} )
+        srv_conn:send_pkt( SS.SYS_BEAT,pkt )
     end
 
     -- 在这里不用更新自己的心跳，因为在on_command里已自动更新

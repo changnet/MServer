@@ -203,6 +203,7 @@ void lsql::invoke_result()
         delete res._res;
         res._res = NULL;
     }
+    lua_pop(L,1); /* remove traceback */
 }
 
 int32 lsql::field_to_lua( 

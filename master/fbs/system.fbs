@@ -1,7 +1,7 @@
 // 系统模块 协议定义
 
 /* 服务器注册 */
-table ssregister
+table SSRegister
 {
     name:string;         // 服务器名字
     session:int;         // 服务器session id
@@ -13,13 +13,13 @@ table ssregister
 }
 
 /* 服务器心跳 */
-struct ssbeat
+struct SSBeat
 {
     response:bool;
 }
 
 /* 热更 */
-table sshot_swap
+table SSHotSwap
 {
     module:[string]; // 需要热更的模块
 }

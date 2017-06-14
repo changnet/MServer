@@ -9,7 +9,7 @@ local g_network_mgr = g_network_mgr
 local gateway_session = g_unique_id:srv_session( 
     "gateway",tonumber(Main.srvindex),tonumber(Main.srvid) )
 
-local Bag = require "item.bag"
+-- local Bag = require "item.bag"
 
 --[[
 玩家子模块，以下功能会自动触发
@@ -22,7 +22,7 @@ local Bag = require "item.bag"
 
 local sub_module = 
 {
-    { name = "bag",new = Bag },
+    -- { name = "bag",new = Bag },
 }
 
 local Player = oo.class( nil,... )

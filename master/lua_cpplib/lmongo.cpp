@@ -207,6 +207,7 @@ void lmongo::invoke_result()
 
         delete res;
     }
+    lua_pop(L,1); /* remove stacktrace */
 }
 
 const struct mongo_query *lmongo::pop_query()

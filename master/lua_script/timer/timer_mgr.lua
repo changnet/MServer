@@ -12,6 +12,7 @@ local Timer_mgr = oo.singleton( nil,... )
 function Timer_mgr:__init()
     self.next_id = 0
 
+    -- 使用weak table防止owner对象不释放内存
     self.owner = {}
     setmetatable( self.owner, {["__mode"]='v'} )
 

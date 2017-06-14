@@ -77,7 +77,8 @@ void ltimer::callback( ev_timer &w,int32 revents )
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
     {
         ERROR( "timer call back fail:%s\n",lua_tostring( L,-1 ) );
-        lua_pop( L,1 ); /* remove error message traceback */
+        lua_pop( L,2 ); /* remove error message traceback */
+        return;
     }
     lua_pop( L,1 ); /* remove traceback */
 }

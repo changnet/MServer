@@ -118,6 +118,7 @@ void leventloop::invoke_signal()
             if ( expect_false( LUA_OK != lua_pcall(L,1,0,top) ) )
             {
                 ERROR( "signal call lua fail:%s",lua_tostring(L,-1) );
+                lua_pop( L,1 ); /* pop error message */
             }
         }
         ++signum;

@@ -272,7 +272,7 @@ bool lnetwork_mgr::accept_new(
         delete new_sk;
         ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -334,7 +334,7 @@ bool lnetwork_mgr::connect_new( uint32 conn_id,int32 conn_ty,int32 ecode )
         _deleting.push_back( conn_id );
         ERROR( "connect_new:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -359,7 +359,7 @@ bool lnetwork_mgr::connect_del( uint32 conn_id,int32 conn_ty )
     {
         ERROR( "connect_del:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -665,7 +665,7 @@ void lnetwork_mgr::cs_command( uint32 conn_id,owner_t owner,
     {
         ERROR( "cs_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -695,7 +695,7 @@ void lnetwork_mgr::sc_command(
     {
         ERROR( "sc_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -706,7 +706,7 @@ void lnetwork_mgr::ss_command(
     uint32 conn_id,const cmd_cfg_t *cfg,const s2s_header *header )
 {
     lua_State *L = lstate::instance()->state();
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    assert( "lua stack dirty",0 == lua_gettop( L ) );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"ss_command_new" );
@@ -726,7 +726,7 @@ void lnetwork_mgr::ss_command(
     {
         ERROR( "invoke_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -1011,7 +1011,7 @@ void lnetwork_mgr::http_command_new( const class socket *sk )
     {
         ERROR( "http_command_new:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return;
     }
     lua_pop( L,1 ); /* remove traceback */
@@ -1152,23 +1152,27 @@ void lnetwork_mgr::process_rpc_cmd( uint32 conn_id,const s2s_header *header )
     if ( unique_id > 0 )
     {
         socket_map_t::iterator itr = _socket_map.find( conn_id );
-        if ( itr == _socket_map.end() )
+        if ( itr != _socket_map.end() )
+        {
+            class socket *sk = itr->second;
+            packet::instance()->unparse_rpc( 
+                L,unique_id,ecode,top,sk->send_buffer() );
+            sk->pending_send();
+        }
+        else
         {
             ERROR( "process_rpc_cmd no return socket found" );
-            return;
         }
-
-        class socket *sk = itr->second;
-        packet::instance()->unparse_rpc( 
-            L,unique_id,ecode,top,sk->send_buffer() );
-        sk->pending_send();
     }
 
     if ( LUA_OK != ecode )
     {
         ERROR( "rpc cmd error:%s",lua_tostring(L,-1) );
+        lua_pop( L,2 ); /* remove error object and traceback */
         return;
     }
+
+    lua_pop( L,1 ); /* remove trace back */
 }
 
 /* 处理rpc返回 */
@@ -1188,7 +1192,7 @@ void lnetwork_mgr::process_rpc_return( uint32 conn_id,const s2s_header *header )
     {
         ERROR( "process_rpc_return:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,1 ); /* remove traceback and error object */
+        lua_pop( L,2 ); /* remove traceback and error object */
         return;
     }
     lua_pop( L,1 ); /* remove traceback */
