@@ -15,8 +15,8 @@ function Network_mgr:__init()
     self.srv_conn = {} -- conn_id为key，服务器连接对象为value
     self.clt_conn = {} -- conn_id为key，客户端连接对象为value
 
-    self.srv_listen = nil -- 监听服务器连接
-    self.clt_listen = nil -- 监听客户端连接
+    self.srv_listen_conn = nil -- 监听服务器连接
+    self.clt_listen_conn = nil -- 监听客户端连接
 
     self.name_srv   = {}  -- 进程名为key，session为value
 
@@ -33,7 +33,7 @@ end
 
 --  监听服务器连接
 function Network_mgr:srv_listen( ip,port )
-    self.srv_listen = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
+    self.srv_listen_conn = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
     PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
 
     return true
@@ -41,7 +41,7 @@ end
 
 --  监听客户端连接
 function Network_mgr:clt_listen( ip,port )
-    self.clt_listen = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
+    self.clt_listen_conn = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )
 
     return true
@@ -185,6 +185,8 @@ end
 -- 底层数据包回调
 function ss_command_new( conn_id,session,cmd,errno,pkt )
     local conn = _network_mgr.srv_conn[conn_id]
+
+    conn.beat = ev:time()
     g_command_mgr:srv_dispatch( conn,cmd,pkt )
 end
 

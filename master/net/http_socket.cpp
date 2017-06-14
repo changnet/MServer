@@ -191,7 +191,7 @@ void http_socket::command_cb ()
         if ( EAGAIN != errno && EWOULDBLOCK != errno )
         {
             socket::stop();
-            ERROR( "stream socket recv error:%s\n",strerror(errno) );
+            ERROR( "http socket recv error:%s\n",strerror(errno) );
             lnetwork_mgr::instance()->connect_del( _conn_id,_conn_ty );
         }
         return;

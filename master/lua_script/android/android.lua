@@ -19,12 +19,6 @@ local Android = oo.class( nil,... )
 function Android:__init( index,conn_id )
     self.index   = index
     self.conn_id = conn_id
-
-    self.timer = Timer()
-    self.timer:set_self( self )
-    self.timer:set_callback( self.do_timer )
-
-    -- self.timer:start( 5,5 )
 end
 
 -- 发送数据包
@@ -62,7 +56,7 @@ end
 
 -- 定时器事件
 function Android:do_timer()
-    -- self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    -- self:send_pkt( CS.PLAYER_PING,{} )
 end
 
 -- ping返回
@@ -74,7 +68,7 @@ function Android:on_ping( errno,pkt )
             local max = 1
             self.ts = ts + max
             for i = 1,max do
-                self:send_pkt( CS.PLAYER_PING,{dummy = self.ts} )
+                self:send_pkt( CS.PLAYER_PING,{} )
             end
         end
     else
@@ -115,14 +109,14 @@ end
 
 -- 进入游戏
 function Android:enter_world()
-    self:send_pkt( CS.PLAYER_ENTER,{ dummy = 1 } )
+    self:send_pkt( CS.PLAYER_ENTER,{} )
 end
 
 -- 确认进入游戏完成
 function Android:on_enter_world( errno,pkt )
     PLOG( "%s enter world success",self.name )
     f_tm_start()
-    self:send_pkt( CS.PLAYER_PING,{dummy = 1} )
+    self:send_pkt( CS.PLAYER_PING,{} )
 end
 
 -- 被顶号

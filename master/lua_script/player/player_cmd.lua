@@ -9,7 +9,7 @@ local g_player_mgr  = g_player_mgr
 
 
 local function player_ping( srv_conn,pid,pkt )
-    srv_conn:send_clt_pkt( pid,SC.PLAYER_PING,{ time = pkt.dummy } )
+    srv_conn:send_clt_pkt( pid,SC.PLAYER_PING,{ time = ev:time() } )
 end
 
 local function player_enter( srv_conn,pid,pkt )

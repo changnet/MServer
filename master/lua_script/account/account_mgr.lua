@@ -117,9 +117,8 @@ end
 -- 帐号在其他地方登录
 function Account_mgr:login_otherwhere( role_info )
     -- 告诉原连接被顶号
-    local _pkt = { dummy = 1 }
     local old_conn = g_network_mgr:get_conn( role_info.conn_id )
-    old_conn:send_pkt( SC.PLAYER_OTHER,_pkt )
+    old_conn:send_pkt( SC.PLAYER_OTHER,{} )
 
     -- 通知其他服务器玩家下线
     if role_info.pid then

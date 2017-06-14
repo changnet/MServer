@@ -17,7 +17,7 @@ function Player_mgr:on_enter_world( pid )
 
     self.player[pid] = player
 
-    player:send_pkt( SC.PLAYER_ENTER,{dummy = 1} )
+    player:send_pkt( SC.PLAYER_ENTER,{} )
 
     PLOG( "player enter world,pid = %d",pid )
 end
