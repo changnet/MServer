@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./colormake.sh -C ../master $1
+time ./colormake.sh -C ../master $1

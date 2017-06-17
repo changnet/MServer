@@ -157,7 +157,7 @@ int32 lprotobuf::load_path( const char *path,const char *suffix )
             && is_suffix_file( dt->d_name,suffix ) )
         {
 
-            if ( !load_file( file_path ) )
+            if ( load_file( file_path ) < 0 )
             {
                 closedir( dir );
                 return       -1;
@@ -329,7 +329,10 @@ int32 lprotobuf::encode_field( lua_State *L,
         lua_pushnil( L );
         while( lua_next( L,index ) )
         {
-            if ( raw_encode_field( L,wmsg,raw_type,index,key ) < 0 ) return -1;
+            if ( raw_encode_field( L,wmsg,raw_type + 2,index,key ) < 0 )
+            {
+                return -1;
+            }
 
             lua_pop( L, 1 );
         }
@@ -346,7 +349,7 @@ int32 lprotobuf::raw_encode_field( lua_State *L,
 #define LUAL_CHECK( TYPE )    \
     if ( !lua_is##TYPE( L,index ) ){    \
         ERROR( "protobuf encode field(%s) expect "#TYPE",got %s",    \
-                    key,lua_typename(L, lua_type(L, index + 1)) );   \
+                    key,lua_typename( L, lua_type( L, index ) ) );   \
         return -1;    \
     }
 

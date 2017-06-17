@@ -26,7 +26,8 @@ end
 
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
-    return network_mgr:load_schema( "fbs" )
+    local fs = network_mgr:load_schema( "pb" )
+    PLOG( "%s load protocol schema:%d",Main.srvname,fs )
 end
 
 -- 注册客户端协议处理

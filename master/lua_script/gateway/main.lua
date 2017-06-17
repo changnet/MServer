@@ -58,8 +58,7 @@ function Main.init()
     Main.starttime = ev:time()
     network_mgr:set_curr_session( Main.session )
 
-    local fs = g_command_mgr:load_schema()
-    PLOG( "gateway load flatbuffers schema:%d",fs )
+    g_command_mgr:load_schema()
 
     if not g_network_mgr:srv_listen( g_setting.sip,g_setting.sport ) then
         ELOG( "gateway server listen fail,exit" )

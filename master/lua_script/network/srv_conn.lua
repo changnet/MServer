@@ -10,6 +10,7 @@ function Srv_conn:__init( conn_id )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
+    self.session = 0
     self.conn_id = conn_id
 end
 

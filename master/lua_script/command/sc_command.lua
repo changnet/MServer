@@ -16,20 +16,20 @@ local MODULE_BAG    = (0x02 << 8)  -- 512
 
 local SC =
 {
-    PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.bfbs","SLogin" },
-    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.bfbs","SPing" },
-    PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.bfbs","SCreateRole" },
-    PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.bfbs","SEnterWorld" },
-    PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.bfbs","SLoginOtherWhere" },
+    PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.pb","player.SLogin" },
+    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.pb","player.SPing" },
+    PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.pb","player.SCreateRole" },
+    PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.pb","player.SEnterWorld" },
+    PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.pb","player.SLoginOtherWhere" },
 }
 
 local CS =
 {
-    PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.bfbs","CLogin" },
-    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.bfbs","CPing" },
-    PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.bfbs","CCreateRole" },
-    PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.bfbs","CEnterWorld" },
-    PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.bfbs","CLoginOtherWhere" },
+    PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.pb","player.CLogin" },
+    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.pb","player.CPing" },
+    PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.pb","player.CCreateRole" },
+    PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.pb","player.CEnterWorld" },
+    PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.pb","player.CLoginOtherWhere" },
 }
 
 -- 使用oo的define功能让这两个表local后仍能热更
