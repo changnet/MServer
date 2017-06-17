@@ -13,6 +13,7 @@ local function srv_syn( srv_conn,pkt )
     srv_conn:authorized( pkt.session )
 
     local _pkt = g_command_mgr:command_pkt()
+
     srv_conn:send_pkt( SS.SYS_ACK,_pkt )
 
     PLOG( "%s register succes",srv_conn:conn_name() )

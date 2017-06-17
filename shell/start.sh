@@ -2,4 +2,4 @@
 
 cd ../master
 
-bin/master $1 $2 $3
+bin/master $@

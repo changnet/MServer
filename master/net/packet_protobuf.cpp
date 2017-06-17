@@ -222,6 +222,7 @@ int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
         type = pbc_rmessage_next( msg, &key );
         if ( key == NULL ) break;
 
+        lua_pushstring( L,key );
         if ( type & PBC_REPEATED )
         {
             lua_newtable( L );
@@ -234,6 +235,7 @@ int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
                     lua_settop( L,top );
                     return           -1;
                 }
+                lua_rawseti( L,top + 3,idx + 1 );
             }
         }
         else
@@ -244,6 +246,7 @@ int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
                 return           -1;
             }
         }
+        lua_rawset( L,top + 1 );
     }
 
     return 0;
@@ -329,7 +332,7 @@ int32 lprotobuf::encode_field( lua_State *L,
         lua_pushnil( L );
         while( lua_next( L,index ) )
         {
-            if ( raw_encode_field( L,wmsg,raw_type + 2,index,key ) < 0 )
+            if ( raw_encode_field( L,wmsg,raw_type,index + 2,key ) < 0 )
             {
                 return -1;
             }
@@ -465,7 +468,7 @@ int32 raw_parse(
     lprotobuf *_lprotobuf,lua_State *L,const char *object,const T *header )
 {
     int32 size = PACKET_BUFFER_LEN( header );
-    if ( size <= 0 || size > MAX_PACKET_LEN )
+    if ( size < 0 || size > MAX_PACKET_LEN )
     {
         ERROR( "illegal packet buffer length" );
         return -1;
@@ -526,7 +529,7 @@ int32 packet::unparse_c2s( lua_State *L,int32 index,
     hd._cmd    = static_cast<uint16>  ( cmd );
 
     send.__append( &hd,sizeof(struct c2s_header) );
-    send.__append( slice.buffer,slice.len );
+    if (slice.len > 0) send.__append( slice.buffer,slice.len );
     DECODER->del_message();
 
     return 0;
@@ -559,7 +562,7 @@ int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
     hd._errno  = ecode;
 
     send.__append( &hd,sizeof(struct s2c_header) );
-    send.__append( slice.buffer,slice.len );
+    if (slice.len > 0) send.__append( slice.buffer,slice.len );
     DECODER->del_message();
 
     return 0;
@@ -595,7 +598,7 @@ int32 packet::unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
     hd._mask   = PKT_SSPK;
 
     send.__append( &hd,sizeof(struct s2s_header) );
-    send.__append( slice.buffer,slice.len );
+    if (slice.len > 0) send.__append( slice.buffer,slice.len );
     DECODER->del_message();
 
     return 0;
@@ -639,7 +642,7 @@ int32 packet::unparse_ssc( lua_State *L,int32 index,owner_t owner,int32 cmd,
 
     send.__append( &hd ,sizeof(struct s2s_header) );
     send.__append( &chd,sizeof(struct s2c_header) );
-    send.__append( slice.buffer,slice.len );
+    if (slice.len > 0) send.__append( slice.buffer,slice.len );
     DECODER->del_message();
 
     return 0;
