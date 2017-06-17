@@ -13,7 +13,7 @@ function Android_mgr:__init()
     self.conn    = {}
     self.android = {}
 
-    network_mgr:load_schema( "fbs" )
+    network_mgr:load_schema( "pb" )
     for _,v in pairs( SC or {} ) do
         self.cmd[ v[1] ] = v
     end

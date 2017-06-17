@@ -72,7 +72,7 @@ function Account_mgr.player_login( self )
         -- 返回角色信息(如果没有角色，则pid和name都为nil)
         clt_conn:send_pkt( SC.PLAYER_LOGIN,role_info )
 
-        PLOG( "client authorized success:%s",pkt.account )
+        PLOG( "client authorized success:%s--%d",pkt.account,role_info.pid or 0 )
     end
 end
 
@@ -102,6 +102,7 @@ function Account_mgr.create_role( self )
         g_network_mgr:bind_role( pid,clt_conn )
 
         clt_conn:send_pkt( SC.PLAYER_CREATE,role_info )
+        PLOG( "create role success:%s--%d",role_info.account,role_info.pid )
     end
 end
 

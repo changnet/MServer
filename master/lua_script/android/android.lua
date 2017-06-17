@@ -48,9 +48,6 @@ end
 
 -- 断开连接
 function Android:on_die()
-    self.timer:stop()
-    self.timer = nil
-
     PLOG( "android die " .. self.index )
 end
 
@@ -79,7 +76,7 @@ end
 -- 登录返回
 function Android:on_login( errno,pkt )
     -- no role,create one now
-    if 0 == pkt.pid then
+    if 0 == (pkt.pid or 0) then
         local _pkt = { name = string.format( "android_%d",self.index ) }
         self:send_pkt( CS.PLAYER_CREATE,_pkt )
 
