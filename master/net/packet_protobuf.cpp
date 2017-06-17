@@ -111,6 +111,7 @@ int32 lprotobuf::load_file( const char *path )
     if ( !ifs.good() || ifs.gcount() != slice.len )
     {
         ifs.close();
+        delete (char *)slice.buffer;
         ERROR( "read file content error:%s",path );
         return -1;
     }
@@ -118,10 +119,12 @@ int32 lprotobuf::load_file( const char *path )
 
     if ( 0 != pbc_register( _env, &slice ) )
     {
+        delete (char *)slice.buffer;
         ERROR( "pbc register error(%s):%s",path,pbc_error( _env ) );
         return -1;
     }
 
+    delete [](char *)slice.buffer;
     return 0;
 }
 
