@@ -5,8 +5,11 @@
 #include <pthread.h>
 
 #if __cplusplus < 201103L    /* < C++11 */
-    #define noexcept
+    #define NOEXCEPT throw()
+    #define EXCEPT throw(std::bad_alloc)
 #else                       /* if support C++ 2011 */
+    #define NOEXCEPT noexcept
+    #define EXCEPT
 #endif
 
 uint32 g_counter  = 0;
@@ -23,7 +26,7 @@ pthread_mutex_t &counter_mutex()
 
 pthread_mutex_t &_mem_mutex_ = counter_mutex();
 
-void *operator new(size_t size)
+void *operator new(size_t size) EXCEPT
 {
     pthread_mutex_lock( &_mem_mutex_ );
     ++g_counter;
@@ -32,7 +35,7 @@ void *operator new(size_t size)
     return ::malloc(size);
 }
 
-void operator delete(void* ptr) noexcept
+void operator delete(void* ptr) NOEXCEPT
 {
     pthread_mutex_lock( &_mem_mutex_ );
     --g_counter;
@@ -41,13 +44,13 @@ void operator delete(void* ptr) noexcept
     ::free(ptr);
 }
 
-void *operator new[](size_t size)
+void *operator new[](size_t size) EXCEPT
 {
     ++g_counters;
     return ::malloc(size);
 }
 
-void operator delete[](void* ptr) noexcept
+void operator delete[](void* ptr) NOEXCEPT
 {
     --g_counters;
     ::free(ptr);
