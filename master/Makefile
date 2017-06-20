@@ -30,11 +30,15 @@ LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
 	-L./deps/lua_bson -L./deps/pbc/build
 
 #link libaray
-SHARED_LIB = -ldl -lrt -pthread -lsasl2 -lssl -lcrypto \
-	-lmongoc-1.0 -lbson-1.0
+# CANT NOT static link sasl2:https://www.cyrusimap.org/sasl/
+# libtool doesn’t always link libraries together. In our environment, we only 
+# have static Krb5 libraries; the GSSAPI plugin should link these libraries in 
+# on platforms that support it (Solaris and Linux among them) but it does not
+SHARED_LIB = -ldl -lrt -pthread -lsasl2
 
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
-	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz -lpbc
+	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz -lpbc \
+	-lmongoc-1.0 -lbson-1.0 -lssl -lcrypto 
 
 #output directory
 ODIR = bin

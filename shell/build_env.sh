@@ -69,7 +69,7 @@ function build_mongo_driver()
     MONGOCVER=1.6.2
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
-    ./configure --disable-automatic-init-and-cleanup
+    ./configure --disable-automatic-init-and-cleanup --enable-static
     make
     make install
 
