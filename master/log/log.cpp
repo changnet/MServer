@@ -36,9 +36,9 @@ void log_file::push( time_t tm,const char *name,const char *str,size_t len )
         snprintf( _name,PATH_MAX,"%s",name );
     }
 
-    if ( len < 0 ) len = strlen( str );
+    if ( len == 0 ) len = strlen( str );
     
-    if ( len <= 0 )
+    if ( len == 0 )
     {
         ERROR( "log file empty log content" );
         return;
@@ -81,7 +81,8 @@ int32 log_file::flush()
     FILE * pf = fopen( _name, "ab+" );
     if ( !pf )  /* 无法打开文件，尝试写入stderr */
     {
-        fprintf( stderr, "can't open log file(%s):%s\n", _name,strerror(errno) );
+        fprintf( stderr, 
+            "can't open log file(%s):%s\n", _name,strerror(errno) );
         while( !_flush->empty() )
         {
             const char *str = _flush->front();

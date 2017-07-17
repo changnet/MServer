@@ -16,6 +16,7 @@
 #define __EV_H__
 
 #include <sys/epoll.h>
+#include "../global/global.h"
 
 typedef double ev_tstamp;
 
@@ -46,7 +47,7 @@ class ev_loop
 {
 public:
     ev_loop();
-    ~ev_loop();
+    virtual ~ev_loop();
 
     int32 run();
     int32 quit();
@@ -89,6 +90,8 @@ protected:
     ev_tstamp mn_now;    /* monotonic clock "now" */
     ev_tstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
+    virtual void running() {};
+    virtual ev_tstamp wait_time();
     void fd_change( int32 fd );
     void fd_reify();
     void backend_init();

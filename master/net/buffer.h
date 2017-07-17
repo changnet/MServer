@@ -13,130 +13,109 @@
  *   直到我们需要调整内存时，才用memmove移动内存。
  */
 
-class buffer_process;
-
 class buffer
 {
 public:
     buffer();
     ~buffer();
 
-    void append( const char *data,uint32 len );
-
-    /* 从socket读取数据 */
-    inline int32 recv( int32 fd )
+    bool append( const void *data,uint32 len ) 
+        __attribute__ ((warn_unused_result))
     {
-        reserved();
-        int32 len = ::read( fd,_buff + _size,_len - _size );
-        if ( len > 0 )
-        {
-            _size += len;
-        }
+        if ( !reserved( len ) ) return false;
 
-        return len;
+        __append( data,len );    return true;
     }
 
-    /* 发送数据 */
-    inline int32 send( int32 fd )
+    /* 减去缓冲区数据，此函数不要动缓冲区的数据，因为数据尚未处理 */
+    inline void subtract( uint32 len )
     {
-        assert( "buff send without data",_size - _pos > 0 );
+        _pos += len;
+        assert( "buffer subtract",_size >= _pos && _len >= _pos );
 
-        int32 len = ::write( fd,_buff + _pos,_size - _pos );
-        if ( len > 0 )
-            _pos += len;
-
-        return len;
+        if ( _size == _pos ) _pos = _size = 0;
     }
 
     /* 清理缓冲区 */
-    inline void clear()
-    {
-        _pos = _size = 0;
-    }
+    inline void clear() { _pos = _size = 0; }
 
     /* 有效数据大小 */
-    inline uint32 data_size()
-    {
-        return _size - _pos;
-    }
-
-    /* 悬空区移动 */
-    inline void moveon( int32 _mv )
-    {
-        _pos += _mv;
-    }
-
-    /* 数据区大小 */
-    inline uint32 size()
-    {
-        return _size;
-    }
+    inline uint32 data_size() const { return _size - _pos; }
 
     /* 总大小 */
-    inline uint32 length()
-    {
-        return _len;
-    }
-
-    /* 悬空区大小 */
-    inline uint32 empty_head_size()
-    {
-        return _pos;
-    }
+    inline uint32 length() const { return _len; }
 
     /* 有效的缓冲区指针 */
-    const char *buff_pointer()
+    char *data() const { return _buff + _pos; }
+
+    /* raw append data,but won't reserved */
+    void __append( const void *data,const uint32 len )
     {
-        return _buff + _pos;
+        assert( "buffer not reserved!",_len - _size >= len );
+        memcpy( _buff + _size,data,len );       _size += len;
     }
-
-    friend class buffer_process;
-
-    static class ordered_pool<BUFFER_CHUNK> allocator;
-private:
-    char  *_buff;    /* 缓冲区指针 */
-    uint32 _size;    /* 缓冲区已使用大小 */
-    uint32 _len;     /* 缓冲区总大小 */
-    uint32 _pos;     /* 悬空区大小 */
-
+public:
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长
      * 2.已知大小(发送数据时)，指数增长到合适大小
      */
-    inline void reserved( uint32 bytes = 0 )
+    inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 ) 
+        __attribute__ ((warn_unused_result))
     {
-        if ( _len - _size > bytes ) /* 不能等于0,刚好用完也申请 */
-            return;
+        uint32 size = _size + vsz;
+        if ( _len - size > bytes ) return true;/* 不能等于0,刚好用完也申请 */
 
         if ( _pos )    /* 解决悬空区 */
         {
-            assert( "reserved memmove error",_size > _pos );
-            memmove( _buff,_buff + _pos,_size - _pos );
+            assert( "reserved memmove error",_size > _pos && size <= _len );
+            memmove( _buff,_buff + _pos,size - _pos );
             _size -= _pos;
-            _pos   = 0;
+            _pos   = 0   ;
 
-            reserved( bytes );
+            return reserved( bytes,vsz );
         }
 
-        uint32 new_len = _len  ? _len  : BUFFER_CHUNK;
+        assert( "buffer no min or max setting",_min_buff > 0 && _max_buff > 0 );
+
+        uint32 new_len = _len  ? _len  : _min_buff;
         uint32 _bytes  = bytes ? bytes : BUFFER_CHUNK;
-        while ( new_len - _size < _bytes )
+        while ( new_len - size < _bytes )
         {
             new_len *= 2;  /* 通用算法：指数增加 */
         }
 
+        if ( new_len > _max_buff ) return false;
+
+        /* 检验内在分配大小是否符合机制 */
+        assert( "buffer chunk size error",0 == new_len%BUFFER_CHUNK );
+
+        uint32 chunk_size = new_len >= BUFFER_LARGE ? 1 : BUFFER_CHUNK_SIZE;
+        char *new_buff = 
+            allocator.ordered_malloc( new_len/BUFFER_CHUNK,chunk_size );
+
         /* 像STL一样把旧内存拷到新内存 */
-        char *new_buff = allocator.ordered_malloc( new_len/BUFFER_CHUNK );
+        if ( size ) memcpy( new_buff,_buff,size );
 
-        if ( _size )
-            memcpy( new_buff,_buff,_size );
-
-        if ( _len )
-            allocator.ordered_free( _buff,_len/BUFFER_CHUNK );
+        if ( _len ) allocator.ordered_free( _buff,_len/BUFFER_CHUNK );
 
         _buff = new_buff;
-        _len  = new_len;
+        _len  = new_len ;
+
+        return      true;
     }
+private:
+    buffer( const buffer & );
+    buffer &operator=( const buffer &);
+public:
+    char  *_buff;    /* 缓冲区指针 */
+    uint32 _size;    /* 缓冲区已使用大小 */
+    uint32 _len ;    /* 缓冲区总大小 */
+    uint32 _pos ;    /* 悬空区大小 */
+
+    uint32 _max_buff; /* 缓冲区最小值 */
+    uint32 _min_buff; /* 缓冲区最大值 */
+
+    static class ordered_pool<BUFFER_CHUNK> allocator;
 };
 
 #endif /* __BUFFER_H__ */

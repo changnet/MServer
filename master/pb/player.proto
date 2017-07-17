@@ -1,0 +1,72 @@
+//玩家模块 协议定义
+
+syntax = "proto3";
+package player;
+
+/* 玩家断线 */
+message SSOffline
+{
+    int32 pid = 1;
+}
+
+// 玩家在其他地方登录
+message SSOtherWhere
+{
+    int32 pid = 1;
+}
+
+// 登录
+message CLogin
+{
+    int32 sid  = 1;        // 服务器id
+    int32 time = 2;       // 时间戳
+    int32 plat = 3;       // 平台id
+    string sign = 4;    // 签名
+    string account = 5; // 帐户
+}
+
+// 登录返回
+message SLogin
+{
+    int32 pid = 1; // 玩家id
+    string name = 2; // 角色名字
+}
+
+// 创建角色
+message CCreateRole
+{
+    string name = 1; // 名字
+}
+
+// 创建角色返回
+message SCreateRole
+{
+    int32 pid = 1; // 玩家id
+    string name = 2; // 角色名字
+}
+
+// 进入游戏
+message CEnterWorld
+{
+}
+
+// 进入游戏
+message SEnterWorld
+{
+}
+
+// ping服务器
+message CPing
+{
+}
+
+// 服务器回包
+message SPing
+{
+    int32 time = 1;
+}
+
+// 顶号
+message SLoginOtherWhere
+{
+}

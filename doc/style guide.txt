@@ -1,0 +1,42 @@
+style guide -- 代码规范
+
+1.缩进
+    4个空格。tab不用于缩进。这是为了在各个平台、编辑器上统一。
+
+2.文件
+    UTF-8无BOM
+
+3.C++ 变量名 类名 枚举 结构体 函数
+    全部小写，下划线分开。如 style_guide、struct socket
+    类(结构体)成员下划线开头。如
+    class style_guide
+    {
+    public:
+        int _style;
+    };
+    原因是此框架使用了大量c库，包括libev、mongodb c driver、parson等等，都是此风格
+
+4.lua 变量 函数
+    同C++，全部小写，下划线分开
+    类中的变量也遵循此规则
+
+5.lua 类名
+    首字母大小，其余全部小写，下划线分开。如 Http_socket
+    这是为了区分创建类和函数调用。如
+    local socket = Http_socket() -- 创建对象
+    local fd = socket:file_description() -- 函数调用
+
+6.C++ 宏定义
+    全部大写。如 #define MAX(x,y) (x > y ? x : y)
+
+7.禁止使用魔数
+    禁止在代码中使用数字(0、1这特殊的数字除外)。
+    C++中使用宏定义，lua中在header文件中定义
+
+8.if如果不能写在一行(>80)，则必须有{}，即使只有一个语句
+    如：
+    if ( !run ) return;
+    if ( number > config )
+    {
+        call_function( number,get_param(config),is_call( number ) );
+    }

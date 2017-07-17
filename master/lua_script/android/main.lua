@@ -1,24 +1,26 @@
 require "global.global"
 require "global.oo"
 require "global.table"
+require "global.define"
+
+local g_android_mgr = require "android.android_mgr"
+
+require "android.android"
+require "android.android_cmd"
 
 math.randomseed( ev:time() )
 
-local Android = require "android.playerdata.android"
-require "signal.signal"
+function sig_handler( signum )
+    ev:exit()
+end
 
 local function main()
-    local androids = {}
+    ev:signal( 2 );
+    ev:signal( 15 );
 
-    for i = 1,2048 do
-        local android = Android(i)
-        android:born( "127.0.0.1",9997 )
+    g_android_mgr:start()
 
-        table.insert( androids,android )
-    end
-
-    oo.check()
-    ev:run()
+    ev:backend()
 end
 
 xpcall( main, __G__TRACKBACK__ )

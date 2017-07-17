@@ -4,13 +4,16 @@
 #include <signal.h>
 #include <pthread.h>
 
+#if __cplusplus < 201103L    /* < C++11 */
+    #define NOEXCEPT throw()
+    #define EXCEPT throw(std::bad_alloc)
+#else                       /* if support C++ 2011 */
+    #define NOEXCEPT noexcept
+    #define EXCEPT
+#endif
+
 uint32 g_counter  = 0;
 uint32 g_counters = 0;
-
-char cwd[PATH_MAX] = {0};    /* current work dir */
-char spath[PATH_MAX] = {0};  /* server path */
-int32 sid = 0;               /* server id */
-time_t _start_tm = time(0);
 
 #ifdef _MEM_DEBUG_
 pthread_mutex_t &counter_mutex()
@@ -23,7 +26,7 @@ pthread_mutex_t &counter_mutex()
 
 pthread_mutex_t &_mem_mutex_ = counter_mutex();
 
-void *operator new(size_t size)
+void *operator new(size_t size) EXCEPT
 {
     pthread_mutex_lock( &_mem_mutex_ );
     ++g_counter;
@@ -32,7 +35,7 @@ void *operator new(size_t size)
     return ::malloc(size);
 }
 
-void operator delete(void* ptr)
+void operator delete(void* ptr) NOEXCEPT
 {
     pthread_mutex_lock( &_mem_mutex_ );
     --g_counter;
@@ -41,13 +44,13 @@ void operator delete(void* ptr)
     ::free(ptr);
 }
 
-void *operator new[](size_t size)
+void *operator new[](size_t size) EXCEPT
 {
     ++g_counters;
     return ::malloc(size);
 }
 
-void operator delete[](void* ptr)
+void operator delete[](void* ptr) NOEXCEPT
 {
     --g_counters;
     ::free(ptr);
@@ -84,10 +87,11 @@ void new_fail()
 }
 
 /* test.cpp:40: int main(): log assertion `("wrong",0)' failed. */
-void __log_assert_fail (const char *__assertion, const char *__file,
-           unsigned int __line, const char *__function)
+void __log_assert_fail (const char *__assertion,
+     const char *__file, unsigned int __line, const char *__function)
 {
-    ERROR( "%s:%d:%s:log assertion '%s' failed",__file,__line,__function,__assertion );
+    ERROR( "%s:%d:%s:log assertion '%s' failed",
+            __file,__line,__function,__assertion );
 }
 
 /* 信号阻塞

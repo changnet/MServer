@@ -1,94 +1,119 @@
 MAKE = make
-#-pipe 使用pipe而不是临时文件，对代码无影响
-#-Wall This enables all the warnings
-#-g gdb debug option
-#-Wl,rpath 指定运行时库文件(so)路径，便携程序可用
-#-w 关闭所有告警
-#-rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace() （这一系列函数使用.dynsym表内符号）这样的函数使用。
-#如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
-CFLAGS = -pipe -Wall -g3
+CC = gcc
+CXX = g++ #clang++
+# -pipe 使用pipe而不是临时文件，对代码无影响
+# -Wall This enables all the warnings
+# -g gdb debug option
+# -Wl,rpath 指定运行时库文件(so)路径，便携程序可用
+# -w 关闭所有告警
+# -rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外
+#    部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace()
+#    (这一系列函数使用.dynsym表内符号)这样的函数使用。
+# 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
+# mysql库根据安装方法不同，位置不本样，可用mysql_config查看
+# (新版本-lmysqlclient_r与-lmysqlclient是一样的)
+# -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
+# https://gcc.gnu.org/projects/cxx-status.html
+CFLAGS = -std=c++11 -pipe -Wall -g3 -pedantic
 LFLAGS = -rdynamic
-OPTIMIZE =
-CC = g++
-INC = -I./deps/http-parser -I./deps/lua_parson -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0
-LIB = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser
-LLIB = -llua -ldl -lrt -pthread -lmysqlclient_r -lsasl2 -lssl -lcrypto -lmongoc-1.0 -lbson-1.0 -llua_parson -lhttp_parser
+OPTIMIZE = -O0
+
+#include path
+INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \
+	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
+	-I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers \
+	-I./deps/lua_bson -I./deps/pbc
+
+#libaray path
+LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
+	-L./deps/lua_rapidxml -L./deps/aho-corasick -L./deps/lua_flatbuffers \
+	-L./deps/lua_bson -L./deps/pbc/build
+
+#link libaray
+# CANT NOT static link sasl2:https://www.cyrusimap.org/sasl/
+# libtool doesn’t always link libraries together. In our environment, we only 
+# have static Krb5 libraries; the GSSAPI plugin should link these libraries in 
+# on platforms that support it (Solaris and Linux among them) but it does not
+SHARED_LIB = -ldl -lrt -pthread -lsasl2
+
+STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
+	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz -lpbc \
+	-lmongoc-1.0 -lbson-1.0 -lssl -lcrypto 
+
+#output directory
 ODIR = bin
-SDIR = ./
-TEST_DIR = ../test
+
 TARGET = $(ODIR)/master
-MKDIR = mkdir -p
 
 #wildcard : 扩展通配符
 #notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global.o clog.o ev.o buffer.o socket.o lsocket.o leventloop.o lstate.o\
-	buffer_process.o sql.o thread.o ltimer.o lsql.o mongo.o lmongo.o lhttp_socket.o\
-	lstream_socket.o lutil.o log.o llog.o
-OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
+_OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
+	net/stream_socket.o lua_cpplib/leventloop.o lua_cpplib/lstate.o \
+	mysql/sql.o thread/thread.o net/http_socket.o \
+	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o \
+	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lobj_counter.o\
+	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o net/packet.o main.o
+OBJS = $(addprefix $(ODIR)/,$(_OBJS))
+
+DEPS := $(OBJS:.o=.d)
+OCFILE := $(_OBJS:.o=.cpp)
 
 #Makefile中，要使用tab键，不能用空格替代
 
-$(ODIR)/%.o: $(SDIR)/deps/include/%.c
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/global/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/ev/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/log/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-
-$(ODIR)/%.o: $(SDIR)/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/lua/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/net/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/mysql/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/thread/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
-
-$(ODIR)/%.o: $(SDIR)/mongo/%.cpp
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(INC) $(LIB) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
+$(ODIR)/%.o: %.cpp
+	@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
+	$(CXX) $(CFLAGS) $(OPTIMIZE) $(INC_PATH) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
 #Makefile格式(x:y)中：x为目标，主为依赖
 #$^ 所有的依赖目标的集合。以空格分隔。如果在依赖目标中有多个重复的,那个这个变量会去除重复的依赖目标,只保留一份。
 #$@ 目标文件的名称x
 #$< 第一个依赖文件的名称y
 #$? 表示比目标还要新的依赖文件列表
-all: DIRS $(OBJS) $(ODIR)/main.o
-	$(CC) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(INC) $(LIB) -o $(TARGET)  $(OBJS) $(ODIR)/main.o $(LLIB)
 
-DIRS:
-	$(MKDIR) $(ODIR)
+all: $(OBJS)
+#@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
+	$(CXX) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB_PATH) -o $(TARGET)  $(OBJS) $(SHARED_LIB) -Wl,-dn $(STATIC_LIB) -Wl,-dy
+
+#The dash at the start of '-include' tells Make to continue when the .d file doesn't exist (e.g. on first compilation)
+-include $(DEPS)
 
 clean:
 	rm -rf $(ODIR)/*
 
-clean_all:
+cleansub:
 	$(MAKE) -C deps/lua_parson clean
+	$(MAKE) -C deps/lua_rapidxml clean
 	$(MAKE) -C deps/http-parser clean
+	$(MAKE) -C deps/aho-corasick clean
+	$(MAKE) -C deps/lua_flatbuffers clean
+	$(MAKE) -C deps/lua_bson clean
+	$(MAKE) -C deps/pbc clean
 	rm -rf $(ODIR)/*
 
-build_all:
+submodule:
 	$(MAKE) -C deps/lua_parson all
+	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package
-	$(MAKE) -C . all
+	$(MAKE) -C deps/aho-corasick all
+	$(MAKE) -C deps/lua_flatbuffers all
+	$(MAKE) -C deps/lua_bson all
+	$(MAKE) -C deps/pbc all
 
 test:
-	valgrind --leak-check=full bin/master test 1
+	./bin/master test 1
 
-.PHONY: all clean test clean_all build_all
+memcheck:
+	valgrind --leak-check=full --show-leak-kinds=all --suppressions=valgrind.suppressions bin/master test 1 1
+
+callgrind:
+	valgrind --tool=callgrind ./bin/master test 1 1
+
+# http://oclint-docs.readthedocs.io/en/stable/rules/
+oclint:
+	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(OCFILE) \
+	-disable-rule=LongLine -disable-rule=ShortVariableName \
+	-disable-rule=UselessParentheses -disable-rule=DoubleNegative \
+	-disable-rule=MultipleUnaryOperator
+.PHONY: all clean test clean_all build_all dir memcheck callgrind

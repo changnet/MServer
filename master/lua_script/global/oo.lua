@@ -81,7 +81,9 @@ function oo.class(super, name)
 
     super = super or class_base
     rawset(clz, "__super", super)
-    rawset(clz, "__index",clz)    --让自己成为一个metatable
+    -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
+    rawset(clz, "__index",clz)
+    -- 设置自己的metatable为父类，这样才能调用父类函数
     setmetatable(clz, {__index = super, __call = new})
     return clz
 end
@@ -142,6 +144,27 @@ function oo.define(_table, name)
 
     return _table
 end
+
+-- refer to a class,to solve circular require,like forward declare.
+-- you must implement the class and require it later some where else.
+-- DO NOT refer a singleton or define.
+function oo.refer(name)
+    if type(name) ~= "string" then
+        error( "oo refer no name specify" )
+        return
+    end
+
+    -- if the class already implemented,return it
+    if class_list[name] ~= nil then
+        return class_list[name]
+    end
+
+    -- create a unimplemented class
+    local clz = {}
+    class_list[name] = clz
+
+    return clz
+end
 --******************************************************************************
 
 -- 获取基类元表(clz是元表而不是对象)
@@ -183,6 +206,21 @@ function oo.check( log_func )
         log_func( str )
     else
         print( str )
+    end
+end
+
+-- 热更
+function oo.hot_swap( log_func )
+    log_func = log_func or print
+
+    for k,_ in pairs( class_list ) do
+        require_ex( k )
+        log_func( "hot swap " .. k )
+    end
+
+    for k,_ in pairs( const_define ) do
+        require_ex( k )
+        log_func( "hot swap " .. k )
     end
 end
 
