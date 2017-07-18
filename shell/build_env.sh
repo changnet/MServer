@@ -32,6 +32,7 @@ function build_base()
     # flatbuffers and mongo will need those to build
     auto_apt_get cmake
     auto_apt_get automake
+    auto_apt_get libtool #protobuf需要
 }
 
 # install third party library
@@ -191,6 +192,26 @@ function build_flatbuffers()
 
     rm -R flatbuffers-$FBB_VER
     cd -
+}
+
+# 其实我们只需要一个protoc来编译proto文件，可能在github直接下载bin文件
+# https://github.com/google/protobuf/releases
+function build_protoc()
+{
+    cd $PKGDIR
+    PROTOBUF_VER=3.3.0
+    #tar -xzvf protobuf-$PROTOBUF_VER.tar.gz
+
+    #
+    cd protobuf-$PROTOBUF_VER
+    # ./autogen.sh 由于这个脚本需要从网上下载gtest，这里是不能直接下载的
+    autoreconf -f -i -Wall,no-obsolete 
+    ./configure
+    make
+    make install
+
+    cd $PKGDIR
+    rm protobuf-$PROTOBUF_VER -R
 }
 
 # install mongodb from a tarball download from 

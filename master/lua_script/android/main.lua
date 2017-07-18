@@ -3,12 +3,16 @@ require "global.oo"
 require "global.table"
 require "global.define"
 
+math.randomseed( ev:time() )
+
+g_timer_mgr   = require "timer.timer_mgr"
 local g_android_mgr = require "android.android_mgr"
 
 require "android.android"
 require "android.android_cmd"
 
-math.randomseed( ev:time() )
+g_ai_mgr = require "ai.ai_mgr"
+g_player_ev = require "event.player_event"
 
 function sig_handler( signum )
     ev:exit()

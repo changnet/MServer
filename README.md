@@ -14,15 +14,21 @@ Socket、C++脚本交互、协议序列化、日志等。MySQL、MongoDB、日�
 
 代码在ubuntu 14.04、debian 7中测试。下面以ubuntu 14.04安装为例:
 
- * sudo apt-get install libmysqlclient-dev
- * sudo apt-get install lua53
- * sudo apt-get install pkg-config libssl-dev libsasl2-dev
- * sudo apt-get install uuid-dev
- * install mongo c driver(https://github.com/mongodb/mongo-c-driver/releases)
- * download submodule: git submodule init and update
- * cd MServer/master & make
- * update submodule: git submodule update
- * update submodule from origin: git submodule foreach git pull origin master
+
+ * 进入源码目录：cd MServer
+ * 下载子模块: git submodule
+ * 更新子模块: git submodule update
+ * 进入shell操作目录：cd shell
+ * 安装依赖(不同系统，该脚本可能无法使用，请参考脚本手动安装)：./build_evn.sh
+ * 编译子模块：./make.sh submodule
+ * 编译主程序:./make.sh
+
+PS:  
+ * 从源仓库更新子模块: git submodule foreach git pull origin master
+ * 如果需要使用flatbuffers，则编译器必须支持C++11。如果使用protobuf，可以使用C++03，但要开启gnu extention（long long类型及__VA_ARGS）
+ * protobuf基于云风的pbc，可以解析protobuf3，但无法使用protobuf3特有的map类型
+
+
 
 组件
 ----
@@ -82,6 +88,7 @@ valgrind测试
 * ps -o 测试缺页中断
 * dump内存情况，包含内存碎片
 * 利用oo的注册功能实现rsf指令全服热更文件(协议自动注册的热更)
+* 增加系统、玩家跨进程事件总线（event bus）
 
 #位置同步
 http://blog.codingnow.com/2006/04/sync.html  

@@ -5,7 +5,6 @@
 -- 机器人对象
 
 local util    = require "util"
-local Timer   = require "Timer"
 local android_mgr = require "android.android_mgr"
 
 local sc = require "command/sc_command"
@@ -19,6 +18,8 @@ local Android = oo.class( nil,... )
 function Android:__init( index,conn_id )
     self.index   = index
     self.conn_id = conn_id
+
+    g_ai_mgr:load( self,1 ) -- 加载AI
 end
 
 -- 发送数据包
@@ -51,26 +52,9 @@ function Android:on_die()
     PLOG( "android die " .. self.index )
 end
 
--- 定时器事件
-function Android:do_timer()
-    -- self:send_pkt( CS.PLAYER_PING,{} )
-end
-
 -- ping返回
 function Android:on_ping( errno,pkt )
-    local ts = self.ts or 1
-
-    if ts < 100000 then
-        if pkt.time >= ts then
-            local max = 1
-            self.ts = ts + max
-            for i = 1,max do
-                self:send_pkt( CS.PLAYER_PING,{} )
-            end
-        end
-    else
-        f_tm_stop( "ping done" )
-    end
+    self.ai.on_ping( self )
 end
 
 -- 登录返回
@@ -112,8 +96,7 @@ end
 -- 确认进入游戏完成
 function Android:on_enter_world( errno,pkt )
     PLOG( "%s enter world success",self.name )
-    f_tm_start()
-    self:send_pkt( CS.PLAYER_PING,{} )
+    g_player_ev:fire_event( PLAYER_EV_ENTER,self )
 end
 
 -- 被顶号
