@@ -1,5 +1,5 @@
 
-±
+í
 player.protoplayer"
 	SSOffline
 pid (Rpid" 
@@ -20,8 +20,12 @@
 pid (Rpid
 name (	Rname"
 CEnterWorld"
-SEnterWorld"
-CPing"
+SEnterWorld"C
+CPing
+x (Rx
+y (Ry
+z (Rz
+way (Rway"
 SPing
 time (Rtime"
 SLoginOtherWherebproto3

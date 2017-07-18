@@ -58,10 +58,10 @@ message SEnterWorld
 // ping服务器
 message CPing
 {
-    int x = 1;
-    int y = 2;
-    int z = 3;
-    int way = 4;
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+    int32 way = 4;
 }
 
 // 服务器回包

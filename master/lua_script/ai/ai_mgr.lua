@@ -36,7 +36,7 @@ function Ai_mgr:__init()
         setmetatable( self.time_poll[index], {["__mode"]='k'} )
     end
 
-    self.timer = g_timer_mgr:new_timer( self,10,1/TIME_SLICE )
+    self.timer = g_timer_mgr:new_timer( self,10,1/TIME_SLICE/TIME_SLICE )
 
     g_timer_mgr:start_timer( self.timer )
 end
