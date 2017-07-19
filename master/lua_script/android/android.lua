@@ -54,7 +54,7 @@ end
 
 -- ping返回
 function Android:on_ping( errno,pkt )
-    self.ai.on_ping( self )
+    self.ai.on_ping( self,pkt )
 end
 
 -- 登录返回

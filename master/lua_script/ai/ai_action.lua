@@ -3,8 +3,14 @@
 local Ai_action = {}
 
 function Ai_action.ping( entity )
-    entity:send_pkt( CS.PLAYER_PING,{ x = 1,y = 2,z = 3,way = 98786} )
     entity.ping_ts = entity.ping_ts + 1
+    entity:send_pkt( CS.PLAYER_PING,
+        {
+            x = entity.pid,
+            y = entity.ping_ts,
+            z = entity.ping_idx + 1,
+            way = ev:time()
+        } )
 end
 
 return Ai_action

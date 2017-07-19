@@ -110,6 +110,15 @@ public:
     inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }
 
+    inline void set_recv_size( uint32 max,uint32 min )
+    {
+        _recv.set_buffer_size( max,min );
+    }
+    inline void set_send_size( uint32 max,uint32 min )
+    {
+        _send.set_buffer_size( max,min );
+    }
+
     friend class leventloop;
 protected:
     buffer _recv;

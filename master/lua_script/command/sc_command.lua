@@ -17,7 +17,7 @@ local MODULE_BAG    = (0x02 << 8)  -- 512
 local SC =
 {
     PLAYER_LOGIN  = { MODULE_PLAYER + 0x01,"player.pb","player.SLogin" },
-    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.pb","player.SPing" },
+    PLAYER_PING   = { MODULE_PLAYER + 0x02,"player.pb","player.CPing" },
     PLAYER_CREATE = { MODULE_PLAYER + 0x03,"player.pb","player.SCreateRole" },
     PLAYER_ENTER  = { MODULE_PLAYER + 0x04,"player.pb","player.SEnterWorld" },
     PLAYER_OTHER  = { MODULE_PLAYER + 0x05,"player.pb","player.SLoginOtherWhere" },

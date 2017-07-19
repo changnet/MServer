@@ -54,6 +54,13 @@ public:
         assert( "buffer not reserved!",_len - _size >= len );
         memcpy( _buff + _size,data,len );       _size += len;
     }
+
+    /* 设置缓冲区最大最小值 */
+    void set_buffer_size( uint32 max,uint32 min )
+    {
+        _max_buff = max;
+        _min_buff = min;
+    }
 public:
     /* 内存扩展,处理两种情况：
      * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长

@@ -249,6 +249,9 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::send_ssc_packet > ( "send_ssc_packet"  );
     lc.def<&lnetwork_mgr::send_http_packet> ( "send_http_packet" );
 
+    lc.def<&lnetwork_mgr::set_send_buffer_size> ( "set_send_buffer_size" );
+    lc.def<&lnetwork_mgr::set_recv_buffer_size> ( "set_recv_buffer_size" );
+
     lc.set( "CNT_NONE",socket::CNT_NONE );
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );

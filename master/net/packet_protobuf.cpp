@@ -317,7 +317,10 @@ int32 lprotobuf::encode( lua_State *L,const char *object,int32 index )
         return -1;
     }
 
-    return raw_encode( L,_write_msg,object,index );
+    int32 ecode = raw_encode( L,_write_msg,object,index );
+    if ( 0 != ecode ) del_message();
+
+    return ecode;
 }
 
 int32 lprotobuf::encode_field( lua_State *L,

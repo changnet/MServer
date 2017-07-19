@@ -264,20 +264,20 @@ bool lnetwork_mgr::accept_new(
     lua_getglobal( L,ACCEPT_EVENT[conn_ty] );
     lua_pushinteger( L,conn_id );
 
+    _socket_map[conn_id] = new_sk;
+
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
     {
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接
          */
-        delete new_sk;
+        _deleting.push_back( conn_id );
         ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,2 ); /* remove traceback and error object */
         return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
-
-    _socket_map[conn_id] = new_sk;
 
     return true;
 }
@@ -1198,4 +1198,42 @@ void lnetwork_mgr::process_rpc_return( uint32 conn_id,const s2s_header *header )
     lua_pop( L,1 ); /* remove traceback */
 
     return;
+}
+
+/* 设置发送缓冲区大小 */
+int32 lnetwork_mgr::set_send_buffer_size()
+{
+    uint32 conn_id = luaL_checkinteger( L,1 );
+    uint32 max     = luaL_checkinteger( L,2 );
+    uint32 min     = luaL_checkinteger( L,3 );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    class socket *_socket = itr->second;
+    _socket->set_send_size( max,min );
+
+    return 0;
+}
+
+/* 设置接收缓冲区大小 */
+int32 lnetwork_mgr::set_recv_buffer_size()
+{
+    uint32 conn_id = luaL_checkinteger( L,1 );
+    uint32 max     = luaL_checkinteger( L,2 );
+    uint32 min     = luaL_checkinteger( L,3 );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        return luaL_error( L,"no such socket found" );
+    }
+
+    class socket *_socket = itr->second;
+    _socket->set_recv_size( max,min );
+
+    return 0;
 }

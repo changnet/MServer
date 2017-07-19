@@ -86,6 +86,10 @@ public:
     int32 send_http_packet();
     /* 发送rpc数据包 */
     int32 send_rpc_packet();
+    /* 设置发送缓冲区大小 */
+    int32 set_send_buffer_size();
+    /* 设置接收缓冲区大小 */
+    int32 set_recv_buffer_size();
 
     int32 close();
     int32 address ();

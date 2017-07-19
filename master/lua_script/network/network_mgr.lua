@@ -157,6 +157,9 @@ function sscn_accept_new( conn_id )
     local conn = Srv_conn( conn_id )
     _network_mgr.srv_conn[conn_id] = conn
 
+    -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
+    network_mgr:set_send_buffer_size( conn_id,16777216,16777216 )
+    network_mgr:set_recv_buffer_size( conn_id,16777216,16777216 )
     PLOG( "accept server connection:%d",conn_id )
 end
 
@@ -175,6 +178,10 @@ function sscn_connect_new( conn_id,ecode )
         _network_mgr.srv_conn[conn_id] = nil
         return
     end
+
+    -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
+    network_mgr:set_send_buffer_size( conn_id,16777216,16777216 )
+    network_mgr:set_recv_buffer_size( conn_id,16777216,16777216 )
 
     local conn = _network_mgr.srv_conn[conn_id]
     PLOG( "server connect (%d) establish",conn_id)

@@ -32,10 +32,11 @@ function Android_mgr:init_cs_command( list )
 end
 
 function Android_mgr:start()
-    for index = 1,2000 do
+    for index = 1,1000 do
         local conn_id = 
             network_mgr:connect( "127.0.0.1",10002,network_mgr.CNT_CSCN )
 
+        assert( nil == self.conn[conn_id] )
         local android = Android( index,conn_id )
         self.conn[conn_id]  = android
         self.android[index] = android
