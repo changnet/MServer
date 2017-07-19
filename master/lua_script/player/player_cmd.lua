@@ -7,10 +7,7 @@ local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 local g_player_mgr  = g_player_mgr
 
-local ping_cnt = 0
 local function player_ping( srv_conn,pid,pkt )
-    ping_cnt = ping_cnt + 1
-    print("ping count is ",ping_cnt)
     srv_conn:send_clt_pkt( pid,SC.PLAYER_PING,pkt )
 end
 

@@ -1,7 +1,7 @@
 -- benchmark测试ai逻辑
 
 local PING_MAX = 1000
-local PING_ONE_TIME = 4
+local PING_ONE_TIME = 2
 assert( 0 == PING_MAX%PING_ONE_TIME )
 
 local Ai_action = require "ai.ai_action"
@@ -38,7 +38,7 @@ end
 local temp = {}
 function Ai.on_ping( entity,pkt )
     entity.ping_idx = entity.ping_idx + 1
-    vd( pkt )
+
     if pkt.y ~= entity.ping_idx then
         PLOG( "pkt pid not match,android %d,expect %d,got %d,ping %d",
                      entity.index,entity.ping_idx,pkt.y,ping_idx )

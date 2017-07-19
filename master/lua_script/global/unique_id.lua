@@ -46,8 +46,8 @@ end
 
 -- 产生一个玩家pid
 function Unique_id:player_id( srvid,seed )
-    local _srvid = srvid & 0xFF -- 保证为16bit
-    local _seed  = seed  & 0xFF
+    local _srvid = srvid & 0xFFFF -- 保证为16bit
+    local _seed  = seed  & 0xFFFF
 
     -- 一个int32类型，前16bit为srvid，后16bit为自增。自增数量放数据库
     -- 合服后，必须取所有合服中最大值
