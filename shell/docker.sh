@@ -156,3 +156,11 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 797d2f0929b4        hello-world         "/hello"            About an hour ago   Exited (0) About an hour ago                       zen_brown
 a9550ead32dc        hello-world         "/hello"            23 hours ago        Exited (0) 23 hours ago                            musing_dijkstra
 xzc@xzc-VirtualBox:~/github/MServer$ sudo docker rm 8c6e997dc885
+
+# 进入已经运行的docker（shell多开）
+xzc@xzc-HP-ProBook-4446s:~/Documents/code/MServer$ sudo docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                    PORTS               NAMES
+0b1e2491aa41        dev                 "/bin/bash"         2 hours ago         Up 2 hours                                    nostalgic_hoover
+1681557aceae        hello-world         "/hello"            3 months ago        Exited (0) 3 months ago                       youthful_almeida
+xzc@xzc-HP-ProBook-4446s:~/Documents/code/MServer$ sudo docker exec -it 0b1e2491aa41 /bin/bash
+root@dev:/#

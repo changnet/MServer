@@ -32,14 +32,17 @@ function Android_mgr:init_cs_command( list )
 end
 
 function Android_mgr:start()
-    for index = 1,1000 do
+    local srvindex = tonumber(Main.srvindex) -- 平台
+    local srvid = tonumber(Main.srvid) -- 服务器
+    for index = 1,2500 do
         local conn_id = 
             network_mgr:connect( "127.0.0.1",10002,network_mgr.CNT_CSCN )
 
         assert( nil == self.conn[conn_id] )
-        local android = Android( index,conn_id )
+        local idx = ( srvid << 16 ) | index
+        local android = Android( idx,conn_id )
         self.conn[conn_id]  = android
-        self.android[index] = android
+        self.android[idx] = android
     end
 end
 

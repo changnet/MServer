@@ -59,7 +59,7 @@ function Ai_mgr:load( entity,index,conf )
     entity.insert_idx = self.insert_idx
     self.time_poll[self.insert_idx][entity] = true
     self.insert_idx = self.insert_idx + 1
-    if self.insert_idx >= TIME_SLICE then self.insert_idx = 1 end
+    if self.insert_idx > TIME_SLICE then self.insert_idx = 1 end
 end
 
 function Ai_mgr:unload( entity )
@@ -68,13 +68,14 @@ function Ai_mgr:unload( entity )
 end
 
 function Ai_mgr:do_timer()
+    -- print("ai do time now index is %d",self.time_index)
     -- 大部分AI精度要求不高，通过一个定时器来分时间片来处理。
     for entity,_ in pairs( self.time_poll[self.time_index] ) do
         entity.ai.execute( entity )
     end
 
     self.time_index = self.time_index + 1
-    if self.time_index >= TIME_SLICE then self.time_index = 1 end
+    if self.time_index > TIME_SLICE then self.time_index = 1 end
 end
 
 local ai_mgr = Ai_mgr()
