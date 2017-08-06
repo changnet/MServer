@@ -171,7 +171,9 @@ function build_mongo_driver()
     MONGOCVER=1.6.2
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
-    ./configure --disable-automatic-init-and-cleanup --enable-static
+    # --with-libbson=[auto/system/bundled]
+    # 强制使用附带的bson库，不然之前系统编辑的bson库可能编译参数不一致(比如不会生成静态bson库)
+    ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
     make
     make install
 
