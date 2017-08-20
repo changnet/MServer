@@ -108,3 +108,16 @@ table.array = function(t,sparse)
     setmetatable( _t,mt )
     return _t
 end
+
+-- Knuth-Durstenfeld Shuffle 洗牌算法
+table.random_shuffle = function( list )
+    local max_idx = #list
+    for idx = max_idx,1,-1 do
+        local index = math.random( 1,idx )
+        local tmp = list[idx]
+        list[idx] = list[index]
+        list[index] = tmp
+    end
+    
+    return list
+end
