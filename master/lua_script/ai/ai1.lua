@@ -13,6 +13,8 @@ local ping_idx = 0
 local ping_finish = 0
 local ping_start  = 0
 
+local finish_entity = {}
+
 function Ai.__init( entity,conf )
     entity.ping_ts = 0
     entity.ping_idx = -1 -- 等待进入游戏
@@ -35,7 +37,6 @@ function Ai.on_enter_world( entity )
     entity.ping_idx = 0
 end
 
-local temp = {}
 function Ai.on_ping( entity,pkt )
     entity.ping_idx = entity.ping_idx + 1
 
@@ -49,17 +50,21 @@ function Ai.on_ping( entity,pkt )
     ping_idx = ping_idx + 1
     if entity.ping_idx >= PING_MAX then
         ping_finish = ping_finish + 1
-        if temp[entity] ~= nil then
+        if finish_entity[entity] ~= nil then
             PLOG( "dumplicate finish,android %d,send %d,recv %d,total %d",
                     entity.index,entity.ping_ts,entity.ping_idx,ping_idx )
             os.exit(1)
             return
         end
-        temp[entity] = 1
+        finish_entity[entity] = 1
     end
     if ping_finish == ping_cnt then
         PLOG( "android finish ping,%d entity recv %d package,time %d",
                             ping_cnt,ping_idx,ev:time() - ping_start )
+    end
+
+    if ping_idx > PING_MAX*ping_cnt then
+        PLOG( "too many android ping package receive" )
     end
 end
 

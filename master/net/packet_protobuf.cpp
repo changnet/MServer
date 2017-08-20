@@ -522,11 +522,13 @@ int32 packet::unparse_c2s( lua_State *L,int32 index,
     DECODER->get_buffer( slice );
     if ( slice.len > MAX_PACKET_LEN )
     {
+        DECODER->del_message();
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
     if ( !send.reserved( slice.len + sizeof(struct c2s_header) ) )
     {
+        DECODER->del_message();
         return luaL_error( L,"can not reserved buffer" );
     }
 
@@ -554,11 +556,13 @@ int32 packet::unparse_s2c( lua_State *L,int32 index,int32 cmd,
     DECODER->get_buffer( slice );
     if ( slice.len > MAX_PACKET_LEN )
     {
+        DECODER->del_message();
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
     if ( !send.reserved( slice.len + sizeof(struct s2c_header) ) )
     {
+        DECODER->del_message();
         return luaL_error( L,"can not reserved buffer" );
     }
 
@@ -588,11 +592,13 @@ int32 packet::unparse_s2s( lua_State *L,int32 index,int32 session,int32 cmd,
     DECODER->get_buffer( slice );
     if ( slice.len > MAX_PACKET_LEN )
     {
+        DECODER->del_message();
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
     if ( !send.reserved( slice.len + sizeof(struct s2s_header) ) )
     {
+        DECODER->del_message();
         return luaL_error( L,"can not reserved buffer" );
     }
 
@@ -623,12 +629,14 @@ int32 packet::unparse_ssc( lua_State *L,int32 index,owner_t owner,int32 cmd,
     DECODER->get_buffer( slice );
     if ( slice.len > MAX_PACKET_LEN )
     {
+        DECODER->del_message();
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
     if ( !send.reserved( 
         slice.len + sizeof(struct s2s_header) + sizeof(struct s2c_header) ) )
     {
+        DECODER->del_message();
         return luaL_error( L,"can not reserved buffer" );
     }
 

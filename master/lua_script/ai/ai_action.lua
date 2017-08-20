@@ -9,7 +9,9 @@ function Ai_action.ping( entity )
             x = entity.pid,
             y = entity.ping_ts,
             z = entity.ping_idx + 1,
-            way = ev:time()
+            way = ev:time(),
+            target = { 1,2,3,4,5,6,7,8,9 },
+            say = "android ping test android ping test android ping test android ping test android ping test"
         } )
 end
 

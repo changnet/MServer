@@ -1,13 +1,13 @@
 //玩家模块 协议定义
 
 /* 玩家断线 */
-struct SSPlayerOffline
+struct SSOffline
 {
     pid:int;
 }
 
 // 玩家在其他地方登录
-struct SSPlayerOtherWhere
+struct SSOtherWhere
 {
     pid:int;
 }
@@ -55,6 +55,12 @@ table SEnterWorld
 // ping服务器
 table CPing
 {
+    x:int;
+    y:int;
+    z:int;
+    way:int;
+    target:[int];
+    say:string;
 }
 
 // 服务器回包
