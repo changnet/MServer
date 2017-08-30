@@ -42,7 +42,7 @@ function build_library()
     # auto_apt_get mysql-server
     auto_apt_get libmysqlclient-dev
     auto_apt_get libreadline6-dev
-    auto_apt_get pkg-config libssl-dev libsasl2-dev
+    # auto_apt_get pkg-config libssl-dev libsasl2-dev
 }
 
 function build_lua()
@@ -158,6 +158,37 @@ function rm_libmysqlclient()
     rm -f /usr/bin/my_print_defaults
     rm -f /usr/bin/perror
     rm -f /usr/bin/mysql_config
+}
+
+# 注意：sasl库编译过程中需要创建软链接(ln -s)，在win挂载到linux方式下是不能创建的
+# 导致编辑失败
+function build_sasl()
+{
+    # apt-get install libssl-dev libsasl2-dev 方式安装不能静态链接
+    # CANT NOT static link sasl2:https://www.cyrusimap.org/sasl/
+    # libtool doesn’t always link libraries together. In our environment, we only 
+    # have static Krb5 libraries; the GSSAPI plugin should link these libraries in 
+    # on platforms that support it (Solaris and Linux among them) but it does not
+
+    cd $PKGDIR
+
+    SASLVER=2.1.26
+    SASL=cyrus-sasl-$SASLVER
+    tar -zxvf $SASL.tar.gz
+    cd $SASL
+    ./configure --enable-static=yes
+    make
+    make install
+    #* Plugins are being installed into /usr/local/lib/sasl2,
+    #* but the library will look for them in /usr/lib/sasl2.
+    #* You need to make sure that the plugins will eventually
+    #* be in /usr/lib/sasl2 -- the easiest way is to make a
+    #* symbolic link from /usr/lib/sasl2 to /usr/local/lib/sasl2,
+    #* but this may not be appropriate for your site, so this
+    #* installation procedure won't do it for you.
+
+    cd -
+    rm -R $SASL
 }
 
 function build_mongo_driver()
