@@ -19,3 +19,6 @@
 [submodule "master/deps/pbc"]
 	path = master/deps/pbc
 	url = https://github.com/changnet/pbc.git
+[submodule "master/deps/websocket-parser"]
+	path = master/deps/websocket-parser
+	url = https://github.com/changnet/websocket-parser

@@ -22,12 +22,12 @@ OPTIMIZE = -O2
 INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \
 	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
 	-I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers \
-	-I./deps/lua_bson -I./deps/pbc
+	-I./deps/lua_bson -I./deps/pbc -I./deps/websocket-parser
 
 #libaray path
 LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
 	-L./deps/lua_rapidxml -L./deps/aho-corasick -L./deps/lua_flatbuffers \
-	-L./deps/lua_bson -L./deps/pbc/build
+	-L./deps/lua_bson -L./deps/pbc/build -L./deps/websocket-parser
 
 #link libaray
 SHARED_LIB = -ldl -lrt -pthread
@@ -35,7 +35,7 @@ SHARED_LIB = -ldl -lrt -pthread
 #sasl库依赖ssl和crypto，因此要放在-lssl -lcrypto之前
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
 	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz -lpbc \
-	-lmongoc-1.0 -lbson-1.0 -lsasl2 -lssl -lcrypto 
+	-lmongoc-1.0 -lbson-1.0 -lsasl2 -lssl -lcrypto -lwebsocket_parser
 
 #output directory
 ODIR = bin
@@ -87,6 +87,7 @@ cleansub:
 	$(MAKE) -C deps/lua_flatbuffers clean
 	$(MAKE) -C deps/lua_bson clean
 	$(MAKE) -C deps/pbc clean
+	$(MAKE) -C deps/websocket-parser clean
 	rm -rf $(ODIR)/*
 
 submodule:
@@ -97,6 +98,7 @@ submodule:
 	$(MAKE) -C deps/lua_flatbuffers all
 	$(MAKE) -C deps/lua_bson all
 	$(MAKE) -C deps/pbc all
+	$(MAKE) -C deps/websocket-parser alib
 
 test:
 	./bin/master test 1
