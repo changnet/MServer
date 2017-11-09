@@ -17,7 +17,8 @@ Socket、C++脚本交互、协议序列化、日志等。MySQL、MongoDB、日�
 
  * 进入源码目录：cd MServer
  * 下载子模块: git submodule
- * 更新子模块: git submodule update
+ * 更新所有子模块: git submodule update
+ * 更新所有子模块：git submodule update [submodule-path] or cd [submodule-path] & git pull origin master
  * 进入shell操作目录：cd shell
  * 安装依赖(不同系统，该脚本可能无法使用，请参考脚本手动安装)：./build_evn.sh
  * 编译子模块：./make.sh submodule
@@ -102,3 +103,9 @@ http://www.codedump.info/?p=388
 
 #Pomelo协议设计参考
 https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
+
+#SSL相关
+ssl切换：https://stackoverflow.com/questions/21193743/ssl-socket-free-and-shutdown
+CA bundle：
+http://www.herongyang.com/PKI/HTTPS-PHP-Multiple-CA-Certificates-in-a-Single-File.html
+https://www.ibm.com/support/knowledgecenter/en/SSWHYP_4.0.0/com.ibm.apimgmt.apionprem.doc/task_apionprem_generate_pkcs_certificate.html
