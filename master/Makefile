@@ -51,7 +51,9 @@ _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 	mysql/sql.o thread/thread.o net/http_socket.o \
 	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o \
 	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lobj_counter.o\
-	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o net/packet.o main.o
+	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o net/packet.o \
+	net/web_socket.o \
+	main.o
 OBJS = $(addprefix $(ODIR)/,$(_OBJS))
 
 DEPS := $(OBJS:.o=.d)
@@ -115,4 +117,4 @@ oclint:
 	-disable-rule=LongLine -disable-rule=ShortVariableName \
 	-disable-rule=UselessParentheses -disable-rule=DoubleNegative \
 	-disable-rule=MultipleUnaryOperator
-.PHONY: all clean test clean_all build_all dir memcheck callgrind
+.PHONY: all clean test clean_all build_all dir memcheck callgrind submodule cleansub
