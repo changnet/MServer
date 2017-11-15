@@ -104,8 +104,105 @@ http://www.codedump.info/?p=388
 #Pomelo协议设计参考
 https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 
-#SSL相关
-ssl切换：https://stackoverflow.com/questions/21193743/ssl-socket-free-and-shutdown
-CA bundle：
-http://www.herongyang.com/PKI/HTTPS-PHP-Multiple-CA-Certificates-in-a-Single-File.html
+#SSL相关  
+ssl切换：https://stackoverflow.com/questions/21193743/ssl-socket-free-and-shutdown  
+CA bundle：  
+http://www.herongyang.com/PKI/HTTPS-PHP-Multiple-CA-Certificates-in-a-Single-File.html  
 https://www.ibm.com/support/knowledgecenter/en/SSWHYP_4.0.0/com.ibm.apimgmt.apionprem.doc/task_apionprem_generate_pkcs_certificate.html
+
+
+```c++
+class socket()
+{
+private:
+    ioctrl *_ctrl;
+    packet *_packet;
+    dispatcher *_dispatcher;
+    codec  *_codec;
+};
+
+socket::socket()
+{
+    _ctrl = NULL;
+}
+
+void socket::set_ctrl()
+{
+    _ctrl = new ssl_io();
+}
+
+void on_read()
+{
+    // 不能单例，因为BIO需要绑定socket。ca文件需要static
+    if ( _ctrl.read() )
+    {
+
+    }
+
+    // 可以单例，传入buff就可以
+    if ( _packer.unpack() )
+    {
+
+    }
+
+    //可以单例，传入类型及buff即可。转发的配置数据可存单例或static
+    if ( _dispatcher.dispatch() )
+    {
+
+    }
+
+    // 这里需要回调脚本
+    _codec.decode();
+}
+
+void on_write()
+{
+
+}
+
+/*
+lua 接口规划：
+
+network_mgr(socket管理):
+close
+listen
+connect
+
+set_curr_session
+set_session
+set_owner
+
+load_schema
+
+set_cs_cmd
+set_ss_cmd
+set_sc_cmd
+
+ssl_init
+ssl_release
+
+======================================================================
+
+lua_socket(单个socket操作):
+get_http_header
+send_c2s_packet
+send_s2c_packet
+send_s2s_packet
+send_ssc_packet
+send_http_packet
+set_send_buffer_size
+set_recv_buffer_size
+
+CNT_NONE
+CNT_CSCN
+CNT_SCCN
+CNT_SSCN
+CNT_HTTP
+
+set_packet
+set_codec
+set_controller
+
+
+*/
+```
