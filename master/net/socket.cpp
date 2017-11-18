@@ -3,9 +3,18 @@
 #include "socket.h"
 #include "../ev/ev_def.h"
 #include "../lua_cpplib/leventloop.h"
+#include "../lua_cpplib/lnetwork_mgr.h"
+
+#include "io/io.h"
+#include "codec/codec.h"
+#include "packet/packet.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
 {
+    _io = NULL;
+    _codec = NULL;
+    _packet = NULL;
+
     _sending  = 0;
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
@@ -18,6 +27,14 @@ socket::~socket()
 
 void socket::stop()
 {
+    delete _io;
+    delete _codec;
+    delete _packet;
+
+    _io = NULL;
+    _codec = NULL;
+    _packet = NULL;
+
     if ( _sending )
     {
         leventloop::instance()->remove_sending( _sending );
@@ -35,6 +52,20 @@ void socket::stop()
 
     _recv.clear();
     _send.clear();
+}
+
+int32 socket::recv()
+{
+    assert( "socket recv without io control",_io );
+
+    return _io->recv( _w.fd,_recv );
+}
+
+int32 socket::send()
+{
+    assert( "socket send without io control",_io );
+
+    return _io->send( _w.fd,_send );
 }
 
 int32 socket::block( int32 fd )
@@ -320,7 +351,7 @@ void socket::listen_cb()
 
         uint32 conn_id = network_mgr->generate_connect_id();
         /* 新增的连接和监听的连接类型必须一样 */
-        class socket *new_sk = new class stream_socket( conn_id,_conn_ty );
+        class socket *new_sk = new class socket( conn_id,_conn_ty );
 
         bool ok = network_mgr->accept_new( conn_id,_conn_ty,new_sk );
         if ( ok ) new_sk->start( new_fd );

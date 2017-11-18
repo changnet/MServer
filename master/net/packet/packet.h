@@ -5,7 +5,7 @@
 class packet
 {
 public:
-    virtual packet();
+    packet();
     virtual ~packet();
 
     virtual int32 parser();

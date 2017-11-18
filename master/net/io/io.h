@@ -1,17 +1,17 @@
 #ifndef __IO_H__
 #define __IO_H__
 
-#include "../global/global.h"
+#include "../buffer.h"
 
 /* socket input output control */
 class io
 {
 public:
-    virtual io();
+    io();
     virtual ~io();
 
-    virtual int32 recv();
-    virtual int32 send();
+    virtual int32 recv( int32 fd,class buffer &buff ) const;
+    virtual int32 send( int32 fd,class buffer &buff ) const;
 };
 
 #endif /* __IO_H__ */

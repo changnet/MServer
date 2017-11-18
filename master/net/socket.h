@@ -57,6 +57,9 @@ public:
     void command_cb();
     void connect_cb();
 
+    int32 recv();
+    int32 send();
+
     void stop ();
     void start( int32 fd = 0);
     int32 validate();
@@ -74,20 +77,6 @@ public:
     {
         this->_this   = object;
         this->_method = &socket::method_thunk<K, method>;
-    }
-
-    inline int32 recv()
-    {
-        assert( "socket recv without io control",_io );
-
-        return io->recv( _w.fd,_recv );
-    }
-
-    inline int32 send()
-    {
-        assert( "socket send without io control",_io );
-
-        return _io.send( _w.fd,_send );
     }
 
     inline int32 fd() const { return _w.fd; }

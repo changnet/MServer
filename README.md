@@ -185,11 +185,10 @@ ssl_release
 
 lua_socket(单个socket操作):
 get_http_header
-send_c2s_packet
-send_s2c_packet
-send_s2s_packet
-send_ssc_packet
-send_http_packet
+send_c2s_packet(c2s、s2c、s2s、ssc、http)
+set_io(base、ssl)
+set_codec(none(由脚本解析，如http的json串)、flatbuf、protobuf)
+set_packet(stream、http、websock)
 set_send_buffer_size
 set_recv_buffer_size
 
