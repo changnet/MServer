@@ -390,11 +390,14 @@ void socket::listen_cb()
 
 void socket::command_cb()
 {
+    static class dispatcher dis = dispatcher::instance();
+    static class lnetwork_mgr network_mgr = lnetwork_mgr::instance();
+
     int32 ret = socket::recv();
     if ( 0 == ret )  /* 对方主动断开 */
     {
         socket::stop();
-        lnetwork_mgr::instance()->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id,_conn_ty );
     }
     else if ( 0 > ret ) /* 出错 */
     {
@@ -402,7 +405,7 @@ void socket::command_cb()
         {
             socket::stop();
             ERROR( "socket recv error:%s\n",strerror(errno) );
-            lnetwork_mgr::instance()->connect_del( _conn_id,_conn_ty );
+            network_mgr->connect_del( _conn_id,_conn_ty );
         }
         return;
     }
@@ -416,8 +419,8 @@ void socket::command_cb()
         if ( len <= 0 ) return;
 
         /* 解析数据包 */
-        lnetwork_mgr::instance()->command_new( _conn_id,_conn_ty,_recv );
+        dis->command_new( _conn_id,_conn_ty,_recv );
 
-        _recv.subtract( len ); /* 移除已处理的数据包 */
+        _packet.remove( _recv,len ) /* 移除已处理的数据包 */
     }
 }

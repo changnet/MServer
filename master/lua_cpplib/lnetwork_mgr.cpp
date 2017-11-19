@@ -2,8 +2,6 @@
 
 #include "ltools.h"
 #include "lstate.h"
-#include "../net/http_socket.h"
-#include "../net/stream_socket.h"
 
 const static char *ACCEPT_EVENT[] =
 {
@@ -230,17 +228,8 @@ int32 lnetwork_mgr::listen()
     }
 
     uint32 conn_id = generate_connect_id();
-    class socket *_socket = NULL;
-    if ( conn_type == socket::CNT_HTTP )
-    {
-        _socket = new class http_socket( 
+    class socket *_socket = new class socket( 
             conn_id,static_cast<socket::conn_t>(conn_type) );
-    }
-    else
-    {
-        _socket = new class stream_socket( 
-            conn_id,static_cast<socket::conn_t>(conn_type) );
-    }
 
     int32 fd = _socket->listen( host,port );
     if ( fd < 0 )
@@ -301,8 +290,8 @@ int32 lnetwork_mgr::connect()
     }
 
     uint32 conn_id = generate_connect_id();
-    class socket *_socket = new class stream_socket( 
-        conn_id,static_cast<socket::conn_t>(conn_type) );
+    class socket *_socket = 
+        new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
     int32 fd = _socket->connect( host,port );
     if ( fd < 0 )

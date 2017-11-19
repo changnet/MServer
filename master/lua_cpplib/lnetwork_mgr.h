@@ -3,7 +3,6 @@
 
 #include <lua.hpp>
 
-#include "../net/packet.h"
 #include "../net/socket.h"
 #include "../global/global.h"
 
