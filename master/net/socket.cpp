@@ -1,9 +1,9 @@
 #include <netinet/tcp.h>    /* for keep-alive */
 
 #include "socket.h"
+#include "dispatcher.h"
 #include "../ev/ev_def.h"
 #include "../lua_cpplib/leventloop.h"
-#include "../lua_cpplib/lnetwork_mgr.h"
 
 #include "io/io.h"
 #include "codec/codec.h"
@@ -330,7 +330,7 @@ void socket::pending_send()
 
 void socket::listen_cb()
 {
-    lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static class dispatcher dispatch = dispatcher::instance();
     while ( socket::active() )
     {
         int32 new_fd = socket::accept();
@@ -349,12 +349,8 @@ void socket::listen_cb()
         KEEP_ALIVE( new_fd );
         USER_TIMEOUT( new_fd );
 
-        uint32 conn_id = network_mgr->generate_connect_id();
-        /* 新增的连接和监听的连接类型必须一样 */
-        class socket *new_sk = new class socket( conn_id,_conn_ty );
-
-        bool ok = network_mgr->accept_new( conn_id,_conn_ty,new_sk );
-        if ( ok ) new_sk->start( new_fd );
+        class new_sk = dispatch->accept_new( _conn_ty );
+        if ( new_sk ) new_sk->start( new_fd );
     }
 }
 
@@ -381,23 +377,22 @@ void socket::listen_cb()
          socket::start();
      }
  
-     /* 连接失败或回调脚本失败,都会被lnetwork_mgr删除 */
-     bool is_ok = 
-         lnetwork_mgr::instance()->connect_new( _conn_id,_conn_ty,ecode );
+     /* 连接失败或回调脚本失败,都会被connect_new删除 */
+     static class dispatcher dispatch = dispatcher::instance();
+     bool is_ok = dispatch->connect_new( _conn_id,_conn_ty,ecode );
  
      if ( !is_ok || 0 != ecode ) socket::stop ();
  }
 
 void socket::command_cb()
 {
-    static class dispatcher dis = dispatcher::instance();
-    static class lnetwork_mgr network_mgr = lnetwork_mgr::instance();
+    static class dispatcher dispatch = dispatcher::instance();
 
     int32 ret = socket::recv();
     if ( 0 == ret )  /* 对方主动断开 */
     {
         socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
+        dispatch->connect_del( _conn_id,_conn_ty );
     }
     else if ( 0 > ret ) /* 出错 */
     {
@@ -405,7 +400,7 @@ void socket::command_cb()
         {
             socket::stop();
             ERROR( "socket recv error:%s\n",strerror(errno) );
-            network_mgr->connect_del( _conn_id,_conn_ty );
+            dispatch->connect_del( _conn_id,_conn_ty );
         }
         return;
     }
@@ -419,7 +414,7 @@ void socket::command_cb()
         if ( len <= 0 ) return;
 
         /* 解析数据包 */
-        dis->command_new( _conn_id,_conn_ty,_recv );
+        dispatch->command_new( _conn_id,_conn_ty,_recv,_packet,_codec );
 
         _packet.remove( _recv,len ) /* 移除已处理的数据包 */
     }
