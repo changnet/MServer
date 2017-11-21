@@ -136,35 +136,54 @@ bool dispatcher::connect_del( uint32 conn_id,int32 conn_ty )
 
 /* 新数据包 */
 void dispatcher::command_new( 
-    uint32 conn_id,socket::conn_t conn_ty,const buffer &recv,packet *pack,codec *codec )
+    uint32 conn_id,socket::conn_t conn_ty,const buffer &recv,packet *unpacker,codec *decoder )
 {
-    int32 cmd = pack->get_cmd( recv );
-    // 部分包是不存在cmd的，比如http，则在当前进程触发
-    if ( cmd < 0 )
+    int64 target;
+    packet::forward_t forwarding = unpacker->get_forward_info( target );
+    // 不需要转发的，则在当前进程触发
+    if ( forwarding == packet::FWT_NONE )
     {
-        return
+        command_local();
+        return;
     }
 
-    /* 不同的链接，数据包不一样 */
-    switch( conn_ty )
+    // 转发给客户端
+    if ( forwarding == packet::fWR_CLT )
     {
-        case socket::CNT_CSCN : /* 解析服务器发往客户端的包 */
-        {
-            process_command( conn_id,
-                reinterpret_cast<struct s2c_header *>( recv.data() ) );
-        }break;
-        case socket::CNT_SCCN : /* 解析客户端发往服务器的包 */
-        {
-            process_command( conn_id,
-                reinterpret_cast<struct c2s_header *>( recv.data() ) );
-        }break;
-        case socket::CNT_SSCN : /* 解析服务器发往服务器的包 */
-        {
-            process_command( conn_id,
-                reinterpret_cast<struct s2s_header *>( recv.data() ) );
-        }break;
-        default : assert( "unknow socket connect type",false );return;
+        return;
     }
+    // 转发给服务器
+
+}
+
+void dispatcher::command_local( packet *unpacker,codec *decoder )
+{
+    assert( "lua stack dirty",0 == lua_gettop( L ) );
+
+    int32 cmd = unpacker->get_cmd();
+
+    lua_pushcfunction( L,traceback );
+
+    // 协议头参数入栈
+    int32 packet_args = unpacker->push_args( L );
+    if (packet_args < 0 )
+    {
+        lua_pop( L,1 ); /* remove traceback */
+        return;
+    }
+
+    // 协议内容解码后入栈
+    int32 codec_args = decoder->decode();
+
+    int32 args = packet_args + codec_args - 1; // 不包含函数本身
+    if ( expect_false( LUA_OK != lua_pcall( L,,0,1 ) ) )
+    {
+        ERROR( "invoke_command_local:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,2 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
 }
 
 /* 处理客户端发给服务器数据包 */

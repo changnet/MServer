@@ -1,23 +1,24 @@
 #ifndef __PACKET_H__
 #define __PACKET_H__
 
-#include "../buffer.h"
-
 /* socket packet parser and deparser */
+
+class socket;
+
 class packet
 {
 public:
-    packet();
     virtual ~packet();
+    packet( class socket *sk ) : _socket( sk ) {};
 
-    /* 解析数据包 */
-    virtual int32 parser( class buffer &buff ) = 0;
+    /* 解析数据包
+     * return: <0 error;0 incomplete;>0 success
+     */
+    virtual int32 pack() = 0;
     /* 反解析(打包)数据包 */
-    virtual int32 deparser( class buffer &buff ) = 0;
-    /* 删除已处理的数据包缓存 */
-    virtual void remove( class buffer &buff,int32 length ) = 0;
-    /* 回调脚本参数入栈 */
-    virtual int32 push_args( class buffer &buff ) = 0;
+    virtual int32 unpack() = 0;
+protected:
+    class socket *_socket;
 };
 
 #endif /* __PACKET_H__ */

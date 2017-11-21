@@ -1,4 +1,8 @@
 #include <netinet/tcp.h>    /* for keep-alive */
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>  /* htons */
 
 #include "socket.h"
 #include "dispatcher.h"
@@ -405,17 +409,9 @@ void socket::command_cb()
         return;
     }
 
-    /* 在回调脚本时，可能被脚本关闭当前socket，这时就不要再处理数据了 */
-    while ( fd() > 0 )
+    /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
+    do
     {
-        assert( "socket command no packet parser",_packet );
-
-        int32 len = _packet.parser( _recv );
-        if ( len <= 0 ) return;
-
-        /* 解析数据包 */
-        dispatch->command_new( _conn_id,_conn_ty,_recv,_packet,_codec );
-
-        _packet.remove( _recv,len ) /* 移除已处理的数据包 */
-    }
+        if ( _packet.unpack() <= 0 ) return;
+    }while ( fd() > 0 );
 }

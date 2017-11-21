@@ -6,12 +6,11 @@
 class stream_packet : public packet
 {
 public:
-    stream_packet();
     virtual ~stream_packet();
+    stream_packet( class socket *sk );
 
-    int32 parser( class buffer &buff );
-    int32 deparser( class buffer &buff );
-    void remove( class buffer &buff,int32 length );
+    int32 parser();
+    int32 deparser();
 };
 
 #endif /* __STREAM_PACKET_H__ */
