@@ -266,8 +266,8 @@ void stream_packet::process_ss_command( const s2s_header *header )
         case packet::PKT_SSPK : ss_dispatch( header );break;
         case packet::PKT_CSPK : css_command( header );return;
         case packet::PKT_SCPK : ssc_command( header );return;
-        case packet::PKT_RPCS : process_rpc_cmd( conn_id,header );return;
-        case packet::PKT_RPCR : process_rpc_return( conn_id,header );return;
+        case packet::PKT_RPCS : rpc_command( header );return;
+        case packet::PKT_RPCR : rpc_return ( header );return;
         default :
         {
             ERROR( "unknow server "
@@ -415,4 +415,74 @@ void stream_packet::ssc_command( const s2s_header *header )
         return;
     }
     sk->pending_send();
+}
+
+
+/* 处理rpc调用 */
+void stream_packet::rpc_command( const s2s_header *header )
+{
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    int32 size = PACKET_BUFFER_LEN( header );
+    /* 去掉header内容 */
+    const char *buffer = reinterpret_cast<const char *>( header + 1 );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal    ( L,"rpc_command_new"  );
+    lua_pushinteger  ( L,_socket->conn_id() );
+    lua_pushinteger  ( L,header->_owner     );
+
+    // rpc解析方式目前固定为bson
+    int32 cnt = codec::decode( L,codec::CDC_BSON,buffer,size,NULL );
+    if ( cnt < 1 ) // rpc调用至少要带参数名
+    {
+        lua_pop( L,4 + cnt );
+        ERROR( "rpc command miss function name" );
+        return;
+    }
+
+    int32 top = lua_gettop( L );
+    int32 unique_id = static_cast<int32>( header->_owner );
+    int32 ecode = lua_pcall( L,4 + cnt,LUA_MULTRET,1 );
+    // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
+    if ( unique_id > 0 )
+    {
+        int32 ret = codec::encode( 
+            L,unique_id,ecode,top,sk->send_buffer() );
+        _socket->pending_send();
+    }
+
+    if ( LUA_OK != ecode )
+    {
+        ERROR( "rpc command:%s",lua_tostring(L,-1) );
+        lua_pop( L,2 ); /* remove error object and traceback */
+        return;
+    }
+
+    lua_pop( L,1 ); /* remove trace back */
+}
+
+/* 处理rpc返回 */
+void stream_packet::rpc_return( const s2s_header *header )
+{
+    lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal( L,"rpc_command_return" );
+    lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,header->_owner );
+    lua_pushinteger( L,header->_errno );
+
+    int32 cnt = packet::instance()->parse( L,header );
+    if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
+    {
+        ERROR( "process_rpc_return:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,2 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+
+    return;
 }
