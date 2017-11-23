@@ -36,15 +36,6 @@ private:
     typedef map_t<int32,cmd_cfg_t> cmd_map_t;
     typedef map_t<uint32,class socket*> socket_map_t;
 public:
-    static void uninstance();
-    static class lnetwork_mgr *instance();
-
-    ~lnetwork_mgr();
-    explicit lnetwork_mgr( lua_State *L );
-
-    /* 删除无效的连接 */
-    void invoke_delete();
-
     /* 设置指令参数 */
     int32 set_cs_cmd();
     int32 set_ss_cmd();
@@ -84,6 +75,16 @@ public:
     int32 listen  ();
     int32 connect ();
 
+public:
+    static void uninstance();
+    static class lnetwork_mgr *instance();
+
+    ~lnetwork_mgr();
+    explicit lnetwork_mgr( lua_State *L );
+
+    /* 删除无效的连接 */
+    void invoke_delete();
+
     /* 通过连接id查找所有者 */
     owner_t get_owner( uint32 conn_id );
     /* 通过所有者查找连接id */
@@ -91,6 +92,9 @@ public:
 
     /* 通过session获取socket连接 */
     class socket *get_connection( int32 session );
+
+    /* 通过onwer获取socket连接 */
+    class socket *get_connection_by_owner( owner_t owner );
 
     /* 获取connect_id */
     uint32 generate_connect_id();

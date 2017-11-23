@@ -6,19 +6,7 @@ struct lua_State;
 class packet
 {
 public:
-    typedef enum
-    {
-        PKT_NONE = 0,  // invalid
-        PKT_CSPK = 1,  // c2s packet
-        PKT_SCPK = 2,  // s2c packet
-        PKT_SSPK = 3,  // s2s packet
-        PKT_RPCS = 4,  // rpc send packet
-        PKT_RPCR = 5,  // rpc return packet
-        PKT_CBCP = 6,  // client broadcast packet
-        PKT_SBCP = 7,  // server broadcast packet
 
-        PKT_MAXT       // max packet type
-    } packet_t;
 public:
     static void uninstance();
     static class packet *instance();

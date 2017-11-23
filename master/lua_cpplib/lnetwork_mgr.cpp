@@ -739,3 +739,20 @@ int32 lnetwork_mgr::set_recv_buffer_size()
 
     return 0;
 }
+
+/* 通过onwer获取socket连接 */
+class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner )
+{
+    uint32 dest_conn = network_mgr->get_conn_id( header->_owner );
+    if ( !dest_conn ) // 客户端刚好断开或者当前进程不是网关 ?
+    {
+        return NULL;
+    }
+    socket_map_t::iterator itr = _socket_map.find( dest_conn );
+    if ( itr == _socket_map.end() )
+    {
+        return NULL;
+    }
+
+    return itr->second;
+}

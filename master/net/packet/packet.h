@@ -15,7 +15,9 @@ public:
      * return: <0 error;0 incomplete;>0 success
      */
     virtual int32 pack() = 0;
-    /* 反解析(打包)数据包 */
+    /* 反解析(打包)数据包 
+     * return: <0 error;0 success
+     */
     virtual int32 unpack() = 0;
 protected:
     class socket *_socket;

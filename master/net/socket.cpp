@@ -16,10 +16,10 @@
 socket::socket( uint32 conn_id,conn_t conn_ty )
 {
     _io = NULL;
-    _codec = NULL;
     _packet = NULL;
 
     _sending  = 0;
+    _codec_ty = 0;
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
 }
@@ -32,11 +32,9 @@ socket::~socket()
 void socket::stop()
 {
     delete _io;
-    delete _codec;
     delete _packet;
 
     _io = NULL;
-    _codec = NULL;
     _packet = NULL;
 
     if ( _sending )

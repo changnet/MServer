@@ -3,6 +3,8 @@
 
 #include "../global/global.h"
 #include "../ev/ev_watcher.h"
+
+#include "codec.h"
 #include "buffer.h"
 
 #ifdef TCP_KEEP_ALIVE
@@ -18,7 +20,6 @@
 #endif
 
 class io;
-class codec;
 class packet;
 class leventloop;
 
@@ -35,7 +36,6 @@ public:
         CNT_CSCN = 1,  // c2s connection
         CNT_SCCN = 2,  // s2c connection
         CNT_SSCN = 3,  // s2s connection
-        CNT_HTTP = 4,  // http connection
 
         CNT_MAXT       // max connection type
     } conn_t;
@@ -74,6 +74,8 @@ public:
         this->_method = &socket::method_thunk<K, method>;
     }
 
+    codec::codec_t codec_type() const { return _codec_ty; }
+
     inline int32 fd() const { return _w.fd; }
     inline uint32 conn_id() const { return _conn_id; }
     inline conn_t conn_type() const { return _conn_ty; }
@@ -103,8 +105,8 @@ private:
     ev_io _w;
 
     class io *_io;
-    class codec *_codec;
     class packet *_packet;
+    codec::codec_t _codec_ty;
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;
