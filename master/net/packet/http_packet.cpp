@@ -6,7 +6,6 @@ http_packet::~http_packet()
 
 http_packet::http_packet( class socket *sk ) : _socket( sk )
 {
-    _is_complete = false;
 }
 
 int32 http_packet::pack()
@@ -16,6 +15,28 @@ int32 http_packet::pack()
 
 int32 http_packet::unpack()
 {
+    uint32 size = _recv.data_size();
+    if ( size == 0 ) return 0;
+
+    int32 nparsed = 
+        http_parser_execute( _parser,&settings,_recv.data(),size );
+
+    _recv.clear(); // http_parser不需要旧缓冲区
+
+    /* web_socket报文,暂时不用回调到上层 */
+    if ( _parser->upgrade )
+    {
+        return;
+    }
+    else if ( nparsed != (int32)size )  /* error */
+    {
+        int32 no = _parser->http_errno;
+        ERROR( "http socket parse error(%d):%s",
+            no,http_errno_name(static_cast<enum http_errno>(no)) );
+
+        return -1;
+    }
+
     return 0;
 }
 
@@ -126,8 +147,6 @@ static const struct http_parser_settings settings =
 /* ====================== HTTP FUNCTION END ================================ */
 void http_packet::reset()
 {
-    _is_complete = false;
-
     _cur_field.clear();
     _cur_value.clear();
 
@@ -145,7 +164,22 @@ void http_packet::on_headers_complete()
 
 void http_packet::on_message_complete()
 {
-    _is_complete = true;
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal    ( L,"http_command_new" );
+    lua_pushinteger  ( L,_socket->conn_id() );
+    lua_pushstring   ( L,_http_info._url.c_str()  );
+    lua_pushstring   ( L,_http_info._body.c_str() );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    {
+        ERROR( "http_command_new:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,2 ); /* remove traceback and error object */
+        return;
+    }
+    lua_pop( L,1 ); /* remove traceback */
 }
 
 void http_packet::append_url( const char *at,size_t len )

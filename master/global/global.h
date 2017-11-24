@@ -24,6 +24,12 @@
 /* Qt style unused paramter handler */
 #define UNUSED(x) (void)x
 
+/* after c++0x,static define in glibc/assert/assert.h */
+#ifndef static_assert
+    #define static_assert(x,msg) \
+        typedef char __STATIC_ASSERT__##__LINE__[(x) ? 1 : -1]
+#endif
+
 /* 分支预测，汇编优化。逻辑上不会改变cond的值 */
 #define expect_false(cond) __builtin_expect (!!(cond),0)
 #define expect_true(cond)  __builtin_expect (!!(cond),1)

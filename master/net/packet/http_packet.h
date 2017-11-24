@@ -44,7 +44,6 @@ public:
     void append_cur_field( const char *at,size_t len );
     void append_cur_value( const char *at,size_t len );
 private:
-    bool _is_complete;
     http_parser *_parser;
     std::string _cur_field;
     std::string _cur_value;

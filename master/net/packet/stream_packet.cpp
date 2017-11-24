@@ -20,17 +20,17 @@
 
 typedef enum
 {
-    PKT_NONE = 0,  // invalid
-    PKT_CSPK = 1,  // c2s packet
-    PKT_SCPK = 2,  // s2c packet
-    PKT_SSPK = 3,  // s2s packet
-    PKT_RPCS = 4,  // rpc send packet
-    PKT_RPCR = 5,  // rpc return packet
-    PKT_CBCP = 6,  // client broadcast packet
-    PKT_SBCP = 7,  // server broadcast packet
+    SPKT_NONE = 0,  // invalid
+    SPKT_CSPK = 1,  // c2s packet
+    SPKT_SCPK = 2,  // s2c packet
+    SPKT_SSPK = 3,  // s2s packet
+    SPKT_RPCS = 4,  // rpc send packet
+    SPKT_RPCR = 5,  // rpc return packet
+    SPKT_CBCP = 6,  // client broadcast packet
+    SPKT_SBCP = 7,  // server broadcast packet
 
-    PKT_MAXT       // max packet type
-} packet_t;
+    SPKT_MAXT       // max packet type
+} stream_packet_t;
 
 #pragma pack (push, 1)
 
@@ -97,7 +97,8 @@ int32 stream_packet::unpack()
         reinterpret_cast<const struct base_header *>( _recv.data() );
     if ( size < header->_length ) return 0;
 
-    // 数据包完整，派发处理
+    dispatch( header ); // 数据包完整，派发处理
+    recv.subtract( PACKET_LENGTH( header ) );   // 无论成功或失败，都移除该数据包
 
     return header->_length;
 }
@@ -149,7 +150,8 @@ void stream_packet::sc_command( const struct base_header *s2c_header )
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    int32 cnt = codec::decode( L,_socket->codec_type(),buffer,size,cmd_cfg );
+    codec *decoder = codec::instance( _socket->codec_type() );
+    int32 cnt = decoder->decode( L,,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_pop( L,5 );
@@ -213,7 +215,7 @@ void stream_packet::clt_forwarding( const c2s_header *header,int32 session )
     struct s2s_header s2sh;
     s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
     s2sh._cmd    = 0;
-    s2sh._packet = packet::PKT_CSPK;
+    s2sh._packet = packet::SPKT_CSPK;
     s2sh._codec  = _socket->codec_type();
     s2sh._owner  = get_owner( conn_id );
 
@@ -243,7 +245,8 @@ void stream_packet::cs_command(
     lua_pushinteger  ( L,owner   );
     lua_pushinteger  ( L,header->_cmd );
 
-    int32 cnt = codec::decode( L,_socket->codec_type(),buffer,size,cmd_cfg );
+    codec *decoder = codec::instance( _socket->codec_type() );
+    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_pop( L,5 );
@@ -267,11 +270,11 @@ void stream_packet::process_ss_command( const s2s_header *header )
     /* 先判断数据包类型 */
     switch ( header->_packet )
     {
-        case packet::PKT_SSPK : ss_dispatch( header );break;
-        case packet::PKT_CSPK : css_command( header );return;
-        case packet::PKT_SCPK : ssc_command( header );return;
-        case packet::PKT_RPCS : rpc_command( header );return;
-        case packet::PKT_RPCR : rpc_return ( header );return;
+        case SPKT_SSPK : ss_dispatch( header );break;
+        case SPKT_CSPK : css_command( header );return;
+        case SPKT_SCPK : ssc_command( header );return;
+        case SPKT_RPCS : rpc_command( header );return;
+        case SPKT_RPCR : rpc_return ( header );return;
         default :
         {
             ERROR( "unknow server "
@@ -333,7 +336,8 @@ void stream_packet::ss_command(
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    int32 cnt = codec::decode( L,_socket->codec_type(),buffer,size,cmd_cfg );
+    codec *decoder = codec::instance( _socket->codec_type() );
+    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_pop( L,6 );
@@ -375,7 +379,8 @@ void stream_packet::css_command( const c2s_header *header )
     lua_pushinteger  ( L,header->_owner   );
     lua_pushinteger  ( L,clt_header->_cmd );
 
-    int32 cnt = codec::decode( L,header->_codec,buffer,size,cmd_cfg );
+    codec *decoder = codec::instance( header->_codec );
+    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_pop( L,5 );
@@ -437,7 +442,9 @@ void stream_packet::rpc_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner     );
 
     // rpc解析方式目前固定为bson
-    int32 cnt = bson_codec::raw_decode( L,buffer,size );
+    bson_codec *codecer = 
+        reinterpret_cast<bson_codec *>( codec::instance( codec::CDC_BSON ) );
+    int32 cnt = codecer->raw_decode( L,buffer,size );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
         lua_pop( L,4 + cnt );
@@ -451,9 +458,7 @@ void stream_packet::rpc_command( const s2s_header *header )
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if ( unique_id > 0 )
     {
-        int32 ret = bson_codec::raw_encode( 
-            L,unique_id,ecode,top,sk->send_buffer() );
-        _socket->pending_send();
+        rpc_pack( L,unique_id,ecode,top );
     }
 
     if ( LUA_OK != ecode )
@@ -477,7 +482,10 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pushinteger( L,header->_owner );
     lua_pushinteger( L,header->_errno );
 
-    int32 cnt = bson_codec::raw_decode( L,buffer,size );
+    // rpc解析方式目前固定为bson
+    bson_codec *decoder = 
+        reinterpret_cast<bson_codec *>( codec::instance( codec::CDC_BSON ) );
+    int32 cnt = decoder->raw_decode( L,buffer,size );
     if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
     {
         ERROR( "rpc_return:%s",lua_tostring( L,-1 ) );
@@ -488,4 +496,44 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pop( L,1 ); /* remove traceback */
 
     return;
+}
+
+/* 打包rpc数据包 */
+int32 stream_packet::rpc_pack(
+    lua_State *L,int32 unique_id,int32 ecode,int32 index )
+{
+    int32 len = 0;
+    const char *buffer = NULL;
+    if ( LUA_OK == ecode )
+    {
+        bson_codec *encoder = 
+            reinterpret_cast<bson_codec *>( codec::instance(codec::CDC_BSON) );
+
+        len = encoder->raw_encode( L,&buffer,index );
+        // 即使出错，也应该告知另一方结果
+        if ( len < 0 )
+        {
+            len = 0;
+            ecode = -1;
+        }
+    }
+
+    struct s2s_header s2sh;
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
+    s2sh._cmd    = 0;
+    s2sh._errno  = ecode;
+    s2sh._owner  = unique_id;
+    s2sh._mask   = PKT_RPCR;
+
+    class buffer &send = _socket->send_buffer();
+    send.__append( &s2sh,sizeof(struct s2s_header) );
+    if ( len > 0)
+    {
+        send.__append( buffer,static_cast<uint32>(len) );
+    }
+    _socket->pending_send();
+
+    encoder->finalize();
+
+    return 0;
 }

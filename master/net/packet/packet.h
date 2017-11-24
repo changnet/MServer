@@ -8,8 +8,22 @@ class socket;
 class packet
 {
 public:
+    typedef enum
+    {
+        PKT_NONE      = 0,
+        PKT_HTTP      = 1,
+        PKT_STREAM    = 2,
+        PKT_WEBSOCKET = 3,
+
+        PKT_MAX
+    }packet_t;
+public:
     virtual ~packet();
     packet( class socket *sk ) : _socket( sk ) {};
+
+    /* 获取当前packet类型
+     */
+    virtual packet_t type() = 0;
 
     /* 数据打包
      * return: <0 error;0 incomplete;>0 success

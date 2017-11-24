@@ -1,13 +1,18 @@
 #include "codec.h"
 
-int32 codec::decode( lua_State *L,
-    codec_t codec_ty,const char *buffer,int32 len,const cmd_cfg_t *cfg )
+static class codec *codec::instance( codec_t type )
 {
-    return 0;
-}
+    if ( type < PKT_NONE || type >= PKT_MAX ) return NULL;
 
-int32 codec::encode( lua_State *L,
-    codec_t codec_ty,const char *buffer,int32 len,const cmd_cfg_t *cfg )
-{
-    return 0;
+    static class codec list[] = 
+    {
+        NULL,
+        new bson_codec(),
+        NULL,
+        new protobuf_codec()
+    };
+
+    static_assert( sizeof(list)/sizeof(list[1]) == PKT_MAX - 1,"" );
+
+    return list[type];
 }
