@@ -1,5 +1,7 @@
 #include "stream_packet.h"
 
+#include "../codec/codec.h"
+#include "../codec/bson_codec.h"
 
 /* 网络通信消息包头格式定义
  */
@@ -111,6 +113,8 @@ void dispatch( const struct base_header *header )
             cs_dispatch( reinterpret_cast<struct c2s_header *>( header ) );
             break;
         case socket::CNT_SSCN: /* 解析服务器发往服务器的包 */
+            process_ss_command(
+                reinterpret_cast<struct s2s_header *>( header ) );
             break;
         default :
             ERROR("stream_packet dispatch "
@@ -433,7 +437,7 @@ void stream_packet::rpc_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner     );
 
     // rpc解析方式目前固定为bson
-    int32 cnt = codec::decode( L,codec::CDC_BSON,buffer,size,NULL );
+    int32 cnt = bson_codec::raw_decode( L,buffer,size );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
         lua_pop( L,4 + cnt );
@@ -447,7 +451,7 @@ void stream_packet::rpc_command( const s2s_header *header )
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if ( unique_id > 0 )
     {
-        int32 ret = codec::encode( 
+        int32 ret = bson_codec::raw_encode( 
             L,unique_id,ecode,top,sk->send_buffer() );
         _socket->pending_send();
     }
@@ -465,7 +469,6 @@ void stream_packet::rpc_command( const s2s_header *header )
 /* 处理rpc返回 */
 void stream_packet::rpc_return( const s2s_header *header )
 {
-    lua_State *L = lstate::instance()->state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
@@ -474,10 +477,10 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pushinteger( L,header->_owner );
     lua_pushinteger( L,header->_errno );
 
-    int32 cnt = packet::instance()->parse( L,header );
+    int32 cnt = bson_codec::raw_decode( L,buffer,size );
     if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
     {
-        ERROR( "process_rpc_return:%s",lua_tostring( L,-1 ) );
+        ERROR( "rpc_return:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,2 ); /* remove traceback and error object */
         return;
