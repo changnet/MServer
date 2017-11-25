@@ -1,5 +1,8 @@
 #include "flatbuffers_codec.h"
 
+#include <lflatbuffers.hpp>
+#include "../global/assert.h"
+
 flatbuffers_codec::flatbuffers_codec()
 {
     _lflatbuffers = new class lflatbuffers();

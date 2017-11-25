@@ -2,6 +2,10 @@
 #define __CODEC_H__
 
 /* socket packet codec */
+
+struct lua_State;
+struct cmd_cfg_t;
+
 class codec
 {
 public:
@@ -22,17 +26,17 @@ public:
     /* 解码数据包
      * return: <0 error,otherwise the number of parameter push to stack
      */
-    int32 decode( lua_State *L,
+    virtual int32 decode( lua_State *L,
         const char *buffer,int32 len,const cmd_cfg_t *cfg ) = 0;
     /* 编码数据包
      * return: <0 error,otherwise the length of buffer
      */
-    int32 encode( lua_State *L,
+    virtual int32 encode( lua_State *L,
         int32 index,const char **buffer,const cmd_cfg_t *cfg ) = 0;
 
     /* 解码、编码结束，处理后续工作
      */
-    void finalize() = 0;
+    virtual void finalize() = 0;
 
     static class codec *instance( codec_t type );
 };

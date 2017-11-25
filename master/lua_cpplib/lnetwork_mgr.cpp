@@ -2,6 +2,7 @@
 
 #include "ltools.h"
 #include "lstate.h"
+#include "../net/socket.h"
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
@@ -373,10 +374,10 @@ int32 lnetwork_mgr::send_c2s_packet()
     }
 
     const cmd_cfg_t &cfg = cmd_itr->second;
-    packet::instance()->unparse_c2s( 
-        L,3,cmd,cfg._schema,cfg._object,sk->send_buffer() );
+    // packet::instance()->unparse_c2s( 
+    //     L,3,cmd,cfg._schema,cfg._object,sk->send_buffer() );
 
-    sk->pending_send();
+    // sk->pending_send();
 
     return 0;
 }
@@ -420,10 +421,10 @@ int32 lnetwork_mgr::send_s2c_packet()
     }
 
     const cmd_cfg_t &cfg = cmd_itr->second;
-    packet::instance()->unparse_s2c( 
-        L,4,cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
+    // packet::instance()->unparse_s2c( 
+    //     L,4,cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
 
-    sk->pending_send();
+    // sk->pending_send();
 
     return 0;
 }
@@ -526,10 +527,10 @@ int32 lnetwork_mgr::send_s2s_packet()
     }
 
     const cmd_cfg_t &cfg = cmd_itr->second;
-    packet::instance()->unparse_s2s( L,pkt_index,_session,
-        cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
+    // packet::instance()->unparse_s2s( L,pkt_index,_session,
+    //     cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
 
-    sk->pending_send();
+    // sk->pending_send();
 
     return 0;
 }
@@ -584,10 +585,10 @@ int32 lnetwork_mgr::send_ssc_packet()
     }
 
     const cmd_cfg_t &cfg = cmd_itr->second;
-    packet::instance()->unparse_ssc( L,pkt_index,owner,
-        cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
+    // packet::instance()->unparse_ssc( L,pkt_index,owner,
+    //     cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
 
-    sk->pending_send();
+    // sk->pending_send();
 
     return 0;
 }
@@ -651,21 +652,21 @@ int32 lnetwork_mgr::get_http_header()
         return luaL_error( L,"illegal socket connecte type" );
     }
 
-    const class http_socket *http_sk = 
-        static_cast<const class http_socket *>( sk );
-    const http_socket::http_info &info = http_sk->get_http();
+    // const class http_socket *http_sk = 
+    //     static_cast<const class http_socket *>( sk );
+    // const http_socket::http_info &info = http_sk->get_http();
 
-    lua_pushboolean( L,http_sk->upgrade() );
-    lua_pushinteger( L,http_sk->status()  );
-    lua_pushstring ( L,http_sk->method()  );
+    // lua_pushboolean( L,http_sk->upgrade() );
+    // lua_pushinteger( L,http_sk->status()  );
+    // lua_pushstring ( L,http_sk->method()  );
 
-    lua_newtable( L );
-    http_socket::head_map_t::const_iterator head_itr = info._head_field.begin();
-    for ( ;head_itr != info._head_field.end(); head_itr++ )
-    {
-        lua_pushstring( L,head_itr->second.c_str() );
-        lua_setfield  ( L,-2,head_itr->first.c_str() );
-    }
+    // lua_newtable( L );
+    // http_socket::head_map_t::const_iterator head_itr = info._head_field.begin();
+    // for ( ;head_itr != info._head_field.end(); head_itr++ )
+    // {
+    //     lua_pushstring( L,head_itr->second.c_str() );
+    //     lua_setfield  ( L,-2,head_itr->first.c_str() );
+    // }
 
     return 4;
 }
@@ -695,9 +696,9 @@ int32 lnetwork_mgr::send_rpc_packet()
         return luaL_error( L,"illegal socket connecte type" );
     }
 
-    packet::instance()->unparse_rpc( L,unique_id,1,sk->send_buffer() );
+    // packet::instance()->unparse_rpc( L,unique_id,1,sk->send_buffer() );
 
-    sk->pending_send();
+    // sk->pending_send();
 
     return 0;
 }
@@ -755,4 +756,84 @@ class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner )
     }
 
     return itr->second;
+}
+
+
+/* 新增连接 */
+class socket *lnetwork_mgr::accept_new( int32 conn_ty )
+{
+    uint32 conn_id = network_mgr->generate_connect_id();
+    /* 新增的连接和监听的连接类型必须一样 */
+    class socket *new_sk = new class socket( conn_id,_conn_ty );
+    _socket_map[conn_id] = new_sk;
+
+    lua_pushcfunction( L,traceback );
+
+    lua_getglobal( L,ACCEPT_EVENT[conn_ty] );
+    lua_pushinteger( L,conn_id );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
+    {
+        /* 出错后，无法得知脚本能否继续处理此连接
+         * 为了防止死链，这里直接删除此连接
+         */
+        _deleting.push_back( conn_id );
+        ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,2 ); /* remove traceback and error object */
+        return    NULL;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+
+    return new_sk;
+}
+
+/* 连接回调 */
+bool lnetwork_mgr::connect_new( uint32 conn_id,int32 conn_ty,int32 ecode )
+{
+    lua_pushcfunction( L,traceback );
+
+    lua_getglobal( L,CONNECT_EVENT[conn_ty] );
+    lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,ecode   );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    {
+        /* 出错后，无法得知脚本能否继续处理此连接
+         * 为了防止死链，这里直接删除此连接
+         */
+        _deleting.push_back( conn_id );
+        ERROR( "connect_new:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,2 ); /* remove traceback and error object */
+        return   false;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+
+    if ( 0 != ecode ) _deleting.push_back( conn_id );
+
+    return true;
+}
+
+
+/* 断开回调 */
+bool lnetwork_mgr::connect_del( uint32 conn_id,int32 conn_ty )
+{
+    _deleting.push_back( conn_id );
+
+    lua_pushcfunction( L,traceback );
+
+    lua_getglobal( L,DELETE_EVENT[conn_ty] );
+    lua_pushinteger( L,conn_id );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
+    {
+        ERROR( "connect_del:%s",lua_tostring( L,-1 ) );
+
+        lua_pop( L,2 ); /* remove traceback and error object */
+        return   false;
+    }
+    lua_pop( L,1 ); /* remove traceback */
+
+    return true;
 }

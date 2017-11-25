@@ -8,7 +8,7 @@ io::~io()
 {
 }
 
-int32 io::recv( int32 fd,class buffer &buff )
+int32 io::recv( int32 fd,class buffer &buff ) const
 {
     if ( !buff.reserved() ) return -1; /* no more memory */
 
@@ -16,12 +16,12 @@ int32 io::recv( int32 fd,class buffer &buff )
     int32 len = ::read( fd,buff._buff + buff._size,buff._len - buff._size );
     if ( len > 0 )
     {
-        _recv._size += len;
+        buff._size += len;
     }
     return len;
 }
 
-int32 io::send( int32 fd,class buffer &buff )
+int32 io::send( int32 fd,class buffer &buff ) const
 {
     assert( "buf send without data",buff._size - buff._pos > 0 );
 

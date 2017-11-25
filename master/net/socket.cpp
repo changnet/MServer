@@ -5,12 +5,11 @@
 #include <arpa/inet.h>  /* htons */
 
 #include "socket.h"
-#include "dispatcher.h"
 #include "../ev/ev_def.h"
 #include "../lua_cpplib/leventloop.h"
+#include "../lua_cpplib/lnetwork_mgr.h"
 
 #include "io/io.h"
-#include "codec/codec.h"
 #include "packet/packet.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
@@ -19,9 +18,9 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
     _packet = NULL;
 
     _sending  = 0;
-    _codec_ty = 0;
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
+    _codec_ty = codec::CDC_NONE;
 }
 
 socket::~socket()
@@ -332,15 +331,15 @@ void socket::pending_send()
 
 void socket::listen_cb()
 {
-    static class dispatcher dispatch = dispatcher::instance();
+    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
     while ( socket::active() )
     {
-        int32 new_fd = socket::accept();
+        int32 new_fd = ::accept(_w.fd,NULL,NULL);
         if ( new_fd < 0 )
         {
             if ( EAGAIN != errno && EWOULDBLOCK != errno )
             {
-                ERROR( "stream socket::accept:%s\n",strerror(errno) );
+                ERROR( "socket::accept:%s\n",strerror(errno) );
                 return;
             }
 
@@ -351,7 +350,7 @@ void socket::listen_cb()
         KEEP_ALIVE( new_fd );
         USER_TIMEOUT( new_fd );
 
-        class new_sk = dispatch->accept_new( _conn_ty );
+        class socket *new_sk = network_mgr->accept_new( _conn_ty );
         if ( new_sk ) new_sk->start( new_fd );
     }
 }
@@ -380,21 +379,21 @@ void socket::listen_cb()
      }
  
      /* 连接失败或回调脚本失败,都会被connect_new删除 */
-     static class dispatcher dispatch = dispatcher::instance();
-     bool is_ok = dispatch->connect_new( _conn_id,_conn_ty,ecode );
+     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+     bool is_ok = network_mgr->connect_new( _conn_id,_conn_ty,ecode );
  
      if ( !is_ok || 0 != ecode ) socket::stop ();
  }
 
 void socket::command_cb()
 {
-    static class dispatcher dispatch = dispatcher::instance();
+    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     int32 ret = socket::recv();
     if ( 0 == ret )  /* 对方主动断开 */
     {
         socket::stop();
-        dispatch->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id,_conn_ty );
     }
     else if ( 0 > ret ) /* 出错 */
     {
@@ -402,7 +401,7 @@ void socket::command_cb()
         {
             socket::stop();
             ERROR( "socket recv error:%s\n",strerror(errno) );
-            dispatch->connect_del( _conn_id,_conn_ty );
+            network_mgr->connect_del( _conn_id,_conn_ty );
         }
         return;
     }
@@ -410,6 +409,6 @@ void socket::command_cb()
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
     {
-        if ( _packet.unpack() <= 0 ) return;
+        if ( _packet->unpack() <= 0 ) return;
     }while ( fd() > 0 );
 }

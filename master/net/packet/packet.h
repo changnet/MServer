@@ -1,6 +1,8 @@
 #ifndef __PACKET_H__
 #define __PACKET_H__
 
+#include "../../global/global.h"
+
 /* socket packet parser and deparser */
 
 class socket;

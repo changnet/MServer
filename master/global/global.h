@@ -25,7 +25,7 @@
 #define UNUSED(x) (void)x
 
 /* after c++0x,static define in glibc/assert/assert.h */
-#ifndef static_assert
+#if __cplusplus < 201103L    /* -std=gnu99 */
     #define static_assert(x,msg) \
         typedef char __STATIC_ASSERT__##__LINE__[(x) ? 1 : -1]
 #endif

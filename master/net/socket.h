@@ -4,8 +4,8 @@
 #include "../global/global.h"
 #include "../ev/ev_watcher.h"
 
-#include "codec.h"
 #include "buffer.h"
+#include "codec/codec.h"
 
 #ifdef TCP_KEEP_ALIVE
 # define KEEP_ALIVE(x)    socket::keep_alive(x)
@@ -82,7 +82,6 @@ public:
     inline bool active() const { return _w.is_active(); }
     inline class buffer &recv_buffer() { return _recv; }
     inline class buffer &send_buffer() { return _send; }
-    inline int32 accept() { return ::accept(_w.fd,NULL,NULL); }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }
 
     inline void set_recv_size( uint32 max,uint32 min )

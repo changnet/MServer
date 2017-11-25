@@ -14,6 +14,8 @@
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
 
+#include "../net/socket.h"
+
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
 
@@ -254,8 +256,6 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );
     lc.set( "CNT_SSCN",socket::CNT_SSCN );
-    lc.set( "CNT_HTTP",socket::CNT_HTTP );
-
 
     return 0;
 }
