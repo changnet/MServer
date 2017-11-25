@@ -1,14 +1,14 @@
-#ifndef __BSON_CODEC_H__
-#define __BSON_CODEC_H__
+#ifndef __FLATBUFFERS_CODEC_H__
+#define __FLATBUFFERS_CODEC_H__
 
 #include "codec.h"
 
-struct bson_t;
-class bson_codec : public codec
+class lflatbuffers;
+class flatbuffers_codec : public codec
 {
 public:
-    bson_codec();
-    ~bson_codec();
+    flatbuffers_codec();
+    ~flatbuffers_codec();
 
     void finalize();
 
@@ -23,7 +23,7 @@ public:
     int32 encode(
         lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg );
 private:
-    bson_t *_doc;
+    class lflatbuffers *_lflatbuffers;
 };
 
-#endif /* __BSON_CODEC_H__ */
+#endif /* __FLATBUFFERS_CODEC_H__ */

@@ -1,7 +1,6 @@
 #include "stream_packet.h"
 
 #include "../codec/codec.h"
-#include "../codec/bson_codec.h"
 
 /* 网络通信消息包头格式定义
  */
@@ -442,9 +441,8 @@ void stream_packet::rpc_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner     );
 
     // rpc解析方式目前固定为bson
-    bson_codec *codecer = 
-        reinterpret_cast<bson_codec *>( codec::instance( codec::CDC_BSON ) );
-    int32 cnt = codecer->raw_decode( L,buffer,size );
+    codec *decoder = codec::instance( codec::CDC_BSON );
+    int32 cnt = decoder->decode( L,buffer,size,NULL );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
         lua_pop( L,4 + cnt );
@@ -483,9 +481,8 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pushinteger( L,header->_errno );
 
     // rpc解析方式目前固定为bson
-    bson_codec *decoder = 
-        reinterpret_cast<bson_codec *>( codec::instance( codec::CDC_BSON ) );
-    int32 cnt = decoder->raw_decode( L,buffer,size );
+    codec *decoder = codec::instance( codec::CDC_BSON );
+    int32 cnt = decoder->decode( L,buffer,size,NULL );
     if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
     {
         ERROR( "rpc_return:%s",lua_tostring( L,-1 ) );
@@ -506,10 +503,9 @@ int32 stream_packet::rpc_pack(
     const char *buffer = NULL;
     if ( LUA_OK == ecode )
     {
-        bson_codec *encoder = 
-            reinterpret_cast<bson_codec *>( codec::instance(codec::CDC_BSON) );
+        codec *decoder = codec::instance( codec::CDC_BSON );
 
-        len = encoder->raw_encode( L,&buffer,index );
+        len = decoder->encode( L,index,&buffer,NULL );
         // 即使出错，也应该告知另一方结果
         if ( len < 0 )
         {
@@ -523,7 +519,7 @@ int32 stream_packet::rpc_pack(
     s2sh._cmd    = 0;
     s2sh._errno  = ecode;
     s2sh._owner  = unique_id;
-    s2sh._mask   = PKT_RPCR;
+    s2sh._packet = PKT_RPCR;
 
     class buffer &send = _socket->send_buffer();
     send.__append( &s2sh,sizeof(struct s2s_header) );

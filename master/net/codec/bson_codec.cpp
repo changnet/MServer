@@ -1,3 +1,4 @@
+#include <lbson.h>
 #include "bson_codec.h"
 
 bson_codec::bson_codec()
@@ -31,27 +32,10 @@ int32 bson_codec::decode(
 }
 
 /* 编码数据包
- * return: <0 error,otherwise the length of buffer
- */
-int32 bson_codec::encode(
-    lua_State *L,const char **buffer,const cmd_cfg_t *cfg )
-{
-    /* lua static start from index = 1 */
-    return raw_encode( L,buffer,1 );
-}
-
-/* 解码数据包
- * return: <0 error,otherwise the number of parameter push to stack
- */
-int32 bson_codec::raw_decode( lua_State *L,const char *buffer,int32 len )
-{
-    return 0;
-}
-
-/* 编码数据包
  * return: <0 error
  */
-int32 bson_codec::raw_encode( lua_State *L,const char **buffer,int32 index )
+int32 bson_codec::encode(
+    lua_State *L,int32 index,const char **buffer,int32 index )
 {
     struct error_collector ec;
     ec.what[0] = 0;

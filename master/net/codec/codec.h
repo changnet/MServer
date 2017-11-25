@@ -27,7 +27,8 @@ public:
     /* 编码数据包
      * return: <0 error,otherwise the length of buffer
      */
-    int32 encode( lua_State *L,const char **buffer,const cmd_cfg_t *cfg ) = 0;
+    int32 encode( lua_State *L,
+        int32 index,const char **buffer,const cmd_cfg_t *cfg ) = 0;
 
     /* 解码、编码结束，处理后续工作
      */

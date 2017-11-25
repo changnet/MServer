@@ -1,14 +1,14 @@
-#ifndef __BSON_CODEC_H__
-#define __BSON_CODEC_H__
+#ifndef __PROTOBUF_CODEC_H__
+#define __PROTOBUF_CODEC_H__
 
 #include "codec.h"
 
-struct bson_t;
-class bson_codec : public codec
+class lprotobuf;
+class protobuf_codec : public codec
 {
 public:
-    bson_codec();
-    ~bson_codec();
+    protobuf_codec();
+    ~protobuf_codec();
 
     void finalize();
 
@@ -23,7 +23,7 @@ public:
     int32 encode(
         lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg );
 private:
-    bson_t *_doc;
+    class lprotobuf *_lprotobuf;
 };
 
-#endif /* __BSON_CODEC_H__ */
+#endif /* __PROTOBUF_CODEC_H__ */
