@@ -21,19 +21,16 @@ public:
     virtual ~http_packet();
     explicit http_packet( class socket *sk );
 
-    /* 打包数据包
-     * return: <0 error;0 incomplete;>0 success
+    /* http的打包放在脚本就可以了，底层暂不处理
      */
-    int32 pack();
+     int32 pack_clt( lua_State *L,int32 index ) { return 0; }
+     int32 pack_srv( lua_State *L,int32 index ) { return 0; }
     /* 数据解包 
      * return: <0 error;0 success
      */
     int32 unpack();
-
-    bool upgrade() const;
-    uint32 status() const;
-    const char *method() const;
-    const struct http_info &get_http() const;
+    /* 解压http数据到lua堆栈 */
+    int32 unpack_header( lua_State *L ) const;
 public:
     /* http_parse 回调函数 */
     void reset();

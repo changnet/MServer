@@ -74,6 +74,7 @@ public:
         this->_method = &socket::method_thunk<K, method>;
     }
 
+    class packet *get_packet() const { return _packet; }
     codec::codec_t codec_type() const { return _codec_ty; }
 
     inline int32 fd() const { return _w.fd; }

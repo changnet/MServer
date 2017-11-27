@@ -5,6 +5,33 @@
 #include "../net/socket.h"
 #include "../net/codec/codec_mgr.h"
 
+const static char *ACCEPT_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_accept_new", // CNT_CSCN
+    "sccn_accept_new", // CNT_SCCN
+    "sscn_accept_new", // CNT_SSCN
+    "http_accept_new", // CNT_HTTP
+};
+
+const static char *CONNECT_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_connect_new", // CNT_CSCN
+    "sccn_connect_new", // CNT_SCCN
+    "sscn_connect_new", // CNT_SSCN
+    "http_connect_new", // CNT_HTTP
+};
+
+const static char *DELETE_EVENT[] =
+{
+    NULL, // CNT_NONE
+    "cscn_connect_del", // CNT_CSCN
+    "sccn_connect_del", // CNT_SCCN
+    "sscn_connect_del", // CNT_SSCN
+    "http_connect_del", // CNT_HTTP
+};
+
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
@@ -341,24 +368,11 @@ int32 lnetwork_mgr::load_schema()
 int32 lnetwork_mgr::send_c2s_packet()
 {
     uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-    int32  cmd     = luaL_checkinteger( L,2 );
-
-    if ( !lua_istable( L,3 ) )
-    {
-        return luaL_error( L,
-            "argument #3 expect table,got %s",lua_typename( L,lua_type(L,3) ) );
-    }
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
     {
         return luaL_error( L,"no such socket found" );
-    }
-
-    cmd_map_t::iterator cmd_itr = _cs_cmd_map.find( cmd );
-    if ( cmd_itr == _cs_cmd_map.end() )
-    {
-        return luaL_error( L,"no command config found:%d",cmd );
     }
 
     class socket *sk = itr->second;
@@ -372,11 +386,13 @@ int32 lnetwork_mgr::send_c2s_packet()
         return luaL_error( L,"illegal socket connecte type" );
     }
 
-    const cmd_cfg_t &cfg = cmd_itr->second;
-    // packet::instance()->unparse_c2s( 
-    //     L,3,cmd,cfg._schema,cfg._object,sk->send_buffer() );
+    const class packet *pkt = sk->get_packet();
+    if ( !pkt )
+    {
+        return luaL_error( L,"no packet found" );
+    }
 
-    // sk->pending_send();
+    pkt->pack_srv( L,2 );
 
     return 0;
 }
@@ -646,28 +662,20 @@ int32 lnetwork_mgr::get_http_header()
         return luaL_error( L,"invalid socket" );
     }
 
-    if ( socket::CNT_HTTP != sk->conn_type() )
+    const class packet *pkt = sk->get_packet();
+    if ( !pkt || packet::PKT_HTTP != pkt->type() )
     {
         return luaL_error( L,"illegal socket connecte type" );
     }
 
-    // const class http_socket *http_sk = 
-    //     static_cast<const class http_socket *>( sk );
-    // const http_socket::http_info &info = http_sk->get_http();
+    int32 size = 
+        (static_cast<const class http_packet *>(pkt))->unpack_header( L );
+    if ( size < 0 )
+    {
+        return luaL_error( L,"http unpack header error" );
+    }
 
-    // lua_pushboolean( L,http_sk->upgrade() );
-    // lua_pushinteger( L,http_sk->status()  );
-    // lua_pushstring ( L,http_sk->method()  );
-
-    // lua_newtable( L );
-    // http_socket::head_map_t::const_iterator head_itr = info._head_field.begin();
-    // for ( ;head_itr != info._head_field.end(); head_itr++ )
-    // {
-    //     lua_pushstring( L,head_itr->second.c_str() );
-    //     lua_setfield  ( L,-2,head_itr->first.c_str() );
-    // }
-
-    return 4;
+    return size;
 }
 
 /* 发送rpc数据包

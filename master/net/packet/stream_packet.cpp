@@ -81,12 +81,6 @@ stream_packet::~stream_packet()
 {
 }
 
-
-int32 stream_packet::pack()
-{
-    return 0;
-}
-
 /* 解析二进制流数据包 */
 int32 stream_packet::unpack()
 {
@@ -543,6 +537,60 @@ int32 stream_packet::rpc_pack(
     }
     _socket->pending_send();
 
+    encoder->finalize();
+
+    return 0;
+}
+
+int32 stream_packet::pack_clt( lua_State *L,int32 index )
+{
+    return 0;
+}
+
+/* 打包客户端发放服务器数据包 */
+int32 stream_packet::pack_srv( lua_State *L,int32 index )
+{
+    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    int32 cmd = luaL_checkinteger( L,index );
+
+    if ( !lua_istable( L,index + 1 ) )
+    {
+        return luaL_error( L,"argument #3 expect table,got %s",
+            lua_typename( L,lua_type(L,index + 1) ) );
+    }
+
+    const cmd_cfg_t *cfg = network_mgr->get_cs_cmd( cmd );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    codec *encoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+
+    const char *buffer = NULL;
+    int32 len = encoder->encode( L,index + 1,&buffer,cfg );
+    if ( len < 0 ) return -1;
+
+    if (len > MAX_PACKET_LEN )
+    {
+        encoder->finalize();
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( len + sizeof(struct c2s_header) ) )
+    {
+        encoder->finalize();
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    struct c2s_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct c2s_header,len );
+    hd._cmd    = static_cast<uint16>  ( cmd );
+
+    send.__append( &hd,sizeof(struct c2s_header) );
+    if (len > 0) send.__append( buffer,len );
     encoder->finalize();
 
     return 0;

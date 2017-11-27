@@ -3,7 +3,6 @@
 
 #include "packet.h"
 
-struct lua_State;
 struct base_header;
 struct c2s_header;
 struct s2s_header;
@@ -15,7 +14,18 @@ public:
     virtual ~stream_packet();
     stream_packet( class socket *sk );
 
-    int32 pack();
+    /* 打包服务器发放客户端数据包
+     * return: <0 error;0 incomplete;>0 success
+     */
+    int32 pack_clt( lua_State *L,int32 index );
+    /* 打包客户端发放服务器数据包
+     * return: <0 error;0 incomplete;>0 success
+     */
+    int32 pack_srv( lua_State *L,int32 index );
+    int32 pack_ss ( lua_State *L,int32 index );
+    int32 pack_rpc( lua_State *L,int32 index );
+    int32 pack_ssc( lua_State *L,int32 index );
+
     int32 unpack();
 private:
     void dispatch( const struct base_header *header );

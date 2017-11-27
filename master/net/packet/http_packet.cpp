@@ -123,11 +123,6 @@ http_packet::http_packet( class socket *sk ) : packet( sk )
     _parser->data = this;
 }
 
-int32 http_packet::pack()
-{
-    return 0;
-}
-
 int32 http_packet::unpack()
 {
     class buffer &recv = _socket->recv_buffer();
@@ -227,4 +222,36 @@ void http_packet::append_cur_field( const char *at,size_t len )
 void http_packet::append_cur_value( const char *at,size_t len )
 {
     _cur_value.append( at,len );
+}
+
+int32 http_packet::unpack_header( lua_State *L ) const
+{
+    const head_map_t &head_field = _http_info._head_field;
+
+    // 返回的压栈数量
+    const static int32 size = 4;
+    // table赋值时，需要一个额外的栈
+    if ( lua_checkstack( L,size + 1 ) )
+    {
+        ERROR( "http unpack header stack over flow" );
+        return -1;
+    }
+
+    // GET or POST
+    const char *method_str = 
+        http_method_str( static_cast<enum http_method>( _parser->method ) );
+
+    lua_pushboolean( L,_parser->upgrade );
+    lua_pushinteger( L,_parser->status_code );
+    lua_pushstring ( L,method_str  );
+
+    lua_newtable( L );
+    head_map_t::const_iterator head_itr = head_field.begin();
+    for ( ;head_itr != head_field.end(); head_itr ++ )
+    {
+        lua_pushstring( L,head_itr->second.c_str() );
+        lua_setfield  ( L,-2,head_itr->first.c_str() );
+    }
+
+    return size;
 }

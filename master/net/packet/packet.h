@@ -6,6 +6,7 @@
 /* socket packet parser and deparser */
 
 class socket;
+struct lua_State;
 
 class packet
 {
@@ -27,10 +28,15 @@ public:
      */
     virtual packet_t type() = 0;
 
-    /* 数据打包
+    /* 打包服务器发放客户端数据包
      * return: <0 error;0 incomplete;>0 success
      */
-    virtual int32 pack() = 0;
+    virtual int32 pack_clt( lua_State *L,int32 index ) = 0;
+    /* 打包客户端发放服务器数据包
+     * return: <0 error;0 incomplete;>0 success
+     */
+    virtual int32 pack_srv( lua_State *L,int32 index ) = 0;
+
     /* 数据解包 
      * return: <0 error;0 success
      */
