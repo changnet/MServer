@@ -483,6 +483,11 @@ void protobuf_codec::finalize()
     }
 }
 
+int32 protobuf_codec::load_path( const char *path )
+{
+    return _lprotobuf->load_path( path );
+}
+
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */

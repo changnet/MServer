@@ -19,6 +19,11 @@ void flatbuffers_codec::finalize()
 {
 }
 
+int32 flatbuffers_codec::load_path( const char *path )
+{
+    return _lflatbuffers->load_bfbs_path( path );
+}
+
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */

@@ -11,6 +11,7 @@ public:
     ~bson_codec();
 
     void finalize();
+    int32 load_path( const char *path ) { return 0; }
 
     /* 解码数据包
      * return: <0 error,otherwise the number of parameter push to stack

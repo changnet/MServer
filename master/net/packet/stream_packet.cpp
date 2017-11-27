@@ -1,7 +1,7 @@
 #include "stream_packet.h"
 
 #include "../socket.h"
-#include "../codec/codec.h"
+#include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../lua_cpplib/lstate.h"
 #include "../../lua_cpplib/lnetwork_mgr.h"
@@ -152,7 +152,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    codec *decoder = codec::instance( _socket->codec_type() );
+    codec *decoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -250,7 +250,7 @@ void stream_packet::cs_command(
     lua_pushinteger  ( L,owner   );
     lua_pushinteger  ( L,header->_cmd );
 
-    codec *decoder = codec::instance( _socket->codec_type() );
+    codec *decoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -342,7 +342,7 @@ void stream_packet::ss_command(
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    codec *decoder = codec::instance( _socket->codec_type() );
+    codec *decoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -386,8 +386,8 @@ void stream_packet::css_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner   );
     lua_pushinteger  ( L,clt_header->_cmd );
 
-    codec *decoder = 
-        codec::instance( static_cast<codec::codec_t>(header->_codec) );
+    codec *decoder = codec_mgr::instance()
+        ->get_codec( static_cast<codec::codec_t>(header->_codec) );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -451,7 +451,7 @@ void stream_packet::rpc_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner     );
 
     // rpc解析方式目前固定为bson
-    codec *decoder = codec::instance( codec::CDC_BSON );
+    codec *decoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
     int32 cnt = decoder->decode( L,buffer,size,NULL );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
@@ -495,7 +495,7 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pushinteger( L,header->_errno );
 
     // rpc解析方式目前固定为bson
-    codec *decoder = codec::instance( codec::CDC_BSON );
+    codec *decoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
     int32 cnt = decoder->decode( L,buffer,size,NULL );
     if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
     {
@@ -515,7 +515,7 @@ int32 stream_packet::rpc_pack(
 {
     int32 len = 0;
     const char *buffer = NULL;
-    codec *encoder = codec::instance( codec::CDC_BSON );
+    codec *encoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
 
     if ( LUA_OK == ecode )
     {

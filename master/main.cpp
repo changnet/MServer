@@ -1,11 +1,12 @@
-#include "global/global.h"
+#include <sys/utsname.h> /* for uname */
+
+#include "mysql/sql.h"
 #include "net/buffer.h"
+#include "mongo/mongo.h"
+#include "net/codec/codec_mgr.h"
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
 #include "lua_cpplib/leventloop.h"
-#include "mysql/sql.h"
-#include "mongo/mongo.h"
-#include <sys/utsname.h> /* for uname */
 #include "lua_cpplib/lobj_counter.h"
 #include "lua_cpplib/lnetwork_mgr.h"
 
@@ -62,6 +63,7 @@ int32 main( int32 argc,char **argv )
     lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
     leventloop::uninstance  ();      /* 关闭主事件循环 */
+    codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
 
     assert( "c++ object push to lua not release",
         obj_counter::instance()->final_check() );

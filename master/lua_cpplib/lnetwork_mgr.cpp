@@ -2,8 +2,8 @@
 
 #include "ltools.h"
 #include "lstate.h"
-#include "../net/codec.h"
 #include "../net/socket.h"
+#include "../net/codec/codec_mgr.h"
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
@@ -329,7 +329,7 @@ int32 lnetwork_mgr::load_schema()
 {
     const char *path = luaL_checkstring( L,1 );
 
-    int32 count = codec::load_schema( path );
+    int32 count = codec_mgr::instance()->load_schema( path );
 
     lua_pushinteger( L,count );
     return 1;

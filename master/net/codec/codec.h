@@ -40,8 +40,10 @@ public:
      */
     virtual void finalize() = 0;
 
-    static int32 load_schema();
-    static class codec *instance( codec_t type );
+    /* 加载schema文件
+     * @path: schema文件所在路径
+     */
+    virtual int32 load_path( const char *path ) = 0;
 };
 
 #endif /* __CODEC_H__ */

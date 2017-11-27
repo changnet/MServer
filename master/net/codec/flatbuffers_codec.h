@@ -11,6 +11,7 @@ public:
     ~flatbuffers_codec();
 
     void finalize();
+    int32 load_path( const char *path );
 
     /* 解码数据包
      * return: <0 error,otherwise the number of parameter push to stack

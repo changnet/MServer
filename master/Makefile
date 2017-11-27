@@ -49,7 +49,7 @@ TARGET = $(ODIR)/master
 _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 	lua_cpplib/leventloop.o lua_cpplib/lstate.o net/io/io.o net/io/io.o\
 	net/packet/stream_packet.o net/packet/http_packet.o\
-	net/codec/codec.o net/codec/bson_codec.o net/codec/flatbuffers_codec.o\
+	net/codec/codec_mgr.o net/codec/bson_codec.o net/codec/flatbuffers_codec.o\
 	net/codec/protobuf_codec.o\
 	mysql/sql.o thread/thread.o \
 	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o\
