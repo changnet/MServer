@@ -19,7 +19,7 @@ public:
     };
 public:
     virtual ~http_packet();
-    http_packet( class socket *sk ) : _socket( sk ) {};
+    explicit http_packet( class socket *sk );
 
     /* 打包数据包
      * return: <0 error;0 incomplete;>0 success

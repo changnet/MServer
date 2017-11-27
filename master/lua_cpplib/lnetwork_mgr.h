@@ -1,9 +1,7 @@
 #ifndef __LNETWORK_MGR_H__
 #define __LNETWORK_MGR_H__
 
-#include <lua.hpp>
-
-#include "../global/global.h"
+#include "../net/net_include.h"
 
 #include <vector>
 #if __cplusplus < 201103L    /* -std=gnu99 */
@@ -14,23 +12,8 @@
     #define map_t    std::unordered_map
 #endif
 
-#define MAX_SCHEMA_NAME  64
-
-/* _maks 设定掩码，按位
- * 1bit: 解码方式:0 普通解码，1 unpack解码
- * 2bit: TODO:广播方式 ？？这个放到脚本
- */
-struct cmd_cfg_t
-{
-    int32 _cmd;
-    int32 _mask;
-    int32 _session;
-    char _schema[MAX_SCHEMA_NAME];
-    char _object[MAX_SCHEMA_NAME];
-};
-typedef int32  owner_t;
-
 class socket;
+struct lua_State;
 class lnetwork_mgr
 {
 private:
@@ -114,7 +97,7 @@ public:
 private:
     void delete_socket( uint32 conn_id );
 private:
-    lua_State *L;
+    struct lua_State *L;
 
     int32 _session; /* 当前进程的session */
     uint32 _conn_seed; /* connect_id种子 */

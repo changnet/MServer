@@ -1,7 +1,8 @@
 #include "flatbuffers_codec.h"
 
 #include <lflatbuffers.hpp>
-#include "../global/assert.h"
+#include "../net_include.h"
+#include "../../global/assert.h"
 
 flatbuffers_codec::flatbuffers_codec()
 {
@@ -24,7 +25,7 @@ void flatbuffers_codec::finalize()
 int32 flatbuffers_codec::decode(
      lua_State *L,const char *buffer,int32 len,const cmd_cfg_t *cfg )
 {
-    if ( _lflatbuffers->decode( L,cfg->_schema,cfg->_object,buffer,size ) < 0 )
+    if ( _lflatbuffers->decode( L,cfg->_schema,cfg->_object,buffer,len ) < 0 )
     {
         ERROR( "flatbuffers decode:%s",_lflatbuffers->last_error() );
         return -1;
@@ -47,7 +48,7 @@ int32 flatbuffers_codec::encode(
     }
 
     size_t size = 0;
-    *buffer = DECODER->get_buffer( size );
+    *buffer = _lflatbuffers->get_buffer( size );
 
     return static_cast<int32>( size );
 }

@@ -1,6 +1,7 @@
 #include "protobuf_codec.h"
+#include "../net_include.h"
 
-#include "pbc.h"
+#include <pbc.h>
 #include <lua.hpp>
 
 /* linux open dir */
@@ -488,7 +489,7 @@ void protobuf_codec::finalize()
 int32 protobuf_codec::decode(
      lua_State *L,const char *buffer,int32 len,const cmd_cfg_t *cfg )
 {
-    if ( _lprotobuf->decode( L,cfg->_object,buffer,size ) < 0 )
+    if ( _lprotobuf->decode( L,cfg->_object,buffer,len ) < 0 )
     {
         ERROR( "protobuf decode:%s",_lprotobuf->last_error() );
         return -1;
@@ -513,7 +514,7 @@ int32 protobuf_codec::encode(
     struct pbc_slice slice;
     _lprotobuf->get_buffer( slice );
 
-    *buffer = slice.buffer;
+    *buffer = static_cast<const char *>( slice.buffer );
 
     return slice.len;
 }

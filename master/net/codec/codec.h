@@ -1,6 +1,8 @@
 #ifndef __CODEC_H__
 #define __CODEC_H__
 
+#include "../../global/global.h"
+
 /* socket packet codec */
 
 struct lua_State;
@@ -38,6 +40,7 @@ public:
      */
     virtual void finalize() = 0;
 
+    static int32 load_schema();
     static class codec *instance( codec_t type );
 };
 

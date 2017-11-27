@@ -1,45 +1,9 @@
+#include <http_parser.h>
+
+#include "../socket.h"
 #include "http_packet.h"
-
-http_packet::~http_packet()
-{
-}
-
-http_packet::http_packet( class socket *sk ) : _socket( sk )
-{
-}
-
-int32 http_packet::pack()
-{
-    return 0;
-}
-
-int32 http_packet::unpack()
-{
-    uint32 size = _recv.data_size();
-    if ( size == 0 ) return 0;
-
-    int32 nparsed = 
-        http_parser_execute( _parser,&settings,_recv.data(),size );
-
-    _recv.clear(); // http_parser不需要旧缓冲区
-
-    /* web_socket报文,暂时不用回调到上层 */
-    if ( _parser->upgrade )
-    {
-        return;
-    }
-    else if ( nparsed != (int32)size )  /* error */
-    {
-        int32 no = _parser->http_errno;
-        ERROR( "http socket parse error(%d):%s",
-            no,http_errno_name(static_cast<enum http_errno>(no)) );
-
-        return -1;
-    }
-
-    return 0;
-}
-
+#include "../../lua_cpplib/ltools.h"
+#include "../../lua_cpplib/lstate.h"
 
 // 开始解析报文，第一个回调的函数，在这里初始化数据
 int32 on_message_begin( http_parser *parser )
@@ -145,6 +109,57 @@ static const struct http_parser_settings settings =
 };
 
 /* ====================== HTTP FUNCTION END ================================ */
+http_packet::~http_packet()
+{
+    delete _parser;
+    _parser = NULL;
+}
+
+http_packet::http_packet( class socket *sk ) : packet( sk )
+{
+    //HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
+    _parser = new struct http_parser();
+    http_parser_init( _parser,HTTP_BOTH );
+    _parser->data = this;
+}
+
+int32 http_packet::pack()
+{
+    return 0;
+}
+
+int32 http_packet::unpack()
+{
+    class buffer &recv = _socket->recv_buffer();
+    uint32 size = recv.data_size();
+    if ( size == 0 ) return 0;
+
+    int32 nparsed = 
+        http_parser_execute( _parser,&settings,recv.data(),size );
+
+    recv.clear(); // http_parser不需要旧缓冲区
+
+    /* web_socket报文,暂时不用回调到上层
+     * The user is expected to check if parser->upgrade has been set to 1 after 
+     * http_parser_execute() returns. Non-HTTP data begins at the buffer 
+     * supplied offset by the return value of http_parser_execute()
+     */
+    if ( _parser->upgrade )
+    {
+        return 0;
+    }
+    else if ( nparsed != (int32)size )  /* error */
+    {
+        int32 no = _parser->http_errno;
+        ERROR( "http socket parse error(%d):%s",
+            no,http_errno_name(static_cast<enum http_errno>(no)) );
+
+        return -1;
+    }
+
+    return 0;
+}
+
 void http_packet::reset()
 {
     _cur_field.clear();
@@ -164,6 +179,7 @@ void http_packet::on_headers_complete()
 
 void http_packet::on_message_complete()
 {
+    static lua_State *L = lstate::instance()->state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );

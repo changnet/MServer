@@ -2,14 +2,13 @@
 
 #include "ltools.h"
 #include "lstate.h"
+#include "../net/codec.h"
 #include "../net/socket.h"
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
 {
-    packet::uninstance();
-
     delete _network_mgr;
     _network_mgr = NULL;
 }
@@ -254,36 +253,36 @@ int32 lnetwork_mgr::connect()
 }
 
 /* 获取客户端指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_cs_cmd( int32 cmd )
+const cmd_cfg_t *lnetwork_mgr::get_cs_cmd( int32 cmd ) const
 {
-    cmd_map_t::iterator itr = _cs_cmd_map.find( cmd );
+    cmd_map_t::const_iterator itr = _cs_cmd_map.find( cmd );
     if ( itr == _cs_cmd_map.end() ) return NULL;
 
     return &(itr->second);
 }
 
 /* 获取服务端指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_ss_cmd( int32 cmd )
+const cmd_cfg_t *lnetwork_mgr::get_ss_cmd( int32 cmd ) const
 {
-    cmd_map_t::iterator itr = _ss_cmd_map.find( cmd );
+    cmd_map_t::const_iterator itr = _ss_cmd_map.find( cmd );
     if ( itr == _ss_cmd_map.end() ) return NULL;
 
     return &(itr->second);
 }
 
 /* 获取sc指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32 cmd )
+const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32 cmd ) const
 {
-    cmd_map_t::iterator itr = _sc_cmd_map.find( cmd );
+    cmd_map_t::const_iterator itr = _sc_cmd_map.find( cmd );
     if ( itr == _sc_cmd_map.end() ) return NULL;
 
     return &(itr->second);
 }
 
 /* 通过连接id查找所有者 */
-owner_t lnetwork_mgr::get_owner( uint32 conn_id )
+owner_t lnetwork_mgr::get_owner( uint32 conn_id ) const
 {
-    map_t<uint32,owner_t>::iterator itr = _conn_owner_map.find( conn_id );
+    map_t<uint32,owner_t>::const_iterator itr = _conn_owner_map.find( conn_id );
     if ( itr == _conn_owner_map.end() )
     {
         return 0;
@@ -293,9 +292,9 @@ owner_t lnetwork_mgr::get_owner( uint32 conn_id )
 }
 
 /* 通过所有者查找连接id */
-uint32 lnetwork_mgr::get_conn_id( owner_t owner )
+uint32 lnetwork_mgr::get_conn_id( owner_t owner ) const
 {
-    map_t<owner_t,uint32>::iterator itr = _owner_map.find( owner );
+    map_t<owner_t,uint32>::const_iterator itr = _owner_map.find( owner );
     if ( itr == _owner_map.end() )
     {
         return 0;
@@ -305,21 +304,21 @@ uint32 lnetwork_mgr::get_conn_id( owner_t owner )
 }
 
 /* 通过session获取socket连接 */
-class socket *lnetwork_mgr::get_connection( int32 session )
+class socket *lnetwork_mgr::get_connection( int32 session ) const
 {
-    map_t<int32,uint32>::iterator itr = _session_map.find( session );
+    map_t<int32,uint32>::const_iterator itr = _session_map.find( session );
     if ( itr == _session_map.end() ) return NULL;
 
-    socket_map_t::iterator sk_itr = _socket_map.find( itr->second );
+    socket_map_t::const_iterator sk_itr = _socket_map.find( itr->second );
     if ( sk_itr == _socket_map.end() ) return NULL;
 
     return sk_itr->second;
 }
 
 /* 通过conn_id获取session */
-int32 lnetwork_mgr::get_session( uint32 conn_id )
+int32 lnetwork_mgr::get_session( uint32 conn_id ) const
 {
-    map_t<uint32,int32>::iterator itr = _conn_session_map.find( conn_id );
+    map_t<uint32,int32>::const_iterator itr = _conn_session_map.find( conn_id );
     if ( itr == _conn_session_map.end() ) return 0;
 
     return itr->second;
@@ -330,7 +329,7 @@ int32 lnetwork_mgr::load_schema()
 {
     const char *path = luaL_checkstring( L,1 );
 
-    int32 count = packet::instance()->load_schema( path );
+    int32 count = codec::load_schema( path );
 
     lua_pushinteger( L,count );
     return 1;

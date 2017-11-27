@@ -1,10 +1,19 @@
 #include "codec.h"
 
-static class codec *codec::instance( codec_t type )
-{
-    if ( type < PKT_NONE || type >= PKT_MAX ) return NULL;
+#include "bson_codec.h"
+#include "protobuf_codec.h"
+#include "flatbuffers_codec.h"
 
-    static class codec list[] = 
+int32 codec::load_schema()
+{
+    return 0;
+}
+
+class codec *codec::instance( codec_t type )
+{
+    if ( type < CDC_NONE || type >= CDC_MAX ) return NULL;
+
+    static class codec *list[] = 
     {
         NULL,
         new bson_codec(),
@@ -12,7 +21,7 @@ static class codec *codec::instance( codec_t type )
         new protobuf_codec()
     };
 
-    static_assert( sizeof(list)/sizeof(list[1]) == PKT_MAX - 1,"" );
+    static_assert( sizeof(list)/sizeof(list[1]) == CDC_MAX - 1,"" );
 
     return list[type];
 }

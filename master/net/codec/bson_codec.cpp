@@ -1,6 +1,9 @@
 #include <lbson.h>
 #include "bson_codec.h"
 
+/* bson_t在bson库中是typedef声明方式，不能直接前置声明 */
+struct x_bson_t : public bson_t {};
+
 bson_codec::bson_codec()
 {
     _bson_doc = NULL;
@@ -28,15 +31,17 @@ void bson_codec::finalize()
 int32 bson_codec::decode(
     lua_State *L,const char *buffer,int32 len,const cmd_cfg_t *cfg )
 {
-    return raw_decode( L,buffer,len );
+    UNUSED( cfg );
+    return 0;
 }
 
 /* 编码数据包
  * return: <0 error
  */
 int32 bson_codec::encode(
-    lua_State *L,int32 index,const char **buffer,int32 index )
+    lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg )
 {
+    UNUSED( cfg );
     struct error_collector ec;
     ec.what[0] = 0;
 
@@ -49,7 +54,7 @@ int32 bson_codec::encode(
         return -1;
     }
 
-    const char *buffer = (const char *)bson_get_data( _bson_doc );
+    *buffer = (const char *)bson_get_data( _bson_doc );
 
     return _bson_doc->len;
 }
