@@ -542,12 +542,58 @@ int32 stream_packet::rpc_pack(
     return 0;
 }
 
+/* 打包服务器发往客户端数据包 */
 int32 stream_packet::pack_clt( lua_State *L,int32 index )
 {
+    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    int32 cmd = luaL_checkinteger( L,index );
+    int32 ecode = luaL_checkinteger( L,index + 1 );
+
+    if ( !lua_istable( L,index + 2 ) )
+    {
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,index + 2) ) );
+    }
+
+    const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    codec *encoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+
+    const char *buffer = NULL;
+    int32 len = encoder->encode( L,index + 1,&buffer,cfg );
+    if ( len < 0 ) return -1;
+
+    if (len > MAX_PACKET_LEN )
+    {
+        encoder->finalize();
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( len + sizeof(struct s2c_header) ) )
+    {
+        encoder->finalize();
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    struct s2c_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct s2c_header,len );
+    hd._cmd    = static_cast<uint16>  ( cmd );
+    hd._errno  = ecode;
+
+    send.__append( &hd,sizeof(struct s2c_header) );
+    if (len > 0) send.__append( buffer,len );
+    encoder->finalize();
+
     return 0;
 }
 
-/* 打包客户端发放服务器数据包 */
+/* 打包客户端发往服务器数据包 */
 int32 stream_packet::pack_srv( lua_State *L,int32 index )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
@@ -556,8 +602,8 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
 
     if ( !lua_istable( L,index + 1 ) )
     {
-        return luaL_error( L,"argument #3 expect table,got %s",
-            lua_typename( L,lua_type(L,index + 1) ) );
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,index + 1) ) );
     }
 
     const cmd_cfg_t *cfg = network_mgr->get_cs_cmd( cmd );
@@ -591,6 +637,136 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
 
     send.__append( &hd,sizeof(struct c2s_header) );
     if (len > 0) send.__append( buffer,len );
+    encoder->finalize();
+
+    return 0;
+}
+
+int32 stream_packet::pack_ss ( lua_State *L,int32 index )
+{
+    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    int32 cmd = luaL_checkinteger( L,index );
+    int32 ecode = luaL_checkinteger( L,index + 1 );
+
+    if ( !lua_istable( L,index + 2 ) )
+    {
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,index + 2) ) );
+    }
+
+    const cmd_cfg_t *cfg = network_mgr->get_ss_cmd( cmd );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    codec *encoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+
+    const char *buffer = NULL;
+    int32 len = encoder->encode( L,index + 2,&buffer,cfg );
+    if ( len < 0 ) return -1;
+
+    if ( len > MAX_PACKET_LEN )
+    {
+        encoder->finalize();
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( len + sizeof(struct s2s_header) ) )
+    {
+        encoder->finalize();
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    struct s2s_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
+    hd._cmd    = static_cast<uint16> ( cmd );
+    hd._errno  = ecode;
+    hd._owner  = network_mgr->curr_session();
+    hd._packet = SPKT_SSPK;
+
+    send.__append( &hd,sizeof(struct s2s_header) );
+    if ( len > 0 ) send.__append( buffer,len );
+    encoder->finalize();
+
+    return 0;
+}
+
+int32 stream_packet::pack_rpc( lua_State *L,int32 index )
+{
+    int32 unique_id = luaL_checkinteger( L,1 );
+    // ecode默认0
+    rpc_pack( L,unique_id,0,SPKT_RPCR,index );
+
+    return 0;
+}
+
+int32 stream_packet::pack_ssc( lua_State *L,int32 index )
+{
+    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    owner_t owner  = luaL_checkinteger( L,index + 1 );
+    int32 codec_ty = luaL_checkinteger( L,index + 2 );
+    int32 cmd      = luaL_checkinteger( L,index + 3 );
+    int32 ecode    = luaL_checkinteger( L,index + 4 );
+
+    if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
+    {
+        return luaL_error( L,"illegal codec type" );
+    }
+
+    if ( !lua_istable( L,index + 5 ) )
+    {
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,index + 5) ) );
+    }
+
+    const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    codec *encoder = codec_mgr::instance()
+        ->get_codec( static_cast<codec::codec_t>(codec_ty) );
+
+    const char *buffer = NULL;
+    int32 len = encoder->encode( L,index + 5,&buffer,cfg );
+    if ( len < 0 ) return -1;
+
+    if ( len > MAX_PACKET_LEN )
+    {
+        encoder->finalize();
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( 
+        len + sizeof(struct s2s_header) + sizeof(struct s2c_header) ) )
+    {
+        encoder->finalize();
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    /* 先构造客户端收到的数据包 */
+    struct s2c_header chd;
+    chd._length = PACKET_MAKE_LENGTH( struct s2c_header,len );
+    chd._cmd    = static_cast<uint16>  ( cmd );
+    chd._errno  = ecode;
+
+    /* 把客户端数据包放到服务器数据包 */
+    struct s2s_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,PACKET_LENGTH(&chd) );
+    hd._cmd    = 0;
+    hd._errno  = 0;
+    hd._owner  = owner;
+    hd._packet = SPKT_SCPK; /*指定数据包类型为服务器发送客户端 */
+
+    send.__append( &hd ,sizeof(struct s2s_header) );
+    send.__append( &chd,sizeof(struct s2c_header) );
+    if ( len > 0 ) send.__append( buffer,len );
     encoder->finalize();
 
     return 0;

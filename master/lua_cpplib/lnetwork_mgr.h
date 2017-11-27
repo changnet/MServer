@@ -2,6 +2,7 @@
 #define __LNETWORK_MGR_H__
 
 #include "../net/net_include.h"
+#include "../net/socket.h"
 
 #include <vector>
 #if __cplusplus < 201103L    /* -std=gnu99 */
@@ -12,7 +13,6 @@
     #define map_t    std::unordered_map
 #endif
 
-class socket;
 struct lua_State;
 class lnetwork_mgr
 {
@@ -45,8 +45,6 @@ public:
     int32 send_s2s_packet();
     /* 跨服务器发送客户端数据包 */
     int32 send_ssc_packet();
-    /* 发送http数据包 */
-    int32 send_http_packet();
     /* 发送rpc数据包 */
     int32 send_rpc_packet();
     /* 设置发送缓冲区大小 */
@@ -91,11 +89,12 @@ public:
     /* 获取当前服务器session */
     int32 curr_session() const { return _session; }
 
-    class socket *accept_new( int32 conn_ty );
+    class socket *accept_new( socket::conn_t conn_ty );
     bool connect_new( uint32 conn_id,int32 conn_ty,int32 ecode );
     bool connect_del( uint32 conn_id,int32 conn_ty );
 private:
     void delete_socket( uint32 conn_id );
+    class packet *lua_check_packet( socket::conn_t conn_ty );
 private:
     struct lua_State *L;
 

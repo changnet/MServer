@@ -26,14 +26,14 @@ public:
 
     /* 获取当前packet类型
      */
-    virtual packet_t type() = 0;
+    virtual packet_t type() const = 0;
 
-    /* 打包服务器发放客户端数据包
-     * return: <0 error;0 incomplete;>0 success
+    /* 打包服务器发往客户端数据包
+     * return: <0 error;>=0 success
      */
     virtual int32 pack_clt( lua_State *L,int32 index ) = 0;
-    /* 打包客户端发放服务器数据包
-     * return: <0 error;0 incomplete;>0 success
+    /* 打包客户端发往服务器数据包
+     * return: <0 error;>=0 success
      */
     virtual int32 pack_srv( lua_State *L,int32 index ) = 0;
 

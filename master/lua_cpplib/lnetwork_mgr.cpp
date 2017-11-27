@@ -2,8 +2,10 @@
 
 #include "ltools.h"
 #include "lstate.h"
-#include "../net/socket.h"
+#include "../net/packet/packet.h"
 #include "../net/codec/codec_mgr.h"
+#include "../net/packet/http_packet.h"
+#include "../net/packet/stream_packet.h"
 
 const static char *ACCEPT_EVENT[] =
 {
@@ -362,88 +364,6 @@ int32 lnetwork_mgr::load_schema()
     return 1;
 }
 
-/* 发送c2s数据包
- * network_mgr:send_c2s_packet( conn_id,cmd,pkt )
- */
-int32 lnetwork_mgr::send_c2s_packet()
-{
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-
-    socket_map_t::iterator itr = _socket_map.find( conn_id );
-    if ( itr == _socket_map.end() )
-    {
-        return luaL_error( L,"no such socket found" );
-    }
-
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 )
-    {
-        return luaL_error( L,"invalid socket" );
-    }
-
-    if ( socket::CNT_CSCN != sk->conn_type() )
-    {
-        return luaL_error( L,"illegal socket connecte type" );
-    }
-
-    const class packet *pkt = sk->get_packet();
-    if ( !pkt )
-    {
-        return luaL_error( L,"no packet found" );
-    }
-
-    pkt->pack_srv( L,2 );
-
-    return 0;
-}
-
-
-/* 发送s2c数据包
- * network_mgr:send_s2c_packet( conn_id,cmd,errno,pkt )
- */
-int32 lnetwork_mgr::send_s2c_packet()
-{
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-    int32 cmd      = luaL_checkinteger( L,2 );
-    int32 ecode    = luaL_checkinteger( L,3 );
-    if ( !lua_istable( L,4 ) )
-    {
-        return luaL_error( L,
-            "argument #4 expect table,got %s",lua_typename( L,lua_type(L,4) ) );
-    }
-
-    socket_map_t::iterator itr = _socket_map.find( conn_id );
-    if ( itr == _socket_map.end() )
-    {
-        return luaL_error( L,"no such socket found" );
-    }
-
-    cmd_map_t::iterator cmd_itr = _sc_cmd_map.find( cmd );
-    if ( cmd_itr == _sc_cmd_map.end() )
-    {
-        return luaL_error( L,"no command config found:%d",cmd );
-    }
-
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 )
-    {
-        return luaL_error( L,"invalid socket" );
-    }
-
-    if ( socket::CNT_SCCN != sk->conn_type() )
-    {
-        return luaL_error( L,"illegal socket connecte type" );
-    }
-
-    const cmd_cfg_t &cfg = cmd_itr->second;
-    // packet::instance()->unparse_s2c( 
-    //     L,4,cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
-
-    // sk->pending_send();
-
-    return 0;
-}
-
 /* 设置(客户端)连接所有者 */
 int32 lnetwork_mgr::set_owner()
 {
@@ -502,54 +422,6 @@ int32 lnetwork_mgr::set_session()
     return 0;
 }
 
-/* 发送s2s数据包
- * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
- */
-int32 lnetwork_mgr::send_s2s_packet()
-{
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-    int32 cmd      = luaL_checkinteger( L,2 );
-    int32 ecode    = luaL_checkinteger( L,3 );
-
-    int32 pkt_index = 4;
-    if ( !lua_istable( L,pkt_index ) )
-    {
-        return luaL_error( L,"argument #%d expect table,got %s",
-            pkt_index,lua_typename( L,lua_type(L,pkt_index) ) );
-    }
-
-    socket_map_t::iterator itr = _socket_map.find( conn_id );
-    if ( itr == _socket_map.end() )
-    {
-        return luaL_error( L,"no such socket found" );
-    }
-
-    cmd_map_t::iterator cmd_itr = _ss_cmd_map.find( cmd );
-    if ( cmd_itr == _ss_cmd_map.end() )
-    {
-        return luaL_error( L,"no command config found:%d",cmd );
-    }
-
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 )
-    {
-        return luaL_error( L,"invalid socket" );
-    }
-
-    if ( socket::CNT_SSCN != sk->conn_type() )
-    {
-        return luaL_error( L,"illegal socket connecte type" );
-    }
-
-    const cmd_cfg_t &cfg = cmd_itr->second;
-    // packet::instance()->unparse_s2s( L,pkt_index,_session,
-    //     cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
-
-    // sk->pending_send();
-
-    return 0;
-}
-
 /* 设置当前进程的session */
 int32 lnetwork_mgr::set_curr_session()
 {
@@ -557,6 +429,86 @@ int32 lnetwork_mgr::set_curr_session()
     return 0;
 }
 
+class packet *lnetwork_mgr::lua_check_packet( socket::conn_t conn_ty )
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+
+    socket_map_t::iterator itr = _socket_map.find( conn_id );
+    if ( itr == _socket_map.end() )
+    {
+        luaL_error( L,"no such socket found" );
+        return NULL;
+    }
+
+    class socket *sk = itr->second;
+    if ( !sk or sk->fd() <= 0 )
+    {
+        luaL_error( L,"invalid socket" );
+        return NULL;
+    }
+
+    if ( socket::CNT_CSCN != sk->conn_type() )
+    {
+        luaL_error( L,"illegal socket connecte type" );
+        return NULL;
+    }
+
+    class packet *pkt = sk->get_packet();
+    if ( !pkt )
+    {
+        luaL_error( L,"no packet found" );
+        return NULL;
+    }
+
+    return pkt;
+}
+
+/* 发送c2s数据包
+ * network_mgr:send_c2s_packet( conn_id,cmd,pkt )
+ */
+int32 lnetwork_mgr::send_c2s_packet()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_CSCN );
+    pkt->pack_srv( L,2 );
+
+    return 0;
+}
+
+
+/* 发送s2c数据包
+ * network_mgr:send_s2c_packet( conn_id,cmd,errno,pkt )
+ */
+int32 lnetwork_mgr::send_s2c_packet()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_SCCN );
+    pkt->pack_clt( L,2 );
+
+    return 0;
+}
+
+/* 发送s2s数据包
+ * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
+ */
+int32 lnetwork_mgr::send_s2s_packet()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_SSCN );
+
+    // s2s数据包只有stream_packet能打包
+    if ( packet::PKT_STREAM != pkt->type() )
+    {
+        return luaL_error( L,"illegal packet type" );
+    }
+
+    // maybe to slower
+    // class stream_packet *stream_pkt = dynamic_cast<class stream_packet *>(pkt);
+    // if ( !stream_pkt )
+    // {
+    //     return luaL_error( L,"not a stream packet" );
+    // }
+    (reinterpret_cast<stream_packet *>(pkt))->pack_ss( L,2 );
+
+    return 0;
+}
 
 /* 在非网关发送客户端数据包
  * conn_id必须为网关连接
@@ -564,83 +516,15 @@ int32 lnetwork_mgr::set_curr_session()
  */
 int32 lnetwork_mgr::send_ssc_packet()
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-    owner_t owner  = luaL_checkinteger( L,2 );
-    int32 cmd      = luaL_checkinteger( L,3 );
-    int32 ecode    = luaL_checkinteger( L,4 );
+    class packet *pkt = lua_check_packet( socket::CNT_SSCN );
 
-    int32 pkt_index = 5;
-    if ( !lua_istable( L,pkt_index ) )
+    // s2s数据包只有stream_packet能打包
+    if ( packet::PKT_STREAM != pkt->type() )
     {
-        return luaL_error( L,"argument #%d expect table,got %s",
-            pkt_index,lua_typename( L,lua_type(L,pkt_index) ) );
+        return luaL_error( L,"illegal packet type" );
     }
 
-    socket_map_t::iterator itr = _socket_map.find( conn_id );
-    if ( itr == _socket_map.end() )
-    {
-        return luaL_error( L,"no such socket found" );
-    }
-
-    cmd_map_t::iterator cmd_itr = _sc_cmd_map.find( cmd );
-    if ( cmd_itr == _sc_cmd_map.end() )
-    {
-        return luaL_error( L,"no command config found:%d",cmd );
-    }
-
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 )
-    {
-        return luaL_error( L,"invalid socket" );
-    }
-
-    if ( socket::CNT_SSCN != sk->conn_type() )
-    {
-        return luaL_error( L,"illegal socket connecte type" );
-    }
-
-    const cmd_cfg_t &cfg = cmd_itr->second;
-    // packet::instance()->unparse_ssc( L,pkt_index,owner,
-    //     cmd,ecode,cfg._schema,cfg._object,sk->send_buffer() );
-
-    // sk->pending_send();
-
-    return 0;
-}
-
-/* 发送http数据包 */
-int32 lnetwork_mgr::send_http_packet()
-{
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-
-    size_t size = 0;
-    const char *content = luaL_checklstring( L,2,&size );
-    if ( !content || size == 0 )
-    {
-        return luaL_error( L,"invalid http content" );
-    }
-
-    socket_map_t::iterator itr = _socket_map.find( conn_id );
-    if ( itr == _socket_map.end() )
-    {
-        return luaL_error( L,"no such socket found" );
-    }
-
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 )
-    {
-        return luaL_error( L,"invalid socket" );
-    }
-
-    if ( socket::CNT_HTTP != sk->conn_type() )
-    {
-        return luaL_error( L,"illegal socket connecte type" );
-    }
-
-    if ( !sk->append( content,size ) )
-    {
-        return luaL_error( L,"can not reserve memory" );
-    }
+    (reinterpret_cast<stream_packet *>(pkt))->pack_ssc( L,2 );
 
     return 0;
 }
@@ -669,7 +553,7 @@ int32 lnetwork_mgr::get_http_header()
     }
 
     int32 size = 
-        (static_cast<const class http_packet *>(pkt))->unpack_header( L );
+        (reinterpret_cast<const class http_packet *>(pkt))->unpack_header( L );
     if ( size < 0 )
     {
         return luaL_error( L,"http unpack header error" );
@@ -683,29 +567,15 @@ int32 lnetwork_mgr::get_http_header()
  */
 int32 lnetwork_mgr::send_rpc_packet()
 {
-    uint32 conn_id  = static_cast<uint32>( luaL_checkinteger( L,1 ) );
-    int32 unique_id = luaL_checkinteger( L,1 );
+    class packet *pkt = lua_check_packet( socket::CNT_SSCN );
 
-    socket_map_t::iterator itr = _socket_map.find( conn_id );
-    if ( itr == _socket_map.end() )
+    // s2s数据包只有stream_packet能打包
+    if ( packet::PKT_STREAM != pkt->type() )
     {
-        return luaL_error( L,"no such socket found" );
+        return luaL_error( L,"illegal packet type" );
     }
 
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 )
-    {
-        return luaL_error( L,"invalid socket" );
-    }
-
-    if ( socket::CNT_SSCN != sk->conn_type() )
-    {
-        return luaL_error( L,"illegal socket connecte type" );
-    }
-
-    // packet::instance()->unparse_rpc( L,unique_id,1,sk->send_buffer() );
-
-    // sk->pending_send();
+    (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
 
     return 0;
 }
@@ -749,14 +619,14 @@ int32 lnetwork_mgr::set_recv_buffer_size()
 }
 
 /* 通过onwer获取socket连接 */
-class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner )
+class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner ) const
 {
-    uint32 dest_conn = network_mgr->get_conn_id( header->_owner );
+    uint32 dest_conn = get_conn_id( owner );
     if ( !dest_conn ) // 客户端刚好断开或者当前进程不是网关 ?
     {
         return NULL;
     }
-    socket_map_t::iterator itr = _socket_map.find( dest_conn );
+    socket_map_t::const_iterator itr = _socket_map.find( dest_conn );
     if ( itr == _socket_map.end() )
     {
         return NULL;
@@ -767,11 +637,11 @@ class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner )
 
 
 /* 新增连接 */
-class socket *lnetwork_mgr::accept_new( int32 conn_ty )
+class socket *lnetwork_mgr::accept_new( socket::conn_t conn_ty )
 {
-    uint32 conn_id = network_mgr->generate_connect_id();
+    uint32 conn_id = generate_connect_id();
     /* 新增的连接和监听的连接类型必须一样 */
-    class socket *new_sk = new class socket( conn_id,_conn_ty );
+    class socket *new_sk = new class socket( conn_id,conn_ty );
     _socket_map[conn_id] = new_sk;
 
     lua_pushcfunction( L,traceback );
