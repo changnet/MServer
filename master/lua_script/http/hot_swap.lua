@@ -55,7 +55,7 @@ function Hot_swap:exec( conn_id,fields,body )
     local ctx = string.format( page200,string.len(tips),tips )
 
     print( ctx )
-    network_mgr:send_http_packet( conn_id,ctx )
+    network_mgr:send_s2c_packet( conn_id,ctx )
 end
 
 local hs = Hot_swap()

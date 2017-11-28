@@ -5,7 +5,9 @@
 #include "../ev/ev_watcher.h"
 
 #include "buffer.h"
+#include "io/io.h"
 #include "codec/codec.h"
+#include "packet/packet.h"
 
 #ifdef TCP_KEEP_ALIVE
 # define KEEP_ALIVE(x)    socket::keep_alive(x)
@@ -19,8 +21,6 @@
 # define USER_TIMEOUT(x)
 #endif
 
-class io;
-class packet;
 class leventloop;
 
 /* 网络socket连接类
@@ -74,8 +74,12 @@ public:
         this->_method = &socket::method_thunk<K, method>;
     }
 
+    int32 set_io( io::io_t io_type );
+    int32 set_packet( packet::packet_t packet_type );
+    int32 set_codec_type( codec::codec_t codec_type );
+
     class packet *get_packet() const { return _packet; }
-    codec::codec_t codec_type() const { return _codec_ty; }
+    codec::codec_t get_codec_type() const { return _codec_ty; }
 
     inline int32 fd() const { return _w.fd; }
     inline uint32 conn_id() const { return _conn_id; }

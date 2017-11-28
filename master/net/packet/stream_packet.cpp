@@ -146,7 +146,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    codec *decoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+    codec *decoder = codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -214,7 +214,7 @@ void stream_packet::clt_forwarding( const c2s_header *header,int32 session )
     s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
     s2sh._cmd    = 0;
     s2sh._packet = SPKT_CSPK;
-    s2sh._codec  = _socket->codec_type();
+    s2sh._codec  = _socket->get_codec_type();
     s2sh._owner  = network_mgr->get_owner_by_conn_id( conn_id );
 
     send.__append( &s2sh,sizeof(struct s2s_header) );
@@ -244,7 +244,8 @@ void stream_packet::cs_command(
     lua_pushinteger  ( L,owner   );
     lua_pushinteger  ( L,header->_cmd );
 
-    codec *decoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+    codec *decoder = 
+        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -337,7 +338,8 @@ void stream_packet::ss_command(
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    codec *decoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+    codec *decoder = 
+        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -563,7 +565,8 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+    codec *encoder = 
+        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 1,&buffer,cfg );
@@ -613,7 +616,8 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+    codec *encoder = 
+        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 1,&buffer,cfg );
@@ -662,7 +666,8 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()->get_codec( _socket->codec_type() );
+    codec *encoder = 
+        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 2,&buffer,cfg );

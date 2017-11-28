@@ -6,11 +6,10 @@
 
 #include "socket.h"
 #include "../ev/ev_def.h"
+#include "packet/http_packet.h"
+#include "packet/stream_packet.h"
 #include "../lua_cpplib/leventloop.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
-
-#include "io/io.h"
-#include "packet/packet.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
 {
@@ -411,4 +410,45 @@ void socket::command_cb()
     {
         if ( _packet->unpack() <= 0 ) return;
     }while ( fd() > 0 );
+}
+
+int32 socket::set_io( io::io_t io_type )
+{
+    delete _io;
+    _io = NULL;
+
+    switch( io_type )
+    {
+        case io::IOT_NONE :
+            _io = new io();
+            break;
+        case io::IOT_SSL :
+            break;
+        default : assert( "io error",false );
+    }
+    return 0;
+}
+
+int32 socket::set_packet( packet::packet_t packet_type )
+{
+    delete _packet;
+    _packet = NULL;
+
+    switch( packet_type )
+    {
+        case packet::PKT_HTTP :
+            _packet = new http_packet( this );
+            break;
+        case packet::PKT_STREAM :
+            _packet = new stream_packet( this );
+            break;
+        default : assert( "packet error",false );
+    }
+    return 0;
+}
+
+int32 socket::set_codec_type( codec::codec_t codec_type )
+{
+    _codec_ty = codec_type;
+    return 0;
 }

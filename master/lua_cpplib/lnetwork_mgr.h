@@ -72,8 +72,12 @@ public:
     /* 通过onwer获取socket连接 */
     class socket *get_conn_by_owner( owner_t owner ) const;
 
+    /* 通过conn_id获取socket连接 */
+    class socket *get_conn_by_conn_id( uint32 conn_id ) const;
+
     /* 通过conn_id获取session */
     int32 get_session_by_conn_id( uint32 conn_id ) const;
+
     /* 获取指令配置 */
     const cmd_cfg_t *get_cs_cmd( int32 cmd ) const;
     const cmd_cfg_t *get_ss_cmd( int32 cmd ) const;

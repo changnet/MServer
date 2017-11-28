@@ -31,7 +31,7 @@ end
 
 -- 监听http连接
 function Httpd:http_listen( ip,port )
-    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_HTTP )
+    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     PLOG( "%s listen for http at %s:%d",Main.srvname,ip,port )
 
     return true
@@ -72,7 +72,7 @@ function http_command_new( conn_id,url,body )
 
         if not exec_file then
             ELOG( "http request page not found:%s",raw_url )
-            network_mgr:send_http_packet( conn_id,page404 )
+            network_mgr:send_s2c_packet( conn_id,page404 )
 
             return network_mgr:close( conn_id )
         end
@@ -84,7 +84,7 @@ function http_command_new( conn_id,url,body )
     local success = xpcall( 
         Httpd.do_exec, __G__TRACKBACK__,httpd,conn_id,path,fields,body )
     if not success then
-        network_mgr:send_http_packet( conn_id,page500 )
+        network_mgr:send_s2c_packet( conn_id,page500 )
 
         return network_mgr:close( conn_id )
     end

@@ -14,9 +14,7 @@
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
 
-#include "../net/io/io.h"
 #include "../net/socket.h"
-#include "../net/packet/packet.h"
 
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
