@@ -32,7 +32,7 @@ function Hot_swap:swap( list )
 end
 
 --[[
-curl -l -H "Content-type: application/json" -X POST -d '{"gateway":[]}' 127.0.0.1:10003/hot_swap
+curl -l -H "Content-type: application/json" -X POST -d '{"gateway":[],"world":[]}' 127.0.0.1:10003/hot_swap
 curl -l -H "Content-type: application/json" -X POST -d '{"gateway":["network.network_mgr"],"world":["network.network_mgr"]}' 127.0.0.1:10003/hot_swap
 ]]
 function Hot_swap:exec( conn_id,fields,body )
@@ -46,16 +46,17 @@ function Hot_swap:exec( conn_id,fields,body )
     for srvname,module_list in pairs( tbl ) do
         if srvname ~= local_name then
             local pkt = { module = module_list }
-            vd( pkt )
+
             g_network_mgr:srv_name_send( srvname,SS.SYS_HOT_SWAP,pkt )
         end
     end
 
-    local tips = "hot swap success!"
+    local tips = "hot swap success!\n"
     local ctx = string.format( page200,string.len(tips),tips )
 
-    print( ctx )
-    network_mgr:send_s2c_packet( conn_id,ctx )
+    network_mgr:send_http_packet( conn_id,ctx )
+
+    g_rpc:invoke( "rpc_test",1,2,3,"abc",nil,{a = 5,b = 9},99.75863 )
 end
 
 local hs = Hot_swap()

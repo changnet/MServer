@@ -479,6 +479,17 @@ int32 lnetwork_mgr::send_s2c_packet()
     return 0;
 }
 
+/* 发送http数据包
+ * network_mgr:send_http_packet( conn_id,ctx )
+ */
+int32 lnetwork_mgr::send_http_packet()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_HTTP );
+    pkt->pack_clt( L,2 );
+
+    return 0;
+}
+
 /* 发送s2s数据包
  * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
  */
@@ -536,7 +547,7 @@ int32 lnetwork_mgr::get_http_header()
     const class packet *pkt = sk->get_packet();
     if ( !pkt || packet::PKT_HTTP != pkt->type() )
     {
-        return luaL_error( L,"illegal socket connecte type" );
+        return luaL_error( L,"illegal socket packet type" );
     }
 
     int32 size = 

@@ -569,7 +569,7 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 1,&buffer,cfg );
+    int32 len = encoder->encode( L,index + 2,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     if (len > MAX_PACKET_LEN )
@@ -708,9 +708,9 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
 
 int32 stream_packet::pack_rpc( lua_State *L,int32 index )
 {
-    int32 unique_id = luaL_checkinteger( L,1 );
+    int32 unique_id = luaL_checkinteger( L,index );
     // ecode默认0
-    rpc_pack( L,unique_id,0,SPKT_RPCR,index );
+    rpc_pack( L,unique_id,0,SPKT_RPCR,index + 1 );
 
     return 0;
 }
@@ -719,20 +719,20 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    owner_t owner  = luaL_checkinteger( L,index + 1 );
-    int32 codec_ty = luaL_checkinteger( L,index + 2 );
-    int32 cmd      = luaL_checkinteger( L,index + 3 );
-    int32 ecode    = luaL_checkinteger( L,index + 4 );
+    owner_t owner  = luaL_checkinteger( L,index     );
+    int32 codec_ty = luaL_checkinteger( L,index + 1 );
+    int32 cmd      = luaL_checkinteger( L,index + 2 );
+    int32 ecode    = luaL_checkinteger( L,index + 3 );
 
     if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
     {
         return luaL_error( L,"illegal codec type" );
     }
 
-    if ( !lua_istable( L,index + 5 ) )
+    if ( !lua_istable( L,index + 4 ) )
     {
         return luaL_error( L,
-            "expect table,got %s",lua_typename( L,lua_type(L,index + 5) ) );
+            "expect table,got %s",lua_typename( L,lua_type(L,index + 4) ) );
     }
 
     const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
@@ -745,7 +745,7 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
         ->get_codec( static_cast<codec::codec_t>(codec_ty) );
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 5,&buffer,cfg );
+    int32 len = encoder->encode( L,index + 4,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     if ( len > MAX_PACKET_LEN )

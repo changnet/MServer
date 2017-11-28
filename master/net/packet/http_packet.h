@@ -35,7 +35,7 @@ public:
     /* http_parse 回调函数 */
     void reset();
     void on_headers_complete();
-    void on_message_complete();
+    int32 on_message_complete();
     void append_url( const char *at,size_t len );
     void append_body( const char *at,size_t len );
     void append_cur_field( const char *at,size_t len );

@@ -35,7 +35,7 @@ end
 function Android_mgr:start()
     local srvindex = tonumber(Main.srvindex) -- 平台
     local srvid = tonumber(Main.srvid) -- 服务器
-    for index = 1,2500 do
+    for index = 1,1 do
         local conn_id = 
             network_mgr:connect( "127.0.0.1",10002,network_mgr.CNT_CSCN )
 
@@ -71,6 +71,11 @@ function cscn_connect_new( conn_id,ecode )
 
         return
     end
+
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+
     PLOG( "android(%d) connect establish",android.index)
     android:on_connect()
 end

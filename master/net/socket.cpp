@@ -29,12 +29,6 @@ socket::~socket()
 
 void socket::stop()
 {
-    delete _io;
-    delete _packet;
-
-    _io = NULL;
-    _packet = NULL;
-
     if ( _sending )
     {
         leventloop::instance()->remove_sending( _sending );
@@ -49,6 +43,13 @@ void socket::stop()
         _w.stop ();
         _w.fd = -1; /* must after stop */
     }
+
+    /* 必须先send后才能delete */
+    delete _io;
+    delete _packet;
+
+    _io = NULL;
+    _packet = NULL;
 
     _recv.clear();
     _send.clear();

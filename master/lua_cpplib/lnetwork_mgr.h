@@ -41,6 +41,7 @@ public:
     int32 send_s2s_packet(); /* 发送s2s数据包 */
     int32 send_ssc_packet(); /* 跨服务器发送客户端数据包 */
     int32 send_rpc_packet(); /* 发送rpc数据包 */
+    int32 send_http_packet();/* 发送http数据包 */
 
     int32 set_send_buffer_size(); /* 设置发送缓冲区大小 */
     int32 set_recv_buffer_size(); /* 设置接收缓冲区大小 */

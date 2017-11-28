@@ -88,9 +88,9 @@ int32 on_message_complete( http_parser *parser )
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
-    http_packet->on_message_complete();
 
-    return 0;
+    // 这里返回非0将不再继续解析
+    return http_packet->on_message_complete();;
 }
 
 /* http chunk应该用不到，暂不处理 */
@@ -172,7 +172,7 @@ void http_packet::on_headers_complete()
     _http_info._head_field[_cur_field] = _cur_value;
 }
 
-void http_packet::on_message_complete()
+int32 http_packet::on_message_complete()
 {
     static lua_State *L = lstate::instance()->state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
@@ -188,9 +188,11 @@ void http_packet::on_message_complete()
         ERROR( "http_command_new:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,2 ); /* remove traceback and error object */
-        return;
+        return -1;
     }
     lua_pop( L,1 ); /* remove traceback */
+
+    return 0;
 }
 
 void http_packet::append_url( const char *at,size_t len )

@@ -23,6 +23,15 @@ local function player_login_otherwhere( srv_conn,pkt )
     g_player_mgr:on_login_otherwhere( pkt.pid )
 end
 
+local function rpc_test( ... )
+    print("rpc_test ==================================",...)
+end
+
+local function x_rpc_test( ... )
+    print("x_rpc_test ==================================",...)
+    return ...
+end
+
 -- 这里注册系统模块的协议处理
 if "gateway" == Main.srvname then
     g_command_mgr:clt_register( CS.PLAYER_LOGIN,
@@ -37,4 +46,7 @@ if "world" == Main.srvname then
 
     g_command_mgr:srv_register( SS.PLAYER_OFFLINE,player_offline )
     g_command_mgr:srv_register( SS.PLAYER_OTHERWHERE,player_login_otherwhere )
+
+    g_rpc:declare("rpc_test",rpc_test)
+    g_rpc:declare("x_rpc_test",x_rpc_test)
 end

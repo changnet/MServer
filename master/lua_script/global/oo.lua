@@ -126,7 +126,7 @@ function oo.define(_table, name)
 
     if type(name) == "string" then
         if const_define[name] ~= nil then
-            local clz = class_list[name]
+            local clz = const_define[name]
             for k,v in pairs(clz) do
                 clz[k] = nil
             end

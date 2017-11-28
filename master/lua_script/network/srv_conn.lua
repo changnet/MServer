@@ -21,7 +21,13 @@ end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
 function Srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
-    return network_mgr:send_ssc_packet( self.conn_id,pid,cmd,ecode or 0,pkt )
+    return network_mgr:send_ssc_packet(
+        self.conn_id,pid,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+end
+
+-- 发送数据包
+function Srv_conn:send_rpc_pkt( unique_id,name,... )
+    return network_mgr:send_rpc_packet( self.conn_id,cmd,ecode or 0,pkt )
 end
 
 -- timeout check

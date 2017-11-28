@@ -52,7 +52,7 @@ function http_accept_new( conn_id )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( conn_id,network_mgr.PKT_HTTP )
 
-    print( "http_accept_new" )
+    print( "http_accept_new",conn_id )
 end
 
 function http_connect_new( conn_id )
@@ -60,11 +60,11 @@ function http_connect_new( conn_id )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( conn_id,network_mgr.PKT_HTTP )
 
-    print( "http_connect_new" )
+    print( "http_connect_new",conn_id )
 end
 
-function http_connect_del()
-    print( "http_connect_del" )
+function http_connect_del( conn_id )
+    print( "http_connect_del",conn_id )
 end
 
 -- http回调
@@ -80,7 +80,7 @@ function http_command_new( conn_id,url,body )
 
         if not exec_file then
             ELOG( "http request page not found:%s",raw_url )
-            network_mgr:send_s2c_packet( conn_id,page404 )
+            network_mgr:send_http_packet( conn_id,page404 )
 
             return network_mgr:close( conn_id )
         end
@@ -92,7 +92,7 @@ function http_command_new( conn_id,url,body )
     local success = xpcall( 
         Httpd.do_exec, __G__TRACKBACK__,httpd,conn_id,path,fields,body )
     if not success then
-        network_mgr:send_s2c_packet( conn_id,page500 )
+        network_mgr:send_http_packet( conn_id,page500 )
 
         return network_mgr:close( conn_id )
     end
