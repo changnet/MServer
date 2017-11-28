@@ -177,7 +177,7 @@ void stream_packet::cs_dispatch( const struct c2s_header *header )
     }
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if ( cmd_cfg->_session != network_mgr->curr_session() )
+    if ( cmd_cfg->_session != network_mgr->get_curr_session() )
     {
         clt_forwarding( header,cmd_cfg->_session );
         return;
@@ -191,7 +191,7 @@ void stream_packet::clt_forwarding( const c2s_header *header,int32 session )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    class socket *dest_sk  = network_mgr->get_connection( session );
+    class socket *dest_sk  = network_mgr->get_conn_by_session( session );
     if ( !dest_sk )
     {
         ERROR( "client "
@@ -215,7 +215,7 @@ void stream_packet::clt_forwarding( const c2s_header *header,int32 session )
     s2sh._cmd    = 0;
     s2sh._packet = SPKT_CSPK;
     s2sh._codec  = _socket->codec_type();
-    s2sh._owner  = network_mgr->get_owner( conn_id );
+    s2sh._owner  = network_mgr->get_owner_by_conn_id( conn_id );
 
     send.__append( &s2sh,sizeof(struct s2s_header) );
     send.__append( header,size );
@@ -236,7 +236,7 @@ void stream_packet::cs_command(
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
     int32 conn_id = _socket->conn_id();
-    owner_t owner = network_mgr->get_owner( conn_id );
+    owner_t owner = network_mgr->get_owner_by_conn_id( conn_id );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"cs_command_new" );
@@ -296,9 +296,10 @@ void stream_packet::ss_dispatch( const s2s_header *header )
     }
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if ( cmd_cfg->_session != network_mgr->curr_session() )
+    if ( cmd_cfg->_session != network_mgr->get_curr_session() )
     {
-        class socket *dest_sk  = network_mgr->get_connection( cmd_cfg->_session );
+        class socket *dest_sk  = 
+            network_mgr->get_conn_by_session( cmd_cfg->_session );
         if ( !dest_sk )
         {
             ERROR( "server packet forwarding "
@@ -405,7 +406,7 @@ void stream_packet::ssc_command( const s2s_header *header )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    class socket *sk = network_mgr->get_connection_by_owner( header->_owner );
+    class socket *sk = network_mgr->get_conn_by_owner( header->_owner );
     if ( !sk )
     {
         ERROR( "ssc packet no clt connect found" );
@@ -684,7 +685,7 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
     hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
     hd._cmd    = static_cast<uint16> ( cmd );
     hd._errno  = ecode;
-    hd._owner  = network_mgr->curr_session();
+    hd._owner  = network_mgr->get_curr_session();
     hd._packet = SPKT_SSPK;
 
     send.__append( &hd,sizeof(struct s2s_header) );

@@ -104,7 +104,7 @@ void lnetwork_mgr::invoke_delete()
  * 之所以不用系统的文件描述符fd，是因为fd对于上层逻辑不可控。比如一个fd被释放，可能在多个进程
  * 之间还未处理完，此fd就被重用了。当前的连接id不太可能会在短时间内重用。
  */
-uint32 lnetwork_mgr::generate_connect_id()
+uint32 lnetwork_mgr::new_connect_id()
 {
     do
     {
@@ -229,7 +229,7 @@ int32 lnetwork_mgr::listen()
         return luaL_error( L,"illegal connection type" );
     }
 
-    uint32 conn_id = generate_connect_id();
+    uint32 conn_id = new_connect_id();
     class socket *_socket = 
         new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
@@ -264,7 +264,7 @@ int32 lnetwork_mgr::connect()
         return luaL_error( L,"illegal connection type" );
     }
 
-    uint32 conn_id = generate_connect_id();
+    uint32 conn_id = new_connect_id();
     class socket *_socket = 
         new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
@@ -309,7 +309,7 @@ const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32 cmd ) const
 }
 
 /* 通过连接id查找所有者 */
-owner_t lnetwork_mgr::get_owner( uint32 conn_id ) const
+owner_t lnetwork_mgr::get_owner_by_conn_id( uint32 conn_id ) const
 {
     map_t<uint32,owner_t>::const_iterator itr = _conn_owner_map.find( conn_id );
     if ( itr == _conn_owner_map.end() )
@@ -321,7 +321,7 @@ owner_t lnetwork_mgr::get_owner( uint32 conn_id ) const
 }
 
 /* 通过所有者查找连接id */
-uint32 lnetwork_mgr::get_conn_id( owner_t owner ) const
+uint32 lnetwork_mgr::get_conn_id_by_owner( owner_t owner ) const
 {
     map_t<owner_t,uint32>::const_iterator itr = _owner_map.find( owner );
     if ( itr == _owner_map.end() )
@@ -333,7 +333,7 @@ uint32 lnetwork_mgr::get_conn_id( owner_t owner ) const
 }
 
 /* 通过session获取socket连接 */
-class socket *lnetwork_mgr::get_connection( int32 session ) const
+class socket *lnetwork_mgr::get_conn_by_session( int32 session ) const
 {
     map_t<int32,uint32>::const_iterator itr = _session_map.find( session );
     if ( itr == _session_map.end() ) return NULL;
@@ -345,7 +345,7 @@ class socket *lnetwork_mgr::get_connection( int32 session ) const
 }
 
 /* 通过conn_id获取session */
-int32 lnetwork_mgr::get_session( uint32 conn_id ) const
+int32 lnetwork_mgr::get_session_by_conn_id( uint32 conn_id ) const
 {
     map_t<uint32,int32>::const_iterator itr = _conn_session_map.find( conn_id );
     if ( itr == _conn_session_map.end() ) return 0;
@@ -619,9 +619,9 @@ int32 lnetwork_mgr::set_recv_buffer_size()
 }
 
 /* 通过onwer获取socket连接 */
-class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner ) const
+class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
 {
-    uint32 dest_conn = get_conn_id( owner );
+    uint32 dest_conn = get_conn_id_by_owner( owner );
     if ( !dest_conn ) // 客户端刚好断开或者当前进程不是网关 ?
     {
         return NULL;
@@ -639,7 +639,7 @@ class socket *lnetwork_mgr::get_connection_by_owner( owner_t owner ) const
 /* 新增连接 */
 class socket *lnetwork_mgr::accept_new( socket::conn_t conn_ty )
 {
-    uint32 conn_id = generate_connect_id();
+    uint32 conn_id = new_connect_id();
     /* 新增的连接和监听的连接类型必须一样 */
     class socket *new_sk = new class socket( conn_id,conn_ty );
     _socket_map[conn_id] = new_sk;

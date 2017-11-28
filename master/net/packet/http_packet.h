@@ -21,10 +21,10 @@ public:
     virtual ~http_packet();
     explicit http_packet( class socket *sk );
 
-    /* http的打包放在脚本就可以了，底层暂不处理
-     */
-     int32 pack_clt( lua_State *L,int32 index ) { return 0; }
-     int32 pack_srv( lua_State *L,int32 index ) { return 0; }
+    packet_t type() const { return PKT_HTTP; }
+
+     int32 pack_clt( lua_State *L,int32 index );
+     int32 pack_srv( lua_State *L,int32 index );
     /* 数据解包 
      * return: <0 error;0 success
      */
@@ -41,6 +41,8 @@ public:
     void append_cur_field( const char *at,size_t len );
     void append_cur_value( const char *at,size_t len );
 private:
+    int32 pack_raw( lua_State *L,int32 index );
+
     http_parser *_parser;
     std::string _cur_field;
     std::string _cur_value;

@@ -255,3 +255,32 @@ int32 http_packet::unpack_header( lua_State *L ) const
 
     return size;
 }
+
+/* http的GET、POST都由上层处理好再传入底层
+ */
+int32 http_packet::pack_raw( lua_State *L,int32 index )
+{
+    size_t size = 0;
+    const char *ctx = luaL_checklstring( L,index,&size );
+    if ( !ctx ) return 0;
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( size ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    send.__append( ctx ,size );
+
+    return 0;
+}
+
+int32 http_packet::pack_clt( lua_State *L,int32 index )
+{
+    return pack_raw( L,index );
+}
+
+int32 http_packet::pack_srv( lua_State *L,int32 index )
+{
+    return pack_raw( L,index );
+}

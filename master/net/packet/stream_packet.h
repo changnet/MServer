@@ -14,6 +14,8 @@ public:
     virtual ~stream_packet();
     stream_packet( class socket *sk );
 
+    packet_t type() const { return PKT_STREAM; }
+
     /* 打包服务器发放客户端数据包
      * return: <0 error;0 incomplete;>0 success
      */

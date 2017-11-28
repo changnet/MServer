@@ -21,7 +21,7 @@ public:
         PKT_MAX
     }packet_t;
 public:
-    virtual ~packet();
+    virtual ~packet() {};
     packet( class socket *sk ) : _socket( sk ) {};
 
     /* 获取当前packet类型

@@ -68,31 +68,30 @@ public:
     void invoke_delete();
 
     /* 通过连接id查找所有者 */
-    owner_t get_owner( uint32 conn_id ) const;
+    owner_t get_owner_by_conn_id( uint32 conn_id ) const;
     /* 通过所有者查找连接id */
-    uint32 get_conn_id( owner_t owner ) const;
+    uint32 get_conn_id_by_owner( owner_t owner ) const;
 
     /* 通过session获取socket连接 */
-    class socket *get_connection( int32 session ) const;
+    class socket *get_conn_by_session( int32 session ) const;
 
     /* 通过onwer获取socket连接 */
-    class socket *get_connection_by_owner( owner_t owner ) const;
+    class socket *get_conn_by_owner( owner_t owner ) const;
 
-    /* 获取connect_id */
-    uint32 generate_connect_id();
     /* 通过conn_id获取session */
-    int32 get_session( uint32 conn_id ) const;
+    int32 get_session_by_conn_id( uint32 conn_id ) const;
     /* 获取指令配置 */
     const cmd_cfg_t *get_cs_cmd( int32 cmd ) const;
     const cmd_cfg_t *get_ss_cmd( int32 cmd ) const;
     const cmd_cfg_t *get_sc_cmd( int32 cmd ) const;
     /* 获取当前服务器session */
-    int32 curr_session() const { return _session; }
+    int32 get_curr_session() const { return _session; }
 
     class socket *accept_new( socket::conn_t conn_ty );
     bool connect_new( uint32 conn_id,int32 conn_ty,int32 ecode );
     bool connect_del( uint32 conn_id,int32 conn_ty );
 private:
+    uint32 new_connect_id(); /* 获取新connect_id */
     void delete_socket( uint32 conn_id );
     class packet *lua_check_packet( socket::conn_t conn_ty );
 private:
