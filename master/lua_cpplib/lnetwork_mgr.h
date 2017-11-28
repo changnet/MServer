@@ -33,7 +33,7 @@ public:
     int32 set_conn_session(); /* 设置(服务器)连接session */
     int32 set_curr_session(); /* 设置当前服务器的session */
 
-    int32 load_schema(); /* 加载schema文件 */
+    int32 load_one_schema(); /* 加载schema文件 */
     int32 get_http_header(); /* 获取http报文头数据 */
 
     int32 send_c2s_packet(); /* 发送c2s数据包 */

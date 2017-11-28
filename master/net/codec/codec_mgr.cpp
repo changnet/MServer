@@ -17,7 +17,7 @@ codec_mgr::codec_mgr()
 
 codec_mgr::~codec_mgr()
 {
-    for (int32 idx = 0;codec::CDC_MAX;idx ++ )
+    for (int32 idx = 0;idx < codec::CDC_MAX;idx ++ )
     {
         if ( _codecs[idx] )
         {
@@ -43,16 +43,9 @@ void codec_mgr::uninstance()
     _codec_mgr = NULL;
 }
 
-int32 codec_mgr::load_schema( const char *path )
+int32 codec_mgr::load_one_schema( codec::codec_t type,const char *path ) const
 {
-    for (int32 idx = 0;codec::CDC_MAX;idx ++ )
-    {
-        if ( _codecs[idx] )
-        {
-            _codecs[idx]->load_path( path );
-        }
-    }
-    return 0;
+    return  NULL == _codecs[type] ? -1 : _codecs[type]->load_path( path );
 }
 
 class codec *codec_mgr::get_codec( codec::codec_t type )

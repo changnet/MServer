@@ -365,24 +365,24 @@ void socket::listen_cb()
  * 1）连接成功建立时，socket 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
  * 2）连接建立失败时，socket 描述字既可读又可写。 （由于有未决的错误，从而可读又可写）
  */
- void socket::connect_cb ()
- {
-     int32 ecode = socket::validate();
- 
-     if ( 0 == ecode )
-     {
-         KEEP_ALIVE( socket::fd() );
-         USER_TIMEOUT( socket::fd() );
- 
-         socket::start();
-     }
- 
-     /* 连接失败或回调脚本失败,都会被connect_new删除 */
-     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
-     bool is_ok = network_mgr->connect_new( _conn_id,_conn_ty,ecode );
- 
-     if ( !is_ok || 0 != ecode ) socket::stop ();
- }
+void socket::connect_cb ()
+{
+    int32 ecode = socket::validate();
+
+    if ( 0 == ecode )
+    {
+        KEEP_ALIVE( socket::fd() );
+        USER_TIMEOUT( socket::fd() );
+
+        socket::start();
+    }
+
+    /* 连接失败或回调脚本失败,都会被connect_new删除 */
+    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    bool is_ok = network_mgr->connect_new( _conn_id,_conn_ty,ecode );
+
+    if ( !is_ok || 0 != ecode ) socket::stop ();
+}
 
 void socket::command_cb()
 {
@@ -393,6 +393,7 @@ void socket::command_cb()
     {
         socket::stop();
         network_mgr->connect_del( _conn_id,_conn_ty );
+        return;
     }
     else if ( 0 > ret ) /* 出错 */
     {

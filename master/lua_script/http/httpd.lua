@@ -31,7 +31,7 @@ end
 
 -- 监听http连接
 function Httpd:http_listen( ip,port )
-    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
+    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_HTTP )
     PLOG( "%s listen for http at %s:%d",Main.srvname,ip,port )
 
     return true
@@ -47,11 +47,19 @@ local httpd = Httpd()
 
 -- =============================================================================
 
-function http_accept_new()
+function http_accept_new( conn_id )
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_NONE )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_HTTP )
+
     print( "http_accept_new" )
 end
 
-function http_connect_new()
+function http_connect_new( conn_id )
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_NONE )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_HTTP )
+
     print( "http_connect_new" )
 end
 

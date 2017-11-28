@@ -157,6 +157,10 @@ function sscn_accept_new( conn_id )
     local conn = Srv_conn( conn_id )
     _network_mgr.srv_conn[conn_id] = conn
 
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+
     -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
     network_mgr:set_send_buffer_size( conn_id,16777216*4,16777216*4 )
     network_mgr:set_recv_buffer_size( conn_id,16777216*4,16777216*4 )
@@ -168,6 +172,10 @@ function sccn_accept_new( conn_id )
     local conn = Clt_conn( conn_id )
     _network_mgr.clt_conn[conn_id] = conn
 
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+
     PLOG( "accept client connection:%d",conn_id )
 end
 
@@ -178,6 +186,10 @@ function sscn_connect_new( conn_id,ecode )
         _network_mgr.srv_conn[conn_id] = nil
         return
     end
+
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
 
     -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
     network_mgr:set_send_buffer_size( conn_id,16777216*4,16777216*4 )

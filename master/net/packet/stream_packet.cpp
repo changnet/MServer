@@ -592,7 +592,9 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
 
     send.__append( &hd,sizeof(struct s2c_header) );
     if (len > 0) send.__append( buffer,len );
+
     encoder->finalize();
+    _socket->pending_send();
 
     return 0;
 }
@@ -642,7 +644,9 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
 
     send.__append( &hd,sizeof(struct c2s_header) );
     if (len > 0) send.__append( buffer,len );
+
     encoder->finalize();
+    _socket->pending_send();
 
     return 0;
 }
@@ -695,7 +699,9 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
 
     send.__append( &hd,sizeof(struct s2s_header) );
     if ( len > 0 ) send.__append( buffer,len );
+
     encoder->finalize();
+    _socket->pending_send();
 
     return 0;
 }
@@ -773,7 +779,9 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     send.__append( &hd ,sizeof(struct s2s_header) );
     send.__append( &chd,sizeof(struct s2c_header) );
     if ( len > 0 ) send.__append( buffer,len );
+
     encoder->finalize();
+    _socket->pending_send();
 
     return 0;
 }

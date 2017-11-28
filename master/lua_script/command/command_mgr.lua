@@ -26,8 +26,11 @@ end
 
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
-    local fs = network_mgr:load_schema( "pb" )
+    local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
     PLOG( "%s load protocol schema:%d",Main.srvname,fs )
+
+    local fs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
+    PLOG( "%s load flatbuffers schema:%d",Main.srvname,fs )
 end
 
 -- 注册客户端协议处理

@@ -9,8 +9,8 @@ public:
     static void uninstance();
     static class codec_mgr *instance();
 
-    int32 load_schema( const char *path );
     class codec *get_codec( codec::codec_t type );
+    int32 load_one_schema( codec::codec_t type,const char *path ) const;
 private:
     codec_mgr();
     ~codec_mgr();

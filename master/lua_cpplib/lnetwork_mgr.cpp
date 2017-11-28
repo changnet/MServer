@@ -12,6 +12,7 @@ const static char *ACCEPT_EVENT[] =
     "cscn_accept_new", // CNT_CSCN
     "sccn_accept_new", // CNT_SCCN
     "sscn_accept_new", // CNT_SSCN
+    "http_accept_new", // CNT_HTTP
 };
 
 const static char *CONNECT_EVENT[] =
@@ -20,6 +21,7 @@ const static char *CONNECT_EVENT[] =
     "cscn_connect_new", // CNT_CSCN
     "sccn_connect_new", // CNT_SCCN
     "sscn_connect_new", // CNT_SSCN
+    "http_connect_new", // CNT_HTTP
 };
 
 const static char *DELETE_EVENT[] =
@@ -28,6 +30,7 @@ const static char *DELETE_EVENT[] =
     "cscn_connect_del", // CNT_CSCN
     "sccn_connect_del", // CNT_SCCN
     "sscn_connect_del", // CNT_SSCN
+    "http_connect_del", // CNT_HTTP
 };
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
@@ -346,10 +349,7 @@ class socket *lnetwork_mgr::get_conn_by_conn_id( uint32 conn_id ) const
     socket_map_t::const_iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() ) return NULL;
 
-    class socket *sk = itr->second;
-    if ( !sk or sk->fd() <= 0 ) return NULL;
-
-    return sk;
+    return itr->second;
 }
 
 /* 通过conn_id获取session */
@@ -362,11 +362,15 @@ int32 lnetwork_mgr::get_session_by_conn_id( uint32 conn_id ) const
 }
 
 /* 加载schema文件 */
-int32 lnetwork_mgr::load_schema()
+int32 lnetwork_mgr::load_one_schema()
 {
-    const char *path = luaL_checkstring( L,1 );
+    int32 type = luaL_checkinteger( L,1 );
+    const char *path = luaL_checkstring( L,2 );
 
-    int32 count = codec_mgr::instance()->load_schema( path );
+    if ( type < codec::CDC_NONE || type >= codec::CDC_MAX ) return -1;
+
+    int32 count = codec_mgr::instance()->
+        load_one_schema( static_cast<codec::codec_t>(type),path );
 
     lua_pushinteger( L,count );
     return 1;
@@ -436,7 +440,7 @@ class packet *lnetwork_mgr::lua_check_packet( socket::conn_t conn_ty )
         return NULL;
     }
 
-    if ( socket::CNT_CSCN != sk->conn_type() )
+    if ( conn_ty != sk->conn_type() )
     {
         luaL_error( L,"illegal socket connecte type" );
         return NULL;
@@ -618,7 +622,6 @@ class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
     return itr->second;
 }
 
-
 /* 新增连接 */
 class socket *lnetwork_mgr::accept_new( socket::conn_t conn_ty )
 {
@@ -714,6 +717,8 @@ int32 lnetwork_mgr::set_conn_io() /* 设置socket的io方式 */
         return luaL_error( L,"invalid io type" );
     }
 
+    sk->set_io( static_cast<io::io_t>(io_type) );
+
     return 0;
 }
 
@@ -740,5 +745,20 @@ int32 lnetwork_mgr::set_conn_codec() /* 设置socket的编译方式 */
 
 int32 lnetwork_mgr::set_conn_packet() /* 设置socket的打包方式 */
 {
+    uint32 conn_id = luaL_checkinteger( L,1 );
+    int32 packet_type  = luaL_checkinteger( L,2 );
+
+    class socket *sk = get_conn_by_conn_id( conn_id );
+    if ( !sk )
+    {
+        return luaL_error( L,"invalid conn id" );
+    }
+
+    if ( packet_type < packet::PKT_NONE || packet_type >= packet::PKT_MAX )
+    {
+        return luaL_error( L,"invalid packet type" );
+    }
+
+    sk->set_packet( static_cast<packet::packet_t>( packet_type ) );
     return 0;
 }

@@ -231,7 +231,7 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::close> ( "close" );
     lc.def<&lnetwork_mgr::listen> ( "listen" );
     lc.def<&lnetwork_mgr::connect> ( "connect" );
-    lc.def<&lnetwork_mgr::load_schema> ( "load_schema" );
+    lc.def<&lnetwork_mgr::load_one_schema> ( "load_one_schema" );
     lc.def<&lnetwork_mgr::set_curr_session> ( "set_curr_session" );
 
     lc.def<&lnetwork_mgr::set_conn_session> ( "set_conn_session" );
@@ -259,6 +259,7 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );
     lc.set( "CNT_SSCN",socket::CNT_SSCN );
+    lc.set( "CNT_HTTP",socket::CNT_HTTP );
 
     lc.set( "IOT_NONE",io::IOT_NONE );
     lc.set( "IOT_SSL" ,io::IOT_SSL  );

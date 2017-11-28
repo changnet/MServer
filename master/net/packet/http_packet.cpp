@@ -271,6 +271,7 @@ int32 http_packet::pack_raw( lua_State *L,int32 index )
     }
 
     send.__append( ctx ,size );
+    _socket->pending_send();
 
     return 0;
 }

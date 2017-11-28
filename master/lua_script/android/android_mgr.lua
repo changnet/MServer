@@ -13,7 +13,7 @@ function Android_mgr:__init()
     self.conn    = {}
     self.android = {}
 
-    local fs = network_mgr:load_schema( "pb" )
+    local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
     PLOG( "android load protocol schema:%d",fs )
     for _,v in pairs( SC or {} ) do
         self.cmd[ v[1] ] = v
