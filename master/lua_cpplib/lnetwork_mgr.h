@@ -24,34 +24,28 @@ public:
     int32 set_cs_cmd();
     int32 set_ss_cmd();
     int32 set_sc_cmd();
-    /* 设置(客户端)连接所有者 */
-    int32 set_owner();
-    /* 设置(服务器)连接session */
-    int32 set_session();
-    /* 设置当前服务器的session */
-    int32 set_curr_session();
 
-    /* 加载schema文件 */
-    int32 load_schema();
+    int32 set_conn_io(); /* 设置socket的io方式 */
+    int32 set_conn_codec (); /* 设置socket的编译方式 */
+    int32 set_conn_packet(); /* 设置socket的打包方式 */
 
-    /* 获取http报文头数据 */
-    int32 get_http_header();
+    int32 set_conn_owner  (); /* 设置(客户端)连接所有者 */
+    int32 set_conn_session(); /* 设置(服务器)连接session */
+    int32 set_curr_session(); /* 设置当前服务器的session */
 
-    /* 发送c2s数据包 */
-    int32 send_c2s_packet();
-    /* 发送s2c数据包 */
-    int32 send_s2c_packet();
-    /* 发送s2s数据包 */
-    int32 send_s2s_packet();
-    /* 跨服务器发送客户端数据包 */
-    int32 send_ssc_packet();
-    /* 发送rpc数据包 */
-    int32 send_rpc_packet();
-    /* 设置发送缓冲区大小 */
-    int32 set_send_buffer_size();
-    /* 设置接收缓冲区大小 */
-    int32 set_recv_buffer_size();
+    int32 load_schema(); /* 加载schema文件 */
+    int32 get_http_header(); /* 获取http报文头数据 */
 
+    int32 send_c2s_packet(); /* 发送c2s数据包 */
+    int32 send_s2c_packet(); /* 发送s2c数据包 */
+    int32 send_s2s_packet(); /* 发送s2s数据包 */
+    int32 send_ssc_packet(); /* 跨服务器发送客户端数据包 */
+    int32 send_rpc_packet(); /* 发送rpc数据包 */
+
+    int32 set_send_buffer_size(); /* 设置发送缓冲区大小 */
+    int32 set_recv_buffer_size(); /* 设置接收缓冲区大小 */
+
+    /* socket基本操作 */
     int32 close();
     int32 address ();
     int32 listen  ();

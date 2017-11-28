@@ -365,7 +365,7 @@ int32 lnetwork_mgr::load_schema()
 }
 
 /* 设置(客户端)连接所有者 */
-int32 lnetwork_mgr::set_owner()
+int32 lnetwork_mgr::set_conn_owner()
 {
     uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
     owner_t owner  = luaL_checkinteger( L,2 );
@@ -394,7 +394,7 @@ int32 lnetwork_mgr::set_owner()
 }
 
 /* 设置(服务器)连接session */
-int32 lnetwork_mgr::set_session()
+int32 lnetwork_mgr::set_conn_session()
 {
     uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
     int32 session  = luaL_checkinteger( L,2 );
@@ -713,4 +713,19 @@ bool lnetwork_mgr::connect_del( uint32 conn_id,int32 conn_ty )
     lua_pop( L,1 ); /* remove traceback */
 
     return true;
+}
+
+int32 lnetwork_mgr::set_conn_io() /* 设置socket的io方式 */
+{
+    return 0;
+}
+
+int32 lnetwork_mgr::set_conn_codec () /* 设置socket的编译方式 */
+{
+    return 0;
+}
+
+int32 lnetwork_mgr::set_conn_packet() /* 设置socket的打包方式 */
+{
+    return 0;
 }

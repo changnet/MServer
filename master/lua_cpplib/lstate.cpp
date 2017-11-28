@@ -14,7 +14,9 @@
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
 
+#include "../net/io/io.h"
 #include "../net/socket.h"
+#include "../net/packet/packet.h"
 
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
@@ -234,12 +236,16 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::load_schema> ( "load_schema" );
     lc.def<&lnetwork_mgr::set_curr_session> ( "set_curr_session" );
 
-    lc.def<&lnetwork_mgr::set_session> ( "set_session" );
-    lc.def<&lnetwork_mgr::set_owner>   ( "set_owner"   );
+    lc.def<&lnetwork_mgr::set_conn_session> ( "set_conn_session" );
+    lc.def<&lnetwork_mgr::set_conn_owner>   ( "set_conn_owner"   );
 
     lc.def<&lnetwork_mgr::set_cs_cmd> ( "set_cs_cmd" );
     lc.def<&lnetwork_mgr::set_ss_cmd> ( "set_ss_cmd" );
     lc.def<&lnetwork_mgr::set_sc_cmd> ( "set_sc_cmd" );
+
+    lc.def<&lnetwork_mgr::set_conn_io>     ( "set_conn_io"     );
+    lc.def<&lnetwork_mgr::set_conn_codec>  ( "set_conn_codec"  );
+    lc.def<&lnetwork_mgr::set_conn_packet> ( "set_conn_packet" );
 
     lc.def<&lnetwork_mgr::get_http_header> ( "get_http_header" );
 
@@ -255,6 +261,20 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );
     lc.set( "CNT_SSCN",socket::CNT_SSCN );
+
+    lc.set( "IOT_NONE",io::IOT_NONE );
+    lc.set( "IOT_SSL" ,io::IOT_SSL  );
+
+    lc.set( "PKT_NONE"     ,packet::PKT_NONE      );
+    lc.set( "PKT_HTTP"     ,packet::PKT_HTTP      );
+    lc.set( "PKT_STREAM"   ,packet::PKT_STREAM    );
+    lc.set( "PKT_WEBSOCKET",packet::PKT_WEBSOCKET );
+
+    lc.set( "CDC_NONE"    ,codec::CDC_NONE    );
+    lc.set( "CDC_BSON"    ,codec::CDC_BSON    );
+    lc.set( "CDC_STREAM"  ,codec::CDC_STREAM  );
+    lc.set( "CDC_FLATBUF" ,codec::CDC_FLATBUF );
+    lc.set( "CDC_PROTOBUF",codec::CDC_PROTOBUF);
 
     return 0;
 }

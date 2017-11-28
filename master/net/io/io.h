@@ -7,6 +7,14 @@
 class io
 {
 public:
+    typedef enum
+    {
+        IOT_NONE = 0,
+        IOT_SSL  = 1,
+
+        IOT_MAX
+    }io_t;
+public:
     io();
     virtual ~io();
 

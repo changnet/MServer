@@ -89,7 +89,7 @@ function Network_mgr:srv_register( conn,pkt )
     end
 
     self.srv[pkt.session] = conn
-    network_mgr:set_session( conn.conn_id,pkt.session )
+    network_mgr:set_conn_session( conn.conn_id,pkt.session )
     return true
 end
 
@@ -119,7 +119,7 @@ function Network_mgr:bind_role( pid,clt_conn )
 
     clt_conn:bind_role( pid )
     self.clt[pid] = clt_conn
-    network_mgr:set_owner( clt_conn.conn_id,pid )
+    network_mgr:set_conn_owner( clt_conn.conn_id,pid )
 end
 
 -- 获取客户端连接
