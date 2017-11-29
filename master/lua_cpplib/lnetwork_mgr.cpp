@@ -13,6 +13,7 @@ const static char *ACCEPT_EVENT[] =
     "sccn_accept_new", // CNT_SCCN
     "sscn_accept_new", // CNT_SSCN
     "http_accept_new", // CNT_HTTP
+    "webs_accept_new", // CNT_WEBS
 };
 
 const static char *CONNECT_EVENT[] =
@@ -22,6 +23,7 @@ const static char *CONNECT_EVENT[] =
     "sccn_connect_new", // CNT_SCCN
     "sscn_connect_new", // CNT_SSCN
     "http_connect_new", // CNT_HTTP
+    "webs_connect_new", // CNT_WEBS
 };
 
 const static char *DELETE_EVENT[] =
@@ -31,6 +33,7 @@ const static char *DELETE_EVENT[] =
     "sccn_connect_del", // CNT_SCCN
     "sscn_connect_del", // CNT_SSCN
     "http_connect_del", // CNT_HTTP
+    "webs_connect_del", // CNT_WEBS
 };
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;

@@ -8,6 +8,7 @@
 #include "../ev/ev_def.h"
 #include "packet/http_packet.h"
 #include "packet/stream_packet.h"
+#include "packet/websocket_packet.h"
 #include "../lua_cpplib/leventloop.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
@@ -442,6 +443,9 @@ int32 socket::set_packet( packet::packet_t packet_type )
             break;
         case packet::PKT_STREAM :
             _packet = new stream_packet( this );
+            break;
+        case packet::PKT_WEBSOCKET :
+            _packet = new websocket_packet( this );
             break;
         default : assert( "packet error",false );
     }

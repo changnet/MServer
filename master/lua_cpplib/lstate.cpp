@@ -262,6 +262,7 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.set( "CNT_SCCN",socket::CNT_SCCN );
     lc.set( "CNT_SSCN",socket::CNT_SSCN );
     lc.set( "CNT_HTTP",socket::CNT_HTTP );
+    lc.set( "CNT_WEBS",socket::CNT_WEBS );
 
     lc.set( "IOT_NONE",io::IOT_NONE );
     lc.set( "IOT_SSL" ,io::IOT_SSL  );
