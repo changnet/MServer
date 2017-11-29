@@ -7,25 +7,52 @@
 
 /*
 https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
-0 1 2 3
-0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-------+-+-------------+-------------------------------+
-|F|R|R|R| opcode|M| Payload len | Extended payload length |
-|I|S|S|S| (4) |A| (7) | (16/64) |
-|N|V|V|V| |S| | (if payload len==126/127) |
-| |1|2|3| |K| | |
+|F|R|R|R| opcode|M| Payload len | Extended payload length       |
+|I|S|S|S|   (4) |A|     (7)     |          (16/64)              |
+|N|V|V|V|       |S|             | (if payload len==126/127)     |
+| |1|2|3|       |K|             |                               |
 +-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
-| Extended payload length continued, if payload len == 127 |
+| Extended payload length continued, if payload len == 127      |
 + - - - - - - - - - - - - - - - +-------------------------------+
-| |Masking-key, if MASK set to 1 |
+|                               |Masking-key, if MASK set to 1  |
 +-------------------------------+-------------------------------+
-| Masking-key (continued) | Payload Data |
+| Masking-key (continued)       | Payload Data                  |
 +-------------------------------- - - - - - - - - - - - - - - - +
-: Payload Data continued ... :
+: Payload Data continued ...                                    :
 + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
-| Payload Data continued ... |
+| Payload Data continued ...                                    |
 +---------------------------------------------------------------+
 
+[   0 ]bit : 标识是否为此消息的最后一个数据包
+[ 1,3 ]bit : 用于扩展协议，一般为0
+[ 4,7 ]bit : opcode，4bit，数据包类型（frame type）
+                0x0：标识一个中间数据包
+                0x1：标识一个text类型数据包
+                0x2：标识一个binary类型数据包
+                0x3-7：保留
+                0x8：标识一个断开连接类型数据包
+                0x9：标识一个ping类型数据包
+                0xA：表示一个pong类型数据包
+                0xB-F：保留
+[   8 ]bit : 用于标识PayloadData是否经过掩码处理。如果是1，Masking-key域的数据即是
+                掩码密钥，用于解码PayloadData。客户端发出的数据帧需要进行掩码处理，
+                所以此位是1。服务端发出的数据帧不能设置此标志位。
+[ 9,15]bit : Payload data的长度,7bit
+    如果其值在0-125，则是payload的真实长度。
+    如果值是126，则后面2个字节形成的16bits无符号整型数的值是payload的真实长度。注意，网络字节序，需要转换。
+    如果值是127，则后面8个字节形成的64bits无符号整型数的值是payload的真实长度。注意，网络字节序，需要转换。
+
+!!! 下面的字段可能不存在，需要根据Payload len的值偏移，这里按最大计算。
+[16,31]bit : Payload len = 126,这16bit构成一个uint16类型表示Payload Data的长度
+[16,79]bit : Payload len = 126,这16bit构成一个uint64类型表示Payload Data的长度
+[80,111]bit: 上面的第8bit值为1时，这里的32bit表示Masking-key。客户端发给服务器的包
+                必须有masking-key。
+                原因见：https://tools.ietf.org/html/rfc6455#section-10.3
+[...] 具体的数据
 */
 
 int on_frame_header( struct websocket_parser *parser )
