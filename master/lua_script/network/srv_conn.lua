@@ -26,8 +26,8 @@ function Srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
 end
 
 -- 发送数据包
-function Srv_conn:send_rpc_pkt( unique_id,name,... )
-    return network_mgr:send_rpc_packet( self.conn_id,cmd,ecode or 0,pkt )
+function Srv_conn:send_rpc_pkt( unique_id,method_name,... )
+    return network_mgr:send_rpc_packet( self.conn_id,unique_id,method_name,... )
 end
 
 -- timeout check

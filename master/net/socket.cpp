@@ -24,6 +24,12 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
 
 socket::~socket()
 {
+    delete _io;
+    delete _packet;
+
+    _io = NULL;
+    _packet = NULL;
+
     assert( "socket not clean",0 == _sending && -1 == _w.fd );
 }
 
@@ -43,13 +49,6 @@ void socket::stop()
         _w.stop ();
         _w.fd = -1; /* must after stop */
     }
-
-    /* 必须先send后才能delete */
-    delete _io;
-    delete _packet;
-
-    _io = NULL;
-    _packet = NULL;
 
     _recv.clear();
     _send.clear();

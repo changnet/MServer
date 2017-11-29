@@ -89,8 +89,10 @@ int32 on_message_complete( http_parser *parser )
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
 
-    // 这里返回非0将不再继续解析
-    return http_packet->on_message_complete();;
+    // 这里返回error将不再继续解析
+    if ( http_packet->on_message_complete() ) return HPE_PAUSED;
+
+    return HPE_OK;
 }
 
 /* http chunk应该用不到，暂不处理 */
@@ -129,6 +131,9 @@ int32 http_packet::unpack()
     uint32 size = recv.data_size();
     if ( size == 0 ) return 0;
 
+    /* 注意：解析完成后，是由http-parser回调脚本的，这时脚本那边可能会关闭socket
+     * 因此要注意http_parser_execute后部分资源是不可再访问的
+     */
     int32 nparsed = 
         http_parser_execute( _parser,&settings,recv.data(),size );
 
@@ -186,13 +191,14 @@ int32 http_packet::on_message_complete()
     if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {
         ERROR( "http_command_new:%s",lua_tostring( L,-1 ) );
-
-        lua_pop( L,2 ); /* remove traceback and error object */
-        return -1;
     }
-    lua_pop( L,1 ); /* remove traceback */
 
-    return 0;
+    lua_settop( L,0 ); /* remove traceback */
+
+    /* 注意：如果一次收到多个http消息，需要在这里检测socket是否由上层脚本关闭
+     * 然后终止http-parser的解析
+     */
+    return _socket->fd() < 0 ? -1 : 0;
 }
 
 void http_packet::append_url( const char *at,size_t len )

@@ -150,7 +150,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
-        lua_pop( L,5 );
+        lua_settop( L,0 );
         return;
     }
 
@@ -158,10 +158,10 @@ void stream_packet::sc_command( const struct s2c_header *header )
     {
         ERROR( "sc_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,2 ); /* remove traceback and error object */
+        lua_settop( L,0 ); /* remove traceback and error object */
         return;
     }
-    lua_pop( L,1 ); /* remove traceback */
+    lua_settop( L,0 ); /* remove traceback */
 }
 
 /* 派发客户端发给服务器数据包 */
@@ -249,7 +249,7 @@ void stream_packet::cs_command(
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
-        lua_pop( L,5 );
+        lua_settop( L,0 );
         return;
     }
 
@@ -257,10 +257,10 @@ void stream_packet::cs_command(
     {
         ERROR( "cs_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,2 ); /* remove traceback and error object */
+        lua_settop( L,0 ); /* remove traceback and error object */
         return;
     }
-    lua_pop( L,1 ); /* remove traceback */
+    lua_settop( L,0 ); /* remove traceback */
 }
 
 
@@ -343,7 +343,7 @@ void stream_packet::ss_command(
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
-        lua_pop( L,6 );
+        lua_settop( L,0 );
         return;
     }
 
@@ -351,10 +351,10 @@ void stream_packet::ss_command(
     {
         ERROR( "ss_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,2 ); /* remove traceback and error object */
+        lua_settop( L,0 ); /* remove traceback and error object */
         return;
     }
-    lua_pop( L,1 ); /* remove traceback */
+    lua_settop( L,0 ); /* remove traceback */
 }
 
 /* 客户端发往服务器，由网关转发的数据包回调脚本 */
@@ -388,7 +388,7 @@ void stream_packet::css_command( const s2s_header *header )
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
-        lua_pop( L,5 );
+        lua_settop( L,0 );
         return;
     }
 
@@ -396,10 +396,10 @@ void stream_packet::css_command( const s2s_header *header )
     {
         ERROR( "css_command:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,2 ); /* remove traceback and error object */
+        lua_settop( L,0 ); /* remove traceback and error object */
         return;
     }
-    lua_pop( L,1 ); /* remove traceback */
+    lua_settop( L,0 ); /* remove traceback */
 }
 
 
@@ -443,6 +443,8 @@ void stream_packet::rpc_command( const s2s_header *header )
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
     lua_pushcfunction( L,traceback );
+    int32 top = lua_gettop( L ); // pcall后，下面的栈都会被弹出
+
     lua_getglobal    ( L,"rpc_command_new"  );
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushinteger  ( L,header->_owner     );
@@ -452,28 +454,27 @@ void stream_packet::rpc_command( const s2s_header *header )
     int32 cnt = decoder->decode( L,buffer,size,NULL );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
-        lua_pop( L,4 + cnt );
+        lua_settop( L,0 );
         ERROR( "rpc command miss function name" );
         return;
     }
 
-    int32 top = lua_gettop( L );
     int32 unique_id = static_cast<int32>( header->_owner );
-    int32 ecode = lua_pcall( L,4 + cnt,LUA_MULTRET,1 );
+    int32 ecode = lua_pcall( L,2 + cnt,LUA_MULTRET,1 );
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if ( unique_id > 0 )
     {
-        rpc_pack( L,unique_id,ecode,SPKT_RPCR,top );
+        rpc_pack( L,unique_id,ecode,SPKT_RPCR,top + 1 );
     }
 
     if ( LUA_OK != ecode )
     {
         ERROR( "rpc command:%s",lua_tostring(L,-1) );
-        lua_pop( L,2 ); /* remove error object and traceback */
+        lua_settop( L,0 ); /* remove error object and traceback */
         return;
     }
 
-    lua_pop( L,1 ); /* remove trace back */
+    lua_settop( L,0 ); /* remove trace back */
 }
 
 /* 处理rpc返回 */
@@ -491,17 +492,22 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pushinteger( L,header->_owner );
     lua_pushinteger( L,header->_errno );
 
-    // rpc解析方式目前固定为bson
-    codec *decoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
-    int32 cnt = decoder->decode( L,buffer,size,NULL );
+    // rpc在出错的情况下仍返回，这时buff可能无法成功打包
+    int32 cnt = 0;
+    if ( size > 0 )
+    {
+        // rpc解析方式目前固定为bson
+        codec *decoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
+        cnt = decoder->decode( L,buffer,size,NULL );
+    }
     if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
     {
         ERROR( "rpc_return:%s",lua_tostring( L,-1 ) );
 
-        lua_pop( L,2 ); /* remove traceback and error object */
+        lua_settop( L,0 ); /* remove traceback and error object */
         return;
     }
-    lua_pop( L,1 ); /* remove traceback */
+    lua_settop( L,0 ); /* remove traceback */
 
     return;
 }
@@ -710,7 +716,7 @@ int32 stream_packet::pack_rpc( lua_State *L,int32 index )
 {
     int32 unique_id = luaL_checkinteger( L,index );
     // ecode默认0
-    rpc_pack( L,unique_id,0,SPKT_RPCR,index + 1 );
+    rpc_pack( L,unique_id,0,SPKT_RPCS,index + 1 );
 
     return 0;
 }

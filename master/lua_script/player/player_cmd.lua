@@ -29,7 +29,7 @@ end
 
 local function x_rpc_test( ... )
     print("x_rpc_test ==================================",...)
-    return ...
+    return 1,3,5,90.1246,nil,{a = 5,b = 5},false,true,998
 end
 
 -- 这里注册系统模块的协议处理

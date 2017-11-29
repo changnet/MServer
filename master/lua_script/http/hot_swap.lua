@@ -55,8 +55,6 @@ function Hot_swap:exec( conn_id,fields,body )
     local ctx = string.format( page200,string.len(tips),tips )
 
     network_mgr:send_http_packet( conn_id,ctx )
-
-    g_rpc:invoke( "rpc_test",1,2,3,"abc",nil,{a = 5,b = 9},99.75863 )
 end
 
 local hs = Hot_swap()
