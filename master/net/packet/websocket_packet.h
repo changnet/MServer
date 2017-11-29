@@ -1,10 +1,10 @@
 #ifndef __WEBSOCKET_PACKET_H__
 #define __WEBSOCKET_PACKET_H__
 
-#include "packet.h"
+#include "http_packet.h"
 
 struct websocket_parser;
-class websocket_packet : public packet
+class websocket_packet : public http_packet
 {
 public:
     ~websocket_packet();
@@ -27,7 +27,12 @@ public:
      * return: <0 error;0 success
      */
     int32 unpack();
+
+    int32 upgrade();
 private:
+    int32 invoke_handshake();
+private:
+    bool _is_upgrade;
     struct websocket_parser *_parser;
 };
 

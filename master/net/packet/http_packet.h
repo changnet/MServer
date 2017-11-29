@@ -21,16 +21,18 @@ public:
     virtual ~http_packet();
     explicit http_packet( class socket *sk );
 
-    packet_t type() const { return PKT_HTTP; }
+    virtual packet_t type() const { return PKT_HTTP; }
 
-     int32 pack_clt( lua_State *L,int32 index );
-     int32 pack_srv( lua_State *L,int32 index );
+    virtual int32 pack_clt( lua_State *L,int32 index );
+    virtual int32 pack_srv( lua_State *L,int32 index );
     /* 数据解包 
      * return: <0 error;0 success
      */
-    int32 unpack();
+    virtual int32 unpack();
     /* 解压http数据到lua堆栈 */
     int32 unpack_header( lua_State *L ) const;
+    /* 设置http为websocket */
+    virtual int32 upgrade() { return 0; }
 public:
     /* http_parse 回调函数 */
     void reset();
@@ -40,13 +42,14 @@ public:
     void append_body( const char *at,size_t len );
     void append_cur_field( const char *at,size_t len );
     void append_cur_value( const char *at,size_t len );
+protected:
+    struct http_info _http_info;
 private:
     int32 pack_raw( lua_State *L,int32 index );
 
     http_parser *_parser;
     std::string _cur_field;
     std::string _cur_value;
-    struct http_info _http_info;
 };
 
 #endif /* __HTTP_PACKET_H__ */

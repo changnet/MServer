@@ -137,8 +137,6 @@ int32 http_packet::unpack()
     int32 nparsed = 
         http_parser_execute( _parser,&settings,recv.data(),size );
 
-    recv.clear(); // http_parser不需要旧缓冲区
-
     /* web_socket报文,暂时不用回调到上层
      * The user is expected to check if parser->upgrade has been set to 1 after 
      * http_parser_execute() returns. Non-HTTP data begins at the buffer 
@@ -146,12 +144,18 @@ int32 http_packet::unpack()
      */
     if ( _parser->upgrade )
     {
-        return 0;
+        /* 除去缓冲区中websocket握手数据
+         * 返回 >0 由子类websocket_packet继续处理数据
+         */
+        recv.subtract( nparsed );
+        return upgrade() >= 0 ? 1 : -1;
     }
-    else if ( nparsed != (int32)size )  /* error */
+
+    recv.clear(); // http_parser不需要旧缓冲区
+    if ( nparsed != (int32)size )  /* error */
     {
         int32 no = _parser->http_errno;
-        ERROR( "http socket parse error(%d):%s",
+        ERROR( "http parse error(%d):%s",
             no,http_errno_name(static_cast<enum http_errno>(no)) );
 
         return -1;

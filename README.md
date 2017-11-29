@@ -91,6 +91,9 @@ valgrind测试
 * 利用oo的注册功能实现rsf指令全服热更文件(协议自动注册的热更)
 * 增加系统、玩家跨进程事件总线（event bus）
 
+#注意
+* 重构后，flatbuffers未测试，可能无法直接使用
+
 #位置同步
 http://blog.codingnow.com/2006/04/sync.html  
 http://blog.codingnow.com/2012/03/dev_note_12.html

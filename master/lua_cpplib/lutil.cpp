@@ -1,12 +1,16 @@
 #include <lua.hpp>
 #include <sys/time.h>
 
+#include <cmath>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
 #include <uuid/uuid.h>
-#include<openssl/md5.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <openssl/buffer.h>
 
 #include "lutil.h"
 
@@ -98,7 +102,7 @@ static int32 md5( lua_State* L )
         {
             // not a string and can not convert to string
             return luaL_error( L,
-                "argument #%d expect function,got %s",
+                "argument #%d expect string,got %s",
                 i,lua_typename( L,lua_type(L,i) ) );
         }
 
@@ -269,6 +273,7 @@ static int32 uuid_short_parse( lua_State *L )
     return 1;
 }
 
+/* 取linux下errno对应的错误描述字符串 */
 static int32 what_error( lua_State *L )
 {
     int32 eno = luaL_checkinteger( L,1 );
@@ -278,10 +283,115 @@ static int32 what_error( lua_State *L )
     return 1;
 }
 
+/* sha1编码
+ * sha1( [upper,],str1,str2,... )
+ */
+static int32 sha1( lua_State *L )
+{
+    size_t len;
+    char buf[SHA_DIGEST_LENGTH*2];
+
+    SHA_CTX ctx;
+    unsigned char sha1[SHA_DIGEST_LENGTH];
+    
+    int32 index = 1;
+    const char *fmt = "%02x"; // default format to lower
+    if ( !lua_isstring( L,1 ) )
+    {
+        index = 2;
+        if ( lua_toboolean( L,1 ) ) fmt = "%02X";
+    }
+
+    if ( !SHA1_Init( &ctx ) )
+    {
+        return luaL_error( L,"sha1 init error" );
+    }
+
+    for ( int32 i = index; i <= lua_gettop( L ); ++i )
+    {
+        const char *ptr = lua_tolstring( L, i, &len );
+        if ( !ptr )
+        {
+            // not a string and can not convert to string
+            return luaL_error( L,
+                "argument #%d expect string,got %s",
+                i,lua_typename( L,lua_type(L,i) ) );
+        }
+
+        SHA1_Update( &ctx, ptr, len );
+    }
+
+    SHA1_Final( sha1, &ctx );
+    for ( int32 i = 0; i < SHA_DIGEST_LENGTH; ++i )
+    {
+        //--%02x即16进制输出，占2个字节
+        snprintf( buf + i*2, 3, fmt, sha1[i] );
+    }
+    lua_pushlstring( L, buf, SHA_DIGEST_LENGTH*2 );
+
+    return 1;
+}
+
+/* base64编码
+ * base64(str)
+ */
+static int32 base64( lua_State *L )
+{
+    /* base64需要预先计算长度并分配内存，故无法像md5那样把需要编码字符串分片传参 */
+    size_t len = 0;
+    const char *str = luaL_checklstring( L,1,&len );
+
+    // 绝大部分用法都是编码很小的字符串，免去内存分配
+    const static size_t base_max = 128;
+    char base64_buff[base_max] = { 0 };
+
+    size_t max_size = 
+        static_cast<size_t>( round(4*ceil(static_cast<double>(len) / 3.0)) );
+
+    char *buff = base64_buff;
+    size_t buff_max = base_max;
+    if ( max_size > base_max )
+    {
+        buff_max = max_size;
+        buff = new char[max_size];
+    }
+
+    // 把内存绑定到BIO，省去拷贝过程
+    BUF_MEM *bptr = BUF_MEM_new();
+    bptr->length = 0;
+    bptr->max = buff_max;
+    bptr->data = buff;
+
+    BIO *base64 = BIO_new( BIO_f_base64() );
+    BIO_set_flags( base64, BIO_FLAGS_BASE64_NO_NL );
+
+    BIO *bio = BIO_new( BIO_s_mem() );
+    BIO_push( base64, bio );
+    BIO_set_mem_buf( base64, bptr, BIO_CLOSE );
+
+    int32 args = 0;
+    if( BIO_write( base64, str, len ) || BIO_flush( base64 ) )
+    {
+        args = 1;
+        lua_pushlstring( L, buff, bptr->length );
+    }
+
+    if ( buff != base64_buff ) delete []buff;
+
+    bptr->length = 0;
+    bptr->max = 0;
+    bptr->data = NULL;
+    BIO_free_all( base64 );
+
+    return args;
+}
+
 static const luaL_Reg utillib[] =
 {
     {"md5", md5},
     {"uuid",uuid},
+    {"sha1",sha1},
+    {"base64",base64},
     {"timeofday", timeofday},
     {"what_error",what_error},
     {"uuid_short",uuid_short},
