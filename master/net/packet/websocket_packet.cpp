@@ -50,9 +50,29 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
 [16,31]bit : Payload len = 126,这16bit构成一个uint16类型表示Payload Data的长度
 [16,79]bit : Payload len = 126,这16bit构成一个uint64类型表示Payload Data的长度
 [80,111]bit: 上面的第8bit值为1时，这里的32bit表示Masking-key。客户端发给服务器的包
-                必须有masking-key。
-                原因见：https://tools.ietf.org/html/rfc6455#section-10.3
+                必须有masking-key。The masking key is a 32-bit value chosen at 
+                random ,needs to be unpredictable
+                原因见：https://tools.ietf.org/pdf/rfc6455.pdf section 5.3 page33
 [...] 具体的数据
+
+有masking key时，数据必须用masking key编码、解码，算法如下(section 5.3)：
+   The masking does not affect the length of the "Payload data".  To
+   convert masked data into unmasked data, or vice versa, the following
+   algorithm is applied.  The same algorithm applies regardless of the
+   direction of the translation, e.g., the same steps are applied to
+   mask the data as to unmask the data.
+
+   Octet i of the transformed data ("transformed-octet-i") is the XOR of
+   octet i of the original data ("original-octet-i") with octet at index
+   i modulo 4 of the masking key ("masking-key-octet-j"):
+
+     j                   = i MOD 4
+     transformed-octet-i = original-octet-i XOR masking-key-octet-j
+
+   The payload length, indicated in the framing as frame-payload-length,
+   does NOT include the length of the masking key.  It is the length of
+   the "Payload data", e.g., the number of bytes following the masking
+   key.
 */
 
 int on_frame_header( struct websocket_parser *parser )
@@ -71,6 +91,7 @@ int on_frame_end( struct websocket_parser *parser )
     return 0;
 }
 
+/* init all field insted of using websocket_parser_settings_init */
 static const struct websocket_parser_settings settings = 
 {
     on_frame_header,
@@ -126,6 +147,11 @@ int32 websocket_packet::unpack()
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
      */
     if ( !_is_upgrade ) return http_packet::unpack();
+
+    size_t nread = websocket_parser_execute( _parser, &settings, data, data_len);
+    if(nread != data_len) {
+        // some callback return a value other than 0
+    }
 
     return 0;
 }
