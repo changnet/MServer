@@ -62,9 +62,9 @@ public:
         _min_buff = min;
     }
 public:
-    /* 内存扩展,处理两种情况：
-     * 1.未知大小(从socket读取时)，默认首次分配BUFFER_CHUNK，用完再按指数增长
-     * 2.已知大小(发送数据时)，指数增长到合适大小
+    /* 内存预分配：
+     * @bytes : 要增长的字节数。默认为0,首次分配BUFFER_CHUNK，用完再按指数增长
+     * @vsz   : 已往缓冲区中写入的字节数，但未增加_size偏移，主要用于自定义写入缓存
      */
     inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 ) 
         __attribute__ ((warn_unused_result))

@@ -493,6 +493,22 @@ int32 lnetwork_mgr::send_http_packet()
     return 0;
 }
 
+/* 发送websocket数据包 */
+int32 lnetwork_mgr::send_webs_srv_packet()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_WEBS );
+    pkt->pack_srv( L,2 );
+    return 0;
+}
+
+/* 发送websocket数据包 */
+int32 lnetwork_mgr::send_webs_clt_packet()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_WEBS );
+    pkt->pack_clt( L,2 );
+    return 0;
+}
+
 /* 发送s2s数据包
  * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
  */

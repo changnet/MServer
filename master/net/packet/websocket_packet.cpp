@@ -55,20 +55,63 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
 [...] 具体的数据
 */
 
-int on_frame_header( struct websocket_parser *parser )
+// 解析完websocket的header
+int32 on_frame_header( struct websocket_parser *parser )
 {
+    assert( "websocket parser NULL",parser && parser->data );
+
+    class websocket_packet *ws_packet =
+        static_cast<class websocket_packet *>( parser->data );
+    class buffer &body = ws_packet->body_buffer();
+
+    // parser->data->opcode = parser->flags & WS_OP_MASK; // gets opcode
+    // parser->data->is_final = parser->flags & WS_FIN;   // checks is final frame
+    // websocket是允许不发内容的，因此length可能为0
+    body.clear();
+    if( parser->length )
+    {
+        if ( !body.reserved( parser->length ) )
+        {
+            ERROR( "websocket cant not allocate memory" );
+            return -1;
+        }
+    }
     return 0;
 }
 
-int on_frame_body( 
+// 收到帧数据
+int32 on_frame_body( 
     struct websocket_parser *parser, const char * at, size_t length )
 {
+    assert( "websocket parser NULL",parser && parser->data );
+
+    class websocket_packet *ws_packet =
+        static_cast<class websocket_packet *>( parser->data );
+    class buffer &body = ws_packet->body_buffer();
+
+    // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
+    if( parser->flags & WS_HAS_MASK ) {
+        if ( !body.reserved( length ) ) return -1;
+
+        websocket_parser_decode( body._buff + body._size, at, length, parser);
+        body._size += length;
+    }
+    else
+    {
+        if ( !body.append( at,length ) ) return -1;
+    }
     return 0;
 }
 
-int on_frame_end( struct websocket_parser *parser )
+// 数据帧完成
+int32 on_frame_end( struct websocket_parser *parser )
 {
-    return 0;
+    assert( "websocket parser NULL",parser && parser->data );
+
+    class websocket_packet *ws_packet =
+        static_cast<class websocket_packet *>( parser->data );
+
+    return ws_packet->on_frame_end();
 }
 
 static const struct websocket_parser_settings settings = 
@@ -104,6 +147,25 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
 {
     if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
+    size_t size = 0;
+    const char *ctx = luaL_checklstring( L,index,&size );
+    if ( !ctx ) return 0;
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( size ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    websocket_flags flags = 
+        static_cast<websocket_flags>( WS_OP_TEXT | WS_FINAL_FRAME );
+    size_t len = websocket_calc_frame_size( flags,size );
+
+    char mask[4] = { '1','3','4','6' };
+    websocket_build_frame( send._buff + send._size,flags,mask,ctx,size );
+    send._size += len;
+    _socket->pending_send();
+
     return 0;
 }
 
@@ -113,6 +175,25 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
 int32 websocket_packet::pack_srv( lua_State *L,int32 index )
 {
     if ( !_is_upgrade ) return http_packet::pack_srv( L,index );
+
+    size_t size = 0;
+    const char *ctx = luaL_checklstring( L,index,&size );
+    if ( !ctx ) return 0;
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( size ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    websocket_flags flags = 
+    static_cast<websocket_flags>( WS_OP_TEXT | WS_FINAL_FRAME | WS_HAS_MASK );
+    size_t len = websocket_calc_frame_size( flags,size );
+
+    char mask[4] = { '1','3','4','6' };
+    websocket_build_frame( send._buff + send._size,flags,mask,ctx,size );
+    send._size += len;
+    _socket->pending_send();
 
     return 0;
 }
@@ -127,12 +208,34 @@ int32 websocket_packet::unpack()
      */
     if ( !_is_upgrade ) return http_packet::unpack();
 
+    class buffer &recv = _socket->recv_buffer();
+    uint32 size = recv.data_size();
+    if ( size == 0 ) return 0;
+
+    // websocket_parser_execute把数据全当二进制处理，没有错误返回
+    // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
+    size_t nparser = 
+        websocket_parser_execute( _parser,&settings,recv.data(),size );
+    // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
+    // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
+    // 普通错误，比如回调脚本出错，是不会中止解析的
+    if ( nparser != size )
+    {
+        _socket->stop();
+        return -1;
+    }
+
+    recv.subtract( nparser );
+
     return 0;
 }
 
 /* 由http升级为websocket，发握手数据 */
 int32 websocket_packet::upgrade()
 {
+    invoke_handshake();
+
+    // 先触发脚本握手才标识为websocket，因为握手进还需要发http
     _is_upgrade = true;
 
     return 0;
@@ -179,6 +282,26 @@ int32 websocket_packet::invoke_handshake()
     if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {
         ERROR( "websocket handshake:%s",lua_tostring( L,-1 ) );
+    }
+
+    lua_settop( L,0 ); /* remove traceback */
+
+    return _socket->fd() < 0 ? -1 : 0;
+}
+
+int32 websocket_packet::on_frame_end()
+{
+    static lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal    ( L,"webs_command_new" );
+    lua_pushinteger  ( L,_socket->conn_id() );
+    lua_pushlstring   ( L,_body.data(),_body.data_size() );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    {
+        ERROR( "websocket command:%s",lua_tostring( L,-1 ) );
     }
 
     lua_settop( L,0 ); /* remove traceback */

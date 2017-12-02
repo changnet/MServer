@@ -12,7 +12,8 @@ int32 on_message_begin( http_parser *parser )
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
-    http_packet->reset();
+    // 这个千万不要因为多态调到websocket_packet::reset去了
+    http_packet->http_packet::reset();
 
     return 0;
 }
