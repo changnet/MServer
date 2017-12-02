@@ -36,6 +36,7 @@ public:
 
     int32 on_message_complete( bool upgrade );
 private:
+    void new_masking_key( char mask[4] );
     int32 invoke_handshake();
 private:
     bool _is_upgrade;

@@ -115,3 +115,4 @@ https://www.ibm.com/support/knowledgecenter/en/SSWHYP_4.0.0/com.ibm.apimgmt.apio
 
 * http_packet、weebsocket需要考虑zero copy
 * codec设置为NONE时无法直接回调，get_codec返回NULL宕机了
+* websocket的ping、pong、FIN、TEXT/BINARY之类的标识是否需要严格实现

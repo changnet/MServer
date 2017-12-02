@@ -34,6 +34,18 @@ local handshake_srv =table.concat(
 local sec_key  = "dGhlIHNhbXBsZSBub25jZQ=="
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+-- websocket opcodes
+local WS_OP_CONTINUE = 0x0
+local WS_OP_TEXT     = 0x1
+local WS_OP_BINARY   = 0x2
+local WS_OP_CLOSE    = 0x8
+local WS_OP_PING     = 0x9
+local WS_OP_PONG     = 0xA
+
+-- websocket marks
+local WS_FINAL_FRAME = 0x10
+local WS_HAS_MASK    = 0x20
+
 local util = require "util"
 local network_mgr = network_mgr
 
@@ -55,7 +67,8 @@ function ws_handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     if sec_websocket_accept then
         -- TODO:验证sec_websocket_accept是否正确
         local ctx = "hello,websocket.I am Mini-Game-Distribute-Server"
-        network_mgr:send_srv_packet( conn_id,ctx )
+        network_mgr:send_srv_packet( 
+            conn_id,WS_OP_TEXT | WS_FINAL_FRAME | WS_HAS_MASK,ctx )
         return
     end
 end

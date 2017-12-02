@@ -147,8 +147,11 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
 {
     if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
+    websocket_flags flags = 
+        static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
+
     size_t size = 0;
-    const char *ctx = luaL_checklstring( L,index,&size );
+    const char *ctx = luaL_checklstring( L,index + 1,&size );
     if ( !ctx ) return 0;
 
     class buffer &send = _socket->send_buffer();
@@ -157,11 +160,9 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
         return luaL_error( L,"can not reserved buffer" );
     }
 
-    websocket_flags flags = 
-        static_cast<websocket_flags>( WS_OP_TEXT | WS_FINAL_FRAME );
     size_t len = websocket_calc_frame_size( flags,size );
 
-    char mask[4] = { '1','3','4','6' };
+    static const char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
     websocket_build_frame( send._buff + send._size,flags,mask,ctx,size );
     send._size += len;
     _socket->pending_send();
@@ -176,8 +177,11 @@ int32 websocket_packet::pack_srv( lua_State *L,int32 index )
 {
     if ( !_is_upgrade ) return http_packet::pack_srv( L,index );
 
+    websocket_flags flags = 
+        static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
+
     size_t size = 0;
-    const char *ctx = luaL_checklstring( L,index,&size );
+    const char *ctx = luaL_checklstring( L,index + 1,&size );
     if ( !ctx ) return 0;
 
     class buffer &send = _socket->send_buffer();
@@ -186,11 +190,10 @@ int32 websocket_packet::pack_srv( lua_State *L,int32 index )
         return luaL_error( L,"can not reserved buffer" );
     }
 
-    websocket_flags flags = 
-    static_cast<websocket_flags>( WS_OP_TEXT | WS_FINAL_FRAME | WS_HAS_MASK );
     size_t len = websocket_calc_frame_size( flags,size );
 
-    char mask[4] = { '1','3','4','6' };
+    char mask[4] = { 0 };
+    new_masking_key( mask );
     websocket_build_frame( send._buff + send._size,flags,mask,ctx,size );
     send._size += len;
     _socket->pending_send();
@@ -308,4 +311,26 @@ int32 websocket_packet::on_frame_end()
     lua_settop( L,0 ); /* remove traceback */
 
     return _socket->fd() < 0 ? -1 : 0;
+}
+
+void websocket_packet::new_masking_key( char mask[4] )
+{
+    /* George Marsaglia  Xorshift generator
+     * www.jstatsoft.org/v08/i14/paper
+     */
+     static unsigned long x=123456789, y=362436069, z=521288629;
+
+    //period 2^96-1
+    unsigned long t;
+    x ^= x << 16;
+    x ^= x >> 5;
+    x ^= x << 1;
+
+   t = x;
+   x = y;
+   y = z;
+   z = t ^ x ^ y;
+
+   uint32 *new_mask = reinterpret_cast<uint32 *>( mask );
+   *new_mask = static_cast<uint32>( z );
 }
