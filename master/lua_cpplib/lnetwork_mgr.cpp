@@ -482,17 +482,6 @@ int32 lnetwork_mgr::send_s2c_packet()
     return 0;
 }
 
-/* 发送http数据包
- * network_mgr:send_http_packet( conn_id,ctx )
- */
-int32 lnetwork_mgr::send_http_packet()
-{
-    class packet *pkt = lua_check_packet( socket::CNT_HTTP );
-    pkt->pack_clt( L,2 );
-
-    return 0;
-}
-
 /* 发送websocket数据包 */
 int32 lnetwork_mgr::send_webs_srv_packet()
 {
@@ -593,6 +582,35 @@ int32 lnetwork_mgr::send_rpc_packet()
     }
 
     (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
+
+    return 0;
+}
+
+/* 发送原始数据包
+ * network_mgr:send_raw_packet( conn_id,content )
+ */
+int32 lnetwork_mgr::send_raw_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    class socket *sk = get_conn_by_conn_id( conn_id );
+    if ( !sk || sk->fd() <= 0 )
+    {
+        luaL_error( L,"invalid socket" );
+        return 0;
+    }
+
+    size_t size = 0;
+    const char *ctx = luaL_checklstring( L,2,&size );
+    if ( !ctx ) return 0;
+
+    class buffer &send = sk->send_buffer();
+    if ( !send.reserved( size ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    send.__append( ctx ,size );
+    sk->pending_send();
 
     return 0;
 }

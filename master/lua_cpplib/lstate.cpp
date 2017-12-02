@@ -251,8 +251,8 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::send_s2c_packet > ( "send_s2c_packet"  );
     lc.def<&lnetwork_mgr::send_s2s_packet > ( "send_s2s_packet"  );
     lc.def<&lnetwork_mgr::send_ssc_packet > ( "send_ssc_packet"  );
-    lc.def<&lnetwork_mgr::send_http_packet> ( "send_http_packet" );
     lc.def<&lnetwork_mgr::send_rpc_packet > ( "send_rpc_packet"  );
+    lc.def<&lnetwork_mgr::send_raw_packet > ( "send_raw_packet"  );
     lc.def<&lnetwork_mgr::send_webs_srv_packet> ( "send_webs_srv_packet" );
     lc.def<&lnetwork_mgr::send_webs_clt_packet > ( "send_webs_clt_packet"  );
 

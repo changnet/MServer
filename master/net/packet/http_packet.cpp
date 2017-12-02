@@ -88,10 +88,13 @@ int32 on_message_complete( http_parser *parser )
     assert( "on_message_complete no parser",parser && (parser->data) );
 
     class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+        static_cast<class http_packet *>( parser->data );
 
     // 这里返回error将不再继续解析
-    if ( http_packet->on_message_complete() ) return HPE_PAUSED;
+    if ( http_packet->on_message_complete( parser->upgrade ) )
+    {
+        return HPE_PAUSED;
+    }
 
     return HPE_OK;
 }
@@ -149,7 +152,7 @@ int32 http_packet::unpack()
          * 返回 >0 由子类websocket_packet继续处理数据
          */
         recv.subtract( nparsed );
-        return upgrade() >= 0 ? 1 : -1;
+        return 1;
     }
 
     recv.clear(); // http_parser不需要旧缓冲区
@@ -182,8 +185,9 @@ void http_packet::on_headers_complete()
     _http_info._head_field[_cur_field] = _cur_value;
 }
 
-int32 http_packet::on_message_complete()
+int32 http_packet::on_message_complete( bool upgrade )
 {
+    UNUSED( upgrade );
     static lua_State *L = lstate::instance()->state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 

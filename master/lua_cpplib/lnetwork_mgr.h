@@ -41,7 +41,7 @@ public:
     int32 send_s2s_packet(); /* 发送s2s数据包 */
     int32 send_ssc_packet(); /* 跨服务器发送客户端数据包 */
     int32 send_rpc_packet(); /* 发送rpc数据包 */
-    int32 send_http_packet();/* 发送http数据包 */
+    int32 send_raw_packet(); /* 发送原始的数据包 */
     int32 send_webs_srv_packet();/* 发送websocket数据包 */
     int32 send_webs_clt_packet();/* 发送websocket数据包 */
 

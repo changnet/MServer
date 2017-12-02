@@ -230,13 +230,14 @@ int32 websocket_packet::unpack()
     return 0;
 }
 
-/* 由http升级为websocket，发握手数据 */
-int32 websocket_packet::upgrade()
+/* http-parser在解析完握手数据时，会触发一次message_complete */
+int32 websocket_packet::on_message_complete( bool upgrade )
 {
-    invoke_handshake();
-
+    assert( "should be upgrade",upgrade );
     // 先触发脚本握手才标识为websocket，因为握手进还需要发http
     _is_upgrade = true;
+
+    invoke_handshake();
 
     return 0;
 }
