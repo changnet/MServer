@@ -55,7 +55,7 @@ function ws_handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     if sec_websocket_accept then
         -- TODO:验证sec_websocket_accept是否正确
         local ctx = "hello,websocket.I am Mini-Game-Distribute-Server"
-        network_mgr:send_webs_srv_packet( conn_id,ctx )
+        network_mgr:send_srv_packet( conn_id,ctx )
         return
     end
 end
@@ -77,7 +77,7 @@ function webs_connect_new( conn_id,ecode )
 
     print( "webs_connect_new",conn_id,ecode )
 
-    network_mgr:send_webs_srv_packet( conn_id,handshake_clt )
+    network_mgr:send_srv_packet( conn_id,handshake_clt )
 end
 
 function webs_connect_del( conn_id )

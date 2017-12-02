@@ -13,7 +13,7 @@ end
 
 -- 发送数据包
 function Clt_conn:send_pkt( cmd,pkt,errno )
-    return network_mgr:send_s2c_packet( self.conn_id,cmd,errno or 0,pkt )
+    return network_mgr:send_clt_packet( self.conn_id,cmd,errno or 0,pkt )
 end
 
 -- 认证成功
