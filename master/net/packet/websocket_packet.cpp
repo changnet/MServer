@@ -236,7 +236,7 @@ int32 websocket_packet::unpack()
 /* http-parser在解析完握手数据时，会触发一次message_complete */
 int32 websocket_packet::on_message_complete( bool upgrade )
 {
-    assert( "should be upgrade",upgrade );
+    assert( "should be upgrade",upgrade && !_is_upgrade );
     // 先触发脚本握手才标识为websocket，因为握手进还需要发http
     _is_upgrade = true;
 
@@ -260,12 +260,14 @@ int32 websocket_packet::invoke_handshake()
     {
         key_str = key_itr->second.c_str();
     }
-
-    head_map_t::const_iterator accept_itr = 
-        head_field.find( "Sec-WebSocket-Accept" );
-    if ( accept_itr != head_field.end() )
+    else
     {
-        accept_str = accept_itr->second.c_str();
+        head_map_t::const_iterator accept_itr = 
+            head_field.find( "Sec-WebSocket-Accept" );
+        if ( accept_itr != head_field.end() )
+        {
+            accept_str = accept_itr->second.c_str();
+        }
     }
 
     if ( NULL == key_str && NULL == accept_str )

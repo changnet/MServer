@@ -334,6 +334,10 @@ static int32 sha1( lua_State *L )
 
 /* base64编码
  * base64(str)
+ * 由于使用了openssl，可能会造成内存不释放的假象
+ * https://stackoverflow.com/questions/472809/openssl-valgrind
+ * BIO_new() -> BIO_set() -> CRYPTO_new_ex_data() -> int_new_ex_data() -> def_get_class()
+ * int_new_ex_data() do not release the mem that def_get_class malloced
  */
 static int32 base64( lua_State *L )
 {
@@ -341,49 +345,25 @@ static int32 base64( lua_State *L )
     size_t len = 0;
     const char *str = luaL_checklstring( L,1,&len );
 
-    // 绝大部分用法都是编码很小的字符串，免去内存分配
-    const static size_t base_max = 128;
-    char base64_buff[base_max] = { 0 };
-
-    size_t max_size = 
-        static_cast<size_t>( round(4*ceil(static_cast<double>(len) / 3.0)) );
-
-    char *buff = base64_buff;
-    size_t buff_max = base_max;
-    if ( max_size > base_max )
-    {
-        buff_max = max_size;
-        buff = new char[max_size];
-    }
-
-    // 把内存绑定到BIO，省去拷贝过程
-    BUF_MEM *bptr = BUF_MEM_new();
-    bptr->length = 0;
-    bptr->max = buff_max;
-    bptr->data = buff;
-
     BIO *base64 = BIO_new( BIO_f_base64() );
     BIO_set_flags( base64, BIO_FLAGS_BASE64_NO_NL );
 
     BIO *bio = BIO_new( BIO_s_mem() );
-    BIO_push( base64, bio );
-    BIO_set_mem_buf( base64, bptr, BIO_CLOSE );
+    base64 = BIO_push( base64, bio );
 
-    int32 args = 0;
-    if( BIO_write( base64, str, len ) || BIO_flush( base64 ) )
+    // warning: value computed is not used [-Wunused-value]
+    (void)BIO_set_close( base64,BIO_CLOSE );
+
+    if( BIO_write( base64, str, len ) && BIO_flush( base64 ) )
     {
-        args = 1;
-        lua_pushlstring( L, buff, bptr->length );
+        BUF_MEM *bptr = NULL;
+        BIO_get_mem_ptr( base64, &bptr );
+        lua_pushlstring( L, bptr->data, bptr->length );
     }
 
-    if ( buff != base64_buff ) delete []buff;
-
-    bptr->length = 0;
-    bptr->max = 0;
-    bptr->data = NULL;
     BIO_free_all( base64 );
 
-    return args;
+    return 1;
 }
 
 static const luaL_Reg utillib[] =

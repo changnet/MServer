@@ -31,7 +31,6 @@ local handshake_srv =table.concat(
     'Access-Control-Allow-Headers: content-type\r\n\r\n',
 } )
 
-local sec_key  = "dGhlIHNhbXBsZSBub25jZQ=="
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 -- websocket opcodes
@@ -54,10 +53,9 @@ function ws_handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     -- 服务器收到客户端的握手请求
     if sec_websocket_key then
         local sha1 = util.sha1( sec_websocket_key,ws_magic )
-        local base64 = util.base64( sha1 )
-        local ctx = string.format( handshake_srv,base64 )
+        local base64 = util.base64( "acb1c2930fd22ac3bd1801ff6521610404c32ab5" )
 
-        print( ctx ) -- just test if match
+        print( sha1,base64 ) -- just test if match
         network_mgr:send_raw_packet( conn_id,handshake_srv )
 
         return
@@ -88,7 +86,7 @@ function webs_connect_new( conn_id,ecode )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
     network_mgr:set_conn_packet( conn_id,network_mgr.PKT_WEBSOCKET )
 
-    print( "webs_connect_new",conn_id,ecode )
+    print( "webs_connect_new",conn_id,ecode,util.what_error( ecode ) )
 
     network_mgr:send_srv_packet( conn_id,handshake_clt )
 end
@@ -102,10 +100,16 @@ function webs_command_new( conn_id,ctx )
 end
 
 local ws_port = 10004
-local ws_listen = network_mgr:listen( "0,0,0,0",ws_port,network_mgr.CNT_WEBS )
+local ws_listen = network_mgr:listen( "127.0.0.1",ws_port,network_mgr.CNT_WEBS )
 print( "websocket listen at port:",ws_port )
 
-local ws_url = "echo.websocket.org"
-local ip1,ip2 = util.gethostbyname( ws_url )
-local ws_conn = network_mgr:connect( ip1,80,network_mgr.CNT_WEBS )
-print( "websocket connect to :",ws_url,ip1 )
+-- 用官方的服务器测试作为client是否正常
+-- local ws_url = "echo.websocket.org"
+-- local ip1,ip2 = util.gethostbyname( ws_url )
+-- local ws_conn = network_mgr:connect( ip1,80,network_mgr.CNT_WEBS )
+-- print( "websocket connect to :",ws_url,ip1,"conn_id = ",ws_conn )
+
+-- 测试自己的服务器是否正常
+local ws_local_conn = 
+    network_mgr:connect( "127.0.0.1",ws_port,network_mgr.CNT_WEBS )
+print( "websocket connect to local server:",ws_port,"conn_id =",ws_local_conn )

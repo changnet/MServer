@@ -1,55 +1,53 @@
 {
-   ignore_libcrypto_conditional_jump_errors_in_leak
+   ignore_dlopen_malloc
    Memcheck:Leak
+   fun:malloc
    ...
-   obj:*/libcrypto.so.*
-}
-{
-   ignore_libcrypto_conditional_jump_errors_in_cond
-   Memcheck:Cond
-   ...
-   obj:*/libcrypto.so.*
-}
-{
-   ignore_libssl_conditional_jump_errors_in_cond
-   Memcheck:Cond
-   ...
-   obj:*/libssl.so.*
-}
-{
-   ignore_libcrypto_conditional_jump_errors_in_value8
-   Memcheck:Value8
-   ...
-   obj:*/libcrypto.so.*
-}
-{
-   ignore_scram_nonce_uninitialized_warning_cond
-   Memcheck:Cond
-   fun:mongoc_b64_ntop
-   ...
-   fun:_mongoc_scram_step
+   fun:_dl_open
    ...
 }
 {
-   ignore_scram_nonce_uninitialized_warning_value8
-   Memcheck:Value8
-   fun:mongoc_b64_ntop
-   ...
-   fun:_mongoc_scram_step
-   ...
-}
-{
-   ignore_libcrypto_conditional_jump_errors_in_param
-   Memcheck:Param
-   sendmsg(msg.msg_iov[0])
-   ...
-   obj:*/libcrypto.so.*
-}
-{
-   ignore_sasl_load_plugin_reachable_warnings
+   ignore_openssl_init_malloc
    Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
    ...
-   fun:_sasl_get_plugin
+   fun:_mongoc_openssl_init
    ...
-   fun:_mongoc_do_init
+}
+{
+   ignore_openssl_init_realloc
+   Memcheck:Leak
+   fun:realloc
+   fun:CRYPTO_realloc
+   ...
+   fun:_mongoc_openssl_init
+   ...
+}
+{
+   ignore_sasl_init_malloc
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   ...
+   fun:sasl_client_init
+   ...
+}
+{
+   ignore_sasl_init_realloc
+   Memcheck:Leak
+   fun:realloc
+   fun:CRYPTO_realloc
+   ...
+   fun:sasl_client_init
+   ...
+}
+{
+   ignore_openssl_def_get_class_malloc
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   ...
+   fun:def_get_class
+   ...
 }
