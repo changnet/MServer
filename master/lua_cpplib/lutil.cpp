@@ -283,25 +283,9 @@ static int32 what_error( lua_State *L )
     return 1;
 }
 
-/* sha1编码
- * sha1( [upper,],str1,str2,... )
- */
-static int32 sha1( lua_State *L )
+int32 _raw_sha1( lua_State *L,int32 index,unsigned char sha1[SHA_DIGEST_LENGTH] )
 {
-    size_t len;
-    char buf[SHA_DIGEST_LENGTH*2];
-
     SHA_CTX ctx;
-    unsigned char sha1[SHA_DIGEST_LENGTH];
-    
-    int32 index = 1;
-    const char *fmt = "%02x"; // default format to lower
-    if ( !lua_isstring( L,1 ) )
-    {
-        index = 2;
-        if ( lua_toboolean( L,1 ) ) fmt = "%02X";
-    }
-
     if ( !SHA1_Init( &ctx ) )
     {
         return luaL_error( L,"sha1 init error" );
@@ -309,6 +293,7 @@ static int32 sha1( lua_State *L )
 
     for ( int32 i = index; i <= lua_gettop( L ); ++i )
     {
+        size_t len;
         const char *ptr = lua_tolstring( L, i, &len );
         if ( !ptr )
         {
@@ -322,12 +307,47 @@ static int32 sha1( lua_State *L )
     }
 
     SHA1_Final( sha1, &ctx );
+
+    return 0;
+}
+
+/* sha1编码
+ * sha1( [upper,],str1,str2,... )
+ */
+static int32 sha1( lua_State *L )
+{
+    unsigned char sha1[SHA_DIGEST_LENGTH];
+
+    int32 index = 1;
+    const char *fmt = "%02x"; // default format to lower
+    if ( !lua_isstring( L,1 ) )
+    {
+        index = 2;
+        if ( lua_toboolean( L,1 ) ) fmt = "%02X";
+    }
+
+    _raw_sha1( L,index,sha1 );
+
+    char buf[SHA_DIGEST_LENGTH*2];
     for ( int32 i = 0; i < SHA_DIGEST_LENGTH; ++i )
     {
         //--%02x即16进制输出，占2个字节
         snprintf( buf + i*2, 3, fmt, sha1[i] );
     }
     lua_pushlstring( L, buf, SHA_DIGEST_LENGTH*2 );
+
+    return 1;
+}
+
+/* sha1编码，返回20byte的十六进制原始数据而不是字符串
+ * sha1_raw( str1,str2,... )
+ */
+static int32 sha1_raw( lua_State *L )
+{
+    unsigned char sha1[SHA_DIGEST_LENGTH];
+    _raw_sha1( L,1,sha1 );
+
+    lua_pushlstring( L, (const char*)sha1, SHA_DIGEST_LENGTH );
 
     return 1;
 }
@@ -372,6 +392,7 @@ static const luaL_Reg utillib[] =
     {"uuid",uuid},
     {"sha1",sha1},
     {"base64",base64},
+    {"sha1_raw",sha1_raw},
     {"timeofday", timeofday},
     {"what_error",what_error},
     {"uuid_short",uuid_short},

@@ -52,10 +52,10 @@ function ws_handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     print( "ws_handshake_new",conn_id,sec_websocket_key,sec_websocket_accept )
     -- 服务器收到客户端的握手请求
     if sec_websocket_key then
-        local sha1 = util.sha1( sec_websocket_key,ws_magic )
-        local base64 = util.base64( "acb1c2930fd22ac3bd1801ff6521610404c32ab5" )
+        local sha1 = util.sha1_raw( sec_websocket_key,ws_magic )
+        local base64 = util.base64( sha1 )
 
-        print( sha1,base64 ) -- just test if match
+        print( base64 ) -- just test if match
         network_mgr:send_raw_packet( conn_id,handshake_srv )
 
         return
