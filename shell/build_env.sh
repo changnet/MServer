@@ -177,6 +177,8 @@ function build_sasl()
     tar -zxvf $SASL.tar.gz
     cd $SASL
     ./configure --enable-static=yes
+    # make过程中需要创建符号链接，部分挂载的文件系统是不能创建符号链接的，这时就要把tar包拷到
+    # 对应的系统去单独执行
     make
     make install
     #* Plugins are being installed into /usr/local/lib/sasl2,

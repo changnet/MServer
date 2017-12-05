@@ -36,12 +36,15 @@ public:
     int32 load_one_schema(); /* 加载schema文件 */
     int32 get_http_header(); /* 获取http报文头数据 */
 
-    int32 send_c2s_packet(); /* 发送c2s数据包 */
-    int32 send_s2c_packet(); /* 发送s2c数据包 */
+    /* 这三个是通用接口，数据打包差异是通过packet的多态实现的 */
+    int32 send_srv_packet(); /* 发送往服务器数据包 */
+    int32 send_clt_packet(); /* 发送往客户端数据包 */
+    int32 send_raw_packet(); /* 发送原始的数据包 */
+
+    /* 这些是在同一种packet上发送不同特定数据包 */
     int32 send_s2s_packet(); /* 发送s2s数据包 */
     int32 send_ssc_packet(); /* 跨服务器发送客户端数据包 */
     int32 send_rpc_packet(); /* 发送rpc数据包 */
-    int32 send_http_packet();/* 发送http数据包 */
 
     int32 set_send_buffer_size(); /* 设置发送缓冲区大小 */
     int32 set_recv_buffer_size(); /* 设置接收缓冲区大小 */

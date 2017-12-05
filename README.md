@@ -16,9 +16,9 @@ Socket、C++脚本交互、协议序列化、日志等。MySQL、MongoDB、日�
 
 
  * 进入源码目录：cd MServer
- * 下载子模块: git submodule
+ * 下载子模块: git submodule update --init --recursive
  * 更新所有子模块: git submodule update
- * 更新所有子模块：git submodule update [submodule-path] or cd [submodule-path] & git pull origin master
+ * 从子模块源更新子模块：cd [submodule-path] & git pull origin master
  * 进入shell操作目录：cd shell
  * 安装依赖(不同系统，该脚本可能无法使用，请参考脚本手动安装)：./build_evn.sh
  * 编译子模块：./make.sh submodule
@@ -112,3 +112,7 @@ ssl切换：https://stackoverflow.com/questions/21193743/ssl-socket-free-and-shu
 CA bundle：  
 http://www.herongyang.com/PKI/HTTPS-PHP-Multiple-CA-Certificates-in-a-Single-File.html  
 https://www.ibm.com/support/knowledgecenter/en/SSWHYP_4.0.0/com.ibm.apimgmt.apionprem.doc/task_apionprem_generate_pkcs_certificate.html
+
+* http_packet、weebsocket需要考虑zero copy
+* codec设置为NONE时无法直接回调，get_codec返回NULL宕机了
+* websocket的ping、pong、FIN、TEXT/BINARY之类的标识是否需要严格实现

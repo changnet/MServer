@@ -443,7 +443,8 @@ class packet *lnetwork_mgr::lua_check_packet( socket::conn_t conn_ty )
         return NULL;
     }
 
-    if ( conn_ty != sk->conn_type() )
+    // CNT_NONE表示不需要检测连接类型
+    if ( socket::CNT_NONE != conn_ty && conn_ty != sk->conn_type() )
     {
         luaL_error( L,"illegal socket connecte type" );
         return NULL;
@@ -460,11 +461,11 @@ class packet *lnetwork_mgr::lua_check_packet( socket::conn_t conn_ty )
 }
 
 /* 发送c2s数据包
- * network_mgr:send_c2s_packet( conn_id,cmd,pkt )
+ * network_mgr:send_srv_packet( conn_id,cmd,pkt )
  */
-int32 lnetwork_mgr::send_c2s_packet()
+int32 lnetwork_mgr::send_srv_packet()
 {
-    class packet *pkt = lua_check_packet( socket::CNT_CSCN );
+    class packet *pkt = lua_check_packet( socket::CNT_NONE );
     pkt->pack_srv( L,2 );
 
     return 0;
@@ -472,22 +473,11 @@ int32 lnetwork_mgr::send_c2s_packet()
 
 
 /* 发送s2c数据包
- * network_mgr:send_s2c_packet( conn_id,cmd,errno,pkt )
+ * network_mgr:send_clt_packet( conn_id,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::send_s2c_packet()
+int32 lnetwork_mgr::send_clt_packet()
 {
-    class packet *pkt = lua_check_packet( socket::CNT_SCCN );
-    pkt->pack_clt( L,2 );
-
-    return 0;
-}
-
-/* 发送http数据包
- * network_mgr:send_http_packet( conn_id,ctx )
- */
-int32 lnetwork_mgr::send_http_packet()
-{
-    class packet *pkt = lua_check_packet( socket::CNT_HTTP );
+    class packet *pkt = lua_check_packet( socket::CNT_NONE );
     pkt->pack_clt( L,2 );
 
     return 0;
@@ -577,6 +567,35 @@ int32 lnetwork_mgr::send_rpc_packet()
     }
 
     (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
+
+    return 0;
+}
+
+/* 发送原始数据包
+ * network_mgr:send_raw_packet( conn_id,content )
+ */
+int32 lnetwork_mgr::send_raw_packet()
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    class socket *sk = get_conn_by_conn_id( conn_id );
+    if ( !sk || sk->fd() <= 0 )
+    {
+        luaL_error( L,"invalid socket" );
+        return 0;
+    }
+
+    size_t size = 0;
+    const char *ctx = luaL_checklstring( L,2,&size );
+    if ( !ctx ) return 0;
+
+    class buffer &send = sk->send_buffer();
+    if ( !send.reserved( size ) )
+    {
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    send.__append( ctx ,size );
+    sk->pending_send();
 
     return 0;
 }

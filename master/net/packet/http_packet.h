@@ -31,13 +31,11 @@ public:
     virtual int32 unpack();
     /* 解压http数据到lua堆栈 */
     int32 unpack_header( lua_State *L ) const;
-    /* 设置http为websocket */
-    virtual int32 upgrade() { return 0; }
 public:
     /* http_parse 回调函数 */
     void reset();
     void on_headers_complete();
-    int32 on_message_complete();
+    virtual int32 on_message_complete( bool upgrade );
     void append_url( const char *at,size_t len );
     void append_body( const char *at,size_t len );
     void append_cur_field( const char *at,size_t len );

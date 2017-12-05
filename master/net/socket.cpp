@@ -389,6 +389,15 @@ void socket::command_cb()
 {
     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
+    /* 在脚本报错的情况下，可能无法设置 io和packet */
+    if ( !_io )
+    {
+        socket::stop();
+        network_mgr->connect_del( _conn_id,_conn_ty );
+        ERROR( "socket command no packet set,socket disconnect" );
+        return;
+    }
+
     int32 ret = socket::recv();
     if ( 0 == ret )  /* 对方主动断开 */
     {
@@ -404,6 +413,15 @@ void socket::command_cb()
             ERROR( "socket recv error:%s\n",strerror(errno) );
             network_mgr->connect_del( _conn_id,_conn_ty );
         }
+        return;
+    }
+
+    /* 在脚本报错的情况下，可能无法设置 io和packet */
+    if ( !_packet )
+    {
+        socket::stop();
+        network_mgr->connect_del( _conn_id,_conn_ty );
+        ERROR( "socket command no packet set,socket disconnect" );
         return;
     }
 
@@ -433,6 +451,7 @@ int32 socket::set_io( io::io_t io_type )
 
 int32 socket::set_packet( packet::packet_t packet_type )
 {
+    /* 如果有旧的，需要先删除 */
     delete _packet;
     _packet = NULL;
 

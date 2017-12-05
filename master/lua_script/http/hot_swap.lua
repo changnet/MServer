@@ -54,7 +54,7 @@ function Hot_swap:exec( conn_id,fields,body )
     local tips = "hot swap success!\n"
     local ctx = string.format( page200,string.len(tips),tips )
 
-    network_mgr:send_http_packet( conn_id,ctx )
+    network_mgr:send_raw_packet( conn_id,ctx )
 end
 
 local hs = Hot_swap()

@@ -28,11 +28,19 @@ public:
      */
     int32 unpack();
 
-    int32 upgrade();
+    /* 数据帧完成 */
+    int32 on_frame_end();
+
+    // 单个消息时，重置
+    class buffer &body_buffer() { return _body; }
+
+    int32 on_message_complete( bool upgrade );
 private:
+    void new_masking_key( char mask[4] );
     int32 invoke_handshake();
 private:
     bool _is_upgrade;
+    class buffer _body;
     struct websocket_parser *_parser;
 };
 
