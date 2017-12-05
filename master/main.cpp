@@ -1,3 +1,4 @@
+#include <openssl/ssl.h>
 #include <sys/utsname.h> /* for uname */
 
 #include "mysql/sql.h"
@@ -10,6 +11,9 @@
 #include "lua_cpplib/lobj_counter.h"
 #include "lua_cpplib/lnetwork_mgr.h"
 
+int32 ssl_init();
+int32 ssl_uninit();
+
 int32 main( int32 argc,char **argv )
 {
     if (argc < 4)
@@ -21,6 +25,7 @@ int32 main( int32 argc,char **argv )
     atexit(onexit);
     std::set_new_handler( new_fail );
 
+    ssl_init();
     sql::library_init();
     mongo::init();
 
@@ -73,6 +78,50 @@ int32 main( int32 argc,char **argv )
     buffer::allocator.purge();
     sql::library_end();
     mongo::cleanup();
+    ssl_uninit();
+
+    return 0;
+}
+
+// 初始化ssl库
+int32 ssl_init()
+{
+    /* sha1、base64等库需要用到的
+     * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
+     * ssl初始化是不可重入的。在初始化期间不要再调用任何相关的ssl函数
+     * ssl可以初始化多次，在openssl\crypto\init.c中通过RUN_ONCE来控制
+     */
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    SSL_library_init();
+#else
+    OPENSSL_init_ssl(0, NULL);
+#endif
+
+    SSL_load_error_strings ();
+    ERR_load_BIO_strings ();
+    OpenSSL_add_all_algorithms ();
+
+    return 0;
+}
+
+int32 ssl_uninit()
+{
+    /* The OPENSSL_cleanup() function deinitialises OpenSSL (both libcrypto and 
+     * libssl). All resources allocated by OpenSSL are freed. Typically there 
+     * should be no need to call this function directly as it is initiated 
+     * automatically on application exit. This is done via the standard C 
+     * library atexit() function. In the event that the application will close 
+     * in a manner that will not call the registered atexit() handlers then the 
+     * application should call OPENSSL_cleanup() directly. Developers of 
+     * libraries using OpenSSL are discouraged from calling this function and 
+     * should instead, typically, rely on auto-deinitialisation. This is to 
+     * avoid error conditions where both an application and a library it depends
+     * on both use OpenSSL, and the library deinitialises it before the 
+     * application has finished using it.
+     */
+
+    // OPENSSL_cleanup();
 
     return 0;
 }
