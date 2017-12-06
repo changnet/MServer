@@ -50,8 +50,8 @@ int32 ssl_mgr::new_ssl_ctx(
         case SSLV_TLS_GEN_AT : method = TLS_method(); break;
         case SSLV_TLS_SRV_AT : method = TLS_server_method(); break;
         case SSLV_TLS_CLT_AT : method = TLS_client_method(); break;
-#else
 #endif
+        case SSLV_TLS_GEN_12 : method = TLSv1_2_method(); break;
         default :
             ERROR( "new_ssl_ctx:unknow ssl version" );
             return -1;
