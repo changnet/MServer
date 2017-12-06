@@ -2,6 +2,7 @@
 
 #include "ltools.h"
 #include "lstate.h"
+#include "../net/io/ssl_mgr.h"
 #include "../net/codec/codec_mgr.h"
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
@@ -794,4 +795,27 @@ int32 lnetwork_mgr::set_conn_packet() /* 设置socket的打包方式 */
 
     sk->set_packet( static_cast<packet::packet_t>( packet_type ) );
     return 0;
+}
+
+int32 lnetwork_mgr::new_ssl_ctx() /* 创建一个ssl上下文 */
+{
+    int32 sslv = luaL_checkinteger( L,1 );
+    const char *cert_file = luaL_checkstring( L,2 );
+    const char *key_file  = luaL_checkstring( L,2 );
+
+    if ( sslv <= ssl_mgr::SSLV_NONE || sslv >= ssl_mgr::SSLV_MAX )
+    {
+        return luaL_error( L,"invalid ssl version" );
+    }
+
+    int32 idx = ssl_mgr::instance()
+        ->new_ssl_ctx( static_cast<ssl_mgr::sslv_t>(sslv),cert_file,key_file );
+
+    if ( idx < 0 )
+    {
+        return luaL_error( L,"new ssl ctx error" );
+    }
+
+    lua_pushinteger( L,idx );
+    return 1;
 }

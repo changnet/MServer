@@ -49,6 +49,8 @@ public:
     int32 set_send_buffer_size(); /* 设置发送缓冲区大小 */
     int32 set_recv_buffer_size(); /* 设置接收缓冲区大小 */
 
+    int32 new_ssl_ctx(); /* 创建一个ssl上下文 */
+
     /* socket基本操作 */
     int32 close();
     int32 address ();

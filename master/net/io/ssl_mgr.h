@@ -29,7 +29,7 @@ public:
     static void uninstance();
     static class ssl_mgr *instance();
 
-    SSL_CTX *get_ssl_ctx();
+    struct ssl_ctx *get_ssl_ctx( int32 idx );
     /* 创建一个ssl上下文
      * @sslv： ssl版本，见sslv_t枚举
      * @cert_file: ca证书文件路径

@@ -1,6 +1,9 @@
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include "ssl_mgr.h"
+
+int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u );
 
 // SSL_CTX是typedef，用这种方式来实现前置声明
 struct ssl_ctx : public SSL_CTX {};
@@ -39,9 +42,22 @@ ssl_mgr::~ssl_mgr()
     memset( _ssl_ctx,0,sizeof(_ssl_ctx) );
 }
 
+struct ssl_ctx *ssl_mgr::get_ssl_ctx( int32 idx )
+{
+    if ( idx < SSLV_NONE || idx >= SSLV_MAX ) return NULL;
+
+    return _ssl_ctx[idx];
+}
+
 int32 ssl_mgr::new_ssl_ctx(
     sslv_t sslv,const char *cert_file,const char *key_file )
 {
+    if ( _ctx_idx >= MAX_SSL_CTX )
+    {
+        ERROR( "new_ssl_ctx:over max ctx storage" );
+        return -1;
+    }
+
     const SSL_METHOD *method = NULL;
     switch( sslv )
     {
@@ -68,17 +84,20 @@ int32 ssl_mgr::new_ssl_ctx(
     if ( SSL_CTX_use_certificate_chain_file( ctx,cert_file ) <= 0 )
     {
         SSL_CTX_free( ctx );
-        ERROR( "new_ssl_ctx:SSL_CTX_use_certificate_chain_file fail" );
+        ERROR( "new_ssl_ctx cert file:%s",
+            ERR_error_string( ERR_get_error(),NULL ) );
         return -1;
     }
 
     // 加载pem格式私钥
     // 如果key加了密码，则需要处理：SSL_CTX_set_default_passwd_cb
     // PS:ca证书是公开的，但其实也是可以加密码的，这时也要处理才能加载
+    SSL_CTX_set_default_passwd_cb( ctx,ctx_passwd_cb );
     if ( SSL_CTX_use_PrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM ) <= 0 )
     {
         SSL_CTX_free( ctx );
-        ERROR( "new_ssl_ctx:SSL_CTX_use_PrivateKey_file fail" );
+        ERROR( "new_ssl_ctx key file:%s",
+            ERR_error_string( ERR_get_error(),NULL ) );
         return -1;
     }
 
@@ -90,6 +109,14 @@ int32 ssl_mgr::new_ssl_ctx(
         return -1;
     }
 
-    _ssl_ctx[_ctx_idx++] = ctx;
-    return 0;
+    _ssl_ctx[_ctx_idx] = ctx;
+    return _ctx_idx ++;
+}
+
+int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u )
+{
+    const char *passwd = "mini_distributed_game_server";
+    strncpy(buf, passwd, size);
+    buf[size - 1] = '\0';
+    return strlen(buf);
 }

@@ -257,6 +257,8 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::set_send_buffer_size> ( "set_send_buffer_size" );
     lc.def<&lnetwork_mgr::set_recv_buffer_size> ( "set_recv_buffer_size" );
 
+    lc.def<&lnetwork_mgr::new_ssl_ctx> ( "new_ssl_ctx" );
+
     lc.set( "CNT_NONE",socket::CNT_NONE );
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );

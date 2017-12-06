@@ -111,3 +111,11 @@ openssl req -new -key private/clt_key.pem -passin pass:$OPENSSLPASS -out private
 # 注意上方签发服务端证书时已经使用-CAcreateserial生成过ca.srl文件，因此这里不需要带上这个参数了
 openssl x509 -req -days 3650 -sha1 -extensions v3_req -CA newcerts/ca.cer -passin pass:$OPENSSLPASS -CAkey private/cakey.pem \
 -CAserial ca.srl -in private/client.csr -out newcerts/client.cer
+
+
+#可以用下面的方法测试生成的key和证书
+# openssl rsa -text -in private/srv_key.pem -passin pass:$OPENSSLPASS
+# openssl x509 -in newcerts/server.cer -text
+
+# 可用以下方法去掉密码
+openssl rsa -in private/srv_key.pem -out private/srv_key_no_passwd.pem

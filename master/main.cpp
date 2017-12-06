@@ -4,6 +4,7 @@
 #include "mysql/sql.h"
 #include "net/buffer.h"
 #include "mongo/mongo.h"
+#include "net/io/ssl_mgr.h"
 #include "net/codec/codec_mgr.h"
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
@@ -69,6 +70,7 @@ int32 main( int32 argc,char **argv )
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
     leventloop::uninstance  ();      /* 关闭主事件循环 */
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
+    ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 
     assert( "c++ object push to lua not release",
         obj_counter::instance()->final_check() );

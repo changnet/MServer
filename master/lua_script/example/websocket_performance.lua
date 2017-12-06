@@ -113,3 +113,6 @@ print( "websocket listen at port:",ws_port )
 local ws_local_conn = 
     network_mgr:connect( "127.0.0.1",ws_port,network_mgr.CNT_WEBS )
 print( "websocket connect to local server:",ws_port,"conn_id =",ws_local_conn )
+
+local idx = network_mgr:new_ssl_ctx( 4,"certs/server.cer","certs/srv_key_no_passwd.pem" )
+print( "create one ssl ctx at ",idx )
