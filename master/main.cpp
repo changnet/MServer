@@ -92,6 +92,7 @@ int32 ssl_init()
      * ssl可以初始化多次，在openssl\crypto\init.c中通过RUN_ONCE来控制
      */
 
+// OPENSSL_VERSION_NUMBER定义在/usr/include/openssl/opensslv.h
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
 #else
