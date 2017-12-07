@@ -6,7 +6,12 @@
 
 #include "../../global/global.h"
 
-struct ssl_ctx;
+struct x_ssl_ctx
+{
+    void *_ctx;
+    char *_passwd;
+};
+
 class ssl_mgr
 {
 public:
@@ -25,23 +30,39 @@ public:
 
         SSLV_MAX
     }sslv_t;
+
+    // key 加密类型
+    typedef enum
+    {
+        KEYT_NONE = 0,
+        KEYT_GEN  = 1, // 通用类型，BEGIN PRIVATE KEY
+        KEYT_RSA  = 2, // RSA，BEGIN RSA PRIVATE KEY
+
+        KEYT_MAX
+    }key_t;
 public:
     static void uninstance();
     static class ssl_mgr *instance();
 
-    struct ssl_ctx *get_ssl_ctx( int32 idx );
+    /* 获取一个SSL_CTX
+     * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
+     * SSL_CTX是一个typedef，不能前置声明
+     */
+    void *get_ssl_ctx( int32 idx );
     /* 创建一个ssl上下文
      * @sslv： ssl版本，见sslv_t枚举
      * @cert_file: ca证书文件路径
      * @key_file: 私钥文件路径
      */
-    int32 new_ssl_ctx( sslv_t sslv,const char *cert_file,const char *key_file );
+    int32 new_ssl_ctx( sslv_t sslv,const char *cert_file,
+        key_t keyt,const char *key_file,const char *passwd );
 private:
     ssl_mgr();
     ~ssl_mgr();
 
     int32 _ctx_idx;
-    ssl_ctx* _ssl_ctx[MAX_SSL_CTX];
+    struct x_ssl_ctx _ssl_ctx[MAX_SSL_CTX];
+
     static class ssl_mgr *_ssl_mgr;
 };
 

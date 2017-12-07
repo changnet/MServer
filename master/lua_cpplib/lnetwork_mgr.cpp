@@ -801,15 +801,24 @@ int32 lnetwork_mgr::new_ssl_ctx() /* 创建一个ssl上下文 */
 {
     int32 sslv = luaL_checkinteger( L,1 );
     const char *cert_file = luaL_checkstring( L,2 );
-    const char *key_file  = luaL_checkstring( L,2 );
+
+    int32 keyt = luaL_checkinteger( L,3 );
+    const char *key_file = luaL_checkstring( L,4 );
+    const char *passwd   = luaL_checkstring( L,5 );
 
     if ( sslv <= ssl_mgr::SSLV_NONE || sslv >= ssl_mgr::SSLV_MAX )
     {
         return luaL_error( L,"invalid ssl version" );
     }
 
-    int32 idx = ssl_mgr::instance()
-        ->new_ssl_ctx( static_cast<ssl_mgr::sslv_t>(sslv),cert_file,key_file );
+    if ( keyt <= ssl_mgr::KEYT_NONE || keyt >= ssl_mgr::KEYT_MAX )
+    {
+        return luaL_error( L,"invalid ssl key type" );
+    }
+
+    int32 idx = ssl_mgr::instance()->new_ssl_ctx( 
+        static_cast<ssl_mgr::sslv_t>(sslv),cert_file,
+        static_cast<ssl_mgr::key_t>(keyt),key_file,passwd );
 
     if ( idx < 0 )
     {

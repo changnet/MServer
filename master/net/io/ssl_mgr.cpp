@@ -5,8 +5,20 @@
 
 int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u );
 
-// SSL_CTX是typedef，用这种方式来实现前置声明
-struct ssl_ctx : public SSL_CTX {};
+void delete_ssl_ctx( struct x_ssl_ctx &ssl_ctx )
+{
+    if ( ssl_ctx._ctx )
+    {
+        SSL_CTX_free( static_cast<SSL_CTX *>(ssl_ctx._ctx) );
+    }
+    if ( ssl_ctx._passwd )
+    {
+        delete []ssl_ctx._passwd;
+    }
+
+    ssl_ctx._ctx = NULL;
+    ssl_ctx._passwd = NULL;
+}
 
 class ssl_mgr *ssl_mgr::_ssl_mgr = NULL;
 
@@ -37,20 +49,20 @@ ssl_mgr::~ssl_mgr()
     _ctx_idx = 0;
     for ( int32 idx = 0;idx < MAX_SSL_CTX;idx ++ )
     {
-        SSL_CTX_free( _ssl_ctx[idx] );
+        delete_ssl_ctx( _ssl_ctx[idx] );
     }
     memset( _ssl_ctx,0,sizeof(_ssl_ctx) );
 }
 
-struct ssl_ctx *ssl_mgr::get_ssl_ctx( int32 idx )
+void *ssl_mgr::get_ssl_ctx( int32 idx )
 {
-    if ( idx < SSLV_NONE || idx >= SSLV_MAX ) return NULL;
+    if ( idx < SSLV_NONE || idx >= _ctx_idx ) return NULL;
 
-    return _ssl_ctx[idx];
+    return _ssl_ctx[idx]._ctx;
 }
 
-int32 ssl_mgr::new_ssl_ctx(
-    sslv_t sslv,const char *cert_file,const char *key_file )
+int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
+    const char *cert_file,key_t keyt,const char *key_file,const char *passwd )
 {
     if ( _ctx_idx >= MAX_SSL_CTX )
     {
@@ -72,8 +84,8 @@ int32 ssl_mgr::new_ssl_ctx(
             ERROR( "new_ssl_ctx:unknow ssl version" );
             return -1;
     }
-    struct ssl_ctx *ctx = 
-        static_cast<struct ssl_ctx *>( SSL_CTX_new( method ) );
+
+    SSL_CTX *ctx = SSL_CTX_new( method );
     if ( !ctx )
     {
         ERROR( "new_ssl_ctx:can NOT create ssl content" );
@@ -89,13 +101,25 @@ int32 ssl_mgr::new_ssl_ctx(
         return -1;
     }
 
+    struct x_ssl_ctx &ssl_ctx = _ssl_ctx[_ctx_idx];
+    ssl_ctx._ctx = ctx;
+    if ( passwd )
+    {
+        size_t size = strlen(passwd);
+        ssl_ctx._passwd = new char[size + 1];
+        memcpy( ssl_ctx._passwd,passwd,size );
+
+        ssl_ctx._passwd[size] = 0;
+    }
+
     // 加载pem格式私钥
     // 如果key加了密码，则需要处理：SSL_CTX_set_default_passwd_cb
     // PS:ca证书是公开的，但其实也是可以加密码的，这时也要处理才能加载
     SSL_CTX_set_default_passwd_cb( ctx,ctx_passwd_cb );
-    if ( SSL_CTX_use_PrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM ) <= 0 )
+    SSL_CTX_set_default_passwd_cb_userdata( ctx,ssl_ctx._passwd );
+    if ( SSL_CTX_use_RSAPrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM ) <= 0 )
     {
-        SSL_CTX_free( ctx );
+        delete_ssl_ctx( ssl_ctx );
         ERROR( "new_ssl_ctx key file:%s",
             ERR_error_string( ERR_get_error(),NULL ) );
         return -1;
@@ -104,19 +128,19 @@ int32 ssl_mgr::new_ssl_ctx(
     // 验证私钥是否和证书匹配
     if ( SSL_CTX_check_private_key( ctx ) <= 0 )
     {
-        SSL_CTX_free( ctx );
+        delete_ssl_ctx( ssl_ctx );
         ERROR( "new_ssl_ctx:certificate and private key not match" );
         return -1;
     }
 
-    _ssl_ctx[_ctx_idx] = ctx;
     return _ctx_idx ++;
 }
 
 int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u )
 {
-    const char *passwd = "mini_distributed_game_server";
-    strncpy(buf, passwd, size);
+    if ( !u ) return 0;
+
+    strncpy(buf, (const char *)u, size);
     buf[size - 1] = '\0';
     return strlen(buf);
 }
