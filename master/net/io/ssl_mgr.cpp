@@ -61,6 +61,11 @@ void *ssl_mgr::get_ssl_ctx( int32 idx )
     return _ssl_ctx[idx]._ctx;
 }
 
+/* 这个函数会造成较多的内存检测问题
+ * Use of uninitialised value of size 8
+ * Conditional jump or move depends on uninitialised value(s)
+ * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
+ */
 int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     const char *cert_file,key_t keyt,const char *key_file,const char *passwd )
 {
@@ -117,7 +122,22 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     // PS:ca证书是公开的，但其实也是可以加密码的，这时也要处理才能加载
     SSL_CTX_set_default_passwd_cb( ctx,ctx_passwd_cb );
     SSL_CTX_set_default_passwd_cb_userdata( ctx,ssl_ctx._passwd );
-    if ( SSL_CTX_use_RSAPrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM ) <= 0 )
+
+    int32 ok = 0;
+    switch( keyt )
+    {
+        case KEYT_GEN :
+            ok = SSL_CTX_use_PrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM );
+            break;
+        case KEYT_RSA :
+            ok = SSL_CTX_use_RSAPrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM );
+            break;
+        default :
+            delete_ssl_ctx( ssl_ctx );
+            ERROR( "invalid key type" );
+            return -1;
+    }
+    if ( ok <= 0 )
     {
         delete_ssl_ctx( ssl_ctx );
         ERROR( "new_ssl_ctx key file:%s",
@@ -136,11 +156,12 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     return _ctx_idx ++;
 }
 
+// 返回密码数据
 int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u )
 {
     if ( !u ) return 0;
 
-    strncpy(buf, (const char *)u, size);
+    strncpy( buf, (const char *)u, size );
     buf[size - 1] = '\0';
     return strlen(buf);
 }
