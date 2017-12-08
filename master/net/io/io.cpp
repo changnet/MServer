@@ -17,6 +17,8 @@ io::~io()
 // 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
 int32 io::recv()
 {
+    assert( "io recv fd invalid",_fd > 0 );
+
     if ( !_recv->reserved() ) return -1; /* no more memory */
 
     uint32 size = _recv->buff_size();
@@ -42,6 +44,8 @@ int32 io::recv()
 // 返回：< 0 错误(包括对方主动断开)，0 成功，> 0 仍需要发送的字节数
 int32 io::send()
 {
+    assert( "io send fd invalid",_fd > 0 );
+
     size_t bytes = _send->data_size();
     assert( "io send without data",bytes > 0 );
 

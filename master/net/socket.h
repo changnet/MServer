@@ -66,6 +66,9 @@ public:
     int32 listen( const char *host,int32 port );
     int32 connect( const char *host,int32 port );
 
+    int32 init_accept();
+    int32 init_connect();
+
     bool __attribute__ (
         (warn_unused_result)) append( const void *data,uint32 len );
 
@@ -102,6 +105,8 @@ public:
     {
         _send.set_buffer_size( max,min );
     }
+private:
+    void init_check( int32 ecode );
 protected:
     buffer _recv;
     buffer _send;

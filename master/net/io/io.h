@@ -27,13 +27,13 @@ public:
      */
     virtual int32 send();
     /* 准备接受状态
+     * 返回: < 0 错误，0  需要重试，> 0 成功
      */
-    virtual int32 init_accept() { return 0; };
+    virtual int32 init_accept( int32 fd ) { return _fd = fd; };
     /* 准备连接状态
+     * 返回: < 0 错误，0  需要重试，> 0 成功
      */
-    virtual int32 init_connect() { return 0; };
-
-    inline void set_fd( int32 fd ) { _fd = fd; }
+    virtual int32 init_connect( int32 fd ) { return _fd = fd; };
 protected:
     int32 _fd;
     class buffer *_recv;

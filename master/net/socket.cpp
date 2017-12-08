@@ -210,9 +210,6 @@ void socket::start( int32 fd )
     set<socket,&socket::command_cb>( this );
     _w.set( fd,EV_READ ); /* 将之前的write改为read */
 
-    assert( "socket,start,no io set",_io );
-
-    _io->set_fd( fd );
     if ( !_w.is_active() ) _w.start();
 }
 
@@ -382,8 +379,20 @@ void socket::listen_cb()
         KEEP_ALIVE( new_fd );
         USER_TIMEOUT( new_fd );
 
-        class socket *new_sk = network_mgr->accept_new( _conn_ty );
-        if ( new_sk ) new_sk->start( new_fd );
+        uint32 conn_id = network_mgr->new_connect_id();
+        class socket *new_sk = new class socket( conn_id,_conn_ty );
+        new_sk->start( new_fd );
+
+        // 初始完socket后才触发脚本，因为脚本那边中能要对socket进行处理了
+        bool is_ok = network_mgr->accept_new( new_sk );
+        if ( expect_true( is_ok ) )
+        {
+            new_sk->init_accept();
+        }
+        else
+        {
+            new_sk->stop();
+        }
     }
 }
 
@@ -414,7 +423,14 @@ void socket::connect_cb ()
     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
     bool is_ok = network_mgr->connect_new( _conn_id,_conn_ty,ecode );
 
-    if ( !is_ok || 0 != ecode ) socket::stop ();
+    if ( expect_true( is_ok && 0 == ecode ) )
+    {
+        init_connect();
+    }
+    else
+    {
+        socket::stop ();
+    }
 }
 
 void socket::command_cb()
@@ -452,7 +468,7 @@ int32 socket::set_io( io::io_t io_type,int32 io_ctx )
             _io = new io( &_recv,&_send );
             break;
         case io::IOT_SSL :
-            _io = new ssl_io( &_recv,&_send );
+            _io = new ssl_io( io_ctx,&_recv,&_send );
             break;
         default : return -1;
     }
@@ -485,5 +501,40 @@ int32 socket::set_packet( packet::packet_t packet_type )
 int32 socket::set_codec_type( codec::codec_t codec_type )
 {
     _codec_ty = codec_type;
+    return 0;
+}
+
+// 返回: < 0 错误，0  需要重试，> 0 成功
+void socket::init_check( int32 ecode )
+{
+    if ( 0 < ecode ) return;
+
+    if ( 0 == ecode )
+    {
+        this->pending_send();
+        return;
+    }
+
+    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    socket::stop();
+    network_mgr->connect_del( _conn_id,_conn_ty );
+}
+
+int32 socket::init_accept()
+{
+    assert( "socket init accept no io set",_io );
+    int32 ecode = _io->init_accept( _w.fd );
+
+    init_check( ecode );
+    return ecode;
+}
+
+int32 socket::init_connect()
+{
+    assert( "socket init connect no io set",_io );
+    int32 ecode = _io->init_connect( _w.fd );
+
+    init_check( ecode );
     return 0;
 }

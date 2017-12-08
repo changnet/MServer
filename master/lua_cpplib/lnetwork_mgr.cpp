@@ -657,11 +657,11 @@ class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
 }
 
 /* 新增连接 */
-class socket *lnetwork_mgr::accept_new( socket::conn_t conn_ty )
+bool lnetwork_mgr::accept_new( class socket *new_sk )
 {
-    uint32 conn_id = new_connect_id();
-    /* 新增的连接和监听的连接类型必须一样 */
-    class socket *new_sk = new class socket( conn_id,conn_ty );
+    uint32 conn_id = new_sk->conn_id();
+    socket::conn_t conn_ty = new_sk->conn_type();
+
     _socket_map[conn_id] = new_sk;
 
     lua_pushcfunction( L,traceback );
@@ -678,11 +678,11 @@ class socket *lnetwork_mgr::accept_new( socket::conn_t conn_ty )
         ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,2 ); /* remove traceback and error object */
-        return    NULL;
+        return   false;
     }
     lua_pop( L,1 ); /* remove traceback */
 
-    return new_sk;
+    return true;
 }
 
 /* 连接回调 */
