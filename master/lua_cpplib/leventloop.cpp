@@ -139,11 +139,11 @@ int32 leventloop::pending_send( class socket *s  )
     return ansendingcnt;
 }
 
-void leventloop::remove_sending( int32 sending )
+void leventloop::remove_pending( int32 pending )
 {
-    assert( "illegal remove sending" ,sending > 0 && sending < ansendingmax );
+    assert( "illegal remove pending" ,pending > 0 && pending < ansendingmax );
 
-    ansendings[sending] = NULL;
+    ansendings[pending] = NULL;
 }
 
 /* 把数据攒到一起，一次发送
@@ -166,35 +166,22 @@ void leventloop::invoke_sending()
             continue;
         }
 
-        assert( "invoke sending index not match",i == _socket->_sending );
+        int32 pending = _socket->get_pending();
+        assert( "invoke sending index not match",i == pending );
 
-        /* 处理发送 */
-        int32 ret = _socket->send();
-
-        if ( 0 == ret || (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) )
-        {
-            ERROR( "invoke sending unsuccess:%s",strerror(errno) );
-            _socket->stop();
-
-            continue;
-        }
-
-        /* 发送完毕，处理一下socket标识 */
-        if ( _socket->_send.data_size() <= 0 )
-        {
-            _socket->_sending = 0;   /* 去除发送标识 */
-            _socket->_send.clear(); /* 去除悬空区 */
-
-            continue;
-        }
+        /* 处理发送,
+         * return: < 0 error,= 0 success,> 0 bytes still need to be send
+         */
+        if ( _socket->send() <= 0 ) continue;
 
         /* 还有数据，处理sendings数组移动，防止中间留空 */
         if ( i > pos + 1 )
         {
             ++pos;
+            pending = pos;
             ansendings[pos]  = _socket;
-            _socket->_sending = pos;
         }
+        _socket->set_pending( pending );
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 

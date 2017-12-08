@@ -8,26 +8,54 @@ io::~io()
 {
 }
 
-int32 io::recv( int32 fd,class buffer &buff ) const
+// 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
+int32 io::recv( int32 fd,class buffer &buff )
 {
     if ( !buff.reserved() ) return -1; /* no more memory */
 
     assert( "socket recv buffer length <= 0",buff._len - buff._size > 0 );
     int32 len = ::read( fd,buff._buff + buff._size,buff._len - buff._size );
-    if ( len > 0 )
+    if ( expect_true(len > 0) )
     {
         buff._size += len;
+        return len;
     }
-    return len;
+
+    if ( 0 == len ) return -1; // 对方主动断开
+
+    /* error happen */
+    if ( errno != EAGAIN && errno != EWOULDBLOCK )
+    {
+        ERROR( "io send:%s",strerror(errno) );
+        return -1;
+    }
+
+    return 0; // 重试
 }
 
-int32 io::send( int32 fd,class buffer &buff ) const
+// 返回：< 0 错误(包括对方主动断开)，0 成功，> 0 仍需要发送的字节数
+int32 io::send( int32 fd,class buffer &buff )
 {
-    assert( "buf send without data",buff._size - buff._pos > 0 );
+    size_t bytes = buff.data_size();
+    assert( "io send without data",bytes > 0 );
 
-    int32 len = ::write( fd,buff._buff + buff._pos,buff._size - buff._pos );
+    int32 len = ::write( fd,buff.data(),bytes );
 
-    if ( len > 0 ) buff._pos += len;
+    if ( expect_true(len > 0) )
+    {
+        buff.subtract( len );
+        return ((size_t)len) == bytes ? 0 : bytes - len;
+    }
 
-    return len;
+    if ( 0 == len ) return -1;// 对方主动断开
+
+    /* error happen */
+    if ( errno != EAGAIN && errno != EWOULDBLOCK )
+    {
+        ERROR( "io send:%s",strerror(errno) );
+        return -1;
+    }
+
+    /* need to try again */
+    return bytes;
 }

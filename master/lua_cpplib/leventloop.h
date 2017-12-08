@@ -26,7 +26,7 @@ public:
     int32 signal();
 
     int32 pending_send( class socket *s );
-    void remove_sending( int32 sending );
+    void remove_pending( int32 pending );
 private:
     explicit leventloop( lua_State *L,bool singleton );
 

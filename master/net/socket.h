@@ -91,6 +91,9 @@ public:
     inline class buffer &send_buffer() { return _send; }
     inline void io_cb( ev_io &w,int32 revents ) { (this->*_method)(); }
 
+    inline int32 get_pending() const { return _pending; }
+    inline int32 set_pending( int32 pending ) { return _pending = pending; }
+
     inline void set_recv_size( uint32 max,uint32 min )
     {
         _recv.set_buffer_size( max,min );
@@ -99,12 +102,10 @@ public:
     {
         _send.set_buffer_size( max,min );
     }
-
-    friend class leventloop;
 protected:
     buffer _recv;
     buffer _send;
-    int32  _sending;
+    int32  _pending;
     uint32 _conn_id;
     conn_t _conn_ty;
 private:

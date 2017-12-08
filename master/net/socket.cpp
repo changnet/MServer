@@ -17,7 +17,7 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
     _io = NULL;
     _packet = NULL;
 
-    _sending  = 0;
+    _pending  = 0;
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
     _codec_ty = codec::CDC_NONE;
@@ -31,17 +31,17 @@ socket::~socket()
     _io = NULL;
     _packet = NULL;
 
-    assert( "socket not clean",0 == _sending && -1 == _w.fd );
+    assert( "socket not clean",0 == _pending && -1 == _w.fd );
 }
 
 void socket::stop()
 {
-    if ( _sending )
+    if ( _pending )
     {
-        leventloop::instance()->remove_sending( _sending );
-        _sending = 0;
+        leventloop::instance()->remove_pending( _pending );
+        _pending = 0;
 
-        send();  /* flush data before close */
+        _io->send( _w.fd,_send );  /* flush data before close */
     }
 
     if ( _w.fd > 0 )
@@ -58,15 +58,43 @@ void socket::stop()
 int32 socket::recv()
 {
     assert( "socket recv without io control",_io );
+    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    return _io->recv( _w.fd,_recv );
+    int32 ret = _io->recv( _w.fd,_recv );
+    if ( ret < 0 )
+    {
+        socket::stop();
+        network_mgr->connect_del( _conn_id,_conn_ty );
+
+        return -1;
+    }
+
+    return ret;
 }
 
+/* 发送数据
+ * return: < 0 error,= 0 success,> 0 bytes still need to be send
+ */
 int32 socket::send()
 {
     assert( "socket send without io control",_io );
+    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    return _io->send( _w.fd,_send );
+    /* 去除发送标识，因为发送时，pending标识会变。
+     * 如果需要再次发送，则主循环需要重设此标识
+     */
+     _pending = 0;
+
+    int32 ret = _io->send( _w.fd,_send );
+    if ( ret < 0 )
+    {
+        socket::stop();
+        network_mgr->connect_del( _conn_id,_conn_ty );
+
+        return -1;
+    }
+
+    return ret;
 }
 
 int32 socket::block( int32 fd )
@@ -323,9 +351,9 @@ int32 socket::listen( const char *host,int32 port )
 
 void socket::pending_send()
 {
-    if ( 0 != _sending ) return; // 已经在发送队列
+    if ( 0 != _pending ) return; // 已经在发送队列
     /* 放到发送队列，一次发送 */
-    _sending = leventloop::instance()->pending_send( this );
+    _pending = leventloop::instance()->pending_send( this );
 }
 
 
@@ -390,40 +418,24 @@ void socket::command_cb()
     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     /* 在脚本报错的情况下，可能无法设置 io和packet */
-    if ( !_io )
+    if ( !_io || !_packet )
     {
         socket::stop();
         network_mgr->connect_del( _conn_id,_conn_ty );
-        ERROR( "socket command no packet set,socket disconnect" );
+        ERROR( "socket command no io or packet set,socket disconnect" );
         return;
     }
 
+    // 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
     int32 ret = socket::recv();
-    if ( 0 == ret )  /* 对方主动断开 */
+    if ( expect_false(0 > ret) )  /* 出错,包括对方主动断开 */
     {
         socket::stop();
         network_mgr->connect_del( _conn_id,_conn_ty );
-        return;
-    }
-    else if ( 0 > ret ) /* 出错 */
-    {
-        if ( EAGAIN != errno && EWOULDBLOCK != errno )
-        {
-            socket::stop();
-            ERROR( "socket recv error:%s\n",strerror(errno) );
-            network_mgr->connect_del( _conn_id,_conn_ty );
-        }
         return;
     }
 
-    /* 在脚本报错的情况下，可能无法设置 io和packet */
-    if ( !_packet )
-    {
-        socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
-        ERROR( "socket command no packet set,socket disconnect" );
-        return;
-    }
+    if ( expect_false(0 == ret) ) return; // 需要重试
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
