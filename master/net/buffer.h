@@ -4,7 +4,13 @@
 #include "../global/global.h"
 #include "../pool/ordered_pool.h"
 
-/* 收发缓冲区，要考虑游戏场景中的几个特殊情况：
+/* 
+ *    +---------------------------------------------------------------+
+ *    |    悬空区   |        数据区          |      空白buff区          |
+ *    +---------------------------------------------------------------+
+ * _buff          _pos                    _size
+ *  
+ *收发缓冲区，要考虑游戏场景中的几个特殊情况：
  * 1.游戏的通信包一般都很小，reserved出现的概率很小。偶尔出现，memcpy的效率也是可以接受的
  * 2.缓冲区可能出现边读取边接收，边发送边写入的情况。因此，当前面的协议未读取完，又接收到新的
  *   协议，或者前面的数据未发送完，又写入新的数据，会造成前面一段缓冲区悬空，没法利用。旧框架
@@ -27,7 +33,7 @@ public:
         __append( data,len );    return true;
     }
 
-    /* 减去缓冲区数据，此函数不要动缓冲区的数据，因为数据尚未处理 */
+    /* 减去缓冲区数据，此函数不处理缓冲区的数据 */
     inline void subtract( uint32 len )
     {
         _pos += len;
@@ -36,17 +42,27 @@ public:
         if ( _size == _pos ) _pos = _size = 0;
     }
 
-    /* 清理缓冲区 */
+    /* 增加数据区 */
+    inline void increase( uint32 len )
+    {
+        _size += len;
+        assert( "buffer increase",_size <= _len );
+    }
+
+    /* 重置 */
     inline void clear() { _pos = _size = 0; }
-
-    /* 有效数据大小 */
-    inline uint32 data_size() const { return _size - _pos; }
-
     /* 总大小 */
     inline uint32 length() const { return _len; }
 
-    /* 有效的缓冲区指针 */
-    char *data() const { return _buff + _pos; }
+    /* 数据区大小 */
+    inline uint32 data_size() const { return _size - _pos; }
+    /* 数据区指针 */
+    inline char *data_pointer() const { return _buff + _pos; }
+
+    /* 缓冲区大小 */
+    inline uint32 buff_size() const { return _len - _size; }
+    /* 缓冲区指针 */
+    inline char *buff_pointer() const { return _buff + _size; }
 
     /* raw append data,but won't reserved */
     void __append( const void *data,const uint32 len )
@@ -113,7 +129,7 @@ public:
 private:
     buffer( const buffer & );
     buffer &operator=( const buffer &);
-public:
+private:
     char  *_buff;    /* 缓冲区指针 */
     uint32 _size;    /* 缓冲区已使用大小 */
     uint32 _len ;    /* 缓冲区总大小 */
@@ -121,7 +137,7 @@ public:
 
     uint32 _max_buff; /* 缓冲区最小值 */
     uint32 _min_buff; /* 缓冲区最大值 */
-
+public:
     static class ordered_pool<BUFFER_CHUNK> allocator;
 };
 

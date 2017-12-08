@@ -113,8 +113,8 @@ int32 on_frame_body(
     if( parser->flags & WS_HAS_MASK ) {
         if ( !body.reserved( length ) ) return -1;
 
-        websocket_parser_decode( body._buff + body._size, at, length, parser);
-        body._size += length;
+        websocket_parser_decode( body.buff_pointer(), at, length, parser);
+        body.increase( length );
     }
     else
     {
@@ -184,8 +184,8 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
     size_t len = websocket_calc_frame_size( flags,size );
 
     static const char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
-    websocket_build_frame( send._buff + send._size,flags,mask,ctx,size );
-    send._size += len;
+    websocket_build_frame( send.buff_pointer(),flags,mask,ctx,size );
+    send.increase( len );
     _socket->pending_send();
 
     return 0;
@@ -215,8 +215,8 @@ int32 websocket_packet::pack_srv( lua_State *L,int32 index )
 
     char mask[4] = { 0 };
     new_masking_key( mask );
-    websocket_build_frame( send._buff + send._size,flags,mask,ctx,size );
-    send._size += len;
+    websocket_build_frame( send.buff_pointer(),flags,mask,ctx,size );
+    send.increase( len );
     _socket->pending_send();
 
     return 0;
@@ -239,7 +239,7 @@ int32 websocket_packet::unpack()
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
     size_t nparser = 
-        websocket_parser_execute( _parser,&settings,recv.data(),size );
+        websocket_parser_execute( _parser,&settings,recv.data_pointer(),size );
     // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
     // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
     // 普通错误，比如回调脚本出错，是不会中止解析的
@@ -324,7 +324,7 @@ int32 websocket_packet::on_frame_end()
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"webs_command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushlstring   ( L,_body.data(),_body.data_size() );
+    lua_pushlstring   ( L,_body.data_pointer(),_body.data_size() );
 
     if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {

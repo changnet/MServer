@@ -5,6 +5,7 @@
 #include <arpa/inet.h>  /* htons */
 
 #include "socket.h"
+#include "io/ssl_io.h"
 #include "../ev/ev_def.h"
 #include "packet/http_packet.h"
 #include "packet/stream_packet.h"
@@ -41,7 +42,7 @@ void socket::stop()
         leventloop::instance()->remove_pending( _pending );
         _pending = 0;
 
-        _io->send( _w.fd,_send );  /* flush data before close */
+        _io->send();  /* flush data before close */
     }
 
     if ( _w.fd > 0 )
@@ -60,7 +61,7 @@ int32 socket::recv()
     assert( "socket recv without io control",_io );
     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    int32 ret = _io->recv( _w.fd,_recv );
+    int32 ret = _io->recv();
     if ( ret < 0 )
     {
         socket::stop();
@@ -85,7 +86,7 @@ int32 socket::send()
      */
      _pending = 0;
 
-    int32 ret = _io->send( _w.fd,_send );
+    int32 ret = _io->send();
     if ( ret < 0 )
     {
         socket::stop();
@@ -209,6 +210,9 @@ void socket::start( int32 fd )
     set<socket,&socket::command_cb>( this );
     _w.set( fd,EV_READ ); /* 将之前的write改为read */
 
+    assert( "socket,start,no io set",_io );
+
+    _io->set_fd( fd );
     if ( !_w.is_active() ) _w.start();
 }
 
@@ -428,14 +432,7 @@ void socket::command_cb()
 
     // 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
     int32 ret = socket::recv();
-    if ( expect_false(0 > ret) )  /* 出错,包括对方主动断开 */
-    {
-        socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
-        return;
-    }
-
-    if ( expect_false(0 == ret) ) return; // 需要重试
+    if ( expect_false(0 >= ret) ) return;  /* 出错,包括对方主动断开或者需要重试 */
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
@@ -444,7 +441,7 @@ void socket::command_cb()
     }while ( fd() > 0 );
 }
 
-int32 socket::set_io( io::io_t io_type )
+int32 socket::set_io( io::io_t io_type,int32 io_ctx )
 {
     delete _io;
     _io = NULL;
@@ -452,12 +449,14 @@ int32 socket::set_io( io::io_t io_type )
     switch( io_type )
     {
         case io::IOT_NONE :
-            _io = new io();
+            _io = new io( &_recv,&_send );
             break;
         case io::IOT_SSL :
+            _io = new ssl_io( &_recv,&_send );
             break;
-        default : assert( "io error",false );
+        default : return -1;
     }
+
     return 0;
 }
 
@@ -478,7 +477,7 @@ int32 socket::set_packet( packet::packet_t packet_type )
         case packet::PKT_WEBSOCKET :
             _packet = new websocket_packet( this );
             break;
-        default : assert( "packet error",false );
+        default : return -1;
     }
     return 0;
 }

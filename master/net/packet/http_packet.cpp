@@ -139,7 +139,7 @@ int32 http_packet::unpack()
      * 因此要注意http_parser_execute后部分资源是不可再访问的
      */
     int32 nparsed = 
-        http_parser_execute( _parser,&settings,recv.data(),size );
+        http_parser_execute( _parser,&settings,recv.data_pointer(),size );
 
     /* web_socket报文,暂时不用回调到上层
      * The user is expected to check if parser->upgrade has been set to 1 after 

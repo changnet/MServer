@@ -735,10 +735,14 @@ bool lnetwork_mgr::connect_del( uint32 conn_id,int32 conn_ty )
     return true;
 }
 
-int32 lnetwork_mgr::set_conn_io() /* 设置socket的io方式 */
+/* 设置socket的io方式
+ * network_mgr:set_conn_io( conn_id,io_type[,io_ctx] )
+ */
+int32 lnetwork_mgr::set_conn_io()
 {
     uint32 conn_id = luaL_checkinteger( L,1 );
     int32 io_type  = luaL_checkinteger( L,2 );
+    int32 io_ctx   = luaL_optinteger  ( L,3,0 );
 
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -751,7 +755,10 @@ int32 lnetwork_mgr::set_conn_io() /* 设置socket的io方式 */
         return luaL_error( L,"invalid io type" );
     }
 
-    sk->set_io( static_cast<io::io_t>(io_type) );
+    if ( sk->set_io( static_cast<io::io_t>(io_type),io_ctx ) < 0 )
+    {
+        return luaL_error( L,"set conn io error" );
+    }
 
     return 0;
 }
@@ -772,7 +779,10 @@ int32 lnetwork_mgr::set_conn_codec() /* 设置socket的编译方式 */
         return luaL_error( L,"invalid codec type" );
     }
 
-    sk->set_codec_type( static_cast<codec::codec_t>( codec_type ) );
+    if ( sk->set_codec_type( static_cast<codec::codec_t>( codec_type ) ) < 0 )
+    {
+        return luaL_error( L,"set conn codec error" );
+    }
 
     return 0;
 }
@@ -793,7 +803,10 @@ int32 lnetwork_mgr::set_conn_packet() /* 设置socket的打包方式 */
         return luaL_error( L,"invalid packet type" );
     }
 
-    sk->set_packet( static_cast<packet::packet_t>( packet_type ) );
+    if ( sk->set_packet( static_cast<packet::packet_t>( packet_type ) ) < 0 )
+    {
+        return luaL_error( L,"set conn packet error" );
+    }
     return 0;
 }
 

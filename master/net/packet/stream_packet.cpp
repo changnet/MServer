@@ -90,7 +90,7 @@ int32 stream_packet::unpack()
     if ( size < sizeof( struct base_header ) ) return 0;
 
     const struct base_header *header = 
-        reinterpret_cast<const struct base_header *>( recv.data() );
+        reinterpret_cast<const struct base_header *>( recv.data_pointer() );
     if ( size < header->_length ) return 0;
 
     dispatch( header ); // 数据包完整，派发处理
