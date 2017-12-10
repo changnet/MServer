@@ -504,21 +504,25 @@ int32 socket::set_codec_type( codec::codec_t codec_type )
     return 0;
 }
 
-// 返回: < 0 错误，0  需要重试，> 0 成功
+// 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 void socket::init_check( int32 ecode )
 {
-    if ( 0 < ecode ) return;
+    if ( expect_false( 0 > ecode ) )
+    {
+        static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    if ( 0 == ecode )
+        socket::stop();
+        network_mgr->connect_del( _conn_id,_conn_ty );
+        return;
+    }
+
+    if ( 2 == ecode )
     {
         this->pending_send();
         return;
     }
 
-    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
-
-    socket::stop();
-    network_mgr->connect_del( _conn_id,_conn_ty );
+    // 重写会触发Read事件，在Read事件处理
 }
 
 int32 socket::init_accept()

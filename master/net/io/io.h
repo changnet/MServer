@@ -27,11 +27,11 @@ public:
      */
     virtual int32 send();
     /* 准备接受状态
-     * 返回: < 0 错误，0  需要重试，> 0 成功
+     * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */
     virtual int32 init_accept( int32 fd ) { return _fd = fd; };
     /* 准备连接状态
-     * 返回: < 0 错误，0  需要重试，> 0 成功
+     * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */
     virtual int32 init_connect( int32 fd ) { return _fd = fd; };
 protected:

@@ -26,7 +26,28 @@ int32 ssl_io::recv()
 {
     assert( "io recv fd invalid",_fd > 0 );
 
-    return 0;
+    if ( !_handshake ) return do_handshake();
+
+    if ( !_recv->reserved() ) return -1; /* no more memory */
+
+    uint32 size = _recv->buff_size();
+    int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->buff_pointer(),size );
+    if ( expect_true(len > 0) )
+    {
+        _recv->increase( len );
+        return len;
+    }
+
+    int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
+    if ( SSL_ERROR_WANT_READ == ecode ) return 0;
+
+    // 非主动断开，打印错误日志
+    if ( SSL_ERROR_ZERO_RETURN != ecode )
+    {
+        ERROR( "ssl io recv:%s",ERR_error_string(ecode,NULL) );
+    }
+
+    return -1;
 }
 
 /* 发送数据
@@ -36,7 +57,27 @@ int32 ssl_io::send()
 {
     assert( "io send fd invalid",_fd > 0 );
 
-    return 0;
+    if ( !_handshake ) return do_handshake();
+
+    size_t bytes = _send->data_size();
+    assert( "io send without data",bytes > 0 );
+    int32 len = SSL_read( X_SSL( _ssl_ctx ),_send->data_pointer(),bytes );
+    if ( expect_true(len > 0) )
+    {
+        _send->subtract( len );
+        return ((size_t)len) == bytes ? 0 : bytes - len;
+    }
+
+    int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
+    if ( SSL_ERROR_WANT_WRITE == ecode ) return bytes;
+
+    // 非主动断开，打印错误日志
+    if ( SSL_ERROR_ZERO_RETURN != ecode )
+    {
+        ERROR( "ssl io send:%s",ERR_error_string(ecode,NULL) );
+    }
+
+    return -1;
 }
 
 /* 准备接受状态
@@ -47,15 +88,20 @@ int32 ssl_io::init_accept( int32 fd )
 
     _fd = fd;
     SSL_set_accept_state( X_SSL( _ssl_ctx ) );
-    return 0;
+
+    return do_handshake();
 }
 
 /* 准备连接状态
  */
 int32 ssl_io::init_connect( int32 fd )
 {
+    if ( init_ssl_ctx( fd ) < 0 ) return -1;
+
     _fd = fd;
-    return 0;
+    SSL_set_connect_state( X_SSL( _ssl_ctx ) );
+
+    return do_handshake();
 }
 
 int32 ssl_io::init_ssl_ctx( int32 fd )
@@ -85,7 +131,7 @@ int32 ssl_io::init_ssl_ctx( int32 fd )
     return 0;
 }
 
-// 返回: < 0 错误，0  需要重试，> 0 成功
+// 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32 ssl_io::do_handshake()
 {
     int32 ecode = SSL_do_handshake( X_SSL( _ssl_ctx ) );
@@ -104,10 +150,8 @@ int32 ssl_io::do_handshake()
      * handshakes.
      */
     ecode = SSL_get_error( X_SSL( _ssl_ctx ),ecode );
-    if ( SSL_ERROR_WANT_WRITE == ecode || SSL_ERROR_WANT_READ == ecode )
-    {
-        return 0;
-    }
+    if (  SSL_ERROR_WANT_READ == ecode ) return 1;
+    if ( SSL_ERROR_WANT_WRITE == ecode ) return 2;
 
     // error
     ERROR( "ssl io do handshake "

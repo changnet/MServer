@@ -96,6 +96,26 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
         ERROR( "new_ssl_ctx:can NOT create ssl content" );
         return -1;
     }
+
+    struct x_ssl_ctx &ssl_ctx = _ssl_ctx[_ctx_idx ++];
+    ssl_ctx._ctx = ctx;
+
+    /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
+     * 因此单向认证的客户端使用的SSL_CTX不需要证书
+     * 关于单、双向认证，参考：http://www.cnblogs.com/Anker/p/6018032.html
+     */
+    if ( !cert_file || !key_file ) return 0;
+
+    // 密码是从Lua传入的，需要拷贝一份，防止以后用到
+    if ( passwd )
+    {
+        size_t size = strlen(passwd);
+        ssl_ctx._passwd = new char[size + 1];
+        memcpy( ssl_ctx._passwd,passwd,size );
+
+        ssl_ctx._passwd[size] = 0;
+    }
+
     // 加载pem格式的ca证书文件，暂不支持ASN1（SSL_FILETYPE_ASN1）格式
     // ASN1只支持一个文件一个证书，pem可以将多个证书放到同一个文件
     if ( SSL_CTX_use_certificate_chain_file( ctx,cert_file ) <= 0 )
@@ -104,17 +124,6 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
         ERROR( "new_ssl_ctx cert file:%s",
             ERR_error_string( ERR_get_error(),NULL ) );
         return -1;
-    }
-
-    struct x_ssl_ctx &ssl_ctx = _ssl_ctx[_ctx_idx];
-    ssl_ctx._ctx = ctx;
-    if ( passwd )
-    {
-        size_t size = strlen(passwd);
-        ssl_ctx._passwd = new char[size + 1];
-        memcpy( ssl_ctx._passwd,passwd,size );
-
-        ssl_ctx._passwd[size] = 0;
     }
 
     // 加载pem格式私钥
@@ -153,7 +162,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
         return -1;
     }
 
-    return _ctx_idx ++;
+    return _ctx_idx - 1;
 }
 
 // 返回密码数据
