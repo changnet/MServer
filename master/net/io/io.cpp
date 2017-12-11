@@ -14,7 +14,7 @@ io::~io()
     _send = NULL;
 }
 
-// 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
+// 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32 io::recv()
 {
     assert( "io recv fd invalid",_fd > 0 );
@@ -26,7 +26,7 @@ int32 io::recv()
     if ( expect_true(len > 0) )
     {
         _recv->increase( len );
-        return len;
+        return 0;
     }
 
     if ( 0 == len ) return -1; // 对方主动断开
@@ -38,10 +38,10 @@ int32 io::recv()
         return -1;
     }
 
-    return 0; // 重试
+    return 1; // 重试
 }
 
-// 返回：< 0 错误(包括对方主动断开)，0 成功，> 0 仍需要发送的字节数
+// * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32 io::send()
 {
     assert( "io send fd invalid",_fd > 0 );
@@ -54,7 +54,7 @@ int32 io::send()
     if ( expect_true(len > 0) )
     {
         _send->subtract( len );
-        return ((size_t)len) == bytes ? 0 : bytes - len;
+        return ((size_t)len) == bytes ? 0 : 2;
     }
 
     if ( 0 == len ) return -1;// 对方主动断开
@@ -67,5 +67,5 @@ int32 io::send()
     }
 
     /* need to try again */
-    return bytes;
+    return 2;
 }

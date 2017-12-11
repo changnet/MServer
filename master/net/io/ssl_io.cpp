@@ -20,7 +20,7 @@ ssl_io::ssl_io( int32 ctx_idx,class buffer *recv,class buffer *send )
 }
 
 /* 接收数据
- * 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
+ * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
 int32 ssl_io::recv()
 {
@@ -35,11 +35,11 @@ int32 ssl_io::recv()
     if ( expect_true(len > 0) )
     {
         _recv->increase( len );
-        return len;
+        return 0;
     }
 
     int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
-    if ( SSL_ERROR_WANT_READ == ecode ) return 0;
+    if ( SSL_ERROR_WANT_READ == ecode ) return 1;
 
     // 非主动断开，打印错误日志
     if ( SSL_ERROR_ZERO_RETURN != ecode )
@@ -51,7 +51,7 @@ int32 ssl_io::recv()
 }
 
 /* 发送数据
- * 返回：< 0 错误(包括对方主动断开)，0 成功，> 0 仍需要发送的字节数
+ * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
 int32 ssl_io::send()
 {
@@ -65,11 +65,11 @@ int32 ssl_io::send()
     if ( expect_true(len > 0) )
     {
         _send->subtract( len );
-        return ((size_t)len) == bytes ? 0 : bytes - len;
+        return ((size_t)len) == bytes ? 0 : 2;
     }
 
     int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
-    if ( SSL_ERROR_WANT_WRITE == ecode ) return bytes;
+    if ( SSL_ERROR_WANT_WRITE == ecode ) return 2;
 
     // 非主动断开，打印错误日志
     if ( SSL_ERROR_ZERO_RETURN != ecode )

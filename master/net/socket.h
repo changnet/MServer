@@ -106,7 +106,7 @@ public:
         _send.set_buffer_size( max,min );
     }
 private:
-    void init_check( int32 ecode );
+    int32 io_status_check( int32 ecode );
 protected:
     buffer _recv;
     buffer _send;

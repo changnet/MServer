@@ -62,14 +62,18 @@ int32 socket::recv()
     assert( "socket recv without io control",_io );
     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
+    // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32 ret = _io->recv();
-    if ( ret < 0 )
+    if ( expect_false(ret < 0) )
     {
         socket::stop();
         network_mgr->connect_del( _conn_id,_conn_ty );
 
         return -1;
     }
+
+    // SSL握手成功，有数据待发送则会出现这种情况
+    if ( expect_false(2 == ret) ) pending_send();
 
     return ret;
 }
@@ -87,8 +91,9 @@ int32 socket::send()
      */
      _pending = 0;
 
+     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32 ret = _io->send();
-    if ( ret < 0 )
+    if ( expect_false(ret < 0) )
     {
         socket::stop();
         network_mgr->connect_del( _conn_id,_conn_ty );
@@ -96,7 +101,7 @@ int32 socket::send()
         return -1;
     }
 
-    return ret;
+    return 2 == ret ? 2 : 0;
 }
 
 int32 socket::block( int32 fd )
@@ -447,9 +452,9 @@ void socket::command_cb()
         return;
     }
 
-    // 返回：< 0 错误(包括对方主动断开)，0 需要重试，> 0 成功读取的字节数
+    // 返回：返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32 ret = socket::recv();
-    if ( expect_false(0 >= ret) ) return;  /* 出错,包括对方主动断开或者需要重试 */
+    if ( expect_false(0 != ret) ) return;  /* 出错,包括对方主动断开或者需要重试 */
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
@@ -505,8 +510,8 @@ int32 socket::set_codec_type( codec::codec_t codec_type )
     return 0;
 }
 
-// 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-void socket::init_check( int32 ecode )
+// 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
+int32 socket::io_status_check( int32 ecode )
 {
     if ( expect_false( 0 > ecode ) )
     {
@@ -514,16 +519,17 @@ void socket::init_check( int32 ecode )
 
         socket::stop();
         network_mgr->connect_del( _conn_id,_conn_ty );
-        return;
+        return -1;
     }
 
     if ( 2 == ecode )
     {
         this->pending_send();
-        return;
+        return -1;
     }
 
     // 重写会触发Read事件，在Read事件处理
+    return 0;
 }
 
 int32 socket::init_accept()
@@ -531,7 +537,7 @@ int32 socket::init_accept()
     assert( "socket init accept no io set",_io );
     int32 ecode = _io->init_accept( _w.fd );
 
-    init_check( ecode );
+    io_status_check( ecode );
     return ecode;
 }
 
@@ -540,6 +546,6 @@ int32 socket::init_connect()
     assert( "socket init connect no io set",_io );
     int32 ecode = _io->init_connect( _w.fd );
 
-    init_check( ecode );
+    io_status_check( ecode );
     return 0;
 }
