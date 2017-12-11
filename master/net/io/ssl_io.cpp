@@ -7,8 +7,24 @@
 #define X_SSL(x) static_cast<SSL *>( x )
 #define X_SSL_CTX(x) static_cast<SSL_CTX *>( x )
 
+// SSL的错误码是按队列存放的，一次错误可以产生多个错误码
+// 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
+#define SSL_ERROR(x)    \
+    do{                                                     \
+        ERROR(x " errno(%d:%s)",errno,strerror(errno));     \
+        int32 eno = 0;                                      \
+        while ( 0 != (eno = ERR_get_error()) ) {            \
+            ERROR( "    %s",ERR_error_string(eno,NULL) );   \
+        }                                                   \
+    }while(0)
+
 ssl_io::~ssl_io()
 {
+    if ( _ssl_ctx )
+    {
+        SSL_free( X_SSL( _ssl_ctx ) );
+        _ssl_ctx = NULL;
+    }
 }
 
 ssl_io::ssl_io( int32 ctx_idx,class buffer *recv,class buffer *send )
@@ -30,6 +46,7 @@ int32 ssl_io::recv()
 
     if ( !_recv->reserved() ) return -1; /* no more memory */
 
+    // ERR_clear_error
     uint32 size = _recv->buff_size();
     int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->buff_pointer(),size );
     if ( expect_true(len > 0) )
@@ -41,12 +58,24 @@ int32 ssl_io::recv()
     int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
     if ( SSL_ERROR_WANT_READ == ecode ) return 1;
 
+    /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
+     * SSL连接关闭时，要先关闭SSL协议，再关闭socket。当一个连接直接关闭时，SSL并不能明确
+     * 区分开来。SSL_ERROR_ZERO_RETURN仅仅是表示SSL协议层关闭，连接并没有关闭(你可以把一
+     * 个SSL连接转化为一个非SSL连接，参考SSL_shutdown)。正常关闭下，SSL_read先收到一个
+     * SSL_ERROR_ZERO_RETURN转换为普通连接，然后read再收到一个0。如果直接关闭，则SSL返回
+     * 0，SSL_get_error检测到syscall错误(即read返回0)，这时errno为0,SSL_get_error并返
+     * 回0。
+     */
+
     // 非主动断开，打印错误日志
-    if ( SSL_ERROR_ZERO_RETURN != ecode )
+    // 在实际测试中，chrome会直接断开链接，而firefox则会关闭SSL */
+    if ( (SSL_ERROR_ZERO_RETURN == ecode)
+        || (SSL_ERROR_SYSCALL == ecode && 0 == errno) )
     {
-        ERROR( "ssl io recv:%s",ERR_error_string(ecode,NULL) );
+        return -1;
     }
 
+    SSL_ERROR( "ssl io recv" );
     return -1;
 }
 
@@ -72,11 +101,13 @@ int32 ssl_io::send()
     if ( SSL_ERROR_WANT_WRITE == ecode ) return 2;
 
     // 非主动断开，打印错误日志
-    if ( SSL_ERROR_ZERO_RETURN != ecode )
+    if ( (SSL_ERROR_ZERO_RETURN == ecode)
+        || (SSL_ERROR_SYSCALL == ecode && 0 == errno) )
     {
-        ERROR( "ssl io send:%s",ERR_error_string(ecode,NULL) );
+        return -1;
     }
 
+    SSL_ERROR( "ssl io send" );
     return -1;
 }
 
@@ -155,8 +186,7 @@ int32 ssl_io::do_handshake()
     if ( SSL_ERROR_WANT_WRITE == ecode ) return 2;
 
     // error
-    ERROR( "ssl io do handshake "
-        "error.system:%s,ssl:%s",strerror(errno),ERR_error_string(ecode,NULL) );
+    SSL_ERROR( "ssl io do handshake:" );
 
     return -1;
 }

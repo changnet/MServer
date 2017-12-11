@@ -1,15 +1,14 @@
 -- hot_swap.lua 代理热更新http接口
 
 local page200 = 
-[[
-HTTP/1.1 200 OK
-Content-Length: %d
-Content-Type: text/html
-Server: Mini-Game-Distribute-Server/1.0
-Connection: close
-
-%s
-]]
+{
+    'HTTP/1.1 200 OK\r\n',
+    'Content-Length: %d\r\n',
+    'Content-Type: text/html\r\n',
+    'Server: Mini-Game-Distribute-Server/1.0\r\n',
+    'Connection: close\r\n\r\n%s'
+}
+page200 = table.concat( page200 )
 
 local json = require "lua_parson"
 

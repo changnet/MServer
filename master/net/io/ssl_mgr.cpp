@@ -3,6 +3,17 @@
 
 #include "ssl_mgr.h"
 
+// SSL的错误码是按队列存放的，一次错误可以产生多个错误码
+// 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
+#define SSL_ERROR(x)    \
+    do{                                                     \
+        ERROR(x " errno(%d:%s)",errno,strerror(errno));     \
+        int32 eno = 0;                                      \
+        while ( 0 != (eno = ERR_get_error()) ) {            \
+            ERROR( "    %s",ERR_error_string(eno,NULL) );   \
+        }                                                   \
+    }while(0)
+
 int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u );
 
 void delete_ssl_ctx( struct x_ssl_ctx &ssl_ctx )
@@ -93,7 +104,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     SSL_CTX *ctx = SSL_CTX_new( method );
     if ( !ctx )
     {
-        ERROR( "new_ssl_ctx:can NOT create ssl content" );
+        SSL_ERROR( "new_ssl_ctx:can NOT create ssl content" );
         return -1;
     }
 
@@ -102,7 +113,11 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
      * 因此单向认证的客户端使用的SSL_CTX不需要证书
-     * 关于单、双向认证，参考：http://www.cnblogs.com/Anker/p/6018032.html
+     * 双向认证参考：SSL_CTX_set_verify()这个函数的用法。
+     * 设置认证标识后，客户端便会把证书发给服务器，服务器会在
+     * SSL_CTX_set_cert_verify_callback中收到回调，校验客户端的证书参数。
+     * 一般情况下，如果客户端的域名不是固定的话，这个认证没什么意义的。
+     * ssh那种是通过公钥、私钥来认证客户端的，不是证书。
      */
     if ( !cert_file || !key_file ) return 0;
 
@@ -121,8 +136,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     if ( SSL_CTX_use_certificate_chain_file( ctx,cert_file ) <= 0 )
     {
         SSL_CTX_free( ctx );
-        ERROR( "new_ssl_ctx cert file:%s",
-            ERR_error_string( ERR_get_error(),NULL ) );
+        SSL_ERROR( "new_ssl_ctx cert file" );
         return -1;
     }
 
@@ -149,8 +163,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     if ( ok <= 0 )
     {
         delete_ssl_ctx( ssl_ctx );
-        ERROR( "new_ssl_ctx key file:%s",
-            ERR_error_string( ERR_get_error(),NULL ) );
+        SSL_ERROR( "new_ssl_ctx key file" );
         return -1;
     }
 
@@ -158,7 +171,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     if ( SSL_CTX_check_private_key( ctx ) <= 0 )
     {
         delete_ssl_ctx( ssl_ctx );
-        ERROR( "new_ssl_ctx:certificate and private key not match" );
+        SSL_ERROR( "new_ssl_ctx:certificate and private key not match" );
         return -1;
     }
 

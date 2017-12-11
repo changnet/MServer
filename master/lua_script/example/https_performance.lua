@@ -25,9 +25,14 @@ local url_page = table.concat( url_tbl )
 local no_cert_idx = network_mgr:new_ssl_ctx( 4 )
 print( "create no cert ssl ctx at ",no_cert_idx )
 
+local srv_idx = network_mgr:new_ssl_ctx( 4,
+    "certs/server.cer",2,"certs/srv_key.pem","mini_distributed_game_server" )
+print( "create server ssl ctx at ",srv_idx )
+
+
 
 function http_accept_new( conn_id )
-    network_mgr:set_conn_io( conn_id,network_mgr.IOT_SSL,no_cert_idx )
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_SSL,srv_idx )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( conn_id,network_mgr.PKT_HTTP )
 
@@ -48,17 +53,32 @@ function http_connect_del( conn_id )
     print( "http_connect_del",conn_id )
 end
 
+local page200 = 
+{
+    'HTTP/1.1 200 OK\r\n',
+    'Content-Length: %d\r\n',
+    'Content-Type: text/html\r\n',
+    'Server: Mini-Game-Distribute-Server/1.0\r\n',
+    'Connection: close\r\n\r\n%s'
+}
+page200 = table.concat( page200 )
+
 -- http回调
 function http_command_new( conn_id,url,body )
     print( "http_command_new",conn_id,url,body )
+
+    local tips = "Mini-Game-Distribute-Server!\n"
+    local ctx = string.format( page200,string.len(tips),tips )
+
+    network_mgr:send_raw_packet( conn_id,ctx )
 end
 
 local http_listen = network_mgr:listen( IP,PORT,network_mgr.CNT_HTTP )
-PLOG( "http listen at %s:%d",IP,PORT )
+PLOG( "https listen at %s:%d",IP,PORT )
 
 local ssl_port = 443
 local ssl_url = "www.openssl.com"
 local ip1,ip2 = util.gethostbyname( ssl_url )
 
-local url_conn_id = network_mgr:connect( ip1,ssl_port,network_mgr.CNT_HTTP )
-print( "connnect to https ",ssl_url,ip1,url_conn_id )
+-- local url_conn_id = network_mgr:connect( ip1,ssl_port,network_mgr.CNT_HTTP )
+-- print( "connnect to https ",ssl_url,ip1,url_conn_id )
