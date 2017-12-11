@@ -30,8 +30,6 @@ private:
     int32 _ctx_idx;
     void *_ssl_ctx; // SSL_CTX，不要在头文件包含ssl.h，编译会增加将近1M
     bool _handshake;
-    class buffer *_recv;
-    class buffer *_send;
 };
 
 #endif /* __SSL_IO_H__ */

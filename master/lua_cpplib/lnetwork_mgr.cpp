@@ -185,11 +185,12 @@ int32 lnetwork_mgr::set_sc_cmd()
 }
 
 /* 仅关闭socket，但不销毁内存
- * network_mgr:close( conn_id )
+ * network_mgr:close( conn_id,false )
  */
 int32 lnetwork_mgr::close()
 {
     uint32 conn_id = luaL_checkinteger( L,1 );
+    bool flush = lua_toboolean( L,2 );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
@@ -204,7 +205,7 @@ int32 lnetwork_mgr::close()
     }
 
     /* stop尝试把缓冲区的数据直接发送 */
-    _socket->stop();
+    _socket->stop( flush );
 
     /* 这里不能删除内存，因为脚本并不知道是否会再次访问此socket
      * 比如底层正在一个for循环里回调脚本时，就需要再次访问
@@ -813,18 +814,18 @@ int32 lnetwork_mgr::set_conn_packet() /* 设置socket的打包方式 */
 int32 lnetwork_mgr::new_ssl_ctx() /* 创建一个ssl上下文 */
 {
     int32 sslv = luaL_checkinteger( L,1 );
-    const char *cert_file = luaL_checkstring( L,2 );
+    const char *cert_file = lua_tostring( L,2 );
 
-    int32 keyt = luaL_checkinteger( L,3 );
-    const char *key_file = luaL_checkstring( L,4 );
-    const char *passwd   = luaL_checkstring( L,5 );
+    int32 keyt = luaL_optinteger( L,3,0 );
+    const char *key_file = lua_tostring( L,4 );
+    const char *passwd   = lua_tostring( L,5 );
 
     if ( sslv <= ssl_mgr::SSLV_NONE || sslv >= ssl_mgr::SSLV_MAX )
     {
         return luaL_error( L,"invalid ssl version" );
     }
 
-    if ( keyt <= ssl_mgr::KEYT_NONE || keyt >= ssl_mgr::KEYT_MAX )
+    if ( keyt < ssl_mgr::KEYT_NONE || keyt >= ssl_mgr::KEYT_MAX )
     {
         return luaL_error( L,"invalid ssl key type" );
     }

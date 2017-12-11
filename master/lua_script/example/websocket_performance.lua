@@ -114,6 +114,8 @@ local ws_local_conn =
     network_mgr:connect( "127.0.0.1",ws_port,network_mgr.CNT_WEBS )
 print( "websocket connect to local server:",ws_port,"conn_id =",ws_local_conn )
 
-local idx = network_mgr:new_ssl_ctx( 4,
+local srv_idx = network_mgr:new_ssl_ctx( 4,
     "certs/server.cer",2,"certs/srv_key.pem","mini_distributed_game_server" )
-print( "create one ssl ctx at ",idx )
+print( "create server ssl ctx at ",srv_idx )
+
+

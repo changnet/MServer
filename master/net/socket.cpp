@@ -35,14 +35,15 @@ socket::~socket()
     assert( "socket not clean",0 == _pending && -1 == _w.fd );
 }
 
-void socket::stop()
+void socket::stop( bool flush )
 {
     if ( _pending )
     {
         leventloop::instance()->remove_pending( _pending );
         _pending = 0;
 
-        _io->send();  /* flush data before close */
+        // 如果是出错，则不发送剩余数据，如果是脚本上层正常关闭，则发送
+        if ( flush ) _io->send();  /* flush data before close */
     }
 
     if ( _w.fd > 0 )

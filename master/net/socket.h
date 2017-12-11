@@ -57,8 +57,8 @@ public:
     int32 recv();
     int32 send();
 
-    void stop ();
     void start( int32 fd = 0);
+    void stop ( bool flush = false );
     int32 validate();
     void pending_send();
 
