@@ -459,8 +459,17 @@ void socket::command_cb()
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
     {
-        if ( _packet->unpack() <= 0 ) return;
+        if ( (ret = _packet->unpack()) <= 0 ) return;
     }while ( fd() > 0 );
+
+    // 解析过程中错误，断开链接
+    if ( expect_false( ret < 0 ) )
+    {
+        socket::stop();
+        network_mgr->connect_del( _conn_id,_conn_ty );
+        ERROR( "socket command unpack data fail" );
+        return;
+    }
 }
 
 int32 socket::set_io( io::io_t io_type,int32 io_ctx )
