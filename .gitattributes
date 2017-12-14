@@ -1,0 +1,4 @@
+* text eol=lf
+*.zip binary
+*.tar.gz binary
+*.tar.bz2 binary
