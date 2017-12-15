@@ -22,10 +22,9 @@ local function main()
     -- require "example.mongo_performance"
     -- require "example.mysql_performance"
     -- require "example.log_performance"
-    -- require "example.http_performance"
-    require "example.https_performance"
+    -- require "example.https_performance"
     -- require "example.stream_performance"
-    -- require "example.websocket_performance"
+    require "example.websocket_performance"
     -- require "example.words_filter_performance"
 
     vd( obj_counter.dump() )

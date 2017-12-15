@@ -192,14 +192,14 @@ int32 http_packet::on_message_complete( bool upgrade )
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"http_command_new" );
+    lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushstring   ( L,_http_info._url.c_str()  );
     lua_pushstring   ( L,_http_info._body.c_str() );
 
     if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {
-        ERROR( "http_command_new:%s",lua_tostring( L,-1 ) );
+        ERROR( "command_new:%s",lua_tostring( L,-1 ) );
     }
 
     lua_settop( L,0 ); /* remove traceback */

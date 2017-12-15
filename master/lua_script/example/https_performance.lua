@@ -6,7 +6,12 @@ local network_mgr = network_mgr
 local conn_mgr = require "network.conn_mgr"
 
 local IP = "0.0.0.0"
-local PORT = 8887
+local PORT = 10002
+local ssl_port = 443
+local ssl_url = "www.openssl.com"
+local IOT  = network_mgr.IOT_SSL
+
+-- 把ssl_port改成80，IOT改成IOT_NONE，就可以测试http
 
 local url_tbl =
 {
@@ -39,7 +44,13 @@ local srv_idx = network_mgr:new_ssl_ctx( 4,
     "certs/server.cer",2,"certs/srv_key.pem","mini_distributed_game_server" )
 print( "create server ssl ctx at ",srv_idx )
 
-local Clt_conn = oo.class( "Clt_conn" )
+local Clt_conn = oo.class( nil,"Clt_conn" )
+
+function Clt_conn:connect( ip,port )
+    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_HTTP )
+    conn_mgr:set_conn( self.conn_id,self )
+    print( "connnect to https ",ip,self.conn_id )
+end
 
 function Clt_conn:conn_new( ecode )
     if 0 ~= ecode then
@@ -47,11 +58,12 @@ function Clt_conn:conn_new( ecode )
         return
     end
 
-    network_mgr:set_conn_io( conn_id,network_mgr.IOT_SSL,no_cert_idx )
-    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_NONE )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_HTTP )
+    network_mgr:set_conn_io( self.conn_id,IOT,no_cert_idx )
+    network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_NONE )
+    network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_HTTP )
 
-    print( "conn_new",conn_id )
+    print( "conn_new",self.conn_id )
+    network_mgr:send_raw_packet( self.conn_id,url_page )
 end
 
 function Clt_conn:conn_del()
@@ -62,7 +74,7 @@ function Clt_conn:command_new( url,body )
     print("clt command new",url,body)
 end
 
-local Srv_conn = oo.class( "Srv_conn" )
+local Srv_conn = oo.class( nil,"Srv_conn" )
 
 function Srv_conn:__init( conn_id )
     self.conn_id = conn_id
@@ -70,13 +82,15 @@ end
 
 function Srv_conn:listen( ip,port )
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_HTTP )
+    conn_mgr:set_conn( self.conn_id,self )
+    PLOG( "https listen at %s:%d",ip,port )
 end
 
-function Srv_conn:accept_new( new_conn_id )
+function Srv_conn:conn_accept( new_conn_id )
     print( "srv conn accept new",new_conn_id )
 
     local new_conn = Srv_conn( new_conn_id )
-    network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_SSL,srv_idx )
+    network_mgr:set_conn_io( new_conn_id,IOT,srv_idx )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
 
@@ -89,22 +103,19 @@ end
 
 -- http回调
 function Srv_conn:command_new( url,body )
-    print( "http_command_new",self.conn_id,url,body )
+    print( "command_new",self.conn_id,url,body )
 
     local tips = "Mini-Game-Distribute-Server!\n"
     local ctx = string.format( page200,string.len(tips),tips )
 
-    network_mgr:send_raw_packet( conn_id,ctx )
+    network_mgr:send_raw_packet( self.conn_id,ctx )
 end
 
--- 在浏览器输入https://127.0.0.1:8887来测试
+-- 在浏览器输入https://127.0.0.1:10002来测试
 local http_listen = Srv_conn()
 http_listen:listen( IP,PORT )
-PLOG( "https listen at %s:%d",IP,PORT )
 
-local ssl_port = 443
-local ssl_url = "www.openssl.com"
 local ip1,ip2 = util.gethostbyname( ssl_url )
 
-local url_conn_id = network_mgr:connect( ip1,ssl_port,network_mgr.CNT_HTTP )
-print( "connnect to https ",ssl_url,ip1,url_conn_id )
+local http_conn = Clt_conn()
+http_conn:connect( ip1,ssl_port )

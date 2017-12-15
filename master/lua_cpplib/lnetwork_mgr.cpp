@@ -640,7 +640,7 @@ bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,new_conn_id );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接

@@ -301,7 +301,7 @@ int32 websocket_packet::invoke_handshake()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"ws_handshake_new" );
+    lua_getglobal    ( L,"handshake_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushstring   ( L,key_str );
     lua_pushstring   ( L,accept_str );
@@ -322,7 +322,7 @@ int32 websocket_packet::on_frame_end()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"webs_command_new" );
+    lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushlstring   ( L,_body.data_pointer(),_body.data_size() );
 
