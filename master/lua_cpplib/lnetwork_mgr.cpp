@@ -7,36 +7,6 @@
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
 
-const static char *ACCEPT_EVENT[] =
-{
-    NULL, // CNT_NONE
-    "cscn_accept_new", // CNT_CSCN
-    "sccn_accept_new", // CNT_SCCN
-    "sscn_accept_new", // CNT_SSCN
-    "http_accept_new", // CNT_HTTP
-    "webs_accept_new", // CNT_WEBS
-};
-
-const static char *CONNECT_EVENT[] =
-{
-    NULL, // CNT_NONE
-    "cscn_connect_new", // CNT_CSCN
-    "sccn_connect_new", // CNT_SCCN
-    "sscn_connect_new", // CNT_SSCN
-    "http_connect_new", // CNT_HTTP
-    "webs_connect_new", // CNT_WEBS
-};
-
-const static char *DELETE_EVENT[] =
-{
-    NULL, // CNT_NONE
-    "cscn_connect_del", // CNT_CSCN
-    "sccn_connect_del", // CNT_SCCN
-    "sscn_connect_del", // CNT_SSCN
-    "http_connect_del", // CNT_HTTP
-    "webs_connect_del", // CNT_WEBS
-};
-
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
 void lnetwork_mgr::uninstance()
@@ -658,24 +628,24 @@ class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
 }
 
 /* 新增连接 */
-bool lnetwork_mgr::accept_new( class socket *new_sk )
+bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
 {
-    uint32 conn_id = new_sk->conn_id();
-    socket::conn_t conn_ty = new_sk->conn_type();
+    uint32 new_conn_id = new_sk->conn_id();
 
-    _socket_map[conn_id] = new_sk;
+    _socket_map[new_conn_id] = new_sk;
 
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,ACCEPT_EVENT[conn_ty] );
+    lua_getglobal( L,"conn_accept" );
     lua_pushinteger( L,conn_id );
+    lua_pushinteger( L,new_conn_id );
 
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
     {
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接
          */
-        _deleting.push_back( conn_id );
+        _deleting.push_back( new_conn_id );
         ERROR( "accept new socket:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,2 ); /* remove traceback and error object */
@@ -687,11 +657,11 @@ bool lnetwork_mgr::accept_new( class socket *new_sk )
 }
 
 /* 连接回调 */
-bool lnetwork_mgr::connect_new( uint32 conn_id,int32 conn_ty,int32 ecode )
+bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
 {
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,CONNECT_EVENT[conn_ty] );
+    lua_getglobal( L,"conn_new" );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,ecode   );
 
@@ -715,13 +685,13 @@ bool lnetwork_mgr::connect_new( uint32 conn_id,int32 conn_ty,int32 ecode )
 
 
 /* 断开回调 */
-bool lnetwork_mgr::connect_del( uint32 conn_id,int32 conn_ty )
+bool lnetwork_mgr::connect_del( uint32 conn_id )
 {
     _deleting.push_back( conn_id );
 
     lua_pushcfunction( L,traceback );
 
-    lua_getglobal( L,DELETE_EVENT[conn_ty] );
+    lua_getglobal( L,"conn_del" );
     lua_pushinteger( L,conn_id );
 
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )

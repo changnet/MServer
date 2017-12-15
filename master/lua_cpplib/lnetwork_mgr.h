@@ -92,9 +92,9 @@ public:
     int32 get_curr_session() const { return _session; }
     uint32 new_connect_id(); /* 获取新connect_id */
 
-    bool accept_new( class socket *new_sk );
-    bool connect_new( uint32 conn_id,int32 conn_ty,int32 ecode );
-    bool connect_del( uint32 conn_id,int32 conn_ty );
+    bool connect_del( uint32 conn_id );
+    bool connect_new( uint32 conn_id,int32 ecode );
+    bool accept_new ( uint32 conn_id,class socket *new_sk );
 private:
     void delete_socket( uint32 conn_id );
     class packet *lua_check_packet( socket::conn_t conn_ty );

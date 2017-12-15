@@ -67,7 +67,7 @@ int32 socket::recv()
     if ( expect_false(ret < 0) )
     {
         socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id );
 
         return -1;
     }
@@ -96,7 +96,7 @@ int32 socket::send()
     if ( expect_false(ret < 0) )
     {
         socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id );
 
         return -1;
     }
@@ -390,7 +390,7 @@ void socket::listen_cb()
         new_sk->start( new_fd );
 
         // 初始完socket后才触发脚本，因为脚本那边中能要对socket进行处理了
-        bool is_ok = network_mgr->accept_new( new_sk );
+        bool is_ok = network_mgr->accept_new( _conn_id,new_sk );
         if ( expect_true( is_ok ) )
         {
             new_sk->init_accept();
@@ -427,7 +427,7 @@ void socket::connect_cb ()
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
     static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
-    bool is_ok = network_mgr->connect_new( _conn_id,_conn_ty,ecode );
+    bool is_ok = network_mgr->connect_new( _conn_id,ecode );
 
     if ( expect_true( is_ok && 0 == ecode ) )
     {
@@ -447,7 +447,7 @@ void socket::command_cb()
     if ( !_io || !_packet )
     {
         socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id );
         ERROR( "socket command no io or packet set,socket disconnect" );
         return;
     }
@@ -466,7 +466,7 @@ void socket::command_cb()
     if ( expect_false( ret < 0 ) )
     {
         socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id );
         ERROR( "socket command unpack data fail" );
         return;
     }
@@ -527,7 +527,7 @@ int32 socket::io_status_check( int32 ecode )
         static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
         socket::stop();
-        network_mgr->connect_del( _conn_id,_conn_ty );
+        network_mgr->connect_del( _conn_id );
         return -1;
     }
 
