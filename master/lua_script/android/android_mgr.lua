@@ -60,7 +60,7 @@ end
 
 local android_mgr = Android_mgr()
 
-function cscn_connect_new( conn_id,ecode )
+function conn_new( conn_id,ecode )
     local android = android_mgr.conn[conn_id]
     if 0 ~= ecode then
         android_mgr.conn[conn_id] = nil
@@ -80,7 +80,7 @@ function cscn_connect_new( conn_id,ecode )
     android:on_connect()
 end
 
-function sc_command_new( conn_id,cmd,errno,... )
+function command_new( conn_id,cmd,errno,... )
     local android = android_mgr.conn[conn_id]
     if not android then
         ELOG( "sc_command_new no connect found" )
@@ -100,7 +100,7 @@ function sc_command_new( conn_id,cmd,errno,... )
     cfg.handler( android,errno,... )
 end
 
-function cscn_connect_del( conn_id )
+function connect_del( conn_id )
     local android = android_mgr.conn[conn_id]
 
     android_mgr.conn[conn_id] = nil

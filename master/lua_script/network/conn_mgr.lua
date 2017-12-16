@@ -8,6 +8,7 @@ local Conn_mgr = oo.singleton( nil,... )
 
 function Conn_mgr:__init()
     self.conn = {}
+    setmetatable(self.conn, {["__mode"]='v'})
 end
 
 function Conn_mgr:get_conn( conn_id )
@@ -21,6 +22,7 @@ end
 local conn_mgr = Conn_mgr()
 
 ---------------------------- 下面这些接口由底层回调 ------------------------------
+----------------------- 直接回调到对应的连接对象以实现多态 ------------------------
 
 -- 接受新的连接
 function conn_accept( conn_id,new_conn_id )

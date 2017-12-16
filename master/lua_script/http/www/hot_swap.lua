@@ -14,7 +14,7 @@ local json = require "lua_parson"
 
 -- 这个模块自己指定路径，因为http请求是/来区分："http/hot_swap"
 -- 我们一般用点
-local Hot_swap = oo.singleton( nil,"http.hot_swap" )
+local Hot_swap = oo.singleton( nil,... )
 
 function Hot_swap:swap( list )
     if not list then return end
@@ -34,7 +34,7 @@ end
 curl -l -H "Content-type: application/json" -X POST -d '{"gateway":[],"world":[]}' 127.0.0.1:10003/hot_swap
 curl -l -H "Content-type: application/json" -X POST -d '{"gateway":["network.network_mgr"],"world":["network.network_mgr"]}' 127.0.0.1:10003/hot_swap
 ]]
-function Hot_swap:exec( conn_id,fields,body )
+function Hot_swap:exec( conn,fields,body )
     local tbl = json.decode( body )
 
     -- 这个http请求总是在gateway收到的
@@ -53,7 +53,7 @@ function Hot_swap:exec( conn_id,fields,body )
     local tips = "hot swap success!\n"
     local ctx = string.format( page200,string.len(tips),tips )
 
-    network_mgr:send_raw_packet( conn_id,ctx )
+    conn:send_pkt( ctx )
 end
 
 local hs = Hot_swap()

@@ -45,6 +45,7 @@ end
 
 -- 主动关闭连接
 function Clt_conn:close()
+    g_conn_mgr:set_conn( self.conn_id,nil )
     return network_mgr:close( self.conn_id )
 end
 

@@ -45,7 +45,7 @@ end
 
 -- 热更
 local function hot_swap( srv_conn,pkt )
-    local hs = require "http.hot_swap"
+    local hs = require "http.www.hot_swap"
     hs:swap( pkt.module or {} )
 
     -- srv_conn:send_pkt( SS_SYS_HOT_SWAP,)

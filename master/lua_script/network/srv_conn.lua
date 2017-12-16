@@ -116,6 +116,7 @@ end
 
 -- 连接断开
 function Srv_conn:conn_del()
+    g_conn_mgr:set_conn( self.conn_id,nil )
     return g_network_mgr:srv_conn_del( self.conn_id )
 end
 
