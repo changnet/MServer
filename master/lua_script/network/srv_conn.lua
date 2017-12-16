@@ -67,4 +67,72 @@ function Srv_conn:conn_name( session )
     return string.format( "%s(I%d.S%d)",name,index,srvid )
 end
 
+-- 监听服务器连接
+function Srv_conn:listen( ip,port )
+    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
+
+    g_conn_mgr:set_conn( self.conn_id,self )
+end
+
+-- 连接到其他服务器
+function Srv_conn:connect( ip,port )
+    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_SSCN )
+
+    g_conn_mgr:set_conn( self.conn_id,self )
+
+    return self.conn_id
+end
+
+-- 接受新的连接
+function Srv_conn:conn_accept( new_conn_id )
+    network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
+    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_STREAM )
+
+    -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
+    network_mgr:set_send_buffer_size( new_conn_id,16777216*4,16777216*4 )
+    network_mgr:set_recv_buffer_size( new_conn_id,16777216*4,16777216*4 )
+
+    local new_conn = Srv_conn( new_conn_id )
+    g_network_mgr:srv_conn_accept( new_conn_id,new_conn )
+
+    return new_conn
+end
+
+-- 连接成功
+function Srv_conn:conn_new( ecode )
+    if 0 == ecode then
+        network_mgr:set_conn_io( self.conn_id,network_mgr.IOT_NONE )
+        network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_PROTOBUF )
+        network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_STREAM )
+
+        -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
+        network_mgr:set_send_buffer_size( self.conn_id,16777216*4,16777216*4 )
+        network_mgr:set_recv_buffer_size( self.conn_id,16777216*4,16777216*4 )
+    end
+
+    return g_network_mgr:srv_conn_new( self.conn_id,ecode )
+end
+
+-- 连接断开
+function Srv_conn:conn_del()
+    return g_network_mgr:srv_conn_del( self.conn_id )
+end
+
+-- 服务器之间消息回调
+function Srv_conn:command_new( session,cmd,errno,pkt )
+    self.beat = ev:time()
+    return g_command_mgr:srv_dispatch( self,cmd,pkt )
+end
+
+-- 转发的客户端消息
+function Srv_conn:css_command_new( pid,cmd,... )
+    return g_command_mgr:clt_dispatch_ex( self,pid,cmd,... )
+end
+
+-- 主动关闭连接
+function Srv_conn:close()
+    return network_mgr:close( self.conn_id )
+end
+
 return Srv_conn

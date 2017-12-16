@@ -35,7 +35,8 @@ end
 
 -- 连接断开
 function conn_del( conn_id )
-    return conn_mgr.conn[conn_id]:conn_del()
+    conn_mgr.conn[conn_id]:conn_del()
+    conn_mgr.conn[conn_id]= nil
 end
 
 -- 消息回调,底层根据不同类，参数也不一样
@@ -48,15 +49,17 @@ function css_command_new( conn_id,... )
     return conn_mgr.conn[conn_id]:css_command_new( ... )
 end
 
--- rpc请求
-function rpc_command_new( conn_id,... )
-    return conn_mgr.conn[conn_id]:rpc_command_new( ... )
-end
+-- rpc特殊处理，由rpc.lua自己分发
 
--- rpc返回
-function rpc_command_return( conn_id,... )
-    return conn_mgr.conn[conn_id]:rpc_command_return( ... )
-end
+-- -- rpc请求
+-- function rpc_command_new( conn_id,... )
+--     return conn_mgr.conn[conn_id]:rpc_command_new( ... )
+-- end
+
+-- -- rpc返回
+-- function rpc_command_return( conn_id,... )
+--     return conn_mgr.conn[conn_id]:rpc_command_return( ... )
+-- end
 
 -- 握手
 function handshake_new( conn_id,... )

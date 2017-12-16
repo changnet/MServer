@@ -141,7 +141,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     uint32 conn_id = _socket->conn_id();
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal( L,"sc_command_new" );
+    lua_getglobal( L,"command_new" );
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
@@ -239,7 +239,7 @@ void stream_packet::cs_command(
     owner_t owner = network_mgr->get_owner_by_conn_id( conn_id );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"cs_command_new" );
+    lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,conn_id );
     lua_pushinteger  ( L,owner   );
     lua_pushinteger  ( L,header->_cmd );
@@ -332,7 +332,7 @@ void stream_packet::ss_command(
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
     lua_pushcfunction( L,traceback );
-    lua_getglobal( L,"ss_command_new" );
+    lua_getglobal( L,"command_new" );
     lua_pushinteger( L,_socket->conn_id() );
     lua_pushinteger( L,header->_owner );
     lua_pushinteger( L,header->_cmd );

@@ -20,6 +20,7 @@ g_unique_id = Unique_id()
 Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
+g_conn_mgr    = require "network.conn_mgr"
 g_timer_mgr   = require "timer.timer_mgr"
 g_command_pre = require "command.command_pre"
 g_setting     = require "gateway.setting"

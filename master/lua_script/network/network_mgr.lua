@@ -33,27 +33,29 @@ end
 
 --  监听服务器连接
 function Network_mgr:srv_listen( ip,port )
-    self.srv_listen_conn = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
-    PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
+    self.srv_listen_conn = Srv_conn()
+    self.srv_listen_conn:listen( ip,port )
 
+    PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
     return true
 end
 
 --  监听客户端连接
 function Network_mgr:clt_listen( ip,port )
-    self.clt_listen_conn = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
-    PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )
+    self.clt_listen_conn = Clt_conn()
+    self.clt_listen_conn:listen( ip,port )
 
+    PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )
     return true
 end
 
 -- 主动连接其他服务器
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
-        local conn_id = 
-            network_mgr:connect( srv.ip,srv.port,network_mgr.CNT_SSCN )
+        local conn = Srv_conn()
+        local conn_id = conn:connect( srv.ip,srv.port )
 
-        self.srv_conn[conn_id] = Srv_conn( conn_id )
+        self.srv_conn[conn_id] = conn
         PLOG( "server connect to %s:%d",srv.ip,srv.port )
     end
 end
@@ -153,47 +155,26 @@ end
 local _network_mgr = Network_mgr()
 
 -- 底层accept回调
-function sscn_accept_new( conn_id )
-    local conn = Srv_conn( conn_id )
+function Network_mgr:srv_conn_accept( conn_id,conn )
     _network_mgr.srv_conn[conn_id] = conn
 
-    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
-    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
-
-    -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
-    network_mgr:set_send_buffer_size( conn_id,16777216*4,16777216*4 )
-    network_mgr:set_recv_buffer_size( conn_id,16777216*4,16777216*4 )
     PLOG( "accept server connection:%d",conn_id )
 end
 
--- 底层accept回调
-function sccn_accept_new( conn_id )
-    local conn = Clt_conn( conn_id )
+-- 新增客户端连接
+function Network_mgr:clt_conn_accept( conn_id,conn )
     _network_mgr.clt_conn[conn_id] = conn
-
-    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
-    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
 
     PLOG( "accept client connection:%d",conn_id )
 end
 
--- 底层connect回调
-function sscn_connect_new( conn_id,ecode )
+-- 服务器之间连接成功
+function Network_mgr:srv_conn_new( conn_id,ecode )
     if 0 ~= ecode then
         PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
         _network_mgr.srv_conn[conn_id] = nil
         return
     end
-
-    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
-    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
-
-    -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
-    network_mgr:set_send_buffer_size( conn_id,16777216*4,16777216*4 )
-    network_mgr:set_recv_buffer_size( conn_id,16777216*4,16777216*4 )
 
     local conn = _network_mgr.srv_conn[conn_id]
     PLOG( "server connect (%d) establish",conn_id)
@@ -201,16 +182,8 @@ function sscn_connect_new( conn_id,ecode )
     conn:send_pkt( SS.SYS_SYN,g_command_mgr:command_pkt() )
 end
 
--- 底层数据包回调
-function ss_command_new( conn_id,session,cmd,errno,pkt )
-    local conn = _network_mgr.srv_conn[conn_id]
-
-    conn.beat = ev:time()
-    g_command_mgr:srv_dispatch( conn,cmd,pkt )
-end
-
 -- 底层连接断开回调
-function sscn_connect_del( conn_id )
+function Network_mgr:srv_conn_del( conn_id )
     local conn = _network_mgr.srv_conn[conn_id]
 
     if conn.session then _network_mgr.srv[conn.session] = nil end
@@ -220,7 +193,7 @@ function sscn_connect_del( conn_id )
 end
 
 -- 客户端连接断开回调
-function sccn_connect_del( conn_id )
+function Network_mgr:clt_conn_del( conn_id )
     local conn = _network_mgr.clt_conn[conn_id]
 
     _network_mgr.clt_conn[conn_id] = nil
@@ -234,18 +207,6 @@ function sccn_connect_del( conn_id )
     end
 
     PLOG( "client connect del:%d",conn_id )
-end
-
--- 客户端数据包回调
-function cs_command_new( conn_id,pid,cmd,... )
-    local conn = _network_mgr.clt_conn[conn_id]
-    g_command_mgr:clt_dispatch( conn,cmd,... )
-end
-
--- 转发的客户端数据包
-function css_command_new( conn_id,pid,cmd,... )
-    local conn = _network_mgr.srv_conn[conn_id]
-    g_command_mgr:clt_dispatch_ex( conn,pid,cmd,... )
 end
 
 return _network_mgr
