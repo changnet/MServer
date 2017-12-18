@@ -118,7 +118,8 @@ end
 function Srv_conn:conn_accept( new_conn_id )
     print( "srv conn accept new",new_conn_id )
 
-    local new_conn = Srv_conn( new_conn_id )
+    -- 弄成全局的，不然会被释放掉
+    new_conn = Srv_conn( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_WEBSOCKET )

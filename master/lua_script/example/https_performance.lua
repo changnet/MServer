@@ -89,7 +89,8 @@ end
 function Srv_conn:conn_accept( new_conn_id )
     print( "srv conn accept new",new_conn_id )
 
-    local new_conn = Srv_conn( new_conn_id )
+    -- 弄成全局的，防止没有引用被释放
+    new_conn = Srv_conn( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,IOT,srv_idx )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
@@ -111,11 +112,13 @@ function Srv_conn:command_new( url,body )
     network_mgr:send_raw_packet( self.conn_id,ctx )
 end
 
+-- 对象弄成全局的，防止没有引用被释放
+
 -- 在浏览器输入https://127.0.0.1:10002来测试
-local http_listen = Srv_conn()
+http_listen = Srv_conn()
 http_listen:listen( IP,PORT )
 
 local ip1,ip2 = util.gethostbyname( ssl_url )
 
-local http_conn = Clt_conn()
+http_conn = Clt_conn()
 http_conn:connect( ip1,ssl_port )
