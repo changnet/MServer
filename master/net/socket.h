@@ -36,8 +36,6 @@ public:
         CNT_CSCN = 1,  // c2s connection
         CNT_SCCN = 2,  // s2c connection
         CNT_SSCN = 3,  // s2s connection
-        CNT_HTTP = 4,  // http connection
-        CNT_WEBS = 5,  // websocket
 
         CNT_MAXT       // max connection type
     } conn_t;

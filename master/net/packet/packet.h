@@ -17,6 +17,7 @@ public:
         PKT_HTTP      = 1,
         PKT_STREAM    = 2,
         PKT_WEBSOCKET = 3,
+        PKT_WSSTREAM  = 4, 
 
         PKT_MAX
     }packet_t;

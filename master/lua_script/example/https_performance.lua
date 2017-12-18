@@ -47,7 +47,7 @@ print( "create server ssl ctx at ",srv_idx )
 local Clt_conn = oo.class( nil,"Clt_conn" )
 
 function Clt_conn:connect( ip,port )
-    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_HTTP )
+    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_CSCN )
     conn_mgr:set_conn( self.conn_id,self )
     print( "connnect to https ",ip,self.conn_id )
 end
@@ -81,7 +81,7 @@ function Srv_conn:__init( conn_id )
 end
 
 function Srv_conn:listen( ip,port )
-    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_HTTP )
+    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     conn_mgr:set_conn( self.conn_id,self )
     PLOG( "https listen at %s:%d",ip,port )
 end

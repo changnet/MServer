@@ -33,7 +33,7 @@ end
 
 -- 监听http连接
 function Httpd:http_listen( ip,port )
-    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_HTTP )
+    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     PLOG( "%s listen for http at %s:%d",Main.srvname,ip,port )
 
     g_conn_mgr:set_conn( self.http_listen,self )

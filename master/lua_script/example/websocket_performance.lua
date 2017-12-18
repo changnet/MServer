@@ -63,7 +63,7 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
 end
 
 function Clt_conn:connect( ip,port )
-    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_WEBS )
+    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_CSCN )
     conn_mgr:set_conn( self.conn_id,self )
     print( "clt connnect to ",ip,self.conn_id )
 end
@@ -110,7 +110,7 @@ function Srv_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
 end
 
 function Srv_conn:listen( ip,port )
-    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_WEBS )
+    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     conn_mgr:set_conn( self.conn_id,self )
     PLOG( "listen at %s:%d",ip,port )
 end
@@ -143,16 +143,18 @@ end
 local ws_url = "echo.websocket.org"
 local ip1,ip2 = util.gethostbyname( ws_url )
 
-local ws_conn = Clt_conn()
+-- 这里创建的对象要放到全局引用，不然会被释放掉，就没法回调了
+
+ws_conn = Clt_conn()
 ws_conn:connect( ip1,80 )
 
 -- 开户本地服务器
 local ws_port = 10002
-local ws_listen = Srv_conn()
+ws_listen = Srv_conn()
 ws_listen:listen( "127.0.0.1",ws_port )
 
 -- 测试自己的服务器是否正常
-local ws_local_conn = Clt_conn()
+ws_local_conn = Clt_conn()
 ws_local_conn:connect( "127.0.0.1",ws_port )
 
 
