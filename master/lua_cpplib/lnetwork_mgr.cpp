@@ -697,7 +697,7 @@ bool lnetwork_mgr::connect_del( uint32 conn_id )
 
     if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
     {
-        ERROR( "connect_del:%s",lua_tostring( L,-1 ) );
+        ERROR( "conn_del:%s",lua_tostring( L,-1 ) );
 
         lua_pop( L,2 ); /* remove traceback and error object */
         return   false;

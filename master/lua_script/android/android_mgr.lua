@@ -100,7 +100,7 @@ function command_new( conn_id,cmd,errno,... )
     cfg.handler( android,errno,... )
 end
 
-function connect_del( conn_id )
+function conn_del( conn_id )
     local android = android_mgr.conn[conn_id]
 
     android_mgr.conn[conn_id] = nil
