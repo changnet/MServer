@@ -1,76 +1,11 @@
 #include "stream_packet.h"
 
 #include "../socket.h"
+#include "../header_include.h"
 #include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../lua_cpplib/lstate.h"
 #include "../../lua_cpplib/lnetwork_mgr.h"
-
-/* 网络通信消息包头格式定义
- */
-
-/* 根据一个header指针获取整个packet的长度(包括_length本身) */
-#define PACKET_LENGTH( h ) ((h)->_length + sizeof(packet_length))
-
-/* 根据一个header和buff长度获取header的_length字段值 */
-#define PACKET_MAKE_LENGTH( h,l )   \
-    static_cast<packet_length>(sizeof(h) + l - sizeof(packet_length))
-
-/* 根据一个header指针获取header后buffer的长度 */
-#define PACKET_BUFFER_LEN( h )    \
-    ((h)->_length - sizeof(*h) + sizeof(packet_length))
-
-
-typedef enum
-{
-    SPKT_NONE = 0,  // invalid
-    SPKT_CSPK = 1,  // c2s packet
-    SPKT_SCPK = 2,  // s2c packet
-    SPKT_SSPK = 3,  // s2s packet
-    SPKT_RPCS = 4,  // rpc send packet
-    SPKT_RPCR = 5,  // rpc return packet
-    SPKT_CBCP = 6,  // client broadcast packet
-    SPKT_SBCP = 7,  // server broadcast packet
-
-    SPKT_MAXT       // max packet type
-} stream_packet_t;
-
-#pragma pack (push, 1)
-
-typedef uint16 array_header;
-typedef uint16 packet_length;
-typedef uint16 string_header;
-
-/* !!!!!!!!! 这里的数据结构必须符合POD结构 !!!!!!!!! */
-
-struct base_header
-{
-    packet_length _length; /* 包长度，不包含本身 */
-    uint16  _cmd  ; /* 8bit模块号,8bit功能号 */
-};
-
-/* 客户端发往服务器 */
-struct c2s_header : public base_header
-{
-};
-
-/* 服务器发往客户端 */
-struct s2c_header : public base_header
-{
-    uint16 _errno ; /* 错误码 */
-};
-
-/* 服务器发往服务器 */
-struct s2s_header : public base_header
-{
-    uint16  _errno ; /* 错误码 */
-    uint16  _packet; /* 数据包类型，见packet_t */
-    uint16  _codec ; /* 解码类型，见codec::codec_t */
-    owner_t _owner ; /* 当前数据包所属id，通常为玩家id */
-};
-
-#pragma pack(pop)
-
 
 stream_packet::stream_packet( class socket *sk )
     : packet( sk )
@@ -130,7 +65,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
-        ERROR( "s2c cmd(%d) cfg found",header->_cmd );
+        ERROR( "sc_command cmd(%d) cfg not found",header->_cmd );
         return;
     }
 
@@ -146,7 +81,8 @@ void stream_packet::sc_command( const struct s2c_header *header )
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    codec *decoder = codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+    class codec *decoder = 
+        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -169,84 +105,43 @@ void stream_packet::cs_dispatch( const struct c2s_header *header )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
-    const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( header->_cmd );
-    if ( !cmd_cfg )
-    {
-        ERROR( "c2s cmd(%d) no cmd cfg found",header->_cmd );
-        return;
-    }
+    int32 cmd = header->_cmd;
+    int32 size = PACKET_BUFFER_LEN( header );
+    const char *ctx = reinterpret_cast<const char *>( header + 1 );
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if ( cmd_cfg->_session != network_mgr->get_curr_session() )
-    {
-        clt_forwarding( header,cmd_cfg->_session );
-        return;
-    }
+    if ( network_mgr->cs_dispatch( cmd,_socket,ctx,size ) ) return;
 
-    cs_command( header,cmd_cfg );/* 在当前进程处理 */
-}
-
-/* 转客户端数据包 */
-void stream_packet::clt_forwarding( const c2s_header *header,int32 session )
-{
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
-
-    class socket *dest_sk  = network_mgr->get_conn_by_session( session );
-    if ( !dest_sk )
-    {
-        ERROR( "client "
-            "packet forwarding no destination found.cmd:%d",header->_cmd );
-        return;
-    }
-
-    size_t size = PACKET_LENGTH( header );
-    class buffer &send = dest_sk->send_buffer();
-    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
-    {
-        ERROR( "client packet forwarding,can not "
-            "reserved memory:%ld",int64(size + sizeof(struct s2s_header)) );
-        return;
-    }
-
-    int32 conn_id = _socket->conn_id();
-
-    struct s2s_header s2sh;
-    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
-    s2sh._cmd    = 0;
-    s2sh._packet = SPKT_CSPK;
-    s2sh._codec  = _socket->get_codec_type();
-    s2sh._owner  = network_mgr->get_owner_by_conn_id( conn_id );
-
-    send.__append( &s2sh,sizeof(struct s2s_header) );
-    send.__append( header,size );
-
-    dest_sk->pending_send();
+    cs_command( cmd,ctx,size);/* 在当前进程处理 */
 }
 
 /* 客户端发往服务器数据包回调脚本 */
-void stream_packet::cs_command(
-    const c2s_header *header,const cmd_cfg_t *cmd_cfg )
+void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 {
     static lua_State *L = lstate::instance()->state();
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
-    int32 size = PACKET_BUFFER_LEN( header );
-    /* 去掉header内容 */
-    const char *buffer = reinterpret_cast<const char *>( header + 1 );
+
+    const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( cmd );
+    if ( !cmd_cfg )
+    {
+        ERROR( "cs_command cmd(%d) no cmd cfg found",cmd );
+        return;
+    }
 
     int32 conn_id = _socket->conn_id();
+    codec::codec_t codec_ty = _socket->get_codec_type();
     owner_t owner = network_mgr->get_owner_by_conn_id( conn_id );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,conn_id );
     lua_pushinteger  ( L,owner   );
-    lua_pushinteger  ( L,header->_cmd );
+    lua_pushinteger  ( L,cmd     );
 
-    codec *decoder = 
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
-    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
+    codec *decoder = codec_mgr::instance()->get_codec( codec_ty );
+    int32 cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_settop( L,0 );
@@ -292,7 +187,7 @@ void stream_packet::ss_dispatch( const s2s_header *header )
     const cmd_cfg_t *cmd_cfg = network_mgr->get_ss_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
-        ERROR( "s2s cmd(%d) no cmd cfg found",header->_cmd );
+        ERROR( "ss_dispatch cmd(%d) no cmd cfg found",header->_cmd );
         return;
     }
 
@@ -364,24 +259,23 @@ void stream_packet::css_command( const s2s_header *header )
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
-    const struct c2s_header *clt_header = 
-        reinterpret_cast<const struct c2s_header *>( header + 1 );
-    const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( clt_header->_cmd );
+
+    const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
-        ERROR( "c2s cmd(%d) no cmd cfg found",clt_header->_cmd );
+        ERROR( "css_command cmd(%d) no cmd cfg found",header->_cmd );
         return;
     }
 
-    int32 size = PACKET_BUFFER_LEN( clt_header );
+    int32 size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
-    const char *buffer = reinterpret_cast<const char *>( clt_header + 1 );
+    const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"css_command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushinteger  ( L,header->_owner   );
-    lua_pushinteger  ( L,clt_header->_cmd );
+    lua_pushinteger  ( L,header->_cmd );
 
     codec *decoder = codec_mgr::instance()
         ->get_codec( static_cast<codec::codec_t>(header->_codec) );
@@ -421,14 +315,10 @@ void stream_packet::ssc_command( const s2s_header *header )
         return;
     }
 
-    class buffer &send = sk->send_buffer();
-    bool is_ok = send.append( header + 1,PACKET_BUFFER_LEN(header) );
-    if ( !is_ok )
-    {
-        ERROR( "ssc packet can not append buffer" );
-        return;
-    }
-    sk->pending_send();
+    int32 size = PACKET_BUFFER_LEN( header );
+    const char *ctx = reinterpret_cast<const char *>( header + 1 );
+    class packet *sk_packet = sk->get_packet();
+    sk_packet->raw_pack_clt( header->_cmd,header->_errno,ctx,size );
 }
 
 
@@ -761,33 +651,48 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     }
 
     class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( 
-        len + sizeof(struct s2s_header) + sizeof(struct s2c_header) ) )
+    if ( !send.reserved( len + sizeof(struct s2s_header) ) )
     {
         encoder->finalize();
         return luaL_error( L,"can not reserved buffer" );
     }
 
-    /* 先构造客户端收到的数据包 */
-    struct s2c_header chd;
-    chd._length = PACKET_MAKE_LENGTH( struct s2c_header,len );
-    chd._cmd    = static_cast<uint16>  ( cmd );
-    chd._errno  = ecode;
-
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,PACKET_LENGTH(&chd) );
-    hd._cmd    = 0;
-    hd._errno  = 0;
+    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
+    hd._cmd    = static_cast<uint16>  ( cmd );;
+    hd._errno  = ecode;
     hd._owner  = owner;
     hd._packet = SPKT_SCPK; /*指定数据包类型为服务器发送客户端 */
 
     send.__append( &hd ,sizeof(struct s2s_header) );
-    send.__append( &chd,sizeof(struct s2c_header) );
     if ( len > 0 ) send.__append( buffer,len );
 
     encoder->finalize();
     _socket->pending_send();
 
+    return 0;
+}
+
+int32 stream_packet::raw_pack_clt( 
+    int32 cmd,uint16 ecode,const char *ctx,size_t size )
+{
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( size + sizeof(struct s2c_header) ) )
+    {
+        ERROR( "raw_pack_clt can not reserved buffer" );
+        return -1;
+    }
+
+    /* 先构造客户端收到的数据包 */
+    struct s2c_header header;
+    header._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
+    header._cmd    = static_cast<uint16>  ( cmd );
+    header._errno  = ecode;
+
+    send.__append( &header ,sizeof(header) );
+    if ( size > 0 ) send.__append( ctx,size );
+
+    _socket->pending_send();
     return 0;
 }

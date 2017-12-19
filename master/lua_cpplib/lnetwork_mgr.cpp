@@ -3,6 +3,7 @@
 #include "ltools.h"
 #include "lstate.h"
 #include "../net/io/ssl_mgr.h"
+#include "../net/header_include.h"
 #include "../net/codec/codec_mgr.h"
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
@@ -811,4 +812,50 @@ int32 lnetwork_mgr::new_ssl_ctx() /* 创建一个ssl上下文 */
 
     lua_pushinteger( L,idx );
     return 1;
+}
+
+/* 把客户端数据包转发给另一服务器 */
+bool lnetwork_mgr::cs_dispatch( 
+    int32 cmd,const class socket *src_sk,const char *ctx,size_t size ) const
+{
+    const cmd_cfg_t *cmd_cfg = get_cs_cmd( cmd );
+    if ( !cmd_cfg )
+    {
+        ERROR( "cs_dispatch cmd(%d) no cmd cfg found",cmd );
+        return false;
+    }
+
+    if ( cmd_cfg->_session == _session ) return false;
+
+    /* 这个指令不是在当前进程处理，自动转发到对应进程 */
+    class socket *dest_sk  = get_conn_by_session( cmd_cfg->_session );
+    if ( !dest_sk )
+    {
+        ERROR( "client packet forwarding no destination found.cmd:%d",cmd );
+        return true; /* 如果转发失败，也相当于转发了 */
+    }
+
+    class buffer &send = dest_sk->send_buffer();
+    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
+    {
+        ERROR( "client packet forwarding,can not "
+            "reserved memory:%ld",int64(size + sizeof(struct s2s_header)) );
+        return true; /* 如果转发失败，也相当于转发了 */
+    }
+
+    int32 conn_id = src_sk->conn_id();
+    codec::codec_t codec_ty = src_sk->get_codec_type();
+
+    struct s2s_header s2sh;
+    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
+    s2sh._cmd    = cmd;
+    s2sh._packet = SPKT_CSPK;
+    s2sh._codec  = codec_ty;
+    s2sh._owner  = get_owner_by_conn_id( conn_id );
+
+    send.__append( &s2sh,sizeof(struct s2s_header) );
+    send.__append( ctx,size );
+
+    dest_sk->pending_send();
+    return true;
 }

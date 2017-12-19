@@ -95,6 +95,10 @@ public:
     bool connect_del( uint32 conn_id );
     bool connect_new( uint32 conn_id,int32 ecode );
     bool accept_new ( uint32 conn_id,class socket *new_sk );
+
+    /* 自动转发 */
+    bool cs_dispatch( int32 cmd,
+        const class socket *src_sk,const char *ctx,size_t size ) const;
 private:
     void delete_socket( uint32 conn_id );
     class packet *lua_check_packet( socket::conn_t conn_ty );

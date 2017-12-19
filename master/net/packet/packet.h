@@ -42,6 +42,14 @@ public:
      * return: <0 error;0 success
      */
     virtual int32 unpack() = 0;
+
+    /* 打包服务器发往客户端的数据包，用于转发 */
+    virtual int32 raw_pack_clt( 
+        int32 cmd,uint16 ecode,const char *ctx,size_t size )
+    {
+        assert( "should never call base function",false );
+        return -1;
+    }
 protected:
     class socket *_socket;
 };

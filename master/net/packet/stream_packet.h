@@ -27,14 +27,14 @@ public:
     int32 pack_ss ( lua_State *L,int32 index );
     int32 pack_rpc( lua_State *L,int32 index );
     int32 pack_ssc( lua_State *L,int32 index );
-
+    int32 raw_pack_clt( 
+        int32 cmd,uint16 ecode,const char *ctx,size_t size );
     int32 unpack();
 private:
     void dispatch( const struct base_header *header );
     void sc_command( const struct s2c_header *header );
     void cs_dispatch( const struct c2s_header *header );
-    void clt_forwarding( const c2s_header *header,int32 session );
-    void cs_command( const c2s_header *header,const cmd_cfg_t *cmd_cfg );
+    void cs_command( int32 cmd,const char *ctx,size_t size );
     void process_ss_command( const s2s_header *header );
     void ss_dispatch( const s2s_header *header );
     void ss_command( const s2s_header *header,const cmd_cfg_t *cmd_cfg );

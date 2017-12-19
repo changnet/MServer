@@ -9,7 +9,7 @@ Main = {}       -- store dynamic runtime info to global
 Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
 
 g_timer_mgr   = require "timer.timer_mgr"
-local g_android_mgr = require "android.android_mgr"
+g_android_mgr = require "android.android_mgr"
 
 require "android.android"
 require "android.android_cmd"
