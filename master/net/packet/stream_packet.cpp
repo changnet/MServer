@@ -449,12 +449,6 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
     int32 cmd = luaL_checkinteger( L,index );
     int32 ecode = luaL_checkinteger( L,index + 1 );
 
-    if ( !lua_istable( L,index + 2 ) )
-    {
-        return luaL_error( L,
-            "expect table,got %s",lua_typename( L,lua_type(L,index + 2) ) );
-    }
-
     const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cfg )
     {
