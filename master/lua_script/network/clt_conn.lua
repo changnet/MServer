@@ -80,7 +80,7 @@ function Clt_conn:conn_del()
 end
 
 -- 消息回调
-function Clt_conn:command_new( pid,cmd,... )
+function Clt_conn:command_new( cmd,... )
     return g_command_mgr:clt_dispatch( self,cmd,... )
 end
 

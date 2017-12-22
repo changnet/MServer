@@ -168,7 +168,7 @@ int32 ws_stream_packet::on_frame_end()
     struct srv_header *header = 
         reinterpret_cast<struct srv_header *>( _body.data_pointer() );
 
-    uint32_t size = _body.data_size() - sizeof( header );
+    uint32_t size = _body.data_size() - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
     if ( network_mgr->cs_dispatch( header->_cmd,_socket,ctx,size ) ) return 0;
 

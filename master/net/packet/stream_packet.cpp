@@ -132,12 +132,10 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 
     int32 conn_id = _socket->conn_id();
     codec::codec_t codec_ty = _socket->get_codec_type();
-    owner_t owner = network_mgr->get_owner_by_conn_id( conn_id );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,conn_id );
-    lua_pushinteger  ( L,owner   );
     lua_pushinteger  ( L,cmd     );
 
     codec *decoder = codec_mgr::instance()->get_codec( codec_ty );
