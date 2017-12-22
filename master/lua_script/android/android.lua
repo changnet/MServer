@@ -4,6 +4,18 @@
 
 -- 机器人对象
 
+-- websocket opcodes
+local WS_OP_CONTINUE = 0x0
+local WS_OP_TEXT     = 0x1
+local WS_OP_BINARY   = 0x2
+local WS_OP_CLOSE    = 0x8
+local WS_OP_PING     = 0x9
+local WS_OP_PONG     = 0xA
+
+-- websocket marks
+local WS_FINAL_FRAME = 0x10
+local WS_HAS_MASK    = 0x20
+
 local util    = require "util"
 local android_mgr = require "android.android_mgr"
 
@@ -24,7 +36,7 @@ end
 
 -- 发送数据包
 function Android:send_pkt( cfg,pkt )
-    return network_mgr:send_srv_packet( self.conn_id,cfg[1],pkt )
+    return network_mgr:send_srv_packet( self.conn_id,WS_OP_BINARY,cfg[1],pkt )
 end
 
 -- 连接成功

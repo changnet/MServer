@@ -71,13 +71,16 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
         return luaL_error( L,"can not reserved buffer" );
     }
 
+    const char *header_ctx = reinterpret_cast<const char*>(&header);
     size_t len = websocket_calc_frame_size( flags,frame_size );
 
+    uint8 mask_offset = 0;
     char *buff = send.buff_pointer();
     static const char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
-    size_t offset = websocket_build_frame( 
-        buff,flags,mask,reinterpret_cast<const char*>(&header),sizeof(header) );
-    websocket_append_frame( buff + offset,flags,mask,ctx,size );
+    size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
+    offset += websocket_append_frame( 
+        buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
+    websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
 
     encoder->finalize();
     send.increase( len );
@@ -127,15 +130,18 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
         return luaL_error( L,"can not reserved buffer" );
     }
 
+    const char *header_ctx = reinterpret_cast<const char*>(&header);
     size_t len = websocket_calc_frame_size( flags,frame_size );
 
     char mask[4] = { 0 };
     new_masking_key( mask );
 
+    uint8 mask_offset = 0;
     char *buff = send.buff_pointer();
-    size_t offset = websocket_build_frame( 
-        buff,flags,mask,reinterpret_cast<const char*>(&header),sizeof(header) );
-    websocket_append_frame( buff + offset,flags,mask,ctx,size );
+    size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
+    offset += websocket_append_frame( 
+        buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
+    websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
 
     encoder->finalize();
     send.increase( len );
@@ -262,6 +268,7 @@ int32 ws_stream_packet::raw_pack_clt(
         return -1;
     }
 
+    const char *header_ctx = reinterpret_cast<const char*>(&header);
     // TODO: 这个flags在通用的服务器交互中传不过来，暂时hard-code，后面如有需求，
     // 再多加一字段传过来
     websocket_flags flags = WS_OP_BINARY;
@@ -270,10 +277,12 @@ int32 ws_stream_packet::raw_pack_clt(
     char mask[4] = { 0 };
     new_masking_key( mask );
 
+    uint8 mask_offset = 0;
     char *buff = send.buff_pointer();
-    size_t offset = websocket_build_frame( 
-        buff,flags,mask,reinterpret_cast<const char*>(&header),sizeof(header) );
-    websocket_append_frame( buff + offset,flags,mask,ctx,size );
+    size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
+    offset += websocket_append_frame( 
+        buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
+    websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
     send.increase( len );
     _socket->pending_send();
 

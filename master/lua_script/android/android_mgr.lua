@@ -1,8 +1,18 @@
 -- 机器人管理
 
+local handshake_clt = table.concat(
+{
+    'GET / HTTP/1.1\r\n',
+    'Connection: Upgrade\r\n',
+    'Sec-WebSocket-Key: %s\r\n',
+    'Upgrade: websocket\r\n',
+    'Sec-WebSocket-Version: 13\r\n\r\n',
+} )
+
 local cmd = require "command.sc_command"
 SC,CS = cmd[1],cmd[2]
 
+local util = require "util"
 local Android = oo.refer( "android.android" )
 
 local network_mgr = network_mgr
@@ -60,6 +70,13 @@ end
 
 local android_mgr = Android_mgr()
 
+function handshake_new( sec_websocket_key,sec_websocket_accept )
+    if not sec_websocket_accept then return end
+
+    -- TODO:验证sec_websocket_accept是否正确
+    print( "clt handshake",sec_websocket_accept)
+end
+
 function conn_new( conn_id,ecode )
     local android = android_mgr.conn[conn_id]
     if 0 ~= ecode then
@@ -74,7 +91,12 @@ function conn_new( conn_id,ecode )
 
     network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_WSSTREAM )
+
+    -- 主动发送握手
+    local sec_websocket_key = util.base64( util.uuid() ) -- RFC6455 随机一个key
+    network_mgr:send_srv_packet( 
+        conn_id,string.format(handshake_clt,sec_websocket_key) )
 
     PLOG( "android(%d) connect establish",android.index)
     android:on_connect()

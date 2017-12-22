@@ -271,6 +271,7 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.set( "PKT_HTTP"     ,packet::PKT_HTTP      );
     lc.set( "PKT_STREAM"   ,packet::PKT_STREAM    );
     lc.set( "PKT_WEBSOCKET",packet::PKT_WEBSOCKET );
+    lc.set( "PKT_WSSTREAM" ,packet::PKT_WSSTREAM  );
 
     lc.set( "CDC_NONE"    ,codec::CDC_NONE    );
     lc.set( "CDC_BSON"    ,codec::CDC_BSON    );

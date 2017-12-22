@@ -10,6 +10,7 @@
 #include "packet/http_packet.h"
 #include "packet/stream_packet.h"
 #include "packet/websocket_packet.h"
+#include "packet/ws_stream_packet.h"
 #include "../lua_cpplib/leventloop.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
@@ -500,14 +501,13 @@ int32 socket::set_packet( packet::packet_t packet_type )
     switch( packet_type )
     {
         case packet::PKT_HTTP :
-            _packet = new http_packet( this );
-            break;
+            _packet = new http_packet( this );break;
         case packet::PKT_STREAM :
-            _packet = new stream_packet( this );
-            break;
+            _packet = new stream_packet( this );break;
         case packet::PKT_WEBSOCKET :
-            _packet = new websocket_packet( this );
-            break;
+            _packet = new websocket_packet( this );break;
+        case packet::PKT_WSSTREAM :
+            _packet = new ws_stream_packet( this );break;
         default : return -1;
     }
     return 0;

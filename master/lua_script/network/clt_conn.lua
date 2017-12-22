@@ -1,5 +1,29 @@
 -- 客户端网络连接
 
+
+local handshake_srv =table.concat(
+{    
+    'HTTP/1.1 101 WebSocket Protocol Handshake\r\n',
+    'Connection: Upgrade\r\n',
+    'Upgrade: WebSocket\r\n',
+    'Sec-WebSocket-Accept: %s\r\n\r\n',
+} )
+
+local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+-- websocket opcodes
+local WS_OP_CONTINUE = 0x0
+local WS_OP_TEXT     = 0x1
+local WS_OP_BINARY   = 0x2
+local WS_OP_CLOSE    = 0x8
+local WS_OP_PING     = 0x9
+local WS_OP_PONG     = 0xA
+
+-- websocket marks
+local WS_FINAL_FRAME = 0x10
+local WS_HAS_MASK    = 0x20
+
+local util = require "util"
 local network_mgr = network_mgr
 local Clt_conn = oo.class( nil,... )
 
@@ -11,9 +35,25 @@ function Clt_conn:__init( conn_id )
     self.conn_id = conn_id
 end
 
+function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
+    -- 服务器收到客户端的握手请求
+    if not sec_websocket_key then
+        self.close()
+        PLOG( "clt handshake no sec_websocket_key")
+        return
+    end
+
+    local sha1 = util.sha1_raw( sec_websocket_key,ws_magic )
+    local base64 = util.base64( sha1 )
+
+    return network_mgr:send_raw_packet( 
+        self.conn_id,string.format(handshake_srv,base64) )
+end
+
 -- 发送数据包
 function Clt_conn:send_pkt( cmd,pkt,errno )
-    return network_mgr:send_clt_packet( self.conn_id,cmd,errno or 0,pkt )
+    return network_mgr:send_clt_packet( 
+        self.conn_id,WS_OP_BINARY,cmd,errno or 0,pkt )
 end
 
 -- 认证成功
@@ -53,7 +93,7 @@ end
 function Clt_conn:conn_accept( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_STREAM )
+    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_WSSTREAM )
 
     local new_conn = Clt_conn( new_conn_id )
     g_network_mgr:clt_conn_accept( new_conn_id,new_conn )
