@@ -166,7 +166,8 @@ websocket_packet::~websocket_packet()
  */
 int32 websocket_packet::pack_clt( lua_State *L,int32 index )
 {
-    if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
+    // 允许握手未完成就发数据，自己保证顺序
+    // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
@@ -196,7 +197,8 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
  */
 int32 websocket_packet::pack_srv( lua_State *L,int32 index )
 {
-    if ( !_is_upgrade ) return http_packet::pack_srv( L,index );
+    // 允许握手未完成就发数据，自己保证顺序
+    // if ( !_is_upgrade ) return http_packet::pack_srv( L,index );
 
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
@@ -258,9 +260,8 @@ int32 websocket_packet::unpack()
 int32 websocket_packet::on_message_complete( bool upgrade )
 {
     assert( "should be upgrade",upgrade && !_is_upgrade );
-    // 先触发脚本握手才标识为websocket，因为握手进还需要发http
-    _is_upgrade = true;
 
+    _is_upgrade = true;
     invoke_handshake();
 
     return 0;

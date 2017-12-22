@@ -70,11 +70,16 @@ end
 
 local android_mgr = Android_mgr()
 
-function handshake_new( sec_websocket_key,sec_websocket_accept )
-    if not sec_websocket_accept then return end
+function handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
+    if not sec_websocket_accept then
+        print("handshake no sec_websocket_accept")
+        return
+    end
 
     -- TODO:验证sec_websocket_accept是否正确
     print( "clt handshake",sec_websocket_accept)
+    local android = android_mgr.conn[conn_id]
+    android:on_connect()
 end
 
 function conn_new( conn_id,ecode )
@@ -95,11 +100,12 @@ function conn_new( conn_id,ecode )
 
     -- 主动发送握手
     local sec_websocket_key = util.base64( util.uuid() ) -- RFC6455 随机一个key
-    network_mgr:send_srv_packet( 
+    network_mgr:send_raw_packet( 
         conn_id,string.format(handshake_clt,sec_websocket_key) )
 
     PLOG( "android(%d) connect establish",android.index)
-    android:on_connect()
+
+    -- 握手完成之前不要发数据，因为发送的模式不对，是以http发送的
 end
 
 function command_new( conn_id,cmd,errno,... )

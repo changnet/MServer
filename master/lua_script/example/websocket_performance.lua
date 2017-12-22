@@ -80,7 +80,7 @@ function Clt_conn:conn_new( ecode )
 
     print( "conn_new",self.conn_id )
 
-    network_mgr:send_srv_packet( self.conn_id,handshake_clt )
+    network_mgr:send_raw_packet( self.conn_id,handshake_clt )
 end
 
 function Clt_conn:conn_del()

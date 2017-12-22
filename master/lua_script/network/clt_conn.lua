@@ -46,6 +46,7 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
     local sha1 = util.sha1_raw( sec_websocket_key,ws_magic )
     local base64 = util.base64( sha1 )
 
+    PLOG("clt handshake %d",self.conn_id)
     return network_mgr:send_raw_packet( 
         self.conn_id,string.format(handshake_srv,base64) )
 end
@@ -53,7 +54,7 @@ end
 -- 发送数据包
 function Clt_conn:send_pkt( cmd,pkt,errno )
     return network_mgr:send_clt_packet( 
-        self.conn_id,WS_OP_BINARY,cmd,errno or 0,pkt )
+        self.conn_id,cmd,errno or 0,WS_OP_BINARY,pkt )
 end
 
 -- 认证成功

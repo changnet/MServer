@@ -34,7 +34,8 @@ ws_stream_packet::ws_stream_packet( class socket *sk ) : websocket_packet( sk )
  */
 int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
 {
-    if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
+    // 允许握手未完成就发数据，自己保证顺序
+    // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
     struct clt_header header;
     header._cmd = luaL_checkinteger( L,index );
@@ -95,7 +96,8 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
  */
 int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
 {
-    if ( !_is_upgrade ) return http_packet::pack_srv( L,index );
+    // 允许握手未完成就发数据，自己保证顺序
+    // if ( !_is_upgrade ) return luaL_error( L,"websocket not upgrade" );
 
     struct srv_header header;
     header._cmd = luaL_checkinteger( L,index );
@@ -113,7 +115,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
 
     const char *ctx = NULL;
-    int32 size = encoder->encode( L,index + 3,&ctx,cfg );
+    int32 size = encoder->encode( L,index + 2,&ctx,cfg );
     if ( size < 0 ) return -1;
 
     if ( size > MAX_PACKET_LEN )
