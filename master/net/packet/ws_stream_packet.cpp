@@ -197,7 +197,7 @@ int32 ws_stream_packet::sc_command()
     lua_pushinteger  ( L,header->_cmd );
     lua_pushinteger  ( L,header->_errno );
 
-    uint32_t size = _body.data_size() - sizeof( header );
+    uint32_t size = _body.data_size() - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
     codec *decoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
