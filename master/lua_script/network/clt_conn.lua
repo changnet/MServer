@@ -54,7 +54,7 @@ end
 -- 发送数据包
 function Clt_conn:send_pkt( cmd,pkt,errno )
     return network_mgr:send_clt_packet( 
-        self.conn_id,cmd,errno or 0,WS_OP_BINARY,pkt )
+        self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
 -- 认证成功
@@ -82,6 +82,25 @@ end
 -- 消息回调
 function Clt_conn:command_new( cmd,... )
     return g_command_mgr:clt_dispatch( self,cmd,... )
+end
+
+function Clt_conn:ctrl_new( flag,body )
+    -- 控制帧只在前4位，先去掉WS_HAS_MASK
+    flag = flag & 0x0F
+    if flag == WS_OP_CLOSE then
+        return network_mgr:send_ctrl_packet( 
+            self.conn_id,WS_OP_CLOSE | WS_FINAL_FRAME )
+        -- 服务器通常不主动关闭连接，这理暂时不处理close
+    elseif flag == WS_OP_PING then
+        -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
+        return network_mgr:send_ctrl_packet( 
+            self.conn_id,WS_OP_PONG | WS_FINAL_FRAME,body )
+    elseif flag == WS_OP_PONG then
+        -- TODO: 这里更新心跳
+        return
+    end
+
+    assert( false,"unknow ctrl flag" )
 end
 
 -- 主动关闭连接

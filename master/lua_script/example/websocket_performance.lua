@@ -58,7 +58,8 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
 
     -- TODO:验证sec_websocket_accept是否正确
     local ctx = "hello,websocket.I am Mini-Game-Distribute-Server"
-    network_mgr:send_srv_packet( self.conn_id,WS_OP_TEXT | WS_HAS_MASK,ctx )
+    network_mgr:send_srv_packet( 
+        self.conn_id,WS_OP_TEXT | WS_HAS_MASK | WS_FINAL_FRAME,ctx )
 end
 
 function Clt_conn:connect( ip,port )
@@ -88,7 +89,8 @@ end
 
 function Clt_conn:command_new( body )
     print("clt command new",body)
-    -- network_mgr:send_ctrl_packet( self.conn_id,WS_OP_PING,"hello" )
+    network_mgr:send_ctrl_packet( 
+        self.conn_id,WS_OP_PING | WS_FINAL_FRAME,"hello" )
 end
 
 function Clt_conn:ctrl_new( flag,body )
@@ -96,13 +98,14 @@ function Clt_conn:ctrl_new( flag,body )
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
         print( "clt ctrl_new close",self.conn_id,body)
-        network_mgr:send_ctrl_packet( self.conn_id,WS_OP_CLOSE | WS_HAS_MASK )
+        network_mgr:send_ctrl_packet( 
+            self.conn_id,WS_OP_CLOSE | WS_HAS_MASK | WS_FINAL_FRAME )
         return
     elseif flag == WS_OP_PING then
         print( "clt ctrl_new ping",self.conn_id,body)
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
         network_mgr:send_ctrl_packet( 
-            self.conn_id,WS_OP_PONG | WS_HAS_MASK,body )
+            self.conn_id,WS_OP_PONG | WS_HAS_MASK | WS_FINAL_FRAME,body )
         return
     elseif flag == WS_OP_PONG then
         print( "clt ctrl_new pong",self.conn_id,body)
@@ -167,12 +170,13 @@ function Srv_conn:ctrl_new( flag,body )
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
         print( "srv ctrl_new close",self.conn_id,body)
-        network_mgr:send_ctrl_packet( self.conn_id,WS_OP_CLOSE )
+        network_mgr:send_ctrl_packet( self.conn_id,WS_OP_CLOSE | WS_FINAL_FRAME )
         return
     elseif flag == WS_OP_PING then
         print( "srv ctrl_new ping",self.conn_id,body)
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
-        network_mgr:send_ctrl_packet( self.conn_id,WS_OP_PONG,body )
+        network_mgr:send_ctrl_packet( 
+            self.conn_id,WS_OP_PONG | WS_FINAL_FRAME,body )
         return
     elseif flag == WS_OP_PONG then
         print( "srv ctrl_new pong",self.conn_id,body)
@@ -188,8 +192,8 @@ local ip1,ip2 = util.gethostbyname( ws_url )
 
 -- 这里创建的对象要放到全局引用，不然会被释放掉，就没法回调了
 
--- ws_conn = Clt_conn()
--- ws_conn:connect( ip1,80 )
+ws_conn = Clt_conn()
+ws_conn:connect( ip1,80 )
 
 -- 开户本地服务器
 local ws_port = 10002

@@ -36,7 +36,8 @@ end
 
 -- 发送数据包
 function Android:send_pkt( cfg,pkt )
-    return network_mgr:send_srv_packet( self.conn_id,cfg[1],WS_OP_BINARY,pkt )
+    return network_mgr:send_srv_packet( 
+        self.conn_id,cfg[1],WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
 -- 连接成功
