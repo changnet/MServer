@@ -253,6 +253,7 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.def<&lnetwork_mgr::send_ssc_packet > ( "send_ssc_packet"  );
     lc.def<&lnetwork_mgr::send_rpc_packet > ( "send_rpc_packet"  );
     lc.def<&lnetwork_mgr::send_raw_packet > ( "send_raw_packet"  );
+    lc.def<&lnetwork_mgr::send_ctrl_packet> ( "send_ctrl_packet" );
 
     lc.def<&lnetwork_mgr::set_send_buffer_size> ( "set_send_buffer_size" );
     lc.def<&lnetwork_mgr::set_recv_buffer_size> ( "set_recv_buffer_size" );

@@ -68,4 +68,9 @@ function handshake_new( conn_id,... )
     return conn_mgr.conn[conn_id]:handshake_new( ... )
 end
 
+-- 控制帧，比如websocket的ping、pong
+function ctrl_new( conn_id,... )
+    return conn_mgr.conn[conn_id]:ctrl_new( ... )
+end
+
 return conn_mgr

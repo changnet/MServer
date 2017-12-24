@@ -7,6 +7,7 @@
 #include "../net/codec/codec_mgr.h"
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
+#include "../net/packet/websocket_packet.h"
 
 class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
 
@@ -858,4 +859,21 @@ bool lnetwork_mgr::cs_dispatch(
 
     dest_sk->pending_send();
     return true;
+}
+
+/* 发送ping-pong等数据包 */
+int32 lnetwork_mgr::send_ctrl_packet ()
+{
+    class packet *pkt = lua_check_packet( socket::CNT_NONE );
+
+    // 检测packet类型，基类是websocket_packet才能发送控制帧
+    packet::packet_t type = pkt->type();
+    if ( (packet::PKT_WSSTREAM != type) && (packet::PKT_WEBSOCKET != type) )
+    {
+        return luaL_error( L,"illegal packet type" );
+    }
+
+    (reinterpret_cast<class websocket_packet *>(pkt))->pack_ctrl( L,2 );
+
+    return 0;
 }

@@ -131,6 +131,15 @@ int32 on_frame_end( struct websocket_parser *parser )
     class websocket_packet *ws_packet =
         static_cast<class websocket_packet *>( parser->data );
 
+    /* https://tools.ietf.org/html/rfc6455#section-5.5
+     * opcode并不是按位来判断的，而是按顺序1、2、3、4...
+     * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are 
+     * identified by opcodes where the most significant bit of the opcode is 1)
+     */
+    if ( expect_false(parser->flags & 0x08) )
+    {
+       return ws_packet->on_ctrl_end();
+    }
     return ws_packet->on_frame_end();
 }
 
@@ -161,10 +170,7 @@ websocket_packet::~websocket_packet()
     _parser = NULL;
 }
 
-/* 打包服务器发往客户端数据包
- * return: <0 error;>=0 success
- */
-int32 websocket_packet::pack_clt( lua_State *L,int32 index )
+int32 websocket_packet::pack_raw( lua_State *L,int32 index )
 {
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
@@ -173,18 +179,18 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
         static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
 
     size_t size = 0;
-    const char *ctx = luaL_checklstring( L,index + 1,&size );
-    if ( !ctx ) return 0;
+    const char *ctx = luaL_optlstring( L,index + 1,NULL,&size );
+    // if ( !ctx ) return 0; // 允许发送空包
 
+    size_t len = websocket_calc_frame_size( flags,size );
     class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( size ) )
+    if ( !send.reserved( len ) )
     {
         return luaL_error( L,"can not reserved buffer" );
     }
 
-    size_t len = websocket_calc_frame_size( flags,size );
-
-    static const char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
+    char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
+    if ( flags & WS_HAS_MASK ) new_masking_key( mask );
     websocket_build_frame( send.buff_pointer(),flags,mask,ctx,size );
     send.increase( len );
     _socket->pending_send();
@@ -192,36 +198,32 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
     return 0;
 }
 
+/* 打包服务器发往客户端数据包
+ * return: <0 error;>=0 success
+ */
+int32 websocket_packet::pack_clt( lua_State *L,int32 index )
+{
+    return pack_raw( L,index );
+}
+
 /* 打包客户端发往服务器数据包
  * return: <0 error;>=0 success
  */
 int32 websocket_packet::pack_srv( lua_State *L,int32 index )
 {
-    // 允许握手未完成就发数据，自己保证顺序
-    // if ( !_is_upgrade ) return http_packet::pack_srv( L,index );
+    return pack_raw( L,index );
+}
 
-    websocket_flags flags = 
-        static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
-
-    size_t size = 0;
-    const char *ctx = luaL_checklstring( L,index + 1,&size );
-    if ( !ctx ) return 0;
-
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( size ) )
-    {
-        return luaL_error( L,"can not reserved buffer" );
-    }
-
-    size_t len = websocket_calc_frame_size( flags,size );
-
-    char mask[4] = { 0 };
-    new_masking_key( mask );
-    websocket_build_frame( send.buff_pointer(),flags,mask,ctx,size );
-    send.increase( len );
-    _socket->pending_send();
-
-    return 0;
+// 发送opcode
+// 对应websocket，可以直接用pack_clt或pack_srv发送控制帧。这个函数是给ws_stream等子类使用
+int32 websocket_packet::pack_ctrl( lua_State *L,int32 index )
+{
+    /* https://tools.ietf.org/html/rfc6455#section-5.5
+     * 控制帧可以包含数据。但这个数据不是data-frame，即不能设置OP_TEXT、OP_BINARY
+     * 标识的应用数据。这个数据是用来说明当前控制帧的。比如close帧后面包含status code，及
+     * 关闭原因，pong数据包则必须原封不动返回ping数据包中的数据
+     */
+    return pack_raw( L,index );
 }
 
 /* 数据解包 
@@ -325,11 +327,34 @@ int32 websocket_packet::on_frame_end()
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushlstring   ( L,_body.data_pointer(),_body.data_size() );
+    lua_pushlstring  ( L,_body.data_pointer(),_body.data_size() );
 
     if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {
         ERROR( "websocket command:%s",lua_tostring( L,-1 ) );
+    }
+
+    lua_settop( L,0 ); /* remove traceback */
+
+    return _socket->fd() < 0 ? -1 : 0;
+}
+
+// 处理ping、pong等opcode 
+int32 websocket_packet::on_ctrl_end()
+{
+    static lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    lua_pushcfunction( L,traceback );
+    lua_getglobal    ( L,"ctrl_new" );
+    lua_pushinteger  ( L,_socket->conn_id() );
+    lua_pushinteger  ( L,_parser->flags );
+    // 控制帧也是可以包含数据的
+    lua_pushlstring  ( L,_body.data_pointer(),_body.data_size() );
+
+    if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    {
+        ERROR( "websocket ctrl:%s",lua_tostring( L,-1 ) );
     }
 
     lua_settop( L,0 ); /* remove traceback */

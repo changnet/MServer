@@ -165,10 +165,16 @@ int32 ws_stream_packet::on_frame_end()
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     /* 服务器收到的包，看要不要转发 */
+    uint32 data_size = _body.data_size();
+    if ( data_size < sizeof(struct srv_header) )
+    {
+        ERROR( "ws_stream_packet on_frame_end packet incomplete" );
+        return 0;
+    }
     struct srv_header *header = 
         reinterpret_cast<struct srv_header *>( _body.data_pointer() );
 
-    uint32_t size = _body.data_size() - sizeof( *header );
+    uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
     if ( network_mgr->cs_dispatch( header->_cmd,_socket,ctx,size ) ) return 0;
 
@@ -182,6 +188,14 @@ int32 ws_stream_packet::sc_command()
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    uint32 data_size = _body.data_size();
+    if ( data_size < sizeof(struct clt_header) )
+    {
+        ERROR( "ws_stream_packet sc_command packet incomplete" );
+        return 0;
+    }
+
     struct clt_header *header = 
         reinterpret_cast<struct clt_header *>( _body.data_pointer() );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
@@ -197,7 +211,7 @@ int32 ws_stream_packet::sc_command()
     lua_pushinteger  ( L,header->_cmd );
     lua_pushinteger  ( L,header->_errno );
 
-    uint32_t size = _body.data_size() - sizeof( *header );
+    uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
     codec *decoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
