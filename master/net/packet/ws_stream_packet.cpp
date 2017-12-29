@@ -291,12 +291,11 @@ int32 ws_stream_packet::raw_pack_clt(
     const char *header_ctx = reinterpret_cast<const char*>(&header);
     // TODO: 这个flags在通用的服务器交互中传不过来，暂时hard-code，后面如有需求，
     // 再多加一字段传过来
-    websocket_flags flags = WS_OP_BINARY;
+    websocket_flags flags = 
+        static_cast<websocket_flags>(WS_OP_BINARY | WS_FINAL_FRAME);
     size_t len = websocket_calc_frame_size( flags,frame_size );
 
     char mask[4] = { 0 };
-    new_masking_key( mask );
-
     uint8 mask_offset = 0;
     char *buff = send.buff_pointer();
     size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
