@@ -7,6 +7,8 @@
 #include "../../lua_cpplib/lstate.h"
 #include "../../lua_cpplib/lnetwork_mgr.h"
 
+#pragma pack (push, 1)
+
 // 发往客户端数据包头
 struct clt_header
 {
@@ -19,6 +21,8 @@ struct srv_header
 {
     uint16 _cmd;
 };
+
+#pragma pack(pop)
 
 ws_stream_packet::~ws_stream_packet()
 {
