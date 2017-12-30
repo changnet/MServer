@@ -1,118 +1,73 @@
-MServer(Mini Distributed Game Server)
-=========
-Mserver是一个基于节点的多进程游戏服务器。每一个节点为一个进程，使用相同的底层(master)
-来启动进程，通过加载不同的lua脚本实现不同的功能。节点之间通过tcp进行通信。master使用
-C++编写，提供了游戏中高性能，高稳定性，脚本不方便完成的组件，包括MySQL、MongoDB、
-Socket、C++脚本交互、协议序列化、日志等。MySQL、MongoDB、日志采用了多线程，socket采用
-了非阻塞epoll，用户可根据自己的习惯继续使用传统的异步回调或者利用lua的coroutine将异步
-转为同步。通常用户不需要修改底层，只需要编写lua脚本，即可完成一个高效稳定的游戏服务器，
-并且可以通过增加节点来提高承载。
+# MServer
+
+Mserver,short for Mini Distributed Game Server,is a lightweight game engine. 
+This engine contains components like socket、db、log、thread that written in C++ 
+to provide high performance.All game logic are designed to run on Lua Script,
+improving develop efficiency and stability.Multi Process Architecture and RPC
+component make sure it has high scalability.
 
 
-编译安装
---------
+## Dependencies
+* Linux
+* G++ >= C++11
 
-代码在ubuntu 14.04、debian 7中测试。下面以ubuntu 14.04安装为例:
+## Build(e.g. debian7)
 
+* git clone https://github.com/changnet/MServer.git
+* cd MServer
+* git submodule update --init --recursive
+* cd shell
+* ./build_env.sh
+* ./make.sh submodule
+* ./make.sh
 
- * 进入源码目录：cd MServer
- * 下载子模块: git submodule update --init --recursive
- * 更新所有子模块: git submodule update
- * 从子模块源更新子模块：cd [submodule-path] & git pull origin master
- * 进入shell操作目录：cd shell
- * 安装依赖(不同系统，该脚本可能无法使用，请参考脚本手动安装)：./build_evn.sh
- * 编译子模块：./make.sh submodule
- * 编译主程序:./make.sh
+## Usage
 
-PS:  
- * 从源仓库更新子模块: git submodule foreach git pull origin master
- * 如果需要使用flatbuffers，则编译器必须支持C++11。如果使用protobuf，可以使用C++03，但要开启gnu extention（long long类型及__VA_ARGS）
- * protobuf基于云风的pbc，可以解析protobuf3，但无法使用protobuf3特有的map类型
+Make sure working directory is Mserver/master
+```shell
+bin/master gateway 1 1
+bin/master world 1 1
+```
+To stop the server,just kill the processes with singal 9.
+There are shell scripts(start.sh、stop.sh) at MServer/shell.
 
+There is a client example at:https://github.com/changnet/EgretDemo
 
+## Features
 
-组件
-----
+ * Hotswap
+ * Multi thread log
+ * RPC(bson RPC)
+ * Network(Tcp、Http、websocket),all SSL support
+ * Lua OOP development
+ * Protocol auto serialize/deserialize(Protobuf、FlatBuffers)
+ * DB operation(MySQL、MongoDB)
+ * AC algorithm wordfilter
+ * Crypto(md5、base64、sha1、uuid ...)
+ * JSON、XML parse/deparse
 
-所有组件均提供对应的lua接口，用户只需要在lua调用对应的接口即可使用组件。
+## Process Architecture
 
- * lua面向对象封装，支持热更，内存监测
- * 重写libev,仅保留io、timer，重写信号处理
- * C++与lua交互封装
- * 非阻塞socket,自定义socket内存池
- * 基于mysql c connector封装mysql，支持lua table直接转换
- * 基于mongo c driver封装mongodb，支持lua table直接转换
- * 基于http-parser的http (client/server)通信模块
- * 基于parson的lua json解析模块
- * 多线程缓冲日志
- * lua_rapidxml，xml解析模块
- * lacism,ac算法关键字过滤
- * protobuf、flatbuffer协议
- * md5、uuid等常用算法接口
- * 基于bson的rpc调用
+![Process Architecture](https://github.com/changnet/MServer/blob/master/doc/picture/master.png)
 
-单个节点master架构
-------------------
-![节点架构](https://github.com/changnet/MServer/blob/master/doc/picture/master.png)
+## ARPG Game Architecture(e.g.)
 
-使用本服务器构建的架构
----------------------
+![Game Architecture](https://github.com/changnet/MServer/blob/master/doc/picture/server%20frame.png)
 
-![全服架构](https://github.com/changnet/MServer/blob/master/doc/picture/server%20frame.png)
+## Valgrind Test
 
-valgrind测试
------------
+* Valgrind version should >= 3.10，valgrind 3.7 on Debian Wheezy not work
+* You may want to suppress all memory leak report about OpenSSL with master/valgrind.suppressions
 
-在ubuntu 14.04,debian 7 wheezy上测试通过，但注意以下两点：  
- * mongo c driver在 valgrind 3.7 on Debian Wheezy下mongoc_client_new会引起
- SIGSEGV，请使用3.10以上版本。
- * mongo c driver中的sasl导致很多still reachable内存未释放，见
- https://github.com/mongodb/mongo-c-driver/blob/master/valgrind.suppressions
+## TODO
 
-待实现组件:
------------
+* A* search algorithm
+* AOI(area of interest)
+* Multi Factor sort algorithm(bucket sort、insertion sort)
+* DataStruct(LRU、LFU、Priority queue、minimum and maximum heap)
 
-* astar、rsa、zlib
-* 为lua提供LRU、LFU、优先队列、大小堆等常用数据结构
-* https_socket(基于openssl(libssl-dev)https://github.com/CloudFundoo/SSL-TLS-clientserver(polar ssl(mbed tls)实现https))
-* 多因子排序算法(桶排序、插入法排序)
-* 寻路算法astar
-* AOI模块
+## Note
 
-#待处理
-* 如果使用coroutine，当前的热更机制是否能更新coroutine中的变量。底层C++回调脚本如何找到正确的lua_State
-* 测试mysql中NULL指针，空查询结果，存储过程返回是否正确
-* http server/client 压测
-* buffer的大小BUFFER_MAX客户端、服务器分开限制,recv、send时处理异常
-* 测试查询大量结果导致out of memory后线程能否恢复
-* arpg使用状态机来替换各种延时操作，而不要注册各种定时器，不能替换的使用二级定时器
-* ps -o 测试缺页中断
-* dump内存情况，包含内存碎片
-* 利用oo的注册功能实现rsf指令全服热更文件(协议自动注册的热更)
-* 增加系统、玩家跨进程事件总线（event bus）
+* In latest version,FlatBuffers isn't being test,may not work properly
+* Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
 
-#注意
-* 重构后，flatbuffers未测试，可能无法直接使用
-
-#位置同步
-http://blog.codingnow.com/2006/04/sync.html  
-http://blog.codingnow.com/2012/03/dev_note_12.html
-
-#AOI模块及其算法
-http://docs2x.smartfoxserver.com/AdvancedTopics/advanced-mmo-api
-http://blog.codingnow.com/2012/03/dev_note_13.html
-http://www.cnblogs.com/sniperHW/archive/2012/09/29/2707953.html
-http://www.codedump.info/?p=388
-
-#Pomelo协议设计参考
-https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
-
-#SSL相关  
-ssl切换：https://stackoverflow.com/questions/21193743/ssl-socket-free-and-shutdown  
-CA bundle：  
-http://www.herongyang.com/PKI/HTTPS-PHP-Multiple-CA-Certificates-in-a-Single-File.html  
-https://www.ibm.com/support/knowledgecenter/en/SSWHYP_4.0.0/com.ibm.apimgmt.apionprem.doc/task_apionprem_generate_pkcs_certificate.html
-
-* http_packet、weebsocket需要考虑zero copy
-* codec设置为NONE时无法直接回调，get_codec返回NULL宕机了
-* websocket的ping、pong、FIN、TEXT/BINARY之类的标识是否需要严格实现
