@@ -41,22 +41,68 @@ There is a client example at:https://github.com/changnet/EgretDemo
  * Network(Tcp、Http、websocket),all SSL support
  * Lua OOP development
  * Protocol auto serialize/deserialize(Protobuf、FlatBuffers)
- * DB operation(MySQL、MongoDB)
+ * Async DB operation(MySQL、MongoDB)
  * AC algorithm wordfilter
  * Crypto(md5、base64、sha1、uuid ...)
  * JSON、XML parse/deparse
 
 ## Process Architecture
 
-![Process Architecture](https://github.com/changnet/MServer/blob/master/doc/picture/master.png)
+```txt
++--------------------------------------------------+
+|                                                  |
+|              Lua Game Application                |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|              Lua C++ Driver                      |
+|                                                  |
++--------------------------------------------------+
+| +-------+ +--------------------+ +----------+    |  thread   +---------+      +---------+
+| |  SSL  | | Tcp/Http/Websocket | | Protobuf |    <----------->   Log   +------>  Files  |
+| +-------+ +--------------------+ +----------+    |           +---------+      +---------+
+|                                                  |
+| +--------+ +----------+ +-------+                |  thread   +---------+      +---------+
+| | Crypto | | JSON/XML | |  RPC  |                <-----------> MySQL   +------>MySQL DB |
+| +--------+ +----------+ +-------+                |           +---------+      +---------+
+|                                                  |
+| +------------+ +-------------+                   |  thread   +---------+      +---------+
+| | WordFilter | | FlatBuffers |                   <----------->MongoDB  +------>   DB    |
+| +------------+ +-------------+                   |           +---------+      +---------+
++--------------------------------------------------+
+```
 
 ## ARPG Game Architecture(e.g.)
 
 ![Game Architecture](https://github.com/changnet/MServer/blob/master/doc/picture/server%20frame.png)
 
+```txt
++--------------------------------------------------+
+|                                                  |
+|            Lua Game application                  |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|             Lua C++ Driver                       |
+|                                                  |
++--------------------------------------------------+
+| +--------+ +------------------+  +-----------+   |           +---------+      +---------+
+| | SSL    | |Tcp/Http/Websocket|  | Protobuf  |   <----------->   Log   +------>  Files  |
+| +--------+ +------------------+  +-----------+   |           +---------+      +---------+
+|                                                  |
+| +--------+ +----------+  +-------+               |           +---------+      +---------+
+| | Crypto | | JSON/XML |  | RPC   |               <-----------> MySQL   +------>MySQL DB |
+| +--------+ +----------+  +-------+               |           +---------+      +---------+
+|                                                  |
+| +------------+                                   |           +---------+      +---------+
+| | WordFilter |                                   <----------->MongoDB  +------>   DB    |
+| +------------+                                   |           +---------+      +---------+
++--------------------------------------------------+
+```
+
 ## Valgrind Test
 
-* Valgrind version should >= 3.10，valgrind 3.7 on Debian Wheezy not work
+* Valgrind version >= 3.10，valgrind 3.7 on Debian Wheezy not work
 * You may want to suppress all memory leak report about OpenSSL with master/valgrind.suppressions
 
 ## TODO
@@ -68,6 +114,6 @@ There is a client example at:https://github.com/changnet/EgretDemo
 
 ## Note
 
-* In latest version,FlatBuffers isn't being test,may not work properly
+* In latest version,FlatBuffers isn't being tested,may not work properly
 * Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
 
