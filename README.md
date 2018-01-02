@@ -74,30 +74,29 @@ There is a client example at:https://github.com/changnet/EgretDemo
 
 ## ARPG Game Architecture(e.g.)
 
-![Game Architecture](https://github.com/changnet/MServer/blob/master/doc/picture/server%20frame.png)
-
 ```txt
-+--------------------------------------------------+
-|                                                  |
-|            Lua Game application                  |
-|                                                  |
-+--------------------------------------------------+
-|                                                  |
-|             Lua C++ Driver                       |
-|                                                  |
-+--------------------------------------------------+
-| +--------+ +------------------+  +-----------+   |           +---------+      +---------+
-| | SSL    | |Tcp/Http/Websocket|  | Protobuf  |   <----------->   Log   +------>  Files  |
-| +--------+ +------------------+  +-----------+   |           +---------+      +---------+
-|                                                  |
-| +--------+ +----------+  +-------+               |           +---------+      +---------+
-| | Crypto | | JSON/XML |  | RPC   |               <-----------> MySQL   +------>MySQL DB |
-| +--------+ +----------+  +-------+               |           +---------+      +---------+
-|                                                  |
-| +------------+                                   |           +---------+      +---------+
-| | WordFilter |                                   <----------->MongoDB  +------>   DB    |
-| +------------+                                   |           +---------+      +---------+
-+--------------------------------------------------+
+              +---------------+
+              |               |
+              | Web Console   |           +-----------------+
+              |               |           |                 |
+              +-------^-------+     +----->   Chat Server   +----+
+                      |             |     |                 |    |
+                      |             |     +-----------------+    |
+                      |             |                            |
+              +-------v-------+     |     +-----------------+    |
+              |               |     |     |                 |    |
+Client <------>    GateWay    <----------->   Data Server   +----+
+              |               |     |     |                 |    |
+              +---------------+     |     +-----------------+    |
+                                    |                            |
+                                    |     +-----------------+    |
+                                    |     | Scene Server 1  |    |
+                                    |     +-----------------+    |
+                                    +----->       ...       +----+
+                                          +-----------------+
+                                          | Scene Server N  |
+                                          +-----------------+
+
 ```
 
 ## Valgrind Test
@@ -116,4 +115,8 @@ There is a client example at:https://github.com/changnet/EgretDemo
 
 * In latest version,FlatBuffers isn't being tested,may not work properly
 * Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
+
+## Thanks
+
+- http://asciiflow.com/
 
