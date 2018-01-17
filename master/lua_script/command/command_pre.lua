@@ -5,8 +5,8 @@ local ss_map = {}
 local sc_map = {}
 local cs_map = {}
 
-local ss_list  = require "command.ss_command"
-local cmd_list = require "command.sc_command"
+local ss_list  = require "proto.ss_command"
+local cmd_list = require "proto.proto"
 
 -- 协议使用太频繁，放到全局变量
 -- 使用时只需要一个指令值就可以了，没必要暴露一个table给用户

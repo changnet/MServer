@@ -1,6 +1,6 @@
 -- 机器人指令处理入口
 
-local sc = require "command/sc_command"
+local sc = require "proto.proto"
 SC,CS = sc[1],sc[2]
 
 local android_mgr = require "android.android_mgr"

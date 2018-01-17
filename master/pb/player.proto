@@ -69,7 +69,12 @@ message CPing
 // 服务器回包
 message SPing
 {
-    int32 time = 1;
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+    int32 way = 4;
+    repeated int32 target = 5;
+    string say = 6;
 }
 
 // 顶号

@@ -115,6 +115,7 @@ Client <------>    GateWay    <----------->   Data Server   +----+
 
 * In latest version,FlatBuffers isn't being tested,may not work properly
 * Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
+* using editor to generate proto file.https://github.com/changnet/SPEditor
 
 ## Thanks
 

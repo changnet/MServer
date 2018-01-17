@@ -19,7 +19,7 @@ local WS_HAS_MASK    = 0x20
 local util    = require "util"
 local android_mgr = require "android.android_mgr"
 
-local sc = require "command/sc_command"
+local sc = require "proto.proto"
 
 local SC,CS = sc[1],sc[2]
 

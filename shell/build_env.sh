@@ -229,13 +229,14 @@ function build_flatbuffers()
     cd -
 }
 
-# 其实我们只需要一个protoc来编译proto文件，可能在github直接下载bin文件
+# 其实我们只需要一个protoc来编译proto文件，不需要源代码
+# 可以在github直接下载bin文件，尤其是在win下开始的时候
 # https://github.com/google/protobuf/releases
 function build_protoc()
 {
     cd $PKGDIR
     PROTOBUF_VER=3.3.0
-    #tar -xzvf protobuf-$PROTOBUF_VER.tar.gz
+    tar -xzvf protobuf-$PROTOBUF_VER.tar.gz
 
     #
     cd protobuf-$PROTOBUF_VER

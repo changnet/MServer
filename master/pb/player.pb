@@ -1,5 +1,5 @@
 
-—
+é
 player.protoplayer"
 	SSOffline
 pid (Rpid" 
@@ -27,7 +27,12 @@
 z (Rz
 way (Rway
 target (Rtarget
-say (	Rsay"
-SPing
-time (Rtime"
+say (	Rsay"m
+SPing
+x (Rx
+y (Ry
+z (Rz
+way (Rway
+target (Rtarget
+say (	Rsay"
 SLoginOtherWherebproto3

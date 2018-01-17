@@ -9,7 +9,7 @@ local handshake_clt = table.concat(
     'Sec-WebSocket-Version: 13\r\n\r\n',
 } )
 
-local cmd = require "command.sc_command"
+local cmd = require "proto.proto"
 SC,CS = cmd[1],cmd[2]
 
 local util = require "util"
