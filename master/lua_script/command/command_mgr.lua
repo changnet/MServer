@@ -149,7 +149,7 @@ end
 
 -- 其他服务器指令注册
 function Command_mgr:other_cmd_register( srv_conn,pkt )
-    local session = pkt.session
+    local session = srv_conn.session
 
     -- 记录该服务器所处理的cs指令
     for _,cmd in pairs( pkt.clt_cmd or {} ) do

@@ -74,6 +74,7 @@ function Srv_conn:listen( ip,port )
 end
 
 function Srv_conn:raw_connect()
+    self.conn_ok = false
     self.conn_id = network_mgr:connect( self.ip,self.port,network_mgr.CNT_SSCN )
 
     g_conn_mgr:set_conn( self.conn_id,self )
@@ -92,7 +93,7 @@ end
 -- 重新连接
 function Srv_conn:reconnect()
     self.auth = false
-    self.session = nil
+    self.session = 0
 
     return self:raw_connect()
 end
@@ -116,6 +117,7 @@ end
 -- 连接成功
 function Srv_conn:conn_new( ecode )
     if 0 == ecode then
+        self.conn_ok = true
         network_mgr:set_conn_io( self.conn_id,network_mgr.IOT_NONE )
         network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_PROTOBUF )
         network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_STREAM )
@@ -130,6 +132,7 @@ end
 
 -- 连接断开
 function Srv_conn:conn_del()
+    self.conn_ok = false
     g_conn_mgr:set_conn( self.conn_id,nil )
     return g_network_mgr:srv_conn_del( self.conn_id )
 end
@@ -147,6 +150,7 @@ end
 
 -- 主动关闭连接
 function Srv_conn:close()
+    self.conn_ok = false
     return network_mgr:close( self.conn_id )
 end
 

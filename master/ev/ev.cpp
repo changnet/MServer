@@ -146,14 +146,14 @@ void ev_loop::fd_reify()
         ANFD *anfd   = anfds + fd;
 
         int32 reify = anfd->reify;
-        int32 events = EPOLL_CTL_DEL == reify ? 0 : (anfd->w)->events;
-
         /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
         if ( expect_false(0 == reify) )
         {
             ERROR( "fd change,but not reify" );
             continue;
         }
+
+        int32 events = EPOLL_CTL_DEL == reify ? 0 : (anfd->w)->events;
 
         backend_modify( fd,events,reify );
         anfd->emask = events;

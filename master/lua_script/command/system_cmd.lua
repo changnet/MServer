@@ -21,7 +21,7 @@ end
 
 -- 同步对方指令数据
 local function srv_cmd_sync( srv_conn,pkt )
-    g_command_mgr:other_cmd_register( srv_conn,pkt  )
+    g_command_mgr:other_cmd_register( srv_conn,pkt )
 end
 
 -- 对方服务器数据同步完成

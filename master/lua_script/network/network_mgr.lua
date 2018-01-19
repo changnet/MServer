@@ -20,6 +20,8 @@ function Network_mgr:__init()
 
     self.name_srv   = {}  -- 进程名为key，session为value
 
+    self.srv_waiting = {} -- 等待重连的服务器连接
+
     local index = tonumber( Main.srvindex )
     local srvid = tonumber( Main.srvid )
     for name,_ in pairs( SRV_NAME ) do
@@ -105,22 +107,34 @@ function Network_mgr:srv_register( conn,pkt )
     return true
 end
 
--- 定时器回调
+-- 检查一个连接超时
 local pkt = {response = true}
+function Network_mgr:check_one_timeout( srv_conn,check_time )
+    if not srv_conn.conn_ok then return end -- 还没连接成功的不检查
+
+    local ts = srv_conn:check( check_time )
+    if ts > SRV_ALIVE_TIMES then
+        PLOG( "%s server timeout",srv_conn:conn_name() )
+
+        self:close_srv_conn( srv_conn )
+        if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
+    elseif ts > 0 and srv_conn.auth then
+        srv_conn:send_pkt( SS.SYS_BEAT,pkt )
+    end
+end
+
+-- 定时器回调
 function Network_mgr:do_timer()
+    -- 重连
+    local waiting = self.srv_waiting
+    if not table.empty( waiting ) then self.srv_waiting = {} end
+    for conn in pairs( waiting ) do
+        self:reconnect_srv( conn )
+    end
+
     local check_time = ev:time() - SRV_ALIVE_INTERVAL
     for conn_id,srv_conn in pairs( self.srv_conn ) do
-        local ts = srv_conn:check( check_time )
-        if ts > SRV_ALIVE_TIMES then
-            PLOG( "%s server timeout",srv_conn:conn_name() )
-            if srv_conn.auto_conn then
-                self:reconnect_srv( srv_conn )
-            else
-                self:close_srv_conn( srv_conn )
-            end
-        elseif ts > 0 then
-            srv_conn:send_pkt( SS.SYS_BEAT,pkt )
-        end
+        self:check_one_timeout( srv_conn,check_time )
     end
 end
 
@@ -198,7 +212,7 @@ function Network_mgr:srv_conn_new( conn_id,ecode )
         PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
         self.srv_conn[conn_id] = nil
 
-        if conn.auto_conn then self:reconnect_srv( conn ) end
+        if conn.auto_conn then self.srv_waiting[conn] = 1 end
         return
     end
 
@@ -217,7 +231,7 @@ function Network_mgr:srv_conn_del( conn_id )
     PLOG( "%s connect del",conn:conn_name() )
 
     -- TODO: 是否有必要检查对方是否主动关闭
-    if conn.auto_conn then self:reconnect_srv( conn ) end
+    if conn.auto_conn then self.srv_waiting[conn] = 1 end
 end
 
 -- 客户端连接断开回调
