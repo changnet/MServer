@@ -9,9 +9,17 @@ message SSRegister
     int32 session = 2;         // 服务器session id
     int32 timestamp = 3;       // 时间戳
     string auth = 4;         // 认证字符串
-    repeated int32 clt_cmd = 5;       // 该服务器处理的客户端指令
-    repeated int32 srv_cmd = 6;       // 该服务器处理的服务器指令
-    repeated string rpc_cmd = 7;    // 该服务器处理的rpc指令
+}
+
+message SSCommandSync
+{
+    repeated int32 clt_cmd  = 1;    // 该服务器处理的客户端指令
+    repeated int32 srv_cmd  = 2;    // 该服务器处理的服务器指令
+    repeated string rpc_cmd = 3;    // 该服务器处理的rpc指令
+}
+
+message SSSyncDone
+{
 }
 
 /* 服务器心跳 */

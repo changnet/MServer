@@ -23,9 +23,11 @@ end
 
 -- 其他服务器注册rpc回调
 function Rpc:register( method_name,session )
-    assert( nil == self.call[method_name],
-        string.format( "rpc already exist:%s",method_name ) )
-    
+    if not Main.ok then -- 启动的时候检查一下，热更则覆盖
+        assert( nil == self.call[method_name],
+            string.format( "rpc already exist:%s",method_name ) )
+    end
+
     self.call[method_name] = {}
     self.call[method_name].session = session
 end

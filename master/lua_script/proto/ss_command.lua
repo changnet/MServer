@@ -15,10 +15,11 @@ local MODULE_PLAYER = (0x01 << 8) -- 256
 
 local SS =
 {
-    SYS_SYN      = { MODULE_SYSTEM + 0x04,"system.pb","system.SSRegister" },
-    SYS_ACK      = { MODULE_SYSTEM + 0x05,"system.pb","system.SSRegister" },
-    SYS_BEAT     = { MODULE_SYSTEM + 0x06,"system.pb","system.SSBeat" },        -- 心跳包
-    SYS_HOT_SWAP = { MODULE_SYSTEM + 0x07,"system.pb","system.SSHotSwap" },    -- 热更
+    SYS_REG       = { MODULE_SYSTEM + 0x04,"system.pb","system.SSRegister" },
+    SYS_CMD_SYNC  = { MODULE_SYSTEM + 0x05,"system.pb","system.SSCommandSync" },
+    SYS_BEAT      = { MODULE_SYSTEM + 0x06,"system.pb","system.SSBeat" },        -- 心跳包
+    SYS_HOT_SWAP  = { MODULE_SYSTEM + 0x07,"system.pb","system.SSHotSwap" },    -- 热更
+    SYS_SYNC_DONE = { MODULE_SYSTEM + 0x08,"system.pb","system.SSSyncDone" },    -- 同步完成
 
     PLAYER_OFFLINE    = { MODULE_PLAYER + 0x01,"player.pb","player.SSOffline" }, -- 玩家下线
     PLAYER_OTHERWHERE = { MODULE_PLAYER + 0x02,"player.pb","player.SSOtherWhere" }, -- 玩家下线

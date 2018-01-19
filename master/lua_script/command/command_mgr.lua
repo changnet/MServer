@@ -50,8 +50,7 @@ end
 -- 注册服务器协议处理
 -- @noauth    -- 处理此协议时，不要求该链接可信
 -- @noreg     -- 此协议不需要注册到其他服务器
--- @nounpack  -- 此协议不要自动解包
-function Command_mgr:srv_register( cmd,handler,noreg,noauth,nounpack )
+function Command_mgr:srv_register( cmd,handler,noreg,noauth )
     local cfg = self.ss[cmd]
     if not cfg then
         return error( "srv_register:cmd not define" )
@@ -60,7 +59,6 @@ function Command_mgr:srv_register( cmd,handler,noreg,noauth,nounpack )
     cfg.handler  = handler
     cfg.noauth   = noauth
     cfg.noreg    = noreg
-    cfg.nounpack = nounpack
 
     local raw_cfg = g_command_pre:get_ss_cmd( cmd )
     network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
@@ -68,14 +66,7 @@ end
 
 -- 本进程需要注册的指令
 function Command_mgr:command_pkt()
-    local pkt =
-    {
-        name    = Main.srvname,
-        session = Main.session,
-        timestamp = ev:time(),
-    }
-    pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
-
+    local pkt = {}
     pkt.clt_cmd = self:clt_cmd()
     pkt.srv_cmd = self:srv_cmd()
     pkt.rpc_cmd = self:rpc_cmd()
@@ -156,15 +147,17 @@ function Command_mgr:rpc_cmd()
     return g_rpc:rpc_cmd()
 end
 
--- 服务器注册
-function Command_mgr:command_register( srv_conn,pkt )
+-- 其他服务器指令注册
+function Command_mgr:other_cmd_register( srv_conn,pkt )
     local session = pkt.session
 
     -- 记录该服务器所处理的cs指令
     for _,cmd in pairs( pkt.clt_cmd or {} ) do
         local _cfg = self.cs[cmd]
-        assert( _cfg,"do_srv_register no such clt cmd" )
-        assert( _cfg,"do_srv_register clt cmd register conflict" )
+        assert( _cfg,"other_cmd_register no such clt cmd" )
+        if not Main.ok then -- 启动的时候检查一下，热更则覆盖
+            assert( _cfg,"other_cmd_register clt cmd register conflict" )
+        end
 
         _cfg.session = session
         local raw_cfg = g_command_pre:get_cs_cmd( cmd )
@@ -174,8 +167,8 @@ function Command_mgr:command_register( srv_conn,pkt )
     -- 记录该服务器所处理的ss指令
     for _,cmd in pairs( pkt.srv_cmd or {} ) do
         local _cfg = self.ss[cmd]
-        assert( _cfg,"do_srv_register no such srv cmd" )
-        assert( _cfg,"do_srv_register srv cmd register conflict" )
+        assert( _cfg,"other_cmd_register no such srv cmd" )
+        assert( _cfg,"other_cmd_register srv cmd register conflict" )
 
         _cfg.session = session
         local raw_cfg = g_command_pre:get_ss_cmd( cmd )

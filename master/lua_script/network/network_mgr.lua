@@ -159,6 +159,8 @@ function Network_mgr:srv_conn_accept( conn_id,conn )
     _network_mgr.srv_conn[conn_id] = conn
 
     PLOG( "accept server connection:%d",conn_id )
+
+    conn:send_register()
 end
 
 -- 新增客户端连接
@@ -179,7 +181,7 @@ function Network_mgr:srv_conn_new( conn_id,ecode )
     local conn = _network_mgr.srv_conn[conn_id]
     PLOG( "server connect (%d) establish",conn_id)
 
-    conn:send_pkt( SS.SYS_SYN,g_command_mgr:command_pkt() )
+    conn:send_register()
 end
 
 -- 底层连接断开回调

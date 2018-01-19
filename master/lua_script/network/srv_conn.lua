@@ -43,9 +43,15 @@ function Srv_conn:check( check_time )
 end
 
 -- 认证成功
-function Srv_conn:authorized( session )
+function Srv_conn:authorized( pkt )
     self.auth = true
-    self.session = session
+    self.name = pkt.name
+    self.session = pkt.session
+end
+
+-- 获取基本类型名字(gateway、world)
+function Srv_conn:base_name()
+    return self.name
 end
 
 -- 获取该连接名称
@@ -56,15 +62,7 @@ function Srv_conn:conn_name( session )
     local ty,index,srvid = 
         g_unique_id:srv_session_parse( session or self.session )
 
-    local name = ""
-    for _name,_ty in pairs( SRV_NAME ) do
-        if ty == _ty then
-            name = _name
-            break
-        end
-    end
-
-    return string.format( "%s(I%d.S%d)",name,index,srvid )
+    return string.format( "%s(I%d.S%d)",self.name,index,srvid )
 end
 
 -- 监听服务器连接
@@ -134,6 +132,18 @@ end
 -- 主动关闭连接
 function Srv_conn:close()
     return network_mgr:close( self.conn_id )
+end
+
+-- 发送认证数据
+function Srv_conn:send_register()
+    local pkt =
+    {
+        name    = Main.srvname,
+        session = Main.session,
+        timestamp = ev:time(),
+    }
+    pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
+    self:send_pkt( SS.SYS_REG,pkt )
 end
 
 return Srv_conn
