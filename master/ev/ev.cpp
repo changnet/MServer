@@ -145,33 +145,18 @@ void ev_loop::fd_reify()
         int32 fd     = fdchanges[i];
         ANFD *anfd   = anfds + fd;
 
-        switch ( anfd->reify )
-        {
-        case 0             : /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
-            ERROR("fd unreify:please avoid "
-                "this fd situation,control your watcher");
-            continue; // break;
-        case EPOLL_CTL_ADD :
-        case EPOLL_CTL_MOD :
-        {
-            int32 events = (anfd->w)->events;
-            /* 允许一个fd在一次loop中不断地del，再add，或者多次mod。
-             * 但只要event不变，则不需要更改epoll
-             */
-            if ( anfd->emask == events ) continue;/* no reification */
+        int32 reify = anfd->reify;
+        int32 events = EPOLL_CTL_DEL == reify ? 0 : (anfd->w)->events;
 
-            backend_modify( fd,events,anfd->reify );
-            anfd->emask = events;
-        }break;
-        case EPOLL_CTL_DEL :
-            /* 此时watcher可能已被delete */
-            backend_modify( fd,0,anfd->reify );
-            anfd->emask = 0;
-            break;
-        default :
-            assert( "unknow epoll modify reification",false );
-            return;
+        /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
+        if ( expect_false(0 == reify) )
+        {
+            ERROR( "fd change,but not reify" );
+            continue;
         }
+
+        backend_modify( fd,events,reify );
+        anfd->emask = events;
     }
 
     fdchangecnt = 0;
@@ -202,6 +187,9 @@ void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
     switch ( errno )
     {
     case EBADF  :
+        /* libev是不处理EPOLL_CTL_DEL的，因为fd被关闭时会自动从epoll中删除
+         * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll，这时特殊处理
+         */
         if ( EPOLL_CTL_DEL == reify ) return;
         assert ( "ev_loop::backend_modify EBADF",false );
         break;
@@ -212,6 +200,11 @@ void ev_loop::backend_modify( int32 fd,int32 events,int32 reify )
         assert ( "ev_loop::backend_modify EINVAL",false );
         break;
     case ENOENT :
+        /* epoll在连接断开时，会把fd从epoll中删除，但ev中仍保留相关数据
+          * 如果这时在同一轮主循环中产生新连接，系统会分配同一个fd
+          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
+          */
+        if ( expect_true (!epoll_ctl(backend_fd,EPOLL_CTL_ADD,fd,&ev)) ) return;
         assert ( "ev_loop::backend_modify ENOENT",false );
         break;
     case ENOMEM :

@@ -12,6 +12,7 @@ function Srv_conn:__init( conn_id )
     self.fchk = 0 -- fail check
     self.session = 0
     self.conn_id = conn_id
+    self.auto_conn = false -- 是否自动重连
 end
 
 -- 发送数据包
@@ -72,13 +73,28 @@ function Srv_conn:listen( ip,port )
     g_conn_mgr:set_conn( self.conn_id,self )
 end
 
--- 连接到其他服务器
-function Srv_conn:connect( ip,port )
-    self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_SSCN )
+function Srv_conn:raw_connect()
+    self.conn_id = network_mgr:connect( self.ip,self.port,network_mgr.CNT_SSCN )
 
     g_conn_mgr:set_conn( self.conn_id,self )
 
     return self.conn_id
+end
+
+-- 连接到其他服务器
+function Srv_conn:connect( ip,port )
+    self.ip = ip
+    self.port = port
+
+    return self:raw_connect()
+end
+
+-- 重新连接
+function Srv_conn:reconnect()
+    self.auth = false
+    self.session = nil
+
+    return self:raw_connect()
 end
 
 -- 接受新的连接

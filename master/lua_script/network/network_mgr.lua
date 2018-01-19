@@ -53,11 +53,21 @@ end
 function Network_mgr:connect_srv( srvs )
     for _,srv in pairs( srvs ) do
         local conn = Srv_conn()
+
+        conn.auto_conn = true
         local conn_id = conn:connect( srv.ip,srv.port )
 
         self.srv_conn[conn_id] = conn
         PLOG( "server connect to %s:%d",srv.ip,srv.port )
     end
+end
+
+-- 重新连接到其他服务器
+function Network_mgr:reconnect_srv( conn )
+    local conn_id = conn:reconnect()
+
+    self.srv_conn[conn_id] = conn
+    PLOG( "server reconnect to %s:%d",conn.ip,conn.port )
 end
 
 -- ============================================================================
@@ -102,8 +112,12 @@ function Network_mgr:do_timer()
     for conn_id,srv_conn in pairs( self.srv_conn ) do
         local ts = srv_conn:check( check_time )
         if ts > SRV_ALIVE_TIMES then
-            -- timeout
             PLOG( "%s server timeout",srv_conn:conn_name() )
+            if srv_conn.auto_conn then
+                self:reconnect_srv( srv_conn )
+            else
+                self:close_srv_conn( srv_conn )
+            end
         elseif ts > 0 then
             srv_conn:send_pkt( SS.SYS_BEAT,pkt )
         end
@@ -150,13 +164,20 @@ function Network_mgr:srv_name_send( name,cmd,pkt,ecode )
     srv_conn:send_pkt( cmd,pkt,ecode )
 end
 
--- ============================================================================
+-- 主动关闭服务器链接
+function Network_mgr:close_srv_conn( conn )
+    conn:close()
+    g_conn_mgr:set_conn( conn.conn_id,nil )
 
-local _network_mgr = Network_mgr()
+    if conn.session then self.srv[conn.session] = nil end
+    self.srv_conn[conn_id] = nil
+end
+
+-- ============================================================================
 
 -- 底层accept回调
 function Network_mgr:srv_conn_accept( conn_id,conn )
-    _network_mgr.srv_conn[conn_id] = conn
+    self.srv_conn[conn_id] = conn
 
     PLOG( "accept server connection:%d",conn_id )
 
@@ -165,20 +186,22 @@ end
 
 -- 新增客户端连接
 function Network_mgr:clt_conn_accept( conn_id,conn )
-    _network_mgr.clt_conn[conn_id] = conn
+    self.clt_conn[conn_id] = conn
 
     PLOG( "accept client connection:%d",conn_id )
 end
 
 -- 服务器之间连接成功
 function Network_mgr:srv_conn_new( conn_id,ecode )
+    local conn = self.srv_conn[conn_id]
     if 0 ~= ecode then
         PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
-        _network_mgr.srv_conn[conn_id] = nil
+        self.srv_conn[conn_id] = nil
+
+        if conn.auto_conn then self:reconnect_srv( conn ) end
         return
     end
 
-    local conn = _network_mgr.srv_conn[conn_id]
     PLOG( "server connect (%d) establish",conn_id)
 
     conn:send_register()
@@ -186,24 +209,27 @@ end
 
 -- 底层连接断开回调
 function Network_mgr:srv_conn_del( conn_id )
-    local conn = _network_mgr.srv_conn[conn_id]
+    local conn = self.srv_conn[conn_id]
 
-    if conn.session then _network_mgr.srv[conn.session] = nil end
-    _network_mgr.srv_conn[conn_id] = nil
+    if conn.session then self.srv[conn.session] = nil end
+    self.srv_conn[conn_id] = nil
 
     PLOG( "%s connect del",conn:conn_name() )
+
+    -- TODO: 是否有必要检查对方是否主动关闭
+    if conn.auto_conn then self:reconnect_srv( conn ) end
 end
 
 -- 客户端连接断开回调
 function Network_mgr:clt_conn_del( conn_id )
-    local conn = _network_mgr.clt_conn[conn_id]
+    local conn = self.clt_conn[conn_id]
 
-    _network_mgr.clt_conn[conn_id] = nil
+    self.clt_conn[conn_id] = nil
 
     g_account_mgr:role_offline( conn_id )
 
     if conn.pid then
-        _network_mgr.clt[conn.pid] = nil
+        self.clt[conn.pid] = nil
         local pkt = { pid = conn.pid }
         g_command_mgr:srv_broadcast( SS.PLAYER_OFFLINE,pkt )
     end
@@ -211,4 +237,5 @@ function Network_mgr:clt_conn_del( conn_id )
     PLOG( "client connect del:%d",conn_id )
 end
 
+local _network_mgr = Network_mgr()
 return _network_mgr
