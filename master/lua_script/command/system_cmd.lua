@@ -41,8 +41,8 @@ end
 
 -- 热更
 local function hot_fix( srv_conn,pkt )
-    local hs = require "http.www.hot_fix"
-    hs:fix( pkt.module or {} )
+    local hf = require "http.www.hot_fix"
+    hf:fix( pkt.module or {} )
 
     -- srv_conn:send_pkt( SS_SYS_HOT_FIX,)
 end

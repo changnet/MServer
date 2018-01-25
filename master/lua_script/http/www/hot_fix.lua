@@ -10,24 +10,63 @@ local page200 =
 }
 page200 = table.concat( page200 )
 
+local util = require "util"
 local json = require "lua_parson"
 
 -- 这个模块自己指定路径，因为http请求是/来区分："http/hot_fix"
 -- 我们一般用点
 local Hot_fix = oo.singleton( nil,... )
 
+-- 热更单个文件
+function Hot_fix:fix_one( path )
+    require_ex( path )
+    PLOG( "hot fix %s",path )
+end
+
+-- 热更协议
+function Hot_fix:fix_proto()
+    if g_command_mgr.modify or g_rpc.modify then
+        local _pkt = g_command_mgr:command_pkt()
+        g_command_mgr:srv_broadcast( SS.SYS_CMD_SYNC,_pkt )
+    end
+end
+
+-- 热更schema文件
+function Hot_fix:fix_schema()
+    g_command_mgr:load_schema()
+end
+
+-- 全局热更
+function Hot_fix:global_fix()
+    oo.hot_fix( PLOG )
+
+    self:fix_one( "modules/module_header" )
+    self:fix_one( "command/command_header" )
+end
+
 function Hot_fix:fix( list )
     if not list then return end
 
+    g_rpc.modify = false
+    g_command_mgr.modify = false -- 自动检测协议注册是否变动
+
+    local sec, usec = util.timeofday()
+
     -- 没有指定文件则全部更新
     if table.empty( list ) then
-        return oo.hot_fix( PLOG )
+        self:global_fix()
+    else
+        for _,module in pairs( list ) do
+            self:fix_one( module )
+        end
     end
 
-    for _,module in pairs( list ) do
-        require_ex( module )
-        PLOG( "hot fix %s",module )
-    end
+    self:fix_proto()
+    self:fix_schema()
+
+    local nsec, nusec = util.timeofday()
+    local msec = (nsec - sec)*1000000 + nusec - usec
+    PLOG( "hot fix finish,time elapsed %d microsecond",msec ) -- 微秒
 end
 
 --[[

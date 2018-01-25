@@ -22,6 +22,8 @@ function Command_mgr:__init()
     for _,v in pairs( CS ) do
         self.cs[ v ] = {}
     end
+
+    self.modify = false -- 协议热更变动标识
 end
 
 -- 加载二进制flatbuffers schema文件
@@ -40,6 +42,7 @@ function Command_mgr:clt_register( cmd,handler,noauth )
         return error( "clt_register:cmd not define" )
     end
 
+    self.modify = true
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 
@@ -56,6 +59,7 @@ function Command_mgr:srv_register( cmd,handler,noreg,noauth )
         return error( "srv_register:cmd not define" )
     end
 
+    self.modify = true
     cfg.handler  = handler
     cfg.noauth   = noauth
     cfg.noreg    = noreg

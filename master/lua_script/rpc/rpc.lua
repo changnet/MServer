@@ -8,15 +8,18 @@ local Rpc = oo.singleton( nil,... )
 function Rpc:__init()
     self.call = {}
     self.seed = 1
+    self.modify = false -- 热更变动标识
 end
 
 -- 声明一个rpc调用
 function Rpc:declare( method_name,func )
-    if self.call[method_name] then
+    -- 在启动(Main.ok为false)时检测冲突，热更时覆盖
+    if not Main.ok and self.call[method_name] then
         return error(
             string.format( "rpc:conflicting declaration:%s",method_name ) )
     end
 
+    self.modify = true
     self.call[method_name] = {}
     self.call[method_name].func = func
 end
