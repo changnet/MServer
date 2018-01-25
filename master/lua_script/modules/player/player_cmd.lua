@@ -11,16 +11,28 @@ local function player_ping( srv_conn,pid,pkt )
     srv_conn:send_clt_pkt( pid,SC.PLAYER_PING,pkt )
 end
 
-local function player_enter( srv_conn,pid,pkt )
-    g_player_mgr:on_enter_world( pid,pkt )
+local function account_mgr_clt_cb( cmd,cb_func,noauth )
+    local cb = function( clt_conn,pkt )
+        return cb_func( g_account_mgr,clt_conn,pkt )
+    end
+
+    g_command_mgr:clt_register( cmd,cb,noauth )
 end
 
-local function player_offline( srv_conn,pkt )
-    g_player_mgr:on_player_offline( pkt )
+local function player_mgr_clt_cb( cmd,cb_func )
+    local cb = function( clt_conn,pid,pkt )
+        return cb_func( g_player_mgr,clt_conn,pid,pkt )
+    end
+
+    g_command_mgr:clt_register( cmd,cb )
 end
 
-local function player_login_otherwhere( srv_conn,pkt )
-    g_player_mgr:on_login_otherwhere( pkt.pid )
+local function player_mgr_srv_cb( cmd,cb_func )
+    local cb = function( srv_conn,pkt )
+        return cb_func( g_player_mgr,srv_conn,pkt )
+    end
+
+    g_command_mgr:srv_register( cmd,cb )
 end
 
 local function rpc_test( ... )
@@ -34,18 +46,16 @@ end
 
 -- 这里注册系统模块的协议处理
 if "gateway" == Main.srvname then
-    g_command_mgr:clt_register( CS.PLAYER_LOGIN,
-        g_account_mgr.player_login(g_account_mgr),true )
-    g_command_mgr:clt_register( CS.PLAYER_CREATE,
-        g_account_mgr.create_role(g_account_mgr),true )
+    account_mgr_clt_cb( CS.PLAYER_LOGIN,g_account_mgr.player_login,true )
+    account_mgr_clt_cb( CS.PLAYER_CREATE,g_account_mgr.create_role,true )
 end
 
 if "world" == Main.srvname then
     g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
-    g_command_mgr:clt_register( CS.PLAYER_ENTER,player_enter )
+    player_mgr_clt_cb( CS.PLAYER_ENTER,g_player_mgr.on_enter_world )
 
-    g_command_mgr:srv_register( SS.PLAYER_OFFLINE,player_offline )
-    g_command_mgr:srv_register( SS.PLAYER_OTHERWHERE,player_login_otherwhere )
+    player_mgr_srv_cb( SS.PLAYER_OFFLINE,g_player_mgr.on_player_offline )
+    player_mgr_srv_cb( SS.PLAYER_OTHERWHERE,g_player_mgr.on_login_otherwhere )
 
     g_rpc:declare("rpc_test",rpc_test)
     g_rpc:declare("x_rpc_test",x_rpc_test)

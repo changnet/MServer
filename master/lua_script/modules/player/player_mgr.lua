@@ -12,7 +12,7 @@ function Player_mgr:__init()
 end
 
 -- 玩家进入游戏世界，创建对象
-function Player_mgr:on_enter_world( pid )
+function Player_mgr:on_enter_world( clt_conn,pid,pkt )
     local player = Player( pid )
 
     self.player[pid] = player
@@ -23,7 +23,7 @@ function Player_mgr:on_enter_world( pid )
 end
 
 -- 玩家离线
-function Player_mgr:on_player_offline( pkt )
+function Player_mgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
     PLOG( "player offline,pid = %d",pid )
 
@@ -31,8 +31,8 @@ function Player_mgr:on_player_offline( pkt )
 end
 
 -- 顶号
-function Player_mgr:on_login_otherwhere( pid )
-    PLOG( "player login other where,pid = %d",pid )
+function Player_mgr:on_login_otherwhere( srv_conn,pkt )
+    PLOG( "player login other where,pid = %d",pkt.pid )
 end
 
 
