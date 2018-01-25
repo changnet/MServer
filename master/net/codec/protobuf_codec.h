@@ -24,6 +24,7 @@ public:
     int32 encode(
         lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg );
 private:
+    bool _is_proto_loaded;
     class lprotobuf *_lprotobuf;
 };
 

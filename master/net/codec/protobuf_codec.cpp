@@ -464,6 +464,7 @@ int32 lprotobuf::raw_encode( lua_State *L,
 ////////////////////////////////////////////////////////////////////////////////
 protobuf_codec::protobuf_codec()
 {
+    _is_proto_loaded = false;
     _lprotobuf = new class lprotobuf();
 }
 
@@ -485,6 +486,16 @@ void protobuf_codec::finalize()
 
 int32 protobuf_codec::load_path( const char *path )
 {
+    // pbc并没有什么unregister之类的函数，只能把整个对象销毁重建了
+    if ( _is_proto_loaded )
+    {
+        finalize();
+
+        delete _lprotobuf;
+        _lprotobuf = new class lprotobuf();
+    }
+
+    _is_proto_loaded = true;
     return _lprotobuf->load_path( path );
 }
 
