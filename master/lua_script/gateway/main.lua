@@ -20,20 +20,7 @@ g_unique_id = Unique_id()
 Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
-g_conn_mgr    = require "network.conn_mgr"
-g_timer_mgr   = require "timer.timer_mgr"
-g_command_pre = require "command.command_pre"
-g_setting     = require "gateway.setting"
-g_rpc         = require "rpc.rpc"
-g_httpd       = require "http.httpd"
-g_network_mgr = require "network.network_mgr"
-g_command_mgr = require "command.command_mgr"
-g_account_mgr = require "modules.account.account_mgr"
-
-require "command/command_header"
-
-local Srv_conn    = require "network.srv_conn"
-local Clt_conn    = require "network.clt_conn"
+require "modules.module_header"
 
 -- 信号处理
 function sig_handler( signum )

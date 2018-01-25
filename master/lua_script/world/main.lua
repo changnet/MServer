@@ -19,18 +19,7 @@ g_unique_id = Unique_id()
 Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 
-g_conn_mgr    = require "network.conn_mgr"
-g_timer_mgr   = require "timer.timer_mgr"
-g_command_pre = require "command.command_pre"
-g_setting     = require "world.setting"
-g_rpc         = require "rpc.rpc"
-g_network_mgr = require "network.network_mgr"
-g_command_mgr = require "command.command_mgr"
-g_player_mgr  = require "modules.player.player_mgr"
-
-require "command/command_header"
-
-local Srv_conn    = require "network.srv_conn"
+require "modules.module_header"
 
 function sig_handler( signum )
     ev:exit()
