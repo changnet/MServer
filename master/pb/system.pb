@@ -1,5 +1,5 @@
 
-Á
+À
 system.protosystem"l
 
 SSRegister
@@ -8,12 +8,12 @@ SSRegister
 	timestamp (R	timestamp
 auth (	Rauth"Z
 SSCommandSync
-clt_cmd (RcltCmd
-srv_cmd (RsrvCmd
-rpc_cmd (	RrpcCmd"
+clt_cmd (RcltCmd
+srv_cmd (RsrvCmd
+rpc_cmd (	RrpcCmd"
 
 SSSyncDone"$
 SSBeat
-response (Rresponse"#
-	SSHotSwap
+response (Rresponse""
+SSHotFix
 module (	Rmodulebproto3

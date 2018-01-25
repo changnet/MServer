@@ -230,7 +230,7 @@ int32 lacism::acism_slurp( const char *path )
 
     assert( "filter worlds file too large",s.st_size < 1024*1024*10 );
 
-    assert( "patt.ptr not free",!_patt.ptr ); /* code hot swap ? */
+    assert( "patt.ptr not free",!_patt.ptr ); /* code hot fix ? */
 
     _patt.ptr = new char[s.st_size+1];
     _patt.len = s.st_size;

@@ -19,7 +19,7 @@ struct SSBeat
 }
 
 /* 热更 */
-table SSHotSwap
+table SSHotFix
 {
     module:[string]; // 需要热更的模块
 }

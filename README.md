@@ -35,7 +35,7 @@ There is a client example at:https://github.com/changnet/EgretDemo
 
 ## Features
 
- * Hotswap
+ * Hotfix
  * Multi thread log
  * RPC(bson RPC)
  * Network(Tcp、Http、websocket),all SSL support

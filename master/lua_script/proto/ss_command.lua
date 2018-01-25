@@ -18,7 +18,7 @@ local SS =
     SYS_REG       = { MODULE_SYSTEM + 0x04,"system.pb","system.SSRegister" },
     SYS_CMD_SYNC  = { MODULE_SYSTEM + 0x05,"system.pb","system.SSCommandSync" },
     SYS_BEAT      = { MODULE_SYSTEM + 0x06,"system.pb","system.SSBeat" },        -- 心跳包
-    SYS_HOT_SWAP  = { MODULE_SYSTEM + 0x07,"system.pb","system.SSHotSwap" },    -- 热更
+    SYS_HOT_FIX  = { MODULE_SYSTEM + 0x07,"system.pb","system.SSHotFix" },    -- 热更
     SYS_SYNC_DONE = { MODULE_SYSTEM + 0x08,"system.pb","system.SSSyncDone" },    -- 同步完成
 
     PLAYER_OFFLINE    = { MODULE_PLAYER + 0x01,"player.pb","player.SSOffline" }, -- 玩家下线
@@ -34,7 +34,7 @@ local SS =
 --     SYS_SYN      = { MODULE_SYSTEM + 0x04,"system.bfbs","SSRegister" },
 --     SYS_ACK      = { MODULE_SYSTEM + 0x05,"system.bfbs","SSRegister" },
 --     SYS_BEAT     = { MODULE_SYSTEM + 0x06,"system.bfbs","SSBeat" },        -- 心跳包
---     SYS_HOT_SWAP = { MODULE_SYSTEM + 0x07,"system.bfbs","SSHotSwap" },    -- 热更
+--     SYS_HOT_Fix  = { MODULE_SYSTEM + 0x07,"system.bfbs","SSHotFix" },    -- 热更
 
 --     PLAYER_OFFLINE    = { MODULE_PLAYER + 0x01,"player.bfbs","SSOffline" }, -- 玩家下线
 --     PLAYER_OTHERWHERE = { MODULE_PLAYER + 0x02,"player.bfbs","SSOtherWhere" }, -- 玩家下线

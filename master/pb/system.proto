@@ -29,7 +29,7 @@ message SSBeat
 }
 
 /* 热更 */
-message SSHotSwap
+message SSHotFix
 {
     repeated string module = 1; // 需要热更的模块
 }
