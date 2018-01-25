@@ -4,7 +4,7 @@
 
 -- 玩家对象管理
 
-local Player = require "player.player"
+local Player = require "modules.player.player"
 local Player_mgr = oo.singleton( nil,... )
 
 function Player_mgr:__init()

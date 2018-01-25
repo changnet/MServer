@@ -44,7 +44,7 @@ end
 function Ai_mgr:load( entity,index,conf )
     local load_path = self.load_path[index]
     if not load_path then
-        load_path = string.format( "ai.ai%d",index )
+        load_path = string.format( "modules.ai.ai%d",index )
         self.load_path[index] = load_path
     end
 

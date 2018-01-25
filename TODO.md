@@ -1,3 +1,6 @@
+* 完成背包、聊天等系统设计
+* 客户端进入场景，增加gm系统
+
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步
 http://blog.codingnow.com/2006/04/sync.html  

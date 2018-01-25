@@ -4,7 +4,7 @@ local PING_MAX = 1000
 local PING_ONE_TIME = 2
 assert( 0 == PING_MAX%PING_ONE_TIME )
 
-local Ai_action = require "ai.ai_action"
+local Ai_action = require "modules.ai.ai_action"
 
 local Ai = {}
 

@@ -28,7 +28,7 @@ g_rpc         = require "rpc.rpc"
 g_httpd       = require "http.httpd"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
-g_account_mgr = require "account.account_mgr"
+g_account_mgr = require "modules.account.account_mgr"
 
 require "command/command_header"
 

@@ -14,7 +14,7 @@ g_android_mgr = require "android.android_mgr"
 require "android.android"
 require "android.android_cmd"
 
-g_ai_mgr = require "ai.ai_mgr"
+g_ai_mgr = require "modules.ai.ai_mgr"
 g_player_ev = require "event.player_event"
 
 function sig_handler( signum )
