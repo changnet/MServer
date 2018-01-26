@@ -83,8 +83,9 @@ function Hot_fix:exec( conn,fields,body )
     self:fix( tbl[local_name],tbl.schema )
 
     -- 热更其他服务器
-    for srvname,module_list in pairs( tbl ) do
-        if srvname ~= local_name then
+    for srvname in pairs( SRV_NAME ) do
+        local module_list = tbl[srvname]
+        if local_name ~= srvname and module_list then
             local pkt = { module = module_list,schema = tbl.schema }
 
             g_network_mgr:srv_name_send( srvname,SS.SYS_HOT_FIX,pkt )

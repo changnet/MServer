@@ -5,7 +5,9 @@
 -- 引入高优先级的文件
 -- 这里的文件请谨慎热更.global.oo是不能热更的
 
-require "global.global"
+local require_ext = require_ex or require
+
+require_ext "global.global" -- 这个文件是基础文件，但可以热更的
 require "global.oo"
 require_ex "global.table"
 require_ex "global.string"
