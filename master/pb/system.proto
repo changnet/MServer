@@ -32,4 +32,5 @@ message SSBeat
 message SSHotFix
 {
     repeated string module = 1; // 需要热更的模块
+    int32 schema = 2; // 是否需要更新schema文件
 }

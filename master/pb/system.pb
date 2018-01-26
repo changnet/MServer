@@ -1,5 +1,5 @@
 
-À
+Ø
 system.protosystem"l
 
 SSRegister
@@ -14,6 +14,7 @@ SSRegister
 
 SSSyncDone"$
 SSBeat
-response (Rresponse""
+response (Rresponse":
 SSHotFix
-module (	Rmodulebproto3
+module (	Rmodule
+schema (Rschemabproto3

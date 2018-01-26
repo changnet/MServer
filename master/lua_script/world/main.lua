@@ -1,9 +1,4 @@
-require "global.global"
-require "global.oo"
-require "global.table"
-require "global.string"
-
-require "global.define"
+-- 游戏世界服务器入口
 
 Main = {}       -- store dynamic runtime info to global
 Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
@@ -13,9 +8,8 @@ Main.wait =
     gateway = 1,
 }
 
-local Unique_id = require "global.unique_id"
+require "modules.module_pre_header"
 
-g_unique_id = Unique_id()
 Main.session = g_unique_id:srv_session(
     Main.srvname,tonumber(Main.srvindex),tonumber(Main.srvid) )
 

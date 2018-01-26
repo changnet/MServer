@@ -25,6 +25,6 @@ if "world" == Main.srvname then
     g_player_mgr  = require "modules.player.player_mgr"
 end
 
--- 加载指令注册入口
+-- 加载指令注册入口(用require_ex保证热更)
 -- 需要在global对象创建后才加载，因为部分模块依赖global对象
-require "command/command_header"
+require_ex "command/command_header"

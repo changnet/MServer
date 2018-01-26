@@ -54,4 +54,6 @@ function Unique_id:player_id( srvid,seed )
     return ( _srvid << 16 ) | _seed
 end
 
-return Unique_id
+local uid = Unique_id()
+
+return uid

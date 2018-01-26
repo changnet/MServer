@@ -40,11 +40,11 @@ end
 function Hot_fix:global_fix()
     oo.hot_fix( PLOG )
 
+    self:fix_one( "modules/module_pre_header" )
     self:fix_one( "modules/module_header" )
-    self:fix_one( "command/command_header" )
 end
 
-function Hot_fix:fix( list )
+function Hot_fix:fix( list,schema )
     if not list then return end
 
     g_rpc.modify = false
@@ -55,14 +55,16 @@ function Hot_fix:fix( list )
     -- 没有指定文件则全部更新
     if table.empty( list ) then
         self:global_fix()
+        self:fix_proto()
+        self:fix_schema()
     else
         for _,module in pairs( list ) do
             self:fix_one( module )
         end
-    end
 
-    self:fix_proto()
-    self:fix_schema()
+        self:fix_proto()
+        if schema then self:fix_schema() end
+    end
 
     local nsec, nusec = util.timeofday()
     local msec = (nsec - sec)*1000000 + nusec - usec
@@ -71,19 +73,19 @@ end
 
 --[[
 curl -l -H "Content-type: application/json" -X POST -d '{"gateway":[],"world":[]}' 127.0.0.1:10003/hot_fix
-curl -l -H "Content-type: application/json" -X POST -d '{"gateway":["network.network_mgr"],"world":["network.network_mgr"]}' 127.0.0.1:10003/hot_fix
+curl -l -H "Content-type: application/json" -X POST -d '{"gateway":["network.network_mgr"],"world":["network.network_mgr"],"schema":1}' 127.0.0.1:10003/hot_fix
 ]]
 function Hot_fix:exec( conn,fields,body )
     local tbl = json.decode( body )
 
     -- 这个http请求总是在gateway收到的
     local local_name = Main.srvname
-    self:fix( tbl[local_name] )
+    self:fix( tbl[local_name],tbl.schema )
 
     -- 热更其他服务器
     for srvname,module_list in pairs( tbl ) do
         if srvname ~= local_name then
-            local pkt = { module = module_list }
+            local pkt = { module = module_list,schema = tbl.schema }
 
             g_network_mgr:srv_name_send( srvname,SS.SYS_HOT_FIX,pkt )
         end

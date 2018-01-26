@@ -166,7 +166,7 @@ end
 function Network_mgr:srv_name_send( name,cmd,pkt,ecode )
     local session = self.name_srv[name]
     if not session then
-        return error( "no such server" )
+        return error( "no such server:" .. name )
     end
 
     local srv_conn = self.srv[session]

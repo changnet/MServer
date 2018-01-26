@@ -1,7 +1,6 @@
 require "global.global"
 require "global.oo"
 require "global.table"
-require "global.define"
 
 math.randomseed( ev:time() )
 
