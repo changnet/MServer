@@ -28,6 +28,8 @@ public:
 private:
     int32 sc_command();
     int32 cs_command( int32 cmd,const char *ctx,size_t size );
+    int32 do_pack_clt( int32 raw_flags,
+        int32 cmd,uint16 ecode,const char *ctx,size_t size );
 };
 
 #endif /* __WS_STREAM_PACKET_H__ */

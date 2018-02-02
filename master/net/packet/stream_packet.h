@@ -29,6 +29,8 @@ public:
     int32 pack_ssc( lua_State *L,int32 index );
     int32 raw_pack_clt( 
         int32 cmd,uint16 ecode,const char *ctx,size_t size );
+    int32 raw_pack_ss( 
+        int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size );
     int32 unpack();
 private:
     void dispatch( const struct base_header *header );

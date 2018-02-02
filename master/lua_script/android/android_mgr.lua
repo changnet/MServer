@@ -13,6 +13,7 @@ local cmd = require "proto.proto"
 SC,CS = cmd[1],cmd[2]
 
 local util = require "util"
+require "modules.system.define"
 local Android = oo.refer( "android.android" )
 
 local network_mgr = network_mgr

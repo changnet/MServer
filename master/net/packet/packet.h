@@ -50,6 +50,13 @@ public:
         assert( "should never call base function",false );
         return -1;
     }
+    /* 打包服务器发往服务器的数据包，用于广播 */
+    virtual int32 raw_pack_ss( 
+        int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size )
+    {
+        assert( "should never call base function",false );
+        return -1;
+    }
 protected:
     class socket *_socket;
 };

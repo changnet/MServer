@@ -410,6 +410,12 @@ class packet *lnetwork_mgr::lua_check_packet( socket::conn_t conn_ty )
 {
     uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
 
+    return raw_check_packet( conn_id,conn_ty );
+}
+
+class packet *lnetwork_mgr::raw_check_packet( 
+        uint32 conn_id,socket::conn_t conn_ty )
+{
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
     {
@@ -489,7 +495,7 @@ int32 lnetwork_mgr::send_ssc_packet()
 {
     class packet *pkt = lua_check_packet( socket::CNT_SSCN );
 
-    // s2s数据包只有stream_packet能打包
+    // ssc数据包只有stream_packet能打包
     if ( packet::PKT_STREAM != pkt->type() )
     {
         return luaL_error( L,"illegal packet type" );
@@ -875,5 +881,100 @@ int32 lnetwork_mgr::send_ctrl_packet ()
 
     (reinterpret_cast<class websocket_packet *>(pkt))->pack_ctrl( L,2 );
 
+    return 0;
+}
+
+/* 广播到所有连接到当前进程的服务器
+ * srv_multicast( conn_list,codec_type,cmd,errno,pkt )
+ */
+int32 lnetwork_mgr::srv_multicast()
+{
+    if ( !lua_istable( L,1 ) )
+    {
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,1) ) );
+    }
+    int32 codec_ty = luaL_checkinteger( L,2 );
+    int32 cmd      = luaL_checkinteger( L,3 );
+    int32 ecode    = luaL_checkinteger( L,4 );
+    if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
+    {
+        return luaL_error( L,"illegal codec type" );
+    }
+
+    if ( !lua_istable( L,5 ) )
+    {
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,5) ) );
+    }
+
+    const cmd_cfg_t *cfg = get_ss_cmd( cmd );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    codec *encoder = codec_mgr::instance()
+        ->get_codec( static_cast<codec::codec_t>(codec_ty) );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no codec conf found: %d",cmd );
+    }
+
+    const char *buffer = NULL;
+    int32 len = encoder->encode( L,5,&buffer,cfg );
+    if ( len < 0 )
+    {
+        encoder->finalize();
+        ERROR( "srv_multicast encode error" );
+        return 0;
+    }
+
+    if ( len > MAX_PACKET_LEN )
+    {
+        encoder->finalize();
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    lua_pushnil(L);  /* first key */
+    while ( lua_next(L, 1) != 0 )
+    {
+        if ( !lua_isinteger( L,-1 ) )
+        {
+            lua_pop( L, 1 );
+            encoder->finalize();
+            return luaL_error( L,"conn list expect integer" );
+        }
+
+        uint32 conn_id = static_cast<uint32>( lua_tointeger(L,-1) );
+
+        lua_pop( L, 1 );
+        class packet *pkt = raw_check_packet( conn_id,socket::CNT_SSCN );
+        if ( !pkt )
+        {
+            ERROR( "srv_multicast conn not found:%ud",conn_id );
+            continue;
+        }
+
+        if ( pkt->raw_pack_ss( cmd,ecode,_session,buffer,len ) < 0 )
+        {
+            ERROR( "srv_multicast can not raw_pack_ss:%ud",conn_id );
+            continue;
+        }
+    }
+
+    encoder->finalize();
+    return 0;
+}
+
+/* 网关进程广播数据到客户端 */
+int32 lnetwork_mgr::clt_multicast()
+{
+    return 0;
+}
+
+/* 非网关数据广播数据到客户端 */
+int32 lnetwork_mgr::ssc_multicast()
+{
     return 0;
 }

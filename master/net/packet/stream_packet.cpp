@@ -83,6 +83,12 @@ void stream_packet::sc_command( const struct s2c_header *header )
 
     class codec *decoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+    if ( !decoder )
+    {
+        ERROR( "command_new no codec conf found: %d",header->_cmd );
+        lua_settop( L,0 );
+        return;
+    }
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -139,6 +145,12 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
     lua_pushinteger  ( L,cmd     );
 
     codec *decoder = codec_mgr::instance()->get_codec( codec_ty );
+    if ( !decoder )
+    {
+        ERROR( "command_new no codec found:%d",cmd );
+        lua_settop( L,0 );
+        return;
+    }
     int32 cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -233,6 +245,12 @@ void stream_packet::ss_command(
 
     codec *decoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+    if ( !decoder )
+    {
+        ERROR( "ss command_new no codec found:%d",header->_cmd );
+        lua_settop( L,0 );
+        return;
+    }
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -277,6 +295,12 @@ void stream_packet::css_command( const s2s_header *header )
 
     codec *decoder = codec_mgr::instance()
         ->get_codec( static_cast<codec::codec_t>(header->_codec) );
+    if ( !decoder )
+    {
+        ERROR( "css_command_new no codec found:%d",header->_cmd );
+        lua_settop( L,0 );
+        return;
+    }
     int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -455,6 +479,10 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
 
     codec *encoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+    if ( !encoder )
+    {
+        return luaL_error( L,"no codec conf found: %d",cmd );
+    }
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 2,&buffer,cfg );
@@ -466,24 +494,13 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( len + sizeof(struct s2c_header) ) )
+    if ( raw_pack_clt( cmd,ecode,buffer,len ) < 0 )
     {
         encoder->finalize();
-        return luaL_error( L,"can not reserved buffer" );
+        return luaL_error( L,"can not raw pack clt" );
     }
 
-    struct s2c_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2c_header,len );
-    hd._cmd    = static_cast<uint16>  ( cmd );
-    hd._errno  = ecode;
-
-    send.__append( &hd,sizeof(struct s2c_header) );
-    if (len > 0) send.__append( buffer,len );
-
     encoder->finalize();
-    _socket->pending_send();
-
     return 0;
 }
 
@@ -508,6 +525,10 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
 
     codec *encoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+    if ( !encoder )
+    {
+        return luaL_error( L,"no codec conf found: %d",cmd );
+    }
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 1,&buffer,cfg );
@@ -560,6 +581,10 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
 
     codec *encoder = 
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+    if ( !encoder )
+    {
+        return luaL_error( L,"no codec found: %d",cmd );
+    }
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 2,&buffer,cfg );
@@ -571,26 +596,14 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( len + sizeof(struct s2s_header) ) )
+    int32 session = network_mgr->get_curr_session();
+    if ( raw_pack_ss( cmd,ecode,session,buffer,len ) < 0 )
     {
         encoder->finalize();
-        return luaL_error( L,"can not reserved buffer" );
+        return luaL_error( L,"can not raw_pack_ss" );
     }
 
-    struct s2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
-    hd._cmd    = static_cast<uint16> ( cmd );
-    hd._errno  = ecode;
-    hd._owner  = network_mgr->get_curr_session();
-    hd._packet = SPKT_SSPK;
-
-    send.__append( &hd,sizeof(struct s2s_header) );
-    if ( len > 0 ) send.__append( buffer,len );
-
     encoder->finalize();
-    _socket->pending_send();
-
     return 0;
 }
 
@@ -631,6 +644,10 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
 
     codec *encoder = codec_mgr::instance()
         ->get_codec( static_cast<codec::codec_t>(codec_ty) );
+    if ( !encoder )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
 
     const char *buffer = NULL;
     int32 len = encoder->encode( L,index + 4,&buffer,cfg );
@@ -681,6 +698,30 @@ int32 stream_packet::raw_pack_clt(
     header._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
     header._cmd    = static_cast<uint16>  ( cmd );
     header._errno  = ecode;
+
+    send.__append( &header ,sizeof(header) );
+    if ( size > 0 ) send.__append( ctx,size );
+
+    _socket->pending_send();
+    return 0;
+}
+
+int32 stream_packet::raw_pack_ss( 
+    int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size )
+{
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
+    {
+        ERROR( "raw_pack_ss can not reserved buffer" );
+        return -1;
+    }
+
+    struct s2s_header header;
+    header._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
+    header._cmd    = static_cast<uint16> ( cmd );
+    header._errno  = ecode;
+    header._owner  = session;
+    header._packet = SPKT_SSPK;
 
     send.__append( &header ,sizeof(header) );
     if ( size > 0 ) send.__append( ctx,size );

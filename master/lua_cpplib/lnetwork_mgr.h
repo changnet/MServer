@@ -47,6 +47,11 @@ public:
     int32 send_rpc_packet(); /* 发送rpc数据包 */
     int32 send_ctrl_packet(); /* 发送ping-pong等数据包 */
 
+    /* 组播数据包 */
+    int32 srv_multicast(); /* 广播到所有连接到当前进程的服务器 */
+    int32 clt_multicast(); /* 网关进程广播数据到客户端 */
+    int32 ssc_multicast(); /* 非网关数据广播数据到客户端 */
+
     int32 set_send_buffer_size(); /* 设置发送缓冲区大小 */
     int32 set_recv_buffer_size(); /* 设置接收缓冲区大小 */
 
@@ -103,6 +108,7 @@ public:
 private:
     void delete_socket( uint32 conn_id );
     class packet *lua_check_packet( socket::conn_t conn_ty );
+    class packet *raw_check_packet( uint32 conn_id,socket::conn_t conn_ty );
 private:
     struct lua_State *L;
 

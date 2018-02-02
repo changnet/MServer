@@ -41,18 +41,17 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
-    struct clt_header header;
-    header._cmd = luaL_checkinteger( L,index );
-    header._errno = luaL_checkinteger( L,index + 1 );
+    int32 cmd    = luaL_checkinteger( L,index );
+    uint16 ecode = luaL_checkinteger( L,index + 1 );
 
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index + 2 ) );
 
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
-    const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( header._cmd );
+    const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cfg )
     {
-        return luaL_error( L,"no command conf found: %d",header._cmd );
+        return luaL_error( L,"no command conf found: %d",cmd );
     }
 
     codec *encoder = 
@@ -68,29 +67,13 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    size_t frame_size = size + sizeof(header);
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( frame_size ) )
+    if ( do_pack_clt( flags,cmd,ecode,ctx,size ) < 0 )
     {
         encoder->finalize();
-        return luaL_error( L,"can not reserved buffer" );
+        return luaL_error( L,"can not do_pack_clt" );
     }
 
-    const char *header_ctx = reinterpret_cast<const char*>(&header);
-    size_t len = websocket_calc_frame_size( flags,frame_size );
-
-    uint8 mask_offset = 0;
-    char *buff = send.buff_pointer();
-    static const char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
-    size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
-    offset += websocket_append_frame( 
-        buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
-    websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
-
     encoder->finalize();
-    send.increase( len );
-    _socket->pending_send();
-
     return 0;
 }
 
@@ -277,6 +260,17 @@ int32 ws_stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 int32 ws_stream_packet::raw_pack_clt( 
     int32 cmd,uint16 ecode,const char *ctx,size_t size )
 {
+    // TODO: 这个flags在通用的服务器交互中传不过来，暂时hard-code.
+    // 后面如有需求，再多加一字段传过来
+    websocket_flags flags = 
+        static_cast<websocket_flags>(WS_OP_BINARY | WS_FINAL_FRAME);
+
+    return do_pack_clt( flags,cmd,ecode,ctx,size );
+}
+
+int32 ws_stream_packet::do_pack_clt(
+    int32 raw_flags,int32 cmd,uint16 ecode,const char *ctx,size_t size )
+{
     struct clt_header header;
     header._cmd = cmd;
     header._errno = ecode;
@@ -288,11 +282,8 @@ int32 ws_stream_packet::raw_pack_clt(
         return -1;
     }
 
+    websocket_flags flags = static_cast<websocket_flags>( raw_flags );
     const char *header_ctx = reinterpret_cast<const char*>(&header);
-    // TODO: 这个flags在通用的服务器交互中传不过来，暂时hard-code，后面如有需求，
-    // 再多加一字段传过来
-    websocket_flags flags = 
-        static_cast<websocket_flags>(WS_OP_BINARY | WS_FINAL_FRAME);
     size_t len = websocket_calc_frame_size( flags,frame_size );
 
     char mask[4] = { 0 };
