@@ -175,11 +175,12 @@ void stream_packet::process_ss_command( const s2s_header *header )
     /* 先判断数据包类型 */
     switch ( header->_packet )
     {
-        case SPKT_SSPK : ss_dispatch( header );break;
-        case SPKT_CSPK : css_command( header );return;
-        case SPKT_SCPK : ssc_command( header );return;
-        case SPKT_RPCS : rpc_command( header );return;
-        case SPKT_RPCR : rpc_return ( header );return;
+        case SPKT_SSPK : ss_dispatch  ( header );return;
+        case SPKT_CSPK : css_command  ( header );return;
+        case SPKT_SCPK : ssc_command  ( header );return;
+        case SPKT_RPCS : rpc_command  ( header );return;
+        case SPKT_RPCR : rpc_return   ( header );return;
+        case SPKT_CBCP : ssc_multicast( header );return;
         default :
         {
             ERROR( "unknow server "
@@ -728,4 +729,205 @@ int32 stream_packet::raw_pack_ss(
 
     _socket->pending_send();
     return 0;
+}
+
+// 打包客户端广播数据
+int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
+{
+    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    owner_t list[MAX_CLT_CAST] = { 0 };
+    int32 mask     = luaL_checkinteger( L,index     );
+    int32 codec_ty = luaL_checkinteger( L,index + 2 );
+    int32 cmd      = luaL_checkinteger( L,index + 3 );
+    int32 ecode    = luaL_checkinteger( L,index + 4 );
+
+    // 占用list的两个位置，这样写入socket缓存区时不用另外处理
+    list[0] = mask;
+    // list[1] = 0; 数量
+    int32 idx = 2;
+    lua_pushnil(L);  /* first key */
+    while ( lua_next(L, 1) != 0 )
+    {
+        if ( !lua_isinteger( L,-1 ) )
+        {
+            lua_pop( L, 1 );
+            return luaL_error( L,"ssc_multicast list expect integer" );
+        }
+
+        if ( idx >= MAX_CLT_CAST )
+        {
+            ERROR( "pack_ssc_multicast too many id in list" );
+            lua_pop( L, 2 );
+            break;
+        }
+        // 以后可能定义owner_t为unsigned类型，当传参数而不是owner时，不要传负数
+        owner_t owner = static_cast<owner_t>( lua_tointeger(L,-1) );
+        list[idx++] = owner;
+        lua_pop( L, 1 );
+    }
+
+    size_t list_len = sizeof(owner_t)*idx;
+
+    if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
+    {
+        return luaL_error( L,"illegal codec type" );
+    }
+
+    if ( !lua_istable( L,index + 5 ) )
+    {
+        return luaL_error( L,
+            "expect table,got %s",lua_typename( L,lua_type(L,index + 5) ) );
+    }
+
+    const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
+    if ( !cfg )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    codec *encoder = codec_mgr::instance()
+        ->get_codec( static_cast<codec::codec_t>(codec_ty) );
+    if ( !encoder )
+    {
+        return luaL_error( L,"no command conf found: %d",cmd );
+    }
+
+    const char *buffer = NULL;
+    int32 len = encoder->encode( L,index + 4,&buffer,cfg );
+    if ( len < 0 ) return -1;
+
+    if ( len > MAX_PACKET_LEN )
+    {
+        encoder->finalize();
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+    }
+
+    class buffer &send = _socket->send_buffer();
+    if ( !send.reserved( list_len + len + sizeof(struct s2s_header) ) )
+    {
+        encoder->finalize();
+        return luaL_error( L,"can not reserved buffer" );
+    }
+
+    /* 把客户端数据包放到服务器数据包 */
+    struct s2s_header hd;
+    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len + list_len );
+    hd._cmd    = static_cast<uint16>  ( cmd );;
+    hd._errno  = ecode;
+    hd._owner  = 0;
+    hd._packet = SPKT_CBCP; /*指定数据包类型为服务器发送客户端 */
+
+    send.__append( list,list_len );
+    send.__append( &hd ,sizeof(struct s2s_header) );
+    if ( len > 0 ) send.__append( buffer,len );
+
+    encoder->finalize();
+    _socket->pending_send();
+
+    return 0;
+}
+
+// 转发到一个客户端
+void stream_packet::ssc_one_multicast( 
+    owner_t owner,int32 cmd,uint16 ecode,const char *ctx,int32 size )
+{
+    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+
+    class socket *sk = network_mgr->get_conn_by_owner( owner );
+    if ( !sk )
+    {
+        ERROR( "ssc_one_multicast no clt connect found" );
+        return;
+    }
+    if ( socket::CNT_SCCN != sk->conn_type() )
+    {
+        ERROR( "ssc_one_multicast destination conn is not a clt" );
+        return;
+    }
+    class packet *sk_packet = sk->get_packet();
+    if ( !sk_packet )
+    {
+        ERROR( "ssc_one_multicast no packet found" );
+        return;
+    }
+    sk_packet->raw_pack_clt( cmd,ecode,ctx,size );
+}
+
+// 处理其他进程发过来的客户端广播
+void stream_packet::ssc_multicast( const s2s_header *header )
+{
+    const owner_t *raw_list = reinterpret_cast<const owner_t *>( header + 1 );
+    int32 mask = static_cast<int32>( *raw_list );
+    int32 count = static_cast<int32>( *(raw_list + 1) );
+    if ( MAX_CLT_CAST < count )
+    {
+        ERROR( "ssc_multicast too many to cast" );
+        return;
+    }
+
+    size_t raw_list_len = sizeof(owner_t)*count;
+    int32 size = PACKET_BUFFER_LEN( header ) - raw_list_len;
+    const char *ctx = reinterpret_cast<const char *>( header + 1 );
+
+    if ( size < 0 )
+    {
+        ERROR( "ssc_multicast packet length broken" );
+        return;
+    }
+
+    if ( CLT_MC_OWNER == mask )
+    {
+        for ( int32 idx = 2;idx < count;idx ++ )
+        {
+            ssc_one_multicast( 
+                *(raw_list + idx),header->_cmd,header->_errno,ctx,size );
+        }
+        return;
+    }
+
+    if ( count > 16 ) // 限制一下参数，防止lua栈溢出
+    {
+        ERROR( "ssc_multicast too many argument" );
+        return;
+    }
+
+    static lua_State *L = lstate::instance()->state();
+    assert( "lua stack dirty",0 == lua_gettop(L) );
+
+    // 根据参数从lua获取对应的玩家id
+    lua_pushcfunction( L,traceback );
+    lua_getglobal( L,"clt_multicast_new" );
+    for ( int32 idx = 2;idx < count;idx ++ )
+    {
+        lua_pushinteger( L,*(raw_list + idx) );
+    }
+    if ( expect_false( LUA_OK != lua_pcall( L,count - 2,1,1 ) ) )
+    {
+        ERROR( "clt_multicast_new:%s",lua_tostring( L,-1 ) );
+
+        lua_settop( L,0 ); /* remove traceback and error object */
+        return;
+    }
+    if ( lua_istable( L,-1 ) )
+    {
+        ERROR( "clt_multicast_new do NOT return a table" );
+        lua_settop( L,0 );
+        return;
+    }
+    lua_pushnil(L);  /* first key */
+    while ( lua_next(L, -1) != 0 )
+    {
+        if ( !lua_isinteger( L,-1 ) )
+        {
+            lua_settop( L,0 );
+            ERROR( "ssc_multicast list expect integer" );
+            return;
+        }
+        owner_t owner = static_cast<owner_t>( lua_tointeger( L,-1 ) );
+        ssc_one_multicast( owner,header->_cmd,header->_errno,ctx,size );
+
+        lua_pop( L,1 );
+    }
+    lua_settop( L,0 ); /* remove traceback */
 }

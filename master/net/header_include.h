@@ -32,6 +32,15 @@ typedef enum
     SPKT_MAXT       // max packet type
 } stream_packet_t;
 
+typedef enum
+{
+    CLT_MC_NONE  = 0,
+    CLT_MC_OWNER = 1, // 根据玩家id广播
+    CLT_MC_ARGS  = 2,  // 根据参数广播
+
+    CLT_MC_MAX
+} clt_multicast_t;
+
 #pragma pack (push, 1)
 
 typedef uint16 array_header;

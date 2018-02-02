@@ -74,4 +74,12 @@
 /* 数据包解析方式 FLATBUFFERS_PARSE/PROTOBUF_PARSE */
 #define PROTOBUF_PARSE
 
+/* 广播一般有两个用处
+ * 1是场景同步广播，这时数量应该是比较小的，目前暂定256。如果太多建议分包广播
+ * 2是全服广播，这时用这个函数时传的应该是参数，而不是玩家id。到网关后再从网关获取
+ * 玩家连接。
+ * 修改这个最大值要考虑栈内存耗尽
+ */
+#define MAX_CLT_CAST 256
+
 #endif /* __CONFIG_H__ */
