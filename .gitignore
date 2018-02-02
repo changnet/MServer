@@ -2,6 +2,8 @@
 *.o
 *.so
 
+.vscode
+
 master/bin
 master/cruntimelog
 master/cerrorlog*

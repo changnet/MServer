@@ -184,15 +184,9 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
         g_rpc:register( cmd,session )
     end
 
-    return true
-end
+    PLOG( "register cmd from %s",srv_conn:conn_name() )
 
--- 服务器广播
--- TODO 底层要做个服务器广播
-function Command_mgr:srv_broadcast( cfg,pkt )
-    for _,srv_conn in pairs( g_network_mgr.srv ) do
-        srv_conn:send_pkt( cfg,pkt )
-    end
+    return true
 end
 
 local command_mgr = Command_mgr()

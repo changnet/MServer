@@ -187,7 +187,15 @@ function Network_mgr:close_srv_conn( conn )
     self.srv_conn[conn_id] = nil
 end
 
--- ============================================================================
+-- 服务器广播
+function Network_mgr:srv_multicast( cmd,pkt,ecode )
+    local conn_list = {}
+    for _,conn in pairs( self.srv ) do
+        table.insert( conn_list,conn.conn_id )
+    end
+    return network_mgr:srv_multicast( 
+        conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+end
 
 -- 底层accept回调
 function Network_mgr:srv_conn_accept( conn_id,conn )
@@ -245,7 +253,7 @@ function Network_mgr:clt_conn_del( conn_id )
     if conn.pid then
         self.clt[conn.pid] = nil
         local pkt = { pid = conn.pid }
-        g_command_mgr:srv_broadcast( SS.PLAYER_OFFLINE,pkt )
+        g_network_mgr:srv_multicast( SS.PLAYER_OFFLINE,pkt )
     end
 
     PLOG( "client connect del:%d",conn_id )

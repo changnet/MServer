@@ -27,7 +27,7 @@ end
 function Hot_fix:fix_proto()
     if g_command_mgr.modify or g_rpc.modify then
         local _pkt = g_command_mgr:command_pkt()
-        g_command_mgr:srv_broadcast( SS.SYS_CMD_SYNC,_pkt )
+        g_network_mgr:srv_multicast( SS.SYS_CMD_SYNC,_pkt )
     end
 end
 
