@@ -1,3 +1,3 @@
 #!/bin/bash
 
-time ./colormake.sh -C ../master $1
+time ../other/colormake.sh --makefile=../other/Makefile -C ../master $1
