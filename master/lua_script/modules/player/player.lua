@@ -20,9 +20,13 @@ local gateway_session = g_unique_id:srv_session(
 5. 定时器    :on_timer
 ]]
 
+local Chat = require "modules.chat.chat"
+local Misc = require "modules.misc.misc"
+
 local sub_module = 
 {
-    -- { name = "bag",new = Bag },
+    { name = "chat",new = Chat },
+    { name = "misc",new = Misc },
 }
 
 local Player = oo.class( nil,... )
@@ -32,7 +36,7 @@ function Player:__init( pid )
 
     -- 创建各个子模块，这些模块包含统一的db存库、加载、初始化规则
     for _,module in pairs( sub_module ) do
-        self[module.name] = module.new( self )
+        self[module.name] = module.new( pid,self )
     end
 end
 
