@@ -34,7 +34,7 @@ function Mongodb:read_event( qid,ecode,res )
         xpcall( self.cb[qid],__G__TRACKBACK__,ecode,res )
         self.cb[qid] = nil
     else
-        ELOG( "mongo result no call back found" )
+        ELOG( "mongo event no call back found" )
     end
 end
 
@@ -50,34 +50,49 @@ function Mongodb:valid()
     return self.mongodb:valid()
 end
 
-function Mongodb:count( this,method,collection,query,skip,limit )
+function Mongodb:count( collection,query,skip,limit,callback )
     local id = self:get_next_id()
-    self.cb[id] = function( ... ) return method( this,... ) end
+    self.cb[id] = callback
     return self.mongodb:count( id,collection,query,skip,limit )
 end
 
-function Mongodb:find( this,method,collection,query,fields,skip,limit )
+function Mongodb:find( collection,query,fields,skip,limit,callback )
     local id = self:get_next_id()
-    self.cb[id] = function( ... ) return method( this,... ) end
+    self.cb[id] = callback
     return self.mongodb:find( id,collection,query,fields,skip,limit )
 end
 
-function Mongodb:find_and_modify( this,method,collection,query,opts )
+function Mongodb:find_and_modify( collection,query,opts,callback )
     local id = self:get_next_id()
-    self.cb[id] = function( ... ) return method( this,... ) end
+    self.cb[id] = callback
     return self.mongodb:find_and_modify( id,collection,query,opts )
 end
 
-function Mongodb:insert( collection,info )
-    return self.mongodb:insert( 0,collection,info )
+function Mongodb:insert( collection,info,callback )
+    local id = 0
+    if callback then
+        id = self:get_next_id()
+        self.cb[id] = callback
+    end
+    return self.mongodb:insert( id,collection,info )
 end
 
-function Mongodb:update( collection,query,info,upsert,multi )
-    return self.mongodb:update( 0,collection,query,info,upsert,multi )
+function Mongodb:update( collection,query,info,upsert,multi,callback )
+    local id = 0
+    if callback then
+        id = self:get_next_id()
+        self.cb[id] = callback
+    end
+    return self.mongodb:update( id,collection,query,info,upsert,multi )
 end
 
-function Mongodb:remove( collection,query,multi )
-    return self.mongodb:remove( 0,collection,query,multi )
+function Mongodb:remove( collection,query,multi,callback )
+    local id = 0
+    if callback then
+        id = self:get_next_id()
+        self.cb[id] = callback
+    end
+    return self.mongodb:remove( id,collection,query,multi )
 end
 
 -- 不提供索引函数，请开服使用脚本创建索引。见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/

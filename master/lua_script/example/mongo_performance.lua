@@ -43,7 +43,10 @@ end
 -- 测试count
 function Mongo_performan:count_test()
     print( "start count test" )
-    g_mongodb:count( self,self.on_count_test,collection )
+    local callback = function( ... )
+        self:on_count_test( ... )
+    end
+    g_mongodb:count( collection,nil,nil,nil,callback )
 end
 
 function Mongo_performan:on_count_test( ecode,res )
@@ -71,9 +74,12 @@ end
 
 function Mongo_performan:find_test()
     print( "start find test" )
-    g_mongodb:find( self,
-        self.on_find_test,collection,'{"_id":{"$gt":20}}',
-        '{"projection":{"_id":0},"skip":10,"limit":10}' )
+
+    local callback = function( ... )
+        self:on_find_test( ... )
+    end
+    g_mongodb:find( '{"_id":{"$gt":20}}',
+        '{"projection":{"_id":0},"skip":10,"limit":10}',nil,nil,nil,callback )
 end
 
 function Mongo_performan:on_find_test( ecode,res )
@@ -93,8 +99,12 @@ end
 function Mongo_performan:sort_test()
     print( "start sort test" )
     -- -1是降序，+1是升序。不能是0
-    g_mongodb:find( self,self.on_sort_test,collection,'{}',
-        '{"projection":{"desc":0,"array":0,"object":0,"sparse":0},"limit":50,"sort":{"amount":-1}}' )
+    local callback = function( ... )
+        self:on_sort_test( ... )
+    end
+    g_mongodb:find( '{}',
+        '{"projection":{"desc":0,"array":0,"object":0,"sparse":0},"limit":50,"sort":{"amount":-1}}',
+        nil,nil,nil,callback )
 end
 
 function Mongo_performan:on_sort_test( ecode,res )

@@ -102,6 +102,10 @@ function Account_mgr:create_role( clt_conn,pkt )
     PLOG( "create role success:%s--%d",role_info.account,role_info.pid )
 end
 
+--  创建角色逻辑
+function Account_mgr:do_create_role()
+end
+
 -- 玩家下线
 function Account_mgr:role_offline( conn_id )
     local role_info = self.conn_acc[conn_id]
