@@ -6,6 +6,7 @@
 lmongo::lmongo( lua_State *L )
     :L (L)
 {
+    _valid = false;
     _dbid = luaL_checkinteger( L,2 );
 }
 
@@ -13,6 +14,8 @@ lmongo::~lmongo()
 {
 }
 
+// 连接数据库
+// 由于是开启线程去连接，并且是异步的，需要上层定时调用valid来检测是否连接上
 int32 lmongo::start()
 {
     if ( active() )
@@ -34,9 +37,18 @@ int32 lmongo::start()
 
 int32 lmongo::stop()
 {
+    _valid = false;
     thread::stop();
 
     return 0;
+}
+
+// 该连接是否已连接上(不是当前状态，仅仅是第一次连接上)
+int32 lmongo::valid()
+{
+    lua_pushboolean( L,_valid );
+
+    return 1;
 }
 
 bool lmongo::initlization()
@@ -47,6 +59,7 @@ bool lmongo::initlization()
         return false;
     }
 
+    _valid = true;
     return true;
 }
 

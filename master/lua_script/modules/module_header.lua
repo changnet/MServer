@@ -17,6 +17,10 @@ if "gateway" == Main.srvname then
     g_account_mgr = require "modules.account.account_mgr"
 
     local Clt_conn    = require "network.clt_conn"
+
+    -- db对象的创建，有点特殊。它是全局对象，但不是单例。不要多次调用new创建多个对象
+    g_mongodb_mgr = require "mongodb.mongodb_mgr"
+    if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
 
 -- 仅在world使用

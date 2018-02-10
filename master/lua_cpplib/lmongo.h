@@ -15,6 +15,7 @@ public:
 
     int32 start();
     int32 stop ();
+    int32 valid();
 
     int32 find     ();
     int32 count    ();
@@ -41,6 +42,7 @@ private:
     lua_State *L ;
     class mongo _mongo;
 
+    bool _valid;
     int32 _dbid;
 
     std::queue<const struct mongo_query  *> _query ;

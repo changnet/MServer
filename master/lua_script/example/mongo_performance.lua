@@ -5,7 +5,9 @@
 -- mongo db 测试用例
 
 g_mongodb_mgr = require "mongodb.mongodb_mgr"
-g_mongodb = g_mongodb_mgr:new( "127.0.0.1",27013,"test","test","mudrv" )
+g_mongodb = g_mongodb_mgr:new()
+
+g_mongodb:start( "127.0.0.1",27013,"test","test","mudrv" )
 
 local max_insert = 100000
 local collection = "item"

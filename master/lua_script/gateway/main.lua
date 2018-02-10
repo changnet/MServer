@@ -18,11 +18,14 @@ require "modules.module_header"
 
 -- 信号处理
 function sig_handler( signum )
-    if g_store_mongo then g_store_mongo:stop() end
-    if   g_store_sql then   g_store_sql:stop() end
-    if     g_log_mgr then     g_log_mgr:stop() end
+    Main.shutdown()
 
     ev:exit()
+end
+
+-- 主程序关闭
+function Main.shutdown()
+    g_mongodb_mgr:stop() -- 关闭所有数据库链接
 end
 
 -- 检查需要等待的服务器是否初始化完成
@@ -51,6 +54,10 @@ function Main.init()
         ELOG( "gateway http listen fail,exit" )
         os.exit( 1 )
     end
+
+    -- 连接数据库
+    g_mongodb:start( g_setting.mongo_ip,g_setting.mongo_port,
+        g_setting.mongo_user,g_setting.mongo_pwd,g_setting.mongo_db )
 end
 
 -- 最终初始化
@@ -58,6 +65,15 @@ function Main.final_init()
     if not g_network_mgr:clt_listen( g_setting.cip,g_setting.cport ) then
         ELOG( "gateway client listen fail,exit" )
         os.exit( 1 )
+    end
+
+    -- TODO:db是异步的，应该做个定时器检测
+    if not g_mongodb:valid() then
+        ELOG( "gateway db connect fail" )
+        os.exit( 1 )
+    else
+        PLOG( "gateway database connect to %s:%d/%s",
+            g_setting.mongo_ip,g_setting.mongo_port,g_setting.mongo_db )
     end
 
     Main.ok = true

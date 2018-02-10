@@ -191,6 +191,7 @@ int32 luaopen_mongo( lua_State *L )
     lclass<lmongo> lc(L,"Mongo");
     lc.def<&lmongo::start> ( "start" );
     lc.def<&lmongo::stop>  ( "stop"  );
+    lc.def<&lmongo::valid> ( "valid" );
 
     lc.def<&lmongo::count>           ( "count"           );
     lc.def<&lmongo::find>            ( "find"            );

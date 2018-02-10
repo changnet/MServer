@@ -11,14 +11,12 @@ function Mongodb_mgr:__init()
 end
 
 -- 新增db连接
-function Mongodb_mgr:new( ip,port,usr,pwd,db )
+function Mongodb_mgr:new()
     self.dbid = self.dbid + 1
 
      local mongodb = Mongodb( self.dbid )
-     mongodb:start( ip,port,usr,pwd,db )
 
      self.mongodb[self.dbid] = mongodb
-
      return mongodb
 end
 

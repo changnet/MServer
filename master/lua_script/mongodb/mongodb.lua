@@ -46,6 +46,10 @@ function Mongodb:stop()
     return self.mongodb:stop()
 end
 
+function Mongodb:valid()
+    return self.mongodb:valid()
+end
+
 function Mongodb:count( this,method,collection,query,skip,limit )
     local id = self:get_next_id()
     self.cb[id] = function( ... ) return method( this,... ) end
