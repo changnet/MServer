@@ -56,10 +56,10 @@ function Mongodb:count( collection,query,skip,limit,callback )
     return self.mongodb:count( id,collection,query,skip,limit )
 end
 
-function Mongodb:find( collection,query,fields,skip,limit,callback )
+function Mongodb:find( collection,query,opts,callback )
     local id = self:get_next_id()
     self.cb[id] = callback
-    return self.mongodb:find( id,collection,query,fields,skip,limit )
+    return self.mongodb:find( id,collection,query,opts )
 end
 
 function Mongodb:find_and_modify( collection,query,opts,callback )

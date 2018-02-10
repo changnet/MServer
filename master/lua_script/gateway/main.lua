@@ -7,6 +7,8 @@ Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
 Main.wait = 
 {
     world = 1, -- 等待一个world服OK
+    db_conn = 1, -- 等待连接db
+    acc_data = 1, -- 等待帐号数据加载
 }
 
 require "modules.module_pre_header"

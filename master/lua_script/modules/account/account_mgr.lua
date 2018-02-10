@@ -164,6 +164,26 @@ function Account_mgr:login_otherwhere( role_info )
     g_network_mgr:clt_close( old_conn )
 end
 
+-- 加载帐号数据
+function Account_mgr:db_load()
+    local callback = function( ... )
+        self:on_db_loaded( ... )
+    end
+
+    g_mongodb:find( "account",nil,nil,callback )
+end
+
+-- db数据加载
+function Account_mgr:on_db_loaded( ecode,res )
+    if 0 ~= ecode then
+        PLOG( "account db load error" )
+        return
+    end
+
+    vd( res )
+    Main.one_wait_finish( "acc_data",1 )
+end
+
 local g_account_mgr = Account_mgr()
 
 return g_account_mgr

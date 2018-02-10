@@ -79,7 +79,7 @@ function Mongo_performan:find_test()
         self:on_find_test( ... )
     end
     g_mongodb:find( '{"_id":{"$gt":20}}',
-        '{"projection":{"_id":0},"skip":10,"limit":10}',nil,nil,nil,callback )
+        '{"projection":{"_id":0},"skip":10,"limit":10}',callback )
 end
 
 function Mongo_performan:on_find_test( ecode,res )
