@@ -263,15 +263,16 @@ void lmongo::invoke_command( bool is_return )
     const struct mongo_query *query = NULL;
     while ( (query = pop_query()) )
     {
+        int32 ecode = 0;
         struct mongo_result *res = NULL;
         switch( query->_mqt )
         {
             case MQT_COUNT  : res = _mongo.count( query );break;
             case MQT_FIND   : res = _mongo.find ( query );break;
             case MQT_FMOD   : res = _mongo.find_and_modify( query );break;
-            case MQT_INSERT : _mongo.insert( query );break;
-            case MQT_UPDATE : _mongo.update( query );break;
-            case MQT_REMOVE : _mongo.remove( query );break;
+            case MQT_INSERT : ecode = _mongo.insert( query );break;
+            case MQT_UPDATE : ecode = _mongo.update( query );break;
+            case MQT_REMOVE : ecode = _mongo.remove( query );break;
             default:
             {
                 ERROR( "unknow handle mongo command type:%d\n",query->_mqt );
@@ -283,7 +284,17 @@ void lmongo::invoke_command( bool is_return )
         /* 如果分配了qid，表示需要返回 */
         if ( is_return && query->_qid > 0 )
         {
-            assert( "mongo res NULL",res );
+            /* 对于insert之类的操作，很多情况下是不需要返回的。
+             * 如果确实需要返回，也只需要一个结果
+             */
+            if ( !res )
+            {
+                res = new mongo_result();
+                res->_data = NULL;
+                res->_qid  = query->_qid;
+                res->_mqt  = query->_mqt;
+                res->_ecode = ecode;
+            }
             push_result( res );
         }
         else

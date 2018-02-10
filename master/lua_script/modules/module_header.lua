@@ -1,6 +1,8 @@
 -- 各模块加载入口
 -- global对象的创建都放在这里，方便热更
 
+E = require_ex "modules.system.error"
+
 g_conn_mgr    = require "network.conn_mgr"
 g_timer_mgr   = require "timer.timer_mgr"
 g_command_pre = require "command.command_pre"

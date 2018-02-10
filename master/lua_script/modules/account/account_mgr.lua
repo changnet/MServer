@@ -42,13 +42,16 @@ function Account_mgr:player_login( clt_conn,pkt )
 
     if not self.account[sid] then self.account[sid] = {} end
     if not self.account[sid][plat] then self.account[sid][plat] = {} end
-    if not self.account[sid][plat][account] then
-        self.account[sid][plat][account] = {}
-        self.account[sid][plat][account].sid     = sid
-        self.account[sid][plat][account].account = account
-    end
 
     local role_info = self.account[sid][plat][account]
+    if not role_info then
+        role_info = {}
+        role_info.sid     = sid
+        role_info.plat    = plat
+        role_info.account = account
+
+        self.account[sid][plat][account] = role_info
+    end
 
         -- 当前一个帐号只能登录一个角色,处理顶号
     if role_info.conn_id then
@@ -90,20 +93,50 @@ function Account_mgr:create_role( clt_conn,pkt )
 
     -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
-    -- TODO 如果没有角色，这里要到数据库创建
-    self.seed = self.seed + 1
-    local pid = g_unique_id:player_id( role_info.sid,self.seed )
-
-    role_info.pid  = pid
-    role_info.name = pkt.name
-    g_network_mgr:bind_role( pid,clt_conn )
-
-    clt_conn:send_pkt( SC.PLAYER_CREATE,role_info )
-    PLOG( "create role success:%s--%d",role_info.account,role_info.pid )
+    return self:do_create_role( role_info,pkt )
 end
 
 --  创建角色逻辑
-function Account_mgr:do_create_role()
+function Account_mgr:do_create_role( role_info,pkt )
+    self.seed = self.seed + 1
+    local pid = g_unique_id:player_id( role_info.sid,self.seed )
+
+    local acc_info = {}
+    acc_info._id = pid
+    acc_info.sid = role_info.sid
+    acc_info.plat = role_info.plat
+    acc_info.name = pkt.name
+    acc_info.account = role_info.account
+
+    local callback = function( ... )
+        self:on_role_create( acc_info,role_info,... )
+    end
+    g_mongodb:insert( "account",acc_info,callback )
+end
+
+-- 创建角色数据库返回
+function Account_mgr:on_role_create( acc_info,role_info,ecode,res )
+    -- 玩家可能断线了，这个clt_conn就不存在了
+    local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
+
+    if ( 0 ~= ecode ) then -- 失败
+        if clt_conn then
+            clt_conn:send_pkt( SC.PLAYER_CREATE,role_info,E.UNDEFINE )
+        end
+        PLOG( "create role error:%s",acc_info.account )
+        return
+    end
+
+    -- 完善玩家数据
+    local pid = acc_info._id
+    role_info.pid  = pid
+    role_info.name = acc_info.name
+    PLOG( "create role success:%s--%d",role_info.account,pid )
+
+    if clt_conn then
+        g_network_mgr:bind_role( pid,clt_conn )
+        clt_conn:send_pkt( SC.PLAYER_CREATE,role_info )
+    end
 end
 
 -- 玩家下线
