@@ -11,7 +11,6 @@ local Account_mgr = oo.singleton( nil,... )
 -- 初始化
 function Account_mgr:__init()
     self.account  = {}
-    self.seed     = 0  -- 这个起服从数据库加载
     self.conn_acc = {} -- conn_id为key，帐号信息为value
 end
 
@@ -93,14 +92,14 @@ function Account_mgr:create_role( clt_conn,pkt )
 
     -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
-    return self:do_create_role( role_info,pkt )
+    local callback = function( pid )
+        return self:do_create_role( role_info,pkt,pid )
+    end
+    return g_unique_id:player_id( role_info.sid,callback )
 end
 
 --  创建角色逻辑
-function Account_mgr:do_create_role( role_info,pkt )
-    self.seed = self.seed + 1
-    local pid = g_unique_id:player_id( role_info.sid,self.seed )
-
+function Account_mgr:do_create_role( role_info,pkt,pid )
     local acc_info = {}
     acc_info._id = pid
     acc_info.tm = ev:time()

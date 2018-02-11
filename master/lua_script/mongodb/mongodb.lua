@@ -90,10 +90,19 @@ function Mongodb:find( collection,query,opts,callback )
     return self.mongodb:find( id,collection,query,opts )
 end
 
-function Mongodb:find_and_modify( collection,query,opts,callback )
+-- query 查询条件
+-- sort 排序条件
+-- updata 更新条件
+-- remove 是否删除记录
+-- upsert 如果记录不存在则删除
+-- new 返回更改后的值
+function Mongodb:find_and_modify( 
+    collection,query,sort,update,fields,remove,upsert,new,callback )
+
     local id = self:get_next_id()
     self.cb[id] = callback
-    return self.mongodb:find_and_modify( id,collection,query,opts )
+    return self.mongodb:find_and_modify( 
+        id,collection,query,sort,update,fields,remove,upsert,new )
 end
 
 function Mongodb:insert( collection,info,callback )
