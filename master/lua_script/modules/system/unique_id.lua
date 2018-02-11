@@ -9,6 +9,24 @@ function Unique_id:__init()
     self.net_id_seed = 0
 end
 
+-- 从数据库加载
+function Unique_id:db_load()
+    local callback = function( ... )
+        self:on_db_loaded( ... )
+    end
+
+    g_mongodb:find( "uniqueid",nil,nil,callback )
+end
+
+function Unique_id:on_db_loaded( ecode,res )
+    if 0 ~= ecode then
+        PLOG( "account db load error" )
+        return
+    end
+
+    Main.one_wait_finish( "uniqueid_data",1 )
+end
+
 -- 生成服务器session id
 -- @name  服务器名称，如gateway、world...
 -- @index 服务器索引，如多个gateway，分别为1,2...

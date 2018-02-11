@@ -26,4 +26,9 @@ PLATFORM =
     [999] = "test",
 }
 
+UNIQUEID =
+{
+    PLAYER = 1, -- 玩家pid
+}
+
 return { ["SRV_NAME"] = SRV_NAME }

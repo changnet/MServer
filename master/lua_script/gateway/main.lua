@@ -8,6 +8,7 @@ Main.wait =
 {
     world = 1, -- 等待一个world服OK
     db_conn = 1, -- 等待连接db
+    uniqueid_data = 1, -- 等待自增id数据加载
     acc_data = 1, -- 等待帐号数据加载
 }
 
@@ -28,6 +29,13 @@ end
 -- 主程序关闭
 function Main.shutdown()
     g_mongodb_mgr:stop() -- 关闭所有数据库链接
+end
+
+-- 数据库连接成功
+function Main.db_connected()
+    Main.one_wait_finish( "db_conn",1 )
+    g_unique_id:db_load()
+    g_account_mgr:db_load()
 end
 
 -- 检查需要等待的服务器是否初始化完成
@@ -58,12 +66,9 @@ function Main.init()
     end
 
     -- 连接数据库
-    local callback = function()
-        Main.one_wait_finish( "db_conn",1 )
-        g_account_mgr:db_load()
-    end
-    g_mongodb:start( g_setting.mongo_ip,g_setting.mongo_port,
-        g_setting.mongo_user,g_setting.mongo_pwd,g_setting.mongo_db,callback )
+    g_mongodb:start( g_setting.mongo_ip,
+        g_setting.mongo_port,g_setting.mongo_user,
+        g_setting.mongo_pwd,g_setting.mongo_db,Main.db_connected )
 end
 
 -- 最终初始化

@@ -103,7 +103,7 @@ function Account_mgr:do_create_role( role_info,pkt )
 
     local acc_info = {}
     acc_info._id = pid
-    acc_info.tm = ev.time()
+    acc_info.tm = ev:time()
     acc_info.sid = role_info.sid
     acc_info.plat = role_info.plat
     acc_info.name = pkt.name
@@ -181,7 +181,18 @@ function Account_mgr:on_db_loaded( ecode,res )
         return
     end
 
-    vd( res )
+    for _,role_info in pairs( res ) do
+        local sid = role_info.sid
+        local plat = role_info.plat
+        local account = role_info.account
+
+        if not self.account[sid] then self.account[sid] = {} end
+        if not self.account[sid][plat] then self.account[sid][plat] = {} end
+
+        role_info.pid = role_info._id
+        self.account[sid][plat][account] = role_info
+    end
+
     Main.one_wait_finish( "acc_data",1 )
 end
 
