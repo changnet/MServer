@@ -58,8 +58,12 @@ function Main.init()
     end
 
     -- 连接数据库
+    local callback = function()
+        Main.one_wait_finish( "db_conn",1 )
+        g_account_mgr:db_load()
+    end
     g_mongodb:start( g_setting.mongo_ip,g_setting.mongo_port,
-        g_setting.mongo_user,g_setting.mongo_pwd,g_setting.mongo_db )
+        g_setting.mongo_user,g_setting.mongo_pwd,g_setting.mongo_db,callback )
 end
 
 -- 最终初始化

@@ -14,6 +14,8 @@ function Mongodb:__init( dbid )
     self.mongodb = Mongo( dbid )
 
     self.cb = {}
+
+    self.timer = g_timer_mgr:new_timer( self,1,1 )
 end
 
 --[[
@@ -29,6 +31,26 @@ function Mongodb:get_next_id()
     return self.next_id
 end
 
+-- 利用定时器来检测是否已连接上数据库
+function Mongodb:do_timer()
+    -- -1未连接或者连接中，0 连接失败，1 连接成功
+    local ok = self.mongodb:valid()
+    if -1 == ok then return end
+
+    g_timer_mgr:del_timer( self.timer )
+    self.timer = nil
+
+    if 0 == ok then
+        PLOG( "mongo db connect error" )
+        return
+    end
+
+    if self.conn_cb then
+        self.conn_cb()
+        self.conn_cb = nil
+    end
+end
+
 function Mongodb:read_event( qid,ecode,res )
     if self.cb[qid] then
         xpcall( self.cb[qid],__G__TRACKBACK__,ecode,res )
@@ -38,8 +60,14 @@ function Mongodb:read_event( qid,ecode,res )
     end
 end
 
-function Mongodb:start( ip,port,usr,pwd,db )
-    return self.mongodb:start( ip,port,usr,pwd,db )
+-- 开始连接数据库，这个在另一个线程操作，是异步的，需要定时查询连接结果
+function Mongodb:start( ip,port,usr,pwd,db,callback )
+    self.mongodb:start( ip,port,usr,pwd,db )
+
+    if callback then
+        self.conn_cb = callback
+        g_timer_mgr:start_timer( self.timer )
+    end
 end
 
 function Mongodb:stop()

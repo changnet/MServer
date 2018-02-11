@@ -42,7 +42,7 @@ private:
     lua_State *L ;
     class mongo _mongo;
 
-    bool _valid;
+    int32 _valid;
     int32 _dbid;
 
     std::queue<const struct mongo_query  *> _query ;

@@ -103,6 +103,7 @@ function Account_mgr:do_create_role( role_info,pkt )
 
     local acc_info = {}
     acc_info._id = pid
+    acc_info.tm = ev.time()
     acc_info.sid = role_info.sid
     acc_info.plat = role_info.plat
     acc_info.name = pkt.name

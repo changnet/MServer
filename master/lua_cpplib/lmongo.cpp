@@ -6,7 +6,7 @@
 lmongo::lmongo( lua_State *L )
     :L (L)
 {
-    _valid = false;
+    _valid = -1;
     _dbid = luaL_checkinteger( L,2 );
 }
 
@@ -37,7 +37,7 @@ int32 lmongo::start()
 
 int32 lmongo::stop()
 {
-    _valid = false;
+    _valid = -1;
     thread::stop();
 
     return 0;
@@ -46,7 +46,7 @@ int32 lmongo::stop()
 // 该连接是否已连接上(不是当前状态，仅仅是第一次连接上)
 int32 lmongo::valid()
 {
-    lua_pushboolean( L,_valid );
+    lua_pushinteger( L,_valid );
 
     return 1;
 }
@@ -55,11 +55,12 @@ bool lmongo::initlization()
 {
     if ( _mongo.connect() )
     {
+        _valid = 0;
         ERROR( "mongo connect fail" );
         return false;
     }
 
-    _valid = true;
+    _valid = 1;
     return true;
 }
 
