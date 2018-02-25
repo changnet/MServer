@@ -24,6 +24,18 @@ function Misc:db_load()
     return true
 end
 
+-- 玩家数据已加载完成，进入场景
+-- 必须返回操作结果
+function Misc:on_login()
+    return true
+end
+
+-- 玩家退出游戏
+-- 必须返回操作结果，但这个结果不影响玩家数据存库
+function Misc:on_logout()
+    return true
+end
+
 -- 获取根数据
 function Misc:get_data_root()
     return self.data_root

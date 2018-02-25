@@ -50,12 +50,31 @@ end
 -- 开始从db加载各模块数据
 function Player:module_db_load()
     self.db_step = 0
+    self.load_step = 0
+
+    -- 根据顺序加载数据库数据
     for _,module in pairs( sub_module ) do
-        local module = self[module.name]
-        if module.db_load then
-            module.db_load()
-            self.db_step = self.db_step + 1
-        end
+        self[module.name].db_load()
+        self.db_step = self.db_step + 1
+    end
+
+    -- db数据初始化，如果模块之间有数据依赖，请自己调整好顺序
+    for _,module in pairs( sub_module ) do
+        self[module.name].db_init()
+    end
+end
+
+-- 登录游戏
+function Player:on_login()
+    for _,module in pairs( sub_module ) do
+        self[module.name].on_login()
+    end
+end
+
+-- 退出游戏
+function Player:on_logout()
+    for _,module in pairs( sub_module ) do
+        self[module.name].on_logout()
     end
 end
 

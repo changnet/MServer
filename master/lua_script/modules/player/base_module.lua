@@ -6,8 +6,9 @@
 
 local Base_module = oo.class( nil,... )
 
-function Base_module:__init__( pid )
+function Base_module:__init__( pid,player )
     self.pid = pid
+    self.player = player
 end
 
 -- 数据存库接口，自动调用
