@@ -9,7 +9,7 @@ local g_network_mgr = g_network_mgr
 local gateway_session = g_unique_id:srv_session( 
     "gateway",tonumber(Main.srvindex),tonumber(Main.srvid) )
 
--- local Bag = require "item.bag"
+local Auto_id = require "modules.system.auto_id"
 
 --[[
 玩家子模块，以下功能会自动触发
@@ -33,6 +33,8 @@ local Player = oo.class( nil,... )
 
 function Player:__init( pid )
     self.pid = pid
+
+    self.auto_id = Auto_id()
 
     self.timer_cnt = 0
     self.timer_1scb = {}
@@ -67,11 +69,28 @@ end
 
 -- 注册1s定时器
 function Player:register_1stimer( callback )
-    table.insert( self.timer_1scb )
+    local id = self.auto_id:next_id()
+
+    self.timer_1scb[id] = callback
+    return id
 end
 
 -- 取消1s定时器
-function Player:remove_1stimer()
+function Player:remove_1stimer( id )
+    self.timer_1scb[id] = nil
+end
+
+-- 注册1s定时器
+function Player:register_5stimer( callback )
+    local id = self.auto_id:next_id()
+
+    self.timer_5scb[id] = callback
+    return id
+end
+
+-- 取消1s定时器
+function Player:remove_5stimer( id )
+    self.timer_5scb[id] = nil
 end
 
 -- 开始从db加载各模块数据
