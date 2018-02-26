@@ -5,30 +5,17 @@
 -- mongo db 数据存储
 
 local Mongo = require "Mongo"
-local LIMIT = require "global.limits"
+local Auto_id = require "modules.system.auto_id"
 
 local Mongodb = oo.class( nil,... )
 
 function Mongodb:__init( dbid )
-    self.next_id = 0
+    self.auto_id = Auto_id()
     self.mongodb = Mongo( dbid )
 
     self.cb = {}
 
     self.timer = g_timer_mgr:new_timer( self,1,1 )
-end
-
---[[
-底层id类型为int32，需要防止越界
-]]
-function Mongodb:get_next_id()
-    repeat
-        if self.next_id >= LIMIT.INT32_MAX then self.next_id = 0 end
-
-        self.next_id = self.next_id + 1
-    until nil == self.cb[self.next_id]
-
-    return self.next_id
 end
 
 -- 利用定时器来检测是否已连接上数据库
@@ -79,13 +66,13 @@ function Mongodb:valid()
 end
 
 function Mongodb:count( collection,query,skip,limit,callback )
-    local id = self:get_next_id()
+    local id = self.auto_id:next_id( self.cb )
     self.cb[id] = callback
     return self.mongodb:count( id,collection,query,skip,limit )
 end
 
 function Mongodb:find( collection,query,opts,callback )
-    local id = self:get_next_id()
+    local id = self.auto_id:next_id( self.cb )
     self.cb[id] = callback
     return self.mongodb:find( id,collection,query,opts )
 end
@@ -99,7 +86,7 @@ end
 function Mongodb:find_and_modify( 
     collection,query,sort,update,fields,remove,upsert,new,callback )
 
-    local id = self:get_next_id()
+    local id = self.auto_id:next_id( self.cb )
     self.cb[id] = callback
     return self.mongodb:find_and_modify( 
         id,collection,query,sort,update,fields,remove,upsert,new )
@@ -108,7 +95,7 @@ end
 function Mongodb:insert( collection,info,callback )
     local id = 0
     if callback then
-        id = self:get_next_id()
+        id = self.auto_id:next_id( self.cb )
         self.cb[id] = callback
     end
     return self.mongodb:insert( id,collection,info )
@@ -117,7 +104,7 @@ end
 function Mongodb:update( collection,query,info,upsert,multi,callback )
     local id = 0
     if callback then
-        id = self:get_next_id()
+        id = self.auto_id:next_id( self.cb )
         self.cb[id] = callback
     end
     return self.mongodb:update( id,collection,query,info,upsert,multi )
@@ -126,7 +113,7 @@ end
 function Mongodb:remove( collection,query,multi,callback )
     local id = 0
     if callback then
-        id = self:get_next_id()
+        id = self.auto_id:next_id( self.cb )
         self.cb[id] = callback
     end
     return self.mongodb:remove( id,collection,query,multi )
