@@ -16,8 +16,8 @@ function Player_mgr:on_enter_world( clt_conn,pid,pkt )
     local player = Player( pid )
 
     self.player[pid] = player
-
-    player:send_pkt( SC.PLAYER_ENTER,{} )
+    if not player:db_load() then return end
+    if not player:on_login() then return end
 
     PLOG( "player enter world,pid = %d",pid )
 end
@@ -25,9 +25,12 @@ end
 -- 玩家离线
 function Player_mgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
-    PLOG( "player offline,pid = %d",pid )
+    local player = self.player[pid]
+
+    player:on_logout()
 
     self.player[pid] = nil
+    PLOG( "player offline,pid = %d",pid )
 end
 
 -- 顶号

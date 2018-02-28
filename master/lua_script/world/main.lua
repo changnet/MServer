@@ -6,6 +6,7 @@ Main.command,Main.srvname,Main.srvindex,Main.srvid = ...
 Main.wait = 
 {
     gateway = 1,
+    db_conn = 1, -- 等待连接db
 }
 
 require "modules.module_pre_header"
@@ -15,8 +16,21 @@ Main.session = g_unique_id:srv_session(
 
 require "modules.module_header"
 
+-- 信号处理
 function sig_handler( signum )
+    Main.shutdown()
+
     ev:exit()
+end
+
+-- 主程序关闭
+function Main.shutdown()
+    g_mongodb_mgr:stop() -- 关闭所有数据库链接
+end
+
+-- 数据库连接成功
+function Main.db_connected()
+    Main.one_wait_finish( "db_conn",1 )
 end
 
 -- 检查需要等待的服务器是否初始化完成
@@ -41,6 +55,11 @@ function Main.init()
     end
 
     g_network_mgr:connect_srv( g_setting.servers )
+
+    -- 连接数据库
+    g_mongodb:start( g_setting.mongo_ip,
+        g_setting.mongo_port,g_setting.mongo_user,
+        g_setting.mongo_pwd,g_setting.mongo_db,Main.db_connected )
 end
 
 function Main.final_init()

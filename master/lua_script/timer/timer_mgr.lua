@@ -64,7 +64,14 @@ local timer_mgr = Timer_mgr()
     可通过timer_id来区分
 ]]
 function timer_event( timer_id )
-    timer_mgr.owner[timer_id]:do_timer( timer_id )
+    -- timer_mgr.owner是是一个weak_table，有时候逻辑报错了，对象可能已被销毁
+    local owner = timer_mgr.owner[timer_id]
+    if not owner then
+        ELOG( "timer no owner found,abort %d",timer_id )
+        return timer_mgr:del_timer( timer_id )
+    end
+
+    return owner:do_timer( timer_id )
 end
 
 return timer_mgr

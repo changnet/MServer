@@ -20,7 +20,8 @@ if "gateway" == Main.srvname then
 
     local Clt_conn    = require "network.clt_conn"
 
-    -- db对象的创建，有点特殊。它是全局对象，但不是单例。不要多次调用new创建多个对象
+    -- db对象的创建，有点特殊。它是全局对象，但不是单例。可以根据业务创建多个db提高效率
+    -- 不要多次调用new创建多个对象
     g_mongodb_mgr = require "mongodb.mongodb_mgr"
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
@@ -29,6 +30,9 @@ end
 if "world" == Main.srvname then
     g_setting     = require "world.setting"
     g_player_mgr  = require "modules.player.player_mgr"
+
+    g_mongodb_mgr = require "mongodb.mongodb_mgr"
+    if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
 
 -- 加载指令注册入口(用require_ex保证热更)

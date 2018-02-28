@@ -70,8 +70,8 @@ local function write_log_file( file,log )
     file:close()
 end
 
-function __G__TRACKBACK__( msg )
-    local stack_trace = debug.traceback()
+function __G__TRACKBACK__( msg,co )
+    local stack_trace = debug.traceback( co )
     local info_table = { "[LCRASH ",time_str(),"]",tostring(msg),"\n",stack_trace }
     local str = table.concat( info_table )
 

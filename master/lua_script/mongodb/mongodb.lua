@@ -119,6 +119,15 @@ function Mongodb:remove( collection,query,multi,callback )
     return self.mongodb:remove( id,collection,query,multi )
 end
 
+
+-- >>>>>>>>>>>>>>>>>> coroutine 同步处理 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+local Mongodb_sync = require "mongodb.mongodb_sync"
+
+function Mongodb:new_sync( routine,... )
+    local co = coroutine.create( routine )
+    return Mongodb_sync( self,co )
+end
+
 -- 不提供索引函数，请开服使用脚本创建索引。见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/
 --[[
 db.collection.getIndexes() 查看已有索引
