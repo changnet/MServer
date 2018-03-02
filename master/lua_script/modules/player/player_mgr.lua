@@ -17,9 +17,8 @@ function Player_mgr:on_enter_world( clt_conn,pid,pkt )
 
     self.player[pid] = player
     if not player:db_load() then return end
-    if not player:on_login() then return end
 
-    PLOG( "player enter world,pid = %d",pid )
+    PLOG( "player login,pid = %d",pid )
 end
 
 -- 玩家离线

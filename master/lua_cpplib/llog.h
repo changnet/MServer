@@ -12,9 +12,9 @@ public:
     explicit llog( lua_State *L );
     ~llog();
     
-    int32 stop ();
-    int32 start();
-    int32 write();
+    int32 stop ( lua_State *L );
+    int32 start( lua_State *L );
+    int32 write( lua_State *L );
     static int32 mkdir_p( lua_State *L );
 private:
     bool cleanup();
@@ -25,7 +25,6 @@ private:
 private:
     int32 _wts;
     class log _log;
-    lua_State *L  ;
 };
 
 #endif /* __LLOG_H__ */

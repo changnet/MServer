@@ -1,8 +1,8 @@
 #include "lsql.h"
 #include "ltools.h"
+#include "lstate.h"
 
 lsql::lsql( lua_State *L )
-    : L (L)
 {
     _dbid = luaL_checkinteger( L,2 );
 }
@@ -12,7 +12,7 @@ lsql::~lsql()
 }
 
 /* 连接mysql并启动线程 */
-int32 lsql::start()
+int32 lsql::start( lua_State *L )
 {
     if ( active() )
     {
@@ -103,7 +103,7 @@ void lsql::invoke_sql( bool is_return )
     }
 }
 
-int32 lsql::stop()
+int32 lsql::stop( lua_State *L )
 {
     thread::stop();
 
@@ -123,7 +123,7 @@ void lsql::push_query( const struct sql_query *query )
     if ( notify ) notify_child( MSG );
 }
 
-int32 lsql::do_sql()
+int32 lsql::do_sql( lua_State *L )
 {
     if ( !active() )
     {
@@ -179,6 +179,7 @@ int32 lsql::pop_result( struct sql_result &res )
 
 void lsql::invoke_result()
 {
+    static lua_State *L = lstate::instance()->state();
     lua_pushcfunction( L,traceback );
 
     /* sql_result是一个比较小的结构体，因此不使用指针 */
@@ -191,7 +192,7 @@ void lsql::invoke_result()
         lua_pushinteger( L,res._ecode );
 
         int32 nargs = 3;
-        int32 args  = mysql_to_lua( res._res );
+        int32 args  = mysql_to_lua( L,res._res );
         if ( args > 0 )         nargs += args;
 
         if ( LUA_OK != lua_pcall( L,nargs,0,1 ) )
@@ -206,7 +207,7 @@ void lsql::invoke_result()
     lua_pop(L,1); /* remove traceback */
 }
 
-int32 lsql::field_to_lua( 
+int32 lsql::field_to_lua( lua_State *L,
     const struct sql_field &field,const struct sql_col &col )
 {
     lua_pushstring( L,field._name );
@@ -246,7 +247,7 @@ int32 lsql::field_to_lua(
 }
 
 /* 将mysql结果集转换为lua table */
-int32 lsql::mysql_to_lua( const struct sql_res *res )
+int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
 {
     if ( !res ) return 0;
 
@@ -271,7 +272,7 @@ int32 lsql::mysql_to_lua( const struct sql_res *res )
 
             if ( !cols[col]._value ) continue;/* 值为NULL */
 
-            field_to_lua( fields[col],cols[col] );
+            field_to_lua( L,fields[col],cols[col] );
             lua_rawset( L, -3 );
         }
 

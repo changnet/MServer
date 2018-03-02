@@ -13,16 +13,16 @@ public:
     explicit lmongo( lua_State *L );
     ~lmongo();
 
-    int32 start();
-    int32 stop ();
-    int32 valid();
+    int32 start( lua_State *L );
+    int32 stop ( lua_State *L );
+    int32 valid( lua_State *L );
 
-    int32 find     ();
-    int32 count    ();
-    int32 insert   ();
-    int32 update   ();
-    int32 remove   ();
-    int32 find_and_modify();
+    int32 find     ( lua_State *L );
+    int32 count    ( lua_State *L );
+    int32 insert   ( lua_State *L );
+    int32 update   ( lua_State *L );
+    int32 remove   ( lua_State *L );
+    int32 find_and_modify( lua_State *L );
 private:
     /* for thread */
     bool cleanup();
@@ -39,7 +39,6 @@ private:
     const struct mongo_result *pop_result();
     const struct mongo_query  *pop_query ();
 private:
-    lua_State *L ;
     class mongo _mongo;
 
     int32 _valid;

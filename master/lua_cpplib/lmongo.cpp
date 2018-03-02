@@ -1,10 +1,10 @@
 #include "lmongo.h"
 
 #include "ltools.h"
+#include "lstate.h"
 #include <lbson.h>
 
 lmongo::lmongo( lua_State *L )
-    :L (L)
 {
     _valid = -1;
     _dbid = luaL_checkinteger( L,2 );
@@ -16,7 +16,7 @@ lmongo::~lmongo()
 
 // 连接数据库
 // 由于是开启线程去连接，并且是异步的，需要上层定时调用valid来检测是否连接上
-int32 lmongo::start()
+int32 lmongo::start( lua_State *L )
 {
     if ( active() )
     {
@@ -35,7 +35,7 @@ int32 lmongo::start()
     return 0;
 }
 
-int32 lmongo::stop()
+int32 lmongo::stop( lua_State *L )
 {
     _valid = -1;
     thread::stop();
@@ -44,7 +44,7 @@ int32 lmongo::stop()
 }
 
 // 该连接是否已连接上(不是当前状态，仅仅是第一次连接上)
-int32 lmongo::valid()
+int32 lmongo::valid( lua_State *L )
 {
     lua_pushinteger( L,_valid );
 
@@ -125,7 +125,7 @@ void lmongo::push_query( const struct mongo_query *query )
     if ( _notify ) notify_child( MSG );
 }
 
-int32 lmongo::count()
+int32 lmongo::count( lua_State *L )
 {
     if ( !active() )
     {
@@ -182,6 +182,7 @@ const struct mongo_result *lmongo::pop_result()
 
 void lmongo::invoke_result()
 {
+    static lua_State *L = lstate::instance()->state();
     lua_pushcfunction( L,traceback );
 
     const struct mongo_result *res = NULL;
@@ -309,7 +310,7 @@ void lmongo::invoke_command( bool is_return )
 }
 
 /* find( id,collection,query,fields ) */
-int32 lmongo::find()
+int32 lmongo::find( lua_State *L )
 {
     if ( !active() )
     {
@@ -363,7 +364,7 @@ int32 lmongo::find()
 
 
 /* find( id,collection,query,sort,update,fields,remove,upsert,new ) */
-int32 lmongo::find_and_modify()
+int32 lmongo::find_and_modify( lua_State *L )
 {
     if ( !active() )
     {
@@ -454,7 +455,7 @@ int32 lmongo::find_and_modify()
 }
 
 /* insert( id,collections,info ) */
-int32 lmongo::insert()
+int32 lmongo::insert( lua_State *L )
 {
     if ( !active() )
     {
@@ -504,7 +505,7 @@ int32 lmongo::insert()
 }
 
 /* update( id,collections,query,update,upsert,multi ) */
-int32 lmongo::update()
+int32 lmongo::update( lua_State *L )
 {
     if ( !active() )
     {
@@ -584,7 +585,7 @@ int32 lmongo::update()
 }
 
 /* remove( id,collections,query,multi ) */
-int32 lmongo::remove()
+int32 lmongo::remove( lua_State *L )
 {
     if ( !active() )
     {

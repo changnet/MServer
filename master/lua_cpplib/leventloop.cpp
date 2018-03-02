@@ -15,9 +15,7 @@ class leventloop *leventloop::instance()
 {
     if ( !_loop )
     {
-        lua_State *L = lstate::instance()->state();
-        assert( "NULL lua state",L );
-        _loop = new leventloop( L,true );
+        _loop = new leventloop( true );
     }
 
     return _loop;
@@ -35,8 +33,7 @@ leventloop::leventloop( lua_State *L )
     assert( "leventloop is singleton",false );
 }
 
-leventloop::leventloop( lua_State *L,bool singleton )
-    : L (L)
+leventloop::leventloop( bool singleton )
 {
     assert( "leventloop is singleton",!_loop );
 
@@ -55,16 +52,15 @@ leventloop::~leventloop()
     ansendingmax =  0;
 }
 
-int32 leventloop::exit()
+int32 leventloop::exit( lua_State *L )
 {
     ev_loop::quit();
     return 0;
 }
 
-int32 leventloop::backend()
+int32 leventloop::backend( lua_State *L )
 {
     assert( "backend uninit",backend_fd >= 0 );
-    assert( "lua state NULL",L );
 
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 用自己的策略控制gc */
@@ -72,13 +68,13 @@ int32 leventloop::backend()
     return run(); /* this won't return until backend stop */
 }
 
-int32 leventloop::time()
+int32 leventloop::time( lua_State *L )
 {
     lua_pushinteger( L,ev_rt_now );
     return 1;
 }
 
-int32 leventloop::signal()
+int32 leventloop::signal( lua_State *L )
 {
     int32 sig = luaL_checkinteger(L, 1);
     int32 sig_action = luaL_optinteger( L,2,-1);
@@ -105,6 +101,7 @@ void leventloop::sig_handler( int32 signum )
 
 void leventloop::invoke_signal()
 {
+    static lua_State *L = lstate::instance()->state();
     lua_pushcfunction(L,traceback);
 
     int signum = 0;
@@ -197,5 +194,6 @@ void leventloop::running()
 
     lnetwork_mgr::instance()->invoke_delete();
 
+    static lua_State *L = lstate::instance()->state();
     lua_gc(L, LUA_GCSTEP, 100);
 }

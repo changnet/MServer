@@ -1,10 +1,10 @@
 #include "ltimer.h"
 #include "ltools.h"
+#include "lstate.h"
 #include "leventloop.h"
 #include "../ev/ev_def.h"
 
 ltimer::ltimer( lua_State *L )
-    :L (L)
 {
     _timer_id = luaL_checkinteger( L,2 );
 
@@ -19,7 +19,7 @@ ltimer::~ltimer()
 {
 }
 
-int32 ltimer::set()
+int32 ltimer::set( lua_State *L )
 {
     ev_tstamp after  = static_cast<ev_tstamp>( luaL_checknumber( L,1 ) );
     ev_tstamp repeat = static_cast<ev_tstamp>( luaL_optnumber( L,2,0. ) );
@@ -34,7 +34,7 @@ int32 ltimer::set()
     return 0;
 }
 
-int32 ltimer::start()
+int32 ltimer::start( lua_State *L )
 {
     /* 理论上可以多次start而不影响，但会有性能上的消耗 */
     if ( _timer.is_active() )
@@ -52,14 +52,14 @@ int32 ltimer::start()
     return 0;
 }
 
-int32 ltimer::stop()
+int32 ltimer::stop( lua_State *L )
 {
     _timer.stop();
 
     return 0;
 }
 
-int32 ltimer::active()
+int32 ltimer::active( lua_State *L )
 {
     lua_pushboolean( L,_timer.is_active() );
 
@@ -69,6 +69,8 @@ int32 ltimer::active()
 void ltimer::callback( ev_timer &w,int32 revents )
 {
     assert( "libev timer cb error",!(EV_ERROR & revents) );
+
+    static lua_State *L = lstate::instance()->state();
 
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"timer_event" );

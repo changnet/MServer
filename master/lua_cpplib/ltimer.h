@@ -11,16 +11,14 @@ public:
     explicit ltimer( lua_State *L );
     ~ltimer();
 
-    int set();
-    int32 stop  ();
-    int32 start ();
-    int32 active();
+    int32 set   ( lua_State *L );
+    int32 stop  ( lua_State *L );
+    int32 start ( lua_State *L );
+    int32 active( lua_State *L );
 
     void callback( ev_timer &w,int32 revents );
 private:
     int32 _timer_id;
-
-    lua_State *L;
     class ev_timer _timer;
 };
 

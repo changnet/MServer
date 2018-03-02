@@ -63,9 +63,9 @@ public:
     ~lacism();
     explicit lacism( lua_State *L );
 
-    int32 scan();
-    int32 replace();
-    int32 load_from_file();
+    int32 scan( lua_State *L );
+    int32 replace( lua_State *L );
+    int32 load_from_file( lua_State *L );
 
     int32 do_replace( int32 strnum,int32 textpos );
 
@@ -82,8 +82,6 @@ private:
     int32 acism_slurp( const char *path );
     MEMREF *acism_refsplit( char *text, char sep, int *pcount );
 private:
-    lua_State *L;
-
     ACISM *_psp;
     MEMBUF _patt;
     int32 _loaded;

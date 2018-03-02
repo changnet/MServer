@@ -4,7 +4,6 @@
 #include "lacism.h"
 
 lacism::lacism( lua_State *L )
-    : L(L)
 {
     _psp   = NULL;
     _pattv = NULL;
@@ -89,7 +88,7 @@ int32 lacism::do_replace( int32 strnum,int32 textpos )
 }
 
 /* 扫描关键字,扫描到其中一个即中止 */
-int32 lacism::scan()
+int32 lacism::scan( lua_State *L )
 {
     if ( !_loaded )
     {
@@ -116,7 +115,7 @@ int32 lacism::scan()
 }
 
 /* 替换关键字 */
-int32 lacism::replace()
+int32 lacism::replace( lua_State *L )
 {
     if ( !_loaded )
     {
@@ -169,7 +168,7 @@ int32 lacism::replace()
     return 1;
 }
 
-int32 lacism::load_from_file()
+int32 lacism::load_from_file( lua_State *L )
 {
     const char *path = luaL_checkstring( L,1 );
     int32 case_sensitive = 1;

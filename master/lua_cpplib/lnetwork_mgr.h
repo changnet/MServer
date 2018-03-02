@@ -21,47 +21,47 @@ private:
     typedef map_t<uint32,class socket*> socket_map_t;
 public:
     /* 设置指令参数 */
-    int32 set_cs_cmd();
-    int32 set_ss_cmd();
-    int32 set_sc_cmd();
+    int32 set_cs_cmd( lua_State *L );
+    int32 set_ss_cmd( lua_State *L );
+    int32 set_sc_cmd( lua_State *L );
 
-    int32 set_conn_io(); /* 设置socket的io方式 */
-    int32 set_conn_codec (); /* 设置socket的编译方式 */
-    int32 set_conn_packet(); /* 设置socket的打包方式 */
+    int32 set_conn_io    ( lua_State *L ); /* 设置socket的io方式 */
+    int32 set_conn_codec ( lua_State *L ); /* 设置socket的编译方式 */
+    int32 set_conn_packet( lua_State *L ); /* 设置socket的打包方式 */
 
-    int32 set_conn_owner  (); /* 设置(客户端)连接所有者 */
-    int32 set_conn_session(); /* 设置(服务器)连接session */
-    int32 set_curr_session(); /* 设置当前服务器的session */
+    int32 set_conn_owner  ( lua_State *L ); /* 设置(客户端)连接所有者 */
+    int32 set_conn_session( lua_State *L ); /* 设置(服务器)连接session */
+    int32 set_curr_session( lua_State *L ); /* 设置当前服务器的session */
 
-    int32 load_one_schema(); /* 加载schema文件 */
-    int32 get_http_header(); /* 获取http报文头数据 */
+    int32 load_one_schema( lua_State *L ); /* 加载schema文件 */
+    int32 get_http_header( lua_State *L ); /* 获取http报文头数据 */
 
     /* 这三个是通用接口，数据打包差异是通过packet的多态实现的 */
-    int32 send_srv_packet(); /* 发送往服务器数据包 */
-    int32 send_clt_packet(); /* 发送往客户端数据包 */
-    int32 send_raw_packet(); /* 发送原始的数据包 */
+    int32 send_srv_packet( lua_State *L ); /* 发送往服务器数据包 */
+    int32 send_clt_packet( lua_State *L ); /* 发送往客户端数据包 */
+    int32 send_raw_packet( lua_State *L ); /* 发送原始的数据包 */
 
     /* 这些是在同一种packet上发送不同特定数据包 */
-    int32 send_s2s_packet(); /* 发送s2s数据包 */
-    int32 send_ssc_packet(); /* 跨服务器发送客户端数据包 */
-    int32 send_rpc_packet(); /* 发送rpc数据包 */
-    int32 send_ctrl_packet(); /* 发送ping-pong等数据包 */
+    int32 send_s2s_packet ( lua_State *L ); /* 发送s2s数据包 */
+    int32 send_ssc_packet ( lua_State *L ); /* 跨服务器发送客户端数据包 */
+    int32 send_rpc_packet ( lua_State *L ); /* 发送rpc数据包 */
+    int32 send_ctrl_packet( lua_State *L ); /* 发送ping-pong等数据包 */
 
     /* 组播数据包 */
-    int32 srv_multicast(); /* 广播到所有连接到当前进程的服务器 */
-    int32 clt_multicast(); /* 网关进程广播数据到客户端 */
-    int32 ssc_multicast(); /* 非网关数据广播数据到客户端 */
+    int32 srv_multicast( lua_State *L ); /* 广播到所有连接到当前进程的服务器 */
+    int32 clt_multicast( lua_State *L ); /* 网关进程广播数据到客户端 */
+    int32 ssc_multicast( lua_State *L ); /* 非网关数据广播数据到客户端 */
 
-    int32 set_send_buffer_size(); /* 设置发送缓冲区大小 */
-    int32 set_recv_buffer_size(); /* 设置接收缓冲区大小 */
+    int32 set_send_buffer_size( lua_State *L ); /* 设置发送缓冲区大小 */
+    int32 set_recv_buffer_size( lua_State *L ); /* 设置接收缓冲区大小 */
 
-    int32 new_ssl_ctx(); /* 创建一个ssl上下文 */
+    int32 new_ssl_ctx( lua_State *L ); /* 创建一个ssl上下文 */
 
     /* socket基本操作 */
-    int32 close();
-    int32 address ();
-    int32 listen  ();
-    int32 connect ();
+    int32 close   ( lua_State *L );
+    int32 address ( lua_State *L );
+    int32 listen  ( lua_State *L );
+    int32 connect ( lua_State *L );
 
 public:
     static void uninstance();
@@ -107,11 +107,10 @@ public:
         const class socket *src_sk,const char *ctx,size_t size ) const;
 private:
     void delete_socket( uint32 conn_id );
-    class packet *lua_check_packet( socket::conn_t conn_ty );
-    class packet *raw_check_packet( uint32 conn_id,socket::conn_t conn_ty );
+    class packet *lua_check_packet( lua_State *L,socket::conn_t conn_ty );
+    class packet *raw_check_packet( 
+        lua_State *L,uint32 conn_id,socket::conn_t conn_ty );
 private:
-    struct lua_State *L;
-
     int32 _session; /* 当前进程的session */
     uint32 _conn_seed; /* connect_id种子 */
 

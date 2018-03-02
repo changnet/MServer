@@ -19,16 +19,16 @@ public:
     explicit leventloop( lua_State *L );
     ~leventloop();
 
-    int32 exit();
-    int32 time();
-    int32 backend();
+    int32 exit( lua_State *L );
+    int32 time( lua_State *L );
+    int32 backend( lua_State *L );
 
-    int32 signal();
+    int32 signal( lua_State *L );
 
     int32 pending_send( class socket *s );
     void remove_pending( int32 pending );
 private:
-    explicit leventloop( lua_State *L,bool singleton );
+    explicit leventloop( bool singleton );
 
     void running();
     void invoke_signal ();
@@ -46,7 +46,6 @@ private:
     int32 ansendingmax;
     int32 ansendingcnt;
 
-    lua_State *L;
     static uint32 sig_mask;
     static class leventloop *_loop;
 };

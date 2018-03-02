@@ -2,7 +2,6 @@
 #include "../lua_cpplib/leventloop.h"
 
 llog::llog( lua_State *L )
-    : L ( L )
 {
     _wts = 0;
 }
@@ -11,7 +10,7 @@ llog::~llog()
 {
 }
 
-int32 llog::stop ()
+int32 llog::stop ( lua_State *L )
 {
     if ( !active() )
     {
@@ -24,7 +23,7 @@ int32 llog::stop ()
     return 0;
 }
 
-int32 llog::start()
+int32 llog::start( lua_State *L )
 {
     /* 设定多少秒写入一次 */
     int32 sec  = luaL_optinteger( L,1,5 );
@@ -34,7 +33,7 @@ int32 llog::start()
     return 0;
 }
 
-int32 llog::write()
+int32 llog::write( lua_State *L )
 {
     if ( !active() )
     {
