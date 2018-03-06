@@ -140,6 +140,11 @@ function Player:on_logout()
     for _,module in pairs( sub_module ) do
         self[module.name]:on_logout()
     end
+
+    -- 存库
+    for _,module in pairs( sub_module ) do
+        self[module.name]:db_save()
+    end
 end
 
 return Player

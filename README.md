@@ -41,7 +41,7 @@ There is a client example at:https://github.com/changnet/EgretDemo
  * Network(Tcp、Http、websocket),all SSL support
  * Lua OOP development
  * Protocol auto serialize/deserialize(Protobuf、FlatBuffers)
- * Async DB operation(MySQL、MongoDB)
+ * Async and coroutine sync DB operation for MySQL、MongoDB
  * AC algorithm wordfilter
  * Crypto(md5、base64、sha1、uuid ...)
  * JSON、XML parse/deparse
