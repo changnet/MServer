@@ -7,8 +7,8 @@
 local Base_module = require "modules.player.base_module"
 local Misc = oo.class( Base_module,... )
 
-function Misc:__init( pid )
-    Base_module.__init( self,pid )
+function Misc:__init( pid,player )
+    Base_module.__init( self,pid,player )
     self.root = {}
     self.db_query = string.format( '{"_id":%d}',pid )
 end

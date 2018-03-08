@@ -7,9 +7,8 @@
 local CHAT = 
 {
     -- channel定义
-    CHL_SYSTEM  = 1, -- 系统广播
-    CHL_WORLD   = 2, -- 世界聊天
-    CHL_PRIVATE = 3 -- 私聊
+    CHL_WORLD   = 1, -- 世界聊天
+    CHL_PRIVATE = 2 -- 私聊
 }
 
 return CHAT

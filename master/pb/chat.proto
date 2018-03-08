@@ -1,0 +1,28 @@
+//聊天模块 协议定义
+
+syntax = "proto3";
+package chat;
+
+/* 聊天相关信息 */
+message SChatInfo
+{
+    int no_chat = 1; // 禁言
+}
+
+/* 发起聊天 */
+message SDoChat
+{
+    int channel = 1; // 频道
+    string context = 2; // 聊天内容
+}
+
+/* 聊天返回 */
+message SDoChat
+{
+    int channel = 1; // 频道
+    string context = 2; // 聊天内容
+
+    int pid= 3; //发起聊天的玩家Id
+    string name = 4; // 玩家名字
+}
+
