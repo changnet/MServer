@@ -50,10 +50,10 @@ function Player:__init( pid )
 end
 
 -- 发送数据包到客户端
-function Player:send_pkt( cfg,pkt )
+function Player:send_pkt( cmd,pkt,ecode )
     local srv_conn = g_network_mgr:get_srv_conn( gateway_session )
 
-    return srv_conn:send_clt_pkt( self.pid,cfg,pkt )
+    return srv_conn:send_clt_pkt( self.pid,cmd,pkt,ecode )
 end
 
 -- 定时器事件
@@ -145,6 +145,11 @@ function Player:on_logout()
     for _,module in pairs( sub_module ) do
         self[module.name]:db_save()
     end
+end
+
+-- 获取通用的存库数据
+function Player:get_misc_var( key )
+    return self.misc:get_var( key )
 end
 
 return Player

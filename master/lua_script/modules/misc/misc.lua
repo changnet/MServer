@@ -53,7 +53,7 @@ end
 
 -- 根据key获取某个数据集
 -- 一般来说每个小功能都有自己的key，以避免与其他功能冲突
-function Misc:get_data_set( key )
+function Misc:get_var( key )
     if not self.root[key] then self.root[key] = {} end
 
     return self.root[key]

@@ -11,6 +11,11 @@ function Player_mgr:__init()
     self.player = {} -- pid为key，Player为对象
 end
 
+-- 获取玩家对象
+function Player_mgr:get_player( pid )
+    return self.player[pid]
+end
+
 -- 玩家进入游戏世界，创建对象
 function Player_mgr:on_enter_world( clt_conn,pid,pkt )
     local player = Player( pid )

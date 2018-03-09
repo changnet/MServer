@@ -11,5 +11,4 @@ local CHAT =
     CHL_PRIVATE = 2 -- 私聊
 }
 
-return CHAT
-
+return oo.define( CHAT,... )
