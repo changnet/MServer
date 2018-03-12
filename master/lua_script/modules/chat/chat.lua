@@ -38,13 +38,22 @@ function Chat:private_chat( conn,pkt )
 
     local rpkt = {}
     rpkt.pid = self.pid
+    rpkt.name = self.player.name
     rpkt.context = pkt.context
+    rpkt.channel = CHAT.CHL_PRIVATE
 
     player:send_pkt( SC.CHAT_DOCHAT,rpkt )
 end
 
 -- 世界聊天
 function Chat:world_chat( conn,pkt )
+    local rpkt = {}
+    rpkt.pid = self.pid
+    rpkt.name = self.player.name
+    rpkt.context = pkt.context
+    rpkt.channel = CHAT.CHL_PRIVATE
+
+    g_network_mgr:clt_multicast( 2,{},SC.CHAT_DOCHAT,rpkt )
 end
 
 channel_func[CHAT.CHL_WORLD] = Chat.world_chat

@@ -36,7 +36,7 @@ typedef enum
 {
     CLT_MC_NONE  = 0,
     CLT_MC_OWNER = 1, // 根据玩家id广播
-    CLT_MC_ARGS  = 2,  // 根据参数广播
+    // 未定义的值，会回调到脚本处理
 
     CLT_MC_MAX
 } clt_multicast_t;

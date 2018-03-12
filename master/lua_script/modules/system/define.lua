@@ -31,4 +31,12 @@ UNIQUEID =
     PLAYER = 1, -- 玩家pid
 }
 
+-- 自定义客户端广播方式
+CLTCAST = 
+{
+    PIDS  = 1, -- 这个在底层直接处理
+    WORLD = 2, -- 全服广播，但仅限于已Enter World的玩家
+    LEVEL = 3, -- 按等级筛选玩家
+}
+
 return { ["SRV_NAME"] = SRV_NAME }

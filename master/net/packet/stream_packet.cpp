@@ -898,11 +898,12 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     // 根据参数从lua获取对应的玩家id
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"clt_multicast_new" );
+    lua_pushinteger( L,mask );
     for ( int32 idx = 2;idx < count;idx ++ )
     {
         lua_pushinteger( L,*(raw_list + idx) );
     }
-    if ( expect_false( LUA_OK != lua_pcall( L,count - 2,1,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,count - 1,1,1 ) ) )
     {
         ERROR( "clt_multicast_new:%s",lua_tostring( L,-1 ) );
 

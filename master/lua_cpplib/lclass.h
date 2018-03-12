@@ -110,7 +110,6 @@ public:
 
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
     typedef int32 (T::*pf_t)(lua_State*);
-    typedef int32 (T::*pf_t_ex)();
     typedef int32 (*pf_st_t)(lua_State*);
 
     /* 注册函数,const char* func_name 就是注册到lua中的函数名字 */
@@ -134,48 +133,9 @@ public:
         return *this;
     }
 
-    template <pf_t_ex pf>
-    lclass<T>& def(const char* func_name)
-    {
-        luaL_getmetatable( L,classname );
-
-        lua_getfield(L, -1, func_name);
-        if ( !lua_isnil(L, -1) )
-        {
-            ERROR( "dumplicate def function %s:%s",classname,func_name );
-        }
-        lua_pop(L, 1); /* drop field */
-
-        lua_pushcfunction(L, &fun_thunk_ex<pf>);
-        lua_setfield(L, -2, func_name);
-
-        lua_pop(L, 1); /* drop class metatable */
-
-        return *this;
-    }
-
     /* 用于定义类的static函数 */
     template <pf_st_t pf>
     lclass<T>& def(const char* func_name)
-    {
-        luaL_getmetatable( L,classname );
-
-        lua_getfield(L, -1, func_name);
-        if ( !lua_isnil(L, -1) )
-        {
-            ERROR( "dumplicate def function %s:%s",classname,func_name );
-        }
-        lua_pop(L, 1); /* drop field */
-
-        lua_pushcfunction(L, pf);
-        lua_setfield(L, -2, func_name);
-
-        lua_pop(L, 1); /* drop class metatable */
-
-        return *this;
-    }
-
-    lclass<T>& def(const char* func_name,pf_t_ex pf)
     {
         luaL_getmetatable( L,classname );
 
@@ -314,21 +274,6 @@ private:
         lua_remove(L, 1);
 
         return ((*ptr)->*pf)(L);
-    }
-
-    template <pf_t_ex pf>
-    static int fun_thunk_ex(lua_State* L)
-    {
-        T** ptr = (T**)luaL_checkudata(L, 1, classname);/* get 'self', or if you prefer, 'this' */
-        if ( expect_false(ptr == NULL || *ptr == NULL) )
-        {
-            return luaL_error(L, "%s calling method with null pointer", classname);
-        }
-
-        /* remove self so member function args start at index 1 */
-        lua_remove(L, 1);
-
-        return ((*ptr)->*pf)();
     }
 private:
     lua_State *L;

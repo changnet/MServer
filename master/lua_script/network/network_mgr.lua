@@ -197,6 +197,24 @@ function Network_mgr:srv_multicast( cmd,pkt,ecode )
         conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
 end
 
+-- 客户端广播
+-- 非网关向客户端广播，由网关转发.网关必须处理clt_multicast_new回调
+-- @mask:掩码，参考C++宏定义clt_multicast_t。
+-- @args_list:参数列表，根据掩码，这个参数可能是玩家id，也可能是自定义参数
+--  如果是玩家id，网关底层会自动转发。如果是自定义参数，如连接id，等级要求...
+-- 回调clt_multicast_new时会把args_list传回脚本，需要脚本定义处理方式
+function Network_mgr:clt_multicast( mask,args_list,cmd,pkt,ecode )
+    return network_mgr:ssc_multicast( conn_id,
+        mask,args_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+end
+
+-- 客户端广播(直接发给客户端，仅网关可用)
+-- @conn_list: 客户端conn_id列表
+function Network_mgr:raw_clt_multicast( conn_list,cmd,pkt,ecode )
+    return network_mgr:clt_multicast( 
+        conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+end
+
 -- 底层accept回调
 function Network_mgr:srv_conn_accept( conn_id,conn )
     self.srv_conn[conn_id] = conn
@@ -257,6 +275,19 @@ function Network_mgr:clt_conn_del( conn_id )
     end
 
     PLOG( "client connect del:%d",conn_id )
+end
+
+-- 此函数必须返回一个value为玩家id的table
+-- CLTCAST定义在define.lua
+function clt_multicast_new( mask,... )
+    if mask == CLTCAST.WORLD then
+        local pid_list = {}
+        for pid in pairs( g_network_mgr.clt ) do
+            table.insert( pid_list,pid )
+        end
+        return pid_list
+    elseif mask == CLTCAST.LEVEL then
+    end
 end
 
 local _network_mgr = Network_mgr()
