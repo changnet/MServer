@@ -6,7 +6,7 @@
 
 local Base_module = oo.class( nil,... )
 
-function Base_module:__init__( pid,player )
+function Base_module:__init( pid,player )
     self.pid = pid
     self.player = player
 end

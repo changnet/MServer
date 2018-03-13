@@ -53,11 +53,17 @@ int32 lmongo::valid( lua_State *L )
 
 bool lmongo::initlization()
 {
-    if ( _mongo.connect() )
+    int32 ok = _mongo.connect();
+    if ( ok > 0 )
     {
         _valid = 0;
         ERROR( "mongo connect fail" );
         return false;
+    }
+    else if ( -1 == ok )
+    {
+        // 初始化正常，但是没ping通，需要重试
+        return true;
     }
 
     _valid = 1;
@@ -71,6 +77,7 @@ void lmongo::routine( notify_t msg )
      */
     if ( _mongo.ping() ) return;
 
+    _valid = 1;
     invoke_command();
 }
 

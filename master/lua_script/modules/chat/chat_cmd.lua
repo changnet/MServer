@@ -3,6 +3,7 @@
 -- xzc
 
 -- 聊天入口文件
+local Chat = require "modules.chat.chat"
 
 local function chat_clt_cb( cmd,cb_func )
     local cb = function( conn,pid,pkt )
@@ -15,3 +16,5 @@ local function chat_clt_cb( cmd,cb_func )
 
     g_command_mgr:clt_register( cmd,cb )
 end
+
+chat_clt_cb( CS.CHAT_DOCHAT,Chat.do_chat )

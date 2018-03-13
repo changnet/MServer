@@ -31,13 +31,14 @@ function Ai.execute( entity )
     end
 
     for index = 1,PING_ONE_TIME do Ai_action.ping( entity ) end
+    Ai_action.random_chat( entity )
 end
 
 function Ai.on_enter_world( entity )
     entity.ping_idx = 0
 end
 
-function Ai.on_ping( entity,pkt )
+function Ai.on_ping( entity,ecode,pkt )
     entity.ping_idx = entity.ping_idx + 1
 
     if pkt.y ~= entity.ping_idx then
@@ -68,6 +69,23 @@ function Ai.on_ping( entity,pkt )
     end
 end
 
+-- 聊天回调
+function Ai.on_chat( entity,ecode,pkt )
+    PLOG( "chat: %d say %s",pkt.pid,pkt.context )
+end
+
 g_player_ev:register( PLAYER_EV_ENTER,Ai.on_enter_world )
+
+local function reg_cb( cmd,func )
+    -- local cb = function( entity,ecode,... )
+    --     return func( entity,ecode,... )
+    -- end
+
+    g_android_mgr:cmd_register( cmd,func )
+end
+
+-- 这里有个问题，一旦AI注册了某个协议，其他地方就不能注册了
+reg_cb( SC.PLAYER_PING,Ai.on_ping )
+reg_cb( SC.CHAT_DOCHAT,Ai.on_chat )
 
 return Ai

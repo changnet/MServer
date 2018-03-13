@@ -65,11 +65,6 @@ function Android:on_die()
     PLOG( "android die " .. self.index )
 end
 
--- ping返回
-function Android:on_ping( errno,pkt )
-    self.ai.on_ping( self,pkt )
-end
-
 -- 登录返回
 function Android:on_login( errno,pkt )
     -- no role,create one now

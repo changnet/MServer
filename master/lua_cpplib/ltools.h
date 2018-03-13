@@ -15,6 +15,13 @@
         if ( x > 0 )    {luaL_unref( L,LUA_REGISTRYINDEX,x );x = 0;} \
     }while( 0 )
 
+#define lUAL_CHECKTABLE(L,idx)    \
+    do{                                                                   \
+        if ( !lua_istable( L,idx ) ){                                     \
+            return luaL_error( L,                                         \
+                "expect table,got %s",lua_typename( L,lua_type(L,idx) ) );\
+    }}while( 0 )
+
 /* lua 5.3支持int64，在转换为bson时需要区分int32、int64 */
 static inline int32 lua_isbit32(int64 v)
 {

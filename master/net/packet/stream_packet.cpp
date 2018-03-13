@@ -732,6 +732,7 @@ int32 stream_packet::raw_pack_ss(
 }
 
 // 打包客户端广播数据
+// ssc_multicast( conn_id,mask,args_list,codec_type,cmd,errno,pkt )
 int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
@@ -742,12 +743,15 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     int32 cmd      = luaL_checkinteger( L,index + 3 );
     int32 ecode    = luaL_checkinteger( L,index + 4 );
 
+    lUAL_CHECKTABLE( L,index + 1 );
+    lUAL_CHECKTABLE( L,index + 5 );
+
     // 占用list的两个位置，这样写入socket缓存区时不用另外处理
     list[0] = mask;
     // list[1] = 0; 数量
     int32 idx = 2;
     lua_pushnil(L);  /* first key */
-    while ( lua_next(L, 1) != 0 )
+    while ( lua_next(L, index + 1) != 0 )
     {
         if ( !lua_isinteger( L,-1 ) )
         {
@@ -774,12 +778,6 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
         return luaL_error( L,"illegal codec type" );
     }
 
-    if ( !lua_istable( L,index + 5 ) )
-    {
-        return luaL_error( L,
-            "expect table,got %s",lua_typename( L,lua_type(L,index + 5) ) );
-    }
-
     const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cfg )
     {
@@ -794,7 +792,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 4,&buffer,cfg );
+    int32 len = encoder->encode( L,index + 5,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     if ( len > MAX_PACKET_LEN )

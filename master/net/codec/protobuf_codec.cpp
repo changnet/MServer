@@ -523,7 +523,7 @@ int32 protobuf_codec::encode(
 {
     if ( _lprotobuf->encode( L,cfg->_object,index ) < 0 )
     {
-        ERROR( "protobuf decode:%s",_lprotobuf->last_error() );
+        ERROR( "protobuf encode:%s",_lprotobuf->last_error() );
         return -1;
     }
 

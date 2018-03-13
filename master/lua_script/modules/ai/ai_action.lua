@@ -15,4 +15,9 @@ function Ai_action.ping( entity )
         } )
 end
 
+-- 随机聊天
+function Ai_action.random_chat( entity )
+    entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "12345678" } )
+end
+
 return Ai_action

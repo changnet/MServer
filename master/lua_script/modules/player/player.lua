@@ -5,10 +5,6 @@
 -- 玩家对象
 
 local g_network_mgr = g_network_mgr
-
-local gateway_session = g_unique_id:srv_session( 
-    "gateway",tonumber(Main.srvindex),tonumber(Main.srvid) )
-
 local Auto_id = require "modules.system.auto_id"
 
 --[[
@@ -25,7 +21,7 @@ local Misc = require "modules.misc.misc"
 
 local sub_module = 
 {
-    -- { name = "chat",new = Chat },
+    { name = "chat",new = Chat },
     { name = "misc",new = Misc },
 }
 
@@ -51,7 +47,7 @@ end
 
 -- 发送数据包到客户端
 function Player:send_pkt( cmd,pkt,ecode )
-    local srv_conn = g_network_mgr:get_srv_conn( gateway_session )
+    local srv_conn = g_network_mgr:get_gateway_conn()
 
     return srv_conn:send_clt_pkt( self.pid,cmd,pkt,ecode )
 end

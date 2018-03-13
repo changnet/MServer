@@ -8,6 +8,9 @@ local Clt_conn      = oo.refer( "network.clt_conn" )
 local network_mgr = network_mgr
 local Network_mgr = oo.singleton( nil,... )
 
+local gateway_session = g_unique_id:srv_session( 
+    "gateway",tonumber(Main.srvindex),tonumber(Main.srvid) )
+
 function Network_mgr:__init()
     self.srv = {}  -- session为key，连接对象为value
     self.clt = {}  -- pid为key，连接对象为value
@@ -71,8 +74,6 @@ function Network_mgr:reconnect_srv( conn )
     self.srv_conn[conn_id] = conn
     PLOG( "server reconnect to %s:%d",conn.ip,conn.port )
 end
-
--- ============================================================================
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
 function Network_mgr:clt_close( clt_conn )
@@ -143,6 +144,11 @@ function Network_mgr:get_srv_conn( session )
     return self.srv[session]
 end
 
+-- 获取网关连接(在非网关服务器进程获取)
+function Network_mgr:get_gateway_conn()
+    return self.srv[gateway_session]
+end
+
 -- 设置客户端连接
 function Network_mgr:bind_role( pid,clt_conn )
     assert( "player already have a conn",nil == self.clt[pid] )
@@ -204,7 +210,8 @@ end
 --  如果是玩家id，网关底层会自动转发。如果是自定义参数，如连接id，等级要求...
 -- 回调clt_multicast_new时会把args_list传回脚本，需要脚本定义处理方式
 function Network_mgr:clt_multicast( mask,args_list,cmd,pkt,ecode )
-    return network_mgr:ssc_multicast( conn_id,
+    local srv_conn = self:get_gateway_conn()
+    return network_mgr:ssc_multicast( srv_conn.conn_id,
         mask,args_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
 end
 
