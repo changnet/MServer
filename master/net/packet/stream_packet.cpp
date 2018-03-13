@@ -771,6 +771,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
         lua_pop( L, 1 );
     }
 
+    list[1] = idx - 2; // 数量
     size_t list_len = sizeof(owner_t)*idx;
 
     if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
@@ -816,8 +817,8 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     hd._owner  = 0;
     hd._packet = SPKT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
-    send.__append( list,list_len );
     send.__append( &hd ,sizeof(struct s2s_header) );
+    send.__append( list,list_len );
     if ( len > 0 ) send.__append( buffer,len );
 
     encoder->finalize();
@@ -860,13 +861,16 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     int32 count = static_cast<int32>( *(raw_list + 1) );
     if ( MAX_CLT_CAST < count )
     {
-        ERROR( "ssc_multicast too many to cast" );
+        ERROR( "ssc_multicast too many to cast:%d",count );
         return;
     }
 
-    size_t raw_list_len = sizeof(owner_t)*count;
+    // 长度记得包含mask和count本身这两个变量
+    size_t raw_list_len = sizeof(owner_t)*(count + 2);
     int32 size = PACKET_BUFFER_LEN( header ) - raw_list_len;
-    const char *ctx = reinterpret_cast<const char *>( header + 1 );
+    const char *ctx = 
+        reinterpret_cast<const char *>( header + 1 );
+    ctx += raw_list_len;
 
     if ( size < 0 )
     {
@@ -897,25 +901,25 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"clt_multicast_new" );
     lua_pushinteger( L,mask );
-    for ( int32 idx = 2;idx < count;idx ++ )
+    for ( int32 idx = 2;idx < count + 2;idx ++ )
     {
         lua_pushinteger( L,*(raw_list + idx) );
     }
-    if ( expect_false( LUA_OK != lua_pcall( L,count - 1,1,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,count + 1,1,1 ) ) )
     {
         ERROR( "clt_multicast_new:%s",lua_tostring( L,-1 ) );
 
         lua_settop( L,0 ); /* remove traceback and error object */
         return;
     }
-    if ( lua_istable( L,-1 ) )
+    if ( !lua_istable( L,-1 ) )
     {
         ERROR( "clt_multicast_new do NOT return a table" );
         lua_settop( L,0 );
         return;
     }
     lua_pushnil(L);  /* first key */
-    while ( lua_next(L, -1) != 0 )
+    while ( lua_next(L, -2) != 0 )
     {
         if ( !lua_isinteger( L,-1 ) )
         {
