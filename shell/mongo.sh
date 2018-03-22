@@ -20,6 +20,8 @@
 # mongo 127.0.0.1:27013/mudrv -u test -p test command.js
 
 # 还可以把mongo shell命令写在文件中，直接导入mongo，这个和使用js文件是不一样的
+# 相当于把文件中的内容一行行输入mongo shell。
+# 因此在文件中需要注意换行。比如for循环的大括号就不能换行
 # mongo 127.0.0.1:27013/mudrv -u test -p test < command.js
 
 
@@ -47,6 +49,12 @@ function shell()
 function new_db()
 {
     $MONGO -u$1 -p$2 --port 27013 admin < ../other/mongo_new.ms
+}
+
+# ./mongo.sh cmd test test test_999 mongo_clear
+function cmd()
+{
+    $MONGO -u$1 -p$2 --port 27013 $3 < ../other/$4.ms
 }
 
 parameter=($@)
