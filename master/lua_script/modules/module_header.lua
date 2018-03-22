@@ -1,6 +1,8 @@
 -- 各模块加载入口
 -- global对象的创建都放在这里，方便热更
 
+-- 非global对象不要放这里，应该由对应模块的入口文件xx_cmd引用。
+
 E = require_ex "modules.system.error"
 
 g_conn_mgr    = require "network.conn_mgr"
@@ -10,7 +12,8 @@ g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
 
-local Srv_conn    = require "network.srv_conn"
+-- 这个非全局对象放在这里是为了满足network_mgr的引用(oo.refer)功能
+local Srv_conn = require "network.srv_conn"
 
 -- 仅在gateway使用
 if "gateway" == Main.srvname then

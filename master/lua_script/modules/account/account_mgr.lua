@@ -100,29 +100,55 @@ end
 
 --  创建角色逻辑
 function Account_mgr:do_create_role( role_info,pkt,pid )
+    local base = {}
+    base.new = 1 -- 标识为新创建，未初始化用户
+    base._id = pid
+    base.tm = ev:time()
+    base.sid = role_info.sid
+    base.plat = role_info.plat
+    base.name = pkt.name
+    base.account = role_info.account
+
+    local callback = function( ... )
+        self:on_role_create( base,role_info,... )
+    end
+    g_mongodb:insert( "base",base,callback )
+end
+
+-- 创建角色数据库返回
+-- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
+function Account_mgr:on_role_create( base,role_info,ecode,res )
+    if 0 ~= ecode then
+        ELOG( "role create error:name = %s,account = %s,srv = %d,plat = %d",
+            base.name,role_info.account,role_info.sid,role_info.plat )
+            self:send_role_create( role_info,E.UNDEFINE )
+        return
+    end
+
+    -- 将角色与帐号绑定
+    return self:do_acc_create( role_info,base.name,base._id )
+end
+
+--  创建帐号
+function Account_mgr:do_acc_create( role_info,name,pid )
     local acc_info = {}
     acc_info._id = pid
     acc_info.tm = ev:time()
     acc_info.sid = role_info.sid
     acc_info.plat = role_info.plat
-    acc_info.name = pkt.name
+    acc_info.name = name
     acc_info.account = role_info.account
 
     local callback = function( ... )
-        self:on_role_create( acc_info,role_info,... )
+        self:on_acc_create( acc_info,role_info,... )
     end
     g_mongodb:insert( "account",acc_info,callback )
 end
 
 -- 创建角色数据库返回
-function Account_mgr:on_role_create( acc_info,role_info,ecode,res )
-    -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
-
-    if ( 0 ~= ecode ) then -- 失败
-        if clt_conn then
-            clt_conn:send_pkt( SC.PLAYER_CREATE,role_info,E.UNDEFINE )
-        end
+function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
+    if 0 ~= ecode then -- 失败
+        self:send_role_create( role_info,E.UNDEFINE )
         PLOG( "create role error:%s",acc_info.account )
         return
     end
@@ -133,10 +159,21 @@ function Account_mgr:on_role_create( acc_info,role_info,ecode,res )
     role_info.name = acc_info.name
     PLOG( "create role success:%s--%d",role_info.account,pid )
 
+    -- 玩家可能断线了，这个clt_conn就不存在了
+    local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
     if clt_conn then
         g_network_mgr:bind_role( pid,clt_conn )
-        clt_conn:send_pkt( SC.PLAYER_CREATE,role_info )
+        self:send_role_create( role_info )
     end
+end
+
+-- 发送角色创建结果
+function Account_mgr:send_role_create( role_info,ecode )
+    -- 玩家可能断线了，这个clt_conn就不存在了
+    local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
+    if not clt_conn then return end
+
+    clt_conn:send_pkt( SC.PLAYER_CREATE,role_info,ecode )
 end
 
 -- 玩家下线

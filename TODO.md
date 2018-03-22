@@ -1,16 +1,7 @@
-* 广播、组播支持
-1. 玩家广播有两个接口，一个是当前进程广播，一个是到gateway广播。服务器则只有当前进程广播
-2. 
-
-network.srv_multicast( conn_list,cmd,pkt )
-network.clt_multicast( conn_list,cmd,ecode,pkt )
-network.ssc_multicast( mask,pid_list or args_list,cmd,ecode,pkt )
-
-先调用packet打包得到buffer，再用raw_pack循环发送
-ssc_multicast有两种组播方式，一种是指定pid数组，另一种是带参数，由网关筛选
 
 * 完成背包、聊天等系统设计
 * 客户端进入场景，增加gm系统
+* gm增加一个从shell脚本调用http的接口
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步
