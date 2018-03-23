@@ -12,9 +12,6 @@ g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
 
--- 这个非全局对象放在这里是为了满足network_mgr的引用(oo.refer)功能
-local Srv_conn = require "network.srv_conn"
-
 -- 仅在gateway使用
 if "gateway" == Main.srvname then
     g_setting     = require "gateway.setting"
@@ -38,6 +35,6 @@ if "world" == Main.srvname then
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
 
--- 加载指令注册入口(用require保证热更)
+-- 加载指令注册入口
 -- 需要在global对象创建后才加载，因为部分模块依赖global对象
 require "command/command_header"

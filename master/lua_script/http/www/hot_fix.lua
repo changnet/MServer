@@ -38,10 +38,7 @@ end
 
 -- 全局热更
 function Hot_fix:global_fix()
-    -- oo.hot_fix( PLOG )
     re_require()
-    -- self:fix_one( "modules/module_pre_header" )
-    -- self:fix_one( "modules/module_header" )
 end
 
 function Hot_fix:fix( list,schema )
@@ -81,7 +78,7 @@ function Hot_fix:exec( conn,fields,body )
     -- 这个http请求总是在gateway收到的
     local local_name = Main.srvname
     self:fix( tbl[local_name],tbl.schema )
-    re_require()
+
     -- 热更其他服务器
     for srvname in pairs( SRV_NAME ) do
         local module_list = tbl[srvname]

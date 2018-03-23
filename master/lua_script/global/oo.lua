@@ -6,7 +6,6 @@ local name_class_l = {}       -- 类列表，类为k，name为v
 local class_list   = {}       -- 类列表，name为k，类为v
 local obj_list     = {}       -- 已创建对象列表，对象为k，name为value
 local singleton    = {}       -- 单例，类为k，v为实例
-local const_define = {}       -- 常量table定义,name为k，table为v
 
 local obj_count_l = {}        -- 对象创建次数列表
 local check_count = 0         -- check调用次数
@@ -14,7 +13,6 @@ local check_flag  = true      -- 是否记录数据
 
 setmetatable(obj_list, {["__mode"]='k'})
 setmetatable(singleton, {["__mode"]='v'})
-setmetatable(const_define, {["__mode"]='v'})
 
 --******************************************************************************
 local class_base = {}  --默认基类
@@ -117,54 +115,6 @@ function oo.singleton(super, name)
     return clz
 end
 
--- 定义可热更常量table
-function oo.define(_table, name)
-    if type(_table) ~= "table" then
-        error( "oo define expect table" )
-        return
-    end
-
-    if type(name) == "string" then
-        if const_define[name] ~= nil then
-            local clz = const_define[name]
-            for k,v in pairs(clz) do
-                clz[k] = nil
-            end
-
-            for k,v in pairs(_table) do  --这是热更的关键，不需要深拷贝
-                clz[k] = v
-            end
-        else
-            const_define[name] = _table
-        end
-    else
-        error( "oo define no name specify" )
-        return
-    end
-
-    return _table
-end
-
--- refer to a class,to solve circular require,like forward declare.
--- you must implement the class and require it later some where else.
--- DO NOT refer a singleton or define.
-function oo.refer(name)
-    if type(name) ~= "string" then
-        error( "oo refer no name specify" )
-        return
-    end
-
-    -- if the class already implemented,return it
-    if class_list[name] ~= nil then
-        return class_list[name]
-    end
-
-    -- create a unimplemented class
-    local clz = {}
-    class_list[name] = clz
-
-    return clz
-end
 --******************************************************************************
 
 -- 获取基类元表(clz是元表而不是对象)

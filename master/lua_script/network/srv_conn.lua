@@ -1,8 +1,5 @@
 -- srv_conn server connection
 
-local g_command_mgr = g_command_mgr
-local g_network_mgr = g_network_mgr
-
 local network_mgr = network_mgr
 local Srv_conn = oo.class( nil,... )
 

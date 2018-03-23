@@ -21,4 +21,4 @@ local LIMIT =
     DOUBLE_MIN    = 2.22507e-308,
 }
 
-return oo.define( LIMIT,... )
+return LIMIT

@@ -2,8 +2,8 @@
 
 local util          = require "util"
 local Timer         = require "Timer"
-local Srv_conn      = oo.refer( "network.srv_conn" )
-local Clt_conn      = oo.refer( "network.clt_conn" )
+local Srv_conn      = require "network.srv_conn"
+local Clt_conn      = require "network.clt_conn"
 
 local network_mgr = network_mgr
 local Network_mgr = oo.singleton( nil,... )

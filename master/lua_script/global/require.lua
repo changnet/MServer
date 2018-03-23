@@ -38,4 +38,3 @@ function re_require()
     require "modules/module_header"
 end
 
-print( "require REWRITE" )
