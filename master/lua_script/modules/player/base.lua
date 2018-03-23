@@ -30,7 +30,8 @@ function Module:db_load( sync_db )
     if 0 ~= ecode then return false end -- 出错
     if not res then return end -- 新号，空数据
     
-    self.root = res
+    self.root = res[1] -- find函数返回的是一个数组
+    vd( self.root )
     return true
 end
 

@@ -97,7 +97,7 @@ function Player:module_db_load( sync_db )
     for step,module in pairs( sub_module ) do
         local ok = self[module.name]:db_load( sync_db )
         if not ok then
-            ELOG( "player db load error,step %d",step )
+            ELOG( "player db load error,pid %d,step %d",self.pid,step )
             return false
         end
     end
