@@ -3,15 +3,14 @@
 -- xzc
 
 -- 引入高优先级的文件
--- 这里的文件请谨慎热更.global.oo是不能热更的
 
-local require_ext = require_ex or require
+require "global.oo" -- 这个文件优先级最高，必须在require之前,绝对不要热更到
+require "global.require"
 
-require_ext "global.global" -- 这个文件是基础文件，但可以热更的
-require "global.oo"
-require_ex "global.table"
-require_ex "global.string"
-
-require_ex "modules.system.define"
+-- 引用一起基础文件，但可以热更的。其他逻辑初始化时可能会用到这些库
+require "global.global"
+require "global.table"
+require "global.string"
+require "modules.system.define"
 
 g_unique_id = require "modules.system.unique_id"

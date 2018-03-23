@@ -214,12 +214,12 @@ function oo.hot_fix( log_func )
     log_func = log_func or print
 
     for k,_ in pairs( class_list ) do
-        require_ex( k )
+        require( k )
         log_func( "hot fix " .. k )
     end
 
     for k,_ in pairs( const_define ) do
-        require_ex( k )
+        require( k )
         log_func( "hot fix " .. k )
     end
 end

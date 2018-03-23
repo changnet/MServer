@@ -6,8 +6,8 @@ local sc_map = {}
 local cs_map = {}
 
 -- 使用ex来保证被热更
-local ss_list  = require_ex "proto.ss_command"
-local cmd_list = require_ex "proto.proto"
+local ss_list  = require "proto.ss_command"
+local cmd_list = require "proto.proto"
 
 -- 协议使用太频繁，放到全局变量
 -- 使用时只需要一个指令值就可以了，没必要暴露一个table给用户

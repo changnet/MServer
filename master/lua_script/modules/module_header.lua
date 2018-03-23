@@ -3,7 +3,7 @@
 
 -- 非global对象不要放这里，应该由对应模块的入口文件xx_cmd引用。
 
-E = require_ex "modules.system.error"
+E = require "modules.system.error"
 
 g_conn_mgr    = require "network.conn_mgr"
 g_timer_mgr   = require "timer.timer_mgr"
@@ -38,6 +38,6 @@ if "world" == Main.srvname then
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
 
--- 加载指令注册入口(用require_ex保证热更)
+-- 加载指令注册入口(用require保证热更)
 -- 需要在global对象创建后才加载，因为部分模块依赖global对象
-require_ex "command/command_header"
+require "command/command_header"
