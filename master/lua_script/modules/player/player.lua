@@ -16,11 +16,13 @@ local Auto_id = require "modules.system.auto_id"
 5. 定时器    :on_timer
 ]]
 
+local Base = require "modules.player.base"
 local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 
 local sub_module = 
 {
+    { name = "base",new = Base },
     { name = "chat",new = Chat },
     { name = "misc",new = Misc },
 }
@@ -106,6 +108,7 @@ function Player:module_db_load( sync_db )
     end
 
     self:on_login()
+    self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 
     return true
 end

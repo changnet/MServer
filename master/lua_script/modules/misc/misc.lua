@@ -4,11 +4,11 @@
 
 -- 处理一些杂七杂八的小功能，存储他们的数据
 
-local Base_module = require "modules.player.base_module"
-local Misc = oo.class( Base_module,... )
+local Module = require "modules.player.module"
+local Misc = oo.class( Module,... )
 
 function Misc:__init( pid,player )
-    Base_module.__init( self,pid,player )
+    Module.__init( self,pid,player )
     self.root = {}
     self.db_query = string.format( '{"_id":%d}',pid )
 end
@@ -35,14 +35,12 @@ end
 -- 玩家数据已加载完成，进入场景
 -- 必须返回操作结果
 function Misc:on_login()
-    self.root.login = ev:time()
     return true
 end
 
 -- 玩家退出游戏
 -- 必须返回操作结果，但这个结果不影响玩家数据存库
 function Misc:on_logout()
-    self.root.logout = ev:time()
     return true
 end
 

@@ -6,12 +6,12 @@
 
 local channel_func = {}
 local CHAT = require "modules.chat.chat_header"
-local Base_module = require "modules.player.base_module"
+local Module = require "modules.player.module"
 
-local Chat = oo.class( Base_module,... )
+local Chat = oo.class( Module,... )
 
 function Chat:__init( pid,player )
-    Base_module.__init( self,pid,player )
+    Module.__init( self,pid,player )
 end
 
 -- 处理聊天
