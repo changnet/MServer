@@ -45,30 +45,6 @@ function Unique_id:on_db_loaded( ecode,res )
     Main.one_wait_finish( "uniqueid_data",1 )
 end
 
--- 生成服务器session id
--- @name  服务器名称，如gateway、world...
--- @index 服务器索引，如多个gateway，分别为1,2...
--- @srvid 服务器id，与运维相关。开了第N个服
-function Unique_id:srv_session( name,index,srvid )
-    local ty = SRV_NAME[name]
-
-    assert( ty,"server name type not define" )
-    assert( index < (1 << 24),"server index out of boundry" )
-    assert( srvid < (1 << 16),   "server id out of boundry" )
-
-    -- int32 ,8bits is ty,8bits is index,16bits is srvid
-    return (ty << 24) + (index <<16) + srvid
-end
-
--- 解析session id
-function Unique_id:srv_session_parse( session )
-    local ty = session >> 24;
-    local index = (session >> 16) & 0xFF
-    local srvid = session & 0xFFFF
-
-    return ty,index,srvid
-end
-
 -- 产生一个标识socket连接的id
 -- 只是简单的自增，如果用完，则循环
 -- 调用此函数时请自己检测id是否重复，如果重复则重新取一个

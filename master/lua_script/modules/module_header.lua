@@ -3,8 +3,15 @@
 
 -- 非global对象不要放这里，应该由对应模块的入口文件xx_cmd引用。
 
+-- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
+require "global.global"
+require "global.table"
+require "global.string"
+require "modules.system.define"
+
 E = require "modules.system.error"
 
+g_unique_id   = require "modules.system.unique_id"
 g_conn_mgr    = require "network.conn_mgr"
 g_timer_mgr   = require "timer.timer_mgr"
 g_command_pre = require "command.command_pre"
