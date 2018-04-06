@@ -15,6 +15,11 @@ g_player_ev = require "event.player_event"
 
 require "android.android_cmd"
 
+-- 信号处理，默认情况下退出
+function sig_handler( signum )
+    ev:exit()
+end
+
 local App = oo.class( nil,... )
 
 -- 初始化
