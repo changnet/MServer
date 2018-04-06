@@ -42,7 +42,7 @@ function Unique_id:on_db_loaded( ecode,res )
         self.unique_seed[seed_id] = seed_map[seed_id] or 0
     end
 
-    Main.one_wait_finish( "uniqueid_data",1 )
+    g_app.one_initialized( "uniqueid_data",1 )
 end
 
 -- 产生一个标识socket连接的id

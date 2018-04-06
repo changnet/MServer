@@ -4,7 +4,7 @@ local SC = SC
 local CS = CS
 local SS = SS
 
-local SESSION = Main.session
+local SESSION = g_app.session
 
 local g_rpc   = g_rpc
 local g_network_mgr = g_network_mgr
@@ -29,10 +29,10 @@ end
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
     local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PLOG( "%s load protocol schema:%d",Main.srvname,fs )
+    PLOG( "%s load protocol schema:%d",g_app.srvname,fs )
 
     local fs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
-    PLOG( "%s load flatbuffers schema:%d",Main.srvname,fs )
+    PLOG( "%s load flatbuffers schema:%d",g_app.srvname,fs )
 end
 
 -- 注册客户端协议处理
@@ -159,7 +159,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
     for _,cmd in pairs( pkt.clt_cmd or {} ) do
         local _cfg = self.cs[cmd]
         assert( _cfg,"other_cmd_register no such clt cmd" )
-        if not Main.ok then -- 启动的时候检查一下，热更则覆盖
+        if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
             assert( _cfg,"other_cmd_register clt cmd register conflict" )
         end
 

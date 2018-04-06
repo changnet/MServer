@@ -47,6 +47,11 @@ function App:final_initialize()
     Application.final_initialize( self )
 end
 
+-- 重写关服接口
+function App:shutdown()
+    g_mongodb_mgr:stop() -- 关闭所有数据库链接
+end
+
 -- 帐号数据初始化
 function App:acc_initialize()
     g_account_mgr:db_load()

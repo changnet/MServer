@@ -13,8 +13,8 @@ end
 
 -- 声明一个rpc调用
 function Rpc:declare( method_name,func )
-    -- 在启动(Main.ok为false)时检测冲突，热更时覆盖
-    if not Main.ok and self.call[method_name] then
+    -- 在启动(g_app.ok为false)时检测冲突，热更时覆盖
+    if not g_app.ok and self.call[method_name] then
         return error(
             string.format( "rpc:conflicting declaration:%s",method_name ) )
     end
@@ -26,7 +26,7 @@ end
 
 -- 其他服务器注册rpc回调
 function Rpc:register( method_name,session )
-    if not Main.ok then -- 启动的时候检查一下，热更则覆盖
+    if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
         assert( nil == self.call[method_name],
             string.format( "rpc already exist:%s",method_name ) )
     end

@@ -45,12 +45,12 @@ local function x_rpc_test( ... )
 end
 
 -- 这里注册系统模块的协议处理
-if "gateway" == Main.srvname then
+if "gateway" == g_app.srvname then
     account_mgr_clt_cb( CS.PLAYER_LOGIN,g_account_mgr.player_login,true )
     account_mgr_clt_cb( CS.PLAYER_CREATE,g_account_mgr.create_role,true )
 end
 
-if "world" == Main.srvname then
+if "world" == g_app.srvname then
     g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
     player_mgr_clt_cb( CS.PLAYER_ENTER,g_player_mgr.on_enter_world )
 

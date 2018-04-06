@@ -32,7 +32,7 @@ end
 -- 对于CS、SS数据包，在注册时设置,因为要记录sesseion，实现自动转发
 -- SC数据包只能全部设置
 for _,v in pairs( cmd_list[1] ) do
-    network_mgr:set_sc_cmd( v[1],v[2],v[3],0,Main.session )
+    network_mgr:set_sc_cmd( v[1],v[2],v[3],0,g_app.session )
 end
 
 local Command_pre = oo.singleton( nil,... )

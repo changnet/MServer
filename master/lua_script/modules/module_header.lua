@@ -20,7 +20,7 @@ g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "command.command_mgr"
 
 -- 仅在gateway使用
-if "gateway" == Main.srvname then
+if "gateway" == g_app.srvname then
     g_setting     = require "gateway.setting"
     g_httpd       = require "http.httpd"
     g_account_mgr = require "modules.account.account_mgr"
@@ -34,7 +34,7 @@ if "gateway" == Main.srvname then
 end
 
 -- 仅在world使用
-if "world" == Main.srvname then
+if "world" == g_app.srvname then
     g_setting     = require "world.setting"
     g_player_mgr  = require "modules.player.player_mgr"
 

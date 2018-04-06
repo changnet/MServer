@@ -8,8 +8,8 @@ local Clt_conn      = require "network.clt_conn"
 local network_mgr = network_mgr
 local Network_mgr = oo.singleton( nil,... )
 
-local gateway_session = g_unique_id:srv_session( 
-    "gateway",tonumber(Main.srvindex),tonumber(Main.srvid) )
+local gateway_session = g_app:srv_session( 
+    "gateway",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
 
 function Network_mgr:__init()
     self.srv = {}  -- session为key，连接对象为value
@@ -25,10 +25,10 @@ function Network_mgr:__init()
 
     self.srv_waiting = {} -- 等待重连的服务器连接
 
-    local index = tonumber( Main.srvindex )
-    local srvid = tonumber( Main.srvid )
+    local index = tonumber( g_app.srvindex )
+    local srvid = tonumber( g_app.srvid )
     for name,_ in pairs( SRV_NAME ) do
-        self.name_srv[name] = g_unique_id:srv_session( name,index,srvid )
+        self.name_srv[name] = g_app:srv_session( name,index,srvid )
     end
 
     self.timer = g_timer_mgr:new_timer( self,10,5 )
@@ -41,7 +41,7 @@ function Network_mgr:srv_listen( ip,port )
     self.srv_listen_conn = Srv_conn()
     self.srv_listen_conn:listen( ip,port )
 
-    PLOG( "%s listen for server at %s:%d",Main.srvname,ip,port )
+    PLOG( "%s listen for server at %s:%d",g_app.srvname,ip,port )
     return true
 end
 
@@ -50,7 +50,7 @@ function Network_mgr:clt_listen( ip,port )
     self.clt_listen_conn = Clt_conn()
     self.clt_listen_conn:listen( ip,port )
 
-    PLOG( "%s listen for client at %s:%d",Main.srvname,ip,port )
+    PLOG( "%s listen for client at %s:%d",g_app.srvname,ip,port )
     return true
 end
 
@@ -91,10 +91,10 @@ function Network_mgr:srv_register( conn,pkt )
         return false
     end
 
-    local ty,index,srvid = g_unique_id:srv_session_parse( pkt.session )
-    if srvid ~= tonumber(Main.srvid) then
+    local ty,index,srvid = g_app:srv_session_parse( pkt.session )
+    if srvid ~= tonumber(g_app.srvid) then
         ELOG( "Network_mgr:srv_register srvid not match,expect %s,got %d",
-            Main.srvid,srvid )
+            g_app.srvid,srvid )
         return
     end
 

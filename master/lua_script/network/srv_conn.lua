@@ -58,7 +58,7 @@ function Srv_conn:conn_name( session )
     if 0 == session then return "unauthorized" end
 
     local ty,index,srvid = 
-        g_unique_id:srv_session_parse( session or self.session )
+        g_app:srv_session_parse( session or self.session )
 
     return string.format( "%s(I%d.S%d)",self.name,index,srvid )
 end
@@ -155,8 +155,8 @@ end
 function Srv_conn:send_register()
     local pkt =
     {
-        name    = Main.srvname,
-        session = Main.session,
+        name    = g_app.srvname,
+        session = g_app.session,
         timestamp = ev:time(),
     }
     pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )

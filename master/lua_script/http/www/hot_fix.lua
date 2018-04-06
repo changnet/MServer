@@ -76,7 +76,7 @@ function Hot_fix:exec( conn,fields,body )
     local tbl = json.decode( body )
 
     -- 这个http请求总是在gateway收到的
-    local local_name = Main.srvname
+    local local_name = g_app.srvname
     self:fix( tbl[local_name],tbl.schema )
 
     -- 热更其他服务器
