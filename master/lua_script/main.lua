@@ -9,6 +9,8 @@ require "global.require"
 
 require "global.global" -- 这个要放require后面，它除了一个测试用的函数是可以热更的
 
+math.randomseed( ev:time() )
+
 local function main( command,srvname,srvindex,srvid,... )
     local App = require( string.format( "%s.app",srvname ) )
 

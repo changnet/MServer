@@ -61,16 +61,20 @@ function Application:module_initialize()
 end
 
 -- 设置初始化后续动作
-function Application:set_initialize( name,after,action )
-    self.init_list[name] = {after = after,action = action }
+-- val：数量，比如说可能需要等待多个场景服务器连接
+function Application:set_initialize( name,after,action,val )
+    self.init_list[name] = {after = after,action = action,val = val or 1 }
 end
 
 -- 一个初始化完成
 function Application:one_initialized( name,val )
-    if not self.init_list[name] then return end
+    local init = self.init_list[name]
+    if not init then
+        return ELOG( "unknow initialize action:%s",name )
+    end
 
-    self.init_list[name] = self.init_list[name] - (val or 1)
-    if self.init_list[name] <= 0 then
+    init.val = init.val - (val or 1)
+    if init.val <= 0 then
         self.init_list[name] = nil
         PLOG( "%s initialize OK",name )
 

@@ -46,6 +46,7 @@ function shell()
     $MONGO -u$1 -p$2 --port 27013 $3
 }
 
+# ./mongo.sh new_db xzc 1
 function new_db()
 {
     $MONGO -u$1 -p$2 --port 27013 admin < ../other/mongo_new.ms

@@ -14,7 +14,7 @@ SC,CS = cmd[1],cmd[2]
 
 local util = require "util"
 require "modules.system.define"
-local Android = oo.refer( "android.android" )
+local Android = require "android.android"
 
 local network_mgr = network_mgr
 local Android_mgr = oo.singleton( nil,... )
@@ -44,8 +44,8 @@ function Android_mgr:init_cs_command( list )
 end
 
 function Android_mgr:start()
-    local srvindex = tonumber(Main.srvindex) -- 平台
-    local srvid = tonumber(Main.srvid) -- 服务器
+    local srvindex = tonumber(g_app.srvindex) -- 平台
+    local srvid = tonumber(g_app.srvid) -- 服务器
     for index = 1,1 do
         local conn_id = 
             network_mgr:connect( "127.0.0.1",10002,network_mgr.CNT_CSCN )

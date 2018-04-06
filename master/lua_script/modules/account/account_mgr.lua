@@ -229,7 +229,7 @@ function Account_mgr:on_db_loaded( ecode,res )
         self.account[sid][plat][account] = role_info
     end
 
-    g_app.one_initialized( "acc_data",1 )
+    g_app:one_initialized( "acc_data",1 )
 end
 
 local g_account_mgr = Account_mgr()

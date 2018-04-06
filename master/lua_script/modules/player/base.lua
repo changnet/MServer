@@ -4,7 +4,7 @@
 
 -- 玩家存库基础数据模块
 
-local Module = require "modules.player.Module"
+local Module = require "modules.player.module"
 
 local Base = oo.class( Module,... )
 
@@ -31,7 +31,7 @@ function Module:db_load( sync_db )
     if not res then return end -- 新号，空数据
     
     self.root = res[1] -- find函数返回的是一个数组
-    vd( self.root )
+
     return true
 end
 

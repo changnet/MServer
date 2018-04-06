@@ -34,7 +34,6 @@ function re_require()
     __require_list__ = {}
 
     -- 重新加载入口文件
-    require "modules/module_pre_header"
-    require "modules/module_header"
+    g_app:module_initialize()
 end
 

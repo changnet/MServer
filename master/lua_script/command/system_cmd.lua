@@ -15,8 +15,6 @@ local function srv_reg( srv_conn,pkt )
     srv_conn:send_pkt( SS.SYS_SYNC_DONE,{} )
 
     PLOG( "%s register succes",srv_conn:conn_name() )
-
-    g_app.one_initialized( pkt.name,1 )
 end
 
 -- 同步对方指令数据
@@ -26,7 +24,7 @@ end
 
 -- 对方服务器数据同步完成
 local function srv_sync_done( srv_conn,pkt )
-    g_app.one_initialized( srv_conn:base_name(),1 )
+    g_app:one_initialized( srv_conn:base_name(),1 )
 end
 
 -- 心跳包
