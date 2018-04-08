@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <command>0x03</command>
+    <comment>杂七杂八的功能</comment>
+    <module>misc</module>
+    <subobjects/>
+</root>

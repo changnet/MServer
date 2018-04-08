@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <command>0x01</command>
+    <comment>玩家相关</comment>
+    <module>player</module>
+    <subobjects>
+        <subobject>
+            <client>Login</client>
+            <command>0x01</command>
+            <comment>登录</comment>
+            <field>LOGIN</field>
+            <server>Login</server>
+        </subobject>
+        <subobject>
+            <client>Ping</client>
+            <command>0x02</command>
+            <comment>心跳</comment>
+            <field>PING</field>
+            <server>Ping</server>
+        </subobject>
+        <subobject>
+            <client>CreateRole</client>
+            <command>0x03</command>
+            <comment>创建角色</comment>
+            <field>CREATE</field>
+            <server>CreateRole</server>
+        </subobject>
+        <subobject>
+            <client>EnterWorld</client>
+            <command>0x04</command>
+            <comment>进入游戏</comment>
+            <field>ENTER</field>
+            <server>EnterWorld</server>
+        </subobject>
+        <subobject>
+            <client></client>
+            <command>0x05</command>
+            <comment>同号抢登</comment>
+            <field>OTHER</field>
+            <server>LoginOtherWhere</server>
+        </subobject>
+    </subobjects>
+</root>

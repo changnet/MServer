@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <command>0x02</command>
+    <comment>背包相关</comment>
+    <module>bag</module>
+    <subobjects/>
+</root>

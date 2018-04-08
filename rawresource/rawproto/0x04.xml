@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <command>0x04</command>
+    <comment>聊天</comment>
+    <module>chat</module>
+    <subobjects>
+        <subobject>
+            <client></client>
+            <command>0x01</command>
+            <comment>禁言</comment>
+            <field>CHATINFO</field>
+            <server>ChatInfo</server>
+        </subobject>
+        <subobject>
+            <client>DoChat</client>
+            <command>0x02</command>
+            <comment>聊天</comment>
+            <field>DOCHAT</field>
+            <server>DoChat</server>
+        </subobject>
+    </subobjects>
+</root>
