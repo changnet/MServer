@@ -20,8 +20,6 @@ private:
     ~lstate();
 
     void open_cpp();
-    void set_c_path();
-    void set_lua_path();
 
     lua_State *L;
     static class lstate *_state;

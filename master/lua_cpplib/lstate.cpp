@@ -69,67 +69,8 @@ int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
 int32 luaopen_network_mgr( lua_State *L );
 
-void lstate::set_lua_path()
-{
-    /* 得到绝对工作路径,getcwd无法获取自启动程序的正确工作路径 */
-    char cwd[PATH_MAX] = {0};
-    if ( getcwd( cwd,PATH_MAX ) <= 0 )
-    {
-        ERROR( "get current working directory fail\n" );
-        exit( 1 );
-    }
-
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "path");
-    const char *old_path = lua_tostring(L, -1);
-
-    char new_path[PATH_MAX] = {0};
-    if ( snprintf( new_path,PATH_MAX,"%s;%s/lua_script/?.lua",old_path,cwd ) >= PATH_MAX )
-    {
-        ERROR( "lua init,lua path overflow\n" );
-        lua_close( L );
-        exit( 1 );
-    }
-
-    lua_pop(L, 1);    /* drop old path field */
-    lua_pushstring(L, new_path);
-    lua_setfield(L, -2, "path");
-    lua_pop(L, 1);   /* drop package table */
-}
-
-void lstate::set_c_path()
-{
-    char cwd[PATH_MAX] = {0};
-    if ( getcwd( cwd,PATH_MAX ) <= 0 )
-    {
-        ERROR( "get current working directory fail\n" );
-        exit( 1 );
-    }
-
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "cpath");
-    const char *old_path = lua_tostring(L, -1);
-
-    char new_path[PATH_MAX] = {0};
-    if ( snprintf( new_path,PATH_MAX,"%s;%s/c_module/?.so",old_path,cwd ) >= PATH_MAX )
-    {
-        ERROR( "lua init,c path overflow\n" );
-        lua_close( L );
-        exit( 1 );
-    }
-
-    lua_pop(L, 1);    /* drop old path field */
-    lua_pushstring(L, new_path);
-    lua_setfield(L, -2, "cpath");
-    lua_pop(L, 1);   /* drop package table */
-}
-
 void lstate::open_cpp()
 {
-    /* 把当前工作目录加到lua的path */
-    set_c_path();
-    set_lua_path();
-
     /* ============================库方式调用================================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     LUA_LIB_OPEN("util", luaopen_util);

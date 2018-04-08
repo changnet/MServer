@@ -4,6 +4,11 @@
 
 -- 进程入口文件
 
+-- 设置lua文件搜索路径
+package.path = "./lua_script/?.lua;" .. package.path
+-- 设置c库搜索路径
+package.cpath = "./c_module/?.so;" .. package.cpath
+
 require "global.oo"
 require "global.require"
 
