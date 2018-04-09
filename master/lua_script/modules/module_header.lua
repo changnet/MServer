@@ -14,10 +14,10 @@ E = require "modules.system.error"
 g_unique_id   = require "modules.system.unique_id"
 g_conn_mgr    = require "network.conn_mgr"
 g_timer_mgr   = require "timer.timer_mgr"
--- g_command_pre = require "modules.command.command_pre"
 g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "modules.command.command_mgr"
+g_re          = require "modules.res.res"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then
