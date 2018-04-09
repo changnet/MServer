@@ -11,7 +11,7 @@ require "global.table"
 g_timer_mgr   = require "timer.timer_mgr"
 g_android_mgr = require "android.android_mgr"
 g_ai_mgr = require "modules.ai.ai_mgr"
-g_player_ev = require "event.player_event"
+g_player_ev = require "modules.event.player_event"
 
 require "android.android_cmd"
 

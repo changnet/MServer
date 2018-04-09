@@ -1,24 +1,58 @@
 -- 消息管理
 
+local ss_map = {}
+local sc_map = {}
+local cs_map = {}
+
+local ss_list  = require "proto.ss_command"
+local cmd_list = require "proto.proto"
+
+-- 协议使用太频繁，放到全局变量，方便调用
+SS = {}
+for k,v in pairs( ss_list ) do
+    -- 使用时只需要一个值就可以了，没必要传一个table
+    -- PLAYER.LOGIN是一个值而不是一个table
+    SS[k] = v[1]
+    ss_map[ v[1] ] = v
+end
+
+SC = {}
+for k,v in pairs( cmd_list[1] ) do
+    SC[k] = v[1]
+    sc_map[ v[1] ] = v
+end
+
+CS = {}
+for k,v in pairs( cmd_list[2] ) do
+    CS[k] = v[1]
+    cs_map[ v[1] ] = v
+end
+
 local SC = SC
 local CS = CS
 local SS = SS
+
+local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
+-- 对于CS、SS数据包，因为要实现现自动转发，在注册回调时设置,因为要记录sesseion
+-- SC数据包则需要在各个进程设置到C++，这样就能在所有进程发协议给客户端
+for _,v in pairs( cmd_list[1] ) do
+    network_mgr:set_sc_cmd( v[1],v[2],v[3],0,0 )
+end
 
 local SESSION = g_app.session
 
 local g_rpc   = g_rpc
 local g_network_mgr = g_network_mgr
 
-local network_mgr = network_mgr
 local Command_mgr = oo.singleton( nil,... )
 
 function Command_mgr:__init()
-    self.ss = {}
+    self.ss = {} -- 记录服务器之间回调函数
     for _,v in pairs( SS ) do
         self.ss[ v ] = {}
     end
 
-    self.cs = {}
+    self.cs = {} -- 记录客户端-服务器之间的回调函数
     for _,v in pairs( CS ) do
         self.cs[ v ] = {}
     end
@@ -46,7 +80,7 @@ function Command_mgr:clt_register( cmd,handler,noauth )
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 
-    local raw_cfg = g_command_pre:get_cs_cmd( cmd )
+    local raw_cfg = cs_map[cmd]
     network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
 end
 
@@ -64,7 +98,7 @@ function Command_mgr:srv_register( cmd,handler,noreg,noauth )
     cfg.noauth   = noauth
     cfg.noreg    = noreg
 
-    local raw_cfg = g_command_pre:get_ss_cmd( cmd )
+    local raw_cfg = ss_map[cmd]
     network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
 end
 
@@ -164,7 +198,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
         end
 
         _cfg.session = session
-        local raw_cfg = g_command_pre:get_cs_cmd( cmd )
+        local raw_cfg = cs_map[cmd]
         network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,session )
     end
 
@@ -175,7 +209,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
         assert( _cfg,"other_cmd_register srv cmd register conflict" )
 
         _cfg.session = session
-        local raw_cfg = g_command_pre:get_ss_cmd( cmd )
+        local raw_cfg = ss_map[cmd]
         network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,session )
     end
 

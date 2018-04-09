@@ -14,10 +14,10 @@ E = require "modules.system.error"
 g_unique_id   = require "modules.system.unique_id"
 g_conn_mgr    = require "network.conn_mgr"
 g_timer_mgr   = require "timer.timer_mgr"
-g_command_pre = require "command.command_pre"
+-- g_command_pre = require "modules.command.command_pre"
 g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"
-g_command_mgr = require "command.command_mgr"
+g_command_mgr = require "modules.command.command_mgr"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then
@@ -42,6 +42,24 @@ if "world" == g_app.srvname then
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
 
+-- =============================================================================
+-- =============================================================================
+-- =============================================================================
+-- ====================================指令注册入口==============================
+-- =============================================================================
+-- =============================================================================
+
 -- 加载指令注册入口
 -- 需要在global对象创建后才加载，因为部分模块依赖global对象
-require "command/command_header"
+-- 公用
+require "modules.system.system_cmd" -- 系统模块
+require "modules.player.player_cmd" -- 玩家基础模块
+
+-- 仅在gateway使用
+if "gateway" == g_app.srvname then
+end
+
+-- 仅在world使用
+if "world" == g_app.srvname then
+    require "modules.chat.chat_cmd" -- 聊天
+end
