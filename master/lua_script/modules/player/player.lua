@@ -146,9 +146,25 @@ function Player:on_logout()
     end
 end
 
+-- 获取对应的模块
+-- @name:模块名，参考sub_module
+function Player:get_module( name )
+    return self[name]
+end
+
 -- 获取通用的存库数据
 function Player:get_misc_var( key )
     return self.misc:get_var( key )
+end
+
+-- 获取元宝数量
+function Player:get_gold()
+    return self.base_root.gold
+end
+
+-- 增加、扣除元宝
+function Player:add_gold( count,op,sub_op )
+    self.base_root.gold = self.base_root.gold + count
 end
 
 return Player

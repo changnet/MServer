@@ -17,7 +17,8 @@ g_timer_mgr   = require "timer.timer_mgr"
 g_rpc         = require "rpc.rpc"
 g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "modules.command.command_mgr"
-g_re          = require "modules.res.res"
+g_res         = require "modules.res.res"
+g_gm          = require "modules.system.gm"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then

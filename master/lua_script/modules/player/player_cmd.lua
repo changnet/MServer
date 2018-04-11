@@ -6,6 +6,7 @@ local SC = SC
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 local g_player_mgr  = g_player_mgr
+local Player = require "modules.player.player"
 
 local function player_ping( srv_conn,pid,pkt )
     srv_conn:send_clt_pkt( pid,SC.PLAYER_PING,pkt )
@@ -60,3 +61,5 @@ if "world" == g_app.srvname then
     g_rpc:declare("rpc_test",rpc_test)
     g_rpc:declare("x_rpc_test",x_rpc_test)
 end
+
+g_res:reg_player_res( RES.GOLD,Player.get_gold,Player.add_gold,Player.add_gold )
