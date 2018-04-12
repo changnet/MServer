@@ -11,6 +11,7 @@ return
         { ip = "127.0.0.1",port = 10001 }, -- gateway
     },
 
+    gm = true, -- 是否启用gm
     mongo_ip = "127.0.0.1", -- mongodb ip
     mongo_port = "27013", -- mongodb 端口
     mongo_db = "test_999", -- 需要连接的数据库

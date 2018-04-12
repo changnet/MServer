@@ -62,6 +62,7 @@ function Ai.on_ping( entity,ecode,pkt )
     if ping_finish == ping_cnt then
         PLOG( "android finish ping,%d entity recv %d package,time %d",
                             ping_cnt,ping_idx,ev:time() - ping_start )
+        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@hf" } )
     end
 
     if ping_idx > PING_MAX*ping_cnt then
@@ -71,7 +72,7 @@ end
 
 -- 聊天回调
 function Ai.on_chat( entity,ecode,pkt )
-    PLOG( "chat: %d say %s",pkt.pid,pkt.context )
+    -- PLOG( "chat: %d say %s",pkt.pid,pkt.context )
 end
 
 g_player_ev:register( PLAYER_EV_ENTER,Ai.on_enter_world )

@@ -29,3 +29,19 @@ string.split = function (str, delimiter,plain)
 
     return sub_str_tab
 end
+
+string.start_with = function(str,ch)
+    for idx = 1,string.len(ch) do
+        if string.byte(ch,idx) ~= string.byte(str,idx) then return false end
+    end
+
+    return true
+end
+
+string.end_with = function(str,ch)
+    for idx = 1,string.len(ch) do
+        if string.byte(ch,-idx) ~= string.byte(str,-idx) then return false end
+    end
+
+    return true
+end

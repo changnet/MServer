@@ -13,13 +13,21 @@ function sig_handler( signum )
     ev:exit()
 end
 
-local function main()
+local App = oo.class( nil,... )
+
+-- 初始化
+function App:__init( ... )
+    self.command,self.srvname,self.srvindex,self.srvid = ...
+end
+
+-- 重写关服接口
+function App:exec()
     ev:signal( 2 );
     ev:signal( 15 );
 
     -- require "example.code_performance"
     -- require "example.mt_performance"
-    require "example.mongo_performance"
+    -- require "example.mongo_performance"
     -- require "example.mysql_performance"
     -- require "example.log_performance"
     -- require "example.https_performance"
@@ -27,8 +35,11 @@ local function main()
     -- require "example.websocket_performance"
     -- require "example.words_filter_performance"
 
+    vd( string.split("@level 999 aaa"," ") )
+
     vd( obj_counter.dump() )
     ev:backend()
 end
 
-xpcall( main, __G__TRACKBACK__ )
+return App
+
