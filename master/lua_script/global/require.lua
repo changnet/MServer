@@ -21,8 +21,8 @@ function require( path )
     return raw_require(path)
 end
 
--- 重新加载脚本
-function re_require()
+-- 清除加载的脚本
+function unrequire()
     -- 先把所有文件都销毁，因为我们不知道文件里的引用关系。避免一个重新加载的文件引用
     -- 了另一个还没重新加载的文件数据
     for path in pairs( __require_list__ ) do
@@ -32,8 +32,5 @@ function re_require()
     -- 清空旧文件记录
     -- 不要尝试直接require __require_list__中的文件，因为有些文件可能删除了
     __require_list__ = {}
-
-    -- 重新加载入口文件
-    g_app:module_initialize()
 end
 

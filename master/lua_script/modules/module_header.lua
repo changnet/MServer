@@ -7,8 +7,9 @@
 require "global.global"
 require "global.table"
 require "global.string"
-require "modules.system.define"
 
+require "modules.system.define"
+require "modules.system.hot_fix"
 E = require "modules.system.error"
 
 g_unique_id   = require "modules.system.unique_id"

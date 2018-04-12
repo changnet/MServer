@@ -59,7 +59,11 @@ local Application = oo.class( nil,... )
 #define SIGSYS		31	/* Bad system call.  */
 #define SIGUNUSED	31
 ]]
+local sig_action = {} -- 注意，这个热更要重新注册。关服的话为默认action则无所谓
 function sig_handler( signum )
+    if sig_action[signum] then return sig_action[signum]() end
+
+    -- 默认关服
     g_app:shutdown()
     ev:exit()
 end
@@ -99,6 +103,12 @@ function Application:srv_session_parse( session )
     local srvid = session & 0xFFFF
 
     return ty,index,srvid
+end
+
+-- 信号处理
+function Application:reg_sig_action( signum,action )
+    ev:signal( signum )
+    sig_action[signum] = action
 end
 
 -- 关服处理
@@ -152,8 +162,8 @@ end
 
 -- 运行进程
 function Application:exec()
-    ev:signal( 2  )
-    ev:signal( 15 )
+    self:reg_sig_action( 2 )
+    self:reg_sig_action( 15 )
 
     self:initialize()
 

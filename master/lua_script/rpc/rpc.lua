@@ -8,7 +8,6 @@ local Rpc = oo.singleton( nil,... )
 function Rpc:__init()
     self.call = {}
     self.seed = 1
-    self.modify = false -- 热更变动标识
 end
 
 -- 声明一个rpc调用
@@ -19,7 +18,6 @@ function Rpc:declare( method_name,func )
             string.format( "rpc:conflicting declaration:%s",method_name ) )
     end
 
-    self.modify = true
     self.call[method_name] = {}
     self.call[method_name].func = func
 end

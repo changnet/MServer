@@ -4,6 +4,8 @@
 
 .vscode
 
+setting.lua
+
 master/bin
 master/cruntimelog
 master/cerrorlog*
