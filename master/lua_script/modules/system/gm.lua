@@ -52,8 +52,10 @@ function GM:hfs()
     hot_fix_script()
 end
 
-local gm = GM()
+function GM:ghf()
+    global_hot_fix()
+end
 
-gm:reg_cmd( "hf",GM.hot_fix )
+local gm = GM()
 
 return gm

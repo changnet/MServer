@@ -45,6 +45,12 @@ local function hot_fix( srv_conn,pkt )
     -- srv_conn:send_pkt( SS_SYS_HOT_FIX,)
 end
 
+local function rpc_gm( context )
+    g_gm:exec( nil,context )
+end
+
+g_rpc:declare( "rpc_gm",rpc_gm,-1 )
+
 -- 这里注册系统模块的协议处理
 g_command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true )
 g_command_mgr:srv_register( SS.SYS_HOT_FIX,hot_fix,true )

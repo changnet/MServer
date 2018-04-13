@@ -28,6 +28,7 @@ function Ai.execute( entity )
     if 0 == ping_start then
         PLOG( "android ping start" )
         ping_start = ev:time()
+        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@ghf" } )
     end
 
     for index = 1,PING_ONE_TIME do Ai_action.ping( entity ) end
@@ -62,7 +63,6 @@ function Ai.on_ping( entity,ecode,pkt )
     if ping_finish == ping_cnt then
         PLOG( "android finish ping,%d entity recv %d package,time %d",
                             ping_cnt,ping_idx,ev:time() - ping_start )
-        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@hf" } )
     end
 
     if ping_idx > PING_MAX*ping_cnt then

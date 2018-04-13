@@ -168,20 +168,14 @@ function Network_mgr:get_conn( conn_id )
     return self.clt_conn[conn_id] or self.srv_conn[conn_id]
 end
 
--- 根据服务器名字发送
-function Network_mgr:srv_name_send( name,cmd,pkt,ecode )
+-- 根据服务器名字获取连接
+function Network_mgr:get_conn_by_name( name )
     local session = self.name_srv[name]
     if not session then
         return error( "no such server:" .. name )
     end
 
-    local srv_conn = self.srv[session]
-    if not srv_conn then
-        ELOG( "srv_send no conn found:%d",cmd )
-        return
-    end
-
-    srv_conn:send_pkt( cmd,pkt,ecode )
+    return self.srv[session]
 end
 
 -- 主动关闭服务器链接
