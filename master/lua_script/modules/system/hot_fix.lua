@@ -57,7 +57,7 @@ function global_hot_fix()
         if g_app.srvname ~= srvname then
             local srv_conn = g_network_mgr:get_conn_by_name( srvname )
             if srv_conn then
-                g_rpc:call( srv_conn,"rpc_gm","hf" )
+                g_rpc:call( srv_conn,"rpc_gm","ghf",nil,"hf" )
             end
         end
     end

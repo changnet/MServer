@@ -1,26 +1,39 @@
 -- http deamon
 
 local page404 = 
-[[
-HTTP/1.1 404 Not Found
-Content-Length: 0
-Content-Type: text/html
-Server: Mini-Game-Distribute-Server/1.0
-Connection: close
-]]
+{
+    'HTTP/1.1 404 Not Found\r\n',
+    'Content-Length: 0\r\n',
+    'Content-Type: text/html\r\n',
+    'Server: Mini-Game-Distribute-Server/1.0\r\n',
+    'Connection: close\r\n\r\n'
+}
+page404 = table.concat( page404 )
 
 local page500 = 
-[[
-HTTP/1.1 500 Not Found
-Content-Length: 0
-Content-Type: text/html
-Server: Mini-Game-Distribute-Server/1.0
-Connection: close
-]]
+{
+    'HTTP/1.1 500 Internal server error\r\n',
+    'Content-Length: 0\r\n',
+    'Content-Type: text/html\r\n',
+    'Server: Mini-Game-Distribute-Server/1.0\r\n',
+    'Connection: close\r\n\r\n'
+}
+page500 = table.concat( page500 )
+
+local page200 = 
+{
+    'HTTP/1.1 200 OK\r\n',
+    'Content-Length: %d\r\n',
+    'Content-Type: text/html\r\n',
+    'Server: Mini-Game-Distribute-Server/1.0\r\n',
+    'Connection: close\r\n\r\n%s'
+}
+page200 = table.concat( page200 )
 
 local network_mgr = network_mgr
 local uri = require "global.uri"
 
+require "http.http_header"
 local Httpd_conn = require "http.httpd_conn"
 
 local Httpd = oo.singleton( nil,... )
@@ -41,9 +54,9 @@ function Httpd:http_listen( ip,port )
 end
 
 -- http调用
-function Httpd:do_exec( conn,path,fields,body )
+function Httpd:do_exec( path,fields,body )
     local exec_obj = require( path )
-    return exec_obj:exec( conn,fields,body )
+    return exec_obj:exec( fields,body )
 end
 
 function Httpd:conn_accept( new_conn_id )
@@ -71,6 +84,18 @@ function Httpd:conn_close( conn )
     conn:close()
 end
 
+-- 格式化错误码为json格式
+function Httpd:format_error( code )
+    return string.format( '{"code":%d,"msg":%s',code[1],code[2] )
+end
+
+-- 格式化http-200返回
+function Httpd:format_200( code )
+    local ctx = self:format_error( code )
+
+    return string.format( page200,string.len(ctx),ctx )
+end
+
 -- http回调
 function Httpd:do_command( conn,url,body )
     -- url = /platform/pay?sid=99&money=200
@@ -95,12 +120,18 @@ function Httpd:do_command( conn,url,body )
         self.exec[raw_url] = path
     end
 
-    local success = xpcall( 
-        Httpd.do_exec, __G__TRACKBACK__,httpd,conn,path,fields,body )
-    if not success then
+    local success,code,ctx = xpcall( 
+        Httpd.do_exec, __G__TRACKBACK__,httpd,path,fields,body )
+    if not success then -- 发生语法错误
         conn:send_pkt( page500 )
 
-        return self:conn_close( conn )
+        return --self:conn_close( conn,true )
+    else
+        if ctx then -- 任何情况下，只要返回了内容，则发送内容
+            conn:send_pkt( ctx )
+        else -- 如果只是返回了一个错误码，则转换成对应错误信息
+            conn:send_pkt( self:format_200( code ) )
+        end
     end
 end
 

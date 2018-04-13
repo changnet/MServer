@@ -45,8 +45,9 @@ local function hot_fix( srv_conn,pkt )
     -- srv_conn:send_pkt( SS_SYS_HOT_FIX,)
 end
 
-local function rpc_gm( context )
-    g_gm:exec( "rpc_gm",nil,context )
+-- 其他服务器通过rpc调用gm
+local function rpc_gm( where,pid,context )
+    g_gm:raw_exec( where,pid,context )
 end
 
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )

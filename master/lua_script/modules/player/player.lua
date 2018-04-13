@@ -47,6 +47,11 @@ function Player:__init( pid )
     g_timer_mgr:start_timer( self.timer )
 end
 
+-- 获取玩家id
+function Player:get_pid()
+    return self.pid
+end
+
 -- 发送数据包到客户端
 function Player:send_pkt( cmd,pkt,ecode )
     local srv_conn = g_network_mgr:get_gateway_conn()
