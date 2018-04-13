@@ -81,7 +81,7 @@ end
 -- 主动断开连接
 function Httpd:conn_close( conn )
     self.conn[conn.conn_id] = nil
-    conn:close()
+    conn:close( true ) -- 默认情况下，http要及时发送数据
 end
 
 -- 格式化错误码为json格式
@@ -124,8 +124,6 @@ function Httpd:do_command( conn,url,body )
         Httpd.do_exec, __G__TRACKBACK__,httpd,path,fields,body )
     if not success then -- 发生语法错误
         conn:send_pkt( page500 )
-
-        return --self:conn_close( conn,true )
     else
         if ctx then -- 任何情况下，只要返回了内容，则发送内容
             conn:send_pkt( ctx )
@@ -133,6 +131,8 @@ function Httpd:do_command( conn,url,body )
             conn:send_pkt( self:format_200( code ) )
         end
     end
+    
+    self:conn_close( conn )
 end
 
 local httpd = Httpd()

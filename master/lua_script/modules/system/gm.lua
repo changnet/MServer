@@ -28,7 +28,7 @@ function GM:exec( where,player,context )
     if self:auto_forward( where,player,cmd,context ) then
         return true
     end
-vd( args )
+
     return self:raw_exec( where,player,table.unpack( args ) )
 end
 

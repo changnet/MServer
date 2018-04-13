@@ -22,9 +22,9 @@ function Httpd_conn:send_pkt( pkt )
     return network_mgr:send_raw_packet( self.conn_id,pkt )
 end
 
-function Httpd_conn:close()
+function Httpd_conn:close( flush )
     g_conn_mgr:set_conn( self.conn_id,nil )
-    return network_mgr:close( self.conn_id )
+    return network_mgr:close( self.conn_id,flush )
 end
 
 return Httpd_conn
