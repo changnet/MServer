@@ -127,7 +127,7 @@ function Player:on_login()
     end
 
     self:send_pkt( SC.PLAYER_ENTER,{} )
-    PLOG( "player enter,pid = %d",self.pid )
+    PFLOG( "player enter,pid = %d",self.pid )
 
     return true
 end

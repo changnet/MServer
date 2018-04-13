@@ -136,7 +136,7 @@ function Application:one_initialized( name,val )
     init.val = init.val - (val or 1)
     if init.val <= 0 then
         self.init_list[name] = nil
-        PLOG( "%s initialize OK",name )
+        PFLOG( "%s initialize OK",name )
 
         for _,init in pairs( self.init_list ) do
             if init.after == name then init.action( self ) end
@@ -157,7 +157,7 @@ end
 -- 初始化完成
 function Application:final_initialize()
     self.ok = true
-    PLOG( "%s server(0x%.8X) start OK",self.srvname,self.session )
+    PFLOG( "%s server(0x%.8X) start OK",self.srvname,self.session )
 end
 
 -- 运行进程

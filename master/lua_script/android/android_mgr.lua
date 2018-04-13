@@ -25,7 +25,7 @@ function Android_mgr:__init()
     self.android = {}
 
     local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PLOG( "android load protocol schema:%d",fs )
+    PFLOG( "android load protocol schema:%d",fs )
     for _,v in pairs( SC or {} ) do
         self.cmd[ v[1] ] = v
     end
@@ -62,7 +62,7 @@ end
 function Android_mgr:cmd_register( cmd_cfg,handler )
     local cfg = self.cmd[cmd_cfg[1]]
     if not cfg then
-        PLOG( "Android_mgr:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
+        PFLOG( "Android_mgr:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
         return
     end
 
@@ -104,7 +104,7 @@ function conn_new( conn_id,ecode )
     network_mgr:send_raw_packet( 
         conn_id,string.format(handshake_clt,sec_websocket_key) )
 
-    PLOG( "android(%d) connect establish",android.index)
+    PFLOG( "android(%d) connect establish",android.index)
 
     -- 握手完成之前不要发数据，因为发送的模式不对，是以http发送的
 end

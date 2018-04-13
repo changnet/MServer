@@ -60,7 +60,7 @@ end
 
 -- 断开连接
 function Android:on_die()
-    PLOG( "android die " .. self.index )
+    PFLOG( "android die " .. self.index )
 end
 
 -- 登录返回
@@ -81,7 +81,7 @@ end
 -- 创角返回
 function Android:on_create_role( errno,pkt )
     if 0 ~= errno then
-        PLOG( "android_%d unable to create role",self.index )
+        PFLOG( "android_%d unable to create role",self.index )
         return
     end
 
@@ -90,7 +90,7 @@ function Android:on_create_role( errno,pkt )
 
     self:enter_world()
 
-    PLOG( "android_%d create role success,pid = %d,name = %s",
+    PFLOG( "android_%d create role success,pid = %d,name = %s",
         self.index,self.pid,self.name )
 end
 
@@ -101,13 +101,13 @@ end
 
 -- 确认进入游戏完成
 function Android:on_enter_world( errno,pkt )
-    PLOG( "%s enter world success",self.name )
+    PFLOG( "%s enter world success",self.name )
     g_player_ev:fire_event( PLAYER_EV_ENTER,self )
 end
 
 -- 被顶号
 function Android:on_login_otherwhere( errno,pkt )
-    PLOG( "%s login other where",self.name )
+    PFLOG( "%s login other where",self.name )
 end
 
 return Android

@@ -28,7 +28,7 @@ function Mongodb:do_timer()
     self.timer = nil
 
     if 0 == ok then
-        PLOG( "mongo db connect error" )
+        PFLOG( "mongo db connect error" )
         return
     end
 

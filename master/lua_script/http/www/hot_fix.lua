@@ -20,7 +20,7 @@ local Hot_fix = oo.singleton( nil,... )
 -- 热更单个文件
 function Hot_fix:fix_one( path )
     require( path )
-    PLOG( "hot fix %s",path )
+    PFLOG( "hot fix %s",path )
 end
 
 -- 热更协议
@@ -65,7 +65,7 @@ function Hot_fix:fix( list,schema )
 
     local nsec, nusec = util.timeofday()
     local msec = (nsec - sec)*1000000 + nusec - usec
-    PLOG( "hot fix finish,time elapsed %d microsecond",msec ) -- 微秒
+    PFLOG( "hot fix finish,time elapsed %d microsecond",msec ) -- 微秒
 end
 
 --[[

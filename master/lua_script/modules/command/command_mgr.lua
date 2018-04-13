@@ -61,10 +61,10 @@ end
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
     local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PLOG( "%s load protocol schema:%d",g_app.srvname,fs )
+    PFLOG( "%s load protocol schema:%d",g_app.srvname,fs )
 
     local fs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
-    PLOG( "%s load flatbuffers schema:%d",g_app.srvname,fs )
+    PFLOG( "%s load flatbuffers schema:%d",g_app.srvname,fs )
 end
 
 -- 注册客户端协议处理
@@ -214,7 +214,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
         g_rpc:register( cmd,session )
     end
 
-    PLOG( "register cmd from %s",srv_conn:conn_name() )
+    PFLOG( "register cmd from %s",srv_conn:conn_name() )
 
     return true
 end

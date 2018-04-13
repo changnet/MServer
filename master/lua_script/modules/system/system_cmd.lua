@@ -14,7 +14,7 @@ local function srv_reg( srv_conn,pkt )
     srv_conn:send_pkt( SS.SYS_CMD_SYNC,_pkt )
     srv_conn:send_pkt( SS.SYS_SYNC_DONE,{} )
 
-    PLOG( "%s register succes",srv_conn:conn_name() )
+    PFLOG( "%s register succes",srv_conn:conn_name() )
 end
 
 -- 同步对方指令数据
@@ -46,7 +46,7 @@ local function hot_fix( srv_conn,pkt )
 end
 
 local function rpc_gm( context )
-    g_gm:exec( nil,context )
+    g_gm:exec( "rpc_gm",nil,context )
 end
 
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )

@@ -36,6 +36,7 @@ function App:exec()
     -- require "example.words_filter_performance"
 
     vd( string.split("@level 999 aaa"," ") )
+    PLOG( {123,"ee"},"abc",123,456)
 
     vd( obj_counter.dump() )
     ev:backend()

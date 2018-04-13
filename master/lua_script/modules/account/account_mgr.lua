@@ -73,7 +73,7 @@ function Account_mgr:player_login( clt_conn,pkt )
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
     clt_conn:send_pkt( SC.PLAYER_LOGIN,role_info )
 
-    PLOG( "client authorized success:%s--%d",pkt.account,role_info.pid or 0 )
+    PFLOG( "client authorized success:%s--%d",pkt.account,role_info.pid or 0 )
 end
 
 -- 创角
@@ -149,7 +149,7 @@ end
 function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
     if 0 ~= ecode then -- 失败
         self:send_role_create( role_info,E.UNDEFINE )
-        PLOG( "create role error:%s",acc_info.account )
+        PFLOG( "create role error:%s",acc_info.account )
         return
     end
 
@@ -157,7 +157,7 @@ function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
     local pid = acc_info._id
     role_info.pid  = pid
     role_info.name = acc_info.name
-    PLOG( "create role success:%s--%d",role_info.account,pid )
+    PFLOG( "create role success:%s--%d",role_info.account,pid )
 
     -- 玩家可能断线了，这个clt_conn就不存在了
     local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
@@ -213,7 +213,7 @@ end
 -- db数据加载
 function Account_mgr:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        PLOG( "account db load error" )
+        PFLOG( "account db load error" )
         return
     end
 

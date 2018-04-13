@@ -41,7 +41,7 @@ function Network_mgr:srv_listen( ip,port )
     self.srv_listen_conn = Srv_conn()
     self.srv_listen_conn:listen( ip,port )
 
-    PLOG( "%s listen for server at %s:%d",g_app.srvname,ip,port )
+    PFLOG( "%s listen for server at %s:%d",g_app.srvname,ip,port )
     return true
 end
 
@@ -50,7 +50,7 @@ function Network_mgr:clt_listen( ip,port )
     self.clt_listen_conn = Clt_conn()
     self.clt_listen_conn:listen( ip,port )
 
-    PLOG( "%s listen for client at %s:%d",g_app.srvname,ip,port )
+    PFLOG( "%s listen for client at %s:%d",g_app.srvname,ip,port )
     return true
 end
 
@@ -63,7 +63,7 @@ function Network_mgr:connect_srv( srvs )
         local conn_id = conn:connect( srv.ip,srv.port )
 
         self.srv_conn[conn_id] = conn
-        PLOG( "server connect to %s:%d",srv.ip,srv.port )
+        PFLOG( "server connect to %s:%d",srv.ip,srv.port )
     end
 end
 
@@ -72,7 +72,7 @@ function Network_mgr:reconnect_srv( conn )
     local conn_id = conn:reconnect()
 
     self.srv_conn[conn_id] = conn
-    PLOG( "server reconnect to %s:%d",conn.ip,conn.port )
+    PFLOG( "server reconnect to %s:%d",conn.ip,conn.port )
 end
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
@@ -115,7 +115,7 @@ function Network_mgr:check_one_timeout( srv_conn,check_time )
 
     local ts = srv_conn:check( check_time )
     if ts > SRV_ALIVE_TIMES then
-        PLOG( "%s server timeout",srv_conn:conn_name() )
+        PFLOG( "%s server timeout",srv_conn:conn_name() )
 
         self:close_srv_conn( srv_conn )
         if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
@@ -220,7 +220,7 @@ end
 function Network_mgr:srv_conn_accept( conn_id,conn )
     self.srv_conn[conn_id] = conn
 
-    PLOG( "accept server connection:%d",conn_id )
+    PFLOG( "accept server connection:%d",conn_id )
 
     conn:send_register()
 end
@@ -229,21 +229,21 @@ end
 function Network_mgr:clt_conn_accept( conn_id,conn )
     self.clt_conn[conn_id] = conn
 
-    PLOG( "accept client connection:%d",conn_id )
+    PFLOG( "accept client connection:%d",conn_id )
 end
 
 -- 服务器之间连接成功
 function Network_mgr:srv_conn_new( conn_id,ecode )
     local conn = self.srv_conn[conn_id]
     if 0 ~= ecode then
-        PLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
+        PFLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
         self.srv_conn[conn_id] = nil
 
         if conn.auto_conn then self.srv_waiting[conn] = 1 end
         return
     end
 
-    PLOG( "server connect (%d) establish",conn_id)
+    PFLOG( "server connect (%d) establish",conn_id)
 
     conn:send_register()
 end
@@ -255,7 +255,7 @@ function Network_mgr:srv_conn_del( conn_id )
     if conn.session then self.srv[conn.session] = nil end
     self.srv_conn[conn_id] = nil
 
-    PLOG( "%s connect del",conn:conn_name() )
+    PFLOG( "%s connect del",conn:conn_name() )
 
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then self.srv_waiting[conn] = 1 end
@@ -275,7 +275,7 @@ function Network_mgr:clt_conn_del( conn_id )
         g_network_mgr:srv_multicast( SS.PLAYER_OFFLINE,pkt )
     end
 
-    PLOG( "client connect del:%d",conn_id )
+    PFLOG( "client connect del:%d",conn_id )
 end
 
 -- 此函数必须返回一个value为玩家id的table

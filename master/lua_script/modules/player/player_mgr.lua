@@ -23,7 +23,7 @@ function Player_mgr:on_enter_world( clt_conn,pid,pkt )
     self.player[pid] = player
     if not player:db_load() then return end
 
-    PLOG( "player login,pid = %d",pid )
+    PFLOG( "player login,pid = %d",pid )
 end
 
 -- 玩家离线
@@ -34,12 +34,12 @@ function Player_mgr:on_player_offline( srv_conn,pkt )
     player:on_logout()
 
     self.player[pid] = nil
-    PLOG( "player offline,pid = %d",pid )
+    PFLOG( "player offline,pid = %d",pid )
 end
 
 -- 顶号
 function Player_mgr:on_login_otherwhere( srv_conn,pkt )
-    PLOG( "player login other where,pid = %d",pkt.pid )
+    PFLOG( "player login other where,pid = %d",pkt.pid )
 end
 
 

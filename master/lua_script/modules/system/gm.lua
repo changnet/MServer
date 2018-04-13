@@ -17,13 +17,14 @@ function GM:chat_gm( player,context )
     local args = string.split(context," ")
     args[1] = string.sub( args[1],2 ) -- 去掉@
 
-    self:exec( player,table.unpack( args ) )
+    self:exec( "chat",player,table.unpack( args ) )
 
     return true
 end
 
 -- gm指令运行入口（注意Player对象可能为nil，因为有可能从http接口调用gm）
-function GM:exec( player,cmd,... )
+function GM:exec( where,player,cmd,... )
+    PLOG( "exec gm:",where,cmd,... )
     -- 优先查找注册过来的gm指令
     local gm_func = gm_map[cmd]
     if gm_func then
@@ -36,7 +37,7 @@ function GM:exec( player,cmd,... )
         return gm_func( self,player,... )
     end
 
-    return PLOG( "try to call gm:%s,no such gm",cmd )
+    return PFLOG( "try to call gm:%s,no such gm",cmd )
 end
 
 -- 注册gm指令

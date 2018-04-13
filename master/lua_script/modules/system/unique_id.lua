@@ -28,7 +28,7 @@ end
 
 function Unique_id:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        PLOG( "account db load error" )
+        PFLOG( "account db load error" )
         return
     end
 

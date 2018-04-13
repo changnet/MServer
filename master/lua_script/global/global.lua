@@ -80,13 +80,18 @@ function __G__TRACKBACK__( msg,co )
 end
 
 --只打印不写入文件
-function PLOG( fmt,... )
+function PFLOG( fmt,... )
     -- 默认为c方式的print字符串格式化打印方式
     if "string" == type( fmt ) then
         print( "[LINFO  " .. time_str() .. "]" .. string.format( fmt,... ) )
     else
         print( "[LINFO  " .. time_str() .. "]",fmt,... )
     end
+end
+
+-- 只打印，不格式化
+function PLOG( any,... )
+    print( "[LINFO  " .. time_str() .. "]" .. tostring(any),... )
 end
 
 --错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
