@@ -105,7 +105,7 @@ function Httpd:do_command( conn,url,body )
     if not path then
         -- 限定http请求的路径，不能随意运行其他路径文件
         -- 也不要随意放其他文件到此路径
-        path = "lua_script/http/www" .. raw_url
+        path = "lua_src/http/www" .. raw_url
         local exec_file = io.open( path .. ".lua","r" )
 
         if not exec_file then
