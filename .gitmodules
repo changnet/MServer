@@ -1,24 +1,24 @@
 [submodule "master/deps/lua_parson"]
-	path = master/deps/lua_parson
+	path = master/cpp_src/deps/lua_parson
 	url = http://github.com/changnet/lua_parson.git
 [submodule "master/deps/lua_flatbuffers"]
-	path = master/deps/lua_flatbuffers
+	path = master/cpp_src/deps/lua_flatbuffers
 	url = http://github.com/changnet/lua_flatbuffers.git
 [submodule "master/deps/lua_rapidxml"]
-	path = master/deps/lua_rapidxml
+	path = master/cpp_src/deps/lua_rapidxml
 	url = http://github.com/changnet/lua_rapidxml.git
 [submodule "master/deps/aho-corasick"]
-	path = master/deps/aho-corasick
+	path = master/cpp_src/deps/aho-corasick
 	url = http://github.com/changnet/aho-corasick.git
 [submodule "master/deps/http-parser"]
-	path = master/deps/http-parser
+	path = master/cpp_src/deps/http-parser
 	url = http://github.com/changnet/http-parser.git
 [submodule "master/deps/lua_bson"]
-	path = master/deps/lua_bson
+	path = master/cpp_src/deps/lua_bson
 	url = http://github.com/changnet/lua_bson.git
 [submodule "master/deps/pbc"]
-	path = master/deps/pbc
+	path = master/cpp_src/deps/pbc
 	url = https://github.com/changnet/pbc.git
 [submodule "master/deps/websocket-parser"]
-	path = master/deps/websocket-parser
+	path = master/cpp_src/deps/websocket-parser
 	url = https://github.com/changnet/websocket-parser

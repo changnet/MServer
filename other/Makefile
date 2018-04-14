@@ -38,7 +38,7 @@ STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
 	-lmongoc-1.0 -lbson-1.0 -lsasl2 -lssl -lcrypto -lwebsocket_parser
 
 #output directory
-ODIR = bin
+ODIR = ../bin
 
 TARGET = $(ODIR)/master
 
