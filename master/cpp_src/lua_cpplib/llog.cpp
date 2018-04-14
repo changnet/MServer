@@ -1,4 +1,5 @@
 #include "llog.h"
+#include "../global/clog.h"
 #include "../lua_cpplib/leventloop.h"
 
 llog::llog( lua_State *L )
@@ -119,4 +120,23 @@ int32 llog::mkdir_p( lua_State *L )
     }
     
     return 1;
+}
+
+// 用于实现stdout、文件双向输出日志打印函数
+int32 llog::plog( lua_State *L )
+{
+    return 0;
+}
+
+// 用于实现stdout、文件双向输出日志打印函数
+int32 llog::elog( lua_State *L )
+{
+    return 0;
+}
+
+// 设置日志参数
+int32 llog::set_args( lua_State *L )
+{
+    is_daemon = true;
+    return 0;
 }

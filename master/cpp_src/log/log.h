@@ -7,6 +7,7 @@
 
 #include "../global/global.h"
 
+// 一个log文件类，不同的文件名归为一个不同的log_file
 class log_file
 {
 public:

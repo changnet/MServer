@@ -35,42 +35,31 @@
 #define expect_true(cond)  __builtin_expect (!!(cond),1)
 
 #ifdef _PFILETIME_
-    #define PFILETIME(f)                                             \
+    #define PFILETIME(f,prefix)                                      \
     do{                                                              \
         ::time_t rawtime;                                            \
         ::time( &rawtime );                                          \
         struct tm *ntm = ::localtime( &rawtime );                    \
-        fprintf(stderr, "[%s %02d-%02d %02d:%02d:%02d]",             \
-            f,(ntm->tm_mon + 1), ntm->tm_mday,                       \
+        fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]",                   \
+            prefix,(ntm->tm_mon + 1), ntm->tm_mday,                  \
             ntm->tm_hour, ntm->tm_min,ntm->tm_sec);                  \
     }while(0)
 #else
     #define PFILETIME(f)
 #endif
 
-#ifdef _PDEBUG_
-    #define PDEBUG(...)    \
-        do{fprintf( stderr,__VA_ARGS__ );fprintf( stderr,"\n" );}while(0)
+#ifdef _PRINTF_
+    #define PRINTF(...)    \
+        do{PFILETIME(stdout,"CP");\
+            fprintf( stdout,__VA_ARGS__ );fprintf( stdout,"\n" );}while(0)
 #else
-    #define PDEBUG(...)
-#endif
-
-#ifdef _LDEBUG_
-    #define LDEBUG(...)    cdebug_log( __VA_ARGS__ )
-#else
-    #define LDEBUG(...)
-#endif
-
-#ifdef _DEBUG_
-    #define DEBUG(...)    do{PDEBUG(__VA_ARGS__);LDEBUG(__VA_ARGS__);}while(0)
-#else
-    #define DEBUG(...)
+    #define PRINTF(...)
 #endif
 
 #ifdef _ERROR_
     #define ERROR(...)         \
-        do{PFILETIME("CERROR");\
-        PDEBUG(__VA_ARGS__);cerror_log( __VA_ARGS__ );}while(0)
+        do{PFILETIME(stderr,"CE");fprintf( stderr,__VA_ARGS__ );\
+        fprintf( stderr,"\n" );cerror_log( __VA_ARGS__ );}while(0)
 #else
     #define ERROR(...)
 #endif

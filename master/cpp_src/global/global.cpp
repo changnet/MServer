@@ -76,7 +76,7 @@ void back_trace(void)
 
 void onexit()
 {
-    PDEBUG( "new counter:%d    ----   new[] counter:%d",g_counter,g_counters );
+    PRINTF( "new counter:%d    ----   new[] counter:%d",g_counter,g_counters );
     //back_trace();
 }
 

@@ -1,16 +1,17 @@
 #include "clog.h"
 #include "global.h"
 
+bool is_daemon = false;
 static time_t log_tm = time(0);      /* process start timestamp */
 
 /* win下不能创建带:的文件,故时间_分开 */
-const char *debug_file( )
+const char *printf_file( )
 {
     static char file[PATH_MAX];
 
     struct tm* tminfo = localtime( &log_tm );
 
-    snprintf( file,PATH_MAX,"%s[%d]%04d-%02d-%02d#%02d_%02d_%02d",CDEBUG_FILE,
+    snprintf( file,PATH_MAX,"%s[%d]%04d-%02d-%02d#%02d_%02d_%02d",CRUNTIME_FILE,
         getpid(),tminfo->tm_year + 1900,tminfo->tm_mon + 1, tminfo->tm_mday,
         tminfo->tm_hour, tminfo->tm_min,tminfo->tm_sec);
 
@@ -32,7 +33,7 @@ const char *error_file( )
 
 void cdebug_log( const char *format,... )
 {
-    static const char *pfile = debug_file();
+    static const char *pfile = printf_file();
 
     time_t rawtime;
     time( &rawtime );
