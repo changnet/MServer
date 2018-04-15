@@ -103,7 +103,7 @@ bool llog::cleanup()
         }
     }
     unlock();
-    
+
     return true;
 }
 
@@ -125,12 +125,20 @@ int32 llog::mkdir_p( lua_State *L )
 // 用于实现stdout、文件双向输出日志打印函数
 int32 llog::plog( lua_State *L )
 {
+    const char *ctx = luaL_checkstring( L,1 );
+    // 这里要注意，不用%s，cprintf_log( "LP",ctx )这样直接调用也是可以的。但是如果脚本传
+    // 入的字符串带特殊符号，如%，则可能会出错
+    cprintf_log( "LP","%s",ctx );
+
     return 0;
 }
 
 // 用于实现stdout、文件双向输出日志打印函数
 int32 llog::elog( lua_State *L )
 {
+    const char *ctx = luaL_checkstring( L,1 );
+    cerror_log( "LE","%s",ctx );
+
     return 0;
 }
 

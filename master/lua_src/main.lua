@@ -36,7 +36,8 @@ local function main( command,srvname,srvindex,srvid,... )
 
     -- win下文件名不支持特殊字符的，比如：
     local epath = string.format( "log/%s_error",srvname )
-    local ppath = string.format( "log/%s#%d-%d-%d#%d_%d_%d",
+    local ppath = string.format( 
+        "log/%s#%04d-%02d-%02d#%02d_%02d_%02d",
         srvname,tm.year,tm.month,tm.day,tm.hour,tm.min,tm.sec )
     Log.set_args( deamon,ppath,epath )
 

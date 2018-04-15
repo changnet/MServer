@@ -53,19 +53,19 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
         ::fclose( pf );                                            \
     }while(0)
 
-void cerror_log( const char *fmt,... )
+void cerror_log( const char *prefix,const char *fmt,... )
 {
-    RAW_FORMAT( "CE",error_path,(is_daemon ? NULL : stderr),fmt );
+    RAW_FORMAT( prefix,error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
-void cprintf_log( const char *fmt,... )
+void cprintf_log( const char *prefix,const char *fmt,... )
 {
     // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR
     if ( expect_false(!printf_path[0]) )
     {
-        RAW_FORMAT( "CE",error_path,(is_daemon ? NULL : stderr),fmt );
+        RAW_FORMAT( prefix,error_path,(is_daemon ? NULL : stderr),fmt );
         return;
     }
 
-    RAW_FORMAT( "CP",printf_path,(is_daemon ? NULL : stdout),fmt );
+    RAW_FORMAT( prefix,printf_path,(is_daemon ? NULL : stdout),fmt );
 }

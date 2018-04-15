@@ -4,6 +4,7 @@
 
 --常用的全局函数
 
+local Log = require "Log"
 local util = require "util"
 
 local function to_readable( val )
@@ -54,58 +55,40 @@ function vd(data, max_level)
     recursion = {}  --释放内存
 end
 
--- 时间字符串。用的不是ev:now()，故只能用于错误打印，不能用于游戏逻辑
-local function time_str()
-    return os.date("%m-%d %H:%M:%S", os.time())
-end
-
-local function write_log_file( file,log )
-    local file = io.open( file,"a+" )
-
-    -- 无写入权限...
-    if not file then return end
-
-    file:write( log )
-    file:write( "\r\n" )
-    file:close()
-end
-
 function __G__TRACKBACK__( msg,co )
     local stack_trace = debug.traceback( co )
-    local info_table = { "[LCRASH ",time_str(),"]",tostring(msg),"\n",stack_trace }
+    local info_table = { tostring(msg),"\n",stack_trace }
     local str = table.concat( info_table )
 
-    print( str )
-    write_log_file( "lua_crash.txt",str )
+    Log.elog( str )
 end
 
---只打印不写入文件
-function PFLOG( fmt,... )
-    -- 默认为c方式的print字符串格式化打印方式
-    if "string" == type( fmt ) then
-        print( "[LINFO  " .. time_str() .. "]" .. string.format( fmt,... ) )
-    else
-        print( "[LINFO  " .. time_str() .. "]",fmt,... )
-    end
-end
-
--- 只打印，不格式化
+-- print log,只打印，不格式化
 function PLOG( any,... )
-    print( "[LINFO  " .. time_str() .. "]" .. tostring(any),... )
+    if not ( ... ) then return Log.plog( tostring(any) ) end
+
+    -- 如果有多个参数，则合并起来输出，类型Lua的print函数
+    Log.plog( table.concat( { any,... },"    " ) )
+end
+
+-- print format log,以第一个为format参数，格式化后面的参数
+function PFLOG( fmt,any,... )
+    -- 默认为c方式的print字符串格式化打印方式
+    if any and "string" == type( fmt ) then
+        Log.plog( string.format( fmt,any,... ) )
+    else
+        PLOG( fmt,any,... )
+    end
 end
 
 --错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function ELOG( fmt,... )
+function ELOG( fmt,any,... )
     local info_table = nil
-    if "string" == type( fmt ) then
-        info_table = { "[LERROR ",time_str(),"]",string.format( fmt,... ) }
-    else
-        info_table = { "[LERROR ",time_str(),"]",fmt,... }
+    if any and "string" == type( fmt ) then
+        return Log.elog( string.format( fmt,any,... ) )
     end
 
-    local ss = table.concat( info_table )
-    print(ss)
-    write_log_file( "lua_error.txt",ss )
+    Log.elog( table.concat( { fmt,any,... },"    " ) )
 end
 
 --测试时间,耗时打印

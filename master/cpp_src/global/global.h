@@ -35,13 +35,13 @@
 #define expect_true(cond)  __builtin_expect (!!(cond),1)
 
 #ifdef _PRINTF_
-    #define PRINTF(...) cprintf_log( __VA_ARGS__ )
+    #define PRINTF(...) cprintf_log( "CP",__VA_ARGS__ )
 #else
     #define PRINTF(...)
 #endif
 
 #ifdef _ERROR_
-    #define ERROR(...) cerror_log( __VA_ARGS__ )
+    #define ERROR(...) cerror_log( "CE",__VA_ARGS__ )
 #else
     #define ERROR(...)
 #endif

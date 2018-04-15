@@ -7,7 +7,7 @@
 // 方面不太好用。nohub方式不停服无法截断日志文件，查看日志也不太方便
 
 extern void set_log_args( bool dm,const char *ppath,const char *epath);
-extern void cerror_log( const char *fmt,... );
-extern void cprintf_log( const char *fmt,... );
+extern void cerror_log ( const char *prefix,const char *fmt,... );
+extern void cprintf_log( const char *prefix,const char *fmt,... );
 
 #endif  /* __CLOG_H__ */
