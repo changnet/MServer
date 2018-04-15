@@ -13,12 +13,6 @@
 /* write error log */
 #define _ERROR_
 
-/* runtime file name */
-#define CRUNTIME_FILE    "runtime"
-
-/* error log file name */
-#define CERROR_FILE    "error"
-
 /* lua enterance file */
 #define LUA_ENTERANCE    "main.lua"
 

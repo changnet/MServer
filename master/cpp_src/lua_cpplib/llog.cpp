@@ -137,6 +137,10 @@ int32 llog::elog( lua_State *L )
 // 设置日志参数
 int32 llog::set_args( lua_State *L )
 {
-    is_daemon = true;
+    bool dm = lua_toboolean( L,1 );
+    const char *ppath = luaL_checkstring( L,2 );
+    const char *epath = luaL_checkstring( L,3 );
+
+    set_log_args( dm,ppath,epath );
     return 0;
 }

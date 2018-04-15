@@ -1,139 +1,71 @@
 #include "clog.h"
 #include "global.h"
+#include "../lua_cpplib/leventloop.h"
 
-bool is_daemon = false;
-static time_t log_tm = time(0);      /* process start timestamp */
+static bool is_daemon = false;    /* 是否后台运行。后台运行则不输出日志到stdout */
+static char printf_path[PATH_MAX] = {0};
+// 防止上层应用来不及设置日志参数就发生错误，默认输出到工作目录error文件
+static char error_path[PATH_MAX]  = {'e','r','r','o','r'};
 
-/* win下不能创建带:的文件,故时间_分开 */
-const char *printf_file( )
+/* 设置日志参数：是否后台，日志路径 */
+void set_log_args( bool dm,const char *ppath,const char *epath)
 {
-    static char file[PATH_MAX];
-
-    struct tm* tminfo = localtime( &log_tm );
-
-    snprintf( file,PATH_MAX,"%s[%d]%04d-%02d-%02d#%02d_%02d_%02d",CRUNTIME_FILE,
-        getpid(),tminfo->tm_year + 1900,tminfo->tm_mon + 1, tminfo->tm_mday,
-        tminfo->tm_hour, tminfo->tm_min,tminfo->tm_sec);
-
-    return file;    /* return static pointer */
+    is_daemon = dm;
+    snprintf( printf_path,PATH_MAX,"%s",ppath );
+    snprintf( error_path ,PATH_MAX,"%s",epath );
 }
 
-const char *error_file( )
+#ifdef _PFILETIME_
+    #define PFILETIME(f,ntm,prefix)                                  \
+        do{                                                          \
+            fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]",               \
+                prefix,(ntm->tm_mon + 1), ntm->tm_mday,              \
+                ntm->tm_hour, ntm->tm_min,ntm->tm_sec);              \
+        }while(0)
+#else
+    #define PFILETIME(f)
+#endif
+
+#define FORMAT_TO_FILE(f)                                           \
+    do{                                                             \
+        va_list args;                                               \
+        va_start(args,fmt);                                         \
+        vfprintf(f,fmt,args);                                       \
+        va_end(args);                                               \
+        fprintf(f,"\n");                                            \
+    }while(0)
+
+// 这个本来想写成函数的，但是c++ 03不支持函数之间可变参传递
+// 要使用主循环的时间戳，不然服务器卡的时候会造成localtime时间与主循环时间戳不一致
+// 查找bug更麻烦
+#define RAW_FORMAT( prefix,path,screen,fmt )                       \
+    do{                                                            \
+        time_t tm = leventloop::instance()->now();                 \
+        struct tm *ntm = ::localtime( &tm );                       \
+        if ( screen ){                                             \
+            PFILETIME( screen,ntm,prefix );                        \
+            FORMAT_TO_FILE( screen );                              \
+        }                                                          \
+        FILE * pf = ::fopen( path, "ab+" );                        \
+        if ( !pf ) return;                                         \
+        PFILETIME( pf,ntm,prefix );                                \
+        FORMAT_TO_FILE( pf );                                      \
+        ::fclose( pf );                                            \
+    }while(0)
+
+void cerror_log( const char *fmt,... )
 {
-    static char file[PATH_MAX];
-
-    struct tm* tminfo = localtime( &log_tm );
-
-    snprintf( file,PATH_MAX,"%s[%d]%04d-%02d-%02d#%02d_%02d_%02d",CERROR_FILE,
-        getpid(),tminfo->tm_year + 1900,tminfo->tm_mon + 1, tminfo->tm_mday,
-        tminfo->tm_hour, tminfo->tm_min,tminfo->tm_sec);
-
-    return file;    /* return static pointer */
+    RAW_FORMAT( "CE",error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
-void cdebug_log( const char *format,... )
+void cprintf_log( const char *fmt,... )
 {
-    static const char *pfile = printf_file();
-
-    time_t rawtime;
-    time( &rawtime );
-    struct tm *ntm = localtime( &rawtime );
-
-    FILE * pf = fopen(pfile, "ab+");
-    if ( !pf )
+    // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR
+    if ( expect_false(!printf_path[0]) )
     {
-        perror("cdebug_log");
-        fprintf(stderr, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
-            (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
-             ntm->tm_sec);
-
-        va_list args;
-        va_start(args,format);
-        vfprintf(stderr,format,args);
-        va_end(args);
-
-        fprintf( stderr,"\n" );
-
+        RAW_FORMAT( "CE",error_path,(is_daemon ? NULL : stderr),fmt );
         return;
     }
 
-    fprintf(pf, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
-        (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
-         ntm->tm_sec);
-
-    va_list args;
-    va_start(args,format);
-    vfprintf(pf,format,args);
-    va_end(args);
-
-    fprintf( pf,"\n" );
-
-    fclose(pf);
-}
-
-void cerror_log( const char *format,... )
-{
-    static const char *pfile = error_file();
-
-    time_t rawtime;
-    time( &rawtime );
-    struct tm *ntm = localtime( &rawtime );
-
-    FILE * pf = fopen(pfile, "ab+");
-    if ( !pf )
-    {
-        perror("cerror_log");
-        fprintf(stderr, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
-            (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
-             ntm->tm_sec);
-
-        va_list args;
-        va_start(args,format);
-        vfprintf(stderr,format,args);
-        va_end(args);
-
-        fprintf( stderr,"\n" );
-
-        return;
-    }
-
-    fprintf(pf, "[%04d-%02d-%02d %02d:%02d:%02d] ",(ntm->tm_year + 1900),
-        (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,
-         ntm->tm_sec);
-
-    va_list args;
-    va_start(args,format);
-    vfprintf(pf,format,args);
-    va_end(args);
-
-    fprintf( pf,"\n" );
-
-    fclose(pf);
-}
-
-void clog( const char *path,const char *format,... )
-{
-    FILE * pf = fopen(path, "ab+");
-    if ( !pf )
-    {
-        perror("clog");
-
-        va_list args;
-        va_start(args,format);
-        vfprintf(stderr,format,args);
-        va_end(args);
-
-        fprintf( stderr,"\n" );
-
-        return;
-    }
-
-    va_list args;
-    va_start(args,format);
-    vfprintf(pf,format,args);
-    va_end(args);
-
-    fprintf( pf,"\n" );
-
-    fclose(pf);
+    RAW_FORMAT( "CP",printf_path,(is_daemon ? NULL : stdout),fmt );
 }

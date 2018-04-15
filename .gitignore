@@ -7,8 +7,7 @@
 setting.lua
 
 master/bin
-master/cruntimelog
-master/cerrorlog*
-master/cdebuglog*
-master/lua_crash.txt
-master/lua_error.txt
+master/error
+master/log
+master/runtime
+master/c_module

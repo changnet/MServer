@@ -386,12 +386,21 @@ static int32 base64( lua_State *L )
     return 1;
 }
 
+// 获取当前进程pid
+static int32 get_pid( lua_State *L )
+{
+    lua_pushinteger( L,::getpid() );
+
+    return 1;
+}
+
 static const luaL_Reg utillib[] =
 {
     {"md5", md5},
     {"uuid",uuid},
     {"sha1",sha1},
     {"base64",base64},
+    {"get_pid",get_pid},
     {"sha1_raw",sha1_raw},
     {"timeofday", timeofday},
     {"what_error",what_error},

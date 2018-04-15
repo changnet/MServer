@@ -34,32 +34,14 @@
 #define expect_false(cond) __builtin_expect (!!(cond),0)
 #define expect_true(cond)  __builtin_expect (!!(cond),1)
 
-#ifdef _PFILETIME_
-    #define PFILETIME(f,prefix)                                      \
-    do{                                                              \
-        ::time_t rawtime;                                            \
-        ::time( &rawtime );                                          \
-        struct tm *ntm = ::localtime( &rawtime );                    \
-        fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]",                   \
-            prefix,(ntm->tm_mon + 1), ntm->tm_mday,                  \
-            ntm->tm_hour, ntm->tm_min,ntm->tm_sec);                  \
-    }while(0)
-#else
-    #define PFILETIME(f)
-#endif
-
 #ifdef _PRINTF_
-    #define PRINTF(...)    \
-        do{PFILETIME(stdout,"CP");\
-            fprintf( stdout,__VA_ARGS__ );fprintf( stdout,"\n" );}while(0)
+    #define PRINTF(...) cprintf_log( __VA_ARGS__ )
 #else
     #define PRINTF(...)
 #endif
 
 #ifdef _ERROR_
-    #define ERROR(...)         \
-        do{PFILETIME(stderr,"CE");fprintf( stderr,__VA_ARGS__ );\
-        fprintf( stderr,"\n" );cerror_log( __VA_ARGS__ );}while(0)
+    #define ERROR(...) cerror_log( __VA_ARGS__ )
 #else
     #define ERROR(...)
 #endif
