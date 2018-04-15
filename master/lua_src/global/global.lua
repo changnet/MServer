@@ -67,7 +67,7 @@ end
 function PLOG( any,... )
     if not ( ... ) then return Log.plog( tostring(any) ) end
 
-    -- 如果有多个参数，则合并起来输出，类型Lua的print函数
+    -- 如果有多个参数，则合并起来输出，类似Lua的print函数
     Log.plog( table.concat( { any,... },"    " ) )
 end
 

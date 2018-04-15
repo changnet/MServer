@@ -34,13 +34,14 @@ local function main( command,srvname,srvindex,srvid,... )
     -- 如果你的服务器是分布式的，包含多个进程，则注意名字要区分开来
     local tm = time.ctime()
 
-    -- win下文件名不支持特殊字符的，比如：
+    -- win下文件名不支持特殊字符的，比如":"
     local epath = string.format( "log/%s_error",srvname )
     local ppath = string.format( 
         "log/%s#%04d-%02d-%02d#%02d_%02d_%02d",
         srvname,tm.year,tm.month,tm.day,tm.hour,tm.min,tm.sec )
     Log.set_args( deamon,ppath,epath )
 
+    PFLOG( "%s start ... ",srvname )
     local App = require( string.format( "%s.app",srvname ) )
 
     g_app = App( command,srvname,srvindex,srvid,... )
