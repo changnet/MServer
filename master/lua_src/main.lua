@@ -24,8 +24,8 @@ local function main( command,srvname,srvindex,srvid,... )
     Log.mkdir_p( "runtime" ) -- 创建运行时数据存储目录
 
     local deamon = false -- 是否后台模式
-    for _,args in pairs( ... or {} ) do
-        if args == "-deamon" then
+    for _,args in pairs( {...} ) do
+        if args == "-daemon" then
             deamon = true;break
         end
     end
