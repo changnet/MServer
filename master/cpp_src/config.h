@@ -32,9 +32,14 @@
 /* sql buffer chunk size */
 #define SQL_CHUNK    64
 
-/* log file config */
-#define LOG_MIN_CHUNK      64
+/* 单次写入的文件日志，不能超过这个值 */
 #define LOG_MAX_LENGTH     10240
+
+/* 缓存的日志数量大小 */
+#define LOG_MAX_COUNT 10240
+
+/* 日志文件超时秒数 */
+#define LOG_FILE_TIMEOUT 600
 
 /* count C++ object which push to lua */
 #define OBJ_COUNTER
