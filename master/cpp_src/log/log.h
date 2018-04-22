@@ -30,8 +30,10 @@ public:
     bool swap();
     void flush();
     void collect_mem();
+    bool flush_one_file();
     class log_one *allocate_one( size_t len );
     void deallocate_one( class log_one *one );
+    int32 flush_one_ctx( FILE *pf,const struct log_one *one );
 
     int32 write_cache( time_t tm,const char *path,const char *str,size_t len );
 private:

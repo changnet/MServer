@@ -19,8 +19,8 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
     #define PFILETIME(f,ntm,prefix)                                  \
         do{                                                          \
             fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]",               \
-                prefix,(ntm->tm_mon + 1), ntm->tm_mday,              \
-                ntm->tm_hour, ntm->tm_min,ntm->tm_sec);              \
+                prefix,(ntm.tm_mon + 1), ntm.tm_mday,                \
+                ntm.tm_hour, ntm.tm_min,ntm.tm_sec);                 \
         }while(0)
 #else
     #define PFILETIME(f)
@@ -41,7 +41,8 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
 #define RAW_FORMAT( prefix,path,screen,fmt )                       \
     do{                                                            \
         time_t tm = leventloop::instance()->now();                 \
-        struct tm *ntm = ::localtime( &tm );                       \
+        struct tm ntm;                                             \
+        ::localtime_r( &tm,&ntm );                                 \
         if ( screen ){                                             \
             PFILETIME( screen,ntm,prefix );                        \
             FORMAT_TO_FILE( screen );                              \
