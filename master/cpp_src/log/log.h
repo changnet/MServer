@@ -2,7 +2,7 @@
 #define __LOG_H__
 
 #include <map>
-#include <queue>
+#include <vector>
 
 #include "../global/global.h"
 
@@ -16,40 +16,28 @@ typedef enum
     LOG_MAX = 2
 }log_size_t;
 
-// 同一文件名日志类，避免同一文件多次打开、关闭
-class log_file
-{
-public:
-    log_file();
-    ~log_file();
-
-    void swap();
-    bool valid();
-    bool need_flush();
-    int32 flush( const char *path );
-    void push( const class log_one *one );
-private:
-    time_t _last_modify;  // 上一次修改的时间，如果太久没有写入日志，就需要清除
-
-    // 一个主线程写入队列，一个日志线程写入文件队列，互不干扰
-    std::queue<const class log_one *> *_queue;
-    std::queue<const class log_one *> *_flush;
-};
+// 单次写入的日志
+typedef std::vector< class log_one *> log_one_list_t;
 
 class log
 {
 public:
     static bool mkdir_p( const char *path );
 public:
-    void remove_empty();
+    log();
+    ~log();
+
+    bool swap();
+    void flush();
+    void collect_mem();
     class log_one *allocate_one( size_t len );
     void deallocate_one( class log_one *one );
 
-    class log_file *get_log_file( const char **path );
-    int32 write( time_t tm,const char *path,const char *str,size_t len );
+    int32 write_cache( time_t tm,const char *path,const char *str,size_t len );
 private:
-    std::map< std::string,class log_file > _file_map;
-    std::queue< class log_one *>[LOG_MAX+1] _mem_pool;
+    log_one_list_t *_cache;   // 主线程写入缓存队列
+    log_one_list_t *_flush;   // 日志线程写入文件队列
+    log_one_list_t _mem_pool[LOG_MAX+1];  // 内存池，防止内存频繁分配
 };
 
 #endif /* __LOG_H__ */

@@ -24,13 +24,15 @@ public:
     // 设置日志参数
     static int32 set_args( lua_State *L );
 private:
+    void do_routine();
+
+    // 线程相关，重写基类相关函数
     bool cleanup();
     void routine( notify_t msg );
     void notification( notify_t msg ) {}
 
     bool initlization() { return true; }
 private:
-    int32 _wts;
     class log _log;
 };
 

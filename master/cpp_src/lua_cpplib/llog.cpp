@@ -4,7 +4,6 @@
 
 llog::llog( lua_State *L )
 {
-    _wts = 0;
 }
 
 llog::~llog()
@@ -42,14 +41,14 @@ int32 llog::write( lua_State *L )
     }
     
     size_t len = 0;
-    const char *name = luaL_checkstring( L,1 );
-    const char *str  = luaL_checklstring( L,2,&len );
+    const char *path = luaL_checkstring( L,1 );
+    const char *ctx  = luaL_checklstring( L,2,&len );
 
-    class leventloop *ev = leventloop::instance();
-    
+    static class leventloop *ev = leventloop::instance();
+
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
-    _log.write( ev->now(),name,str,len );
+    _log.write_cache( ev->now(),path,ctx,len );
     unlock();
 
     return 0;
@@ -60,49 +59,30 @@ void llog::routine( notify_t msg )
     // none 是超时
     if ( NONE != msg ) return;
 
-    bool wfl = true;
-    while ( wfl )
-    {
-        wfl = false;
+}
 
-        lock();
-        class log_file *plf = _log.get_log_file( _wts );
-        unlock();
-
-        if ( plf )
-        {
-            plf->flush(); /* 写入磁盘 */
-            wfl = true;
-        }
-    }
-
-    /* 清理不必要的缓存 */
+// 线程逻辑
+void llog::do_routine()
+{
+    /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
     lock();
-    _log.remove_empty( _wts );
+    _log.swap();
     unlock();
 
-    ++_wts;
+    // 日志线程写入文件
+    _log.flush();
+
+    // 回收内存
+    lock();
+    _log.collect_mem();
+    unlock();
 }
 
 bool llog::cleanup()
 {
     /* 线程终止，所有日志入磁盘 */
-    /* 不应该再有新日志进来，可以全程锁定 */
-    ++_wts;
-    bool wfl = true;
-    
-    lock();
-    while ( wfl )
-    {
-        wfl = false;
-        class log_file *plf = _log.get_log_file( _wts );
-        if ( plf )
-        {
-            plf->flush(); /* 写入磁盘 */
-            wfl = true;
-        }
-    }
-    unlock();
+    /* 不应该再有新日志进来，如果有，则丢日志 */
+    do_routine();
 
     return true;
 }

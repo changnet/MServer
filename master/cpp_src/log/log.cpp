@@ -11,6 +11,7 @@ struct log_one
 public:
     time_t _tm;
     size_t _len;
+    char _path[PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
 
     virtual log_size_t get_type() = 0;
     virtual const char *get_ctx() = 0;
@@ -34,139 +35,89 @@ private:
     char _context[size];
 };
 
-log_file::log_file()
+// int32 log_file:flush_one( FILE *pf,const struct log_one *one )
+// {
+//     struct tm *ntm = localtime( one->_tm );
+//     int byte = fprintf( pf,
+//         "[%04d-%02d-%02d %02d:%02d:%02d]",(ntm->tm_year + 1900),
+//         (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec
+//     );
+
+//     if ( byte <= 0 )
+//     {
+//         ERROR( "log file write time error" );
+//         return -1;
+//     }
+
+//     size_t wbyte = fwrite( one->_context,1,one->_len,pf );
+//     if ( wbyte <= 0 )
+//     {
+//         ERROR( "log file write context error" );
+//         return -1;
+//     }
+
+//     /* 自动换行 */
+//     static const char * tail = "\n";
+//     size_t tbyte = fwrite( tail,1,strlen( tail ),pf );
+//     if ( tbyte <= 0 )
+//     {
+//         ERROR( "log file write context error" );
+//         return -1;
+//     }
+
+//     return 0;
+// }
+
+// // 写入缓存的日志到文件
+// int32 log_file::flush( const char *path )
+// {
+//     FILE * pf = fopen( path, "ab+" );
+//     if ( !pf )  /* 无法打开文件，尝试写入stderr */
+//     {
+//         ERROR( "can't open log file(%s):%s\n", path,strerror(errno) );
+
+//         return -1;
+//     }
+
+//     while( !_flush->empty() )
+//     {
+//         const struct log_one *one = _flush->front();
+//         // TODO:出错了，也没有办法啊，暂时缓存一下。
+//         if ( flush_one() < 0 ) break;
+
+//         _flush->pop();
+//     }
+
+//     fclose( pf );
+//     return 0;
+// }
+
+///////////////////////////////////////////////////////////////////////////////
+log::log()
 {
-    _last_modify = 0;
-    _queue = new std::queue<const class log_one *>;
-    _flush = new std::queue<const class log_one *>;
+    _cache = new log_one_list_t();
+    _flush = new log_one_list_t();
 }
 
-log_file::~log_file()
+log::~log()
 {
-    assert( "log file not flush yet",_queue->empty() && _flush->empty() );
+    assert( "log not flush",_cache->empty() && _flush->empty() );
 }
 
-void log_file::swap( int32 ts )
+// 交换缓存和待写入队列
+bool log::swap()
 {
-    if ( !_flush.empty() )
-    {
-        ERROR( "log file swap not empty" );
-        return false;
-    }
+    if (!_flush->empty() ) return false;
 
-    std::queue<const class log_one *> swap_tmp = _flush;
-
-    _flush = _queue;
-    _queue = swap_tmp;
-}
-
-void log_file::push( const class log_one *one )
-{
-    // 如果超过最大值，新来的就要丢日志了
-    if ( _queue.size() >= LOG_MAX_COUNT )
-    {
-        ERROR( "log file over max,abort" );
-        return;
-    }
-
-    _queue.push( one );
-}
-
-
-int32 log_file:flush_one( FILE *pf,const struct log_one *one )
-{
-    struct tm *ntm = localtime( one->_tm );
-    int byte = fprintf( pf,
-        "[%04d-%02d-%02d %02d:%02d:%02d]",(ntm->tm_year + 1900),
-        (ntm->tm_mon + 1), ntm->tm_mday, ntm->tm_hour, ntm->tm_min,ntm->tm_sec
-    );
-
-    if ( byte <= 0 )
-    {
-        ERROR( "log file write time error" );
-        return -1;
-    }
-
-    size_t wbyte = fwrite( one->_context,1,one->_len,pf );
-    if ( wbyte <= 0 )
-    {
-        ERROR( "log file write context error" );
-        return -1;
-    }
-
-    /* 自动换行 */
-    static const char * tail = "\n";
-    size_t tbyte = fwrite( tail,1,strlen( tail ),pf );
-    if ( tbyte <= 0 )
-    {
-        ERROR( "log file write context error" );
-        return -1;
-    }
-
-    return 0;
-}
-
-// 写入缓存的日志到文件
-int32 log_file::flush( const char *path )
-{
-    FILE * pf = fopen( path, "ab+" );
-    if ( !pf )  /* 无法打开文件，尝试写入stderr */
-    {
-        ERROR( "can't open log file(%s):%s\n", path,strerror(errno) );
-
-        return -1;
-    }
-
-    while( !_flush->empty() )
-    {
-        const struct log_one *one = _flush->front();
-        // TODO:出错了，也没有办法啊，暂时缓存一下。
-        if ( flush_one() < 0 ) break;
-
-        _flush->pop();
-    }
-
-    fclose( pf );
-    return 0;
-}
-
-/* 如果太久该文件无日志写入，则不要再缓存了 */
-bool log_file::valid( int32 ts )
-{
-    if ( !_flush->empty() || !_queue->empty() ) return false;
-    if ( _last_modify + LOG_FILE_TIMEOUT > ::time() ) return false;
+    log_one_list_t *swap_tmp = _flush;
+    _flush = _cache;
+    _cache = swap_tmp;
 
     return true;
 }
 
-/* 是否需要写入文件 */
-bool log_file::need_flush()
-{
-    return !_flush.empty();
-}
-
-/* ========================================================================== */
-
-/* 此函数上层会加锁，要求尽量快 */
-class log_file *log::get_log_file( const char **path )
-{
-    std::map< std::string,class log_file >::iterator itr = _file_map.begin();
-    while ( itr != _file_map.end() )
-    {
-        class log_file &lf = itr->second;
-        if ( lf.need_flush() )
-        {
-            *path = itr->first.c_str();
-            return &lf;
-        }
-
-        ++itr;
-    }
-
-    return NULL;
-}
-
-int32 log::write( time_t tm,const char *path,const char *str,size_t len )
+// 主线程写入缓存，上层加锁
+int32 log::write_cache( time_t tm,const char *path,const char *str,size_t len )
 {
     assert( "write log no file path",path );
 
@@ -178,36 +129,34 @@ int32 log::write( time_t tm,const char *path,const char *str,size_t len )
     }
 
     one->_tm = tm;
-    one->
+    one->set_ctx( str,len );
+    snprintf( one->_path,PATH_MAX,"%s",path );
 
-    class log_file &lf = _file_map[path];
-    lf.push( tm,path,str,len );
-
+    _cache->push_back( one );    
     return 0;
 }
 
-void log::remove_empty( int32 ts )
+// 日志线程写入文件
+void log::flush()
 {
-    bool rfl = true;
-    while ( rfl )
-    {
-        rfl = false;
-        std::map< std::string,class log_file >::iterator itr = _file_map.begin();
-        while ( itr != _file_map.end() )
-        {
-            class log_file &lf = itr->second;
 
-            /* 通过次数来控制同一个文件一轮只写入一次 */
-            if ( !lf.valid( ts ) )
-            {
-                _file_map.erase( itr );
-                rfl = true;
-                break;
-            }
+}
 
-            ++itr;
-        }
-    }
+// 回收内存到内存池，上层加锁
+void log::collect_mem()
+{
+
+}
+
+// 从内存池中分配一个日志缓存对象
+class log_one *log::allocate_one( size_t len )
+{
+    return NULL;
+}
+
+//回收一个日志缓存对象到内存池
+void log::deallocate_one( class log_one *one )
+{
 }
 
 /* same as mkdir -p path */
