@@ -39,7 +39,7 @@ int32 llog::write( lua_State *L )
     {
         return luaL_error( L,"log thread inactive" );
     }
-    
+
     size_t len = 0;
     const char *path = luaL_checkstring( L,1 );
     const char *ctx  = luaL_checklstring( L,2,&len );
@@ -56,9 +56,8 @@ int32 llog::write( lua_State *L )
 
 void llog::routine( notify_t msg )
 {
-    // none 是超时
-    if ( NONE != msg ) return;
-
+    UNUSED( msg );
+    do_routine();
 }
 
 // 线程逻辑
@@ -98,7 +97,7 @@ int32 llog::mkdir_p( lua_State *L )
     {
         lua_pushboolean( L,0 );
     }
-    
+
     return 1;
 }
 

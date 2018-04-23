@@ -5,10 +5,20 @@
 
 #include "log.h"
 
+/* 日志分配内存大小*/
+const size_t log::LOG_SIZE[LOG_SIZE_MAX] = { 64,1024,LOG_MAX_LENGTH };
+/* 日志内存池大小*/
+const size_t log::LOG_POOL[LOG_SIZE_MAX] = { 512,512,1 };
+/* 内存池每次分配的大小 */
+const size_t log::LOG_NEW[LOG_SIZE_MAX] = { 64,64,1 };
+
 // 单次写入的日志内容
 class log_one
 {
 public:
+    log_one(){};
+    virtual ~log_one(){};
+
     time_t _tm;
     size_t _len;
     char _path[PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
@@ -95,7 +105,7 @@ int32 log::flush_one_ctx( FILE *pf,const struct log_one *one )
         return -1;
     }
 
-    size_t wbyte = fwrite( 
+    size_t wbyte = fwrite(
         (const void*)one->get_ctx(),sizeof(char),one->_len,pf );
     if ( wbyte <= 0 )
     {
@@ -138,7 +148,7 @@ bool log::flush_one_file()
                 // TODO:这个异常处理有问题
                 // 打开不了文件，可能是权限、路径、磁盘满，这里先全部标识为已写入，丢日志
                 one->_len = 0;
-                return true; 
+                return true;
             }
         }
         else
@@ -178,15 +188,78 @@ void log::collect_mem()
     _flush->clear();
 }
 
+// 内存池分配逻辑
+void log::allocate_pool( log_size_t lt )
+{
+#define ALLOCATE_MANY( LT,SZ )                                     \
+    do{                                                            \
+        for ( size_t idx = 0;idx < ctx_sz;++idx ){                 \
+            pool->push_back( new log_one_ctx< LOG_MIN,64 >() );    \
+        }                                                          \
+    }while( 0 )
+
+    assert(
+        "log allocate pool illegal log size type",
+        (lt >= LOG_MIN) && (lt < LOG_SIZE_MAX) );
+
+    size_t ctx_sz = LOG_NEW[lt];
+    log_one_list_t *pool = &(_mem_pool[lt]);
+
+    // 由于这里没有使用oerder_pool，无法一次分配一个数组或者内存块，只能通过for来分配
+    switch( lt )
+    {
+        case LOG_MIN : ALLOCATE_MANY( LOG_MIN,64 );break;
+        case LOG_MID : ALLOCATE_MANY( LOG_MID,512 );break;
+        case LOG_MAX : ALLOCATE_MANY( LOG_MAX,LOG_MAX_LENGTH );break;
+        default: return;
+    }
+#undef ALLOCATE_MANY
+}
+
 // 从内存池中分配一个日志缓存对象
 class log_one *log::allocate_one( size_t len )
 {
+    if ( len > LOG_MAX_LENGTH ) len = LOG_MAX_LENGTH;
+
+    uint32 lt;
+    for ( lt = LOG_MIN;lt < LOG_SIZE_MAX;++lt )
+    {
+        if ( len <= LOG_SIZE[lt] )
+        {
+            log_one_list_t *pool = &(_mem_pool[lt]);
+            if ( expect_false(pool->empty()) )
+            {
+                allocate_pool( static_cast<log_size_t>(lt) );
+            }
+
+            // 需要重新检测vector是否为空
+            if ( expect_true(!pool->empty()) )
+            {
+                class log_one *one = pool->back();
+
+                pool->pop_back();
+                return one;
+            }
+
+            return NULL;
+        }
+    }
     return NULL;
 }
 
 //回收一个日志缓存对象到内存池
 void log::deallocate_one( class log_one *one )
 {
+    assert( "deallocate one NULL log ctx",one );
+
+    log_size_t lt = one->get_type();
+    if ( _mem_pool[lt].size() >= LOG_POOL[lt] )
+    {
+        delete one;
+        return;
+    }
+
+    _mem_pool[lt].push_back( one );
 }
 
 /* same as mkdir -p path */
