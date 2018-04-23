@@ -11,7 +11,7 @@ class llog : public thread
 public:
     explicit llog( lua_State *L );
     ~llog();
-    
+
     int32 stop ( lua_State *L );
     int32 start( lua_State *L );
     int32 write( lua_State *L );

@@ -18,6 +18,15 @@ typedef enum
     LOG_SIZE_MAX
 }log_size_t;
 
+// 日志输出类型
+typedef enum
+{
+    LO_FILE   = 1, // 输出到指定文件
+    LO_PRINTF = 2, // 用于实现异步PRINTF宏定义
+
+    LO_MAX
+}log_out_t;
+
 // 单次写入的日志
 typedef std::vector< class log_one *> log_one_list_t;
 
@@ -32,12 +41,13 @@ public:
     bool swap();
     void flush();
     void collect_mem();
-    int32 write_cache( time_t tm,const char *path,const char *str,size_t len );
+    int32 write_cache( time_t tm,
+        const char *path,const char *str,size_t len,log_out_t out );
 private:
-    bool flush_one_file();
     void allocate_pool( log_size_t lt );
     class log_one *allocate_one( size_t len );
     void deallocate_one( class log_one *one );
+    bool flush_one_file( log_one_list_t::iterator pos );
     int32 flush_one_ctx( FILE *pf,const struct log_one *one );
 private:
     log_one_list_t *_cache;   // 主线程写入缓存队列

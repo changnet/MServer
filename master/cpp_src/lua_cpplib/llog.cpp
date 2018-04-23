@@ -43,12 +43,18 @@ int32 llog::write( lua_State *L )
     size_t len = 0;
     const char *path = luaL_checkstring( L,1 );
     const char *ctx  = luaL_checklstring( L,2,&len );
+    int32 out_type   = luaL_optinteger( L,3,LO_FILE );
+
+    if ( out_type < LO_FILE || out_type >= LO_MAX )
+    {
+        return luaL_error( L,"log output type error" );
+    }
 
     static class leventloop *ev = leventloop::instance();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
-    _log.write_cache( ev->now(),path,ctx,len );
+    _log.write_cache( ev->now(),path,ctx,len,static_cast<log_out_t>(out_type) );
     unlock();
 
     return 0;

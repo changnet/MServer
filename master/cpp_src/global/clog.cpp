@@ -38,9 +38,8 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
 // 这个本来想写成函数的，但是c++ 03不支持函数之间可变参传递
 // 要使用主循环的时间戳，不然服务器卡的时候会造成localtime时间与主循环时间戳不一致
 // 查找bug更麻烦
-#define RAW_FORMAT( prefix,path,screen,fmt )                       \
+#define RAW_FORMAT( tm,prefix,path,screen,fmt )                    \
     do{                                                            \
-        time_t tm = leventloop::instance()->now();                 \
         struct tm ntm;                                             \
         ::localtime_r( &tm,&ntm );                                 \
         if ( screen ){                                             \
@@ -56,17 +55,32 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
 
 void cerror_log( const char *prefix,const char *fmt,... )
 {
-    RAW_FORMAT( prefix,error_path,(is_daemon ? NULL : stderr),fmt );
+    time_t tm = leventloop::instance()->now();
+    RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
 void cprintf_log( const char *prefix,const char *fmt,... )
 {
+    time_t tm = leventloop::instance()->now();
+    // TODO:兼容低版本C++标准，没办法传...可变参，无法调用raw_cprintf_log
     // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR
     if ( expect_false(!printf_path[0]) )
     {
-        RAW_FORMAT( prefix,error_path,(is_daemon ? NULL : stderr),fmt );
+        RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
         return;
     }
 
-    RAW_FORMAT( prefix,printf_path,(is_daemon ? NULL : stdout),fmt );
+    RAW_FORMAT( tm,prefix,printf_path,(is_daemon ? NULL : stdout),fmt );
+}
+
+void raw_cprintf_log( time_t tm,const char *prefix,const char *fmt,... )
+{
+    // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR
+    if ( expect_false(!printf_path[0]) )
+    {
+        RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
+        return;
+    }
+
+    RAW_FORMAT( tm,prefix,printf_path,(is_daemon ? NULL : stdout),fmt );
 }

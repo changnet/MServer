@@ -21,6 +21,7 @@ public:
 
     time_t _tm;
     size_t _len;
+    log_out_t _out;
     char _path[PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
 
     virtual log_size_t get_type() const = 0;
@@ -54,6 +55,21 @@ log::log()
 log::~log()
 {
     assert( "log not flush",_cache->empty() && _flush->empty() );
+
+    delete _cache;
+    delete _flush;
+
+    _cache = NULL;
+    _flush = NULL;
+
+    for ( int idx = 0;idx < LOG_SIZE_MAX;++idx )
+    {
+        log_one_list_t *pool = &(_mem_pool[idx]);
+        log_one_list_t::iterator itr = pool->begin();
+        for ( ;itr != pool->end();++itr ) delete *itr;
+
+        pool->clear();
+    }
 }
 
 // 交换缓存和待写入队列
@@ -69,7 +85,8 @@ bool log::swap()
 }
 
 // 主线程写入缓存，上层加锁
-int32 log::write_cache( time_t tm,const char *path,const char *str,size_t len )
+int32 log::write_cache( time_t tm,
+    const char *path,const char *str,size_t len,log_out_t out )
 {
     assert( "write log no file path",path );
 
@@ -81,6 +98,7 @@ int32 log::write_cache( time_t tm,const char *path,const char *str,size_t len )
     }
 
     one->_tm = tm;
+    one->_out = out;
     one->set_ctx( str,len );
     snprintf( one->_path,PATH_MAX,"%s",path );
 
@@ -126,54 +144,56 @@ int32 log::flush_one_ctx( FILE *pf,const struct log_one *one )
 }
 
 // 写入一个日志文件
-bool log::flush_one_file()
+bool log::flush_one_file( log_one_list_t::iterator pos )
 {
-    FILE *pf = NULL;
-    const char *path = NULL;
+    log_one *one = *pos;
+    const char *path = one->_path;
+
+    FILE *pf = fopen( path, "ab+" );
+    if ( !pf )  /* 无法打开文件*/
+    {
+        ERROR( "can't open log file(%s):%s\n", path,strerror(errno) );
+
+        // TODO:这个异常处理有问题
+        // 打开不了文件，可能是权限、路径、磁盘满，这里先全部标识为已写入，丢日志
+        return false;
+    }
+
+    do{
+        one = *pos;
+        if ( 0 == strcmp( path,one->_path ) )
+        {
+            flush_one_ctx( pf,one );
+            one->_len = 0; // 标记为已经写入
+        }
+
+        ++pos;
+    }while ( pos != _flush->end() );
+
+    fclose( pf );
+    return true;
+}
+
+// 日志线程写入文件
+void log::flush()
+{
     log_one_list_t::iterator itr = _flush->begin();
     for ( ;itr != _flush->end(); ++itr )
     {
         log_one *one = *itr;
         if ( 0 == one->_len ) continue;
 
-        // 第一次查找到可写入的日志时打开文件
-        if ( NULL == path )
+        if ( LO_PRINTF == one->_out )
         {
-            path = one->_path;
-            pf = fopen( path, "ab+" );
-            if ( !pf )  /* 无法打开文件*/
-            {
-                ERROR( "can't open log file(%s):%s\n", path,strerror(errno) );
-
-                // TODO:这个异常处理有问题
-                // 打开不了文件，可能是权限、路径、磁盘满，这里先全部标识为已写入，丢日志
-                one->_len = 0;
-                return true;
-            }
+            raw_cprintf_log( one->_tm,"LP","%s",one->get_ctx() );
         }
         else
         {
-            // 为了提高效率，一次只写入一个文件
-            if ( 0 != strcmp( path,one->_path ) ) continue;
+            flush_one_file( itr );
         }
 
-        flush_one_ctx( pf,one );
-        one->_len = 0; // 标记为已经写入
+        one->_len = 0;
     }
-
-    if ( pf ) fclose( pf );
-
-    return NULL != pf;
-}
-
-// 日志线程写入文件
-void log::flush()
-{
-    bool ok = true;
-    do
-    {
-        ok = flush_one_file();
-    }while( ok );
 }
 
 // 回收内存到内存池，上层加锁
@@ -194,7 +214,7 @@ void log::allocate_pool( log_size_t lt )
 #define ALLOCATE_MANY( LT,SZ )                                     \
     do{                                                            \
         for ( size_t idx = 0;idx < ctx_sz;++idx ){                 \
-            pool->push_back( new log_one_ctx< LOG_MIN,64 >() );    \
+            pool->push_back( new log_one_ctx< LT,SZ >() );         \
         }                                                          \
     }while( 0 )
 
