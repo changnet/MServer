@@ -36,7 +36,7 @@ local function var_dump(data, max_level, prefix)
         print(prefix .. "{")
         for k,v in pairs(data) do
             io.stdout:write(prefix_next .. tostring( to_readable(k) ) .. " = ")
-            if type(v) ~= "table" or 
+            if type(v) ~= "table" or
                 (type(max_level) == "number" and max_level <= 1) then
                 print( to_readable(v) )
             else
@@ -78,6 +78,24 @@ function PFLOG( fmt,any,... )
         Log.plog( string.format( fmt,any,... ) )
     else
         PLOG( fmt,any,... )
+    end
+end
+
+-- 异步print log,只打印，不格式化。仅在日志线程开启后有效
+function PRINT( any,... )
+    if not ( ... ) then return g_log_mgr.flogger:write( "",tostring(any),2 ) end
+
+    -- 如果有多个参数，则合并起来输出，类似Lua的print函数
+    g_log_mgr.flogger:write( "",table.concat( { any,... },"    " ),2 )
+end
+
+-- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
+function PRINTF( fmt,any,... )
+    -- 默认为c方式的print字符串格式化打印方式
+    if any and "string" == type( fmt ) then
+        g_log_mgr.flogger:write( "",string.format( fmt,any,... ),2 )
+    else
+        PRINT( fmt,any,... )
     end
 end
 

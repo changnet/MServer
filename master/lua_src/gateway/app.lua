@@ -50,6 +50,8 @@ end
 -- 重写关服接口
 function App:shutdown()
     g_mongodb_mgr:stop() -- 关闭所有数据库链接
+
+    g_log_mgr:close() -- 关闭文件日志线程及数据库日志线程
 end
 
 -- 帐号数据初始化

@@ -20,7 +20,7 @@ local Base = require "modules.player.base"
 local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 
-local sub_module = 
+local sub_module =
 {
     { name = "base",new = Base },
     { name = "chat",new = Chat },
@@ -132,7 +132,7 @@ function Player:on_login()
     end
 
     self:send_pkt( SC.PLAYER_ENTER,{} )
-    PFLOG( "player enter,pid = %d",self.pid )
+    PRINTF( "player enter,pid = %d",self.pid )
 
     return true
 end

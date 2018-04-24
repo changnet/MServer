@@ -120,7 +120,7 @@ void thread::do_routine()
         int32 sz = ::read( _fd[1],&event,sizeof(int8) ); /* 阻塞 */
         if ( sz < 0 )
         {
-            /* errno variable is thread save */
+            /* errno variable is thread safe */
             if ( errno == EAGAIN || errno == EWOULDBLOCK )
             {
                 this->routine( NONE );
@@ -138,7 +138,7 @@ void thread::do_routine()
         }
         else if ( 0 == sz )
         {
-            ERROR( "socketpair close,thread exit" );
+            ERROR( "thread socketpair close,thread exit" );
             break;
         }
         this->routine( static_cast<notify_t>(event) );
