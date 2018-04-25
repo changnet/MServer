@@ -13,6 +13,7 @@ public:
     explicit lsql( lua_State *L );
     ~lsql();
 
+    int32 valid ( lua_State *L );
     int32 start ( lua_State *L );
     int32 stop  ( lua_State *L );
     int32 do_sql( lua_State *L );
@@ -39,6 +40,7 @@ private:
     class sql _sql;
 
     int32 _dbid;
+    int32 _valid; // -1连接中，0失败，1成功
 
     std::queue<struct sql_result > _result;
     std::queue<const struct sql_query *> _query ;

@@ -21,6 +21,7 @@ void sql::library_end()
 
 sql::sql()
 {
+    _is_cn = false;
     _conn =  NULL;
 
     _host[0]   = '\0';
@@ -48,7 +49,7 @@ void sql::set( const char *host,const int32 port,
 }
 
 /* 连接数据库 */
-bool sql::connect()
+int32 sql::connect()
 {
     assert( "mysql connection not clean",NULL == _conn );
 
@@ -56,7 +57,7 @@ bool sql::connect()
     if ( !_conn )
     {
         ERROR( "mysql init fail:%s\n",mysql_error(_conn) );
-        return false;
+        return 1;
     }
 
     /* mysql_options的时间精度都为秒级
@@ -78,21 +79,42 @@ bool sql::connect()
         mysql_close( _conn );
         _conn =         NULL;
 
-        return false;
+        return 1;
     }
 
-    if ( NULL == mysql_real_connect(
-        _conn,_host,_usr,_pwd,_dbname,_port,NULL,0 ) )
+    return raw_connect();
+}
+
+// 连接逻辑
+int32 sql::raw_connect()
+{
+    /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
+     * fails, you must repeat the mysql_options() calls before trying to connect
+     * again. With this option, the mysql_options() calls need not be repeated
+     */
+    if ( mysql_real_connect(
+        _conn,_host,_usr,_pwd,_dbname,_port,NULL,CLIENT_REMEMBER_OPTIONS ) )
     {
-        ERROR( "mysql real connect fail:%s\n",mysql_error( _conn ) );
-
-        mysql_close( _conn );
-        _conn =         NULL;
-
-        return false;
+        _is_cn = true;
+        return 0;
     }
 
-    return true;
+    /* 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
+     */
+    uint32 eno = mysql_errno( _conn );
+    if ( CR_SERVER_LOST == eno )
+    {
+        ERROR( "mysql cant not connect server,"
+            "will try again:%s\n",mysql_error( _conn ) );
+        return -1;
+    }
+
+    ERROR( "mysql real connect fail:%s\n",mysql_error( _conn ) );
+
+    mysql_close( _conn );
+    _conn =         NULL;
+
+    return 1;
 }
 
 void sql::disconnect()
@@ -107,8 +129,33 @@ void sql::disconnect()
 int32 sql::ping()
 {
     assert( "try to ping a invalid mysql connection",_conn );
+    if ( !_conn )
+    {
+        ERROR( "mysql ping invalid connection" );
+        return 1;
+    }
 
-    return mysql_ping( _conn );
+    // 初始化时连接不成功，现在重新尝试
+    if ( -1 == _is_cn )
+    {
+        int32 ok = raw_connect();
+        if ( -1 == ok )
+        {
+            return -1;// 需要继续尝试
+        }
+        else if ( ok > 0 )
+        {
+            return 1;// 错误
+        }
+    }
+
+    int32 eno = mysql_ping( _conn );
+    if ( eno )
+    {
+        ERROR( "mysql ping error:%s\n",mysql_error( _conn ) );
+    }
+
+    return eno;
 }
 
 const char *sql::error()
@@ -188,7 +235,7 @@ int32 sql::result( struct sql_res **res )
         {
             assert( "fetch field more than field count",index < num_fields );
             (*res)->_fields[index]._type = field->type;
-            snprintf( 
+            snprintf(
                 (*res)->_fields[index]._name,SQL_FIELD_LEN,"%s",field->name );
 
             ++index;
@@ -221,7 +268,7 @@ int32 sql::result( struct sql_res **res )
     return mysql_errno( _conn );
 }
 
-int32 sql::get_errno()
+uint32 sql::get_errno()
 {
     assert( "sql get_errno,connection not valid",_conn );
     return mysql_errno( _conn );

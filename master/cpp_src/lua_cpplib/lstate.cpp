@@ -118,7 +118,9 @@ int32 luaopen_timer ( lua_State *L )
 
 int32 luaopen_sql( lua_State *L )
 {
+
     lclass<lsql> lc(L,"Sql");
+    lc.def<&lsql::valid> ( "valid" );
     lc.def<&lsql::start> ( "start" );
     lc.def<&lsql::stop>  ( "stop"  );
 

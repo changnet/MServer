@@ -5,27 +5,34 @@
 -- mysql数据存储处理
 
 local Sql = require "Sql"
-local LIMIT = require "global.limits"
+local Auto_id = require "modules.system.auto_id"
 
 local Mysql = oo.class( nil,... )
 
 function Mysql:__init( dbid )
-    self.next_id = 0
+    self.auto_id = Auto_id()
     self.query   = {}
     self.sql     = Sql( dbid )
 end
 
---[[
-底层id类型为int32，需要防止越界
-]]
-function Mysql:get_next_id()
-    repeat
-        if self.next_id >= LIMIT.INT32_MAX then self.next_id = 0 end
+-- 定时器回调
+function Mysql:do_timer()
+   -- -1未连接或者连接中，0 连接失败，1 连接成功
+   local ok = self.sql:valid()
+   if -1 == ok then return end
 
-        self.next_id = self.next_id + 1
-    until nil == self.query[self.next_id]
+   g_timer_mgr:del_timer( self.timer )
+   self.timer = nil
 
-    return self.next_id
+   if 0 == ok then
+       ELOG( "mysql connect error" )
+       return
+   end
+
+   if self.conn_cb then
+       self.conn_cb()
+       self.conn_cb = nil
+   end
 end
 
 function Mysql:read_event( qid,ecode,res )
@@ -37,8 +44,15 @@ function Mysql:read_event( qid,ecode,res )
     end
 end
 
-function Mysql:start( ip,port,usr,pwd,db )
+function Mysql:start( ip,port,usr,pwd,db,callback )
     self.sql:start( ip,port,usr,pwd,db )
+
+    -- 连接成功后回调
+    if callback then
+        self.conn_cb = callback
+        self.timer = g_timer_mgr:new_timer( self,1,1 )
+        g_timer_mgr:start_timer( self.timer )
+    end
 end
 
 function Mysql:stop()
@@ -50,7 +64,7 @@ function Mysql:exec_cmd( stmt )
 end
 
 function Mysql:select( this,method,stmt )
-    local id = self:get_next_id()
+    local id = self.auto_id:next_id( self.query )
     self.query[id] = function( ... ) return method( this,... ) end
 
     self.sql:do_sql( id,stmt )

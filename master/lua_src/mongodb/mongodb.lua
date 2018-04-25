@@ -14,8 +14,6 @@ function Mongodb:__init( dbid )
     self.mongodb = Mongo( dbid )
 
     self.cb = {}
-
-    self.timer = g_timer_mgr:new_timer( self,1,1 )
 end
 
 -- 利用定时器来检测是否已连接上数据库
@@ -28,7 +26,7 @@ function Mongodb:do_timer()
     self.timer = nil
 
     if 0 == ok then
-        PFLOG( "mongo db connect error" )
+        ELOG( "mongo db connect error" )
         return
     end
 
@@ -53,6 +51,7 @@ function Mongodb:start( ip,port,usr,pwd,db,callback )
 
     if callback then
         self.conn_cb = callback
+        self.timer = g_timer_mgr:new_timer( self,1,1 )
         g_timer_mgr:start_timer( self.timer )
     end
 end
@@ -83,12 +82,12 @@ end
 -- remove 是否删除记录
 -- upsert 如果记录不存在则删除
 -- new 返回更改后的值
-function Mongodb:find_and_modify( 
+function Mongodb:find_and_modify(
     collection,query,sort,update,fields,remove,upsert,new,callback )
 
     local id = self.auto_id:next_id( self.cb )
     self.cb[id] = callback
-    return self.mongodb:find_and_modify( 
+    return self.mongodb:find_and_modify(
         id,collection,query,sort,update,fields,remove,upsert,new )
 end
 

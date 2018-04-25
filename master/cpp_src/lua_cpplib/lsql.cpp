@@ -4,11 +4,20 @@
 
 lsql::lsql( lua_State *L )
 {
+    _valid = -1;
     _dbid = luaL_checkinteger( L,2 );
 }
 
 lsql::~lsql()
 {
+}
+
+// 是否有效(只判断是否连接上，后续断线等不检测)
+int32 lsql::valid ( lua_State *L )
+{
+    lua_pushinteger( L,_valid );
+
+    return 1;
 }
 
 /* 连接mysql并启动线程 */
@@ -36,12 +45,9 @@ void lsql::routine( notify_t msg )
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
      */
-    if ( _sql.ping() )
-    {
-        ERROR( "mysql ping error:%s",_sql.error() );
-        return;
-    }
+    if ( 0 != _sql.ping() ) return;
 
+    _valid = 1;
     invoke_sql();
 }
 
@@ -105,6 +111,7 @@ void lsql::invoke_sql( bool is_return )
 
 int32 lsql::stop( lua_State *L )
 {
+    _valid = -1;
     thread::stop();
 
     return 0;
@@ -252,7 +259,7 @@ int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
     if ( !res ) return 0;
 
     assert( "sql result over boundary",
-        res->_num_cols == res->_fields.size() 
+        res->_num_cols == res->_fields.size()
         &&res->_num_rows == res->_rows.size() );
 
     lua_createtable( L,res->_num_rows,0 ); /* 创建数组，元素个数为num_rows */
@@ -303,13 +310,22 @@ bool lsql::cleanup()
 bool lsql::initlization()
 {
     mysql_thread_init();
-    if ( !_sql.connect() )
+
+    int32 ok = _sql.connect();
+    if ( ok > 0 )
     {
+        _valid = 0;
         mysql_thread_end();
         notify_parent( ERROR );
         return false;
     }
+    else if ( -1 == ok )
+    {
+        // 初始化正常，但是需要稍后重试
+        return true;
+    }
 
+    _valid = 1;
     return true;
 }
 

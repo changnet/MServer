@@ -5,17 +5,29 @@
 -- mysql测试用例
 
 --[[
+忘记root密码：
+/etc/init.d/mysql stop
+mysqld -nt --skip-grant-tables &
+无密码进入：mysql -uroot -p
+use mysql;
+update user set password=password("1") where user="root";
+flush privileges;
+exit;
+
+/etc/init.d/mysql start
+现在用新密码进入
+
+
 mysql> CREATE USER 'test'@'%' IDENTIFIED BY 'test';
-mysql> GRANT ALL PRIVILEGES ON *.* TO 'test'@'%'
-    ->     WITH GRANT OPTION;
+mysql> GRANT ALL PRIVILEGES ON *.* TO 'test'@'%' WITH GRANT OPTION;
 
 sudo vi /etc/mysql/my.cnf
 #bind_address = 127.0.0.1
 /etc/init.d/mysql restart
 
-CREATE SCHEMA `mudrv` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
-use mudrv;
-CREATE TABLE `mudrv`.`item` (
+CREATE SCHEMA `game_test` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
+use game_test;
+CREATE TABLE `game_test`.`item` (
   `auto_id` INT NOT NULL AUTO_INCREMENT,
   `id` INT NULL DEFAULT 0,
   `desc` VARCHAR(45) NULL,
@@ -34,8 +46,8 @@ if server start fail,check:
 ]]
 
 g_mysql_mgr   = require "mysql.mysql_mgr"
-local g_mysql = g_mysql_mgr:new( "127.0.0.1",3306,"test","test","mudrv" )
-
+local g_mysql = g_mysql_mgr:new()
+g_mysql:start( "127.0.0.1",3306,"test","test","game_test" )
 
 local max_insert = 100000
 local Mysql_performance = {}
@@ -52,7 +64,7 @@ function Mysql_performance:insert_test()
 
     -- desc是mysql关键字，因此需要加``
     for i = 1,max_insert do
-        local str = string.format( 
+        local str = string.format(
             "insert into item (id,`desc`,amount) values (%d,'%s',%d)",
             i,"just test item",i*10 )
         g_mysql:insert( str )
