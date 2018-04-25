@@ -15,4 +15,10 @@ return
     mongo_db = "test_999", -- 需要连接的数据库
     mongo_user = "test", -- mongo 用户(以后弄个加密，以免明文保存)
     mongo_pwd  = "test", -- mongo 密码(以后弄个加密，以免明文保存)
+
+    mysql_ip   = "127.0.0.1";
+    mysql_port = 3306,
+    mysql_user = "test",
+    mysql_pwd  = "test",
+    mysql_db   = "test_999",
 }

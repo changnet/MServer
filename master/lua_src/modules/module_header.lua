@@ -22,6 +22,7 @@ g_network_mgr = require "network.network_mgr"
 g_command_mgr = require "modules.command.command_mgr"
 g_res         = require "modules.res.res"
 g_gm          = require "modules.system.gm"
+g_mysql_mgr   = require "mysql.mysql_mgr"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then

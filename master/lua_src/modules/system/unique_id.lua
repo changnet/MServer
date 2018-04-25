@@ -28,7 +28,7 @@ end
 
 function Unique_id:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        PFLOG( "account db load error" )
+        ELOG( "account db load error" )
         return
     end
 
@@ -105,7 +105,7 @@ function Unique_id:player_id( srvid,raw_cb )
 
     -- new = true, -- 返回Modify后的值
     -- upsert = true, -- 如果不存在，则插入一个记录
-    return g_mongodb:find_and_modify( 
+    return g_mongodb:find_and_modify(
         "uniqueid",player_query,nil,player_update,nil,false,true,true,callback )
 end
 

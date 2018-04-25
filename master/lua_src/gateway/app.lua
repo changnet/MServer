@@ -13,6 +13,7 @@ function App:__init( ... )
     Application.__init( self,... )
 
     self:set_initialize( "world" ) -- 等待一个world服OK
+    self:set_initialize( "db_logger",nil,self.db_logger_initialize ) -- db日志
     self:set_initialize( "db_conn",nil,self.db_initialize ) -- 等待连接db
     -- 等待自增id数据加载
     self:set_initialize( "uniqueid_data","db_conn",self.uniqueid_initialize )
@@ -51,7 +52,7 @@ end
 function App:shutdown()
     g_mongodb_mgr:stop() -- 关闭所有数据库链接
 
-    g_log_mgr:close() -- 关闭文件日志线程及数据库日志线程
+    Application.shutdown( self )
 end
 
 -- 帐号数据初始化

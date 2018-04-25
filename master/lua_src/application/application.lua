@@ -113,6 +113,8 @@ end
 
 -- 关服处理
 function Application:shutdown()
+    g_log_mgr:close() -- 关闭文件日志线程及数据库日志线程
+    g_mysql_mgr:stop() -- 关闭mysql连接
 end
 
 -- 加载各个子模块
@@ -136,7 +138,7 @@ function Application:one_initialized( name,val )
     init.val = init.val - (val or 1)
     if init.val <= 0 then
         self.init_list[name] = nil
-        PFLOG( "%s initialize OK",name )
+        PFLOG( "%s:%s initialize OK",self.srvname,name )
 
         for _,init in pairs( self.init_list ) do
             if init.after == name then init.action( self ) end
@@ -184,6 +186,11 @@ end
 -- 加载自增id
 function Application:uniqueid_initialize()
     g_unique_id:db_load()
+end
+
+-- 初始化db日志
+function Application:db_logger_initialize()
+    g_log_mgr:db_logger_init()
 end
 
 return Application

@@ -18,7 +18,7 @@ thread::thread()
     int32 rv = pthread_mutex_init( &_mutex,NULL );
     if ( 0 != rv )
     {
-        FATAL( "pthread_mutex_init error:%s\n",strerror(errno) );
+        FATAL( "pthread_mutex_init error:%s",strerror(errno) );
         return;
     }
 }
@@ -34,7 +34,7 @@ thread::~thread()
     int32 rv = pthread_mutex_destroy( &_mutex );
     if ( 0 != rv )
     {
-        FATAL( "pthread_mutex_destroy error:%s\n",strerror(errno) );
+        FATAL( "pthread_mutex_destroy error:%s",strerror(errno) );
         return;
     }
 }
@@ -47,7 +47,7 @@ bool thread::start( int32 sec,int32 usec )
      */
     if ( socketpair( AF_UNIX, SOCK_STREAM,IPPROTO_IP,_fd ) < 0 )
     {
-        ERROR( "socketpair fail:%s",strerror(errno) );
+        ERROR( "thread socketpair fail:%s",strerror(errno) );
         return false;
     }
     socket::non_block( _fd[0] );    /* 主线程fd需要为非阻塞并加入到主循环监听 */
@@ -103,7 +103,7 @@ void thread::stop()
          * number.errno is not use.
          * not strerror(errno)
          */
-        FATAL( "thread join fail:%s\n",strerror( ecode ) );
+        FATAL( "thread join fail:%s",strerror( ecode ) );
     }
     _join = true;
 
