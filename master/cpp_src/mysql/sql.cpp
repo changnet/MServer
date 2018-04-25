@@ -102,10 +102,9 @@ int32 sql::raw_connect()
     /* 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
      */
     uint32 eno = mysql_errno( _conn );
-    if ( CR_SERVER_LOST == eno )
+    if ( CR_SERVER_LOST == eno || CR_CONN_HOST_ERROR == eno )
     {
-        ERROR( "mysql cant not connect server,"
-            "will try again:%s\n",mysql_error( _conn ) );
+        ERROR( "mysql will try again:%s\n",mysql_error( _conn ) );
         return -1;
     }
 
@@ -136,7 +135,7 @@ int32 sql::ping()
     }
 
     // 初始化时连接不成功，现在重新尝试
-    if ( -1 == _is_cn )
+    if (  !_is_cn )
     {
         int32 ok = raw_connect();
         if ( -1 == ok )
@@ -147,6 +146,7 @@ int32 sql::ping()
         {
             return 1;// 错误
         }
+        _is_cn = true;
     }
 
     int32 eno = mysql_ping( _conn );
