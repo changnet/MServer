@@ -37,6 +37,13 @@ end
 -- 关闭文件日志线程及数据库日志线程
 function Log_mgr:close()
     self.fl_logger:stop()
+    -- db则由g_mysql_mgr去管理
+end
+
+-- 记录登录、退出日志
+local login_out_stmt = "INSERT INTO `login_logout` (pid,op_type,op_time) values (%d,%d,%d)"
+function Log_mgr:login_or_logout( pid,op_type )
+    self.db_logger:insert( string.format(login_out_stmt,pid,op_type,ev:time()) )
 end
 
 local log_mgr = Log_mgr()

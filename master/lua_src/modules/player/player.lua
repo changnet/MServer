@@ -132,6 +132,7 @@ function Player:on_login()
     end
 
     self:send_pkt( SC.PLAYER_ENTER,{} )
+    g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
     PRINTF( "player enter,pid = %d",self.pid )
 
     return true
@@ -149,6 +150,9 @@ function Player:on_logout()
     for _,module in pairs( sub_module ) do
         self[module.name]:db_save()
     end
+    g_log_mgr:login_or_logout( self.pid,LOG.LOGOUT )
+
+    PRINTF( "player logout,pid = %d",self.pid )
 end
 
 -- 获取对应的模块
