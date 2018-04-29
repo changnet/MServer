@@ -24,10 +24,10 @@
 # 因此在文件中需要注意换行。比如for循环的大括号就不能换行
 # mongo 127.0.0.1:27013/mudrv -u test -p test < command.js
 
-
+# mongodb配置存放目录，默认目录在/etc/mongodb.conf
 DBPATH=/home/xzc/mongodb
-MONGOD=$DBPATH/bin/mongod
-MONGO=$DBPATH/bin/mongo
+MONGOD=mongod
+MONGO=mongo
 
 function start()
 {

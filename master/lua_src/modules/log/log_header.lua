@@ -2,6 +2,8 @@
 
 LOG =
 {
-    NEWPLAYER  = 1, -- 新号
-    MAILATTACH = 2, -- 邮件附件
+    LOGIN      = 1, -- 登录
+    LOGOUT     = 2, -- 退出
+    NEWPLAYER  = 3, -- 新号
+    MAILATTACH = 4, -- 邮件附件
 }

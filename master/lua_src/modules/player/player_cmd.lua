@@ -36,15 +36,6 @@ local function player_mgr_srv_cb( cmd,cb_func )
     g_command_mgr:srv_register( cmd,cb )
 end
 
-local function rpc_test( ... )
-    print("rpc_test ==================================",...)
-end
-
-local function x_rpc_test( ... )
-    print("x_rpc_test ==================================",...)
-    return 1,3,5,90.1246,nil,{a = 5,b = 5},false,true,998
-end
-
 -- 这里注册系统模块的协议处理
 if "gateway" == g_app.srvname then
     account_mgr_clt_cb( CS.PLAYER_LOGIN,g_account_mgr.player_login,true )
@@ -57,9 +48,6 @@ if "world" == g_app.srvname then
 
     player_mgr_srv_cb( SS.PLAYER_OFFLINE,g_player_mgr.on_player_offline )
     player_mgr_srv_cb( SS.PLAYER_OTHERWHERE,g_player_mgr.on_login_otherwhere )
-
-    g_rpc:declare("rpc_test",rpc_test)
-    g_rpc:declare("x_rpc_test",x_rpc_test)
 end
 
 g_res:reg_player_res( RES.GOLD,Player.get_gold,Player.add_gold,Player.add_gold )
