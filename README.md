@@ -9,7 +9,12 @@ component make sure it has high scalability.
 
 ## Dependencies
 * Linux
-* G++ >= C++11
+* G++ (support C++03 at least,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
+* MySQL
+* MongoDB
+* Lua 5.3
+* Flatbuffer(optional,C++11 needed)
+* protobuf(optional,v2 and v3 compatible)
 
 ## Build(e.g. debian7)
 
@@ -20,18 +25,6 @@ component make sure it has high scalability.
 * ./build_env.sh
 * ./make.sh submodule
 * ./make.sh
-
-## Usage
-
-Make sure working directory is Mserver/master
-```shell
-bin/master gateway 1 1
-bin/master world 1 1
-```
-To stop the server,just kill the processes with singal 9.
-There are shell scripts(start.sh、stop.sh) at MServer/shell.
-
-There is a client example at:https://github.com/changnet/EgretDemo
 
 ## Features
 
@@ -102,6 +95,10 @@ There is a client example at:https://github.com/changnet/EgretDemo
                      +-----------------+
 ```
 
+## Build & Usage
+
+See it at [Wiki](https://github.com/changnet/MServer/wiki/Build)
+
 ## Valgrind Test
 
 * Valgrind version >= 3.10，valgrind 3.7 on Debian Wheezy not work
@@ -119,6 +116,7 @@ There is a client example at:https://github.com/changnet/EgretDemo
 * In latest version,FlatBuffers isn't being tested,may not work properly
 * Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
 * using editor to generate proto file.https://github.com/changnet/SPEditor
+* using excel to manage config file.https://github.com/changnet/py_exceltools
 
 ## Thanks
 
