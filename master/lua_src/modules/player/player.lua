@@ -131,8 +131,11 @@ function Player:on_login()
         self[module.name]:on_login()
     end
 
-    self:send_pkt( SC.PLAYER_ENTER,{} )
+
+    g_player_ev:fire_event( PLAYER_EV.ENTER,self )
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
+
+    self:send_pkt( SC.PLAYER_ENTER,{} )
     PRINTF( "player enter,pid = %d",self.pid )
 
     return true
@@ -142,6 +145,10 @@ end
 function Player:on_logout()
     g_timer_mgr:del_timer( self.timer )
 
+    -- 退出事件
+    g_player_ev:fire_event( PLAYER_EV.EXIT,self )
+
+    -- 各个子模块退出处理
     for _,module in pairs( sub_module ) do
         self[module.name]:on_logout()
     end

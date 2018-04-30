@@ -6,6 +6,8 @@ local SC = SC
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 local g_player_mgr  = g_player_mgr
+
+local Base = require "modules.player.base"
 local Player = require "modules.player.player"
 
 local function player_ping( srv_conn,pid,pkt )
@@ -36,6 +38,12 @@ local function player_mgr_srv_cb( cmd,cb_func )
     g_command_mgr:srv_register( cmd,cb )
 end
 
+local function player_base_cb( cb_func )
+    return function( player,... )
+        return cb_func( player:get_module( "base" ),... )
+    end
+end
+
 -- 这里注册系统模块的协议处理
 if "gateway" == g_app.srvname then
     account_mgr_clt_cb( CS.PLAYER_LOGIN,g_account_mgr.player_login,true )
@@ -50,4 +58,5 @@ if "world" == g_app.srvname then
     player_mgr_srv_cb( SS.PLAYER_OTHERWHERE,g_player_mgr.on_login_otherwhere )
 end
 
+g_player_ev:register( PLAYER_EV.ENTER,player_base_cb( Base.send_info ) )
 g_res:reg_player_res( RES.GOLD,Player.get_gold,Player.add_gold,Player.add_gold )

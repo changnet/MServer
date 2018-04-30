@@ -8,7 +8,8 @@ PLAYER_EV =
 {
     CONN  = 1,    -- 与服务器建立连接
     ENTER = 2,    -- 进入游戏世界
-    DEATH = 3,    -- 玩家死亡
+    EXIT  = 3,    -- 离开游戏
+    DEATH = 4,    -- 玩家死亡
 }
 
 SYSTEM_EV = 
