@@ -23,6 +23,8 @@ g_command_mgr = require "modules.command.command_mgr"
 g_res         = require "modules.res.res"
 g_gm          = require "modules.system.gm"
 g_mysql_mgr   = require "mysql.mysql_mgr"
+g_player_ev   = require "modules.event.player_event"
+g_system_ev   = require "modules.event.system_event"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then

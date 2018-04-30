@@ -39,5 +39,12 @@
             <field>OTHER</field>
             <server>LoginOtherWhere</server>
         </subobject>
+        <subobject>
+            <client></client>
+            <command>0x06</command>
+            <comment>基础数据</comment>
+            <field>BASE</field>
+            <server>Base</server>
+        </subobject>
     </subobjects>
 </root>

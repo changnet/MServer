@@ -1,5 +1,5 @@
 
-é
+†
 player.protoplayer"
 	SSOffline
 pid (Rpid" 
@@ -35,4 +35,6 @@
 way (Rway
 target (Rtarget
 say (	Rsay"
-SLoginOtherWherebproto3
+SLoginOtherWhere"
+SBase
+gold (Rgoldbproto3

@@ -75,7 +75,7 @@ function Ai.on_chat( entity,ecode,pkt )
     -- PFLOG( "chat: %d say %s",pkt.pid,pkt.context )
 end
 
-g_player_ev:register( PLAYER_EV_ENTER,Ai.on_enter_world )
+g_player_ev:register( PLAYER_EV.ENTER,Ai.on_enter_world )
 
 local function reg_cb( cmd,func )
     -- local cb = function( entity,ecode,... )

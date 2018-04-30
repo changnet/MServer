@@ -18,7 +18,6 @@ local SS =
     SYS_REG       = { MODULE_SYSTEM + 0x04,"system.pb","system.SSRegister" },
     SYS_CMD_SYNC  = { MODULE_SYSTEM + 0x05,"system.pb","system.SSCommandSync" },
     SYS_BEAT      = { MODULE_SYSTEM + 0x06,"system.pb","system.SSBeat" },        -- 心跳包
-    SYS_HOT_FIX  = { MODULE_SYSTEM + 0x07,"system.pb","system.SSHotFix" },    -- 热更
     SYS_SYNC_DONE = { MODULE_SYSTEM + 0x08,"system.pb","system.SSSyncDone" },    -- 同步完成
 
     PLAYER_OFFLINE    = { MODULE_PLAYER + 0x01,"player.pb","player.SSOffline" }, -- 玩家下线

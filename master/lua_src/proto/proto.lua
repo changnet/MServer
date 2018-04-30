@@ -13,6 +13,7 @@ local SC =
     PLAYER_CREATE = { PLAYER + 0x03,"player.pb","player.SCreateRole" },
     PLAYER_ENTER = { PLAYER + 0x04,"player.pb","player.SEnterWorld" },
     PLAYER_OTHER = { PLAYER + 0x05,"player.pb","player.SLoginOtherWhere" },
+    PLAYER_BASE = { PLAYER + 0x06,"player.pb","player.SBase" },
     CHAT_CHATINFO = { CHAT + 0x01,"chat.pb","chat.SChatInfo" },
     CHAT_DOCHAT = { CHAT + 0x02,"chat.pb","chat.SDoChat" },
 

@@ -81,3 +81,10 @@ message SPing
 message SLoginOtherWhere
 {
 }
+
+// 基础数据
+message SBase
+{
+    // pid及名字在登录时已发
+    int32 gold = 1; // 元宝
+}

@@ -1,8 +1,6 @@
 -- 玩家事件总线
 
-PLAYER_EV_CONN  = 1    -- 与服务器建立连接
-PLAYER_EV_ENTER = 2    -- 进入游戏世界
-PLAYER_EV_DEATH = 3    -- 玩家死亡
+require "modules.event.event_header"
 
 local Player_event = oo.singleton( nil,... )
 

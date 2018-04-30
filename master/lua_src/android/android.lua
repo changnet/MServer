@@ -102,7 +102,7 @@ end
 -- 确认进入游戏完成
 function Android:on_enter_world( errno,pkt )
     PFLOG( "%s enter world success",self.name )
-    g_player_ev:fire_event( PLAYER_EV_ENTER,self )
+    g_player_ev:fire_event( PLAYER_EV.ENTER,self )
 end
 
 -- 被顶号
