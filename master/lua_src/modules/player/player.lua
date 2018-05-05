@@ -19,12 +19,14 @@ local Auto_id = require "modules.system.auto_id"
 local Base = require "modules.player.base"
 local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
+local Bag  = require "modules.bag.bag"
 
 local sub_module =
 {
     { name = "base",new = Base },
     { name = "chat",new = Chat },
     { name = "misc",new = Misc },
+    { name = "bag" ,new = Bag  },
 }
 
 local Player = oo.class( nil,... )
