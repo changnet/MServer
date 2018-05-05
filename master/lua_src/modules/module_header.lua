@@ -26,9 +26,13 @@ g_mysql_mgr   = require "mysql.mysql_mgr"
 g_player_ev   = require "modules.event.player_event"
 g_system_ev   = require "modules.event.system_event"
 
+-- 加载服务器配置
+local raw_setting = require "setting.setting"
+g_setting     = raw_setting[g_app.srvname]
+assert( "no server conf found",g_setting )
+
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then
-    g_setting     = require "gateway.setting"
     g_httpd       = require "http.httpd"
     g_account_mgr = require "modules.account.account_mgr"
 
@@ -42,7 +46,6 @@ end
 
 -- 仅在world使用
 if "world" == g_app.srvname then
-    g_setting     = require "world.setting"
     g_player_mgr  = require "modules.player.player_mgr"
 
     g_mongodb_mgr = require "mongodb.mongodb_mgr"
