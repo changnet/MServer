@@ -79,16 +79,30 @@ function GM:reg_cmd( cmd,gm_func,srvname )
     forward_map[cmd] = srvname
 end
 
+-- 热更新本服，包括脚本、协议、rpc
 function GM:hf()
     hot_fix()
 end
 
+-- 只热更脚本
 function GM:hfs()
     hot_fix_script()
 end
 
+-- 全局热更，会更新其他进程
 function GM:ghf()
     global_hot_fix()
+end
+
+-- 添加元宝
+function GM:add_gold( player,count )
+    player:add_gold( tonumber(count),LOG.GM )
+end
+
+-- 添加道具
+function GM:add_item( player,id,count )
+    local bag = player:get_module( "bag" )
+    bag:add( tonumber(id),tonumber(count),LOG.GM )
 end
 
 local gm = GM()

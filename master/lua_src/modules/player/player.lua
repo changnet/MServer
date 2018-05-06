@@ -185,4 +185,9 @@ function Player:add_gold( count,op,sub_op )
     self.base_root.gold = self.base_root.gold + count
 end
 
+-- 获取等级
+function Player:get_level()
+    return self.base_root.level
+end
+
 return Player

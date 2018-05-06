@@ -25,8 +25,8 @@ end
 -- 数据加载接口，自动调用
 -- 必须返回操作结果
 function Base:db_load( sync_db )
-    local ecode,res = sync_db:find( 
-        "base",string.format( '{"_id":%d}',self.pid ) )
+    local ecode,res = 
+        sync_db:find( "base",string.format( '{"_id":%d}',self.pid ) )
     if 0 ~= ecode then return false end -- 出错
     if not res then return end -- 新号，空数据
     
@@ -38,6 +38,12 @@ end
 -- 数据加载完成自动调用，用于初始化从数据库加载的数据
 -- 必须返回操作结果
 function Base:db_init()
+    -- 新玩家初始化
+    if 1 == self.root.new then
+        self.root.level = 1 -- 初始1级
+        self.root.gold  = 0
+    end
+
     return true
 end
 

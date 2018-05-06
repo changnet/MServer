@@ -2,8 +2,9 @@
 
 LOG =
 {
-    LOGIN      = 1, -- 登录
-    LOGOUT     = 2, -- 退出
-    NEWPLAYER  = 3, -- 新号
-    MAILATTACH = 4, -- 邮件附件
+    GM         = 1, -- GM操作
+    LOGIN      = 2, -- 登录
+    LOGOUT     = 3, -- 退出
+    NEWPLAYER  = 4, -- 新号
+    MAILATTACH = 5, -- 邮件附件
 }

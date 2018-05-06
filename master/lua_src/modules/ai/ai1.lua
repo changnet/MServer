@@ -28,7 +28,13 @@ function Ai.execute( entity )
     if 0 == ping_start then
         PFLOG( "android ping start" )
         ping_start = ev:time()
+
+        -- gm测试
         entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@ghf" } )
+        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_gold 9" } )
+        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 10000 1" } )
+        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 10001 1" } )
+        entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 20001 1" } )
     end
 
     for index = 1,PING_ONE_TIME do Ai_action.ping( entity ) end

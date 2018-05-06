@@ -12,10 +12,8 @@ table.size = function(t)
     local ret = 0
     local k,v
     while true do
-        k, v = next(t, k)
-        if k == nil then
-            break
-        end
+        k, v = _G.next(t, k)
+        if k == nil then break end
         ret = ret + 1
     end
     return ret
@@ -41,16 +39,12 @@ table.empty = function(t)
 end
 
 --[[
-浅拷贝
+浅拷贝,shallow_copy
 ]]
-table.shallow_copy = function(t,mt)
-    if "table" ~= type(t) then return t end
-
+table.copy = function(t,mt)
     local ct = {}
 
-    for k,v in pairs(t) do
-        ct[k] = v
-    end
+    for k,v in pairs(t) do ct[k] = v end
 
     if mt then
         setmetatable( ct,getmetatable(t) )
@@ -99,7 +93,7 @@ end
 将一个table指定为数组
 此函数与底层bson解析有关，非通用函数
 ]]
-table.array = function(t,sparse)
+table.set_array = function(t,sparse)
     local _t = t or {}
     local mt = getmetatable( _t ) or {}
     rawset( mt,"__array",true )
