@@ -23,6 +23,8 @@ return
         mysql_user = "test",
         mysql_pwd  = "test",
         mysql_db   = "test_999",
+
+        lang = "zh", -- 简体中文
     },
 
     world = -- world服务器配置
@@ -46,5 +48,7 @@ return
         mysql_user = "test",
         mysql_pwd  = "test",
         mysql_db   = "test_999",
+
+        lang = "zh", -- 简体中文
     }
 }
