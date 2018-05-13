@@ -75,7 +75,7 @@ function Bag:add( id,count )
     return self:raw_add( item )
 end
 
--- 添加道具
+-- 添加道具,此函数会复制一份配置
 -- item里至少包含id、count，还可以包含其他字段，如绑定、装备强化等级、过期时间...
 local exclude_key = { "res" }
 function Bag:add_this( item )

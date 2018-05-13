@@ -180,9 +180,14 @@ function Player:get_gold()
     return self.base_root.gold
 end
 
--- 增加、扣除元宝
+-- 增加元宝
 function Player:add_gold( count,op,sub_op )
     self.base_root.gold = self.base_root.gold + count
+end
+
+-- 增加元宝
+function Player:dec_gold( count,op,sub_op )
+    self.base_root.gold = self.base_root.gold - count
 end
 
 -- 获取等级
