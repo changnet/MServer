@@ -14,6 +14,7 @@ local SC =
     PLAYER_ENTER = { PLAYER + 0x04,"player.pb","player.SEnterWorld" },
     PLAYER_OTHER = { PLAYER + 0x05,"player.pb","player.SLoginOtherWhere" },
     PLAYER_BASE = { PLAYER + 0x06,"player.pb","player.SBase" },
+    MISC_WELCOME = { MISC + 0x01,"misc.pb","misc.SWelcome" },
     CHAT_CHATINFO = { CHAT + 0x01,"chat.pb","chat.SChatInfo" },
     CHAT_DOCHAT = { CHAT + 0x02,"chat.pb","chat.SDoChat" },
 
@@ -25,6 +26,7 @@ local CS =
     PLAYER_PING = { PLAYER + 0x02,"player.pb","player.CPing" },
     PLAYER_CREATE = { PLAYER + 0x03,"player.pb","player.CCreateRole" },
     PLAYER_ENTER = { PLAYER + 0x04,"player.pb","player.CEnterWorld" },
+    MISC_WELCOME_GET = { MISC + 0x02,"misc.pb","misc.CWelcomeGet" },
     CHAT_DOCHAT = { CHAT + 0x02,"chat.pb","chat.CDoChat" },
 
 }

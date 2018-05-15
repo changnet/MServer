@@ -3,5 +3,20 @@
     <command>0x03</command>
     <comment>杂七杂八的功能</comment>
     <module>misc</module>
-    <subobjects/>
+    <subobjects>
+        <subobject>
+            <client></client>
+            <command>0x01</command>
+            <comment>角色欢迎数据</comment>
+            <field>WELCOME</field>
+            <server>Welcome</server>
+        </subobject>
+        <subobject>
+            <client>WelcomeGet</client>
+            <command>0x02</command>
+            <comment>领取角色欢迎奖励</comment>
+            <field>WELCOME_GET</field>
+            <server></server>
+        </subobject>
+    </subobjects>
 </root>

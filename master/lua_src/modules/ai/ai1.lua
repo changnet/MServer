@@ -30,6 +30,7 @@ function Ai.execute( entity )
         ping_start = ev:time()
 
         -- gm测试
+        entity:send_pkt( CS.MISC_WELCOME_GET,{} )
         entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@ghf" } )
         entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_gold 9" } )
         entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 10000 1" } )

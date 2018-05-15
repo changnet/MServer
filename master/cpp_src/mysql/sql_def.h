@@ -103,8 +103,9 @@ struct sql_query
         _id   = id;
         _size = size;
 
-        _stmt = new char[size];
+        _stmt = new char[size + 1];
         memcpy( _stmt,stmt,size );
+        _stmt[size] = 0; // 保证0结尾，因为有些地方需要打印stmt
     }
 
     ~sql_query()

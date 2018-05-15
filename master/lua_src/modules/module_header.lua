@@ -13,6 +13,11 @@ require "modules.system.define"
 require "modules.system.hot_fix"
 E = require "modules.system.error"
 
+-- 加载服务器配置
+local raw_setting = require "setting.setting"
+g_setting     = raw_setting[g_app.srvname]
+assert( "no server conf found",g_setting )
+
 g_log_mgr     = require "modules.log.log_mgr"
 g_unique_id   = require "modules.system.unique_id"
 g_conn_mgr    = require "network.conn_mgr"
@@ -26,11 +31,6 @@ g_mysql_mgr   = require "mysql.mysql_mgr"
 g_player_ev   = require "modules.event.player_event"
 g_system_ev   = require "modules.event.system_event"
 g_lang        = require "modules.lang.lang"
-
--- 加载服务器配置
-local raw_setting = require "setting.setting"
-g_setting     = raw_setting[g_app.srvname]
-assert( "no server conf found",g_setting )
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then
@@ -74,5 +74,5 @@ end
 if "world" == g_app.srvname then
     require "modules.chat.chat_cmd" -- 聊天
     require "modules.bag.bag_cmd"   -- 背包
-    require "modules.misc.misc"     -- 杂七杂八的小功能
+    require "modules.misc.misc_cmd"     -- 杂七杂八的小功能
 end
