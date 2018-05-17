@@ -73,7 +73,7 @@ void lnetwork_mgr::invoke_delete()
     _deleting.clear();
 }
 
-/* 产生一个唯一的连接id 
+/* 产生一个唯一的连接id
  * 之所以不用系统的文件描述符fd，是因为fd对于上层逻辑不可控。比如一个fd被释放，可能在多个进程
  * 之间还未处理完，此fd就被重用了。当前的连接id不太可能会在短时间内重用。
  */
@@ -204,7 +204,7 @@ int32 lnetwork_mgr::listen( lua_State *L )
     }
 
     uint32 conn_id = new_connect_id();
-    class socket *_socket = 
+    class socket *_socket =
         new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
     int32 fd = _socket->listen( host,port );
@@ -239,7 +239,7 @@ int32 lnetwork_mgr::connect( lua_State *L )
     }
 
     uint32 conn_id = new_connect_id();
-    class socket *_socket = 
+    class socket *_socket =
         new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
     int32 fd = _socket->connect( host,port );
@@ -411,7 +411,7 @@ class packet *lnetwork_mgr::lua_check_packet( lua_State *L,socket::conn_t conn_t
     return raw_check_packet( L,conn_id,conn_ty );
 }
 
-class packet *lnetwork_mgr::raw_check_packet( 
+class packet *lnetwork_mgr::raw_check_packet(
         lua_State *L,uint32 conn_id,socket::conn_t conn_ty )
 {
     class socket *sk = get_conn_by_conn_id( conn_id );
@@ -521,7 +521,7 @@ int32 lnetwork_mgr::get_http_header( lua_State *L )
         return luaL_error( L,"illegal socket packet type" );
     }
 
-    int32 size = 
+    int32 size =
         (reinterpret_cast<const class http_packet *>(pkt))->unpack_header( L );
     if ( size < 0 )
     {
@@ -809,7 +809,7 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
         return luaL_error( L,"invalid ssl key type" );
     }
 
-    int32 idx = ssl_mgr::instance()->new_ssl_ctx( 
+    int32 idx = ssl_mgr::instance()->new_ssl_ctx(
         static_cast<ssl_mgr::sslv_t>(sslv),cert_file,
         static_cast<ssl_mgr::key_t>(keyt),key_file,passwd );
 
@@ -823,7 +823,7 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
 }
 
 /* 把客户端数据包转发给另一服务器 */
-bool lnetwork_mgr::cs_dispatch( 
+bool lnetwork_mgr::cs_dispatch(
     int32 cmd,const class socket *src_sk,const char *ctx,size_t size ) const
 {
     const cmd_cfg_t *cmd_cfg = get_cs_cmd( cmd );
@@ -847,7 +847,7 @@ bool lnetwork_mgr::cs_dispatch(
     if ( !send.reserved( size + sizeof(struct s2s_header) ) )
     {
         ERROR( "client packet forwarding,can not "
-            "reserved memory:%ld",int64(size + sizeof(struct s2s_header)) );
+            "reserved memory:" FMT64d,int64(size + sizeof(struct s2s_header)) );
         return true; /* 如果转发失败，也相当于转发了 */
     }
 

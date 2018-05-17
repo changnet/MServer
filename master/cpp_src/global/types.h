@@ -40,6 +40,9 @@ typedef int32_t        int32;
 typedef uint64_t      uint64;
 typedef int64_t        int64;
 
+#define FMT64d "%" PRId64
+#define FMT64u "%" PRIu64
+
 /* avoid c-style string */
 typedef std::string    string;
 

@@ -113,10 +113,11 @@ function Player:module_db_load( sync_db )
     for _,module in pairs( sub_module ) do
         self[module.name]:db_init()
     end
-
-    self:on_login()
     self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 
+    self:on_login()
+
+    self.ok = true -- 标识初始化完成，未初始化完成的不要存库
     return true
 end
 
@@ -146,6 +147,12 @@ end
 -- 退出游戏
 function Player:on_logout()
     g_timer_mgr:del_timer( self.timer )
+
+    -- 未初始化完成不能存库，防止数据被覆盖
+    if not self.ok then
+        ELOG( "player initialize not finish,runing logout:%d",self.pid )
+        return
+    end
 
     -- 退出事件
     g_player_ev:fire_event( PLAYER_EV.EXIT,self )

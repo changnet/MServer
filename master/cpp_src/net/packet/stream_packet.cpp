@@ -24,7 +24,7 @@ int32 stream_packet::unpack()
     uint32 size = recv.data_size();
     if ( size < sizeof( struct base_header ) ) return 0;
 
-    const struct base_header *header = 
+    const struct base_header *header =
         reinterpret_cast<const struct base_header *>( recv.data_pointer() );
     if ( size < header->_length ) return 0;
 
@@ -81,7 +81,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    class codec *decoder = 
+    class codec *decoder =
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     if ( !decoder )
     {
@@ -205,7 +205,7 @@ void stream_packet::ss_dispatch( const s2s_header *header )
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
     if ( cmd_cfg->_session != network_mgr->get_curr_session() )
     {
-        class socket *dest_sk  = 
+        class socket *dest_sk  =
             network_mgr->get_conn_by_session( cmd_cfg->_session );
         if ( !dest_sk )
         {
@@ -218,7 +218,7 @@ void stream_packet::ss_dispatch( const s2s_header *header )
         if ( !is_ok )
         {
             ERROR( "server packet forwrding "
-                "can not reserved memory:%ld",int64(PACKET_LENGTH( header )) );
+                "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header )) );
         }
         return;
     }
@@ -244,7 +244,7 @@ void stream_packet::ss_command(
     lua_pushinteger( L,header->_cmd );
     lua_pushinteger( L,header->_errno );
 
-    codec *decoder = 
+    codec *decoder =
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     if ( !decoder )
     {
@@ -478,7 +478,7 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = 
+    codec *encoder =
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     if ( !encoder )
     {
@@ -524,7 +524,7 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = 
+    codec *encoder =
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     if ( !encoder )
     {
@@ -580,7 +580,7 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = 
+    codec *encoder =
         codec_mgr::instance()->get_codec( _socket->get_codec_type() );
     if ( !encoder )
     {
@@ -684,7 +684,7 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     return 0;
 }
 
-int32 stream_packet::raw_pack_clt( 
+int32 stream_packet::raw_pack_clt(
     int32 cmd,uint16 ecode,const char *ctx,size_t size )
 {
     class buffer &send = _socket->send_buffer();
@@ -707,7 +707,7 @@ int32 stream_packet::raw_pack_clt(
     return 0;
 }
 
-int32 stream_packet::raw_pack_ss( 
+int32 stream_packet::raw_pack_ss(
     int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size )
 {
     class buffer &send = _socket->send_buffer();
@@ -828,7 +828,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
 }
 
 // 转发到一个客户端
-void stream_packet::ssc_one_multicast( 
+void stream_packet::ssc_one_multicast(
     owner_t owner,int32 cmd,uint16 ecode,const char *ctx,int32 size )
 {
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
@@ -868,7 +868,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     // 长度记得包含mask和count本身这两个变量
     size_t raw_list_len = sizeof(owner_t)*(count + 2);
     int32 size = PACKET_BUFFER_LEN( header ) - raw_list_len;
-    const char *ctx = 
+    const char *ctx =
         reinterpret_cast<const char *>( header + 1 );
     ctx += raw_list_len;
 
@@ -882,7 +882,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     {
         for ( int32 idx = 2;idx < count;idx ++ )
         {
-            ssc_one_multicast( 
+            ssc_one_multicast(
                 *(raw_list + idx),header->_cmd,header->_errno,ctx,size );
         }
         return;
