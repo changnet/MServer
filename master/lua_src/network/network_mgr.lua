@@ -8,7 +8,7 @@ local Clt_conn      = require "network.clt_conn"
 local network_mgr = network_mgr
 local Network_mgr = oo.singleton( nil,... )
 
-local gateway_session = g_app:srv_session( 
+local gateway_session = g_app:srv_session(
     "gateway",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
 
 function Network_mgr:__init()
@@ -80,7 +80,18 @@ function Network_mgr:clt_close( clt_conn )
     self.clt_conn[clt_conn.conn_id] = nil
     if clt_conn.pid then self.clt[clt_conn.pid] = nil end
 
-    network_mgr:close( clt_conn.conn_id )
+    clt_conn:close()
+end
+
+-- 根据pid主动关闭客户端连接
+function Network_mgr:clt_close_by_pid( pid )
+    local conn = self.clt[pid]
+    if not conn then
+        ELOG( "clt_close_by_pid no conn found:%d",pid )
+        return
+    end
+
+    self:clt_close( conn )
 end
 
 -- 服务器认证
@@ -193,7 +204,7 @@ function Network_mgr:srv_multicast( cmd,pkt,ecode )
     for _,conn in pairs( self.srv ) do
         table.insert( conn_list,conn.conn_id )
     end
-    return network_mgr:srv_multicast( 
+    return network_mgr:srv_multicast(
         conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
 end
 
@@ -212,7 +223,7 @@ end
 -- 客户端广播(直接发给客户端，仅网关可用)
 -- @conn_list: 客户端conn_id列表
 function Network_mgr:raw_clt_multicast( conn_list,cmd,pkt,ecode )
-    return network_mgr:clt_multicast( 
+    return network_mgr:clt_multicast(
         conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
 end
 
@@ -269,6 +280,7 @@ function Network_mgr:clt_conn_del( conn_id )
 
     g_account_mgr:role_offline( conn_id )
 
+    -- 如果已经登录，通知其他服玩家下线
     if conn.pid then
         self.clt[conn.pid] = nil
         local pkt = { pid = conn.pid }

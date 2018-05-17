@@ -1,6 +1,6 @@
 -- mongodb_sync.lua
 -- 2018-0228
---xzc 
+--xzc
 
 -- 用coroutine来封装一套接近同步操作的数据库接口
 
@@ -25,6 +25,11 @@ end
 
 function Mongodb_sync:start( ... )
     return after_coroutine_resume( self.co,coroutine.resume( self.co,... ) )
+end
+
+-- 是否有效
+function Mongodb_sync:valid()
+    return "dead" ~= coroutine.status( self.co )
 end
 
 -- 这些数据库操作接口同mongodb.lua中的一样

@@ -9,11 +9,44 @@ local Player_mgr = oo.singleton( nil,... )
 
 function Player_mgr:__init()
     self.player = {} -- pid为key，Player为对象
+    self.raw_player = {} -- 未初始化的玩家对象
 end
 
 -- 获取玩家对象
+function Player_mgr:raw_get_player( pid )
+    return raw_player[pid]
+end
+
+-- 获取已初始化的玩家对象
 function Player_mgr:get_player( pid )
     return self.player[pid]
+end
+
+-- 处理玩家初始化成功
+function Player_mgr:enter_success( player )
+    local pid = player:get_pid()
+
+    self.player[pid] = player
+    self.raw_player[pid] = nil
+end
+
+-- 玩家初始化失败
+function Player_mgr:enter_fail( player )
+    -- 通知网关关闭连接
+    g_rpc:invoke( "player_disconnect",player:get_pid() )
+end
+
+-- 定时检测加载失败的玩家
+function Player_mgr:check_enter_fail()
+    local wait_del = {}
+    for pid,player in pairs( self.raw_player ) do
+        if not player:is_loading() then
+            wait_del[pid] = true
+            self.enter_one( player )
+        end
+    end
+
+    for k in pairs( wait_del ) do self.raw_player[k] = nil end
 end
 
 -- 玩家进入游戏世界，创建对象

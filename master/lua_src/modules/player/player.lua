@@ -117,6 +117,7 @@ function Player:module_db_load( sync_db )
 
     self:on_login()
 
+    self.sync_db = nil
     self.ok = true -- 标识初始化完成，未初始化完成的不要存库
     return true
 end
@@ -125,7 +126,15 @@ end
 function Player:db_load()
     local sync_db = g_mongodb:new_sync( self.module_db_load,self )
 
+    self.sync_db = sync_db
     return sync_db:start( self,sync_db )
+end
+
+-- 是否正在加载中
+function Player:is_loading()
+    if not self.sync_db or not self.sync_db:valid() then return false end
+
+    return true
 end
 
 -- 登录游戏

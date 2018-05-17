@@ -10,8 +10,14 @@ local Account_mgr = oo.singleton( nil,... )
 
 -- 初始化
 function Account_mgr:__init()
-    self.account  = {}
+    self.account  = {} -- 三级key [sid][plat][account]
     self.conn_acc = {} -- conn_id为key，帐号信息为value
+    self.role_acc = {} -- 玩家pid为key
+end
+
+-- 根据Pid获取角色数据
+function Account_mgr:get_role_info( pid )
+    return self.role_acc[pid]
 end
 
 -- 玩家登录
@@ -159,6 +165,8 @@ function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
     role_info.name = acc_info.name
     PFLOG( "create role success:%s--%d",role_info.account,pid )
 
+    self.role_acc[pid] = role_info
+
     -- 玩家可能断线了，这个clt_conn就不存在了
     local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
     if clt_conn then
@@ -183,6 +191,17 @@ function Account_mgr:role_offline( conn_id )
 
     role_info.conn_id = nil
     self.conn_acc[conn_id] = nil
+end
+
+-- 根据pid下线
+function Account_mgr:role_offline_by_pid( pid )
+    local role_info = self.role_acc[pid]
+    if not role_info then
+        ELOG( "role_offline_by_pid no role_info found:%d",pid )
+        return
+    end
+
+    self:role_info( role_info.conn_id )
 end
 
 -- 帐号在其他地方登录
@@ -226,6 +245,7 @@ function Account_mgr:on_db_loaded( ecode,res )
         if not self.account[sid][plat] then self.account[sid][plat] = {} end
 
         role_info.pid = role_info._id
+        self.role_acc[role_info.pid] = role_info
         self.account[sid][plat][account] = role_info
     end
 
