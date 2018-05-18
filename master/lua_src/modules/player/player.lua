@@ -119,6 +119,8 @@ function Player:module_db_load( sync_db )
 
     self.sync_db = nil
     self.ok = true -- 标识初始化完成，未初始化完成的不要存库
+
+    g_player_mgr:enter_success( self )
     return true
 end
 

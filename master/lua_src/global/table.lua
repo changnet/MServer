@@ -112,6 +112,34 @@ table.random_shuffle = function( list )
         list[idx] = list[index]
         list[index] = tmp
     end
-    
+
     return list
+end
+
+-- 合并任意变量
+-- table.concat并不能合并带nil、false、true之类的变量
+-- table.concat_any( "|","abc",nil,true,false,999 )
+table.concat_any = function( sep,... )
+    local any = table.pack( ... )
+
+    return table.concat_tbl( any,sep )
+end
+
+-- 这个tbl必须指定数组大小n，通常来自table.pack
+table.concat_tbl = function( tbl,sep )
+    local max_idx = tbl.n
+    for k = 1,max_idx do
+        local v = tbl[k]
+        if nil == v then
+            tbl[k] = "nil"
+        elseif true == v then
+            tbl[k] = "true"
+        elseif false == v then
+            tbl[k] = "false"
+        elseif "userdata" == type(v) then
+            tbl[k] = tostring(v)
+        end
+    end
+
+    return table.concat( tbl,sep )
 end

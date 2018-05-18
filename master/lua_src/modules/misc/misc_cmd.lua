@@ -15,7 +15,8 @@ end
 
 -- 协议回调
 local function role_welcome_cmd_cb( cmd,func )
-    return function ( srv_conn,pid,pkt )
+    assert( func,"role_welcome cmd no callback" )
+    local cb = function ( srv_conn,pid,pkt )
         local player = g_player_mgr:get_player( pid )
         if not player then
             ELOG( "role_welcome_cb no player:%d",cmd )
@@ -24,10 +25,9 @@ local function role_welcome_cmd_cb( cmd,func )
 
         return func( role_welcome,player,pkt )
     end
+
+    g_command_mgr:clt_register( cmd,cb )
 end
 
 g_player_ev:register( PLAYER_EV.ENTER,role_welcome_cb(role_welcome.on_enter) )
-g_command_mgr:clt_register( CS.MISC_WELCOME_GET,
-    role_welcome_cmd_cb(role_welcome.handle_award) )
-
-
+role_welcome_cmd_cb( CS.MISC_WELCOME_GET,role_welcome.handle_award )

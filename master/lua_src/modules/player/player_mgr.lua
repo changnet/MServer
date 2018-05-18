@@ -10,6 +10,8 @@ local Player_mgr = oo.singleton( nil,... )
 function Player_mgr:__init()
     self.player = {} -- pid为key，Player为对象
     self.raw_player = {} -- 未初始化的玩家对象
+
+    g_app:register_5stimer( function() return self:check_enter_fail() end )
 end
 
 -- 获取玩家对象
@@ -42,7 +44,7 @@ function Player_mgr:check_enter_fail()
     for pid,player in pairs( self.raw_player ) do
         if not player:is_loading() then
             wait_del[pid] = true
-            self.enter_one( player )
+            self.enter_fail( player )
         end
     end
 

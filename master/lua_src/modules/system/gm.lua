@@ -53,7 +53,9 @@ end
 
 -- gm指令运行入口（注意Player对象可能为nil，因为有可能从http接口调用gm）
 function GM:raw_exec( where,player,cmd,... )
-    PLOG( "exec gm:",where,cmd,... )
+    -- 防止PLOG函数本身报错，连热更的指令都没法刷了
+    xpcall( PLOG,__G__TRACKBACK__,"exec gm:",where,cmd,... )
+
     -- 优先查找注册过来的gm指令
     local gm_func = gm_map[cmd]
     if gm_func then

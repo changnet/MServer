@@ -65,10 +65,13 @@ end
 
 -- print log,只打印，不格式化
 function PLOG( any,... )
-    if not ( ... ) then return Log.plog( tostring(any) ) end
+    local args_num = select( "#",... )
+
+    -- if not ( ... ) then ... end 这种写法当...的第一个参数是nil就不对了
+    if 0 == args_num then return Log.plog( tostring(any) ) end
 
     -- 如果有多个参数，则合并起来输出，类似Lua的print函数
-    Log.plog( table.concat( { any,... },"    " ) )
+    Log.plog( table.concat_any( "    ",any,... ) )
 end
 
 -- print format log,以第一个为format参数，格式化后面的参数
@@ -83,12 +86,13 @@ end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效
 function PRINT( any,... )
-    if not ( ... ) then
+    local args_num = select( "#",... )
+    if 0 == args_num then
         return g_log_mgr.fl_logger:write( "",tostring(any),2 )
     end
 
     -- 如果有多个参数，则合并起来输出，类似Lua的print函数
-    g_log_mgr.fl_logger:write( "",table.concat( { any,... },"    " ),2 )
+    g_log_mgr.fl_logger:write( "",table.concat_any( "    ",any,... ),2 )
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
@@ -108,7 +112,7 @@ function ELOG( fmt,any,... )
         return Log.elog( string.format( fmt,any,... ) )
     end
 
-    Log.elog( table.concat( { fmt,any,... },"    " ) )
+    Log.elog( table.concat_any( "    ",fmt,any,... ) )
 end
 
 --测试时间,耗时打印
