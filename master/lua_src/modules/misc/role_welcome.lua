@@ -10,7 +10,7 @@ local Role_welcome = oo.singleton( nil,... )
 
 -- 登录事件
 function Role_welcome:on_enter( player )
-    local var = player:get_misc_var( "welcome" )
+    local var = player:get_misc_root()
     if var.welcome then return end -- 已经领取过
 
     return self:send_info( player,0 )
@@ -23,7 +23,7 @@ end
 
 -- 处理前端领取奖励
 function Role_welcome:handle_award( player,pkt )
-    local var = player:get_misc_var()
+    local var = player:get_misc_root()
     if var.welcome then return end -- 已经领取过
 
     var.welcome = 1

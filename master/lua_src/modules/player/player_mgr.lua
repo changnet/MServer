@@ -15,7 +15,7 @@ function Player_mgr:__init()
 end
 
 -- 获取玩家对象
-function Player_mgr:raw_get_player( pid )
+function Player_mgr:get_raw_player( pid )
     return raw_player[pid]
 end
 
@@ -44,7 +44,7 @@ function Player_mgr:check_enter_fail()
     for pid,player in pairs( self.raw_player ) do
         if not player:is_loading() then
             wait_del[pid] = true
-            self.enter_fail( player )
+            self:enter_fail( player )
         end
     end
 
@@ -55,7 +55,7 @@ end
 function Player_mgr:on_enter_world( clt_conn,pid,pkt )
     local player = Player( pid )
 
-    self.player[pid] = player
+    self.raw_player[pid] = player
     if not player:db_load() then return end
 
     PRINTF( "player login,pid = %d",pid )
@@ -65,6 +65,10 @@ end
 function Player_mgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
     local player = self.player[pid]
+    if not player then
+        ELOG( "player offline,object not found:%d",pid )
+        return
+    end
 
     player:on_logout()
 
@@ -76,7 +80,6 @@ end
 function Player_mgr:on_login_otherwhere( srv_conn,pkt )
     PRINTF( "player login other where,pid = %d",pkt.pid )
 end
-
 
 local player_mgr = Player_mgr()
 

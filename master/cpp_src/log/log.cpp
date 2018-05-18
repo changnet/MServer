@@ -41,6 +41,7 @@ public:
 
         _len = sz;
         memcpy( _context,ctx,sz );
+        _context[len] = 0; // 有可能是输出到stdout的，必须0结尾
     }
 private:
     char _context[size];
@@ -90,7 +91,7 @@ int32 log::write_cache( time_t tm,
 {
     assert( "write log no file path",path );
 
-    class log_one *one = allocate_one( len );
+    class log_one *one = allocate_one( len + 1 );
     if ( !one )
     {
         ERROR( "log write cant not allocate memory" );

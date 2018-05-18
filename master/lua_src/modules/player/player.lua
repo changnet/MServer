@@ -116,7 +116,7 @@ function Player:module_db_load( sync_db )
     self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 
     self:on_login()
-
+    local a = nil + 1
     self.sync_db = nil
     self.ok = true -- 标识初始化完成，未初始化完成的不要存库
 
@@ -191,6 +191,11 @@ end
 -- 获取通用的存库数据
 function Player:get_misc_var( key )
     return self.misc:get_var( key )
+end
+
+-- 获取通用数据
+function Player:get_misc_root()
+    return self.misc:get_root()
 end
 
 -- 获取元宝数量
