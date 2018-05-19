@@ -22,12 +22,12 @@ local function account_mgr_clt_cb( cmd,cb_func,noauth )
     g_command_mgr:clt_register( cmd,cb,noauth )
 end
 
-local function player_mgr_clt_cb( cmd,cb_func )
+local function player_mgr_clt_cb( cmd,cb_func,noauth )
     local cb = function( clt_conn,pid,pkt )
         return cb_func( g_player_mgr,clt_conn,pid,pkt )
     end
 
-    g_command_mgr:clt_register( cmd,cb )
+    g_command_mgr:clt_register( cmd,cb,noauth )
 end
 
 local function player_mgr_srv_cb( cmd,cb_func )
@@ -61,7 +61,7 @@ end
 
 if "world" == g_app.srvname then
     g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
-    player_mgr_clt_cb( CS.PLAYER_ENTER,g_player_mgr.on_enter_world )
+    player_mgr_clt_cb( CS.PLAYER_ENTER,g_player_mgr.on_enter_world,true )
 
     player_mgr_srv_cb( SS.PLAYER_OFFLINE,g_player_mgr.on_player_offline )
     player_mgr_srv_cb( SS.PLAYER_OTHERWHERE,g_player_mgr.on_login_otherwhere )

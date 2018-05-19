@@ -30,6 +30,7 @@ function Player_mgr:enter_success( player )
 
     self.player[pid] = player
     self.raw_player[pid] = nil
+    g_authorize:set_player( pid )
 
     player:send_pkt( SC.PLAYER_ENTER,{} )
     PRINTF( "player enter,pid = %d",pid )
@@ -67,6 +68,8 @@ end
 -- 玩家离线
 function Player_mgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
+    g_authorize:unset_player( pid )
+
     local player = self.player[pid]
     if not player then
         ELOG( "player offline,object not found:%d",pid )

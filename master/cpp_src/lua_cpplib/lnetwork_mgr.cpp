@@ -835,7 +835,9 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
     return 1;
 }
 
-/* 把客户端数据包转发给另一服务器 */
+/* 把客户端数据包转发给另一服务器
+ * 这个函数如果返回false，则会将协议在当前进程派发
+ */
 bool lnetwork_mgr::cs_dispatch(
     int32 cmd,const class socket *src_sk,const char *ctx,size_t size ) const
 {
@@ -846,11 +848,7 @@ bool lnetwork_mgr::cs_dispatch(
         return false;
     }
 
-    if ( expect_false(cmd_cfg->_session == _session) )
-    {
-        ERROR( "cs_dispatch cmd(%d) should be current session",cmd );
-        return false;
-    }
+    if ( cmd_cfg->_session == _session ) return false;
 
     int32 conn_id = src_sk->conn_id();
     /* 这个socket必须经过认证，归属某个对象后才能转发到其他服务器

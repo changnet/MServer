@@ -56,6 +56,9 @@ function Command_mgr:__init()
     for _,v in pairs( CS ) do
         self.cs[ v ] = {}
     end
+
+    -- 引用授权数据，防止频繁调用函数
+    self.auth_pid = g_authorize:get_player_data()
 end
 
 -- 加载二进制flatbuffers schema文件
@@ -151,8 +154,15 @@ function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
         return ELOG( "clt_dispatch_ex:cmd [%d] no handle function found",cmd )
     end
 
+    -- 判断这个服务器连接是已认证的
     if not srv_conn.auth then
         return ELOG( "clt_dispatch_ex:srv conn not auth,cmd [%d]",cmd )
+    end
+
+    -- 判断这个玩家是已认证的
+    if not cfg.noauth and not self.auth_pid[pid] then
+        return ELOG( 
+            "clt_dispatch_ex:player not auth,pid [%d],cmd [%d]",pid,cmd )
     end
 
     return handler( srv_conn,pid,... )
