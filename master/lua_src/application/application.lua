@@ -157,7 +157,9 @@ end
 
 -- 进程初始化
 function Application:initialize()
-    g_command_mgr:load_schema()
+    if not g_command_mgr:load_schema() then
+        os.exit( 1 )
+    end
     for _,init in pairs( self.init_list ) do
         if not init.after and init.action then init.action( self ) end
     end

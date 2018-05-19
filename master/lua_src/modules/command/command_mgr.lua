@@ -60,11 +60,13 @@ end
 
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
-    local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PFLOG( "%s load protocol schema:%d",g_app.srvname,fs )
+    local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
+    PFLOG( "%s load protocol schema:%d",g_app.srvname,pfs )
 
-    local fs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
-    PFLOG( "%s load flatbuffers schema:%d",g_app.srvname,fs )
+    local ffs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
+    PFLOG( "%s load flatbuffers schema:%d",g_app.srvname,ffs )
+
+    return (pfs >= 0 and ffs >= 0)
 end
 
 -- 注册客户端协议处理
@@ -103,7 +105,7 @@ function Command_mgr:command_pkt()
     local pkt = {}
     pkt.clt_cmd = self:clt_cmd()
     pkt.srv_cmd = self:srv_cmd()
-    pkt.rpc_cmd = self:rpc_cmd()
+    pkt.rpc_cmd = g_rpc:rpc_cmd()
 
     return pkt
 end
@@ -174,11 +176,6 @@ function Command_mgr:srv_cmd()
     end
 
     return cmds
-end
-
--- 获取当前进程处理的rpc指令
-function Command_mgr:rpc_cmd()
-    return g_rpc:rpc_cmd()
 end
 
 -- 其他服务器指令注册

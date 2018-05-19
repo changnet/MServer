@@ -103,6 +103,9 @@ public:
     {
         _send.set_buffer_size( max,min );
     }
+
+    inline int64 get_object_id() const { return _object_id; }
+    inline void set_object_id( int64 oid ) { _object_id = oid; }
 private:
     int32 io_status_check( int32 ecode );
 protected:
@@ -113,6 +116,7 @@ protected:
     conn_t _conn_ty;
 private:
     ev_io _w;
+    int64 _object_id; /* 标识这个socket对应上层逻辑的object */ 
 
     class io *_io;
     class packet *_packet;

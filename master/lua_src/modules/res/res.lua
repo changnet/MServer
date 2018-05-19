@@ -19,23 +19,27 @@ local Res = oo.singleton( nil,... )
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:add_res( res_list,op,sub_op )
-    for _,one in pairs( res_list ) do self:add_one_res( one,op,sub_op ) end
+function Res:add_res( player,res_list,op,sub_op )
+    for _,one in pairs( res_list ) do
+        self:add_one_res( player,one,op,sub_op )
+    end
 end
 
 -- 扣除资源(这个函数并不检测资源是否足够)
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:dec_res( res_list,op,sub_op )
-    for _,one in pairs( res_list ) do self:dec_one_res( one,op,sub_op ) end
+function Res:dec_res( player,res_list,op,sub_op )
+    for _,one in pairs( res_list ) do
+        self:dec_one_res( player,one,op,sub_op )
+    end
 end
 
 -- 增加一个资源
 -- @res:资源{res = 1,id = 0,count = 100}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:add_one_res( res,op,sub_op )
+function Res:add_one_res( player,res,op,sub_op )
     local add_func = res_dec_map[res.res]
     if not add_func then
         ELOG("Res:add_one_res no function found:%s,op %d",tostring(res.res),op)
@@ -43,14 +47,14 @@ function Res:add_one_res( res,op,sub_op )
     end
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return add_func( res.id,res.count,op,sub_op,res )
+    return add_func( player,res.id,res.count,op,sub_op,res )
 end
 
 -- 扣除一个资源
 -- @res:资源{res = 1,id = 0,count = 100}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:dec_one_res( res,op,sub_op )
+function Res:dec_one_res( player,res,op,sub_op )
     local dec_func = res_dec_map[res.res]
     if not dec_func then
         ELOG("Res:dec_one_res no function found:%s,op %d",tostring(res.res),op)
@@ -58,26 +62,28 @@ function Res:dec_one_res( res,op,sub_op )
     end
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return dec_func( res.id,res.count,op,sub_op,res )
+    return dec_func( player,res.id,res.count,op,sub_op,res )
 end
 
 -- 检查某个资源是否足够
-function Res:check_one_res( res )
+function Res:check_one_res( player,res )
     local get_func = res_get_map[res.res]
     if not get_func then
-        ELOG("Res:check_one_res no function found:%s,op %d",tostring(res.res),op)
+        ELOG("Res:check_one_res not found:%s,op %d",tostring(res.res),op)
         return false
     end
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return get_func( res.id,res.count,res )
+    return get_func( player,res.id,res.count,res )
 end
 
 -- 检测资源是否足够
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
-function Res:check_res( res_list )
+function Res:check_res( player,res_list )
     for _,one in pairs( res_list ) do
-        if not self:dec_one_res( one,op,sub_op ) then return false,one end
+        if not self:dec_one_res( player,one,op,sub_op ) then
+            return false,one
+        end
     end
 
     return true

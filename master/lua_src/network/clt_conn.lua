@@ -65,6 +65,7 @@ end
 -- 将该链接绑定一个角色
 function Clt_conn:bind_role( pid )
     self.pid = pid
+    network_mgr:set_conn_owner( self.conn_id,self.pid or 0 )
 end
 
 -- 监听客户端连接
@@ -76,6 +77,10 @@ end
 
 -- 连接断开
 function Clt_conn:conn_del()
+    -- 这个会自动解除
+    -- g_conn_mgr:set_conn( self.conn_id,nil )
+    network_mgr:unset_conn_owner( self.conn_id,self.pid or 0 )
+
     return g_network_mgr:clt_conn_del( self.conn_id )
 end
 
@@ -106,6 +111,8 @@ end
 -- 主动关闭连接
 function Clt_conn:close()
     g_conn_mgr:set_conn( self.conn_id,nil )
+    network_mgr:unset_conn_owner( self.conn_id,self.pid or 0 )
+
     return network_mgr:close( self.conn_id )
 end
 

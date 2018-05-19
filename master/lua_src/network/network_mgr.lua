@@ -164,7 +164,6 @@ function Network_mgr:bind_role( pid,clt_conn )
 
     clt_conn:bind_role( pid )
     self.clt[pid] = clt_conn
-    network_mgr:set_conn_owner( clt_conn.conn_id,pid )
 end
 
 -- 获取客户端连接
@@ -273,11 +272,9 @@ end
 -- 客户端连接断开回调
 function Network_mgr:clt_conn_del( conn_id )
     local conn = self.clt_conn[conn_id]
-
-    self.clt_conn[conn_id] = nil
-
     g_account_mgr:role_offline( conn_id )
 
+    self.clt_conn[conn_id] = nil
     -- 如果已经登录，通知其他服玩家下线
     if conn.pid then
         self.clt[conn.pid] = nil

@@ -6,10 +6,8 @@
 
 -- 热更协议
 local function fix_proto()
-    if g_command_mgr.modify or g_rpc.modify then
-        local _pkt = g_command_mgr:command_pkt()
-        g_network_mgr:srv_multicast( SS.SYS_CMD_SYNC,_pkt )
-    end
+    local pkt = g_command_mgr:command_pkt()
+    g_network_mgr:srv_multicast( SS.SYS_CMD_SYNC,pkt )
 end
 
 -- 热更schema文件

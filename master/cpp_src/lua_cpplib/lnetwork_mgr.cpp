@@ -40,7 +40,6 @@ lnetwork_mgr::~lnetwork_mgr()
     _owner_map.clear();
     _socket_map.clear();
     _session_map.clear();
-    _conn_owner_map.clear();
     _conn_session_map.clear();
 }
 
@@ -282,18 +281,6 @@ const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32 cmd ) const
     return &(itr->second);
 }
 
-/* 通过连接id查找所有者 */
-owner_t lnetwork_mgr::get_owner_by_conn_id( uint32 conn_id ) const
-{
-    map_t<uint32,owner_t>::const_iterator itr = _conn_owner_map.find( conn_id );
-    if ( itr == _conn_owner_map.end() )
-    {
-        return 0;
-    }
-
-    return itr->second;
-}
-
 /* 通过所有者查找连接id */
 uint32 lnetwork_mgr::get_conn_id_by_owner( owner_t owner ) const
 {
@@ -357,7 +344,7 @@ int32 lnetwork_mgr::set_conn_owner( lua_State *L )
     uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
     owner_t owner  = luaL_checkinteger( L,2 );
 
-    const class socket *sk = get_conn_by_conn_id( conn_id );
+    class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
     {
         return luaL_error( L,"invalid connection" );
@@ -368,8 +355,23 @@ int32 lnetwork_mgr::set_conn_owner( lua_State *L )
         return luaL_error( L,"illegal connection type" );
     }
 
+    sk->set_object_id( owner );
     _owner_map[owner]  = conn_id;
-    _conn_owner_map[conn_id] = owner;
+
+    return 0;
+}
+
+/* 解除(客户端)连接所有者 */
+int32 lnetwork_mgr::unset_conn_owner( lua_State *L )
+{
+    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
+    owner_t owner  = luaL_checkinteger( L,2 );
+
+    _owner_map.erase( owner );
+
+    // 这个时候可能socket已被销毁
+    class socket *sk = get_conn_by_conn_id( conn_id );
+    if ( sk ) sk->set_object_id( 0 );
 
     return 0;
 }
@@ -630,7 +632,18 @@ class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
         return NULL;
     }
 
-    return itr->second;
+    /* 由网关转发给客户的数据包，是根据_socket_map来映射连接的。
+     * 但是上层逻辑是脚本，万一发生错误则可能导致_socket_map的映射出现错误
+     * 造成玩家数据发送到另一个玩家去了
+     */
+    socket *sk = itr->second;
+    if ( sk->get_object_id() != owner )
+    {
+        ERROR("get_conn_by_owner not match:%d,conn = %d",owner,sk->conn_id());
+        return NULL;
+    }
+
+    return sk;
 }
 
 /* 新增连接 */
@@ -827,13 +840,28 @@ bool lnetwork_mgr::cs_dispatch(
     int32 cmd,const class socket *src_sk,const char *ctx,size_t size ) const
 {
     const cmd_cfg_t *cmd_cfg = get_cs_cmd( cmd );
-    if ( !cmd_cfg )
+    if ( expect_false(!cmd_cfg) )
     {
         ERROR( "cs_dispatch cmd(%d) no cmd cfg found",cmd );
         return false;
     }
 
-    if ( cmd_cfg->_session == _session ) return false;
+    if ( expect_false(cmd_cfg->_session == _session) )
+    {
+        ERROR( "cs_dispatch cmd(%d) should be current session",cmd );
+        return false;
+    }
+
+    int32 conn_id = src_sk->conn_id();
+    /* 这个socket必须经过认证，归属某个对象后才能转发到其他服务器
+     * 防止网关后面的服务器被攻击
+     */
+    int64 object_id = src_sk->get_object_id();
+    if ( expect_false(!object_id) )
+    {
+        ERROR( "cs_dispatch cmd(%d) socket do NOT have object:%d",cmd,conn_id );
+        return false;
+    }
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
     class socket *dest_sk  = get_conn_by_session( cmd_cfg->_session );
@@ -851,7 +879,6 @@ bool lnetwork_mgr::cs_dispatch(
         return true; /* 如果转发失败，也相当于转发了 */
     }
 
-    int32 conn_id = src_sk->conn_id();
     codec::codec_t codec_ty = src_sk->get_codec_type();
 
     struct s2s_header s2sh;
@@ -859,7 +886,7 @@ bool lnetwork_mgr::cs_dispatch(
     s2sh._cmd    = cmd;
     s2sh._packet = SPKT_CSPK;
     s2sh._codec  = codec_ty;
-    s2sh._owner  = get_owner_by_conn_id( conn_id );
+    s2sh._owner  = static_cast<owner_t>(object_id);
 
     send.__append( &s2sh,sizeof(struct s2s_header) );
     send.__append( ctx,size );

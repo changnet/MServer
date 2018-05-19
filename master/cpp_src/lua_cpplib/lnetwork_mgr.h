@@ -30,6 +30,7 @@ public:
     int32 set_conn_packet( lua_State *L ); /* 设置socket的打包方式 */
 
     int32 set_conn_owner  ( lua_State *L ); /* 设置(客户端)连接所有者 */
+    int32 unset_conn_owner( lua_State *L ); /* 解除(客户端)连接所有者 */
     int32 set_conn_session( lua_State *L ); /* 设置(服务器)连接session */
     int32 set_curr_session( lua_State *L ); /* 设置当前服务器的session */
 
@@ -73,8 +74,6 @@ public:
     /* 删除无效的连接 */
     void invoke_delete();
 
-    /* 通过连接id查找所有者 */
-    owner_t get_owner_by_conn_id( uint32 conn_id ) const;
     /* 通过所有者查找连接id */
     uint32 get_conn_id_by_owner( owner_t owner ) const;
 
@@ -122,8 +121,6 @@ private:
     std::vector<uint32> _deleting;/* 异步删除的socket */
     /* owner-conn_id 映射,ssc数据包转发时需要 */
     map_t<owner_t,uint32> _owner_map;
-    /* conn_id-owner 映射，css数据包转发时需要 */
-    map_t<uint32,owner_t> _conn_owner_map;
 
     map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
     map_t<uint32,owner_t> _conn_session_map; /* conn_id-session 映射 */

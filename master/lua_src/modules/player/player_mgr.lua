@@ -30,12 +30,15 @@ function Player_mgr:enter_success( player )
 
     self.player[pid] = player
     self.raw_player[pid] = nil
+
+    player:send_pkt( SC.PLAYER_ENTER,{} )
+    PRINTF( "player enter,pid = %d",pid )
 end
 
 -- 玩家初始化失败
 function Player_mgr:enter_fail( player )
     -- 通知网关关闭连接
-    g_rpc:invoke( "player_disconnect",player:get_pid() )
+    g_rpc:invoke( "kill_player_connect",player:get_pid() )
 end
 
 -- 定时检测加载失败的玩家

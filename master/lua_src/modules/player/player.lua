@@ -116,7 +116,7 @@ function Player:module_db_load( sync_db )
     self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 
     self:on_login()
-    local a = nil + 1
+
     self.sync_db = nil
     self.ok = true -- 标识初始化完成，未初始化完成的不要存库
 
@@ -141,16 +141,11 @@ end
 
 -- 登录游戏
 function Player:on_login()
-    for _,module in pairs( sub_module ) do
-        self[module.name]:on_login()
-    end
+    for _,module in pairs( sub_module ) do self[module.name]:on_login() end
 
 
     g_player_ev:fire_event( PLAYER_EV.ENTER,self )
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
-
-    self:send_pkt( SC.PLAYER_ENTER,{} )
-    PRINTF( "player enter,pid = %d",self.pid )
 
     return true
 end

@@ -18,6 +18,7 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
 {
     _io = NULL;
     _packet = NULL;
+    _object_id = 0;
 
     _pending  = 0;
     _conn_id  = conn_id;

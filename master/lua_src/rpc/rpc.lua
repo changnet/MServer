@@ -1,19 +1,20 @@
 -- rpc client and server
 
-local LIMIT = require "global.limits"
+
 local g_network_mgr = g_network_mgr
+local Auto_id = require "modules.system.auto_id"
 
 local Rpc = oo.singleton( nil,... )
 
 function Rpc:__init()
     self.callback = {}
     self.procedure = {}
-    self.seed = 1
+    self.auto_id = Auto_id()
 end
 
 -- 声明一个rpc调用
 -- @session：缺省下默认为当前服务器，不能冲突。-1则为不广播，调用时需要指定服务器
-function Rpc:declare( method_name,func,session )
+function Rpc:declare( method_name,method,session )
     -- 在启动(g_app.ok为false)时检测冲突，热更时覆盖
     if not g_app.ok and self.procedure[method_name] then
         return error(
@@ -21,8 +22,8 @@ function Rpc:declare( method_name,func,session )
     end
 
     self.procedure[method_name] = {}
-    self.procedure[method_name].func = func
-    self.procedure[method_name].session = -1
+    self.procedure[method_name].method = method
+    self.procedure[method_name].session = session
 end
 
 -- 其他服务器注册rpc回调
@@ -38,8 +39,9 @@ end
 
 -- 获取method所在的连接
 -- 查找不到则返回nil
-function Rpc:get_method_conn( mathod_name )
+function Rpc:get_method_conn( method_name )
     local cfg = self.procedure[method_name]
+
     if not cfg then return nil end
 
     return g_network_mgr:get_srv_conn( cfg.session )
@@ -48,10 +50,10 @@ end
 -- 发起rpc调用(无返回值)
 -- rpc:invoke( "addExp",pid,exp )
 function Rpc:invoke( method_name,... )
-    local srv_conn = self:get_method_conn( mathod_name )
+    local srv_conn = self:get_method_conn( method_name )
     if not srv_conn then
-        return error( string.format( 
-            "rpc:no connection to remote server:%s,%d",method_name))
+        ELOG( "rpc:no connection to remote server:%s",method_name )
+        return
     end
 
     return srv_conn:send_rpc_pkt( 0,method_name,... )
@@ -79,12 +81,10 @@ end
 -- rpc:xcall( "addExp",callback,pid,exp )
 function Rpc:xcall( srv_conn,method_name,callback,... )
     -- 记录回调信息
-    self.callback[self.seed] = callback
+    local call_id = self.auto_id:next_id( self.callback )
 
-    srv_conn:send_rpc_pkt( self.seed,method_name,... )
-
-    self.seed = self.seed + 1
-    if self.seed > LIMIT.INT32_MAX then self.seed = 1 end
+    self.callback[call_id] = callback
+    srv_conn:send_rpc_pkt( call_id,method_name,... )
 end
 
 -- 获取当前服务器的所有rpc调用
@@ -92,7 +92,7 @@ function Rpc:rpc_cmd()
     local cmds = {}
 
     for method_name,cfg in pairs( self.procedure ) do
-        if -1 ~= cfg.session and cfg.func then
+        if -1 ~= cfg.session and cfg.method then
             table.insert( cmds,method_name )
         end
     end
@@ -109,7 +109,7 @@ function rpc_command_new( conn_id,rpc_id,method_name,... )
         return error( string.format( "rpc:\"%s\" was not declared",method_name ) )
     end
 
-    return cfg.func( ... )
+    return cfg.method( ... )
 end
 
 function rpc_command_return ( conn_id,rpc_id,ecode,... )

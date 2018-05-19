@@ -201,7 +201,7 @@ function Account_mgr:role_offline_by_pid( pid )
         return
     end
 
-    self:role_info( role_info.conn_id )
+    self:role_offline( role_info.conn_id )
 end
 
 -- 帐号在其他地方登录

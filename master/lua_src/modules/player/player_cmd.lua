@@ -45,7 +45,7 @@ local function player_base_cb( cb_func )
 end
 
 -- 强制玩家断开连接，网关用
-local function player_disconnect( pid )
+local function kill_player_connect( pid )
     PFLOG( "kill player conn:%d",pid )
 
     g_account_mgr:role_offline_by_pid( pid )
@@ -54,7 +54,7 @@ end
 
 -- 这里注册系统模块的协议处理
 if "gateway" == g_app.srvname then
-    g_rpc:declare( "player_disconnect",player_disconnect )
+    g_rpc:declare( "kill_player_connect",kill_player_connect )
     account_mgr_clt_cb( CS.PLAYER_LOGIN,g_account_mgr.player_login,true )
     account_mgr_clt_cb( CS.PLAYER_CREATE,g_account_mgr.create_role,true )
 end
