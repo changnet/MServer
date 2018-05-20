@@ -32,6 +32,7 @@ g_mysql_mgr   = require "mysql.mysql_mgr"
 g_player_ev   = require "modules.event.player_event"
 g_system_ev   = require "modules.event.system_event"
 g_lang        = require "modules.lang.lang"
+g_mail_mgr    = require "modules.mail.mail_mgr"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then
@@ -66,6 +67,7 @@ end
 -- 公用
 require "modules.system.system_cmd" -- 系统模块
 require "modules.player.player_cmd" -- 玩家基础模块
+require "modules.mail.mail_cmd"     -- 邮件模块
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then

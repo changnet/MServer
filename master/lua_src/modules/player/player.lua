@@ -20,6 +20,7 @@ local Base = require "modules.player.base"
 local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 local Bag  = require "modules.bag.bag"
+local Mail = require "modules.mail.mail"
 
 local sub_module =
 {
@@ -27,6 +28,7 @@ local sub_module =
     { name = "chat",new = Chat },
     { name = "misc",new = Misc },
     { name = "bag" ,new = Bag  },
+    { name = "Mail",new = Mail },
 }
 
 local Player = oo.class( nil,... )
