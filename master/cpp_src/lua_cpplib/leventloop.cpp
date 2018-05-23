@@ -68,9 +68,17 @@ int32 leventloop::backend( lua_State *L )
     return run(); /* this won't return until backend stop */
 }
 
+// 帧时间
 int32 leventloop::time( lua_State *L )
 {
     lua_pushinteger( L,ev_rt_now );
+    return 1;
+}
+
+// 实时时间
+int32 leventloop::real_time( lua_State *L )
+{
+    lua_pushinteger( L,get_time() );
     return 1;
 }
 

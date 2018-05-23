@@ -97,10 +97,11 @@ void lstate::open_cpp()
 int32 luaopen_ev( lua_State *L )
 {
     lclass<leventloop> lc(L,"Eventloop");
-    lc.def<&leventloop::time>   ("time"   );
-    lc.def<&leventloop::exit>   ("exit"   );
-    lc.def<&leventloop::signal> ("signal" );
-    lc.def<&leventloop::backend>("backend");
+    lc.def<&leventloop::time>     ("time"     );
+    lc.def<&leventloop::exit>     ("exit"     );
+    lc.def<&leventloop::signal>   ("signal"   );
+    lc.def<&leventloop::backend>  ("backend"  );
+    lc.def<&leventloop::real_time>("real_time");
 
     return 0;
 }

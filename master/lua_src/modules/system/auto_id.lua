@@ -2,7 +2,7 @@
 -- 2018-02-26
 -- xzc
 
--- 一个不存库的自增id。如果达到最大值，则从1重复自增
+-- auto increament id 一个不存库的自增id。如果达到最大值，则从1重复自增
 
 local LIMIT = require "global.limits"
 
