@@ -4,6 +4,153 @@
 
 -- 增加部分常用table函数
 
+local raw_table_dump -- 函数前置声明
+
+-- 导出缩进，pretty = true时才生效
+local function dump_table_indent( indent,dump_tbl )
+    if indent <= 0 then return end
+
+    -- TODO:这个感觉不用做缓存的吧，一来这个功能不常用，二是同一个字符串只分配一次内存
+    for idx = 1,indent do table.insert( dump_tbl,"    " ) end
+end
+
+-- 导出换行，pretty = true时才生效
+local function dump_table_break( indent,dump_tbl )
+    if indent < 0 then return end
+
+    return table.insert( dump_tbl,"\n" )
+end
+
+-- kv之间的分隔，比如"a = 9"有分隔，"a=9"无分隔
+local function dump_table_seperator( indent,dump_tbl )
+    if indent < 0 then return end
+
+    return table.insert( dump_tbl," " )
+end
+
+-- 导出key
+local function dump_table_key( key,dump_tbl )
+    local key_type = type( key )
+
+    if "string" == key_type then
+        table.insert( dump_tbl,"['" )
+        table.insert( dump_tbl,key  )
+        table.insert( dump_tbl,"']" )
+        return
+    end
+
+    if "number" == key_type then
+        table.insert( dump_tbl,"[" )
+        table.insert( dump_tbl,key  )
+        table.insert( dump_tbl,"]" )
+        return
+    end
+
+    if "boolean" == key_type then
+        table.insert( dump_tbl,"[" )
+        table.insert( dump_tbl,tostring(key)  )
+        table.insert( dump_tbl,"]" )
+        return
+    end
+
+    --table nil thread userdata 不能作key.否则写入文件后没法还原
+    error( string.format("can NOT converte %s to string key",key_type) )
+end
+
+-- 导出value
+local function dump_table_val( key,val,indent,dump_tbl,dump_recursion )
+    local val_type = type( val )
+
+    if "number" == val_type then
+        dump_table_seperator( indent,dump_tbl )
+        return table.insert( dump_tbl,val  )
+    end
+
+    if "boolean" == val_type then
+        dump_table_seperator( indent,dump_tbl )
+        -- table.concat不支持boolean类型的
+        return table.insert( dump_tbl,tostring( val )  )
+    end
+
+    if "string" == val_type then
+        dump_table_seperator( indent,dump_tbl )
+        table.insert( dump_tbl,"'" )
+        table.insert( dump_tbl,val  )
+        table.insert( dump_tbl,"'" )
+        return
+    end
+
+    if "table" == val_type then
+        -- 不能循环引用，一是防止死循环，二是写入到文件后没法还原
+        if dump_recursion[val] then
+            error( string.format(
+                "recursion reference table at key:%s",tostring(key)) )
+        end
+
+        dump_recursion[val] = true
+        return raw_table_dump( val,indent,dump_tbl,dump_recursion )
+    end
+
+    -- function thread userdata 不能作value.否则写入文件后没法还原
+    error( string.format("can NOT converte %s to string val",val_type) )
+end
+
+-- 导出逻辑
+raw_table_dump = function( tbl,indent,dump_tbl,dump_recursion )
+    local next_indent = indent >= 0 and indent + 1 or -1 -- indent < 0 表示不缩进
+
+    -- 子table和key之间是需要换行的
+    if indent > 0 then dump_table_break( indent,dump_tbl ) end
+
+    dump_table_indent( indent,dump_tbl )
+    table.insert( dump_tbl,"{" )
+    dump_table_break( indent,dump_tbl )
+
+    local first = true
+    for k,v in pairs( tbl ) do
+        if not first then
+            table.insert( dump_tbl,"," )
+            dump_table_break( next_indent,dump_tbl )
+        end
+
+        first = false;
+        dump_table_indent( next_indent,dump_tbl )
+        dump_table_key( k,dump_tbl )
+        dump_table_seperator( indent,dump_tbl )
+        table.insert( dump_tbl,"=" )
+        dump_table_val( k,v,next_indent,dump_tbl,dump_recursion )
+    end
+
+    dump_table_break( indent,dump_tbl )
+    dump_table_indent( indent,dump_tbl )
+    table.insert( dump_tbl,"}" )
+
+    return dump_tbl
+end
+
+-- 导出table为字符串.
+-- table中不能包括thread、function、userdata，table之间不能相互引用
+-- @pretty:是否美化
+table.dump = function( tbl,pretty )
+    local dump_tbl = {}
+    local dump_recursive = {}
+
+    local indent = pretty and 0 or -1
+    raw_table_dump( tbl,indent,dump_tbl,dump_recursive )
+
+    return table.concat( dump_tbl )
+end
+
+-- 从字符串加载一个table
+table.load = function( str )
+    -- 5.3没有dostring之类的方法了
+    -- load返回一个函数，"{a = 9}"这样的字符串是不合lua语法的
+    local chunk_f,chunk_e = load( "return " .. str )
+    if not chunk_f then error ( chunk_e ) end
+
+    return chunk_f()
+end
+
 --[[
 不计算Key为nil的情况
 如果使用了rawset,value可能为nil
