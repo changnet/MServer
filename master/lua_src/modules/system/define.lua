@@ -14,7 +14,10 @@ SRV_NAME =
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"
 
--- 服务器连接超时设定
+-- 一个玩家最大邮件数量
+MAX_MAIL = 200
+
+-- 服务器连接超时设定(秒)
 SRV_ALIVE_INTERVAL   = 5
 SRV_ALIVE_TIMES      = 5
 

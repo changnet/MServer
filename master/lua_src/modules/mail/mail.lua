@@ -57,4 +57,26 @@ function Mail:on_logout()
     return true
 end
 
+-- 由mail_mgr添加一封邮件
+function Mail:add_mail( mail )
+end
+
+-- 增加一封系统邮件
+function Mail:add_sys_mail( mail )
+    -- id是根据时间来算的，调时间有可能出现问题
+    if self.sys_id >= mail.id then
+        ELOG("add_sys_mail sys id error:pid = %d,old = %d,now = %d",
+            self.pid,self.sys_id,mail.id )
+    else
+        self.sys_id = mail.id
+    end
+
+    self:add_mail( mail )
+end
+
+-- 标识需要重新加载邮件(当你正在登录中，有收到新邮件)
+function Mail:set_reload()
+    self.reload = true
+end
+
 return Mail

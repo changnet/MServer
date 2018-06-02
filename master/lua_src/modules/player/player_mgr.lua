@@ -24,6 +24,11 @@ function Player_mgr:get_player( pid )
     return self.player[pid]
 end
 
+-- 获取所有已初始化玩家对象
+function Player_mgr:get_all_player()
+    return self.player
+end
+
 -- 处理玩家初始化成功
 function Player_mgr:enter_success( player )
     local pid = player:get_pid()
