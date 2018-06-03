@@ -81,6 +81,8 @@ function GM:reg_cmd( cmd,gm_func,srvname )
     forward_map[cmd] = srvname
 end
 
+--------------------------------------------------------------------------------
+
 -- 热更新本服，包括脚本、协议、rpc
 function GM:hf()
     hot_fix()
@@ -105,6 +107,11 @@ end
 function GM:add_item( player,id,count )
     local bag = player:get_module( "bag" )
     bag:add( tonumber(id),tonumber(count),LOG.GM )
+end
+
+-- 邮件测试
+function GM:sys_mail( player,title,ctx )
+    g_mail_mgr:send_sys_mail( title,ctx )
 end
 
 local gm = GM()

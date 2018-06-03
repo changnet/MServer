@@ -15,6 +15,7 @@ function App:__init( ... )
     self:set_initialize( "gateway" ) -- 等待一个gateway服连接OK
     self:set_initialize( "db_logger",nil,self.db_logger_initialize ) -- db日志
     self:set_initialize( "db_conn",nil,self.db_initialize ) -- 等待连接db
+    self:set_initialize( "sys_mail","db_conn",self.sys_mail_initialize ) -- 加载全服邮件
 end
 
 -- 重写初始化入口
@@ -36,6 +37,11 @@ function App:shutdown()
     g_mongodb_mgr:stop() -- 关闭所有数据库链接
 
     Application.shutdown( self )
+end
+
+-- 加载全服邮件
+function App:sys_mail_initialize()
+    g_mail_mgr:db_load()
 end
 
 return App

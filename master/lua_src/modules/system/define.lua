@@ -17,6 +17,9 @@ LOGIN_KEY = "409065b7570155637b95e38ca13542e0"
 -- 一个玩家最大邮件数量
 MAX_MAIL = 200
 
+-- 系统邮件最大数量
+MAX_SYS_MAIL = 500
+
 -- 服务器连接超时设定(秒)
 SRV_ALIVE_INTERVAL   = 5
 SRV_ALIVE_TIMES      = 5

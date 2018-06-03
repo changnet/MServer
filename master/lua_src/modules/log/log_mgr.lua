@@ -46,5 +46,19 @@ function Log_mgr:login_or_logout( pid,op_type )
     self.db_logger:insert( string.format(login_out_stmt,pid,op_type,ev:time()) )
 end
 
+-- 记录添加邮件操作日志
+-- @who:玩家pid，如果是系统邮件，则为sys
+function Log_mgr:add_mail_log( who,mail )
+    local ctx = string.format("add_mail:%s,%s",tostring(who),table.dump(mail))
+    self.fl_logger:write( "log/mail_log",ctx)
+end
+
+-- 记录删除邮件操作日志
+-- @who:玩家pid，如果是系统邮件，则为sys
+function Log_mgr:del_mail_log( who,mail )
+    local ctx = string.format("del_mail:%s,%s",tostring(who),table.dump(mail))
+    self.fl_logger:write( "log/mail_log",ctx)
+end
+
 local log_mgr = Log_mgr()
 return log_mgr

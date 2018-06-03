@@ -1,7 +1,5 @@
 -- rpc client and server
 
-
-local g_network_mgr = g_network_mgr
 local Auto_id = require "modules.system.auto_id"
 
 local Rpc = oo.singleton( nil,... )

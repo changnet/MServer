@@ -244,14 +244,15 @@ end
 function Network_mgr:srv_conn_new( conn_id,ecode )
     local conn = self.srv_conn[conn_id]
     if 0 ~= ecode then
-        PFLOG( "server connect(%d) error:%s",conn_id,util.what_error( ecode ) )
+        PFLOG( "server connect(%d) to %s:%d error:%s",
+            conn_id,conn.ip,conn.port,util.what_error( ecode ) )
         self.srv_conn[conn_id] = nil
 
         if conn.auto_conn then self.srv_waiting[conn] = 1 end
         return
     end
 
-    PFLOG( "server connect (%d) establish",conn_id)
+    PFLOG( "server connect(%d) to %s:%d establish",conn_id,conn.ip,conn.port)
 
     conn:send_register()
 end

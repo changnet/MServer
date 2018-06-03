@@ -22,7 +22,7 @@ local function rpc_send_mail( pid,title,ctx,attachment,op )
 end
 
 -- 其他服发邮件时通过rpc发送系统邮件到world进程处理
-local function rpc_send_sys_mail( pid,title,ctx,attachment,op )
+local function rpc_send_sys_mail( title,ctx,attachment,op )
     g_mail_mgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
 end
 

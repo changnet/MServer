@@ -9,6 +9,7 @@ local Time_id = require "modules.system.time_id"
 local Mail_mgr = oo.singleton( nil,... )
 
 function Mail_mgr:__init()
+    self.list = {}
     self.time_id = Time_id()
 end
 
@@ -87,6 +88,11 @@ end
 -- @level: >= 此等级的玩家才能收到
 -- @vip:达到此vip等级才能收到
 function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
+    if not title or not ctx then
+        ELOG("send sys mail,no title(%s) or ctx(%s)",title,ctx)
+        return
+    end
+
     if "world" ~= g_app.srvname then
         return g_rpc:invoke( 
             "rpc_send_sys_mail",title,ctx,attachment,op,expire,level,vip )
@@ -112,7 +118,9 @@ function Mail_mgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     end
 
     table.insert( self.list,mail )
+    g_log_mgr:add_mail_log("sys",mail)
 
+    self:truncate()
     self:db_save() -- 系统邮件不多，直接存库
     self:dispatch_sys_mail( mail )
 end
@@ -127,10 +135,41 @@ end
 
 -- 存库
 function Mail_mgr:db_save()
+    local query = string.format('{"_id":%d}',g_app.srvindex)
+    g_mongodb:update( "sys_mail",query,{ list = self.list },true )
 end
 
 -- 读库
 function Mail_mgr:db_load()
+    local callback = function( ... )
+        self:on_db_loaded( ... )
+    end
+
+    local query = string.format('{"_id":%d}',g_app.srvindex)
+    g_mongodb:find( "sys_mail",query,nil,callback )
+end
+
+-- db数据加载回调
+function Mail_mgr:on_db_loaded( ecode,res )
+    if 0 ~= ecode then
+        ELOG( "sys mail db load error" )
+        return
+    end
+
+    -- 新服没有全服邮件数据
+    if res and res[1] then self.list = res[1].list end
+
+    g_app:one_initialized( "sys_mail",1 )
+end
+
+-- 删除多出的邮件
+function Mail_mgr:truncate()
+    while #self.list > MAX_SYS_MAIL do
+        local old_mail = self.list[1]
+        table.remove( self.lsit,1 )
+
+        g_log_mgr:del_mail_log( "sys",old_mail )
+    end
 end
 
 local mail_mgr = Mail_mgr()

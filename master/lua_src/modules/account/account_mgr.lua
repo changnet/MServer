@@ -232,7 +232,7 @@ end
 -- db数据加载
 function Account_mgr:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        PFLOG( "account db load error" )
+        ELOG( "account db load error" )
         return
     end
 

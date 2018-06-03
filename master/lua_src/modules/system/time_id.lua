@@ -10,10 +10,16 @@ local LIMIT = require "global.limits"
 local Time_id = oo.class( nil,... )
 
 function Time_id:__init()
-    self.sec = 0
+    self.sec = ev:time()
     self.seed = 0
 end
 
+-- 获取当前的id
+function Time_id:now_id()
+    return ( self.seed << 16 + self.sec )
+end
+
+-- 获取下一个自增Id
 function Time_id:next_id()
     local now = ev:time()
     if self.sec ~= now then

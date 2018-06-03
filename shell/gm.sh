@@ -13,4 +13,5 @@ fi
 
 # 用法：./gm.sh ghf,ghf表示gm内容
 # $@所有传入的参数，注意不要用单引号'$@'
+# ./gm.sh "sys_mail aaa bbb"
 curl -l -H "Content-type: application/json" -X POST -d "$@" 127.0.0.1:10003/web_gm
