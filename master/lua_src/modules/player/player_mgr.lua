@@ -14,9 +14,15 @@ function Player_mgr:__init()
     g_app:register_5stimer( function() return self:check_enter_fail() end )
 end
 
+-- 判断玩家是否存在
+function Player_mgr:is_pid_exist( pid )
+    -- TODO:考虑起服加载玩家基础数据
+    return true
+end
+
 -- 获取玩家对象
 function Player_mgr:get_raw_player( pid )
-    return raw_player[pid]
+    return self.raw_player[pid]
 end
 
 -- 获取已初始化的玩家对象

@@ -100,6 +100,11 @@ function Player:remove_5stimer( id )
     self.timer_5scb[id] = nil
 end
 
+-- 是否新创建的玩家(仅在登录过程有用，登录完成后肯定不是新玩家了)
+function Player:is_new()
+    return ( 1 == self.base.root.new )
+end
+
 -- 开始从db加载各模块数据
 function Player:module_db_load( sync_db )
     -- 根据顺序加载数据库数据
@@ -111,13 +116,25 @@ function Player:module_db_load( sync_db )
         end
     end
 
+    -- 是否为新创建的玩家
+    local is_new = self:is_new()
+
     -- db数据初始化，如果模块之间有数据依赖，请自己调整好顺序
     for _,module in pairs( sub_module ) do
-        self[module.name]:db_init()
+        self[module.name]:db_init( is_new )
     end
     self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 
     self:on_login()
+
+    -- 如果为新创建的玩家，初始化后及时存库
+    if is_new then
+        self.base.root.new = nil
+        if not self.base:db_save() then
+            ELOG("player is new,db save fail:%d",self.pid )
+            return false
+        end
+    end
 
     self.sync_db = nil
     self.ok = true -- 标识初始化完成，未初始化完成的不要存库
@@ -132,6 +149,11 @@ function Player:db_load()
 
     self.sync_db = sync_db
     return sync_db:start( self,sync_db )
+end
+
+-- 获取同步加载db(只在登录过程中有效)
+function Player:get_sync_db()
+    return self.sync_db
 end
 
 -- 是否正在加载中

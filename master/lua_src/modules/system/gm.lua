@@ -114,6 +114,11 @@ function GM:sys_mail( player,title,ctx )
     g_mail_mgr:send_sys_mail( title,ctx )
 end
 
+-- 发送邮件测试
+function GM:send_mail( player,pid,title,ctx )
+    g_mail_mgr:send_mail( tonumber(pid),title,ctx )
+end
+
 local gm = GM()
 
 return gm

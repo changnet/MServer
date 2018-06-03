@@ -1,3 +1,4 @@
+#include <cstdarg>
 #include "lmongo.h"
 
 #include "ltools.h"
@@ -316,6 +317,60 @@ void lmongo::invoke_command( bool is_return )
     }
 }
 
+// 把对应的json字符串或者lua table参数转换为bson
+// @opt:可选参数：0 表示可以传入nil，返回NULL;1 表示未传入参数则创建一个新的bson
+bson_t *lmongo::string_or_table_to_bson( 
+    lua_State *L,int index,int opt,bson_t *bs,... )
+{
+#define CLEAN_BSON( arg )    \
+    do{\
+        va_list args;\
+        for (va_start(args,arg);arg != END_BSON;arg = va_arg(args,bson_t *)){\
+            if (arg) bson_destroy(arg);\
+        }\
+        va_end(args);\
+    }while(0)
+
+    bson_t *bson = NULL;
+    if ( lua_istable( L,index ) ) // 自动将lua table 转化为bson
+    {
+        struct error_collector error;
+        if ( !( bson = lbs_do_encode( L,index,NULL,&error ) ) )
+        {
+            CLEAN_BSON(bs);
+            luaL_error( L,"table to bson error:%s",error.what );
+            return NULL;
+        }
+
+        return bson;
+    }
+
+    if ( lua_isstring( L,index ) ) // json字符串
+    {
+        const char *json = lua_tostring( L,index );
+        bson_error_t error;
+        bson = bson_new_from_json( 
+            reinterpret_cast<const uint8 *>(json),-1,&error );
+        if ( !bson )
+        {
+            CLEAN_BSON(bs);
+            luaL_error( L,"json to bson error:%s",error.message );
+            return NULL;
+        }
+
+        return bson;
+    }
+
+    if ( 0 == opt ) return NULL;
+    if ( 1 == opt ) return bson_new();
+
+    luaL_error( 
+        L,"argument #%d expect table or json string",index );
+    return NULL;
+
+#undef CLEAN_BSON
+}
+
 /* find( id,collection,query,fields ) */
 int32 lmongo::find( lua_State *L )
 {
@@ -331,34 +386,8 @@ int32 lmongo::find( lua_State *L )
         return luaL_error( L,"mongo find:collection not specify" );
     }
 
-    const char *str_query  = luaL_optstring( L,3,NULL );
-    const char *str_opts = luaL_optstring( L,4,NULL );
-
-    bson_t *query = NULL;
-    if ( str_query )
-    {
-        bson_error_t error;
-        query = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_query),-1,&error );
-        if ( !query ) return luaL_error( L,"field query:%s",error.message );
-    }
-    else
-    {
-        query = bson_new(); /* find函数不允许query为NULL，但查询参数可以空 */
-    }
-
-    bson_t *opts = NULL;
-    if ( str_opts )
-    {
-        bson_error_t error;
-        opts = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_opts),-1,&error );
-        if ( !opts )
-        {
-            bson_destroy( query );
-            return luaL_error( L,"field opts:%s",error.message );
-        }
-    }
+    bson_t *query = string_or_table_to_bson( L,3,1 );
+    bson_t *opts  = string_or_table_to_bson( L,4,0,query,END_BSON );
 
     struct mongo_query *mongo_find = new mongo_query();
     mongo_find->set( id,MQT_FIND );  /* count必须有返回 */
@@ -385,72 +414,14 @@ int32 lmongo::find_and_modify( lua_State *L )
         return luaL_error( L,"mongo find_and_modify:collection not specify" );
     }
 
-    const char *str_query  = luaL_optstring( L,3,NULL );
-    const char *str_sort   = luaL_optstring( L,4,NULL );
-    const char *str_update = luaL_optstring( L,5,NULL );
-    const char *str_fields = luaL_optstring( L,6,NULL );
+    bson_t *query  = string_or_table_to_bson( L,3,1 );
+    bson_t *sort   = string_or_table_to_bson( L,4,0,query,END_BSON );
+    bson_t *update = string_or_table_to_bson( L,5,1,query,sort,END_BSON );
+    bson_t *fields = string_or_table_to_bson( L,6,0,query,sort,update,END_BSON );
+
     bool _remove  = lua_toboolean( L,7 );
     bool _upsert  = lua_toboolean( L,8 );
     bool _new     = lua_toboolean( L,9 );
-
-    bson_t *query = NULL;
-    if ( str_query )
-    {
-        bson_error_t error;
-        query = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_query),-1,&error );
-        if ( !query ) return luaL_error( L,"query:%s",error.message );
-    }
-    else
-    {
-        query = bson_new();  /* find_and_modify函数不允许query为NULL */
-    }
-
-    bson_t *sort = NULL;
-    if ( str_sort )
-    {
-        bson_error_t error;
-        sort = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_sort),-1,&error );
-        if ( !sort )
-        {
-            bson_destroy( query );
-            return luaL_error( L,"sort:%s",error.message );
-        }
-    }
-
-    bson_t *update = NULL;
-    if ( str_update )
-    {
-        bson_error_t error;
-        update = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_update),-1,&error );
-        if ( !update )
-        {
-            bson_destroy( query );
-            if ( sort ) bson_destroy( sort );
-            return luaL_error( L,"update:%s",error.message );
-        }
-    }
-    else
-    {
-        update = bson_new();  /* update can't be NULL */
-    }
-
-    bson_t *fields = NULL;
-    if ( str_fields )
-    {
-        bson_error_t error;
-        fields = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_fields),-1,&error );
-        if ( !fields )
-        {
-            bson_destroy( query );
-            if ( sort ) bson_destroy( sort );
-            bson_destroy( update );
-            return luaL_error( L,"fields:%s",error.message );
-        }
-    }
 
     struct mongo_query *mongo_fmod = new mongo_query();
     mongo_fmod->set( id,MQT_FMOD );
@@ -476,31 +447,7 @@ int32 lmongo::insert( lua_State *L )
         return luaL_error( L,"mongo insert:collection not specify" );
     }
 
-    bson_t *query = NULL;
-    if ( lua_istable( L,3 ) ) // 自动将lua table 转化为bson
-    {
-        struct error_collector error;
-        if ( !( query = lbs_do_encode( L,3,NULL,&error ) ) )
-        {
-            return luaL_error( L,"table to bson error:%s",error.what );
-        }
-    }
-    else if ( lua_isstring( L,3 ) ) // json字符串
-    {
-        const char *str_query = lua_tostring( L,3 );
-        bson_error_t error;
-        query = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_query),-1,&error );
-        if ( !query )
-        {
-            return luaL_error( L,"json string:%s",error.message );
-        }
-    }
-    else
-    {
-        return luaL_error( 
-            L,"mongo insert argument #3 expect table or json string" );
-    }
+    bson_t *query = string_or_table_to_bson( L,3 );
 
     struct mongo_query *mongo_insert = new mongo_query();
     mongo_insert->set( id,MQT_INSERT );
@@ -526,58 +473,8 @@ int32 lmongo::update( lua_State *L )
         return luaL_error( L,"mongo update:collection not specify" );
     }
 
-    bson_t *query = NULL;
-    if ( lua_istable( L,3 ) )
-    {
-        struct error_collector error;
-        if ( !( query = lbs_do_encode( L,3,NULL,&error ) ) )
-        {
-            return luaL_error( L,"field query table:%s",error.what );
-        }
-    }
-    else if ( lua_isstring( L,3 ) )
-    {
-        const char *str_query = lua_tostring( L,3 );
-        bson_error_t error;
-        query = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_query),-1,&error );
-        if ( !query )
-        {
-            return luaL_error( L,"field query json string:%s",error.message );
-        }
-    }
-    else
-    {
-        return luaL_error( L,"argument #3 expect table or json string" );
-    }
-
-    bson_t *update = NULL;
-    if ( lua_istable( L,4 ) )
-    {
-        struct error_collector error;
-        if ( !( update = lbs_do_encode( L,4,NULL,&error ) ) )
-        {
-            bson_destroy( query );
-            return luaL_error( L,"field update table:%s",error.what );
-        }
-    }
-    else if ( lua_isstring( L,4 ) )
-    {
-        const char *str_update = lua_tostring( L,4 );
-        bson_error_t error;
-        update = bson_new_from_json( 
-            reinterpret_cast<const uint8 *>(str_update),-1,&error );
-        if ( !update )
-        {
-            bson_destroy( query );
-            return luaL_error( L,"field update json string:%s",error.message );
-        }
-    }
-    else
-    {
-        bson_destroy( query );
-        return luaL_error( L,"argument #4 expect table or json string" );
-    }
+    bson_t *query  = string_or_table_to_bson( L,3 );
+    bson_t *update = string_or_table_to_bson( L,4,-1,query,END_BSON );
 
     int32 upsert = lua_toboolean( L,5 );
     int32 multi  = lua_toboolean( L,6 );
@@ -606,31 +503,9 @@ int32 lmongo::remove( lua_State *L )
         return luaL_error( L,"mongo remove:collection not specify" );
     }
 
-    bson_t *query = NULL;
-    if ( lua_istable( L,3 ) )
-    {
-        struct error_collector error;
-        if ( !( query = lbs_do_encode( L,3,NULL,&error ) ) )
-        {
-            return luaL_error( L,"table:%s",error.what );
-        }
-    }
-    else if ( lua_isstring( L,3 ) )
-    {
-        const char *str_query = lua_tostring( L,3 );
-        bson_error_t error;
-        query = bson_new_from_json( reinterpret_cast<const uint8 *>(str_query),-1,&error );
-        if ( !query )
-        {
-            return luaL_error( L,"json string:%s",error.message );
-        }
-    }
-    else
-    {
-        return luaL_error( L,"argument #3 expect table or json string" );
-    }
+    bson_t *query = string_or_table_to_bson( L,3 );
 
-    int32 multi  = lua_toboolean( L,6 );
+    int32 multi  = lua_toboolean( L,4 );
 
     struct mongo_query *mongo_remove = new mongo_query();
     mongo_remove->set( id,MQT_REMOVE );

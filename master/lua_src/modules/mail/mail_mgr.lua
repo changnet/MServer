@@ -10,6 +10,8 @@ local Mail_mgr = oo.singleton( nil,... )
 
 function Mail_mgr:__init()
     self.list = {}
+
+    -- 用这个time_id来做id，好处是不用存库，坏处是往后调时间的时候发邮件就会出错
     self.time_id = Time_id()
 end
 
@@ -43,6 +45,14 @@ function Mail_mgr:raw_send_mail( pid,title,ctx,attachment,op )
         return
     end
 
+    -- 检测pid是否有效
+    if not g_player_mgr:is_pid_exist( pid ) then
+        ELOG("raw_send_mail:pid not exist,%s",table.dump(mail))
+        return
+    end
+
+    g_log_mgr:add_mail_log( pid,mail )
+
     local player = g_player_mgr:get_player( pid )
     if player then
         player:get_module("mail"):add_mail(mail)
@@ -54,7 +64,7 @@ function Mail_mgr:raw_send_mail( pid,title,ctx,attachment,op )
     -- 正在登录中的玩家，标识一下需要重新加载邮件数据(他不一定能成功登录，可能不存库)
     -- 另一种是完全不在线,则由他登录时再加载邮件
     local raw_player = g_player_mgr:get_raw_player( pid )
-    if raw_player then player:get_module("mail"):set_reload() end
+    if raw_player then raw_player:get_module("mail"):set_reload() end
 end
 
 -- 添加个人离线邮件
@@ -62,19 +72,45 @@ function Mail_mgr:add_offline_mail( pid,mail )
     -- list.N，mongodb 2.2+版本后语法，表示list数组中第N个元素不存在时才插入(从0开始)
     -- 防止玩家太久不上线邮箱爆了
     local query = string.format( 
-        '{"_id":%d,"list.%d:{"$exists":false}"}',pid,MAX_MAIL - 1 )
+        '{"_id":%d,"list.%d":{"$exists":false}}',pid,MAX_MAIL - 1 )
+    local update = { ["$push"] = {["list"] = mail} }
 
     local cb = function( ecode,res )
         self:on_offline_mail( pid,mail,ecode,res )
     end
-    g_mongodb:update( "mail",
-        query,{ ["$push"] = {["list"] = mail} },true,false,cb )
+
+    -- 不能upsert,否则当邮箱满了的时候就会尝试插入新记录
+    -- 新玩家时有初始化邮箱的
+    return g_mongodb:find_and_modify(
+        "mail",query,nil,update,{list = 0},false,false,false,cb )
+
+    -- 使用update也可以，但是就没法知道返回值了
+    -- g_mongodb:update( "mail",
+    --     query,{ ["$push"] = {["list"] = mail} },true,false,cb )
 end
 
 -- 添加个个离线邮件结果
+--[[
+返回的值，不带list.如果因为邮箱满了，n的值为0
+table: 0x2b8cff0
+{
+    "lastErrorObject" = table: 0x2bdde50
+    {
+        "n" = 1
+        "updatedExisting" = true
+    }
+    "value" = table: 0x2c6d110
+    {
+        "_id" = 65537
+    }
+    "ok" = 1.0
+}
+
+]]
 function Mail_mgr:on_offline_mail( pid,mail,ecode,res )
-    vd(res)
-    -- TODO:如果插入失败，记录一下日志
+    if 0 == ecode and res.lastErrorObject.n == 1 then return end
+    -- 如果插入失败，记录一下日志
+    g_log_mgr:add_mail_log( string.format("offline_mail_error_%d",pid),mail )
 end
 
 -- 发送系统邮件
@@ -164,12 +200,46 @@ end
 
 -- 删除多出的邮件
 function Mail_mgr:truncate()
+    -- TODO:是不是要先找过期了的
     while #self.list > MAX_SYS_MAIL do
         local old_mail = self.list[1]
-        table.remove( self.lsit,1 )
+        table.remove( self.list,1 )
 
         g_log_mgr:del_mail_log( "sys",old_mail )
     end
+end
+
+-- 获取上一次使用的最大id
+function Mail_mgr:get_now_id()
+    return self.time_id:now_id()
+end
+
+-- 检查是否有新的全服邮件
+function Mail_mgr:check_new_sys_mail( player,mail_box,sys_id )
+    local new_cnt = 0
+
+    -- 邮件是按时间倒序排列的
+    for idx = #self.list,1,-1 do
+        local mail = self.list[idx]
+        if mail.id <= sys_id then break end
+
+        if self:check_mail_limit( mail,palyer ) then
+            new_cnt = new_cnt + 1
+            mail_box:raw_add_sys_mail( mail )
+        end
+    end
+
+    return new_cnt
+end
+
+-- 检查邮件条件
+function Mail_mgr:check_mail_limit( mail,player )
+    --  过期
+    if mail.expire and ev:time() >= mail.expire then return false end
+    -- 等级限制
+    if mail.level and player:get_level() < mail.level then return false end
+
+    return true
 end
 
 local mail_mgr = Mail_mgr()
