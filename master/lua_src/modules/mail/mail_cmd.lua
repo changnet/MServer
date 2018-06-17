@@ -7,6 +7,19 @@
 local g_mail_mgr = g_mail_mgr
 local g_player_mgr = g_player_mgr
 
+local Mail = require "modules.mail.mail"
+
+-- 邮件回调
+local function mail_cb( cmd,func )
+    local cb = function( srv_conn,pid,pkt )
+        local player = g_player_mgr:get_player( pid )
+        return func( player:get_module("mail"),pkt )
+    end
+
+    g_command_mgr:clt_register( cmd,cb )
+end
+
+-- 邮件管理器回调
 local function mail_mgr_cb( cmd,func )
     local cb = function( srv_conn,pid,pkt )
         local player = g_player_mgr:get_player( pid )
@@ -29,4 +42,6 @@ end
 if "world" == g_app.srvname then
     g_rpc:declare( "rpc_send_mail",rpc_send_mail )
     g_rpc:declare( "rpc_send_sys_mail",rpc_send_sys_mail )
+
+    mail_mgr_cb( CS.MAIL_DEL,Mail.handle_mail_del )
 end

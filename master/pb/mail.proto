@@ -1,0 +1,46 @@
+//聊天模块 协议定义
+
+syntax = "proto3";
+package mail;
+
+// 附件数据，和道具差不多
+message Attachment
+{
+    string uuid = 1; // 唯一id
+    int32 id    = 2; // 道具id
+    int32 count = 3; // 数量数量
+}
+
+// 邮件数据
+message Mail
+{
+    // 所有道具通用字段
+    int32 id     = 1; // 邮件id
+    string title = 2; // 标题
+    string ctx   = 3; // 内容
+    bool new     = 4; // 是否新邮件
+    repeated Attachment attachments = 5; // 附件
+}
+
+/* 邮件列表 */
+message SMailInfo
+{
+    repeated Mail mails = 1; // 邮件列表
+}
+
+// 删除邮件
+message CMailDel
+{
+    repeated int32 id = 1; // 要删除的邮件id
+}
+
+message SMailDel
+{
+    repeated int32 id = 1; // 成功删除的邮件Id
+}
+
+// 新增邮件
+message SNewMail
+{
+    Mail mail = 1; // 邮件列表
+}

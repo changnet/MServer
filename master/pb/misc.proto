@@ -13,3 +13,9 @@ message SWelcome
 message CWelcomeGet
 {
 }
+
+// 提示语
+message STips
+{
+    string tips = 1; // 提示内容
+}

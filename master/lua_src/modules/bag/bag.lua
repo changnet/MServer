@@ -249,7 +249,7 @@ function Bag:send_info()
             table.insert( pkt.items,self:pack_one_item(item,idx) )
         end
     end
-vd(pkt)
+
     self.player:send_pkt( SC.BAG_INFO,pkt )
 end
 

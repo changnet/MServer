@@ -4,6 +4,7 @@
 
 -- 语言包
 
+require "modules.lang.lang_header"
 local misc_list = require "config.lang_misc"
 local tips_list = require "config.lang_tips"
 
@@ -22,12 +23,24 @@ tips_list = nil
 
 local Lang = oo.singleton( nil,... )
 
+-- 获取misc语言包
 function Lang:get_misc( id )
     return misc_lang[id]
 end
 
+-- 获取tips语言包
 function Lang:get_tips( id )
     return tips_lang[id]
+end
+
+-- 发送tips
+function Lang:send_tips( player,id )
+    if not tips_lang[id] then
+        ELOG( "Lang:send_tips no such id:%d",id )
+        return
+    end
+
+    player:send_pkt( SC.MISC_TIPS,tips_lang[id] )
 end
 
 local lang = Lang()

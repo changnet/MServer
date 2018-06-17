@@ -1,7 +1,9 @@
 
-M
+j
 
 misc.protomisc""
 SWelcome
 status (Rstatus"
-CWelcomeGetbproto3
+CWelcomeGet"
+STips
+tips (	Rtipsbproto3

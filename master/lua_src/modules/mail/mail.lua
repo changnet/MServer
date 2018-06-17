@@ -112,7 +112,7 @@ end
 function Mail:on_login()
     if not self:check_reload() then return false end
 
-    -- TODO:发送邮件数据
+    self:send_info() -- 发送邮件数据
     return true
 end
 
@@ -126,6 +126,7 @@ end
 function Mail:add_mail( mail )
     self.modify = true
     table.insert( self.list,mail )
+    self:send_new_mail( mail )
 
     self:truncate()
 end
@@ -153,6 +154,59 @@ end
 -- 删除多出的邮件
 function Mail:truncate()
     -- TODO:策划应该会有删除要求，暂时不做
+end
+
+-- 发送邮件数据
+function Mail:send_info()
+    local pkt = {}
+    pkt.mails = self.list
+
+    self.player:send_pkt( SC.MAIL_INFO,pkt )
+end
+
+-- 发送新邮件
+function Mail:send_new_mail(new_mail)
+    local pkt = {}
+    pkt.mail = new_mail
+
+    self.player:send_pkt( SC.MAIL_NEW,pkt )
+end
+
+-- 能否删除邮件
+function Mail:can_del( mail )
+    return true
+end
+
+-- 处理邮件删除
+function Mail:handle_mail_del( pkt )
+    if not pkt.id or #pkt.id == 0 then
+        return ELOG( "handle_mail_del no mail id specify:%d",self.pid )
+    end
+
+    local mail_map = {}
+    for _,id in pairs( pkt.id ) do mail_map[id] = true end
+
+    -- 先判断所有邮件是否都可以删除
+    for _,mail in pairs( self.list ) do
+        if mail_map[mail.id] then
+            if not self:can_del( mail ) then
+                return g_lang:send_tips( self.player,TIPS.CANOT_DEL_MAIL )
+            end
+        end
+    end
+
+    -- 统一进行删除操作
+    for id in pairs( mail_map ) do
+        for idx,mail in pairs( self.list ) do
+            if mail.id == id then
+                table.remove( self.list,idx )
+                g_log_mgr:del_mail_log( self.pid,mail )
+                break
+            end
+        end
+    end
+
+    self.player:send_pkt( SC.MAIL_DEL,pkt )
 end
 
 return Mail

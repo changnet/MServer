@@ -18,5 +18,12 @@
             <field>WELCOME_GET</field>
             <server></server>
         </subobject>
+        <subobject>
+            <client>undefine</client>
+            <command>0x03</command>
+            <comment>发送提示</comment>
+            <field>TIPS</field>
+            <server>Tips</server>
+        </subobject>
     </subobjects>
 </root>

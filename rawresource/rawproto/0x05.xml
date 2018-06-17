@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <command>0x05</command>
+    <comment>邮件</comment>
+    <module>mail</module>
+    <subobjects>
+        <subobject>
+            <client></client>
+            <command>0x01</command>
+            <comment>邮件数据</comment>
+            <field>INFO</field>
+            <server>MailInfo</server>
+        </subobject>
+        <subobject>
+            <client>MailDel</client>
+            <command>0x02</command>
+            <comment>删除邮件</comment>
+            <field>DEL</field>
+            <server>MailDel</server>
+        </subobject>
+        <subobject>
+            <client></client>
+            <command>0x03</command>
+            <comment>新增邮件</comment>
+            <field>NEW</field>
+            <server>NewMail</server>
+        </subobject>
+    </subobjects>
+</root>
