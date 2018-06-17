@@ -15,6 +15,7 @@ local SC =
     PLAYER_ENTER = { PLAYER + 0x04,"player.pb","player.SEnterWorld" },
     PLAYER_OTHER = { PLAYER + 0x05,"player.pb","player.SLoginOtherWhere" },
     PLAYER_BASE = { PLAYER + 0x06,"player.pb","player.SBase" },
+    PLAYER_UPDATE_RES = { PLAYER + 0x07,"player.pb","player.SUpdateRes" },
     BAG_INFO = { BAG + 0x01,"bag.pb","bag.SBagInfo" },
     MISC_WELCOME = { MISC + 0x01,"misc.pb","misc.SWelcome" },
     MISC_TIPS = { MISC + 0x03,"misc.pb","misc.STips" },
@@ -33,7 +34,6 @@ local CS =
     PLAYER_CREATE = { PLAYER + 0x03,"player.pb","player.CCreateRole" },
     PLAYER_ENTER = { PLAYER + 0x04,"player.pb","player.CEnterWorld" },
     MISC_WELCOME_GET = { MISC + 0x02,"misc.pb","misc.CWelcomeGet" },
-    MISC_TIPS = { MISC + 0x03,"misc.pb","misc.Cundefine" },
     CHAT_DOCHAT = { CHAT + 0x02,"chat.pb","chat.CDoChat" },
     MAIL_DEL = { MAIL + 0x02,"mail.pb","mail.CMailDel" },
 

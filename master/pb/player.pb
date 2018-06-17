@@ -1,5 +1,5 @@
 
-†
+Á
 player.protoplayer"
 	SSOffline
 pid (Rpid" 
@@ -37,4 +37,8 @@
 say (	Rsay"
 SLoginOtherWhere"
 SBase
-gold (Rgoldbproto3
+gold (Rgold"9
+
+SUpdateRes
+res_type (RresType
+val (Rvalbproto3

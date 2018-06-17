@@ -46,5 +46,12 @@
             <field>BASE</field>
             <server>Base</server>
         </subobject>
+        <subobject>
+            <client></client>
+            <command>0x07</command>
+            <comment>更新虚拟资源(元宝之类)</comment>
+            <field>UPDATE_RES</field>
+            <server>UpdateRes</server>
+        </subobject>
     </subobjects>
 </root>

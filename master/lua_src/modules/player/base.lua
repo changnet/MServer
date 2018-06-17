@@ -69,4 +69,12 @@ function Base:send_info()
     self.player:send_pkt( SC.PLAYER_BASE,pkt )
 end
 
+-- 更新虚拟资源(铜钱、元宝等)
+local res_pkt = { res_type = 0,val = 0 }
+function Base:update_res( res_type,val )
+    res_pkt.val      = val
+    res_pkt.res_type = res_type
+    self.player:send_pkt( SC.PLAYER_UPDATE_RES,res_pkt )
+end
+
 return Base

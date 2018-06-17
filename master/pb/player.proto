@@ -88,3 +88,10 @@ message SBase
     // pid及名字在登录时已发
     int32 gold = 1; // 元宝
 }
+
+// 更新虚拟资源(元宝之类)
+message SUpdateRes
+{
+    int32 res_type = 1; // 资源类型，参考通用资源类型定义
+    int32 val      = 2; // 资源数量
+}

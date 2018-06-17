@@ -19,7 +19,7 @@
             <server></server>
         </subobject>
         <subobject>
-            <client>undefine</client>
+            <client></client>
             <command>0x03</command>
             <comment>发送提示</comment>
             <field>TIPS</field>

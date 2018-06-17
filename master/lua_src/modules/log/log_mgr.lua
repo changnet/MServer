@@ -46,6 +46,15 @@ function Log_mgr:login_or_logout( pid,op_type )
     self.db_logger:insert( string.format(login_out_stmt,pid,op_type,ev:time()) )
 end
 
+-- 元宝操作日志
+-- 日志里不应该有特殊字符，故ext不做特殊处理
+function Log_mgr:gold_log( pid,op_val,new_val,op_type,ext )
+    local stmt = string.format(
+        "INSERT INTO `gold` (pid,op_val,new_val,op_type,op_time,ext) values (%d,%d,%d,%d,%d,\"%s\")",
+        pid,op_val,new_val,op_type,ev:time(),tostring(ext or "") )
+    self.db_logger:insert( stmt )
+end
+
 -- 记录添加邮件操作日志
 -- @who:玩家pid，如果是系统邮件，则为sys
 function Log_mgr:add_mail_log( who,mail )

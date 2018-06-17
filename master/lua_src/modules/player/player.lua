@@ -22,6 +22,8 @@ local Misc = require "modules.misc.misc"
 local Bag  = require "modules.bag.bag"
 local Mail = require "modules.mail.mail"
 
+local RES = RES
+
 local sub_module =
 {
     { name = "base",new = Base },
@@ -224,12 +226,20 @@ end
 
 -- 增加元宝
 function Player:add_gold( count,op,sub_op )
-    self.base_root.gold = self.base_root.gold + count
+    local new_val = self.base_root.gold + count
+    g_log_mgr:gold_log( self.pid,count,new_val,op,sub_op )
+
+    self.base_root.gold = new_val
+    self.base:update_res( RES.GOLD,self.base_root.gold )
 end
 
 -- 增加元宝
 function Player:dec_gold( count,op,sub_op )
-    self.base_root.gold = self.base_root.gold - count
+    local new_val = self.base_root.gold - count
+    g_log_mgr:gold_log( self.pid,count,new_val,op,sub_op )
+
+    self.base_root.gold = new_val
+    self.base:update_res( RES.GOLD,self.base_root.gold )
 end
 
 -- 获取等级
