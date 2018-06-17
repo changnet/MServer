@@ -1,0 +1,28 @@
+//聊天模块 协议定义
+
+syntax = "proto3";
+package bag;
+
+// 道具结构
+message Item
+{
+    // 所有道具通用字段
+    string uuid = 1; // 唯一id
+    int32 id    = 2; // 道具id
+    int32 count = 3; // 数量数量
+    int32 grid  = 4; // 所在格子索引
+
+    // 装备特有字段
+    int32 level = 9; // 装备等级
+    int32 stage = 10; // 装备阶数
+}
+
+/* 背包数据
+ * 注：单个道具变动时，也是发此协议。只是数组长度为1.如果count = 0，则表示删除
+ */
+message SBagInfo
+{
+    repeated Item items = 1; // 道具列表
+}
+
+

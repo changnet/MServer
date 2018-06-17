@@ -50,10 +50,10 @@ public:
 private:
     int32 raw_encode( lua_State *L,
         struct pbc_wmessage *wmsg,const char *object,int32 index );
-    int32 encode_field( lua_State *L,
-        struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key );
-    int32 raw_encode_field( lua_State *L,
-        struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key );
+    int32 encode_field( lua_State *L,struct pbc_wmessage *wmsg,
+        int32 type,int32 index,const char *key,const char *object );
+    int32 raw_encode_field( lua_State *L,struct pbc_wmessage *wmsg,
+        int32 type,int32 index,const char *key,const char *object );
 
     int32 raw_decode( lua_State *L,struct pbc_rmessage *msg );
     int32 decode_field( lua_State *L,
@@ -300,7 +300,7 @@ int32 lprotobuf::decode_field( lua_State *L,
             ERROR( "protobuf decode sub message not found:%s",key );
             return -1;
         }
-        return raw_decode( L,msg );
+        return raw_decode( L,submsg );
     }break;
     default :
         ERROR( "protobuf decode unknow type" ); return -1;
@@ -326,8 +326,9 @@ int32 lprotobuf::encode( lua_State *L,const char *object,int32 index )
     return ecode;
 }
 
-int32 lprotobuf::encode_field( lua_State *L,
-    struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key )
+int32 lprotobuf::encode_field( 
+    lua_State *L,struct pbc_wmessage *wmsg,
+    int32 type,int32 index,const char *key,const char *object )
 {
     if ( type & PBC_REPEATED )
     {
@@ -341,7 +342,7 @@ int32 lprotobuf::encode_field( lua_State *L,
         lua_pushnil( L );
         while( lua_next( L,index ) )
         {
-            if ( raw_encode_field( L,wmsg,raw_type,index + 2,key ) < 0 )
+            if ( raw_encode_field( L,wmsg,raw_type,index + 2,key,object ) < 0 )
             {
                 return -1;
             }
@@ -352,11 +353,12 @@ int32 lprotobuf::encode_field( lua_State *L,
         return 0;
     }
 
-    return raw_encode_field( L,wmsg,type,index,key );
+    return raw_encode_field( L,wmsg,type,index,key,object );
 }
 
-int32 lprotobuf::raw_encode_field( lua_State *L,
-    struct pbc_wmessage *wmsg,int32 type,int32 index,const char *key )
+int32 lprotobuf::raw_encode_field( 
+    lua_State *L,struct pbc_wmessage *wmsg,
+    int32 type,int32 index,const char *key,const char *object )
 {
 #define LUAL_CHECK( TYPE )    \
     if ( !lua_is##TYPE( L,index ) ){    \
@@ -407,7 +409,7 @@ int32 lprotobuf::raw_encode_field( lua_State *L,
     {
         LUAL_CHECK( table )
         struct pbc_wmessage *submsg = pbc_wmessage_message( wmsg, key );
-        return raw_encode( L,submsg,key,index );
+        return raw_encode( L,submsg,object,index );
     }break;
     default:
         ERROR( "unknow protobuf type" );return -1;
@@ -434,6 +436,9 @@ int32 lprotobuf::raw_encode( lua_State *L,
 
     int32 top = lua_gettop( L );
 
+    /* pbc并未提供遍历sdl的方法，只能反过来遍历tabale.
+     * 如果table中包含较多的无效字段，hash消耗将会比较大
+     */
     lua_pushnil( L );
     while ( lua_next( L,index ) )
     {
@@ -442,17 +447,15 @@ int32 lprotobuf::raw_encode( lua_State *L,
 
         const char *key = lua_tostring( L,-2 );
 
-        /* pbc并未提供遍历sdl的方法，只能反过来遍历tabale.
-         * 如果table中包含较多的无效字段，hash消耗将会比较大
-         */
-        int32 val_type = pbc_type( _env,object,key,NULL );
+        const char *sub_object = NULL;
+        int32 val_type = pbc_type( _env,object,key,&sub_object );
         if ( val_type <= 0 )
         {
             lua_pop( L, 1 );
             continue;
         }
 
-        if ( encode_field( L,wmsg,val_type,top + 2,key ) < 0 )
+        if ( encode_field( L,wmsg,val_type,top + 2,key,sub_object ) < 0 )
         {
             return -1;
         }

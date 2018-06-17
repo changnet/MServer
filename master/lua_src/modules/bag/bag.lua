@@ -59,6 +59,7 @@ end
 -- 玩家数据已加载完成，进入场景
 -- 必须返回操作结果
 function Bag:on_login()
+    self:send_info()
     return true
 end
 
@@ -102,13 +103,19 @@ function Bag:raw_add( item )
     end
 
     -- 尝试堆叠到旧格子上
+    local update_grid = {}
     for idx,old_item in pairs( self.grid ) do
         local pile = self:pile_count( old_item,item,count )
         if pile > 0 then
             count = count - pile
             old_item.count = old_item.count + pile
+            table.insert( update_grid,idx )
             if count <= 0 then break end
         end
+    end
+
+    for _,idx in pairs( update_grid ) do
+        self:send_one_info( self.grid[idx],idx )
     end
 
     -- 堆叠完了
@@ -123,6 +130,7 @@ function Bag:add_to_new_grid( item )
     local conf = item_map[item.id]
     local max_grid = self:get_max_grid()
 
+    local new_grid = {}
     local count = item.count
     for idx = 1,max_grid do
         if not self.grid[idx] then
@@ -138,9 +146,15 @@ function Bag:add_to_new_grid( item )
 
             count = count - raw_count
             self.grid[idx] = new_item
-            if count <= 0 then return 0 end
+            table.insert( new_grid,idx )
+            if count <= 0 then break end
         end
     end
+
+    for _,idx in pairs( new_grid ) do
+        self:send_one_info( self.grid[idx],idx )
+    end
+    if count <= 0 then return 0 end
 
     -- 没有新格子可以插入
     PLOG( "bag full:player = %d,id = %d,count = %d",self.pid,id,count )
@@ -150,6 +164,8 @@ end
 -- 能堆叠的数量
 local pile_key = { "id" }
 function Bag:pile_count( old_item,new_item,new_count )
+    if not old_item then return 0 end
+
     -- 指定的属性一样才能堆叠
     for _,key in pairs( pile_key ) do
         if old_item[key] ~= new_item[key] then return 0 end
@@ -166,7 +182,7 @@ function Bag:dec( id,count )
 
     -- 不要在for循环中修改grid
     for idx in pairs( self.grid ) do
-        if id == item.id then index = idx;break end
+        if item and id == item.id then index = idx;break end
     end
 
     if not index then
@@ -177,10 +193,16 @@ function Bag:dec( id,count )
     local item = self.grid[index]
     if item.count > count then
         item.count = item.count - count
+        
+        self:send_one_info( item,index )
         return 0
     end
 
     self.grid[index] = nil
+
+    item.count = 0
+    self:send_one_info( item,index )
+
     return self:dec( id,count - item.count )
 end
 
@@ -189,7 +211,7 @@ end
 function Bag:check_item_count( id,check_cnt )
     local count = 0
     for _,item in pairs( self.grid ) do
-        if id == item.id then
+        if item and id == item.id then
             count = count + item.count
             if check_cnt and count >= check_cnt then return check_cnt end
         end
@@ -201,6 +223,44 @@ end
 -- 空的背包格子数
 function Bag:get_empty_grid_count()
     return self:get_max_grid() - table.size( self.grid )
+end
+
+-- 打包一个道具到协议
+-- TODO:是需要打包，还是直接使用self.grid中的数据，取决于self.grid中的数据和协议数据是否
+-- 一致。现在游戏没有定是什么类型，没有做uuid、道具id映射，暂时用打包
+function Bag:pack_one_item(item,idx)
+    local pkt = {}
+    pkt.grid  = idx
+    pkt.uuid  = item.uuid
+    pkt.id    = item.id
+    pkt.count = item.count
+
+    -- TODO:如果是装备，则打包装备数据
+
+    return pkt
+end
+
+-- 发送背包数据
+function Bag:send_info()
+    local pkt = {}
+    pkt.items = {}
+    for idx,item in pairs( self.grid ) do
+        if item then
+            table.insert( pkt.items,self:pack_one_item(item,idx) )
+        end
+    end
+vd(pkt)
+    self.player:send_pkt( SC.BAG_INFO,pkt )
+end
+
+-- 发送单个道具数据
+function Bag:send_one_info(item,grid)
+    local pkt = {}
+    pkt.items = {}
+
+    table.insert( pkt.items,self:pack_one_item(item,grid) )
+
+    self.player:send_pkt( SC.BAG_INFO,pkt )
 end
 
 return Bag

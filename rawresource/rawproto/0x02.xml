@@ -3,5 +3,13 @@
     <command>0x02</command>
     <comment>背包相关</comment>
     <module>bag</module>
-    <subobjects/>
+    <subobjects>
+        <subobject>
+            <client></client>
+            <command>0x01</command>
+            <comment>背包数据</comment>
+            <field>INFO</field>
+            <server>BagInfo</server>
+        </subobject>
+    </subobjects>
 </root>

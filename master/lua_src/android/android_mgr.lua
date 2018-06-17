@@ -69,6 +69,10 @@ function Android_mgr:cmd_register( cmd_cfg,handler )
     cfg.handler = handler
 end
 
+function Android_mgr:dump_pkt( pkt )
+    vd(pkt)
+end
+
 local android_mgr = Android_mgr()
 
 function handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
@@ -122,6 +126,7 @@ function command_new( conn_id,cmd,errno,... )
     end
 
     if not cfg.handler then
+        android_mgr:dump_pkt( ... )
         ELOG( "sc_command_new no handler found:%d",cmd )
         return
     end
