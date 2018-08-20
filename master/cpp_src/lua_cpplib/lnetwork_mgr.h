@@ -1,17 +1,10 @@
 #ifndef __LNETWORK_MGR_H__
 #define __LNETWORK_MGR_H__
 
+#include <vector>
+
 #include "../net/net_include.h"
 #include "../net/socket.h"
-
-#include <vector>
-#if __cplusplus < 201103L    /* -std=gnu99 */
-    #include <map>
-    #define map_t    std::map
-#else                       /* if support C++ 2011 */
-    #include <unordered_map>
-    #define map_t    std::unordered_map
-#endif
 
 struct lua_State;
 class lnetwork_mgr
@@ -107,7 +100,7 @@ public:
 private:
     void delete_socket( uint32 conn_id );
     class packet *lua_check_packet( lua_State *L,socket::conn_t conn_ty );
-    class packet *raw_check_packet( 
+    class packet *raw_check_packet(
         lua_State *L,uint32 conn_id,socket::conn_t conn_ty );
 private:
     int32 _session; /* 当前进程的session */

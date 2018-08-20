@@ -46,6 +46,15 @@ typedef int64_t        int64;
 /* avoid c-style string */
 typedef std::string    string;
 
+/* 需要使用hash map，但又希望能兼容旧版本时使用map_t */
+#if __cplusplus < 201103L    /* -std=gnu99 */
+    #include <map>
+    #define map_t    std::map
+#else                       /* if support C++ 2011 */
+    #include <unordered_map>
+    #define map_t    std::unordered_map
+#endif
+
 #if __cplusplus >= 201103L
     //#pragma message("base type bit check")
     static_assert( sizeof( int8 ) == 1,"type bit not support" );

@@ -10,6 +10,7 @@
 class a_star
 {
 public:
+// heuristic Manhattan distance
 };
 
- #endif /* __A_STAR_H__ */
+#endif /* __A_STAR_H__ */

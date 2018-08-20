@@ -1,13 +1,6 @@
 #ifndef __LRU_KV_H__
 #define __LRU_KV_H__
 
-#if __cplusplus < 201103L    /* -std=gnu99 */
-    #include <map>
-    #define map    std::map
-#else                       /* if support C++ 2011 */
-    #include <unordered_map>
-    #define map    std::unordered_map
-#endif
 #include <list>
 #include "../../global/global.h"
 
@@ -30,8 +23,8 @@ private:
     std::list< std::pair<K,V> > _list;
     typedef typename std::list< std::pair<K,V> >::iterator list_iterator;
 
-    map< K,list_iterator > _map;
-    typedef typename map< K,list_iterator >::iterator map_iterator;
+    map_t< K,list_iterator > _map;
+    typedef typename map_t< K,list_iterator >::iterator map_iterator;
 };
 
 template<class K,class V>
@@ -55,7 +48,7 @@ V *lru_kv<K,V>::find( const K &k )
     {
         return NULL;
     }
-    
+
     return &((itr->second)->second);
 }
 
@@ -68,7 +61,7 @@ void lru_kv<K,V>::update( const K &k )
         assert( "update lru element not found",false );
         return;
     }
-    
+
     /* if support C++11 move,will be faster here */
     V v = (itr->second)->second;
     _list.erase( itr->second );
@@ -86,7 +79,7 @@ void lru_kv<K,V>::erase( const K &k )
         assert( "erase lru element not found",false );
         return;
     }
-    
+
     _list.erase( itr->second );
     _map.erase( itr );
 }
@@ -99,7 +92,7 @@ void lru_kv<K,V>::resize( size_t size )
     {
         _map.erase( _list.back().first );
         _list.pop_back();
-        
+
         --_size;
     }
 }
@@ -112,25 +105,25 @@ void lru_kv<K,V>::insert( const K &k,const V &v )
     {
         /* value update and make it last use */
         _list.erase( itr->second );
-        
+
         _list.push_front( std::pair<K,V>(k,v) );
         itr->second = _list.begin();
         return;
     }
-    
+
     /* new element */
     _list.push_front( std::pair<K,V>(k,v) );
     _map.insert( std::pair< K,list_iterator >( k,_list.begin() ) );
     ++_size;
-    
+
     if ( _size > _max_size )  /* whhile ?? */
     {
         _map.erase( _list.back().first );
         _list.pop_back();
-        
+
         --_size;
     }
-    
+
     assert( "size over flow",_size <= _max_size );
 }
 
