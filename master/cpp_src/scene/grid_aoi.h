@@ -8,6 +8,7 @@
 class grid_aoi
 {
 public:
+
 };
 
 #endif /* __GRID_AOI_H__ */
