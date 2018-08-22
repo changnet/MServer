@@ -1,7 +1,16 @@
 #include "a_star.h"
 
-#define DEFAULT_SET 128*128 // 默认格子集合大小，128*128有点大，占128k内存了
+// 默认格子集合大小，128*128有点大，占128k内存了
+// 如果有超级大地图，那么可能要考虑用hash_map，虽然慢一点，至少不会爆内存
+#define DEFAULT_SET 128*128
 #define DEFAULT_POOL 1024  // 默认分配格子内存池数量
+
+/* 定义一个格子的距离,整数计算效率比浮点高，
+ * 根据勾股定理，要定一个误差较小的整数对角距离,边长为10，那边沿对角走则为14
+ */
+#define D 10   // 格子边长
+#define DD 14  // 格子对角边长
+
 
 a_star::a_star()
 {
@@ -74,21 +83,119 @@ bool a_star::search(
 bool a_star::do_search(
     const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
 {
-#define IS_OPEN(x,y)
 #define IS_CLOSE(x,y)
+#define FIND_OPEN(x,y)
 #define PUSH_OPEN_SET(x,y)
 #define PUSH_CLOSE_SET(X,Y)
 
-    node *nd = new_node(x,y);
-
-    PUSH_OPEN_SET(nd);
-    PUSH_CLOSE_SET(nd);
-
-    while (nd)
+    // 地图以左上角为坐标原点，分别向8个方向移动时的向量
+    const static int16_t offset [][2] =
     {
+        {0,-1},{1,0},{ 0,1},{-1, 0}, // 北-东-南-西
+        {1,-1},{1,1},{-1,1},{-1,-1}  // 东北-东南-西南-西北
+    };
 
+    struct node *parent = new_node(x,y);
+    while ( parent )
+    {
+        PUSH_CLOSE_SET(parent);
+
+        /* 查找相邻的8个点,这里允许沿对角行走
+         * TODO:对角的两个格子均可行走，则可以沿对角行走。部分游戏要相邻格子也可行走
+         * 才可以，这个看策划具体设定
+         */
+        for ( int32_t dir = 0;dir < 8;dir ++ )
+        {
+            int32_t x = parent->x + offset[dir][0];
+            int32_t y = parent->y + offset[dir][1];
+
+            // 不可行走或者已经close的格子，忽略
+            if ( map->get_pass_cost(x,y) < 0 || IS_CLOSE(x,y) ) continue;
+
+            /* 计算起点到当前点的消耗
+             * 前4个方向(北-东-南-西)都是直走，假设边长为10，那边沿对角走则为14
+             * 复杂的游戏，可能每个格子的速度不一样(即get_pass_cost值不一样)，有的
+             * 是飞行，有的是行走，这里先假设都是一样的
+             */
+            int32_t g = parent->g + (dir < 4 ? D : DD);
+            int32_t h = diagonal( x,y,dx,dy );
+
+            struct node *child = FIND_OPEN( x,y )
+            if ( child )
+            {
+                // 发现更优路径，更新路径
+                if ( g + h < child->g + child->h )
+                {
+                    child->g = g;
+                    child->h = h;
+                    child->px = parent->x;
+                    child->py = parent->y;
+                }
+            }
+            else
+            {
+                child = new_node(x,y,parent->x,parent->y);
+                child->g = g;
+                child->h = h;
+                PUSH_OPEN_SET( child );
+            }
+        }
+
+        parent = NULL;
     }
 
 #undef PUSH_OPEN_SET
 #undef PUSH_CLOSE_SET
+}
+
+node *a_star::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t py)
+{
+    if ( _pool_idx >= _pool_max ) return NULL;
+    node *nd = _node_pool[_pool_idx ++];
+    nd->x = x;
+    nd->y = y;
+    nd->px = px;
+    nd->px = py;
+
+    nd->g = 0;
+    nd->h = 0;
+    nd->mask = 0;
+
+    return nd;
+}
+
+/* 曼哈顿距离，不会算对角距离，
+ * 适用只能往东南西北4个方向，不能走对角的游戏
+ */
+int32_t a_star::manhattan(int32_t x,int32_t y,int32_t gx,int32_t gy)
+{
+    int32_t dx = abs(x - dx);
+    int32_t dy = abs(y - dy);
+
+    return D * (dx + dy);
+}
+
+/* 对角距离
+ * 适用东南西北，以及东北-东南-西南-西北(沿45度角走)的游戏
+ */
+int32_t a_star::diagonal(int32_t x,int32_t y,int32_t gx,int32_t gy)
+{
+    int32_t dx = abs(x - gx);
+    int32_t dy = abs(y - gy);
+    // DD是斜边长，2*D是两直角边总和，min(dx,dy)就是需要走45度的格子数
+    // D * (dx + dy)是先假设所有格子直走，然后加上5度走多出的距离
+    return D * (dx + dy) + (DD - 2 * D) * min(dx, dy);
+}
+
+/* 欧几里得距离
+ * 适用可以沿任意角度行走的游戏。但是f = g + h中，g的值是一步步算出来的，因此g值
+ * 要么是直线，要么是45度角的消耗，因此会导致f值不准确。不过这里的h <= n，还是可以
+ * 得到最小路径，只是算法效率受影响
+ */
+int32_t a_star::euclidean(int32_t x,int32_t y,int32_t gx,int32_t gy)
+{
+    int32_t dx = abs(x - x);
+    int32_t dy = abs(y - y);
+    // 这个算法有sqrt，会慢一点，不过现在的游戏大多数是可以任意角度行走的
+    return D * sqrt(dx * dx + dy * dy);
 }

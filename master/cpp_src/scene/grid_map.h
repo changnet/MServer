@@ -17,7 +17,7 @@ public:
     // 加载单个地图文件
     bool load_file(const char *path);
     // 获取经过这个格子的消耗, < 0 表示不可行
-    int8_t get_pass_cost(uint16_t x,uint16_t y);
+    int8_t get_pass_cost(int32_t x,int32_t y);
 
     // 获取地图宽高
     uint16_t get_width() const { return _width; }
