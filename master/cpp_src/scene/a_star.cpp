@@ -11,6 +11,7 @@
 #define D 10   // 格子边长
 #define DD 14  // 格子对角边长
 
+#define NODE_SET_IDX(x,y,h) (x * h + y)
 
 a_star::a_star()
 {
@@ -75,6 +76,8 @@ bool a_star::search(
 
     // 清空寻路缓存
     _pool_idx = 0;
+    _path.clear();
+    _open_set.clear();
     memset( _node_set,NULL,sizeof(void *)*width*height );
 
     return do_search( map,x,y,dx,dy );
@@ -98,6 +101,14 @@ bool a_star::do_search(
     struct node *parent = new_node(x,y);
     while ( parent )
     {
+        uint16_t px = parent->x;
+        uint16_t py = parent->y;
+        // 到达目标
+        if ( px == dx && py == dy )
+        {
+            return backtrace_path( parent,x,y );
+        }
+
         PUSH_CLOSE_SET(parent);
 
         /* 查找相邻的8个点,这里允许沿对角行走
@@ -106,8 +117,8 @@ bool a_star::do_search(
          */
         for ( int32_t dir = 0;dir < 8;dir ++ )
         {
-            int32_t x = parent->x + offset[dir][0];
-            int32_t y = parent->y + offset[dir][1];
+            int32_t x = px + offset[dir][0];
+            int32_t y = py + offset[dir][1];
 
             // 不可行走或者已经close的格子，忽略
             if ( map->get_pass_cost(x,y) < 0 || IS_CLOSE(x,y) ) continue;
@@ -128,28 +139,75 @@ bool a_star::do_search(
                 {
                     child->g = g;
                     child->h = h;
-                    child->px = parent->x;
-                    child->py = parent->y;
+                    child->px = px;
+                    child->py = py;
                 }
             }
             else
             {
-                child = new_node(x,y,parent->x,parent->y);
+                child = new_node(x,y,px,py);
                 child->g = g;
                 child->h = h;
                 PUSH_OPEN_SET( child );
             }
         }
 
-        parent = NULL;
+        parent = pop_open_set(); // 从open_set取出最优格子
     }
 
 #undef PUSH_OPEN_SET
 #undef PUSH_CLOSE_SET
 }
 
-node *a_star::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t py)
+/* 查找open set里最优的点
+ * 有些项目使用priority_queue来做的，但我觉得用vector反而更快些，毕竟在更新
+ * 路径时不需要维护，删除时，把最后一个元素调到当前点即可
+ */
+struct node *a_star:pop_open_set()
 {
+    struct node *parent = NULL;
+
+    int32_t parent_f = -1
+    size_t parent_idx = -1;
+    for ( size_t idx = 0;idx < _open_set.size();idx ++ )
+    {
+        const struct node *nd = -_open_set[idx];
+        if (!parent || parent_f > nd->g + nd->h )
+        {
+            parent = nd;
+            parent_idx = idx;
+            parent_f = nd->g + nd->h;
+        }
+    }
+
+    return parent;
+}
+
+// 从终点回溯到起点并得到路径
+bool backtrace_path( const struct node *dest,int32_t x,int32_t y )
+{
+    assert("a start path not clear", 0 == _path.size());
+
+    // 102400防止逻辑出错
+    while (dest && _path.size() < 1024000)
+    {
+        _path.push_back(dest->x,dest->y);
+
+        // 到达了起点
+        // 注意由于坐标用的是uint16_t类型，起点父坐标为(0,0)有可能与真实坐标冲突
+        if (dest->x == x && dest->y == y) return true;
+
+        dest = _node_set[NODE_SET_IDX()];
+    }
+
+    return false;
+}
+
+// 从内存池取一个格子对象
+struct node *a_star::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t py)
+{
+    // 如果预分配的都用完了，就不找了
+    // 继续再找对于服务器而言也太低效，建议上导航坐标或者针对玩法优化
     if ( _pool_idx >= _pool_max ) return NULL;
     node *nd = _node_pool[_pool_idx ++];
     nd->x = x;

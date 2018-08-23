@@ -7,6 +7,9 @@
  #ifndef __A_STAR_H__
  #define __A_STAR_H__
 
+ #include <vector>
+ #include "../global/global.h"
+
 class grid_map;
 class a_star
 {
@@ -32,9 +35,11 @@ public:
      */
     bool search( const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy);
 private:
+    struct node *pop_open_set();
+    bool backtrace_path( const struct node *dest,int32_t x,int32_t y );
     bool do_search(
         const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy);
-    node *new_node(uint16_t x,uint16_t y,uint16_t px = 0,uint16_t py = 0);
+    struct node *new_node(uint16_t x,uint16_t y,uint16_t px = 0,uint16_t py = 0);
 
     /* 启发函数的选择，下面的连接说明各个算法的适用场景及效率
      * http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
@@ -63,8 +68,10 @@ private:
      */
     int32_t euclidean(int32_t x,int32_t y,int32_t gx,int32_t gy);
 private:
-    node **_node_set; // 记录当前寻路格子集合
-    node *_node_pool; // 格子对象内存池
+    struct node **_node_set; // 记录当前寻路格子集合
+    struct node *_node_pool; // 格子对象内存池
+    std::vector<uint16_t> _path; // 生成的路径，反向并且每两个元素表示一个格子
+    std::vector<struct node*> _open_set; // 记录算法运行过程中待处理的格子
 
     int32_t _set_max;  // 当前集合大小
     int32_t _pool_max; // 内存池格子数量
