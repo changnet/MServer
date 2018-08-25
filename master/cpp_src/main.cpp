@@ -72,6 +72,7 @@ int32 main( int32 argc,char **argv )
     }
 
     lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
+    lmap_mgr::uninstance    ();      /* 关闭地图管理 */
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
     leventloop::uninstance  ();      /* 关闭主事件循环 */
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */

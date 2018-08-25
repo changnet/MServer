@@ -2,6 +2,7 @@
 #define __LMAP_MGR_H__
 
 #include <lua.hpp>
+#include "../scene/a_star.h"
 #include "../scene/map_mgr.h"
 
 class lmap_mgr : public map_mgr
@@ -21,7 +22,7 @@ public:
 
     int32 find_path( lua_State *L); // 寻路
 private:
-
+    class a_star _a_star;
     static class lmap_mgr *_lmap_mgr;
 };
 

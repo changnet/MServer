@@ -34,6 +34,8 @@ public:
      * @dx,dy：dest，终点坐标
      */
     bool search( const grid_map *map,int32 x,int32 y,int32 dx,int32 dy);
+    // 获取路径
+    const std::vector<uint16> &get_path() const { return _path; }
 private:
     struct node *pop_open_set();
     bool backtrace_path( 

@@ -75,4 +75,7 @@
  */
 #define MAX_CLT_CAST 256
 
+// 格子地图最大的格子数量
+#define MAX_MAP_GRID 256
+
 #endif /* __CONFIG_H__ */
