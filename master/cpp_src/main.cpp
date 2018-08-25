@@ -8,6 +8,7 @@
 #include "net/codec/codec_mgr.h"
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
+#include "lua_cpplib/lmap_mgr.h"
 #include "lua_cpplib/leventloop.h"
 #include "lua_cpplib/lobj_counter.h"
 #include "lua_cpplib/lnetwork_mgr.h"
@@ -39,6 +40,10 @@ int32 main( int32 argc,char **argv )
     class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
     lclass<lnetwork_mgr>::push( L,network_mgr,false );
     lua_setglobal( L,"network_mgr" );
+
+    class lmap_mgr *map_mgr = lmap_mgr::instance();
+    lclass<lmap_mgr>::push( L,map_mgr,false );
+    lua_setglobal( L,"map_mgr" );
 
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];

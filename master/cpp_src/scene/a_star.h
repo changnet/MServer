@@ -17,7 +17,7 @@ public:
     // 路径辅助节点
     struct node
     {
-        uint8_t mask; // 用于标识是否缓存数据，是否close，是否open
+        uint8_t mask; // 是否close
         int32_t g; // a*算法中f = g + h中的g，代表从起始位置到该格子的开销
         int32_t h; // a*算法中f = g + h中的h，代表该格子到目标节点预估的开销
         uint16_t x; // 该格子的x坐标
@@ -36,7 +36,8 @@ public:
     bool search( const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy);
 private:
     struct node *pop_open_set();
-    bool backtrace_path( const struct node *dest,int32_t x,int32_t y );
+    bool backtrace_path( 
+        const struct node *dest,int32_t dx,int32_t dy,uint16_t height );
     bool do_search(
         const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy);
     struct node *new_node(uint16_t x,uint16_t y,uint16_t px = 0,uint16_t py = 0);

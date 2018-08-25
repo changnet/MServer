@@ -1,6 +1,7 @@
 #ifndef __LMAP_MGR_H__
 #define __LMAP_MGR_H__
 
+#include <lua.hpp>
 #include "../scene/map_mgr.h"
 
 class lmap_mgr : public map_mgr
@@ -11,7 +12,9 @@ public:
 
     ~lmap_mgr();
     explicit lmap_mgr( lua_State *L );
-public:
+private:
+
+    static class lmap_mgr *_lmap_mgr;
 };
 
 #endif /* __LMAP_MGR_H__ */
