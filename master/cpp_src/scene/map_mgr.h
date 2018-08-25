@@ -15,7 +15,7 @@ public:
     // 加载该目标下所有地图文件
     bool load_path(const char *path,const char *suffix);
     // 获取地图数据
-    class grid_map *get_map(int32_t id) const;
+    class grid_map *get_map(int32 id) const;
 private:
     map_t<int,class grid_map> _map_set; // 所有地图数据集合
 };

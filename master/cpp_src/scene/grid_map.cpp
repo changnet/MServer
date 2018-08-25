@@ -19,7 +19,7 @@ bool grid_map::load_file(const char *path)
 }
 
 // 获取经过这个格子的消耗, < 0 表示不可行
-int8_t grid_map::get_pass_cost(int32_t x,int32_t y) const
+int8 grid_map::get_pass_cost(int32 x,int32 y) const
 {
     if ( expect_false(x < 0 || x >= _width) ) return -1;
     if ( expect_false(y < 0 || y >= _height) ) return -1;

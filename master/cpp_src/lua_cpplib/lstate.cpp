@@ -10,6 +10,7 @@
 #include "lclass.h"
 #include "ltimer.h"
 #include "lacism.h"
+#include "lmap_mgr.h"
 #include "leventloop.h"
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
@@ -67,6 +68,7 @@ int32 luaopen_log   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
+int32 luaopen_map_mgr( lua_State *L );
 int32 luaopen_network_mgr( lua_State *L );
 
 void lstate::open_cpp()
@@ -87,6 +89,7 @@ void lstate::open_cpp()
     luaopen_timer (L);
     luaopen_acism (L);
     luaopen_mongo (L);
+    luaopen_map_mgr(L);
     luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
@@ -232,6 +235,20 @@ int32 luaopen_network_mgr( lua_State *L )
     lc.set( "CDC_STREAM"  ,codec::CDC_STREAM  );
     lc.set( "CDC_FLATBUF" ,codec::CDC_FLATBUF );
     lc.set( "CDC_PROTOBUF",codec::CDC_PROTOBUF);
+
+    return 0;
+}
+
+int32 luaopen_map_mgr( lua_State *L )
+{
+    lclass<lmap_mgr> lc(L,"map_mgr");
+
+    lc.def<&lmap_mgr::fill_map> ( "fill_map" );
+    lc.def<&lmap_mgr::find_path> ( "find_path" );
+    lc.def<&lmap_mgr::load_path> ( "load_path" );
+    lc.def<&lmap_mgr::load_file> ( "load_file" );
+    lc.def<&lmap_mgr::remove_map> ( "remove_map" );
+    lc.def<&lmap_mgr::create_map> ( "create_map" );
 
     return 0;
 }
