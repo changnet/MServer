@@ -91,10 +91,15 @@ int32 lmap_mgr::find_path( lua_State *L) // 寻路
 
     int32 tbl_idx = 1;
     // 原来的路径是反向的，这里还原
-    for (size_t idx = path_sz - 1;idx > 0;idx -= 2 )
+    for (int32 idx = path_sz - 1;idx > 0;idx -= 2 )
     {
-        lua_rawseti(L,tbl_idx++,path[idx - 1]); // x坐标
-        lua_rawseti(L,tbl_idx++,path[idx]);     // y坐标
+        // x坐标
+        lua_pushinteger(L,path[idx - 1]);
+        lua_rawseti(L,tbl_stack,tbl_idx++);
+
+        // y坐标
+        lua_pushinteger(L,path[idx]);
+        lua_rawseti(L,tbl_stack,tbl_idx++);
     }
 
     // 设置table的n值为路径坐标数

@@ -47,7 +47,7 @@ a_star::~a_star()
 bool a_star::search(const grid_map *map,int32 x,int32 y,int32 dx,int32 dy)
 {
     // 起点和终点必须是可行走的
-    if ( map->get_pass_cost(x,y) < 0 || map->get_pass_cost(dx,dy) )
+    if ( map->get_pass_cost(x,y) < 0 || map->get_pass_cost(dx,dy) < 0 )
     {
         return false;
     }
@@ -101,6 +101,7 @@ bool a_star::do_search(
 
     uint16 height = map->get_height();
     struct node *parent = new_node(x,y);
+    _node_set[x *height + y] = parent;
     while ( parent )
     {
         uint16 px = parent->x;
@@ -119,13 +120,14 @@ bool a_star::do_search(
          */
         for ( int32 dir = 0;dir < 8;dir ++ )
         {
-            int32 x = px + offset[dir][0];
-            int32 y = py + offset[dir][1];
+            // c = child,p = parent
+            int32 cx = px + offset[dir][0];
+            int32 cy = py + offset[dir][1];
 
             // 不可行走的格子，忽略
-            if ( map->get_pass_cost(x,y) < 0 ) continue;
+            if ( map->get_pass_cost(cx,cy) < 0 ) continue;
 
-            int32 idx = x * height + y;
+            int32 idx = cx * height + cy;
             struct node *child = _node_set[idx];
 
             // 已经close的格子，忽略
@@ -137,7 +139,7 @@ bool a_star::do_search(
              * 是飞行，有的是行走，这里先假设都是一样的
              */
             int32 g = parent->g + (dir < 4 ? D : DD);
-            int32 h = diagonal( x,y,dx,dy );
+            int32 h = diagonal( cx,cy,dx,dy );
 
             if ( child )
             {
@@ -152,7 +154,7 @@ bool a_star::do_search(
             }
             else
             {
-                child = new_node(x,y,px,py);
+                child = new_node(cx,cy,px,py);
                 if ( expect_false(!child) ) return false;
 
                 child->g = g;
@@ -216,7 +218,7 @@ bool a_star::backtrace_path(
         // 注意由于坐标用的是uint16类型，起点父坐标为(0,0)有可能与真实坐标冲突
         if (x == dx && y == dy) return true;
 
-        dest = _node_set[x * height + y];
+        dest = _node_set[dest->px * height + dest->py];
     }
 
     return false;
@@ -235,7 +237,7 @@ struct a_star::node *a_star::new_node(uint16 x,uint16 y,uint16 px,uint16 py)
     nd->x = x;
     nd->y = y;
     nd->px = px;
-    nd->px = py;
+    nd->py = py;
 
     nd->g = 0;
     nd->h = 0;
