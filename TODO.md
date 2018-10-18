@@ -1,4 +1,5 @@
 
+* 参考boost实现object_pool，把astar和aoi中的缓存改由object_pool实现，其他系统也看下有没有替换的
 * 完成背包、聊天等系统设计
 * 客户端进入场景，增加gm系统
 * gm增加一个从shell脚本调用http的接口

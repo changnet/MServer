@@ -74,6 +74,10 @@ void back_trace(void)
     free(strings);
 }
 
+/* https://isocpp.org/files/papers/N3690.pdf
+ * 3.6.3 Termination
+ * static 变量的销毁与 static变更创建和std::atexit的调用顺序相关，这里可能并没统计到
+ */
 void onexit()
 {
     PRINTF( "new counter:%d    ----   new[] counter:%d",g_counter,g_counters );
