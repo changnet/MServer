@@ -11,6 +11,7 @@
 #include "ltimer.h"
 #include "lacism.h"
 #include "lmap_mgr.h"
+#include "lgrid_aoi.h"
 #include "leventloop.h"
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
@@ -69,6 +70,7 @@ int32 luaopen_timer ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
 int32 luaopen_map_mgr( lua_State *L );
+int32 luaopen_grid_aoi( lua_State *L );
 int32 luaopen_network_mgr( lua_State *L );
 
 void lstate::open_cpp()
@@ -90,6 +92,7 @@ void lstate::open_cpp()
     luaopen_acism (L);
     luaopen_mongo (L);
     luaopen_map_mgr(L);
+    luaopen_grid_aoi(L);
     luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
@@ -250,5 +253,13 @@ int32 luaopen_map_mgr( lua_State *L )
     lc.def<&lmap_mgr::remove_map> ( "remove_map" );
     lc.def<&lmap_mgr::create_map> ( "create_map" );
 
+    return 0;
+}
+
+int32 luaopen_grid_aoi( lua_State *L )
+{
+    lclass<lgrid_aoi> lc(L,"grid_aoi");
+
+    lc.def<&lgrid_aoi::set_watch_mask> ( "set_watch_mask" );
     return 0;
 }

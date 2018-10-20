@@ -11,7 +11,7 @@
 class grid_aoi
 {
 public:
-    typedef entity_id_t uint32; // 用来标识实体的唯一id
+    typedef uint32 entity_id_t; // 用来标识实体的唯一id
     typedef std::vector< entity_id_t > entity_vector_t; // 实体列表
 
     struct entity_ctx
@@ -48,7 +48,7 @@ protected:
 
     void del_entity_ctx();
     struct entity_ctx *new_entity_ctx();
-private:
+protected:
     /* 需要放入watch_me列表的实体类型，按位取值
      * 一般来说只有玩家需要放进去，因为实体移动、攻击等需要广播给这些玩家
      * 一些游戏或者手游全屏广播的场景，不需要开启这个列表
