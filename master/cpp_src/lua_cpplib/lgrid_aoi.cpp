@@ -1,3 +1,4 @@
+#include "ltools.h"
 #include "lgrid_aoi.h"
 
 lgrid_aoi::~lgrid_aoi()
@@ -37,9 +38,35 @@ int32 lgrid_aoi::set_size( lua_State *L ) // 设置宽高，格子像素
     return 0;
 }
 
+// 获取某个类型的实体
 int32 lgrid_aoi::get_all_entitys(lua_State *L)
 {
-    return 0;
+    // 可以多个实体类型，按位表示
+    int32 mask = luaL_checkinteger(L,1);
+
+    lUAL_CHECKTABLE(L,2);
+
+    int32 index = 1;
+    entity_set_t::const_iterator itr = _entity_set.begin();
+    for (;itr != _entity_set.end();itr ++)
+    {
+        const grid_aoi::entity_ctx *ctx = itr->second;
+        if (ctx && (ctx->_type & mask))
+        {
+            lua_pushinteger(L,ctx->_id);
+            lua_rawseti(L,2,index);
+
+            index ++;
+        }
+    }
+
+    // 类似table.pack的做法，最后设置一个n表示数量
+    lua_pushstring( L,"n" );
+    lua_pushinteger(L,index - 1);
+    lua_rawset(L,2);
+
+    lua_pushinteger(index - 1);
+    return 1;
 }
 
 /* 获取某一范围内实体

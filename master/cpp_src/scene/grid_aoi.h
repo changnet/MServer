@@ -24,6 +24,7 @@ public:
         // 都需要频繁广播给他们。如果游戏并不是arpg，可能并不这个列表
         entity_vector_t* _watch_me;
     };
+    typedef entity_set_t map_t< entity_id_t,struct entity_ctx* >;
 public:
     grid_aoi();
     virtual ~grid_aoi();
@@ -67,7 +68,7 @@ protected:
     map_t< uint32,entity_vector_t* > _entity_grid;
 
     /* 记录所有实体的数据 */
-    map_t< entity_id_t,struct entity_ctx* > _entity_set;
+    entity_set_t _entity_set;
 };
 
 #endif /* __GRID_AOI_H__ */
