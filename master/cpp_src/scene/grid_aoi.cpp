@@ -160,6 +160,15 @@ bool remove_grid_entity(int32 x,int32 y,entity_id_t id)
     return false;
 }
 
+// 获取实体的ctx
+const struct entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id) const
+{
+    entity_set_t::const_iterator itr = _entity_set.find(id);
+    if (_entity_set.end() == itr) return NULL;
+
+    return itr->second;
+}
+
 // 处理实体退出场景
 bool grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
 {

@@ -34,6 +34,7 @@ public:
     void set_visual_range(int32 width,int32 height); // 设置视野
     bool set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
 
+    const struct entity_ctx *get_entity_ctx(entity_id_t id) const;
     /* 获取某一范围内实体
      * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      */

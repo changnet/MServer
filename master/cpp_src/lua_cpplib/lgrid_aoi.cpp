@@ -88,14 +88,53 @@ int32 lgrid_aoi::get_entitys( lua_State *L )
     entity_vector_t *list = new_entity_vector();
     if (grid_aoi::get_entitys(list,srcx,srcy,destx,desty) < 0)
     {
-        return luaL_error(L,"aoi entitys error");
+        del_entity_vector(list);
+        return luaL_error(L,"aoi get entitys error");
     }
+
+    int32 index = 1;
+    entity_vector_t::const_iterator itr = list->begin()
+    for (;itr != list->end();itr ++)
+    {
+        const struct entity_ctx *ctx = get_entity_ctx(*itr);
+        if (ctx && (mask & ctx->_type))
+        {
+            lua_pushinteger(L,ctx->_id);
+            lua_rawseti(L,2,index);
+
+            index ++
+        }
+    }
+
+    // 类似table.pack的做法，最后设置一个n表示数量
+    lua_pushstring( L,"n" );
+    lua_pushinteger(L,index - 1);
+    lua_rawset(L,2);
+
+    del_entity_vector(list);
 
     return 0;
 }
 
 int32 lgrid_aoi::exit_entity( lua_State *L )
 {
+    entity_id_t id = luaL_checkinteger(L,1);
+
+    entity_vector_t *list = NULL;
+    if (lua_istable(L,2)) list = new_entity_vector();
+
+    if (!grid_aoi::exit_entity(id,list))
+    {
+        if (list) del_entity_vector(list);
+
+        return luaL_error(L,"aoi exit entitys error");
+    }
+
+    if (!list) return 0;
+
+
+    del_entity_vector(list);
+
     return 0;
 }
 
