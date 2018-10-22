@@ -21,7 +21,8 @@ public:
         uint8 _pos_y; // 格子坐标，y
         entity_id_t _id;
         // 关注我的实体列表。比如我周围的玩家，需要看到我移动、放技能
-        // 都需要频繁广播给他们。如果游戏并不是arpg，可能并不这个列表
+        // 都需要频繁广播给他们。如果游戏并不是arpg，可能并不需要这个列表
+        // 一般怪物、npc不要加入这个列表，如果有少部分npc需要aoi事件，另外定一个类型
         entity_vector_t* _watch_me;
     };
     typedef entity_set_t map_t< entity_id_t,struct entity_ctx* >;
@@ -31,16 +32,15 @@ public:
 
     void set_watch_mask(uint32 mask); // 设置需要放入watch_me列表的实体类型
     void set_visual_range(int32 width,int32 height); // 设置视野
-    void set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
+    bool set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
 
-    int32 get_all_entitys(entity_vector_t *list);
     /* 获取某一范围内实体
      * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      */
     int32 get_entitys(entity_vector_t *list,
         int32 srcx,int32 srcy,int32 destx,int32 desty);
 
-    bool exit_entity(entity_id_t id);
+    bool exit_entity(entity_id_t id,entity_vector_t *list = NULL);
     bool enter_entity(entity_id_t id,int32 x,int32 y,uint8 type);
     bool update_entity(entity_id_t id,int32 x,int32 y,uint8 type);
 protected:
@@ -49,6 +49,9 @@ protected:
 
     void del_entity_ctx();
     struct entity_ctx *new_entity_ctx();
+
+    entity_vector_t *get_grid_entitys(int32 x,int32 y); // 获取格子内的实体列表
+    bool remove_grid_entity(int32 x,int32 y,entity_id_t id); // 删除格子内实体
 protected:
     /* 需要放入watch_me列表的实体类型，按位取值
      * 一般来说只有玩家需要放进去，因为实体移动、攻击等需要广播给这些玩家

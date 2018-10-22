@@ -46,7 +46,7 @@
     #define ERROR(...)
 #endif
 
-/* terminated without destroying any object and without calling any of the 
+/* terminated without destroying any object and without calling any of the
  * functions passed to atexit or at_quick_exit
  */
 #define FATAL(...)    do{ERROR(__VA_ARGS__);::abort();}while(0)
@@ -82,9 +82,11 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
         cur = size;                                 \
     }
 
+#define MATH_MIN(a,b)    ((a) > (b) ? (b) : (a))
+#define MATH_MAX(a,b)    ((a) > (b) ? (a) : (b))
+
 #define EMPTY(base,size)
-#define array_zero(base,size)    \
-    memset ((void *)(base), 0, size)
+#define array_zero(base,size)    memset((void *)(base), 0, size)
 
 /* will be called while process exit */
 extern void onexit();

@@ -44,7 +44,7 @@ int32 lgrid_aoi::get_all_entitys(lua_State *L)
     // 可以多个实体类型，按位表示
     int32 mask = luaL_checkinteger(L,1);
 
-    lUAL_CHECKTABLE(L,2);
+    lUAL_CHECKTABLE(L,2); // 用来保存返回的实体id的table
 
     int32 index = 1;
     entity_set_t::const_iterator itr = _entity_set.begin();
@@ -74,6 +74,23 @@ int32 lgrid_aoi::get_all_entitys(lua_State *L)
  */
 int32 lgrid_aoi::get_entitys( lua_State *L )
 {
+    // 可以多个实体类型，按位表示
+    int32 mask = luaL_checkinteger(L,1);
+
+    lUAL_CHECKTABLE(L,2);
+
+    // 矩形的两个对角像素坐标
+    int32 srcx = luaL_checkinteger(L,3);
+    int32 srcy = luaL_checkinteger(L,4);
+    int32 destx = luaL_checkinteger(L,5);
+    int32 desty = luaL_checkinteger(L,6);
+
+    entity_vector_t *list = new_entity_vector();
+    if (grid_aoi::get_entitys(list,srcx,srcy,destx,desty) < 0)
+    {
+        return luaL_error(L,"aoi entitys error");
+    }
+
     return 0;
 }
 
