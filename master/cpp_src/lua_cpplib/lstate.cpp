@@ -4,6 +4,7 @@
 
 #include "llog.h"
 #include "lsql.h"
+#include "laoi.h"
 #include "lutil.h"
 #include "lmongo.h"
 #include "lstate.h"
@@ -11,7 +12,6 @@
 #include "ltimer.h"
 #include "lacism.h"
 #include "lmap_mgr.h"
-#include "lgrid_aoi.h"
 #include "leventloop.h"
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
@@ -66,11 +66,11 @@ lstate::~lstate()
 int32 luaopen_ev    ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
 int32 luaopen_log   ( lua_State *L );
+int32 luaopen_aoi   ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
 int32 luaopen_map_mgr( lua_State *L );
-int32 luaopen_grid_aoi( lua_State *L );
 int32 luaopen_network_mgr( lua_State *L );
 
 void lstate::open_cpp()
@@ -88,11 +88,11 @@ void lstate::open_cpp()
     luaopen_ev    (L);
     luaopen_sql   (L);
     luaopen_log   (L);
+    luaopen_aoi   (L);
     luaopen_timer (L);
     luaopen_acism (L);
     luaopen_mongo (L);
     luaopen_map_mgr(L);
-    luaopen_grid_aoi(L);
     luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
@@ -256,10 +256,10 @@ int32 luaopen_map_mgr( lua_State *L )
     return 0;
 }
 
-int32 luaopen_grid_aoi( lua_State *L )
+int32 luaopen_aoi( lua_State *L )
 {
-    lclass<lgrid_aoi> lc(L,"grid_aoi");
+    lclass<laoi> lc(L,"grid_aoi");
 
-    lc.def<&lgrid_aoi::set_watch_mask> ( "set_watch_mask" );
+    lc.def<&laoi::set_watch_mask> ( "set_watch_mask" );
     return 0;
 }
