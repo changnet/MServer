@@ -106,9 +106,8 @@ int32 grid_aoi::get_entitys(
 int32 grid_aoi::raw_get_entitys(
     entity_vector_t *list,int32 x,int32 y,int32 dx,int32 dy);
     // 限制越界
-    if (x < 0 || y < 0) return -1;
-    if (dx > _width) dx = _width;
-    if (dy > _height) dy = _height;
+    if (x < 0 || y < 0) return 1;
+    if (dx > _width || dy > _height) return 2;
 
     // 遍历范围内的所有格子
     for (int32 ix = x;ix < dx;ix ++)
@@ -136,29 +135,18 @@ entity_vector_t *grid_aoi::get_grid_entitys(int32 x,int32 y)
     return itr->second;
 }
 
-// 删除格子内实体
-bool grid_aoi::remove_grid_entity(int32 x,int32 y,struct entity_ctx *ctx)
+bool grid_aoi::remove_entity_from_vector(
+    entity_vector_t *list,const struct entity_ctx *ctx)
 {
-    int32 index = MAKE_INDEX(x,y);
-    map_t< uint32,entity_vector_t* >::iterator itr = _entity_grid.find(index);
-    if (itr == _entity_grid.end() || !itr->second) return false;
-
-    entity_vector_t *grid_list = itr->second;
-    entity_vector_t::iterator viter = grid_list->begin();
-    for (;viter != grid_list->end();viter ++)
+    entity_vector_t::const_iterator iter = list->begin();
+    for (;iter != list->end();iter ++)
     {
-        if (*viter == ctx)
+        if (*iter == ctx)
         {
             // 用最后一个元素替换就好，不用移动其他元素
-            *viter = grid_list->back();
-            grid_list->pop_back();
+            *iter = list->back();
+            list->pop_back();
 
-            // 这个格子不再有实体就清空
-            if (grid_list.empty())
-            {
-                del_entity_vector(grid_list);
-                _entity_grid.remove(itr);
-            }
             return true;
         }
     }
@@ -166,8 +154,28 @@ bool grid_aoi::remove_grid_entity(int32 x,int32 y,struct entity_ctx *ctx)
     return false;
 }
 
+// 删除格子内实体
+bool grid_aoi::remove_grid_entity(int32 x,int32 y,const struct entity_ctx *ctx)
+{
+    int32 index = MAKE_INDEX(x,y);
+    map_t< uint32,entity_vector_t* >::iterator iter = _entity_grid.find(index);
+    if (iter == _entity_grid.end() || !iter->second) return false;
+
+    entity_vector_t *grid_list = iter->second;
+    bool isDel = remove_entity_from_vector(grid_list,ctx);
+
+    // 这个格子不再有实体就清空
+    if (grid_list.empty())
+    {
+        del_entity_vector(grid_list);
+        _entity_grid.remove(iter);
+    }
+
+    return isDel;
+}
+
 // 获取实体的ctx
-const struct entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id) const
+struct entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
 {
     entity_set_t::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return NULL;
@@ -195,6 +203,21 @@ int32 grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
     }
 
     // 从别人的watch_me列表删除
+    // 自己关注event才有可能出现在别人的watch列表中
+    if (ctx->_event)
+    {
+        entity_vector_t *list = new_entity_vector();
+
+        int32 x = 0,y = 0,dx = 0,dy = 0;
+        get_visual_range(x,y,dx,dy,gx,gy);
+        raw_get_entitys(list,x,y,dx,dy);
+
+        entity_vector_t::iterator itr = list->begin();
+        for (;itr != list->end();itr ++)
+        {
+            remove_entity_from_vector(itr->second->_watch_me,ctx);
+        }
+    }
 
     del_entity_ctx(ctx);
 
@@ -203,7 +226,7 @@ int32 grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
 
 // 处理实体进入场景
 int32 grid_aoi::enter_entity(
-    entity_id_t id,int32 x,int32 y,uint8 type,uint8 event)
+    entity_id_t id,int32 x,int32 y,uint8 type,uint8 event,entity_vector_t *list)
 {
     // 检测坐标
     int32 gx = PIX_TO_GRID(x);
@@ -225,23 +248,72 @@ int32 grid_aoi::enter_entity(
     ctx->_event = event;
     ctx->_watch_me = new_entity_vector();
 
-    entity_vector_t *list = new_entity_vector();
-    raw_get_entitys(list,gx - _visual_width,
-        gy - _visual_height,gx + _visual_width,gy + _visual_height);
+    entity_vector_t *watch_list = new_entity_vector();
 
-    entity_vector_t::iterator itr = list->begin();
-    for (;itr != list->end();itr ++)
+    int32 x = 0,y = 0,dx = 0,dy = 0;
+    get_visual_range(x,y,dx,dy,gx,gy);
+    raw_get_entitys(list,x,y,dx,dy);
+
+    entity_vector_t *watch_me = ctx->_watch_me;
+    entity_vector_t::iterator iter = watch_list->begin();
+    for (;iter != watch_list->end();iter ++)
     {
+        struct entity_ctx *other = *iter;
         // 把自己加到别人的watch
+        if (event) other->_watch_me.push_back(ctx);
         // 把别人加到自己的watch
+        if (other->_event) watch_me.push_back(other);
     }
+
+    // 返回需要触发aoi事件的实体
+    if (list) list.insert(list->end(),watch_me.begin(),watch_me.end());
 
     del_entity_vector(list);
 
     return 0;
 }
 
-bool grid_aoi::update_entity(entity_id_t id,int32 x,int32 y,uint8 type)
+/* 判断两个位置视野交集
+ * @x,y,dx,dy:矩形区域视野的对角坐标
+ * @pos_x,pos_y:实体旧位置坐标
+ */
+// 判断视野范围
+void grid_aoi::get_visual_range(
+    int32 &x,int32 &y,int32 &dx,int32 &dy,int32 pos_x,int32 pos_y)
 {
-    return true;
+    // 以pos为中心，构造一个矩形视野
+    x = pos_x - _visual_width;
+    y = pos_y - _visual_height;
+    dx = pos_x + _visual_width;
+    dy = pos_y + _visual_height;
+
+    // 处理边界
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (dx > _width) dx = _width;
+    if (dy > _height) dy = _height;
+}
+/* 更新实体位置
+ * @list_in:接收实体进入的实体列表
+ * @list_out:接收实体消失的实体列表
+ * @list:接收实体更新的实体列表
+ */
+int32 grid_aoi::update_entity(entity_id_t id,
+        int32 x,int32 y,entity_vector_t *list_in,
+        entity_vector_t *list_out,entity_vector_t *list)
+{
+    // 检测坐标
+    int32 gx = PIX_TO_GRID(x);
+    int32 gy = PIX_TO_GRID(y);
+    if (gx < 0 || gy < 0 || gx > _width || gy > _height) return 1;
+
+    struct entity_ctx *ctx = get_entity_ctx(id);
+    if (!ctx) return 2;
+
+    // 在一个格子内移动不用处理
+    if (gx == ctx->_pos_x && gy == ctx->_pos_y) return 0;
+
+
+
+    return 0;
 }

@@ -4,6 +4,9 @@
  * 1. 暂定所有实体视野一样
  * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要watch_me列表
  * 3. 只提供获取矩形范围内实体。技能寻敌时如果不是矩形，上层再从这些实体筛选
+ * 4. 通过event来控制实体关注的事件。npc、怪物通常不关注任何事件，这样可以大幅提升
+ *    效率，战斗ai另外做即可(攻击玩家在ai定时器定时取watch_me列表即可)。怪物攻击怪物或
+ *    npc在玩家靠近时对话可以给这些实体加上事件，这样的实体不会太多
  */
 
 #ifndef __GRID_AOI_H__
@@ -40,7 +43,7 @@ public:
     void set_visual_range(int32 width,int32 height); // 设置视野
     int32 set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
 
-    const struct entity_ctx *get_entity_ctx(entity_id_t id) const;
+    struct entity_ctx *get_entity_ctx(entity_id_t id);
     /* 获取某一范围内实体
      * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      */
@@ -48,8 +51,11 @@ public:
         int32 srcx,int32 srcy,int32 destx,int32 desty);
 
     int32 exit_entity(entity_id_t id,entity_vector_t *list = NULL);
-    int32 enter_entity(entity_id_t id,int32 x,int32 y,uint8 type,uint8 event);
-    int32 update_entity(entity_id_t id,int32 x,int32 y,uint8 type);
+    int32 enter_entity(entity_id_t id,
+        int32 x,int32 y,uint8 type,uint8 event,entity_vector_t *list = NULL);
+    int32 update_entity(entity_id_t id,
+        int32 x,int32 y,entity_vector_t *list_in = NULL,
+        entity_vector_t *list_out = NULL,entity_vector_t *list = NULL);
 protected:
     void del_entity_vector(); // 需要实现缓存，太大的直接删除不要丢缓存
     entity_vector_t *new_entity_vector();
@@ -57,12 +63,18 @@ protected:
     void del_entity_ctx();
     struct entity_ctx *new_entity_ctx();
 
+private:
     entity_vector_t *get_grid_entitys(int32 x,int32 y); // 获取格子内的实体列表
+    bool remove_entity_from_vector(
+        entity_vector_t *list,const struct entity_ctx *ctx);
     // 删除格子内实体
-    bool remove_grid_entity(int32 x,int32 y,struct entity_ctx *ctx);
+    bool remove_grid_entity(int32 x,int32 y,const struct entity_ctx *ctx);
     // 获取矩形内的实体
     int32 raw_get_entitys(
         entity_vector_t *list,int32 x,int32 y,int32 dx,int32 dy);
+    // 判断视野范围
+    void get_visual_range(
+        int32 &x,int32 &y,int32 &dx,int32 &dy,int32 pos_x,int32 pos_y);
 protected:
     /* 需要放入watch_me列表的实体类型，按位取值
      * 一般来说只有玩家需要放进去，因为实体移动、攻击等需要广播给这些玩家
