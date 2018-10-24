@@ -9,8 +9,6 @@
 
 grid_aoi::grid_aoi()
 {
-    _watch_mask = 0;
-
     _width = 0; // 场景最大宽度(格子坐标)
     _height = 0; // 场景最大高度(格子坐标)
 
@@ -43,12 +41,6 @@ void grid_aoi::del_entity_ctx()
 struct entity_ctx *grid_aoi::new_entity_ctx()
 {
     return NULL;
-}
-
-// 设置需要放入watch_me列表的实体类型
-void grid_aoi::set_watch_mask(uint32 mask)
-{
-    _watch_mask = mask;
 }
 
 // 设置视野
@@ -110,9 +102,10 @@ int32 grid_aoi::raw_get_entitys(
     if (dx > _width || dy > _height) return 2;
 
     // 遍历范围内的所有格子
-    for (int32 ix = x;ix < dx;ix ++)
+    // 注意坐标是格子的中心坐标，因为要包含当前格子，用<=
+    for (int32 ix = x;ix <= dx;ix ++)
     {
-        for (int32 iy = y;iy < dy;iy ++)
+        for (int32 iy = y;iy <= dy;iy ++)
         {
             entity_vector_t *grid_list = get_grid_entitys(ix,iy);
             if (!grid_list) continue;
@@ -174,6 +167,20 @@ bool grid_aoi::remove_grid_entity(int32 x,int32 y,const struct entity_ctx *ctx)
     return isDel;
 }
 
+// 插入实体到格子内
+void grid_aoi::insert_grid_entity(int32 x,int32 y,struct entity_ctx *ctx)
+{
+    int32 index = MAKE_INDEX(x,y);
+
+    // https://en.cppreference.com/w/cpp/language/value_initialization
+    // 没创建时，grid_list应该是NULL
+    entity_vector_t *&grid_list = _entity_grid[index];
+    // 注意上面用的是指针的引用
+    if (!grid_list) grid_list = new_entity_vector();
+
+    grid_list.push_back(ctx);
+}
+
 // 获取实体的ctx
 struct entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
 {
@@ -206,22 +213,41 @@ int32 grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
     // 自己关注event才有可能出现在别人的watch列表中
     if (ctx->_event)
     {
-        entity_vector_t *list = new_entity_vector();
-
         int32 x = 0,y = 0,dx = 0,dy = 0;
         get_visual_range(x,y,dx,dy,gx,gy);
-        raw_get_entitys(list,x,y,dx,dy);
 
-        entity_vector_t::iterator itr = list->begin();
-        for (;itr != list->end();itr ++)
-        {
-            remove_entity_from_vector(itr->second->_watch_me,ctx);
-        }
+        // 把自己的列表清空，这样从自己列表中删除时就不用循环了
+        watch_me->clear();
+        entity_exit_range(ctx,x,y,dx,dy);
     }
 
     del_entity_ctx(ctx);
 
     return isOk ? 0 : -1;
+}
+
+// 处理实体退出某个范围
+void grid_aoi::entity_exit_range(struct entity_ctx *ctx,
+    int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list)
+{
+     entity_vector_t *watch_list = new_entity_vector();
+
+    raw_get_entitys(watch_list,x,y,dx,dy);
+    entity_vector_t::iterator iter = watch_list->begin();
+    for (;iter != watch_list->end();iter ++)
+    {
+        // 从别人的watch_me列表删除自己，并且从自己的watch_me列表中删除别人
+        struct entity_ctx *other = iter->second;
+        // 自己关注event才有可能出现在别人的watch列表中
+        if (ctx->_event) remove_entity_from_vector(other->_watch_me,ctx);
+        if (other->_event)
+        {
+            remove_entity_from_vector(ctx->_watch_me,other);
+            if (list) list->push_back(other);
+        }
+    }
+
+    del_entity_vector(watch_list);
 }
 
 // 处理实体进入场景
@@ -248,11 +274,23 @@ int32 grid_aoi::enter_entity(
     ctx->_event = event;
     ctx->_watch_me = new_entity_vector();
 
+    insert_grid_entity(gx,gy,ctx); // 插入到格子内
+
     entity_vector_t *watch_list = new_entity_vector();
 
     int32 x = 0,y = 0,dx = 0,dy = 0;
     get_visual_range(x,y,dx,dy,gx,gy);
-    raw_get_entitys(list,x,y,dx,dy);
+    entity_enter_range(ctx,x,y,dx,dy,list);
+
+    return 0;
+}
+
+// 处理实体进入某个范围
+void grid_aoi::entity_enter_range(struct entity_ctx *ctx,
+    int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list)
+{
+    entity_vector_t *watch_list = new_entity_vector();
+    raw_get_entitys(watch_list,x,y,dx,dy);
 
     entity_vector_t *watch_me = ctx->_watch_me;
     entity_vector_t::iterator iter = watch_list->begin();
@@ -262,15 +300,16 @@ int32 grid_aoi::enter_entity(
         // 把自己加到别人的watch
         if (event) other->_watch_me.push_back(ctx);
         // 把别人加到自己的watch
-        if (other->_event) watch_me.push_back(other);
+        if (other->_event)
+        {
+            watch_me.push_back(other);
+
+            // 返回需要触发aoi事件的实体
+            if (list) list.push_back(other);
+        }
     }
 
-    // 返回需要触发aoi事件的实体
-    if (list) list.insert(list->end(),watch_me.begin(),watch_me.end());
-
-    del_entity_vector(list);
-
-    return 0;
+    del_entity_vector(watch_list);
 }
 
 /* 判断两个位置视野交集
@@ -313,7 +352,98 @@ int32 grid_aoi::update_entity(entity_id_t id,
     // 在一个格子内移动不用处理
     if (gx == ctx->_pos_x && gy == ctx->_pos_y) return 0;
 
+    // 获取旧视野
+    int32 old_x = 0,old_y = 0,old_dx = 0,old_dy = 0;
+    get_visual_range(old_x,old_y,old_dx,old_dy,ctx->_pos_x,ctx->_pos_y);
+
+    // 获取新视野
+    int32 new_x = 0,new_y = 0,new_dx = 0,new_dy = 0;
+    get_visual_range(new_x,new_y,new_dx,new_dy,gx,gy);
+
+    /* 求矩形交集 intersection
+     * 1. 分别取两个矩形左上角坐标中x、y最大值作为交集矩形的左上角的坐标
+     * 2. 分别取两个矩形的右下角坐标x、y最小值作为交集矩形的右下角坐标
+     * 3. 判断交集矩形的左上角坐标是否在右下角坐标的左上方。如果否则没有交集
+     */
+    bool intersection = true;
+    int32 it_x = MATH_MAX(old_x,new_x);
+    int32 it_y = MATH_MAX(old_y,new_y);
+    int32 it_dx = MATH_MIN(old_dx,new_dx);
+    int32 it_dy = MATH_MIN(old_dy,new_dy);
+    if (it_x > it_dx || it_y > it_dy) intersection = false;
+
+    // 从旧格子退出
+    bool exitOk = remove_grid_entity(ctx->_pos_x,ctx->_pos_y,ctx);
+    // 进入新格子
+    insert_grid_entity(gx,gy,ctx);
+
+    // 交集区域内玩家，触发更新事件
+    // 旧视野区域，触发退出
+    // 新视野区域，触发进入
+    if (!intersection)
+    {
+        entity_exit_range(ctx,old_x,old_y,old_dx,old_dy,list_out);
+        entity_enter_range(ctx,new_x,new_y,new_dx,new_dy,list_in);
+        return exitOk;
+    }
+
+    raw_get_entitys(list,it_x,it_y,it_dx,it_dy);
+
+    for (int32 ix = old_x;ix <= old_dx;ix ++)
+    {
+        // 排除交集区域
+        // 因为视野这个矩形不可以旋转，所以交集区域总在矩形的4个角上
+        // 按x轴筛选，那y轴就有几种情况：1无效，2取上半段，3取下段
+        int32 iy = old_y;
+        int32 idy = old_dy;
+        if (ix >= it_x && ix <= it_dx)
+        {
+            if (old_dy > it_dy) // 下段
+            {
+                iy = it_dy + 1;
+                sub_dy = old_dy;
+            }
+            else if (old_y < it_y) // 上段
+            {
+                iy = old_y;
+                idy = it_y - 1;
+            }
+            else
+            {
+                continue; // 无效
+            }
+        }
+
+        assert("rectangle difference fail",iy <= idy)
+        entity_exit_range(ctx,ix,ix,iy,idy,list_out);
+    }
+
+    for (int32 ix = new_x;ix <= new_dx;ix ++)
+    {
+        int32 iy = new_y;
+        int32 idy = new_dy;
+        if (ix >= it_x && ix <= it_dx)
+        {
+            if (new_dy > it_dy) // 下段
+            {
+                iy = it_dy + 1;
+                sub_dy = new_dy;
+            }
+            else if (new_y < it_y) // 上段
+            {
+                iy = old_y;
+                idy = it_y - 1;
+            }
+            else
+            {
+                continue; // 无效
+            }
+        }
+
+        assert("rectangle difference fail",iy <= idy)
+        entity_enter_range(ctx,ix,ix,iy,idy,list_in);
+    }
 
 
-    return 0;
+    return exitOk;
 }

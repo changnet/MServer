@@ -39,7 +39,6 @@ public:
     grid_aoi();
     virtual ~grid_aoi();
 
-    void set_watch_mask(uint32 mask); // 设置需要放入watch_me列表的实体类型
     void set_visual_range(int32 width,int32 height); // 设置视野
     int32 set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
 
@@ -67,6 +66,8 @@ private:
     entity_vector_t *get_grid_entitys(int32 x,int32 y); // 获取格子内的实体列表
     bool remove_entity_from_vector(
         entity_vector_t *list,const struct entity_ctx *ctx);
+    // 插入实体到格子内
+    void insert_grid_entity(int32 x,int32 y,struct entity_ctx *ctx);
     // 删除格子内实体
     bool remove_grid_entity(int32 x,int32 y,const struct entity_ctx *ctx);
     // 获取矩形内的实体
@@ -75,13 +76,13 @@ private:
     // 判断视野范围
     void get_visual_range(
         int32 &x,int32 &y,int32 &dx,int32 &dy,int32 pos_x,int32 pos_y);
+    // 处理实体进入某个范围
+    void entity_enter_range(struct entity_ctx *ctx,
+        int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list);
+    // 处理实体退出某个范围
+    void entity_exit_range(struct entity_ctx *ctx,
+        int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list);
 protected:
-    /* 需要放入watch_me列表的实体类型，按位取值
-     * 一般来说只有玩家需要放进去，因为实体移动、攻击等需要广播给这些玩家
-     * 一些游戏或者手游全屏广播的场景，不需要开启这个列表
-     */
-    uint32 _watch_mask;
-
     uint8 _width; // 场景最大宽度(格子坐标)
     uint8 _height; // 场景最大高度(格子坐标)
     uint32 _grid_pix; // 多少像素转换为一个格子边长

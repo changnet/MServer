@@ -10,7 +10,6 @@ public:
     ~laoi();
     explicit laoi( lua_State *L );
 
-    int32 set_watch_mask( lua_State *L ); // 设置需要放入watch_me列表的实体类型
     int32 set_visual_range( lua_State *L ); // 设置视野
     int32 set_size( lua_State *L ); // 设置宽高，格子像素
 

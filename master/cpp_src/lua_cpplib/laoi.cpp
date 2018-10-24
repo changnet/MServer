@@ -9,14 +9,6 @@ laoi::laoi( lua_State *L )
 {
 }
 
-int32 laoi::set_watch_mask( lua_State *L ) // 设置需要放入watch_me列表的实体类型
-{
-    int32 mask = luaL_checkinteger(L,1);
-    grid_aoi::set_watch_mask(mask);
-
-    return 0;
-}
-
 int32 laoi::set_visual_range( lua_State *L ) // 设置视野
 {
     // 这里的宽高都是指格子数
