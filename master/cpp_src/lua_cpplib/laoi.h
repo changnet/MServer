@@ -10,8 +10,8 @@ public:
     ~laoi();
     explicit laoi( lua_State *L );
 
-    int32 set_visual_range( lua_State *L ); // 设置视野
     int32 set_size( lua_State *L ); // 设置宽高，格子像素
+    int32 set_visual_range( lua_State *L ); // 设置视野
 
     int32 get_all_entitys(lua_State *L);
     /* 获取某一范围内实体

@@ -1,6 +1,26 @@
 #include "ltools.h"
 #include "laoi.h"
 
+// 类似table.pack的做法，最后设置一个n表示数量
+#define TABLE_PACK(tbl_idx,list,FILTER)    \
+    do{ \
+        int32 index = 1; \
+        entity_vector_t::const_iterator iter = list->begin(); \
+        for (;iter != list->end();iter ++) \
+        { \
+            const struct entity_ctx *ctx = *iter; \
+            FILTER \
+            { \
+                lua_pushinteger(L,ctx->_id); \
+                lua_rawseti(L,tbl_idx,index); \
+                index ++; \
+            } \
+        } \
+        lua_pushstring( L,"n" ); \
+        lua_pushinteger(L,index - 1); \
+        lua_rawset(L,tbl_idx); \
+    }while(0)
+
 laoi::~laoi()
 {
 }
@@ -57,7 +77,7 @@ int32 laoi::get_all_entitys(lua_State *L)
     lua_pushinteger(L,index - 1);
     lua_rawset(L,2);
 
-    lua_pushinteger(index - 1);
+    lua_pushinteger(L,index - 1);
     return 1;
 }
 
@@ -67,7 +87,7 @@ int32 laoi::get_all_entitys(lua_State *L)
 int32 laoi::get_entitys( lua_State *L )
 {
     // 可以多个实体类型，按位表示
-    int32 mask = luaL_checkinteger(L,1);
+    int32 type_mask = luaL_checkinteger(L,1);
 
     lUAL_CHECKTABLE(L,2);
 
@@ -85,24 +105,9 @@ int32 laoi::get_entitys( lua_State *L )
         return luaL_error(L,"aoi get entitys error:%d",ecode);
     }
 
-    int32 index = 1;
-    entity_vector_t::const_iterator itr = list->begin()
-    for (;itr != list->end();itr ++)
-    {
-        const struct entity_ctx *ctx = *itr;
-        if (ctx && (mask & ctx->_type))
-        {
-            lua_pushinteger(L,ctx->_id);
-            lua_rawseti(L,2,index);
-
-            index ++
-        }
-    }
-
-    // 类似table.pack的做法，最后设置一个n表示数量
-    lua_pushstring( L,"n" );
-    lua_pushinteger(L,index - 1);
-    lua_rawset(L,2);
+#define TYPE_FILTER if (ctx && (type_mask & ctx->_type))
+    TABLE_PACK(2,list,TYPE_FILTER);
+#undef TYPE_FILTER
 
     del_entity_vector(list);
 

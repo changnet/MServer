@@ -18,7 +18,10 @@
 class grid_aoi
 {
 public:
+    struct entity_ctx;
+
     typedef uint32 entity_id_t; // 用来标识实体的唯一id
+    typedef std::vector< struct entity_ctx* > entity_vector_t; // 实体列表
 
     struct entity_ctx
     {
@@ -33,8 +36,7 @@ public:
         entity_vector_t* _watch_me;
     };
 
-    typedef std::vector< struct entity_ctx* > entity_vector_t; // 实体列表
-    typedef entity_set_t map_t< entity_id_t,struct entity_ctx* >;
+    typedef map_t< entity_id_t,struct entity_ctx* > entity_set_t;
 public:
     grid_aoi();
     virtual ~grid_aoi();
@@ -56,12 +58,11 @@ public:
         int32 x,int32 y,entity_vector_t *list_in = NULL,
         entity_vector_t *list_out = NULL,entity_vector_t *list = NULL);
 protected:
-    void del_entity_vector(); // 需要实现缓存，太大的直接删除不要丢缓存
     entity_vector_t *new_entity_vector();
+    void del_entity_vector(entity_vector_t *list);
 
-    void del_entity_ctx();
     struct entity_ctx *new_entity_ctx();
-
+    void del_entity_ctx(struct entity_ctx *ctx);
 private:
     entity_vector_t *get_grid_entitys(int32 x,int32 y); // 获取格子内的实体列表
     bool remove_entity_from_vector(
@@ -78,10 +79,10 @@ private:
         int32 &x,int32 &y,int32 &dx,int32 &dy,int32 pos_x,int32 pos_y);
     // 处理实体进入某个范围
     void entity_enter_range(struct entity_ctx *ctx,
-        int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list);
+        int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list = NULL);
     // 处理实体退出某个范围
     void entity_exit_range(struct entity_ctx *ctx,
-        int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list);
+        int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list = NULL);
 protected:
     uint8 _width; // 场景最大宽度(格子坐标)
     uint8 _height; // 场景最大高度(格子坐标)

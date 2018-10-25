@@ -25,20 +25,20 @@ grid_aoi::~grid_aoi()
 }
 
 // 需要实现缓存，太大的直接删除不要丢缓存
-void grid_aoi::del_entity_vector()
+void grid_aoi::del_entity_vector(entity_vector_t *list)
 {
 }
 
-entity_vector_t *grid_aoi::new_entity_vector()
+grid_aoi::entity_vector_t *grid_aoi::new_entity_vector()
 {
     return NULL;
 }
 
-void grid_aoi::del_entity_ctx()
+void grid_aoi::del_entity_ctx(struct entity_ctx *ctx)
 {
 }
 
-struct entity_ctx *grid_aoi::new_entity_ctx()
+struct grid_aoi::entity_ctx *grid_aoi::new_entity_ctx()
 {
     return NULL;
 }
@@ -60,7 +60,7 @@ int32 grid_aoi::set_size(int32 width,int32 height,int32 pix)
     _width = PIX_TO_GRID(width);
     _height = PIX_TO_GRID(height);
 
-    static const max_grid = 0x01 << INDEX_BIT;
+    static const int max_grid = 0x01 << INDEX_BIT;
     if (_width > max_grid || _height > max_grid)
     {
         _width = 0;
@@ -96,7 +96,8 @@ int32 grid_aoi::get_entitys(
 
 // 获取矩形内的实体
 int32 grid_aoi::raw_get_entitys(
-    entity_vector_t *list,int32 x,int32 y,int32 dx,int32 dy);
+    entity_vector_t *list,int32 x,int32 y,int32 dx,int32 dy)
+{
     // 限制越界
     if (x < 0 || y < 0) return 1;
     if (dx > _width || dy > _height) return 2;
@@ -118,9 +119,9 @@ int32 grid_aoi::raw_get_entitys(
 }
 
 // 获取格子内的实体列表
-entity_vector_t *grid_aoi::get_grid_entitys(int32 x,int32 y)
+grid_aoi::entity_vector_t *grid_aoi::get_grid_entitys(int32 x,int32 y)
 {
-    int32 index = MAKE_INDEX(ix,iy);
+    int32 index = MAKE_INDEX(x,y);
 
     map_t< uint32,entity_vector_t* >::iterator itr = _entity_grid.find(index);
     if (itr == _entity_grid.end()) return NULL;
@@ -131,7 +132,7 @@ entity_vector_t *grid_aoi::get_grid_entitys(int32 x,int32 y)
 bool grid_aoi::remove_entity_from_vector(
     entity_vector_t *list,const struct entity_ctx *ctx)
 {
-    entity_vector_t::const_iterator iter = list->begin();
+    entity_vector_t::iterator iter = list->begin();
     for (;iter != list->end();iter ++)
     {
         if (*iter == ctx)
@@ -158,10 +159,10 @@ bool grid_aoi::remove_grid_entity(int32 x,int32 y,const struct entity_ctx *ctx)
     bool isDel = remove_entity_from_vector(grid_list,ctx);
 
     // 这个格子不再有实体就清空
-    if (grid_list.empty())
+    if (grid_list->empty())
     {
         del_entity_vector(grid_list);
-        _entity_grid.remove(iter);
+        _entity_grid.erase(iter);
     }
 
     return isDel;
@@ -178,11 +179,11 @@ void grid_aoi::insert_grid_entity(int32 x,int32 y,struct entity_ctx *ctx)
     // 注意上面用的是指针的引用
     if (!grid_list) grid_list = new_entity_vector();
 
-    grid_list.push_back(ctx);
+    grid_list->push_back(ctx);
 }
 
 // 获取实体的ctx
-struct entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
+struct grid_aoi::entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
 {
     entity_set_t::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return NULL;
@@ -193,11 +194,11 @@ struct entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
 // 处理实体退出场景
 int32 grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
 {
-    entity_set_t::iterator itr = _entity_set.find(id);
-    if (_entity_set.end() == itr) return 1;
+    entity_set_t::iterator iter = _entity_set.find(id);
+    if (_entity_set.end() == iter) return 1;
 
-    struct entity_ctx *ctx = itr->second;
-    _entity_set.remove(itr);
+    struct entity_ctx *ctx = iter->second;
+    _entity_set.erase(iter);
 
     if (!ctx) return 2;
     bool isOk = remove_grid_entity(ctx->_pos_x,ctx->_pos_y,ctx);
@@ -214,7 +215,7 @@ int32 grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
     if (ctx->_event)
     {
         int32 x = 0,y = 0,dx = 0,dy = 0;
-        get_visual_range(x,y,dx,dy,gx,gy);
+        get_visual_range(x,y,dx,dy,ctx->_pos_x,ctx->_pos_y);
 
         // 把自己的列表清空，这样从自己列表中删除时就不用循环了
         watch_me->clear();
@@ -237,7 +238,7 @@ void grid_aoi::entity_exit_range(struct entity_ctx *ctx,
     for (;iter != watch_list->end();iter ++)
     {
         // 从别人的watch_me列表删除自己，并且从自己的watch_me列表中删除别人
-        struct entity_ctx *other = iter->second;
+        struct entity_ctx *other = *iter;
         // 自己关注event才有可能出现在别人的watch列表中
         if (ctx->_event) remove_entity_from_vector(other->_watch_me,ctx);
         if (other->_event)
@@ -276,11 +277,9 @@ int32 grid_aoi::enter_entity(
 
     insert_grid_entity(gx,gy,ctx); // 插入到格子内
 
-    entity_vector_t *watch_list = new_entity_vector();
-
-    int32 x = 0,y = 0,dx = 0,dy = 0;
-    get_visual_range(x,y,dx,dy,gx,gy);
-    entity_enter_range(ctx,x,y,dx,dy,list);
+    int32 vx = 0,vy = 0,vdx = 0,vdy = 0;
+    get_visual_range(vx,vy,vdx,vdy,gx,gy);
+    entity_enter_range(ctx,vx,vy,vdx,vdy,list);
 
     return 0;
 }
@@ -298,14 +297,14 @@ void grid_aoi::entity_enter_range(struct entity_ctx *ctx,
     {
         struct entity_ctx *other = *iter;
         // 把自己加到别人的watch
-        if (event) other->_watch_me.push_back(ctx);
+        if (ctx->_event) other->_watch_me->push_back(ctx);
         // 把别人加到自己的watch
         if (other->_event)
         {
-            watch_me.push_back(other);
+            watch_me->push_back(other);
 
             // 返回需要触发aoi事件的实体
-            if (list) list.push_back(other);
+            if (list) list->push_back(other);
         }
     }
 
@@ -401,7 +400,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             if (old_dy > it_dy) // 下段
             {
                 iy = it_dy + 1;
-                sub_dy = old_dy;
+                idy = old_dy;
             }
             else if (old_y < it_y) // 上段
             {
@@ -414,7 +413,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             }
         }
 
-        assert("rectangle difference fail",iy <= idy)
+        assert("rectangle difference fail",iy <= idy);
         entity_exit_range(ctx,ix,ix,iy,idy,list_out);
     }
 
@@ -427,7 +426,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             if (new_dy > it_dy) // 下段
             {
                 iy = it_dy + 1;
-                sub_dy = new_dy;
+                idy = new_dy;
             }
             else if (new_y < it_y) // 上段
             {
@@ -440,7 +439,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             }
         }
 
-        assert("rectangle difference fail",iy <= idy)
+        assert("rectangle difference fail",iy <= idy);
         entity_enter_range(ctx,ix,ix,iy,idy,list_in);
     }
 

@@ -260,6 +260,6 @@ int32 luaopen_aoi( lua_State *L )
 {
     lclass<laoi> lc(L,"grid_aoi");
 
-    lc.def<&laoi::set_watch_mask> ( "set_watch_mask" );
+    lc.def<&laoi::set_size> ( "set_size" );
     return 0;
 }
