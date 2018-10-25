@@ -261,5 +261,14 @@ int32 luaopen_aoi( lua_State *L )
     lclass<laoi> lc(L,"grid_aoi");
 
     lc.def<&laoi::set_size> ( "set_size" );
+    lc.def<&laoi::set_visual_range> ( "set_visual_range" );
+
+    lc.def<&laoi::get_entitys> ( "get_entitys" );
+    lc.def<&laoi::get_all_entitys> ( "get_all_entitys" );
+    lc.def<&laoi::get_watch_me_entitys> ( "get_watch_me_entitys" );
+
+    lc.def<&laoi::exit_entity> ( "exit_entity" );
+    lc.def<&laoi::enter_entity> ( "enter_entity" );
+    lc.def<&laoi::update_entity> ( "update_entity" );
     return 0;
 }

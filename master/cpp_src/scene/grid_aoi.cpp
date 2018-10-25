@@ -337,8 +337,8 @@ void grid_aoi::get_visual_range(
  * @list:接收实体更新的实体列表
  */
 int32 grid_aoi::update_entity(entity_id_t id,
-        int32 x,int32 y,entity_vector_t *list_in,
-        entity_vector_t *list_out,entity_vector_t *list)
+        int32 x,int32 y,entity_vector_t *list,
+        entity_vector_t *list_in,entity_vector_t *list_out)
 {
     // 检测坐标
     int32 gx = PIX_TO_GRID(x);

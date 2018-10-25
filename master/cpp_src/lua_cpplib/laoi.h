@@ -14,6 +14,7 @@ public:
     int32 set_visual_range( lua_State *L ); // 设置视野
 
     int32 get_all_entitys(lua_State *L);
+    int32 get_watch_me_entitys(lua_State *L);
     /* 获取某一范围内实体
      * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      */

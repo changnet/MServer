@@ -55,8 +55,8 @@ public:
     int32 enter_entity(entity_id_t id,
         int32 x,int32 y,uint8 type,uint8 event,entity_vector_t *list = NULL);
     int32 update_entity(entity_id_t id,
-        int32 x,int32 y,entity_vector_t *list_in = NULL,
-        entity_vector_t *list_out = NULL,entity_vector_t *list = NULL);
+        int32 x,int32 y,entity_vector_t *list = NULL,
+        entity_vector_t *list_in = NULL,entity_vector_t *list_out = NULL);
 protected:
     entity_vector_t *new_entity_vector();
     void del_entity_vector(entity_vector_t *list);
