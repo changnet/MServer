@@ -88,10 +88,6 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define EMPTY(base,size)
 #define array_zero(base,size)    memset((void *)(base), 0, size)
 
-/* will be called while process exit */
-extern void onexit();
-/* will be called while allocate memory failed with new */
-extern void new_fail();
-extern void signal_block();
+extern void global_mem_counter(uint32 &counter,uint32 &counters);
 
 #endif  /* __GOLBAL_H__ */

@@ -1,7 +1,6 @@
 #include "global.h"
 
 #include <execinfo.h>    /* for backtrace */
-#include <signal.h>
 #include <pthread.h>
 
 #if __cplusplus < 201103L    /* < C++11 */
@@ -14,6 +13,11 @@
 
 uint32 g_counter  = 0;
 uint32 g_counters = 0;
+void global_mem_counter(uint32 &counter,uint32 &counters)
+{
+    counter = g_counter;
+    counters = g_counters;
+}
 
 #ifdef _MEM_DEBUG_
 pthread_mutex_t &counter_mutex()
@@ -74,22 +78,6 @@ void back_trace(void)
     free(strings);
 }
 
-/* https://isocpp.org/files/papers/N3690.pdf
- * 3.6.3 Termination
- * static 变量的销毁与 static变更创建和std::atexit的调用顺序相关，这里可能并没统计到
- */
-void onexit()
-{
-    PRINTF( "new counter:%d    ----   new[] counter:%d",g_counter,g_counters );
-    //back_trace();
-}
-
-void new_fail()
-{
-    ERROR( "no more memory!!!" );
-    ::abort();
-}
-
 /* test.cpp:40: int main(): log assertion `("wrong",0)' failed. */
 void __log_assert_fail (const char *__assertion,
      const char *__file, unsigned int __line, const char *__function)
@@ -98,22 +86,3 @@ void __log_assert_fail (const char *__assertion,
             __file,__line,__function,__assertion );
 }
 
-/* 信号阻塞
- * 多线程中需要处理三种信号：
- * 1)pthread_kill向指定线程发送的信号，只有指定的线程收到并处理
- * 2)SIGSEGV之类由本线程异常的信号，只有本线程能收到。但通常是终止整个进程。
- * 3)SIGINT等通过外部传入的信号(如kill指令)，查找一个不阻塞该信号的线程。如果有多个，
- *   则选择第一个。
- * 因此，对于1，当前框架并未使用。对于2，默认abort并coredump。对于3，我们希望主线程
- * 收到而不希望子线程收到，故在这里要block掉。
- */
-void signal_block()
-{
-    //--屏蔽所有信号
-    sigset_t mask;
-    sigemptyset( &mask );
-    sigaddset( &mask, SIGINT  );
-    sigaddset( &mask, SIGTERM );
-
-    pthread_sigmask( SIG_BLOCK, &mask, NULL );
-}

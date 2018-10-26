@@ -15,6 +15,10 @@
 
 int32 ssl_init();
 int32 ssl_uninit();
+/* will be called while process exit */
+void on_exit();
+/* will be called while allocate memory failed with new */
+void on_new_fail();
 
 int32 main( int32 argc,char **argv )
 {
@@ -32,8 +36,8 @@ int32 main( int32 argc,char **argv )
      * 尽早调用atexit，比所有全局变量初始化都早，这样才能保证静态变量的析构函数在
      * onexit之前调用
      */
-    atexit(onexit);
-    std::set_new_handler( new_fail );
+    atexit(on_exit);
+    std::set_new_handler( on_new_fail );
 
     ssl_init();
     sql::library_init();
@@ -141,4 +145,22 @@ int32 ssl_uninit()
     // OPENSSL_cleanup();
 
     return 0;
+}
+
+/* https://isocpp.org/files/papers/N3690.pdf
+ * 3.6.3 Termination
+ * static 变量的销毁与 static变更创建和std::atexit的调用顺序相关，这里可能并没统计到
+ */
+void on_exit()
+{
+    uint32 counter  = 0;
+    uint32 counters = 0;
+    global_mem_counter(counter,counters);
+    PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
+    //back_trace();
+}
+
+void on_new_fail()
+{
+    FATAL( "out of memory!!! abort" );
 }

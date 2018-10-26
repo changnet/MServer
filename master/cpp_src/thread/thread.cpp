@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <arpa/inet.h>  /* htons */
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -37,6 +38,26 @@ thread::~thread()
         FATAL( "pthread_mutex_destroy error:%s",strerror(errno) );
         return;
     }
+}
+
+/* 信号阻塞
+ * 多线程中需要处理三种信号：
+ * 1)pthread_kill向指定线程发送的信号，只有指定的线程收到并处理
+ * 2)SIGSEGV之类由本线程异常的信号，只有本线程能收到。但通常是终止整个进程。
+ * 3)SIGINT等通过外部传入的信号(如kill指令)，查找一个不阻塞该信号的线程。如果有多个，
+ *   则选择第一个。
+ * 因此，对于1，当前框架并未使用。对于2，默认abort并coredump。对于3，我们希望主线程
+ * 收到而不希望子线程收到，故在这里要block掉。
+ */
+void thread::signal_block()
+{
+    //--屏蔽所有信号
+    sigset_t mask;
+    sigemptyset( &mask );
+    sigaddset( &mask, SIGINT  );
+    sigaddset( &mask, SIGTERM );
+
+    pthread_sigmask( SIG_BLOCK, &mask, NULL );
 }
 
 /* 开始线程 */
