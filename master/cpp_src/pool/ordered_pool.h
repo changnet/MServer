@@ -45,8 +45,8 @@ private:
      * @npartition    单块内存数量
      * @n             等长系数
      */
-    inline void *segregate( void * const ptr,uint32 partition_sz,
-        uint32 npartition,uint32 n )
+    inline void *segregate(
+        void * const ptr,uint32 partition_sz,uint32 npartition,uint32 n )
     {
         assert( "ordered_pool array over border",anptmax > n );
         /* in case ordered_malloc new only one chunk */
@@ -69,7 +69,8 @@ template<uint32 ordered_size>
 ordered_pool<ordered_size>::ordered_pool()
     : anpts(NULL),anptmax(0),block_list(NULL)
 {
-    assert( "ordered size less then sizeof(void *)",ordered_size >= sizeof(void *) );
+    assert( "ordered size less "
+        "then sizeof(void *)",ordered_size >= sizeof(void *) );
 }
 
 template<uint32 ordered_size>
@@ -125,11 +126,16 @@ char *ordered_pool<ordered_size>::ordered_malloc( uint32 n,uint32 chunk_size )
     return block + sizeof(void *);
 }
 
-/* 归还内存 */
+/* 归还内存
+ * @n:表示ptr的内存大小是ordered_size的n倍
+ */
 template<uint32 ordered_size>
 void ordered_pool<ordered_size>::ordered_free( char * const ptr,uint32 n )
 {
     assert( "illegal ordered free",anptmax >= n && ptr );
+
+    // 把ptr前几个字节指向anpts[n],然后设置的起点指针为ptr.
+    // 相当于把ptr放到anpts[n]这个链表的首部
     nextof( ptr ) = anpts[n];
     anpts[n] = ptr;
 }
