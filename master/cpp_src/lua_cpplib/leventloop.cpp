@@ -138,7 +138,8 @@ int32 leventloop::pending_send( class socket *s  )
 {
     // 0位是空的，不使用
     ++ansendingcnt;
-    array_resize( ANSENDING,ansendings,ansendingmax,ansendingcnt + 1,EMPTY );
+    array_resize( ANSENDING,ansendings,
+        ansendingmax,ansendingcnt + 1,array_noinit );
     ansendings[ansendingcnt] = s;
 
     return ansendingcnt;

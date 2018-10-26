@@ -13,7 +13,7 @@
 #define __GRID_AOI_H__
 
 #include <vector>
-#include "../global/global.h"
+#include "../pool/object_pool.h"
 
 class grid_aoi
 {
@@ -99,6 +99,9 @@ protected:
 
     /* 记录所有实体的数据 */
     entity_set_t _entity_set;
+
+    static object_pool< entity_ctx > _ctx_pool;
+    static object_pool< entity_vector_t > _vector_pool;
 };
 
 #endif /* __GRID_AOI_H__ */

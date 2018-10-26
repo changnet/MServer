@@ -134,7 +134,7 @@ int32 ev_loop::io_stop( ev_io *w )
 void ev_loop::fd_change( int32 fd )
 {
     ++fdchangecnt;
-    array_resize( ANCHANGE,fdchanges,fdchangemax,fdchangecnt,EMPTY );
+    array_resize( ANCHANGE,fdchanges,fdchangemax,fdchangecnt,array_noinit );
     fdchanges [fdchangecnt - 1] = fd;
 }
 
@@ -307,7 +307,7 @@ void ev_loop::time_update()
 
 void ev_loop::backend_poll( ev_tstamp timeout )
 {
-    /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, 
+    /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs,
      * which is below the default libev max wait time, however.
      */
     int32 eventcnt = epoll_wait(
@@ -352,7 +352,7 @@ void ev_loop::feed_event( ev_watcher *w,int32 revents )
     else
     {
         w->pending = ++pendingcnt;
-        array_resize( ANPENDING,pendings,pendingmax,pendingcnt,EMPTY );
+        array_resize( ANPENDING,pendings,pendingmax,pendingcnt,array_noinit );
         pendings[w->pending - 1].w      = w;
         pendings[w->pending - 1].events = revents;
     }
@@ -418,7 +418,7 @@ int32 ev_loop::timer_start( ev_timer *w )
 
     ++timercnt;
     int32 active = timercnt + HEAP0 - 1;
-    array_resize ( ANHE, timers, timermax, uint32(active + 1), EMPTY );
+    array_resize ( ANHE, timers, timermax, uint32(active + 1), array_noinit );
     timers [active] = w;
     up_heap( timers, active );
 
@@ -508,8 +508,8 @@ void ev_loop::adjust_heap( ANHE *heap,int32 N,int32 k )
 
 void ev_loop::reheap( ANHE *heap,int32 N )
 {
-    /* we don't use floyds algorithm, upheap is simpler and is more 
-     * cache-efficient also, this is easy to implement and correct 
+    /* we don't use floyds algorithm, upheap is simpler and is more
+     * cache-efficient also, this is easy to implement and correct
      * for both 2-heaps and 4-heaps
      */
     for (int32 i = 0; i < N; ++i)
