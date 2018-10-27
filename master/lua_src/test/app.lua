@@ -34,7 +34,8 @@ function App:exec()
     -- require "example.stream_performance"
     -- require "example.websocket_performance"
     -- require "example.words_filter_performance"
-    require "example.scene_performance"
+    -- require "example.scene_performance"
+    require "example.aoi_performance"
 
     vd( obj_counter.dump() )
     ev:backend()

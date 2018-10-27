@@ -198,8 +198,8 @@ int32 laoi::update_entity( lua_State *L )
     entity_vector_t *list_out = NULL;
 
     if (lua_istable(L,4)) list = new_entity_vector();
-    if (lua_istable(L,5)) list = new_entity_vector();
-    if (lua_istable(L,6)) list = new_entity_vector();
+    if (lua_istable(L,5)) list_in = new_entity_vector();
+    if (lua_istable(L,6)) list_out = new_entity_vector();
 
     int32 ecode = grid_aoi::update_entity(id,x,y,list,list_in,list_out);
     if ( 0 != ecode )

@@ -244,7 +244,7 @@ int32 luaopen_network_mgr( lua_State *L )
 
 int32 luaopen_map_mgr( lua_State *L )
 {
-    lclass<lmap_mgr> lc(L,"map_mgr");
+    lclass<lmap_mgr> lc(L,"Map_mgr");
 
     lc.def<&lmap_mgr::fill_map> ( "fill_map" );
     lc.def<&lmap_mgr::find_path> ( "find_path" );
@@ -258,7 +258,7 @@ int32 luaopen_map_mgr( lua_State *L )
 
 int32 luaopen_aoi( lua_State *L )
 {
-    lclass<laoi> lc(L,"grid_aoi");
+    lclass<laoi> lc(L,"Aoi");
 
     lc.def<&laoi::set_size> ( "set_size" );
     lc.def<&laoi::set_visual_range> ( "set_visual_range" );
