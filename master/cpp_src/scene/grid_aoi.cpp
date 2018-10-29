@@ -453,7 +453,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             }
             else if (new_y < it_y) // 上段
             {
-                iy = old_y;
+                iy = new_y;
                 idy = it_y - 1;
             }
             else
@@ -468,7 +468,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
 
 INSETION:
     // 进入新格子
-    ctx>>_pos_x = gx;
+    ctx->_pos_x = gx;
     ctx->_pos_y = gy;
     insert_grid_entity(gx,gy,ctx);
 

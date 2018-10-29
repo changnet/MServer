@@ -28,6 +28,18 @@ local function in_visual_range(et,other)
     return true
 end
 
+-- 获取在自己视野范围内，并且关注事件的实体
+local function get_visual_ev(et)
+    local ev_map = {}
+    for id,other in pairs(entity_info) do
+        if id ~= et.id and 0 ~= other.event and in_visual_range(et,other) then
+            ev_map[id] = other
+        end
+    end
+
+    return ev_map
+end
+
 -- 校验所有实体数据
 local function valid(list)
     -- 校验有没有重复
@@ -42,22 +54,33 @@ end
 
 -- 校验触发事件时返回的实体列表
 local function valid_ev(et,list)
+    local id_map = {}
     local max = list.n
     for idx = 1,max do
         id = list[idx]
 
-        assert(et.id ~= id)
+        assert(et.id ~= id) -- 返回列表不应该包含自己
 
+        -- 返回的实体有效并且关注事件
         local other = entity_info[id]
         assert(other and 0 ~= other.event,string.format("id is %d",id))
 
+        -- 校验视野范围
         assert(in_visual_range(et,other))
-    end
-end
 
--- 校验watch_me列表
-local function valid_watch_me(et,list)
-    valid_ev(et,list)
+        assert( nil == id_map[id] ) -- 校验返回的实体不会重复
+        id_map[id] = true
+    end
+
+    -- 校验在视野范围的实体都在列表上
+    local visual_ev = get_visual_ev(et)
+    for id,other in pairs(visual_ev) do
+        assert( nil ~= id_map[id] )
+        id_map[id] = nil
+    end
+
+    -- 校验不在视野范围内或者不关注事件的实体不要在返回列表上
+    assert( table.empty(id_map) )
 end
 
 local function enter(id,x,y,type,event)
@@ -107,10 +130,36 @@ enter(99997,max_width,0,ET_NPC,1)
 enter(99998,0,max_heigth,ET_MONSTER,0)
 enter(99999,max_width,max_heigth,ET_PLAYER,1)
 
-update(99997,0,max_heigth)
-update(99998,max_width,max_heigth)
-update(99997,max_width,max_heigth)
+update(99997,0,max_heigth) -- 进入同一个格子
+update(99998,max_width,max_heigth) -- 离开有人的格子
+update(99997,max_width,max_heigth) -- 三个实体在同一个格子
+update(99999,max_width - 1,max_heigth - 1) -- 测试视野范围内移动
 
 exit(99997)
 exit(99998)
 exit(99999)
+
+-- 上面做一些临界测试，下面开始做随机测试
+
+local max_entity = 1000
+local exit_info = {}
+
+
+for idx = 1,max_entity do
+    local x = math.random(0,max_width)
+    local y = math.random(0,max_heigth)
+    local entity_type = math.random(1,3)
+    local event = math.random(0,1)
+    enter(idx,x,y,entity_type,event)
+end
+
+-- 随机退出、更新、进入
+
+-- 对全地图实体进行校验
+for id,entity in pairs(entity_info) do
+    -- 检验watch列表
+    ao:get_watch_me_entitys(id,entity_pack_list)
+    valid_ev(et,entity_pack_list)
+
+    -- 核对坐标、类型、事件
+end
