@@ -27,17 +27,18 @@ public:
     ~object_pool()
     {
         purge();
-        delete []_anpts;
     }
 
     /* 清空内存池 */
     void purge()
     {
-        for (uint32 idx = 0;idx <_anptsize;idx ++)
+        for (uint32 idx = 0;idx < _anptsize;idx ++)
         {
             delete _anpts[idx];
         }
         _anptsize = 0;
+        delete []_anpts;
+        _anpts = NULL;
     }
 
     void set_max_size(const uint32 size) { _max_size = size; }

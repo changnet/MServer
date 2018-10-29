@@ -4,6 +4,7 @@
 #include "mysql/sql.h"
 #include "net/buffer.h"
 #include "mongo/mongo.h"
+#include "scene/grid_aoi.h"
 #include "net/io/ssl_mgr.h"
 #include "net/codec/codec_mgr.h"
 #include "lua_cpplib/lclass.h"
@@ -33,8 +34,9 @@ int32 main( int32 argc,char **argv )
      * initialization of an object with static storage duration, the call to
      * the destructor for the object is sequenced before the call to the
      * function passed to std::atexit.
-     * 尽早调用atexit，比所有全局变量初始化都早，这样才能保证静态变量的析构函数在
-     * onexit之前调用
+     * 尽早调用atexit，这样才能保证静态变量的析构函数在onexit之前调用
+     * 不过全局、静态变量初始化都比main早，且static initialization order fiasco
+     * 目前都是手动释放
      */
     atexit(on_exit);
     std::set_new_handler( on_new_fail );
@@ -95,7 +97,8 @@ int32 main( int32 argc,char **argv )
     obj_counter::uninstance();       /* 关闭计数 */
 
     /* 清除静态数据，以免影响内存检测 */
-    buffer::allocator.purge();
+    buffer::purge();
+    grid_aoi::purge();
     sql::library_end();
     mongo::cleanup();
     ssl_uninit();

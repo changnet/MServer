@@ -4,12 +4,12 @@
 #include "../global/global.h"
 #include "../pool/ordered_pool.h"
 
-/* 
+/*
  *    +---------------------------------------------------------------+
  *    |    悬空区   |        数据区          |      空白buff区          |
  *    +---------------------------------------------------------------+
  * _buff          _pos                    _size
- *  
+ *
  *收发缓冲区，要考虑游戏场景中的几个特殊情况：
  * 1.游戏的通信包一般都很小，reserved出现的概率很小。偶尔出现，memcpy的效率也是可以接受的
  * 2.缓冲区可能出现边读取边接收，边发送边写入的情况。因此，当前面的协议未读取完，又接收到新的
@@ -25,7 +25,9 @@ public:
     buffer();
     ~buffer();
 
-    bool append( const void *data,uint32 len ) 
+    static void purge() { allocator.purge(); }
+
+    bool append( const void *data,uint32 len )
         __attribute__ ((warn_unused_result))
     {
         if ( !reserved( len ) ) return false;
@@ -82,7 +84,7 @@ public:
      * @bytes : 要增长的字节数。默认为0,首次分配BUFFER_CHUNK，用完再按指数增长
      * @vsz   : 已往缓冲区中写入的字节数，但未增加_size偏移，主要用于自定义写入缓存
      */
-    inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 ) 
+    inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 )
         __attribute__ ((warn_unused_result))
     {
         uint32 size = _size + vsz;
@@ -113,7 +115,7 @@ public:
         assert( "buffer chunk size error",0 == new_len%BUFFER_CHUNK );
 
         uint32 chunk_size = new_len >= BUFFER_LARGE ? 1 : BUFFER_CHUNK_SIZE;
-        char *new_buff = 
+        char *new_buff =
             allocator.ordered_malloc( new_len/BUFFER_CHUNK,chunk_size );
 
         /* 像STL一样把旧内存拷到新内存 */
@@ -137,7 +139,7 @@ private:
 
     uint32 _max_buff; /* 缓冲区最小值 */
     uint32 _min_buff; /* 缓冲区最大值 */
-public:
+private:
     static class ordered_pool<BUFFER_CHUNK> allocator;
 };
 

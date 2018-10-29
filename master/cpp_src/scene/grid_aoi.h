@@ -41,6 +41,8 @@ public:
     grid_aoi();
     virtual ~grid_aoi();
 
+    static void purge() { _ctx_pool.purge();_vector_pool.purge(); }
+
     void set_visual_range(int32 width,int32 height); // 设置视野
     int32 set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
 

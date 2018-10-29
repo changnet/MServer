@@ -26,6 +26,9 @@ grid_aoi::~grid_aoi()
     entity_set_t::iterator iter = _entity_set.begin();
     for (;iter != _entity_set.end();iter ++) del_entity_ctx(iter->second);
 
+    map_t< uint32,entity_vector_t* >::iterator viter = _entity_grid.begin();
+    for (;viter != _entity_grid.end();viter ++) del_entity_vector(viter->second);
+
     _entity_set.clear();
     _entity_grid.clear();
 }
@@ -33,13 +36,15 @@ grid_aoi::~grid_aoi()
 // 需要实现缓存，太大的直接删除不要丢缓存
 void grid_aoi::del_entity_vector(entity_vector_t *list)
 {
-
     _vector_pool.destroy(list,list->size() > 512);
 }
 
 grid_aoi::entity_vector_t *grid_aoi::new_entity_vector()
 {
-    return _vector_pool.construct();
+    entity_vector_t *vt = _vector_pool.construct();
+
+    vt->clear();
+    return vt;
 }
 
 void grid_aoi::del_entity_ctx(struct entity_ctx *ctx)
@@ -284,16 +289,18 @@ int32 grid_aoi::enter_entity(
     struct entity_ctx *ctx = new_entity_ctx();
     ret.first->second = ctx;
 
+    ctx->_id = id;
     ctx->_pos_x = gx;
     ctx->_pos_y = gy;
     ctx->_type = type;
     ctx->_event = event;
 
-    insert_grid_entity(gx,gy,ctx); // 插入到格子内
-
+    // 先取事件列表，这样就不会包含自己
     int32 vx = 0,vy = 0,vdx = 0,vdy = 0;
     get_visual_range(vx,vy,vdx,vdy,gx,gy);
     entity_enter_range(ctx,vx,vy,vdx,vdy,list);
+
+    insert_grid_entity(gx,gy,ctx); // 插入到格子内
 
     return 0;
 }
@@ -387,8 +394,8 @@ int32 grid_aoi::update_entity(entity_id_t id,
 
     // 从旧格子退出
     bool exitOk = remove_grid_entity(ctx->_pos_x,ctx->_pos_y,ctx);
-    // 进入新格子
-    insert_grid_entity(gx,gy,ctx);
+
+    // 由于事件列表不包含自己，退出格子后先取列表再进入新格子
 
     // 交集区域内玩家，触发更新事件
     // 旧视野区域，触发退出
@@ -397,7 +404,9 @@ int32 grid_aoi::update_entity(entity_id_t id,
     {
         entity_exit_range(ctx,old_x,old_y,old_dx,old_dy,list_out);
         entity_enter_range(ctx,new_x,new_y,new_dx,new_dy,list_in);
-        return exitOk;
+
+        goto INSETION;// 进入新格子
+        return -1;
     }
 
     raw_get_entitys(list,it_x,it_y,it_dx,it_dy);
@@ -457,6 +466,11 @@ int32 grid_aoi::update_entity(entity_id_t id,
         entity_enter_range(ctx,ix,ix,iy,idy,list_in);
     }
 
+INSETION:
+    // 进入新格子
+    ctx>>_pos_x = gx;
+    ctx->_pos_y = gy;
+    insert_grid_entity(gx,gy,ctx);
 
-    return exitOk;
+    return exitOk ? 0 : -1;
 }

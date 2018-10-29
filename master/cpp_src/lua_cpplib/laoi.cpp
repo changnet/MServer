@@ -208,7 +208,7 @@ int32 laoi::update_entity( lua_State *L )
         if (list_in) del_entity_vector(list_in);
         if (list_out) del_entity_vector(list_out);
 
-        return luaL_error(L,"aoi enter entitys error:%d",ecode);
+        return luaL_error(L,"aoi update entitys error:%d",ecode);
     }
 
     if (list) { VECTOR_TBL_PACK(4,list,EVENT_FILTER); }
