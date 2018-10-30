@@ -8,6 +8,8 @@ local height = 64 -- 地图格子高度
 local visual_width = 3 -- 视野宽度格子数
 local visual_height = 4 -- 视野高度格子数
 
+local is_valid = true -- 测试性能时不做校验
+
 aoi:set_size(width*pix,height*pix,pix)
 aoi:set_visual_range(visual_width,visual_height)
 
@@ -22,8 +24,10 @@ local entity_pack_list = {}
 
 -- 是否在视野内
 local function in_visual_range(et,other)
-    if math.abs(other.x - et.x) > visual_width*pix then return false end
-    if math.abs(other.y - et.y) > visual_height*pix then return false end
+    local x_range = math.abs(math.floor(other.x/pix) - math.floor(et.x/pix))
+    local y_range = math.abs(math.floor(other.y/pix) - math.floor(et.y/pix))
+    if x_range > visual_width then return false end
+    if y_range > visual_height then return false end
 
     return true
 end
@@ -40,20 +44,9 @@ local function get_visual_ev(et)
     return ev_map
 end
 
--- 校验所有实体数据
-local function valid(list)
-    -- 校验有没有重复
-    -- 校验所在格子
-    -- 校验底层坐标和脚本坐标是否一致(检验底层指针正确性)
-    local times = {}
-
-    for _,id in pairs(list) do
-
-    end
-end
 
 -- 校验触发事件时返回的实体列表
-local function valid_ev(et,list)
+local function raw_valid_ev(et,list)
     local id_map = {}
     local max = list.n
     for idx = 1,max do
@@ -66,21 +59,72 @@ local function valid_ev(et,list)
         assert(other and 0 ~= other.event,string.format("id is %d",id))
 
         -- 校验视野范围
-        assert(in_visual_range(et,other))
+        if not in_visual_range(et,other) then
+            PFLOG("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+                et.id,et.x,et.y,other.id,other.x,other.y)
+            assert(false)
+        end
 
         assert( nil == id_map[id] ) -- 校验返回的实体不会重复
         id_map[id] = true
     end
 
+    return id_map
+end
+
+local function valid_ev(et,list)
+    local id_map = raw_valid_ev(et,list)
     -- 校验在视野范围的实体都在列表上
     local visual_ev = get_visual_ev(et)
     for id,other in pairs(visual_ev) do
-        assert( nil ~= id_map[id] )
+        if nil == id_map[id] then
+            PFLOG("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+                et.id,et.x,et.y,other.id,other.x,other.y)
+            assert(false)
+        end
+
         id_map[id] = nil
     end
 
     -- 校验不在视野范围内或者不关注事件的实体不要在返回列表上
     assert( table.empty(id_map) )
+end
+
+-- 校验更新位置时收到实体进入事件的列表
+local function valid_in(et,list)
+    raw_valid_ev(et,list)
+end
+
+-- 校验更新位置时收到实体退出事件的列表
+local function valid_out(et,list)
+    local id_map = {}
+    local max = list.n
+    for idx = 1,max do
+        id = list[idx]
+
+        assert(et.id ~= id) -- 返回列表不应该包含自己
+
+        -- 返回的实体有效并且关注事件
+        local other = entity_info[id]
+        assert(other and 0 ~= other.event,string.format("id is %d",id))
+
+        -- 校验视野范围
+        if in_visual_range(et,other) then
+            PFLOG("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+                et.id,et.x,et.y,other.id,other.x,other.y)
+            assert(false)
+        end
+
+        assert( nil == id_map[id] ) -- 校验返回的实体不会重复
+        id_map[id] = true
+    end
+end
+
+-- 对watch_me列表进行校验
+local function valid_watch_me(et)
+    -- 检验watch列表
+    aoi:get_watch_me_entitys(et.id,entity_pack_list)
+    valid_ev(et,entity_pack_list)
 end
 
 local function enter(id,x,y,type,event)
@@ -97,8 +141,11 @@ local function enter(id,x,y,type,event)
     entity.type = type
     entity.event = event
 
+    -- PLOG(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:enter_entity(id,x,y,type,event,entity_pack_list)
-    valid_ev(entity,entity_pack_list)
+    if is_valid then valid_ev(entity,entity_pack_list) end
+
+    return entity
 end
 
 local function update(id,x,y)
@@ -110,7 +157,14 @@ local function update(id,x,y)
 
     local list_in = {}
     local list_out = {}
+    -- PLOG(id,"new pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:update_entity(id,x,y,entity_pack_list,list_in,list_out)
+
+    if is_valid then
+        raw_valid_ev(entity,entity_pack_list)
+        valid_in(entity,list_in)
+        valid_out(entity,list_out)
+    end
 end
 
 local function exit(id)
@@ -120,7 +174,8 @@ local function exit(id)
     aoi:exit_entity(id,entity_pack_list)
 
     entity_info[id] = nil
-    valid_ev(entity,entity_pack_list)
+    -- PLOG(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
+    if is_valid then valid_ev(entity,entity_pack_list) end
 end
 
 -- 坐标传入的都是像素
@@ -140,26 +195,65 @@ exit(99998)
 exit(99999)
 
 -- 上面做一些临界测试，下面开始做随机测试
+local max_entity = 2000
+local max_random = 5000
+local function random_map(map)
+    -- 随机大概会达到一个平衡的,随便取一个值
+    local srand = max_entity/3
 
-local max_entity = 1000
-local exit_info = {}
+    local idx = 0
+    local hit = nil
+    for id,et in pairs(map) do
+        if not hit then hit = et end
+        idx = idx + 1
+        if idx >= srand then return et end
+    end
 
-
-for idx = 1,max_entity do
-    local x = math.random(0,max_width)
-    local y = math.random(0,max_heigth)
-    local entity_type = math.random(1,3)
-    local event = math.random(0,1)
-    enter(idx,x,y,entity_type,event)
+    return hit
 end
 
--- 随机退出、更新、进入
+local function random_test()
+    local exit_info = {}
+    for idx = 1,max_entity do
+        local x = math.random(0,max_width)
+        local y = math.random(0,max_heigth)
+        local entity_type = math.random(1,3)
+        local event = math.random(0,1)
+        local et = enter(idx,x,y,entity_type,event)
+        -- valid_watch_me(et)
+    end
 
--- 对全地图实体进行校验
-for id,entity in pairs(entity_info) do
-    -- 检验watch列表
-    ao:get_watch_me_entitys(id,entity_pack_list)
-    valid_ev(et,entity_pack_list)
-
-    -- 核对坐标、类型、事件
+    -- 随机退出、更新、进入
+    for idx = 1,max_random do
+        local ev = math.random(1,3)
+        if 1 == ev then
+            local et = random_map(exit_info)
+            if et then
+                local x = math.random(0,max_width)
+                local y = math.random(0,max_heigth)
+                local new_et = enter(et.id,x,y,et.type,et.event)
+                exit_info[et.id] = nil
+                -- valid_watch_me(new_et)
+            end
+        elseif 2 == ev then
+            local et = random_map(entity_info)
+            if et then
+                local x = math.random(0,max_width)
+                local y = math.random(0,max_heigth)
+                update(et.id,x,y)
+                -- valid_watch_me(et)
+            end
+        elseif 3 == ev then
+            local et = random_map(entity_info)
+            if et then
+                exit(et.id)
+                exit_info[et.id] = et
+            end
+        end
+    end
 end
+
+f_tm_start()
+-- is_valid = false -- 仅在测试性能时为false
+random_test()
+f_tm_stop( "aoi cost") -- aoi cost        617882  microsecond

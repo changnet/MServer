@@ -402,6 +402,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
     // 新视野区域，触发进入
     if (!intersection)
     {
+        ctx->_watch_me->clear(); // 把列表清空，退出时减少查找时间
         entity_exit_range(ctx,old_x,old_y,old_dx,old_dy,list_out);
         entity_enter_range(ctx,new_x,new_y,new_dx,new_dy,list_in);
 
@@ -437,7 +438,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
         }
 
         assert("rectangle difference fail",iy <= idy);
-        entity_exit_range(ctx,ix,ix,iy,idy,list_out);
+        entity_exit_range(ctx,ix,iy,ix,idy,list_out);
     }
 
     for (int32 ix = new_x;ix <= new_dx;ix ++)
@@ -463,7 +464,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
         }
 
         assert("rectangle difference fail",iy <= idy);
-        entity_enter_range(ctx,ix,ix,iy,idy,list_in);
+        entity_enter_range(ctx,ix,iy,ix,idy,list_in);
     }
 
 INSETION:
