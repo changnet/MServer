@@ -50,13 +50,13 @@ _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 	lua_cpplib/leventloop.o lua_cpplib/lstate.o net/io/io.o net/io/ssl_mgr.o\
 	net/packet/stream_packet.o net/packet/http_packet.o net/io/ssl_io.o\
 	net/codec/codec_mgr.o net/codec/bson_codec.o net/codec/flatbuffers_codec.o\
-	net/codec/protobuf_codec.o net/packet/websocket_packet.o\
+	net/codec/protobuf_codec.o net/packet/websocket_packet.o util/rank.o\
 	mysql/sql.o thread/thread.o net/packet/ws_stream_packet.o\
 	scene/a_star.o scene/grid_map.o scene/map_mgr.o scene/grid_aoi.o\
 	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o\
 	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lobj_counter.o\
 	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o lua_cpplib/lmap_mgr.o\
-	lua_cpplib/laoi.o\
+	lua_cpplib/laoi.o lua_cpplib/lrank.o\
 	main.o
 OBJS = $(addprefix $(ODIR)/,$(_OBJS))
 
