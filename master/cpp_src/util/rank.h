@@ -56,7 +56,7 @@ public:
     virtual object_id_t get_id_by_rank(object_id_t rank) const = 0;
 
     // 清除排行的对象，但不清除内存
-    void clear() { _count = 0; }
+    virtual void clear() { _count = 0;_max_factor = 0; }
 
     /* 设置排行榜上限，超过此上限将不会在排行榜中存数据
      * 排序因子会减小的排行榜谨慎设置此值，因为假如某个对象因为上限不在排行榜，而其他对象排名
@@ -74,12 +74,16 @@ protected:
     uint8 _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
 };
 
-// 插入法排序
+/* 插入法排序,适用于伤害排行
+ * 伤害更新很频繁，但是其实伤害排行榜排名变化不大，移动数组的情况较少
+ */
 class insertion_rank : public base_rank
 {
 public:
     insertion_rank();
     ~insertion_rank();
+
+    void clear();
 
     int32 remove(object_id_t id);
     int32 insert(object_id_t id,factor_t factor,int32 max_idx = 1);
@@ -93,6 +97,7 @@ private:
     void shift_down(object_t *object);
     void raw_remove(object_t *object);
 private:
+    int32 _max_list;
     object_t **_object_list;
     map_t< object_id_t,object_t* > _object_set;
 };

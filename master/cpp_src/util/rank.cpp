@@ -14,10 +14,21 @@ base_rank::~base_rank()
 // =========================== insertion rank ================================
 insertion_rank::insertion_rank()
 {
+    _max_list = 0;
     _object_list = NULL;
 }
 
 insertion_rank::~insertion_rank()
+{
+    clear();
+
+    delete []_object_list;
+
+    _max_list = 0;
+    _object_list = NULL;
+}
+
+void insertion_rank::clear()
 {
     map_t< object_id_t,object_t* >::const_iterator iter = _object_set.begin();
     for (;iter != _object_set.end();iter ++)
@@ -26,8 +37,7 @@ insertion_rank::~insertion_rank()
     }
     _object_set.clear();
 
-    delete []_object_list;
-    _object_list = NULL;
+    base_rank::clear();
 }
 
 // 把object往数组0位置移动
@@ -48,8 +58,6 @@ void insertion_rank::shift_up(object_t *object)
 
         _object_list[idx] = object;
         _object_list[idx + 1] = next;
-
-        object = next;
     }
 }
 
@@ -71,8 +79,6 @@ void insertion_rank::shift_down(object_t *object)
 
         _object_list[idx] = object;
         _object_list[idx - 1] = next;
-
-        object = next;
     }
 }
 
@@ -105,6 +111,8 @@ int32 insertion_rank::insert(object_id_t id,factor_t factor,int32 max_idx)
 {
     if (expect_false(max_idx <= 0 || max_idx > MAX_RANK_FACTOR)) return 1;
 
+    if (expect_false(_max_count <= 0)) return 2;
+
     if (expect_false(max_idx > _max_factor)) _max_factor = max_idx;
 
     // 排行榜已满处理
@@ -123,7 +131,7 @@ int32 insertion_rank::insert(object_id_t id,factor_t factor,int32 max_idx)
     // 防止重复
     std::pair< map_t< object_id_t,object_t* >::iterator,bool > ret;
     ret = _object_set.insert(std::pair<object_id_t,object_t*>(id,NULL));
-    if (false == ret.second) return 2;
+    if (false == ret.second) return 3;
 
     object_t *object = new object_t();
     ret.first->second = object;
@@ -134,7 +142,7 @@ int32 insertion_rank::insert(object_id_t id,factor_t factor,int32 max_idx)
         object->_factor[idx] = factor[idx];
     }
 
-    array_resize(object_t*,_object_list,_count,_max_count,array_zero);
+    array_resize(object_t*,_object_list,_max_list,_max_count,array_zero);
 
     object->_index = _count;
     _object_list[_count++] = object;

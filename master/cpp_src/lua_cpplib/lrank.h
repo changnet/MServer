@@ -89,11 +89,10 @@ template< class T > int32 lrank<T>::update(lua_State *L)
     int32 factor_idx = luaL_optinteger(L,3,1);
 
     int32 ret = _rank.update(id,factor,factor_idx);
-    if (0 != ret)
-    {
-        return luaL_error(L,"rank update error,code:%d",ret);
-    }
-    return 0;
+
+    // 有可能未能进入排行榜，更新失败
+    lua_pushboolean(L,ret == 0);
+    return 1;
 }
 
 template< class T > int32 lrank<T>::get_factor(lua_State *L)
