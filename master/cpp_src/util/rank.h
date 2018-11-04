@@ -56,7 +56,7 @@ public:
     virtual object_id_t get_id_by_rank(object_id_t rank) const = 0;
 
     // 清除排行的对象，但不清除内存
-    void clear() { _rank_count = 0; }
+    void clear() { _count = 0; }
 
     /* 设置排行榜上限，超过此上限将不会在排行榜中存数据
      * 排序因子会减小的排行榜谨慎设置此值，因为假如某个对象因为上限不在排行榜，而其他对象排名
@@ -67,11 +67,11 @@ public:
     // 获取当前排行榜用到的排序因子数量
     int32 get_max_factor() const { return _max_factor; };
     // 获取当前排行榜中对象数量
-    int32 get_rank_count() const { return _rank_count; };
+    int32 get_count() const { return _count; };
 protected:
+    int32 _count; // 当前排行榜中数量
     int32 _max_count; // 排行榜最大数量
-    int32 _rank_count; // 当前排行榜中数量
-    uint8 _max_factor; // 当前排行榜使用到的最大排序因子数量
+    uint8 _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
 };
 
 // 插入法排序

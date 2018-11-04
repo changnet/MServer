@@ -1,3 +1,5 @@
+-- aoi算法测试
+
 local Aoi = require "Aoi"
 
 local aoi = Aoi()

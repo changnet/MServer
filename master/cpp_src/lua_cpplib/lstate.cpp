@@ -5,6 +5,7 @@
 #include "llog.h"
 #include "lsql.h"
 #include "laoi.h"
+#include "lrank.h"
 #include "lutil.h"
 #include "lmongo.h"
 #include "lstate.h"
@@ -67,6 +68,7 @@ int32 luaopen_ev    ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
 int32 luaopen_log   ( lua_State *L );
 int32 luaopen_aoi   ( lua_State *L );
+int32 luaopen_rank  ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
@@ -89,6 +91,7 @@ void lstate::open_cpp()
     luaopen_sql   (L);
     luaopen_log   (L);
     luaopen_aoi   (L);
+    luaopen_rank  (L);
     luaopen_timer (L);
     luaopen_acism (L);
     luaopen_mongo (L);
@@ -270,5 +273,30 @@ int32 luaopen_aoi( lua_State *L )
     lc.def<&laoi::exit_entity> ( "exit_entity" );
     lc.def<&laoi::enter_entity> ( "enter_entity" );
     lc.def<&laoi::update_entity> ( "update_entity" );
+    return 0;
+}
+
+int32 luaopen_rank( lua_State *L )
+{
+#define DEF_RANK(T,class_name) \
+    do{\
+        lclass< lrank<T> > lc(L,class_name);\
+        lc.def< &lrank<T>::clear > ("clear");\
+        lc.def< &lrank<T>::remove > ("remove");\
+        lc.def< &lrank<T>::insert > ("insert");\
+        lc.def< &lrank<T>::update > ("update");\
+        lc.def< &lrank<T>::get_count > ("get_count");\
+        lc.def< &lrank<T>::set_max_count > ("set_max_count");\
+        lc.def< &lrank<T>::get_max_factor > ("get_max_factor");\
+        lc.def< &lrank<T>::get_factor > ("get_factor");\
+        lc.def< &lrank<T>::get_rank_by_id > ("get_rank_by_id");\
+        lc.def< &lrank<T>::get_id_by_rank > ("get_id_by_rank");\
+    } while(0)
+
+
+    // 以后会增加不同的排序算法，但是接口是一致的
+    DEF_RANK(class insertion_rank,"insertion_rank");
+
+#undef DEF_RANK
     return 0;
 }
