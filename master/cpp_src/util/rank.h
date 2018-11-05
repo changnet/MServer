@@ -22,7 +22,7 @@ public:
     public:
         object_t(){};
         ~object_t(){};
-        
+
         inline static int32 compare_factor(
             factor_t src,factor_t dest,int32 max_idx = MAX_RANK_FACTOR)
         {
@@ -100,6 +100,24 @@ private:
     int32 _max_list;
     object_t **_object_list;
     map_t< object_id_t,object_t* > _object_set;
+};
+
+/* 桶排序，只是桶分得比较细，演变成了有序hash map
+ * 原本想用std::multimap来实现，但是在C++11之前的版本是无法保证同一个桶中的对象顺序的
+ * http://www.cplusplus.com/reference/map/multimap/insert/
+ * There are no guarantees on the relative order of equivalent elements
+ * 适用场景：一次性大量数据排序，不删除对象，不更新对象，比如全服玩家定时排序
+ * 缺点：
+ * 1. 占用内存稍大
+ * 2. 根据id取排名，根据排名取id都需要重新做一次记录(速度慢)
+ */
+
+class bucket_rank : public base_rank
+{
+public:
+    typedef std::list<> bucket_t;
+private:
+    std::map<> _bucket_set;
 };
 
 #endif /* __RANK_H__ */
