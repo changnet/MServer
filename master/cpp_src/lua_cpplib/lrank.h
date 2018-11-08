@@ -67,9 +67,8 @@ template< class T > int32 lrank<T>::insert(lua_State *L)
     factor[0] = luaL_checkinteger(L,2);
     for (int32 idx = 1;idx < MAX_RANK_FACTOR;idx ++)
     {
-        if (!lua_isinteger(L,2 + idx)) break;
-
-        factor[factor_idx++] = lua_tointeger(L,2 + idx);
+        // 没有默认为0
+        factor[factor_idx++] = luaL_optinteger(L,2 + idx,0);
     }
 
     int32 ret = _rank.insert(id,factor,factor_idx);

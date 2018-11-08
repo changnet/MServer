@@ -1,6 +1,8 @@
 #ifndef __RANK_H__
 #define __RANK_H__
 
+#include <map>
+#include <list>
 #include "../global/global.h"
 
 /* 排行榜底层数据结构
@@ -23,8 +25,8 @@ public:
         object_t(){};
         ~object_t(){};
 
-        inline static int32 compare_factor(
-            factor_t src,factor_t dest,int32 max_idx = MAX_RANK_FACTOR)
+        inline static int32 compare_factor(const factor_t src,
+            const factor_t dest,int32 max_idx = MAX_RANK_FACTOR)
         {
             for (int32 idx = 0;idx < max_idx;idx ++)
             {
@@ -115,9 +117,21 @@ private:
 class bucket_rank : public base_rank
 {
 public:
-    typedef std::list<> bucket_t;
+    typedef std::list<object_id_t> bucket_t;
+    typedef bool (*key_comp_t)(const factor_t src,const factor_t dest);
+
+public:
+    bucket_rank();
+    ~bucket_rank();
+
+    // strict weak order,operator <
+    static bool key_comp(const factor_t src,const factor_t dest)
+    {
+        // TODO:这里暂时没法按_max_factor来对比排序因子，只能全部都对比
+        return object_t::compare_factor(src,dest) < 0;
+    }
 private:
-    std::map<> _bucket_set;
+    std::map< raw_factor_t*,bucket_t,key_comp_t > _bucket_list;
 };
 
 #endif /* __RANK_H__ */

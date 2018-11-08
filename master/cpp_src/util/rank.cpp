@@ -137,7 +137,8 @@ int32 insertion_rank::insert(object_id_t id,factor_t factor,int32 max_idx)
     ret.first->second = object;
 
     object->_id = id;
-    for (int32 idx = 0;idx < _max_factor;idx ++)
+    // 需要赋值每个factor，没有就是0，防止动态扩展
+    for (int32 idx = 0;idx < MAX_RANK_FACTOR;idx ++)
     {
         object->_factor[idx] = factor[idx];
     }
@@ -200,4 +201,14 @@ base_rank::object_id_t insertion_rank::get_id_by_rank(object_id_t rank) const
 
     // 排名从1开始
     return _object_list[rank - 1]->_id;
+}
+
+// =========================== bucket rank ================================
+bucket_rank::bucket_rank()
+    : _bucket_list(key_comp)
+{
+}
+
+bucket_rank::~bucket_rank()
+{
 }
