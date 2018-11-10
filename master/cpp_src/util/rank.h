@@ -78,6 +78,7 @@ protected:
 
 /* 插入法排序,适用于伤害排行
  * 伤害更新很频繁，但是其实伤害排行榜排名变化不大，移动数组的情况较少
+ * 而且这个排行榜需要发送给前端，因此get_rank_by_id和get_id_by_rank效率都要比较高
  */
 class insertion_rank : public base_rank
 {
@@ -111,7 +112,7 @@ private:
  * 适用场景：一次性大量数据排序，不删除对象，不更新对象，比如全服玩家定时排序
  * 缺点：
  * 1. 占用内存稍大
- * 2. 根据id取排名，根据排名取id都需要重新做一次记录(速度慢)
+ * 2. 根据id取排名，根据排名取id都慢。排完序可考虑做缓存
  */
 
 class bucket_rank : public base_rank
