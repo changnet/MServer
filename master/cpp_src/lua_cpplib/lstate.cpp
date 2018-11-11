@@ -278,25 +278,23 @@ int32 luaopen_aoi( lua_State *L )
 
 int32 luaopen_rank( lua_State *L )
 {
-#define DEF_RANK(T,class_name) \
-    do{\
-        lclass< lrank<T> > lc(L,class_name);\
-        lc.def< &lrank<T>::clear > ("clear");\
-        lc.def< &lrank<T>::remove > ("remove");\
-        lc.def< &lrank<T>::insert > ("insert");\
-        lc.def< &lrank<T>::update > ("update");\
-        lc.def< &lrank<T>::get_count > ("get_count");\
-        lc.def< &lrank<T>::set_max_count > ("set_max_count");\
-        lc.def< &lrank<T>::get_max_factor > ("get_max_factor");\
-        lc.def< &lrank<T>::get_factor > ("get_factor");\
-        lc.def< &lrank<T>::get_rank_by_id > ("get_rank_by_id");\
-        lc.def< &lrank<T>::get_id_by_rank > ("get_id_by_rank");\
-    } while(0)
+    lclass< linsertion_rank > lc_insertion_rank(L,"Insertion_rank");
+    lc_insertion_rank.def< &linsertion_rank::clear > ("clear");
+    lc_insertion_rank.def< &linsertion_rank::remove > ("remove");
+    lc_insertion_rank.def< &linsertion_rank::insert > ("insert");
+    lc_insertion_rank.def< &linsertion_rank::update > ("update");
+    lc_insertion_rank.def< &linsertion_rank::get_count > ("get_count");
+    lc_insertion_rank.def< &linsertion_rank::set_max_count > ("set_max_count");
+    lc_insertion_rank.def< &linsertion_rank::get_max_factor > ("get_max_factor");
+    lc_insertion_rank.def< &linsertion_rank::get_factor > ("get_factor");
+    lc_insertion_rank.def< &linsertion_rank::get_rank_by_id > ("get_rank_by_id");
+    lc_insertion_rank.def< &linsertion_rank::get_id_by_rank > ("get_id_by_rank");
 
+    lclass< lbucket_rank > lc_bucket_rank(L,"Bucket_rank");
+    lc_bucket_rank.def< &lbucket_rank::clear > ("clear");
+    lc_bucket_rank.def< &lbucket_rank::insert > ("insert");
+    lc_bucket_rank.def< &lbucket_rank::get_count > ("get_count");
+    lc_bucket_rank.def< &lbucket_rank::get_top_n > ("get_top_n");
 
-    // 以后会增加不同的排序算法，但是接口是一致的
-    DEF_RANK(class insertion_rank,"insertion_rank");
-
-#undef DEF_RANK
     return 0;
 }

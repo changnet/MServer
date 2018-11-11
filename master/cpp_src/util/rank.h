@@ -46,34 +46,13 @@ public:
     base_rank();
     virtual ~base_rank();
 
-    // 删除一个对象
-    virtual int32 remove(object_id_t id) = 0;
-    // 插入一个对象
-    virtual int32 insert(object_id_t id,factor_t factor,int32 max_idx = 1) = 0;
-    // 更新一个对象排序因子
-    virtual int32 update(object_id_t id,int64 factor,int32 factor_idx = 0) = 0;
-
-    virtual int32 get_rank_by_id(object_id_t id) const = 0;
-    virtual const raw_factor_t *get_factor(object_id_t id) const = 0;
-    virtual object_id_t get_id_by_rank(object_id_t rank) const = 0;
-
     // 清除排行的对象，但不清除内存
-    virtual void clear() { _count = 0;_max_factor = 0; }
+    virtual void clear() { _count = 0; }
 
-    /* 设置排行榜上限，超过此上限将不会在排行榜中存数据
-     * 排序因子会减小的排行榜谨慎设置此值，因为假如某个对象因为上限不在排行榜，而其他对象排名
-     * 下降将会导致该对象不会上榜
-     */
-    void set_max_count(int32 max) { _max_count = max; };
-
-    // 获取当前排行榜用到的排序因子数量
-    int32 get_max_factor() const { return _max_factor; };
     // 获取当前排行榜中对象数量
     int32 get_count() const { return _count; };
 protected:
     int32 _count; // 当前排行榜中数量
-    int32 _max_count; // 排行榜最大数量
-    uint8 _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
 };
 
 /* 插入法排序,适用于伤害排行
@@ -92,6 +71,15 @@ public:
     int32 insert(object_id_t id,factor_t factor,int32 max_idx = 1);
     int32 update(object_id_t id,raw_factor_t factor,int32 factor_idx = 0);
 
+    /* 设置排行榜上限，超过此上限将不会在排行榜中存数据
+     * 排序因子会减小的排行榜谨慎设置此值，因为假如某个对象因为上限不在排行榜，而其他对象排名
+     * 下降将会导致该对象不会上榜
+     */
+    void set_max_count(int32 max) { _max_count = max; };
+
+    // 获取当前排行榜用到的排序因子数量
+    int32 get_max_factor() const { return _max_factor; };
+
     int32 get_rank_by_id(object_id_t id) const;
     const raw_factor_t *get_factor(object_id_t id) const;
     object_id_t get_id_by_rank(object_id_t rank) const;
@@ -100,6 +88,9 @@ private:
     void shift_down(object_t *object);
     void raw_remove(object_t *object);
 private:
+    int32 _max_count; // 排行榜最大数量
+    uint8 _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
+
     int32 _max_list;
     object_t **_object_list;
     map_t< object_id_t,object_t* > _object_set;
@@ -120,10 +111,14 @@ class bucket_rank : public base_rank
 public:
     typedef std::list<object_id_t> bucket_t;
     typedef bool (*key_comp_t)(const factor_t src,const factor_t dest);
+    typedef std::map< raw_factor_t*,bucket_t,key_comp_t > bucket_list_t;
 
 public:
     bucket_rank();
     ~bucket_rank();
+
+    void clear();
+    int32 insert(object_id_t id,factor_t factor);
 
     // strict weak order,operator <
     static bool key_comp(const factor_t src,const factor_t dest)
@@ -131,8 +126,8 @@ public:
         // TODO:这里暂时没法按_max_factor来对比排序因子，只能全部都对比
         return object_t::compare_factor(src,dest) < 0;
     }
-private:
-    std::map< raw_factor_t*,bucket_t,key_comp_t > _bucket_list;
+protected:
+    bucket_list_t _bucket_list;
 };
 
 #endif /* __RANK_H__ */

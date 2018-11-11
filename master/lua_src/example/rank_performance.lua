@@ -1,6 +1,6 @@
 -- 排行榜算法测试
 
-local Insertion_rank = require "insertion_rank"
+local Insertion_rank = require "Insertion_rank"
 
 local function dump(rank)
     local count = rank:get_count()

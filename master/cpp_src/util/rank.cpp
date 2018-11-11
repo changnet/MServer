@@ -3,8 +3,6 @@
 base_rank::base_rank()
 {
     _count = 0; // 当前排行榜中数量
-    _max_count = 64; // 排行榜最大数量(默认64)
-    _max_factor = 0; // 当前排行榜使用到的最大排序因子数量
 }
 
 base_rank::~base_rank()
@@ -16,6 +14,8 @@ insertion_rank::insertion_rank()
 {
     _max_list = 0;
     _object_list = NULL;
+    _max_count = 64; // 排行榜最大数量(默认64)
+    _max_factor = 0; // 当前排行榜使用到的最大排序因子数量
 }
 
 insertion_rank::~insertion_rank()
@@ -37,6 +37,7 @@ void insertion_rank::clear()
     }
     _object_set.clear();
 
+    _max_factor = 0;
     base_rank::clear();
 }
 
@@ -211,4 +212,40 @@ bucket_rank::bucket_rank()
 
 bucket_rank::~bucket_rank()
 {
+    clear();
+
+    base_rank::clear();
+}
+
+void bucket_rank::clear()
+{
+    bucket_list_t::const_iterator iter = _bucket_list.begin();
+    for (;iter != _bucket_list.end();iter ++)
+    {
+        delete []iter->first;
+    }
+
+    _bucket_list.clear();
+}
+
+int32 bucket_rank::insert(object_id_t id,factor_t factor)
+{
+    bucket_list_t::iterator iter = _bucket_list.find(factor);
+    if (_bucket_list.end() == iter)
+    {
+        raw_factor_t *new_factor = new factor_t();
+        for (int32 idx = 0;idx < MAX_RANK_FACTOR;idx ++)
+        {
+            new_factor[idx] = factor[idx];
+        }
+        _bucket_list[new_factor].push_back(id);
+    }
+    else
+    {
+        iter->second.push_back(id);
+    }
+
+    _count ++;
+
+    return 0;
 }
