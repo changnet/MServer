@@ -1,6 +1,8 @@
 -- 排行榜算法测试
 
-local Insertion_rank = require "Insertion_rank"
+local Bucket_rank = require "util.bucket_rank"
+local Insertion_rank = require "util.insertion_rank"
+-- local Insertion_rank = require "Insertion_rank"
 
 local function dump(rank)
     local count = rank:get_count()
@@ -40,7 +42,9 @@ for idx = 1,max_object do
     local ft2 = math.random(1,max_random)
     local ft3 = math.random(1,max_random)
 
-    irank:insert(idx,ft1,ft2,ft3)
+    local object = irank:insert(idx,ft1,ft2,ft3)
+    object.name = "ee[ee\"hh"
+    object.level = idx
 end
 
 for idx = 1,max_object do
@@ -58,3 +62,30 @@ f_tm_stop("rank cost") -- 1000 max_object,rank cost	5789	microsecond
 
 dump(irank)
 
+irank:save("runtime/rank/test.rank")
+
+irank:clear()
+irank:load("runtime/rank/test.rank")
+dump(irank)
+-- vd(irank.object)
+
+
+local random_f = {}
+for idx = 1,1000000 do
+    table.insert(random_f,math.random(1,100))
+end
+
+irank:clear()
+brank = Bucket_rank()
+
+f_tm_start()
+for idx = 1,#random_f do
+    irank:insert(idx,random_f[idx])
+end
+f_tm_stop("insert rank cost")
+
+f_tm_start()
+for idx = 1,#random_f do
+    brank:insert(idx,random_f[idx])
+end
+f_tm_stop("bucket rank cost")

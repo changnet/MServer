@@ -22,6 +22,7 @@ math.randomseed( ev:time() )
 local function main( command,srvname,srvindex,srvid,... )
     Log.mkdir_p( "log" )  -- 创建日志目录
     Log.mkdir_p( "runtime" ) -- 创建运行时数据存储目录
+    Log.mkdir_p( "runtime/rank" ) -- 创建运行时排行榜数据存储目录
 
     local deamon = false -- 是否后台模式
     for _,args in pairs( {...} ) do
