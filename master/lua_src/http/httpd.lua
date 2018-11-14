@@ -1,6 +1,6 @@
 -- http deamon
 
-local page404 = 
+local page404 =
 {
     'HTTP/1.1 404 Not Found\r\n',
     'Content-Length: 0\r\n',
@@ -10,7 +10,7 @@ local page404 =
 }
 page404 = table.concat( page404 )
 
-local page500 = 
+local page500 =
 {
     'HTTP/1.1 500 Internal server error\r\n',
     'Content-Length: 0\r\n',
@@ -20,7 +20,7 @@ local page500 =
 }
 page500 = table.concat( page500 )
 
-local page200 = 
+local page200 =
 {
     'HTTP/1.1 200 OK\r\n',
     'Content-Length: %d\r\n',
@@ -31,7 +31,7 @@ local page200 =
 page200 = table.concat( page200 )
 
 local network_mgr = network_mgr
-local uri = require "global.uri"
+local uri = require "util.uri"
 
 require "http.http_header"
 local Httpd_conn = require "http.httpd_conn"
@@ -120,7 +120,7 @@ function Httpd:do_command( conn,url,body )
         self.exec[raw_url] = path
     end
 
-    local success,code,ctx = xpcall( 
+    local success,code,ctx = xpcall(
         Httpd.do_exec, __G__TRACKBACK__,httpd,path,fields,body )
     if not success then -- 发生语法错误
         conn:send_pkt( page500 )
@@ -131,7 +131,7 @@ function Httpd:do_command( conn,url,body )
             conn:send_pkt( self:format_200( code ) )
         end
     end
-    
+
     self:conn_close( conn )
 end
 
