@@ -36,7 +36,8 @@ function App:exec()
     -- require "example.words_filter_performance"
     -- require "example.scene_performance"
     -- require "example.aoi_performance"
-    require "example.rank_performance"
+    -- require "example.rank_performance"
+    require "example.other_performance"
 
     vd( obj_counter.dump() )
     ev:backend()
