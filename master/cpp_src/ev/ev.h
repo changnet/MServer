@@ -43,6 +43,10 @@ typedef struct
 typedef ev_timer *ANHE;
 typedef int32 ANCHANGE;
 
+/* epoll does sometimes return early, this is just to avoid the worst */
+// TODO:尚不清楚这个机制(libev的 backend_mintime = 1e-3秒)，应该是要传个非0值
+#define EPOLL_MIN_TM 1
+
 class ev
 {
 public:
@@ -60,6 +64,7 @@ public:
     
     static ev_tstamp get_time();
     static ev_tstamp get_clock();
+    static int64 get_clock_ms();
     inline ev_tstamp now()
     {
         return ev_rt_now;
@@ -83,14 +88,14 @@ protected:
     
     int32 backend_fd;
     epoll_event epoll_events[EPOLL_MAXEV];
-    ev_tstamp backend_mintime;
     
+    int64 ev_now_ms; // 主循环时间，毫秒
     ev_tstamp ev_rt_now;
     ev_tstamp now_floor; /* last time we refreshed rt_time */
     ev_tstamp mn_now;    /* monotonic clock "now" */
     ev_tstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
-    virtual void running() {};
+    virtual void running( int64 ms_now ) {};
     virtual ev_tstamp wait_time();
     void fd_change( int32 fd );
     void fd_reify();

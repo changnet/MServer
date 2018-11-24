@@ -25,6 +25,7 @@ ev::ev()
     mn_now    = get_clock ();
     now_floor = mn_now;
     rtmn_diff = ev_rt_now - mn_now;
+    ev_now_ms = get_clock_ms ();
 
     backend_init();
 }
@@ -80,7 +81,7 @@ int32 ev::run()
 
         invoke_pending ();
 
-        running ();
+        running (ev_now_ms);
     }    /* while */
 
     return 0;
@@ -236,9 +237,6 @@ void ev::backend_init()
         FATAL( "libev backend init fail:%s",strerror(errno) );
         return;
     }
-
-    /* epoll does sometimes return early, this is just to avoid the worst */
-    backend_mintime = 1e-3;
 }
 
 ev_tstamp ev::get_time()
@@ -262,6 +260,13 @@ ev_tstamp ev::get_clock()
     struct timespec ts;
     clock_gettime (CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec * 1e-9;
+}
+
+int64 ev::get_clock_ms()
+{
+    struct timespec ts;
+    clock_gettime (CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
 }
 
 void ev::time_update()
@@ -301,6 +306,8 @@ void ev::time_update()
         now_floor = mn_now;
     }
 
+    ev_now_ms = get_clock_ms ();
+
     /* no timer adjustment, as the monotonic clock doesn't jump */
     /* timers_reschedule (loop, rtmn_diff - odiff) */
 }
@@ -311,7 +318,7 @@ void ev::backend_poll( ev_tstamp timeout )
      * which is below the default libev max wait time, however.
      */
     int32 eventcnt = epoll_wait(
-        backend_fd, epoll_events, EPOLL_MAXEV, timeout * 1e3);
+        backend_fd, epoll_events, EPOLL_MAXEV, timeout);
     if (expect_false (eventcnt < 0))
     {
         if ( errno != EINTR )
@@ -518,7 +525,7 @@ void ev::reheap( ANHE *heap,int32 N )
     }
 }
 
-/* calculate blocking time */
+/* calculate blocking time,milliseconds */
 ev_tstamp ev::wait_time()
 {
     ev_tstamp waittime  = 0.;
@@ -531,11 +538,13 @@ ev_tstamp ev::wait_time()
         if (waittime > to) waittime = to;
     }
 
+    waittime = waittime * 1e3; // to milliseconds
+
     /* at this point, we NEED to wait, so we have to ensure */
     /* to pass a minimum nonzero value to the backend */
-    if (expect_false (waittime < backend_mintime))
+    if (expect_false (waittime < EPOLL_MIN_TM))
     {
-        waittime = backend_mintime;
+        waittime = EPOLL_MIN_TM;
     }
 
     return waittime;

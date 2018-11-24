@@ -42,6 +42,9 @@ lev::lev( bool singleton )
     ansendings = NULL;
     ansendingmax =  0;
     ansendingcnt =  0;
+
+    _lua_gc_tm = 0;
+    _app_ev_interval = 0;
 }
 
 lev::~lev()
@@ -63,7 +66,7 @@ int32 lev::backend( lua_State *L )
     assert( "backend uninit",backend_fd >= 0 );
 
     loop_done = false;
-    lua_gc(L, LUA_GCSTOP, 0); /* 用自己的策略控制gc */
+    lua_gc(L, LUA_GCSTOP, 0); /* 停止主动gc,用自己的策略控制gc */
 
     return run(); /* this won't return until backend stop */
 }
@@ -99,6 +102,19 @@ int32 lev::signal( lua_State *L )
     else
         ::signal( sig, sig_handler );
 
+    return 0;
+}
+
+int32 lev::set_app_ev( lua_State *L ) // 设置脚本主循环回调
+{
+    // 主循环不要设置太长的循环时间，如果太长用定时器就好了
+    int32 interval = luaL_checkinteger(L, 1);
+    if ( interval < 0 || interval > 1000 )
+    {
+        return luaL_error( L,"illegal argument" );
+    }
+
+    _app_ev_interval = interval;
     return 0;
 }
 
@@ -196,13 +212,62 @@ void lev::invoke_sending()
         ansendingcnt >= 0 && ansendingcnt < ansendingmax );
 }
 
-void lev::running()
+void lev::invoke_app_ev (int64 ms_now)
+{
+    static lua_State *L = lstate::instance()->state();
+
+    if (!_app_ev_interval || _next_app_ev_tm < ms_now ) return;
+
+    // 以上次以起点。这样即使服务器卡了，也能保证回调次数
+    _next_app_ev_tm += _app_ev_interval;
+
+    lua_pushcfunction(L,traceback);
+    lua_getglobal( L,"sig_handler" );
+    lua_pushinteger( L,ms_now );
+    if ( expect_false( LUA_OK != lua_pcall(L,1,0,1) ) )
+    {
+        ERROR( "invoke_app_ev fail:%s",lua_tostring(L,-1) );
+        lua_pop( L,1 ); /* pop error message */
+    }
+
+    lua_pop( L,1 ); /* remove traceback */
+}
+
+ev_tstamp lev::wait_time()
+{
+    // 如果有数据未发送，尽快发送
+    if (ansendingcnt > 0) return EPOLL_MIN_TM;
+
+    ev_tstamp waittime = ev::wait_time();
+
+    // 在定时器和下一次脚本回调之间选一个最接近的数据
+    if (_app_ev_interval)
+    {
+        waittime = MATH_MIN( (_next_app_ev_tm - ev_now_ms),waittime );
+    }
+
+    if (expect_false (waittime < EPOLL_MIN_TM))
+    {
+        waittime = EPOLL_MIN_TM;
+    }
+
+    return waittime;
+}
+
+void lev::running( int64 ms_now )
 {
     invoke_sending ();
     invoke_signal  ();
+    invoke_app_ev  (ms_now);
 
     lnetwork_mgr::instance()->invoke_delete();
 
     static lua_State *L = lstate::instance()->state();
-    lua_gc(L, LUA_GCSTEP, 100);
+
+    // TODO:每秒gc一次，太频繁浪费性能，需要根据项目调整
+    if (_lua_gc_tm != ev_rt_now)
+    {
+        _lua_gc_tm = ev_rt_now;
+        lua_gc(L, LUA_GCSTEP, 100);
+    }
 }
