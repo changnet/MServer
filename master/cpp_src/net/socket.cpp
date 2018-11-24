@@ -209,8 +209,8 @@ void socket::start( int32 fd )
 
     if ( fd > 0 ) // 新创建的socket
     {
-        class ev_loop *loop = 
-            static_cast<class ev_loop *>( lev::instance() );
+        class ev *loop = 
+            static_cast<class ev *>( lev::instance() );
         _w.set( loop );
         _w.set<socket,&socket::io_cb>( this );
     }
@@ -249,8 +249,8 @@ int32 socket::connect( const char *host,int32 port )
 
     set<socket,&socket::connect_cb>( this );
 
-    class ev_loop *loop = 
-        static_cast<class ev_loop *>( lev::instance() );
+    class ev *loop = 
+        static_cast<class ev *>( lev::instance() );
     _w.set( loop );
     _w.set<socket,&socket::io_cb>( this );
     _w.start( fd,EV_WRITE );
@@ -349,8 +349,8 @@ int32 socket::listen( const char *host,int32 port )
 
     set<socket,&socket::listen_cb>( this );
 
-    class ev_loop *loop = 
-        static_cast<class ev_loop *>( lev::instance() );
+    class ev *loop = 
+        static_cast<class ev *>( lev::instance() );
     _w.set( loop );
     _w.set<socket,&socket::io_cb>( this );
     _w.start( fd,EV_READ );

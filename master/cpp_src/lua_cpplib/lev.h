@@ -10,7 +10,7 @@
 #include "../ev/ev_watcher.h"
 
 class socket;
-class lev : public ev_loop
+class lev : public ev
 {
 public:
     static lev *instance();
@@ -37,7 +37,7 @@ private:
 
     ev_tstamp wait_time()
     {
-        return ansendingcnt > 0 ? backend_mintime : ev_loop::wait_time();
+        return ansendingcnt > 0 ? backend_mintime : ev::wait_time();
     }
     static void sig_handler( int32 signum );
 private:

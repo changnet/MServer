@@ -96,7 +96,7 @@ bool thread::start( int32 sec,int32 usec )
         return false;
     }
 
-    class ev_loop *loop = static_cast<ev_loop *>( lev::instance() );
+    class ev *loop = static_cast<ev *>( lev::instance() );
     _watcher.set( loop );
     _watcher.set<thread,&thread::io_cb>( this );
     _watcher.start( _fd[0],EV_READ );

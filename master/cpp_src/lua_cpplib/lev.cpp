@@ -54,7 +54,7 @@ lev::~lev()
 
 int32 lev::exit( lua_State *L )
 {
-    ev_loop::quit();
+    ev::quit();
     return 0;
 }
 

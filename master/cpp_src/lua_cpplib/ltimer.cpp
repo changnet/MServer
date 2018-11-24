@@ -8,8 +8,8 @@ ltimer::ltimer( lua_State *L )
 {
     _timer_id = luaL_checkinteger( L,2 );
 
-    class ev_loop *loop = 
-        static_cast<class ev_loop *>( lev::instance() );
+    class ev *loop = 
+        static_cast<class ev *>( lev::instance() );
 
     _timer.set( loop );
     _timer.set<ltimer,&ltimer::callback>( this );

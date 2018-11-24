@@ -12,9 +12,9 @@ public:
     int32 pending;
     void *data;
     void (*cb)(ev_watcher *w, int32 revents);
-    ev_loop *loop;
+    ev *loop;
 public:
-    explicit ev_watcher( ev_loop *_loop)
+    explicit ev_watcher( ev *_loop)
         : loop (_loop)
     {
         active  = false;
@@ -31,14 +31,14 @@ template<class watcher>
 class ev_base : public ev_watcher
 {
 public:
-    explicit ev_base( ev_loop *_loop)
+    explicit ev_base( ev *_loop)
         : ev_watcher (_loop)
     {
     }
 
     virtual ~ev_base(){}
 
-    void set( ev_loop *_loop )
+    void set( ev *_loop )
     {
         loop = _loop;
     }
@@ -93,7 +93,7 @@ public:
 public:
     using ev_base<ev_io>::set;
 
-    explicit ev_io( ev_loop *loop = 0 )
+    explicit ev_io( ev *loop = 0 )
         : ev_base<ev_io> ( loop )
     {
         fd     = -1;
@@ -162,7 +162,7 @@ public:
 public:
     using ev_base<ev_timer>::set;
 
-    explicit ev_timer( ev_loop *loop = 0 )
+    explicit ev_timer( ev *loop = 0 )
         : ev_base<ev_timer> ( loop )
     {
         at       = 0.;

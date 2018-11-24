@@ -43,11 +43,11 @@ typedef struct
 typedef ev_timer *ANHE;
 typedef int32 ANCHANGE;
 
-class ev_loop
+class ev
 {
 public:
-    ev_loop();
-    virtual ~ev_loop();
+    ev();
+    virtual ~ev();
 
     int32 run();
     int32 quit();
