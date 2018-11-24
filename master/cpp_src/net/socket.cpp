@@ -11,7 +11,7 @@
 #include "packet/stream_packet.h"
 #include "packet/websocket_packet.h"
 #include "packet/ws_stream_packet.h"
-#include "../lua_cpplib/leventloop.h"
+#include "../lua_cpplib/lev.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
@@ -41,7 +41,7 @@ void socket::stop( bool flush )
 {
     if ( _pending )
     {
-        leventloop::instance()->remove_pending( _pending );
+        lev::instance()->remove_pending( _pending );
         _pending = 0;
 
         // 如果是出错，则不发送剩余数据，如果是脚本上层正常关闭，则发送
@@ -210,7 +210,7 @@ void socket::start( int32 fd )
     if ( fd > 0 ) // 新创建的socket
     {
         class ev_loop *loop = 
-            static_cast<class ev_loop *>( leventloop::instance() );
+            static_cast<class ev_loop *>( lev::instance() );
         _w.set( loop );
         _w.set<socket,&socket::io_cb>( this );
     }
@@ -250,7 +250,7 @@ int32 socket::connect( const char *host,int32 port )
     set<socket,&socket::connect_cb>( this );
 
     class ev_loop *loop = 
-        static_cast<class ev_loop *>( leventloop::instance() );
+        static_cast<class ev_loop *>( lev::instance() );
     _w.set( loop );
     _w.set<socket,&socket::io_cb>( this );
     _w.start( fd,EV_WRITE );
@@ -350,7 +350,7 @@ int32 socket::listen( const char *host,int32 port )
     set<socket,&socket::listen_cb>( this );
 
     class ev_loop *loop = 
-        static_cast<class ev_loop *>( leventloop::instance() );
+        static_cast<class ev_loop *>( lev::instance() );
     _w.set( loop );
     _w.set<socket,&socket::io_cb>( this );
     _w.start( fd,EV_READ );
@@ -362,7 +362,7 @@ void socket::pending_send()
 {
     if ( 0 != _pending ) return; // 已经在发送队列
     /* 放到发送队列，一次发送 */
-    _pending = leventloop::instance()->pending_send( this );
+    _pending = lev::instance()->pending_send( this );
 }
 
 

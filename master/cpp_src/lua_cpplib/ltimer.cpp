@@ -1,7 +1,7 @@
 #include "ltimer.h"
 #include "ltools.h"
 #include "lstate.h"
-#include "leventloop.h"
+#include "lev.h"
 #include "../ev/ev_def.h"
 
 ltimer::ltimer( lua_State *L )
@@ -9,7 +9,7 @@ ltimer::ltimer( lua_State *L )
     _timer_id = luaL_checkinteger( L,2 );
 
     class ev_loop *loop = 
-        static_cast<class ev_loop *>( leventloop::instance() );
+        static_cast<class ev_loop *>( lev::instance() );
 
     _timer.set( loop );
     _timer.set<ltimer,&ltimer::callback>( this );

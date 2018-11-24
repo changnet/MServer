@@ -10,7 +10,7 @@
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
 #include "lua_cpplib/lmap_mgr.h"
-#include "lua_cpplib/leventloop.h"
+#include "lua_cpplib/lev.h"
 #include "lua_cpplib/lobj_counter.h"
 #include "lua_cpplib/lnetwork_mgr.h"
 
@@ -47,8 +47,8 @@ int32 main( int32 argc,char **argv )
 
     lua_State *L = lstate::instance()->state();
 
-    class leventloop *loop = leventloop::instance();
-    lclass<leventloop>::push( L,loop,false );
+    class lev *loop = lev::instance();
+    lclass<lev>::push( L,loop,false );
     lua_setglobal( L,"ev" );
 
     class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
@@ -88,7 +88,7 @@ int32 main( int32 argc,char **argv )
     lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
     lmap_mgr::uninstance    ();      /* 关闭地图管理 */
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
-    leventloop::uninstance  ();      /* 关闭主事件循环 */
+    lev::uninstance  ();      /* 关闭主事件循环 */
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
     ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 

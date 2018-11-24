@@ -1,6 +1,6 @@
 #include "llog.h"
 #include "../global/clog.h"
-#include "../lua_cpplib/leventloop.h"
+#include "../lua_cpplib/lev.h"
 
 llog::llog( lua_State *L )
 {
@@ -50,7 +50,7 @@ int32 llog::write( lua_State *L )
         return luaL_error( L,"log output type error" );
     }
 
-    static class leventloop *ev = leventloop::instance();
+    static class lev *ev = lev::instance();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();

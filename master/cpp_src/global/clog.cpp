@@ -1,6 +1,6 @@
 #include "clog.h"
 #include "global.h"
-#include "../lua_cpplib/leventloop.h"
+#include "../lua_cpplib/lev.h"
 
 static bool is_daemon = false;    /* 是否后台运行。后台运行则不输出日志到stdout */
 static char printf_path[PATH_MAX] = {0};
@@ -55,13 +55,13 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
 
 void cerror_log( const char *prefix,const char *fmt,... )
 {
-    time_t tm = leventloop::instance()->now();
+    time_t tm = lev::instance()->now();
     RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
 void cprintf_log( const char *prefix,const char *fmt,... )
 {
-    time_t tm = leventloop::instance()->now();
+    time_t tm = lev::instance()->now();
     // TODO:兼容低版本C++标准，没办法传...可变参，无法调用raw_cprintf_log
     // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR
     if ( expect_false(!printf_path[0]) )

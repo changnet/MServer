@@ -47,7 +47,7 @@ TARGET = $(ODIR)/master
 #patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
 #         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
 _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
-	lua_cpplib/leventloop.o lua_cpplib/lstate.o net/io/io.o net/io/ssl_mgr.o\
+	lua_cpplib/lev.o lua_cpplib/lstate.o net/io/io.o net/io/ssl_mgr.o\
 	net/packet/stream_packet.o net/packet/http_packet.o net/io/ssl_io.o\
 	net/codec/codec_mgr.o net/codec/bson_codec.o net/codec/flatbuffers_codec.o\
 	net/codec/protobuf_codec.o net/packet/websocket_packet.o util/rank.o\

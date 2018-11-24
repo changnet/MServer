@@ -1,6 +1,6 @@
 #include <signal.h>
 
-#include "leventloop.h"
+#include "lev.h"
 #include "lstate.h"
 #include "ltools.h"
 #include "lnetwork_mgr.h"
@@ -8,34 +8,34 @@
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
 
-uint32 leventloop::sig_mask = 0;
-class leventloop *leventloop::_loop = NULL;
+uint32 lev::sig_mask = 0;
+class lev *lev::_loop = NULL;
 
-class leventloop *leventloop::instance()
+class lev *lev::instance()
 {
     if ( !_loop )
     {
-        _loop = new leventloop( true );
+        _loop = new lev( true );
     }
 
     return _loop;
 }
 
-void leventloop::uninstance()
+void lev::uninstance()
 {
     if ( _loop ) delete _loop;
     _loop = NULL;
 }
 
-leventloop::leventloop( lua_State *L )
+lev::lev( lua_State *L )
 {
-    /* leventloop是一个单例，但lclass的机制却要求构造函数是公有的 */
-    assert( "leventloop is singleton",false );
+    /* lev是一个单例，但lclass的机制却要求构造函数是公有的 */
+    assert( "lev is singleton",false );
 }
 
-leventloop::leventloop( bool singleton )
+lev::lev( bool singleton )
 {
-    assert( "leventloop is singleton",!_loop );
+    assert( "lev is singleton",!_loop );
 
     UNUSED( singleton );
 
@@ -44,7 +44,7 @@ leventloop::leventloop( bool singleton )
     ansendingcnt =  0;
 }
 
-leventloop::~leventloop()
+lev::~lev()
 {
     if ( ansendings ) delete []ansendings;
     ansendings = NULL;
@@ -52,13 +52,13 @@ leventloop::~leventloop()
     ansendingmax =  0;
 }
 
-int32 leventloop::exit( lua_State *L )
+int32 lev::exit( lua_State *L )
 {
     ev_loop::quit();
     return 0;
 }
 
-int32 leventloop::backend( lua_State *L )
+int32 lev::backend( lua_State *L )
 {
     assert( "backend uninit",backend_fd >= 0 );
 
@@ -69,20 +69,20 @@ int32 leventloop::backend( lua_State *L )
 }
 
 // 帧时间
-int32 leventloop::time( lua_State *L )
+int32 lev::time( lua_State *L )
 {
     lua_pushinteger( L,ev_rt_now );
     return 1;
 }
 
 // 实时时间
-int32 leventloop::real_time( lua_State *L )
+int32 lev::real_time( lua_State *L )
 {
     lua_pushinteger( L,get_time() );
     return 1;
 }
 
-int32 leventloop::signal( lua_State *L )
+int32 lev::signal( lua_State *L )
 {
     int32 sig = luaL_checkinteger(L, 1);
     int32 sig_action = luaL_optinteger( L,2,-1);
@@ -102,12 +102,12 @@ int32 leventloop::signal( lua_State *L )
     return 0;
 }
 
-void leventloop::sig_handler( int32 signum )
+void lev::sig_handler( int32 signum )
 {
     sig_mask |= ( 1 << signum );
 }
 
-void leventloop::invoke_signal()
+void lev::invoke_signal()
 {
     static lua_State *L = lstate::instance()->state();
     lua_pushcfunction(L,traceback);
@@ -134,7 +134,7 @@ void leventloop::invoke_signal()
     lua_remove(L,top); /* remove traceback */
 }
 
-int32 leventloop::pending_send( class socket *s  )
+int32 lev::pending_send( class socket *s  )
 {
     // 0位是空的，不使用
     ++ansendingcnt;
@@ -145,7 +145,7 @@ int32 leventloop::pending_send( class socket *s  )
     return ansendingcnt;
 }
 
-void leventloop::remove_pending( int32 pending )
+void lev::remove_pending( int32 pending )
 {
     assert( "illegal remove pending" ,pending > 0 && pending < ansendingmax );
 
@@ -157,7 +157,7 @@ void leventloop::remove_pending( int32 pending )
  * 坏处是：需要多一个数组管理；如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
  * 然而，游戏中包多，但数据量不大
  */
-void leventloop::invoke_sending()
+void lev::invoke_sending()
 {
     if ( ansendingcnt <= 0 )
         return;
@@ -196,7 +196,7 @@ void leventloop::invoke_sending()
         ansendingcnt >= 0 && ansendingcnt < ansendingmax );
 }
 
-void leventloop::running()
+void lev::running()
 {
     invoke_sending ();
     invoke_signal  ();

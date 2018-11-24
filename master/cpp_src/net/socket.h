@@ -21,7 +21,7 @@
 # define USER_TIMEOUT(x)
 #endif
 
-class leventloop;
+class lev;
 
 /* 网络socket连接类
  * 这里封装了基本的网络操作

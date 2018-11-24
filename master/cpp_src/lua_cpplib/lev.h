@@ -1,5 +1,5 @@
-#ifndef __LEVENTLOOP_H__
-#define __LEVENTLOOP_H__
+#ifndef __LEV_H__
+#define __LEV_H__
 
 /* 事件循环 lua wrap */
 
@@ -10,14 +10,14 @@
 #include "../ev/ev_watcher.h"
 
 class socket;
-class leventloop : public ev_loop
+class lev : public ev_loop
 {
 public:
-    static leventloop *instance();
+    static lev *instance();
     static void uninstance();
 
-    explicit leventloop( lua_State *L );
-    ~leventloop();
+    explicit lev( lua_State *L );
+    ~lev();
 
     int32 exit( lua_State *L );
     int32 time( lua_State *L ); // 帧时间
@@ -29,7 +29,7 @@ public:
     int32 pending_send( class socket *s );
     void remove_pending( int32 pending );
 private:
-    explicit leventloop( bool singleton );
+    explicit lev( bool singleton );
 
     void running();
     void invoke_signal ();
@@ -48,7 +48,7 @@ private:
     int32 ansendingcnt;
 
     static uint32 sig_mask;
-    static class leventloop *_loop;
+    static class lev *_loop;
 };
 
-#endif /* __LEVENTLOOP_H__ */
+#endif /* __LEV_H__ */
