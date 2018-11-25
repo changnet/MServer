@@ -216,13 +216,13 @@ void lev::invoke_app_ev (int64 ms_now)
 {
     static lua_State *L = lstate::instance()->state();
 
-    if (!_app_ev_interval || _next_app_ev_tm < ms_now ) return;
+    if (!_app_ev_interval || _next_app_ev_tm > ms_now ) return;
 
-    // 以上次以起点。这样即使服务器卡了，也能保证回调次数
-    _next_app_ev_tm += _app_ev_interval;
+    // TODO:以当前时间为起点。服务器卡了，回调次数就少了，以后有需要再改
+    _next_app_ev_tm = ms_now + _app_ev_interval;
 
     lua_pushcfunction(L,traceback);
-    lua_getglobal( L,"sig_handler" );
+    lua_getglobal( L,"application_ev" );
     lua_pushinteger( L,ms_now );
     if ( expect_false( LUA_OK != lua_pcall(L,1,0,1) ) )
     {
@@ -233,10 +233,11 @@ void lev::invoke_app_ev (int64 ms_now)
     lua_pop( L,1 ); /* remove traceback */
 }
 
+// 计算距离下一次循环时的时间(毫秒)
 ev_tstamp lev::wait_time()
 {
-    // 如果有数据未发送，尽快发送
-    if (ansendingcnt > 0) return EPOLL_MIN_TM;
+    // TODO:如果有数据未发送，尽快发送(暂定10毫秒，后面再做调试)
+    if (ansendingcnt > 0) return 10;
 
     ev_tstamp waittime = ev::wait_time();
 

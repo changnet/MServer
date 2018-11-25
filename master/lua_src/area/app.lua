@@ -28,6 +28,13 @@ function App:initialize()
     Application.initialize( self )
 end
 
+-- 重写初始化结束入口
+function App:final_initialize()
+    ev:set_app_ev( 200 ) -- 200毫秒回调一次主循环
+
+    Application.final_initialize( self )
+end
+
 -- 重写关服接口
 function App:shutdown()
     Application.shutdown( self )
@@ -36,6 +43,11 @@ end
 -- 加载全服邮件
 function App:dungeon_initialize()
     
+end
+
+-- 主事件循环，设置了ev:set_app_ev后由C++回调
+function application_ev( ms_now )
+    PLOG("application_ev",ms_now,ev:time())
 end
 
 return App

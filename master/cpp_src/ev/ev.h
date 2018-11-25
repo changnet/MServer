@@ -63,12 +63,9 @@ public:
     int32 timer_stop( ev_timer *w );
     
     static ev_tstamp get_time();
-    static ev_tstamp get_clock();
-    static int64 get_clock_ms();
-    inline ev_tstamp now()
-    {
-        return ev_rt_now;
-    }
+
+    void update_clock();
+    inline ev_tstamp now() { return ev_rt_now; }
 protected:
     volatile bool loop_done;
     ANFD *anfds;

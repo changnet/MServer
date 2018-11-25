@@ -22,10 +22,10 @@ ev::ev()
     timercnt = 0;
 
     ev_rt_now = get_time ();
-    mn_now    = get_clock ();
+
+    update_clock();
     now_floor = mn_now;
     rtmn_diff = ev_rt_now - mn_now;
-    ev_now_ms = get_clock_ms ();
 
     backend_init();
 }
@@ -255,23 +255,18 @@ ev_tstamp ev::get_time()
  * CLOCK_MONOTONIC_RAW: 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
  * CLOCK_BOOTTIME: 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
  */
-ev_tstamp ev::get_clock()
+void ev::update_clock()
 {
     struct timespec ts;
     clock_gettime (CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec + ts.tv_nsec * 1e-9;
-}
 
-int64 ev::get_clock_ms()
-{
-    struct timespec ts;
-    clock_gettime (CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
+    mn_now = ts.tv_sec + ts.tv_nsec * 1e-9;
+    ev_now_ms = ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
 }
 
 void ev::time_update()
 {
-    mn_now = get_clock ();
+    update_clock ();
 
     /* only fetch the realtime clock every 0.5*MIN_TIMEJUMP seconds */
     /* interpolate in the meantime */
@@ -302,11 +297,10 @@ void ev::time_update()
         }
 
         ev_rt_now = get_time ();
-        mn_now    = get_clock ();
+
+        update_clock ();
         now_floor = mn_now;
     }
-
-    ev_now_ms = get_clock_ms ();
 
     /* no timer adjustment, as the monotonic clock doesn't jump */
     /* timers_reschedule (loop, rtmn_diff - odiff) */
