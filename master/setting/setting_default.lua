@@ -31,7 +31,7 @@ return
     {
         sip     = "127.0.0.1", -- s2s监听ip
         sport   = 20001,       -- s2s监听端口
-        servers =
+        servers = -- 主动连接到下面的服务器
         {
             { ip = "127.0.0.1",port = 10001 }, -- gateway
         },
@@ -48,6 +48,19 @@ return
         mysql_user = "test",
         mysql_pwd  = "test",
         mysql_db   = "test_999",
+
+        lang = "zh", -- 简体中文
+    },
+
+    area = -- area服务器配置
+    {
+        servers = -- 主动连接到下面的服务器
+        {
+            { ip = "127.0.0.1",port = 10001 }, -- gateway
+            { ip = "127.0.0.1",port = 20001 }, -- world
+        },
+
+        gm = true, -- 是否启用gm
 
         lang = "zh", -- 简体中文
     }

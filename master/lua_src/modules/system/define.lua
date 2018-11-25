@@ -7,8 +7,10 @@ SRV_NAME =
 {
     gateway = 1,
     world   = 2,
-    test    = 3,
-    example = 4
+    area    = 3,
+
+    -- 以下服务器为特殊用途
+    test    = 9 -- 测试用例
 }
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"

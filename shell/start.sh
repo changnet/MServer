@@ -1,7 +1,7 @@
 #!/bin/bash
 
 parameter=($@)
-processes=(gateway world)
+processes=(gateway world area)
 
 cd ../master
 

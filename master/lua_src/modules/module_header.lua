@@ -16,7 +16,7 @@ E = require "modules.system.error"
 -- 加载服务器配置
 local raw_setting = require "setting.setting"
 g_setting     = raw_setting[g_app.srvname]
-assert( "no server conf found",g_setting )
+assert( g_setting,"no server conf found" )
 
 g_log_mgr     = require "modules.log.log_mgr"
 g_unique_id   = require "modules.system.unique_id"

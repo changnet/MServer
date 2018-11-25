@@ -3,7 +3,7 @@
 function join_by { local IFS="$1"; shift; echo "$*"; }
 
 parameter=($@)
-processes=(gateway world)
+processes=(gateway world area)
 
 cd ../master
 
