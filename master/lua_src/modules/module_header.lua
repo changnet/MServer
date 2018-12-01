@@ -55,6 +55,11 @@ if "world" == g_app.srvname then
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
 
+-- 仅在area使用
+if "area" == g_app.srvname then
+    g_entity_mgr = require "modules.entity.entity_mgr"
+end
+
 -- =============================================================================
 -- =============================================================================
 -- =============================================================================
@@ -64,6 +69,7 @@ end
 
 -- 加载指令注册入口
 -- 需要在global对象创建后才加载，因为部分模块依赖global对象
+
 -- 公用
 require "modules.system.system_cmd" -- 系统模块
 require "modules.player.player_cmd" -- 玩家基础模块
@@ -78,4 +84,9 @@ if "world" == g_app.srvname then
     require "modules.chat.chat_cmd" -- 聊天
     require "modules.bag.bag_cmd"   -- 背包
     require "modules.misc.misc_cmd"     -- 杂七杂八的小功能
+end
+
+-- 仅在area使用
+if "area" == g_app.srvname then
+    require "modules.entity.entity_cmd" -- 实体相关
 end

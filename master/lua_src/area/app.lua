@@ -47,7 +47,7 @@ end
 
 -- 主事件循环，设置了ev:set_app_ev后由C++回调
 function application_ev( ms_now )
-    PLOG("application_ev",ms_now,ev:time())
+    -- PLOG("application_ev",ms_now,ev:time())
 end
 
 return App
