@@ -36,6 +36,7 @@ function Entity_mgr:new_entity( et,... )
         entity = Entity_npc(eid,...)
     elseif ET.PLAYER == et then
         entity = Entity_player(eid,...)
+        self.entity_player[entity.pid] = entity
     elseif ET.MONSTER == et then
         entity = Entity_monster(eid,...)
     else
@@ -43,6 +44,30 @@ function Entity_mgr:new_entity( et,... )
     end
 
     return entity
+end
+
+-- 删除实体
+function Entity_mgr:del_entity( eid )
+    local entity = self.entity[eid]
+    if not entity then
+        return ELOG("del entity fail,no such entity")
+    end
+
+    self.entity[eid] = nil
+    if ET.PLAYER == entity.et then
+        self.entity_player[entity.pid] = nil
+    end
+end
+
+-- 删除玩家实体
+function Entity_mgr:del_entity_player( pid )
+    local entity = self.entity_player[pid]
+    if not entity then
+        return ELOG("del entity player fail,no such entity")
+    end
+
+    self.entity_player[pid] = nil
+    self.entity[entity.eid] = nil
 end
 
 local entity_mgr = Entity_mgr()

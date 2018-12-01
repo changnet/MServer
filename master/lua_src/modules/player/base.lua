@@ -51,6 +51,13 @@ end
 -- 必须返回操作结果
 function Base:on_login()
     self.root.login = ev:time()
+
+    -- 更新基础数据到场景服
+    local base_info = {}
+    base_info.sex = self.root.sex
+    base_info.level = self.root.level
+
+    g_rpc:invoke("update_player_base",self.pid,base_info,true)
     return true
 end
 

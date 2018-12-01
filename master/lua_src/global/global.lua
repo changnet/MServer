@@ -112,7 +112,11 @@ function ELOG( fmt,any,... )
         return Log.elog( string.format( fmt,any,... ) )
     end
 
-    Log.elog( table.concat_any( "    ",fmt,any,... ) )
+    if any then
+        Log.elog( table.concat_any( "    ",fmt,any,... ) )
+    else
+        Log.elog( tostring(fmt) )
+    end
 end
 
 --测试时间,耗时打印

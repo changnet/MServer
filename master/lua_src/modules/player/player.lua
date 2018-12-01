@@ -198,6 +198,9 @@ function Player:on_logout()
     for _,module in pairs( sub_module ) do
         self[module.name]:db_save()
     end
+
+    -- 退出场景
+    g_rpc:invoke("exit_player",self.pid)
     g_log_mgr:login_or_logout( self.pid,LOG.LOGOUT )
 
     PRINTF( "player logout,pid = %d",self.pid )
