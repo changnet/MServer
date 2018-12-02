@@ -16,7 +16,7 @@ return
         {['count'] = 99,['id'] = 20000,['res'] = 3},
         {['count'] = 99,['id'] = 20001,['res'] = 3}
     },
-    ['mail_ctx'] = 1,
+    ['mail_ctx'] = '测试新手邮件',
     ['resources'] =
     {
         {['count'] = 999999,['id'] = 0,['res'] = 1},
