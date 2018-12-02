@@ -4,6 +4,8 @@
 
 -- 玩家存库基础数据模块
 
+local level_conf = require "config.player_levelup"
+
 local Module = require "modules.player.module"
 
 local Base = oo.class( Module,... )
@@ -44,7 +46,16 @@ function Base:db_init()
         self.root.gold  = 0
     end
 
+    -- 计算基础属性
+    self:calc_abt()
+
     return true
+end
+
+-- 计算基础属性
+function Base:calc_abt()
+    local conf = level_conf[self.root.level]
+    self.player:set_sys_abt( ABTSYS.BASE,conf.attr )
 end
 
 -- 玩家数据已加载完成，进入场景
@@ -57,7 +68,7 @@ function Base:on_login()
     base_info.sex = self.root.sex
     base_info.level = self.root.level
 
-    g_rpc:invoke("update_player_base",self.pid,base_info,true)
+    g_rpc:invoke("player_update_base",self.pid,base_info,true)
     return true
 end
 

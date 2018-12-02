@@ -31,8 +31,9 @@ https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 * C++内存池统计
 * C++主要对象统计
 * 脚本在C++中创建的对象统计
-* 各协议接收、发送次数、频率统计
+* 各协议接收、发送次数、频率统计（包括rpc调用）
 * socket流量统计
 * 各协议处理耗时统计
 * sethook各协议调用函数统计(debug用)
 * sethook限制、统计堆栈调用深度，防止死循环(debug用)
+

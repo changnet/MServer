@@ -21,9 +21,11 @@ local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 local Bag  = require "modules.bag.bag"
 local Mail = require "modules.mail.mail"
+local Attribute_sys = require "modules.attribute.attribute_sys"
 
 local RES = RES
 
+-- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
 local sub_module =
 {
     { name = "base",new = Base },
@@ -48,6 +50,9 @@ function Player:__init( pid )
     for _,module in pairs( sub_module ) do
         self[module.name] = module.new( pid,self )
     end
+
+    -- 不需要标准流程的子模块
+    self.abt_sys = Attribute_sys( pid )
 
     self.timer = g_timer_mgr:new_timer( self,1,1 )
     g_timer_mgr:start_timer( self.timer )
@@ -171,6 +176,14 @@ function Player:on_login()
 
 
     g_player_ev:fire_event( PLAYER_EV.ENTER,self )
+
+    -- 所有系统处理完后，计算一次总属性
+    self.abt_sys:calc_final_abt()
+    -- 同步战斗属性到场景
+    self.abt_sys:update_battle_abt()
+    -- 实体进入场景
+    g_rpc:invoke("player_enter_scene",self.pid)
+
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
 
     return true
@@ -200,7 +213,7 @@ function Player:on_logout()
     end
 
     -- 退出场景
-    g_rpc:invoke("exit_player",self.pid)
+    g_rpc:invoke("player_exit",self.pid)
     g_log_mgr:login_or_logout( self.pid,LOG.LOGOUT )
 
     PRINTF( "player logout,pid = %d",self.pid )
@@ -248,6 +261,11 @@ end
 -- 获取等级
 function Player:get_level()
     return self.base_root.level
+end
+
+-- 设置某个系统属性
+function Player:set_sys_abt( id,abt_list )
+    self.abt_sys:set_sys_abt( id,abt_list )
 end
 
 return Player
