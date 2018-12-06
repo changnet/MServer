@@ -5,6 +5,7 @@
 -- 实体管理
 
 local ET = require "modules.entity.entity_header"
+local Time_id = require "modules.system.time_id"
 
 local Entity_npc = require "modules.entity.entity_npc"
 local Entity_player = require "modules.entity.entity_player"
@@ -15,6 +16,7 @@ local Entity_mgr = oo.singleton( nil,... )
 function Entity_mgr:__init()
     self.entity = {} -- 以实体唯一id为key
     self.entity_player = {} -- 以玩家id为key
+    self.id_generator = Time_id()
 end
 
 -- 根据实体Id获取实体
@@ -30,7 +32,9 @@ end
 -- 创建实体
 function Entity_mgr:new_entity( et,... )
     local entity = nil
-    local eid = 111
+    local eid = self.id_generator:next_id_ex()
+
+    assert( nil == self.entity[eid],"dumplication entity id" )
 
     if ET.NPC == et then
         entity = Entity_npc(eid,...)

@@ -38,4 +38,25 @@ function Time_id:next_id()
     return ( self.seed << 16 + now )
 end
 
+-- 获取下一个自增Id
+-- 如果当前已达上限，将占用未来时间，以处理瞬间创建大量id的场景
+function Time_id:next_id_ex()
+    local now = ev:time()
+    if self.sec ~= now then
+        self.seed = 0
+        self.sec  = now
+        return now
+    end
+
+    self.seed = self.seed + 1
+    if self.seed >= LIMIT.UINT16_MAX then
+        self.seed = 1
+        self.sec = self.sec + 1
+        PLOG( "Time_id:next_id over max,using next second" )
+    end
+
+    -- TODO:2038年可以修改偏移的位数或者对now作一个偏移，不再从1970年计算
+    return ( self.seed << 16 + now )
+end
+
 return Time_id
