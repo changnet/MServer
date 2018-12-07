@@ -34,7 +34,7 @@ function Entity_mgr:new_entity( et,... )
     local entity = nil
     local eid = self.id_generator:next_id_ex()
 
-    assert( nil == self.entity[eid],"dumplication entity id" )
+    assert( nil == self.entity[eid],"duplication entity id" )
 
     if ET.NPC == et then
         entity = Entity_npc(eid,...)
