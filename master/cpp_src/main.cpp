@@ -35,8 +35,9 @@ int32 main( int32 argc,char **argv )
      * the destructor for the object is sequenced before the call to the
      * function passed to std::atexit.
      * 尽早调用atexit，这样才能保证静态变量的析构函数在onexit之前调用
-     * 不过全局、静态变量初始化都比main早，且static initialization order fiasco
-     * 目前都是手动释放
+     * 不过全局、静态变量初始化都比main早，且有
+     * static initialization order fiasco(https://isocpp.org/wiki/faq/ctors)
+     * 的问题，目前都是手动释放
      */
     atexit(on_exit);
     std::set_new_handler( on_new_fail );

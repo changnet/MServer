@@ -37,3 +37,11 @@ https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 * sethook各协议调用函数统计(debug用)
 * sethook限制、统计堆栈调用深度，防止死循环(debug用)
 
+https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
+https://stackoverflow.com/questions/24603142/why-is-operator-new-necessary-when-operator-new-is-enough
+https://sourceware.org/binutils/docs/ld/VERSION.html
+https://stackoverflow.com/questions/211237/static-variables-initialisation-order
+http://blog.fesnel.com/blog/2009/08/25/preloading-with-multiple-symbol-versions/
+
+mem
+http://man7.org/linux/man-pages/man3/mallinfo.3.html

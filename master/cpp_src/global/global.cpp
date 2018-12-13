@@ -39,6 +39,15 @@ void *operator new(size_t size) EXCEPT
     return ::malloc(size);
 }
 
+void *operator new(size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
+{
+    pthread_mutex_lock( &_mem_mutex_ );
+    ++g_counter;
+    pthread_mutex_unlock( &_mem_mutex_ );
+
+    return ::malloc(size);
+}
+
 void operator delete(void* ptr) NOEXCEPT
 {
     pthread_mutex_lock( &_mem_mutex_ );
@@ -50,13 +59,17 @@ void operator delete(void* ptr) NOEXCEPT
 
 void *operator new[](size_t size) EXCEPT
 {
+    pthread_mutex_lock( &_mem_mutex_ );
     ++g_counters;
+    pthread_mutex_unlock( &_mem_mutex_ );
     return ::malloc(size);
 }
 
 void operator delete[](void* ptr) NOEXCEPT
 {
+    pthread_mutex_lock( &_mem_mutex_ );
     --g_counters;
+    pthread_mutex_unlock( &_mem_mutex_ );
     ::free(ptr);
 }
 #endif /* _MEM_DEBUG_ */
