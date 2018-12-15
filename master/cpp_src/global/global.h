@@ -88,6 +88,6 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define array_noinit(base,size)
 #define array_zero(base,size)    memset((void *)(base), 0, size)
 
-extern void global_mem_counter(uint32 &counter,uint32 &counters);
+extern void global_mem_counter(int32 &counter,int32 &counters);
 
 #endif  /* __GOLBAL_H__ */

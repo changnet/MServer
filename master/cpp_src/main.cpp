@@ -157,8 +157,8 @@ int32 ssl_uninit()
  */
 void on_exit()
 {
-    uint32 counter  = 0;
-    uint32 counters = 0;
+    int32 counter  = 0;
+    int32 counters = 0;
     global_mem_counter(counter,counters);
     PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
     //back_trace();
