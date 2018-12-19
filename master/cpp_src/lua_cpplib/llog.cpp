@@ -137,3 +137,12 @@ int32 llog::set_args( lua_State *L )
     set_log_args( dm,ppath,epath );
     return 0;
 }
+
+// 设置日志参数
+int32 llog::set_name( lua_State *L )
+{
+    const char *name = luaL_checkstring( L,1 );
+
+    set_app_name( name );
+    return 0;
+}

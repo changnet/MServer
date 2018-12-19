@@ -37,12 +37,16 @@ local function main( command,srvname,srvindex,srvid,... )
 
     -- win下文件名不支持特殊字符的，比如":"
     local epath = string.format( "log/%s_error",srvname )
-    local ppath = string.format( 
+    local ppath = string.format(
         "log/%s#%04d-%02d-%02d#%02d_%02d_%02d",
         srvname,tm.year,tm.month,tm.day,tm.hour,tm.min,tm.sec )
     Log.set_args( deamon,ppath,epath )
 
-    PFLOG( "%s start ... ",srvname )
+    -- 非后台模式，打印进程名到屏幕，否则多个进程在同一终端开户时不好区分日志
+    local app_name = string.format("%s.%d",srvname,srvindex)
+    if not deamon then Log.set_name( app_name ) end
+
+    PFLOG( "starting %s ... ",app_name )
     local App = require( string.format( "%s.app",srvname ) )
 
     g_app = App( command,srvname,srvindex,srvid,... )

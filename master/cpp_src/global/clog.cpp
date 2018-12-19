@@ -7,6 +7,9 @@ static char printf_path[PATH_MAX] = {0};
 // 防止上层应用来不及设置日志参数就发生错误，默认输出到工作目录error文件
 static char error_path[PATH_MAX]  = {'e','r','r','o','r'};
 
+// app进程名
+static char app_name[LOG_APP_NAME] = {0};
+
 /* 设置日志参数：是否后台，日志路径 */
 void set_log_args( bool dm,const char *ppath,const char *epath)
 {
@@ -15,6 +18,23 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
     snprintf( error_path ,PATH_MAX,"%s",epath );
 }
 
+/* 设置app进程名 */
+void set_app_name( const char *name )
+{
+#ifdef LOG_APP_NAME
+    snprintf( app_name,LOG_APP_NAME,"%s",name );
+#endif
+}
+
+// print app name，打印app进程名
+#ifdef LOG_APP_NAME
+    #define PAPPNAME(f) \
+        do{ if (app_name[0]) fprintf(f,"[%s]",app_name); } while(0)
+#else
+    #define PAPPNAME(f)
+#endif
+
+// print file time，是否打印文件时间
 #ifdef _PFILETIME_
     #define PFILETIME(f,ntm,prefix)                                  \
         do{                                                          \
@@ -38,12 +58,13 @@ void set_log_args( bool dm,const char *ppath,const char *epath)
 // 这个本来想写成函数的，但是c++ 03不支持函数之间可变参传递
 // 要使用主循环的时间戳，不然服务器卡的时候会造成localtime时间与主循环时间戳不一致
 // 查找bug更麻烦
-#define RAW_FORMAT( tm,prefix,path,screen,fmt )                    \
+#define RAW_FORMAT( ctm,prefix,path,screen,fmt )                   \
     do{                                                            \
         struct tm ntm;                                             \
-        ::localtime_r( &tm,&ntm );                                 \
+        ::localtime_r( &ctm,&ntm );                                \
         if ( screen ){                                             \
             PFILETIME( screen,ntm,prefix );                        \
+            PAPPNAME( screen );                                    \
             FORMAT_TO_FILE( screen );                              \
         }                                                          \
         FILE * pf = ::fopen( path, "ab+" );                        \

@@ -41,6 +41,9 @@
 /* 日志文件超时秒数 */
 #define LOG_FILE_TIMEOUT 600
 
+/* 日志是否打印app进程名,后面的数字表示进程名最大长度 */
+#define LOG_APP_NAME 32
+
 /* count C++ object which push to lua */
 #define OBJ_COUNTER
 

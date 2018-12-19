@@ -145,7 +145,7 @@ function Application:one_initialized( name,val )
     init.val = init.val - (val or 1)
     if init.val <= 0 then
         self.init_list[name] = nil
-        PFLOG( "%s:%s initialize OK",self.srvname,name )
+        PFLOG( "initialize one action OK:%s",name )
 
         for _,init in pairs( self.init_list ) do
             if init.after == name then init.action( self ) end

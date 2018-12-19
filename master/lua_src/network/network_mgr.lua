@@ -39,7 +39,7 @@ function Network_mgr:srv_listen( ip,port )
     self.srv_listen_conn = Srv_conn()
     self.srv_listen_conn:listen( ip,port )
 
-    PFLOG( "%s listen for server at %s:%d",g_app.srvname,ip,port )
+    PFLOG( "listen for server at %s:%d",ip,port )
     return true
 end
 
@@ -48,7 +48,7 @@ function Network_mgr:clt_listen( ip,port )
     self.clt_listen_conn = Clt_conn()
     self.clt_listen_conn:listen( ip,port )
 
-    PFLOG( "%s listen for client at %s:%d",g_app.srvname,ip,port )
+    PFLOG( "listen for client at %s:%d",ip,port )
     return true
 end
 
@@ -61,7 +61,7 @@ function Network_mgr:connect_srv( srvs )
         local conn_id = conn:connect( srv.ip,srv.port )
 
         self.srv_conn[conn_id] = conn
-        PFLOG( "server connect to %s:%d",srv.ip,srv.port )
+        PFLOG( "connect to %s:%d",srv.ip,srv.port )
     end
 end
 
@@ -70,7 +70,7 @@ function Network_mgr:reconnect_srv( conn )
     local conn_id = conn:reconnect()
 
     self.srv_conn[conn_id] = conn
-    PFLOG( "server reconnect to %s:%d",conn.ip,conn.port )
+    PFLOG( "reconnect to %s:%d",conn.ip,conn.port )
 end
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
@@ -244,7 +244,7 @@ end
 function Network_mgr:srv_conn_new( conn_id,ecode )
     local conn = self.srv_conn[conn_id]
     if 0 ~= ecode then
-        PFLOG( "server connect(%d) to %s:%d error:%s",
+        PFLOG( "connect(%d) to %s:%d error:%s",
             conn_id,conn.ip,conn.port,util.what_error( ecode ) )
         self.srv_conn[conn_id] = nil
 
@@ -252,7 +252,7 @@ function Network_mgr:srv_conn_new( conn_id,ecode )
         return
     end
 
-    PFLOG( "server connect(%d) to %s:%d establish",conn_id,conn.ip,conn.port)
+    PFLOG( "connect(%d) to %s:%d establish",conn_id,conn.ip,conn.port)
 
     conn:send_register()
 end

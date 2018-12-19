@@ -64,10 +64,10 @@ end
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
     local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PFLOG( "%s load protocol schema:%d",g_app.srvname,pfs )
+    PFLOG( "load protocol schema:%d",pfs )
 
     local ffs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
-    PFLOG( "%s load flatbuffers schema:%d",g_app.srvname,ffs )
+    PFLOG( "load flatbuffers schema:%d",ffs )
 
     return (pfs >= 0 and ffs >= 0)
 end
@@ -161,7 +161,7 @@ function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
 
     -- 判断这个玩家是已认证的
     if not cfg.noauth and not self.auth_pid[pid] then
-        return ELOG( 
+        return ELOG(
             "clt_dispatch_ex:player not auth,pid [%d],cmd [%d]",pid,cmd )
     end
 

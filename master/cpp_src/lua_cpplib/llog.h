@@ -23,6 +23,8 @@ public:
     static int32 elog( lua_State *L );
     // 设置日志参数
     static int32 set_args( lua_State *L );
+    // 设置进程名
+    static int32 set_name( lua_State *L );
 private:
     void do_routine();
 

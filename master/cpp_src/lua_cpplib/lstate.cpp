@@ -167,6 +167,7 @@ int32 luaopen_log( lua_State *L )
     lc.def<&llog::plog> ("plog");
     lc.def<&llog::elog> ("elog");
     lc.def<&llog::set_args> ("set_args");
+    lc.def<&llog::set_name> ("set_name");
 
     return 0;
 }
