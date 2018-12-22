@@ -1,0 +1,42 @@
+//实体模块 协议定义，包含实体出现、消失、移动、外显同步 ...
+
+syntax = "proto3";
+package entity;
+
+// /////////////////////// server ////////////////////////////////////////////
+
+// 实体出现在视野中
+message SAppear
+{
+    int64 handle = 1; // 实体唯一handle
+    int32 type   = 2; // 实体类型,在entity_header.lua中定义
+    int32 way    = 3; // 出现方式，普通、传送、跳跃、复活...
+    int32 pix_x  = 4; // x轴像素坐标
+    int32 pix_y  = 5; // y轴像素坐标
+}
+
+// 视野中的实体消失
+message SDisappear
+{
+    int64 handle = 1; // 实体唯一handle
+    int32 way    = 2; // 消失方式，普通、传送、跳跃、死亡...
+}
+
+// 实体移动
+message SMove
+{
+    int64 handle = 1; // 实体唯一handle
+    int32 way    = 2; // 移动方式，行走、跳跃、飞行...
+    int32 pix_x  = 3; // 目的地x轴像素坐标
+    int32 pix_y  = 4; // 目的地y轴像素坐标
+}
+
+// /////////////////////// client ////////////////////////////////////////////
+
+// 玩家移动
+message CMove
+{
+    int32 way    = 1; // 移动方式，行走、跳跃、飞行...
+    int32 pix_x  = 2; // 目的地x轴像素坐标
+    int32 pix_y  = 3; // 目的地y轴像素坐标
+}
