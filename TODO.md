@@ -36,6 +36,7 @@ https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 * 各协议处理耗时统计
 * sethook各协议调用函数统计(debug用)
 * sethook限制、统计堆栈调用深度，防止死循环(debug用)
+* 统计各副本、各场景在线人数
 
 https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
 https://stackoverflow.com/questions/24603142/why-is-operator-new-necessary-when-operator-new-is-enough

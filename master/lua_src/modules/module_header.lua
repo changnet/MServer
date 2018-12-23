@@ -58,6 +58,7 @@ end
 -- 仅在area使用
 if "area" == g_app.srvname then
     g_entity_mgr = require "modules.entity.entity_mgr"
+    g_dungeon_mgr = require "modules.dungeon.dungeon_mgr"
 end
 
 -- =============================================================================
