@@ -4,12 +4,8 @@
 
 -- 玩家背包模块
 
-local item_conf = require "config.item_item"
-local level_conf = require "config.player_levelup"
-
--- 初始化配置
-local item_map = {}
-for _,v in pairs( item_conf ) do item_map[v.id] = v end
+local level_conf = require_conf("player_levelup")
+local item_conf = require_kv_conf("item_item","id")
 
 local Module = require "modules.player.module"
 
@@ -96,7 +92,7 @@ function Bag:raw_add( item )
     local id = item.id
     local count = item.count
 
-    local conf = item_map[id]
+    local conf = item_conf[id]
     if not conf then
         ELOG( "item conf not found:player = %d,id = %d",self.pid,id )
         return count
@@ -127,7 +123,7 @@ end
 
 -- 插入道具到新格子
 function Bag:add_to_new_grid( item )
-    local conf = item_map[item.id]
+    local conf = item_conf[item.id]
     local max_grid = self:get_max_grid()
 
     local new_grid = {}
@@ -171,7 +167,7 @@ function Bag:pile_count( old_item,new_item,new_count )
         if old_item[key] ~= new_item[key] then return 0 end
     end
 
-    local conf = item_map[old_item.id]
+    local conf = item_conf[old_item.id]
     return math.min( conf.pile - old_item.count,new_count )
 end
 

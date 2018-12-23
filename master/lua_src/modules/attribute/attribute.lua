@@ -4,7 +4,7 @@
 
 -- 战斗属性
 
-local raw_conf = require "config.attribute_base"
+local raw_conf = require_conf("attribute_base")
 
 -- 数组转kv
 local abt_factor = {}

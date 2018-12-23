@@ -4,7 +4,7 @@
 
 -- 角色欢迎
 
-local welcom_conf = require "config.player_welcome"
+local welcom_conf = require_conf("player_welcome")
 
 local Role_welcome = oo.singleton( nil,... )
 

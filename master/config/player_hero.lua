@@ -15,6 +15,8 @@ return
         ['attack'] = 29,
         ['attack_range'] = 500,
         ['attack_speed'] = 1,
+        ['crit'] = 0,
+        ['crit_damage'] = 0,
         ['defense'] = 1,
         ['exp'] = 400,
         ['hit_effect_bone'] = 'Bip01 Pelvis',
@@ -23,6 +25,7 @@ return
         ['intelligence'] = 17,
         ['level'] = 1,
         ['move_speed'] = 400,
+        ['mp'] = 0,
         ['name'] = '战士',
         ['prime_attribute'] = 'strength',
         ['scale_ratio'] = 1,
@@ -36,6 +39,8 @@ return
         ['attack'] = 14,
         ['attack_range'] = 500,
         ['attack_speed'] = 1,
+        ['crit'] = 0,
+        ['crit_damage'] = 0,
         ['defense'] = 2,
         ['exp'] = 800,
         ['hit_effect_bone'] = 'Bone33',
@@ -44,10 +49,12 @@ return
         ['intelligence'] = 17,
         ['level'] = 1,
         ['move_speed'] = 300,
+        ['mp'] = 0,
         ['name'] = '法师',
         ['prime_attribute'] = 'agility',
         ['scale_ratio'] = 0.800000011921,
-        ['strength'] = 15
+        ['strength'] = 15,
+        ['upgrade_id'] = 0
     },
     {
         ['agility'] = 8,
@@ -55,6 +62,8 @@ return
         ['attack'] = 8,
         ['attack_range'] = 500,
         ['attack_speed'] = 1,
+        ['crit'] = 0,
+        ['crit_damage'] = 0,
         ['defense'] = 1,
         ['exp'] = 400,
         ['hit_effect_bone'] = 'Bone33',
@@ -63,9 +72,11 @@ return
         ['intelligence'] = 17,
         ['level'] = 1,
         ['move_speed'] = 300,
+        ['mp'] = 0,
         ['name'] = '射手',
         ['prime_attribute'] = 'agility',
         ['scale_ratio'] = 0.5,
-        ['strength'] = 13
+        ['strength'] = 13,
+        ['upgrade_id'] = 0
     }
 }

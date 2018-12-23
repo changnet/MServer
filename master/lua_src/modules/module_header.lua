@@ -8,6 +8,7 @@ require "global.global"
 require "global.table"
 require "global.string"
 require "global.time"
+require "global.require_conf"
 
 require "modules.system.define"
 require "modules.system.hot_fix"

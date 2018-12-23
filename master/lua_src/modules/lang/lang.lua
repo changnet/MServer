@@ -5,8 +5,8 @@
 -- 语言包
 
 require "modules.lang.lang_header"
-local misc_list = require "config.lang_misc"
-local tips_list = require "config.lang_tips"
+local misc_list = require_conf("lang_misc")
+local tips_list = require_conf("lang_tips")
 
 local lang_type = g_setting.lang
 

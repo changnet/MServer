@@ -9,7 +9,7 @@ from attribute_base
 
 return
 {
-    {['id'] = 1,['name'] = '血量'},
+    {['factor'] = 0,['id'] = 1,['name'] = '血量'},
     {['factor'] = 2.5,['id'] = 2,['name'] = '最大血量'},
     {['factor'] = 8,['id'] = 3,['name'] = '攻击'},
     {['factor'] = 8,['id'] = 4,['name'] = '防御'}

@@ -4,7 +4,7 @@
 
 -- 玩家存库基础数据模块
 
-local level_conf = require "config.player_levelup"
+local level_conf = require_conf("player_levelup")
 
 local Module = require "modules.player.module"
 
