@@ -27,6 +27,12 @@ end
 function Dungeon_mgr:init_static_dungeon()
     -- TODO:真实项目应该从配置加载，这里只创建几个测试场景
     PLOG("init_static_dungeon for test")
+
+    -- 创建测试场景
+    local test_scene = 10
+    for id = 1,test_scene do
+        map_mgr:create_map(id,128,64)
+    end
 end
 
 -- 创建副本

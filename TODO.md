@@ -2,9 +2,8 @@
 * 参考boost实现object_pool，把astar和aoi中的缓存改由object_pool实现，其他系统也看下有没有替换的
 * 完成背包、聊天等系统设计
 * 客户端进入场景，增加gm系统
-* gm增加一个从shell脚本调用http的接口
 * mysql增加lua table直接存mysql接口，并且测试一下和格式化字符串的效率
-* 在debug模式下，增加个配置可以在打印日志时固定显示进程名，不然日志分不清
+* 实现场景的static区域属性(不可修改)和dynamic区域属性(可根据逻辑创建和修改)
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步
