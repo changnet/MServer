@@ -15,7 +15,7 @@ function App:__init( ... )
 
     self:set_initialize( "world" ) -- 等待一个world服连接OK
     self:set_initialize( "gateway" ) -- 等待一个world服连接OK
-    -- self:set_initialize( "dungeon",nil,self.dungeon_initialize ) -- 加载副本数据
+    self:set_initialize( "dungeon",nil,self.dungeon_initialize ) -- 加载副本数据
 end
 
 -- 重写初始化入口
@@ -42,7 +42,7 @@ end
 
 -- 加载全服邮件
 function App:dungeon_initialize()
-    
+    g_dungeon_mgr:init_static_dungeon()
 end
 
 -- 主事件循环，设置了ev:set_app_ev后由C++回调

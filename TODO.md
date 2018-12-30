@@ -3,6 +3,7 @@
 * 完成背包、聊天等系统设计
 * 客户端进入场景，增加gm系统
 * mysql增加lua table直接存mysql接口，并且测试一下和格式化字符串的效率
+* 把astar和map模块分开，把map_mgr去掉，都放到lua管理
 * 实现场景的static区域属性(不可修改)和dynamic区域属性(可根据逻辑创建和修改)
 
 #清理test和doc目录中无关的内容，迁移到wiki

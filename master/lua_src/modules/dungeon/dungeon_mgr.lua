@@ -4,13 +4,16 @@
 
 -- 副本管理
 
-local Dungeono = require "modules.dungeon.dungeon"
+local Dungeon = require "modules.dungeon.dungeon"
+local Time_id = require "modules.system.time_id"
 
 local Dungeon_mgr = oo.singleton( nil,... )
 
 function Dungeon_mgr:__init()
     self.static = nil -- 静态副本(像主城这种)，在起服时候创建，永远不销毁
     self.dungeon = {} -- 副本handle为key
+
+    self.hdl_generator = Time_id()
 end
 
 -- 获取静态副本
@@ -33,11 +36,26 @@ function Dungeon_mgr:init_static_dungeon()
     for id = 1,test_scene do
         map_mgr:create_map(id,128,64)
     end
+
+    -- 创建主城等静态场景(副本id为0)
+    self.static = self:create_dungeon(0)
+
+    g_app:one_initialized( "dungeon",1 ) -- 副本数据初始化完成
 end
 
 -- 创建副本
-function Dungeon_mgr:create_dungeon( id )
-    -- TODO:从配置加载
+-- @only_first_scene:只初始化第一个场景
+function Dungeon_mgr:create_dungeon( id,only_first_scene )
+    local hdl = self.hdl_generator:next_id()
+
+    local dungeon = Dungeon(id,hdl)
+    if only_first_scene then
+        dungeon:init_first_scene()
+    else
+        dungeon:init_all_scene()
+    end
+
+    return dungeon
 end
 
 -- 销毁副本
