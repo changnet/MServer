@@ -34,7 +34,7 @@ function Dungeon_mgr:init_static_dungeon()
     -- 创建测试场景
     local test_scene = 10
     for id = 1,test_scene do
-        map_mgr:create_map(id,128,64)
+        g_map_mgr:create_map(id,128,64)
     end
 
     -- 创建主城等静态场景(副本id为0)
