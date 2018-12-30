@@ -9,7 +9,6 @@
 #include "net/codec/codec_mgr.h"
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
-#include "lua_cpplib/lmap_mgr.h"
 #include "lua_cpplib/lev.h"
 #include "lua_cpplib/lobj_counter.h"
 #include "lua_cpplib/lnetwork_mgr.h"
@@ -56,10 +55,6 @@ int32 main( int32 argc,char **argv )
     lclass<lnetwork_mgr>::push( L,network_mgr,false );
     lua_setglobal( L,"network_mgr" );
 
-    class lmap_mgr *map_mgr = lmap_mgr::instance();
-    lclass<lmap_mgr>::push( L,map_mgr,false );
-    lua_setglobal( L,"map_mgr" );
-
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf( script_path,PATH_MAX,"lua_src/%s",LUA_ENTERANCE );
@@ -87,7 +82,6 @@ int32 main( int32 argc,char **argv )
     }
 
     lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
-    lmap_mgr::uninstance    ();      /* 关闭地图管理 */
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
     lev::uninstance  ();      /* 关闭主事件循环 */
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */

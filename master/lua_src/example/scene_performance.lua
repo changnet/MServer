@@ -1,12 +1,17 @@
 -- 场景相关性能测试
 
-local map_mgr = map_mgr
-
 local id = 9999
 local width = 64
 local height = 64
 
-if not map_mgr:create_map(id,width,height) then
+local Map = require "Map"
+local Astar = require "Astar"
+
+
+local map = Map()
+local astar = Astar()
+
+if not map:set(id,width,height) then
     PLOG("create map error")
     return
 end
@@ -55,7 +60,7 @@ for _,range in pairs( grid ) do
     local y = range.y
     local cost = range.cost
     for x = range.x_min,range.x_max do
-        if not map_mgr:fill_map(id,x,y,cost) then
+        if not map:fill(x,y,cost) then
             PLOG("fill map error")
         end
     end
@@ -65,7 +70,7 @@ local path = {} -- 路径
 
 -- @dp: dump path
 function test_path(id,x,y,dx,dy,path,dp)
-    local cnt = map_mgr:find_path(id,x,y,dx,dy,path)
+    local cnt = astar:search(map,x,y,dx,dy,path)
     if not cnt or cnt <= 0 then
         PFLOG("can not find path from (%d,%d) to (%d,%d)",x,y,dx,dy)
         return

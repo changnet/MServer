@@ -2,18 +2,19 @@
 #include <lparson.h>
 #include <lrapidxml.hpp>
 
+#include "lev.h"
 #include "llog.h"
 #include "lsql.h"
 #include "laoi.h"
+#include "lmap.h"
 #include "lrank.h"
 #include "lutil.h"
+#include "lastar.h"
 #include "lmongo.h"
 #include "lstate.h"
 #include "lclass.h"
 #include "ltimer.h"
 #include "lacism.h"
-#include "lmap_mgr.h"
-#include "lev.h"
 #include "lobj_counter.h"
 #include "lnetwork_mgr.h"
 
@@ -68,11 +69,12 @@ int32 luaopen_ev    ( lua_State *L );
 int32 luaopen_sql   ( lua_State *L );
 int32 luaopen_log   ( lua_State *L );
 int32 luaopen_aoi   ( lua_State *L );
+int32 luaopen_map   ( lua_State *L );
 int32 luaopen_rank  ( lua_State *L );
 int32 luaopen_timer ( lua_State *L );
+int32 luaopen_astar ( lua_State *L );
 int32 luaopen_acism ( lua_State *L );
 int32 luaopen_mongo ( lua_State *L );
-int32 luaopen_map_mgr( lua_State *L );
 int32 luaopen_network_mgr( lua_State *L );
 
 void lstate::open_cpp()
@@ -91,11 +93,12 @@ void lstate::open_cpp()
     luaopen_sql   (L);
     luaopen_log   (L);
     luaopen_aoi   (L);
+    luaopen_map   (L);
     luaopen_rank  (L);
     luaopen_timer (L);
+    luaopen_astar (L);
     luaopen_acism (L);
     luaopen_mongo (L);
-    luaopen_map_mgr(L);
     luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
@@ -247,20 +250,6 @@ int32 luaopen_network_mgr( lua_State *L )
     return 0;
 }
 
-int32 luaopen_map_mgr( lua_State *L )
-{
-    lclass<lmap_mgr> lc(L,"Map_mgr");
-
-    lc.def<&lmap_mgr::fill_map> ( "fill_map" );
-    lc.def<&lmap_mgr::find_path> ( "find_path" );
-    lc.def<&lmap_mgr::load_path> ( "load_path" );
-    lc.def<&lmap_mgr::load_file> ( "load_file" );
-    lc.def<&lmap_mgr::remove_map> ( "remove_map" );
-    lc.def<&lmap_mgr::create_map> ( "create_map" );
-
-    return 0;
-}
-
 int32 luaopen_aoi( lua_State *L )
 {
     lclass<laoi> lc(L,"Aoi");
@@ -275,6 +264,19 @@ int32 luaopen_aoi( lua_State *L )
     lc.def<&laoi::exit_entity> ( "exit_entity" );
     lc.def<&laoi::enter_entity> ( "enter_entity" );
     lc.def<&laoi::update_entity> ( "update_entity" );
+    return 0;
+}
+
+int32 luaopen_map( lua_State *L )
+{
+    lclass<lmap> lc(L,"Map");
+
+    lc.def<&lmap::set>  ( "set" );
+    lc.def<&lmap::fill> ( "fill" );
+    lc.def<&lmap::load> ( "load" );
+    lc.def<&lmap::fork> ( "fork" );
+    lc.def<&lmap::get_size> ( "get_size" );
+
     return 0;
 }
 
@@ -297,6 +299,15 @@ int32 luaopen_rank( lua_State *L )
     lc_bucket_rank.def< &lbucket_rank::insert > ("insert");
     lc_bucket_rank.def< &lbucket_rank::get_count > ("get_count");
     lc_bucket_rank.def< &lbucket_rank::get_top_n > ("get_top_n");
+
+    return 0;
+}
+
+int32 luaopen_astar( lua_State *L )
+{
+    lclass<lastar> lc(L,"Astar");
+
+    lc.def<&lastar::search>  ( "search" );
 
     return 0;
 }
