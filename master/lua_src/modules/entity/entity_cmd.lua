@@ -48,14 +48,17 @@ local function player_exit( pid )
 end
 
 -- 玩家进入场景
-local function player_enter_scene( pid,dungeon_id,scene_id )
+-- 在进入场景之前，必须已经同步玩家必要的数据(外显、战斗属性等)
+local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     local player = g_entity_mgr:get_player(pid)
     if not player then
         ELOG("player_enter_scene no player found",pid)
         return
     end
 
-    PLOG("player enter scene",pid)
+    g_dungeon_mgr:enter_static_scene(player,scene_id,pix_x,pix_y)
+
+    PLOG("player enter scene",pid,scene_id,pix_x,pix_y)
 end
 
 g_rpc:declare( "player_exit",player_exit )

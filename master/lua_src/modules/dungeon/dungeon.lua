@@ -34,12 +34,15 @@ end
 -- 场景少的可以在副本创建时初始化所有场景
 -- 但像爬塔这种几十上百层的就不要一下子创建那么多场景了
 function Dungeon:init_all_scene()
+    for scene_id in pairs (scene_map[self.id]) do
+        self:init_one_scene( scene_id )
+    end
 end
 
 -- 初始化场景
 function Dungeon:init_one_scene( scene_id )
     assert(nil == self.scene[scene_id]) -- 只能初始化一次
-    assert(scene_map[id][scene_id]) -- 校验场景在这个副本中
+    assert(scene_map[self.id][scene_id]) -- 校验场景在这个副本中
 
     self.scene[scene_id] = Scene(scene_id)
 end
@@ -50,6 +53,14 @@ function Dungeon:init_first_scene()
     local scene_id = conf.scene[1]
 
     return self:init_one_scene(scene_id)
+end
+
+-- 进入副本
+function Dungeon:enter(entity,scene_id,pix_x,pix_y)
+    local scene = self.scene[scene_id]
+
+    assert(scene)
+    return scene:entity_enter(entity,pix_x,pix_y)
 end
 
 return Dungeon

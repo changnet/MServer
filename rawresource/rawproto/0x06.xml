@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <command>0x06</command>
+    <comment>实体模块</comment>
+    <module>entity</module>
+    <subobjects>
+        <subobject>
+            <client></client>
+            <command>0x01</command>
+            <comment>实体出现</comment>
+            <field>APPEAR</field>
+            <server>Appear</server>
+        </subobject>
+        <subobject>
+            <client></client>
+            <command>0x02</command>
+            <comment>实体消失</comment>
+            <field>DISAPPEAR</field>
+            <server>Disappear</server>
+        </subobject>
+        <subobject>
+            <client>undefine</client>
+            <command>0x03</command>
+            <comment>移动</comment>
+            <field>MOVE</field>
+            <server>Move</server>
+        </subobject>
+    </subobjects>
+</root>

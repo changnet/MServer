@@ -65,9 +65,7 @@ end
 
 -- 发送数据包到客户端
 function Player:send_pkt( cmd,pkt,ecode )
-    local srv_conn = g_network_mgr:get_gateway_conn()
-
-    return srv_conn:send_clt_pkt( self.pid,cmd,pkt,ecode )
+    return g_network_mgr:send_clt_pkt( self.pid,cmd,pkt,ecode )
 end
 
 -- 定时器事件
@@ -182,7 +180,7 @@ function Player:on_login()
     -- 同步战斗属性到场景
     self.abt_sys:update_battle_abt()
     -- 实体进入场景
-    g_rpc:invoke("player_enter_scene",self.pid)
+    g_rpc:invoke("player_enter_scene",self.pid,0,1,1,1)
 
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
 

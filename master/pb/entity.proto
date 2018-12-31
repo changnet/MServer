@@ -6,7 +6,7 @@ package entity;
 // /////////////////////// 结构定义 ////////////////////////////////////////////
 message PlayerAppear
 {
-    int32 actor_id = 1; // 玩家id
+    int32 pid = 1; // 玩家id
 }
 
 message MonsterAppear

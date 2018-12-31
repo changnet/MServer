@@ -158,6 +158,12 @@ function Network_mgr:get_gateway_conn()
     return self.srv[gateway_session]
 end
 
+-- 在非网关进程直接发送数据到客户端
+function Network_mgr:send_clt_pkt( pid,cmd,pkt,ecode )
+    local srv_conn = self.srv[gateway_session]
+    return srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
+end
+
 -- 设置客户端连接
 function Network_mgr:bind_role( pid,clt_conn )
     assert( "player already have a conn",nil == self.clt[pid] )

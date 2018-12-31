@@ -9,9 +9,14 @@ local visual_width = 3 -- 视野宽度格子数
 local visual_height = 4 -- 视野高度格子数
 
 local Aoi = require "Aoi"
+local ET = require "modules.entity.entity_header"
 local scene_conf = require_kv_conf("dungeon_scene","id")
 
 local Scene = oo.class( nil,... )
+
+-- 缓存一个table用于和底层交互，避免频繁创建table
+local tmp_list = {}
+local g_entity_mgr = g_entity_mgr
 
 function Scene:__init(id,dungeon_hdl)
     self.id = id
@@ -21,7 +26,9 @@ function Scene:__init(id,dungeon_hdl)
     -- 一些场景可能会有动态地图，比如根据帮派改变可行走区域，这时就要用map:fork来复制一份
     -- 地图数据根据程序处理了，这里暂不处理
     local map_id = scene_conf[id].map
-    local map = g_mgr_map:get_map( map_id )
+    local map = g_map_mgr:get_map( map_id )
+
+    local width,height = map:get_size()
 
     local aoi = Aoi()
     aoi:set_size(width*pix,height*pix,pix)
@@ -30,6 +37,81 @@ function Scene:__init(id,dungeon_hdl)
     self.aoi = aoi
 
     self.entity_count = {} -- 场景中各种实体的数量，在这里统计
+end
+
+-- 实体进入场景
+function Scene:entity_enter(entity,pix_x,pix_y)
+    local event = 0
+    local et = entity.et
+
+    -- 目前只有玩家会接收其他实体的事件
+    if ET.PLAYER == et then event = 1 end
+    self.aoi:enter_entity(entity.pid,pix_x,pix_y,et,event,tmp_list)
+
+    if tmp_list.n <= 0 then return end
+
+
+    local pid_list = {}
+    local is_player = (ET.PLAYER == entity.et)
+
+    for idx = 1,tmp_list.n do
+        local tmp_entity = g_entity_mgr:get_entity( tmp_list[idx] )
+
+        -- 如果在我周围的是一个玩家，告诉他我出现了
+        if ET.PLAYER == tmp_entity.et then
+            table.insert(pid_list,tmp_entity.pid)
+        end
+
+        -- 告诉我周围出现了这个实体(玩家或怪物、npc)
+        if is_player then
+            local other_pkt = tmp_entity:appear_pkt()
+            g_network_mgr:send_clt_pkt(entity.pid,SC.ENTITY_APPEAR,other_pkt)
+        end
+    end
+
+    -- 告诉我周围的玩家，我出现了
+    if not table.empty(pid_list) then
+        -- 1表示底层按玩家pid广播
+        local my_pkt = entity:appear_pkt()
+        g_network_mgr:clt_multicast( 1,pid_list,SC.ENTITY_APPEAR,my_pkt )
+    end
+end
+
+-- 实体退出场景
+local exit_pkt = {}
+function Scene:entity_exit(entity)
+    -- tmp_list只返回关注entity的实体列表，目前只有玩家列表
+    self.aoi:exit_entity(entity.eid,tmp_list)
+    if tmp_list.n <= 0 then return end
+
+    -- 广播给周边的玩家该实体消失了
+    local pid_list = {}
+    local g_entity_mgr = g_entity_mgr
+
+    for idx = 1,tmp_list.n do
+        local tmp_entity = g_entity_mgr:get_entity( tmp_list[idx] )
+
+        assert( ET.PLAYER == tmp_entity.et and tmp_entity.pid )
+        table.insert( pid_list,tmp_entity.pid )
+    end
+
+    -- exit_pkt.way = 0 -- 如何退出
+    exit_pkt.handle = entity.eid
+    -- 1表示底层按玩家pid广播
+    g_network_mgr:clt_multicast( 1,pid_list,SC.ENTITY_DISAPPEAR,exit_pkt )
+end
+
+-- 获取场景中的实体数据 移动
+function Scene:get_entity_count( entity_type )
+    return self.entity_count[entity_type]
+end
+
+-- 获取场景中的实体
+-- 请不要保存或者修改返回的table
+function Scene:get_entity( entity_type )
+    self.aoi:get_all_entitys(entity_type,tmp_list)
+
+    return tmp_list
 end
 
 return Scene

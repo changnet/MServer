@@ -98,7 +98,7 @@ function Res:reg_player_res( res_type,get,add,dec )
 end
 
 local function res_op_factory( module,func )
-    return function( palyer,... )
+    return function( player,... )
         return func( player:get_module(module),... )
     end
 end

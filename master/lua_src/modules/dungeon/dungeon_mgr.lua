@@ -69,6 +69,11 @@ function Dungeon_mgr:destory_dungeon( handle )
     self.dungeon[handle] = nil
 end
 
+-- 进入静态场景
+function Dungeon_mgr:enter_static_scene(entity,scene_id,pix_x,pix_y)
+    return self.static:enter(entity,scene_id,pix_x,pix_y)
+end
+
 local dg_mgr = Dungeon_mgr()
 
 return dg_mgr

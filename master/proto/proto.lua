@@ -5,6 +5,7 @@ local BAG = (0x02 << 8)
 local MISC = (0x03 << 8)
 local CHAT = (0x04 << 8)
 local MAIL = (0x05 << 8)
+local ENTITY = (0x06 << 8)
 
 
 local SC =
@@ -24,6 +25,9 @@ local SC =
     MAIL_INFO = { MAIL + 0x01,"mail.pb","mail.SMailInfo" },
     MAIL_DEL = { MAIL + 0x02,"mail.pb","mail.SMailDel" },
     MAIL_NEW = { MAIL + 0x03,"mail.pb","mail.SNewMail" },
+    ENTITY_APPEAR = { ENTITY + 0x01,"entity.pb","entity.SAppear" },
+    ENTITY_DISAPPEAR = { ENTITY + 0x02,"entity.pb","entity.SDisappear" },
+    ENTITY_MOVE = { ENTITY + 0x03,"entity.pb","entity.SMove" },
 
 }
 
@@ -36,6 +40,7 @@ local CS =
     MISC_WELCOME_GET = { MISC + 0x02,"misc.pb","misc.CWelcomeGet" },
     CHAT_DOCHAT = { CHAT + 0x02,"chat.pb","chat.CDoChat" },
     MAIL_DEL = { MAIL + 0x02,"mail.pb","mail.CMailDel" },
+    ENTITY_MOVE = { ENTITY + 0x03,"entity.pb","entity.Cundefine" },
 
 }
 
