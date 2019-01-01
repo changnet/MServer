@@ -3,7 +3,7 @@
 -- xzc
 
 local UNIQUEID = UNIQUEID
-local Unique_id = oo.class( nil,... )
+local Unique_id = oo.singleton( nil,... )
 
 local player_query = string.format( '{"_id":%d}',UNIQUEID.PLAYER )
 
@@ -32,6 +32,8 @@ function Unique_id:on_db_loaded( ecode,res )
         return
     end
 
+    -- TODO:有些项目是到对应的表里查找最大id，比如玩家id就到玩家表里把最大id找出来，这样不
+    -- 用考虑合服的事，后面试下
     local seed_map = {}
     for _,raw_seed in pairs( res ) do
         local seed_id = raw_seed._id

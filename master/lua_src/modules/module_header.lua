@@ -19,6 +19,9 @@ local raw_setting = require "setting.setting"
 g_setting     = raw_setting[g_app.srvname]
 assert( g_setting,"no server conf found" )
 
+-- !!! 放到这里的，一定要是singleton，不然会被销毁重建
+-- TODO:找个方法检测一下是否singleton
+
 g_log_mgr     = require "modules.log.log_mgr"
 g_unique_id   = require "modules.system.unique_id"
 g_conn_mgr    = require "network.conn_mgr"
