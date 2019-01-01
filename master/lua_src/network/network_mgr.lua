@@ -8,8 +8,13 @@ local Clt_conn      = require "network.clt_conn"
 local network_mgr = network_mgr
 local Network_mgr = oo.singleton( nil,... )
 
+-- 目前暂定只有一个网关，一个世界，一个场景
 local gateway_session = g_app:srv_session(
     "gateway",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
+local world_session = g_app:srv_session(
+    "world",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
+local area_session = g_app:srv_session(
+    "area",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
 
 function Network_mgr:__init()
     self.srv = {}  -- session为key，连接对象为value
@@ -164,6 +169,27 @@ function Network_mgr:send_clt_pkt( pid,cmd,pkt,ecode )
     return srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
 end
 
+-- 发送服务器数据包到网关(现在同一类型只有一个进程才能这样做)
+function Network_mgr:send_gateway_pkt( cmd,pkt,ecode )
+    local srv_conn = self.srv[gateway_session]
+
+    return srv_conn:send_pkt( cmd,pkt,ecode )
+end
+
+-- 发送服务器数据包到世界服(现在同一类型只有一个进程才能这样做)
+function Network_mgr:send_world_pkt( cmd,pkt,ecode )
+    local srv_conn = self.srv[world_session]
+
+    return srv_conn:send_pkt( cmd,pkt,ecode )
+end
+
+-- 发送服务器数据包到场景(现在同一类型只有一个进程才能这样做)
+function Network_mgr:send_area_pkt( cmd,pkt,ecode )
+    local srv_conn = self.srv[area_session]
+
+    return srv_conn:send_pkt( cmd,pkt,ecode )
+end
+
 -- 设置客户端连接
 function Network_mgr:bind_role( pid,clt_conn )
     assert( "player already have a conn",nil == self.clt[pid] )
@@ -286,7 +312,7 @@ function Network_mgr:clt_conn_del( conn_id )
     if conn.pid then
         self.clt[conn.pid] = nil
         local pkt = { pid = conn.pid }
-        g_network_mgr:srv_multicast( SS.PLAYER_OFFLINE,pkt )
+        g_network_mgr:send_world_pkt( SS.PLAYER_OFFLINE,pkt )
     end
 
     PFLOG( "client connect del:%d",conn_id )

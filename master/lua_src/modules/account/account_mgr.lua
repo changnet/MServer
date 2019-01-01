@@ -213,7 +213,7 @@ function Account_mgr:login_otherwhere( role_info )
     -- 通知其他服务器玩家下线
     if role_info.pid then
         local pkt = { pid = role_info.pid }
-        g_network_mgr:srv_multicast( SS.PLAYER_OTHERWHERE,pkt )
+        g_network_mgr:send_world_pkt( SS.PLAYER_OTHERWHERE,pkt )
     end
 
     -- 关闭旧客户端连接

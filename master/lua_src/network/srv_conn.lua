@@ -101,7 +101,7 @@ function Srv_conn:conn_accept( new_conn_id )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_STREAM )
 
-    -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
+    -- 设置服务器之间链接缓冲区大小：16777216 = 16MB
     network_mgr:set_send_buffer_size( new_conn_id,16777216*4,16777216*4 )
     network_mgr:set_recv_buffer_size( new_conn_id,16777216*4,16777216*4 )
 
@@ -119,7 +119,7 @@ function Srv_conn:conn_new( ecode )
         network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_PROTOBUF )
         network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_STREAM )
 
-        -- 设置服务器之前链接缓冲区大小：16777216 = 16MB
+        -- 设置服务器之间链接缓冲区大小：16777216 = 16MB
         network_mgr:set_send_buffer_size( self.conn_id,16777216*4,16777216*4 )
         network_mgr:set_recv_buffer_size( self.conn_id,16777216*4,16777216*4 )
     end

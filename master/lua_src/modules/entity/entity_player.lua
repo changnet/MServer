@@ -36,12 +36,12 @@ local tmp_pkt = {}
 local tmp_player_pkt = {}
 function Entity_player:appear_pkt()
     -- 创建基础数据
-    Entity.appear_pkt(tmp_pkt)
+    Entity.appear_pkt(self,tmp_pkt)
 
     -- 创建玩家特有的数据
-    tm_player_pkt.pid = self.pid
+    tmp_player_pkt.pid = self.pid
 
-    tmp_pkt.player = self.player_appear_pkt()
+    tmp_pkt.player = tmp_player_pkt
 
     return tmp_pkt
 end

@@ -20,7 +20,7 @@ class grid_aoi
 public:
     struct entity_ctx;
 
-    typedef uint32 entity_id_t; // 用来标识实体的唯一id
+    typedef int64 entity_id_t; // 用来标识实体的唯一id
     typedef std::vector< struct entity_ctx* > entity_vector_t; // 实体列表
 
     struct entity_ctx

@@ -203,25 +203,28 @@ void stream_packet::ss_dispatch( const s2s_header *header )
     }
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if ( cmd_cfg->_session != network_mgr->get_curr_session() )
-    {
-        class socket *dest_sk  =
-            network_mgr->get_conn_by_session( cmd_cfg->_session );
-        if ( !dest_sk )
-        {
-            ERROR( "server packet forwarding "
-                "no destination found.cmd:%d",header->_cmd );
-            return;
-        }
+    // 暂时停用服务器数据包自动转发 !!! 2019-01-01
+    // 在实际使用中，这个功能较为少用。但是会引起一些麻烦。
+    // 比如错误地广播一个数据包，会导致其他进程把数据包转发给一个进程。
+    // if ( cmd_cfg->_session != network_mgr->get_curr_session() )
+    // {
+    //     class socket *dest_sk  =
+    //         network_mgr->get_conn_by_session( cmd_cfg->_session );
+    //     if ( !dest_sk )
+    //     {
+    //         ERROR( "server packet forwarding "
+    //             "no destination found.cmd:%d",header->_cmd );
+    //         return;
+    //     }
 
-        bool is_ok = dest_sk->append( header,PACKET_LENGTH( header ) );
-        if ( !is_ok )
-        {
-            ERROR( "server packet forwrding "
-                "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header )) );
-        }
-        return;
-    }
+    //     bool is_ok = dest_sk->append( header,PACKET_LENGTH( header ) );
+    //     if ( !is_ok )
+    //     {
+    //         ERROR( "server packet forwrding "
+    //             "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header )) );
+    //     }
+    //     return;
+    // }
 
     ss_command( header,cmd_cfg );
 }

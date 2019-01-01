@@ -47,6 +47,7 @@ function Entity_mgr:new_entity( et,... )
         assert( false,string.format("unknow entity type:%d",et) )
     end
 
+    self.entity[eid] = entity
     return entity
 end
 

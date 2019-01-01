@@ -87,8 +87,6 @@ function Player_mgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
     g_authorize:unset_player( pid )
 
-    PRINTF( "player offline 1111,pid = %d",pid )
-    PRINTF( "player offline 2222,pid = %d",pid )
     local player = self.player[pid]
     if not player then
         ELOG( "player offline,object not found:%d",pid )

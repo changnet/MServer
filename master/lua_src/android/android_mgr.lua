@@ -46,7 +46,7 @@ end
 function Android_mgr:start()
     local srvindex = tonumber(g_app.srvindex) -- 平台
     local srvid = tonumber(g_app.srvid) -- 服务器
-    for index = 1,1 do
+    for index = 1,3 do
         local conn_id = 
             network_mgr:connect( "127.0.0.1",10002,network_mgr.CNT_CSCN )
 
