@@ -16,12 +16,13 @@ end
 
 -- 获取当前的id
 function Time_id:now_id()
-    return ( self.seed << 16 + self.sec )
+    return ( (self.seed << 32) + self.sec )
 end
 
 -- 获取下一个自增Id
 function Time_id:next_id()
     local now = ev:time()
+
     if self.sec ~= now then
         self.seed = 0
         self.sec  = now
@@ -34,8 +35,9 @@ function Time_id:next_id()
         return -1
     end
 
+    -- 0-31为时间戳，32-47为计数
     -- TODO:2038年可以修改偏移的位数或者对now作一个偏移，不再从1970年计算
-    return ( self.seed << 16 + now )
+    return ( (self.seed << 32) + now )
 end
 
 -- 获取下一个自增Id
@@ -56,7 +58,7 @@ function Time_id:next_id_ex()
     end
 
     -- TODO:2038年可以修改偏移的位数或者对now作一个偏移，不再从1970年计算
-    return ( self.seed << 16 + now )
+    return ( (self.seed << 32) + now )
 end
 
 return Time_id

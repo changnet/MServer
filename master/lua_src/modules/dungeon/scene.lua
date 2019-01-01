@@ -18,8 +18,9 @@ local Scene = oo.class( nil,... )
 local tmp_list = {}
 local g_entity_mgr = g_entity_mgr
 
-function Scene:__init(id,dungeon_hdl)
+function Scene:__init(id,dungeon_id,dungeon_hdl)
     self.id = id
+    self.dungeon_id  = dungeon_id
     self.dungeon_hdl = dungeon_hdl
 
     -- TODO:对于绝大多数地图，地图数据都是不变的，多个副本共用一份，则g_map_mgr管理就可以了
@@ -37,6 +38,7 @@ function Scene:__init(id,dungeon_hdl)
     self.aoi = aoi
 
     self.entity_count = {} -- 场景中各种实体的数量，在这里统计
+    for _,et in pairs(ET) do self.entity_count[et] = 0 end
 end
 
 -- 实体进入场景
@@ -46,7 +48,10 @@ function Scene:entity_enter(entity,pix_x,pix_y)
 
     -- 目前只有玩家会接收其他实体的事件
     if ET.PLAYER == et then event = 1 end
-    self.aoi:enter_entity(entity.pid,pix_x,pix_y,et,event,tmp_list)
+    self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,event,tmp_list)
+
+    self.entity_count[et] = 1 + self.entity_count[et]
+    entity:set_pos(self.dungeon_hdl,self.dungeon_id,self.id,pix_x,pix_y)
 
     if tmp_list.n <= 0 then return end
 
@@ -81,7 +86,13 @@ end
 local exit_pkt = {}
 function Scene:entity_exit(entity)
     -- tmp_list只返回关注entity的实体列表，目前只有玩家列表
+    -- TODO:aoi找不到这个实体会报错，这个要不要改成返回值
     self.aoi:exit_entity(entity.eid,tmp_list)
+
+    local et = entity.et
+    self.entity_count[et] = self.entity_count[et] - 1
+    assert(self.entity_count[et] >= 0,"scene entity count fail")
+
     if tmp_list.n <= 0 then return end
 
     -- 广播给周边的玩家该实体消失了

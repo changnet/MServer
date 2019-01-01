@@ -6,12 +6,12 @@
 
 local Attribute_sys = require "modules.attribute.attribute_sys"
 
-local Entity_player = oo.class( nil,... )
+local Entity = require "modules.entity.entity"
+local Entity_player = oo.class( Entity,... )
 
 function Entity_player:__init(eid,pid)
+    Entity.__init(self,eid,ET.PLAYER)
     self.pid = pid -- 玩家唯一id
-    self.eid = eid -- 实体唯一id
-    self.et = ET.PLAYER
 
     self.abt_sys = Attribute_sys()
 end
@@ -29,26 +29,17 @@ function Entity_player:update_battle_abt( abt_list )
     for idx = 1,#abt_list,2 do
         sys:push_one( abt_list[idx],abt_list[idx+1] )
     end
-
-    vd(self.abt_sys)
-end
-
--- 创建玩家特有的数据
-local tmp_player_pkt = {}
-function Entity_player:player_appear_pkt()
-    tm_player_pkt.pid = self.pid
 end
 
 -- 创建实体出现的数据包
 local tmp_pkt = {}
+local tmp_player_pkt = {}
 function Entity_player:appear_pkt()
-    -- TODO:基础数据，所有实体共用，但考虑到实体使用太频繁，没敢用继承,后面测试后再看看效果
-    tmp_pkt.handle = self.eid
-    tmp_pkt.way    = 0
-    tmp_pkt.type   = self.et
-    tmp_pkt.pix_x  = self.x or 0
-    tmp_pkt.pix_y  = self.y or 0
-    tmp_pkt.name   = self.name
+    -- 创建基础数据
+    Entity.appear_pkt(tmp_pkt)
+
+    -- 创建玩家特有的数据
+    tm_player_pkt.pid = self.pid
 
     tmp_pkt.player = self.player_appear_pkt()
 

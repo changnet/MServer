@@ -1,5 +1,5 @@
 -- mongodb_sync.lua
--- 2018-0228
+-- 2018-02-28
 --xzc
 
 -- 用coroutine来封装一套接近同步操作的数据库接口
@@ -8,6 +8,13 @@
 -- 要wrap一层，把返回值变成...参数
 local function after_coroutine_resume( co,ok,args,... )
     if ok then return args,... end
+
+    __G__TRACKBACK__( args,co )
+    return false
+end
+
+local function after_coroutine_start( co,ok,args,... )
+    if ok then return ok,args,... end
 
     __G__TRACKBACK__( args,co )
     return false
@@ -24,7 +31,7 @@ function Mongodb_sync:__init( mongodb,co )
 end
 
 function Mongodb_sync:start( ... )
-    return after_coroutine_resume( self.co,coroutine.resume( self.co,... ) )
+    return after_coroutine_start( self.co,coroutine.resume( self.co,... ) )
 end
 
 -- 是否有效

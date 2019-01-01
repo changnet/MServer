@@ -153,7 +153,7 @@ function Bag:add_to_new_grid( item )
     if count <= 0 then return 0 end
 
     -- 没有新格子可以插入
-    PLOG( "bag full:player = %d,id = %d,count = %d",self.pid,id,count )
+    ELOG( "bag full:player = %d,id = %d,count = %d",self.pid,item.id,count )
     return count
 end
 

@@ -24,6 +24,8 @@ init()
 local Dungeon = oo.class( nil,... )
 
 function Dungeon:__init( id,handle )
+    assert( 0 ~= handle )
+
     self.id = id
     self.handle = handle
 
@@ -44,7 +46,7 @@ function Dungeon:init_one_scene( scene_id )
     assert(nil == self.scene[scene_id]) -- 只能初始化一次
     assert(scene_map[self.id][scene_id]) -- 校验场景在这个副本中
 
-    self.scene[scene_id] = Scene(scene_id)
+    self.scene[scene_id] = Scene(scene_id,self.id,self.handle)
 end
 
 -- 初始化第一个场景
@@ -61,6 +63,14 @@ function Dungeon:enter(entity,scene_id,pix_x,pix_y)
 
     assert(scene)
     return scene:entity_enter(entity,pix_x,pix_y)
+end
+
+-- 退出副本
+function Dungeon:exit(entity,scene_id)
+    local scene = self.scene[scene_id]
+
+    assert(scene)
+    return scene:entity_exit(entity)
 end
 
 return Dungeon

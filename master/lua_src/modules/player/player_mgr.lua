@@ -49,8 +49,11 @@ end
 
 -- 玩家初始化失败
 function Player_mgr:enter_fail( player )
+    local pid = player:get_pid()
+    PLOG("player enter timeout,kill connection",pid)
+
     -- 通知网关关闭连接
-    g_rpc:invoke( "kill_player_connect",player:get_pid() )
+    g_rpc:invoke( "kill_player_connect",pid )
 end
 
 -- 定时检测加载失败的玩家
@@ -71,7 +74,10 @@ function Player_mgr:on_enter_world( clt_conn,pid,pkt )
     local player = Player( pid )
 
     self.raw_player[pid] = player
-    if not player:db_load() then return end
+    if not player:db_load() then
+        ELOG("player db load fail,pid = %d",pid)
+        return
+    end
 
     PRINTF( "player login,pid = %d",pid )
 end
@@ -81,6 +87,8 @@ function Player_mgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
     g_authorize:unset_player( pid )
 
+    PRINTF( "player offline 1111,pid = %d",pid )
+    PRINTF( "player offline 2222,pid = %d",pid )
     local player = self.player[pid]
     if not player then
         ELOG( "player offline,object not found:%d",pid )

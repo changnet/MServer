@@ -55,6 +55,7 @@ function Dungeon_mgr:create_dungeon( id,only_first_scene )
         dungeon:init_all_scene()
     end
 
+    self.dungeon[hdl] = dungeon
     return dungeon
 end
 

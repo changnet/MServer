@@ -43,6 +43,14 @@ end
 
 -- 玩家退出area
 local function player_exit( pid )
+    local player = g_entity_mgr:get_player(pid)
+    if not player then
+        PLOG("area player exit,entity not found",pid)
+        return
+    end
+
+    player:exit_scene()
+
     g_entity_mgr:del_entity_player( pid )
     PLOG("area player exit:",pid)
 end
