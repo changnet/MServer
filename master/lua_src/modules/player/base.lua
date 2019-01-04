@@ -27,11 +27,11 @@ end
 -- 数据加载接口，自动调用
 -- 必须返回操作结果
 function Base:db_load( sync_db )
-    local ecode,res = 
+    local ecode,res =
         sync_db:find( "base",string.format( '{"_id":%d}',self.pid ) )
     if 0 ~= ecode then return false end -- 出错
     if not res then return end -- 新号，空数据
-    
+
     self.root = res[1] -- find函数返回的是一个数组
 
     return true
@@ -60,13 +60,14 @@ end
 
 -- 玩家数据已加载完成，进入场景
 -- 必须返回操作结果
+local base_info = {}
 function Base:on_login()
     self.root.login = ev:time()
 
     -- 更新基础数据到场景服
-    local base_info = {}
     base_info.sex = self.root.sex
     base_info.level = self.root.level
+    base_info.name = self.root.name
 
     g_rpc:invoke("player_update_base",self.pid,base_info,true)
     return true
