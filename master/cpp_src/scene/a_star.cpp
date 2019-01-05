@@ -201,7 +201,7 @@ struct a_star::node *a_star::pop_open_set()
 }
 
 // 从终点回溯到起点并得到路径
-bool a_star::backtrace_path( 
+bool a_star::backtrace_path(
     const struct node *dest,int32 dx,int32 dy,uint16 height )
 {
     assert("a start path not clear", 0 == _path.size());
@@ -265,7 +265,7 @@ int32 a_star::diagonal(int32 x,int32 y,int32 gx,int32 gy)
     int32 dx = abs(x - gx);
     int32 dy = abs(y - gy);
     // DD是斜边长，2*D是两直角边总和，min(dx,dy)就是需要走45度的格子数
-    // D * (dx + dy)是先假设所有格子直走，然后加上5度走多出的距离
+    // D * (dx + dy)是先假设所有格子直走，然后加上45度走多出的距离
     return D * (dx + dy) + (DD - 2 * D) * (dx < dy ? dx : dy);
 }
 
