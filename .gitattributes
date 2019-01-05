@@ -1,4 +1,5 @@
 * text eol=lf
+*.pb binary
 *.zip binary
 *.tar.gz binary
 *.tar.bz2 binary

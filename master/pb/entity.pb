@@ -1,12 +1,19 @@
 
-ë
-entity.protoentity"q
+¢
+entity.protoentity" 
+PlayerAppear
+pid (Rpid"
+MonsterAppear
+id (Rid"ä
 SAppear
-handle (Rhandle
-type (Rtype
-way (Rway
+handle (Rhandle
+way (Rway
+type (Rtype
 pix_x (RpixX
-pix_y (RpixY"6
+pix_y (RpixY
+name (	Rname,
+player (2.entity.PlayerAppearRplayer/
+monster (2.entity.MonsterAppearRmonster"6
 
 SDisappear
 handle (Rhandle
