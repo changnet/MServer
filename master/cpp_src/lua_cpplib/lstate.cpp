@@ -112,6 +112,7 @@ int32 luaopen_ev( lua_State *L )
     lc.def<&lev::time>     ("time"     );
     lc.def<&lev::exit>     ("exit"     );
     lc.def<&lev::signal>   ("signal"   );
+    lc.def<&lev::ms_time>  ("ms_time"  );
     lc.def<&lev::backend>  ("backend"  );
     lc.def<&lev::real_time>("real_time");
     lc.def<&lev::set_app_ev>("set_app_ev");

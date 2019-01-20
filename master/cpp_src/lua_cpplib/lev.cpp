@@ -78,6 +78,12 @@ int32 lev::time( lua_State *L )
     return 1;
 }
 
+int32 lev::ms_time( lua_State *L ) // 帧时间，ms
+{
+    lua_pushinteger( L,ev_now_ms );
+    return 1;
+}
+
 // 实时时间
 int32 lev::real_time( lua_State *L )
 {
@@ -265,7 +271,7 @@ void lev::running( int64 ms_now )
 
     static lua_State *L = lstate::instance()->state();
 
-    // TODO:每秒gc一次，太频繁浪费性能，需要根据项目调整
+    // TODO:每秒gc一次，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
     if (_lua_gc_tm != ev_rt_now)
     {
         _lua_gc_tm = ev_rt_now;

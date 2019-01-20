@@ -6,6 +6,7 @@
 
 local Move = require "modules.move.move"
 local Entity = require "modules.entity.entity"
+local Attribute_sys = require "modules.attribute.attribute_sys"
 
 local Entity_animal = oo.class( Entity,... )
 
@@ -13,6 +14,12 @@ function Entity_animal:__init(...)
     Entity.__init(self,...)
 
     self.move = Move(self)
+    self.abt_sys = Attribute_sys() -- 战斗属性(血量、攻击力...)
+end
+
+-- 获取战斗属性
+function Entity_animal:get_attribute( abt )
+    return self.abt_sys[abt] or 0
 end
 
 -- 处理客户端请求移动

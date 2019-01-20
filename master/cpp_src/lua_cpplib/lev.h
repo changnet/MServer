@@ -21,6 +21,7 @@ public:
 
     int32 exit( lua_State *L );
     int32 time( lua_State *L ); // 帧时间
+    int32 ms_time( lua_State *L ); // 帧时间，ms
     int32 backend( lua_State *L );
     int32 real_time( lua_State *L ); // 实时时间
 
