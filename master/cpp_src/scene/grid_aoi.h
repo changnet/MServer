@@ -44,7 +44,7 @@ public:
     static void purge() { _ctx_pool.purge();_vector_pool.purge(); }
 
     void set_visual_range(int32 width,int32 height); // 设置视野
-    int32 set_size(int32 width,int32 height,int32 pix); // 设置宽高，格子像素
+    int32 set_size(int32 width,int32 height); // 设置宽高
 
     struct entity_ctx *get_entity_ctx(entity_id_t id);
     /* 获取某一范围内实体
@@ -88,7 +88,6 @@ private:
 protected:
     uint8 _width; // 场景最大宽度(格子坐标)
     uint8 _height; // 场景最大高度(格子坐标)
-    uint32 _grid_pix; // 多少像素转换为一个格子边长
 
     // 格子数指以实体为中心，不包含当前格子，上下或者左右的格子数
     uint8 _visual_width; // 视野宽度格子数

@@ -1,7 +1,5 @@
 #include "grid_aoi.h"
-
-#define GRID_PIX 64 // 默认格子边长64像素
-#define PIX_TO_GRID(pix) (pix/_grid_pix) // 像素坐标转换为格子坐标，左上角是(0,0)
+#include "scene_include.h"
 
 // 暂定格子数最大为256，一个格子坐标x占高8位，y占低8位构成一个索引
 #define INDEX_BIT 8
@@ -17,8 +15,6 @@ grid_aoi::grid_aoi()
 
     _visual_width = 0; // 视野宽度格子数
     _visual_height = 0; // 视野高度格子数
-
-    _grid_pix = GRID_PIX; // 多少像素转换为一个格子边长
 }
 
 grid_aoi::~grid_aoi()
@@ -71,12 +67,10 @@ void grid_aoi::set_visual_range(int32 width,int32 height)
     _visual_height = height;
 }
 
-// 设置宽高，格子像素
+// 设置宽高
 // @width,@height 像素
-int32 grid_aoi::set_size(int32 width,int32 height,int32 pix)
+int32 grid_aoi::set_size(int32 width,int32 height)
 {
-    _grid_pix = pix > 0 ? pix : GRID_PIX;
-
     _width = PIX_TO_GRID(width);
     _height = PIX_TO_GRID(height);
 

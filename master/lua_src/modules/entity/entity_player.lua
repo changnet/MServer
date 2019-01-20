@@ -6,11 +6,11 @@
 
 local Attribute_sys = require "modules.attribute.attribute_sys"
 
-local Entity = require "modules.entity.entity"
-local Entity_player = oo.class( Entity,... )
+local Entity_animal = require "modules.entity.entity_animal"
+local Entity_player = oo.class( Entity_animal,... )
 
 function Entity_player:__init(eid,pid)
-    Entity.__init(self,eid,ET.PLAYER)
+    Entity_animal.__init(self,eid,ET.PLAYER)
     self.pid = pid -- 玩家唯一id
 
     self.abt_sys = Attribute_sys()

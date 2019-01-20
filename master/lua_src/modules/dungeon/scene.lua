@@ -36,9 +36,15 @@ function Scene:__init(id,dungeon_id,dungeon_hdl)
     aoi:set_visual_range(visual_width,visual_height)
 
     self.aoi = aoi
+    self.map = map
 
     self.entity_count = {} -- 场景中各种实体的数量，在这里统计
     for _,et in pairs(ET) do self.entity_count[et] = 0 end
+end
+
+-- 该坐标能否通过
+function Scene:can_pass(x,y,is_pix)
+    return self.map:get_pass_cost(x,y,is_pix) >= 0
 end
 
 -- 实体进入场景

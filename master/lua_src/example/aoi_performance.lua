@@ -12,7 +12,7 @@ local visual_height = 4 -- 视野高度格子数
 
 local is_valid = true -- 测试性能时不做校验
 
-aoi:set_size(width*pix,height*pix,pix)
+aoi:set_size(width*pix,height*pix)
 aoi:set_visual_range(visual_width,visual_height)
 
 local entity_info = {}

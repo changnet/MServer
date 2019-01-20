@@ -276,6 +276,7 @@ int32 luaopen_map( lua_State *L )
     lc.def<&lmap::load> ( "load" );
     lc.def<&lmap::fork> ( "fork" );
     lc.def<&lmap::get_size> ( "get_size" );
+    lc.def<&lmap::get_pass_cost> ( "get_pass_cost" );
 
     return 0;
 }

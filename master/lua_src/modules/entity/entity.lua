@@ -24,6 +24,19 @@ function Entity:set_pos(dungeon_hdl,dungeon_id,scene_id,pix_x,pix_y)
     self.pix_y = pix_y
 end
 
+-- 获取所有副本对象
+function Entity:get_dungeon()
+    return g_dungeon_mgr:get_dungeon(self.dungeon_hdl)
+end
+
+-- 获取所在场景对象
+function Entity:get_scene()
+    local dungeon = g_dungeon_mgr:get_dungeon(self.dungeon_hdl)
+    if not dungeon then return nil end
+
+    return dungeon.scene[self.scene_id]
+end
+
 -- 创建实体出现的数据包
 -- @pkt：不要频繁创建table，必须由上层传进入，因为不同的实体使用的数据包格式不一样
 -- 由基类缓存是无法覆盖所有字段的

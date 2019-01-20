@@ -1,10 +1,10 @@
 
 * 参考boost实现object_pool，把astar和aoi中的缓存改由object_pool实现，其他系统也看下有没有替换的
-* 完成背包、聊天等系统设计
-* 客户端进入场景，增加gm系统
 * mysql增加lua table直接存mysql接口，并且测试一下和格式化字符串的效率
-* 把astar和map模块分开，把map_mgr去掉，都放到lua管理
 * 实现场景的static区域属性(不可修改)和dynamic区域属性(可根据逻辑创建和修改)
+* fast_class的设计，主要是把基类的函数拷贝到当前子类。由于现在是所有文件热更,不存在之前单个文件热更导致的子类热更不到的情况
+* 技能的配置比较复杂，看看能不能设计出多action，多result，多条件控制又比较容易明白的excel配置
+* 把所有的static、global变量放到一个static_global类去，以控制他们的创建、销毁顺序
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步

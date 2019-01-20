@@ -73,3 +73,20 @@ g_rpc:declare( "player_exit",player_exit )
 g_rpc:declare( "player_enter_scene",player_enter_scene )
 g_rpc:declare( "player_update_base",player_update_base )
 g_rpc:declare( "player_update_battle_abt",player_update_battle_abt )
+
+--------------------------------------------------------------------------------
+local Entity_player = require "modules.entity.entity_player"
+local function entity_player_clt_cb( cmd,cb_func )
+    local cb = function( conn,pid,pkt )
+        local player = g_entity_mgr:get_player( pid )
+        if not player then
+            return ELOG( "entity_player_clt_cb call no player found:%d",pid )
+        end
+        return cb_func( player,conn,pkt )
+    end
+
+    g_command_mgr:clt_register( cmd,cb )
+end
+
+entity_player_clt_cb( CS.ENTITY_MOVE,Entity_player.do_move )
+--------------------------------------------------------------------------------

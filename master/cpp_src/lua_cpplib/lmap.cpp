@@ -1,4 +1,5 @@
 #include "lmap.h"
+#include "../scene/scene_include.h"
 
 lmap::~lmap()
 {
@@ -64,4 +65,21 @@ int32 lmap::fork( lua_State *L ) // 复制一份地图(用于动态修改地图�
     // TODO:暂时没有对应的数据来做
 
     return 0;
+}
+
+int32 lmap::get_pass_cost( lua_State *L ) // 获取通过某个格子的消耗
+{
+    int32 x = luaL_checkinteger(L,1); // 坐标x
+    int32 y = luaL_checkinteger(L,2); // 坐标y
+
+    // 传进来的参数是否为像素坐标
+    if ( 0 != lua_toboolean( L,3 ) )
+    {
+        x = PIX_TO_GRID( x );
+        y = PIX_TO_GRID( y );
+    }
+
+    lua_pushinteger( L,grid_map::get_pass_cost( x,y ) );
+
+    return 1;
 }
