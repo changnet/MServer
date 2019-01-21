@@ -93,8 +93,33 @@ function Move:moving( ms_now )
         return
     end
 
-    -- 玩家可能沿任意方向走，这个怎么计算新坐标?
     local ms = ms_now - self.ms_move
+    local dis = ms * speed / 1000 -- 行走的像素距离，转化为秒
+
+    local x = self.entity.pix_x
+    local y = self.entity.pix_y
+
+    local x_dis = self.dest_x - x
+    local y_dis = self.dest_y - y
+    local dest_dis = math.sqrt( x_dis * x_dis + y_dis * y_dis )
+
+    local new_x = nil
+    local new_y = nil
+    if dis >= dest_dis then
+        new_x = self.dest_x
+        new_y = self.dest_y
+    else
+        -- 用 平等线等分线段 计算出新的x、y坐标
+        new_x = dis * x_dis / dest_dis
+        new_y = dis * y_dis / dest_dis
+    end
+
+    -- 新位置是否可行走
+    local scene = self.entity:get_scene()
+    if not scene or scene:can_pass(new_x,new_y) then
+        ELOG("moving (%d,%d) can NOT pass",new_x,new_y)
+        return
+    end
 end
 
 return Move
