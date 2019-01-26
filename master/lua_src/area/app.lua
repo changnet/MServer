@@ -9,6 +9,8 @@ local Application = require "application.application"
 
 local App = oo.class( Application,... )
 
+local g_entity_mgr = nil
+
 -- 初始化
 function App:__init( ... )
     Application.__init( self,... )
@@ -33,6 +35,8 @@ function App:final_initialize()
     ev:set_app_ev( 200 ) -- 200毫秒回调一次主循环
 
     Application.final_initialize( self )
+
+    g_entity_mgr = _G.g_entity_mgr
 end
 
 -- 重写关服接口
@@ -47,7 +51,7 @@ end
 
 -- 主事件循环，设置了ev:set_app_ev后由C++回调
 function application_ev( ms_now )
-    -- PLOG("application_ev",ms_now,ev:time())
+    g_entity_mgr:routine( ms_now )
 end
 
 return App

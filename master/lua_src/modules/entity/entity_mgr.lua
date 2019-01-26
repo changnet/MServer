@@ -75,6 +75,13 @@ function Entity_mgr:del_entity_player( pid )
     self.entity[entity.eid] = nil
 end
 
+-- 事件主循环
+function Entity_mgr:routine( ms_now )
+    for _,entity in pairs( self.entity ) do
+        entity:routine( ms_now )
+    end
+end
+
 local entity_mgr = Entity_mgr()
 
 return entity_mgr

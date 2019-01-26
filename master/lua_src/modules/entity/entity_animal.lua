@@ -30,4 +30,9 @@ function Entity_animal:do_move( conn,pkt )
     self.move:move_to(pkt.way,pkt.pix_x,pkt.pix_y)
 end
 
+-- 事件循环
+function Entity_animal:routine( ms_now )
+    self.move:moving( ms_now )
+end
+
 return Entity_animal

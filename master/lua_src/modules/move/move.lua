@@ -79,19 +79,20 @@ end
 -- 更新位置再停止移动
 function Move:stop()
     -- 如果更新位置不成功，那么已经强制停止了，就不需要再次停止
-    if not moving( ev:ms_time() ) then return end
+    if not moving( ev:ms_time(),true ) then return end
 
     return self:raw_stop()
 end
 
 -- 定时处理玩家的位置
 -- 广播实体的出现
-function Move:moving( ms_now )
+function Move:moving( ms_now,no_time_chk )
     -- 移动方式不存在表示当前没在移动
     if not self.way or MT.NONE == self.way then return true end
 
     -- TODO:这个函数的调用间隔要精准控制。太频繁玩家每次移动还在同一个格子就浪费性能
     -- 太久才调用一次，则服务端无法及时广播移动给周围的人，也无法及时广播周围实体出现
+    if not no_time_chk and ms_now - self.ms_move < 1000 then return end
 
     local entity = self.entity
     local speed = entity:get_attribute( ABT.MOVE )
