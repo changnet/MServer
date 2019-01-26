@@ -36,10 +36,9 @@ function Move:move_to(way,pix_x,pix_y)
 end
 
 local move_pkt = {}
-local watch_list = {}
 -- 移动到对应位置
 function Move:moving_to(scene,way,pix_x,pix_y)
-    local ms_now = ms_time
+    local ms_now = ev:ms_time()
 
     -- 先更新下当前位置，然后从现在开始计算移动
     self:moving( ms_now )
@@ -49,55 +48,63 @@ function Move:moving_to(scene,way,pix_x,pix_y)
     self.dest_x = pix_x
     self.dest_y = pix_y
 
+    move_pkt.handle = self.entity.eid
+    move_pkt.way    = way
+    move_pkt.pix_x  = pix_x
+    move_pkt.pix_y  = pix_y
+
     -- 广播给玩家我开始移动
-    scene.aoi:get_watch_me_entitys(self.entity.eid,watch_list,ET.PLAYER)
-
-    local pid_list = {}
-
     -- 如果自己是玩家，那么移动消息也发给自己
-    if ET.PLAYER == self.entity.et then
-        table.insert(pid_list,self.entity.pid)
-    end
+    local to_me = ET.PLAYER == self.entity.et
+    scene:broadcast_to_watch_me(entity,SC.ENTITY_MOVE,move_pkt,to_me)
+end
 
-    for idx = 1,tmp_list.n do
-        local tmp_entity = g_entity_mgr:get_entity( tmp_list[idx] )
+-- 停止移动
+local pos_pkt = {}
+function Move:raw_stop()
+    self.way = nil
+    self.ms_move = nil
+    self.dest_x  = nil
+    self.dest_y  = nil
 
-        -- 如果在我周围的是一个玩家，告诉他我出现了
-        if ET.PLAYER == tmp_entity.et then
-            table.insert(pid_list,tmp_entity.pid)
-        end
-    end
+    -- 广播给周围的玩家，停止移动
+    pos_pkt.handle = self.entity.eid
+    pos_pkt.pix_x  = self.entity.pix_x
+    pos_pkt.pix_y  = self.entity.pix_y
 
-    if not table.empty(pid_list) then
-        -- 1表示底层按玩家pid广播
-        move_pkt.handle = self.entity.eid
-        move_pkt.way    = way
-        move_pkt.pix_x  = pix_x
-        move_pkt.pix_y  = pix_y
-        g_network_mgr:clt_multicast( 1,pid_list,SC.ENTITY_MOVE,move_pkt )
-    end
+    local to_me = ET.PLAYER == self.entity.et
+    scene:broadcast_to_watch_me(entity,SC.ENTITY_POS,pos_pkt,to_me)
+end
+
+-- 更新位置再停止移动
+function Move:stop()
+    -- 如果更新位置不成功，那么已经强制停止了，就不需要再次停止
+    if not moving( ev:ms_time() ) then return end
+
+    return self:raw_stop()
 end
 
 -- 定时处理玩家的位置
 -- 广播实体的出现
 function Move:moving( ms_now )
     -- 移动方式不存在表示当前没在移动
-    if not self.way or MT.NONE == self.way then return end
+    if not self.way or MT.NONE == self.way then return true end
 
     -- TODO:这个函数的调用间隔要精准控制。太频繁玩家每次移动还在同一个格子就浪费性能
     -- 太久才调用一次，则服务端无法及时广播移动给周围的人，也无法及时广播周围实体出现
 
-    local speed = self.entity:get_attribute( ABT.MOVE )
+    local entity = self.entity
+    local speed = entity:get_attribute( ABT.MOVE )
     if speed <= 0 then
         ELOG("moving speed zero")
-        return
+        return true
     end
 
     local ms = ms_now - self.ms_move
     local dis = ms * speed / 1000 -- 行走的像素距离，转化为秒
 
-    local x = self.entity.pix_x
-    local y = self.entity.pix_y
+    local x = entity.pix_x
+    local y = entity.pix_y
 
     local x_dis = self.dest_x - x
     local y_dis = self.dest_y - y
@@ -114,12 +121,34 @@ function Move:moving( ms_now )
         new_y = dis * y_dis / dest_dis
     end
 
-    -- 新位置是否可行走
-    local scene = self.entity:get_scene()
-    if not scene or scene:can_pass(new_x,new_y) then
-        ELOG("moving (%d,%d) can NOT pass",new_x,new_y)
+    self.ms_move = ms_now
+    local scene = entity:get_scene()
+
+    -- 移动幅度太小，不用处理
+    if scene.aoi:is_same_pos(x,y,new_x,new_y) then
+        entity.pix_x = new_x
+        entity.pix_y = new_y
         return
     end
+
+    -- 新位置是否可行走
+    if not scene:can_pass(new_x,new_y) then
+        self:raw_stop()
+        ELOG("moving (%d,%d) can NOT pass",new_x,new_y)
+        return false
+    end
+
+    entity.pix_x = new_x
+    entity.pix_y = new_y
+
+    scene.aoi:update_entity(self.entity.eid,nil,list_in,list_out)
+
+    -- 这些玩家看不到我了，告诉他们我消失了
+    scene:broadcast_entity_disappear(entity,list_out)
+    -- 这些玩家看到我出现了
+    scene:broadcast_entity_disappear(entity,list_in)
+
+    return true
 end
 
 return Move

@@ -47,26 +47,16 @@ function Scene:can_pass(x,y,is_pix)
     return self.map:get_pass_cost(x,y,is_pix) >= 0
 end
 
--- 实体进入场景
-function Scene:entity_enter(entity,pix_x,pix_y)
-    local event = 0
-    local et = entity.et
-
-    -- 目前只有玩家会接收其他实体的事件
-    if ET.PLAYER == et then event = 1 end
-    self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,event,tmp_list)
-
-    self.entity_count[et] = 1 + self.entity_count[et]
-    entity:set_pos(self.dungeon_hdl,self.dungeon_id,self.id,pix_x,pix_y)
-
-    if tmp_list.n <= 0 then return end
+-- 广播实体出现
+function Scene:broadcast_entity_appear(entity,eid_list,way)
+    if eid_list.n <= 0 then return end
 
 
     local pid_list = {}
     local is_player = (ET.PLAYER == entity.et)
 
-    for idx = 1,tmp_list.n do
-        local tmp_entity = g_entity_mgr:get_entity( tmp_list[idx] )
+    for idx = 1,eid_list.n do
+        local tmp_entity = g_entity_mgr:get_entity( eid_list[idx] )
 
         -- 如果在我周围的是一个玩家，告诉他我出现了
         if ET.PLAYER == tmp_entity.et then
@@ -88,8 +78,73 @@ function Scene:entity_enter(entity,pix_x,pix_y)
     end
 end
 
--- 实体退出场景
+-- 实体进入场景
+function Scene:entity_enter(entity,pix_x,pix_y)
+    local event = 0
+    local et = entity.et
+
+    -- 目前只有玩家会接收其他实体的事件
+    if ET.PLAYER == et then event = 1 end
+    self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,event,tmp_list)
+
+    self.entity_count[et] = 1 + self.entity_count[et]
+    entity:set_pos(self.dungeon_hdl,self.dungeon_id,self.id,pix_x,pix_y)
+
+    return self:broadcast_entity_appear(entity,tmp_list)
+end
+
+-- 广播实体消失
+-- @eid_list:eid列表，包含n字段表示数量
 local exit_pkt = {}
+function Scene:broadcast_entity_disappear(entity,eid_list,way)
+    if eid_list.n <= 0 then return end
+
+    -- 广播给周边的玩家该实体消失了
+    local pid_list = {}
+    local g_entity_mgr = g_entity_mgr
+
+    for idx = 1,eid_list.n do
+        local tmp_entity = g_entity_mgr:get_entity( eid_list[idx] )
+
+        assert( ET.PLAYER == tmp_entity.et and tmp_entity.pid )
+        table.insert( pid_list,tmp_entity.pid )
+    end
+
+    exit_pkt.way = 0 -- 如何退出
+    exit_pkt.handle = entity.eid
+    -- 1表示底层按玩家pid广播
+    return g_network_mgr:clt_multicast(1,pid_list,SC.ENTITY_DISAPPEAR,exit_pkt)
+end
+
+-- 广播数据给关注我的玩家
+-- @to_me:是否也广播给自己
+function Scene:broadcast_to_watch_me(entity,cmd,pkt,to_me)
+    -- 广播给玩家我开始移动
+    self.aoi:get_watch_me_entitys(entity.eid,tmp_list,ET.PLAYER)
+
+    local pid_list = {}
+
+    -- 如果自己是玩家，那么移动消息也发给自己
+    if to_me and ET.PLAYER == self.entity.et then
+        table.insert(pid_list,entity.pid)
+    end
+
+    for idx = 1,tmp_list.n do
+        local tmp_entity = g_entity_mgr:get_entity( tmp_list[idx] )
+
+        -- 如果在我周围的是一个玩家，告诉他我出现了
+        if ET.PLAYER == tmp_entity.et then
+            table.insert(pid_list,tmp_entity.pid)
+        end
+    end
+
+    if not table.empty(pid_list) then
+        -- 1表示底层按玩家pid广播
+        g_network_mgr:clt_multicast( 1,pid_list,cmd,pkt )
+    end
+end
+
+-- 实体退出场景
 function Scene:entity_exit(entity)
     -- tmp_list只返回关注entity的实体列表，目前只有玩家列表
     -- TODO:aoi找不到这个实体会报错，这个要不要改成返回值
@@ -99,23 +154,7 @@ function Scene:entity_exit(entity)
     self.entity_count[et] = self.entity_count[et] - 1
     assert(self.entity_count[et] >= 0,"scene entity count fail")
 
-    if tmp_list.n <= 0 then return end
-
-    -- 广播给周边的玩家该实体消失了
-    local pid_list = {}
-    local g_entity_mgr = g_entity_mgr
-
-    for idx = 1,tmp_list.n do
-        local tmp_entity = g_entity_mgr:get_entity( tmp_list[idx] )
-
-        assert( ET.PLAYER == tmp_entity.et and tmp_entity.pid )
-        table.insert( pid_list,tmp_entity.pid )
-    end
-
-    -- exit_pkt.way = 0 -- 如何退出
-    exit_pkt.handle = entity.eid
-    -- 1表示底层按玩家pid广播
-    g_network_mgr:clt_multicast( 1,pid_list,SC.ENTITY_DISAPPEAR,exit_pkt )
+    return self:broadcast_entity_disappear(entity,tmp_list)
 end
 
 -- 获取场景中的实体数据 移动

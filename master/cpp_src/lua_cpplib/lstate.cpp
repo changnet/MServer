@@ -265,6 +265,9 @@ int32 luaopen_aoi( lua_State *L )
     lc.def<&laoi::exit_entity> ( "exit_entity" );
     lc.def<&laoi::enter_entity> ( "enter_entity" );
     lc.def<&laoi::update_entity> ( "update_entity" );
+
+    lc.def<&laoi::is_same_pos> ( "is_same_pos" );
+
     return 0;
 }
 

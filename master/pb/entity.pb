@@ -1,5 +1,5 @@
 
-¢
+ì
 entity.protoentity" 
 PlayerAppear
 pid (Rpid"
@@ -22,7 +22,11 @@ SDisappear
 handle (Rhandle
 way (Rway
 pix_x (RpixX
-pix_y (RpixY"C
+pix_y (RpixY"H
+SPos
+handle (Rhandle
+pix_x (RpixX
+pix_y (RpixY"C
 CMove
 way (Rway
 pix_x (RpixX
