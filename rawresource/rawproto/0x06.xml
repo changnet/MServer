@@ -19,11 +19,18 @@
             <server>Disappear</server>
         </subobject>
         <subobject>
-            <client>undefine</client>
+            <client>Move</client>
             <command>0x03</command>
             <comment>移动</comment>
             <field>MOVE</field>
             <server>Move</server>
+        </subobject>
+        <subobject>
+            <client></client>
+            <command>0x04</command>
+            <comment>后端强制同步位置</comment>
+            <field>POS</field>
+            <server>SPos</server>
         </subobject>
     </subobjects>
 </root>

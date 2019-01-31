@@ -23,6 +23,9 @@ public:
     int32 exit_entity( lua_State *L );
     int32 enter_entity( lua_State *L );
     int32 update_entity( lua_State *L );
+
+    // 两个位置在aoi中是否一致
+    int32 is_same_pos( lua_State *L );
 };
 
 #endif /* __LAOI_H__ */

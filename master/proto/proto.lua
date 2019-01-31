@@ -28,6 +28,7 @@ local SC =
     ENTITY_APPEAR = { ENTITY + 0x01,"entity.pb","entity.SAppear" },
     ENTITY_DISAPPEAR = { ENTITY + 0x02,"entity.pb","entity.SDisappear" },
     ENTITY_MOVE = { ENTITY + 0x03,"entity.pb","entity.SMove" },
+    ENTITY_POS = { ENTITY + 0x04,"entity.pb","entity.SSPos" },
 
 }
 
@@ -40,7 +41,7 @@ local CS =
     MISC_WELCOME_GET = { MISC + 0x02,"misc.pb","misc.CWelcomeGet" },
     CHAT_DOCHAT = { CHAT + 0x02,"chat.pb","chat.CDoChat" },
     MAIL_DEL = { MAIL + 0x02,"mail.pb","mail.CMailDel" },
-    ENTITY_MOVE = { ENTITY + 0x03,"entity.pb","entity.Cundefine" },
+    ENTITY_MOVE = { ENTITY + 0x03,"entity.pb","entity.CMove" },
 
 }
 
