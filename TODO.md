@@ -41,6 +41,7 @@ https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 * sethook各协议调用函数统计(debug用)
 * sethook限制、统计堆栈调用深度，防止死循环(debug用)
 * 统计各副本、各场景在线人数
+* 统计routine主循环中各实体的耗时
 
 尝试用upb替换pbc:https://github.com/google/upb
 lua_stream中解析proto文件，用proto文件来做schema文件
