@@ -25,16 +25,22 @@ local network_mgr = network_mgr
 local Android = oo.class( nil,... )
 
 -- 构造函数
-function Android:__init( index,conn_id )
+function Android:__init( index )
     self.index   = index
-    self.conn_id = conn_id
 
     g_ai_mgr:load( self,1 ) -- 加载AI
 end
 
+-- 设置连接Id
+function Android:set_conn( conn_id )
+    self.conn_id = conn_id
+
+    return g_android_mgr:set_android_conn(conn_id,android)
+end
+
 -- 发送数据包
 function Android:send_pkt( cfg,pkt )
-    return network_mgr:send_srv_packet( 
+    return network_mgr:send_srv_packet(
         self.conn_id,cfg[1],WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
@@ -46,7 +52,7 @@ function Android:on_connect()
     -- sign:string;    // 签名
     -- account:string; // 帐户
 
-    local pkt = 
+    local pkt =
     {
         sid  = 1,
         time = ev:time(),
