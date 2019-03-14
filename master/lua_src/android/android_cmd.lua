@@ -77,19 +77,14 @@ function handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     end
 
     -- TODO:验证sec_websocket_accept是否正确
-    print( "clt handshake",sec_websocket_accept)
-    local android = android_mgr.conn[conn_id]
-    android:on_connect()
+
+    if handshake_handler then handshake_handler(conn_id) end
 end
 
 function conn_new( conn_id,ecode )
-    local android = android_mgr.conn[conn_id]
     if 0 ~= ecode then
-        android_mgr.conn[conn_id] = nil
-        android_mgr.android[android.index] = nil
-
-        ELOG( "android(%d) connect fail:%s",
-            android.index,util.what_error(ecode) )
+        PFLOG( "connection(%d) fail:%d",conn_id,ecode)
+        if conn_new_handler then conn_new_handler(conn_id,ecode) end
 
         return
     end
@@ -103,7 +98,7 @@ function conn_new( conn_id,ecode )
     network_mgr:send_raw_packet(
         conn_id,string.format(handshake_clt,sec_websocket_key) )
 
-    PFLOG( "android(%d) connect establish",android.index)
+    PFLOG( "connection(%d) establish",conn_id)
 
     -- 握手完成之前不要发数据，因为发送的模式不对，是以http发送的
 end
