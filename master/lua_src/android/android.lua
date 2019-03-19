@@ -28,7 +28,7 @@ local Android = oo.class( nil,... )
 function Android:__init( index )
     self.index   = index
 
-    g_ai_mgr:load( self,1 ) -- 加载AI
+    self.ai = g_ai_mgr:new( self,1 ) -- 加载AI
 end
 
 -- 设置连接Id
@@ -42,78 +42,6 @@ end
 function Android:send_pkt( cfg,pkt )
     return network_mgr:send_srv_packet(
         self.conn_id,cfg[1],WS_OP_BINARY | WS_FINAL_FRAME,pkt )
-end
-
--- 连接成功
-function Android:on_connect()
-    -- sid:int;        // 服务器id
-    -- time:int;       // 时间戳
-    -- plat:int;       // 平台id
-    -- sign:string;    // 签名
-    -- account:string; // 帐户
-
-    local pkt =
-    {
-        sid  = 1,
-        time = ev:time(),
-        plat = 999,
-        account = string.format( "android_%d",self.index )
-    }
-    pkt.sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
-
-    self:send_pkt( CS.PLAYER_LOGIN,pkt )
-end
-
--- 断开连接
-function Android:on_die()
-    PFLOG( "android die " .. self.index )
-end
-
--- 登录返回
-function Android:on_login( errno,pkt )
-    -- no role,create one now
-    if 0 == (pkt.pid or 0) then
-        local _pkt = { name = string.format( "android_%d",self.index ) }
-        self:send_pkt( CS.PLAYER_CREATE,_pkt )
-
-        return
-    end
-
-    self.pid  = pkt.pid
-    self.name = pkt.name
-    self:enter_world()
-end
-
--- 创角返回
-function Android:on_create_role( errno,pkt )
-    if 0 ~= errno then
-        PFLOG( "android_%d unable to create role",self.index )
-        return
-    end
-
-    self.pid  = pkt.pid
-    self.name = pkt.name
-
-    self:enter_world()
-
-    PFLOG( "android_%d create role success,pid = %d,name = %s",
-        self.index,self.pid,self.name )
-end
-
--- 进入游戏
-function Android:enter_world()
-    self:send_pkt( CS.PLAYER_ENTER,{} )
-end
-
--- 确认进入游戏完成
-function Android:on_enter_world( errno,pkt )
-    PFLOG( "%s enter world success",self.name )
-    g_player_ev:fire_event( PLAYER_EV.ENTER,self )
-end
-
--- 被顶号
-function Android:on_login_otherwhere( errno,pkt )
-    PFLOG( "%s login other where",self.name )
 end
 
 return Android

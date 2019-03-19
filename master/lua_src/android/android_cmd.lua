@@ -62,13 +62,6 @@ function Android_cmd:dump_pkt( pkt )
 end
 
 local android_cmd = Android_cmd()
-local Android = require "android.android"
-
-android_cmd:cmd_register( SC.PLAYER_LOGIN,Android.on_login )
-android_cmd:cmd_register( SC.PLAYER_CREATE,Android.on_create_role )
-android_cmd:cmd_register( SC.PLAYER_ENTER,Android.on_enter_world )
-android_cmd:cmd_register( SC.PLAYER_OTHER,Android.on_login_otherwhere )
-
 
 function handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     if not sec_websocket_accept then
@@ -78,12 +71,11 @@ function handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
 
     -- TODO:验证sec_websocket_accept是否正确
 
-    if handshake_handler then handshake_handler(conn_id) end
+    if handshake_handler then handshake_handler(conn_id,0) end
 end
 
 function conn_new( conn_id,ecode )
     if 0 ~= ecode then
-        PFLOG( "connection(%d) fail:%d",conn_id,ecode)
         if conn_new_handler then conn_new_handler(conn_id,ecode) end
 
         return
@@ -98,41 +90,29 @@ function conn_new( conn_id,ecode )
     network_mgr:send_raw_packet(
         conn_id,string.format(handshake_clt,sec_websocket_key) )
 
-    PFLOG( "connection(%d) establish",conn_id)
-
     -- 握手完成之前不要发数据，因为发送的模式不对，是以http发送的
+    if conn_new_handler then conn_new_handler(conn_id,ecode) end
 end
 
 function command_new( conn_id,cmd,errno,... )
-    local android = android_mgr.conn[conn_id]
-    if not android then
-        ELOG( "sc_command_new no connect found" )
-    end
-
-    local cfg = android_mgr.cmd[cmd]
+    local cfg = sc_cmd[cmd]
     if not cfg then
         ELOG( "sc_command_new no such cmd:%d",cmd )
         return
     end
 
     if not cfg.handler then
-        android_mgr:dump_pkt( ... )
+        android_cmd:dump_pkt( ... )
         ELOG( "sc_command_new no handler found:%d",cmd )
         return
     end
 
+    local android = g_android_mgr:get_android_by_conn(conn_id)
     cfg.handler( android,errno,... )
 end
 
 function conn_del( conn_id )
-    local android = android_mgr.conn[conn_id]
-
-    android_mgr.conn[conn_id] = nil
-    android_mgr.android[android.index] = nil
-
     ELOG( "android(%d) connect del",android.index )
-
-    android:on_die()
 end
 
 return android_cmd

@@ -7,12 +7,12 @@
 require "global.global"
 require "global.oo"
 require "global.table"
+require "global.require_conf"
 
 g_timer_mgr   = require "timer.timer_mgr"
+g_android_cmd = require "android.android_cmd"
 g_android_mgr = require "android.android_mgr"
-g_player_ev = require "modules.event.player_event"
-
-g_android_mgr = require "android.android_cmd"
+-- g_player_ev = require "modules.event.player_event"
 
 g_ai_mgr = require "modules.ai.ai_mgr"
 
