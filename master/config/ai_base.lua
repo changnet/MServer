@@ -13,7 +13,7 @@ return
         ['id'] = 1,
         ['isReturn'] = 0,
         ['maxDist'] = 10000,
-        ['param'] = {['login_time'] = 600,['logout_time'] = 1200},
+        ['param'] = {['login_time'] = 30,['logout_time'] = 30},
         ['type'] = 1
     },
     {['id'] = 10001,['isReturn'] = 1,['maxDist'] = 20,['type'] = 2},

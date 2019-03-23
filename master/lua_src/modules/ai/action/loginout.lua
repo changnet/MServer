@@ -6,8 +6,6 @@ local Loginout = oo.class( nil,... )
 
 -- 检查是否执行登录
 function Loginout:check_and_login(ai)
-    if ai.is_login then return false end -- 已经线
-
     local param = ai.ai_conf.param
     if (ai.logout_time or 0) + param.login_time > ev:time() then
         return false
@@ -105,6 +103,21 @@ end
 
 -- 是否执行退出
 function Loginout:check_and_logout(ai)
+    local param = ai.ai_conf.param
+    if (ai.login_time or 0) + param.logout_time > ev:time() then
+        return false
+    end
+
+    ai.state = AST.OFF
+    ai.logout_time = ev:time()
+
+    local entity = ai.entity
+    network_mgr:close( entity.conn_id )
+
+    entity:set_conn( nil )
+    PFLOG( "%s logout",entity.name )
+
+    return true
 end
 
 -- ************************************************************************** --
@@ -138,18 +151,20 @@ local function net_cb( cb )
     end
 end
 
-local function cmd_cb( cb )
-    return function (android,errno,pkt)
+local function cmd_cb( cmd,cb )
+    local raw_cb = function (android,errno,pkt)
         return cb(Loginout,android,errno,pkt)
     end
+
+    g_android_cmd:cmd_register( cmd,raw_cb )
 end
 
 g_android_cmd:conn_new_register(net_cb(Loginout.on_conn_new))
 g_android_cmd:handshake_register(net_cb(Loginout.on_handshake))
 
-g_android_cmd:cmd_register( SC.PLAYER_LOGIN,cmd_cb(Loginout.on_login) )
-g_android_cmd:cmd_register( SC.PLAYER_CREATE,cmd_cb(Loginout.on_create_role) )
-g_android_cmd:cmd_register( SC.PLAYER_ENTER,cmd_cb(Loginout.on_enter_world) )
-g_android_cmd:cmd_register( SC.PLAYER_OTHER,cmd_cb(Loginout.on_login_otherwhere) )
+cmd_cb( SC.PLAYER_LOGIN,Loginout.on_login)
+cmd_cb( SC.PLAYER_CREATE,Loginout.on_create_role)
+cmd_cb( SC.PLAYER_ENTER,Loginout.on_enter_world)
+cmd_cb( SC.PLAYER_OTHER,Loginout.on_login_otherwhere)
 
 return Loginout

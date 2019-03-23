@@ -1,6 +1,8 @@
 -- 用来测试AI
 
 local AST = require "modules.ai.ai_header"
+
+local test = require "modules.ai.action.test"
 local loginout = require "modules.ai.action.loginout"
 
 local Ai_test = oo.class( nil,... )
@@ -31,6 +33,9 @@ function Ai_test:routine(ms_now)
 
     -- 下面这些action都是并行的
 
+    -- test:gm(self)
+    test:chat(self)
+    test:ping(self)
     -- 聊天
     -- chat:check_and_chat(self)
     -- 移动、切换场景
