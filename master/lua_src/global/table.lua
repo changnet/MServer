@@ -283,8 +283,11 @@ table.concat_tbl = function( tbl,sep )
             tbl[k] = "true"
         elseif false == v then
             tbl[k] = "false"
-        elseif "userdata" == type(v) then
-            tbl[k] = tostring(v)
+        else
+            local s_type = type(v)
+            if "userdata" == s_type or "table" == s_type then
+                tbl[k] = tostring(v)
+            end
         end
     end
 

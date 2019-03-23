@@ -5,9 +5,13 @@ local AST = require "modules.ai.ai_header"
 local Loginout = oo.class( nil,... )
 
 -- 检查是否执行登录
-function Loginout:check_and_login(ai,param)
+function Loginout:check_and_login(ai)
     if ai.is_login then return false end -- 已经线
-    if ai.logout_time + param.logout_time > ev:now() then return false end
+
+    local param = ai.ai_conf.param
+    if (ai.logout_time or 0) + param.login_time > ev:time() then
+        return false
+    end
 
     -- 连接服务器
     local conn_id =
@@ -31,7 +35,7 @@ function Loginout:do_login(entity)
         sid  = 1,
         time = ev:time(),
         plat = 999,
-        account = string.format( "android_%d",self.index )
+        account = string.format( "android_%d",entity.index )
     }
     pkt.sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
 
@@ -84,8 +88,12 @@ end
 -- 确认进入游戏完成
 function Loginout:on_enter_world( entity,errno,pkt )
     entity.ai.state = AST.ON
+
+    -- 记录登录时间，一段时间后自动退出
+    entity.ai.login_time = ev:time()
+
     PFLOG( "%s enter world success",entity.name )
-    g_player_ev:fire_event( PLAYER_EV.ENTER,entity )
+    -- g_player_ev:fire_event( PLAYER_EV.ENTER,entity )
 end
 
 -- 被顶号
@@ -96,7 +104,7 @@ end
 -- ************************************************************************** --
 
 -- 是否执行退出
-function Loginout:check_and_logout(ai,entity,param)
+function Loginout:check_and_logout(ai)
 end
 
 -- ************************************************************************** --

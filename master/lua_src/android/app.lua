@@ -9,6 +9,7 @@ require "global.oo"
 require "global.table"
 require "global.require_conf"
 
+require "modules.system.define"
 g_timer_mgr   = require "timer.timer_mgr"
 g_android_cmd = require "android.android_cmd"
 g_android_mgr = require "android.android_mgr"
@@ -35,7 +36,13 @@ function App:exec()
 
     g_android_mgr:start()
 
+    ev:set_app_ev( 1000 ) -- 1000毫秒回调一次主循环
     ev:backend()
+end
+
+-- 主事件循环，设置了ev:set_app_ev后由C++回调
+function application_ev( ms_now )
+    g_android_mgr:routine( ms_now )
 end
 
 return App

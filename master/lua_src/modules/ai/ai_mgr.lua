@@ -13,10 +13,16 @@ local AI_TYPE =
 function Ai_mgr:__init()
 end
 
-function Ai_mgr:new( entity,ai_type )
-    local ai = AI_TYPE[ai_type]
+-- 创建AI逻辑
+-- @id:ai_base配置表id
+function Ai_mgr:new( entity,id )
+    local conf = ai_conf[id]
+    ASSERT( conf,"ai conf id not exist",id )
 
-    return ai(entity)
+    local ai = AI_TYPE[conf.type]
+    ASSERT( conf,"ai type not exist",id,conf.type )
+
+    return ai(entity,conf)
 end
 
 local ai_mgr = Ai_mgr()

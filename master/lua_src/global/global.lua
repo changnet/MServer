@@ -119,6 +119,13 @@ function ELOG( fmt,any,... )
     end
 end
 
+function ASSERT( expr,... )
+    if expr then return end
+
+    local msg = table.concat_any( "    ",... )
+    return error(msg)
+end
+
 --测试时间,耗时打印
 local _sec, _usec -- 这函数热更会导致出错，仅测试用
 function f_tm_start()
