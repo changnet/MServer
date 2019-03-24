@@ -3,6 +3,7 @@
 local AST = require "modules.ai.ai_header"
 
 local test = require "modules.ai.action.test"
+local move = require "modules.ai.action.move"
 local loginout = require "modules.ai.action.loginout"
 
 local Ai_test = oo.class( nil,... )
@@ -32,14 +33,14 @@ function Ai_test:routine(ms_now)
     end
 
     -- 下面这些action都是并行的
+        -- 聊天
+    -- 移动、切换场景
+    -- 增加、使用资源
 
     -- test:gm(self)
     test:chat(self)
     test:ping(self)
-    -- 聊天
-    -- chat:check_and_chat(self)
-    -- 移动、切换场景
-    -- 增加、使用资源
+    move:random_move(self)
 end
 
 return Ai_test
