@@ -6,6 +6,8 @@
 -- 由于实体在场景中使用比较频繁，一开始不想用继承的，不过考虑下还是用了。
 -- 到时测试得到结果后再做处理
 
+local g_network_mgr = g_network_mgr
+
 local Entity = oo.class( nil,... )
 
 -- @eid:实体唯一id
@@ -13,6 +15,11 @@ local Entity = oo.class( nil,... )
 function Entity:__init(eid,et)
     self.eid = eid -- 实体唯一id
     self.et = et
+end
+
+-- 发送数据包
+function Entity:send_pkt(cmd,pkt,ecode)
+    return g_network_mgr:send_clt_pkt(self.pid,cmd,pkt,ecode)
 end
 
 -- 设置位置信息

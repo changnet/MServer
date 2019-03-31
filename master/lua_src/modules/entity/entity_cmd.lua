@@ -50,6 +50,7 @@ local function player_exit( pid )
     end
 
     player:exit_scene()
+    g_authorize:unset_player( pid )
 
     g_entity_mgr:del_entity_player( pid )
     PLOG("area player exit:",pid)
@@ -64,8 +65,10 @@ local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
         return
     end
 
+    -- TODO:这里只进入测试场景
     g_dungeon_mgr:enter_static_scene(player,scene_id,pix_x,pix_y)
 
+    g_authorize:set_player( pid )
     PLOG("player enter scene",pid,scene_id,pix_x,pix_y)
 end
 

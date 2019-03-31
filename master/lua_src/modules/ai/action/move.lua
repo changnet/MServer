@@ -18,7 +18,40 @@ function Move:random_move(ai)
     return true
 end
 
+-- 玩家进入场景
+function Move:on_enter_scene(entity,errno,pkt)
+    local dungeon_id = pkt.dungeon_id or 0 -- pbc里int为0发不过来
+    PFLOG("%s(%d) enter scene %d:%d",
+        entity.name,entity.pid,dungeon_id,pkt.scene_id)
+
+    -- 设置位置信息
+    entity.dungeon_id = dungeon_id
+    entity.dungeon_hdl = pkt.dungeon_hdl
+    entity.scene_id = pkt.scene_id
+    entity.scene_hdl = pkt.scene_hdl
+    entity.pix_x = pkt.pix_x
+    entity.pix_y = pkt.pix_y
+
+    entity.ai.moving = false
+end
+
 function Move:on_move(entity,errno,pkt)
+    if pkt.handle == entity.handle then
+    end
+end
+
+function Move:on_appear(entity,errno,pkt)
+    if pkt.player and entity.pid == pkt.player then
+        PLOG("myself appear %s() at ")
+    end
+end
+
+-- 实体消失
+function Move:on_disappear(entity,errno,pkt)
+end
+
+-- 服务器强制重置实体位置
+function Move:on_reset_pos(entity,errno,pkt)
 end
 
 -- ************************************************************************** --
@@ -32,5 +65,9 @@ local function cmd_cb( cmd,cb )
 end
 
 cmd_cb( SC.ENTITY_MOVE,Move.on_move)
+cmd_cb( SC.ENTITY_APPEAR,Move.on_appear)
+cmd_cb( SC.ENTITY_POS,Move.on_reset_pos)
+cmd_cb( SC.ENTITY_DISAPPEAR,Move.on_disappear)
+cmd_cb( SC.ENTITY_ENTERSCENE,Move.on_enter_scene)
 
 return Move

@@ -66,7 +66,7 @@ function Scene:broadcast_entity_appear(entity,eid_list,way)
         -- 告诉我周围出现了这个实体(玩家或怪物、npc)
         if is_player then
             local other_pkt = tmp_entity:appear_pkt()
-            g_network_mgr:send_clt_pkt(entity.pid,SC.ENTITY_APPEAR,other_pkt)
+            entity:send_pkt(SC.ENTITY_APPEAR,other_pkt)
         end
     end
 
@@ -78,8 +78,29 @@ function Scene:broadcast_entity_appear(entity,eid_list,way)
     end
 end
 
+-- 发送实体进入场景
+local scene_pkt = {}
+function Scene:send_enter_scene(entity,pix_x,pix_y)
+    if ET.PLAYER ~= entity.et then return end
+
+    scene_pkt.dungeon_id = self.dungeon_id
+    scene_pkt.dungeon_hdl = self.dungeon_hdl
+    scene_pkt.scene_id = self.id
+    scene_pkt.pix_x = pix_x
+    scene_pkt.pix_y = pix_y
+
+    return entity:send_pkt(SC.ENTITY_ENTERSCENE,scene_pkt)
+end
+
 -- 实体进入场景
 function Scene:entity_enter(entity,pix_x,pix_y)
+    -- 先退出旧场景
+    local old_scene = entity:get_scene()
+    if old_scene then
+        ASSERT(old_scene ~= self,self.dungeon_id,self.id)
+        old_scene:entity_exit(entity)
+    end
+
     local event = 0
     local et = entity.et
 
@@ -88,7 +109,9 @@ function Scene:entity_enter(entity,pix_x,pix_y)
     self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,event,tmp_list)
 
     self.entity_count[et] = 1 + self.entity_count[et]
+
     entity:set_pos(self.dungeon_hdl,self.dungeon_id,self.id,pix_x,pix_y)
+    self:send_enter_scene(entity,pix_x,pix_y)
 
     return self:broadcast_entity_appear(entity,tmp_list)
 end
@@ -125,7 +148,7 @@ function Scene:broadcast_to_watch_me(entity,cmd,pkt,to_me)
     local pid_list = {}
 
     -- 如果自己是玩家，那么移动消息也发给自己
-    if to_me and ET.PLAYER == self.entity.et then
+    if to_me and ET.PLAYER == entity.et then
         table.insert(pid_list,entity.pid)
     end
 

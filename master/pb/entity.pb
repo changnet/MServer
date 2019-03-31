@@ -1,10 +1,18 @@
 
-Ï
+Å
 entity.protoentity" 
 PlayerAppear
 pid (Rpid"
 MonsterAppear
-id (Rid"‰
+id (Rid"í
+SEnterScene
+
+dungeon_id (R	dungeonId
+dungeon_hdl (R
+dungeonHdl
+scene_id (RsceneId
+pix_x (RpixX
+pix_y (RpixY"‰
 SAppear
 handle (Rhandle
 way (Rway

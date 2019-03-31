@@ -30,7 +30,14 @@
             <command>0x04</command>
             <comment>后端强制同步位置</comment>
             <field>POS</field>
-            <server>SPos</server>
+            <server>Pos</server>
+        </subobject>
+        <subobject>
+            <client></client>
+            <command>0x05</command>
+            <comment>玩家进入场景</comment>
+            <field>EnterScene</field>
+            <server>EnterScene</server>
         </subobject>
     </subobjects>
 </root>

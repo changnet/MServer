@@ -112,7 +112,7 @@ function command_new( conn_id,cmd,errno,... )
 end
 
 function conn_del( conn_id )
-    ELOG( "android(%d) connect del",android.index )
+    PLOG( "%d connect del",android.index )
 end
 
 return android_cmd

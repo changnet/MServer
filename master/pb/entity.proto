@@ -16,6 +16,17 @@ message MonsterAppear
 
 // /////////////////////// server ////////////////////////////////////////////
 
+// 玩家进入场景
+message SEnterScene
+{
+    int32 dungeon_id  = 1; // 副本id
+    int64 dungeon_hdl = 2; // 副本唯一handle
+    int32 scene_id    = 3; // 场景id
+
+    int32 pix_x  = 4; // x轴像素坐标
+    int32 pix_y  = 5; // y轴像素坐标
+}
+
 // 实体出现在视野中
 message SAppear
 {

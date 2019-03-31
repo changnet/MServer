@@ -28,7 +28,8 @@ local SC =
     ENTITY_APPEAR = { ENTITY + 0x01,"entity.pb","entity.SAppear" },
     ENTITY_DISAPPEAR = { ENTITY + 0x02,"entity.pb","entity.SDisappear" },
     ENTITY_MOVE = { ENTITY + 0x03,"entity.pb","entity.SMove" },
-    ENTITY_POS = { ENTITY + 0x04,"entity.pb","entity.SSPos" },
+    ENTITY_POS = { ENTITY + 0x04,"entity.pb","entity.SPos" },
+    ENTITY_ENTERSCENE = { ENTITY + 0x05,"entity.pb","entity.SEnterScene" },
 
 }
 

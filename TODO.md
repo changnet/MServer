@@ -35,13 +35,14 @@ https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 * C++内存池统计
 * C++主要对象统计
 * 脚本在C++中创建的对象统计
-* 各协议接收、发送次数、频率统计（包括rpc调用）、slow protocol
+* 各协议接收、发送次数、频率统计（包括rpc调用）、slow protocol、db存库、查库频率，各查询平均时间
 * socket流量统计
 * 各协议处理耗时统计
 * sethook各协议调用函数统计(debug用)
 * sethook限制、统计堆栈调用深度，防止死循环(debug用)
 * 统计各副本、各场景在线人数
 * 统计routine主循环中各实体的耗时
+* 像实体出现这种频率高又包含子message的，如何优化?(这个是发出去的，可以用固定table)
 
 尝试用upb替换pbc:https://github.com/google/upb
 lua_stream中解析proto文件，用proto文件来做schema文件
