@@ -12,3 +12,4 @@ master/error
 master/log
 master/runtime
 master/c_module
+master/core~

@@ -224,7 +224,7 @@ function Network_mgr:close_srv_conn( conn )
     g_conn_mgr:set_conn( conn.conn_id,nil )
 
     if conn.session then self.srv[conn.session] = nil end
-    self.srv_conn[conn_id] = nil
+    self.srv_conn[conn.conn_id] = nil
 end
 
 -- 服务器广播
@@ -327,7 +327,9 @@ function clt_multicast_new( mask,... )
             table.insert( pid_list,pid )
         end
         return pid_list
-    elseif mask == CLTCAST.LEVEL then
+    -- elseif mask == CLTCAST.LEVEL then
+    else
+        ELOG("clt_multicast_new unknow mask",mask)
     end
 end
 

@@ -881,16 +881,18 @@ void stream_packet::ssc_multicast( const s2s_header *header )
         return;
     }
 
+    // 根据玩家pid广播，底层直接处理 
     if ( CLT_MC_OWNER == mask )
     {
-        for ( int32 idx = 2;idx < count;idx ++ )
+        for ( int32 idx = 0;idx < count;idx ++ )
         {
             ssc_one_multicast(
-                *(raw_list + idx),header->_cmd,header->_errno,ctx,size );
+                *(raw_list + idx + 2),header->_cmd,header->_errno,ctx,size );
         }
         return;
     }
 
+    // 如果不是根据pid广播，那么这个list就是自定义参数，参数不能太多
     if ( count > 16 ) // 限制一下参数，防止lua栈溢出
     {
         ERROR( "ssc_multicast too many argument" );
