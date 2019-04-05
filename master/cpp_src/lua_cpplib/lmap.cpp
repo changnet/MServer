@@ -69,8 +69,8 @@ int32 lmap::fork( lua_State *L ) // 复制一份地图(用于动态修改地图�
 
 int32 lmap::get_pass_cost( lua_State *L ) // 获取通过某个格子的消耗
 {
-    int32 x = luaL_checkinteger(L,1); // 坐标x
-    int32 y = luaL_checkinteger(L,2); // 坐标y
+    int32 x = (int32)luaL_checknumber(L,1); // 坐标x
+    int32 y = (int32)luaL_checknumber(L,2); // 坐标y
 
     // 传进来的参数是否为像素坐标
     if ( 0 != lua_toboolean( L,3 ) )

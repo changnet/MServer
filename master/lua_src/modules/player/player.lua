@@ -11,7 +11,7 @@ local Auto_id = require "modules.system.auto_id"
 玩家子模块，以下功能会自动触发
 1. 创建对象
 2. 加载数据库:db_load
-3. 数据初始化:db_init
+3. 数据初始化:on_init
 4. 定时存库  :db_save
 5. 定时器    :on_timer
 ]]
@@ -126,7 +126,7 @@ function Player:module_db_load( sync_db )
 
     -- db数据初始化，如果模块之间有数据依赖，请自己调整好顺序
     for _,module in pairs( sub_module ) do
-        self[module.name]:db_init( is_new )
+        self[module.name]:on_init( is_new )
     end
     self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 

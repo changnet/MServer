@@ -39,7 +39,7 @@ end
 
 -- 数据加载完成自动调用，用于初始化从数据库加载的数据
 -- 必须返回操作结果
-function Base:db_init()
+function Base:on_init()
     -- 新玩家初始化
     if 1 == self.root.new then
         self.root.level = 1 -- 初始1级

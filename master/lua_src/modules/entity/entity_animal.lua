@@ -19,7 +19,7 @@ end
 
 -- 获取战斗属性
 function Entity_animal:get_attribute( abt )
-    return self.abt_sys[abt] or 0
+    return self.abt_sys:get_one_final_attr(abt) or 0
 end
 
 -- 处理客户端请求移动
@@ -32,6 +32,7 @@ end
 
 -- 事件循环
 function Entity_animal:routine( ms_now )
+    self.abt_sys:update_modify( ms_now ) -- 定时计算总属性
     self.move:moving( ms_now )
 end
 

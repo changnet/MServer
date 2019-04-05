@@ -25,6 +25,8 @@ function Entity_player:update_battle_abt( abt_list )
     for idx = 1,#abt_list,2 do
         sys:push_one( abt_list[idx],abt_list[idx+1] )
     end
+
+    self.abt_sys:modify(true)
 end
 
 -- 创建实体出现的数据包

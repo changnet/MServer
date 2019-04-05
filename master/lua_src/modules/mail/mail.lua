@@ -65,7 +65,7 @@ end
 
 -- 数据加载完成自动调用，用于初始化从数据库加载的数据
 -- 必须返回操作结果
-function Mail:db_init( is_new )
+function Mail:on_init( is_new )
     local sys_id = g_mail_mgr:get_now_id()
 
     -- 新创建的号，直接跳过旧的全服邮件
@@ -104,7 +104,7 @@ function Mail:check_reload()
     if not self:db_load( self.player:get_sync_db() ) then return false end
 
     -- 重新初始化数据
-    return self:db_init( self.payer:is_new() )
+    return self:on_init( self.payer:is_new() )
 end
 
 -- 玩家数据已加载完成，进入场景

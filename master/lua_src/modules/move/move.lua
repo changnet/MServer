@@ -67,12 +67,16 @@ function Move:raw_stop()
     self.dest_x  = nil
     self.dest_y  = nil
 
-    -- 广播给周围的玩家，停止移动
-    pos_pkt.handle = self.entity.eid
-    pos_pkt.pix_x  = self.entity.pix_x
-    pos_pkt.pix_y  = self.entity.pix_y
+    local entity = self.entity
 
-    local to_me = ET.PLAYER == self.entity.et
+    -- 广播给周围的玩家，停止移动
+    pos_pkt.handle = entity.eid
+    pos_pkt.pix_x  = entity.pix_x
+    pos_pkt.pix_y  = entity.pix_y
+
+    local to_me = ET.PLAYER == entity.et
+
+    local scene = entity:get_scene()
     scene:broadcast_to_watch_me(entity,SC.ENTITY_POS,pos_pkt,to_me)
 end
 
@@ -135,14 +139,14 @@ function Move:moving( ms_now,no_time_chk )
     -- 新位置是否可行走
     if not scene:can_pass(new_x,new_y) then
         self:raw_stop()
-        ELOG("moving (%d,%d) can NOT pass",new_x,new_y)
+        ELOG("moving (%f,%f) can NOT pass",new_x,new_y)
         return false
     end
 
     entity.pix_x = new_x
     entity.pix_y = new_y
 
-    scene.aoi:update_entity(self.entity.eid,nil,list_in,list_out)
+    scene.aoi:update_entity(entity.eid,nil,list_in,list_out)
 
     -- 这些玩家看不到我了，告诉他们我消失了
     scene:broadcast_entity_disappear(entity,list_out)

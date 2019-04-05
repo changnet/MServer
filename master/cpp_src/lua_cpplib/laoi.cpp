@@ -227,11 +227,11 @@ int32 laoi::update_entity( lua_State *L )
 int32 laoi::is_same_pos( lua_State *L )
 {
     // 像素坐标
-    int32 src_x = luaL_checkinteger(L,1);
-    int32 src_y = luaL_checkinteger(L,2);
+    int32 src_x = (int32)luaL_checknumber(L,1);
+    int32 src_y = (int32)luaL_checknumber(L,2);
 
-    int32 dest_x = luaL_checkinteger(L,1);
-    int32 dest_y = luaL_checkinteger(L,2);
+    int32 dest_x = (int32)luaL_checknumber(L,3);
+    int32 dest_y = (int32)luaL_checknumber(L,4);
 
     // 在脚本算要用math.floor，比较慢，而且，以后可能aoi的格子和地图格子大小不一样
     int32 sx = PIX_TO_GRID(src_x);
