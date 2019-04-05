@@ -884,6 +884,7 @@ bool lnetwork_mgr::cs_dispatch(
     s2sh._cmd    = cmd;
     s2sh._packet = SPKT_CSPK;
     s2sh._codec  = codec_ty;
+    s2sh._errno  = 0;
     s2sh._owner  = static_cast<owner_t>(object_id);
 
     send.__append( &s2sh,sizeof(struct s2s_header) );

@@ -726,6 +726,7 @@ int32 stream_packet::raw_pack_ss(
     header._errno  = ecode;
     header._owner  = session;
     header._packet = SPKT_SSPK;
+    header._codec  = codec::CDC_NONE;// 这个这里用不着，但不初始化valgrind就会警告
 
     send.__append( &header ,sizeof(header) );
     if ( size > 0 ) send.__append( ctx,size );

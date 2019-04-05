@@ -106,19 +106,10 @@ submodule:
 	$(MAKE) -C deps/pbc lib
 	$(MAKE) -C deps/websocket-parser alib
 
-test:
-	./bin/master test 1
-
-memcheck:
-	valgrind --leak-check=full --show-leak-kinds=all --suppressions=valgrind.suppressions --gen-suppressions=all bin/master test 1 1
-
-callgrind:
-	valgrind --tool=callgrind ./bin/master test 1 1
-
 # http://oclint-docs.readthedocs.io/en/stable/rules/
 oclint:
 	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(OCFILE) \
 	-disable-rule=LongLine -disable-rule=ShortVariableName \
 	-disable-rule=UselessParentheses -disable-rule=DoubleNegative \
 	-disable-rule=MultipleUnaryOperator
-.PHONY: all clean test clean_all build_all dir memcheck callgrind submodule cleansub
+.PHONY: all clean clean_all build_all dir submodule cleansub

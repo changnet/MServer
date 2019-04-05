@@ -154,7 +154,12 @@ void on_exit()
     int32 counter  = 0;
     int32 counters = 0;
     global_mem_counter(counter,counters);
-    PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
+
+    // 直接用PRINTF会导致重新创建ev取时间
+    // PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
+
+    raw_cprintf_log( ::time(NULL),
+        "CP","new counter:%d    ----   new[] counter:%d",counter,counters );
     //back_trace();
 }
 

@@ -242,3 +242,20 @@
    fun:SSL_CTX_use_RSAPrivateKey_file
    ...
 }
+{
+   <pthread_dl_open>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:_dl_map_object_deps
+   fun:dl_open_worker
+   fun:_dl_catch_error
+   fun:_dl_open
+   fun:do_dlopen
+   fun:_dl_catch_error
+   fun:dlerror_run
+   fun:__libc_dlopen_mode
+   fun:pthread_cancel_init
+   fun:_Unwind_ForcedUnwind
+   fun:__pthread_unwind
+}
