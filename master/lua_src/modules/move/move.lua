@@ -57,6 +57,7 @@ function Move:moving_to(scene,way,pix_x,pix_y)
     -- 如果自己是玩家，那么移动消息也发给自己
     local to_me = ET.PLAYER == self.entity.et
     scene:broadcast_to_watch_me(self.entity,SC.ENTITY_MOVE,move_pkt,to_me)
+    PLOG("moving to ===============================",to_me)
 end
 
 -- 停止移动

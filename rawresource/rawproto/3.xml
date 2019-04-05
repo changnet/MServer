@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
-    <command>0x03</command>
+    <command>3</command>
     <comment>杂七杂八的功能</comment>
     <module>misc</module>
     <subobjects>
         <subobject>
             <client></client>
-            <command>0x01</command>
+            <command>1</command>
             <comment>角色欢迎数据</comment>
             <field>WELCOME</field>
             <server>Welcome</server>
         </subobject>
         <subobject>
             <client>WelcomeGet</client>
-            <command>0x02</command>
+            <command>2</command>
             <comment>领取角色欢迎奖励</comment>
             <field>WELCOME_GET</field>
             <server></server>
         </subobject>
         <subobject>
             <client></client>
-            <command>0x03</command>
+            <command>3</command>
             <comment>发送提示</comment>
             <field>TIPS</field>
             <server>Tips</server>

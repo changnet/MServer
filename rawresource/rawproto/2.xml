@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
-    <command>0x02</command>
+    <command>2</command>
     <comment>背包相关</comment>
     <module>bag</module>
     <subobjects>
         <subobject>
             <client></client>
-            <command>0x01</command>
+            <command>1</command>
             <comment>背包数据</comment>
             <field>INFO</field>
             <server>BagInfo</server>

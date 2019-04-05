@@ -102,7 +102,7 @@ function command_new( conn_id,cmd,errno,... )
     end
 
     if not cfg.handler then
-        android_cmd:dump_pkt( ... )
+        -- android_cmd:dump_pkt( ... )
         ELOG( "sc_command_new no handler found:%d",cmd )
         return
     end

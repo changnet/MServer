@@ -36,22 +36,37 @@ function Move:on_enter_scene(entity,errno,pkt)
 end
 
 function Move:on_move(entity,errno,pkt)
-    if pkt.handle == entity.handle then
+    if entity.handle == pkt.handle then
+        entity.ai.moving = true
+
+        entity.pix_x = pkt.pix_x
+        entity.pix_y = pkt.pix_y
+        PLOG("move my pos to",entity.name,pkt.pix_x,pkt.pix_y)
+    else
+        PLOG("move other pos at",pkt.pix_x,pkt.pix_y)
     end
 end
 
 function Move:on_appear(entity,errno,pkt)
-    if pkt.player and entity.pid == pkt.player then
-        PLOG("myself appear %s() at ")
-    end
+    PLOG("entity appear:",pkt.name,pkt.pix_x,pkt.pix_y)
 end
 
 -- 实体消失
 function Move:on_disappear(entity,errno,pkt)
+    PLOG("entity disappear:",pkt.handle)
 end
 
 -- 服务器强制重置实体位置
 function Move:on_reset_pos(entity,errno,pkt)
+    if entity.handle == pkt.handle then
+        entity.ai.moving = false
+
+        entity.pix_x = pkt.pix_x
+        entity.pix_y = pkt.pix_y
+        PLOG("reset my pos at",entity.name,pkt.pix_x,pkt.pix_y)
+    else
+        PLOG("reset other pos at",pkt.pix_x,pkt.pix_y)
+    end
 end
 
 -- ************************************************************************** --
