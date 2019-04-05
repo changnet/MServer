@@ -191,8 +191,8 @@ int32 laoi::update_entity( lua_State *L )
 {
     entity_id_t id = luaL_checkinteger(L,1);
     // 实体像素坐标
-    int32 x = luaL_checkinteger(L,2);
-    int32 y = luaL_checkinteger(L,3);
+    int32 x = (int32)luaL_checknumber(L,2);
+    int32 y = (int32)luaL_checknumber(L,3);
 
     entity_vector_t *list = NULL;
     entity_vector_t *list_in = NULL;

@@ -19,7 +19,7 @@ end
 function Move:move_to(way,pix_x,pix_y)
     -- 目标位置是否可行走
     local scene = self.entity:get_scene()
-    if not scene or scene:can_pass(pix_x,pix_y) then
+    if not scene or not scene:can_pass(pix_x,pix_y,true) then
         ELOG("move_to dest (%d,%d) can NOT pass",pix_x,pix_y)
         return
     end
@@ -90,6 +90,8 @@ end
 
 -- 定时处理玩家的位置
 -- 广播实体的出现
+local list_in = {}
+local list_out = {}
 function Move:moving( ms_now,no_time_chk )
     -- 移动方式不存在表示当前没在移动
     if not self.way or MT.NONE == self.way then return true end
@@ -137,7 +139,7 @@ function Move:moving( ms_now,no_time_chk )
     end
 
     -- 新位置是否可行走
-    if not scene:can_pass(new_x,new_y) then
+    if not scene:can_pass(new_x,new_y,true) then
         self:raw_stop()
         ELOG("moving (%f,%f) can NOT pass",new_x,new_y)
         return false
@@ -146,7 +148,7 @@ function Move:moving( ms_now,no_time_chk )
     entity.pix_x = new_x
     entity.pix_y = new_y
 
-    scene.aoi:update_entity(entity.eid,nil,list_in,list_out)
+    scene.aoi:update_entity(entity.eid,new_x,new_y,nil,list_in,list_out)
 
     -- 这些玩家看不到我了，告诉他们我消失了
     scene:broadcast_entity_disappear(entity,list_out)

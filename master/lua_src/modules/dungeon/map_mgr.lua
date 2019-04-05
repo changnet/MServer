@@ -26,6 +26,8 @@ function Map_mgr:create_map( id,width,height )
     map:set(id,width,height)
 
     self.map[id] = map
+
+    return map
 end
 
 -- 获取地图对象
