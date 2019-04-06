@@ -2,16 +2,16 @@
 
 oo = {}
 
-local name_class_l = {}       -- 类列表，类为k，name为v
-local class_list   = {}       -- 类列表，name为k，类为v
-local obj_list     = {}       -- 已创建对象列表，对象为k，name为value
-local singleton    = {}       -- 单例，类为k，v为实例
+local class_name = {}       -- 类列表，类为k，name为v
+local name_class = {}       -- 类列表，name为k，类为v
 
-local obj_count_l = {}        -- 对象创建次数列表
-local check_count = 0         -- check调用次数
-local check_flag  = true      -- 是否记录数据
+local object     = {}       -- 已创建对象列表，对象为k，name为value
+local singleton  = {}       -- 单例，类为k，v为实例
 
-setmetatable(obj_list, {["__mode"]='k'})
+local obj_count  = {}        -- 对象创建次数列表
+local stat_flag  = true      -- 是否记录数据
+
+setmetatable(object, {["__mode"]='k'})
 setmetatable(singleton, {["__mode"]='v'})
 
 --******************************************************************************
@@ -37,10 +37,10 @@ local function new(clz, ...)
     setmetatable(obj, clz)
     obj:__init(...)
 
-    if check_flag then                  --check
-        local name = name_class_l[clz] or "none"
-        obj_list[obj] = name
-        obj_count_l[name] = (obj_count_l[name] or 0) + 1
+    if stat_flag then                  --check
+        local name = class_name[clz] or "none"
+        object[obj] = name
+        obj_count[name] = (obj_count[name] or 0) + 1
     end
 
     return obj
@@ -60,17 +60,17 @@ end
 function oo.class(super, name)
     local clz = {}
     if type(name) == "string" then
-        if class_list[name] ~= nil then
-            clz = class_list[name]
+        if name_class[name] ~= nil then
+            clz = name_class[name]
             for k,v in pairs(clz) do  --这是热更的关键
                 clz[k] = nil
             end
         else
-            class_list[name] = clz
+            name_class[name] = clz
         end
 
-        if check_flag then                     --check
-            name_class_l[clz] = name
+        if stat_flag then                     --check
+            class_name[clz] = name
         end
     else
         error( "oo class no name specify" )
@@ -90,17 +90,17 @@ end
 function oo.singleton(super, name)
     local clz = {}
     if type(name) == "string" then
-        if class_list[name] ~= nil then
-            clz = class_list[name]
+        if name_class[name] ~= nil then
+            clz = name_class[name]
             for k,v in pairs(clz) do  --这是热更的关键
                 clz[k] = nil
             end
         else
-            class_list[name] = clz
+            name_class[name] = clz
         end
 
-        if check_flag then                     --check
-            name_class_l[clz] = name
+        if stat_flag then                     --check
+            class_name[clz] = name
         end
     else
         error( "oo singleton no name specify" )
@@ -129,49 +129,29 @@ end
 
 -- 获取某个类的元表
 function oo.metatableof(name)
-    return class_list[name]
+    return name_class[name]
 end
 
--- 内存检查
-function oo.check( log_func )
-    collectgarbage("collect")
+-- 返回各对象的统计(由于lua的gc问题，这些统计并不是实时的)
+function oo.stat()
+    -- collectgarbage("collect")
 
-    local obj_size = 0
-    local list = {}
-    for obj,name in pairs(obj_list) do
-        obj_size = obj_size + 1
-        list[name] = (list[name] or 0) + 1
+    local total = 0 -- 所有对象数量
+    local cur_count = {} -- 当前数量
+    for obj,name in pairs(object) do
+        total = total + 1
+        cur_count[name] = (cur_count[name] or 0) + 1
     end
 
-    check_count = check_count + 1
-    local str = string.format("obj size is %d, check times is %d\n", obj_size, check_count)
-    for name,ts in pairs(obj_count_l) do
-        if list[name] and list[name] > 0 then
-            str = str .. string.format("\t%s create %d time,now exist %d!\n",name,ts,list[name] or 0)
-        end
-    end
+    local stat = {}
+    stat.total = total
+    stat.cur = cur_count
 
-    str = str .. "check done ... \n"
-    if log_func then
-        log_func( str )
-    else
-        print( str )
-    end
+    stat.max = {}
+    for k,v in pairs(obj_count) do stat.max[k] = v end
+
+    return stat
 end
 
--- 热更
-function oo.hot_fix( log_func )
-    log_func = log_func or print
-
-    for k,_ in pairs( class_list ) do
-        require( k )
-        log_func( "hot fix " .. k )
-    end
-
-    for k,_ in pairs( const_define ) do
-        require( k )
-        log_func( "hot fix " .. k )
-    end
-end
 
 return oo
