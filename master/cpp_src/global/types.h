@@ -46,13 +46,46 @@ typedef int64_t        int64;
 /* avoid c-style string */
 typedef std::string    string;
 
+/* 自定义类型hash也可以放到std::hash中，暂时不这样做
+ * https://en.cppreference.com/w/cpp/utility/hash
+ */
+
+/* hash function for const char* http://www.cse.yorku.ca/~oz/hash.html */
+// https://exceptionshub.com/what-is-the-default-hash-function-used-in-c-stdunordered_map.html
+struct hash_const_char
+{
+    size_t operator()(const char * str) const
+    {
+        size_t hash = 5381;
+        int c;
+
+        /* hash * 33 + c */
+        while((c = *str++)) hash = ((hash << 5) + hash) + c;
+
+        return hash;
+    }
+};
+
+/* compare function for const char* */
+struct cmp_const_char
+{
+    bool operator()(const char *a, const char *b) const
+    {
+        return std::strcmp(a, b) < 0;
+    }
+};
+
 /* 需要使用hash map，但又希望能兼容旧版本时使用map_t */
 #if __cplusplus < 201103L    /* -std=gnu99 */
     #include <map>
     #define map_t    std::map
-#else                       /* if support C++ 2011 */
+    #define char_map_t(T) std::map<const char*,T,cmp_const_char>
+#else    /* if support C++ 2011 */
     #include <unordered_map>
+    /* using syntax in C+=11,same as typedef but support templates */
     #define map_t    std::unordered_map
+    template<typename T> using char_map_t = 
+        std::unordered_map<const char*,T,hash_const_char,cmp_const_char>;
 #endif
 
 #if __cplusplus >= 201103L

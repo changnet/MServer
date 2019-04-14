@@ -44,9 +44,6 @@
 /* 日志是否打印app进程名,后面的数字表示进程名最大长度 */
 #define LOG_APP_NAME 32
 
-/* count C++ object which push to lua */
-#define OBJ_COUNTER
-
 /* 单个包最大长度，与包头数据类型定义有关 */
 #define MAX_PACKET_LEN    65535
 

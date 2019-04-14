@@ -15,16 +15,7 @@
 /* 注册struct、class到lua，适用于在lua创建c、c++对象 */
 
 #include <lua.hpp>
-#include "lobj_counter.h"
-#include "../global/global.h"
-
-#ifdef OBJ_COUNTER
-# define OBJ_ADD_COUNT(name) do{ obj_counter::instance()->add_count(name); }while(0)
-# define OBJ_DEC_COUNT(name) do{ obj_counter::instance()->dec_count(name); }while(0)
-#else
-# define OBJ_ADD_COUNT(name)
-# define OBJ_DEC_COUNT(name)
-#endif /* OBJ_COUNTER */
+#include "../util/statistic.h"
 
 template<class T>
 class lclass
@@ -86,7 +77,7 @@ public:
         const T** ptr = (const T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
 
-        OBJ_ADD_COUNT( classname );
+        C_LUA_OBJECT_ADD( classname );
 
         luaL_getmetatable( L,classname );
         /* metatable on stack now,can not be nil */
@@ -180,7 +171,7 @@ private:
         /* 优先计数，在构造函数调用luaL_error执行longjump导致内存泄漏
          * 这里至少能统计到
          */
-        OBJ_ADD_COUNT( classname );
+        C_LUA_OBJECT_ADD( classname );
 
         /* lua调用__call,第一个参数是该元表所属的table.取构造函数参数要注意 */
         T* obj = new T( L );
@@ -214,7 +205,7 @@ private:
     /* gc函数 */
     static int gc(lua_State* L)
     {
-        OBJ_DEC_COUNT( classname );
+        C_LUA_OBJECT_DEC( classname );
 
         if ( luaL_getmetafield(L, 1, "_notgc") )
         {
