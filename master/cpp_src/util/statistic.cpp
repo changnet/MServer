@@ -37,7 +37,7 @@ void statistic::add_c_obj(const char *what,int32 count)
     }
     else
     {
-        assert("add_c_obj count < 0",counter._cur > 0);
+        assert("add_c_obj count < 0",counter._cur >= 0);
     }
 }
 
@@ -52,6 +52,6 @@ void statistic::add_c_lua_obj(const char *what,int32 count)
     }
     else
     {
-        assert("add_c_lua_obj count < 0",counter._cur > 0);
+        assert("add_c_lua_obj count < 0",counter._cur >= 0);
     }
 }

@@ -4,6 +4,7 @@
 
 -- 统计服务器运行情况
 
+require "statistic"
 local Statistic = oo.singleton( nil,... )
 
 function Statistic.collect()
@@ -11,9 +12,11 @@ function Statistic.collect()
     -- "count": returns the total memory in use by Lua (in Kbytes)
     total_stat.lua_mem = collectgarbage("count")
 
-    vd( obj_counter.dump() )
-
     total_stat.lua_obj = oo.stat()
+
+    local cpp_stat = statistic.dump();
+
+    table.merge(cpp_stat,total_stat)
     vd(total_stat)
 
     return total_stat

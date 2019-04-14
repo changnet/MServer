@@ -1,4 +1,5 @@
 #include "grid_map.h"
+#include "../util/statistic.h"
 
 grid_map::grid_map()
 {
@@ -6,11 +7,15 @@ grid_map::grid_map()
     _width = 0;
     _height = 0;
     _grid_set = NULL;
+
+    C_OBJECT_ADD("grid_map");
 }
 
 grid_map::~grid_map()
 {
     delete []_grid_set;
+
+    C_OBJECT_DEC("grid_map");
 }
 
 // 加载单个地图文件

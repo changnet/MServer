@@ -1,4 +1,5 @@
 #include "rank.h"
+#include "../util/statistic.h"
 
 base_rank::base_rank()
 {
@@ -16,6 +17,8 @@ insertion_rank::insertion_rank()
     _object_list = NULL;
     _max_count = 64; // 排行榜最大数量(默认64)
     _max_factor = 0; // 当前排行榜使用到的最大排序因子数量
+
+    C_OBJECT_ADD("insertion_rank");
 }
 
 insertion_rank::~insertion_rank()
@@ -26,6 +29,8 @@ insertion_rank::~insertion_rank()
 
     _max_list = 0;
     _object_list = NULL;
+
+    C_OBJECT_DEC("insertion_rank");
 }
 
 void insertion_rank::clear()

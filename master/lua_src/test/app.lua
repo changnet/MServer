@@ -2,7 +2,7 @@ require "global.global"
 require "global.oo"
 require "global.table"
 require "global.string"
-require "obj_counter"
+require "statistic"
 json = require "lua_parson"
 
 function sig_handler( signum )
@@ -34,12 +34,12 @@ function App:exec()
     -- require "example.stream_performance"
     -- require "example.websocket_performance"
     -- require "example.words_filter_performance"
-    require "example.scene_performance"
+    -- require "example.scene_performance"
     -- require "example.aoi_performance"
     -- require "example.rank_performance"
     -- require "example.other_performance"
 
-    vd( obj_counter.dump() )
+    vd( statistic.dump() )
     ev:backend()
 end
 

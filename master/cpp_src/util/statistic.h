@@ -17,12 +17,6 @@
 class statistic
 {
 public:
-    static void uninstance();
-    static class statistic *instance();
-
-    void add_c_obj(const char *what,int32 count);
-    void add_c_lua_obj(const char *what,int32 count);
-public:
 
     // 只记录数量的计数器
     class base_counter
@@ -60,7 +54,16 @@ public:
     /* 所有统计的名称都是static字符串,不要传入一个临时字符串
      * 低版本的C++用std::string做key会每次申请内存都构造字符串
      */
-    typedef char_map_t< struct base_counter > base_counter_t;
+    typedef const_char_map_t(struct base_counter) base_counter_t;
+public:
+    static void uninstance();
+    static class statistic *instance();
+
+    void add_c_obj(const char *what,int32 count);
+    void add_c_lua_obj(const char *what,int32 count);
+
+    const statistic::base_counter_t &get_c_obj() const { return _c_obj; }
+    const statistic::base_counter_t &get_c_lua_obj() const { return _c_lua_obj; }
 private:
     ~statistic();
     explicit statistic();

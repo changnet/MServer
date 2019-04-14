@@ -13,6 +13,7 @@
 #include "packet/ws_stream_packet.h"
 #include "../lua_cpplib/lev.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
+#include "../util/statistic.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
 {
@@ -24,6 +25,8 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
     _codec_ty = codec::CDC_NONE;
+
+    C_OBJECT_ADD("socket");
 }
 
 socket::~socket()
@@ -34,6 +37,7 @@ socket::~socket()
     _io = NULL;
     _packet = NULL;
 
+    C_OBJECT_DEC("socket");
     assert( "socket not clean",0 == _pending && -1 == _w.fd );
 }
 

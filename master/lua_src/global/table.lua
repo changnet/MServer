@@ -222,15 +222,15 @@ end
 --[[
 浅合并
 ]]
-table.shallow_merge = function(src,dest,mt)
+table.merge = function(src,dest,mt)
     local ct = dest or {}
 
-    for k,v in pairs(t) do
+    for k,v in pairs(src) do
         ct[k] = v
     end
 
     if mt then
-        setmetatable( ct,getmetatable(t) )
+        setmetatable( ct,getmetatable(src) )
     end
 
     return ct

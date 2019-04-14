@@ -15,7 +15,7 @@
 #include "lclass.h"
 #include "ltimer.h"
 #include "lacism.h"
-#include "lobj_counter.h"
+#include "lstatistic.h"
 #include "lnetwork_mgr.h"
 
 #include "../net/socket.h"
@@ -82,9 +82,9 @@ void lstate::open_cpp()
     /* ============================库方式调用================================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     LUA_LIB_OPEN("util", luaopen_util);
+    LUA_LIB_OPEN("statistic", luaopen_statistic);
     LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
     LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
-    LUA_LIB_OPEN("obj_counter", luaopen_obj_counter);
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 
     /* ============================对象方式调用================================ */

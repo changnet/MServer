@@ -1,5 +1,6 @@
 #include "grid_aoi.h"
 #include "scene_include.h"
+#include "../util/statistic.h"
 
 // 暂定格子数最大为256，一个格子坐标x占高8位，y占低8位构成一个索引
 #define INDEX_BIT 8
@@ -15,6 +16,8 @@ grid_aoi::grid_aoi()
 
     _visual_width = 0; // 视野宽度格子数
     _visual_height = 0; // 视野高度格子数
+
+    C_OBJECT_ADD("grid_aoi");
 }
 
 grid_aoi::~grid_aoi()
@@ -27,6 +30,8 @@ grid_aoi::~grid_aoi()
 
     _entity_set.clear();
     _entity_grid.clear();
+
+    C_OBJECT_DEC("grid_aoi");
 }
 
 // 需要实现缓存，太大的直接删除不要丢缓存

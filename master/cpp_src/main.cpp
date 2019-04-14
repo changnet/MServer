@@ -4,13 +4,13 @@
 #include "mysql/sql.h"
 #include "net/buffer.h"
 #include "mongo/mongo.h"
+#include "lua_cpplib/lev.h"
 #include "scene/grid_aoi.h"
 #include "net/io/ssl_mgr.h"
-#include "net/codec/codec_mgr.h"
+#include "util/statistic.h"
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
-#include "lua_cpplib/lev.h"
-#include "lua_cpplib/lobj_counter.h"
+#include "net/codec/codec_mgr.h"
 #include "lua_cpplib/lnetwork_mgr.h"
 
 int32 ssl_init();
@@ -87,9 +87,7 @@ int32 main( int32 argc,char **argv )
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
     ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 
-    assert( "c++ object push to lua not release",
-        obj_counter::instance()->final_check() );
-    obj_counter::uninstance();       /* 关闭计数 */
+    statistic::uninstance();       /* 关闭计数 */
 
     /* 清除静态数据，以免影响内存检测 */
     buffer::purge();
