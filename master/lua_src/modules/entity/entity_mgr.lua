@@ -32,7 +32,7 @@ end
 -- 创建实体
 function Entity_mgr:new_entity( et,... )
     local entity = nil
-    local eid = self.id_generator:next_id_ex()
+    local eid = self.id_generator:next_id()
 
     assert( nil == self.entity[eid],"duplication entity id" )
 

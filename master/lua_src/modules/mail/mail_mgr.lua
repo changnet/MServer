@@ -71,7 +71,7 @@ end
 function Mail_mgr:add_offline_mail( pid,mail )
     -- list.N，mongodb 2.2+版本后语法，表示list数组中第N个元素不存在时才插入(从0开始)
     -- 防止玩家太久不上线邮箱爆了
-    local query = string.format( 
+    local query = string.format(
         '{"_id":%d,"list.%d":{"$exists":false}}',pid,MAX_MAIL - 1 )
     local update = { ["$push"] = {["list"] = mail} }
 
@@ -130,7 +130,7 @@ function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     end
 
     if "world" ~= g_app.srvname then
-        return g_rpc:invoke( 
+        return g_rpc:invoke(
             "rpc_send_sys_mail",title,ctx,attachment,op,expire,level,vip )
     end
 
@@ -211,7 +211,7 @@ end
 
 -- 获取上一次使用的最大id
 function Mail_mgr:get_now_id()
-    return self.time_id:now_id()
+    return self.time_id:last_id()
 end
 
 -- 检查是否有新的全服邮件
