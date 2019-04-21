@@ -33,7 +33,7 @@ void lstatistic::dump_base_counter(
         const struct statistic::base_counter &bc = itr->second;
         lua_createtable( L,0,3 );
         lua_pushstring( L,"name" );
-        lua_pushstring( L,itr->first );
+        lua_pushstring( L,itr->first._raw_ctx );
         lua_rawset( L,-3 );
 
         lua_pushstring( L,"max" );

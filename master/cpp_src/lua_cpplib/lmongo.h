@@ -36,7 +36,7 @@ private:
     void notification( notify_t msg );
 
     void invoke_result();
-    void invoke_command( bool is_return = true );
+    void invoke_command();
 
     void push_query( const struct mongo_query *query );
     void push_result( const struct mongo_result *result );

@@ -98,7 +98,7 @@ int32 mongo::ping()
    return ecode;
 }
 
-struct mongo_result *mongo::count( const struct mongo_query *mq )
+bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo count,inactivity connection",_conn );
     assert( "mongo count,empty query",mq );
@@ -106,36 +106,27 @@ struct mongo_result *mongo::count( const struct mongo_query *mq )
     mongoc_collection_t *collection = 
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    bson_error_t error;
     int64 count = mongoc_collection_count( collection, 
-        MONGOC_QUERY_NONE,mq->_query, mq->_skip, mq->_limit, NULL, &error );
+        MONGOC_QUERY_NONE,mq->_query,mq->_skip,mq->_limit,NULL,&res->_error );
 
     mongoc_collection_destroy ( collection );
 
-    struct mongo_result *result = new mongo_result();
-    result->_qid = mq->_qid;
-    result->_mqt = mq->_mqt;
-
     if ( count < 0 )    /* 如果失败，返回-1 */
     {
-        result->_data  = NULL;
-        result->_ecode = error.code;
+        res->_data  = NULL;
 
-        ERROR( "mongo count error:%s\n",error.message );
-    }
-    else
-    {
-        bson_t *doc = bson_new();
-        BSON_APPEND_INT64( doc,"count",count );
-
-        result->_data  = doc;
-        result->_ecode = 0  ;
+        return false;
     }
 
-    return result;
+    bson_t *doc = bson_new();
+    BSON_APPEND_INT64( doc,"count",count );
+
+    res->_data  = doc;
+
+    return true;
 }
 
-struct mongo_result *mongo::find ( const struct mongo_query *mq )
+bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo find,inactivity connection",_conn );
     assert( "mongo find,empty query",mq );
@@ -146,10 +137,6 @@ struct mongo_result *mongo::find ( const struct mongo_query *mq )
     mongoc_cursor_t *cursor = 
         mongoc_collection_find_with_opts( 
         collection, mq->_query, mq->_fields, NULL );
-
-    struct mongo_result *result = new mongo_result();
-    result->_qid = mq->_qid;
-    result->_mqt = mq->_mqt;
 
     int32 index = 0;
     bson_t *doc = bson_new();
@@ -176,28 +163,25 @@ struct mongo_result *mongo::find ( const struct mongo_query *mq )
         assert( "bson append document err",r );
     }
 
-    bson_error_t error;
-    if ( mongoc_cursor_error( cursor,&error) )
+    if ( mongoc_cursor_error( cursor,&res->_error) )
     {
         bson_destroy( doc );
-        result->_data  = NULL;
-        result->_ecode = error.code;
+        res->_data  = NULL;
 
-        ERROR( "mongo find error:%s\n",error.message );
+        mongoc_collection_destroy ( collection );
+        return false;
     }
-    else
-    {
-        result->_data  = doc;
-        result->_ecode = 0  ;
-    }
+
+    res->_data  = doc;
 
     mongoc_cursor_destroy( cursor );
     mongoc_collection_destroy ( collection );
 
-    return result;
+    return true;
 }
 
-struct mongo_result *mongo::find_and_modify ( const struct mongo_query *mq )
+bool mongo::find_and_modify ( 
+    const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo find_and_modify,inactivity connection",_conn );
     assert( "mongo find_and_modify,empty query",mq );
@@ -205,28 +189,27 @@ struct mongo_result *mongo::find_and_modify ( const struct mongo_query *mq )
     mongoc_collection_t *collection = 
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    struct mongo_result *result = new mongo_result();
-    result->_data = bson_new();
-    result->_qid  = mq->_qid;
-    result->_mqt  = mq->_mqt;
+    assert( "mongo find_and modify data dirty",NULL == res->_data );
 
-    bson_error_t error;
-    if ( !mongoc_collection_find_and_modify( 
+    res->_data = bson_new();
+    bool ok = mongoc_collection_find_and_modify( 
         collection,mq->_query,mq->_sort,mq->_update,
-        mq->_fields,mq->_remove, mq->_upsert,mq->_new, result->_data, &error ) )
-    {
-        bson_destroy( result->_data );
-        result->_ecode = error.code;
-        result->_data  = NULL      ;
-        ERROR( "mongo find_and_modify error:%s\n",error.message );
-    }
+        mq->_fields,mq->_remove,mq->_upsert,mq->_new,res->_data,&res->_error );
 
     mongoc_collection_destroy ( collection );
+    if ( !ok )
+    {
+        bson_destroy( res->_data );
+        res->_data  = NULL      ;
 
-    return result;
+        return false;
+
+    }
+
+    return true;
 }
 
-int32 mongo::insert( const struct mongo_query *mq )
+bool mongo::insert( const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo insert,inactivity connection",_conn );
     assert( "mongo insert,empty query",mq );
@@ -234,21 +217,15 @@ int32 mongo::insert( const struct mongo_query *mq )
     mongoc_collection_t *collection = 
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    int32 ecode = 0;
-    bson_error_t error;
-    if ( !mongoc_collection_insert( collection, MONGOC_INSERT_NONE,
-        mq->_query, NULL, &error ) )
-    {
-        ecode = error.code;
-        ERROR( "mongo insert error:%s\n",error.message );
-    }
+    bool ok = mongoc_collection_insert( 
+        collection, MONGOC_INSERT_NONE, mq->_query, NULL, &res->_error );
 
     mongoc_collection_destroy ( collection );
 
-    return ecode;
+    return ok;
 }
 
-int32 mongo::update( const struct mongo_query *mq )
+bool mongo::update( const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo update,inactivity connection",_conn );
     assert( "mongo update,empty query",mq );
@@ -256,22 +233,17 @@ int32 mongo::update( const struct mongo_query *mq )
     mongoc_collection_t *collection = 
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    int32 ecode = 0;
-    bson_error_t error;
     mongoc_update_flags_t flags = (mongoc_update_flags_t)mq->_flags;
-    if ( !mongoc_collection_update( 
-        collection, flags, mq->_query, mq->_update, NULL, &error ) )
-    {
-        ecode = error.code;
-        ERROR( "mongo update error:%s\n",error.message );
-    }
+
+    bool ok = mongoc_collection_update( 
+        collection, flags, mq->_query, mq->_update, NULL, &res->_error );
 
     mongoc_collection_destroy ( collection );
 
-    return ecode;
+    return ok;
 }
 
-int32 mongo::remove( const struct mongo_query *mq )
+bool mongo::remove( const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo remove,inactivity connection",_conn );
     assert( "mongo remove,empty query",mq );
@@ -279,16 +251,10 @@ int32 mongo::remove( const struct mongo_query *mq )
     mongoc_collection_t *collection = 
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    int32 ecode = 0;
-    bson_error_t error;
-    if ( !mongoc_collection_remove( collection, 
-        (mongoc_remove_flags_t)mq->_flags, mq->_query, NULL, &error ) )
-    {
-        ecode = error.code;
-        ERROR( "mongo remove error:%s\n",error.message );
-    }
+    bool ok = mongoc_collection_remove( collection, 
+        (mongoc_remove_flags_t)mq->_flags, mq->_query, NULL, &res->_error );
 
     mongoc_collection_destroy ( collection );
 
-    return ecode;
+    return ok;
 }

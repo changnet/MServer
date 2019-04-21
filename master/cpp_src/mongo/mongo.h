@@ -20,8 +20,14 @@ typedef enum
     MQT_FMOD   = 3,
     MQT_INSERT = 4,
     MQT_UPDATE = 5,
-    MQT_REMOVE = 6
+    MQT_REMOVE = 6,
+    MQT_MAX
 }mqt_t; /* mongo_query_type */
+
+static const char* MQT_NAME[] = 
+    {"none","count","find","find_and_modify","insert","update","remove"};
+
+static_assert( MQT_MAX == array_size(MQT_NAME),"mongo name define" );
 
 struct mongo_query
 {
@@ -138,14 +144,18 @@ struct mongo_result
     int32   _qid  ;
     mqt_t   _mqt  ;
     bson_t *_data ;
-    int32   _ecode;
+    bson_error_t _error;
+    char  _clt[MONGO_VAR_LEN]; // collection
+    char  _query[MONGO_VAR_LEN]; // 查询条件，日志用
 
     mongo_result()
     {
         _qid    = 0;
-        _mqt    = MQT_NONE;
         _data   = NULL;
-        _ecode  = 0;
+        _mqt    = MQT_NONE;
+
+        _clt[0]        = '\0';
+        _query[0]      = '\0';
     }
 
     ~mongo_result()
@@ -155,7 +165,6 @@ struct mongo_result
         _qid    = 0;
         _mqt    = MQT_NONE;
         _data   = NULL;
-        _ecode  = 0;
     }
 };
 
@@ -175,12 +184,12 @@ public:
     int32 connect();
     void disconnect();
 
-    int32 insert ( const struct mongo_query *mq );
-    int32 update ( const struct mongo_query *mq );
-    int32 remove ( const struct mongo_query *mq );
-    struct mongo_result *count( const struct mongo_query *mq );
-    struct mongo_result *find ( const struct mongo_query *mq );
-    struct mongo_result *find_and_modify( const struct mongo_query *mq );
+    bool insert ( const struct mongo_query *mq,struct mongo_result *res );
+    bool update ( const struct mongo_query *mq,struct mongo_result *res );
+    bool remove ( const struct mongo_query *mq,struct mongo_result *res );
+    bool count  ( const struct mongo_query *mq,struct mongo_result *res );
+    bool find   ( const struct mongo_query *mq,struct mongo_result *res );
+    bool find_and_modify( const struct mongo_query *mq,struct mongo_result *res );
 
 private:
     int32 _port;

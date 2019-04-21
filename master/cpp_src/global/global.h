@@ -85,6 +85,7 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define MATH_MIN(a,b)    ((a) > (b) ? (b) : (a))
 #define MATH_MAX(a,b)    ((a) > (b) ? (a) : (b))
 
+#define array_size(x) (sizeof(x)/sizeof(x[0]))
 #define array_noinit(base,size)
 #define array_zero(base,size)    memset((void *)(base), 0, size)
 

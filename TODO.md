@@ -4,13 +4,15 @@
 * 实现场景的static区域属性(不可修改)和dynamic区域属性(可根据逻辑创建和修改)
 * fast_class的设计，主要是把基类的函数拷贝到当前子类。由于现在是所有文件热更,不存在之前单个文件热更导致的子类热更不到的情况
 * 技能的配置比较复杂，看看能不能设计出多action，多result，多条件控制又比较容易明白的excel配置
-* 把所有的static、global变量放到一个static_global类去，以控制他们的创建、销毁顺序
+* 把所有的static、global变量放到一个static_global类去，以控制他们的创建、销毁顺序,把ssl mysql mongodb的初始化也放里面,这个现在在global.cpp里定义
 * 主循环是否使用分时器
 * async_worker（属性计算、技能延后，技能延后看看是放这里还是主循环）
 * profile看效率问题
 * lint优化代码
 * 服务器socket预分配内存太大，当服务器之间连接太多(比如中心服，500条连接)，就会分不了内存
 * 要不要把运行目录放到bin目录，这样生成的core文件，error文件以及log、setting这些与版本无关的全在一个目录里了
+* mongo.cpp里的日志不是线程安全的，虽然只是会导致时间打印不对
+* mongodb的result感觉要用个object_pool
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步

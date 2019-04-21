@@ -87,11 +87,11 @@ bool lmongo::cleanup()
     if ( _mongo.ping() )
     {
         ERROR( "mongo ping fail at cleanup,data may lost" );
-        /* TODO write to file */
+        /* TODO:write to file */
     }
     else
     {
-        invoke_command( false );
+        invoke_command();
     }
 
     _mongo.disconnect();
@@ -196,11 +196,14 @@ void lmongo::invoke_result()
     const struct mongo_result *res = NULL;
     while ( (res = pop_result()) )
     {
+        // 为0表示不需要回调到脚本
+        if ( 0 == res->_qid ) continue;
+
         lua_getglobal( L,"mongodb_read_event" );
 
         lua_pushinteger( L,_dbid      );
         lua_pushinteger( L,res->_qid   );
-        lua_pushinteger( L,res->_ecode );
+        lua_pushinteger( L,res->_error.code );
 
         int32 nargs = 3;
         if ( res->_data )
@@ -265,55 +268,46 @@ void lmongo::push_result( const struct mongo_result *result )
     if ( is_notify ) notify_parent( MSG );
 }
 
-/* 在子线程触发查询命令
- * is_return:是否需要返回结果,关闭线程时将不返回
- */
-void lmongo::invoke_command( bool is_return )
+/* 在子线程触发查询命令 */
+void lmongo::invoke_command()
 {
     const struct mongo_query *query = NULL;
     while ( (query = pop_query()) )
     {
-        int32 ecode = 0;
-        struct mongo_result *res = NULL;
+        bool ok = false;
+        struct mongo_result *res = new mongo_result();
         switch( query->_mqt )
         {
-            case MQT_COUNT  : res = _mongo.count( query );break;
-            case MQT_FIND   : res = _mongo.find ( query );break;
-            case MQT_FMOD   : res = _mongo.find_and_modify( query );break;
-            case MQT_INSERT : ecode = _mongo.insert( query );break;
-            case MQT_UPDATE : ecode = _mongo.update( query );break;
-            case MQT_REMOVE : ecode = _mongo.remove( query );break;
+            case MQT_COUNT  : ok = _mongo.count( query,res );break;
+            case MQT_FIND   : ok = _mongo.find ( query,res );break;
+            case MQT_FMOD   : ok = _mongo.find_and_modify( query,res );break;
+            case MQT_INSERT : ok = _mongo.insert( query,res );break;
+            case MQT_UPDATE : ok = _mongo.update( query,res );break;
+            case MQT_REMOVE : ok = _mongo.remove( query,res );break;
             default:
             {
                 ERROR( "unknow handle mongo command type:%d\n",query->_mqt );
+                delete res;
                 delete query;
                 continue;
             }
         }
 
-        /* 如果分配了qid，表示需要返回 */
-        if ( is_return && query->_qid > 0 )
+        if ( !ok ) assert( "mongo result check", 0 != res->_error.code );
+
+        res->_qid = query->_qid;
+        res->_mqt = query->_mqt;
+        snprintf( res->_clt,MONGO_VAR_LEN,"%s",query->_clt );
+
+        if ( query->_query )
         {
-            /* 对于insert之类的操作，很多情况下是不需要返回的。
-             * 如果确实需要返回，也只需要一个结果
-             */
-            if ( !res )
-            {
-                res = new mongo_result();
-                res->_data = NULL;
-                res->_qid  = query->_qid;
-                res->_mqt  = query->_mqt;
-                res->_ecode = ecode;
-            }
-            push_result( res );
-        }
-        else
-        {
-            delete res; /* 关服时不需要回调 */
+            snprintf( res->_query,MONGO_VAR_LEN,
+                "%s",bson_as_json (query->_query, NULL) );
         }
 
+        push_result( res );
+
         delete query;
-        query = NULL;
     }
 }
 
