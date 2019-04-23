@@ -1,3 +1,4 @@
+#include <ctime> // for clock
 #include <cstdarg>
 #include "lmongo.h"
 
@@ -155,7 +156,7 @@ int32 lmongo::count( lua_State *L )
     if ( str_query )
     {
         bson_error_t error;
-        query = bson_new_from_json( 
+        query = bson_new_from_json(
             reinterpret_cast<const uint8 *>(str_query),-1,&error );
         if ( !query )
         {
@@ -209,7 +210,7 @@ void lmongo::invoke_result()
         if ( res->_data )
         {
             struct error_collector error;
-            bson_type_t root_type = 
+            bson_type_t root_type =
                 res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
 
             if ( lbs_do_decode( L,res->_data,root_type,&error ) < 0 )
@@ -275,6 +276,7 @@ void lmongo::invoke_command()
     while ( (query = pop_query()) )
     {
         bool ok = false;
+        clock_t begin = clock();
         struct mongo_result *res = new mongo_result();
         switch( query->_mqt )
         {
@@ -298,6 +300,7 @@ void lmongo::invoke_command()
         res->_qid = query->_qid;
         res->_mqt = query->_mqt;
         snprintf( res->_clt,MONGO_VAR_LEN,"%s",query->_clt );
+        res->_elaspe = ((float)(clock() - begin))/CLOCKS_PER_SEC;
 
         if ( query->_query )
         {
@@ -313,7 +316,7 @@ void lmongo::invoke_command()
 
 // 把对应的json字符串或者lua table参数转换为bson
 // @opt:可选参数：0 表示可以传入nil，返回NULL;1 表示未传入参数则创建一个新的bson
-bson_t *lmongo::string_or_table_to_bson( 
+bson_t *lmongo::string_or_table_to_bson(
     lua_State *L,int index,int opt,bson_t *bs,... )
 {
 #define CLEAN_BSON( arg )    \
@@ -343,7 +346,7 @@ bson_t *lmongo::string_or_table_to_bson(
     {
         const char *json = lua_tostring( L,index );
         bson_error_t error;
-        bson = bson_new_from_json( 
+        bson = bson_new_from_json(
             reinterpret_cast<const uint8 *>(json),-1,&error );
         if ( !bson )
         {
@@ -358,7 +361,7 @@ bson_t *lmongo::string_or_table_to_bson(
     if ( 0 == opt ) return NULL;
     if ( 1 == opt ) return bson_new();
 
-    luaL_error( 
+    luaL_error(
         L,"argument #%d expect table or json string",index );
     return NULL;
 
@@ -419,7 +422,7 @@ int32 lmongo::find_and_modify( lua_State *L )
 
     struct mongo_query *mongo_fmod = new mongo_query();
     mongo_fmod->set( id,MQT_FMOD );
-    mongo_fmod->set_find_modify( 
+    mongo_fmod->set_find_modify(
         collection,query,sort,update,fields,_remove,_upsert,_new );
 
     push_query( mongo_fmod );

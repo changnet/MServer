@@ -94,6 +94,11 @@ void cprintf_log( const char *prefix,const char *fmt,... )
     RAW_FORMAT( tm,prefix,printf_path,(is_daemon ? NULL : stdout),fmt );
 }
 
+void raw_cerror_log( time_t tm,const char *prefix,const char *fmt,... )
+{
+    RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
+}
+
 void raw_cprintf_log( time_t tm,const char *prefix,const char *fmt,... )
 {
     // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR

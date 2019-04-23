@@ -12,7 +12,7 @@
 #define MONGO_VAR_LEN    64
 
 /* mongo CRUD 操作 */
-typedef enum 
+typedef enum
 {
     MQT_NONE   = 0,
     MQT_COUNT  = 1,
@@ -24,7 +24,7 @@ typedef enum
     MQT_MAX
 }mqt_t; /* mongo_query_type */
 
-static const char* MQT_NAME[] = 
+static const char* MQT_NAME[] =
     {"none","count","find","find_and_modify","insert","update","remove"};
 
 static_assert( MQT_MAX == array_size(MQT_NAME),"mongo name define" );
@@ -144,6 +144,7 @@ struct mongo_result
     int32   _qid  ;
     mqt_t   _mqt  ;
     bson_t *_data ;
+    float   _elaspe; // 消耗的时间，秒
     bson_error_t _error;
     char  _clt[MONGO_VAR_LEN]; // collection
     char  _query[MONGO_VAR_LEN]; // 查询条件，日志用
@@ -151,6 +152,7 @@ struct mongo_result
     mongo_result()
     {
         _qid    = 0;
+        _elaspe = 0.0;
         _data   = NULL;
         _mqt    = MQT_NONE;
 

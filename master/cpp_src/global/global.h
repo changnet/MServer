@@ -36,14 +36,20 @@
 
 #ifdef _PRINTF_
     #define PRINTF(...) cprintf_log( "CP",__VA_ARGS__ )
+    // 线程安全，并且不需要依赖lev的时间
+    #define PRINTF_R(...) raw_cprintf_log( ::time(NULL),"CP",__VA_ARGS__ )
 #else
     #define PRINTF(...)
+    #define PRINTF_R(...)
 #endif
 
 #ifdef _ERROR_
     #define ERROR(...) cerror_log( "CE",__VA_ARGS__ )
+    // 线程安全，并且不需要依赖lev的时间
+    #define ERROR_R(...) raw_cerror_log( ::time(NULL),"CE",__VA_ARGS__ )
 #else
     #define ERROR(...)
+    #define ERROR_R(...)
 #endif
 
 /* terminated without destroying any object and without calling any of the

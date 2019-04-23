@@ -70,7 +70,7 @@ int32 mongo::ping()
     mongoc_database_t * database = mongoc_client_get_database( _conn, _db );
 
     /* cursor总是需要释放 */
-    mongoc_cursor_t *cursor = mongoc_database_command( 
+    mongoc_cursor_t *cursor = mongoc_database_command(
         database,(mongoc_query_flags_t)0, 0, 1, 0, &ping, NULL, NULL );
 
     const bson_t *reply;
@@ -88,7 +88,7 @@ int32 mongo::ping()
     int32 ecode = mongoc_cursor_error( cursor, &error );
     if ( ecode )
     {
-        ERROR( "mongo ping error(%d):%s",error.code,error.message );
+        ERROR_R( "mongo ping error(%d):%s",error.code,error.message );
     }
 
     mongoc_cursor_destroy( cursor );
@@ -103,10 +103,10 @@ bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
     assert( "mongo count,inactivity connection",_conn );
     assert( "mongo count,empty query",mq );
 
-    mongoc_collection_t *collection = 
+    mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    int64 count = mongoc_collection_count( collection, 
+    int64 count = mongoc_collection_count( collection,
         MONGOC_QUERY_NONE,mq->_query,mq->_skip,mq->_limit,NULL,&res->_error );
 
     mongoc_collection_destroy ( collection );
@@ -131,11 +131,11 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
     assert( "mongo find,inactivity connection",_conn );
     assert( "mongo find,empty query",mq );
 
-    mongoc_collection_t *collection = 
+    mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    mongoc_cursor_t *cursor = 
-        mongoc_collection_find_with_opts( 
+    mongoc_cursor_t *cursor =
+        mongoc_collection_find_with_opts(
         collection, mq->_query, mq->_fields, NULL );
 
     int32 index = 0;
@@ -180,19 +180,19 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
     return true;
 }
 
-bool mongo::find_and_modify ( 
+bool mongo::find_and_modify (
     const struct mongo_query *mq,struct mongo_result *res )
 {
     assert( "mongo find_and_modify,inactivity connection",_conn );
     assert( "mongo find_and_modify,empty query",mq );
 
-    mongoc_collection_t *collection = 
+    mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
     assert( "mongo find_and modify data dirty",NULL == res->_data );
 
     res->_data = bson_new();
-    bool ok = mongoc_collection_find_and_modify( 
+    bool ok = mongoc_collection_find_and_modify(
         collection,mq->_query,mq->_sort,mq->_update,
         mq->_fields,mq->_remove,mq->_upsert,mq->_new,res->_data,&res->_error );
 
@@ -214,10 +214,10 @@ bool mongo::insert( const struct mongo_query *mq,struct mongo_result *res )
     assert( "mongo insert,inactivity connection",_conn );
     assert( "mongo insert,empty query",mq );
 
-    mongoc_collection_t *collection = 
+    mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    bool ok = mongoc_collection_insert( 
+    bool ok = mongoc_collection_insert(
         collection, MONGOC_INSERT_NONE, mq->_query, NULL, &res->_error );
 
     mongoc_collection_destroy ( collection );
@@ -230,12 +230,12 @@ bool mongo::update( const struct mongo_query *mq,struct mongo_result *res )
     assert( "mongo update,inactivity connection",_conn );
     assert( "mongo update,empty query",mq );
 
-    mongoc_collection_t *collection = 
+    mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
     mongoc_update_flags_t flags = (mongoc_update_flags_t)mq->_flags;
 
-    bool ok = mongoc_collection_update( 
+    bool ok = mongoc_collection_update(
         collection, flags, mq->_query, mq->_update, NULL, &res->_error );
 
     mongoc_collection_destroy ( collection );
@@ -248,10 +248,10 @@ bool mongo::remove( const struct mongo_query *mq,struct mongo_result *res )
     assert( "mongo remove,inactivity connection",_conn );
     assert( "mongo remove,empty query",mq );
 
-    mongoc_collection_t *collection = 
+    mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    bool ok = mongoc_collection_remove( collection, 
+    bool ok = mongoc_collection_remove( collection,
         (mongoc_remove_flags_t)mq->_flags, mq->_query, NULL, &res->_error );
 
     mongoc_collection_destroy ( collection );

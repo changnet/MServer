@@ -11,6 +11,7 @@ extern void set_app_name( const char *name );
 extern void set_log_args( bool dm,const char *ppath,const char *epath);
 extern void cerror_log ( const char *prefix,const char *fmt,... );
 extern void cprintf_log( const char *prefix,const char *fmt,... );
+extern void raw_cerror_log( time_t tm,const char *prefix,const char *fmt,... );
 extern void raw_cprintf_log( time_t tm,const char *prefix,const char *fmt,... );
 
 #endif  /* __CLOG_H__ */
