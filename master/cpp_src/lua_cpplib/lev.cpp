@@ -1,12 +1,13 @@
 #include <signal.h>
 
 #include "lev.h"
-#include "lstate.h"
 #include "ltools.h"
 #include "lnetwork_mgr.h"
 
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
+
+#include "../system/static_global.h"
 
 uint32 lev::sig_mask = 0;
 
@@ -104,7 +105,7 @@ void lev::sig_handler( int32 signum )
 
 void lev::invoke_signal()
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     lua_pushcfunction(L,traceback);
 
     int signum = 0;
@@ -193,7 +194,7 @@ void lev::invoke_sending()
 
 void lev::invoke_app_ev (int64 ms_now)
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
 
     if (!_app_ev_interval || _next_app_ev_tm > ms_now ) return;
 
@@ -242,7 +243,7 @@ void lev::running( int64 ms_now )
 
     lnetwork_mgr::instance()->invoke_delete();
 
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
 
     // TODO:每秒gc一次，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
     if (_lua_gc_tm != ev_rt_now)

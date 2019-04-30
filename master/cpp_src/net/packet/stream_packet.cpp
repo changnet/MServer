@@ -4,7 +4,7 @@
 #include "../header_include.h"
 #include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
-#include "../../lua_cpplib/lstate.h"
+#include "../../system/static_global.h"
 #include "../../lua_cpplib/lnetwork_mgr.h"
 
 stream_packet::stream_packet( class socket *sk )
@@ -58,7 +58,7 @@ void stream_packet::dispatch( const struct base_header *header )
 /* 服务器发往客户端数据包回调脚本 */
 void stream_packet::sc_command( const struct s2c_header *header )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
@@ -124,7 +124,7 @@ void stream_packet::cs_dispatch( const struct c2s_header *header )
 /* 客户端发往服务器数据包回调脚本 */
 void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
@@ -233,7 +233,7 @@ void stream_packet::ss_dispatch( const s2s_header *header )
 void stream_packet::ss_command(
     const s2s_header *header,const cmd_cfg_t *cmd_cfg )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop( L ) );
 
     int32 size = PACKET_BUFFER_LEN( header );
@@ -275,7 +275,7 @@ void stream_packet::ss_command(
 /* 客户端发往服务器，由网关转发的数据包回调脚本 */
 void stream_packet::css_command( const s2s_header *header )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
@@ -351,7 +351,7 @@ void stream_packet::ssc_command( const s2s_header *header )
 /* 处理rpc调用 */
 void stream_packet::rpc_command( const s2s_header *header )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     int32 size = PACKET_BUFFER_LEN( header );
@@ -396,7 +396,7 @@ void stream_packet::rpc_command( const s2s_header *header )
 /* 处理rpc返回 */
 void stream_packet::rpc_return( const s2s_header *header )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     int32 size = PACKET_BUFFER_LEN( header );
@@ -900,7 +900,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
         return;
     }
 
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     // 根据参数从lua获取对应的玩家id

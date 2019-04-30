@@ -4,7 +4,7 @@
 #include "ws_stream_packet.h"
 #include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
-#include "../../lua_cpplib/lstate.h"
+#include "../../system/static_global.h"
 #include "../../lua_cpplib/lnetwork_mgr.h"
 
 #pragma pack (push, 1)
@@ -171,7 +171,7 @@ int32 ws_stream_packet::on_frame_end()
 /* 回调server to client的数据包 */
 int32 ws_stream_packet::sc_command()
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
@@ -222,7 +222,7 @@ int32 ws_stream_packet::sc_command()
 /* 回调 client to server 的数据包 */
 int32 ws_stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );

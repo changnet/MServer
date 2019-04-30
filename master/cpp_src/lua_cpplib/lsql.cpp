@@ -1,6 +1,6 @@
 #include "lsql.h"
 #include "ltools.h"
-#include "lstate.h"
+#include "../system/static_global.h"
 
 lsql::lsql( lua_State *L )
 {
@@ -186,7 +186,7 @@ int32 lsql::pop_result( struct sql_result &res )
 
 void lsql::invoke_result()
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     lua_pushcfunction( L,traceback );
 
     /* sql_result是一个比较小的结构体，因此不使用指针 */

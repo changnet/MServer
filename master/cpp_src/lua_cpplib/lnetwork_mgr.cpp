@@ -1,7 +1,8 @@
 #include "lnetwork_mgr.h"
 
 #include "ltools.h"
-#include "lstate.h"
+#include "../system/static_global.h"
+
 #include "../net/io/ssl_mgr.h"
 #include "../net/header_include.h"
 #include "../net/codec/codec_mgr.h"
@@ -653,7 +654,7 @@ bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
 
     _socket_map[new_conn_id] = new_sk;
 
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     lua_pushcfunction( L,traceback );
 
     lua_getglobal( L,"conn_accept" );
@@ -679,7 +680,7 @@ bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
 /* 连接回调 */
 bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     lua_pushcfunction( L,traceback );
 
     lua_getglobal( L,"conn_new" );
@@ -710,7 +711,7 @@ bool lnetwork_mgr::connect_del( uint32 conn_id )
 {
     _deleting.push_back( conn_id );
 
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     lua_pushcfunction( L,traceback );
 
     lua_getglobal( L,"conn_del" );

@@ -3,7 +3,7 @@
 #include "../socket.h"
 #include "http_packet.h"
 #include "../../lua_cpplib/ltools.h"
-#include "../../lua_cpplib/lstate.h"
+#include "../../system/static_global.h"
 
 // 开始解析报文，第一个回调的函数，在这里初始化数据
 int32 on_message_begin( http_parser *parser )
@@ -188,7 +188,7 @@ void http_packet::on_headers_complete()
 int32 http_packet::on_message_complete( bool upgrade )
 {
     UNUSED( upgrade );
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );

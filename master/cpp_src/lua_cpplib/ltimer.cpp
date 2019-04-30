@@ -1,6 +1,5 @@
 #include "ltimer.h"
 #include "ltools.h"
-#include "lstate.h"
 #include "../ev/ev_def.h"
 #include "../system/static_global.h"
 
@@ -67,7 +66,7 @@ void ltimer::callback( ev_timer &w,int32 revents )
 {
     assert( "libev timer cb error",!(EV_ERROR & revents) );
 
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
 
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"timer_event" );

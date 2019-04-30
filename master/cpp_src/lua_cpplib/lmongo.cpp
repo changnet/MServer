@@ -3,8 +3,9 @@
 #include "lmongo.h"
 
 #include "ltools.h"
-#include "lstate.h"
 #include <lbson.h>
+
+#include "../system/static_global.h"
 
 lmongo::lmongo( lua_State *L )
 {
@@ -191,7 +192,7 @@ const struct mongo_result *lmongo::pop_result()
 
 void lmongo::invoke_result()
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     lua_pushcfunction( L,traceback );
 
     const struct mongo_result *res = NULL;

@@ -23,23 +23,6 @@
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
 
-class lstate *lstate::_state = NULL;
-class lstate *lstate::instance()
-{
-    if ( !_state )
-    {
-        _state = new lstate();
-    }
-
-    return _state;
-}
-
-void lstate::uninstance()
-{
-    if ( _state ) delete _state;
-    _state = NULL;
-}
-
 lstate::lstate()
 {
     /* 初始化lua */

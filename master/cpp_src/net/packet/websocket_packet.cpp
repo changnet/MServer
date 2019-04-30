@@ -3,7 +3,7 @@
 #include "../socket.h"
 #include "websocket_packet.h"
 #include "../../lua_cpplib/ltools.h"
-#include "../../lua_cpplib/lstate.h"
+#include "../../system/static_global.h"
 
 /*
 https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
@@ -300,7 +300,7 @@ int32 websocket_packet::invoke_handshake()
         return -1;
     }
 
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
@@ -321,7 +321,7 @@ int32 websocket_packet::invoke_handshake()
 
 int32 websocket_packet::on_frame_end()
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
@@ -342,7 +342,7 @@ int32 websocket_packet::on_frame_end()
 // 处理ping、pong等opcode 
 int32 websocket_packet::on_ctrl_end()
 {
-    static lua_State *L = lstate::instance()->state();
+    static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     lua_pushcfunction( L,traceback );
