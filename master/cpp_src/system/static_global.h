@@ -4,6 +4,7 @@
 #include "statistic.h"
 #include "../log/thread_log.h"
 #include "../lua_cpplib/lev.h"
+#include "../net/io/ssl_mgr.h"
 #include "../lua_cpplib/lstate.h"
 #include "../net/codec/codec_mgr.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
@@ -18,6 +19,7 @@ public:
     static class ev *ev() { return &_ev; }
     static class lev *lua_ev() { return &_ev; }
     static lua_State *state() { return _state.state(); }
+    static class ssl_mgr *ssl_mgr() { return &_ssl_mgr; }
     static class codec_mgr *codec_mgr() { return &_codec_mgr; }
     static class statistic *statistic() { return &_statistic; }
     static class thread_log *global_log() { return &_global_log; }
@@ -39,6 +41,7 @@ private:
     static class lstate _state;
     static class thread_log _global_log;
     static class codec_mgr _codec_mgr;
+    static class ssl_mgr _ssl_mgr;
     static class lnetwork_mgr _network_mgr;
 };
 

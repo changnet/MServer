@@ -41,8 +41,8 @@ public:
         KEYT_MAX
     }key_t;
 public:
-    static void uninstance();
-    static class ssl_mgr *instance();
+    ~ssl_mgr();
+    explicit ssl_mgr();
 
     /* 获取一个SSL_CTX
      * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
@@ -57,13 +57,8 @@ public:
     int32 new_ssl_ctx( sslv_t sslv,const char *cert_file,
         key_t keyt,const char *key_file,const char *passwd );
 private:
-    ssl_mgr();
-    ~ssl_mgr();
-
     int32 _ctx_idx;
     struct x_ssl_ctx _ssl_ctx[MAX_SSL_CTX];
-
-    static class ssl_mgr *_ssl_mgr;
 };
 
 #endif /* __SSL_MGR_H__ */

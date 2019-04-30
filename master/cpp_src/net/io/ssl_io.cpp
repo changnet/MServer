@@ -2,7 +2,7 @@
 #include <openssl/err.h>
 
 #include "ssl_io.h"
-#include "ssl_mgr.h"
+#include "../../system/static_global.h"
 
 #define X_SSL(x) static_cast<SSL *>( x )
 #define X_SSL_CTX(x) static_cast<SSL_CTX *>( x )
@@ -137,7 +137,7 @@ int32 ssl_io::init_connect( int32 fd )
 
 int32 ssl_io::init_ssl_ctx( int32 fd )
 {
-    static class ssl_mgr *ctx_mgr = ssl_mgr::instance();
+    static class ssl_mgr *ctx_mgr = static_global::ssl_mgr();
 
     void *base_ctx = ctx_mgr->get_ssl_ctx( _ctx_idx );
     if ( !base_ctx )

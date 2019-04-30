@@ -4,13 +4,14 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
-class static_global::initializer static_global::_initializer;
-class statistic static_global::_statistic;
 class lev static_global::_ev;
 class lstate static_global::_state;
-class thread_log static_global::_global_log;
+class ssl_mgr static_global::_ssl_mgr;
 class codec_mgr static_global::_codec_mgr;
+class statistic static_global::_statistic;
+class thread_log static_global::_global_log;
 class lnetwork_mgr static_global::_network_mgr;
+class static_global::initializer static_global::_initializer;
 
 int32 ssl_init();
 int32 ssl_uninit();

@@ -48,7 +48,6 @@ private:
     int32 _app_ev_interval; // 多少毫秒加高一次到脚本
 
     static uint32 sig_mask;
-    static class lev *_loop;
 };
 
 #endif /* __LEV_H__ */

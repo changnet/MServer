@@ -3,9 +3,7 @@
 
 #include "net/buffer.h"
 #include "scene/grid_aoi.h"
-#include "net/io/ssl_mgr.h"
 #include "lua_cpplib/lclass.h"
-#include "net/codec/codec_mgr.h"
 #include "system/static_global.h"
 
 int32 main( int32 argc,char **argv )
@@ -49,8 +47,6 @@ int32 main( int32 argc,char **argv )
 
         return 1;
     }
-
-    ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 
     /* 清除静态数据，以免影响内存检测 */
     buffer::purge();

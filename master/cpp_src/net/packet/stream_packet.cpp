@@ -2,7 +2,6 @@
 
 #include "../socket.h"
 #include "../header_include.h"
-#include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
 

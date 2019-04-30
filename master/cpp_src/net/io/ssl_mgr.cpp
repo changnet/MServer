@@ -31,24 +31,6 @@ void delete_ssl_ctx( struct x_ssl_ctx &ssl_ctx )
     ssl_ctx._passwd = NULL;
 }
 
-class ssl_mgr *ssl_mgr::_ssl_mgr = NULL;
-
-class ssl_mgr *ssl_mgr::instance()
-{
-    if ( !_ssl_mgr )
-    {
-        _ssl_mgr = new ssl_mgr();
-    }
-
-    return _ssl_mgr;
-}
-
-void ssl_mgr::uninstance()
-{
-    delete _ssl_mgr;
-    _ssl_mgr = NULL;
-}
-
 ssl_mgr::ssl_mgr()
 {
     _ctx_idx = 0;

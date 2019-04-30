@@ -3,7 +3,6 @@
 #include "ltools.h"
 #include "../system/static_global.h"
 
-#include "../net/io/ssl_mgr.h"
 #include "../net/header_include.h"
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
@@ -802,7 +801,7 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
         return luaL_error( L,"invalid ssl key type" );
     }
 
-    int32 idx = ssl_mgr::instance()->new_ssl_ctx(
+    int32 idx = static_global::ssl_mgr()->new_ssl_ctx(
         static_cast<ssl_mgr::sslv_t>(sslv),cert_file,
         static_cast<ssl_mgr::key_t>(keyt),key_file,passwd );
 
