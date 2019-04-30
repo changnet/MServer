@@ -54,7 +54,7 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
     }
 
     codec *encoder = 
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
 
     const char *ctx = NULL;
     int32 size = encoder->encode( L,index + 3,&ctx,cfg );
@@ -98,7 +98,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     }
 
     codec *encoder = 
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
 
     const char *ctx = NULL;
     int32 size = encoder->encode( L,index + 2,&ctx,cfg );
@@ -200,7 +200,7 @@ int32 ws_stream_packet::sc_command()
     uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
     codec *decoder = 
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     int32 cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -238,7 +238,7 @@ int32 ws_stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
     lua_pushinteger  ( L,cmd );
 
     codec *decoder = 
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     int32 cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {

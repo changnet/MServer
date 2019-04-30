@@ -81,7 +81,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     lua_pushinteger( L,header->_errno );
 
     class codec *decoder =
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     if ( !decoder )
     {
         ERROR( "command_new no codec conf found: %d",header->_cmd );
@@ -143,7 +143,7 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
     lua_pushinteger  ( L,conn_id );
     lua_pushinteger  ( L,cmd     );
 
-    codec *decoder = codec_mgr::instance()->get_codec( codec_ty );
+    codec *decoder = static_global::codec_mgr()->get_codec( codec_ty );
     if ( !decoder )
     {
         ERROR( "command_new no codec found:%d",cmd );
@@ -247,7 +247,7 @@ void stream_packet::ss_command(
     lua_pushinteger( L,header->_errno );
 
     codec *decoder =
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     if ( !decoder )
     {
         ERROR( "ss command_new no codec found:%d",header->_cmd );
@@ -296,7 +296,7 @@ void stream_packet::css_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner   );
     lua_pushinteger  ( L,header->_cmd );
 
-    codec *decoder = codec_mgr::instance()
+    codec *decoder = static_global::codec_mgr()
         ->get_codec( static_cast<codec::codec_t>(header->_codec) );
     if ( !decoder )
     {
@@ -365,7 +365,7 @@ void stream_packet::rpc_command( const s2s_header *header )
     lua_pushinteger  ( L,header->_owner     );
 
     // rpc解析方式目前固定为bson
-    codec *decoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
+    codec *decoder = static_global::codec_mgr()->get_codec( codec::CDC_BSON );
     int32 cnt = decoder->decode( L,buffer,size,NULL );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
@@ -412,7 +412,7 @@ void stream_packet::rpc_return( const s2s_header *header )
     if ( size > 0 )
     {
         // rpc解析方式目前固定为bson
-        codec *decoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
+        codec *decoder = static_global::codec_mgr()->get_codec( codec::CDC_BSON );
         cnt = decoder->decode( L,buffer,size,NULL );
     }
     if ( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) )
@@ -433,7 +433,7 @@ int32 stream_packet::rpc_pack(
 {
     int32 len = 0;
     const char *buffer = NULL;
-    codec *encoder = codec_mgr::instance()->get_codec( codec::CDC_BSON );
+    codec *encoder = static_global::codec_mgr()->get_codec( codec::CDC_BSON );
 
     if ( LUA_OK == ecode )
     {
@@ -481,7 +481,7 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
     }
 
     codec *encoder =
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     if ( !encoder )
     {
         return luaL_error( L,"no codec conf found: %d",cmd );
@@ -527,7 +527,7 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
     }
 
     codec *encoder =
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     if ( !encoder )
     {
         return luaL_error( L,"no codec conf found: %d",cmd );
@@ -583,7 +583,7 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
     }
 
     codec *encoder =
-        codec_mgr::instance()->get_codec( _socket->get_codec_type() );
+        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
     if ( !encoder )
     {
         return luaL_error( L,"no codec found: %d",cmd );
@@ -645,7 +645,7 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()
+    codec *encoder = static_global::codec_mgr()
         ->get_codec( static_cast<codec::codec_t>(codec_ty) );
     if ( !encoder )
     {
@@ -788,7 +788,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()
+    codec *encoder = static_global::codec_mgr()
         ->get_codec( static_cast<codec::codec_t>(codec_ty) );
     if ( !encoder )
     {

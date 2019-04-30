@@ -5,6 +5,7 @@
 #include "../log/thread_log.h"
 #include "../lua_cpplib/lev.h"
 #include "../lua_cpplib/lstate.h"
+#include "../net/codec/codec_mgr.h"
 #include "../lua_cpplib/lnetwork_mgr.h"
 
 /* 管理全局static或者global变量
@@ -17,6 +18,7 @@ public:
     static class ev *ev() { return &_ev; }
     static class lev *lua_ev() { return &_ev; }
     static lua_State *state() { return _state.state(); }
+    static class codec_mgr *codec_mgr() { return &_codec_mgr; }
     static class statistic *statistic() { return &_statistic; }
     static class thread_log *global_log() { return &_global_log; }
     static class lnetwork_mgr *network_mgr() { return &_network_mgr; }
@@ -36,6 +38,7 @@ private:
     static class lev _ev;
     static class lstate _state;
     static class thread_log _global_log;
+    static class codec_mgr _codec_mgr;
     static class lnetwork_mgr _network_mgr;
 };
 

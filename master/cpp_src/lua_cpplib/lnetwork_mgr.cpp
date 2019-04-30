@@ -5,7 +5,6 @@
 
 #include "../net/io/ssl_mgr.h"
 #include "../net/header_include.h"
-#include "../net/codec/codec_mgr.h"
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
 #include "../net/packet/websocket_packet.h"
@@ -312,7 +311,7 @@ int32 lnetwork_mgr::load_one_schema( lua_State *L )
 
     if ( type < codec::CDC_NONE || type >= codec::CDC_MAX ) return -1;
 
-    int32 count = codec_mgr::instance()->
+    int32 count = static_global::codec_mgr()->
         load_one_schema( static_cast<codec::codec_t>(type),path );
 
     lua_pushinteger( L,count );
@@ -922,7 +921,7 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()
+    codec *encoder = static_global::codec_mgr()
         ->get_codec( static_cast<codec::codec_t>(codec_ty) );
     if ( !cfg )
     {
@@ -1005,7 +1004,7 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = codec_mgr::instance()
+    codec *encoder = static_global::codec_mgr()
         ->get_codec( static_cast<codec::codec_t>(codec_ty) );
     if ( !cfg )
     {

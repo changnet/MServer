@@ -4,8 +4,6 @@
 #include "protobuf_codec.h"
 #include "flatbuffers_codec.h"
 
-class codec_mgr *codec_mgr::_codec_mgr = NULL;
-
 codec_mgr::codec_mgr()
 {
     memset( _codecs,0,sizeof(_codecs) );
@@ -25,22 +23,6 @@ codec_mgr::~codec_mgr()
             _codecs[idx] = NULL;
         }
     }
-}
-
-class codec_mgr *codec_mgr::instance()
-{
-    if ( !_codec_mgr )
-    {
-        _codec_mgr = new class codec_mgr();
-    }
-
-    return _codec_mgr;
-}
-
-void codec_mgr::uninstance()
-{
-    delete _codec_mgr;
-    _codec_mgr = NULL;
 }
 
 int32 codec_mgr::load_one_schema( codec::codec_t type,const char *path ) const

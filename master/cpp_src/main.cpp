@@ -50,7 +50,6 @@ int32 main( int32 argc,char **argv )
         return 1;
     }
 
-    codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
     ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 
     /* 清除静态数据，以免影响内存检测 */
