@@ -26,7 +26,11 @@ protected:
     // typedef int32 (*pf_st_t)(lua_State*); //lua_CFunction
 public:
     virtual ~lbaseclass() {}
-    explicit lbaseclass( lua_State *L,const char *classname ) :L(L)
+
+    /* 在构造函数中不要调用virtual函数取c_new_func，只能当参数传进进来了 */
+    explicit lbaseclass(
+        lua_State *L,const char *classname,lua_CFunction c_new_func = NULL )
+        : L(L)
     {
         _classname = classname;
         /* lua 5.3的get函数基本返回类型，而5.1基本为void。需要另外调用is函数 */
@@ -48,7 +52,7 @@ public:
         lua_setfield(L, -2, "__index");
 
         lua_newtable( L );
-        lua_pushcfunction(L, c_new_func());
+        lua_pushcfunction(L, c_new_func);
         lua_setfield(L, -2, "__call");
         lua_setmetatable( L,-2 );
 
@@ -172,8 +176,6 @@ private:
         return 0;
     }
 
-    virtual lua_CFunction c_new_func() { return cnew; }
-
     /* 元方法,__tostring */
     static int tostring(lua_State* L)
     {
@@ -262,7 +264,7 @@ template<class T>
 class lclass : public lbaseclass<T>
 {
 public:
-    lclass( lua_State *L,const char *classname ) : lbaseclass<T>(L,classname)
+    lclass( lua_State *L,const char *classname ) : lbaseclass<T>(L,classname, cnew)
     {
     }
 private:
@@ -292,8 +294,6 @@ private:
 
         return 1;
     }
-
-    lua_CFunction c_new_func() { return cnew; }
 };
 
 #endif /* __LCLASS_H__ */

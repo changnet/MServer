@@ -4,14 +4,21 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
+#include "../net/buffer.h"
+#include "../scene/grid_aoi.h"
+
+/* 各个变量之间有依赖，要注意顺序
+ * 同一个unit中的static对象，先声明的先初始化。销毁的时候则反过来
+ * 在头文件中的顺序不重要，这里实现的顺序才是运行时的顺序
+ */
+class static_global::initializer static_global::_initializer;
+class statistic static_global::_statistic;
 class lev static_global::_ev;
 class lstate static_global::_state;
-class ssl_mgr static_global::_ssl_mgr;
-class codec_mgr static_global::_codec_mgr;
-class statistic static_global::_statistic;
 class thread_log static_global::_global_log;
+class codec_mgr static_global::_codec_mgr;
+class ssl_mgr static_global::_ssl_mgr;
 class lnetwork_mgr static_global::_network_mgr;
-class static_global::initializer static_global::_initializer;
 
 int32 ssl_init();
 int32 ssl_uninit();
@@ -43,6 +50,10 @@ static_global::initializer::~initializer()
     sql::library_end();
     mongo::cleanup();
     ssl_uninit();
+
+        /* 清除静态数据，以免影响内存检测 */
+    buffer::purge();
+    grid_aoi::purge();
 }
 
 

@@ -32,9 +32,6 @@ private:
         explicit initializer();
     };
 private:
-    /* 这个顺序是要求的
-     * 同一个unit中的static对象，先声明的先初始化。销毁的时候则反过来
-     */
     static class initializer _initializer;
     static class statistic _statistic;
     static class lev _ev;

@@ -1,8 +1,5 @@
 #include <sys/utsname.h> /* for uname */
 
-
-#include "net/buffer.h"
-#include "scene/grid_aoi.h"
 #include "lua_cpplib/lclass.h"
 #include "system/static_global.h"
 
@@ -47,10 +44,6 @@ int32 main( int32 argc,char **argv )
 
         return 1;
     }
-
-    /* 清除静态数据，以免影响内存检测 */
-    buffer::purge();
-    grid_aoi::purge();
 
     return 0;
 }
