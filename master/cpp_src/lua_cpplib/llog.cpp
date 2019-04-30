@@ -1,6 +1,6 @@
 #include "llog.h"
 #include "../global/clog.h"
-#include "../lua_cpplib/lev.h"
+#include "../system/static_global.h"
 
 llog::llog( lua_State *L )
 {
@@ -50,7 +50,7 @@ int32 llog::write( lua_State *L )
         return luaL_error( L,"log output type error" );
     }
 
-    static class lev *ev = lev::instance();
+    static class ev *ev = static_global::ev();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
@@ -90,21 +90,6 @@ bool llog::cleanup()
     do_routine();
 
     return true;
-}
-
-int32 llog::mkdir_p( lua_State *L )
-{
-    const char *path = luaL_checkstring( L,1 );
-    if ( log::mkdir_p( path ) )
-    {
-        lua_pushboolean( L,1 );
-    }
-    else
-    {
-        lua_pushboolean( L,0 );
-    }
-
-    return 1;
 }
 
 // 用于实现stdout、文件双向输出日志打印函数

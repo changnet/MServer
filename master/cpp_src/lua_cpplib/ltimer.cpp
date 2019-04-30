@@ -1,17 +1,14 @@
 #include "ltimer.h"
 #include "ltools.h"
 #include "lstate.h"
-#include "lev.h"
 #include "../ev/ev_def.h"
+#include "../system/static_global.h"
 
 ltimer::ltimer( lua_State *L )
 {
     _timer_id = luaL_checkinteger( L,2 );
 
-    class ev *loop = 
-        static_cast<class ev *>( lev::instance() );
-
-    _timer.set( loop );
+    _timer.set( static_global::ev() );
     _timer.set<ltimer,&ltimer::callback>( this );
 }
 

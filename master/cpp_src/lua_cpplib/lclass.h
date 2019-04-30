@@ -18,18 +18,18 @@
 #include "../util/statistic.h"
 
 template<class T>
-class lclass
+class lbaseclass
 {
 public:
-    lclass( lua_State *L,const char *_classname )
-        :L(L)
+    virtual ~lbaseclass() {}
+    explicit lbaseclass( lua_State *L,const char *classname ) :L(L)
     {
-        classname = _classname;
+        _classname = classname;
         /* lua 5.3的get函数基本返回类型，而5.1基本为void。需要另外调用is函数 */
 
-        if ( 0 == luaL_newmetatable( L,classname ) )
+        if ( 0 == luaL_newmetatable( L,_classname ) )
         {
-            FATAL( "dumplicate define class %s\n",classname );
+            FATAL( "dumplicate define class %s\n",_classname );
             return;
         }
 
@@ -56,7 +56,7 @@ public:
         }
 
         lua_pushvalue( L,1 );
-        lua_setfield( L,-2,classname );
+        lua_setfield( L,-2,_classname );
 
         lua_settop( L,0 );
     }
@@ -69,7 +69,7 @@ public:
     static int push(lua_State *L,const T *obj, bool gc = false)
     {
         assert( "push null obj",obj );
-        assert( "class not regist yet",classname );
+        assert( "class not regist yet",_classname );
 
         /* 这里只是创建一个指针给lua管理，可以换用placement new把整个对象的
            内存都给lua管理
@@ -77,9 +77,9 @@ public:
         const T** ptr = (const T**)lua_newuserdata(L, sizeof(T*));
         *ptr = obj;
 
-        C_LUA_OBJECT_ADD( classname );
+        C_LUA_OBJECT_ADD( _classname );
 
-        luaL_getmetatable( L,classname );
+        luaL_getmetatable( L,_classname );
         /* metatable on stack now,can not be nil */
 
         /* 如果不自动gc，则需要在metatable中设置一张名为_notgc的表。以userdata
@@ -105,14 +105,14 @@ public:
 
     /* 注册函数,const char* func_name 就是注册到lua中的函数名字 */
     template <pf_t pf>
-    lclass<T>& def(const char* func_name)
+    lbaseclass<T>& def(const char* func_name)
     {
-        luaL_getmetatable( L,classname );
+        luaL_getmetatable( L,_classname );
 
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",_classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -126,14 +126,14 @@ public:
 
     /* 用于定义类的static函数 */
     template <pf_st_t pf>
-    lclass<T>& def(const char* func_name)
+    lbaseclass<T>& def(const char* func_name)
     {
-        luaL_getmetatable( L,classname );
+        luaL_getmetatable( L,_classname );
 
         lua_getfield(L, -1, func_name);
         if ( !lua_isnil(L, -1) )
         {
-            ERROR( "dumplicate def function %s:%s",classname,func_name );
+            ERROR( "dumplicate def function %s:%s",_classname,func_name );
         }
         lua_pop(L, 1); /* drop field */
 
@@ -146,14 +146,14 @@ public:
     }
 
     /* 注册变量,通常用于设置宏定义、枚举 */
-    lclass<T>& set(const char* val_name, int32 val)
+    lbaseclass<T>& set(const char* val_name, int32 val)
     {
-        luaL_getmetatable( L,classname );
+        luaL_getmetatable( L,_classname );
 
         lua_getfield(L, -1, val_name);
         if(!lua_isnil(L, -1))
         {
-            ERROR( "dumplicate set variable %s:%s",classname,val_name );
+            ERROR( "dumplicate set variable %s:%s",_classname,val_name );
         }
         lua_pop(L, 1);/* drop field */
 
@@ -168,35 +168,17 @@ private:
     /* 创建c对象 */
     static int cnew(lua_State* L)
     {
-        /* 优先计数，在构造函数调用luaL_error执行longjump导致内存泄漏
-         * 这里至少能统计到
-         */
-        C_LUA_OBJECT_ADD( classname );
-
-        /* lua调用__call,第一个参数是该元表所属的table.取构造函数参数要注意 */
-        T* obj = new T( L );
-
-        lua_settop( L,1 ); /* 清除所有构造函数参数,只保留元表 */
-
-        T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
-        *ptr = obj;
-
-        /* 把新创建的userdata和元表交换堆栈位置 */
-        lua_insert(L,1);
-
-        /* 弹出元表,并把元表设置为userdata的元表 */
-        lua_setmetatable(L, -2);
-
-        return 1;
+        assert("base class,cant NOT cteate object",false);
+        return 0;
     }
 
     /* 元方法,__tostring */
     static int tostring(lua_State* L)
     {
-        T** ptr = (T**)luaL_checkudata(L, 1,classname);
+        T** ptr = (T**)luaL_checkudata(L, 1, _classname);
         if(ptr != NULL)
         {
-            lua_pushfstring(L, "%s: %p", classname, *ptr);
+            lua_pushfstring(L, "%s: %p", _classname, *ptr);
             return 1;
         }
         return 0;
@@ -205,7 +187,7 @@ private:
     /* gc函数 */
     static int gc(lua_State* L)
     {
-        C_LUA_OBJECT_DEC( classname );
+        C_LUA_OBJECT_DEC( _classname );
 
         if ( luaL_getmetafield(L, 1, "_notgc") )
         {
@@ -217,7 +199,7 @@ private:
                 return 0;
         }
 
-        T** ptr = (T**)luaL_checkudata(L, 1,classname);
+        T** ptr = (T**)luaL_checkudata(L, 1,_classname);
         if ( *ptr != NULL )
             delete *ptr;
         *ptr = NULL;
@@ -255,10 +237,11 @@ private:
     template <pf_t pf>
     static int fun_thunk(lua_State* L)
     {
-        T** ptr = (T**)luaL_checkudata( L, 1, classname );/* get 'self', or if you prefer, 'this' */
+        T** ptr = (T**)luaL_checkudata( L, 1, _classname );/* get 'self', or if you prefer, 'this' */
         if ( expect_false(ptr == NULL || *ptr == NULL) )
         {
-            return luaL_error(L, "%s calling method with null pointer", classname);
+            return luaL_error(L,
+                "%s calling method with null pointer", _classname);
         }
 
         /* remove self so member function args start at index 1 */
@@ -266,11 +249,47 @@ private:
 
         return ((*ptr)->*pf)(L);
     }
-private:
+protected:
     lua_State *L;
-    static const char *classname;
+    static const char *_classname;
 };
 
-template<class T> const char *lclass<T>::classname = NULL;
+template<class T> const char *lbaseclass<T>::_classname = NULL;
+
+template<class T>
+class lclass : public lbaseclass<T>
+{
+public:
+    lclass( lua_State *L,const char *classname ) : lbaseclass<T>(L,classname)
+    {
+    }
+private:
+    using lbaseclass<T>::_classname;
+
+    /* 创建c对象 */
+    static int cnew(lua_State* L)
+    {
+        /* 优先计数，在构造函数调用luaL_error执行longjump导致内存泄漏
+         * 这里至少能统计到
+         */
+        C_LUA_OBJECT_ADD( _classname );
+
+        /* lua调用__call,第一个参数是该元表所属的table.取构造函数参数要注意 */
+        T* obj = new T( L );
+
+        lua_settop( L,1 ); /* 清除所有构造函数参数,只保留元表 */
+
+        T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
+        *ptr = obj;
+
+        /* 把新创建的userdata和元表交换堆栈位置 */
+        lua_insert(L,1);
+
+        /* 弹出元表,并把元表设置为userdata的元表 */
+        lua_setmetatable(L, -2);
+
+        return 1;
+    }
+};
 
 #endif /* __LCLASS_H__ */

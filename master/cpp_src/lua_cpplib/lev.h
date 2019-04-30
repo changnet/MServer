@@ -13,11 +13,8 @@ class socket;
 class lev : public ev
 {
 public:
-    static lev *instance();
-    static void uninstance();
-
-    explicit lev( lua_State *L );
     ~lev();
+    explicit lev();
 
     int32 exit( lua_State *L );
     int32 time( lua_State *L ); // 帧时间
@@ -31,8 +28,6 @@ public:
     int32 pending_send( class socket *s );
     void remove_pending( int32 pending );
 private:
-    explicit lev( bool singleton );
-
     void running( int64 ms_now );
     void invoke_signal ();
     void invoke_sending();

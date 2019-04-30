@@ -1,6 +1,6 @@
 #include "clog.h"
 #include "global.h"
-#include "../lua_cpplib/lev.h"
+#include "../system/static_global.h"
 
 static bool is_daemon = false;    /* 是否后台运行。后台运行则不输出日志到stdout */
 static char printf_path[PATH_MAX] = {0};
@@ -76,13 +76,13 @@ void set_app_name( const char *name )
 
 void cerror_log( const char *prefix,const char *fmt,... )
 {
-    time_t tm = lev::instance()->now();
+    time_t tm = static_global::ev()->now();
     RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
 void cprintf_log( const char *prefix,const char *fmt,... )
 {
-    time_t tm = lev::instance()->now();
+    time_t tm = static_global::ev()->now();
     // TODO:兼容低版本C++标准，没办法传...可变参，无法调用raw_cprintf_log
     // 如果尚未设置路径(这个不应该发生，设置路径的优先级很高的)，则转到ERROR
     if ( expect_false(!printf_path[0]) )

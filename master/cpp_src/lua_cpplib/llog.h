@@ -15,7 +15,6 @@ public:
     int32 stop ( lua_State *L );
     int32 start( lua_State *L );
     int32 write( lua_State *L );
-    static int32 mkdir_p( lua_State *L );
 
     // 用于实现stdout、文件双向输出日志打印函数
     static int32 plog( lua_State *L );

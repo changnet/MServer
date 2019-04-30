@@ -6,7 +6,7 @@
 #include "thread.h"
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
-#include "../lua_cpplib/lev.h"
+#include "../system/static_global.h"
 
 thread::thread()
 {
@@ -96,8 +96,7 @@ bool thread::start( int32 sec,int32 usec )
         return false;
     }
 
-    class ev *loop = static_cast<ev *>( lev::instance() );
-    _watcher.set( loop );
+    _watcher.set( static_global::ev() );
     _watcher.set<thread,&thread::io_cb>( this );
     _watcher.start( _fd[0],EV_READ );
 

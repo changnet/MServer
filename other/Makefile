@@ -51,8 +51,8 @@ _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 	net/packet/stream_packet.o net/packet/http_packet.o net/io/ssl_io.o\
 	net/codec/codec_mgr.o net/codec/bson_codec.o net/codec/flatbuffers_codec.o\
 	net/codec/protobuf_codec.o net/packet/websocket_packet.o util/rank.o\
-	mysql/sql.o thread/thread.o net/packet/ws_stream_packet.o\
-	scene/a_star.o scene/grid_map.o scene/grid_aoi.o\
+	mysql/sql.o thread/thread.o net/packet/ws_stream_packet.o log/thread_log.o\
+	scene/a_star.o scene/grid_map.o scene/grid_aoi.o system/static_global.o\
 	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o\
 	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lstatistic.o\
 	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o util/statistic.o\

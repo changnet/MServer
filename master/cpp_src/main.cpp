@@ -4,13 +4,13 @@
 #include "mysql/sql.h"
 #include "net/buffer.h"
 #include "mongo/mongo.h"
-#include "lua_cpplib/lev.h"
 #include "scene/grid_aoi.h"
 #include "net/io/ssl_mgr.h"
 #include "util/statistic.h"
 #include "lua_cpplib/lclass.h"
 #include "lua_cpplib/lstate.h"
 #include "net/codec/codec_mgr.h"
+#include "system/static_global.h"
 #include "lua_cpplib/lnetwork_mgr.h"
 
 int32 ssl_init();
@@ -47,8 +47,7 @@ int32 main( int32 argc,char **argv )
 
     lua_State *L = lstate::instance()->state();
 
-    class lev *loop = lev::instance();
-    lclass<lev>::push( L,loop,false );
+    lclass<lev>::push( L,static_global::lua_ev(),false );
     lua_setglobal( L,"ev" );
 
     class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
@@ -83,7 +82,6 @@ int32 main( int32 argc,char **argv )
 
     lstate::uninstance      ();      /* 关闭lua，其他模块引用太多lua_State */
     lnetwork_mgr::uninstance();      /* 关闭网络管理 */
-    lev::uninstance  ();      /* 关闭主事件循环 */
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
     ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 

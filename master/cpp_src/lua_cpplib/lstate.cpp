@@ -108,7 +108,7 @@ void lstate::open_cpp()
 
 int32 luaopen_ev( lua_State *L )
 {
-    lclass<lev> lc(L,"Ev");
+    lbaseclass<lev> lc(L,"Ev");
     lc.def<&lev::time>     ("time"     );
     lc.def<&lev::exit>     ("exit"     );
     lc.def<&lev::signal>   ("signal"   );
@@ -167,7 +167,6 @@ int32 luaopen_log( lua_State *L )
     lc.def<&llog::stop>  ("stop");
     lc.def<&llog::start> ("start");
     lc.def<&llog::write> ("write");
-    lc.def<&llog::mkdir_p> ("mkdir_p");
     lc.def<&llog::plog> ("plog");
     lc.def<&llog::elog> ("elog");
     lc.def<&llog::set_args> ("set_args");

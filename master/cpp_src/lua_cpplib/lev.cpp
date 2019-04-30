@@ -9,36 +9,9 @@
 #include "../net/socket.h"
 
 uint32 lev::sig_mask = 0;
-class lev *lev::_loop = NULL;
 
-class lev *lev::instance()
+lev::lev()
 {
-    if ( !_loop )
-    {
-        _loop = new lev( true );
-    }
-
-    return _loop;
-}
-
-void lev::uninstance()
-{
-    if ( _loop ) delete _loop;
-    _loop = NULL;
-}
-
-lev::lev( lua_State *L )
-{
-    /* lev是一个单例，但lclass的机制却要求构造函数是公有的 */
-    assert( "lev is singleton",false );
-}
-
-lev::lev( bool singleton )
-{
-    assert( "lev is singleton",!_loop );
-
-    UNUSED( singleton );
-
     ansendings = NULL;
     ansendingmax =  0;
     ansendingcnt =  0;

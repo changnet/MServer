@@ -1,6 +1,3 @@
-#include <sys/stat.h>
-#include <sys/types.h>
-
 #include <string>
 
 #include "log.h"
@@ -35,6 +32,7 @@ class log_one_ctx : public log_one
 public:
     log_size_t get_type() const { return lst; }
     const char *get_ctx() const { return _context; }
+
     void set_ctx( const char *ctx,size_t len )
     {
         size_t sz = len > size ? size : len;
@@ -87,7 +85,7 @@ bool log::swap()
 
 // 主线程写入缓存，上层加锁
 int32 log::write_cache( time_t tm,
-    const char *path,const char *str,size_t len,log_out_t out )
+    const char *path,const char *ctx,size_t len,log_out_t out )
 {
     assert( "write log no file path",path );
 
@@ -100,7 +98,7 @@ int32 log::write_cache( time_t tm,
 
     one->_tm = tm;
     one->_out = out;
-    one->set_ctx( str,len );
+    one->set_ctx( ctx,len );
     snprintf( one->_path,PATH_MAX,"%s",path );
 
     _cache->push_back( one );
@@ -281,33 +279,4 @@ void log::deallocate_one( class log_one *one )
     }
 
     _mem_pool[lt].push_back( one );
-}
-
-/* same as mkdir -p path */
-bool log::mkdir_p( const char *path )
-{
-    assert( "mkdir_p:null path",path );
-
-    char dir_path[PATH_MAX];
-    int32 len = strlen( path );
-
-    for ( int32 i = 0; i <= len && i < PATH_MAX; i++ )
-    {
-        dir_path[i] = *( path + i );
-        if ( ('\0' == dir_path[i] || dir_path[i] == '/') && i > 0)
-        {
-            dir_path[i]='\0';
-            if ( ::access(dir_path, F_OK) < 0 ) /* test if file already exist */
-            {
-                if ( ::mkdir( dir_path, S_IRWXU ) < 0 )
-                {
-                    ERROR( "mkdir -p %s fail:%s", dir_path, strerror(errno) );
-                    return false;
-                }
-            }
-            dir_path[i]='/';
-        }
-    }
-
-    return true;
 }

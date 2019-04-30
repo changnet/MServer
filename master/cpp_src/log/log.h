@@ -33,8 +33,6 @@ typedef std::vector< class log_one *> log_one_list_t;
 class log
 {
 public:
-    static bool mkdir_p( const char *path );
-public:
     log();
     ~log();
 
@@ -42,7 +40,7 @@ public:
     void flush();
     void collect_mem();
     int32 write_cache( time_t tm,
-        const char *path,const char *str,size_t len,log_out_t out );
+        const char *path,const char *ctx,size_t len,log_out_t out );
 private:
     void allocate_pool( log_size_t lt );
     class log_one *allocate_one( size_t len );

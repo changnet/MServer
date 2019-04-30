@@ -5,6 +5,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <uuid/uuid.h>
 #include <openssl/md5.h>
@@ -394,12 +396,51 @@ static int32 get_pid( lua_State *L )
     return 1;
 }
 
+// 如果不存在则创建多层目录
+int32 mkdir_p( lua_State *L )
+{
+    const char *path = luaL_checkstring( L,1 );
+
+    if ( !path || 0 == strcmp(path,"") )
+    {
+        lua_pushboolean( L,0 );
+        return 1;
+    }
+
+    char dir_path[PATH_MAX];
+    int32 len = strlen( path );
+
+    for ( int32 i = 0; i <= len && i < PATH_MAX; i++ )
+    {
+        dir_path[i] = *( path + i );
+        if ( ('\0' == dir_path[i] || dir_path[i] == '/') && i > 0)
+        {
+            dir_path[i]='\0';
+            if ( ::access(dir_path, F_OK) < 0 ) /* test if file already exist */
+            {
+                if ( ::mkdir( dir_path, S_IRWXU ) < 0 )
+                {
+                    ERROR( "mkdir -p %s fail:%s", dir_path, strerror(errno) );
+
+                    lua_pushboolean( L,0 );
+                    return 1;
+                }
+            }
+            dir_path[i]='/';
+        }
+    }
+
+    lua_pushboolean( L,1 );
+    return 1;
+}
+
 static const luaL_Reg utillib[] =
 {
     {"md5", md5},
     {"uuid",uuid},
     {"sha1",sha1},
     {"base64",base64},
+    {"mkdir_p",mkdir_p},
     {"get_pid",get_pid},
     {"sha1_raw",sha1_raw},
     {"timeofday", timeofday},
