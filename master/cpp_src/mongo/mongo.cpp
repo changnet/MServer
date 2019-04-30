@@ -163,8 +163,9 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
         assert( "bson append document err",r );
     }
 
-    if ( mongoc_cursor_error( cursor,&res->_error) )
+    if ( mongoc_cursor_error( cursor,&res->_error ) )
     {
+        ERROR_R("mongoc_cursor_error");
         bson_destroy( doc );
         res->_data  = NULL;
 

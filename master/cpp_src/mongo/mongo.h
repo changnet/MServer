@@ -9,6 +9,8 @@
 /* mongo db会覆盖assert，这里必须重新覆盖 */
 #include "../global/assert.h"
 
+#include "../system/static_global.h"
+
 #define MONGO_VAR_LEN    64
 
 /* mongo CRUD 操作 */
@@ -44,6 +46,7 @@ struct mongo_query
     bson_t *_sort;
     bson_t *_update;
     int32 _flags;
+    int64 _time; // 请求的时间戳，毫秒
 
     mongo_query()
     {
@@ -60,6 +63,7 @@ struct mongo_query
         _sort          = NULL;
         _update        = NULL;
         _flags         = 0;
+        _time          = static_global::ev()->ms_now();;
     }
 
     ~mongo_query()
@@ -146,18 +150,23 @@ struct mongo_result
     bson_t *_data ;
     float   _elaspe; // 消耗的时间，秒
     bson_error_t _error;
+    int64 _time; // 请求的时间戳，毫秒
     char  _clt[MONGO_VAR_LEN]; // collection
     char  _query[MONGO_VAR_LEN]; // 查询条件，日志用
 
     mongo_result()
     {
         _qid    = 0;
+        _time   = 0;
         _elaspe = 0.0;
         _data   = NULL;
         _mqt    = MQT_NONE;
 
         _clt[0]        = '\0';
         _query[0]      = '\0';
+
+        // mongodb的api，在没有错误时，传入的bson_error_t是没有设置为0的
+        memset(&_error,0,sizeof(bson_error_t));
     }
 
     ~mongo_result()

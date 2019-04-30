@@ -1,41 +1,60 @@
+#include <lua.hpp>
+
 #include "llog.h"
 #include "../global/clog.h"
 #include "../system/static_global.h"
 
 llog::llog( lua_State *L )
 {
+    _log = NULL;
 }
 
 llog::~llog()
 {
+    if ( _log )
+    {
+        delete _log;
+        _log = NULL;
+    }
 }
 
 int32 llog::stop ( lua_State *L )
 {
-    if ( !active() )
+    if ( !_log || !_log->active() )
     {
         ERROR( "try to stop a inactive log thread" );
         return 0;
     }
 
-    thread::stop();
+    _log->stop();
 
     return 0;
 }
 
 int32 llog::start( lua_State *L )
 {
+    if ( _log )
+    {
+        luaL_error( L,"log thread already active" );
+        return 0;
+    }
+
     /* 设定多少秒写入一次 */
     int32 sec  = luaL_optinteger( L,1,5 );
     int32 usec = luaL_optinteger( L,2,0 );
-    thread::start( sec,usec );
+
+    _log = new thread_log();
+    _log->start( sec,usec );
 
     return 0;
 }
 
 int32 llog::write( lua_State *L )
 {
-    if ( !active() )
+    // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
+    class thread_log *tl = _log ? _log : static_global::async_log();
+
+    if ( !tl->active() )
     {
         return luaL_error( L,"log thread inactive" );
     }
@@ -50,46 +69,9 @@ int32 llog::write( lua_State *L )
         return luaL_error( L,"log output type error" );
     }
 
-    static class ev *ev = static_global::ev();
-
-    /* 时间必须取主循环的帧，不能取即时的时间戳 */
-    lock();
-    _log.write_cache( ev->now(),path,ctx,len,static_cast<log_out_t>(out_type) );
-    unlock();
+    tl->write( path,ctx,len,static_cast<log_out_t>(out_type) );
 
     return 0;
-}
-
-void llog::routine( notify_t msg )
-{
-    UNUSED( msg );
-    do_routine();
-}
-
-// 线程逻辑
-void llog::do_routine()
-{
-    /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
-    lock();
-    _log.swap();
-    unlock();
-
-    // 日志线程写入文件
-    _log.flush();
-
-    // 回收内存
-    lock();
-    _log.collect_mem();
-    unlock();
-}
-
-bool llog::cleanup()
-{
-    /* 线程终止，所有日志入磁盘 */
-    /* 不应该再有新日志进来，如果有，则丢日志 */
-    do_routine();
-
-    return true;
 }
 
 // 用于实现stdout、文件双向输出日志打印函数
@@ -118,8 +100,9 @@ int32 llog::set_args( lua_State *L )
     bool dm = lua_toboolean( L,1 );
     const char *ppath = luaL_checkstring( L,2 );
     const char *epath = luaL_checkstring( L,3 );
+    const char *mpath = luaL_checkstring( L,4 );
 
-    set_log_args( dm,ppath,epath );
+    set_log_args( dm,ppath,epath,mpath );
     return 0;
 }
 

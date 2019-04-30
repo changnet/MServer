@@ -5,17 +5,20 @@
 static bool is_daemon = false;    /* 是否后台运行。后台运行则不输出日志到stdout */
 static char printf_path[PATH_MAX] = {0};
 // 防止上层应用来不及设置日志参数就发生错误，默认输出到工作目录error文件
-static char error_path[PATH_MAX]  = {'e','r','r','o','r'};
+static char error_path[PATH_MAX]  = "error";
+static char mongodb_path[PATH_MAX]  = "mongodb";
 
 // app进程名
 static char app_name[LOG_APP_NAME] = {0};
 
 /* 设置日志参数：是否后台，日志路径 */
-void set_log_args( bool dm,const char *ppath,const char *epath)
+void set_log_args( bool dm,
+    const char *ppath,const char *epath,const char *mpath)
 {
     is_daemon = dm;
     snprintf( printf_path,PATH_MAX,"%s",ppath );
     snprintf( error_path ,PATH_MAX,"%s",epath );
+    snprintf( mongodb_path ,PATH_MAX,"%s",mpath );
 }
 
 /* 设置app进程名 */
@@ -78,6 +81,13 @@ void cerror_log( const char *prefix,const char *fmt,... )
 {
     time_t tm = static_global::ev()->now();
     RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
+}
+
+void mongodb_log( const char *prefix,const char *fmt,... )
+{
+    // mongodb的日志暂时不打印到屏蔽，太多了
+    time_t tm = static_global::ev()->now();
+    RAW_FORMAT( tm,prefix,mongodb_path,NULL,fmt );
 }
 
 void cprintf_log( const char *prefix,const char *fmt,... )

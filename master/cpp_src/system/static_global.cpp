@@ -14,8 +14,8 @@
 class static_global::initializer static_global::_initializer;
 class statistic static_global::_statistic;
 class lev static_global::_ev;
+class thread_log static_global::_async_log;
 class lstate static_global::_state;
-class thread_log static_global::_global_log;
 class codec_mgr static_global::_codec_mgr;
 class ssl_mgr static_global::_ssl_mgr;
 class lnetwork_mgr static_global::_network_mgr;

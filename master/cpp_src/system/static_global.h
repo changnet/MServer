@@ -22,7 +22,7 @@ public:
     static class ssl_mgr *ssl_mgr() { return &_ssl_mgr; }
     static class codec_mgr *codec_mgr() { return &_codec_mgr; }
     static class statistic *statistic() { return &_statistic; }
-    static class thread_log *global_log() { return &_global_log; }
+    static class thread_log *async_log() { return &_async_log; }
     static class lnetwork_mgr *network_mgr() { return &_network_mgr; }
 private:
     class initializer
@@ -36,7 +36,7 @@ private:
     static class statistic _statistic;
     static class lev _ev;
     static class lstate _state;
-    static class thread_log _global_log;
+    static class thread_log _async_log;
     static class codec_mgr _codec_mgr;
     static class ssl_mgr _ssl_mgr;
     static class lnetwork_mgr _network_mgr;

@@ -65,6 +65,8 @@ public:
     static ev_tstamp get_time();
 
     void update_clock();
+
+    inline int64 ms_now() { return ev_now_ms; }
     inline ev_tstamp now() { return ev_rt_now; }
 protected:
     volatile bool loop_done;

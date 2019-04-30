@@ -198,6 +198,25 @@ void lmongo::invoke_result()
     const struct mongo_result *res = NULL;
     while ( (res = pop_result()) )
     {
+        // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
+        int64 real = static_global::ev()->ms_now() - res->_time;
+        if ( 0 == res->_error.code)
+        {
+            mongodb_log("CP","%s.%s:%s real:" FMT64d " msec,thread:%.3f sec",
+                res->_clt,MQT_NAME[res->_mqt],res->_query,real,res->_elaspe);
+        }
+        else
+        {
+            mongodb_log("CP",
+                "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
+                res->_clt,MQT_NAME[res->_mqt],res->_query,res->_error.code,
+                res->_error.message,real,res->_elaspe);
+
+            ERROR(
+                "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
+                res->_clt,MQT_NAME[res->_mqt],res->_query,res->_error.code,
+                res->_error.message,real,res->_elaspe);
+        }
         // 为0表示不需要回调到脚本
         if ( 0 == res->_qid ) continue;
 
@@ -296,10 +315,18 @@ void lmongo::invoke_command()
             }
         }
 
-        if ( !ok ) assert( "mongo result check", 0 != res->_error.code );
+        if ( ok )
+        {
+            assert( "mongo result check", 0 == res->_error.code );
+        }
+        else
+        {
+            assert( "mongo result check", 0 != res->_error.code );
+        }
 
-        res->_qid = query->_qid;
-        res->_mqt = query->_mqt;
+        res->_qid  = query->_qid;
+        res->_mqt  = query->_mqt;
+        res->_time = query->_time;
         snprintf( res->_clt,MONGO_VAR_LEN,"%s",query->_clt );
         res->_elaspe = ((float)(clock() - begin))/CLOCKS_PER_SEC;
 

@@ -1,16 +1,16 @@
 #ifndef __LLOG_H__
 #define __LLOG_H__
 
-#include <lua.hpp>
+#include "../global/global.h"
 
-#include "../log/log.h"
-#include "../thread/thread.h"
+struct lua_State;
+class thread_log;
 
-class llog : public thread
+class llog
 {
 public:
-    explicit llog( lua_State *L );
     ~llog();
+    explicit llog( lua_State *L );
 
     int32 stop ( lua_State *L );
     int32 start( lua_State *L );
@@ -25,16 +25,7 @@ public:
     // 设置进程名
     static int32 set_name( lua_State *L );
 private:
-    void do_routine();
-
-    // 线程相关，重写基类相关函数
-    bool cleanup();
-    void routine( notify_t msg );
-    void notification( notify_t msg ) {}
-
-    bool initlization() { return true; }
-private:
-    class log _log;
+    class thread_log *_log;
 };
 
 #endif /* __LLOG_H__ */
