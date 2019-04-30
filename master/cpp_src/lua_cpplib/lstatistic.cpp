@@ -1,5 +1,5 @@
 #include "lstatistic.h"
-
+#include "../system/static_global.h"
 
 int32 lstatistic::dump( lua_State *L )
 {
@@ -9,7 +9,7 @@ int32 lstatistic::dump( lua_State *L )
         dump_base_counter( counter,L );\
         lua_rawset( L,-3 );\
     } while(0)
-    const statistic *stat = statistic::instance();
+    const statistic *stat = static_global::statistic();
 
     lua_newtable( L );
 

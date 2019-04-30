@@ -1,6 +1,6 @@
 #include "grid_aoi.h"
 #include "scene_include.h"
-#include "../util/statistic.h"
+#include "../system/static_global.h"
 
 // 暂定格子数最大为256，一个格子坐标x占高8位，y占低8位构成一个索引
 #define INDEX_BIT 8

@@ -1,23 +1,5 @@
 #include "statistic.h"
 
-class statistic *statistic::_stat = NULL;
-
-void statistic::uninstance()
-{
-    if (_stat)
-    {
-        delete _stat;
-        _stat = NULL;
-    }
-}
-
-class statistic *statistic::instance()
-{
-    if (!_stat) _stat = new statistic();
-
-    return _stat;
-}
-
 statistic::~statistic()
 {
 }

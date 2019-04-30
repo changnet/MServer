@@ -55,7 +55,7 @@ _OBJS = global/global.o global/clog.o ev/ev.o net/buffer.o net/socket.o\
 	scene/a_star.o scene/grid_map.o scene/grid_aoi.o system/static_global.o\
 	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o\
 	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lstatistic.o\
-	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o util/statistic.o\
+	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o system/statistic.o\
 	lua_cpplib/laoi.o lua_cpplib/lrank.o lua_cpplib/lmap.o lua_cpplib/lastar.o\
 	main.o
 OBJS = $(addprefix $(ODIR)/,$(_OBJS))

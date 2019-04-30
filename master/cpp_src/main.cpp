@@ -4,7 +4,6 @@
 #include "net/buffer.h"
 #include "scene/grid_aoi.h"
 #include "net/io/ssl_mgr.h"
-#include "util/statistic.h"
 #include "lua_cpplib/lclass.h"
 #include "net/codec/codec_mgr.h"
 #include "system/static_global.h"
@@ -53,8 +52,6 @@ int32 main( int32 argc,char **argv )
 
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
     ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
-
-    statistic::uninstance();       /* 关闭计数 */
 
     /* 清除静态数据，以免影响内存检测 */
     buffer::purge();

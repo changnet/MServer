@@ -4,14 +4,14 @@
 #include "../global/global.h"
 
 #define C_OBJECT_ADD(what) \
-    do{statistic::instance()->add_c_obj(what,1);}while(0)
+    do{static_global::statistic()->add_c_obj(what,1);}while(0)
 #define C_OBJECT_DEC(what) \
-    do{statistic::instance()->add_c_obj(what,-1);}while(0)
+    do{static_global::statistic()->add_c_obj(what,-1);}while(0)
 
 #define C_LUA_OBJECT_ADD(what) \
-    do{statistic::instance()->add_c_lua_obj(what,1);}while(0)
+    do{static_global::statistic()->add_c_lua_obj(what,1);}while(0)
 #define C_LUA_OBJECT_DEC(what) \
-    do{statistic::instance()->add_c_lua_obj(what,-1);}while(0)
+    do{static_global::statistic()->add_c_lua_obj(what,-1);}while(0)
 
 // 统计对象数量、内存、socket流量等...
 class statistic
@@ -56,8 +56,8 @@ public:
      */
     typedef const_char_map_t(struct base_counter) base_counter_t;
 public:
-    static void uninstance();
-    static class statistic *instance();
+    ~statistic();
+    explicit statistic();
 
     void add_c_obj(const char *what,int32 count);
     void add_c_lua_obj(const char *what,int32 count);
@@ -65,13 +65,9 @@ public:
     const statistic::base_counter_t &get_c_obj() const { return _c_obj; }
     const statistic::base_counter_t &get_c_lua_obj() const { return _c_lua_obj; }
 private:
-    ~statistic();
-    explicit statistic();
 private:
     base_counter_t _c_obj; // c对象计数器
     base_counter_t _c_lua_obj; // 从c push到lua对象
-
-    static class statistic *_stat;
 };
 
 #endif /* __STATISTIC_H__ */

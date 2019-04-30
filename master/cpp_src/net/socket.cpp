@@ -12,7 +12,6 @@
 #include "packet/websocket_packet.h"
 #include "packet/ws_stream_packet.h"
 #include "../system/static_global.h"
-#include "../util/statistic.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
 {

@@ -1,7 +1,7 @@
 #ifndef __STATIC_GLOBAL_H__
 #define __STATIC_GLOBAL_H__
 
-
+#include "statistic.h"
 #include "../log/thread_log.h"
 #include "../lua_cpplib/lev.h"
 #include "../lua_cpplib/lstate.h"
@@ -17,6 +17,7 @@ public:
     static class ev *ev() { return &_ev; }
     static class lev *lua_ev() { return &_ev; }
     static lua_State *state() { return _state.state(); }
+    static class statistic *statistic() { return &_statistic; }
     static class thread_log *global_log() { return &_global_log; }
     static class lnetwork_mgr *network_mgr() { return &_network_mgr; }
 private:
@@ -31,6 +32,7 @@ private:
      * 同一个unit中的static对象，先声明的先初始化。销毁的时候则反过来
      */
     static class initializer _initializer;
+    static class statistic _statistic;
     static class lev _ev;
     static class lstate _state;
     static class thread_log _global_log;

@@ -1,5 +1,5 @@
 #include "grid_map.h"
-#include "../util/statistic.h"
+#include "../system/static_global.h"
 
 grid_map::grid_map()
 {

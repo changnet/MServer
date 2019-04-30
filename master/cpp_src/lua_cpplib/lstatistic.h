@@ -2,7 +2,7 @@
 #define __LSTATISTIC_H__
 
 #include <lua.hpp>
-#include "../util/statistic.h"
+#include "../system/statistic.h"
 
 class lstatistic
 {

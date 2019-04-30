@@ -5,6 +5,7 @@
 #include "../mongo/mongo.h"
 
 class static_global::initializer static_global::_initializer;
+class statistic static_global::_statistic;
 class lev static_global::_ev;
 class lstate static_global::_state;
 class thread_log static_global::_global_log;

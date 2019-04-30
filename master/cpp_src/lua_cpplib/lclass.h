@@ -15,7 +15,7 @@
 /* 注册struct、class到lua，适用于在lua创建c、c++对象 */
 
 #include <lua.hpp>
-#include "../util/statistic.h"
+#include "../system/static_global.h"
 
 template<class T>
 class lbaseclass
