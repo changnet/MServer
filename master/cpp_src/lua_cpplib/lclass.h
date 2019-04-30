@@ -20,6 +20,10 @@
 template<class T>
 class lbaseclass
 {
+protected:
+    /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
+    typedef int32 (T::*lua_CppFunction)(lua_State*);
+    // typedef int32 (*pf_st_t)(lua_State*); //lua_CFunction
 public:
     virtual ~lbaseclass() {}
     explicit lbaseclass( lua_State *L,const char *classname ) :L(L)
@@ -44,7 +48,7 @@ public:
         lua_setfield(L, -2, "__index");
 
         lua_newtable( L );
-        lua_pushcfunction(L, cnew);
+        lua_pushcfunction(L, c_new_func());
         lua_setfield(L, -2, "__call");
         lua_setmetatable( L,-2 );
 
@@ -99,12 +103,8 @@ public:
         return lua_setmetatable( L,-2 );
     }
 
-    /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
-    typedef int32 (T::*pf_t)(lua_State*);
-    typedef int32 (*pf_st_t)(lua_State*);
-
     /* 注册函数,const char* func_name 就是注册到lua中的函数名字 */
-    template <pf_t pf>
+    template <lua_CppFunction pf>
     lbaseclass<T>& def(const char* func_name)
     {
         luaL_getmetatable( L,_classname );
@@ -125,7 +125,7 @@ public:
     }
 
     /* 用于定义类的static函数 */
-    template <pf_st_t pf>
+    template <lua_CFunction pf>
     lbaseclass<T>& def(const char* func_name)
     {
         luaL_getmetatable( L,_classname );
@@ -165,12 +165,14 @@ public:
         return *this;
     }
 private:
-    /* 创建c对象 */
-    static int cnew(lua_State* L)
+    /* 单例，不能创建c对象。可以直接在C中push对象到lua */
+    static int32 cnew(lua_State* L)
     {
         assert("base class,cant NOT cteate object",false);
         return 0;
     }
+
+    virtual lua_CFunction c_new_func() { return cnew; }
 
     /* 元方法,__tostring */
     static int tostring(lua_State* L)
@@ -234,7 +236,7 @@ private:
         }
     }
 
-    template <pf_t pf>
+    template <lua_CppFunction pf>
     static int fun_thunk(lua_State* L)
     {
         T** ptr = (T**)luaL_checkudata( L, 1, _classname );/* get 'self', or if you prefer, 'this' */
@@ -290,6 +292,8 @@ private:
 
         return 1;
     }
+
+    lua_CFunction c_new_func() { return cnew; }
 };
 
 #endif /* __LCLASS_H__ */

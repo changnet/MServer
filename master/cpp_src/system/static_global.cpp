@@ -8,6 +8,7 @@ class static_global::initializer static_global::_initializer;
 class lev static_global::_ev;
 class lstate static_global::_state;
 class thread_log static_global::_global_log;
+class lnetwork_mgr static_global::_network_mgr;
 
 int32 ssl_init();
 int32 ssl_uninit();

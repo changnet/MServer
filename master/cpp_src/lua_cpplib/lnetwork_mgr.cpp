@@ -10,24 +10,6 @@
 #include "../net/packet/stream_packet.h"
 #include "../net/packet/websocket_packet.h"
 
-class lnetwork_mgr *lnetwork_mgr::_network_mgr = NULL;
-
-void lnetwork_mgr::uninstance()
-{
-    delete _network_mgr;
-    _network_mgr = NULL;
-}
-
-class lnetwork_mgr *lnetwork_mgr::instance()
-{
-    if ( NULL == _network_mgr )
-    {
-        _network_mgr = new lnetwork_mgr( NULL );
-    }
-
-    return _network_mgr;
-}
-
 lnetwork_mgr::~lnetwork_mgr()
 {
     socket_map_t::iterator itr = _socket_map.begin();
@@ -44,10 +26,8 @@ lnetwork_mgr::~lnetwork_mgr()
     _conn_session_map.clear();
 }
 
-lnetwork_mgr::lnetwork_mgr( lua_State *L )
-    :_conn_seed(0)
+lnetwork_mgr::lnetwork_mgr() :_conn_seed(0)
 {
-    assert( "lnetwork_mgr is singleton",NULL == _network_mgr );
 }
 
 /* 删除无效的连接 */

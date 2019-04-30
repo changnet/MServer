@@ -5,7 +5,6 @@
 #include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
-#include "../../lua_cpplib/lnetwork_mgr.h"
 
 #pragma pack (push, 1)
 
@@ -47,7 +46,7 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index + 2 ) );
 
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
     const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cfg )
     {
@@ -91,7 +90,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index + 1 ) );
 
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
     const cmd_cfg_t *cfg = network_mgr->get_cs_cmd( header._cmd );
     if ( !cfg )
     {
@@ -149,7 +148,7 @@ int32 ws_stream_packet::on_frame_end()
         return sc_command();
     }
 
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     /* 服务器收到的包，看要不要转发 */
     uint32 data_size = _body.data_size();
@@ -172,7 +171,7 @@ int32 ws_stream_packet::on_frame_end()
 int32 ws_stream_packet::sc_command()
 {
     static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
@@ -223,7 +222,7 @@ int32 ws_stream_packet::sc_command()
 int32 ws_stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 {
     static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( cmd );

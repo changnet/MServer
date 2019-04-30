@@ -8,7 +8,6 @@
 #include "lua_cpplib/lclass.h"
 #include "net/codec/codec_mgr.h"
 #include "system/static_global.h"
-#include "lua_cpplib/lnetwork_mgr.h"
 
 int32 main( int32 argc,char **argv )
 {
@@ -23,8 +22,7 @@ int32 main( int32 argc,char **argv )
     lclass<lev>::push( L,static_global::lua_ev(),false );
     lua_setglobal( L,"ev" );
 
-    class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
-    lclass<lnetwork_mgr>::push( L,network_mgr,false );
+    lclass<lnetwork_mgr>::push( L,static_global::network_mgr(),false );
     lua_setglobal( L,"network_mgr" );
 
     /* 加载程序入口脚本 */
@@ -53,7 +51,6 @@ int32 main( int32 argc,char **argv )
         return 1;
     }
 
-    lnetwork_mgr::uninstance();      /* 关闭网络管理 */
     codec_mgr::uninstance   ();      /* 销毁数据编码对象 */
     ssl_mgr::uninstance     ();      /* 销毁ssl上下文 */
 

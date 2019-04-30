@@ -12,7 +12,6 @@
 #include "packet/websocket_packet.h"
 #include "packet/ws_stream_packet.h"
 #include "../system/static_global.h"
-#include "../lua_cpplib/lnetwork_mgr.h"
 #include "../util/statistic.h"
 
 socket::socket( uint32 conn_id,conn_t conn_ty )
@@ -66,7 +65,7 @@ void socket::stop( bool flush )
 int32 socket::recv()
 {
     assert( "socket recv without io control",_io );
-    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32 ret = _io->recv();
@@ -90,7 +89,7 @@ int32 socket::recv()
 int32 socket::send()
 {
     assert( "socket send without io control",_io );
-    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     /* 去除发送标识，因为发送时，pending标识会变。
      * 如果需要再次发送，则主循环需要重设此标识
@@ -366,7 +365,7 @@ void socket::pending_send()
 
 void socket::listen_cb()
 {
-    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
     while ( socket::active() )
     {
         int32 new_fd = ::accept(_w.fd,NULL,NULL);
@@ -426,7 +425,7 @@ void socket::connect_cb ()
     }
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
-    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
     bool is_ok = network_mgr->connect_new( _conn_id,ecode );
 
     if ( expect_true( is_ok && 0 == ecode ) )
@@ -441,7 +440,7 @@ void socket::connect_cb ()
 
 void socket::command_cb()
 {
-    static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     /* 在脚本报错的情况下，可能无法设置 io和packet */
     if ( !_io || !_packet )
@@ -523,7 +522,7 @@ int32 socket::io_status_check( int32 ecode )
 {
     if ( expect_false( 0 > ecode ) )
     {
-        static class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+        static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
         socket::stop();
         network_mgr->connect_del( _conn_id );

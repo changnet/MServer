@@ -171,7 +171,7 @@ int32 luaopen_acism( lua_State *L )
 
 int32 luaopen_network_mgr( lua_State *L )
 {
-    lclass<lnetwork_mgr> lc(L,"Network_mgr");
+    lbaseclass<lnetwork_mgr> lc(L,"Network_mgr");
 
     lc.def<&lnetwork_mgr::close> ( "close" );
     lc.def<&lnetwork_mgr::listen> ( "listen" );

@@ -5,7 +5,6 @@
 #include "../codec/codec_mgr.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
-#include "../../lua_cpplib/lnetwork_mgr.h"
 
 stream_packet::stream_packet( class socket *sk )
     : packet( sk )
@@ -59,7 +58,7 @@ void stream_packet::dispatch( const struct base_header *header )
 void stream_packet::sc_command( const struct s2c_header *header )
 {
     static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
@@ -109,7 +108,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
 /* 派发客户端发给服务器数据包 */
 void stream_packet::cs_dispatch( const struct c2s_header *header )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     int32 cmd = header->_cmd;
     int32 size = PACKET_BUFFER_LEN( header );
@@ -125,7 +124,7 @@ void stream_packet::cs_dispatch( const struct c2s_header *header )
 void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
 {
     static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
@@ -193,7 +192,7 @@ void stream_packet::process_ss_command( const s2s_header *header )
 /* 派发服务器之间的数据包 */
 void stream_packet::ss_dispatch( const s2s_header *header )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     const cmd_cfg_t *cmd_cfg = network_mgr->get_ss_cmd( header->_cmd );
     if ( !cmd_cfg )
@@ -276,7 +275,7 @@ void stream_packet::ss_command(
 void stream_packet::css_command( const s2s_header *header )
 {
     static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
@@ -326,7 +325,7 @@ void stream_packet::css_command( const s2s_header *header )
 /* 解析其他服务器转发到网关的客户端数据包 */
 void stream_packet::ssc_command( const s2s_header *header )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     class socket *sk = network_mgr->get_conn_by_owner( header->_owner );
     if ( !sk )
@@ -470,7 +469,7 @@ int32 stream_packet::rpc_pack(
 /* 打包服务器发往客户端数据包 */
 int32 stream_packet::pack_clt( lua_State *L,int32 index )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     int32 cmd = luaL_checkinteger( L,index );
     int32 ecode = luaL_checkinteger( L,index + 1 );
@@ -511,7 +510,7 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
 /* 打包客户端发往服务器数据包 */
 int32 stream_packet::pack_srv( lua_State *L,int32 index )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     int32 cmd = luaL_checkinteger( L,index );
 
@@ -566,7 +565,7 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
 
 int32 stream_packet::pack_ss ( lua_State *L,int32 index )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     int32 cmd = luaL_checkinteger( L,index );
     int32 ecode = luaL_checkinteger( L,index + 1 );
@@ -622,7 +621,7 @@ int32 stream_packet::pack_rpc( lua_State *L,int32 index )
 
 int32 stream_packet::pack_ssc( lua_State *L,int32 index )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     owner_t owner  = luaL_checkinteger( L,index     );
     int32 codec_ty = luaL_checkinteger( L,index + 1 );
@@ -739,7 +738,7 @@ int32 stream_packet::raw_pack_ss(
 // ssc_multicast( conn_id,mask,args_list,codec_type,cmd,errno,pkt )
 int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     owner_t list[MAX_CLT_CAST] = { 0 };
     int32 mask     = luaL_checkinteger( L,index     );
@@ -835,7 +834,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
 void stream_packet::ssc_one_multicast(
     owner_t owner,int32 cmd,uint16 ecode,const char *ctx,int32 size )
 {
-    static const class lnetwork_mgr *network_mgr = lnetwork_mgr::instance();
+    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     class socket *sk = network_mgr->get_conn_by_owner( owner );
     if ( !sk )

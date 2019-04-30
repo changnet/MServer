@@ -2,7 +2,6 @@
 
 #include "lev.h"
 #include "ltools.h"
-#include "lnetwork_mgr.h"
 
 #include "../ev/ev_def.h"
 #include "../net/socket.h"
@@ -241,11 +240,11 @@ void lev::running( int64 ms_now )
     invoke_signal  ();
     invoke_app_ev  (ms_now);
 
-    lnetwork_mgr::instance()->invoke_delete();
+    static_global::network_mgr()->invoke_delete();
 
     static lua_State *L = static_global::state();
 
-    // TODO:每秒gc一次，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
+    // TODO:每秒gc一个步骤，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
     if (_lua_gc_tm != ev_rt_now)
     {
         _lua_gc_tm = ev_rt_now;
