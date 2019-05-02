@@ -12,12 +12,26 @@ public:
     virtual ~thread();
     explicit thread(const char *name);
 
+    /* 停止线程 */
     void stop ();
+    /* 开始线程，可设置多长时间超时一次
+     * @sec:秒
+     * @usec:微秒
+     */
     bool start( int32 sec = 1,int32 usec = 0 );
+    /* 还在处理的数据
+     * @finish:是子线程已处理完，等待主线程处理的数量
+     * @unfinished:是等待子线程处理的数量
+     * 返回总数
+     */
+    virtual size_t busy_job( 
+        size_t *finished = NULL,size_t *unfinished = NULL ) = 0;
 
-    inline bool active() { return _run; }
-    inline pthread_t get_id() { return _id; }
-    inline const char *get_name() { return _name; }
+    inline bool active() const { return _run; }
+    /* 子线程是否正在处理数据，不在处理数据也不代表缓冲区没数据等待处理 */
+    inline bool is_busy() const { return _busy;}
+    inline pthread_t get_id() const { return _id; }
+    inline const char *get_name() const { return _name; }
 
     static void signal_block();
 public:

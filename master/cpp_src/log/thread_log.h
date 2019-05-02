@@ -11,6 +11,7 @@ public:
     thread_log();
     ~thread_log();
 
+    size_t busy_job( size_t *finished = NULL,size_t *unfinished = NULL );
     void write(const char *path,const char *ctx,size_t len,log_out_t out_type);
 private:
     // 线程相关，重写基类相关函数

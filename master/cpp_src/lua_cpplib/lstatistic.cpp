@@ -9,12 +9,17 @@ int32 lstatistic::dump( lua_State *L )
         dump_base_counter( counter,L );\
         lua_rawset( L,-3 );\
     } while(0)
+
     const statistic *stat = static_global::statistic();
 
     lua_newtable( L );
 
     DUMP_BASE_COUNTER( "c_obj",stat->get_c_obj() );
     DUMP_BASE_COUNTER( "c_lua_obj",stat->get_c_lua_obj() );
+
+    lua_pushstring( L,"thread" );
+    dump_thread( L );
+    lua_rawset( L,-3 );
 
     return 1;
 
@@ -45,6 +50,46 @@ void lstatistic::dump_base_counter(
         lua_rawset( L,-3 );
 
         lua_rawseti( L,-2,index );
+        ++index;itr ++;
+    }
+}
+
+void lstatistic::dump_thread( lua_State *L )
+{
+    const thread_mgr::thread_mpt_t &threads =
+        static_global::thread_mgr()->get_threads();
+
+    int32 index = 1;
+    lua_newtable( L );
+    thread_mgr::thread_mpt_t::const_iterator itr = threads.begin();
+    while ( itr != threads.end() )
+    {
+        class thread *thread = itr->second;
+
+        size_t finished = 0;
+        size_t unfinished = 0;
+        thread->busy_job( &finished,&unfinished );
+
+        lua_createtable( L,0,3 );
+
+        lua_pushstring( L,"id" );
+        lua_pushnumber( L,thread->get_id() );
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"name" );
+        lua_pushstring( L,thread->get_name() );
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"finish" );
+        lua_pushnumber( L,finished );
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"unfinished" );
+        lua_pushnumber( L,unfinished );
+        lua_rawset( L,-3 );
+
+        lua_rawseti( L,-2,index );
+
         ++index;itr ++;
     }
 }

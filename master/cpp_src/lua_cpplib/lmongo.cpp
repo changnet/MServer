@@ -73,6 +73,21 @@ bool lmongo::initialize()
     return true;
 }
 
+size_t lmongo::busy_job( size_t *finished,size_t *unfinished )
+{
+    lock();
+    size_t finished_sz = _result.size();
+    size_t unfinished_sz = _query.size();
+
+    if ( is_busy() ) unfinished_sz += 1;
+    unlock();
+
+    if ( finished ) *finished = finished_sz;
+    if ( unfinished ) *unfinished = unfinished_sz;
+
+    return finished_sz + unfinished_sz;
+}
+
 void lmongo::routine( notify_t notify )
 {
     /* 如果某段时间连不上，只能由下次超时后触发

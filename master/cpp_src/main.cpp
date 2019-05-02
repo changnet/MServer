@@ -45,6 +45,8 @@ int32 main( int32 argc,char **argv )
         return 1;
     }
 
+    static_global::thread_mgr()->stop();
+
     return 0;
 }
 

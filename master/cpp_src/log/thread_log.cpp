@@ -9,6 +9,20 @@ thread_log::~thread_log()
 {
 }
 
+size_t thread_log::busy_job( size_t *finished,size_t *unfinished )
+{
+    lock();
+    size_t unfinished_sz = _log.pending_size();
+
+    if ( is_busy() ) unfinished_sz += 1;
+    unlock();
+
+    if ( finished ) *finished = 0;
+    if ( unfinished ) *unfinished = unfinished_sz;
+
+    return unfinished_sz;
+}
+
 void thread_log::write(
     const char *path,const char *ctx,size_t len,log_out_t out_type)
 {

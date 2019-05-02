@@ -15,8 +15,8 @@ struct lua_State;
 class lmongo : public thread
 {
 public:
-    explicit lmongo( lua_State *L );
     ~lmongo();
+    explicit lmongo( lua_State *L );
 
     int32 start( lua_State *L );
     int32 stop ( lua_State *L );
@@ -28,6 +28,8 @@ public:
     int32 update   ( lua_State *L );
     int32 remove   ( lua_State *L );
     int32 find_and_modify( lua_State *L );
+
+    size_t busy_job( size_t *finished = NULL,size_t *unfinished = NULL );
 private:
     /* for thread */
     bool uninitialize();

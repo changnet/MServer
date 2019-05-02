@@ -9,6 +9,8 @@ class thread;
 class thread_mgr
 {
 public:
+    typedef std::map< pthread_t,class thread * > thread_mpt_t;
+public:
     thread_mgr();
     ~thread_mgr();
 
@@ -16,9 +18,9 @@ public:
     void push( class thread *thd );
 
     void stop();
-    void is_busy();
-public:
-    typedef std::map< pthread_t,class thread * > thread_mpt_t;
+    bool is_busy();
+
+    const thread_mpt_t &get_threads() const { return _threads; }
 private:
     thread_mpt_t _threads;
 };

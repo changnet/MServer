@@ -17,6 +17,8 @@ public:
     int32 start ( lua_State *L );
     int32 stop  ( lua_State *L );
     int32 do_sql( lua_State *L );
+
+    size_t busy_job( size_t *finished = NULL,size_t *unfinished = NULL );
 private:
     bool uninitialize();
     bool initialize();

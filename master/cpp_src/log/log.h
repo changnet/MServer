@@ -39,6 +39,7 @@ public:
     bool swap();
     void flush();
     void collect_mem();
+    size_t pending_size();
     int32 write_cache( time_t tm,
         const char *path,const char *ctx,size_t len,log_out_t out );
 private:

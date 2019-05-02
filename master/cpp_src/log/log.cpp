@@ -71,6 +71,12 @@ log::~log()
     }
 }
 
+// 等待处理的日志数量
+size_t log::pending_size()
+{
+    return _cache->size() + _flush->size();
+}
+
 // 交换缓存和待写入队列
 bool log::swap()
 {

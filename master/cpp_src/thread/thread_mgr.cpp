@@ -44,3 +44,18 @@ void thread_mgr::stop()
 
     _threads.clear();
 }
+
+/* 子线程是否还有数据待处理 */
+bool thread_mgr::is_busy()
+{
+    thread_mpt_t::const_iterator itr = _threads.begin();
+    while ( itr != _threads.end() )
+    {
+        class thread *_thread = itr->second;
+        if ( _thread->busy_job() > 0 ) return true;
+
+        itr ++;
+    }
+
+    return false;
+}
