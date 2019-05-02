@@ -188,13 +188,21 @@ void log::flush()
         log_one *one = *itr;
         if ( 0 == one->_len ) continue;
 
-        if ( LO_PRINTF == one->_out )
+        switch( one->_out )
         {
-            raw_cprintf_log( one->_tm,"LP","%s",one->get_ctx() );
-        }
-        else
-        {
-            flush_one_file( itr );
+            case LO_FILE :
+                flush_one_file( itr );
+                break;
+            case LO_LPRINTF :
+                raw_cprintf_log( one->_tm,"LP","%s",one->get_ctx() );
+                break;
+            case LO_MONGODB :
+                raw_mongodb_log( one->_tm,"CP","%s",one->get_ctx() );
+                break;
+            default:
+                ERROR("unknow log output type:%d",one->_out);
+                break;
+
         }
 
         one->_len = 0;

@@ -57,6 +57,17 @@ static_global::initializer::~initializer()
     grid_aoi::purge();
 }
 
+void static_global::initialize()  /* 程序运行时初始化 */
+{
+    _async_log.start( 3,0 );
+}
+
+void static_global::uninitialize() /* 程序结束时反初始化 */
+{
+    _async_log.stop();
+    _thread_mgr.stop();
+}
+
 
 // 初始化ssl库
 int32 ssl_init()

@@ -34,6 +34,32 @@ void thread_log::write(
     unlock();
 }
 
+void thread_log::raw_write( 
+    const char *path,log_out_t out,const char *fmt,... )
+{
+    static char ctx_buff[LOG_MAX_LENGTH];
+
+    va_list args;
+    va_start(args,fmt);
+    int32 len = vsnprintf(ctx_buff,LOG_MAX_LENGTH,fmt,args);
+    va_end(args);
+
+    /* snprintf
+     * 错误返回-1
+     * 缓冲区不足，返回需要的缓冲区长度(即返回值>=缓冲区长度表示被截断)
+     * 正确返回写入的字符串长度
+     * 上面的返回值都不包含0结尾的长度
+     */
+
+    if ( len < 0 )
+    {
+        ERROR("raw_write snprintf fail");
+        return;
+    }
+
+    write( path,ctx_buff,len > LOG_MAX_LENGTH ? LOG_MAX_LENGTH : len,out );
+}
+
 // 线程结束之前清理函数
 bool thread_log::uninitialize()
 {

@@ -11,6 +11,8 @@ int32 main( int32 argc,char **argv )
         exit( 1 );
     }
 
+    static_global::initialize();
+
     lua_State *L = static_global::state();
 
     lclass<lev>::push( L,static_global::lua_ev(),false );
@@ -45,7 +47,7 @@ int32 main( int32 argc,char **argv )
         return 1;
     }
 
-    static_global::thread_mgr()->stop();
+    static_global::uninitialize();
 
     return 0;
 }

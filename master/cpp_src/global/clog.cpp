@@ -83,10 +83,9 @@ void cerror_log( const char *prefix,const char *fmt,... )
     RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
-void mongodb_log( const char *prefix,const char *fmt,... )
+void raw_mongodb_log( time_t tm,const char *prefix,const char *fmt,... )
 {
-    // mongodb的日志暂时不打印到屏蔽，太多了
-    time_t tm = static_global::ev()->now();
+    // mongodb的日志暂时不打印到stdout，太多了
     RAW_FORMAT( tm,prefix,mongodb_path,NULL,fmt );
 }
 

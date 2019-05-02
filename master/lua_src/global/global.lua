@@ -7,6 +7,8 @@
 local Log = require "Log"
 local util = require "util"
 
+local async_logger = Log()
+
 local function to_readable( val )
     if type(val) == "string" then
         return "\"" .. val .. "\""
@@ -88,20 +90,20 @@ end
 function PRINT( any,... )
     local args_num = select( "#",... )
     if 0 == args_num then
-        return g_log_mgr.fl_logger:write( "",tostring(any),2 )
+        return async_logger:write( "",tostring(any),2 )
     end
 
     -- 如果有多个参数，则合并起来输出，类似Lua的print函数
-    g_log_mgr.fl_logger:write( "",table.concat_any( "    ",any,... ),2 )
+    async_logger:write( "",table.concat_any( "    ",any,... ),2 )
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
 function PRINTF( fmt,any,... )
     -- 默认为c方式的print字符串格式化打印方式
     if any and "string" == type( fmt ) then
-        g_log_mgr.fl_logger:write( "",string.format( fmt,any,... ),2 )
+        return async_logger:write( "",string.format( fmt,any,... ),2 )
     else
-        PRINT( fmt,any,... )
+        return PRINT( fmt,any,... )
     end
 end
 

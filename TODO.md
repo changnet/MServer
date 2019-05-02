@@ -11,10 +11,9 @@
 * lint优化代码
 * 服务器socket预分配内存太大，当服务器之间连接太多(比如中心服，500条连接)，就会分不了内存
 * 要不要把运行目录放到bin目录，这样生成的core文件，error文件以及log、setting这些与版本无关的全在一个目录里了
-* mongo.cpp里的日志不是线程安全的，虽然只是会导致时间打印不对
 * mongodb的result感觉要用个object_pool
 * lclass弄个继承，基础的只是push到lua，不会创建。然后把C++中push到lua的类多余的构造函数去掉
-* 日志中的内存池也要改下，加上统计
+* log.cpp中的设计有问题，内存池要简化，交换缓存是在线程中。最后看下log是不是合并到thread_log中去，整合为async_log
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步

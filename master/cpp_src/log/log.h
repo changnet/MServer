@@ -21,8 +21,9 @@ typedef enum
 // 日志输出类型
 typedef enum
 {
-    LO_FILE   = 1, // 输出到指定文件
-    LO_PRINTF = 2, // 用于实现异步PRINTF宏定义
+    LO_FILE    = 1, // 输出到指定文件
+    LO_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
+    LO_MONGODB = 3, // mongodb日志
 
     LO_MAX
 }log_out_t;

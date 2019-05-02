@@ -214,15 +214,17 @@ void lmongo::invoke_result()
     while ( (res = pop_result()) )
     {
         // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
+        static thread_log *logger = static_global::async_log();
         int64 real = static_global::ev()->ms_now() - res->_time;
         if ( 0 == res->_error.code)
         {
-            mongodb_log("CP","%s.%s:%s real:" FMT64d " msec,thread:%.3f sec",
+            logger->raw_write("",LO_MONGODB,
+                "%s.%s:%s real:" FMT64d " msec,thread:%.3f sec",
                 res->_clt,MQT_NAME[res->_mqt],res->_query,real,res->_elaspe);
         }
         else
         {
-            mongodb_log("CP",
+            logger->raw_write("",LO_MONGODB,
                 "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
                 res->_clt,MQT_NAME[res->_mqt],res->_query,res->_error.code,
                 res->_error.message,real,res->_elaspe);

@@ -10,9 +10,9 @@
 extern void set_app_name( const char *name );
 extern void cerror_log ( const char *prefix,const char *fmt,... );
 extern void cprintf_log( const char *prefix,const char *fmt,... );
-extern void mongodb_log ( const char *prefix,const char *fmt,... );
 extern void raw_cerror_log( time_t tm,const char *prefix,const char *fmt,... );
 extern void raw_cprintf_log( time_t tm,const char *prefix,const char *fmt,... );
+extern void raw_mongodb_log( time_t tm,const char *prefix,const char *fmt,... );
 
 /* 设置日志参数
  * @dm: deamon，是否守护进程。为守护进程不会输出日志到stdcerr

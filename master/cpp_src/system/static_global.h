@@ -17,6 +17,9 @@
 class static_global
 {
 public:
+    static void initialize();  /* 程序运行时初始化 */
+    static void uninitialize(); /* 程序结束时反初始化 */
+
     static class ev *ev() { return &_ev; }
     static class lev *lua_ev() { return &_ev; }
     static lua_State *state() { return _state.state(); }
