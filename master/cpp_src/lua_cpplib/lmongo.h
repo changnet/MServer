@@ -30,10 +30,10 @@ public:
     int32 find_and_modify( lua_State *L );
 private:
     /* for thread */
-    bool cleanup();
-    bool initlization();
-    void routine( notify_t msg );
-    void notification( notify_t msg );
+    bool uninitialize();
+    bool initialize();
+    void routine( notify_t notify );
+    void notification( notify_t notify );
 
     void invoke_result();
     void invoke_command();

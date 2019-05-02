@@ -2,7 +2,7 @@
 #include "ltools.h"
 #include "../system/static_global.h"
 
-lsql::lsql( lua_State *L )
+lsql::lsql( lua_State *L ) : thread("lsql")
 {
     _valid = -1;
     _dbid = luaL_checkinteger( L,2 );
@@ -40,7 +40,7 @@ int32 lsql::start( lua_State *L )
     return 0;
 }
 
-void lsql::routine( notify_t msg )
+void lsql::routine( notify_t notify )
 {
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
@@ -127,7 +127,7 @@ void lsql::push_query( const struct sql_query *query )
     /* 子线程的socket是阻塞的。主线程检测到子线程正常处理sql则无需告知。防止
      * 子线程socket缓冲区满造成Resource temporarily unavailable
      */
-    if ( notify ) notify_child( MSG );
+    if ( notify ) notify_child( NTF_CUSTOM );
 }
 
 int32 lsql::do_sql( lua_State *L )
@@ -152,13 +152,13 @@ int32 lsql::do_sql( lua_State *L )
     return 0;
 }
 
-void lsql::notification( notify_t msg )
+void lsql::notification( notify_t notify )
 {
-    if ( MSG == msg )
+    if ( NTF_CUSTOM == notify )
     {
         invoke_result();
     }
-    else if ( ERROR == msg )
+    else if ( NTF_ERROR == notify )
     {
         ERROR( "sql thread error" );
     }
@@ -289,7 +289,7 @@ int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
     return 1;
 }
 
-bool lsql::cleanup()
+bool lsql::uninitialize()
 {
     if ( _sql.ping() )
     {
@@ -307,7 +307,7 @@ bool lsql::cleanup()
     return true;
 }
 
-bool lsql::initlization()
+bool lsql::initialize()
 {
     mysql_thread_init();
 
@@ -316,7 +316,7 @@ bool lsql::initlization()
     {
         _valid = 0;
         mysql_thread_end();
-        notify_parent( ERROR );
+        notify_parent( NTF_ERROR );
         return false;
     }
     else if ( -1 == ok )
@@ -348,5 +348,5 @@ void lsql::push_result( int32 id,struct sql_res *res )
     _result.push( result );
     unlock();
 
-    if ( notify ) notify_parent( MSG );
+    if ( notify ) notify_parent( NTF_CUSTOM );
 }

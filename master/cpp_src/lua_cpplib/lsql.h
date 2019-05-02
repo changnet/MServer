@@ -18,16 +18,16 @@ public:
     int32 stop  ( lua_State *L );
     int32 do_sql( lua_State *L );
 private:
-    bool cleanup();
-    bool initlization();
+    bool uninitialize();
+    bool initialize();
 
     void invoke_result();
 
     void invoke_sql ( bool is_return = true );
     void push_result( int32 id,struct sql_res *res );
 
-    void routine( notify_t msg );
-    void notification( notify_t msg );
+    void routine( notify_t notify );
+    void notification( notify_t notify );
 
     int32 mysql_to_lua( lua_State *L,const struct sql_res *res );
     int32 field_to_lua( lua_State *L,

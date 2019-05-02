@@ -8,13 +8,15 @@
 #include "../net/socket.h"
 #include "../system/static_global.h"
 
-thread::thread()
+thread::thread(const char *name)
 {
     _fd[0] = -1 ;
     _fd[1] = -1 ;
     _thread = 0;
     _run  = false;
     _join = false;
+
+    _name = name;
 
     int32 rv = pthread_mutex_init( &_mutex,NULL );
     if ( 0 != rv )
@@ -115,7 +117,7 @@ void thread::stop()
     assert( "thread join zero thread id", 0 != _thread );
 
     _run = false;
-    notify_child( EXIT );
+    notify_child( NTF_EXIT );
     int32 ecode = pthread_join( _thread,NULL );
     if ( ecode )
     {
@@ -136,15 +138,15 @@ void thread::do_routine()
 {
     while ( true )
     {
-        int8 event = 0;
-        int32 sz = ::read( _fd[1],&event,sizeof(int8) ); /* 阻塞 */
+        int8 notify = 0;
+        int32 sz = ::read( _fd[1],&notify,sizeof(int8) ); /* 阻塞 */
         if ( sz < 0 )
         {
             /* errno variable is thread safe */
             if ( errno == EAGAIN || errno == EWOULDBLOCK )
             {
-                this->routine( NONE );
-                continue;  // just timeout
+                this->routine( NTF_NONE );
+                continue;  // just timeout，超时，需要运行routine，里面有ping机制
             }
             else if ( errno == EINTR )
             {
@@ -161,9 +163,9 @@ void thread::do_routine()
             ERROR( "thread socketpair close,thread exit" );
             break;
         }
-        this->routine( static_cast<notify_t>(event) );
+        this->routine( static_cast<notify_t>(notify) );
 
-        if ( EXIT == static_cast<notify_t>(event) )
+        if ( NTF_EXIT == static_cast<notify_t>(notify) )
         {
             break;
         }
@@ -178,34 +180,28 @@ void *thread::start_routine( void *arg )
 
     signal_block();  /* 子线程不处理外部信号 */
 
-    if ( !_thread->initlization() )  /* 初始化 */
+    if ( !_thread->initialize() )  /* 初始化 */
     {
-        ERROR( "thread initlization fail" );
+        ERROR( "thread initialize fail" );
         return NULL;
     }
 
     _thread->do_routine();
 
-    if ( !_thread->cleanup() )  /* 清理 */
+    if ( !_thread->uninitialize() )  /* 清理 */
     {
-        ERROR( "thread cleanup fail" );
+        ERROR( "thread uninitialize fail" );
         return NULL;
     }
 
     return NULL;
 }
 
-/* 获取线程id */
-pthread_t thread::get_id()
-{
-    return _thread;
-}
-
-void thread::notify_child( notify_t msg )
+void thread::notify_child( notify_t notify )
 {
     assert( "notify_child:socket pair not open",_fd[1] >= 0 );
 
-    int8 val = static_cast<int8>(msg);
+    int8 val = static_cast<int8>(notify);
     int32 sz = ::write( _fd[0],&val,sizeof(int8) );
     if ( sz != sizeof(int8) )
     {
@@ -213,15 +209,15 @@ void thread::notify_child( notify_t msg )
     }
 }
 
-void thread::notify_parent( notify_t msg )
+void thread::notify_parent( notify_t notify )
 {
     assert( "notify_parent:socket pair not open",_fd[0] >= 0 );
 
-    int8 val = static_cast<int8>(msg);
+    int8 val = static_cast<int8>(notify);
     int32 sz = ::write( _fd[1],&val,sizeof(int8) );
     if ( sz != sizeof(int8) )
     {
-        ERROR( "notify child error:%s",strerror(errno) );
+        ERROR_R( "notify child error:%s",strerror(errno) );
     }
 }
 

@@ -14,11 +14,11 @@ public:
     void write(const char *path,const char *ctx,size_t len,log_out_t out_type);
 private:
     // 线程相关，重写基类相关函数
-    bool cleanup();
-    void routine( notify_t msg );
-    void notification( notify_t msg ) {}
+    bool uninitialize();
+    void routine( notify_t notify );
+    void notification( notify_t notify ) {}
 
-    bool initlization() { return true; }
+    bool initialize() { return true; }
 private:
     class log _log;
 };

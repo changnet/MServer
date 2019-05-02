@@ -7,7 +7,7 @@
 
 #include "../system/static_global.h"
 
-lmongo::lmongo( lua_State *L )
+lmongo::lmongo( lua_State *L ) : thread("lmongo")
 {
     _valid = -1;
     _dbid = luaL_checkinteger( L,2 );
@@ -54,7 +54,7 @@ int32 lmongo::valid( lua_State *L )
     return 1;
 }
 
-bool lmongo::initlization()
+bool lmongo::initialize()
 {
     int32 ok = _mongo.connect();
     if ( ok > 0 )
@@ -73,7 +73,7 @@ bool lmongo::initlization()
     return true;
 }
 
-void lmongo::routine( notify_t msg )
+void lmongo::routine( notify_t notify )
 {
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
@@ -84,7 +84,7 @@ void lmongo::routine( notify_t msg )
     invoke_command();
 }
 
-bool lmongo::cleanup()
+bool lmongo::uninitialize()
 {
     if ( _mongo.ping() )
     {
@@ -101,13 +101,13 @@ bool lmongo::cleanup()
     return true;
 }
 
-void lmongo::notification( notify_t msg )
+void lmongo::notification( notify_t notify )
 {
-    if ( MSG == msg )
+    if ( NTF_CUSTOM == notify )
     {
         invoke_result();
     }
-    else if ( ERROR == msg )
+    else if ( NTF_ERROR == notify )
     {
         ERROR( "mongo thread error" );
     }
@@ -132,7 +132,7 @@ void lmongo::push_query( const struct mongo_query *query )
     _query.push( query );
     unlock();
 
-    if ( _notify ) notify_child( MSG );
+    if ( _notify ) notify_child( NTF_CUSTOM );
 }
 
 int32 lmongo::count( lua_State *L )
@@ -286,7 +286,7 @@ void lmongo::push_result( const struct mongo_result *result )
     _result.push( result );
     unlock();
 
-    if ( is_notify ) notify_parent( MSG );
+    if ( is_notify ) notify_parent( NTF_CUSTOM );
 }
 
 /* 在子线程触发查询命令 */

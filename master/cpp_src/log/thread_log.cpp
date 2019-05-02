@@ -1,7 +1,7 @@
 #include "thread_log.h"
 #include "../system/static_global.h"
 
-thread_log::thread_log()
+thread_log::thread_log() : thread("thread_log")
 {
 }
 
@@ -21,16 +21,16 @@ void thread_log::write(
 }
 
 // 线程结束之前清理函数
-bool thread_log::cleanup()
+bool thread_log::uninitialize()
 {
-    routine( NONE );
+    routine( NTF_NONE );
     return true;
 }
 
 // 线程主循环
-void thread_log::routine( notify_t msg )
+void thread_log::routine( notify_t notify )
 {
-    UNUSED( msg );
+    UNUSED( notify );
 
     /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
     lock();
