@@ -64,10 +64,10 @@ end
 -- 加载二进制flatbuffers schema文件
 function Command_mgr:load_schema()
     local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PFLOG( "load protocol schema:%d",pfs )
+    PRINTF( "load protocol schema:%d",pfs )
 
     local ffs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
-    PFLOG( "load flatbuffers schema:%d",ffs )
+    PRINTF( "load flatbuffers schema:%d",ffs )
 
     return (pfs >= 0 and ffs >= 0)
 end
@@ -221,7 +221,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
         g_rpc:register( cmd,session )
     end
 
-    PFLOG( "register cmd from %s",srv_conn:conn_name() )
+    PRINTF( "register cmd from %s",srv_conn:conn_name() )
 
     return true
 end

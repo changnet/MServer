@@ -21,7 +21,7 @@ end
 -- 玩家进入场景
 function Move:on_enter_scene(entity,errno,pkt)
     local dungeon_id = pkt.dungeon_id or 0 -- pbc里int为0发不过来
-    PFLOG("%s(%d) enter scene %d:%d",
+    PRINTF("%s(%d) enter scene %d:%d",
         entity.name,entity.pid,dungeon_id,pkt.scene_id)
 
     -- 设置位置信息
@@ -41,19 +41,19 @@ function Move:on_move(entity,errno,pkt)
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
-        PLOG("move my pos to",entity.name,pkt.pix_x,pkt.pix_y)
+        PRINT("move my pos to",entity.name,pkt.pix_x,pkt.pix_y)
     else
-        PLOG("move other pos at",pkt.pix_x,pkt.pix_y)
+        PRINT("move other pos at",pkt.pix_x,pkt.pix_y)
     end
 end
 
 function Move:on_appear(entity,errno,pkt)
-    PLOG("entity appear:",pkt.name,pkt.pix_x,pkt.pix_y)
+    PRINT("entity appear:",pkt.name,pkt.pix_x,pkt.pix_y)
 end
 
 -- 实体消失
 function Move:on_disappear(entity,errno,pkt)
-    PLOG("entity disappear:",pkt.handle)
+    PRINT("entity disappear:",pkt.handle)
 end
 
 -- 服务器强制重置实体位置
@@ -63,9 +63,9 @@ function Move:on_reset_pos(entity,errno,pkt)
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
-        PLOG("reset my pos at",entity.name,pkt.pix_x,pkt.pix_y)
+        PRINT("reset my pos at",entity.name,pkt.pix_x,pkt.pix_y)
     else
-        PLOG("reset other pos at",pkt.pix_x,pkt.pix_y)
+        PRINT("reset other pos at",pkt.pix_x,pkt.pix_y)
     end
 end
 

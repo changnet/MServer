@@ -9,7 +9,7 @@ local function dump(rank)
     for idx = 1,count do
         local id = rank:get_id_by_rank(idx)
         local ft1,ft2,ft3 = rank:get_factor(id)
-        PLOG(idx,id,ft1,ft2,ft3)
+        PRINT(idx,id,ft1,ft2,ft3)
     end
 end
 

@@ -79,7 +79,7 @@ function Account_mgr:player_login( clt_conn,pkt )
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
     clt_conn:send_pkt( SC.PLAYER_LOGIN,role_info )
 
-    PFLOG( "client authorized success:%s--%d",pkt.account,role_info.pid or 0 )
+    PRINTF( "client authorized success:%s--%d",pkt.account,role_info.pid or 0 )
 end
 
 -- 创角
@@ -155,7 +155,7 @@ end
 function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
     if 0 ~= ecode then -- 失败
         self:send_role_create( role_info,E.UNDEFINE )
-        PFLOG( "create role error:%s",acc_info.account )
+        PRINTF( "create role error:%s",acc_info.account )
         return
     end
 
@@ -163,7 +163,7 @@ function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
     local pid = acc_info._id
     role_info.pid  = pid
     role_info.name = acc_info.name
-    PFLOG( "create role success:%s--%d",role_info.account,pid )
+    PRINTF( "create role success:%s--%d",role_info.account,pid )
 
     self.role_acc[pid] = role_info
 

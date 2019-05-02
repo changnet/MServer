@@ -145,7 +145,7 @@ function Application:one_initialized( name,val )
     init.val = init.val - (val or 1)
     if init.val <= 0 then
         self.init_list[name] = nil
-        PFLOG( "initialize one action OK:%s",name )
+        PRINTF( "initialize one action OK:%s",name )
 
         for _,init in pairs( self.init_list ) do
             if init.after == name then init.action( self ) end
@@ -171,7 +171,7 @@ function Application:final_initialize()
     g_timer_mgr:start_timer( self.timer )
 
     self.ok = true
-    PFLOG( "%s server(0x%.8X) start OK",self.srvname,self.session )
+    PRINTF( "%s server(0x%.8X) start OK",self.srvname,self.session )
 end
 
 

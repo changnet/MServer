@@ -35,12 +35,12 @@ end
 -- ************************************************************************** --
 
 function Test:on_ping( entity,ecode,pkt )
-    PLOG("ping:",pkt.y)
+    PRINT("ping:",pkt.y)
     -- vd(pkt)
 end
 
 function Test:on_chat( entity,ecode,pkt )
-    PFLOG( "chat: %d say %s",pkt.pid,pkt.context )
+    PRINTF( "chat: %d say %s",pkt.pid,pkt.context )
 end
 
 -- ************************************************************************** --

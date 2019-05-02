@@ -14,7 +14,7 @@ local function srv_reg( srv_conn,pkt )
     srv_conn:send_pkt( SS.SYS_CMD_SYNC,_pkt )
     srv_conn:send_pkt( SS.SYS_SYNC_DONE,{} )
 
-    PFLOG( "%s register succes",srv_conn:conn_name() )
+    PRINTF( "%s register succes",srv_conn:conn_name() )
 end
 
 -- 同步对方指令数据

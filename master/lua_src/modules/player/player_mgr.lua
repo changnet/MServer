@@ -50,7 +50,7 @@ end
 -- 玩家初始化失败
 function Player_mgr:enter_fail( player )
     local pid = player:get_pid()
-    PLOG("player enter timeout,kill connection",pid)
+    PRINT("player enter timeout,kill connection",pid)
 
     -- 通知网关关闭连接
     g_rpc:invoke( "kill_player_connect",pid )

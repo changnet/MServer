@@ -39,14 +39,14 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
     -- 服务器收到客户端的握手请求
     if not sec_websocket_key then
         self.close()
-        PFLOG( "clt handshake no sec_websocket_key")
+        PRINTF( "clt handshake no sec_websocket_key")
         return
     end
 
     local sha1 = util.sha1_raw( sec_websocket_key,ws_magic )
     local base64 = util.base64( sha1 )
 
-    PFLOG("clt handshake %d",self.conn_id)
+    PRINTF("clt handshake %d",self.conn_id)
     return network_mgr:send_raw_packet( 
         self.conn_id,string.format(handshake_srv,base64) )
 end

@@ -47,7 +47,7 @@ local function main( command,srvname,srvindex,srvid,... )
     local app_name = string.format("%s.%d",srvname,srvindex)
     if not deamon then Log.set_name( app_name ) end
 
-    PFLOG( "starting %s ... ",app_name )
+    SYNC_PRINTF( "starting %s ... ",app_name )
     local App = require( string.format( "%s.app",srvname ) )
 
     g_app = App( command,srvname,srvindex,srvid,... )

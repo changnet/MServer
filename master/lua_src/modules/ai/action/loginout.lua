@@ -43,7 +43,7 @@ end
 
 -- 断开连接
 function Loginout:on_disconnect( entity )
-    PFLOG( "android(%d) die ",entity.index )
+    PRINTF( "android(%d) die ",entity.index )
 end
 
 -- 登录返回
@@ -65,7 +65,7 @@ end
 -- 创角返回
 function Loginout:on_create_role( entity,errno,pkt )
     if 0 ~= errno then
-        PFLOG( "android_%d unable to create role",entity.index )
+        PRINTF( "android_%d unable to create role",entity.index )
         return
     end
 
@@ -74,7 +74,7 @@ function Loginout:on_create_role( entity,errno,pkt )
 
     self:enter_world()
 
-    PFLOG( "android_%d create role success,pid = %d,name = %s",
+    PRINTF( "android_%d create role success,pid = %d,name = %s",
         entity.index,entity.pid,entity.name )
 end
 
@@ -90,13 +90,13 @@ function Loginout:on_enter_world( entity,errno,pkt )
     -- 记录登录时间，一段时间后自动退出
     entity.ai.login_time = ev:time()
 
-    PFLOG( "%s enter world success",entity.name )
+    PRINTF( "%s enter world success",entity.name )
     -- g_player_ev:fire_event( PLAYER_EV.ENTER,entity )
 end
 
 -- 被顶号
 function Loginout:on_login_otherwhere( entity,errno,pkt )
-    PFLOG( "%s login other where",entity.name )
+    PRINTF( "%s login other where",entity.name )
 end
 
 -- ************************************************************************** --
@@ -115,7 +115,7 @@ function Loginout:check_and_logout(ai)
     network_mgr:close( entity.conn_id )
 
     entity:set_conn( nil )
-    PFLOG( "%s logout",entity.name )
+    PRINTF( "%s logout",entity.name )
 
     return true
 end
@@ -125,7 +125,7 @@ end
 -- 连接回调
 function Loginout:on_conn_new(entity,conn_id,ecode)
     if 0 == ecode then
-        PFLOG( "android(%d) connection(%d) establish",entity.index,conn_id)
+        PRINTF( "android(%d) connection(%d) establish",entity.index,conn_id)
         return
     end
 
@@ -137,7 +137,7 @@ end
 
 -- websocket握手回调
 function Loginout:on_handshake(entity,conn_id,ecode)
-    PFLOG( "android(%d) handshake ",entity.index)
+    PRINTF( "android(%d) handshake ",entity.index)
 
     return self:do_login(entity)
 end

@@ -62,7 +62,7 @@ local function raw_valid_ev(et,list)
 
         -- 校验视野范围
         if not in_visual_range(et,other) then
-            PFLOG("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            PRINTF("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
                 et.id,et.x,et.y,other.id,other.x,other.y)
             assert(false)
         end
@@ -80,7 +80,7 @@ local function valid_ev(et,list)
     local visual_ev = get_visual_ev(et)
     for id,other in pairs(visual_ev) do
         if nil == id_map[id] then
-            PFLOG("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            PRINTF("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
                 et.id,et.x,et.y,other.id,other.x,other.y)
             assert(false)
         end
@@ -112,7 +112,7 @@ local function valid_out(et,list)
 
         -- 校验视野范围
         if in_visual_range(et,other) then
-            PFLOG("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            PRINTF("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
                 et.id,et.x,et.y,other.id,other.x,other.y)
             assert(false)
         end
@@ -143,7 +143,7 @@ local function enter(id,x,y,type,event)
     entity.type = type
     entity.event = event
 
-    -- PLOG(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
+    -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:enter_entity(id,x,y,type,event,entity_pack_list)
     if is_valid then valid_ev(entity,entity_pack_list) end
 
@@ -159,7 +159,7 @@ local function update(id,x,y)
 
     local list_in = {}
     local list_out = {}
-    -- PLOG(id,"new pos is",math.floor(x/pix),math.floor(y/pix))
+    -- PRINT(id,"new pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:update_entity(id,x,y,entity_pack_list,list_in,list_out)
 
     if is_valid then
@@ -176,7 +176,7 @@ local function exit(id)
     aoi:exit_entity(id,entity_pack_list)
 
     entity_info[id] = nil
-    -- PLOG(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
+    -- PRINT(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
     if is_valid then valid_ev(entity,entity_pack_list) end
 end
 

@@ -46,7 +46,7 @@ end
 
 -- 强制玩家断开连接，网关用
 local function kill_player_connect( pid )
-    PFLOG( "kill player conn:%d",pid )
+    PRINTF( "kill player conn:%d",pid )
 
     g_account_mgr:role_offline_by_pid( pid )
     g_network_mgr:clt_close_by_pid( pid )

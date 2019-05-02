@@ -20,7 +20,7 @@ do
     SC,CS = sc[1],sc[2]
 
     local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
-    PFLOG( "android load protocol schema:%d",fs )
+    PRINTF( "android load protocol schema:%d",fs )
 
     -- 注册服务器发往机器人的指令配置
     for _,cfg in pairs( SC ) do
@@ -40,7 +40,7 @@ local Android_cmd = oo.singleton( nil,... )
 function Android_cmd:cmd_register( cmd_cfg,handler )
     local cfg = sc_cmd[cmd_cfg[1]]
     if not cfg then
-        PFLOG( "Android_cmd:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
+        PRINTF( "Android_cmd:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
         return
     end
 
@@ -112,7 +112,7 @@ function command_new( conn_id,cmd,errno,... )
 end
 
 function conn_del( conn_id )
-    PLOG( "%d connect del",android.index )
+    PRINT( "%d connect del",android.index )
 end
 
 return android_cmd

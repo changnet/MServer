@@ -15,6 +15,6 @@ for idx,val in pairs( tbl ) do mh:push(val,idx) end
 
 for idx = 1,#tbl do
     local object = mh:top()
-    PLOG(object.key,object.value)
+    PRINT(object.key,object.value)
     mh:pop()
 end

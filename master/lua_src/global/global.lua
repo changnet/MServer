@@ -65,8 +65,8 @@ function __G__TRACKBACK__( msg,co )
     Log.elog( str )
 end
 
--- print log,只打印，不格式化
-function PLOG( any,... )
+-- 同步print log,只打印，不格式化
+function SYNC_PRINT( any,... )
     local args_num = select( "#",... )
 
     -- if not ( ... ) then ... end 这种写法当...的第一个参数是nil就不对了
@@ -76,13 +76,13 @@ function PLOG( any,... )
     Log.plog( table.concat_any( "    ",any,... ) )
 end
 
--- print format log,以第一个为format参数，格式化后面的参数
-function PFLOG( fmt,any,... )
+-- 同步print format log,以第一个为format参数，格式化后面的参数
+function SYNC_PRINTF( fmt,any,... )
     -- 默认为c方式的print字符串格式化打印方式
     if any and "string" == type( fmt ) then
         Log.plog( string.format( fmt,any,... ) )
     else
-        PLOG( fmt,any,... )
+        SYNC_PRINT( fmt,any,... )
     end
 end
 

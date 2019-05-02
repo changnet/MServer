@@ -83,7 +83,7 @@ end
 function Srv_conn:listen( ip,port )
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     conn_mgr:set_conn( self.conn_id,self )
-    PFLOG( "https listen at %s:%d",ip,port )
+    PRINTF( "https listen at %s:%d",ip,port )
 end
 
 function Srv_conn:conn_accept( new_conn_id )

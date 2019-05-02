@@ -17,7 +17,7 @@ local function player_update_base( pid,base,new )
     -- 首次进入场景，需要创建实体
     if new then
         player = g_entity_mgr:new_entity(ET.PLAYER,pid)
-        PLOG("area player update base:",pid)
+        PRINT("area player update base:",pid)
     else
         player = g_entity_mgr:get_player(pid)
     end
@@ -45,7 +45,7 @@ end
 local function player_exit( pid )
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        PLOG("area player exit,entity not found",pid)
+        PRINT("area player exit,entity not found",pid)
         return
     end
 
@@ -53,7 +53,7 @@ local function player_exit( pid )
     g_authorize:unset_player( pid )
 
     g_entity_mgr:del_entity_player( pid )
-    PLOG("area player exit:",pid)
+    PRINT("area player exit:",pid)
 end
 
 -- 玩家进入场景
@@ -69,7 +69,7 @@ local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     g_dungeon_mgr:enter_static_scene(player,scene_id,pix_x,pix_y)
 
     g_authorize:set_player( pid )
-    PLOG("player enter scene",pid,scene_id,pix_x,pix_y)
+    PRINT("player enter scene",pid,scene_id,pix_x,pix_y)
 end
 
 g_rpc:declare( "player_exit",player_exit )

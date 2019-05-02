@@ -13,7 +13,7 @@ local Log_mgr = oo.singleton( nil,... )
 function Log_mgr:__init()
     -- 启动文件日志线程
     local fl_logger = Log()
-    fl_logger:start( 3,0 ); -- 3秒写入一次
+    -- fl_logger:start( 3,0 ); -- 暂不启用另外的线程
 
     self.fl_logger = fl_logger
 end
