@@ -12,9 +12,11 @@ thread::thread(const char *name)
 {
     _fd[0] = -1 ;
     _fd[1] = -1 ;
-    _thread = 0;
+
+    _id    = 0;
     _run  = false;
     _join = false;
+    _busy = false;
 
     _name = name;
 
@@ -88,7 +90,7 @@ bool thread::start( int32 sec,int32 usec )
     _run = true;
 
     /* 创建线程 */
-    if ( pthread_create( &_thread,NULL,thread::start_routine,(void *)this ) )
+    if ( pthread_create( &_id,NULL,thread::start_routine,(void *)this ) )
     {
         _run = false;
         ::close( _fd[0] );
@@ -102,6 +104,8 @@ bool thread::start( int32 sec,int32 usec )
     _watcher.set<thread,&thread::io_cb>( this );
     _watcher.start( _fd[0],EV_READ );
 
+    static_global::thread_mgr()->push( this );
+
     return true;
 }
 
@@ -114,11 +118,11 @@ void thread::stop()
         return;
     }
 
-    assert( "thread join zero thread id", 0 != _thread );
+    assert( "thread join zero thread id", 0 != _id );
 
     _run = false;
     notify_child( NTF_EXIT );
-    int32 ecode = pthread_join( _thread,NULL );
+    int32 ecode = pthread_join( _id,NULL );
     if ( ecode )
     {
         /* On success, pthread_join() returns 0; on error, it returns an error
@@ -126,12 +130,15 @@ void thread::stop()
          * not strerror(errno)
          */
         FATAL( "thread join fail:%s",strerror( ecode ) );
+        return;
     }
     _join = true;
 
     if ( _watcher.is_active() ) _watcher.stop();
     if ( _fd[0] >= 0 ) { ::close( _fd[0] );_fd[0] = -1; }
     if ( _fd[1] >= 0 ) { ::close( _fd[1] );_fd[1] = -1; }
+
+    static_global::thread_mgr()->pop( _id );
 }
 
 void thread::do_routine()
@@ -163,7 +170,11 @@ void thread::do_routine()
             ERROR( "thread socketpair close,thread exit" );
             break;
         }
+
+        // TODO:这个变量是辅助用的，出错也没什么。暂不加锁
+        _busy = true;
         this->routine( static_cast<notify_t>(notify) );
+        _busy = false;
 
         if ( NTF_EXIT == static_cast<notify_t>(notify) )
         {

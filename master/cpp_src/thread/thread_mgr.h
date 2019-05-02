@@ -5,24 +5,22 @@
 #include <pthread.h>
 #include "../global/global.h"
 
-
 class thread;
 class thread_mgr
 {
 public:
-    static thread_mgr *instance();
-    static void uninstance();
-    
-    void push( class thread *_thread );
-    class thread *pop( pthread_t _thread_t );
-    
-    void clear();
-private:
     thread_mgr();
     ~thread_mgr();
 
-    std::map< pthread_t,class thread * > _threads;
-    static class thread_mgr *_instance;
+    void pop( pthread_t thd_id );
+    void push( class thread *thd );
+
+    void stop();
+    void is_busy();
+public:
+    typedef std::map< pthread_t,class thread * > thread_mpt_t;
+private:
+    thread_mpt_t _threads;
 };
 
 #endif /* __THREAD_MGR_H__ */

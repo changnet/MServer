@@ -1,25 +1,5 @@
-#include "thread_mgr.h"
 #include "thread.h"
-
-thread_mgr *thread_mgr::_instance = NULL;
-
-/* 获取单例 */
-thread_mgr *thread_mgr::instance()
-{
-    if ( !_instance )
-        _instance = new thread_mgr();
-    
-    return _instance;
-}
-
-/* 销毁单例 */
-void thread_mgr::uninstance()
-{
-    if ( _instance )
-        delete _instance;
-
-    _instance = NULL;
-}
+#include "thread_mgr.h"
 
 thread_mgr::thread_mgr()
 {
@@ -30,39 +10,37 @@ thread_mgr::~thread_mgr()
 }
 
 /* 添加一个待管理thread */
-void thread_mgr::push( class thread *_thread )
+void thread_mgr::push( class thread *thd )
 {
-    assert( "thread mgr push NULL",_thread );
-    
-    pthread_t pt = _thread->get_id();
-    _threads[pt] = _thread;
+    assert( "thread mgr push NULL",thd );
+
+    _threads[thd->get_id()] = thd;
 }
 
 /* 取消管理thread */
-class thread *thread_mgr::pop( pthread_t thread_t )
+void thread_mgr::pop( pthread_t thd_id )
 {
-    std::map< pthread_t,class thread * >::iterator itr = _threads.find( thread_t );
-    if ( itr == _threads.end() )
-        return NULL;
-    
-    class thread *_thread = itr->second;
-    _threads.erase( itr );
-    
-    return _thread;
+    thread_mpt_t::iterator itr = _threads.find( thd_id );
+    if ( itr != _threads.end() )
+    {
+        _threads.erase( itr );
+    }
 }
 
 /* 停止并join所有线程 */
-void thread_mgr::clear()
+void thread_mgr::stop()
 {
-    std::map< pthread_t,class thread * >::iterator itr = _threads.begin();
-    while ( itr != _threads.end() )
+    thread_mpt_t threads( _threads );
+
+    // 循环里会改变_threads
+    thread_mpt_t::iterator itr = threads.begin();
+    while ( itr != threads.end() )
     {
         class thread *_thread = itr->second;
         _thread->stop();
-        _thread->join();
-        
+
         itr ++;
     }
-    
+
     _threads.clear();
 }

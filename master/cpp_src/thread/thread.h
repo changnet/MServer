@@ -16,7 +16,7 @@ public:
     bool start( int32 sec = 1,int32 usec = 0 );
 
     inline bool active() { return _run; }
-    inline pthread_t get_id() { return _thread; }
+    inline pthread_t get_id() { return _id; }
     inline const char *get_name() { return _name; }
 
     static void signal_block();
@@ -50,9 +50,10 @@ private:
 private:
     int32 _fd[2]  ;
     ev_io _watcher;
-    pthread_t _thread;
+    pthread_t _id;
     volatile bool _run;
     volatile bool _join;
+    volatile bool _busy;
     pthread_mutex_t _mutex;
 
     const char *_name; // 线程名字，日志用而已
