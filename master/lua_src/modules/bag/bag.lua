@@ -94,7 +94,7 @@ function Bag:raw_add( item )
 
     local conf = item_conf[id]
     if not conf then
-        ELOG( "item conf not found:player = %d,id = %d",self.pid,id )
+        ERROR( "item conf not found:player = %d,id = %d",self.pid,id )
         return count
     end
 
@@ -153,7 +153,7 @@ function Bag:add_to_new_grid( item )
     if count <= 0 then return 0 end
 
     -- 没有新格子可以插入
-    ELOG( "bag full:player = %d,id = %d,count = %d",self.pid,item.id,count )
+    ERROR( "bag full:player = %d,id = %d,count = %d",self.pid,item.id,count )
     return count
 end
 
@@ -182,7 +182,7 @@ function Bag:dec( id,count )
     end
 
     if not index then
-        ELOG("can NOT dec item,player = %d,id = %d,count = %d",self.pid,id,count)
+        ERROR("can NOT dec item,player = %d,id = %d,count = %d",self.pid,id,count)
         return count
     end
 

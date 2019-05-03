@@ -19,7 +19,7 @@ local function role_welcome_cmd_cb( cmd,func )
     local cb = function ( srv_conn,pid,pkt )
         local player = g_player_mgr:get_player( pid )
         if not player then
-            ELOG( "role_welcome_cb no player:%d",cmd )
+            ERROR( "role_welcome_cb no player:%d",cmd )
             return
         end
 

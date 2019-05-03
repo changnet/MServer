@@ -109,7 +109,7 @@ function Httpd:do_command( conn,url,body )
         local exec_file = io.open( path .. ".lua","r" )
 
         if not exec_file then
-            ELOG( "http request page not found:%s",raw_url )
+            ERROR( "http request page not found:%s",raw_url )
             conn:send_pkt( page404 )
 
             return self:conn_close( conn )

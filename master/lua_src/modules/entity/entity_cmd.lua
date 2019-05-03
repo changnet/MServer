@@ -23,7 +23,7 @@ local function player_update_base( pid,base,new )
     end
 
     if not player then
-        ELOG("update_player_base no player found",pid)
+        ERROR("update_player_base no player found",pid)
         return
     end
 
@@ -34,7 +34,7 @@ end
 local function player_update_battle_abt( pid,abt_list )
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ELOG("player_update_battle_abt no player found",pid)
+        ERROR("player_update_battle_abt no player found",pid)
         return
     end
 
@@ -61,7 +61,7 @@ end
 local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ELOG("player_enter_scene no player found",pid)
+        ERROR("player_enter_scene no player found",pid)
         return
     end
 
@@ -86,7 +86,7 @@ local function entity_player_clt_cb( cmd,cb_func )
     local cb = function( conn,pid,pkt )
         local player = g_entity_mgr:get_player( pid )
         if not player then
-            return ELOG( "entity_player_clt_cb call no player found:%d",pid )
+            return ERROR( "entity_player_clt_cb call no player found:%d",pid )
         end
         return cb_func( player,conn,pkt )
     end

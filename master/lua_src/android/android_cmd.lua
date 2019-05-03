@@ -97,13 +97,13 @@ end
 function command_new( conn_id,cmd,errno,... )
     local cfg = sc_cmd[cmd]
     if not cfg then
-        ELOG( "sc_command_new no such cmd:%d",cmd )
+        ERROR( "sc_command_new no such cmd:%d",cmd )
         return
     end
 
     if not cfg.handler then
         -- android_cmd:dump_pkt( ... )
-        ELOG( "sc_command_new no handler found:%d",cmd )
+        ERROR( "sc_command_new no handler found:%d",cmd )
         return
     end
 

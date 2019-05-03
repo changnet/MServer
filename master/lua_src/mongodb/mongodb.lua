@@ -26,7 +26,7 @@ function Mongodb:do_timer()
     self.timer = nil
 
     if 0 == ok then
-        ELOG( "mongo db connect error" )
+        ERROR( "mongo db connect error" )
         return
     end
 
@@ -41,7 +41,7 @@ function Mongodb:read_event( qid,ecode,res )
         xpcall( self.cb[qid],__G__TRACKBACK__,ecode,res )
         self.cb[qid] = nil
     else
-        ELOG( "mongo event no call back found" )
+        ERROR( "mongo event no call back found" )
     end
 end
 

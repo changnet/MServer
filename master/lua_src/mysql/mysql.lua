@@ -25,7 +25,7 @@ function Mysql:do_timer()
    self.timer = nil
 
    if 0 == ok then
-       ELOG( "mysql connect error" )
+       ERROR( "mysql connect error" )
        return
    end
 
@@ -40,7 +40,7 @@ function Mysql:read_event( qid,ecode,res )
         xpcall( self.query[qid],__G__TRACKBACK__,ecode,res )
         self.query[qid] = nil
     else
-        ELOG( "mysql result no call back found" )
+        ERROR( "mysql result no call back found" )
     end
 end
 

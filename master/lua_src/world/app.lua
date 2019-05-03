@@ -24,7 +24,7 @@ function App:initialize()
     self:module_initialize()
 
     if not g_network_mgr:srv_listen( g_setting.sip,g_setting.sport ) then
-        ELOG( "world server listen fail,exit" )
+        ERROR( "world server listen fail,exit" )
         os.exit( 1 )
     end
 

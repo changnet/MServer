@@ -168,7 +168,7 @@ end
 function Application:one_initialized( name,val )
     local init = self.init_list[name]
     if not init then
-        return ELOG( "unknow initialize action:%s",name )
+        return ERROR( "unknow initialize action:%s",name )
     end
 
     init.val = init.val - (val or 1)

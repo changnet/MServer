@@ -24,19 +24,19 @@ end
 function Account_mgr:player_login( clt_conn,pkt )
     local sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
     if sign ~= pkt.sign then
-        ELOG( "clt sign error:%s",pkt.account )
+        ERROR( "clt sign error:%s",pkt.account )
         return
     end
 
     if not PLATFORM[pkt.plat] then
-        ELOG( "clt platform error:%s",tostring(pkt.plat) )
+        ERROR( "clt platform error:%s",tostring(pkt.plat) )
         return
     end
 
     local conn_id = clt_conn.conn_id
     -- 不能重复发送(不是顶号，conn_id不应该会重复)
     if self.conn_acc[conn_id] then
-        ELOG( "player login pkt dumplicate send" )
+        ERROR( "player login pkt dumplicate send" )
         return
     end
 
@@ -86,13 +86,13 @@ end
 function Account_mgr:create_role( clt_conn,pkt )
     local role_info = self.conn_acc[clt_conn.conn_id]
     if not role_info then
-        ELOG( "create role,no account info" )
+        ERROR( "create role,no account info" )
         return
     end
 
     -- 当前一个帐号只能创建一个角色
     if role_info.pid then
-        ELOG( "role already create" )
+        ERROR( "role already create" )
         return
     end
 
@@ -125,7 +125,7 @@ end
 -- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
 function Account_mgr:on_role_create( base,role_info,ecode,res )
     if 0 ~= ecode then
-        ELOG( "role create error:name = %s,account = %s,srv = %d,plat = %d",
+        ERROR( "role create error:name = %s,account = %s,srv = %d,plat = %d",
             base.name,role_info.account,role_info.sid,role_info.plat )
             self:send_role_create( role_info,E.UNDEFINE )
         return
@@ -197,7 +197,7 @@ end
 function Account_mgr:role_offline_by_pid( pid )
     local role_info = self.role_acc[pid]
     if not role_info then
-        ELOG( "role_offline_by_pid no role_info found:%d",pid )
+        ERROR( "role_offline_by_pid no role_info found:%d",pid )
         return
     end
 
@@ -232,7 +232,7 @@ end
 -- db数据加载
 function Account_mgr:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        ELOG( "account db load error" )
+        ERROR( "account db load error" )
         return
     end
 

@@ -116,7 +116,7 @@ function Player:module_db_load( sync_db )
     for step,module in pairs( sub_module ) do
         local ok = self[module.name]:db_load( sync_db )
         if not ok then
-            ELOG( "player db load error,pid %d,step %d",self.pid,step )
+            ERROR( "player db load error,pid %d,step %d",self.pid,step )
             return false
         end
     end
@@ -136,7 +136,7 @@ function Player:module_db_load( sync_db )
     if is_new then
         self.base.root.new = nil
         if not self.base:db_save() then
-            ELOG("player is new,db save fail:%d",self.pid )
+            ERROR("player is new,db save fail:%d",self.pid )
             return false
         end
     end
@@ -193,7 +193,7 @@ function Player:on_logout()
 
     -- 未初始化完成不能存库，防止数据被覆盖
     if not self.ok then
-        ELOG( "player initialize not finish,runing logout:%d",self.pid )
+        ERROR( "player initialize not finish,runing logout:%d",self.pid )
         return
     end
 

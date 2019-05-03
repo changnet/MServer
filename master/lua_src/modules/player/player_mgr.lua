@@ -75,7 +75,7 @@ function Player_mgr:on_enter_world( clt_conn,pid,pkt )
 
     self.raw_player[pid] = player
     if not player:db_load() then
-        ELOG("player db load fail,pid = %d",pid)
+        ERROR("player db load fail,pid = %d",pid)
         return
     end
 
@@ -89,7 +89,7 @@ function Player_mgr:on_player_offline( srv_conn,pkt )
 
     local player = self.player[pid]
     if not player then
-        ELOG( "player offline,object not found:%d",pid )
+        ERROR( "player offline,object not found:%d",pid )
         return
     end
 

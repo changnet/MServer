@@ -18,7 +18,7 @@ end
 function Chat:do_chat( conn,pkt )
     local var = self.player:get_misc_var( "chat" )
     if var.no_chat then -- 被禁言
-        return ELOG( "do chat while no_chat:%d",self.pid )
+        return ERROR( "do chat while no_chat:%d",self.pid )
     end
 
     -- 聊天中带gm
@@ -26,7 +26,7 @@ function Chat:do_chat( conn,pkt )
 
     local chat_func = channel_func[pkt.channel]
     if not chat_func then
-        return ELOG( "channel func not found:%d-%d",self.pid,pkt.channel )
+        return ERROR( "channel func not found:%d-%d",self.pid,pkt.channel )
     end
 
     return chat_func( self,conn,pkt )
@@ -36,7 +36,7 @@ end
 function Chat:private_chat( conn,pkt )
     local player = g_player_mgr:get_player( pkt.pid )
     if not player then
-        return ELOG( "private chat target player not found:%d",pkt.pid )
+        return ERROR( "private chat target player not found:%d",pkt.pid )
     end
 
     local rpkt = {}

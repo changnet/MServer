@@ -138,7 +138,7 @@ function Loginout:on_conn_new(entity,conn_id,ecode)
 
     entity:set_conn(nil)
 
-    ELOG( "android(%d) connection(%d) fail:%s",
+    ERROR( "android(%d) connection(%d) fail:%s",
         entity.index,conn_id,util.what_error(ecode) )
 end
 

@@ -41,13 +41,13 @@ function Mail_mgr:raw_send_mail( pid,title,ctx,attachment,op )
     -- 个人邮件不能同时发送超过65535
     -- 如果实在是在线人数太多,又不能发全服邮件，则考虑改一下time_id的位数，或者延迟几秒多次发
     if mail.id < 0 then
-        ELOG("raw_send_mail:can NOT allocate mail id,%s",table.dump(mail))
+        ERROR("raw_send_mail:can NOT allocate mail id,%s",table.dump(mail))
         return
     end
 
     -- 检测pid是否有效
     if not g_player_mgr:is_pid_exist( pid ) then
-        ELOG("raw_send_mail:pid not exist,%s",table.dump(mail))
+        ERROR("raw_send_mail:pid not exist,%s",table.dump(mail))
         return
     end
 
@@ -125,7 +125,7 @@ end
 -- @vip:达到此vip等级才能收到
 function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     if not title or not ctx then
-        ELOG("send sys mail,no title(%s) or ctx(%s)",title,ctx)
+        ERROR("send sys mail,no title(%s) or ctx(%s)",title,ctx)
         return
     end
 
@@ -149,7 +149,7 @@ function Mail_mgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     mail.attachment = attachment
 
     if mail.id < 0 then
-        ELOG("raw_send_sys_mail:can NOT allocate mail id,%s",table.dump(mail))
+        ERROR("raw_send_sys_mail:can NOT allocate mail id,%s",table.dump(mail))
         return
     end
 
@@ -188,7 +188,7 @@ end
 -- db数据加载回调
 function Mail_mgr:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        ELOG( "sys mail db load error" )
+        ERROR( "sys mail db load error" )
         return
     end
 

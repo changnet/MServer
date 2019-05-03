@@ -28,7 +28,7 @@ end
 
 function Unique_id:on_db_loaded( ecode,res )
     if 0 ~= ecode then
-        ELOG( "account db load error" )
+        ERROR( "account db load error" )
         return
     end
 
@@ -76,7 +76,7 @@ table: 0x18eb940
 ]]
 function Unique_id:on_player_id( srvid,raw_cb,ecode,res )
     if 0 ~= ecode or 1 ~= res.ok then
-        ELOG( "update player id error" )
+        ERROR( "update player id error" )
         return
     end
 
@@ -84,7 +84,7 @@ function Unique_id:on_player_id( srvid,raw_cb,ecode,res )
     local seed = res.value.seed or 0
     local local_seed = self.unique_seed[UNIQUEID.PLAYER] + 1
     if seed ~= local_seed then
-        ELOG( "update player id not match,expect %d,got %d",seed,local_seed )
+        ERROR( "update player id not match,expect %d,got %d",seed,local_seed )
         return
     end
 

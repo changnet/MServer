@@ -108,7 +108,7 @@ function PRINTF( fmt,any,... )
 end
 
 --错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function ELOG( fmt,any,... )
+function ERROR( fmt,any,... )
     local info_table = nil
     if any and "string" == type( fmt ) then
         return Log.elog( string.format( fmt,any,... ) )

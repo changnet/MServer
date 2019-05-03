@@ -50,7 +50,7 @@ end
 function Rpc:invoke( method_name,... )
     local srv_conn = self:get_method_conn( method_name )
     if not srv_conn then
-        ELOG( "rpc:no connection to remote server:%s",method_name )
+        ERROR( "rpc:no connection to remote server:%s",method_name )
         return
     end
 
@@ -113,7 +113,7 @@ end
 function rpc_command_return ( conn_id,rpc_id,ecode,... )
     local callback = rpc.callback[rpc_id]
     if not callback then
-        ELOG("rpc return no callback found:id = %d",rpc_id)
+        ERROR("rpc return no callback found:id = %d",rpc_id)
         return
     end
 

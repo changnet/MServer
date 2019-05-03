@@ -40,7 +40,7 @@ function GM:auto_forward( where,player,cmd,context )
 
     local srv_conn = g_network_mgr:get_conn_by_name( srvname )
     if not srv_conn then
-        ELOG("gm auto forward no conn found:%s",cmd)
+        ERROR("gm auto forward no conn found:%s",cmd)
         return true
     end
 

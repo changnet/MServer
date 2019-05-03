@@ -42,7 +42,7 @@ end
 function Res:add_one_res( player,res,op,sub_op )
     local add_func = res_dec_map[res.res]
     if not add_func then
-        ELOG("Res:add_one_res no function found:%s,op %d",tostring(res.res),op)
+        ERROR("Res:add_one_res no function found:%s,op %d",tostring(res.res),op)
         return
     end
 
@@ -57,7 +57,7 @@ end
 function Res:dec_one_res( player,res,op,sub_op )
     local dec_func = res_dec_map[res.res]
     if not dec_func then
-        ELOG("Res:dec_one_res no function found:%s,op %d",tostring(res.res),op)
+        ERROR("Res:dec_one_res no function found:%s,op %d",tostring(res.res),op)
         return
     end
 
@@ -69,7 +69,7 @@ end
 function Res:check_one_res( player,res )
     local get_func = res_get_map[res.res]
     if not get_func then
-        ELOG("Res:check_one_res not found:%s,op %d",tostring(res.res),op)
+        ERROR("Res:check_one_res not found:%s,op %d",tostring(res.res),op)
         return false
     end
 

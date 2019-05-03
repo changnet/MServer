@@ -55,7 +55,7 @@ end
 function Entity_mgr:del_entity( eid )
     local entity = self.entity[eid]
     if not entity then
-        return ELOG("del entity fail,no such entity")
+        return ERROR("del entity fail,no such entity")
     end
 
     self.entity[eid] = nil
@@ -68,7 +68,7 @@ end
 function Entity_mgr:del_entity_player( pid )
     local entity = self.entity_player[pid]
     if not entity then
-        return ELOG("del entity player fail,no such entity")
+        return ERROR("del entity player fail,no such entity")
     end
 
     self.entity_player[pid] = nil

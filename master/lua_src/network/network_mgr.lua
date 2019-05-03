@@ -90,7 +90,7 @@ end
 function Network_mgr:clt_close_by_pid( pid )
     local conn = self.clt[pid]
     if not conn then
-        ELOG( "clt_close_by_pid no conn found:%d",pid )
+        ERROR( "clt_close_by_pid no conn found:%d",pid )
         return
     end
 
@@ -101,19 +101,19 @@ end
 function Network_mgr:srv_register( conn,pkt )
     local auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
     if pkt.auth ~= auth then
-        ELOG( "Network_mgr:srv_register fail,session %d",pkt.session )
+        ERROR( "Network_mgr:srv_register fail,session %d",pkt.session )
         return false
     end
 
     local ty,index,srvid = g_app:srv_session_parse( pkt.session )
     if srvid ~= tonumber(g_app.srvid) then
-        ELOG( "Network_mgr:srv_register srvid not match,expect %s,got %d",
+        ERROR( "Network_mgr:srv_register srvid not match,expect %s,got %d",
             g_app.srvid,srvid )
         return
     end
 
     if self.srv[pkt.session] then
-        ELOG( "Network_mgr:srv_register session conflict:%d",pkt.session )
+        ERROR( "Network_mgr:srv_register session conflict:%d",pkt.session )
         return false
     end
 
@@ -329,7 +329,7 @@ function clt_multicast_new( mask,... )
         return pid_list
     -- elseif mask == CLTCAST.LEVEL then
     else
-        ELOG("clt_multicast_new unknow mask",mask)
+        ERROR("clt_multicast_new unknow mask",mask)
     end
 end
 
