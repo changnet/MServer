@@ -16,6 +16,12 @@ message MonsterAppear
 
 // /////////////////////// server ////////////////////////////////////////////
 
+// 主角实体属性
+message SProperty
+{
+    int64 handle = 1; // 实体handle
+}
+
 // 玩家进入场景
 message SEnterScene
 {

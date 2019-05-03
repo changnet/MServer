@@ -3,13 +3,18 @@
 -- 2018-11-20
 
 -- 玩家实体，用于在场景显示
-
+local g_network_mgr = g_network_mgr
 local Entity_animal = require "modules.entity.entity_animal"
 local Entity_player = oo.class( Entity_animal,... )
 
 function Entity_player:__init(eid,pid)
     Entity_animal.__init(self,eid,ET.PLAYER)
     self.pid = pid -- 玩家唯一id
+end
+
+-- 发送数据包
+function Entity_player:send_pkt(cmd,pkt,ecode)
+    return g_network_mgr:send_clt_pkt(self.pid,cmd,pkt,ecode)
 end
 
 -- 同步来自gw的基础属性
@@ -42,6 +47,14 @@ function Entity_player:appear_pkt()
     tmp_pkt.player = tmp_player_pkt
 
     return tmp_pkt
+end
+
+-- 玩家登录进入场景时，下发实体属性
+local property_pkt = {}
+function Entity_player:send_property()
+    property_pkt.handle = self.eid
+
+    return self:send_pkt(SC.ENTITY_PROPERTY,property_pkt)
 end
 
 return Entity_player

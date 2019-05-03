@@ -94,6 +94,13 @@ function Loginout:on_enter_world( entity,errno,pkt )
     -- g_player_ev:fire_event( PLAYER_EV.ENTER,entity )
 end
 
+-- 初始化场景属性
+function Loginout:on_init_property( entity,errno,pkt )
+    ASSERT( nil == entity.handle,"on_init_property already have handle")
+
+    entity.handle = pkt.handle
+end
+
 -- 被顶号
 function Loginout:on_login_otherwhere( entity,errno,pkt )
     PRINTF( "%s login other where",entity.name )
@@ -166,5 +173,6 @@ cmd_cb( SC.PLAYER_LOGIN,Loginout.on_login)
 cmd_cb( SC.PLAYER_CREATE,Loginout.on_create_role)
 cmd_cb( SC.PLAYER_ENTER,Loginout.on_enter_world)
 cmd_cb( SC.PLAYER_OTHER,Loginout.on_login_otherwhere)
+cmd_cb( SC.ENTITY_PROPERTY,Loginout.on_init_property)
 
 return Loginout

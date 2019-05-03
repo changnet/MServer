@@ -65,6 +65,9 @@ local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
         return
     end
 
+    -- 下发实体属性
+    player:send_property()
+
     -- TODO:这里只进入测试场景
     g_dungeon_mgr:enter_static_scene(player,scene_id,pix_x,pix_y)
 

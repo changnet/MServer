@@ -35,6 +35,7 @@ function Move:on_enter_scene(entity,errno,pkt)
     entity.ai.moving = false
 end
 
+-- 某个实体移动
 function Move:on_move(entity,errno,pkt)
     if entity.handle == pkt.handle then
         entity.ai.moving = true
@@ -43,7 +44,7 @@ function Move:on_move(entity,errno,pkt)
         entity.pix_y = pkt.pix_y
         PRINT("move my pos to",entity.name,pkt.pix_x,pkt.pix_y)
     else
-        PRINT("move other pos at",pkt.pix_x,pkt.pix_y)
+        PRINT("other move pos at",pkt.pix_x,pkt.pix_y)
     end
 end
 

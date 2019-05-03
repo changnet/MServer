@@ -1,10 +1,12 @@
 
-Å
+¶
 entity.protoentity" 
 PlayerAppear
 pid (Rpid"
 MonsterAppear
-id (Rid"í
+id (Rid"#
+	SProperty
+handle (Rhandle"í
 SEnterScene
 
 dungeon_id (R	dungeonId

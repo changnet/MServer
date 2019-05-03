@@ -30,6 +30,7 @@ local SC =
     ENTITY_MOVE = { ENTITY + 3,"entity.pb","entity.SMove" }, -- 1539
     ENTITY_POS = { ENTITY + 4,"entity.pb","entity.SPos" }, -- 1540
     ENTITY_ENTERSCENE = { ENTITY + 5,"entity.pb","entity.SEnterScene" }, -- 1541
+    ENTITY_PROPERTY = { ENTITY + 6,"entity.pb","entity.SProperty" }, -- 1542
 
 }
 

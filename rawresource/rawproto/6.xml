@@ -36,8 +36,15 @@
             <client></client>
             <command>5</command>
             <comment>玩家进入场景</comment>
-            <field>EnterScene</field>
+            <field>ENTERSCENE</field>
             <server>EnterScene</server>
+        </subobject>
+        <subobject>
+            <client></client>
+            <command>6</command>
+            <comment>主角实体属性</comment>
+            <field>PROPERTY</field>
+            <server>Property</server>
         </subobject>
     </subobjects>
 </root>
