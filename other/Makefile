@@ -4,6 +4,7 @@ CXX = g++ #clang++
 # -pipe 使用pipe而不是临时文件，对代码无影响
 # -Wall This enables all the warnings
 # -g gdb debug option
+# -s:直接生成与运用strip同样效果的可执行文件（删除了所有符号信息）
 # -Wl,rpath 指定运行时库文件(so)路径，便携程序可用
 # -w 关闭所有告警
 # -rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外
@@ -14,7 +15,7 @@ CXX = g++ #clang++
 # (新版本-lmysqlclient_r与-lmysqlclient是一样的)
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 # https://gcc.gnu.org/projects/cxx-status.html
-CFLAGS = -std=c++11 -pipe -Wall -g3 -pedantic
+CFLAGS = -std=c++11 -pipe -Wall -g3 -pedantic #-s
 LFLAGS = -rdynamic
 OPTIMIZE = -O0 # -O2
 
