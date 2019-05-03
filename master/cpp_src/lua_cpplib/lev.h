@@ -19,7 +19,8 @@ public:
     int32 exit( lua_State *L );
     int32 time( lua_State *L ); // 帧时间
     int32 ms_time( lua_State *L ); // 帧时间，ms
-    int32 backend( lua_State *L );
+    int32 backend( lua_State *L ); // 进入后台循环
+    int32 who_busy( lua_State *L ); // 看下哪条线程繁忙
     int32 real_time( lua_State *L ); // 实时时间
 
     int32 signal( lua_State *L );

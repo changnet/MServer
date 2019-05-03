@@ -36,7 +36,7 @@ end
 
 -- 关闭文件日志线程及数据库日志线程
 function Log_mgr:close()
-    self.fl_logger:stop()
+    -- self.fl_logger:stop()
     -- db则由g_mysql_mgr去管理
 end
 

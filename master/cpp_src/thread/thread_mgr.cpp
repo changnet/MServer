@@ -45,17 +45,19 @@ void thread_mgr::stop()
     _threads.clear();
 }
 
-/* 子线程是否还有数据待处理 */
-bool thread_mgr::is_busy()
+/* 查找没处理完数据的子线程 */
+const char *thread_mgr::who_is_busy(size_t &finished,size_t &unfinished)
 {
     thread_mpt_t::const_iterator itr = _threads.begin();
     while ( itr != _threads.end() )
     {
-        class thread *_thread = itr->second;
-        if ( _thread->busy_job() > 0 ) return true;
+        class thread *thd = itr->second;
+        if ( thd->busy_job(&finished,&unfinished) > 0 ) return thd->get_name();
 
         itr ++;
     }
 
-    return false;
+    finished = 0;
+    unfinished = 0;
+    return NULL;
 }

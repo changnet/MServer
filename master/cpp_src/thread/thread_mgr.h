@@ -18,7 +18,7 @@ public:
     void push( class thread *thd );
 
     void stop();
-    bool is_busy();
+    const char *who_is_busy(size_t &finished,size_t &unfinished);
 
     const thread_mpt_t &get_threads() const { return _threads; }
 private:

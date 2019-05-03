@@ -64,9 +64,21 @@ local sig_action = {} -- 注意，这个热更要重新注册。关服的话为�
 function sig_handler( signum )
     if sig_action[signum] then return sig_action[signum]() end
 
-    -- 默认关服
-    g_app:shutdown()
-    ev:exit()
+    SYNC_PRINTF( "catch signal %d,prepare to shutdown ...",signum )
+
+    g_app:prepare_shutdown()
+
+    local shutdown = function()
+        if not g_app:check_shutdown() then return end
+
+        g_app:shutdown();ev:exit()
+    end
+
+    if not g_app:check_shutdown() then
+        return g_app:register_1stimer( shutdown )
+    end
+
+    g_app:shutdown();ev:exit()
 end
 
 -- 初始化
@@ -116,6 +128,23 @@ end
 function Application:reg_sig_action( signum,action )
     ev:signal( signum )
     sig_action[signum] = action
+end
+
+-- 准备关服
+function Application:prepare_shutdown()
+end
+
+-- 检测能否关服
+function Application:check_shutdown()
+    local who,finished,unfinished = ev:who_busy()
+    if not who then return true end
+
+
+    SYNC_PRINTF( 
+        "thread %s busy,%d finished job,%d unfinished job,waiting ...",
+        who,finished,unfinished )
+
+    return false
 end
 
 -- 关服处理
