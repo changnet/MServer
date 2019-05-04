@@ -15,6 +15,9 @@ function Move:random_move(ai)
     ai.entity:send_pkt( CS.ENTITY_MOVE,{ way = MT.WALK,pix_x = px,pix_y = py } )
 
     ai.moving = true
+    ai.dx = px
+    ai.dy = py
+    PRINTF("move to %d,%d(%d,%d)",math.floor(px/64),math.floor(py/64),px,py)
     return true
 end
 
@@ -42,6 +45,7 @@ function Move:on_move(entity,errno,pkt)
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
+
         PRINT("move my pos to",entity.name,pkt.pix_x,pkt.pix_y)
     else
         PRINT("other move pos at",pkt.pix_x,pkt.pix_y)
@@ -58,15 +62,15 @@ function Move:on_disappear(entity,errno,pkt)
 end
 
 -- 服务器强制重置实体位置
-function Move:on_reset_pos(entity,errno,pkt)
+function Move:on_update_pos(entity,errno,pkt)
     if entity.handle == pkt.handle then
         entity.ai.moving = false
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
-        PRINT("reset my pos at",entity.name,pkt.pix_x,pkt.pix_y)
+        PRINT("update my pos at",entity.name,pkt.pix_x,pkt.pix_y)
     else
-        PRINT("reset other pos at",pkt.pix_x,pkt.pix_y)
+        PRINT("update other pos at",pkt.pix_x,pkt.pix_y)
     end
 end
 
@@ -82,7 +86,7 @@ end
 
 cmd_cb( SC.ENTITY_MOVE,Move.on_move)
 cmd_cb( SC.ENTITY_APPEAR,Move.on_appear)
-cmd_cb( SC.ENTITY_POS,Move.on_reset_pos)
+cmd_cb( SC.ENTITY_POS,Move.on_update_pos)
 cmd_cb( SC.ENTITY_DISAPPEAR,Move.on_disappear)
 cmd_cb( SC.ENTITY_ENTERSCENE,Move.on_enter_scene)
 

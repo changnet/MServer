@@ -14,6 +14,7 @@
 * mongodb的result感觉要用个object_pool
 * lclass弄个继承，基础的只是push到lua，不会创建。然后把C++中push到lua的类多余的构造函数去掉
 * log.cpp中的设计有问题，内存池要简化，交换缓存是在线程中。最后看下log是不是合并到thread_log中去，整合为async_log
+* pbc中错误提示不明确(本来是int，发个float就重现了)
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步

@@ -54,9 +54,9 @@ function Move:moving_to(scene,way,pix_x,pix_y)
     move_pkt.pix_y  = pix_y
 
     -- 广播给玩家我开始移动
-    -- 如果自己是玩家，那么移动消息也发给自己
-    local to_me = ET.PLAYER == self.entity.et
-    scene:broadcast_to_watch_me(self.entity,SC.ENTITY_MOVE,move_pkt,to_me)
+    -- 暂时不用发给自己，前端和后端位置不用一致，只要在允许范围内即可
+    -- local to_me = ET.PLAYER == self.entity.et
+    scene:broadcast_to_watch_me(self.entity,SC.ENTITY_MOVE,move_pkt)
 end
 
 -- 停止移动
@@ -122,10 +122,12 @@ function Move:moving( ms_now,no_time_chk )
     if dis >= dest_dis then
         new_x = self.dest_x
         new_y = self.dest_y
+
+        self:raw_stop() -- 到达目的地
     else
         -- 用 平等线等分线段 计算出新的x、y坐标
-        new_x = dis * x_dis / dest_dis
-        new_y = dis * y_dis / dest_dis
+        new_x = math.floor(x + dis * x_dis / dest_dis)
+        new_y = math.floor(y + dis * y_dis / dest_dis)
     end
 
     self.ms_move = ms_now
