@@ -6,7 +6,7 @@
    fun:CRYPTO_realloc
    ...
    fun:_Z8ssl_initv
-   fun:main
+   ...
 }
 {
    <main_openssl_init_malloc>
@@ -16,7 +16,7 @@
    fun:CRYPTO_malloc
    ...
    fun:_Z8ssl_initv
-   fun:main
+   ...
 }
 {
    <openssl_bn_cmp_uninitialised_conditional_jump>

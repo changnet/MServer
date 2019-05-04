@@ -449,8 +449,9 @@ int32 stream_packet::rpc_pack(
     s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
     s2sh._cmd    = 0;
     s2sh._errno  = ecode;
-    s2sh._owner  = unique_id;
     s2sh._packet = pkt;
+    s2sh._codec  = codec::CDC_NONE; // 用不着，但不初始化valgrind会警告
+    s2sh._owner  = unique_id;
 
     class buffer &send = _socket->send_buffer();
     send.__append( &s2sh,sizeof(struct s2s_header) );
@@ -674,6 +675,7 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     hd._cmd    = static_cast<uint16>  ( cmd );;
     hd._errno  = ecode;
     hd._owner  = owner;
+    hd._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
     hd._packet = SPKT_SCPK; /*指定数据包类型为服务器发送客户端 */
 
     send.__append( &hd ,sizeof(struct s2s_header) );
@@ -817,6 +819,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     hd._cmd    = static_cast<uint16>  ( cmd );;
     hd._errno  = ecode;
     hd._owner  = 0;
+    hd._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
     hd._packet = SPKT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
     send.__append( &hd ,sizeof(struct s2s_header) );

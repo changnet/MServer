@@ -1,8 +1,4 @@
-#include <lbson.h>
 #include "bson_codec.h"
-
-/* bson_t在bson库中是typedef声明方式，不能直接前置声明 */
-struct x_bson_t : public bson_t {};
 
 bson_codec::bson_codec()
 {
@@ -20,7 +16,6 @@ void bson_codec::finalize()
     {
         bson_destroy( _bson_doc );
 
-        delete _bson_doc;
         _bson_doc = NULL;
     }
 }
@@ -68,7 +63,7 @@ int32 bson_codec::encode(
     struct error_collector ec;
     ec.what[0] = 0;
 
-    bson_t *_bson_doc = bson_new();
+    _bson_doc = bson_new();
     if ( 0 != lbs_do_encode_stack( L,_bson_doc,index,&ec ) )
     {
         finalize();

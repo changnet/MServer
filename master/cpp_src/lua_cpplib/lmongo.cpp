@@ -235,7 +235,11 @@ void lmongo::invoke_result()
                 res->_error.message,real,res->_elaspe);
         }
         // 为0表示不需要回调到脚本
-        if ( 0 == res->_qid ) continue;
+        if ( 0 == res->_qid )
+        {
+            delete res;
+            continue;
+        }
 
         lua_getglobal( L,"mongodb_read_event" );
 
@@ -349,8 +353,9 @@ void lmongo::invoke_command()
 
         if ( query->_query )
         {
-            snprintf( res->_query,MONGO_VAR_LEN,
-                "%s",bson_as_json (query->_query, NULL) );
+            char *ctx = bson_as_json (query->_query, NULL);
+            snprintf( res->_query,MONGO_VAR_LEN,"%s",ctx );
+            bson_free(ctx);
         }
 
         push_result( res );

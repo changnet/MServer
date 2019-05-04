@@ -1,9 +1,10 @@
 #ifndef __BSON_CODEC_H__
 #define __BSON_CODEC_H__
 
+#include <lbson.h>
 #include "codec.h"
 
-struct x_bson_t;
+// bson编码
 class bson_codec : public codec
 {
 public:
@@ -24,7 +25,7 @@ public:
     int32 encode(
         lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg );
 private:
-    struct x_bson_t *_bson_doc;
+    bson_t *_bson_doc;
 };
 
 #endif /* __BSON_CODEC_H__ */
