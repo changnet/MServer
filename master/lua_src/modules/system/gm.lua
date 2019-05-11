@@ -10,9 +10,7 @@ local GM = oo.singleton( nil,... )
 
 -- 检测聊天中是否带gm
 function GM:chat_gm( player,context )
-    if not g_setting.gm or not string.start_with( context,"@" ) then
-        return false
-    end
+    if not g_setting.gm then return false end
 
     local gm_ctx = string.sub( context,2 ) -- 去掉@
 
@@ -23,9 +21,15 @@ end
 
 -- 转发或者运行gm
 function GM:exec( where,player,context )
+    if not string.start_with( context,"@" ) then
+        return false
+    end
+
+    local raw_ctx = string.sub( context,2 ) -- 去掉@
+
     -- 分解gm指令(@level 999分解为{@level,999})
-    local args = string.split(context," ")
-    if self:auto_forward( where,player,cmd,context ) then
+    local args = string.split(raw_ctx," ")
+    if self:auto_forward( where,player,args[1],raw_ctx ) then
         return true
     end
 

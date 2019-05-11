@@ -121,6 +121,7 @@ function Loginout:check_and_logout(ai)
     local entity = ai.entity
     network_mgr:close( entity.conn_id )
 
+    entity.handle = nil -- 要测试重登录，handle会重置
     entity:set_conn( nil )
     PRINTF( "%s logout",entity.name )
 

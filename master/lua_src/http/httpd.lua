@@ -85,13 +85,18 @@ function Httpd:conn_close( conn )
 end
 
 -- 格式化错误码为json格式
-function Httpd:format_error( code )
-    return string.format( '{"code":%d,"msg":%s',code[1],code[2] )
+function Httpd:format_error( code,ctx )
+    if not ctx then
+        return string.format( '{"code":%d,"msg":"%s"}',code[1],code[2] )
+    else
+        return string.format(
+            '{"code":%d,"msg":"%s","ctx":"%s"}',code[1],code[2],ctx )
+    end
 end
 
 -- 格式化http-200返回
-function Httpd:format_200( code )
-    local ctx = self:format_error( code )
+function Httpd:format_200( code,error_ctx )
+    local ctx = self:format_error( code,error_ctx )
 
     return string.format( page200,string.len(ctx),ctx )
 end
@@ -125,11 +130,7 @@ function Httpd:do_command( conn,url,body )
     if not success then -- 发生语法错误
         conn:send_pkt( page500 )
     else
-        if ctx then -- 任何情况下，只要返回了内容，则发送内容
-            conn:send_pkt( ctx )
-        else -- 如果只是返回了一个错误码，则转换成对应错误信息
-            conn:send_pkt( self:format_200( code ) )
-        end
+        conn:send_pkt( self:format_200( code,ctx ) )
     end
 
     self:conn_close( conn )

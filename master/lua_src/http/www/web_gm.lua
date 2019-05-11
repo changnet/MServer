@@ -3,12 +3,12 @@
 local Web_gm = oo.singleton( nil,... )
 
 --[[
--- 本来gm格式是@ghf这要的，但curl占用了@这个特殊符号，发不出去
-curl -l -H "Content-type: application/json" -X POST -d 'ghf' 127.0.0.1:10003/Web_gm
+-- @-表示从stdin读入数据，curl本来有个--data-raw参数的，但是很多版本用不了
+echo ghf | curl -l -H "Content-type: application/json" --data '@-' 127.0.0.1:10003/Web_gm
 ]]
 function Web_gm:exec( fields,body )
     if not body or not g_gm:exec( "web_gm",nil,body ) then
-        return HTTPE.GM_INVALID
+        return HTTPE.GM_INVALID,body
     end
 
     return HTTPE.OK
