@@ -18,8 +18,8 @@ end
 function Android_mgr:start()
     local srvindex = tonumber(g_app.srvindex) -- 平台
     local srvid = tonumber(g_app.srvid) -- 服务器
-    for index = 1,1 do
-        local idx = ( srvid << 16 ) | index
+    for index = 1,srvid do
+        local idx = ( srvindex << 16 ) | index
         self.android[idx] = Android( idx )
     end
 end

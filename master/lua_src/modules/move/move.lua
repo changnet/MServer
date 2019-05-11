@@ -155,7 +155,7 @@ function Move:moving( ms_now,no_time_chk )
     -- 这些玩家看不到我了，告诉他们我消失了
     scene:broadcast_entity_disappear(entity,list_out)
     -- 这些玩家看到我出现了
-    scene:broadcast_entity_disappear(entity,list_in)
+    scene:broadcast_entity_appear(entity,list_in)
 
     return true
 end

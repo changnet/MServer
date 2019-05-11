@@ -765,7 +765,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
 
         if ( idx >= MAX_CLT_CAST )
         {
-            ERROR( "pack_ssc_multicast too many id in list" );
+            ERROR( "pack_ssc_multicast too many id in list:%d",idx );
             lua_pop( L, 2 );
             break;
         }

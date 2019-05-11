@@ -57,7 +57,7 @@ function Attribute_sys:set_sys_abt( id,abt_list )
 end
 
 -- 标识是否变动
-function Attribute_sys:modify(md)
+function Attribute_sys:set_modify(md)
     self.modify = md
 end
 

@@ -4,6 +4,8 @@
 
 -- 玩家实体，用于在场景显示
 local g_network_mgr = g_network_mgr
+
+local Entity = require "modules.entity.entity"
 local Entity_animal = require "modules.entity.entity_animal"
 local Entity_player = oo.class( Entity_animal,... )
 
@@ -31,7 +33,7 @@ function Entity_player:update_battle_abt( abt_list )
         sys:push_one( abt_list[idx],abt_list[idx+1] )
     end
 
-    self.abt_sys:modify(true)
+    self.abt_sys:set_modify(true)
 end
 
 -- 创建实体出现的数据包

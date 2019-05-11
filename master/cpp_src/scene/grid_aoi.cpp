@@ -409,7 +409,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
         return -1;
     }
 
-    raw_get_entitys(list,it_x,it_y,it_dx,it_dy);
+    if (list) raw_get_entitys(list,it_x,it_y,it_dx,it_dy);
 
     for (int32 ix = old_x;ix <= old_dx;ix ++)
     {

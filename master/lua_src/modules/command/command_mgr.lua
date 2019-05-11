@@ -72,6 +72,14 @@ function Command_mgr:load_schema()
     return (pfs >= 0 and ffs >= 0)
 end
 
+-- 拆分协议为模块 + 功能
+function Command_mgr:dismantle_cmd( cmd )
+    local f = cmd & 0x000F
+    local m = cmd >> 0x0008
+
+    return m,f
+end
+
 -- 注册客户端协议处理
 function Command_mgr:clt_register( cmd,handler,noauth )
     local cfg = self.cs[cmd]
@@ -119,11 +127,13 @@ function Command_mgr:srv_dispatch( srv_conn,cmd,... )
 
     local handler = cfg.handler
     if not cfg.handler then
-        return ERROR( "srv_dispatch:cmd [%d] no handle function found",cmd )
+        return ERROR( "srv_dispatch:cmd [%d-%d] no handle function found",
+            self:dismantle_cmd(cmd) )
     end
 
     if not srv_conn.auth and not cfg.noauth then
-        return ERROR( "clt_dispatch:try to call auth cmd [%d]",cmd )
+        return ERROR( "clt_dispatch:try to call auth cmd [%d-%d]",
+            self:dismantle_cmd(cmd) )
     end
 
     return handler( srv_conn,... )
@@ -135,11 +145,13 @@ function Command_mgr:clt_dispatch( clt_conn,cmd,... )
 
     local handler = cfg.handler
     if not cfg.handler then
-        return ERROR( "clt_dispatch:cmd [%d] no handle function found",cmd )
+        return ERROR( "clt_dispatch:cmd [%d-%d] no handle function found",
+            self:dismantle_cmd(cmd) )
     end
 
     if not clt_conn.auth and not cfg.noauth then
-        return ERROR( "clt_dispatch:try to call auth cmd [%d]",cmd )
+        return ERROR( "clt_dispatch:try to call auth cmd [%d-%d]",
+            self:dismantle_cmd(cmd) )
     end
 
     return handler( clt_conn,... )
@@ -151,18 +163,21 @@ function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
 
     local handler = cfg.handler
     if not cfg.handler then
-        return ERROR( "clt_dispatch_ex:cmd [%d] no handle function found",cmd )
+        return ERROR( "clt_dispatch_ex:cmd [%d-%d] no handle function found",
+            self:dismantle_cmd(cmd) )
     end
 
     -- 判断这个服务器连接是已认证的
     if not srv_conn.auth then
-        return ERROR( "clt_dispatch_ex:srv conn not auth,cmd [%d]",cmd )
+        return ERROR( "clt_dispatch_ex:srv conn not auth,cmd [%d-%d]",
+            self:dismantle_cmd(cmd) )
     end
 
     -- 判断这个玩家是已认证的
     if not cfg.noauth and not self.auth_pid[pid] then
         return ERROR(
-            "clt_dispatch_ex:player not auth,pid [%d],cmd [%d]",pid,cmd )
+            "clt_dispatch_ex:player not auth,pid [%d],cmd [%d-%d]",
+            pid,self:dismantle_cmd(cmd) )
     end
 
     return handler( srv_conn,pid,... )

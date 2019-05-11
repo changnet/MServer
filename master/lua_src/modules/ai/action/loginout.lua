@@ -59,7 +59,7 @@ function Loginout:on_login( entity,errno,pkt )
     -- 如果已经存在角色，直接请求进入游戏
     entity.pid  = pkt.pid
     entity.name = pkt.name
-    self:enter_world(entity)
+    self:enter_world( entity )
 end
 
 -- 创角返回
@@ -72,7 +72,7 @@ function Loginout:on_create_role( entity,errno,pkt )
     entity.pid  = pkt.pid
     entity.name = pkt.name
 
-    self:enter_world()
+    self:enter_world( entity )
 
     PRINTF( "android_%d create role success,pid = %d,name = %s",
         entity.index,entity.pid,entity.name )
