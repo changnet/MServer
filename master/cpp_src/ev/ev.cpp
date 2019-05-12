@@ -61,20 +61,11 @@ int32 ev::run()
     loop_done = false;
     while ( !loop_done )
     {
-        fd_reify();/* update fd-related kernel structures */
+        /* update ev_rt_now, do magic */
+        time_update ();
+        int64 old_now_ms = ev_now_ms;
 
-        /* calculate blocking time */
-        {
-            /* update time to cancel out callback processing overhead */
-            time_update ();
-
-            ev_tstamp waittime  = wait_time();
-
-            backend_poll ( waittime );
-
-            /* update ev_rt_now, do magic */
-            time_update ();
-        }
+        fd_reify ();/* update fd-related kernel structures */
 
         /* queue pending timers and reschedule them */
         timers_reify (); /* relative timers called last */
@@ -82,6 +73,17 @@ int32 ev::run()
         invoke_pending ();
 
         running (ev_now_ms);
+
+        /* update time to cancel out callback processing overhead */
+        time_update ();
+
+        after_run (old_now_ms,ev_now_ms);
+        /* calculate blocking time */
+        {
+            ev_tstamp waittime  = wait_time();
+
+            backend_poll ( waittime );
+        }
     }    /* while */
 
     return 0;

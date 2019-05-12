@@ -17,6 +17,7 @@ lev::lev()
     ansendingcnt =  0;
 
     _lua_gc_tm = 0;
+    _critical_tm = -1;
     _app_ev_interval = 0;
 }
 
@@ -110,6 +111,13 @@ int32 lev::set_app_ev( lua_State *L ) // 设置脚本主循环回调
     }
 
     _app_ev_interval = interval;
+    return 0;
+}
+
+int32 lev::set_critical_time( lua_State *L ) // 设置主循环临界时间
+{
+    _critical_tm = luaL_checkinteger(L, 1);
+
     return 0;
 }
 
@@ -265,5 +273,17 @@ void lev::running( int64 ms_now )
     {
         _lua_gc_tm = ev_rt_now;
         lua_gc(L, LUA_GCSTEP, 100);
+    }
+}
+
+void lev::after_run(int64 ms_old,int64 ms_now )
+{
+    if ( expect_false(_critical_tm < 0) ) return;
+
+    int64 ms = ms_now - ms_old;
+    if ( ms > _critical_tm )
+    {
+        static_global::async_log()
+            ->raw_write("",LO_CPRINTF,"ev busy:%d msec",ms);
     }
 }

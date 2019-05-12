@@ -31,6 +31,9 @@ local function main( command,srvname,srvindex,srvid,... )
         end
     end
 
+    -- 设置主循环临界时间，目前只用来输出日志,检测卡主循环
+    ev:set_critical_time(1000)
+
     -- 设置错误日志、打印日志
     -- 如果你的服务器是分布式的，包含多个进程，则注意名字要区分开来
     local tm = time.ctime()

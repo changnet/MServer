@@ -199,6 +199,9 @@ void log::flush()
             case LO_MONGODB :
                 raw_mongodb_log( one->_tm,"CP","%s",one->get_ctx() );
                 break;
+            case LO_CPRINTF :
+                raw_cprintf_log( one->_tm,"LP","%s",one->get_ctx() );
+                break;
             default:
                 ERROR("unknow log output type:%d",one->_out);
                 break;

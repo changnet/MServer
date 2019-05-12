@@ -94,7 +94,9 @@ protected:
     ev_tstamp mn_now;    /* monotonic clock "now" */
     ev_tstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
-    virtual void running( int64 ms_now ) {};
+    virtual void running( int64 ms_now ) {}
+    virtual void after_run(int64 old_ms_now ,int64 ms_now ) {}
+
     virtual ev_tstamp wait_time();
     void fd_change( int32 fd );
     void fd_reify();

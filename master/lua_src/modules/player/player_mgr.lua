@@ -43,7 +43,6 @@ function Player_mgr:enter_success( player )
     self.raw_player[pid] = nil
     g_authorize:set_player( pid )
 
-    player:send_pkt( SC.PLAYER_ENTER,{} )
     PRINTF( "player enter,pid = %d",pid )
 end
 

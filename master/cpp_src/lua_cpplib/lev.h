@@ -22,6 +22,7 @@ public:
     int32 backend( lua_State *L ); // 进入后台循环
     int32 who_busy( lua_State *L ); // 看下哪条线程繁忙
     int32 real_time( lua_State *L ); // 实时时间
+    int32 set_critical_time( lua_State *L ); // 设置主循环临界时间
 
     int32 signal( lua_State *L );
     int32 set_app_ev( lua_State *L ); // 设置脚本主循环回调
@@ -33,6 +34,7 @@ private:
     void invoke_signal ();
     void invoke_sending();
     void invoke_app_ev (int64 ms_now);
+    void after_run(int64 old_ms_now ,int64 ms_now );
 
     ev_tstamp wait_time();
     static void sig_handler( int32 signum );
@@ -44,6 +46,7 @@ private:
     int32 ansendingmax;
     int32 ansendingcnt;
 
+    int32 _critical_tm;   // 每次主循环的临界时间，毫秒
     ev_tstamp _lua_gc_tm; // 上一次gc的时间戳
     int64 _next_app_ev_tm; // 下次运行脚本主循环的时间戳
     int32 _app_ev_interval; // 多少毫秒加高一次到脚本

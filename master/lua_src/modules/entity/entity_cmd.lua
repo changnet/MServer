@@ -69,10 +69,14 @@ local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     player:send_property()
 
     -- TODO:这里只进入测试场景
-    g_dungeon_mgr:enter_static_scene(player,scene_id,pix_x,pix_y)
+    local px = math.random(0,128*64)
+    local py = math.random(0,64*64)
+    g_dungeon_mgr:enter_static_scene(player,scene_id,px,py)
 
     g_authorize:set_player( pid )
-    PRINT("player enter scene",pid,scene_id,pix_x,pix_y)
+
+    player:send_pkt( SC.PLAYER_ENTER,{} )
+    PRINT("player enter scene",pid,scene_id,px,py)
 end
 
 g_rpc:declare( "player_exit",player_exit )
