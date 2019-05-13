@@ -248,6 +248,14 @@ ev_tstamp ev::get_time()
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
+int64 ev::get_ms_time()
+{
+    struct timespec ts;
+    clock_gettime (CLOCK_MONOTONIC, &ts);
+
+    return ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
+}
+
 /*
  * 获取当前时钟
  * CLOCK_REALTIME: 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。

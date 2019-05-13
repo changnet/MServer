@@ -62,7 +62,7 @@ int32 lev::who_busy( lua_State *L ) // 看下哪条线程繁忙
 {
     size_t finished = 0;
     size_t unfinished = 0;
-    const char *who = 
+    const char *who =
         static_global::thread_mgr()->who_is_busy(finished,unfinished);
 
     if ( !who ) return 0;
@@ -80,6 +80,14 @@ int32 lev::real_time( lua_State *L )
     lua_pushinteger( L,get_time() );
     return 1;
 }
+
+// 实时时间
+int32 lev::real_ms_time( lua_State *L )
+{
+    lua_pushinteger( L,get_ms_time() );
+    return 1;
+}
+
 
 int32 lev::signal( lua_State *L )
 {

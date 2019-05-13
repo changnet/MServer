@@ -100,6 +100,7 @@ int32 luaopen_ev( lua_State *L )
     lc.def<&lev::who_busy> ("who_busy" );
     lc.def<&lev::real_time>("real_time");
     lc.def<&lev::set_app_ev>("set_app_ev");
+    lc.def<&lev::real_ms_time>("real_ms_time");
     lc.def<&lev::set_critical_time>("set_critical_time");
 
     return 0;

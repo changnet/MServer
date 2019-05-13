@@ -55,13 +55,14 @@ public:
 
     int32 run();
     int32 quit();
-    
+
     int32 io_start( ev_io *w );
     int32 io_stop( ev_io *w );
 
     int32 timer_start( ev_timer *w );
     int32 timer_stop( ev_timer *w );
-    
+
+    static int64 get_ms_time();
     static ev_tstamp get_time();
 
     void update_clock();
@@ -72,22 +73,22 @@ protected:
     volatile bool loop_done;
     ANFD *anfds;
     uint32 anfdmax;
-    
+
     ANPENDING *pendings;
     uint32 pendingmax;
     uint32 pendingcnt;
-    
+
     ANCHANGE *fdchanges;
     uint32 fdchangemax;
     uint32 fdchangecnt;
-    
+
     ANHE *timers;
     uint32 timermax;
     uint32 timercnt;
-    
+
     int32 backend_fd;
     epoll_event epoll_events[EPOLL_MAXEV];
-    
+
     int64 ev_now_ms; // 主循环时间，毫秒
     ev_tstamp ev_rt_now;
     ev_tstamp now_floor; /* last time we refreshed rt_time */

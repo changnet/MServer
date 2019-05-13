@@ -22,6 +22,7 @@ public:
     int32 backend( lua_State *L ); // 进入后台循环
     int32 who_busy( lua_State *L ); // 看下哪条线程繁忙
     int32 real_time( lua_State *L ); // 实时时间
+    int32 real_ms_time( lua_State *L ); // 实时时间，毫秒
     int32 set_critical_time( lua_State *L ); // 设置主循环临界时间
 
     int32 signal( lua_State *L );
