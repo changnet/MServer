@@ -26,7 +26,7 @@ function Log_mgr:db_logger_init()
 
     self.db_logger = g_mysql_mgr:new()
     self.db_logger:start( g_setting.mysql_ip,g_setting.mysql_port,
-    g_setting.mysql_user,g_setting.mysql_pwd,g_setting.mysql_db,callback )
+        g_setting.mysql_user,g_setting.mysql_pwd,g_setting.mysql_db,callback )
 end
 
 -- db日志初始化完成

@@ -25,7 +25,7 @@ function App:initialize()
     self:module_initialize() -- 加载子模块
 
     -- 主动连接到gateway和world
-    g_network_mgr:connect_srv( g_setting.servers )
+    g_network_mgr:connect_srv( g_app_setting.servers )
 
     Application.initialize( self )
 end

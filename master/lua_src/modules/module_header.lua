@@ -15,9 +15,9 @@ require "modules.system.hot_fix"
 E = require "modules.system.error"
 
 -- 加载服务器配置
-local raw_setting = require "setting.setting"
-g_setting     = raw_setting[g_app.srvname]
-assert( g_setting,"no server conf found" )
+g_setting = require "setting.setting"
+g_app_setting = g_setting[g_app.srvname]
+assert( g_app_setting,"no server conf found" )
 
 -- !!! 放到这里的，一定要是singleton，不然会被销毁重建
 -- TODO:找个方法检测一下是否singleton

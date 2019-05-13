@@ -23,12 +23,12 @@ end
 function App:initialize()
     self:module_initialize()
 
-    if not g_network_mgr:srv_listen( g_setting.sip,g_setting.sport ) then
+    if not g_network_mgr:srv_listen( g_app_setting.sip,g_app_setting.sport ) then
         ERROR( "world server listen fail,exit" )
         os.exit( 1 )
     end
 
-    g_network_mgr:connect_srv( g_setting.servers )
+    g_network_mgr:connect_srv( g_app_setting.servers )
 
     Application.initialize( self )
 end

@@ -140,7 +140,7 @@ function Application:check_shutdown()
     if not who then return true end
 
 
-    SYNC_PRINTF( 
+    SYNC_PRINTF(
         "thread %s busy,%d finished job,%d unfinished job,waiting ...",
         who,finished,unfinished )
 

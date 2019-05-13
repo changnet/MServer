@@ -4,6 +4,21 @@
 
 return
 {
+    mongo_ip = "127.0.0.1", -- mongodb ip
+    mongo_port = "27013", -- mongodb 端口
+    mongo_db = "test_999", -- 需要连接的数据库
+    mongo_user = "test", -- mongo 用户(以后弄个加密，以免明文保存)
+    mongo_pwd  = "test", -- mongo 密码(以后弄个加密，以免明文保存)
+
+    mysql_ip   = "127.0.0.1";
+    mysql_port = 3306,
+    mysql_user = "test",
+    mysql_pwd  = "test",
+    mysql_db   = "test_999",
+
+    gm = true, -- 是否启用gm
+    lang = "zh", -- 简体中文
+
     gateway = -- gateway 配置
     {
         sip   = "127.0.0.1", -- s2s监听ip
@@ -12,44 +27,17 @@ return
         cport = 10002,       -- s2s监听端口
         hip   = "127.0.0.1", -- http监听ip
         hport = 10003,       -- http监听端口
-        mongo_ip = "127.0.0.1", -- mongodb ip
-        mongo_port = "27013", -- mongodb 端口
-        mongo_db = "test_999", -- 需要连接的数据库
-        mongo_user = "test", -- mongo 用户(以后弄个加密，以免明文保存)
-        mongo_pwd  = "test", -- mongo 密码(以后弄个加密，以免明文保存)
 
-        mysql_ip   = "127.0.0.1";
-        mysql_port = 3306,
-        mysql_user = "test",
-        mysql_pwd  = "test",
-        mysql_db   = "test_999",
-
-        lang = "zh", -- 简体中文
     },
 
     world = -- world服务器配置
     {
         sip     = "127.0.0.1", -- s2s监听ip
         sport   = 20001,       -- s2s监听端口
-        servers = -- 主动连接到下面的服务器
+        servers =
         {
             { ip = "127.0.0.1",port = 10001 }, -- gateway
         },
-
-        gm = true, -- 是否启用gm
-        mongo_ip = "127.0.0.1", -- mongodb ip
-        mongo_port = "27013", -- mongodb 端口
-        mongo_db = "test_999", -- 需要连接的数据库
-        mongo_user = "test", -- mongo 用户(以后弄个加密，以免明文保存)
-        mongo_pwd  = "test", -- mongo 密码(以后弄个加密，以免明文保存)
-
-        mysql_ip   = "127.0.0.1";
-        mysql_port = 3306,
-        mysql_user = "test",
-        mysql_pwd  = "test",
-        mysql_db   = "test_999",
-
-        lang = "zh", -- 简体中文
     },
 
     area = -- area服务器配置
@@ -59,9 +47,5 @@ return
             { ip = "127.0.0.1",port = 10001 }, -- gateway
             { ip = "127.0.0.1",port = 20001 }, -- world
         },
-
-        gm = true, -- 是否启用gm
-
-        lang = "zh", -- 简体中文
     }
 }

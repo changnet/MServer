@@ -8,6 +8,9 @@ function Rpc:__init()
     self.callback = {}
     self.procedure = {}
     self.auto_id = Auto_id()
+
+    self.stat = {}
+    self.stat_tm = 0
 end
 
 -- 声明一个rpc调用
@@ -68,7 +71,7 @@ end
 function Rpc:xinvoke( method_name,callback,... )
     local srv_conn = self:get_method_conn( method_name )
     if not srv_conn then
-        return error( string.format( 
+        return error( string.format(
             "rpc:no connection to remote server:%s",method_name))
     end
 
@@ -104,7 +107,7 @@ local rpc = Rpc()
 function rpc_command_new( conn_id,rpc_id,method_name,... )
     local cfg = rpc.procedure[method_name]
     if not cfg then
-        return error( string.format( "rpc:\"%s\" was not declared",method_name ) )
+        return error( string.format( "rpc:[%s] was not declared",method_name ) )
     end
 
     return cfg.method( ... )

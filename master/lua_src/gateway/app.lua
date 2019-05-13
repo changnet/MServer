@@ -26,12 +26,12 @@ end
 function App:initialize()
     self:module_initialize()
 
-    if not g_network_mgr:srv_listen( g_setting.sip,g_setting.sport ) then
+    if not g_network_mgr:srv_listen( g_app_setting.sip,g_app_setting.sport ) then
         ERROR( "gateway server listen fail,exit" )
         os.exit( 1 )
     end
 
-    if not g_httpd:http_listen( g_setting.hip,g_setting.hport ) then
+    if not g_httpd:http_listen( g_app_setting.hip,g_app_setting.hport ) then
         ERROR( "gateway http listen fail,exit" )
         os.exit( 1 )
     end
@@ -41,7 +41,7 @@ end
 
 -- 重写初始化结束入口
 function App:final_initialize()
-    if not g_network_mgr:clt_listen( g_setting.cip,g_setting.cport ) then
+    if not g_network_mgr:clt_listen( g_app_setting.cip,g_app_setting.cport ) then
         ERROR( "gateway client listen fail,exit" )
         os.exit( 1 )
     end
