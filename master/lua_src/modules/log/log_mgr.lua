@@ -12,10 +12,10 @@ local Log_mgr = oo.singleton( nil,... )
 -- 初始化
 function Log_mgr:__init()
     -- 启动文件日志线程
-    local fl_logger = Log()
-    -- fl_logger:start( 3,0 ); -- 暂不启用另外的线程
+    -- local async_file = Log()
+    -- async_file:start( 3,0 ); -- 暂不启用另外的线程
 
-    self.fl_logger = fl_logger
+    self.async_file = __g_async_log -- async_file
 end
 
 -- 初始化db日志
@@ -36,7 +36,7 @@ end
 
 -- 关闭文件日志线程及数据库日志线程
 function Log_mgr:close()
-    -- self.fl_logger:stop()
+    -- self.async_file:stop()
     -- db则由g_mysql_mgr去管理
 end
 
@@ -59,14 +59,19 @@ end
 -- @who:玩家pid，如果是系统邮件，则为sys
 function Log_mgr:add_mail_log( who,mail )
     local ctx = string.format("add_mail:%s,%s",tostring(who),table.dump(mail))
-    self.fl_logger:write( "log/mail_log",ctx)
+    self.async_file:write( "log/mail_log",ctx)
 end
 
 -- 记录删除邮件操作日志
 -- @who:玩家pid，如果是系统邮件，则为sys
 function Log_mgr:del_mail_log( who,mail )
     local ctx = string.format("del_mail:%s,%s",tostring(who),table.dump(mail))
-    self.fl_logger:write( "log/mail_log",ctx)
+    self.async_file:write( "log/mail_log",ctx )
+end
+
+-- 自定义写文件
+function Log_mgr:raw_file_printf( path,... )
+    return self.async_file.write( path,string.format(...) )
 end
 
 local log_mgr = Log_mgr()

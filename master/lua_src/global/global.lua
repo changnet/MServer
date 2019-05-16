@@ -7,7 +7,8 @@
 local Log = require "Log"
 local util = require "util"
 
-local async_logger = Log()
+__g_async_log = Log()
+local async_logger = __g_async_log
 
 local function to_readable( val )
     if type(val) == "string" then

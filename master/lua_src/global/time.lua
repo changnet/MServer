@@ -5,7 +5,7 @@
 -- 游戏逻辑中常用时间相关函数
 -- 请使用ev:time()来获取时间戳，而不是os.time()，防止帧时间和实时时间对不上
 
-local time = {}
+time = {}
 
 local math = math
 local ONE_MINUTE = 60
@@ -51,6 +51,11 @@ function time.ctime( when )
     return os.date( "*t", when or ev:time() )
 end
 
+-- 输入UTC时间戳，返回本地时间字符串
+-- time.date_fmt( 1558012266 ) 2019-06-16 21:11:06
+function time.date_fmt( when )
+    return os.date( "%Y-%m-%d %H:%M:%S", when or ev:time() )
+end
 
 --这是获取2000-01-01 00:00:00以来所过的天数，根据系统时区变化
 function time.get_day_from_2000()
@@ -102,7 +107,7 @@ function time.get_weekday()
     if sec > 0 then
         return math.ceil( sec/ONE_DAY)
     end
-    
+
     return 1  --周日00:00才会这样，算周一
 end
 

@@ -10,7 +10,7 @@ package.path = "./lua_src/?.lua;" .. package.path
 package.cpath = "./c_module/?.so;" .. package.cpath
 
 require "global.oo"
-require "global.require"
+require "global.require" -- 需要热更的文件，必须放在这后面
 
 local Log  = require "Log"
 local util = require "util"

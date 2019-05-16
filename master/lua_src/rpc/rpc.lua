@@ -2,6 +2,8 @@
 
 local Auto_id = require "modules.system.auto_id"
 
+local rpc_perf = g_app_setting.rpc_perf
+
 local Rpc = oo.singleton( nil,... )
 
 function Rpc:__init()
@@ -11,6 +13,45 @@ function Rpc:__init()
 
     self.stat = {}
     self.stat_tm = 0
+end
+
+-- 更新耗时统计
+function Rpc:update_statistic( method_name,ms )
+    local stat = self.stat[method_name]
+    if not stat then
+        stat = { ms = 0, ts = 0, max = 0, min = 0}
+        self.stat[method_name] = stat
+    end
+
+    stat.ms = stat.ms + ms
+    stat.ts = stat.ts + 1
+    if ms > stat.max then stat.max = ms end
+    if 0 == stat.min or ms < stat.min then stat.min = ms end
+end
+
+-- 写入耗时统计到文件
+function Rpc:serialize_statistic()
+
+    local stat_name = {}
+    for k in pairs( self.stat ) do table.insert( stat_name,k ) end
+
+    -- 按名字排序，方便对比查找
+    table.sort( stat_name )
+
+    g_log_mgr:raw_file_printf( rpc_perf,
+        "%s ~ %s:",time.date_fmt(self.stat_tm),time.date_fmt(ev:time()))
+
+    -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
+    g_log_mgr:raw_file_printf( rpc_perf,
+        "%-16s %-16s %-16s %-16s %-16s %-16s",
+        "method","count","msec","max","min","avg" )
+
+    for _,name in pairs( stat_name ) do
+        local stat = self.stat[name]
+        g_log_mgr:raw_file_printf( rpc_perf,
+            "%-16s %-16d %-16d %-16d %-16d %-16d",
+            name,stat.ts,stat.ms,stat.max,stat.min,math.ceil(stat.ms/stat.ts))
+    end
 end
 
 -- 声明一个rpc调用
@@ -110,7 +151,13 @@ function rpc_command_new( conn_id,rpc_id,method_name,... )
         return error( string.format( "rpc:[%s] was not declared",method_name ) )
     end
 
-    return cfg.method( ... )
+    if rpc_perf then
+        local beg = ev:real_ms_time()
+        cfg.method( ... )
+        return rpc:update_statistic(method_name,ev:real_ms_time() - beg)
+    else
+        return cfg.method( ... )
+    end
 end
 
 function rpc_command_return ( conn_id,rpc_id,ecode,... )

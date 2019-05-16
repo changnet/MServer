@@ -18,6 +18,7 @@ return
 
     gm = true, -- 是否启用gm
     lang = "zh", -- 简体中文
+    rpc_perf = "log/rpc_perf", -- rpc指令耗时记录，不配置则不记录
 
     gateway = -- gateway 配置
     {
