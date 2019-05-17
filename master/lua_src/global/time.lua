@@ -52,9 +52,9 @@ function time.ctime( when )
 end
 
 -- 输入UTC时间戳，返回本地时间字符串
--- time.date_fmt( 1558012266 ) 2019-06-16 21:11:06
-function time.date_fmt( when )
-    return os.date( "%Y-%m-%d %H:%M:%S", when or ev:time() )
+-- time.date( 1558012266 ) 2019-06-16 21:11:06
+function time.date( when,fmt )
+    return os.date( fmt or "%Y-%m-%d %H:%M:%S", when or ev:time() )
 end
 
 --这是获取2000-01-01 00:00:00以来所过的天数，根据系统时区变化

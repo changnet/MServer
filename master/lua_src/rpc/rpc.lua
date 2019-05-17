@@ -39,7 +39,7 @@ function Rpc:serialize_statistic()
     table.sort( stat_name )
 
     g_log_mgr:raw_file_printf( rpc_perf,
-        "%s ~ %s:",time.date_fmt(self.stat_tm),time.date_fmt(ev:time()))
+        "%s ~ %s:",time.date(self.stat_tm),time.date(ev:time()))
 
     -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
     g_log_mgr:raw_file_printf( rpc_perf,

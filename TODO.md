@@ -13,8 +13,17 @@
 * 要不要把运行目录放到bin目录，这样生成的core文件，error文件以及log、setting这些与版本无关的全在一个目录里了
 * mongodb的result感觉要用个object_pool
 * lclass弄个继承，基础的只是push到lua，不会创建。然后把C++中push到lua的类多余的构造函数去掉
-* log.cpp中的设计有问题，内存池要简化，交换缓存是在线程中。最后看下log是不是合并到thread_log中去，整合为async_log
 * pbc中错误提示不明确(本来是int，发个float就重现了)
+
+#优化定时器（加到wiki）
+* app定时器，只保留5秒，并且修正为整分钟触发(用real time修正)
+* 定时器可配置是否处理time jump
+* app一次性delay定时器，
+* 玩家一次性delay定时器，
+* 副本一次性delay定时器，副本延迟、销毁退出用
+* 绝对定时器(absolute timer,指定年月日时分秒运行)
+* 相对定时器(relative timer,指定周几，几日，时分秒，按月，按周循环)
+* 用小堆实现系统长时定时器，把上面的一些定时器管理起来
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步
