@@ -46,12 +46,22 @@ void thread_mgr::stop()
 }
 
 /* 查找没处理完数据的子线程 */
-const char *thread_mgr::who_is_busy(size_t &finished,size_t &unfinished)
+const char *thread_mgr::who_is_busy(
+    size_t &finished,size_t &unfinished,bool skip)
 {
     thread_mpt_t::const_iterator itr = _threads.begin();
     while ( itr != _threads.end() )
     {
         class thread *thd = itr->second;
+
+        // 这个线程的数据不需要等待它处理完
+        // 比如写日志不会回调到主线程，最后会pthread_join等待写完日志
+        if ( skip and !thd->is_wait_busy() )
+        {
+            itr ++;
+            continue;
+        }
+
         if ( thd->busy_job(&finished,&unfinished) > 0 ) return thd->get_name();
 
         itr ++;

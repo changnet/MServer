@@ -136,7 +136,7 @@ end
 
 -- 检测能否关服
 function Application:check_shutdown()
-    local who,finished,unfinished = ev:who_busy()
+    local who,finished,unfinished = ev:who_busy( true )
     if not who then return true end
 
 

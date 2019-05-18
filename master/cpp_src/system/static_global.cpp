@@ -60,6 +60,10 @@ static_global::initializer::~initializer()
 void static_global::initialize()  /* 程序运行时初始化 */
 {
     _async_log.start( 3,0 );
+
+    // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙
+    // 关不了服。stop的时候会处理所有日志
+    _async_log.set_wait_busy( false );
 }
 
 void static_global::uninitialize() /* 程序结束时反初始化 */

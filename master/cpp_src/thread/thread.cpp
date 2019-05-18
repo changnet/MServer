@@ -19,6 +19,7 @@ thread::thread(const char *name)
     _busy = false;
 
     _name = name;
+    _wait_busy = true;
 
     int32 rv = pthread_mutex_init( &_mutex,NULL );
     if ( 0 != rv )

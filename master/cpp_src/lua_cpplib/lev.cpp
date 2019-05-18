@@ -60,10 +60,12 @@ int32 lev::ms_time( lua_State *L ) // 帧时间，ms
 
 int32 lev::who_busy( lua_State *L ) // 看下哪条线程繁忙
 {
+    bool skip = lua_toboolean( L,1 );
+
     size_t finished = 0;
     size_t unfinished = 0;
     const char *who =
-        static_global::thread_mgr()->who_is_busy(finished,unfinished);
+        static_global::thread_mgr()->who_is_busy(finished,unfinished,skip);
 
     if ( !who ) return 0;
 

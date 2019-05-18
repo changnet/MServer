@@ -33,6 +33,9 @@ public:
     inline pthread_t get_id() const { return _id; }
     inline const char *get_name() const { return _name; }
 
+    inline bool is_wait_busy() const { return _wait_busy; }
+    inline void set_wait_busy( bool busy ) { _wait_busy = busy; }
+
     static void signal_block();
 public:
     typedef enum
@@ -70,6 +73,7 @@ private:
     volatile bool _busy;
     pthread_mutex_t _mutex;
 
+    bool _wait_busy; // 当关服的时候，是否需要等待这个线程
     const char *_name; // 线程名字，日志用而已
 };
 
