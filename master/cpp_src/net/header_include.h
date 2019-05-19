@@ -6,16 +6,12 @@
 /* 网络通信消息包头格式定义
  */
 
-/* 根据一个header指针获取整个packet的长度(包括_length本身) */
-#define PACKET_LENGTH( h ) ((h)->_length + sizeof(packet_length))
-
 /* 根据一个header和buff长度获取header的_length字段值 */
 #define PACKET_MAKE_LENGTH( h,l )   \
-    static_cast<packet_length>(sizeof(h) + l - sizeof(packet_length))
+    static_cast<packet_length>(sizeof(h) + l)
 
 /* 根据一个header指针获取header后buffer的长度 */
-#define PACKET_BUFFER_LEN( h )    \
-    ((h)->_length - sizeof(*h) + sizeof(packet_length))
+#define PACKET_BUFFER_LEN( h )    ((h)->_length - sizeof(*h))
 
 
 typedef enum
@@ -51,7 +47,7 @@ typedef uint16 string_header;
 
 struct base_header
 {
-    packet_length _length; /* 包长度，不包含本身 */
+    packet_length _length; /* 包长度，包含本身 */
     uint16  _cmd  ; /* 8bit模块号,8bit功能号 */
 };
 

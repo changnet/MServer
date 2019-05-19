@@ -24,10 +24,12 @@ int32 stream_packet::unpack()
 
     const struct base_header *header =
         reinterpret_cast<const struct base_header *>( recv.data_pointer() );
+
+    
     if ( size < header->_length ) return 0;
 
     dispatch( header ); // 数据包完整，派发处理
-    recv.subtract( PACKET_LENGTH( header ) );   // 无论成功或失败，都移除该数据包
+    recv.subtract( header->_length );   // 无论成功或失败，都移除该数据包
 
     return header->_length;
 }
