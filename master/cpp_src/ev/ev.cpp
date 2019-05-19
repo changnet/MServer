@@ -180,11 +180,11 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
 
     ev.data.fd = fd;
     ev.events  = (events & EV_READ  ? EPOLLIN  : 0)
-               | (events & EV_WRITE ? EPOLLOUT : 0);
+               | (events & EV_WRITE ? EPOLLOUT : 0) /* | EPOLLET */ ;
     /* pre-2.6.9 kernels require a non-null pointer with EPOLL_CTL_DEL, */
     /* The default behavior for epoll is Level Triggered. */
-    /* LT同时支持block和no-block，持续通知 */
-    /* ET只支持no-block，一个事件只通知一次 */
+    /* LT(Level Triggered)同时支持block和no-block，持续通知 */
+    /* ET(Edge Trigger)只支持no-block，一个事件只通知一次 */
     if ( expect_true (!epoll_ctl(backend_fd,reify,fd,&ev)) ) return;
 
     switch ( errno )

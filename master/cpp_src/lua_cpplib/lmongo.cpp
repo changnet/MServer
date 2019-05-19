@@ -214,6 +214,8 @@ void lmongo::invoke_result()
     while ( (res = pop_result()) )
     {
         // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
+        // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
+        // 原因是ev那边频繁收到协议，导致数据库与子线程通信的fd一直没被epoll触发
         static thread_log *logger = static_global::async_log();
         int64 real = static_global::ev()->ms_now() - res->_time;
         if ( 0 == res->_error.code)
