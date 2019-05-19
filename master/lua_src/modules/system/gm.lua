@@ -22,14 +22,14 @@ end
 -- 转发或者运行gm
 function GM:exec( where,player,context )
     if not string.start_with( context,"@" ) then
-        return false
+        return false,"gm need to start with@:" .. context
     end
 
     local raw_ctx = string.sub( context,2 ) -- 去掉@
 
     -- 分解gm指令(@level 999分解为{@level,999})
     local args = string.split(raw_ctx," ")
-    if self:auto_forward( where,player,args[1],raw_ctx ) then
+    if self:auto_forward( where,player,args[1],args ) then
         return true
     end
 
@@ -38,7 +38,7 @@ end
 
 -- 自动转发gm到对应的服务器
 -- TODO:暂时不考虑存在多个同名服务器的情况
-function GM:auto_forward( where,player,cmd,context )
+function GM:auto_forward( where,player,cmd,args )
     local srvname = forward_map[cmd]
     if not srvname or g_app.srvname == srvname then return false end
 
@@ -51,31 +51,55 @@ function GM:auto_forward( where,player,cmd,context )
     local pid = nil
     if player then pid = player:get_pid() end
 
-    g_rpc:call( srv_conn,"rpc_gm",where,pid,context )
+    g_rpc:call( srv_conn,"rpc_gm",g_app.srvname,cmd,table.unpack( args ) )
     return true
 end
 
 -- gm指令运行入口（注意Player对象可能为nil，因为有可能从http接口调用gm）
 function GM:raw_exec( where,player,cmd,... )
-    -- 防止PLOG函数本身报错，连热更的指令都没法刷了
+    -- 防止日志函数本身报错，连热更的指令都没法刷了
     xpcall( PRINT,__G__TRACKBACK__,"exec gm:",where,cmd,... )
 
     -- 优先查找注册过来的gm指令
     local gm_func = gm_map[cmd]
     if gm_func then
-        gm_func( player,... )
-        return true
+        local ok,msg = gm_func( player,... )
+        if ok == nil then
+            return true -- 很多不重要的指令默认不写返回值，认为是成功的
+        else
+            return ok,msg
+        end
     end
 
     -- 写在gm模块本身的指令
     gm_func = self[cmd]
     if gm_func then
-        gm_func( self,player,... )
-        return true
+        local ok,msg = gm_func( self,player,... )
+        if ok == nil then
+            return true -- 很多不重要的指令默认不写返回值，认为是成功的
+        else
+            return ok,msg
+        end
     end
 
     PRINTF( "try to call gm:%s,no such gm",cmd )
-    return false
+    return false,"no such gm:" .. cmd
+end
+
+-- 广播gm
+function GM:broadcast( cmd,... )
+    -- 仅允许网关广播
+    ASSERT( cmd and g_app.srvname == "gateway" )
+
+    -- 目前服务器没有同一个name多开，直接通过名字对比
+    for srvname in pairs( SRV_NAME ) do
+        if g_app.srvname ~= srvname then
+            local srv_conn = g_network_mgr:get_conn_by_name( srvname )
+            if srv_conn then
+                g_rpc:call( srv_conn,"rpc_gm",g_app.srvname,cmd,... )
+            end
+        end
+    end
 end
 
 -- 注册gm指令
@@ -99,7 +123,28 @@ end
 
 -- 全局热更，会更新其他进程
 function GM:ghf()
-    global_hot_fix()
+    hot_fix()
+    if g_app.srvname == "gateway" then self:broadcast( "hf" ) end
+end
+
+-- 立刻进一次rpc耗时统计,不带参数表示不重置
+-- @rpc_perf 1
+function GM:rpc_perf( reset )
+    if not g_rpc:serialize_statistic( reset ) then
+        return false,"rpc_perf not set,set it with:@set_rpc_perf log/rpc_perf 1"
+    end
+
+    if g_app.srvname == "gateway" then self:broadcast( "rpc_perf",reset ) end
+
+    return true
+end
+
+-- 设置rpc耗时统计,取消统计不带任何参数
+-- @set_rpc_perf "log/rpc_perf" 1
+function GM:set_rpc_perf( perf,reset )
+    g_rpc:set_statistic( perf,reset )
+
+    return true
 end
 
 -- 添加元宝

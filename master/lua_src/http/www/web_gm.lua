@@ -7,11 +7,16 @@ local Web_gm = oo.singleton( nil,... )
 echo ghf | curl -l -H "Content-type: application/json" --data '@-' 127.0.0.1:10003/Web_gm
 ]]
 function Web_gm:exec( fields,body )
-    if not body or not g_gm:exec( "web_gm",nil,body ) then
+    if not body then
         return HTTPE.GM_INVALID,body
     end
 
-    return HTTPE.OK
+    local ok,msg = g_gm:exec( "web_gm",nil,body )
+    if not ok then
+        return HTTPE.GM_INVALID,msg or body
+    end
+
+    return HTTPE.OK,msg
 end
 
 local wgm = Web_gm()

@@ -7,6 +7,7 @@
 raw_require = require
 
 __require_list__ = {} -- 在全局记录require过的文件路径
+__no_update_require__ = {} -- 这些文件不需要热更
 
 -- 重写require函数
 --[[
@@ -15,10 +16,18 @@ package.loaded中的。热更时不要把系统库、_G这些销毁掉。
     因为起服时，上述的库已加载好，这时我们再加载脚本，就可以得出哪些是后面加载的脚本了。
 ]]
 function require( path )
-    if not package.loaded[path] then -- 已加载的可能是系统加，不要记录
+    if not package.loaded[path] then -- 已加载的可能是系统模块，不能热更，不要记录
+        assert( nil == __no_update_require__[path] )
         __require_list__[path] = 1
     end
     return raw_require(path)
+end
+
+-- 一些不需要热更的文件
+function no_update_require( path )
+    __no_update_require__[path] = 1
+
+    return raw_require( path )
 end
 
 -- 清除加载的脚本
@@ -27,6 +36,7 @@ function unrequire()
     -- 了另一个还没重新加载的文件数据
     for path in pairs( __require_list__ ) do
         package.loaded[path] = nil
+        assert( nil == __no_update_require__[path] )
     end
 
     -- 清空旧文件记录

@@ -2,7 +2,7 @@
 
 local Auto_id = require "modules.system.auto_id"
 
-local rpc_perf = g_app_setting.rpc_perf
+local rpc_perf = g_setting.rpc_perf
 
 local Rpc = oo.singleton( nil,... )
 
@@ -12,7 +12,22 @@ function Rpc:__init()
     self.auto_id = Auto_id()
 
     self.stat = {}
-    self.stat_tm = 0
+    self.stat_tm = ev:time()
+end
+
+-- 设置统计log文件
+function Rpc:set_statistic( perf,reset )
+    -- 如果之前正在统计，先写入旧的
+    if rpc_perf and ( not perf or reset ) then self:serialize_statistic() end
+
+    -- 如果之前没在统计，或者强制重置，则需要重设stat_tm
+    if not rpc_perf or reset then
+        self.stat = {}
+        self.stat_tm = ev.time()
+    end
+
+    rpc_perf = perf
+    g_setting.rpc_perf = perf -- 覆盖配置值，不然热更就会从配置读取
 end
 
 -- 更新耗时统计
@@ -30,7 +45,10 @@ function Rpc:update_statistic( method_name,ms )
 end
 
 -- 写入耗时统计到文件
-function Rpc:serialize_statistic()
+function Rpc:serialize_statistic( reset )
+    if not rpc_perf then return false end
+
+    local path = string.format( "%s_%s",rpc_perf,g_app.srvname )
 
     local stat_name = {}
     for k in pairs( self.stat ) do table.insert( stat_name,k ) end
@@ -38,20 +56,27 @@ function Rpc:serialize_statistic()
     -- 按名字排序，方便对比查找
     table.sort( stat_name )
 
-    g_log_mgr:raw_file_printf( rpc_perf,
+    g_log_mgr:raw_file_printf( path,
         "%s ~ %s:",time.date(self.stat_tm),time.date(ev:time()))
 
     -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
-    g_log_mgr:raw_file_printf( rpc_perf,
-        "%-16s %-16s %-16s %-16s %-16s %-16s",
+    g_log_mgr:raw_file_printf( path,
+        "%-32s %-16s %-16s %-16s %-16s %-16s",
         "method","count","msec","max","min","avg" )
 
     for _,name in pairs( stat_name ) do
         local stat = self.stat[name]
-        g_log_mgr:raw_file_printf( rpc_perf,
-            "%-16s %-16d %-16d %-16d %-16d %-16d",
+        g_log_mgr:raw_file_printf( path,
+            "%-32s %-16d %-16d %-16d %-16d %-16d",
             name,stat.ts,stat.ms,stat.max,stat.min,math.ceil(stat.ms/stat.ts))
     end
+
+    if reset then
+        self.stat = {}
+        self.stat_tm = ev.time()
+    end
+
+    return true
 end
 
 -- 声明一个rpc调用

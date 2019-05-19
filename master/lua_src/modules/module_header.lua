@@ -15,7 +15,8 @@ require "modules.system.hot_fix"
 E = require "modules.system.error"
 
 -- 加载服务器配置
-g_setting = require "setting.setting"
+-- 服务器配置不支持热更，很多字段，比如端口id你热更了，也不可能改变
+g_setting = no_update_require "setting.setting"
 g_app_setting = g_setting[g_app.srvname]
 assert( g_app_setting,"no server conf found" )
 

@@ -71,7 +71,7 @@ end
 
 -- 自定义写文件
 function Log_mgr:raw_file_printf( path,... )
-    return self.async_file.write( path,string.format(...) )
+    return self.async_file:write( path,string.format(...) )
 end
 
 local log_mgr = Log_mgr()

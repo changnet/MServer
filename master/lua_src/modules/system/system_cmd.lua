@@ -37,15 +37,9 @@ local function srv_beat( srv_conn,pkt )
     -- 在这里不用更新自己的心跳，因为在on_command里已自动更新
 end
 
--- 热更
-local function hot_fix( srv_conn,pkt )
-    local hf = require "http.www.hot_fix"
-    hf:fix( pkt.module or {} )
-end
-
 -- 其他服务器通过rpc调用gm
-local function rpc_gm( where,pid,context )
-    g_gm:raw_exec( where,pid,context )
+local function rpc_gm( where,cmd,... )
+    g_gm:raw_exec( where,nil,cmd,... )
 end
 
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )
