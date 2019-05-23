@@ -75,7 +75,7 @@ function sig_handler( signum )
     end
 
     if not g_app:check_shutdown() then
-        return g_app:register_1stimer( shutdown )
+        return g_app:register_5stimer( shutdown )
     end
 
     g_app:shutdown();ev:exit()
@@ -94,8 +94,6 @@ function Application:__init( ... )
     network_mgr:set_curr_session( self.session )
 
     -- 系统定时器
-    self.timer_cnt = 0
-    self.timer_1scb = {}
     self.timer_5scb = {}
     self.auto_id = Auto_id()
 end
@@ -196,7 +194,7 @@ end
 
 -- 初始化完成
 function Application:final_initialize()
-    self.timer = g_timer_mgr:new_timer( self,1,1 )
+    self.timer = g_timer_mgr:new_timer( self,5,5 )
     g_timer_mgr:start_timer( self.timer )
 
     self.ok = true
@@ -206,26 +204,7 @@ end
 
 -- 定时器事件
 function Application:do_timer()
-    self.timer_cnt = self.timer_cnt + 1
-    for _,cb in pairs( self.timer_1scb ) do cb() end
-
-    if 0 == self.timer_cnt%5 then
-        self.timer_cnt = 0
-        for _,cb in pairs( self.timer_5scb ) do cb() end
-    end
-end
-
--- 注册1s定时器
-function Application:register_1stimer( callback )
-    local id = self.auto_id:next_id()
-
-    self.timer_1scb[id] = callback
-    return id
-end
-
--- 取消1s定时器
-function Application:remove_1stimer( id )
-    self.timer_1scb[id] = nil
+    for _,cb in pairs( self.timer_5scb ) do cb() end
 end
 
 -- 注册1s定时器

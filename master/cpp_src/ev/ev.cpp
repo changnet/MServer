@@ -191,7 +191,7 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
     {
     case EBADF  :
         /* libev是不处理EPOLL_CTL_DEL的，因为fd被关闭时会自动从epoll中删除
-         * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll，这时特殊处理
+         * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll自动删除，这时特殊处理
          */
         if ( EPOLL_CTL_DEL == reify ) return;
         assert ( "ev::backend_modify EBADF",false );
@@ -217,6 +217,8 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
         assert ( "ev::backend_modify ENOSPC",false );
         break;
     case EPERM  :
+        // 一个fd被epoll自动删除后，可能会被分配到其他用处，比如打开了个文件
+        if ( EPOLL_CTL_DEL == reify ) return;
         assert ( "ev::backend_modify EPERM",false );
         break;
     default     :
