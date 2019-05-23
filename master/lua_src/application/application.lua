@@ -194,7 +194,9 @@ end
 
 -- 初始化完成
 function Application:final_initialize()
-    self.timer = g_timer_mgr:new_timer( self,5,5 )
+    -- 修正为整点触发(X分0秒)，但后面调时间就不对了
+    local next = 60 - ev:time() % 60
+    self.timer = g_timer_mgr:new_timer( self,next,5 )
     g_timer_mgr:start_timer( self.timer )
 
     self.ok = true

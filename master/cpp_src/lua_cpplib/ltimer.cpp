@@ -20,12 +20,16 @@ int32 ltimer::set( lua_State *L )
     ev_tstamp after  = static_cast<ev_tstamp>( luaL_checknumber( L,1 ) );
     ev_tstamp repeat = static_cast<ev_tstamp>( luaL_optnumber( L,2,0. ) );
 
+    bool time_jump = false;
+    if ( lua_isboolean( L,3 ) ) time_jump = lua_toboolean( L,3 );
+
     if ( after < 0. or repeat < 0. )
     {
         return luaL_error( L,"negative timer argument" );
     }
 
     _timer.set( after,repeat );
+    _timer.set_time_jump( time_jump );
 
     return 0;
 }

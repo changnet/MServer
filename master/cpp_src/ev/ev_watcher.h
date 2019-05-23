@@ -156,6 +156,7 @@ public:
 class ev_timer : public ev_base<ev_timer>
 {
 public:
+    bool tj; // time jump
     ev_tstamp at;
     ev_tstamp repeat;
 
@@ -165,6 +166,7 @@ public:
     explicit ev_timer( ev *loop = 0 )
         : ev_base<ev_timer> ( loop )
     {
+        tj = false;
         at       = 0.;
         repeat   = 0.;
     }
@@ -174,6 +176,8 @@ public:
         /* TODO stop ?? */
         stop();
     }
+
+    inline void set_time_jump( bool jump ) { tj = jump; }
 
     void start()
     {

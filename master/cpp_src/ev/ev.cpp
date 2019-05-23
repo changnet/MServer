@@ -407,8 +407,17 @@ void ev::timers_reify()
         if (w->repeat)
         {
             w->at += w->repeat;
-            if ( w->at < mn_now )
-                w->at = mn_now;
+
+            // 当前用的是MN定时器，所以不存在用户调时间的问题
+            // 但可能存在卡主循环的情况，libev默认情况下是修正为当前时间
+            // 但在游戏逻辑中，多数情况还是需要按次数触发
+            // 有些定时器修正为整点(刚好0秒的时候)触发的，因引不要随意修正为当前时间
+            if ( w->at < mn_now && w->tj )
+            {
+                // w->at = mn_now // libev默认的处理方式
+                // tj = time jump，这个间隔不太可能太大，直接循环比较快
+                while (w->at < mn_now) { w->at += w->repeat; }
+            }
 
             assert( "libev: negative ev_timer repeat value", w->repeat > 0. );
 
