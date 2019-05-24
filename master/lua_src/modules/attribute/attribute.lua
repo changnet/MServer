@@ -12,7 +12,7 @@ for _,conf in pairs(raw_conf) do
     abt_factor[conf.id] = conf.factor
 end
 
-local Attribute = oo.class( nil,... )
+local Attribute = oo.class( ... )
 
 function Attribute:__init()
     self.attribute = {}

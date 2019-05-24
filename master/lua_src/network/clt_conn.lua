@@ -2,7 +2,7 @@
 
 
 local handshake_srv =table.concat(
-{    
+{
     'HTTP/1.1 101 WebSocket Protocol Handshake\r\n',
     'Connection: Upgrade\r\n',
     'Upgrade: WebSocket\r\n',
@@ -25,7 +25,7 @@ local WS_HAS_MASK    = 0x20
 
 local util = require "util"
 local network_mgr = network_mgr
-local Clt_conn = oo.class( nil,... )
+local Clt_conn = oo.class( ... )
 
 function Clt_conn:__init( conn_id )
     self.auth = false
@@ -47,13 +47,13 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
     local base64 = util.base64( sha1 )
 
     PRINTF("clt handshake %d",self.conn_id)
-    return network_mgr:send_raw_packet( 
+    return network_mgr:send_raw_packet(
         self.conn_id,string.format(handshake_srv,base64) )
 end
 
 -- 发送数据包
 function Clt_conn:send_pkt( cmd,pkt,errno )
-    return network_mgr:send_clt_packet( 
+    return network_mgr:send_clt_packet(
         self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
@@ -93,12 +93,12 @@ function Clt_conn:ctrl_new( flag,body )
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
-        return network_mgr:send_ctrl_packet( 
+        return network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_CLOSE | WS_FINAL_FRAME )
         -- 服务器通常不主动关闭连接，这理暂时不处理close
     elseif flag == WS_OP_PING then
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
-        return network_mgr:send_ctrl_packet( 
+        return network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_PONG | WS_FINAL_FRAME,body )
     elseif flag == WS_OP_PONG then
         -- TODO: 这里更新心跳

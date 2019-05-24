@@ -6,7 +6,7 @@ local test = require "modules.ai.action.test"
 local move = require "modules.ai.action.move"
 local loginout = require "modules.ai.action.loginout"
 
-local Ai_test = oo.class( nil,... )
+local Ai_test = oo.class( ... )
 
 function Ai_test:__init(entity,conf)
     self.entity = entity

@@ -4,7 +4,7 @@
 
 -- 玩家子模块基类
 
-local Module = oo.class( nil,... )
+local Module = oo.class( ... )
 
 function Module:__init( pid,player )
     self.pid = pid

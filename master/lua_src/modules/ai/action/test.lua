@@ -1,6 +1,6 @@
 -- 一些用来测试服务器的ai action
 
-local Test = oo.class( nil,... )
+local Test = oo.class( ... )
 
 function Test:ping(ai)
     local entity = ai.entity

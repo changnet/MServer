@@ -56,20 +56,34 @@ local function new_singleton( clz,... )
 end
 
 --******************************************************************************
+-- 创建惰性继承类，无法实现多继承
+-- 惰性继承用元表实现继承，这样如果单一更新其中一个文件，则所有对象(包括子类都会被更新)
+local function lazy_class(clz,super)
+    super = super or class_base
+    rawset(clz, "__super", super)
+    -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
+    rawset(clz, "__index",clz)
+    -- 设置自己的metatable为父类，这样才能调用父类函数
+    setmetatable(clz, {__index = super, __call = new})
+
+    return clz
+end
+
 -- 声明lua类
-function oo.class(super, name)
+function oo.class(name,...)
     local clz = {}
     if type(name) == "string" then
+        -- 如果已经存在，则是热更，先把旧函数都清空
         if name_class[name] ~= nil then
             clz = name_class[name]
-            for k,v in pairs(clz) do  --这是热更的关键
+            for k,v in pairs(clz) do
                 clz[k] = nil
             end
         else
             name_class[name] = clz
         end
 
-        if stat_flag then                     --check
+        if stat_flag then    -- 状态统计
             class_name[clz] = name
         end
     else
@@ -77,13 +91,7 @@ function oo.class(super, name)
         return
     end
 
-    super = super or class_base
-    rawset(clz, "__super", super)
-    -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
-    rawset(clz, "__index",clz)
-    -- 设置自己的metatable为父类，这样才能调用父类函数
-    setmetatable(clz, {__index = super, __call = new})
-    return clz
+    return lazy_class(clz,...)
 end
 
 -- 声明lua单例类

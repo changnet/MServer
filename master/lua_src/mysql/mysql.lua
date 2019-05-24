@@ -7,7 +7,7 @@
 local Sql = require "Sql"
 local Auto_id = require "modules.system.auto_id"
 
-local Mysql = oo.class( nil,... )
+local Mysql = oo.class( ... )
 
 function Mysql:__init( dbid )
     self.auto_id = Auto_id()

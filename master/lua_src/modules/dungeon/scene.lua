@@ -12,7 +12,7 @@ local Aoi = require "Aoi"
 local ET = require "modules.entity.entity_header"
 local scene_conf = require_kv_conf("dungeon_scene","id")
 
-local Scene = oo.class( nil,... )
+local Scene = oo.class( ... )
 
 -- 缓存一个table用于和底层交互，避免频繁创建table
 local tmp_list = {}

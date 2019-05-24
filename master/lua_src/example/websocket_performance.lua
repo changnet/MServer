@@ -21,7 +21,7 @@ local handshake_clt = table.concat(
 } )
 
 local handshake_srv =table.concat(
-{    
+{
     'HTTP/1.1 101 WebSocket Protocol Handshake\r\n',
     'Date: Fri, 10 Feb 2012 17:38:18 GMT\r\n',
     'Connection: Upgrade\r\n',
@@ -50,7 +50,7 @@ local WS_HAS_MASK    = 0x20
 local util = require "util"
 local network_mgr = network_mgr
 
-local Clt_conn = oo.class( nil,"Clt_conn" )
+local Clt_conn = oo.class( "Clt_conn" )
 
 function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
     print( "clt handshake",sec_websocket_accept)
@@ -58,7 +58,7 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
 
     -- TODO:验证sec_websocket_accept是否正确
     local ctx = "hello,websocket.I am Mini-Game-Distribute-Server"
-    network_mgr:send_srv_packet( 
+    network_mgr:send_srv_packet(
         self.conn_id,WS_OP_TEXT | WS_HAS_MASK | WS_FINAL_FRAME,ctx )
 end
 
@@ -89,7 +89,7 @@ end
 
 function Clt_conn:command_new( body )
     print("clt command new",body)
-    network_mgr:send_ctrl_packet( 
+    network_mgr:send_ctrl_packet(
         self.conn_id,WS_OP_PING | WS_FINAL_FRAME,"hello" )
 end
 
@@ -98,13 +98,13 @@ function Clt_conn:ctrl_new( flag,body )
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
         print( "clt ctrl_new close",self.conn_id,body)
-        network_mgr:send_ctrl_packet( 
+        network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_CLOSE | WS_HAS_MASK | WS_FINAL_FRAME )
         return
     elseif flag == WS_OP_PING then
         print( "clt ctrl_new ping",self.conn_id,body)
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
-        network_mgr:send_ctrl_packet( 
+        network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_PONG | WS_HAS_MASK | WS_FINAL_FRAME,body )
         return
     elseif flag == WS_OP_PONG then
@@ -115,7 +115,7 @@ function Clt_conn:ctrl_new( flag,body )
     assert( false,"clt unknow ctrl flag" )
 end
 
-local Srv_conn = oo.class( nil,"Srv_conn" )
+local Srv_conn = oo.class( "Srv_conn" )
 
 function Srv_conn:__init( conn_id )
     self.conn_id = conn_id
@@ -175,7 +175,7 @@ function Srv_conn:ctrl_new( flag,body )
     elseif flag == WS_OP_PING then
         print( "srv ctrl_new ping",self.conn_id,body)
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
-        network_mgr:send_ctrl_packet( 
+        network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_PONG | WS_FINAL_FRAME,body )
         return
     elseif flag == WS_OP_PONG then

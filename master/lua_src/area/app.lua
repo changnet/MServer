@@ -7,7 +7,7 @@
 
 local Application = require "application.application"
 
-local App = oo.class( Application,... )
+local App = oo.class( ...,Application )
 
 local g_entity_mgr = nil
 

@@ -9,7 +9,7 @@ local item_conf = require_kv_conf("item_item","id")
 
 local Module = require "modules.player.module"
 
-local Bag = oo.class( Module,... )
+local Bag = oo.class( ...,Module )
 
 -- 初始化
 function Bag:__init( pid,player )
@@ -44,7 +44,7 @@ function Bag:db_load( sync_db )
     if 0 ~= ecode then return false end -- 出错
 
     -- 新号，空数据时res = nil
-    if res and res[1] then self.grid = res[1].item end 
+    if res and res[1] then self.grid = res[1].item end
 
     -- 标识为数组，这样在存库时会把各个格子的道具存为数组
     table.set_array( self.grid )
@@ -189,7 +189,7 @@ function Bag:dec( id,count )
     local item = self.grid[index]
     if item.count > count then
         item.count = item.count - count
-        
+
         self:send_one_info( item,index )
         return 0
     end

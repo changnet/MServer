@@ -13,7 +13,7 @@
 local json = require "lua_parson"
 local Bucket_rank_core = require "Insertion_rank"
 
-local Bucket_rank = oo.class( nil,... )
+local Bucket_rank = oo.class( ... )
 
 function Bucket_rank:__init()
     self.object = {}

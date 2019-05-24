@@ -7,7 +7,7 @@
 local Mongo = require "Mongo"
 local Auto_id = require "modules.system.auto_id"
 
-local Mongodb = oo.class( nil,... )
+local Mongodb = oo.class( ... )
 
 function Mongodb:__init( dbid )
     self.auto_id = Auto_id()

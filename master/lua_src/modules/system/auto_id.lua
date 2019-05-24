@@ -6,7 +6,7 @@
 
 local LIMIT = require "global.limits"
 
-local Auto_id = oo.class( nil,... )
+local Auto_id = oo.class( ... )
 
 function Auto_id:__init()
     self.seed = 0

@@ -8,7 +8,7 @@
 -- 节点的右子节点是 2*index+1，
 -- 每一个节点大于（或等于）这个节点的子节点，但左右子节点的大小则不固定
 
-local Max_heap = oo.class( nil, ... )
+local Max_heap = oo.class( ... )
 
 function Max_heap:__init()
     self.heap       = {}
@@ -61,18 +61,18 @@ function Max_heap:shift_down(i, e)
         if c ~= count and self.heap[c].key < self.heap[c + 1].key then
             c = c + 1
         end
-        
+
         if e.key > self.heap[c].key then
             break
         end
-        
+
         local o = self.heap[c]
         self.heap[i] = o
         o.index = i
         i = c
         c = 2 * i
     end
-    
+
     self.heap[i] = e
     e.index = i
 end
@@ -108,13 +108,13 @@ function Max_heap:erase(id)
             assert(e.index <= count, string.format("%d, %d", e.index, count))
             local p = math.floor(e.index / 2)
             local last = self.heap[count]
-            self.count = count - 1 
+            self.count = count - 1
             if e.index > 1 and self.heap[p].key < last.key then
                 self:shift_up(e.index, last)
             else
                 self:shift_down(e.index, last)
             end
-            
+
             self.map_list[id] = nil
             self.heap[count] = nil
             e.index = 0

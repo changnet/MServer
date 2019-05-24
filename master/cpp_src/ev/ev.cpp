@@ -203,10 +203,12 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
         assert ( "ev::backend_modify EINVAL",false );
         break;
     case ENOENT :
-        /* epoll在连接断开时，会把fd从epoll中删除，但ev中仍保留相关数据
-          * 如果这时在同一轮主循环中产生新连接，系统会分配同一个fd
-          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
-          */
+        /* ENOENT：fd不属于这个backend_fd管理的fd
+         * epoll在连接断开时，会把fd从epoll中删除，但ev中仍保留相关数据
+         * 如果这时在同一轮主循环中产生新连接，系统会分配同一个fd
+         * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
+         */
+        if ( EPOLL_CTL_DEL == reify ) return;
         if ( expect_true (!epoll_ctl(backend_fd,EPOLL_CTL_ADD,fd,&ev)) ) return;
         assert ( "ev::backend_modify ENOENT",false );
         break;

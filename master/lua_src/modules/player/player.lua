@@ -35,7 +35,7 @@ local sub_module =
     { name = "Mail",new = Mail },
 }
 
-local Player = oo.class( nil,... )
+local Player = oo.class( ... )
 
 function Player:__init( pid )
     self.pid = pid

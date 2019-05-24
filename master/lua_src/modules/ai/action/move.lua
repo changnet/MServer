@@ -2,7 +2,7 @@
 
 local MT = require "modules.move.move_header"
 
-local Move = oo.class( nil,... )
+local Move = oo.class( ... )
 
 -- 随机移动
 -- 这个是机器人用来模拟客户端移动的。怪物AI是直接在服务器移动，不能用这个

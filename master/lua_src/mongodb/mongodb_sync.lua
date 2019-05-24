@@ -20,7 +20,7 @@ local function after_coroutine_start( co,ok,args,... )
     return false
 end
 
-local Mongodb_sync = oo.class( nil,... )
+local Mongodb_sync = oo.class( ... )
 
 function Mongodb_sync:__init( mongodb,co )
     self.co = co

@@ -8,7 +8,7 @@ local Move = require "modules.move.move"
 local Entity = require "modules.entity.entity"
 local Attribute_sys = require "modules.attribute.attribute_sys"
 
-local Entity_animal = oo.class( Entity,... )
+local Entity_animal = oo.class( ...,Entity )
 
 function Entity_animal:__init(...)
     Entity.__init(self,...)

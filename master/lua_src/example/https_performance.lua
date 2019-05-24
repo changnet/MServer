@@ -27,7 +27,7 @@ local url_tbl =
 }
 local url_page = table.concat( url_tbl )
 
-local page200 = 
+local page200 =
 {
     'HTTP/1.1 200 OK\r\n',
     'Content-Length: %d\r\n',
@@ -44,7 +44,7 @@ local srv_idx = network_mgr:new_ssl_ctx( 4,
     "certs/server.cer",2,"certs/srv_key.pem","mini_distributed_game_server" )
 print( "create server ssl ctx at ",srv_idx )
 
-local Clt_conn = oo.class( nil,"Clt_conn" )
+local Clt_conn = oo.class( "Clt_conn" )
 
 function Clt_conn:connect( ip,port )
     self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_CSCN )
@@ -74,7 +74,7 @@ function Clt_conn:command_new( url,body )
     print("clt command new",url,body)
 end
 
-local Srv_conn = oo.class( nil,"Srv_conn" )
+local Srv_conn = oo.class( "Srv_conn" )
 
 function Srv_conn:__init( conn_id )
     self.conn_id = conn_id

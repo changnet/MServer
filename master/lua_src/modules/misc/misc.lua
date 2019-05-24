@@ -5,7 +5,7 @@
 -- 处理一些杂七杂八的小功能，存储他们的数据
 
 local Module = require "modules.player.module"
-local Misc = oo.class( Module,... )
+local Misc = oo.class( ...,Module )
 
 function Misc:__init( pid,player )
     Module.__init( self,pid,player )
@@ -26,7 +26,7 @@ function Misc:db_load( sync_db )
     local ecode,res = sync_db:find( "misc",self.db_query )
     if 0 ~= ecode then return false end -- 出错
     if not res then return true end -- 新号，空数据
-    
+
     self.root = res[1] or {} -- find函数查不到数据时返回一个空数组
 
     return true

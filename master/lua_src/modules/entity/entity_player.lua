@@ -7,7 +7,7 @@ local g_network_mgr = g_network_mgr
 
 local Entity = require "modules.entity.entity"
 local Entity_animal = require "modules.entity.entity_animal"
-local Entity_player = oo.class( Entity_animal,... )
+local Entity_player = oo.class( ...,Entity_animal )
 
 function Entity_player:__init(eid,pid)
     Entity_animal.__init(self,eid,ET.PLAYER)

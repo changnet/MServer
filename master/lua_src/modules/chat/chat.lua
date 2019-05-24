@@ -8,7 +8,7 @@ local channel_func = {}
 local CHAT = require "modules.chat.chat_header"
 local Module = require "modules.player.module"
 
-local Chat = oo.class( Module,... )
+local Chat = oo.class( ...,Module )
 
 function Chat:__init( pid,player )
     Module.__init( self,pid,player )

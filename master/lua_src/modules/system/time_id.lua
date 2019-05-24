@@ -7,7 +7,7 @@
 
 local LIMIT = require "global.limits"
 
-local Time_id = oo.class( nil,... )
+local Time_id = oo.class( ... )
 
 function Time_id:__init()
     -- TODO:2038年可以修改偏移的位数或者对now作一个偏移，不再从1970年计算

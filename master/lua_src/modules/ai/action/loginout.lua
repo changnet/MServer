@@ -2,7 +2,7 @@
 
 local AST = require "modules.ai.ai_header"
 
-local Loginout = oo.class( nil,... )
+local Loginout = oo.class( ... )
 
 -- 检查是否执行登录
 function Loginout:check_and_login(ai)

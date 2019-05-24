@@ -13,7 +13,7 @@ function sig_handler( signum )
     ev:exit()
 end
 
-local App = oo.class( nil,... )
+local App = oo.class( ... )
 
 -- 初始化
 function App:__init( ... )

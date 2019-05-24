@@ -8,7 +8,7 @@ local MT = require "modules.move.move_header"
 local ET = require "modules.entity.entity_header"
 local ABT = require "modules.attribute.attribute_header"
 
-local Move = oo.class( nil,... )
+local Move = oo.class( ... )
 
 function Move:__init(entity)
     self.entity = entity

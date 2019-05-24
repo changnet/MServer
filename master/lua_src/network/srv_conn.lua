@@ -1,7 +1,7 @@
 -- srv_conn server connection
 
 local network_mgr = network_mgr
-local Srv_conn = oo.class( nil,... )
+local Srv_conn = oo.class( ... )
 
 function Srv_conn:__init( conn_id )
     self.auth = false
@@ -57,7 +57,7 @@ function Srv_conn:conn_name( session )
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
-    local ty,index,srvid = 
+    local ty,index,srvid =
         g_app:srv_session_parse( session or self.session )
 
     return string.format( "%s(I%d.S%d)",self.name,index,srvid )

@@ -7,7 +7,7 @@
 require "modules.system.define"
 local Auto_id = require "modules.system.auto_id"
 
-local Application = oo.class( nil,... )
+local Application = oo.class( ... )
 
 -- 信号处理，默认情况下退出
 --[[

@@ -6,7 +6,7 @@
 
 local Application = require "application.application"
 
-local App = oo.class( Application,... )
+local App = oo.class( ...,Application )
 
 -- 初始化
 function App:__init( ... )

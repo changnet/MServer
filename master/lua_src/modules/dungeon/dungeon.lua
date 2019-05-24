@@ -21,7 +21,7 @@ end
 
 init()
 
-local Dungeon = oo.class( nil,... )
+local Dungeon = oo.class( ... )
 
 function Dungeon:__init( id,handle )
     assert( 0 ~= handle )

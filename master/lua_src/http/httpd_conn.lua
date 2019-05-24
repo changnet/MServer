@@ -4,7 +4,7 @@
 
 -- 后台http连接
 
-local Httpd_conn = oo.class( nil,... )
+local Httpd_conn = oo.class( ... )
 
 function Httpd_conn:__init( conn_id )
     self.conn_id = conn_id

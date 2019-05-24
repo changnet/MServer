@@ -14,7 +14,7 @@
 local json = require "lua_parson"
 local Insertion_rank_core = require "Insertion_rank"
 
-local Insertion_rank = oo.class( nil,... )
+local Insertion_rank = oo.class( ... )
 
 function Insertion_rank:__init()
     self.object = {} -- 存储排行对象附带的数据

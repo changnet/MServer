@@ -20,7 +20,7 @@
 
 local Module = require "modules.player.module"
 
-local Mail = oo.class( Module,... )
+local Mail = oo.class( ...,Module )
 
 function Mail:__init( pid,player )
     self.list = {}
@@ -77,7 +77,7 @@ function Mail:on_init( is_new )
     end
 
     -- 检查是否有新全服邮件
-    local new_cnt = 
+    local new_cnt =
         g_mail_mgr:check_new_sys_mail( self.player,self,self.sys_id )
     if self.sys_id < sys_id then
         self.modify = true

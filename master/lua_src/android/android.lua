@@ -22,7 +22,7 @@ local sc = require "proto.proto"
 local SC,CS = sc[1],sc[2]
 
 local network_mgr = network_mgr
-local Android = oo.class( nil,... )
+local Android = oo.class( ... )
 
 -- 构造函数
 function Android:__init( index )
