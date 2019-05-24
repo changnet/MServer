@@ -6,7 +6,7 @@
 
 local welcom_conf = require_conf("player_welcome")
 
-local Role_welcome = oo.singleton( nil,... )
+local Role_welcome = oo.singleton( ... )
 
 -- 登录事件
 function Role_welcome:on_enter( player )

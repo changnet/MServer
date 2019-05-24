@@ -2,7 +2,7 @@
 
 require "modules.event.event_header"
 
-local Player_event = oo.singleton( nil,... )
+local Player_event = oo.singleton( ... )
 
 -- 事件注册放到upvalue，这样热更时才能刷新
 local event_map = {}

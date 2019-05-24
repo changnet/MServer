@@ -5,7 +5,7 @@
 -- mysql连接管理
 
 local Mysql = require "mysql.mysql"
-local Mysql_mgr = oo.singleton( nil,... )
+local Mysql_mgr = oo.singleton( ... )
 
 function Mysql_mgr:__init()
     self.dbid  = 0

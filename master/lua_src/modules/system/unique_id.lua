@@ -3,7 +3,7 @@
 -- xzc
 
 local UNIQUEID = UNIQUEID
-local Unique_id = oo.singleton( nil,... )
+local Unique_id = oo.singleton( ... )
 
 local player_query = string.format( '{"_id":%d}',UNIQUEID.PLAYER )
 

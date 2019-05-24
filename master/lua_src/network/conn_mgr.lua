@@ -4,7 +4,7 @@
 
 -- 连接管理
 
-local Conn_mgr = oo.singleton( nil,... )
+local Conn_mgr = oo.singleton( ... )
 
 function Conn_mgr:__init()
     self.conn = {}

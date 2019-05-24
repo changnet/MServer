@@ -5,7 +5,7 @@
 -- 玩家对象管理
 
 local Player = require "modules.player.player"
-local Player_mgr = oo.singleton( nil,... )
+local Player_mgr = oo.singleton( ... )
 
 function Player_mgr:__init()
     self.player = {} -- pid为key，Player为对象

@@ -5,7 +5,7 @@
 -- 统计服务器运行情况
 
 require "statistic"
-local Statistic = oo.singleton( nil,... )
+local Statistic = oo.singleton( ... )
 
 function Statistic.collect()
     local total_stat = {}

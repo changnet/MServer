@@ -1,7 +1,7 @@
 -- 系统事件总线
 
 require "modules.event.event_header"
-local System_event = oo.singleton( nil,... )
+local System_event = oo.singleton( ... )
 
 function System_event:__init()
 end

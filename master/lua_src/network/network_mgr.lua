@@ -6,7 +6,7 @@ local Srv_conn      = require "network.srv_conn"
 local Clt_conn      = require "network.clt_conn"
 
 local network_mgr = network_mgr
-local Network_mgr = oo.singleton( nil,... )
+local Network_mgr = oo.singleton( ... )
 
 -- 目前暂定只有一个网关，一个世界，一个场景
 local gateway_session = g_app:srv_session(

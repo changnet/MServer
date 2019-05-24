@@ -1,6 +1,6 @@
 -- web_stat.lua http 查询服务器状态接口
 
-local Web_stat = oo.singleton( nil,... )
+local Web_stat = oo.singleton( ... )
 
 local json = require "lua_parson"
 local stat = require "modules.system.statistic"

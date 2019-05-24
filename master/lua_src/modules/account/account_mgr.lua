@@ -6,7 +6,7 @@
 
 local util = require "util"
 local g_command_mgr = g_command_mgr
-local Account_mgr = oo.singleton( nil,... )
+local Account_mgr = oo.singleton( ... )
 
 -- 初始化
 function Account_mgr:__init()

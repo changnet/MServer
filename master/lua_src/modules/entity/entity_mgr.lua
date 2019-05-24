@@ -11,7 +11,7 @@ local Entity_npc = require "modules.entity.entity_npc"
 local Entity_player = require "modules.entity.entity_player"
 local Entity_monster = require "modules.entity.entity_monster"
 
-local Entity_mgr = oo.singleton( nil,... )
+local Entity_mgr = oo.singleton( ... )
 
 function Entity_mgr:__init()
     self.entity = {} -- 以实体唯一id为key

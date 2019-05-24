@@ -3,7 +3,7 @@
 -- xzc
 
 local Mongodb = require "mongodb.mongodb"
-local Mongodb_mgr = oo.singleton( nil,... )
+local Mongodb_mgr = oo.singleton( ... )
 
 function Mongodb_mgr:__init()
     self.dbid = 0

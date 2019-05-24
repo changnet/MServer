@@ -7,7 +7,7 @@
 local Log = require "Log"
 require "modules.log.log_header"
 
-local Log_mgr = oo.singleton( nil,... )
+local Log_mgr = oo.singleton( ... )
 
 -- 初始化
 function Log_mgr:__init()

@@ -7,7 +7,7 @@
 local LIMIT = require "global.limits"
 
 local Timer = require "Timer"
-local Timer_mgr = oo.singleton( nil,... )
+local Timer_mgr = oo.singleton( ... )
 
 function Timer_mgr:__init()
     self.next_id = 0

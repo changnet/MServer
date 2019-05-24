@@ -16,7 +16,7 @@
 
 local ASYNC = require "modules.async_worker.async_worker_header"
 
-local Async_worker = oo.singleton( nil,... )
+local Async_worker = oo.singleton( ... )
 
 function Async_worker:__init()
 end

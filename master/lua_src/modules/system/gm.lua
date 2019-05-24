@@ -6,7 +6,7 @@
 
 local gm_map = {}
 local forward_map = {}
-local GM = oo.singleton( nil,... )
+local GM = oo.singleton( ... )
 
 -- 检测聊天中是否带gm
 function GM:chat_gm( player,context )

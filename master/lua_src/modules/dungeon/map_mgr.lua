@@ -7,7 +7,7 @@
 local Map = require "Map"
 local Astar = require "Astar"
 
-local Map_mgr = oo.singleton( nil,... )
+local Map_mgr = oo.singleton( ... )
 
 function Map_mgr:__init()
     self.map = {} -- map id为key

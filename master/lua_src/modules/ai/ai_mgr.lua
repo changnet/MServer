@@ -2,7 +2,7 @@
 
 local ai_conf = require_conf "ai_base"
 
-local Ai_mgr = oo.singleton( nil,... )
+local Ai_mgr = oo.singleton( ... )
 
 -- 定义AI类型对应的ai逻辑文件
 local AI_TYPE =

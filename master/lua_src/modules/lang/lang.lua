@@ -21,7 +21,7 @@ for _,one in pairs( tips_list ) do tips_lang[one.id] = one[lang_type] end
 misc_list = nil
 tips_list = nil
 
-local Lang = oo.singleton( nil,... )
+local Lang = oo.singleton( ... )
 
 -- 获取misc语言包
 function Lang:get_misc( id )

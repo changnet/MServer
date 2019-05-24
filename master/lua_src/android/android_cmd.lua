@@ -34,7 +34,7 @@ do
     end
 end
 
-local Android_cmd = oo.singleton( nil,... )
+local Android_cmd = oo.singleton( ... )
 
 -- 注册指令处理
 function Android_cmd:cmd_register( cmd_cfg,handler )

@@ -36,7 +36,7 @@ local uri = require "util.uri"
 require "http.http_header"
 local Httpd_conn = require "http.httpd_conn"
 
-local Httpd = oo.singleton( nil,... )
+local Httpd = oo.singleton( ... )
 
 function Httpd:__init()
     self.conn = {}

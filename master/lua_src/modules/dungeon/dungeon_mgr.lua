@@ -7,7 +7,7 @@
 local Dungeon = require "modules.dungeon.dungeon"
 local Time_id = require "modules.system.time_id"
 
-local Dungeon_mgr = oo.singleton( nil,... )
+local Dungeon_mgr = oo.singleton( ... )
 
 function Dungeon_mgr:__init()
     self.static = nil -- 静态副本(像主城这种)，在起服时候创建，永远不销毁

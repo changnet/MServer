@@ -44,7 +44,7 @@ local SESSION = g_app.session
 local g_rpc   = g_rpc
 local g_network_mgr = g_network_mgr
 
-local Command_mgr = oo.singleton( nil,... )
+local Command_mgr = oo.singleton( ... )
 
 function Command_mgr:__init()
     self.ss = {} -- 记录服务器之间回调函数

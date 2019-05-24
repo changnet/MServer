@@ -2,7 +2,7 @@
 
 local Android = require "android.android"
 
-local Android_mgr = oo.singleton( nil,... )
+local Android_mgr = oo.singleton( ... )
 
 function Android_mgr:__init()
     self.conn    = {}

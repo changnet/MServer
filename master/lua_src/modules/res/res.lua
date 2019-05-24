@@ -13,7 +13,7 @@ local res_dec_map = {} -- 扣除
 
 local RES = require "modules.res.res_header"
 
-local Res = oo.singleton( nil,... )
+local Res = oo.singleton( ... )
 
 -- 添加资源
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}

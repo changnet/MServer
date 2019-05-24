@@ -1,6 +1,6 @@
 -- web_gm.lua http gm接口
 
-local Web_gm = oo.singleton( nil,... )
+local Web_gm = oo.singleton( ... )
 
 --[[
 -- @-表示从stdin读入数据，curl本来有个--data-raw参数的，但是很多版本用不了

@@ -4,7 +4,7 @@ local Auto_id = require "modules.system.auto_id"
 
 local rpc_perf = g_setting.rpc_perf
 
-local Rpc = oo.singleton( nil,... )
+local Rpc = oo.singleton( ... )
 
 function Rpc:__init()
     self.callback = {}

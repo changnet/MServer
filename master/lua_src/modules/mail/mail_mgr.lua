@@ -6,7 +6,7 @@
 
 local Time_id = require "modules.system.time_id"
 
-local Mail_mgr = oo.singleton( nil,... )
+local Mail_mgr = oo.singleton( ... )
 
 function Mail_mgr:__init()
     self.list = {}
