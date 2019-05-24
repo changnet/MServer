@@ -69,8 +69,43 @@ local function lazy_class(clz,super)
     return clz
 end
 
--- 声明lua类
-function oo.class(name,...)
+-- 创建快速继承类，可实现多继承
+-- 直接将基类函数复制到当前类，多重继承不会有损耗
+-- 要求热更时，能热更所有文件(基类有更新，则子类也需要更新)
+-- 使用这个继承，设计框架时要注意引用先后关系
+-- 先热更子类，再热更基类就出现子类用了旧的基类函数
+local function fast_class(clz,super,...)
+    super = super or class_base
+
+    local supers = { super,... }
+
+    -- 多重继承或多继承时，各个基类必须按 s3,s2,s1... 顺序传进来
+    -- 而同名函数则会按 s1覆盖s0,s2覆盖s1,s3覆盖s2 的顺序
+    for idx = #supers,1,-1 do
+        -- 复制基类函数到子类
+        local clz_base = supers[idx]
+        for k,v in pairs(clz_base) do clz[k] = v end
+    end
+
+    -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
+    rawset(clz, "__index",clz)
+    -- 设置自己的metatable为父类，这样才能调用父类函数
+    setmetatable(clz, { __call = new })
+
+    return clz
+end
+
+--[[
+    声明lua类，有3种写法
+    oo.class( ... ) -- 无继承
+    oo.class( ...,s3,s2,s1,s0 ) -- 多继承
+    oo.class( ClassName,s0 ) -- 手动声明类名
+
+    对于lua5.1，require函数伟入模块路径，刚好用作类名，避免冲突，即上面的 ...
+    但lua5.3 require传入两个参数，因此super的类型需要判断一下
+    ...,s这种写法，会让 ... 只取第一个值
+]]
+function oo.class(name,super,...)
     local clz = {}
     if type(name) == "string" then
         -- 如果已经存在，则是热更，先把旧函数都清空
@@ -91,7 +126,11 @@ function oo.class(name,...)
         return
     end
 
-    return lazy_class(clz,...)
+    if "table" == type(super) then
+        return fast_class(clz,super,...) --lazy_class(clz,super,...)
+    else
+        return fast_class(clz,...)
+    end
 end
 
 -- 声明lua单例类
