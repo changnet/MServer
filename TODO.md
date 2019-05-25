@@ -353,3 +353,69 @@ __malloc_info (int options, FILE *fp)
   return 0;
 }
 ```
+
+
+```lua
+-- http://lua-users.org/wiki/ObjectOrientationClosureApproach
+function test_table_object( this,cb )
+	return { this = this,cb = cb }
+end
+
+function test_closure_object( this,cb )
+	return function()
+		return cb( this )
+	end
+end
+
+local function cb()
+	print("do nothing ...")
+end
+
+local max = 1000000
+
+local table_mgr = {}
+local closure_mgr = {}
+
+function test_table()
+	
+	local beg_m = collectgarbage("count")
+	local beg_tm = os.clock()
+
+	for idx = 1,max do
+		table_mgr[idx] = test_table_object( {},cb )
+	end
+
+	local end_m = collectgarbage("count")
+	local end_tm = os.clock()
+
+	print("table test",end_m - beg_m,end_tm - beg_tm)
+end
+
+function test_closure()
+	
+	local beg_m = collectgarbage("count")
+	local beg_tm = os.clock()
+
+	for idx = 1,max do
+		table_mgr[idx] = test_closure_object( {},cb )
+	end
+
+	local end_m = collectgarbage("count")
+	local end_tm = os.clock()
+
+	print("closure test",end_m - beg_m,end_tm - beg_tm)
+end
+
+collectgarbage("stop")
+collectgarbage("collect")
+
+--[[
+Program 'lua53.exe' started in 'E:\7yao\lua_test' (pid: 1532).
+closure test	117946.5	0.489
+table test	125000.0	0.446
+]]
+
+test_closure()
+test_table()
+
+```
