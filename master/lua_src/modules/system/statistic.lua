@@ -19,6 +19,8 @@ function Statistic.collect()
     table.merge(cpp_stat,total_stat)
     vd(total_stat)
 
+    -- rpc调用暂时不加到这里，通过 @rpc_perf 1 指令查看
+
     return total_stat
 end
 

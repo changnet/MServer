@@ -167,6 +167,20 @@ function oo.metatableof(name)
     return name_class[name]
 end
 
+-- 对象调用转换为函数调用
+-- 需要通过名字调用，因为会热更
+-- @p0 ...: paramN,可变参数，因为不能用...，但也没必要用table.pack
+-- cannot use '...' outside a vararg function near '...'
+function oo.method_thunk( this,method,p0,p1,p2,p3,p4,p5 )
+    assert( this and method, "oo.method_thunk nil object or method" )
+
+    -- 需要通过函数名去调用，因为函数可能被热更
+    local name = __method__( this,method )
+
+    method = nil -- 用不着了，这里没必要继承引用旧函数，不然热更的时候不会gc
+    return function() return this[name]( this,p0,p1,p2,p3,p4,p5 ) end
+end
+
 -- 返回各对象的统计(由于lua的gc问题，这些统计并不是实时的)
 function oo.stat()
     -- collectgarbage("collect")

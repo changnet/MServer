@@ -11,7 +11,7 @@ function Player_mgr:__init()
     self.player = {} -- pid为key，Player为对象
     self.raw_player = {} -- 未初始化的玩家对象
 
-    g_app:register_5stimer( function() return self:check_enter_fail() end )
+    g_app:reg_5s_timer( self,self.check_enter_fail )
 end
 
 -- 判断玩家是否存在

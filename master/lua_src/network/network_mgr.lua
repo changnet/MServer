@@ -36,7 +36,7 @@ function Network_mgr:__init()
         self.name_srv[name] = g_app:srv_session( name,index,srvid )
     end
 
-    g_app:register_5stimer( function() return self:do_timer() end )
+    g_app:reg_5s_timer( self,self.do_timer )
 end
 
 --  监听服务器连接

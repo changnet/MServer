@@ -2,8 +2,6 @@
 
 local Auto_id = require "modules.system.auto_id"
 
-local rpc_perf = g_setting.rpc_perf
-
 local Rpc = oo.singleton( ... )
 
 function Rpc:__init()
@@ -13,21 +11,44 @@ function Rpc:__init()
 
     self.stat = {}
     self.stat_tm = ev:time()
+    self.rpc_perf = g_setting.rpc_perf
+
+    self:check_timer()
+end
+
+-- 检测是否需要开启定时器定时写统计信息到文件
+function Rpc:check_timer()
+    if not self.rpc_perf and self.timer then
+        g_timer_mgr:del_timer( self.timer )
+
+        self.timer = nil
+        return 
+    end
+
+    if self.rpc_perf and not self.timer then
+        self.timer = g_timer_mgr:new_timer( 1800,1800,self,self.do_timer )
+    end
+
+end
+
+function Rpc:do_timer()
+    self:serialize_statistic( true )
 end
 
 -- 设置统计log文件
 function Rpc:set_statistic( perf,reset )
     -- 如果之前正在统计，先写入旧的
-    if rpc_perf and ( not perf or reset ) then self:serialize_statistic() end
+    if self.rpc_perf and ( not perf or reset ) then self:serialize_statistic() end
 
     -- 如果之前没在统计，或者强制重置，则需要重设stat_tm
-    if not rpc_perf or reset then
+    if not self.rpc_perf or reset then
         self.stat = {}
         self.stat_tm = ev.time()
     end
 
-    rpc_perf = perf
-    g_setting.rpc_perf = perf -- 覆盖配置值，不然热更就会从配置读取
+    self.rpc_perf = perf
+
+    self:check_timer()
 end
 
 -- 更新耗时统计
@@ -46,9 +67,9 @@ end
 
 -- 写入耗时统计到文件
 function Rpc:serialize_statistic( reset )
-    if not rpc_perf then return false end
+    if not self.rpc_perf then return false end
 
-    local path = string.format( "%s_%s",rpc_perf,g_app.srvname )
+    local path = string.format( "%s_%s",self.rpc_perf,g_app.srvname )
 
     local stat_name = {}
     for k in pairs( self.stat ) do table.insert( stat_name,k ) end
@@ -176,7 +197,7 @@ function rpc_command_new( conn_id,rpc_id,method_name,... )
         return error( string.format( "rpc:[%s] was not declared",method_name ) )
     end
 
-    if rpc_perf then
+    if rpc.rpc_perf then
         local beg = ev:real_ms_time()
         cfg.method( ... )
         return rpc:update_statistic(method_name,ev:real_ms_time() - beg)

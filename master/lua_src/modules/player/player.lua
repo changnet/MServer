@@ -54,7 +54,7 @@ function Player:__init( pid )
     -- 不需要标准流程的子模块
     self.abt_sys = Attribute_sys( pid )
 
-    self.timer = g_timer_mgr:new_timer( 1,1,self,self.do_timer )
+    self.timer = g_timer_mgr:new_timer( 5,5,self,self.do_timer )
 end
 
 -- 获取玩家id
@@ -69,38 +69,19 @@ end
 
 -- 定时器事件
 function Player:do_timer()
-    -- TODO: 是否有必要启动两个定时器，在没有回调时停止对应的定时器
-    self.timer_cnt = self.timer_cnt + 1
-    for _,cb in pairs( self.timer_1scb ) do cb() end
-
-    if 0 == self.timer_cnt%5 then
-        for _,cb in pairs( self.timer_5scb ) do cb() end
-    end
+    for _,cb in pairs( self.timer_5scb ) do cb() end
 end
 
 -- 注册1s定时器
-function Player:register_1stimer( callback )
+function Player:reg_5s_timer( this,method )
     local id = self.auto_id:next_id()
 
-    self.timer_1scb[id] = callback
+    self.timer_5scb[id] = oo.method_thunk( this,method )
     return id
 end
 
 -- 取消1s定时器
-function Player:remove_1stimer( id )
-    self.timer_1scb[id] = nil
-end
-
--- 注册1s定时器
-function Player:register_5stimer( callback )
-    local id = self.auto_id:next_id()
-
-    self.timer_5scb[id] = callback
-    return id
-end
-
--- 取消1s定时器
-function Player:remove_5stimer( id )
+function Player:remove_5s_timer( id )
     self.timer_5scb[id] = nil
 end
 

@@ -30,16 +30,6 @@ function Timer_mgr:get_next_id()
     return self.next_id
 end
 
--- @p0 ...: paramN,可变参数，因为不能用...，但也没必要用table.pack
--- cannot use '...' outside a vararg function near '...'
-function Timer_mgr:cb_factory( this,method,p0,p1,p2,p3,p4,p5 )
-    -- 需要通过函数名去调用，因为函数可能被热更
-    local name = __method__( this,method )
-
-    method = nil -- 用不着了，这里没必要继承引用旧函数，不然热更的时候不会gc
-    return function() return this[name]( this,p0,p1,p2,p3,p4,p5 ) end
-end
-
 -- 创建新定时器
 -- @after:延迟N秒启动定时器，可以是小数，精度是毫秒级的
 -- @interval:按N秒循环回调
@@ -51,7 +41,7 @@ function Timer_mgr:new_timer( after,interval,this,method,... )
     local timer = Timer( timer_id )
     timer:set( after,interval )
 
-    self.cb[timer_id] = self:cb_factory( this,method,... )
+    self.cb[timer_id] = oo.method_thunk( this,method,... )
     self.timer[timer_id] = timer
 
     timer:start()

@@ -62,11 +62,7 @@ local Application = oo.class( ... )
 ]]
 local sig_action = {} -- 注意，这个热更要重新注册。关服的话为默认action则无所谓
 
-local function shutdown()
-    if not g_app:check_shutdown() then return end
 
-    g_app:shutdown();ev:exit()
-end
 
 function sig_handler( signum )
     if sig_action[signum] then return sig_action[signum]() end
@@ -75,11 +71,9 @@ function sig_handler( signum )
 
     g_app:prepare_shutdown()
 
-    if g_app.ok and not g_app:check_shutdown() then
-        return g_app:register_5stimer( shutdown )
+    if not g_app:check_shutdown() then
+        return g_app:reg_5s_timer( g_app,g_app.check_shutdown )
     end
-    print("shutdown ================")
-    g_app:shutdown();ev:exit()
 end
 
 -- 初始化
@@ -136,7 +130,10 @@ end
 -- 检测能否关服
 function Application:check_shutdown()
     local who,finished,unfinished = ev:who_busy( true )
-    if not who then return true end
+    if not who then
+        self:shutdown()
+        return true
+    end
 
 
     SYNC_PRINTF(
@@ -150,6 +147,8 @@ end
 function Application:shutdown()
     g_log_mgr:close() -- 关闭文件日志线程及数据库日志线程
     g_mysql_mgr:stop() -- 关闭mysql连接
+
+    ev:exit()
 end
 
 -- 加载各个子模块
@@ -197,7 +196,6 @@ end
 function Application:final_initialize()
     -- 修正为整点触发(X分0秒)，但后面调时间就不对了
     local next = 5 - (ev:time() % 5)
-    PRINT("new timer ==================",next)
     self.timer = g_timer_mgr:new_timer( next,5,self,self.do_timer )
 
     self.ok = true
@@ -207,20 +205,19 @@ end
 
 -- 定时器事件
 function Application:do_timer()
-    PRINT("do timer ============================")
     for _,cb in pairs( self.timer_5scb ) do cb() end
 end
 
 -- 注册1s定时器
-function Application:register_5stimer( callback )
+function Application:reg_5s_timer( this,method )
     local id = self.auto_id:next_id()
 
-    self.timer_5scb[id] = callback
+    self.timer_5scb[id] = oo.method_thunk( this,method )
     return id
 end
 
 -- 取消1s定时器
-function Application:remove_5stimer( id )
+function Application:remove_5s_timer( id )
     self.timer_5scb[id] = nil
 end
 
