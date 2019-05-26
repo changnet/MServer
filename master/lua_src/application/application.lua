@@ -61,6 +61,13 @@ local Application = oo.class( ... )
 #define SIGUNUSED	31
 ]]
 local sig_action = {} -- 注意，这个热更要重新注册。关服的话为默认action则无所谓
+
+local function shutdown()
+    if not g_app:check_shutdown() then return end
+
+    g_app:shutdown();ev:exit()
+end
+
 function sig_handler( signum )
     if sig_action[signum] then return sig_action[signum]() end
 
@@ -68,16 +75,10 @@ function sig_handler( signum )
 
     g_app:prepare_shutdown()
 
-    local shutdown = function()
-        if not g_app:check_shutdown() then return end
-
-        g_app:shutdown();ev:exit()
-    end
-
-    if not g_app:check_shutdown() then
+    if g_app.ok and not g_app:check_shutdown() then
         return g_app:register_5stimer( shutdown )
     end
-
+    print("shutdown ================")
     g_app:shutdown();ev:exit()
 end
 
@@ -196,8 +197,8 @@ end
 function Application:final_initialize()
     -- 修正为整点触发(X分0秒)，但后面调时间就不对了
     local next = 5 - (ev:time() % 5)
-    self.timer = g_timer_mgr:new_timer( self,next,5 )
-    g_timer_mgr:start_timer( self.timer )
+    PRINT("new timer ==================",next)
+    self.timer = g_timer_mgr:new_timer( next,5,self,self.do_timer )
 
     self.ok = true
     PRINTF( "%s server(0x%.8X) start OK",self.srvname,self.session )
@@ -206,6 +207,7 @@ end
 
 -- 定时器事件
 function Application:do_timer()
+    PRINT("do timer ============================")
     for _,cb in pairs( self.timer_5scb ) do cb() end
 end
 

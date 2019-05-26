@@ -16,8 +16,14 @@ setmetatable(singleton, {["__mode"]='v'})
 
 --******************************************************************************
 local class_base = {}  --默认基类
+
 -- default construnctor
 function class_base:__init()
+end
+
+-- 是否从oo.class创建的对象
+function class_base:is_oo()
+    return true
 end
 
 -- isa operator(是否从某个类继承而来或者就是该类)
@@ -101,9 +107,9 @@ end
     oo.class( ...,s3,s2,s1,s0 ) -- 多继承
     oo.class( ClassName,s0 ) -- 手动声明类名
 
-    对于lua5.1，require函数伟入模块路径，刚好用作类名，避免冲突，即上面的 ...
+    对于lua5.1，require函数传入模块路径，刚好用作类名，避免冲突，即上面的 ...
     但lua5.3 require传入两个参数，因此super的类型需要判断一下
-    ...,s这种写法，会让 ... 只取第一个值
+    oo.class( ...,s3,s2,s1,s0 )这种写法，会让 ... 只取第一个值
 ]]
 local function raw_class(new_method,name,super,...)
     local clz = {}
@@ -127,9 +133,10 @@ local function raw_class(new_method,name,super,...)
     end
 
     if "table" == type(super) then
-        return fast_class(new_method,clz,super,...) --lazy_class(clz,super,...)
+        -- lazy_class(new_method,clz,super,...)
+        return lazy_class(new_method,clz,super,...)
     else
-        return fast_class(new_method,clz,...)
+        return lazy_class(new_method,clz,...)
     end
 end
 

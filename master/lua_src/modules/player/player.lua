@@ -54,8 +54,7 @@ function Player:__init( pid )
     -- 不需要标准流程的子模块
     self.abt_sys = Attribute_sys( pid )
 
-    self.timer = g_timer_mgr:new_timer( self,1,1 )
-    g_timer_mgr:start_timer( self.timer )
+    self.timer = g_timer_mgr:new_timer( 1,1,self,self.do_timer )
 end
 
 -- 获取玩家id

@@ -51,8 +51,7 @@ function Mongodb:start( ip,port,usr,pwd,db,callback )
 
     if callback then
         self.conn_cb = callback
-        self.timer = g_timer_mgr:new_timer( self,1,1 )
-        g_timer_mgr:start_timer( self.timer )
+        self.timer = g_timer_mgr:new_timer( 1,1,self,self.do_timer )
     end
 end
 

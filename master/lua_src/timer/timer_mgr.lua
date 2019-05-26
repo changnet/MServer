@@ -13,8 +13,8 @@ function Timer_mgr:__init()
     self.next_id = 0
 
     -- 使用weak table防止owner对象不释放内存
-    self.owner = {}
-    setmetatable( self.owner, {["__mode"]='v'} )
+    self.cb = {}
+    -- setmetatable( self.cb, {["__mode"]='v'} )
 
     self.timer = {}
 end
@@ -26,52 +26,69 @@ function Timer_mgr:get_next_id()
         self.next_id = self.next_id + 1
     until nil == self.timer[self.next_id]
 
-    assert( nil == self.owner[self.next_id] )
+    ASSERT( nil == self.cb[self.next_id],self.next_id )
     return self.next_id
 end
 
-function Timer_mgr:new_timer( owner,after,interval )
+-- @p0 ...: paramN,可变参数，因为不能用...，但也没必要用table.pack
+-- cannot use '...' outside a vararg function near '...'
+function Timer_mgr:cb_factory( this,method,p0,p1,p2,p3,p4,p5 )
+    -- 需要通过函数名去调用，因为函数可能被热更
+    local name = __method__( this,method )
+
+    method = nil -- 用不着了，这里没必要继承引用旧函数，不然热更的时候不会gc
+    return function() return this[name]( this,p0,p1,p2,p3,p4,p5 ) end
+end
+
+-- 创建新定时器
+-- @after:延迟N秒启动定时器，可以是小数，精度是毫秒级的
+-- @interval:按N秒循环回调
+-- @this:回调对象
+-- @method:回调函数
+function Timer_mgr:new_timer( after,interval,this,method,... )
     local timer_id = self:get_next_id()
 
     local timer = Timer( timer_id )
     timer:set( after,interval )
 
-    self.owner[timer_id] = owner
+    self.cb[timer_id] = self:cb_factory( this,method,... )
     self.timer[timer_id] = timer
 
+    timer:start()
     return timer_id
 end
 
+-- 重启定时器
 function Timer_mgr:start_timer( timer_id )
     self.timer[timer_id]:start()
 end
 
+-- 暂停定时器
 function Timer_mgr:stop_timer ( timer_id )
     self.timer[timer_id]:stop()
 end
 
+-- 删除定时器
 function Timer_mgr:del_timer( timer_id )
     self.timer[timer_id]:stop()
 
-    self.owner[timer_id] = nil
+    self.cb[timer_id] = nil
     self.timer[timer_id] = nil
 end
 
 local timer_mgr = Timer_mgr()
 
 --[[
-    为了解决函数引用造成的热更问题，这里统一调用do_timer。如果某个对象拥有多个定时器，
-    可通过timer_id来区分
+    C++ 统一回调这个函数，根据timer_id区分
 ]]
 function timer_event( timer_id )
-    -- timer_mgr.owner是是一个weak_table，有时候逻辑报错了，对象可能已被销毁
-    local owner = timer_mgr.owner[timer_id]
-    if not owner then
-        ERROR( "timer no owner found,abort %d",timer_id )
+    local cb = timer_mgr.cb[timer_id]
+    if not cb then
+        ERROR( "timer no cb found,abort %d",timer_id )
         return timer_mgr:del_timer( timer_id )
     end
 
-    return owner:do_timer( timer_id )
+    return cb()
 end
 
 return timer_mgr
