@@ -10,8 +10,8 @@ function Move:random_move(ai)
     if ai.moving then return false end
 
     -- 在dungeon_mgr中初始化的场景大小
-    local px = math.random(0,128*64)
-    local py = math.random(0,64*64)
+    local px = math.random(0,128*64 - 1)
+    local py = math.random(0,64*64 - 1)
     ai.entity:send_pkt( CS.ENTITY_MOVE,{ way = MT.WALK,pix_x = px,pix_y = py } )
 
     ai.moving = true

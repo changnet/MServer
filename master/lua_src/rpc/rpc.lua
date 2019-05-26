@@ -94,7 +94,7 @@ function Rpc:serialize_statistic( reset )
 
     if reset then
         self.stat = {}
-        self.stat_tm = ev.time()
+        self.stat_tm = ev:time()
     end
 
     return true
