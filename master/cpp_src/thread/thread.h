@@ -24,7 +24,7 @@ public:
      * @unfinished:是等待子线程处理的数量
      * 返回总数
      */
-    virtual size_t busy_job( 
+    virtual size_t busy_job(
         size_t *finished = NULL,size_t *unfinished = NULL ) = 0;
 
     inline bool active() const { return _run; }
@@ -68,6 +68,8 @@ private:
     int32 _fd[2]  ;
     ev_io _watcher;
     pthread_t _id;
+
+    // 这些变量，应该用std::atomic，不过现在要兼容03版本，这些变量也不需要很严格加锁
     volatile bool _run;
     volatile bool _join;
     volatile bool _busy;
