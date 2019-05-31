@@ -13,10 +13,20 @@ local ONE_HOUR = ONE_MINUTE * ONE_MINUTE
 local ONE_DAY = ONE_HOUR * 24
 local ONE_WEEK = ONE_DAY*7
 
+
 -- 手动建立一些时间基准，本地时间2000-01-01 00:00对应UTC
 local sec_2000 = os.time{year=2000,month=1,day=1,hour=0,min=0,sec=0}
-local refresh_2000 = sec_2000 + ONE_HOUR*4
-local monday_2000 = os.time{year=2000,month=1,day=3,hour=0,min=0,sec=0}
+
+-- 获取短时间戳
+-- 之前有项目组这样用，把标准UTC时间戳减去一个时间基准，以解决时间戳超出32bit的问题
+-- 千万不要这样用，千万不要这样用。因为sec_2000这个值是用本地时间算的，不同时区是不固定的。
+-- 管理后台尝试还原这个时间戳，服务器在韩国，但是后台可以在中国、韩国使用，导致后台的同事需要分
+-- 开处理，而且，做全球同服的时候，或者客户端和服务器在不同时区的时候，就SB了
+-- 因此，这个时间基准也应该是UTC的，固定一个值就好，不要用本地时间算
+function time.get_mini_time()
+    assert(false)
+    return ev:time() - sec_2000
+end
 
 -- Compute the difference in seconds between local time and UTC.
 function time.get_timezone()
@@ -57,25 +67,6 @@ function time.date( when,fmt )
     return os.date( fmt or "%Y-%m-%d %H:%M:%S", when or ev:time() )
 end
 
---这是获取2000-01-01 00:00:00以来所过的天数，根据系统时区变化
-function time.get_day_from_2000()
-    return math.floor( (ev:time() - sec_2000)/ONE_DAY )
-end
-
---这是获取2000-01-01 00:00:00以来所过的秒数，根据系统时区变化
-function time.get_second_from_2000()
-    return ev:time() - sec_2000
-end
-
---这是获取2000-01-01 04:00:00以来所过的天数，根据系统时区变化
-function time.get_refresh_day_from_2000()
-    return math.ceil( (ev:time() - refresh_2000)/ONE_DAY )
-end
-
---这是获取2000-01-01 00:00:00以来所过的周数，根据系统时区变化
-function time.get_week_from_2000()
-    return math.ceil( (ev:time() - monday_2000)/ONE_WEEK )
-end
 
 --获取当天的0时0分0秒的时间
 function time.get_begin_of_day()
@@ -93,33 +84,9 @@ function time.get_next_hour()
     return ev:time() - ev:time()%ONE_HOUR + ONE_HOUR
 end
 
---获取下一次的4时0分0秒的时间
-function time.get_next_refresh_time()
-    local pass = (ev:time() - refresh_2000)%ONE_DAY  --相对04:00的已过秒数
-
-    return ev:time() - pass + ONE_DAY
-end
-
---获得星期几 1星期一
---TODO 这里星期天是7
-function time.get_weekday()
-    local sec = (ev:time() - monday_2000)%ONE_WEEK
-    if sec > 0 then
-        return math.ceil( sec/ONE_DAY)
-    end
-
-    return 1  --周日00:00才会这样，算周一
-end
-
 --获取当天的秒数，范围是(0 <= sec < 24 * 3600)
 function time.get_second_of_day()
     return (ev:time() + TIMEZONE)%ONE_DAY
-end
-
---比较a-b时间是否>=num天
-function time.compare_days(a,b,num)
-    local ds = math.floor((a - sec_2000)/ONE_DAY) - math.floor((b - sec_2000)/ONE_DAY)
-    return ds >= num
 end
 
 return time

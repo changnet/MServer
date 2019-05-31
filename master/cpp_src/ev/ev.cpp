@@ -58,9 +58,22 @@ int32 ev::run()
 {
     assert( "backend uninit",backend_fd >= 0 );
 
+    /* 加载脚本时，可能会卡比较久，因此必须time_update
+     * 必须先调用fd_reify、timers_reify才进入backend_poll，否则因为没有初始化fd，
+     * 没有初始化timer而导致阻塞
+     * backend_poll得放在invoke_pending、running之前，因为这些逻辑可能会终止循环。放在
+     * 后面会增加一次backend_poll，这个时间可能为60秒(关服要等60秒)
+     */
+    time_update ();
+    fd_reify ();
+    timers_reify ();
+    time_update ();
+
     loop_done = false;
-    while ( !loop_done )
+    while ( expect_true(!loop_done) )
     {
+        backend_poll ( wait_time() );
+
         /* update ev_rt_now, do magic */
         time_update ();
         int64 old_now_ms = ev_now_ms;
@@ -78,12 +91,6 @@ int32 ev::run()
         time_update ();
 
         after_run (old_now_ms,ev_now_ms);
-        /* calculate blocking time */
-        {
-            ev_tstamp waittime  = wait_time();
-
-            backend_poll ( waittime );
-        }
     }    /* while */
 
     return 0;
