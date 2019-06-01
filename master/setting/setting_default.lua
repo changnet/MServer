@@ -18,6 +18,7 @@ return
 
     gm = true, -- 是否启用gm
     lang = "zh", -- 简体中文
+    gc_stat = true, -- 是否记录gc时间，不配置则不记录
     rpc_perf = "log/rpc_perf", -- rpc指令耗时记录，不配置则不记录
     cmd_perf = "log/cmd_perf", -- cmd指令耗时记录，不配置则不记录
 

@@ -184,6 +184,8 @@ end
 
 -- 进程初始化
 function Application:initialize()
+    if g_setting.gc_stat then ev:set_gc_stat( true ) end
+
     if not g_command_mgr:load_schema() then
         os.exit( 1 )
     end

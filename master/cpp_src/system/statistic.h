@@ -32,6 +32,26 @@ public:
         int64 _cur;
     };
 
+    // 时间计数器
+    class time_counter
+    {
+    public:
+        time_counter() { reset(); }
+        inline void reset()
+        {
+            _count = 0;
+            _msec  = 0;
+
+            _max = 0;
+            _min = -1;
+        }
+    public:
+        int64 _count;
+        int64 _msec;
+        int64 _max;
+        int64 _min;
+    };
+
     // 按时间间隔的计数器
     class interval_counter : public base_counter
     {
@@ -62,10 +82,21 @@ public:
     void add_c_obj(const char *what,int32 count);
     void add_c_lua_obj(const char *what,int32 count);
 
+    void add_lua_gc(int32 msec)
+    {
+        _lua_gc._count += 1;
+        _lua_gc._msec  += msec;
+        if (_lua_gc._max < msec) _lua_gc._max = msec;
+        if ( -1 == _lua_gc._min || _lua_gc._min > msec) _lua_gc._min = msec;
+    }
+
+    void reset_lua_gc() { _lua_gc.reset(); }
+
+    const statistic::time_counter &get_lua_gc() const { return _lua_gc; }
     const statistic::base_counter_t &get_c_obj() const { return _c_obj; }
     const statistic::base_counter_t &get_c_lua_obj() const { return _c_lua_obj; }
 private:
-private:
+    time_counter _lua_gc; // lua gc时间统计
     base_counter_t _c_obj; // c对象计数器
     base_counter_t _c_lua_obj; // 从c push到lua对象
 };

@@ -145,7 +145,7 @@ function GM:set_rpc_perf( perf,reset )
     g_rpc:set_statistic( perf,reset )
 
     if g_app.srvname == "gateway" then
-        self:broadcast( "set_rpc_perf",reset )
+        self:broadcast( "set_rpc_perf",perf,reset )
     end
 
     return true
@@ -169,7 +169,18 @@ function GM:set_cmd_perf( perf,reset )
     g_command_mgr:set_statistic( perf,reset )
 
     if g_app.srvname == "gateway" then
-        self:broadcast( "set_cmd_perf",reset )
+        self:broadcast( "set_cmd_perf",perf,reset )
+    end
+
+    return true
+end
+
+-- 设置是否统计gc时间,取消统计不带任何参数
+-- @set_gc_stat 1
+function GM:set_gc_stat( set,reset )
+    ev:set_gc_stat( set and true or false,reset and true or false )
+    if g_app.srvname == "gateway" then
+        self:broadcast( "set_gc_stat",set,reset )
     end
 
     return true

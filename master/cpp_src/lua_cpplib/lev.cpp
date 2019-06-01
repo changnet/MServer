@@ -19,6 +19,8 @@ lev::lev()
     _lua_gc_tm = 0;
     _critical_tm = -1;
     _app_ev_interval = 0;
+
+    _lua_gc_stat = false;
 }
 
 lev::~lev()
@@ -90,6 +92,18 @@ int32 lev::real_ms_time( lua_State *L )
     return 1;
 }
 
+// 设置lua gc参数
+int32 lev::set_gc_stat( lua_State *L )
+{
+    _lua_gc_stat = lua_toboolean( L,1 );
+
+    if (lua_isboolean( L,2 ) && lua_toboolean( L,2 ))
+    {
+        static_global::statistic()->reset_lua_gc();
+    }
+
+    return 0;
+}
 
 int32 lev::signal( lua_State *L )
 {
@@ -282,7 +296,17 @@ void lev::running( int64 ms_now )
     if (_lua_gc_tm != ev_rt_now)
     {
         _lua_gc_tm = ev_rt_now;
-        lua_gc(L, LUA_GCSTEP, 100);
+
+        if ( !_lua_gc_stat )
+        {
+            lua_gc(L, LUA_GCSTEP, 100);
+        }
+        else
+        {
+            int64 beg = get_ms_time();
+            lua_gc(L, LUA_GCSTEP, 100);
+            static_global::statistic()->add_lua_gc( get_ms_time() - beg );
+        }
     }
 }
 

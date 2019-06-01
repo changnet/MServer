@@ -9,6 +9,7 @@ class lstatistic
 public:
     static int32 dump( lua_State *L );
 private:
+    static void dump_lua_gc( lua_State *L );
     static void dump_thread( lua_State *L );
     static void dump_base_counter( 
         const statistic::base_counter_t &counter,lua_State *L );

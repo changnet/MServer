@@ -21,6 +21,10 @@ int32 lstatistic::dump( lua_State *L )
     dump_thread( L );
     lua_rawset( L,-3 );
 
+    lua_pushstring( L,"lua_gc" );
+    dump_lua_gc( L );
+    lua_rawset( L,-3 );
+
     return 1;
 
 #undef DUMP_BASE_COUNTER
@@ -92,6 +96,34 @@ void lstatistic::dump_thread( lua_State *L )
 
         ++index;itr ++;
     }
+}
+
+void lstatistic::dump_lua_gc( lua_State *L )
+{
+    const statistic::time_counter &counter 
+        = static_global::statistic()->get_lua_gc();
+
+    lua_newtable( L );
+
+    lua_pushstring( L,"count" );
+    lua_pushnumber( L,counter._count );
+    lua_rawset( L,-3 );
+
+    lua_pushstring( L,"msec" );
+    lua_pushnumber( L,counter._msec );
+    lua_rawset( L,-3 );
+
+    lua_pushstring( L,"max" );
+    lua_pushnumber( L,counter._max );
+    lua_rawset( L,-3 );
+
+    lua_pushstring( L,"min" );
+    lua_pushnumber( L,counter._min );
+    lua_rawset( L,-3 );
+
+    lua_pushstring( L,"avg" );
+    lua_pushnumber( L,counter._msec/counter._count );
+    lua_rawset( L,-3 );
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -94,7 +94,7 @@ function Rpc:serialize_statistic( reset )
             name,stat.ts,stat.ms,stat.max,stat.min,math.ceil(stat.ms/stat.ts))
     end
 
-    g_log_mgr:raw_file_printf( path,"\n\n" )
+    g_log_mgr:raw_file_printf( path,"%s","\n\n" )
 
     if reset then
         self.stat = {}
