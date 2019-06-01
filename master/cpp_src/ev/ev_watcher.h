@@ -17,7 +17,7 @@ public:
     explicit ev_watcher( ev *_loop)
         : loop (_loop)
     {
-        active  = false;
+        active  = 0;
         pending = 0;
         data    = NULL;
         cb      = NULL;
@@ -187,12 +187,12 @@ public:
         assert( "ev_timer::start without callback",cb );
         assert( "start a active timer",!active );
 
-        active = loop->timer_start( this );
+        loop->timer_start( this );
     }
 
     void stop()
     {
-        active = loop->timer_stop( this );
+        loop->timer_stop( this );
     }
 
     void set( ev_tstamp after,ev_tstamp repeat = 0. )

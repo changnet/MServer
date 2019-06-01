@@ -458,6 +458,7 @@ int32 ev::timer_start( ev_timer *w )
     return active;
 }
 
+// 暂停定时器
 int32 ev::timer_stop( ev_timer *w )
 {
     clear_pending( w );
@@ -470,14 +471,17 @@ int32 ev::timer_stop( ev_timer *w )
 
         --timercnt;
 
+        // 如果这个定时器刚好在最后，就不用调整二叉堆
         if (expect_true ((uint32)active < timercnt + HEAP0))
         {
+            // 把当前最后一个timer(timercnt + HEAP0)覆盖当前timer的位置，再重新调整
             timers [active] = timers [timercnt + HEAP0];
             adjust_heap(timers, timercnt, active);
         }
     }
 
     w->at -= mn_now;
+    w->active = 0;
 
     return 0;
 }
@@ -488,17 +492,18 @@ void ev::down_heap( ANHE *heap,int32 N,int32 k )
 
     for (;;)
     {
+        // 二叉堆的规则：N*2、N*2+1则为child的下标
         int c = k << 1;
 
         if (c >= N + HEAP0) break;
 
+        // 取左节点(N*2)还是取右节点(N*2+1)
         c += c + 1 < N + HEAP0 && (heap [c])->at > (heap [c + 1])->at ? 1 : 0;
 
         if ( he->at <= (heap [c])->at ) break;
 
         heap [k] = heap [c];
         (heap [k])->active = k;
-
         k = c;
     }
 
