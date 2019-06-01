@@ -38,7 +38,9 @@ end
 -- 设置统计log文件
 function Rpc:set_statistic( perf,reset )
     -- 如果之前正在统计，先写入旧的
-    if self.rpc_perf and ( not perf or reset ) then self:serialize_statistic() end
+    if self.rpc_perf and ( not perf or reset ) then
+        self:serialize_statistic()
+    end
 
     -- 如果之前没在统计，或者强制重置，则需要重设stat_tm
     if not self.rpc_perf or reset then
@@ -91,6 +93,8 @@ function Rpc:serialize_statistic( reset )
             "%-32s %-16d %-16d %-16d %-16d %-16d",
             name,stat.ts,stat.ms,stat.max,stat.min,math.ceil(stat.ms/stat.ts))
     end
+
+    g_log_mgr:raw_file_printf( path,"\n\n" )
 
     if reset then
         self.stat = {}

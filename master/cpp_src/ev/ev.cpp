@@ -59,10 +59,10 @@ int32 ev::run()
     assert( "backend uninit",backend_fd >= 0 );
 
     /* 加载脚本时，可能会卡比较久，因此必须time_update
-     * 必须先调用fd_reify、timers_reify才进入backend_poll，否则因为没有初始化fd，
-     * 没有初始化timer而导致阻塞
+     * 必须先调用fd_reify、timers_reify才进入backend_poll，否则因为没有初始化fd、timer
+     * 导致阻塞一段时间后才能收到数据
      * backend_poll得放在invoke_pending、running之前，因为这些逻辑可能会终止循环。放在
-     * 后面会增加一次backend_poll，这个时间可能为60秒(关服要等60秒)
+     * 后面会增加一次backend_poll，这个时间可能为60秒(导致关服要等60秒)
      */
     time_update ();
     fd_reify ();

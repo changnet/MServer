@@ -25,6 +25,8 @@ local WS_HAS_MASK    = 0x20
 
 local util = require "util"
 local network_mgr = network_mgr
+local g_command_mgr = g_command_mgr
+
 local Clt_conn = oo.class( ... )
 
 function Clt_conn:__init( conn_id )

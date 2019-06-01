@@ -59,6 +59,112 @@ function Command_mgr:__init()
 
     -- 引用授权数据，防止频繁调用函数
     self.auth_pid = g_authorize:get_player_data()
+
+    -- 状态统计数据
+    self.cs_stat  = {}
+    self.ss_stat  = {}
+    self.css_stat = {}
+    self.stat_tm  = ev:time()
+    self.cmd_perf = g_setting.cmd_perf
+
+    self:check_timer() -- 开启状态统计定时器
+end
+
+-- 检测是否需要开启定时器定时写统计信息到文件
+function Command_mgr:check_timer()
+    if not self.cmd_perf and self.timer then
+        g_timer_mgr:del_timer( self.timer )
+
+        self.timer = nil
+        return 
+    end
+
+    if self.cmd_perf and not self.timer then
+        self.timer = g_timer_mgr:new_timer( 1800,1800,self,self.do_timer )
+    end
+end
+
+function Command_mgr:do_timer()
+    self:serialize_statistic( true )
+end
+
+-- 设置统计log文件
+function Command_mgr:set_statistic( perf,reset )
+    -- 如果之前正在统计，先写入旧的
+    if self.cmd_perf and ( not perf or reset ) then
+        self:serialize_statistic()
+    end
+
+    -- 如果之前没在统计，或者强制重置，则需要重设stat_tm
+    if not self.cmd_perf or reset then
+        self.stat = {}
+        self.stat_tm = ev.time()
+    end
+
+    self.cmd_perf = perf
+
+    self:check_timer()
+end
+
+-- 更新耗时统计
+function Command_mgr:update_statistic( stat_list,cmd,ms )
+    local stat = stat_list[cmd]
+    if not stat then
+        stat = { ms = 0, ts = 0, max = 0, min = 0}
+        stat_list[cmd] = stat
+    end
+
+    stat.ms = stat.ms + ms
+    stat.ts = stat.ts + 1
+    if ms > stat.max then stat.max = ms end
+    if 0 == stat.min or ms < stat.min then stat.min = ms end
+end
+
+-- 写入耗时统计到文件
+function Command_mgr:raw_serialize_statistic( stat_name,stat_list )
+    local stat_cmd = {}
+    for k in pairs( stat_list ) do table.insert( stat_cmd,k ) end
+
+    -- 按名字排序，方便对比查找
+    table.sort( stat_cmd )
+
+    g_log_mgr:raw_file_printf( path,stat_name )
+    -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
+    g_log_mgr:raw_file_printf( path,
+        "%-16s %-16s %-16s %-16s %-16s %-16s",
+        "cmd","count","msec","max","min","avg" )
+
+    for _,cmd in pairs( stat_cmd ) do
+        local stat = stat_list[cmd]
+        g_log_mgr:raw_file_printf( path,
+            "%-16s %-16d %-16d %-16d %-16d %-16d",
+            string.format("%2d-%d",self:dismantle_cmd(cmd)),
+            stat.ts,stat.ms,stat.max,stat.min,math.ceil(stat.ms/stat.ts))
+    end
+end
+
+-- 写入耗时统计到文件
+function Command_mgr:serialize_statistic( reset )
+    if not self.cmd_perf then return false end
+
+    local path = string.format( "%s_%s",self.cmd_perf,g_app.srvname )
+
+    g_log_mgr:raw_file_printf( path,
+        "%s ~ %s:",time.date(self.stat_tm),time.date(ev:time()))
+
+    self:raw_serialize_statistic( "cs_cmd:",self.cs_stat )
+    self:raw_serialize_statistic( "ss_cmd:",self.ss_stat )
+    self:raw_serialize_statistic( "css_cmd:",self.css_stat )
+
+    g_log_mgr:raw_file_printf( path,"\n\n" )
+    if reset then
+        self.cs_stat  = {}
+        self.ss_stat  = {}
+        self.css_stat = {}
+        self.stat_tm  = ev:time()
+    end
+
+    return true
 end
 
 -- 加载二进制flatbuffers schema文件
@@ -136,7 +242,13 @@ function Command_mgr:srv_dispatch( srv_conn,cmd,... )
             self:dismantle_cmd(cmd) )
     end
 
-    return handler( srv_conn,... )
+    if self.cmd_perf then
+        local beg = ev:real_ms_time()
+        handler( srv_conn,... )
+        return self:update_statistic( self.ss_stat,cmd,ev:real_ms_time() - beg )
+    else
+        return handler( srv_conn,... )
+    end
 end
 
 -- 分发协议
@@ -154,7 +266,13 @@ function Command_mgr:clt_dispatch( clt_conn,cmd,... )
             self:dismantle_cmd(cmd) )
     end
 
-    return handler( clt_conn,... )
+    if self.cmd_perf then
+        local beg = ev:real_ms_time()
+        handler( clt_conn,... )
+        return self:update_statistic( self.cs_stat,cmd,ev:real_ms_time() - beg )
+    else
+        return handler( clt_conn,... )
+    end
 end
 
 -- 分发网关转发的客户端协议
@@ -180,7 +298,13 @@ function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
             pid,self:dismantle_cmd(cmd) )
     end
 
-    return handler( srv_conn,pid,... )
+    if self.cmd_perf then
+        local beg = ev:real_ms_time()
+        handler( srv_conn,pid,... )
+        return self:update_statistic(self.css_stat,cmd,ev:real_ms_time() - beg)
+    else
+        return handler( srv_conn,pid,... )
+    end
 end
 
 -- 获取当前进程处理的客户端指令

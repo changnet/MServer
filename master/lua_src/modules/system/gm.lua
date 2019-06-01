@@ -144,6 +144,34 @@ end
 function GM:set_rpc_perf( perf,reset )
     g_rpc:set_statistic( perf,reset )
 
+    if g_app.srvname == "gateway" then
+        self:broadcast( "set_rpc_perf",reset )
+    end
+
+    return true
+end
+
+-- 立刻进一次cmd耗时统计,不带参数表示不重置
+-- @cmd_perf 1
+function GM:cmd_perf( reset )
+    if not g_command_mgr:serialize_statistic( reset ) then
+        return false,"rpc_perf not set,set it with:@set_cmd_perf log/cmd_perf 1"
+    end
+
+    if g_app.srvname == "gateway" then self:broadcast( "cmd_perf",reset ) end
+
+    return true
+end
+
+-- 设置cmd耗时统计,取消统计不带任何参数
+-- @set_cmd_perf "log/cmd_perf" 1
+function GM:set_cmd_perf( perf,reset )
+    g_command_mgr:set_statistic( perf,reset )
+
+    if g_app.srvname == "gateway" then
+        self:broadcast( "set_cmd_perf",reset )
+    end
+
     return true
 end
 

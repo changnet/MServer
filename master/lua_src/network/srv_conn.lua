@@ -1,6 +1,8 @@
 -- srv_conn server connection
 
 local network_mgr = network_mgr
+local g_command_mgr = g_command_mgr
+
 local Srv_conn = oo.class( ... )
 
 function Srv_conn:__init( conn_id )
