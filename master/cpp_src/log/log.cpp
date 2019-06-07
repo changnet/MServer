@@ -45,9 +45,9 @@ private:
 log::log()
     : _ctx_pool 
     {
-        new object_pool< log_one_ctx<LOG_SIZE_S,LOG_CTX_SIZE[0]>,1024,64 >,
-        new object_pool< log_one_ctx<LOG_SIZE_M,LOG_CTX_SIZE[1]>,1024,64 >,
-        new object_pool< log_one_ctx<LOG_SIZE_L,LOG_CTX_SIZE[2]>,8,8 >
+        new object_pool< log_one_ctx<LOG_SIZE_S,LOG_CTX_SIZE[0]>,1024,64 >("log_S"),
+        new object_pool< log_one_ctx<LOG_SIZE_M,LOG_CTX_SIZE[1]>,1024,64 >("log_M"),
+        new object_pool< log_one_ctx<LOG_SIZE_L,LOG_CTX_SIZE[2]>,8,8 >("log_L")
     }
 {
     _cache = new log_one_list_t();

@@ -64,7 +64,7 @@ function Httpd:conn_accept( new_conn_id )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
 
-    print( "http_accept_new",new_conn_id )
+    PRINT( "http_accept_new",new_conn_id )
 
     local new_conn = Httpd_conn( new_conn_id )
 
@@ -75,7 +75,7 @@ end
 -- 对方断开连接
 function Httpd:conn_del( conn_id )
     self.conn[conn_id] = nil
-    print( "http_connect_del",conn_id )
+    PRINT( "http_connect_del",conn_id )
 end
 
 -- 主动断开连接

@@ -6,8 +6,8 @@
 #define INDEX_BIT 8
 #define MAKE_INDEX(x,y) ((int32)x << INDEX_BIT) + y
 
-object_pool< grid_aoi::entity_ctx,10240,1024 > grid_aoi::_ctx_pool;
-object_pool< grid_aoi::entity_vector_t,10240,1024 > grid_aoi::_vector_pool;
+object_pool< grid_aoi::entity_ctx,10240,1024 > grid_aoi::_ctx_pool("grid_aoi_ctx");
+object_pool< grid_aoi::entity_vector_t,10240,1024 > grid_aoi::_vector_pool("grid_aoi_vector");
 
 grid_aoi::grid_aoi()
 {

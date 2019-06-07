@@ -25,6 +25,10 @@ int32 lstatistic::dump( lua_State *L )
     dump_lua_gc( L );
     lua_rawset( L,-3 );
 
+    lua_pushstring( L,"mem_pool" );
+    dump_mem_pool( L );
+    lua_rawset( L,-3 );
+
     return 1;
 
 #undef DUMP_BASE_COUNTER
@@ -46,11 +50,11 @@ void lstatistic::dump_base_counter(
         lua_rawset( L,-3 );
 
         lua_pushstring( L,"max" );
-        lua_pushnumber( L,bc._max );
+        lua_pushinteger( L,bc._max );
         lua_rawset( L,-3 );
 
         lua_pushstring( L,"cur" );
-        lua_pushnumber( L,bc._cur );
+        lua_pushinteger( L,bc._cur );
         lua_rawset( L,-3 );
 
         lua_rawseti( L,-2,index );
@@ -77,7 +81,7 @@ void lstatistic::dump_thread( lua_State *L )
         lua_createtable( L,0,3 );
 
         lua_pushstring( L,"id" );
-        lua_pushnumber( L,thread->get_id() );
+        lua_pushinteger( L,thread->get_id() );
         lua_rawset( L,-3 );
 
         lua_pushstring( L,"name" );
@@ -85,11 +89,11 @@ void lstatistic::dump_thread( lua_State *L )
         lua_rawset( L,-3 );
 
         lua_pushstring( L,"finish" );
-        lua_pushnumber( L,finished );
+        lua_pushinteger( L,finished );
         lua_rawset( L,-3 );
 
         lua_pushstring( L,"unfinished" );
-        lua_pushnumber( L,unfinished );
+        lua_pushinteger( L,unfinished );
         lua_rawset( L,-3 );
 
         lua_rawseti( L,-2,index );
@@ -106,24 +110,68 @@ void lstatistic::dump_lua_gc( lua_State *L )
     lua_newtable( L );
 
     lua_pushstring( L,"count" );
-    lua_pushnumber( L,counter._count );
+    lua_pushinteger( L,counter._count );
     lua_rawset( L,-3 );
 
     lua_pushstring( L,"msec" );
-    lua_pushnumber( L,counter._msec );
+    lua_pushinteger( L,counter._msec );
     lua_rawset( L,-3 );
 
     lua_pushstring( L,"max" );
-    lua_pushnumber( L,counter._max );
+    lua_pushinteger( L,counter._max );
     lua_rawset( L,-3 );
 
     lua_pushstring( L,"min" );
-    lua_pushnumber( L,counter._min );
+    lua_pushinteger( L,counter._min );
     lua_rawset( L,-3 );
 
     lua_pushstring( L,"avg" );
-    lua_pushnumber( L,counter._msec/counter._count );
+    lua_pushinteger( L,counter._msec/counter._count );
     lua_rawset( L,-3 );
+}
+
+void lstatistic::dump_mem_pool( lua_State *L )
+{
+    int32 index = 1;
+    lua_newtable( L );
+
+    class pool** pool_stat = pool::get_pool_stat();
+    for (int32 idx = 0;idx < pool::MAX_POOL;idx ++)
+    {
+        if (NULL == pool_stat[idx]) continue;
+
+        class pool *ps = pool_stat[idx];
+
+        lua_newtable( L );
+
+        lua_pushstring( L,"name" );
+        lua_pushstring( L,ps->get_name() );
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"max" );
+        lua_pushinteger( L,ps->get_max_new() );
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"del" );
+        lua_pushinteger( L,ps->get_max_del() );
+        lua_rawset( L,-3 );
+
+        int64 now = ps->get_max_now();
+        lua_pushstring( L,"now" );
+        lua_pushinteger( L, now);
+        lua_rawset( L,-3 );
+
+        size_t size = ps->get_object_size();
+        lua_pushstring( L,"mem" );
+        lua_pushinteger( L,now * size );
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"size" );
+        lua_pushinteger( L,size );
+        lua_rawset( L,-3 );
+
+        lua_rawseti( L,-2,index++ );
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
