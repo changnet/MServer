@@ -2,12 +2,9 @@
 
 #include "log.h"
 
-/* 日志分配内存大小*/
-const size_t log::LOG_SIZE[LOG_SIZE_MAX] = { 64,1024,LOG_MAX_LENGTH };
-/* 日志内存池大小*/
-const size_t log::LOG_POOL[LOG_SIZE_MAX] = { 512,512,1 };
-/* 内存池每次分配的大小 */
-const size_t log::LOG_NEW[LOG_SIZE_MAX] = { 64,64,1 };
+/* 定义日志内容的大小 */
+static constexpr size_t 
+    LOG_CTX_SIZE[log::LOG_SIZE_MAX] = { 64,1024,LOG_MAX_LENGTH };
 
 // 单次写入的日志内容
 class log_one
@@ -21,16 +18,16 @@ public:
     log_out_t _out;
     char _path[PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
 
-    virtual log_size_t get_type() const = 0;
+    virtual log::log_size_t get_type() const = 0;
     virtual const char *get_ctx() const = 0;
     virtual void set_ctx( const char *ctx,size_t len ) = 0;
 };
 
-template<log_size_t lst,size_t size>
+template<log::log_size_t lst,size_t size>
 class log_one_ctx : public log_one
 {
 public:
-    log_size_t get_type() const { return lst; }
+    log::log_size_t get_type() const { return lst; }
     const char *get_ctx() const { return _context; }
 
     void set_ctx( const char *ctx,size_t len )
@@ -48,9 +45,9 @@ private:
 log::log()
     : _ctx_pool 
     {
-        new object_pool< log_one_ctx<LOG_SIZE_S,64>,1024,64 >,
-        new object_pool< log_one_ctx<LOG_SIZE_M,512>,1024,64 >,
-        new object_pool< log_one_ctx<LOG_SIZE_L,LOG_MAX_LENGTH>,8,8 >
+        new object_pool< log_one_ctx<LOG_SIZE_S,LOG_CTX_SIZE[0]>,1024,64 >,
+        new object_pool< log_one_ctx<LOG_SIZE_M,LOG_CTX_SIZE[1]>,1024,64 >,
+        new object_pool< log_one_ctx<LOG_SIZE_L,LOG_CTX_SIZE[2]>,8,8 >
     }
 {
     _cache = new log_one_list_t();
@@ -69,11 +66,10 @@ log::~log()
 
     for ( int idx = 0;idx < LOG_SIZE_MAX;++idx )
     {
-        log_one_list_t *pool = &(_mem_pool[idx]);
-        log_one_list_t::iterator itr = pool->begin();
-        for ( ;itr != pool->end();++itr ) delete *itr;
+        _ctx_pool[idx]->purge();
 
-        pool->clear();
+        delete _ctx_pool[idx];
+        _ctx_pool[idx] = NULL;
     }
 }
 
@@ -230,61 +226,16 @@ void log::collect_mem()
     _flush->clear();
 }
 
-// 内存池分配逻辑
-void log::allocate_pool( log_size_t lt )
-{
-#define ALLOCATE_MANY( LT,SZ )                                     \
-    do{                                                            \
-        for ( size_t idx = 0;idx < ctx_sz;++idx ){                 \
-            pool->push_back( new log_one_ctx< LT,SZ >() );         \
-        }                                                          \
-    }while( 0 )
-
-    assert(
-        "log allocate pool illegal log size type",
-        (lt >= LOG_SIZE_S) && (lt < LOG_SIZE_MAX) );
-
-    size_t ctx_sz = LOG_NEW[lt];
-    log_one_list_t *pool = &(_mem_pool[lt]);
-
-    // 由于这里没有使用oerder_pool，无法一次分配一个数组或者内存块，只能通过for来分配
-    switch( lt )
-    {
-        case LOG_SIZE_S : ALLOCATE_MANY( LOG_SIZE_S,64 );break;
-        case LOG_SIZE_M : ALLOCATE_MANY( LOG_SIZE_M,512 );break;
-        case LOG_SIZE_L : ALLOCATE_MANY( LOG_SIZE_L,LOG_MAX_LENGTH );break;
-        default: return;
-    }
-#undef ALLOCATE_MANYL
-}
-
-// 从内存池中分配一个日志缓存对象
+// 根据长度从内存池中分配一个日志缓存对象
 class log_one *log::allocate_one( size_t len )
 {
     if ( len > LOG_MAX_LENGTH ) len = LOG_MAX_LENGTH;
 
-    uint32 lt;
-    for ( lt = LOG_SIZE_S;lt < LOG_SIZE_MAX;++lt )
+    for ( uint32 lt = LOG_SIZE_S;lt < LOG_SIZE_MAX;++lt )
     {
-        if ( len <= LOG_SIZE[lt] )
-        {
-            log_one_list_t *pool = &(_mem_pool[lt]);
-            if ( expect_false(pool->empty()) )
-            {
-                allocate_pool( static_cast<log_size_t>(lt) );
-            }
+        if ( len > LOG_CTX_SIZE[lt] ) continue;
 
-            // 需要重新检测vector是否为空
-            if ( expect_true(!pool->empty()) )
-            {
-                class log_one *one = pool->back();
-
-                pool->pop_back();
-                return one;
-            }
-
-            return NULL;
-        }
+        return (log_one*)_ctx_pool[lt]->construct_any();
     }
     return NULL;
 }
@@ -295,11 +246,6 @@ void log::deallocate_one( class log_one *one )
     assert( "deallocate one NULL log ctx",one );
 
     log_size_t lt = one->get_type();
-    if ( _mem_pool[lt].size() >= LOG_POOL[lt] )
-    {
-        delete one;
-        return;
-    }
 
-    _mem_pool[lt].push_back( one );
+    _ctx_pool[lt]->destroy_any( one );
 }

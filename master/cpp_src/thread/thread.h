@@ -1,6 +1,7 @@
 #ifndef __THREAD_H__
 #define __THREAD_H__
 
+#include <atomic>
 #include <pthread.h>
 
 #include "../ev/ev_watcher.h"
@@ -69,10 +70,9 @@ private:
     ev_io _watcher;
     pthread_t _id;
 
-    // 这些变量，应该用std::atomic，不过现在要兼容03版本，这些变量也不需要很严格加锁
-    volatile bool _run;
-    volatile bool _join;
-    volatile bool _busy;
+    std::atomic<bool> _run;
+    std::atomic<bool> _join;
+    std::atomic<bool> _busy;
     pthread_mutex_t _mutex;
 
     bool _wait_busy; // 当关服的时候，是否需要等待这个线程

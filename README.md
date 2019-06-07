@@ -9,7 +9,7 @@ component make sure it has high scalability.
 
 ## Dependencies
 * Linux
-* G++ (support C++03 at least,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
+* G++ (support C++11 at least,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
 * MySQL
 * MongoDB
 * Lua 5.3

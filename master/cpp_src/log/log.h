@@ -8,19 +8,6 @@
 
 class log_one;
 
-    // 将日志内容分为小、中、大三种类型。避免内存碎片化
-    typedef enum
-    {
-        LOG_SIZE_S = 0, //small
-        LOG_SIZE_M = 1, // middle
-        LOG_SIZE_L = 2, // large
-
-        LOG_SIZE_MAX
-    }log_size_t;
-
-    // 单次写入的日志
-    typedef std::vector< class log_one *> log_one_list_t;
-
 // 日志输出类型
 typedef enum
 {
@@ -35,7 +22,18 @@ typedef enum
 class log
 {
 public:
+    // 将日志内容分为小、中、大三种类型。避免内存碎片化
+    typedef enum
+    {
+        LOG_SIZE_S = 0, //small
+        LOG_SIZE_M = 1, // middle
+        LOG_SIZE_L = 2, // large
 
+        LOG_SIZE_MAX
+    }log_size_t;
+
+    // 单次写入的日志
+    typedef std::vector< class log_one *> log_one_list_t;
 public:
     log();
     ~log();
@@ -47,7 +45,6 @@ public:
     int32 write_cache( time_t tm,
         const char *path,const char *ctx,size_t len,log_out_t out );
 private:
-    void allocate_pool( log_size_t lt );
     class log_one *allocate_one( size_t len );
     void deallocate_one( class log_one *one );
     bool flush_one_file( log_one_list_t::iterator pos );
@@ -55,16 +52,8 @@ private:
 private:
     log_one_list_t *_cache;   // 主线程写入缓存队列
     log_one_list_t *_flush;   // 日志线程写入文件队列
-    log_one_list_t _mem_pool[LOG_SIZE_MAX];  // 内存池，防止内存频繁分配
 
     class pool* _ctx_pool[LOG_SIZE_MAX];
-
-    /* 日志分配内存大小*/
-    static const size_t LOG_SIZE[LOG_SIZE_MAX];
-    /* 日志内存池大小*/
-    static const size_t LOG_POOL[LOG_SIZE_MAX];
-    /* 内存池每次分配的大小 */
-    static const size_t LOG_NEW[LOG_SIZE_MAX];
 };
 
 #endif /* __LOG_H__ */

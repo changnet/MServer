@@ -12,8 +12,22 @@
 #include "../global/global.h"
 
 // 内存池基类
+
 class pool
 {
+public:
+    pool() {}
+    virtual ~pool() {}
+
+    virtual void purge() = 0;
+
+    /* TODO
+     * T *construct返回的类型和子类object_pool的模板参数有关。当实现多态时，无法预知子类
+     * 的类型。如果把基类也做成模板T，子类中的typename T也是不一样的，无法实现多态。这个在
+     * 日志中有用到。
+     */
+    virtual void *construct_any() = 0;
+    virtual void destroy_any(void *const object,bool is_free = false) = 0;
 };
 
 template <typename T,uint32 msize = 1024,uint32 nsize = 1024>
@@ -35,20 +49,21 @@ public:
 
     ~object_pool()
     {
-        purge();
+        clear();
     }
 
-    /* 清空内存池 */
-    void purge()
+    inline void *construct_any()
     {
-        for (uint32 idx = 0;idx < _anptsize;idx ++)
-        {
-            delete _anpts[idx];
-        }
-        _anptsize = 0;
-        delete []_anpts;
-        _anpts = NULL;
+        return this->construct();
     }
+
+    inline void destroy_any(void *const object,bool is_free = false)
+    {
+        this->destroy(static_cast<T *const>(object),is_free);
+    }
+
+    // 清空内存，同clear。但这个是虚函数
+    inline void purge() { clear(); }
 
     // 构造对象
     T *construct()
@@ -71,11 +86,11 @@ public:
     /* 回收对象(当内存池已满时，对象会被直接销毁)
      * @free:是否直接释放对象内存
      */
-    void destroy(T *const obj,bool free = false)
+    void destroy(T *const object,bool is_free = false)
     {
-        if (free || _anptsize >= _max_size)
+        if (is_free || _anptsize >= _max_size)
         {
-            delete obj;
+            delete object;
         }
         else
         {
@@ -84,8 +99,18 @@ public:
                 uint32 mini_size = MATH_MIN(_anptmax + _next_size,_max_size);
                 array_resize( T*,_anpts,_anptmax,mini_size,array_noinit );
             }
-            _anpts[_anptsize++] = obj;
+            _anpts[_anptsize++] = object;
         }
+    }
+private:
+    /* 清空内存池 */
+    inline void clear()
+    {
+        for (uint32 idx = 0;idx < _anptsize;idx ++) delete _anpts[idx];
+
+        _anptsize = 0;
+        delete []_anpts;
+        _anpts = NULL;
     }
 private:
     T **_anpts;    /* 空闲对象数组 */
