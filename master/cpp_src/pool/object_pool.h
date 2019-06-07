@@ -6,15 +6,24 @@
  * 2. 会一次性申请大量对象缓存起来，但这些对象并不一定是连续的
  * 3. 对象申请出去后，内存池不再维护该对象，调用purge也不会释放该对象
  * 4. 回收对象时，不会检验该对象是否来自当前内存池
+ * 5. TODO:construct和destory并不会调用构造、析构函数，以后有需求再加
  */
 
 #include "../global/global.h"
 
-template <typename T>
-class object_pool
+// 内存池基类
+class pool
+{
+};
+
+template <typename T,uint32 msize = 1024,uint32 nsize = 1024>
+class object_pool : public pool
 {
 public:
-    explicit object_pool(uint32 msize = 1024,uint32 nsize = 1024)
+    /* @msize:允许池中分配的最大对象数量
+     * @nsize:每次预分配的数量
+     */
+    object_pool() : pool()
     {
         _anpts = NULL;
         _anptmax = 0;
@@ -40,10 +49,6 @@ public:
         delete []_anpts;
         _anpts = NULL;
     }
-
-    void set_max_size(const uint32 size) { _max_size = size; }
-    // 当对象池为空时，一次申请的对象数量
-    void set_next_size(const uint32 size){ _next_size = size; };
 
     // 构造对象
     T *construct()
@@ -76,8 +81,8 @@ public:
         {
             if (expect_false(_anptsize >= _anptmax))
             {
-                uint32 msize = MATH_MIN(_anptmax + _next_size,_max_size);
-                array_resize( T*,_anpts,_anptmax,msize,array_noinit );
+                uint32 mini_size = MATH_MIN(_anptmax + _next_size,_max_size);
+                array_resize( T*,_anpts,_anptmax,mini_size,array_noinit );
             }
             _anpts[_anptsize++] = obj;
         }

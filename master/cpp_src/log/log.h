@@ -4,19 +4,22 @@
 #include <map>
 #include <vector>
 
-#include "../global/global.h"
+#include "../pool/object_pool.h"
 
 class log_one;
 
-// 将日志内容分为小、中、大三种类型
-typedef enum
-{
-    LOG_MIN = 0,
-    LOG_MID = 1,
-    LOG_MAX = 2,
+    // 将日志内容分为小、中、大三种类型。避免内存碎片化
+    typedef enum
+    {
+        LOG_SIZE_S = 0, //small
+        LOG_SIZE_M = 1, // middle
+        LOG_SIZE_L = 2, // large
 
-    LOG_SIZE_MAX
-}log_size_t;
+        LOG_SIZE_MAX
+    }log_size_t;
+
+    // 单次写入的日志
+    typedef std::vector< class log_one *> log_one_list_t;
 
 // 日志输出类型
 typedef enum
@@ -29,11 +32,10 @@ typedef enum
     LO_MAX
 }log_out_t;
 
-// 单次写入的日志
-typedef std::vector< class log_one *> log_one_list_t;
-
 class log
 {
+public:
+
 public:
     log();
     ~log();
@@ -54,6 +56,8 @@ private:
     log_one_list_t *_cache;   // 主线程写入缓存队列
     log_one_list_t *_flush;   // 日志线程写入文件队列
     log_one_list_t _mem_pool[LOG_SIZE_MAX];  // 内存池，防止内存频繁分配
+
+    class pool* _ctx_pool[LOG_SIZE_MAX];
 
     /* 日志分配内存大小*/
     static const size_t LOG_SIZE[LOG_SIZE_MAX];

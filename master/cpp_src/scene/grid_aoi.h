@@ -101,8 +101,8 @@ protected:
     /* 记录所有实体的数据 */
     entity_set_t _entity_set;
 
-    static object_pool< entity_ctx > _ctx_pool;
-    static object_pool< entity_vector_t > _vector_pool;
+    static object_pool< entity_ctx,10240,1024 > _ctx_pool;
+    static object_pool< entity_vector_t,10240,1024 > _vector_pool;
 };
 
 #endif /* __GRID_AOI_H__ */

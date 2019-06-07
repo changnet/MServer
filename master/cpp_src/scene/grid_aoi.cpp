@@ -6,8 +6,8 @@
 #define INDEX_BIT 8
 #define MAKE_INDEX(x,y) ((int32)x << INDEX_BIT) + y
 
-object_pool< grid_aoi::entity_ctx > grid_aoi::_ctx_pool(10240,1024);
-object_pool< grid_aoi::entity_vector_t > grid_aoi::_vector_pool(10240,1024);
+object_pool< grid_aoi::entity_ctx,10240,1024 > grid_aoi::_ctx_pool;
+object_pool< grid_aoi::entity_vector_t,10240,1024 > grid_aoi::_vector_pool;
 
 grid_aoi::grid_aoi()
 {
@@ -351,6 +351,7 @@ void grid_aoi::get_visual_range(
     if (dx > _width) dx = _width;
     if (dy > _height) dy = _height;
 }
+
 /* 更新实体位置
  * @list_in:接收实体进入的实体列表
  * @list_out:接收实体消失的实体列表

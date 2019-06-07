@@ -8,7 +8,7 @@
  #define __A_STAR_H__
 
 #include <vector>
-#include "../global/global.h"
+#include "../pool/object_pool.h"
 
 class grid_map;
 class a_star

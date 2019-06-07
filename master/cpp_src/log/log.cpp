@@ -46,6 +46,12 @@ private:
 };
 
 log::log()
+    : _ctx_pool 
+    {
+        new object_pool< log_one_ctx<LOG_SIZE_S,64>,1024,64 >,
+        new object_pool< log_one_ctx<LOG_SIZE_M,512>,1024,64 >,
+        new object_pool< log_one_ctx<LOG_SIZE_L,LOG_MAX_LENGTH>,8,8 >
+    }
 {
     _cache = new log_one_list_t();
     _flush = new log_one_list_t();
@@ -236,7 +242,7 @@ void log::allocate_pool( log_size_t lt )
 
     assert(
         "log allocate pool illegal log size type",
-        (lt >= LOG_MIN) && (lt < LOG_SIZE_MAX) );
+        (lt >= LOG_SIZE_S) && (lt < LOG_SIZE_MAX) );
 
     size_t ctx_sz = LOG_NEW[lt];
     log_one_list_t *pool = &(_mem_pool[lt]);
@@ -244,12 +250,12 @@ void log::allocate_pool( log_size_t lt )
     // 由于这里没有使用oerder_pool，无法一次分配一个数组或者内存块，只能通过for来分配
     switch( lt )
     {
-        case LOG_MIN : ALLOCATE_MANY( LOG_MIN,64 );break;
-        case LOG_MID : ALLOCATE_MANY( LOG_MID,512 );break;
-        case LOG_MAX : ALLOCATE_MANY( LOG_MAX,LOG_MAX_LENGTH );break;
+        case LOG_SIZE_S : ALLOCATE_MANY( LOG_SIZE_S,64 );break;
+        case LOG_SIZE_M : ALLOCATE_MANY( LOG_SIZE_M,512 );break;
+        case LOG_SIZE_L : ALLOCATE_MANY( LOG_SIZE_L,LOG_MAX_LENGTH );break;
         default: return;
     }
-#undef ALLOCATE_MANY
+#undef ALLOCATE_MANYL
 }
 
 // 从内存池中分配一个日志缓存对象
@@ -258,7 +264,7 @@ class log_one *log::allocate_one( size_t len )
     if ( len > LOG_MAX_LENGTH ) len = LOG_MAX_LENGTH;
 
     uint32 lt;
-    for ( lt = LOG_MIN;lt < LOG_SIZE_MAX;++lt )
+    for ( lt = LOG_SIZE_S;lt < LOG_SIZE_MAX;++lt )
     {
         if ( len <= LOG_SIZE[lt] )
         {
