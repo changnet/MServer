@@ -148,26 +148,38 @@ void lstatistic::dump_mem_pool( lua_State *L )
         lua_pushstring( L,ps->get_name() );
         lua_rawset( L,-3 );
 
+        // 累计分配数量
+        int64 max_new = ps->get_max_new();
         lua_pushstring( L,"max" );
-        lua_pushinteger( L,ps->get_max_new() );
+        lua_pushinteger( L, max_new);
         lua_rawset( L,-3 );
 
+        // 累计销毁数量
+        int64 max_del = ps->get_max_del();
         lua_pushstring( L,"del" );
-        lua_pushinteger( L,ps->get_max_del() );
+        lua_pushinteger( L,max_del );
         lua_rawset( L,-3 );
 
-        int64 now = ps->get_max_now();
+        // 当前还在内存池中数量
+        int64 max_now = ps->get_max_now();
         lua_pushstring( L,"now" );
-        lua_pushinteger( L, now);
+        lua_pushinteger( L, max_now);
         lua_rawset( L,-3 );
 
+        // 单个对象内存大小
         size_t size = ps->get_object_size();
-        lua_pushstring( L,"mem" );
-        lua_pushinteger( L,now * size );
+        lua_pushstring( L,"sizeof" );
+        lua_pushinteger( L,size );
         lua_rawset( L,-3 );
 
-        lua_pushstring( L,"size" );
-        lua_pushinteger( L,size );
+        // 当前在这个内存池分配的内存
+        lua_pushstring( L,"mem" );
+        lua_pushinteger( L,(max_new - max_del) * size );
+        lua_rawset( L,-3 );
+
+        // 当前还在池内的内存
+        lua_pushstring( L,"now_mem" );
+        lua_pushinteger( L,max_now * size );
         lua_rawset( L,-3 );
 
         lua_rawseti( L,-2,index++ );
