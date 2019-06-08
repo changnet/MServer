@@ -132,7 +132,7 @@ http_packet::http_packet( class socket *sk ) : packet( sk )
 int32 http_packet::unpack()
 {
     class buffer &recv = _socket->recv_buffer();
-    uint32 size = recv.data_size();
+    uint32 size = recv.get_used_size();
     if ( size == 0 ) return 0;
 
     /* 注意：解析完成后，是由http-parser回调脚本的，这时脚本那边可能会关闭socket
@@ -151,7 +151,7 @@ int32 http_packet::unpack()
         /* 除去缓冲区中websocket握手数据
          * 返回 >0 由子类websocket_packet继续处理数据
          */
-        recv.subtract( nparsed );
+        recv.remove( nparsed );
         return 1;
     }
 
@@ -281,14 +281,7 @@ int32 http_packet::pack_raw( lua_State *L,int32 index )
     const char *ctx = luaL_checklstring( L,index,&size );
     if ( !ctx ) return 0;
 
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( size ) )
-    {
-        return luaL_error( L,"can not reserved buffer" );
-    }
-
-    send.__append( ctx ,size );
-    _socket->pending_send();
+    _socket->append( ctx ,size );
 
     return 0;
 }

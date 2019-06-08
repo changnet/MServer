@@ -25,7 +25,7 @@ int32 io::recv()
     int32 len = ::read( _fd,_recv->buff_pointer(),size );
     if ( expect_true(len > 0) )
     {
-        _recv->increase( len );
+        _recv->add_used_offset( len );
         return 0;
     }
 
@@ -46,15 +46,15 @@ int32 io::send()
 {
     assert( "io send fd invalid",_fd > 0 );
 
-    size_t bytes = _send->data_size();
+    size_t bytes = _send->get_used_size();
     assert( "io send without data",bytes > 0 );
 
-    int32 len = ::write( _fd,_send->data_pointer(),bytes );
+    int32 len = ::write( _fd,_send->get_used_ctx(),bytes );
 
     if ( expect_true(len > 0) )
     {
-        _send->subtract( len );
-        return ((size_t)len) == bytes ? 0 : 2;
+        _send->remove( len );
+        return _send->get_used_size() > 0 ? 0 : 2;
     }
 
     if ( 0 == len ) return -1;// 对方主动断开

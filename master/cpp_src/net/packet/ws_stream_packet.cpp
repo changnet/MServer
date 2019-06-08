@@ -131,7 +131,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
 
     encoder->finalize();
-    send.increase( len );
+    send.add_used_offset( len );
     _socket->pending_send();
 
     return 0;
@@ -141,7 +141,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
 int32 ws_stream_packet::on_frame_end()
 {
     socket::conn_t conn_ty = _socket->conn_type();
-    /* 客户端到服务器的连接(CSCN)收到的是服务器发放客户端的数据包(sc_command) */
+    /* 客户端到服务器的连接(CSCN)收到的是服务器发往客户端的数据包(sc_command) */
     if ( socket::CNT_CSCN == conn_ty )
     {
         return sc_command();
@@ -150,14 +150,15 @@ int32 ws_stream_packet::on_frame_end()
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     /* 服务器收到的包，看要不要转发 */
-    uint32 data_size = _body.data_size();
+    uint32 data_size = 0;
+    char *ctx = _body.check_all_used_ctx( data_size );
     if ( data_size < sizeof(struct srv_header) )
     {
         ERROR( "ws_stream_packet on_frame_end packet incomplete" );
         return 0;
     }
     struct srv_header *header = 
-        reinterpret_cast<struct srv_header *>( _body.data_pointer() );
+        reinterpret_cast<struct srv_header *>( ctx );
 
     uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
@@ -174,7 +175,8 @@ int32 ws_stream_packet::sc_command()
 
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
-    uint32 data_size = _body.data_size();
+    uint32 data_size = 0;
+    char *ctx = _body.check_all_used_ctx( data_size );
     if ( data_size < sizeof(struct clt_header) )
     {
         ERROR( "ws_stream_packet sc_command packet incomplete" );
@@ -182,7 +184,7 @@ int32 ws_stream_packet::sc_command()
     }
 
     struct clt_header *header = 
-        reinterpret_cast<struct clt_header *>( _body.data_pointer() );
+        reinterpret_cast<struct clt_header *>( ctx );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
@@ -291,7 +293,7 @@ int32 ws_stream_packet::do_pack_clt(
     offset += websocket_append_frame( 
         buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
     websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
-    send.increase( len );
+    send.add_used_offset( len );
     _socket->pending_send();
 
     return 0;

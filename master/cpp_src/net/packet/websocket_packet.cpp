@@ -114,7 +114,7 @@ int32 on_frame_body(
         if ( !body.reserved( length ) ) return -1;
 
         websocket_parser_decode( body.buff_pointer(), at, length, parser);
-        body.increase( length );
+        body.add_used_offset( length );
     }
     else
     {
@@ -192,7 +192,7 @@ int32 websocket_packet::pack_raw( lua_State *L,int32 index )
     char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
     if ( flags & WS_HAS_MASK ) new_masking_key( mask );
     websocket_build_frame( send.buff_pointer(),flags,mask,ctx,size );
-    send.increase( len );
+    send.add_used_offset( len );
     _socket->pending_send();
 
     return 0;
@@ -237,13 +237,15 @@ int32 websocket_packet::unpack()
     if ( !_is_upgrade ) return http_packet::unpack();
 
     class buffer &recv = _socket->recv_buffer();
-    uint32 size = recv.data_size();
+
+    uint32 size = 0;
+    char *ctx = check_all_used_ctx( size );
     if ( size == 0 ) return 0;
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
     size_t nparser = 
-        websocket_parser_execute( _parser,&settings,recv.data_pointer(),size );
+        websocket_parser_execute( _parser,&settings,ctx,size );
     // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
     // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
     // 普通错误，比如回调脚本出错，是不会中止解析的
@@ -253,7 +255,7 @@ int32 websocket_packet::unpack()
         return -1;
     }
 
-    recv.subtract( nparser );
+    recv.remove( nparser );
 
     return 0;
 }
@@ -324,10 +326,13 @@ int32 websocket_packet::on_frame_end()
     static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
+    uint32 size = 0;
+    char *ctx = _body.check_all_used_ctx( size );
+
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushlstring  ( L,_body.data_pointer(),_body.data_size() );
+    lua_pushlstring  ( L,ctx,size );
 
     if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {
@@ -345,12 +350,15 @@ int32 websocket_packet::on_ctrl_end()
     static lua_State *L = static_global::state();
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
+    uint32 size = 0;
+    char *ctx = _body.check_all_used_ctx( size );
+
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"ctrl_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushinteger  ( L,_parser->flags );
     // 控制帧也是可以包含数据的
-    lua_pushlstring  ( L,_body.data_pointer(),_body.data_size() );
+    lua_pushlstring  ( L,ctx,size );
 
     if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {

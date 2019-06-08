@@ -19,19 +19,24 @@ int32 stream_packet::unpack()
 {
     class buffer &recv = _socket->recv_buffer();
 
-    uint32 size = recv.data_size();
-    if ( size < sizeof( struct base_header ) ) return 0;
+    // 检测包头是否完整
+    if ( !recv.check_used_size( sizeof( struct base_header ) ) ) return 0;
 
     const struct base_header *header =
-        reinterpret_cast<const struct base_header *>( recv.data_pointer() );
+        reinterpret_cast<const struct base_header *>(
+            recv.check_used_ctx( sizeof( struct base_header ) ) );
 
-    
-    if ( size < header->_length ) return 0;
+    // 检测包内容是否完整
+    uint32 length = header->_length;
+    if ( !recv.check_used_size( length ) ) return 0;
+
+    header = reinterpret_cast<
+        const struct base_header *>(recv.check_used_ctx( length ) );
 
     dispatch( header ); // 数据包完整，派发处理
-    recv.subtract( header->_length );   // 无论成功或失败，都移除该数据包
+    recv.remove( length );   // 无论成功或失败，都移除该数据包
 
-    return header->_length;
+    return length;
 }
 
 void stream_packet::dispatch( const struct base_header *header )
@@ -456,10 +461,10 @@ int32 stream_packet::rpc_pack(
     s2sh._owner  = unique_id;
 
     class buffer &send = _socket->send_buffer();
-    send.__append( &s2sh,sizeof(struct s2s_header) );
+    send.append( &s2sh,sizeof(struct s2s_header) );
     if ( len > 0)
     {
-        send.__append( buffer,static_cast<uint32>(len) );
+        send.append( buffer,static_cast<uint32>(len) );
     }
     _socket->pending_send();
 
@@ -545,19 +550,13 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( len + sizeof(struct c2s_header) ) )
-    {
-        encoder->finalize();
-        return luaL_error( L,"can not reserved buffer" );
-    }
-
     struct c2s_header hd;
     hd._length = PACKET_MAKE_LENGTH( struct c2s_header,len );
     hd._cmd    = static_cast<uint16>  ( cmd );
 
-    send.__append( &hd,sizeof(struct c2s_header) );
-    if (len > 0) send.__append( buffer,len );
+    class buffer &send = _socket->send_buffer();
+    send.append( &hd,sizeof(struct c2s_header) );
+    if (len > 0) send.append( buffer,len );
 
     encoder->finalize();
     _socket->pending_send();
@@ -664,13 +663,6 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( len + sizeof(struct s2s_header) ) )
-    {
-        encoder->finalize();
-        return luaL_error( L,"can not reserved buffer" );
-    }
-
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header hd;
     hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
@@ -680,8 +672,9 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     hd._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
     hd._packet = SPKT_SCPK; /*指定数据包类型为服务器发送客户端 */
 
-    send.__append( &hd ,sizeof(struct s2s_header) );
-    if ( len > 0 ) send.__append( buffer,len );
+    class buffer &send = _socket->send_buffer();
+    send.append( &hd ,sizeof(struct s2s_header) );
+    if ( len > 0 ) send.append( buffer,len );
 
     encoder->finalize();
     _socket->pending_send();
@@ -692,21 +685,15 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
 int32 stream_packet::raw_pack_clt(
     int32 cmd,uint16 ecode,const char *ctx,size_t size )
 {
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( size + sizeof(struct s2c_header) ) )
-    {
-        ERROR( "raw_pack_clt can not reserved buffer" );
-        return -1;
-    }
-
     /* 先构造客户端收到的数据包 */
     struct s2c_header header;
     header._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
     header._cmd    = static_cast<uint16>  ( cmd );
     header._errno  = ecode;
 
-    send.__append( &header ,sizeof(header) );
-    if ( size > 0 ) send.__append( ctx,size );
+    class buffer &send = _socket->send_buffer();
+    send.append( &header ,sizeof(header) );
+    if ( size > 0 ) send.append( ctx,size );
 
     _socket->pending_send();
     return 0;
@@ -715,13 +702,6 @@ int32 stream_packet::raw_pack_clt(
 int32 stream_packet::raw_pack_ss(
     int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size )
 {
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
-    {
-        ERROR( "raw_pack_ss can not reserved buffer" );
-        return -1;
-    }
-
     struct s2s_header header;
     header._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
     header._cmd    = static_cast<uint16> ( cmd );
@@ -730,8 +710,9 @@ int32 stream_packet::raw_pack_ss(
     header._packet = SPKT_SSPK;
     header._codec  = codec::CDC_NONE;// 这个这里用不着，但不初始化valgrind就会警告
 
-    send.__append( &header ,sizeof(header) );
-    if ( size > 0 ) send.__append( ctx,size );
+    class buffer &send = _socket->send_buffer();
+    send.append( &header ,sizeof(header) );
+    if ( size > 0 ) send.append( ctx,size );
 
     _socket->pending_send();
     return 0;
@@ -807,14 +788,6 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
         encoder->finalize();
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
-
-    class buffer &send = _socket->send_buffer();
-    if ( !send.reserved( list_len + len + sizeof(struct s2s_header) ) )
-    {
-        encoder->finalize();
-        return luaL_error( L,"can not reserved buffer" );
-    }
-
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header hd;
     hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len + list_len );
@@ -824,9 +797,10 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     hd._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
     hd._packet = SPKT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
-    send.__append( &hd ,sizeof(struct s2s_header) );
-    send.__append( list,list_len );
-    if ( len > 0 ) send.__append( buffer,len );
+    class buffer &send = _socket->send_buffer();
+    send.append( &hd ,sizeof(struct s2s_header) );
+    send.append( list,list_len );
+    if ( len > 0 ) send.append( buffer,len );
 
     encoder->finalize();
     _socket->pending_send();

@@ -200,7 +200,7 @@ int32 socket::user_timeout( int32 fd )
 void socket::start( int32 fd )
 {
     assert( "socket start,dirty buffer",
-        0 == _send.data_size() && 0 == _send.data_size() );
+        0 == _send.get_used_size() && 0 == _send.get_used_size() );
 
     if ( fd > 0 && _w.fd > 0 )
     {
@@ -283,15 +283,6 @@ const char *socket::address()
     }
 
     return inet_ntoa(addr.sin_addr);
-}
-
-bool socket::append( const void *data,uint32 len )
-{
-    if ( !_send.append( data,len ) ) return false;
-
-    pending_send();
-
-    return true;
 }
 
 int32 socket::listen( const char *host,int32 port )

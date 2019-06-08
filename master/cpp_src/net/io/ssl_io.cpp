@@ -51,7 +51,7 @@ int32 ssl_io::recv()
     int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->buff_pointer(),size );
     if ( expect_true(len > 0) )
     {
-        _recv->increase( len );
+        _recv->add_used_offset( len );
         return 0;
     }
 
@@ -88,13 +88,13 @@ int32 ssl_io::send()
 
     if ( !_handshake ) return do_handshake();
 
-    size_t bytes = _send->data_size();
+    size_t bytes = _send->_send->get_used_size()();
     assert( "io send without data",bytes > 0 );
-    int32 len = SSL_write( X_SSL( _ssl_ctx ),_send->data_pointer(),bytes );
+    int32 len = SSL_write( X_SSL( _ssl_ctx ),_send->get_used_ctx(),bytes );
     if ( expect_true(len > 0) )
     {
-        _send->subtract( len );
-        return ((size_t)len) == bytes ? 0 : 2;
+        _send->remove( len );
+        return _send->get_used_size() > 0 ? 0 : 2;
     }
 
     int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
@@ -170,7 +170,7 @@ int32 ssl_io::do_handshake()
     {
         _handshake = true;
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
-        return _send->data_size() > 0 ? 2 : 0;
+        return _send->get_used_size() > 0 ? 2 : 0;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of 

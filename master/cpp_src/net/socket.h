@@ -67,8 +67,12 @@ public:
     int32 init_accept();
     int32 init_connect();
 
-    bool __attribute__ (
-        (warn_unused_result)) append( const void *data,uint32 len );
+    inline void append( const void *data,uint32 len )
+    {
+        _send.append( data,len );
+
+        pending_send();
+    }
 
     template<class K, void (K::*method)()>
     void set (K *object)

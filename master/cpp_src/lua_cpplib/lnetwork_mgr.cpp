@@ -548,12 +548,8 @@ int32 lnetwork_mgr::send_raw_packet( lua_State *L )
     if ( !ctx ) return 0;
 
     class buffer &send = sk->send_buffer();
-    if ( !send.reserved( size ) )
-    {
-        return luaL_error( L,"can not reserved buffer" );
-    }
 
-    send.__append( ctx ,size );
+    send.append( ctx ,size );
     sk->pending_send();
 
     return 0;
@@ -848,14 +844,6 @@ bool lnetwork_mgr::cs_dispatch(
         return true; /* 如果转发失败，也相当于转发了 */
     }
 
-    class buffer &send = dest_sk->send_buffer();
-    if ( !send.reserved( size + sizeof(struct s2s_header) ) )
-    {
-        ERROR( "client packet forwarding,can not "
-            "reserved memory:" FMT64d,int64(size + sizeof(struct s2s_header)) );
-        return true; /* 如果转发失败，也相当于转发了 */
-    }
-
     codec::codec_t codec_ty = src_sk->get_codec_type();
 
     struct s2s_header s2sh;
@@ -866,8 +854,9 @@ bool lnetwork_mgr::cs_dispatch(
     s2sh._errno  = 0;
     s2sh._owner  = static_cast<owner_t>(object_id);
 
-    send.__append( &s2sh,sizeof(struct s2s_header) );
-    send.__append( ctx,size );
+    class buffer &send = dest_sk->send_buffer();
+    send.append( &s2sh,sizeof(struct s2s_header) );
+    send.append( ctx,size );
 
     dest_sk->pending_send();
     return true;
