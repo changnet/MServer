@@ -9,25 +9,86 @@
  * 4.最小内存块不能小于一个指针长度(4/8 bytes)
  */
 
-#include "../global/global.h"
+#include "pool.h"
 
 template<uint32 ordered_size>
 class ordered_pool
 {
 public:
-    ordered_pool();
-    ~ordered_pool();
+    ordered_pool()
+        : anpts(NULL),anptmax(0),block_list(NULL)
+    {
+        assert( "ordered size less "
+            "then sizeof(void *)",ordered_size >= sizeof(void *) );
+    }
 
-    void purge();
-    void ordered_free  ( char * const ptr,uint32 n );
-    char *ordered_malloc( uint32 n = 1,uint32 chunk_size = 512 );
+    ~ordered_pool() { clear(); };
+
+    virtual void purge() { clear(); };
+    virtual size_t get_sizeof() const { return ordered_size; }
+
+    void ordered_free  ( char * const ptr,uint32 n )
+    {
+        assert( "illegal ordered free",anptmax >= n && ptr );
+
+        // 把ptr前几个字节指向anpts[n],然后设置的起点指针为ptr.
+        // 相当于把ptr放到anpts[n]这个链表的首部
+        nextof( ptr ) = anpts[n];
+        anpts[n] = ptr;
+    }
+
+    char *ordered_malloc( uint32 n = 1,uint32 chunk_size = 512 )
+    {
+        assert( "ordered_malloc size <= 0",n > 0 && chunk_size > 0 );
+        array_resize( NODE,anpts,anptmax,n+1,array_zero );
+        void *ptr = anpts[n];
+        if ( ptr )
+        {
+            anpts[n] = nextof( ptr );
+            return static_cast<char *>(ptr);
+        }
+
+        /* 每次固定申请chunk_size块大小为(n*ordered_size)内存
+         * 不用指数增长方式因为内存分配过大可能会失败
+         */
+        uint32 partition_sz = n*ordered_size;
+        assert( "buffer overflow",UINT_MAX/partition_sz > chunk_size );
+
+        uint64 block_size = sizeof(void *) + chunk_size*partition_sz;
+        char *block = new char[block_size];
+
+        /* 分配出来的内存，预留一个指针的位置在首部，用作链表将所有从系统获取的
+         * 内存串起来
+         */
+        nextof( block ) = block_list;
+        block_list = block;
+
+        /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
+        segregate( block + sizeof(void *) + partition_sz,partition_sz,
+            chunk_size - 1,n );
+        return block + sizeof(void *);
+    }
 private:
-    typedef void * NODE;
+    void clear() /* 释放所有内存，包括已分配出去未归还的。慎用！ */
+    {
+        if ( anpts )
+        {
+            delete []anpts;
+            anpts   = NULL;
+        }
 
-    NODE *anpts;    /* 空闲内存块链表数组,倍数n为下标 */
-    uint32 anptmax;
+        anptmax = 0;
 
-    void *block_list; /* 从系统分配的内存块链表 */
+        while ( block_list )
+        {
+            char *_ptr = static_cast<char *>(block_list);
+            block_list = nextof( block_list );
+
+            delete []_ptr;
+        }
+
+        block_list = NULL;
+    }
 
     /* 一块内存的指针是ptr,这块内存的前几个字节储存了下一块内存的指针地址
      * 即ptr可以看作是指针的指针
@@ -63,101 +124,13 @@ private:
         nextof( last ) = anpts[n];
         return anpts[n] = ptr;
     }
+private:
+    typedef void * NODE;
+
+    NODE *anpts;    /* 空闲内存块链表数组,倍数n为下标 */
+    uint32 anptmax;
+
+    void *block_list; /* 从系统分配的内存块链表 */
 };
-
-template<uint32 ordered_size>
-ordered_pool<ordered_size>::ordered_pool()
-    : anpts(NULL),anptmax(0),block_list(NULL)
-{
-    assert( "ordered size less "
-        "then sizeof(void *)",ordered_size >= sizeof(void *) );
-}
-
-template<uint32 ordered_size>
-ordered_pool<ordered_size>::~ordered_pool()
-{
-    if ( anpts )
-        delete []anpts;
-    anpts   = NULL;
-    anptmax = 0;
-
-    while ( block_list )
-    {
-        char *_ptr = static_cast<char *>(block_list);
-        block_list = nextof( block_list );
-
-        delete []_ptr;
-    }
-
-    block_list = NULL;
-}
-
-/* 分配N*ordered_size内存 */
-template<uint32 ordered_size>
-char *ordered_pool<ordered_size>::ordered_malloc( uint32 n,uint32 chunk_size )
-{
-    assert( "ordered_malloc size <= 0",n > 0 && chunk_size > 0 );
-    array_resize( NODE,anpts,anptmax,n+1,array_zero );
-    void *ptr = anpts[n];
-    if ( ptr )
-    {
-        anpts[n] = nextof( ptr );
-        return static_cast<char *>(ptr);
-    }
-
-    /* 每次固定申请chunk_size块大小为(n*ordered_size)内存
-     * 不用指数增长方式因为内存分配过大可能会失败
-     */
-    uint32 partition_sz = n*ordered_size;
-    assert( "buffer overflow",UINT_MAX/partition_sz > chunk_size );
-
-    uint64 block_size = sizeof(void *) + chunk_size*partition_sz;
-    char *block = new char[block_size];
-
-    /* 分配出来的内存，预留一个指针的位置在首部，用作链表将所有从系统获取的
-     * 内存串起来
-     */
-    nextof( block ) = block_list;
-    block_list = block;
-
-    /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
-    segregate( block + sizeof(void *) + partition_sz,partition_sz,
-        chunk_size - 1,n );
-    return block + sizeof(void *);
-}
-
-/* 归还内存
- * @n:表示ptr的内存大小是ordered_size的n倍
- */
-template<uint32 ordered_size>
-void ordered_pool<ordered_size>::ordered_free( char * const ptr,uint32 n )
-{
-    assert( "illegal ordered free",anptmax >= n && ptr );
-
-    // 把ptr前几个字节指向anpts[n],然后设置的起点指针为ptr.
-    // 相当于把ptr放到anpts[n]这个链表的首部
-    nextof( ptr ) = anpts[n];
-    anpts[n] = ptr;
-}
-
-/* 释放从系统申请的内存，包括已经分配出去的，慎用 */
-template<uint32 ordered_size>
-void ordered_pool<ordered_size>::purge()
-{
-    if ( anpts )
-        delete []anpts;
-    anpts   = NULL;
-    anptmax = 0;
-
-    while ( block_list )
-    {
-        char *_ptr = static_cast<char *>(block_list);
-        block_list = nextof( block_list );
-
-        delete []_ptr;
-    }
-
-    block_list = NULL;
-}
 
 #endif /* __ORDERED_POOL_H__ */

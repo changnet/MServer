@@ -167,7 +167,7 @@ void lstatistic::dump_mem_pool( lua_State *L )
         lua_rawset( L,-3 );
 
         // 单个对象内存大小
-        size_t size = ps->get_object_size();
+        size_t size = ps->get_sizeof();
         lua_pushstring( L,"sizeof" );
         lua_pushinteger( L,size );
         lua_rawset( L,-3 );
