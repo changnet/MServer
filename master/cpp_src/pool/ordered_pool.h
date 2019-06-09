@@ -64,8 +64,8 @@ public:
         block_list = block;
 
         /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
-        segregate( block + sizeof(void *) + partition_sz,partition_sz,
-            chunk_size - 1,n );
+        segregate( block + 
+            sizeof(void *) + partition_sz,partition_sz,chunk_size - 1,n );
         return block + sizeof(void *);
     }
 private:

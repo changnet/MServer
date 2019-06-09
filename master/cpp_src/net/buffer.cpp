@@ -1,14 +1,16 @@
 #include "buffer.h"
 
 // 临时连续缓冲区
-static char continuous_ctx[MAX_PACKET_LEN] = { 0 };
+static const uint32 continuous_size = MAX_PACKET_LEN;
+static char continuous_ctx[continuous_size] = { 0 };
 
 buffer::buffer()
 {
     _chunk_size = 0; // 已申请chunk数量
 
     _chunk_max = 8; // 允许申请chunk的最大数量
-    _chunk_ctx_size = MAX_PACKET_LEN; // 单个chunk的缓冲区大小
+    // 默认单个chunk的缓冲区大小
+    _chunk_ctx_size = (MAX_PACKET_LEN / BUFFER_CHUNK + 1) * BUFFER_CHUNK ;
 
     // TODO:服务器应该需要预先分配比较大的缓冲区而不是默认值
     _front = _back = new_chunk();
@@ -123,7 +125,8 @@ const char *buffer::check_used_ctx( uint32 len )
         return _front->used_ctx();
     }
 
-    assert("检测大小",false);
+    // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
+    PRINTF( "using continuous buffer:%d",len );
 
     uint32 used = 0;
     const chunk_t *next = _front;
@@ -131,6 +134,9 @@ const char *buffer::check_used_ctx( uint32 len )
     do
     {
         uint32 next_used = next->used_size();
+        assert( "continuous buffer overflow !!!",
+            used + next_used <= continuous_size );
+
         memcpy( continuous_ctx + used,
             next->used_ctx(),MATH_MIN( len - used,next_used ) );
 
@@ -158,6 +164,9 @@ const char *buffer::check_all_used_ctx( uint32 &len )
     do
     {
         uint32 next_used = next->used_size();
+        assert( "continuous buffer overflow !!!",
+            used + next_used <= continuous_size );
+
         memcpy( continuous_ctx + used,next->used_ctx(),next_used );
 
         used += next_used;
@@ -166,5 +175,9 @@ const char *buffer::check_all_used_ctx( uint32 &len )
 
     len = used;
     assert( "check_used_ctx fail", used > 0 );
+
+    // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
+    PRINTF( "using all continuous buffer:%d",len );
+
     return continuous_ctx;
 }

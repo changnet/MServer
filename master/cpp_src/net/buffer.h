@@ -175,7 +175,7 @@ private:
 
     inline void del_chunk( chunk_t *chunk )
     {
-        assert( "chunk size corruption",_chunk_size > 1 );
+        assert( "chunk size corruption",_chunk_size > 0 );
 
         _chunk_size --;
         del_ctx( chunk->_ctx,chunk->_max );

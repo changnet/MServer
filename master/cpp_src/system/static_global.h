@@ -13,6 +13,12 @@
 /* 管理全局static或者global变量
  * 控制全局、静态变更的创建、销毁顺序，避免影响内存管理
  * static initialization order fiasco(https://isocpp.org/wiki/faq/ctors)
+ * 其他静态变量只能是局部的，用get函数获取，参考object_pool的用法
+ *
+ * initializer只放业务无关的初始化，比如全局锁、ssl初始化...
+ * 业务逻辑的初始化放initialize函数
+ * 业务逻辑的销毁放uninitialize函数。业务逻辑必须在这晨销毁，不能等到static对象析构 !!!
+ * 因为其他局部变量在main函数之后销毁了
  */
 class static_global
 {

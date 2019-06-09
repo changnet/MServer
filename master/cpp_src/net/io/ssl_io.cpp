@@ -95,7 +95,7 @@ int32 ssl_io::send()
     if ( expect_true(len > 0) )
     {
         _send->remove( len );
-        return _send->get_used_size() > 0 ? 0 : 2;
+        return 0 == _send->get_used_size() ? 0 : 2;
     }
 
     int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
@@ -171,7 +171,7 @@ int32 ssl_io::do_handshake()
     {
         _handshake = true;
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
-        return _send->get_used_size() > 0 ? 2 : 0;
+        return 0 == _send->get_used_size() ? 0 : 2;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of 

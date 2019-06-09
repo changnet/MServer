@@ -10,9 +10,14 @@
  * 同一个unit中的static对象，先声明的先初始化。销毁的时候则反过来
  * 在头文件中的顺序不重要，这里实现的顺序才是运行时的顺序
  */
+
+// 1. initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class static_global::initializer static_global::_initializer;
+// 2. 状态统计，独立的
 class statistic static_global::_statistic;
+// 3. 事件主循环
 class lev static_global::_ev;
+// 4. 线程管理
 class thread_mgr static_global::_thread_mgr;
 class thread_log static_global::_async_log;
 class lstate static_global::_state;
@@ -55,6 +60,7 @@ static_global::initializer::~initializer()
     grid_aoi::purge();
 }
 
+// 业务都放这里逻辑初始化
 void static_global::initialize()  /* 程序运行时初始化 */
 {
     _async_log.start( 1,0 );
@@ -64,10 +70,16 @@ void static_global::initialize()  /* 程序运行时初始化 */
     _async_log.set_wait_busy( false );
 }
 
+/* 业务逻辑都放这里销毁，不能放initializer的析构函数或者等到对应static对象析构
+ * 因为业务逻辑可能包含static对象，等到调用析构的时候已经晚了
+ * 比如socket的buffer对象中使用局部static内存池。如果在_network_mgr的析构里才关闭socket
+ * 局部static内存池早就销毁了，内存早已出错。日志线程也是同样的设计。
+ */
 void static_global::uninitialize() /* 程序结束时反初始化 */
 {
     _async_log.stop();
     _thread_mgr.stop();
+    _network_mgr.clear();
 }
 
 

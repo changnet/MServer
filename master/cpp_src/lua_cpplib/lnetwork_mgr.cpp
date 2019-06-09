@@ -10,6 +10,15 @@
 
 lnetwork_mgr::~lnetwork_mgr()
 {
+    clear();
+}
+
+lnetwork_mgr::lnetwork_mgr() :_conn_seed(0)
+{
+}
+
+void lnetwork_mgr::clear() /* 清除所有网络数据，不通知上层脚本 */
+{
     socket_map_t::iterator itr = _socket_map.begin();
     for ( ;itr != _socket_map.end(); itr ++ )
     {
@@ -22,10 +31,6 @@ lnetwork_mgr::~lnetwork_mgr()
     _socket_map.clear();
     _session_map.clear();
     _conn_session_map.clear();
-}
-
-lnetwork_mgr::lnetwork_mgr() :_conn_seed(0)
-{
 }
 
 /* 删除无效的连接 */
@@ -546,8 +551,6 @@ int32 lnetwork_mgr::send_raw_packet( lua_State *L )
     size_t size = 0;
     const char *ctx = luaL_checklstring( L,2,&size );
     if ( !ctx ) return 0;
-
-    class buffer &send = sk->send_buffer();
 
     sk->append( ctx ,size );
 

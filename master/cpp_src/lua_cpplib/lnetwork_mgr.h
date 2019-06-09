@@ -61,6 +61,8 @@ public:
     int32 connect ( lua_State *L );
 
 public:
+    void clear(); /* 清除所有网络数据，不通知上层脚本 */
+
     /* 删除无效的连接 */
     void invoke_delete();
 

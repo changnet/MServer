@@ -55,7 +55,7 @@ int32 io::send()
     if ( expect_true(len > 0) )
     {
         _send->remove( len );
-        return _send->get_used_size() > 0 ? 0 : 2;
+        return 0 == _send->get_used_size() ? 0 : 2;
     }
 
     if ( 0 == len ) return -1;// 对方主动断开
