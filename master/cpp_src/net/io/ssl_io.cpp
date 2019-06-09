@@ -47,8 +47,8 @@ int32 ssl_io::recv()
     if ( !_recv->reserved() ) return -1; /* no more memory */
 
     // ERR_clear_error
-    uint32 size = _recv->buff_size();
-    int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->buff_pointer(),size );
+    uint32 size = _recv->get_space_size();
+    int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->get_space_ctx(),size );
     if ( expect_true(len > 0) )
     {
         _recv->add_used_offset( len );
@@ -88,8 +88,9 @@ int32 ssl_io::send()
 
     if ( !_handshake ) return do_handshake();
 
-    size_t bytes = _send->_send->get_used_size()();
+    size_t bytes = _send->get_used_size();
     assert( "io send without data",bytes > 0 );
+
     int32 len = SSL_write( X_SSL( _ssl_ctx ),_send->get_used_ctx(),bytes );
     if ( expect_true(len > 0) )
     {

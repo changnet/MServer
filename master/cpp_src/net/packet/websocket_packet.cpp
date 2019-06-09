@@ -110,15 +110,25 @@ int32 on_frame_body(
     class buffer &body = ws_packet->body_buffer();
 
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
-    if( parser->flags & WS_HAS_MASK ) {
-        if ( !body.reserved( length ) ) return -1;
+    if( parser->flags & WS_HAS_MASK )
+    {
+        // if ( !body.reserved( length ) ) return -1;
+        // 不再reserved，在frame_header里应该已reserved的。而且，正常情况下，websocket
+        // 应该只用到单个接收缓冲区。如果单个放不下最大协议，考虑修改缓冲区大小。目前缓冲区没
+        // 法reserved超过一个chunk大小的连续缓冲区
+        if ( body.get_space_size() < length )
+        {
+            ERROR( "websocket packet on frame body overflow:%d,%d",
+                body.get_used_size(),body.get_space_size() );
+            return -1;
+        }
 
-        websocket_parser_decode( body.buff_pointer(), at, length, parser);
+        websocket_parser_decode( body.get_space_ctx(), at, length, parser);
         body.add_used_offset( length );
     }
     else
     {
-        if ( !body.append( at,length ) ) return -1;
+        body.append( at,length );
     }
     return 0;
 }
@@ -191,7 +201,7 @@ int32 websocket_packet::pack_raw( lua_State *L,int32 index )
 
     char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
     if ( flags & WS_HAS_MASK ) new_masking_key( mask );
-    websocket_build_frame( send.buff_pointer(),flags,mask,ctx,size );
+    websocket_build_frame( send.get_space_ctx(),flags,mask,ctx,size );
     send.add_used_offset( len );
     _socket->pending_send();
 
@@ -239,7 +249,7 @@ int32 websocket_packet::unpack()
     class buffer &recv = _socket->recv_buffer();
 
     uint32 size = 0;
-    char *ctx = check_all_used_ctx( size );
+    const char *ctx = recv.check_all_used_ctx( size );
     if ( size == 0 ) return 0;
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
@@ -327,7 +337,7 @@ int32 websocket_packet::on_frame_end()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     uint32 size = 0;
-    char *ctx = _body.check_all_used_ctx( size );
+    const char *ctx = _body.check_all_used_ctx( size );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
@@ -351,7 +361,7 @@ int32 websocket_packet::on_ctrl_end()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     uint32 size = 0;
-    char *ctx = _body.check_all_used_ctx( size );
+    const char *ctx = _body.check_all_used_ctx( size );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"ctrl_new" );

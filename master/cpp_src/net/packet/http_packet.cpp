@@ -137,9 +137,11 @@ int32 http_packet::unpack()
 
     /* 注意：解析完成后，是由http-parser回调脚本的，这时脚本那边可能会关闭socket
      * 因此要注意http_parser_execute后部分资源是不可再访问的
+     * http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
+     * 不用check_all_used_ctx
      */
     int32 nparsed = 
-        http_parser_execute( _parser,&settings,recv.data_pointer(),size );
+        http_parser_execute( _parser,&settings,recv.get_used_ctx(),size );
 
     /* web_socket报文,暂时不用回调到上层
      * The user is expected to check if parser->upgrade has been set to 1 after 

@@ -1,14 +1,14 @@
 #ifndef __BUFFER_H__
 #define __BUFFER_H__
 
-#include "../global/global.h"
+#include "../pool/object_pool.h"
 #include "../pool/ordered_pool.h"
 
-/*
+/* 单个chunk
  *    +---------------------------------------------------------------+
- *    |    悬空区   |        数据区          |      空白buff区          |
+ *    |    悬空区   |        有效数据区        |      空白区(space)       |
  *    +---------------------------------------------------------------+
- * _buff          _pos                    _size
+ * _buff          _beg                    _end
  *
  *收发缓冲区，要考虑游戏场景中的几个特殊情况：
  * 1.游戏的通信包一般都很小，reserved出现的概率很小。偶尔出现，memcpy的效率也是可以接受的
@@ -18,133 +18,6 @@
  *   并且包不完整的情况下效率很低(进程间的socket粘包很严重)。因此，我们忽略前面的悬空缓冲区，
  *   直到我们需要调整内存时，才用memmove移动内存。
  */
-
-/* 
-class buffer
-{
-public:
-    buffer();
-    ~buffer();
-
-    static void purge() { allocator.purge(); }
-
-    bool append( const void *data,uint32 len )
-        __attribute__ ((warn_unused_result))
-    {
-        if ( !reserved( len ) ) return false;
-
-        __append( data,len );    return true;
-    }
-
-    // 减去缓冲区数据，此函数不处理缓冲区的数据
-    inline void subtract( uint32 len )
-    {
-        _pos += len;
-        assert( "buffer subtract",_size >= _pos && _len >= _pos );
-
-        if ( _size == _pos ) _pos = _size = 0;
-    }
-
-    // 增加数据区
-    inline void increase( uint32 len )
-    {
-        _size += len;
-        assert( "buffer increase",_size <= _len );
-    }
-
-    // 重置
-    inline void clear() { _pos = _size = 0; }
-    // 总大小
-    inline uint32 length() const { return _len; }
-
-    // 数据区大小
-    inline uint32 data_size() const { return _size - _pos; }
-    // 数据区指针 
-    inline char *data_pointer() const { return _buff + _pos; }
-
-    // 缓冲区大小
-    inline uint32 buff_size() const { return _len - _size; }
-    // 缓冲区指针
-    inline char *buff_pointer() const { return _buff + _size; }
-
-    // raw append data,but won't reserved
-    void __append( const void *data,const uint32 len )
-    {
-        assert( "buffer not reserved!",_len - _size >= len );
-        memcpy( _buff + _size,data,len );       _size += len;
-    }
-
-    // 设置缓冲区最大最小值
-    void set_buffer_size( uint32 max,uint32 min )
-    {
-        _max_buff = max;
-        _min_buff = min;
-    }
-public:
-    /* 内存预分配：
-     * @bytes : 要增长的字节数。默认为0,首次分配BUFFER_CHUNK，用完再按指数增长
-     * @vsz   : 已往缓冲区中写入的字节数，但未增加_size偏移，主要用于自定义写入缓存
-     /
-    inline bool reserved( uint32 bytes = 0,uint32 vsz = 0 )
-        __attribute__ ((warn_unused_result))
-    {
-        uint32 size = _size + vsz;
-        if ( _len - size > bytes ) return true;/* 不能等于0,刚好用完也申请 /
-
-        if ( _pos )    /* 解决悬空区 /
-        {
-            assert( "reserved memmove error",_size > _pos && size <= _len );
-            memmove( _buff,_buff + _pos,size - _pos );
-            _size -= _pos;
-            _pos   = 0   ;
-
-            return reserved( bytes,vsz );
-        }
-
-        assert( "buffer no min or max setting",_min_buff > 0 && _max_buff > 0 );
-
-        uint32 new_len = _len  ? _len  : _min_buff;
-        uint32 _bytes  = bytes ? bytes : BUFFER_CHUNK;
-        while ( new_len - size < _bytes )
-        {
-            new_len *= 2;  /* 通用算法：指数增加 /
-        }
-
-        if ( new_len > _max_buff ) return false;
-
-        /* 检验内在分配大小是否符合机制 /
-        assert( "buffer chunk size error",0 == new_len%BUFFER_CHUNK );
-
-        uint32 chunk_size = new_len >= BUFFER_LARGE ? 1 : BUFFER_CHUNK_SIZE;
-        char *new_buff =
-            allocator.ordered_malloc( new_len/BUFFER_CHUNK,chunk_size );
-
-        /* 像STL一样把旧内存拷到新内存 /
-        if ( size ) memcpy( new_buff,_buff,size );
-
-        if ( _len ) allocator.ordered_free( _buff,_len/BUFFER_CHUNK );
-
-        _buff = new_buff;
-        _len  = new_len ;
-
-        return      true;
-    }
-private:
-    buffer( const buffer & );
-    buffer &operator=( const buffer &);
-private:
-    char  *_buff;    /* 缓冲区指针 /
-    uint32 _size;    /* 缓冲区已使用大小 /
-    uint32 _len ;    /* 缓冲区总大小 /
-    uint32 _pos ;    /* 悬空区大小 /
-
-    uint32 _max_buff; /* 缓冲区最小值 /
-    uint32 _min_buff; /* 缓冲区最大值 /
-private:
-    static class ordered_pool<BUFFER_CHUNK> allocator;
-};
-*/
-
 
 /* 网络收发缓冲区
  * 
@@ -173,95 +46,62 @@ private:
  *   4). 需要处理超过包大小时，合并、拆分的情况
  */
 
-// TODO: static char continuous_ctx[MAX_PACKET_LEN] = { 0 }; 放C++文件
-
 class buffer
 {
-public:
-    buffer()
+private:
+    class chunk_t
     {
-        _front = _back = new_chunk();
-    }
+    public:
+        char  *_ctx;    /* 缓冲区指针 */
+        uint32 _max;    /* 缓冲区总大小 */
 
-    ~buffer()
-    {
-        while (_front)
+        uint32 _beg;    /* 有效数据开始位置 */
+        uint32 _end;    /* 有效数据结束位置 */
+
+        chunk_t *_next; /* 链表下一节点 */
+
+        inline void remove( uint32 len )
         {
-            chunk_t *tmp = _front;
-            _front = _front->_next;
-
-            del_chunk( tmp );
+            _beg += len;
+            assert("chunk remove corruption",_end >= _beg );
+        }
+        inline void add_used_offset( uint32 len )
+        {
+            _end += len;
+            assert("chunk append corruption",_max >= _end );
+        }
+        inline void append( const void *data,const uint32 len )
+        {
+            add_used_offset( len );
+            memcpy( _ctx,data,len );
         }
 
-        _front = _back = NULL;
-    }
+        // 有效数据指针
+        inline const char *used_ctx() const { return _ctx + _beg; }
+        inline char *space_ctx() { return _ctx + _end; } // 空闲缓冲区指针
 
-    // 添加数据
-    void append( const void *data,const uint32 len )
-    {
-        uint32 append_sz = 0;
-        do
-        {
-            reserved();
-            uint32 space = _back->space_size();
+        inline void clear() { _beg = _end = 0; } // 重置有效数据
+        inline uint32 used_size() const { return _end - _beg; } // 有效数据大小
+        inline uint32 space_size() const { return _max - _end; } // 空闲缓冲区大小
+    };
 
-            uint32 size = MATH_MIN( space,len - append_sz );
-            _back->append( data + append_sz,size );
+    typedef ordered_pool<BUFFER_CHUNK> ctx_pool_t;
+    typedef object_pool< chunk_t,1024,64 > chunk_pool_t;
+public:
+    buffer();
+    ~buffer();
 
-            append_sz += size;
+    void clear();
+    void remove( uint32 len );
+    void append( const void *data,const uint32 len );
 
-            // 大多数情况下，一次应该可以添加完数据
-            // 如果不能，考虑调整单个chunk的大小，否则影响效率
-        }while ( expect_false(append_sz < len) );
-    }
-
-    // 删除数据
-    void remove( uint32 len )
-    {
-        uint32 remove_sz = 0;
-        do
-        {
-            uint32 used = _front->used_size();
-
-            // 这个chunk还有其他数据
-            if ( used > len )
-            {
-                _front->remove( len );
-                break;
-            }
-
-            // 这个chunk只剩下这个数据包
-            if ( used == len )
-            {
-                chunk_t *next = _front->_next;
-                if ( next )
-                {
-                    // 还有下一个chunk，则指向下一个chunk
-                    del_chunk( _front );
-                    _front = next;
-                }
-                else
-                {
-                    _front->clear(); // 在无数据的时候重重置缓冲区
-                }
-                break;
-            }
-
-            // 这个数据包分布在多个chunk，一个个删
-            chunk_t *tmp = _front;
-
-            _front = _front->_next;
-            assert( "no more chunk to remove",_front );
-
-            del_chunk( tmp );
-            remove_sz += used;
-        } while( true );
-    }
+    const char *check_used_ctx( uint32 len );
+    const char *check_all_used_ctx( uint32 &len );
 
     // 只获取第一个chunk的有效数据大小，用于socket发送
     inline uint32 get_used_size() const { return _front->used_size(); }
     // 只获取第一个chunk的有效数据指针，用于socket发送
-    inline char *get_used_ctx() const { return _front->used_ctx(); };
+    inline const char *get_used_ctx() const { return _front->used_ctx(); };
 
     /* 检测当前有效数据的大小是否 >= 指定值
      * TODO:用于数据包分在不同chunk的情况，这是采用这种设计缺点之一
@@ -276,69 +116,16 @@ public:
             used += next->used_size();
 
             next = next->_next;
-        } while ( expect_false(next && used < len) )
+        } while ( expect_false(next && used < len) );
 
         return used >= len;
     }
 
-    /* 检测指定长度的有效数据是否在连续内存，不在的话要合并成连续内存
-     * protobuf这些都要求内存在连续缓冲区才能解析
-     * TODO:这是采用这种设计缺点之二
-     */
-    inline char *check_used_ctx( uint32 len )
-    {
-        // 大多数情况下，是在同一个chunk的，如果不是，调整下chunk的大小，否则影响效率
-        if ( expect_true( _front->used_size() >= len ) )
-        {
-            return _front->used_ctx();
-        }
 
-        static char ctx[MAX_PACKET_LEN] = { 0 };
-
-        uint32 used = 0;
-        const chunk_t *next = _front;
-
-        do
-        {
-            uint32 next_used = next->used_size();
-            memcpy( continuous_ctx + used,
-                next->used_ctx(),MATH_MIN( len - used,next_used ) );
-
-            used += next_used;
-            next = next->_next;
-        } while ( next && used < len )
-
-        assert( "check_used_ctx fail", used == len );
-        return continuous_ctx;
-    }
-
-    inline char *check_all_used_ctx( uint32 &len )
-    {
-        if ( expect_true( !_front->_next ) )
-        {
-            len = _front->used_size();
-            return _front->used_ctx();
-        }
-
-        uint32 used = 0;
-        const chunk_t *next = _front;
-
-        do
-        {
-            uint32 next_used = next->used_size();
-            memcpy( continuous_ctx + used,next->used_ctx(),next_used );
-
-            used += next_used;
-            next = next->_next;
-        } while ( next )
-
-        len = used;
-        assert( "check_used_ctx fail", used > 0 );
-        return continuous_ctx;
-    }
-
-    // 获取空闲缓冲区指针及大小，只获取一个chunk的，用于socket接收
-    char *get_space_ctx(uint32 &space);
+    // 获取空闲缓冲区大小，只获取一个chunk的，用于socket接收
+    inline uint32 get_space_size() { return _back->space_size(); }
+    // 获取空闲缓冲区指针，只获取一个chunk的，用于socket接收
+    inline char *get_space_ctx() { return _back->space_ctx(); };
     // 增加有效数据长度，比如从socket读数据时，先拿缓冲区，然后才知道读了多少数据
     inline void add_used_offset(uint32 len)
     {
@@ -349,82 +136,102 @@ public:
      * @len:len为0表示不需要确定预分配
      * 注意当len不为0时而当前chunk空间不足，会直接申请下一个chunk，数据包并不是连续的
      */
-    void reserved(uint32 len = 0)
+    inline bool __attribute__ ((warn_unused_result)) reserved(uint32 len = 0)
     {
         uint32 space = _back->space_size();
         if ( 0 == space || len > space )
         {
             _back = _back->_next = new_chunk( len );
         }
+
+        return true;
     }
 
+    // 设置缓冲区参数
+    // @max:chunk最大数量
+    // @ctx_max:默认
+    void set_buffer_size( uint32 max,uint32 ctx_size )
+    {
+        _chunk_max = max;
+        _chunk_ctx_size = ctx_size;
+
+        // 设置的chunk大小必须是等长内存池的N倍
+        assert( "illegal buffer chunk size", 0 == ctx_size % BUFFER_CHUNK );
+    }
 private:
     inline chunk_t *new_chunk( uint32 ctx_size  = 0 )
     {
-        chunk_t *chunk = new chunk_t();
+        chunk_pool_t *pool = get_chunk_pool();
+
+        chunk_t *chunk = pool->construct();
         memset(chunk,0,sizeof(chunk_t));
 
         chunk->_ctx = new_ctx( ctx_size );
         chunk->_max = ctx_size;
 
+        _chunk_size ++;
         return chunk;
     }
 
-    inline del_chunk( chunk_t *chunk )
+    inline void del_chunk( chunk_t *chunk )
     {
+        assert( "chunk size corruption",_chunk_size > 1 );
 
+        _chunk_size --;
+        del_ctx( chunk->_ctx,chunk->_max );
+
+        chunk_pool_t *pool = get_chunk_pool();
+        pool->destroy( chunk );
     }
 
     // @size:要分配的缓冲区大小，会被修正为最终分配的大小
     inline char *new_ctx( uint32 &size )
     {
+        // 如果分配太小，则修正为指定socket的大小。避免reserved分配太小的内存块
+        uint32 new_size = MATH_MAX( size,_chunk_ctx_size );
 
+        // 大小只能是BUFFER_CHUNK的N倍，如果不是则修正
+        if ( 0 != new_size % BUFFER_CHUNK )
+        {
+            new_size = (new_size / BUFFER_CHUNK + 1) * BUFFER_CHUNK;
+        }
+
+        assert( "buffer chunk ctx size error",new_size > 0 );
+
+        size = new_size;
+
+        ctx_pool_t *pool = get_ctx_pool();
+        // TODO:处理下分配数量的机制
+        return pool->ordered_malloc( new_size/BUFFER_CHUNK,8 );
     }
 
-    inline del_ctx( char *ctx,uint32 size )
+    inline void del_ctx( char *ctx,uint32 size )
     {
+        assert( "illegal buffer chunk ctx size error",
+            size > 0 && (0 == size % BUFFER_CHUNK) );
+
+        ctx_pool_t *pool = get_ctx_pool();
+        pool->ordered_free( ctx, size / BUFFER_CHUNK );
     }
 private:
-    typedef struct
+    // 采用局部static，这样就不会影响static_global中的内存统计
+    chunk_pool_t *get_chunk_pool()
     {
-        char  *_ctx;    /* 缓冲区指针 */
-        uint32 _max;    /* 缓冲区总大小 */
-
-        uint32 _beg;    /* 有效数据开始位置 */
-        uint32 _end;    /* 有效数据结束位置 */
-
-        chunk_t *_next; /* 链表下一节点 */
-
-        inline remove( uint32 len )
-        {
-            _beg += len;
-            assert("chunk remove corruption",_end >= _beg );
-        }
-        inline void add_used_offset( uint32 len )
-        {
-            _end += len;
-            assert("chunk append corruption",_max >= _end );
-        }
-        inline append( const void *data,const uint32 len )
-        {
-            add_used_offset( len );
-            memcpy( _ctx,data,len );
-        }
-
-        inline char *used_ctx() { return _ctx + _beg; } // 有效数据指针
-        inline char *space_ctx() { return _ctx + _end; } // 空闲缓冲区指针
-
-        inline void clear() { _beg = _end = 0; } // 重置有效数据
-        inline uint32 used_size() const { return _end - _beg; } // 有效数据大小
-        inline uint32 space_size() const { return _max - _end; } // 空闲缓冲区大小
-    }chunk_t;
-
+        static chunk_pool_t chunk_pool("buffer_chunk");
+        return &chunk_pool;
+    }
+    ctx_pool_t *get_ctx_pool()
+    {
+        static ctx_pool_t ctx_pool;
+        return &ctx_pool;
+    }
+private:
     chunk_t *_front; // 数据包链表头
     chunk_t *_back ; // 数据包链表尾
     uint32 _chunk_size; // 已申请chunk数量
 
     uint32 _chunk_max; // 允许申请chunk的最大数量
-    uint32 _chunk_ctx_max; // 单个chunk的缓冲区大小
+    uint32 _chunk_ctx_size; // 单个chunk的缓冲区大小
 };
 
 #endif /* __BUFFER_H__ */

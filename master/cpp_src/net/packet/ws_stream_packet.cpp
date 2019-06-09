@@ -124,7 +124,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     new_masking_key( mask );
 
     uint8 mask_offset = 0;
-    char *buff = send.buff_pointer();
+    char *buff = send.get_space_ctx();
     size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
     offset += websocket_append_frame( 
         buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
@@ -151,14 +151,14 @@ int32 ws_stream_packet::on_frame_end()
 
     /* 服务器收到的包，看要不要转发 */
     uint32 data_size = 0;
-    char *ctx = _body.check_all_used_ctx( data_size );
+    const char *data_ctx = _body.check_all_used_ctx( data_size );
     if ( data_size < sizeof(struct srv_header) )
     {
         ERROR( "ws_stream_packet on_frame_end packet incomplete" );
         return 0;
     }
-    struct srv_header *header = 
-        reinterpret_cast<struct srv_header *>( ctx );
+    const struct srv_header *header = 
+        reinterpret_cast<const struct srv_header *>( data_ctx );
 
     uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
@@ -176,15 +176,15 @@ int32 ws_stream_packet::sc_command()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     uint32 data_size = 0;
-    char *ctx = _body.check_all_used_ctx( data_size );
+    const char *data_ctx = _body.check_all_used_ctx( data_size );
     if ( data_size < sizeof(struct clt_header) )
     {
         ERROR( "ws_stream_packet sc_command packet incomplete" );
         return 0;
     }
 
-    struct clt_header *header = 
-        reinterpret_cast<struct clt_header *>( ctx );
+    const struct clt_header *header = 
+        reinterpret_cast<const struct clt_header *>( data_ctx );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
@@ -288,7 +288,7 @@ int32 ws_stream_packet::do_pack_clt(
 
     char mask[4] = { 0 };
     uint8 mask_offset = 0;
-    char *buff = send.buff_pointer();
+    char *buff = send.get_space_ctx();
     size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
     offset += websocket_append_frame( 
         buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );

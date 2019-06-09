@@ -4,7 +4,6 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
-#include "../net/buffer.h"
 #include "../scene/grid_aoi.h"
 
 /* 各个变量之间有依赖，要注意顺序
@@ -52,8 +51,7 @@ static_global::initializer::~initializer()
     mongo::cleanup();
     ssl_uninit();
 
-        /* 清除静态数据，以免影响内存检测 */
-    buffer::purge();
+    /* 清除静态数据，以免影响内存检测 */
     grid_aoi::purge();
 }
 

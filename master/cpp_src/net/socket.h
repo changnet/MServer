@@ -99,13 +99,13 @@ public:
     inline int32 get_pending() const { return _pending; }
     inline int32 set_pending( int32 pending ) { return _pending = pending; }
 
-    inline void set_recv_size( uint32 max,uint32 min )
+    inline void set_recv_size( uint32 max,uint32 ctx_size )
     {
-        _recv.set_buffer_size( max,min );
+        _recv.set_buffer_size( max,ctx_size );
     }
-    inline void set_send_size( uint32 max,uint32 min )
+    inline void set_send_size( uint32 max,uint32 ctx_size )
     {
-        _send.set_buffer_size( max,min );
+        _send.set_buffer_size( max,ctx_size );
     }
 
     inline int64 get_object_id() const { return _object_id; }

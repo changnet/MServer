@@ -549,8 +549,7 @@ int32 lnetwork_mgr::send_raw_packet( lua_State *L )
 
     class buffer &send = sk->send_buffer();
 
-    send.append( ctx ,size );
-    sk->pending_send();
+    sk->append( ctx ,size );
 
     return 0;
 }
@@ -558,9 +557,9 @@ int32 lnetwork_mgr::send_raw_packet( lua_State *L )
 /* 设置发送缓冲区大小 */
 int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
 {
-    uint32 conn_id = luaL_checkinteger( L,1 );
-    uint32 max     = luaL_checkinteger( L,2 );
-    uint32 min     = luaL_checkinteger( L,3 );
+    uint32 conn_id  = luaL_checkinteger( L,1 );
+    uint32 max      = luaL_checkinteger( L,2 );
+    uint32 ctx_size = luaL_checkinteger( L,3 );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
@@ -569,7 +568,7 @@ int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
     }
 
     class socket *_socket = itr->second;
-    _socket->set_send_size( max,min );
+    _socket->set_send_size( max,ctx_size );
 
     return 0;
 }
@@ -577,9 +576,9 @@ int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
 /* 设置接收缓冲区大小 */
 int32 lnetwork_mgr::set_recv_buffer_size( lua_State *L )
 {
-    uint32 conn_id = luaL_checkinteger( L,1 );
-    uint32 max     = luaL_checkinteger( L,2 );
-    uint32 min     = luaL_checkinteger( L,3 );
+    uint32 conn_id  = luaL_checkinteger( L,1 );
+    uint32 max      = luaL_checkinteger( L,2 );
+    uint32 ctx_size = luaL_checkinteger( L,3 );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
@@ -588,7 +587,7 @@ int32 lnetwork_mgr::set_recv_buffer_size( lua_State *L )
     }
 
     class socket *_socket = itr->second;
-    _socket->set_recv_size( max,min );
+    _socket->set_recv_size( max,ctx_size );
 
     return 0;
 }

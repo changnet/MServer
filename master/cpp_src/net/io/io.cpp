@@ -21,8 +21,9 @@ int32 io::recv()
 
     if ( !_recv->reserved() ) return -1; /* no more memory */
 
-    uint32 size = _recv->buff_size();
-    int32 len = ::read( _fd,_recv->buff_pointer(),size );
+    // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
+    uint32 size = _recv->get_space_size();
+    int32 len = ::read( _fd,_recv->get_space_ctx(),size );
     if ( expect_true(len > 0) )
     {
         _recv->add_used_offset( len );
