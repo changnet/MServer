@@ -4,8 +4,6 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
-#include "../scene/grid_aoi.h"
-
 /* 各个变量之间有依赖，要注意顺序
  * 同一个unit中的static对象，先声明的先初始化。销毁的时候则反过来
  * 在头文件中的顺序不重要，这里实现的顺序才是运行时的顺序
@@ -55,9 +53,6 @@ static_global::initializer::~initializer()
     sql::library_end();
     mongo::cleanup();
     ssl_uninit();
-
-    /* 清除静态数据，以免影响内存检测 */
-    grid_aoi::purge();
 }
 
 // 业务都放这里逻辑初始化

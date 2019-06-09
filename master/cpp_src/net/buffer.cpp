@@ -12,8 +12,7 @@ buffer::buffer()
     // 默认单个chunk的缓冲区大小
     _chunk_ctx_size = (MAX_PACKET_LEN / BUFFER_CHUNK + 1) * BUFFER_CHUNK ;
 
-    // TODO:服务器应该需要预先分配比较大的缓冲区而不是默认值
-    _front = _back = new_chunk();
+    _front = _back = NULL;
 }
 
 buffer::~buffer()
@@ -33,6 +32,8 @@ buffer::~buffer()
 // 删除多余的chunk只保留一个
 void buffer::clear()
 {
+    if ( !_front ) return;
+
     while (_front->_next)
     {
         chunk_t *tmp = _front;
@@ -117,7 +118,7 @@ void buffer::remove( uint32 len )
  * protobuf这些都要求内存在连续缓冲区才能解析
  * TODO:这是采用这种设计缺点之二
  */
-const char *buffer::check_used_ctx( uint32 len )
+const char *buffer::to_continuous_ctx( uint32 len )
 {
     // 大多数情况下，是在同一个chunk的，如果不是，调整下chunk的大小，否则影响效率
     if ( expect_true( _front->used_size() >= len ) )
@@ -144,19 +145,17 @@ const char *buffer::check_used_ctx( uint32 len )
         next = next->_next;
     } while ( next && used < len );
 
-    assert( "check_used_ctx fail", used == len );
+    assert( "to_continuous_ctx fail", used == len );
     return continuous_ctx;
 }
 
-const char *buffer::check_all_used_ctx( uint32 &len )
+const char *buffer::all_to_continuous_ctx( uint32 &len )
 {
     if ( expect_true( !_front->_next ) )
     {
         len = _front->used_size();
         return _front->used_ctx();
     }
-
-    assert("检测大小",false); // 改名成 to_continuous_ctx
 
     uint32 used = 0;
     const chunk_t *next = _front;
@@ -174,7 +173,7 @@ const char *buffer::check_all_used_ctx( uint32 &len )
     } while ( next );
 
     len = used;
-    assert( "check_used_ctx fail", used > 0 );
+    assert( "all_to_continuous_ctx fail", used > 0 );
 
     // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
     PRINTF( "using all continuous buffer:%d",len );

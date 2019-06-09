@@ -249,7 +249,7 @@ int32 websocket_packet::unpack()
     class buffer &recv = _socket->recv_buffer();
 
     uint32 size = 0;
-    const char *ctx = recv.check_all_used_ctx( size );
+    const char *ctx = recv.all_to_continuous_ctx( size );
     if ( size == 0 ) return 0;
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
@@ -337,7 +337,7 @@ int32 websocket_packet::on_frame_end()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     uint32 size = 0;
-    const char *ctx = _body.check_all_used_ctx( size );
+    const char *ctx = _body.all_to_continuous_ctx( size );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
@@ -361,7 +361,7 @@ int32 websocket_packet::on_ctrl_end()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     uint32 size = 0;
-    const char *ctx = _body.check_all_used_ctx( size );
+    const char *ctx = _body.all_to_continuous_ctx( size );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"ctrl_new" );

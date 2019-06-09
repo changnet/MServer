@@ -24,14 +24,14 @@ int32 stream_packet::unpack()
 
     const struct base_header *header =
         reinterpret_cast<const struct base_header *>(
-            recv.check_used_ctx( sizeof( struct base_header ) ) );
+            recv.to_continuous_ctx( sizeof( struct base_header ) ) );
 
     // 检测包内容是否完整
     uint32 length = header->_length;
     if ( !recv.check_used_size( length ) ) return 0;
 
     header = reinterpret_cast<
-        const struct base_header *>(recv.check_used_ctx( length ) );
+        const struct base_header *>(recv.to_continuous_ctx( length ) );
 
     dispatch( header ); // 数据包完整，派发处理
     recv.remove( length );   // 无论成功或失败，都移除该数据包

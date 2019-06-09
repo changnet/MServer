@@ -53,7 +53,7 @@ local network_mgr = network_mgr
 local Clt_conn = oo.class( "Clt_conn" )
 
 function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
-    print( "clt handshake",sec_websocket_accept)
+    PRINT( "clt handshake",sec_websocket_accept)
     if not sec_websocket_accept then return end
 
     -- TODO:验证sec_websocket_accept是否正确
@@ -65,12 +65,12 @@ end
 function Clt_conn:connect( ip,port )
     self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_CSCN )
     conn_mgr:set_conn( self.conn_id,self )
-    print( "clt connnect to ",ip,self.conn_id )
+    PRINT( "clt connnect to ",ip,self.conn_id )
 end
 
 function Clt_conn:conn_new( ecode )
     if 0 ~= ecode then
-        print( "clt_conn conn error",self.conn_id,util.what_error(ecode) )
+        PRINT( "clt_conn conn error",self.conn_id,util.what_error(ecode) )
         return
     end
 
@@ -78,17 +78,17 @@ function Clt_conn:conn_new( ecode )
     network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_WEBSOCKET )
 
-    print( "conn_new",self.conn_id )
+    PRINT( "conn_new",self.conn_id )
 
     network_mgr:send_raw_packet( self.conn_id,handshake_clt )
 end
 
 function Clt_conn:conn_del()
-    print("conn_del",self.conn_id)
+    PRINT("conn_del",self.conn_id)
 end
 
 function Clt_conn:command_new( body )
-    print("clt command new",body)
+    PRINT("clt command new",body)
     network_mgr:send_ctrl_packet(
         self.conn_id,WS_OP_PING | WS_FINAL_FRAME,"hello" )
 end
@@ -97,18 +97,18 @@ function Clt_conn:ctrl_new( flag,body )
     -- 控制帧只在前4位，先去掉WS_HAS_MASK这些位
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
-        print( "clt ctrl_new close",self.conn_id,body)
+        PRINT( "clt ctrl_new close",self.conn_id,body)
         network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_CLOSE | WS_HAS_MASK | WS_FINAL_FRAME )
         return
     elseif flag == WS_OP_PING then
-        print( "clt ctrl_new ping",self.conn_id,body)
+        PRINT( "clt ctrl_new ping",self.conn_id,body)
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
         network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_PONG | WS_HAS_MASK | WS_FINAL_FRAME,body )
         return
     elseif flag == WS_OP_PONG then
-        print( "clt ctrl_new pong",self.conn_id,body)
+        PRINT( "clt ctrl_new pong",self.conn_id,body)
         return
     end
 
@@ -122,14 +122,14 @@ function Srv_conn:__init( conn_id )
 end
 
 function Srv_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
-    print( "srv handshake_new",sec_websocket_key )
+    PRINT( "srv handshake_new",sec_websocket_key )
     -- 服务器收到客户端的握手请求
     if not sec_websocket_key then return end
 
     local sha1 = util.sha1_raw( sec_websocket_key,ws_magic )
     local base64 = util.base64( sha1 )
 
-    print( base64 ) -- just test if match
+    PRINT( base64 ) -- just test if match
     network_mgr:send_raw_packet( self.conn_id,handshake_srv )
 end
 
@@ -140,7 +140,7 @@ function Srv_conn:listen( ip,port )
 end
 
 function Srv_conn:conn_accept( new_conn_id )
-    print( "srv conn accept new",new_conn_id )
+    PRINT( "srv conn accept new",new_conn_id )
 
     -- 弄成全局的，不然会被释放掉
     new_conn = Srv_conn( new_conn_id )
@@ -152,12 +152,12 @@ function Srv_conn:conn_accept( new_conn_id )
 end
 
 function Srv_conn:conn_del()
-    print( "srv conn del",self.conn_id )
+    PRINT( "srv conn del",self.conn_id )
 end
 
 -- 回调
 function Srv_conn:command_new( body )
-    print( "srv command_new",self.conn_id,body )
+    PRINT( "srv command_new",self.conn_id,body )
 
     local tips = "Mini-Game-Distribute-Server!"
 
@@ -169,17 +169,17 @@ function Srv_conn:ctrl_new( flag,body )
     -- 控制帧只在前4位，先去掉WS_HAS_MASK这些位
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
-        print( "srv ctrl_new close",self.conn_id,body)
+        PRINT( "srv ctrl_new close",self.conn_id,body)
         network_mgr:send_ctrl_packet( self.conn_id,WS_OP_CLOSE | WS_FINAL_FRAME )
         return
     elseif flag == WS_OP_PING then
-        print( "srv ctrl_new ping",self.conn_id,body)
+        PRINT( "srv ctrl_new ping",self.conn_id,body)
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
         network_mgr:send_ctrl_packet(
             self.conn_id,WS_OP_PONG | WS_FINAL_FRAME,body )
         return
     elseif flag == WS_OP_PONG then
-        print( "srv ctrl_new pong",self.conn_id,body)
+        PRINT( "srv ctrl_new pong",self.conn_id,body)
         return
     end
 
@@ -192,8 +192,8 @@ local ip1,ip2 = util.gethostbyname( ws_url )
 
 -- 这里创建的对象要放到全局引用，不然会被释放掉，就没法回调了
 
-ws_conn = Clt_conn()
-ws_conn:connect( ip1,80 )
+-- ws_conn = Clt_conn()
+-- ws_conn:connect( ip1,80 )
 
 -- 开户本地服务器
 local ws_port = 10002

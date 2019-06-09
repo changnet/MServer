@@ -6,9 +6,6 @@
 #define INDEX_BIT 8
 #define MAKE_INDEX(x,y) ((int32)x << INDEX_BIT) + y
 
-object_pool< grid_aoi::entity_ctx,10240,1024 > grid_aoi::_ctx_pool("grid_aoi_ctx");
-object_pool< grid_aoi::entity_vector_t,10240,1024 > grid_aoi::_vector_pool("grid_aoi_vector");
-
 grid_aoi::grid_aoi()
 {
     _width = 0; // 场景最大宽度(格子坐标)
@@ -37,12 +34,12 @@ grid_aoi::~grid_aoi()
 // 需要实现缓存，太大的直接删除不要丢缓存
 void grid_aoi::del_entity_vector(entity_vector_t *list)
 {
-    _vector_pool.destroy(list,list->size() > 512);
+    get_vector_pool()->destroy(list,list->size() > 512);
 }
 
 grid_aoi::entity_vector_t *grid_aoi::new_entity_vector()
 {
-    entity_vector_t *vt = _vector_pool.construct();
+    entity_vector_t *vt = get_vector_pool()->construct();
 
     vt->clear();
     return vt;
@@ -52,12 +49,12 @@ void grid_aoi::del_entity_ctx(struct entity_ctx *ctx)
 {
     del_entity_vector(ctx->_watch_me);
 
-    _ctx_pool.destroy(ctx);
+    get_ctx_pool()->destroy(ctx);
 }
 
 struct grid_aoi::entity_ctx *grid_aoi::new_entity_ctx()
 {
-    struct entity_ctx *ctx = _ctx_pool.construct();
+    struct entity_ctx *ctx = get_ctx_pool()->construct();
 
     ctx->_watch_me = new_entity_vector();
 

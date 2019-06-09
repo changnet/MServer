@@ -72,8 +72,8 @@ private:
         }
         inline void append( const void *data,const uint32 len )
         {
+            memcpy( _ctx + _end,data,len );
             add_used_offset( len );
-            memcpy( _ctx,data,len );
         }
 
         // 有效数据指针
@@ -95,11 +95,15 @@ public:
     void remove( uint32 len );
     void append( const void *data,const uint32 len );
 
-    const char *check_used_ctx( uint32 len );
-    const char *check_all_used_ctx( uint32 &len );
+    const char *to_continuous_ctx( uint32 len );
+    const char *all_to_continuous_ctx( uint32 &len );
 
     // 只获取第一个chunk的有效数据大小，用于socket发送
-    inline uint32 get_used_size() const { return _front->used_size(); }
+    inline uint32 get_used_size() const
+    {
+        return _front ? _front->used_size() : 0;
+    }
+
     // 只获取第一个chunk的有效数据指针，用于socket发送
     inline const char *get_used_ctx() const { return _front->used_ctx(); };
 
@@ -123,7 +127,10 @@ public:
 
 
     // 获取空闲缓冲区大小，只获取一个chunk的，用于socket接收
-    inline uint32 get_space_size() { return _back->space_size(); }
+    inline uint32 get_space_size()
+    {
+        return _back ? _back->space_size() : 0;
+    }
     // 获取空闲缓冲区指针，只获取一个chunk的，用于socket接收
     inline char *get_space_ctx() { return _back->space_ctx(); };
     // 增加有效数据长度，比如从socket读数据时，先拿缓冲区，然后才知道读了多少数据
@@ -138,6 +145,12 @@ public:
      */
     inline bool __attribute__ ((warn_unused_result)) reserved(uint32 len = 0)
     {
+        if ( expect_false(!_front) )
+        {
+            _back = _front = new_chunk();
+            return true;
+        }
+
         uint32 space = _back->space_size();
         if ( 0 == space || len > space )
         {
@@ -200,9 +213,10 @@ private:
 
         size = new_size;
 
+        /* 分配的内存块太大每次将只分配一块，其他分配8块 */
         ctx_pool_t *pool = get_ctx_pool();
-        // TODO:处理下分配数量的机制
-        return pool->ordered_malloc( new_size/BUFFER_CHUNK,8 );
+        return pool->ordered_malloc( 
+            new_size/BUFFER_CHUNK, new_size >= BUFFER_LARGE ? 1 : 8 );
     }
 
     inline void del_ctx( char *ctx,uint32 size )
@@ -222,7 +236,7 @@ private:
     }
     ctx_pool_t *get_ctx_pool()
     {
-        static ctx_pool_t ctx_pool;
+        static ctx_pool_t ctx_pool("buffer_ctx");
         return &ctx_pool;
     }
 private:

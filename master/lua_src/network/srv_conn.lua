@@ -97,15 +97,22 @@ function Srv_conn:reconnect()
     return self:raw_connect()
 end
 
+-- 重新连接
+function Srv_conn:set_conn_param( conn_id )
+    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+
+    -- 设置服务器之间链接缓冲区大小：
+    -- 发送的话可能会累加，要设置大些.16777216 = 16MB，最大累加16*64 = 1024M
+    -- 接收的话现在是收到数据立马解析完，不需要很大
+    network_mgr:set_send_buffer_size( conn_id,64,16777216 )
+    network_mgr:set_recv_buffer_size( conn_id,8,8388608 ) -- 8M
+end
+
 -- 接受新的连接
 function Srv_conn:conn_accept( new_conn_id )
-    network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
-    network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_STREAM )
-
-    -- 设置服务器之间链接缓冲区大小：16777216 = 16MB
-    network_mgr:set_send_buffer_size( new_conn_id,16777216*4,16777216*4 )
-    network_mgr:set_recv_buffer_size( new_conn_id,16777216*4,16777216*4 )
+    self:set_conn_param( new_conn_id )
 
     local new_conn = Srv_conn( new_conn_id )
     g_network_mgr:srv_conn_accept( new_conn_id,new_conn )
@@ -117,13 +124,7 @@ end
 function Srv_conn:conn_new( ecode )
     if 0 == ecode then
         self.conn_ok = true
-        network_mgr:set_conn_io( self.conn_id,network_mgr.IOT_NONE )
-        network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_PROTOBUF )
-        network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_STREAM )
-
-        -- 设置服务器之间链接缓冲区大小：16777216 = 16MB
-        network_mgr:set_send_buffer_size( self.conn_id,16777216*4,16777216*4 )
-        network_mgr:set_recv_buffer_size( self.conn_id,16777216*4,16777216*4 )
+        self:set_conn_param( self.conn_id )
     end
 
     return g_network_mgr:srv_conn_new( self.conn_id,ecode )

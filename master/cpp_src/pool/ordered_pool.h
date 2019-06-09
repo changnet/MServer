@@ -12,11 +12,11 @@
 #include "pool.h"
 
 template<uint32 ordered_size>
-class ordered_pool
+class ordered_pool : public pool
 {
 public:
-    ordered_pool()
-        : anpts(NULL),anptmax(0),block_list(NULL)
+    explicit ordered_pool( const char *name )
+        : pool(name),anpts(NULL),anptmax(0),block_list(NULL)
     {
         assert( "ordered size less "
             "then sizeof(void *)",ordered_size >= sizeof(void *) );
@@ -27,7 +27,7 @@ public:
     virtual void purge() { clear(); };
     virtual size_t get_sizeof() const { return ordered_size; }
 
-    void ordered_free  ( char * const ptr,uint32 n )
+    void ordered_free( char * const ptr,uint32 n )
     {
         assert( "illegal ordered free",anptmax >= n && ptr );
 
@@ -35,15 +35,21 @@ public:
         // 相当于把ptr放到anpts[n]这个链表的首部
         nextof( ptr ) = anpts[n];
         anpts[n] = ptr;
+
+        _max_now += n;
     }
 
-    char *ordered_malloc( uint32 n = 1,uint32 chunk_size = 512 )
+    /* 分配一块大小为n个ordered_size的内存
+     * @chunk_size:预分配的数量(因为内存大小不一，分配策划需要根据逻辑来定)
+     */
+    char *ordered_malloc( uint32 n,uint32 chunk_size )
     {
         assert( "ordered_malloc size <= 0",n > 0 && chunk_size > 0 );
         array_resize( NODE,anpts,anptmax,n+1,array_zero );
         void *ptr = anpts[n];
         if ( ptr )
         {
+            _max_now -= n;
             anpts[n] = nextof( ptr );
             return static_cast<char *>(ptr);
         }
@@ -62,6 +68,10 @@ public:
          */
         nextof( block ) = block_list;
         block_list = block;
+
+        // 统计的是最小单元的数量
+        _max_new += n*chunk_size;
+        _max_now += n*(chunk_size - 1);
 
         /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
         segregate( block + 

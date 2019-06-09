@@ -78,14 +78,17 @@ int32 ev::run()
         time_update ();
         int64 old_now_ms = ev_now_ms;
 
+        /* 先处理完上一次的阻塞的IO和定时器再调用 fd_reify和timers_reify
+         * 因为在处理过程中可能会增删fd、timer
+         */
+        invoke_pending ();
+
+        running (ev_now_ms);
+
         fd_reify ();/* update fd-related kernel structures */
 
         /* queue pending timers and reschedule them */
         timers_reify (); /* relative timers called last */
-
-        invoke_pending ();
-
-        running (ev_now_ms);
 
         /* update time to cancel out callback processing overhead */
         time_update ();

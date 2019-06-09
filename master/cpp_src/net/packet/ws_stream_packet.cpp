@@ -151,7 +151,7 @@ int32 ws_stream_packet::on_frame_end()
 
     /* 服务器收到的包，看要不要转发 */
     uint32 data_size = 0;
-    const char *data_ctx = _body.check_all_used_ctx( data_size );
+    const char *data_ctx = _body.all_to_continuous_ctx( data_size );
     if ( data_size < sizeof(struct srv_header) )
     {
         ERROR( "ws_stream_packet on_frame_end packet incomplete" );
@@ -176,7 +176,7 @@ int32 ws_stream_packet::sc_command()
     assert( "lua stack dirty",0 == lua_gettop(L) );
 
     uint32 data_size = 0;
-    const char *data_ctx = _body.check_all_used_ctx( data_size );
+    const char *data_ctx = _body.all_to_continuous_ctx( data_size );
     if ( data_size < sizeof(struct clt_header) )
     {
         ERROR( "ws_stream_packet sc_command packet incomplete" );

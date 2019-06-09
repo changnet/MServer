@@ -39,7 +39,7 @@ function App:exec()
     -- require "example.rank_performance"
     -- require "example.other_performance"
 
-    vd( statistic.dump() )
+    -- vd( statistic.dump() )
     ev:backend()
 end
 

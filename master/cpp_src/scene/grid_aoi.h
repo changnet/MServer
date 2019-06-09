@@ -41,8 +41,6 @@ public:
     grid_aoi();
     virtual ~grid_aoi();
 
-    static void purge() { _ctx_pool.purge();_vector_pool.purge(); }
-
     void set_visual_range(int32 width,int32 height); // 设置视野
     int32 set_size(int32 width,int32 height); // 设置宽高
 
@@ -85,6 +83,22 @@ private:
     // 处理实体退出某个范围
     void entity_exit_range(struct entity_ctx *ctx,
         int32 x,int32 y,int32 dx,int32 dy,entity_vector_t *list = NULL);
+private:
+    typedef object_pool< grid_aoi::entity_ctx,10240,1024 > ctx_pool_t;
+    typedef object_pool< grid_aoi::entity_vector_t,10240,1024 > vector_pool_t;
+
+    ctx_pool_t *get_ctx_pool()
+    {
+        static ctx_pool_t ctx_pool("grid_aoi_ctx");
+
+        return &ctx_pool;
+    }
+    vector_pool_t *get_vector_pool()
+    {
+        static vector_pool_t ctx_pool("grid_aoi_vector");
+
+        return &ctx_pool;
+    }
 protected:
     uint8 _width; // 场景最大宽度(格子坐标)
     uint8 _height; // 场景最大高度(格子坐标)
@@ -100,9 +114,6 @@ protected:
 
     /* 记录所有实体的数据 */
     entity_set_t _entity_set;
-
-    static object_pool< entity_ctx,10240,1024 > _ctx_pool;
-    static object_pool< entity_vector_t,10240,1024 > _vector_pool;
 };
 
 #endif /* __GRID_AOI_H__ */
