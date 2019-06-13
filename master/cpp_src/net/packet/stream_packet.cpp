@@ -544,7 +544,7 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
     if ( len < 0 ) return -1;
 
     struct c2s_header c2sh;
-    SET_HEADER_LENGTH( c2sh, cmd, len, SET_LENGTH_FAIL_ENCODE );
+    SET_HEADER_LENGTH( c2sh, len, cmd, SET_LENGTH_FAIL_ENCODE );
     c2sh._cmd    = static_cast<uint16>  ( cmd );
 
     class buffer &send = _socket->send_buffer();
@@ -652,8 +652,8 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
 
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header s2sh;
-    SET_HEADER_LENGTH( s2sh, cmd, len, SET_LENGTH_FAIL_ENCODE );
-    s2sh._cmd    = static_cast<uint16>  ( cmd );;
+    SET_HEADER_LENGTH( s2sh, len, cmd, SET_LENGTH_FAIL_ENCODE );
+    s2sh._cmd    = static_cast<uint16>  ( cmd );
     s2sh._errno  = ecode;
     s2sh._owner  = owner;
     s2sh._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
@@ -772,8 +772,8 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
 
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header s2sh;
-    SET_HEADER_LENGTH( s2sh, cmd, len, SET_LENGTH_FAIL_ENCODE );
-    s2sh._cmd    = static_cast<uint16>  ( cmd );;
+    SET_HEADER_LENGTH( s2sh, list_len + len, cmd, SET_LENGTH_FAIL_ENCODE );
+    s2sh._cmd    = static_cast<uint16>  ( cmd );
     s2sh._errno  = ecode;
     s2sh._owner  = 0;
     s2sh._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
