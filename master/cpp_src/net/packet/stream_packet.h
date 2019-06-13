@@ -2,7 +2,7 @@
 #define __STREAM_PACKET_H__
 
 #include "packet.h"
-#include "../net_include.h"
+#include "../net_header.h"
 
 struct base_header;
 struct c2s_header;
@@ -29,9 +29,9 @@ public:
     int32 pack_rpc( lua_State *L,int32 index );
     int32 pack_ssc( lua_State *L,int32 index );
     int32 pack_ssc_multicast( lua_State *L,int32 index );
-    int32 raw_pack_clt( 
+    int32 raw_pack_clt(
         int32 cmd,uint16 ecode,const char *ctx,size_t size );
-    int32 raw_pack_ss( 
+    int32 raw_pack_ss(
         int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size );
     int32 unpack();
 private:
@@ -49,7 +49,7 @@ private:
     void ssc_multicast( const s2s_header *header );
     int32 rpc_pack(
         lua_State *L,int32 unique_id,int32 ecode,uint16 pkt,int32 index );
-    void ssc_one_multicast( 
+    void ssc_one_multicast(
         owner_t owner,int32 cmd,uint16 ecode,const char *ctx,int32 size );
 };
 

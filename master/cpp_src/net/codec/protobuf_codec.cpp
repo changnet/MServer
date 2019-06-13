@@ -1,5 +1,5 @@
 #include "protobuf_codec.h"
-#include "../net_include.h"
+#include "../net_header.h"
 
 #include <pbc.h>
 #include <lua.hpp>
@@ -39,7 +39,7 @@ public:
     void del_message();
 
     int32 encode( lua_State *L,const char *object,int32 index );
-    int32 decode( 
+    int32 decode(
         lua_State *L,const char *object,const char *buffer,size_t size );
 
     const char *last_error();
@@ -110,7 +110,7 @@ int32 lprotobuf::load_file( const char *path )
     slice.len = len;
     slice.buffer = new char[slice.len];
     ifs.read( (char *)slice.buffer,slice.len );
-    
+
     if ( !ifs.good() || ifs.gcount() != slice.len )
     {
         ifs.close();
@@ -189,7 +189,7 @@ void lprotobuf::get_buffer( struct pbc_slice &slice )
     pbc_wmessage_buffer( _write_msg,&slice );
 }
 
-int32 lprotobuf::decode( 
+int32 lprotobuf::decode(
     lua_State *L,const char *object,const char *buffer,size_t size )
 {
     struct pbc_slice slice;
@@ -326,7 +326,7 @@ int32 lprotobuf::encode( lua_State *L,const char *object,int32 index )
     return ecode;
 }
 
-int32 lprotobuf::encode_field( 
+int32 lprotobuf::encode_field(
     lua_State *L,struct pbc_wmessage *wmsg,
     int32 type,int32 index,const char *key,const char *object )
 {
@@ -356,7 +356,7 @@ int32 lprotobuf::encode_field(
     return raw_encode_field( L,wmsg,type,index,key,object );
 }
 
-int32 lprotobuf::raw_encode_field( 
+int32 lprotobuf::raw_encode_field(
     lua_State *L,struct pbc_wmessage *wmsg,
     int32 type,int32 index,const char *key,const char *object )
 {

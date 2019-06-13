@@ -1,7 +1,6 @@
 #include "stream_packet.h"
 
 #include "../socket.h"
-#include "../header_include.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
 
@@ -453,7 +452,7 @@ int32 stream_packet::rpc_pack(
     }
 
     struct s2s_header s2sh;
-    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
+    SET_HEADER_LENGTH( s2sh, len, 0, SET_LENGTH_FAIL_RETURN );
     s2sh._cmd    = 0;
     s2sh._errno  = ecode;
     s2sh._packet = pkt;
@@ -544,18 +543,12 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
     int32 len = encoder->encode( L,index + 1,&buffer,cfg );
     if ( len < 0 ) return -1;
 
-    if (len > MAX_PACKET_LEN )
-    {
-        encoder->finalize();
-        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
-    }
-
-    struct c2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct c2s_header,len );
-    hd._cmd    = static_cast<uint16>  ( cmd );
+    struct c2s_header c2sh;
+    SET_HEADER_LENGTH( c2sh, cmd, len, SET_LENGTH_FAIL_ENCODE );
+    c2sh._cmd    = static_cast<uint16>  ( cmd );
 
     class buffer &send = _socket->send_buffer();
-    send.append( &hd,sizeof(struct c2s_header) );
+    send.append( &c2sh,sizeof(c2sh) );
     if (len > 0) send.append( buffer,len );
 
     encoder->finalize();
@@ -657,23 +650,17 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     int32 len = encoder->encode( L,index + 4,&buffer,cfg );
     if ( len < 0 ) return -1;
 
-    if ( len > MAX_PACKET_LEN )
-    {
-        encoder->finalize();
-        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
-    }
-
     /* 把客户端数据包放到服务器数据包 */
-    struct s2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len );
-    hd._cmd    = static_cast<uint16>  ( cmd );;
-    hd._errno  = ecode;
-    hd._owner  = owner;
-    hd._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
-    hd._packet = SPKT_SCPK; /*指定数据包类型为服务器发送客户端 */
+    struct s2s_header s2sh;
+    SET_HEADER_LENGTH( s2sh, cmd, len, SET_LENGTH_FAIL_ENCODE );
+    s2sh._cmd    = static_cast<uint16>  ( cmd );;
+    s2sh._errno  = ecode;
+    s2sh._owner  = owner;
+    s2sh._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
+    s2sh._packet = SPKT_SCPK; /*指定数据包类型为服务器发送客户端 */
 
     class buffer &send = _socket->send_buffer();
-    send.append( &hd ,sizeof(struct s2s_header) );
+    send.append( &s2sh ,sizeof(s2sh) );
     if ( len > 0 ) send.append( buffer,len );
 
     encoder->finalize();
@@ -686,13 +673,13 @@ int32 stream_packet::raw_pack_clt(
     int32 cmd,uint16 ecode,const char *ctx,size_t size )
 {
     /* 先构造客户端收到的数据包 */
-    struct s2c_header header;
-    header._length = PACKET_MAKE_LENGTH( struct s2c_header,size );
-    header._cmd    = static_cast<uint16>  ( cmd );
-    header._errno  = ecode;
+    struct s2c_header s2ch;
+    SET_HEADER_LENGTH( s2ch, size, cmd, SET_LENGTH_FAIL_RETURN );
+    s2ch._cmd    = static_cast<uint16>  ( cmd );
+    s2ch._errno  = ecode;
 
     class buffer &send = _socket->send_buffer();
-    send.append( &header ,sizeof(header) );
+    send.append( &s2ch ,sizeof(s2ch) );
     if ( size > 0 ) send.append( ctx,size );
 
     _socket->pending_send();
@@ -702,16 +689,16 @@ int32 stream_packet::raw_pack_clt(
 int32 stream_packet::raw_pack_ss(
     int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size )
 {
-    struct s2s_header header;
-    header._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
-    header._cmd    = static_cast<uint16> ( cmd );
-    header._errno  = ecode;
-    header._owner  = session;
-    header._packet = SPKT_SSPK;
-    header._codec  = codec::CDC_NONE;// 这个这里用不着，但不初始化valgrind就会警告
+    struct s2s_header s2sh;
+    SET_HEADER_LENGTH( s2sh, size, cmd, SET_LENGTH_FAIL_RETURN );
+    s2sh._cmd    = static_cast<uint16> ( cmd );
+    s2sh._errno  = ecode;
+    s2sh._owner  = session;
+    s2sh._packet = SPKT_SSPK;
+    s2sh._codec  = codec::CDC_NONE;// 这个这里用不着，但不初始化valgrind就会警告
 
     class buffer &send = _socket->send_buffer();
-    send.append( &header ,sizeof(header) );
+    send.append( &s2sh ,sizeof(s2sh) );
     if ( size > 0 ) send.append( ctx,size );
 
     _socket->pending_send();
@@ -783,22 +770,17 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     int32 len = encoder->encode( L,index + 5,&buffer,cfg );
     if ( len < 0 ) return -1;
 
-    if ( len > MAX_PACKET_LEN )
-    {
-        encoder->finalize();
-        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
-    }
     /* 把客户端数据包放到服务器数据包 */
-    struct s2s_header hd;
-    hd._length = PACKET_MAKE_LENGTH( struct s2s_header,len + list_len );
-    hd._cmd    = static_cast<uint16>  ( cmd );;
-    hd._errno  = ecode;
-    hd._owner  = 0;
-    hd._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
-    hd._packet = SPKT_CBCP; /*指定数据包类型为服务器发送客户端 */
+    struct s2s_header s2sh;
+    SET_HEADER_LENGTH( s2sh, cmd, len, SET_LENGTH_FAIL_ENCODE );
+    s2sh._cmd    = static_cast<uint16>  ( cmd );;
+    s2sh._errno  = ecode;
+    s2sh._owner  = 0;
+    s2sh._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
+    s2sh._packet = SPKT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
     class buffer &send = _socket->send_buffer();
-    send.append( &hd ,sizeof(struct s2s_header) );
+    send.append( &s2sh ,sizeof(s2sh) );
     send.append( list,list_len );
     if ( len > 0 ) send.append( buffer,len );
 
@@ -859,7 +841,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
         return;
     }
 
-    // 根据玩家pid广播，底层直接处理 
+    // 根据玩家pid广播，底层直接处理
     if ( CLT_MC_OWNER == mask )
     {
         for ( int32 idx = 0;idx < count;idx ++ )

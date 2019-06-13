@@ -3,7 +3,6 @@
 #include "ltools.h"
 #include "../system/static_global.h"
 
-#include "../net/header_include.h"
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"
 #include "../net/packet/websocket_packet.h"
@@ -849,7 +848,7 @@ bool lnetwork_mgr::cs_dispatch(
     codec::codec_t codec_ty = src_sk->get_codec_type();
 
     struct s2s_header s2sh;
-    s2sh._length = PACKET_MAKE_LENGTH( struct s2s_header,size );
+    SET_HEADER_LENGTH( s2sh, size, cmd, SET_LENGTH_FAIL_BOOL );
     s2sh._cmd    = cmd;
     s2sh._packet = SPKT_CSPK;
     s2sh._codec  = codec_ty;

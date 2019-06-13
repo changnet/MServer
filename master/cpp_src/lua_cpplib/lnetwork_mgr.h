@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "../net/net_include.h"
+#include "../net/net_header.h"
 #include "../net/socket.h"
 
 struct lua_State;
