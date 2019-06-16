@@ -39,6 +39,16 @@ public:
 
         CNT_MAXT       // max connection type
     } conn_t;
+
+    // socket缓冲区溢出后处理方式
+    typedef enum
+    {
+        OAT_NONE = 0, // 不做任何处理
+        OAT_KILL = 1, // 断开连接，通常用于与客户端连接
+        OAT_PEND = 2, // 阻塞，通用用于服务器之间连接
+
+        OAT_MAX
+    } over_action_t;
 public:
     virtual ~socket();
     explicit socket( uint32 conn_id,conn_t conn_ty );
@@ -103,8 +113,9 @@ public:
     {
         _recv.set_buffer_size( max,ctx_size );
     }
-    inline void set_send_size( uint32 max,uint32 ctx_size )
+    inline void set_send_size( uint32 max,uint32 ctx_size,over_action_t oa )
     {
+        _over_action = oa;
         _send.set_buffer_size( max,ctx_size );
     }
 
@@ -120,11 +131,12 @@ protected:
     conn_t _conn_ty;
 private:
     ev_io _w;
-    int64 _object_id; /* 标识这个socket对应上层逻辑的object */ 
+    int64 _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */ 
 
     class io *_io;
     class packet *_packet;
     codec::codec_t _codec_ty;
+    over_action_t _over_action;
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;

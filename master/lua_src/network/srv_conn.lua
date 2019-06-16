@@ -106,7 +106,8 @@ function Srv_conn:set_conn_param( conn_id )
     -- 设置服务器之间链接缓冲区大小：
     -- 发送的话可能会累加，要设置大些.16777216 = 16MB，最大累加16*64 = 1024M
     -- 接收的话现在是收到数据立马解析完，不需要很大
-    network_mgr:set_send_buffer_size( conn_id,64,16777216 )
+    -- set_send_buffer_size最后一个参数表示over_action，2 = 溢出后阻塞
+    network_mgr:set_send_buffer_size( conn_id,64,16777216,2 )
     network_mgr:set_recv_buffer_size( conn_id,8,8388608 ) -- 8M
 end
 

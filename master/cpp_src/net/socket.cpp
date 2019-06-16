@@ -23,6 +23,7 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
     _codec_ty = codec::CDC_NONE;
+    _over_action = OAT_NONE;
 
     C_OBJECT_ADD("socket");
 }
@@ -103,6 +104,47 @@ int32 socket::send()
         network_mgr->connect_del( _conn_id );
 
         return -1;
+    }
+
+    /* 处理缓冲区溢出.收缓冲区是收到多少处理多少，一般有长度限制，不用另外处理 */
+    if ( expect_false(_send.is_overflow()) )
+    {
+        // 对于客户端这种不重要的，可以断开连接
+        if ( OAT_KILL == _over_action )
+        {
+            ERROR( "socket send buffer overflow,kill connection,"
+                "object:" FMT64d ",conn:%d,buffer size:%d",
+                _object_id,_conn_id,_send.get_all_used_size() );
+
+            socket::stop();
+            network_mgr->connect_del( _conn_id );
+
+            return -1;
+        }
+
+        // 如果是服务器之前的连接，考虑阻塞
+        // 这会影响定时器这些，但至少数据不会丢
+        // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
+        if ( OAT_PEND == _over_action )
+        {
+            do
+            {
+                sleep( 500 );
+                ERROR( "socket send buffer overflow,pending,"
+                "object:" FMT64d ",conn:%d,buffer size:%d",
+                _object_id,_conn_id,_send.get_all_used_size() );
+
+                // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
+                ret = _io->send();
+                if ( expect_false(ret < 0) )
+                {
+                    socket::stop();
+                    network_mgr->connect_del( _conn_id );
+
+                    return -1;
+                }
+            } while ( !_send.is_overflow() );
+        }
     }
 
     return 2 == ret ? 2 : 0;

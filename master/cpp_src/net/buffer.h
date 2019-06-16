@@ -125,6 +125,21 @@ public:
         return used >= len;
     }
 
+    // 获取当前所有的数据长度
+    inline uint32 get_all_used_size() const
+    {
+        uint32 used = 0;
+        const chunk_t *next = _front;
+
+        do
+        {
+            used += next->used_size();
+
+            next = next->_next;
+        } while ( expect_false(next) );
+
+        return used;
+    }
 
     // 获取空闲缓冲区大小，只获取一个chunk的，用于socket接收
     inline uint32 get_space_size()
@@ -145,6 +160,9 @@ public:
      */
     inline bool __attribute__ ((warn_unused_result)) reserved(uint32 len = 0)
     {
+        // 正常情况下不会分配这么大，但防止websocket时别人恶意传长度
+        if ( expect_false(len > BUFFER_CHUNK*10) ) return false;
+
         if ( expect_false(!_front) )
         {
             _back = _front = new_chunk();
@@ -171,6 +189,9 @@ public:
         // 设置的chunk大小必须是等长内存池的N倍
         assert( "illegal buffer chunk size", 0 == ctx_size % BUFFER_CHUNK );
     }
+
+    // 当前缓冲区是否超了设定值
+    inline bool is_overflow() const { return _chunk_size > _chunk_max; }
 private:
     inline chunk_t *new_chunk( uint32 ctx_size  = 0 )
     {

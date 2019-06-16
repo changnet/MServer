@@ -562,6 +562,7 @@ int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
     uint32 conn_id  = luaL_checkinteger( L,1 );
     uint32 max      = luaL_checkinteger( L,2 );
     uint32 ctx_size = luaL_checkinteger( L,3 );
+    int32  over_action = luaL_optinteger( L,4,socket::OAT_NONE );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
@@ -569,8 +570,14 @@ int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
         return luaL_error( L,"no such socket found" );
     }
 
+    if ( over_action < socket::OAT_NONE || over_action >= socket::OAT_MAX )
+    {
+        return luaL_error( L,"overflow action value illegal" );
+    }
+
     class socket *_socket = itr->second;
-    _socket->set_send_size( max,ctx_size );
+    _socket->set_send_size( 
+        max,ctx_size,static_cast<socket::over_action_t>(over_action) );
 
     return 0;
 }

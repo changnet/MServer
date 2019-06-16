@@ -124,6 +124,10 @@ function Clt_conn:conn_accept( new_conn_id )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_WSSTREAM )
 
+    -- set_send_buffer_size最后一个参数表示over_action，1 = 溢出后断开
+    network_mgr:set_send_buffer_size( new_conn_id,128,8192,1 ) -- 8k*128 = 1024k
+    network_mgr:set_recv_buffer_size( new_conn_id,8,8192 ) -- 8k*8 = 64k
+
     local new_conn = Clt_conn( new_conn_id )
     g_network_mgr:clt_conn_accept( new_conn_id,new_conn )
 
