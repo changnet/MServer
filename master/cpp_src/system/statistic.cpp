@@ -7,7 +7,6 @@ statistic::~statistic()
 
 statistic::statistic()
 {
-    _traffic_time = 0;
 }
 
 void statistic::add_c_obj(const char *what,int32 count)
@@ -40,8 +39,55 @@ void statistic::add_c_lua_obj(const char *what,int32 count)
     }
 }
 
-void statistic::reset_socket_traffic()
+void statistic::reset_trafic()
 {
-    _traffic_time = static_global::ev()->now();
-    memset(_socket_traffic,0,sizeof(_socket_traffic));
+    const time_t now = static_global::ev()->now();
+    for (int type = 0;type < socket::CNT_MAX;type ++)
+    {
+        _total_traffic[type].reset();
+        _total_traffic[type]._time = now;
+    }
+
+    socket_traffic_t::iterator itr = _socket_traffic.begin();
+    while ( itr != _socket_traffic.end() )
+    {
+        itr->second.reset();
+        itr->second._time = now;
+
+        itr ++;
+    }
+}
+
+void statistic::remove_socket_traffic(uint32 conn_id)
+{
+    assert("socket traffic del statistic corruption",
+        _socket_traffic.end() != _socket_traffic.find(conn_id));
+
+    _socket_traffic.erase( conn_id );
+}
+
+void statistic::insert_socket_traffic(uint32 conn_id)
+{
+    assert("socket traffic new statistic corruption",
+        _socket_traffic.end() == _socket_traffic.find(conn_id));
+
+    _socket_traffic[conn_id]._time = static_global::ev()->now();
+}
+
+void statistic::add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
+{
+    assert( "connection type error",
+        type > socket::CNT_NONE && type < socket::CNT_MAX );
+
+    _total_traffic[type]._send += val;
+    _socket_traffic[conn_id]._send += val;
+}
+
+void statistic::add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
+{
+    assert( "connection type error",
+        type > socket::CNT_NONE && type < socket::CNT_MAX );
+
+    _total_traffic[type]._recv += val;
+    _socket_traffic[conn_id]._recv += val;
 }

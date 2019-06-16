@@ -121,6 +121,17 @@ public:
 
     inline int64 get_object_id() const { return _object_id; }
     inline void set_object_id( int64 oid ) { _object_id = oid; }
+
+    /* 获取统计数据
+     * @schunk:发送缓冲区分配的内存块
+     * @rchunk:接收缓冲区分配的内存块
+     * @smem:发送缓冲区分配的内存大小
+     * @rmem:接收缓冲区分配的内在大小
+     * @spending:待发送的数据
+     * @rpending:待处理的数据
+     */
+    void get_stat( uint32 &schunk,uint32 &rchunk,
+        uint32 &smem,uint32 &rmem,uint32 &spending,uint32 &rpending);
 private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32 io_status_check( int32 ecode );
@@ -138,10 +149,6 @@ private:
     class packet *_packet;
     codec::codec_t _codec_ty;
     over_action_t _over_action;
-
-    time_t _ctime; // 创建时间戳
-    int64  _recv_traffic; // 累计接收的数据量
-    int64  _send_traffic; // 累计发送的数据量
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;

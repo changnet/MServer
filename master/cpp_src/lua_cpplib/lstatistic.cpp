@@ -1,6 +1,16 @@
 #include "lstatistic.h"
 #include "../system/static_global.h"
 
+#define PUSH_STRING( name,val ) \
+    do{\
+        lua_pushstring( L,name );lua_pushstring( L,val );lua_rawset( L,-3 );\
+    } while(0)
+
+#define PUSH_INTEGER( name,val ) \
+    do{\
+        lua_pushstring( L,name );lua_pushinteger( L,val );lua_rawset( L,-3 );\
+    } while(0)
+
 int32 lstatistic::dump( lua_State *L )
 {
 #define DUMP_BASE_COUNTER(what,counter)    \
@@ -30,8 +40,13 @@ int32 lstatistic::dump( lua_State *L )
     lua_rawset( L,-3 );
 
     lua_pushstring( L,"traffic" );
-    dump_traffic( L );
+    dump_total_traffic( L );
     lua_rawset( L,-3 );
+
+    lua_pushstring( L,"socket" );
+    dump_socket( L );
+    lua_rawset( L,-3 );
+
 
     return 1;
 
@@ -49,20 +64,15 @@ void lstatistic::dump_base_counter(
     {
         const struct statistic::base_counter &bc = itr->second;
         lua_createtable( L,0,3 );
-        lua_pushstring( L,"name" );
-        lua_pushstring( L,itr->first._raw_ctx );
-        lua_rawset( L,-3 );
 
-        lua_pushstring( L,"max" );
-        lua_pushinteger( L,bc._max );
-        lua_rawset( L,-3 );
+        PUSH_STRING( "name",itr->first._raw_ctx );
 
-        lua_pushstring( L,"cur" );
-        lua_pushinteger( L,bc._cur );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "max",bc._max );
+
+        PUSH_INTEGER( "cur",bc._cur );
 
         lua_rawseti( L,-2,index );
-        ++index;itr ++;
+        index ++;itr ++;
     }
 }
 
@@ -84,25 +94,17 @@ void lstatistic::dump_thread( lua_State *L )
 
         lua_createtable( L,0,3 );
 
-        lua_pushstring( L,"id" );
-        lua_pushinteger( L,thread->get_id() );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "id",thread->get_id() );
 
-        lua_pushstring( L,"name" );
-        lua_pushstring( L,thread->get_name() );
-        lua_rawset( L,-3 );
+        PUSH_STRING( "name",thread->get_name() );
 
-        lua_pushstring( L,"finish" );
-        lua_pushinteger( L,finished );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "finish",finished );
 
-        lua_pushstring( L,"unfinished" );
-        lua_pushinteger( L,unfinished );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "unfinished",unfinished );
 
         lua_rawseti( L,-2,index );
 
-        ++index;itr ++;
+        index ++;itr ++;
     }
 }
 
@@ -113,25 +115,15 @@ void lstatistic::dump_lua_gc( lua_State *L )
 
     lua_newtable( L );
 
-    lua_pushstring( L,"count" );
-    lua_pushinteger( L,counter._count );
-    lua_rawset( L,-3 );
+    PUSH_INTEGER( "count",counter._count );
 
-    lua_pushstring( L,"msec" );
-    lua_pushinteger( L,counter._msec );
-    lua_rawset( L,-3 );
+    PUSH_INTEGER( "msec",counter._msec );
 
-    lua_pushstring( L,"max" );
-    lua_pushinteger( L,counter._max );
-    lua_rawset( L,-3 );
+    PUSH_INTEGER( "max",counter._max );
 
-    lua_pushstring( L,"min" );
-    lua_pushinteger( L,counter._min );
-    lua_rawset( L,-3 );
+    PUSH_INTEGER( "min",counter._min );
 
-    lua_pushstring( L,"avg" );
-    lua_pushinteger( L,counter._msec/counter._count );
-    lua_rawset( L,-3 );
+    PUSH_INTEGER( "avg",counter._msec/counter._count );
 }
 
 void lstatistic::dump_mem_pool( lua_State *L )
@@ -148,55 +140,41 @@ void lstatistic::dump_mem_pool( lua_State *L )
 
         lua_newtable( L );
 
-        lua_pushstring( L,"name" );
-        lua_pushstring( L,ps->get_name() );
-        lua_rawset( L,-3 );
+        PUSH_STRING( "name",ps->get_name() );
 
         // 累计分配数量
         int64 max_new = ps->get_max_new();
-        lua_pushstring( L,"max" );
-        lua_pushinteger( L, max_new);
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "max",max_new );
 
         // 累计销毁数量
         int64 max_del = ps->get_max_del();
-        lua_pushstring( L,"del" );
-        lua_pushinteger( L,max_del );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "del",max_del );
 
         // 当前还在内存池中数量
         int64 max_now = ps->get_max_now();
-        lua_pushstring( L,"now" );
-        lua_pushinteger( L, max_now);
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "now",max_now );
 
         // 单个对象内存大小
         size_t size = ps->get_sizeof();
-        lua_pushstring( L,"sizeof" );
-        lua_pushinteger( L,size );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "sizeof",size );
 
         // 当前在这个内存池分配的内存
-        lua_pushstring( L,"mem" );
-        lua_pushinteger( L,(max_new - max_del) * size );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "mem",(max_new - max_del) * size );
 
         // 当前还在池内的内存
-        lua_pushstring( L,"now_mem" );
-        lua_pushinteger( L,max_now * size );
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "now_mem",max_now * size );
 
         lua_rawseti( L,-2,index++ );
     }
 }
 
 // 总的收发流量
-void lstatistic::dump_traffic ( lua_State *L )
+void lstatistic::dump_total_traffic ( lua_State *L )
 {
     const statistic *stat = static_global::statistic();
-    const statistic::traffic_counter *list = stat->get_traffic();
+    const statistic::traffic_counter *list = stat->get_total_traffic();
 
-    const int32 sec = static_global::ev()->now() - stat->get_traffic_time();
+    const time_t now = static_global::ev()->now();
 
     lua_newtable( L );
     for ( int32 type = 1;type < socket::CNT_MAX;type ++ )
@@ -204,27 +182,79 @@ void lstatistic::dump_traffic ( lua_State *L )
         const statistic::traffic_counter &counter = list[type];
 
         lua_newtable( L );
+        int32 sec = now - counter._time;
 
-        lua_pushstring( L,"send" );
-        lua_pushinteger( L,counter._send);
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "send",counter._send );
 
-        lua_pushstring( L,"recv" );
-        lua_pushinteger( L,counter._recv);
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "recv",counter._recv );
 
-        lua_pushstring( L,"send_avg" );
-        lua_pushinteger( L,counter._send / sec);
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "send_avg",counter._send / sec );
 
-        lua_pushstring( L,"recv_avg" );
-        lua_pushinteger( L,counter._recv / sec);
-        lua_rawset( L,-3 );
+        PUSH_INTEGER( "recv_avg",counter._recv / sec );
 
         lua_rawseti( L,-2,type );
-
-        // 这里没有记录时间，只统计总收到。由上层统计平均值
     }
+}
+
+
+// socket情况
+void lstatistic::dump_socket( lua_State *L )
+{
+#define ST_T statistic::socket_traffic_t
+
+    const statistic *stat = static_global::statistic();
+    const ST_T &socket_traffic = stat->get_socket_traffic();
+
+    const time_t now = static_global::ev()->now();
+
+    class lnetwork_mgr *nm = static_global::network_mgr();
+
+    int32 index = 1;
+    lua_newtable( L );
+
+    ST_T::const_iterator itr = socket_traffic.begin();
+    while ( itr != socket_traffic.end() )
+    {
+        const statistic::traffic_counter &counter = itr->second;
+
+        lua_newtable( L );
+
+        uint32 conn_id = itr->first;
+        int32 sec = now - counter._time;
+
+        PUSH_INTEGER( "conn_id",conn_id );
+        PUSH_INTEGER( "send",counter._send );
+        PUSH_INTEGER( "recv",counter._recv );
+        PUSH_INTEGER( "send_avg",counter._send / sec );
+        PUSH_INTEGER( "recv_avg",counter._recv / sec );
+
+        class socket *sk = nm->get_conn_by_conn_id( itr->first );
+        if (!sk)
+        {
+            ERROR("dump_socket no such socket found:",conn_id);
+        }
+        else
+        {
+            uint32 smem = 0;
+            uint32 rmem = 0;
+            uint32 schunk = 0;
+            uint32 rchunk = 0;
+            uint32 spending = 0;
+            uint32 rpending = 0;
+            sk->get_stat( schunk,rchunk,smem,rmem,spending,rpending);
+
+            PUSH_INTEGER( "send_mem",smem );
+            PUSH_INTEGER( "recv_mem",rmem );
+            PUSH_INTEGER( "send_chunk",schunk );
+            PUSH_INTEGER( "recv_chunk",rchunk );
+            PUSH_INTEGER( "send_pending",spending );
+            PUSH_INTEGER( "recv_pending",rpending );
+        }
+
+        itr ++;
+        lua_rawseti( L,-2,index++ );
+    }
+#undef ST_T
 }
 
 ////////////////////////////////////////////////////////////////////////////////

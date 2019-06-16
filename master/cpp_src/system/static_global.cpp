@@ -65,7 +65,7 @@ void static_global::initialize()  /* 程序运行时初始化 */
     _async_log.set_wait_busy( false );
 
     // 初始化流量统计，这个和时间有关，等 ev 初始化后才调用
-    _statistic.reset_socket_traffic();
+    _statistic.reset_trafic();
 }
 
 /* 业务逻辑都放这里销毁，不能放initializer的析构函数或者等到对应static对象析构

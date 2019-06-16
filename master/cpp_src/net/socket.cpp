@@ -24,10 +24,6 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
     _codec_ty = codec::CDC_NONE;
     _over_action = OAT_NONE;
 
-    _recv_traffic = 0;
-    _send_traffic = 0;
-    _ctime = static_global::ev()->now();
-
     C_OBJECT_ADD("socket");
 }
 
@@ -45,6 +41,8 @@ socket::~socket()
 
 void socket::stop( bool flush )
 {
+    C_SOCKET_TRAFFIC_DEL( _conn_id );
+
     if ( _pending )
     {
         static_global::lua_ev()->remove_pending( _pending );
@@ -85,8 +83,7 @@ int32 socket::recv()
         return -1;
     }
 
-    _recv_traffic += byte;
-    C_RECV_TRAFFIC_ADD(_conn_ty,byte);
+    C_RECV_TRAFFIC_ADD(_conn_id,_conn_ty,byte);
 
     // SSL握手成功，有数据待发送则会出现这种情况
     if ( expect_false(2 == ret) ) pending_send();
@@ -107,8 +104,7 @@ int32 socket::send()
             network_mgr->connect_del( _conn_id );\
             return -1;\
         }\
-        _send_traffic += byte;\
-        C_SEND_TRAFFIC_ADD(_conn_ty,byte);\
+        C_SEND_TRAFFIC_ADD(_conn_id,_conn_ty,byte);\
     } while (0)
 
     assert( "socket send without io control",_io );
@@ -274,6 +270,8 @@ void socket::start( int32 fd )
     _w.set( fd,EV_READ ); /* 将之前的write改为read */
 
     if ( !_w.is_active() ) _w.start();
+
+    C_SOCKET_TRAFFIC_NEW( _conn_id );
 }
 
 int32 socket::connect( const char *host,int32 port )
@@ -600,4 +598,25 @@ int32 socket::init_connect()
 
     io_status_check( ecode );
     return 0;
+}
+
+/* 获取统计数据
+ * @schunk:发送缓冲区分配的内存块
+ * @rchunk:接收缓冲区分配的内存块
+ * @smem:发送缓冲区分配的内存大小
+ * @rmem:接收缓冲区分配的内在大小
+ * @spending:待发送的数据
+ * @rpending:待处理的数据
+ */
+void socket::get_stat( uint32 &schunk,uint32 &rchunk,
+    uint32 &smem,uint32 &rmem,uint32 &spending,uint32 &rpending)
+{
+    schunk = _send.get_chunk_size();
+    rchunk = _recv.get_chunk_size();
+
+    smem = _send.get_chunk_mem_size();
+    rmem = _recv.get_chunk_mem_size();
+
+    spending = _send.get_all_used_size();
+    rpending = _recv.get_all_used_size();
 }

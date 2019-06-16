@@ -104,6 +104,24 @@ public:
         return _front ? _front->used_size() : 0;
     }
 
+    // 获取chunk的数量
+    inline uint32 get_chunk_size() const { return _chunk_size; }
+    // 获取所有chunk分配的内存大小
+    inline uint32 get_chunk_mem_size() const 
+    {
+        uint32 mem = 0;
+        const chunk_t *next = _front;
+
+        do
+        {
+            mem += next->_max;;
+            next = next->_next;
+
+        } while ( next );
+
+        return mem;
+    }
+
     // 只获取第一个chunk的有效数据指针，用于socket发送
     inline const char *get_used_ctx() const { return _front->used_ctx(); };
 
