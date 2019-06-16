@@ -61,11 +61,11 @@ public:
     traffic_counter() { reset(); }
     inline void reset()
     {
-        _recv_traffic = 0;_send_traffic = 0;
+        _recv = 0;_send = 0;
     }
     public:
-        int64 _recv_traffic;
-        int64 _send_traffic;
+        int64 _recv;
+        int64 _send;
     };
 
     /* 所有统计的名称都是static字符串,不要传入一个临时字符串
@@ -90,32 +90,33 @@ public:
     inline void add_send_traffic(socket::conn_t type,uint32 val)
     {
         assert( "connection type error",
-            type <= socket::CNT_NONE || type >= socket::CNT_MAX );
+            type > socket::CNT_NONE && type < socket::CNT_MAX );
 
-        _socket_traffic[type]._send_traffic += val;
+        _socket_traffic[type]._send += val;
     }
 
     inline void add_recv_traffic(socket::conn_t type,uint32 val)
     {
         assert( "connection type error",
-            type <= socket::CNT_NONE || type >= socket::CNT_MAX );
+            type > socket::CNT_NONE && type < socket::CNT_MAX );
 
-        _socket_traffic[type]._recv_traffic += val;
+        _socket_traffic[type]._recv += val;
     }
 
     inline void reset_lua_gc() { _lua_gc.reset(); }
-    inline void reset_socket_traffic()
-    {
-        memset(_socket_traffic,0,sizeof(_socket_traffic));
-    }
+    void reset_socket_traffic();
 
+    const time_t get_traffic_time() const { return _traffic_time; }
     const statistic::time_counter &get_lua_gc() const { return _lua_gc; }
     const statistic::base_counter_t &get_c_obj() const { return _c_obj; }
     const statistic::base_counter_t &get_c_lua_obj() const { return _c_lua_obj; }
+    const statistic::traffic_counter *get_traffic() const { return _socket_traffic; }
 private:
     time_counter _lua_gc; // lua gc时间统计
     base_counter_t _c_obj; // c对象计数器
     base_counter_t _c_lua_obj; // 从c push到lua对象
+
+    time_t _traffic_time; // socket流量统计开始时间戳
     traffic_counter _socket_traffic[socket::CNT_MAX]; // socket流量统计
 };
 

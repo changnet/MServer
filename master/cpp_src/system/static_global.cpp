@@ -63,6 +63,9 @@ void static_global::initialize()  /* 程序运行时初始化 */
     // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙
     // 关不了服。stop的时候会处理所有日志
     _async_log.set_wait_busy( false );
+
+    // 初始化流量统计，这个和时间有关，等 ev 初始化后才调用
+    _statistic.reset_socket_traffic();
 }
 
 /* 业务逻辑都放这里销毁，不能放initializer的析构函数或者等到对应static对象析构

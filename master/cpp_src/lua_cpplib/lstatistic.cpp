@@ -29,6 +29,10 @@ int32 lstatistic::dump( lua_State *L )
     dump_mem_pool( L );
     lua_rawset( L,-3 );
 
+    lua_pushstring( L,"traffic" );
+    dump_traffic( L );
+    lua_rawset( L,-3 );
+
     return 1;
 
 #undef DUMP_BASE_COUNTER
@@ -183,6 +187,43 @@ void lstatistic::dump_mem_pool( lua_State *L )
         lua_rawset( L,-3 );
 
         lua_rawseti( L,-2,index++ );
+    }
+}
+
+// 总的收发流量
+void lstatistic::dump_traffic ( lua_State *L )
+{
+    const statistic *stat = static_global::statistic();
+    const statistic::traffic_counter *list = stat->get_traffic();
+
+    const int32 sec = static_global::ev()->now() - stat->get_traffic_time();
+
+    lua_newtable( L );
+    for ( int32 type = 1;type < socket::CNT_MAX;type ++ )
+    {
+        const statistic::traffic_counter &counter = list[type];
+
+        lua_newtable( L );
+
+        lua_pushstring( L,"send" );
+        lua_pushinteger( L,counter._send);
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"recv" );
+        lua_pushinteger( L,counter._recv);
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"send_avg" );
+        lua_pushinteger( L,counter._send / sec);
+        lua_rawset( L,-3 );
+
+        lua_pushstring( L,"recv_avg" );
+        lua_pushinteger( L,counter._recv / sec);
+        lua_rawset( L,-3 );
+
+        lua_rawseti( L,-2,type );
+
+        // 这里没有记录时间，只统计总收到。由上层统计平均值
     }
 }
 
