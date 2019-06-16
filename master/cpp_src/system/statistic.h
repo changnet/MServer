@@ -1,17 +1,19 @@
 #ifndef __STATISTIC_H__
 #define __STATISTIC_H__
 
-#include "../global/global.h"
+#include "../net/socket.h"
 
-#define C_OBJECT_ADD(what) \
-    do{static_global::statistic()->add_c_obj(what,1);}while(0)
-#define C_OBJECT_DEC(what) \
-    do{static_global::statistic()->add_c_obj(what,-1);}while(0)
+#define G_STAT    static_global::statistic()
+#define C_OBJECT_ADD(what) do{G_STAT->add_c_obj(what,1);}while(0)
+#define C_OBJECT_DEC(what) do{G_STAT->add_c_obj(what,-1);}while(0)
 
-#define C_LUA_OBJECT_ADD(what) \
-    do{static_global::statistic()->add_c_lua_obj(what,1);}while(0)
-#define C_LUA_OBJECT_DEC(what) \
-    do{static_global::statistic()->add_c_lua_obj(what,-1);}while(0)
+#define C_LUA_OBJECT_ADD(what) do{G_STAT->add_c_lua_obj(what,1);}while(0)
+#define C_LUA_OBJECT_DEC(what) do{G_STAT->add_c_lua_obj(what,-1);}while(0)
+
+#define C_SEND_TRAFFIC_ADD(type,val) \
+    do{G_STAT->add_send_traffic(type,val);}while(0)
+#define C_RECV_TRAFFIC_ADD(type,val) \
+    do{G_STAT->add_recv_traffic(type,val);}while(0)
 
 // 统计对象数量、内存、socket流量等...
 class statistic
@@ -52,23 +54,18 @@ public:
         int64 _min;
     };
 
-    // 按时间间隔的计数器
-    class interval_counter : public base_counter
+    // 流量计数器
+    class traffic_counter
     {
     public:
-        interval_counter()
-        {
-            _min = 0;
-        }
+    traffic_counter() { reset(); }
+    inline void reset()
+    {
+        _recv_traffic = 0;_send_traffic = 0;
+    }
     public:
-        int64 _min;
-
-        int64 _int_max; // 时间间隔内最大值
-        int64 _int_min; // 时间间隔内最小值
-
-        int64 _int_time; // 时间间隔结束时间戳
-        int32 _interval; // 时间间隔大小(秒)
-        int64 _int_total; // 时间间隔内总数
+        int64 _recv_traffic;
+        int64 _send_traffic;
     };
 
     /* 所有统计的名称都是static字符串,不要传入一个临时字符串
@@ -90,7 +87,27 @@ public:
         if ( -1 == _lua_gc._min || _lua_gc._min > msec) _lua_gc._min = msec;
     }
 
-    void reset_lua_gc() { _lua_gc.reset(); }
+    inline void add_send_traffic(socket::conn_t type,uint32 val)
+    {
+        assert( "connection type error",
+            type <= socket::CNT_NONE || type >= socket::CNT_MAX );
+
+        _socket_traffic[type]._send_traffic += val;
+    }
+
+    inline void add_recv_traffic(socket::conn_t type,uint32 val)
+    {
+        assert( "connection type error",
+            type <= socket::CNT_NONE || type >= socket::CNT_MAX );
+
+        _socket_traffic[type]._recv_traffic += val;
+    }
+
+    inline void reset_lua_gc() { _lua_gc.reset(); }
+    inline void reset_socket_traffic()
+    {
+        memset(_socket_traffic,0,sizeof(_socket_traffic));
+    }
 
     const statistic::time_counter &get_lua_gc() const { return _lua_gc; }
     const statistic::base_counter_t &get_c_obj() const { return _c_obj; }
@@ -99,6 +116,7 @@ private:
     time_counter _lua_gc; // lua gc时间统计
     base_counter_t _c_obj; // c对象计数器
     base_counter_t _c_lua_obj; // 从c push到lua对象
+    traffic_counter _socket_traffic[socket::CNT_MAX]; // socket流量统计
 };
 
 #endif /* __STATISTIC_H__ */

@@ -180,7 +180,7 @@ int32 lnetwork_mgr::listen( lua_State *L )
 
     int32 port      = luaL_checkinteger( L,2 );
     int32 conn_type = luaL_checkinteger( L,3 );
-    if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAXT )
+    if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAX )
     {
         return luaL_error( L,"illegal connection type" );
     }
@@ -215,7 +215,7 @@ int32 lnetwork_mgr::connect( lua_State *L )
 
     int32 port      = luaL_checkinteger( L,2 );
     int32 conn_type = luaL_checkinteger( L,3 );
-    if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAXT )
+    if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAX )
     {
         return luaL_error( L,"illegal connection type" );
     }

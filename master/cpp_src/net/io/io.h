@@ -20,12 +20,14 @@ public:
 
     /* 接收数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
+     * @byte: 接收的数据长度
      */
-    virtual int32 recv();
+    virtual int32 recv( int32 &byte );
     /* 发送数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
+     * @byte: 发送的数据长度
      */
-    virtual int32 send();
+    virtual int32 send( int32 &byte );
     /* 准备接受状态
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */

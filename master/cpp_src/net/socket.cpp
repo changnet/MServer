@@ -24,6 +24,10 @@ socket::socket( uint32 conn_id,conn_t conn_ty )
     _codec_ty = codec::CDC_NONE;
     _over_action = OAT_NONE;
 
+    _recv_traffic = 0;
+    _send_traffic = 0;
+    _ctime = static_global::ev()->now();
+
     C_OBJECT_ADD("socket");
 }
 
@@ -47,7 +51,11 @@ void socket::stop( bool flush )
         _pending = 0;
 
         // 如果是出错，则不发送剩余数据，如果是脚本上层正常关闭，则发送
-        if ( flush ) _io->send();  /* flush data before close */
+        if ( flush )
+        {
+            int32 byte = 0;
+            _io->send( byte );
+        }
     }
 
     if ( _w.fd > 0 )
@@ -67,7 +75,8 @@ int32 socket::recv()
     static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32 ret = _io->recv();
+    int32 byte = 0;
+    int32 ret = _io->recv( byte );
     if ( expect_false(ret < 0) )
     {
         socket::stop();
@@ -75,6 +84,9 @@ int32 socket::recv()
 
         return -1;
     }
+
+    _recv_traffic += byte;
+    C_RECV_TRAFFIC_ADD(_conn_ty,byte);
 
     // SSL握手成功，有数据待发送则会出现这种情况
     if ( expect_false(2 == ret) ) pending_send();
@@ -87,6 +99,18 @@ int32 socket::recv()
  */
 int32 socket::send()
 {
+#define IO_SEND()    \
+    do{\
+        ret = _io->send( byte );\
+        if ( expect_false(ret < 0) ){\
+            socket::stop();\
+            network_mgr->connect_del( _conn_id );\
+            return -1;\
+        }\
+        _send_traffic += byte;\
+        C_SEND_TRAFFIC_ADD(_conn_ty,byte);\
+    } while (0)
+
     assert( "socket send without io control",_io );
     static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
@@ -96,14 +120,10 @@ int32 socket::send()
      _pending = 0;
 
      // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32 ret = _io->send();
-    if ( expect_false(ret < 0) )
-    {
-        socket::stop();
-        network_mgr->connect_del( _conn_id );
+    int32 byte = 0;
+    int32 ret  = 0;
 
-        return -1;
-    }
+    IO_SEND();
 
     /* 处理缓冲区溢出.收缓冲区是收到多少处理多少，一般有长度限制，不用另外处理 */
     if ( expect_false(_send.is_overflow()) )
@@ -133,20 +153,14 @@ int32 socket::send()
                 "object:" FMT64d ",conn:%d,buffer size:%d",
                 _object_id,_conn_id,_send.get_all_used_size() );
 
-                // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-                ret = _io->send();
-                if ( expect_false(ret < 0) )
-                {
-                    socket::stop();
-                    network_mgr->connect_del( _conn_id );
-
-                    return -1;
-                }
+                IO_SEND();
             } while ( !_send.is_overflow() );
         }
     }
 
     return 2 == ret ? 2 : 0;
+
+#undef IO_SEND
 }
 
 int32 socket::block( int32 fd )

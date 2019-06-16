@@ -15,10 +15,11 @@ io::~io()
 }
 
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32 io::recv()
+int32 io::recv( int32 &byte )
 {
     assert( "io recv fd invalid",_fd > 0 );
 
+    byte = 0;
     if ( !_recv->reserved() ) return -1; /* no more memory */
 
     // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
@@ -26,6 +27,7 @@ int32 io::recv()
     int32 len = ::read( _fd,_recv->get_space_ctx(),size );
     if ( expect_true(len > 0) )
     {
+        byte = len;
         _recv->add_used_offset( len );
         return 0;
     }
@@ -43,10 +45,11 @@ int32 io::recv()
 }
 
 // * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32 io::send()
+int32 io::send( int32 &byte )
 {
     assert( "io send fd invalid",_fd > 0 );
 
+    byte = 0;
     size_t bytes = _send->get_used_size();
     assert( "io send without data",bytes > 0 );
 
@@ -54,6 +57,7 @@ int32 io::send()
 
     if ( expect_true(len > 0) )
     {
+        byte = len;
         _send->remove( len );
         return 0 == _send->get_used_size() ? 0 : 2;
     }

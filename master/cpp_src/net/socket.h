@@ -37,7 +37,7 @@ public:
         CNT_SCCN = 2,  // s2c connection
         CNT_SSCN = 3,  // s2s connection
 
-        CNT_MAXT       // max connection type
+        CNT_MAX       // max connection type
     } conn_t;
 
     // socket缓冲区溢出后处理方式
@@ -122,6 +122,7 @@ public:
     inline int64 get_object_id() const { return _object_id; }
     inline void set_object_id( int64 oid ) { _object_id = oid; }
 private:
+    // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32 io_status_check( int32 ecode );
 protected:
     buffer _recv;
@@ -137,6 +138,10 @@ private:
     class packet *_packet;
     codec::codec_t _codec_ty;
     over_action_t _over_action;
+
+    time_t _ctime; // 创建时间戳
+    int64  _recv_traffic; // 累计接收的数据量
+    int64  _send_traffic; // 累计发送的数据量
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;

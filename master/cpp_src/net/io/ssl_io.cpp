@@ -38,10 +38,11 @@ ssl_io::ssl_io( int32 ctx_idx,class buffer *recv,class buffer *send )
 /* 接收数据
  * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
-int32 ssl_io::recv()
+int32 ssl_io::recv( int32 &byte )
 {
     assert( "io recv fd invalid",_fd > 0 );
 
+    byte = 0;
     if ( !_handshake ) return do_handshake();
 
     if ( !_recv->reserved() ) return -1; /* no more memory */
@@ -51,6 +52,7 @@ int32 ssl_io::recv()
     int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->get_space_ctx(),size );
     if ( expect_true(len > 0) )
     {
+        byte = len;
         _recv->add_used_offset( len );
         return 0;
     }
@@ -82,10 +84,11 @@ int32 ssl_io::recv()
 /* 发送数据
  * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
-int32 ssl_io::send()
+int32 ssl_io::send( int32 &byte )
 {
     assert( "io send fd invalid",_fd > 0 );
 
+    byte = 0;
     if ( !_handshake ) return do_handshake();
 
     size_t bytes = _send->get_used_size();
@@ -94,6 +97,7 @@ int32 ssl_io::send()
     int32 len = SSL_write( X_SSL( _ssl_ctx ),_send->get_used_ctx(),bytes );
     if ( expect_true(len > 0) )
     {
+        byte = len;
         _send->remove( len );
         return 0 == _send->get_used_size() ? 0 : 2;
     }
