@@ -41,8 +41,6 @@ socket::~socket()
 
 void socket::stop( bool flush )
 {
-    C_SOCKET_TRAFFIC_DEL( _conn_id );
-
     if ( _pending )
     {
         static_global::lua_ev()->remove_pending( _pending );
@@ -65,6 +63,8 @@ void socket::stop( bool flush )
 
     _recv.clear();
     _send.clear();
+
+    C_SOCKET_TRAFFIC_DEL( _conn_id );
 }
 
 int32 socket::recv()

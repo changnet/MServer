@@ -112,12 +112,12 @@ public:
         uint32 mem = 0;
         const chunk_t *next = _front;
 
-        do
+        while (next)
         {
             mem += next->_max;;
             next = next->_next;
 
-        } while ( next );
+        };
 
         return mem;
     }
@@ -126,6 +126,7 @@ public:
     inline const char *get_used_ctx() const { return _front->used_ctx(); };
 
     /* 检测当前有效数据的大小是否 >= 指定值
+     * 这个函数必须在确定已有数据的情况下调用，不检测next是否为空
      * TODO:用于数据包分在不同chunk的情况，这是采用这种设计缺点之一
      */
     inline bool check_used_size( uint32 len ) const
@@ -149,12 +150,12 @@ public:
         uint32 used = 0;
         const chunk_t *next = _front;
 
-        do
+        while (next)
         {
             used += next->used_size();
 
             next = next->_next;
-        } while ( expect_false(next) );
+        }
 
         return used;
     }

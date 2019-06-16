@@ -123,7 +123,8 @@ void lstatistic::dump_lua_gc( lua_State *L )
 
     PUSH_INTEGER( "min",counter._min );
 
-    PUSH_INTEGER( "avg",counter._msec/counter._count );
+    int64 count = counter._count > 0 ? counter._count : 1;
+    PUSH_INTEGER( "avg",counter._msec / count );
 }
 
 void lstatistic::dump_mem_pool( lua_State *L )
@@ -183,6 +184,7 @@ void lstatistic::dump_total_traffic ( lua_State *L )
 
         lua_newtable( L );
         int32 sec = now - counter._time;
+        if (sec < 1) sec = 1;
 
         PUSH_INTEGER( "send",counter._send );
 
@@ -221,6 +223,7 @@ void lstatistic::dump_socket( lua_State *L )
 
         uint32 conn_id = itr->first;
         int32 sec = now - counter._time;
+        if (sec < 1) sec = 1;
 
         PUSH_INTEGER( "conn_id",conn_id );
         PUSH_INTEGER( "send",counter._send );
@@ -243,6 +246,8 @@ void lstatistic::dump_socket( lua_State *L )
             uint32 rpending = 0;
             sk->get_stat( schunk,rchunk,smem,rmem,spending,rpending);
 
+            // object_id，如果是客户端连接，则是玩家pid，其他情况没什么用
+            PUSH_INTEGER( "object_id",sk->get_object_id() );
             PUSH_INTEGER( "send_mem",smem );
             PUSH_INTEGER( "recv_mem",rmem );
             PUSH_INTEGER( "send_chunk",schunk );

@@ -60,8 +60,12 @@ void statistic::reset_trafic()
 
 void statistic::remove_socket_traffic(uint32 conn_id)
 {
-    assert("socket traffic del statistic corruption",
-        _socket_traffic.end() != _socket_traffic.find(conn_id));
+    // 一个listen的sokcet，由于没有调用socket::start，是没发这里来的，但会调用stop
+    // 一个connect失败的socket，也是没调用socket::start，但会调用stop
+    // 目前暂时没法区分，也没必要加变量区分
+
+    // assert("socket traffic del statistic corruption",
+    //     _socket_traffic.end() != _socket_traffic.find(conn_id));
 
     _socket_traffic.erase( conn_id );
 }
