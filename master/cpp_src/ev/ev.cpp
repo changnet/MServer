@@ -1,6 +1,5 @@
 #include <fcntl.h>
 
-#include "ev_def.h"
 #include "ev.h"
 #include "ev_watcher.h"
 

@@ -6,7 +6,6 @@
 
 #include "socket.h"
 #include "io/ssl_io.h"
-#include "../ev/ev_def.h"
 #include "packet/http_packet.h"
 #include "packet/stream_packet.h"
 #include "packet/websocket_packet.h"

@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 
 #include "thread.h"
-#include "../ev/ev_def.h"
 #include "../net/socket.h"
 #include "../system/static_global.h"
 
