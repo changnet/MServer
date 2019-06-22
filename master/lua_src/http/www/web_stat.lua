@@ -13,7 +13,7 @@ function Web_stat:exec( fields,body )
 
     local ctx = json.encode(total_stat)
 
-    return HTTPE.OK,ctx
+    return HTTPE.OK_NIL,ctx
 end
 
 local wst = Web_stat()

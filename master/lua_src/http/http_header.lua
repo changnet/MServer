@@ -3,6 +3,7 @@
 -- http接口错误码
 HTTPE = 
 {
-    OK = {0,"success"}, -- 0 成功
+    OK = { 0,"success" }, -- 0 成功,返回 succes 字符串
+    OK_NIL = { 0 }, -- 0, 成功，返回的内容由对应的模块构建，不根据错误码构建
     GM_INVALID = { 1,"invalid gm" }, -- 1 无效的gm
 }

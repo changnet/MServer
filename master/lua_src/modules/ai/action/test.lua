@@ -27,15 +27,18 @@ random_one( max_pkt )-- 保证最大临界值一定会出现
 PRINT("random LARGE string finish !!!")
 
 function Test:ping(ai)
+    if ai.ping_ctx then return end -- 上一次的还没返回
+
     local entity = ai.entity
 
-    ai.ping_ctx = random_str[math.random(1,#random_str)]
+    local ctx = random_str[math.random(1,#random_str)]
     ai.ping_ts = (ai.ping_ts or 0) + 1
     entity:send_pkt( CS.PLAYER_PING,
         {
             index = ai.ping_ts,
-            context = ai.ping_ctx
+            context = ctx
         } )
+    ai.ping_ctx = ctx -- 放到后面，因为发包时要测试超长报错的情况
 end
 
 function Test:gm(ai)
@@ -58,6 +61,8 @@ end
 function Test:on_ping( entity,ecode,pkt )
     local ai = entity.ai
     ASSERT( pkt.context == ai.ping_ctx,string.len(ai.ping_ctx))
+
+    ai.ping_ctx = nil
     PRINT("ping:",pkt.index)
     -- vd(pkt)
 end

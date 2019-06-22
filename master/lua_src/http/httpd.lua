@@ -88,10 +88,15 @@ end
 function Httpd:format_error( code,ctx )
     if not ctx then
         return string.format( '{"code":%d,"msg":"%s"}',code[1],code[2] )
-    else
+    end
+
+    if code[2] then
         return string.format(
             '{"code":%d,"msg":"%s","ctx":"%s"}',code[1],code[2],ctx )
     end
+
+    -- 直接返回由对应功能指定的内容。比如返回一个json串，不好再放到ctx里
+    return ctx
 end
 
 -- 格式化http-200返回
