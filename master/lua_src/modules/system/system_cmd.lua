@@ -27,7 +27,7 @@ local function srv_sync_done( srv_conn,pkt )
     g_app:one_initialized( srv_conn:base_name(),1 )
 end
 
--- 心跳包
+-- 服务器之间心跳包
 local beat_pkt = { response = false }
 local function srv_beat( srv_conn,pkt )
     if pkt.response then
@@ -43,6 +43,7 @@ local function rpc_gm( where,cmd,... )
 end
 
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )
+
 
 -- 这里注册系统模块的协议处理
 g_command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true )

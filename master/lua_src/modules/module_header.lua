@@ -39,6 +39,7 @@ g_player_ev   = require "modules.event.player_event"
 g_system_ev   = require "modules.event.system_event"
 g_lang        = require "modules.lang.lang"
 g_mail_mgr    = require "modules.mail.mail_mgr"
+g_ping        = require "modules.system.ping"
 
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then

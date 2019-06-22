@@ -118,6 +118,11 @@ function Rpc:declare( method_name,method,session )
     self.procedure[method_name].session = session
 end
 
+-- 获取当前rpc回调、返回的连接
+function Rpc:last_conn()
+    return g_network_mgr:get_conn( self.last_conn_id )
+end
+
 -- 其他服务器注册rpc回调
 function Rpc:register( method_name,session )
     if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
@@ -194,8 +199,15 @@ end
 
 local rpc = Rpc()
 
+-- 为了实现可变参数不用table.pack，只能再wrap一层
+local function args_wrap(method_name,beg,...)
+    rpc:update_statistic(method_name,ev:real_ms_time() - beg)
+    return ...
+end
+
 -- 底层回调，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
 function rpc_command_new( conn_id,rpc_id,method_name,... )
+    rpc.last_conn_id = conn_id
     local cfg = rpc.procedure[method_name]
     if not cfg then
         return error( string.format( "rpc:[%s] was not declared",method_name ) )
@@ -203,14 +215,14 @@ function rpc_command_new( conn_id,rpc_id,method_name,... )
 
     if rpc.rpc_perf then
         local beg = ev:real_ms_time()
-        cfg.method( ... )
-        return rpc:update_statistic(method_name,ev:real_ms_time() - beg)
+        return args_wrap( method_name,beg,cfg.method( ... ) )
     else
         return cfg.method( ... )
     end
 end
 
 function rpc_command_return ( conn_id,rpc_id,ecode,... )
+    rpc.last_conn_id = conn_id
     local callback = rpc.callback[rpc_id]
     if not callback then
         ERROR("rpc return no callback found:id = %d",rpc_id)

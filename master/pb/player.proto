@@ -55,26 +55,24 @@ message SEnterWorld
 {
 }
 
-// ping服务器
+// ping服务器，用来测试的
 message CPing
 {
-    int32 x = 1;
-    int32 y = 2;
-    int32 z = 3;
-    int32 way = 4;
-    repeated int32 target = 5;
-    string say = 6;
+    int32 index = 1; // 索引
+    string context = 2; // 目前用来测试socket效率，分包等情况
 }
 
-// 服务器回包
+// ping服务器回包
 message SPing
 {
-    int32 x = 1;
-    int32 y = 2;
-    int32 z = 3;
-    int32 way = 4;
-    repeated int32 target = 5;
-    string say = 6;
+    message SrvTime
+    {
+        string name = 1; // 链接名
+        int32  time = 2; // 消耗时间(毫秒)
+    }
+    int32 index = 1;
+    string context = 2; // 返回数据校验socket收发的完整性
+    repeated srvtime = 3;
 }
 
 // 顶号

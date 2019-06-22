@@ -10,9 +10,7 @@ local g_player_mgr  = g_player_mgr
 local Base = require "modules.player.base"
 local Player = require "modules.player.player"
 
-local function player_ping( srv_conn,pid,pkt )
-    srv_conn:send_clt_pkt( pid,SC.PLAYER_PING,pkt )
-end
+
 
 local function account_mgr_clt_cb( cmd,cb_func,noauth )
     local cb = function( clt_conn,pkt )
@@ -60,7 +58,6 @@ if "gateway" == g_app.srvname then
 end
 
 if "world" == g_app.srvname then
-    g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
     player_mgr_clt_cb( CS.PLAYER_ENTER,g_player_mgr.on_enter_world,true )
 
     player_mgr_srv_cb( SS.PLAYER_OFFLINE,g_player_mgr.on_player_offline )

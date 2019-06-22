@@ -127,6 +127,11 @@ function GM:ghf()
     if g_app.srvname == "gateway" then self:broadcast( "hf" ) end
 end
 
+-- ping一下服务器间的延迟，看卡不卡
+function GM:ping()
+    return g_ping:start(1)
+end
+
 -- 立刻进一次rpc耗时统计,不带参数表示不重置
 -- @rpc_perf 1
 function GM:rpc_perf( reset )

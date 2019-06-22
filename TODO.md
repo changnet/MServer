@@ -40,11 +40,13 @@ https://github.com/xiarendeniao/pomelo-aoi
 #Pomelo协议设计参考
 https://github.com/NetEase/pomelo/wiki/Pomelo-%E5%8D%8F%E8%AE%AE
 
-#AOI设计
-* 算法：十字链表 九宫格 灯塔
-* 作用：移动、攻击广播、技能寻敌
-* 事件：移动、加入、离开事件，要针对类型处理，如玩家和npc是不一样的
-* 异步：事件触发可以弄成异步的，但是目前只考虑同步
+# 模块框架不是很好（参考ping）
+* 总得声明一个singleton？
+* gateway、world不同进程运行的逻辑不一样，用if判断？
+* rpc的声明、回调只能用local函数？
+* 客户端回调也只能是local函数？
+* rpc、cmd注册放在文件尾？不是每个模块都有一个xxx_cmd文件的
+
 
 #状态监控
 * C++内存池统计

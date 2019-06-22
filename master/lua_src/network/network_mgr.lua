@@ -158,6 +158,11 @@ function Network_mgr:get_srv_conn( session )
     return self.srv[session]
 end
 
+-- 获取所有服务器连接
+function Network_mgr:get_all_srv_conn()
+    return self.srv
+end
+
 -- 获取网关连接(在非网关服务器进程获取)
 function Network_mgr:get_gateway_conn()
     return self.srv[gateway_session]
