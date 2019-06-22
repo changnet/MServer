@@ -21,13 +21,11 @@ function Ping:start(how,conn_id,other)
     local id = self.seed
     self.seed = self.seed + 1
 
-    PRINT("start ping =========",id)
-
     local wait = 0
     for _,srv_conn in pairs(g_network_mgr:get_all_srv_conn()) do
         wait = wait + 1
         g_rpc:xcall( srv_conn,
-            "rpc_ping",function( ecode,id ) PRINT("ecode",ecode);self:on_ping( id ) end,id )
+            "rpc_ping",function( ecode,id ) self:on_ping( id ) end,id )
     end
 
     -- 没有其他服务器连接?
@@ -48,7 +46,6 @@ end
 
 -- 其他服务器进程收到ping返回
 function Ping:on_ping( id )
-    PRINT("on ping ==============",id)
     local info = self.pending[id]
     if not info then
         return PRINT("ping no info found",id)
@@ -93,6 +90,7 @@ function Ping:done( id,info )
         for _,srvtime in pairs(info.srvs) do
             table.insert(pkt.srvtime,srvtime)
         end
+
         return conn:send_pkt( SC.PLAYER_PING,pkt )
     end
 end
@@ -101,12 +99,11 @@ local ping = Ping()
 
 -- 来自机器人的ping请求，走的是客户端连接
 local function player_ping( clt_conn,pkt )
-    return ping:star( 2,clt_conn.conn_id,pkt )
+    return ping:start( 2,clt_conn.conn_id,pkt )
 end
 
 -- 服务器之间ping
 local function rpc_ping( id )
-    PRINT("rpc ping ======================",id)
     return id
 end
 

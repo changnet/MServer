@@ -72,7 +72,7 @@ message SPing
     }
     int32 index = 1;
     string context = 2; // 返回数据校验socket收发的完整性
-    repeated srvtime = 3;
+    repeated SrvTime srvtime = 3;
 }
 
 // 顶号

@@ -1,5 +1,5 @@
 
-Á
+º
 player.protoplayer"
 	SSOffline
 pid (Rpid" 
@@ -20,21 +20,17 @@
 pid (Rpid
 name (	Rname"
 CEnterWorld"
-SEnterWorld"m
-CPing
-x (Rx
-y (Ry
-z (Rz
-way (Rway
-target (Rtarget
-say (	Rsay"m
-SPing
-x (Rx
-y (Ry
-z (Rz
-way (Rway
-target (Rtarget
-say (	Rsay"
+SEnterWorld"7
+CPing
+index (Rindex
+context (	Rcontext"›
+SPing
+index (Rindex
+context (	Rcontext/
+srvtime (2.player.SPing.SrvTimeRsrvtime1
+SrvTime
+name (	Rname
+time (Rtime"
 SLoginOtherWhere"
 SBase
 gold (Rgold"9
