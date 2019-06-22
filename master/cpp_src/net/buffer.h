@@ -116,7 +116,6 @@ public:
         {
             mem += next->_max;;
             next = next->_next;
-
         };
 
         return mem;
@@ -184,7 +183,7 @@ public:
 
         if ( expect_false(!_front) )
         {
-            _back = _front = new_chunk();
+            _back = _front = new_chunk( len );
             return true;
         }
 
@@ -192,6 +191,13 @@ public:
         if ( 0 == space || len > space )
         {
             _back = _back->_next = new_chunk( len );
+            // 不允许前面有一个空的chunk
+            if ( 0 == _front->used_size() )
+            {
+                assert( "buffer link corruption",_back == _front->_next );
+
+                del_chunk( _front );_front = _back;
+            }
         }
 
         return true;
