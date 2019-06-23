@@ -2,6 +2,9 @@
 
 #include "log.h"
 
+// cat /usr/include/linux/limits.h | grep PATH_MAX PATH_MAX = 4096，这个太长了
+#define LOG_PATH_MAX    64
+
 /* 定义日志内容的大小 */
 static constexpr size_t 
     LOG_CTX_SIZE[log::LOG_SIZE_MAX] = { 64,1024,LOG_MAX_LENGTH };
@@ -16,7 +19,7 @@ public:
     time_t _tm;
     size_t _len;
     log_out_t _out;
-    char _path[PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
+    char _path[LOG_PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
 
     virtual log::log_size_t get_type() const = 0;
     virtual const char *get_ctx() const = 0;
@@ -107,7 +110,7 @@ int32 log::write_cache( time_t tm,
     one->_tm = tm;
     one->_out = out;
     one->set_ctx( ctx,len );
-    snprintf( one->_path,PATH_MAX,"%s",path );
+    snprintf( one->_path,LOG_PATH_MAX,"%s",path );
 
     _cache->push_back( one );
     return 0;
@@ -202,7 +205,7 @@ void log::flush()
                 raw_mongodb_log( one->_tm,"CP","%s",one->get_ctx() );
                 break;
             case LO_CPRINTF :
-                raw_cprintf_log( one->_tm,"LP","%s",one->get_ctx() );
+                raw_cprintf_log( one->_tm,"CP","%s",one->get_ctx() );
                 break;
             default:
                 ERROR("unknow log output type:%d",one->_out);

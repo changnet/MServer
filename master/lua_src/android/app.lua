@@ -19,6 +19,21 @@ g_ai_mgr = require "modules.ai.ai_mgr"
 
 -- 信号处理，默认情况下退出
 function sig_handler( signum )
+    if signum == 15 then
+        local json = require "lua_parson"
+        local stat = require "modules.system.statistic"
+
+        local total_stat = stat.collect()
+
+        local ctx = json.encode(total_stat)
+
+        local of = io.open( "log/android_stat","a+" )
+        of:write(ctx)
+        of:write("\n\n\n")
+        of:close()
+        return
+    end
+
     ev:exit()
 end
 
