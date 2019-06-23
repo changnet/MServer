@@ -45,8 +45,12 @@ end
 
 -- 发送数据包
 function Android:send_pkt( cfg,pkt )
-    return network_mgr:send_srv_packet(
-        self.conn_id,cfg[1],WS_OP_BINARY | WS_FINAL_FRAME,pkt )
+    -- 使用tcp二进制流
+    return network_mgr:send_srv_packet( self.conn_id,cfg[1],pkt )
+
+    -- 使用websocket二进制流
+    -- return network_mgr:send_srv_packet(
+    --     self.conn_id,cfg[1],WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
 function Android:routine( ms_now )

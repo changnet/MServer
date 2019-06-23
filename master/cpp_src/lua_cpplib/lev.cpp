@@ -201,35 +201,34 @@ void lev::remove_pending( int32 pending )
  */
 void lev::invoke_sending()
 {
-    if ( ansendingcnt <= 0 )
-        return;
+    if ( ansendingcnt <= 0 ) return;
 
     int32 pos = 0;
-    class socket *_socket = NULL;
+    class socket *skt = NULL;
 
-    for ( int32 i = 1;i <= ansendingcnt;i ++ )/* 0位是空的，不使用 */
+    /* 0位是空的，不使用 */
+    for ( int32 pending = 1;pending <= ansendingcnt;pending ++ )
     {
-        if ( !(_socket = ansendings[i]) ) /* 可能调用了remove_sending */
+        if ( !(skt = ansendings[pending]) ) /* 可能调用了remove_sending */
         {
             continue;
         }
 
-        int32 pending = _socket->get_pending();
-        assert( "invoke sending index not match",i == pending );
+        assert( "invoke sending index not match",pending == skt->get_pending());
 
         /* 处理发送,
          * return: < 0 error,= 0 success,> 0 bytes still need to be send
          */
-        if ( _socket->send() <= 0 ) continue;
+        if ( skt->send() <= 0 ) continue;
 
         /* 还有数据，处理sendings数组移动，防止中间留空 */
-        if ( i > pos + 1 )
+        if ( pending > pos )
         {
             ++pos;
             pending = pos;
-            ansendings[pos]  = _socket;
+            ansendings[pos]  = skt;
         }
-        _socket->set_pending( pending );
+        skt->set_pending( pending );
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 

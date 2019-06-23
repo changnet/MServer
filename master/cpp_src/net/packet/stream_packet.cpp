@@ -162,7 +162,7 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
+    if ( expect_false( LUA_OK != lua_pcall( L,2 + cnt,0,1 ) ) )
     {
         ERROR( "cs_command:%s",lua_tostring( L,-1 ) );
 

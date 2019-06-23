@@ -74,7 +74,6 @@ void buffer::append( const void *raw_data,const uint32 len )
 // 删除数据
 void buffer::remove( uint32 len )
 {
-    uint32 remove_sz = 0;
     do
     {
         uint32 used = _front->used_size();
@@ -107,11 +106,11 @@ void buffer::remove( uint32 len )
         chunk_t *tmp = _front;
 
         _front = _front->_next;
-        assert( "no more chunk to remove",_front );
+        assert( "no more chunk to remove",_front && len > used );
 
+        len -= used;
         del_chunk( tmp );
-        remove_sz += used;
-    } while( true );
+    } while( len > 0 );
 }
 
 /* 检测指定长度的有效数据是否在连续内存，不在的话要合并成连续内存
@@ -134,12 +133,11 @@ const char *buffer::to_continuous_ctx( uint32 len )
 
     do
     {
-        uint32 next_used = next->used_size();
+        uint32 next_used = MATH_MIN( len - used,next->used_size() );
         assert( "continuous buffer overflow !!!",
             used + next_used <= continuous_size );
 
-        memcpy( continuous_ctx + used,
-            next->used_ctx(),MATH_MIN( len - used,next_used ) );
+        memcpy( continuous_ctx + used,next->used_ctx(),next_used );
 
         used += next_used;
         next = next->_next;
@@ -149,6 +147,7 @@ const char *buffer::to_continuous_ctx( uint32 len )
     return continuous_ctx;
 }
 
+// 把所有数据放到一块连续缓冲区中
 const char *buffer::all_to_continuous_ctx( uint32 &len )
 {
     if ( expect_true( !_front->_next ) )

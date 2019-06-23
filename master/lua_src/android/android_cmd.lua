@@ -52,7 +52,7 @@ function Android_cmd:handshake_register( handler )
     handshake_handler = handler
 end
 
--- 连接处理
+-- 连接成功，回调对应的模块
 function Android_cmd:conn_new_register( handler )
     conn_new_handler = handler
 end
@@ -83,12 +83,17 @@ function conn_new( conn_id,ecode )
 
     network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_WSSTREAM )
 
-    -- 主动发送握手
-    local sec_websocket_key = util.base64( util.uuid() ) -- RFC6455 随机一个key
-    network_mgr:send_raw_packet(
-        conn_id,string.format(handshake_clt,sec_websocket_key) )
+    -- 使用tcp二进制流
+    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+
+    -- 使用websocket二进制流
+    -- network_mgr:set_conn_packet( conn_id,network_mgr.PKT_WSSTREAM )
+
+    -- -- 主动发送握手
+    -- local sec_websocket_key = util.base64( util.uuid() ) -- RFC6455 随机一个key
+    -- network_mgr:send_raw_packet(
+    --     conn_id,string.format(handshake_clt,sec_websocket_key) )
 
     -- 握手完成之前不要发数据，因为发送的模式不对，是以http发送的
     if conn_new_handler then conn_new_handler(conn_id,ecode) end

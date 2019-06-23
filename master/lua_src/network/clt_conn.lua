@@ -55,8 +55,11 @@ end
 
 -- 发送数据包
 function Clt_conn:send_pkt( cmd,pkt,errno )
-    return network_mgr:send_clt_packet(
-        self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )
+    -- 使用tcp二进制流
+    return network_mgr:send_clt_packet( self.conn_id,cmd,errno or 0,pkt )
+    -- 使用websocket
+    -- return network_mgr:send_clt_packet(
+    --     self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
 -- 认证成功
@@ -122,7 +125,11 @@ end
 function Clt_conn:conn_accept( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_WSSTREAM )
+
+    -- 使用tcp二进制流
+    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_STREAM )
+    -- 使用websocket二进制流
+    -- network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_WSSTREAM )
 
     -- set_send_buffer_size最后一个参数表示over_action，1 = 溢出后断开
     network_mgr:set_send_buffer_size( new_conn_id,128,8192,1 ) -- 8k*128 = 1024k

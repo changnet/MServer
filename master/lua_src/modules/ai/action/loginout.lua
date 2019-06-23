@@ -134,6 +134,9 @@ end
 function Loginout:on_conn_new(entity,conn_id,ecode)
     if 0 == ecode then
         PRINTF( "android(%d) connection(%d) establish",entity.index,conn_id)
+
+        -- 如果是tcp到这里连接就建立完成了。websocket还要等握手
+        self:do_login(entity)
         return
     end
 

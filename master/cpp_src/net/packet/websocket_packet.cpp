@@ -331,6 +331,7 @@ int32 websocket_packet::invoke_handshake()
     return _socket->fd() < 0 ? -1 : 0;
 }
 
+// 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
 int32 websocket_packet::on_frame_end()
 {
     static lua_State *L = static_global::state();
