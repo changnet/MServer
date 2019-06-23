@@ -137,20 +137,20 @@ int32 socket::send()
             return -1;
         }
 
-        // 如果是服务器之前的连接，考虑阻塞
+        // 如果是服务器之间的连接，考虑阻塞
         // 这会影响定时器这些，但至少数据不会丢
         // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
         if ( OAT_PEND == _over_action )
         {
             do
             {
-                sleep( 500 );
+                usleep( 500000 );
                 ERROR( "socket send buffer overflow,pending,"
                 "object:" FMT64d ",conn:%d,buffer size:%d",
                 _object_id,_conn_id,_send.get_all_used_size() );
 
                 IO_SEND();
-            } while ( !_send.is_overflow() );
+            } while ( _send.is_overflow() );
         }
     }
 

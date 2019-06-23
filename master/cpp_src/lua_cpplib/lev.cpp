@@ -214,7 +214,7 @@ void lev::invoke_sending()
             continue;
         }
 
-        assert( "invoke sending index not match",pending == skt->get_pending());
+        assert( "pending index not match",pending == skt->get_pending() );
 
         /* 处理发送,
          * return: < 0 error,= 0 success,> 0 bytes still need to be send
@@ -225,10 +225,10 @@ void lev::invoke_sending()
         if ( pending > pos )
         {
             ++pos;
-            pending = pos;
             ansendings[pos]  = skt;
+            skt->set_pending( pos );
         }
-        skt->set_pending( pending );
+        assert( "new pending index not match",pos == skt->get_pending());
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 
