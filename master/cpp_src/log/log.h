@@ -1,11 +1,12 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
-#include <map>
+#include <ctime>
 #include <vector>
 
-#include "../pool/object_pool.h"
+#include "../global/global.h"
 
+class pool;
 class log_one;
 
 // 日志输出类型
@@ -40,19 +41,24 @@ public:
 
     bool swap();
     void flush();
+    void close_files();
     void collect_mem();
     size_t pending_size();
+    bool inline empty() const { return _flush->empty(); }
     int32 write_cache( time_t tm,
         const char *path,const char *ctx,size_t len,log_out_t out );
 private:
     class log_one *allocate_one( size_t len );
     void deallocate_one( class log_one *one );
-    bool flush_one_file( log_one_list_t::iterator pos );
-    int32 flush_one_ctx( FILE *pf,const struct log_one *one );
+    bool flush_one_file(struct tm &ntm,
+        const log_one *one,const char *path,const char *prefix = "" );
+    int32 flush_one_ctx(
+        FILE *pf,const struct log_one *one,struct tm &ntm,const char *prefix );
 private:
     log_one_list_t *_cache;   // 主线程写入缓存队列
     log_one_list_t *_flush;   // 日志线程写入文件队列
 
+    map_t<std::string,FILE *> _files;
     class pool* _ctx_pool[LOG_SIZE_MAX];
 };
 

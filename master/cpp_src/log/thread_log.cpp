@@ -34,15 +34,12 @@ void thread_log::write(
     unlock();
 }
 
-void thread_log::raw_write( 
-    const char *path,log_out_t out,const char *fmt,... )
+void thread_log::raw_write(
+    const char *path,log_out_t out,const char *fmt,va_list args )
 {
     static char ctx_buff[LOG_MAX_LENGTH];
 
-    va_list args;
-    va_start(args,fmt);
     int32 len = vsnprintf(ctx_buff,LOG_MAX_LENGTH,fmt,args);
-    va_end(args);
 
     /* snprintf
      * 错误返回-1
@@ -59,6 +56,14 @@ void thread_log::raw_write(
 
     write( path,ctx_buff,len > LOG_MAX_LENGTH ? LOG_MAX_LENGTH : len,out );
 }
+void thread_log::raw_write( 
+    const char *path,log_out_t out,const char *fmt,... )
+{
+    va_list args;
+    va_start(args,fmt);
+    raw_write(path,out,fmt,args);
+    va_end(args);
+}
 
 // 线程结束之前清理函数
 bool thread_log::uninitialize()
@@ -72,16 +77,25 @@ void thread_log::routine( notify_t notify )
 {
     UNUSED( notify );
 
-    /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
-    lock();
-    _log.swap();
-    unlock();
+    do
+    {
+        /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
+        lock();
+        _log.swap();
+        unlock();
 
-    // 日志线程写入文件
-    _log.flush();
+        // 日志线程写入文件
+        _log.flush();
 
-    // 回收内存
-    lock();
-    _log.collect_mem();
-    unlock();
+        // 回收内存
+        lock();
+        _log.collect_mem();
+        unlock();
+
+        lock();
+        _log.swap();
+        unlock();
+    } while ( !_log.empty() );
+
+    _log.close_files();
 }

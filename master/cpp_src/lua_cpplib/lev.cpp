@@ -315,7 +315,6 @@ void lev::after_run(int64 ms_old,int64 ms_now )
     int64 ms = ms_now - ms_old;
     if ( ms > _critical_tm )
     {
-        static_global::async_log()
-            ->raw_write("",LO_CPRINTF,"ev busy:%d msec",ms);
+        PRINTF("ev busy:%d msec",ms);
     }
 }
