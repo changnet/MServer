@@ -1,7 +1,6 @@
 #include <lua.hpp>
 
 #include "llog.h"
-#include "../global/clog.h"
 #include "../system/static_global.h"
 
 llog::llog( lua_State *L )

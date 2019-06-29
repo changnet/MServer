@@ -60,7 +60,9 @@ end
 
 function Test:on_ping( entity,ecode,pkt )
     local ai = entity.ai
-    ASSERT( pkt.context == ai.ping_ctx,string.len(ai.ping_ctx))
+
+    -- pbc发空字符串会变成nil
+    ASSERT( (pkt.context or "") == ai.ping_ctx,string.len(ai.ping_ctx))
 
     ai.ping_ctx = nil
     PRINT("ping:",pkt.index)
