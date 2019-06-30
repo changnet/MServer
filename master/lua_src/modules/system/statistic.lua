@@ -9,6 +9,7 @@ local Statistic = oo.singleton( ... )
 
 function Statistic.collect()
     local total_stat = {}
+    total_stat.app = g_app.srvname
     -- "count": returns the total memory in use by Lua (in Kbytes)
     total_stat.lua_mem = collectgarbage("count")
 
@@ -25,4 +26,11 @@ function Statistic.collect()
 end
 
 local stat = Statistic()
+
+local function rpc_stat()
+    return stat:collect()
+end
+
+g_rpc:declare("rpc_stat",rpc_stat,-1)
+
 return stat

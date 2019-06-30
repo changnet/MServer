@@ -54,9 +54,9 @@ function Httpd:http_listen( ip,port )
 end
 
 -- http调用
-function Httpd:do_exec( path,fields,body )
+function Httpd:do_exec( path,conn,fields,body )
     local exec_obj = require( path )
-    return exec_obj:exec( fields,body )
+    return exec_obj:exec( conn,fields,body )
 end
 
 function Httpd:conn_accept( new_conn_id )
@@ -100,10 +100,25 @@ function Httpd:format_error( code,ctx )
 end
 
 -- 格式化http-200返回
-function Httpd:format_200( code,error_ctx )
-    local ctx = self:format_error( code,error_ctx )
+function Httpd:format_200( code,ctx )
+    local ctx = self:format_error( code,ctx )
 
     return string.format( page200,string.len(ctx),ctx )
+end
+
+-- 处理返回
+function Httpd:do_return(conn,success,code,ctx)
+    if not success then -- 发生语法错误
+        conn:send_pkt( page500 )
+    else
+        -- 需要异步处理数据，阻塞中
+        -- TODO:要不要加个定时器做超时?
+        if code == HTTPE.PENDING then return end
+
+        conn:send_pkt( self:format_200( code,ctx ) )
+    end
+
+    return self:conn_close( conn )
 end
 
 -- http回调
@@ -131,14 +146,9 @@ function Httpd:do_command( conn,url,body )
     end
 
     local success,code,ctx = xpcall(
-        Httpd.do_exec, __G__TRACKBACK__,httpd,path,fields,body )
-    if not success then -- 发生语法错误
-        conn:send_pkt( page500 )
-    else
-        conn:send_pkt( self:format_200( code,ctx ) )
-    end
+        Httpd.do_exec, __G__TRACKBACK__,httpd,path,conn,fields,body )
 
-    self:conn_close( conn )
+    return self:do_return(conn,success,code,ctx)
 end
 
 local httpd = Httpd()

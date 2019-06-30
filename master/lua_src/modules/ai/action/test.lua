@@ -6,7 +6,7 @@ local Test = oo.class( ... )
 
 -- 测试socket拆包完整性才用65535,平时不用这么大
 -- 由于protobuf编码，发65535肯定超最大包长了，注意下报错就行
-local max_pkt = 65535
+local max_pkt = 55535
 local random_str = { "",}
 
 local function random_one( max_len )
