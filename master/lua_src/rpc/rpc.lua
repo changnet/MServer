@@ -1,4 +1,17 @@
--- rpc client and server
+-- rpc调用
+
+--[[
+1. 所有rpc调用在起服时都必须向其他进程注册
+2. 收到其他进程的rpc注册，会在rpc本身生成一个函数，不是在metatable，而是在数据层self，这样不
+   影响热更
+3. 无返回调用的时候，可以用 g_rpc:method_name直接调用
+4. 需要指定进程或者返回的时候，用 g_rpc:proxy(srv_conn,cb,...):method_name调用
+5. proxy这里会引用一些对象，如果调用出错无返回，将导致这些对象无法释放。一般脚本报错，
+   底层是有rpc返回的。如果是因为连接断开，可在连接断开时检测处理。因为涉及到数据准确性，后续再
+   看看有没有其他方法处理。目前暂不处理
+6. proxy里引用的回调函数，可能是需要热更的。这里会把成员函数转换成名字，不影响热更。如果是
+   local函数，是没法热更的。建议放在对象中。如果一定要热更，参考name.lua的处理
+]]
 
 local Auto_id = require "modules.system.auto_id"
 
@@ -7,6 +20,7 @@ local Rpc = oo.singleton( ... )
 function Rpc:__init()
     self.callback = {}
     self.procedure = {}
+
     self.auto_id = Auto_id()
 
     self.stat = {}
@@ -113,6 +127,13 @@ function Rpc:declare( method_name,method,session )
             string.format( "rpc:conflicting declaration:%s",method_name ) )
     end
 
+    -- 为了简化调用，会把rpc直接放到self里
+    -- 调用方式为:g_rpc:method_name()，因此名字不能和rpc里的名字一样
+    if not self.procedure[method_name] and self[method_name] then
+        return error(string.format(
+            "rpc:conflicting withself declaration:%s",method_name ))
+    end
+
     self.procedure[method_name] = {}
     self.procedure[method_name].method = method
     self.procedure[method_name].session = session
@@ -123,15 +144,114 @@ function Rpc:last_conn()
     return g_network_mgr:get_conn( self.last_conn_id )
 end
 
+-- 生成一个可变参回调函数
+function Rpc:func_chunk(cb_func,...)
+    -- 由于回调参数是可变的，rpc返回的参数也是可变的，但显然没有 cb_func( ...,... )
+    -- 这种可以把两个可变参拼起来的写法
+    -- 全部用table.pack table.unpack会优雅一起，但我认为每次都创建一个table消耗有点大
+
+    local args_count = select( "#",... )
+
+    if 0 == args_count then
+        return function( ... )
+            return cb_func( ... )
+        end
+    end
+
+    if 1 == args_count then
+        local args1 = ...
+        return function( ... )
+            return cb_func( args1,... )
+        end
+    end
+
+    if 2 == args_count then
+        local args1,args2 = ...
+        return function( ... )
+            return cb_func( args1,args2,... )
+        end
+    end
+
+    if 3 == args_count then
+        local args1,args2,args3 = ...
+        return function( ... )
+            return cb_func( args1,args2,args3,... )
+        end
+    end
+
+    local args = table.pack( ... )
+    return function( ... )
+        return cb_func( table.unpack(args),... )
+    end
+end
+
+-- rpc调用代理，这个是参照了python的设置
+-- 通过代理来设置调用的进程、回调函数、回调参数
+-- @srv_conn:目标进程的服务器连接，如果rpc是某个进程专有，这个参数可以不传
+-- @cb_func:回调函数，如果不需要回调，这个参数可以不传。如果回调函数是一个成员函数，把对象
+--          放在后面的参数即可，如：g_rpc:proxy(player.add_exp,player)
+function Rpc:proxy(srv_conn,cb_func,...)
+    -- proxy设置的参数，用完即失效，如果不失效，应该是哪里逻辑出现了错误
+    assert( nil == self.next_conn)
+    assert( nil == self.next_cb_func)
+
+    if type(srv_conn) == "function" then
+        self.next_cb_func = func_chunk(cb_func,...)
+        return self
+    end
+
+    self.next_conn = srv_conn
+    if cb_func then
+        assert( type(cb_func) == "function" )
+        self.next_cb_func = func_chunk(cb_func,...)
+    end
+
+    return self
+end
+
+-- 生成一个可直接调用的rpc函数
+function Rpc:invoke_factory(method_name,session)
+    return function ( ... )
+        local srv_conn = nil
+        if -1 == session then
+            srv_conn = self.next_conn
+            self.next_conn = nil
+        else
+            assert( nil == self.next_conn )
+            srv_conn = g_network_mgr:get_srv_conn( session )
+        end
+
+        assert( srv_conn )
+
+        local call_id = 0
+        if self.next_cb_func then
+            call_id = self.auto_id:next_id( self.callback )
+            self.callback[call_id] = self.next_cb_func
+
+            self.next_cb_func = nil
+        end
+
+        return srv_conn:send_rpc_pkt( call_id,method_name,... )
+    end
+end
+
 -- 其他服务器注册rpc回调
-function Rpc:register( method_name,session )
+function Rpc:register( procedure,session )
+    local method_name = procedure.name
     if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
         assert( nil == self.procedure[method_name],
             string.format( "rpc already exist:%s",method_name ) )
     end
 
+    -- procedure里的session一般是-1，表示这个procedure在多个进程同时存在，调用时需要
+    -- 指定进程
+    local method_session = procedure.session or session
+
     self.procedure[method_name] = {}
-    self.procedure[method_name].session = session
+    self.procedure[method_name].session = method_session
+
+    -- 放到self，方便直接调用
+    self[method_name] = invoke_factory(method_name,session)
 end
 
 -- 获取method所在的连接
@@ -189,8 +309,8 @@ function Rpc:rpc_cmd()
     local cmds = {}
 
     for method_name,cfg in pairs( self.procedure ) do
-        if -1 ~= cfg.session and cfg.method then
-            table.insert( cmds,method_name )
+        if cfg.method then -- 有method的才是本进程声明的
+            table.insert( cmds,{ method = method_name,session = cfg.session } )
         end
     end
 

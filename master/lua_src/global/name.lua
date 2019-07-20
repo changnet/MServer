@@ -6,7 +6,23 @@
 -- lua目前本身没有提供根据变量取名字的函数，即使debug库也没有
 -- 但在一起功能，例如定时器回调中，考虑到函数会热更，使用函数名较为合适
 
+-- 这里提供一个机制取对象(oo.lua)中的成员函数，做了缓存之后，也不会有效率问题
+
+-- 如果是local函数，那没有通用的方法可以取，只能通过手动注册。
+-- 这个仅限于定时器、rpc等特殊调用，一般情况下，还是用对象来做吧
+
+--[[
+-- 你这样用法，foo做为回调函数就不影响热更
+local function foo()
+end
+__reg_func__(foo,"foo")
+g_rpc:proxy(foo):back_to_foo( ... )
+]]
+
+-- ！！！local函数调用当前在定时器、rpc中都去掉了，因为手动注册函数这个不优雅，以后有需求再加
+
 local names = {}
+local func_names = {}
 
 local function raw_name( mt,method )
     if not mt then return nil end
@@ -32,4 +48,15 @@ function __method__( this,method )
 
     names[method] = name
     return name
+end
+
+function __reg_func__ (func,name)
+    assert( nil == func_names[func] )
+
+    func_names[func] = name
+end
+
+-- 取local函数名
+function __func__( func )
+    return func_names[func]
 end
