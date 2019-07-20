@@ -69,7 +69,7 @@ function Base:on_login()
     base_info.level = self.root.level
     base_info.name = self.root.name
 
-    g_rpc:invoke("player_update_base",self.pid,base_info,true)
+    g_rpc:player_update_base( self.pid,base_info,true )
     return true
 end
 

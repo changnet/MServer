@@ -9,6 +9,7 @@ setting.lua
 
 master/bin
 master/error
+master/printf
 master/log
 master/runtime
 master/c_module

@@ -176,8 +176,11 @@ function oo.method_thunk( this,method,p0,p1,p2,p3,p4,p5 )
 
     -- 需要通过函数名去调用，因为函数可能被热更
     local name = __method__( this,method )
+    if not name then
+        return error( "no method found")
+    end
 
-    -- 用不着了，这里没必要继承引用旧函数，不然热更的时候不会gc
+    -- method用不着了，这里没必要继承引用旧函数，不然热更的时候不会gc
     -- ps:高版本的lua(5.3)会自动判断这些upvalue是否被引用。而低版本则不会
     -- 传入不同的参数到闭包，如果这个参数没用到，lua 5.3返回的函数指针是一样的，5.1的不一样
     method = nil

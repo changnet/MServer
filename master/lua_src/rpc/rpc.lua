@@ -17,6 +17,8 @@ local Auto_id = require "modules.system.auto_id"
 
 local Rpc = oo.singleton( ... )
 
+local __method__ = __method__
+
 function Rpc:__init()
     self.callback = {}
     self.procedure = {}
@@ -144,11 +146,17 @@ function Rpc:last_conn()
     return g_network_mgr:get_conn( self.last_conn_id )
 end
 
+function Rpc:is_method( func,this )
+    if "table" == type(this) then
+    end
+end
+
 -- 生成一个可变参回调函数
 function Rpc:func_chunk(cb_func,...)
     -- 由于回调参数是可变的，rpc返回的参数也是可变的，但显然没有 cb_func( ...,... )
     -- 这种可以把两个可变参拼起来的写法
     -- 全部用table.pack table.unpack会优雅一起，但我认为每次都创建一个table消耗有点大
+    -- 所以现在把常用的几个函数列出来
 
     local args_count = select( "#",... )
 
@@ -158,30 +166,66 @@ function Rpc:func_chunk(cb_func,...)
         end
     end
 
+    -- local name = __method__(args1,cb_func)
+    -- 如果是成员函数，则转成成员函数名字调用，这样引用的cb_func也能热更
+
     if 1 == args_count then
         local args1 = ...
-        return function( ... )
-            return cb_func( args1,... )
+        local name = __method__(args1,cb_func)
+        if name then
+            cb_func = nil
+            return function( ... )
+                return args1[name]( args1,... )
+            end
+        else
+            return function( ... )
+                return cb_func( args1,... )
+            end
         end
     end
 
     if 2 == args_count then
         local args1,args2 = ...
-        return function( ... )
-            return cb_func( args1,args2,... )
+        local name = __method__(args1,cb_func)
+        if name then
+            cb_func = nil
+            return function( ... )
+                return args1[name]( args1,args2,... )
+            end
+        else
+            return function( ... )
+                return cb_func( args1,args2,... )
+            end
         end
     end
 
     if 3 == args_count then
         local args1,args2,args3 = ...
-        return function( ... )
-            return cb_func( args1,args2,args3,... )
+        local name = __method__(args1,cb_func)
+        if name then
+            cb_func = nil
+            return function( ... )
+                return args1[name]( args1,args2,args3,... )
+            end
+        else
+            return function( ... )
+                return cb_func( args1,args2,args3,... )
+            end
         end
     end
 
     local args = table.pack( ... )
-    return function( ... )
-        return cb_func( table.unpack(args),... )
+    local args1 = args[1]
+    local name = __method__(args1,cb_func)
+    if name then
+        cb_func = nil
+        return function( ... )
+            return args1[name]( table.unpack(args),... )
+        end
+    else
+        return function( ... )
+            return cb_func( table.unpack(args),... )
+        end
     end
 end
 
@@ -189,21 +233,25 @@ end
 -- 通过代理来设置调用的进程、回调函数、回调参数
 -- @srv_conn:目标进程的服务器连接，如果rpc是某个进程专有，这个参数可以不传
 -- @cb_func:回调函数，如果不需要回调，这个参数可以不传。如果回调函数是一个成员函数，把对象
---          放在后面的参数即可，如：g_rpc:proxy(player.add_exp,player)
+--          放在后面的参数即可，如：g_rpc:proxy(player.add_exp,player):add_exp
+-- 注：使用proxy时尽量用g_rpc:proxy():method()这样直接调用，避免设置了proxy但没调用函数
+-- 的情况。
+-- TODO:把proxy放到另一个同样复制了invoke_factory函数的table，返回该table而不是self
 function Rpc:proxy(srv_conn,cb_func,...)
     -- proxy设置的参数，用完即失效，如果不失效，应该是哪里逻辑出现了错误
     assert( nil == self.next_conn)
     assert( nil == self.next_cb_func)
 
+    -- 为function表示没传srv_conn
     if type(srv_conn) == "function" then
-        self.next_cb_func = func_chunk(cb_func,...)
+        self.next_cb_func = self:func_chunk(cb_func,...)
         return self
     end
 
     self.next_conn = srv_conn
     if cb_func then
         assert( type(cb_func) == "function" )
-        self.next_cb_func = func_chunk(cb_func,...)
+        self.next_cb_func = self:func_chunk(cb_func,...)
     end
 
     return self
@@ -211,13 +259,14 @@ end
 
 -- 生成一个可直接调用的rpc函数
 function Rpc:invoke_factory(method_name,session)
-    return function ( ... )
+    -- 调用时是用:所以有这个this_self
+    return function ( this_self,... )
         local srv_conn = nil
         if -1 == session then
             srv_conn = self.next_conn
             self.next_conn = nil
         else
-            assert( nil == self.next_conn )
+            assert( nil == self.next_conn,method_name )
             srv_conn = g_network_mgr:get_srv_conn( session )
         end
 
@@ -237,71 +286,34 @@ end
 
 -- 其他服务器注册rpc回调
 function Rpc:register( procedure,session )
-    local method_name = procedure.name
+    local method_name = procedure.method
+    local method_session = procedure.session
+
+    -- procedure里的session一般是-1，
+    -- 表示这个procedure在多个进程同时存在，调用时需要指定进程
+    if -1 == method_session and self.procedure[method_name] then
+        -- 在本进程声明会占用self.procedure[method_name]
+        if not self[method_name] then
+            self[method_name] = self:invoke_factory(method_name,method_session)
+        end
+
+        return
+    end
+
     if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
         assert( nil == self.procedure[method_name],
             string.format( "rpc already exist:%s",method_name ) )
     end
 
-    -- procedure里的session一般是-1，表示这个procedure在多个进程同时存在，调用时需要
-    -- 指定进程
-    local method_session = procedure.session or session
+    if not method_session or 0 == method_session then
+        method_session = session
+    end
 
     self.procedure[method_name] = {}
     self.procedure[method_name].session = method_session
 
     -- 放到self，方便直接调用
-    self[method_name] = invoke_factory(method_name,session)
-end
-
--- 获取method所在的连接
--- 查找不到则返回nil
-function Rpc:get_method_conn( method_name )
-    local cfg = self.procedure[method_name]
-
-    if not cfg then return nil end
-
-    return g_network_mgr:get_srv_conn( cfg.session )
-end
-
--- 发起rpc调用(无返回值)
--- rpc:invoke( "addExp",pid,exp )
-function Rpc:invoke( method_name,... )
-    local srv_conn = self:get_method_conn( method_name )
-    if not srv_conn then
-        ERROR( "rpc:no connection to remote server:%s",method_name )
-        return
-    end
-
-    return srv_conn:send_rpc_pkt( 0,method_name,... )
-end
-
--- 发起rpc调用(无返回值)
--- rpc:call( "addExp",pid,exp )
-function Rpc:call( srv_conn,method_name,... )
-    return srv_conn:send_rpc_pkt( 0,method_name,... )
-end
-
--- 发起rpc调用(有返回值)
--- rpc:xinvoke( "addExp",callback,pid,exp )
-function Rpc:xinvoke( method_name,callback,... )
-    local srv_conn = self:get_method_conn( method_name )
-    if not srv_conn then
-        return error( string.format(
-            "rpc:no connection to remote server:%s",method_name))
-    end
-
-    return self:xcall( srv_conn,method_name,callback,... )
-end
-
--- 发起rpc调用
--- rpc:xcall( "addExp",callback,pid,exp )
-function Rpc:xcall( srv_conn,method_name,callback,... )
-    -- 记录回调信息
-    local call_id = self.auto_id:next_id( self.callback )
-
-    self.callback[call_id] = callback
-    srv_conn:send_rpc_pkt( call_id,method_name,... )
+    self[method_name] = self:invoke_factory(method_name,method_session)
 end
 
 -- 获取当前服务器的所有rpc调用

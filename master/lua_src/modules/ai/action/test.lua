@@ -8,23 +8,26 @@ local Test = oo.class( ... )
 -- 由于protobuf编码，发65535肯定超最大包长了，注意下报错就行
 local max_pkt = 55535
 local random_str = { "",}
+if false then -- 测试包临界才用这个随机
+    local function random_one( max_len )
+        local chars = {}
+        for len = 1,max_len do
+            table.insert(chars,string.char(math.random(48,126)))
+        end
 
-local function random_one( max_len )
-    local chars = {}
-    for len = 1,max_len do
-        table.insert(chars,string.char(math.random(48,126)))
+        table.insert(random_str,table.concat(chars))
     end
 
-    table.insert(random_str,table.concat(chars))
+    for idx = 1,200 do
+        random_one( math.random(1,max_pkt) )
+    end
+
+    random_one( max_pkt )-- 保证最大临界值一定会出现
+
+    PRINT("random LARGE string finish !!!")
+else
+    table.insert(random_str,"just some test char 1234567890abcdefghijklmno")
 end
-
-for idx = 1,200 do
-    random_one( math.random(1,max_pkt) )
-end
-
-random_one( max_pkt )-- 保证最大临界值一定会出现
-
-PRINT("random LARGE string finish !!!")
 
 function Test:ping(ai)
     if ai.ping_ctx then return end -- 上一次的还没返回

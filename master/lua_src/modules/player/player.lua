@@ -160,7 +160,7 @@ function Player:on_login()
     -- 同步战斗属性到场景
     self.abt_sys:update_battle_abt()
     -- 实体进入场景
-    g_rpc:invoke("player_enter_scene",self.pid,0,1,1,1)
+    g_rpc:player_enter_scene( self.pid,0,1,1,1 )
 
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
 
@@ -191,7 +191,7 @@ function Player:on_logout()
     end
 
     -- 退出场景
-    g_rpc:invoke("player_exit",self.pid)
+    g_rpc:player_exit( self.pid )
     g_log_mgr:login_or_logout( self.pid,LOG.LOGOUT )
 
     PRINTF( "player logout,pid = %d",self.pid )

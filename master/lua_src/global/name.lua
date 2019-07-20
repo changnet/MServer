@@ -21,8 +21,12 @@ g_rpc:proxy(foo):back_to_foo( ... )
 
 -- ！！！local函数调用当前在定时器、rpc中都去掉了，因为手动注册函数这个不优雅，以后有需求再加
 
+
 local names = {}
 local func_names = {}
+
+setmetatable(names, {["__mode"]='k'})
+setmetatable(func_names, {["__mode"]='k'})
 
 local function raw_name( mt,method )
     if not mt then return nil end
@@ -38,15 +42,20 @@ end
 -- 这个函数目前只对oo中的对象函数有用，对标C的 __func__ 宏
 function __method__( this,method )
     local name = names[method]
-    if name then return name end
+    if name then
+        if -1 == name then return nil end -- 已查找过但找不到名字的，标为-1
+        return name
+    end
 
-    assert( this:is_oo(),"only object support" )
+    -- 当前仅仅支持oo里的对象
+    if "table" ~= type(this) or not this.is_oo then
+        names[method] = -1
+        return nil
+    end
 
     name = raw_name( oo.classof(this),method )
 
-    assert( name,"method name not found" )
-
-    names[method] = name
+    names[method] = name or -1
     return name
 end
 

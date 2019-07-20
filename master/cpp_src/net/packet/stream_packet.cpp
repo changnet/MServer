@@ -384,7 +384,7 @@ void stream_packet::rpc_command( const s2s_header *header )
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if ( unique_id > 0 )
     {
-        rpc_pack( L,unique_id,ecode,SPKT_RPCR,top + 1 );
+        do_pack_rpc( L,unique_id,ecode,SPKT_RPCR,top + 1 );
     }
 
     if ( LUA_OK != ecode )
@@ -433,7 +433,7 @@ void stream_packet::rpc_return( const s2s_header *header )
 }
 
 /* 打包rpc数据包 */
-int32 stream_packet::rpc_pack(
+int32 stream_packet::do_pack_rpc(
     lua_State *L,int32 unique_id,int32 ecode,uint16 pkt,int32 index )
 {
     int32 len = 0;
@@ -443,9 +443,11 @@ int32 stream_packet::rpc_pack(
     if ( LUA_OK == ecode )
     {
         len = encoder->encode( L,index,&buffer,NULL );
-        // 即使出错，也应该告知另一方结果
         if ( len < 0 )
         {
+            // 发送时，出错就不发了
+            // 返回时，出错也应该告知另一进程出错了
+            if ( SPKT_RPCS == pkt ) return -1;
             len = 0;
             ecode = -1;
         }
@@ -608,9 +610,7 @@ int32 stream_packet::pack_rpc( lua_State *L,int32 index )
 {
     int32 unique_id = luaL_checkinteger( L,index );
     // ecode默认0
-    rpc_pack( L,unique_id,0,SPKT_RPCS,index + 1 );
-
-    return 0;
+    return do_pack_rpc( L,unique_id,0,SPKT_RPCS,index + 1 );
 }
 
 int32 stream_packet::pack_ssc( lua_State *L,int32 index )

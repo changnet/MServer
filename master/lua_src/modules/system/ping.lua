@@ -24,8 +24,7 @@ function Ping:start(how,conn_id,other)
     local wait = 0
     for _,srv_conn in pairs(g_network_mgr:get_all_srv_conn()) do
         wait = wait + 1
-        g_rpc:xcall( srv_conn,
-            "rpc_ping",function( ecode,id ) self:on_ping( id ) end,id )
+        g_rpc:proxy( srv_conn,self.on_ping,self ):rpc_ping( id )
     end
 
     -- 没有其他服务器连接?
@@ -45,7 +44,7 @@ function Ping:start(how,conn_id,other)
 end
 
 -- 其他服务器进程收到ping返回
-function Ping:on_ping( id )
+function Ping:on_ping( ecode,id )
     local info = self.pending[id]
     if not info then
         return PRINT("ping no info found",id)

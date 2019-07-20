@@ -529,7 +529,11 @@ int32 lnetwork_mgr::send_rpc_packet( lua_State *L )
         return luaL_error( L,"illegal packet type" );
     }
 
-    (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
+    int32 ecode = (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
+    if ( 0 != ecode )
+    {
+        return luaL_error( L,"send rpc packet error" );
+    }
 
     return 0;
 }

@@ -25,12 +25,12 @@ function Web_stat:exec( conn,fields,body )
     end
 
     -- TODO:这个rpc调用有问题，不能引用conn为up value的，conn可能会被客户端断开
-    g_rpc:xcall(srv_conn,"rpc_stat",
+    g_rpc:proxy(srv_conn,
         function(ecode,ctx)
             return g_httpd:do_return(
                 conn,0 == ecode,HTTPE.OK_NIL,json.encode(ctx))
         end
-    )
+    ):rpc_stat()
     return HTTPE.PENDING -- 阻塞等待数据返回
 end
 

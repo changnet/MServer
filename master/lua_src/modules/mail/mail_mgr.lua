@@ -24,7 +24,7 @@ end
 function Mail_mgr:send_mail( pid,title,ctx,attachment,op )
     -- 邮件数据统一在world处理，不是该进程则转
     if "world" ~= g_app.srvname then
-        return g_rpc:invoke("rpc_send_mail",pid,title,ctx,attachment,op )
+        return g_rpc:rpc_send_mail( pid,title,ctx,attachment,op )
     end
 
     return self:raw_send_mail( pid,title,ctx,attachment,op )
@@ -130,8 +130,8 @@ function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     end
 
     if "world" ~= g_app.srvname then
-        return g_rpc:invoke(
-            "rpc_send_sys_mail",title,ctx,attachment,op,expire,level,vip )
+        return g_rpc:rpc_send_sys_mail( 
+            title,ctx,attachment,op,expire,level,vip )
     end
 
     return self:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )

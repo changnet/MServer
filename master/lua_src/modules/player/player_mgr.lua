@@ -47,12 +47,12 @@ function Player_mgr:enter_success( player )
 end
 
 -- 玩家初始化失败
-function Player_mgr:enter_fail( player )
+function Player_mgr:do_enter_fail( player )
     local pid = player:get_pid()
     PRINT("player enter timeout,kill connection",pid)
 
     -- 通知网关关闭连接
-    g_rpc:invoke( "kill_player_connect",pid )
+    g_rpc:kill_player_connect( pid )
 end
 
 -- 定时检测加载失败的玩家
@@ -61,7 +61,7 @@ function Player_mgr:check_enter_fail()
     for pid,player in pairs( self.raw_player ) do
         if not player:is_loading() then
             wait_del[pid] = true
-            self:enter_fail( player )
+            self:do_enter_fail( player )
         end
     end
 

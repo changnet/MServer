@@ -92,7 +92,7 @@ function Attribute_sys:update_battle_abt()
         table.insert(abt_list,v)
     end
 
-    g_rpc:invoke( "player_update_battle_abt",self.pid,abt_list )
+    g_rpc:player_update_battle_abt( self.pid,abt_list )
 end
 
 return Attribute_sys

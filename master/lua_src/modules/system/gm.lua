@@ -51,7 +51,7 @@ function GM:auto_forward( where,player,cmd,args )
     local pid = nil
     if player then pid = player:get_pid() end
 
-    g_rpc:call( srv_conn,"rpc_gm",g_app.srvname,cmd,table.unpack( args ) )
+    g_rpc:proxy(srv_conn):rpc_gm( g_app.srvname,cmd,table.unpack( args ) )
     return true
 end
 
@@ -96,7 +96,7 @@ function GM:broadcast( cmd,... )
         if g_app.srvname ~= srvname then
             local srv_conn = g_network_mgr:get_conn_by_name( srvname )
             if srv_conn then
-                g_rpc:call( srv_conn,"rpc_gm",g_app.srvname,cmd,... )
+                g_rpc:proxy( srv_conn):rpc_gm( g_app.srvname,cmd,... )
             end
         end
     end

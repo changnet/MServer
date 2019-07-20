@@ -7,7 +7,7 @@ int32 main( int32 argc,char **argv )
 {
     if (argc < 4)
     {
-        ERROR( "usage: [name] [index] [srvid]\n" );
+        ERROR_R( "usage: [name] [index] [srvid]\n" );
         exit( 1 );
     }
 
