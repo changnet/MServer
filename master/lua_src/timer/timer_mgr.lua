@@ -9,6 +9,8 @@ local LIMIT = require "global.limits"
 local Timer = require "Timer"
 local Timer_mgr = oo.singleton( ... )
 
+local method_thunk = method_thunk
+
 function Timer_mgr:__init()
     self.next_id = 0
 
@@ -41,7 +43,7 @@ function Timer_mgr:new_timer( after,interval,this,method,... )
     local timer = Timer( timer_id )
     timer:set( after,interval )
 
-    self.cb[timer_id] = oo.method_thunk( this,method,... )
+    self.cb[timer_id] = method_thunk( this,method,... )
     self.timer[timer_id] = timer
 
     timer:start()

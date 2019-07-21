@@ -24,6 +24,7 @@ local Mail = require "modules.mail.mail"
 local Attribute_sys = require "modules.attribute.attribute_sys"
 
 local RES = RES
+local method_thunk = method_thunk
 
 -- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
 local sub_module =
@@ -76,7 +77,7 @@ end
 function Player:reg_5s_timer( this,method )
     local id = self.auto_id:next_id()
 
-    self.timer_5scb[id] = oo.method_thunk( this,method )
+    self.timer_5scb[id] = method_thunk( this,method )
     return id
 end
 
