@@ -3,15 +3,16 @@
 # build development enviroment
 # install 3th party software or library,like lua、mongodb
 
-PKGDIR=../package
+RAWPKTDIR=../package
+PKGDIR=/tmp/mserver_package
 
-# "set -e" will cause bash to exit with an error on any simple command. 
-# "set -o pipefail" will cause bash to exit with an error on any command 
+# "set -e" will cause bash to exit with an error on any simple command.
+# "set -o pipefail" will cause bash to exit with an error on any command
 #  in a pipeline as well.
 set -e
 set -o pipefail
 
-function auto_apt_get()
+function auto_apt_install()
 {
     echo "install $1 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     apt-get -y install $1
@@ -25,31 +26,32 @@ function append_to_file()
 # install base compile enviroment
 function build_base()
 {
-    auto_apt_get gcc
-    auto_apt_get g++
-    auto_apt_get make
+    auto_apt_install gcc
+    auto_apt_install g++
+    auto_apt_install make
 
     # flatbuffers and mongo will need those to build
-    auto_apt_get cmake
-    auto_apt_get automake
-    auto_apt_get libtool #protobuf需要
+    auto_apt_install cmake
+    auto_apt_install automake
+    auto_apt_install libtool #protobuf需要
 }
 
 # install third party library
 function build_library()
 {
-    auto_apt_get uuid-dev
-    # auto_apt_get mysql-server
-    auto_apt_get libmysqlclient-dev
-    auto_apt_get libreadline6-dev
-    # auto_apt_get pkg-config libssl-dev libsasl2-dev
+    auto_apt_install uuid-dev
+    # auto_apt_install mysql-server
+    # auto_apt_install libmysqlclient-dev
+    auto_apt_install libmariadbclient-dev
+    auto_apt_install libreadline-dev
+    # auto_apt_install pkg-config libssl-dev libsasl2-dev
 }
 
 function build_lua()
 {
     cd $PKGDIR
 
-    LUAVER=5.3.1
+    LUAVER=5.3.5
     tar -zxvf lua-$LUAVER.tar.gz
     cd lua-$LUAVER
     make linux install
@@ -160,19 +162,20 @@ function rm_libmysqlclient()
     rm -f /usr/bin/mysql_config
 }
 
-# 注意：sasl库编译过程中需要创建软链接(ln -s)，在win挂载到linux方式下是不能创建的
-# 导致编辑失败
+# https://github.com/cyrusimap/cyrus-sasl/releases
+# 注意：sasl库编译过程中需要创建软链接(ln -s)
+# 在win挂载到linux方式下是不能创建的,导致编译失败
 function build_sasl()
 {
     # apt-get install libssl-dev libsasl2-dev 方式安装不能静态链接
     # CANT NOT static link sasl2:https://www.cyrusimap.org/sasl/
-    # libtool doesn’t always link libraries together. In our environment, we only 
-    # have static Krb5 libraries; the GSSAPI plugin should link these libraries in 
+    # libtool doesn’t always link libraries together. In our environment, we only
+    # have static Krb5 libraries; the GSSAPI plugin should link these libraries in
     # on platforms that support it (Solaris and Linux among them) but it does not
 
     cd $PKGDIR
 
-    SASLVER=2.1.26
+    SASLVER=2.1.27
     SASL=cyrus-sasl-$SASLVER
     tar -zxvf $SASL.tar.gz
     cd $SASL
@@ -201,12 +204,15 @@ function build_mongo_driver()
     # mongo-c-driver-1.2.1\src\libbson\configure
     cd $PKGDIR
 
-    MONGOCVER=1.6.2
+    MONGOCVER=1.14.0
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
+    mkdir cmake-build
+    cd cmake-build
+    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC=ON -DENABLE_BSON=ON
     # --with-libbson=[auto/system/bundled]
-    # 强制使用附带的bson库，不然之前系统编辑的bson库可能编译参数不一致(比如不会生成静态bson库)
-    ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
+    # 强制使用附带的bson库，不然之前系统编译的bson库可能编译参数不一致(比如不会生成静态bson库)
+    # ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
     make
     make install
 
@@ -241,7 +247,7 @@ function build_protoc()
     #
     cd protobuf-$PROTOBUF_VER
     # ./autogen.sh 由于这个脚本需要从网上下载gtest，这里是不能直接下载的
-    autoreconf -f -i -Wall,no-obsolete 
+    autoreconf -f -i -Wall,no-obsolete
     ./configure
     make
     make install
@@ -250,7 +256,7 @@ function build_protoc()
     rm protobuf-$PROTOBUF_VER -R
 }
 
-# install mongodb from a tarball download from 
+# install mongodb from a tarball download from
 # https://www.mongodb.com/download-center#community
 # automatic install and setting config and serivce.
 function build_mongodb()
@@ -315,6 +321,8 @@ function build_mongodb()
 }
 
 if [[ ! $1 ]];then
+    # 很多软件包包含软件链接，在win挂载目录到linux下开发时解压出错，干脆复制一份
+    yes | cp $RAWPKTDIR/* PKGDIR/
     build_base
     build_library
     build_lua
@@ -335,14 +343,14 @@ fi
 # make: pcre-config: Command not found
 # If you write HAVE_RULES=yes then pcre must be available. So you have two options:
 # 1. Remove HAVE_RULES=yes
-# 2. Install pcre(auto_apt_get libpcre3-dev)
+# 2. Install pcre(auto_apt_install libpcre3-dev)
 
 # TODO build oclint env
 # need debian8(>=gcc5)
 # edit /etc/apt/sources.list
 # deb-src http://mirrors.163.com/debian-security/ jessie/updates main non-free contrib
 # apt-get update
-# auto_apt_get g++-6
+# auto_apt_install g++-6
 # download https://github.com/oclint/oclint/releases
 # tar -zxvf xx.tar.gz
 # cd xxx
