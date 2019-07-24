@@ -3,6 +3,7 @@
 # build development enviroment
 # install 3th party software or library,like lua、mongodb
 
+BUILD_ENV_LOG=./build_env_log.txt
 RAWPKTDIR=../package
 PKGDIR=/tmp/mserver_package
 
@@ -26,6 +27,7 @@ function append_to_file()
 # install base compile enviroment
 function build_base()
 {
+    echo "build base ..."
     auto_apt_install gcc
     auto_apt_install g++
     auto_apt_install make
@@ -56,9 +58,6 @@ function build_lua()
     cd lua-$LUAVER
     make linux install
     make install
-
-    cd -
-    rm -R $PKGDIR/lua-$LUAVER
 }
 
 # 这是一个简单自定义源码安装libmysqlclient-dev的cmake脚本
@@ -75,9 +74,6 @@ function build_libmysqlclient()
     cmake . -DINSTALL_BINDIR=/usr/bin -DINSTALL_DOCDIR=/usr/share/docs/mysql -DINSTALL_DOCREADMEDIR=/usr/share/docs/mysql -DINSTALL_INCLUDEDIR=/usr/include/mysql -DINSTALL_INFODIR=/usr/share/docs/mysql -DINSTALL_LIBDIR=/usr/lib/x86_64-linux-gnu/ -DINSTALL_DOCREADMEDIR=/usr/share/docs/mysql
     make
     make install
-
-    cd -
-    rm -R $PKGDIR/$LIBMYSQLC
 }
 
 function rm_libmysqlclient()
@@ -191,11 +187,11 @@ function build_sasl()
     #* symbolic link from /usr/lib/sasl2 to /usr/local/lib/sasl2,
     #* but this may not be appropriate for your site, so this
     #* installation procedure won't do it for you.
-
-    cd -
-    rm -R $SASL
 }
 
+# http://mongoc.org/
+# https://github.com/mongodb/mongo-c-driver/releases/download/1.14.0/mongo-c-driver-1.14.0.tar.gz
+# http://mongoc.org/libmongoc/current/installing.html
 function build_mongo_driver()
 {
     # 如果出现aclocal-1.14: command not found,安装automake，版本不对
@@ -209,34 +205,27 @@ function build_mongo_driver()
     cd mongo-c-driver-$MONGOCVER
     mkdir cmake-build
     cd cmake-build
-    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC=ON -DENABLE_BSON=ON
+    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC=ON -DENABLE_BSON=ON ..
     # --with-libbson=[auto/system/bundled]
     # 强制使用附带的bson库，不然之前系统编译的bson库可能编译参数不一致(比如不会生成静态bson库)
     # ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
     make
     make install
-
-    cd -
-    rm -R $PKGDIR/mongo-c-driver-$MONGOCVER
 }
 
 function build_flatbuffers()
 {
     cd $PKGDIR
 
-    FBB_VER=1.6.0
+    FBB_VER=1.11.0
     tar -zxvf flatbuffers-$FBB_VER.tar.gz
-    cmake -DFLATBUFFERS_BUILD_SHAREDLIB=ON flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
+    cmake flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
     make -C flatbuffers-$FBB_VER all
     make -C flatbuffers-$FBB_VER install
     ldconfig -v
-
-    rm -R flatbuffers-$FBB_VER
-    cd -
 }
 
-# 其实我们只需要一个protoc来编译proto文件，不需要源代码
-# 可以在github直接下载bin文件，尤其是在win下开始的时候
+# 编译protobuf库并安装
 # https://github.com/google/protobuf/releases
 function build_protoc()
 {
@@ -251,9 +240,19 @@ function build_protoc()
     ./configure
     make
     make install
+}
 
+# 我们只需要一个protoc来编译proto文件，不需要源代码
+# 可以在github直接下载bin文件，尤其是在win下开发的时候
+# https://github.com/google/protobuf/releases
+function install_protoc()
+{
     cd $PKGDIR
-    rm protobuf-$PROTOBUF_VER -R
+
+    PROTOC_ZIP=protoc-3.9.0-linux-x86_64.zip
+    # curl -OL https://github.com/google/protobuf/releases/download/v3.9.0/$PROTOC_ZIP
+    unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
+    unzip -o $PROTOC_ZIP -d /usr/local include/*
 }
 
 # install mongodb from a tarball download from
@@ -320,16 +319,32 @@ function build_mongodb()
     cd -
 }
 
-if [[ ! $1 ]];then
+function build_env_once()
+{
+    old_pwd=`pwd`
     # 很多软件包包含软件链接，在win挂载目录到linux下开发时解压出错，干脆复制一份
-    yes | cp $RAWPKTDIR/* PKGDIR/
-    build_base
-    build_library
-    build_lua
-    build_mongo_driver
-    build_flatbuffers
+    echo "prepare temp dir $PKGDIR"
+    mkdir -p $PKGDIR
+
+    echo "copy all package to $PKGDIR"
+    cp $RAWPKTDIR/* $PKGDIR/
+
+    # build_base
+    # build_library
+    # build_lua
+    # build_sasl
+    # build_mongo_driver
+    # build_flatbuffers
+    install_protoc
+
+    cd $old_pwd
+    rm -R $PKGDIR
+}
+
+if [[ ! $1 ]];then
+    build_env_once 2>&1 | tee $BUILD_ENV_LOG
 else
-    build_$1
+    build_$1 2>&1 | tee $BUILD_ENV_LOG
 fi
 
 
