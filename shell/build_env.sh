@@ -3,6 +3,8 @@
 # build development enviroment
 # install 3th party software or library,like lua、mongodb
 
+# UPDATE to Debian 9.9 at 2019-07-22
+
 BUILD_ENV_LOG=./build_env_log.txt
 RAWPKTDIR=../package
 PKGDIR=/tmp/mserver_package
@@ -24,10 +26,10 @@ function append_to_file()
     echo "$2" >>$1
 }
 
-# install base compile enviroment
-function build_base()
+# install compile enviroment
+function build_tool_chain()
 {
-    echo "build base ..."
+    echo "build tool chain ..."
     auto_apt_install gcc
     auto_apt_install g++
     auto_apt_install make
@@ -329,23 +331,24 @@ function build_env_once()
     echo "copy all package to $PKGDIR"
     cp $RAWPKTDIR/* $PKGDIR/
 
-    # build_base
+    build_tool_chain
     # build_library
     # build_lua
     # build_sasl
     # build_mongo_driver
-    # build_flatbuffers
-    install_protoc
+    build_flatbuffers
+    # install_protoc
 
     cd $old_pwd
     rm -R $PKGDIR
 }
 
-if [[ ! $1 ]];then
-    build_env_once 2>&1 | tee $BUILD_ENV_LOG
-else
-    build_$1 2>&1 | tee $BUILD_ENV_LOG
-fi
+
+build_env_once 2>&1 | tee $BUILD_ENV_LOG
+
+# 只要安装其中一个的话，把上面的代码临时注释掉即可
+# build_$1 2>&1 | tee $BUILD_ENV_LOG
+
 
 
 # TODO build cppcheck
