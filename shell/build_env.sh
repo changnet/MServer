@@ -44,6 +44,7 @@ function build_tool_chain()
 function build_library()
 {
     auto_apt_install uuid-dev
+    auto_apt_install openssl-dev
     # auto_apt_install mysql-server
     # auto_apt_install libmysqlclient-dev
     auto_apt_install libmariadbclient-dev
@@ -332,12 +333,12 @@ function build_env_once()
     cp $RAWPKTDIR/* $PKGDIR/
 
     build_tool_chain
-    # build_library
-    # build_lua
-    # build_sasl
-    # build_mongo_driver
+    build_library
+    build_lua
+    build_sasl
+    build_mongo_driver
     build_flatbuffers
-    # install_protoc
+    install_protoc
 
     cd $old_pwd
     rm -R $PKGDIR

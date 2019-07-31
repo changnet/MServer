@@ -14,3 +14,4 @@ master/log
 master/runtime
 master/c_module
 master/core*
+shell/build_env_log.txt
