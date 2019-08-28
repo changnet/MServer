@@ -106,8 +106,9 @@ bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    int64 count = mongoc_collection_count( collection,
-        MONGOC_QUERY_NONE,mq->_query,mq->_skip,mq->_limit,NULL,&res->_error );
+    // opts = {"skip":1,"limit":5}
+    int64 count = mongoc_collection_count_documents(
+        collection,mq->_query,mq->_opts,NULL,NULL,&res->_error );
 
     mongoc_collection_destroy ( collection );
 

@@ -23,7 +23,7 @@ public:
         SSLV_TLS_GEN_AT    = 1, // 通用类型(generic type)，可作服务器或客户端,自动协商
         SSLV_TLS_SRV_AT    = 2, // 服务器用，自动协商版本
         SSLV_TLS_CLT_AT    = 3, // 客户端用，自动协商版本
-        SSLV_TLS_GEN_12    = 4, // 通用类型，TLS 1.2
+        // SSLV_TLS_GEN_12    = 4, // 通用类型，TLS 1.2 deprecated
         // SSLV_SSL_GEN_23 = 4, // 通用类型，SSL2、SSL3版本
         // SSLV_SSL_SRV_23 = 5, // 服务器用，SSL2、SSL3版本
         // SSLV_SSL_CLT_23 = 6, // 客户端用，SSL2、SSL3版本

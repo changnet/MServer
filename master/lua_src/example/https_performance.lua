@@ -37,10 +37,10 @@ local page200 =
 }
 page200 = table.concat( page200 )
 
-local no_cert_idx = network_mgr:new_ssl_ctx( 4 )
+local no_cert_idx = network_mgr:new_ssl_ctx( 1 )
 print( "create no cert ssl ctx at ",no_cert_idx )
 
-local srv_idx = network_mgr:new_ssl_ctx( 4,
+local srv_idx = network_mgr:new_ssl_ctx( 1,
     "certs/server.cer",2,"certs/srv_key.pem","mini_distributed_game_server" )
 print( "create server ssl ctx at ",srv_idx )
 

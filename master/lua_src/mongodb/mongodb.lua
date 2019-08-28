@@ -63,10 +63,10 @@ function Mongodb:valid()
     return self.mongodb:valid()
 end
 
-function Mongodb:count( collection,query,skip,limit,callback )
+function Mongodb:count( collection,query,opts,callback )
     local id = self.auto_id:next_id( self.cb )
     self.cb[id] = callback
-    return self.mongodb:count( id,collection,query,skip,limit )
+    return self.mongodb:count( id,collection,query,opts )
 end
 
 function Mongodb:find( collection,query,opts,callback )

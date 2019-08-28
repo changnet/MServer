@@ -165,8 +165,7 @@ int32 lmongo::count( lua_State *L )
     }
 
     const char *str_query  = luaL_optstring( L,3,NULL );
-    int64 skip  = luaL_optinteger( L,4,0 );
-    int64 limit = luaL_optinteger( L,5,0 );
+    const char *str_opts   = luaL_optstring( L,4,NULL );
 
     bson_t *query = NULL;
     if ( str_query )
@@ -180,9 +179,22 @@ int32 lmongo::count( lua_State *L )
         }
     }
 
+    bson_t *opts = NULL;
+    if ( str_opts )
+    {
+        bson_error_t error;
+        opts = bson_new_from_json(
+            reinterpret_cast<const uint8 *>(str_opts),-1,&error );
+        if ( !opts )
+        {
+            bson_free(query);
+            return luaL_error( L,error.message );
+        }
+    }
+
     struct mongo_query *mongo_count = new mongo_query();
     mongo_count->set( id,MQT_COUNT );  /* count必须有返回 */
-    mongo_count->set_count( collection,query,skip,limit );
+    mongo_count->set_count( collection,query,opts );
 
     push_query( mongo_count );
 

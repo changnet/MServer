@@ -46,7 +46,7 @@ function Mongo_performan:count_test()
     local callback = function( ... )
         self:on_count_test( ... )
     end
-    g_mongodb:count( collection,nil,nil,nil,callback )
+    g_mongodb:count( collection,nil,nil,callback )
 end
 
 function Mongo_performan:on_count_test( ecode,res )

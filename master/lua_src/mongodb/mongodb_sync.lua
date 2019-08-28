@@ -41,8 +41,8 @@ end
 
 -- 这些数据库操作接口同mongodb.lua中的一样
 
-function Mongodb_sync:count( collection,query,skip,limit )
-    self.mongodb:count( collection,query,skip,limit,self.callback )
+function Mongodb_sync:count( collection,query,opts )
+    self.mongodb:count( collection,query,opts,self.callback )
 
     return coroutine.yield()
 end

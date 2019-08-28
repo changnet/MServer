@@ -31,12 +31,16 @@ LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
 	-L./deps/lua_bson -L./deps/pbc/build -L./deps/websocket-parser
 
 #link libaray
-SHARED_LIB = -ldl -lrt -pthread
+SHARED_LIB = -ldl -lrt -pthread -lresolv -lz
+
+# in mongoc v1.14.0,share library is libmongoc-1.0.so.0
+# while static library is -lmongoc-static-1.0 -lbson-static-1.0
+# and it need dns library and zip library -lresolv -lz
 
 #sasl库依赖ssl和crypto，因此要放在-lssl -lcrypto之前
 STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
-	-lflatbuffers -llua_parson -llua_bson -luuid -lmysqlclient_r -lz -lpbc \
-	-lmongoc-1.0 -lbson-1.0 -lsasl2 -lssl -lcrypto -lwebsocket_parser
+	-lflatbuffers -llua_parson -llua_bson -luuid -lmariadbclient -lz -lpbc \
+	-lmongoc-static-1.0 -lbson-static-1.0 -lsasl2 -lssl -lcrypto -lwebsocket_parser
 
 #output directory
 ODIR = ../bin

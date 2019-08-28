@@ -2,7 +2,6 @@
 #define __MONGO_H__
 
 #include <bson.h>
-#include <bcon.h>
 #include <mongoc.h>
 
 #include "../global/global.h"
@@ -36,14 +35,13 @@ struct mongo_query
     int32 _qid;   // query id
     mqt_t _mqt;
     char  _clt[MONGO_VAR_LEN]; // collection
-    int64 _skip;
-    int64 _limit;
     bool _remove;
     bool _upsert;
     bool _new;
+    bson_t *_opts;
+    bson_t *_sort;
     bson_t *_query;
     bson_t *_fields;
-    bson_t *_sort;
     bson_t *_update;
     int32 _flags;
     int64 _time; // 请求的时间戳，毫秒
@@ -53,11 +51,10 @@ struct mongo_query
         _mqt           = MQT_NONE;
         _qid           = 0;
         _clt[0]        = '\0';
-        _skip          = 0;
-        _limit         = 0;
         _remove        = false;
         _upsert        = false;
         _new           = false;
+        _opts          = NULL;
         _query         = NULL;
         _fields        = NULL;
         _sort          = NULL;
@@ -85,14 +82,12 @@ struct mongo_query
         _mqt = mqt;
     }
 
-    void set_count( const char *clt,
-        bson_t *query,int64 skip = 0,int64 limit = 0 )
+    void set_count( const char *clt,bson_t *query,bson_t *opts )
     {
         snprintf( _clt,MONGO_VAR_LEN,"%s",clt );
 
+        _opts   = opts;
         _query  = query;
-        _skip   = skip ;
-        _limit  = limit;
     }
 
     void set_find( const char *clt,bson_t *query,bson_t *fields = NULL )
