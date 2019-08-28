@@ -44,7 +44,7 @@ function build_tool_chain()
 function build_library()
 {
     auto_apt_install uuid-dev
-    auto_apt_install openssl-dev
+    auto_apt_install libssl-dev # openssl
     # auto_apt_install mysql-server
     # auto_apt_install libmysqlclient-dev
     auto_apt_install libmariadbclient-dev
@@ -342,6 +342,8 @@ function build_env_once()
 
     cd $old_pwd
     rm -R $PKGDIR
+
+    echo "all done !!!"
 }
 
 

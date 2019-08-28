@@ -103,7 +103,7 @@ submodule:
 	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package
 	$(MAKE) -C deps/aho-corasick all
-	$(MAKE) -C deps/lua_flatbuffers all
+	$(MAKE) -C deps/lua_flatbuffers staticlib
 	$(MAKE) -C deps/lua_bson all
 	$(MAKE) -C deps/pbc lib
 	$(MAKE) -C deps/websocket-parser alib
