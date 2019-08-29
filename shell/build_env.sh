@@ -203,7 +203,7 @@ function build_mongo_driver()
     # mongo-c-driver-1.2.1\src\libbson\configure
     cd $PKGDIR
 
-    MONGOCVER=1.14.0
+    MONGOCVER=1.15.0
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
     mkdir cmake-build
