@@ -47,27 +47,16 @@ ODIR = ../bin
 
 TARGET = $(ODIR)/master
 
-#wildcard : 扩展通配符
-#notdir ： 去除路径 FILES = $(notdir $(wildcard *.c *.cpp))
-#patsubst <pattern>,<replacement>,<text> ：将text中的变量按pattern替换为replacement
-#         OBJS = $(patsubst %.cpp,%.o,$(patsubst %.c %,%.o,$(FILES)))
-_OBJS = global/global.o ev/ev.o net/buffer.o net/socket.o\
-	lua_cpplib/lev.o lua_cpplib/lstate.o net/io/io.o net/io/ssl_mgr.o\
-	net/packet/stream_packet.o net/packet/http_packet.o net/io/ssl_io.o\
-	net/codec/codec_mgr.o net/codec/bson_codec.o net/codec/flatbuffers_codec.o\
-	net/codec/protobuf_codec.o net/packet/websocket_packet.o util/rank.o\
-	mysql/sql.o thread/thread.o net/packet/ws_stream_packet.o log/thread_log.o\
-	scene/a_star.o scene/grid_map.o scene/grid_aoi.o system/static_global.o\
-	lua_cpplib/ltimer.o lua_cpplib/lsql.o mongo/mongo.o lua_cpplib/lmongo.o\
-	lua_cpplib/llog.o lua_cpplib/lutil.o log/log.o lua_cpplib/lstatistic.o\
-	lua_cpplib/lacism.o lua_cpplib/lnetwork_mgr.o system/statistic.o\
-	lua_cpplib/laoi.o lua_cpplib/lrank.o lua_cpplib/lmap.o lua_cpplib/lastar.o\
-	thread/thread_mgr.o\
-	main.o
-OBJS = $(addprefix $(ODIR)/,$(_OBJS))
+#https://www.gnu.org/software/make/manual/html_node/Text-Functions.html
 
+# 排除deps目录，并且查找1、2、3级目录中的所有cpp文件
+SOURCES = $(filter-out deps/%,$(wildcard *.cpp */*.cpp */*/*.cpp))
+
+# 把查找到的cpp文件路径里的.cpp全部替换为.o，并加上前缀
+OBJS = $(addprefix $(ODIR)/,$(SOURCES:.cpp=.o))
+
+# 把.o文件替换成.d文件，用来生成依赖文件
 DEPS := $(OBJS:.o=.d)
-OCFILE := $(_OBJS:.o=.cpp)
 
 #Makefile中，要使用tab键，不能用空格替代
 
@@ -114,8 +103,9 @@ submodule:
 
 # http://oclint-docs.readthedocs.io/en/stable/rules/
 oclint:
-	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(OCFILE) \
+	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(SOURCES) \
 	-disable-rule=LongLine -disable-rule=ShortVariableName \
 	-disable-rule=UselessParentheses -disable-rule=DoubleNegative \
 	-disable-rule=MultipleUnaryOperator
+
 .PHONY: all clean clean_all build_all dir submodule cleansub
