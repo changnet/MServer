@@ -16,7 +16,7 @@
 # db.item.find();
 # db.item.drop();
 
-# mongo可以运行js文件，但是这个js文件是不能用"use admin"这个mongo shell命令的
+# mongo可以运行js文件，但是这个js文件是不能用"use admin"这种mongo shell命令
 # mongo 127.0.0.1:27013/mudrv -u test -p test command.js
 
 # 还可以把mongo shell命令写在文件中，直接导入mongo，这个和使用js文件是不一样的

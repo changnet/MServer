@@ -80,7 +80,7 @@ all: $(OBJS)
 clean:
 	rm -rf $(ODIR)/*
 
-cleansub:
+submodule:
 	$(MAKE) -C deps/lua_parson clean
 	$(MAKE) -C deps/lua_rapidxml clean
 	$(MAKE) -C deps/http-parser clean
@@ -91,7 +91,6 @@ cleansub:
 	$(MAKE) -C deps/websocket-parser clean
 	rm -rf $(ODIR)/*
 
-submodule:
 	$(MAKE) -C deps/lua_parson all
 	$(MAKE) -C deps/lua_rapidxml all
 	$(MAKE) -C deps/http-parser package

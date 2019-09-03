@@ -3,7 +3,11 @@
 *.so
 .~*
 
+# visual studio code project
 .vscode
+
+# qt creator project file
+*.pro.user
 
 setting.lua
 
