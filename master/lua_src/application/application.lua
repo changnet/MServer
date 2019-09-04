@@ -214,7 +214,7 @@ end
 function Application:reg_5s_timer( this,method )
     local id = self.auto_id:next_id()
 
-    self.timer_5scb[id] = oo.method_thunk( this,method )
+    self.timer_5scb[id] = method_thunk( this,method )
     return id
 end
 
