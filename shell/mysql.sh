@@ -35,13 +35,13 @@ function new_log_schema()
     create schema $3 default character set utf8 collate utf8_general_ci;
 EOF
 
-mysql -u$1 -p$2 $3 --default_character_set utf8 < "../other/log_schema.sql"
+mysql -u$1 -p$2 $3 --default_character_set utf8 < "../project/log_schema.sql"
 }
 
 # 导出数据库结构
 function dump_struct()
 {
-    mysqldump -u$1 -p$2 --default_character_set utf8 --no-data $3 > "../other/log_schema.sql"
+    mysqldump -u$1 -p$2 --default_character_set utf8 --no-data $3 > "../project/log_schema.sql"
 }
 
 parameter=($@)

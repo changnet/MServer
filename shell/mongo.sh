@@ -88,7 +88,7 @@ EOF
 # ./mongo.sh cmd test_999 mongo_clear
 function cmd()
 {
-    $TEST_MONGO $3 < ../other/$4.ms
+    $TEST_MONGO $3 < ../project/$4.ms
 }
 
 parameter=($@)
