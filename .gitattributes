@@ -4,3 +4,6 @@
 *.tar.gz binary
 *.tar.bz2 binary
 *.xlsx binary
+*.doc binary
+*.graphml binary
+*.png binary
