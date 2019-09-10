@@ -1,5 +1,4 @@
-#ifndef __WS_STREAM_PACKET_H__
-#define __WS_STREAM_PACKET_H__
+#pragma once
 
 #include "websocket_packet.h"
 
@@ -23,7 +22,7 @@ public:
     /* 数据帧完成 */
     virtual int32 on_frame_end();
 
-    int32 raw_pack_clt( 
+    int32 raw_pack_clt(
         int32 cmd,uint16 ecode,const char *ctx,size_t size );
 private:
     int32 sc_command();
@@ -31,5 +30,3 @@ private:
     int32 do_pack_clt( int32 raw_flags,
         int32 cmd,uint16 ecode,const char *ctx,size_t size );
 };
-
-#endif /* __WS_STREAM_PACKET_H__ */

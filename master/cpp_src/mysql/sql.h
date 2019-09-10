@@ -1,5 +1,4 @@
-#ifndef __SQL_H__
-#define __SQL_H__
+#pragma once
 
 #include "sql_def.h"
 
@@ -34,5 +33,3 @@ private:
     char _pwd[SQL_VAR_LEN];
     char _dbname[SQL_VAR_LEN];
 };
-
-#endif /* __SQL_H__ */

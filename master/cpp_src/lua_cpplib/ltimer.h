@@ -1,5 +1,4 @@
-#ifndef __LTIMER_H__
-#define __LTIMER_H__
+#pragma once
 
 #include <lua.hpp>
 #include "../global/global.h"
@@ -21,5 +20,3 @@ private:
     int32 _timer_id;
     class ev_timer _timer;
 };
-
-#endif /* __LTIMER_H__ */

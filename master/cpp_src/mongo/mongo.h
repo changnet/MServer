@@ -1,5 +1,4 @@
-#ifndef __MONGO_H__
-#define __MONGO_H__
+#pragma once
 
 #include <bson.h>
 #include <mongoc.h>
@@ -206,5 +205,3 @@ private:
 
     mongoc_client_t *_conn;
 };
-
-#endif

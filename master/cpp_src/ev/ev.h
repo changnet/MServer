@@ -1,3 +1,5 @@
+#pragma once
+
 /*
  * for epoll
  * 1.closing a file descriptor cause it to be removed from all
@@ -10,10 +12,6 @@
  *   epoll_wait数组一次装不下，可以有某个fd永远未被读取(ET模式下将会导致下次不再触发)。
  *   这时需要调整事件大小，重新编译。
  */
-
-
-#ifndef __EV_H__
-#define __EV_H__
 
 #include <sys/epoll.h>
 #include "../global/global.h"
@@ -141,5 +139,3 @@ protected:
     void adjust_heap( ANHE *heap,int32 N,int32 k );
     void reheap( ANHE *heap,int32 N );
 };
-
-#endif /* __EV_H__ */

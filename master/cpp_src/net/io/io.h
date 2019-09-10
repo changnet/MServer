@@ -1,5 +1,4 @@
-#ifndef __IO_H__
-#define __IO_H__
+#pragma once
 
 #include "../buffer.h"
 
@@ -41,5 +40,3 @@ protected:
     class buffer *_recv;
     class buffer *_send;
 };
-
-#endif /* __IO_H__ */

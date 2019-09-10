@@ -1,5 +1,4 @@
-#ifndef __THREAD_H__
-#define __THREAD_H__
+#pragma once
 
 #include <atomic>
 #include <pthread.h>
@@ -78,5 +77,3 @@ private:
     bool _wait_busy; // 当关服的时候，是否需要等待这个线程
     const char *_name; // 线程名字，日志用而已
 };
-
-#endif /* __THREAD_H__ */

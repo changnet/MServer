@@ -1,5 +1,4 @@
-#ifndef __STREAM_PACKET_H__
-#define __STREAM_PACKET_H__
+#pragma once
 
 #include "packet.h"
 #include "../net_header.h"
@@ -52,5 +51,3 @@ private:
     void ssc_one_multicast(
         owner_t owner,int32 cmd,uint16 ecode,const char *ctx,int32 size );
 };
-
-#endif /* __STREAM_PACKET_H__ */

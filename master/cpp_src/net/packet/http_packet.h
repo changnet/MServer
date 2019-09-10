@@ -1,5 +1,4 @@
-#ifndef __HTTP_PACKET_H__
-#define __HTTP_PACKET_H__
+#pragma once
 
 #include <map>
 #include <queue>
@@ -25,7 +24,7 @@ public:
 
     virtual int32 pack_clt( lua_State *L,int32 index );
     virtual int32 pack_srv( lua_State *L,int32 index );
-    /* 数据解包 
+    /* 数据解包
      * return: <0 error;0 success
      */
     virtual int32 unpack();
@@ -49,5 +48,3 @@ private:
     std::string _cur_field;
     std::string _cur_value;
 };
-
-#endif /* __HTTP_PACKET_H__ */

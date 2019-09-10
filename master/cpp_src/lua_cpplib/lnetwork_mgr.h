@@ -1,5 +1,4 @@
-#ifndef __LNETWORK_MGR_H__
-#define __LNETWORK_MGR_H__
+#pragma once
 
 #include <vector>
 
@@ -117,5 +116,3 @@ private:
     map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
     map_t<uint32,owner_t> _conn_session_map; /* conn_id-session 映射 */
 };
-
-#endif /* __LNETWORK_MGR_H__ */

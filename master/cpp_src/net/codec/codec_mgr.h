@@ -1,5 +1,4 @@
-#ifndef __CODEC_MGR_H__
-#define __CODEC_MGR_H__
+#pragma once
 
 #include "codec.h"
 
@@ -14,5 +13,3 @@ public:
 private:
     class codec* _codecs[codec::CDC_MAX];
 };
-
-#endif /* __CODEC_MGR_H__ */

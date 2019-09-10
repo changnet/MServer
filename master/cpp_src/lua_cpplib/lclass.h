@@ -1,5 +1,4 @@
-#ifndef __LCLASS_H__
-#define __LCLASS_H__
+#pragma once
 
 /*
  * http://lua-users.org/wiki/CppBindingWithLunar
@@ -295,5 +294,3 @@ private:
         return 1;
     }
 };
-
-#endif /* __LCLASS_H__ */

@@ -1,5 +1,4 @@
-#ifndef __BSON_CODEC_H__
-#define __BSON_CODEC_H__
+#pragma once
 
 #include <lbson.h>
 #include "codec.h"
@@ -27,5 +26,3 @@ public:
 private:
     bson_t *_bson_doc;
 };
-
-#endif /* __BSON_CODEC_H__ */

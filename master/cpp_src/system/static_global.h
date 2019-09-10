@@ -1,5 +1,4 @@
-#ifndef __STATIC_GLOBAL_H__
-#define __STATIC_GLOBAL_H__
+#pragma once
 
 #include "statistic.h"
 #include "../log/thread_log.h"
@@ -54,5 +53,3 @@ private:
 
     static class initializer  _initializer;
 };
-
-#endif /* __STATIC_GLOBAL_H__ */

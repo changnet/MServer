@@ -1,5 +1,4 @@
-#ifndef __LEV_H__
-#define __LEV_H__
+#pragma once
 
 /* 事件循环 lua wrap */
 
@@ -58,5 +57,3 @@ private:
 
     static uint32 sig_mask;
 };
-
-#endif /* __LEV_H__ */

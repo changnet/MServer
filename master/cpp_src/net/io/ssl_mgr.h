@@ -1,5 +1,4 @@
-#ifndef __SSL_MGR_H__
-#define __SSL_MGR_H__
+#pragma once
 
 // 最大8组ctx来适应不同版本的、不同连接，应该足够了
 #define MAX_SSL_CTX  8
@@ -60,5 +59,3 @@ private:
     int32 _ctx_idx;
     struct x_ssl_ctx _ssl_ctx[MAX_SSL_CTX];
 };
-
-#endif /* __SSL_MGR_H__ */

@@ -1,5 +1,4 @@
-#ifndef __LRANK_H__
-#define __LRANK_H__
+#pragma once
 
 #include <lua.hpp>
 
@@ -61,5 +60,3 @@ public:
         lua_pushinteger(L,bucket_rank::get_count());return 1;
     }
 };
-
-#endif /* __LRANK_H__ */

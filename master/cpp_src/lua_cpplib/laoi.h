@@ -1,5 +1,4 @@
-#ifndef __LAOI_H__
-#define __LAOI_H__
+#pragma once
 
 #include <lua.hpp>
 #include "../scene/grid_aoi.h"
@@ -27,5 +26,3 @@ public:
     // 两个位置在aoi中是否一致
     int32 is_same_pos( lua_State *L );
 };
-
-#endif /* __LAOI_H__ */

@@ -1,5 +1,4 @@
-#ifndef __AUTO_MUTEX_H__
-#define __AUTO_MUTEX_H__
+#pragma once
 
 #include <pthread.h>
 
@@ -11,7 +10,7 @@ public:
     {
         pthread_mutex_lock( _mutex );
     }
-    
+
     ~auto_mutex()
     {
         pthread_mutex_unlock( _mutex );
@@ -19,5 +18,3 @@ public:
 private:
     pthread_mutex_t *_mutex;
 };
-
-#endif /* __AUTO_MUTEX_H__ */

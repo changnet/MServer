@@ -1,5 +1,4 @@
-#ifndef __FLATBUFFERS_CODEC_H__
-#define __FLATBUFFERS_CODEC_H__
+#pragma once
 
 #include "codec.h"
 
@@ -26,5 +25,3 @@ public:
 private:
     class lflatbuffers *_lflatbuffers;
 };
-
-#endif /* __FLATBUFFERS_CODEC_H__ */

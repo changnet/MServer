@@ -1,5 +1,4 @@
-#ifndef __LSTATE_H__
-#define __LSTATE_H__
+#pragma once
 
 struct lua_State;
 
@@ -16,5 +15,3 @@ private:
 
     lua_State *L;
 };
-
-#endif /* __LSTATE_H__ */

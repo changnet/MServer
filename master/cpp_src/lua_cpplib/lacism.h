@@ -1,5 +1,4 @@
-#ifndef __LACISM_H__
-#define __LACISM_H__
+#pragma once
 
 /* 暂时不提供忽略大小写
  * 原因是原acism库不支持这一功能，一旦修改，代码库不好管理
@@ -89,5 +88,3 @@ private:
     MEMRPL _memrpl;
     int32 _case_sensitive;
 };
-
-#endif /* __LACISM_H__ */

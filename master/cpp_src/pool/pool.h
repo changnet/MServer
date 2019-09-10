@@ -1,5 +1,4 @@
-#ifndef __POOL_H__
-#define __POOL_H__
+#pragma once
 
 #include "../global/global.h"
 
@@ -81,5 +80,3 @@ protected:
     int64 _max_del; // 总删除数量
     int64 _max_now; // 当前缓存数量
 };
-
-#endif /* __POOL_H__ */

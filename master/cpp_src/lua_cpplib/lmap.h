@@ -1,5 +1,4 @@
-#ifndef __LMAP_H__
-#define __LMAP_H__
+#pragma once
 
 #include <lua.hpp>
 #include "../scene/grid_map.h"
@@ -17,5 +16,3 @@ public:
     int32 get_size( lua_State *L ); // 获取地图宽高
     int32 get_pass_cost( lua_State *L ); // 获取通过某个格子的消耗
 };
-
-#endif /* __LMAP_H__ */

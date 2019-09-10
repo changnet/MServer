@@ -1,5 +1,4 @@
-#ifndef __SOCKET_H__
-#define __SOCKET_H__
+#pragma once
 
 #include "../global/global.h"
 #include "../ev/ev_watcher.h"
@@ -143,7 +142,7 @@ protected:
     conn_t _conn_ty;
 private:
     ev_io _w;
-    int64 _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */ 
+    int64 _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
     class io *_io;
     class packet *_packet;
@@ -160,5 +159,3 @@ private:
       (static_cast<K *>(this->_this)->*method)();
     }
 };
-
-#endif /* __SOCKET_H__ */

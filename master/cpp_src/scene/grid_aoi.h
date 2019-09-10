@@ -1,3 +1,5 @@
+#pragma once
+
 /* 九宫格AOI(Area of Interest)算法
  * 2018-07-18 by xzc
  *
@@ -8,9 +10,6 @@
  *    效率，战斗ai另外做即可(攻击玩家在ai定时器定时取watch_me列表即可)。怪物攻击怪物或
  *    npc在玩家靠近时对话可以给这些实体加上事件，这样的实体不会太多
  */
-
-#ifndef __GRID_AOI_H__
-#define __GRID_AOI_H__
 
 #include <vector>
 #include "../pool/object_pool.h"
@@ -115,5 +114,3 @@ protected:
     /* 记录所有实体的数据 */
     entity_set_t _entity_set;
 };
-
-#endif /* __GRID_AOI_H__ */

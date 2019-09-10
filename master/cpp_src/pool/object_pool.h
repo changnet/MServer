@@ -1,5 +1,4 @@
-#ifndef __OBJECT_POOL_H__
-#define __OBJECT_POOL_H__
+#pragma once
 
 /* 对象内存池
  * 1. 只提供基本的分配、缓存功能
@@ -101,5 +100,3 @@ private:
     uint32 _anptmax; /* 对象数组的最大长度 */
     uint32 _anptsize; /* 对象数组的当前长度 */
 };
-
-#endif /* __OBJECT_POOL_H__ */

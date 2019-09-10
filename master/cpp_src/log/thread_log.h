@@ -1,5 +1,4 @@
-#ifndef __THREAD_LOG_H__
-#define __THREAD_LOG_H__
+#pragma once
 
 #include "log.h"
 #include "../thread/thread.h"
@@ -27,5 +26,3 @@ private:
 private:
     class log _log;
 };
-
-#endif /* __THREAD_LOG_H__ */

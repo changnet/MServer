@@ -1,5 +1,4 @@
-#ifndef __LOG_H__
-#define __LOG_H__
+#pragma once
 
 #include <ctime>
 #include <vector>
@@ -61,5 +60,3 @@ private:
     map_t<std::string,FILE *> _files;
     class pool* _ctx_pool[LOG_SIZE_MAX];
 };
-
-#endif /* __LOG_H__ */

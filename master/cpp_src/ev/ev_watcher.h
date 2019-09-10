@@ -1,5 +1,4 @@
-#ifndef __EV_WATCHER_H__
-#define __EV_WATCHER_H__
+#pragma once
 
 #include "ev.h"
 
@@ -213,5 +212,3 @@ public:
         start();
     }
 };
-
-#endif /* __EV_WATCHER_H__ */

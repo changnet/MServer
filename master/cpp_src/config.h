@@ -1,5 +1,4 @@
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
+#pragma once
 
 /* enable memeory debug */
 #define _MEM_DEBUG_
@@ -77,5 +76,3 @@
 
 // 格子地图最大的格子数量
 #define MAX_MAP_GRID 256
-
-#endif /* __CONFIG_H__ */

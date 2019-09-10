@@ -1,5 +1,4 @@
-#ifndef __LTOOLS_H__
-#define __LTOOLS_H__
+#pragma once
 
 #include <cmath>
 #include <lua.hpp>
@@ -166,5 +165,3 @@ static inline int traceback ( lua_State *L )
 
     return 1;
 }
-
-#endif /* __LTOOLS_H__ */

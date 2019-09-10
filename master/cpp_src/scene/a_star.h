@@ -1,11 +1,10 @@
+#pragma once
+
 /* a star寻路算法
  * 2018-07-18 by xzc
  * http://theory.stanford.edu/~amitp/GameProgramming/
  * https://www.geeksforgeeks.org/a-search-algorithm/
  */
-
- #ifndef __A_STAR_H__
- #define __A_STAR_H__
 
 #include <vector>
 #include "../pool/object_pool.h"
@@ -80,5 +79,3 @@ private:
     int32 _pool_max; // 内存池格子数量
     int32 _pool_idx; // 内存池当前已用数量
 };
-
-#endif /* __A_STAR_H__ */

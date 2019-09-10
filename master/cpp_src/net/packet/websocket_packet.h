@@ -1,5 +1,4 @@
-#ifndef __WEBSOCKET_PACKET_H__
-#define __WEBSOCKET_PACKET_H__
+#pragma once
 
 #include "../buffer.h"
 #include "http_packet.h"
@@ -24,7 +23,7 @@ public:
      */
     virtual int32 pack_srv( lua_State *L,int32 index );
 
-    /* 数据解包 
+    /* 数据解包
      * return: <0 error;0 success
      */
     virtual int32 unpack();
@@ -51,5 +50,3 @@ protected:
     class buffer _body;
     struct websocket_parser *_parser;
 };
-
-#endif /* __WEBSOCKET_PACKET_H__ */

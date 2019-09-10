@@ -1,5 +1,4 @@
-#ifndef __CODEC_H__
-#define __CODEC_H__
+#pragma once
 
 #include "../../global/global.h"
 
@@ -45,5 +44,3 @@ public:
      */
     virtual int32 load_path( const char *path ) = 0;
 };
-
-#endif /* __CODEC_H__ */

@@ -1,5 +1,4 @@
-#ifndef __LASTAR_H__
-#define __LASTAR_H__
+#pragma once
 
 #include <lua.hpp>
 #include "../scene/a_star.h"
@@ -12,5 +11,3 @@ public:
 
     int32 search( lua_State *L ); // 寻路
 };
-
-#endif /* __LASTAR_H__ */

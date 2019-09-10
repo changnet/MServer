@@ -1,5 +1,4 @@
-#ifndef __NET_HEADER_H__
-#define __NET_HEADER_H__
+#pragma once
 
 /* 网络通信消息包头格式定义
  */
@@ -105,5 +104,3 @@ struct s2s_header : public base_header
 };
 
 #pragma pack(pop)
-
-#endif /* __NET_HEADER_H__ */

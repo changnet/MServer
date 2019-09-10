@@ -1,5 +1,4 @@
-#ifndef __TYPES_H__
-#define __TYPES_H__
+#pragma once
 
 /*
 stdint.h
@@ -61,5 +60,3 @@ typedef std::string    string;
     static_assert( sizeof( float) == 4,"type bit not support" );
     static_assert( sizeof(double) == 8,"type bit not support" );
 #endif
-
-#endif    /* __TYPES_H__ */

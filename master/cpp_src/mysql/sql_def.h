@@ -1,5 +1,4 @@
-#ifndef __SQL_RESULT_H__
-#define __SQL_RESULT_H__
+#pragma once
 
 #include <vector>
 #include <mysql.h>
@@ -121,5 +120,3 @@ struct sql_query
     size_t _size;
     char  *_stmt;
 };
-
-#endif /* __SQL_RESULT_H__ */

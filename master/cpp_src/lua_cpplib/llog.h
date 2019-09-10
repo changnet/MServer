@@ -1,5 +1,4 @@
-#ifndef __LLOG_H__
-#define __LLOG_H__
+#pragma once
 
 #include "../global/global.h"
 
@@ -27,5 +26,3 @@ public:
 private:
     class thread_log *_log;
 };
-
-#endif /* __LLOG_H__ */

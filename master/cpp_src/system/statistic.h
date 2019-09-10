@@ -1,5 +1,4 @@
-#ifndef __STATISTIC_H__
-#define __STATISTIC_H__
+#pragma once
 
 #include "../net/socket.h"
 
@@ -101,7 +100,7 @@ public:
     const statistic::time_counter &get_lua_gc() const { return _lua_gc; }
     const statistic::base_counter_t &get_c_obj() const { return _c_obj; }
     const statistic::base_counter_t &get_c_lua_obj() const { return _c_lua_obj; }
-    const statistic::traffic_counter *get_total_traffic() const 
+    const statistic::traffic_counter *get_total_traffic() const
     {
         return _total_traffic;
     }
@@ -117,5 +116,3 @@ private:
     socket_traffic_t _socket_traffic; // 各个socket单独流量统计
     traffic_counter _total_traffic[socket::CNT_MAX]; // socket总流量统计
 };
-
-#endif /* __STATISTIC_H__ */

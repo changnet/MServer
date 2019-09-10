@@ -1,5 +1,4 @@
-#ifndef __LSQL_H__
-#define __LSQL_H__
+#pragma once
 
 #include <lua.hpp>
 #include <queue>
@@ -47,5 +46,3 @@ private:
     std::queue<struct sql_result > _result;
     std::queue<const struct sql_query *> _query ;
 };
-
-#endif /* __LSQL_H__ */

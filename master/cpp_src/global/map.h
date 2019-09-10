@@ -1,5 +1,4 @@
-#ifndef __MAP_H__
-#define __MAP_H__
+#pragma once
 
 
 //--------------------------------------------------------------------------
@@ -125,5 +124,3 @@ struct equal_c_string
     #define const_char_map_t(T)    \
         std::unordered_map<const c_string,T,hash_c_string,equal_c_string>
 #endif
-
-#endif /* __MAP_H__ */

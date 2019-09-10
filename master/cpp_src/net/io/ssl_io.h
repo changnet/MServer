@@ -1,5 +1,4 @@
-#ifndef __SSL_IO_H__
-#define __SSL_IO_H__
+#pragma once
 
 #include "io.h"
 
@@ -33,5 +32,3 @@ private:
     void *_ssl_ctx; // SSL_CTX，不要在头文件包含ssl.h，编译会增加将近1M
     bool _handshake;
 };
-
-#endif /* __SSL_IO_H__ */

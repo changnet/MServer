@@ -1,5 +1,4 @@
-#ifndef __THREAD_MGR_H__
-#define __THREAD_MGR_H__
+#pragma once
 
 #include <map>
 #include <pthread.h>
@@ -25,5 +24,3 @@ public:
 private:
     thread_mpt_t _threads;
 };
-
-#endif /* __THREAD_MGR_H__ */

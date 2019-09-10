@@ -1,5 +1,4 @@
-#ifndef __PROTOBUF_CODEC_H__
-#define __PROTOBUF_CODEC_H__
+#pragma once
 
 #include "codec.h"
 
@@ -27,5 +26,3 @@ private:
     bool _is_proto_loaded;
     class lprotobuf *_lprotobuf;
 };
-
-#endif /* __PROTOBUF_CODEC_H__ */

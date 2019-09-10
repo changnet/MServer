@@ -1,5 +1,4 @@
-#ifndef __BUFFER_H__
-#define __BUFFER_H__
+#pragma once
 
 #include "../pool/object_pool.h"
 #include "../pool/ordered_pool.h"
@@ -20,7 +19,7 @@
  */
 
 /* 网络收发缓冲区
- * 
+ *
  * 1. 连续缓冲区
  *    整个缓冲区只用一块内存，不够了按2倍重新分配，把旧数据拷贝到新缓冲区。分配了就不再释放
  *    1). 缓冲区是连续的，存取效率高。socket读写可以直接用缓冲区，不需要二次拷贝,
@@ -107,7 +106,7 @@ public:
     // 获取chunk的数量
     inline uint32 get_chunk_size() const { return _chunk_size; }
     // 获取所有chunk分配的内存大小
-    inline uint32 get_chunk_mem_size() const 
+    inline uint32 get_chunk_mem_size() const
     {
         uint32 mem = 0;
         const chunk_t *next = _front;
@@ -261,7 +260,7 @@ private:
 
         /* 分配的内存块太大每次将只分配一块，其他分配8块 */
         ctx_pool_t *pool = get_ctx_pool();
-        return pool->ordered_malloc( 
+        return pool->ordered_malloc(
             new_size/BUFFER_CHUNK, new_size >= BUFFER_LARGE ? 1 : 8 );
     }
 
@@ -293,5 +292,3 @@ private:
     uint32 _chunk_max; // 允许申请chunk的最大数量
     uint32 _chunk_ctx_size; // 单个chunk的缓冲区大小
 };
-
-#endif /* __BUFFER_H__ */

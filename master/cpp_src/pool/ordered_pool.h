@@ -1,5 +1,4 @@
-#ifndef __ORDERED_POOL_H__
-#define __ORDERED_POOL_H__
+#pragma once
 
 /* 等长内存池，参考了boost内存池(boolst/pool/pool.hpp).分配的内存只能是ordered_size
  * 的n倍。每一个n都形成一个空闲链表，利用率比boost低。
@@ -74,7 +73,7 @@ public:
         _max_now += n*(chunk_size - 1);
 
         /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
-        segregate( block + 
+        segregate( block +
             sizeof(void *) + partition_sz,partition_sz,chunk_size - 1,n );
         return block + sizeof(void *);
     }
@@ -142,5 +141,3 @@ private:
 
     void *block_list; /* 从系统分配的内存块链表 */
 };
-
-#endif /* __ORDERED_POOL_H__ */

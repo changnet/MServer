@@ -1,5 +1,4 @@
-#ifndef __RANK_H__
-#define __RANK_H__
+#pragma once
 
 #include <map>
 #include <list>
@@ -129,5 +128,3 @@ public:
 protected:
     bucket_list_t _bucket_list;
 };
-
-#endif /* __RANK_H__ */

@@ -1,5 +1,4 @@
-#ifndef __GOLBAL_H__
-#define __GOLBAL_H__
+#pragma once
 
 #include <cstdio>      /* c compatible,like printf */
 #include <cstdlib>     /* c lib like malloc */
@@ -118,5 +117,3 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define array_zero(base,size)    memset((void *)(base), 0, size)
 
 extern void global_mem_counter(int32 &counter,int32 &counters);
-
-#endif  /* __GOLBAL_H__ */
