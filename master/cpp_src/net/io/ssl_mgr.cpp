@@ -167,7 +167,7 @@ int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u )
 {
     if ( !u ) return 0;
 
-    strncpy( buf, (const char *)u, size );
-    buf[size - 1] = '\0';
+    snprintf( buf,size,"%s",(const char *)u );
+
     return strlen(buf);
 }

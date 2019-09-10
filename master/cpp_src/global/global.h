@@ -19,6 +19,9 @@
 #include "types.h"     /* base data type */
 #include "assert.h"
 
+// those functions are easily make mistake,not allow to use project"
+#include "banned.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // 底层C日志相关函数，脚本最终也在调用C来打印日志
 
