@@ -4,11 +4,11 @@
 #include "../thread/thread.h"
 
 // 多线程日志
-class thread_log : public thread
+class async_log : public thread
 {
 public:
-    thread_log();
-    ~thread_log();
+    async_log();
+    ~async_log();
 
     size_t busy_job( size_t *finished = NULL,size_t *unfinished = NULL );
 

@@ -9,7 +9,7 @@ class lstate       *static_global::_state       = NULL;
 class ssl_mgr      *static_global::_ssl_mgr     = NULL;
 class codec_mgr    *static_global::_codec_mgr   = NULL;
 class statistic    *static_global::_statistic   = NULL;
-class thread_log   *static_global::_async_log   = NULL;
+class async_log   *static_global::_async_log   = NULL;
 class thread_mgr   *static_global::_thread_mgr  = NULL;
 class lnetwork_mgr *static_global::_network_mgr = NULL;
 
@@ -64,7 +64,7 @@ void static_global::initialize()  /* 程序运行时初始化 */
     _statistic = new class statistic();
     _ev = new class lev();
     _thread_mgr = new class thread_mgr();
-    _async_log = new class thread_log();
+    _async_log = new class async_log();
     _state = new class lstate();
     _codec_mgr = new class codec_mgr();
     _ssl_mgr = new class ssl_mgr();

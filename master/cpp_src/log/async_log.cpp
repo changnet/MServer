@@ -1,15 +1,15 @@
-#include "thread_log.h"
+#include "async_log.h"
 #include "../system/static_global.h"
 
-thread_log::thread_log() : thread("thread_log")
+async_log::async_log() : thread("thread_log")
 {
 }
 
-thread_log::~thread_log()
+async_log::~async_log()
 {
 }
 
-size_t thread_log::busy_job( size_t *finished,size_t *unfinished )
+size_t async_log::busy_job( size_t *finished,size_t *unfinished )
 {
     lock();
     size_t unfinished_sz = _log.pending_size();
@@ -23,7 +23,7 @@ size_t thread_log::busy_job( size_t *finished,size_t *unfinished )
     return unfinished_sz;
 }
 
-void thread_log::write(
+void async_log::write(
     const char *path,const char *ctx,size_t len,log_out_t out_type)
 {
     static class ev *ev = static_global::ev();
@@ -34,7 +34,7 @@ void thread_log::write(
     unlock();
 }
 
-void thread_log::raw_write(
+void async_log::raw_write(
     const char *path,log_out_t out,const char *fmt,va_list args )
 {
     static char ctx_buff[LOG_MAX_LENGTH];
@@ -56,7 +56,7 @@ void thread_log::raw_write(
 
     write( path,ctx_buff,len > LOG_MAX_LENGTH ? LOG_MAX_LENGTH : len,out );
 }
-void thread_log::raw_write( 
+void async_log::raw_write(
     const char *path,log_out_t out,const char *fmt,... )
 {
     va_list args;
@@ -66,14 +66,14 @@ void thread_log::raw_write(
 }
 
 // 线程结束之前清理函数
-bool thread_log::uninitialize()
+bool async_log::uninitialize()
 {
     routine( NTF_NONE );
     return true;
 }
 
 // 线程主循环
-void thread_log::routine( notify_t notify )
+void async_log::routine( notify_t notify )
 {
     UNUSED( notify );
 

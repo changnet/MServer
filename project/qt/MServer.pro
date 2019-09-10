@@ -7,7 +7,6 @@ SOURCES += \
     ../../master/cpp_src/ev/ev.cpp \
     ../../master/cpp_src/global/global.cpp \
     ../../master/cpp_src/log/log.cpp \
-    ../../master/cpp_src/log/thread_log.cpp \
     ../../master/cpp_src/lua_cpplib/lacism.cpp \
     ../../master/cpp_src/lua_cpplib/laoi.cpp \
     ../../master/cpp_src/lua_cpplib/lastar.cpp \
@@ -45,7 +44,8 @@ SOURCES += \
     ../../master/cpp_src/thread/thread.cpp \
     ../../master/cpp_src/thread/thread_mgr.cpp \
     ../../master/cpp_src/util/rank.cpp \
-    ../../master/cpp_src/main.cpp
+    ../../master/cpp_src/main.cpp \
+    ../../master/cpp_src/log/async_log.cpp
 
 HEADERS += \
     ../../master/cpp_src/ev/ev.h \
@@ -55,7 +55,6 @@ HEADERS += \
     ../../master/cpp_src/global/map.h \
     ../../master/cpp_src/global/types.h \
     ../../master/cpp_src/log/log.h \
-    ../../master/cpp_src/log/thread_log.h \
     ../../master/cpp_src/lua_cpplib/lacism.h \
     ../../master/cpp_src/lua_cpplib/laoi.h \
     ../../master/cpp_src/lua_cpplib/lastar.h \
@@ -104,7 +103,8 @@ HEADERS += \
     ../../master/cpp_src/thread/thread.h \
     ../../master/cpp_src/thread/thread_mgr.h \
     ../../master/cpp_src/util/rank.h \
-    ../../master/cpp_src/config.h
+    ../../master/cpp_src/config.h \
+    ../../master/cpp_src/log/async_log.h
 
 
 unix:!macx: LIBS += -L$$PWD/../../master/cpp_src/deps/aho-corasick/ -lacism

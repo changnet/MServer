@@ -42,7 +42,7 @@ int32 llog::start( lua_State *L )
     int32 sec  = luaL_optinteger( L,1,5 );
     int32 usec = luaL_optinteger( L,2,0 );
 
-    _log = new thread_log();
+    _log = new async_log();
     _log->start( sec,usec );
 
     return 0;
@@ -51,7 +51,7 @@ int32 llog::start( lua_State *L )
 int32 llog::write( lua_State *L )
 {
     // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
-    class thread_log *tl = _log ? _log : static_global::async_log();
+    class async_log *tl = _log ? _log : static_global::async_logger();
 
     if ( !tl->active() )
     {

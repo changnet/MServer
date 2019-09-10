@@ -3,7 +3,7 @@
 #include "../global/global.h"
 
 struct lua_State;
-class thread_log;
+class async_log;
 
 class llog
 {
@@ -24,5 +24,5 @@ public:
     // 设置进程名
     static int32 set_name( lua_State *L );
 private:
-    class thread_log *_log;
+    class async_log *_log;
 };

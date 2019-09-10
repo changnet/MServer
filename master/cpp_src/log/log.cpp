@@ -94,7 +94,7 @@ void cerror_log( const char *prefix,const char *fmt,... )
 // 日志打印函数，异步写到文件，用主循环时间戳，线程不安全
 void cprintf_log( const char *prefix,const char *fmt,... )
 {
-    static thread_log *logger = static_global::async_log();
+    static async_log *logger = static_global::async_logger();
 
     va_list args;
     va_start(args,fmt);
