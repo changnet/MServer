@@ -37,7 +37,8 @@ function build_tool_chain()
     # flatbuffers and mongo will need those to build
     auto_apt_install cmake
     auto_apt_install automake
-    auto_apt_install libtool #protobuf需要
+    auto_apt_install libtool # protobuf需要
+    auto_apt_install unzip # 解压protobuf包
 }
 
 # install third party library

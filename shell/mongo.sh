@@ -23,31 +23,18 @@
 # 因此在文件中需要注意换行。比如for循环的大括号就不能换行
 # mongo 127.0.0.1:27013/mudrv -u test -p test < command.js
 
-# mongodb配置存放目录，默认目录在/etc/mongodb.conf
-DBPATH=/home/xzc/mongodb
-
 # mongo 127.0.0.1:27013/admin是对的
 # mongo 127.0.0.1:27013 admin是错的，要在后面加数据库名，需要用--host和--port
 MONGO="mongo --host 127.0.0.1 --port 27013"
 TEST_MONGO="$MONGO -utest -ptest"
 ADMIN_MONGO="$MONGO -uxzc -p1"
 
-function start()
-{
-    mongod -f $DBPATH/mongod.conf
-}
-
-function stop()
-{
-    mongod --shutdown -f $DBPATH/mongod.conf
-}
-
 # 创建数据库帐号管理员
 # mongodb和MySQL不一样，每个数据库都必须创建专属的帐号。而创建创建帐号需要帐号管理员
 # 帐号管理员只能管理帐号，不能管理数据库数据
-# 这是数据库的第一个管理员，所以要去/etc/mongod.conf注释掉authorization选项
+# 这是数据库的第一个管理员，所以要去/etc/mongod.conf注释掉authorization:enabled选项
 # systemctl start mongod
-# 运行完脚本后，再加上authorization然后重启数据库
+# 运行完脚本后，再加上authorization:enabled然后重启数据库
 function admin()
 {
 # Read：允许用户读取指定数据库
