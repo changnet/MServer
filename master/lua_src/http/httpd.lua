@@ -121,6 +121,8 @@ function Httpd:do_return(conn,success,code,ctx)
     return self:conn_close( conn )
 end
 
+local httpd = Httpd()
+
 -- http回调
 function Httpd:do_command( conn,url,body )
     -- url = /platform/pay?sid=99&money=200
@@ -150,7 +152,5 @@ function Httpd:do_command( conn,url,body )
 
     return self:do_return(conn,success,code,ctx)
 end
-
-local httpd = Httpd()
 
 return httpd

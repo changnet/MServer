@@ -83,7 +83,7 @@ end
 -- 更新位置再停止移动
 function Move:stop()
     -- 如果更新位置不成功，那么已经强制停止了，就不需要再次停止
-    if not moving( ev:ms_time(),true ) then return end
+    if not self:moving( ev:ms_time(),true ) then return end
 
     return self:raw_stop()
 end

@@ -177,7 +177,7 @@ function Bag:dec( id,count )
     local index = nil
 
     -- 不要在for循环中修改grid
-    for idx in pairs( self.grid ) do
+    for idx,item in pairs( self.grid ) do
         if item and id == item.id then index = idx;break end
     end
 

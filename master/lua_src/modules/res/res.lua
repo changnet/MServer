@@ -69,7 +69,7 @@ end
 function Res:check_one_res( player,res )
     local get_func = res_get_map[res.res]
     if not get_func then
-        ERROR("Res:check_one_res not found:%s,op %d",tostring(res.res),op)
+        ERROR("Res:check_one_res not found:%s,op %d",tostring(res.res))
         return false
     end
 
@@ -81,7 +81,7 @@ end
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
 function Res:check_res( player,res_list )
     for _,one in pairs( res_list ) do
-        if not self:dec_one_res( player,one,op,sub_op ) then
+        if not self:check_one_res( player,one ) then
             return false,one
         end
     end
@@ -91,7 +91,6 @@ end
 
 -- 注册处理函数(不能放在__init里，因为要热更。热更不会重新调用__init)
 function Res:reg_player_res( res_type,get,add,dec )
-    local res_op = function( player,... ) return func( player,... ) end
     res_get_map[res_type] = function( player,... ) return get( player,... ) end
     res_add_map[res_type] = function( player,... ) return add( player,... ) end
     res_dec_map[res_type] = function( player,... ) return dec( player,... ) end

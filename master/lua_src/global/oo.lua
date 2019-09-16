@@ -28,10 +28,10 @@ end
 
 -- isa operator(是否从某个类继承而来或者就是该类)
 function class_base:isa(clz)
-    local c = classof(self)
+    local c = oo.classof(self)
     while c and c ~= class_base do
         if c == clz then return true end
-        c = superclassof(c)
+        c = oo.superclassof(c)
     end
     return false
 end

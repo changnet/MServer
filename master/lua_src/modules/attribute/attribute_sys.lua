@@ -20,7 +20,7 @@ end
 
 -- 获取某个系统的属性集
 function Attribute_sys:raw_get_sys(id)
-    return selef.sys[id]
+    return self.sys[id]
 end
 
 -- 获取某个系统的属性集(不存在则创建)

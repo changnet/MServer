@@ -130,7 +130,7 @@ function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     end
 
     if "world" ~= g_app.srvname then
-        return g_rpc:rpc_send_sys_mail( 
+        return g_rpc:rpc_send_sys_mail(
             title,ctx,attachment,op,expire,level,vip )
     end
 
@@ -223,7 +223,7 @@ function Mail_mgr:check_new_sys_mail( player,mail_box,sys_id )
         local mail = self.list[idx]
         if mail.id <= sys_id then break end
 
-        if self:check_mail_limit( mail,palyer ) then
+        if self:check_mail_limit( mail,player ) then
             new_cnt = new_cnt + 1
             mail_box:raw_add_sys_mail( mail )
         end
