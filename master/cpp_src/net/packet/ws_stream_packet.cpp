@@ -155,9 +155,9 @@ int32 ws_stream_packet::on_frame_end()
 
     uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
-    if ( network_mgr->cs_dispatch( _cmd,_socket,ctx,size ) ) return 0;
+    if ( network_mgr->cs_dispatch( cmd,_socket,ctx,size ) ) return 0;
 
-    return cs_command( _cmd,ctx,size );
+    return cs_command( cmd,ctx,size );
 }
 
 /* 回调server to client的数据包 */
@@ -186,17 +186,17 @@ int32 ws_stream_packet::sc_command()
         return 0;
     }
 
-    const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( _cmd );
+    const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cmd_cfg )
     {
-        ERROR( "sc_command cmd(%d) no cmd cfg found",_cmd );
+        ERROR( "sc_command cmd(%d) no cmd cfg found",cmd );
         return 0;
     }
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushinteger  ( L,_cmd );
+    lua_pushinteger  ( L,cmd );
     lua_pushinteger  ( L,header->_errno );
 
     uint32_t size = data_size - sizeof( *header );

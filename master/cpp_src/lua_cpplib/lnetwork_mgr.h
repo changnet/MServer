@@ -97,6 +97,7 @@ public:
         const class socket *src_sk,const char *ctx,size_t size ) const;
 private:
     void delete_socket( uint32 conn_id );
+    int32 get_cmd_session( int64 object_id,int32 cmd ) const;
     class packet *lua_check_packet( lua_State *L,socket::conn_t conn_ty );
     class packet *raw_check_packet(
         lua_State *L,uint32 conn_id,socket::conn_t conn_ty );

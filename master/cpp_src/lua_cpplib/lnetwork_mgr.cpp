@@ -822,34 +822,59 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
     return 1;
 }
 
+// 查找该cmd在哪个进程处理
+int32 lnetwork_mgr::get_cmd_session(int64 object_id, int32 cmd ) const
+{
+    const cmd_cfg_t *cmd_cfg = get_cs_cmd( cmd );
+    if ( expect_false(!cmd_cfg) )
+    {
+        ERROR( "cs_dispatch cmd(%d) no cmd cfg found",cmd );
+        return -1;
+    }
+
+    // 是否需要动态转发
+    static const int dyn_mask = 0x01 << cmd_cfg_t::MK_DYNAMIC;
+    if ( 0 == (cmd_cfg->_mask & dyn_mask) )
+    {
+        return cmd_cfg->_session;
+    }
+
+    /* 这个socket必须经过认证，归属某个对象后才能转发到其他服务器
+     * 防止网关后面的服务器被攻击
+     * 与客户端的连接，这个object_id就是玩家id
+     */
+    if ( expect_false(!object_id) )
+    {
+        ERROR( "cs_dispatch cmd(%d) socket do NOT have object",cmd );
+        return -1;
+    }
+
+    map_t<owner_t,int32>::const_iterator iter = _owner_session.find(object_id);
+    if (iter == _owner_session.end())
+    {
+        ERROR( "cs_dispatch cmd(%d) "
+               "socket do NOT have object:%d-" FMT64d,cmd,object_id );
+        return -1;
+    }
+
+    return iter->second;
+}
+
 /* 把客户端数据包转发给另一服务器
  * 这个函数如果返回false，则会将协议在当前进程派发
  */
 bool lnetwork_mgr::cs_dispatch(
     int32 cmd,const class socket *src_sk,const char *ctx,size_t size ) const
 {
-    const cmd_cfg_t *cmd_cfg = get_cs_cmd( cmd );
-    if ( expect_false(!cmd_cfg) )
-    {
-        ERROR( "cs_dispatch cmd(%d) no cmd cfg found",cmd );
-        return false;
-    }
-
-    if ( cmd_cfg->_session == _session ) return false;
-
-    int32 conn_id = src_sk->conn_id();
-    /* 这个socket必须经过认证，归属某个对象后才能转发到其他服务器
-     * 防止网关后面的服务器被攻击
-     */
     int64 object_id = src_sk->get_object_id();
-    if ( expect_false(!object_id) )
-    {
-        ERROR( "cs_dispatch cmd(%d) socket do NOT have object:%d",cmd,conn_id );
-        return false;
-    }
+    int32 session = get_cmd_session( object_id,cmd );
+    if ( session < 0 ) return true;
+
+    // 在当前进程处理，不需要转发
+    if ( session == _session ) return false;
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    class socket *dest_sk  = get_conn_by_session( cmd_cfg->_session );
+    class socket *dest_sk  = get_conn_by_session( session );
     if ( !dest_sk )
     {
         ERROR( "client packet forwarding no destination found.cmd:%d",cmd );
