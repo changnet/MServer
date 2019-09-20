@@ -5,6 +5,11 @@
 
 int32 main( int32 argc,char **argv )
 {
+    /* 参数:[name] [index] [srvid]
+     * @name:必须是app名，比如gateway，有对应的实现
+     * @index:app索引，如area开了2个进程，分别是1、2
+     * @srvid:服务器id，这个是运营分配的区服id
+     */
     if (argc < 4)
     {
         ERROR_R( "usage: [name] [index] [srvid]\n" );

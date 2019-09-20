@@ -5,23 +5,6 @@
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
 
-#pragma pack (push, 1)
-
-// 发往客户端数据包头
-struct clt_header
-{
-    uint16 _cmd;
-    uint16 _errno; /* 错误码 */
-};
-
-// 发往服务器数据包头
-struct srv_header
-{
-    uint16 _cmd;
-};
-
-#pragma pack(pop)
-
 ws_stream_packet::~ws_stream_packet()
 {
 }
@@ -84,16 +67,15 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return luaL_error( L,"websocket not upgrade" );
 
-    struct srv_header header;
-    header._cmd = luaL_checkinteger( L,index );
+    int cmd = luaL_checkinteger( L,index );
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index + 1 ) );
 
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
-    const cmd_cfg_t *cfg = network_mgr->get_cs_cmd( header._cmd );
+    const cmd_cfg_t *cfg = network_mgr->get_cs_cmd( cmd );
     if ( !cfg )
     {
-        return luaL_error( L,"no command conf found: %d",header._cmd );
+        return luaL_error( L,"no command conf found: %d",cmd );
     }
 
     codec *encoder = 
@@ -106,10 +88,14 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     if ( size > MAX_PACKET_LEN )
     {
         encoder->finalize();
-        return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
+        return luaL_error( L,"buffer size over MAX_PACKET_LEN:%d",cmd );
     }
 
-    size_t frame_size = size + sizeof(header);
+    struct c2s_header c2sh;
+    SET_HEADER_LENGTH( c2sh, size, cmd, SET_LENGTH_FAIL_ENCODE );
+    c2sh._cmd    = static_cast<uint16>  ( cmd );
+
+    size_t frame_size = size + sizeof(c2sh);
     class buffer &send = _socket->send_buffer();
     if ( !send.reserved( frame_size ) )
     {
@@ -117,7 +103,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
         return luaL_error( L,"can not reserved buffer" );
     }
 
-    const char *header_ctx = reinterpret_cast<const char*>(&header);
+    const char *header_ctx = reinterpret_cast<const char*>(&c2sh);
     size_t len = websocket_calc_frame_size( flags,frame_size );
 
     char mask[4] = { 0 };
@@ -127,7 +113,7 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     char *buff = send.get_space_ctx();
     size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
     offset += websocket_append_frame( 
-        buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
+        buff + offset,flags,mask,header_ctx,sizeof(c2sh),&mask_offset );
     websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
 
     encoder->finalize();
@@ -152,19 +138,26 @@ int32 ws_stream_packet::on_frame_end()
     /* 服务器收到的包，看要不要转发 */
     uint32 data_size = 0;
     const char *data_ctx = _body.all_to_continuous_ctx( data_size );
-    if ( data_size < sizeof(struct srv_header) )
+    if ( data_size < sizeof(struct c2s_header) )
     {
         ERROR( "ws_stream_packet on_frame_end packet incomplete" );
         return 0;
     }
-    const struct srv_header *header = 
-        reinterpret_cast<const struct srv_header *>( data_ctx );
+    const struct c2s_header *header =
+        reinterpret_cast<const struct c2s_header *>( data_ctx );
+
+    int cmd = header->_cmd;
+    if ( data_size < header->_length )
+    {
+        ERROR( "ws_stream_packet on_frame_end packet length error:%d",cmd );
+        return 0;
+    }
 
     uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
-    if ( network_mgr->cs_dispatch( header->_cmd,_socket,ctx,size ) ) return 0;
+    if ( network_mgr->cs_dispatch( _cmd,_socket,ctx,size ) ) return 0;
 
-    return cs_command( header->_cmd,ctx,size );
+    return cs_command( _cmd,ctx,size );
 }
 
 /* 回调server to client的数据包 */
@@ -177,25 +170,33 @@ int32 ws_stream_packet::sc_command()
 
     uint32 data_size = 0;
     const char *data_ctx = _body.all_to_continuous_ctx( data_size );
-    if ( data_size < sizeof(struct clt_header) )
+    if ( data_size < sizeof(struct s2c_header) )
     {
         ERROR( "ws_stream_packet sc_command packet incomplete" );
         return 0;
     }
 
-    const struct clt_header *header = 
-        reinterpret_cast<const struct clt_header *>( data_ctx );
-    const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
+    const struct s2c_header *header =
+        reinterpret_cast<const struct s2c_header *>( data_ctx );
+
+    int cmd = header->_cmd;
+    if ( data_size < header->_length )
+    {
+        ERROR( "ws_stream_packet sc_command packet length error:%d",cmd );
+        return 0;
+    }
+
+    const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( _cmd );
     if ( !cmd_cfg )
     {
-        ERROR( "sc_command cmd(%d) no cmd cfg found",header->_cmd );
+        ERROR( "sc_command cmd(%d) no cmd cfg found",_cmd );
         return 0;
     }
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );
     lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushinteger  ( L,header->_cmd );
+    lua_pushinteger  ( L,_cmd );
     lua_pushinteger  ( L,header->_errno );
 
     uint32_t size = data_size - sizeof( *header );
@@ -271,10 +272,12 @@ int32 ws_stream_packet::raw_pack_clt(
 int32 ws_stream_packet::do_pack_clt(
     int32 raw_flags,int32 cmd,uint16 ecode,const char *ctx,size_t size )
 {
-    struct clt_header header;
-    header._cmd = cmd;
-    header._errno = ecode;
-    size_t frame_size = size + sizeof(header);
+    struct s2c_header s2ch;
+    SET_HEADER_LENGTH( s2ch, size, cmd, SET_LENGTH_FAIL_RETURN );
+    s2ch._cmd    = static_cast<uint16>  ( cmd );
+    s2ch._errno  = ecode;
+
+    size_t frame_size = size + sizeof(s2ch);
     class buffer &send = _socket->send_buffer();
     if ( !send.reserved( frame_size ) )
     {
@@ -283,7 +286,7 @@ int32 ws_stream_packet::do_pack_clt(
     }
 
     websocket_flags flags = static_cast<websocket_flags>( raw_flags );
-    const char *header_ctx = reinterpret_cast<const char*>(&header);
+    const char *header_ctx = reinterpret_cast<const char*>(&s2ch);
     size_t len = websocket_calc_frame_size( flags,frame_size );
 
     char mask[4] = { 0 };
@@ -291,7 +294,7 @@ int32 ws_stream_packet::do_pack_clt(
     char *buff = send.get_space_ctx();
     size_t offset = websocket_build_frame_header( buff,flags,mask,frame_size );
     offset += websocket_append_frame( 
-        buff + offset,flags,mask,header_ctx,sizeof(header),&mask_offset );
+        buff + offset,flags,mask,header_ctx,sizeof(s2ch),&mask_offset );
     websocket_append_frame( buff + offset,flags,mask,ctx,size,&mask_offset );
     send.add_used_offset( len );
     _socket->pending_send();

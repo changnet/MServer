@@ -112,6 +112,7 @@ private:
     std::vector<uint32> _deleting;/* 异步删除的socket */
     /* owner-conn_id 映射,ssc数据包转发时需要 */
     map_t<owner_t,uint32> _owner_map;
+    map_t<owner_t,int32> _owner_session; /* owner-session映射 */
 
     map_t<int32,uint32> _session_map; /* session-conn_id 映射 */
     map_t<uint32,owner_t> _conn_session_map; /* conn_id-session 映射 */

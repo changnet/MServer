@@ -14,6 +14,9 @@
 * mongodb的result感觉要用个object_pool
 * lclass弄个继承，基础的只是push到lua，不会创建。然后把C++中push到lua的类多余的构造函数去掉
 * pbc中错误提示不明确(本来是int，发个float就重现了)
+* set_initialize这个初始化流程优化一下，改成注册是不是要好一点
+* stream_packet.cc里和ws_stream_packet.cc里的sc_command和cs_command可以合并复用
+* 考虑用C++编译Lua:https://www.liangzl.com/get-article-detail-140988.html
 
 #优化定时器（加到wiki）
 * app定时器，只保留5秒，并且修正为整分钟触发(用real time修正)
