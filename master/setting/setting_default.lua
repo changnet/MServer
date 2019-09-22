@@ -45,6 +45,7 @@ return
 
     area = -- area服务器配置
     {
+        process = 2, -- 开了2个进程
         servers = -- 主动连接到下面的服务器
         {
             { ip = "127.0.0.1",port = 10001 }, -- gateway

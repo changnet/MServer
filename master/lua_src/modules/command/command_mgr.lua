@@ -57,6 +57,8 @@ function Command_mgr:__init()
         self.cs[ v ] = {}
     end
 
+    self.app_reg = {} -- 哪些进程已注册过了
+
     -- 引用授权数据，防止频繁调用函数
     self.auth_pid = g_authorize:get_player_data()
 
@@ -327,8 +329,21 @@ function Command_mgr:srv_cmd()
     return cmds
 end
 
--- 其他服务器指令注册
+-- 注册其他服务器指令,以实现协议自动转发
 function Command_mgr:other_cmd_register( srv_conn,pkt )
+    local base_name = srv_conn:base_name()
+    -- 同一类服务，他们的协议是一样的，只不过需要做动态转发，无需再注册一次
+    if self.app_reg[base_name] then
+        PRINTF( "register cmd from %s",srv_conn:conn_name() )
+        return true
+    end
+
+    local mask = 0
+    local app_setting = g_setting[base_name]
+    if app_setting.process and app_setting.process > 1 then
+        mask = 2 -- 标记为需要动态转发，见C++ MK_DYNAMIC定义
+    end
+
     local session = srv_conn.session
 
     -- 记录该服务器所处理的cs指令
@@ -341,7 +356,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
 
         _cfg.session = session
         local raw_cfg = cs_map[cmd]
-        network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,session )
+        network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],mask,session )
     end
 
     -- 记录该服务器所处理的ss指令

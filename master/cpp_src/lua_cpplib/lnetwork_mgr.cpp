@@ -1099,3 +1099,14 @@ int32 lnetwork_mgr::ssc_multicast( lua_State *L )
 
     return 0;
 }
+
+// 设置玩家当前所在的session
+int32 lnetwork_mgr::set_player_session( lua_State *L )
+{
+    owner_t owner = luaL_checkinteger( L,1 );
+    int32 session = luaL_checkinteger( L,2 );
+
+    _owner_session[owner] = session;
+
+    return 0;
+}

@@ -118,7 +118,7 @@ end
 
 function conn_del( conn_id )
     local android = g_android_mgr:get_android_by_conn(conn_id)
-    PRINT( "%d connect del",android.index )
+    PRINTF( "%d connect del",android.index )
 end
 
 return android_cmd

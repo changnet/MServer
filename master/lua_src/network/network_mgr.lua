@@ -8,11 +8,9 @@ local Clt_conn      = require "network.clt_conn"
 local network_mgr = network_mgr
 local Network_mgr = oo.singleton( ... )
 
--- 目前暂定只有一个网关，一个世界，一个场景
-local gateway_session = g_app:srv_session(
-    "gateway",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
-local world_session = g_app:srv_session(
-    "world",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
+-- 目前暂定只有一个网关，一个世界
+local gateway_session = g_app:srv_session( "gateway",1,tonumber(g_app.srvid) )
+local world_session = g_app:srv_session( "world",1,tonumber(g_app.srvid) )
 local area_session = g_app:srv_session(
     "area",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
 
