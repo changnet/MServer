@@ -12,7 +12,7 @@ local App = oo.class( ...,Application )
 function App:__init( ... )
     Application.__init( self,... )
 
-    self:set_initialize( "area" ) -- 等待一个area服连接OK
+    self:set_initialize( "area",nil,nil,2 ) -- 等待2个area服连接OK
     self:set_initialize( "gateway" ) -- 等待一个gateway服连接OK
     self:set_initialize( "db_logger",nil,self.db_logger_initialize ) -- db日志
     self:set_initialize( "db_conn",nil,self.db_initialize ) -- 等待连接db

@@ -78,7 +78,7 @@ function Command_mgr:check_timer()
         g_timer_mgr:del_timer( self.timer )
 
         self.timer = nil
-        return 
+        return
     end
 
     if self.cmd_perf and not self.timer then
@@ -334,9 +334,11 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
     local base_name = srv_conn:base_name()
     -- 同一类服务，他们的协议是一样的，只不过需要做动态转发，无需再注册一次
     if self.app_reg[base_name] then
-        PRINTF( "register cmd from %s",srv_conn:conn_name() )
+        PRINTF( "cmd from %s,already register",srv_conn:conn_name() )
         return true
     end
+
+    self.app_reg[base_name] = true
 
     local mask = 0
     local app_setting = g_setting[base_name]
