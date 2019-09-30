@@ -341,9 +341,11 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
     self.app_reg[base_name] = true
 
     local mask = 0
+    local multi_process = false
     local app_setting = g_setting[base_name]
     if app_setting.process and app_setting.process > 1 then
         mask = 2 -- 标记为需要动态转发，见C++ MK_DYNAMIC定义
+        multi_process = true
     end
 
     local session = srv_conn.session
@@ -374,7 +376,7 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
 
     -- 记录该服务器所处理的rpc指令
     for _,cmd in pairs( pkt.rpc_cmd or {} ) do
-        g_rpc:register( cmd,session )
+        g_rpc:register( cmd,session,multi_process )
     end
 
     PRINTF( "register cmd from %s",srv_conn:conn_name() )

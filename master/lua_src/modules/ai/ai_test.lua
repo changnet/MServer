@@ -33,7 +33,7 @@ function Ai_test:routine(ms_now)
     end
 
     -- 下面这些action都是并行的
-        -- 聊天
+    -- 聊天
     -- 移动、切换场景
     -- 增加、使用资源
 
@@ -41,6 +41,7 @@ function Ai_test:routine(ms_now)
     test:chat(self)
     test:ping(self)
     move:random_move(self)
+    move:switch_fuben(self)
 end
 
 return Ai_test

@@ -26,6 +26,10 @@ local Attribute_sys = require "modules.attribute.attribute_sys"
 local RES = RES
 local method_thunk = method_thunk
 
+local static_session = g_app:srv_session( "area",1,tonumber(g_app.srvid) )
+
+local AREA_SESSION = {}
+
 -- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
 local sub_module =
 {
@@ -149,12 +153,6 @@ function Player:is_loading()
     return true
 end
 
--- 获取静态场景的session
-function Player:static_scene_conn()
-    local session = g_app:srv_session( "area",1,tonumber(g_app.srvid) )
-    return g_network_mgr:get_srv_conn( session )
-end
-
 -- 登录游戏
 function Player:on_login()
     for _,module in pairs( sub_module ) do self[module.name]:on_login() end
@@ -165,15 +163,27 @@ function Player:on_login()
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
 
-    local conn = static_scene_conn()
+    local conn = g_network_mgr:get_srv_conn( static_session )
+    -- 同步基础属性，名字、外显等
+    self.base:update( conn )
     -- 同步战斗属性到场景
     self.abt_sys:update_battle_abt( conn )
     -- 实体进入场景
-    g_rpc:proxy(conn):player_enter_scene( self.pid,0,1,1,1 )
+    g_rpc:proxy(conn):player_init_scene( self.pid,0,1,1,1 )
 
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
 
+    self:set_session( conn.session )
+
     return true
+end
+
+-- 设置玩家所在的session
+function Player:set_session( session )
+    network_mgr:set_player_session( self.pid,session )
+
+    -- 设置session到网关，实现自动转发协议
+    g_rpc:set_player_session( self.pid,session )
 end
 
 -- 退出游戏
@@ -256,10 +266,34 @@ function Player:set_sys_abt( id,abt_list )
 end
 
 -- 进入某个副本
-function Player:enter_fuben( id )
-    -- 先到对应的进程检测是否能够进入对应的副本
+function Player:enter_fuben( pkt )
+    local id = pkt.id
+    -- 先到对应的进程检测是否能够进入对应的副本，这里只是测试不用检测
+
+    -- 双数在场景进程1,单数在2，用来测试切换。真实情况是根据拥挤场景来规则
+    local index = (0 == id % 2 and 1 or 2)
+
+    if not session then
+        AREA_SESSION[index] = 
+            g_app:srv_session( "area",index,tonumber(g_app.srvid) )
+    end
+    local session = AREA_SESSION[index]
+    local conn = g_network_mgr:get_srv_conn( session )
+
     -- 然后玩家从当前进程退出场景
-    -- 最后进入新的进程里的场景
+    if session ~= network_mgr:get_player_session( self.pid ) then
+        g_rpc:proxy(self.pid):player_exit( self.pid )
+        -- 同步基础属性，名字、外显等
+        self.base:update( conn )
+        -- 同步战斗属性到场景
+        self.abt_sys:update_battle_abt( conn )
+    end
+    -- 实体进入场景
+    g_rpc:proxy(conn):enter_test_dungeon( self.pid,id )
+
+    self:set_session( session )
+
+    PRINT("player enter fuben",self.pid,id)
 end
 
 return Player

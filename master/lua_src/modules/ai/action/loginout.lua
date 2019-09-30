@@ -7,7 +7,7 @@ local Loginout = oo.class( ... )
 -- 检查是否执行登录
 function Loginout:check_and_login(ai)
     local param = ai.ai_conf.param
-    if (ai.logout_time or 0) + param.login_time > ev:time() then
+    if (ai.login_time or 0) > ev:time() then
         return false
     end
 
@@ -87,8 +87,10 @@ end
 function Loginout:on_enter_world( entity,errno,pkt )
     entity.ai.state = AST.ON
 
+    local param = entity.ai.ai_conf.param
+
     -- 记录登录时间，一段时间后自动退出
-    entity.ai.login_time = ev:time()
+    entity.ai.logout_time = ev:time() + math.random(60,param.logout_time)
 
     PRINTF( "%s enter world success",entity.name )
     -- g_player_ev:fire_event( PLAYER_EV.ENTER,entity )
@@ -110,13 +112,14 @@ end
 
 -- 是否执行退出
 function Loginout:check_and_logout(ai)
-    local param = ai.ai_conf.param
-    if (ai.login_time or 0) + param.logout_time > ev:time() then
+    if ai.logout_time > ev:time() then
         return false
     end
 
+    local param = ai.ai_conf.param
+
     ai.state = AST.OFF
-    ai.logout_time = ev:time()
+    ai.login_time = ev:time() + math.random(60,param.login_time)
 
     local entity = ai.entity
     network_mgr:close( entity.conn_id )

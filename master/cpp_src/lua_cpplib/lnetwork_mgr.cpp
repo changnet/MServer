@@ -833,8 +833,7 @@ int32 lnetwork_mgr::get_cmd_session(int64 object_id, int32 cmd ) const
     }
 
     // 是否需要动态转发
-    static const int dyn_mask = 0x01 << cmd_cfg_t::MK_DYNAMIC;
-    if ( 0 == (cmd_cfg->_mask & dyn_mask) )
+    if ( 0 == (cmd_cfg->_mask & cmd_cfg_t::MK_DYNAMIC) )
     {
         return cmd_cfg->_session;
     }
@@ -853,7 +852,7 @@ int32 lnetwork_mgr::get_cmd_session(int64 object_id, int32 cmd ) const
     if (iter == _owner_session.end())
     {
         ERROR( "cs_dispatch cmd(%d) "
-               "socket do NOT have object:%d-" FMT64d,cmd,object_id );
+               "no session to forwarding:%d-" FMT64d,cmd,object_id );
         return -1;
     }
 
@@ -1124,7 +1123,6 @@ int32 lnetwork_mgr::get_player_session( lua_State *L )
     owner_t owner = luaL_checkinteger( L,1 );
 
     map_t<owner_t,int32>::const_iterator iter = _owner_session.find(owner);
-    if (iter == _owner_session.end())
 
     lua_pushinteger( L,iter == _owner_session.end() ? -1 : iter->second );
 

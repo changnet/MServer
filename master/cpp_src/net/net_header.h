@@ -7,16 +7,13 @@
 
 #define MAX_SCHEMA_NAME  64
 
-/* _maks 设定掩码，按位表示不同功能
- * 1bit: 解码方式:0 普通解码，1 unpack解码
- * 2bit: 是否动态转发
- */
 struct cmd_cfg_t
 {
+    // 设定掩码，按位表示不同功能，值为 1 2 4 8 16
     enum
     {
-        MK_UNPACK  = 1,
-        MK_DYNAMIC = 2,
+        MK_UNPACK  = 1, //解码方式:0 普通解码，1 unpack解码
+        MK_DYNAMIC = 2, // 是否动态转发
         MK_MAX
     };
     int32 _cmd;

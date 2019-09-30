@@ -16,6 +16,7 @@ local function player_update_base( pid,base,new )
 
     -- 首次进入场景，需要创建实体
     if new then
+        g_authorize:set_player( pid )
         player = g_entity_mgr:new_entity(ET.PLAYER,pid)
         PRINT("area player update base:",pid)
     else
@@ -58,10 +59,10 @@ end
 
 -- 玩家进入场景
 -- 在进入场景之前，必须已经同步玩家必要的数据(外显、战斗属性等)
-local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
+local function player_init_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ERROR("player_enter_scene no player found",pid)
+        ERROR("player_init_scene no player found",pid)
         return
     end
 
@@ -73,14 +74,12 @@ local function player_enter_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     local py = math.random(0,64*64)
     g_dungeon_mgr:enter_static_scene(player,scene_id,px,py)
 
-    g_authorize:set_player( pid )
-
     player:send_pkt( SC.PLAYER_ENTER,{} )
-    PRINT("player enter scene",pid,scene_id,px,py)
+    PRINT("player init scene",pid,scene_id,px,py)
 end
 
 g_rpc:declare( "player_exit",player_exit )
-g_rpc:declare( "player_enter_scene",player_enter_scene )
+g_rpc:declare( "player_init_scene",player_init_scene )
 g_rpc:declare( "player_update_base",player_update_base )
 g_rpc:declare( "player_update_battle_abt",player_update_battle_abt )
 

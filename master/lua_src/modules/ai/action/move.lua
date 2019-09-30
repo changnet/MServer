@@ -74,6 +74,27 @@ function Move:on_update_pos(entity,errno,pkt)
     end
 end
 
+-- 切换副本，测试玩家在进程中切换
+function Move:switch_fuben(ai)
+    local now = ev:time()
+    if not ai.fuben_time then
+        ai.fuben_time = now + math.random(10,30)
+    end
+
+    if ai.fuben_time > now then return end
+
+    -- 随机切换一个副本
+    local id = math.random(1,10)
+    if id == (ai.fb_id or 0) then return end
+
+    ai.entity:send_pkt( CS.PLAYER_ENTERFUBEN,{ id = id } )
+    ai.fuben_time = now + math.random(10,30)
+
+    ai.fb_id = id
+    local entity = ai.entity
+    PRINT("switch to new fuben",entity.name,id)
+end
+
 -- ************************************************************************** --
 
 local function cmd_cb( cmd,cb )

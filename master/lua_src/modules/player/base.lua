@@ -58,19 +58,21 @@ function Base:calc_abt()
     self.player:set_sys_abt( ABTSYS.BASE,conf.attr )
 end
 
--- 玩家数据已加载完成，进入场景
--- 必须返回操作结果
+-- 玩家数据已加载完成,必须返回操作结果
 local base_info = {}
 function Base:on_login()
     self.root.login = ev:time()
 
+    return true
+end
+
+function Base:update(conn)
     -- 更新基础数据到场景服
     base_info.sex = self.root.sex
     base_info.level = self.root.level
     base_info.name = self.root.name
 
-    g_rpc:player_update_base( self.pid,base_info,true )
-    return true
+    g_rpc:proxy(conn or self.pid):player_update_base( self.pid,base_info,true )
 end
 
 -- 玩家退出游戏

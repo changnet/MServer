@@ -21,10 +21,10 @@ function Test_dungeon:do_enter(pid,fb_id)
 
     local px = math.random(0,128*64)
     local py = math.random(0,64*64)
-    local scene_id = dungeon:first_scene()
 
     local dungeon = g_dungeon_mgr:get_dungeon(handle)
-    dungeon:enter( player,scene_id,px,py )
+
+    dungeon:enter( player,dungeon:first_scene(),px,py )
 end
 
 local test = Test_dungeon()

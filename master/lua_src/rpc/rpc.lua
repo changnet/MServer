@@ -299,9 +299,9 @@ function Rpc:invoke_factory(method_name,session)
 end
 
 -- 其他服务器注册rpc回调
-function Rpc:register( procedure,session )
+function Rpc:register( procedure,session,multi_process )
     local method_name = procedure.method
-    local method_session = procedure.session
+    local method_session = multi_process and -1 or procedure.session
 
     -- procedure里的session一般是-1，
     -- 表示这个procedure在多个进程同时存在，调用时需要指定进程
@@ -326,7 +326,7 @@ function Rpc:register( procedure,session )
     self.procedure[method_name] = {}
     self.procedure[method_name].session = method_session
 
-    -- 放到self，方便直接调用
+    -- 放到self，方便直接用 g_rpc:method_name 的方式调用
     self[method_name] = self:invoke_factory(method_name,method_session)
 end
 

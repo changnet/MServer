@@ -45,9 +45,8 @@ local function rpc_gm( where,cmd,... )
 end
 
 -- 设置玩家所在的session
-local function set_player_session( pid )
-    local srv_conn = g_rpc:last_conn()
-    network_mgr:set_player_session( pid,srv_conn.session )
+local function set_player_session( pid,session )
+    network_mgr:set_player_session( pid,session )
 end
 
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )

@@ -99,4 +99,5 @@ end
 -- 仅在area使用
 if "area" == g_app.srvname then
     require "modules.entity.entity_cmd" -- 实体相关
+    require "modules.dungeon.test_dungeon" -- 测试不同场景进程中切换
 end
