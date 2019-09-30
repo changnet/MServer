@@ -104,8 +104,7 @@ HEADERS += \
     ../../master/cpp_src/thread/thread_mgr.h \
     ../../master/cpp_src/util/rank.h \
     ../../master/cpp_src/config.h \
-    ../../master/cpp_src/log/async_log.h \
-    ../../master/cpp_src/net/routing.h
+    ../../master/cpp_src/log/async_log.h
 
 
 unix:!macx: LIBS += -L$$PWD/../../master/cpp_src/deps/aho-corasick/ -lacism

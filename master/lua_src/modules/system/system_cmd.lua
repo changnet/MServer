@@ -1,5 +1,6 @@
 
 local SS = SS
+local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 
@@ -43,7 +44,17 @@ local function rpc_gm( where,cmd,... )
     g_gm:raw_exec( where,nil,cmd,... )
 end
 
+-- 设置玩家所在的session
+local function set_player_session( pid )
+    local srv_conn = g_rpc:last_conn()
+    network_mgr:set_player_session( pid,srv_conn.session )
+end
+
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )
+
+if "gateway" == g_app.srvname then
+    g_rpc:declare( "set_player_session",set_player_session )
+end
 
 
 -- 这里注册系统模块的协议处理

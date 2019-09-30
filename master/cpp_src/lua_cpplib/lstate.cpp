@@ -214,6 +214,9 @@ int32 luaopen_network_mgr( lua_State *L )
 
     lc.def<&lnetwork_mgr::new_ssl_ctx> ( "new_ssl_ctx" );
 
+    lc.def<&lnetwork_mgr::get_player_session> ( "get_player_session" );
+    lc.def<&lnetwork_mgr::set_player_session> ( "set_player_session" );
+
     lc.set( "CNT_NONE",socket::CNT_NONE );
     lc.set( "CNT_CSCN",socket::CNT_CSCN );
     lc.set( "CNT_SCCN",socket::CNT_SCCN );

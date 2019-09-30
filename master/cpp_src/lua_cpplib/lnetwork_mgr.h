@@ -53,7 +53,9 @@ public:
 
     int32 new_ssl_ctx( lua_State *L ); /* 创建一个ssl上下文 */
 
-    int32 set_player_session( lua_State *L ); // 设置玩家当前所在的session
+    // 设置、获取玩家当前所在的session
+    int32 set_player_session( lua_State *L );
+    int32 get_player_session( lua_State *L );
 
     /* socket基本操作 */
     int32 close   ( lua_State *L );

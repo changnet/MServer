@@ -146,11 +146,6 @@ function Rpc:last_conn()
     return g_network_mgr:get_conn( self.last_conn_id )
 end
 
-function Rpc:is_method( func,this )
-    if "table" == type(this) then
-    end
-end
-
 -- 生成一个可变参回调函数
 function Rpc:func_chunk(cb_func,...)
     -- 由于回调参数是可变的，rpc返回的参数也是可变的，但显然没有 cb_func( ...,... )
@@ -229,26 +224,42 @@ function Rpc:func_chunk(cb_func,...)
     end
 end
 
--- rpc调用代理，这个是参照了python的设置
+-- rpc调用代理，这个是参照了python的设计
 -- 通过代理来设置调用的进程、回调函数、回调参数
--- @srv_conn:目标进程的服务器连接，如果rpc是某个进程专有，这个参数可以不传
+-- @conn:目标进程的服务器连接，
+--     1. 如果rpc是某个进程专有，这个参数可以不传
+--     2. 如果传的是srv_conn对象，则直接使用该连接
+--     3. 如果传的数字，则认为是pid，根据玩家所在的session动态取连接
 -- @cb_func:回调函数，如果不需要回调，这个参数可以不传。如果回调函数是一个成员函数，把对象
 --          放在后面的参数即可，如：g_rpc:proxy(player.add_exp,player):add_exp
 -- 注：使用proxy时尽量用g_rpc:proxy():method()这样直接调用，避免设置了proxy但没调用函数
 -- 的情况。
 -- TODO:把proxy放到另一个同样复制了invoke_factory函数的table，返回该table而不是self
-function Rpc:proxy(srv_conn,cb_func,...)
+function Rpc:proxy(conn,cb_func,...)
     -- proxy设置的参数，用完即失效，如果不失效，应该是哪里逻辑出现了错误
     assert( nil == self.next_conn)
     assert( nil == self.next_cb_func)
 
-    -- 为function表示没传srv_conn
-    if type(srv_conn) == "function" then
+    local conn_type = type(conn)
+
+    -- 为function表示没传conn
+    if "function" == conn_type then
         self.next_cb_func = self:func_chunk(cb_func,...)
         return self
     end
 
-    self.next_conn = srv_conn
+    -- pid，根据玩家所在的进程动态取连接
+    if "number" == conn_type then
+        local session = network_mgr:get_player_session( conn )
+        if session <= 0 then
+            ERROR( "rpc proxy can NOT found player connection:%d",conn )
+            return
+        end
+
+        conn = g_network_mgr:get_srv_conn( session )
+    end
+
+    self.next_conn = conn
     if cb_func then
         assert( type(cb_func) == "function" )
         self.next_cb_func = self:func_chunk(cb_func,...)
@@ -266,7 +277,7 @@ function Rpc:invoke_factory(method_name,session)
             srv_conn = self.next_conn
             self.next_conn = nil
         else
-            assert( nil == self.next_conn,method_name )
+            ASSERT( nil == self.next_conn,method_name )
             srv_conn = g_network_mgr:get_srv_conn( session )
         end
 

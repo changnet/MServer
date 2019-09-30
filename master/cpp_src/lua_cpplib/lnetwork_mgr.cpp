@@ -1106,7 +1106,27 @@ int32 lnetwork_mgr::set_player_session( lua_State *L )
     owner_t owner = luaL_checkinteger( L,1 );
     int32 session = luaL_checkinteger( L,2 );
 
-    _owner_session[owner] = session;
+    if ( session <= 0 )
+    {
+        _owner_session.erase( owner );
+    }
+    else
+    {
+        _owner_session[owner] = session;
+    }
 
     return 0;
+}
+
+// 设置玩家当前所在的session
+int32 lnetwork_mgr::get_player_session( lua_State *L )
+{
+    owner_t owner = luaL_checkinteger( L,1 );
+
+    map_t<owner_t,int32>::const_iterator iter = _owner_session.find(owner);
+    if (iter == _owner_session.end())
+
+    lua_pushinteger( L,iter == _owner_session.end() ? -1 : iter->second );
+
+    return 1;
 }
