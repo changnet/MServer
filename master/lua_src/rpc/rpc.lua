@@ -240,6 +240,9 @@ function Rpc:proxy(conn,cb_func,...)
     assert( nil == self.next_conn)
     assert( nil == self.next_cb_func)
 
+    -- conn和cb_func必须有一个不能为空
+    assert( conn or cb_func )
+
     local conn_type = type(conn)
 
     -- 为function表示没传conn

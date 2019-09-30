@@ -53,5 +53,12 @@
             <field>UPDATE_RES</field>
             <server>UpdateRes</server>
         </subobject>
+        <subobject>
+            <client>EnterFuben</client>
+            <command>8</command>
+            <comment>进入副本</comment>
+            <field>ENTERFUBEN</field>
+            <server></server>
+        </subobject>
     </subobjects>
 </root>

@@ -11,8 +11,6 @@ local Network_mgr = oo.singleton( ... )
 -- 目前暂定只有一个网关，一个世界
 local gateway_session = g_app:srv_session( "gateway",1,tonumber(g_app.srvid) )
 local world_session = g_app:srv_session( "world",1,tonumber(g_app.srvid) )
-local area_session = g_app:srv_session(
-    "area",tonumber(g_app.srvindex),tonumber(g_app.srvid) )
 
 function Network_mgr:__init()
     self.srv = {}  -- session为key，连接对象为value
@@ -182,13 +180,6 @@ end
 -- 发送服务器数据包到世界服(现在同一类型只有一个进程才能这样做)
 function Network_mgr:send_world_pkt( cmd,pkt,ecode )
     local srv_conn = self.srv[world_session]
-
-    return srv_conn:send_pkt( cmd,pkt,ecode )
-end
-
--- 发送服务器数据包到场景(现在同一类型只有一个进程才能这样做)
-function Network_mgr:send_area_pkt( cmd,pkt,ecode )
-    local srv_conn = self.srv[area_session]
 
     return srv_conn:send_pkt( cmd,pkt,ecode )
 end

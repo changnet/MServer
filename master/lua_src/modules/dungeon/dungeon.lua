@@ -49,16 +49,22 @@ function Dungeon:init_one_scene( scene_id )
     self.scene[scene_id] = Scene(scene_id,self.id,self.handle)
 end
 
+-- 获取第一个场景id
+function Dungeon:first_scene()
+    local conf = base_conf[self.id]
+
+    return conf.scene[1]
+end
+
 -- 初始化第一个场景
 function Dungeon:init_first_scene()
-    local conf = base_conf[self.id]
-    local scene_id = conf.scene[1]
-
-    return self:init_one_scene(scene_id)
+    return self:init_one_scene(self:first_scene())
 end
 
 -- 进入副本
 function Dungeon:enter(entity,scene_id,pix_x,pix_y)
+    if not scene_id then scene_id = self:first_scene() end
+
     local scene = self.scene[scene_id]
 
     assert(scene)

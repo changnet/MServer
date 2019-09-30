@@ -36,10 +36,21 @@ local function player_mgr_srv_cb( cmd,cb_func )
     g_command_mgr:srv_register( cmd,cb )
 end
 
+-- 基础模块回调
 local function player_base_cb( cb_func )
     return function( player,... )
         return cb_func( player:get_module( "base" ),... )
     end
+end
+
+-- 玩家对象回调
+local function player_clt_cb( cmd,cb_func )
+    local cb = function( srv_conn,pid,pkt )
+        local player = g_player_mgr:get_player( pid )
+        return cb_func( player,pkt )
+    end
+
+    g_command_mgr:clt_register( cmd,cb )
 end
 
 -- 强制玩家断开连接，网关用
@@ -58,6 +69,7 @@ if "gateway" == g_app.srvname then
 end
 
 if "world" == g_app.srvname then
+    player_clt_cb( CS.PLAYER_ENTERFUBEN, Player.enter_fuben )
     player_mgr_clt_cb( CS.PLAYER_ENTER,g_player_mgr.on_enter_world,true )
 
     player_mgr_srv_cb( SS.PLAYER_OFFLINE,g_player_mgr.on_player_offline )

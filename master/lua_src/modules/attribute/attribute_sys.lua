@@ -84,7 +84,8 @@ function Attribute_sys:calc_final_abt()
 end
 
 -- 把属性同步到场景
-function Attribute_sys:update_battle_abt()
+-- @conn: 指定更新属性的连接，不指定的话说明玩家已经进入对应的场景，从pid取就可以了
+function Attribute_sys:update_battle_abt( conn )
     -- TODO: 这里需要优化一下，看下是不是要改成protobuf同步
     local abt_list = {}
     for k,v in pairs( self.final_abt.attribute ) do
@@ -92,7 +93,7 @@ function Attribute_sys:update_battle_abt()
         table.insert(abt_list,v)
     end
 
-    g_rpc:player_update_battle_abt( self.pid,abt_list )
+    g_rpc:proxy(conn or self.pid):player_update_battle_abt( self.pid,abt_list )
 end
 
 return Attribute_sys

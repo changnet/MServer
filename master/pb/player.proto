@@ -93,3 +93,9 @@ message SUpdateRes
     int32 res_type = 1; // 资源类型，参考通用资源类型定义
     int32 val      = 2; // 资源数量
 }
+
+// 玩家进入副本
+message CEnterFuben
+{
+    int32 id = 1; // 副本id
+}

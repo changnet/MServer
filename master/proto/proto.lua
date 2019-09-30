@@ -40,6 +40,7 @@ local CS =
     PLAYER_PING = { PLAYER + 2,"player.pb","player.CPing" }, -- 258
     PLAYER_CREATE = { PLAYER + 3,"player.pb","player.CCreateRole" }, -- 259
     PLAYER_ENTER = { PLAYER + 4,"player.pb","player.CEnterWorld" }, -- 260
+    PLAYER_ENTERFUBEN = { PLAYER + 8,"player.pb","player.CEnterFuben" }, -- 264
     MISC_WELCOME_GET = { MISC + 2,"misc.pb","misc.CWelcomeGet" }, -- 770
     CHAT_DOCHAT = { CHAT + 2,"chat.pb","chat.CDoChat" }, -- 1026
     MAIL_DEL = { MAIL + 2,"mail.pb","mail.CMailDel" }, -- 1282

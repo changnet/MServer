@@ -10,7 +10,7 @@ local Time_id = require "modules.system.time_id"
 local Dungeon_mgr = oo.singleton( ... )
 
 function Dungeon_mgr:__init()
-    self.static = nil -- 静态副本(像主城这种)，在起服时候创建，永远不销毁
+    self.static  = nil -- 静态副本(像主城这种)，在起服时候创建，永远不销毁
     self.dungeon = {} -- 副本handle为key
 
     self.hdl_generator = Time_id()
@@ -39,9 +39,7 @@ function Dungeon_mgr:init_static_dungeon()
         local map = g_map_mgr:create_map(id,test_width,test_height)
 
         for width = 0,test_width - 1 do
-            for height = 0,test_height - 1 do
-                map:fill(width,height,1)
-            end
+            for height = 0,test_height - 1 do map:fill(width,height,1) end
         end
     end
 

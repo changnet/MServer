@@ -149,6 +149,12 @@ function Player:is_loading()
     return true
 end
 
+-- 获取静态场景的session
+function Player:static_scene_conn()
+    local session = g_app:srv_session( "area",1,tonumber(g_app.srvid) )
+    return g_network_mgr:get_srv_conn( session )
+end
+
 -- 登录游戏
 function Player:on_login()
     for _,module in pairs( sub_module ) do self[module.name]:on_login() end
@@ -158,10 +164,12 @@ function Player:on_login()
 
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
+
+    local conn = static_scene_conn()
     -- 同步战斗属性到场景
-    self.abt_sys:update_battle_abt()
+    self.abt_sys:update_battle_abt( conn )
     -- 实体进入场景
-    g_rpc:player_enter_scene( self.pid,0,1,1,1 )
+    g_rpc:proxy(conn):player_enter_scene( self.pid,0,1,1,1 )
 
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
 
@@ -192,7 +200,7 @@ function Player:on_logout()
     end
 
     -- 退出场景
-    g_rpc:player_exit( self.pid )
+    g_rpc:proxy(self.pid):player_exit( self.pid )
     g_log_mgr:login_or_logout( self.pid,LOG.LOGOUT )
 
     PRINTF( "player logout,pid = %d",self.pid )
@@ -245,6 +253,13 @@ end
 -- 设置某个系统属性
 function Player:set_sys_abt( id,abt_list )
     self.abt_sys:set_sys_abt( id,abt_list )
+end
+
+-- 进入某个副本
+function Player:enter_fuben( id )
+    -- 先到对应的进程检测是否能够进入对应的副本
+    -- 然后玩家从当前进程退出场景
+    -- 最后进入新的进程里的场景
 end
 
 return Player
