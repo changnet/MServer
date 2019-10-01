@@ -301,9 +301,9 @@ void lev::running( int64 ms_now )
         }
         else
         {
-            int64 beg = get_ms_time();
+            STAT_TIME_BEG();
             lua_gc(L, LUA_GCSTEP, 100);
-            static_global::statistic()->add_lua_gc( get_ms_time() - beg );
+            static_global::statistic()->add_lua_gc( STAT_TIME_END );
         }
     }
 }

@@ -158,7 +158,8 @@ function Command_mgr:serialize_statistic( reset )
     self:raw_serialize_statistic( path,"ss_cmd:",self.ss_stat )
     self:raw_serialize_statistic( path,"css_cmd:",self.css_stat )
 
-    g_log_mgr:raw_file_printf( path,"%s","\n\n" )
+    g_log_mgr:raw_file_printf( 
+        path,"%s.%d end %s",g_app.srvname,g_app.srvindex,"\n\n" )
     if reset then
         self.cs_stat  = {}
         self.ss_stat  = {}

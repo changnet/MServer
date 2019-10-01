@@ -60,9 +60,9 @@ void statistic::reset_trafic()
 
 void statistic::remove_socket_traffic(uint32 conn_id)
 {
-    // 一个listen的sokcet，由于没有调用socket::start，是没发这里来的，但会调用stop
-    // 一个connect失败的socket，也是没调用socket::start，但会调用stop
-    // 目前暂时没法区分，也没必要加变量区分
+    // 一个listen的sokcet，由于没有调用socket::start，不在_socket_traffic
+    // 一个connect失败的socket，也是没调用socket::start
+    // 但它们会调用stop，会尝试从_socket_traffic中删除。目前暂时没法区分，也没必要区分
 
     // assert("socket traffic del statistic corruption",
     //     _socket_traffic.end() != _socket_traffic.find(conn_id));
@@ -94,4 +94,13 @@ void statistic::add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
 
     _total_traffic[type]._recv += val;
     _socket_traffic[conn_id]._recv += val;
+}
+
+void statistic::add_rpc_count(const char *cmd,size_t size,int64 msec)
+{
+
+}
+
+void statistic::add_pkt_count(int32 type,int32 cmd,size_t size,int64 msec)
+{
 }
