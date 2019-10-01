@@ -65,7 +65,7 @@ void lstatistic::dump_base_counter(
         const struct statistic::base_counter &bc = itr->second;
         lua_createtable( L,0,3 );
 
-        PUSH_STRING( "name",itr->first._raw_ctx );
+        PUSH_STRING( "name",itr->first.c_str() );
 
         PUSH_INTEGER( "max",bc._max );
 
@@ -262,10 +262,71 @@ void lstatistic::dump_socket( lua_State *L )
 #undef ST_T
 }
 
+int32 lstatistic::dump_pkt( lua_State *L )
+{
+    const statistic *stat = static_global::statistic();
+
+    lua_newtable( L );
+    for (int32 type = SPKT_CSPK;type < SPKT_MAXT;type ++)
+    {
+        int32 index = 1;
+        lua_newtable( L );
+        const statistic::pkt_counter_t &pkts = stat->_pkt_count[type];
+
+        statistic::pkt_counter_t::const_iterator itr = pkts.begin();
+        while ( itr != pkts.end() )
+        {
+            lua_newtable( L );
+            const statistic::pkt_counter &counter = itr->second;
+            PUSH_INTEGER( "cmd",itr->first );
+            PUSH_INTEGER( "max",counter._max );
+            PUSH_INTEGER( "min",counter._min );
+            PUSH_INTEGER( "msec",counter._msec );
+            PUSH_INTEGER( "size",counter._size );
+            PUSH_INTEGER( "count",counter._count );
+            PUSH_INTEGER( "max_size",counter._max_size );
+            PUSH_INTEGER( "min_size",counter._min_size );
+            PUSH_INTEGER( "avg",counter._msec / counter._count );
+            PUSH_INTEGER( "avg_size",counter._size / counter._count );
+
+            itr ++;
+            lua_rawseti( L,-2,index++ );
+        }
+
+        lua_rawseti( L,-2,type );
+    }
+
+    int32 index = 1;
+    lua_newtable( L );
+
+    statistic::rpc_counter_t::const_iterator itr = stat->_rpc_count.begin();
+    while ( itr != stat->_rpc_count.end() )
+    {
+        lua_newtable( L );
+        const statistic::pkt_counter &counter = itr->second;
+        PUSH_STRING ( "cmd",itr->first.c_str() );
+        PUSH_INTEGER( "max",counter._max );
+        PUSH_INTEGER( "min",counter._min );
+        PUSH_INTEGER( "msec",counter._msec );
+        PUSH_INTEGER( "size",counter._size );
+        PUSH_INTEGER( "count",counter._count );
+        PUSH_INTEGER( "max_size",counter._max_size );
+        PUSH_INTEGER( "min_size",counter._min_size );
+        PUSH_INTEGER( "avg",counter._msec / counter._count );
+        PUSH_INTEGER( "avg_size",counter._size / counter._count );
+
+        itr ++;
+        lua_rawseti( L,-2,index++ );
+    }
+
+    return 2;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 static const luaL_Reg statistic_lib[] =
 {
     {"dump", lstatistic::dump},
+    {"dump_pkt", lstatistic::dump_pkt},
     {NULL, NULL}
 };
 

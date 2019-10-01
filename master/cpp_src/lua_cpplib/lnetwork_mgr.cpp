@@ -920,6 +920,7 @@ int32 lnetwork_mgr::send_ctrl_packet ( lua_State *L )
  */
 int32 lnetwork_mgr::srv_multicast( lua_State *L )
 {
+    STAT_TIME_BEG();
     if ( !lua_istable( L,1 ) )
     {
         return luaL_error( L,
@@ -995,6 +996,9 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
     }
 
     encoder->finalize();
+
+    PKT_STAT_ADD( SPKT_SSPK, 
+        cmd, int32(len + sizeof(struct s2s_header)),STAT_TIME_END() );
     return 0;
 }
 
@@ -1003,6 +1007,7 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
  */
 int32 lnetwork_mgr::clt_multicast( lua_State *L )
 {
+    STAT_TIME_BEG();
     if ( !lua_istable( L,1 ) )
     {
         return luaL_error( L,
@@ -1078,6 +1083,10 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
     }
 
     encoder->finalize();
+
+    PKT_STAT_ADD( SPKT_SCPK, 
+        cmd, int32(len + sizeof(struct s2c_header)),STAT_TIME_END() );
+
     return 0;
 }
 

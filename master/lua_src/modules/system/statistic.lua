@@ -15,10 +15,15 @@ function Statistic.collect()
 
     total_stat.lua_obj = oo.stat()
 
-    local cpp_stat = statistic.dump();
+    local cpp_stat = statistic.dump()
+    local pkt_stat,rpc_stat = statistic.dump_pkt()
 
     table.merge(cpp_stat,total_stat)
-    vd(total_stat)
+    table.merge(pkt_stat,total_stat)
+    table.merge(rpc_stat,total_stat)
+    -- vd(total_stat)
+    vd(pkt_stat)
+    vd(rpc_stat)
 
     -- rpc调用暂时不加到这里，通过 @rpc_perf 1 指令查看
 

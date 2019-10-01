@@ -19,6 +19,7 @@ ws_stream_packet::ws_stream_packet( class socket *sk ) : websocket_packet( sk )
  */
 int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
 {
+    STAT_TIME_BEG();
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
@@ -55,6 +56,9 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
     }
 
     encoder->finalize();
+
+    PKT_STAT_ADD( SPKT_SCPK, 
+        cmd, int32(size + sizeof(struct s2c_header)),STAT_TIME_END() );
     return 0;
 }
 
@@ -64,6 +68,7 @@ int32 ws_stream_packet::pack_clt( lua_State *L,int32 index )
  */
 int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
 {
+    STAT_TIME_BEG();
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return luaL_error( L,"websocket not upgrade" );
 
@@ -119,6 +124,8 @@ int32 ws_stream_packet::pack_srv( lua_State *L,int32 index )
     encoder->finalize();
     send.add_used_offset( len );
     _socket->pending_send();
+
+    PKT_STAT_ADD( SPKT_CSPK, cmd, int32(c2sh._length),STAT_TIME_END() );
 
     return 0;
 }

@@ -96,11 +96,38 @@ void statistic::add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
     _socket_traffic[conn_id]._recv += val;
 }
 
-void statistic::add_rpc_count(const char *cmd,size_t size,int64 msec)
+void statistic::add_rpc_count(const char *cmd,int32 size,int64 msec)
 {
+    if (!cmd)
+    {
+        ERROR("rpc cmd not found");
+        return;
+    }
 
+    pkt_counter &pkt = _rpc_count[cmd];
+    pkt._size  += size;
+    pkt._msec  += msec;
+    pkt._count += 1;
+
+    if (msec > pkt._max) pkt._max = msec;
+    if (-1 == pkt._min || msec < pkt._min) pkt._min = msec;
+
+    if (size > pkt._max_size) pkt._max_size = size;
+    if (-1 == pkt._min_size || size < pkt._min_size) pkt._min_size = size;
 }
 
-void statistic::add_pkt_count(int32 type,int32 cmd,size_t size,int64 msec)
+void statistic::add_pkt_count(int32 type,int32 cmd,int32 size,int64 msec)
 {
+    assert("cmd type error",type > SPKT_NONE && type < SPKT_MAXT);
+
+    pkt_counter &pkt = _pkt_count[type][cmd];
+    pkt._size  += size;
+    pkt._msec  += msec;
+    pkt._count += 1;
+
+    if (msec > pkt._max) pkt._max = msec;
+    if (-1 == pkt._min || msec < pkt._min) pkt._min = msec;
+
+    if (size > pkt._max_size) pkt._max_size = size;
+    if (-1 == pkt._min_size || size < pkt._min_size) pkt._min_size = size;
 }

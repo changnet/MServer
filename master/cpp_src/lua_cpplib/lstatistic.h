@@ -7,6 +7,7 @@ class lstatistic
 {
 public:
     static int32 dump( lua_State *L );
+    static int32 dump_pkt( lua_State *L );
 private:
     static void dump_lua_gc  ( lua_State *L );
     static void dump_thread  ( lua_State *L );

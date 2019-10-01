@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../net/socket.h"
+#include "../net/net_header.h"
 
 #define G_STAT    static_global::statistic()
 
@@ -22,9 +23,9 @@
 #define C_RECV_TRAFFIC_ADD(conn_id,type,val) \
     do{G_STAT->add_recv_traffic(conn_id,type,val);}while(0)
 
-#define PKT_ADD(type,cmd,size,msec) \
+#define PKT_STAT_ADD(type,cmd,size,msec) \
     do{G_STAT->add_pkt_count(type,cmd,size,msec);}while(0)
-#define RPC_ADD(cmd,size,msec) \
+#define RPC_STAT_ADD(cmd,size,msec) \
     do{G_STAT->add_rpc_count(cmd,size,msec);}while(0)
 
 // 统计对象数量、内存、socket流量等...
@@ -71,14 +72,19 @@ public:
         int64 _msec;
         int64 _size;
         int64 _count;
+        int32 _max_size;
+        int32 _min_size;
+
         pkt_counter () { reset(); }
-        inline reset() 
+        inline void reset() 
         {
             _max   = 0;
-            _min   = 0;
+            _min   = -1;
             _msec  = 0;
             _size  = 0;
             _count = 0;
+            _max_size = 0;
+            _min_size = -1;
         }
     };
 
@@ -124,8 +130,8 @@ public:
     void add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val);
     void add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val);
 
-    void add_rpc_count(const char *cmd,size_t size,int64 msec);
-    void add_pkt_count(int32 type,int32 cmd,size_t size,int64 msec);
+    void add_rpc_count(const char *cmd,int32 size,int64 msec);
+    void add_pkt_count(int32 type,int32 cmd,int32 size,int64 msec);
 
     inline void reset_lua_gc() { _lua_gc.reset(); }
 
@@ -140,11 +146,12 @@ public:
     {
         return _socket_traffic;
     }
-private:
+public:
     time_counter _lua_gc; // lua gc时间统计
     base_counter_t _c_obj; // c对象计数器
     base_counter_t _c_lua_obj; // 从c push到lua对象
 
+    rpc_counter_t _rpc_count;
     pkt_counter_t _pkt_count[SPKT_MAXT]; // 发包时间、数量、大小统计
     socket_traffic_t _socket_traffic; // 各个socket单独流量统计
     traffic_counter _total_traffic[socket::CNT_MAX]; // socket总流量统计
