@@ -118,7 +118,7 @@ function Httpd:do_return(conn,success,code,ctx)
         conn:send_pkt( self:format_200( code,ctx ) )
     end
 
-    return self:conn_close( conn )
+    return self:conn_close( conn,true )
 end
 
 local httpd = Httpd()

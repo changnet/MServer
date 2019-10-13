@@ -15,9 +15,9 @@ CXX = g++ #clang++
 # (新版本-lmysqlclient_r与-lmysqlclient是一样的)
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 # https://gcc.gnu.org/projects/cxx-status.html
-CFLAGS = -std=c++11 -pipe -Wall -g3 -pedantic #-s
+CFLAGS = -std=c++11 -pipe -Wall -pedantic #-s
 LFLAGS = -rdynamic
-OPTIMIZE = -O0 # -O2
+OPTIMIZE = -g3 -O0 # -g0 -O2
 
 #include path
 INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \

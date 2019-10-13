@@ -46,11 +46,26 @@ void socket::stop( bool flush )
         static_global::lua_ev()->remove_pending( _pending );
         _pending = 0;
 
-        // 如果是出错，则不发送剩余数据，如果是脚本上层正常关闭，则发送
+        // 正常情况下，服务器不会主动关闭与游戏客户端的连接
+        // 如果出错或者关服才会主动关闭，这时不会flush数据的
+        // 一些特殊的连接，比如服务器之间的连接，或者服务器与后端的连接
+        // 关闭的时候必须发送完所有数据，这种情况比较少，直接循环发送就可以了
         if ( flush )
         {
+            int32 code = 0;
             int32 byte = 0;
-            _io->send( byte );
+
+            int32 try_times = 0;
+            do
+            {
+                code = _io->send( byte );
+
+                try_times ++;
+                if (try_times > 32)
+                {
+                    ERROR("socket flush data try too many times:%d",try_times);
+                }
+            } while ( 2 == code && try_times < 512 );
         }
     }
 
