@@ -2,7 +2,6 @@
 
 #include <lflatbuffers.hpp>
 #include "../net_header.h"
-#include "../../global/assert.h"
 
 flatbuffers_codec::flatbuffers_codec()
 {

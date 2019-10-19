@@ -9,4 +9,9 @@
    : __assert_fail (__STRING((why,expr)), __FILE__, __LINE__, __ASSERT_FUNCTION))
 
 #define __EXPAND(_1, _2, NAME, ...) NAME
-#define ASSERT(...) __EXPAND(__VA_ARGS__, __ASSERT2, __ASSERT1)(__VA_ARGS__)
+// _UNUSED avoid warning
+// Warning: ISO C++11 requires at least one argument for the "..." in a variadic macro
+
+// ASSERT(false) same as assert(false)
+// ASSERT(false, "something wrong") if you prefer add some message to it
+#define ASSERT(...) __EXPAND(__VA_ARGS__, __ASSERT2, __ASSERT1, _UNUSED)(__VA_ARGS__)
