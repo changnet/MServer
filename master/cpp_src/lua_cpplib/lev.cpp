@@ -38,7 +38,7 @@ int32 lev::exit( lua_State *L )
 
 int32 lev::backend( lua_State *L )
 {
-    assert( "backend uninit",backend_fd >= 0 );
+    ASSERT( backend_fd >= 0, "backend uninit" );
 
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 停止主动gc,用自己的策略控制gc */
@@ -189,7 +189,7 @@ int32 lev::pending_send( class socket *s  )
 
 void lev::remove_pending( int32 pending )
 {
-    assert( "illegal remove pending" ,pending > 0 && pending < ansendingmax );
+    ASSERT( pending > 0 && pending < ansendingmax, "illegal remove pending" );
 
     ansendings[pending] = NULL;
 }
@@ -214,7 +214,7 @@ void lev::invoke_sending()
             continue;
         }
 
-        assert( "pending index not match",pending == skt->get_pending() );
+        ASSERT( pending == skt->get_pending(), "pending index not match" );
 
         /* 处理发送,
          * return: < 0 error,= 0 success,> 0 bytes still need to be send
@@ -228,13 +228,13 @@ void lev::invoke_sending()
             ansendings[pos]  = skt;
             skt->set_pending( pos );
         }
-        assert( "new pending index not match",pos == skt->get_pending());
+        ASSERT( pos == skt->get_pending(), "new pending index not match" );
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 
     ansendingcnt = pos;
-    assert( "invoke sending sending counter fail",
-        ansendingcnt >= 0 && ansendingcnt < ansendingmax );
+    ASSERT( ansendingcnt >= 0 && ansendingcnt < ansendingmax,
+                        "invoke sending sending counter fail" );
 }
 
 void lev::invoke_app_ev (int64 ms_now)

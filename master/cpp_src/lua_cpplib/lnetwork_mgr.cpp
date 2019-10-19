@@ -46,7 +46,7 @@ void lnetwork_mgr::invoke_delete()
         }
 
         const class socket *sk = sk_itr->second;
-        assert( "delete socket illegal",NULL != sk && sk->fd() <= 0 );
+        ASSERT( NULL != sk && sk->fd() <= 0, "delete socket illegal" );
 
         delete sk;
         _socket_map.erase( sk_itr );

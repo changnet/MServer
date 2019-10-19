@@ -131,7 +131,7 @@ function Bag:add_to_new_grid( item )
     for idx = 1,max_grid do
         if not self.grid[idx] then
             local raw_count = math.min( count,conf.pile )
-            assert( "item pile conf error",raw_count > 0 )
+            ASSERT( raw_count > 0, "item pile conf error" )
 
             local new_item = item
             -- 一个格子装不完，需要复制一份

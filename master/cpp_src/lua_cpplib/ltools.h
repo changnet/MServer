@@ -47,7 +47,7 @@ static inline int32 lua_isarray( lua_State *L,int32 index,int32 *array,
     int32 *max_index )
 {
     double key = 0;
-    assert( "lua_isarray empty input argument",array && max_index );
+    ASSERT( array && max_index, "lua_isarray empty input argument" );
 
     /* set default value */
     *array = 0;

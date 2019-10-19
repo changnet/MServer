@@ -186,7 +186,7 @@ end
 
 -- 设置客户端连接
 function Network_mgr:bind_role( pid,clt_conn )
-    assert( "player already have a conn",nil == self.clt[pid] )
+    ASSERT( nil == self.clt[pid], "player already have a conn" )
 
     clt_conn:bind_role( pid )
     self.clt[pid] = clt_conn

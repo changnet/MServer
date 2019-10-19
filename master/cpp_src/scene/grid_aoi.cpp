@@ -434,7 +434,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             }
         }
 
-        assert("rectangle difference fail",iy <= idy);
+        ASSERT(iy <= idy, "rectangle difference fail");
         entity_exit_range(ctx,ix,iy,ix,idy,list_out);
     }
 
@@ -460,7 +460,7 @@ int32 grid_aoi::update_entity(entity_id_t id,
             }
         }
 
-        assert("rectangle difference fail",iy <= idy);
+        ASSERT(iy <= idy, "rectangle difference fail");
         entity_enter_range(ctx,ix,iy,ix,idy,list_in);
     }
 

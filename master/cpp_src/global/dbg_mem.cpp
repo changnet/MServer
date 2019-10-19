@@ -25,8 +25,10 @@ void global_mem_counter(int32 &counter,int32 &counters)
 static pthread_mutex_t *counter_mutex()
 {
     static pthread_mutex_t _mutex;
-    assert( "global memory counter mutex error",
-        0 == pthread_mutex_init( &_mutex,NULL ) );
+    ASSERT(
+        0 == pthread_mutex_init( &_mutex,NULL ),
+        "global memory counter mutex error" );
+
     return &_mutex;
 }
 
@@ -44,7 +46,7 @@ class global_static
 public:
     global_static() 
     {
-        assert( "memory counter mutex is NULL",!_mem_mutex_ );
+        ASSERT( !_mem_mutex_, "memory counter mutex is NULL" );
         _mem_mutex_ = counter_mutex();
     }
 
@@ -56,7 +58,7 @@ const static global_static gs;
 
 void *operator new(size_t size) EXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     ++g_counter;
@@ -67,7 +69,7 @@ void *operator new(size_t size) EXCEPT
 
 void *operator new(size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     ++g_counter;
@@ -78,7 +80,7 @@ void *operator new(size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
 
 void operator delete(void* ptr) NOEXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     --g_counter;
@@ -89,7 +91,7 @@ void operator delete(void* ptr) NOEXCEPT
 
 void operator delete(void* ptr,const std::nothrow_t& nothrow_value) NOEXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     --g_counter;
@@ -100,7 +102,7 @@ void operator delete(void* ptr,const std::nothrow_t& nothrow_value) NOEXCEPT
 
 void *operator new[](size_t size) EXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     ++g_counters;
@@ -110,7 +112,7 @@ void *operator new[](size_t size) EXCEPT
 
 void *operator new[](size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     ++g_counters;
@@ -120,7 +122,7 @@ void *operator new[](size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
 
 void operator delete[](void* ptr) NOEXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     --g_counters;
@@ -130,7 +132,7 @@ void operator delete[](void* ptr) NOEXCEPT
 
 void operator delete[](void* ptr,const std::nothrow_t& nothrow_value) NOEXCEPT
 {
-    assert( "memory counter mutex is NULL",_mem_mutex_ );
+    ASSERT( _mem_mutex_, "memory counter mutex is NULL" );
 
     pthread_mutex_lock( _mem_mutex_ );
     --g_counters;

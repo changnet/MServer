@@ -17,7 +17,7 @@ io::~io()
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32 io::recv( int32 &byte )
 {
-    assert( "io recv fd invalid",_fd > 0 );
+    ASSERT( _fd > 0, "io recv fd invalid" );
 
     byte = 0;
     if ( !_recv->reserved() ) return -1; /* no more memory */
@@ -47,11 +47,11 @@ int32 io::recv( int32 &byte )
 // * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32 io::send( int32 &byte )
 {
-    assert( "io send fd invalid",_fd > 0 );
+    ASSERT( _fd > 0, "io send fd invalid" );
 
     byte = 0;
     size_t bytes = _send->get_used_size();
-    assert( "io send without data",bytes > 0 );
+    ASSERT( bytes > 0, "io send without data" );
 
     int32 len = ::write( _fd,_send->get_used_ctx(),bytes );
 

@@ -55,7 +55,7 @@ ev::~ev()
 
 int32 ev::run()
 {
-    assert( "backend uninit",backend_fd >= 0 );
+    ASSERT( backend_fd >= 0, "backend uninit" );
 
     /* 加载脚本时，可能会卡比较久，因此必须time_update
      * 必须先调用fd_reify、timers_reify才进入backend_poll，否则因为没有初始化fd、timer
@@ -114,7 +114,7 @@ int32 ev::io_start( ev_io *w )
     ANFD *anfd = anfds + fd;
 
     /* 与原libev不同，现在同一个fd只能有一个watcher */
-    assert( "duplicate fd",!(anfd->w) );
+    ASSERT( !(anfd->w), "duplicate fd" );
 
     anfd->w = w;
     anfd->reify = anfd->emask ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
@@ -131,8 +131,8 @@ int32 ev::io_stop( ev_io *w )
     if ( expect_false(!w->is_active()) ) return 0;
 
     int32 fd = w->fd;
-    assert( "illegal fd (must stay "
-        "constant after start!)", fd >= 0 && uint32(fd) < anfdmax );
+    ASSERT( fd >= 0 && uint32(fd) < anfdmax,
+        "illegal fd (must stay constant after start!)");
 
     ANFD *anfd = anfds + fd;
     anfd->w = 0;
@@ -203,13 +203,13 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
          * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll自动删除，这时特殊处理
          */
         if ( EPOLL_CTL_DEL == reify ) return;
-        assert ( "ev::backend_modify EBADF",false );
+        ASSERT ( false, "ev::backend_modify EBADF" );
         break;
     case EEXIST :
         ERROR( "ev::backend_modify EEXIST" );
         break;
     case EINVAL :
-        assert ( "ev::backend_modify EINVAL",false );
+        ASSERT ( false, "ev::backend_modify EINVAL" );
         break;
     case ENOENT :
         /* ENOENT：fd不属于这个backend_fd管理的fd
@@ -219,18 +219,18 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
          */
         if ( EPOLL_CTL_DEL == reify ) return;
         if ( expect_true (!epoll_ctl(backend_fd,EPOLL_CTL_ADD,fd,&ev)) ) return;
-        assert ( "ev::backend_modify ENOENT",false );
+        ASSERT ( false, "ev::backend_modify ENOENT" );
         break;
     case ENOMEM :
-        assert ( "ev::backend_modify ENOMEM",false );
+        ASSERT ( false, "ev::backend_modify ENOMEM" );
         break;
     case ENOSPC :
-        assert ( "ev::backend_modify ENOSPC",false );
+        ASSERT ( false, "ev::backend_modify ENOSPC" );
         break;
     case EPERM  :
         // 一个fd被epoll自动删除后，可能会被分配到其他用处，比如打开了个文件
         if ( EPOLL_CTL_DEL == reify ) return;
-        assert ( "ev::backend_modify EPERM",false );
+        ASSERT ( false, "ev::backend_modify EPERM" );
         break;
     default     :
         ERROR( "unknow ev error" );
@@ -354,7 +354,7 @@ void ev::backend_poll( ev_tstamp timeout )
         int got  = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
                  | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
 
-        assert( "catch not interested event",got & anfds[fd].emask );
+        ASSERT( got & anfds[fd].emask, "catch not interested event" );
 
         fd_event ( fd, got );
     }
@@ -363,7 +363,7 @@ void ev::backend_poll( ev_tstamp timeout )
 void ev::fd_event( int32 fd,int32 revents )
 {
     ANFD *anfd = anfds + fd;
-    assert( "fd event no watcher",anfd->w );
+    ASSERT( anfd->w, "fd event no watcher" );
     feed_event( anfd->w,revents );
 }
 
@@ -412,7 +412,7 @@ void ev::timers_reify()
     {
         ev_timer *w = timers [HEAP0];
 
-        assert( "libev: invalid timer detected", w->is_active () );
+        ASSERT( w->is_active (), "libev: invalid timer detected" );
 
         /* first reschedule or stop timer */
         if (w->repeat)
@@ -430,7 +430,7 @@ void ev::timers_reify()
                 while (w->at < mn_now) { w->at += w->repeat; }
             }
 
-            assert( "libev: negative ev_timer repeat value", w->repeat > 0. );
+            ASSERT( w->repeat > 0., "libev: negative ev_timer repeat value" );
 
             down_heap(timers, timercnt, HEAP0);
         }
@@ -447,7 +447,7 @@ int32 ev::timer_start( ev_timer *w )
 {
     w->at += mn_now;
 
-    assert ( "libev: negative repeat value", w->repeat >= 0. );
+    ASSERT( w->repeat >= 0., "libev: negative repeat value" );
 
     ++timercnt;
     int32 active = timercnt + HEAP0 - 1;
@@ -455,7 +455,7 @@ int32 ev::timer_start( ev_timer *w )
     timers [active] = w;
     up_heap( timers, active );
 
-    assert ( "libev: internal timer heap corruption", timers [w->active] == w );
+    ASSERT( timers [w->active] == w, "libev: internal timer heap corruption" );
 
     return active;
 }
@@ -469,7 +469,7 @@ int32 ev::timer_stop( ev_timer *w )
     {
         int32 active = w->active;
 
-        assert( "libev: internal timer heap corruption", timers [active] == w );
+        ASSERT( timers [active] == w, "libev: internal timer heap corruption" );
 
         --timercnt;
 

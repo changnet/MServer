@@ -128,7 +128,7 @@ void lmongo::notification( notify_t notify )
     }
     else
     {
-        assert( "unhandle mongo event",false );
+        ASSERT( false, "unhandle mongo event" );
     }
 }
 
@@ -352,11 +352,11 @@ void lmongo::invoke_command()
 
         if ( ok )
         {
-            assert( "mongo result check", 0 == res->_error.code );
+            ASSERT( 0 == res->_error.code, "mongo result check" );
         }
         else
         {
-            assert( "mongo result check", 0 != res->_error.code );
+            ASSERT( 0 != res->_error.code, "mongo result check" );
         }
 
         res->_qid  = query->_qid;

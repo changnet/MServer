@@ -38,7 +38,7 @@ lstate::lstate()
 
 lstate::~lstate()
 {
-    assert( "lua stack not clean at program exit",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L), "lua stack not clean at program exit" );
 
     /* Destroys all objects in the given Lua state (calling the corresponding
      * garbage-collection metamethods, if any) and frees all dynamic memory used
@@ -86,7 +86,7 @@ void lstate::open_cpp()
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */
-    assert( "lua stack not clean after init", 0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L), "lua stack not clean after init" );
 }
 
 int32 luaopen_ev( lua_State *L )

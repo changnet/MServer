@@ -107,11 +107,11 @@ public:
 
     void start()
     {
-        assert( "ev_io::start with NULL loop",loop );
-        assert( "ev_io::start without event",events );
-        assert( "ev_io::start without callback",cb );
-        assert( "ev_io::start with negative fd",fd >= 0 );
-        assert( "ev_io::start a active watcher",!active );
+        ASSERT( loop, "ev_io::start with NULL loop" );
+        ASSERT( events, "ev_io::start without event" );
+        ASSERT( cb, "ev_io::start without callback" );
+        ASSERT( fd >= 0, "ev_io::start with negative fd" );
+        ASSERT( !active, "ev_io::start a active watcher" );
 
         active = loop->io_start( this );
     }
@@ -180,11 +180,11 @@ public:
 
     void start()
     {
-        assert( "ev_timer::start with NULL loop",loop );
-        assert( "ev_timer::start with negative after",at >= 0. );
-        assert( "ev_timer::start with negative repeat",repeat >= 0. );
-        assert( "ev_timer::start without callback",cb );
-        assert( "start a active timer",!active );
+        ASSERT( loop, "ev_timer::start with NULL loop" );
+        ASSERT( at >= 0., "ev_timer::start with negative after" );
+        ASSERT( repeat >= 0., "ev_timer::start with negative repeat" );
+        ASSERT( cb, "ev_timer::start without callback" );
+        ASSERT( !active, "start a active timer" );
 
         loop->timer_start( this );
     }

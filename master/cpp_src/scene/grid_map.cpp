@@ -27,7 +27,7 @@ bool grid_map::load_file(const char *path)
 // 设置地图信息
 bool grid_map::set( int32 id,uint16 width,uint16 height )
 {
-    assert("grid map already have data", NULL == _grid_set);
+    ASSERT(NULL == _grid_set, "grid map already have data");
 
     if ( MAX_MAP_GRID < width || MAX_MAP_GRID < height ) return false;
 

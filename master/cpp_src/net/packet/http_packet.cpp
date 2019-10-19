@@ -8,7 +8,7 @@
 // 开始解析报文，第一个回调的函数，在这里初始化数据
 int32 on_message_begin( http_parser *parser )
 {
-    assert( "on_url no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_url no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
@@ -21,7 +21,7 @@ int32 on_message_begin( http_parser *parser )
 // 解析到url报文，可能只是一部分
 int32 on_url( http_parser *parser, const char *at, size_t length )
 {
-    assert( "on_url no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_url no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
@@ -41,7 +41,7 @@ int32 on_status( http_parser *parser, const char *at, size_t length )
 
 int32 on_header_field( http_parser *parser, const char *at, size_t length )
 {
-    assert( "on_header_field no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_header_field no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
@@ -52,7 +52,7 @@ int32 on_header_field( http_parser *parser, const char *at, size_t length )
 
 int32 on_header_value( http_parser *parser, const char *at, size_t length )
 {
-    assert( "on_header_value no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_header_value no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
@@ -63,7 +63,7 @@ int32 on_header_value( http_parser *parser, const char *at, size_t length )
 
 int32 on_headers_complete( http_parser *parser )
 {
-    assert( "on_header_value no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_header_value no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
@@ -74,7 +74,7 @@ int32 on_headers_complete( http_parser *parser )
 
 int32 on_body( http_parser *parser, const char *at, size_t length )
 {
-    assert( "on_body no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_body no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>(parser->data);
@@ -85,7 +85,7 @@ int32 on_body( http_parser *parser, const char *at, size_t length )
 
 int32 on_message_complete( http_parser *parser )
 {
-    assert( "on_message_complete no parser",parser && (parser->data) );
+    ASSERT( parser && (parser->data), "on_message_complete no parser" );
 
     class http_packet * http_packet = 
         static_cast<class http_packet *>( parser->data );
@@ -191,7 +191,7 @@ int32 http_packet::on_message_complete( bool upgrade )
 {
     UNUSED( upgrade );
     static lua_State *L = static_global::state();
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
     lua_pushcfunction( L,traceback );
     lua_getglobal    ( L,"command_new" );

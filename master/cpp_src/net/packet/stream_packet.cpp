@@ -65,7 +65,7 @@ void stream_packet::sc_command( const struct s2c_header *header )
     static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( header->_cmd );
     if ( !cmd_cfg )
     {
@@ -131,7 +131,7 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
     static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
     const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( cmd );
     if ( !cmd_cfg )
@@ -238,7 +238,7 @@ void stream_packet::ss_command(
     const s2s_header *header,const cmd_cfg_t *cmd_cfg )
 {
     static lua_State *L = static_global::state();
-    assert( "lua stack dirty",0 == lua_gettop( L ) );
+    ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
     int32 size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
@@ -282,7 +282,7 @@ void stream_packet::css_command( const s2s_header *header )
     static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
     const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( header->_cmd );
     if ( !cmd_cfg )
@@ -356,7 +356,7 @@ void stream_packet::ssc_command( const s2s_header *header )
 void stream_packet::rpc_command( const s2s_header *header )
 {
     static lua_State *L = static_global::state();
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
     int32 size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
@@ -401,7 +401,7 @@ void stream_packet::rpc_command( const s2s_header *header )
 void stream_packet::rpc_return( const s2s_header *header )
 {
     static lua_State *L = static_global::state();
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
     int32 size = PACKET_BUFFER_LEN( header );
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
@@ -889,7 +889,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     }
 
     static lua_State *L = static_global::state();
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
     // 根据参数从lua获取对应的玩家id
     lua_pushcfunction( L,traceback );

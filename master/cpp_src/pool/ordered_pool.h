@@ -17,8 +17,8 @@ public:
     explicit ordered_pool( const char *name )
         : pool(name),anpts(NULL),anptmax(0),block_list(NULL)
     {
-        assert( "ordered size less "
-            "then sizeof(void *)",ordered_size >= sizeof(void *) );
+        ASSERT( ordered_size >= sizeof(void *),
+            "ordered size less then sizeof(void *)" );
     }
 
     ~ordered_pool() { clear(); };
@@ -28,7 +28,7 @@ public:
 
     void ordered_free( char * const ptr,uint32 n )
     {
-        assert( "illegal ordered free",anptmax >= n && ptr );
+        ASSERT( anptmax >= n && ptr, "illegal ordered free" );
 
         // 把ptr前几个字节指向anpts[n],然后设置的起点指针为ptr.
         // 相当于把ptr放到anpts[n]这个链表的首部
@@ -43,7 +43,7 @@ public:
      */
     char *ordered_malloc( uint32 n,uint32 chunk_size )
     {
-        assert( "ordered_malloc size <= 0",n > 0 && chunk_size > 0 );
+        ASSERT( n > 0 && chunk_size > 0, "ordered_malloc size <= 0" );
         array_resize( NODE,anpts,anptmax,n+1,array_zero );
         void *ptr = anpts[n];
         if ( ptr )
@@ -57,7 +57,7 @@ public:
          * 不用指数增长方式因为内存分配过大可能会失败
          */
         uint32 partition_sz = n*ordered_size;
-        assert( "buffer overflow",UINT_MAX/partition_sz > chunk_size );
+        ASSERT( UINT_MAX/partition_sz > chunk_size, "buffer overflow" );
 
         uint64 block_size = sizeof(void *) + chunk_size*partition_sz;
         char *block = new char[block_size];
@@ -118,7 +118,7 @@ private:
     inline void *segregate(
         void * const ptr,uint32 partition_sz,uint32 npartition,uint32 n )
     {
-        assert( "ordered_pool array over border",anptmax > n );
+        ASSERT( anptmax > n, "ordered_pool array over border" );
         /* in case ordered_malloc new only one chunk */
         if ( npartition <= 0 ) return anpts[n];
 

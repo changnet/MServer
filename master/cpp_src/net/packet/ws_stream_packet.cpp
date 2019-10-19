@@ -173,7 +173,7 @@ int32 ws_stream_packet::sc_command()
     static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
     uint32 data_size = 0;
     const char *data_ctx = _body.all_to_continuous_ctx( data_size );
@@ -233,7 +233,7 @@ int32 ws_stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
     static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    assert( "lua stack dirty",0 == lua_gettop(L) );
+    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
     const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( cmd );
     if ( !cmd_cfg )
     {

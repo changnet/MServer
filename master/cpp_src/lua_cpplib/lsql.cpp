@@ -88,7 +88,7 @@ void lsql::invoke_sql( bool is_return )
     while ( ( query = pop_query() ) )
     {
         const char *stmt = query->_stmt;
-        assert( "empty sql statement",stmt && query->_size > 0 );
+        ASSERT( stmt && query->_size > 0, "empty sql statement" );
 
         struct sql_res *res = NULL;
         if ( expect_false( _sql.query( stmt,query->_size ) ) )
@@ -179,7 +179,7 @@ void lsql::notification( notify_t notify )
     }
     else
     {
-        assert( "unknow sql event",false );
+        ASSERT( false, "unknow sql event" );
     }
 }
 
@@ -273,9 +273,9 @@ int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
 {
     if ( !res ) return 0;
 
-    assert( "sql result over boundary",
+    ASSERT(
         res->_num_cols == res->_fields.size()
-        &&res->_num_rows == res->_rows.size() );
+        &&res->_num_rows == res->_rows.size(), "sql result over boundary" );
 
     lua_createtable( L,res->_num_rows,0 ); /* 创建数组，元素个数为num_rows */
 
@@ -289,8 +289,8 @@ int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
         const std::vector<sql_col> &cols = rows[row]._cols;
         for ( uint32 col = 0;col < res->_num_cols;col ++ )
         {
-            assert( "sql result column "
-                "over boundary",res->_num_cols == cols.size() );
+            ASSERT( res->_num_cols == cols.size(),
+                "sql result column over boundary" );
 
             if ( !cols[col]._value ) continue;/* 值为NULL */
 

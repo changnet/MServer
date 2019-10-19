@@ -8,7 +8,7 @@
 void sql::library_init()
 {
     int32 ecode = mysql_library_init( 0,NULL,NULL );
-    assert( "mysql library init fail", 0 == ecode );
+    ASSERT( 0 == ecode, "mysql library init fail" );
 }
 
 /* 释放mysql库，仅在程序结束时调用。如果不介意内存，可以不调用.
@@ -34,7 +34,7 @@ sql::sql()
 
 sql::~sql()
 {
-    assert( "sql not clean",NULL == _conn );
+    ASSERT( NULL == _conn , "sql not clean");
 }
 
 void sql::set( const char *host,const int32 port,
@@ -51,7 +51,7 @@ void sql::set( const char *host,const int32 port,
 /* 连接数据库 */
 int32 sql::connect()
 {
-    assert( "mysql connection not clean",NULL == _conn );
+    ASSERT( NULL == _conn, "mysql connection not clean" );
 
     _conn = mysql_init( NULL );
     if ( !_conn )
@@ -118,7 +118,7 @@ int32 sql::raw_connect()
 
 void sql::disconnect()
 {
-    assert( "try to disconnect a invalid mysql connection",_conn );
+    ASSERT( _conn, "try to disconnect a invalid mysql connection" );
     if ( !_conn ) return;
 
     mysql_close( _conn );
@@ -127,7 +127,7 @@ void sql::disconnect()
 
 int32 sql::ping()
 {
-    assert( "try to ping a invalid mysql connection",_conn );
+    ASSERT( _conn, "try to ping a invalid mysql connection" );
     if ( !_conn )
     {
         ERROR( "mysql ping invalid connection" );
@@ -160,13 +160,13 @@ int32 sql::ping()
 
 const char *sql::error()
 {
-    assert( "try to get error from a invalid mysql connection",_conn );
+    ASSERT( _conn, "try to get error from a invalid mysql connection" );
     return mysql_error( _conn );
 }
 
 int32 sql::query( const char *stmt,size_t size )
 {
-    assert( "sql query,connection not valid",_conn );
+    ASSERT( _conn, "sql query,connection not valid" );
 
     /* Client error message numbers are listed in the MySQL errmsg.h header
      * file. Server error message numbers are listed in mysqld_error.h
@@ -198,7 +198,7 @@ int32 sql::query( const char *stmt,size_t size )
 
 int32 sql::result( struct sql_res **res )
 {
-    assert( "sql result,connection not valid",_conn );
+    ASSERT( _conn, "sql result,connection not valid" );
 
     /* mysql_store_result() returns a null pointer if the statement did not
      * return a result set (for example, if it was an INSERT statement).
@@ -220,7 +220,7 @@ int32 sql::result( struct sql_res **res )
         }
 
         uint32 num_fields = mysql_num_fields( result );
-        assert( "mysql result field count zero",num_fields > 0 );
+        ASSERT( num_fields > 0, "mysql result field count zero" );
 
         /* 注意使用resize来避免内存重新分配以及push_back产生的拷贝消耗 */
         *res = new sql_res();
@@ -233,7 +233,7 @@ int32 sql::result( struct sql_res **res )
         MYSQL_FIELD *field;
         while( (field = mysql_fetch_field( result )) )
         {
-            assert( "fetch field more than field count",index < num_fields );
+            ASSERT( index < num_fields, "fetch field more than field count" );
             (*res)->_fields[index]._type = field->type;
             snprintf(
                 (*res)->_fields[index]._name,SQL_FIELD_LEN,"%s",field->name );
@@ -270,6 +270,6 @@ int32 sql::result( struct sql_res **res )
 
 uint32 sql::get_errno()
 {
-    assert( "sql get_errno,connection not valid",_conn );
+    ASSERT( _conn, "sql get_errno,connection not valid" );
     return mysql_errno( _conn );
 }

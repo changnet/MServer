@@ -40,7 +40,7 @@ ssl_io::ssl_io( int32 ctx_idx,class buffer *recv,class buffer *send )
  */
 int32 ssl_io::recv( int32 &byte )
 {
-    assert( "io recv fd invalid",_fd > 0 );
+    ASSERT( _fd > 0, "io recv fd invalid" );
 
     byte = 0;
     if ( !_handshake ) return do_handshake();
@@ -86,13 +86,13 @@ int32 ssl_io::recv( int32 &byte )
  */
 int32 ssl_io::send( int32 &byte )
 {
-    assert( "io send fd invalid",_fd > 0 );
+    ASSERT( _fd > 0, "io send fd invalid" );
 
     byte = 0;
     if ( !_handshake ) return do_handshake();
 
     size_t bytes = _send->get_used_size();
-    assert( "io send without data",bytes > 0 );
+    ASSERT( bytes > 0, "io send without data" );
 
     int32 len = SSL_write( X_SSL( _ssl_ctx ),_send->get_used_ctx(),bytes );
     if ( expect_true(len > 0) )

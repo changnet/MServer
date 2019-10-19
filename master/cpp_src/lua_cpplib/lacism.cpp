@@ -56,7 +56,7 @@ int32 lacism::on_match( int32 strnum, int32 textpos, MEMREF const *pattv )
 
 int32 lacism::on_replace( int32 strnum,int32 textpos,void *context )
 {
-    assert( "acism on_replace NULL context",context );
+    ASSERT( context, "acism on_replace NULL context" );
 
     class lacism *acism = static_cast<class lacism *>(context);
     return acism->do_replace( strnum,textpos );
@@ -64,7 +64,7 @@ int32 lacism::on_replace( int32 strnum,int32 textpos,void *context )
 
 int32 lacism::do_replace( int32 strnum,int32 textpos )
 {
-    assert( "acism do_replace buffer error",(size_t)textpos > _memrpl.text_pos );
+    ASSERT((size_t)textpos > _memrpl.text_pos, "acism do_replace buffer error");
 
     size_t pattv_len = _pattv[strnum].len;
     size_t str_len = textpos - pattv_len - _memrpl.text_pos;
@@ -73,7 +73,7 @@ int32 lacism::do_replace( int32 strnum,int32 textpos )
     /* 必须是<=，防止mem_len为0的情况 */
     if (  _memrpl.rpl_size <= mem_len ) _memrpl.reserved( mem_len );
 
-    assert( "acism do_replace buffer overflow",_memrpl.rpl_size >= mem_len );
+    ASSERT( _memrpl.rpl_size >= mem_len, "acism do_replace buffer overflow" );
 
     memcpy( _memrpl.rpl_text + _memrpl.rpl_len,
         _memrpl.text + _memrpl.text_pos,str_len);
@@ -227,9 +227,9 @@ int32 lacism::acism_slurp( const char *path )
      * Aho-Corasick-Interleaved_State_Matrix.pdf
      */
 
-    assert( "filter worlds file too large",s.st_size < 1024*1024*10 );
+    ASSERT( s.st_size < 1024*1024*10, "filter worlds file too large" );
 
-    assert( "patt.ptr not free",!_patt.ptr ); /* code hot fix ? */
+    ASSERT( !_patt.ptr, "patt.ptr not free" ); /* code hot fix ? */
 
     _patt.ptr = new char[s.st_size+1];
     _patt.len = s.st_size;

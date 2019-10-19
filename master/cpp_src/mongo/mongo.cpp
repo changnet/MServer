@@ -17,7 +17,7 @@ mongo::mongo()
 
 mongo::~mongo()
 {
-    assert( "mongo db not clean yet",NULL == _conn );
+    ASSERT( NULL == _conn, "mongo db not clean yet" );
 }
 
 void mongo::set( const char *ip,
@@ -33,7 +33,7 @@ void mongo::set( const char *ip,
 
 int32 mongo::connect()
 {
-    assert( "mongo duplicate connect",!_conn );
+    ASSERT( !_conn, "mongo duplicate connect" );
 
     char uri[PATH_MAX];
     /* "mongodb://user:password@localhost/?authSource=mydb" */
@@ -62,7 +62,7 @@ void mongo::disconnect()
 
 int32 mongo::ping()
 {
-    assert( "try to ping a inactive mongo",_conn );
+    ASSERT( _conn, "try to ping a inactive mongo" );
 
     bson_t ping;
     bson_init( &ping );
@@ -100,8 +100,8 @@ int32 mongo::ping()
 
 bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
 {
-    assert( "mongo count,inactivity connection",_conn );
-    assert( "mongo count,empty query",mq );
+    ASSERT( mq, "mongo count,empty query" );
+    ASSERT( _conn, "mongo count,inactivity connection" );
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
@@ -129,8 +129,8 @@ bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
 
 bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
 {
-    assert( "mongo find,inactivity connection",_conn );
-    assert( "mongo find,empty query",mq );
+    ASSERT( mq, "mongo find,empty query" );
+    ASSERT( _conn, "mongo find,inactivity connection" );
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
@@ -161,7 +161,7 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
         bool r = BSON_APPEND_DOCUMENT( doc,index_buff,sub_doc );
         index ++;
 
-        assert( "bson append document err",r );
+        ASSERT( r, "bson append document err" );
     }
 
     if ( mongoc_cursor_error( cursor,&res->_error ) )
@@ -185,13 +185,13 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
 bool mongo::find_and_modify (
     const struct mongo_query *mq,struct mongo_result *res )
 {
-    assert( "mongo find_and_modify,inactivity connection",_conn );
-    assert( "mongo find_and_modify,empty query",mq );
+    ASSERT( mq, "mongo find_and_modify,empty query" );
+    ASSERT( _conn, "mongo find_and_modify,inactivity connection" );
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
-    assert( "mongo find_and modify data dirty",NULL == res->_data );
+    ASSERT( NULL == res->_data, "mongo find_and modify data dirty" );
 
     res->_data = bson_new();
     bool ok = mongoc_collection_find_and_modify(
@@ -213,8 +213,8 @@ bool mongo::find_and_modify (
 
 bool mongo::insert( const struct mongo_query *mq,struct mongo_result *res )
 {
-    assert( "mongo insert,inactivity connection",_conn );
-    assert( "mongo insert,empty query",mq );
+    ASSERT( mq, "mongo insert,empty query" );
+    ASSERT( _conn, "mongo insert,inactivity connection" );
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
@@ -229,8 +229,8 @@ bool mongo::insert( const struct mongo_query *mq,struct mongo_result *res )
 
 bool mongo::update( const struct mongo_query *mq,struct mongo_result *res )
 {
-    assert( "mongo update,inactivity connection",_conn );
-    assert( "mongo update,empty query",mq );
+    ASSERT( mq, "mongo update,empty query" );
+    ASSERT( _conn, "mongo update,inactivity connection" );
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );
@@ -247,8 +247,8 @@ bool mongo::update( const struct mongo_query *mq,struct mongo_result *res )
 
 bool mongo::remove( const struct mongo_query *mq,struct mongo_result *res )
 {
-    assert( "mongo remove,inactivity connection",_conn );
-    assert( "mongo remove,empty query",mq );
+    ASSERT( mq, "mongo update,empty query" );
+    ASSERT( _conn, "mongo update,inactivity connection" );
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection( _conn, _db, mq->_clt );

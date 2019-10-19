@@ -75,8 +75,8 @@ public:
      */
     static int push(lua_State *L,const T *obj, bool gc = false)
     {
-        assert( "push null obj",obj );
-        assert( "class not regist yet",_classname );
+        ASSERT( obj, "push null obj" );
+        ASSERT( _classname, "class not regist yet" );
 
         /* 这里只是创建一个指针给lua管理，可以换用placement new把整个对象的
            内存都给lua管理
@@ -171,7 +171,7 @@ private:
     /* 单例，不能创建c对象。可以直接在C中push对象到lua */
     static int32 cnew(lua_State* L)
     {
-        assert("base class,cant NOT cteate object",false);
+        ASSERT(false,"base class,cant NOT cteate object");
         return 0;
     }
 

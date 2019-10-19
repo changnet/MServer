@@ -59,7 +59,7 @@ struct sql_col
 
     void set( const char *value,size_t size)
     {
-        assert ( "sql col not clean",0 == _size && !_value );
+        ASSERT ( 0 == _size && !_value, "sql col not clean" );
         if ( !value || 0 >= size ) return;  /* 结果为NULL */
 
         _size  = size;  /* 注意没加1 */

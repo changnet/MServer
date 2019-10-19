@@ -36,7 +36,7 @@ socket::~socket()
     _packet = NULL;
 
     C_OBJECT_DEC("socket");
-    assert( "socket not clean",0 == _pending && -1 == _w.fd );
+    ASSERT( 0 == _pending && -1 == _w.fd, "socket not clean" );
 }
 
 void socket::stop( bool flush )
@@ -84,7 +84,7 @@ void socket::stop( bool flush )
 
 int32 socket::recv()
 {
-    assert( "socket recv without io control",_io );
+    ASSERT( _io, "socket recv without io control" );
     static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
@@ -122,7 +122,7 @@ int32 socket::send()
         C_SEND_TRAFFIC_ADD(_conn_id,_conn_ty,byte);\
     } while (0)
 
-    assert( "socket send without io control",_io );
+    ASSERT( _io, "socket send without io control" );
     static class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     /* 去除发送标识，因为发送时，pending标识会变。
@@ -265,15 +265,14 @@ int32 socket::user_timeout( int32 fd )
  */
 void socket::start( int32 fd )
 {
-    assert( "socket start,dirty buffer",
-        0 == _send.get_used_size() && 0 == _send.get_used_size() );
+    ASSERT( 0 == _send.get_used_size() && 0 == _send.get_used_size() );
 
     if ( fd > 0 && _w.fd > 0 )
     {
-        assert( "socket already exist",false );
+        ASSERT( false, "socket already exist" );
     }
     fd = fd > 0 ? fd : _w.fd;
-    assert( "socket not invalid",fd > 0 );
+    ASSERT( fd > 0, "socket not invalid" );
 
     if ( fd > 0 ) // 新创建的socket
     {
@@ -291,7 +290,7 @@ void socket::start( int32 fd )
 
 int32 socket::connect( const char *host,int32 port )
 {
-    assert( "socket fd dirty",_w.fd < 0 );
+    ASSERT( _w.fd < 0, "socket fd dirty" );
 
     // 创建新socket并设置为非阻塞
     int32 fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
@@ -599,7 +598,7 @@ int32 socket::io_status_check( int32 ecode )
 
 int32 socket::init_accept()
 {
-    assert( "socket init accept no io set",_io );
+    ASSERT( _io, "socket init accept no io set" );
     int32 ecode = _io->init_accept( _w.fd );
 
     io_status_check( ecode );
@@ -608,7 +607,7 @@ int32 socket::init_accept()
 
 int32 socket::init_connect()
 {
-    assert( "socket init connect no io set",_io );
+    ASSERT( _io, "socket init connect no io set" );
     int32 ecode = _io->init_connect( _w.fd );
 
     io_status_check( ecode );

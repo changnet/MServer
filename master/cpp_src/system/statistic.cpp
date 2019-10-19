@@ -20,7 +20,7 @@ void statistic::add_c_obj(const char *what,int32 count)
     }
     else
     {
-        assert("add_c_obj count < 0",counter._cur >= 0);
+        ASSERT(counter._cur >= 0, "add_c_obj count < 0");
     }
 }
 
@@ -35,7 +35,7 @@ void statistic::add_c_lua_obj(const char *what,int32 count)
     }
     else
     {
-        assert("add_c_lua_obj count < 0",counter._cur >= 0);
+        ASSERT(counter._cur >= 0, "add_c_lua_obj count < 0");
     }
 }
 
@@ -64,24 +64,23 @@ void statistic::remove_socket_traffic(uint32 conn_id)
     // 一个connect失败的socket，也是没调用socket::start
     // 但它们会调用stop，会尝试从_socket_traffic中删除。目前暂时没法区分，也没必要区分
 
-    // assert("socket traffic del statistic corruption",
-    //     _socket_traffic.end() != _socket_traffic.find(conn_id));
+    // ASSERT(_socket_traffic.end() != _socket_traffic.find(conn_id),
+    //    "socket traffic del statistic corruption",);
 
     _socket_traffic.erase( conn_id );
 }
 
 void statistic::insert_socket_traffic(uint32 conn_id)
 {
-    assert("socket traffic new statistic corruption",
-        _socket_traffic.end() == _socket_traffic.find(conn_id));
+    ASSERT( _socket_traffic.end() == _socket_traffic.find(conn_id),
+                            "socket traffic new statistic corruption" );
 
     _socket_traffic[conn_id]._time = static_global::ev()->now();
 }
 
 void statistic::add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
 {
-    assert( "connection type error",
-        type > socket::CNT_NONE && type < socket::CNT_MAX );
+    ASSERT( type > socket::CNT_NONE && type < socket::CNT_MAX );
 
     _total_traffic[type]._send += val;
     _socket_traffic[conn_id]._send += val;
@@ -89,8 +88,7 @@ void statistic::add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
 
 void statistic::add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
 {
-    assert( "connection type error",
-        type > socket::CNT_NONE && type < socket::CNT_MAX );
+    ASSERT( type > socket::CNT_NONE && type < socket::CNT_MAX );
 
     _total_traffic[type]._recv += val;
     _socket_traffic[conn_id]._recv += val;
@@ -118,7 +116,7 @@ void statistic::add_rpc_count(const char *cmd,int32 size,int64 msec)
 
 void statistic::add_pkt_count(int32 type,int32 cmd,int32 size,int64 msec)
 {
-    assert("cmd type error",type > SPKT_NONE && type < SPKT_MAXT);
+    ASSERT(type > SPKT_NONE && type < SPKT_MAXT, "cmd type error");
 
     pkt_counter &pkt = _pkt_count[type][cmd];
     pkt._size  += size;

@@ -12,7 +12,7 @@ thread_mgr::~thread_mgr()
 /* 添加一个待管理thread */
 void thread_mgr::push( class thread *thd )
 {
-    assert( "thread mgr push NULL",thd );
+    ASSERT( thd, "thread mgr push NULL" );
 
     _threads[thd->get_id()] = thd;
 }

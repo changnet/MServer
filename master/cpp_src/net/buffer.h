@@ -62,12 +62,12 @@ private:
         inline void remove( uint32 len )
         {
             _beg += len;
-            assert("chunk remove corruption",_end >= _beg );
+            ASSERT(_end >= _beg, "chunk remove corruption" );
         }
         inline void add_used_offset( uint32 len )
         {
             _end += len;
-            assert("chunk append corruption",_max >= _end );
+            ASSERT(_max >= _end, "chunk append corruption" );
         }
         inline void append( const void *data,const uint32 len )
         {
@@ -193,7 +193,7 @@ public:
             // 不允许前面有一个空的chunk
             if ( 0 == _front->used_size() )
             {
-                assert( "buffer link corruption",_back == _front->_next );
+                ASSERT( _back == _front->_next, "buffer link corruption" );
 
                 del_chunk( _front );_front = _back;
             }
@@ -211,7 +211,7 @@ public:
         _chunk_ctx_size = ctx_size;
 
         // 设置的chunk大小必须是等长内存池的N倍
-        assert( "illegal buffer chunk size", 0 == ctx_size % BUFFER_CHUNK );
+        ASSERT( 0 == ctx_size % BUFFER_CHUNK, "illegal buffer chunk size" );
     }
 
     // 当前缓冲区是否超了设定值
@@ -233,7 +233,7 @@ private:
 
     inline void del_chunk( chunk_t *chunk )
     {
-        assert( "chunk size corruption",_chunk_size > 0 );
+        ASSERT( _chunk_size > 0, "chunk size corruption" );
 
         _chunk_size --;
         del_ctx( chunk->_ctx,chunk->_max );
@@ -254,7 +254,7 @@ private:
             new_size = (new_size / BUFFER_CHUNK + 1) * BUFFER_CHUNK;
         }
 
-        assert( "buffer chunk ctx size error",new_size > 0 );
+        ASSERT( new_size > 0, "buffer chunk ctx size error" );
 
         size = new_size;
 
@@ -266,8 +266,9 @@ private:
 
     inline void del_ctx( char *ctx,uint32 size )
     {
-        assert( "illegal buffer chunk ctx size error",
-            size > 0 && (0 == size % BUFFER_CHUNK) );
+        ASSERT(
+            size > 0 && (0 == size % BUFFER_CHUNK),
+            "illegal buffer chunk ctx size error" );
 
         ctx_pool_t *pool = get_ctx_pool();
         pool->ordered_free( ctx, size / BUFFER_CHUNK );
