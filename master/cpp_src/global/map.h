@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+#include <cstring>
 
 //--------------------------------------------------------------------------
 // MurmurHash2, by Austin Appleby

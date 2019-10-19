@@ -22,6 +22,8 @@
 // those functions are easily make mistake,not allow to use project"
 #include "banned.h"
 
+#include "dbg_mem.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // 底层C日志相关函数，脚本最终也在调用C来打印日志
 
@@ -118,5 +120,3 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define array_size(x) (sizeof(x)/sizeof(x[0]))
 #define array_noinit(base,size)
 #define array_zero(base,size)    memset((void *)(base), 0, size)
-
-extern void global_mem_counter(int32 &counter,int32 &counters);
