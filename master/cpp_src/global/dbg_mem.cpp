@@ -141,3 +141,13 @@ void operator delete[](void* ptr,const std::nothrow_t& nothrow_value) NOEXCEPT
 }
 
 #endif /* _MEM_DEBUG_ */
+
+////////////////////// END OF COUNTER /////////////////////////////////////////
+
+#ifdef _DBG_MEM_TRACE
+
+void dbg_mem_tracer::process(void* ptr)
+{
+}
+
+#endif /* _DBG_MEM_TRACE */
