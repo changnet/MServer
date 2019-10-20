@@ -2,6 +2,7 @@
 
 /* enable memeory debug */
 #define _MEM_DEBUG_
+#define _DBG_MEM_TRACE
 
 /* print file and time when C++ error */
 #define _PFILETIME_

@@ -13,7 +13,7 @@ extern void global_mem_counter(int32 &counter,int32 &counters);
 
 #ifdef _DBG_MEM_TRACE
 
-#define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
+// #define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
 
 class dbg_mem_tracer
 {
@@ -24,7 +24,10 @@ public:
     void process(void* ptr);
 
 public:
-    dbg_mem_tracer(const char* file, int line) : _file(file), _line(line) {}
+    explicit dbg_mem_tracer(const char* file, int line)
+        : _file(file), _line(line)
+    {
+    }
     /**
      * Pointer-to-Member Operators: .* and ->*
      * 显式地通过对象指针调用成员函数，不过这里和它本身的功能并没关系
