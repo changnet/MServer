@@ -13,7 +13,7 @@ extern void global_mem_counter(int32 &counter,int32 &counters);
 
 #ifdef _DBG_MEM_TRACE
 
-// #define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
+#define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
 
 class dbg_mem_tracer
 {

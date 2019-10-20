@@ -6,6 +6,8 @@
 
 #include <pthread.h>
 
+#undef new
+
 #if __cplusplus < 201103L    /* < C++11 */
     #define NOEXCEPT throw()
     #define EXCEPT throw(std::bad_alloc)
