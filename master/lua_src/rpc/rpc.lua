@@ -38,7 +38,7 @@ function Rpc:check_timer()
         g_timer_mgr:del_timer( self.timer )
 
         self.timer = nil
-        return 
+        return
     end
 
     if self.rpc_perf and not self.timer then
@@ -110,7 +110,7 @@ function Rpc:serialize_statistic( reset )
             name,stat.ts,stat.ms,stat.max,stat.min,math.ceil(stat.ms/stat.ts))
     end
 
-    g_log_mgr:raw_file_printf( 
+    g_log_mgr:raw_file_printf(
         path,"%s.%d end %s",g_app.srvname,g_app.srvindex,"\n\n" )
 
     if reset then
@@ -375,6 +375,7 @@ function rpc_command_return ( conn_id,rpc_id,ecode,... )
         ERROR("rpc return no callback found:id = %d",rpc_id)
         return
     end
+    rpc.callback[rpc_id] = nil
 
     return callback( ecode,... )
 end
