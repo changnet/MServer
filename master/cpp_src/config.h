@@ -1,8 +1,8 @@
 #pragma once
 
-/* enable memeory debug */
-#define _MEM_DEBUG_
-#define _DBG_MEM_TRACE
+/* 是否打开内存调试，在makefile中定义 */
+// #define NMEM_DEBUG
+#define NDBG_MEM_TRACE
 
 /* print file and time when C++ error */
 #define _PFILETIME_

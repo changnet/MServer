@@ -21,7 +21,7 @@ LFLAGS = -rdynamic
 # make BUILD_OPT=release
 BUILD_OPT ?= debug
 ifeq ($(BUILD_OPT), release)
-    OPTIMIZE = -g0 -O2
+    OPTIMIZE = -g0 -O2 -DNMEM_DEBUG
 else
     OPTIMIZE = -g3 -O0
 endif
