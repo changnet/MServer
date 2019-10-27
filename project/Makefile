@@ -17,7 +17,14 @@ CXX = g++ #clang++
 # https://gcc.gnu.org/projects/cxx-status.html
 CFLAGS = -std=c++11 -pipe -Wall -pedantic #-s
 LFLAGS = -rdynamic
-OPTIMIZE = -g3 -O0 # -g0 -O2
+
+# make BUILD_OPT=release
+BUILD_OPT ?= debug
+ifeq ($(BUILD_OPT), release)
+    OPTIMIZE = -g0 -O2
+else
+    OPTIMIZE = -g3 -O0
+endif
 
 #include path
 INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \
@@ -71,7 +78,6 @@ $(ODIR)/%.o: %.cpp
 #$? 表示比目标还要新的依赖文件列表
 
 all: $(OBJS)
-#@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
 	$(CXX) $(CFLAGS) $(LFLAGS) $(OPTIMIZE) $(LIB_PATH) -o $(TARGET)  $(OBJS) $(SHARED_LIB) -Wl,-dn $(STATIC_LIB) -Wl,-dy
 
 #The dash at the start of '-include' tells Make to continue when the .d file doesn't exist (e.g. on first compilation)
