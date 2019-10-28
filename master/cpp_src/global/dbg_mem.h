@@ -4,14 +4,21 @@
 
 // 在最开始的版本中，只用了一个内存计数器，是上一个项目中迁移过来的，来源无法考究
 
-// 现在加上内存跟踪，该方法来自:https://github.com/adah1972/nvwa
-// 不过原项目直接集成过来过于沉重，部分我想要的功能也没有，因此我自己改了下  xzc at 20191019
+// 后来尝试加上内存跟踪，该方法来自:https://github.com/adah1972/nvwa
+// 测试后发现，#define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
+// 这种宏定义解决了placement new的问题，不过没法解决
+// ::operator new这种显式调用operator new的写法，而stl中有这种写法
+// 作者给出的解决方案是必须把incclude dbg_mem.h放到其他头文件之后
+
+// 这种方法限制较大，因此不用。还不如直接在operator new中记录所有调用堆栈
+// 但是这和valgrind的massif有什么区别呢，因此我还是用massif
+// 注：用massif时把内存计数器也关掉 xzc at 20191027
 
 #include "types.h"
 
 extern void global_mem_counter(int32 &counter,int32 &counters);
 
-#ifdef _DBG_MEM_TRACE
+#ifndef NDBG_MEM_TRACE
 
 #define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
 
@@ -21,7 +28,12 @@ public:
     const char* _file;
     const int   _line;
 
-    void process(void* ptr);
+    void process(void* ptr)
+    {
+        /* 重载operator new函数，记录每一次分配的指针，以地址为Key放到一个unordered_map
+         * 这里根据 ptr 可以查找对应的记录
+         */
+    }
 
 public:
     explicit dbg_mem_tracer(const char* file, int line)
@@ -44,4 +56,4 @@ private:
     dbg_mem_tracer& operator=(const dbg_mem_tracer&);
 };
 
-#endif /* _DBG_MEM_TRACE */
+#endif /* NDBG_MEM_TRACE */
