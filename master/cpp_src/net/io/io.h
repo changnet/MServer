@@ -21,22 +21,22 @@ public:
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 接收的数据长度
      */
-    virtual int32 recv( int32 &byte );
+    virtual int32_t recv( int32_t &byte );
     /* 发送数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 发送的数据长度
      */
-    virtual int32 send( int32 &byte );
+    virtual int32_t send( int32_t &byte );
     /* 准备接受状态
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */
-    virtual int32 init_accept( int32 fd ) { return _fd = fd; };
+    virtual int32_t init_accept( int32_t fd ) { return _fd = fd; };
     /* 准备连接状态
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */
-    virtual int32 init_connect( int32 fd ) { return _fd = fd; };
+    virtual int32_t init_connect( int32_t fd ) { return _fd = fd; };
 protected:
-    int32 _fd;
+    int32_t _fd;
     class buffer *_recv;
     class buffer *_send;
 };

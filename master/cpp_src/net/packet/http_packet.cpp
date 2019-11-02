@@ -6,7 +6,7 @@
 #include "../../system/static_global.h"
 
 // 开始解析报文，第一个回调的函数，在这里初始化数据
-int32 on_message_begin( http_parser *parser )
+int32_t on_message_begin( http_parser *parser )
 {
     ASSERT( parser && (parser->data), "on_url no parser" );
 
@@ -19,7 +19,7 @@ int32 on_message_begin( http_parser *parser )
 }
 
 // 解析到url报文，可能只是一部分
-int32 on_url( http_parser *parser, const char *at, size_t length )
+int32_t on_url( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_url no parser" );
 
@@ -30,7 +30,7 @@ int32 on_url( http_parser *parser, const char *at, size_t length )
     return 0;
 }
 
-int32 on_status( http_parser *parser, const char *at, size_t length )
+int32_t on_status( http_parser *parser, const char *at, size_t length )
 {
     UNUSED( parser );
     UNUSED( at );
@@ -39,7 +39,7 @@ int32 on_status( http_parser *parser, const char *at, size_t length )
     return 0;
 }
 
-int32 on_header_field( http_parser *parser, const char *at, size_t length )
+int32_t on_header_field( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_header_field no parser" );
 
@@ -50,7 +50,7 @@ int32 on_header_field( http_parser *parser, const char *at, size_t length )
     return 0;
 }
 
-int32 on_header_value( http_parser *parser, const char *at, size_t length )
+int32_t on_header_value( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_header_value no parser" );
 
@@ -61,7 +61,7 @@ int32 on_header_value( http_parser *parser, const char *at, size_t length )
     return 0;
 }
 
-int32 on_headers_complete( http_parser *parser )
+int32_t on_headers_complete( http_parser *parser )
 {
     ASSERT( parser && (parser->data), "on_header_value no parser" );
 
@@ -72,7 +72,7 @@ int32 on_headers_complete( http_parser *parser )
     return 0;
 }
 
-int32 on_body( http_parser *parser, const char *at, size_t length )
+int32_t on_body( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_body no parser" );
 
@@ -83,7 +83,7 @@ int32 on_body( http_parser *parser, const char *at, size_t length )
     return 0;
 }
 
-int32 on_message_complete( http_parser *parser )
+int32_t on_message_complete( http_parser *parser )
 {
     ASSERT( parser && (parser->data), "on_message_complete no parser" );
 
@@ -129,10 +129,10 @@ http_packet::http_packet( class socket *sk ) : packet( sk )
     _parser->data = this;
 }
 
-int32 http_packet::unpack()
+int32_t http_packet::unpack()
 {
     class buffer &recv = _socket->recv_buffer();
-    uint32 size = recv.get_used_size();
+    uint32_t size = recv.get_used_size();
     if ( size == 0 ) return 0;
 
     /* 注意：解析完成后，是由http-parser回调脚本的，这时脚本那边可能会关闭socket
@@ -140,7 +140,7 @@ int32 http_packet::unpack()
      * http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
      * 不用check_all_used_ctx
      */
-    int32 nparsed = 
+    int32_t nparsed = 
         http_parser_execute( _parser,&settings,recv.get_used_ctx(),size );
 
     /* web_socket报文,暂时不用回调到上层
@@ -158,9 +158,9 @@ int32 http_packet::unpack()
     }
 
     recv.clear(); // http_parser不需要旧缓冲区
-    if ( nparsed != (int32)size )  /* error */
+    if ( nparsed != (int32_t)size )  /* error */
     {
-        int32 no = _parser->http_errno;
+        int32_t no = _parser->http_errno;
         ERROR( "http parse error(%d):%s",
             no,http_errno_name(static_cast<enum http_errno>(no)) );
 
@@ -187,7 +187,7 @@ void http_packet::on_headers_complete()
     _http_info._head_field[_cur_field] = _cur_value;
 }
 
-int32 http_packet::on_message_complete( bool upgrade )
+int32_t http_packet::on_message_complete( bool upgrade )
 {
     UNUSED( upgrade );
     static lua_State *L = static_global::state();
@@ -199,7 +199,7 @@ int32 http_packet::on_message_complete( bool upgrade )
     lua_pushstring   ( L,_http_info._url.c_str()  );
     lua_pushstring   ( L,_http_info._body.c_str() );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {
         ERROR( "command_new:%s",lua_tostring( L,-1 ) );
     }
@@ -243,12 +243,12 @@ void http_packet::append_cur_value( const char *at,size_t len )
     _cur_value.append( at,len );
 }
 
-int32 http_packet::unpack_header( lua_State *L ) const
+int32_t http_packet::unpack_header( lua_State *L ) const
 {
     const head_map_t &head_field = _http_info._head_field;
 
     // 返回的压栈数量
-    const static int32 size = 4;
+    const static int32_t size = 4;
     // table赋值时，需要一个额外的栈
     if ( lua_checkstack( L,size + 1 ) )
     {
@@ -277,7 +277,7 @@ int32 http_packet::unpack_header( lua_State *L ) const
 
 /* http的GET、POST都由上层处理好再传入底层
  */
-int32 http_packet::pack_raw( lua_State *L,int32 index )
+int32_t http_packet::pack_raw( lua_State *L,int32_t index )
 {
     size_t size = 0;
     const char *ctx = luaL_checklstring( L,index,&size );
@@ -288,12 +288,12 @@ int32 http_packet::pack_raw( lua_State *L,int32 index )
     return 0;
 }
 
-int32 http_packet::pack_clt( lua_State *L,int32 index )
+int32_t http_packet::pack_clt( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }
 
-int32 http_packet::pack_srv( lua_State *L,int32 index )
+int32_t http_packet::pack_srv( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }

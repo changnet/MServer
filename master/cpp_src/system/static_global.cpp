@@ -16,8 +16,8 @@ class lnetwork_mgr *static_global::_network_mgr = NULL;
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class static_global::initializer static_global::_initializer;
 
-int32 ssl_init();
-int32 ssl_uninit();
+int32_t ssl_init();
+int32_t ssl_uninit();
 /* will be called while process exit */
 void on_exit();
 /* will be called while allocate memory failed with new */
@@ -103,7 +103,7 @@ void static_global::uninitialize() /* 程序结束时反初始化 */
 
 
 // 初始化ssl库
-int32 ssl_init()
+int32_t ssl_init()
 {
     /* sha1、base64等库需要用到的
      * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
@@ -125,7 +125,7 @@ int32 ssl_init()
     return 0;
 }
 
-int32 ssl_uninit()
+int32_t ssl_uninit()
 {
     /* The OPENSSL_cleanup() function deinitialises OpenSSL (both libcrypto and
      * libssl). All resources allocated by OpenSSL are freed. Typically there
@@ -152,8 +152,8 @@ int32 ssl_uninit()
  */
 void on_exit()
 {
-    int32 counter  = 0;
-    int32 counters = 0;
+    int32_t counter  = 0;
+    int32_t counters = 0;
     global_mem_counter(counter,counters);
 
     // 直接用PRINTF会导致重新创建ev取时间

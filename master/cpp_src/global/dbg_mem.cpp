@@ -16,9 +16,9 @@
     #define EXCEPT
 #endif
 
-int32 g_counter  = 0;
-int32 g_counters = 0;
-void global_mem_counter(int32 &counter,int32 &counters)
+int32_t g_counter  = 0;
+int32_t g_counters = 0;
+void global_mem_counter(int32_t &counter,int32_t &counters)
 {
     counter = g_counter;
     counters = g_counters;

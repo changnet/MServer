@@ -20,7 +20,7 @@ thread::thread(const char *name)
     _name = name;
     _wait_busy = true;
 
-    int32 rv = pthread_mutex_init( &_mutex,NULL );
+    int32_t rv = pthread_mutex_init( &_mutex,NULL );
     if ( 0 != rv )
     {
         FATAL( "pthread_mutex_init error:%s",strerror(errno) );
@@ -36,7 +36,7 @@ thread::~thread()
 
     if ( !_join ) pthread_detach( pthread_self() );
 
-    int32 rv = pthread_mutex_destroy( &_mutex );
+    int32_t rv = pthread_mutex_destroy( &_mutex );
     if ( 0 != rv )
     {
         FATAL( "pthread_mutex_destroy error:%s",strerror(errno) );
@@ -65,7 +65,7 @@ void thread::signal_block()
 }
 
 /* 开始线程 */
-bool thread::start( int32 sec,int32 usec )
+bool thread::start( int32_t sec,int32_t usec )
 {
     /* fd[0]  父进程
      * fd[1]  子线程
@@ -122,7 +122,7 @@ void thread::stop()
 
     _run = false;
     notify_child( NTF_EXIT );
-    int32 ecode = pthread_join( _id,NULL );
+    int32_t ecode = pthread_join( _id,NULL );
     if ( ecode )
     {
         /* On success, pthread_join() returns 0; on error, it returns an error
@@ -145,8 +145,8 @@ void thread::do_routine()
 {
     while ( true )
     {
-        int8 notify = 0;
-        int32 sz = ::read( _fd[1],&notify,sizeof(int8) ); /* 阻塞 */
+        int8_t notify = 0;
+        int32_t sz = ::read( _fd[1],&notify,sizeof(int8_t) ); /* 阻塞 */
         if ( sz < 0 )
         {
             /* errno variable is thread safe */
@@ -212,9 +212,9 @@ void thread::notify_child( notify_t notify )
 {
     ASSERT( _fd[1] >= 0, "notify_child:socket pair not open" );
 
-    int8 val = static_cast<int8>(notify);
-    int32 sz = ::write( _fd[0],&val,sizeof(int8) );
-    if ( sz != sizeof(int8) )
+    int8_t val = static_cast<int8_t>(notify);
+    int32_t sz = ::write( _fd[0],&val,sizeof(int8_t) );
+    if ( sz != sizeof(int8_t) )
     {
         ERROR( "notify child error:%s",strerror(errno) );
     }
@@ -224,18 +224,18 @@ void thread::notify_parent( notify_t notify )
 {
     ASSERT( _fd[0] >= 0, "notify_parent:socket pair not open" );
 
-    int8 val = static_cast<int8>(notify);
-    int32 sz = ::write( _fd[1],&val,sizeof(int8) );
-    if ( sz != sizeof(int8) )
+    int8_t val = static_cast<int8_t>(notify);
+    int32_t sz = ::write( _fd[1],&val,sizeof(int8_t) );
+    if ( sz != sizeof(int8_t) )
     {
         ERROR_R( "notify child error:%s",strerror(errno) );
     }
 }
 
-void thread::io_cb( ev_io &w,int32 revents )
+void thread::io_cb( EvIO &w,int32_t revents )
 {
-    int8 event = 0;
-    int32 sz = ::read( _fd[0],&event,sizeof(int8) );
+    int8_t event = 0;
+    int32_t sz = ::read( _fd[0],&event,sizeof(int8_t) );
     if ( sz < 0 )
     {
         if ( errno == EAGAIN || errno == EWOULDBLOCK )
@@ -254,7 +254,7 @@ void thread::io_cb( ev_io &w,int32 revents )
 
         return;
     }
-    else if ( sizeof(int8) != sz )
+    else if ( sizeof(int8_t) != sz )
     {
         FATAL( "socketpair package incomplete,should not happen" );
 

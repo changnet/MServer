@@ -3,7 +3,7 @@
 #include "lua_cpplib/lclass.h"
 #include "system/static_global.h"
 
-int32 main( int32 argc,char **argv )
+int32_t main( int32_t argc,char **argv )
 {
     /* 参数:[name] [index] [srvid]
      * @name:必须是app名，比如gateway，有对应的实现

@@ -25,7 +25,7 @@ bool grid_map::load_file(const char *path)
 }
 
 // 设置地图信息
-bool grid_map::set( int32 id,uint16 width,uint16 height )
+bool grid_map::set( int32_t id,uint16_t width,uint16_t height )
 {
     ASSERT(NULL == _grid_set, "grid map already have data");
 
@@ -34,16 +34,16 @@ bool grid_map::set( int32 id,uint16 width,uint16 height )
     _id = id;
     _width = width;
     _height = height;
-    _grid_set = new int8[_width*_height];
+    _grid_set = new int8_t[_width*_height];
 
     // 全部初始化为不可行走
-    memset(_grid_set,-1,sizeof(int8)*_width*height);
+    memset(_grid_set,-1,sizeof(int8_t)*_width*height);
 
     return true;
 }
 
 // 填充地图信息
-bool grid_map::fill( uint16 x,uint16 y,int8 cost )
+bool grid_map::fill( uint16_t x,uint16_t y,int8_t cost )
 {
     if ( x >= _width || y >= _height ) return false;
 
@@ -53,10 +53,10 @@ bool grid_map::fill( uint16 x,uint16 y,int8 cost )
 }
 
 // 获取经过这个格子的消耗, < 0 表示不可行
-int8 grid_map::get_pass_cost(int32 x,int32 y) const
+int8_t grid_map::get_pass_cost(int32_t x,int32_t y) const
 {
-    if ( expect_false(x < 0 || x >= _width) ) return -1;
-    if ( expect_false(y < 0 || y >= _height) ) return -1;
+    if ( EXPECT_FALSE(x < 0 || x >= _width) ) return -1;
+    if ( EXPECT_FALSE(y < 0 || y >= _height) ) return -1;
 
     return _grid_set[x*_height + y];
 }

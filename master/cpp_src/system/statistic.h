@@ -5,7 +5,7 @@
 
 #define G_STAT    static_global::statistic()
 
-#define STAT_TIME_BEG() int64 stat_time_beg = static_global::ev()->get_ms_time()
+#define STAT_TIME_BEG() int64_t stat_time_beg = static_global::ev()->get_ms_time()
 #define STAT_TIME_END() (static_global::ev()->get_ms_time() - stat_time_beg)
 
 #define C_OBJECT_ADD(what) do{G_STAT->add_c_obj(what,1);}while(0)
@@ -43,8 +43,8 @@ public:
             _cur = 0;
         }
     public:
-        int64 _max;
-        int64 _cur;
+        int64_t _max;
+        int64_t _cur;
     };
 
     // 时间计数器
@@ -57,23 +57,23 @@ public:
             _max = 0;_min = -1;_count = 0;_msec  = 0;
         }
     public:
-        int64 _max;
-        int64 _min;
-        int64 _msec;
-        int64 _count;
+        int64_t _max;
+        int64_t _min;
+        int64_t _msec;
+        int64_t _count;
     };
 
     // 发包计数器(收包统计在脚本做)
     class pkt_counter
     {
     public:
-        int64 _max;
-        int64 _min;
-        int64 _msec;
-        int64 _size;
-        int64 _count;
-        int32 _max_size;
-        int32 _min_size;
+        int64_t _max;
+        int64_t _min;
+        int64_t _msec;
+        int64_t _size;
+        int64_t _count;
+        int32_t _max_size;
+        int32_t _min_size;
 
         pkt_counter () { reset(); }
         inline void reset() 
@@ -98,25 +98,25 @@ public:
         _recv = 0;_send = 0;_time = 0;
     }
     public:
-        int64 _recv;
-        int64 _send;
+        int64_t _recv;
+        int64_t _send;
         time_t _time; // 时间戳，各个socket时间不一样，要分开统计
     };
 
-    typedef map_t<int32,pkt_counter> pkt_counter_t;
-    typedef map_t<std::string,pkt_counter> rpc_counter_t;
+    typedef StdMap<int32_t,pkt_counter> pkt_counter_t;
+    typedef StdMap<std::string,pkt_counter> rpc_counter_t;
 
-    typedef map_t<uint32,traffic_counter> socket_traffic_t;
-    typedef map_t<std::string,struct base_counter> base_counter_t;
+    typedef StdMap<uint32_t,traffic_counter> socket_traffic_t;
+    typedef StdMap<std::string,struct base_counter> base_counter_t;
 public:
     ~statistic();
     explicit statistic();
 
     void reset_trafic();
-    void add_c_obj(const char *what,int32 count);
-    void add_c_lua_obj(const char *what,int32 count);
+    void add_c_obj(const char *what,int32_t count);
+    void add_c_lua_obj(const char *what,int32_t count);
 
-    void add_lua_gc(int32 msec)
+    void add_lua_gc(int32_t msec)
     {
         _lua_gc._count += 1;
         _lua_gc._msec  += msec;
@@ -124,14 +124,14 @@ public:
         if ( -1 == _lua_gc._min || _lua_gc._min > msec) _lua_gc._min = msec;
     }
 
-    void remove_socket_traffic(uint32 conn_id);
-    void insert_socket_traffic(uint32 conn_id);
+    void remove_socket_traffic(uint32_t conn_id);
+    void insert_socket_traffic(uint32_t conn_id);
 
-    void add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val);
-    void add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val);
+    void add_send_traffic(uint32_t conn_id,socket::conn_t type,uint32_t val);
+    void add_recv_traffic(uint32_t conn_id,socket::conn_t type,uint32_t val);
 
-    void add_rpc_count(const char *cmd,int32 size,int64 msec);
-    void add_pkt_count(int32 type,int32 cmd,int32 size,int64 msec);
+    void add_rpc_count(const char *cmd,int32_t size,int64_t msec);
+    void add_pkt_count(int32_t type,int32_t cmd,int32_t size,int64_t msec);
 
     inline void reset_lua_gc() { _lua_gc.reset(); }
 

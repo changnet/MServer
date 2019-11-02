@@ -114,14 +114,14 @@ struct equal_c_string
     }
 };
 
-/* 需要使用hash map，但又希望能兼容旧版本时使用map_t */
+/* 需要使用hash map，但又希望能兼容旧版本时使用StdMap */
 #if __cplusplus < 201103L    /* -std=gnu99 */
     #include <map>
-    #define map_t    std::map
+    #define StdMap    std::map
     #define const_char_map_t(T) std::map<const char *,T,cmp_const_char>
 #else    /* if support C++ 2011 */
     #include <unordered_map>
-    #define map_t    std::unordered_map
+    #define StdMap    std::unordered_map
     // TODO:template<class T> using const_char_map_t = ...，但03版本不支持
     #define const_char_map_t(T)    \
         std::unordered_map<const c_string,T,hash_c_string,equal_c_string>

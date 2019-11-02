@@ -4,16 +4,16 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 /* 公共基类以实现多态 */
-class ev_watcher
+class EvWatcher
 {
 public:
-    int32 active;
-    int32 pending;
+    int32_t active;
+    int32_t pending;
     void *data;
-    void (*cb)(ev_watcher *w, int32 revents);
-    ev *loop;
+    void (*cb)(EvWatcher *w, int32_t revents);
+    Ev *loop;
 public:
-    explicit ev_watcher( ev *_loop)
+    explicit EvWatcher( Ev *_loop)
         : loop (_loop)
     {
         active  = 0;
@@ -22,27 +22,27 @@ public:
         cb      = NULL;
     }
 
-    virtual ~ev_watcher(){}
+    virtual ~EvWatcher(){}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-template<class watcher>
-class ev_base : public ev_watcher
+template<class Watcher>
+class EvBase : public EvWatcher
 {
 public:
-    explicit ev_base( ev *_loop)
-        : ev_watcher (_loop)
+    explicit EvBase( Ev *_loop)
+        : EvWatcher (_loop)
     {
     }
 
-    virtual ~ev_base(){}
+    virtual ~EvBase(){}
 
-    void set( ev *_loop )
+    void set( Ev *_loop )
     {
         loop = _loop;
     }
 
-    void set_(const void *data, void (*cb)(ev_watcher *w, int revents))
+    void set_(const void *data, void (*cb)(EvWatcher *w, int revents))
     {
         this->data = (void *)data;
         this->cb   = cb;
@@ -54,52 +54,52 @@ public:
     }
 
     // function callback(no object)
-    template<void (*function)(watcher &w, int32)>
+    template<void (*function)(Watcher &w, int32_t)>
     void set (void *data = 0)
     {
       set_ (data, function_thunk<function>);
     }
 
-    template<void (*function)(watcher &w, int32)>
-    static void function_thunk (ev_watcher *w, int32 revents)
+    template<void (*function)(Watcher &w, int32_t)>
+    static void function_thunk (EvWatcher *w, int32_t revents)
     {
       function
-        (*static_cast<watcher *>(w), revents);
+        (*static_cast<Watcher *>(w), revents);
     }
 
     // method callback
-    template<class K, void (K::*method)(watcher &w, int32)>
+    template<class K, void (K::*method)(Watcher &w, int32_t)>
     void set (K *object)
     {
       set_ (object, method_thunk<K, method>);
     }
 
-    template<class K, void (K::*method)(watcher &w, int32)>
-    static void method_thunk (ev_watcher *w, int32 revents)
+    template<class K, void (K::*method)(Watcher &w, int32_t)>
+    static void method_thunk (EvWatcher *w, int32_t revents)
     {
       (static_cast<K *>(w->data)->*method)
-        (*static_cast<watcher *>(w), revents);
+        (*static_cast<Watcher *>(w), revents);
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ev_io : public ev_base<ev_io>
+class EvIO : public EvBase<EvIO>
 {
 public:
-    int32 fd;
-    int32 events;
+    int32_t fd;
+    int32_t events;
 
 public:
-    using ev_base<ev_io>::set;
+    using EvBase<EvIO>::set;
 
-    explicit ev_io( ev *loop = 0 )
-        : ev_base<ev_io> ( loop )
+    explicit EvIO( Ev *loop = 0 )
+        : EvBase<EvIO> ( loop )
     {
         fd     = -1;
         events = 0;
     }
 
-    ~ev_io()
+    ~EvIO()
     {
         /* TODO */
         stop();
@@ -121,10 +121,10 @@ public:
         active = loop->io_stop( this );
     }
 
-    void set( int32 fd,int32 events )
+    void set( int32_t fd,int32_t events )
     {
         /* TODO stop ?? */
-        int32 old_active = active;
+        int32_t old_active = active;
         if ( old_active ) stop();
 
         this->fd     = fd;
@@ -133,10 +133,10 @@ public:
         if ( old_active ) start();
     }
 
-    void set( int32 events )
+    void set( int32_t events )
     {
         /* TODO stop ?? */
-        int32 old_active = active;
+        int32_t old_active = active;
         if ( old_active ) stop();
 
         this->events = events;
@@ -144,7 +144,7 @@ public:
         if ( old_active ) start();
     }
 
-    void start( int32 fd,int32 events )
+    void start( int32_t fd,int32_t events )
     {
         set( fd,events );
         start();
@@ -152,25 +152,25 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ev_timer : public ev_base<ev_timer>
+class EvTimer : public EvBase<EvTimer>
 {
 public:
     bool tj; // time jump
-    ev_tstamp at;
-    ev_tstamp repeat;
+    EvTstamp at;
+    EvTstamp repeat;
 
 public:
-    using ev_base<ev_timer>::set;
+    using EvBase<EvTimer>::set;
 
-    explicit ev_timer( ev *loop = 0 )
-        : ev_base<ev_timer> ( loop )
+    explicit EvTimer( Ev *loop = 0 )
+        : EvBase<EvTimer> ( loop )
     {
         tj = false;
         at       = 0.;
         repeat   = 0.;
     }
 
-    ~ev_timer()
+    ~EvTimer()
     {
         /* TODO stop ?? */
         stop();
@@ -194,9 +194,9 @@ public:
         loop->timer_stop( this );
     }
 
-    void set( ev_tstamp after,ev_tstamp repeat = 0. )
+    void set( EvTstamp after,EvTstamp repeat = 0. )
     {
-        int32 old_active = active;
+        int32_t old_active = active;
 
         if ( old_active ) stop();
 
@@ -206,7 +206,7 @@ public:
         if ( old_active ) start();
     }
 
-    void start( ev_tstamp after,ev_tstamp repeat = 0. )
+    void start( EvTstamp after,EvTstamp repeat = 0. )
     {
         set( after,repeat );
         start();

@@ -15,8 +15,8 @@
 class base_rank
 {
 public:
-    typedef int32 object_id_t;
-    typedef int64 raw_factor_t;
+    typedef int32_t object_id_t;
+    typedef int64_t raw_factor_t;
     typedef raw_factor_t factor_t[MAX_RANK_FACTOR];
     class object_t
     {
@@ -24,10 +24,10 @@ public:
         object_t(){};
         ~object_t(){};
 
-        inline static int32 compare_factor(const factor_t src,
-            const factor_t dest,int32 max_idx = MAX_RANK_FACTOR)
+        inline static int32_t compare_factor(const factor_t src,
+            const factor_t dest,int32_t max_idx = MAX_RANK_FACTOR)
         {
-            for (int32 idx = 0;idx < max_idx;idx ++)
+            for (int32_t idx = 0;idx < max_idx;idx ++)
             {
                 if (src[idx] == dest[idx]) continue;
 
@@ -37,7 +37,7 @@ public:
             return 0;
         }
     public:
-        int32 _index; // 排名
+        int32_t _index; // 排名
         object_id_t _id;
         factor_t _factor;
     };
@@ -49,9 +49,9 @@ public:
     virtual void clear() { _count = 0; }
 
     // 获取当前排行榜中对象数量
-    int32 get_count() const { return _count; };
+    int32_t get_count() const { return _count; };
 protected:
-    int32 _count; // 当前排行榜中数量
+    int32_t _count; // 当前排行榜中数量
 };
 
 /* 插入法排序,适用于伤害排行
@@ -66,20 +66,20 @@ public:
 
     void clear();
 
-    int32 remove(object_id_t id);
-    int32 insert(object_id_t id,factor_t factor,int32 max_idx = 1);
-    int32 update(object_id_t id,raw_factor_t factor,int32 factor_idx = 0);
+    int32_t remove(object_id_t id);
+    int32_t insert(object_id_t id,factor_t factor,int32_t max_idx = 1);
+    int32_t update(object_id_t id,raw_factor_t factor,int32_t factor_idx = 0);
 
     /* 设置排行榜上限，超过此上限将不会在排行榜中存数据
      * 排序因子会减小的排行榜谨慎设置此值，因为假如某个对象因为上限不在排行榜，而其他对象排名
      * 下降将会导致该对象不会上榜
      */
-    void set_max_count(int32 max) { _max_count = max; };
+    void set_max_count(int32_t max) { _max_count = max; };
 
     // 获取当前排行榜用到的排序因子数量
-    int32 get_max_factor() const { return _max_factor; };
+    int32_t get_max_factor() const { return _max_factor; };
 
-    int32 get_rank_by_id(object_id_t id) const;
+    int32_t get_rank_by_id(object_id_t id) const;
     const raw_factor_t *get_factor(object_id_t id) const;
     object_id_t get_id_by_rank(object_id_t rank) const;
 private:
@@ -87,12 +87,12 @@ private:
     void shift_down(object_t *object);
     void raw_remove(object_t *object);
 private:
-    int32 _max_count; // 排行榜最大数量
-    uint8 _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
+    int32_t _max_count; // 排行榜最大数量
+    uint8_t _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
 
-    int32 _max_list;
+    int32_t _max_list;
     object_t **_object_list;
-    map_t< object_id_t,object_t* > _object_set;
+    StdMap< object_id_t,object_t* > _object_set;
 };
 
 /* 桶排序，只是桶分得比较细，演变成了有序hash map
@@ -117,7 +117,7 @@ public:
     ~bucket_rank();
 
     void clear();
-    int32 insert(object_id_t id,factor_t factor);
+    int32_t insert(object_id_t id,factor_t factor);
 
     // strict weak order,operator <
     static bool key_comp(const factor_t src,const factor_t dest)

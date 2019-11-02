@@ -16,13 +16,13 @@
 
 #include "types.h"
 
-extern void global_mem_counter(int32 &counter,int32 &counters);
+extern void global_mem_counter(int32_t &counter,int32_t &counters);
 
 #ifndef NDBG_MEM_TRACE
 
 #define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
 
-class dbg_mem_tracer
+class DbgMemTracer
 {
 public:
     const char* _file;
@@ -36,7 +36,7 @@ public:
     }
 
 public:
-    explicit dbg_mem_tracer(const char* file, int line)
+    explicit DbgMemTracer(const char* file, int line)
         : _file(file), _line(line)
     {
     }
@@ -52,8 +52,8 @@ public:
     template <class T> T* operator->*(T* ptr) { process(ptr); return ptr; }
 
 private:
-    dbg_mem_tracer(const dbg_mem_tracer&);
-    dbg_mem_tracer& operator=(const dbg_mem_tracer&);
+    DbgMemTracer(const DbgMemTracer&);
+    DbgMemTracer& operator=(const DbgMemTracer&);
 };
 
 #endif /* NDBG_MEM_TRACE */

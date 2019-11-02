@@ -8,13 +8,13 @@
 #define SSL_ERROR(x)    \
     do{                                                     \
         ERROR(x " errno(%d:%s)",errno,strerror(errno));     \
-        int32 eno = 0;                                      \
+        int32_t eno = 0;                                      \
         while ( 0 != (eno = ERR_get_error()) ) {            \
             ERROR( "    %s",ERR_error_string(eno,NULL) );   \
         }                                                   \
     }while(0)
 
-int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u );
+int32_t ctx_passwd_cb( char *buf, int32_t size, int rwflag, void *u );
 
 void delete_ssl_ctx( struct x_ssl_ctx &ssl_ctx )
 {
@@ -40,14 +40,14 @@ ssl_mgr::ssl_mgr()
 ssl_mgr::~ssl_mgr()
 {
     _ctx_idx = 0;
-    for ( int32 idx = 0;idx < MAX_SSL_CTX;idx ++ )
+    for ( int32_t idx = 0;idx < MAX_SSL_CTX;idx ++ )
     {
         delete_ssl_ctx( _ssl_ctx[idx] );
     }
     memset( _ssl_ctx,0,sizeof(_ssl_ctx) );
 }
 
-void *ssl_mgr::get_ssl_ctx( int32 idx )
+void *ssl_mgr::get_ssl_ctx( int32_t idx )
 {
     if ( idx < SSLV_NONE || idx >= _ctx_idx ) return NULL;
 
@@ -59,7 +59,7 @@ void *ssl_mgr::get_ssl_ctx( int32 idx )
  * Conditional jump or move depends on uninitialised value(s)
  * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
  */
-int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
+int32_t ssl_mgr::new_ssl_ctx( sslv_t sslv,
     const char *cert_file,key_t keyt,const char *key_file,const char *passwd )
 {
     if ( _ctx_idx >= MAX_SSL_CTX )
@@ -130,7 +130,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
     SSL_CTX_set_default_passwd_cb( ctx,ctx_passwd_cb );
     SSL_CTX_set_default_passwd_cb_userdata( ctx,ssl_ctx._passwd );
 
-    int32 ok = 0;
+    int32_t ok = 0;
     switch( keyt )
     {
         case KEYT_GEN :
@@ -163,7 +163,7 @@ int32 ssl_mgr::new_ssl_ctx( sslv_t sslv,
 }
 
 // 返回密码数据
-int32 ctx_passwd_cb( char *buf, int32 size, int rwflag, void *u )
+int32_t ctx_passwd_cb( char *buf, int32_t size, int rwflag, void *u )
 {
     if ( !u ) return 0;
 

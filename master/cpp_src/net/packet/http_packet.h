@@ -22,19 +22,19 @@ public:
 
     virtual packet_t type() const { return PKT_HTTP; }
 
-    virtual int32 pack_clt( lua_State *L,int32 index );
-    virtual int32 pack_srv( lua_State *L,int32 index );
+    virtual int32_t pack_clt( lua_State *L,int32_t index );
+    virtual int32_t pack_srv( lua_State *L,int32_t index );
     /* 数据解包
      * return: <0 error;0 success
      */
-    virtual int32 unpack();
+    virtual int32_t unpack();
     /* 解压http数据到lua堆栈 */
-    int32 unpack_header( lua_State *L ) const;
+    int32_t unpack_header( lua_State *L ) const;
 public:
     /* http_parse 回调函数 */
     void reset();
     void on_headers_complete();
-    virtual int32 on_message_complete( bool upgrade );
+    virtual int32_t on_message_complete( bool upgrade );
     void append_url( const char *at,size_t len );
     void append_body( const char *at,size_t len );
     void append_cur_field( const char *at,size_t len );
@@ -42,7 +42,7 @@ public:
 protected:
     struct http_info _http_info;
 private:
-    int32 pack_raw( lua_State *L,int32 index );
+    int32_t pack_raw( lua_State *L,int32_t index );
 
     http_parser *_parser;
     std::string _cur_field;

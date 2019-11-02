@@ -19,7 +19,7 @@ lmongo::~lmongo()
 
 // 连接数据库
 // 由于是开启线程去连接，并且是异步的，需要上层定时调用valid来检测是否连接上
-int32 lmongo::start( lua_State *L )
+int32_t lmongo::start( lua_State *L )
 {
     if ( active() )
     {
@@ -27,7 +27,7 @@ int32 lmongo::start( lua_State *L )
     }
 
     const char *ip   = luaL_checkstring  ( L,1 );
-    const int32 port = luaL_checkinteger ( L,2 );
+    const int32_t port = luaL_checkinteger ( L,2 );
     const char *usr  = luaL_checkstring  ( L,3 );
     const char *pwd  = luaL_checkstring  ( L,4 );
     const char *db   = luaL_checkstring  ( L,5 );
@@ -38,7 +38,7 @@ int32 lmongo::start( lua_State *L )
     return 0;
 }
 
-int32 lmongo::stop( lua_State *L )
+int32_t lmongo::stop( lua_State *L )
 {
     _valid = -1;
     thread::stop();
@@ -47,7 +47,7 @@ int32 lmongo::stop( lua_State *L )
 }
 
 // 该连接是否已连接上(不是当前状态，仅仅是第一次连接上)
-int32 lmongo::valid( lua_State *L )
+int32_t lmongo::valid( lua_State *L )
 {
     lua_pushinteger( L,_valid );
 
@@ -56,7 +56,7 @@ int32 lmongo::valid( lua_State *L )
 
 bool lmongo::initialize()
 {
-    int32 ok = _mongo.connect();
+    int32_t ok = _mongo.connect();
     if ( ok > 0 )
     {
         _valid = 0;
@@ -150,14 +150,14 @@ void lmongo::push_query( const struct mongo_query *query )
     if ( _notify ) notify_child( NTF_CUSTOM );
 }
 
-int32 lmongo::count( lua_State *L )
+int32_t lmongo::count( lua_State *L )
 {
     if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
 
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *collection = luaL_checkstring( L,2 );
     if ( !collection )
     {
@@ -172,7 +172,7 @@ int32 lmongo::count( lua_State *L )
     {
         bson_error_t error;
         query = bson_new_from_json(
-            reinterpret_cast<const uint8 *>(str_query),-1,&error );
+            reinterpret_cast<const uint8_t *>(str_query),-1,&error );
         if ( !query )
         {
             return luaL_error( L,error.message );
@@ -184,7 +184,7 @@ int32 lmongo::count( lua_State *L )
     {
         bson_error_t error;
         opts = bson_new_from_json(
-            reinterpret_cast<const uint8 *>(str_opts),-1,&error );
+            reinterpret_cast<const uint8_t *>(str_opts),-1,&error );
         if ( !opts )
         {
             bson_free(query);
@@ -229,7 +229,7 @@ void lmongo::invoke_result()
         // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
         // 原因是ev那边频繁收到协议，导致数据库与子线程通信的fd一直没被epoll触发
         static async_log *logger = static_global::async_logger();
-        int64 real = static_global::ev()->ms_now() - res->_time;
+        int64_t real = static_global::ev()->ms_now() - res->_time;
         if ( 0 == res->_error.code)
         {
             logger->raw_write("",LO_MONGODB,
@@ -261,7 +261,7 @@ void lmongo::invoke_result()
         lua_pushinteger( L,res->_qid   );
         lua_pushinteger( L,res->_error.code );
 
-        int32 nargs = 3;
+        int32_t nargs = 3;
         if ( res->_data )
         {
             struct error_collector error;
@@ -411,7 +411,7 @@ bson_t *lmongo::string_or_table_to_bson(
         const char *json = lua_tostring( L,index );
         bson_error_t error;
         bson = bson_new_from_json(
-            reinterpret_cast<const uint8 *>(json),-1,&error );
+            reinterpret_cast<const uint8_t *>(json),-1,&error );
         if ( !bson )
         {
             CLEAN_BSON(bs);
@@ -433,14 +433,14 @@ bson_t *lmongo::string_or_table_to_bson(
 }
 
 /* find( id,collection,query,fields ) */
-int32 lmongo::find( lua_State *L )
+int32_t lmongo::find( lua_State *L )
 {
     if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
 
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *collection = luaL_checkstring( L,2 );
     if ( !collection )
     {
@@ -461,14 +461,14 @@ int32 lmongo::find( lua_State *L )
 
 
 /* find( id,collection,query,sort,update,fields,remove,upsert,new ) */
-int32 lmongo::find_and_modify( lua_State *L )
+int32_t lmongo::find_and_modify( lua_State *L )
 {
     if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
 
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *collection = luaL_checkstring( L,2 );
     if ( !collection )
     {
@@ -494,14 +494,14 @@ int32 lmongo::find_and_modify( lua_State *L )
 }
 
 /* insert( id,collections,info ) */
-int32 lmongo::insert( lua_State *L )
+int32_t lmongo::insert( lua_State *L )
 {
     if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
 
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *collection = luaL_checkstring( L,2 );
     if ( !collection )
     {
@@ -520,14 +520,14 @@ int32 lmongo::insert( lua_State *L )
 }
 
 /* update( id,collections,query,update,upsert,multi ) */
-int32 lmongo::update( lua_State *L )
+int32_t lmongo::update( lua_State *L )
 {
     if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
 
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *collection = luaL_checkstring( L,2 );
     if ( !collection )
     {
@@ -537,8 +537,8 @@ int32 lmongo::update( lua_State *L )
     bson_t *query  = string_or_table_to_bson( L,3 );
     bson_t *update = string_or_table_to_bson( L,4,-1,query,END_BSON );
 
-    int32 upsert = lua_toboolean( L,5 );
-    int32 multi  = lua_toboolean( L,6 );
+    int32_t upsert = lua_toboolean( L,5 );
+    int32_t multi  = lua_toboolean( L,6 );
 
     struct mongo_query *mongo_update = new mongo_query();
     mongo_update->set( id,MQT_UPDATE );
@@ -550,14 +550,14 @@ int32 lmongo::update( lua_State *L )
 }
 
 /* remove( id,collections,query,multi ) */
-int32 lmongo::remove( lua_State *L )
+int32_t lmongo::remove( lua_State *L )
 {
     if ( !active() )
     {
         return luaL_error( L,"mongo thread not active" );
     }
 
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *collection = luaL_checkstring( L,2 );
     if ( !collection )
     {
@@ -566,7 +566,7 @@ int32 lmongo::remove( lua_State *L )
 
     bson_t *query = string_or_table_to_bson( L,3 );
 
-    int32 multi  = lua_toboolean( L,4 );
+    int32_t multi  = lua_toboolean( L,4 );
 
     struct mongo_query *mongo_remove = new mongo_query();
     mongo_remove->set( id,MQT_REMOVE );

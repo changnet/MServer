@@ -25,11 +25,11 @@ typedef enum
 static const char* MQT_NAME[] =
     {"none","count","find","find_and_modify","insert","update","remove"};
 
-static_assert( MQT_MAX == array_size(MQT_NAME),"mongo name define" );
+static_assert( MQT_MAX == ARRAY_SIZE(MQT_NAME),"mongo name define" );
 
 struct mongo_query
 {
-    int32 _qid;   // query id
+    int32_t _qid;   // query id
     mqt_t _mqt;
     char  _clt[MONGO_VAR_LEN]; // collection
     bool _remove;
@@ -40,8 +40,8 @@ struct mongo_query
     bson_t *_query;
     bson_t *_fields;
     bson_t *_update;
-    int32 _flags;
-    int64 _time; // 请求的时间戳，毫秒
+    int32_t _flags;
+    int64_t _time; // 请求的时间戳，毫秒
 
     mongo_query()
     {
@@ -73,7 +73,7 @@ struct mongo_query
         _update        = NULL;
     }
 
-    void set( int32 qid,mqt_t mqt )
+    void set( int32_t qid,mqt_t mqt )
     {
         _qid = qid;
         _mqt = mqt;
@@ -116,7 +116,7 @@ struct mongo_query
     }
 
     void set_update( const char *clt,
-        bson_t *query,bson_t *update,int32 upsert,int32 multi )
+        bson_t *query,bson_t *update,int32_t upsert,int32_t multi )
     {
         snprintf( _clt,MONGO_VAR_LEN,"%s",clt );
         _query  = query ;
@@ -126,7 +126,7 @@ struct mongo_query
                  (  multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE );
     }
 
-    void set_remove( const char *clt,bson_t *query,int32 multi)
+    void set_remove( const char *clt,bson_t *query,int32_t multi)
     {
         snprintf( _clt,MONGO_VAR_LEN,"%s",clt );
 
@@ -137,12 +137,12 @@ struct mongo_query
 
 struct mongo_result
 {
-    int32   _qid  ;
+    int32_t   _qid  ;
     mqt_t   _mqt  ;
     bson_t *_data ;
     float   _elaspe; // 消耗的时间，秒
     bson_error_t _error;
-    int64 _time; // 请求的时间戳，毫秒
+    int64_t _time; // 请求的时间戳，毫秒
     char  _clt[MONGO_VAR_LEN]; // collection
     char  _query[MONGO_VAR_LEN]; // 查询条件，日志用
 
@@ -181,10 +181,10 @@ public:
     ~mongo();
 
     void set( const char *ip,
-        int32 port,const char *usr,const char *pwd,const char *db );
+        int32_t port,const char *usr,const char *pwd,const char *db );
 
-    int32 ping();
-    int32 connect();
+    int32_t ping();
+    int32_t connect();
     void disconnect();
 
     bool insert ( const struct mongo_query *mq,struct mongo_result *res );
@@ -195,7 +195,7 @@ public:
     bool find_and_modify( const struct mongo_query *mq,struct mongo_result *res );
 
 private:
-    int32 _port;
+    int32_t _port;
     char  _ip [MONGO_VAR_LEN];
     char  _usr[MONGO_VAR_LEN];
     char  _pwd[MONGO_VAR_LEN];

@@ -19,7 +19,7 @@
 /* clock_gettime(CLOCK_MONOTONIC)是内核调用，并且不受time jump影响
  * gettimeofday是用户空间调用
  */
-static int32 timeofday( lua_State *L )
+static int32_t timeofday( lua_State *L )
 {
     struct timeval tv;
     if ( gettimeofday( &tv, NULL ) == 0 )
@@ -33,7 +33,7 @@ static int32 timeofday( lua_State *L )
 }
 
 /* 域名转Ip,阻塞方式 */
-static int32 gethost( lua_State *L )
+static int32_t gethost( lua_State *L )
 {
     const char *name = luaL_checkstring( L,1 );
     if ( !name ) return luaL_error( L,"gethost illegal argument" );
@@ -51,7 +51,7 @@ static int32 gethost( lua_State *L )
         return luaL_error( L,"gethostbyname unknow address type" );
     }
 
-    int32 return_value = 0;
+    int32_t return_value = 0;
     char dst[INET6_ADDRSTRLEN];
     char **pptr = hptr->h_addr_list;
     for( ;*pptr != NULL; pptr++ )
@@ -79,7 +79,7 @@ static int32 gethost( lua_State *L )
 /* md5
  * md5( [upper,],str1,str2,... )
  */
-static int32 md5( lua_State* L )
+static int32_t md5( lua_State* L )
 {
     size_t len;
     MD5_CTX md;
@@ -87,7 +87,7 @@ static int32 md5( lua_State* L )
     const char* ptr;
     unsigned char dgst[16];
     
-    int32 index = 1;
+    int32_t index = 1;
     const char *fmt = "%02x"; // default format to lower
     if ( !lua_isstring( L,1 ) )
     {
@@ -97,7 +97,7 @@ static int32 md5( lua_State* L )
     }
 
     MD5_Init( &md );
-    for ( int32 i = index; i <= lua_gettop( L ); ++i )
+    for ( int32_t i = index; i <= lua_gettop( L ); ++i )
     {
         ptr = lua_tolstring( L, i, &len );
         if ( !ptr )
@@ -112,7 +112,7 @@ static int32 md5( lua_State* L )
     }
 
     MD5_Final( dgst, &md );
-    for ( int32 i = 0; i < 16; ++i )
+    for ( int32_t i = 0; i < 16; ++i )
     {
         //--%02x即16进制输出，占2个字节
         snprintf( buf + i*2, 3, fmt, dgst[i] );
@@ -122,7 +122,7 @@ static int32 md5( lua_State* L )
     return 1;
 }
 
-static int32 uuid( lua_State *L )
+static int32_t uuid( lua_State *L )
 {
     uuid_t u;
     char b[40] = { 0 };
@@ -137,7 +137,7 @@ static int32 uuid( lua_State *L )
 }
 
 /* 利用非标准base64编码uuid，产生一个22个字符串 */
-static int32 uuid_short( lua_State *L )
+static int32_t uuid_short( lua_State *L )
 {
     static const char *digest = 
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
@@ -159,7 +159,7 @@ static int32 uuid_short( lua_State *L )
      * 64bit表示6bit，一个char为8bit，每次编码3个char，产生4个符。5次共编码120bit
      */
     char *cur_char = out;
-    for ( int32 index = 0;index < 5;index ++ )
+    for ( int32_t index = 0;index < 5;index ++ )
     {
 
         /* 1111 1100取高6bit，再右移2bit得到前6bit */
@@ -222,7 +222,7 @@ inline char uuid_short_char( lua_State *L,const char c )
     return digest[(int)c];
 }
 
-static int32 uuid_short_parse( lua_State *L )
+static int32_t uuid_short_parse( lua_State *L )
 {
     size_t len = 0;
     const char *str_uuid = lua_tolstring( L,1,&len );
@@ -237,7 +237,7 @@ static int32 uuid_short_parse( lua_State *L )
 
     char fragment;
     /* 每次取4个字符填充到3个char，5次填充20字符,120bit */
-    for ( int32 index = 0;index < 5;index ++ )
+    for ( int32_t index = 0;index < 5;index ++ )
     {
         fragment = uuid_short_char( L,*str_uuid++ );
         // 0011 1111 填充高6bit
@@ -276,16 +276,16 @@ static int32 uuid_short_parse( lua_State *L )
 }
 
 /* 取linux下errno对应的错误描述字符串 */
-static int32 what_error( lua_State *L )
+static int32_t what_error( lua_State *L )
 {
-    int32 eno = luaL_checkinteger( L,1 );
+    int32_t eno = luaL_checkinteger( L,1 );
 
     lua_pushstring( L,strerror(eno) );
 
     return 1;
 }
 
-int32 _raw_sha1( lua_State *L,int32 index,unsigned char sha1[SHA_DIGEST_LENGTH] )
+int32_t _raw_sha1( lua_State *L,int32_t index,unsigned char sha1[SHA_DIGEST_LENGTH] )
 {
     SHA_CTX ctx;
     if ( !SHA1_Init( &ctx ) )
@@ -293,7 +293,7 @@ int32 _raw_sha1( lua_State *L,int32 index,unsigned char sha1[SHA_DIGEST_LENGTH] 
         return luaL_error( L,"sha1 init error" );
     }
 
-    for ( int32 i = index; i <= lua_gettop( L ); ++i )
+    for ( int32_t i = index; i <= lua_gettop( L ); ++i )
     {
         size_t len;
         const char *ptr = lua_tolstring( L, i, &len );
@@ -316,11 +316,11 @@ int32 _raw_sha1( lua_State *L,int32 index,unsigned char sha1[SHA_DIGEST_LENGTH] 
 /* sha1编码
  * sha1( [upper,],str1,str2,... )
  */
-static int32 sha1( lua_State *L )
+static int32_t sha1( lua_State *L )
 {
     unsigned char sha1[SHA_DIGEST_LENGTH];
 
-    int32 index = 1;
+    int32_t index = 1;
     const char *fmt = "%02x"; // default format to lower
     if ( !lua_isstring( L,1 ) )
     {
@@ -331,7 +331,7 @@ static int32 sha1( lua_State *L )
     _raw_sha1( L,index,sha1 );
 
     char buf[SHA_DIGEST_LENGTH*2];
-    for ( int32 i = 0; i < SHA_DIGEST_LENGTH; ++i )
+    for ( int32_t i = 0; i < SHA_DIGEST_LENGTH; ++i )
     {
         //--%02x即16进制输出，占2个字节
         snprintf( buf + i*2, 3, fmt, sha1[i] );
@@ -344,7 +344,7 @@ static int32 sha1( lua_State *L )
 /* sha1编码，返回20byte的十六进制原始数据而不是字符串
  * sha1_raw( str1,str2,... )
  */
-static int32 sha1_raw( lua_State *L )
+static int32_t sha1_raw( lua_State *L )
 {
     unsigned char sha1[SHA_DIGEST_LENGTH];
     _raw_sha1( L,1,sha1 );
@@ -361,7 +361,7 @@ static int32 sha1_raw( lua_State *L )
  * BIO_new() -> BIO_set() -> CRYPTO_new_ex_data() -> int_new_ex_data() -> def_get_class()
  * int_new_ex_data() do not release the mem that def_get_class malloced
  */
-static int32 base64( lua_State *L )
+static int32_t base64( lua_State *L )
 {
     /* base64需要预先计算长度并分配内存，故无法像md5那样把需要编码字符串分片传参 */
     size_t len = 0;
@@ -389,7 +389,7 @@ static int32 base64( lua_State *L )
 }
 
 // 获取当前进程pid
-static int32 get_pid( lua_State *L )
+static int32_t get_pid( lua_State *L )
 {
     lua_pushinteger( L,::getpid() );
 
@@ -397,7 +397,7 @@ static int32 get_pid( lua_State *L )
 }
 
 // 如果不存在则创建多层目录
-int32 mkdir_p( lua_State *L )
+int32_t mkdir_p( lua_State *L )
 {
     const char *path = luaL_checkstring( L,1 );
 
@@ -408,9 +408,9 @@ int32 mkdir_p( lua_State *L )
     }
 
     char dir_path[PATH_MAX];
-    int32 len = strlen( path );
+    int32_t len = strlen( path );
 
-    for ( int32 i = 0; i <= len && i < PATH_MAX; i++ )
+    for ( int32_t i = 0; i <= len && i < PATH_MAX; i++ )
     {
         dir_path[i] = *( path + i );
         if ( ('\0' == dir_path[i] || dir_path[i] == '/') && i > 0)
@@ -451,7 +451,7 @@ static const luaL_Reg utillib[] =
     {NULL, NULL}
 };
 
-int32 luaopen_util( lua_State *L )
+int32_t luaopen_util( lua_State *L )
 {
   luaL_newlib(L, utillib);
   return 1;

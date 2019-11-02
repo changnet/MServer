@@ -80,8 +80,8 @@ struct sql_row
 
 struct sql_res
 {
-    uint32 _num_rows;  // 行数
-    uint32 _num_cols;  // 列数
+    uint32_t _num_rows;  // 行数
+    uint32_t _num_cols;  // 列数
     std::vector<sql_field> _fields; // 字段名
     std::vector<sql_row  > _rows  ; // 行数据
 };
@@ -89,15 +89,15 @@ struct sql_res
 /* 查询结果 */
 struct sql_result
 {
-    int32 _id;      /* 标记查询的id，用于回调 */
-    int32 _ecode;
+    int32_t _id;      /* 标记查询的id，用于回调 */
+    int32_t _ecode;
     struct sql_res *_res;
 };
 
 /* 查询请求 */
 struct sql_query
 {
-    explicit sql_query( int32 id,size_t size,const char *stmt )
+    explicit sql_query( int32_t id,size_t size,const char *stmt )
     {
         _id   = id;
         _size = size;
@@ -116,7 +116,7 @@ struct sql_query
         _stmt     = NULL;
     }
 
-    int32  _id;
+    int32_t  _id;
     size_t _size;
     char  *_stmt;
 };

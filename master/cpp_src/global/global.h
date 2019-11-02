@@ -57,8 +57,8 @@ extern void set_log_args( bool dm,
 #endif
 
 /* 分支预测，汇编优化。逻辑上不会改变cond的值 */
-#define expect_false(cond) __builtin_expect (!!(cond),0)
-#define expect_true(cond)  __builtin_expect (!!(cond),1)
+#define EXPECT_FALSE(cond) __builtin_expect (!!(cond),0)
+#define EXPECT_TRUE(cond)  __builtin_expect (!!(cond),1)
 
 #ifdef _PRINTF_
     #define PRINTF(...) cprintf_log( "CP",__VA_ARGS__ )
@@ -87,7 +87,7 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
            unsigned int __line, const char *__function);
 
 /* This prints an "log assertion failed" message and return,not abort.  */
-#define log_assert(why,expr,...)                         \
+#define LOG_ASSERT(why,expr,...)                         \
     do{                                                  \
         if ( !(expr) )                                   \
         {                                                \
@@ -97,11 +97,11 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
         }                                                \
     }while (0)
 
-#define array_resize(type,base,cur,cnt,init)        \
+#define ARRAY_RESIZE(type,base,cur,cnt,init)        \
     if ( (cnt) > (cur) )                            \
     {                                               \
-        uint32 size = cur > 0 ? cur : 16;           \
-        while ( size < (uint32)cnt )                \
+        uint32_t size = cur > 0 ? cur : 16;           \
+        while ( size < (uint32_t)cnt )                \
         {                                           \
             size *= 2;                              \
         }                                           \
@@ -117,6 +117,6 @@ extern void __log_assert_fail (const char *__assertion, const char *__file,
 #define MATH_MIN(a,b)    ((a) > (b) ? (b) : (a))
 #define MATH_MAX(a,b)    ((a) > (b) ? (a) : (b))
 
-#define array_size(x) (sizeof(x)/sizeof(x[0]))
-#define array_noinit(base,size)
-#define array_zero(base,size)    memset((void *)(base), 0, size)
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+#define ARRAY_NOINIT(base,size)
+#define ARRAY_ZERO(base,size)    memset((void *)(base), 0, size)

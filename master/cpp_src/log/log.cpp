@@ -202,7 +202,7 @@ bool log::swap()
 }
 
 // 主线程写入缓存，上层加锁
-int32 log::write_cache( time_t tm,
+int32_t log::write_cache( time_t tm,
     const char *path,const char *ctx,size_t len,log_out_t out )
 {
     ASSERT( path, "write log no file path" );
@@ -224,7 +224,7 @@ int32 log::write_cache( time_t tm,
 }
 
 // 写入一项日志内容
-int32 log::flush_one_ctx(
+int32_t log::flush_one_ctx(
     FILE *pf,const struct log_one *one,struct tm &ntm,const char *prefix )
 {
     int byte = PFILETIME(pf,ntm,prefix);
@@ -349,7 +349,7 @@ class log_one *log::allocate_one( size_t len )
 {
     if ( len > LOG_MAX_LENGTH ) len = LOG_MAX_LENGTH;
 
-    for ( uint32 lt = LOG_SIZE_S;lt < LOG_SIZE_MAX;++lt )
+    for ( uint32_t lt = LOG_SIZE_S;lt < LOG_SIZE_MAX;++lt )
     {
         if ( len > LOG_CTX_SIZE[lt] ) continue;
 
@@ -371,7 +371,7 @@ void log::deallocate_one( class log_one *one )
 void log::close_files()
 {
     // 暂时保留文件名，以免频繁创建，应该也不是很多
-    map_t<std::string,FILE *>::iterator itr = _files.begin();
+    StdMap<std::string,FILE *>::iterator itr = _files.begin();
     while ( itr != _files.end() )
     {
         FILE *pf = itr->second;

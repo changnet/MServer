@@ -14,7 +14,7 @@ stream_packet::~stream_packet()
 }
 
 /* 解析二进制流数据包 */
-int32 stream_packet::unpack()
+int32_t stream_packet::unpack()
 {
     class buffer &recv = _socket->recv_buffer();
 
@@ -26,7 +26,7 @@ int32 stream_packet::unpack()
             recv.to_continuous_ctx( sizeof( struct base_header ) ) );
 
     // 检测包内容是否完整
-    uint32 length = header->_length;
+    uint32_t length = header->_length;
     if ( !recv.check_used_size( length ) ) return 0;
 
     header = reinterpret_cast<
@@ -73,11 +73,11 @@ void stream_packet::sc_command( const struct s2c_header *header )
         return;
     }
 
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
-    uint32 conn_id = _socket->conn_id();
+    uint32_t conn_id = _socket->conn_id();
 
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"command_new" );
@@ -93,14 +93,14 @@ void stream_packet::sc_command( const struct s2c_header *header )
         lua_settop( L,0 );
         return;
     }
-    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
+    int32_t cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_settop( L,0 );
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
     {
         ERROR( "sc_command:%s",lua_tostring( L,-1 ) );
 
@@ -115,8 +115,8 @@ void stream_packet::cs_dispatch( const struct c2s_header *header )
 {
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    int32 cmd = header->_cmd;
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t cmd = header->_cmd;
+    int32_t size = PACKET_BUFFER_LEN( header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
@@ -126,7 +126,7 @@ void stream_packet::cs_dispatch( const struct c2s_header *header )
 }
 
 /* 客户端发往服务器数据包回调脚本 */
-void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
+void stream_packet::cs_command( int32_t cmd,const char *ctx,size_t size )
 {
     static lua_State *L = static_global::state();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
@@ -140,7 +140,7 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
         return;
     }
 
-    int32 conn_id = _socket->conn_id();
+    int32_t conn_id = _socket->conn_id();
     codec::codec_t codec_ty = _socket->get_codec_type();
 
     lua_pushcfunction( L,traceback );
@@ -155,14 +155,14 @@ void stream_packet::cs_command( int32 cmd,const char *ctx,size_t size )
         lua_settop( L,0 );
         return;
     }
-    int32 cnt = decoder->decode( L,ctx,size,cmd_cfg );
+    int32_t cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_settop( L,0 );
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,2 + cnt,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,2 + cnt,0,1 ) ) )
     {
         ERROR( "cs_command:%s",lua_tostring( L,-1 ) );
 
@@ -240,7 +240,7 @@ void stream_packet::ss_command(
     static lua_State *L = static_global::state();
     ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
@@ -259,14 +259,14 @@ void stream_packet::ss_command(
         lua_settop( L,0 );
         return;
     }
-    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
+    int32_t cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_settop( L,0 );
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,4 + cnt,0,1 ) ) )
     {
         ERROR( "ss_command:%s",lua_tostring( L,-1 ) );
 
@@ -291,7 +291,7 @@ void stream_packet::css_command( const s2s_header *header )
         return;
     }
 
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
@@ -309,14 +309,14 @@ void stream_packet::css_command( const s2s_header *header )
         lua_settop( L,0 );
         return;
     }
-    int32 cnt = decoder->decode( L,buffer,size,cmd_cfg );
+    int32_t cnt = decoder->decode( L,buffer,size,cmd_cfg );
     if ( cnt < 0 )
     {
         lua_settop( L,0 );
         return;
     }
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3 + cnt,0,1 ) ) )
     {
         ERROR( "css_command:%s",lua_tostring( L,-1 ) );
 
@@ -345,7 +345,7 @@ void stream_packet::ssc_command( const s2s_header *header )
         return;
     }
 
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t size = PACKET_BUFFER_LEN( header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
     class packet *sk_packet = sk->get_packet();
     sk_packet->raw_pack_clt( header->_cmd,header->_errno,ctx,size );
@@ -358,12 +358,12 @@ void stream_packet::rpc_command( const s2s_header *header )
     static lua_State *L = static_global::state();
     ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t size = PACKET_BUFFER_LEN( header );
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
     lua_pushcfunction( L,traceback );
-    int32 top = lua_gettop( L ); // pcall后，下面的栈都会被弹出
+    int32_t top = lua_gettop( L ); // pcall后，下面的栈都会被弹出
 
     lua_getglobal    ( L,"rpc_command_new"  );
     lua_pushinteger  ( L,_socket->conn_id() );
@@ -371,7 +371,7 @@ void stream_packet::rpc_command( const s2s_header *header )
 
     // rpc解析方式目前固定为bson
     codec *decoder = static_global::codec_mgr()->get_codec( codec::CDC_BSON );
-    int32 cnt = decoder->decode( L,buffer,size,NULL );
+    int32_t cnt = decoder->decode( L,buffer,size,NULL );
     if ( cnt < 1 ) // rpc调用至少要带参数名
     {
         lua_settop( L,0 );
@@ -379,8 +379,8 @@ void stream_packet::rpc_command( const s2s_header *header )
         return;
     }
 
-    int32 unique_id = static_cast<int32>( header->_owner );
-    int32 ecode = lua_pcall( L,2 + cnt,LUA_MULTRET,1 );
+    int32_t unique_id = static_cast<int32_t>( header->_owner );
+    int32_t ecode = lua_pcall( L,2 + cnt,LUA_MULTRET,1 );
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if ( unique_id > 0 )
     {
@@ -403,7 +403,7 @@ void stream_packet::rpc_return( const s2s_header *header )
     static lua_State *L = static_global::state();
     ASSERT( 0 == lua_gettop(L),"lua stack dirty" );
 
-    int32 size = PACKET_BUFFER_LEN( header );
+    int32_t size = PACKET_BUFFER_LEN( header );
     const char *buffer = reinterpret_cast<const char *>( header + 1 );
 
     lua_pushcfunction( L,traceback );
@@ -413,7 +413,7 @@ void stream_packet::rpc_return( const s2s_header *header )
     lua_pushinteger( L,header->_errno );
 
     // rpc在出错的情况下仍返回，这时buff可能无法成功打包
-    int32 cnt = 0;
+    int32_t cnt = 0;
     if ( size > 0 )
     {
         // rpc解析方式目前固定为bson
@@ -433,12 +433,12 @@ void stream_packet::rpc_return( const s2s_header *header )
 }
 
 /* 打包rpc数据包 */
-int32 stream_packet::do_pack_rpc(
-    lua_State *L,int32 unique_id,int32 ecode,uint16 pkt,int32 index )
+int32_t stream_packet::do_pack_rpc(
+    lua_State *L,int32_t unique_id,int32_t ecode,uint16_t pkt,int32_t index )
 {
     STAT_TIME_BEG();
 
-    int32 len = 0;
+    int32_t len = 0;
     const char *buffer = NULL;
     codec *encoder = static_global::codec_mgr()->get_codec( codec::CDC_BSON );
 
@@ -467,7 +467,7 @@ int32 stream_packet::do_pack_rpc(
     send.append( &s2sh,sizeof(struct s2s_header) );
     if ( len > 0)
     {
-        send.append( buffer,static_cast<uint32>(len) );
+        send.append( buffer,static_cast<uint32_t>(len) );
     }
     _socket->pending_send();
 
@@ -477,20 +477,20 @@ int32 stream_packet::do_pack_rpc(
     if ( SPKT_RPCS == pkt && lua_isstring(L,index) )
     {
         RPC_STAT_ADD( 
-            lua_tostring(L,index),(int32)s2sh._length, STAT_TIME_END() );
+            lua_tostring(L,index),(int32_t)s2sh._length, STAT_TIME_END() );
     }
 
     return 0;
 }
 
 /* 打包服务器发往客户端数据包 */
-int32 stream_packet::pack_clt( lua_State *L,int32 index )
+int32_t stream_packet::pack_clt( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    int32 cmd = luaL_checkinteger( L,index );
-    int32 ecode = luaL_checkinteger( L,index + 1 );
+    int32_t cmd = luaL_checkinteger( L,index );
+    int32_t ecode = luaL_checkinteger( L,index + 1 );
 
     const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cfg )
@@ -506,7 +506,7 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 2,&buffer,cfg );
+    int32_t len = encoder->encode( L,index + 2,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     if (len > MAX_PACKET_LEN )
@@ -524,18 +524,18 @@ int32 stream_packet::pack_clt( lua_State *L,int32 index )
     encoder->finalize();
 
     PKT_STAT_ADD( SPKT_SCPK, 
-        cmd, int32(len + sizeof(struct s2c_header)),STAT_TIME_END() );
+        cmd, int32_t(len + sizeof(struct s2c_header)),STAT_TIME_END() );
     return 0;
 }
 
 /* 打包客户端发往服务器数据包 */
-int32 stream_packet::pack_srv( lua_State *L,int32 index )
+int32_t stream_packet::pack_srv( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
 
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    int32 cmd = luaL_checkinteger( L,index );
+    int32_t cmd = luaL_checkinteger( L,index );
 
     if ( !lua_istable( L,index + 1 ) )
     {
@@ -557,12 +557,12 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 1,&buffer,cfg );
+    int32_t len = encoder->encode( L,index + 1,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     struct c2s_header c2sh;
     SET_HEADER_LENGTH( c2sh, len, cmd, SET_LENGTH_FAIL_ENCODE );
-    c2sh._cmd    = static_cast<uint16>  ( cmd );
+    c2sh._cmd    = static_cast<uint16_t>  ( cmd );
 
     class buffer &send = _socket->send_buffer();
     send.append( &c2sh,sizeof(c2sh) );
@@ -571,18 +571,18 @@ int32 stream_packet::pack_srv( lua_State *L,int32 index )
     encoder->finalize();
     _socket->pending_send();
 
-    PKT_STAT_ADD( SPKT_CSPK, cmd, int32(c2sh._length),STAT_TIME_END() );
+    PKT_STAT_ADD( SPKT_CSPK, cmd, int32_t(c2sh._length),STAT_TIME_END() );
 
     return 0;
 }
 
-int32 stream_packet::pack_ss ( lua_State *L,int32 index )
+int32_t stream_packet::pack_ss ( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
-    int32 cmd = luaL_checkinteger( L,index );
-    int32 ecode = luaL_checkinteger( L,index + 1 );
+    int32_t cmd = luaL_checkinteger( L,index );
+    int32_t ecode = luaL_checkinteger( L,index + 1 );
 
     if ( !lua_istable( L,index + 2 ) )
     {
@@ -604,7 +604,7 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 2,&buffer,cfg );
+    int32_t len = encoder->encode( L,index + 2,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     if ( len > MAX_PACKET_LEN )
@@ -613,7 +613,7 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
         return luaL_error( L,"buffer size over MAX_PACKET_LEN" );
     }
 
-    int32 session = network_mgr->get_curr_session();
+    int32_t session = network_mgr->get_curr_session();
     if ( raw_pack_ss( cmd,ecode,session,buffer,len ) < 0 )
     {
         encoder->finalize();
@@ -623,27 +623,27 @@ int32 stream_packet::pack_ss ( lua_State *L,int32 index )
     encoder->finalize();
 
     PKT_STAT_ADD( SPKT_SSPK, 
-        cmd, int32(len + sizeof(struct s2s_header)),STAT_TIME_END() );
+        cmd, int32_t(len + sizeof(struct s2s_header)),STAT_TIME_END() );
     return 0;
 }
 
-int32 stream_packet::pack_rpc( lua_State *L,int32 index )
+int32_t stream_packet::pack_rpc( lua_State *L,int32_t index )
 {
-    int32 unique_id = luaL_checkinteger( L,index );
+    int32_t unique_id = luaL_checkinteger( L,index );
     // ecode默认0
     return do_pack_rpc( L,unique_id,0,SPKT_RPCS,index + 1 );
 }
 
-int32 stream_packet::pack_ssc( lua_State *L,int32 index )
+int32_t stream_packet::pack_ssc( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
 
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     owner_t owner  = luaL_checkinteger( L,index     );
-    int32 codec_ty = luaL_checkinteger( L,index + 1 );
-    int32 cmd      = luaL_checkinteger( L,index + 2 );
-    int32 ecode    = luaL_checkinteger( L,index + 3 );
+    int32_t codec_ty = luaL_checkinteger( L,index + 1 );
+    int32_t cmd      = luaL_checkinteger( L,index + 2 );
+    int32_t ecode    = luaL_checkinteger( L,index + 3 );
 
     if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
     {
@@ -670,13 +670,13 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 4,&buffer,cfg );
+    int32_t len = encoder->encode( L,index + 4,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header s2sh;
     SET_HEADER_LENGTH( s2sh, len, cmd, SET_LENGTH_FAIL_ENCODE );
-    s2sh._cmd    = static_cast<uint16>  ( cmd );
+    s2sh._cmd    = static_cast<uint16_t>  ( cmd );
     s2sh._errno  = ecode;
     s2sh._owner  = owner;
     s2sh._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
@@ -689,18 +689,18 @@ int32 stream_packet::pack_ssc( lua_State *L,int32 index )
     encoder->finalize();
     _socket->pending_send();
 
-    PKT_STAT_ADD( SPKT_SSPK, cmd, int32(s2sh._length),STAT_TIME_END() );
+    PKT_STAT_ADD( SPKT_SSPK, cmd, int32_t(s2sh._length),STAT_TIME_END() );
 
     return 0;
 }
 
-int32 stream_packet::raw_pack_clt(
-    int32 cmd,uint16 ecode,const char *ctx,size_t size )
+int32_t stream_packet::raw_pack_clt(
+    int32_t cmd,uint16_t ecode,const char *ctx,size_t size )
 {
     /* 先构造客户端收到的数据包 */
     struct s2c_header s2ch;
     SET_HEADER_LENGTH( s2ch, size, cmd, SET_LENGTH_FAIL_RETURN );
-    s2ch._cmd    = static_cast<uint16>  ( cmd );
+    s2ch._cmd    = static_cast<uint16_t>  ( cmd );
     s2ch._errno  = ecode;
 
     class buffer &send = _socket->send_buffer();
@@ -711,12 +711,12 @@ int32 stream_packet::raw_pack_clt(
     return 0;
 }
 
-int32 stream_packet::raw_pack_ss(
-    int32 cmd,uint16 ecode,int32 session,const char *ctx,size_t size )
+int32_t stream_packet::raw_pack_ss(
+    int32_t cmd,uint16_t ecode,int32_t session,const char *ctx,size_t size )
 {
     struct s2s_header s2sh;
     SET_HEADER_LENGTH( s2sh, size, cmd, SET_LENGTH_FAIL_RETURN );
-    s2sh._cmd    = static_cast<uint16> ( cmd );
+    s2sh._cmd    = static_cast<uint16_t> ( cmd );
     s2sh._errno  = ecode;
     s2sh._owner  = session;
     s2sh._packet = SPKT_SSPK;
@@ -732,17 +732,17 @@ int32 stream_packet::raw_pack_ss(
 
 // 打包客户端广播数据
 // ssc_multicast( conn_id,mask,args_list,codec_type,cmd,errno,pkt )
-int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
+int32_t stream_packet::pack_ssc_multicast( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
 
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
     owner_t list[MAX_CLT_CAST] = { 0 };
-    int32 mask     = luaL_checkinteger( L,index     );
-    int32 codec_ty = luaL_checkinteger( L,index + 2 );
-    int32 cmd      = luaL_checkinteger( L,index + 3 );
-    int32 ecode    = luaL_checkinteger( L,index + 4 );
+    int32_t mask     = luaL_checkinteger( L,index     );
+    int32_t codec_ty = luaL_checkinteger( L,index + 2 );
+    int32_t cmd      = luaL_checkinteger( L,index + 3 );
+    int32_t ecode    = luaL_checkinteger( L,index + 4 );
 
     lUAL_CHECKTABLE( L,index + 1 );
     lUAL_CHECKTABLE( L,index + 5 );
@@ -750,7 +750,7 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     // 占用list的两个位置，这样写入socket缓存区时不用另外处理
     list[0] = mask;
     // list[1] = 0; 数量
-    int32 idx = 2;
+    int32_t idx = 2;
     lua_pushnil(L);  /* first key */
     while ( lua_next(L, index + 1) != 0 )
     {
@@ -794,13 +794,13 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,index + 5,&buffer,cfg );
+    int32_t len = encoder->encode( L,index + 5,&buffer,cfg );
     if ( len < 0 ) return -1;
 
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header s2sh;
     SET_HEADER_LENGTH( s2sh, list_len + len, cmd, SET_LENGTH_FAIL_ENCODE );
-    s2sh._cmd    = static_cast<uint16>  ( cmd );
+    s2sh._cmd    = static_cast<uint16_t>  ( cmd );
     s2sh._errno  = ecode;
     s2sh._owner  = 0;
     s2sh._codec  = codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
@@ -814,14 +814,14 @@ int32 stream_packet::pack_ssc_multicast( lua_State *L,int32 index )
     encoder->finalize();
     _socket->pending_send();
 
-    PKT_STAT_ADD( SPKT_CBCP, cmd, int32(s2sh._length),STAT_TIME_END() );
+    PKT_STAT_ADD( SPKT_CBCP, cmd, int32_t(s2sh._length),STAT_TIME_END() );
 
     return 0;
 }
 
 // 转发到一个客户端
 void stream_packet::ssc_one_multicast(
-    owner_t owner,int32 cmd,uint16 ecode,const char *ctx,int32 size )
+    owner_t owner,int32_t cmd,uint16_t ecode,const char *ctx,int32_t size )
 {
     static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
 
@@ -849,8 +849,8 @@ void stream_packet::ssc_one_multicast(
 void stream_packet::ssc_multicast( const s2s_header *header )
 {
     const owner_t *raw_list = reinterpret_cast<const owner_t *>( header + 1 );
-    int32 mask = static_cast<int32>( *raw_list );
-    int32 count = static_cast<int32>( *(raw_list + 1) );
+    int32_t mask = static_cast<int32_t>( *raw_list );
+    int32_t count = static_cast<int32_t>( *(raw_list + 1) );
     if ( MAX_CLT_CAST < count )
     {
         ERROR( "ssc_multicast too many to cast:%d",count );
@@ -859,7 +859,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
 
     // 长度记得包含mask和count本身这两个变量
     size_t raw_list_len = sizeof(owner_t)*(count + 2);
-    int32 size = PACKET_BUFFER_LEN( header ) - raw_list_len;
+    int32_t size = PACKET_BUFFER_LEN( header ) - raw_list_len;
     const char *ctx =
         reinterpret_cast<const char *>( header + 1 );
     ctx += raw_list_len;
@@ -873,7 +873,7 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     // 根据玩家pid广播，底层直接处理
     if ( CLT_MC_OWNER == mask )
     {
-        for ( int32 idx = 0;idx < count;idx ++ )
+        for ( int32_t idx = 0;idx < count;idx ++ )
         {
             ssc_one_multicast(
                 *(raw_list + idx + 2),header->_cmd,header->_errno,ctx,size );
@@ -895,11 +895,11 @@ void stream_packet::ssc_multicast( const s2s_header *header )
     lua_pushcfunction( L,traceback );
     lua_getglobal( L,"clt_multicast_new" );
     lua_pushinteger( L,mask );
-    for ( int32 idx = 2;idx < count + 2;idx ++ )
+    for ( int32_t idx = 2;idx < count + 2;idx ++ )
     {
         lua_pushinteger( L,*(raw_list + idx) );
     }
-    if ( expect_false( LUA_OK != lua_pcall( L,count + 1,1,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,count + 1,1,1 ) ) )
     {
         ERROR( "clt_multicast_new:%s",lua_tostring( L,-1 ) );
 

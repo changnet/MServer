@@ -76,7 +76,7 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
 */
 
 // 解析完websocket的header
-int32 on_frame_header( struct websocket_parser *parser )
+int32_t on_frame_header( struct websocket_parser *parser )
 {
     ASSERT( parser && parser->data, "websocket parser NULL" );
 
@@ -100,7 +100,7 @@ int32 on_frame_header( struct websocket_parser *parser )
 }
 
 // 收到帧数据
-int32 on_frame_body( 
+int32_t on_frame_body( 
     struct websocket_parser *parser, const char * at, size_t length )
 {
     ASSERT( parser && parser->data, "websocket parser NULL" );
@@ -134,7 +134,7 @@ int32 on_frame_body(
 }
 
 // 数据帧完成
-int32 on_frame_end( struct websocket_parser *parser )
+int32_t on_frame_end( struct websocket_parser *parser )
 {
     ASSERT( parser && parser->data, "websocket parser NULL" );
 
@@ -146,7 +146,7 @@ int32 on_frame_end( struct websocket_parser *parser )
      * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are 
      * identified by opcodes where the most significant bit of the opcode is 1)
      */
-    if ( expect_false(parser->flags & 0x08) )
+    if ( EXPECT_FALSE(parser->flags & 0x08) )
     {
        return ws_packet->on_ctrl_end();
     }
@@ -180,7 +180,7 @@ websocket_packet::~websocket_packet()
     _parser = NULL;
 }
 
-int32 websocket_packet::pack_raw( lua_State *L,int32 index )
+int32_t websocket_packet::pack_raw( lua_State *L,int32_t index )
 {
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
@@ -211,7 +211,7 @@ int32 websocket_packet::pack_raw( lua_State *L,int32 index )
 /* 打包服务器发往客户端数据包
  * return: <0 error;>=0 success
  */
-int32 websocket_packet::pack_clt( lua_State *L,int32 index )
+int32_t websocket_packet::pack_clt( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }
@@ -219,14 +219,14 @@ int32 websocket_packet::pack_clt( lua_State *L,int32 index )
 /* 打包客户端发往服务器数据包
  * return: <0 error;>=0 success
  */
-int32 websocket_packet::pack_srv( lua_State *L,int32 index )
+int32_t websocket_packet::pack_srv( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }
 
 // 发送opcode
 // 对应websocket，可以直接用pack_clt或pack_srv发送控制帧。这个函数是给ws_stream等子类使用
-int32 websocket_packet::pack_ctrl( lua_State *L,int32 index )
+int32_t websocket_packet::pack_ctrl( lua_State *L,int32_t index )
 {
     /* https://tools.ietf.org/html/rfc6455#section-5.5
      * 控制帧可以包含数据。但这个数据不是data-frame，即不能设置OP_TEXT、OP_BINARY
@@ -239,7 +239,7 @@ int32 websocket_packet::pack_ctrl( lua_State *L,int32 index )
 /* 数据解包 
  * return: <0 error;0 success
  */
-int32 websocket_packet::unpack()
+int32_t websocket_packet::unpack()
 {
     /* 未握手时，由http处理
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
@@ -248,7 +248,7 @@ int32 websocket_packet::unpack()
 
     class buffer &recv = _socket->recv_buffer();
 
-    uint32 size = 0;
+    uint32_t size = 0;
     const char *ctx = recv.all_to_continuous_ctx( size );
     if ( size == 0 ) return 0;
 
@@ -271,7 +271,7 @@ int32 websocket_packet::unpack()
 }
 
 /* http-parser在解析完握手数据时，会触发一次message_complete */
-int32 websocket_packet::on_message_complete( bool upgrade )
+int32_t websocket_packet::on_message_complete( bool upgrade )
 {
     ASSERT( upgrade && !_is_upgrade, "should be upgrade");
 
@@ -281,7 +281,7 @@ int32 websocket_packet::on_message_complete( bool upgrade )
     return 0;
 }
 
-int32 websocket_packet::invoke_handshake()
+int32_t websocket_packet::invoke_handshake()
 {
     /* https://tools.ietf.org/pdf/rfc6455.pdf Section 1.3,page 6
      */
@@ -321,7 +321,7 @@ int32 websocket_packet::invoke_handshake()
     lua_pushstring   ( L,key_str );
     lua_pushstring   ( L,accept_str );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {
         ERROR( "websocket handshake:%s",lua_tostring( L,-1 ) );
     }
@@ -332,12 +332,12 @@ int32 websocket_packet::invoke_handshake()
 }
 
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
-int32 websocket_packet::on_frame_end()
+int32_t websocket_packet::on_frame_end()
 {
     static lua_State *L = static_global::state();
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
-    uint32 size = 0;
+    uint32_t size = 0;
     const char *ctx = _body.all_to_continuous_ctx( size );
 
     lua_pushcfunction( L,traceback );
@@ -345,7 +345,7 @@ int32 websocket_packet::on_frame_end()
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushlstring  ( L,ctx,size );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {
         ERROR( "websocket command:%s",lua_tostring( L,-1 ) );
     }
@@ -356,12 +356,12 @@ int32 websocket_packet::on_frame_end()
 }
 
 // 处理ping、pong等opcode 
-int32 websocket_packet::on_ctrl_end()
+int32_t websocket_packet::on_ctrl_end()
 {
     static lua_State *L = static_global::state();
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
-    uint32 size = 0;
+    uint32_t size = 0;
     const char *ctx = _body.all_to_continuous_ctx( size );
 
     lua_pushcfunction( L,traceback );
@@ -371,7 +371,7 @@ int32 websocket_packet::on_ctrl_end()
     // 控制帧也是可以包含数据的
     lua_pushlstring  ( L,ctx,size );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3,0,1 ) ) )
     {
         ERROR( "websocket ctrl:%s",lua_tostring( L,-1 ) );
     }
@@ -399,6 +399,6 @@ void websocket_packet::new_masking_key( char mask[4] )
    y = z;
    z = t ^ x ^ y;
 
-   uint32 *new_mask = reinterpret_cast<uint32 *>( mask );
-   *new_mask = static_cast<uint32>( z );
+   uint32_t *new_mask = reinterpret_cast<uint32_t *>( mask );
+   *new_mask = static_cast<uint32_t>( z );
 }

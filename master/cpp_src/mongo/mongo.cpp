@@ -21,7 +21,7 @@ mongo::~mongo()
 }
 
 void mongo::set( const char *ip,
-    const int32 port,const char *usr,const char *pwd,const char *db )
+    const int32_t port,const char *usr,const char *pwd,const char *db )
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
     _port = port;
@@ -31,7 +31,7 @@ void mongo::set( const char *ip,
     snprintf( _db ,MONGO_VAR_LEN,"%s",db  );
 }
 
-int32 mongo::connect()
+int32_t mongo::connect()
 {
     ASSERT( !_conn, "mongo duplicate connect" );
 
@@ -50,7 +50,7 @@ int32 mongo::connect()
      * 默认10s超时.超服时阻塞,应该可以接受.尝试ping一下，失败也不一定说明有问题
      * 需要关注日志。
      */
-    int32 ok = ping();
+    int32_t ok = ping();
     return 0 == ok ? 0 : -1;
 }
 
@@ -60,7 +60,7 @@ void mongo::disconnect()
     _conn = NULL;
 }
 
-int32 mongo::ping()
+int32_t mongo::ping()
 {
     ASSERT( _conn, "try to ping a inactive mongo" );
 
@@ -85,7 +85,7 @@ int32 mongo::ping()
 
     /* get the error */
     bson_error_t error;
-    int32 ecode = mongoc_cursor_error( cursor, &error );
+    int32_t ecode = mongoc_cursor_error( cursor, &error );
     if ( ecode )
     {
         ERROR_R( "mongo ping error(%d):%s",error.code,error.message );
@@ -107,7 +107,7 @@ bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
         mongoc_client_get_collection( _conn, _db, mq->_clt );
 
     // opts = {"skip":1,"limit":5}
-    int64 count = mongoc_collection_count_documents(
+    int64_t count = mongoc_collection_count_documents(
         collection,mq->_query,mq->_opts,NULL,NULL,&res->_error );
 
     mongoc_collection_destroy ( collection );
@@ -139,7 +139,7 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
         mongoc_collection_find_with_opts(
         collection, mq->_query, mq->_fields, NULL );
 
-    int32 index = 0;
+    int32_t index = 0;
     bson_t *doc = bson_new();
 
     const bson_t *sub_doc = NULL;
@@ -154,7 +154,7 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
          * bson_append_document还是bson_append_array仅在bson_iter_type中有区别
          */
 
-        const int32 buff_len = 128;
+        const int32_t buff_len = 128;
         char index_buff[buff_len];
         snprintf( index_buff,buff_len,"%d",index );
 

@@ -17,16 +17,16 @@ public:
     ~lmongo();
     explicit lmongo( lua_State *L );
 
-    int32 start( lua_State *L );
-    int32 stop ( lua_State *L );
-    int32 valid( lua_State *L );
+    int32_t start( lua_State *L );
+    int32_t stop ( lua_State *L );
+    int32_t valid( lua_State *L );
 
-    int32 find     ( lua_State *L );
-    int32 count    ( lua_State *L );
-    int32 insert   ( lua_State *L );
-    int32 update   ( lua_State *L );
-    int32 remove   ( lua_State *L );
-    int32 find_and_modify( lua_State *L );
+    int32_t find     ( lua_State *L );
+    int32_t count    ( lua_State *L );
+    int32_t insert   ( lua_State *L );
+    int32_t update   ( lua_State *L );
+    int32_t remove   ( lua_State *L );
+    int32_t find_and_modify( lua_State *L );
 
     size_t busy_job( size_t *finished = NULL,size_t *unfinished = NULL );
 private:
@@ -49,8 +49,8 @@ private:
 private:
     class mongo _mongo;
 
-    int32 _valid;
-    int32 _dbid;
+    int32_t _valid;
+    int32_t _dbid;
 
     std::queue<const struct mongo_query  *> _query ;
     std::queue<const struct mongo_result *> _result;

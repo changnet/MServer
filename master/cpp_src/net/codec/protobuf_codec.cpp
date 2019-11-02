@@ -38,26 +38,26 @@ public:
 
     void del_message();
 
-    int32 encode( lua_State *L,const char *object,int32 index );
-    int32 decode(
+    int32_t encode( lua_State *L,const char *object,int32_t index );
+    int32_t decode(
         lua_State *L,const char *object,const char *buffer,size_t size );
 
     const char *last_error();
     void get_buffer( struct pbc_slice &slice );
 
-    int32 load_file( const char *paeth );
-    int32 load_path( const char *path,const char *suffix = "pb" );
+    int32_t load_file( const char *paeth );
+    int32_t load_path( const char *path,const char *suffix = "pb" );
 private:
-    int32 raw_encode( lua_State *L,
-        struct pbc_wmessage *wmsg,const char *object,int32 index );
-    int32 encode_field( lua_State *L,struct pbc_wmessage *wmsg,
-        int32 type,int32 index,const char *key,const char *object );
-    int32 raw_encode_field( lua_State *L,struct pbc_wmessage *wmsg,
-        int32 type,int32 index,const char *key,const char *object );
+    int32_t raw_encode( lua_State *L,
+        struct pbc_wmessage *wmsg,const char *object,int32_t index );
+    int32_t encode_field( lua_State *L,struct pbc_wmessage *wmsg,
+        int32_t type,int32_t index,const char *key,const char *object );
+    int32_t raw_encode_field( lua_State *L,struct pbc_wmessage *wmsg,
+        int32_t type,int32_t index,const char *key,const char *object );
 
-    int32 raw_decode( lua_State *L,struct pbc_rmessage *msg );
-    int32 decode_field( lua_State *L,
-        struct pbc_rmessage *msg,const char *key,int32 type,int32 idx );
+    int32_t raw_decode( lua_State *L,struct pbc_rmessage *msg );
+    int32_t decode_field( lua_State *L,
+        struct pbc_rmessage *msg,const char *key,int32_t type,int32_t idx );
 private:
     struct pbc_env *_env;
     struct pbc_wmessage *_write_msg;
@@ -84,7 +84,7 @@ void lprotobuf::del_message()
     _write_msg = NULL;
 }
 
-int32 lprotobuf::load_file( const char *path )
+int32_t lprotobuf::load_file( const char *path )
 {
     std::ifstream ifs( path,std::ifstream::binary|std::ifstream::in );
     if ( !ifs.good() )
@@ -96,7 +96,7 @@ int32 lprotobuf::load_file( const char *path )
 
     // get length of file:
     ifs.seekg( 0, ifs.end );
-    int32 len = ifs.tellg();
+    int32_t len = ifs.tellg();
     ifs.seekg( 0, ifs.beg );
 
     if ( !ifs.good() or len <= 0 )
@@ -131,7 +131,7 @@ int32 lprotobuf::load_file( const char *path )
     return 0;
 }
 
-int32 lprotobuf::load_path( const char *path,const char *suffix )
+int32_t lprotobuf::load_path( const char *path,const char *suffix )
 {
     char file_path[PATH_MAX];
     int sz = snprintf( file_path,PATH_MAX,"%s/",path );
@@ -189,11 +189,11 @@ void lprotobuf::get_buffer( struct pbc_slice &slice )
     pbc_wmessage_buffer( _write_msg,&slice );
 }
 
-int32 lprotobuf::decode(
+int32_t lprotobuf::decode(
     lua_State *L,const char *object,const char *buffer,size_t size )
 {
     struct pbc_slice slice;
-    slice.len = static_cast<int32>( size );
+    slice.len = static_cast<int32_t>( size );
     slice.buffer = const_cast<char *>( buffer );
 
     struct pbc_rmessage * msg = pbc_rmessage_new( _env,object,&slice );
@@ -203,13 +203,13 @@ int32 lprotobuf::decode(
         return -1;
     }
 
-    int32 ecode = raw_decode( L,msg );
+    int32_t ecode = raw_decode( L,msg );
     pbc_rmessage_delete( msg );
 
     return ecode;
 }
 
-int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
+int32_t lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
 {
     int type = 0;
     const char *key = NULL;
@@ -219,7 +219,7 @@ int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
         ERROR( "protobuf decode stack overflow" );
         return -1;
     }
-    int32 top = lua_gettop( L );
+    int32_t top = lua_gettop( L );
 
     lua_newtable( L );
 
@@ -232,7 +232,7 @@ int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
         if ( type & PBC_REPEATED )
         {
             lua_newtable( L );
-            int32 raw_type = (type & ~PBC_REPEATED);
+            int32_t raw_type = (type & ~PBC_REPEATED);
             int size = pbc_rmessage_size( msg, key );
             for ( int idx = 0;idx < size;idx ++ )
             {
@@ -258,8 +258,8 @@ int32 lprotobuf::raw_decode( lua_State *L,struct pbc_rmessage *msg )
     return 0;
 }
 
-int32 lprotobuf::decode_field( lua_State *L,
-    struct pbc_rmessage *msg,const char *key,int32 type,int32 idx )
+int32_t lprotobuf::decode_field( lua_State *L,
+    struct pbc_rmessage *msg,const char *key,int32_t type,int32_t idx )
 {
     switch( type )
     {
@@ -268,7 +268,7 @@ int32 lprotobuf::decode_field( lua_State *L,
     {
         uint32_t hi,low;
         low = pbc_rmessage_integer( msg,key,idx,&hi );
-        int64 val = (int64)((uint64)hi << 32 | (uint64)low);
+        int64_t val = (int64_t)((uint64_t)hi << 32 | (uint64_t)low);
         lua_pushinteger( L,val );
     }break;
     case PBC_REAL :
@@ -278,17 +278,17 @@ int32 lprotobuf::decode_field( lua_State *L,
     }break;
     case PBC_BOOL :
     {
-        uint32 val = pbc_rmessage_integer( msg,key,idx,NULL );
+        uint32_t val = pbc_rmessage_integer( msg,key,idx,NULL );
         lua_pushboolean( L,val );
     }break;
     case PBC_ENUM :
     {
-        uint32 val = pbc_rmessage_integer( msg,key,idx,NULL );
+        uint32_t val = pbc_rmessage_integer( msg,key,idx,NULL );
         lua_pushinteger( L,val );
     }break;
     case PBC_STRING : case PBC_BYTES :
     {
-        int32 size = 0;
+        int32_t size = 0;
         const char *bytes = pbc_rmessage_string( msg,key,idx,&size );
         lua_pushlstring( L,bytes,size );
     }break;
@@ -309,7 +309,7 @@ int32 lprotobuf::decode_field( lua_State *L,
     return 0;
 }
 
-int32 lprotobuf::encode( lua_State *L,const char *object,int32 index )
+int32_t lprotobuf::encode( lua_State *L,const char *object,int32_t index )
 {
     ASSERT( NULL == _write_msg, "protobuf write message not clear" );
 
@@ -320,15 +320,15 @@ int32 lprotobuf::encode( lua_State *L,const char *object,int32 index )
         return -1;
     }
 
-    int32 ecode = raw_encode( L,_write_msg,object,index );
+    int32_t ecode = raw_encode( L,_write_msg,object,index );
     if ( 0 != ecode ) del_message();
 
     return ecode;
 }
 
-int32 lprotobuf::encode_field(
+int32_t lprotobuf::encode_field(
     lua_State *L,struct pbc_wmessage *wmsg,
-    int32 type,int32 index,const char *key,const char *object )
+    int32_t type,int32_t index,const char *key,const char *object )
 {
     if ( type & PBC_REPEATED )
     {
@@ -338,7 +338,7 @@ int32 lprotobuf::encode_field(
             return -1;
         }
 
-        int32 raw_type = (type & ~PBC_REPEATED);
+        int32_t raw_type = (type & ~PBC_REPEATED);
         lua_pushnil( L );
         while( lua_next( L,index ) )
         {
@@ -356,9 +356,9 @@ int32 lprotobuf::encode_field(
     return raw_encode_field( L,wmsg,type,index,key,object );
 }
 
-int32 lprotobuf::raw_encode_field(
+int32_t lprotobuf::raw_encode_field(
     lua_State *L,struct pbc_wmessage *wmsg,
-    int32 type,int32 index,const char *key,const char *object )
+    int32_t type,int32_t index,const char *key,const char *object )
 {
 #define LUAL_CHECK( TYPE )    \
     if ( !lua_is##TYPE( L,index ) ){    \
@@ -373,9 +373,9 @@ int32 lprotobuf::raw_encode_field(
     case PBC_UINT : case PBC_FIXED64 : case PBC_INT64 :
     {
         LUAL_CHECK( integer )
-        int64 val = (int64)( lua_tointeger( L,index ) );
-        uint32 hi = (uint32)( val >> 32 );
-        pbc_wmessage_integer( wmsg, key, (uint32)val, hi );
+        int64_t val = (int64_t)( lua_tointeger( L,index ) );
+        uint32_t hi = (uint32_t)( val >> 32 );
+        pbc_wmessage_integer( wmsg, key, (uint32_t)val, hi );
     }break;
     case PBC_REAL    :
     {
@@ -385,21 +385,21 @@ int32 lprotobuf::raw_encode_field(
     }break;
     case PBC_BOOL :
     {
-        int32 val = lua_toboolean( L,index );
-        pbc_wmessage_integer( wmsg, key, (uint32)val, 0 );
+        int32_t val = lua_toboolean( L,index );
+        pbc_wmessage_integer( wmsg, key, (uint32_t)val, 0 );
     }break;
     case PBC_ENUM :
     {
         LUAL_CHECK( integer )
-        int32 val = lua_tointeger( L,index );
-        pbc_wmessage_integer( wmsg, key, (uint32)val, 0 );
+        int32_t val = lua_tointeger( L,index );
+        pbc_wmessage_integer( wmsg, key, (uint32_t)val, 0 );
     }break;
     case PBC_STRING  : case PBC_BYTES :
     {
         LUAL_CHECK( string )
         size_t len = 0;
         const char * val = lua_tolstring( L,index,&len );
-        if ( pbc_wmessage_string( wmsg, key, val, (int32)len ) )
+        if ( pbc_wmessage_string( wmsg, key, val, (int32_t)len ) )
         {
             ERROR( "field(%s) write string error",key );
             return -1;
@@ -419,8 +419,8 @@ int32 lprotobuf::raw_encode_field(
 #undef LUAL_CHECK
 }
 
-int32 lprotobuf::raw_encode( lua_State *L,
-    struct pbc_wmessage *wmsg,const char *object,int32 index )
+int32_t lprotobuf::raw_encode( lua_State *L,
+    struct pbc_wmessage *wmsg,const char *object,int32_t index )
 {
     if ( !lua_istable( L,index ) )
     {
@@ -434,7 +434,7 @@ int32 lprotobuf::raw_encode( lua_State *L,
         return -1;
     }
 
-    int32 top = lua_gettop( L );
+    int32_t top = lua_gettop( L );
 
     /* pbc并未提供遍历sdl的方法，只能反过来遍历tabale.
      * 如果table中包含较多的无效字段，hash消耗将会比较大
@@ -448,7 +448,7 @@ int32 lprotobuf::raw_encode( lua_State *L,
         const char *key = lua_tostring( L,-2 );
 
         const char *sub_object = NULL;
-        int32 val_type = pbc_type( _env,object,key,&sub_object );
+        int32_t val_type = pbc_type( _env,object,key,&sub_object );
         if ( val_type <= 0 )
         {
             lua_pop( L, 1 );
@@ -487,7 +487,7 @@ void protobuf_codec::finalize()
     }
 }
 
-int32 protobuf_codec::load_path( const char *path )
+int32_t protobuf_codec::load_path( const char *path )
 {
     // pbc并没有什么unregister之类的函数，只能把整个对象销毁重建了
     if ( _is_proto_loaded )
@@ -505,8 +505,8 @@ int32 protobuf_codec::load_path( const char *path )
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32 protobuf_codec::decode(
-     lua_State *L,const char *buffer,int32 len,const cmd_cfg_t *cfg )
+int32_t protobuf_codec::decode(
+     lua_State *L,const char *buffer,int32_t len,const cmd_cfg_t *cfg )
 {
     if ( _lprotobuf->decode( L,cfg->_object,buffer,len ) < 0 )
     {
@@ -521,8 +521,8 @@ int32 protobuf_codec::decode(
 /* 编码数据包
  * return: <0 error,otherwise the length of buffer
  */
-int32 protobuf_codec::encode(
-    lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg )
+int32_t protobuf_codec::encode(
+    lua_State *L,int32_t index,const char **buffer,const cmd_cfg_t *cfg )
 {
     if ( _lprotobuf->encode( L,cfg->_object,index ) < 0 )
     {

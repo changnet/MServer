@@ -12,7 +12,7 @@
 #define SSL_ERROR(x)    \
     do{                                                     \
         ERROR(x " errno(%d:%s)",errno,strerror(errno));     \
-        int32 eno = 0;                                      \
+        int32_t eno = 0;                                      \
         while ( 0 != (eno = ERR_get_error()) ) {            \
             ERROR( "    %s",ERR_error_string(eno,NULL) );   \
         }                                                   \
@@ -27,7 +27,7 @@ ssl_io::~ssl_io()
     }
 }
 
-ssl_io::ssl_io( int32 ctx_idx,class buffer *recv,class buffer *send )
+ssl_io::ssl_io( int32_t ctx_idx,class buffer *recv,class buffer *send )
     : io( recv,send )
 {
     _handshake = false;
@@ -38,7 +38,7 @@ ssl_io::ssl_io( int32 ctx_idx,class buffer *recv,class buffer *send )
 /* 接收数据
  * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
-int32 ssl_io::recv( int32 &byte )
+int32_t ssl_io::recv( int32_t &byte )
 {
     ASSERT( _fd > 0, "io recv fd invalid" );
 
@@ -48,16 +48,16 @@ int32 ssl_io::recv( int32 &byte )
     if ( !_recv->reserved() ) return -1; /* no more memory */
 
     // ERR_clear_error
-    uint32 size = _recv->get_space_size();
-    int32 len = SSL_read( X_SSL( _ssl_ctx ),_recv->get_space_ctx(),size );
-    if ( expect_true(len > 0) )
+    uint32_t size = _recv->get_space_size();
+    int32_t len = SSL_read( X_SSL( _ssl_ctx ),_recv->get_space_ctx(),size );
+    if ( EXPECT_TRUE(len > 0) )
     {
         byte = len;
         _recv->add_used_offset( len );
         return 0;
     }
 
-    int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
+    int32_t ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
     if ( SSL_ERROR_WANT_READ == ecode ) return 1;
 
     /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
@@ -84,7 +84,7 @@ int32 ssl_io::recv( int32 &byte )
 /* 发送数据
  * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
-int32 ssl_io::send( int32 &byte )
+int32_t ssl_io::send( int32_t &byte )
 {
     ASSERT( _fd > 0, "io send fd invalid" );
 
@@ -94,15 +94,15 @@ int32 ssl_io::send( int32 &byte )
     size_t bytes = _send->get_used_size();
     ASSERT( bytes > 0, "io send without data" );
 
-    int32 len = SSL_write( X_SSL( _ssl_ctx ),_send->get_used_ctx(),bytes );
-    if ( expect_true(len > 0) )
+    int32_t len = SSL_write( X_SSL( _ssl_ctx ),_send->get_used_ctx(),bytes );
+    if ( EXPECT_TRUE(len > 0) )
     {
         byte = len;
         _send->remove( len );
         return 0 == _send->get_used_size() ? 0 : 2;
     }
 
-    int32 ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
+    int32_t ecode = SSL_get_error( X_SSL( _ssl_ctx ),len );
     if ( SSL_ERROR_WANT_WRITE == ecode ) return 2;
 
     // 非主动断开，打印错误日志
@@ -118,7 +118,7 @@ int32 ssl_io::send( int32 &byte )
 
 /* 准备接受状态
  */
-int32 ssl_io::init_accept( int32 fd )
+int32_t ssl_io::init_accept( int32_t fd )
 {
     if ( init_ssl_ctx( fd ) < 0 ) return -1;
 
@@ -130,7 +130,7 @@ int32 ssl_io::init_accept( int32 fd )
 
 /* 准备连接状态
  */
-int32 ssl_io::init_connect( int32 fd )
+int32_t ssl_io::init_connect( int32_t fd )
 {
     if ( init_ssl_ctx( fd ) < 0 ) return -1;
 
@@ -140,7 +140,7 @@ int32 ssl_io::init_connect( int32 fd )
     return do_handshake();
 }
 
-int32 ssl_io::init_ssl_ctx( int32 fd )
+int32_t ssl_io::init_ssl_ctx( int32_t fd )
 {
     static class ssl_mgr *ctx_mgr = static_global::ssl_mgr();
 
@@ -168,9 +168,9 @@ int32 ssl_io::init_ssl_ctx( int32 fd )
 }
 
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32 ssl_io::do_handshake()
+int32_t ssl_io::do_handshake()
 {
-    int32 ecode = SSL_do_handshake( X_SSL( _ssl_ctx ) );
+    int32_t ecode = SSL_do_handshake( X_SSL( _ssl_ctx ) );
     if ( 1 == ecode )
     {
         _handshake = true;

@@ -26,7 +26,7 @@ size_t async_log::busy_job( size_t *finished,size_t *unfinished )
 void async_log::write(
     const char *path,const char *ctx,size_t len,log_out_t out_type)
 {
-    static class ev *ev = static_global::ev();
+    static class Ev *ev = static_global::ev();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
@@ -39,7 +39,7 @@ void async_log::raw_write(
 {
     static char ctx_buff[LOG_MAX_LENGTH];
 
-    int32 len = vsnprintf(ctx_buff,LOG_MAX_LENGTH,fmt,args);
+    int32_t len = vsnprintf(ctx_buff,LOG_MAX_LENGTH,fmt,args);
 
     /* snprintf
      * 错误返回-1

@@ -3,7 +3,7 @@
 #include "ev.h"
 #include "ev_watcher.h"
 
-ev::ev()
+Ev::Ev()
 {
     anfds = NULL;
     anfdmax = 0;
@@ -29,7 +29,7 @@ ev::ev()
     backend_init();
 }
 
-ev::~ev()
+Ev::~Ev()
 {
     /* it's safe to delete NULL pointer,
      * and to avoid oclint error:unnecessary null check for dealloc
@@ -53,7 +53,7 @@ ev::~ev()
     }
 }
 
-int32 ev::run()
+int32_t Ev::run()
 {
     ASSERT( backend_fd >= 0, "backend uninit" );
 
@@ -69,13 +69,13 @@ int32 ev::run()
     time_update ();
 
     loop_done = false;
-    while ( expect_true(!loop_done) )
+    while ( EXPECT_TRUE(!loop_done) )
     {
         backend_poll ( wait_time() );
 
         /* update ev_rt_now, do magic */
         time_update ();
-        int64 old_now_ms = ev_now_ms;
+        int64_t old_now_ms = ev_now_ms;
 
         /* 先处理完上一次的阻塞的IO和定时器再调用 fd_reify和timers_reify
          * 因为在处理过程中可能会增删fd、timer
@@ -98,18 +98,18 @@ int32 ev::run()
     return 0;
 }
 
-int32 ev::quit()
+int32_t Ev::quit()
 {
     loop_done = true;
 
     return 0;
 }
 
-int32 ev::io_start( ev_io *w )
+int32_t Ev::io_start( EvIO *w )
 {
-    int32 fd = w->fd;
+    int32_t fd = w->fd;
 
-    array_resize( ANFD,anfds,anfdmax,uint32(fd + 1),array_zero );
+    ARRAY_RESIZE( ANFD,anfds,anfdmax,uint32_t(fd + 1),ARRAY_ZERO );
 
     ANFD *anfd = anfds + fd;
 
@@ -124,14 +124,14 @@ int32 ev::io_start( ev_io *w )
     return 1;
 }
 
-int32 ev::io_stop( ev_io *w )
+int32_t Ev::io_stop( EvIO *w )
 {
     clear_pending( w );
 
-    if ( expect_false(!w->is_active()) ) return 0;
+    if ( EXPECT_FALSE(!w->is_active()) ) return 0;
 
-    int32 fd = w->fd;
-    ASSERT( fd >= 0 && uint32(fd) < anfdmax,
+    int32_t fd = w->fd;
+    ASSERT( fd >= 0 && uint32_t(fd) < anfdmax,
         "illegal fd (must stay constant after start!)");
 
     ANFD *anfd = anfds + fd;
@@ -143,29 +143,29 @@ int32 ev::io_stop( ev_io *w )
     return 0;
 }
 
-void ev::fd_change( int32 fd )
+void Ev::fd_change( int32_t fd )
 {
     ++fdchangecnt;
-    array_resize( ANCHANGE,fdchanges,fdchangemax,fdchangecnt,array_noinit );
+    ARRAY_RESIZE( ANCHANGE,fdchanges,fdchangemax,fdchangecnt,ARRAY_NOINIT );
     fdchanges [fdchangecnt - 1] = fd;
 }
 
-void ev::fd_reify()
+void Ev::fd_reify()
 {
-    for ( uint32 i = 0;i < fdchangecnt;i ++ )
+    for ( uint32_t i = 0;i < fdchangecnt;i ++ )
     {
-        int32 fd     = fdchanges[i];
+        int32_t fd     = fdchanges[i];
         ANFD *anfd   = anfds + fd;
 
-        int32 reify = anfd->reify;
+        int32_t reify = anfd->reify;
         /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
-        if ( expect_false(0 == reify) )
+        if ( EXPECT_FALSE(0 == reify) )
         {
             ERROR( "fd change,but not reify" );
             continue;
         }
 
-        int32 events = EPOLL_CTL_DEL == reify ? 0 : (anfd->w)->events;
+        int32_t events = EPOLL_CTL_DEL == reify ? 0 : (anfd->w)->events;
 
         backend_modify( fd,events,reify );
         anfd->emask = events;
@@ -181,7 +181,7 @@ void ev::fd_reify()
  * libev和libevent均采用类似处理方法。但它们由于考虑dup、fork、thread等特性，
  * 处理更为复杂。
  */
-void ev::backend_modify( int32 fd,int32 events,int32 reify )
+void Ev::backend_modify( int32_t fd,int32_t events,int32_t reify )
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */
@@ -194,7 +194,7 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
     /* The default behavior for epoll is Level Triggered. */
     /* LT(Level Triggered)同时支持block和no-block，持续通知 */
     /* ET(Edge Trigger)只支持no-block，一个事件只通知一次 */
-    if ( expect_true (!epoll_ctl(backend_fd,reify,fd,&ev)) ) return;
+    if ( EXPECT_TRUE (!epoll_ctl(backend_fd,reify,fd,&ev)) ) return;
 
     switch ( errno )
     {
@@ -218,7 +218,7 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
          */
         if ( EPOLL_CTL_DEL == reify ) return;
-        if ( expect_true (!epoll_ctl(backend_fd,EPOLL_CTL_ADD,fd,&ev)) ) return;
+        if ( EXPECT_TRUE (!epoll_ctl(backend_fd,EPOLL_CTL_ADD,fd,&ev)) ) return;
         ASSERT ( false, "ev::backend_modify ENOENT" );
         break;
     case ENOMEM :
@@ -238,7 +238,7 @@ void ev::backend_modify( int32 fd,int32 events,int32 reify )
     }
 }
 
-void ev::backend_init()
+void Ev::backend_init()
 {
 #ifdef EPOLL_CLOEXEC
     backend_fd = epoll_create1 (EPOLL_CLOEXEC);
@@ -254,14 +254,14 @@ void ev::backend_init()
     }
 }
 
-ev_tstamp ev::get_time()
+EvTstamp Ev::get_time()
 {
     struct timespec ts;
     clock_gettime (CLOCK_REALTIME, &ts);//more precise then gettimeofday
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-int64 ev::get_ms_time()
+int64_t Ev::get_ms_time()
 {
     struct timespec ts;
     clock_gettime (CLOCK_MONOTONIC, &ts);
@@ -278,7 +278,7 @@ int64 ev::get_ms_time()
  * CLOCK_MONOTONIC_RAW: 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
  * CLOCK_BOOTTIME: 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
  */
-void ev::update_clock()
+void Ev::update_clock()
 {
     struct timespec ts;
     clock_gettime (CLOCK_MONOTONIC, &ts);
@@ -287,7 +287,7 @@ void ev::update_clock()
     ev_now_ms = ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
 }
 
-void ev::time_update()
+void Ev::time_update()
 {
     update_clock ();
 
@@ -310,11 +310,11 @@ void ev::time_update()
      * doesn't hurt either as we only do this on time-jumps or
      * in the unlikely event of having been preempted here.
      */
-    for ( int32 i = 4; --i; )
+    for ( int32_t i = 4; --i; )
     {
         rtmn_diff = ev_rt_now - mn_now;
 
-        if ( expect_true (mn_now - now_floor < MIN_TIMEJUMP * .5) )
+        if ( EXPECT_TRUE (mn_now - now_floor < MIN_TIMEJUMP * .5) )
         {
             return; /* all is well */
         }
@@ -329,14 +329,14 @@ void ev::time_update()
     /* timers_reschedule (loop, rtmn_diff - odiff) */
 }
 
-void ev::backend_poll( ev_tstamp timeout )
+void Ev::backend_poll( EvTstamp timeout )
 {
     /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs,
      * which is below the default libev max wait time, however.
      */
-    int32 eventcnt = epoll_wait(
+    int32_t eventcnt = epoll_wait(
         backend_fd, epoll_events, EPOLL_MAXEV, timeout);
-    if (expect_false (eventcnt < 0))
+    if (EXPECT_FALSE (eventcnt < 0))
     {
         if ( errno != EINTR )
         {
@@ -346,7 +346,7 @@ void ev::backend_poll( ev_tstamp timeout )
         return;
     }
 
-    for ( int32 i = 0; i < eventcnt; ++i)
+    for ( int32_t i = 0; i < eventcnt; ++i)
     {
         struct epoll_event *ev = epoll_events + i;
 
@@ -360,36 +360,36 @@ void ev::backend_poll( ev_tstamp timeout )
     }
 }
 
-void ev::fd_event( int32 fd,int32 revents )
+void Ev::fd_event( int32_t fd,int32_t revents )
 {
     ANFD *anfd = anfds + fd;
     ASSERT( anfd->w, "fd event no watcher" );
     feed_event( anfd->w,revents );
 }
 
-void ev::feed_event( ev_watcher *w,int32 revents )
+void Ev::feed_event( EvWatcher *w,int32_t revents )
 {
-    if ( expect_false(w->pending) )
+    if ( EXPECT_FALSE(w->pending) )
     {
         pendings[w->pending - 1].events |= revents;
     }
     else
     {
         w->pending = ++pendingcnt;
-        array_resize( ANPENDING,pendings,pendingmax,pendingcnt,array_noinit );
+        ARRAY_RESIZE( ANPENDING,pendings,pendingmax,pendingcnt,ARRAY_NOINIT );
         pendings[w->pending - 1].w      = w;
         pendings[w->pending - 1].events = revents;
     }
 }
 
-void ev::invoke_pending()
+void Ev::invoke_pending()
 {
     while (pendingcnt)
     {
         ANPENDING *p = pendings + --pendingcnt;
 
-        ev_watcher *w = p->w;
-        if ( expect_true(w) ) /* 调用了clear_pending */
+        EvWatcher *w = p->w;
+        if ( EXPECT_TRUE(w) ) /* 调用了clear_pending */
         {
             w->pending = 0;
             w->cb( w,p->events );
@@ -397,7 +397,7 @@ void ev::invoke_pending()
     }
 }
 
-void ev::clear_pending( ev_watcher *w )
+void Ev::clear_pending( EvWatcher *w )
 {
     if (w->pending)
     {
@@ -406,11 +406,11 @@ void ev::clear_pending( ev_watcher *w )
     }
 }
 
-void ev::timers_reify()
+void Ev::timers_reify()
 {
     while (timercnt && (timers [HEAP0])->at < mn_now)
     {
-        ev_timer *w = timers [HEAP0];
+        EvTimer *w = timers [HEAP0];
 
         ASSERT( w->is_active (), "libev: invalid timer detected" );
 
@@ -443,15 +443,15 @@ void ev::timers_reify()
     }
 }
 
-int32 ev::timer_start( ev_timer *w )
+int32_t Ev::timer_start( EvTimer *w )
 {
     w->at += mn_now;
 
     ASSERT( w->repeat >= 0., "libev: negative repeat value" );
 
     ++timercnt;
-    int32 active = timercnt + HEAP0 - 1;
-    array_resize ( ANHE, timers, timermax, uint32(active + 1), array_noinit );
+    int32_t active = timercnt + HEAP0 - 1;
+    ARRAY_RESIZE ( ANHE, timers, timermax, uint32_t(active + 1), ARRAY_NOINIT );
     timers [active] = w;
     up_heap( timers, active );
 
@@ -461,20 +461,20 @@ int32 ev::timer_start( ev_timer *w )
 }
 
 // 暂停定时器
-int32 ev::timer_stop( ev_timer *w )
+int32_t Ev::timer_stop( EvTimer *w )
 {
     clear_pending( w );
-    if ( expect_false(!w->is_active()) ) return 0;
+    if ( EXPECT_FALSE(!w->is_active()) ) return 0;
 
     {
-        int32 active = w->active;
+        int32_t active = w->active;
 
         ASSERT( timers [active] == w, "libev: internal timer heap corruption" );
 
         --timercnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (expect_true ((uint32)active < timercnt + HEAP0))
+        if (EXPECT_TRUE ((uint32_t)active < timercnt + HEAP0))
         {
             // 把当前最后一个timer(timercnt + HEAP0)覆盖当前timer的位置，再重新调整
             timers [active] = timers [timercnt + HEAP0];
@@ -488,7 +488,7 @@ int32 ev::timer_stop( ev_timer *w )
     return 0;
 }
 
-void ev::down_heap( ANHE *heap,int32 N,int32 k )
+void Ev::down_heap( ANHE *heap,int32_t N,int32_t k )
 {
     ANHE he = heap [k];
 
@@ -513,7 +513,7 @@ void ev::down_heap( ANHE *heap,int32 N,int32 k )
     he->active = k;
 }
 
-void ev::up_heap( ANHE *heap,int32 k )
+void Ev::up_heap( ANHE *heap,int32_t k )
 {
     ANHE he = heap [k];
 
@@ -532,7 +532,7 @@ void ev::up_heap( ANHE *heap,int32 k )
     he->active = k;
 }
 
-void ev::adjust_heap( ANHE *heap,int32 N,int32 k )
+void Ev::adjust_heap( ANHE *heap,int32_t N,int32_t k )
 {
     if (k > HEAP0 && (heap [k])->at <= (heap [HPARENT (k)])->at)
     {
@@ -544,28 +544,28 @@ void ev::adjust_heap( ANHE *heap,int32 N,int32 k )
     }
 }
 
-void ev::reheap( ANHE *heap,int32 N )
+void Ev::reheap( ANHE *heap,int32_t N )
 {
     /* we don't use floyds algorithm, upheap is simpler and is more
      * cache-efficient also, this is easy to implement and correct
      * for both 2-heaps and 4-heaps
      */
-    for (int32 i = 0; i < N; ++i)
+    for (int32_t i = 0; i < N; ++i)
     {
         up_heap (heap, i + HEAP0);
     }
 }
 
 /* calculate blocking time,milliseconds */
-ev_tstamp ev::wait_time()
+EvTstamp Ev::wait_time()
 {
-    ev_tstamp waittime  = 0.;
+    EvTstamp waittime  = 0.;
 
     waittime = MAX_BLOCKTIME;
 
     if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
     {
-        ev_tstamp to = (timers [HEAP0])->at - mn_now;
+        EvTstamp to = (timers [HEAP0])->at - mn_now;
         if (waittime > to) waittime = to;
     }
 
@@ -573,7 +573,7 @@ ev_tstamp ev::wait_time()
 
     /* at this point, we NEED to wait, so we have to ensure */
     /* to pass a minimum nonzero value to the backend */
-    if (expect_false (waittime < EPOLL_MIN_TM))
+    if (EXPECT_FALSE (waittime < EPOLL_MIN_TM))
     {
         waittime = EPOLL_MIN_TM;
     }

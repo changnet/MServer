@@ -32,14 +32,14 @@ printf an uint16_t integer.
 
 #include "map.h" // custom map
 
-typedef uint8_t        uint8;
-typedef int8_t          int8;
-typedef uint16_t      uint16;
-typedef int16_t        int16;
-typedef uint32_t      uint32;
-typedef int32_t        int32;
-typedef uint64_t      uint64;
-typedef int64_t        int64;
+typedef uint8_t        uint8_t;
+typedef int8_t          int8_t;
+typedef uint16_t      uint16_t;
+typedef int16_t        int16_t;
+typedef uint32_t      uint32_t;
+typedef int32_t        int32_t;
+typedef uint64_t      uint64_t;
+typedef int64_t        int64_t;
 
 #define FMT64d "%" PRId64
 #define FMT64u "%" PRIu64
@@ -49,14 +49,14 @@ typedef std::string    string;
 
 #if __cplusplus >= 201103L
     //#pragma message("base type bit check")
-    static_assert( sizeof( int8 ) == 1,"type bit not support" );
-    static_assert( sizeof(uint8 ) == 1,"type bit not support" );
-    static_assert( sizeof( int16) == 2,"type bit not support" );
-    static_assert( sizeof(uint16) == 2,"type bit not support" );
-    static_assert( sizeof( int32) == 4,"type bit not support" );
-    static_assert( sizeof(uint32) == 4,"type bit not support" );
-    static_assert( sizeof( int64) == 8,"type bit not support" );
-    static_assert( sizeof(uint64) == 8,"type bit not support" );
+    static_assert( sizeof( int8_t ) == 1,"type bit not support" );
+    static_assert( sizeof(uint8_t ) == 1,"type bit not support" );
+    static_assert( sizeof( int16_t) == 2,"type bit not support" );
+    static_assert( sizeof(uint16_t) == 2,"type bit not support" );
+    static_assert( sizeof( int32_t) == 4,"type bit not support" );
+    static_assert( sizeof(uint32_t) == 4,"type bit not support" );
+    static_assert( sizeof( int64_t) == 8,"type bit not support" );
+    static_assert( sizeof(uint64_t) == 8,"type bit not support" );
     static_assert( sizeof( float) == 4,"type bit not support" );
     static_assert( sizeof(double) == 8,"type bit not support" );
 #endif

@@ -44,7 +44,7 @@ a_star::~a_star()
  * @x,y：起点坐标
  * @dx,dy：dest，终点坐标
  */
-bool a_star::search(const grid_map *map,int32 x,int32 y,int32 dx,int32 dy)
+bool a_star::search(const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
 {
     // 起点和终点必须是可行走的
     if ( map->get_pass_cost(x,y) < 0 || map->get_pass_cost(dx,dy) < 0 )
@@ -52,8 +52,8 @@ bool a_star::search(const grid_map *map,int32 x,int32 y,int32 dx,int32 dy)
         return false;
     }
 
-    uint16 width = map->get_width();
-    uint16 height = map->get_height();
+    uint16_t width = map->get_width();
+    uint16_t height = map->get_height();
     // 分配格子集合，每次寻路时只根据当前地图只增不减
     if ( _set_max < width*height )
     {
@@ -90,22 +90,22 @@ bool a_star::search(const grid_map *map,int32 x,int32 y,int32 dx,int32 dy)
 
 // a*算法逻辑
 bool a_star::do_search(
-    const grid_map *map,int32 x,int32 y,int32 dx,int32 dy)
+    const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
 {
     // 地图以左上角为坐标原点，分别向8个方向移动时的向量
-    const static int16 offset [][2] =
+    const static int16_t offset [][2] =
     {
         {0,-1},{1,0},{ 0,1},{-1, 0}, // 北-东-南-西
         {1,-1},{1,1},{-1,1},{-1,-1}  // 东北-东南-西南-西北
     };
 
-    uint16 height = map->get_height();
+    uint16_t height = map->get_height();
     struct node *parent = new_node(x,y);
     _node_set[x *height + y] = parent;
     while ( parent )
     {
-        uint16 px = parent->x;
-        uint16 py = parent->y;
+        uint16_t px = parent->x;
+        uint16_t py = parent->y;
         // 到达目标
         if ( px == dx && py == dy )
         {
@@ -118,16 +118,16 @@ bool a_star::do_search(
          * TODO:对角的两个格子均可行走，则可以沿对角行走。部分游戏要相邻格子也可行走
          * 才可以，这个看策划具体设定
          */
-        for ( int32 dir = 0;dir < 8;dir ++ )
+        for ( int32_t dir = 0;dir < 8;dir ++ )
         {
             // c = child,p = parent
-            int32 cx = px + offset[dir][0];
-            int32 cy = py + offset[dir][1];
+            int32_t cx = px + offset[dir][0];
+            int32_t cy = py + offset[dir][1];
 
             // 不可行走的格子，忽略
             if ( map->get_pass_cost(cx,cy) < 0 ) continue;
 
-            int32 idx = cx * height + cy;
+            int32_t idx = cx * height + cy;
             struct node *child = _node_set[idx];
 
             // 已经close的格子，忽略
@@ -138,8 +138,8 @@ bool a_star::do_search(
              * 复杂的游戏，可能每个格子的速度不一样(即get_pass_cost值不一样)，有的
              * 是飞行，有的是行走，这里先假设都是一样的
              */
-            int32 g = parent->g + (dir < 4 ? D : DD);
-            int32 h = diagonal( cx,cy,dx,dy );
+            int32_t g = parent->g + (dir < 4 ? D : DD);
+            int32_t h = diagonal( cx,cy,dx,dy );
 
             if ( child )
             {
@@ -155,7 +155,7 @@ bool a_star::do_search(
             else
             {
                 child = new_node(cx,cy,px,py);
-                if ( expect_false(!child) ) return false;
+                if ( EXPECT_FALSE(!child) ) return false;
 
                 child->g = g;
                 child->h = h;
@@ -179,7 +179,7 @@ struct a_star::node *a_star::pop_open_set()
     size_t open_sz = _open_set.size();
     if ( 0 == open_sz ) return NULL;
 
-    int32 parent_f = -1;
+    int32_t parent_f = -1;
     size_t parent_idx = -1;
     struct node *parent = NULL;
     for ( size_t idx = 0;idx < open_sz;idx ++ )
@@ -202,15 +202,15 @@ struct a_star::node *a_star::pop_open_set()
 
 // 从终点回溯到起点并得到路径
 bool a_star::backtrace_path(
-    const struct node *dest,int32 dx,int32 dy,uint16 height )
+    const struct node *dest,int32_t dx,int32_t dy,uint16_t height )
 {
     ASSERT(0 == _path.size(), "a start path not clear");
 
     // 102400防止逻辑出错
     while (dest && _path.size() < 1024000)
     {
-        uint16 x = dest->x;
-        uint16 y = dest->y;
+        uint16_t x = dest->x;
+        uint16_t y = dest->y;
         _path.push_back( x );
         _path.push_back( y );
 
@@ -225,7 +225,7 @@ bool a_star::backtrace_path(
 }
 
 // 从内存池取一个格子对象
-struct a_star::node *a_star::new_node(uint16 x,uint16 y,uint16 px,uint16 py)
+struct a_star::node *a_star::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t py)
 {
     // 如果预分配的都用完了，就不找了
     // 继续再找对于服务器而言也太低效，建议上导航坐标或者针对玩法优化
@@ -249,10 +249,10 @@ struct a_star::node *a_star::new_node(uint16 x,uint16 y,uint16 px,uint16 py)
 /* 曼哈顿距离，不会算对角距离，
  * 适用只能往东南西北4个方向，不能走对角的游戏
  */
-int32 a_star::manhattan(int32 x,int32 y,int32 gx,int32 gy)
+int32_t a_star::manhattan(int32_t x,int32_t y,int32_t gx,int32_t gy)
 {
-    int32 dx = abs(x - gx);
-    int32 dy = abs(y - gy);
+    int32_t dx = abs(x - gx);
+    int32_t dy = abs(y - gy);
 
     return D * (dx + dy);
 }
@@ -260,10 +260,10 @@ int32 a_star::manhattan(int32 x,int32 y,int32 gx,int32 gy)
 /* 对角距离
  * 适用东南西北，以及东北-东南-西南-西北(沿45度角走)的游戏
  */
-int32 a_star::diagonal(int32 x,int32 y,int32 gx,int32 gy)
+int32_t a_star::diagonal(int32_t x,int32_t y,int32_t gx,int32_t gy)
 {
-    int32 dx = abs(x - gx);
-    int32 dy = abs(y - gy);
+    int32_t dx = abs(x - gx);
+    int32_t dy = abs(y - gy);
     // DD是斜边长，2*D是两直角边总和，min(dx,dy)就是需要走45度的格子数
     // D * (dx + dy)是先假设所有格子直走，然后加上45度走多出的距离
     return D * (dx + dy) + (DD - 2 * D) * (dx < dy ? dx : dy);
@@ -274,10 +274,10 @@ int32 a_star::diagonal(int32 x,int32 y,int32 gx,int32 gy)
  * 要么是直线，要么是45度角的消耗，因此会导致f值不准确。不过这里的h <= n，还是可以
  * 得到最小路径，只是算法效率受影响
  */
-int32 a_star::euclidean(int32 x,int32 y,int32 gx,int32 gy)
+int32_t a_star::euclidean(int32_t x,int32_t y,int32_t gx,int32_t gy)
 {
-    int32 dx = abs(x - gx);
-    int32 dy = abs(y - gy);
+    int32_t dx = abs(x - gx);
+    int32_t dy = abs(y - gy);
     // 这个算法有sqrt，会慢一点，不过现在的游戏大多数是可以任意角度行走的
     return D * sqrt(dx * dx + dy * dy);
 }

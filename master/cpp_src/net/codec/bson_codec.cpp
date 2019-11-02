@@ -23,8 +23,8 @@ void bson_codec::finalize()
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32 bson_codec::decode(
-    lua_State *L,const char *buffer,int32 len,const cmd_cfg_t *cfg )
+int32_t bson_codec::decode(
+    lua_State *L,const char *buffer,int32_t len,const cmd_cfg_t *cfg )
 {
     UNUSED( cfg );
 
@@ -41,7 +41,7 @@ int32 bson_codec::decode(
 
     struct error_collector ec;
     ec.what[0] = 0;
-    int32 args = lbs_do_decode_stack( L,doc,&ec );
+    int32_t args = lbs_do_decode_stack( L,doc,&ec );
 
     bson_reader_destroy( reader );
     if ( args < 0 )
@@ -56,8 +56,8 @@ int32 bson_codec::decode(
 /* 编码数据包
  * return: <0 error
  */
-int32 bson_codec::encode(
-    lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg )
+int32_t bson_codec::encode(
+    lua_State *L,int32_t index,const char **buffer,const cmd_cfg_t *cfg )
 {
     UNUSED( cfg );
     struct error_collector ec;

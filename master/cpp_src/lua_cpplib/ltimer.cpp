@@ -14,10 +14,10 @@ ltimer::~ltimer()
 {
 }
 
-int32 ltimer::set( lua_State *L )
+int32_t ltimer::set( lua_State *L )
 {
-    ev_tstamp after  = static_cast<ev_tstamp>( luaL_checknumber( L,1 ) );
-    ev_tstamp repeat = static_cast<ev_tstamp>( luaL_optnumber( L,2,0. ) );
+    EvTstamp after  = static_cast<EvTstamp>( luaL_checknumber( L,1 ) );
+    EvTstamp repeat = static_cast<EvTstamp>( luaL_optnumber( L,2,0. ) );
 
     bool time_jump = false;
     if ( lua_isboolean( L,3 ) ) time_jump = lua_toboolean( L,3 );
@@ -33,7 +33,7 @@ int32 ltimer::set( lua_State *L )
     return 0;
 }
 
-int32 ltimer::start( lua_State *L )
+int32_t ltimer::start( lua_State *L )
 {
     /* 理论上可以多次start而不影响，但会有性能上的消耗 */
     if ( _timer.is_active() )
@@ -51,21 +51,21 @@ int32 ltimer::start( lua_State *L )
     return 0;
 }
 
-int32 ltimer::stop( lua_State *L )
+int32_t ltimer::stop( lua_State *L )
 {
     _timer.stop();
 
     return 0;
 }
 
-int32 ltimer::active( lua_State *L )
+int32_t ltimer::active( lua_State *L )
 {
     lua_pushboolean( L,_timer.is_active() );
 
     return 1;
 }
 
-void ltimer::callback( ev_timer &w,int32 revents )
+void ltimer::callback( EvTimer &w,int32_t revents )
 {
     ASSERT( !(EV_ERROR & revents), "libev timer cb error" );
 
@@ -75,7 +75,7 @@ void ltimer::callback( ev_timer &w,int32 revents )
     lua_getglobal( L,"timer_event" );
     lua_pushinteger( L,_timer_id   );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,1,0,1 ) ) )
     {
         ERROR( "timer call back fail:%s\n",lua_tostring( L,-1 ) );
         lua_pop( L,2 ); /* remove error message traceback */

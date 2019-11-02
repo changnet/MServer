@@ -9,7 +9,7 @@ statistic::statistic()
 {
 }
 
-void statistic::add_c_obj(const char *what,int32 count)
+void statistic::add_c_obj(const char *what,int32_t count)
 {
     class base_counter &counter = _c_obj[what];
 
@@ -24,7 +24,7 @@ void statistic::add_c_obj(const char *what,int32 count)
     }
 }
 
-void statistic::add_c_lua_obj(const char *what,int32 count)
+void statistic::add_c_lua_obj(const char *what,int32_t count)
 {
     class base_counter &counter = _c_lua_obj[what];
 
@@ -58,7 +58,7 @@ void statistic::reset_trafic()
     }
 }
 
-void statistic::remove_socket_traffic(uint32 conn_id)
+void statistic::remove_socket_traffic(uint32_t conn_id)
 {
     // 一个listen的sokcet，由于没有调用socket::start，不在_socket_traffic
     // 一个connect失败的socket，也是没调用socket::start
@@ -70,7 +70,7 @@ void statistic::remove_socket_traffic(uint32 conn_id)
     _socket_traffic.erase( conn_id );
 }
 
-void statistic::insert_socket_traffic(uint32 conn_id)
+void statistic::insert_socket_traffic(uint32_t conn_id)
 {
     ASSERT( _socket_traffic.end() == _socket_traffic.find(conn_id),
                             "socket traffic new statistic corruption" );
@@ -78,7 +78,7 @@ void statistic::insert_socket_traffic(uint32 conn_id)
     _socket_traffic[conn_id]._time = static_global::ev()->now();
 }
 
-void statistic::add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
+void statistic::add_send_traffic(uint32_t conn_id,socket::conn_t type,uint32_t val)
 {
     ASSERT( type > socket::CNT_NONE && type < socket::CNT_MAX );
 
@@ -86,7 +86,7 @@ void statistic::add_send_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
     _socket_traffic[conn_id]._send += val;
 }
 
-void statistic::add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
+void statistic::add_recv_traffic(uint32_t conn_id,socket::conn_t type,uint32_t val)
 {
     ASSERT( type > socket::CNT_NONE && type < socket::CNT_MAX );
 
@@ -94,7 +94,7 @@ void statistic::add_recv_traffic(uint32 conn_id,socket::conn_t type,uint32 val)
     _socket_traffic[conn_id]._recv += val;
 }
 
-void statistic::add_rpc_count(const char *cmd,int32 size,int64 msec)
+void statistic::add_rpc_count(const char *cmd,int32_t size,int64_t msec)
 {
     if (!cmd)
     {
@@ -114,7 +114,7 @@ void statistic::add_rpc_count(const char *cmd,int32 size,int64 msec)
     if (-1 == pkt._min_size || size < pkt._min_size) pkt._min_size = size;
 }
 
-void statistic::add_pkt_count(int32 type,int32 cmd,int32 size,int64 msec)
+void statistic::add_pkt_count(int32_t type,int32_t cmd,int32_t size,int64_t msec)
 {
     ASSERT(type > SPKT_NONE && type < SPKT_MAXT, "cmd type error");
 

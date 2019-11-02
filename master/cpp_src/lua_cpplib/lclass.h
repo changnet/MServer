@@ -21,7 +21,7 @@ class lbaseclass
 {
 protected:
     /* 提供两种不同的注册函数,其返回值均为返回lua层的值数量 */
-    typedef int32 (T::*lua_CppFunction)(lua_State*);
+    typedef int32_t (T::*lua_CppFunction)(lua_State*);
     // typedef int32 (*pf_st_t)(lua_State*); //lua_CFunction
 public:
     virtual ~lbaseclass() {}
@@ -149,7 +149,7 @@ public:
     }
 
     /* 注册变量,通常用于设置宏定义、枚举 */
-    lbaseclass<T>& set(const char* val_name, int32 val)
+    lbaseclass<T>& set(const char* val_name, int32_t val)
     {
         luaL_getmetatable( L,_classname );
 
@@ -169,7 +169,7 @@ public:
     }
 private:
     /* 单例，不能创建c对象。可以直接在C中push对象到lua */
-    static int32 cnew(lua_State* L)
+    static int32_t cnew(lua_State* L)
     {
         ASSERT(false,"base class,cant NOT cteate object");
         return 0;
@@ -241,7 +241,7 @@ private:
     static int fun_thunk(lua_State* L)
     {
         T** ptr = (T**)luaL_checkudata( L, 1, _classname );/* get 'self', or if you prefer, 'this' */
-        if ( expect_false(ptr == NULL || *ptr == NULL) )
+        if ( EXPECT_FALSE(ptr == NULL || *ptr == NULL) )
         {
             return luaL_error(L,
                 "%s calling method with null pointer", _classname);

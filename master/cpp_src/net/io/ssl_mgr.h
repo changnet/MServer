@@ -47,15 +47,15 @@ public:
      * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
      * SSL_CTX是一个typedef，不能前置声明
      */
-    void *get_ssl_ctx( int32 idx );
+    void *get_ssl_ctx( int32_t idx );
     /* 创建一个ssl上下文
      * @sslv： ssl版本，见sslv_t枚举
      * @cert_file: ca证书文件路径
      * @key_file: 私钥文件路径
      */
-    int32 new_ssl_ctx( sslv_t sslv,const char *cert_file,
+    int32_t new_ssl_ctx( sslv_t sslv,const char *cert_file,
         key_t keyt,const char *key_file,const char *passwd );
 private:
-    int32 _ctx_idx;
+    int32_t _ctx_idx;
     struct x_ssl_ctx _ssl_ctx[MAX_SSL_CTX];
 };

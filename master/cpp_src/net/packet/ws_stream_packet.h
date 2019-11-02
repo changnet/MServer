@@ -13,20 +13,20 @@ public:
     /* 打包服务器发往客户端数据包
     * return: <0 error;>=0 success
     */
-    virtual int32 pack_clt( lua_State *L,int32 index );
+    virtual int32_t pack_clt( lua_State *L,int32_t index );
     /* 打包客户端发往服务器数据包
      * return: <0 error;>=0 success
      */
-    virtual int32 pack_srv( lua_State *L,int32 index );
+    virtual int32_t pack_srv( lua_State *L,int32_t index );
 
     /* 数据帧完成 */
-    virtual int32 on_frame_end();
+    virtual int32_t on_frame_end();
 
-    int32 raw_pack_clt(
-        int32 cmd,uint16 ecode,const char *ctx,size_t size );
+    int32_t raw_pack_clt(
+        int32_t cmd,uint16_t ecode,const char *ctx,size_t size );
 private:
-    int32 sc_command();
-    int32 cs_command( int32 cmd,const char *ctx,size_t size );
-    int32 do_pack_clt( int32 raw_flags,
-        int32 cmd,uint16 ecode,const char *ctx,size_t size );
+    int32_t sc_command();
+    int32_t cs_command( int32_t cmd,const char *ctx,size_t size );
+    int32_t do_pack_clt( int32_t raw_flags,
+        int32_t cmd,uint16_t ecode,const char *ctx,size_t size );
 };

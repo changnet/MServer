@@ -9,5 +9,5 @@ public:
     ~lastar() {};
     explicit lastar( lua_State *L ) {};
 
-    int32 search( lua_State *L ); // 寻路
+    int32_t search( lua_State *L ); // 寻路
 };

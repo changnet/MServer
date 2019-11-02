@@ -7,7 +7,7 @@
  */
 void sql::library_init()
 {
-    int32 ecode = mysql_library_init( 0,NULL,NULL );
+    int32_t ecode = mysql_library_init( 0,NULL,NULL );
     ASSERT( 0 == ecode, "mysql library init fail" );
 }
 
@@ -37,7 +37,7 @@ sql::~sql()
     ASSERT( NULL == _conn , "sql not clean");
 }
 
-void sql::set( const char *host,const int32 port,
+void sql::set( const char *host,const int32_t port,
         const char *usr,const char *pwd,const char *dbname )
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
@@ -49,7 +49,7 @@ void sql::set( const char *host,const int32 port,
 }
 
 /* 连接数据库 */
-int32 sql::connect()
+int32_t sql::connect()
 {
     ASSERT( NULL == _conn, "mysql connection not clean" );
 
@@ -62,9 +62,9 @@ int32 sql::connect()
 
     /* mysql_options的时间精度都为秒级
      */
-    uint32 connect_timeout = 60;
-    uint32 read_timeout    = 30;
-    uint32 write_timeout   = 30;
+    uint32_t connect_timeout = 60;
+    uint32_t read_timeout    = 30;
+    uint32_t write_timeout   = 30;
     bool reconnect = true;
     if ( mysql_options( _conn, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout ) ||
          mysql_options( _conn, MYSQL_OPT_READ_TIMEOUT, &read_timeout ) ||
@@ -86,7 +86,7 @@ int32 sql::connect()
 }
 
 // 连接逻辑
-int32 sql::raw_connect()
+int32_t sql::raw_connect()
 {
     /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
      * fails, you must repeat the mysql_options() calls before trying to connect
@@ -101,7 +101,7 @@ int32 sql::raw_connect()
 
     /* 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
      */
-    uint32 eno = mysql_errno( _conn );
+    uint32_t eno = mysql_errno( _conn );
     if ( CR_SERVER_LOST == eno || CR_CONN_HOST_ERROR == eno )
     {
         ERROR( "mysql will try again:%s\n",mysql_error( _conn ) );
@@ -125,7 +125,7 @@ void sql::disconnect()
     _conn =         NULL;
 }
 
-int32 sql::ping()
+int32_t sql::ping()
 {
     ASSERT( _conn, "try to ping a invalid mysql connection" );
     if ( !_conn )
@@ -137,7 +137,7 @@ int32 sql::ping()
     // 初始化时连接不成功，现在重新尝试
     if (  !_is_cn )
     {
-        int32 ok = raw_connect();
+        int32_t ok = raw_connect();
         if ( -1 == ok )
         {
             return -1;// 需要继续尝试
@@ -149,7 +149,7 @@ int32 sql::ping()
         _is_cn = true;
     }
 
-    int32 eno = mysql_ping( _conn );
+    int32_t eno = mysql_ping( _conn );
     if ( eno )
     {
         ERROR( "mysql ping error:%s\n",mysql_error( _conn ) );
@@ -164,7 +164,7 @@ const char *sql::error()
     return mysql_error( _conn );
 }
 
-int32 sql::query( const char *stmt,size_t size )
+int32_t sql::query( const char *stmt,size_t size )
 {
     ASSERT( _conn, "sql query,connection not valid" );
 
@@ -173,7 +173,7 @@ int32 sql::query( const char *stmt,size_t size )
      */
     if ( mysql_real_query( _conn,stmt,size ) )
     {
-        int32 ecode = mysql_errno( _conn );
+        int32_t ecode = mysql_errno( _conn );
         if ( CR_SERVER_LOST == ecode || CR_SERVER_GONE_ERROR == ecode )
         {
             /* reconnect and try again */
@@ -196,7 +196,7 @@ int32 sql::query( const char *stmt,size_t size )
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
-int32 sql::result( struct sql_res **res )
+int32_t sql::result( struct sql_res **res )
 {
     ASSERT( _conn, "sql result,connection not valid" );
 
@@ -211,7 +211,7 @@ int32 sql::result( struct sql_res **res )
     MYSQL_RES *result = mysql_store_result( _conn );
     if ( result )
     {
-        uint32 num_rows   = mysql_num_rows( result );
+        uint32_t num_rows   = mysql_num_rows( result );
         if ( 0 >= num_rows ) /* we got empty set */
         {
             mysql_free_result( result );
@@ -219,7 +219,7 @@ int32 sql::result( struct sql_res **res )
             return 0; /* success */
         }
 
-        uint32 num_fields = mysql_num_fields( result );
+        uint32_t num_fields = mysql_num_fields( result );
         ASSERT( num_fields > 0, "mysql result field count zero" );
 
         /* 注意使用resize来避免内存重新分配以及push_back产生的拷贝消耗 */
@@ -229,7 +229,7 @@ int32 sql::result( struct sql_res **res )
         (*res)->_fields.resize( num_fields );
         (*res)->_rows.resize  ( num_rows   );
 
-        uint32 index = 0;
+        uint32_t index = 0;
         MYSQL_FIELD *field;
         while( (field = mysql_fetch_field( result )) )
         {
@@ -253,7 +253,7 @@ int32 sql::result( struct sql_res **res )
              * result set
              */
             size_t *lengths = mysql_fetch_lengths( result );
-            for ( uint32 i = 0;i < num_fields;i ++ )
+            for ( uint32_t i = 0;i < num_fields;i ++ )
             {
                 res_row._cols[i].set( row[i],lengths[i] );
             }
@@ -268,7 +268,7 @@ int32 sql::result( struct sql_res **res )
     return mysql_errno( _conn );
 }
 
-uint32 sql::get_errno()
+uint32_t sql::get_errno()
 {
     ASSERT( _conn, "sql get_errno,connection not valid" );
     return mysql_errno( _conn );

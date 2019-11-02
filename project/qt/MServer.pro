@@ -45,7 +45,8 @@ SOURCES += \
     ../../master/cpp_src/thread/thread_mgr.cpp \
     ../../master/cpp_src/util/rank.cpp \
     ../../master/cpp_src/main.cpp \
-    ../../master/cpp_src/log/async_log.cpp
+    ../../master/cpp_src/log/async_log.cpp \
+    ../../master/cpp_src/global/dbg_mem.cpp
 
 HEADERS += \
     ../../master/cpp_src/ev/ev.h \
@@ -104,7 +105,8 @@ HEADERS += \
     ../../master/cpp_src/thread/thread_mgr.h \
     ../../master/cpp_src/util/rank.h \
     ../../master/cpp_src/config.h \
-    ../../master/cpp_src/log/async_log.h
+    ../../master/cpp_src/log/async_log.h \
+    ../../master/cpp_src/global/dbg_mem.h
 
 
 unix:!macx: LIBS += -L$$PWD/../../master/cpp_src/deps/aho-corasick/ -lacism

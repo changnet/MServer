@@ -10,7 +10,7 @@ public:
     {
         bool del_from_stat = false;
         class pool** pool_stat = get_pool_stat();
-        for (int32 idx = 0;idx < MAX_POOL;idx ++)
+        for (int32_t idx = 0;idx < MAX_POOL;idx ++)
         {
             if (this == pool_stat[idx])
             {
@@ -32,7 +32,7 @@ public:
 
         bool add_to_stat = false;
         class pool** pool_stat = get_pool_stat();
-        for (int32 idx = 0;idx < MAX_POOL;idx ++)
+        for (int32_t idx = 0;idx < MAX_POOL;idx ++)
         {
             if (NULL == pool_stat[idx])
             {
@@ -46,9 +46,9 @@ public:
         ASSERT( add_to_stat, "cant not add to stat" );
     }
 
-    int64 get_max_new() const { return _max_new; }
-    int64 get_max_del() const { return _max_del; }
-    int64 get_max_now() const { return _max_now; }
+    int64_t get_max_new() const { return _max_new; }
+    int64_t get_max_del() const { return _max_del; }
+    int64_t get_max_now() const { return _max_now; }
     const char *get_name() const { return _name; }
 
     virtual void purge() = 0;
@@ -68,7 +68,7 @@ public:
         ASSERT(false, "can NOT call base destroy_any");
     }
 public:
-    static constexpr int32 MAX_POOL = 8;
+    static constexpr int32_t MAX_POOL = 8;
     static class pool** get_pool_stat()
     {
         static class pool* pool_stat[MAX_POOL] = { 0 };
@@ -76,7 +76,7 @@ public:
     }
 protected:
     const char *_name;
-    int64 _max_new; // 总分配数量
-    int64 _max_del; // 总删除数量
-    int64 _max_now; // 当前缓存数量
+    int64_t _max_new; // 总分配数量
+    int64_t _max_del; // 总删除数量
+    int64_t _max_now; // 当前缓存数量
 };

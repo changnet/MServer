@@ -17,7 +17,7 @@ llog::~llog()
     }
 }
 
-int32 llog::stop ( lua_State *L )
+int32_t llog::stop ( lua_State *L )
 {
     if ( !_log || !_log->active() )
     {
@@ -30,7 +30,7 @@ int32 llog::stop ( lua_State *L )
     return 0;
 }
 
-int32 llog::start( lua_State *L )
+int32_t llog::start( lua_State *L )
 {
     if ( _log )
     {
@@ -39,8 +39,8 @@ int32 llog::start( lua_State *L )
     }
 
     /* 设定多少秒写入一次 */
-    int32 sec  = luaL_optinteger( L,1,5 );
-    int32 usec = luaL_optinteger( L,2,0 );
+    int32_t sec  = luaL_optinteger( L,1,5 );
+    int32_t usec = luaL_optinteger( L,2,0 );
 
     _log = new async_log();
     _log->start( sec,usec );
@@ -48,7 +48,7 @@ int32 llog::start( lua_State *L )
     return 0;
 }
 
-int32 llog::write( lua_State *L )
+int32_t llog::write( lua_State *L )
 {
     // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
     class async_log *tl = _log ? _log : static_global::async_logger();
@@ -61,7 +61,7 @@ int32 llog::write( lua_State *L )
     size_t len = 0;
     const char *path = luaL_checkstring( L,1 );
     const char *ctx  = luaL_checklstring( L,2,&len );
-    int32 out_type   = luaL_optinteger( L,3,LO_FILE );
+    int32_t out_type   = luaL_optinteger( L,3,LO_FILE );
 
     if ( out_type < LO_FILE || out_type >= LO_MAX )
     {
@@ -74,7 +74,7 @@ int32 llog::write( lua_State *L )
 }
 
 // 用于实现stdout、文件双向输出日志打印函数
-int32 llog::plog( lua_State *L )
+int32_t llog::plog( lua_State *L )
 {
     const char *ctx = luaL_checkstring( L,1 );
     // 这里要注意，不用%s，cprintf_log( "LP",ctx )这样直接调用也是可以的。但是如果脚本传
@@ -85,7 +85,7 @@ int32 llog::plog( lua_State *L )
 }
 
 // 用于实现stdout、文件双向输出日志打印函数
-int32 llog::elog( lua_State *L )
+int32_t llog::elog( lua_State *L )
 {
     const char *ctx = luaL_checkstring( L,1 );
     cerror_log( "LE","%s",ctx );
@@ -94,7 +94,7 @@ int32 llog::elog( lua_State *L )
 }
 
 // 设置日志参数
-int32 llog::set_args( lua_State *L )
+int32_t llog::set_args( lua_State *L )
 {
     bool dm = lua_toboolean( L,1 );
     const char *ppath = luaL_checkstring( L,2 );
@@ -106,7 +106,7 @@ int32 llog::set_args( lua_State *L )
 }
 
 // 设置日志参数
-int32 llog::set_name( lua_State *L )
+int32_t llog::set_name( lua_State *L )
 {
     const char *name = luaL_checkstring( L,1 );
 

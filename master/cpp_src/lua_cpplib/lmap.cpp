@@ -9,17 +9,17 @@ lmap::lmap( lua_State *L )
 {
 }
 
-int32 lmap::load( lua_State *L ) // 加载地图数据
+int32_t lmap::load( lua_State *L ) // 加载地图数据
 {
     // TODO: 地图数据格式定下来才能做
     return 0;
 }
 
-int32 lmap::set( lua_State *L ) // 设置地图信息(用于动态创建地图)
+int32_t lmap::set( lua_State *L ) // 设置地图信息(用于动态创建地图)
 {
-    int32 id     = luaL_checkinteger(L,1);
-    int32 width  = luaL_checkinteger(L,2);
-    int32 height = luaL_checkinteger(L,3);
+    int32_t id     = luaL_checkinteger(L,1);
+    int32_t width  = luaL_checkinteger(L,2);
+    int32_t height = luaL_checkinteger(L,3);
 
     if ( width < 0 || height < 0 ) return 0;
 
@@ -29,11 +29,11 @@ int32 lmap::set( lua_State *L ) // 设置地图信息(用于动态创建地图)
     return 1;
 }
 
-int32 lmap::fill( lua_State *L ) // (用于动态创建地图)
+int32_t lmap::fill( lua_State *L ) // (用于动态创建地图)
 {
-    int32 x    = luaL_checkinteger(L,1); // 填充的坐标x
-    int32 y    = luaL_checkinteger(L,2); // 填充的坐标y
-    int32 cost = luaL_checkinteger(L,3); // 该格子的消耗
+    int32_t x    = luaL_checkinteger(L,1); // 填充的坐标x
+    int32_t y    = luaL_checkinteger(L,2); // 填充的坐标y
+    int32_t cost = luaL_checkinteger(L,3); // 该格子的消耗
 
     bool ok = grid_map::fill( x,y,cost );
 
@@ -41,10 +41,10 @@ int32 lmap::fill( lua_State *L ) // (用于动态创建地图)
     return 1;
 }
 
-int32 lmap::get_size( lua_State *L )   // 获取地图宽高
+int32_t lmap::get_size( lua_State *L )   // 获取地图宽高
 {
-    int32 width = grid_map::get_width();
-    int32 height = grid_map::get_height();
+    int32_t width = grid_map::get_width();
+    int32_t height = grid_map::get_height();
 
     lua_pushinteger( L,width );
     lua_pushinteger( L,height );
@@ -52,7 +52,7 @@ int32 lmap::get_size( lua_State *L )   // 获取地图宽高
     return 2;
 }
 
-int32 lmap::fork( lua_State *L ) // 复制一份地图(用于动态修改地图数据)
+int32_t lmap::fork( lua_State *L ) // 复制一份地图(用于动态修改地图数据)
 {
     // TODO:以后可能会加上区域属性，一些属性需要动态修改
     // 这时候我们可以复制一份地图数据，而不会直接修改基础配置数据
@@ -67,10 +67,10 @@ int32 lmap::fork( lua_State *L ) // 复制一份地图(用于动态修改地图�
     return 0;
 }
 
-int32 lmap::get_pass_cost( lua_State *L ) // 获取通过某个格子的消耗
+int32_t lmap::get_pass_cost( lua_State *L ) // 获取通过某个格子的消耗
 {
-    int32 x = (int32)luaL_checknumber(L,1); // 坐标x
-    int32 y = (int32)luaL_checknumber(L,2); // 坐标y
+    int32_t x = (int32_t)luaL_checknumber(L,1); // 坐标x
+    int32_t y = (int32_t)luaL_checknumber(L,2); // 坐标y
 
     // 传进来的参数是否为像素坐标
     if ( 0 != lua_toboolean( L,3 ) )

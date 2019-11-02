@@ -35,7 +35,7 @@ void lnetwork_mgr::clear() /* 清除所有网络数据，不通知上层脚本 *
 /* 删除无效的连接 */
 void lnetwork_mgr::invoke_delete()
 {
-    std::vector<uint32>::iterator itr = _deleting.begin();
+    std::vector<uint32_t>::iterator itr = _deleting.begin();
     for ( ;itr != _deleting.end();itr ++ )
     {
         socket_map_t::iterator sk_itr = _socket_map.find( *itr );
@@ -59,7 +59,7 @@ void lnetwork_mgr::invoke_delete()
  * 之所以不用系统的文件描述符fd，是因为fd对于上层逻辑不可控。比如一个fd被释放，可能在多个进程
  * 之间还未处理完，此fd就被重用了。当前的连接id不太可能会在短时间内重用。
  */
-uint32 lnetwork_mgr::new_connect_id()
+uint32_t lnetwork_mgr::new_connect_id()
 {
     do
     {
@@ -73,13 +73,13 @@ uint32 lnetwork_mgr::new_connect_id()
 /* 设置某个客户端指令的参数
  * network_mgr:set_cs_cmd( cmd,schema,object[,mask,session] )
  */
-int32 lnetwork_mgr::set_cs_cmd( lua_State *L )
+int32_t lnetwork_mgr::set_cs_cmd( lua_State *L )
 {
-    int32 cmd          = luaL_checkinteger( L,1 );
+    int32_t cmd          = luaL_checkinteger( L,1 );
     const char *schema = luaL_checkstring ( L,2 );
     const char *object = luaL_checkstring ( L,3 );
-    int32 mask         = luaL_optinteger  ( L,4,0 );
-    int32 session      = luaL_optinteger  ( L,5,_session );
+    int32_t mask         = luaL_optinteger  ( L,4,0 );
+    int32_t session      = luaL_optinteger  ( L,5,_session );
 
     cmd_cfg_t &cfg = _cs_cmd_map[cmd];
     cfg._cmd     = cmd;
@@ -95,13 +95,13 @@ int32 lnetwork_mgr::set_cs_cmd( lua_State *L )
 /* 设置某个服务器指令的参数
  * network_mgr:set_ss_cmd( cmd,schema,object[,mask,session] )
  */
-int32 lnetwork_mgr::set_ss_cmd( lua_State *L )
+int32_t lnetwork_mgr::set_ss_cmd( lua_State *L )
 {
-    int32 cmd          = luaL_checkinteger( L,1 );
+    int32_t cmd          = luaL_checkinteger( L,1 );
     const char *schema = luaL_checkstring ( L,2 );
     const char *object = luaL_checkstring ( L,3 );
-    int32 mask         = luaL_optinteger  ( L,4,0 );
-    int32 session      = luaL_optinteger  ( L,5,_session );
+    int32_t mask         = luaL_optinteger  ( L,4,0 );
+    int32_t session      = luaL_optinteger  ( L,5,_session );
 
     cmd_cfg_t &cfg = _ss_cmd_map[cmd];
     cfg._cmd     = cmd;
@@ -117,13 +117,13 @@ int32 lnetwork_mgr::set_ss_cmd( lua_State *L )
 /* 设置某个sc指令的参数
  * network_mgr:set_ss_cmd( cmd,schema,object[,mask,session] )
  */
-int32 lnetwork_mgr::set_sc_cmd( lua_State *L )
+int32_t lnetwork_mgr::set_sc_cmd( lua_State *L )
 {
-    int32 cmd          = luaL_checkinteger( L,1 );
+    int32_t cmd          = luaL_checkinteger( L,1 );
     const char *schema = luaL_checkstring ( L,2 );
     const char *object = luaL_checkstring ( L,3 );
-    int32 mask         = luaL_optinteger  ( L,4,0 );
-    int32 session      = luaL_optinteger  ( L,5,_session );
+    int32_t mask         = luaL_optinteger  ( L,4,0 );
+    int32_t session      = luaL_optinteger  ( L,5,_session );
 
     cmd_cfg_t &cfg = _sc_cmd_map[cmd];
     cfg._cmd     = cmd;
@@ -139,9 +139,9 @@ int32 lnetwork_mgr::set_sc_cmd( lua_State *L )
 /* 仅关闭socket，但不销毁内存
  * network_mgr:close( conn_id,false )
  */
-int32 lnetwork_mgr::close( lua_State *L )
+int32_t lnetwork_mgr::close( lua_State *L )
 {
-    uint32 conn_id = luaL_checkinteger( L,1 );
+    uint32_t conn_id = luaL_checkinteger( L,1 );
     bool flush = lua_toboolean( L,2 );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
@@ -170,7 +170,7 @@ int32 lnetwork_mgr::close( lua_State *L )
 /* 监听端口
  * network_mgr:listen( host,port,conn_type )
  */
-int32 lnetwork_mgr::listen( lua_State *L )
+int32_t lnetwork_mgr::listen( lua_State *L )
 {
     const char *host = luaL_checkstring( L,1 );
     if ( !host )
@@ -178,18 +178,18 @@ int32 lnetwork_mgr::listen( lua_State *L )
         return luaL_error( L,"host not specify" );
     }
 
-    int32 port      = luaL_checkinteger( L,2 );
-    int32 conn_type = luaL_checkinteger( L,3 );
+    int32_t port      = luaL_checkinteger( L,2 );
+    int32_t conn_type = luaL_checkinteger( L,3 );
     if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAX )
     {
         return luaL_error( L,"illegal connection type" );
     }
 
-    uint32 conn_id = new_connect_id();
+    uint32_t conn_id = new_connect_id();
     class socket *_socket =
         new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
-    int32 fd = _socket->listen( host,port );
+    int32_t fd = _socket->listen( host,port );
     if ( fd < 0 )
     {
         delete _socket;
@@ -205,7 +205,7 @@ int32 lnetwork_mgr::listen( lua_State *L )
 /* 主动连接其他服务器
  * network_mgr:connect( host,port,conn_type )
  */
-int32 lnetwork_mgr::connect( lua_State *L )
+int32_t lnetwork_mgr::connect( lua_State *L )
 {
     const char *host = luaL_checkstring( L,1 );
     if ( !host )
@@ -213,18 +213,18 @@ int32 lnetwork_mgr::connect( lua_State *L )
         return luaL_error( L,"host not specify" );
     }
 
-    int32 port      = luaL_checkinteger( L,2 );
-    int32 conn_type = luaL_checkinteger( L,3 );
+    int32_t port      = luaL_checkinteger( L,2 );
+    int32_t conn_type = luaL_checkinteger( L,3 );
     if ( conn_type <= socket::CNT_NONE || conn_type >= socket::CNT_MAX )
     {
         return luaL_error( L,"illegal connection type" );
     }
 
-    uint32 conn_id = new_connect_id();
+    uint32_t conn_id = new_connect_id();
     class socket *_socket =
         new class socket( conn_id,static_cast<socket::conn_t>(conn_type) );
 
-    int32 fd = _socket->connect( host,port );
+    int32_t fd = _socket->connect( host,port );
     if ( fd < 0 )
     {
         delete _socket;
@@ -238,7 +238,7 @@ int32 lnetwork_mgr::connect( lua_State *L )
 }
 
 /* 获取客户端指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_cs_cmd( int32 cmd ) const
+const cmd_cfg_t *lnetwork_mgr::get_cs_cmd( int32_t cmd ) const
 {
     cmd_map_t::const_iterator itr = _cs_cmd_map.find( cmd );
     if ( itr == _cs_cmd_map.end() ) return NULL;
@@ -247,7 +247,7 @@ const cmd_cfg_t *lnetwork_mgr::get_cs_cmd( int32 cmd ) const
 }
 
 /* 获取服务端指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_ss_cmd( int32 cmd ) const
+const cmd_cfg_t *lnetwork_mgr::get_ss_cmd( int32_t cmd ) const
 {
     cmd_map_t::const_iterator itr = _ss_cmd_map.find( cmd );
     if ( itr == _ss_cmd_map.end() ) return NULL;
@@ -256,7 +256,7 @@ const cmd_cfg_t *lnetwork_mgr::get_ss_cmd( int32 cmd ) const
 }
 
 /* 获取sc指令配置 */
-const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32 cmd ) const
+const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32_t cmd ) const
 {
     cmd_map_t::const_iterator itr = _sc_cmd_map.find( cmd );
     if ( itr == _sc_cmd_map.end() ) return NULL;
@@ -265,9 +265,9 @@ const cmd_cfg_t *lnetwork_mgr::get_sc_cmd( int32 cmd ) const
 }
 
 /* 通过所有者查找连接id */
-uint32 lnetwork_mgr::get_conn_id_by_owner( owner_t owner ) const
+uint32_t lnetwork_mgr::get_conn_id_by_owner( owner_t owner ) const
 {
-    map_t<owner_t,uint32>::const_iterator itr = _owner_map.find( owner );
+    StdMap<owner_t,uint32_t>::const_iterator itr = _owner_map.find( owner );
     if ( itr == _owner_map.end() )
     {
         return 0;
@@ -277,9 +277,9 @@ uint32 lnetwork_mgr::get_conn_id_by_owner( owner_t owner ) const
 }
 
 /* 通过session获取socket连接 */
-class socket *lnetwork_mgr::get_conn_by_session( int32 session ) const
+class socket *lnetwork_mgr::get_conn_by_session( int32_t session ) const
 {
-    map_t<int32,uint32>::const_iterator itr = _session_map.find( session );
+    StdMap<int32_t,uint32_t>::const_iterator itr = _session_map.find( session );
     if ( itr == _session_map.end() ) return NULL;
 
     socket_map_t::const_iterator sk_itr = _socket_map.find( itr->second );
@@ -289,7 +289,7 @@ class socket *lnetwork_mgr::get_conn_by_session( int32 session ) const
 }
 
 /* 通过conn_id获取socket连接 */
-class socket *lnetwork_mgr::get_conn_by_conn_id( uint32 conn_id ) const
+class socket *lnetwork_mgr::get_conn_by_conn_id( uint32_t conn_id ) const
 {
     socket_map_t::const_iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() ) return NULL;
@@ -298,23 +298,23 @@ class socket *lnetwork_mgr::get_conn_by_conn_id( uint32 conn_id ) const
 }
 
 /* 通过conn_id获取session */
-int32 lnetwork_mgr::get_session_by_conn_id( uint32 conn_id ) const
+int32_t lnetwork_mgr::get_session_by_conn_id( uint32_t conn_id ) const
 {
-    map_t<uint32,int32>::const_iterator itr = _conn_session_map.find( conn_id );
+    StdMap<uint32_t,int32_t>::const_iterator itr = _conn_session_map.find( conn_id );
     if ( itr == _conn_session_map.end() ) return 0;
 
     return itr->second;
 }
 
 /* 加载schema文件 */
-int32 lnetwork_mgr::load_one_schema( lua_State *L )
+int32_t lnetwork_mgr::load_one_schema( lua_State *L )
 {
-    int32 type = luaL_checkinteger( L,1 );
+    int32_t type = luaL_checkinteger( L,1 );
     const char *path = luaL_checkstring( L,2 );
 
     if ( type < codec::CDC_NONE || type >= codec::CDC_MAX ) return -1;
 
-    int32 count = static_global::codec_mgr()->
+    int32_t count = static_global::codec_mgr()->
         load_one_schema( static_cast<codec::codec_t>(type),path );
 
     lua_pushinteger( L,count );
@@ -322,9 +322,9 @@ int32 lnetwork_mgr::load_one_schema( lua_State *L )
 }
 
 /* 设置(客户端)连接所有者 */
-int32 lnetwork_mgr::set_conn_owner( lua_State *L )
+int32_t lnetwork_mgr::set_conn_owner( lua_State *L )
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
+    uint32_t conn_id = static_cast<uint32_t>( luaL_checkinteger( L,1) );
     owner_t owner  = luaL_checkinteger( L,2 );
 
     class socket *sk = get_conn_by_conn_id( conn_id );
@@ -345,9 +345,9 @@ int32 lnetwork_mgr::set_conn_owner( lua_State *L )
 }
 
 /* 解除(客户端)连接所有者 */
-int32 lnetwork_mgr::unset_conn_owner( lua_State *L )
+int32_t lnetwork_mgr::unset_conn_owner( lua_State *L )
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
+    uint32_t conn_id = static_cast<uint32_t>( luaL_checkinteger( L,1) );
     owner_t owner  = luaL_checkinteger( L,2 );
 
     _owner_map.erase( owner );
@@ -360,10 +360,10 @@ int32 lnetwork_mgr::unset_conn_owner( lua_State *L )
 }
 
 /* 设置(服务器)连接session */
-int32 lnetwork_mgr::set_conn_session( lua_State *L )
+int32_t lnetwork_mgr::set_conn_session( lua_State *L )
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1) );
-    int32 session  = luaL_checkinteger( L,2 );
+    uint32_t conn_id = static_cast<uint32_t>( luaL_checkinteger( L,1) );
+    int32_t session  = luaL_checkinteger( L,2 );
 
     const class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -383,7 +383,7 @@ int32 lnetwork_mgr::set_conn_session( lua_State *L )
 }
 
 /* 设置当前进程的session */
-int32 lnetwork_mgr::set_curr_session( lua_State *L )
+int32_t lnetwork_mgr::set_curr_session( lua_State *L )
 {
     _session = luaL_checkinteger( L,1 );
     return 0;
@@ -391,13 +391,13 @@ int32 lnetwork_mgr::set_curr_session( lua_State *L )
 
 class packet *lnetwork_mgr::lua_check_packet( lua_State *L,socket::conn_t conn_ty )
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    uint32_t conn_id = static_cast<uint32_t>( luaL_checkinteger( L,1 ) );
 
     return raw_check_packet( L,conn_id,conn_ty );
 }
 
 class packet *lnetwork_mgr::raw_check_packet(
-        lua_State *L,uint32 conn_id,socket::conn_t conn_ty )
+        lua_State *L,uint32_t conn_id,socket::conn_t conn_ty )
 {
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -426,7 +426,7 @@ class packet *lnetwork_mgr::raw_check_packet(
 /* 发送c2s数据包
  * network_mgr:send_srv_packet( conn_id,cmd,pkt )
  */
-int32 lnetwork_mgr::send_srv_packet( lua_State *L )
+int32_t lnetwork_mgr::send_srv_packet( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_NONE );
     pkt->pack_srv( L,2 );
@@ -438,7 +438,7 @@ int32 lnetwork_mgr::send_srv_packet( lua_State *L )
 /* 发送s2c数据包
  * network_mgr:send_clt_packet( conn_id,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::send_clt_packet( lua_State *L )
+int32_t lnetwork_mgr::send_clt_packet( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_NONE );
     pkt->pack_clt( L,2 );
@@ -449,7 +449,7 @@ int32 lnetwork_mgr::send_clt_packet( lua_State *L )
 /* 发送s2s数据包
  * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::send_s2s_packet( lua_State *L )
+int32_t lnetwork_mgr::send_s2s_packet( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_SSCN );
 
@@ -474,7 +474,7 @@ int32 lnetwork_mgr::send_s2s_packet( lua_State *L )
  * conn_id必须为网关连接
  * network_mgr:send_ssc_packet( conn_id,pid,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::send_ssc_packet( lua_State *L )
+int32_t lnetwork_mgr::send_ssc_packet( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_SSCN );
 
@@ -490,9 +490,9 @@ int32 lnetwork_mgr::send_ssc_packet( lua_State *L )
 }
 
 /* 获取http报文头数据 */
-int32 lnetwork_mgr::get_http_header( lua_State *L )
+int32_t lnetwork_mgr::get_http_header( lua_State *L )
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    uint32_t conn_id = static_cast<uint32_t>( luaL_checkinteger( L,1 ) );
 
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -506,7 +506,7 @@ int32 lnetwork_mgr::get_http_header( lua_State *L )
         return luaL_error( L,"illegal socket packet type" );
     }
 
-    int32 size =
+    int32_t size =
         (reinterpret_cast<const class http_packet *>(pkt))->unpack_header( L );
     if ( size < 0 )
     {
@@ -519,7 +519,7 @@ int32 lnetwork_mgr::get_http_header( lua_State *L )
 /* 发送rpc数据包
  * network_mgr:send_rpc_packet( conn_id,unique_id,name,param1,param2,param3 )
  */
-int32 lnetwork_mgr::send_rpc_packet( lua_State *L )
+int32_t lnetwork_mgr::send_rpc_packet( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_SSCN );
 
@@ -529,7 +529,7 @@ int32 lnetwork_mgr::send_rpc_packet( lua_State *L )
         return luaL_error( L,"illegal packet type" );
     }
 
-    int32 ecode = (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
+    int32_t ecode = (reinterpret_cast<stream_packet *>(pkt))->pack_rpc( L,2 );
     if ( 0 != ecode )
     {
         return luaL_error( L,"send rpc packet error" );
@@ -541,9 +541,9 @@ int32 lnetwork_mgr::send_rpc_packet( lua_State *L )
 /* 发送原始数据包
  * network_mgr:send_raw_packet( conn_id,content )
  */
-int32 lnetwork_mgr::send_raw_packet( lua_State *L )
+int32_t lnetwork_mgr::send_raw_packet( lua_State *L )
 {
-    uint32 conn_id = static_cast<uint32>( luaL_checkinteger( L,1 ) );
+    uint32_t conn_id = static_cast<uint32_t>( luaL_checkinteger( L,1 ) );
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk || sk->fd() <= 0 )
     {
@@ -561,12 +561,12 @@ int32 lnetwork_mgr::send_raw_packet( lua_State *L )
 }
 
 /* 设置发送缓冲区大小 */
-int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
+int32_t lnetwork_mgr::set_send_buffer_size( lua_State *L )
 {
-    uint32 conn_id  = luaL_checkinteger( L,1 );
-    uint32 max      = luaL_checkinteger( L,2 );
-    uint32 ctx_size = luaL_checkinteger( L,3 );
-    int32  over_action = luaL_optinteger( L,4,socket::OAT_NONE );
+    uint32_t conn_id  = luaL_checkinteger( L,1 );
+    uint32_t max      = luaL_checkinteger( L,2 );
+    uint32_t ctx_size = luaL_checkinteger( L,3 );
+    int32_t  over_action = luaL_optinteger( L,4,socket::OAT_NONE );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
@@ -587,11 +587,11 @@ int32 lnetwork_mgr::set_send_buffer_size( lua_State *L )
 }
 
 /* 设置接收缓冲区大小 */
-int32 lnetwork_mgr::set_recv_buffer_size( lua_State *L )
+int32_t lnetwork_mgr::set_recv_buffer_size( lua_State *L )
 {
-    uint32 conn_id  = luaL_checkinteger( L,1 );
-    uint32 max      = luaL_checkinteger( L,2 );
-    uint32 ctx_size = luaL_checkinteger( L,3 );
+    uint32_t conn_id  = luaL_checkinteger( L,1 );
+    uint32_t max      = luaL_checkinteger( L,2 );
+    uint32_t ctx_size = luaL_checkinteger( L,3 );
 
     socket_map_t::iterator itr = _socket_map.find( conn_id );
     if ( itr == _socket_map.end() )
@@ -608,7 +608,7 @@ int32 lnetwork_mgr::set_recv_buffer_size( lua_State *L )
 /* 通过onwer获取socket连接 */
 class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
 {
-    uint32 dest_conn = get_conn_id_by_owner( owner );
+    uint32_t dest_conn = get_conn_id_by_owner( owner );
     if ( !dest_conn ) // 客户端刚好断开或者当前进程不是网关 ?
     {
         return NULL;
@@ -634,9 +634,9 @@ class socket *lnetwork_mgr::get_conn_by_owner( owner_t owner ) const
 }
 
 /* 新增连接 */
-bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
+bool lnetwork_mgr::accept_new( uint32_t conn_id,class socket *new_sk )
 {
-    uint32 new_conn_id = new_sk->conn_id();
+    uint32_t new_conn_id = new_sk->conn_id();
 
     _socket_map[new_conn_id] = new_sk;
 
@@ -647,7 +647,7 @@ bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,new_conn_id );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接
@@ -664,7 +664,7 @@ bool lnetwork_mgr::accept_new( uint32 conn_id,class socket *new_sk )
 }
 
 /* 连接回调 */
-bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
+bool lnetwork_mgr::connect_new( uint32_t conn_id,int32_t ecode )
 {
     static lua_State *L = static_global::state();
     lua_pushcfunction( L,traceback );
@@ -673,7 +673,7 @@ bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
     lua_pushinteger( L,conn_id );
     lua_pushinteger( L,ecode   );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,2,0,1 ) ) )
     {
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接
@@ -693,7 +693,7 @@ bool lnetwork_mgr::connect_new( uint32 conn_id,int32 ecode )
 
 
 /* 断开回调 */
-bool lnetwork_mgr::connect_del( uint32 conn_id )
+bool lnetwork_mgr::connect_del( uint32_t conn_id )
 {
     _deleting.push_back( conn_id );
 
@@ -703,7 +703,7 @@ bool lnetwork_mgr::connect_del( uint32 conn_id )
     lua_getglobal( L,"conn_del" );
     lua_pushinteger( L,conn_id );
 
-    if ( expect_false( LUA_OK != lua_pcall( L,1,0,1 ) ) )
+    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,1,0,1 ) ) )
     {
         ERROR( "conn_del:%s",lua_tostring( L,-1 ) );
 
@@ -718,11 +718,11 @@ bool lnetwork_mgr::connect_del( uint32 conn_id )
 /* 设置socket的io方式
  * network_mgr:set_conn_io( conn_id,io_type[,io_ctx] )
  */
-int32 lnetwork_mgr::set_conn_io( lua_State *L )
+int32_t lnetwork_mgr::set_conn_io( lua_State *L )
 {
-    uint32 conn_id = luaL_checkinteger( L,1 );
-    int32 io_type  = luaL_checkinteger( L,2 );
-    int32 io_ctx   = luaL_optinteger  ( L,3,0 );
+    uint32_t conn_id = luaL_checkinteger( L,1 );
+    int32_t io_type  = luaL_checkinteger( L,2 );
+    int32_t io_ctx   = luaL_optinteger  ( L,3,0 );
 
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -743,10 +743,10 @@ int32 lnetwork_mgr::set_conn_io( lua_State *L )
     return 0;
 }
 
-int32 lnetwork_mgr::set_conn_codec( lua_State *L ) /* 设置socket的编译方式 */
+int32_t lnetwork_mgr::set_conn_codec( lua_State *L ) /* 设置socket的编译方式 */
 {
-    uint32 conn_id = luaL_checkinteger( L,1 );
-    int32 codec_type  = luaL_checkinteger( L,2 );
+    uint32_t conn_id = luaL_checkinteger( L,1 );
+    int32_t codec_type  = luaL_checkinteger( L,2 );
 
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -767,10 +767,10 @@ int32 lnetwork_mgr::set_conn_codec( lua_State *L ) /* 设置socket的编译方�
     return 0;
 }
 
-int32 lnetwork_mgr::set_conn_packet( lua_State *L ) /* 设置socket的打包方式 */
+int32_t lnetwork_mgr::set_conn_packet( lua_State *L ) /* 设置socket的打包方式 */
 {
-    uint32 conn_id = luaL_checkinteger( L,1 );
-    int32 packet_type  = luaL_checkinteger( L,2 );
+    uint32_t conn_id = luaL_checkinteger( L,1 );
+    int32_t packet_type  = luaL_checkinteger( L,2 );
 
     class socket *sk = get_conn_by_conn_id( conn_id );
     if ( !sk )
@@ -790,12 +790,12 @@ int32 lnetwork_mgr::set_conn_packet( lua_State *L ) /* 设置socket的打包方�
     return 0;
 }
 
-int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
+int32_t lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
 {
-    int32 sslv = luaL_checkinteger( L,1 );
+    int32_t sslv = luaL_checkinteger( L,1 );
     const char *cert_file = lua_tostring( L,2 );
 
-    int32 keyt = luaL_optinteger( L,3,0 );
+    int32_t keyt = luaL_optinteger( L,3,0 );
     const char *key_file = lua_tostring( L,4 );
     const char *passwd   = lua_tostring( L,5 );
 
@@ -809,7 +809,7 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
         return luaL_error( L,"invalid ssl key type" );
     }
 
-    int32 idx = static_global::ssl_mgr()->new_ssl_ctx(
+    int32_t idx = static_global::ssl_mgr()->new_ssl_ctx(
         static_cast<ssl_mgr::sslv_t>(sslv),cert_file,
         static_cast<ssl_mgr::key_t>(keyt),key_file,passwd );
 
@@ -823,10 +823,10 @@ int32 lnetwork_mgr::new_ssl_ctx( lua_State *L ) /* 创建一个ssl上下文 */
 }
 
 // 查找该cmd在哪个进程处理
-int32 lnetwork_mgr::get_cmd_session(int64 object_id, int32 cmd ) const
+int32_t lnetwork_mgr::get_cmd_session(int64_t object_id, int32_t cmd ) const
 {
     const cmd_cfg_t *cmd_cfg = get_cs_cmd( cmd );
-    if ( expect_false(!cmd_cfg) )
+    if ( EXPECT_FALSE(!cmd_cfg) )
     {
         ERROR( "cs_dispatch cmd(%d) no cmd cfg found",cmd );
         return -1;
@@ -842,13 +842,13 @@ int32 lnetwork_mgr::get_cmd_session(int64 object_id, int32 cmd ) const
      * 防止网关后面的服务器被攻击
      * 与客户端的连接，这个object_id就是玩家id
      */
-    if ( expect_false(!object_id) )
+    if ( EXPECT_FALSE(!object_id) )
     {
         ERROR( "cs_dispatch cmd(%d) socket do NOT have object",cmd );
         return -1;
     }
 
-    map_t<owner_t,int32>::const_iterator iter = _owner_session.find(object_id);
+    StdMap<owner_t,int32_t>::const_iterator iter = _owner_session.find(object_id);
     if (iter == _owner_session.end())
     {
         ERROR( "cs_dispatch cmd(%d) "
@@ -863,10 +863,10 @@ int32 lnetwork_mgr::get_cmd_session(int64 object_id, int32 cmd ) const
  * 这个函数如果返回false，则会将协议在当前进程派发
  */
 bool lnetwork_mgr::cs_dispatch(
-    int32 cmd,const class socket *src_sk,const char *ctx,size_t size ) const
+    int32_t cmd,const class socket *src_sk,const char *ctx,size_t size ) const
 {
-    int64 object_id = src_sk->get_object_id();
-    int32 session = get_cmd_session( object_id,cmd );
+    int64_t object_id = src_sk->get_object_id();
+    int32_t session = get_cmd_session( object_id,cmd );
     if ( session < 0 ) return true;
 
     // 在当前进程处理，不需要转发
@@ -899,7 +899,7 @@ bool lnetwork_mgr::cs_dispatch(
 }
 
 /* 发送ping-pong等数据包 */
-int32 lnetwork_mgr::send_ctrl_packet ( lua_State *L )
+int32_t lnetwork_mgr::send_ctrl_packet ( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_NONE );
 
@@ -918,7 +918,7 @@ int32 lnetwork_mgr::send_ctrl_packet ( lua_State *L )
 /* 广播到所有连接到当前进程的服务器
  * srv_multicast( conn_list,codec_type,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::srv_multicast( lua_State *L )
+int32_t lnetwork_mgr::srv_multicast( lua_State *L )
 {
     STAT_TIME_BEG();
     if ( !lua_istable( L,1 ) )
@@ -926,9 +926,9 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
         return luaL_error( L,
             "expect table,got %s",lua_typename( L,lua_type(L,1) ) );
     }
-    int32 codec_ty = luaL_checkinteger( L,2 );
-    int32 cmd      = luaL_checkinteger( L,3 );
-    int32 ecode    = luaL_checkinteger( L,4 );
+    int32_t codec_ty = luaL_checkinteger( L,2 );
+    int32_t cmd      = luaL_checkinteger( L,3 );
+    int32_t ecode    = luaL_checkinteger( L,4 );
     if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
     {
         return luaL_error( L,"illegal codec type" );
@@ -954,7 +954,7 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,5,&buffer,cfg );
+    int32_t len = encoder->encode( L,5,&buffer,cfg );
     if ( len < 0 )
     {
         encoder->finalize();
@@ -978,7 +978,7 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
             return luaL_error( L,"conn list expect integer" );
         }
 
-        uint32 conn_id = static_cast<uint32>( lua_tointeger(L,-1) );
+        uint32_t conn_id = static_cast<uint32_t>( lua_tointeger(L,-1) );
 
         lua_pop( L, 1 );
         class packet *pkt = raw_check_packet( L,conn_id,socket::CNT_SSCN );
@@ -998,14 +998,14 @@ int32 lnetwork_mgr::srv_multicast( lua_State *L )
     encoder->finalize();
 
     PKT_STAT_ADD( SPKT_SSPK, 
-        cmd, int32(len + sizeof(struct s2s_header)),STAT_TIME_END() );
+        cmd, int32_t(len + sizeof(struct s2s_header)),STAT_TIME_END() );
     return 0;
 }
 
 /* 网关进程广播数据到客户端
  * clt_multicast( conn_list,codec_type,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::clt_multicast( lua_State *L )
+int32_t lnetwork_mgr::clt_multicast( lua_State *L )
 {
     STAT_TIME_BEG();
     if ( !lua_istable( L,1 ) )
@@ -1013,9 +1013,9 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
         return luaL_error( L,
             "expect table,got %s",lua_typename( L,lua_type(L,1) ) );
     }
-    int32 codec_ty = luaL_checkinteger( L,2 );
-    int32 cmd      = luaL_checkinteger( L,3 );
-    int32 ecode    = luaL_checkinteger( L,4 );
+    int32_t codec_ty = luaL_checkinteger( L,2 );
+    int32_t cmd      = luaL_checkinteger( L,3 );
+    int32_t ecode    = luaL_checkinteger( L,4 );
     if ( codec_ty < codec::CDC_NONE || codec_ty >= codec::CDC_MAX )
     {
         return luaL_error( L,"illegal codec type" );
@@ -1041,7 +1041,7 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
     }
 
     const char *buffer = NULL;
-    int32 len = encoder->encode( L,5,&buffer,cfg );
+    int32_t len = encoder->encode( L,5,&buffer,cfg );
     if ( len < 0 )
     {
         encoder->finalize();
@@ -1065,7 +1065,7 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
             return luaL_error( L,"conn list expect integer" );
         }
 
-        uint32 conn_id = static_cast<uint32>( lua_tointeger(L,-1) );
+        uint32_t conn_id = static_cast<uint32_t>( lua_tointeger(L,-1) );
 
         lua_pop( L, 1 );
         class packet *pkt = raw_check_packet( L,conn_id,socket::CNT_SSCN );
@@ -1085,7 +1085,7 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
     encoder->finalize();
 
     PKT_STAT_ADD( SPKT_SCPK, 
-        cmd, int32(len + sizeof(struct s2c_header)),STAT_TIME_END() );
+        cmd, int32_t(len + sizeof(struct s2c_header)),STAT_TIME_END() );
 
     return 0;
 }
@@ -1093,7 +1093,7 @@ int32 lnetwork_mgr::clt_multicast( lua_State *L )
 /* 非网关数据广播数据到客户端
  * ssc_multicast( conn_id,mask,conn_list or args_list,codec_type,cmd,errno,pkt )
  */
-int32 lnetwork_mgr::ssc_multicast( lua_State *L )
+int32_t lnetwork_mgr::ssc_multicast( lua_State *L )
 {
     class packet *pkt = lua_check_packet( L,socket::CNT_SSCN );
 
@@ -1109,10 +1109,10 @@ int32 lnetwork_mgr::ssc_multicast( lua_State *L )
 }
 
 // 设置玩家当前所在的session
-int32 lnetwork_mgr::set_player_session( lua_State *L )
+int32_t lnetwork_mgr::set_player_session( lua_State *L )
 {
     owner_t owner = luaL_checkinteger( L,1 );
-    int32 session = luaL_checkinteger( L,2 );
+    int32_t session = luaL_checkinteger( L,2 );
 
     if ( session <= 0 )
     {
@@ -1127,11 +1127,11 @@ int32 lnetwork_mgr::set_player_session( lua_State *L )
 }
 
 // 设置玩家当前所在的session
-int32 lnetwork_mgr::get_player_session( lua_State *L )
+int32_t lnetwork_mgr::get_player_session( lua_State *L )
 {
     owner_t owner = luaL_checkinteger( L,1 );
 
-    map_t<owner_t,int32>::const_iterator iter = _owner_session.find(owner);
+    StdMap<owner_t,int32_t>::const_iterator iter = _owner_session.find(owner);
 
     lua_pushinteger( L,iter == _owner_session.end() ? -1 : iter->second );
 

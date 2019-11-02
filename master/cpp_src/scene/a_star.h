@@ -16,13 +16,13 @@ public:
     // 路径辅助节点
     struct node
     {
-        uint8 mask; // 是否close
-        int32 g; // a*算法中f = g + h中的g，代表从起始位置到该格子的开销
-        int32 h; // a*算法中f = g + h中的h，代表该格子到目标节点预估的开销
-        uint16 x; // 该格子的x坐标
-        uint16 y; // 该格子的y坐标
-        uint16 px; // 该格子的父格子x坐标
-        uint16 py; // 该格子的父格子y坐标
+        uint8_t mask; // 是否close
+        int32_t g; // a*算法中f = g + h中的g，代表从起始位置到该格子的开销
+        int32_t h; // a*算法中f = g + h中的h，代表该格子到目标节点预估的开销
+        uint16_t x; // 该格子的x坐标
+        uint16_t y; // 该格子的y坐标
+        uint16_t px; // 该格子的父格子x坐标
+        uint16_t py; // 该格子的父格子y坐标
     };
 public:
     a_star();
@@ -32,16 +32,16 @@ public:
      * @x,y：起点坐标
      * @dx,dy：dest，终点坐标
      */
-    bool search( const grid_map *map,int32 x,int32 y,int32 dx,int32 dy);
+    bool search( const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy);
     // 获取路径
-    const std::vector<uint16> &get_path() const { return _path; }
+    const std::vector<uint16_t> &get_path() const { return _path; }
 private:
     struct node *pop_open_set();
     bool backtrace_path(
-        const struct node *dest,int32 dx,int32 dy,uint16 height );
+        const struct node *dest,int32_t dx,int32_t dy,uint16_t height );
     bool do_search(
-        const grid_map *map,int32 x,int32 y,int32 dx,int32 dy);
-    struct node *new_node(uint16 x,uint16 y,uint16 px = 0,uint16 py = 0);
+        const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy);
+    struct node *new_node(uint16_t x,uint16_t y,uint16_t px = 0,uint16_t py = 0);
 
     /* 启发函数的选择，下面的连接说明各个算法的适用场景及效率
      * http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
@@ -56,26 +56,26 @@ private:
     /* 曼哈顿距离，不会算对角距离，
      * 适用只能往东南西北4个方向，不能走对角的游戏
      */
-    int32 manhattan(int32 x,int32 y,int32 gx,int32 gy);
+    int32_t manhattan(int32_t x,int32_t y,int32_t gx,int32_t gy);
 
     /* 对角距离
      * 适用东南西北，以及东北-东南-西南-西北(沿45度角走)的游戏
      */
-    int32 diagonal(int32 x,int32 y,int32 gx,int32 gy);
+    int32_t diagonal(int32_t x,int32_t y,int32_t gx,int32_t gy);
 
     /* 欧几里得距离
      * 适用可以沿任意角度行走的游戏。但是f = g + h中，g的值是一步步算出来的，因此g值
      * 要么是直线，要么是45度角的消耗，因此会导致f值不准确。不过这里的h <= n，还是可以
      * 得到最小路径，只是算法效率受影响
      */
-    int32 euclidean(int32 x,int32 y,int32 gx,int32 gy);
+    int32_t euclidean(int32_t x,int32_t y,int32_t gx,int32_t gy);
 private:
     struct node **_node_set; // 记录当前寻路格子集合
     struct node *_node_pool; // 格子对象内存池
-    std::vector<uint16> _path; // 生成的路径，反向并且每两个元素表示一个格子
+    std::vector<uint16_t> _path; // 生成的路径，反向并且每两个元素表示一个格子
     std::vector<struct node*> _open_set; // 记录算法运行过程中待处理的格子
 
-    int32 _set_max;  // 当前集合大小
-    int32 _pool_max; // 内存池格子数量
-    int32 _pool_idx; // 内存池当前已用数量
+    int32_t _set_max;  // 当前集合大小
+    int32_t _pool_max; // 内存池格子数量
+    int32_t _pool_idx; // 内存池当前已用数量
 };

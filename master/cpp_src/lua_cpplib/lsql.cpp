@@ -28,7 +28,7 @@ size_t lsql::busy_job( size_t *finished,size_t *unfinished )
 }
 
 // 是否有效(只判断是否连接上，后续断线等不检测)
-int32 lsql::valid ( lua_State *L )
+int32_t lsql::valid ( lua_State *L )
 {
     lua_pushinteger( L,_valid );
 
@@ -36,7 +36,7 @@ int32 lsql::valid ( lua_State *L )
 }
 
 /* 连接mysql并启动线程 */
-int32 lsql::start( lua_State *L )
+int32_t lsql::start( lua_State *L )
 {
     if ( active() )
     {
@@ -44,7 +44,7 @@ int32 lsql::start( lua_State *L )
     }
 
     const char *host   = luaL_checkstring  ( L,1 );
-    const int32 port   = luaL_checkinteger ( L,2 );
+    const int32_t port   = luaL_checkinteger ( L,2 );
     const char *usr    = luaL_checkstring  ( L,3 );
     const char *pwd    = luaL_checkstring  ( L,4 );
     const char *dbname = luaL_checkstring  ( L,5 );
@@ -91,7 +91,7 @@ void lsql::invoke_sql( bool is_return )
         ASSERT( stmt && query->_size > 0, "empty sql statement" );
 
         struct sql_res *res = NULL;
-        if ( expect_false( _sql.query( stmt,query->_size ) ) )
+        if ( EXPECT_FALSE( _sql.query( stmt,query->_size ) ) )
         {
             ERROR( "sql query error:%s",_sql.error() );
             ERROR( "sql will not exec:%s",stmt );
@@ -124,7 +124,7 @@ void lsql::invoke_sql( bool is_return )
     }
 }
 
-int32 lsql::stop( lua_State *L )
+int32_t lsql::stop( lua_State *L )
 {
     _valid = -1;
     thread::stop();
@@ -145,7 +145,7 @@ void lsql::push_query( const struct sql_query *query )
     if ( notify ) notify_child( NTF_CUSTOM );
 }
 
-int32 lsql::do_sql( lua_State *L )
+int32_t lsql::do_sql( lua_State *L )
 {
     if ( !active() )
     {
@@ -153,7 +153,7 @@ int32 lsql::do_sql( lua_State *L )
     }
 
     size_t size = 0;
-    int32 id = luaL_checkinteger( L,1 );
+    int32_t id = luaL_checkinteger( L,1 );
     const char *stmt = luaL_checklstring( L,2,&size );
     if ( !stmt || size == 0 )
     {
@@ -183,7 +183,7 @@ void lsql::notification( notify_t notify )
     }
 }
 
-int32 lsql::pop_result( struct sql_result &res )
+int32_t lsql::pop_result( struct sql_result &res )
 {
     lock();
     if ( _result.empty() )
@@ -213,8 +213,8 @@ void lsql::invoke_result()
         lua_pushinteger( L,res._id );
         lua_pushinteger( L,res._ecode );
 
-        int32 nargs = 3;
-        int32 args  = mysql_to_lua( L,res._res );
+        int32_t nargs = 3;
+        int32_t args  = mysql_to_lua( L,res._res );
         if ( args > 0 )         nargs += args;
 
         if ( LUA_OK != lua_pcall( L,nargs,0,1 ) )
@@ -229,7 +229,7 @@ void lsql::invoke_result()
     lua_pop(L,1); /* remove traceback */
 }
 
-int32 lsql::field_to_lua( lua_State *L,
+int32_t lsql::field_to_lua( lua_State *L,
     const struct sql_field &field,const struct sql_col &col )
 {
     lua_pushstring( L,field._name );
@@ -269,7 +269,7 @@ int32 lsql::field_to_lua( lua_State *L,
 }
 
 /* 将mysql结果集转换为lua table */
-int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
+int32_t lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
 {
     if ( !res ) return 0;
 
@@ -281,13 +281,13 @@ int32 lsql::mysql_to_lua( lua_State *L,const struct sql_res *res )
 
     const std::vector<sql_field> &fields = res->_fields;
     const std::vector<sql_row  > &rows   = res->_rows;
-    for ( uint32 row = 0;row < res->_num_rows;row ++ )
+    for ( uint32_t row = 0;row < res->_num_rows;row ++ )
     {
         lua_pushinteger( L,row + 1 ); /* lua table从1开始 */
         lua_createtable( L,0,res->_num_cols ); /* 创建hash表，元素个数为num_cols */
 
         const std::vector<sql_col> &cols = rows[row]._cols;
-        for ( uint32 col = 0;col < res->_num_cols;col ++ )
+        for ( uint32_t col = 0;col < res->_num_cols;col ++ )
         {
             ASSERT( res->_num_cols == cols.size(),
                 "sql result column over boundary" );
@@ -326,7 +326,7 @@ bool lsql::initialize()
 {
     mysql_thread_init();
 
-    int32 ok = _sql.connect();
+    int32_t ok = _sql.connect();
     if ( ok > 0 )
     {
         _valid = 0;
@@ -344,7 +344,7 @@ bool lsql::initialize()
     return true;
 }
 
-void lsql::push_result( int32 id,struct sql_res *res )
+void lsql::push_result( int32_t id,struct sql_res *res )
 {
     /* 需要回调的应该都有结果，没有的话可能是逻辑错误 */
     if ( !res )

@@ -10,13 +10,13 @@ public:
     explicit ltimer( lua_State *L );
     ~ltimer();
 
-    int32 set   ( lua_State *L );
-    int32 stop  ( lua_State *L );
-    int32 start ( lua_State *L );
-    int32 active( lua_State *L );
+    int32_t set   ( lua_State *L );
+    int32_t stop  ( lua_State *L );
+    int32_t start ( lua_State *L );
+    int32_t active( lua_State *L );
 
-    void callback( ev_timer &w,int32 revents );
+    void callback( EvTimer &w,int32_t revents );
 private:
-    int32 _timer_id;
-    class ev_timer _timer;
+    int32_t _timer_id;
+    class EvTimer _timer;
 };

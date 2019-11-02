@@ -29,8 +29,6 @@
 #define HPARENT(k) ((k) >> 1)
 #define UPHEAP_DONE(p,k) (!(p))
 
-typedef double ev_tstamp;
-
 /* eventmask, revents, events... */
 enum
 {
@@ -42,100 +40,100 @@ enum
     EV_ERROR    = (int)0x80000000  /* sent when an error occurs */
 };
 
-typedef double ev_tstamp;
+typedef double EvTstamp;
 
-class ev_watcher;
-class ev_io;
-class ev_timer;
+class EvWatcher;
+class EvIO;
+class EvTimer;
 
 /* file descriptor info structure */
 typedef struct
 {
-  ev_io *w;
-  uint8 reify;  /* EPOLL_CTL_ADD、EPOLL_CTL_MOD、EPOLL_CTL_DEL */
-  uint8 emask;  /* epoll event register in epoll */
+  EvIO *w;
+  uint8_t reify;  /* EPOLL_CTL_ADD、EPOLL_CTL_MOD、EPOLL_CTL_DEL */
+  uint8_t emask;  /* epoll event register in epoll */
 } ANFD;
 
 /* stores the pending event set for a given watcher */
 typedef struct
 {
-  ev_watcher *w;
+  EvWatcher *w;
   int events; /* the pending event set for the given watcher */
 } ANPENDING;
 
 /* timer heap element */
-typedef ev_timer *ANHE;
-typedef int32 ANCHANGE;
+typedef EvTimer *ANHE;
+typedef int32_t ANCHANGE;
 
 /* epoll does sometimes return early, this is just to avoid the worst */
 // TODO:尚不清楚这个机制(libev的 backend_mintime = 1e-3秒)，应该是要传个非0值
 #define EPOLL_MIN_TM 1
 
-class ev
+class Ev
 {
 public:
-    ev();
-    virtual ~ev();
+    Ev();
+    virtual ~Ev();
 
-    int32 run();
-    int32 quit();
+    int32_t run();
+    int32_t quit();
 
-    int32 io_start( ev_io *w );
-    int32 io_stop( ev_io *w );
+    int32_t io_start( EvIO *w );
+    int32_t io_stop( EvIO *w );
 
-    int32 timer_start( ev_timer *w );
-    int32 timer_stop( ev_timer *w );
+    int32_t timer_start( EvTimer *w );
+    int32_t timer_stop( EvTimer *w );
 
-    static int64 get_ms_time();
-    static ev_tstamp get_time();
+    static int64_t get_ms_time();
+    static EvTstamp get_time();
 
     void update_clock();
 
-    inline int64 ms_now() { return ev_now_ms; }
-    inline ev_tstamp now() { return ev_rt_now; }
+    inline int64_t ms_now() { return ev_now_ms; }
+    inline EvTstamp now() { return ev_rt_now; }
 protected:
     volatile bool loop_done;
     ANFD *anfds;
-    uint32 anfdmax;
+    uint32_t anfdmax;
 
     ANPENDING *pendings;
-    uint32 pendingmax;
-    uint32 pendingcnt;
+    uint32_t pendingmax;
+    uint32_t pendingcnt;
 
     ANCHANGE *fdchanges;
-    uint32 fdchangemax;
-    uint32 fdchangecnt;
+    uint32_t fdchangemax;
+    uint32_t fdchangecnt;
 
     ANHE *timers;
-    uint32 timermax;
-    uint32 timercnt;
+    uint32_t timermax;
+    uint32_t timercnt;
 
-    int32 backend_fd;
+    int32_t backend_fd;
     epoll_event epoll_events[EPOLL_MAXEV];
 
-    int64 ev_now_ms; // 主循环时间，毫秒
-    ev_tstamp ev_rt_now;
-    ev_tstamp now_floor; /* last time we refreshed rt_time */
-    ev_tstamp mn_now;    /* monotonic clock "now" */
-    ev_tstamp rtmn_diff; /* difference realtime - monotonic time */
+    int64_t ev_now_ms; // 主循环时间，毫秒
+    EvTstamp ev_rt_now;
+    EvTstamp now_floor; /* last time we refreshed rt_time */
+    EvTstamp mn_now;    /* monotonic clock "now" */
+    EvTstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
-    virtual void running( int64 ms_now ) {}
-    virtual void after_run(int64 old_ms_now ,int64 ms_now ) {}
+    virtual void running( int64_t ms_now ) {}
+    virtual void after_run(int64_t old_ms_now ,int64_t ms_now ) {}
 
-    virtual ev_tstamp wait_time();
-    void fd_change( int32 fd );
+    virtual EvTstamp wait_time();
+    void fd_change( int32_t fd );
     void fd_reify();
     void backend_init();
-    void backend_modify( int32 fd,int32 events,int32 reify );
+    void backend_modify( int32_t fd,int32_t events,int32_t reify );
     void time_update();
-    void backend_poll( ev_tstamp timeout );
-    void fd_event( int32 fd,int32 revents );
-    void feed_event( ev_watcher *w,int32 revents );
+    void backend_poll( EvTstamp timeout );
+    void fd_event( int32_t fd,int32_t revents );
+    void feed_event( EvWatcher *w,int32_t revents );
     void invoke_pending();
-    void clear_pending( ev_watcher *w );
+    void clear_pending( EvWatcher *w );
     void timers_reify();
-    void down_heap( ANHE *heap,int32 N,int32 k );
-    void up_heap( ANHE *heap,int32 k );
-    void adjust_heap( ANHE *heap,int32 N,int32 k );
-    void reheap( ANHE *heap,int32 N );
+    void down_heap( ANHE *heap,int32_t N,int32_t k );
+    void up_heap( ANHE *heap,int32_t k );
+    void adjust_heap( ANHE *heap,int32_t N,int32_t k );
+    void reheap( ANHE *heap,int32_t N );
 };

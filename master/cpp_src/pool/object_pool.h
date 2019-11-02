@@ -10,7 +10,7 @@
 
 #include "pool.h"
 
-template <typename T,uint32 msize = 1024,uint32 nsize = 1024>
+template <typename T,uint32_t msize = 1024,uint32_t nsize = 1024>
 class object_pool : public pool
 {
 public:
@@ -46,9 +46,9 @@ public:
     // 构造对象
     T *construct()
     {
-        if (expect_false(0 == _anptsize))
+        if (EXPECT_FALSE(0 == _anptsize))
         {
-            array_resize( T*,_anpts,_anptmax,nsize,array_noinit );
+            ARRAY_RESIZE( T*,_anpts,_anptmax,nsize,ARRAY_NOINIT );
             // 暂时循环分配而不是一次分配一个数组
             // 因为要实现一个特殊的需求。像vector这种对象，如果分配太多内存，是不会
             // 回收的，低版本都没有shrink_to_fit,这里需要直接把这个对象删除掉
@@ -76,10 +76,10 @@ public:
         }
         else
         {
-            if (expect_false(_anptsize >= _anptmax))
+            if (EXPECT_FALSE(_anptsize >= _anptmax))
             {
-                uint32 mini_size = MATH_MIN(_anptmax + nsize,msize);
-                array_resize( T*,_anpts,_anptmax,mini_size,array_noinit );
+                uint32_t mini_size = MATH_MIN(_anptmax + nsize,msize);
+                ARRAY_RESIZE( T*,_anpts,_anptmax,mini_size,ARRAY_NOINIT );
             }
             _max_now ++;
             _anpts[_anptsize++] = object;
@@ -89,7 +89,7 @@ private:
     /* 清空内存池 */
     inline void clear()
     {
-        for (uint32 idx = 0;idx < _anptsize;idx ++) delete _anpts[idx];
+        for (uint32_t idx = 0;idx < _anptsize;idx ++) delete _anpts[idx];
 
         _anptsize = 0;
         delete []_anpts;
@@ -97,6 +97,6 @@ private:
     }
 private:
     T **_anpts;    /* 空闲对象数组 */
-    uint32 _anptmax; /* 对象数组的最大长度 */
-    uint32 _anptsize; /* 对象数组的当前长度 */
+    uint32_t _anptmax; /* 对象数组的最大长度 */
+    uint32_t _anptsize; /* 对象数组的当前长度 */
 };

@@ -48,17 +48,17 @@ lstate::~lstate()
     L = NULL;
 }
 
-int32 luaopen_ev    ( lua_State *L );
-int32 luaopen_sql   ( lua_State *L );
-int32 luaopen_log   ( lua_State *L );
-int32 luaopen_aoi   ( lua_State *L );
-int32 luaopen_map   ( lua_State *L );
-int32 luaopen_rank  ( lua_State *L );
-int32 luaopen_timer ( lua_State *L );
-int32 luaopen_astar ( lua_State *L );
-int32 luaopen_acism ( lua_State *L );
-int32 luaopen_mongo ( lua_State *L );
-int32 luaopen_network_mgr( lua_State *L );
+int32_t luaopen_ev    ( lua_State *L );
+int32_t luaopen_sql   ( lua_State *L );
+int32_t luaopen_log   ( lua_State *L );
+int32_t luaopen_aoi   ( lua_State *L );
+int32_t luaopen_map   ( lua_State *L );
+int32_t luaopen_rank  ( lua_State *L );
+int32_t luaopen_timer ( lua_State *L );
+int32_t luaopen_astar ( lua_State *L );
+int32_t luaopen_acism ( lua_State *L );
+int32_t luaopen_mongo ( lua_State *L );
+int32_t luaopen_network_mgr( lua_State *L );
 
 void lstate::open_cpp()
 {
@@ -89,7 +89,7 @@ void lstate::open_cpp()
     ASSERT( 0 == lua_gettop(L), "lua stack not clean after init" );
 }
 
-int32 luaopen_ev( lua_State *L )
+int32_t luaopen_ev( lua_State *L )
 {
     lbaseclass<lev> lc(L,"Ev");
     lc.def<&lev::time>     ("time"     );
@@ -107,7 +107,7 @@ int32 luaopen_ev( lua_State *L )
     return 0;
 }
 
-int32 luaopen_timer ( lua_State *L )
+int32_t luaopen_timer ( lua_State *L )
 {
     lclass<ltimer> lc(L,"Timer");
     lc.def<&ltimer::set>   ( "set"    );
@@ -118,7 +118,7 @@ int32 luaopen_timer ( lua_State *L )
     return 0;
 }
 
-int32 luaopen_sql( lua_State *L )
+int32_t luaopen_sql( lua_State *L )
 {
 
     lclass<lsql> lc(L,"Sql");
@@ -131,7 +131,7 @@ int32 luaopen_sql( lua_State *L )
     return 0;
 }
 
-int32 luaopen_mongo( lua_State *L )
+int32_t luaopen_mongo( lua_State *L )
 {
     lclass<lmongo> lc(L,"Mongo");
     lc.def<&lmongo::start> ( "start" );
@@ -148,7 +148,7 @@ int32 luaopen_mongo( lua_State *L )
     return 0;
 }
 
-int32 luaopen_log( lua_State *L )
+int32_t luaopen_log( lua_State *L )
 {
     lclass<llog> lc(L,"Log");
     lc.def<&llog::stop>  ("stop");
@@ -162,7 +162,7 @@ int32 luaopen_log( lua_State *L )
     return 0;
 }
 
-int32 luaopen_acism( lua_State *L )
+int32_t luaopen_acism( lua_State *L )
 {
     lclass<lacism> lc(L,"Acism");
 
@@ -173,7 +173,7 @@ int32 luaopen_acism( lua_State *L )
     return 0;
 }
 
-int32 luaopen_network_mgr( lua_State *L )
+int32_t luaopen_network_mgr( lua_State *L )
 {
     lbaseclass<lnetwork_mgr> lc(L,"Network_mgr");
 
@@ -240,7 +240,7 @@ int32 luaopen_network_mgr( lua_State *L )
     return 0;
 }
 
-int32 luaopen_aoi( lua_State *L )
+int32_t luaopen_aoi( lua_State *L )
 {
     lclass<laoi> lc(L,"Aoi");
 
@@ -260,7 +260,7 @@ int32 luaopen_aoi( lua_State *L )
     return 0;
 }
 
-int32 luaopen_map( lua_State *L )
+int32_t luaopen_map( lua_State *L )
 {
     lclass<lmap> lc(L,"Map");
 
@@ -274,7 +274,7 @@ int32 luaopen_map( lua_State *L )
     return 0;
 }
 
-int32 luaopen_rank( lua_State *L )
+int32_t luaopen_rank( lua_State *L )
 {
     lclass< linsertion_rank > lc_insertion_rank(L,"Insertion_rank");
     lc_insertion_rank.def< &linsertion_rank::clear > ("clear");
@@ -297,7 +297,7 @@ int32 luaopen_rank( lua_State *L )
     return 0;
 }
 
-int32 luaopen_astar( lua_State *L )
+int32_t luaopen_astar( lua_State *L )
 {
     lclass<lastar> lc(L,"Astar");
 

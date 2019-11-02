@@ -18,7 +18,7 @@ public:
      * @sec:秒
      * @usec:微秒
      */
-    bool start( int32 sec = 1,int32 usec = 0 );
+    bool start( int32_t sec = 1,int32_t usec = 0 );
     /* 还在处理的数据
      * @finish:是子线程已处理完，等待主线程处理的数量
      * @unfinished:是等待子线程处理的数量
@@ -63,10 +63,10 @@ protected:
     inline void unlock() { pthread_mutex_unlock( &_mutex ); }
 private:
     void do_routine();
-    void io_cb( ev_io &w,int32 revents );
+    void io_cb( EvIO &w,int32_t revents );
 private:
-    int32 _fd[2]  ;
-    ev_io _watcher;
+    int32_t _fd[2]  ;
+    EvIO _watcher;
     pthread_t _id;
 
     std::atomic<bool> _run;

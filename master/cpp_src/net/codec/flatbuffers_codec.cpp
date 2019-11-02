@@ -18,7 +18,7 @@ void flatbuffers_codec::finalize()
 {
 }
 
-int32 flatbuffers_codec::load_path( const char *path )
+int32_t flatbuffers_codec::load_path( const char *path )
 {
     return _lflatbuffers->load_bfbs_path( path );
 }
@@ -26,8 +26,8 @@ int32 flatbuffers_codec::load_path( const char *path )
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32 flatbuffers_codec::decode(
-     lua_State *L,const char *buffer,int32 len,const cmd_cfg_t *cfg )
+int32_t flatbuffers_codec::decode(
+     lua_State *L,const char *buffer,int32_t len,const cmd_cfg_t *cfg )
 {
     if ( _lflatbuffers->decode( L,cfg->_schema,cfg->_object,buffer,len ) < 0 )
     {
@@ -42,8 +42,8 @@ int32 flatbuffers_codec::decode(
 /* 编码数据包
  * return: <0 error,otherwise the length of buffer
  */
-int32 flatbuffers_codec::encode(
-    lua_State *L,int32 index,const char **buffer,const cmd_cfg_t *cfg )
+int32_t flatbuffers_codec::encode(
+    lua_State *L,int32_t index,const char **buffer,const cmd_cfg_t *cfg )
 {
     if ( _lflatbuffers->encode( L,cfg->_schema,cfg->_object,index ) < 0 )
     {
@@ -54,5 +54,5 @@ int32 flatbuffers_codec::encode(
     size_t size = 0;
     *buffer = _lflatbuffers->get_buffer( size );
 
-    return static_cast<int32>( size );
+    return static_cast<int32_t>( size );
 }
