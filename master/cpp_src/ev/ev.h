@@ -42,7 +42,7 @@ enum
 
 typedef double EvTstamp;
 
-class EvWatcher;
+class EVWatcher;
 class EvIO;
 class EvTimer;
 
@@ -57,7 +57,7 @@ typedef struct
 /* stores the pending event set for a given watcher */
 typedef struct
 {
-  EvWatcher *w;
+  EVWatcher *w;
   int events; /* the pending event set for the given watcher */
 } ANPENDING;
 
@@ -70,11 +70,11 @@ typedef int32_t ANCHANGE;
 #define EPOLL_MIN_TM 1
 
 // event loop
-class Ev
+class EV
 {
 public:
-    Ev();
-    virtual ~Ev();
+    EV();
+    virtual ~EV();
 
     int32_t run();
     int32_t quit();
@@ -129,9 +129,9 @@ protected:
     void time_update();
     void backend_poll( EvTstamp timeout );
     void fd_event( int32_t fd,int32_t revents );
-    void feed_event( EvWatcher *w,int32_t revents );
+    void feed_event( EVWatcher *w,int32_t revents );
     void invoke_pending();
-    void clear_pending( EvWatcher *w );
+    void clear_pending( EVWatcher *w );
     void timers_reify();
     void down_heap( ANHE *heap,int32_t N,int32_t k );
     void up_heap( ANHE *heap,int32_t k );

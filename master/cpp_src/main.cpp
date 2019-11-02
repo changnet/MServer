@@ -20,7 +20,7 @@ int32_t main( int32_t argc,char **argv )
 
     lua_State *L = StaticGlobal::state();
 
-    LClass<LEv>::push( L,StaticGlobal::lua_ev(),false );
+    LClass<LEV>::push( L,StaticGlobal::lua_ev(),false );
     lua_setglobal( L,"ev" );
 
     LClass<LNetworkMgr>::push( L,StaticGlobal::network_mgr(),false );

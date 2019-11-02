@@ -4,16 +4,16 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 /* 公共基类以实现多态 */
-class EvWatcher
+class EVWatcher
 {
 public:
     int32_t active;
     int32_t pending;
     void *data;
-    void (*cb)(EvWatcher *w, int32_t revents);
-    Ev *loop;
+    void (*cb)(EVWatcher *w, int32_t revents);
+    EV *loop;
 public:
-    explicit EvWatcher( Ev *_loop)
+    explicit EVWatcher( EV *_loop)
         : loop (_loop)
     {
         active  = 0;
@@ -22,27 +22,27 @@ public:
         cb      = NULL;
     }
 
-    virtual ~EvWatcher(){}
+    virtual ~EVWatcher(){}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 template<class Watcher>
-class EvBase : public EvWatcher
+class EVBase : public EVWatcher
 {
 public:
-    explicit EvBase( Ev *_loop)
-        : EvWatcher (_loop)
+    explicit EVBase( EV *_loop)
+        : EVWatcher (_loop)
     {
     }
 
-    virtual ~EvBase(){}
+    virtual ~EVBase(){}
 
-    void set( Ev *_loop )
+    void set( EV *_loop )
     {
         loop = _loop;
     }
 
-    void set_(const void *data, void (*cb)(EvWatcher *w, int revents))
+    void set_(const void *data, void (*cb)(EVWatcher *w, int revents))
     {
         this->data = (void *)data;
         this->cb   = cb;
@@ -61,7 +61,7 @@ public:
     }
 
     template<void (*function)(Watcher &w, int32_t)>
-    static void function_thunk (EvWatcher *w, int32_t revents)
+    static void function_thunk (EVWatcher *w, int32_t revents)
     {
       function
         (*static_cast<Watcher *>(w), revents);
@@ -75,7 +75,7 @@ public:
     }
 
     template<class K, void (K::*method)(Watcher &w, int32_t)>
-    static void method_thunk (EvWatcher *w, int32_t revents)
+    static void method_thunk (EVWatcher *w, int32_t revents)
     {
       (static_cast<K *>(w->data)->*method)
         (*static_cast<Watcher *>(w), revents);
@@ -83,17 +83,17 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class EvIO : public EvBase<EvIO>
+class EvIO : public EVBase<EvIO>
 {
 public:
     int32_t fd;
     int32_t events;
 
 public:
-    using EvBase<EvIO>::set;
+    using EVBase<EvIO>::set;
 
-    explicit EvIO( Ev *loop = 0 )
-        : EvBase<EvIO> ( loop )
+    explicit EvIO( EV *loop = 0 )
+        : EVBase<EvIO> ( loop )
     {
         fd     = -1;
         events = 0;
@@ -152,7 +152,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class EvTimer : public EvBase<EvTimer>
+class EvTimer : public EVBase<EvTimer>
 {
 public:
     bool tj; // time jump
@@ -160,10 +160,10 @@ public:
     EvTstamp repeat;
 
 public:
-    using EvBase<EvTimer>::set;
+    using EVBase<EvTimer>::set;
 
-    explicit EvTimer( Ev *loop = 0 )
-        : EvBase<EvTimer> ( loop )
+    explicit EvTimer( EV *loop = 0 )
+        : EVBase<EvTimer> ( loop )
     {
         tj = false;
         at       = 0.;

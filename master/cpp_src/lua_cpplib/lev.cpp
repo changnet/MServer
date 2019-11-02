@@ -7,9 +7,9 @@
 
 #include "../system/static_global.h"
 
-uint32_t LEv::sig_mask = 0;
+uint32_t LEV::sig_mask = 0;
 
-LEv::LEv()
+LEV::LEV()
 {
     ansendings = NULL;
     ansendingmax =  0;
@@ -22,7 +22,7 @@ LEv::LEv()
     _lua_gc_stat = false;
 }
 
-LEv::~LEv()
+LEV::~LEV()
 {
     if ( ansendings ) delete []ansendings;
     ansendings = NULL;
@@ -30,13 +30,13 @@ LEv::~LEv()
     ansendingmax =  0;
 }
 
-int32_t LEv::exit( lua_State *L )
+int32_t LEV::exit( lua_State *L )
 {
-    Ev::quit();
+    EV::quit();
     return 0;
 }
 
-int32_t LEv::backend( lua_State *L )
+int32_t LEV::backend( lua_State *L )
 {
     ASSERT( backend_fd >= 0, "backend uninit" );
 
@@ -47,19 +47,19 @@ int32_t LEv::backend( lua_State *L )
 }
 
 // 帧时间
-int32_t LEv::time( lua_State *L )
+int32_t LEV::time( lua_State *L )
 {
     lua_pushinteger( L,ev_rt_now );
     return 1;
 }
 
-int32_t LEv::ms_time( lua_State *L ) // 帧时间，ms
+int32_t LEV::ms_time( lua_State *L ) // 帧时间，ms
 {
     lua_pushinteger( L,ev_now_ms );
     return 1;
 }
 
-int32_t LEv::who_busy( lua_State *L ) // 看下哪条线程繁忙
+int32_t LEV::who_busy( lua_State *L ) // 看下哪条线程繁忙
 {
     bool skip = lua_toboolean( L,1 );
 
@@ -78,21 +78,21 @@ int32_t LEv::who_busy( lua_State *L ) // 看下哪条线程繁忙
 }
 
 // 实时时间
-int32_t LEv::real_time( lua_State *L )
+int32_t LEV::real_time( lua_State *L )
 {
     lua_pushinteger( L,get_time() );
     return 1;
 }
 
 // 实时时间
-int32_t LEv::real_ms_time( lua_State *L )
+int32_t LEV::real_ms_time( lua_State *L )
 {
     lua_pushinteger( L,get_ms_time() );
     return 1;
 }
 
 // 设置lua gc参数
-int32_t LEv::set_gc_stat( lua_State *L )
+int32_t LEV::set_gc_stat( lua_State *L )
 {
     _lua_gc_stat = lua_toboolean( L,1 );
 
@@ -104,7 +104,7 @@ int32_t LEv::set_gc_stat( lua_State *L )
     return 0;
 }
 
-int32_t LEv::signal( lua_State *L )
+int32_t LEV::signal( lua_State *L )
 {
     int32_t sig = luaL_checkinteger(L, 1);
     int32_t sig_action = luaL_optinteger( L,2,-1);
@@ -124,7 +124,7 @@ int32_t LEv::signal( lua_State *L )
     return 0;
 }
 
-int32_t LEv::set_app_ev( lua_State *L ) // 设置脚本主循环回调
+int32_t LEV::set_app_ev( lua_State *L ) // 设置脚本主循环回调
 {
     // 主循环不要设置太长的循环时间，如果太长用定时器就好了
     int32_t interval = luaL_checkinteger(L, 1);
@@ -137,19 +137,19 @@ int32_t LEv::set_app_ev( lua_State *L ) // 设置脚本主循环回调
     return 0;
 }
 
-int32_t LEv::set_critical_time( lua_State *L ) // 设置主循环临界时间
+int32_t LEV::set_critical_time( lua_State *L ) // 设置主循环临界时间
 {
     _critical_tm = luaL_checkinteger(L, 1);
 
     return 0;
 }
 
-void LEv::sig_handler( int32_t signum )
+void LEV::sig_handler( int32_t signum )
 {
     sig_mask |= ( 1 << signum );
 }
 
-void LEv::invoke_signal()
+void LEV::invoke_signal()
 {
     static lua_State *L = StaticGlobal::state();
     lua_pushcfunction(L,traceback);
@@ -176,7 +176,7 @@ void LEv::invoke_signal()
     lua_remove(L,top); /* remove traceback */
 }
 
-int32_t LEv::pending_send( class Socket *s  )
+int32_t LEV::pending_send( class Socket *s  )
 {
     // 0位是空的，不使用
     ++ansendingcnt;
@@ -187,7 +187,7 @@ int32_t LEv::pending_send( class Socket *s  )
     return ansendingcnt;
 }
 
-void LEv::remove_pending( int32_t pending )
+void LEV::remove_pending( int32_t pending )
 {
     ASSERT( pending > 0 && pending < ansendingmax, "illegal remove pending" );
 
@@ -199,7 +199,7 @@ void LEv::remove_pending( int32_t pending )
  * 坏处是：需要多一个数组管理；如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
  * 然而，游戏中包多，但数据量不大
  */
-void LEv::invoke_sending()
+void LEV::invoke_sending()
 {
     if ( ansendingcnt <= 0 ) return;
 
@@ -237,7 +237,7 @@ void LEv::invoke_sending()
                         "invoke sending sending counter fail" );
 }
 
-void LEv::invoke_app_ev (int64_t ms_now)
+void LEV::invoke_app_ev (int64_t ms_now)
 {
     static lua_State *L = StaticGlobal::state();
 
@@ -259,12 +259,12 @@ void LEv::invoke_app_ev (int64_t ms_now)
 }
 
 // 计算距离下一次循环时的时间(毫秒)
-EvTstamp LEv::wait_time()
+EvTstamp LEV::wait_time()
 {
     // TODO:如果有数据未发送，尽快发送(暂定10毫秒，后面再做调试)
     if (ansendingcnt > 0) return 10;
 
-    EvTstamp waittime = Ev::wait_time();
+    EvTstamp waittime = EV::wait_time();
 
     // 在定时器和下一次脚本回调之间选一个最接近的数据
     if (_app_ev_interval)
@@ -280,7 +280,7 @@ EvTstamp LEv::wait_time()
     return waittime;
 }
 
-void LEv::running( int64_t ms_now )
+void LEV::running( int64_t ms_now )
 {
     invoke_sending ();
     invoke_signal  ();
@@ -308,7 +308,7 @@ void LEv::running( int64_t ms_now )
     }
 }
 
-void LEv::after_run(int64_t ms_old,int64_t ms_now )
+void LEV::after_run(int64_t ms_old,int64_t ms_now )
 {
     if ( EXPECT_FALSE(_critical_tm < 0) ) return;
 

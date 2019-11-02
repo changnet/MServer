@@ -91,18 +91,18 @@ void LState::open_cpp()
 
 int32_t luaopen_ev( lua_State *L )
 {
-    LBaseClass<LEv> lc(L,"Ev");
-    lc.def<&LEv::time>     ("time"     );
-    lc.def<&LEv::exit>     ("exit"     );
-    lc.def<&LEv::signal>   ("signal"   );
-    lc.def<&LEv::ms_time>  ("ms_time"  );
-    lc.def<&LEv::backend>  ("backend"  );
-    lc.def<&LEv::who_busy> ("who_busy" );
-    lc.def<&LEv::real_time>("real_time");
-    lc.def<&LEv::set_app_ev>("set_app_ev");
-    lc.def<&LEv::set_gc_stat>("set_gc_stat");
-    lc.def<&LEv::real_ms_time>("real_ms_time");
-    lc.def<&LEv::set_critical_time>("set_critical_time");
+    LBaseClass<LEV> lc(L,"Ev");
+    lc.def<&LEV::time>     ("time"     );
+    lc.def<&LEV::exit>     ("exit"     );
+    lc.def<&LEV::signal>   ("signal"   );
+    lc.def<&LEV::ms_time>  ("ms_time"  );
+    lc.def<&LEV::backend>  ("backend"  );
+    lc.def<&LEV::who_busy> ("who_busy" );
+    lc.def<&LEV::real_time>("real_time");
+    lc.def<&LEV::set_app_ev>("set_app_ev");
+    lc.def<&LEV::set_gc_stat>("set_gc_stat");
+    lc.def<&LEV::real_ms_time>("real_ms_time");
+    lc.def<&LEV::set_critical_time>("set_critical_time");
 
     return 0;
 }

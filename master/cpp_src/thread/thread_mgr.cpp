@@ -20,7 +20,7 @@ void ThreadMgr::push( class Thread *thd )
 /* 取消管理thread */
 void ThreadMgr::pop( pthread_t thd_id )
 {
-    thread_mpt_t::iterator itr = _threads.find( thd_id );
+    ThreadMap::iterator itr = _threads.find( thd_id );
     if ( itr != _threads.end() )
     {
         _threads.erase( itr );
@@ -30,10 +30,10 @@ void ThreadMgr::pop( pthread_t thd_id )
 /* 停止并join所有线程 */
 void ThreadMgr::stop()
 {
-    thread_mpt_t threads( _threads );
+    ThreadMap threads( _threads );
 
     // 循环里会改变_threads
-    thread_mpt_t::iterator itr = threads.begin();
+    ThreadMap::iterator itr = threads.begin();
     while ( itr != threads.end() )
     {
         class Thread *_thread = itr->second;
@@ -49,7 +49,7 @@ void ThreadMgr::stop()
 const char *ThreadMgr::who_is_busy(
     size_t &finished,size_t &unfinished,bool skip)
 {
-    thread_mpt_t::const_iterator itr = _threads.begin();
+    ThreadMap::const_iterator itr = _threads.begin();
     while ( itr != _threads.end() )
     {
         class Thread *thd = itr->second;

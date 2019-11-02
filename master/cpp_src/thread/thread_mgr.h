@@ -8,7 +8,7 @@ class Thread;
 class ThreadMgr
 {
 public:
-    typedef std::map< pthread_t,class Thread * > thread_mpt_t;
+    typedef std::map< pthread_t,class Thread * > ThreadMap;
 public:
     ThreadMgr();
     ~ThreadMgr();
@@ -20,7 +20,7 @@ public:
     const char *who_is_busy(
         size_t &finished,size_t &unfinished,bool skip = false);
 
-    const thread_mpt_t &get_threads() const { return _threads; }
+    const ThreadMap &get_threads() const { return _threads; }
 private:
-    thread_mpt_t _threads;
+    ThreadMap _threads;
 };

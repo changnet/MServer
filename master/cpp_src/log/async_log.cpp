@@ -26,7 +26,7 @@ size_t AsyncLog::busy_job( size_t *finished,size_t *unfinished )
 void AsyncLog::write(
     const char *path,const char *ctx,size_t len,LogOut out_type)
 {
-    static class Ev *ev = StaticGlobal::ev();
+    static class EV *ev = StaticGlobal::ev();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();

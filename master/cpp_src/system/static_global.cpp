@@ -4,14 +4,14 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
-class LEv          *StaticGlobal::_ev          = NULL;
+class LEV          *StaticGlobal::_ev          = NULL;
 class LState       *StaticGlobal::_state       = NULL;
-class SSLMgr      *StaticGlobal::_ssl_mgr     = NULL;
-class CodecMgr    *StaticGlobal::_codec_mgr   = NULL;
+class SSLMgr       *StaticGlobal::_ssl_mgr     = NULL;
+class CodecMgr     *StaticGlobal::_codec_mgr   = NULL;
 class Statistic    *StaticGlobal::_statistic   = NULL;
-class AsyncLog   *StaticGlobal::_async_log   = NULL;
-class ThreadMgr   *StaticGlobal::_thread_mgr  = NULL;
-class LNetworkMgr *StaticGlobal::_network_mgr = NULL;
+class AsyncLog     *StaticGlobal::_async_log   = NULL;
+class ThreadMgr    *StaticGlobal::_thread_mgr  = NULL;
+class LNetworkMgr  *StaticGlobal::_network_mgr = NULL;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::_initializer;
@@ -61,9 +61,9 @@ void StaticGlobal::initialize()  /* 程序运行时初始化 */
 
 
     // 状态统计，独立的
-    _statistic = new class statistic();
-    _ev = new class LEv();
-    _thread_mgr = new class thread_mgr();
+    _statistic = new class Statistic();
+    _ev = new class LEV();
+    _thread_mgr = new class ThreadMgr();
     _async_log = new class AsyncLog();
     _state = new class LState();
     _codec_mgr = new class CodecMgr();

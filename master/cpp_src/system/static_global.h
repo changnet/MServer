@@ -25,14 +25,14 @@ public:
     static void initialize();  /* 程序运行时初始化 */
     static void uninitialize(); /* 程序结束时反初始化 */
 
-    static class Ev *ev() { return _ev; }
-    static class LEv *lua_ev() { return _ev; }
+    static class EV *ev() { return _ev; }
+    static class LEV *lua_ev() { return _ev; }
     static lua_State *state() { return _state->state(); }
     static class SSLMgr *ssl_mgr() { return _ssl_mgr; }
     static class CodecMgr *codec_mgr() { return _codec_mgr; }
-    static class statistic *statistic() { return _statistic; }
+    static class Statistic *statistic() { return _statistic; }
     static class AsyncLog *async_logger() { return _async_log; }
-    static class thread_mgr *thread_mgr() { return _thread_mgr; }
+    static class ThreadMgr *thread_mgr() { return _thread_mgr; }
     static class LNetworkMgr *network_mgr() { return _network_mgr; }
 private:
     class initializer // 提供一个等级极高的初始化
@@ -42,13 +42,13 @@ private:
         explicit initializer();
     };
 private:
-    static class LEv          *_ev;
-    static class LState       *_state;
+    static class LEV         *_ev;
+    static class LState      *_state;
     static class SSLMgr      *_ssl_mgr;
     static class CodecMgr    *_codec_mgr;
-    static class statistic    *_statistic;
-    static class AsyncLog   *_async_log;
-    static class thread_mgr   *_thread_mgr;
+    static class Statistic   *_statistic;
+    static class AsyncLog    *_async_log;
+    static class ThreadMgr   *_thread_mgr;
     static class LNetworkMgr *_network_mgr;
 
     static class initializer  _initializer;

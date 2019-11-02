@@ -78,15 +78,15 @@ void LStatistic::dump_base_counter(
 
 void LStatistic::dump_thread( lua_State *L )
 {
-    const ThreadMgr::thread_mpt_t &threads =
+    const ThreadMgr::ThreadMap &threads =
         StaticGlobal::thread_mgr()->get_threads();
 
     int32_t index = 1;
     lua_newtable( L );
-    ThreadMgr::thread_mpt_t::const_iterator itr = threads.begin();
+    ThreadMgr::ThreadMap::const_iterator itr = threads.begin();
     while ( itr != threads.end() )
     {
-        class thread *thread = itr->second;
+        class Thread *thread = itr->second;
 
         size_t finished = 0;
         size_t unfinished = 0;
@@ -202,7 +202,7 @@ void LStatistic::dump_total_traffic ( lua_State *L )
 // socket情况
 void LStatistic::dump_socket( lua_State *L )
 {
-#define ST_T statistic::socket_traffic_t
+#define ST_T Statistic::SocketTrafficType
 
     const Statistic *stat = StaticGlobal::statistic();
     const ST_T &socket_traffic = stat->get_socket_traffic();

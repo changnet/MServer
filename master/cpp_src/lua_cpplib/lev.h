@@ -9,11 +9,11 @@
 #include "../ev/ev_watcher.h"
 
 class Socket;
-class LEv : public Ev
+class LEV : public EV
 {
 public:
-    ~LEv();
-    explicit LEv();
+    ~LEV();
+    explicit LEV();
 
     int32_t exit( lua_State *L );
     int32_t time( lua_State *L ); // 帧时间

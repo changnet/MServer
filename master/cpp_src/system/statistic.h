@@ -5,8 +5,8 @@
 
 #define G_STAT    StaticGlobal::statistic()
 
-#define STAT_TIME_BEG() int64_t stat_time_beg = static_global::ev()->get_ms_time()
-#define STAT_TIME_END() (static_global::ev()->get_ms_time() - stat_time_beg)
+#define STAT_TIME_BEG() int64_t stat_time_beg = StaticGlobal::ev()->get_ms_time()
+#define STAT_TIME_END() (StaticGlobal::ev()->get_ms_time() - stat_time_beg)
 
 #define C_OBJECT_ADD(what) do{G_STAT->add_c_obj(what,1);}while(0)
 #define C_OBJECT_DEC(what) do{G_STAT->add_c_obj(what,-1);}while(0)
