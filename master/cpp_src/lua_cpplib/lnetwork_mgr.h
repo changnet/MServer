@@ -6,14 +6,14 @@
 #include "../net/socket.h"
 
 struct lua_State;
-class lnetwork_mgr
+class LNetworkMgr
 {
 private:
-    typedef StdMap<int32_t,cmd_cfg_t> cmd_map_t;
-    typedef StdMap<uint32_t,class socket*> socket_map_t;
+    typedef StdMap<int32_t,CmdCfg> cmd_map_t;
+    typedef StdMap<uint32_t,class Socket*> socket_map_t;
 public:
-    ~lnetwork_mgr();
-    explicit lnetwork_mgr();
+    ~LNetworkMgr();
+    explicit LNetworkMgr();
 
     /* 设置指令参数 */
     int32_t set_cs_cmd( lua_State *L );
@@ -70,41 +70,41 @@ public:
     void invoke_delete();
 
     /* 通过所有者查找连接id */
-    uint32_t get_conn_id_by_owner( owner_t owner ) const;
+    uint32_t get_conn_id_by_owner( Owner owner ) const;
 
     /* 通过session获取socket连接 */
-    class socket *get_conn_by_session( int32_t session ) const;
+    class Socket *get_conn_by_session( int32_t session ) const;
 
     /* 通过onwer获取socket连接 */
-    class socket *get_conn_by_owner( owner_t owner ) const;
+    class Socket *get_conn_by_owner( Owner owner ) const;
 
     /* 通过conn_id获取socket连接 */
-    class socket *get_conn_by_conn_id( uint32_t conn_id ) const;
+    class Socket *get_conn_by_conn_id( uint32_t conn_id ) const;
 
     /* 通过conn_id获取session */
     int32_t get_session_by_conn_id( uint32_t conn_id ) const;
 
     /* 获取指令配置 */
-    const cmd_cfg_t *get_cs_cmd( int32_t cmd ) const;
-    const cmd_cfg_t *get_ss_cmd( int32_t cmd ) const;
-    const cmd_cfg_t *get_sc_cmd( int32_t cmd ) const;
+    const CmdCfg *get_cs_cmd( int32_t cmd ) const;
+    const CmdCfg *get_ss_cmd( int32_t cmd ) const;
+    const CmdCfg *get_sc_cmd( int32_t cmd ) const;
     /* 获取当前服务器session */
     int32_t get_curr_session() const { return _session; }
     uint32_t new_connect_id(); /* 获取新connect_id */
 
     bool connect_del( uint32_t conn_id );
     bool connect_new( uint32_t conn_id,int32_t ecode );
-    bool accept_new ( uint32_t conn_id,class socket *new_sk );
+    bool accept_new ( uint32_t conn_id,class Socket *new_sk );
 
     /* 自动转发 */
     bool cs_dispatch( int32_t cmd,
-        const class socket *src_sk,const char *ctx,size_t size ) const;
+        const class Socket *src_sk,const char *ctx,size_t size ) const;
 private:
     void delete_socket( uint32_t conn_id );
     int32_t get_cmd_session( int64_t object_id,int32_t cmd ) const;
-    class packet *lua_check_packet( lua_State *L,socket::conn_t conn_ty );
-    class packet *raw_check_packet(
-        lua_State *L,uint32_t conn_id,socket::conn_t conn_ty );
+    class Packet *lua_check_packet( lua_State *L,Socket::ConnType conn_ty );
+    class Packet *raw_check_packet(
+        lua_State *L,uint32_t conn_id,Socket::ConnType conn_ty );
 private:
     int32_t _session; /* 当前进程的session */
     uint32_t _conn_seed; /* connect_id种子 */
@@ -116,9 +116,9 @@ private:
 
     std::vector<uint32_t> _deleting;/* 异步删除的socket */
     /* owner-conn_id 映射,ssc数据包转发时需要 */
-    StdMap<owner_t,uint32_t> _owner_map;
-    StdMap<owner_t,int32_t> _owner_session; /* owner-session映射 */
+    StdMap<Owner,uint32_t> _owner_map;
+    StdMap<Owner,int32_t> _owner_session; /* owner-session映射 */
 
     StdMap<int32_t,uint32_t> _session_map; /* session-conn_id 映射 */
-    StdMap<uint32_t,owner_t> _conn_session_map; /* conn_id-session 映射 */
+    StdMap<uint32_t,Owner> _conn_session_map; /* conn_id-session 映射 */
 };

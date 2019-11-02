@@ -12,7 +12,7 @@
 #include "packet/ws_stream_packet.h"
 #include "../system/static_global.h"
 
-socket::socket( uint32_t conn_id,conn_t conn_ty )
+Socket::Socket( uint32_t conn_id,ConnType conn_ty )
 {
     _io = NULL;
     _packet = NULL;
@@ -21,13 +21,13 @@ socket::socket( uint32_t conn_id,conn_t conn_ty )
     _pending  = 0;
     _conn_id  = conn_id;
     _conn_ty  = conn_ty;
-    _codec_ty = codec::CDC_NONE;
+    _codec_ty = Codec::CDC_NONE;
     _over_action = OAT_NONE;
 
     C_OBJECT_ADD("socket");
 }
 
-socket::~socket()
+Socket::~Socket()
 {
     delete _io;
     delete _packet;
@@ -39,11 +39,11 @@ socket::~socket()
     ASSERT( 0 == _pending && -1 == _w.fd, "socket not clean" );
 }
 
-void socket::stop( bool flush )
+void Socket::stop( bool flush )
 {
     if ( _pending )
     {
-        static_global::lua_ev()->remove_pending( _pending );
+        StaticGlobal::lua_ev()->remove_pending( _pending );
         _pending = 0;
 
         // 正常情况下，服务器不会主动关闭与游戏客户端的连接
@@ -82,17 +82,17 @@ void socket::stop( bool flush )
     C_SOCKET_TRAFFIC_DEL( _conn_id );
 }
 
-int32_t socket::recv()
+int32_t Socket::recv()
 {
     ASSERT( _io, "socket recv without io control" );
-    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32_t byte = 0;
     int32_t ret = _io->recv( byte );
     if ( EXPECT_FALSE(ret < 0) )
     {
-        socket::stop();
+        Socket::stop();
         network_mgr->connect_del( _conn_id );
 
         return -1;
@@ -109,13 +109,13 @@ int32_t socket::recv()
 /* 发送数据
  * return: < 0 error,= 0 success,> 0 bytes still need to be send
  */
-int32_t socket::send()
+int32_t Socket::send()
 {
 #define IO_SEND()    \
     do{\
         ret = _io->send( byte );\
         if ( EXPECT_FALSE(ret < 0) ){\
-            socket::stop();\
+            Socket::stop();\
             network_mgr->connect_del( _conn_id );\
             return -1;\
         }\
@@ -123,7 +123,7 @@ int32_t socket::send()
     } while (0)
 
     ASSERT( _io, "socket send without io control" );
-    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 去除发送标识，因为发送时，pending标识会变。
      * 如果需要再次发送，则主循环需要重设此标识
@@ -146,7 +146,7 @@ int32_t socket::send()
                 "object:" FMT64d ",conn:%d,buffer size:%d",
                 _object_id,_conn_id,_send.get_all_used_size() );
 
-            socket::stop();
+            Socket::stop();
             network_mgr->connect_del( _conn_id );
 
             return -1;
@@ -174,7 +174,7 @@ int32_t socket::send()
 #undef IO_SEND
 }
 
-int32_t socket::block( int32_t fd )
+int32_t Socket::block( int32_t fd )
 {
     int32_t flags = fcntl( fd, F_GETFL, 0 ); //get old status
     if ( flags == -1 )
@@ -185,7 +185,7 @@ int32_t socket::block( int32_t fd )
     return fcntl( fd, F_SETFL, flags);
 }
 
-int32_t socket::non_block( int32_t fd )
+int32_t Socket::non_block( int32_t fd )
 {
     int32_t flags = fcntl( fd, F_GETFL, 0 ); //get old status
     if ( flags == -1 )
@@ -211,7 +211,7 @@ int32_t socket::non_block( int32_t fd )
  * 味着，我们的keepalive总是不能发送出去。 而此时，我们也并不知道该连接已经出错而中断。
  * 在较长时间的重传失败之后，我们才会知道。即我们在重传超时后才知道连接失败.
  */
-int32_t socket::keep_alive( int32_t fd )
+int32_t Socket::keep_alive( int32_t fd )
 {
     int32_t optval = 1;
     int32_t optlen = sizeof(optval);
@@ -249,7 +249,7 @@ int32_t socket::keep_alive( int32_t fd )
  * 如果keep-alive的数据包也无ack，则开始计时.这时keep-alive同时有效，
  * 谁先超时则谁先生效
  */
-int32_t socket::user_timeout( int32_t fd )
+int32_t Socket::user_timeout( int32_t fd )
 {
 #ifdef TCP_USER_TIMEOUT  /* 内核支持才开启，centos 6(2.6.32)就不支持 */
     uint32_t timeout = _TCP_USER_TIMEOUT;
@@ -263,7 +263,7 @@ int32_t socket::user_timeout( int32_t fd )
 /* 设置为开始读取数据
  * 该socket之前可能已经active
  */
-void socket::start( int32_t fd )
+void Socket::start( int32_t fd )
 {
     ASSERT( 0 == _send.get_used_size() && 0 == _send.get_used_size() );
 
@@ -276,11 +276,11 @@ void socket::start( int32_t fd )
 
     if ( fd > 0 ) // 新创建的socket
     {
-        _w.set( static_global::ev() );
-        _w.set<socket,&socket::io_cb>( this );
+        _w.set( StaticGlobal::ev() );
+        _w.set<Socket,&Socket::io_cb>( this );
     }
 
-    set<socket,&socket::command_cb>( this );
+    set<Socket,&Socket::command_cb>( this );
     _w.set( fd,EV_READ ); /* 将之前的write改为read */
 
     if ( !_w.is_active() ) _w.start();
@@ -288,7 +288,7 @@ void socket::start( int32_t fd )
     C_SOCKET_TRAFFIC_NEW( _conn_id );
 }
 
-int32_t socket::connect( const char *host,int32_t port )
+int32_t Socket::connect( const char *host,int32_t port )
 {
     ASSERT( _w.fd < 0, "socket fd dirty" );
 
@@ -314,16 +314,16 @@ int32_t socket::connect( const char *host,int32_t port )
         return     -1;
     }
 
-    set<socket,&socket::connect_cb>( this );
+    set<Socket,&Socket::connect_cb>( this );
 
-    _w.set( static_global::ev() );
-    _w.set<socket,&socket::io_cb>( this );
+    _w.set( StaticGlobal::ev() );
+    _w.set<Socket,&Socket::io_cb>( this );
     _w.start( fd,EV_WRITE );
 
     return fd;
 }
 
-int32_t socket::validate()
+int32_t Socket::validate()
 {
     int32_t err   = 0;
     socklen_t len = sizeof (err);
@@ -335,7 +335,7 @@ int32_t socket::validate()
     return err;
 }
 
-const char *socket::address()
+const char *Socket::address()
 {
     if ( _w.fd < 0 ) return NULL;
 
@@ -352,7 +352,7 @@ const char *socket::address()
     return inet_ntoa(addr.sin_addr);
 }
 
-int32_t socket::listen( const char *host,int32_t port )
+int32_t Socket::listen( const char *host,int32_t port )
 {
     int32_t fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if ( fd < 0 )
@@ -403,27 +403,27 @@ int32_t socket::listen( const char *host,int32_t port )
         return     -1;
     }
 
-    set<socket,&socket::listen_cb>( this );
+    set<Socket,&Socket::listen_cb>( this );
 
-    _w.set( static_global::ev() );
-    _w.set<socket,&socket::io_cb>( this );
+    _w.set( StaticGlobal::ev() );
+    _w.set<Socket,&Socket::io_cb>( this );
     _w.start( fd,EV_READ );
 
     return fd;
 }
 
-void socket::pending_send()
+void Socket::pending_send()
 {
     if ( 0 != _pending ) return; // 已经在发送队列
     /* 放到发送队列，一次发送 */
-    _pending = static_global::lua_ev()->pending_send( this );
+    _pending = StaticGlobal::lua_ev()->pending_send( this );
 }
 
 
-void socket::listen_cb()
+void Socket::listen_cb()
 {
-    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
-    while ( socket::active() )
+    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    while ( Socket::active() )
     {
         int32_t new_fd = ::accept(_w.fd,NULL,NULL);
         if ( new_fd < 0 )
@@ -437,12 +437,12 @@ void socket::listen_cb()
             break;  /* 所有等待的连接已处理完 */
         }
 
-        socket::non_block( new_fd );
+        Socket::non_block( new_fd );
         KEEP_ALIVE( new_fd );
         USER_TIMEOUT( new_fd );
 
         uint32_t conn_id = network_mgr->new_connect_id();
-        class socket *new_sk = new class socket( conn_id,_conn_ty );
+        class Socket *new_sk = new class Socket( conn_id,_conn_ty );
         new_sk->start( new_fd );
 
         // 初始完socket后才触发脚本，因为脚本那边中能要对socket进行处理了
@@ -469,20 +469,20 @@ void socket::listen_cb()
  * 1）连接成功建立时，socket 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
  * 2）连接建立失败时，socket 描述字既可读又可写。 （由于有未决的错误，从而可读又可写）
  */
-void socket::connect_cb ()
+void Socket::connect_cb ()
 {
-    int32_t ecode = socket::validate();
+    int32_t ecode = Socket::validate();
 
     if ( 0 == ecode )
     {
-        KEEP_ALIVE( socket::fd() );
-        USER_TIMEOUT( socket::fd() );
+        KEEP_ALIVE( Socket::fd() );
+        USER_TIMEOUT( Socket::fd() );
 
-        socket::start();
+        Socket::start();
     }
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
-    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     bool is_ok = network_mgr->connect_new( _conn_id,ecode );
 
     if ( EXPECT_TRUE( is_ok && 0 == ecode ) )
@@ -491,25 +491,25 @@ void socket::connect_cb ()
     }
     else
     {
-        socket::stop ();
+        Socket::stop ();
     }
 }
 
-void socket::command_cb()
+void Socket::command_cb()
 {
-    static class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 在脚本报错的情况下，可能无法设置 io和packet */
     if ( !_io || !_packet )
     {
-        socket::stop();
+        Socket::stop();
         network_mgr->connect_del( _conn_id );
         ERROR( "socket command no io or packet set,socket disconnect" );
         return;
     }
 
     // 返回：返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32_t ret = socket::recv();
+    int32_t ret = Socket::recv();
     if ( EXPECT_FALSE(0 != ret) ) return;  /* 出错,包括对方主动断开或者需要重试 */
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
@@ -521,25 +521,25 @@ void socket::command_cb()
     // 解析过程中错误，断开链接
     if ( EXPECT_FALSE( ret < 0 ) )
     {
-        socket::stop();
+        Socket::stop();
         network_mgr->connect_del( _conn_id );
         ERROR( "socket command unpack data fail" );
         return;
     }
 }
 
-int32_t socket::set_io( io::io_t io_type,int32_t io_ctx )
+int32_t Socket::set_io( IO::IOT io_type,int32_t io_ctx )
 {
     delete _io;
     _io = NULL;
 
     switch( io_type )
     {
-        case io::IOT_NONE :
-            _io = new io( &_recv,&_send );
+        case IO::IOT_NONE :
+            _io = new IO( &_recv,&_send );
             break;
-        case io::IOT_SSL :
-            _io = new ssl_io( io_ctx,&_recv,&_send );
+        case IO::IOT_SSL :
+            _io = new SSLIO( io_ctx,&_recv,&_send );
             break;
         default : return -1;
     }
@@ -547,7 +547,7 @@ int32_t socket::set_io( io::io_t io_type,int32_t io_ctx )
     return 0;
 }
 
-int32_t socket::set_packet( packet::packet_t packet_type )
+int32_t Socket::set_packet( Packet::PacketType packet_type )
 {
     /* 如果有旧的，需要先删除 */
     delete _packet;
@@ -555,33 +555,33 @@ int32_t socket::set_packet( packet::packet_t packet_type )
 
     switch( packet_type )
     {
-        case packet::PKT_HTTP :
-            _packet = new http_packet( this );break;
-        case packet::PKT_STREAM :
-            _packet = new stream_packet( this );break;
-        case packet::PKT_WEBSOCKET :
-            _packet = new websocket_packet( this );break;
-        case packet::PKT_WSSTREAM :
-            _packet = new ws_stream_packet( this );break;
+        case Packet::PT_HTTP :
+            _packet = new HttpPacket( this );break;
+        case Packet::PT_STREAM :
+            _packet = new StreamPacket( this );break;
+        case Packet::PT_WEBSOCKET :
+            _packet = new WebsocketPacket( this );break;
+        case Packet::PT_WSSTREAM :
+            _packet = new WSStreamPacket( this );break;
         default : return -1;
     }
     return 0;
 }
 
-int32_t socket::set_codec_type( codec::codec_t codec_type )
+int32_t Socket::set_codec_type( Codec::CodecType codec_type )
 {
     _codec_ty = codec_type;
     return 0;
 }
 
 // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t socket::io_status_check( int32_t ecode )
+int32_t Socket::io_status_check( int32_t ecode )
 {
     if ( EXPECT_FALSE( 0 > ecode ) )
     {
-        static class lnetwork_mgr *network_mgr = static_global::network_mgr();
+        static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-        socket::stop();
+        Socket::stop();
         network_mgr->connect_del( _conn_id );
         return -1;
     }
@@ -596,7 +596,7 @@ int32_t socket::io_status_check( int32_t ecode )
     return 0;
 }
 
-int32_t socket::init_accept()
+int32_t Socket::init_accept()
 {
     ASSERT( _io, "socket init accept no io set" );
     int32_t ecode = _io->init_accept( _w.fd );
@@ -605,7 +605,7 @@ int32_t socket::init_accept()
     return ecode;
 }
 
-int32_t socket::init_connect()
+int32_t Socket::init_connect()
 {
     ASSERT( _io, "socket init connect no io set" );
     int32_t ecode = _io->init_connect( _w.fd );
@@ -622,7 +622,7 @@ int32_t socket::init_connect()
  * @spending:待发送的数据
  * @rpending:待处理的数据
  */
-void socket::get_stat( uint32_t &schunk,uint32_t &rchunk,
+void Socket::get_stat( uint32_t &schunk,uint32_t &rchunk,
     uint32_t &smem,uint32_t &rmem,uint32_t &spending,uint32_t &rpending)
 {
     schunk = _send.get_chunk_size();

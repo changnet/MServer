@@ -1,9 +1,9 @@
 #include "lrank.h"
 
 
-int32_t linsertion_rank::remove(lua_State *L)
+int32_t LInsertionRank::remove(lua_State *L)
 {
-    base_rank::object_id_t id = luaL_checkinteger(L,1);
+    BaseRank::object_id_t id = luaL_checkinteger(L,1);
 
     int32_t ret = insertion_rank::remove(id);
 
@@ -11,13 +11,13 @@ int32_t linsertion_rank::remove(lua_State *L)
     return 1;
 }
 
-int32_t linsertion_rank::insert(lua_State *L)
+int32_t LInsertionRank::insert(lua_State *L)
 {
-    base_rank::object_id_t id = luaL_checkinteger(L,1);
+    BaseRank::object_id_t id = luaL_checkinteger(L,1);
 
     // 可以传入一个或多个排序因子，至少传入一个
     int32_t factor_idx = 1;
-    base_rank::factor_t factor = {0}; // 全部初始化为0
+    BaseRank::factor_t factor = {0}; // 全部初始化为0
     factor[0] = luaL_checkinteger(L,2);
     for (int32_t idx = 1;idx < MAX_RANK_FACTOR;idx ++)
     {
@@ -35,10 +35,10 @@ int32_t linsertion_rank::insert(lua_State *L)
     return 0;
 }
 
-int32_t linsertion_rank::update(lua_State *L)
+int32_t LInsertionRank::update(lua_State *L)
 {
-    base_rank::object_id_t id = luaL_checkinteger(L,1);
-    base_rank::raw_factor_t factor = luaL_checkinteger(L,2);
+    BaseRank::object_id_t id = luaL_checkinteger(L,1);
+    BaseRank::raw_factor_t factor = luaL_checkinteger(L,2);
 
     int32_t factor_idx = luaL_optinteger(L,3,1);
 
@@ -49,10 +49,10 @@ int32_t linsertion_rank::update(lua_State *L)
     return 1;
 }
 
-int32_t linsertion_rank::get_factor(lua_State *L)
+int32_t LInsertionRank::get_factor(lua_State *L)
 {
-    base_rank::object_id_t id = luaL_checkinteger(L,1);
-    const base_rank::raw_factor_t *factor = insertion_rank::get_factor(id);
+    BaseRank::object_id_t id = luaL_checkinteger(L,1);
+    const BaseRank::raw_factor_t *factor = insertion_rank::get_factor(id);
     if (!factor) return 0;
 
     int32_t max_factor = insertion_rank::get_max_factor();
@@ -65,16 +65,16 @@ int32_t linsertion_rank::get_factor(lua_State *L)
     return max_factor;
 }
 
-int32_t linsertion_rank::get_rank_by_id(lua_State *L)
+int32_t LInsertionRank::get_rank_by_id(lua_State *L)
 {
-    base_rank::object_id_t id = luaL_checkinteger(L,1);
+    BaseRank::object_id_t id = luaL_checkinteger(L,1);
 
     lua_pushinteger(L,insertion_rank::get_rank_by_id(id));
 
     return 1;
 }
 
-int32_t linsertion_rank::get_id_by_rank(lua_State *L)
+int32_t LInsertionRank::get_id_by_rank(lua_State *L)
 {
     int32_t rank = luaL_checkinteger(L,1);
 
@@ -86,13 +86,13 @@ int32_t linsertion_rank::get_id_by_rank(lua_State *L)
 // ========================== bucket rank =================================
 
 // 插入一个排序对象
-int32_t lbucket_rank::insert(lua_State *L)
+int32_t lBucketRank::insert(lua_State *L)
 {
-    base_rank::object_id_t id = luaL_checkinteger(L,1);
+    BaseRank::object_id_t id = luaL_checkinteger(L,1);
 
     // 可以传入一个或多个排序因子，至少传入一个
     int32_t factor_idx = 1;
-    base_rank::factor_t factor = {0}; // 全部初始化为0
+    BaseRank::factor_t factor = {0}; // 全部初始化为0
     factor[0] = luaL_checkinteger(L,2);
     for (int32_t idx = 1;idx < MAX_RANK_FACTOR;idx ++)
     {
@@ -111,7 +111,7 @@ int32_t lbucket_rank::insert(lua_State *L)
 }
 
 // 获取前N名对象
-int32_t lbucket_rank::get_top_n(lua_State *L)
+int32_t lBucketRank::get_top_n(lua_State *L)
 {
     int32_t top_n = luaL_checkinteger(L,1);
 

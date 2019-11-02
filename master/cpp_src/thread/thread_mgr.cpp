@@ -1,16 +1,16 @@
 #include "thread.h"
 #include "thread_mgr.h"
 
-thread_mgr::thread_mgr()
+ThreadMgr::ThreadMgr()
 {
 }
 
-thread_mgr::~thread_mgr()
+ThreadMgr::~ThreadMgr()
 {
 }
 
 /* 添加一个待管理thread */
-void thread_mgr::push( class thread *thd )
+void ThreadMgr::push( class Thread *thd )
 {
     ASSERT( thd, "thread mgr push NULL" );
 
@@ -18,7 +18,7 @@ void thread_mgr::push( class thread *thd )
 }
 
 /* 取消管理thread */
-void thread_mgr::pop( pthread_t thd_id )
+void ThreadMgr::pop( pthread_t thd_id )
 {
     thread_mpt_t::iterator itr = _threads.find( thd_id );
     if ( itr != _threads.end() )
@@ -28,7 +28,7 @@ void thread_mgr::pop( pthread_t thd_id )
 }
 
 /* 停止并join所有线程 */
-void thread_mgr::stop()
+void ThreadMgr::stop()
 {
     thread_mpt_t threads( _threads );
 
@@ -36,7 +36,7 @@ void thread_mgr::stop()
     thread_mpt_t::iterator itr = threads.begin();
     while ( itr != threads.end() )
     {
-        class thread *_thread = itr->second;
+        class Thread *_thread = itr->second;
         _thread->stop();
 
         itr ++;
@@ -46,13 +46,13 @@ void thread_mgr::stop()
 }
 
 /* 查找没处理完数据的子线程 */
-const char *thread_mgr::who_is_busy(
+const char *ThreadMgr::who_is_busy(
     size_t &finished,size_t &unfinished,bool skip)
 {
     thread_mpt_t::const_iterator itr = _threads.begin();
     while ( itr != _threads.end() )
     {
-        class thread *thd = itr->second;
+        class Thread *thd = itr->second;
 
         // 这个线程的数据不需要等待它处理完
         // 比如写日志不会回调到主线程，最后会pthread_join等待写完日志

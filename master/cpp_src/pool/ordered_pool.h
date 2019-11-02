@@ -11,19 +11,19 @@
 #include "pool.h"
 
 template<uint32_t ordered_size>
-class ordered_pool : public pool
+class OrderedPool : public Pool
 {
 public:
-    explicit ordered_pool( const char *name )
-        : pool(name),anpts(NULL),anptmax(0),block_list(NULL)
+    explicit OrderedPool( const char *name )
+        : Pool(name),anpts(NULL),anptmax(0),block_list(NULL)
     {
         ASSERT( ordered_size >= sizeof(void *),
             "ordered size less then sizeof(void *)" );
     }
 
-    ~ordered_pool() { clear(); };
+    ~OrderedPool() { clear(); }
 
-    virtual void purge() { clear(); };
+    virtual void purge() { clear(); }
     virtual size_t get_sizeof() const { return ordered_size; }
 
     void ordered_free( char * const ptr,uint32_t n )

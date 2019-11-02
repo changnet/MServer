@@ -6,7 +6,7 @@
 #include "packet.h"
 
 struct http_parser;
-class http_packet : public packet
+class HttpPacket : public Packet
 {
 public:
     typedef std::map< std::string,std::string > head_map_t;
@@ -17,10 +17,10 @@ public:
         head_map_t _head_field;
     };
 public:
-    virtual ~http_packet();
-    explicit http_packet( class socket *sk );
+    virtual ~HttpPacket();
+    explicit HttpPacket( class Socket *sk );
 
-    virtual packet_t type() const { return PKT_HTTP; }
+    virtual PacketType type() const { return PT_HTTP; }
 
     virtual int32_t pack_clt( lua_State *L,int32_t index );
     virtual int32_t pack_srv( lua_State *L,int32_t index );

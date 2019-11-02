@@ -3,11 +3,11 @@
 #include <lua.hpp>
 #include "../scene/grid_map.h"
 
-class lmap : public grid_map
+class LMap : public GridMap
 {
 public:
-    ~lmap();
-    explicit lmap( lua_State *L );
+    ~LMap();
+    explicit LMap( lua_State *L );
 
     int32_t load( lua_State *L ); // 加载地图数据
     int32_t set( lua_State *L ); // 设置地图信息(用于动态创建地图)

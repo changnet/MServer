@@ -4,18 +4,18 @@
 #include "protobuf_codec.h"
 #include "flatbuffers_codec.h"
 
-codec_mgr::codec_mgr()
+CodecMgr::CodecMgr()
 {
     memset( _codecs,0,sizeof(_codecs) );
 
-    _codecs[codec::CDC_BSON] = new class bson_codec();
-    _codecs[codec::CDC_FLATBUF] = new class flatbuffers_codec();
-    _codecs[codec::CDC_PROTOBUF] = new class protobuf_codec();
+    _codecs[Codec::CDC_BSON] = new class BsonCodec();
+    _codecs[Codec::CDC_FLATBUF] = new class FlatbuffersCodec();
+    _codecs[Codec::CDC_PROTOBUF] = new class ProtobufCodec();
 }
 
-codec_mgr::~codec_mgr()
+CodecMgr::~CodecMgr()
 {
-    for (int32_t idx = 0;idx < codec::CDC_MAX;idx ++ )
+    for (int32_t idx = 0;idx < Codec::CDC_MAX;idx ++ )
     {
         if ( _codecs[idx] )
         {
@@ -25,14 +25,14 @@ codec_mgr::~codec_mgr()
     }
 }
 
-int32_t codec_mgr::load_one_schema( codec::codec_t type,const char *path ) const
+int32_t CodecMgr::load_one_schema( Codec::CodecType type,const char *path ) const
 {
     return  NULL == _codecs[type] ? -1 : _codecs[type]->load_path( path );
 }
 
-class codec *codec_mgr::get_codec( codec::codec_t type )
+class Codec *CodecMgr::get_codec( Codec::CodecType type )
 {
-    if ( type < codec::CDC_NONE || type >= codec::CDC_MAX ) return NULL;
+    if ( type < Codec::CDC_NONE || type >= Codec::CDC_MAX ) return NULL;
 
     return _codecs[type];
 }

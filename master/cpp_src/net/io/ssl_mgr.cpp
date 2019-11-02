@@ -8,7 +8,7 @@
 #define SSL_ERROR(x)    \
     do{                                                     \
         ERROR(x " errno(%d:%s)",errno,strerror(errno));     \
-        int32_t eno = 0;                                      \
+        int32_t eno = 0;                                    \
         while ( 0 != (eno = ERR_get_error()) ) {            \
             ERROR( "    %s",ERR_error_string(eno,NULL) );   \
         }                                                   \
@@ -16,7 +16,7 @@
 
 int32_t ctx_passwd_cb( char *buf, int32_t size, int rwflag, void *u );
 
-void delete_ssl_ctx( struct x_ssl_ctx &ssl_ctx )
+void delete_ssl_ctx( struct XSSLCtx &ssl_ctx )
 {
     if ( ssl_ctx._ctx )
     {
@@ -31,13 +31,13 @@ void delete_ssl_ctx( struct x_ssl_ctx &ssl_ctx )
     ssl_ctx._passwd = NULL;
 }
 
-ssl_mgr::ssl_mgr()
+SSLMgr::SSLMgr()
 {
     _ctx_idx = 0;
     memset( _ssl_ctx,0,sizeof(_ssl_ctx) );
 }
 
-ssl_mgr::~ssl_mgr()
+SSLMgr::~SSLMgr()
 {
     _ctx_idx = 0;
     for ( int32_t idx = 0;idx < MAX_SSL_CTX;idx ++ )
@@ -47,9 +47,9 @@ ssl_mgr::~ssl_mgr()
     memset( _ssl_ctx,0,sizeof(_ssl_ctx) );
 }
 
-void *ssl_mgr::get_ssl_ctx( int32_t idx )
+void *SSLMgr::get_ssl_ctx( int32_t idx )
 {
-    if ( idx < SSLV_NONE || idx >= _ctx_idx ) return NULL;
+    if ( idx < SSLVT_NONE || idx >= _ctx_idx ) return NULL;
 
     return _ssl_ctx[idx]._ctx;
 }
@@ -59,8 +59,8 @@ void *ssl_mgr::get_ssl_ctx( int32_t idx )
  * Conditional jump or move depends on uninitialised value(s)
  * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
  */
-int32_t ssl_mgr::new_ssl_ctx( sslv_t sslv,
-    const char *cert_file,key_t keyt,const char *key_file,const char *passwd )
+int32_t SSLMgr::new_ssl_ctx( SSLVT sslv,
+    const char *cert_file,KeyType keyt,const char *key_file,const char *passwd )
 {
     if ( _ctx_idx >= MAX_SSL_CTX )
     {
@@ -73,9 +73,9 @@ int32_t ssl_mgr::new_ssl_ctx( sslv_t sslv,
     {
 // OPENSSL_VERSION_NUMBER定义在/usr/include/openssl/opensslv.h
 #if OPENSSL_VERSION_NUMBER > 0x1000105fL
-        case SSLV_TLS_GEN_AT : method = TLS_method(); break;
-        case SSLV_TLS_SRV_AT : method = TLS_server_method(); break;
-        case SSLV_TLS_CLT_AT : method = TLS_client_method(); break;
+        case SSLVT_TLS_GEN_AT : method = TLS_method(); break;
+        case SSLVT_TLS_SRV_AT : method = TLS_server_method(); break;
+        case SSLVT_TLS_CLT_AT : method = TLS_client_method(); break;
 #endif
         // 新版本中无需指定版本号，用上面的自动协商·
         //  warning: ‘const SSL_METHOD* TLSv1_2_method()’ is deprecated
@@ -92,7 +92,7 @@ int32_t ssl_mgr::new_ssl_ctx( sslv_t sslv,
         return -1;
     }
 
-    struct x_ssl_ctx &ssl_ctx = _ssl_ctx[_ctx_idx ++];
+    struct XSSLCtx &ssl_ctx = _ssl_ctx[_ctx_idx ++];
     ssl_ctx._ctx = ctx;
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
@@ -133,10 +133,10 @@ int32_t ssl_mgr::new_ssl_ctx( sslv_t sslv,
     int32_t ok = 0;
     switch( keyt )
     {
-        case KEYT_GEN :
+        case KT_GEN :
             ok = SSL_CTX_use_PrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM );
             break;
-        case KEYT_RSA :
+        case KT_RSA :
             ok = SSL_CTX_use_RSAPrivateKey_file( ctx,key_file,SSL_FILETYPE_PEM );
             break;
         default :

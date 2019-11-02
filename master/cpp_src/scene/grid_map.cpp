@@ -1,7 +1,7 @@
 #include "grid_map.h"
 #include "../system/static_global.h"
 
-grid_map::grid_map()
+GridMap::GridMap()
 {
     _id = 0;
     _width = 0;
@@ -11,7 +11,7 @@ grid_map::grid_map()
     C_OBJECT_ADD("grid_map");
 }
 
-grid_map::~grid_map()
+GridMap::~GridMap()
 {
     delete []_grid_set;
 
@@ -19,13 +19,13 @@ grid_map::~grid_map()
 }
 
 // 加载单个地图文件
-bool grid_map::load_file(const char *path)
+bool GridMap::load_file(const char *path)
 {
     return true;
 }
 
 // 设置地图信息
-bool grid_map::set( int32_t id,uint16_t width,uint16_t height )
+bool GridMap::set( int32_t id,uint16_t width,uint16_t height )
 {
     ASSERT(NULL == _grid_set, "grid map already have data");
 
@@ -43,7 +43,7 @@ bool grid_map::set( int32_t id,uint16_t width,uint16_t height )
 }
 
 // 填充地图信息
-bool grid_map::fill( uint16_t x,uint16_t y,int8_t cost )
+bool GridMap::fill( uint16_t x,uint16_t y,int8_t cost )
 {
     if ( x >= _width || y >= _height ) return false;
 
@@ -53,7 +53,7 @@ bool grid_map::fill( uint16_t x,uint16_t y,int8_t cost )
 }
 
 // 获取经过这个格子的消耗, < 0 表示不可行
-int8_t grid_map::get_pass_cost(int32_t x,int32_t y) const
+int8_t GridMap::get_pass_cost(int32_t x,int32_t y) const
 {
     if ( EXPECT_FALSE(x < 0 || x >= _width) ) return -1;
     if ( EXPECT_FALSE(y < 0 || y >= _height) ) return -1;

@@ -9,35 +9,35 @@
 #include "packet/packet.h"
 
 #ifdef TCP_KEEP_ALIVE
-# define KEEP_ALIVE(x)    socket::keep_alive(x)
+# define KEEP_ALIVE(x)    Socket::keep_alive(x)
 #else
 # define KEEP_ALIVE(x)
 #endif
 
 #ifdef _TCP_USER_TIMEOUT
-# define USER_TIMEOUT(x)    socket::user_timeout(x)
+# define USER_TIMEOUT(x)    Socket::user_timeout(x)
 #else
 # define USER_TIMEOUT(x)
 #endif
 
-class lev;
+class LEv;
 
 /* 网络socket连接类
  * 这里封装了基本的网络操作
  * ev_io、eventloop、getsockopt这类操作都不再给子类或外部调用
  */
-class socket
+class Socket
 {
 public:
     typedef enum
     {
-        CNT_NONE = 0,  // invalid connection
-        CNT_CSCN = 1,  // c2s connection
-        CNT_SCCN = 2,  // s2c connection
-        CNT_SSCN = 3,  // s2s connection
+        CT_NONE = 0,  // invalid connection
+        CT_CSCN = 1,  // c2s connection
+        CT_SCCN = 2,  // s2c connection
+        CT_SSCN = 3,  // s2s connection
 
-        CNT_MAX       // max connection type
-    } conn_t;
+        CT_MAX       // max connection type
+    } ConnType;
 
     // socket缓冲区溢出后处理方式
     typedef enum
@@ -47,10 +47,10 @@ public:
         OAT_PEND = 2, // 阻塞，通用用于服务器之间连接
 
         OAT_MAX
-    } over_action_t;
+    } OverActionType;
 public:
-    virtual ~socket();
-    explicit socket( uint32_t conn_id,conn_t conn_ty );
+    virtual ~Socket();
+    explicit Socket( uint32_t conn_id,ConnType conn_ty );
 
     static int32_t block( int32_t fd );
     static int32_t non_block( int32_t fd );
@@ -87,22 +87,22 @@ public:
     void set (K *object)
     {
         this->_this   = object;
-        this->_method = &socket::method_thunk<K, method>;
+        this->_method = &Socket::method_thunk<K, method>;
     }
 
-    int32_t set_io( io::io_t io_type,int32_t io_ctx );
-    int32_t set_packet( packet::packet_t packet_type );
-    int32_t set_codec_type( codec::codec_t codec_type );
+    int32_t set_io( IO::IOT io_type,int32_t io_ctx );
+    int32_t set_packet( Packet::PacketType packet_type );
+    int32_t set_codec_type( Codec::CodecType codec_type );
 
-    class packet *get_packet() const { return _packet; }
-    codec::codec_t get_codec_type() const { return _codec_ty; }
+    class Packet *get_packet() const { return _packet; }
+    Codec::CodecType get_codec_type() const { return _codec_ty; }
 
     inline int32_t fd() const { return _w.fd; }
     inline uint32_t conn_id() const { return _conn_id; }
-    inline conn_t conn_type() const { return _conn_ty; }
+    inline ConnType conn_type() const { return _conn_ty; }
     inline bool active() const { return _w.is_active(); }
-    inline class buffer &recv_buffer() { return _recv; }
-    inline class buffer &send_buffer() { return _send; }
+    inline class Buffer &recv_buffer() { return _recv; }
+    inline class Buffer &send_buffer() { return _send; }
     inline void io_cb( EvIO &w,int32_t revents ) { (this->*_method)(); }
 
     inline int32_t get_pending() const { return _pending; }
@@ -112,7 +112,7 @@ public:
     {
         _recv.set_buffer_size( max,ctx_size );
     }
-    inline void set_send_size( uint32_t max,uint32_t ctx_size,over_action_t oa )
+    inline void set_send_size( uint32_t max,uint32_t ctx_size,OverActionType oa )
     {
         _over_action = oa;
         _send.set_buffer_size( max,ctx_size );
@@ -135,23 +135,23 @@ private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32_t io_status_check( int32_t ecode );
 protected:
-    buffer _recv;
-    buffer _send;
+    Buffer _recv;
+    Buffer _send;
     int32_t  _pending;
     uint32_t _conn_id;
-    conn_t _conn_ty;
+    ConnType _conn_ty;
 private:
     EvIO _w;
     int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
-    class io *_io;
-    class packet *_packet;
-    codec::codec_t _codec_ty;
-    over_action_t _over_action;
+    class IO *_io;
+    class Packet *_packet;
+    Codec::CodecType _codec_ty;
+    OverActionType _over_action;
 
     /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
     void *_this;
-    void (socket::*_method)();
+    void (Socket::*_method)();
 
     template<class K, void (K::*method)()>
     void method_thunk ()

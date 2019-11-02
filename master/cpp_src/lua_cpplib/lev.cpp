@@ -7,9 +7,9 @@
 
 #include "../system/static_global.h"
 
-uint32_t lev::sig_mask = 0;
+uint32_t LEv::sig_mask = 0;
 
-lev::lev()
+LEv::LEv()
 {
     ansendings = NULL;
     ansendingmax =  0;
@@ -22,7 +22,7 @@ lev::lev()
     _lua_gc_stat = false;
 }
 
-lev::~lev()
+LEv::~LEv()
 {
     if ( ansendings ) delete []ansendings;
     ansendings = NULL;
@@ -30,13 +30,13 @@ lev::~lev()
     ansendingmax =  0;
 }
 
-int32_t lev::exit( lua_State *L )
+int32_t LEv::exit( lua_State *L )
 {
     Ev::quit();
     return 0;
 }
 
-int32_t lev::backend( lua_State *L )
+int32_t LEv::backend( lua_State *L )
 {
     ASSERT( backend_fd >= 0, "backend uninit" );
 
@@ -47,26 +47,26 @@ int32_t lev::backend( lua_State *L )
 }
 
 // 帧时间
-int32_t lev::time( lua_State *L )
+int32_t LEv::time( lua_State *L )
 {
     lua_pushinteger( L,ev_rt_now );
     return 1;
 }
 
-int32_t lev::ms_time( lua_State *L ) // 帧时间，ms
+int32_t LEv::ms_time( lua_State *L ) // 帧时间，ms
 {
     lua_pushinteger( L,ev_now_ms );
     return 1;
 }
 
-int32_t lev::who_busy( lua_State *L ) // 看下哪条线程繁忙
+int32_t LEv::who_busy( lua_State *L ) // 看下哪条线程繁忙
 {
     bool skip = lua_toboolean( L,1 );
 
     size_t finished = 0;
     size_t unfinished = 0;
     const char *who =
-        static_global::thread_mgr()->who_is_busy(finished,unfinished,skip);
+        StaticGlobal::thread_mgr()->who_is_busy(finished,unfinished,skip);
 
     if ( !who ) return 0;
 
@@ -78,33 +78,33 @@ int32_t lev::who_busy( lua_State *L ) // 看下哪条线程繁忙
 }
 
 // 实时时间
-int32_t lev::real_time( lua_State *L )
+int32_t LEv::real_time( lua_State *L )
 {
     lua_pushinteger( L,get_time() );
     return 1;
 }
 
 // 实时时间
-int32_t lev::real_ms_time( lua_State *L )
+int32_t LEv::real_ms_time( lua_State *L )
 {
     lua_pushinteger( L,get_ms_time() );
     return 1;
 }
 
 // 设置lua gc参数
-int32_t lev::set_gc_stat( lua_State *L )
+int32_t LEv::set_gc_stat( lua_State *L )
 {
     _lua_gc_stat = lua_toboolean( L,1 );
 
     if (lua_isboolean( L,2 ) && lua_toboolean( L,2 ))
     {
-        static_global::statistic()->reset_lua_gc();
+        StaticGlobal::statistic()->reset_lua_gc();
     }
 
     return 0;
 }
 
-int32_t lev::signal( lua_State *L )
+int32_t LEv::signal( lua_State *L )
 {
     int32_t sig = luaL_checkinteger(L, 1);
     int32_t sig_action = luaL_optinteger( L,2,-1);
@@ -124,7 +124,7 @@ int32_t lev::signal( lua_State *L )
     return 0;
 }
 
-int32_t lev::set_app_ev( lua_State *L ) // 设置脚本主循环回调
+int32_t LEv::set_app_ev( lua_State *L ) // 设置脚本主循环回调
 {
     // 主循环不要设置太长的循环时间，如果太长用定时器就好了
     int32_t interval = luaL_checkinteger(L, 1);
@@ -137,21 +137,21 @@ int32_t lev::set_app_ev( lua_State *L ) // 设置脚本主循环回调
     return 0;
 }
 
-int32_t lev::set_critical_time( lua_State *L ) // 设置主循环临界时间
+int32_t LEv::set_critical_time( lua_State *L ) // 设置主循环临界时间
 {
     _critical_tm = luaL_checkinteger(L, 1);
 
     return 0;
 }
 
-void lev::sig_handler( int32_t signum )
+void LEv::sig_handler( int32_t signum )
 {
     sig_mask |= ( 1 << signum );
 }
 
-void lev::invoke_signal()
+void LEv::invoke_signal()
 {
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
     lua_pushcfunction(L,traceback);
 
     int signum = 0;
@@ -176,7 +176,7 @@ void lev::invoke_signal()
     lua_remove(L,top); /* remove traceback */
 }
 
-int32_t lev::pending_send( class socket *s  )
+int32_t LEv::pending_send( class Socket *s  )
 {
     // 0位是空的，不使用
     ++ansendingcnt;
@@ -187,7 +187,7 @@ int32_t lev::pending_send( class socket *s  )
     return ansendingcnt;
 }
 
-void lev::remove_pending( int32_t pending )
+void LEv::remove_pending( int32_t pending )
 {
     ASSERT( pending > 0 && pending < ansendingmax, "illegal remove pending" );
 
@@ -199,12 +199,12 @@ void lev::remove_pending( int32_t pending )
  * 坏处是：需要多一个数组管理；如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
  * 然而，游戏中包多，但数据量不大
  */
-void lev::invoke_sending()
+void LEv::invoke_sending()
 {
     if ( ansendingcnt <= 0 ) return;
 
     int32_t pos = 0;
-    class socket *skt = NULL;
+    class Socket *skt = NULL;
 
     /* 0位是空的，不使用 */
     for ( int32_t pending = 1;pending <= ansendingcnt;pending ++ )
@@ -237,9 +237,9 @@ void lev::invoke_sending()
                         "invoke sending sending counter fail" );
 }
 
-void lev::invoke_app_ev (int64_t ms_now)
+void LEv::invoke_app_ev (int64_t ms_now)
 {
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
 
     if (!_app_ev_interval || _next_app_ev_tm > ms_now ) return;
 
@@ -259,7 +259,7 @@ void lev::invoke_app_ev (int64_t ms_now)
 }
 
 // 计算距离下一次循环时的时间(毫秒)
-EvTstamp lev::wait_time()
+EvTstamp LEv::wait_time()
 {
     // TODO:如果有数据未发送，尽快发送(暂定10毫秒，后面再做调试)
     if (ansendingcnt > 0) return 10;
@@ -280,15 +280,15 @@ EvTstamp lev::wait_time()
     return waittime;
 }
 
-void lev::running( int64_t ms_now )
+void LEv::running( int64_t ms_now )
 {
     invoke_sending ();
     invoke_signal  ();
     invoke_app_ev  (ms_now);
 
-    static_global::network_mgr()->invoke_delete();
+    StaticGlobal::network_mgr()->invoke_delete();
 
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
 
     // TODO:每秒gc一个步骤，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
     if (_lua_gc_tm != ev_rt_now)
@@ -303,12 +303,12 @@ void lev::running( int64_t ms_now )
         {
             STAT_TIME_BEG();
             lua_gc(L, LUA_GCSTEP, 100);
-            static_global::statistic()->add_lua_gc( STAT_TIME_END() );
+            StaticGlobal::statistic()->add_lua_gc( STAT_TIME_END() );
         }
     }
 }
 
-void lev::after_run(int64_t ms_old,int64_t ms_now )
+void LEv::after_run(int64_t ms_old,int64_t ms_now )
 {
     if ( EXPECT_FALSE(_critical_tm < 0) ) return;
 

@@ -2,14 +2,14 @@
 
 #include "codec.h"
 
-class codec_mgr
+class CodecMgr
 {
 public:
-    ~codec_mgr();
-    explicit codec_mgr();
+    ~CodecMgr();
+    explicit CodecMgr();
 
-    class codec *get_codec( codec::codec_t type );
-    int32_t load_one_schema( codec::codec_t type,const char *path ) const;
+    class Codec *get_codec( Codec::CodecType type );
+    int32_t load_one_schema( Codec::CodecType type,const char *path ) const;
 private:
-    class codec* _codecs[codec::CDC_MAX];
+    class Codec* _codecs[Codec::CDC_MAX];
 };

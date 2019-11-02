@@ -9,7 +9,7 @@
 
 /* 定义日志内容的大小 */
 static constexpr size_t 
-    LOG_CTX_SIZE[log::LOG_SIZE_MAX] = { 64,1024,LOG_MAX_LENGTH };
+    LOG_CTX_SIZE[Log::LS_MAX] = { 64,1024,LOG_MAX_LENGTH };
 
 static bool is_daemon = false;    /* 是否后台运行。后台运行则不输出日志到stdout */
 static char printf_path[PATH_MAX] = "printf";
@@ -87,14 +87,14 @@ void set_app_name( const char *name )
 // 错误函数，同步写到文件，用主循环时间戳，线程不安全
 void cerror_log( const char *prefix,const char *fmt,... )
 {
-    time_t tm = static_global::ev()->now();
+    time_t tm = StaticGlobal::ev()->now();
     RAW_FORMAT( tm,prefix,error_path,(is_daemon ? NULL : stderr),fmt );
 }
 
 // 日志打印函数，异步写到文件，用主循环时间戳，线程不安全
 void cprintf_log( const char *prefix,const char *fmt,... )
 {
-    static async_log *logger = static_global::async_logger();
+    static AsyncLog *logger = StaticGlobal::async_logger();
 
     va_list args;
     va_start(args,fmt);
@@ -117,27 +117,27 @@ void raw_cprintf_log( time_t tm,const char *prefix,const char *fmt,... )
 ////////////////////////////////////////////////////////////////////////////////
 
 // 单次写入的日志内容
-class log_one
+class LogOne
 {
 public:
-    log_one(){};
-    virtual ~log_one(){};
+    LogOne(){}
+    virtual ~LogOne(){}
 
     time_t _tm;
     size_t _len;
-    log_out_t _out;
+    LogOut _out;
     char _path[LOG_PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
 
-    virtual log::log_size_t get_type() const = 0;
+    virtual Log::LogSize get_type() const = 0;
     virtual const char *get_ctx() const = 0;
     virtual void set_ctx( const char *ctx,size_t len ) = 0;
 };
 
-template<log::log_size_t lst,size_t size>
-class log_one_ctx : public log_one
+template<Log::LogSize lst,size_t size>
+class log_one_ctx : public LogOne
 {
 public:
-    log::log_size_t get_type() const { return lst; }
+    Log::LogSize get_type() const { return lst; }
     const char *get_ctx() const { return _context; }
 
     void set_ctx( const char *ctx,size_t len )
@@ -152,19 +152,19 @@ private:
     char _context[size];
 };
 
-log::log()
+Log::Log()
     : _ctx_pool 
     {
-        new object_pool< log_one_ctx<LOG_SIZE_S,LOG_CTX_SIZE[0]>,1024,64 >("log_S"),
-        new object_pool< log_one_ctx<LOG_SIZE_M,LOG_CTX_SIZE[1]>,1024,64 >("log_M"),
-        new object_pool< log_one_ctx<LOG_SIZE_L,LOG_CTX_SIZE[2]>,8,8 >("log_L")
+        new ObjectPool< log_one_ctx<LS_S,LOG_CTX_SIZE[0]>,1024,64 >("log_S"),
+        new ObjectPool< log_one_ctx<LS_M,LOG_CTX_SIZE[1]>,1024,64 >("log_M"),
+        new ObjectPool< log_one_ctx<LS_L,LOG_CTX_SIZE[2]>,8,8 >("log_L")
     }
 {
-    _cache = new log_one_list_t();
-    _flush = new log_one_list_t();
+    _cache = new LogOneList();
+    _flush = new LogOneList();
 }
 
-log::~log()
+Log::~Log()
 {
     ASSERT( _cache->empty() && _flush->empty(), "log not flush" );
 
@@ -174,7 +174,7 @@ log::~log()
     _cache = NULL;
     _flush = NULL;
 
-    for ( int idx = 0;idx < LOG_SIZE_MAX;++idx )
+    for ( int idx = 0;idx < LS_MAX;++idx )
     {
         _ctx_pool[idx]->purge();
 
@@ -184,17 +184,17 @@ log::~log()
 }
 
 // 等待处理的日志数量
-size_t log::pending_size()
+size_t Log::pending_size()
 {
     return _cache->size() + _flush->size();
 }
 
 // 交换缓存和待写入队列
-bool log::swap()
+bool Log::swap()
 {
     if (!_flush->empty() ) return false;
 
-    log_one_list_t *swap_tmp = _flush;
+    LogOneList *swap_tmp = _flush;
     _flush = _cache;
     _cache = swap_tmp;
 
@@ -202,12 +202,12 @@ bool log::swap()
 }
 
 // 主线程写入缓存，上层加锁
-int32_t log::write_cache( time_t tm,
-    const char *path,const char *ctx,size_t len,log_out_t out )
+int32_t Log::write_cache( time_t tm,
+    const char *path,const char *ctx,size_t len,LogOut out )
 {
     ASSERT( path, "write log no file path" );
 
-    class log_one *one = allocate_one( len + 1 );
+    class LogOne *one = allocate_one( len + 1 );
     if ( !one )
     {
         ERROR( "log write cant not allocate memory" );
@@ -224,8 +224,8 @@ int32_t log::write_cache( time_t tm,
 }
 
 // 写入一项日志内容
-int32_t log::flush_one_ctx(
-    FILE *pf,const struct log_one *one,struct tm &ntm,const char *prefix )
+int32_t Log::flush_one_ctx(
+    FILE *pf,const struct LogOne *one,struct tm &ntm,const char *prefix )
 {
     int byte = PFILETIME(pf,ntm,prefix);
 
@@ -256,8 +256,8 @@ int32_t log::flush_one_ctx(
 }
 
 // 写入一个日志文件
-bool log::flush_one_file(
-    struct tm &ntm,const log_one *one,const char *path,const char *prefix )
+bool Log::flush_one_file(
+    struct tm &ntm,const LogOne *one,const char *path,const char *prefix )
 {
     FILE *pf = _files[path];
     if (!pf)
@@ -281,7 +281,7 @@ bool log::flush_one_file(
 }
 
 // 日志线程写入文件
-void log::flush()
+void Log::flush()
 {
 #define FORMAT_TO_SCREEN(screen,ntm,prefix,ctx)                \
     do{                                                        \
@@ -290,10 +290,10 @@ void log::flush()
         fprintf(screen,"%s\n",ctx);                            \
     } while(0)
 
-    log_one_list_t::iterator itr = _flush->begin();
+    LogOneList::iterator itr = _flush->begin();
     for ( ;itr != _flush->end(); ++itr )
     {
-        log_one *one = *itr;
+        LogOne *one = *itr;
         if ( 0 == one->_len ) continue;
 
         struct tm ntm;
@@ -333,9 +333,9 @@ void log::flush()
 }
 
 // 回收内存到内存池，上层加锁
-void log::collect_mem()
+void Log::collect_mem()
 {
-    log_one_list_t::iterator itr = _flush->begin();
+    LogOneList::iterator itr = _flush->begin();
     for ( ;itr != _flush->end(); ++itr )
     {
         deallocate_one( *itr );
@@ -345,30 +345,30 @@ void log::collect_mem()
 }
 
 // 根据长度从内存池中分配一个日志缓存对象
-class log_one *log::allocate_one( size_t len )
+class LogOne *Log::allocate_one( size_t len )
 {
     if ( len > LOG_MAX_LENGTH ) len = LOG_MAX_LENGTH;
 
-    for ( uint32_t lt = LOG_SIZE_S;lt < LOG_SIZE_MAX;++lt )
+    for ( uint32_t lt = LS_S;lt < LS_MAX;++lt )
     {
         if ( len > LOG_CTX_SIZE[lt] ) continue;
 
-        return (log_one*)_ctx_pool[lt]->construct_any();
+        return (LogOne*)_ctx_pool[lt]->construct_any();
     }
     return NULL;
 }
 
 //回收一个日志缓存对象到内存池
-void log::deallocate_one( class log_one *one )
+void Log::deallocate_one( class LogOne *one )
 {
     ASSERT( one, "deallocate one NULL log ctx" );
 
-    log_size_t lt = one->get_type();
+    LogSize lt = one->get_type();
 
     _ctx_pool[lt]->destroy_any( one );
 }
 
-void log::close_files()
+void Log::close_files()
 {
     // 暂时保留文件名，以免频繁创建，应该也不是很多
     StdMap<std::string,FILE *>::iterator itr = _files.begin();

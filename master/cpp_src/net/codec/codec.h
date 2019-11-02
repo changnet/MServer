@@ -5,9 +5,9 @@
 /* socket packet codec */
 
 struct lua_State;
-struct cmd_cfg_t;
+struct CmdCfg;
 
-class codec
+class Codec
 {
 public:
     typedef enum
@@ -19,21 +19,21 @@ public:
         CDC_PROTOBUF = 4, // google protocol buffers
 
         CDC_MAX
-    }codec_t;
+    } CodecType;
 public:
-    codec() {};
-    virtual ~codec() {};
+    Codec() {}
+    virtual ~Codec() {}
 
     /* 解码数据包
      * return: <0 error,otherwise the number of parameter push to stack
      */
     virtual int32_t decode( lua_State *L,
-        const char *buffer,int32_t len,const cmd_cfg_t *cfg ) = 0;
+        const char *buffer,int32_t len,const CmdCfg *cfg ) = 0;
     /* 编码数据包
      * return: <0 error,otherwise the length of buffer
      */
     virtual int32_t encode( lua_State *L,
-        int32_t index,const char **buffer,const cmd_cfg_t *cfg ) = 0;
+        int32_t index,const char **buffer,const CmdCfg *cfg ) = 0;
 
     /* 解码、编码结束，处理后续工作
      */

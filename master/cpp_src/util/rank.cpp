@@ -1,12 +1,12 @@
 #include "rank.h"
 #include "../system/static_global.h"
 
-base_rank::base_rank()
+BaseRank::BaseRank()
 {
     _count = 0; // 当前排行榜中数量
 }
 
-base_rank::~base_rank()
+BaseRank::~BaseRank()
 {
 }
 
@@ -35,7 +35,7 @@ insertion_rank::~insertion_rank()
 
 void insertion_rank::clear()
 {
-    StdMap< object_id_t,object_t* >::const_iterator iter = _object_set.begin();
+    StdMap< object_id_t,Object* >::const_iterator iter = _object_set.begin();
     for (;iter != _object_set.end();iter ++)
     {
         delete iter->second;
@@ -43,16 +43,16 @@ void insertion_rank::clear()
     _object_set.clear();
 
     _max_factor = 0;
-    base_rank::clear();
+    BaseRank::clear();
 }
 
 // 把object往数组0位置移动
-void insertion_rank::shift_up(object_t *object)
+void insertion_rank::shift_up(Object *object)
 {
     for (int32_t idx = object->_index - 1;idx > 0;idx --)
     {
-        object_t *next = _object_list[idx];
-        if (object_t::compare_factor(
+        Object *next = _object_list[idx];
+        if (Object::compare_factor(
             object->_factor,next->_factor,_max_factor) <= 0)
         {
             return;
@@ -68,12 +68,12 @@ void insertion_rank::shift_up(object_t *object)
 }
 
 // 把object往数组尾移动
-void insertion_rank::shift_down(object_t *object)
+void insertion_rank::shift_down(Object *object)
 {
     for (int32_t idx = object->_index + 1;idx < _count;idx ++)
     {
-        object_t *next = _object_list[idx];
-        if (object_t::compare_factor(
+        Object *next = _object_list[idx];
+        if (Object::compare_factor(
             object->_factor,next->_factor,_max_factor) >= 0)
         {
             return;
@@ -89,7 +89,7 @@ void insertion_rank::shift_down(object_t *object)
 }
 
 // 从排行榜中删除该对象
-void insertion_rank::raw_remove(object_t *object)
+void insertion_rank::raw_remove(Object *object)
 {
     _count --;
     for (int32_t idx = object->_index;idx < _count;idx ++)
@@ -104,7 +104,7 @@ void insertion_rank::raw_remove(object_t *object)
 
 int32_t insertion_rank::remove(object_id_t id)
 {
-    StdMap< object_id_t,object_t* >::const_iterator iter = _object_set.find(id);
+    StdMap< object_id_t,Object* >::const_iterator iter = _object_set.find(id);
     if (iter == _object_set.end()) return -1;
 
     raw_remove(iter->second);
@@ -124,10 +124,10 @@ int32_t insertion_rank::insert(object_id_t id,factor_t factor,int32_t max_idx)
     // 排行榜已满处理
     if (_count >= _max_count)
     {
-        object_t *last = _object_list[_count - 1];
+        Object *last = _object_list[_count - 1];
 
         // 不在排名之内，丢弃
-        int32_t cmp = object_t::compare_factor(factor,last->_factor,_max_factor);
+        int32_t cmp = Object::compare_factor(factor,last->_factor,_max_factor);
         if (cmp <= 0) return 0;
 
         // 删除掉最后一个,腾出一个空位
@@ -135,11 +135,11 @@ int32_t insertion_rank::insert(object_id_t id,factor_t factor,int32_t max_idx)
     }
 
     // 防止重复
-    std::pair< StdMap< object_id_t,object_t* >::iterator,bool > ret;
-    ret = _object_set.insert(std::pair<object_id_t,object_t*>(id,NULL));
+    std::pair< StdMap< object_id_t,Object* >::iterator,bool > ret;
+    ret = _object_set.insert(std::pair<object_id_t,Object*>(id,NULL));
     if (false == ret.second) return 3;
 
-    object_t *object = new object_t();
+    Object *object = new Object();
     ret.first->second = object;
 
     object->_id = id;
@@ -149,7 +149,7 @@ int32_t insertion_rank::insert(object_id_t id,factor_t factor,int32_t max_idx)
         object->_factor[idx] = factor[idx];
     }
 
-    ARRAY_RESIZE(object_t*,_object_list,_max_list,_max_count,ARRAY_ZERO);
+    ARRAY_RESIZE(Object*,_object_list,_max_list,_max_count,ARRAY_ZERO);
 
     object->_index = _count;
     _object_list[_count++] = object;
@@ -165,10 +165,10 @@ int32_t insertion_rank::update(
 {
     if (EXPECT_FALSE(factor_idx <= 0 || factor_idx > MAX_RANK_FACTOR)) return 1;
 
-    StdMap< object_id_t,object_t* >::iterator iter = _object_set.find(id);
+    StdMap< object_id_t,Object* >::iterator iter = _object_set.find(id);
     if (iter == _object_set.end()) return 2;
 
-    object_t *object = iter->second;
+    Object *object = iter->second;
     int32_t raw_idx = factor_idx - 1;
     raw_factor_t old_factor = object->_factor[raw_idx];
 
@@ -184,7 +184,7 @@ int32_t insertion_rank::update(
 // 通过id取排名，返回排名(从1开始),出错返回 -1
 int32_t insertion_rank::get_rank_by_id(object_id_t id) const
 {
-    StdMap< object_id_t,object_t* >::const_iterator iter = _object_set.find(id);
+    StdMap< object_id_t,Object* >::const_iterator iter = _object_set.find(id);
     if (iter == _object_set.end()) return -1;
 
     // 返回排名(从1开始)
@@ -192,16 +192,16 @@ int32_t insertion_rank::get_rank_by_id(object_id_t id) const
 }
 
 // 根据id取排序因子
-const base_rank::raw_factor_t *insertion_rank::get_factor(object_id_t id) const
+const BaseRank::raw_factor_t *insertion_rank::get_factor(object_id_t id) const
 {
-    StdMap< object_id_t,object_t* >::const_iterator iter = _object_set.find(id);
+    StdMap< object_id_t,Object* >::const_iterator iter = _object_set.find(id);
     if (iter == _object_set.end()) return NULL;
 
     return iter->second->_factor;
 }
 
 //  根据排名获取对象id
-base_rank::object_id_t insertion_rank::get_id_by_rank(object_id_t rank) const
+BaseRank::object_id_t insertion_rank::get_id_by_rank(object_id_t rank) const
 {
     if (rank <= 0 || rank > _count) return -1;
 
@@ -219,7 +219,7 @@ bucket_rank::~bucket_rank()
 {
     clear();
 
-    base_rank::clear();
+    BaseRank::clear();
 }
 
 void bucket_rank::clear()

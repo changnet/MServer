@@ -1,15 +1,15 @@
 #include "async_log.h"
 #include "../system/static_global.h"
 
-async_log::async_log() : thread("thread_log")
+AsyncLog::AsyncLog() : Thread("thread_log")
 {
 }
 
-async_log::~async_log()
+AsyncLog::~AsyncLog()
 {
 }
 
-size_t async_log::busy_job( size_t *finished,size_t *unfinished )
+size_t AsyncLog::busy_job( size_t *finished,size_t *unfinished )
 {
     lock();
     size_t unfinished_sz = _log.pending_size();
@@ -23,10 +23,10 @@ size_t async_log::busy_job( size_t *finished,size_t *unfinished )
     return unfinished_sz;
 }
 
-void async_log::write(
-    const char *path,const char *ctx,size_t len,log_out_t out_type)
+void AsyncLog::write(
+    const char *path,const char *ctx,size_t len,LogOut out_type)
 {
-    static class Ev *ev = static_global::ev();
+    static class Ev *ev = StaticGlobal::ev();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
@@ -34,8 +34,8 @@ void async_log::write(
     unlock();
 }
 
-void async_log::raw_write(
-    const char *path,log_out_t out,const char *fmt,va_list args )
+void AsyncLog::raw_write(
+    const char *path,LogOut out,const char *fmt,va_list args )
 {
     static char ctx_buff[LOG_MAX_LENGTH];
 
@@ -56,8 +56,8 @@ void async_log::raw_write(
 
     write( path,ctx_buff,len > LOG_MAX_LENGTH ? LOG_MAX_LENGTH : len,out );
 }
-void async_log::raw_write(
-    const char *path,log_out_t out,const char *fmt,... )
+void AsyncLog::raw_write(
+    const char *path,LogOut out,const char *fmt,... )
 {
     va_list args;
     va_start(args,fmt);
@@ -66,14 +66,14 @@ void async_log::raw_write(
 }
 
 // 线程结束之前清理函数
-bool async_log::uninitialize()
+bool AsyncLog::uninitialize()
 {
-    routine( NTF_NONE );
+    routine( NT_NONE );
     return true;
 }
 
 // 线程主循环
-void async_log::routine( notify_t notify )
+void AsyncLog::routine( NotifyType notify )
 {
     UNUSED( notify );
 

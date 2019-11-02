@@ -6,15 +6,15 @@
 struct base_header;
 struct c2s_header;
 struct s2s_header;
-struct cmd_cfg_t;
+struct CmdCfg;
 
-class stream_packet : public packet
+class StreamPacket : public Packet
 {
 public:
-    virtual ~stream_packet();
-    stream_packet( class socket *sk );
+    virtual ~StreamPacket();
+    StreamPacket( class Socket *sk );
 
-    packet_t type() const { return PKT_STREAM; }
+    PacketType type() const { return PT_STREAM; }
 
     /* 打包服务器发放客户端数据包
      * return: <0 error;0 incomplete;>0 success
@@ -40,7 +40,7 @@ private:
     void cs_command( int32_t cmd,const char *ctx,size_t size );
     void process_ss_command( const s2s_header *header );
     void ss_dispatch( const s2s_header *header );
-    void ss_command( const s2s_header *header,const cmd_cfg_t *cmd_cfg );
+    void ss_command( const s2s_header *header,const CmdCfg *cmd_cfg );
     void css_command( const s2s_header *header );
     void ssc_command( const s2s_header *header );
     void rpc_command( const s2s_header *header );
@@ -49,5 +49,5 @@ private:
     int32_t do_pack_rpc(
         lua_State *L,int32_t unique_id,int32_t ecode,uint16_t pkt,int32_t index );
     void ssc_one_multicast(
-        owner_t owner,int32_t cmd,uint16_t ecode,const char *ctx,int32_t size );
+        Owner owner,int32_t cmd,uint16_t ecode,const char *ctx,int32_t size );
 };

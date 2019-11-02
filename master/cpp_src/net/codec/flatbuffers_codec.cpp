@@ -3,22 +3,22 @@
 #include <lflatbuffers.hpp>
 #include "../net_header.h"
 
-flatbuffers_codec::flatbuffers_codec()
+FlatbuffersCodec::FlatbuffersCodec()
 {
     _lflatbuffers = new class lflatbuffers();
 }
 
-flatbuffers_codec::~flatbuffers_codec()
+FlatbuffersCodec::~FlatbuffersCodec()
 {
     delete _lflatbuffers;
     _lflatbuffers = NULL;
 }
 
-void flatbuffers_codec::finalize()
+void FlatbuffersCodec::finalize()
 {
 }
 
-int32_t flatbuffers_codec::load_path( const char *path )
+int32_t FlatbuffersCodec::load_path( const char *path )
 {
     return _lflatbuffers->load_bfbs_path( path );
 }
@@ -26,8 +26,8 @@ int32_t flatbuffers_codec::load_path( const char *path )
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t flatbuffers_codec::decode(
-     lua_State *L,const char *buffer,int32_t len,const cmd_cfg_t *cfg )
+int32_t FlatbuffersCodec::decode(
+     lua_State *L,const char *buffer,int32_t len,const CmdCfg *cfg )
 {
     if ( _lflatbuffers->decode( L,cfg->_schema,cfg->_object,buffer,len ) < 0 )
     {
@@ -42,8 +42,8 @@ int32_t flatbuffers_codec::decode(
 /* 编码数据包
  * return: <0 error,otherwise the length of buffer
  */
-int32_t flatbuffers_codec::encode(
-    lua_State *L,int32_t index,const char **buffer,const cmd_cfg_t *cfg )
+int32_t FlatbuffersCodec::encode(
+    lua_State *L,int32_t index,const char **buffer,const CmdCfg *cfg )
 {
     if ( _lflatbuffers->encode( L,cfg->_schema,cfg->_object,index ) < 0 )
     {

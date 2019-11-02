@@ -2,13 +2,13 @@
 
 #include "websocket_packet.h"
 
-class ws_stream_packet : public websocket_packet
+class WSStreamPacket : public WebsocketPacket
 {
 public:
-    ~ws_stream_packet();
-    ws_stream_packet( class socket *sk );
+    ~WSStreamPacket();
+    WSStreamPacket( class Socket *sk );
 
-    packet_t type() const { return PKT_WSSTREAM; };
+    PacketType type() const { return PT_WSSTREAM; }
 
     /* 打包服务器发往客户端数据包
     * return: <0 error;>=0 success

@@ -2,11 +2,11 @@
 
 #include "sql_def.h"
 
-class sql
+class Sql
 {
 public:
-    sql ();
-    ~sql();
+    Sql ();
+    ~Sql();
 
     void set( const char *host,const int32_t port,
         const char *usr,const char *pwd,const char *dbname );

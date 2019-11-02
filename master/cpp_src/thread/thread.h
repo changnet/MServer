@@ -6,11 +6,11 @@
 #include "../ev/ev_watcher.h"
 #include "../global/global.h"
 
-class thread
+class Thread
 {
 public:
-    virtual ~thread();
-    explicit thread(const char *name);
+    virtual ~Thread();
+    explicit Thread(const char *name);
 
     /* 停止线程 */
     void stop ();
@@ -40,22 +40,22 @@ public:
 public:
     typedef enum
     {
-        NTF_ERROR  = -1, // 线程出现错误
-        NTF_NONE   =  0, // 未定义的消息，比如有时候主线程只是想子线程运行一下routine，发起ping之类
-        NTF_EXIT   =  1, // 通知子线程退出
-        NTF_CUSTOM =  2, // 自定义消息，根据各线程自定义处理数据
+        NT_ERROR  = -1, // 线程出现错误
+        NT_NONE   =  0, // 未定义的消息，比如有时候主线程只是想子线程运行一下routine，发起ping之类
+        NT_EXIT   =  1, // 通知子线程退出
+        NT_CUSTOM =  2, // 自定义消息，根据各线程自定义处理数据
 
-        NTF_MAX
-    }notify_t;
+        NT_MAX
+    } NotifyType;
 protected:
     virtual bool initialize() = 0;     /* 子线程初始化 */
     virtual bool uninitialize() = 0;    /* 子线程清理 */
 
-    void notify_child( notify_t notify );     /* 通知子线程 */
-    void notify_parent( notify_t notify );     /* 通知主线程 */
+    void notify_child( NotifyType notify );     /* 通知子线程 */
+    void notify_parent( NotifyType notify );     /* 通知主线程 */
 
-    virtual void routine( notify_t notify ) = 0;    /* 子线程通知处理 */
-    virtual void notification( notify_t notify ) = 0;    /* 主线程收到通知 */
+    virtual void routine( NotifyType notify ) = 0;    /* 子线程通知处理 */
+    virtual void notification( NotifyType notify ) = 0;    /* 主线程收到通知 */
 
     static void *start_routine( void *arg );
 

@@ -11,7 +11,7 @@
         lua_pushstring( L,name );lua_pushinteger( L,val );lua_rawset( L,-3 );\
     } while(0)
 
-int32_t lstatistic::dump( lua_State *L )
+int32_t LStatistic::dump( lua_State *L )
 {
 #define DUMP_BASE_COUNTER(what,counter)    \
     do{\
@@ -20,7 +20,7 @@ int32_t lstatistic::dump( lua_State *L )
         lua_rawset( L,-3 );\
     } while(0)
 
-    const statistic *stat = static_global::statistic();
+    const Statistic *stat = StaticGlobal::statistic();
 
     lua_newtable( L );
 
@@ -53,16 +53,16 @@ int32_t lstatistic::dump( lua_State *L )
 #undef DUMP_BASE_COUNTER
 }
 
-void lstatistic::dump_base_counter( 
-    const statistic::base_counter_t &counter,lua_State *L )
+void LStatistic::dump_base_counter( 
+    const Statistic::BaseCounterType &counter,lua_State *L )
 {
     int32_t index = 1;
 
     lua_newtable( L );
-    statistic::base_counter_t::const_iterator itr = counter.begin();
+    Statistic::BaseCounterType::const_iterator itr = counter.begin();
     while ( itr != counter.end() )
     {
-        const struct statistic::base_counter &bc = itr->second;
+        const struct Statistic::BaseCounter &bc = itr->second;
         lua_createtable( L,0,3 );
 
         PUSH_STRING( "name",itr->first.c_str() );
@@ -76,14 +76,14 @@ void lstatistic::dump_base_counter(
     }
 }
 
-void lstatistic::dump_thread( lua_State *L )
+void LStatistic::dump_thread( lua_State *L )
 {
-    const thread_mgr::thread_mpt_t &threads =
-        static_global::thread_mgr()->get_threads();
+    const ThreadMgr::thread_mpt_t &threads =
+        StaticGlobal::thread_mgr()->get_threads();
 
     int32_t index = 1;
     lua_newtable( L );
-    thread_mgr::thread_mpt_t::const_iterator itr = threads.begin();
+    ThreadMgr::thread_mpt_t::const_iterator itr = threads.begin();
     while ( itr != threads.end() )
     {
         class thread *thread = itr->second;
@@ -108,10 +108,10 @@ void lstatistic::dump_thread( lua_State *L )
     }
 }
 
-void lstatistic::dump_lua_gc( lua_State *L )
+void LStatistic::dump_lua_gc( lua_State *L )
 {
-    const statistic::time_counter &counter 
-        = static_global::statistic()->get_lua_gc();
+    const Statistic::TimeCounter &counter 
+        = StaticGlobal::statistic()->get_lua_gc();
 
     lua_newtable( L );
 
@@ -127,17 +127,17 @@ void lstatistic::dump_lua_gc( lua_State *L )
     PUSH_INTEGER( "avg",counter._msec / count );
 }
 
-void lstatistic::dump_mem_pool( lua_State *L )
+void LStatistic::dump_mem_pool( lua_State *L )
 {
     int32_t index = 1;
     lua_newtable( L );
 
-    class pool** pool_stat = pool::get_pool_stat();
-    for (int32_t idx = 0;idx < pool::MAX_POOL;idx ++)
+    class Pool** pool_stat = Pool::get_pool_stat();
+    for (int32_t idx = 0;idx < Pool::MAX_POOL;idx ++)
     {
         if (NULL == pool_stat[idx]) continue;
 
-        class pool *ps = pool_stat[idx];
+        class Pool *ps = pool_stat[idx];
 
         lua_newtable( L );
 
@@ -170,17 +170,17 @@ void lstatistic::dump_mem_pool( lua_State *L )
 }
 
 // 总的收发流量
-void lstatistic::dump_total_traffic ( lua_State *L )
+void LStatistic::dump_total_traffic ( lua_State *L )
 {
-    const statistic *stat = static_global::statistic();
-    const statistic::traffic_counter *list = stat->get_total_traffic();
+    const Statistic *stat = StaticGlobal::statistic();
+    const Statistic::TrafficCounter *list = stat->get_total_traffic();
 
-    const time_t now = static_global::ev()->now();
+    const time_t now = StaticGlobal::ev()->now();
 
     lua_newtable( L );
-    for ( int32_t type = 1;type < socket::CNT_MAX;type ++ )
+    for ( int32_t type = 1;type < Socket::CT_MAX;type ++ )
     {
-        const statistic::traffic_counter &counter = list[type];
+        const Statistic::TrafficCounter &counter = list[type];
 
         lua_newtable( L );
         int32_t sec = now - counter._time;
@@ -200,16 +200,16 @@ void lstatistic::dump_total_traffic ( lua_State *L )
 
 
 // socket情况
-void lstatistic::dump_socket( lua_State *L )
+void LStatistic::dump_socket( lua_State *L )
 {
 #define ST_T statistic::socket_traffic_t
 
-    const statistic *stat = static_global::statistic();
+    const Statistic *stat = StaticGlobal::statistic();
     const ST_T &socket_traffic = stat->get_socket_traffic();
 
-    const time_t now = static_global::ev()->now();
+    const time_t now = StaticGlobal::ev()->now();
 
-    class lnetwork_mgr *nm = static_global::network_mgr();
+    class LNetworkMgr *nm = StaticGlobal::network_mgr();
 
     int32_t index = 1;
     lua_newtable( L );
@@ -217,7 +217,7 @@ void lstatistic::dump_socket( lua_State *L )
     ST_T::const_iterator itr = socket_traffic.begin();
     while ( itr != socket_traffic.end() )
     {
-        const statistic::traffic_counter &counter = itr->second;
+        const Statistic::TrafficCounter &counter = itr->second;
 
         lua_newtable( L );
 
@@ -231,7 +231,7 @@ void lstatistic::dump_socket( lua_State *L )
         PUSH_INTEGER( "send_avg",counter._send / sec );
         PUSH_INTEGER( "recv_avg",counter._recv / sec );
 
-        class socket *sk = nm->get_conn_by_conn_id( itr->first );
+        class Socket *sk = nm->get_conn_by_conn_id( itr->first );
         if (!sk)
         {
             ERROR("dump_socket no such socket found:",conn_id);
@@ -262,22 +262,22 @@ void lstatistic::dump_socket( lua_State *L )
 #undef ST_T
 }
 
-int32_t lstatistic::dump_pkt( lua_State *L )
+int32_t LStatistic::dump_pkt( lua_State *L )
 {
-    const statistic *stat = static_global::statistic();
+    const Statistic *stat = StaticGlobal::statistic();
 
     lua_newtable( L );
-    for (int32_t type = SPKT_CSPK;type < SPKT_MAXT;type ++)
+    for (int32_t type = SPT_CSPK;type < SPT_MAXT;type ++)
     {
         int32_t index = 1;
         lua_newtable( L );
-        const statistic::pkt_counter_t &pkts = stat->_pkt_count[type];
+        const Statistic::PktCounterType &pkts = stat->_pkt_count[type];
 
-        statistic::pkt_counter_t::const_iterator itr = pkts.begin();
+        Statistic::PktCounterType::const_iterator itr = pkts.begin();
         while ( itr != pkts.end() )
         {
             lua_newtable( L );
-            const statistic::pkt_counter &counter = itr->second;
+            const Statistic::PktCounter &counter = itr->second;
             PUSH_INTEGER( "cmd",itr->first );
             PUSH_INTEGER( "max",counter._max );
             PUSH_INTEGER( "min",counter._min );
@@ -299,11 +299,11 @@ int32_t lstatistic::dump_pkt( lua_State *L )
     int32_t index = 1;
     lua_newtable( L );
 
-    statistic::rpc_counter_t::const_iterator itr = stat->_rpc_count.begin();
+    Statistic::RPCCounterType::const_iterator itr = stat->_rpc_count.begin();
     while ( itr != stat->_rpc_count.end() )
     {
         lua_newtable( L );
-        const statistic::pkt_counter &counter = itr->second;
+        const Statistic::PktCounter &counter = itr->second;
         PUSH_STRING ( "cmd",itr->first.c_str() );
         PUSH_INTEGER( "max",counter._max );
         PUSH_INTEGER( "min",counter._min );
@@ -325,8 +325,8 @@ int32_t lstatistic::dump_pkt( lua_State *L )
 ////////////////////////////////////////////////////////////////////////////////
 static const luaL_Reg statistic_lib[] =
 {
-    {"dump", lstatistic::dump},
-    {"dump_pkt", lstatistic::dump_pkt},
+    {"dump", LStatistic::dump},
+    {"dump_pkt", LStatistic::dump_pkt},
     {NULL, NULL}
 };
 

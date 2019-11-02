@@ -465,13 +465,13 @@ int32_t lprotobuf::raw_encode( lua_State *L,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-protobuf_codec::protobuf_codec()
+ProtobufCodec::ProtobufCodec()
 {
     _is_proto_loaded = false;
     _lprotobuf = new class lprotobuf();
 }
 
-protobuf_codec::~protobuf_codec()
+ProtobufCodec::~ProtobufCodec()
 {
     finalize();
 
@@ -479,7 +479,7 @@ protobuf_codec::~protobuf_codec()
     _lprotobuf = NULL;
 }
 
-void protobuf_codec::finalize()
+void ProtobufCodec::finalize()
 {
     if ( _lprotobuf )
     {
@@ -487,7 +487,7 @@ void protobuf_codec::finalize()
     }
 }
 
-int32_t protobuf_codec::load_path( const char *path )
+int32_t ProtobufCodec::load_path( const char *path )
 {
     // pbc并没有什么unregister之类的函数，只能把整个对象销毁重建了
     if ( _is_proto_loaded )
@@ -505,8 +505,8 @@ int32_t protobuf_codec::load_path( const char *path )
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t protobuf_codec::decode(
-     lua_State *L,const char *buffer,int32_t len,const cmd_cfg_t *cfg )
+int32_t ProtobufCodec::decode(
+     lua_State *L,const char *buffer,int32_t len,const CmdCfg *cfg )
 {
     if ( _lprotobuf->decode( L,cfg->_object,buffer,len ) < 0 )
     {
@@ -521,8 +521,8 @@ int32_t protobuf_codec::decode(
 /* 编码数据包
  * return: <0 error,otherwise the length of buffer
  */
-int32_t protobuf_codec::encode(
-    lua_State *L,int32_t index,const char **buffer,const cmd_cfg_t *cfg )
+int32_t ProtobufCodec::encode(
+    lua_State *L,int32_t index,const char **buffer,const CmdCfg *cfg )
 {
     if ( _lprotobuf->encode( L,cfg->_object,index ) < 0 )
     {

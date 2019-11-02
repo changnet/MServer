@@ -45,10 +45,10 @@
  *   4). 需要处理超过包大小时，合并、拆分的情况
  */
 
-class buffer
+class Buffer
 {
 private:
-    class chunk_t
+    class Chunk
     {
     public:
         char  *_ctx;    /* 缓冲区指针 */
@@ -57,7 +57,7 @@ private:
         uint32_t _beg;    /* 有效数据开始位置 */
         uint32_t _end;    /* 有效数据结束位置 */
 
-        chunk_t *_next; /* 链表下一节点 */
+        Chunk *_next; /* 链表下一节点 */
 
         inline void remove( uint32_t len )
         {
@@ -84,11 +84,11 @@ private:
         inline uint32_t space_size() const { return _max - _end; } // 空闲缓冲区大小
     };
 
-    typedef ordered_pool<BUFFER_CHUNK> ctx_pool_t;
-    typedef object_pool< chunk_t,1024,64 > chunk_pool_t;
+    typedef OrderedPool<BUFFER_CHUNK> ctx_pool_t;
+    typedef ObjectPool< Chunk,1024,64 > chunk_pool_t;
 public:
-    buffer();
-    ~buffer();
+    Buffer();
+    ~Buffer();
 
     void clear();
     void remove( uint32_t len );
@@ -109,7 +109,7 @@ public:
     inline uint32_t get_chunk_mem_size() const
     {
         uint32_t mem = 0;
-        const chunk_t *next = _front;
+        const Chunk *next = _front;
 
         while (next)
         {
@@ -130,7 +130,7 @@ public:
     inline bool check_used_size( uint32_t len ) const
     {
         uint32_t used = 0;
-        const chunk_t *next = _front;
+        const Chunk *next = _front;
 
         do
         {
@@ -146,7 +146,7 @@ public:
     inline uint32_t get_all_used_size() const
     {
         uint32_t used = 0;
-        const chunk_t *next = _front;
+        const Chunk *next = _front;
 
         while (next)
         {
@@ -217,12 +217,12 @@ public:
     // 当前缓冲区是否超了设定值
     inline bool is_overflow() const { return _chunk_size > _chunk_max; }
 private:
-    inline chunk_t *new_chunk( uint32_t ctx_size  = 0 )
+    inline Chunk *new_chunk( uint32_t ctx_size  = 0 )
     {
         chunk_pool_t *pool = get_chunk_pool();
 
-        chunk_t *chunk = pool->construct();
-        memset(chunk,0,sizeof(chunk_t));
+        Chunk *chunk = pool->construct();
+        memset(chunk,0,sizeof(Chunk));
 
         chunk->_ctx = new_ctx( ctx_size );
         chunk->_max = ctx_size;
@@ -231,7 +231,7 @@ private:
         return chunk;
     }
 
-    inline void del_chunk( chunk_t *chunk )
+    inline void del_chunk( Chunk *chunk )
     {
         ASSERT( _chunk_size > 0, "chunk size corruption" );
 
@@ -286,8 +286,8 @@ private:
         return &ctx_pool;
     }
 private:
-    chunk_t *_front; // 数据包链表头
-    chunk_t *_back ; // 数据包链表尾
+    Chunk *_front; // 数据包链表头
+    Chunk *_back ; // 数据包链表尾
     uint32_t _chunk_size; // 已申请chunk数量
 
     uint32_t _chunk_max; // 允许申请chunk的最大数量

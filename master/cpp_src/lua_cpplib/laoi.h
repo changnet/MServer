@@ -3,11 +3,11 @@
 #include <lua.hpp>
 #include "../scene/grid_aoi.h"
 
-class laoi : public grid_aoi
+class LAoi : public GridAOI
 {
 public:
-    ~laoi();
-    explicit laoi( lua_State *L );
+    ~LAoi();
+    explicit LAoi( lua_State *L );
 
     int32_t set_size( lua_State *L ); // 设置宽高，格子像素
     int32_t set_visual_range( lua_State *L ); // 设置视野

@@ -45,7 +45,8 @@ typedef int64_t        int64_t;
 #define FMT64u "%" PRIu64
 
 /* to avoid confuse,do NOT use c-style string,use char * instead */
-typedef std::string    string;
+#undef string
+// typedef std::string    string;
 
 #if __cplusplus >= 201103L
     //#pragma message("base type bit check")

@@ -69,6 +69,7 @@ typedef int32_t ANCHANGE;
 // TODO:尚不清楚这个机制(libev的 backend_mintime = 1e-3秒)，应该是要传个非0值
 #define EPOLL_MIN_TM 1
 
+// event loop
 class Ev
 {
 public:

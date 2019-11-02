@@ -7,7 +7,7 @@
 #include "../net/socket.h"
 #include "../system/static_global.h"
 
-thread::thread(const char *name)
+Thread::Thread(const char *name)
 {
     _fd[0] = -1 ;
     _fd[1] = -1 ;
@@ -28,7 +28,7 @@ thread::thread(const char *name)
     }
 }
 
-thread::~thread()
+Thread::~Thread()
 {
     ASSERT( !_run, "thread still running" );
     ASSERT( !_watcher.is_active(), "io watcher not close" );
@@ -53,7 +53,7 @@ thread::~thread()
  * 因此，对于1，当前框架并未使用。对于2，默认abort并coredump。对于3，我们希望主线程
  * 收到而不希望子线程收到，故在这里要block掉。
  */
-void thread::signal_block()
+void Thread::signal_block()
 {
     //--屏蔽所有信号
     sigset_t mask;
@@ -65,7 +65,7 @@ void thread::signal_block()
 }
 
 /* 开始线程 */
-bool thread::start( int32_t sec,int32_t usec )
+bool Thread::start( int32_t sec,int32_t usec )
 {
     /* fd[0]  父进程
      * fd[1]  子线程
@@ -75,7 +75,7 @@ bool thread::start( int32_t sec,int32_t usec )
         ERROR( "thread socketpair fail:%s",strerror(errno) );
         return false;
     }
-    socket::non_block( _fd[0] );    /* 主线程fd需要为非阻塞并加入到主循环监听 */
+    Socket::non_block( _fd[0] );    /* 主线程fd需要为非阻塞并加入到主循环监听 */
 
     /* 子线程设置一个超时，阻塞就可以了，没必要用poll(fd太大，不允许使用select) */
     struct timeval tm;
@@ -90,7 +90,7 @@ bool thread::start( int32_t sec,int32_t usec )
     _run = true;
 
     /* 创建线程 */
-    if ( pthread_create( &_id,NULL,thread::start_routine,(void *)this ) )
+    if ( pthread_create( &_id,NULL,Thread::start_routine,(void *)this ) )
     {
         _run = false;
         ::close( _fd[0] );
@@ -100,17 +100,17 @@ bool thread::start( int32_t sec,int32_t usec )
         return false;
     }
 
-    _watcher.set( static_global::ev() );
-    _watcher.set<thread,&thread::io_cb>( this );
+    _watcher.set( StaticGlobal::ev() );
+    _watcher.set<Thread,&Thread::io_cb>( this );
     _watcher.start( _fd[0],EV_READ );
 
-    static_global::thread_mgr()->push( this );
+    StaticGlobal::thread_mgr()->push( this );
 
     return true;
 }
 
 /* 终止线程 */
-void thread::stop()
+void Thread::stop()
 {
     if ( !_run )
     {
@@ -121,7 +121,7 @@ void thread::stop()
     ASSERT( 0 != _id, "thread join zero thread id" );
 
     _run = false;
-    notify_child( NTF_EXIT );
+    notify_child( NT_EXIT );
     int32_t ecode = pthread_join( _id,NULL );
     if ( ecode )
     {
@@ -138,10 +138,10 @@ void thread::stop()
     if ( _fd[0] >= 0 ) { ::close( _fd[0] );_fd[0] = -1; }
     if ( _fd[1] >= 0 ) { ::close( _fd[1] );_fd[1] = -1; }
 
-    static_global::thread_mgr()->pop( _id );
+    StaticGlobal::thread_mgr()->pop( _id );
 }
 
-void thread::do_routine()
+void Thread::do_routine()
 {
     while ( true )
     {
@@ -152,7 +152,7 @@ void thread::do_routine()
             /* errno variable is thread safe */
             if ( errno == EAGAIN || errno == EWOULDBLOCK )
             {
-                this->routine( NTF_NONE );
+                this->routine( NT_NONE );
                 continue;  // just timeout，超时，需要运行routine，里面有ping机制
             }
             else if ( errno == EINTR )
@@ -173,10 +173,10 @@ void thread::do_routine()
 
         // TODO:这个变量是辅助用的，出错也没什么。暂不加锁
         _busy = true;
-        this->routine( static_cast<notify_t>(notify) );
+        this->routine( static_cast<NotifyType>(notify) );
         _busy = false;
 
-        if ( NTF_EXIT == static_cast<notify_t>(notify) )
+        if ( NT_EXIT == static_cast<NotifyType>(notify) )
         {
             break;
         }
@@ -184,9 +184,9 @@ void thread::do_routine()
 }
 
 /* 线程入口函数 */
-void *thread::start_routine( void *arg )
+void *Thread::start_routine( void *arg )
 {
-    class thread *_thread = static_cast<class thread *>( arg );
+    class Thread *_thread = static_cast<class Thread *>( arg );
     ASSERT( _thread, "thread start routine got NULL argument" );
 
     signal_block();  /* 子线程不处理外部信号 */
@@ -208,7 +208,7 @@ void *thread::start_routine( void *arg )
     return NULL;
 }
 
-void thread::notify_child( notify_t notify )
+void Thread::notify_child( NotifyType notify )
 {
     ASSERT( _fd[1] >= 0, "notify_child:socket pair not open" );
 
@@ -220,7 +220,7 @@ void thread::notify_child( notify_t notify )
     }
 }
 
-void thread::notify_parent( notify_t notify )
+void Thread::notify_parent( NotifyType notify )
 {
     ASSERT( _fd[0] >= 0, "notify_parent:socket pair not open" );
 
@@ -232,7 +232,7 @@ void thread::notify_parent( notify_t notify )
     }
 }
 
-void thread::io_cb( EvIO &w,int32_t revents )
+void Thread::io_cb( EvIO &w,int32_t revents )
 {
     int8_t event = 0;
     int32_t sz = ::read( _fd[0],&event,sizeof(int8_t) );
@@ -261,5 +261,5 @@ void thread::io_cb( EvIO &w,int32_t revents )
         return;
     }
 
-    this->notification( static_cast<notify_t>(event) );
+    this->notification( static_cast<NotifyType>(event) );
 }

@@ -18,7 +18,7 @@
         }                                                   \
     }while(0)
 
-ssl_io::~ssl_io()
+SSLIO::~SSLIO()
 {
     if ( _ssl_ctx )
     {
@@ -27,8 +27,8 @@ ssl_io::~ssl_io()
     }
 }
 
-ssl_io::ssl_io( int32_t ctx_idx,class buffer *recv,class buffer *send )
-    : io( recv,send )
+SSLIO::SSLIO( int32_t ctx_idx,class Buffer *recv,class Buffer *send )
+    : IO( recv,send )
 {
     _handshake = false;
     _ssl_ctx = NULL;
@@ -38,7 +38,7 @@ ssl_io::ssl_io( int32_t ctx_idx,class buffer *recv,class buffer *send )
 /* 接收数据
  * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
-int32_t ssl_io::recv( int32_t &byte )
+int32_t SSLIO::recv( int32_t &byte )
 {
     ASSERT( _fd > 0, "io recv fd invalid" );
 
@@ -84,7 +84,7 @@ int32_t ssl_io::recv( int32_t &byte )
 /* 发送数据
  * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
  */
-int32_t ssl_io::send( int32_t &byte )
+int32_t SSLIO::send( int32_t &byte )
 {
     ASSERT( _fd > 0, "io send fd invalid" );
 
@@ -118,7 +118,7 @@ int32_t ssl_io::send( int32_t &byte )
 
 /* 准备接受状态
  */
-int32_t ssl_io::init_accept( int32_t fd )
+int32_t SSLIO::init_accept( int32_t fd )
 {
     if ( init_ssl_ctx( fd ) < 0 ) return -1;
 
@@ -130,7 +130,7 @@ int32_t ssl_io::init_accept( int32_t fd )
 
 /* 准备连接状态
  */
-int32_t ssl_io::init_connect( int32_t fd )
+int32_t SSLIO::init_connect( int32_t fd )
 {
     if ( init_ssl_ctx( fd ) < 0 ) return -1;
 
@@ -140,9 +140,9 @@ int32_t ssl_io::init_connect( int32_t fd )
     return do_handshake();
 }
 
-int32_t ssl_io::init_ssl_ctx( int32_t fd )
+int32_t SSLIO::init_ssl_ctx( int32_t fd )
 {
-    static class ssl_mgr *ctx_mgr = static_global::ssl_mgr();
+    static class SSLMgr *ctx_mgr = StaticGlobal::ssl_mgr();
 
     void *base_ctx = ctx_mgr->get_ssl_ctx( _ctx_idx );
     if ( !base_ctx )
@@ -168,7 +168,7 @@ int32_t ssl_io::init_ssl_ctx( int32_t fd )
 }
 
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t ssl_io::do_handshake()
+int32_t SSLIO::do_handshake()
 {
     int32_t ecode = SSL_do_handshake( X_SSL( _ssl_ctx ) );
     if ( 1 == ecode )

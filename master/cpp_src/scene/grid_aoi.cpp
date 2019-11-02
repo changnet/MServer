@@ -6,7 +6,7 @@
 #define INDEX_BIT 8
 #define MAKE_INDEX(x,y) ((int32_t)x << INDEX_BIT) + y
 
-grid_aoi::grid_aoi()
+GridAOI::GridAOI()
 {
     _width = 0; // 场景最大宽度(格子坐标)
     _height = 0; // 场景最大高度(格子坐标)
@@ -17,7 +17,7 @@ grid_aoi::grid_aoi()
     C_OBJECT_ADD("grid_aoi");
 }
 
-grid_aoi::~grid_aoi()
+GridAOI::~GridAOI()
 {
     entity_set_t::iterator iter = _entity_set.begin();
     for (;iter != _entity_set.end();iter ++) del_entity_ctx(iter->second);
@@ -32,12 +32,12 @@ grid_aoi::~grid_aoi()
 }
 
 // 需要实现缓存，太大的直接删除不要丢缓存
-void grid_aoi::del_entity_vector(entity_vector_t *list)
+void GridAOI::del_entity_vector(entity_vector_t *list)
 {
     get_vector_pool()->destroy(list,list->size() > 512);
 }
 
-grid_aoi::entity_vector_t *grid_aoi::new_entity_vector()
+GridAOI::entity_vector_t *GridAOI::new_entity_vector()
 {
     entity_vector_t *vt = get_vector_pool()->construct();
 
@@ -45,14 +45,14 @@ grid_aoi::entity_vector_t *grid_aoi::new_entity_vector()
     return vt;
 }
 
-void grid_aoi::del_entity_ctx(struct entity_ctx *ctx)
+void GridAOI::del_entity_ctx(struct entity_ctx *ctx)
 {
     del_entity_vector(ctx->_watch_me);
 
     get_ctx_pool()->destroy(ctx);
 }
 
-struct grid_aoi::entity_ctx *grid_aoi::new_entity_ctx()
+struct GridAOI::entity_ctx *GridAOI::new_entity_ctx()
 {
     struct entity_ctx *ctx = get_ctx_pool()->construct();
 
@@ -63,7 +63,7 @@ struct grid_aoi::entity_ctx *grid_aoi::new_entity_ctx()
 
 // 设置视野
 // @width,@height 格子数
-void grid_aoi::set_visual_range(int32_t width,int32_t height)
+void GridAOI::set_visual_range(int32_t width,int32_t height)
 {
     _visual_width = width;
     _visual_height = height;
@@ -71,7 +71,7 @@ void grid_aoi::set_visual_range(int32_t width,int32_t height)
 
 // 设置宽高
 // @width,@height 像素
-int32_t grid_aoi::set_size(int32_t width,int32_t height)
+int32_t GridAOI::set_size(int32_t width,int32_t height)
 {
     _width = PIX_TO_GRID(width);
     _height = PIX_TO_GRID(height);
@@ -90,7 +90,7 @@ int32_t grid_aoi::set_size(int32_t width,int32_t height)
 /* 获取某一范围内实体
  * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
  */
-int32_t grid_aoi::get_entitys(
+int32_t GridAOI::get_entitys(
     entity_vector_t *list,int32_t srcx,int32_t srcy,int32_t destx,int32_t desty)
 {
     // 4个坐标必须为矩形的对角像素坐标,这里转换为左上角和右下角坐标
@@ -111,7 +111,7 @@ int32_t grid_aoi::get_entitys(
 }
 
 // 获取矩形内的实体
-int32_t grid_aoi::raw_get_entitys(
+int32_t GridAOI::raw_get_entitys(
     entity_vector_t *list,int32_t x,int32_t y,int32_t dx,int32_t dy)
 {
     // 限制越界
@@ -135,7 +135,7 @@ int32_t grid_aoi::raw_get_entitys(
 }
 
 // 获取格子内的实体列表
-grid_aoi::entity_vector_t *grid_aoi::get_grid_entitys(int32_t x,int32_t y)
+GridAOI::entity_vector_t *GridAOI::get_grid_entitys(int32_t x,int32_t y)
 {
     int32_t index = MAKE_INDEX(x,y);
 
@@ -145,7 +145,7 @@ grid_aoi::entity_vector_t *grid_aoi::get_grid_entitys(int32_t x,int32_t y)
     return itr->second;
 }
 
-bool grid_aoi::remove_entity_from_vector(
+bool GridAOI::remove_entity_from_vector(
     entity_vector_t *list,const struct entity_ctx *ctx)
 {
     entity_vector_t::iterator iter = list->begin();
@@ -165,7 +165,7 @@ bool grid_aoi::remove_entity_from_vector(
 }
 
 // 删除格子内实体
-bool grid_aoi::remove_grid_entity(int32_t x,int32_t y,const struct entity_ctx *ctx)
+bool GridAOI::remove_grid_entity(int32_t x,int32_t y,const struct entity_ctx *ctx)
 {
     int32_t index = MAKE_INDEX(x,y);
     StdMap< uint32_t,entity_vector_t* >::iterator iter = _entity_grid.find(index);
@@ -185,7 +185,7 @@ bool grid_aoi::remove_grid_entity(int32_t x,int32_t y,const struct entity_ctx *c
 }
 
 // 插入实体到格子内
-void grid_aoi::insert_grid_entity(int32_t x,int32_t y,struct entity_ctx *ctx)
+void GridAOI::insert_grid_entity(int32_t x,int32_t y,struct entity_ctx *ctx)
 {
     int32_t index = MAKE_INDEX(x,y);
 
@@ -199,7 +199,7 @@ void grid_aoi::insert_grid_entity(int32_t x,int32_t y,struct entity_ctx *ctx)
 }
 
 // 获取实体的ctx
-struct grid_aoi::entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
+struct GridAOI::entity_ctx *GridAOI::get_entity_ctx(entity_id_t id)
 {
     entity_set_t::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return NULL;
@@ -208,7 +208,7 @@ struct grid_aoi::entity_ctx *grid_aoi::get_entity_ctx(entity_id_t id)
 }
 
 // 处理实体退出场景
-int32_t grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
+int32_t GridAOI::exit_entity(entity_id_t id,entity_vector_t *list)
 {
     entity_set_t::iterator iter = _entity_set.find(id);
     if (_entity_set.end() == iter) return 1;
@@ -244,7 +244,7 @@ int32_t grid_aoi::exit_entity(entity_id_t id,entity_vector_t *list)
 }
 
 // 处理实体退出某个范围
-void grid_aoi::entity_exit_range(struct entity_ctx *ctx,
+void GridAOI::entity_exit_range(struct entity_ctx *ctx,
     int32_t x,int32_t y,int32_t dx,int32_t dy,entity_vector_t *list)
 {
      entity_vector_t *watch_list = new_entity_vector();
@@ -268,7 +268,7 @@ void grid_aoi::entity_exit_range(struct entity_ctx *ctx,
 }
 
 // 处理实体进入场景
-int32_t grid_aoi::enter_entity(
+int32_t GridAOI::enter_entity(
     entity_id_t id,int32_t x,int32_t y,uint8_t type,uint8_t event,entity_vector_t *list)
 {
     // 检测坐标
@@ -302,7 +302,7 @@ int32_t grid_aoi::enter_entity(
 }
 
 // 处理实体进入某个范围
-void grid_aoi::entity_enter_range(struct entity_ctx *ctx,
+void GridAOI::entity_enter_range(struct entity_ctx *ctx,
     int32_t x,int32_t y,int32_t dx,int32_t dy,entity_vector_t *list)
 {
     entity_vector_t *watch_list = new_entity_vector();
@@ -333,7 +333,7 @@ void grid_aoi::entity_enter_range(struct entity_ctx *ctx,
  * @pos_x,pos_y:实体旧位置坐标
  */
 // 判断视野范围
-void grid_aoi::get_visual_range(
+void GridAOI::get_visual_range(
     int32_t &x,int32_t &y,int32_t &dx,int32_t &dy,int32_t pos_x,int32_t pos_y)
 {
     // 以pos为中心，构造一个矩形视野
@@ -354,7 +354,7 @@ void grid_aoi::get_visual_range(
  * @list_out:接收实体消失的实体列表
  * @list:接收实体更新的实体列表
  */
-int32_t grid_aoi::update_entity(entity_id_t id,
+int32_t GridAOI::update_entity(entity_id_t id,
         int32_t x,int32_t y,entity_vector_t *list,
         entity_vector_t *list_in,entity_vector_t *list_out)
 {

@@ -3,7 +3,7 @@
 #include "../buffer.h"
 
 /* socket input output control */
-class io
+class IO
 {
 public:
     typedef enum
@@ -12,10 +12,10 @@ public:
         IOT_SSL  = 1,
 
         IOT_MAX
-    }io_t;
+    } IOT;
 public:
-    virtual ~io();
-    io( class buffer *recv,class buffer *send );
+    virtual ~IO();
+    IO( class Buffer *recv,class Buffer *send );
 
     /* 接收数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
@@ -30,13 +30,13 @@ public:
     /* 准备接受状态
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */
-    virtual int32_t init_accept( int32_t fd ) { return _fd = fd; };
+    virtual int32_t init_accept( int32_t fd ) { return _fd = fd; }
     /* 准备连接状态
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      */
-    virtual int32_t init_connect( int32_t fd ) { return _fd = fd; };
+    virtual int32_t init_connect( int32_t fd ) { return _fd = fd; }
 protected:
     int32_t _fd;
-    class buffer *_recv;
-    class buffer *_send;
+    class Buffer *_recv;
+    class Buffer *_send;
 };

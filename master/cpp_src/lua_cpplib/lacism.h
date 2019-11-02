@@ -26,7 +26,7 @@ extern "C" {
 
 #include "../global/global.h"
 
-typedef struct { char *ptr; size_t len; }	MEMBUF;
+typedef struct { char *ptr; size_t len; } MemBuf;
 typedef struct
 {
     int32_t rpl_len;                          /* rpl的长度 */
@@ -54,13 +54,13 @@ typedef struct
         }
         rpl_size = new_size;
     }
-} MEMRPL;
+} MemRpl;
 
-class lacism
+class LAcism
 {
 public:
-    ~lacism();
-    explicit lacism( lua_State *L );
+    ~LAcism();
+    explicit LAcism( lua_State *L );
 
     int32_t scan( lua_State *L );
     int32_t replace( lua_State *L );
@@ -82,9 +82,9 @@ private:
     MEMREF *acism_refsplit( char *text, char sep, int *pcount );
 private:
     ACISM *_psp;
-    MEMBUF _patt;
+    MemBuf _patt;
     int32_t _loaded;
     MEMREF *_pattv;
-    MEMRPL _memrpl;
+    MemRpl _memrpl;
     int32_t _case_sensitive;
 };

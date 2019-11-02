@@ -4,11 +4,11 @@
 #include "../global/global.h"
 #include "../ev/ev_watcher.h"
 
-class ltimer
+class LTimer
 {
 public:
-    explicit ltimer( lua_State *L );
-    ~ltimer();
+    explicit LTimer( lua_State *L );
+    ~LTimer();
 
     int32_t set   ( lua_State *L );
     int32_t stop  ( lua_State *L );

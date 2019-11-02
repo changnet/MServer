@@ -1,16 +1,16 @@
 #include "bson_codec.h"
 
-bson_codec::bson_codec()
+BsonCodec::BsonCodec()
 {
     _bson_doc = NULL;
 }
 
-bson_codec::~bson_codec()
+BsonCodec::~BsonCodec()
 {
     finalize();
 }
 
-void bson_codec::finalize()
+void BsonCodec::finalize()
 {
     if ( _bson_doc )
     {
@@ -23,8 +23,8 @@ void bson_codec::finalize()
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t bson_codec::decode(
-    lua_State *L,const char *buffer,int32_t len,const cmd_cfg_t *cfg )
+int32_t BsonCodec::decode(
+    lua_State *L,const char *buffer,int32_t len,const CmdCfg *cfg )
 {
     UNUSED( cfg );
 
@@ -56,8 +56,8 @@ int32_t bson_codec::decode(
 /* 编码数据包
  * return: <0 error
  */
-int32_t bson_codec::encode(
-    lua_State *L,int32_t index,const char **buffer,const cmd_cfg_t *cfg )
+int32_t BsonCodec::encode(
+    lua_State *L,int32_t index,const char **buffer,const CmdCfg *cfg )
 {
     UNUSED( cfg );
     struct error_collector ec;

@@ -6,11 +6,11 @@
 #include "../thread/thread.h"
 #include "../mysql/sql.h"
 
-class lsql : public thread
+class LSql : public Thread
 {
 public:
-    explicit lsql( lua_State *L );
-    ~lsql();
+    explicit LSql( lua_State *L );
+    ~LSql();
 
     int32_t valid ( lua_State *L );
     int32_t start ( lua_State *L );
@@ -27,22 +27,22 @@ private:
     void invoke_sql ( bool is_return = true );
     void push_result( int32_t id,struct sql_res *res );
 
-    void routine( notify_t notify );
-    void notification( notify_t notify );
+    void routine( NotifyType notify );
+    void notification( NotifyType notify );
 
     int32_t mysql_to_lua( lua_State *L,const struct sql_res *res );
     int32_t field_to_lua( lua_State *L,
-        const struct sql_field &field,const struct sql_col &col );
+        const struct SqlField &field,const struct SqlCol &col );
 
-    const struct sql_query *pop_query();
-    void push_query( const struct sql_query *query );
-    int32_t pop_result( struct sql_result &res );
+    const struct SqlQuery *pop_query();
+    void push_query( const struct SqlQuery *query );
+    int32_t pop_result( struct SqlResult &res );
 private:
-    class sql _sql;
+    class Sql _sql;
 
     int32_t _dbid;
     int32_t _valid; // -1连接中，0失败，1成功
 
-    std::queue<struct sql_result > _result;
-    std::queue<const struct sql_query *> _query ;
+    std::queue<struct SqlResult > _result;
+    std::queue<const struct SqlQuery *> _query ;
 };

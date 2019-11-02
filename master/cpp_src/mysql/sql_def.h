@@ -32,24 +32,24 @@ enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
             MYSQL_TYPE_GEOMETRY=255
 };
 */
-struct sql_field
+struct SqlField
 {
     char _name[SQL_FIELD_LEN];
     enum_field_types    _type; /* define in mysql_com.h */
 };
 
-struct sql_col
+struct SqlCol
 {
     size_t _size;
     char *_value;
 
-    sql_col()
+    SqlCol()
     {
         _size  = 0;
         _value = NULL;
     }
 
-    ~sql_col()
+    ~SqlCol()
     {
         if ( _value ) delete []_value;
 
@@ -73,21 +73,21 @@ struct sql_col
     }
 };
 
-struct sql_row
+struct SqlRow
 {
-    std::vector<sql_col> _cols;
+    std::vector<SqlCol> _cols;
 };
 
 struct sql_res
 {
     uint32_t _num_rows;  // 行数
     uint32_t _num_cols;  // 列数
-    std::vector<sql_field> _fields; // 字段名
-    std::vector<sql_row  > _rows  ; // 行数据
+    std::vector<SqlField> _fields; // 字段名
+    std::vector<SqlRow  > _rows  ; // 行数据
 };
 
 /* 查询结果 */
-struct sql_result
+struct SqlResult
 {
     int32_t _id;      /* 标记查询的id，用于回调 */
     int32_t _ecode;
@@ -95,9 +95,9 @@ struct sql_result
 };
 
 /* 查询请求 */
-struct sql_query
+struct SqlQuery
 {
-    explicit sql_query( int32_t id,size_t size,const char *stmt )
+    explicit SqlQuery( int32_t id,size_t size,const char *stmt )
     {
         _id   = id;
         _size = size;
@@ -107,7 +107,7 @@ struct sql_query
         _stmt[size] = 0; // 保证0结尾，因为有些地方需要打印stmt
     }
 
-    ~sql_query()
+    ~SqlQuery()
     {
         if ( _stmt ) delete []_stmt;
 

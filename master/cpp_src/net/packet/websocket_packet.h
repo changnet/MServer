@@ -4,15 +4,15 @@
 #include "http_packet.h"
 
 struct websocket_parser;
-class websocket_packet : public http_packet
+class WebsocketPacket : public HttpPacket
 {
 public:
-    virtual ~websocket_packet();
-    websocket_packet( class socket *sk );
+    virtual ~WebsocketPacket();
+    WebsocketPacket( class Socket *sk );
 
     /* 获取当前packet类型
      */
-    virtual packet_t type() const { return PKT_WEBSOCKET; };
+    virtual PacketType type() const { return PT_WEBSOCKET; }
 
     /* 打包服务器发往客户端数据包
      * return: <0 error;>=0 success
@@ -34,7 +34,7 @@ public:
     virtual int32_t on_frame_end();
 
     // 单个消息时，重置
-    class buffer &body_buffer() { return _body; }
+    class Buffer &body_buffer() { return _body; }
 
     // 从http升级到websocket时，会触发一次on_message_complete
     int32_t on_message_complete( bool upgrade );
@@ -47,6 +47,6 @@ protected:
     int32_t pack_raw( lua_State *L,int32_t index );
 protected:
     bool _is_upgrade;
-    class buffer _body;
+    class Buffer _body;
     struct websocket_parser *_parser;
 };

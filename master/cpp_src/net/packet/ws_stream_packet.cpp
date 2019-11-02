@@ -5,11 +5,11 @@
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
 
-ws_stream_packet::~ws_stream_packet()
+WSStreamPacket::~WSStreamPacket()
 {
 }
 
-ws_stream_packet::ws_stream_packet( class socket *sk ) : websocket_packet( sk )
+WSStreamPacket::WSStreamPacket( class Socket *sk ) : WebsocketPacket( sk )
 {
 }
 
@@ -17,7 +17,7 @@ ws_stream_packet::ws_stream_packet( class socket *sk ) : websocket_packet( sk )
  * pack_clt( cmd,errno,flags,ctx )
  * return: <0 error;>=0 success
  */
-int32_t ws_stream_packet::pack_clt( lua_State *L,int32_t index )
+int32_t WSStreamPacket::pack_clt( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
     // 允许握手未完成就发数据，自己保证顺序
@@ -29,15 +29,15 @@ int32_t ws_stream_packet::pack_clt( lua_State *L,int32_t index )
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index + 2 ) );
 
-    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
-    const cmd_cfg_t *cfg = network_mgr->get_sc_cmd( cmd );
+    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    const CmdCfg *cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cfg )
     {
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = 
-        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
+    Codec *encoder = 
+        StaticGlobal::codec_mgr()->get_codec( _socket->get_codec_type() );
 
     const char *ctx = NULL;
     int32_t size = encoder->encode( L,index + 3,&ctx,cfg );
@@ -57,7 +57,7 @@ int32_t ws_stream_packet::pack_clt( lua_State *L,int32_t index )
 
     encoder->finalize();
 
-    PKT_STAT_ADD( SPKT_SCPK, 
+    PKT_STAT_ADD( SPT_SCPK, 
         cmd, int32_t(size + sizeof(struct s2c_header)),STAT_TIME_END() );
     return 0;
 }
@@ -66,7 +66,7 @@ int32_t ws_stream_packet::pack_clt( lua_State *L,int32_t index )
  * pack_srv( cmd,flags,ctx )
  * return: <0 error;>=0 success
  */
-int32_t ws_stream_packet::pack_srv( lua_State *L,int32_t index )
+int32_t WSStreamPacket::pack_srv( lua_State *L,int32_t index )
 {
     STAT_TIME_BEG();
     // 允许握手未完成就发数据，自己保证顺序
@@ -76,15 +76,15 @@ int32_t ws_stream_packet::pack_srv( lua_State *L,int32_t index )
     websocket_flags flags = 
         static_cast<websocket_flags>( luaL_checkinteger( L,index + 1 ) );
 
-    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
-    const cmd_cfg_t *cfg = network_mgr->get_cs_cmd( cmd );
+    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    const CmdCfg *cfg = network_mgr->get_cs_cmd( cmd );
     if ( !cfg )
     {
         return luaL_error( L,"no command conf found: %d",cmd );
     }
 
-    codec *encoder = 
-        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
+    Codec *encoder = 
+        StaticGlobal::codec_mgr()->get_codec( _socket->get_codec_type() );
 
     const char *ctx = NULL;
     int32_t size = encoder->encode( L,index + 2,&ctx,cfg );
@@ -101,7 +101,7 @@ int32_t ws_stream_packet::pack_srv( lua_State *L,int32_t index )
     c2sh._cmd    = static_cast<uint16_t>  ( cmd );
 
     size_t frame_size = size + sizeof(c2sh);
-    class buffer &send = _socket->send_buffer();
+    class Buffer &send = _socket->send_buffer();
     if ( !send.reserved( frame_size ) )
     {
         encoder->finalize();
@@ -125,22 +125,22 @@ int32_t ws_stream_packet::pack_srv( lua_State *L,int32_t index )
     send.add_used_offset( len );
     _socket->pending_send();
 
-    PKT_STAT_ADD( SPKT_CSPK, cmd, int32_t(c2sh._length),STAT_TIME_END() );
+    PKT_STAT_ADD( SPT_CSPK, cmd, int32_t(c2sh._length),STAT_TIME_END() );
 
     return 0;
 }
 
 /* 数据帧完成 */
-int32_t ws_stream_packet::on_frame_end()
+int32_t WSStreamPacket::on_frame_end()
 {
-    socket::conn_t conn_ty = _socket->conn_type();
+    Socket::ConnType conn_ty = _socket->conn_type();
     /* 客户端到服务器的连接(CSCN)收到的是服务器发往客户端的数据包(sc_command) */
-    if ( socket::CNT_CSCN == conn_ty )
+    if ( Socket::CT_CSCN == conn_ty )
     {
         return sc_command();
     }
 
-    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 服务器收到的包，看要不要转发 */
     uint32_t data_size = 0;
@@ -168,10 +168,10 @@ int32_t ws_stream_packet::on_frame_end()
 }
 
 /* 回调server to client的数据包 */
-int32_t ws_stream_packet::sc_command()
+int32_t WSStreamPacket::sc_command()
 {
-    static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static lua_State *L = StaticGlobal::state();
+    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
@@ -193,7 +193,7 @@ int32_t ws_stream_packet::sc_command()
         return 0;
     }
 
-    const cmd_cfg_t *cmd_cfg = network_mgr->get_sc_cmd( cmd );
+    const CmdCfg *cmd_cfg = network_mgr->get_sc_cmd( cmd );
     if ( !cmd_cfg )
     {
         ERROR( "sc_command cmd(%d) no cmd cfg found",cmd );
@@ -208,8 +208,8 @@ int32_t ws_stream_packet::sc_command()
 
     uint32_t size = data_size - sizeof( *header );
     const char *ctx = reinterpret_cast<const char *>( header + 1 );
-    codec *decoder = 
-        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
+    Codec *decoder = 
+        StaticGlobal::codec_mgr()->get_codec( _socket->get_codec_type() );
     int32_t cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -228,13 +228,13 @@ int32_t ws_stream_packet::sc_command()
 }
 
 /* 回调 client to server 的数据包 */
-int32_t ws_stream_packet::cs_command( int32_t cmd,const char *ctx,size_t size )
+int32_t WSStreamPacket::cs_command( int32_t cmd,const char *ctx,size_t size )
 {
-    static lua_State *L = static_global::state();
-    static const class lnetwork_mgr *network_mgr = static_global::network_mgr();
+    static lua_State *L = StaticGlobal::state();
+    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
-    const cmd_cfg_t *cmd_cfg = network_mgr->get_cs_cmd( cmd );
+    const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd( cmd );
     if ( !cmd_cfg )
     {
         ERROR( "cs_command cmd(%d) no cmd cfg found",cmd );
@@ -246,8 +246,8 @@ int32_t ws_stream_packet::cs_command( int32_t cmd,const char *ctx,size_t size )
     lua_pushinteger  ( L,_socket->conn_id() );
     lua_pushinteger  ( L,cmd );
 
-    codec *decoder = 
-        static_global::codec_mgr()->get_codec( _socket->get_codec_type() );
+    Codec *decoder = 
+        StaticGlobal::codec_mgr()->get_codec( _socket->get_codec_type() );
     int32_t cnt = decoder->decode( L,ctx,size,cmd_cfg );
     if ( cnt < 0 )
     {
@@ -265,7 +265,7 @@ int32_t ws_stream_packet::cs_command( int32_t cmd,const char *ctx,size_t size )
     return _socket->fd() < 0 ? -1 : 0;
 }
 
-int32_t ws_stream_packet::raw_pack_clt( 
+int32_t WSStreamPacket::raw_pack_clt( 
     int32_t cmd,uint16_t ecode,const char *ctx,size_t size )
 {
     // TODO: 这个flags在通用的服务器交互中传不过来，暂时hard-code.
@@ -276,7 +276,7 @@ int32_t ws_stream_packet::raw_pack_clt(
     return do_pack_clt( flags,cmd,ecode,ctx,size );
 }
 
-int32_t ws_stream_packet::do_pack_clt(
+int32_t WSStreamPacket::do_pack_clt(
     int32_t raw_flags,int32_t cmd,uint16_t ecode,const char *ctx,size_t size )
 {
     struct s2c_header s2ch;
@@ -285,7 +285,7 @@ int32_t ws_stream_packet::do_pack_clt(
     s2ch._errno  = ecode;
 
     size_t frame_size = size + sizeof(s2ch);
-    class buffer &send = _socket->send_buffer();
+    class Buffer &send = _socket->send_buffer();
     if ( !send.reserved( frame_size ) )
     {
         ERROR( "ws stream raw_pack_clt can not reserve memory" );

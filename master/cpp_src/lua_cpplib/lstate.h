@@ -3,11 +3,11 @@
 struct lua_State;
 
 // lua状态机
-class lstate
+class LState
 {
 public:
-    ~lstate();
-    explicit lstate();
+    ~LState();
+    explicit LState();
 
     inline lua_State *state() { return L; }
 private:

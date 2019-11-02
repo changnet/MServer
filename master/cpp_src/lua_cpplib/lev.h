@@ -8,12 +8,12 @@
 #include "../ev/ev.h"
 #include "../ev/ev_watcher.h"
 
-class socket;
-class lev : public Ev
+class Socket;
+class LEv : public Ev
 {
 public:
-    ~lev();
-    explicit lev();
+    ~LEv();
+    explicit LEv();
 
     int32_t exit( lua_State *L );
     int32_t time( lua_State *L ); // 帧时间
@@ -29,7 +29,7 @@ public:
 
     int32_t set_gc_stat( lua_State *L ); // 设置lua gc参数
 
-    int32_t pending_send( class socket *s );
+    int32_t pending_send( class Socket *s );
     void remove_pending( int32_t pending );
 private:
     void running( int64_t ms_now );
@@ -41,7 +41,7 @@ private:
     EvTstamp wait_time();
     static void sig_handler( int32_t signum );
 private:
-    typedef class socket *ANSENDING;
+    typedef class Socket *ANSENDING;
 
     /* 待发送队列 */
     ANSENDING *ansendings;

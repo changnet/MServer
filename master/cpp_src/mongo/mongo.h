@@ -20,17 +20,17 @@ typedef enum
     MQT_UPDATE = 5,
     MQT_REMOVE = 6,
     MQT_MAX
-}mqt_t; /* mongo_query_type */
+} MQT; /* mongo_query_type */
 
 static const char* MQT_NAME[] =
     {"none","count","find","find_and_modify","insert","update","remove"};
 
 static_assert( MQT_MAX == ARRAY_SIZE(MQT_NAME),"mongo name define" );
 
-struct mongo_query
+struct MongoQuery
 {
     int32_t _qid;   // query id
-    mqt_t _mqt;
+    MQT _mqt;
     char  _clt[MONGO_VAR_LEN]; // collection
     bool _remove;
     bool _upsert;
@@ -43,7 +43,7 @@ struct mongo_query
     int32_t _flags;
     int64_t _time; // 请求的时间戳，毫秒
 
-    mongo_query()
+    MongoQuery()
     {
         _mqt           = MQT_NONE;
         _qid           = 0;
@@ -57,10 +57,10 @@ struct mongo_query
         _sort          = NULL;
         _update        = NULL;
         _flags         = 0;
-        _time          = static_global::ev()->ms_now();;
+        _time          = StaticGlobal::ev()->ms_now();;
     }
 
-    ~mongo_query()
+    ~MongoQuery()
     {
         if ( _query  ) bson_destroy( _query  );
         if ( _fields ) bson_destroy( _fields );
@@ -73,7 +73,7 @@ struct mongo_query
         _update        = NULL;
     }
 
-    void set( int32_t qid,mqt_t mqt )
+    void set( int32_t qid,MQT mqt )
     {
         _qid = qid;
         _mqt = mqt;
@@ -135,10 +135,10 @@ struct mongo_query
     }
 };
 
-struct mongo_result
+struct MongoResult
 {
     int32_t   _qid  ;
-    mqt_t   _mqt  ;
+    MQT   _mqt  ;
     bson_t *_data ;
     float   _elaspe; // 消耗的时间，秒
     bson_error_t _error;
@@ -146,7 +146,7 @@ struct mongo_result
     char  _clt[MONGO_VAR_LEN]; // collection
     char  _query[MONGO_VAR_LEN]; // 查询条件，日志用
 
-    mongo_result()
+    MongoResult()
     {
         _qid    = 0;
         _time   = 0;
@@ -161,7 +161,7 @@ struct mongo_result
         memset(&_error,0,sizeof(bson_error_t));
     }
 
-    ~mongo_result()
+    ~MongoResult()
     {
         if ( _data ) bson_destroy( _data );
 
@@ -171,14 +171,14 @@ struct mongo_result
     }
 };
 
-class mongo
+class Mongo
 {
 public:
     static void init();
     static void cleanup();
 
-    mongo();
-    ~mongo();
+    Mongo();
+    ~Mongo();
 
     void set( const char *ip,
         int32_t port,const char *usr,const char *pwd,const char *db );
@@ -187,12 +187,12 @@ public:
     int32_t connect();
     void disconnect();
 
-    bool insert ( const struct mongo_query *mq,struct mongo_result *res );
-    bool update ( const struct mongo_query *mq,struct mongo_result *res );
-    bool remove ( const struct mongo_query *mq,struct mongo_result *res );
-    bool count  ( const struct mongo_query *mq,struct mongo_result *res );
-    bool find   ( const struct mongo_query *mq,struct mongo_result *res );
-    bool find_and_modify( const struct mongo_query *mq,struct mongo_result *res );
+    bool insert ( const struct MongoQuery *mq,struct MongoResult *res );
+    bool update ( const struct MongoQuery *mq,struct MongoResult *res );
+    bool remove ( const struct MongoQuery *mq,struct MongoResult *res );
+    bool count  ( const struct MongoQuery *mq,struct MongoResult *res );
+    bool find   ( const struct MongoQuery *mq,struct MongoResult *res );
+    bool find_and_modify( const struct MongoQuery *mq,struct MongoResult *res );
 
 private:
     int32_t _port;

@@ -3,7 +3,7 @@
 
 #include "lacism.h"
 
-lacism::lacism( lua_State *L )
+LAcism::LAcism( lua_State *L )
 {
     _psp   = NULL;
     _pattv = NULL;
@@ -13,10 +13,10 @@ lacism::lacism( lua_State *L )
     _patt.ptr = NULL;
     _patt.len = 0;
 
-    memset( &_memrpl,0,sizeof(MEMRPL) );
+    memset( &_memrpl,0,sizeof(MemRpl) );
 }
 
-lacism::~lacism()
+LAcism::~LAcism()
 {
     if ( _patt.ptr )
     {
@@ -47,22 +47,22 @@ lacism::~lacism()
 /* 返回0,继续搜索
  * 返回非0,终止搜索，并且acism_more返回该值
  */
-int32_t lacism::on_match( int32_t strnum, int32_t textpos, MEMREF const *pattv )
+int32_t LAcism::on_match( int32_t strnum, int32_t textpos, MEMREF const *pattv )
 {
     (void)strnum, (void)pattv;
 
     return textpos;
 }
 
-int32_t lacism::on_replace( int32_t strnum,int32_t textpos,void *context )
+int32_t LAcism::on_replace( int32_t strnum,int32_t textpos,void *context )
 {
     ASSERT( context, "acism on_replace NULL context" );
 
-    class lacism *acism = static_cast<class lacism *>(context);
+    class LAcism *acism = static_cast<class LAcism *>(context);
     return acism->do_replace( strnum,textpos );
 }
 
-int32_t lacism::do_replace( int32_t strnum,int32_t textpos )
+int32_t LAcism::do_replace( int32_t strnum,int32_t textpos )
 {
     ASSERT((size_t)textpos > _memrpl.text_pos, "acism do_replace buffer error");
 
@@ -88,7 +88,7 @@ int32_t lacism::do_replace( int32_t strnum,int32_t textpos )
 }
 
 /* 扫描关键字,扫描到其中一个即中止 */
-int32_t lacism::scan( lua_State *L )
+int32_t LAcism::scan( lua_State *L )
 {
     if ( !_loaded )
     {
@@ -108,14 +108,14 @@ int32_t lacism::scan( lua_State *L )
     MEMREF text   = {str, len};
 
     int32_t textpos = acism_scan( _psp, text,
-        (ACISM_ACTION*)lacism::on_match, _pattv,_case_sensitive );
+        (ACISM_ACTION*)LAcism::on_match, _pattv,_case_sensitive );
 
     lua_pushinteger( L,textpos );
     return 1;
 }
 
 /* 替换关键字 */
-int32_t lacism::replace( lua_State *L )
+int32_t LAcism::replace( lua_State *L )
 {
     if ( !_loaded )
     {
@@ -139,7 +139,7 @@ int32_t lacism::replace( lua_State *L )
     _memrpl.text_pos = 0;
 
     (void)acism_scan( _psp, text,
-        (ACISM_ACTION*)lacism::on_replace, this, _case_sensitive );
+        (ACISM_ACTION*)LAcism::on_replace, this, _case_sensitive );
 
     if ( 0 == _memrpl.rpl_len )
     {
@@ -168,7 +168,7 @@ int32_t lacism::replace( lua_State *L )
     return 1;
 }
 
-int32_t lacism::load_from_file( lua_State *L )
+int32_t LAcism::load_from_file( lua_State *L )
 {
     const char *path = luaL_checkstring( L,1 );
     int32_t case_sensitive = 1;
@@ -204,7 +204,7 @@ int32_t lacism::load_from_file( lua_State *L )
     return 1;
 }
 
-int32_t lacism::acism_slurp( const char *path )
+int32_t LAcism::acism_slurp( const char *path )
 {
     int32_t fd = ::open( path, O_RDONLY );
     if ( fd < 0 ) return errno;
@@ -246,7 +246,7 @@ int32_t lacism::acism_slurp( const char *path )
     return  0;
 }
 
-MEMREF *lacism::acism_refsplit( char *text, char sep, int *pcount )
+MEMREF *LAcism::acism_refsplit( char *text, char sep, int *pcount )
 {
     char *cp = NULL;
     char *ps = NULL;

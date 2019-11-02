@@ -16,7 +16,7 @@
 
 #define NODE_IDX(x,y,h) (x * h + y)
 
-a_star::a_star()
+AStar::AStar()
 {
     _node_set = NULL;  // 记录当前寻路格子数据
     _node_pool = NULL; // 格子对象内存池
@@ -26,7 +26,7 @@ a_star::a_star()
     _pool_idx = 0; // 内存池当前已用数量
 }
 
-a_star::~a_star()
+AStar::~AStar()
 {
     delete []_node_set;
     delete []_node_pool;
@@ -44,7 +44,7 @@ a_star::~a_star()
  * @x,y：起点坐标
  * @dx,dy：dest，终点坐标
  */
-bool a_star::search(const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
+bool AStar::search(const GridMap *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
 {
     // 起点和终点必须是可行走的
     if ( map->get_pass_cost(x,y) < 0 || map->get_pass_cost(dx,dy) < 0 )
@@ -62,7 +62,7 @@ bool a_star::search(const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t d
         _set_max = width*height;
         _set_max = _set_max > DEFAULT_SET ? _set_max : DEFAULT_SET;
 
-        _node_set = new node*[DEFAULT_SET];
+        _node_set = new Node*[DEFAULT_SET];
     }
 
     /* 格子内存池
@@ -76,21 +76,21 @@ bool a_star::search(const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t d
         delete []_node_pool;
 
         _pool_max = DEFAULT_POOL;
-        _node_pool = new struct node[DEFAULT_POOL];
+        _node_pool = new struct Node[DEFAULT_POOL];
     }
 
     // 清空寻路缓存
     _pool_idx = 0;
     _path.clear();
     _open_set.clear();
-    memset( _node_set,0,sizeof(struct node *)*width*height );
+    memset( _node_set,0,sizeof(struct Node *)*width*height );
 
     return do_search( map,x,y,dx,dy );
 }
 
 // a*算法逻辑
-bool a_star::do_search(
-    const grid_map *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
+bool AStar::do_search(
+    const GridMap *map,int32_t x,int32_t y,int32_t dx,int32_t dy)
 {
     // 地图以左上角为坐标原点，分别向8个方向移动时的向量
     const static int16_t offset [][2] =
@@ -100,7 +100,7 @@ bool a_star::do_search(
     };
 
     uint16_t height = map->get_height();
-    struct node *parent = new_node(x,y);
+    struct Node *parent = new_node(x,y);
     _node_set[x *height + y] = parent;
     while ( parent )
     {
@@ -128,7 +128,7 @@ bool a_star::do_search(
             if ( map->get_pass_cost(cx,cy) < 0 ) continue;
 
             int32_t idx = cx * height + cy;
-            struct node *child = _node_set[idx];
+            struct Node *child = _node_set[idx];
 
             // 已经close的格子，忽略
             if ( child && child->mask ) continue;
@@ -174,17 +174,17 @@ bool a_star::do_search(
  * 有些项目使用priority_queue来做的，但我觉得用vector反而更快些，毕竟在更新
  * 路径时不需要维护，删除时，把最后一个元素调到当前点即可
  */
-struct a_star::node *a_star::pop_open_set()
+struct AStar::Node *AStar::pop_open_set()
 {
     size_t open_sz = _open_set.size();
     if ( 0 == open_sz ) return NULL;
 
     int32_t parent_f = -1;
     size_t parent_idx = -1;
-    struct node *parent = NULL;
+    struct Node *parent = NULL;
     for ( size_t idx = 0;idx < open_sz;idx ++ )
     {
-        struct node *nd = _open_set[idx];
+        struct Node *nd = _open_set[idx];
         if (!parent || parent_f > nd->g + nd->h )
         {
             parent = nd;
@@ -201,8 +201,8 @@ struct a_star::node *a_star::pop_open_set()
 }
 
 // 从终点回溯到起点并得到路径
-bool a_star::backtrace_path(
-    const struct node *dest,int32_t dx,int32_t dy,uint16_t height )
+bool AStar::backtrace_path(
+    const struct Node *dest,int32_t dx,int32_t dy,uint16_t height )
 {
     ASSERT(0 == _path.size(), "a start path not clear");
 
@@ -225,12 +225,12 @@ bool a_star::backtrace_path(
 }
 
 // 从内存池取一个格子对象
-struct a_star::node *a_star::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t py)
+struct AStar::Node *AStar::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t py)
 {
     // 如果预分配的都用完了，就不找了
     // 继续再找对于服务器而言也太低效，建议上导航坐标或者针对玩法优化
     if ( _pool_idx >= _pool_max ) return NULL;
-    struct node *nd = _node_pool + _pool_idx;
+    struct Node *nd = _node_pool + _pool_idx;
 
     _pool_idx ++;
 
@@ -249,7 +249,7 @@ struct a_star::node *a_star::new_node(uint16_t x,uint16_t y,uint16_t px,uint16_t
 /* 曼哈顿距离，不会算对角距离，
  * 适用只能往东南西北4个方向，不能走对角的游戏
  */
-int32_t a_star::manhattan(int32_t x,int32_t y,int32_t gx,int32_t gy)
+int32_t AStar::manhattan(int32_t x,int32_t y,int32_t gx,int32_t gy)
 {
     int32_t dx = abs(x - gx);
     int32_t dy = abs(y - gy);
@@ -260,7 +260,7 @@ int32_t a_star::manhattan(int32_t x,int32_t y,int32_t gx,int32_t gy)
 /* 对角距离
  * 适用东南西北，以及东北-东南-西南-西北(沿45度角走)的游戏
  */
-int32_t a_star::diagonal(int32_t x,int32_t y,int32_t gx,int32_t gy)
+int32_t AStar::diagonal(int32_t x,int32_t y,int32_t gx,int32_t gy)
 {
     int32_t dx = abs(x - gx);
     int32_t dy = abs(y - gy);
@@ -274,7 +274,7 @@ int32_t a_star::diagonal(int32_t x,int32_t y,int32_t gx,int32_t gy)
  * 要么是直线，要么是45度角的消耗，因此会导致f值不准确。不过这里的h <= n，还是可以
  * 得到最小路径，只是算法效率受影响
  */
-int32_t a_star::euclidean(int32_t x,int32_t y,int32_t gx,int32_t gy)
+int32_t AStar::euclidean(int32_t x,int32_t y,int32_t gx,int32_t gy)
 {
     int32_t dx = abs(x - gx);
     int32_t dy = abs(y - gy);

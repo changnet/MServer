@@ -4,7 +4,7 @@
 static const uint32_t continuous_size = MAX_PACKET_LEN;
 static char continuous_ctx[continuous_size] = { 0 };
 
-buffer::buffer()
+Buffer::Buffer()
 {
     _chunk_size = 0; // 已申请chunk数量
 
@@ -15,11 +15,11 @@ buffer::buffer()
     _front = _back = NULL;
 }
 
-buffer::~buffer()
+Buffer::~Buffer()
 {
     while (_front)
     {
-        chunk_t *tmp = _front;
+        Chunk *tmp = _front;
         _front = _front->_next;
 
         del_chunk( tmp );
@@ -30,13 +30,13 @@ buffer::~buffer()
 
 // 清空所有内容
 // 删除多余的chunk只保留一个
-void buffer::clear()
+void Buffer::clear()
 {
     if ( !_front ) return;
 
     while (_front->_next)
     {
-        chunk_t *tmp = _front;
+        Chunk *tmp = _front;
         _front = _front->_next;
 
         del_chunk( tmp );
@@ -47,7 +47,7 @@ void buffer::clear()
 }
 
 // 添加数据
-void buffer::append( const void *raw_data,const uint32_t len )
+void Buffer::append( const void *raw_data,const uint32_t len )
 {
     const char *data = reinterpret_cast<const char *>( raw_data );
     uint32_t append_sz = 0;
@@ -72,7 +72,7 @@ void buffer::append( const void *raw_data,const uint32_t len )
 }
 
 // 删除数据
-void buffer::remove( uint32_t len )
+void Buffer::remove( uint32_t len )
 {
     do
     {
@@ -88,7 +88,7 @@ void buffer::remove( uint32_t len )
         // 这个chunk只剩下这个数据包
         if ( used == len )
         {
-            chunk_t *next = _front->_next;
+            Chunk *next = _front->_next;
             if ( next )
             {
                 // 还有下一个chunk，则指向下一个chunk
@@ -103,7 +103,7 @@ void buffer::remove( uint32_t len )
         }
 
         // 这个数据包分布在多个chunk，一个个删
-        chunk_t *tmp = _front;
+        Chunk *tmp = _front;
 
         _front = _front->_next;
         ASSERT( _front && len > used, "no more chunk to remove" );
@@ -117,7 +117,7 @@ void buffer::remove( uint32_t len )
  * protobuf这些都要求内存在连续缓冲区才能解析
  * TODO:这是采用这种设计缺点之二
  */
-const char *buffer::to_continuous_ctx( uint32_t len )
+const char *Buffer::to_continuous_ctx( uint32_t len )
 {
     // 大多数情况下，是在同一个chunk的，如果不是，调整下chunk的大小，否则影响效率
     if ( EXPECT_TRUE( _front->used_size() >= len ) )
@@ -129,7 +129,7 @@ const char *buffer::to_continuous_ctx( uint32_t len )
     PRINTF( "using continuous buffer:%d",len );
 
     uint32_t used = 0;
-    const chunk_t *next = _front;
+    const Chunk *next = _front;
 
     do
     {
@@ -149,7 +149,7 @@ const char *buffer::to_continuous_ctx( uint32_t len )
 }
 
 // 把所有数据放到一块连续缓冲区中
-const char *buffer::all_to_continuous_ctx( uint32_t &len )
+const char *Buffer::all_to_continuous_ctx( uint32_t &len )
 {
     if ( EXPECT_TRUE( !_front->_next ) )
     {
@@ -158,7 +158,7 @@ const char *buffer::all_to_continuous_ctx( uint32_t &len )
     }
 
     uint32_t used = 0;
-    const chunk_t *next = _front;
+    const Chunk *next = _front;
 
     do
     {

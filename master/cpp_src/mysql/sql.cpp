@@ -5,7 +5,7 @@
  * thread-safe, so call it before threads are created, or protect the call with
  * a mutex
  */
-void sql::library_init()
+void Sql::library_init()
 {
     int32_t ecode = mysql_library_init( 0,NULL,NULL );
     ASSERT( 0 == ecode, "mysql library init fail" );
@@ -14,12 +14,12 @@ void sql::library_init()
 /* 释放mysql库，仅在程序结束时调用。如果不介意内存，可以不调用.
  * mysql++就未调用
  */
-void sql::library_end()
+void Sql::library_end()
 {
     mysql_library_end();
 }
 
-sql::sql()
+Sql::Sql()
 {
     _is_cn = false;
     _conn =  NULL;
@@ -32,12 +32,12 @@ sql::sql()
     _port = 0;
 }
 
-sql::~sql()
+Sql::~Sql()
 {
     ASSERT( NULL == _conn , "sql not clean");
 }
 
-void sql::set( const char *host,const int32_t port,
+void Sql::set( const char *host,const int32_t port,
         const char *usr,const char *pwd,const char *dbname )
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
@@ -49,7 +49,7 @@ void sql::set( const char *host,const int32_t port,
 }
 
 /* 连接数据库 */
-int32_t sql::connect()
+int32_t Sql::connect()
 {
     ASSERT( NULL == _conn, "mysql connection not clean" );
 
@@ -86,7 +86,7 @@ int32_t sql::connect()
 }
 
 // 连接逻辑
-int32_t sql::raw_connect()
+int32_t Sql::raw_connect()
 {
     /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
      * fails, you must repeat the mysql_options() calls before trying to connect
@@ -116,7 +116,7 @@ int32_t sql::raw_connect()
     return 1;
 }
 
-void sql::disconnect()
+void Sql::disconnect()
 {
     ASSERT( _conn, "try to disconnect a invalid mysql connection" );
     if ( !_conn ) return;
@@ -125,7 +125,7 @@ void sql::disconnect()
     _conn =         NULL;
 }
 
-int32_t sql::ping()
+int32_t Sql::ping()
 {
     ASSERT( _conn, "try to ping a invalid mysql connection" );
     if ( !_conn )
@@ -158,13 +158,13 @@ int32_t sql::ping()
     return eno;
 }
 
-const char *sql::error()
+const char *Sql::error()
 {
     ASSERT( _conn, "try to get error from a invalid mysql connection" );
     return mysql_error( _conn );
 }
 
-int32_t sql::query( const char *stmt,size_t size )
+int32_t Sql::query( const char *stmt,size_t size )
 {
     ASSERT( _conn, "sql query,connection not valid" );
 
@@ -196,7 +196,7 @@ int32_t sql::query( const char *stmt,size_t size )
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
-int32_t sql::result( struct sql_res **res )
+int32_t Sql::result( struct sql_res **res )
 {
     ASSERT( _conn, "sql result,connection not valid" );
 
@@ -246,7 +246,7 @@ int32_t sql::result( struct sql_res **res )
         index = 0;
         while ( (row = mysql_fetch_row(result)) )
         {
-            struct sql_row &res_row = (*res)->_rows[index];
+            struct SqlRow &res_row = (*res)->_rows[index];
             res_row._cols.resize( num_fields );
 
             /* mysql_fetch_lengths() is valid only for the current row of the
@@ -268,7 +268,7 @@ int32_t sql::result( struct sql_res **res )
     return mysql_errno( _conn );
 }
 
-uint32_t sql::get_errno()
+uint32_t Sql::get_errno()
 {
     ASSERT( _conn, "sql get_errno,connection not valid" );
     return mysql_errno( _conn );

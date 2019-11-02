@@ -3,13 +3,13 @@
 #include "../global/global.h"
 
 // 内存池基类
-class pool
+class Pool
 {
 public:
-    virtual ~pool()
+    virtual ~Pool()
     {
         bool del_from_stat = false;
-        class pool** pool_stat = get_pool_stat();
+        class Pool** pool_stat = get_pool_stat();
         for (int32_t idx = 0;idx < MAX_POOL;idx ++)
         {
             if (this == pool_stat[idx])
@@ -22,7 +22,7 @@ public:
 
         ASSERT( del_from_stat, "cant not del from stat" );
     }
-    explicit pool(const char *name)
+    explicit Pool(const char *name)
     {
         _max_new = 0;
         _max_del = 0;
@@ -31,7 +31,7 @@ public:
         _name = name;
 
         bool add_to_stat = false;
-        class pool** pool_stat = get_pool_stat();
+        class Pool** pool_stat = get_pool_stat();
         for (int32_t idx = 0;idx < MAX_POOL;idx ++)
         {
             if (NULL == pool_stat[idx])
@@ -69,9 +69,9 @@ public:
     }
 public:
     static constexpr int32_t MAX_POOL = 8;
-    static class pool** get_pool_stat()
+    static class Pool** get_pool_stat()
     {
-        static class pool* pool_stat[MAX_POOL] = { 0 };
+        static class Pool* pool_stat[MAX_POOL] = { 0 };
         return pool_stat;
     }
 protected:

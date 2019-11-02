@@ -10,10 +10,10 @@ int32_t on_message_begin( http_parser *parser )
 {
     ASSERT( parser && (parser->data), "on_url no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>(parser->data);
     // 这个千万不要因为多态调到websocket_packet::reset去了
-    http_packet->http_packet::reset();
+    http_packet->HttpPacket::reset();
 
     return 0;
 }
@@ -23,8 +23,8 @@ int32_t on_url( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_url no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>(parser->data);
     http_packet->append_url( at,length );
 
     return 0;
@@ -43,8 +43,8 @@ int32_t on_header_field( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_header_field no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_field( at,length );
 
     return 0;
@@ -54,8 +54,8 @@ int32_t on_header_value( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_header_value no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_value( at,length );
 
     return 0;
@@ -65,8 +65,8 @@ int32_t on_headers_complete( http_parser *parser )
 {
     ASSERT( parser && (parser->data), "on_header_value no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>(parser->data);
     http_packet->on_headers_complete();
 
     return 0;
@@ -76,8 +76,8 @@ int32_t on_body( http_parser *parser, const char *at, size_t length )
 {
     ASSERT( parser && (parser->data), "on_body no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>(parser->data);
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>(parser->data);
     http_packet->append_body( at,length );
 
     return 0;
@@ -87,8 +87,8 @@ int32_t on_message_complete( http_parser *parser )
 {
     ASSERT( parser && (parser->data), "on_message_complete no parser" );
 
-    class http_packet * http_packet = 
-        static_cast<class http_packet *>( parser->data );
+    class HttpPacket * http_packet =
+        static_cast<class HttpPacket *>( parser->data );
 
     // 这里返回error将不再继续解析
     if ( http_packet->on_message_complete( parser->upgrade ) )
@@ -115,13 +115,13 @@ static const struct http_parser_settings settings =
 };
 
 /* ====================== HTTP FUNCTION END ================================ */
-http_packet::~http_packet()
+HttpPacket::~HttpPacket()
 {
     delete _parser;
     _parser = NULL;
 }
 
-http_packet::http_packet( class socket *sk ) : packet( sk )
+HttpPacket::HttpPacket( class Socket *sk ) : Packet( sk )
 {
     //HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
     _parser = new struct http_parser();
@@ -129,9 +129,9 @@ http_packet::http_packet( class socket *sk ) : packet( sk )
     _parser->data = this;
 }
 
-int32_t http_packet::unpack()
+int32_t HttpPacket::unpack()
 {
-    class buffer &recv = _socket->recv_buffer();
+    class Buffer &recv = _socket->recv_buffer();
     uint32_t size = recv.get_used_size();
     if ( size == 0 ) return 0;
 
@@ -170,7 +170,7 @@ int32_t http_packet::unpack()
     return 0;
 }
 
-void http_packet::reset()
+void HttpPacket::reset()
 {
     _cur_field.clear();
     _cur_value.clear();
@@ -180,17 +180,17 @@ void http_packet::reset()
     _http_info._head_field.clear();
 }
 
-void http_packet::on_headers_complete()
+void HttpPacket::on_headers_complete()
 {
     if ( _cur_field.empty() ) return;
 
     _http_info._head_field[_cur_field] = _cur_value;
 }
 
-int32_t http_packet::on_message_complete( bool upgrade )
+int32_t HttpPacket::on_message_complete( bool upgrade )
 {
     UNUSED( upgrade );
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
     lua_pushcfunction( L,traceback );
@@ -212,17 +212,17 @@ int32_t http_packet::on_message_complete( bool upgrade )
     return _socket->fd() < 0 ? -1 : 0;
 }
 
-void http_packet::append_url( const char *at,size_t len )
+void HttpPacket::append_url( const char *at,size_t len )
 {
     _http_info._url.append( at,len );
 }
 
-void http_packet::append_body( const char *at,size_t len )
+void HttpPacket::append_body( const char *at,size_t len )
 {
     _http_info._body.append( at,len );
 }
 
-void http_packet::append_cur_field( const char *at,size_t len )
+void HttpPacket::append_cur_field( const char *at,size_t len )
 {
     /* 报文中的field和value是成对的，但是http-parser解析完一对字段后并没有回调任何函数
      * 如果检测到value不为空，则说明当前收到的是新字段
@@ -238,12 +238,12 @@ void http_packet::append_cur_field( const char *at,size_t len )
     _cur_field.append( at,len );
 }
 
-void http_packet::append_cur_value( const char *at,size_t len )
+void HttpPacket::append_cur_value( const char *at,size_t len )
 {
     _cur_value.append( at,len );
 }
 
-int32_t http_packet::unpack_header( lua_State *L ) const
+int32_t HttpPacket::unpack_header( lua_State *L ) const
 {
     const head_map_t &head_field = _http_info._head_field;
 
@@ -277,7 +277,7 @@ int32_t http_packet::unpack_header( lua_State *L ) const
 
 /* http的GET、POST都由上层处理好再传入底层
  */
-int32_t http_packet::pack_raw( lua_State *L,int32_t index )
+int32_t HttpPacket::pack_raw( lua_State *L,int32_t index )
 {
     size_t size = 0;
     const char *ctx = luaL_checklstring( L,index,&size );
@@ -288,12 +288,12 @@ int32_t http_packet::pack_raw( lua_State *L,int32_t index )
     return 0;
 }
 
-int32_t http_packet::pack_clt( lua_State *L,int32_t index )
+int32_t HttpPacket::pack_clt( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }
 
-int32_t http_packet::pack_srv( lua_State *L,int32_t index )
+int32_t HttpPacket::pack_srv( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }

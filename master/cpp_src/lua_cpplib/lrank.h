@@ -5,13 +5,13 @@
 #include "ltools.h"
 #include "../util/rank.h"
 
-class linsertion_rank : public insertion_rank
+class LInsertionRank : public insertion_rank
 {
 public:
-    ~linsertion_rank() {};
-    explicit linsertion_rank(lua_State *L) {};
+    ~LInsertionRank() {}
+    explicit LInsertionRank(lua_State *L) {}
 
-    int32_t clear(lua_State *L) { insertion_rank::clear();return 0; };
+    int32_t clear(lua_State *L) { insertion_rank::clear();return 0; }
 
     int32_t remove(lua_State *L);
     int32_t insert(lua_State *L);
@@ -45,11 +45,11 @@ public:
     int32_t get_id_by_rank(lua_State *L);
 };
 
-class lbucket_rank : public bucket_rank
+class lBucketRank : public bucket_rank
 {
 public:
-    ~lbucket_rank() {};
-    explicit lbucket_rank(lua_State *L) {};
+    ~lBucketRank() {}
+    explicit lBucketRank(lua_State *L) {}
 
     int32_t insert(lua_State *L);
     int32_t get_top_n(lua_State *L);

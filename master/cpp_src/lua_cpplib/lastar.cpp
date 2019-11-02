@@ -2,9 +2,9 @@
 #include "ltools.h"
 #include "lastar.h"
 
-int32_t lastar::search( lua_State *L ) // 寻路
+int32_t LAstar::search( lua_State *L ) // 寻路
 {
-    class lmap** udata = (class lmap**)luaL_checkudata( L, 1, "Map" );
+    class LMap** udata = (class LMap**)luaL_checkudata( L, 1, "Map" );
 
     int32_t x    = luaL_checkinteger(L,2); // 起点坐标x
     int32_t y    = luaL_checkinteger(L,3); // 起点坐标x
@@ -15,12 +15,12 @@ int32_t lastar::search( lua_State *L ) // 寻路
     const static int32_t tbl_stack = 6;
     lUAL_CHECKTABLE(L,tbl_stack);
 
-    class grid_map *map = *udata;
+    class GridMap *map = *udata;
     if ( !map ) return 0;
 
-    if ( !a_star::search(map,x,y,dx,dy) ) return 0;
+    if ( !AStar::search(map,x,y,dx,dy) ) return 0;
 
-    const std::vector<uint16_t> &path = a_star::get_path();
+    const std::vector<uint16_t> &path = AStar::get_path();
 
     size_t path_sz = path.size();
     // 路径依次存各个点的x,y坐标，应该是成双的

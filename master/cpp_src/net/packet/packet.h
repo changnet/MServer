@@ -4,29 +4,29 @@
 
 /* socket packet parser and deparser */
 
-class socket;
+class Socket;
 struct lua_State;
 
-class packet
+class Packet
 {
 public:
     typedef enum
     {
-        PKT_NONE      = 0,
-        PKT_HTTP      = 1,
-        PKT_STREAM    = 2,
-        PKT_WEBSOCKET = 3,
-        PKT_WSSTREAM  = 4,
+        PT_NONE      = 0,
+        PT_HTTP      = 1,
+        PT_STREAM    = 2,
+        PT_WEBSOCKET = 3,
+        PT_WSSTREAM  = 4,
 
         PKT_MAX
-    }packet_t;
+    } PacketType;
 public:
-    virtual ~packet() {};
-    packet( class socket *sk ) : _socket( sk ) {};
+    virtual ~Packet() {}
+    Packet( class Socket *sk ) : _socket( sk ) {}
 
     /* 获取当前packet类型
      */
-    virtual packet_t type() const = 0;
+    virtual PacketType type() const = 0;
 
     /* 打包服务器发往客户端数据包
      * return: <0 error;>=0 success
@@ -57,5 +57,5 @@ public:
         return -1;
     }
 protected:
-    class socket *_socket;
+    class Socket *_socket;
 };

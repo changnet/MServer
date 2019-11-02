@@ -3,13 +3,13 @@
 #include "../global/global.h"
 
 struct lua_State;
-class async_log;
+class AsyncLog;
 
-class llog
+class LLog
 {
 public:
-    ~llog();
-    explicit llog( lua_State *L );
+    ~LLog();
+    explicit LLog( lua_State *L );
 
     int32_t stop ( lua_State *L );
     int32_t start( lua_State *L );
@@ -24,5 +24,5 @@ public:
     // 设置进程名
     static int32_t set_name( lua_State *L );
 private:
-    class async_log *_log;
+    class AsyncLog *_log;
 };

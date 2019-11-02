@@ -80,9 +80,9 @@ int32_t on_frame_header( struct websocket_parser *parser )
 {
     ASSERT( parser && parser->data, "websocket parser NULL" );
 
-    class websocket_packet *ws_packet =
-        static_cast<class websocket_packet *>( parser->data );
-    class buffer &body = ws_packet->body_buffer();
+    class WebsocketPacket *ws_packet =
+        static_cast<class WebsocketPacket *>( parser->data );
+    class Buffer &body = ws_packet->body_buffer();
 
     // parser->data->opcode = parser->flags & WS_OP_MASK; // gets opcode
     // parser->data->is_final = parser->flags & WS_FIN;   // checks is final frame
@@ -105,9 +105,9 @@ int32_t on_frame_body(
 {
     ASSERT( parser && parser->data, "websocket parser NULL" );
 
-    class websocket_packet *ws_packet =
-        static_cast<class websocket_packet *>( parser->data );
-    class buffer &body = ws_packet->body_buffer();
+    class WebsocketPacket *ws_packet =
+        static_cast<class WebsocketPacket *>( parser->data );
+    class Buffer &body = ws_packet->body_buffer();
 
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
     if( parser->flags & WS_HAS_MASK )
@@ -138,8 +138,8 @@ int32_t on_frame_end( struct websocket_parser *parser )
 {
     ASSERT( parser && parser->data, "websocket parser NULL" );
 
-    class websocket_packet *ws_packet =
-        static_cast<class websocket_packet *>( parser->data );
+    class WebsocketPacket *ws_packet =
+        static_cast<class WebsocketPacket *>( parser->data );
 
     /* https://tools.ietf.org/html/rfc6455#section-5.5
      * opcode并不是按位来判断的，而是按顺序1、2、3、4...
@@ -163,7 +163,7 @@ static const struct websocket_parser_settings settings =
 
 ///////////////////////////////// WEBSOCKET PARSER /////////////////////////////
 
-websocket_packet::websocket_packet( class socket *sk ) : http_packet( sk )
+WebsocketPacket::WebsocketPacket( class Socket *sk ) : HttpPacket( sk )
 {
     _is_upgrade = false;
 
@@ -172,7 +172,7 @@ websocket_packet::websocket_packet( class socket *sk ) : http_packet( sk )
     _parser->data = this;
 }
 
-websocket_packet::~websocket_packet()
+WebsocketPacket::~WebsocketPacket()
 {
     _is_upgrade = false;
 
@@ -180,7 +180,7 @@ websocket_packet::~websocket_packet()
     _parser = NULL;
 }
 
-int32_t websocket_packet::pack_raw( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_raw( lua_State *L,int32_t index )
 {
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
@@ -193,7 +193,7 @@ int32_t websocket_packet::pack_raw( lua_State *L,int32_t index )
     // if ( !ctx ) return 0; // 允许发送空包
 
     size_t len = websocket_calc_frame_size( flags,size );
-    class buffer &send = _socket->send_buffer();
+    class Buffer &send = _socket->send_buffer();
     if ( !send.reserved( len ) )
     {
         return luaL_error( L,"can not reserved buffer" );
@@ -211,7 +211,7 @@ int32_t websocket_packet::pack_raw( lua_State *L,int32_t index )
 /* 打包服务器发往客户端数据包
  * return: <0 error;>=0 success
  */
-int32_t websocket_packet::pack_clt( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_clt( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }
@@ -219,14 +219,14 @@ int32_t websocket_packet::pack_clt( lua_State *L,int32_t index )
 /* 打包客户端发往服务器数据包
  * return: <0 error;>=0 success
  */
-int32_t websocket_packet::pack_srv( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_srv( lua_State *L,int32_t index )
 {
     return pack_raw( L,index );
 }
 
 // 发送opcode
 // 对应websocket，可以直接用pack_clt或pack_srv发送控制帧。这个函数是给ws_stream等子类使用
-int32_t websocket_packet::pack_ctrl( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_ctrl( lua_State *L,int32_t index )
 {
     /* https://tools.ietf.org/html/rfc6455#section-5.5
      * 控制帧可以包含数据。但这个数据不是data-frame，即不能设置OP_TEXT、OP_BINARY
@@ -239,14 +239,14 @@ int32_t websocket_packet::pack_ctrl( lua_State *L,int32_t index )
 /* 数据解包 
  * return: <0 error;0 success
  */
-int32_t websocket_packet::unpack()
+int32_t WebsocketPacket::unpack()
 {
     /* 未握手时，由http处理
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
      */
-    if ( !_is_upgrade ) return http_packet::unpack();
+    if ( !_is_upgrade ) return HttpPacket::unpack();
 
-    class buffer &recv = _socket->recv_buffer();
+    class Buffer &recv = _socket->recv_buffer();
 
     uint32_t size = 0;
     const char *ctx = recv.all_to_continuous_ctx( size );
@@ -271,7 +271,7 @@ int32_t websocket_packet::unpack()
 }
 
 /* http-parser在解析完握手数据时，会触发一次message_complete */
-int32_t websocket_packet::on_message_complete( bool upgrade )
+int32_t WebsocketPacket::on_message_complete( bool upgrade )
 {
     ASSERT( upgrade && !_is_upgrade, "should be upgrade");
 
@@ -281,7 +281,7 @@ int32_t websocket_packet::on_message_complete( bool upgrade )
     return 0;
 }
 
-int32_t websocket_packet::invoke_handshake()
+int32_t WebsocketPacket::invoke_handshake()
 {
     /* https://tools.ietf.org/pdf/rfc6455.pdf Section 1.3,page 6
      */
@@ -312,7 +312,7 @@ int32_t websocket_packet::invoke_handshake()
         return -1;
     }
 
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
     lua_pushcfunction( L,traceback );
@@ -332,9 +332,9 @@ int32_t websocket_packet::invoke_handshake()
 }
 
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
-int32_t websocket_packet::on_frame_end()
+int32_t WebsocketPacket::on_frame_end()
 {
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
     uint32_t size = 0;
@@ -356,9 +356,9 @@ int32_t websocket_packet::on_frame_end()
 }
 
 // 处理ping、pong等opcode 
-int32_t websocket_packet::on_ctrl_end()
+int32_t WebsocketPacket::on_ctrl_end()
 {
-    static lua_State *L = static_global::state();
+    static lua_State *L = StaticGlobal::state();
     ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
 
     uint32_t size = 0;
@@ -381,7 +381,7 @@ int32_t websocket_packet::on_ctrl_end()
     return _socket->fd() < 0 ? -1 : 0;
 }
 
-void websocket_packet::new_masking_key( char mask[4] )
+void WebsocketPacket::new_masking_key( char mask[4] )
 {
     /* George Marsaglia  Xorshift generator
      * www.jstatsoft.org/v08/i14/paper

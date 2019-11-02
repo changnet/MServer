@@ -12,17 +12,17 @@
 
 #define MAX_RANK_FACTOR 3 // 最大排序因子数量
 
-class base_rank
+class BaseRank
 {
 public:
     typedef int32_t object_id_t;
     typedef int64_t raw_factor_t;
     typedef raw_factor_t factor_t[MAX_RANK_FACTOR];
-    class object_t
+    class Object
     {
     public:
-        object_t(){};
-        ~object_t(){};
+        Object() {}
+        ~Object() {}
 
         inline static int32_t compare_factor(const factor_t src,
             const factor_t dest,int32_t max_idx = MAX_RANK_FACTOR)
@@ -42,14 +42,14 @@ public:
         factor_t _factor;
     };
 public:
-    base_rank();
-    virtual ~base_rank();
+    BaseRank();
+    virtual ~BaseRank();
 
     // 清除排行的对象，但不清除内存
     virtual void clear() { _count = 0; }
 
     // 获取当前排行榜中对象数量
-    int32_t get_count() const { return _count; };
+    int32_t get_count() const { return _count; }
 protected:
     int32_t _count; // 当前排行榜中数量
 };
@@ -58,7 +58,7 @@ protected:
  * 伤害更新很频繁，但是其实伤害排行榜排名变化不大，移动数组的情况较少
  * 而且这个排行榜需要发送给前端，因此get_rank_by_id和get_id_by_rank效率都要比较高
  */
-class insertion_rank : public base_rank
+class insertion_rank : public BaseRank
 {
 public:
     insertion_rank();
@@ -83,16 +83,16 @@ public:
     const raw_factor_t *get_factor(object_id_t id) const;
     object_id_t get_id_by_rank(object_id_t rank) const;
 private:
-    void shift_up(object_t *object);
-    void shift_down(object_t *object);
-    void raw_remove(object_t *object);
+    void shift_up(Object *object);
+    void shift_down(Object *object);
+    void raw_remove(Object *object);
 private:
     int32_t _max_count; // 排行榜最大数量
     uint8_t _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
 
     int32_t _max_list;
-    object_t **_object_list;
-    StdMap< object_id_t,object_t* > _object_set;
+    Object **_object_list;
+    StdMap< object_id_t,Object* > _object_set;
 };
 
 /* 桶排序，只是桶分得比较细，演变成了有序hash map
@@ -105,7 +105,7 @@ private:
  * 2. 根据id取排名，根据排名取id都慢。排完序可考虑做缓存
  */
 
-class bucket_rank : public base_rank
+class bucket_rank : public BaseRank
 {
 public:
     typedef std::list<object_id_t> bucket_t;
@@ -123,7 +123,7 @@ public:
     static bool key_comp(const factor_t src,const factor_t dest)
     {
         // TODO:这里暂时没法按_max_factor来对比排序因子，只能全部都对比
-        return object_t::compare_factor(src,dest) < 0;
+        return Object::compare_factor(src,dest) < 0;
     }
 protected:
     bucket_list_t _bucket_list;

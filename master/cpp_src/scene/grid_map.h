@@ -7,11 +7,11 @@
 
 #include "../global/global.h"
 
-class grid_map
+class GridMap
 {
 public:
-    grid_map();
-    ~grid_map();
+    GridMap();
+    ~GridMap();
 
     // 加载单个地图文件
     bool load_file(const char *path);

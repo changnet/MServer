@@ -23,7 +23,7 @@
 #define LUA_LIB_OPEN( name,func ) \
     do{luaL_requiref(L, name, func, 1);lua_pop(L, 1);  /* remove lib */}while(0)
 
-lstate::lstate()
+LState::LState()
 {
     /* 初始化lua */
     L = luaL_newstate();
@@ -36,7 +36,7 @@ lstate::lstate()
     open_cpp();
 }
 
-lstate::~lstate()
+LState::~LState()
 {
     ASSERT( 0 == lua_gettop(L), "lua stack not clean at program exit" );
 
@@ -60,7 +60,7 @@ int32_t luaopen_acism ( lua_State *L );
 int32_t luaopen_mongo ( lua_State *L );
 int32_t luaopen_network_mgr( lua_State *L );
 
-void lstate::open_cpp()
+void LState::open_cpp()
 {
     /* ============================库方式调用================================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
@@ -91,29 +91,29 @@ void lstate::open_cpp()
 
 int32_t luaopen_ev( lua_State *L )
 {
-    lbaseclass<lev> lc(L,"Ev");
-    lc.def<&lev::time>     ("time"     );
-    lc.def<&lev::exit>     ("exit"     );
-    lc.def<&lev::signal>   ("signal"   );
-    lc.def<&lev::ms_time>  ("ms_time"  );
-    lc.def<&lev::backend>  ("backend"  );
-    lc.def<&lev::who_busy> ("who_busy" );
-    lc.def<&lev::real_time>("real_time");
-    lc.def<&lev::set_app_ev>("set_app_ev");
-    lc.def<&lev::set_gc_stat>("set_gc_stat");
-    lc.def<&lev::real_ms_time>("real_ms_time");
-    lc.def<&lev::set_critical_time>("set_critical_time");
+    LBaseClass<LEv> lc(L,"Ev");
+    lc.def<&LEv::time>     ("time"     );
+    lc.def<&LEv::exit>     ("exit"     );
+    lc.def<&LEv::signal>   ("signal"   );
+    lc.def<&LEv::ms_time>  ("ms_time"  );
+    lc.def<&LEv::backend>  ("backend"  );
+    lc.def<&LEv::who_busy> ("who_busy" );
+    lc.def<&LEv::real_time>("real_time");
+    lc.def<&LEv::set_app_ev>("set_app_ev");
+    lc.def<&LEv::set_gc_stat>("set_gc_stat");
+    lc.def<&LEv::real_ms_time>("real_ms_time");
+    lc.def<&LEv::set_critical_time>("set_critical_time");
 
     return 0;
 }
 
 int32_t luaopen_timer ( lua_State *L )
 {
-    lclass<ltimer> lc(L,"Timer");
-    lc.def<&ltimer::set>   ( "set"    );
-    lc.def<&ltimer::stop>  ( "stop"   );
-    lc.def<&ltimer::start> ( "start"  );
-    lc.def<&ltimer::active>( "active" );
+    LClass<LTimer> lc(L,"Timer");
+    lc.def<&LTimer::set>   ( "set"    );
+    lc.def<&LTimer::stop>  ( "stop"   );
+    lc.def<&LTimer::start> ( "start"  );
+    lc.def<&LTimer::active>( "active" );
 
     return 0;
 }
@@ -121,187 +121,187 @@ int32_t luaopen_timer ( lua_State *L )
 int32_t luaopen_sql( lua_State *L )
 {
 
-    lclass<lsql> lc(L,"Sql");
-    lc.def<&lsql::valid> ( "valid" );
-    lc.def<&lsql::start> ( "start" );
-    lc.def<&lsql::stop>  ( "stop"  );
+    LClass<LSql> lc(L,"Sql");
+    lc.def<&LSql::valid> ( "valid" );
+    lc.def<&LSql::start> ( "start" );
+    lc.def<&LSql::stop>  ( "stop"  );
 
-    lc.def<&lsql::do_sql> ( "do_sql" );
+    lc.def<&LSql::do_sql> ( "do_sql" );
 
     return 0;
 }
 
 int32_t luaopen_mongo( lua_State *L )
 {
-    lclass<lmongo> lc(L,"Mongo");
-    lc.def<&lmongo::start> ( "start" );
-    lc.def<&lmongo::stop>  ( "stop"  );
-    lc.def<&lmongo::valid> ( "valid" );
+    LClass<LMongo> lc(L,"Mongo");
+    lc.def<&LMongo::start> ( "start" );
+    lc.def<&LMongo::stop>  ( "stop"  );
+    lc.def<&LMongo::valid> ( "valid" );
 
-    lc.def<&lmongo::count>           ( "count"           );
-    lc.def<&lmongo::find>            ( "find"            );
-    lc.def<&lmongo::insert>          ( "insert"          );
-    lc.def<&lmongo::update>          ( "update"          );
-    lc.def<&lmongo::remove>          ( "remove"          );
-    lc.def<&lmongo::find_and_modify> ( "find_and_modify" );
+    lc.def<&LMongo::count>           ( "count"           );
+    lc.def<&LMongo::find>            ( "find"            );
+    lc.def<&LMongo::insert>          ( "insert"          );
+    lc.def<&LMongo::update>          ( "update"          );
+    lc.def<&LMongo::remove>          ( "remove"          );
+    lc.def<&LMongo::find_and_modify> ( "find_and_modify" );
 
     return 0;
 }
 
 int32_t luaopen_log( lua_State *L )
 {
-    lclass<llog> lc(L,"Log");
-    lc.def<&llog::stop>  ("stop");
-    lc.def<&llog::start> ("start");
-    lc.def<&llog::write> ("write");
-    lc.def<&llog::plog> ("plog");
-    lc.def<&llog::elog> ("elog");
-    lc.def<&llog::set_args> ("set_args");
-    lc.def<&llog::set_name> ("set_name");
+    LClass<LLog> lc(L,"Log");
+    lc.def<&LLog::stop>  ("stop");
+    lc.def<&LLog::start> ("start");
+    lc.def<&LLog::write> ("write");
+    lc.def<&LLog::plog> ("plog");
+    lc.def<&LLog::elog> ("elog");
+    lc.def<&LLog::set_args> ("set_args");
+    lc.def<&LLog::set_name> ("set_name");
 
     return 0;
 }
 
 int32_t luaopen_acism( lua_State *L )
 {
-    lclass<lacism> lc(L,"Acism");
+    LClass<LAcism> lc(L,"Acism");
 
-    lc.def<&lacism::scan> ( "scan" );
-    lc.def<&lacism::replace> ( "replace" );
-    lc.def<&lacism::load_from_file> ( "load_from_file" );
+    lc.def<&LAcism::scan> ( "scan" );
+    lc.def<&LAcism::replace> ( "replace" );
+    lc.def<&LAcism::load_from_file> ( "load_from_file" );
 
     return 0;
 }
 
 int32_t luaopen_network_mgr( lua_State *L )
 {
-    lbaseclass<lnetwork_mgr> lc(L,"Network_mgr");
+    LBaseClass<LNetworkMgr> lc(L,"Network_mgr");
 
-    lc.def<&lnetwork_mgr::close> ( "close" );
-    lc.def<&lnetwork_mgr::listen> ( "listen" );
-    lc.def<&lnetwork_mgr::connect> ( "connect" );
-    lc.def<&lnetwork_mgr::load_one_schema> ( "load_one_schema" );
-    lc.def<&lnetwork_mgr::set_curr_session> ( "set_curr_session" );
+    lc.def<&LNetworkMgr::close> ( "close" );
+    lc.def<&LNetworkMgr::listen> ( "listen" );
+    lc.def<&LNetworkMgr::connect> ( "connect" );
+    lc.def<&LNetworkMgr::load_one_schema> ( "load_one_schema" );
+    lc.def<&LNetworkMgr::set_curr_session> ( "set_curr_session" );
 
-    lc.def<&lnetwork_mgr::set_conn_session> ( "set_conn_session" );
-    lc.def<&lnetwork_mgr::set_conn_owner>   ( "set_conn_owner"   );
-    lc.def<&lnetwork_mgr::unset_conn_owner> ( "unset_conn_owner" );
+    lc.def<&LNetworkMgr::set_conn_session> ( "set_conn_session" );
+    lc.def<&LNetworkMgr::set_conn_owner>   ( "set_conn_owner"   );
+    lc.def<&LNetworkMgr::unset_conn_owner> ( "unset_conn_owner" );
 
-    lc.def<&lnetwork_mgr::set_cs_cmd> ( "set_cs_cmd" );
-    lc.def<&lnetwork_mgr::set_ss_cmd> ( "set_ss_cmd" );
-    lc.def<&lnetwork_mgr::set_sc_cmd> ( "set_sc_cmd" );
+    lc.def<&LNetworkMgr::set_cs_cmd> ( "set_cs_cmd" );
+    lc.def<&LNetworkMgr::set_ss_cmd> ( "set_ss_cmd" );
+    lc.def<&LNetworkMgr::set_sc_cmd> ( "set_sc_cmd" );
 
-    lc.def<&lnetwork_mgr::set_conn_io>     ( "set_conn_io"     );
-    lc.def<&lnetwork_mgr::set_conn_codec>  ( "set_conn_codec"  );
-    lc.def<&lnetwork_mgr::set_conn_packet> ( "set_conn_packet" );
+    lc.def<&LNetworkMgr::set_conn_io>     ( "set_conn_io"     );
+    lc.def<&LNetworkMgr::set_conn_codec>  ( "set_conn_codec"  );
+    lc.def<&LNetworkMgr::set_conn_packet> ( "set_conn_packet" );
 
-    lc.def<&lnetwork_mgr::get_http_header> ( "get_http_header" );
+    lc.def<&LNetworkMgr::get_http_header> ( "get_http_header" );
 
-    lc.def<&lnetwork_mgr::send_srv_packet > ( "send_srv_packet"  );
-    lc.def<&lnetwork_mgr::send_clt_packet > ( "send_clt_packet"  );
-    lc.def<&lnetwork_mgr::send_s2s_packet > ( "send_s2s_packet"  );
-    lc.def<&lnetwork_mgr::send_ssc_packet > ( "send_ssc_packet"  );
-    lc.def<&lnetwork_mgr::send_rpc_packet > ( "send_rpc_packet"  );
-    lc.def<&lnetwork_mgr::send_raw_packet > ( "send_raw_packet"  );
-    lc.def<&lnetwork_mgr::send_ctrl_packet> ( "send_ctrl_packet" );
+    lc.def<&LNetworkMgr::send_srv_packet > ( "send_srv_packet"  );
+    lc.def<&LNetworkMgr::send_clt_packet > ( "send_clt_packet"  );
+    lc.def<&LNetworkMgr::send_s2s_packet > ( "send_s2s_packet"  );
+    lc.def<&LNetworkMgr::send_ssc_packet > ( "send_ssc_packet"  );
+    lc.def<&LNetworkMgr::send_rpc_packet > ( "send_rpc_packet"  );
+    lc.def<&LNetworkMgr::send_raw_packet > ( "send_raw_packet"  );
+    lc.def<&LNetworkMgr::send_ctrl_packet> ( "send_ctrl_packet" );
 
-    lc.def<&lnetwork_mgr::srv_multicast> ( "srv_multicast" );
-    lc.def<&lnetwork_mgr::clt_multicast> ( "clt_multicast" );
-    lc.def<&lnetwork_mgr::ssc_multicast> ( "ssc_multicast" );
+    lc.def<&LNetworkMgr::srv_multicast> ( "srv_multicast" );
+    lc.def<&LNetworkMgr::clt_multicast> ( "clt_multicast" );
+    lc.def<&LNetworkMgr::ssc_multicast> ( "ssc_multicast" );
 
-    lc.def<&lnetwork_mgr::set_send_buffer_size> ( "set_send_buffer_size" );
-    lc.def<&lnetwork_mgr::set_recv_buffer_size> ( "set_recv_buffer_size" );
+    lc.def<&LNetworkMgr::set_send_buffer_size> ( "set_send_buffer_size" );
+    lc.def<&LNetworkMgr::set_recv_buffer_size> ( "set_recv_buffer_size" );
 
-    lc.def<&lnetwork_mgr::new_ssl_ctx> ( "new_ssl_ctx" );
+    lc.def<&LNetworkMgr::new_ssl_ctx> ( "new_ssl_ctx" );
 
-    lc.def<&lnetwork_mgr::get_player_session> ( "get_player_session" );
-    lc.def<&lnetwork_mgr::set_player_session> ( "set_player_session" );
+    lc.def<&LNetworkMgr::get_player_session> ( "get_player_session" );
+    lc.def<&LNetworkMgr::set_player_session> ( "set_player_session" );
 
-    lc.set( "CNT_NONE",socket::CNT_NONE );
-    lc.set( "CNT_CSCN",socket::CNT_CSCN );
-    lc.set( "CNT_SCCN",socket::CNT_SCCN );
-    lc.set( "CNT_SSCN",socket::CNT_SSCN );
+    lc.set( "CNT_NONE",Socket::CT_NONE );
+    lc.set( "CNT_CSCN",Socket::CT_CSCN );
+    lc.set( "CNT_SCCN",Socket::CT_SCCN );
+    lc.set( "CNT_SSCN",Socket::CT_SSCN );
 
-    lc.set( "IOT_NONE",io::IOT_NONE );
-    lc.set( "IOT_SSL" ,io::IOT_SSL  );
+    lc.set( "IOT_NONE",IO::IOT_NONE );
+    lc.set( "IOT_SSL" ,IO::IOT_SSL  );
 
-    lc.set( "PKT_NONE"     ,packet::PKT_NONE      );
-    lc.set( "PKT_HTTP"     ,packet::PKT_HTTP      );
-    lc.set( "PKT_STREAM"   ,packet::PKT_STREAM    );
-    lc.set( "PKT_WEBSOCKET",packet::PKT_WEBSOCKET );
-    lc.set( "PKT_WSSTREAM" ,packet::PKT_WSSTREAM  );
+    lc.set( "PKT_NONE"     ,Packet::PT_NONE      );
+    lc.set( "PKT_HTTP"     ,Packet::PT_HTTP      );
+    lc.set( "PKT_STREAM"   ,Packet::PT_STREAM    );
+    lc.set( "PKT_WEBSOCKET",Packet::PT_WEBSOCKET );
+    lc.set( "PKT_WSSTREAM" ,Packet::PT_WSSTREAM  );
 
-    lc.set( "CDC_NONE"    ,codec::CDC_NONE    );
-    lc.set( "CDC_BSON"    ,codec::CDC_BSON    );
-    lc.set( "CDC_STREAM"  ,codec::CDC_STREAM  );
-    lc.set( "CDC_FLATBUF" ,codec::CDC_FLATBUF );
-    lc.set( "CDC_PROTOBUF",codec::CDC_PROTOBUF);
+    lc.set( "CDC_NONE"    ,Codec::CDC_NONE    );
+    lc.set( "CDC_BSON"    ,Codec::CDC_BSON    );
+    lc.set( "CDC_STREAM"  ,Codec::CDC_STREAM  );
+    lc.set( "CDC_FLATBUF" ,Codec::CDC_FLATBUF );
+    lc.set( "CDC_PROTOBUF",Codec::CDC_PROTOBUF);
 
     return 0;
 }
 
 int32_t luaopen_aoi( lua_State *L )
 {
-    lclass<laoi> lc(L,"Aoi");
+    LClass<LAoi> lc(L,"Aoi");
 
-    lc.def<&laoi::set_size> ( "set_size" );
-    lc.def<&laoi::set_visual_range> ( "set_visual_range" );
+    lc.def<&LAoi::set_size> ( "set_size" );
+    lc.def<&LAoi::set_visual_range> ( "set_visual_range" );
 
-    lc.def<&laoi::get_entitys> ( "get_entitys" );
-    lc.def<&laoi::get_all_entitys> ( "get_all_entitys" );
-    lc.def<&laoi::get_watch_me_entitys> ( "get_watch_me_entitys" );
+    lc.def<&LAoi::get_entitys> ( "get_entitys" );
+    lc.def<&LAoi::get_all_entitys> ( "get_all_entitys" );
+    lc.def<&LAoi::get_watch_me_entitys> ( "get_watch_me_entitys" );
 
-    lc.def<&laoi::exit_entity> ( "exit_entity" );
-    lc.def<&laoi::enter_entity> ( "enter_entity" );
-    lc.def<&laoi::update_entity> ( "update_entity" );
+    lc.def<&LAoi::exit_entity> ( "exit_entity" );
+    lc.def<&LAoi::enter_entity> ( "enter_entity" );
+    lc.def<&LAoi::update_entity> ( "update_entity" );
 
-    lc.def<&laoi::is_same_pos> ( "is_same_pos" );
+    lc.def<&LAoi::is_same_pos> ( "is_same_pos" );
 
     return 0;
 }
 
 int32_t luaopen_map( lua_State *L )
 {
-    lclass<lmap> lc(L,"Map");
+    LClass<LMap> lc(L,"Map");
 
-    lc.def<&lmap::set>  ( "set" );
-    lc.def<&lmap::fill> ( "fill" );
-    lc.def<&lmap::load> ( "load" );
-    lc.def<&lmap::fork> ( "fork" );
-    lc.def<&lmap::get_size> ( "get_size" );
-    lc.def<&lmap::get_pass_cost> ( "get_pass_cost" );
+    lc.def<&LMap::set>  ( "set" );
+    lc.def<&LMap::fill> ( "fill" );
+    lc.def<&LMap::load> ( "load" );
+    lc.def<&LMap::fork> ( "fork" );
+    lc.def<&LMap::get_size> ( "get_size" );
+    lc.def<&LMap::get_pass_cost> ( "get_pass_cost" );
 
     return 0;
 }
 
 int32_t luaopen_rank( lua_State *L )
 {
-    lclass< linsertion_rank > lc_insertion_rank(L,"Insertion_rank");
-    lc_insertion_rank.def< &linsertion_rank::clear > ("clear");
-    lc_insertion_rank.def< &linsertion_rank::remove > ("remove");
-    lc_insertion_rank.def< &linsertion_rank::insert > ("insert");
-    lc_insertion_rank.def< &linsertion_rank::update > ("update");
-    lc_insertion_rank.def< &linsertion_rank::get_count > ("get_count");
-    lc_insertion_rank.def< &linsertion_rank::set_max_count > ("set_max_count");
-    lc_insertion_rank.def< &linsertion_rank::get_max_factor > ("get_max_factor");
-    lc_insertion_rank.def< &linsertion_rank::get_factor > ("get_factor");
-    lc_insertion_rank.def< &linsertion_rank::get_rank_by_id > ("get_rank_by_id");
-    lc_insertion_rank.def< &linsertion_rank::get_id_by_rank > ("get_id_by_rank");
+    LClass< LInsertionRank > lc_insertion_rank(L,"Insertion_rank");
+    lc_insertion_rank.def< &LInsertionRank::clear > ("clear");
+    lc_insertion_rank.def< &LInsertionRank::remove > ("remove");
+    lc_insertion_rank.def< &LInsertionRank::insert > ("insert");
+    lc_insertion_rank.def< &LInsertionRank::update > ("update");
+    lc_insertion_rank.def< &LInsertionRank::get_count > ("get_count");
+    lc_insertion_rank.def< &LInsertionRank::set_max_count > ("set_max_count");
+    lc_insertion_rank.def< &LInsertionRank::get_max_factor > ("get_max_factor");
+    lc_insertion_rank.def< &LInsertionRank::get_factor > ("get_factor");
+    lc_insertion_rank.def< &LInsertionRank::get_rank_by_id > ("get_rank_by_id");
+    lc_insertion_rank.def< &LInsertionRank::get_id_by_rank > ("get_id_by_rank");
 
-    lclass< lbucket_rank > lc_bucket_rank(L,"Bucket_rank");
-    lc_bucket_rank.def< &lbucket_rank::clear > ("clear");
-    lc_bucket_rank.def< &lbucket_rank::insert > ("insert");
-    lc_bucket_rank.def< &lbucket_rank::get_count > ("get_count");
-    lc_bucket_rank.def< &lbucket_rank::get_top_n > ("get_top_n");
+    LClass< lBucketRank > lc_bucket_rank(L,"Bucket_rank");
+    lc_bucket_rank.def< &lBucketRank::clear > ("clear");
+    lc_bucket_rank.def< &lBucketRank::insert > ("insert");
+    lc_bucket_rank.def< &lBucketRank::get_count > ("get_count");
+    lc_bucket_rank.def< &lBucketRank::get_top_n > ("get_top_n");
 
     return 0;
 }
 
 int32_t luaopen_astar( lua_State *L )
 {
-    lclass<lastar> lc(L,"Astar");
+    LClass<LAstar> lc(L,"Astar");
 
-    lc.def<&lastar::search>  ( "search" );
+    lc.def<&LAstar::search>  ( "search" );
 
     return 0;
 }

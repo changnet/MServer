@@ -14,7 +14,7 @@
 #include <vector>
 #include "../pool/object_pool.h"
 
-class grid_aoi
+class GridAOI
 {
 public:
     struct entity_ctx;
@@ -37,8 +37,8 @@ public:
 
     typedef StdMap< entity_id_t,struct entity_ctx* > entity_set_t;
 public:
-    grid_aoi();
-    virtual ~grid_aoi();
+    GridAOI();
+    virtual ~GridAOI();
 
     void set_visual_range(int32_t width,int32_t height); // 设置视野
     int32_t set_size(int32_t width,int32_t height); // 设置宽高
@@ -83,8 +83,8 @@ private:
     void entity_exit_range(struct entity_ctx *ctx,
         int32_t x,int32_t y,int32_t dx,int32_t dy,entity_vector_t *list = NULL);
 private:
-    typedef object_pool< grid_aoi::entity_ctx,10240,1024 > ctx_pool_t;
-    typedef object_pool< grid_aoi::entity_vector_t,10240,1024 > vector_pool_t;
+    typedef ObjectPool< GridAOI::entity_ctx,10240,1024 > ctx_pool_t;
+    typedef ObjectPool< GridAOI::entity_vector_t,10240,1024 > vector_pool_t;
 
     ctx_pool_t *get_ctx_pool()
     {

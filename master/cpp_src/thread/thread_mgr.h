@@ -4,17 +4,17 @@
 #include <pthread.h>
 #include "../global/global.h"
 
-class thread;
-class thread_mgr
+class Thread;
+class ThreadMgr
 {
 public:
-    typedef std::map< pthread_t,class thread * > thread_mpt_t;
+    typedef std::map< pthread_t,class Thread * > thread_mpt_t;
 public:
-    thread_mgr();
-    ~thread_mgr();
+    ThreadMgr();
+    ~ThreadMgr();
 
     void pop( pthread_t thd_id );
-    void push( class thread *thd );
+    void push( class Thread *thd );
 
     void stop();
     const char *who_is_busy(

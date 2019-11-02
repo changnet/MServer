@@ -16,14 +16,14 @@ int32_t main( int32_t argc,char **argv )
         exit( 1 );
     }
 
-    static_global::initialize();
+    StaticGlobal::initialize();
 
-    lua_State *L = static_global::state();
+    lua_State *L = StaticGlobal::state();
 
-    lclass<lev>::push( L,static_global::lua_ev(),false );
+    LClass<LEv>::push( L,StaticGlobal::lua_ev(),false );
     lua_setglobal( L,"ev" );
 
-    lclass<lnetwork_mgr>::push( L,static_global::network_mgr(),false );
+    LClass<LNetworkMgr>::push( L,StaticGlobal::network_mgr(),false );
     lua_setglobal( L,"network_mgr" );
 
     /* 加载程序入口脚本 */
@@ -52,7 +52,7 @@ int32_t main( int32_t argc,char **argv )
         return 1;
     }
 
-    static_global::uninitialize();
+    StaticGlobal::uninitialize();
 
     return 0;
 }

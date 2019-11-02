@@ -1,13 +1,13 @@
 #include "io.h"
 
-io::io( class buffer *recv,class buffer *send )
+IO::IO( class Buffer *recv,class Buffer *send )
 {
     _fd = -1; // 创建一个io的时候，fd可能还未创建，后面再设置
     _recv = recv;
     _send = send;
 }
 
-io::~io()
+IO::~IO()
 {
     _fd = -1;
     _recv = NULL;
@@ -15,7 +15,7 @@ io::~io()
 }
 
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t io::recv( int32_t &byte )
+int32_t IO::recv( int32_t &byte )
 {
     ASSERT( _fd > 0, "io recv fd invalid" );
 
@@ -45,7 +45,7 @@ int32_t io::recv( int32_t &byte )
 }
 
 // * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t io::send( int32_t &byte )
+int32_t IO::send( int32_t &byte )
 {
     ASSERT( _fd > 0, "io send fd invalid" );
 

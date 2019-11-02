@@ -1,26 +1,26 @@
 #include "mongo.h"
 
-void mongo::init()
+void Mongo::init()
 {
     mongoc_init();
 }
 
-void mongo::cleanup()
+void Mongo::cleanup()
 {
     mongoc_cleanup();
 }
 
-mongo::mongo()
+Mongo::Mongo()
 {
     _conn = NULL;
 }
 
-mongo::~mongo()
+Mongo::~Mongo()
 {
     ASSERT( NULL == _conn, "mongo db not clean yet" );
 }
 
-void mongo::set( const char *ip,
+void Mongo::set( const char *ip,
     const int32_t port,const char *usr,const char *pwd,const char *db )
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
@@ -31,7 +31,7 @@ void mongo::set( const char *ip,
     snprintf( _db ,MONGO_VAR_LEN,"%s",db  );
 }
 
-int32_t mongo::connect()
+int32_t Mongo::connect()
 {
     ASSERT( !_conn, "mongo duplicate connect" );
 
@@ -54,13 +54,13 @@ int32_t mongo::connect()
     return 0 == ok ? 0 : -1;
 }
 
-void mongo::disconnect()
+void Mongo::disconnect()
 {
     if ( _conn ) mongoc_client_destroy( _conn );
     _conn = NULL;
 }
 
-int32_t mongo::ping()
+int32_t Mongo::ping()
 {
     ASSERT( _conn, "try to ping a inactive mongo" );
 
@@ -98,7 +98,7 @@ int32_t mongo::ping()
    return ecode;
 }
 
-bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
+bool Mongo::count( const struct MongoQuery *mq,struct MongoResult *res )
 {
     ASSERT( mq, "mongo count,empty query" );
     ASSERT( _conn, "mongo count,inactivity connection" );
@@ -127,7 +127,7 @@ bool mongo::count( const struct mongo_query *mq,struct mongo_result *res )
     return true;
 }
 
-bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
+bool Mongo::find ( const struct MongoQuery *mq,struct MongoResult *res )
 {
     ASSERT( mq, "mongo find,empty query" );
     ASSERT( _conn, "mongo find,inactivity connection" );
@@ -182,8 +182,8 @@ bool mongo::find ( const struct mongo_query *mq,struct mongo_result *res )
     return true;
 }
 
-bool mongo::find_and_modify (
-    const struct mongo_query *mq,struct mongo_result *res )
+bool Mongo::find_and_modify (
+    const struct MongoQuery *mq,struct MongoResult *res )
 {
     ASSERT( mq, "mongo find_and_modify,empty query" );
     ASSERT( _conn, "mongo find_and_modify,inactivity connection" );
@@ -211,7 +211,7 @@ bool mongo::find_and_modify (
     return true;
 }
 
-bool mongo::insert( const struct mongo_query *mq,struct mongo_result *res )
+bool Mongo::insert( const struct MongoQuery *mq,struct MongoResult *res )
 {
     ASSERT( mq, "mongo insert,empty query" );
     ASSERT( _conn, "mongo insert,inactivity connection" );
@@ -227,7 +227,7 @@ bool mongo::insert( const struct mongo_query *mq,struct mongo_result *res )
     return ok;
 }
 
-bool mongo::update( const struct mongo_query *mq,struct mongo_result *res )
+bool Mongo::update( const struct MongoQuery *mq,struct MongoResult *res )
 {
     ASSERT( mq, "mongo update,empty query" );
     ASSERT( _conn, "mongo update,inactivity connection" );
@@ -245,7 +245,7 @@ bool mongo::update( const struct mongo_query *mq,struct mongo_result *res )
     return ok;
 }
 
-bool mongo::remove( const struct mongo_query *mq,struct mongo_result *res )
+bool Mongo::remove( const struct MongoQuery *mq,struct MongoResult *res )
 {
     ASSERT( mq, "mongo update,empty query" );
     ASSERT( _conn, "mongo update,inactivity connection" );

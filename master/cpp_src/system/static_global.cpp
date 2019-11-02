@@ -4,17 +4,17 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
-class lev          *static_global::_ev          = NULL;
-class lstate       *static_global::_state       = NULL;
-class ssl_mgr      *static_global::_ssl_mgr     = NULL;
-class codec_mgr    *static_global::_codec_mgr   = NULL;
-class statistic    *static_global::_statistic   = NULL;
-class async_log   *static_global::_async_log   = NULL;
-class thread_mgr   *static_global::_thread_mgr  = NULL;
-class lnetwork_mgr *static_global::_network_mgr = NULL;
+class LEv          *StaticGlobal::_ev          = NULL;
+class LState       *StaticGlobal::_state       = NULL;
+class SSLMgr      *StaticGlobal::_ssl_mgr     = NULL;
+class CodecMgr    *StaticGlobal::_codec_mgr   = NULL;
+class Statistic    *StaticGlobal::_statistic   = NULL;
+class AsyncLog   *StaticGlobal::_async_log   = NULL;
+class ThreadMgr   *StaticGlobal::_thread_mgr  = NULL;
+class LNetworkMgr *StaticGlobal::_network_mgr = NULL;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
-class static_global::initializer static_global::_initializer;
+class StaticGlobal::initializer StaticGlobal::_initializer;
 
 int32_t ssl_init();
 int32_t ssl_uninit();
@@ -23,7 +23,7 @@ void on_exit();
 /* will be called while allocate memory failed with new */
 void on_new_fail();
 
-static_global::initializer::initializer()
+StaticGlobal::initializer::initializer()
 {
     /* https://isocpp.org/files/papers/N3690.pdf 3.6.3 Termination
      *  If a call to std::atexit is sequenced before the completion of the
@@ -37,19 +37,19 @@ static_global::initializer::initializer()
     std::set_new_handler( on_new_fail );
 
     ssl_init();
-    sql::library_init();
-    mongo::init();
+    Sql::library_init();
+    Mongo::init();
 }
 
-static_global::initializer::~initializer()
+StaticGlobal::initializer::~initializer()
 {
-    sql::library_end();
-    mongo::cleanup();
+    Sql::library_end();
+    Mongo::cleanup();
     ssl_uninit();
 }
 
 // 业务都放这里逻辑初始化
-void static_global::initialize()  /* 程序运行时初始化 */
+void StaticGlobal::initialize()  /* 程序运行时初始化 */
 {
     /* 原本用static对象，但实在是无法控制各个销毁的顺序。因为其他文件中还有局部static对象
      * 会依赖这些对象。
@@ -62,13 +62,13 @@ void static_global::initialize()  /* 程序运行时初始化 */
 
     // 状态统计，独立的
     _statistic = new class statistic();
-    _ev = new class lev();
+    _ev = new class LEv();
     _thread_mgr = new class thread_mgr();
-    _async_log = new class async_log();
-    _state = new class lstate();
-    _codec_mgr = new class codec_mgr();
-    _ssl_mgr = new class ssl_mgr();
-    _network_mgr = new class lnetwork_mgr();
+    _async_log = new class AsyncLog();
+    _state = new class LState();
+    _codec_mgr = new class CodecMgr();
+    _ssl_mgr = new class SSLMgr();
+    _network_mgr = new class LNetworkMgr();
 
     _async_log->start( 1,0 );
 
@@ -85,7 +85,7 @@ void static_global::initialize()  /* 程序运行时初始化 */
  * 比如socket的buffer对象中使用局部static内存池。如果在_network_mgr的析构里才关闭socket
  * 局部static内存池早就销毁了，内存早已出错。日志线程也是同样的设计。
  */
-void static_global::uninitialize() /* 程序结束时反初始化 */
+void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
 {
     _async_log->stop();
     _thread_mgr->stop();

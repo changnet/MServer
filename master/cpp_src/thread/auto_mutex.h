@@ -2,16 +2,16 @@
 
 #include <pthread.h>
 
-class auto_mutex
+class AutoMutex
 {
 public:
-    explicit auto_mutex( pthread_mutex_t *mutex )
+    explicit AutoMutex( pthread_mutex_t *mutex )
         : _mutex( mutex )
     {
         pthread_mutex_lock( _mutex );
     }
 
-    ~auto_mutex()
+    ~AutoMutex()
     {
         pthread_mutex_unlock( _mutex );
     }

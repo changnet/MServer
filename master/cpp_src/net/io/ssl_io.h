@@ -2,11 +2,11 @@
 
 #include "io.h"
 
-class ssl_io : public io
+class SSLIO : public IO
 {
 public:
-    ~ssl_io();
-    ssl_io( int32_t ctx_idx,class buffer *recv,class buffer *send );
+    ~SSLIO();
+    SSLIO( int32_t ctx_idx,class Buffer *recv,class Buffer *send );
 
     /* 接收数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写

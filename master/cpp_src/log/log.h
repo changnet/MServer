@@ -5,8 +5,8 @@
 
 #include "../global/global.h"
 
-class pool;
-class log_one;
+class Pool;
+class LogOne;
 
 // 日志输出类型
 typedef enum
@@ -17,26 +17,26 @@ typedef enum
     LO_CPRINTF = 4, // C异步PRINTF宏定义
 
     LO_MAX
-}log_out_t;
+} LogOut;
 
-class log
+class Log
 {
 public:
     // 将日志内容分为小、中、大三种类型。避免内存碎片化
     typedef enum
     {
-        LOG_SIZE_S = 0, //small
-        LOG_SIZE_M = 1, // middle
-        LOG_SIZE_L = 2, // large
+        LS_S = 0, //small
+        LS_M = 1, // middle
+        LS_L = 2, // large
 
-        LOG_SIZE_MAX
-    }log_size_t;
+        LS_MAX
+    } LogSize;
 
     // 单次写入的日志
-    typedef std::vector< class log_one *> log_one_list_t;
+    typedef std::vector< class LogOne *> LogOneList;
 public:
-    log();
-    ~log();
+    Log();
+    ~Log();
 
     bool swap();
     void flush();
@@ -45,18 +45,18 @@ public:
     size_t pending_size();
     bool inline empty() const { return _flush->empty(); }
     int32_t write_cache( time_t tm,
-        const char *path,const char *ctx,size_t len,log_out_t out );
+        const char *path,const char *ctx,size_t len,LogOut out );
 private:
-    class log_one *allocate_one( size_t len );
-    void deallocate_one( class log_one *one );
+    class LogOne *allocate_one( size_t len );
+    void deallocate_one( class LogOne *one );
     bool flush_one_file(struct tm &ntm,
-        const log_one *one,const char *path,const char *prefix = "" );
+        const LogOne *one,const char *path,const char *prefix = "" );
     int32_t flush_one_ctx(
-        FILE *pf,const struct log_one *one,struct tm &ntm,const char *prefix );
+        FILE *pf,const struct LogOne *one,struct tm &ntm,const char *prefix );
 private:
-    log_one_list_t *_cache;   // 主线程写入缓存队列
-    log_one_list_t *_flush;   // 日志线程写入文件队列
+    LogOneList *_cache;   // 主线程写入缓存队列
+    LogOneList *_flush;   // 日志线程写入文件队列
 
     StdMap<std::string,FILE *> _files;
-    class pool* _ctx_pool[LOG_SIZE_MAX];
+    class Pool* _ctx_pool[LS_MAX];
 };

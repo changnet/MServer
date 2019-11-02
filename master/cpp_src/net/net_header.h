@@ -7,7 +7,7 @@
 
 #define MAX_SCHEMA_NAME  64
 
-struct cmd_cfg_t
+struct CmdCfg
 {
     // 设定掩码，按位表示不同功能，值为 1 2 4 8 16
     enum
@@ -22,7 +22,7 @@ struct cmd_cfg_t
     char _schema[MAX_SCHEMA_NAME];
     char _object[MAX_SCHEMA_NAME];
 };
-typedef int32_t  owner_t;
+typedef int32_t  Owner;
 
 #define SET_LENGTH_FAIL_BOOL do{ return false; } while (0)
 #define SET_LENGTH_FAIL_RETURN do{ return -1; } while (0)
@@ -51,17 +51,17 @@ typedef int32_t  owner_t;
 
 typedef enum
 {
-    SPKT_NONE = 0,  // invalid
-    SPKT_CSPK = 1,  // c2s packet
-    SPKT_SCPK = 2,  // s2c packet
-    SPKT_SSPK = 3,  // s2s packet
-    SPKT_RPCS = 4,  // rpc send packet
-    SPKT_RPCR = 5,  // rpc return packet
-    SPKT_CBCP = 6,  // client broadcast packet
-    SPKT_SBCP = 7,  // server broadcast packet
+    SPT_NONE = 0,  // invalid
+    SPT_CSPK = 1,  // c2s packet
+    SPT_SCPK = 2,  // s2c packet
+    SPT_SSPK = 3,  // s2s packet
+    SPT_RPCS = 4,  // rpc send packet
+    SPT_RPCR = 5,  // rpc return packet
+    SPT_CBCP = 6,  // client broadcast packet
+    SPT_SBCP = 7,  // server broadcast packet
 
-    SPKT_MAXT       // max packet type
-} stream_packet_t;
+    SPT_MAXT       // max packet type
+} StreamPacketType;
 
 typedef enum
 {
@@ -103,7 +103,7 @@ struct s2s_header : public base_header
     uint16_t  _errno ; /* 错误码 */
     uint16_t  _packet; /* 数据包类型，见packet_t */
     uint16_t  _codec ; /* 解码类型，见codec::codec_t */
-    owner_t _owner ; /* 当前数据包所属id，通常为玩家id */
+    Owner _owner ; /* 当前数据包所属id，通常为玩家id */
 };
 
 #pragma pack(pop)

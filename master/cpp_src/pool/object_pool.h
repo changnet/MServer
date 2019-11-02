@@ -11,20 +11,20 @@
 #include "pool.h"
 
 template <typename T,uint32_t msize = 1024,uint32_t nsize = 1024>
-class object_pool : public pool
+class ObjectPool : public Pool
 {
 public:
     /* @msize:允许池中分配的最大对象数量
      * @nsize:每次预分配的数量
      */
-    explicit object_pool(const char *name) : pool(name)
+    explicit ObjectPool(const char *name) : Pool(name)
     {
         _anpts = NULL;
         _anptmax = 0;
         _anptsize = 0;
     }
 
-    ~object_pool()
+    ~ObjectPool()
     {
         clear();
     }
