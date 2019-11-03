@@ -34,7 +34,7 @@ local network_mgr = network_mgr
 local uri = require "util.uri"
 
 require "http.http_header"
-local Httpd_conn = require "http.httpd_conn"
+local HttpdConn = require "http.httpd_conn"
 
 local Httpd = oo.singleton( ... )
 
@@ -66,7 +66,7 @@ function Httpd:conn_accept( new_conn_id )
 
     PRINT( "http_accept_new",new_conn_id )
 
-    local new_conn = Httpd_conn( new_conn_id )
+    local new_conn = HttpdConn( new_conn_id )
 
     self.conn[new_conn_id] = new_conn
     return new_conn

@@ -276,7 +276,7 @@ int32_t luaopen_map( lua_State *L )
 
 int32_t luaopen_rank( lua_State *L )
 {
-    LClass< LInsertionRank > lc_insertion_rank(L,"Insertion_rank");
+    LClass< LInsertionRank > lc_insertion_rank(L,"InsertionRank");
     lc_insertion_rank.def< &LInsertionRank::clear > ("clear");
     lc_insertion_rank.def< &LInsertionRank::remove > ("remove");
     lc_insertion_rank.def< &LInsertionRank::insert > ("insert");
@@ -288,7 +288,7 @@ int32_t luaopen_rank( lua_State *L )
     lc_insertion_rank.def< &LInsertionRank::get_rank_by_id > ("get_rank_by_id");
     lc_insertion_rank.def< &LInsertionRank::get_id_by_rank > ("get_id_by_rank");
 
-    LClass< lBucketRank > lc_bucket_rank(L,"Bucket_rank");
+    LClass< lBucketRank > lc_bucket_rank(L,"BucketRank");
     lc_bucket_rank.def< &lBucketRank::clear > ("clear");
     lc_bucket_rank.def< &lBucketRank::insert > ("insert");
     lc_bucket_rank.def< &lBucketRank::get_count > ("get_count");

@@ -5,12 +5,12 @@
 -- mysql数据存储处理
 
 local Sql = require "Sql"
-local Auto_id = require "modules.system.auto_id"
+local AutoId = require "modules.system.auto_id"
 
 local Mysql = oo.class( ... )
 
 function Mysql:__init( dbid )
-    self.auto_id = Auto_id()
+    self.auto_id = AutoId()
     self.query   = {}
     self.sql     = Sql( dbid )
 end

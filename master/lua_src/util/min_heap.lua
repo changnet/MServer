@@ -7,40 +7,40 @@
 -- 节点的右子节点是 2*index+1，
 -- 每一个节点大于（或等于）这个节点的子节点，但左右子节点的大小则不固定
 
-local Min_heap = oo.class( ... )
+local MinHeap = oo.class( ... )
 
-function Min_heap:__init()
+function MinHeap:__init()
     self.heap       = {}
     self.map_list   = {}
     self.count      = 0
     self.next_id    = 1
 end
 
-function Min_heap:alloc_id()
+function MinHeap:alloc_id()
     local id = self.next_id
     self.next_id = self.next_id + 1
     return id
 end
 
-function Min_heap:top()
+function MinHeap:top()
     return self.heap[1]
 end
 
-function Min_heap:is_empty()
+function MinHeap:is_empty()
     return 0 == self.count
 end
 
-function Min_heap:size()
+function MinHeap:size()
     return self.count
 end
 
-function Min_heap:clear()
+function MinHeap:clear()
     self.heap       = {}
     self.map_list   = {}
     self.count      = 0
 end
 
-function Min_heap:shift_up(i, e)
+function MinHeap:shift_up(i, e)
     local p = math.floor(i / 2)
     while (i > 1 and self.heap[p].key > e.key) do
         local o = self.heap[p]
@@ -53,7 +53,7 @@ function Min_heap:shift_up(i, e)
     e.index = i
 end
 
-function Min_heap:shift_down(i, e)
+function MinHeap:shift_down(i, e)
     local c = 2 * i
     local count = self.count
     while (c <= count) do
@@ -76,7 +76,7 @@ function Min_heap:shift_down(i, e)
     e.index = i
 end
 
-function Min_heap:push(key, value)
+function MinHeap:push(key, value)
     local id = self:alloc_id()
     local e = {}
     e.key = key
@@ -89,7 +89,7 @@ function Min_heap:push(key, value)
     return id
 end
 
-function Min_heap:pop()
+function MinHeap:pop()
     local count = self.count
     if 0 ~= count then
         self.map_list[self.heap[1].id] = nil
@@ -99,7 +99,7 @@ function Min_heap:pop()
     end
 end
 
-function Min_heap:erase(id)
+function MinHeap:erase(id)
     local count = self.count
     if 0 ~= count then
         local e = self.map_list[id]
@@ -121,4 +121,4 @@ function Min_heap:erase(id)
     end
 end
 
-return Min_heap
+return MinHeap

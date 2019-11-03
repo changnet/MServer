@@ -44,15 +44,15 @@ local srv_idx = network_mgr:new_ssl_ctx( 1,
     "certs/server.cer",2,"certs/srv_key.pem","mini_distributed_game_server" )
 print( "create server ssl ctx at ",srv_idx )
 
-local Clt_conn = oo.class( "Clt_conn" )
+local CltConn = oo.class( "CltConn" )
 
-function Clt_conn:connect( ip,port )
+function CltConn:connect( ip,port )
     self.conn_id = network_mgr:connect( ip,port,network_mgr.CNT_CSCN )
     conn_mgr:set_conn( self.conn_id,self )
     print( "connnect to https ",ip,self.conn_id )
 end
 
-function Clt_conn:conn_new( ecode )
+function CltConn:conn_new( ecode )
     if 0 ~= ecode then
         print( "clt_conn conn error" )
         return
@@ -66,31 +66,31 @@ function Clt_conn:conn_new( ecode )
     network_mgr:send_raw_packet( self.conn_id,url_page )
 end
 
-function Clt_conn:conn_del()
+function CltConn:conn_del()
     print("conn_del")
 end
 
-function Clt_conn:command_new( url,body )
+function CltConn:command_new( url,body )
     print("clt command new",url,body)
 end
 
-local Srv_conn = oo.class( "Srv_conn" )
+local SrvConn = oo.class( "SrvConn" )
 
-function Srv_conn:__init( conn_id )
+function SrvConn:__init( conn_id )
     self.conn_id = conn_id
 end
 
-function Srv_conn:listen( ip,port )
+function SrvConn:listen( ip,port )
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
     conn_mgr:set_conn( self.conn_id,self )
     PRINTF( "https listen at %s:%d",ip,port )
 end
 
-function Srv_conn:conn_accept( new_conn_id )
+function SrvConn:conn_accept( new_conn_id )
     print( "srv conn accept new",new_conn_id )
 
     -- 弄成全局的，防止没有引用被释放
-    new_conn = Srv_conn( new_conn_id )
+    new_conn = SrvConn( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,IOT,srv_idx )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
@@ -98,12 +98,12 @@ function Srv_conn:conn_accept( new_conn_id )
     return new_conn
 end
 
-function Srv_conn:conn_del()
+function SrvConn:conn_del()
     print( "srv conn del",self.conn_id )
 end
 
 -- http回调
-function Srv_conn:command_new( url,body )
+function SrvConn:command_new( url,body )
     print( "command_new",self.conn_id,url,body )
 
     local tips = "Mini-Game-Distribute-Server!\n"
@@ -115,10 +115,10 @@ end
 -- 对象弄成全局的，防止没有引用被释放
 
 -- 在浏览器输入https://127.0.0.1:10002来测试
-http_listen = Srv_conn()
+http_listen = SrvConn()
 http_listen:listen( IP,PORT )
 
 local ip1,ip2 = util.gethostbyname( ssl_url )
 
-http_conn = Clt_conn()
+http_conn = CltConn()
 http_conn:connect( ip1,ssl_port )

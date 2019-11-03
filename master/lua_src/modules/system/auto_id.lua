@@ -6,9 +6,9 @@
 
 local LIMIT = require "global.limits"
 
-local Auto_id = oo.class( ... )
+local AutoId = oo.class( ... )
 
-function Auto_id:__init()
+function AutoId:__init()
     self.seed = 0
 end
 
@@ -16,7 +16,7 @@ end
 类型为int32，需要防止越界
 @unique_map : 以id为key的table，用于获取唯一key.如果不需要可以不传值
 ]]
-function Auto_id:next_id( unique_map )
+function AutoId:next_id( unique_map )
     local unique_map = unique_map or {}
     repeat
         if self.seed >= LIMIT.INT32_MAX then self.seed = 0 end
@@ -27,4 +27,4 @@ function Auto_id:next_id( unique_map )
     return self.seed
 end
 
-return Auto_id
+return AutoId

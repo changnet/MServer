@@ -5,9 +5,9 @@
 -- 玩家对象管理
 
 local Player = require "modules.player.player"
-local Player_mgr = oo.singleton( ... )
+local PlayerMgr = oo.singleton( ... )
 
-function Player_mgr:__init()
+function PlayerMgr:__init()
     self.player = {} -- pid为key，Player为对象
     self.raw_player = {} -- 未初始化的玩家对象
 
@@ -15,28 +15,28 @@ function Player_mgr:__init()
 end
 
 -- 判断玩家是否存在
-function Player_mgr:is_pid_exist( pid )
+function PlayerMgr:is_pid_exist( pid )
     -- TODO:考虑起服加载玩家基础数据
     return true
 end
 
 -- 获取玩家对象
-function Player_mgr:get_raw_player( pid )
+function PlayerMgr:get_raw_player( pid )
     return self.raw_player[pid]
 end
 
 -- 获取已初始化的玩家对象
-function Player_mgr:get_player( pid )
+function PlayerMgr:get_player( pid )
     return self.player[pid]
 end
 
 -- 获取所有已初始化玩家对象
-function Player_mgr:get_all_player()
+function PlayerMgr:get_all_player()
     return self.player
 end
 
 -- 处理玩家初始化成功
-function Player_mgr:enter_success( player )
+function PlayerMgr:enter_success( player )
     local pid = player:get_pid()
 
     self.player[pid] = player
@@ -47,7 +47,7 @@ function Player_mgr:enter_success( player )
 end
 
 -- 玩家初始化失败
-function Player_mgr:do_enter_fail( player )
+function PlayerMgr:do_enter_fail( player )
     local pid = player:get_pid()
     PRINT("player enter timeout,kill connection",pid)
 
@@ -56,7 +56,7 @@ function Player_mgr:do_enter_fail( player )
 end
 
 -- 定时检测加载失败的玩家
-function Player_mgr:check_enter_fail()
+function PlayerMgr:check_enter_fail()
     local wait_del = {}
     for pid,player in pairs( self.raw_player ) do
         if not player:is_loading() then
@@ -69,7 +69,7 @@ function Player_mgr:check_enter_fail()
 end
 
 -- 玩家进入游戏世界，创建对象
-function Player_mgr:on_enter_world( clt_conn,pid,pkt )
+function PlayerMgr:on_enter_world( clt_conn,pid,pkt )
     local player = Player( pid )
 
     self.raw_player[pid] = player
@@ -82,7 +82,7 @@ function Player_mgr:on_enter_world( clt_conn,pid,pkt )
 end
 
 -- 玩家离线
-function Player_mgr:on_player_offline( srv_conn,pkt )
+function PlayerMgr:on_player_offline( srv_conn,pkt )
     local pid = pkt.pid
     g_authorize:unset_player( pid )
 
@@ -99,10 +99,10 @@ function Player_mgr:on_player_offline( srv_conn,pkt )
 end
 
 -- 顶号
-function Player_mgr:on_login_otherwhere( srv_conn,pkt )
+function PlayerMgr:on_login_otherwhere( srv_conn,pkt )
     PRINTF( "player login other where,pid = %d",pkt.pid )
 end
 
-local player_mgr = Player_mgr()
+local player_mgr = PlayerMgr()
 
 return player_mgr

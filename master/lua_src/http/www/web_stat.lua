@@ -1,6 +1,6 @@
 -- web_stat.lua http 查询服务器状态接口
 
-local Web_stat = oo.singleton( ... )
+local WebStat = oo.singleton( ... )
 
 local json = require "lua_parson"
 
@@ -8,7 +8,7 @@ local json = require "lua_parson"
     curl 127.0.0.1:10003/web_stat
     curl -l --data 'gateway' 127.0.0.1:10003/web_stat
 ]]
-function Web_stat:exec( conn,fields,body )
+function WebStat:exec( conn,fields,body )
     -- 未指定进程名或者查询的是当前进程
     if "" == body or body == g_app.srvname then
         local total_stat = g_stat.collect()
@@ -34,6 +34,6 @@ function Web_stat:exec( conn,fields,body )
     return HTTPE.PENDING -- 阻塞等待数据返回
 end
 
-local wst = Web_stat()
+local wst = WebStat()
 
 return wst

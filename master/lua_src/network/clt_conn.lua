@@ -27,9 +27,9 @@ local util = require "util"
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 
-local Clt_conn = oo.class( ... )
+local CltConn = oo.class( ... )
 
-function Clt_conn:__init( conn_id )
+function CltConn:__init( conn_id )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
@@ -37,7 +37,7 @@ function Clt_conn:__init( conn_id )
     self.conn_id = conn_id
 end
 
-function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
+function CltConn:handshake_new( sec_websocket_key,sec_websocket_accept )
     -- 服务器收到客户端的握手请求
     if not sec_websocket_key then
         self.close()
@@ -54,7 +54,7 @@ function Clt_conn:handshake_new( sec_websocket_key,sec_websocket_accept )
 end
 
 -- 发送数据包
-function Clt_conn:send_pkt( cmd,pkt,errno )
+function CltConn:send_pkt( cmd,pkt,errno )
     -- 使用tcp二进制流
     return network_mgr:send_clt_packet( self.conn_id,cmd,errno or 0,pkt )
     -- 使用websocket
@@ -63,25 +63,25 @@ function Clt_conn:send_pkt( cmd,pkt,errno )
 end
 
 -- 认证成功
-function Clt_conn:authorized()
+function CltConn:authorized()
     self.auth = true
 end
 
 -- 将该链接绑定一个角色
-function Clt_conn:bind_role( pid )
+function CltConn:bind_role( pid )
     self.pid = pid
     network_mgr:set_conn_owner( self.conn_id,self.pid or 0 )
 end
 
 -- 监听客户端连接
-function Clt_conn:listen( ip,port )
+function CltConn:listen( ip,port )
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
 
     g_conn_mgr:set_conn( self.conn_id,self )
 end
 
 -- 连接断开
-function Clt_conn:conn_del()
+function CltConn:conn_del()
     -- 这个会自动解除
     -- g_conn_mgr:set_conn( self.conn_id,nil )
     network_mgr:unset_conn_owner( self.conn_id,self.pid or 0 )
@@ -90,11 +90,11 @@ function Clt_conn:conn_del()
 end
 
 -- 消息回调
-function Clt_conn:command_new( cmd,... )
+function CltConn:command_new( cmd,... )
     return g_command_mgr:clt_dispatch( self,cmd,... )
 end
 
-function Clt_conn:ctrl_new( flag,body )
+function CltConn:ctrl_new( flag,body )
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
@@ -114,7 +114,7 @@ function Clt_conn:ctrl_new( flag,body )
 end
 
 -- 主动关闭连接
-function Clt_conn:close()
+function CltConn:close()
     g_conn_mgr:set_conn( self.conn_id,nil )
     network_mgr:unset_conn_owner( self.conn_id,self.pid or 0 )
 
@@ -122,7 +122,7 @@ function Clt_conn:close()
 end
 
 -- 接受新客户端连接
-function Clt_conn:conn_accept( new_conn_id )
+function CltConn:conn_accept( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_PROTOBUF )
 
@@ -135,10 +135,10 @@ function Clt_conn:conn_accept( new_conn_id )
     network_mgr:set_send_buffer_size( new_conn_id,128,8192,1 ) -- 8k*128 = 1024k
     network_mgr:set_recv_buffer_size( new_conn_id,8,8192 ) -- 8k*8 = 64k
 
-    local new_conn = Clt_conn( new_conn_id )
+    local new_conn = CltConn( new_conn_id )
     g_network_mgr:clt_conn_accept( new_conn_id,new_conn )
 
     return new_conn
 end
 
-return Clt_conn
+return CltConn

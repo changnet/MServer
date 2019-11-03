@@ -44,9 +44,9 @@ local SESSION = g_app.session
 local g_rpc   = g_rpc
 local g_network_mgr = g_network_mgr
 
-local Command_mgr = oo.singleton( ... )
+local CommandMgr = oo.singleton( ... )
 
-function Command_mgr:__init()
+function CommandMgr:__init()
     self.ss = {} -- 记录服务器之间回调函数
     for _,v in pairs( SS ) do
         self.ss[ v ] = {}
@@ -73,7 +73,7 @@ function Command_mgr:__init()
 end
 
 -- 检测是否需要开启定时器定时写统计信息到文件
-function Command_mgr:check_timer()
+function CommandMgr:check_timer()
     if not self.cmd_perf and self.timer then
         g_timer_mgr:del_timer( self.timer )
 
@@ -86,12 +86,12 @@ function Command_mgr:check_timer()
     end
 end
 
-function Command_mgr:do_timer()
+function CommandMgr:do_timer()
     self:serialize_statistic( true )
 end
 
 -- 设置统计log文件
-function Command_mgr:set_statistic( perf,reset )
+function CommandMgr:set_statistic( perf,reset )
     -- 如果之前正在统计，先写入旧的
     if self.cmd_perf and ( not perf or reset ) then
         self:serialize_statistic()
@@ -109,7 +109,7 @@ function Command_mgr:set_statistic( perf,reset )
 end
 
 -- 更新耗时统计
-function Command_mgr:update_statistic( stat_list,cmd,ms )
+function CommandMgr:update_statistic( stat_list,cmd,ms )
     local stat = stat_list[cmd]
     if not stat then
         stat = { ms = 0, ts = 0, max = 0, min = 0}
@@ -123,7 +123,7 @@ function Command_mgr:update_statistic( stat_list,cmd,ms )
 end
 
 -- 写入耗时统计到文件
-function Command_mgr:raw_serialize_statistic( path,stat_name,stat_list )
+function CommandMgr:raw_serialize_statistic( path,stat_name,stat_list )
     local stat_cmd = {}
     for k in pairs( stat_list ) do table.insert( stat_cmd,k ) end
 
@@ -142,7 +142,7 @@ function Command_mgr:raw_serialize_statistic( path,stat_name,stat_list )
 end
 
 -- 写入耗时统计到文件
-function Command_mgr:serialize_statistic( reset )
+function CommandMgr:serialize_statistic( reset )
     if not self.cmd_perf then return false end
 
     local path = string.format( "%s_%s",self.cmd_perf,g_app.srvname )
@@ -158,7 +158,7 @@ function Command_mgr:serialize_statistic( reset )
     self:raw_serialize_statistic( path,"ss_cmd:",self.ss_stat )
     self:raw_serialize_statistic( path,"css_cmd:",self.css_stat )
 
-    g_log_mgr:raw_file_printf( 
+    g_log_mgr:raw_file_printf(
         path,"%s.%d end %s",g_app.srvname,g_app.srvindex,"\n\n" )
     if reset then
         self.cs_stat  = {}
@@ -171,7 +171,7 @@ function Command_mgr:serialize_statistic( reset )
 end
 
 -- 加载二进制flatbuffers schema文件
-function Command_mgr:load_schema()
+function CommandMgr:load_schema()
     local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
     PRINTF( "load protocol schema:%d",pfs )
 
@@ -182,7 +182,7 @@ function Command_mgr:load_schema()
 end
 
 -- 拆分协议为模块 + 功能
-function Command_mgr:dismantle_cmd( cmd )
+function CommandMgr:dismantle_cmd( cmd )
     local f = cmd & 0x000F
     local m = cmd >> 0x0008
 
@@ -190,7 +190,7 @@ function Command_mgr:dismantle_cmd( cmd )
 end
 
 -- 注册客户端协议处理
-function Command_mgr:clt_register( cmd,handler,noauth )
+function CommandMgr:clt_register( cmd,handler,noauth )
     local cfg = self.cs[cmd]
     if not cfg then
         return error( "clt_register:cmd not define" )
@@ -206,7 +206,7 @@ end
 -- 注册服务器协议处理
 -- @noauth    -- 处理此协议时，不要求该链接可信
 -- @noreg     -- 此协议不需要注册到其他服务器
-function Command_mgr:srv_register( cmd,handler,noreg,noauth )
+function CommandMgr:srv_register( cmd,handler,noreg,noauth )
     local cfg = self.ss[cmd]
     if not cfg then
         return error( "srv_register:cmd not define" )
@@ -221,7 +221,7 @@ function Command_mgr:srv_register( cmd,handler,noreg,noauth )
 end
 
 -- 本进程需要注册的指令
-function Command_mgr:command_pkt()
+function CommandMgr:command_pkt()
     local pkt = {}
     pkt.clt_cmd = self:clt_cmd()
     pkt.srv_cmd = self:srv_cmd()
@@ -231,7 +231,7 @@ function Command_mgr:command_pkt()
 end
 
 -- 发分服务器协议
-function Command_mgr:srv_dispatch( srv_conn,cmd,... )
+function CommandMgr:srv_dispatch( srv_conn,cmd,... )
     local cfg = self.ss[cmd]
 
     local handler = cfg.handler
@@ -255,7 +255,7 @@ function Command_mgr:srv_dispatch( srv_conn,cmd,... )
 end
 
 -- 分发协议
-function Command_mgr:clt_dispatch( clt_conn,cmd,... )
+function CommandMgr:clt_dispatch( clt_conn,cmd,... )
     local cfg = self.cs[cmd]
 
     local handler = cfg.handler
@@ -279,7 +279,7 @@ function Command_mgr:clt_dispatch( clt_conn,cmd,... )
 end
 
 -- 分发网关转发的客户端协议
-function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
+function CommandMgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
     local cfg = self.cs[cmd]
 
     local handler = cfg.handler
@@ -311,7 +311,7 @@ function Command_mgr:clt_dispatch_ex( srv_conn,pid,cmd,... )
 end
 
 -- 获取当前进程处理的客户端指令
-function Command_mgr:clt_cmd()
+function CommandMgr:clt_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.cs ) do
         if cfg.handler then table.insert( cmds,cmd ) end
@@ -321,7 +321,7 @@ function Command_mgr:clt_cmd()
 end
 
 -- 获取当前进程处理的服务端指令
-function Command_mgr:srv_cmd()
+function CommandMgr:srv_cmd()
     local cmds = {}
     for cmd,cfg in pairs( self.ss ) do
         if cfg.handler and not cfg.noreg then table.insert( cmds,cmd ) end
@@ -331,7 +331,7 @@ function Command_mgr:srv_cmd()
 end
 
 -- 注册其他服务器指令,以实现协议自动转发
-function Command_mgr:other_cmd_register( srv_conn,pkt )
+function CommandMgr:other_cmd_register( srv_conn,pkt )
     local base_name = srv_conn:base_name()
     -- 同一类服务，他们的协议是一样的，只不过需要做动态转发，无需再注册一次
     if self.app_reg[base_name] then
@@ -385,6 +385,6 @@ function Command_mgr:other_cmd_register( srv_conn,pkt )
     return true
 end
 
-local command_mgr = Command_mgr()
+local command_mgr = CommandMgr()
 
 return command_mgr

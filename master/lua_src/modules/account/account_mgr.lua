@@ -6,22 +6,22 @@
 
 local util = require "util"
 local g_command_mgr = g_command_mgr
-local Account_mgr = oo.singleton( ... )
+local AccountMgr = oo.singleton( ... )
 
 -- 初始化
-function Account_mgr:__init()
+function AccountMgr:__init()
     self.account  = {} -- 三级key [sid][plat][account]
     self.conn_acc = {} -- conn_id为key，帐号信息为value
     self.role_acc = {} -- 玩家pid为key
 end
 
 -- 根据Pid获取角色数据
-function Account_mgr:get_role_info( pid )
+function AccountMgr:get_role_info( pid )
     return self.role_acc[pid]
 end
 
 -- 玩家登录
-function Account_mgr:player_login( clt_conn,pkt )
+function AccountMgr:player_login( clt_conn,pkt )
     local sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
     if sign ~= pkt.sign then
         ERROR( "clt sign error:%s",pkt.account )
@@ -83,7 +83,7 @@ function Account_mgr:player_login( clt_conn,pkt )
 end
 
 -- 创角
-function Account_mgr:create_role( clt_conn,pkt )
+function AccountMgr:create_role( clt_conn,pkt )
     local role_info = self.conn_acc[clt_conn.conn_id]
     if not role_info then
         ERROR( "create role,no account info" )
@@ -105,7 +105,7 @@ function Account_mgr:create_role( clt_conn,pkt )
 end
 
 --  创建角色逻辑
-function Account_mgr:do_create_role( role_info,pkt,pid )
+function AccountMgr:do_create_role( role_info,pkt,pid )
     local base = {}
     base.new = 1 -- 标识为新创建，未初始化用户
     base._id = pid
@@ -123,7 +123,7 @@ end
 
 -- 创建角色数据库返回
 -- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
-function Account_mgr:on_role_create( base,role_info,ecode,res )
+function AccountMgr:on_role_create( base,role_info,ecode,res )
     if 0 ~= ecode then
         ERROR( "role create error:name = %s,account = %s,srv = %d,plat = %d",
             base.name,role_info.account,role_info.sid,role_info.plat )
@@ -136,7 +136,7 @@ function Account_mgr:on_role_create( base,role_info,ecode,res )
 end
 
 --  创建帐号
-function Account_mgr:do_acc_create( role_info,name,pid )
+function AccountMgr:do_acc_create( role_info,name,pid )
     local acc_info = {}
     acc_info._id = pid
     acc_info.tm = ev:time()
@@ -152,7 +152,7 @@ function Account_mgr:do_acc_create( role_info,name,pid )
 end
 
 -- 创建角色数据库返回
-function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
+function AccountMgr:on_acc_create( acc_info,role_info,ecode,res )
     if 0 ~= ecode then -- 失败
         self:send_role_create( role_info,E.UNDEFINE )
         PRINTF( "create role error:%s",acc_info.account )
@@ -176,7 +176,7 @@ function Account_mgr:on_acc_create( acc_info,role_info,ecode,res )
 end
 
 -- 发送角色创建结果
-function Account_mgr:send_role_create( role_info,ecode )
+function AccountMgr:send_role_create( role_info,ecode )
     -- 玩家可能断线了，这个clt_conn就不存在了
     local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
     if not clt_conn then return end
@@ -185,7 +185,7 @@ function Account_mgr:send_role_create( role_info,ecode )
 end
 
 -- 玩家下线
-function Account_mgr:role_offline( conn_id )
+function AccountMgr:role_offline( conn_id )
     local role_info = self.conn_acc[conn_id]
     if not role_info then return end -- 连接上来未登录就断线
 
@@ -194,7 +194,7 @@ function Account_mgr:role_offline( conn_id )
 end
 
 -- 根据pid下线
-function Account_mgr:role_offline_by_pid( pid )
+function AccountMgr:role_offline_by_pid( pid )
     local role_info = self.role_acc[pid]
     if not role_info then
         ERROR( "role_offline_by_pid no role_info found:%d",pid )
@@ -205,7 +205,7 @@ function Account_mgr:role_offline_by_pid( pid )
 end
 
 -- 帐号在其他地方登录
-function Account_mgr:login_otherwhere( role_info )
+function AccountMgr:login_otherwhere( role_info )
     -- 告诉原连接被顶号
     local old_conn = g_network_mgr:get_conn( role_info.conn_id )
     old_conn:send_pkt( SC.PLAYER_OTHER,{} )
@@ -221,7 +221,7 @@ function Account_mgr:login_otherwhere( role_info )
 end
 
 -- 加载帐号数据
-function Account_mgr:db_load()
+function AccountMgr:db_load()
     local callback = function( ... )
         self:on_db_loaded( ... )
     end
@@ -230,7 +230,7 @@ function Account_mgr:db_load()
 end
 
 -- db数据加载
-function Account_mgr:on_db_loaded( ecode,res )
+function AccountMgr:on_db_loaded( ecode,res )
     if 0 ~= ecode then
         ERROR( "account db load error" )
         return
@@ -252,6 +252,6 @@ function Account_mgr:on_db_loaded( ecode,res )
     g_app:one_initialized( "acc_data",1 )
 end
 
-local g_account_mgr = Account_mgr()
+local g_account_mgr = AccountMgr()
 
 return g_account_mgr

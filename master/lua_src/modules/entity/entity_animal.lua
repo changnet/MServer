@@ -6,24 +6,24 @@
 
 local Move = require "modules.move.move"
 local Entity = require "modules.entity.entity"
-local Attribute_sys = require "modules.attribute.attribute_sys"
+local AttributeSys = require "modules.attribute.attribute_sys"
 
-local Entity_animal = oo.class( ...,Entity )
+local EntityAnimal = oo.class( ...,Entity )
 
-function Entity_animal:__init(...)
+function EntityAnimal:__init(...)
     Entity.__init(self,...)
 
     self.move = Move(self)
-    self.abt_sys = Attribute_sys() -- 战斗属性(血量、攻击力...)
+    self.abt_sys = AttributeSys() -- 战斗属性(血量、攻击力...)
 end
 
 -- 获取战斗属性
-function Entity_animal:get_attribute( abt )
+function EntityAnimal:get_attribute( abt )
     return self.abt_sys:get_one_final_attr(abt) or 0
 end
 
 -- 处理客户端请求移动
-function Entity_animal:do_move( conn,pkt )
+function EntityAnimal:do_move( conn,pkt )
     -- 后端不处理寻路，前端发给后端的路线都是直线的，如果遇到转弯这些则必须分开发送
     -- 后端不严格检测线路是否可行，只会定时检测，遇到不可行走则会拉玩家到对应的位置
 
@@ -32,9 +32,9 @@ function Entity_animal:do_move( conn,pkt )
 end
 
 -- 事件循环
-function Entity_animal:routine( ms_now )
+function EntityAnimal:routine( ms_now )
     self.abt_sys:update_modify( ms_now ) -- 定时计算总属性
     self.move:moving( ms_now )
 end
 
-return Entity_animal
+return EntityAnimal

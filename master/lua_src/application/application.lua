@@ -5,7 +5,7 @@
 -- app进程基类
 
 require "modules.system.define"
-local Auto_id = require "modules.system.auto_id"
+local AutoId = require "modules.system.auto_id"
 
 local Application = oo.class( ... )
 
@@ -90,7 +90,7 @@ function Application:__init( ... )
 
     -- 系统定时器
     self.timer_5scb = {}
-    self.auto_id = Auto_id()
+    self.auto_id = AutoId()
 end
 
 -- 生成服务器session id

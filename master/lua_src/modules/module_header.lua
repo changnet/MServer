@@ -47,7 +47,7 @@ if "gateway" == g_app.srvname then
     g_httpd       = require "http.httpd"
     g_account_mgr = require "modules.account.account_mgr"
 
-    local Clt_conn    = require "network.clt_conn"
+    local CltConn    = require "network.clt_conn"
 
     -- db对象的创建，有点特殊。它是全局对象，但不是单例。可以根据业务创建多个db提高效率
     -- 不要多次调用new创建多个对象

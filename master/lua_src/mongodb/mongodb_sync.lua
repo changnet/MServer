@@ -20,9 +20,9 @@ local function after_coroutine_start( co,ok,args,... )
     return false
 end
 
-local Mongodb_sync = oo.class( ... )
+local MongodbSync = oo.class( ... )
 
-function Mongodb_sync:__init( mongodb,co )
+function MongodbSync:__init( mongodb,co )
     self.co = co
     self.mongodb = mongodb
     self.callback = function( ecode,res )
@@ -30,27 +30,27 @@ function Mongodb_sync:__init( mongodb,co )
     end
 end
 
-function Mongodb_sync:start( ... )
+function MongodbSync:start( ... )
     return after_coroutine_start( self.co,coroutine.resume( self.co,... ) )
 end
 
 -- 是否有效
-function Mongodb_sync:valid()
+function MongodbSync:valid()
     return "dead" ~= coroutine.status( self.co )
 end
 
 -- 这些数据库操作接口同mongodb.lua中的一样
 
-function Mongodb_sync:count( collection,query,opts )
+function MongodbSync:count( collection,query,opts )
     self.mongodb:count( collection,query,opts,self.callback )
 
     return coroutine.yield()
 end
 
-function Mongodb_sync:find( collection,query,opts )
+function MongodbSync:find( collection,query,opts )
     self.mongodb:find( collection,query,opts,self.callback )
 
     return coroutine.yield()
 end
 
-return Mongodb_sync
+return MongodbSync

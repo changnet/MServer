@@ -1,8 +1,8 @@
 -- 排行榜算法测试
 
-local Bucket_rank = require "util.bucket_rank"
-local Insertion_rank = require "util.insertion_rank"
--- local Insertion_rank = require "Insertion_rank"
+local BucketRank = require "util.bucket_rank"
+local InsertionRank = require "util.insertion_rank"
+-- local InsertionRank = require "InsertionRank"
 
 local function dump(rank)
     local count = rank:get_count()
@@ -13,7 +13,7 @@ local function dump(rank)
     end
 end
 
-local irank = Insertion_rank()
+local irank = InsertionRank()
 
 
 irank:insert(1,999,999,999)
@@ -76,7 +76,7 @@ for idx = 1,1000000 do
 end
 
 irank:clear()
-brank = Bucket_rank()
+brank = BucketRank()
 
 f_tm_start()
 for idx = 1,#random_f do

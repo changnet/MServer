@@ -4,22 +4,22 @@
 
 -- 连接管理
 
-local Conn_mgr = oo.singleton( ... )
+local ConnMgr = oo.singleton( ... )
 
-function Conn_mgr:__init()
+function ConnMgr:__init()
     self.conn = {}
     setmetatable(self.conn, {["__mode"]='v'})
 end
 
-function Conn_mgr:get_conn( conn_id )
+function ConnMgr:get_conn( conn_id )
     return self.conn[conn_id]
 end
 
-function Conn_mgr:set_conn( conn_id,conn )
+function ConnMgr:set_conn( conn_id,conn )
     self.conn[conn_id] = conn
 end
 
-local conn_mgr = Conn_mgr()
+local conn_mgr = ConnMgr()
 
 ---------------------------- 下面这些接口由底层回调 ------------------------------
 ----------------------- 直接回调到对应的连接对象以实现多态 ------------------------

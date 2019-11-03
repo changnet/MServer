@@ -1,15 +1,15 @@
 -- 测试副本用的
 
-local Test_dungeon = oo.singleton( ... )
+local TestDungeon = oo.singleton( ... )
 
-function Test_dungeon:__init()
+function TestDungeon:__init()
     self.handle = {}
 end
 
-function Test_dungeon:do_enter(pid,fb_id)
+function TestDungeon:do_enter(pid,fb_id)
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ERROR("Test_dungeon:do_enter no player found",pid)
+        ERROR("TestDungeon:do_enter no player found",pid)
         return
     end
 
@@ -27,7 +27,7 @@ function Test_dungeon:do_enter(pid,fb_id)
     dungeon:enter( player,dungeon:first_scene(),px,py )
 end
 
-local test = Test_dungeon()
+local test = TestDungeon()
 
 local function enter_fuben(pid,fb_id)
     return test:do_enter(pid,fb_id)

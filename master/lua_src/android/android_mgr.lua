@@ -2,20 +2,20 @@
 
 local Android = require "android.android"
 
-local Android_mgr = oo.singleton( ... )
+local AndroidMgr = oo.singleton( ... )
 
-function Android_mgr:__init()
+function AndroidMgr:__init()
     self.conn    = {}
     self.android = {}
 end
 
-function Android_mgr:set_android_conn(conn_id,android)
+function AndroidMgr:set_android_conn(conn_id,android)
     if android then assert(nil == self.conn[conn_id]) end
 
     self.conn[conn_id] = android
 end
 
-function Android_mgr:start()
+function AndroidMgr:start()
     local srvindex = tonumber(g_app.srvindex) -- 平台
     local srvid = tonumber(g_app.srvid) -- 服务器
     for index = 1,srvid do
@@ -24,17 +24,17 @@ function Android_mgr:start()
     end
 end
 
-function Android_mgr:get_android_by_conn(conn_id)
+function AndroidMgr:get_android_by_conn(conn_id)
     return self.conn[conn_id]
 end
 
-function Android_mgr:routine( ms_now )
+function AndroidMgr:routine( ms_now )
     for _,android in pairs(self.android) do
         android:routine( ms_now )
     end
 end
 
-local android_mgr = Android_mgr()
+local android_mgr = AndroidMgr()
 
 return android_mgr
 

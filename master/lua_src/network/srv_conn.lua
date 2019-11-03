@@ -3,9 +3,9 @@
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 
-local Srv_conn = oo.class( ... )
+local SrvConn = oo.class( ... )
 
-function Srv_conn:__init( conn_id )
+function SrvConn:__init( conn_id )
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
@@ -15,23 +15,23 @@ function Srv_conn:__init( conn_id )
 end
 
 -- 发送数据包
-function Srv_conn:send_pkt( cmd,pkt,ecode )
+function SrvConn:send_pkt( cmd,pkt,ecode )
     return network_mgr:send_s2s_packet( self.conn_id,cmd,ecode or 0,pkt )
 end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
-function Srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
+function SrvConn:send_clt_pkt( pid,cmd,pkt,ecode )
     return network_mgr:send_ssc_packet(
         self.conn_id,pid,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
 end
 
 -- 发送数据包
-function Srv_conn:send_rpc_pkt( unique_id,method_name,... )
+function SrvConn:send_rpc_pkt( unique_id,method_name,... )
     return network_mgr:send_rpc_packet( self.conn_id,unique_id,method_name,... )
 end
 
 -- timeout check
-function Srv_conn:check( check_time )
+function SrvConn:check( check_time )
     if self.beat < check_time then
         self.fchk = self.fchk + 1
 
@@ -43,19 +43,19 @@ function Srv_conn:check( check_time )
 end
 
 -- 认证成功
-function Srv_conn:authorized( pkt )
+function SrvConn:authorized( pkt )
     self.auth = true
     self.name = pkt.name
     self.session = pkt.session
 end
 
 -- 获取基本类型名字(gateway、world)
-function Srv_conn:base_name()
+function SrvConn:base_name()
     return self.name
 end
 
 -- 获取该连接名称
-function Srv_conn:conn_name( session )
+function SrvConn:conn_name( session )
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
@@ -66,13 +66,13 @@ function Srv_conn:conn_name( session )
 end
 
 -- 监听服务器连接
-function Srv_conn:listen( ip,port )
+function SrvConn:listen( ip,port )
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
 
     g_conn_mgr:set_conn( self.conn_id,self )
 end
 
-function Srv_conn:raw_connect()
+function SrvConn:raw_connect()
     self.conn_ok = false
     self.conn_id = network_mgr:connect( self.ip,self.port,network_mgr.CNT_SSCN )
 
@@ -82,7 +82,7 @@ function Srv_conn:raw_connect()
 end
 
 -- 连接到其他服务器
-function Srv_conn:connect( ip,port )
+function SrvConn:connect( ip,port )
     self.ip = ip
     self.port = port
 
@@ -90,7 +90,7 @@ function Srv_conn:connect( ip,port )
 end
 
 -- 重新连接
-function Srv_conn:reconnect()
+function SrvConn:reconnect()
     self.auth = false
     self.session = 0
 
@@ -98,7 +98,7 @@ function Srv_conn:reconnect()
 end
 
 -- 重新连接
-function Srv_conn:set_conn_param( conn_id )
+function SrvConn:set_conn_param( conn_id )
     network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
     network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
@@ -112,17 +112,17 @@ function Srv_conn:set_conn_param( conn_id )
 end
 
 -- 接受新的连接
-function Srv_conn:conn_accept( new_conn_id )
+function SrvConn:conn_accept( new_conn_id )
     self:set_conn_param( new_conn_id )
 
-    local new_conn = Srv_conn( new_conn_id )
+    local new_conn = SrvConn( new_conn_id )
     g_network_mgr:srv_conn_accept( new_conn_id,new_conn )
 
     return new_conn
 end
 
 -- 连接成功
-function Srv_conn:conn_new( ecode )
+function SrvConn:conn_new( ecode )
     if 0 == ecode then
         self.conn_ok = true
         self:set_conn_param( self.conn_id )
@@ -132,31 +132,31 @@ function Srv_conn:conn_new( ecode )
 end
 
 -- 连接断开
-function Srv_conn:conn_del()
+function SrvConn:conn_del()
     self.conn_ok = false
     g_conn_mgr:set_conn( self.conn_id,nil )
     return g_network_mgr:srv_conn_del( self.conn_id )
 end
 
 -- 服务器之间消息回调
-function Srv_conn:command_new( session,cmd,errno,pkt )
+function SrvConn:command_new( session,cmd,errno,pkt )
     self.beat = ev:time()
     return g_command_mgr:srv_dispatch( self,cmd,pkt )
 end
 
 -- 转发的客户端消息
-function Srv_conn:css_command_new( pid,cmd,... )
+function SrvConn:css_command_new( pid,cmd,... )
     return g_command_mgr:clt_dispatch_ex( self,pid,cmd,... )
 end
 
 -- 主动关闭连接
-function Srv_conn:close()
+function SrvConn:close()
     self.conn_ok = false
     return network_mgr:close( self.conn_id )
 end
 
 -- 发送认证数据
-function Srv_conn:send_register()
+function SrvConn:send_register()
     local pkt =
     {
         name    = g_app.srvname,
@@ -167,4 +167,4 @@ function Srv_conn:send_register()
     self:send_pkt( SS.SYS_REG,pkt )
 end
 
-return Srv_conn
+return SrvConn

@@ -13,7 +13,7 @@
    local函数，是没法热更的。建议放在对象中。如果一定要热更，参考name.lua的处理
 ]]
 
-local Auto_id = require "modules.system.auto_id"
+local AutoId = require "modules.system.auto_id"
 
 local Rpc = oo.singleton( ... )
 
@@ -23,7 +23,7 @@ function Rpc:__init()
     self.callback = {}
     self.procedure = {}
 
-    self.auto_id = Auto_id()
+    self.auto_id = AutoId()
 
     self.stat = {}
     self.stat_tm = ev:time()

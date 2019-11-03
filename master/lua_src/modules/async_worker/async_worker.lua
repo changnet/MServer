@@ -16,11 +16,11 @@
 
 local ASYNC = require "modules.async_worker.async_worker_header"
 
-local Async_worker = oo.singleton( ... )
+local AsyncWorker = oo.singleton( ... )
 
-function Async_worker:__init()
+function AsyncWorker:__init()
 end
 
-local worker = Async_worker()
+local worker = AsyncWorker()
 
 return worker

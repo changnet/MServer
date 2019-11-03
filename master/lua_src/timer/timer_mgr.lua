@@ -7,11 +7,11 @@
 local LIMIT = require "global.limits"
 
 local Timer = require "Timer"
-local Timer_mgr = oo.singleton( ... )
+local TimerMgr = oo.singleton( ... )
 
 local method_thunk = method_thunk
 
-function Timer_mgr:__init()
+function TimerMgr:__init()
     self.next_id = 0
 
     -- 使用weak table防止owner对象不释放内存
@@ -21,7 +21,7 @@ function Timer_mgr:__init()
     self.timer = {}
 end
 
-function Timer_mgr:get_next_id()
+function TimerMgr:get_next_id()
     repeat
         if self.next_id >= LIMIT.INT32_MAX then self.next_id = 0 end
 
@@ -37,7 +37,7 @@ end
 -- @interval:按N秒循环回调
 -- @this:回调对象
 -- @method:回调函数
-function Timer_mgr:new_timer( after,interval,this,method,... )
+function TimerMgr:new_timer( after,interval,this,method,... )
     local timer_id = self:get_next_id()
 
     local timer = Timer( timer_id )
@@ -51,24 +51,24 @@ function Timer_mgr:new_timer( after,interval,this,method,... )
 end
 
 -- 重启定时器
-function Timer_mgr:start_timer( timer_id )
+function TimerMgr:start_timer( timer_id )
     self.timer[timer_id]:start()
 end
 
 -- 暂停定时器
-function Timer_mgr:stop_timer ( timer_id )
+function TimerMgr:stop_timer ( timer_id )
     self.timer[timer_id]:stop()
 end
 
 -- 删除定时器
-function Timer_mgr:del_timer( timer_id )
+function TimerMgr:del_timer( timer_id )
     self.timer[timer_id]:stop()
 
     self.cb[timer_id] = nil
     self.timer[timer_id] = nil
 end
 
-local timer_mgr = Timer_mgr()
+local timer_mgr = TimerMgr()
 
 --[[
     C++ 统一回调这个函数，根据timer_id区分

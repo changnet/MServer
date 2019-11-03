@@ -3,7 +3,7 @@
 -- xzc
 
 local UNIQUEID = UNIQUEID
-local Unique_id = oo.singleton( ... )
+local UniqueId = oo.singleton( ... )
 
 local player_query = string.format( '{"_id":%d}',UNIQUEID.PLAYER )
 
@@ -11,14 +11,14 @@ local player_query = string.format( '{"_id":%d}',UNIQUEID.PLAYER )
 local player_update  = '{"$inc":{"seed":1}}'
 
 -- 初始化
-function Unique_id:__init()
+function UniqueId:__init()
     self.net_id_seed = 0
 
     self.unique_seed = {} -- 需要存库的seed
 end
 
 -- 从数据库加载
-function Unique_id:db_load()
+function UniqueId:db_load()
     local callback = function( ... )
         self:on_db_loaded( ... )
     end
@@ -26,7 +26,7 @@ function Unique_id:db_load()
     g_mongodb:find( "uniqueid",nil,nil,callback )
 end
 
-function Unique_id:on_db_loaded( ecode,res )
+function UniqueId:on_db_loaded( ecode,res )
     if 0 ~= ecode then
         ERROR( "account db load error" )
         return
@@ -50,7 +50,7 @@ end
 -- 产生一个标识socket连接的id
 -- 只是简单的自增，如果用完，则循环
 -- 调用此函数时请自己检测id是否重复，如果重复则重新取一个
-function Unique_id:conn_id()
+function UniqueId:conn_id()
     if self.net_id_seed >= 0xFFFFFFFF then self.net_id_seed = 0 end
 
     self.net_id_seed = self.net_id_seed + 1
@@ -74,7 +74,7 @@ table: 0x18eb940
     }
 }
 ]]
-function Unique_id:on_player_id( srvid,raw_cb,ecode,res )
+function UniqueId:on_player_id( srvid,raw_cb,ecode,res )
     if 0 ~= ecode or 1 ~= res.ok then
         ERROR( "update player id error" )
         return
@@ -100,7 +100,7 @@ function Unique_id:on_player_id( srvid,raw_cb,ecode,res )
 end
 
 -- 产生一个玩家pid
-function Unique_id:player_id( srvid,raw_cb )
+function UniqueId:player_id( srvid,raw_cb )
     local callback = function( ... )
         self:on_player_id( srvid,raw_cb,... )
     end
@@ -111,6 +111,6 @@ function Unique_id:player_id( srvid,raw_cb )
         "uniqueid",player_query,nil,player_update,nil,false,true,true,callback )
 end
 
-local uid = Unique_id()
+local uid = UniqueId()
 
 return uid

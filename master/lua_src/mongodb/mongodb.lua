@@ -5,12 +5,12 @@
 -- mongo db 数据存储
 
 local Mongo = require "Mongo"
-local Auto_id = require "modules.system.auto_id"
+local AutoId = require "modules.system.auto_id"
 
 local Mongodb = oo.class( ... )
 
 function Mongodb:__init( dbid )
-    self.auto_id = Auto_id()
+    self.auto_id = AutoId()
     self.mongodb = Mongo( dbid )
 
     self.cb = {}
@@ -121,11 +121,11 @@ end
 
 
 -- >>>>>>>>>>>>>>>>>> coroutine 同步处理 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-local Mongodb_sync = require "mongodb.mongodb_sync"
+local MongodbSync = require "mongodb.mongodb_sync"
 
 function Mongodb:new_sync( routine,... )
     local co = coroutine.create( routine )
-    return Mongodb_sync( self,co )
+    return MongodbSync( self,co )
 end
 
 -- 不提供索引函数，请开服使用脚本创建索引。见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/

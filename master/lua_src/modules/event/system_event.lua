@@ -1,14 +1,14 @@
 -- 系统事件总线
 
 require "modules.event.event_header"
-local System_event = oo.singleton( ... )
+local SystemEvent = oo.singleton( ... )
 
-function System_event:__init()
+function SystemEvent:__init()
 end
 
-function System_event:fire_event( event_id,... )
+function SystemEvent:fire_event( event_id,... )
 end
 
-local sys_ev = System_event()
+local sys_ev = SystemEvent()
 
 return sys_ev

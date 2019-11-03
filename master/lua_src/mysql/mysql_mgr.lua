@@ -5,14 +5,14 @@
 -- mysql连接管理
 
 local Mysql = require "mysql.mysql"
-local Mysql_mgr = oo.singleton( ... )
+local MysqlMgr = oo.singleton( ... )
 
-function Mysql_mgr:__init()
+function MysqlMgr:__init()
     self.dbid  = 0
     self.mysql = {}
 end
 
-function Mysql_mgr:new()
+function MysqlMgr:new()
     self.dbid = self.dbid + 1
 
     local mysql = Mysql( self.dbid )
@@ -21,14 +21,14 @@ function Mysql_mgr:new()
     return mysql
 end
 
-function Mysql_mgr:stop()
+function MysqlMgr:stop()
     for _,mysql in pairs( self.mysql ) do
         mysql:stop()
     end
 end
 
 
-local mysql_mgr = Mysql_mgr()
+local mysql_mgr = MysqlMgr()
 
 --  底层回调很难回调到对应的mysql对象，只能在这里做一次分发
 function mysql_read_event( dbid,qid,ecode,res )

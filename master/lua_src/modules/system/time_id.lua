@@ -7,9 +7,9 @@
 
 local LIMIT = require "global.limits"
 
-local Time_id = oo.class( ... )
+local TimeId = oo.class( ... )
 
-function Time_id:__init()
+function TimeId:__init()
     -- TODO:2038年可以修改偏移的位数或者对now作一个偏移，不再从1970年计算
     -- 从初始化开始计时，自增满才增加时间因子，只要重启进程时没用使用到当前时间，就不会
     -- 产生重复id
@@ -18,12 +18,12 @@ function Time_id:__init()
 end
 
 -- 获取上一次产生的id
-function Time_id:last_id()
+function TimeId:last_id()
     return ( (self.seed << 32) + self.sec )
 end
 
 -- 获取下一个自增Id
-function Time_id:next_id()
+function TimeId:next_id()
     self.seed = self.seed + 1
     if self.seed >= LIMIT.UINT16_MAX then
         self.seed = 0
@@ -34,4 +34,4 @@ function Time_id:next_id()
     return ( (self.seed << 32) + self.sec )
 end
 
-return Time_id
+return TimeId

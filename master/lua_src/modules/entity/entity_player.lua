@@ -6,26 +6,26 @@
 local g_network_mgr = g_network_mgr
 
 local Entity = require "modules.entity.entity"
-local Entity_animal = require "modules.entity.entity_animal"
-local Entity_player = oo.class( ...,Entity_animal )
+local EntityAnimal = require "modules.entity.entity_animal"
+local EntityPlayer = oo.class( ...,EntityAnimal )
 
-function Entity_player:__init(eid,pid)
-    Entity_animal.__init(self,eid,ET.PLAYER)
+function EntityPlayer:__init(eid,pid)
+    EntityAnimal.__init(self,eid,ET.PLAYER)
     self.pid = pid -- 玩家唯一id
 end
 
 -- 发送数据包
-function Entity_player:send_pkt(cmd,pkt,ecode)
+function EntityPlayer:send_pkt(cmd,pkt,ecode)
     return g_network_mgr:send_clt_pkt(self.pid,cmd,pkt,ecode)
 end
 
 -- 同步来自gw的基础属性
-function Entity_player:update_base_info( base )
+function EntityPlayer:update_base_info( base )
     for k,v in pairs(base) do self[k] = v end
 end
 
 -- 同步来自gw的玩家战斗属性
-function Entity_player:update_battle_abt( abt_list )
+function EntityPlayer:update_battle_abt( abt_list )
     local sys = self.abt_sys:get_sys( ABTSYS.SYNC )
 
     sys:clear()
@@ -39,7 +39,7 @@ end
 -- 创建实体出现的数据包
 local tmp_pkt = {}
 local tmp_player_pkt = {}
-function Entity_player:appear_pkt()
+function EntityPlayer:appear_pkt()
     -- 创建基础数据
     Entity.appear_pkt(self,tmp_pkt)
 
@@ -53,10 +53,10 @@ end
 
 -- 玩家登录进入场景时，下发实体属性
 local property_pkt = {}
-function Entity_player:send_property()
+function EntityPlayer:send_property()
     property_pkt.handle = self.eid
 
     return self:send_pkt(SC.ENTITY_PROPERTY,property_pkt)
 end
 
-return Entity_player
+return EntityPlayer

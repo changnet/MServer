@@ -11,18 +11,18 @@
 -- !!!
 
 local json = require "lua_parson"
-local Bucket_rank_core = require "Insertion_rank"
+local BucketRankCore = require "InsertionRank"
 
-local Bucket_rank = oo.class( ... )
+local BucketRank = oo.class( ... )
 
-function Bucket_rank:__init()
+function BucketRank:__init()
     self.object = {}
     self.sort_id = {}
     self.rank_id = {}
-    self.rank = Bucket_rank_core()
+    self.rank = BucketRankCore()
 end
 
-function Bucket_rank:clear()
+function BucketRank:clear()
     self.object = {}
     self.sort_id = {}
     self.rank_id = {}
@@ -30,12 +30,12 @@ function Bucket_rank:clear()
 end
 
 
-function Bucket_rank:get_count()
+function BucketRank:get_count()
     return self.rank:get_count()
 end
 
 -- 做个缓存，这样从id取排名，或者从排名取id就很快了
-function Bucket_rank:make_cache()
+function BucketRank:make_cache()
     local count = self.rank:get_count()
     local max_idx = self.rank:get_top_n(count,self.sort_id)
 
@@ -47,7 +47,7 @@ end
 
 -- 插入一个排序对象，返回对象数据
 -- insert(id,factor1,factor2,factor3),可带多个排序因子
-function Bucket_rank:insert( id,... )
+function BucketRank:insert( id,... )
     self.rank:insert( id,... )
 
     local object = {}
@@ -58,7 +58,7 @@ function Bucket_rank:insert( id,... )
 end
 
 -- 保存到文件，通常在runtime\rank文件夹内
-function Bucket_rank:save( path )
+function BucketRank:save( path )
     -- 按排序顺序写入文件，这样方便查看
     local sort_object = {}
     local count = self.rank:get_count();
@@ -71,7 +71,7 @@ function Bucket_rank:save( path )
 end
 
 -- 从文件加载,这个函数不会主动clear
-function Bucket_rank:load( path )
+function BucketRank:load( path )
     local sort_object = json.decode_from_file( path )
 
     for _,object in pairs(sort_object) do
@@ -81,8 +81,8 @@ function Bucket_rank:load( path )
     end
 end
 
-function Bucket_rank:get_object( id )
+function BucketRank:get_object( id )
     return self.object[id]
 end
 
-return Bucket_rank
+return BucketRank

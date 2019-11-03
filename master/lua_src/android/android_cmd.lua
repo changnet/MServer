@@ -34,13 +34,13 @@ do
     end
 end
 
-local Android_cmd = oo.singleton( ... )
+local AndroidCmd = oo.singleton( ... )
 
 -- 注册指令处理
-function Android_cmd:cmd_register( cmd_cfg,handler )
+function AndroidCmd:cmd_register( cmd_cfg,handler )
     local cfg = sc_cmd[cmd_cfg[1]]
     if not cfg then
-        PRINTF( "Android_cmd:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
+        PRINTF( "AndroidCmd:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
         return
     end
 
@@ -48,20 +48,20 @@ function Android_cmd:cmd_register( cmd_cfg,handler )
 end
 
 -- 握手处理
-function Android_cmd:handshake_register( handler )
+function AndroidCmd:handshake_register( handler )
     handshake_handler = handler
 end
 
 -- 连接成功，回调对应的模块
-function Android_cmd:conn_new_register( handler )
+function AndroidCmd:conn_new_register( handler )
     conn_new_handler = handler
 end
 
-function Android_cmd:dump_pkt( pkt )
+function AndroidCmd:dump_pkt( pkt )
     vd(pkt)
 end
 
-local android_cmd = Android_cmd()
+local android_cmd = AndroidCmd()
 
 function handshake_new( conn_id,sec_websocket_key,sec_websocket_accept )
     if not sec_websocket_accept then

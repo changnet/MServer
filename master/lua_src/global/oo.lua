@@ -1,5 +1,4 @@
--- a much simple OO implementation base on loop.simple
-
+-- Object Oriented
 oo = {}
 
 local class_name = {}       -- 类列表，类为k，name为v
@@ -134,9 +133,9 @@ local function raw_class(new_method,name,super,...)
 
     if "table" == type(super) then
         -- lazy_class(new_method,clz,super,...)
-        return lazy_class(new_method,clz,super,...)
+        return fast_class(new_method,clz,super,...)
     else
-        return lazy_class(new_method,clz,...)
+        return fast_class(new_method,clz,...)
     end
 end
 

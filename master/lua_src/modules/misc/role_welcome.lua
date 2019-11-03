@@ -6,10 +6,10 @@
 
 local welcom_conf = require_conf("player_welcome")
 
-local Role_welcome = oo.singleton( ... )
+local RoleWelcome = oo.singleton( ... )
 
 -- 登录事件
-function Role_welcome:on_enter( player )
+function RoleWelcome:on_enter( player )
     local var = player:get_misc_root()
     if var.welcome then return end -- 已经领取过
 
@@ -17,12 +17,12 @@ function Role_welcome:on_enter( player )
 end
 
 -- 发送数据
-function Role_welcome:send_info( player,st )
+function RoleWelcome:send_info( player,st )
     return player:send_pkt( SC.MISC_WELCOME,{status = st})
 end
 
 -- 处理前端领取奖励
-function Role_welcome:handle_award( player,pkt )
+function RoleWelcome:handle_award( player,pkt )
     local var = player:get_misc_root()
     if var.welcome then return end -- 已经领取过
 
@@ -34,6 +34,6 @@ function Role_welcome:handle_award( player,pkt )
     self:send_info( player,1 )
 end
 
-local rw = Role_welcome()
+local rw = RoleWelcome()
 
 return rw

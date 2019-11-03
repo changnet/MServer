@@ -8,40 +8,40 @@
 -- 节点的右子节点是 2*index+1，
 -- 每一个节点大于（或等于）这个节点的子节点，但左右子节点的大小则不固定
 
-local Max_heap = oo.class( ... )
+local MaxHeap = oo.class( ... )
 
-function Max_heap:__init()
+function MaxHeap:__init()
     self.heap       = {}
     self.map_list   = {}
     self.count      = 0
     self.next_id    = 1
 end
 
-function Max_heap:alloc_id()
+function MaxHeap:alloc_id()
     local id = self.next_id
     self.next_id = self.next_id + 1
     return id
 end
 
-function Max_heap:top()
+function MaxHeap:top()
     return self.heap[1]
 end
 
-function Max_heap:is_empty()
+function MaxHeap:is_empty()
     return 0 == self.count
 end
 
-function Max_heap:size()
+function MaxHeap:size()
     return self.count
 end
 
-function Max_heap:clear()
+function MaxHeap:clear()
     self.heap       = {}
     self.map_list   = {}
     self.count      = 0
 end
 
-function Max_heap:shift_up(i, e)
+function MaxHeap:shift_up(i, e)
     local p = math.floor(i / 2)
     while (i > 1 and self.heap[p].key < e.key) do
         local o = self.heap[p]
@@ -54,7 +54,7 @@ function Max_heap:shift_up(i, e)
     e.index = i
 end
 
-function Max_heap:shift_down(i, e)
+function MaxHeap:shift_down(i, e)
     local c = 2 * i
     local count = self.count
     while (c <= count) do
@@ -77,7 +77,7 @@ function Max_heap:shift_down(i, e)
     e.index = i
 end
 
-function Max_heap:push(key, value)
+function MaxHeap:push(key, value)
     local id = self:alloc_id()
     local e = {}
     e.key = key
@@ -90,7 +90,7 @@ function Max_heap:push(key, value)
     return id
 end
 
-function Max_heap:pop()
+function MaxHeap:pop()
     local count = self.count
     if 0 ~= count then
         self.map_list[self.heap[1].id] = nil
@@ -100,7 +100,7 @@ function Max_heap:pop()
     end
 end
 
-function Max_heap:erase(id)
+function MaxHeap:erase(id)
     local count = self.count
     if 0 ~= count then
         local e = self.map_list[id]
@@ -122,4 +122,4 @@ function Max_heap:erase(id)
     end
 end
 
-return Max_heap
+return MaxHeap

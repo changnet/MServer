@@ -84,7 +84,7 @@ g_rpc:declare( "player_update_base",player_update_base )
 g_rpc:declare( "player_update_battle_abt",player_update_battle_abt )
 
 --------------------------------------------------------------------------------
-local Entity_player = require "modules.entity.entity_player"
+local EntityPlayer = require "modules.entity.entity_player"
 local function entity_player_clt_cb( cmd,cb_func )
     local cb = function( conn,pid,pkt )
         local player = g_entity_mgr:get_player( pid )
@@ -97,5 +97,5 @@ local function entity_player_clt_cb( cmd,cb_func )
     g_command_mgr:clt_register( cmd,cb )
 end
 
-entity_player_clt_cb( CS.ENTITY_MOVE,Entity_player.do_move )
+entity_player_clt_cb( CS.ENTITY_MOVE,EntityPlayer.do_move )
 --------------------------------------------------------------------------------

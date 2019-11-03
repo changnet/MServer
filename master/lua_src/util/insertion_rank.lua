@@ -12,28 +12,28 @@
 
 
 local json = require "lua_parson"
-local Insertion_rank_core = require "Insertion_rank"
+local InsertionRankCore = require "InsertionRank"
 
-local Insertion_rank = oo.class( ... )
+local InsertionRank = oo.class( ... )
 
-function Insertion_rank:__init()
+function InsertionRank:__init()
     self.object = {} -- 存储排行对象附带的数据
-    self.rank = Insertion_rank_core()
+    self.rank = InsertionRankCore()
 end
 
-function Insertion_rank:clear()
+function InsertionRank:clear()
     self.object = {}
     return self.rank:clear()
 end
 
-function Insertion_rank:remove( id )
+function InsertionRank:remove( id )
     self.object[id] = nil
     return self.rank:remove( id )
 end
 
 -- 插入一个排序对象，返回对象数据
 -- insert(id,factor1,factor2,factor3),可带多个排序因子
-function Insertion_rank:insert( id,... )
+function InsertionRank:insert( id,... )
     self.rank:insert( id,... )
 
     local object = {}
@@ -44,39 +44,39 @@ function Insertion_rank:insert( id,... )
 end
 
 -- 更新某个排序因子
-function Insertion_rank:update( id,factor,idx )
+function InsertionRank:update( id,factor,idx )
     idx = idx or 1
     self.rank:update( id,factor,idx )
 
     self.object[id].__FACTOR[idx] = factor
 end
 
-function Insertion_rank:get_count()
+function InsertionRank:get_count()
     return self.rank:get_count()
 end
 
-function Insertion_rank:set_max_count( max_count )
+function InsertionRank:set_max_count( max_count )
     return self.rank:set_max_count( max_count )
 end
 
-function Insertion_rank:get_max_factor()
+function InsertionRank:get_max_factor()
     return self.rank:get_max_factor()
 end
 
-function Insertion_rank:get_factor( id )
+function InsertionRank:get_factor( id )
     return self.rank:get_factor( id )
 end
 
-function Insertion_rank:get_rank_by_id( id )
+function InsertionRank:get_rank_by_id( id )
     return self.rank:get_rank_by_id( id )
 end
 
-function Insertion_rank:get_id_by_rank( rank )
+function InsertionRank:get_id_by_rank( rank )
     return self.rank:get_id_by_rank( rank )
 end
 
 -- 保存到文件，通常在runtime\rank文件夹内
-function Insertion_rank:save( path )
+function InsertionRank:save( path )
     -- 按排序顺序写入文件，这样方便查看
     local sort_object = {}
     local count = self.rank:get_count();
@@ -89,7 +89,7 @@ function Insertion_rank:save( path )
 end
 
 -- 从文件加载,这个函数不会主动clear
-function Insertion_rank:load( path )
+function InsertionRank:load( path )
     local sort_object = json.decode_from_file( path )
 
     for _,object in pairs(sort_object) do
@@ -99,8 +99,8 @@ function Insertion_rank:load( path )
     end
 end
 
-function Insertion_rank:get_object( id )
+function InsertionRank:get_object( id )
     return self.object[id]
 end
 
-return Insertion_rank
+return InsertionRank

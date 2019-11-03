@@ -8,9 +8,9 @@ require "modules.attribute.attribute_header"
 local Attribute = require "modules.attribute.attribute"
 
 local ABTSYS = ABTSYS
-local Attribute_sys = oo.class( ... )
+local AttributeSys = oo.class( ... )
 
-function Attribute_sys:__init( pid )
+function AttributeSys:__init( pid )
     self.pid = pid
     self.sys = {} -- attribute_header.lua中定义的系统id为key
 
@@ -19,12 +19,12 @@ function Attribute_sys:__init( pid )
 end
 
 -- 获取某个系统的属性集
-function Attribute_sys:raw_get_sys(id)
+function AttributeSys:raw_get_sys(id)
     return self.sys[id]
 end
 
 -- 获取某个系统的属性集(不存在则创建)
-function Attribute_sys:get_sys(id)
+function AttributeSys:get_sys(id)
     if id <= ABTSYS.NONE or id >= ABTSYS.MAX then return nil end
 
     if not self.sys[id] then self.sys[id] = Attribute() end
@@ -33,23 +33,23 @@ function Attribute_sys:get_sys(id)
 end
 
 -- 获取最终属性
-function Attribute_sys:get_final_attr()
+function AttributeSys:get_final_attr()
     return self.final_abt.attribute
 end
 
 -- 获取一个最终属性
-function Attribute_sys:get_one_final_attr(id)
+function AttributeSys:get_one_final_attr(id)
     return self.final_abt.attribute[id]
 end
 
 -- 添加属性到某个系统
-function Attribute_sys:add_sys_abt( id,abt_list )
+function AttributeSys:add_sys_abt( id,abt_list )
     local sys = self:get_sys(id)
     return sys:push( abt_list )
 end
 
 -- 设置某个系统属性
-function Attribute_sys:set_sys_abt( id,abt_list )
+function AttributeSys:set_sys_abt( id,abt_list )
     local sys = self:get_sys(id)
 
     sys:clear()
@@ -57,12 +57,12 @@ function Attribute_sys:set_sys_abt( id,abt_list )
 end
 
 -- 标识是否变动
-function Attribute_sys:set_modify(md)
+function AttributeSys:set_modify(md)
     self.modify = md
 end
 
 -- 定时检测属性变动
-function Attribute_sys:update_modify()
+function AttributeSys:update_modify()
     if not self.modify then return end
 
     self.modify = false
@@ -70,7 +70,7 @@ function Attribute_sys:update_modify()
 end
 
 -- 计算总的属性
-function Attribute_sys:calc_final_abt()
+function AttributeSys:calc_final_abt()
     self.final_abt:clear()
 
     for _,sys in pairs( self.sys ) do
@@ -85,7 +85,7 @@ end
 
 -- 把属性同步到场景
 -- @conn: 指定更新属性的连接，不指定的话说明玩家已经进入对应的场景，从pid取就可以了
-function Attribute_sys:update_battle_abt( conn )
+function AttributeSys:update_battle_abt( conn )
     -- TODO: 这里需要优化一下，看下是不是要改成protobuf同步
     local abt_list = {}
     for k,v in pairs( self.final_abt.attribute ) do
@@ -96,4 +96,4 @@ function Attribute_sys:update_battle_abt( conn )
     g_rpc:proxy(conn or self.pid):player_update_battle_abt( self.pid,abt_list )
 end
 
-return Attribute_sys
+return AttributeSys

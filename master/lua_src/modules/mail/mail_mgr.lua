@@ -4,15 +4,15 @@
 
 -- 全服邮件 管理
 
-local Time_id = require "modules.system.time_id"
+local TimeId = require "modules.system.time_id"
 
-local Mail_mgr = oo.singleton( ... )
+local MailMgr = oo.singleton( ... )
 
-function Mail_mgr:__init()
+function MailMgr:__init()
     self.list = {}
 
     -- 用这个time_id来做id，好处是不用存库，坏处是往后调时间的时候发邮件就会出错
-    self.time_id = Time_id()
+    self.time_id = TimeId()
 end
 
 -- 发送个人邮件（离线在线均可）
@@ -21,7 +21,7 @@ end
 -- @ctx:邮件内容
 -- @attachment:通用奖励格式，参考res.lua
 -- @op:日志操作，用于跟踪附件资源产出。参考log_header
-function Mail_mgr:send_mail( pid,title,ctx,attachment,op )
+function MailMgr:send_mail( pid,title,ctx,attachment,op )
     -- 邮件数据统一在world处理，不是该进程则转
     if "world" ~= g_app.srvname then
         return g_rpc:rpc_send_mail( pid,title,ctx,attachment,op )
@@ -30,7 +30,7 @@ function Mail_mgr:send_mail( pid,title,ctx,attachment,op )
     return self:raw_send_mail( pid,title,ctx,attachment,op )
 end
 
-function Mail_mgr:raw_send_mail( pid,title,ctx,attachment,op )
+function MailMgr:raw_send_mail( pid,title,ctx,attachment,op )
     local mail = {}
     mail.id    = self.time_id:next_id()
     mail.op    = op
@@ -68,7 +68,7 @@ function Mail_mgr:raw_send_mail( pid,title,ctx,attachment,op )
 end
 
 -- 添加个人离线邮件
-function Mail_mgr:add_offline_mail( pid,mail )
+function MailMgr:add_offline_mail( pid,mail )
     -- list.N，mongodb 2.2+版本后语法，表示list数组中第N个元素不存在时才插入(从0开始)
     -- 防止玩家太久不上线邮箱爆了
     local query = string.format(
@@ -107,7 +107,7 @@ table: 0x2b8cff0
 }
 
 ]]
-function Mail_mgr:on_offline_mail( pid,mail,ecode,res )
+function MailMgr:on_offline_mail( pid,mail,ecode,res )
     if 0 == ecode and res.lastErrorObject.n == 1 then return end
     -- 如果插入失败，记录一下日志
     g_log_mgr:add_mail_log( string.format("offline_mail_error_%d",pid),mail )
@@ -123,7 +123,7 @@ end
 -- @expire:超过这个时间戳此邮件失效(已发给玩家的不影响，只是这时候登录的玩家就不会收到了)
 -- @level: >= 此等级的玩家才能收到
 -- @vip:达到此vip等级才能收到
-function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
+function MailMgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     if not title or not ctx then
         ERROR("send sys mail,no title(%s) or ctx(%s)",title,ctx)
         return
@@ -137,7 +137,7 @@ function Mail_mgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     return self:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
 end
 
-function Mail_mgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
+function MailMgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     local mail  = {}
     mail.id     = self.time_id:next_id()
     mail.op     = op
@@ -162,7 +162,7 @@ function Mail_mgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
 end
 
 -- 把新增的全服邮件派发给在线的玩家
-function Mail_mgr:dispatch_sys_mail( mail )
+function MailMgr:dispatch_sys_mail( mail )
     local players = g_player_mgr:get_all_player()
     for _,player in pairs( players ) do
         player:get_module("mail"):add_sys_mail( mail )
@@ -170,13 +170,13 @@ function Mail_mgr:dispatch_sys_mail( mail )
 end
 
 -- 存库
-function Mail_mgr:db_save()
+function MailMgr:db_save()
     local query = string.format('{"_id":%d}',g_app.srvindex)
     g_mongodb:update( "sys_mail",query,{ list = self.list },true )
 end
 
 -- 读库
-function Mail_mgr:db_load()
+function MailMgr:db_load()
     local callback = function( ... )
         self:on_db_loaded( ... )
     end
@@ -186,7 +186,7 @@ function Mail_mgr:db_load()
 end
 
 -- db数据加载回调
-function Mail_mgr:on_db_loaded( ecode,res )
+function MailMgr:on_db_loaded( ecode,res )
     if 0 ~= ecode then
         ERROR( "sys mail db load error" )
         return
@@ -199,7 +199,7 @@ function Mail_mgr:on_db_loaded( ecode,res )
 end
 
 -- 删除多出的邮件
-function Mail_mgr:truncate()
+function MailMgr:truncate()
     -- TODO:是不是要先找过期了的
     while #self.list > MAX_SYS_MAIL do
         local old_mail = self.list[1]
@@ -210,12 +210,12 @@ function Mail_mgr:truncate()
 end
 
 -- 获取上一次使用的最大id
-function Mail_mgr:get_now_id()
+function MailMgr:get_now_id()
     return self.time_id:last_id()
 end
 
 -- 检查是否有新的全服邮件
-function Mail_mgr:check_new_sys_mail( player,mail_box,sys_id )
+function MailMgr:check_new_sys_mail( player,mail_box,sys_id )
     local new_cnt = 0
 
     -- 邮件是按时间倒序排列的
@@ -233,7 +233,7 @@ function Mail_mgr:check_new_sys_mail( player,mail_box,sys_id )
 end
 
 -- 检查邮件条件
-function Mail_mgr:check_mail_limit( mail,player )
+function MailMgr:check_mail_limit( mail,player )
     --  过期
     if mail.expire and ev:time() >= mail.expire then return false end
     -- 等级限制
@@ -242,6 +242,6 @@ function Mail_mgr:check_mail_limit( mail,player )
     return true
 end
 
-local mail_mgr = Mail_mgr()
+local mail_mgr = MailMgr()
 
 return mail_mgr

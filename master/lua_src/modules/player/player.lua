@@ -5,7 +5,7 @@
 -- 玩家对象
 
 local g_network_mgr = g_network_mgr
-local Auto_id = require "modules.system.auto_id"
+local AutoId = require "modules.system.auto_id"
 
 --[[
 玩家子模块，以下功能会自动触发
@@ -21,7 +21,7 @@ local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 local Bag  = require "modules.bag.bag"
 local Mail = require "modules.mail.mail"
-local Attribute_sys = require "modules.attribute.attribute_sys"
+local AttributeSys = require "modules.attribute.attribute_sys"
 
 local RES = RES
 local method_thunk = method_thunk
@@ -45,7 +45,7 @@ local Player = oo.class( ... )
 function Player:__init( pid )
     self.pid = pid
 
-    self.auto_id = Auto_id()
+    self.auto_id = AutoId()
 
     self.timer_cnt = 0
     self.timer_1scb = {}
@@ -57,7 +57,7 @@ function Player:__init( pid )
     end
 
     -- 不需要标准流程的子模块
-    self.abt_sys = Attribute_sys( pid )
+    self.abt_sys = AttributeSys( pid )
 
     self.timer = g_timer_mgr:new_timer( 5,5,self,self.do_timer )
 end
@@ -274,7 +274,7 @@ function Player:enter_fuben( pkt )
     local index = (0 == id % 2 and 1 or 2)
 
     if not session then
-        AREA_SESSION[index] = 
+        AREA_SESSION[index] =
             g_app:srv_session( "area",index,tonumber(g_app.srvid) )
     end
     local session = AREA_SESSION[index]

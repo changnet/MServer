@@ -3,15 +3,15 @@
 -- xzc
 
 local Mongodb = require "mongodb.mongodb"
-local Mongodb_mgr = oo.singleton( ... )
+local MongodbMgr = oo.singleton( ... )
 
-function Mongodb_mgr:__init()
+function MongodbMgr:__init()
     self.dbid = 0
     self.mongodb = {}
 end
 
 -- 新增db连接
-function Mongodb_mgr:new()
+function MongodbMgr:new()
     self.dbid = self.dbid + 1
 
      local mongodb = Mongodb( self.dbid )
@@ -21,13 +21,13 @@ function Mongodb_mgr:new()
 end
 
 -- 断开所有db(阻塞)
-function Mongodb_mgr:stop()
+function MongodbMgr:stop()
     for _,db in pairs( self.mongodb ) do
         db:stop()
     end
 end
 
-local db_mgr = Mongodb_mgr()
+local db_mgr = MongodbMgr()
 
 function mongodb_read_event( dbid,qid,ecode,res )
     local db = db_mgr.mongodb[dbid]
