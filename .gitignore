@@ -7,7 +7,7 @@
 .vscode
 
 # qt creator project file
-*.pro.user
+*.pro.user*
 
 setting.lua
 
