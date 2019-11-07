@@ -65,7 +65,7 @@ int32_t LTimer::active( lua_State *L )
     return 1;
 }
 
-void LTimer::callback( EvTimer &w,int32_t revents )
+void LTimer::callback( EVTimer &w,int32_t revents )
 {
     ASSERT( !(EV_ERROR & revents), "libev timer cb error" );
 

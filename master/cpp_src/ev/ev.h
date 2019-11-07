@@ -43,15 +43,15 @@ enum
 typedef double EvTstamp;
 
 class EVWatcher;
-class EvIO;
-class EvTimer;
+class EVIO;
+class EVTimer;
 
 /* file descriptor info structure */
 typedef struct
 {
-  EvIO *w;
-  uint8_t reify;  /* EPOLL_CTL_ADD、EPOLL_CTL_MOD、EPOLL_CTL_DEL */
-  uint8_t emask;  /* epoll event register in epoll */
+    EVIO *w;
+    uint8_t reify; /* EPOLL_CTL_ADD、EPOLL_CTL_MOD、EPOLL_CTL_DEL */
+    uint8_t emask; /* epoll event register in epoll */
 } ANFD;
 
 /* stores the pending event set for a given watcher */
@@ -62,7 +62,7 @@ typedef struct
 } ANPENDING;
 
 /* timer heap element */
-typedef EvTimer *ANHE;
+typedef EVTimer *ANHE;
 typedef int32_t ANCHANGE;
 
 /* epoll does sometimes return early, this is just to avoid the worst */
@@ -79,11 +79,11 @@ public:
     int32_t run();
     int32_t quit();
 
-    int32_t io_start( EvIO *w );
-    int32_t io_stop( EvIO *w );
+    int32_t io_start(EVIO *w);
+    int32_t io_stop(EVIO *w);
 
-    int32_t timer_start( EvTimer *w );
-    int32_t timer_stop( EvTimer *w );
+    int32_t timer_start(EVTimer *w);
+    int32_t timer_stop(EVTimer *w);
 
     static int64_t get_ms_time();
     static EvTstamp get_time();

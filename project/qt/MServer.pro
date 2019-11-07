@@ -5,6 +5,7 @@ CONFIG -= qt
 
 SOURCES += \
     ../../master/cpp_src/ev/ev.cpp \
+    ../../master/cpp_src/ev/ev_watcher.cpp \
     ../../master/cpp_src/global/global.cpp \
     ../../master/cpp_src/log/log.cpp \
     ../../master/cpp_src/lua_cpplib/lacism.cpp \

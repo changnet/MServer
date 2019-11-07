@@ -232,7 +232,7 @@ void Thread::notify_parent( NotifyType notify )
     }
 }
 
-void Thread::io_cb( EvIO &w,int32_t revents )
+void Thread::io_cb( EVIO &w,int32_t revents )
 {
     int8_t event = 0;
     int32_t sz = ::read( _fd[0],&event,sizeof(int8_t) );

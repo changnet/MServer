@@ -63,10 +63,10 @@ protected:
     inline void unlock() { pthread_mutex_unlock( &_mutex ); }
 private:
     void do_routine();
-    void io_cb( EvIO &w,int32_t revents );
+    void io_cb( EVIO &w,int32_t revents );
 private:
     int32_t _fd[2]  ;
-    EvIO _watcher;
+    EVIO _watcher;
     pthread_t _id;
 
     std::atomic<bool> _run;

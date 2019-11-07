@@ -15,8 +15,8 @@ public:
     int32_t start ( lua_State *L );
     int32_t active( lua_State *L );
 
-    void callback( EvTimer &w,int32_t revents );
+    void callback( EVTimer &w,int32_t revents );
 private:
     int32_t _timer_id;
-    class EvTimer _timer;
+    class EVTimer _timer;
 };

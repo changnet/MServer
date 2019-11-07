@@ -105,7 +105,7 @@ int32_t EV::quit()
     return 0;
 }
 
-int32_t EV::io_start( EvIO *w )
+int32_t EV::io_start( EVIO *w )
 {
     int32_t fd = w->fd;
 
@@ -124,7 +124,7 @@ int32_t EV::io_start( EvIO *w )
     return 1;
 }
 
-int32_t EV::io_stop( EvIO *w )
+int32_t EV::io_stop( EVIO *w )
 {
     clear_pending( w );
 
@@ -410,7 +410,7 @@ void EV::timers_reify()
 {
     while (timercnt && (timers [HEAP0])->at < mn_now)
     {
-        EvTimer *w = timers [HEAP0];
+        EVTimer *w = timers [HEAP0];
 
         ASSERT( w->is_active (), "libev: invalid timer detected" );
 
@@ -443,7 +443,7 @@ void EV::timers_reify()
     }
 }
 
-int32_t EV::timer_start( EvTimer *w )
+int32_t EV::timer_start( EVTimer *w )
 {
     w->at += mn_now;
 
@@ -461,7 +461,7 @@ int32_t EV::timer_start( EvTimer *w )
 }
 
 // 暂停定时器
-int32_t EV::timer_stop( EvTimer *w )
+int32_t EV::timer_stop( EVTimer *w )
 {
     clear_pending( w );
     if ( EXPECT_FALSE(!w->is_active()) ) return 0;

@@ -103,7 +103,7 @@ public:
     inline bool active() const { return _w.is_active(); }
     inline class Buffer &recv_buffer() { return _recv; }
     inline class Buffer &send_buffer() { return _send; }
-    inline void io_cb( EvIO &w,int32_t revents ) { (this->*_method)(); }
+    inline void io_cb( EVIO &w,int32_t revents ) { (this->*_method)(); }
 
     inline int32_t get_pending() const { return _pending; }
     inline int32_t set_pending( int32_t pending ) { return _pending = pending; }
@@ -141,7 +141,7 @@ protected:
     uint32_t _conn_id;
     ConnType _conn_ty;
 private:
-    EvIO _w;
+    EVIO _w;
     int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
     class IO *_io;

@@ -13,16 +13,9 @@ public:
     void (*cb)(EVWatcher *w, int32_t revents);
     EV *loop;
 public:
-    explicit EVWatcher( EV *_loop)
-        : loop (_loop)
-    {
-        active  = 0;
-        pending = 0;
-        data    = NULL;
-        cb      = NULL;
-    }
+    explicit EVWatcher(EV *_loop);
 
-    virtual ~EVWatcher(){}
+    virtual ~EVWatcher() {}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,76 +76,32 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class EvIO : public EVBase<EvIO>
+class EVIO : public EVBase<EVIO>
 {
 public:
     int32_t fd;
     int32_t events;
 
 public:
-    using EVBase<EvIO>::set;
+    using EVBase<EVIO>::set;
 
-    explicit EvIO( EV *loop = 0 )
-        : EVBase<EvIO> ( loop )
-    {
-        fd     = -1;
-        events = 0;
-    }
+    explicit EVIO(EV *loop = NULL);
 
-    ~EvIO()
-    {
-        /* TODO */
-        stop();
-    }
+    ~EVIO();
 
-    void start()
-    {
-        ASSERT( loop, "ev_io::start with NULL loop" );
-        ASSERT( events, "ev_io::start without event" );
-        ASSERT( cb, "ev_io::start without callback" );
-        ASSERT( fd >= 0, "ev_io::start with negative fd" );
-        ASSERT( !active, "ev_io::start a active watcher" );
+    void start();
 
-        active = loop->io_start( this );
-    }
+    void stop();
 
-    void stop()
-    {
-        active = loop->io_stop( this );
-    }
+    void set(int32_t fd, int32_t events);
 
-    void set( int32_t fd,int32_t events )
-    {
-        /* TODO stop ?? */
-        int32_t old_active = active;
-        if ( old_active ) stop();
+    void set(int32_t events);
 
-        this->fd     = fd;
-        this->events = events;
-
-        if ( old_active ) start();
-    }
-
-    void set( int32_t events )
-    {
-        /* TODO stop ?? */
-        int32_t old_active = active;
-        if ( old_active ) stop();
-
-        this->events = events;
-
-        if ( old_active ) start();
-    }
-
-    void start( int32_t fd,int32_t events )
-    {
-        set( fd,events );
-        start();
-    }
+    void start(int32_t fd, int32_t events);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class EvTimer : public EVBase<EvTimer>
+class EVTimer : public EVBase<EVTimer>
 {
 public:
     bool tj; // time jump
@@ -160,55 +109,19 @@ public:
     EvTstamp repeat;
 
 public:
-    using EVBase<EvTimer>::set;
+    using EVBase<EVTimer>::set;
 
-    explicit EvTimer( EV *loop = 0 )
-        : EVBase<EvTimer> ( loop )
-    {
-        tj = false;
-        at       = 0.;
-        repeat   = 0.;
-    }
+    explicit EVTimer(EV *loop = NULL);
 
-    ~EvTimer()
-    {
-        /* TODO stop ?? */
-        stop();
-    }
+    ~EVTimer();
 
-    inline void set_time_jump( bool jump ) { tj = jump; }
+    void set_time_jump(bool jump);
 
-    void start()
-    {
-        ASSERT( loop, "ev_timer::start with NULL loop" );
-        ASSERT( at >= 0., "ev_timer::start with negative after" );
-        ASSERT( repeat >= 0., "ev_timer::start with negative repeat" );
-        ASSERT( cb, "ev_timer::start without callback" );
-        ASSERT( !active, "start a active timer" );
+    void start();
 
-        loop->timer_start( this );
-    }
+    void stop();
 
-    void stop()
-    {
-        loop->timer_stop( this );
-    }
+    void set(EvTstamp after, EvTstamp repeat = 0.);
 
-    void set( EvTstamp after,EvTstamp repeat = 0. )
-    {
-        int32_t old_active = active;
-
-        if ( old_active ) stop();
-
-        this->at     = after;
-        this->repeat = repeat;
-
-        if ( old_active ) start();
-    }
-
-    void start( EvTstamp after,EvTstamp repeat = 0. )
-    {
-        set( after,repeat );
-        start();
-    }
+    void start(EvTstamp after, EvTstamp repeat = 0.);
 };
