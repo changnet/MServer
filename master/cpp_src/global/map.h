@@ -16,14 +16,13 @@
 // 2. It will not produce the same results on little-endian and big-endian
 //    machines.
 
-static inline
-unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
+static inline unsigned int MurmurHash2(const void *key, int len, unsigned int seed)
 {
     // 'm' and 'r' are mixing constants generated offline.
     // They're not really 'magic', they just happen to work well.
 
     const unsigned int m = 0x5bd1e995;
-    const int r = 24;
+    const int r          = 24;
 
     // Initialize the hash to a 'random' value
 
@@ -31,9 +30,9 @@ unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
 
     // Mix 4 bytes at a time into the hash
 
-    const unsigned char * data = (const unsigned char *)key;
+    const unsigned char *data = (const unsigned char *)key;
 
-    while(len >= 4)
+    while (len >= 4)
     {
         unsigned int k = *(unsigned int *)data;
 
@@ -50,12 +49,11 @@ unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
 
     // Handle the last few bytes of the input array
 
-    switch(len)
+    switch (len)
     {
     case 3: h ^= data[2] << 16;
     case 2: h ^= data[1] << 8;
-    case 1: h ^= data[0];
-            h *= m;
+    case 1: h ^= data[0]; h *= m;
     };
 
     // Do a few final mixes of the hash to ensure the last few
@@ -76,8 +74,8 @@ struct c_string
     c_string(const char *ctx)
     {
         _raw_ctx = ctx;
-        _length = strlen(ctx);
-        _hash = MurmurHash2(ctx,_length,static_cast<size_t>(0xc70f6907UL));
+        _length  = strlen(ctx);
+        _hash    = MurmurHash2(ctx, _length, static_cast<size_t>(0xc70f6907UL));
     }
 };
 
@@ -90,10 +88,7 @@ struct c_string
  * other hash function(djb2,sdbm) http://www.cse.yorku.ca/~oz/hash.html */
 struct hash_c_string
 {
-    size_t operator()(const c_string &cs) const
-    {
-        return cs._hash;
-    }
+    size_t operator()(const c_string &cs) const { return cs._hash; }
 };
 
 /* compare function for const char* */
@@ -115,14 +110,14 @@ struct equal_c_string
 };
 
 /* 需要使用hash map，但又希望能兼容旧版本时使用StdMap */
-#if __cplusplus < 201103L    /* -std=gnu99 */
+#if __cplusplus < 201103L /* -std=gnu99 */
     #include <map>
-    #define StdMap    std::map
-    #define const_char_map_t(T) std::map<const char *,T,cmp_const_char>
-#else    /* if support C++ 2011 */
+    #define StdMap              std::map
+    #define const_char_map_t(T) std::map<const char *, T, cmp_const_char>
+#else /* if support C++ 2011 */
     #include <unordered_map>
-    #define StdMap    std::unordered_map
+    #define StdMap std::unordered_map
     // TODO:template<class T> using const_char_map_t = ...，但03版本不支持
-    #define const_char_map_t(T)    \
-        std::unordered_map<const c_string,T,hash_c_string,equal_c_string>
+    #define const_char_map_t(T)                                                \
+        std::unordered_map<const c_string, T, hash_c_string, equal_c_string>
 #endif

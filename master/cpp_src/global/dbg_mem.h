@@ -16,19 +16,19 @@
 
 #include "types.h"
 
-extern void global_mem_counter(int32_t &counter,int32_t &counters);
+extern void global_mem_counter(int32_t &counter, int32_t &counters);
 
 #ifndef NDBG_MEM_TRACE
 
-#define new dbg_mem_tracer(__FILE__, __LINE__) ->* new
+    #define new dbg_mem_tracer(__FILE__, __LINE__)->*new
 
 class DbgMemTracer
 {
 public:
-    const char* _file;
-    const int   _line;
+    const char *_file;
+    const int _line;
 
-    void process(void* ptr)
+    void process(void *ptr)
     {
         /* 重载operator new函数，记录每一次分配的指针，以地址为Key放到一个unordered_map
          * 这里根据 ptr 可以查找对应的记录
@@ -36,24 +36,27 @@ public:
     }
 
 public:
-    explicit DbgMemTracer(const char* file, int line)
-        : _file(file), _line(line)
+    explicit DbgMemTracer(const char *file, int line) : _file(file), _line(line)
     {
     }
     /**
      * Pointer-to-Member Operators: .* and ->*
      * 显式地通过对象指针调用成员函数，不过这里和它本身的功能并没关系
-     * 
+     *
      * dbg_mem_tracer(__FILE__, __LINE__) ->* new
      * 假如 new Test() 返回一个 Test类型的指针ptr，即
      * dbg_mem_tracer(__FILE__, __LINE__) ->* ptr
      * 就会调用下面的函数进行处理
      */
-    template <class T> T* operator->*(T* ptr) { process(ptr); return ptr; }
+    template <class T> T *operator->*(T *ptr)
+    {
+        process(ptr);
+        return ptr;
+    }
 
 private:
-    DbgMemTracer(const DbgMemTracer&);
-    DbgMemTracer& operator=(const DbgMemTracer&);
+    DbgMemTracer(const DbgMemTracer &);
+    DbgMemTracer &operator=(const DbgMemTracer &);
 };
 
 #endif /* NDBG_MEM_TRACE */

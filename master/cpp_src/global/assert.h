@@ -3,10 +3,10 @@
 #include <cassert>
 
 #define __ASSERT1(expr) assert(expr)
-#define __ASSERT2(expr,why) \
-     ((expr)								\
-   ? __ASSERT_VOID_CAST (0)						\
-   : __assert_fail (__STRING((why,expr)), __FILE__, __LINE__, __ASSERT_FUNCTION))
+#define __ASSERT2(expr, why)                                                   \
+    ((expr) ? __ASSERT_VOID_CAST(0)                                            \
+            : __assert_fail(__STRING((why, expr)), __FILE__, __LINE__,         \
+                            __ASSERT_FUNCTION))
 
 #define __EXPAND(_1, _2, NAME, ...) NAME
 // _UNUSED avoid warning
@@ -15,4 +15,5 @@
 
 // ASSERT(false) same as assert(false)
 // ASSERT(false, "something wrong") if you prefer add some message to it
-#define ASSERT(...) __EXPAND(__VA_ARGS__, __ASSERT2, __ASSERT1, _UNUSED)(__VA_ARGS__)
+#define ASSERT(...)                                                            \
+    __EXPAND(__VA_ARGS__, __ASSERT2, __ASSERT1, _UNUSED)(__VA_ARGS__)

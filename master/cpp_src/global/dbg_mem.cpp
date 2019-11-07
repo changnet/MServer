@@ -8,19 +8,19 @@
 
 #undef new
 
-#if __cplusplus < 201103L    /* < C++11 */
+#if __cplusplus < 201103L /* < C++11 */
     #define NOEXCEPT throw()
-    #define EXCEPT throw(std::bad_alloc)
-#else                       /* if support C++ 2011 */
+    #define EXCEPT   throw(std::bad_alloc)
+#else /* if support C++ 2011 */
     #define NOEXCEPT noexcept
     #define EXCEPT
 #endif
 
 int32_t g_counter  = 0;
 int32_t g_counters = 0;
-void global_mem_counter(int32_t &counter,int32_t &counters)
+void global_mem_counter(int32_t &counter, int32_t &counters)
 {
-    counter = g_counter;
+    counter  = g_counter;
     counters = g_counters;
 }
 
@@ -37,9 +37,8 @@ void global_mem_counter(int32_t &counter,int32_t &counters)
 static inline pthread_mutex_t *mem_mutex()
 {
     static pthread_mutex_t _mutex;
-    ASSERT(
-        0 == pthread_mutex_init( &_mutex,NULL ),
-        "global memory counter mutex error" );
+    ASSERT(0 == pthread_mutex_init(&_mutex, NULL),
+           "global memory counter mutex error");
 
     return &_mutex;
 }
@@ -48,42 +47,42 @@ void *operator new(size_t size) EXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     ++g_counter;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
 
     return ::malloc(size);
 }
 
-void *operator new(size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
+void *operator new(size_t size, const std::nothrow_t &nothrow_value) NOEXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     ++g_counter;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
 
     return ::malloc(size);
 }
 
-void operator delete(void* ptr) NOEXCEPT
+void operator delete(void *ptr)NOEXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     --g_counter;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
 
     ::free(ptr);
 }
 
-void operator delete(void* ptr,const std::nothrow_t& nothrow_value) NOEXCEPT
+void operator delete(void *ptr, const std::nothrow_t &nothrow_value)NOEXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     --g_counter;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
 
     ::free(ptr);
 }
@@ -92,39 +91,39 @@ void *operator new[](size_t size) EXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     ++g_counters;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
     return ::malloc(size);
 }
 
-void *operator new[](size_t size,const std::nothrow_t& nothrow_value) NOEXCEPT
+void *operator new[](size_t size, const std::nothrow_t &nothrow_value) NOEXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     ++g_counters;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
     return ::malloc(size);
 }
 
-void operator delete[](void* ptr) NOEXCEPT
+void operator delete[](void *ptr) NOEXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     --g_counters;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
     ::free(ptr);
 }
 
-void operator delete[](void* ptr,const std::nothrow_t& nothrow_value) NOEXCEPT
+void operator delete[](void *ptr, const std::nothrow_t &nothrow_value) NOEXCEPT
 {
     pthread_mutex_t *mutex = mem_mutex();
 
-    pthread_mutex_lock( mutex );
+    pthread_mutex_lock(mutex);
     --g_counters;
-    pthread_mutex_unlock( mutex );
+    pthread_mutex_unlock(mutex);
     ::free(ptr);
 }
 
