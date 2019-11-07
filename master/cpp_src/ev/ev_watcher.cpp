@@ -1,11 +1,11 @@
 #include "ev_watcher.h"
 
-EVWatcher::EVWatcher(EV *_loop) : loop(_loop)
+EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
-    active = 0;
-    pending = 0;
-    data = NULL;
-    cb = NULL;
+    _active = 0;
+    _pending = 0;
+    _data = NULL;
+    _cb = NULL;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -23,24 +23,24 @@ EVIO::~EVIO()
 
 void EVIO::start()
 {
-    ASSERT(loop, "ev_io::start with NULL loop");
+    ASSERT(_loop, "ev_io::start with NULL loop");
     ASSERT(events, "ev_io::start without event");
-    ASSERT(cb, "ev_io::start without callback");
+    ASSERT(_cb, "ev_io::start without callback");
     ASSERT(fd >= 0, "ev_io::start with negative fd");
-    ASSERT(!active, "ev_io::start a active watcher");
+    ASSERT(!_active, "ev_io::start a active watcher");
 
-    active = loop->io_start(this);
+    _active = _loop->io_start(this);
 }
 
 void EVIO::stop()
 {
-    active = loop->io_stop(this);
+    _active = _loop->io_stop(this);
 }
 
 void EVIO::set(int32_t fd, int32_t events)
 {
     /* TODO stop ?? */
-    int32_t old_active = active;
+    int32_t old_active = _active;
     if (old_active)
         stop();
 
@@ -54,7 +54,7 @@ void EVIO::set(int32_t fd, int32_t events)
 void EVIO::set(int32_t events)
 {
     /* TODO stop ?? */
-    int32_t old_active = active;
+    int32_t old_active = _active;
     if (old_active)
         stop();
 
@@ -91,23 +91,23 @@ void EVTimer::set_time_jump(bool jump)
 
 void EVTimer::start()
 {
-    ASSERT(loop, "ev_timer::start with NULL loop");
+    ASSERT(_loop, "ev_timer::start with NULL loop");
     ASSERT(at >= 0., "ev_timer::start with negative after");
     ASSERT(repeat >= 0., "ev_timer::start with negative repeat");
-    ASSERT(cb, "ev_timer::start without callback");
-    ASSERT(!active, "start a active timer");
+    ASSERT(_cb, "ev_timer::start without callback");
+    ASSERT(!_active, "start a active timer");
 
-    loop->timer_start(this);
+    _loop->timer_start(this);
 }
 
 void EVTimer::stop()
 {
-    loop->timer_stop(this);
+    _loop->timer_stop(this);
 }
 
 void EVTimer::set(EvTstamp after, EvTstamp repeat)
 {
-    int32_t old_active = active;
+    int32_t old_active = _active;
 
     if (old_active)
         stop();

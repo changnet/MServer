@@ -369,16 +369,16 @@ void EV::fd_event( int32_t fd,int32_t revents )
 
 void EV::feed_event( EVWatcher *w,int32_t revents )
 {
-    if ( EXPECT_FALSE(w->pending) )
+    if ( EXPECT_FALSE(w->_pending) )
     {
-        pendings[w->pending - 1].events |= revents;
+        pendings[w->_pending - 1].events |= revents;
     }
     else
     {
-        w->pending = ++pendingcnt;
+        w->_pending = ++pendingcnt;
         ARRAY_RESIZE( ANPENDING,pendings,pendingmax,pendingcnt,ARRAY_NOINIT );
-        pendings[w->pending - 1].w      = w;
-        pendings[w->pending - 1].events = revents;
+        pendings[w->_pending - 1].w      = w;
+        pendings[w->_pending - 1].events = revents;
     }
 }
 
@@ -391,18 +391,18 @@ void EV::invoke_pending()
         EVWatcher *w = p->w;
         if ( EXPECT_TRUE(w) ) /* 调用了clear_pending */
         {
-            w->pending = 0;
-            w->cb( w,p->events );
+            w->_pending = 0;
+            w->_cb( w,p->events );
         }
     }
 }
 
 void EV::clear_pending( EVWatcher *w )
 {
-    if (w->pending)
+    if (w->_pending)
     {
-        pendings [w->pending - 1].w = 0;
-        w->pending = 0;
+        pendings [w->_pending - 1].w = 0;
+        w->_pending = 0;
     }
 }
 
@@ -455,7 +455,7 @@ int32_t EV::timer_start( EVTimer *w )
     timers [active] = w;
     up_heap( timers, active );
 
-    ASSERT( timers [w->active] == w, "libev: internal timer heap corruption" );
+    ASSERT( timers [w->_active] == w, "libev: internal timer heap corruption" );
 
     return active;
 }
@@ -467,7 +467,7 @@ int32_t EV::timer_stop( EVTimer *w )
     if ( EXPECT_FALSE(!w->is_active()) ) return 0;
 
     {
-        int32_t active = w->active;
+        int32_t active = w->_active;
 
         ASSERT( timers [active] == w, "libev: internal timer heap corruption" );
 
@@ -483,7 +483,7 @@ int32_t EV::timer_stop( EVTimer *w )
     }
 
     w->at -= mn_now;
-    w->active = 0;
+    w->_active = 0;
 
     return 0;
 }
@@ -505,12 +505,12 @@ void EV::down_heap( ANHE *heap,int32_t N,int32_t k )
         if ( he->at <= (heap [c])->at ) break;
 
         heap [k] = heap [c];
-        (heap [k])->active = k;
+        (heap [k])->_active = k;
         k = c;
     }
 
     heap [k] = he;
-    he->active = k;
+    he->_active = k;
 }
 
 void EV::up_heap( ANHE *heap,int32_t k )
@@ -524,12 +524,12 @@ void EV::up_heap( ANHE *heap,int32_t k )
         if ( UPHEAP_DONE (p, k) || (heap [p])->at <= he->at ) break;
 
         heap [k] = heap [p];
-        (heap [k])->active = k;
+        (heap [k])->_active = k;
         k = p;
     }
 
     heap [k] = he;
-    he->active = k;
+    he->_active = k;
 }
 
 void EV::adjust_heap( ANHE *heap,int32_t N,int32_t k )

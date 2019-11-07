@@ -7,13 +7,14 @@
 class EVWatcher
 {
 public:
-    int32_t active;
-    int32_t pending;
-    void *data;
-    void (*cb)(EVWatcher *w, int32_t revents);
-    EV *loop;
+    int32_t _active;
+    int32_t _pending;
+    void *_data;
+    void (*_cb)(EVWatcher *w, int32_t revents);
+    EV *_loop;
+
 public:
-    explicit EVWatcher(EV *_loop);
+    explicit EVWatcher(EV *loop);
 
     virtual ~EVWatcher() {}
 };
@@ -23,32 +24,23 @@ template<class Watcher>
 class EVBase : public EVWatcher
 {
 public:
-    explicit EVBase( EV *_loop)
-        : EVWatcher (_loop)
-    {
-    }
+    explicit EVBase(EV *loop) : EVWatcher(loop) {}
 
     virtual ~EVBase(){}
 
-    void set( EV *_loop )
+    void set(EV *loop) { _loop = loop; }
+
+    void set_(void *data, void (*cb)(EVWatcher *w, int revents))
     {
-        loop = _loop;
+        this->_data = (void *) data;
+        this->_cb = cb;
     }
 
-    void set_(const void *data, void (*cb)(EVWatcher *w, int revents))
-    {
-        this->data = (void *)data;
-        this->cb   = cb;
-    }
-
-    bool is_active() const
-    {
-        return active;
-    }
+    bool is_active() const { return _active; }
 
     // function callback(no object)
     template<void (*function)(Watcher &w, int32_t)>
-    void set (void *data = 0)
+    void set(void *data = NULL)
     {
       set_ (data, function_thunk<function>);
     }
@@ -70,8 +62,7 @@ public:
     template<class K, void (K::*method)(Watcher &w, int32_t)>
     static void method_thunk (EVWatcher *w, int32_t revents)
     {
-      (static_cast<K *>(w->data)->*method)
-        (*static_cast<Watcher *>(w), revents);
+        (static_cast<K *>(w->_data)->*method)(*static_cast<Watcher *>(w), revents);
     }
 };
 
@@ -85,7 +76,7 @@ public:
 public:
     using EVBase<EVIO>::set;
 
-    explicit EVIO(EV *loop = NULL);
+    explicit EVIO(EV *_loop = NULL);
 
     ~EVIO();
 
@@ -111,7 +102,7 @@ public:
 public:
     using EVBase<EVTimer>::set;
 
-    explicit EVTimer(EV *loop = NULL);
+    explicit EVTimer(EV *_loop = NULL);
 
     ~EVTimer();
 
