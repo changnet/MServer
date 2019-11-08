@@ -28,15 +28,16 @@ endif
 
 SUB_DIR = ../deps
 SUB_LIB = http-parser lua_parson lua_rapidxml aho-corasick lua_flatbuffers \
-	lua_bson pbc websocket-parser
+	lua_bson websocket-parser
 
 #include path
 INC_PATH = -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
-	-I/usr/include/mysql \
+	-I/usr/include/mysql -I$(SUB_DIR)/pbc \
 	$(addprefix -I$(SUB_DIR)/,$(SUB_LIB))
 
 #libaray path
-LIB_PATH = -L/usr/local/lib $(addprefix -L$(SUB_DIR)/,$(SUB_LIB))
+LIB_PATH = -L/usr/local/lib -L$(SUB_DIR)/pbc/build \
+	$(addprefix -L$(SUB_DIR)/,$(SUB_LIB))
 
 #link libaray
 SHARED_LIB = -ldl -lrt -pthread -lresolv -lz
@@ -51,7 +52,7 @@ STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
 	-lmongoc-static-1.0 -lbson-static-1.0 -lsasl2 -lssl -lcrypto -lwebsocket_parser
 
 #distribution directory
-DIST = ../server/bin
+DIST = ../../server/bin
 BUILD_DIR=$(DIST)/.build
 TARGET = $(DIST)/master
 
@@ -105,6 +106,6 @@ submodule:
 	$(MAKE) -C $(SUB_DIR)/lua_flatbuffers staticlib
 	$(MAKE) -C $(SUB_DIR)/lua_bson all
 	$(MAKE) -C $(SUB_DIR)/pbc lib
-	$(MAKE) -C $(SUB_DIR)/websocket-parser alibs
+	$(MAKE) -C $(SUB_DIR)/websocket-parser alib
 
 .PHONY: all clean submodule

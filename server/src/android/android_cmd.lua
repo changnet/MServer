@@ -19,7 +19,7 @@ do
     local sc = require "proto.proto"
     SC,CS = sc[1],sc[2]
 
-    local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
+    local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"../pb" )
     PRINTF( "android load protocol schema:%d",fs )
 
     -- 注册服务器发往机器人的指令配置

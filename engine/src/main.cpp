@@ -28,7 +28,7 @@ int32_t main(int32_t argc, char **argv)
 
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
-    snprintf(script_path, PATH_MAX, "lua_src/%s", LUA_ENTERANCE);
+    snprintf(script_path, PATH_MAX, "%s", LUA_ENTERANCE);
     if (LUA_OK != luaL_loadfile(L, script_path))
     {
         const char *err_msg = lua_tostring(L, -1);

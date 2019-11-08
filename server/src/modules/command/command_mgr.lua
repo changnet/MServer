@@ -172,10 +172,10 @@ end
 
 -- 加载二进制flatbuffers schema文件
 function CommandMgr:load_schema()
-    local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"pb" )
+    local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"../pb" )
     PRINTF( "load protocol schema:%d",pfs )
 
-    local ffs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"fbs" )
+    local ffs = network_mgr:load_one_schema( network_mgr.CDC_FLATBUF,"../fbs" )
     PRINTF( "load flatbuffers schema:%d",ffs )
 
     return (pfs >= 0 and ffs >= 0)

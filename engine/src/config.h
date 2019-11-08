@@ -14,7 +14,7 @@
 #define _ERROR_
 
 /* lua enterance file */
-#define LUA_ENTERANCE "main.lua"
+#define LUA_ENTERANCE "../src/main.lua"
 
 /* is assert work ? */
 //#define NDEBUG

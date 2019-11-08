@@ -5,9 +5,9 @@
 -- 进程入口文件
 
 -- 设置lua文件搜索路径
-package.path = "./lua_src/?.lua;" .. package.path
+package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
 -- 设置c库搜索路径
-package.cpath = "./c_module/?.so;" .. package.cpath
+package.cpath = "../src/c_module/?.so;" .. package.cpath
 
 require "global.oo"
 require "global.require" -- 需要热更的文件，必须放在这后面
