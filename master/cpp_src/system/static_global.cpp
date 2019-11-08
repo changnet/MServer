@@ -4,14 +4,14 @@
 #include "../mysql/sql.h"
 #include "../mongo/mongo.h"
 
-class LEV          *StaticGlobal::_ev          = NULL;
-class LState       *StaticGlobal::_state       = NULL;
-class SSLMgr       *StaticGlobal::_ssl_mgr     = NULL;
-class CodecMgr     *StaticGlobal::_codec_mgr   = NULL;
-class Statistic    *StaticGlobal::_statistic   = NULL;
-class AsyncLog     *StaticGlobal::_async_log   = NULL;
-class ThreadMgr    *StaticGlobal::_thread_mgr  = NULL;
-class LNetworkMgr  *StaticGlobal::_network_mgr = NULL;
+class LEV *StaticGlobal::_ev                  = NULL;
+class LState *StaticGlobal::_state            = NULL;
+class SSLMgr *StaticGlobal::_ssl_mgr          = NULL;
+class CodecMgr *StaticGlobal::_codec_mgr      = NULL;
+class Statistic *StaticGlobal::_statistic     = NULL;
+class AsyncLog *StaticGlobal::_async_log      = NULL;
+class ThreadMgr *StaticGlobal::_thread_mgr    = NULL;
+class LNetworkMgr *StaticGlobal::_network_mgr = NULL;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::_initializer;
@@ -32,9 +32,9 @@ StaticGlobal::initializer::initializer()
      * function passed to std::atexit.
      * 尽早调用atexit，这样才能保证静态变量的析构函数在onexit之前调用
      */
-    atexit( on_exit );
+    atexit(on_exit);
 
-    std::set_new_handler( on_new_fail );
+    std::set_new_handler(on_new_fail);
 
     ssl_init();
     Sql::library_init();
@@ -49,7 +49,7 @@ StaticGlobal::initializer::~initializer()
 }
 
 // 业务都放这里逻辑初始化
-void StaticGlobal::initialize()  /* 程序运行时初始化 */
+void StaticGlobal::initialize() /* 程序运行时初始化 */
 {
     /* 原本用static对象，但实在是无法控制各个销毁的顺序。因为其他文件中还有局部static对象
      * 会依赖这些对象。
@@ -59,22 +59,21 @@ void StaticGlobal::initialize()  /* 程序运行时初始化 */
      * 在头文件中的顺序不重要，这里实现的顺序才是运行时的顺序
      */
 
-
     // 状态统计，独立的
-    _statistic = new class Statistic();
-    _ev = new class LEV();
-    _thread_mgr = new class ThreadMgr();
-    _async_log = new class AsyncLog();
-    _state = new class LState();
-    _codec_mgr = new class CodecMgr();
-    _ssl_mgr = new class SSLMgr();
+    _statistic   = new class Statistic();
+    _ev          = new class LEV();
+    _thread_mgr  = new class ThreadMgr();
+    _async_log   = new class AsyncLog();
+    _state       = new class LState();
+    _codec_mgr   = new class CodecMgr();
+    _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
 
-    _async_log->start( 1,0 );
+    _async_log->start(1, 0);
 
     // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙
     // 关不了服。stop的时候会处理所有日志
-    _async_log->set_wait_busy( false );
+    _async_log->set_wait_busy(false);
 
     // 初始化流量统计，这个和时间有关，等 ev 初始化后才调用
     _statistic->reset_trafic();
@@ -101,7 +100,6 @@ void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
     delete _statistic;
 }
 
-
 // 初始化ssl库
 int32_t ssl_init()
 {
@@ -118,9 +116,9 @@ int32_t ssl_init()
     OPENSSL_init_ssl(0, NULL);
 #endif
 
-    SSL_load_error_strings ();
-    ERR_load_BIO_strings ();
-    OpenSSL_add_all_algorithms ();
+    SSL_load_error_strings();
+    ERR_load_BIO_strings();
+    OpenSSL_add_all_algorithms();
 
     return 0;
 }
@@ -154,16 +152,16 @@ void on_exit()
 {
     int32_t counter  = 0;
     int32_t counters = 0;
-    global_mem_counter(counter,counters);
+    global_mem_counter(counter, counters);
 
     // 直接用PRINTF会导致重新创建ev取时间
     // PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
 
-    PRINTF_R( "new counter:%d    ----   new[] counter:%d",counter,counters );
-    //back_trace();
+    PRINTF_R("new counter:%d    ----   new[] counter:%d", counter, counters);
+    // back_trace();
 }
 
 void on_new_fail()
 {
-    FATAL( "out of memory!!! abort" );
+    FATAL("out of memory!!! abort");
 }

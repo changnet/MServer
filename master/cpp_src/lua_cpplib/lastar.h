@@ -7,7 +7,7 @@ class LAstar : public AStar
 {
 public:
     ~LAstar() {}
-    explicit LAstar( lua_State *L ) {}
+    explicit LAstar(lua_State *L) {}
 
-    int32_t search( lua_State *L ); // 寻路
+    int32_t search(lua_State *L); // 寻路
 };

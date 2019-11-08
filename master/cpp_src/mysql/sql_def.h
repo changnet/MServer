@@ -4,8 +4,8 @@
 #include <mysql.h>
 #include "../global/global.h"
 
-#define SQL_FIELD_LEN    64
-#define SQL_VAR_LEN      64
+#define SQL_FIELD_LEN 64
+#define SQL_VAR_LEN   64
 
 /*
 enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
@@ -35,7 +35,7 @@ enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
 struct SqlField
 {
     char _name[SQL_FIELD_LEN];
-    enum_field_types    _type; /* define in mysql_com.h */
+    enum_field_types _type; /* define in mysql_com.h */
 };
 
 struct SqlCol
@@ -51,25 +51,25 @@ struct SqlCol
 
     ~SqlCol()
     {
-        if ( _value ) delete []_value;
+        if (_value) delete[] _value;
 
         _size  = 0;
         _value = NULL;
     }
 
-    void set( const char *value,size_t size)
+    void set(const char *value, size_t size)
     {
-        ASSERT ( 0 == _size && !_value, "sql col not clean" );
-        if ( !value || 0 >= size ) return;  /* 结果为NULL */
+        ASSERT(0 == _size && !_value, "sql col not clean");
+        if (!value || 0 >= size) return; /* 结果为NULL */
 
-        _size  = size;  /* 注意没加1 */
-        _value = new char[size+1];
+        _size  = size; /* 注意没加1 */
+        _value = new char[size + 1];
 
         /* 无论何种数据类型(包括寸进制)，都统一加\0
          * 方便后面转换为int之类时可以直接atoi
          */
-        memcpy( _value,value,size );
-        _value[size]         = '\0';
+        memcpy(_value, value, size);
+        _value[size] = '\0';
     }
 };
 
@@ -80,16 +80,16 @@ struct SqlRow
 
 struct sql_res
 {
-    uint32_t _num_rows;  // 行数
-    uint32_t _num_cols;  // 列数
+    uint32_t _num_rows;            // 行数
+    uint32_t _num_cols;            // 列数
     std::vector<SqlField> _fields; // 字段名
-    std::vector<SqlRow  > _rows  ; // 行数据
+    std::vector<SqlRow> _rows;     // 行数据
 };
 
 /* 查询结果 */
 struct SqlResult
 {
-    int32_t _id;      /* 标记查询的id，用于回调 */
+    int32_t _id; /* 标记查询的id，用于回调 */
     int32_t _ecode;
     struct sql_res *_res;
 };
@@ -97,26 +97,26 @@ struct SqlResult
 /* 查询请求 */
 struct SqlQuery
 {
-    explicit SqlQuery( int32_t id,size_t size,const char *stmt )
+    explicit SqlQuery(int32_t id, size_t size, const char *stmt)
     {
         _id   = id;
         _size = size;
 
         _stmt = new char[size + 1];
-        memcpy( _stmt,stmt,size );
+        memcpy(_stmt, stmt, size);
         _stmt[size] = 0; // 保证0结尾，因为有些地方需要打印stmt
     }
 
     ~SqlQuery()
     {
-        if ( _stmt ) delete []_stmt;
+        if (_stmt) delete[] _stmt;
 
-        _id       = 0;
-        _size     = 0;
-        _stmt     = NULL;
+        _id   = 0;
+        _size = 0;
+        _stmt = NULL;
     }
 
-    int32_t  _id;
+    int32_t _id;
     size_t _size;
-    char  *_stmt;
+    char *_stmt;
 };

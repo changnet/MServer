@@ -2,16 +2,16 @@
 
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
-    _active = 0;
+    _active  = 0;
     _pending = 0;
-    _data = NULL;
-    _cb = NULL;
+    _data    = NULL;
+    _cb      = NULL;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 EVIO::EVIO(EV *loop) : EVBase<EVIO>(loop)
 {
-    fd = -1;
+    fd     = -1;
     events = 0;
 }
 
@@ -41,27 +41,23 @@ void EVIO::set(int32_t fd, int32_t events)
 {
     /* TODO stop ?? */
     int32_t old_active = _active;
-    if (old_active)
-        stop();
+    if (old_active) stop();
 
-    this->fd = fd;
+    this->fd     = fd;
     this->events = events;
 
-    if (old_active)
-        start();
+    if (old_active) start();
 }
 
 void EVIO::set(int32_t events)
 {
     /* TODO stop ?? */
     int32_t old_active = _active;
-    if (old_active)
-        stop();
+    if (old_active) stop();
 
     this->events = events;
 
-    if (old_active)
-        start();
+    if (old_active) start();
 }
 
 void EVIO::start(int32_t fd, int32_t events)
@@ -73,8 +69,8 @@ void EVIO::start(int32_t fd, int32_t events)
 
 EVTimer::EVTimer(EV *loop) : EVBase<EVTimer>(loop)
 {
-    tj = false;
-    at = 0.;
+    tj     = false;
+    at     = 0.;
     repeat = 0.;
 }
 
@@ -109,14 +105,12 @@ void EVTimer::set(EvTstamp after, EvTstamp repeat)
 {
     int32_t old_active = _active;
 
-    if (old_active)
-        stop();
+    if (old_active) stop();
 
-    this->at = after;
+    this->at     = after;
     this->repeat = repeat;
 
-    if (old_active)
-        start();
+    if (old_active) start();
 }
 
 void EVTimer::start(EvTstamp after, EvTstamp repeat)

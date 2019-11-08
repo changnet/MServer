@@ -16,13 +16,13 @@
  *
  * initializer只放业务无关的初始化，比如全局锁、ssl初始化...
  * 业务逻辑的初始化放initialize函数
- * 业务逻辑的销毁放uninitialize函数。业务逻辑必须在这里销毁，不能等到static对象析构 !!!
- * 因为其他局部变量在main函数之后销毁了
+ * 业务逻辑的销毁放uninitialize函数。业务逻辑必须在这里销毁，不能等到static对象析构
+ * !!! 因为其他局部变量在main函数之后销毁了
  */
 class StaticGlobal
 {
 public:
-    static void initialize();  /* 程序运行时初始化 */
+    static void initialize();   /* 程序运行时初始化 */
     static void uninitialize(); /* 程序结束时反初始化 */
 
     static class EV *ev() { return _ev; }
@@ -34,6 +34,7 @@ public:
     static class AsyncLog *async_logger() { return _async_log; }
     static class ThreadMgr *thread_mgr() { return _thread_mgr; }
     static class LNetworkMgr *network_mgr() { return _network_mgr; }
+
 private:
     class initializer // 提供一个等级极高的初始化
     {
@@ -41,15 +42,16 @@ private:
         ~initializer();
         explicit initializer();
     };
+
 private:
-    static class LEV         *_ev;
-    static class LState      *_state;
-    static class SSLMgr      *_ssl_mgr;
-    static class CodecMgr    *_codec_mgr;
-    static class Statistic   *_statistic;
-    static class AsyncLog    *_async_log;
-    static class ThreadMgr   *_thread_mgr;
+    static class LEV *_ev;
+    static class LState *_state;
+    static class SSLMgr *_ssl_mgr;
+    static class CodecMgr *_codec_mgr;
+    static class Statistic *_statistic;
+    static class AsyncLog *_async_log;
+    static class ThreadMgr *_thread_mgr;
     static class LNetworkMgr *_network_mgr;
 
-    static class initializer  _initializer;
+    static class initializer _initializer;
 };

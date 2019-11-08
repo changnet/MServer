@@ -25,9 +25,10 @@ public:
         ~Object() {}
 
         inline static int32_t compare_factor(const factor_t src,
-            const factor_t dest,int32_t max_idx = MAX_RANK_FACTOR)
+                                             const factor_t dest,
+                                             int32_t max_idx = MAX_RANK_FACTOR)
         {
-            for (int32_t idx = 0;idx < max_idx;idx ++)
+            for (int32_t idx = 0; idx < max_idx; idx++)
             {
                 if (src[idx] == dest[idx]) continue;
 
@@ -36,11 +37,13 @@ public:
 
             return 0;
         }
+
     public:
         int32_t _index; // 排名
         object_id_t _id;
         factor_t _factor;
     };
+
 public:
     BaseRank();
     virtual ~BaseRank();
@@ -50,6 +53,7 @@ public:
 
     // 获取当前排行榜中对象数量
     int32_t get_count() const { return _count; }
+
 protected:
     int32_t _count; // 当前排行榜中数量
 };
@@ -67,8 +71,8 @@ public:
     void clear();
 
     int32_t remove(object_id_t id);
-    int32_t insert(object_id_t id,factor_t factor,int32_t max_idx = 1);
-    int32_t update(object_id_t id,raw_factor_t factor,int32_t factor_idx = 0);
+    int32_t insert(object_id_t id, factor_t factor, int32_t max_idx = 1);
+    int32_t update(object_id_t id, raw_factor_t factor, int32_t factor_idx = 0);
 
     /* 设置排行榜上限，超过此上限将不会在排行榜中存数据
      * 排序因子会减小的排行榜谨慎设置此值，因为假如某个对象因为上限不在排行榜，而其他对象排名
@@ -82,17 +86,19 @@ public:
     int32_t get_rank_by_id(object_id_t id) const;
     const raw_factor_t *get_factor(object_id_t id) const;
     object_id_t get_id_by_rank(object_id_t rank) const;
+
 private:
     void shift_up(Object *object);
     void shift_down(Object *object);
     void raw_remove(Object *object);
+
 private:
     int32_t _max_count; // 排行榜最大数量
     uint8_t _max_factor; // 当前排行榜使用到的最大排序因子数量(从1开始)
 
     int32_t _max_list;
     Object **_object_list;
-    StdMap< object_id_t,Object* > _object_set;
+    StdMap<object_id_t, Object *> _object_set;
 };
 
 /* 桶排序，只是桶分得比较细，演变成了有序hash map
@@ -109,22 +115,23 @@ class bucket_rank : public BaseRank
 {
 public:
     typedef std::list<object_id_t> bucket_t;
-    typedef bool (*key_comp_t)(const factor_t src,const factor_t dest);
-    typedef std::map< raw_factor_t*,bucket_t,key_comp_t > bucket_list_t;
+    typedef bool (*key_comp_t)(const factor_t src, const factor_t dest);
+    typedef std::map<raw_factor_t *, bucket_t, key_comp_t> bucket_list_t;
 
 public:
     bucket_rank();
     ~bucket_rank();
 
     void clear();
-    int32_t insert(object_id_t id,factor_t factor);
+    int32_t insert(object_id_t id, factor_t factor);
 
     // strict weak order,operator <
-    static bool key_comp(const factor_t src,const factor_t dest)
+    static bool key_comp(const factor_t src, const factor_t dest)
     {
         // TODO:这里暂时没法按_max_factor来对比排序因子，只能全部都对比
-        return Object::compare_factor(src,dest) < 0;
+        return Object::compare_factor(src, dest) < 0;
     }
+
 protected:
     bucket_list_t _bucket_list;
 };

@@ -5,16 +5,13 @@
 class AutoMutex
 {
 public:
-    explicit AutoMutex( pthread_mutex_t *mutex )
-        : _mutex( mutex )
+    explicit AutoMutex(pthread_mutex_t *mutex) : _mutex(mutex)
     {
-        pthread_mutex_lock( _mutex );
+        pthread_mutex_lock(_mutex);
     }
 
-    ~AutoMutex()
-    {
-        pthread_mutex_unlock( _mutex );
-    }
+    ~AutoMutex() { pthread_mutex_unlock(_mutex); }
+
 private:
     pthread_mutex_t *_mutex;
 };

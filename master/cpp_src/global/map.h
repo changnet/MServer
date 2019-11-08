@@ -118,6 +118,6 @@ struct equal_c_string
     #include <unordered_map>
     #define StdMap std::unordered_map
     // TODO:template<class T> using const_char_map_t = ...，但03版本不支持
-    #define const_char_map_t(T)                                                \
+    #define const_char_map_t(T) \
         std::unordered_map<const c_string, T, hash_c_string, equal_c_string>
 #endif

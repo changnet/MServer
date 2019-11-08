@@ -50,7 +50,7 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
 [16,31]bit : Payload len = 126,这16bit构成一个uint16类型表示Payload Data的长度
 [16,79]bit : Payload len = 126,这16bit构成一个uint64类型表示Payload Data的长度
 [80,111]bit: 上面的第8bit值为1时，这里的32bit表示Masking-key。客户端发给服务器的包
-                必须有masking-key。The masking key is a 32-bit value chosen at 
+                必须有masking-key。The masking key is a 32-bit value chosen at
                 random ,needs to be unpredictable
                 原因见：https://tools.ietf.org/pdf/rfc6455.pdf section 5.3 page33
 [...] 具体的数据
@@ -76,23 +76,23 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
 */
 
 // 解析完websocket的header
-int32_t on_frame_header( struct websocket_parser *parser )
+int32_t on_frame_header(struct websocket_parser *parser)
 {
-    ASSERT( parser && parser->data, "websocket parser NULL" );
+    ASSERT(parser && parser->data, "websocket parser NULL");
 
     class WebsocketPacket *ws_packet =
-        static_cast<class WebsocketPacket *>( parser->data );
+        static_cast<class WebsocketPacket *>(parser->data);
     class Buffer &body = ws_packet->body_buffer();
 
     // parser->data->opcode = parser->flags & WS_OP_MASK; // gets opcode
-    // parser->data->is_final = parser->flags & WS_FIN;   // checks is final frame
-    // websocket是允许不发内容的，因此length可能为0
+    // parser->data->is_final = parser->flags & WS_FIN;   // checks is final
+    // frame websocket是允许不发内容的，因此length可能为0
     body.clear();
-    if( parser->length )
+    if (parser->length)
     {
-        if ( !body.reserved( parser->length ) )
+        if (!body.reserved(parser->length))
         {
-            ERROR( "websocket cant not allocate memory" );
+            ERROR("websocket cant not allocate memory");
             return -1;
         }
     }
@@ -100,62 +100,61 @@ int32_t on_frame_header( struct websocket_parser *parser )
 }
 
 // 收到帧数据
-int32_t on_frame_body( 
-    struct websocket_parser *parser, const char * at, size_t length )
+int32_t on_frame_body(struct websocket_parser *parser, const char *at,
+                      size_t length)
 {
-    ASSERT( parser && parser->data, "websocket parser NULL" );
+    ASSERT(parser && parser->data, "websocket parser NULL");
 
     class WebsocketPacket *ws_packet =
-        static_cast<class WebsocketPacket *>( parser->data );
+        static_cast<class WebsocketPacket *>(parser->data);
     class Buffer &body = ws_packet->body_buffer();
 
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
-    if( parser->flags & WS_HAS_MASK )
+    if (parser->flags & WS_HAS_MASK)
     {
         // if ( !body.reserved( length ) ) return -1;
         // 不再reserved，在frame_header里应该已reserved的。而且，正常情况下，websocket
         // 应该只用到单个接收缓冲区。如果单个放不下最大协议，考虑修改缓冲区大小。目前缓冲区没
         // 法reserved超过一个chunk大小的连续缓冲区
-        if ( body.get_space_size() < length )
+        if (body.get_space_size() < length)
         {
-            ERROR( "websocket packet on frame body overflow:%d,%d",
-                body.get_used_size(),body.get_space_size() );
+            ERROR("websocket packet on frame body overflow:%d,%d",
+                  body.get_used_size(), body.get_space_size());
             return -1;
         }
 
-        websocket_parser_decode( body.get_space_ctx(), at, length, parser);
-        body.add_used_offset( length );
+        websocket_parser_decode(body.get_space_ctx(), at, length, parser);
+        body.add_used_offset(length);
     }
     else
     {
-        body.append( at,length );
+        body.append(at, length);
     }
     return 0;
 }
 
 // 数据帧完成
-int32_t on_frame_end( struct websocket_parser *parser )
+int32_t on_frame_end(struct websocket_parser *parser)
 {
-    ASSERT( parser && parser->data, "websocket parser NULL" );
+    ASSERT(parser && parser->data, "websocket parser NULL");
 
     class WebsocketPacket *ws_packet =
-        static_cast<class WebsocketPacket *>( parser->data );
+        static_cast<class WebsocketPacket *>(parser->data);
 
     /* https://tools.ietf.org/html/rfc6455#section-5.5
      * opcode并不是按位来判断的，而是按顺序1、2、3、4...
-     * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are 
+     * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are
      * identified by opcodes where the most significant bit of the opcode is 1)
      */
-    if ( EXPECT_FALSE(parser->flags & 0x08) )
+    if (EXPECT_FALSE(parser->flags & 0x08))
     {
-       return ws_packet->on_ctrl_end();
+        return ws_packet->on_ctrl_end();
     }
     return ws_packet->on_frame_end();
 }
 
 /* init all field insted of using websocket_parser_settings_init */
-static const struct websocket_parser_settings settings = 
-{
+static const struct websocket_parser_settings settings = {
     on_frame_header,
     on_frame_body,
     on_frame_end,
@@ -163,12 +162,12 @@ static const struct websocket_parser_settings settings =
 
 ///////////////////////////////// WEBSOCKET PARSER /////////////////////////////
 
-WebsocketPacket::WebsocketPacket( class Socket *sk ) : HttpPacket( sk )
+WebsocketPacket::WebsocketPacket(class Socket *sk) : HttpPacket(sk)
 {
     _is_upgrade = false;
 
     _parser = new struct websocket_parser();
-    websocket_parser_init( _parser );
+    websocket_parser_init(_parser);
     _parser->data = this;
 }
 
@@ -180,29 +179,29 @@ WebsocketPacket::~WebsocketPacket()
     _parser = NULL;
 }
 
-int32_t WebsocketPacket::pack_raw( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
 {
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
-    websocket_flags flags = 
-        static_cast<websocket_flags>( luaL_checkinteger( L,index ) );
+    websocket_flags flags =
+        static_cast<websocket_flags>(luaL_checkinteger(L, index));
 
-    size_t size = 0;
-    const char *ctx = luaL_optlstring( L,index + 1,NULL,&size );
+    size_t size     = 0;
+    const char *ctx = luaL_optlstring(L, index + 1, NULL, &size);
     // if ( !ctx ) return 0; // 允许发送空包
 
-    size_t len = websocket_calc_frame_size( flags,size );
+    size_t len         = websocket_calc_frame_size(flags, size);
     class Buffer &send = _socket->send_buffer();
-    if ( !send.reserved( len ) )
+    if (!send.reserved(len))
     {
-        return luaL_error( L,"can not reserved buffer" );
+        return luaL_error(L, "can not reserved buffer");
     }
 
-    char mask[4] = { 0 }; /* 服务器发往客户端并不需要mask */
-    if ( flags & WS_HAS_MASK ) new_masking_key( mask );
-    websocket_build_frame( send.get_space_ctx(),flags,mask,ctx,size );
-    send.add_used_offset( len );
+    char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
+    if (flags & WS_HAS_MASK) new_masking_key(mask);
+    websocket_build_frame(send.get_space_ctx(), flags, mask, ctx, size);
+    send.add_used_offset(len);
     _socket->pending_send();
 
     return 0;
@@ -211,32 +210,32 @@ int32_t WebsocketPacket::pack_raw( lua_State *L,int32_t index )
 /* 打包服务器发往客户端数据包
  * return: <0 error;>=0 success
  */
-int32_t WebsocketPacket::pack_clt( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_clt(lua_State *L, int32_t index)
 {
-    return pack_raw( L,index );
+    return pack_raw(L, index);
 }
 
 /* 打包客户端发往服务器数据包
  * return: <0 error;>=0 success
  */
-int32_t WebsocketPacket::pack_srv( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_srv(lua_State *L, int32_t index)
 {
-    return pack_raw( L,index );
+    return pack_raw(L, index);
 }
 
 // 发送opcode
 // 对应websocket，可以直接用pack_clt或pack_srv发送控制帧。这个函数是给ws_stream等子类使用
-int32_t WebsocketPacket::pack_ctrl( lua_State *L,int32_t index )
+int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
 {
     /* https://tools.ietf.org/html/rfc6455#section-5.5
      * 控制帧可以包含数据。但这个数据不是data-frame，即不能设置OP_TEXT、OP_BINARY
-     * 标识的应用数据。这个数据是用来说明当前控制帧的。比如close帧后面包含status code，及
-     * 关闭原因，pong数据包则必须原封不动返回ping数据包中的数据
+     * 标识的应用数据。这个数据是用来说明当前控制帧的。比如close帧后面包含status
+     * code，及 关闭原因，pong数据包则必须原封不动返回ping数据包中的数据
      */
-    return pack_raw( L,index );
+    return pack_raw(L, index);
 }
 
-/* 数据解包 
+/* 数据解包
  * return: <0 error;0 success
  */
 int32_t WebsocketPacket::unpack()
@@ -244,36 +243,35 @@ int32_t WebsocketPacket::unpack()
     /* 未握手时，由http处理
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
      */
-    if ( !_is_upgrade ) return HttpPacket::unpack();
+    if (!_is_upgrade) return HttpPacket::unpack();
 
     class Buffer &recv = _socket->recv_buffer();
 
-    uint32_t size = 0;
-    const char *ctx = recv.all_to_continuous_ctx( size );
-    if ( size == 0 ) return 0;
+    uint32_t size   = 0;
+    const char *ctx = recv.all_to_continuous_ctx(size);
+    if (size == 0) return 0;
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
-    size_t nparser = 
-        websocket_parser_execute( _parser,&settings,ctx,size );
+    size_t nparser = websocket_parser_execute(_parser, &settings, ctx, size);
     // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
     // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
     // 普通错误，比如回调脚本出错，是不会中止解析的
-    if ( nparser != size )
+    if (nparser != size)
     {
         _socket->stop();
         return -1;
     }
 
-    recv.remove( nparser );
+    recv.remove(nparser);
 
     return 0;
 }
 
 /* http-parser在解析完握手数据时，会触发一次message_complete */
-int32_t WebsocketPacket::on_message_complete( bool upgrade )
+int32_t WebsocketPacket::on_message_complete(bool upgrade)
 {
-    ASSERT( upgrade && !_is_upgrade, "should be upgrade");
+    ASSERT(upgrade && !_is_upgrade, "should be upgrade");
 
     _is_upgrade = true;
     invoke_handshake();
@@ -286,47 +284,47 @@ int32_t WebsocketPacket::invoke_handshake()
     /* https://tools.ietf.org/pdf/rfc6455.pdf Section 1.3,page 6
      */
 
-    const char *key_str = NULL;
+    const char *key_str    = NULL;
     const char *accept_str = NULL;
 
     /* 不知道当前是服务端还是客户端，两个key都查找，由上层处理 */
-    const head_map_t &head_field = _http_info._head_field;
-    head_map_t::const_iterator key_itr = head_field.find( "Sec-WebSocket-Key" );
-    if ( key_itr != head_field.end() )
+    const head_map_t &head_field       = _http_info._head_field;
+    head_map_t::const_iterator key_itr = head_field.find("Sec-WebSocket-Key");
+    if (key_itr != head_field.end())
     {
         key_str = key_itr->second.c_str();
     }
     else
     {
-        head_map_t::const_iterator accept_itr = 
-            head_field.find( "Sec-WebSocket-Accept" );
-        if ( accept_itr != head_field.end() )
+        head_map_t::const_iterator accept_itr =
+            head_field.find("Sec-WebSocket-Accept");
+        if (accept_itr != head_field.end())
         {
             accept_str = accept_itr->second.c_str();
         }
     }
 
-    if ( NULL == key_str && NULL == accept_str )
+    if (NULL == key_str && NULL == accept_str)
     {
-        ERROR( "websocket handshake header field not found" );
+        ERROR("websocket handshake header field not found");
         return -1;
     }
 
     static lua_State *L = StaticGlobal::state();
-    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
+    ASSERT(0 == lua_gettop(L), "lua stack dirty");
 
-    lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"handshake_new" );
-    lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushstring   ( L,key_str );
-    lua_pushstring   ( L,accept_str );
+    lua_pushcfunction(L, traceback);
+    lua_getglobal(L, "handshake_new");
+    lua_pushinteger(L, _socket->conn_id());
+    lua_pushstring(L, key_str);
+    lua_pushstring(L, accept_str);
 
-    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
     {
-        ERROR( "websocket handshake:%s",lua_tostring( L,-1 ) );
+        ERROR("websocket handshake:%s", lua_tostring(L, -1));
     }
 
-    lua_settop( L,0 ); /* remove traceback */
+    lua_settop(L, 0); /* remove traceback */
 
     return _socket->fd() < 0 ? -1 : 0;
 }
@@ -335,70 +333,70 @@ int32_t WebsocketPacket::invoke_handshake()
 int32_t WebsocketPacket::on_frame_end()
 {
     static lua_State *L = StaticGlobal::state();
-    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
+    ASSERT(0 == lua_gettop(L), "lua stack dirty");
 
-    uint32_t size = 0;
-    const char *ctx = _body.all_to_continuous_ctx( size );
+    uint32_t size   = 0;
+    const char *ctx = _body.all_to_continuous_ctx(size);
 
-    lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"command_new" );
-    lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushlstring  ( L,ctx,size );
+    lua_pushcfunction(L, traceback);
+    lua_getglobal(L, "command_new");
+    lua_pushinteger(L, _socket->conn_id());
+    lua_pushlstring(L, ctx, size);
 
-    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,2,0,1 ) ) )
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2, 0, 1)))
     {
-        ERROR( "websocket command:%s",lua_tostring( L,-1 ) );
+        ERROR("websocket command:%s", lua_tostring(L, -1));
     }
 
-    lua_settop( L,0 ); /* remove traceback */
+    lua_settop(L, 0); /* remove traceback */
 
     return _socket->fd() < 0 ? -1 : 0;
 }
 
-// 处理ping、pong等opcode 
+// 处理ping、pong等opcode
 int32_t WebsocketPacket::on_ctrl_end()
 {
     static lua_State *L = StaticGlobal::state();
-    ASSERT( 0 == lua_gettop(L), "lua stack dirty" );
+    ASSERT(0 == lua_gettop(L), "lua stack dirty");
 
-    uint32_t size = 0;
-    const char *ctx = _body.all_to_continuous_ctx( size );
+    uint32_t size   = 0;
+    const char *ctx = _body.all_to_continuous_ctx(size);
 
-    lua_pushcfunction( L,traceback );
-    lua_getglobal    ( L,"ctrl_new" );
-    lua_pushinteger  ( L,_socket->conn_id() );
-    lua_pushinteger  ( L,_parser->flags );
+    lua_pushcfunction(L, traceback);
+    lua_getglobal(L, "ctrl_new");
+    lua_pushinteger(L, _socket->conn_id());
+    lua_pushinteger(L, _parser->flags);
     // 控制帧也是可以包含数据的
-    lua_pushlstring  ( L,ctx,size );
+    lua_pushlstring(L, ctx, size);
 
-    if ( EXPECT_FALSE( LUA_OK != lua_pcall( L,3,0,1 ) ) )
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
     {
-        ERROR( "websocket ctrl:%s",lua_tostring( L,-1 ) );
+        ERROR("websocket ctrl:%s", lua_tostring(L, -1));
     }
 
-    lua_settop( L,0 ); /* remove traceback */
+    lua_settop(L, 0); /* remove traceback */
 
     return _socket->fd() < 0 ? -1 : 0;
 }
 
-void WebsocketPacket::new_masking_key( char mask[4] )
+void WebsocketPacket::new_masking_key(char mask[4])
 {
     /* George Marsaglia  Xorshift generator
      * www.jstatsoft.org/v08/i14/paper
      */
-     static unsigned long x=123456789, y=362436069, z=521288629;
+    static unsigned long x = 123456789, y = 362436069, z = 521288629;
 
-    //period 2^96-1
+    // period 2^96-1
     unsigned long t;
     x ^= x << 16;
     x ^= x >> 5;
     x ^= x << 1;
 
-   t = x;
-   x = y;
-   y = z;
-   z = t ^ x ^ y;
+    t = x;
+    x = y;
+    y = z;
+    z = t ^ x ^ y;
 
-   uint32_t *new_mask = reinterpret_cast<uint32_t *>( mask );
-   *new_mask = static_cast<uint32_t>( z );
+    uint32_t *new_mask = reinterpret_cast<uint32_t *>(mask);
+    *new_mask          = static_cast<uint32_t>(z);
 }

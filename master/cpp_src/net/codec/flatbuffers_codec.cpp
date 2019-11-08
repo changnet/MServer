@@ -14,24 +14,22 @@ FlatbuffersCodec::~FlatbuffersCodec()
     _lflatbuffers = NULL;
 }
 
-void FlatbuffersCodec::finalize()
-{
-}
+void FlatbuffersCodec::finalize() {}
 
-int32_t FlatbuffersCodec::load_path( const char *path )
+int32_t FlatbuffersCodec::load_path(const char *path)
 {
-    return _lflatbuffers->load_bfbs_path( path );
+    return _lflatbuffers->load_bfbs_path(path);
 }
 
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t FlatbuffersCodec::decode(
-     lua_State *L,const char *buffer,int32_t len,const CmdCfg *cfg )
+int32_t FlatbuffersCodec::decode(lua_State *L, const char *buffer, int32_t len,
+                                 const CmdCfg *cfg)
 {
-    if ( _lflatbuffers->decode( L,cfg->_schema,cfg->_object,buffer,len ) < 0 )
+    if (_lflatbuffers->decode(L, cfg->_schema, cfg->_object, buffer, len) < 0)
     {
-        ERROR( "flatbuffers decode:%s",_lflatbuffers->last_error() );
+        ERROR("flatbuffers decode:%s", _lflatbuffers->last_error());
         return -1;
     }
 
@@ -42,17 +40,17 @@ int32_t FlatbuffersCodec::decode(
 /* 编码数据包
  * return: <0 error,otherwise the length of buffer
  */
-int32_t FlatbuffersCodec::encode(
-    lua_State *L,int32_t index,const char **buffer,const CmdCfg *cfg )
+int32_t FlatbuffersCodec::encode(lua_State *L, int32_t index,
+                                 const char **buffer, const CmdCfg *cfg)
 {
-    if ( _lflatbuffers->encode( L,cfg->_schema,cfg->_object,index ) < 0 )
+    if (_lflatbuffers->encode(L, cfg->_schema, cfg->_object, index) < 0)
     {
-        ERROR( "flatbuffers encode:%s",_lflatbuffers->last_error() );
+        ERROR("flatbuffers encode:%s", _lflatbuffers->last_error());
         return -1;
     }
 
     size_t size = 0;
-    *buffer = _lflatbuffers->get_buffer( size );
+    *buffer     = _lflatbuffers->get_buffer(size);
 
-    return static_cast<int32_t>( size );
+    return static_cast<int32_t>(size);
 }

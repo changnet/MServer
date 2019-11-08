@@ -52,7 +52,7 @@ extern void set_log_args(bool dm, const char *ppath, const char *epath,
 
 /* after c++0x,static define in glibc/assert/assert.h */
 #if __cplusplus < 201103L /* -std=gnu99 */
-    #define static_assert(x, msg)                                              \
+    #define static_assert(x, msg) \
         typedef char __STATIC_ASSERT__##__LINE__[(x) ? 1 : -1]
 #endif
 
@@ -81,42 +81,42 @@ extern void set_log_args(bool dm, const char *ppath, const char *epath,
 /* terminated without destroying any object and without calling any of the
  * functions passed to atexit or at_quick_exit
  */
-#define FATAL(...)                                                             \
-    do                                                                         \
-    {                                                                          \
-        ERROR(__VA_ARGS__);                                                    \
-        ::abort();                                                             \
+#define FATAL(...)          \
+    do                      \
+    {                       \
+        ERROR(__VA_ARGS__); \
+        ::abort();          \
     } while (0)
 
 extern void __log_assert_fail(const char *__assertion, const char *__file,
                               unsigned int __line, const char *__function);
 
 /* This prints an "log assertion failed" message and return,not abort.  */
-#define LOG_ASSERT(why, expr, ...)                                             \
-    do                                                                         \
-    {                                                                          \
-        if (!(expr))                                                           \
-        {                                                                      \
-            __log_assert_fail(__STRING((why, expr)), __FILE__, __LINE__,       \
-                              __ASSERT_FUNCTION);                              \
-            return __VA_ARGS__;                                                \
-        }                                                                      \
+#define LOG_ASSERT(why, expr, ...)                                       \
+    do                                                                   \
+    {                                                                    \
+        if (!(expr))                                                     \
+        {                                                                \
+            __log_assert_fail(__STRING((why, expr)), __FILE__, __LINE__, \
+                              __ASSERT_FUNCTION);                        \
+            return __VA_ARGS__;                                          \
+        }                                                                \
     } while (0)
 
-#define ARRAY_RESIZE(type, base, cur, cnt, init)                               \
-    if ((cnt) > (cur))                                                         \
-    {                                                                          \
-        uint32_t size = cur > 0 ? cur : 16;                                    \
-        while (size < (uint32_t)cnt)                                           \
-        {                                                                      \
-            size *= 2;                                                         \
-        }                                                                      \
-        type *tmp = new type[size];                                            \
-        init(tmp, sizeof(type) * size);                                        \
-        if (cur > 0) memcpy(tmp, base, sizeof(type) * cur);                    \
-        delete[] base;                                                         \
-        base = tmp;                                                            \
-        cur  = size;                                                           \
+#define ARRAY_RESIZE(type, base, cur, cnt, init)            \
+    if ((cnt) > (cur))                                      \
+    {                                                       \
+        uint32_t size = cur > 0 ? cur : 16;                 \
+        while (size < (uint32_t)cnt)                        \
+        {                                                   \
+            size *= 2;                                      \
+        }                                                   \
+        type *tmp = new type[size];                         \
+        init(tmp, sizeof(type) * size);                     \
+        if (cur > 0) memcpy(tmp, base, sizeof(type) * cur); \
+        delete[] base;                                      \
+        base = tmp;                                         \
+        cur  = size;                                        \
     }
 
 #define MATH_MIN(a, b) ((a) > (b) ? (b) : (a))

@@ -20,49 +20,47 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-template<class Watcher>
-class EVBase : public EVWatcher
+template <class Watcher> class EVBase : public EVWatcher
 {
 public:
     explicit EVBase(EV *loop) : EVWatcher(loop) {}
 
-    virtual ~EVBase(){}
+    virtual ~EVBase() {}
 
     void set(EV *loop) { _loop = loop; }
 
     void set_(void *data, void (*cb)(EVWatcher *w, int revents))
     {
-        this->_data = (void *) data;
-        this->_cb = cb;
+        this->_data = (void *)data;
+        this->_cb   = cb;
     }
 
     bool is_active() const { return _active; }
 
     // function callback(no object)
-    template<void (*function)(Watcher &w, int32_t)>
-    void set(void *data = NULL)
+    template <void (*function)(Watcher &w, int32_t)> void set(void *data = NULL)
     {
-      set_ (data, function_thunk<function>);
+        set_(data, function_thunk<function>);
     }
 
-    template<void (*function)(Watcher &w, int32_t)>
-    static void function_thunk (EVWatcher *w, int32_t revents)
+    template <void (*function)(Watcher &w, int32_t)>
+    static void function_thunk(EVWatcher *w, int32_t revents)
     {
-      function
-        (*static_cast<Watcher *>(w), revents);
+        function(*static_cast<Watcher *>(w), revents);
     }
 
     // method callback
-    template<class K, void (K::*method)(Watcher &w, int32_t)>
-    void set (K *object)
+    template <class K, void (K::*method)(Watcher &w, int32_t)>
+    void set(K *object)
     {
-      set_ (object, method_thunk<K, method>);
+        set_(object, method_thunk<K, method>);
     }
 
-    template<class K, void (K::*method)(Watcher &w, int32_t)>
-    static void method_thunk (EVWatcher *w, int32_t revents)
+    template <class K, void (K::*method)(Watcher &w, int32_t)>
+    static void method_thunk(EVWatcher *w, int32_t revents)
     {
-        (static_cast<K *>(w->_data)->*method)(*static_cast<Watcher *>(w), revents);
+        (static_cast<K *>(w->_data)->*method)(*static_cast<Watcher *>(w),
+                                              revents);
     }
 };
 

@@ -10,6 +10,7 @@ public:
     explicit LState();
 
     inline lua_State *state() { return L; }
+
 private:
     void open_cpp();
 

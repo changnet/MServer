@@ -1,45 +1,45 @@
-#include <fcntl.h>    // open O_RDONLY
+#include <fcntl.h> // open O_RDONLY
 #include <sys/stat.h>
 
 #include "lacism.h"
 
-LAcism::LAcism( lua_State *L )
+LAcism::LAcism(lua_State *L)
 {
-    _psp   = NULL;
-    _pattv = NULL;
-    _loaded  = 0;
+    _psp            = NULL;
+    _pattv          = NULL;
+    _loaded         = 0;
     _case_sensitive = 1;
 
     _patt.ptr = NULL;
     _patt.len = 0;
 
-    memset( &_memrpl,0,sizeof(MemRpl) );
+    memset(&_memrpl, 0, sizeof(MemRpl));
 }
 
 LAcism::~LAcism()
 {
-    if ( _patt.ptr )
+    if (_patt.ptr)
     {
-        delete []_patt.ptr;
+        delete[] _patt.ptr;
         _patt.ptr = NULL;
         _patt.len = 0;
     }
 
-    if ( _pattv )
+    if (_pattv)
     {
-        delete []_pattv;
+        delete[] _pattv;
         _pattv = NULL;
     }
 
-    if ( _psp )
+    if (_psp)
     {
         acism_destroy(_psp);
         _psp = NULL;
     }
 
-    if ( _memrpl.rpl_text )
+    if (_memrpl.rpl_text)
     {
-        delete []_memrpl.rpl_text;
+        delete[] _memrpl.rpl_text;
         _memrpl.rpl_text = NULL;
     }
 }
@@ -47,39 +47,39 @@ LAcism::~LAcism()
 /* 返回0,继续搜索
  * 返回非0,终止搜索，并且acism_more返回该值
  */
-int32_t LAcism::on_match( int32_t strnum, int32_t textpos, MEMREF const *pattv )
+int32_t LAcism::on_match(int32_t strnum, int32_t textpos, MEMREF const *pattv)
 {
     (void)strnum, (void)pattv;
 
     return textpos;
 }
 
-int32_t LAcism::on_replace( int32_t strnum,int32_t textpos,void *context )
+int32_t LAcism::on_replace(int32_t strnum, int32_t textpos, void *context)
 {
-    ASSERT( context, "acism on_replace NULL context" );
+    ASSERT(context, "acism on_replace NULL context");
 
     class LAcism *acism = static_cast<class LAcism *>(context);
-    return acism->do_replace( strnum,textpos );
+    return acism->do_replace(strnum, textpos);
 }
 
-int32_t LAcism::do_replace( int32_t strnum,int32_t textpos )
+int32_t LAcism::do_replace(int32_t strnum, int32_t textpos)
 {
     ASSERT((size_t)textpos > _memrpl.text_pos, "acism do_replace buffer error");
 
     size_t pattv_len = _pattv[strnum].len;
-    size_t str_len = textpos - pattv_len - _memrpl.text_pos;
-    size_t mem_len = str_len + _memrpl.word_len + _memrpl.rpl_len;
+    size_t str_len   = textpos - pattv_len - _memrpl.text_pos;
+    size_t mem_len   = str_len + _memrpl.word_len + _memrpl.rpl_len;
 
     /* 必须是<=，防止mem_len为0的情况 */
-    if (  _memrpl.rpl_size <= mem_len ) _memrpl.reserved( mem_len );
+    if (_memrpl.rpl_size <= mem_len) _memrpl.reserved(mem_len);
 
-    ASSERT( _memrpl.rpl_size >= mem_len, "acism do_replace buffer overflow" );
+    ASSERT(_memrpl.rpl_size >= mem_len, "acism do_replace buffer overflow");
 
-    memcpy( _memrpl.rpl_text + _memrpl.rpl_len,
-        _memrpl.text + _memrpl.text_pos,str_len);
+    memcpy(_memrpl.rpl_text + _memrpl.rpl_len, _memrpl.text + _memrpl.text_pos,
+           str_len);
     _memrpl.rpl_len += str_len;
 
-    memcpy( _memrpl.rpl_text + _memrpl.rpl_len,_memrpl.word,_memrpl.word_len );
+    memcpy(_memrpl.rpl_text + _memrpl.rpl_len, _memrpl.word, _memrpl.word_len);
     _memrpl.rpl_len += _memrpl.word_len;
 
     _memrpl.text_pos = textpos;
@@ -88,49 +88,49 @@ int32_t LAcism::do_replace( int32_t strnum,int32_t textpos )
 }
 
 /* 扫描关键字,扫描到其中一个即中止 */
-int32_t LAcism::scan( lua_State *L )
+int32_t LAcism::scan(lua_State *L)
 {
-    if ( !_loaded )
+    if (!_loaded)
     {
-        return luaL_error( L,"no pattern load yet" );
+        return luaL_error(L, "no pattern load yet");
     }
 
     /* no worlds loaded */
-    if ( !_pattv || !_psp )
+    if (!_pattv || !_psp)
     {
-        lua_pushinteger( L,0 );
+        lua_pushinteger(L, 0);
         return 1;
     }
 
-    size_t len = 0;
-    const char *str = luaL_checklstring( L,1,&len );
+    size_t len      = 0;
+    const char *str = luaL_checklstring(L, 1, &len);
 
-    MEMREF text   = {str, len};
+    MEMREF text = {str, len};
 
-    int32_t textpos = acism_scan( _psp, text,
-        (ACISM_ACTION*)LAcism::on_match, _pattv,_case_sensitive );
+    int32_t textpos = acism_scan(_psp, text, (ACISM_ACTION *)LAcism::on_match,
+                                 _pattv, _case_sensitive);
 
-    lua_pushinteger( L,textpos );
+    lua_pushinteger(L, textpos);
     return 1;
 }
 
 /* 替换关键字 */
-int32_t LAcism::replace( lua_State *L )
+int32_t LAcism::replace(lua_State *L)
 {
-    if ( !_loaded )
+    if (!_loaded)
     {
-        return luaL_error( L,"no pattern load yet" );
+        return luaL_error(L, "no pattern load yet");
     }
 
-    MEMREF text   = {NULL, 0};
+    MEMREF text = {NULL, 0};
 
-    text.ptr = luaL_checklstring( L,1,&(text.len) );
-    _memrpl.word = luaL_checklstring( L,2,&(_memrpl.word_len) );
+    text.ptr     = luaL_checklstring(L, 1, &(text.len));
+    _memrpl.word = luaL_checklstring(L, 2, &(_memrpl.word_len));
 
     /* no worlds loaded */
-    if ( !_pattv || !_psp )
+    if (!_pattv || !_psp)
     {
-        lua_pushvalue( L,1 );
+        lua_pushvalue(L, 1);
         return 1;
     }
 
@@ -138,88 +138,88 @@ int32_t LAcism::replace( lua_State *L )
     _memrpl.rpl_len  = 0;
     _memrpl.text_pos = 0;
 
-    (void)acism_scan( _psp, text,
-        (ACISM_ACTION*)LAcism::on_replace, this, _case_sensitive );
+    (void)acism_scan(_psp, text, (ACISM_ACTION *)LAcism::on_replace, this,
+                     _case_sensitive);
 
-    if ( 0 == _memrpl.rpl_len )
+    if (0 == _memrpl.rpl_len)
     {
-        lua_pushvalue( L,1 );
+        lua_pushvalue(L, 1);
         return 1;
     }
 
-    if ( _memrpl.text_pos < text.len )
+    if (_memrpl.text_pos < text.len)
     {
         size_t str_len = text.len - _memrpl.text_pos;
         size_t mem_len = _memrpl.rpl_len + str_len;
-        if ( _memrpl.rpl_size <= mem_len )
+        if (_memrpl.rpl_size <= mem_len)
         {
-            _memrpl.reserved( mem_len );
+            _memrpl.reserved(mem_len);
         }
 
-        memcpy( _memrpl.rpl_text + _memrpl.rpl_len,_memrpl.text + _memrpl.text_pos,
-            str_len );
+        memcpy(_memrpl.rpl_text + _memrpl.rpl_len,
+               _memrpl.text + _memrpl.text_pos, str_len);
 
         _memrpl.text_pos = text.len;
         _memrpl.rpl_len += str_len;
     }
 
-    lua_pushlstring( L,_memrpl.rpl_text,_memrpl.rpl_len );
+    lua_pushlstring(L, _memrpl.rpl_text, _memrpl.rpl_len);
 
     return 1;
 }
 
-int32_t LAcism::load_from_file( lua_State *L )
+int32_t LAcism::load_from_file(lua_State *L)
 {
-    const char *path = luaL_checkstring( L,1 );
+    const char *path       = luaL_checkstring(L, 1);
     int32_t case_sensitive = 1;
 
-    if ( lua_isboolean( L,2 ) )
+    if (lua_isboolean(L, 2))
     {
-        case_sensitive = lua_toboolean( L,2 );
+        case_sensitive = lua_toboolean(L, 2);
     }
 
-    if ( this->acism_slurp( path ) )
+    if (this->acism_slurp(path))
     {
-        return luaL_error( L,"can't read file[%s]:",path,strerror(errno) );
+        return luaL_error(L, "can't read file[%s]:", path, strerror(errno));
     }
 
-    _loaded = 1;/* mark file loaded */
-    if ( !case_sensitive )
+    _loaded = 1; /* mark file loaded */
+    if (!case_sensitive)
     {
-        for ( size_t i = 0;i < _patt.len;i ++ )
+        for (size_t i = 0; i < _patt.len; i++)
         {
-            *(_patt.ptr + i) = ::tolower( *(_patt.ptr + i) );
+            *(_patt.ptr + i) = ::tolower(*(_patt.ptr + i));
         }
     }
 
     int32_t npatts = 0;
-    if ( _patt.ptr )
+    if (_patt.ptr)
     {
-        _pattv = this->acism_refsplit( _patt.ptr, '\n', &npatts );
-        _psp = acism_create( _pattv, npatts );
+        _pattv = this->acism_refsplit(_patt.ptr, '\n', &npatts);
+        _psp   = acism_create(_pattv, npatts);
     }
     _case_sensitive = case_sensitive;
 
-    lua_pushinteger( L,npatts );
+    lua_pushinteger(L, npatts);
     return 1;
 }
 
-int32_t LAcism::acism_slurp( const char *path )
+int32_t LAcism::acism_slurp(const char *path)
 {
-    int32_t fd = ::open( path, O_RDONLY );
-    if ( fd < 0 ) return errno;
+    int32_t fd = ::open(path, O_RDONLY);
+    if (fd < 0) return errno;
 
     struct stat s;
-    if ( fstat(fd, &s) || !S_ISREG(s.st_mode) )
+    if (fstat(fd, &s) || !S_ISREG(s.st_mode))
     {
-        ::close( fd );
+        ::close(fd);
         return errno;
     }
 
     /* empty file,do nothing */
-    if ( s.st_size <= 0 )
+    if (s.st_size <= 0)
     {
-        ::close( fd );
+        ::close(fd);
         return 0;
     }
 
@@ -227,36 +227,35 @@ int32_t LAcism::acism_slurp( const char *path )
      * Aho-Corasick-Interleaved_State_Matrix.pdf
      */
 
-    ASSERT( s.st_size < 1024*1024*10, "filter worlds file too large" );
+    ASSERT(s.st_size < 1024 * 1024 * 10, "filter worlds file too large");
 
-    ASSERT( !_patt.ptr, "patt.ptr not free" ); /* code hot fix ? */
+    ASSERT(!_patt.ptr, "patt.ptr not free"); /* code hot fix ? */
 
-    _patt.ptr = new char[s.st_size+1];
+    _patt.ptr = new char[s.st_size + 1];
     _patt.len = s.st_size;
 
-    if ( _patt.len != (unsigned)read(fd, _patt.ptr, _patt.len) )
+    if (_patt.len != (unsigned)read(fd, _patt.ptr, _patt.len))
     {
-        ::close( fd );
+        ::close(fd);
         return errno;
     }
 
     ::close(fd);
     _patt.ptr[_patt.len] = 0;
 
-    return  0;
+    return 0;
 }
 
-MEMREF *LAcism::acism_refsplit( char *text, char sep, int *pcount )
+MEMREF *LAcism::acism_refsplit(char *text, char sep, int *pcount)
 {
     char *cp = NULL;
     char *ps = NULL;
-    int32_t i,nstrs = 0;
+    int32_t i, nstrs = 0;
     MEMREF *strv = NULL;
 
     if (*text)
     {
-        for (cp = text, nstrs = 1; (cp = strchr(cp, sep)); ++cp)
-            ++nstrs;
+        for (cp = text, nstrs = 1; (cp = strchr(cp, sep)); ++cp) ++nstrs;
 
         strv = (MEMREF *)new char[nstrs * sizeof(MEMREF)];
 
@@ -265,7 +264,7 @@ MEMREF *LAcism::acism_refsplit( char *text, char sep, int *pcount )
             strv[i].ptr = cp;
             strv[i].len = ps - strv[i].ptr;
 
-            cp = ps;
+            cp  = ps;
             *cp = 0;
         }
 
@@ -275,5 +274,5 @@ MEMREF *LAcism::acism_refsplit( char *text, char sep, int *pcount )
     }
 
     if (pcount) *pcount = nstrs;
-    return    strv;
+    return strv;
 }

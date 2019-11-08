@@ -13,7 +13,8 @@
 #include <lua.hpp>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 //#include <msutil.h>
@@ -23,34 +24,37 @@ extern "C" {
 }
 #endif
 
-
 #include "../global/global.h"
 
-typedef struct { char *ptr; size_t len; } MemBuf;
 typedef struct
 {
-    int32_t rpl_len;                          /* rpl的长度 */
-    size_t text_pos;                        /* 已替换部分相对于原字符串位置 */
-    size_t word_len;                        /* word的长度 */
-    size_t rpl_size;                        /* rpl的总长度 */
-    char *rpl_text;                         /* 替换后的字符串 */
-    const char *word;                       /* 替换为此字符串 */
-    const char *text;                       /* 原字符串 */
+    char *ptr;
+    size_t len;
+} MemBuf;
+typedef struct
+{
+    int32_t rpl_len;  /* rpl的长度 */
+    size_t text_pos;  /* 已替换部分相对于原字符串位置 */
+    size_t word_len;  /* word的长度 */
+    size_t rpl_size;  /* rpl的总长度 */
+    char *rpl_text;   /* 替换后的字符串 */
+    const char *word; /* 替换为此字符串 */
+    const char *text; /* 原字符串 */
 
-    void reserved( size_t bytes )
+    void reserved(size_t bytes)
     {
         size_t new_size = rpl_size ? rpl_size : ACISM_REPLACE_DEFAULT;
-        while ( new_size < bytes )
+        while (new_size < bytes)
         {
             new_size *= 2;
         }
 
         const char *tmp = rpl_text;
-        rpl_text = new char[new_size];
-        if ( tmp )
+        rpl_text        = new char[new_size];
+        if (tmp)
         {
-            memcpy( rpl_text,tmp,rpl_len );
-            delete []tmp;
+            memcpy(rpl_text, tmp, rpl_len);
+            delete[] tmp;
         }
         rpl_size = new_size;
     }
@@ -60,16 +64,17 @@ class LAcism
 {
 public:
     ~LAcism();
-    explicit LAcism( lua_State *L );
+    explicit LAcism(lua_State *L);
 
-    int32_t scan( lua_State *L );
-    int32_t replace( lua_State *L );
-    int32_t load_from_file( lua_State *L );
+    int32_t scan(lua_State *L);
+    int32_t replace(lua_State *L);
+    int32_t load_from_file(lua_State *L);
 
-    int32_t do_replace( int32_t strnum,int32_t textpos );
+    int32_t do_replace(int32_t strnum, int32_t textpos);
 
-    static int32_t on_match( int32_t strnum, int32_t textpos, MEMREF const *pattv );
-    static int32_t on_replace( int32_t strnum,int32_t textpos,void *context );
+    static int32_t on_match(int32_t strnum, int32_t textpos, MEMREF const *pattv);
+    static int32_t on_replace(int32_t strnum, int32_t textpos, void *context);
+
 private:
     /* 这几个函数在acism.h或msutil.h中都有类似的函数
      * 重写原因如下:
@@ -78,8 +83,9 @@ private:
      * 3.msutil根本就不在libacism.a中，需要改动makefile
      * 4.大小写的处理是在acism.c上修改的，原因是_acism.h中的写法在C++中编译不过
      */
-    int32_t acism_slurp( const char *path );
-    MEMREF *acism_refsplit( char *text, char sep, int *pcount );
+    int32_t acism_slurp(const char *path);
+    MEMREF *acism_refsplit(char *text, char sep, int *pcount);
+
 private:
     ACISM *_psp;
     MemBuf _patt;

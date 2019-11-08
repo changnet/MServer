@@ -1,15 +1,11 @@
 #include "statistic.h"
 #include "../system/static_global.h"
 
-Statistic::~Statistic()
-{
-}
+Statistic::~Statistic() {}
 
-Statistic::Statistic()
-{
-}
+Statistic::Statistic() {}
 
-void Statistic::add_c_obj(const char *what,int32_t count)
+void Statistic::add_c_obj(const char *what, int32_t count)
 {
     class BaseCounter &counter = _c_obj[what];
 
@@ -24,7 +20,7 @@ void Statistic::add_c_obj(const char *what,int32_t count)
     }
 }
 
-void Statistic::add_c_lua_obj(const char *what,int32_t count)
+void Statistic::add_c_lua_obj(const char *what, int32_t count)
 {
     class BaseCounter &counter = _c_lua_obj[what];
 
@@ -42,19 +38,19 @@ void Statistic::add_c_lua_obj(const char *what,int32_t count)
 void Statistic::reset_trafic()
 {
     const time_t now = StaticGlobal::ev()->now();
-    for (int type = 0;type < Socket::CT_MAX;type ++)
+    for (int type = 0; type < Socket::CT_MAX; type++)
     {
         _total_traffic[type].reset();
         _total_traffic[type]._time = now;
     }
 
     SocketTrafficType::iterator itr = _socket_traffic.begin();
-    while ( itr != _socket_traffic.end() )
+    while (itr != _socket_traffic.end())
     {
         itr->second.reset();
         itr->second._time = now;
 
-        itr ++;
+        itr++;
     }
 }
 
@@ -67,34 +63,36 @@ void Statistic::remove_socket_traffic(uint32_t conn_id)
     // ASSERT(_socket_traffic.end() != _socket_traffic.find(conn_id),
     //    "socket traffic del statistic corruption",);
 
-    _socket_traffic.erase( conn_id );
+    _socket_traffic.erase(conn_id);
 }
 
 void Statistic::insert_socket_traffic(uint32_t conn_id)
 {
-    ASSERT( _socket_traffic.end() == _socket_traffic.find(conn_id),
-                            "socket traffic new statistic corruption" );
+    ASSERT(_socket_traffic.end() == _socket_traffic.find(conn_id),
+           "socket traffic new statistic corruption");
 
     _socket_traffic[conn_id]._time = StaticGlobal::ev()->now();
 }
 
-void Statistic::add_send_traffic(uint32_t conn_id,Socket::ConnType type,uint32_t val)
+void Statistic::add_send_traffic(uint32_t conn_id, Socket::ConnType type,
+                                 uint32_t val)
 {
-    ASSERT( type > Socket::CT_NONE && type < Socket::CT_MAX );
+    ASSERT(type > Socket::CT_NONE && type < Socket::CT_MAX);
 
     _total_traffic[type]._send += val;
     _socket_traffic[conn_id]._send += val;
 }
 
-void Statistic::add_recv_traffic(uint32_t conn_id,Socket::ConnType type,uint32_t val)
+void Statistic::add_recv_traffic(uint32_t conn_id, Socket::ConnType type,
+                                 uint32_t val)
 {
-    ASSERT( type > Socket::CT_NONE && type < Socket::CT_MAX );
+    ASSERT(type > Socket::CT_NONE && type < Socket::CT_MAX);
 
     _total_traffic[type]._recv += val;
     _socket_traffic[conn_id]._recv += val;
 }
 
-void Statistic::add_rpc_count(const char *cmd,int32_t size,int64_t msec)
+void Statistic::add_rpc_count(const char *cmd, int32_t size, int64_t msec)
 {
     if (!cmd)
     {
@@ -103,8 +101,8 @@ void Statistic::add_rpc_count(const char *cmd,int32_t size,int64_t msec)
     }
 
     PktCounter &pkt = _rpc_count[cmd];
-    pkt._size  += size;
-    pkt._msec  += msec;
+    pkt._size += size;
+    pkt._msec += msec;
     pkt._count += 1;
 
     if (msec > pkt._max) pkt._max = msec;
@@ -114,13 +112,14 @@ void Statistic::add_rpc_count(const char *cmd,int32_t size,int64_t msec)
     if (-1 == pkt._min_size || size < pkt._min_size) pkt._min_size = size;
 }
 
-void Statistic::add_pkt_count(int32_t type,int32_t cmd,int32_t size,int64_t msec)
+void Statistic::add_pkt_count(int32_t type, int32_t cmd, int32_t size,
+                              int64_t msec)
 {
     ASSERT(type > SPT_NONE && type < SPT_MAXT, "cmd type error");
 
     PktCounter &pkt = _pkt_count[type][cmd];
-    pkt._size  += size;
-    pkt._msec  += msec;
+    pkt._size += size;
+    pkt._msec += msec;
     pkt._count += 1;
 
     if (msec > pkt._max) pkt._max = msec;

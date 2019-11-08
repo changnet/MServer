@@ -16,28 +16,30 @@
 #include <sys/epoll.h>
 #include "../global/global.h"
 
-#define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
-#define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */
+#define MIN_TIMEJUMP \
+    1. /* minimum timejump that gets detected (if monotonic clock available) */
+#define MAX_BLOCKTIME \
+    59.743 /* never wait longer than this time (to detect time jumps) */
 
 /*
- * the heap functions want a real array index. array index 0 is guaranteed to not
- * be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP gives
- * the branching factor of the d-tree.
+ * the heap functions want a real array index. array index 0 is guaranteed to
+ * not be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP
+ * gives the branching factor of the d-tree.
  */
 
-#define HEAP0 1
-#define HPARENT(k) ((k) >> 1)
-#define UPHEAP_DONE(p,k) (!(p))
+#define HEAP0             1
+#define HPARENT(k)        ((k) >> 1)
+#define UPHEAP_DONE(p, k) (!(p))
 
 /* eventmask, revents, events... */
 enum
 {
-    EV_UNDEF    = (int)0xFFFFFFFF, /* guaranteed to be invalid */
-    EV_NONE     =            0x00, /* no events */
-    EV_READ     =            0x01, /* ev_io detected read will not block */
-    EV_WRITE    =            0x02, /* ev_io detected write will not block */
-    EV_TIMER    =      0x00000100, /* timer timed out */
-    EV_ERROR    = (int)0x80000000  /* sent when an error occurs */
+    EV_UNDEF = (int)0xFFFFFFFF, /* guaranteed to be invalid */
+    EV_NONE  = 0x00,            /* no events */
+    EV_READ  = 0x01,            /* ev_io detected read will not block */
+    EV_WRITE = 0x02,            /* ev_io detected write will not block */
+    EV_TIMER = 0x00000100,      /* timer timed out */
+    EV_ERROR = (int)0x80000000  /* sent when an error occurs */
 };
 
 typedef double EvTstamp;
@@ -57,8 +59,8 @@ typedef struct
 /* stores the pending event set for a given watcher */
 typedef struct
 {
-  EVWatcher *w;
-  int events; /* the pending event set for the given watcher */
+    EVWatcher *w;
+    int events; /* the pending event set for the given watcher */
 } ANPENDING;
 
 /* timer heap element */
@@ -92,6 +94,7 @@ public:
 
     inline int64_t ms_now() { return ev_now_ms; }
     inline EvTstamp now() { return ev_rt_now; }
+
 protected:
     volatile bool loop_done;
     ANFD *anfds;
@@ -118,23 +121,23 @@ protected:
     EvTstamp mn_now;    /* monotonic clock "now" */
     EvTstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
-    virtual void running( int64_t ms_now ) {}
-    virtual void after_run(int64_t old_ms_now ,int64_t ms_now ) {}
+    virtual void running(int64_t ms_now) {}
+    virtual void after_run(int64_t old_ms_now, int64_t ms_now) {}
 
     virtual EvTstamp wait_time();
-    void fd_change( int32_t fd );
+    void fd_change(int32_t fd);
     void fd_reify();
     void backend_init();
-    void backend_modify( int32_t fd,int32_t events,int32_t reify );
+    void backend_modify(int32_t fd, int32_t events, int32_t reify);
     void time_update();
-    void backend_poll( EvTstamp timeout );
-    void fd_event( int32_t fd,int32_t revents );
-    void feed_event( EVWatcher *w,int32_t revents );
+    void backend_poll(EvTstamp timeout);
+    void fd_event(int32_t fd, int32_t revents);
+    void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
-    void clear_pending( EVWatcher *w );
+    void clear_pending(EVWatcher *w);
     void timers_reify();
-    void down_heap( ANHE *heap,int32_t N,int32_t k );
-    void up_heap( ANHE *heap,int32_t k );
-    void adjust_heap( ANHE *heap,int32_t N,int32_t k );
-    void reheap( ANHE *heap,int32_t N );
+    void down_heap(ANHE *heap, int32_t N, int32_t k);
+    void up_heap(ANHE *heap, int32_t k);
+    void adjust_heap(ANHE *heap, int32_t N, int32_t k);
+    void reheap(ANHE *heap, int32_t N);
 };

@@ -25,7 +25,7 @@ public:
     // 将日志内容分为小、中、大三种类型。避免内存碎片化
     typedef enum
     {
-        LS_S = 0, //small
+        LS_S = 0, // small
         LS_M = 1, // middle
         LS_L = 2, // large
 
@@ -33,7 +33,8 @@ public:
     } LogSize;
 
     // 单次写入的日志
-    typedef std::vector< class LogOne *> LogOneList;
+    typedef std::vector<class LogOne *> LogOneList;
+
 public:
     Log();
     ~Log();
@@ -44,19 +45,21 @@ public:
     void collect_mem();
     size_t pending_size();
     bool inline empty() const { return _flush->empty(); }
-    int32_t write_cache( time_t tm,
-        const char *path,const char *ctx,size_t len,LogOut out );
-private:
-    class LogOne *allocate_one( size_t len );
-    void deallocate_one( class LogOne *one );
-    bool flush_one_file(struct tm &ntm,
-        const LogOne *one,const char *path,const char *prefix = "" );
-    int32_t flush_one_ctx(
-        FILE *pf,const struct LogOne *one,struct tm &ntm,const char *prefix );
-private:
-    LogOneList *_cache;   // 主线程写入缓存队列
-    LogOneList *_flush;   // 日志线程写入文件队列
+    int32_t write_cache(time_t tm, const char *path, const char *ctx,
+                        size_t len, LogOut out);
 
-    StdMap<std::string,FILE *> _files;
-    class Pool* _ctx_pool[LS_MAX];
+private:
+    class LogOne *allocate_one(size_t len);
+    void deallocate_one(class LogOne *one);
+    bool flush_one_file(struct tm &ntm, const LogOne *one, const char *path,
+                        const char *prefix = "");
+    int32_t flush_one_ctx(FILE *pf, const struct LogOne *one, struct tm &ntm,
+                          const char *prefix);
+
+private:
+    LogOneList *_cache; // 主线程写入缓存队列
+    LogOneList *_flush; // 日志线程写入文件队列
+
+    StdMap<std::string, FILE *> _files;
+    class Pool *_ctx_pool[LS_MAX];
 };

@@ -3,14 +3,14 @@
 # sh不能创建数组，故这里用bash
 
 EXCLUDE=( deps )
-SRC=../master/cpp_src/global
+SRC=../master/cpp_src
 
 CF_NAME=.clang-format
 CF_FILE=../project/$CF_NAME
 
 EX_PATH=""
 for E in ${EXCLUDE[@]}; do
-    EX_PATH+="-not -path \"$SRC${E}/*\""
+    EX_PATH+="-not -path \"$SRC/${E}/*\""
 done
 
 

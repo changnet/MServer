@@ -51,28 +51,28 @@ private:
     class Chunk
     {
     public:
-        char  *_ctx;    /* 缓冲区指针 */
-        uint32_t _max;    /* 缓冲区总大小 */
+        char *_ctx;    /* 缓冲区指针 */
+        uint32_t _max; /* 缓冲区总大小 */
 
-        uint32_t _beg;    /* 有效数据开始位置 */
-        uint32_t _end;    /* 有效数据结束位置 */
+        uint32_t _beg; /* 有效数据开始位置 */
+        uint32_t _end; /* 有效数据结束位置 */
 
         Chunk *_next; /* 链表下一节点 */
 
-        inline void remove( uint32_t len )
+        inline void remove(uint32_t len)
         {
             _beg += len;
-            ASSERT(_end >= _beg, "chunk remove corruption" );
+            ASSERT(_end >= _beg, "chunk remove corruption");
         }
-        inline void add_used_offset( uint32_t len )
+        inline void add_used_offset(uint32_t len)
         {
             _end += len;
-            ASSERT(_max >= _end, "chunk append corruption" );
+            ASSERT(_max >= _end, "chunk append corruption");
         }
-        inline void append( const void *data,const uint32_t len )
+        inline void append(const void *data, const uint32_t len)
         {
-            memcpy( _ctx + _end,data,len );
-            add_used_offset( len );
+            memcpy(_ctx + _end, data, len);
+            add_used_offset(len);
         }
 
         // 有效数据指针
@@ -80,22 +80,29 @@ private:
         inline char *space_ctx() { return _ctx + _end; } // 空闲缓冲区指针
 
         inline void clear() { _beg = _end = 0; } // 重置有效数据
-        inline uint32_t used_size() const { return _end - _beg; } // 有效数据大小
-        inline uint32_t space_size() const { return _max - _end; } // 空闲缓冲区大小
+        inline uint32_t used_size() const
+        {
+            return _end - _beg;
+        } // 有效数据大小
+        inline uint32_t space_size() const
+        {
+            return _max - _end;
+        } // 空闲缓冲区大小
     };
 
     typedef OrderedPool<BUFFER_CHUNK> ctx_pool_t;
-    typedef ObjectPool< Chunk,1024,64 > chunk_pool_t;
+    typedef ObjectPool<Chunk, 1024, 64> chunk_pool_t;
+
 public:
     Buffer();
     ~Buffer();
 
     void clear();
-    void remove( uint32_t len );
-    void append( const void *data,const uint32_t len );
+    void remove(uint32_t len);
+    void append(const void *data, const uint32_t len);
 
-    const char *to_continuous_ctx( uint32_t len );
-    const char *all_to_continuous_ctx( uint32_t &len );
+    const char *to_continuous_ctx(uint32_t len);
+    const char *all_to_continuous_ctx(uint32_t &len);
 
     // 只获取第一个chunk的有效数据大小，用于socket发送
     inline uint32_t get_used_size() const
@@ -108,12 +115,13 @@ public:
     // 获取所有chunk分配的内存大小
     inline uint32_t get_chunk_mem_size() const
     {
-        uint32_t mem = 0;
+        uint32_t mem      = 0;
         const Chunk *next = _front;
 
         while (next)
         {
-            mem += next->_max;;
+            mem += next->_max;
+            ;
             next = next->_next;
         };
 
@@ -127,9 +135,9 @@ public:
      * 这个函数必须在确定已有数据的情况下调用，不检测next是否为空
      * TODO:用于数据包分在不同chunk的情况，这是采用这种设计缺点之一
      */
-    inline bool check_used_size( uint32_t len ) const
+    inline bool check_used_size(uint32_t len) const
     {
-        uint32_t used = 0;
+        uint32_t used     = 0;
         const Chunk *next = _front;
 
         do
@@ -137,7 +145,7 @@ public:
             used += next->used_size();
 
             next = next->_next;
-        } while ( EXPECT_FALSE(next && used < len) );
+        } while (EXPECT_FALSE(next && used < len));
 
         return used >= len;
     }
@@ -145,7 +153,7 @@ public:
     // 获取当前所有的数据长度
     inline uint32_t get_all_used_size() const
     {
-        uint32_t used = 0;
+        uint32_t used     = 0;
         const Chunk *next = _front;
 
         while (next)
@@ -159,43 +167,38 @@ public:
     }
 
     // 获取空闲缓冲区大小，只获取一个chunk的，用于socket接收
-    inline uint32_t get_space_size()
-    {
-        return _back ? _back->space_size() : 0;
-    }
+    inline uint32_t get_space_size() { return _back ? _back->space_size() : 0; }
     // 获取空闲缓冲区指针，只获取一个chunk的，用于socket接收
     inline char *get_space_ctx() { return _back->space_ctx(); };
     // 增加有效数据长度，比如从socket读数据时，先拿缓冲区，然后才知道读了多少数据
-    inline void add_used_offset(uint32_t len)
-    {
-        _back->add_used_offset( len );
-    }
+    inline void add_used_offset(uint32_t len) { _back->add_used_offset(len); }
 
     /* 预分配一块连续的空闲缓冲区，大小不能超过单个chunk
      * @len:len为0表示不需要确定预分配
      * 注意当len不为0时而当前chunk空间不足，会直接申请下一个chunk，数据包并不是连续的
      */
-    inline bool __attribute__ ((warn_unused_result)) reserved(uint32_t len = 0)
+    inline bool __attribute__((warn_unused_result)) reserved(uint32_t len = 0)
     {
         // 正常情况下不会分配这么大，但防止websocket时别人恶意传长度
-        if ( EXPECT_FALSE(len > BUFFER_CHUNK*10) ) return false;
+        if (EXPECT_FALSE(len > BUFFER_CHUNK * 10)) return false;
 
-        if ( EXPECT_FALSE(!_front) )
+        if (EXPECT_FALSE(!_front))
         {
-            _back = _front = new_chunk( len );
+            _back = _front = new_chunk(len);
             return true;
         }
 
         uint32_t space = _back->space_size();
-        if ( 0 == space || len > space )
+        if (0 == space || len > space)
         {
-            _back = _back->_next = new_chunk( len );
+            _back = _back->_next = new_chunk(len);
             // 不允许前面有一个空的chunk
-            if ( 0 == _front->used_size() )
+            if (0 == _front->used_size())
             {
-                ASSERT( _back == _front->_next, "buffer link corruption" );
+                ASSERT(_back == _front->_next, "buffer link corruption");
 
-                del_chunk( _front );_front = _back;
+                del_chunk(_front);
+                _front = _back;
             }
         }
 
@@ -205,74 +208,75 @@ public:
     // 设置缓冲区参数
     // @max:chunk最大数量
     // @ctx_max:默认
-    void set_buffer_size( uint32_t max,uint32_t ctx_size )
+    void set_buffer_size(uint32_t max, uint32_t ctx_size)
     {
-        _chunk_max = max;
+        _chunk_max      = max;
         _chunk_ctx_size = ctx_size;
 
         // 设置的chunk大小必须是等长内存池的N倍
-        ASSERT( 0 == ctx_size % BUFFER_CHUNK, "illegal buffer chunk size" );
+        ASSERT(0 == ctx_size % BUFFER_CHUNK, "illegal buffer chunk size");
     }
 
     // 当前缓冲区是否超了设定值
     inline bool is_overflow() const { return _chunk_size > _chunk_max; }
+
 private:
-    inline Chunk *new_chunk( uint32_t ctx_size  = 0 )
+    inline Chunk *new_chunk(uint32_t ctx_size = 0)
     {
         chunk_pool_t *pool = get_chunk_pool();
 
         Chunk *chunk = pool->construct();
-        memset(chunk,0,sizeof(Chunk));
+        memset(chunk, 0, sizeof(Chunk));
 
-        chunk->_ctx = new_ctx( ctx_size );
+        chunk->_ctx = new_ctx(ctx_size);
         chunk->_max = ctx_size;
 
-        _chunk_size ++;
+        _chunk_size++;
         return chunk;
     }
 
-    inline void del_chunk( Chunk *chunk )
+    inline void del_chunk(Chunk *chunk)
     {
-        ASSERT( _chunk_size > 0, "chunk size corruption" );
+        ASSERT(_chunk_size > 0, "chunk size corruption");
 
-        _chunk_size --;
-        del_ctx( chunk->_ctx,chunk->_max );
+        _chunk_size--;
+        del_ctx(chunk->_ctx, chunk->_max);
 
         chunk_pool_t *pool = get_chunk_pool();
-        pool->destroy( chunk );
+        pool->destroy(chunk);
     }
 
     // @size:要分配的缓冲区大小，会被修正为最终分配的大小
-    inline char *new_ctx( uint32_t &size )
+    inline char *new_ctx(uint32_t &size)
     {
         // 如果分配太小，则修正为指定socket的大小。避免reserved分配太小的内存块
-        uint32_t new_size = MATH_MAX( size,_chunk_ctx_size );
+        uint32_t new_size = MATH_MAX(size, _chunk_ctx_size);
 
         // 大小只能是BUFFER_CHUNK的N倍，如果不是则修正
-        if ( 0 != new_size % BUFFER_CHUNK )
+        if (0 != new_size % BUFFER_CHUNK)
         {
             new_size = (new_size / BUFFER_CHUNK + 1) * BUFFER_CHUNK;
         }
 
-        ASSERT( new_size > 0, "buffer chunk ctx size error" );
+        ASSERT(new_size > 0, "buffer chunk ctx size error");
 
         size = new_size;
 
         /* 分配的内存块太大每次将只分配一块，其他分配8块 */
         ctx_pool_t *pool = get_ctx_pool();
-        return pool->ordered_malloc(
-            new_size/BUFFER_CHUNK, new_size >= BUFFER_LARGE ? 1 : 8 );
+        return pool->ordered_malloc(new_size / BUFFER_CHUNK,
+                                    new_size >= BUFFER_LARGE ? 1 : 8);
     }
 
-    inline void del_ctx( char *ctx,uint32_t size )
+    inline void del_ctx(char *ctx, uint32_t size)
     {
-        ASSERT(
-            size > 0 && (0 == size % BUFFER_CHUNK),
-            "illegal buffer chunk ctx size error" );
+        ASSERT(size > 0 && (0 == size % BUFFER_CHUNK),
+               "illegal buffer chunk ctx size error");
 
         ctx_pool_t *pool = get_ctx_pool();
-        pool->ordered_free( ctx, size / BUFFER_CHUNK );
+        pool->ordered_free(ctx, size / BUFFER_CHUNK);
     }
+
 private:
     // 采用局部static，这样就不会影响static_global中的内存统计
     chunk_pool_t *get_chunk_pool()
@@ -285,11 +289,12 @@ private:
         static ctx_pool_t ctx_pool("buffer_ctx");
         return &ctx_pool;
     }
+
 private:
-    Chunk *_front; // 数据包链表头
-    Chunk *_back ; // 数据包链表尾
+    Chunk *_front;        // 数据包链表头
+    Chunk *_back;         // 数据包链表尾
     uint32_t _chunk_size; // 已申请chunk数量
 
-    uint32_t _chunk_max; // 允许申请chunk的最大数量
+    uint32_t _chunk_max;      // 允许申请chunk的最大数量
     uint32_t _chunk_ctx_size; // 单个chunk的缓冲区大小
 };
