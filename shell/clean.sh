@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ../master
+cd ../server/bin
 
 rm log/*
 rm error

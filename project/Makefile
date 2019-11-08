@@ -26,16 +26,17 @@ else
     OPTIMIZE = -g3 -O0
 endif
 
+SUB_DIR = ../deps
+SUB_LIB = http-parser lua_parson lua_rapidxml aho-corasick lua_flatbuffers \
+	lua_bson pbc websocket-parser
+
 #include path
-INC_PATH = -I./deps/http-parser -I./deps/lua_parson -I./deps/lua_rapidxml \
-	-I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
-	-I/usr/include/mysql -I./deps/aho-corasick -I./deps/lua_flatbuffers \
-	-I./deps/lua_bson -I./deps/pbc -I./deps/websocket-parser
+INC_PATH = -I/usr/local/include/libmongoc-1.0 -I/usr/local/include/libbson-1.0 \
+	-I/usr/include/mysql \
+	$(addprefix -I$(SUB_DIR)/,$(SUB_LIB))
 
 #libaray path
-LIB_PATH = -L/usr/local/lib -L./deps/lua_parson -L./deps/http-parser \
-	-L./deps/lua_rapidxml -L./deps/aho-corasick -L./deps/lua_flatbuffers \
-	-L./deps/lua_bson -L./deps/pbc/build -L./deps/websocket-parser
+LIB_PATH = -L/usr/local/lib $(addprefix -L$(SUB_DIR)/,$(SUB_LIB))
 
 #link libaray
 SHARED_LIB = -ldl -lrt -pthread -lresolv -lz
@@ -49,10 +50,10 @@ STATIC_LIB = -llua -lhttp_parser -llua_rapidxml -lacism -llua_flatbuffers \
 	-lflatbuffers -llua_parson -llua_bson -luuid -lmariadbclient -lz -lpbc \
 	-lmongoc-static-1.0 -lbson-static-1.0 -lsasl2 -lssl -lcrypto -lwebsocket_parser
 
-#output directory
-ODIR = ../bin
-
-TARGET = $(ODIR)/master
+#distribution directory
+DIST = ../server/bin
+BUILD_DIR=$(DIST)/.build
+TARGET = $(DIST)/master
 
 #https://www.gnu.org/software/make/manual/html_node/Text-Functions.html
 
@@ -60,14 +61,14 @@ TARGET = $(ODIR)/master
 SOURCES = $(filter-out deps/%,$(wildcard *.cpp */*.cpp */*/*.cpp))
 
 # 把查找到的cpp文件路径里的.cpp全部替换为.o，并加上前缀
-OBJS = $(addprefix $(ODIR)/,$(SOURCES:.cpp=.o))
+OBJS = $(addprefix $(BUILD_DIR)/,$(SOURCES:.cpp=.o))
 
 # 把.o文件替换成.d文件，用来生成依赖文件
 DEPS := $(OBJS:.o=.d)
 
 #Makefile中，要使用tab键，不能用空格替代
 
-$(ODIR)/%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp
 	@[ ! -d $(dir $@) ] & mkdir -p $(dir $@)
 	$(CXX) $(CFLAGS) $(OPTIMIZE) $(INC_PATH) -c -MMD -MP -MF"$(@:%.o=%.d)" -o $@ $<
 
@@ -84,33 +85,26 @@ all: $(OBJS)
 -include $(DEPS)
 
 clean:
-	rm -rf $(ODIR)/*
+	rm -rf $(BUILD_DIR)/*
 
 submodule:
-	$(MAKE) -C deps/lua_parson clean
-	$(MAKE) -C deps/lua_rapidxml clean
-	$(MAKE) -C deps/http-parser clean
-	$(MAKE) -C deps/aho-corasick clean
-	$(MAKE) -C deps/lua_flatbuffers clean
-	$(MAKE) -C deps/lua_bson clean
-	$(MAKE) -C deps/pbc clean
-	$(MAKE) -C deps/websocket-parser clean
-	rm -rf $(ODIR)/*
+	$(MAKE) -C $(SUB_DIR)/lua_parson clean
+	$(MAKE) -C $(SUB_DIR)/lua_rapidxml clean
+	$(MAKE) -C $(SUB_DIR)/http-parser clean
+	$(MAKE) -C $(SUB_DIR)/aho-corasick clean
+	$(MAKE) -C $(SUB_DIR)/lua_flatbuffers clean
+	$(MAKE) -C $(SUB_DIR)/lua_bson clean
+	$(MAKE) -C $(SUB_DIR)/pbc clean
+	$(MAKE) -C $(SUB_DIR)/websocket-parser clean
+	rm -rf $(BUILD_DIR)/*
 
-	$(MAKE) -C deps/lua_parson all
-	$(MAKE) -C deps/lua_rapidxml all
-	$(MAKE) -C deps/http-parser package
-	$(MAKE) -C deps/aho-corasick all
-	$(MAKE) -C deps/lua_flatbuffers staticlib
-	$(MAKE) -C deps/lua_bson all
-	$(MAKE) -C deps/pbc lib
-	$(MAKE) -C deps/websocket-parser alib
+	$(MAKE) -C $(SUB_DIR)/lua_parson all
+	$(MAKE) -C $(SUB_DIR)/lua_rapidxml all
+	$(MAKE) -C $(SUB_DIR)/http-parser package
+	$(MAKE) -C $(SUB_DIR)/aho-corasick all
+	$(MAKE) -C $(SUB_DIR)/lua_flatbuffers staticlib
+	$(MAKE) -C $(SUB_DIR)/lua_bson all
+	$(MAKE) -C $(SUB_DIR)/pbc lib
+	$(MAKE) -C $(SUB_DIR)/websocket-parser alibs
 
-# http://oclint-docs.readthedocs.io/en/stable/rules/
-oclint:
-	/home/xzc/oclint-0.11.1/bin/oclint -p $(ODIR) $(SOURCES) \
-	-disable-rule=LongLine -disable-rule=ShortVariableName \
-	-disable-rule=UselessParentheses -disable-rule=DoubleNegative \
-	-disable-rule=MultipleUnaryOperator
-
-.PHONY: all clean clean_all build_all dir submodule cleansub
+.PHONY: all clean submodule

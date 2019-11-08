@@ -9,4 +9,4 @@
 # -D EPOLL_CLOEXEC ev.cpp中是否定义是否使用新版本epoll_create1
 # --library need cppcheck1.78
 # --check-config Cppcheck cannot find all the include files (use --check-config for details)
-/home/xzc/cppcheck-1.78/cppcheck -DTCP_USER_TIMEOUT -UEPOLL_CLOEXEC -D_ASSERT_H -UNDEBUG --library=../project/cppcheck.cfg --enable=all -i../master/deps ../master
+/home/xzc/cppcheck-1.78/cppcheck -DTCP_USER_TIMEOUT -UEPOLL_CLOEXEC -D_ASSERT_H -UNDEBUG --library=../project/cppcheck.cfg --enable=all -i../engine/deps ../engine/src

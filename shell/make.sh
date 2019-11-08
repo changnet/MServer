@@ -2,7 +2,7 @@
 
 # --makefile中的路径是相对于源码路径的
 
-SRC=../master/cpp_src
+SRC=../engine/src
 MAKEFILE=../../project/Makefile
 
 target=$1

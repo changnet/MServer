@@ -10,7 +10,7 @@
 # 修改 /etc/security/limits.conf 永久修改
 # #<domain>      <type>  <item>         <value>
 # #
-# 
+#
 # *               soft    core            unlimited
 # #root            hard    core            100000
 
@@ -27,12 +27,12 @@
 # sudo sysctl --system
 
 # The /proc/sys/kernel/core_pattern configuration setting is set when the apport
-# crash reporting service starts on system boot. So the first step in the 
-# process would be to disable apport. This can be done by editing the 
+# crash reporting service starts on system boot. So the first step in the
+# process would be to disable apport. This can be done by editing the
 # /etc/default/apport file, and setting enabled=0.
-# At this point, the kernel default core pattern should remain on boot. If you 
-# want to switch to some other pattern you can do this by placing a file in 
-# /etc/sysctl.d that ends in .conf (e.g. 60-core-pattern.conf). It's contents 
+# At this point, the kernel default core pattern should remain on boot. If you
+# want to switch to some other pattern you can do this by placing a file in
+# /etc/sysctl.d that ends in .conf (e.g. 60-core-pattern.conf). It's contents
 # should look something like this (adjusting for your desired pattern):
 
 # kernel.core_pattern = core
@@ -43,12 +43,12 @@
 # man core
 # http://man7.org/linux/man-pages/man5/core.5.html
 
-cd ../master
+cd ../server/bin
 
 if [[ ! $2 ]]; then
     # ./gdb.sh core-master-4836 调试core文件
-    gdb bin/master $1
+    gdb master $1
 else
     # ./gdb.sh gateway 1 1 启动进程进行调试
-    gdb -args bin/master $1 $2 $3
+    gdb -args master $1 $2 $3
 fi

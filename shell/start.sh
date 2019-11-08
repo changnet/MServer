@@ -3,7 +3,7 @@
 parameter=($@)
 applications=(gateway world area area)
 
-cd ../master
+cd ../master/bin
 
 # ./start.sh app srv_id
 # app的index会被自动计算出来
@@ -19,7 +19,7 @@ if [ "${parameter[0]}" == "all" ]; then
             last_app=$app
         fi
 
-        bin/master $app $last_idx ${parameter[@]:1} &
+        master $app $last_idx ${parameter[@]:1} &
         sleep 3
     done
 else
@@ -29,5 +29,5 @@ else
         idx=1
     fi
 
-    bin/master ${parameter[0]} $idx ${parameter[1]} ${parameter[3]}
+    master ${parameter[0]} $idx ${parameter[1]} ${parameter[3]}
 fi

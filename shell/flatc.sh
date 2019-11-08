@@ -1,12 +1,12 @@
 #!/bin/bash
 
-cd ../master/fbs
+cd ../server/fbs
 
 counter=0
-for i in *.fbs  
-do  
-    echo $i  
-    #echo ${i%.*}".bfbs"  
+for i in *.fbs
+do
+    echo $i
+    #echo ${i%.*}".bfbs"
 
     flatc -b --schema $i
 

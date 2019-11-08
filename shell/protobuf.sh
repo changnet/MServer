@@ -3,13 +3,13 @@
 set -e
 set -o pipefail
 
-cd ../master/pb
+cd ../server/pb
 
 counter=0
-for i in *.proto  
-do  
+for i in *.proto
+do
     echo compiling $i ...
-    #echo ${i%.*}".pb"  
+    #echo ${i%.*}".pb"
 
     # --descriptor_set_out
     protoc -o ${i%.*}".pb" $i

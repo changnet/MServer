@@ -6,7 +6,7 @@
 # UPDATE to Debian 9.9 at 2019-07-22
 
 BUILD_ENV_LOG=./build_env_log.txt
-RAWPKTDIR=../package
+RAWPKTDIR=../engine/package
 PKGDIR=/tmp/mserver_package
 
 # "set -e" will cause bash to exit with an error on any simple command.

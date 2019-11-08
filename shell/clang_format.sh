@@ -2,8 +2,8 @@
 
 # sh不能创建数组，故这里用bash
 
-EXCLUDE=( deps )
-SRC=../master/cpp_src
+EXCLUDE=( deps ) # 要排除的目录
+SRC=../engine/src
 
 CF_NAME=.clang-format
 CF_FILE=../project/$CF_NAME
