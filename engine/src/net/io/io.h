@@ -8,10 +8,10 @@ class IO
 public:
     typedef enum
     {
-        IOT_NONE = 0,
-        IOT_SSL  = 1,
+        IOT_NONE = 0, ///< 默认IO类型，无特别处理
+        IOT_SSL  = 1, ///< 使用SSL加密
 
-        IOT_MAX
+        IOT_MAX ///< IO类型最大值
     } IOT;
 
 public:

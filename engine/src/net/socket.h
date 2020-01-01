@@ -31,12 +31,12 @@ class Socket
 public:
     typedef enum
     {
-        CT_NONE = 0, // invalid connection
-        CT_CSCN = 1, // c2s connection
-        CT_SCCN = 2, // s2c connection
-        CT_SSCN = 3, // s2s connection
+        CT_NONE = 0, ///< 连接方式，无效值
+        CT_CSCN = 1, ///< c2s 客户端与服务器之间连接
+        CT_SCCN = 2, ///< s2c 服务器与客户端之间连接
+        CT_SSCN = 3, ///< s2s 服务器与服务器之间连接
 
-        CT_MAX // max connection type
+        CT_MAX ///< 连接方式最大值
     } ConnType;
 
     // socket缓冲区溢出后处理方式

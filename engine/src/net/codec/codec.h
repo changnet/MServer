@@ -12,13 +12,13 @@ class Codec
 public:
     typedef enum
     {
-        CDC_NONE = 0, // 不需要解码，比如来自http的json字符串，由上层解析
-        CDC_BSON     = 1, // bson
-        CDC_STREAM   = 2, // 自定义二进制流
-        CDC_FLATBUF  = 3, // google FlatBuffers
-        CDC_PROTOBUF = 4, // google protocol buffers
+        CDC_NONE     = 0, ///< 协议编码方式，不编码，比如来自http的字符串，由上层解析
+        CDC_BSON     = 1, ///< 协议编码方式，bson，rpc使用
+        CDC_STREAM   = 2, ///< 协议编码方式，自定义二进制流
+        CDC_FLATBUF  = 3, ///< 协议编码方式，google FlatBuffers
+        CDC_PROTOBUF = 4, ///< 协议编码方式，google protocol buffers
 
-        CDC_MAX
+        CDC_MAX ///< 协议编码方式最大值
     } CodecType;
 
 public:
