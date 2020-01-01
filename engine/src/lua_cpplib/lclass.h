@@ -146,7 +146,7 @@ public:
     }
 
     /* 注册变量,通常用于设置宏定义、枚举 */
-    LBaseClass<T> &set(const char *val_name, int32_t val)
+    LBaseClass<T> &set(int32_t val, const char *val_name)
     {
         luaL_getmetatable(L, _class_name);
 
