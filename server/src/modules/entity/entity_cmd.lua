@@ -4,12 +4,6 @@
 
 -- 实体指令入口
 
--- 热更
-local function hot_fix( srv_conn,pkt )
-    local hf = require "http.www.hot_fix"
-    hf:fix( pkt.module or {} )
-end
-
 -- 同步gw的玩家属性到area
 local function player_update_base( pid,base,new )
     local player = nil

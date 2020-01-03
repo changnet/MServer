@@ -4,7 +4,7 @@
 
 -- 事件宏定义
 
-PLAYER_EV = 
+PLAYER_EV =
 {
     CONN  = 1,    -- 与服务器建立连接
     ENTER = 2,    -- 进入游戏世界
@@ -12,7 +12,7 @@ PLAYER_EV =
     DEATH = 4,    -- 玩家死亡
 }
 
-SYSTEM_EV = 
+SYSTEM_EV =
 {
     READY = 1,    -- 系统初始化完成
 }

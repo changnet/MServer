@@ -4,7 +4,7 @@
 -- xzc
 
 -- 移动方式 Move Type
-MT = 
+MT =
 {
     NONE = 0, -- 未移动
     WALK = 1, -- 行走

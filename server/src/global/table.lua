@@ -4,6 +4,7 @@
 
 -- 增加部分常用table函数
 
+local __next = _G.next
 local raw_table_dump -- 函数前置声明
 
 -- 导出缩进，pretty = true时才生效
@@ -11,7 +12,7 @@ local function dump_table_indent( indent,dump_tbl )
     if indent <= 0 then return end
 
     -- TODO:这个感觉不用做缓存的吧，一来这个功能不常用，二是同一个字符串只分配一次内存
-    for idx = 1,indent do table.insert( dump_tbl,"    " ) end
+    for _ = 1,indent do table.insert( dump_tbl,"    " ) end
 end
 
 -- 导出换行，pretty = true时才生效
@@ -157,9 +158,9 @@ end
 ]]
 table.size = function(t)
     local ret = 0
-    local k,v
+    local k
     while true do
-        k, v = _G.next(t, k)
+        k = __next(t, k)
         if k == nil then break end
         ret = ret + 1
     end
@@ -170,9 +171,9 @@ end
 清空一个table
 ]]
 table.clear = function(t)
-    local k, v
+    local k
     while true do
-        k, v = _G.next(t, k)
+        k = __next(t, k)
         if k == nil then return end
         t[k] = nil
     end
@@ -182,7 +183,7 @@ end
 判断一个table是否为空
 ]]
 table.empty = function(t)
-    return _G.next(t) == nil
+    return __next(t) == nil
 end
 
 --[[

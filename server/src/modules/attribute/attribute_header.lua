@@ -5,7 +5,7 @@
 -- 战斗属性宏定义
 
 -- 属性类型定义 attribute type
-ABT = 
+ABT =
 {
     NONE = 0, -- 无效
     HP = 1, -- 血量

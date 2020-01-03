@@ -7,11 +7,10 @@
 
 time = {}
 
-local math = math
 local ONE_MINUTE = 60
 local ONE_HOUR = ONE_MINUTE * ONE_MINUTE
 local ONE_DAY = ONE_HOUR * 24
-local ONE_WEEK = ONE_DAY*7
+-- local ONE_WEEK = ONE_DAY*7
 
 
 -- 手动建立一些时间基准，本地时间2000-01-01 00:00对应UTC

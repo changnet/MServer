@@ -1,7 +1,6 @@
 -- 消息管理
 
 local ss_map = {}
-local sc_map = {}
 local cs_map = {}
 
 local ss_list  = require "proto.ss_command"
@@ -19,7 +18,6 @@ end
 SC = {}
 for k,v in pairs( cmd_list[1] ) do
     SC[k] = v[1]
-    sc_map[ v[1] ] = v
 end
 
 CS = {}
@@ -28,7 +26,6 @@ for k,v in pairs( cmd_list[2] ) do
     cs_map[ v[1] ] = v
 end
 
-local SC = SC
 local CS = CS
 local SS = SS
 
@@ -42,7 +39,6 @@ end
 local SESSION = g_app.session
 
 local g_rpc   = g_rpc
-local g_network_mgr = g_network_mgr
 
 local CommandMgr = oo.singleton( ... )
 

@@ -5,7 +5,7 @@
 -- 实体宏定义
 
 -- entity type 实体类型，按位表示，底层aoi那边方便筛选
-ET = 
+ET =
 {
     NPC = 1,  -- npc，不可攻击
     PLAYER = 2, -- 玩家

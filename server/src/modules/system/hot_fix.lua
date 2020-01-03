@@ -4,6 +4,8 @@
 
 -- 热更逻辑
 
+local util = require "util"
+
 -- 热更协议
 local function fix_proto()
     local pkt = g_command_mgr:command_pkt()

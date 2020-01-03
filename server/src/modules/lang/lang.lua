@@ -17,10 +17,6 @@ local tips_lang = {}
 for _,one in pairs( misc_list ) do misc_lang[one.id] = one[lang_type] end
 for _,one in pairs( tips_list ) do tips_lang[one.id] = one[lang_type] end
 
--- 原始配置用不到了
-misc_list = nil
-tips_list = nil
-
 local Lang = oo.singleton( ... )
 
 -- 获取misc语言包

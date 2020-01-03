@@ -4,7 +4,6 @@
 
 -- 日志管理
 
-local Log = require "Log"
 require "modules.log.log_header"
 
 local LogMgr = oo.singleton( ... )
@@ -41,7 +40,8 @@ function LogMgr:close()
 end
 
 -- 记录登录、退出日志
-local login_out_stmt = "INSERT INTO `login_logout` (pid,op_type,op_time) values (%d,%d,%d)"
+local login_out_stmt =
+    "INSERT INTO `login_logout` (pid,op_type,op_time) values (%d,%d,%d)"
 function LogMgr:login_or_logout( pid,op_type )
     self.db_logger:insert( string.format(login_out_stmt,pid,op_type,ev:time()) )
 end

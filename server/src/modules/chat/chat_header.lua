@@ -4,7 +4,7 @@
 
 -- 聊天宏定义
 
-local CHAT = 
+local CHAT =
 {
     -- channel定义
     CHL_WORLD   = 1, -- 世界聊天

@@ -119,7 +119,7 @@ function NetworkMgr:srv_register( conn,pkt )
 end
 
 -- 检查一个连接超时
-local pkt = {response = true}
+local tm_pkt = {response = true}
 function NetworkMgr:check_one_timeout( srv_conn,check_time )
     if not srv_conn.conn_ok then return end -- 还没连接成功的不检查
 
@@ -130,7 +130,7 @@ function NetworkMgr:check_one_timeout( srv_conn,check_time )
         self:close_srv_conn( srv_conn )
         if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
     elseif ts > 0 and srv_conn.auth then
-        srv_conn:send_pkt( SS.SYS_BEAT,pkt )
+        srv_conn:send_pkt( SS.SYS_BEAT,tm_pkt )
     end
 end
 

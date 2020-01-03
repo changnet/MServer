@@ -15,7 +15,7 @@
 -- 你这样用法，foo做为回调函数就不影响热更
 local function foo()
 end
-__reg_func__(foo,"foo")
+__reg_func(foo,"foo")
 g_rpc:proxy(foo):back_to_foo( ... )
 ]]
 
@@ -79,13 +79,13 @@ function method_thunk( this,method,p0,p1,p2,p3,p4,p5 )
     return function() return this[name]( this,p0,p1,p2,p3,p4,p5 ) end
 end
 
-function __reg_func__ (func,name)
+function __reg_func (func,name)
     assert( nil == func_names[func] )
 
     func_names[func] = name
 end
 
 -- 取local函数名
-function __func__( func )
+function __func( func )
     return func_names[func]
 end

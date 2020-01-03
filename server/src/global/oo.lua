@@ -63,6 +63,7 @@ end
 --******************************************************************************
 -- 创建惰性继承类，无法实现多继承
 -- 惰性继承用元表实现继承，这样如果单一更新其中一个文件，则所有对象(包括子类都会被更新)
+-- luacheck: ignore lazy_class
 local function lazy_class(new_method,clz,super)
     super = super or class_base
     rawset(clz, "__super", super)
@@ -116,7 +117,7 @@ local function raw_class(new_method,name,super,...)
         -- 如果已经存在，则是热更，先把旧函数都清空
         if name_class[name] ~= nil then
             clz = name_class[name]
-            for k,v in pairs(clz) do
+            for k in pairs(clz) do
                 clz[k] = nil
             end
         else
@@ -172,7 +173,7 @@ function oo.stat()
 
     local total = 0 -- 所有对象数量
     local cur_count = {} -- 当前数量
-    for obj,name in pairs(object) do
+    for _, name in pairs(object) do
         total = total + 1
         cur_count[name] = (cur_count[name] or 0) + 1
     end

@@ -32,7 +32,7 @@ function Ping:start(how,conn_id,other)
         return PRINT("ping no other app found")
     end
 
-    self.pending[id] = 
+    self.pending[id] =
     {
         srvs    = {},
         how     = how,
@@ -57,7 +57,7 @@ function Ping:on_ping( ecode,id )
         self.pending[id] = nil
         return PRINT("ping info error",id)
     end
-    info.srvs[conn_id] = 
+    info.srvs[conn_id] =
     {
         name = srv_conn:conn_name(),
         time = ev:real_ms_time() - info.ms_time

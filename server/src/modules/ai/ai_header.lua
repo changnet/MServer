@@ -1,5 +1,6 @@
 -- AI相关定义
 
+-- ai state type
 AST =
 {
     OFF   = 1, -- 离线
