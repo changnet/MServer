@@ -16,6 +16,9 @@ local entrance = "lstate.cpp"
 -- 这个目录下的所有文件都会被遍历，查找导出的符号
 local dir = "../engine/src/lua_cpplib/"
 
+-- 导出目录
+local export_dir = "../server/engine/"
+
 -- 部分符号在其他目录，这些文件也需要查找
 local other_file =
 {
@@ -26,9 +29,12 @@ local other_file =
 
 local set_regex = "^%s*lc%.set%(%w+::([_%w]+),%s*\"([_%w]+)\"%)"
 local define_regex = "^%s*lc%.def<&%w+::([_%w]+)>%(\"([_%w]+)\"%)"
+local lib_regex = "^%s*LUA_LIB_OPEN%(\"([_%w]+)\"%s*,%s*([_%w]+)%)"
 local class_regex = "^%s*[LBaseClass%|%LClass]+<([_%w]+)>.+%(.+,%s*\"([_%w]+)\"%)"
 
-local apis = {}
+local libs = {}
+local lib_file = {}
+local classes = {}
 local comments = {}
 
 local function to_readable( val )
@@ -74,13 +80,20 @@ end
 --[[
     eg: local b = {aaa="aaa",bbb="bbb",ccc="ccc"}
 ]]
-local function vd(data, max_level)
+function vd(data, max_level)
     var_dump(data, max_level or 20)
     recursion = {}  --释放内存
 end
 
 -- 解析一行代码
 local function parse_line(line, last_class)
+    -- 解析导出的库
+    local lib_name, lib = string.match(line, lib_regex);
+    if lib then
+        libs[lib_name] = lib
+        return
+    end
+
     -- 解析导出类
     local class, class_name = string.match(line, class_regex)
     if class then
@@ -92,8 +105,8 @@ local function parse_line(line, last_class)
             set = {},
             define = {}
         }
-        assert(not apis[class_name])
-        apis[class_name] = last_class
+        assert(not classes[class_name])
+        classes[class_name] = last_class
         return last_class
     end
 
@@ -125,7 +138,7 @@ local function parse_line(line, last_class)
 end
 
 -- 从lstate.cpp中解析要导出的api
-local function parse_api()
+local function parse_lib_class()
     local last_class
     for line in io.lines(dir .. entrance) do
         last_class = parse_line(line, last_class)
@@ -141,13 +154,14 @@ local function parse_comment_name(line, last_comment)
     end
 
     local define_name = string.match(
-        line, "^%s*int32_t%s+([_%w]+)%(lua_State %*L%)")
+        line, "^[static]*%s*int32_t%s+([_%w]+)%(lua_State %*L%)")
     if define_name then
         last_comment.define_name = define_name
         return true
     end
 
     -- 必须是空行，不然这个注释不是类、lua函数、常量的注释，没用的
+    print(line)
     assert(string.match(line, "^%s*$"))
 
     return false
@@ -205,6 +219,22 @@ local function parse_comment_line(line, last_comment)
     return last_comment
 end
 
+-- 由于现在只是简单地通过正则解析符号
+-- 对于 LUA_LIB_OPEN("util", luaopen_util); 这种库，是没办法知道它在哪个文件里
+-- 声明，有哪些导出的函数的。现在的做法是，如果找到 luaopen_util 则认为该文件是
+-- 这个库所在的文件，并且这个文件里所有通过dexygen注释导出的函数，都是这个库的接
+-- 口
+local function check_lib(line, file)
+    if lib_file[file] then return end
+
+    for lib_name, lib in pairs(libs) do
+        if string.match(line,
+            "^int32_t%s+" .. lib .. "%s*%(lua_State%s+%*L%)") then
+            lib_file[file] = lib_name
+        end
+    end
+end
+
 -- 从单个文件中解析出注释
 local function parse_file(file)
     --[[
@@ -218,15 +248,19 @@ local function parse_file(file)
         符号在注释左边 ///< 注释2
     ]]
     local done
+    local file_comment = {}
     local last_comment = nil
     for line in io.lines(file) do
+        check_lib(line, file)
         last_comment, done = parse_comment_line(line, last_comment)
         if done then
             last_comment.pending = nil
-            table.insert(comments, last_comment)
+            table.insert(file_comment, last_comment)
             last_comment = nil
         end
     end
+
+    comments[file] = file_comment
 end
 
 -- 从源码中解析出注释
@@ -242,16 +276,82 @@ local function parse_comment()
     for _, file in pairs(other_file) do parse_file(file) end
 end
 
-parse_api()
+-- 导出一个符号(常量定义、函数等)
+local function export_one_symbol(file, base, indexer, symbol)
+    for _, cmt in pairs(symbol.cmt) do
+        file:write("-- ")
+        file:write(cmt)
+        file:write("\n")
+    end
+
+    if symbol.set_name then
+        file:write(base)
+        file:write(indexer)
+        file:write(symbol.set_name)
+        file:write(" = ")
+        file:write(symbol.val)
+    elseif symbol.define_name then
+        file:write("function ")
+        file:write(base)
+        file:write(indexer)
+        file:write(symbol.define_name)
+        file:write("(")
+        file:write(")\nend")
+    else
+        assert(false)
+    end
+    file:write("\n\n")
+end
+
+-- 导出单个库
+local function export_one_lib(lib_name)
+    local file = io.open(export_dir .. lib_name .. ".lua", "wb")
+    file:write(string.format("-- %s\n", lib_name))
+    file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
+
+    file:write(string.format("%s = {}\n\n", lib_name))
+
+    local file_path
+    for path, name in pairs(lib_file) do
+        if name == lib_name then
+            file_path = path
+            break;
+        end
+    end
+
+    if not file_path then
+        print(string.format("Warning: no file found for lib %s", lib_name))
+        return
+    end
+
+    local file_cmt = comments[file_path]
+    if not file_cmt then
+        print(string.format("Warning: no symbol found for lib %s", lib_name))
+        return
+    end
+
+    for _, symbol in pairs(file_cmt) do
+        assert(not symbol.class_name)
+        export_one_symbol(file, lib_name, ".", symbol)
+    end
+end
+
+-- 导出库接口到文件
+local function export_lib()
+    for lib_name in pairs(libs) do
+        export_one_lib(lib_name)
+    end
+end
+
+-- 导出类
+local function export_class()
+end
+
+local beg = os.clock()
+
+parse_lib_class()
 parse_comment()
--- vd(api)
-vd(comments)
+export_lib()
+export_class()
 
--- local line = "CT_NONE = 0, ///< 连接方式，无效值"
--- print(line, "==>", string.match(line, "^%s*([_%w]+)(.+)///<%s*(.+)"))
-
-
-
--- parse_file("../engine/src/net/socket.h")
-
--- TODO: 导出utils这种函数
+print("export done, time " .. os.clock() - beg)

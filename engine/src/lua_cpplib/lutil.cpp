@@ -402,8 +402,12 @@ static int32_t get_pid(lua_State *L)
     return 1;
 }
 
-// 如果不存在则创建多层目录
-int32_t mkdir_p(lua_State *L)
+/**
+ * 如果不存在则创建多层目录，和shell指令mkdir -p效果一致
+ * @param path linux下路径 path/to/dir
+ * @return boolean
+ */
+static int32_t mkdir_p(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
 
