@@ -78,7 +78,7 @@ public:
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
      * @param tbl 可选参数，周围关注此实体更新事件的实体存放在此table中，数量设置在n字段
-     * @param in 可选参数，周围关注此实体出现事件的实体存放在此table中，数量设置在n字段
+     * @param into 可选参数，周围关注此实体出现事件的实体存放在此table中，数量设置在n字段
      * @param out 可选参数，周围关注此实体消失事件的实体存放在此table中，数量设置在n字段
      */
     int32_t update_entity(lua_State *L);

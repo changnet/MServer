@@ -286,7 +286,7 @@ local function export_one_symbol(file, base, indexer, symbol)
 
     if symbol.set_name then
         file:write(base)
-        file:write(indexer)
+        file:write(".")
         file:write(symbol.set_name)
         file:write(" = ")
         file:write(symbol.val)
@@ -296,7 +296,18 @@ local function export_one_symbol(file, base, indexer, symbol)
         file:write(indexer)
         file:write(symbol.define_name)
         file:write("(")
+
+        local first = true
+        for _, param in pairs(symbol.param or {}) do
+            if not first then file:write(", ") end
+            first = false
+            file:write(param)
+        end
+
         file:write(")\nend")
+    elseif symbol.class_name then
+        file:write(base)
+        file:write(" = {}")
     else
         assert(false)
     end
@@ -305,12 +316,13 @@ end
 
 -- 导出单个库
 local function export_one_lib(lib_name)
-    local file = io.open(export_dir .. lib_name .. ".lua", "wb")
+    local file = io.open(export_dir .. string.lower(lib_name) .. ".lua", "wb")
     file:write(string.format("-- %s\n", lib_name))
     file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
 
     file:write(string.format("%s = {}\n\n", lib_name))
 
+    -- 查找当前库在哪个文件
     local file_path
     for path, name in pairs(lib_file) do
         if name == lib_name then
@@ -343,8 +355,46 @@ local function export_lib()
     end
 end
 
+-- 导出一个类型
+-- @class_name: lua中的类名
+-- @class:包含的类型信息，class.class是C++中的类型名
+local function export_one_class(class_name, class)
+    local file = io.open(
+        export_dir .. string.lower(class_name) .. ".lua", "wb")
+    file:write(string.format("-- %s\n", class_name))
+    file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
+
+    local symbols
+    local class_sym
+    for _, file_cmts in pairs(comments) do
+        for _, symbol in pairs(file_cmts or {}) do
+            if class.class == symbol.class_name then
+                class_sym = symbol
+                symbols = file_cmts
+                break
+            end
+        end
+    end
+
+    if not symbols then
+        print(string.format(
+            "Warning: no symbol found for class %s", class.class))
+        return
+    end
+
+    export_one_symbol(file, class_name, nil, class_sym)
+    for _, symbol in pairs(symbols) do
+        if not symbol.class_name then
+            export_one_symbol(file, class_name, ":", symbol)
+        end
+    end
+end
+
 -- 导出类
 local function export_class()
+    for class_name, class in pairs(classes) do
+        export_one_class(class_name, class)
+    end
 end
 
 local beg = os.clock()
