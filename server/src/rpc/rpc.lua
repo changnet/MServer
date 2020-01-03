@@ -17,7 +17,7 @@ local AutoId = require "modules.system.auto_id"
 
 local Rpc = oo.singleton( ... )
 
-local __method__ = __method__
+local __method = __method
 
 function Rpc:__init()
     self.callback = {}
@@ -162,12 +162,12 @@ function Rpc:func_chunk(cb_func,...)
         end
     end
 
-    -- local name = __method__(args1,cb_func)
+    -- local name = __method(args1,cb_func)
     -- 如果是成员函数，则转成成员函数名字调用，这样引用的cb_func也能热更
 
     if 1 == args_count then
         local args1 = ...
-        local name = __method__(args1,cb_func)
+        local name = __method(args1,cb_func)
         if name then
             cb_func = nil
             return function( ... )
@@ -182,7 +182,7 @@ function Rpc:func_chunk(cb_func,...)
 
     if 2 == args_count then
         local args1,args2 = ...
-        local name = __method__(args1,cb_func)
+        local name = __method(args1,cb_func)
         if name then
             cb_func = nil
             return function( ... )
@@ -197,7 +197,7 @@ function Rpc:func_chunk(cb_func,...)
 
     if 3 == args_count then
         local args1,args2,args3 = ...
-        local name = __method__(args1,cb_func)
+        local name = __method(args1,cb_func)
         if name then
             cb_func = nil
             return function( ... )
@@ -212,7 +212,7 @@ function Rpc:func_chunk(cb_func,...)
 
     local args = table.pack( ... )
     local args1 = args[1]
-    local name = __method__(args1,cb_func)
+    local name = __method(args1,cb_func)
     if name then
         cb_func = nil
         return function( ... )

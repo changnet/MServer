@@ -346,6 +346,7 @@ local function export_one_lib(lib_name)
         assert(not symbol.class_name)
         export_one_symbol(file, lib_name, ".", symbol)
     end
+    print("export lib " .. lib_name)
 end
 
 -- 导出库接口到文件
@@ -388,6 +389,8 @@ local function export_one_class(class_name, class)
             export_one_symbol(file, class_name, ":", symbol)
         end
     end
+
+    print("export class " .. class_name)
 end
 
 -- 导出类

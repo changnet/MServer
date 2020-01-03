@@ -101,9 +101,9 @@ end
 
 -- 格式化http-200返回
 function Httpd:format_200( code,ctx )
-    local ctx = self:format_error( code,ctx )
+    local error_ctx = self:format_error( code,ctx )
 
-    return string.format( page200,string.len(ctx),ctx )
+    return string.format( page200,string.len(error_ctx),error_ctx )
 end
 
 -- 处理返回
@@ -148,7 +148,7 @@ function Httpd:do_command( conn,url,body )
     end
 
     local success,code,ctx = xpcall(
-        Httpd.do_exec, __G__TRACKBACK__,httpd,path,conn,fields,body )
+        Httpd.do_exec, __G__TRACKBACK,httpd,path,conn,fields,body )
 
     return self:do_return(conn,success,code,ctx)
 end

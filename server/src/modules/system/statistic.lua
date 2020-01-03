@@ -4,7 +4,7 @@
 
 -- 统计服务器运行情况
 
-require "statistic"
+local statistic = require "statistic"
 local Statistic = oo.singleton( ... )
 
 function Statistic.collect()

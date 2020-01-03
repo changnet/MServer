@@ -17,12 +17,11 @@ end
 @unique_map : 以id为key的table，用于获取唯一key.如果不需要可以不传值
 ]]
 function AutoId:next_id( unique_map )
-    local unique_map = unique_map or {}
     repeat
         if self.seed >= LIMIT.INT32_MAX then self.seed = 0 end
 
         self.seed = self.seed + 1
-    until nil == unique_map[self.seed]
+    until (not unique_map or nil == unique_map[self.seed])
 
     return self.seed
 end

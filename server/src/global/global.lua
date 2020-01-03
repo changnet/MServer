@@ -58,7 +58,7 @@ function vd(data, max_level)
     recursion = {}  --释放内存
 end
 
-function __G__TRACKBACK__( msg,co )
+function __G__TRACKBACK( msg,co )
     local stack_trace = debug.traceback( co )
     local info_table = { tostring(msg),"\n",stack_trace }
     local str = table.concat( info_table )

@@ -27,7 +27,7 @@ SRV_ALIVE_INTERVAL   = 5
 SRV_ALIVE_TIMES      = 5
 
 -- 接入平台
-PLATFORM = 
+PLATFORM =
 {
     [999] = "test",
 }
@@ -38,7 +38,7 @@ UNIQUEID =
 }
 
 -- 自定义客户端广播方式
-CLTCAST = 
+CLTCAST =
 {
     PIDS  = 1, -- 这个在底层直接处理
     WORLD = 2, -- 全服广播，但仅限于已Enter World的玩家

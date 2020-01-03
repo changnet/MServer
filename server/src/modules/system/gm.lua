@@ -58,7 +58,7 @@ end
 -- gm指令运行入口（注意Player对象可能为nil，因为有可能从http接口调用gm）
 function GM:raw_exec( where,player,cmd,... )
     -- 防止日志函数本身报错，连热更的指令都没法刷了
-    xpcall( PRINT,__G__TRACKBACK__,"exec gm:",where,cmd,... )
+    xpcall( PRINT,__G__TRACKBACK,"exec gm:",where,cmd,... )
 
     -- 优先查找注册过来的gm指令
     local gm_func = gm_map[cmd]

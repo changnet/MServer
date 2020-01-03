@@ -57,4 +57,4 @@ local function main( command,srvname,srvindex,srvid,... )
     g_app:exec()
 end
 
-xpcall( main, __G__TRACKBACK__,... )
+xpcall( main, __G__TRACKBACK,... )

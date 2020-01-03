@@ -5,7 +5,6 @@
 -- 帐号管理
 
 local util = require "util"
-local g_command_mgr = g_command_mgr
 local AccountMgr = oo.singleton( ... )
 
 -- 初始化

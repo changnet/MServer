@@ -37,7 +37,7 @@ end
 
 function Mysql:read_event( qid,ecode,res )
     if self.query[qid] then
-        xpcall( self.query[qid],__G__TRACKBACK__,ecode,res )
+        xpcall( self.query[qid],__G__TRACKBACK,ecode,res )
         self.query[qid] = nil
     else
         ERROR( "mysql result no call back found" )

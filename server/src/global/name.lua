@@ -40,7 +40,7 @@ local function raw_name( mt,method )
 end
 
 -- 这个函数目前只对oo中的对象函数有用，对标C的 __func__ 宏
-function __method__( this,method )
+function __method( this,method )
     local name = names[method]
     if name then
         if -1 == name then return nil end -- 已查找过但找不到名字的，标为-1
@@ -67,7 +67,7 @@ function method_thunk( this,method,p0,p1,p2,p3,p4,p5 )
     assert( this and method, "method_thunk nil object or method" )
 
     -- 需要通过函数名去调用，因为函数可能被热更
-    local name = __method__( this,method )
+    local name = __method( this,method )
     if not name then
         return error( "no method found")
     end

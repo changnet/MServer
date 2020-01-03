@@ -38,7 +38,7 @@ end
 
 function Mongodb:read_event( qid,ecode,res )
     if self.cb[qid] then
-        xpcall( self.cb[qid],__G__TRACKBACK__,ecode,res )
+        xpcall( self.cb[qid],__G__TRACKBACK,ecode,res )
         self.cb[qid] = nil
     else
         ERROR( "mongo event no call back found" )
