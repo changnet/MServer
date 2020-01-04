@@ -17,6 +17,10 @@
         lua_rawset(L, -3);       \
     } while (0)
 
+/**
+ * 导出引擎的内存、gc、发包等状态数据
+ * @return 包含所有状态数据的table
+ */
 int32_t LStatistic::dump(lua_State *L)
 {
 #define DUMP_BASE_COUNTER(what, counter) \
@@ -269,6 +273,10 @@ void LStatistic::dump_socket(lua_State *L)
 #undef ST_T
 }
 
+/**
+ * 导出引擎的发包状态数据
+ * @return 包含引擎发包状态数据的table
+ */
 int32_t LStatistic::dump_pkt(lua_State *L)
 {
     const Statistic *stat = StaticGlobal::statistic();

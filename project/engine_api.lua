@@ -153,8 +153,14 @@ local function parse_comment_name(line, last_comment)
         return true
     end
 
+    -- try int32_t test(lua_State *L)
     local define_name = string.match(
         line, "^[static]*%s*int32_t%s+([_%w]+)%(lua_State %*L%)")
+    if not define_name then
+        -- try int32_t Class::test(lua_State *L)
+        define_name = string.match(
+        line, "^[static]*%s*int32_t%s+[_%w]+::([_%w]+)%(lua_State %*L%)")
+    end
     if define_name then
         last_comment.define_name = define_name
         return true
@@ -212,7 +218,7 @@ local function parse_comment_line(line, last_comment)
     if comment then
         table.insert(last_comment.cmt, comment)
 
-        local param = string.match(line, "^%s*%*%s*@param%s([_%w]+)")
+        local param = string.match(line, "^%s*%*%s*@param%s([%._%w]+)")
         if param then table.insert(last_comment.param, param) end
     end
 

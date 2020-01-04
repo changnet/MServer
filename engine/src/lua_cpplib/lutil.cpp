@@ -16,8 +16,11 @@
 
 #include "lutil.h"
 
-/* clock_gettime(CLOCK_MONOTONIC)是内核调用，并且不受time jump影响
+/**
+ * 获取1970年以来的时间
+ * clock_gettime(CLOCK_MONOTONIC)是内核调用，并且不受time jump影响
  * gettimeofday是用户空间调用
+ * @return 秒 微秒
  */
 static int32_t timeofday(lua_State *L)
 {
@@ -32,7 +35,11 @@ static int32_t timeofday(lua_State *L)
     return 0;
 }
 
-/* 域名转Ip,阻塞方式 */
+/**
+ * 以阻塞方式获取域名对应的ip
+ * @param name 域名，如：www.openssl.com
+ * @return ip1 ip2 ...
+ */
 static int32_t gethost(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
@@ -76,8 +83,11 @@ static int32_t gethost(lua_State *L)
     return return_value;
 }
 
-/* md5
- * md5( [upper,],str1,str2,... )
+/**
+ * 计算字符串的md5值
+ * @param upper 可选参数，返回值是否转换为大写
+ * @param ... 需要计算的字符串，可以值多个
+ * @return md5值
  */
 static int32_t md5(lua_State *L)
 {
@@ -121,6 +131,11 @@ static int32_t md5(lua_State *L)
     return 1;
 }
 
+/**
+ * 产生一个新的uuid(Universally Unique Identifier)
+ * @param upper 可选参数，返回值是否转换为大写
+ * @return uuid
+ */
 static int32_t uuid(lua_State *L)
 {
     uuid_t u;
@@ -135,7 +150,10 @@ static int32_t uuid(lua_State *L)
     return 1;
 }
 
-/* 利用非标准base64编码uuid，产生一个22个字符串 */
+/**
+ * 利用非标准base64编码uuid，产生一个22个字符串
+ * @return 22个字符的短uuid
+ */
 static int32_t uuid_short(lua_State *L)
 {
     static const char *digest =
@@ -228,6 +246,11 @@ inline char uuid_short_char(lua_State *L, const char c)
     return digest[(int)c];
 }
 
+/**
+ * 解析一个由uuid_short产生的短uuid
+ * @param uuid 短uuid字符串
+ * @return 标准uuid
+ */
 static int32_t uuid_short_parse(lua_State *L)
 {
     size_t len           = 0;
@@ -281,7 +304,11 @@ static int32_t uuid_short_parse(lua_State *L)
     return 1;
 }
 
-/* 取linux下errno对应的错误描述字符串 */
+/**
+ * 取linux下errno对应的错误描述字符串
+ * @param error 错误码
+ * @return 错误描述字符串
+ */
 static int32_t what_error(lua_State *L)
 {
     int32_t eno = luaL_checkinteger(L, 1);
@@ -319,8 +346,11 @@ int32_t _raw_sha1(lua_State *L, int32_t index,
     return 0;
 }
 
-/* sha1编码
- * sha1( [upper,],str1,str2,... )
+/**
+ * 计算字符串sha1编码
+ * @param upper 可选参数，结果是否转换为大写
+ * @param ... 需要计算的字符串，可以多个，sha1(true, str1, str2, ...)
+ * @return sha1字符串
  */
 static int32_t sha1(lua_State *L)
 {
@@ -347,8 +377,10 @@ static int32_t sha1(lua_State *L)
     return 1;
 }
 
-/* sha1编码，返回20byte的十六进制原始数据而不是字符串
- * sha1_raw( str1,str2,... )
+/**
+ * sha1编码，返回20byte的十六进制原始数据而不是字符串
+ * @param ... 需要计算的字符串，可以多个，sha1_raw(str1,str2,...)
+ * @return 20byte的十六进制原始sha1数据
  */
 static int32_t sha1_raw(lua_State *L)
 {
@@ -360,12 +392,10 @@ static int32_t sha1_raw(lua_State *L)
     return 1;
 }
 
-/* base64编码
- * base64(str)
- * 由于使用了openssl，可能会造成内存不释放的假象
- * https://stackoverflow.com/questions/472809/openssl-valgrind
- * BIO_new() -> BIO_set() -> CRYPTO_new_ex_data() -> int_new_ex_data() -> def_get_class()
- * int_new_ex_data() do not release the mem that def_get_class malloced
+/**
+ * 计算base64编码
+ * @param str 需要计算的字符串
+ * @return base6字符串
  */
 static int32_t base64(lua_State *L)
 {
@@ -394,7 +424,10 @@ static int32_t base64(lua_State *L)
     return 1;
 }
 
-// 获取当前进程pid
+/**
+ * 获取当前进程pid
+ * @return 当前进程pid
+ */
 static int32_t get_pid(lua_State *L)
 {
     lua_pushinteger(L, ::getpid());
