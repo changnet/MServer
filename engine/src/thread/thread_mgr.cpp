@@ -51,7 +51,7 @@ const char *ThreadMgr::who_is_busy(size_t &finished, size_t &unfinished, bool sk
 
         // 这个线程的数据不需要等待它处理完
         // 比如写日志不会回调到主线程，最后会pthread_join等待写完日志
-        if (skip and !thd->is_wait_busy())
+        if (skip && !thd->is_wait_busy())
         {
             itr++;
             continue;
