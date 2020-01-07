@@ -80,6 +80,7 @@ end
 --[[
     eg: local b = {aaa="aaa",bbb="bbb",ccc="ccc"}
 ]]
+-- luacheck: ignore vd
 function vd(data, max_level)
     var_dump(data, max_level or 20)
     recursion = {}  --释放内存
@@ -155,11 +156,11 @@ local function parse_comment_name(line, last_comment)
 
     -- try int32_t test(lua_State *L)
     local define_name = string.match(
-        line, "^[static]*%s*int32_t%s+([_%w]+)%(lua_State %*L%)")
+        line, "^%s*[static]*%s*int32_t%s+([_%w]+)%(lua_State %*L%)")
     if not define_name then
         -- try int32_t Class::test(lua_State *L)
         define_name = string.match(
-        line, "^[static]*%s*int32_t%s+[_%w]+::([_%w]+)%(lua_State %*L%)")
+        line, "^%s*[static]*%s*int32_t%s+[_%w]+::([_%w]+)%(lua_State %*L%)")
     end
     if define_name then
         last_comment.define_name = define_name
