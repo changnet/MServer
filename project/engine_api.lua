@@ -363,12 +363,25 @@ local function export_lib()
     end
 end
 
+-- 把类名等转换为符合规范的文件名(小写 + 下划线)
+local function to_file_name(raw_name)
+    local new_name = string.gsub(raw_name,"[A-Z]", function(ch)
+        return string.lower(ch)
+    end, 1)
+
+    new_name = string.gsub(new_name,"[A-Z]", function(ch)
+        return "_" .. string.lower(ch)
+    end)
+
+    return new_name
+end
+
 -- 导出一个类型
 -- @class_name: lua中的类名
 -- @class:包含的类型信息，class.class是C++中的类型名
 local function export_one_class(class_name, class)
     local file = io.open(
-        export_dir .. string.lower(class_name) .. ".lua", "wb")
+        export_dir .. to_file_name(class_name) .. ".lua", "wb")
     file:write(string.format("-- %s\n", class_name))
     file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
 
