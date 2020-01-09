@@ -61,7 +61,3 @@ end
 function InsertionRank:get_id_by_rank(rank)
 end
 
--- 重置排行榜，但不释放内存
-function InsertionRank:clear()
-end
-

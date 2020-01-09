@@ -33,9 +33,7 @@ local lib_regex = "^%s*LUA_LIB_OPEN%(\"([_%w]+)\"%s*,%s*([_%w]+)%)"
 local class_regex = "^%s*[LBaseClass%|%LClass]+<([_%w]+)>.+%(.+,%s*\"([_%w]+)\"%)"
 
 local libs = {}
-local lib_file = {}
 local classes = {}
-local comments = {}
 
 local function to_readable( val )
     if type(val) == "string" then
@@ -89,25 +87,25 @@ end
 -- 解析一行代码
 local function parse_line(line, last_class)
     -- 解析导出的库
-    local lib_name, lib = string.match(line, lib_regex);
-    if lib then
-        libs[lib_name] = lib
+    local lib_name, lib_open_func = string.match(line, lib_regex);
+    if lib_name then
+        libs[lib_name] = {raw = lib_open_func}
         return
     end
 
     -- 解析导出类
-    local class, class_name = string.match(line, class_regex)
-    if class then
+    local raw_class_name, class_name = string.match(line, class_regex)
+    if raw_class_name then
         last_class =
         {
-            class = class,
-            class_name = class_name,
+            raw_class_name = raw_class_name,-- C++类型名
+            class_name = class_name, -- 导出到lua类名
 
             set = {},
             define = {}
         }
-        assert(not classes[class_name])
-        classes[class_name] = last_class
+        assert(not classes[raw_class_name])
+        classes[raw_class_name] = last_class
         return last_class
     end
 
@@ -231,15 +229,15 @@ end
 -- 声明，有哪些导出的函数的。现在的做法是，如果找到 luaopen_util 则认为该文件是
 -- 这个库所在的文件，并且这个文件里所有通过dexygen注释导出的函数，都是这个库的接
 -- 口
-local function check_lib(line, file)
-    if lib_file[file] then return end
-
+local function check_lib(line)
     for lib_name, lib in pairs(libs) do
         if string.match(line,
-            "^int32_t%s+" .. lib .. "%s*%(lua_State%s+%*L%)") then
-            lib_file[file] = lib_name
+            "^int32_t%s+" .. lib.raw .. "%s*%(lua_State%s+%*L%)") then
+            return lib_name
         end
     end
+
+    return nil
 end
 
 -- 从单个文件中解析出注释
@@ -255,19 +253,30 @@ local function parse_file(file)
         符号在注释左边 ///< 注释2
     ]]
     local done
-    local file_comment = {}
+    local cur_comment = {}
     local last_comment = nil
     for line in io.lines(file) do
-        check_lib(line, file)
-        last_comment, done = parse_comment_line(line, last_comment)
-        if done then
-            last_comment.pending = nil
-            table.insert(file_comment, last_comment)
-            last_comment = nil
+        local lib_name = check_lib(line, file)
+        if lib_name then
+            assert(not last_comment)
+            libs[lib_name].cmts = cur_comment
+        else
+            last_comment, done = parse_comment_line(line, last_comment)
+            if done then
+                -- 同一个文件，可能会导出多个类，这里处理下
+                local name = last_comment.class_name
+                if name then
+                    cur_comment = {}
+                    classes[name].cmts = cur_comment;
+                    classes[name].class_cmt = last_comment
+                else
+                    last_comment.pending = nil
+                    table.insert(cur_comment, last_comment)
+                end
+                last_comment = nil
+            end
         end
     end
-
-    comments[file] = file_comment
 end
 
 -- 从源码中解析出注释
@@ -322,34 +331,19 @@ local function export_one_symbol(file, base, indexer, symbol)
 end
 
 -- 导出单个库
-local function export_one_lib(lib_name)
+local function export_one_lib(lib_name, lib)
     local file = io.open(export_dir .. string.lower(lib_name) .. ".lua", "wb")
     file:write(string.format("-- %s\n", lib_name))
     file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
 
     file:write(string.format("%s = {}\n\n", lib_name))
 
-    -- 查找当前库在哪个文件
-    local file_path
-    for path, name in pairs(lib_file) do
-        if name == lib_name then
-            file_path = path
-            break;
-        end
-    end
-
-    if not file_path then
+    if not lib.cmts then
         print(string.format("Warning: no file found for lib %s", lib_name))
         return
     end
 
-    local file_cmt = comments[file_path]
-    if not file_cmt then
-        print(string.format("Warning: no symbol found for lib %s", lib_name))
-        return
-    end
-
-    for _, symbol in pairs(file_cmt) do
+    for _, symbol in pairs(lib.cmts) do
         assert(not symbol.class_name)
         export_one_symbol(file, lib_name, ".", symbol)
     end
@@ -358,8 +352,8 @@ end
 
 -- 导出库接口到文件
 local function export_lib()
-    for lib_name in pairs(libs) do
-        export_one_lib(lib_name)
+    for lib_name, lib in pairs(libs) do
+        export_one_lib(lib_name, lib)
     end
 end
 
@@ -385,26 +379,14 @@ local function export_one_class(class_name, class)
     file:write(string.format("-- %s\n", class_name))
     file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
 
-    local symbols
-    local class_sym
-    for _, file_cmts in pairs(comments) do
-        for _, symbol in pairs(file_cmts or {}) do
-            if class.class == symbol.class_name then
-                class_sym = symbol
-                symbols = file_cmts
-                break
-            end
-        end
-    end
-
-    if not symbols then
+    if not class.cmts then
         print(string.format(
-            "Warning: no symbol found for class %s", class.class))
+            "Warning: no symbol found for class %s", class_name))
         return
     end
 
-    export_one_symbol(file, class_name, nil, class_sym)
-    for _, symbol in pairs(symbols) do
+    export_one_symbol(file, class_name, nil, class.class_cmt)
+    for _, symbol in pairs(class.cmts) do
         if not symbol.class_name then
             export_one_symbol(file, class_name, ":", symbol)
         end
@@ -415,8 +397,8 @@ end
 
 -- 导出类
 local function export_class()
-    for class_name, class in pairs(classes) do
-        export_one_class(class_name, class)
+    for _, class in pairs(classes) do
+        export_one_class(class.class_name, class)
     end
 end
 
