@@ -4,7 +4,7 @@
 
 -- 增加部分常用table函数
 
-local __next = _G.next
+local next = next
 local raw_table_dump -- 函数前置声明
 
 -- 导出缩进，pretty = true时才生效
@@ -97,7 +97,7 @@ local function dump_table_val( key,val,indent,dump_tbl,dump_recursion )
 end
 
 -- 导出逻辑
-raw_table_dump = function( tbl,indent,dump_tbl,dump_recursion )
+function raw_table_dump( tbl,indent,dump_tbl,dump_recursion )
     local next_indent = indent >= 0 and indent + 1 or -1 -- indent < 0 表示不缩进
 
     -- 子table和key之间是需要换行的
@@ -132,7 +132,7 @@ end
 -- 导出table为字符串.
 -- table中不能包括thread、function、userdata，table之间不能相互引用
 -- @pretty:是否美化
-table.dump = function( tbl,pretty )
+function table.dump( tbl,pretty )
     local dump_tbl = {}
     local dump_recursive = {}
 
@@ -143,7 +143,7 @@ table.dump = function( tbl,pretty )
 end
 
 -- 从字符串加载一个table
-table.load = function( str )
+function table.load( str )
     -- 5.3没有dostring之类的方法了
     -- load返回一个函数，"{a = 9}"这样的字符串是不合lua语法的
     local chunk_f,chunk_e = load( "return " .. str )
@@ -156,11 +156,11 @@ end
 不计算Key为nil的情况
 如果使用了rawset,value可能为nil
 ]]
-table.size = function(t)
+function table.size(t)
     local ret = 0
     local k
     while true do
-        k = __next(t, k)
+        k = next(t, k)
         if k == nil then break end
         ret = ret + 1
     end
@@ -170,10 +170,10 @@ end
 --[[
 清空一个table
 ]]
-table.clear = function(t)
+function table.clear(t)
     local k
     while true do
-        k = __next(t, k)
+        k = next(t, k)
         if k == nil then return end
         t[k] = nil
     end
@@ -182,14 +182,14 @@ end
 --[[
 判断一个table是否为空
 ]]
-table.empty = function(t)
-    return __next(t) == nil
+function table.empty(t)
+    return next(t) == nil
 end
 
 --[[
 浅拷贝,shallow_copy
 ]]
-table.copy = function(t,mt)
+function table.copy(t,mt)
     local ct = {}
 
     for k,v in pairs(t) do ct[k] = v end
@@ -204,7 +204,7 @@ end
 --[[
 深拷贝
 ]]
-table.deep_copy = function(t,mt)
+function table.deep_copy(t,mt)
     if "table" ~= type(t) then return t end
 
     local ct = {}
@@ -223,7 +223,7 @@ end
 --[[
 浅合并
 ]]
-table.merge = function(src,dest,mt)
+function table.merge(src,dest,mt)
     local ct = dest or {}
 
     for k,v in pairs(src) do
@@ -241,7 +241,7 @@ end
 将一个table指定为数组
 此函数与底层bson解析有关，非通用函数
 ]]
-table.set_array = function(t,sparse)
+function table.set_array(t,sparse)
     local _t = t or {}
     local mt = getmetatable( _t ) or {}
     rawset( mt,"__array",true )
@@ -252,7 +252,7 @@ table.set_array = function(t,sparse)
 end
 
 -- Knuth-Durstenfeld Shuffle 洗牌算法
-table.random_shuffle = function( list )
+function table.random_shuffle( list )
     local max_idx = #list
     for idx = max_idx,1,-1 do
         local index = math.random( 1,idx )
@@ -267,14 +267,14 @@ end
 -- 合并任意变量
 -- table.concat并不能合并带nil、false、true之类的变量
 -- table.concat_any( "|","abc",nil,true,false,999 )
-table.concat_any = function( sep,... )
+function table.concat_any( sep,... )
     local any = table.pack( ... )
 
     return table.concat_tbl( any,sep )
 end
 
 -- 这个tbl必须指定数组大小n，通常来自table.pack
-table.concat_tbl = function( tbl,sep )
+function table.concat_tbl( tbl,sep )
     local max_idx = tbl.n
     for k = 1,max_idx do
         local v = tbl[k]
@@ -293,4 +293,36 @@ table.concat_tbl = function( tbl,sep )
     end
 
     return table.concat( tbl,sep )
+end
+
+-- 默认排序算法(降序，从大到小)
+local function default_comp(dst, src)
+    return dst > src
+end
+
+-- 稳定排序算法，应该没table.sort快
+function table.sort_stable(list, comp)
+    -- 冒泡排序
+    local length = #list
+    local comp_func = comp or default_comp
+
+    local ok
+    for index = 1, length - 1 do
+        ok = false
+
+        for idx = 1, length - index do
+            local dst, src = list[i], list[i + 1]
+            if comp(dst, src) then
+                local tmp = src
+                list[i] = dst
+                list[i + 1] = tmp
+
+                ok = false
+            end
+        end
+
+        if ok then break end
+    end
+
+    return list
 end
