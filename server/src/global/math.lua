@@ -9,6 +9,9 @@ function math.round(val, decimal)
         return val >= 0 and math.floor(val + 0.5) or math.ceil(val - 0.5)
     end
 
+    -- math.round(102.994, 2) = 102.994
+    -- math.round(102.994, 0) = 102
+    -- math.round(102.994, -1) = 100
     local mult = 10^decimal
     local base = val * mult + 0.5
 

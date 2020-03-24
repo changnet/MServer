@@ -6,7 +6,7 @@
 -- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
 require "global.global"
 require "global.table"
-require "global.maths"
+require "global.math"
 require "global.string"
 require "global.time"
 require "global.name"
