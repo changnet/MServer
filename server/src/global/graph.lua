@@ -1,6 +1,12 @@
 -- 一些常用的几何、图形函数
 graph = {}
 
+local deg = math.deg -- 弧度转角度，相当于 180 / math.pi
+local rad = math.rad -- 角度转弧度，相当于 math.pi / 180
+
+local max = math.max
+local min = math.min
+
 -- 平面点的旋转 graph.rotate(1, 0, 45) = (0.7, 0.7)
 -- @x: x轴坐标
 -- @y: y轴坐标
@@ -9,7 +15,7 @@ function graph.rotate(x, y, alpha)
     -- https://www.cnblogs.com/orange1438/p/4583825.html
 
     -- 角度转换为弧度
-    local radian = alpha * 3.1459 / 180
+    local radian = rad(alpha)
     local cos, sin = math.cos(radian), math.sin(radian)
 
     -- 如果是格子坐标，需要取整
@@ -64,4 +70,139 @@ function graph.within_circle_sector(
     if not graph.is_clockwise(end_x, end_y, zero_x, zero_y) then return false end
 
     return graph.within_circle(zero_x, zero_y, 0, 0, radius)
+end
+
+-- 以(x,y)为原点，计算两点之间的角度(-180, 180]
+-- @positive: 是否转换为正数角[0，360)
+function graph.angel(x, y, dst_x, dst_y, positive)
+    -- 计算两点之间的角度公式是：
+    -- double angleOfLine = Math.Atan2((Y2 - Y1), (X2 - X2)) * 180 / Math.PI
+    -- 假设点一是坐标原点（0,0）点二是（1,0）则这两点之间的连线角度是：0
+    -- 假设点一是坐标原点（0,0）点二是（0,-1）则这两点之间的连线角度是：-90
+
+    -- 象限1[0,90] 象限2(90,180] 象限(-180,-90] 象限4(-90,0)
+
+    -- 180 / PI是弧度转换为角度，相当于math.deg
+    local angle = deg(math.atan2(dst_y - y, dst_x - x))
+    if not positive or angle >= 0 then return angle end
+
+    return angle + 360
+end
+
+-- 判断一个角度是否在指定范围内
+-- @beg_angle: 逆时针方向，起始角度
+-- @beg_angle: 逆时针方向，结束角度
+function graph.within_angle_range(angle, beg_angle, end_angle)
+    -- 负角度全部转换为[0,360)
+    if angle < 0 then angle = angle + 360 end
+    if beg_angle < 0 then beg_angle = beg_angle + 360 end
+    if end_angle < 0 then end_angle = end_angle + 360 end
+
+    -- 因为规定了逆时针方向，如果起始角度大于结束角度
+    -- 则是扇形被0度分成2部分的情况，特殊处理一下
+    if beg_angle > end_angle then
+        return angle >= beg_angle or angle <= end_angle
+    end
+
+    return angle >= beg_angle and angle <= end_angle
+end
+
+-- 根据一个坐标范围，计算中点
+function graph.range_to_mid(min_range, max_range)
+    -- 例如：x轴上(90,180)的中点是135，同样适用于y轴。同时计算x，y则是线段中点
+    return (min_range + max_range) / 2
+end
+
+-- 根据中点，计算最大、最小值
+function graph.mid_to_range(mid, range)
+    -- 例如：x轴中点是135，范围大小是90，则最小、最大值为(90,180)
+    -- 同时计算x、y轴，则可以根据线段中点计算出两头的坐标
+    local mid_range = range / 2
+    return mid - mid_range, mid + mid_range
+end
+
+-- 根据角度判断点是否在扇形内
+-- @x: x轴坐标
+-- @y: y轴坐标
+-- @center_x: 圆心x轴坐标
+-- @center_x: 圆心y轴坐标
+-- @radius: 半径
+-- @beg_angle: 开始的角度
+-- @end_angle: 结束的角度
+function graph.within_circle_range(
+    x, y, center_x, center_y, radius, beg_angle, end_angle)
+    -- 假如激光炮可移动角度是90度，求开炮时命中的目标
+    -- 那么以炮为中心，射程为半径
+    -- 以开炮目标坐标计算出初始角度，结合移动角度计算出角度范围
+    -- 以半径为正方形的半长，从AOI选出所有实体
+    -- 用此函数判断每个实体是否在扇形内即可得到命中目标
+
+    -- 判断是否在圆内
+    if not graph.within_circle(x, y, center_x, center_y, radius) then
+        return false
+    end
+    -- 计算目标和圆心形成的角度
+    local angle = graph.angel(x, y, center_x, center_y)
+    -- 判断角度是否在预期角度范围内
+    return angle >= beg_angle and angle <= end_angle
+end
+
+-- 计算水平(没有旋转角度)两个矩形的重叠区域
+-- @src: 源矩形，xl、yl(是左上角坐标，left)，xr、yr是右下角下标，right
+-- @dst: 目标矩形左上角和右下角坐标
+-- @return 是否重叠，左上角坐标，右下角坐标
+function graph.rectangle_intersection(
+    src_xl, src_yl, src_xr, src_yr, dst_xl, dst_yl, dst_xr, dst_yr)
+
+    local xl = max(src_xl, dst_xl)
+    local xr = min(src_xr, dst_xr)
+    local yl = max(src_yl, dst_yl)
+    local yr = min(src_yr, dst_yr)
+
+    -- 没有重叠
+    if xl > xr or yl > yr then return false end
+
+    return true, xl, yl, xr, yr
+end
+
+-- 判断点是否在多边形内
+-- @vert_x: 多边形各个点的x坐标
+-- @vert_y：多边形各个点的y坐标，顺序和x坐标对应
+function graph.within_polygon(vert_x, vert_y, x, y)
+    -- https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+    -- https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
+
+    --[[
+        I run a semi-infinite ray horizontally (increasing x, fixed y) out from
+    the test point, and count how many edges it crosses. At each crossing, the
+    ray switches between inside and outside. This is called the Jordan curve theorem.
+
+    The variable c is switching from 0 to 1 and 1 to 0 each time the horizontal
+    ray crosses any edge. So basically it's keeping track of whether the number
+    of edges crossed are even or odd. 0 means even and 1 means odd.
+
+    int i, j, c = 0;
+    for (i = 0, j = nvert-1; i < nvert; j = i++) {
+      if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+       (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+         c = !c;
+    }
+    return c;
+    ]]
+
+    assert(#vert_x == #vert_y)
+    local within = false
+
+    local j = #vert_y
+    for i = 0, #vert_x do
+        if (vert_y[i] > y) ~= (vert_y[j] > y)
+            and (x < (vert_x[j] - vert_x[i])
+            * (y -vert_y[i]) / (vert_y[j] - vert_y[i]) + vert_x[i]) then
+
+            j = i
+            within = not within
+        end
+    end
+
+    return within
 end
