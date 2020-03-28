@@ -350,9 +350,9 @@ function CommandMgr:other_cmd_register( srv_conn,pkt )
     -- 记录该服务器所处理的cs指令
     for _,cmd in pairs( pkt.clt_cmd or {} ) do
         local _cfg = self.cs[cmd]
-        assert( _cfg,"other_cmd_register no such clt cmd" )
+        ASSERT( _cfg,"other_cmd_register no such clt cmd", cmd )
         if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
-            assert( _cfg,"other_cmd_register clt cmd register conflict" )
+            ASSERT( _cfg,"other_cmd_register clt cmd register conflict", cmd )
         end
 
         _cfg.session = session
@@ -363,8 +363,8 @@ function CommandMgr:other_cmd_register( srv_conn,pkt )
     -- 记录该服务器所处理的ss指令
     for _,cmd in pairs( pkt.srv_cmd or {} ) do
         local _cfg = self.ss[cmd]
-        assert( _cfg,"other_cmd_register no such srv cmd" )
-        assert( _cfg,"other_cmd_register srv cmd register conflict" )
+        ASSERT( _cfg,"other_cmd_register no such srv cmd", cmd )
+        ASSERT( _cfg,"other_cmd_register srv cmd register conflict", cmd )
 
         _cfg.session = session
         local raw_cfg = ss_map[cmd]

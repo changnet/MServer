@@ -33,6 +33,14 @@ static int is_suffix_file(const char *path, const char *suffix)
 class lprotobuf
 {
 public:
+    struct DecodeCtx
+    {
+        int id;
+        lua_State *L;
+        int32_t length;
+        struct pbc_env *env;
+    };
+public:
     ~lprotobuf();
     lprotobuf();
 
@@ -48,6 +56,16 @@ public:
     int32_t load_file(const char *paeth);
     int32_t load_path(const char *path, const char *suffix = "pb");
 
+    static int32_t decode_message(
+        lua_State *L, struct pbc_env *env,
+        const char *object, struct pbc_slice *slice);
+
+    static void decode_cb(void *ud, int32_t type, const char *object,
+        union pbc_value *v, int id, const char *key);
+
+    static int32_t push_value(
+        lua_State *L, struct pbc_env *env,
+        int type, const char * object, union pbc_value *v);
 private:
     int32_t raw_encode(lua_State *L, struct pbc_wmessage *wmsg,
                        const char *object, int32_t index);
@@ -60,7 +78,6 @@ private:
     int32_t raw_decode(lua_State *L, struct pbc_rmessage *msg);
     int32_t decode_field(lua_State *L, struct pbc_rmessage *msg,
                          const char *key, int32_t type, int32_t idx);
-
 private:
     struct pbc_env *_env;
     struct pbc_wmessage *_write_msg;
@@ -196,17 +213,136 @@ int32_t lprotobuf::decode(lua_State *L, const char *object, const char *buffer,
     slice.len    = static_cast<int32_t>(size);
     slice.buffer = const_cast<char *>(buffer);
 
-    struct pbc_rmessage *msg = pbc_rmessage_new(_env, object, &slice);
-    if (!msg)
+    /**
+     * 以前用struct pbc_rmessage *msg = pbc_rmessage_new(_env, object, &slice);
+     * 来解析，然后用pbc_rmessage_next来遍历解析出的字段再赋值给lua
+     * 这种方式相当于把所有字段先解析放到一个hash表，再一个个取出来赋值给lua
+     * 而pbc_decode的方式则是在解析过程中直接放到lua表，稍微快一些
+     */
+    int32_t ecode = decode_message(L, _env, object, &slice);
+
+    return ecode;
+}
+
+int32_t lprotobuf::decode_message(
+        lua_State *L, struct pbc_env *env,
+        const char *object, struct pbc_slice *slice)
+{
+    if (!lua_checkstack(L, 3))
     {
-        ERROR("protobuf decode:%s", last_error());
+        ERROR("protobuf decode stack overflow");
         return -1;
     }
 
-    int32_t ecode = raw_decode(L, msg);
-    pbc_rmessage_delete(msg);
+    lprotobuf::DecodeCtx ctx;
+    ctx.L = L;
+    ctx.id = 0;
+    ctx.env = env;
+    ctx.length = 0;
 
-    return ecode;
+    lua_newtable(L);
+
+    int32_t ok = pbc_decode(env, object, slice, lprotobuf::decode_cb, &ctx);
+    if (ok && ctx.id)
+    {
+        lua_rawset(L, -3);
+    }
+
+    return ok;
+}
+
+/**
+ * pbc解码回调。每解码一个字段，都会回调这个函数
+ * 参考pbc binding/lua53/pbc-lua53.c
+ */
+void lprotobuf::decode_cb(void *ud, int32_t type, const char *object,
+        union pbc_value *v, int id, const char *key)
+{
+    // undefined field
+    if (NULL == key) {
+        return;
+    }
+
+    lprotobuf::DecodeCtx *ctx = (lprotobuf::DecodeCtx *)ud;
+    /**
+     * pbc做这个decode时，如果是数组，在数组结束、开始时都没有回调的
+     * 它是为惰性解码设计的，即每次解析只解析当前这一层的message
+     * 因此不用考虑数组嵌套的问题。但我们这里是一次性全部解析的
+     * message sub { repeated int list = 1; }
+     * message test {
+     *     repeated int list = 1;
+     *     repeated sub sub_list = 2;
+     *     repeated int sub_list_2 = 3;
+     * }
+     * 这种情况，如果id不一样，则不在同一个数组，同时需要结束上一个数组
+     */
+    lua_State *L = ctx->L;
+    if (type & PBC_REPEATED)
+    {
+        if (id != ctx->id)
+        {
+            if (ctx->id)
+            {
+                lua_rawset(L, -3);
+            }
+            ctx->id = id;
+            lua_pushstring(L, key);
+            lua_newtable(L);
+        }
+        lprotobuf::push_value(L, ctx->env, type & ~PBC_REPEATED, object, v);
+        lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+    }
+    else
+    {
+        // 上一个数组结束了
+        if (ctx->id)
+        {
+            ctx->id = 0;
+            lua_rawset(L, -3);
+        }
+        lprotobuf::push_value(L, ctx->env, type, object, v);
+        lua_setfield(L, -2, key);
+    }
+}
+
+int32_t lprotobuf::push_value(
+        lua_State *L, struct pbc_env *env,
+        int type, const char * object, union pbc_value *v)
+{
+    switch(type)
+    {
+    case PBC_FIXED32:
+    case PBC_INT:
+        lua_pushinteger(L, (int)v->i.low);
+        break;
+    case PBC_REAL:
+        lua_pushnumber(L, v->f);
+        break;
+    case PBC_BOOL:
+        lua_pushboolean(L, v->i.low);
+        break;
+    case PBC_ENUM:
+        lua_pushstring(L, v->e.name);
+        break;
+    case PBC_BYTES:
+    case PBC_STRING:
+        lua_pushlstring(L, (const char *)v->s.buffer , v->s.len);
+        break;
+    case PBC_MESSAGE:
+        return decode_message(L, env, object, &(v->s));
+    case PBC_FIXED64:
+    case PBC_UINT:
+    case PBC_INT64: {
+        uint64_t v64 = (uint64_t)(v->i.hi) << 32 | (uint64_t)(v->i.low);
+        lua_pushinteger(L,v64);
+        break;
+    }
+    default:
+        luaL_error(L, "Unknown type %s", object);
+        break;
+    }
+
+    return 0;
 }
 
 int32_t lprotobuf::raw_decode(lua_State *L, struct pbc_rmessage *msg)
