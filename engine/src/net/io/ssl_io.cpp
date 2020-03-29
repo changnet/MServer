@@ -1,8 +1,8 @@
-#include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/ssl.h>
 
-#include "ssl_io.h"
 #include "../../system/static_global.h"
+#include "ssl_io.h"
 
 #define X_SSL(x)     static_cast<SSL *>(x)
 #define X_SSL_CTX(x) static_cast<SSL_CTX *>(x)

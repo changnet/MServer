@@ -1,9 +1,9 @@
 #include <http_parser.h>
 
-#include "../socket.h"
-#include "http_packet.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
+#include "../socket.h"
+#include "http_packet.h"
 
 // 开始解析报文，第一个回调的函数，在这里初始化数据
 int32_t on_message_begin(http_parser *parser)

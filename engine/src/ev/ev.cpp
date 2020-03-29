@@ -262,12 +262,16 @@ int64_t EV::get_ms_time()
 /*
  * 获取当前时钟
  * CLOCK_REALTIME:
- * 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。 CLOCK_REALTIME_COARSE:
- * 系统实时时间，比起CLOCK_REALTIME有更快的获取速度，更低一些的精确度。 CLOCK_MONOTONIC:
+ * 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。
+ * CLOCK_REALTIME_COARSE:
+ * 系统实时时间，比起CLOCK_REALTIME有更快的获取速度，更低一些的精确度。
+ * CLOCK_MONOTONIC:
  * 从系统启动这一刻开始计时，即使系统时间被用户改变，也不受影响。系统休眠时不会计时。受adjtime和NTP影响。
  * CLOCK_MONOTONIC_COARSE:
- * 如同CLOCK_MONOTONIC，但有更快的获取速度和更低一些的精确度。受NTP影响。 CLOCK_MONOTONIC_RAW:
- * 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。 CLOCK_BOOTTIME:
+ * 如同CLOCK_MONOTONIC，但有更快的获取速度和更低一些的精确度。受NTP影响。
+ * CLOCK_MONOTONIC_RAW:
+ * 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
+ * CLOCK_BOOTTIME:
  * 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
  */
 void EV::update_clock()

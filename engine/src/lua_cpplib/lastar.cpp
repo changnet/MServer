@@ -1,6 +1,6 @@
+#include "lastar.h"
 #include "lmap.h"
 #include "ltools.h"
-#include "lastar.h"
 
 int32_t LAstar::search(lua_State *L) // 寻路
 {

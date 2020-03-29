@@ -1,5 +1,5 @@
-#include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/ssl.h>
 
 #include "ssl_mgr.h"
 

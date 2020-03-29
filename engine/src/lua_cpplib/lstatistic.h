@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lua.hpp>
 #include "../system/statistic.h"
+#include <lua.hpp>
 
 class LStatistic
 {

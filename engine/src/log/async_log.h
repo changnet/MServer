@@ -1,7 +1,7 @@
 #pragma once
 
-#include "log.h"
 #include "../thread/thread.h"
+#include "log.h"
 
 // 多线程日志
 class AsyncLog : public Thread

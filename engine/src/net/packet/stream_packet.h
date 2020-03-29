@@ -1,7 +1,7 @@
 #pragma once
 
-#include "packet.h"
 #include "../net_header.h"
+#include "packet.h"
 
 struct base_header;
 struct c2s_header;

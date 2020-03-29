@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lua.hpp>
 #include "../scene/grid_aoi.h"
+#include <lua.hpp>
 
 /**
  * AOI算法，目前用格子地图实现
@@ -37,8 +37,10 @@ public:
      * 获取周围关注自己的实体列表,常用于自己释放技能、扣血、特效等广播给周围的人
      * @param id 自己的唯一实体id
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
-     * @param mask 可选参数，实体类型掩码，不同实体类型按位表示，只获取这些类型的实体
-     * @param event 可选参数，事件类型掩码，不同事件类型按位表示，只获取关注这些事件的实体
+     * @param mask
+     * 可选参数，实体类型掩码，不同实体类型按位表示，只获取这些类型的实体
+     * @param event
+     * 可选参数，事件类型掩码，不同事件类型按位表示，只获取关注这些事件的实体
      */
     int32_t get_watch_me_entitys(lua_State *L);
 
@@ -57,7 +59,8 @@ public:
     /**
      * 实体退出场景
      * @param id 唯一实体id
-     * @param tbl 可选参数，周围关注此实体退出事件的实体存放在此table中，数量设置在n字段
+     * @param tbl
+     * 可选参数，周围关注此实体退出事件的实体存放在此table中，数量设置在n字段
      */
     int32_t exit_entity(lua_State *L);
 
@@ -68,7 +71,8 @@ public:
      * @param y 实体像素坐标y
      * @param type 实体类型(怪物、npc等)
      * @param event 实体关注的事件(进入、退出场景等)
-     * @param tbl 可选参数，周围关注此实体进入事件的实体存放在此table中，数量设置在n字段
+     * @param tbl
+     * 可选参数，周围关注此实体进入事件的实体存放在此table中，数量设置在n字段
      */
     int32_t enter_entity(lua_State *L);
 
@@ -77,9 +81,12 @@ public:
      * @param id 唯一实体id
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
-     * @param tbl 可选参数，周围关注此实体更新事件的实体存放在此table中，数量设置在n字段
-     * @param into 可选参数，周围关注此实体出现事件的实体存放在此table中，数量设置在n字段
-     * @param out 可选参数，周围关注此实体消失事件的实体存放在此table中，数量设置在n字段
+     * @param tbl
+     * 可选参数，周围关注此实体更新事件的实体存放在此table中，数量设置在n字段
+     * @param into
+     * 可选参数，周围关注此实体出现事件的实体存放在此table中，数量设置在n字段
+     * @param out
+     * 可选参数，周围关注此实体消失事件的实体存放在此table中，数量设置在n字段
      */
     int32_t update_entity(lua_State *L);
 

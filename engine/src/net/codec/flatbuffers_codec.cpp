@@ -1,7 +1,7 @@
 #include "flatbuffers_codec.h"
 
-#include <lflatbuffers.hpp>
 #include "../net_header.h"
+#include <lflatbuffers.hpp>
 
 FlatbuffersCodec::FlatbuffersCodec()
 {

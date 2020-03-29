@@ -1,11 +1,11 @@
-#include <signal.h>
 #include <arpa/inet.h> /* htons */
-#include <sys/types.h>
+#include <signal.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 
-#include "thread.h"
 #include "../net/socket.h"
 #include "../system/static_global.h"
+#include "thread.h"
 
 Thread::Thread(const char *name)
 {

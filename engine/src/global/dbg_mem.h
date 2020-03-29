@@ -30,7 +30,8 @@ public:
 
     void process(void *ptr)
     {
-        /* 重载operator new函数，记录每一次分配的指针，以地址为Key放到一个unordered_map
+        /* 重载operator
+         * new函数，记录每一次分配的指针，以地址为Key放到一个unordered_map
          * 这里根据 ptr 可以查找对应的记录
          */
     }

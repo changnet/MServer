@@ -1,18 +1,18 @@
 #include <lua.hpp>
 #include <sys/time.h>
 
+#include <arpa/inet.h>
 #include <cmath>
 #include <netdb.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <uuid/uuid.h>
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
-#include <openssl/evp.h>
-#include <openssl/buffer.h>
+#include <uuid/uuid.h>
 
 #include "lutil.h"
 
@@ -399,7 +399,8 @@ static int32_t sha1_raw(lua_State *L)
  */
 static int32_t base64(lua_State *L)
 {
-    /* base64需要预先计算长度并分配内存，故无法像md5那样把需要编码字符串分片传参 */
+    /* base64需要预先计算长度并分配内存，故无法像md5那样把需要编码字符串分片传参
+     */
     size_t len      = 0;
     const char *str = luaL_checklstring(L, 1, &len);
 

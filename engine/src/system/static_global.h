@@ -1,13 +1,13 @@
 #pragma once
 
-#include "statistic.h"
 #include "../log/async_log.h"
 #include "../lua_cpplib/lev.h"
-#include "../net/io/ssl_mgr.h"
-#include "../thread/thread_mgr.h"
+#include "../lua_cpplib/lnetwork_mgr.h"
 #include "../lua_cpplib/lstate.h"
 #include "../net/codec/codec_mgr.h"
-#include "../lua_cpplib/lnetwork_mgr.h"
+#include "../net/io/ssl_mgr.h"
+#include "../thread/thread_mgr.h"
+#include "statistic.h"
 
 /* 管理全局static或者global变量
  * 控制全局、静态变更的创建、销毁顺序，避免影响内存管理

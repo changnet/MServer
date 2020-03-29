@@ -1,6 +1,6 @@
-#include <ctime> // for clock
-#include <cstdarg>
 #include "lmongo.h"
+#include <cstdarg>
+#include <ctime> // for clock
 
 #include "ltools.h"
 #include <lbson.h>

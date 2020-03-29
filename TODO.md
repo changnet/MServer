@@ -2,18 +2,12 @@
 * 参考boost实现object_pool，把astar和aoi中的缓存改由object_pool实现，其他系统也看下有没有替换的
 * mysql增加lua table直接存mysql接口，并且测试一下和格式化字符串的效率
 * 实现场景的static区域属性(不可修改)和dynamic区域属性(可根据逻辑创建和修改)
-* fast_class的设计，主要是把基类的函数拷贝到当前子类。由于现在是所有文件热更,不存在之前单个文件热更导致的子类热更不到的情况
 * 技能的配置比较复杂，看看能不能设计出多action，多result，多条件控制又比较容易明白的excel配置
-* 把所有的static、global变量放到一个static_global类去，以控制他们的创建、销毁顺序,把ssl mysql mongodb的初始化也放里面,这个现在在global.cpp里定义
 * 主循环是否使用分时器
 * async_worker（属性计算、技能延后，技能延后看看是放这里还是主循环）
 * profile看效率问题
 * lint优化代码
-* 服务器socket预分配内存太大，当服务器之间连接太多(比如中心服，500条连接)，就会分不了内存
-* 要不要把运行目录放到bin目录，这样生成的core文件，error文件以及log、setting这些与版本无关的全在一个目录里了
 * mongodb的result感觉要用个object_pool
-* lclass弄个继承，基础的只是push到lua，不会创建。然后把C++中push到lua的类多余的构造函数去掉
-* pbc中错误提示不明确(本来是int，发个float就重现了)
 * set_initialize这个初始化流程优化一下，改成注册是不是要好一点
 * stream_packet.cc里和ws_stream_packet.cc里的sc_command和cs_command可以合并复用
 * 考虑用C++编译Lua:https://www.liangzl.com/get-article-detail-140988.html
@@ -33,7 +27,7 @@
 
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步
-http://blog.codingnow.com/2006/04/sync.html  
+http://blog.codingnow.com/2006/04/sync.html
 http://blog.codingnow.com/2012/03/dev_note_12.html
 
 #AOI模块及其算法

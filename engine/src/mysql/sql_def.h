@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <mysql.h>
 #include "../global/global.h"
+#include <mysql.h>
+#include <vector>
 
 #define SQL_FIELD_LEN 64
 #define SQL_VAR_LEN   64

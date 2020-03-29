@@ -2,8 +2,8 @@
 
 #include <queue>
 
-#include "../thread/thread.h"
 #include "../mongo/mongo.h"
+#include "../thread/thread.h"
 
 // 由于指针可能是NULL，故用-1来表示。但是这并不百分百安全。不过在这里，顶多只是内存泄漏
 // sbrk有类似的用法 The UNIX sbrk() function relies on this working, in that it

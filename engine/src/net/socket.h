@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../global/global.h"
 #include "../ev/ev_watcher.h"
+#include "../global/global.h"
 
 #include "buffer.h"
-#include "io/io.h"
 #include "codec/codec.h"
+#include "io/io.h"
 #include "packet/packet.h"
 
 #ifdef TCP_KEEP_ALIVE
@@ -152,7 +152,8 @@ private:
     Codec::CodecType _codec_ty;
     OverActionType _over_action;
 
-    /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型 */
+    /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型
+     */
     void *_this;
     void (Socket::*_method)();
 

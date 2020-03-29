@@ -1,8 +1,8 @@
-#include <openssl/ssl.h>
 #include "static_global.h"
+#include <openssl/ssl.h>
 
-#include "../mysql/sql.h"
 #include "../mongo/mongo.h"
+#include "../mysql/sql.h"
 
 class LEV *StaticGlobal::_ev                  = NULL;
 class LState *StaticGlobal::_state            = NULL;
@@ -103,11 +103,11 @@ void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
 // 初始化ssl库
 int32_t ssl_init()
 {
-    /* sha1、base64等库需要用到的
-     * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
-     * ssl初始化是不可重入的。在初始化期间不要再调用任何相关的ssl函数
-     * ssl可以初始化多次，在openssl\crypto\init.c中通过RUN_ONCE来控制
-     */
+/* sha1、base64等库需要用到的
+ * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
+ * ssl初始化是不可重入的。在初始化期间不要再调用任何相关的ssl函数
+ * ssl可以初始化多次，在openssl\crypto\init.c中通过RUN_ONCE来控制
+ */
 
 // OPENSSL_VERSION_NUMBER定义在/usr/include/openssl/opensslv.h
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -146,7 +146,8 @@ int32_t ssl_uninit()
 
 /* https://isocpp.org/files/papers/N3690.pdf
  * 3.6.3 Termination
- * static 变量的销毁与 static变更创建和std::atexit的调用顺序相关，这里可能并没统计到
+ * static 变量的销毁与
+ * static变更创建和std::atexit的调用顺序相关，这里可能并没统计到
  */
 void on_exit()
 {

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../global/global.h"
 #include <cmath>
 #include <lua.hpp>
-#include "../global/global.h"
 
 #define LUA_REF(x)       \
     if (x) LUA_UNREF(x); \

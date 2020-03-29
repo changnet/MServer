@@ -2,8 +2,8 @@
 
 #include <lua.hpp>
 
-#include "ltools.h"
 #include "../util/rank.h"
+#include "ltools.h"
 
 /**
  * 插入法排序

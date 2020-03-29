@@ -13,8 +13,8 @@
  *   这时需要调整事件大小，重新编译。
  */
 
-#include <sys/epoll.h>
 #include "../global/global.h"
+#include <sys/epoll.h>
 
 #define MIN_TIMEJUMP \
     1. /* minimum timejump that gets detected (if monotonic clock available) */

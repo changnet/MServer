@@ -1,9 +1,9 @@
 #include <websocket_parser.h>
 
-#include "../socket.h"
-#include "ws_stream_packet.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
+#include "../socket.h"
+#include "ws_stream_packet.h"
 
 WSStreamPacket::~WSStreamPacket() {}
 

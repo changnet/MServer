@@ -1,8 +1,8 @@
 #include "stream_packet.h"
 
-#include "../socket.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
+#include "../socket.h"
 
 StreamPacket::StreamPacket(class Socket *sk) : Packet(sk) {}
 
@@ -220,7 +220,8 @@ void StreamPacket::ss_dispatch(const s2s_header *header)
     //     if ( !is_ok )
     //     {
     //         ERROR( "server packet forwrding "
-    //             "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header )) );
+    //             "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header
+    //             )) );
     //     }
     //     return;
     // }

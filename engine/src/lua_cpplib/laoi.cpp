@@ -1,6 +1,6 @@
-#include "ltools.h"
 #include "laoi.h"
 #include "../scene/scene_include.h"
+#include "ltools.h"
 
 #define EVENT_FILTER if (ctx && ctx->_event)
 #define TYPE_FILTER  if (ctx && (type_mask & ctx->_type))

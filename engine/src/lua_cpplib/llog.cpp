@@ -1,7 +1,7 @@
 #include <lua.hpp>
 
-#include "llog.h"
 #include "../system/static_global.h"
+#include "llog.h"
 
 LLog::LLog(lua_State *L)
 {
@@ -77,7 +77,8 @@ int32_t LLog::write(lua_State *L)
 int32_t LLog::plog(lua_State *L)
 {
     const char *ctx = luaL_checkstring(L, 1);
-    // 这里要注意，不用%s，cprintf_log( "LP",ctx )这样直接调用也是可以的。但是如果脚本传
+    // 这里要注意，不用%s，cprintf_log( "LP",ctx
+    // )这样直接调用也是可以的。但是如果脚本传
     // 入的字符串带特殊符号，如%，则可能会出错
     cprintf_log("LP", "%s", ctx);
 

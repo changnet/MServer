@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../global/global.h"
 #include <map>
 #include <pthread.h>
-#include "../global/global.h"
 
 class Thread;
 class ThreadMgr

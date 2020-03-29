@@ -1,23 +1,23 @@
 #pragma once
 
+#include <cerrno>      /* errno */
+#include <cstdarg>     /* va_start va_end ... */
 #include <cstdio>      /* c compatible,like printf */
 #include <cstdlib>     /* c lib like malloc */
-#include <iostream>    /* c++ base support */
-#include <ctime>       /* time function */
-#include <cstdarg>     /* va_start va_end ... */
-#include <unistd.h>    /* POSIX api */
-#include <sys/types.h> /* linux sys types like pid_t */
 #include <cstring>     /* memset memcpy */
-#include <cerrno>      /* errno */
+#include <ctime>       /* time function */
+#include <iostream>    /* c++ base support */
 #include <limits.h>    /* PATH_MAX */
+#include <sys/types.h> /* linux sys types like pid_t */
+#include <unistd.h>    /* POSIX api */
 
 #include "../config.h" /* config paramter */
 
 /* assert with error msg,third parted code not include this file will work fine
    with old assert.
 */
-#include "types.h" /* base data type */
 #include "assert.h"
+#include "types.h" /* base data type */
 
 // those functions are easily make mistake,not allow to use project"
 #include "banned.h"
@@ -36,7 +36,8 @@ extern void cprintf_log(const char *prefix, const char *fmt, ...);
 extern void raw_cerror_log(time_t tm, const char *prefix, const char *fmt, ...);
 extern void raw_cprintf_log(time_t tm, const char *prefix, const char *fmt, ...);
 
-/* 设置日志参数
+/**
+ * 设置日志参数
  * @dm: deamon，是否守护进程。为守护进程不会输出日志到stdcerr
  * @ppath: printf path,打印日志的文件路径
  * @epath: error path,错误日志的文件路径
@@ -45,6 +46,10 @@ extern void raw_cprintf_log(time_t tm, const char *prefix, const char *fmt, ...)
 extern void set_log_args(bool dm, const char *ppath, const char *epath,
                          const char *mpath);
 
+/**
+ * 格式化std::string，需要C++20才有std::format，这个暂时用一下
+ */
+extern std::string std_format(const char *fmt, ...);
 ////////////////////////////////////////////////////////////////////////////////
 
 /* Qt style unused paramter handler */
@@ -77,6 +82,8 @@ extern void set_log_args(bool dm, const char *ppath, const char *epath,
     #define ERROR(...)
     #define ERROR_R(...)
 #endif
+
+#define STD_FMT(...) std_format(__VA_ARGS__)
 
 /* terminated without destroying any object and without calling any of the
  * functions passed to atexit or at_quick_exit

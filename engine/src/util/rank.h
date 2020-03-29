@@ -1,8 +1,8 @@
 #pragma once
 
-#include <map>
-#include <list>
 #include "../global/global.h"
+#include <list>
+#include <map>
 
 /* 排行榜底层数据结构
  * 1. 脚本不太好处理多因子排序和内存的精细管理(如批量移动)，所以放底层实现

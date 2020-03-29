@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lbson.h>
 #include "codec.h"
+#include <lbson.h>
 
 // bson编码
 class BsonCodec : public Codec

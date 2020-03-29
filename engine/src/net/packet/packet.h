@@ -18,7 +18,7 @@ public:
         PT_WEBSOCKET = 3, ///< 协议打包类型，标准websocket方式
         PT_WSSTREAM  = 4, ///< 协议打包类型，websocket + 二进制流
 
-        PKT_MAX  ///< 协议打包类型最大值
+        PKT_MAX ///< 协议打包类型最大值
     } PacketType;
 
 public:

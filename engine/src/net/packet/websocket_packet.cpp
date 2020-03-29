@@ -1,9 +1,9 @@
 #include <websocket_parser.h>
 
-#include "../socket.h"
-#include "websocket_packet.h"
 #include "../../lua_cpplib/ltools.h"
 #include "../../system/static_global.h"
+#include "../socket.h"
+#include "websocket_packet.h"
 
 /*
 https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
@@ -38,7 +38,8 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
                 0x9：标识一个ping类型数据包
                 0xA：表示一个pong类型数据包
                 0xB-F：保留
-[   8 ]bit : 用于标识PayloadData是否经过掩码处理。如果是1，Masking-key域的数据即是
+[   8 ]bit :
+用于标识PayloadData是否经过掩码处理。如果是1，Masking-key域的数据即是
                 掩码密钥，用于解码PayloadData。客户端发出的数据帧需要进行掩码处理，
                 所以此位是1。服务端发出的数据帧不能设置此标志位。
 [ 9,15]bit : Payload data的长度,7bit
@@ -49,10 +50,12 @@ https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28
 !!! 下面的字段可能不存在，需要根据Payload len的值偏移，这里按最大计算。
 [16,31]bit : Payload len = 126,这16bit构成一个uint16类型表示Payload Data的长度
 [16,79]bit : Payload len = 126,这16bit构成一个uint64类型表示Payload Data的长度
-[80,111]bit: 上面的第8bit值为1时，这里的32bit表示Masking-key。客户端发给服务器的包
+[80,111]bit:
+上面的第8bit值为1时，这里的32bit表示Masking-key。客户端发给服务器的包
                 必须有masking-key。The masking key is a 32-bit value chosen at
                 random ,needs to be unpredictable
-                原因见：https://tools.ietf.org/pdf/rfc6455.pdf section 5.3 page33
+                原因见：https://tools.ietf.org/pdf/rfc6455.pdf section 5.3
+page33
 [...] 具体的数据
 
 有masking key时，数据必须用masking key编码、解码，算法如下(section 5.3)：

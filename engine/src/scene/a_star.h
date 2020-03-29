@@ -6,8 +6,8 @@
  * https://www.geeksforgeeks.org/a-search-algorithm/
  */
 
-#include <vector>
 #include "../pool/object_pool.h"
+#include <vector>
 
 class GridMap;
 class AStar
@@ -68,7 +68,8 @@ private:
 
     /* 欧几里得距离
      * 适用可以沿任意角度行走的游戏。但是f = g +
-     * h中，g的值是一步步算出来的，因此g值 要么是直线，要么是45度角的消耗，因此会导致f值不准确。不过这里的h
+     * h中，g的值是一步步算出来的，因此g值
+     * 要么是直线，要么是45度角的消耗，因此会导致f值不准确。不过这里的h
      * <= n，还是可以 得到最小路径，只是算法效率受影响
      */
     int32_t euclidean(int32_t x, int32_t y, int32_t gx, int32_t gy);

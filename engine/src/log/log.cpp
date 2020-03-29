@@ -1,8 +1,8 @@
 #include <string>
 
-#include "log.h"
 #include "../pool/object_pool.h"
 #include "../system/static_global.h"
+#include "log.h"
 
 // cat /usr/include/linux/limits.h | grep PATH_MAX PATH_MAX = 4096，这个太长了
 #define LOG_PATH_MAX 64

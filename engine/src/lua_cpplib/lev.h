@@ -4,9 +4,9 @@
 
 #include <lua.hpp>
 
-#include "../global/global.h"
 #include "../ev/ev.h"
 #include "../ev/ev_watcher.h"
+#include "../global/global.h"
 
 class Socket;
 

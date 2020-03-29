@@ -6,15 +6,16 @@
  * 本代码使用gc控制的原因是交给lua控制的只是一个对象指针，对象内存仍由c层管理。这样
  * 在lua层中的指针被销毁，对象仍能在c层继续使用。又或者push的对象不是new出来的。
  *
- * light userdata是有metatable的，但是全局共用一个。所以，如果需要把light userdata
+ * light userdata是有metatable的，但是全局共用一个。所以，如果需要把light
+ * userdata
  * 传到lua层，是没法确认其类型的。执行强转时容易coredump。需要设计一个全局metatable，
  * 以light userdata为key,v为类型来确定类型。
  */
 
 /* 注册struct、class到lua，适用于在lua创建c、c++对象 */
 
-#include <lua.hpp>
 #include "../system/static_global.h"
+#include <lua.hpp>
 
 template <class T> class LBaseClass
 {

@@ -10,7 +10,8 @@
 
 #define __EXPAND(_1, _2, NAME, ...) NAME
 // _UNUSED avoid warning
-// Warning: ISO C++11 requires at least one argument for the "..." in a variadic macro
+// Warning: ISO C++11 requires at least one argument for the "..." in a variadic
+// macro
 // https://stackoverflow.com/questions/11761703/overloading-macro-on-number-of-arguments
 
 // ASSERT(false) same as assert(false)

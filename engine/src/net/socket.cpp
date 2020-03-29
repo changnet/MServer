@@ -1,16 +1,16 @@
-#include <netinet/tcp.h> /* for keep-alive */
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h> /* htons */
+#include <fcntl.h>
+#include <netinet/tcp.h> /* for keep-alive */
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "socket.h"
+#include "../system/static_global.h"
 #include "io/ssl_io.h"
 #include "packet/http_packet.h"
 #include "packet/stream_packet.h"
 #include "packet/websocket_packet.h"
 #include "packet/ws_stream_packet.h"
-#include "../system/static_global.h"
+#include "socket.h"
 
 Socket::Socket(uint32_t conn_id, ConnType conn_ty)
 {
@@ -197,7 +197,8 @@ int32_t Socket::non_block(int32_t fd)
 }
 
 /* keepalive并不是TCP规范的一部分。在Host Requirements
- * RFC罗列有不使用它的三个理由： 1.在短暂的故障期间，它们可能引起一个良好连接（good
+ * RFC罗列有不使用它的三个理由：
+ * 1.在短暂的故障期间，它们可能引起一个良好连接（good
  * connection）被释放（dropped）， 2.它们消费了不必要的宽带，
  * 3.在以数据包计费的互联网上它们（额外）花费金钱。
  *
@@ -463,9 +464,12 @@ void Socket::listen_cb()
  * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to
  * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
  * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
- * of  the  usual  error  codes  listed  here,explaining the reason for the failure)
- * 1）连接成功建立时，socket 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
- * 2）连接建立失败时，socket 描述字既可读又可写。 （由于有未决的错误，从而可读又可写）
+ * of  the  usual  error  codes  listed  here,explaining the reason for the
+ * failure)
+ * 1）连接成功建立时，socket
+ * 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
+ * 2）连接建立失败时，socket 描述字既可读又可写。
+ * （由于有未决的错误，从而可读又可写）
  */
 void Socket::connect_cb()
 {

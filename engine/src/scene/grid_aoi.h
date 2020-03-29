@@ -6,13 +6,14 @@
  * 1. 暂定所有实体视野一样
  * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要watch_me列表
  * 3. 只提供获取矩形范围内实体。技能寻敌时如果不是矩形，上层再从这些实体筛选
- * 4. 通过event来控制实体关注的事件。npc、怪物通常不关注任何事件，这样可以大幅提升
+ * 4.
+ * 通过event来控制实体关注的事件。npc、怪物通常不关注任何事件，这样可以大幅提升
  *    效率，战斗ai另外做即可(攻击玩家在ai定时器定时取watch_me列表即可)。怪物攻击怪物或
  *    npc在玩家靠近时对话可以给这些实体加上事件，这样的实体不会太多
  */
 
-#include <vector>
 #include "../pool/object_pool.h"
+#include <vector>
 
 class GridAOI
 {
@@ -67,7 +68,8 @@ protected:
     void del_entity_ctx(struct entity_ctx *ctx);
 
 private:
-    entity_vector_t *get_grid_entitys(int32_t x, int32_t y); // 获取格子内的实体列表
+    entity_vector_t *get_grid_entitys(int32_t x,
+                                      int32_t y); // 获取格子内的实体列表
     bool remove_entity_from_vector(entity_vector_t *list,
                                    const struct entity_ctx *ctx);
     // 插入实体到格子内

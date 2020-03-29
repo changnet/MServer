@@ -1,7 +1,7 @@
 #include "lnetwork_mgr.h"
 
-#include "ltools.h"
 #include "../system/static_global.h"
+#include "ltools.h"
 
 #include "../net/packet/http_packet.h"
 #include "../net/packet/stream_packet.h"

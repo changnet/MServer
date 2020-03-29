@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lua.hpp>
 #include "../scene/grid_map.h"
+#include <lua.hpp>
 
 /**
  * 地编数据，目前用格子实现

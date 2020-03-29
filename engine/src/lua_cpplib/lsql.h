@@ -1,10 +1,10 @@
 #pragma once
 
+#include "../global/global.h"
+#include "../mysql/sql.h"
+#include "../thread/thread.h"
 #include <lua.hpp>
 #include <queue>
-#include "../global/global.h"
-#include "../thread/thread.h"
-#include "../mysql/sql.h"
 
 /**
  * MySQL、MariaDB 操作
