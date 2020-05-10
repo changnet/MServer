@@ -69,7 +69,7 @@ void LTimer::callback(EVTimer &w, int32_t revents)
 
     static lua_State *L = StaticGlobal::state();
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "timer_event");
     lua_pushinteger(L, _timer_id);
 

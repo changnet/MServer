@@ -199,7 +199,7 @@ int32_t LSql::pop_result(struct SqlResult &res)
 void LSql::invoke_result()
 {
     static lua_State *L = StaticGlobal::state();
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
 
     /* sql_result是一个比较小的结构体，因此不使用指针 */
     struct SqlResult res;

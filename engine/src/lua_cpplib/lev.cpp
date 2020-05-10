@@ -152,7 +152,7 @@ void LEV::sig_handler(int32_t signum)
 void LEV::invoke_signal()
 {
     static lua_State *L = StaticGlobal::state();
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
 
     int signum  = 0;
     int32_t top = lua_gettop(L);
@@ -246,7 +246,7 @@ void LEV::invoke_app_ev(int64_t ms_now)
     // TODO:以当前时间为起点。服务器卡了，回调次数就少了，以后有需要再改
     _next_app_ev_tm = ms_now + _app_ev_interval;
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
     lua_pushinteger(L, ms_now);
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))

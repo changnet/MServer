@@ -218,7 +218,7 @@ const struct MongoResult *LMongo::pop_result()
 void LMongo::invoke_result()
 {
     static lua_State *L = StaticGlobal::state();
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
 
     const struct MongoResult *res = NULL;
     while ((res = pop_result()))

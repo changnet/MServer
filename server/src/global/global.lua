@@ -58,12 +58,22 @@ function vd(data, max_level)
     recursion = {}  --释放内存
 end
 
+-- 用于lua错误信息处理
 function __G__TRACKBACK( msg,co )
     local stack_trace = debug.traceback( co )
     local info_table = { tostring(msg),"\n",stack_trace }
     local str = table.concat( info_table )
 
     Log.elog( str )
+    return msg
+end
+
+-- 用于底层C错误信息处理
+function __G_C_TRACKBACK( msg,co )
+    local stack_trace = debug.traceback( co )
+    local info_table = { tostring(msg),"\n",stack_trace }
+
+    return table.concat( info_table )
 end
 
 -- 同步print log,只打印，不格式化

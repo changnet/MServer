@@ -74,7 +74,7 @@ void StreamPacket::sc_command(const struct s2c_header *header)
 
     uint32_t conn_id = _socket->conn_id();
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, conn_id);
     lua_pushinteger(L, header->_cmd);
@@ -138,7 +138,7 @@ void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
     int32_t conn_id           = _socket->conn_id();
     Codec::CodecType codec_ty = _socket->get_codec_type();
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, conn_id);
     lua_pushinteger(L, cmd);
@@ -239,7 +239,7 @@ void StreamPacket::ss_command(const s2s_header *header, const CmdCfg *cmd_cfg)
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, header->_owner);
@@ -290,7 +290,7 @@ void StreamPacket::css_command(const s2s_header *header)
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "css_command_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, header->_owner);
@@ -355,7 +355,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     int32_t top = lua_gettop(L); // pcall后，下面的栈都会被弹出
 
     lua_getglobal(L, "rpc_command_new");
@@ -399,7 +399,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     int32_t size       = PACKET_BUFFER_LEN(header);
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "rpc_command_return");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, header->_owner);
@@ -884,7 +884,7 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
     ASSERT(0 == lua_gettop(L), "lua stack dirty");
 
     // 根据参数从lua获取对应的玩家id
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "clt_multicast_new");
     lua_pushinteger(L, mask);
     for (int32_t idx = 2; idx < count + 2; idx++)

@@ -196,7 +196,7 @@ int32_t WSStreamPacket::sc_command()
         return 0;
     }
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, cmd);
@@ -237,7 +237,7 @@ int32_t WSStreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
         return 0;
     }
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, cmd);

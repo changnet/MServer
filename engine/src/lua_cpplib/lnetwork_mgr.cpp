@@ -639,7 +639,7 @@ bool LNetworkMgr::accept_new(uint32_t conn_id, class Socket *new_sk)
     _socket_map[new_conn_id] = new_sk;
 
     static lua_State *L = StaticGlobal::state();
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
 
     lua_getglobal(L, "conn_accept");
     lua_pushinteger(L, conn_id);
@@ -665,7 +665,7 @@ bool LNetworkMgr::accept_new(uint32_t conn_id, class Socket *new_sk)
 bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
 {
     static lua_State *L = StaticGlobal::state();
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
 
     lua_getglobal(L, "conn_new");
     lua_pushinteger(L, conn_id);
@@ -695,7 +695,7 @@ bool LNetworkMgr::connect_del(uint32_t conn_id)
     _deleting.push_back(conn_id);
 
     static lua_State *L = StaticGlobal::state();
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
 
     lua_getglobal(L, "conn_del");
     lua_pushinteger(L, conn_id);

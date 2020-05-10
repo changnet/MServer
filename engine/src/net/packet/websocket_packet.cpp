@@ -316,7 +316,7 @@ int32_t WebsocketPacket::invoke_handshake()
     static lua_State *L = StaticGlobal::state();
     ASSERT(0 == lua_gettop(L), "lua stack dirty");
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "handshake_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushstring(L, key_str);
@@ -341,7 +341,7 @@ int32_t WebsocketPacket::on_frame_end()
     uint32_t size   = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushlstring(L, ctx, size);
@@ -365,7 +365,7 @@ int32_t WebsocketPacket::on_ctrl_end()
     uint32_t size   = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "ctrl_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, _parser->flags);

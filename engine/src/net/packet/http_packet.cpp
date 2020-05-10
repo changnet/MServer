@@ -184,7 +184,7 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
     static lua_State *L = StaticGlobal::state();
     ASSERT(0 == lua_gettop(L), "lua stack dirty");
 
-    lua_pushcfunction(L, traceback);
+    LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushstring(L, _http_info._url.c_str());

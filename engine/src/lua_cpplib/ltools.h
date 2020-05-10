@@ -4,6 +4,12 @@
 #include <cmath>
 #include <lua.hpp>
 
+/**
+ * lua_pushcfunction(L, traceback);也可以，但lua_pushcfunction其实是创建一个
+ * 闭包，会占用一部分内存，然后再gc掉。因此在lua定义一个global函数可能更好
+ */
+#define LUA_PUSHTRACEBACK(L) lua_getglobal(L, "__G_C_TRACKBACK")
+
 #define LUA_REF(x)       \
     if (x) LUA_UNREF(x); \
     x = luaL_ref(L, LUA_REGISTRYINDEX)
