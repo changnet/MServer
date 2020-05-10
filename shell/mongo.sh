@@ -32,7 +32,9 @@ ADMIN_MONGO="$MONGO -uxzc -p1"
 # 创建数据库帐号管理员
 # mongodb和MySQL不一样，每个数据库都必须创建专属的帐号。而创建创建帐号需要帐号管理员
 # 帐号管理员只能管理帐号，不能管理数据库数据
-# 这是数据库的第一个管理员，所以要去/etc/mongod.conf注释掉authorization:enabled选项
+# 这是数据库的第一个管理员，所以要去/etc/mongod.conf注释掉authorization: enabled选项
+# security:
+#   authorization: enabled
 # systemctl start mongod
 # 运行完脚本后，再加上authorization:enabled然后重启数据库
 function admin()

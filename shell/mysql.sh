@@ -1,11 +1,14 @@
 #!/bin/bash
 
+CLI=mariadb #mysql
+
 # mysql control shell
 
 # 查看使用哪个配置文件 mariadb --verbose --help | grep my.cnf，一般是/etc/mysql/my.cnf
 
 # mariadb的配置在 cat /etc/mysql/mariadb.conf.d/50-server.cnf
-# debian系统下，/etc/mysql/debian.cnf配置root用户不用密码进入
+# debian系统下，/etc/mysql/debian.cnf配置root用户不用密码进入，所以即使设置了root密码
+# root用户仍然能不用密码进入，用了密码反而不行
 
 # 去掉 skip-grant-tables
 # 设置root密码: SET PASSWORD FOR 'root'@'localhost' = PASSWORD('1');
@@ -19,7 +22,7 @@
 # ./mysql.sh new_user root 1 test test
 function new_user()
 {
-    mysql -u$1 -p$2 <<EOF
+    $CLI -u$1 -p$2 <<EOF
     CREATE USER "$3"@'%' IDENTIFIED BY "$4";
     GRANT ALL PRIVILEGES ON *.* TO "$3"@'%' WITH GRANT OPTION;
     flush privileges;
@@ -31,11 +34,11 @@ EOF
 # ./mysql.sh new_log_schema test test test_999
 function new_log_schema()
 {
-    mysql -u$1 -p$2 <<EOF
+    $CLI -u$1 -p$2 <<EOF
     create schema $3 default character set utf8 collate utf8_general_ci;
 EOF
 
-mysql -u$1 -p$2 $3 --default_character_set utf8 < "../project/log_schema.sql"
+$CLI -u$1 -p$2 $3 --default_character_set utf8 < "../project/log_schema.sql"
 }
 
 # 导出数据库结构
