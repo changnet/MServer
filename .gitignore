@@ -9,6 +9,9 @@
 # qt creator project file
 *.pro.user*
 
+# 临时生成的文件
+engine/include
+
 setting.lua
 
 server/bin
