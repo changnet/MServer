@@ -7,6 +7,14 @@
 
 这个工程只是用来方便阅读分析代码的。编译、调试还是用Makefile和gdb。
 
+### no suitable kit found
+如果Qt Creator打开工程提示：no suitable kit found，是因为没有安装qmake，无法解析工程文件
+
+apt install qt5-default，然后在Qt Creator tools->Options->Qt Versions->add，最后设置好 构建套件(Kits)中的qmake版本即可
+
+### clang-format
+在Qt Creator的 帮助->插件里，新版本有clang-format支持。如果不能用（https://bugs.launchpad.net/ubuntu/+source/qtcreator/+bug/1876436），则在Beautifier这个插件里。
+配置选择File即可，.clang-format配置文件必须在engine/src根目录，否则格式化不生效，也不会有什么错误提示
 
 ### 添加已有目录
 1. 在工程上右键，选择 添加已有目录

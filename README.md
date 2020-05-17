@@ -16,7 +16,7 @@ component make sure it has high scalability.
 * Flatbuffer(optional,C++11 needed)
 * protobuf(optional,v2 and v3 compatible)
 
-## Build(e.g. debian7)
+## Build(e.g. debian9)
 
 * git clone https://github.com/changnet/MServer.git
 * cd MServer
