@@ -1,5 +1,3 @@
-#include <sys/utsname.h> /* for uname */
-
 #include "lua_cpplib/lclass.h"
 #include "system/static_global.h"
 

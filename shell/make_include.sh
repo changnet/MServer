@@ -2,33 +2,38 @@
 
 DST=../engine/include
 mkdir -p $DST
-rm -R $DST/*
+
+# clear directory if not empty
+if [ ! -z "$(ls -A $DST)" ]; then
+   rm -R $DST/*
+fi
+
+function cp_r()
+{
+    FROM=$1
+    local -n FILES=$2
+    for F in ${FILES[@]}; do
+        echo $DST/$F
+        cp -R $FROM/$F $DST/$F
+    done
+}
 
 # sh不能创建数组，故这里用bash
-LUA_INC=/usr/local/include
 LUA_FILES=( "lua.h" "lua.hpp" "luaconf.h" "lualib.h" "lauxlib.h" )
-for F in ${LUA_FILES[@]}; do
-    echo $DST/"$F"
-    cp -R $LUA_INC/$F $DST
-done
+cp_r /usr/local/include LUA_FILES
 
-MONGO_INC=/usr/local/include/libmongoc-1.0
-BSON_FILES=("mongoc" "mongoc.h")
-for F in ${BSON_FILES[@]}; do
-    echo $DST/"$F"
-    cp -R $MONGO_INC/$F $DST
-done
+MONGO_FILES=("mongoc" "mongoc.h")
+cp_r /usr/local/include/libmongoc-1.0 MONGO_FILES
 
-BSON_INC=/usr/local/include/libbson-1.0
+
 BSON_FILES=("bson" "bson.h")
-for F in ${BSON_FILES[@]}; do
-    echo $DST/"$F"
-    cp -R $BSON_INC/$F $DST
-done
+cp_r /usr/local/include/libbson-1.0 BSON_FILES
 
-cp -R /usr/include/uuid $DST
+USR_FILES=("uuid" "openssl")
+cp_r /usr/include/ USR_FILES
 
-cp -R /usr/include/openssl $DST
-cp /usr/include/x86_64-linux-gnu/openssl/opensslconf.h $DST/openssl/
+GNU_FILES=("openssl/opensslconf.h")
+cp_r /usr/include/x86_64-linux-gnu GNU_FILES
+
 echo "done"
 

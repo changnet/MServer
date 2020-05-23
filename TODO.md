@@ -25,6 +25,8 @@
 * 相对定时器(relative timer,指定周几，几日，时分秒，按月，按周循环)
 * 用小堆实现系统长时定时器，把上面的一些定时器管理起来
 
+## win下epoll接口封装： https://github.com/piscisaureus/wepoll/blob/dist/wepoll.h
+
 #清理test和doc目录中无关的内容，迁移到wiki
 #位置同步
 http://blog.codingnow.com/2006/04/sync.html

@@ -1,5 +1,7 @@
 ### Qt Creator project file
 
+https://www.qt.io/offline-installers
+
 我主要是在linux下用Visual Studio Code写这个框架，所以一般是不用IDE的。
 如果一定要用IDE，推荐跨平台的Qt Creator。
 
