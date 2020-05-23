@@ -13,8 +13,10 @@ function cp_r()
     FROM=$1
     local -n FILES=$2
     for F in ${FILES[@]}; do
-        echo $DST/$F
-        cp -R $FROM/$F $DST/$F
+        p=$DST/$F
+        echo $p
+        mkdir -p `dirname $p`
+        cp -R $FROM/$F $p
     done
 }
 
@@ -29,9 +31,11 @@ cp_r /usr/local/include/libmongoc-1.0 MONGO_FILES
 BSON_FILES=("bson" "bson.h")
 cp_r /usr/local/include/libbson-1.0 BSON_FILES
 
+# "arpa/inet.h" "features.h"
 USR_FILES=("uuid" "openssl")
 cp_r /usr/include/ USR_FILES
 
+#  "sys/epoll.h" "bits/epoll.h"  "bits/sigset.h" "sys/socket.h"
 GNU_FILES=("openssl/opensslconf.h")
 cp_r /usr/include/x86_64-linux-gnu GNU_FILES
 
