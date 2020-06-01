@@ -64,21 +64,41 @@ int32_t LAcism::on_replace(int32_t strnum, int32_t textpos, void *context)
 
 int32_t LAcism::do_replace(int32_t strnum, int32_t textpos)
 {
-    ASSERT((size_t)textpos > _memrpl.text_pos, "acism do_replace buffer error");
+    ASSERT((size_t) textpos >= _memrpl.text_pos, "acism do_replace buffer error");
 
+    //匹配到的单词长度
     size_t pattv_len = _pattv[strnum].len;
+    /**
+     * 同一个词，可能会被重复匹配，例如：
+     * O、K和OK都是需要匹配的单词，OK是要匹配的字符串
+     * 匹配到O时，会命中单词O，这时pattv_len为1
+     * 匹配到OK时，会命中单词O，这时pattv_len为1
+     * 匹配到OK时，会命中单词OK，这时pattv_len为2,计算出来的长度就为负数
+     * 一共会被匹配到3次
+     */
+    if (textpos - pattv_len < _memrpl.text_pos)
+    {
+        _memrpl.text_pos = textpos;
+        return 0;
+    }
+
     size_t str_len   = textpos - pattv_len - _memrpl.text_pos;
     size_t mem_len   = str_len + _memrpl.word_len + _memrpl.rpl_len;
 
-    /* 必须是<=，防止mem_len为0的情况 */
+    /* 重新分配替换后的内存，必须是<=，防止mem_len为0的情况 */
     if (_memrpl.rpl_size <= mem_len) _memrpl.reserved(mem_len);
 
     ASSERT(_memrpl.rpl_size >= mem_len, "acism do_replace buffer overflow");
 
-    memcpy(_memrpl.rpl_text + _memrpl.rpl_len, _memrpl.text + _memrpl.text_pos,
-           str_len);
-    _memrpl.rpl_len += str_len;
+    // 复制被替换之前的字符串
+    if (str_len > 0)
+    {
+        memcpy(_memrpl.rpl_text + _memrpl.rpl_len,
+               _memrpl.text + _memrpl.text_pos, str_len);
+        _memrpl.rpl_len += str_len;
+    }
 
+    // 复制要替换的字符串
     memcpy(_memrpl.rpl_text + _memrpl.rpl_len, _memrpl.word, _memrpl.word_len);
     _memrpl.rpl_len += _memrpl.word_len;
 
