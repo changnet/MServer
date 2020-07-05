@@ -25,30 +25,30 @@ CHAT = {
 PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- 登录
     LOGIN = {
-        s = "player.SLogin"
+        s = "player.SLogin", i = 1
     },
     -- 心跳包
     PING = {
-        s = "player.SPing"
+        s = "player.SPing", i = 2
     }, -- 同时用来显示ping值
     -- 创角
     CREATE = {
-        s = "player.SCreateRole"
+        s = "player.SCreateRole", i = 3
     },
     -- 进入游戏
     ENTER = {
-        s = "player.SEnterWorld"
+        s = "player.SEnterWorld", i = 4
     },
     -- 顶号
     OTHER = {
-        s = "player.SLoginOtherWhere", c = "player.SLoginOtherWhere",
+        s = "player.SLoginOtherWhere", c = "player.SLoginOtherWhere", i = 5
     },
     -- 登录时下发基础数据
     BASE = {
-        s = "player.SBase"
+        s = "player.SBase", i = 6
     },
     -- 更新通用资源
     UPDATE_RES = {
-        s = "player.SUpdateRes"
+        s = "player.SUpdateRes", i = 7
     },
 }
