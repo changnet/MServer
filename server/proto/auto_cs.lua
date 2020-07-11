@@ -1,3 +1,5 @@
+-- AUTO GENERATE, DO NOT MODIFY
+
 -- client & server protocol define
 
 --[[

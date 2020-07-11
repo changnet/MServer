@@ -2,7 +2,7 @@
 
 -- ＠param path 需要解析的文件路径
 -- ＠param s_path 生成的服务器协议文件路径(包含文件名)
--- ＠param c_type 成的客户端协议文件类型，支持 lua、typescript
+-- ＠param c_type 成的客户端协议文件类型，支持 lua、ts(typescript)
 -- ＠param c_path 生成的客户端协议文件路径(包含文件名)
 local path, s_path, c_type, c_path = ...
 
@@ -254,6 +254,8 @@ local function write_lua(path, ctx)
 
     assert(f)
 
+    f:write("-- AUTO GENERATE, DO NOT MODIFY\n\n")
+
     for index, line in ipairs(ctx.lines) do
         local change = ctx.changes[index]
         if not change then
@@ -273,6 +275,82 @@ local function write_lua(path, ctx)
 
     f:flush()
     io.close(f)
+end
+
+-- 生成typescript配置
+local function write_ts(path, ctx)
+--[[
+export interface CS {
+    i: number;
+    c?: string;
+    s?: string;
+}
+
+export class PLAYER {
+
+    /**
+     * 登录
+     */
+    public static LOGIN: CS = {
+        s: "player.SLogin", i: 1
+    }
+}
+
+export const Cmd: Map<number, CS> = new Map<number, CS>([
+    [1, PLAYER.LOGIN]
+])
+]]
+    local f = io.open(path, "w")
+
+    assert(f)
+
+    f:write("// AUTO GENERATE, DO NOT MODIFY\n\n")
+    f:write("export interface CS {\n")
+    f:write("    i: number;\n")
+    f:write("    c?: string;\n")
+    f:write("    s?: string;\n")
+    f:write("}\n\n")
+
+    local cur_m
+    for _, v in ipairs(ctx.sym_list) do
+        local m = v.m
+        if cur_m ~= m then
+            -- 上一个模块结束
+            if cur_m then f:write("}\n\n") end
+            -- 当前模块开始
+            cur_m = m
+            f:write("export class " .. m .. " {\n")
+        end
+
+        local mm = v.mm
+        f:write("    public static " .. mm .. ": CS = {\n")
+        f:write("        ") -- 缩进
+
+        v = ctx.symbols[m][mm]
+
+        local first = true
+        first = write_fields(f, v.s, "s: ", first)
+        first = write_fields(f, v.c, "c: ", first)
+        first = write_fields(f, v.i, "i: ", first)
+        f:write("\n    }\n")
+    end
+
+    -- 上一个模块结束
+    if cur_m then f:write("}\n\n") end
+
+    -- 写入一个根据i获取协议信息的map
+    f:write("export const Cmd: Map<number, CS> = new Map<number, CS>([")
+    for _, v in ipairs(ctx.sym_list) do
+        local m = v.m
+        local mm = v.mm
+        v = ctx.symbols[m][mm]
+        f:write(string.format("\n    [%d, %s.%s],", v.i, m, mm))
+    end
+    f:write("\n]);\n")
+
+    f:flush()
+    io.close(f)
+    print("TODO: 导出注释到ts")
 end
 
 local function main()
@@ -295,7 +373,7 @@ local function main()
         local old_m = old_define[m] or {}
         local old_mm = old_m[mm] or {}
         if old_mm.i then
-            ctx.symbols[m][nm].i = old_mm.i
+            ctx.symbols[m][mm].i = old_mm.i
         else
             max_id = max_id + 1
             ctx.symbols[m][mm].i = max_id
@@ -305,6 +383,14 @@ local function main()
 
     write_lua(s_path, ctx)
     print(string.format("writing new define to %s", s_path))
+
+    if c_type == "ts" or c_type == "typescript" then
+        write_ts(c_path, ctx)
+        print(string.format("writing new define to %s", c_path))
+    elseif c_type == "lua" then
+        write_lua(c_path, ctx)
+        print(string.format("writing new define to %s", c_path))
+    end
 end
 
 main()
