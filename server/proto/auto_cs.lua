@@ -27,23 +27,28 @@ CHAT = {
 PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- 登录
     LOGIN = {
-        s = "player.SLogin", i = 1
+        s = "player.SLogin", c = "player.CLogin", i = 1
+
     },
     -- 心跳包
     PING = {
-        s = "player.SPing", i = 2
+        s = "player.SPing", c = "player.CPing", i = 2
+
     }, -- 同时用来显示ping值
     -- 创角
     CREATE = {
-        s = "player.SCreateRole", i = 3
+        s = "player.SCreateRole", c = "player.CCreateRole", i = 3
+
     },
     -- 进入游戏
     ENTER = {
-        s = "player.SEnterWorld", i = 4
+        s = "player.SEnterWorld", c = "player.CEnterWorld", i = 4
+
     },
     -- 顶号
     OTHER = {
         s = "player.SLoginOtherWhere", c = "player.SLoginOtherWhere", i = 5
+
     },
     -- 登录时下发基础数据
     BASE = {
@@ -52,5 +57,77 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- 更新通用资源
     UPDATE_RES = {
         s = "player.SUpdateRes", i = 7
+    },
+    -- 进入副本
+    ENTERFUBEN = {
+        c = "player.CEnterFuben", i = 8
+    },
+}
+
+-- 聊天
+CHAT = {
+    CHATINFO = {
+        s = "chat.SChatInfo", i = 9
+    },
+    DOCHAT = {
+        s = "chat.SDoChat", c = "chat.CDoChat", i = 10
+
+    },
+}
+
+-- 一些零散的功能，不必定义独立的协议，可以都放这里
+MISC = {
+    WELCOME = {
+        s = "misc.SWelcome", i = 11
+    },
+    TIPS = {
+        s = "misc.STips", i = 12
+    },
+    WELCOME_GET = {
+        c = "misc.CWelcomeGet", i = 13
+    },
+}
+
+-- 背包模块
+BAG = {
+    INFO = {
+        s = "bag.SBagInfo", i = 14
+    },
+}
+
+-- 邮件模块
+MAIL = {
+    INFO = {
+        s = "mail.SMailInfo", i = 15
+    },
+    DEL = {
+        s = "mail.SMailDel", c = "mail.CMailDel", i = 16
+
+    },
+    NEW = {
+        s = "mail.SNewMail", i = 17
+    },
+}
+
+-- 场景实体相关协议
+ENTITY = {
+    APPEAR = {
+        s = "entity.SAppear", i = 18
+    },
+    DISAPPEAR = {
+        s = "entity.SDisappear", i = 19
+    },
+    MOVE = {
+        s = "entity.SMove", c = "entity.CMove", i = 20
+
+    },
+    POS = {
+        s = "entity.SPos", i = 21
+    },
+    ENTERSCENE = {
+        s = "entity.SEnterScene", i = 22
+    },
+    PROPERTY = {
+        s = "entity.SProperty", i = 23
     },
 }

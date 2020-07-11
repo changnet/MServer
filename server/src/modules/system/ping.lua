@@ -90,7 +90,7 @@ function Ping:done( id,info )
             table.insert(pkt.srvtime,srvtime)
         end
 
-        return conn:send_pkt( SC.PLAYER_PING,pkt )
+        return conn:send_pkt( PLAYER.PING,pkt )
     end
 end
 
@@ -109,7 +109,7 @@ end
 g_rpc:declare( "rpc_ping",rpc_ping,-1 )
 
 if "gateway" == g_app.srvname then
-    g_command_mgr:clt_register( CS.PLAYER_PING,player_ping )
+    g_command_mgr:clt_register( PLAYER.PING,player_ping )
 end
 
 return ping

@@ -16,13 +16,13 @@ end
 
 -- 发送数据包
 function SrvConn:send_pkt( cmd,pkt,ecode )
-    return network_mgr:send_s2s_packet( self.conn_id,cmd,ecode or 0,pkt )
+    return network_mgr:send_s2s_packet( self.conn_id,cmd.i,ecode or 0,pkt )
 end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
 function SrvConn:send_clt_pkt( pid,cmd,pkt,ecode )
     return network_mgr:send_ssc_packet(
-        self.conn_id,pid,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+        self.conn_id,pid,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
 end
 
 -- 发送数据包
@@ -164,7 +164,7 @@ function SrvConn:send_register()
         timestamp = ev:time(),
     }
     pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
-    self:send_pkt( SS.SYS_REG,pkt )
+    self:send_pkt( SYS.REG,pkt )
 end
 
 return SrvConn

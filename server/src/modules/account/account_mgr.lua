@@ -76,7 +76,7 @@ function AccountMgr:player_login( clt_conn,pkt )
     end
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    clt_conn:send_pkt( SC.PLAYER_LOGIN,role_info )
+    clt_conn:send_pkt( PLAYER.LOGIN,role_info )
 
     PRINTF( "client authorized success:%s--%d",pkt.account,role_info.pid or 0 )
 end
@@ -180,7 +180,7 @@ function AccountMgr:send_role_create( role_info,ecode )
     local clt_conn = g_network_mgr:get_conn( role_info.conn_id )
     if not clt_conn then return end
 
-    clt_conn:send_pkt( SC.PLAYER_CREATE,role_info,ecode )
+    clt_conn:send_pkt( PLAYER.CREATE,role_info,ecode )
 end
 
 -- 玩家下线
@@ -207,12 +207,12 @@ end
 function AccountMgr:login_otherwhere( role_info )
     -- 告诉原连接被顶号
     local old_conn = g_network_mgr:get_conn( role_info.conn_id )
-    old_conn:send_pkt( SC.PLAYER_OTHER,{} )
+    old_conn:send_pkt( PLAYER.OTHER,{} )
 
     -- 通知其他服务器玩家下线
     if role_info.pid then
         local pkt = { pid = role_info.pid }
-        g_network_mgr:send_world_pkt( SS.PLAYER_OTHERWHERE,pkt )
+        g_network_mgr:send_world_pkt( SYS.PLAYER_OTHERWHERE,pkt )
     end
 
     -- 关闭旧客户端连接

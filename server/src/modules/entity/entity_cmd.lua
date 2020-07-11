@@ -68,7 +68,7 @@ local function player_init_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
     local py = math.random(0,64*64)
     g_dungeon_mgr:enter_static_scene(player,scene_id,px,py)
 
-    player:send_pkt( SC.PLAYER_ENTER,{} )
+    player:send_pkt( PLAYER.ENTER,{} )
     PRINT("player init scene",pid,scene_id,px,py)
 end
 
@@ -91,5 +91,5 @@ local function entity_player_clt_cb( cmd,cb_func )
     g_command_mgr:clt_register( cmd,cb )
 end
 
-entity_player_clt_cb( CS.ENTITY_MOVE,EntityPlayer.do_move )
+entity_player_clt_cb( ENTITY.MOVE,EntityPlayer.do_move )
 --------------------------------------------------------------------------------

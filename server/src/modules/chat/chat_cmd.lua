@@ -17,4 +17,4 @@ local function chat_clt_cb( cmd,cb_func )
     g_command_mgr:clt_register( cmd,cb )
 end
 
-chat_clt_cb( CS.CHAT_DOCHAT,Chat.do_chat )
+chat_clt_cb( CHAT.DOCHAT,Chat.do_chat )

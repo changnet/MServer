@@ -37,7 +37,7 @@ function Loginout:do_login(entity)
     }
     pkt.sign = util.md5( LOGIN_KEY,pkt.time,pkt.account )
 
-    return entity:send_pkt( CS.PLAYER_LOGIN,pkt )
+    return entity:send_pkt( PLAYER.LOGIN,pkt )
 end
 
 
@@ -51,7 +51,7 @@ function Loginout:on_login( entity,errno,pkt )
     -- no role,create one now
     if 0 == (pkt.pid or 0) then
         local _pkt = { name = string.format( "android_%d",entity.index ) }
-        entity:send_pkt( CS.PLAYER_CREATE,_pkt )
+        entity:send_pkt( PLAYER.CREATE,_pkt )
 
         return
     end
@@ -80,7 +80,7 @@ end
 
 -- 请求进入游戏
 function Loginout:enter_world( entity )
-    entity:send_pkt( CS.PLAYER_ENTER,{} )
+    entity:send_pkt( PLAYER.ENTER,{} )
 end
 
 -- 确认进入游戏完成
@@ -176,10 +176,10 @@ end
 g_android_cmd:conn_new_register(net_cb(Loginout.on_conn_new))
 g_android_cmd:handshake_register(net_cb(Loginout.on_handshake))
 
-cmd_cb( SC.PLAYER_LOGIN,Loginout.on_login)
-cmd_cb( SC.PLAYER_CREATE,Loginout.on_create_role)
-cmd_cb( SC.PLAYER_ENTER,Loginout.on_enter_world)
-cmd_cb( SC.PLAYER_OTHER,Loginout.on_login_otherwhere)
-cmd_cb( SC.ENTITY_PROPERTY,Loginout.on_init_property)
+cmd_cb( PLAYER.LOGIN,Loginout.on_login)
+cmd_cb( PLAYER.CREATE,Loginout.on_create_role)
+cmd_cb( PLAYER.ENTER,Loginout.on_enter_world)
+cmd_cb( PLAYER.OTHER,Loginout.on_login_otherwhere)
+cmd_cb( ENTITY.PROPERTY,Loginout.on_init_property)
 
 return Loginout

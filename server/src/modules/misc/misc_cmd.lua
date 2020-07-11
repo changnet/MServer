@@ -30,4 +30,4 @@ local function role_welcome_cmd_cb( cmd,func )
 end
 
 g_player_ev:register( PLAYER_EV.ENTER,role_welcome_cb(role_welcome.on_enter) )
-role_welcome_cmd_cb( CS.MISC_WELCOME_GET,role_welcome.handle_award )
+role_welcome_cmd_cb( MISC.WELCOME_GET,role_welcome.handle_award )

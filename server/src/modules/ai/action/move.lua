@@ -12,7 +12,7 @@ function Move:random_move(ai)
     -- 在dungeon_mgr中初始化的场景大小
     local px = math.random(0,128*64 - 1)
     local py = math.random(0,64*64 - 1)
-    ai.entity:send_pkt( CS.ENTITY_MOVE,{ way = MT.WALK,pix_x = px,pix_y = py } )
+    ai.entity:send_pkt( ENTITY.MOVE,{ way = MT.WALK,pix_x = px,pix_y = py } )
 
     ai.moving = true
     ai.dx = px
@@ -87,7 +87,7 @@ function Move:switch_fuben(ai)
     local id = math.random(1,10)
     if id == (ai.fb_id or 0) then return end
 
-    ai.entity:send_pkt( CS.PLAYER_ENTERFUBEN,{ id = id } )
+    ai.entity:send_pkt( PLAYER.ENTERFUBEN,{ id = id } )
     ai.fuben_time = now + math.random(10,30)
 
     ai.fb_id = id
@@ -105,10 +105,10 @@ local function cmd_cb( cmd,cb )
     g_android_cmd:cmd_register( cmd,raw_cb )
 end
 
-cmd_cb( SC.ENTITY_MOVE,Move.on_move)
-cmd_cb( SC.ENTITY_APPEAR,Move.on_appear)
-cmd_cb( SC.ENTITY_POS,Move.on_update_pos)
-cmd_cb( SC.ENTITY_DISAPPEAR,Move.on_disappear)
-cmd_cb( SC.ENTITY_ENTERSCENE,Move.on_enter_scene)
+cmd_cb( ENTITY.MOVE,Move.on_move)
+cmd_cb( ENTITY.APPEAR,Move.on_appear)
+cmd_cb( ENTITY.POS,Move.on_update_pos)
+cmd_cb( ENTITY.DISAPPEAR,Move.on_disappear)
+cmd_cb( ENTITY.ENTERSCENE,Move.on_enter_scene)
 
 return Move

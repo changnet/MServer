@@ -1,39 +1,32 @@
 -- 消息管理
 
-local ss_map = {}
-local cs_map = {}
-
-local ss_list  = require "proto.ss_command"
-local cmd_list = require "proto.proto"
-
--- 协议使用太频繁，放到全局变量，方便调用
-SS = {}
-for k,v in pairs( ss_list ) do
-    -- 使用时只需要一个值就可以了，没必要传一个table
-    -- PLAYER.LOGIN是一个值而不是一个table
-    SS[k] = v[1]
-    ss_map[ v[1] ] = v
-end
-
-SC = {}
-for k,v in pairs( cmd_list[1] ) do
-    SC[k] = v[1]
-end
-
-CS = {}
-for k,v in pairs( cmd_list[2] ) do
-    CS[k] = v[1]
-    cs_map[ v[1] ] = v
-end
-
-local CS = CS
-local SS = SS
-
 local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
+
+local CS = load_global_define("proto.auto_cs", true)
+local SS = load_global_define("proto.auto_ss", true)
+
+local cs_map = {}
+local ss_map = {}
+
 -- 对于CS、SS数据包，因为要实现现自动转发，在注册回调时设置,因为要记录sesseion
 -- SC数据包则需要在各个进程设置到C++，这样就能在所有进程发协议给客户端
-for _,v in pairs( cmd_list[1] ) do
-    network_mgr:set_sc_cmd( v[1],v[2],v[3],0,0 )
+for _, m in pairs(CS) do
+    for _, mm in pairs(m) do
+        if mm.s then
+            -- 对于protobuf，使用"player.SLogin"这种结构
+            -- 但对于flatbuffers，是文件名 ＋ 结构名，所以要拆分
+            local p = string.match(mm.s, "^(%w+)%.%w+$")
+            network_mgr:set_sc_cmd(mm.i, p, mm.s ,0, 0)
+        end
+
+        cs_map[mm.i] = mm
+    end
+end
+
+for _, m in pairs(CS) do
+    for _, mm in pairs(m) do
+        ss_map[mm.i] = mm
+    end
 end
 
 local SESSION = g_app.session
@@ -44,13 +37,13 @@ local CommandMgr = oo.singleton( ... )
 
 function CommandMgr:__init()
     self.ss = {} -- 记录服务器之间回调函数
-    for _,v in pairs( SS ) do
-        self.ss[ v ] = {}
+    for i in pairs( ss_map ) do
+        self.ss[i] = {}
     end
 
     self.cs = {} -- 记录客户端-服务器之间的回调函数
-    for _,v in pairs( CS ) do
-        self.cs[ v ] = {}
+    for i, mm in pairs( cs_map ) do
+        if mm.c then self.cs[i] = {} end
     end
 
     self.app_reg = {} -- 哪些进程已注册过了
@@ -168,6 +161,7 @@ end
 
 -- 加载二进制flatbuffers schema文件
 function CommandMgr:load_schema()
+    -- 注意：pbc中如果一个pb文件引用了另一个pb文件中的message，则另一个文件必须优先加载
     local pfs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"../pb" )
     PRINTF( "load protocol schema:%d",pfs )
 
@@ -187,33 +181,35 @@ end
 
 -- 注册客户端协议处理
 function CommandMgr:clt_register( cmd,handler,noauth )
-    local cfg = self.cs[cmd]
+    local i = cmd.i
+    local cfg = self.cs[i]
     if not cfg then
-        return error( "clt_register:cmd not define" )
+        return error( "clt_register:cmd not define: " .. i)
     end
 
     cfg.handler = handler
     cfg.noauth  = noauth  -- 处理此协议时，不要求该链接可信
 
-    local raw_cfg = cs_map[cmd]
-    network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
+    network_mgr:set_cs_cmd(
+        i, string.match(cmd.c, "^(%w+)%.%w+$"), cmd.c,0,SESSION)
 end
 
 -- 注册服务器协议处理
 -- @noauth    -- 处理此协议时，不要求该链接可信
 -- @noreg     -- 此协议不需要注册到其他服务器
 function CommandMgr:srv_register( cmd,handler,noreg,noauth )
-    local cfg = self.ss[cmd]
+    local i = cmd.i
+    local cfg = self.ss[i]
     if not cfg then
-        return error( "srv_register:cmd not define" )
+        return error( "srv_register:cmd not define: " .. i)
     end
 
     cfg.handler  = handler
     cfg.noauth   = noauth
     cfg.noreg    = noreg
 
-    local raw_cfg = ss_map[cmd]
-    network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,SESSION )
+    network_mgr:set_ss_cmd(
+        i, string.match(cmd.s, "^(%w+)%.%w+$"), cmd.s,0,SESSION )
 end
 
 -- 本进程需要注册的指令
@@ -351,13 +347,14 @@ function CommandMgr:other_cmd_register( srv_conn,pkt )
     for _,cmd in pairs( pkt.clt_cmd or {} ) do
         local _cfg = self.cs[cmd]
         ASSERT( _cfg,"other_cmd_register no such clt cmd", cmd )
-        if not g_app.ok then -- 启动的时候检查一下，热更则覆盖
+        if not g_app.ok then -- 启动的时候检查是否重复，热更操作则直接覆盖
             ASSERT( _cfg,"other_cmd_register clt cmd register conflict", cmd )
         end
 
         _cfg.session = session
         local raw_cfg = cs_map[cmd]
-        network_mgr:set_cs_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],mask,session )
+        network_mgr:set_cs_cmd(
+            cmd, string.match(raw_cfg.c, "^(%w+)%.%w+$"),raw_cfg.c,mask,session)
     end
 
     -- 记录该服务器所处理的ss指令
@@ -368,7 +365,8 @@ function CommandMgr:other_cmd_register( srv_conn,pkt )
 
         _cfg.session = session
         local raw_cfg = ss_map[cmd]
-        network_mgr:set_ss_cmd( raw_cfg[1],raw_cfg[2],raw_cfg[3],0,session )
+        network_mgr:set_ss_cmd(
+            cmd, string.match(raw_cfg.s, "^(%w+)%.%w+$"),raw_cfg.s,0,session)
     end
 
     -- 记录该服务器所处理的rpc指令

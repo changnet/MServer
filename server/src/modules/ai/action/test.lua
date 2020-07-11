@@ -36,7 +36,7 @@ function Test:ping(ai)
 
     local ctx = random_str[math.random(1,#random_str)]
     ai.ping_ts = (ai.ping_ts or 0) + 1
-    entity:send_pkt( CS.PLAYER_PING,
+    entity:send_pkt( PLAYER.PING,
         {
             index = ai.ping_ts,
             context = ctx
@@ -47,16 +47,16 @@ end
 function Test:gm(ai)
     -- gm测试
     local entity = ai.entity
-    -- entity:send_pkt( CS.MISC_WELCOME_GET,{} )
-    entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@ghf" } )
-    entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_gold 9" } )
-    entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 10000 1" } )
-    entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 10001 1" } )
-    entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "@add_item 20001 1" } )
+    -- entity:send_pkt( MISC.WELCOME_GET,{} )
+    entity:send_pkt( CHAT.DOCHAT,{ channel = 1,context = "@ghf" } )
+    entity:send_pkt( CHAT.DOCHAT,{ channel = 1,context = "@add_gold 9" } )
+    entity:send_pkt( CHAT.DOCHAT,{ channel = 1,context = "@add_item 10000 1" } )
+    entity:send_pkt( CHAT.DOCHAT,{ channel = 1,context = "@add_item 10001 1" } )
+    entity:send_pkt( CHAT.DOCHAT,{ channel = 1,context = "@add_item 20001 1" } )
 end
 
 function Test:chat(ai)
-    ai.entity:send_pkt( CS.CHAT_DOCHAT,{ channel = 1,context = "12345678" } )
+    ai.entity:send_pkt( CHAT.DOCHAT,{ channel = 1,context = "12345678" } )
 end
 
 -- ************************************************************************** --
@@ -86,7 +86,7 @@ local function cmd_cb( cmd,cb )
     g_android_cmd:cmd_register( cmd,raw_cb )
 end
 
-cmd_cb( SC.PLAYER_PING,Test.on_ping)
-cmd_cb( SC.CHAT_DOCHAT,Test.on_chat)
+cmd_cb( PLAYER.PING,Test.on_ping)
+cmd_cb( CHAT.DOCHAT,Test.on_chat)
 
 return Test

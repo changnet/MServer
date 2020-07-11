@@ -246,7 +246,7 @@ function Bag:send_info()
         end
     end
 
-    self.player:send_pkt( SC.BAG_INFO,pkt )
+    self.player:send_pkt( BAG.INFO,pkt )
 end
 
 -- 发送单个道具数据
@@ -256,7 +256,7 @@ function Bag:send_one_info(item,grid)
 
     table.insert( pkt.items,self:pack_one_item(item,grid) )
 
-    self.player:send_pkt( SC.BAG_INFO,pkt )
+    self.player:send_pkt( BAG.INFO,pkt )
 end
 
 return Bag

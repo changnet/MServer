@@ -43,5 +43,5 @@ if "world" == g_app.srvname then
     g_rpc:declare( "rpc_send_mail",rpc_send_mail )
     g_rpc:declare( "rpc_send_sys_mail",rpc_send_sys_mail )
 
-    mail_mgr_cb( CS.MAIL_DEL,Mail.handle_mail_del )
+    mail_mgr_cb( MAIL.DEL,Mail.handle_mail_del )
 end

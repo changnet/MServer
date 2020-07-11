@@ -66,7 +66,7 @@ function Scene:broadcast_entity_appear(entity,eid_list,way)
         -- 告诉我周围出现了这个实体(玩家或怪物、npc)
         if is_player then
             local other_pkt = tmp_entity:appear_pkt()
-            entity:send_pkt(SC.ENTITY_APPEAR,other_pkt)
+            entity:send_pkt(ENTITY.APPEAR,other_pkt)
         end
     end
 
@@ -74,7 +74,7 @@ function Scene:broadcast_entity_appear(entity,eid_list,way)
     if not table.empty(pid_list) then
         -- 1表示底层按玩家pid广播
         local my_pkt = entity:appear_pkt()
-        g_network_mgr:clt_multicast( 1,pid_list,SC.ENTITY_APPEAR,my_pkt )
+        g_network_mgr:clt_multicast( 1,pid_list,ENTITY.APPEAR,my_pkt )
     end
 end
 
@@ -89,7 +89,7 @@ function Scene:send_enter_scene(entity,pix_x,pix_y)
     scene_pkt.pix_x = pix_x
     scene_pkt.pix_y = pix_y
 
-    return entity:send_pkt(SC.ENTITY_ENTERSCENE,scene_pkt)
+    return entity:send_pkt(ENTITY.ENTERSCENE,scene_pkt)
 end
 
 -- 实体进入场景
@@ -136,7 +136,7 @@ function Scene:broadcast_entity_disappear(entity,eid_list,way)
     exit_pkt.way = 0 -- 如何退出
     exit_pkt.handle = entity.eid
     -- 1表示底层按玩家pid广播
-    return g_network_mgr:clt_multicast(1,pid_list,SC.ENTITY_DISAPPEAR,exit_pkt)
+    return g_network_mgr:clt_multicast(1,pid_list,ENTITY.DISAPPEAR,exit_pkt)
 end
 
 -- 广播数据给关注我的玩家

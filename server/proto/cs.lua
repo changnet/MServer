@@ -25,23 +25,28 @@ CHAT = {
 PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- 登录
     LOGIN = {
-        s = "player.SLogin"
+        s = "player.SLogin",
+        c = "player.CLogin"
     },
     -- 心跳包
     PING = {
-        s = "player.SPing"
+        s = "player.SPing",
+        c = "player.CPing"
     }, -- 同时用来显示ping值
     -- 创角
     CREATE = {
-        s = "player.SCreateRole"
+        s = "player.SCreateRole",
+        c = "player.CCreateRole"
     },
     -- 进入游戏
     ENTER = {
-        s = "player.SEnterWorld"
+        s = "player.SEnterWorld",
+        c = "player.CEnterWorld"
     },
     -- 顶号
     OTHER = {
-        s = "player.SLoginOtherWhere", c = "player.SLoginOtherWhere",
+        s = "player.SLoginOtherWhere",
+        c = "player.SLoginOtherWhere",
     },
     -- 登录时下发基础数据
     BASE = {
@@ -50,5 +55,77 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- 更新通用资源
     UPDATE_RES = {
         s = "player.SUpdateRes"
+    },
+    -- 进入副本
+    ENTERFUBEN = {
+        c = "player.CEnterFuben"
+    },
+}
+
+-- 聊天
+CHAT = {
+    CHATINFO = {
+        s = "chat.SChatInfo"
+    },
+    DOCHAT = {
+        s = "chat.SDoChat",
+        c = "chat.CDoChat"
+    },
+}
+
+-- 一些零散的功能，不必定义独立的协议，可以都放这里
+MISC = {
+    WELCOME = {
+        s = "misc.SWelcome"
+    },
+    TIPS = {
+        s = "misc.STips"
+    },
+    WELCOME_GET = {
+        c = "misc.CWelcomeGet"
+    },
+}
+
+-- 背包模块
+BAG = {
+    INFO = {
+        s = "bag.SBagInfo"
+    },
+}
+
+-- 邮件模块
+MAIL = {
+    INFO = {
+        s = "mail.SMailInfo"
+    },
+    DEL = {
+        s = "mail.SMailDel",
+        c = "mail.CMailDel"
+    },
+    NEW = {
+        s = "mail.SNewMail",
+    },
+}
+
+-- 场景实体相关协议
+ENTITY = {
+    APPEAR = {
+        s = "entity.SAppear"
+    },
+    DISAPPEAR = {
+        s = "entity.SDisappear"
+    },
+    MOVE = {
+        s = "entity.SMove",
+        c = "entity.CMove"
+    },
+    POS = {
+        s = "entity.SPos"
+    },
+    ENTERSCENE = {
+        s = "entity.SEnterScene"
+    },
+    PROPERTY = {
+        s = "entity.SProperty"
     },
 }

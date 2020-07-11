@@ -65,8 +65,8 @@ end
 --------------------------------------------------------------------------------
 
 -- 加载lua文件，并读取其中的全局变量
-local function load_define(path)
-    local f = io.open(path, "r")
+local function load_define(def_path)
+    local f = io.open(def_path, "r")
 
     -- 文件不存在
     if not f then return {} end
@@ -77,8 +77,8 @@ local function load_define(path)
     setmetatable(_G, {
         __newindex = define
     })
-    -- require(path) -- require不能处理带../..这种相对路径，或者固定路径
-    dofile(path)
+    -- require(def_path) -- require不能处理带../..这种相对路径，或者固定路径
+    dofile(def_path)
     setmetatable(_G, nil)
 
     return define
@@ -256,6 +256,7 @@ local function write_lua(path, ctx)
 
     f:write("-- AUTO GENERATE, DO NOT MODIFY\n\n")
 
+    local done = {}
     for index, line in ipairs(ctx.lines) do
         local change = ctx.changes[index]
         if not change then
@@ -263,12 +264,15 @@ local function write_lua(path, ctx)
         else
             local v = ctx.symbols[change.m][change.mm]
 
-            local first = true
-            f:write("        ")
-            first = write_fields(f, v.s, "s = ", first)
-            first = write_fields(f, v.c, "c = ", first)
-            first = write_fields(f, v.i, "i = ", first)
-            first = write_fields(f, v.t, "-- ", first)
+            if not done[v.i] then
+                done[v.i] = true
+                local first = true
+                f:write("        ")
+                first = write_fields(f, v.s, "s = ", first)
+                first = write_fields(f, v.c, "c = ", first)
+                first = write_fields(f, v.i, "i = ", first)
+                first = write_fields(f, v.t, "-- ", first)
+            end
         end
         f:write("\n")
     end

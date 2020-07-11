@@ -130,7 +130,7 @@ function NetworkMgr:check_one_timeout( srv_conn,check_time )
         self:close_srv_conn( srv_conn )
         if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
     elseif ts > 0 and srv_conn.auth then
-        srv_conn:send_pkt( SS.SYS_BEAT,tm_pkt )
+        srv_conn:send_pkt( SYS.BEAT,tm_pkt )
     end
 end
 
@@ -306,7 +306,7 @@ function NetworkMgr:clt_conn_del( conn_id )
     if conn.pid then
         self.clt[conn.pid] = nil
         local pkt = { pid = conn.pid }
-        g_network_mgr:send_world_pkt( SS.PLAYER_OFFLINE,pkt )
+        g_network_mgr:send_world_pkt( SYS.PLAYER_OFFLINE,pkt )
     end
 
     PRINTF( "client connect del:%d",conn_id )

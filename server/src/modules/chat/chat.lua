@@ -45,7 +45,7 @@ function Chat:private_chat( conn,pkt )
     rpkt.context = pkt.context
     rpkt.channel = CHAT.CHL_PRIVATE
 
-    player:send_pkt( SC.CHAT_DOCHAT,rpkt )
+    player:send_pkt( CHAT.DOCHAT,rpkt )
 end
 
 -- 世界聊天
@@ -56,7 +56,7 @@ function Chat:world_chat( conn,pkt )
     rpkt.context = pkt.context
     rpkt.channel = CHAT.CHL_PRIVATE
 
-    g_network_mgr:clt_multicast( 2,{},SC.CHAT_DOCHAT,rpkt )
+    g_network_mgr:clt_multicast( 2,{},CHAT.DOCHAT,rpkt )
 end
 
 channel_func[CHAT.CHL_WORLD] = Chat.world_chat

@@ -38,10 +38,10 @@ SYS = {
 }
 
 --[[
-如果使用的是flatbuffer，只是没有package名,其他定义是一样的
+如果使用的是flatbuffer，没有package名,那定义就是 文件名.结构名
 SYS = {
     REG = {
-        s = "SSRegister" -- 协议结构定义在system.fbs中
+        s = "system.SSRegister", -- 协议结构定义在system.fbs中
     },
 }
 ]]
