@@ -132,16 +132,17 @@ function Httpd:do_command( conn,url,body )
     if not path then
         -- 限定http请求的路径，不能随意运行其他路径文件
         -- 也不要随意放其他文件到此路径
-        path = "lua_src/http/www" .. raw_url
-        local exec_file = io.open( path .. ".lua","r" )
+        path = "http/www" .. raw_url
+        local exec_file = io.open( "../src/" .. path .. ".lua","r" )
 
         if not exec_file then
-            ERROR( "http request page not found:%s",raw_url )
+            ERROR( "http request page not found:%s",path )
             conn:send_pkt( page404 )
 
             return self:conn_close( conn )
         end
 
+        io.close(exec_file)
         path = string.gsub( path,"%/", "." ) -- 把/转为.来匹配lua的require格式
         -- 记录一个path而不是一个exec_obj，不影响热更，但不用每次都拼字符
         self.exec[raw_url] = path

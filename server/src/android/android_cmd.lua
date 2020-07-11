@@ -16,31 +16,35 @@ local handshake_handler = {}
 local network_mgr = network_mgr
 
 do
-    local sc = require "proto.proto"
-    SC,CS = sc[1],sc[2]
+    local cs = load_global_define("proto.auto_cs", true)
 
     local fs = network_mgr:load_one_schema( network_mgr.CDC_PROTOBUF,"../pb" )
     PRINTF( "android load protocol schema:%d",fs )
 
-    -- 注册服务器发往机器人的指令配置
-    for _,cfg in pairs( SC ) do
-        sc_cmd[ cfg[1] ] = cfg
-        network_mgr:set_sc_cmd( cfg[1],cfg[2],cfg[3],0,0 )
-    end
+    for _, m in pairs( cs ) do
+        for _, mm in pairs(m) do
 
-    -- 注册机器人发往服务器的指令配置
-    for _,cfg in pairs( CS ) do
-        network_mgr:set_cs_cmd( cfg[1],cfg[2],cfg[3],0,0 )
+            -- 注册服务器发往机器人的指令配置
+            if mm.s then
+                sc_cmd[ mm.i ] = mm
+                network_mgr:set_sc_cmd( mm.i,"",mm.s,0,0 )
+            end
+
+            -- 注册机器人发往服务器的指令配置
+            if mm.c then
+                network_mgr:set_cs_cmd( mm.i,"",mm.c,0,0 )
+            end
+        end
     end
 end
 
 local AndroidCmd = oo.singleton( ... )
 
 -- 注册指令处理
-function AndroidCmd:cmd_register( cmd_cfg,handler )
-    local cfg = sc_cmd[cmd_cfg[1]]
+function AndroidCmd:cmd_register( cmd,handler )
+    local cfg = sc_cmd[cmd.i]
     if not cfg then
-        PRINTF( "AndroidCmd:cmd_dispatcher no such cmd:%d",cmd_cfg[1] )
+        PRINTF( "AndroidCmd:cmd_dispatcher no such cmd:%d",cmd.i )
         return
     end
 

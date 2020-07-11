@@ -23,7 +23,7 @@ for _, m in pairs(CS) do
     end
 end
 
-for _, m in pairs(CS) do
+for _, m in pairs(SS) do
     for _, mm in pairs(m) do
         ss_map[mm.i] = mm
     end
