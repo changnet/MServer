@@ -130,7 +130,7 @@ function NetworkMgr:check_one_timeout( srv_conn,check_time )
         self:close_srv_conn( srv_conn )
         if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
     elseif ts > 0 and srv_conn.auth then
-        srv_conn:send_pkt( SS.SYS_BEAT,tm_pkt )
+        srv_conn:send_pkt( SYS.BEAT,tm_pkt )
     end
 end
 
@@ -228,7 +228,7 @@ function NetworkMgr:srv_multicast( cmd,pkt,ecode )
         table.insert( conn_list,conn.conn_id )
     end
     return network_mgr:srv_multicast(
-        conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+        conn_list,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
 end
 
 -- 客户端广播
@@ -240,14 +240,14 @@ end
 function NetworkMgr:clt_multicast( mask,args_list,cmd,pkt,ecode )
     local srv_conn = self:get_gateway_conn()
     return network_mgr:ssc_multicast( srv_conn.conn_id,
-        mask,args_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+        mask,args_list,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
 end
 
 -- 客户端广播(直接发给客户端，仅网关可用)
 -- @conn_list: 客户端conn_id列表
 function NetworkMgr:raw_clt_multicast( conn_list,cmd,pkt,ecode )
     return network_mgr:clt_multicast(
-        conn_list,network_mgr.CDC_PROTOBUF,cmd,ecode or 0,pkt )
+        conn_list,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
 end
 
 -- 底层accept回调
@@ -306,7 +306,7 @@ function NetworkMgr:clt_conn_del( conn_id )
     if conn.pid then
         self.clt[conn.pid] = nil
         local pkt = { pid = conn.pid }
-        g_network_mgr:send_world_pkt( SS.PLAYER_OFFLINE,pkt )
+        g_network_mgr:send_world_pkt( SYS.PLAYER_OFFLINE,pkt )
     end
 
     PRINTF( "client connect del:%d",conn_id )

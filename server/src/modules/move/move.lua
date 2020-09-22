@@ -56,7 +56,7 @@ function Move:moving_to(scene,way,pix_x,pix_y)
     -- 广播给玩家我开始移动
     -- 暂时不用发给自己，前端和后端位置不用一致，只要在允许范围内即可
     -- local to_me = ET.PLAYER == self.entity.et
-    scene:broadcast_to_watch_me(self.entity,SC.ENTITY_MOVE,move_pkt)
+    scene:broadcast_to_watch_me(self.entity,ENTITY.MOVE,move_pkt)
 end
 
 -- 停止移动
@@ -77,7 +77,7 @@ function Move:raw_stop()
     local to_me = ET.PLAYER == entity.et
 
     local scene = entity:get_scene()
-    scene:broadcast_to_watch_me(entity,SC.ENTITY_POS,pos_pkt,to_me)
+    scene:broadcast_to_watch_me(entity,ENTITY.POS,pos_pkt,to_me)
 end
 
 -- 更新位置再停止移动

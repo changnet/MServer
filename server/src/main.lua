@@ -2,7 +2,7 @@
 -- 2018-04-04
 -- xzc
 
--- 进程入口文件
+-- 进程入口文件(引文件不可热更)
 
 -- 设置lua文件搜索路径
 package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
@@ -14,7 +14,7 @@ require "global.require" -- 需要热更的文件，必须放在这后面
 
 local Log  = require "Log"
 local util = require "util"
-require "global.global" -- 这个要放require后面，它除了一个测试用的函数是可以热更的
+require "global.global" -- 这个要放require后面，它是可以热更的
 local time = require "global.time"
 
 math.randomseed( ev:time() )

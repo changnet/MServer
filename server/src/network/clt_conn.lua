@@ -56,7 +56,7 @@ end
 -- 发送数据包
 function CltConn:send_pkt( cmd,pkt,errno )
     -- 使用tcp二进制流
-    return network_mgr:send_clt_packet( self.conn_id,cmd,errno or 0,pkt )
+    return network_mgr:send_clt_packet( self.conn_id,cmd.i,errno or 0,pkt )
     -- 使用websocket
     -- return network_mgr:send_clt_packet(
     --     self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )

@@ -1,5 +1,4 @@
 
-local SS = SS
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
@@ -12,8 +11,8 @@ local function srv_reg( srv_conn,pkt )
     srv_conn:authorized( pkt )
 
     local _pkt = g_command_mgr:command_pkt()
-    srv_conn:send_pkt( SS.SYS_CMD_SYNC,_pkt )
-    srv_conn:send_pkt( SS.SYS_SYNC_DONE,{} )
+    srv_conn:send_pkt( SYS.CMD_SYNC,_pkt )
+    srv_conn:send_pkt( SYS.SYNC_DONE,{} )
 
     PRINTF( "%s register succes:session %d",
         srv_conn:conn_name(),srv_conn.session )
@@ -33,7 +32,7 @@ end
 local beat_pkt = { response = false }
 local function srv_beat( srv_conn,pkt )
     if pkt.response then
-        srv_conn:send_pkt( SS.SYS_BEAT,beat_pkt )
+        srv_conn:send_pkt( SYS.BEAT,beat_pkt )
     end
 
     -- 在这里不用更新自己的心跳，因为在on_command里已自动更新
@@ -57,7 +56,7 @@ end
 
 
 -- 这里注册系统模块的协议处理
-g_command_mgr:srv_register( SS.SYS_BEAT,srv_beat,true )
-g_command_mgr:srv_register( SS.SYS_REG,srv_reg,true,true )
-g_command_mgr:srv_register( SS.SYS_CMD_SYNC,srv_cmd_sync,true )
-g_command_mgr:srv_register( SS.SYS_SYNC_DONE,srv_sync_done,true )
+g_command_mgr:srv_register( SYS.BEAT,srv_beat,true )
+g_command_mgr:srv_register( SYS.REG,srv_reg,true,true )
+g_command_mgr:srv_register( SYS.CMD_SYNC,srv_cmd_sync,true )
+g_command_mgr:srv_register( SYS.SYNC_DONE,srv_sync_done,true )

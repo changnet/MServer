@@ -18,7 +18,7 @@ end
 
 -- 发送数据
 function RoleWelcome:send_info( player,st )
-    return player:send_pkt( SC.MISC_WELCOME,{status = st})
+    return player:send_pkt( MISC.WELCOME,{status = st})
 end
 
 -- 处理前端领取奖励

@@ -16,11 +16,6 @@ local WS_OP_PONG     = 0xA
 local WS_FINAL_FRAME = 0x10
 local WS_HAS_MASK    = 0x20
 
-local util = require "util"
-local sc = require "proto.proto"
-
-local SC,CS = sc[1],sc[2]
-
 local network_mgr = network_mgr
 local Android = oo.class( ... )
 
@@ -44,9 +39,9 @@ function Android:set_conn( conn_id )
 end
 
 -- 发送数据包
-function Android:send_pkt( cfg,pkt )
+function Android:send_pkt( cmd,pkt )
     -- 使用tcp二进制流
-    return network_mgr:send_srv_packet( self.conn_id,cfg[1],pkt )
+    return network_mgr:send_srv_packet( self.conn_id,cmd.i,pkt )
 
     -- 使用websocket二进制流
     -- return network_mgr:send_srv_packet(

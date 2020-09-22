@@ -56,7 +56,7 @@ local property_pkt = {}
 function EntityPlayer:send_property()
     property_pkt.handle = self.eid
 
-    return self:send_pkt(SC.ENTITY_PROPERTY,property_pkt)
+    return self:send_pkt(ENTITY.PROPERTY,property_pkt)
 end
 
 return EntityPlayer

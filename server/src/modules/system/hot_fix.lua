@@ -9,7 +9,7 @@ local util = require "util"
 -- 热更协议
 local function fix_proto()
     local pkt = g_command_mgr:command_pkt()
-    g_network_mgr:srv_multicast( SS.SYS_CMD_SYNC,pkt )
+    g_network_mgr:srv_multicast( SYS.CMD_SYNC,pkt )
 end
 
 -- 热更schema文件

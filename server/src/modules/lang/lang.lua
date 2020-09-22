@@ -36,7 +36,7 @@ function Lang:send_tips( player,id )
         return
     end
 
-    player:send_pkt( SC.MISC_TIPS,tips_lang[id] )
+    player:send_pkt( MISC.TIPS,tips_lang[id] )
 end
 
 local lang = Lang()

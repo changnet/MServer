@@ -6,4 +6,4 @@
 如何处理配置文件及协议。
 
 导出的lua配置文件文件，放在master/config目录下
-导出的协议文件，放在master/proto目录下
+导出的协议文件，放在server/proto，由shell目录下的auto_proto.sh导出

@@ -161,7 +161,7 @@ function Mail:send_info()
     local pkt = {}
     pkt.mails = self.list
 
-    self.player:send_pkt( SC.MAIL_INFO,pkt )
+    self.player:send_pkt( MAIL.INFO,pkt )
 end
 
 -- 发送新邮件
@@ -169,7 +169,7 @@ function Mail:send_new_mail(new_mail)
     local pkt = {}
     pkt.mail = new_mail
 
-    self.player:send_pkt( SC.MAIL_NEW,pkt )
+    self.player:send_pkt( MAIL.NEW,pkt )
 end
 
 -- 能否删除邮件
@@ -206,7 +206,7 @@ function Mail:handle_mail_del( pkt )
         end
     end
 
-    self.player:send_pkt( SC.MAIL_DEL,pkt )
+    self.player:send_pkt( MAIL.DEL,pkt )
 end
 
 return Mail
