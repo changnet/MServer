@@ -5,10 +5,13 @@
 #include "../socket.h"
 #include "http_packet.h"
 
+#define ASSERT_PARSER_DATA() \
+    ASSERT(parser && (parser->data), __FUNCTION__" no parser")
+
 // 开始解析报文，第一个回调的函数，在这里初始化数据
 int32_t on_message_begin(http_parser *parser)
 {
-    ASSERT(parser && (parser->data), "on_url no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     // 这个千万不要因为多态调到websocket_packet::reset去了
@@ -20,7 +23,7 @@ int32_t on_message_begin(http_parser *parser)
 // 解析到url报文，可能只是一部分
 int32_t on_url(http_parser *parser, const char *at, size_t length)
 {
-    ASSERT(parser && (parser->data), "on_url no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_url(at, length);
@@ -39,7 +42,7 @@ int32_t on_status(http_parser *parser, const char *at, size_t length)
 
 int32_t on_header_field(http_parser *parser, const char *at, size_t length)
 {
-    ASSERT(parser && (parser->data), "on_header_field no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_field(at, length);
@@ -49,7 +52,7 @@ int32_t on_header_field(http_parser *parser, const char *at, size_t length)
 
 int32_t on_header_value(http_parser *parser, const char *at, size_t length)
 {
-    ASSERT(parser && (parser->data), "on_header_value no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_value(at, length);
@@ -59,7 +62,7 @@ int32_t on_header_value(http_parser *parser, const char *at, size_t length)
 
 int32_t on_headers_complete(http_parser *parser)
 {
-    ASSERT(parser && (parser->data), "on_header_value no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->on_headers_complete();
@@ -69,7 +72,7 @@ int32_t on_headers_complete(http_parser *parser)
 
 int32_t on_body(http_parser *parser, const char *at, size_t length)
 {
-    ASSERT(parser && (parser->data), "on_body no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_body(at, length);
@@ -79,7 +82,7 @@ int32_t on_body(http_parser *parser, const char *at, size_t length)
 
 int32_t on_message_complete(http_parser *parser)
 {
-    ASSERT(parser && (parser->data), "on_message_complete no parser");
+    ASSERT_PARSER_DATA();
 
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
 
@@ -92,7 +95,22 @@ int32_t on_message_complete(http_parser *parser)
     return HPE_OK;
 }
 
-/* http chunk应该用不到，暂不处理 */
+/**
+ * http chunk应该用不到，暂不处理
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+
+7\r\n
+Mozilla\r\n
+9\r\n
+Developer\r\n
+7\r\n
+Network\r\n
+0\r\n
+\r\n
+ */
 static const struct http_parser_settings settings = {on_message_begin,
                                                      on_url,
                                                      on_status,

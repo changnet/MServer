@@ -3,10 +3,19 @@
 #include <cassert>
 
 #define __ASSERT1(expr) assert(expr)
+
+// __ASSERT_VOID_CAST is linux implement
+#ifdef __ASSERT_VOID_CAST
 #define __ASSERT2(expr, why)                                           \
     ((expr) ? __ASSERT_VOID_CAST(0)                                    \
             : __assert_fail(__STRING((why, expr)), __FILE__, __LINE__, \
                             __ASSERT_FUNCTION))
+#else
+#define __ASSERT2(expr, why) \
+    (void) \
+    ((!!(expr)) || \
+    (_wassert(_CRT_WIDE(#why","#expr),_CRT_WIDE(__FILE__),__LINE__),0))
+#endif
 
 #define __EXPAND(_1, _2, NAME, ...) NAME
 // _UNUSED avoid warning
