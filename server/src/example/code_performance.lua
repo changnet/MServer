@@ -2,7 +2,7 @@
 -- xzc
 -- 2016-03-06
 
-require "global.global"
+require "global.test"
 local json = require "lua_parson"
 local xml = require "lua_rapidxml"
 
@@ -826,7 +826,14 @@ local xml_str = [==[
                     <dFacility.15 PhoneNumberType="9913009">788-732-4568</dFacility.15></dFacility.FacilityGroup></dFacilityGroup></dFacility></DemographicReport></DEMDataSet>
 ]==]
 
-f_tm_start()
-local xml_tb = xml.decode_from_file( "arena.xml" )
-f_tm_stop( "xml decode cost")
+-- f_tm_start()
+-- local xml_tb = xml.decode_from_file( "arena.xml" )
+-- f_tm_stop( "xml decode cost")
 -- vd( xml_tb )
+
+t_describe("string extend library", function()
+    t_it("string.split", function()
+        local list = string.split("a,b,c", ",")
+        t_equal(list, {"a", "b", "c"})
+    end)
+end)

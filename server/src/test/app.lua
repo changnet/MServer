@@ -25,7 +25,7 @@ function App:exec()
     ev:signal( 2 );
     ev:signal( 15 );
 
-    -- require "example.code_performance"
+    require "example.code_performance"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
     -- require "example.mysql_performance"
