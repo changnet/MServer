@@ -2,7 +2,6 @@
 -- xzc
 -- 2016-03-06
 
-require "global.test"
 local json = require "lua_parson"
 local xml = require "lua_rapidxml"
 

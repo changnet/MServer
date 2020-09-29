@@ -25,6 +25,11 @@ function App:exec()
     ev:signal( 2 );
     ev:signal( 15 );
 
+    require "global.test"
+    t_setup({
+        print = PRINT
+    })
+
     require "example.code_performance"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
@@ -40,6 +45,7 @@ function App:exec()
     -- require "example.other_performance"
 
     -- vd( statistic.dump() )
+    t_run()
     ev:backend()
 end
 
