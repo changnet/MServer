@@ -830,9 +830,44 @@ local xml_str = [==[
 -- f_tm_stop( "xml decode cost")
 -- vd( xml_tb )
 
-t_describe("string extend library", function()
+t_describe("string extend library test", function()
     t_it("string.split", function()
         local list = string.split("a,b,c", ",")
         t_equal(list, {"a", "b", "c"})
+    end)
+
+    t_it("string.trim", function()
+        local str = string.trim("   \tabc\t   ")
+        t_equal(str, "abc")
+    end)
+
+    t_it("string.replace", function()
+        local str = string.replace("abcabc", "abc", "11111")
+        t_equal(str, "11111abc")
+    end)
+
+    t_it("string.replace_all", function()
+        local str = string.replace_all("abcabc", "abc", "1111")
+        t_equal(str, "11111111")
+    end)
+
+    t_it("string.replace_at greater", function()
+        local str = string.replace_at("abcabc", "1111", 4)
+        t_equal(str, "abc1111")
+    end)
+
+    t_it("string.replace_at less", function()
+        local str = string.replace_at("abcabc", "1", 4)
+        t_equal(str, "abc1bc")
+    end)
+
+    t_it("string.replace_at insert", function()
+        local str = string.replace_at("abcabc", "111", 4, 4)
+        t_equal(str, "abc111abc")
+    end)
+
+    t_it("string.gescape", function()
+        local str = string.gescape("[.+*]%abcd")
+        t_equal(str, "%[%.%+%*%]%%abcd")
     end)
 end)

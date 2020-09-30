@@ -87,35 +87,39 @@ end
 
 -- 替换第一个查找到的字符串
 -- @param str 被替换的字符串
--- @param sub_str 替换的字符串
-function string.replace(str, sub_str)
+-- @param old_str 替换的字符
+-- @param new_str 新的字符
+function string.replace(str, old_str, new_str)
     -- 不要用gsub，因为sub_str可能包含正则字符
-    local b, e = str:find(sub_str, 1, true)
+    local b, e = str:find(old_str, 1, true)
     if not b then
         return str
     end
 
-    return str:sub(1, b - 1) .. sub_str .. str:sub(e + 1)
+    return str:sub(1, b - 1) .. new_str .. str:sub(e + 1)
 end
 
 -- 替换所有查找到的字符串
 -- @param str 被替换的字符串
--- @param sub_str 替换的字符串
-function string.replace_all(str, sub_str)
+-- @param old_str 替换的字符
+-- @param new_str 新的字符
+function string.replace_all(str, old_str, new_str)
     -- 不要用gsub，因为sub_str可能包含正则字符
 
     -- TODO 当需要替换的字符太多时，这里字符串拆分、拼接效率会很差
     -- 如果有频繁调用的需求，需要做一个C++版本
     local offset = 1
     while true do
-        local b, e = str:find(sub_str, offset, true)
+        local b, e = str:find(old_str, offset, true)
         if not b then
             return str
         end
 
-        str = str:sub(offset, b - 1) .. sub_str .. str:sub(e + 1)
-        offset = b + string.len(sub_str)
+        str = str:sub(1, b - 1) .. new_str .. str:sub(e + 1)
+        offset = b + string.len(new_str)
     end
+
+    return str
 end
 
 -- 根据字符串下标替换字符(i == j时可用于插入字符串)
@@ -124,9 +128,9 @@ end
 -- @param i 替换开始的下标
 -- @param 替换结束的下标，未指定则为sub_str的长度
 function string.replace_at(str, sub_str, i, j)
-    j = j or string.len(sub_str)
+    j = j or (i + string.len(sub_str))
 
-    return str:sub(1, i) .. sub_str .. str:sub(j, -1)
+    return str:sub(1, i - 1) .. sub_str .. str:sub(j, -1)
 end
 
 -- 把字符串中的正则字符进行转义
