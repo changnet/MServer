@@ -7,7 +7,7 @@
 -- 设置lua文件搜索路径
 package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
 -- 设置c库搜索路径
-package.cpath = "../src/c_module/?.so;" .. package.cpath
+package.cpath = "../c_module/?.so;" .. package.cpath
 
 require "global.oo"
 require "global.require" -- 需要热更的文件，必须放在这后面

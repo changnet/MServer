@@ -42,6 +42,10 @@ LIB_PATH = -L/usr/local/lib -L$(SUB_DIR)/pbc/build \
 #link libaray
 SHARED_LIB = -ldl -lrt -pthread -lresolv -lz
 
+# 注意主程序lua库采用static link后，如果需要加载lua的so模块，则对应的so模块不能静态链
+# 接到lua库，否则报Multiple Lua VMs detected
+# https://stackoverflow.com/questions/31639483/lua-multiple-vms-detected-while-trying-to-add-extension-for-statically-linke
+
 # in mongoc v1.14.0,share library is libmongoc-1.0.so.0
 # while static library is -lmongoc-static-1.0 -lbson-static-1.0
 # and it need dns library and zip library -lresolv -lz

@@ -830,6 +830,13 @@ local xml_str = [==[
 -- f_tm_stop( "xml decode cost")
 -- vd( xml_tb )
 
+t_describe("c module(so or dll) dynamically loaded test", function()
+    t_it("big integer library test", function()
+        local lua_bigint = require "lua_bigint"
+        t_equal(tostring(lua_bigint(1000000001)), "1000000001")
+    end)
+end)
+
 t_describe("string extend library test", function()
     t_it("string.split", function()
         local list = string.split("a,b,c", ",")

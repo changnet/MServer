@@ -1,6 +1,5 @@
 *.a
 *.o
-*.so
 .~*
 
 # visual studio code project
