@@ -133,7 +133,7 @@ local function dump(o)
     return s .. '} '
 end
 
-
+-- 检测两个lua变量是否相等
 local function equal(got, expect)
     if got == expect then return true end
 
@@ -206,44 +206,58 @@ function t_reset()
     T.i_now = nil
     T.pass = 0
     T.fail = 0
+    T.time = 0
 end
 
 -- first reset
 t_reset()
 
+local function run_one(d)
+    T.print(B(d.title))
+    T.d_now = d
+    local ok, msg = xpcall(d.func, error_msgh)
+    if not ok then
+        T.print(R(msg))
+        return
+    end
+
+    for _, i in pairs(d.i) do
+        T.i_now = i
+        local tm = os.clock()
+        local ok, msg = xpcall(i.func, error_msgh)
+        if ok then
+            tm = math.ceil((os.clock() - tm) * 1000)
+
+            T.pass = T.pass + 1
+            if tm > 1 then
+                T.print(G("%s%s (%dms)", OK, i.title, tm))
+            else
+                T.print(G(OK .. i.title))
+            end
+        else
+            T.fail = T.fail + 1
+            if not msg:find(TEST_FAIL) then
+                append_msg(msg)
+            end
+            T.print(R(FAIL .. i.title))
+            print_msg(i)
+        end
+    end
+end
+
 -- run current test session
 function t_run()
+    T.time = os.clock()
 
     for _, d in pairs(T.d) do
-        T.print(B(d.title))
-        T.d_now = d
-        local ok, msg = xpcall(d.func, error_msgh)
-        if not ok then
-            T.print(R(msg))
-        else
-            for _, i in pairs(d.i) do
-                T.i_now = i
-                local ok, msg = xpcall(i.func, error_msgh)
-                if ok then
-                    T.pass = T.pass + 1
-                    T.print(G(OK .. i.title))
-                else
-                    T.fail = T.fail + 1
-                    if not msg:find(TEST_FAIL) then
-                        append_msg(msg)
-                    end
-                    T.print(R(FAIL .. i.title))
-                    print_msg(i)
-                end
-            end
-        end
+        run_one(d)
     end
 
     local pass = T.pass
     local fail = T.fail
-    local time = 0
+    local time = math.ceil((os.clock() - T.time) * 1000)
     T.print(string.format("%s, %s (%dms)",
         G("%d passing", T.pass),
-        fail > 0 and R("%d failing", fail) or N("%d failing", fail),
+        fail > 0 and R("%d failing", fail) or G("0 failing"),
         time))
 end
