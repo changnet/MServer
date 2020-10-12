@@ -92,3 +92,85 @@ t_describe("string extend library test", function()
         t_equal(str, "%[%.%+%*%]%%abcd")
     end)
 end)
+
+local function str_split(s, p)
+    local tbl = {}
+    local pt = '[^' .. p .. ']+'
+    for w in string.gmatch(s, pt) do table.insert(tbl, w) end
+
+    return tbl
+end
+
+local function str_split2(s, p)
+    local tbl = {}
+    local pt = '[^' .. p .. ']+'
+    
+    string.gsub(s, pt, function(w) table.insert(tbl, w) end)
+
+    return tbl
+end
+
+function str_split3(str, delimiter, plain)
+    local search_pos  = 1
+    local sub_tab_len = 0
+    local sub_str_tab = {}
+    while true do
+        local pos = string.find( str, delimiter,search_pos,plain )
+        if not pos then
+            local sub_str = string.sub( str, search_pos, -1 )
+            table.insert( sub_str_tab,sub_tab_len + 1,sub_str )
+            break
+        end
+
+        local sub_str = string.sub( str, search_pos, pos - 1 )
+        table.insert( sub_str_tab,sub_tab_len + 1,sub_str )
+        sub_tab_len = sub_tab_len + 1
+
+        search_pos = pos + 1
+    end
+
+    return sub_str_tab
+end
+
+t_describe("string split performance test", function()
+    local times = 100000
+    local str1 = "aaaaaaaaaaaaa\tbbbbbbbbbbbbbbbbbbbbbbbb\tcccccccccccccc\t"
+    local str2 = "aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbcccccccccc"
+
+    collectgarbage("stop")
+
+    t_it("using string.find", function()
+        local old_mem = collectgarbage("count")
+        for i = 1, times do
+            str_split3(str1, '\t')
+            str_split3(str2, '\t')
+        end
+
+        t_print(string.format(
+            "using memory %.03f kb", collectgarbage("count") - old_mem))
+    end)
+
+    t_it("using string.gmatch", function()
+        local old_mem = collectgarbage("count")
+        for i = 1, times do
+            str_split(str1, '\t')
+            str_split(str2, '\t')
+        end
+
+        t_print(string.format(
+            "using memory %.03f kb", collectgarbage("count") - old_mem))
+    end)
+
+    t_it("using string.gsub", function()
+        local old_mem = collectgarbage("count")
+        for i = 1, times do
+            str_split2(str1, '\t')
+            str_split2(str2, '\t')
+        end
+
+        t_print(string.format(
+            "using memory %.03f kb", collectgarbage("count") - old_mem))
+    end)
+
+    collectgarbage("restart")
+end)

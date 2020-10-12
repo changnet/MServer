@@ -36,7 +36,13 @@ local function W(fmt, ...)
     return "\27[37m" .. string.format(fmt, ...) .. "\27[0m"
 end
 -- /////////////////////////////////////////////////////////////////////////////
+-- data storage for test
+_G.__test = {
+    print = print
+}
+local T = _G.__test
 
+-- /////////////////////////////////////////////////////////////////////////////
 -- describe a test case
 local Describe = {}
 
@@ -47,6 +53,8 @@ function Describe:__init(title, func)
     self.title = title
     self.func  = func
     self.i = {} -- it block
+
+    assert(not T.d_now, "recursive describe test not support now")
 end
 
 rawset(Describe, "__index", Describe)
@@ -68,6 +76,9 @@ local It = {}
 function It:__init(title, func)
     self.title = title
     self.func  = func
+
+    assert(not T.i_now, "it block must NOT called inside another it block")
+    assert(T.d_now, "it block MUST called inside describe describe block")
 end
 
 rawset(It, "__index", It)
@@ -81,11 +92,6 @@ setmetatable(It, {
 })
 
 -- /////////////////// GLOBAL test function ////////////////////////////////////
--- data storage for test
-_G.__test = {
-    print = print
-}
-local T = _G.__test
 
 local INDENT = "       "
 
@@ -179,11 +185,44 @@ function t_describe(title, func)
     -- valid_test_ins(self, "Describe")
 end
 
+local function run_one_it(i)
+    T.i_now = i
+    local tm = os.clock()
+    local ok, msg = xpcall(i.func, error_msgh)
+    if ok then
+        tm = math.ceil((os.clock() - tm) * 1000)
+
+        T.pass = T.pass + 1
+        if tm > 1 then
+            T.print(G("%s%s (%dms)", OK, i.title, tm))
+        else
+            T.print(G(OK .. i.title))
+        end
+    else
+        T.fail = T.fail + 1
+        if not msg:find(TEST_FAIL) then
+            append_msg(msg)
+        end
+        T.print(R(FAIL .. i.title))
+        print_msg(i)
+    end
+    T.i_now = nil
+end
+
 function t_it(title, func)
     local i = It(title, func)
 
-    table.insert(T.d_now.i, i)
+    -- 策略1：得到所有it block后再统一执行
+    -- 那么运行describe中的代码将不按顺序顺序，需要使用t_before、t_after来执行
+    -- table.insert(T.d_now.i, i)
+
+    -- 策略2：直接执行所有it block
+    -- 那么describe中的代码按顺序执行
+    -- 但是，如果整个测试中有异步测试时，仍需要使用t_before、t_after来执行
+    run_one_it(i)
 end
+
+
 
 function t_wait(timeout)
 end
@@ -212,37 +251,16 @@ end
 -- first reset
 t_reset()
 
-local function run_one(d)
+local function run_one_describe(d)
     T.print(B(d.title))
+
     T.d_now = d
     local ok, msg = xpcall(d.func, error_msgh)
     if not ok then
         T.print(R(msg))
-        return
     end
 
-    for _, i in pairs(d.i) do
-        T.i_now = i
-        local tm = os.clock()
-        local ok, msg = xpcall(i.func, error_msgh)
-        if ok then
-            tm = math.ceil((os.clock() - tm) * 1000)
-
-            T.pass = T.pass + 1
-            if tm > 1 then
-                T.print(G("%s%s (%dms)", OK, i.title, tm))
-            else
-                T.print(G(OK .. i.title))
-            end
-        else
-            T.fail = T.fail + 1
-            if not msg:find(TEST_FAIL) then
-                append_msg(msg)
-            end
-            T.print(R(FAIL .. i.title))
-            print_msg(i)
-        end
-    end
+    T.d_now = nil
 end
 
 -- run current test session
@@ -250,7 +268,7 @@ function t_run()
     T.time = os.clock()
 
     for _, d in pairs(T.d) do
-        run_one(d)
+        run_one_describe(d)
     end
 
     local pass = T.pass
