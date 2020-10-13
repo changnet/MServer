@@ -14,11 +14,28 @@ local js = [==[
 ]==]
 
 t_describe("json lib test", function()
+    local times = 10000
     t_it("encode decode", function()
         local tbl = json.decode(js)
         local str = json.encode(tbl)
         local tbl_ex = json.decode(str)
         t_equal(tbl, tbl_ex)
+    end)
+
+    t_it("perf test", function()
+        for i = 1, times do
+            local tbl = json.decode(js)
+            json.encode(tbl)
+        end
+    end)
+
+    t_it("lua cjson dynamically loaded perf", function()
+        local cjson = require "cjson"
+
+        for i = 1, times do
+            local tbl = cjson.decode(js)
+            cjson.encode(tbl)
+        end
     end)
 end)
 
@@ -41,13 +58,6 @@ t_describe("xml lib test", function()
         local str = xml.encode(tbl)
         local tbl_ex = xml.decode(str)
         t_equal(tbl, tbl_ex)
-    end)
-end)
-
-t_describe("c module(so or dll) dynamically loaded test", function()
-    t_it("big integer library test", function()
-        local lua_bigint = require "lua_bigint"
-        t_equal(tostring(lua_bigint(1000000001)), "1000000001")
     end)
 end)
 

@@ -5,4 +5,4 @@
 https://stackoverflow.com/questions/31639483/lua-multiple-vms-detected-while-trying-to-add-extension-for-statically-linke
 
 
-lua_bigint.so from https://github.com/changnet/lua_bigint just for testing.
+cjson.so from ``luarocks install lua-cjson 2.1.0-1`` just for testing.
