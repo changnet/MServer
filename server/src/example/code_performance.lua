@@ -20,6 +20,10 @@ t_describe("json lib test", function()
         local str = json.encode(tbl)
         local tbl_ex = json.decode(str)
         t_equal(tbl, tbl_ex)
+
+        local cjson = require "cjson"
+        local tbl_cj = cjson.decode(js)
+        t_equal(tbl, tbl_cj)
     end)
 
     t_it("perf test", function()
