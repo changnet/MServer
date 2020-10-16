@@ -36,22 +36,18 @@ void set_app_name(const char *name)
 #endif
 }
 
-// print app name，打印app进程名
-#ifdef LOG_APP_NAME
-    #define PAPPNAME(f)                                    \
-        do                                                 \
-        {                                                  \
-            if (app_name[0]) fprintf(f, "[%s]", app_name); \
-        } while (0)
-#else
-    #define PAPPNAME(f)
-#endif
-
 // print file time，是否打印文件时间
 #ifdef _PFILETIME_
-    #define PFILETIME(f, ntm, prefix)                                        \
-        fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]", prefix, (ntm.tm_mon + 1), \
-                ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec)
+    #ifdef LOG_APP_NAME
+        #define PFILETIME(f, ntm, prefix)                                   \
+            fprintf(f, "[%s%s%02d-%02d %02d:%02d:%02d]", app_name, prefix,  \
+                    (ntm.tm_mon + 1), ntm.tm_mday, ntm.tm_hour, ntm.tm_min, \
+                    ntm.tm_sec)
+    #else
+        #define PFILETIME(f, ntm, prefix)                                        \
+            fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]", prefix, (ntm.tm_mon + 1), \
+                    ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec)
+    #endif
 #else
     #define PFILETIME(f)
 #endif
@@ -77,7 +73,6 @@ void set_app_name(const char *name)
         if (screen)                                \
         {                                          \
             PFILETIME(screen, ntm, prefix);        \
-            PAPPNAME(screen);                      \
             FORMAT_TO_FILE(screen);                \
         }                                          \
         FILE *pf = ::fopen(path, "ab+");           \
@@ -288,7 +283,6 @@ void Log::flush()
     do                                             \
     {                                              \
         PFILETIME(screen, ntm, prefix);            \
-        PAPPNAME(screen);                          \
         fprintf(screen, "%s\n", ctx);              \
     } while (0)
 

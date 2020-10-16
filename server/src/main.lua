@@ -47,7 +47,10 @@ local function main( command,srvname,srvindex,srvid,... )
     Log.set_args( deamon,ppath,epath,mpath )
 
     -- 非后台模式，打印进程名到屏幕，否则多个进程在同一终端开户时不好区分日志
-    local app_name = string.format("%s.%d",srvname,srvindex)
+    -- 取首字母大写即可，不用全名，如果以后有重名再改
+    -- local app_name = string.format("%s.%d",srvname,srvindex)
+    local app_name = string.format("%s%d",
+        string.char(string.byte(srvname) - 32),srvindex)
     if not deamon then Log.set_name( app_name ) end
 
     SYNC_PRINTF( "starting %s ... ",app_name )
