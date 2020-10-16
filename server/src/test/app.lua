@@ -30,7 +30,7 @@ function App:exec()
         print = PRINT
     })
 
-    require "example.code_performance"
+    require "test.misc_test"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
     -- require "example.mysql_performance"

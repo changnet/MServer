@@ -27,7 +27,7 @@ function MaxHeap:top()
     return self.heap[1]
 end
 
-function MaxHeap:is_empty()
+function MaxHeap:empty()
     return 0 == self.count
 end
 

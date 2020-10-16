@@ -295,26 +295,28 @@ function table.concat_tbl( tbl,sep )
     return table.concat( tbl,sep )
 end
 
--- 默认排序算法(降序，从大到小)
-local function default_comp(dst, src)
-    return dst > src
+-- 默认排序算法(升序，从小到大，与table.sort一致)
+-- 如果返回true，则a排在b后面
+local function default_comp(a, b)
+    return a > b
 end
 
 -- 稳定排序算法，应该没table.sort快
-function table.sort_stable(list, comp)
+-- @param comp 对比函数，默认使用<
+function table.sort_ex(list, comp)
     -- 冒泡排序
     local length = #list
-    local comp_func = comp or default_comp
+    comp = comp or default_comp
 
     local ok
     for index = 1, length - 1 do
-        ok = false
+        ok = true
 
-        for idx = 1, length - index do
-            local dst, src = list[i], list[i + 1]
-            if comp(dst, src) then
-                local tmp = src
-                list[i] = dst
+        for i = 1, length - index do
+            local a, b = list[i], list[i + 1]
+            if comp(a, b) then
+                local tmp = a
+                list[i] = b
                 list[i + 1] = tmp
 
                 ok = false

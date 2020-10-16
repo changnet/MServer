@@ -1,4 +1,4 @@
--- code_performance.lua
+-- misc_test.lua
 -- xzc
 -- 2016-03-06
 
@@ -187,4 +187,68 @@ t_describe("string split performance test", function()
     end)
 
     collectgarbage("restart")
+end)
+
+t_describe("table extend library test", function()
+    t_it("table.sort_ex default compare func", function()
+        local tbl = { 5,3,6,9,9,4,3,5,3 }
+        table.sort_ex(tbl)
+
+        t_equal(tbl, {3,3,3,4,5,5,6,9,9})
+    end)
+
+    t_it("table.sort_ex custom compare func", function()
+        local tbl = { 5,3,6,9,9,4,3,5,3 }
+        table.sort_ex(tbl, function(a, b)
+            return a < b
+        end)
+
+        t_equal(tbl, {9,9,6,5,5,4,3,3,3})
+    end)
+end)
+
+
+t_describe("util.head test", function()
+    local MaxHeap = require "util.max_heap"
+
+    local tbl = { 9,6,7,4,8,3,2,1,5 }
+
+    t_it("max heap test", function()
+        local expect = {}
+        local mh = MaxHeap()
+        for idx,val in pairs( tbl ) do
+            mh:push(val,idx)
+            table.insert(expect, {val, idx})
+        end
+
+         -- stable sort
+        table.sort_ex(expect, function(a, b)
+            if a[1] ~= b[1] then return a[1] < b[1] end
+
+            return a[2] > b[2]
+        end)
+
+        local index = 1
+        while not mh:empty() do
+            local obj = mh:top()
+            local exp = expect[index]
+
+            t_equal(obj.key, exp[1])
+            t_equal(obj.value, exp[2])
+
+            mh:pop()
+            index = index + 1
+        end
+    end)
+
+    -- TODO 重新实现heap，参考C++的priority_queue，根据传入的对比函数实现
+    -- 大小堆
+    t_it("min heap test", function()
+        t_print("UNIMPLEMENTED !!")
+    end)
+
+    -- 参考boost，加一个id，对比id的大小实现稳定heap https://www.boost.org/doc/libs/develop/doc/html/heap.html
+    t_it("heap stable", function()
+        t_print("UNIMPLEMENTED !!")
+    end)
 end)
