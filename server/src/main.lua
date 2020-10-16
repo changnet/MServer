@@ -50,10 +50,10 @@ local function main( command,srvname,srvindex,srvid,... )
     -- 取首字母大写即可，不用全名，如果以后有重名再改
     -- local app_name = string.format("%s.%d",srvname,srvindex)
     local app_name = string.format("%s%d",
-        string.char(string.byte(srvname) - 32),srvindex)
+        string.char(string.byte(srvname) - 32), srvindex)
     if not deamon then Log.set_name( app_name ) end
 
-    SYNC_PRINTF( "starting %s ... ",app_name )
+    SYNC_PRINTF( "starting %s.%d ... ", srvname, srvindex )
     local App = require( string.format( "%s.app",srvname ) )
 
     g_app = App( command,srvname,srvindex,srvid,... )
