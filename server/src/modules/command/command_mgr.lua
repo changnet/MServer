@@ -71,7 +71,7 @@ function CommandMgr:check_timer()
     end
 
     if self.cmd_perf and not self.timer then
-        self.timer = g_timer_mgr:new_timer( 1800,1800,self,self.do_timer )
+        self.timer = g_timer_mgr.interval( 1800,1800,self,self.do_timer )
     end
 end
 

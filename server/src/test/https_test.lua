@@ -1,4 +1,4 @@
--- https_performance.lua
+-- http(s)_test.lua
 -- 2017-12-11
 -- xzc
 
@@ -123,3 +123,15 @@ local ip1,ip2 = util.gethostbyname( ssl_url )
 
 http_conn = CltConn()
 http_conn:connect( ip1,ssl_port )
+
+t_describe("http(s) test", function()
+    t_it("http get example.com", function()
+        t_wait(10000)
+
+        print("before ",os.clock(), os.date())
+        g_timer_mgr:timeout(5, function()
+            print("after ",os.clock(), os.date())
+            t_done()
+        end)
+    end)
+end)

@@ -198,7 +198,7 @@ end
 function Application:final_initialize()
     -- 修正为整点触发(X分0秒)，但后面调时间就不对了
     local next = 5 - (ev:time() % 5)
-    self.timer = g_timer_mgr:new_timer( next,5,self,self.do_timer )
+    self.timer = g_timer_mgr.interval( next,5,self,self.do_timer )
 
     self.ok = true
     PRINTF( "%s server(0x%.8X) start OK",self.srvname,self.session )

@@ -2,8 +2,11 @@ require "global.global"
 require "global.oo"
 require "global.table"
 require "global.string"
+require "global.name"
 require "statistic"
 json = require "lua_parson"
+
+g_timer_mgr = require "timer.timer_mgr"
 
 function sig_handler( signum )
     if g_mysql_mgr   then g_mysql_mgr:stop()   end
@@ -27,7 +30,16 @@ function App:exec()
 
     require "global.test"
     t_setup({
-        print = PRINT
+        print = PRINT,
+        timer = {
+            new = function(timeout, func)
+                return g_timer_mgr:timeout(timeout/1000, func)
+            end,
+
+            del = function(timer_id)
+                return g_timer_mgr:stop(timer_id)
+            end
+        }
     })
 
     require "test.misc_test"

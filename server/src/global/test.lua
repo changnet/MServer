@@ -245,7 +245,7 @@ function t_equal(got, expect)
 end
 
 -- test if expr is true
-function t_assert(expt)
+function t_assert(expr)
     if expr then return end
 
     local msg = debug.traceback("assertion failed!")
@@ -278,6 +278,8 @@ end
 -- 设置当前测试异步超时时间(毫秒)
 function t_wait(timeout)
     assert(not T.i_now.timer, "call wait multi times")
+
+    T.i_now.timeout = timeout
     T.i_now.timer = T.timer.new(timeout or 2000, function()
         coroutine.resume(T.co)
     end)
@@ -288,6 +290,7 @@ function t_done()
     T.timer.del(T.i_now.timer)
 
     T.i_now.timer = nil
+    T.i_now.timeout = nil
     coroutine.resume(T.co)
 end
 

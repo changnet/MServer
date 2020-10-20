@@ -50,7 +50,7 @@ function Mysql:start( ip,port,usr,pwd,db,callback )
     -- 连接成功后回调
     if callback then
         self.conn_cb = callback
-        self.timer = g_timer_mgr:new_timer( 1,1,self,self.do_timer )
+        self.timer = g_timer_mgr.interval( 1,1,self,self.do_timer )
     end
 end
 
