@@ -1,5 +1,43 @@
 -- simple test facility
 
+--[[
+1. 所用测试的api都以t_xx形式命名，表示这是一个测试用的接口，请勿用于业务逻辑
+2. 一些参数可通过t_setup设置，具体查看t_steup接口
+3. 进行异步测试时，必须通过t_setup接口设置定时器函数
+4. 测试是同步进行的，当遇到异步测试时，会阻塞到测试完成或超时
+5. t_describe中的测试会先收集，再执行，故如果需要执行测试前后的动作，则需要t_before、t_after
+
+用例：
+```lua
+t_describe("测试套件名", function()
+    it("测试逻辑", function()
+        T.print("hello")
+    end)
+
+    it("测试逻辑2-异步", function()
+        t_wait(2000)
+
+        http.get("www.example.com", function())
+            t_done()
+        end
+    end)
+end)
+```
+
+PS： 曾考虑过异步执行测试，但这样一来，异步测试里的日志打印就及其混乱。js的mocha测试也
+是同步测试
+```lua
+-- 参考js的promise实现的异步测试
+it("async test", function(wait, done)
+    wait(2000)
+
+    http.get("www.example.com", function())
+        done()
+    end
+end)
+```
+]]
+
 -- https://stackoverflow.com/questions/1718403/enable-bash-output-color-with-lua-script
 -- Note the \27. Whenever Lua sees a \ followed by a decimal number, it converts
 -- this decimal number into its ASCII equivalent. I used \27 to obtain the bash
@@ -61,7 +99,7 @@ rawset(Describe, "__index", Describe)
 rawset(Describe, "__name", "Describe")
 setmetatable(Describe, {
     __call = function(self, ...)
-        local ins = setmetatable({}, Describe)
+        local ins = setmetatable({}, self)
         ins:__init(...)
         return ins;
     end
@@ -85,26 +123,17 @@ rawset(It, "__index", It)
 rawset(It, "__name", "It")
 setmetatable(It, {
     __call = function(self, ...)
-        local ins = setmetatable({}, It)
+        local ins = setmetatable({}, self)
         ins:__init(...)
         return ins;
     end
 })
 
--- /////////////////// GLOBAL test function ////////////////////////////////////
-
-local INDENT = "       "
+-- /////////////////// internal test function //////////////////////////////////
 
 local OK     = "[  OK] "
 local FAIL   = "[FAIL] "
 local TEST_FAIL = "__test_fail__"
-
--- check a variable is a test instance
-local function valid_test_ins(ins, name)
-    assert(type(ins) == "table", "using custom self in test function not allow")
-
-    assert (ins.__name == name, "using custom self in test function not allow")
-end
 
 local function append_msg(msg)
     if not T.i_now.msg then T.i_now.msg = {} end
@@ -157,6 +186,47 @@ local function equal(got, expect)
     return true
 end
 
+local function run_one_it(i)
+    local tm = os.clock()
+    local ok, msg = xpcall(i.func, error_msgh)
+    if not ok then
+        T.fail = T.fail + 1
+        if not msg:find(TEST_FAIL) then
+            append_msg(msg)
+        end
+        T.print(R(FAIL .. i.title))
+        print_msg(i)
+        return
+    end
+
+
+    -- 进入异步等待
+    if i.timeout then coroutine.yield() end
+
+    -- 异步超时
+    if i.timeout then
+        T.print(R("%s%s (timeout)", FAIL, i.title))
+        return
+    end
+
+    tm = math.ceil((os.clock() - tm) * 1000)
+
+    T.pass = T.pass + 1
+    if tm > 1 then
+        T.print(G("%s%s (%dms)", OK, i.title, tm))
+    else
+        T.print(G(OK .. i.title))
+    end
+end
+
+local function run_one_describe(d)
+    local ok, msg = xpcall(d.func, error_msgh)
+    if not ok then
+        T.print(R(msg))
+    end
+end
+
+-- ///////////////// test interface ////////////////////////////////////////////
 -- 打印测试信息
 function t_print(...)
     T.print(...)
@@ -171,11 +241,17 @@ function t_equal(got, expect)
         "got: %s, expect: %s",dump(got), dump(expect)), 2)
 
     append_msg(msg)
-    assert(fase, TEST_FAIL)
+    assert(false, TEST_FAIL)
 end
 
 -- test if expr is true
-function t_assert()
+function t_assert(expt)
+    if expr then return end
+
+    local msg = debug.traceback("assertion failed!")
+
+    append_msg(msg)
+    assert(false, TEST_FAIL)
 end
 
 function t_describe(title, func)
@@ -185,49 +261,52 @@ function t_describe(title, func)
     -- valid_test_ins(self, "Describe")
 end
 
-local function run_one_it(i)
-    T.i_now = i
-    local tm = os.clock()
-    local ok, msg = xpcall(i.func, error_msgh)
-    if ok then
-        tm = math.ceil((os.clock() - tm) * 1000)
-
-        T.pass = T.pass + 1
-        if tm > 1 then
-            T.print(G("%s%s (%dms)", OK, i.title, tm))
-        else
-            T.print(G(OK .. i.title))
-        end
-    else
-        T.fail = T.fail + 1
-        if not msg:find(TEST_FAIL) then
-            append_msg(msg)
-        end
-        T.print(R(FAIL .. i.title))
-        print_msg(i)
-    end
-    T.i_now = nil
-end
-
+-- 创建一个具体的测试
 function t_it(title, func)
     local i = It(title, func)
 
     -- 策略1：得到所有it block后再统一执行
     -- 那么运行describe中的代码将不按顺序顺序，需要使用t_before、t_after来执行
-    -- table.insert(T.d_now.i, i)
+    table.insert(T.d_now.i, i)
 
     -- 策略2：直接执行所有it block
     -- 那么describe中的代码按顺序执行
     -- 但是，如果整个测试中有异步测试时，仍需要使用t_before、t_after来执行
-    run_one_it(i)
+    -- run_one_it(i)
 end
 
-
-
+-- 设置当前测试异步超时时间(毫秒)
 function t_wait(timeout)
+    assert(not T.i_now.timer, "call wait multi times")
+    T.i_now.timer = T.timer.new(timeout or 2000, function()
+        coroutine.resume(T.co)
+    end)
 end
 
+-- 结束当前异步测试
 function t_done()
+    T.timer.del(T.i_now.timer)
+
+    T.i_now.timer = nil
+    coroutine.resume(T.co)
+end
+
+-- 测试前运行的函数
+function t_before(func)
+    assert(T.d_now, "MUST called inside describe block")
+
+    if not T.d_now.before then T.d_now.before = {} end
+
+    table.insert(T.d_now.before, func)
+end
+
+-- 测试后运行的函数
+function t_after(func)
+    assert(T.d_now, "MUST called inside describe block")
+
+    if not T.d_now.after then T.d_now.after = {} end
+
+    table.insert(T.d_now.after, func)
 end
 
 -- setup test parameters
@@ -248,34 +327,64 @@ function t_reset()
     T.time = 0
 end
 
--- first reset
-t_reset()
-
-local function run_one_describe(d)
-    T.print(B(d.title))
-
-    T.d_now = d
-    local ok, msg = xpcall(d.func, error_msgh)
-    if not ok then
-        T.print(R(msg))
-    end
-
-    T.d_now = nil
-end
-
 -- run current test session
-function t_run()
+local function run()
     T.time = os.clock()
 
+    -- 收集所有测试
     for _, d in pairs(T.d) do
+        T.d_now = d
         run_one_describe(d)
+        T.d_now = nil
+    end
+
+    -- 执行测试
+    for _, d in pairs(T.d) do
+        T.print(B(d.title))
+
+        -- 执行before函数
+        for _, func in pairs(d.before or {}) do
+            local ok, msg = xpcall(func, error_msgh)
+            if not ok then
+                T.print(R("%s", msg))
+            end
+        end
+
+        T.d_now = d
+        for _, i in pairs(d.i) do
+            T.i_now = i
+            run_one_it(i)
+            T.i_now = nil
+        end
+
+        -- 执行before函数
+        for _, func in pairs(d.after or {}) do
+            local ok, msg = xpcall(func, error_msgh)
+            if not ok then
+                T.print(R("%s", msg))
+            end
+        end
+
+        T.d_now = nil
     end
 
     local pass = T.pass
     local fail = T.fail
     local time = math.ceil((os.clock() - T.time) * 1000)
     T.print(string.format("%s, %s (%dms)",
-        G("%d passing", T.pass),
+        G("%d passing", pass),
         fail > 0 and R("%d failing", fail) or G("0 failing"),
         time))
+
+    T.co = nil
 end
+
+-- run current test session
+function t_run()
+    T.co = coroutine.create(run)
+
+    coroutine.resume(T.co)
+end
+
+-- /////////////////////////////////////////////////////////////////////////////
+t_reset() -- first reset

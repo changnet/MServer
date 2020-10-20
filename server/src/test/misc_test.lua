@@ -151,7 +151,9 @@ t_describe("string split performance test", function()
     local str1 = "aaaaaaaaaaaaa\tbbbbbbbbbbbbbbbbbbbbbbbb\tcccccccccccccc\t"
     local str2 = "aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbcccccccccc"
 
-    collectgarbage("stop")
+    t_before(function()
+        collectgarbage("stop")
+    end)
 
     t_it("using string.find", function()
         local old_mem = collectgarbage("count")
@@ -186,7 +188,9 @@ t_describe("string split performance test", function()
             "using memory %.03f kb", collectgarbage("count") - old_mem))
     end)
 
-    collectgarbage("restart")
+    t_after(function()
+        collectgarbage("restart")
+    end)
 end)
 
 t_describe("table extend library test", function()
