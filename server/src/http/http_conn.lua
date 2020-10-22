@@ -1,30 +1,123 @@
--- httpd_conn.lua
+-- http_conn.lua
 --- 2017-12-16
 -- xzc
 
--- 后台http连接
+-- http连接
 
-local HttpdConn = oo.class( ... )
+local PAGE_GET =
+'GET %s%s%s HTTP/1.1\r\n\z
+Host: %s:%d\r\n\z
+Connection: keep-alive\r\n\z
+Upgrade-Insecure-Requests: 1\r\n\z
+Accept: text/plain,application/json\r\n\r\n'
 
-function HttpdConn:__init( conn_id )
-    self.conn_id = conn_id
+local PAGE_POST =
+'POST %s HTTP/1.1\r\n\z
+HOST: %s:%d\r\n\z
+Content-Length: %d\r\n\z
+Connection: keep-alive\r\n\z
+Accept: text/plain,application/json\r\n\r\n%s\
+'
+
+local network_mgr = network_mgr
+
+local HttpConn = oo.class( ... )
+
+function HttpConn:__init()
 end
 
-function HttpdConn:conn_del()
-    return g_httpd:conn_del( self.conn_id )
+function HttpConn:conn_del()
 end
 
-function HttpdConn:command_new( url,body )
-    return g_httpd:do_command( self,url,body )
+function HttpConn:command_new( url,body )
+    return self.on_command(self, url, body)
 end
 
-function HttpdConn:send_pkt( pkt )
+-- 发送数据包
+function HttpConn:send_pkt( pkt )
     return network_mgr:send_raw_packet( self.conn_id,pkt )
 end
 
-function HttpdConn:close( flush )
+-- 连接到其他服务器
+-- @param host 目标服务器地址
+-- @param port 目标服务器端口
+-- @param on_connect 连接成功(或失败)时的回调函数
+-- @param on_command 收到请求时回调函数，不需要可为nil
+function HttpConn:connect( host,port, on_connect, on_command )
+    self.ip = util.gethostbyname(host)
+    -- 这个host需要注意，实测对www.example.com请求时，
+    -- 如果host为一个ip，是会返回404的
+    self.host = host
+    self.port = port
+    self.on_connect = on_connect
+    self.on_command = on_command
+
+    self.conn_id = network_mgr:connect( self.ip,port,network_mgr.CNT_CSCN )
+
+    g_conn_mgr:set_conn( self.conn_id,self )
+end
+
+-- 关闭链接
+-- @param flush 关闭前是否发送缓冲区的数据
+function HttpConn:close( flush )
     g_conn_mgr:set_conn( self.conn_id,nil )
     return network_mgr:close( self.conn_id,flush )
 end
 
-return HttpdConn
+-- 监听http连接
+-- @param on_command 收到请求时的回调函数
+function HttpConn:listen( ip,port, on_command )
+    self.on_command = on_command
+    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
+
+    g_conn_mgr:set_conn( self.conn_id,self )
+    return true
+end
+
+-- 有新的连接进来
+function HttpConn:conn_accept( new_conn_id )
+    network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
+    network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
+    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
+
+    local new_conn = HttpConn( new_conn_id )
+
+    new_conn.on_command = self.on_command
+    return new_conn
+end
+
+-- 连接成功(或失败)
+function HttpConn:conn_new( ecode )
+    if 0 == ecode then
+        network_mgr:set_conn_io( self.conn_id, network_mgr.IOT_NONE )
+        network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_NONE )
+        network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_HTTP )
+    end
+
+    if self.on_connect then return self.on_connect(self, ecode) end
+end
+
+-- 发起get请求
+-- @param url 请求的url
+-- @param req 请求的数据，不包含url，已进行url转义。如: name=1&pass=2
+-- @param cb 回调函数，不需要或者在connnect时已指定可为nil
+function HttpConn:get(url, req, cb)
+    if cb then self.on_command = cb end
+
+    return self:send_pkt(string.format(PAGE_GET,
+        url or "/", req and "?" or "", req or "", self.host, self.port))
+end
+
+-- 发起post请求
+-- @param url 请求的url
+-- @param body 请求的数据
+-- @param cb 回调函数，不需要或者在connnect时已指定可为nil
+function HttpConn:post(url, body, cb)
+    if cb then self.on_command = cb end
+
+    body = body or ""
+    return self:send_pkt(string.format(
+        PAGE_POST, url, self.host, self.port, string.len(body), body))
+end
+
+return HttpConn

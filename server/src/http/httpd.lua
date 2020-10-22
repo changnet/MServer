@@ -30,11 +30,9 @@ local page200 =
 }
 page200 = table.concat( page200 )
 
-local network_mgr = network_mgr
 local uri = require "util.uri"
 
 require "http.http_header"
-local HttpdConn = require "http.httpd_conn"
 
 local Httpd = oo.singleton( ... )
 
@@ -44,44 +42,20 @@ function Httpd:__init()
     self.http_listen = nil
 end
 
--- 监听http连接
-function Httpd:http_listen( ip,port )
-    self.http_listen = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
-    PRINTF( "listen for http at %s:%d",ip,port )
+-- 添加socket连接
+function Httpd:add_conn(conn)
+    self.conn[conn.conn_id] = conn
+end
 
-    g_conn_mgr:set_conn( self.http_listen,self )
-    return true
+-- 删除连接
+function Httpd:del_conn(conn_id)
+    self.conn[conn_id] = nil
 end
 
 -- http调用
 function Httpd:do_exec( path,conn,fields,body )
     local exec_obj = require( path )
     return exec_obj:exec( conn,fields,body )
-end
-
-function Httpd:conn_accept( new_conn_id )
-    network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
-    network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
-    network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
-
-    PRINT( "http_accept_new",new_conn_id )
-
-    local new_conn = HttpdConn( new_conn_id )
-
-    self.conn[new_conn_id] = new_conn
-    return new_conn
-end
-
--- 对方断开连接
-function Httpd:conn_del( conn_id )
-    self.conn[conn_id] = nil
-    PRINT( "http_connect_del",conn_id )
-end
-
--- 主动断开连接
-function Httpd:conn_close( conn )
-    self.conn[conn.conn_id] = nil
-    conn:close( true ) -- 默认情况下，http要及时发送数据
 end
 
 -- 格式化错误码为json格式
@@ -118,7 +92,7 @@ function Httpd:do_return(conn,success,code,ctx)
         conn:send_pkt( self:format_200( code,ctx ) )
     end
 
-    return self:conn_close( conn,true )
+    return conn:close( true )
 end
 
 local httpd = Httpd()
@@ -139,7 +113,7 @@ function Httpd:do_command( conn,url,body )
             ERROR( "http request page not found:%s",path )
             conn:send_pkt( page404 )
 
-            return self:conn_close( conn )
+            return conn:close( true )
         end
 
         io.close(exec_file)

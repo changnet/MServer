@@ -124,14 +124,40 @@ local ip1,ip2 = util.gethostbyname( ssl_url )
 http_conn = CltConn()
 http_conn:connect( ip1,ssl_port )
 
+local HttpConn = require "http.http_conn"
+g_conn_mgr = require "network.conn_mgr"
+
 t_describe("http(s) test", function()
     t_it("http get example.com", function()
-        t_wait(10000)
+        t_wait(5000)
 
-        print("before ",os.clock(), os.date())
-        g_timer_mgr:timeout(5, function()
-            print("after ",os.clock(), os.date())
-            t_done()
+        local conn = HttpConn()
+        _G.https_test_conn = conn
+
+        conn:connect("www.example.com", 80, function(_conn, ecode)
+            t_equal(0, ecode)
+
+            conn:get("/", nil, function(__conn, url, body)
+                conn:close()
+                t_done()
+            end)
+        end)
+    end)
+
+    t_it("http post example.com", function()
+        t_wait(5000)
+
+        local conn = HttpConn()
+        _G.https_test_conn = conn
+
+        conn:connect("www.example.com", 80, function(_conn, ecode)
+            t_equal(0, ecode)
+
+            conn:post("/", nil, function(__conn, url, body)
+                t_print(body)
+                conn:close()
+                t_done()
+            end)
         end)
     end)
 end)

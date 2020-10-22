@@ -234,6 +234,7 @@ end
 
 -- test if two variable equal
 function t_equal(got, expect)
+    assert(T.co, "test already finished or not begin yet")
     if equal(got, expect) then return end
 
     -- show msg late and abort current test
@@ -246,6 +247,7 @@ end
 
 -- test if expr is true
 function t_assert(expr)
+    assert(T.co, "test already finished or not begin yet")
     if expr then return end
 
     local msg = debug.traceback("assertion failed!")
