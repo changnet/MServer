@@ -35,14 +35,14 @@ end
 -- 检测是否需要开启定时器定时写统计信息到文件
 function Rpc:check_timer()
     if not self.rpc_perf and self.timer then
-        g_timer_mgr:del_timer( self.timer )
+        g_timer_mgr:stop( self.timer )
 
         self.timer = nil
         return
     end
 
     if self.rpc_perf and not self.timer then
-        self.timer = g_timer_mgr.interval( 1800,1800,self,self.do_timer )
+        self.timer = g_timer_mgr:interval( 1800,1800,-1,self,self.do_timer )
     end
 
 end

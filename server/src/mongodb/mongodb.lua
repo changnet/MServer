@@ -22,7 +22,7 @@ function Mongodb:do_timer()
     local ok = self.mongodb:valid()
     if -1 == ok then return end
 
-    g_timer_mgr:del_timer( self.timer )
+    g_timer_mgr:stop( self.timer )
     self.timer = nil
 
     if 0 == ok then
@@ -51,7 +51,7 @@ function Mongodb:start( ip,port,usr,pwd,db,callback )
 
     if callback then
         self.conn_cb = callback
-        self.timer = g_timer_mgr.interval( 1,1,self,self.do_timer )
+        self.timer = g_timer_mgr:interval( 1,1,-1,self,self.do_timer )
     end
 end
 

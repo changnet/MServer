@@ -1,32 +1,50 @@
--- http deamon
+-- http deamon，一个简单的http服务器，专门处理www目录下的内容
+local Httpd = oo.singleton( ... )
+
+local uri = require "util.uri"
+local HTTP = require "http.http_header"
+local HttpConn = require "http.http_conn"
 
 local page404 = HTTP.P404
 local page500 = HTTP.P500
 local page200 = HTTP.P200_CLOSE
 
-local uri = require "util.uri"
-
-require "http.http_header"
-
-local Httpd = oo.singleton( ... )
-
 function Httpd:__init()
     self.conn = {}
     self.exec = {}
-    self.http_listen = nil
+    self.listen_conn = nil
 end
 
--- 添加socket连接
-function Httpd:add_conn(conn)
-    self.conn[conn.conn_id] = conn
+-- 收到新连接时放到列表，定时踢出不断开的连接
+function Httpd:on_accept(conn)
+    -- self.conn = {}
 end
 
--- 删除连接
-function Httpd:del_conn(conn_id)
-    self.conn[conn_id] = nil
+-- 启动http服务器
+function Httpd:start(ip, port)
+    assert(not self.listen_conn)
+
+    self.listen_conn = HttpConn()
+
+    -- 用函数wrap一层，这样不影响热更
+    self.listen_conn:listen(ip, port, function(conn)
+        return self:on_accept(conn)
+    end, function(conn, url, body)
+        return self:do_command(conn, url, body)
+    end)
+
+    return true;
 end
 
--- http调用
+-- 停止http服务器
+function Httpd:stop()
+    self.listen_conn:close()
+    self.listen_conn = nil
+
+    -- TODO 关闭self.conn中的所有连接
+end
+
+-- 处理http请求
 function Httpd:do_exec( path,conn,fields,body )
     local exec_obj = require( path )
     return exec_obj:exec( conn,fields,body )

@@ -29,19 +29,19 @@ end
 
 -- 创建按间隔循环的定时器
 -- @param after 延迟N秒启动定时器，可以是小数，精度是毫秒级的
--- @param ival 循环间隔，单位秒，可以是小数，精度是毫秒级的，0表示不循环
+-- @param sec 循环间隔，单位秒，可以是小数，精度是毫秒级的，0表示不循环
 -- @param times 循环次数，-1表示永久
 -- @param this 回调对象，没有可以不传此参数
 -- @param method 回调函数
 -- @param ... 其他回调参数
 -- @return 定时器id
-function TimerMgr:interval( after,ival,times,this,method,... )
-    assert(ival > 0, "repeat interval MUST > 0")
+function TimerMgr:interval( after,sec,times,this,method,... )
+    assert(sec >= 0, "repeat interval MUST > 0")
 
     local timer_id = self:get_next_id()
 
     local timer = Timer( timer_id )
-    timer:set( after,ival )
+    timer:set( after,sec )
 
     local cb
     if "function" == type(this) then
@@ -49,11 +49,16 @@ function TimerMgr:interval( after,ival,times,this,method,... )
     else
         cb = method_thunk( this,method,... )
     end
-    self.timer[timer_id] = {
+    local info = {
         cb = cb,
-        times = 1,
         timer = timer,
     }
+
+    if times >= 0 then
+        info.ts = 0
+        info.times = times
+    end
+    self.timer[timer_id] = info
 
     timer:start()
     return timer_id
@@ -66,31 +71,15 @@ end
 -- @param ... 其他回调参数
 -- @return 定时器id
 function TimerMgr:timeout(after, this, method, ...)
-    local timer_id = self:get_next_id()
-
-    local timer = Timer( timer_id )
-    timer:set( after,0 )
-
-    local cb
-    if "function" == type(this) then
-        cb = func_thunk(this, method, ...)
-    else
-        cb = method_thunk( this,method,... )
-    end
-    self.timer[timer_id] = {
-        cb = cb,
-        ts = 0,
-        times = 1,
-        timer = timer,
-    }
-
-    timer:start()
-    return timer_id
+    return self:interval(after, 0, 1, this, method, ...)
 end
 
 -- 停止定时器
 function TimerMgr:stop( timer_id )
-    self.timer[timer_id].timer:stop()
+    local info = self.timer[timer_id]
+    if not info then return end
+
+    info.timer:stop()
 
     self.timer[timer_id] = nil
 end
@@ -107,8 +96,10 @@ function timer_event( timer_id )
         return timer_mgr:stop( timer_id )
     end
 
-    timer.ts = timer.ts + 1
-    if timer.ts > timer.times then timer_mgr:stop( timer_id ) end
+    if timer.times then
+        timer.ts = timer.ts + 1
+        if timer.ts >= timer.times then timer_mgr:stop( timer_id ) end
+    end
 
     return timer.cb()
 end

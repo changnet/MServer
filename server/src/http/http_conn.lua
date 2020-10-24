@@ -55,8 +55,10 @@ function HttpConn:close( flush )
 end
 
 -- 监听http连接
--- @param on_command 收到请求时的回调函数
-function HttpConn:listen( ip,port, on_command )
+-- @param on_command 收到请求时的回调函数，可为nil
+-- @param on_accept 接受新连接时的回调函数，可为nil
+function HttpConn:listen( ip,port, on_accept, on_command)
+    self.on_accept = on_accept
     self.on_command = on_command
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
 
@@ -73,6 +75,7 @@ function HttpConn:conn_accept( new_conn_id )
     local new_conn = HttpConn( new_conn_id )
 
     new_conn.on_command = self.on_command
+    if self.on_accept then self:on_accept(new_conn) end
     return new_conn
 end
 

@@ -59,7 +59,7 @@ function Player:__init( pid )
     -- 不需要标准流程的子模块
     self.abt_sys = AttributeSys( pid )
 
-    self.timer = g_timer_mgr.interval( 5,5,self,self.do_timer )
+    self.timer = g_timer_mgr:interval( 5,5,-1,self,self.do_timer )
 end
 
 -- 获取玩家id
@@ -188,7 +188,7 @@ end
 
 -- 退出游戏
 function Player:on_logout()
-    g_timer_mgr:del_timer( self.timer )
+    g_timer_mgr:stop( self.timer )
 
     -- 未初始化完成不能存库，防止数据被覆盖
     if not self.ok then

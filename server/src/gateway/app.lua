@@ -31,7 +31,7 @@ function App:initialize()
         os.exit( 1 )
     end
 
-    if not g_httpd:http_listen( g_app_setting.hip,g_app_setting.hport ) then
+    if not g_httpd:start( g_app_setting.hip,g_app_setting.hport ) then
         ERROR( "gateway http listen fail,exit" )
         os.exit( 1 )
     end

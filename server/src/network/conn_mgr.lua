@@ -8,7 +8,7 @@ local ConnMgr = oo.singleton( ... )
 
 function ConnMgr:__init()
     self.conn = {}
-    setmetatable(self.conn, {["__mode"]='v'})
+    -- setmetatable(self.conn, {["__mode"]='v'})
 end
 
 function ConnMgr:get_conn( conn_id )

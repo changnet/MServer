@@ -176,7 +176,7 @@ t_describe("http(s) test", function()
         local host = "127.0.0.1"
 
         local srvConn = HttpConn()
-        srvConn:listen(host, port, function(conn, url, body)
+        srvConn:listen(host, port, nil, function(conn, url, body)
             local _, _, method = conn:get_header()
 
             -- 1 = GET, 3 = POST
