@@ -259,19 +259,20 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
     // 返回的压栈数量
     const static int32_t size = 4;
     // table赋值时，需要一个额外的栈
-    if (lua_checkstack(L, size + 1))
+    if (!lua_checkstack(L, size + 1))
     {
         ERROR("http unpack header stack over flow");
         return -1;
     }
 
-    // GET or POST
-    const char *method_str =
-        http_method_str(static_cast<enum http_method>(_parser->method));
-
     lua_pushboolean(L, _parser->upgrade);
     lua_pushinteger(L, _parser->status_code);
-    lua_pushstring(L, method_str);
+
+    // GET or POST
+    // const char *method_str =
+    //     http_method_str(static_cast<enum http_method>(_parser->method));
+    // lua_pushstring(L, method_str);
+    lua_pushinteger(L, _parser->method); // 1 = GET, 3 = POST
 
     lua_newtable(L);
     head_map_t::const_iterator head_itr = head_field.begin();

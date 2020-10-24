@@ -4,26 +4,17 @@
 
 -- http连接
 
-local PAGE_GET =
-'GET %s%s%s HTTP/1.1\r\n\z
-Host: %s:%d\r\n\z
-Connection: keep-alive\r\n\z
-Upgrade-Insecure-Requests: 1\r\n\z
-Accept: text/plain,application/json\r\n\r\n'
+local HTTP = require "http.http_header"
 
-local PAGE_POST =
-'POST %s HTTP/1.1\r\n\z
-HOST: %s:%d\r\n\z
-Content-Length: %d\r\n\z
-Connection: keep-alive\r\n\z
-Accept: text/plain,application/json\r\n\r\n%s\
-'
+local PAGE_GET = HTTP.PGET
+local PAGE_POST = HTTP.PPOST
 
 local network_mgr = network_mgr
 
 local HttpConn = oo.class( ... )
 
-function HttpConn:__init()
+function HttpConn:__init(conn_id)
+    self.conn_id = conn_id -- 通过accept创建时需要直接指定
 end
 
 function HttpConn:conn_del()
@@ -43,10 +34,9 @@ end
 -- @param port 目标服务器端口
 -- @param on_connect 连接成功(或失败)时的回调函数
 -- @param on_command 收到请求时回调函数，不需要可为nil
-function HttpConn:connect( host,port, on_connect, on_command )
+function HttpConn:connect( host, port, on_connect, on_command )
     self.ip = util.gethostbyname(host)
-    -- 这个host需要注意，实测对www.example.com请求时，
-    -- 如果host为一个ip，是会返回404的
+    -- 这个host需要注意，实测对www.example.com请求时，如果host为一个ip，是会返回404的
     self.host = host
     self.port = port
     self.on_connect = on_connect
@@ -118,6 +108,12 @@ function HttpConn:post(url, body, cb)
     body = body or ""
     return self:send_pkt(string.format(
         PAGE_POST, url, self.host, self.port, string.len(body), body))
+end
+
+-- 获取http头信息(code仅在返回时有用，method仅在请求时有用)
+-- return upgrade, code, method, fields
+function HttpConn:get_header()
+    return network_mgr:get_http_header(self.conn_id)
 end
 
 return HttpConn

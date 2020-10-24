@@ -133,6 +133,7 @@ setmetatable(It, {
 
 local OK     = "[  OK] "
 local FAIL   = "[FAIL] "
+local PEND   = "[PEND] "
 local TEST_FAIL = "__test_fail__"
 
 local function append_msg(msg)
@@ -201,11 +202,18 @@ local function run_one_it(i)
 
 
     -- 进入异步等待
-    if i.timeout then coroutine.yield() end
+    if i.status == PEND then coroutine.yield() end
 
     -- 异步超时
-    if i.timeout then
+    if i.status == PEND then
         T.print(R("%s%s (timeout)", FAIL, i.title))
+        return
+    end
+
+    -- 异步失败
+    if i.status == FAIL then
+        T.print(R(FAIL .. i.title))
+        print_msg(i)
         return
     end
 
@@ -242,7 +250,13 @@ function t_equal(got, expect)
         "got: %s, expect: %s",dump(got), dump(expect)), 2)
 
     append_msg(msg)
-    assert(false, TEST_FAIL)
+
+    if "running" == coroutine.status(T.co) then
+        assert(false, TEST_FAIL)
+    else
+        T.i_now.status = FAIL
+        coroutine.resume(T.co)
+    end
 end
 
 -- test if expr is true
@@ -253,7 +267,12 @@ function t_assert(expr)
     local msg = debug.traceback("assertion failed!")
 
     append_msg(msg)
-    assert(false, TEST_FAIL)
+    if "running" == coroutine.status(T.co) then
+        assert(false, TEST_FAIL)
+    else
+        T.i_now.status = FAIL
+        coroutine.resume(T.co)
+    end
 end
 
 function t_describe(title, func)
@@ -281,7 +300,7 @@ end
 function t_wait(timeout)
     assert(not T.i_now.timer, "call wait multi times")
 
-    T.i_now.timeout = timeout
+    T.i_now.status = PEND
     T.i_now.timer = T.timer.new(timeout or 2000, function()
         coroutine.resume(T.co)
     end)
@@ -292,7 +311,7 @@ function t_done()
     T.timer.del(T.i_now.timer)
 
     T.i_now.timer = nil
-    T.i_now.timeout = nil
+    T.i_now.status = nil
     coroutine.resume(T.co)
 end
 

@@ -116,47 +116,94 @@ end
 -- 对象弄成全局的，防止没有引用被释放
 
 -- 在浏览器输入https://127.0.0.1:10002来测试
-http_listen = SrvConn()
-http_listen:listen( IP,PORT )
+-- http_listen = SrvConn()
+-- http_listen:listen( IP,PORT )
 
-local ip1,ip2 = util.gethostbyname( ssl_url )
+-- local ip1,ip2 = util.gethostbyname( ssl_url )
 
-http_conn = CltConn()
-http_conn:connect( ip1,ssl_port )
+-- http_conn = CltConn()
+-- http_conn:connect( ip1,ssl_port )
 
 local HttpConn = require "http.http_conn"
 g_conn_mgr = require "network.conn_mgr"
 
 t_describe("http(s) test", function()
-    t_it("http get example.com", function()
+    -- 产生一个缓存，避免下面连接时查询dns导致测试超时
+    local host = "www.example.com"
+    util.gethostbyname(host)
+
+    t_it("http get " .. host, function()
         t_wait(5000)
 
         local conn = HttpConn()
-        _G.https_test_conn = conn
 
-        conn:connect("www.example.com", 80, function(_conn, ecode)
-            t_equal(0, ecode)
+        conn:connect(host, 80, function(_conn, ecode)
+            t_equal(ecode, 0)
 
             conn:get("/", nil, function(__conn, url, body)
+                local _, code = conn:get_header()
+                t_equal(code, 200)
                 conn:close()
                 t_done()
             end)
         end)
     end)
 
-    t_it("http post example.com", function()
+    t_it("http post " .. host, function()
         t_wait(5000)
 
         local conn = HttpConn()
-        _G.https_test_conn = conn
 
-        conn:connect("www.example.com", 80, function(_conn, ecode)
-            t_equal(0, ecode)
+        conn:connect(host, 80, function(_conn, ecode)
+            t_equal(ecode, 0)
 
             conn:post("/", nil, function(__conn, url, body)
-                t_print(body)
+                local _, code = conn:get_header()
+                t_equal(code, 200)
                 conn:close()
                 t_done()
+            end)
+        end)
+    end)
+
+    t_it("http local server test", function()
+        t_wait(5000)
+
+        local m = 1 -- 1 = GET, 3 = POST
+        local ctx = "hello"
+
+        local port = 8182
+        local host = "127.0.0.1"
+
+        local srvConn = HttpConn()
+        srvConn:listen(host, port, function(conn, url, body)
+            local _, _, method = conn:get_header()
+
+            -- 1 = GET, 3 = POST
+            if "/get" == url then
+                t_equal(method, 1)
+            else
+                t_equal(url, "/post")
+                t_equal(method, 3)
+            end
+
+            conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+        end)
+
+        local cltConn = HttpConn()
+        cltConn:connect(host, port, function(_, ecode)
+            t_equal(ecode, 0)
+
+            cltConn:get("/get", nil, function(_, url, body)
+                local _, code = cltConn:get_header()
+                t_equal(code, 200)
+
+                cltConn:post("/post", nil, function()
+                    local _, code = cltConn:get_header()
+                    t_equal(code, 200)
+                    cltConn:close()
+                    t_done()
+                end)
             end)
         end)
     end)

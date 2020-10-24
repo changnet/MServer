@@ -8,15 +8,15 @@ echo ghf | curl -l -H "Content-type: application/json" --data '@-' 127.0.0.1:100
 ]]
 function WebGM:exec( conn,fields,body )
     if not body then
-        return HTTPE.INVALID,body
+        return HTTP.INVALID,body
     end
 
     local ok,msg = g_gm:exec( "web_gm",nil,body )
     if not ok then
-        return HTTPE.INVALID,msg or body
+        return HTTP.INVALID,msg or body
     end
 
-    return HTTPE.OK,msg
+    return HTTP.OK,msg
 end
 
 local wgm = WebGM()

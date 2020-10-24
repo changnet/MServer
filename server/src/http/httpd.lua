@@ -1,34 +1,8 @@
 -- http deamon
 
-local page404 =
-{
-    'HTTP/1.1 404 Not Found\r\n',
-    'Content-Length: 0\r\n',
-    'Content-Type: text/html\r\n',
-    'Server: Mini-Game-Distribute-Server/1.0\r\n',
-    'Connection: close\r\n\r\n'
-}
-page404 = table.concat( page404 )
-
-local page500 =
-{
-    'HTTP/1.1 500 Internal server error\r\n',
-    'Content-Length: 0\r\n',
-    'Content-Type: text/html\r\n',
-    'Server: Mini-Game-Distribute-Server/1.0\r\n',
-    'Connection: close\r\n\r\n'
-}
-page500 = table.concat( page500 )
-
-local page200 =
-{
-    'HTTP/1.1 200 OK\r\n',
-    'Content-Length: %d\r\n',
-    'Content-Type: text/html\r\n',
-    'Server: Mini-Game-Distribute-Server/1.0\r\n',
-    'Connection: close\r\n\r\n%s'
-}
-page200 = table.concat( page200 )
+local page404 = HTTP.P404
+local page500 = HTTP.P500
+local page200 = HTTP.P200_CLOSE
 
 local uri = require "util.uri"
 
@@ -87,7 +61,7 @@ function Httpd:do_return(conn,success,code,ctx)
     else
         -- 需要异步处理数据，阻塞中
         -- TODO:要不要加个定时器做超时?
-        if code == HTTPE.PENDING then return end
+        if code == HTTP.PENDING then return end
 
         conn:send_pkt( self:format_200( code,ctx ) )
     end
