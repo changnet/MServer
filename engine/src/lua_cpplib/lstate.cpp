@@ -241,6 +241,11 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.set(Codec::CDC_FLATBUF, "CDC_FLATBUF");
     lc.set(Codec::CDC_PROTOBUF, "CDC_PROTOBUF");
 
+    lc.set(SSLMgr::SSLVT_NONE, "SSLVT_NONE");
+    lc.set(SSLMgr::SSLVT_TLS_GEN_AT, "SSLVT_TLS_GEN_AT");
+    lc.set(SSLMgr::SSLVT_TLS_SRV_AT, "SSLVT_TLS_SRV_AT");
+    lc.set(SSLMgr::SSLVT_TLS_CLT_AT, "SSLVT_TLS_CLT_AT");
+
     return 0;
 }
 

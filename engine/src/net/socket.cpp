@@ -530,7 +530,7 @@ void Socket::command_cb()
     }
 }
 
-int32_t Socket::set_io(IO::IOT io_type, int32_t io_ctx)
+int32_t Socket::set_io(IO::IOT io_type, const char *param)
 {
     delete _io;
     _io = NULL;
@@ -538,7 +538,7 @@ int32_t Socket::set_io(IO::IOT io_type, int32_t io_ctx)
     switch (io_type)
     {
     case IO::IOT_NONE: _io = new IO(&_recv, &_send); break;
-    case IO::IOT_SSL: _io = new SSLIO(io_ctx, &_recv, &_send); break;
+    case IO::IOT_SSL: _io = new SSLIO(param, &_recv, &_send); break;
     default: return -1;
     }
 

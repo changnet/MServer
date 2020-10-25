@@ -90,7 +90,7 @@ public:
         this->_method = &Socket::method_thunk<K, method>;
     }
 
-    int32_t set_io(IO::IOT io_type, int32_t io_ctx);
+    int32_t set_io(IO::IOT io_type, const char *param);
     int32_t set_packet(Packet::PacketType packet_type);
     int32_t set_codec_type(Codec::CodecType codec_type);
 

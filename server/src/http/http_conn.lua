@@ -53,6 +53,18 @@ function HttpConn:connect( host, port, on_connect, on_command )
     g_conn_mgr:set_conn( self.conn_id,self )
 end
 
+-- 以https试连接到其他服务器
+-- @param host 目标服务器地址
+-- @param port 目标服务器端口
+-- @param cert 证书路径，必须调用new_ssl_ctx以该证书创建一个ctx
+-- @param on_connect 连接成功(或失败)时的回调函数
+-- @param on_command 收到请求时回调函数，不需要可为nil
+function HttpConn:connect_s( host, port, cert, on_connect, on_command )
+    self.cert = cert or ""
+
+    return self:connect( host, port, on_connect, on_command )
+end
+
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
 function HttpConn:close( flush )
@@ -63,7 +75,7 @@ end
 -- 监听http连接
 -- @param on_command 收到请求时的回调函数，可为nil
 -- @param on_accept 接受新连接时的回调函数，可为nil
-function HttpConn:listen( ip,port, on_accept, on_command)
+function HttpConn:listen(ip,port, on_accept, on_command)
     self.on_accept = on_accept
     self.on_command = on_command
     self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SCCN )
@@ -72,9 +84,22 @@ function HttpConn:listen( ip,port, on_accept, on_command)
     return true
 end
 
+-- 以https方式监听http连接
+-- @param cert 证书路径，必须调用new_ssl_ctx以该证书创建一个ctx
+-- @param on_command 收到请求时的回调函数，可为nil
+-- @param on_accept 接受新连接时的回调函数，可为nil
+function HttpConn:listen_s( ip, port, cert, on_accept, on_command)
+    self.cert = assert(cert)
+    return self:listen(ip, port, on_accept, on_command)
+end
+
 -- 有新的连接进来
 function HttpConn:conn_accept( new_conn_id )
-    network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
+    if self.cert then
+        network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_SSL, self.cert )
+    else
+        network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
+    end
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_HTTP )
 
@@ -88,7 +113,11 @@ end
 -- 连接成功(或失败)
 function HttpConn:conn_new( ecode )
     if 0 == ecode then
-        network_mgr:set_conn_io( self.conn_id, network_mgr.IOT_NONE )
+        if self.cert then
+            network_mgr:set_conn_io(self.conn_id,network_mgr.IOT_SSL, self.cert)
+        else
+            network_mgr:set_conn_io( self.conn_id,network_mgr.IOT_NONE )
+        end
         network_mgr:set_conn_codec( self.conn_id,network_mgr.CDC_NONE )
         network_mgr:set_conn_packet( self.conn_id,network_mgr.PKT_HTTP )
     end

@@ -719,7 +719,7 @@ int32_t LNetworkMgr::set_conn_io(lua_State *L)
 {
     uint32_t conn_id = luaL_checkinteger(L, 1);
     int32_t io_type  = luaL_checkinteger(L, 2);
-    int32_t io_ctx   = luaL_optinteger(L, 3, 0);
+    const char *io_param = lua_tostring(L, 3);
 
     class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -732,7 +732,7 @@ int32_t LNetworkMgr::set_conn_io(lua_State *L)
         return luaL_error(L, "invalid io type");
     }
 
-    if (sk->set_io(static_cast<IO::IOT>(io_type), io_ctx) < 0)
+    if (sk->set_io(static_cast<IO::IOT>(io_type), io_param) < 0)
     {
         return luaL_error(L, "set conn io error");
     }
@@ -792,31 +792,17 @@ int32_t LNetworkMgr::new_ssl_ctx(lua_State *L) /* 创建一个ssl上下文 */
     int32_t sslv          = luaL_checkinteger(L, 1);
     const char *cert_file = lua_tostring(L, 2);
 
-    int32_t keyt         = luaL_optinteger(L, 3, 0);
-    const char *key_file = lua_tostring(L, 4);
-    const char *passwd   = lua_tostring(L, 5);
+    const char *key_file = lua_tostring(L, 3);
+    const char *passwd   = lua_tostring(L, 4);
 
-    if (sslv <= SSLMgr::SSLVT_NONE || sslv >= SSLMgr::SSLVT_MAX)
-    {
-        return luaL_error(L, "invalid ssl version");
-    }
+    void *ctx = StaticGlobal::ssl_mgr()->new_ssl_ctx(
+        static_cast<SSLMgr::SSLVT>(sslv), cert_file, key_file, passwd);
 
-    if (keyt < SSLMgr::KT_NONE || keyt >= SSLMgr::KT_MAX)
-    {
-        return luaL_error(L, "invalid ssl key type");
-    }
-
-    int32_t idx = StaticGlobal::ssl_mgr()->new_ssl_ctx(
-        static_cast<SSLMgr::SSLVT>(sslv), cert_file,
-        static_cast<SSLMgr::KeyType>(keyt), key_file, passwd);
-
-    if (idx < 0)
+    if (!ctx)
     {
         return luaL_error(L, "new ssl ctx error");
     }
-
-    lua_pushinteger(L, idx);
-    return 1;
+    return 0;
 }
 
 // 查找该cmd在哪个进程处理
