@@ -20,8 +20,14 @@ end
 function HttpConn:conn_del()
 end
 
-function HttpConn:command_new( url,body )
-    return self.on_command(self, url, body)
+-- 收到消息
+-- @param http_type enum http_parser_type 0请求request，1 返回respond
+-- @param code 错误码，如404，仅response有用
+-- @param method 1 = GET, 3 = POST，仅request有用，其他值参考C++的定义
+-- @param url 请求的url，仅request有用
+-- @param body 数据
+function HttpConn:command_new( http_type, code, method, url, body )
+    return self:on_command(http_type, code, method, url, body)
 end
 
 -- 发送数据包

@@ -140,12 +140,13 @@ t_describe("http(s) test", function()
         conn:connect(host, 80, function(_conn, ecode)
             t_equal(ecode, 0)
 
-            conn:get("/", nil, function(__conn, url, body)
-                local _, code = conn:get_header()
-                t_equal(code, 200)
-                conn:close()
-                t_done()
-            end)
+            conn:get("/", nil,
+                function(__conn, http_type, code, method, url, body)
+                    t_equal(http_type, 1)
+                    t_equal(code, 200)
+                    conn:close()
+                    t_done()
+                end)
         end)
     end)
 
@@ -157,54 +158,57 @@ t_describe("http(s) test", function()
         conn:connect(host, 80, function(_conn, ecode)
             t_equal(ecode, 0)
 
-            conn:post("/", nil, function(__conn, url, body)
-                local _, code = conn:get_header()
-                t_equal(code, 200)
-                conn:close()
-                t_done()
-            end)
+            conn:post("/", nil,
+                function(__conn, http_type, code, method, url, body)
+                    t_equal(http_type, 1)
+                    t_equal(code, 200)
+                    conn:close()
+                    t_done()
+                end)
         end)
     end)
 
     t_it("http local server test", function()
         t_wait(5000)
 
-        local m = 1 -- 1 = GET, 3 = POST
         local ctx = "hello"
 
         local port = 8182
         local host = "127.0.0.1"
 
         local srvConn = HttpConn()
-        srvConn:listen(host, port, nil, function(conn, url, body)
-            local _, _, method = conn:get_header()
+        srvConn:listen(host, port, nil,
+            function(conn, http_type, code, method, url, body)
+                t_equal(http_type, 0)
 
-            -- 1 = GET, 3 = POST
-            if "/get" == url then
-                t_equal(method, 1)
-            else
-                t_equal(url, "/post")
-                t_equal(method, 3)
-            end
+                -- 1 = GET, 3 = POST
+                if "/get" == url then
+                    t_equal(method, 1)
+                else
+                    t_equal(url, "/post")
+                    t_equal(method, 3)
+                end
 
-            conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-        end)
+                conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+            end)
 
         local cltConn = HttpConn()
         cltConn:connect(host, port, function(_, ecode)
             t_equal(ecode, 0)
 
-            cltConn:get("/get", nil, function(_, url, body)
-                local _, code = cltConn:get_header()
-                t_equal(code, 200)
-
-                cltConn:post("/post", nil, function()
-                    local _, code = cltConn:get_header()
+            cltConn:get("/get", nil,
+                function(_, http_type, code, method, url, body)
+                    local header = cltConn:get_header()
                     t_equal(code, 200)
-                    cltConn:close()
-                    t_done()
+                    t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+
+                    cltConn:post("/post", nil,
+                        function(_, http_type2, code2, method2, url2, body2)
+                            t_equal(code2, 200)
+                            cltConn:close()
+                            t_done()
+                        end)
                 end)
-            end)
         end)
     end)
 end)

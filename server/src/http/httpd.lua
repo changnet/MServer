@@ -1,4 +1,4 @@
--- http deamon，一个简单的http服务器，专门处理www目录下的内容
+-- http deamon，一个简单的http服务器，专门处理www目录下的内容，通常用于gm以及后台通信
 local Httpd = oo.singleton( ... )
 
 local uri = require "util.uri"
@@ -90,7 +90,7 @@ end
 local httpd = Httpd()
 
 -- http回调
-function Httpd:do_command( conn,url,body )
+function Httpd:do_command( conn, http_type, code, method, url, body)
     -- url = /platform/pay?sid=99&money=200
     local raw_url,fields = uri.parse( url )
 
@@ -114,10 +114,10 @@ function Httpd:do_command( conn,url,body )
         self.exec[raw_url] = path
     end
 
-    local success,code,ctx = xpcall(
+    local success,ecode,ctx = xpcall(
         Httpd.do_exec, __G__TRACKBACK,httpd,path,conn,fields,body )
 
-    return self:do_return(conn,success,code,ctx)
+    return self:do_return(conn,success,ecode,ctx)
 end
 
 return httpd

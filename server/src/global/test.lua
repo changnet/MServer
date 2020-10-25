@@ -206,12 +206,14 @@ local function run_one_it(i)
 
     -- 异步超时
     if i.status == PEND then
+        T.fail = T.fail + 1
         T.print(R("%s%s (timeout)", FAIL, i.title))
         return
     end
 
     -- 异步失败
     if i.status == FAIL then
+        T.fail = T.fail + 1
         T.print(R(FAIL .. i.title))
         print_msg(i)
         return

@@ -205,10 +205,20 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
+
+    // enum http_parser_type 0请求request，1 返回respond
+    lua_pushinteger(L, _parser->type);
+    lua_pushinteger(L, _parser->status_code); // 仅respond有用
+
+    // GET or POST
+    // const char *method_str =
+    //     http_method_str(static_cast<enum http_method>(_parser->method));
+    // lua_pushstring(L, method_str);
+    lua_pushinteger(L, _parser->method); // 1 = GET, 3 = POST，仅request有用
     lua_pushstring(L, _http_info._url.c_str());
     lua_pushstring(L, _http_info._body.c_str());
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 6, 0, 1)))
     {
         ERROR("command_new:%s", lua_tostring(L, -1));
     }
@@ -256,23 +266,12 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
 {
     const head_map_t &head_field = _http_info._head_field;
 
-    // 返回的压栈数量
-    const static int32_t size = 4;
     // table赋值时，需要一个额外的栈
-    if (!lua_checkstack(L, size + 1))
+    if (!lua_checkstack(L, 2))
     {
         ERROR("http unpack header stack over flow");
         return -1;
     }
-
-    lua_pushboolean(L, _parser->upgrade);
-    lua_pushinteger(L, _parser->status_code);
-
-    // GET or POST
-    // const char *method_str =
-    //     http_method_str(static_cast<enum http_method>(_parser->method));
-    // lua_pushstring(L, method_str);
-    lua_pushinteger(L, _parser->method); // 1 = GET, 3 = POST
 
     lua_newtable(L);
     head_map_t::const_iterator head_itr = head_field.begin();
@@ -282,7 +281,7 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
         lua_setfield(L, -2, head_itr->first.c_str());
     }
 
-    return size;
+    return 1;
 }
 
 /* http的GET、POST都由上层处理好再传入底层
