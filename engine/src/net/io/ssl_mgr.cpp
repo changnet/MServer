@@ -5,18 +5,16 @@
 
 // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
-#define SSL_ERROR(x)                                      \
-    do                                                    \
-    {                                                     \
-        ERROR(x " errno(%d:%s)", errno, strerror(errno)); \
-        int32_t eno = 0;                                  \
-        while (0 != (eno = ERR_get_error()))              \
-        {                                                 \
-            ERROR("    %s", ERR_error_string(eno, NULL)); \
-        }                                                 \
-    } while (0)
+void SSLMgr::ssl_error(const char *what)
+{
+    ERROR("%s errno(%d:%s)", what, errno, strerror(errno));
 
-int32_t ctx_passwd_cb(char *buf, int32_t size, int rwflag, void *u);
+    int32_t eno = 0;
+    while (0 != (eno = ERR_get_error()))
+    {
+        ERROR("    %s", ERR_error_string(eno, NULL));
+    }
+}
 
 SSLMgr::SSLMgr()
 {
@@ -65,7 +63,7 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     SSL_CTX *ctx = SSL_CTX_new(method);
     if (!ctx)
     {
-        SSL_ERROR("new_ssl_ctx:can NOT create ssl content");
+        ssl_error("new_ssl_ctx:can NOT create ssl content");
         return -1;
     }
 
@@ -88,7 +86,7 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     // ASN1只支持一个文件一个证书，pem可以将多个证书放到同一个文件
     if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
     {
-        SSL_ERROR("new_ssl_ctx cert file");
+        ssl_error("new_ssl_ctx cert file");
         goto FAIL;
     }
 
@@ -110,14 +108,14 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     ok = SSL_CTX_use_RSAPrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
     if (ok <= 0)
     {
-        SSL_ERROR("new_ssl_ctx key file");
+        ssl_error("new_ssl_ctx key file");
         goto FAIL;
     }
 
     // 验证私钥是否和证书匹配
     if (SSL_CTX_check_private_key(ctx) <= 0)
     {
-        SSL_ERROR("new_ssl_ctx:certificate and private key not match");
+        ssl_error("new_ssl_ctx:certificate and private key not match");
         goto FAIL;
     }
 

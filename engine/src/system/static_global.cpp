@@ -139,7 +139,30 @@ int32_t ssl_uninit()
      * application has finished using it.
      */
 
-    // OPENSSL_cleanup();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    // stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
+    FIPS_mode_set(0);
+    CRYPTO_set_locking_callback(nullptr);
+    CRYPTO_set_id_callback(nullptr);
+
+    ERR_remove_state(0);
+
+    SSL_COMP_free_compression_methods();
+
+    ENGINE_cleanup();
+
+    CONF_modules_free();
+    CONF_modules_unload(1);
+
+    COMP_zlib_cleanup();
+
+    ERR_free_strings();
+    EVP_cleanup();
+
+    CRYPTO_cleanup_all_ex_data();
+#else
+    OPENSSL_cleanup();
+#endif
 
     return 0;
 }

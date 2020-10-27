@@ -48,6 +48,8 @@ public:
     ~SSLMgr();
     explicit SSLMgr();
 
+    static void ssl_error(const char *what);
+
     /* 根据证书路径获取一个SSL_CTX
      * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
      * SSL_CTX是一个typedef，不能前置声明

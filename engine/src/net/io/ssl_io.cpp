@@ -7,19 +7,6 @@
 #define X_SSL(x)     static_cast<SSL *>(x)
 #define X_SSL_CTX(x) static_cast<SSL_CTX *>(x)
 
-// SSL的错误码是按队列存放的，一次错误可以产生多个错误码
-// 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
-#define SSL_ERROR(x)                                      \
-    do                                                    \
-    {                                                     \
-        ERROR(x " errno(%d:%s)", errno, strerror(errno)); \
-        int32_t eno = 0;                                  \
-        while (0 != (eno = ERR_get_error()))              \
-        {                                                 \
-            ERROR("    %s", ERR_error_string(eno, NULL)); \
-        }                                                 \
-    } while (0)
-
 SSLIO::~SSLIO()
 {
     if (_ssl_ctx)
@@ -32,9 +19,8 @@ SSLIO::~SSLIO()
 SSLIO::SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send)
     : IO(recv, send)
 {
-    _handshake = false;
-    _ssl_ctx   = NULL;
-    _ssl_id    = ssl_id;
+    _ssl_ctx = NULL;
+    _ssl_id  = ssl_id;
 }
 
 /* 接收数据
@@ -45,7 +31,7 @@ int32_t SSLIO::recv(int32_t &byte)
     ASSERT(_fd > 0, "io recv fd invalid");
 
     byte = 0;
-    if (!_handshake) return do_handshake();
+    if (!SSL_is_init_finished(X_SSL(_ssl_ctx))) return do_handshake();
 
     if (!_recv->reserved()) return -1; /* no more memory */
 
@@ -79,7 +65,7 @@ int32_t SSLIO::recv(int32_t &byte)
         return -1;
     }
 
-    SSL_ERROR("ssl io recv");
+    SSLMgr::ssl_error("ssl io recv");
     return -1;
 }
 
@@ -91,7 +77,7 @@ int32_t SSLIO::send(int32_t &byte)
     ASSERT(_fd > 0, "io send fd invalid");
 
     byte = 0;
-    if (!_handshake) return do_handshake();
+    if (!SSL_is_init_finished(X_SSL(_ssl_ctx))) return do_handshake();
 
     size_t bytes = _send->get_used_size();
     ASSERT(bytes > 0, "io send without data");
@@ -114,7 +100,7 @@ int32_t SSLIO::send(int32_t &byte)
         return -1;
     }
 
-    SSL_ERROR("ssl io send");
+    SSLMgr::ssl_error("ssl io send");
     return -1;
 }
 
@@ -175,7 +161,6 @@ int32_t SSLIO::do_handshake()
     int32_t ecode = SSL_do_handshake(X_SSL(_ssl_ctx));
     if (1 == ecode)
     {
-        _handshake = true;
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         return 0 == _send->get_used_size() ? 0 : 2;
     }
@@ -193,7 +178,7 @@ int32_t SSLIO::do_handshake()
     if (SSL_ERROR_WANT_WRITE == ecode) return 2;
 
     // error
-    SSL_ERROR("ssl io do handshake:");
+    SSLMgr::ssl_error("ssl io do handshake:");
 
     return -1;
 }
