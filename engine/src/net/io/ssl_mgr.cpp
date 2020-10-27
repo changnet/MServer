@@ -3,8 +3,6 @@
 
 #include "ssl_mgr.h"
 
-static const char *DEFAULT_FILE = "__ssl_no_cert_file__";
-
 // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
 #define SSL_ERROR(x)                                      \
@@ -22,23 +20,21 @@ int32_t ctx_passwd_cb(char *buf, int32_t size, int rwflag, void *u);
 
 SSLMgr::SSLMgr()
 {
+    _seed = 0;
 }
 
 SSLMgr::~SSLMgr()
 {
-    for (auto &iter: _ctx)
+    for (auto &iter : _ctx)
     {
         SSL_CTX_free(static_cast<SSL_CTX *>(iter.second._ctx));
     }
     _ctx.clear();
 }
 
-void *SSLMgr::get_ssl_ctx(const char *cert_file)
+void *SSLMgr::get_ssl_ctx(int32_t ssl_id)
 {
-    // 空字符串也使用默认名字
-    const char *name = (cert_file && *cert_file) ? cert_file : DEFAULT_FILE;
-
-    auto iter = _ctx.find(name);
+    auto iter = _ctx.find(ssl_id);
     return iter == _ctx.end() ? nullptr : iter->second._ctx;
 }
 
@@ -47,16 +43,9 @@ void *SSLMgr::get_ssl_ctx(const char *cert_file)
  * Conditional jump or move depends on uninitialised value(s)
  * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
  */
-void *SSLMgr::new_ssl_ctx(SSLVT sslv,
-    const char *cert_file, const char *key_file, const char *passwd)
+int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
+                            const char *key_file, const char *passwd)
 {
-    const char *name = cert_file ? cert_file : DEFAULT_FILE;
-    if (_ctx.find(name) != _ctx.end())
-    {
-        ERROR("ssl context already for file: %s", name);
-        return nullptr;
-    }
-
     const SSL_METHOD *method = NULL;
     switch (sslv)
     {
@@ -69,7 +58,7 @@ void *SSLMgr::new_ssl_ctx(SSLVT sslv,
     // 新版本中无需指定版本号，用上面的自动协商·
     // warning: ‘const SSL_METHOD* TLSv1_2_method()’ is deprecated
     // case SSLV_TLS_GEN_12 : method = TLSv1_2_method(); break;
-    default: ERROR("new_ssl_ctx:unknow ssl version"); return nullptr;
+    default: ERROR("new_ssl_ctx:unknow ssl version"); return -1;
     }
 
     // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
@@ -77,11 +66,12 @@ void *SSLMgr::new_ssl_ctx(SSLVT sslv,
     if (!ctx)
     {
         SSL_ERROR("new_ssl_ctx:can NOT create ssl content");
-        return nullptr;
+        return -1;
     }
 
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
-    auto iter = _ctx.emplace(name, XSSLCtx {ctx, passwd});
+    ++_seed;
+    auto iter = _ctx.emplace(_seed, XSSLCtx{ctx, passwd});
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
      * 因此单向认证的客户端使用的SSL_CTX不需要证书
@@ -91,16 +81,15 @@ void *SSLMgr::new_ssl_ctx(SSLVT sslv,
      * 一般情况下，如果客户端的域名不是固定的话，这个认证没什么意义的。
      * ssh那种是通过公钥、私钥来认证客户端的，不是证书。
      */
-    if (!cert_file || !key_file) return ctx;
+    if (!cert_file || !key_file) return _seed;
 
+    int32_t ok = 0;
     // 加载pem格式的ca证书文件，暂不支持ASN1（SSL_FILETYPE_ASN1）格式
     // ASN1只支持一个文件一个证书，pem可以将多个证书放到同一个文件
     if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
     {
-        SSL_CTX_free(ctx);
-        _ctx.erase(iter.first);
         SSL_ERROR("new_ssl_ctx cert file");
-        return nullptr;
+        goto FAIL;
     }
 
     // 加载pem格式私钥
@@ -118,33 +107,24 @@ void *SSLMgr::new_ssl_ctx(SSLVT sslv,
     // RSA，里面以 BEGIN RSA PRIVATE KEY 开头
     // 现在一般都用的RSA
     // SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
-    int32_t ok = SSL_CTX_use_RSAPrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
+    ok = SSL_CTX_use_RSAPrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
     if (ok <= 0)
     {
-        SSL_CTX_free(ctx);
-        _ctx.erase(iter.first);
         SSL_ERROR("new_ssl_ctx key file");
-        return nullptr;
+        goto FAIL;
     }
 
     // 验证私钥是否和证书匹配
     if (SSL_CTX_check_private_key(ctx) <= 0)
     {
-        SSL_CTX_free(ctx);
-        _ctx.erase(iter.first);
         SSL_ERROR("new_ssl_ctx:certificate and private key not match");
-        return nullptr;
+        goto FAIL;
     }
 
-    return ctx;
-}
+    return _seed;
 
-// 返回密码数据
-int32_t ctx_passwd_cb(char *buf, int32_t size, int rwflag, void *u)
-{
-    if (!u) return 0;
-
-    snprintf(buf, size, "%s", (const char *)u);
-
-    return strlen(buf);
+FAIL:
+    SSL_CTX_free(ctx);
+    _ctx.erase(iter.first);
+    return -1;
 }

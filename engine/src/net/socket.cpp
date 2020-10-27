@@ -530,7 +530,7 @@ void Socket::command_cb()
     }
 }
 
-int32_t Socket::set_io(IO::IOT io_type, const char *param)
+int32_t Socket::set_io(IO::IOT io_type, int32_t param)
 {
     delete _io;
     _io = NULL;

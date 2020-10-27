@@ -6,7 +6,7 @@ class SSLIO : public IO
 {
 public:
     ~SSLIO();
-    SSLIO(const char *cert, class Buffer *recv, class Buffer *send);
+    explicit SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send);
 
     /* 接收数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
@@ -30,7 +30,7 @@ private:
     int32_t init_ssl_ctx(int32_t fd);
 
 private:
-    char _cert[256]; // ssl证书路径
+    int32_t _ssl_id;
     void *_ssl_ctx; // SSL_CTX，不要在头文件包含ssl.h，编译会增加将近1M
     bool _handshake;
 };

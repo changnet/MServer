@@ -29,13 +29,12 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(const char *cert, class Buffer *recv, class Buffer *send)
+SSLIO::SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send)
     : IO(recv, send)
 {
     _handshake = false;
     _ssl_ctx   = NULL;
-
-    snprintf(_cert, sizeof(_cert), "%s", cert ? cert : "");
+    _ssl_id    = ssl_id;
 }
 
 /* 接收数据
@@ -147,10 +146,10 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
     static class SSLMgr *ctx_mgr = StaticGlobal::ssl_mgr();
 
-    void *base_ctx = ctx_mgr->get_ssl_ctx(_cert);
+    void *base_ctx = ctx_mgr->get_ssl_ctx(_ssl_id);
     if (!base_ctx)
     {
-        ERROR("ssl io init ssl ctx no base ctx found");
+        ERROR("ssl io init ssl ctx no base ctx found: %d", _ssl_id);
         return -1;
     }
 

@@ -56,11 +56,11 @@ end
 -- 以https试连接到其他服务器
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
--- @param cert 证书路径，必须调用new_ssl_ctx以该证书创建一个ctx
+-- @param ssl 用new_ssl_ctx创建的ssl_ctx
 -- @param on_connect 连接成功(或失败)时的回调函数
 -- @param on_command 收到请求时回调函数，不需要可为nil
-function HttpConn:connect_s( host, port, cert, on_connect, on_command )
-    self.cert = cert or ""
+function HttpConn:connect_s( host, port, ssl, on_connect, on_command )
+    self.ssl = assert(ssl)
 
     return self:connect( host, port, on_connect, on_command )
 end
@@ -85,18 +85,18 @@ function HttpConn:listen(ip,port, on_accept, on_command)
 end
 
 -- 以https方式监听http连接
--- @param cert 证书路径，必须调用new_ssl_ctx以该证书创建一个ctx
+-- @param ssl 用new_ssl_ctx创建的ssl_ctx
 -- @param on_command 收到请求时的回调函数，可为nil
 -- @param on_accept 接受新连接时的回调函数，可为nil
-function HttpConn:listen_s( ip, port, cert, on_accept, on_command)
-    self.cert = assert(cert)
+function HttpConn:listen_s( ip, port, ssl, on_accept, on_command)
+    self.ssl = assert(ssl)
     return self:listen(ip, port, on_accept, on_command)
 end
 
 -- 有新的连接进来
 function HttpConn:conn_accept( new_conn_id )
-    if self.cert then
-        network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_SSL, self.cert )
+    if self.ssl then
+        network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_SSL, self.ssl )
     else
         network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
     end
@@ -113,8 +113,8 @@ end
 -- 连接成功(或失败)
 function HttpConn:conn_new( ecode )
     if 0 == ecode then
-        if self.cert then
-            network_mgr:set_conn_io(self.conn_id,network_mgr.IOT_SSL, self.cert)
+        if self.ssl then
+            network_mgr:set_conn_io(self.conn_id,network_mgr.IOT_SSL, self.ssl)
         else
             network_mgr:set_conn_io( self.conn_id,network_mgr.IOT_NONE )
         end

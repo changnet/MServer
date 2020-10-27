@@ -719,7 +719,7 @@ int32_t LNetworkMgr::set_conn_io(lua_State *L)
 {
     uint32_t conn_id = luaL_checkinteger(L, 1);
     int32_t io_type  = luaL_checkinteger(L, 2);
-    const char *io_param = lua_tostring(L, 3);
+    int32_t io_param = luaL_optinteger(L, 3, 0);
 
     class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -795,14 +795,16 @@ int32_t LNetworkMgr::new_ssl_ctx(lua_State *L) /* 创建一个ssl上下文 */
     const char *key_file = lua_tostring(L, 3);
     const char *passwd   = lua_tostring(L, 4);
 
-    void *ctx = StaticGlobal::ssl_mgr()->new_ssl_ctx(
+    int32_t ssl_id = StaticGlobal::ssl_mgr()->new_ssl_ctx(
         static_cast<SSLMgr::SSLVT>(sslv), cert_file, key_file, passwd);
 
-    if (!ctx)
+    if (ssl_id <= 0)
     {
         return luaL_error(L, "new ssl ctx error");
     }
-    return 0;
+
+    lua_pushinteger(L, ssl_id);
+    return 1;
 }
 
 // 查找该cmd在哪个进程处理

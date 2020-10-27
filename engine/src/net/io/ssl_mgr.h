@@ -22,7 +22,8 @@ public:
     typedef enum
     {
         SSLVT_NONE = 0, // 无效
-        SSLVT_TLS_GEN_AT = 1, // 通用类型(generic type)，可作服务器或客户端,自动协商
+        SSLVT_TLS_GEN_AT =
+            1, // 通用类型(generic type)，可作服务器或客户端,自动协商
         SSLVT_TLS_SRV_AT = 2, // 服务器用，自动协商版本
         SSLVT_TLS_CLT_AT = 3, // 客户端用，自动协商版本
         // SSLVT_TLS_GEN_12    = 4, // 通用类型，TLS 1.2 deprecated
@@ -51,16 +52,17 @@ public:
      * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
      * SSL_CTX是一个typedef，不能前置声明
      */
-    void *get_ssl_ctx(const char *cert_file);
+    void *get_ssl_ctx(int32_t ssl_id);
     /* 创建一个ssl上下文
      * @sslv： ssl版本，见sslv_t枚举
      * @cert_file: ca证书文件路径
      * @key_file: 私钥文件路径
      * @passwd: 私钥文件密码，如果无密码则为null
      */
-    void *new_ssl_ctx(SSLVT sslv,
-        const char *cert_file, const char *key_file, const char *passwd);
+    int32_t new_ssl_ctx(SSLVT sslv, const char *cert_file, const char *key_file,
+                        const char *passwd);
 
 private:
-    std::unordered_map<std::string, XSSLCtx> _ctx;
+    int32_t _seed; // 用于产生ssl唯一id
+    std::unordered_map<int32_t, XSSLCtx> _ctx;
 };

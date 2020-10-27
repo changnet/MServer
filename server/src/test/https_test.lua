@@ -8,24 +8,26 @@ g_conn_mgr = require "network.conn_mgr"
 
 t_describe("http(s) test", function()
     -- 产生一个缓存，避免下面连接时查询dns导致测试超时
-    local host = "www.example.com"
-    util.gethostbyname(host)
+    -- example.com不稳定，经常连不上，用postman来测试
+    -- local exp_host = "www.example.com"
+    local exp_host = "postman-echo.com"
+    util.gethostbyname(exp_host)
 
-    network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
+    local clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
 
-    network_mgr:new_ssl_ctx(
+    local srv_ssl = network_mgr:new_ssl_ctx(
         network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
         "../certs/srv_key.pem","mini_distributed_game_server" )
 
-    t_it("http get " .. host, function()
+    t_it("http get " .. exp_host, function()
         t_wait(5000)
 
         local conn = HttpConn()
 
-        conn:connect(host, 80, function(_conn, ecode)
+        conn:connect(exp_host, 80, function(_conn, ecode)
             t_equal(ecode, 0)
 
-            conn:get("/", nil,
+            conn:get("/get", nil,
                 function(__conn, http_type, code, method, url, body)
                     t_equal(http_type, 1)
                     t_equal(code, 200)
@@ -35,15 +37,15 @@ t_describe("http(s) test", function()
         end)
     end)
 
-    t_it("http post " .. host, function()
+    t_it("http post " .. exp_host, function()
         t_wait(5000)
 
         local conn = HttpConn()
 
-        conn:connect(host, 80, function(_conn, ecode)
+        conn:connect(exp_host, 80, function(_conn, ecode)
             t_equal(ecode, 0)
 
-            conn:post("/", nil,
+            conn:post("/post", nil,
                 function(__conn, http_type, code, method, url, body)
                     t_equal(http_type, 1)
                     t_equal(code, 200)
@@ -98,15 +100,15 @@ t_describe("http(s) test", function()
     end)
 
 
-    t_it("https get " .. host, function()
+    t_it("https get " .. exp_host, function()
         t_wait(5000)
 
         local conn = HttpConn()
 
-        conn:connect_s(host, 443, nil, function(_conn, ecode)
+        conn:connect_s(exp_host, 443, clt_ssl, function(_conn, ecode)
             t_equal(ecode, 0)
 
-            conn:get("/", nil,
+            conn:get("/get", nil,
                 function(__conn, http_type, code, method, url, body)
                     t_equal(http_type, 1)
                     t_equal(code, 200)
@@ -116,15 +118,15 @@ t_describe("http(s) test", function()
         end)
     end)
 
-    t_it("https post " .. host, function()
+    t_it("https post " .. exp_host, function()
         t_wait(5000)
 
         local conn = HttpConn()
 
-        conn:connect_s(host, 443, nil, function(_conn, ecode)
+        conn:connect_s(exp_host, 443, clt_ssl, function(_conn, ecode)
             t_equal(ecode, 0)
 
-            conn:post("/", nil,
+            conn:post("/post", nil,
                 function(__conn, http_type, code, method, url, body)
                     t_equal(http_type, 1)
                     t_equal(code, 200)
@@ -143,7 +145,7 @@ t_describe("http(s) test", function()
         local host = "127.0.0.1"
 
         local srvConn = HttpConn()
-        srvConn:listen_s(host, port, "../certs/server.cer", nil,
+        srvConn:listen_s(host, port, srv_ssl, nil,
             function(conn, http_type, code, method, url, body)
                 t_equal(http_type, 0)
 
@@ -159,7 +161,7 @@ t_describe("http(s) test", function()
             end)
 
         local cltConn = HttpConn()
-        cltConn:connect_s(host, port, nil, function(_, ecode)
+        cltConn:connect_s(host, port, clt_ssl, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,
