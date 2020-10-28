@@ -161,6 +161,7 @@ int32_t SSLIO::do_handshake()
     int32_t ecode = SSL_do_handshake(X_SSL(_ssl_ctx));
     if (1 == ecode)
     {
+        // SSLMgr::dump_x509(_ssl_ctx);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         return 0 == _send->get_used_size() ? 0 : 2;
     }

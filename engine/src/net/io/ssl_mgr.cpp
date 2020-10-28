@@ -16,6 +16,25 @@ void SSLMgr::ssl_error(const char *what)
     }
 }
 
+void SSLMgr::dump_x509(const void *ctx)
+{
+    X509 *cert = SSL_get_peer_certificate(static_cast<const SSL *>(ctx));
+    if (cert != NULL)
+    {
+        char buf[256];
+
+        // 证书拥有者
+        X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
+        PRINTF("x509 subject name: %s", buf);
+
+        // 颁发者
+        X509_NAME_oneline(X509_get_issuer_name(cert), buf, sizeof(buf));
+        PRINTF("x509 issuer name: %s", buf);
+
+        X509_free(cert);
+    }
+}
+
 SSLMgr::SSLMgr()
 {
     _seed = 0;
@@ -42,7 +61,8 @@ void *SSLMgr::get_ssl_ctx(int32_t ssl_id)
  * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
  */
 int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
-                            const char *key_file, const char *passwd)
+                            const char *key_file, const char *passwd,
+                            const char *ca)
 {
     const SSL_METHOD *method = NULL;
     switch (sslv)
@@ -65,6 +85,20 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     {
         ssl_error("new_ssl_ctx:can NOT create ssl content");
         return -1;
+    }
+
+    // 指定了根ca证书路径，说明需要校验对方证书的正确性
+    if (ca)
+    {
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+
+        /*加载CA FILE*/
+        if (SSL_CTX_load_verify_locations(ctx, ca, nullptr) != 1)
+        {
+            SSL_CTX_free(ctx);
+            ssl_error("load verify fail");
+            return -1;
+        }
     }
 
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有

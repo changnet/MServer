@@ -49,6 +49,7 @@ public:
     explicit SSLMgr();
 
     static void ssl_error(const char *what);
+    static void dump_x509(const void *ctx);
 
     /* 根据证书路径获取一个SSL_CTX
      * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
@@ -62,7 +63,7 @@ public:
      * @passwd: 私钥文件密码，如果无密码则为null
      */
     int32_t new_ssl_ctx(SSLVT sslv, const char *cert_file, const char *key_file,
-                        const char *passwd);
+                        const char *passwd, const char *ca);
 
 private:
     int32_t _seed; // 用于产生ssl唯一id

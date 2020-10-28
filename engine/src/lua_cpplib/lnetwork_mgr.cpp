@@ -795,8 +795,10 @@ int32_t LNetworkMgr::new_ssl_ctx(lua_State *L) /* 创建一个ssl上下文 */
     const char *key_file = lua_tostring(L, 3);
     const char *passwd   = lua_tostring(L, 4);
 
+    const char *ca = lua_tostring(L, 5);
+
     int32_t ssl_id = StaticGlobal::ssl_mgr()->new_ssl_ctx(
-        static_cast<SSLMgr::SSLVT>(sslv), cert_file, key_file, passwd);
+        static_cast<SSLMgr::SSLVT>(sslv), cert_file, key_file, passwd, ca);
 
     if (ssl_id <= 0)
     {
