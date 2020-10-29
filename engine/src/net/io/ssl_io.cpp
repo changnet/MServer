@@ -1,17 +1,11 @@
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-
 #include "../../system/static_global.h"
 #include "ssl_io.h"
-
-#define X_SSL(x)     static_cast<SSL *>(x)
-#define X_SSL_CTX(x) static_cast<SSL_CTX *>(x)
 
 SSLIO::~SSLIO()
 {
     if (_ssl_ctx)
     {
-        SSL_free(X_SSL(_ssl_ctx));
+        SSL_free(_ssl_ctx);
         _ssl_ctx = NULL;
     }
 }
@@ -31,13 +25,13 @@ int32_t SSLIO::recv(int32_t &byte)
     ASSERT(_fd > 0, "io recv fd invalid");
 
     byte = 0;
-    if (!SSL_is_init_finished(X_SSL(_ssl_ctx))) return do_handshake();
+    if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
     if (!_recv->reserved()) return -1; /* no more memory */
 
     // ERR_clear_error
     uint32_t size = _recv->get_space_size();
-    int32_t len   = SSL_read(X_SSL(_ssl_ctx), _recv->get_space_ctx(), size);
+    int32_t len   = SSL_read(_ssl_ctx, _recv->get_space_ctx(), size);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;
@@ -45,7 +39,7 @@ int32_t SSLIO::recv(int32_t &byte)
         return 0;
     }
 
-    int32_t ecode = SSL_get_error(X_SSL(_ssl_ctx), len);
+    int32_t ecode = SSL_get_error(_ssl_ctx, len);
     if (SSL_ERROR_WANT_READ == ecode) return 1;
 
     /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
@@ -77,12 +71,12 @@ int32_t SSLIO::send(int32_t &byte)
     ASSERT(_fd > 0, "io send fd invalid");
 
     byte = 0;
-    if (!SSL_is_init_finished(X_SSL(_ssl_ctx))) return do_handshake();
+    if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
     size_t bytes = _send->get_used_size();
     ASSERT(bytes > 0, "io send without data");
 
-    int32_t len = SSL_write(X_SSL(_ssl_ctx), _send->get_used_ctx(), bytes);
+    int32_t len = SSL_write(_ssl_ctx, _send->get_used_ctx(), bytes);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;
@@ -90,7 +84,7 @@ int32_t SSLIO::send(int32_t &byte)
         return 0 == _send->get_used_size() ? 0 : 2;
     }
 
-    int32_t ecode = SSL_get_error(X_SSL(_ssl_ctx), len);
+    int32_t ecode = SSL_get_error(_ssl_ctx, len);
     if (SSL_ERROR_WANT_WRITE == ecode) return 2;
 
     // 非主动断开，打印错误日志
@@ -111,7 +105,7 @@ int32_t SSLIO::init_accept(int32_t fd)
     if (init_ssl_ctx(fd) < 0) return -1;
 
     _fd = fd;
-    SSL_set_accept_state(X_SSL(_ssl_ctx));
+    SSL_set_accept_state(_ssl_ctx);
 
     return do_handshake();
 }
@@ -123,7 +117,7 @@ int32_t SSLIO::init_connect(int32_t fd)
     if (init_ssl_ctx(fd) < 0) return -1;
 
     _fd = fd;
-    SSL_set_connect_state(X_SSL(_ssl_ctx));
+    SSL_set_connect_state(_ssl_ctx);
 
     return do_handshake();
 }
@@ -132,21 +126,21 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
     static class SSLMgr *ctx_mgr = StaticGlobal::ssl_mgr();
 
-    void *base_ctx = ctx_mgr->get_ssl_ctx(_ssl_id);
+    SSL_CTX *base_ctx = ctx_mgr->get_ssl_ctx(_ssl_id);
     if (!base_ctx)
     {
         ERROR("ssl io init ssl ctx no base ctx found: %d", _ssl_id);
         return -1;
     }
 
-    _ssl_ctx = SSL_new(X_SSL_CTX(base_ctx));
+    _ssl_ctx = SSL_new(base_ctx);
     if (!_ssl_ctx)
     {
         ERROR("ssl io init ssl SSL_new fail");
         return -1;
     }
 
-    if (!SSL_set_fd(X_SSL(_ssl_ctx), fd))
+    if (!SSL_set_fd(_ssl_ctx, fd))
     {
         ERROR("ssl io init ssl SSL_set_fd fail");
         return -1;
@@ -158,7 +152,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32_t SSLIO::do_handshake()
 {
-    int32_t ecode = SSL_do_handshake(X_SSL(_ssl_ctx));
+    int32_t ecode = SSL_do_handshake(_ssl_ctx);
     if (1 == ecode)
     {
         // SSLMgr::dump_x509(_ssl_ctx);
@@ -174,7 +168,7 @@ int32_t SSLIO::do_handshake()
      * SSL_read(), SSL_peek(), and SSL_write() will handle any pending
      * handshakes.
      */
-    ecode = SSL_get_error(X_SSL(_ssl_ctx), ecode);
+    ecode = SSL_get_error(_ssl_ctx, ecode);
     if (SSL_ERROR_WANT_READ == ecode) return 1;
     if (SSL_ERROR_WANT_WRITE == ecode) return 2;
 

@@ -16,7 +16,7 @@ void SSLMgr::ssl_error(const char *what)
     }
 }
 
-void SSLMgr::dump_x509(const void *ctx)
+void SSLMgr::dump_x509(const SSL *ctx)
 {
     X509 *cert = SSL_get_peer_certificate(static_cast<const SSL *>(ctx));
     if (cert != NULL)
@@ -49,7 +49,7 @@ SSLMgr::~SSLMgr()
     _ctx.clear();
 }
 
-void *SSLMgr::get_ssl_ctx(int32_t ssl_id)
+SSL_CTX *SSLMgr::get_ssl_ctx(int32_t ssl_id)
 {
     auto iter = _ctx.find(ssl_id);
     return iter == _ctx.end() ? nullptr : iter->second._ctx;

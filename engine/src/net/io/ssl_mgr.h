@@ -1,5 +1,6 @@
 #pragma once
 
+#include <openssl/ssl.h>
 #include "../../global/global.h"
 
 class SSLMgr
@@ -8,12 +9,12 @@ public:
     class XSSLCtx
     {
     public:
-        explicit XSSLCtx(void *ctx, const char *passwd)
+        explicit XSSLCtx(SSL_CTX *ctx, const char *passwd)
         {
             _ctx = ctx;
             snprintf(_passwd, sizeof(_passwd), "%s", passwd ? passwd : "");
         }
-        void *_ctx;
+        SSL_CTX *_ctx;
         char _passwd[256];
     };
 
@@ -49,13 +50,11 @@ public:
     explicit SSLMgr();
 
     static void ssl_error(const char *what);
-    static void dump_x509(const void *ctx);
+    static void dump_x509(const SSL *ctx);
 
     /* 根据证书路径获取一个SSL_CTX
-     * 之所以不直接返回SSL_CTX类弄，是因为不想包含巨大的openssl/ssl.h头文件
-     * SSL_CTX是一个typedef，不能前置声明
      */
-    void *get_ssl_ctx(int32_t ssl_id);
+    SSL_CTX *get_ssl_ctx(int32_t ssl_id);
     /* 创建一个ssl上下文
      * @sslv： ssl版本，见sslv_t枚举
      * @cert_file: ca证书文件路径
