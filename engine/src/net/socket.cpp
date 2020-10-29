@@ -171,7 +171,7 @@ int32_t Socket::send()
         }
     }
 
-    return 2 == ret ? 2 : 0;
+    return ret;
 
 #undef IO_SEND
 }
@@ -444,7 +444,7 @@ void Socket::listen_cb()
         class Socket *new_sk = new class Socket(conn_id, _conn_ty);
         new_sk->start(new_fd);
 
-        // 初始完socket后才触发脚本，因为脚本那边中能要对socket进行处理了
+        // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
         bool is_ok = network_mgr->accept_new(_conn_id, new_sk);
         if (EXPECT_TRUE(is_ok))
         {
@@ -583,7 +583,7 @@ int32_t Socket::io_status_check(int32_t ecode)
     if (2 == ecode)
     {
         this->pending_send();
-        return -1;
+        return 0;
     }
 
     // 重写会触发Read事件，在Read事件处理
@@ -592,20 +592,16 @@ int32_t Socket::io_status_check(int32_t ecode)
 
 int32_t Socket::init_accept()
 {
-    ASSERT(_io, "socket init accept no io set");
     int32_t ecode = _io->init_accept(_w.fd);
 
-    io_status_check(ecode);
-    return ecode;
+    return io_status_check(ecode);
 }
 
 int32_t Socket::init_connect()
 {
-    ASSERT(_io, "socket init connect no io set");
     int32_t ecode = _io->init_connect(_w.fd);
 
-    io_status_check(ecode);
-    return 0;
+    return io_status_check(ecode);
 }
 
 /* 获取统计数据

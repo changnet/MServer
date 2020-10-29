@@ -262,7 +262,7 @@ void LEV::invoke_app_ev(int64_t ms_now)
 EvTstamp LEV::wait_time()
 {
     // TODO:如果有数据未发送，尽快发送(暂定10毫秒，后面再做调试)
-    if (ansendingcnt > 0) return 10;
+    if (ansendingcnt > 0) return EPOLL_MIN_TM;
 
     EvTstamp waittime = EV::wait_time();
 
