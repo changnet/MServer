@@ -20,7 +20,7 @@ local App = oo.class( ... )
 
 -- 初始化
 function App:__init( ... )
-    self.command,self.srvname,self.srvindex,self.srvid = ...
+    self.command,self.srvname,self.srvindex,self.srvid, self.filter = ...
 end
 
 -- 重写关服接口
@@ -39,7 +39,10 @@ function App:exec()
             del = function(timer_id)
                 return g_timer_mgr:stop(timer_id)
             end
-        }
+        },
+        -- 过滤器，允许只执行一部分测试
+        -- ./start.sh test 1 1 https 只执行名字包含https的测试
+        filter = self.filter,
     })
 
     require "test.misc_test"

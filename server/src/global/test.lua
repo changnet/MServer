@@ -187,7 +187,7 @@ local function equal(got, expect)
     return true
 end
 
-local function run_one_it(i)
+local function test_one_it(i)
     local tm = os.clock()
     local ok, msg = xpcall(i.func, error_msgh)
     if not ok then
@@ -229,7 +229,45 @@ local function run_one_it(i)
     end
 end
 
+local function test_one_describe(d)
+    -- 被过滤掉，这个测试不需要执行
+    if not d.should_run and 0 == #d.i then return end
+
+    T.print(B(d.title))
+
+    -- 执行before函数
+    for _, func in pairs(d.before or {}) do
+        local ok, msg = xpcall(func, error_msgh)
+        if not ok then
+            T.print(R("%s", msg))
+        end
+    end
+
+    T.d_now = d
+    for _, i in pairs(d.i) do
+        T.i_now = i
+        test_one_it(i)
+        T.i_now = nil
+    end
+
+    -- 执行before函数
+    for _, func in pairs(d.after or {}) do
+        local ok, msg = xpcall(func, error_msgh)
+        if not ok then
+            T.print(R("%s", msg))
+        end
+    end
+
+    T.d_now = nil
+end
+
 local function run_one_describe(d)
+    local should_run = true
+    if T.filter then
+        should_run = string.find(d.title, T.filter)
+    end
+
+    d.should_run = should_run
     local ok, msg = xpcall(d.func, error_msgh)
     if not ok then
         T.print(R(msg))
@@ -286,6 +324,12 @@ end
 
 -- 创建一个具体的测试
 function t_it(title, func)
+    local should_run = T.d_now.should_run
+    if not should_run and T.filter then
+        should_run = string.find(title, T.filter)
+    end
+    if not should_run then return end
+
     local i = It(title, func)
 
     -- 策略1：得到所有it block后再统一执行
@@ -341,6 +385,10 @@ function t_setup(params)
 
     -- log outpout function if not using std print
     T.print = params.print or print
+
+    -- 过滤器，允许只执行一部分测试
+    -- ./start.sh test 1 1 https 只执行名字包含https的测试
+    T.filter = params.filter
 end
 
 -- reset the test session
@@ -365,33 +413,12 @@ local function run()
     end
 
     -- 执行测试
+    if T.filter then
+        T.print(Y("Using filter: %s", T.filter))
+    end
+
     for _, d in pairs(T.d) do
-        T.print(B(d.title))
-
-        -- 执行before函数
-        for _, func in pairs(d.before or {}) do
-            local ok, msg = xpcall(func, error_msgh)
-            if not ok then
-                T.print(R("%s", msg))
-            end
-        end
-
-        T.d_now = d
-        for _, i in pairs(d.i) do
-            T.i_now = i
-            run_one_it(i)
-            T.i_now = nil
-        end
-
-        -- 执行before函数
-        for _, func in pairs(d.after or {}) do
-            local ok, msg = xpcall(func, error_msgh)
-            if not ok then
-                T.print(R("%s", msg))
-            end
-        end
-
-        T.d_now = nil
+        test_one_describe(d)
     end
 
     local pass = T.pass
