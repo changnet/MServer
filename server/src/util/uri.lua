@@ -58,15 +58,21 @@ function Uri.encode( str )
     -- rfc1738  rfc2396 *不被编码，~会被编码。这个版本在php、java中较为通用
     -- rfc3986  *会被编码，~不会被编码
     -- 空格为%20
-    return string.gsub(str, "([^%w%.%-_~])", function(c) return string.format("%%%02X", string.byte(c)) end)
+    return string.gsub(str, "([^%w%.%-_~])", function(c)
+        return string.format("%%%02X", string.byte(c))
+    end)
 
     -- 部分版本空格是+，请使用以下版本
-    -- str = string.gsub(str, "([^%w%.%-_~ ])", function(c) return string.format("%%%02X", string.byte(c)) end)
+    -- str = string.gsub(str, "([^%w%.%-_~ ])", function(c)
+    --     return string.format("%%%02X", string.byte(c))
+    -- end)
     -- return string.gsub(str, " ", "+")
 end
 
 function Uri.decode( str )
-    return string.gsub(str, '%%(%x%x)', function(h) return string.char(tonumber(h, 16)) end)
+    return string.gsub(str, '%%(%x%x)', function(h)
+        return string.char(tonumber(h, 16))
+    end)
 end
 
 --[[
