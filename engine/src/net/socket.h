@@ -8,18 +8,6 @@
 #include "io/io.h"
 #include "packet/packet.h"
 
-#ifdef TCP_KEEP_ALIVE
-    #define KEEP_ALIVE(x) Socket::keep_alive(x)
-#else
-    #define KEEP_ALIVE(x)
-#endif
-
-#ifdef _TCP_USER_TIMEOUT
-    #define USER_TIMEOUT(x) Socket::user_timeout(x)
-#else
-    #define USER_TIMEOUT(x)
-#endif
-
 class LEV;
 
 /* 网络socket连接类
@@ -70,7 +58,15 @@ public:
     int32_t validate();
     void pending_send();
 
-    const char *address();
+    /**
+     * 获取ip地址及端口
+     * @brief address
+     * @param buf
+     * @param len must be at least INET6_ADDRSTRLEN bytes long
+     * @param port
+     * @return
+     */
+    const char *address(char *buf, size_t len, int *port);
     int32_t listen(const char *host, int32_t port);
     int32_t connect(const char *host, int32_t port);
 

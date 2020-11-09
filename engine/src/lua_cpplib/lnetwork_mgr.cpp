@@ -165,6 +165,32 @@ int32_t LNetworkMgr::close(lua_State *L)
     return 0;
 }
 
+/**
+ * 获取某个连接的ip地址
+ * @param conn_id 网关连接id
+ */
+int32_t LNetworkMgr::address(lua_State *L)
+{
+    uint32_t conn_id = luaL_checkinteger(L, 1);
+
+    socket_map_t::iterator itr = _socket_map.find(conn_id);
+    if (itr == _socket_map.end())
+    {
+        return luaL_error(L, "no such socket found");
+    }
+
+    char buf[32];
+    int port = 0;
+    if (!itr->second->address(buf,sizeof(buf), &port))
+    {
+        return luaL_error(L, strerror(errno));
+    }
+
+    lua_pushstring(L, buf);
+    lua_pushinteger(L, port);
+    return 2;
+}
+
 /* 监听端口
  * network_mgr:listen( host,port,conn_type )
  */

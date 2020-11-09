@@ -260,7 +260,7 @@ public:
     int32_t close(lua_State *L);
 
     /**
-     * 获取某个连接的ip地址 TODO: 未实现
+     * 获取某个连接的ip地址
      * @param conn_id 网关连接id
      */
     int32_t address(lua_State *L);

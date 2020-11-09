@@ -12,6 +12,30 @@
 #include "packet/ws_stream_packet.h"
 #include "socket.h"
 
+#ifdef TCP_KEEP_ALIVE
+    #define KEEP_ALIVE(x) Socket::keep_alive(x)
+#else
+    #define KEEP_ALIVE(x)
+#endif
+
+#ifdef _TCP_USER_TIMEOUT
+    #define USER_TIMEOUT(x) Socket::user_timeout(x)
+#else
+    #define USER_TIMEOUT(x)
+#endif
+
+#ifdef USE_IP_V4
+    #define AF_INET_X AF_INET
+    #define sin_addr_x sin_addr
+    #define sin_port_x sin_port
+    #define sockaddr_in_x sockaddr_in
+#else
+    #define AF_INET_X AF_INET6
+    #define sin_addr_x sin6_addr
+    #define sin_port_x sin6_port
+    #define sockaddr_in_x sockaddr_in6
+#endif
+
 Socket::Socket(uint32_t conn_id, ConnType conn_ty)
 {
     _io        = NULL;
@@ -256,6 +280,7 @@ int32_t Socket::user_timeout(int32_t fd)
     return setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout,
                       sizeof(timeout));
 #else
+    UNUSED(fd);
     return 0;
 #endif
 }
@@ -293,17 +318,26 @@ int32_t Socket::connect(const char *host, int32_t port)
     ASSERT(_w.fd < 0, "socket fd dirty");
 
     // 创建新socket并设置为非阻塞
-    int32_t fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    int32_t fd = ::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
     if (fd < 0 || non_block(fd) < 0)
     {
         return -1;
     }
 
-    struct sockaddr_in sk_socket;
+    struct sockaddr_in_x sk_socket;
     memset(&sk_socket, 0, sizeof(sk_socket));
-    sk_socket.sin_family      = AF_INET;
-    sk_socket.sin_addr.s_addr = inet_addr(host);
-    sk_socket.sin_port        = htons(port);
+    sk_socket.sin_family        = AF_INET_X;
+    sk_socket.sin_port_x        = htons(port);
+
+    // https://man7.org/linux/man-pages/man3/inet_pton.3.html
+    // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
+    // IPv6 address must be supplied in src instead
+    // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip
+    if (inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x) < 0)
+    {
+        ::close(fd);
+        return -1;
+    }
 
     /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
     if (::connect(fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0
@@ -335,26 +369,32 @@ int32_t Socket::validate()
     return err;
 }
 
-const char *Socket::address()
+const char *Socket::address(char *buf, size_t len, int *port)
 {
     if (_w.fd < 0) return NULL;
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(struct sockaddr_in));
-    socklen_t len = sizeof(struct sockaddr_in);
+    struct sockaddr_in_x addr;
 
-    if (getpeername(_w.fd, (struct sockaddr *)&addr, &len) < 0)
+    memset(&addr, 0, sizeof(addr));
+    socklen_t addr_len = sizeof(addr);
+
+    if (getpeername(_w.fd, (struct sockaddr *)&addr, &addr_len) < 0)
     {
         ERROR("socket::address getpeername error: %s\n", strerror(errno));
         return NULL;
     }
 
-    return inet_ntoa(addr.sin_addr);
+    if (port)
+    {
+        *port = ntohs(addr.sin_port_x);
+    }
+
+    return inet_ntop(AF_INET_X, &addr.sin_addr_x, buf, len);
 }
 
 int32_t Socket::listen(const char *host, int32_t port)
 {
-    int32_t fd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    int32_t fd = ::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
     if (fd < 0)
     {
         return -1;
@@ -383,11 +423,26 @@ int32_t Socket::listen(const char *host, int32_t port)
         return -1;
     }
 
-    struct sockaddr_in sk_socket;
+#ifndef USE_IP_V4
+    // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
+    int mode = 0;
+    if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&mode, sizeof(mode) < 0)
+    {
+        ::close(fd);
+        return -1;
+    }
+#endif
+
+    struct sockaddr_in_x sk_socket;
     memset(&sk_socket, 0, sizeof(sk_socket));
-    sk_socket.sin_family      = AF_INET;
-    sk_socket.sin_addr.s_addr = inet_addr(host);
+    sk_socket.sin_family      = AF_INET_X;
     sk_socket.sin_port        = htons(port);
+
+    if (inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x) < 0)
+    {
+        ::close(fd);
+        return -1;
+    }
 
     if (::bind(fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
     {
