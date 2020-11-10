@@ -12,6 +12,7 @@ t_describe("http(s) test", function()
     -- local exp_host = "www.example.com"
     local exp_host = "postman-echo.com"
 
+    -- 测试时发现，ipv6可以把ipv4的地址传进去
     local local_host = "::1" -- "127.0.0.1"
 
     t_before( function()
