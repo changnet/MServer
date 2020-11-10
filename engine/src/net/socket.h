@@ -46,6 +46,15 @@ public:
     static int32_t keep_alive(int32_t fd);
     static int32_t user_timeout(int32_t fd);
 
+    /**
+     * @brief 根据域名获取ip地址，此函数会阻塞
+     * @param addrs ip地址数组
+     * @param host 需要解析的域名
+     * @return 0成功
+     */
+    static int32_t get_addr_info(std::vector<std::string> &addrs,
+                                 const char *host);
+
     void listen_cb();
     void command_cb();
     void connect_cb();

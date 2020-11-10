@@ -11,6 +11,11 @@
 #include <sys/types.h> /* linux sys types like pid_t */
 #include <unistd.h>    /* POSIX api */
 
+// 常用的头文件，避免需要手动include
+#include <string>
+#include <vector>
+#include <unordered_map>
+
 #include "../config.h" /* config paramter */
 
 /* assert with error msg,third parted code not include this file will work fine

@@ -1,6 +1,8 @@
 #include <lua.hpp>
 #include <sys/time.h>
 
+#include "../net/socket.h"
+
 #include <arpa/inet.h>
 #include <cmath>
 #include <netdb.h>
@@ -45,42 +47,17 @@ static int32_t gethost(lua_State *L)
     const char *name = luaL_checkstring(L, 1);
     if (!name) return luaL_error(L, "gethost illegal argument");
 
-    struct hostent *hptr;
-
-    if ((hptr = gethostbyname(name)) == NULL)
+    std::vector<std::string> addrs;
+    if (0 != Socket::get_addr_info(addrs, name))
     {
-        ERROR("gethostbyname(%s):%s", name, hstrerror(h_errno));
-        return 0;
+        return luaL_error(L, "get host fail");
     }
 
-    if (hptr->h_addrtype != AF_INET && hptr->h_addrtype != AF_INET6)
+    for (auto &x : addrs)
     {
-        return luaL_error(L, "gethostbyname unknow address type");
+        lua_pushstring(L, x.c_str());
     }
-
-    int32_t return_value = 0;
-    char dst[INET6_ADDRSTRLEN];
-    char **pptr = hptr->h_addr_list;
-    for (; *pptr != NULL; pptr++)
-    {
-        if (lua_gettop(L) > 256)
-        {
-            ERROR("too many ip found,truncate");
-            return return_value;
-        }
-        lua_checkstack(L, 1);
-        const char *host = inet_ntop(hptr->h_addrtype, *pptr, dst, sizeof(dst));
-        if (!host)
-        {
-            ERROR("gethostbyname "
-                  "inet_ntop error(%d):%s",
-                  errno, strerror(errno));
-            return return_value;
-        }
-        lua_pushstring(L, host);
-        ++return_value;
-    }
-    return return_value;
+    return addrs.size();
 }
 
 /**
@@ -178,7 +155,6 @@ static int32_t uuid_short(lua_State *L)
     char *cur_char = out;
     for (int32_t index = 0; index < 5; index++)
     {
-
         /* 1111 1100取高6bit，再右移2bit得到前6bit */
         /* 0000 0011取低2bit，左移4bit存到val的2~3bit */
         fragment    = *uuid++;

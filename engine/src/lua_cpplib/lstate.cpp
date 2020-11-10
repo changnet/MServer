@@ -218,6 +218,8 @@ int32_t luaopen_network_mgr(lua_State *L)
 
     lc.def<&LNetworkMgr::new_ssl_ctx>("new_ssl_ctx");
 
+    lc.def<&LNetworkMgr::address>("address");
+
     lc.def<&LNetworkMgr::get_player_session>("get_player_session");
     lc.def<&LNetworkMgr::set_player_session>("set_player_session");
 

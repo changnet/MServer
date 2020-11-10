@@ -55,9 +55,9 @@ end)
 -- 8 - Invisible
 
 -- NONE RED BLUE GREEN YELLOW WHITE
-local function N(fmt, ...)
-    return string.format(fmt, ...)
-end
+-- local function N(fmt, ...)
+--     return string.format(fmt, ...)
+-- end
 local function R(fmt, ...)
     return "\27[31m" .. string.format(fmt, ...) .. "\27[0m"
 end
@@ -70,9 +70,9 @@ end
 local function Y(fmt, ...)
     return "\27[33m" .. string.format(fmt, ...) .. "\27[0m"
 end
-local function W(fmt, ...)
-    return "\27[37m" .. string.format(fmt, ...) .. "\27[0m"
-end
+-- local function W(fmt, ...)
+--     return "\27[37m" .. string.format(fmt, ...) .. "\27[0m"
+-- end
 -- /////////////////////////////////////////////////////////////////////////////
 -- data storage for test
 _G.__test = {

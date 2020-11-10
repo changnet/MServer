@@ -3,6 +3,7 @@
 #include <netinet/tcp.h> /* for keep-alive */
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <netdb.h>
 
 #include "../system/static_global.h"
 #include "io/ssl_io.h"
@@ -25,14 +26,16 @@
 #endif
 
 #ifdef USE_IP_V4
-    #define AF_INET_X AF_INET
-    #define sin_addr_x sin_addr
-    #define sin_port_x sin_port
+    #define AF_INET_X     AF_INET
+    #define sin_addr_x    sin_addr
+    #define sin_port_x    sin_port
+    #define sin_family_x  sin_family
     #define sockaddr_in_x sockaddr_in
 #else
-    #define AF_INET_X AF_INET6
-    #define sin_addr_x sin6_addr
-    #define sin_port_x sin6_port
+    #define AF_INET_X     AF_INET6
+    #define sin_addr_x    sin6_addr
+    #define sin_port_x    sin6_port
+    #define sin_family_x  sin6_family
     #define sockaddr_in_x sockaddr_in6
 #endif
 
@@ -285,6 +288,49 @@ int32_t Socket::user_timeout(int32_t fd)
 #endif
 }
 
+int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
+{
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = AF_INET_X; /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_STREAM;
+#ifdef USE_IP_V4
+    hints.ai_flags = 0;
+#else
+    hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
+#endif
+    hints.ai_protocol  = 0; /* Any protocol */
+    hints.ai_canonname = NULL;
+    hints.ai_addr      = NULL;
+    hints.ai_next      = NULL;
+
+    struct addrinfo *result;
+    if (0 != getaddrinfo(host, nullptr, &hints, &result))
+    {
+        ERROR("getaddrinfo: %s", strerror(errno));
+        return -1;
+    }
+
+    char buf[INET6_ADDRSTRLEN];
+    for (struct addrinfo *rp = result; rp != NULL; rp = rp->ai_next)
+    {
+        if (inet_ntop(rp->ai_family,
+                      &((struct sockaddr_in_x *)rp->ai_addr)->sin_addr_x, buf,
+                      sizeof(buf)))
+        {
+            addrs.emplace_back(buf);
+        }
+        else
+        {
+            ERROR("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
+            return -1;
+        }
+    }
+    freeaddrinfo(result);
+
+    return 0;
+}
+
 /* 设置为开始读取数据
  * 该socket之前可能已经active
  */
@@ -326,8 +372,8 @@ int32_t Socket::connect(const char *host, int32_t port)
 
     struct sockaddr_in_x sk_socket;
     memset(&sk_socket, 0, sizeof(sk_socket));
-    sk_socket.sin_family        = AF_INET_X;
-    sk_socket.sin_port_x        = htons(port);
+    sk_socket.sin_family_x = AF_INET_X;
+    sk_socket.sin_port_x   = htons(port);
 
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
@@ -401,6 +447,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     }
 
     int32_t optval = 1;
+    struct sockaddr_in_x sk_socket;
     /*
      * enable address reuse.it will help when the socket is in TIME_WAIT status.
      * for example:
@@ -411,51 +458,41 @@ int32_t Socket::listen(const char *host, int32_t port)
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
         < 0)
     {
-        ::close(fd);
-
-        return -1;
+        goto FAIL;
     }
 
     if (non_block(fd) < 0)
     {
-        ::close(fd);
-
-        return -1;
+        goto FAIL;
     }
 
 #ifndef USE_IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    int mode = 0;
-    if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&mode, sizeof(mode) < 0)
+    optval = 0;
+    if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval))
+        < 0)
     {
-        ::close(fd);
-        return -1;
+        goto FAIL;
     }
 #endif
 
-    struct sockaddr_in_x sk_socket;
     memset(&sk_socket, 0, sizeof(sk_socket));
-    sk_socket.sin_family      = AF_INET_X;
-    sk_socket.sin_port        = htons(port);
+    sk_socket.sin_family_x = AF_INET_X;
+    sk_socket.sin_port_x   = htons(port);
 
     if (inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x) < 0)
     {
-        ::close(fd);
-        return -1;
+        goto FAIL;
     }
 
     if (::bind(fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
     {
-        ::close(fd);
-
-        return -1;
+        goto FAIL;
     }
 
     if (::listen(fd, 256) < 0)
     {
-        ::close(fd);
-
-        return -1;
+        goto FAIL;
     }
 
     set<Socket, &Socket::listen_cb>(this);
@@ -465,6 +502,10 @@ int32_t Socket::listen(const char *host, int32_t port)
     _w.start(fd, EV_READ);
 
     return fd;
+
+FAIL:
+    ::close(fd);
+    return -1;
 }
 
 void Socket::pending_send()

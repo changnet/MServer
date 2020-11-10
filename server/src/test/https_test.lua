@@ -11,7 +11,13 @@ t_describe("http(s) test", function()
     -- example.com不稳定，经常连不上，用postman来测试
     -- local exp_host = "www.example.com"
     local exp_host = "postman-echo.com"
-    util.gethostbyname(exp_host)
+
+    local local_host = "::1" -- "127.0.0.1"
+
+    t_before( function()
+        local ip = util.gethostbyname(exp_host)
+        t_print("target host address is", ip)
+    end)
 
     local clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
 
@@ -34,7 +40,7 @@ t_describe("http(s) test", function()
         "../certs/ca.cer")
 
     t_it("http get " .. exp_host, function()
-        t_wait(5000)
+        t_wait(10000)
 
         local conn = HttpConn()
 
@@ -52,7 +58,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http post " .. exp_host, function()
-        t_wait(5000)
+        t_wait(10000)
 
         local conn = HttpConn()
 
@@ -70,15 +76,14 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http local server test", function()
-        t_wait(5000)
+        t_wait(10000)
 
         local ctx = "hello"
 
         local port = 8182
-        local host = "127.0.0.1"
 
         local srvConn = HttpConn()
-        srvConn:listen(host, port, nil,
+        srvConn:listen(local_host, port, nil,
             function(conn, http_type, code, method, url, body)
                 t_equal(http_type, 0)
 
@@ -90,11 +95,15 @@ t_describe("http(s) test", function()
                     t_equal(method, 3)
                 end
 
+                local addr = network_mgr:address(conn.conn_id)
+
+                t_print("accept http from", addr)
+                t_equal(addr, local_host)
                 conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
             end)
 
         local cltConn = HttpConn()
-        cltConn:connect(host, port, function(_, ecode)
+        cltConn:connect(local_host, port, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,
@@ -115,7 +124,7 @@ t_describe("http(s) test", function()
 
 
     t_it("https get " .. exp_host, function()
-        t_wait(5000)
+        t_wait(10000)
 
         local conn = HttpConn()
 
@@ -133,7 +142,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https post " .. exp_host, function()
-        t_wait(5000)
+        t_wait(10000)
 
         local conn = HttpConn()
 
@@ -151,15 +160,14 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https local server test", function()
-        t_wait(5000)
+        t_wait(10000)
 
         local ctx = "hello"
 
         local port = 8183
-        local host = "127.0.0.1"
 
         local srvConn = HttpConn()
-        srvConn:listen_s(host, port, srv_ssl, nil,
+        srvConn:listen_s(local_host, port, srv_ssl, nil,
             function(conn, http_type, code, method, url, body)
                 t_equal(http_type, 0)
 
@@ -175,7 +183,7 @@ t_describe("http(s) test", function()
             end)
 
         local cltConn = HttpConn()
-        cltConn:connect_s(host, port, clt_ssl, function(_, ecode)
+        cltConn:connect_s(local_host, port, clt_ssl, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,
@@ -195,7 +203,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https valify and get " .. exp_host, function()
-        t_wait(5000)
+        t_wait(10000)
 
         local conn = HttpConn()
 
@@ -214,15 +222,14 @@ t_describe("http(s) test", function()
 
 
     t_it("https two-way valify local server test", function()
-        t_wait(5000)
+        t_wait(10000)
 
         local ctx = "hello"
 
         local port = 8184
-        local host = "127.0.0.1"
 
         local srvConn = HttpConn()
-        srvConn:listen_s(host, port, vfy_srv_ssl, nil,
+        srvConn:listen_s(local_host, port, vfy_srv_ssl, nil,
             function(conn, http_type, code, method, url, body)
                 t_equal(http_type, 0)
 
@@ -238,7 +245,7 @@ t_describe("http(s) test", function()
             end)
 
         local cltConn = HttpConn()
-        cltConn:connect_s(host, port, vfy_clt_ssl, function(_, ecode)
+        cltConn:connect_s(local_host, port, vfy_clt_ssl, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,

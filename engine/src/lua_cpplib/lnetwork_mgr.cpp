@@ -179,8 +179,8 @@ int32_t LNetworkMgr::address(lua_State *L)
         return luaL_error(L, "no such socket found");
     }
 
-    char buf[32];
     int port = 0;
+    char buf[128]; // INET6_ADDRSTRLEN
     if (!itr->second->address(buf,sizeof(buf), &port))
     {
         return luaL_error(L, strerror(errno));
