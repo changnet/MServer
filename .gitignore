@@ -6,7 +6,7 @@
 .vscode
 
 # qt creator project file
-*.pro.user*
+*.user*
 
 # 临时生成的文件
 engine/include
