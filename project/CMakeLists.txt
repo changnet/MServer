@@ -39,13 +39,18 @@ add_library(lua_bson STATIC ${DEPS_PATH}/lua_bson/lbson.c)
 target_include_directories(lua_bson PRIVATE
     /usr/local/include/libbson-1.0
 )
-target_link_libraries(lua_bson bson-static-1.0)
+# target_link_libraries(lua_bson bson-static-1.0)
 
 # lua_flatbuffers
 file(GLOB SRC_LIST "${DEPS_PATH}/lua_flatbuffers/*.cpp")
 list(REMOVE_ITEM SRC_LIST "${DEPS_PATH}/lua_flatbuffers/cpp_test.cpp")
 add_library(lua_flatbuffers STATIC ${SRC_LIST})
-target_link_libraries(lua_flatbuffers flatbuffers)
+
+# https://cmake.org/cmake/help/latest/command/target_link_libraries.html#libraries-for-both-a-target-and-its-dependents
+# Library dependencies are transitive by default with this signature. 
+# When this target is linked into another target then the libraries linked to
+# this target will appear on the link line for the other target too.
+# target_link_libraries(lua_flatbuffers flatbuffers)
 
 #lua_parson
 add_library(lua_parson STATIC
@@ -120,7 +125,8 @@ target_link_libraries(master
     flatbuffers.a
     mariadbclient.a
     mongoc-static-1.0.a
-    bson-static-1.0.a sasl2.a
+    bson-static-1.0.a
+    sasl2.a
 
     ssl crypto dl rt pthread resolv z
 )
