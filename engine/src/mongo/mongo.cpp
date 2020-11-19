@@ -161,6 +161,7 @@ bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
         index++;
 
         ASSERT(r, "bson append document err");
+        UNUSED(r);
     }
 
     if (mongoc_cursor_error(cursor, &res->_error))

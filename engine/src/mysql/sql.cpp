@@ -9,6 +9,7 @@ void Sql::library_init()
 {
     int32_t ecode = mysql_library_init(0, NULL, NULL);
     ASSERT(0 == ecode, "mysql library init fail");
+    UNUSED(ecode);
 }
 
 /* 释放mysql库，仅在程序结束时调用。如果不介意内存，可以不调用.

@@ -8,19 +8,17 @@ class Pool
 public:
     virtual ~Pool()
     {
-        bool del_from_stat     = false;
         class Pool **pool_stat = get_pool_stat();
         for (int32_t idx = 0; idx < MAX_POOL; idx++)
         {
             if (this == pool_stat[idx])
             {
-                del_from_stat  = true;
                 pool_stat[idx] = NULL;
-                break;
+                return;
             }
         }
 
-        ASSERT(del_from_stat, "cant not del from stat");
+        ASSERT(false, "cant not del from stat");
     }
     explicit Pool(const char *name)
     {
@@ -30,20 +28,18 @@ public:
 
         _name = name;
 
-        bool add_to_stat       = false;
         class Pool **pool_stat = get_pool_stat();
         for (int32_t idx = 0; idx < MAX_POOL; idx++)
         {
             if (NULL == pool_stat[idx])
             {
-                add_to_stat    = true;
                 pool_stat[idx] = this;
-                break;
+                return;
             }
         }
 
         // 目前C++的逻辑不涉及具体业务逻辑，内存池数量应该是可以预估的
-        ASSERT(add_to_stat, "cant not add to stat");
+        ASSERT(false, "cant not add to stat");
     }
 
     int64_t get_max_new() const { return _max_new; }

@@ -16,8 +16,31 @@ project(MServer)
 # mysql库根据安装方法不同，位置不本样，可用mysql_config查看
 # (新版本-lmysqlclient_r与-lmysqlclient是一样的)
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
-set(CMAKE_C_FLAGS "-O2 -g -pipe -Wall -pedantic")
-set(CMAKE_CXX_FLAGS "-O2 -g -pipe -Wall -pedantic -std=c++11")
+
+if(NOT CMAKE_BUILD_TYPE)
+   set(CMAKE_BUILD_TYPE Debug )
+endif()
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_C_FLAGS "-O0 -g -pipe -Wall -pedantic")
+    set(CMAKE_CXX_FLAGS "-O0 -g -pipe -Wall -pedantic -std=c++11")
+elseif(CMAKE_BUILD_TYPE MATCHES Release)
+    set(CMAKE_C_FLAGS "-O2 -g -pipe -Wall -DNDEBUG -pedantic")
+    set(CMAKE_CXX_FLAGS "-O2 -g -pipe -Wall -pedantic -DNDEBUG -std=c++11")
+else()
+    message(FATAL_ERROR "Unknow CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+endif()
+
+message("CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+message("   CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
+message("   CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+# message("   CMAKE_C_FLAGS_DEBUG = ${CMAKE_C_FLAGS_DEBUG}")
+# message("   CMAKE_C_FLAGS_RELEASE = ${CMAKE_C_FLAGS_RELEASE}")
+# message("   CMAKE_C_FLAGS_RELWITHDEBINFO = ${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+# message("   CMAKE_C_FLAGS_MINSIZEREL = ${CMAKE_C_FLAGS_MINSIZEREL}")
+# message("   CMAKE_CXX_FLAGS_DEBUG = ${CMAKE_CXX_FLAGS_DEBUG}")
+# message("   CMAKE_CXX_FLAGS_RELEASE = ${CMAKE_CXX_FLAGS_RELEASE}")
+# message("   CMAKE_CXX_FLAGS_RELWITHDEBINFO = ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+# message("   CMAKE_CXX_FLAGS_MINSIZEREL = ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
 # 设置的参数能被子目录继承，子目录可以选择覆盖
 set(SRC_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/../engine")
@@ -82,6 +105,12 @@ add_library(acism STATIC
 
 
 # master
+
+# 把库的符号包含到生成的exe中，lua直接require so库时才可以找到符号
+# 新版本用 target_link_options
+# -E等同于 --export-dynamic 或者 -rdynamic
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,-E")
+
 # deps库的目录(cmake 3.13后请使用 target_link_directories)
 link_directories(
     ${LIBRARY_OUTPUT_PATH}
@@ -109,7 +138,7 @@ target_include_directories(master PRIVATE
 # 静态链接是为了方便部署，运维安装完系统后，不用额外安装的库静态链接，如 pthread、rt
 # 其他的需要静态链接
 target_link_libraries(master
-    # 需要编译的库，可以写成acism或者acism.a，前者与上面的add_library同名，cmake会
+    # 需要编译的库，可以写成acism或者acism.a。前者与上面的add_library同名，cmake会
     # 自动解决依赖关系，后者表示静态链接，但不会产生依赖关系
     pbc
     acism
