@@ -255,7 +255,7 @@ private:
     inline char *new_ctx(uint32_t &size)
     {
         // 如果分配太小，则修正为指定socket的大小。避免reserved分配太小的内存块
-        uint32_t new_size = MATH_MAX(size, _chunk_ctx_size);
+        uint32_t new_size = std::max(size, _chunk_ctx_size);
 
         // 大小只能是BUFFER_CHUNK的N倍，如果不是则修正
         if (0 != new_size % BUFFER_CHUNK)

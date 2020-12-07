@@ -269,7 +269,7 @@ EvTstamp LEV::wait_time()
     // 在定时器和下一次脚本回调之间选一个最接近的数据
     if (_app_ev_interval)
     {
-        waittime = MATH_MIN((_next_app_ev_tm - ev_now_ms), waittime);
+        waittime = std::min((_next_app_ev_tm - ev_now_ms), (int64_t)waittime);
     }
 
     if (EXPECT_FALSE(waittime < EPOLL_MIN_TM))

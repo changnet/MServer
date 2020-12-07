@@ -14,6 +14,7 @@
 // 常用的头文件，避免需要手动include
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 
 #include "../config.h" /* config paramter */
@@ -130,9 +131,6 @@ extern void __log_assert_fail(const char *__assertion, const char *__file,
         base = tmp;                                         \
         cur  = size;                                        \
     }
-
-#define MATH_MIN(a, b) ((a) > (b) ? (b) : (a))
-#define MATH_MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define ARRAY_NOINIT(base, size)

@@ -61,7 +61,7 @@ void Buffer::append(const void *raw_data, const uint32_t len)
 
         uint32_t space = _back->space_size();
 
-        uint32_t size = MATH_MIN(space, len - append_sz);
+        uint32_t size = std::min(space, len - append_sz);
         _back->append(data + append_sz, size);
 
         append_sz += size;
@@ -133,7 +133,7 @@ const char *Buffer::to_continuous_ctx(uint32_t len)
 
     do
     {
-        uint32_t next_used = MATH_MIN(len - used, next->used_size());
+        uint32_t next_used = std::min(len - used, next->used_size());
         ASSERT(used + next_used <= continuous_size,
                "continuous buffer overflow !!!");
 

@@ -72,7 +72,7 @@ public:
         {
             if (EXPECT_FALSE(_anptsize >= _anptmax))
             {
-                uint32_t mini_size = MATH_MIN(_anptmax + nsize, msize);
+                uint32_t mini_size = std::min(_anptmax + nsize, msize);
                 ARRAY_RESIZE(T *, _anpts, _anptmax, mini_size, ARRAY_NOINIT);
             }
             _max_now++;
