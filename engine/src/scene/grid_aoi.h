@@ -96,6 +96,13 @@ protected:
     struct EntityCtx *new_entity_ctx();
     void del_entity_ctx(struct EntityCtx *ctx);
 
+    /** 获取矩形内的实体 */
+    int32_t get_range_entity(EntityVector *list, int32_t x, int32_t y,
+                            int32_t dx, int32_t dy);
+
+    // 获取视野范围
+    void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,
+                          int32_t pos_x, int32_t pos_y);
 private:
     static bool remove_entity_from_vector(EntityVector *list,
                                    const struct EntityCtx *ctx);
@@ -106,12 +113,6 @@ private:
     /** 遍历矩形内的实体 */
     void each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
                            std::function<void(EntityCtx *)> &&func);
-    /** 获取矩形内的实体 */
-    int32_t get_range_entity(EntityVector *list, int32_t x, int32_t y,
-                            int32_t dx, int32_t dy);
-    // 判断视野范围
-    void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,
-                          int32_t pos_x, int32_t pos_y);
     // 处理实体进入某个范围
     void entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                             int32_t dx, int32_t dy, EntityVector *list = NULL);

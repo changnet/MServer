@@ -200,7 +200,7 @@ int32_t GridAOI::exit_entity(EntityId id, EntityVector *list)
     _entity_set.erase(iter);
 
     if (!ctx) return 2;
-    bool isOk = remove_grid_entity(ctx->_pos_x, ctx->_pos_y, ctx);
+    bool ok = remove_grid_entity(ctx->_pos_x, ctx->_pos_y, ctx);
 
     // 是否需要返回关注自己离开场景的实体列表
     EntityVector *interest_me = ctx->_interest_me;
@@ -223,7 +223,7 @@ int32_t GridAOI::exit_entity(EntityId id, EntityVector *list)
 
     del_entity_ctx(ctx);
 
-    return isOk ? 0 : -1;
+    return ok ? 0 : -1;
 }
 
 // 处理实体退出某个范围

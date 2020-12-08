@@ -55,13 +55,13 @@ LState::~LState()
 int32_t luaopen_ev(lua_State *L);
 int32_t luaopen_sql(lua_State *L);
 int32_t luaopen_log(lua_State *L);
-int32_t luaopen_aoi(lua_State *L);
 int32_t luaopen_map(lua_State *L);
 int32_t luaopen_rank(lua_State *L);
 int32_t luaopen_timer(lua_State *L);
 int32_t luaopen_astar(lua_State *L);
 int32_t luaopen_acism(lua_State *L);
 int32_t luaopen_mongo(lua_State *L);
+int32_t luaopen_grid_aoi(lua_State *L);
 int32_t luaopen_network_mgr(lua_State *L);
 
 void LState::open_cpp()
@@ -79,13 +79,13 @@ void LState::open_cpp()
     luaopen_ev(L);
     luaopen_sql(L);
     luaopen_log(L);
-    luaopen_aoi(L);
     luaopen_map(L);
     luaopen_rank(L);
     luaopen_timer(L);
     luaopen_astar(L);
     luaopen_acism(L);
     luaopen_mongo(L);
+    luaopen_grid_aoi(L);
     luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
@@ -251,7 +251,7 @@ int32_t luaopen_network_mgr(lua_State *L)
     return 0;
 }
 
-int32_t luaopen_aoi(lua_State *L)
+int32_t luaopen_grid_aoi(lua_State *L)
 {
     LClass<LGridAoi> lc(L, "GridAoi");
 
@@ -260,6 +260,7 @@ int32_t luaopen_aoi(lua_State *L)
 
     lc.def<&LGridAoi::get_entity>("get_entity");
     lc.def<&LGridAoi::get_all_entity>("get_all_entity");
+    lc.def<&LGridAoi::get_visual_entity>("get_visual_entity");
     lc.def<&LGridAoi::get_interest_me_entity>("get_interest_me_entity");
 
     lc.def<&LGridAoi::exit_entity>("exit_entity");

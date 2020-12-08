@@ -57,8 +57,6 @@ int32_t LGridAoi::get_interest_me_entity(lua_State *L)
 
     lUAL_CHECKTABLE(L, 2);
 
-    int32_t mask = luaL_optinteger(L, 3, 0xF);
-
     const struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
@@ -67,13 +65,9 @@ int32_t LGridAoi::get_interest_me_entity(lua_State *L)
         return 0;
     }
 
-    table_pack(L, 2, *(ctx->_interest_me), [L, mask](const EntityCtx *ctx) {
-        if (is_interest(mask, ctx))
-        {
-            lua_pushinteger(L, ctx->_id);
-            return true;
-        }
-        return false;
+    table_pack(L, 2, *(ctx->_interest_me), [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
     });
 
     return 0;
@@ -104,6 +98,41 @@ int32_t LGridAoi::get_entity(lua_State *L)
     }
 
     table_pack(L, 2, *list, [L, mask](const EntityCtx *ctx) {
+        if (is_interest(mask, ctx))
+        {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        }
+        return false;
+    });
+
+    del_entity_vector(list);
+
+    return 0;
+}
+
+int32_t LGridAoi::get_visual_entity(lua_State *L)
+{
+    EntityId id  = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger(L, 2);
+    lUAL_CHECKTABLE(L, 3);
+
+    const struct EntityCtx *ctx = get_entity_ctx(id);
+    if (!ctx)
+    {
+        table_pack_size(L, 3, 0);
+        ERROR("no such entity found, id = %d", id);
+        return 0;
+    }
+
+    // 获取旧视野
+    int32_t x = 0, y = 0, dx = 0, dy = 0;
+    get_visual_range(x, y, dx, dy, ctx->_pos_x, ctx->_pos_y);
+
+    EntityVector *list = new_entity_vector();
+    get_range_entity(list, x, y, dx, dy);
+
+    table_pack(L, 3, *list, [L, mask](const EntityCtx *ctx) {
         if (is_interest(mask, ctx))
         {
             lua_pushinteger(L, ctx->_id);

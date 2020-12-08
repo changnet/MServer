@@ -38,7 +38,6 @@ public:
      * 获取周围关注自己的实体列表,常用于自己释放技能、扣血、特效等广播给周围的人
      * @param id 自己的唯一实体id
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
-     * @param mask [optional]掩码，根据mask获取特定类型的实体(0xF表示所有)
      */
     int32_t get_interest_me_entity(lua_State *L);
 
@@ -53,6 +52,14 @@ public:
      * @param dst_y 矩形右下角y坐标
      */
     int32_t get_entity(lua_State *L);
+
+    /**
+     * 获取某个实体视野范围内的实体
+     * @param id 实体id
+     * @param mask 掩码，根据mask获取特定类型的实体(0xF表示所有)
+     * @param tbl 获取到的实体存放在此table中，数量设置在n字段
+     */
+    int32_t get_visual_entity(lua_State *L);
 
     /**
      * 实体退出场景

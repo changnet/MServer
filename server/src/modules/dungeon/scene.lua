@@ -143,7 +143,7 @@ end
 -- @to_me:是否也广播给自己
 function Scene:broadcast_to_watch_me(entity,cmd,pkt,to_me)
     -- 广播给玩家我开始移动
-    self.aoi:get_interest_me_entity(entity.eid,tmp_list,ET.PLAYER)
+    self.aoi:get_interest_me_entity(entity.eid,tmp_list)
 
     local pid_list = {}
 
