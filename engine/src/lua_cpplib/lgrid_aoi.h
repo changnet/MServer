@@ -6,11 +6,11 @@
 /**
  * AOI算法，目前用格子地图实现
  */
-class LAoi : public GridAOI
+class LGridAoi : public GridAOI
 {
 public:
-    ~LAoi();
-    explicit LAoi(lua_State *L);
+    ~LGridAoi();
+    explicit LGridAoi(lua_State *L);
 
     /**
      * 设置地图大小

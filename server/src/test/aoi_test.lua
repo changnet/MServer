@@ -1,6 +1,6 @@
 -- aoi算法测试
 
-local Aoi = require "Aoi"
+local Aoi = require "GridAoi"
 
 local aoi = Aoi()
 
@@ -102,7 +102,7 @@ local function valid_out(et,list)
     local id_map = {}
     local max = list.n
     for idx = 1,max do
-        id = list[idx]
+        local id = list[idx]
 
         assert(et.id ~= id) -- 返回列表不应该包含自己
 
@@ -205,7 +205,7 @@ local function random_map(map)
 
     local idx = 0
     local hit = nil
-    for id,et in pairs(map) do
+    for _, et in pairs(map) do
         if not hit then hit = et end
         idx = idx + 1
         if idx >= srand then return et end
@@ -222,11 +222,11 @@ local function random_test()
         local entity_type = math.random(1,3)
         local event = math.random(0,1)
         local et = enter(idx,x,y,entity_type,event)
-        -- valid_watch_me(et)
+        valid_watch_me(et)
     end
 
     -- 随机退出、更新、进入
-    for idx = 1,max_random do
+    for _ = 1,max_random do
         local ev = math.random(1,3)
         if 1 == ev then
             local et = random_map(exit_info)
@@ -235,7 +235,7 @@ local function random_test()
                 local y = math.random(0,max_heigth)
                 local new_et = enter(et.id,x,y,et.type,et.event)
                 exit_info[et.id] = nil
-                -- valid_watch_me(new_et)
+                valid_watch_me(new_et)
             end
         elseif 2 == ev then
             local et = random_map(entity_info)
@@ -243,7 +243,7 @@ local function random_test()
                 local x = math.random(0,max_width)
                 local y = math.random(0,max_heigth)
                 update(et.id,x,y)
-                -- valid_watch_me(et)
+                valid_watch_me(et)
             end
         elseif 3 == ev then
             local et = random_map(entity_info)

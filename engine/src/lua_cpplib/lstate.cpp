@@ -3,7 +3,7 @@
 #include <lua.hpp>
 
 #include "lacism.h"
-#include "laoi.h"
+#include "lgrid_aoi.h"
 #include "lastar.h"
 #include "lclass.h"
 #include "lev.h"
@@ -253,20 +253,20 @@ int32_t luaopen_network_mgr(lua_State *L)
 
 int32_t luaopen_aoi(lua_State *L)
 {
-    LClass<LAoi> lc(L, "Aoi");
+    LClass<LGridAoi> lc(L, "GridAoi");
 
-    lc.def<&LAoi::set_size>("set_size");
-    lc.def<&LAoi::set_visual_range>("set_visual_range");
+    lc.def<&LGridAoi::set_size>("set_size");
+    lc.def<&LGridAoi::set_visual_range>("set_visual_range");
 
-    lc.def<&LAoi::get_entitys>("get_entitys");
-    lc.def<&LAoi::get_all_entitys>("get_all_entitys");
-    lc.def<&LAoi::get_watch_me_entitys>("get_watch_me_entitys");
+    lc.def<&LGridAoi::get_entitys>("get_entitys");
+    lc.def<&LGridAoi::get_all_entitys>("get_all_entitys");
+    lc.def<&LGridAoi::get_watch_me_entitys>("get_watch_me_entitys");
 
-    lc.def<&LAoi::exit_entity>("exit_entity");
-    lc.def<&LAoi::enter_entity>("enter_entity");
-    lc.def<&LAoi::update_entity>("update_entity");
+    lc.def<&LGridAoi::exit_entity>("exit_entity");
+    lc.def<&LGridAoi::enter_entity>("enter_entity");
+    lc.def<&LGridAoi::update_entity>("update_entity");
 
-    lc.def<&LAoi::is_same_pos>("is_same_pos");
+    lc.def<&LGridAoi::is_same_pos>("is_same_pos");
 
     return 0;
 }

@@ -1,5 +1,4 @@
-#include "laoi.h"
-#include "../scene/scene_include.h"
+#include "lgrid_aoi.h"
 #include "ltools.h"
 
 #define EVENT_FILTER if (ctx && ctx->_event)
@@ -32,11 +31,11 @@
 #define MAP_TBL_PACK(tbl_idx, list, FILTER) \
     TABLE_PACK(tbl_idx, list, entity_set_t::const_iterator, iter->second, FILTER)
 
-LAoi::~LAoi() {}
+LGridAoi::~LGridAoi() {}
 
-LAoi::LAoi(lua_State *L) {}
+LGridAoi::LGridAoi(lua_State *L) {}
 
-int32_t LAoi::set_visual_range(lua_State *L) // 设置视野
+int32_t LGridAoi::set_visual_range(lua_State *L) // 设置视野
 {
     // 这里的宽高都是指格子数
     int32_t width  = luaL_checkinteger(L, 1);
@@ -46,7 +45,7 @@ int32_t LAoi::set_visual_range(lua_State *L) // 设置视野
     return 0;
 }
 
-int32_t LAoi::set_size(lua_State *L) // 设置宽高
+int32_t LGridAoi::set_size(lua_State *L) // 设置宽高
 {
     // 这里的宽高都是指像素，因为地图的大小可能并不刚好符合格子数，后面再做转换
     int32_t width    = luaL_checkinteger(L, 1);
@@ -59,7 +58,7 @@ int32_t LAoi::set_size(lua_State *L) // 设置宽高
 }
 
 // 获取某个类型的实体
-int32_t LAoi::get_all_entitys(lua_State *L)
+int32_t LGridAoi::get_all_entitys(lua_State *L)
 {
     // 可以多个实体类型，按位表示
     int32_t type_mask = luaL_checkinteger(L, 1);
@@ -73,7 +72,7 @@ int32_t LAoi::get_all_entitys(lua_State *L)
 
 // 获取关注自己的实体列表
 // 常用于自己释放技能、扣血、特效等广播给周围的人
-int32_t LAoi::get_watch_me_entitys(lua_State *L)
+int32_t LGridAoi::get_watch_me_entitys(lua_State *L)
 {
     entity_id_t id = luaL_checkinteger(L, 1);
 
@@ -102,7 +101,7 @@ int32_t LAoi::get_watch_me_entitys(lua_State *L)
 /* 获取某一范围内实体
  * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
  */
-int32_t LAoi::get_entitys(lua_State *L)
+int32_t LGridAoi::get_entitys(lua_State *L)
 {
     // 可以多个实体类型，按位表示
     int32_t type_mask = luaL_checkinteger(L, 1);
@@ -131,7 +130,7 @@ int32_t LAoi::get_entitys(lua_State *L)
 }
 
 // 处理实体退出场景
-int32_t LAoi::exit_entity(lua_State *L)
+int32_t LGridAoi::exit_entity(lua_State *L)
 {
     entity_id_t id = luaL_checkinteger(L, 1);
 
@@ -155,7 +154,7 @@ int32_t LAoi::exit_entity(lua_State *L)
     return 0;
 }
 
-int32_t LAoi::enter_entity(lua_State *L)
+int32_t LGridAoi::enter_entity(lua_State *L)
 {
     entity_id_t id = luaL_checkinteger(L, 1);
     // 实体像素坐标
@@ -185,7 +184,7 @@ int32_t LAoi::enter_entity(lua_State *L)
     return 0;
 }
 
-int32_t LAoi::update_entity(lua_State *L)
+int32_t LGridAoi::update_entity(lua_State *L)
 {
     entity_id_t id = luaL_checkinteger(L, 1);
     // 实体像素坐标
@@ -231,7 +230,7 @@ int32_t LAoi::update_entity(lua_State *L)
 }
 
 // 两个位置在aoi中是否一致
-int32_t LAoi::is_same_pos(lua_State *L)
+int32_t LGridAoi::is_same_pos(lua_State *L)
 {
     // 像素坐标
     int32_t src_x = (int32_t)luaL_checknumber(L, 1);
@@ -240,11 +239,7 @@ int32_t LAoi::is_same_pos(lua_State *L)
     int32_t dest_x = (int32_t)luaL_checknumber(L, 3);
     int32_t dest_y = (int32_t)luaL_checknumber(L, 4);
 
-    // 在脚本算要用math.floor，比较慢，而且，以后可能aoi的格子和地图格子大小不一样
-    int32_t sx = PIX_TO_GRID(src_x);
-    int32_t sy = PIX_TO_GRID(src_y);
-    int32_t dx = PIX_TO_GRID(dest_x);
-    int32_t dy = PIX_TO_GRID(dest_y);
+    lua_pushboolean(L, GridAOI::is_same_pos(src_x, src_y, dest_x, dest_y));
 
-    return sx == dx && sy == dy;
+    return 1;
 }

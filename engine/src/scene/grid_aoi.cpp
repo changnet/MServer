@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "grid_aoi.h"
 #include "../system/static_global.h"
 
@@ -64,8 +66,8 @@ bool GridAOI::set_visual_range(int32_t width, int32_t height)
 {
     if (_pix_grid <= 0) return false;
 
-    _visual_width  = width / _pix_grid;
-    _visual_height = height / _pix_grid;
+    _visual_width  = std::ceil(((double)width) / _pix_grid);
+    _visual_height = std::ceil(((double)height) / _pix_grid);
 
     return true;
 }

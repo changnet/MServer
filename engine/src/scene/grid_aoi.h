@@ -14,6 +14,8 @@
  *    效率，战斗ai另外做即可(攻击玩家在ai定时器定时取watch_me列表即可)。怪物攻击怪物或
  *    npc在玩家靠近时对话可以给这些实体加上事件，这样的实体不会太多
  * 5. 假设1m为一个格子，则1平方千米的地图存实体指针的内存为 1024 * 1024 * 8 = 8k
+ *    (实际是一个vector链表，要大些，但一个服的地图数量有限，应该是可接受的)
+ * 6. 所有对外接口均为像素，内部则转换为格子坐标来处理，但不会记录原有的像素坐标
  */
 class GridAOI
 {
@@ -28,8 +30,8 @@ public:
      */
     struct entity_ctx
     {
-        uint8_t _type;  // 记录实体类型
-        uint8_t _event; // 关注的事件
+        uint8_t _type;   // 记录实体类型
+        uint8_t _event;  // 关注的事件
         uint16_t _pos_x; // 格子坐标，x
         uint16_t _pos_y; // 格子坐标，y
         entity_id_t _id;
@@ -42,6 +44,13 @@ public:
 public:
     GridAOI();
     virtual ~GridAOI();
+
+    /** 根据像素坐标判断是否在同一个格子内 */
+    bool is_same_pos(int32_t x, int32_t y, int32_t dx, int32_t dy)
+    {
+        return (x / _pix_grid == dx / _pix_grid)
+               && (y / _pix_grid == dy / _pix_grid);
+    }
 
     bool set_visual_range(int32_t width, int32_t height);
     void set_size(int32_t width, int32_t height, int32_t pix_grid);
@@ -106,8 +115,8 @@ private:
     }
 
 protected:
-    int32_t _width;  // 场景最大宽度(格子坐标)
-    int32_t _height; // 场景最大高度(格子坐标)
+    int32_t _width;    // 场景最大宽度(格子坐标)
+    int32_t _height;   // 场景最大高度(格子坐标)
     int32_t _pix_grid; // 每个格子表示的像素大小
 
     // 格子数指以实体为中心，不包含当前格子，上下或者左右的格子数
