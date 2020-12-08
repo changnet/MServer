@@ -328,8 +328,14 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
     struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx) return 2;
 
-    // 在一个格子内移动不用处理
-    if (gx == ctx->_pos_x && gy == ctx->_pos_y) return 0;
+    // 在一个格子内移动，只需要返回关注该玩家的列表即可
+    // AOI这边其实不用做任何处理，但其他玩家要看得到他移动
+    // TODO 如果格子太小，或者不需要很精确显示位置的，这里都可以不处理
+    if (gx == ctx->_pos_x && gy == ctx->_pos_y)
+    {
+        list->insert(list->end(), ctx->_watch_me->begin(), ctx->_watch_me->end());
+        return 0;
+    }
 
     // 获取旧视野
     int32_t old_x = 0, old_y = 0, old_dx = 0, old_dy = 0;

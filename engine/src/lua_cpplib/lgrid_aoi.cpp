@@ -1,35 +1,7 @@
 #include "lgrid_aoi.h"
 #include "ltools.h"
 
-#define EVENT_FILTER if (ctx && ctx->_event)
-#define TYPE_FILTER  if (ctx && (type_mask & ctx->_type))
-
-// 类似table.pack的做法，最后设置一个n表示数量
-#define TABLE_PACK(tbl_idx, list, ITER, FROM_ITER, FILTER) \
-    do                                                     \
-    {                                                      \
-        int32_t index = 1;                                 \
-        ITER iter     = list->begin();                     \
-        for (; iter != list->end(); iter++)                \
-        {                                                  \
-            const struct EntityCtx *ctx = FROM_ITER;       \
-            FILTER                                         \
-            {                                              \
-                lua_pushinteger(L, ctx->_id);              \
-                lua_rawseti(L, tbl_idx, index);            \
-                index++;                                   \
-            }                                              \
-        }                                                  \
-        lua_pushstring(L, "n");                            \
-        lua_pushinteger(L, index - 1);                     \
-        lua_rawset(L, tbl_idx);                            \
-    } while (0)
-
-#define VECTOR_TBL_PACK(tbl_idx, list, FILTER) \
-    TABLE_PACK(tbl_idx, list, EntityVector::const_iterator, *iter, FILTER)
-
-#define MAP_TBL_PACK(tbl_idx, list, FILTER) \
-    TABLE_PACK(tbl_idx, list, EntitySet::const_iterator, iter->second, FILTER)
+#define BIT_FILTER(mask, ctx_mask) (-1 == mask || (mask & ctx_mask))
 
 LGridAoi::~LGridAoi() {}
 
@@ -65,11 +37,15 @@ int32_t LGridAoi::get_all_entity(lua_State *L)
 
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
-    auto filter = [L, type_mask](std::pair<const int64_t, EntityCtx *> &iter) {
-        if (!(type_mask & iter.second->_type)) return false;
+    using EntitySetPair = std::pair<const int64_t, EntityCtx *>;
+    auto filter         = [L, type_mask](const EntitySetPair &iter) {
+        if (BIT_FILTER(type_mask, iter.second->_type))
+        {
+            lua_pushinteger(L, iter.second->_id);
+            return true;
+        }
 
-        lua_pushinteger(L, iter.second->_id);
-        return true;
+        return false;
     };
     table_pack(L, 2, _entity_set, filter);
 
@@ -90,18 +66,22 @@ int32_t LGridAoi::get_watch_me_entity(lua_State *L)
     const struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
-        lua_pushinteger(L, -1);
-        return 1;
+        table_pack_size(L, 2, 0);
+        return 0;
     }
 
-#define TE_FILTER                                            \
-    if (ctx && (-1 == type_mask || (type_mask & ctx->_type)) \
-        && (-1 == event_mask || (event_mask & ctx->_event)))
-    VECTOR_TBL_PACK(2, ctx->_watch_me, TE_FILTER);
-#undef TE_FILTER
+    auto filter = [L, type_mask, event_mask](const EntityCtx *ctx) {
+        if (BIT_FILTER(type_mask, ctx->_type)
+            && BIT_FILTER(event_mask, ctx->_event))
+        {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        }
+        return false;
+    };
+    table_pack(L, 2, *(ctx->_watch_me), filter);
 
-    lua_pushinteger(L, ctx->_watch_me->size());
-    return 1;
+    return 0;
 }
 
 /* 获取某一范围内实体
@@ -128,7 +108,15 @@ int32_t LGridAoi::get_entity(lua_State *L)
         return luaL_error(L, "aoi get entity error:%d", ecode);
     }
 
-    VECTOR_TBL_PACK(2, list, TYPE_FILTER);
+    auto filter = [L, type_mask](const EntityCtx *ctx) {
+        if (BIT_FILTER(type_mask, ctx->_type))
+        {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        }
+        return false;
+    };
+    table_pack(L, 2, *list, filter);
 
     del_entity_vector(list);
 
@@ -153,7 +141,15 @@ int32_t LGridAoi::exit_entity(lua_State *L)
 
     if (!list) return 0;
 
-    VECTOR_TBL_PACK(2, list, EVENT_FILTER);
+    auto filter = [L](const EntityCtx *ctx) {
+        if (ctx->_event)
+        {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        }
+        return false;
+    };
+    table_pack(L, 2, *list, filter);
 
     del_entity_vector(list);
 
@@ -184,7 +180,15 @@ int32_t LGridAoi::enter_entity(lua_State *L)
 
     if (!list) return 0;
 
-    VECTOR_TBL_PACK(6, list, EVENT_FILTER);
+    auto filter = [L](const EntityCtx *ctx) {
+        if (ctx->_event)
+        {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        }
+        return false;
+    };
+    table_pack(L, 6, *list, filter);
 
     del_entity_vector(list);
     return 0;
@@ -215,17 +219,25 @@ int32_t LGridAoi::update_entity(lua_State *L)
         return luaL_error(L, "aoi update entity error:%d", ecode);
     }
 
+    auto filter = [L](const EntityCtx *ctx) {
+        if (ctx->_event)
+        {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        }
+        return false;
+    };
     if (list)
     {
-        VECTOR_TBL_PACK(4, list, EVENT_FILTER);
+        table_pack(L, 4, *list, filter);
     }
     if (list_in)
     {
-        VECTOR_TBL_PACK(5, list_in, EVENT_FILTER);
+        table_pack(L, 5, *list_in, filter);
     }
     if (list_out)
     {
-        VECTOR_TBL_PACK(6, list_out, EVENT_FILTER);
+        table_pack(L, 6, *list_out, filter);
     }
 
     if (list) del_entity_vector(list);

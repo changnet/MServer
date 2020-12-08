@@ -177,11 +177,24 @@ static inline int traceback(lua_State *L)
 }
 
 /**
+ * @brief 设置table的n值
+ * @param L Lua虚拟机
+ * @param index table所在栈索引
+ * @param n 数量n
+ */
+static inline void table_pack_size(lua_State *L, int32_t index, int32_t n)
+{
+    lua_pushstring(L, "n");
+    lua_pushinteger(L, n);
+    lua_rawset(L, index);
+}
+
+/**
  * 类似于table.pack，把一个数组或map打包到table中，n表示数量
  * @param filter 把需要打包的数据放到堆栈并返回true
  */
 template <typename Container, typename Filter>
-void table_pack(lua_State *L, int32_t index, Container container, Filter &filter)
+void table_pack(lua_State *L, int32_t index,const Container &container, Filter &filter)
 {
     int32_t n = 0;
     for (auto &iter : container)
@@ -193,7 +206,7 @@ void table_pack(lua_State *L, int32_t index, Container container, Filter &filter
         }
     }
 
-    lua_pushstring(L, "n");
-    lua_pushinteger(L, n);
-    lua_rawset(L, index);
+    table_pack_size(L, index, n);
 }
+
+

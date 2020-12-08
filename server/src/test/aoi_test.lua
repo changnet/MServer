@@ -159,7 +159,7 @@ local function update(aoi, id,x,y)
     local list_out = {}
 
     aoi:update_entity(id,x,y,entity_pack_list,list_in,list_out)
-    PRINT("update pos", id, x, y, list_in.n, list_out.n )
+    PRINT("update pos", id, x, y, entity_pack_list.n, list_in.n, list_out.n )
 
     if is_valid then
         raw_valid_ev(entity,entity_pack_list)
@@ -259,19 +259,27 @@ t_describe("grid aoi", function()
         local entity_list = {}
         aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, entity_list)
         t_equal(entity_list.n, table.size(entity_info))
-
         aoi:get_all_entity(ET_PLAYER, entity_list)
         t_equal(entity_list.n, 2)
 
-        -- 测试进入视野(地图边界)
-        update(aoi, 99997, max_width, max_height) -- 进入同一个格子
-        update(aoi, 99998, max_width, max_height) -- 离开有人的格子
-        update(aoi, 99997, max_width, max_height) -- 三个实体在同一个格子
-        update(aoi, 99999, max_width, max_height) -- 测试视野范围内移动
+        aoi:get_entity(ET_PLAYER, entity_list, 0, 0, 10, 10)
+        t_equal(entity_list.n, 1)
+        aoi:get_entity(ET_NPC, entity_list, 0, 0, 10, 10)
+        t_equal(entity_list.n, 0)
 
-        -- 测试在视野内移动(临界值)
+        -- 测试进入视野(地图边界)
+        -- 99998的event为0，表示它不关注其他任何实体的变动，
+        -- 因此其他实体移动时，list_in和list_out这些列表都不包含它
+        update(aoi, 99996, max_width, max_height)
+        update(aoi, 99998, max_width, max_height)
+        update(aoi, 99997, max_width, max_height)
+        update(aoi, 99999, max_width - pix / 2, max_height - pix / 2)
+
         -- 测试离开视野(临界值)
 
+        -- 测试离开其中一个视野的同时进入另一个实体的视野
+
+        -- 退出场景
         exit(aoi, 99996)
         exit(aoi, 99997)
         exit(aoi, 99998)
