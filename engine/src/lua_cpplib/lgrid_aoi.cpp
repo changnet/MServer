@@ -12,7 +12,7 @@
         ITER iter     = list->begin();                     \
         for (; iter != list->end(); iter++)                \
         {                                                  \
-            const struct entity_ctx *ctx = FROM_ITER;      \
+            const struct EntityCtx *ctx = FROM_ITER;       \
             FILTER                                         \
             {                                              \
                 lua_pushinteger(L, ctx->_id);              \
@@ -26,10 +26,10 @@
     } while (0)
 
 #define VECTOR_TBL_PACK(tbl_idx, list, FILTER) \
-    TABLE_PACK(tbl_idx, list, entity_vector_t::const_iterator, *iter, FILTER)
+    TABLE_PACK(tbl_idx, list, EntityVector::const_iterator, *iter, FILTER)
 
 #define MAP_TBL_PACK(tbl_idx, list, FILTER) \
-    TABLE_PACK(tbl_idx, list, entity_set_t::const_iterator, iter->second, FILTER)
+    TABLE_PACK(tbl_idx, list, EntitySet::const_iterator, iter->second, FILTER)
 
 LGridAoi::~LGridAoi() {}
 
@@ -74,14 +74,14 @@ int32_t LGridAoi::get_all_entitys(lua_State *L)
 // 常用于自己释放技能、扣血、特效等广播给周围的人
 int32_t LGridAoi::get_watch_me_entitys(lua_State *L)
 {
-    entity_id_t id = luaL_checkinteger(L, 1);
+    EntityId id = luaL_checkinteger(L, 1);
 
     lUAL_CHECKTABLE(L, 2);
 
     int32_t type_mask  = luaL_optinteger(L, 3, -1);
     int32_t event_mask = luaL_optinteger(L, 4, -1);
 
-    const struct entity_ctx *ctx = get_entity_ctx(id);
+    const struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         lua_pushinteger(L, -1);
@@ -114,8 +114,8 @@ int32_t LGridAoi::get_entitys(lua_State *L)
     int32_t destx = luaL_checkinteger(L, 5);
     int32_t desty = luaL_checkinteger(L, 6);
 
-    entity_vector_t *list = new_entity_vector();
-    int32_t ecode = GridAOI::get_entitys(list, srcx, srcy, destx, desty);
+    EntityVector *list = new_entity_vector();
+    int32_t ecode      = GridAOI::get_entitys(list, srcx, srcy, destx, desty);
     if (0 != ecode)
     {
         del_entity_vector(list);
@@ -132,9 +132,9 @@ int32_t LGridAoi::get_entitys(lua_State *L)
 // 处理实体退出场景
 int32_t LGridAoi::exit_entity(lua_State *L)
 {
-    entity_id_t id = luaL_checkinteger(L, 1);
+    EntityId id = luaL_checkinteger(L, 1);
 
-    entity_vector_t *list = NULL;
+    EntityVector *list = NULL;
     if (lua_istable(L, 2)) list = new_entity_vector();
 
     int32_t ecode = GridAOI::exit_entity(id, list);
@@ -156,7 +156,7 @@ int32_t LGridAoi::exit_entity(lua_State *L)
 
 int32_t LGridAoi::enter_entity(lua_State *L)
 {
-    entity_id_t id = luaL_checkinteger(L, 1);
+    EntityId id = luaL_checkinteger(L, 1);
     // 实体像素坐标
     int32_t x = luaL_checkinteger(L, 2);
     int32_t y = luaL_checkinteger(L, 3);
@@ -165,7 +165,7 @@ int32_t LGridAoi::enter_entity(lua_State *L)
     // 关注的事件，目前没有定义事件类型，1表示关注所有事件，0表示都不关注
     uint8_t event = static_cast<uint8_t>(luaL_checkinteger(L, 5));
 
-    entity_vector_t *list = NULL;
+    EntityVector *list = NULL;
     if (lua_istable(L, 6)) list = new_entity_vector();
 
     int32_t ecode = GridAOI::enter_entity(id, x, y, type, event, list);
@@ -173,7 +173,7 @@ int32_t LGridAoi::enter_entity(lua_State *L)
     {
         if (list) del_entity_vector(list);
 
-        return luaL_error(L, "aoi enter entitys error:%d", ecode);
+        return luaL_error(L, "aoi enter entitys error:ecode = %d", ecode);
     }
 
     if (!list) return 0;
@@ -186,14 +186,14 @@ int32_t LGridAoi::enter_entity(lua_State *L)
 
 int32_t LGridAoi::update_entity(lua_State *L)
 {
-    entity_id_t id = luaL_checkinteger(L, 1);
+    EntityId id = luaL_checkinteger(L, 1);
     // 实体像素坐标
     int32_t x = (int32_t)luaL_checknumber(L, 2);
     int32_t y = (int32_t)luaL_checknumber(L, 3);
 
-    entity_vector_t *list     = NULL;
-    entity_vector_t *list_in  = NULL;
-    entity_vector_t *list_out = NULL;
+    EntityVector *list     = NULL;
+    EntityVector *list_in  = NULL;
+    EntityVector *list_out = NULL;
 
     if (lua_istable(L, 4)) list = new_entity_vector();
     if (lua_istable(L, 5)) list_in = new_entity_vector();

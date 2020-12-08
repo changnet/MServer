@@ -50,5 +50,5 @@ if [[ ! $2 ]]; then
     gdb master $1
 else
     # ./gdb.sh gateway 1 1 启动进程进行调试
-    gdb -args master $1 $2 $3
+    gdb -args master $1 $2 $3 $4 $5
 fi

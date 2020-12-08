@@ -7,11 +7,11 @@ if [ "$1" == "mem" ]; then
     valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all \
     --suppressions=../../project/valgrind.suppressions \
     --gen-suppressions=all \
-    ./master $2 1 1
+    ./master $2 $3 $4 $5
 elif [ "$1" == "call" ]; then
-    valgrind --tool=callgrind ./master $2 1 1
+    valgrind --tool=callgrind ./master $2 $3 $4 $5
 elif [ "$1" == "massif" ]; then
     # ms_print
     # 配合gdb malloc_stats malloc_info(0, stdout)
-    valgrind --tool=massif ./master $2 1 1
+    valgrind --tool=massif ./master $2 $3 $4 $5
 fi

@@ -47,6 +47,7 @@ function App:exec()
 
     require "test.misc_test"
     require "test.https_test"
+    require "test.aoi_test"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
     -- require "example.mysql_performance"
@@ -55,7 +56,6 @@ function App:exec()
     -- require "example.websocket_performance"
     -- require "example.words_filter_performance"
     -- require "example.scene_performance"
-    -- require "example.aoi_performance"
     -- require "example.rank_performance"
     -- require "example.other_performance"
 
