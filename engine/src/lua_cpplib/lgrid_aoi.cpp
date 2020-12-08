@@ -51,7 +51,7 @@ int32_t LGridAoi::get_all_entity(lua_State *L)
 
 // 获取关注自己的实体列表
 // 常用于自己释放技能、扣血、特效等广播给周围的人
-int32_t LGridAoi::get_watch_me_entity(lua_State *L)
+int32_t LGridAoi::get_interest_me_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
 
@@ -63,6 +63,7 @@ int32_t LGridAoi::get_watch_me_entity(lua_State *L)
     if (!ctx)
     {
         table_pack_size(L, 2, 0);
+        ERROR("no such entity found, id = %d", id);
         return 0;
     }
 
@@ -191,7 +192,7 @@ int32_t LGridAoi::update_entity(lua_State *L)
     if (lua_istable(L, 6)) list_out = new_entity_vector();
 
     int32_t ecode = GridAOI::update_entity(id, x, y, list, list_in, list_out);
-    if (0 != ecode)
+    if (0 > ecode)
     {
         if (list) del_entity_vector(list);
         if (list_in) del_entity_vector(list_in);
@@ -207,21 +208,22 @@ int32_t LGridAoi::update_entity(lua_State *L)
     if (list)
     {
         table_pack(L, 4, *list, filter);
+        del_entity_vector(list);
     }
     if (list_in)
     {
         table_pack(L, 5, *list_in, filter);
+        del_entity_vector(list_in);
     }
     if (list_out)
     {
         table_pack(L, 6, *list_out, filter);
+        del_entity_vector(list_out);
     }
 
-    if (list) del_entity_vector(list);
-    if (list_in) del_entity_vector(list_in);
-    if (list_out) del_entity_vector(list_out);
-
-    return 0;
+    // 1表示该实体移动幅度过小，格子位置没有变化
+    lua_pushboolean(L, 1 != ecode);
+    return 1;
 }
 
 // 两个位置在aoi中是否一致

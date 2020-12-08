@@ -19,7 +19,7 @@ local ET_PLAYER = 1 -- 玩家，关注所有实体事件
 local ET_NPC = 2 -- npc，关注玩家事件
 local ET_MONSTER = 4 -- 怪物，不关注任何事件
 
-local entity_pack_list = {}
+local list = {}
 
 -- 是否在视野内
 local function in_visual_range(et,other)
@@ -33,10 +33,10 @@ local function in_visual_range(et,other)
 end
 
 -- 获取在自己视野范围内，并且关注事件的实体
-local function get_visual_ev(et)
+local function get_visual_list(et, mask)
     local ev_map = {}
     for id,other in pairs(entity_info) do
-        if id ~= et.id and 0 ~= (et.mask & other.mask)
+        if id ~= et.id and 0 ~= (mask & other.mask)
             and in_visual_range(et,other) then
             ev_map[id] = other
         end
@@ -46,8 +46,8 @@ local function get_visual_ev(et)
 end
 
 
--- 校验触发事件时返回的实体列表
-local function raw_valid_ev(et,list)
+-- 校验list里的实体都在et的视野范围内
+local function valid_visual_list(et,list)
     local id_map = {}
     local max = list.n
     for idx = 1,max do
@@ -72,10 +72,13 @@ local function raw_valid_ev(et,list)
     return id_map
 end
 
-local function valid_ev(et,list)
-    local id_map = raw_valid_ev(et,list)
+-- 把list和自己视野内的实体进行交叉对比，校验list的正确性
+local function valid_visual(et, list, mask)
+    -- 校验列表里的实体都在视野范围内
+    local id_map = valid_visual_list(et,list)
+
     -- 校验在视野范围的实体都在列表上
-    local visual_ev = get_visual_ev(et)
+    local visual_ev = get_visual_list(et, mask or et.mask)
     for id,other in pairs(visual_ev) do
         if not id_map[id] then
             PRINTF("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
@@ -91,12 +94,12 @@ local function valid_ev(et,list)
 end
 
 -- 校验更新位置时收到实体进入事件的列表
-local function valid_in(et,list)
-    raw_valid_ev(et,list)
+local function valid_in(et, list)
+    valid_visual_list(et, list)
 end
 
 -- 校验更新位置时收到实体退出事件的列表
-local function valid_out(et,list)
+local function valid_out(et, list)
     local id_map = {}
     local max = list.n
     for idx = 1,max do
@@ -121,14 +124,13 @@ local function valid_out(et,list)
     end
 end
 
--- 对watch_me列表进行校验
-local function valid_watch_me(aoi, et)
-    -- 检验watch列表
-    aoi:get_watch_me_entity(et.id,entity_pack_list)
-    valid_ev(et,entity_pack_list)
+-- 对interest_me列表进行校验
+local function valid_interest_me(aoi, et)
+    aoi:get_interest_me_entity(et.id,list)
+    valid_visual(et,list)
 end
 
-local function enter(aoi, id,x,y,mask)
+local function enter(aoi, id, x, y, mask)
     local entity = entity_info[id]
     if not entity then
         entity = {}
@@ -142,8 +144,8 @@ local function enter(aoi, id,x,y,mask)
     entity.mask = mask
 
     -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
-    aoi:enter_entity(id,x,y,mask,entity_pack_list)
-    if is_valid then valid_ev(entity,entity_pack_list) end
+    aoi:enter_entity(id,x,y,mask,list)
+    if is_valid then valid_visual(entity,list, 0xF) end
 
     return entity
 end
@@ -158,13 +160,14 @@ local function update(aoi, id,x,y)
     local list_in = {}
     local list_out = {}
 
-    aoi:update_entity(id,x,y,entity_pack_list,list_in,list_out)
-    PRINT("update pos", id, x, y, entity_pack_list.n, list_in.n, list_out.n )
+    aoi:update_entity(id,x,y,list,list_in,list_out)
+    PRINT("update pos", id, x, y, list.n, list_in.n, list_out.n )
 
     if is_valid then
-        raw_valid_ev(entity,entity_pack_list)
-        valid_in(entity,list_in)
-        valid_out(entity,list_out)
+        valid_visual_list(entity,list)
+        valid_in(entity, list_in)
+        valid_out(entity, list_out)
+        valid_interest_me(aoi, entity)
     end
 end
 
@@ -172,11 +175,11 @@ local function exit(aoi, id)
     local entity = entity_info[id]
     assert(entity)
 
-    aoi:exit_entity(id,entity_pack_list)
+    aoi:exit_entity(id,list)
 
     entity_info[id] = nil
     -- PRINT(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
-    if is_valid then valid_ev(entity,entity_pack_list) end
+    if is_valid then valid_visual(entity,list) end
 end
 
 
@@ -207,7 +210,7 @@ local function random_test(aoi, max_width, max_height)
         local y = math.random(0,max_height)
         local mask_idx = math.random(mask_opt)
         local et = enter(aoi, idx,x,y,mask_opt[mask_idx])
-        valid_watch_me(aoi, et)
+        valid_interest_me(aoi, et)
     end
 
     -- 随机退出、更新、进入
@@ -220,7 +223,7 @@ local function random_test(aoi, max_width, max_height)
                 local y = math.random(0,max_height)
                 local new_et = enter(aoi, et.id,x,y,et.mask)
                 exit_info[et.id] = nil
-                valid_watch_me(aoi, new_et)
+                valid_interest_me(aoi, new_et)
             end
         elseif 2 == ev then
             local et = random_map(entity_info)
@@ -228,7 +231,7 @@ local function random_test(aoi, max_width, max_height)
                 local x = math.random(0,max_width)
                 local y = math.random(0,max_height)
                 update(aoi, et.id,x,y)
-                valid_watch_me(aoi, et)
+                valid_interest_me(aoi, et)
             end
         elseif 3 == ev then
             local et = random_map(entity_info)
@@ -271,7 +274,13 @@ t_describe("grid aoi", function()
         update(aoi, 99996, max_width, max_height)
         update(aoi, 99998, max_width, max_height)
         update(aoi, 99997, max_width, max_height)
+
+        -- 在同一个格子内移动
+        -- 这个移动比较特殊，同一个格子表示aoi没有变化，因此list_in和list_out为空
+        -- list是interest_me列表而不是整个视野范围内的实体
         update(aoi, 99999, max_width - pix / 2, max_height - pix / 2)
+        aoi:get_interest_me_entity(99999, entity_list, 0xF)
+        t_equal(entity_list.n, 1)
 
         -- 测试离开视野(临界值)
 

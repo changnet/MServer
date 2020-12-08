@@ -83,6 +83,7 @@ public:
      * @param list 接收实体更新的实体列表
      * @param list_in 接收实体进入的实体列表
      * @param list_out 接收实体消失的实体列表
+     * @return <0错误，0正常，>0正常，但做了特殊处理
      */
     int32_t update_entity(EntityId id, int32_t x, int32_t y,
                           EntityVector *list = NULL, EntityVector *list_in = NULL,

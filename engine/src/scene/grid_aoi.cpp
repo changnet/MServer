@@ -118,7 +118,7 @@ int32_t GridAOI::get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
     dx = dx / _pix_grid;
     dy = dy / _pix_grid;
 
-    if (!valid_pos(x, y, dx, dy)) return 1;
+    if (!valid_pos(x, y, dx, dy)) return -1;
 
     return get_range_entity(list, x, y, dx, dy);
 }
@@ -249,7 +249,7 @@ int32_t GridAOI::enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask,
     // 检测坐标
     int32_t gx = x / _pix_grid;
     int32_t gy = y / _pix_grid;
-    if (!valid_pos(gx, gy, gx, gy)) return 1;
+    if (!valid_pos(gx, gy, gx, gy)) return -1;
 
     // 防止重复进入场景
     auto ret = _entity_set.emplace(id, nullptr);
@@ -322,10 +322,10 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
     // 检测坐标
     int32_t gx = x / _pix_grid;
     int32_t gy = y / _pix_grid;
-    if (!valid_pos(gx, gy, gx, gy)) return 1;
+    if (!valid_pos(gx, gy, gx, gy)) return -1;
 
     struct EntityCtx *ctx = get_entity_ctx(id);
-    if (!ctx) return 2;
+    if (!ctx) return -2;
 
     // 在一个格子内移动，只需要返回关注该玩家的列表即可
     // AOI这边其实不用做任何处理，但其他玩家要看得到他移动
@@ -334,7 +334,7 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
     {
         list->insert(list->end(), ctx->_interest_me->begin(),
                      ctx->_interest_me->end());
-        return 0;
+        return 1;
     }
 
     // 获取旧视野
@@ -438,5 +438,5 @@ INSETION:
     ctx->_pos_y = gy;
     insert_grid_entity(gx, gy, ctx);
 
-    return exitOk ? 0 : -1;
+    return exitOk ? 0 : -3;
 }

@@ -260,7 +260,7 @@ int32_t luaopen_aoi(lua_State *L)
 
     lc.def<&LGridAoi::get_entity>("get_entity");
     lc.def<&LGridAoi::get_all_entity>("get_all_entity");
-    lc.def<&LGridAoi::get_watch_me_entity>("get_watch_me_entity");
+    lc.def<&LGridAoi::get_interest_me_entity>("get_interest_me_entity");
 
     lc.def<&LGridAoi::exit_entity>("exit_entity");
     lc.def<&LGridAoi::enter_entity>("enter_entity");

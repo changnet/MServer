@@ -40,7 +40,7 @@ public:
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
      * @param mask [optional]掩码，根据mask获取特定类型的实体(0xF表示所有)
      */
-    int32_t get_watch_me_entity(lua_State *L);
+    int32_t get_interest_me_entity(lua_State *L);
 
     /**
      * 获取某一范围内实体
