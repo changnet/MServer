@@ -36,7 +36,8 @@ end
 local function get_visual_ev(et)
     local ev_map = {}
     for id,other in pairs(entity_info) do
-        if id ~= et.id and 0 ~= other.event and in_visual_range(et,other) then
+        if id ~= et.id and 0 ~= (et.mask & other.mask)
+            and in_visual_range(et,other) then
             ev_map[id] = other
         end
     end
@@ -56,7 +57,6 @@ local function raw_valid_ev(et,list)
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
-        assert(other and 0 ~= other.event,string.format("id is %d",id))
 
         -- 校验视野范围
         if not in_visual_range(et,other) then
@@ -106,7 +106,8 @@ local function valid_out(et,list)
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
-        assert(other and 0 ~= other.event,string.format("id is %d",id))
+        assert(other and 0 ~= (et.mask & other.mask),
+            string.format("id is %d",id))
 
         -- 校验视野范围
         if in_visual_range(et,other) then
@@ -127,7 +128,7 @@ local function valid_watch_me(aoi, et)
     valid_ev(et,entity_pack_list)
 end
 
-local function enter(aoi, id,x,y,type,event)
+local function enter(aoi, id,x,y,mask)
     local entity = entity_info[id]
     if not entity then
         entity = {}
@@ -138,11 +139,10 @@ local function enter(aoi, id,x,y,type,event)
     entity.x  = x
     entity.y  = y
 
-    entity.type = type
-    entity.event = event
+    entity.mask = mask
 
     -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
-    aoi:enter_entity(id,x,y,type,event,entity_pack_list)
+    aoi:enter_entity(id,x,y,mask,entity_pack_list)
     if is_valid then valid_ev(entity,entity_pack_list) end
 
     return entity
@@ -201,12 +201,12 @@ end
 
 local function random_test(aoi, max_width, max_height)
     local exit_info = {}
+    local mask_opt = { ET_PLAYER, ET_NPC, ET_MONSTER }
     for idx = 1,max_entity do
         local x = math.random(0,max_width)
         local y = math.random(0,max_height)
-        local entity_type = math.random(1,3)
-        local event = math.random(0,1)
-        local et = enter(aoi, idx,x,y,entity_type,event)
+        local mask_idx = math.random(mask_opt)
+        local et = enter(aoi, idx,x,y,mask_opt[mask_idx])
         valid_watch_me(aoi, et)
     end
 
@@ -218,7 +218,7 @@ local function random_test(aoi, max_width, max_height)
             if et then
                 local x = math.random(0,max_width)
                 local y = math.random(0,max_height)
-                local new_et = enter(aoi, et.id,x,y,et.type,et.event)
+                local new_et = enter(aoi, et.id,x,y,et.mask)
                 exit_info[et.id] = nil
                 valid_watch_me(aoi, new_et)
             end
@@ -251,10 +251,10 @@ t_describe("grid aoi", function()
         local max_height = height - 1
 
         -- 测试进入四个角
-        enter(aoi, 99996,0,0,ET_PLAYER,1)
-        enter(aoi, 99997,max_width,0,ET_NPC,1)
-        enter(aoi, 99998,0,max_height,ET_MONSTER,0)
-        enter(aoi, 99999,max_width,max_height,ET_PLAYER,1)
+        enter(aoi, 99996,0,0,ET_PLAYER)
+        enter(aoi, 99997,max_width,0,ET_NPC)
+        enter(aoi, 99998,0,max_height,ET_MONSTER)
+        enter(aoi, 99999,max_width,max_height,ET_PLAYER)
 
         local entity_list = {}
         aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, entity_list)
@@ -268,8 +268,6 @@ t_describe("grid aoi", function()
         t_equal(entity_list.n, 0)
 
         -- 测试进入视野(地图边界)
-        -- 99998的event为0，表示它不关注其他任何实体的变动，
-        -- 因此其他实体移动时，list_in和list_out这些列表都不包含它
         update(aoi, 99996, max_width, max_height)
         update(aoi, 99998, max_width, max_height)
         update(aoi, 99997, max_width, max_height)

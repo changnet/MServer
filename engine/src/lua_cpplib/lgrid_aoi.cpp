@@ -1,15 +1,13 @@
 #include "lgrid_aoi.h"
 #include "ltools.h"
 
-#define BIT_FILTER(mask, ctx_mask) (-1 == mask || (mask & ctx_mask))
-
 LGridAoi::~LGridAoi() {}
 
 LGridAoi::LGridAoi(lua_State *L) {}
 
-int32_t LGridAoi::set_visual_range(lua_State *L) // 设置视野
+int32_t LGridAoi::set_visual_range(lua_State *L)
 {
-    // 这里的宽高都是指格子数
+    // 这里的宽高都是指像素
     int32_t width  = luaL_checkinteger(L, 1);
     int32_t height = luaL_checkinteger(L, 2);
     GridAOI::set_visual_range(width, height);
@@ -17,7 +15,7 @@ int32_t LGridAoi::set_visual_range(lua_State *L) // 设置视野
     return 0;
 }
 
-int32_t LGridAoi::set_size(lua_State *L) // 设置宽高
+int32_t LGridAoi::set_size(lua_State *L)
 {
     // 这里的宽高都是指像素，因为地图的大小可能并不刚好符合格子数，后面再做转换
     int32_t width    = luaL_checkinteger(L, 1);
@@ -33,21 +31,20 @@ int32_t LGridAoi::set_size(lua_State *L) // 设置宽高
 int32_t LGridAoi::get_all_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
-    int32_t type_mask = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger(L, 1);
 
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
     using EntitySetPair = std::pair<const int64_t, EntityCtx *>;
-    auto filter         = [L, type_mask](const EntitySetPair &iter) {
-        if (BIT_FILTER(type_mask, iter.second->_type))
+    table_pack(L, 2, _entity_set, [L, mask](const EntitySetPair &iter) {
+        if (is_interest(mask, iter.second))
         {
             lua_pushinteger(L, iter.second->_id);
             return true;
         }
 
         return false;
-    };
-    table_pack(L, 2, _entity_set, filter);
+    });
 
     return 0;
 }
@@ -60,8 +57,7 @@ int32_t LGridAoi::get_watch_me_entity(lua_State *L)
 
     lUAL_CHECKTABLE(L, 2);
 
-    int32_t type_mask  = luaL_optinteger(L, 3, -1);
-    int32_t event_mask = luaL_optinteger(L, 4, -1);
+    int32_t mask = luaL_optinteger(L, 3, 0xF);
 
     const struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
@@ -70,16 +66,14 @@ int32_t LGridAoi::get_watch_me_entity(lua_State *L)
         return 0;
     }
 
-    auto filter = [L, type_mask, event_mask](const EntityCtx *ctx) {
-        if (BIT_FILTER(type_mask, ctx->_type)
-            && BIT_FILTER(event_mask, ctx->_event))
+    table_pack(L, 2, *(ctx->_interest_me), [L, mask](const EntityCtx *ctx) {
+        if (is_interest(mask, ctx))
         {
             lua_pushinteger(L, ctx->_id);
             return true;
         }
         return false;
-    };
-    table_pack(L, 2, *(ctx->_watch_me), filter);
+    });
 
     return 0;
 }
@@ -90,7 +84,7 @@ int32_t LGridAoi::get_watch_me_entity(lua_State *L)
 int32_t LGridAoi::get_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
-    int32_t type_mask = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger(L, 1);
 
     lUAL_CHECKTABLE(L, 2);
 
@@ -108,15 +102,14 @@ int32_t LGridAoi::get_entity(lua_State *L)
         return luaL_error(L, "aoi get entity error:%d", ecode);
     }
 
-    auto filter = [L, type_mask](const EntityCtx *ctx) {
-        if (BIT_FILTER(type_mask, ctx->_type))
+    table_pack(L, 2, *list, [L, mask](const EntityCtx *ctx) {
+        if (is_interest(mask, ctx))
         {
             lua_pushinteger(L, ctx->_id);
             return true;
         }
         return false;
-    };
-    table_pack(L, 2, *list, filter);
+    });
 
     del_entity_vector(list);
 
@@ -141,15 +134,10 @@ int32_t LGridAoi::exit_entity(lua_State *L)
 
     if (!list) return 0;
 
-    auto filter = [L](const EntityCtx *ctx) {
-        if (ctx->_event)
-        {
-            lua_pushinteger(L, ctx->_id);
-            return true;
-        }
-        return false;
-    };
-    table_pack(L, 2, *list, filter);
+    table_pack(L, 2, *list, [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
+    });
 
     del_entity_vector(list);
 
@@ -162,15 +150,13 @@ int32_t LGridAoi::enter_entity(lua_State *L)
     // 实体像素坐标
     int32_t x = luaL_checkinteger(L, 2);
     int32_t y = luaL_checkinteger(L, 3);
-    // 实体类型，玩家、怪物、npc等
-    uint8_t type = static_cast<uint8_t>(luaL_checkinteger(L, 4));
-    // 关注的事件，目前没有定义事件类型，1表示关注所有事件，0表示都不关注
-    uint8_t event = static_cast<uint8_t>(luaL_checkinteger(L, 5));
+    // 掩码，可用于区分玩家、怪物、npc等，由上层定义
+    uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 4));
 
     EntityVector *list = NULL;
-    if (lua_istable(L, 6)) list = new_entity_vector();
+    if (lua_istable(L, 5)) list = new_entity_vector();
 
-    int32_t ecode = GridAOI::enter_entity(id, x, y, type, event, list);
+    int32_t ecode = GridAOI::enter_entity(id, x, y, mask, list);
     if (0 != ecode)
     {
         if (list) del_entity_vector(list);
@@ -180,15 +166,10 @@ int32_t LGridAoi::enter_entity(lua_State *L)
 
     if (!list) return 0;
 
-    auto filter = [L](const EntityCtx *ctx) {
-        if (ctx->_event)
-        {
-            lua_pushinteger(L, ctx->_id);
-            return true;
-        }
-        return false;
-    };
-    table_pack(L, 6, *list, filter);
+    table_pack(L, 5, *list, [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
+    });
 
     del_entity_vector(list);
     return 0;
@@ -220,12 +201,8 @@ int32_t LGridAoi::update_entity(lua_State *L)
     }
 
     auto filter = [L](const EntityCtx *ctx) {
-        if (ctx->_event)
-        {
-            lua_pushinteger(L, ctx->_id);
-            return true;
-        }
-        return false;
+        lua_pushinteger(L, ctx->_id);
+        return true;
     };
     if (list)
     {

@@ -1,18 +1,16 @@
 #pragma once
 
 #include "../pool/object_pool.h"
-#include <vector>
+#include <functional>
 
 /**
  * 格子AOI(Area of Interest)算法
  * 2018-07-18 by xzc
  *
  * 1. 暂定所有实体视野一样
- * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要watch_me列表
+ * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要_interest_me列表
  * 3. 只提供获取矩形范围内实体。技能寻敌时如果不是矩形，上层再从这些实体筛选
- * 4. 通过event来控制实体关注的事件。npc、怪物通常不关注任何事件，这样可以大幅提升
- *    效率，战斗ai另外做即可(攻击玩家在ai定时器定时取watch_me列表即可)。怪物攻击怪物或
- *    npc在玩家靠近时对话可以给这些实体加上事件，这样的实体不会太多
+ * 4. 通过mask来控制实体之间的交互
  * 5. 假设1m为一个格子，则1平方千米的地图存实体指针的内存为 1024 * 1024 * 8 = 8k
  *    (实际是一个vector链表，要大些，但一个服的地图数量有限，应该是可接受的)
  * 6. 所有对外接口均为像素，内部则转换为格子坐标来处理，但不会记录原有的像素坐标
@@ -30,20 +28,35 @@ public:
      */
     struct EntityCtx
     {
-        uint8_t _type;   // 记录实体类型
-        uint8_t _event;  // 关注的事件
+        /**
+         * @brief 掩码，按位表示，由上层定义
+         *
+         */
+        uint8_t _mask;
+
         uint16_t _pos_x; // 格子坐标，x
         uint16_t _pos_y; // 格子坐标，y
         EntityId _id;
-        // 关注我的实体列表。比如我周围的玩家，需要看到我移动、放技能
-        // 都需要频繁广播给他们。如果游戏并不是arpg，可能并不需要这个列表
-        // 一般怪物、npc不要加入这个列表，如果有少部分npc需要aoi事件，另外定一个类型
-        EntityVector *_watch_me;
+
+        /**
+         * 对我感兴趣的实体列表。比如我周围的玩家，需要看到我移动、放技能，都需要频繁广播给他们，
+         * 可以直接从这个列表取。如果游戏并不是arpg，可能并不需要这个列表。
+         * 当两个实体的mask存在交集时，将同时放入双方的_interest_me，但这只是做初步的筛选，例
+         * 如不要把怪物放到玩家的_interest_me，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
+         * 根据业务处理
+         */
+        EntityVector *_interest_me;
     };
 
 public:
     GridAOI();
     virtual ~GridAOI();
+
+    /** 根据mask判断两个实体是否interest */
+    static inline bool is_interest(int32_t mask, const EntityCtx *ctx)
+    {
+        return mask & ctx->_mask;
+    }
 
     /** 根据像素坐标判断是否在同一个格子内 */
     bool is_same_pos(int32_t x, int32_t y, int32_t dx, int32_t dy)
@@ -63,8 +76,7 @@ public:
                         int32_t destx, int32_t desty);
 
     int32_t exit_entity(EntityId id, EntityVector *list = NULL);
-    int32_t enter_entity(EntityId id, int32_t x, int32_t y, uint8_t type,
-                         uint8_t event, EntityVector *list = NULL);
+    int32_t enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask, EntityVector *list = NULL);
 
     /**
      * 更新实体位置
@@ -84,14 +96,17 @@ protected:
     void del_entity_ctx(struct EntityCtx *ctx);
 
 private:
-    bool remove_entity_from_vector(EntityVector *list,
+    static bool remove_entity_from_vector(EntityVector *list,
                                    const struct EntityCtx *ctx);
     /** 插入实体到格子内 */
     void insert_grid_entity(int32_t x, int32_t y, struct EntityCtx *ctx);
     /** 从格子列表内删除实体 */
     bool remove_grid_entity(int32_t x, int32_t y, const struct EntityCtx *ctx);
-    // 获取矩形内的实体
-    int32_t raw_get_entity(EntityVector *list, int32_t x, int32_t y,
+    /** 遍历矩形内的实体 */
+    void each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
+                           std::function<void(EntityCtx *)> &&func);
+    /** 获取矩形内的实体 */
+    int32_t get_range_entity(EntityVector *list, int32_t x, int32_t y,
                             int32_t dx, int32_t dy);
     // 判断视野范围
     void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,

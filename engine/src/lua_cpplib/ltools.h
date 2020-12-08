@@ -194,7 +194,7 @@ static inline void table_pack_size(lua_State *L, int32_t index, int32_t n)
  * @param filter 把需要打包的数据放到堆栈并返回true
  */
 template <typename Container, typename Filter>
-void table_pack(lua_State *L, int32_t index,const Container &container, Filter &filter)
+void table_pack(lua_State *L, int32_t index,const Container &container, Filter &&filter)
 {
     int32_t n = 0;
     for (auto &iter : container)
