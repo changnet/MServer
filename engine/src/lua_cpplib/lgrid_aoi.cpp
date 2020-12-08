@@ -51,7 +51,7 @@ int32_t LAoi::set_size(lua_State *L) // 设置宽高
     // 这里的宽高都是指像素，因为地图的大小可能并不刚好符合格子数，后面再做转换
     int32_t width    = luaL_checkinteger(L, 1);
     int32_t height   = luaL_checkinteger(L, 2);
-    int32_t pix_grid = luaL_checkinteger(L, 2);
+    int32_t pix_grid = luaL_checkinteger(L, 3);
 
     GridAOI::set_size(width, height, pix_grid);
 

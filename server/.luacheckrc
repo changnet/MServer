@@ -17,6 +17,10 @@ read_globals =
 -- 可读可写全局变量
 globals = require "__globals"
 
+-- 一些做了扩展的内部库需要设置为global
+table.insert(globals, "table")
+table.insert(globals, "string")
+
 exclude_files =
 {
     "engine/*", -- 用于代码实例的引擎接口文件，不用检查

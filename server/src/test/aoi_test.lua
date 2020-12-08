@@ -52,7 +52,7 @@ local function raw_valid_ev(et,list)
     local id_map = {}
     local max = list.n
     for idx = 1,max do
-        id = list[idx]
+        local id = list[idx]
 
         assert(et.id ~= id) -- 返回列表不应该包含自己
 

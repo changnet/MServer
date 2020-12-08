@@ -207,9 +207,9 @@ function build_mongo_driver()
     MONGOCVER=1.15.0
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
-    mkdir cmake-build
+    mkdir -p cmake-build
     cd cmake-build
-    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC=ON -DENABLE_BSON=ON ..
+    cmake -G "MSYS Makefiles" -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC=ON -DENABLE_BSON=ON ..
     # --with-libbson=[auto/system/bundled]
     # 强制使用附带的bson库，不然之前系统编译的bson库可能编译参数不一致(比如不会生成静态bson库)
     # ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
@@ -333,11 +333,17 @@ function build_env_once()
     echo "copy all package to $PKGDIR"
     cp $RAWPKTDIR/* $PKGDIR/
 
-    build_tool_chain
-    build_library
-    build_lua
-    build_sasl
-    build_mongo_driver
+	if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+		echo "env = LINUX"
+		build_tool_chain
+		build_library
+	elif [ "$(expr substr $(uname -s) 1 9)" == "CYGWIN_NT" ]; then
+	    echo "env = CYGWIN"
+	fi
+
+    #build_lua
+    #build_sasl
+    #build_mongo_driver
     build_flatbuffers
     install_protoc
 
