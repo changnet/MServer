@@ -175,3 +175,25 @@ static inline int traceback(lua_State *L)
 
     return 1;
 }
+
+/**
+ * 类似于table.pack，把一个数组或map打包到table中，n表示数量
+ * @param filter 把需要打包的数据放到堆栈并返回true
+ */
+template <typename Container, typename Filter>
+void table_pack(lua_State *L, int32_t index, Container container, Filter &filter)
+{
+    int32_t n = 0;
+    for (auto &iter : container)
+    {
+        if (filter(iter))
+        {
+            ++n;
+            lua_rawseti(L, index, n);
+        }
+    }
+
+    lua_pushstring(L, "n");
+    lua_pushinteger(L, n);
+    lua_rawset(L, index);
+}

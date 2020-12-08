@@ -258,9 +258,9 @@ int32_t luaopen_aoi(lua_State *L)
     lc.def<&LGridAoi::set_size>("set_size");
     lc.def<&LGridAoi::set_visual_range>("set_visual_range");
 
-    lc.def<&LGridAoi::get_entitys>("get_entitys");
-    lc.def<&LGridAoi::get_all_entitys>("get_all_entitys");
-    lc.def<&LGridAoi::get_watch_me_entitys>("get_watch_me_entitys");
+    lc.def<&LGridAoi::get_entity>("get_entity");
+    lc.def<&LGridAoi::get_all_entity>("get_all_entity");
+    lc.def<&LGridAoi::get_watch_me_entity>("get_watch_me_entity");
 
     lc.def<&LGridAoi::exit_entity>("exit_entity");
     lc.def<&LGridAoi::enter_entity>("enter_entity");

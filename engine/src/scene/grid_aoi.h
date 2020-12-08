@@ -59,12 +59,19 @@ public:
     /**
      * 获取某一范围内实体。底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      */
-    int32_t get_entitys(EntityVector *list, int32_t srcx, int32_t srcy,
+    int32_t get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
                         int32_t destx, int32_t desty);
 
     int32_t exit_entity(EntityId id, EntityVector *list = NULL);
     int32_t enter_entity(EntityId id, int32_t x, int32_t y, uint8_t type,
                          uint8_t event, EntityVector *list = NULL);
+
+    /**
+     * 更新实体位置
+     * @param list 接收实体更新的实体列表
+     * @param list_in 接收实体进入的实体列表
+     * @param list_out 接收实体消失的实体列表
+     */
     int32_t update_entity(EntityId id, int32_t x, int32_t y,
                           EntityVector *list = NULL, EntityVector *list_in = NULL,
                           EntityVector *list_out = NULL);
@@ -84,7 +91,7 @@ private:
     /** 从格子列表内删除实体 */
     bool remove_grid_entity(int32_t x, int32_t y, const struct EntityCtx *ctx);
     // 获取矩形内的实体
-    int32_t raw_get_entitys(EntityVector *list, int32_t x, int32_t y,
+    int32_t raw_get_entity(EntityVector *list, int32_t x, int32_t y,
                             int32_t dx, int32_t dy);
     // 判断视野范围
     void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,

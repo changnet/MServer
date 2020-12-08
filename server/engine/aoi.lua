@@ -19,7 +19,7 @@ end
 -- 获取所有实体
 -- @param mask 实体类型掩码，不同实体类型按位表示，只获取这些类型的实体
 -- @param tbl 获取到的实体存放在此table中，数量设置在n字段
-function Aoi:get_all_entitys(mask, tbl)
+function Aoi:get_all_entity(mask, tbl)
 end
 
 -- 获取周围关注自己的实体列表,常用于自己释放技能、扣血、特效等广播给周围的人
@@ -27,7 +27,7 @@ end
 -- @param tbl 获取到的实体存放在此table中，数量设置在n字段
 -- @param mask 可选参数，实体类型掩码，不同实体类型按位表示，只获取这些类型的实体
 -- @param event 可选参数，事件类型掩码，不同事件类型按位表示，只获取关注这些事件的实体
-function Aoi:get_watch_me_entitys(id, tbl, mask, event)
+function Aoi:get_watch_me_entity(id, tbl, mask, event)
 end
 
 -- 获取某一范围内实体
@@ -38,7 +38,7 @@ end
 -- @param src_y 矩形左上角y坐标
 -- @param dst_x 矩形右下角x坐标
 -- @param dst_y 矩形右下角y坐标
-function Aoi:get_entitys(mask, tbl, src_x, src_y, dst_x, dst_y)
+function Aoi:get_entity(mask, tbl, src_x, src_y, dst_x, dst_y)
 end
 
 -- 实体退出场景

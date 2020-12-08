@@ -31,7 +31,7 @@ public:
      * @param mask 实体类型掩码，不同实体类型按位表示，只获取这些类型的实体
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
      */
-    int32_t get_all_entitys(lua_State *L);
+    int32_t get_all_entity(lua_State *L);
 
     /**
      * 获取周围关注自己的实体列表,常用于自己释放技能、扣血、特效等广播给周围的人
@@ -42,7 +42,7 @@ public:
      * @param event
      * 可选参数，事件类型掩码，不同事件类型按位表示，只获取关注这些事件的实体
      */
-    int32_t get_watch_me_entitys(lua_State *L);
+    int32_t get_watch_me_entity(lua_State *L);
 
     /**
      * 获取某一范围内实体
@@ -54,7 +54,7 @@ public:
      * @param dst_x 矩形右下角x坐标
      * @param dst_y 矩形右下角y坐标
      */
-    int32_t get_entitys(lua_State *L);
+    int32_t get_entity(lua_State *L);
 
     /**
      * 实体退出场景

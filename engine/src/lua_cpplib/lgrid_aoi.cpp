@@ -58,21 +58,27 @@ int32_t LGridAoi::set_size(lua_State *L) // 设置宽高
 }
 
 // 获取某个类型的实体
-int32_t LGridAoi::get_all_entitys(lua_State *L)
+int32_t LGridAoi::get_all_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
     int32_t type_mask = luaL_checkinteger(L, 1);
 
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
-    MAP_TBL_PACK(2, (&_entity_set), TYPE_FILTER);
+    auto filter = [L, type_mask](std::pair<const int64_t, EntityCtx *> &iter) {
+        if (!(type_mask & iter.second->_type)) return false;
+
+        lua_pushinteger(L, iter.second->_id);
+        return true;
+    };
+    table_pack(L, 2, _entity_set, filter);
 
     return 0;
 }
 
 // 获取关注自己的实体列表
 // 常用于自己释放技能、扣血、特效等广播给周围的人
-int32_t LGridAoi::get_watch_me_entitys(lua_State *L)
+int32_t LGridAoi::get_watch_me_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
 
@@ -101,7 +107,7 @@ int32_t LGridAoi::get_watch_me_entitys(lua_State *L)
 /* 获取某一范围内实体
  * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
  */
-int32_t LGridAoi::get_entitys(lua_State *L)
+int32_t LGridAoi::get_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
     int32_t type_mask = luaL_checkinteger(L, 1);
@@ -115,11 +121,11 @@ int32_t LGridAoi::get_entitys(lua_State *L)
     int32_t desty = luaL_checkinteger(L, 6);
 
     EntityVector *list = new_entity_vector();
-    int32_t ecode      = GridAOI::get_entitys(list, srcx, srcy, destx, desty);
+    int32_t ecode      = GridAOI::get_entity(list, srcx, srcy, destx, desty);
     if (0 != ecode)
     {
         del_entity_vector(list);
-        return luaL_error(L, "aoi get entitys error:%d", ecode);
+        return luaL_error(L, "aoi get entity error:%d", ecode);
     }
 
     VECTOR_TBL_PACK(2, list, TYPE_FILTER);
@@ -142,7 +148,7 @@ int32_t LGridAoi::exit_entity(lua_State *L)
     {
         if (list) del_entity_vector(list);
 
-        return luaL_error(L, "aoi exit entitys error:%d", ecode);
+        return luaL_error(L, "aoi exit entity error:%d", ecode);
     }
 
     if (!list) return 0;
@@ -173,7 +179,7 @@ int32_t LGridAoi::enter_entity(lua_State *L)
     {
         if (list) del_entity_vector(list);
 
-        return luaL_error(L, "aoi enter entitys error:ecode = %d", ecode);
+        return luaL_error(L, "aoi enter entity error:ecode = %d", ecode);
     }
 
     if (!list) return 0;
@@ -206,7 +212,7 @@ int32_t LGridAoi::update_entity(lua_State *L)
         if (list_in) del_entity_vector(list_in);
         if (list_out) del_entity_vector(list_out);
 
-        return luaL_error(L, "aoi update entitys error:%d", ecode);
+        return luaL_error(L, "aoi update entity error:%d", ecode);
     }
 
     if (list)

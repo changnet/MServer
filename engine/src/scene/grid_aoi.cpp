@@ -18,8 +18,7 @@ GridAOI::GridAOI()
 
 GridAOI::~GridAOI()
 {
-    EntitySet::iterator iter = _entity_set.begin();
-    for (; iter != _entity_set.end(); iter++) del_entity_ctx(iter->second);
+    for (auto &iter : _entity_set) del_entity_ctx(iter.second);
 
     _entity_set.clear();
     delete[] _entity_grid;
@@ -94,8 +93,8 @@ void GridAOI::set_size(int32_t width, int32_t height, int32_t pix_grid)
  * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
  * 传入的坐标均为像素坐标
  */
-int32_t GridAOI::get_entitys(EntityVector *list, int32_t srcx, int32_t srcy,
-                             int32_t destx, int32_t desty)
+int32_t GridAOI::get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
+                            int32_t destx, int32_t desty)
 {
     // 4个坐标必须为矩形的对角像素坐标,这里转换为左上角和右下角坐标
     int32_t x  = srcx;
@@ -121,12 +120,12 @@ int32_t GridAOI::get_entitys(EntityVector *list, int32_t srcx, int32_t srcy,
 
     if (!valid_pos(x, y, dx, dy)) return 1;
 
-    return raw_get_entitys(list, x, y, dx, dy);
+    return raw_get_entity(list, x, y, dx, dy);
 }
 
 // 获取矩形内的实体
-int32_t GridAOI::raw_get_entitys(EntityVector *list, int32_t x, int32_t y,
-                                 int32_t dx, int32_t dy)
+int32_t GridAOI::raw_get_entity(EntityVector *list, int32_t x, int32_t y,
+                                int32_t dx, int32_t dy)
 {
     // 遍历范围内的所有格子
     // 注意坐标是格子的中心坐标，因为要包含当前格子，用<=
@@ -223,12 +222,10 @@ void GridAOI::entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
 {
     EntityVector *watch_list = new_entity_vector();
 
-    raw_get_entitys(watch_list, x, y, dx, dy);
-    EntityVector::iterator iter = watch_list->begin();
-    for (; iter != watch_list->end(); iter++)
+    raw_get_entity(watch_list, x, y, dx, dy);
+    for (auto other : *watch_list)
     {
         // 从别人的watch_me列表删除自己，并且从自己的watch_me列表中删除别人
-        struct EntityCtx *other = *iter;
         // 自己关注event才有可能出现在别人的watch列表中
         if (ctx->_event) remove_entity_from_vector(other->_watch_me, ctx);
         if (other->_event)
@@ -278,13 +275,11 @@ void GridAOI::entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                                  int32_t dx, int32_t dy, EntityVector *list)
 {
     EntityVector *watch_list = new_entity_vector();
-    raw_get_entitys(watch_list, x, y, dx, dy);
+    raw_get_entity(watch_list, x, y, dx, dy);
 
-    EntityVector *watch_me      = ctx->_watch_me;
-    EntityVector::iterator iter = watch_list->begin();
-    for (; iter != watch_list->end(); iter++)
+    EntityVector *watch_me = ctx->_watch_me;
+    for (auto other : *watch_list)
     {
-        struct EntityCtx *other = *iter;
         // 把自己加到别人的watch
         if (ctx->_event) other->_watch_me->push_back(ctx);
         // 把别人加到自己的watch
@@ -321,11 +316,6 @@ void GridAOI::get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,
     if (dy >= _height) dy = _height - 1;
 }
 
-/* 更新实体位置
- * @list_in:接收实体进入的实体列表
- * @list_out:接收实体消失的实体列表
- * @list:接收实体更新的实体列表
- */
 int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
                                EntityVector *list, EntityVector *list_in,
                                EntityVector *list_out)
@@ -379,7 +369,7 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
         return -1;
     }
 
-    if (list) raw_get_entitys(list, it_x, it_y, it_dx, it_dy);
+    if (list) raw_get_entity(list, it_x, it_y, it_dx, it_dy);
 
     for (int32_t ix = old_x; ix <= old_dx; ix++)
     {

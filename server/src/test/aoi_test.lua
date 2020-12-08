@@ -14,10 +14,10 @@ local is_valid = true -- 测试性能时不做校验
 
 local entity_info = {}
 
--- 实体类型
+-- 实体类型(按位表示，因为需要按位筛选)
 local ET_PLAYER = 1 -- 玩家，关注所有实体事件
 local ET_NPC = 2 -- npc，关注玩家事件
-local ET_MONSTER = 3 -- 怪物，不关注任何事件
+local ET_MONSTER = 4 -- 怪物，不关注任何事件
 
 local entity_pack_list = {}
 
@@ -123,7 +123,7 @@ end
 -- 对watch_me列表进行校验
 local function valid_watch_me(aoi, et)
     -- 检验watch列表
-    aoi:get_watch_me_entitys(et.id,entity_pack_list)
+    aoi:get_watch_me_entity(et.id,entity_pack_list)
     valid_ev(et,entity_pack_list)
 end
 
@@ -157,8 +157,9 @@ local function update(aoi, id,x,y)
 
     local list_in = {}
     local list_out = {}
-    -- PRINT(id,"new pos is",math.floor(x/pix),math.floor(y/pix))
+
     aoi:update_entity(id,x,y,entity_pack_list,list_in,list_out)
+    PRINT("update pos", id, x, y, list_in.n, list_out.n )
 
     if is_valid then
         raw_valid_ev(entity,entity_pack_list)
@@ -248,22 +249,35 @@ t_describe("grid aoi", function()
         -- 坐标传入的都是像素，坐标从0开始，所以减1
         local max_width = width - 1
         local max_height = height - 1
+
+        -- 测试进入四个角
         enter(aoi, 99996,0,0,ET_PLAYER,1)
         enter(aoi, 99997,max_width,0,ET_NPC,1)
         enter(aoi, 99998,0,max_height,ET_MONSTER,0)
         enter(aoi, 99999,max_width,max_height,ET_PLAYER,1)
 
-        update(aoi, 99997,0,max_height) -- 进入同一个格子
-        update(aoi, 99998,max_width,max_height) -- 离开有人的格子
-        update(aoi, 99997,max_width,max_height) -- 三个实体在同一个格子
-        update(aoi, 99999,max_width - 1,max_height - 1) -- 测试视野范围内移动
+        local entity_list = {}
+        aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, entity_list)
+        t_equal(entity_list.n, table.size(entity_info))
+
+        aoi:get_all_entity(ET_PLAYER, entity_list)
+        t_equal(entity_list.n, 2)
+
+        -- 测试进入视野(地图边界)
+        update(aoi, 99997, max_width, max_height) -- 进入同一个格子
+        update(aoi, 99998, max_width, max_height) -- 离开有人的格子
+        update(aoi, 99997, max_width, max_height) -- 三个实体在同一个格子
+        update(aoi, 99999, max_width, max_height) -- 测试视野范围内移动
+
+        -- 测试在视野内移动(临界值)
+        -- 测试离开视野(临界值)
 
         exit(aoi, 99996)
         exit(aoi, 99997)
         exit(aoi, 99998)
         exit(aoi, 99999)
 
-        random_test(aoi, max_width, max_height)
+        -- random_test(aoi, max_width, max_height)
     end)
 
     t_it("perf test", function()

@@ -143,7 +143,7 @@ end
 -- @to_me:是否也广播给自己
 function Scene:broadcast_to_watch_me(entity,cmd,pkt,to_me)
     -- 广播给玩家我开始移动
-    self.aoi:get_watch_me_entitys(entity.eid,tmp_list,ET.PLAYER)
+    self.aoi:get_watch_me_entity(entity.eid,tmp_list,ET.PLAYER)
 
     local pid_list = {}
 
@@ -188,7 +188,7 @@ end
 -- 获取场景中的实体
 -- 请不要保存或者修改返回的table
 function Scene:get_entity( entity_type )
-    self.aoi:get_all_entitys(entity_type,tmp_list)
+    self.aoi:get_all_entity(entity_type,tmp_list)
 
     return tmp_list
 end
