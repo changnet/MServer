@@ -383,8 +383,15 @@ end
 function t_setup(params)
     T.timer = params.timer
 
+    local print_func = params.print or print
+    local time_update = params.time_update or function() end
     -- log outpout function if not using std print
-    T.print = params.print or print
+    T.print = function(...)
+        -- 测试时，需要在一帧里跑很多逻辑，耗时太长，这时需要手动更新主循环时间，不然
+        -- 打印的时间都不会变
+        time_update()
+        print_func(...)
+    end
 
     -- 过滤器，允许只执行一部分测试
     -- ./start.sh test 1 1 https 只执行名字包含https的测试

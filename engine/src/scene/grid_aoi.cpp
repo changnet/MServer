@@ -26,36 +26,6 @@ GridAOI::~GridAOI()
     C_OBJECT_DEC("grid_aoi");
 }
 
-// 需要实现缓存，太大的直接删除不要丢缓存
-void GridAOI::del_entity_vector(EntityVector *list)
-{
-    get_vector_pool()->destroy(list, list->size() > 512);
-}
-
-GridAOI::EntityVector *GridAOI::new_entity_vector()
-{
-    EntityVector *vt = get_vector_pool()->construct();
-
-    vt->clear();
-    return vt;
-}
-
-void GridAOI::del_entity_ctx(struct EntityCtx *ctx)
-{
-    del_entity_vector(ctx->_interest_me);
-
-    get_ctx_pool()->destroy(ctx);
-}
-
-struct GridAOI::EntityCtx *GridAOI::new_entity_ctx()
-{
-    struct EntityCtx *ctx = get_ctx_pool()->construct();
-
-    ctx->_interest_me = new_entity_vector();
-
-    return ctx;
-}
-
 /**
  * 设置视野，必须先设置场景大小后才能调用此函数
  * @param width 像素

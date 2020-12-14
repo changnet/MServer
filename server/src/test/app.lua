@@ -43,6 +43,9 @@ function App:exec()
         -- 过滤器，允许只执行一部分测试
         -- ./start.sh test 1 1 https 只执行名字包含https的测试
         filter = self.filter,
+        time_update = function()
+            ev:time_update()
+        end
     })
 
     require "test.misc_test"

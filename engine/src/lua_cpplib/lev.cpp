@@ -43,7 +43,14 @@ int32_t LEV::backend(lua_State *L)
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 停止主动gc,用自己的策略控制gc */
 
-    return run(); /* this won't return until backend stop */
+    run(); /* this won't return until backend stop */
+    return 0;
+}
+
+int32_t LEV::time_update(lua_State *L)
+{
+    EV::time_update();
+    return 0;
 }
 
 // 帧时间

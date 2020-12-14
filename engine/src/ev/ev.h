@@ -121,8 +121,8 @@ protected:
     EvTstamp mn_now;    /* monotonic clock "now" */
     EvTstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
-    virtual void running(int64_t ms_now) {}
-    virtual void after_run(int64_t old_ms_now, int64_t ms_now) {}
+    virtual void running(int64_t ms) = 0;
+    virtual void after_run(int64_t old_ms, int64_t ms) = 0;
 
     virtual EvTstamp wait_time();
     void fd_change(int32_t fd);

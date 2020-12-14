@@ -90,11 +90,35 @@ public:
                           EntityVector *list_out = NULL);
 
 protected:
-    EntityVector *new_entity_vector();
-    void del_entity_vector(EntityVector *list);
+    void del_entity_vector(EntityVector *list)
+    {
+        // 太大的直接删除不要丢缓存，避免缓存消耗太多内存
+        get_vector_pool()->destroy(list, list->size() > 128);
+    }
 
-    struct EntityCtx *new_entity_ctx();
-    void del_entity_ctx(struct EntityCtx *ctx);
+    EntityVector *new_entity_vector()
+    {
+        EntityVector *vt = get_vector_pool()->construct();
+
+        vt->clear();
+        return vt;
+    }
+
+    void del_entity_ctx(struct EntityCtx *ctx)
+    {
+        del_entity_vector(ctx->_interest_me);
+
+        get_ctx_pool()->destroy(ctx);
+    }
+
+    struct EntityCtx *new_entity_ctx()
+    {
+        struct EntityCtx *ctx = get_ctx_pool()->construct();
+
+        ctx->_interest_me = new_entity_vector();
+
+        return ctx;
+    }
 
     /** 获取矩形内的实体 */
     int32_t get_range_entity(EntityVector *list, int32_t x, int32_t y,
