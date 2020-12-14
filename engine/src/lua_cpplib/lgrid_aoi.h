@@ -6,7 +6,7 @@
 /**
  * AOI算法，目前用格子地图实现
  */
-class LGridAoi : public GridAOI
+class LGridAoi final: public GridAOI
 {
 public:
     ~LGridAoi();

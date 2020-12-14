@@ -6,7 +6,7 @@ local Aoi = require "GridAoi"
 
 local pix = 64 -- 一个格子边长64像素
 local width = 6400 -- 地图像素宽度(从0开始)
-local height = 6400 -- 地图像素高度(从0开始)
+local height = 12800 -- 地图像素高度(从0开始)
 local visual_width = 3 * pix -- 视野半宽(像素)
 local visual_height = 4 * pix -- 视野半高(像素)
 
@@ -302,6 +302,9 @@ t_describe("test grid aoi", function()
         exit(aoi, 99997)
         exit(aoi, 99998)
         exit(aoi, 99999)
+
+        aoi:get_entity(0xF, tmp_list, 0, 0, max_width, max_height)
+        t_equal(tmp_list.n, 0)
 
         local max_entity = 2000
         local max_random = 50000

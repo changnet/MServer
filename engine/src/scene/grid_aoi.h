@@ -11,8 +11,8 @@
  * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要_interest_me列表
  * 3. 只提供获取矩形范围内实体。技能寻敌时如果不是矩形，上层再从这些实体筛选
  * 4. 通过mask来控制实体之间的交互
- * 5. 假设1m为一个格子，则1平方千米的地图存实体指针的内存为 1024 * 1024 * 8 = 8k
- *    (实际是一个vector链表，要大些，但一个服的地图数量有限，应该是可接受的)
+ * 5. 假设1m为一个格子，则1平方千米的地图存实体指针的内存为 1024 * 1024 * 8 = 8M
+ *    (内存占用有点大，但一个服的地图数量有限，应该是可接受的)
  * 6. 所有对外接口均为像素，内部则转换为格子坐标来处理，但不会记录原有的像素坐标
  */
 class GridAOI
@@ -73,10 +73,11 @@ public:
      * 获取某一范围内实体。底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      */
     int32_t get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
-                        int32_t destx, int32_t desty);
+                       int32_t destx, int32_t desty);
 
-    int32_t exit_entity(EntityId id, EntityVector *list = NULL);
-    int32_t enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask, EntityVector *list = NULL);
+    int32_t exit_entity(EntityId id, EntityVector *list = nullptr);
+    int32_t enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask,
+                         EntityVector *list = nullptr);
 
     /**
      * 更新实体位置
@@ -86,8 +87,9 @@ public:
      * @return <0错误，0正常，>0正常，但做了特殊处理
      */
     int32_t update_entity(EntityId id, int32_t x, int32_t y,
-                          EntityVector *list = NULL, EntityVector *list_in = NULL,
-                          EntityVector *list_out = NULL);
+                          EntityVector *list     = nullptr,
+                          EntityVector *list_in  = nullptr,
+                          EntityVector *list_out = nullptr);
 
 protected:
     void del_entity_vector(EntityVector *list)
@@ -122,14 +124,15 @@ protected:
 
     /** 获取矩形内的实体 */
     int32_t get_range_entity(EntityVector *list, int32_t x, int32_t y,
-                            int32_t dx, int32_t dy);
+                             int32_t dx, int32_t dy);
 
     // 获取视野范围
     void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,
                           int32_t pos_x, int32_t pos_y);
+
 private:
     static bool remove_entity_from_vector(EntityVector *list,
-                                   const struct EntityCtx *ctx);
+                                          const struct EntityCtx *ctx);
     /** 插入实体到格子内 */
     void insert_grid_entity(int32_t x, int32_t y, struct EntityCtx *ctx);
     /** 从格子列表内删除实体 */
@@ -139,23 +142,25 @@ private:
                            std::function<void(EntityCtx *)> &&func);
     // 处理实体进入某个范围
     void entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
-                            int32_t dx, int32_t dy, EntityVector *list = NULL);
+                            int32_t dx, int32_t dy, EntityVector *list = nullptr);
     // 处理实体退出某个范围
     void entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
-                           int32_t dx, int32_t dy, EntityVector *list = NULL);
+                           int32_t dx, int32_t dy, EntityVector *list = nullptr);
 
     /** 校验格子坐标是否合法 */
     bool valid_pos(int32_t x, int32_t y, int32_t dx, int32_t dy) const
     {
         if (x < 0 || y < 0 || dx >= _width || dy >= _height)
         {
-            ERROR("Invalid grid pos (%d, %d) (%d, %d), range (%d, %d)",
-                  x, y, dx, dy, _width - 1, _height - 1);
+            ERROR("Invalid grid pos (%d, %d) (%d, %d), range (%d, %d)", x, y,
+                  dx, dy, _width - 1, _height - 1);
             return false;
         }
         return true;
     }
+
 private:
+    // 这些pool做成局部static变量以避免影响内存统计
     using CtxPool          = ObjectPool<GridAOI::EntityCtx, 10240, 1024>;
     using EntityVectorPool = ObjectPool<GridAOI::EntityVector, 10240, 1024>;
 
@@ -185,8 +190,10 @@ protected:
      * 记录每个格子中的实体id列表
      * 有X[m][n]、X[_width * m + n]这两种存储方式，测试后发现第二种效率更高
      * https://stackoverflow.com/questions/936687/how-do-i-declare-a-2d-array-in-c-using-new
+     *
+     * 一个地图中，绝大部分格子是不可行走的，因此对应的格子需要用到才会创建数组，节省内存
      */
-    EntityVector *_entity_grid;
+    EntityVector **_entity_grid;
 
     /* 记录所有实体的数据 */
     EntitySet _entity_set;

@@ -151,7 +151,7 @@ int32_t LGridAoi::exit_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
 
-    EntityVector *list = NULL;
+    EntityVector *list = nullptr;
     if (lua_istable(L, 2)) list = new_entity_vector();
 
     int32_t ecode = GridAOI::exit_entity(id, list);
@@ -183,7 +183,7 @@ int32_t LGridAoi::enter_entity(lua_State *L)
     // 掩码，可用于区分玩家、怪物、npc等，由上层定义
     uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 4));
 
-    EntityVector *list = NULL;
+    EntityVector *list = nullptr;
     if (lua_istable(L, 5)) list = new_entity_vector();
 
     int32_t ecode = GridAOI::enter_entity(id, x, y, mask, list);
@@ -212,9 +212,9 @@ int32_t LGridAoi::update_entity(lua_State *L)
     int32_t x = (int32_t)luaL_checknumber(L, 2);
     int32_t y = (int32_t)luaL_checknumber(L, 3);
 
-    EntityVector *list     = NULL;
-    EntityVector *list_in  = NULL;
-    EntityVector *list_out = NULL;
+    EntityVector *list     = nullptr;
+    EntityVector *list_in  = nullptr;
+    EntityVector *list_out = nullptr;
 
     if (lua_istable(L, 4)) list = new_entity_vector();
     if (lua_istable(L, 5)) list_in = new_entity_vector();

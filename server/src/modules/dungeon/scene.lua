@@ -8,7 +8,7 @@ local pix = 64 -- 一个格子边长64像素
 local visual_width = 3 -- 视野宽度格子数
 local visual_height = 4 -- 视野高度格子数
 
-local Aoi = require "Aoi"
+local Aoi = require "GridAoi"
 local ET = require "modules.entity.entity_header"
 local scene_conf = require_kv_conf("dungeon_scene","id")
 
@@ -31,12 +31,17 @@ function Scene:__init(id,dungeon_id,dungeon_hdl)
 
     local width,height = map:get_size()
 
+    local pix_width = width * pix
+    local pix_height = height * pix
+
     local aoi = Aoi()
-    aoi:set_size(width*pix,height*pix,pix)
-    aoi:set_visual_range(visual_width,visual_height)
+    aoi:set_size(pix_width, pix_height, pix)
+    aoi:set_visual_range(visual_width * pix,visual_height * pix)
 
     self.aoi = aoi
     self.map = map
+    self.pix_width = pix_width
+    self.pix_height = pix_height
 
     self.entity_count = {} -- 场景中各种实体的数量，在这里统计
     for _,et in pairs(ET) do self.entity_count[et] = 0 end
@@ -94,6 +99,12 @@ end
 
 -- 实体进入场景
 function Scene:entity_enter(entity,pix_x,pix_y)
+    if pix_x >= self.pix_width or pix_y >= self.pix_height then
+        ERROR("cene:entity_enter invalid pos(%d, %d) for scene %d",
+            pix_x, pix_y, self.id)
+        return
+    end
+
     -- 先退出旧场景
     local old_scene = entity:get_scene()
     if old_scene then
@@ -101,12 +112,8 @@ function Scene:entity_enter(entity,pix_x,pix_y)
         old_scene:entity_exit(entity)
     end
 
-    local event = 0
     local et = entity.et
-
-    -- 目前只有玩家会接收其他实体的事件
-    if ET.PLAYER == et then event = 1 end
-    self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,event,tmp_list)
+    self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,tmp_list)
 
     self.entity_count[et] = 1 + self.entity_count[et]
 

@@ -4,6 +4,8 @@ local AST = require "modules.ai.ai_header"
 
 local Loginout = oo.class( ... )
 
+g_setting = require "setting.setting" -- no_update_require
+
 -- 检查是否执行登录
 function Loginout:check_and_login(ai)
     local param = ai.ai_conf.param
@@ -11,9 +13,16 @@ function Loginout:check_and_login(ai)
         return false
     end
 
+    local conf = g_setting.gateway
+    local host = conf.cip
+    if "0.0.0.0" == host then
+        host = "127.0.0.1"
+    elseif "::" == host then
+        host = "::1"
+    end
+
     -- 连接服务器
-    local conn_id =
-            network_mgr:connect( "127.0.0.1",10002,network_mgr.CNT_CSCN )
+    local conn_id = network_mgr:connect( host,conf.cport,network_mgr.CNT_CSCN )
 
     ai.state = AST.LOGIN
     ai.entity:set_conn(conn_id)

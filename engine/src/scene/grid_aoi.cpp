@@ -21,6 +21,11 @@ GridAOI::~GridAOI()
     for (auto &iter : _entity_set) del_entity_ctx(iter.second);
 
     _entity_set.clear();
+
+    for (int i = 0; i < _width * _height; i++)
+    {
+        delete _entity_grid[i];
+    }
     delete[] _entity_grid;
 
     C_OBJECT_DEC("grid_aoi");
@@ -41,21 +46,16 @@ bool GridAOI::set_visual_range(int32_t width, int32_t height)
     return true;
 }
 
-/**
- * 设置场景大小
- * @param width 格子数
- * @param height 格子数
- * @param pix_grid 每个格子对应的像素大小
- */
 void GridAOI::set_size(int32_t width, int32_t height, int32_t pix_grid)
 {
     assert(pix_grid > 0 && !_entity_grid);
     _pix_grid = pix_grid;
 
-    _width  = width / _pix_grid;
-    _height = height / _pix_grid;
+    _width  = (int32_t)std::ceil(((double)width) / _pix_grid);
+    _height = (int32_t)std::ceil(((double)height) / _pix_grid);
 
-    _entity_grid = new EntityVector[_width * _height];
+    _entity_grid = new EntityVector *[_width * _height];
+    memset(_entity_grid, 0, sizeof(EntityVector *) * _width * _height);
 }
 
 /**
@@ -102,11 +102,10 @@ void GridAOI::each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
     {
         for (int32_t iy = y; iy <= dy; iy++)
         {
-            const EntityVector &grid_list = _entity_grid[_width * ix + iy];
-
-            for (auto ctx : grid_list)
+            const EntityVector *list = _entity_grid[ix + _width * iy];
+            if (list)
             {
-                func(ctx);
+                for (auto ctx : *list) func(ctx);
             }
         }
     }
@@ -142,20 +141,29 @@ bool GridAOI::remove_entity_from_vector(EntityVector *list,
 
 bool GridAOI::remove_grid_entity(int32_t x, int32_t y, const struct EntityCtx *ctx)
 {
-    return remove_entity_from_vector(&(_entity_grid[_width * x + y]), ctx);
+    // TODO 当列表为空时，这里是否需要把数组从_entity_grid移除
+    // 如果是持久的副本，应该还会用到，如果是临时副本，一会儿就销毁了，好像移除也没多大作用
+    EntityVector *list = _entity_grid[x + _width * y];
+    return list ? remove_entity_from_vector(list, ctx) : false;
 }
 
 // 插入实体到格子内
 void GridAOI::insert_grid_entity(int32_t x, int32_t y, struct EntityCtx *ctx)
 {
-    _entity_grid[_width * x + y].push_back(ctx);
+    EntityVector *list = _entity_grid[x + _width * y];
+    if (!list)
+    {
+        list                         = new_entity_vector();
+        _entity_grid[x + _width * y] = list;
+    }
+    list->push_back(ctx);
 }
 
 // 获取实体的ctx
 struct GridAOI::EntityCtx *GridAOI::get_entity_ctx(EntityId id)
 {
     EntitySet::const_iterator itr = _entity_set.find(id);
-    if (_entity_set.end() == itr) return NULL;
+    if (_entity_set.end() == itr) return nullptr;
 
     return itr->second;
 }
@@ -328,7 +336,7 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
     if (it_x > it_dx || it_y > it_dy) intersection = false;
 
     // 从旧格子退出
-    bool exitOk = remove_grid_entity(ctx->_pos_x, ctx->_pos_y, ctx);
+    bool ok = remove_grid_entity(ctx->_pos_x, ctx->_pos_y, ctx);
 
     // 由于事件列表不包含自己，退出格子后先取列表再进入新格子
 
@@ -408,5 +416,5 @@ INSETION:
     ctx->_pos_y = gy;
     insert_grid_entity(gx, gy, ctx);
 
-    return exitOk ? 0 : -3;
+    return ok ? 0 : -2;
 }

@@ -379,7 +379,14 @@ int32_t Socket::connect(const char *host, int32_t port)
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
     // IPv6 address must be supplied in src instead
     // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip
-    if (inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x) <= 0)
+    int32_t ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
+    if (0 == ok)
+    {
+        ERROR("invalid host format: %s", host);
+        ::close(fd);
+        return -1;
+    }
+    else if (ok < 0)
     {
         ::close(fd);
         return -1;
@@ -484,7 +491,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
     if (0 == ok)
     {
-        ERROR("inval host format: %s", host);
+        ERROR("invalid host format: %s", host);
         goto FAIL;
     }
     else if (ok < 0)

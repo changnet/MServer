@@ -24,22 +24,22 @@ return
 
     gateway = -- gateway 配置
     {
-        sip   = "127.0.0.1", -- s2s监听ip
+        sip   = "::1", -- s2s监听ip
         sport = 10001,       -- s2s监听端口
-        cip   = "0.0.0.0", -- c2s监听ip，在virtualbox的端口转发模式下，127.0.0.1转发不成功
+        cip   = "::", -- c2s监听ip，在virtualbox的端口转发模式下，127.0.0.1转发不成功
         cport = 10002,       -- s2s监听端口
-        hip   = "127.0.0.1", -- http监听ip
+        hip   = "::1", -- http监听ip
         hport = 10003,       -- http监听端口
 
     },
 
     world = -- world服务器配置
     {
-        sip     = "127.0.0.1", -- s2s监听ip
+        sip     = "::1", -- s2s监听ip
         sport   = 20001,       -- s2s监听端口
         servers =
         {
-            { ip = "127.0.0.1",port = 10001 }, -- gateway
+            { ip = "::1",port = 10001 }, -- gateway
         },
     },
 
@@ -48,8 +48,8 @@ return
         process = 2, -- 开了2个进程
         servers = -- 主动连接到下面的服务器
         {
-            { ip = "127.0.0.1",port = 10001 }, -- gateway
-            { ip = "127.0.0.1",port = 20001 }, -- world
+            { ip = "::1",port = 10001 }, -- gateway
+            { ip = "::1",port = 20001 }, -- world
         },
     }
 }
