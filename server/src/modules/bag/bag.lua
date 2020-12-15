@@ -182,7 +182,8 @@ function Bag:dec( id,count )
     end
 
     if not index then
-        ERROR("can NOT dec item,player = %d,id = %d,count = %d",self.pid,id,count)
+        ERROR("can NOT dec item,player = %d,id = %d,count = %d",
+            self.pid,id,count)
         return count
     end
 

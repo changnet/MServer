@@ -118,8 +118,6 @@ function string.replace_all(str, old_str, new_str)
         str = str:sub(1, b - 1) .. new_str .. str:sub(e + 1)
         offset = b + string.len(new_str)
     end
-
-    return str
 end
 
 -- 根据字符串下标替换字符(i == j时可用于插入字符串)

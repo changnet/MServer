@@ -27,7 +27,7 @@ t_describe("json lib test", function()
     end)
 
     t_it("perf test", function()
-        for i = 1, times do
+        for _ = 1, times do
             local tbl = json.decode(js)
             json.encode(tbl)
         end
@@ -36,7 +36,7 @@ t_describe("json lib test", function()
     t_it("lua cjson dynamically loaded perf", function()
         local cjson = require "cjson"
 
-        for i = 1, times do
+        for _ = 1, times do
             local tbl = cjson.decode(js)
             cjson.encode(tbl)
         end
@@ -118,7 +118,7 @@ end
 local function str_split2(s, p)
     local tbl = {}
     local pt = '[^' .. p .. ']+'
-    
+
     string.gsub(s, pt, function(w) table.insert(tbl, w) end)
 
     return tbl
@@ -157,7 +157,7 @@ t_describe("string split performance test", function()
 
     t_it("using string.find", function()
         local old_mem = collectgarbage("count")
-        for i = 1, times do
+        for _ = 1, times do
             str_split3(str1, '\t')
             str_split3(str2, '\t')
         end
@@ -168,7 +168,7 @@ t_describe("string split performance test", function()
 
     t_it("using string.gmatch", function()
         local old_mem = collectgarbage("count")
-        for i = 1, times do
+        for _ = 1, times do
             str_split(str1, '\t')
             str_split(str2, '\t')
         end
@@ -179,7 +179,7 @@ t_describe("string split performance test", function()
 
     t_it("using string.gsub", function()
         local old_mem = collectgarbage("count")
-        for i = 1, times do
+        for _ = 1, times do
             str_split2(str1, '\t')
             str_split2(str2, '\t')
         end

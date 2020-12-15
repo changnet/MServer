@@ -103,7 +103,8 @@ function Mongo_performan:sort_test()
         self:on_sort_test( ... )
     end
     g_mongodb:find( '{}',
-        '{"projection":{"desc":0,"array":0,"object":0,"sparse":0},"limit":50,"sort":{"amount":-1}}',
+        '{"projection":{"desc":0,"array":0,"object":0,"sparse":0},"limit":50,\z
+            "sort":{"amount":-1}}',
         nil,nil,nil,callback )
 end
 

@@ -36,9 +36,9 @@ local handshake_srv =table.concat(
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 -- websocket opcodes
-local WS_OP_CONTINUE = 0x0
+-- local WS_OP_CONTINUE = 0x0
 local WS_OP_TEXT     = 0x1
-local WS_OP_BINARY   = 0x2
+-- local WS_OP_BINARY   = 0x2
 local WS_OP_CLOSE    = 0x8
 local WS_OP_PING     = 0x9
 local WS_OP_PONG     = 0xA
@@ -143,12 +143,12 @@ function SrvConn:conn_accept( new_conn_id )
     PRINT( "srv conn accept new",new_conn_id )
 
     -- 弄成全局的，不然会被释放掉
-    new_conn = SrvConn( new_conn_id )
+    _G.new_conn = SrvConn( new_conn_id )
     network_mgr:set_conn_io( new_conn_id,network_mgr.IOT_NONE )
     network_mgr:set_conn_codec( new_conn_id,network_mgr.CDC_NONE )
     network_mgr:set_conn_packet( new_conn_id,network_mgr.PKT_WEBSOCKET )
 
-    return new_conn
+    return _G.new_conn
 end
 
 function SrvConn:conn_del()
@@ -170,7 +170,7 @@ function SrvConn:ctrl_new( flag,body )
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
         PRINT( "srv ctrl_new close",self.conn_id,body)
-        network_mgr:send_ctrl_packet( self.conn_id,WS_OP_CLOSE | WS_FINAL_FRAME )
+        network_mgr:send_ctrl_packet(self.conn_id, WS_OP_CLOSE | WS_FINAL_FRAME)
         return
     elseif flag == WS_OP_PING then
         PRINT( "srv ctrl_new ping",self.conn_id,body)
@@ -187,8 +187,8 @@ function SrvConn:ctrl_new( flag,body )
 end
 
 -- 用官方的服务器测试作为client是否正常
-local ws_url = "echo.websocket.org"
-local ip1,ip2 = util.gethostbyname( ws_url )
+-- local ws_url = "echo.websocket.org"
+-- local ip1,ip2 = util.gethostbyname( ws_url )
 
 -- 这里创建的对象要放到全局引用，不然会被释放掉，就没法回调了
 

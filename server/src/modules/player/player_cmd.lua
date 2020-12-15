@@ -1,8 +1,5 @@
 -- 玩家相关协议处理
 
-local CS = CS
-local SC = SC
-
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 local g_player_mgr  = g_player_mgr

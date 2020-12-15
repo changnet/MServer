@@ -48,9 +48,6 @@ function GM:auto_forward( where,player,cmd,args )
         return true
     end
 
-    local pid = nil
-    if player then pid = player:get_pid() end
-
     g_rpc:proxy(srv_conn):rpc_gm( g_app.srvname,cmd,table.unpack( args ) )
     return true
 end

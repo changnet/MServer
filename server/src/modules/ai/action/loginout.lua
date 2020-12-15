@@ -8,7 +8,6 @@ g_setting = require "setting.setting" -- no_update_require
 
 -- 检查是否执行登录
 function Loginout:check_and_login(ai)
-    local param = ai.ai_conf.param
     if (ai.login_time or 0) > ev:time() then
         return false
     end

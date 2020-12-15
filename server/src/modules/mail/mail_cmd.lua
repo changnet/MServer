@@ -10,14 +10,14 @@ local g_player_mgr = g_player_mgr
 local Mail = require "modules.mail.mail"
 
 -- 邮件回调
-local function mail_cb( cmd,func )
-    local cb = function( srv_conn,pid,pkt )
-        local player = g_player_mgr:get_player( pid )
-        return func( player:get_module("mail"),pkt )
-    end
+-- local function mail_cb( cmd,func )
+--     local cb = function( srv_conn,pid,pkt )
+--         local player = g_player_mgr:get_player( pid )
+--         return func( player:get_module("mail"),pkt )
+--     end
 
-    g_command_mgr:clt_register( cmd,cb )
-end
+--     g_command_mgr:clt_register( cmd,cb )
+-- end
 
 -- 邮件管理器回调
 local function mail_mgr_cb( cmd,func )

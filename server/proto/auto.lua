@@ -187,9 +187,7 @@ CHAT = {
     end
 
     -- 处理 s = "Chat.SChat" 放到独立行的情况
-    local mm = nil
     if "s" ~= name and "c" ~= name then
-        mm = name
         ctx.mm = name
         ctx.symbols[ctx.m][name] = {}
         table.insert(ctx.sym_list, {
@@ -200,7 +198,7 @@ CHAT = {
         if s then ctx.symbols[ctx.m][ctx.mm].s = s end
         if c then ctx.symbols[ctx.m][ctx.mm].c = c end
         if t then ctx.symbols[ctx.m][ctx.mm].t = t end
-    
+
         ctx.changes[ctx.index] = {
             m = ctx.m,
             mm = ctx.mm,
@@ -211,7 +209,7 @@ CHAT = {
 end
 
 -- 解析协议定义
-local function parse(path)
+local function parse(file_path)
     local ctx = {
         index = 0,
         lines = {},
@@ -219,7 +217,7 @@ local function parse(path)
         changes = {},
         sym_list = {}
     }
-    for line in io.lines(path) do table.insert(ctx.lines, line) end
+    for line in io.lines(file_path) do table.insert(ctx.lines, line) end
 
     while nextLine(ctx) do
         repeat
@@ -249,8 +247,8 @@ local function write_fields(f, val, prefix, first)
 end
 
 -- 生成lua配置文件
-local function write_lua(path, ctx)
-    local f = io.open(path, "w")
+local function write_lua(file_path, ctx)
+    local f = io.open(file_path, "w")
 
     assert(f)
 
@@ -282,7 +280,7 @@ local function write_lua(path, ctx)
 end
 
 -- 生成typescript配置
-local function write_ts(path, ctx)
+local function write_ts(file_path, ctx)
 --[[
 export interface CS {
     i: number;

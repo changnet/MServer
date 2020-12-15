@@ -273,11 +273,12 @@ function Player:enter_fuben( pkt )
     -- 双数在场景进程1,单数在2，用来测试切换。真实情况是根据拥挤场景来规则
     local index = (0 == id % 2 and 1 or 2)
 
-    if not session then
-        AREA_SESSION[index] =
-            g_app:srv_session( "area",index,tonumber(g_app.srvid) )
-    end
     local session = AREA_SESSION[index]
+    if not session then
+        session = g_app:srv_session( "area",index,tonumber(g_app.srvid) )
+        AREA_SESSION[index] = session
+    end
+
     local conn = g_network_mgr:get_srv_conn( session )
 
     -- 然后玩家从当前进程退出场景

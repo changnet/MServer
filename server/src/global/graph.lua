@@ -67,7 +67,9 @@ function graph.within_circle_sector(
     -- 3. 目标点与圆心的距离在半径范围内
 
     if graph.is_clockwise(beg_x, beg_y, zero_x, zero_y) then return false end
-    if not graph.is_clockwise(end_x, end_y, zero_x, zero_y) then return false end
+    if not graph.is_clockwise(end_x, end_y, zero_x, zero_y) then
+        return false
+    end
 
     return graph.within_circle(zero_x, zero_y, 0, 0, radius)
 end

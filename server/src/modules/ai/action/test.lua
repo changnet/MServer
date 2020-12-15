@@ -6,28 +6,28 @@ local Test = oo.class( ... )
 
 -- 测试socket拆包完整性才用65535,平时不用这么大
 -- 由于protobuf编码，发65535肯定超最大包长了，注意下报错就行
-local max_pkt = 55535
 local random_str = { "",}
-if false then -- 测试包临界才用这个随机
-    local function random_one( max_len )
-        local chars = {}
-        for len = 1,max_len do
-            table.insert(chars,string.char(math.random(48,126)))
-        end
+-- local max_pkt = 55535
+-- -- 测试包临界才用这个随机
+-- local function random_one( max_len )
+--     local chars = {}
+--     for _ = 1,max_len do
+--         table.insert(chars,string.char(math.random(48,126)))
+--     end
 
-        table.insert(random_str,table.concat(chars))
-    end
+--     table.insert(random_str,table.concat(chars))
+-- end
 
-    for idx = 1,200 do
-        random_one( math.random(1,max_pkt) )
-    end
+-- for _ = 1,200 do
+--     random_one( math.random(1,max_pkt) )
+-- end
 
-    random_one( max_pkt )-- 保证最大临界值一定会出现
+-- random_one( max_pkt )-- 保证最大临界值一定会出现
+-- PRINT("random LARGE string finish !!!")
 
-    PRINT("random LARGE string finish !!!")
-else
-    table.insert(random_str,"just some test char 1234567890abcdefghijklmno")
-end
+-- 一般测试用这个随机就可以了
+table.insert(random_str,"just some test char 1234567890abcdefghijklmno")
+
 
 function Test:ping(ai)
     if ai.ping_ctx then return end -- 上一次的还没返回

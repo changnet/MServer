@@ -13,7 +13,8 @@ print( "acism worlds filter",acism:scan("出售枪支是非法的") )
 -- -- 改小缓冲区测试,做一些边缘测试
 print( "acism worlds replace",acism:replace("出售枪支是非法的","***") )
 print( "acism worlds replace",acism:replace("18dy18Dy18dy18dy","***") )
-print( "acism worlds replace",acism:replace("出售枪支是非法的","************************************************") )
+print( "acism worlds replace",acism:replace(
+    "出售枪支是非法的","************************************************") )
 print( "acism worlds replace",acism:replace("","***") )
 print( "acism worlds replace",acism:replace("出售枪支是非法的","~") )
 print( "acism worlds replace",acism:replace("出售枪支是非法的","") )

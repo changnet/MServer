@@ -36,12 +36,12 @@ end
 
     转换为
 
-    [1] = 
+    [1] =
     {
         [1] = { stage = 1,level = 1,val = 1 },
         [2] = { stage = 1,level = 2,val = 2 },
     },
-    [2] = 
+    [2] =
     {
         [1] = { stage = 2,level = 1,val = 3 },
         [2] = { stage = 2,level = 2,val = 4 },
@@ -75,7 +75,7 @@ end
 --[[
 --  test code
 
-local tbl = 
+local tbl =
 {
     { stage = 1,level = 1,val = 1 },
     { stage = 1,level = 2,val = 2 },
@@ -83,7 +83,7 @@ local tbl =
     { stage = 2,level = 2,val = 4 },
 }
 
-local tbl_id = 
+local tbl_id =
 {
     { id = 1 },
     { id = 2 },

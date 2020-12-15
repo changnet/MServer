@@ -44,26 +44,26 @@ local ts = 10000000
 
 f_tm_start()
 local cnt = 0
-for i = 1,ts do
+for _ = 1,ts do
     cnt = test( cnt,1 )
 end
 f_tm_stop( "call function native" )
 
 f_tm_start()
-local cnt = 0
-for i = 1,ts do
+cnt = 0
+for _ = 1,ts do
     cnt = tb.test( cnt,1 )
 end
 f_tm_stop( "call function as table value" )
 
 f_tm_start()
-for i = 1,ts do
+for _ = 1,ts do
     cnt = empty_mt6.test( cnt,1 )
 end
 f_tm_stop( "call function with 3 level metatable" )
 
 f_tm_start()
-for i = 1,ts do
+for _ = 1,ts do
     cnt = mt_tb.test( cnt,1 )
 end
 f_tm_stop( "call function with 10 level metatable" )

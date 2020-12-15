@@ -131,8 +131,6 @@ function Scene:broadcast_entity_disappear(entity,eid_list,way)
 
     -- 广播给周边的玩家该实体消失了
     local pid_list = {}
-    local g_entity_mgr = g_entity_mgr
-
     for idx = 1,eid_list.n do
         local tmp_entity = g_entity_mgr:get_entity( eid_list[idx] )
 

@@ -1,7 +1,7 @@
 -- 一些常用的数学库
 
 -- 四舍五入
--- @decimal 保留的小数位数，可以是负数
+-- @param decimal 保留的小数位数，可以是负数
 function math.round(val, decimal)
     -- Note that math.ceil(num-.5) ~= math.floor(num+.5)
     -- e.g. for -.5 with math.ceil(num-.5) == -1 math.floor(num+.5) == 0

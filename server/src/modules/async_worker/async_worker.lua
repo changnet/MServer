@@ -13,9 +13,6 @@
 --    用timer可以做，但不划算，考虑在底层循环加一个回调，现在暂时不做
 -- 5. 异步执行时再添加、修改异步数据循环修改数据
 
-
-local ASYNC = require "modules.async_worker.async_worker_header"
-
 local AsyncWorker = oo.singleton( ... )
 
 function AsyncWorker:__init()

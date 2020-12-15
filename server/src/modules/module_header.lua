@@ -43,6 +43,19 @@ g_mail_mgr    = require "modules.mail.mail_mgr"
 g_ping        = require "modules.system.ping"
 g_stat        = require "modules.system.statistic"
 
+--==============================================================================
+-- 下面是一些根据app创建的全局变量，前置声明用于消除luacheck的检测问题
+
+g_httpd = nil
+g_account_mgr = nil
+g_mongodb_mgr = nil
+g_mongodb = nil
+g_player_mgr = nil
+g_map_mgr = nil
+g_entity_mgr = nil
+g_dungeon_mgr = nil
+
+--==============================================================================
 -- 仅在gateway使用
 if "gateway" == g_app.srvname then
     g_httpd       = require "http.httpd"
@@ -53,7 +66,7 @@ if "gateway" == g_app.srvname then
     g_mongodb_mgr = require "mongodb.mongodb_mgr"
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
-
+--==============================================================================
 -- 仅在world使用
 if "world" == g_app.srvname then
     g_player_mgr  = require "modules.player.player_mgr"
@@ -61,7 +74,7 @@ if "world" == g_app.srvname then
     g_mongodb_mgr = require "mongodb.mongodb_mgr"
     if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
 end
-
+--==============================================================================
 -- 仅在area使用
 if "area" == g_app.srvname then
     g_map_mgr = require "modules.dungeon.map_mgr"
@@ -85,8 +98,8 @@ require "modules.player.player_cmd" -- 玩家基础模块
 require "modules.mail.mail_cmd"     -- 邮件模块
 
 -- 仅在gateway使用
-if "gateway" == g_app.srvname then
-end
+-- if "gateway" == g_app.srvname then
+-- end
 
 -- 仅在world使用
 if "world" == g_app.srvname then

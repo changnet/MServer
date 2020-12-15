@@ -5,16 +5,16 @@
 -- 机器人对象
 
 -- websocket opcodes
-local WS_OP_CONTINUE = 0x0
-local WS_OP_TEXT     = 0x1
-local WS_OP_BINARY   = 0x2
-local WS_OP_CLOSE    = 0x8
-local WS_OP_PING     = 0x9
-local WS_OP_PONG     = 0xA
+-- local WS_OP_CONTINUE = 0x0
+-- local WS_OP_TEXT     = 0x1
+-- local WS_OP_BINARY   = 0x2
+-- local WS_OP_CLOSE    = 0x8
+-- local WS_OP_PING     = 0x9
+-- local WS_OP_PONG     = 0xA
 
--- websocket marks
-local WS_FINAL_FRAME = 0x10
-local WS_HAS_MASK    = 0x20
+-- -- websocket marks
+-- local WS_FINAL_FRAME = 0x10
+-- local WS_HAS_MASK    = 0x20
 
 local network_mgr = network_mgr
 local Android = oo.class( ... )

@@ -174,8 +174,8 @@ function Application:one_initialized( name,val )
         self.init_list[name] = nil
         PRINTF( "initialize one action OK:%s",name )
 
-        for _,init in pairs( self.init_list ) do
-            if init.after == name then init.action( self ) end
+        for _, step in pairs( self.init_list ) do
+            if step.after == name then step.action( self ) end
         end
     end
 

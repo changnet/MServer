@@ -1,6 +1,7 @@
 -- 机器人指令处理入口
 -- 机器人的网络模块极其简单，也不考虑热更之类，在这里简单处理了
 
+-- luacheck:ignore handshake_clt
 local handshake_clt = table.concat(
 {
     'GET / HTTP/1.1\r\n',

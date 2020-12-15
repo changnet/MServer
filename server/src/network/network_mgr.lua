@@ -1,7 +1,6 @@
 -- network_mgr 网络连接管理
 
 local util          = require "util"
-local Timer         = require "Timer"
 local SrvConn      = require "network.srv_conn"
 local CltConn      = require "network.clt_conn"
 
@@ -101,7 +100,7 @@ function NetworkMgr:srv_register( conn,pkt )
         return false
     end
 
-    local ty,index,srvid = g_app:srv_session_parse( pkt.session )
+    local _, _, srvid = g_app:srv_session_parse( pkt.session )
     if srvid ~= tonumber(g_app.srvid) then
         ERROR( "NetworkMgr:srv_register srvid not match,expect %s,got %d",
             g_app.srvid,srvid )
@@ -144,7 +143,7 @@ function NetworkMgr:do_timer()
     end
 
     local check_time = ev:time() - SRV_ALIVE_INTERVAL
-    for conn_id,srv_conn in pairs( self.srv_conn ) do
+    for _, srv_conn in pairs( self.srv_conn ) do
         self:check_one_timeout( srv_conn,check_time )
     end
 end

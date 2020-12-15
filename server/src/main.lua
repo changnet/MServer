@@ -19,6 +19,9 @@ local time = require "global.time"
 
 math.randomseed( ev:time() )
 
+-- 当前进程application对象
+g_app = nil
+
 local function main( command,srvname,srvindex,srvid,... )
     util.mkdir_p( "log" )  -- 创建日志目录
     util.mkdir_p( "runtime" ) -- 创建运行时数据存储目录

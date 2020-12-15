@@ -36,7 +36,7 @@ end
 
 -- 地图的坐标原点在左上角
 -- cost为负数表示不可行走，正数数值表示行走的难度，值越大，行走消耗越大，寻路优先级越低[1,127]
-local grid = 
+local grid =
 {
     { y = 1,cost = 1,x_min = 0,x_max = 31},
     { y = 2,cost = 1,x_min = 27,x_max = 27},
@@ -69,8 +69,8 @@ end
 local path = {} -- 路径
 
 -- @dp: dump path
-function test_path(id,x,y,dx,dy,path,dp)
-    local cnt = astar:search(map,x,y,dx,dy,path)
+function test_path(_id,x,y,dx,dy,_path,dp)
+    local cnt = astar:search(map,x,y,dx,dy,_path)
     if not cnt or cnt <= 0 then
         PRINTF("can not find path from (%d,%d) to (%d,%d)",x,y,dx,dy)
         return
@@ -79,12 +79,12 @@ function test_path(id,x,y,dx,dy,path,dp)
     if not dp then return end
 
     local path_set = {}
-    for idx = 1,path.n,2 do
-        local x = path[idx]
-        local y = path[idx + 1]
+    for idx = 1,_path.n,2 do
+        local _x = _path[idx]
+        local _y = _path[idx + 1]
 
-        if not path_set[y] then path_set[y] = {} end
-        path_set[y][x] = 1
+        if not path_set[_y] then path_set[_y] = {} end
+        path_set[_y][_x] = 1
     end
 
     local path_tbl = {}
@@ -99,7 +99,7 @@ function test_path(id,x,y,dx,dy,path,dp)
         table.insert(path_tbl,"\n");
     end
 
-    vd(path)
+    vd(_path)
     print(table.concat(path_tbl))
 end
 

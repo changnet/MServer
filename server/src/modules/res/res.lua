@@ -11,7 +11,7 @@ local res_get_map = {} -- 获取
 local res_add_map = {} -- 增加
 local res_dec_map = {} -- 扣除
 
-local RES = require "modules.res.res_header"
+require "modules.res.res_header"
 
 local Res = oo.singleton( ... )
 

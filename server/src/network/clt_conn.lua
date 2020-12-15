@@ -12,16 +12,16 @@ local handshake_srv =table.concat(
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 -- websocket opcodes
-local WS_OP_CONTINUE = 0x0
-local WS_OP_TEXT     = 0x1
-local WS_OP_BINARY   = 0x2
+-- local WS_OP_CONTINUE = 0x0
+-- local WS_OP_TEXT     = 0x1
+-- local WS_OP_BINARY   = 0x2
 local WS_OP_CLOSE    = 0x8
 local WS_OP_PING     = 0x9
 local WS_OP_PONG     = 0xA
 
 -- websocket marks
 local WS_FINAL_FRAME = 0x10
-local WS_HAS_MASK    = 0x20
+-- local WS_HAS_MASK    = 0x20
 
 local util = require "util"
 local network_mgr = network_mgr

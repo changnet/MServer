@@ -47,14 +47,14 @@ for idx = 1,max_object do
     object.level = idx
 end
 
-for idx = 1,max_object do
+for _ = 1,max_object do
     local idx = math.random(1,3)
     local ft1 = math.random(1,max_random)
 
     irank:update(idx,ft1,idx)
 end
 
-for idx = 1,max_object/2 do
+for _ = 1,max_object/2 do
     irank:remove(math.random(1,max_object))
 end
 
@@ -71,7 +71,7 @@ dump(irank)
 
 
 local random_f = {}
-for idx = 1,1000000 do
+for _ = 1,1000000 do
     table.insert(random_f,math.random(1,100))
 end
 

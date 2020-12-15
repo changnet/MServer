@@ -5,7 +5,6 @@
 --常用的全局函数
 
 local Log = require "Log"
-local util = require "util"
 
 __g_async_log = Log()
 local async_logger = __g_async_log
@@ -138,31 +137,16 @@ function ASSERT( expr,... )
     return error(msg)
 end
 
---测试时间,耗时打印, start和stop必须成对调用，仅测试用
-function f_tm_start()
-    _g_sec, _g_usec = util.timeofday()
-end
-
---[[
-1秒＝1000毫秒，
-1毫秒＝1000微秒，
-1微妙＝1000纳秒，
-1纳秒＝1000皮秒。
-秒用s表现,毫秒用ms,微秒用μs表示，纳秒用ns表示，皮秒用ps表示
-]]
-function f_tm_stop(...)
-    local sec,usec = util.timeofday()
-    assert( sec >= _g_sec,"time jump" )
-    local temp = (sec-_g_sec)*1000000 + usec - _g_usec
-    print(..., temp, "microsecond")
-end
-
 -- 从一个文件加载全局定义，该文件必须是未require的,里面的全局变量必须是未定义的
 -- @param path 需要加载的文件路径，同require的参数，一般用点号
 -- @param g 是否设置到全局
 -- @return table,包含该文件中的所有全局变量定义
 function load_global_define(path, g)
-    if not _g_defines then _g_defines = {} end
+    local _g_defines = _G._g_defines
+    if not _g_defines then
+        _g_defines = {}
+        _G._g_defines = _g_defines
+    end
     if _g_defines[path] then
         -- 必须先清除旧的变量，否则__newindex不会触发
         for k in pairs(_g_defines[path]) do _G[k] = nil end

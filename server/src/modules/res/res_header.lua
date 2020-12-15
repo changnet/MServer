@@ -4,7 +4,7 @@
 -- res表示资源类型，id表示资源id(虚拟资源可能不需要id)，count表示数量
 
 -- 资源类型
-RES = 
+RES =
 {
     GOLD = 1,  -- 元宝
     COPPER = 2, -- 铜钱
