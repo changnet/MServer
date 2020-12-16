@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../pool/object_pool.h"
-#include <functional>
+#include <functional> /* std::function */
 
 /**
  * 格子AOI(Area of Interest)算法
@@ -161,8 +161,8 @@ private:
 
 private:
     // 这些pool做成局部static变量以避免影响内存统计
-    using CtxPool          = ObjectPool<GridAOI::EntityCtx, 10240, 1024>;
-    using EntityVectorPool = ObjectPool<GridAOI::EntityVector, 10240, 1024>;
+    using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
+    using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
 
     CtxPool *get_ctx_pool()
     {
