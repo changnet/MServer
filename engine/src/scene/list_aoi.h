@@ -27,7 +27,7 @@ public:
         int32_t _pos_x; // 像素坐标x
         int32_t _pos_y; // 像素坐标y
         int32_t _pos_z; // 像素坐标z
-        int32_t _visual; // 视野大小(像素)
+        int32_t _fov;   // 视野大小(Field of view,像素)
         EntityId _id;
 
         // 每个轴需要一个双链表
@@ -47,9 +47,42 @@ public:
          */
         EntityVector *_interest_me;
     };
+
+    /// 记录视野相关信息
+    struct FieldOfViewRef
+    {
+        int32_t _fov;
+        int32_t _ref;
+        FieldOfViewRef(int32_t fov, int32_t ref)
+        {
+            _fov = fov;
+            _ref = ref;
+        }
+    };
+
 public:
     ListAOI();
     virtual ~ListAOI();
+
+    ListAOI(const ListAOI &)  = delete;
+    ListAOI(const ListAOI &&) = delete;
+    ListAOI &operator=(const ListAOI &) = delete;
+    ListAOI &operator=(const ListAOI &&) = delete;
+
+    /**
+     * @brief 实体进入场景
+     * @param id 实体唯一id
+     * @param x 像素坐标x
+     * @param y 像素坐标y
+     * @param z 像素坐标z
+     * @param fov 视野
+     * @param mask 掩码，由上层定义，影响interest_me列表
+     * @param list 在视野范围内的实体列表
+     * @return
+     */
+    bool enter_entity(EntityId id, int32_t x, int32_t y, int32_t z, int32_t fov,
+                      uint8_t mask, EntityVector *list = nullptr);
+
 private:
     // 这些pool做成局部static变量以避免影响内存统计
     using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
@@ -97,6 +130,12 @@ private:
 
         return ctx;
     }
+
+    /// 增加视野引用
+    void add_fov(int32_t fov);
+    /// 减少视野引用
+    void dec_fov(int32_t fov);
+
 private:
     // 每个轴需要一个双链表
     EntityCtx *_first_x;
@@ -106,7 +145,19 @@ private:
     EntityCtx *_first_z;
     EntityCtx *_last_z;
 
-    /* 记录所有实体的数据 */
-    EntitySet _entity_set;
-};
+    /**
+     * 是否启用y轴
+     * 如果不启用y轴，所有y坐标都传0，效果一样。但y轴链表的值都是一样的，每次遍历整个链表消耗比较大
+     */
+    bool _use_y;
 
+    int32_t _max_fov;      /// 场景中最大的视野半径
+    EntitySet _entity_set; /// 记录所有实体的数据
+
+    /**
+     * @brief 记录场景中所有的视野信息，用来维护_max_fvo
+     * 如果每次_max_fov变化都需要遍历所有实体，消耗有点大。这个数组预计比较小，一般同一个场景中
+     * 不同视野的实体都是个位数
+     */
+    std::vector<FieldOfViewRef> _fov_ref;
+};

@@ -52,6 +52,11 @@ public:
     GridAOI();
     virtual ~GridAOI();
 
+    GridAOI(const GridAOI &) = delete;
+    GridAOI(const GridAOI &&) = delete;
+    GridAOI& operator=(const GridAOI&) = delete;
+    GridAOI& operator=(const GridAOI&&) = delete;
+
     /** 根据mask判断两个实体是否interest */
     static inline bool is_interest(int32_t mask, const EntityCtx *ctx)
     {
