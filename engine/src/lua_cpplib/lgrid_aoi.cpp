@@ -37,7 +37,7 @@ int32_t LGridAoi::get_all_entity(lua_State *L)
 
     using EntitySetPair = std::pair<const int64_t, EntityCtx *>;
     table_pack(L, 2, _entity_set, [L, mask](const EntitySetPair &iter) {
-        if (is_interest(mask, iter.second))
+        if (mask & iter.second->_mask)
         {
             lua_pushinteger(L, iter.second->_id);
             return true;
@@ -98,7 +98,7 @@ int32_t LGridAoi::get_entity(lua_State *L)
     }
 
     table_pack(L, 2, *list, [L, mask](const EntityCtx *ctx) {
-        if (is_interest(mask, ctx))
+        if (mask & ctx->_mask)
         {
             lua_pushinteger(L, ctx->_id);
             return true;
@@ -133,7 +133,7 @@ int32_t LGridAoi::get_visual_entity(lua_State *L)
     get_range_entity(list, x, y, dx, dy);
 
     table_pack(L, 3, *list, [L, mask](const EntityCtx *ctx) {
-        if (is_interest(mask, ctx))
+        if (mask & ctx->_mask)
         {
             lua_pushinteger(L, ctx->_id);
             return true;

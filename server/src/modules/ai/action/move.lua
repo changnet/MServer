@@ -4,6 +4,9 @@ local MT = require "modules.move.move_header"
 
 local Move = oo.class( ... )
 
+local FB_MIN_SEC = 20
+local FB_MAX_SEC = 35
+
 -- 随机移动
 -- 这个是机器人用来模拟客户端移动的。怪物AI是直接在服务器移动，不能用这个
 function Move:random_move(ai)
@@ -70,7 +73,7 @@ function Move:on_update_pos(entity,errno,pkt)
         entity.pix_y = pkt.pix_y
         PRINT("update my pos at",entity.name,pkt.pix_x,pkt.pix_y)
     else
-        PRINT("update other pos at",pkt.pix_x,pkt.pix_y)
+        PRINT("update other pos at",pkt.pix_x,pkt.pix_y, pkt.handle)
     end
 end
 
@@ -78,7 +81,7 @@ end
 function Move:switch_fuben(ai)
     local now = ev:time()
     if not ai.fuben_time then
-        ai.fuben_time = now + math.random(10,30)
+        ai.fuben_time = now + math.random(FB_MIN_SEC,FB_MAX_SEC)
     end
 
     if ai.fuben_time > now then return end
@@ -88,7 +91,7 @@ function Move:switch_fuben(ai)
     if id == (ai.fb_id or 0) then return end
 
     ai.entity:send_pkt( PLAYER.ENTERFUBEN,{ id = id } )
-    ai.fuben_time = now + math.random(10,30)
+    ai.fuben_time = now + math.random(FB_MIN_SEC, FB_MIN_SEC)
 
     ai.fb_id = id
     local entity = ai.entity

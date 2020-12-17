@@ -112,8 +112,10 @@ function Scene:entity_enter(entity,pix_x,pix_y)
         old_scene:entity_exit(entity)
     end
 
+    local mask = 0
     local et = entity.et
-    self.aoi:enter_entity(entity.eid,pix_x,pix_y,et,tmp_list)
+    if (ET.PLAYER == et) then mask = 0x1 end
+    self.aoi:enter_entity(entity.eid,pix_x,pix_y,mask,tmp_list)
 
     self.entity_count[et] = 1 + self.entity_count[et]
 
@@ -145,12 +147,12 @@ function Scene:broadcast_entity_disappear(entity,eid_list,way)
 end
 
 -- 广播数据给关注我的玩家
--- @to_me:是否也广播给自己
-function Scene:broadcast_to_watch_me(entity,cmd,pkt,to_me)
+-- @param to_me 是否也广播给自己
+function Scene:broadcast_to_interest_me(entity,cmd,pkt,to_me)
     -- 广播给玩家我开始移动
     self.aoi:get_interest_me_entity(entity.eid,tmp_list)
 
-    local pid_list = {}
+    local pid_list = {} -- TODO 这个list也使用table.pack机制效率应该会高些
 
     -- 如果自己是玩家，那么移动消息也发给自己
     if to_me and ET.PLAYER == entity.et then

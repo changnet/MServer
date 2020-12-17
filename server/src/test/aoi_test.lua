@@ -18,9 +18,10 @@ local is_valid = true -- 测试性能时不做校验
 local entity_info = {}
 
 -- 实体类型(按位表示，因为需要按位筛选)
-local ET_PLAYER = 1 -- 玩家，关注所有实体事件
-local ET_NPC = 2 -- npc，关注玩家事件
-local ET_MONSTER = 4 -- 怪物，不关注任何事件
+local INTEREST = 1 -- 第一位表示是否关注其他实体，C++那边定死了，不能占用
+local ET_PLAYER = 2 + INTEREST -- 玩家，关注所有实体事件
+local ET_NPC = 4 -- npc，关注玩家事件
+local ET_MONSTER = 8 -- 怪物，不关注任何事件
 
 local tmp_list = {}
 local list_in = {}
@@ -83,7 +84,7 @@ local function valid_visual(et, list, mask)
     local id_map = valid_visual_list(et,list)
 
     -- 校验在视野范围的实体都在列表上
-    local visual_ev = get_visual_list(et, mask or et.mask)
+    local visual_ev = get_visual_list(et, mask)
     for id,other in pairs(visual_ev) do
         if not id_map[id] then
             PRINTF("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
@@ -95,7 +96,13 @@ local function valid_visual(et, list, mask)
     end
 
     -- 校验不在视野范围内或者不关注事件的实体不要在返回列表上
-    assert( table.empty(id_map) )
+    if not table.empty(id_map) then
+        PRINT("THOSE ID IN LIST BUT NOT IN VISUAL RANGE")
+        for id in pairs(id_map) do
+            PRINT(id)
+        end
+        assert(false)
+    end
 end
 
 -- 校验更新位置时收到实体进入事件的列表
@@ -114,7 +121,7 @@ local function valid_out(et, list)
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
-        assert(other and 0 ~= (et.mask & other.mask),
+        assert(other and 0 ~= (other.mask & INTEREST),
             string.format("id is %d",id))
 
         -- 校验视野范围
@@ -132,7 +139,7 @@ end
 -- 对interest_me列表进行校验
 local function valid_interest_me(aoi, et)
     aoi:get_interest_me_entity(et.id,tmp_list)
-    valid_visual(et,tmp_list)
+    valid_visual(et,tmp_list, INTEREST)
 end
 
 local function enter(aoi, id, x, y, mask)
@@ -181,7 +188,7 @@ local function exit(aoi, id)
 
     entity_info[id] = nil
     -- PRINT(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
-    if is_valid then valid_visual(entity,tmp_list) end
+    if is_valid then valid_visual(entity,tmp_list, INTEREST) end
 end
 
 
@@ -280,8 +287,12 @@ t_describe("test grid aoi", function()
         -- 这个移动比较特殊，同一个格子表示aoi没有变化，因此list_in和list_out为空
         -- list是interest_me列表而不是整个视野范围内的实体
         update(aoi, 99999, max_width - pix / 2, max_height - pix / 2)
+        -- 校验只有另一个玩家对自己感兴趣
         aoi:get_interest_me_entity(99999, tmp_list)
         t_equal(tmp_list.n, 1)
+        -- 对于怪物或者npc而言，应该有两个玩家对自己感兴趣
+        aoi:get_interest_me_entity(99997, tmp_list)
+        t_equal(tmp_list.n, 2)
         local move = aoi:update_entity(99999,max_width,max_height,tmp_list)
         t_assert(not move)
         t_equal(tmp_list.n, 1)

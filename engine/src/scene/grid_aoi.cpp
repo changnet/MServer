@@ -211,17 +211,20 @@ int32_t GridAOI::exit_entity(EntityId id, EntityVector *list)
     return ok ? 0 : -1;
 }
 
-// 处理实体退出某个范围
 void GridAOI::entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                                 int32_t dx, int32_t dy, EntityVector *list)
 {
-    uint8_t mask = ctx->_mask;
+    uint8_t interest = ctx->_mask & INTEREST;
 
-    each_range_entity(x, y, dx, dy, [list, ctx, mask](EntityCtx *other) {
-        if (is_interest(mask, other))
+    each_range_entity(x, y, dx, dy, [list, ctx, interest](EntityCtx *other) {
+        if (interest)
+        {
+            GridAOI::remove_entity_from_vector(other->_interest_me, ctx);
+        }
+        if (other->_mask & INTEREST)
         {
             GridAOI::remove_entity_from_vector(ctx->_interest_me, other);
-            GridAOI::remove_entity_from_vector(other->_interest_me, ctx);
+
             if (list) list->push_back(other);
         }
     });
@@ -262,15 +265,17 @@ int32_t GridAOI::enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask,
 void GridAOI::entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                                  int32_t dx, int32_t dy, EntityVector *list)
 {
-    uint8_t mask              = ctx->_mask;
+    uint8_t interest          = ctx->_mask & INTEREST;
     EntityVector *interest_me = ctx->_interest_me;
     each_range_entity(x, y, dx, dy,
-                      [list, ctx, interest_me, mask](EntityCtx *other) {
-                          // 加入到双方的interest列表
-                          if (GridAOI::is_interest(mask, other))
+                      [list, ctx, interest_me, interest](EntityCtx *other) {
+                          // 自己对其他实体感兴趣，就把自己加到对方列表，这样对方有变化时才会推送数据给自己
+                          if (interest) other->_interest_me->push_back(ctx);
+
+                          // 别人对其他实体感兴趣，把别人加到自己的列表，这样自己有变化才会发数据给对方
+                          if (other->_mask & INTEREST)
                           {
                               interest_me->push_back(other);
-                              other->_interest_me->push_back(ctx);
                           }
 
                           // 无论是否interest，都返回需要触发aoi事件的实体。假如玩家进入场景时，怪物对他不

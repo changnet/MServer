@@ -23,15 +23,15 @@ public:
     using EntityVector = std::vector<struct EntityCtx *>; // 实体列表
     using EntitySet    = std::unordered_map<EntityId, struct EntityCtx *>;
 
+    /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
+    static const int INTEREST = 0x1;
+
     /**
      * 场景中单个实体的类型、坐标等数据
      */
     struct EntityCtx
     {
-        /**
-         * @brief 掩码，按位表示，由上层定义
-         *
-         */
+        /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
         uint8_t _mask;
 
         uint16_t _pos_x; // 格子坐标，x
@@ -56,12 +56,6 @@ public:
     GridAOI(const GridAOI &&) = delete;
     GridAOI& operator=(const GridAOI&) = delete;
     GridAOI& operator=(const GridAOI&&) = delete;
-
-    /** 根据mask判断两个实体是否interest */
-    static inline bool is_interest(int32_t mask, const EntityCtx *ctx)
-    {
-        return mask & ctx->_mask;
-    }
 
     /** 根据像素坐标判断是否在同一个格子内 */
     bool is_same_pos(int32_t x, int32_t y, int32_t dx, int32_t dy)
@@ -145,10 +139,10 @@ private:
     /** 遍历矩形内的实体 */
     void each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
                            std::function<void(EntityCtx *)> &&func);
-    // 处理实体进入某个范围
+    /// 处理实体进入某个范围
     void entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                             int32_t dx, int32_t dy, EntityVector *list = nullptr);
-    // 处理实体退出某个范围
+    /// 处理实体退出某个范围
     void entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                            int32_t dx, int32_t dy, EntityVector *list = nullptr);
 
