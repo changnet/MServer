@@ -141,10 +141,17 @@ bool GridAOI::remove_entity_from_vector(EntityVector *list,
 
 bool GridAOI::remove_grid_entity(int32_t x, int32_t y, const struct EntityCtx *ctx)
 {
-    // TODO 当列表为空时，这里是否需要把数组从_entity_grid移除
-    // 如果是持久的副本，应该还会用到，如果是临时副本，一会儿就销毁了，好像移除也没多大作用
+    // 当列表为空时，把数组从_entity_grid移除放到池里复用
     EntityVector *list = _entity_grid[x + _width * y];
-    return list ? remove_entity_from_vector(list, ctx) : false;
+    if (!list) return false;
+
+    remove_entity_from_vector(list, ctx);
+    if (list->empty())
+    {
+        _entity_grid[x + _width * y] = nullptr;
+        del_entity_vector(list);
+    }
+    return true;
 }
 
 // 插入实体到格子内

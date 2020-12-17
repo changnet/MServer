@@ -125,7 +125,7 @@ int32_t LGridAoi::get_visual_entity(lua_State *L)
         return 0;
     }
 
-    // 获取旧视野
+    // 获取视野
     int32_t x = 0, y = 0, dx = 0, dy = 0;
     get_visual_range(x, y, dx, dy, ctx->_pos_x, ctx->_pos_y);
 

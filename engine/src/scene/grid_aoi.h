@@ -100,7 +100,7 @@ protected:
     void del_entity_vector(EntityVector *list)
     {
         // 太大的直接删除不要丢缓存，避免缓存消耗太多内存
-        get_vector_pool()->destroy(list, list->size() > 128);
+        get_vector_pool()->destroy(list, list->capacity() > 128);
     }
 
     EntityVector *new_entity_vector()

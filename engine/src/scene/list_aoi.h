@@ -104,7 +104,7 @@ private:
     void del_entity_vector(EntityVector *list)
     {
         // 太大的直接删除不要丢缓存，避免缓存消耗太多内存
-        get_vector_pool()->destroy(list, list->size() > 128);
+        get_vector_pool()->destroy(list, list->capacity() > 128);
     }
 
     EntityVector *new_entity_vector()
@@ -126,6 +126,7 @@ private:
     {
         struct EntityCtx *ctx = get_ctx_pool()->construct();
 
+        memset(ctx, 0, sizeof(*ctx));
         ctx->_interest_me = new_entity_vector();
 
         return ctx;
@@ -135,6 +136,40 @@ private:
     void add_fov(int32_t fov);
     /// 减少视野引用
     void dec_fov(int32_t fov);
+    /// 判断点(x,y,z)是否在ctx视野范围内
+    bool in_fov(EntityCtx *ctx, int32_t x, int32_t y, int32_t z)
+    {
+        // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
+        int32_t fov = ctx->_fov;
+        return fov >= std::abs(ctx->_pos_x - x)
+               && fov >= std::abs(ctx->_pos_z - z)
+               && (!_use_y || fov >= std::abs(ctx->_pos_y - y));
+    }
+
+    /// 把ctx插入到链表合适的地方
+    template <int32_t EntityCtx::*_pos, EntityCtx *EntityCtx::*_next,
+              EntityCtx *EntityCtx::*_prev>
+    void insert_list(EntityCtx *&list, EntityCtx *ctx)
+    {
+        if (!list)
+        {
+            list = ctx;
+            return;
+        }
+
+        EntityCtx *prev = list;
+        EntityCtx *next = list;
+        while (next && next->*_pos <= ctx->*_pos)
+        {
+            prev = next;
+            next = next->*_next;
+        }
+        // 把ctx插入到prev与next之间
+        prev->*_next = ctx;
+        ctx->*_prev  = prev;
+        ctx->*_next  = next;
+        if (next) next->*_prev = ctx;
+    }
 
 private:
     // 每个轴需要一个双链表

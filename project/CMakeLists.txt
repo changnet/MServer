@@ -18,7 +18,7 @@ project(MServer)
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    set(LIB_PREFIX "D:/cygwin64/bin/")
+    set(LIB_PREFIX "D:/cygwin64/")
     message("Using CYGWIN LIBRARY ${LIB_PREFIX}")
 endif()
 

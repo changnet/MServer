@@ -9,7 +9,7 @@ ListAOI::ListAOI()
     _first_z = nullptr;
     _last_z  = nullptr;
 
-    _use_y = true;
+    _use_y   = true;
     _max_fov = 0;
 }
 
@@ -39,7 +39,42 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     ctx->_pos_z = z;
     ctx->_fov   = fov;
 
-    add_fov(fov);
+    add_fov(fov); // 记录视野
+
+    // 分别插入三轴链表
+    insert_list<&EntityCtx::_pos_x, &EntityCtx::_next_x, &EntityCtx::_prev_x>(
+        _first_x, ctx);
+    if (_use_y)
+    {
+        insert_list<&EntityCtx::_pos_y, &EntityCtx::_next_y, &EntityCtx::_prev_y>(
+            _first_x, ctx);
+    }
+    insert_list<&EntityCtx::_pos_z, &EntityCtx::_next_z, &EntityCtx::_prev_z>(
+        _first_x, ctx);
+
+    // 建立interest me列表
+    int32_t prev_fov = x - _max_fov;
+    int32_t next_fov = x + _max_fov;
+    EntityCtx *prev  = ctx->_prev_x;
+    while (prev && prev->_pos_x >= prev_fov)
+    {
+        if (in_fov(prev, x, y, z))
+        {
+            ctx->_interest_me->emplace_back(prev);
+        }
+        if (list) list->emplace_back(prev);
+        prev = prev->_prev_x;
+    }
+    EntityCtx *next = ctx->_next_x;
+    while (next && next->_pos_x <= next_fov)
+    {
+        if (in_fov(next, x, y, z))
+        {
+            ctx->_interest_me->emplace_back(next);
+        }
+        if (list) list->emplace_back(next);
+        next = next->_next_x;
+    }
     return true;
 }
 
