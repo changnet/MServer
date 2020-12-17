@@ -1,4 +1,7 @@
 -- 导出引擎中的接口
+
+-- 在project目录执行 lua engine_api.lua
+
 -- 用于代码提示和luacheck
 --[[
 需要导出的注释，必须按doxygen格式，如下
@@ -138,6 +141,7 @@ end
 
 -- 从lstate.cpp中解析要导出的api
 local function parse_lib_class()
+    print("parse " .. dir .. entrance)
     local last_class
     for line in io.lines(dir .. entrance) do
         last_class = parse_line(line, last_class)
@@ -146,17 +150,18 @@ end
 
 -- 查找注释的类、函数、常量
 local function parse_comment_name(line, last_comment)
+    -- 类声明
     local class_name = string.match(line, "^class ([_%w]+)")
     if class_name then
         last_comment.class_name = class_name
         return true
     end
 
-    -- try int32_t test(lua_State *L)
+    -- 函数声明 int32_t test(lua_State *L)
     local define_name = string.match(
         line, "^%s*[static]*%s*int32_t%s+([_%w]+)%(lua_State %*L%)")
     if not define_name then
-        -- try int32_t Class::test(lua_State *L)
+        -- 函数实现 int32_t Class::test(lua_State *L)
         define_name = string.match(
         line, "^%s*[static]*%s*int32_t%s+[_%w]+::([_%w]+)%(lua_State %*L%)")
     end
@@ -165,16 +170,14 @@ local function parse_comment_name(line, last_comment)
         return true
     end
 
-    -- 必须是空行，不然这个注释不是类、lua函数、常量的注释，没用的
-    print(line)
-    assert(string.match(line, "^%s*$"))
+    -- 这个注释不是需要导出的格式，没用的
 
     return false
 end
 
--- 从一行代码中解析注释
+-- 从一行代码中解析注释(仅支持doxgen格式的注释，所以需要导出的，都必须用这个格式)
 local function parse_comment_line(line, last_comment)
-    -- 查找多行注释开始
+    -- 查找多行注释开始 /**
     if not last_comment then
         local beg_cmt = string.match(line, "^%s*/%*%*")
         if beg_cmt then
@@ -182,7 +185,7 @@ local function parse_comment_line(line, last_comment)
             return last_comment
         end
 
-        -- 查找单行注释
+        -- 查找单行注释 ///
         local single_name, single_val, single_cmt =
             string.match(line, "^%s*([_%w]+)(.+)///<%s*(.+)")
         if single_name then
@@ -205,7 +208,7 @@ local function parse_comment_line(line, last_comment)
         return last_comment, done
     end
 
-    -- 查找多行注释是否结束
+    -- 查找多行注释是否结束 */
     local end_cmt = string.match(line, "^%s*%*/")
     if end_cmt then
         last_comment.pending = true
@@ -230,6 +233,7 @@ end
 -- 这个库所在的文件，并且这个文件里所有通过dexygen注释导出的函数，都是这个库的接
 -- 口
 local function check_lib(line)
+    -- 查找 int32_t foo(lua_State L) 这种格式的函数
     for lib_name, lib in pairs(libs) do
         if string.match(line,
             "^int32_t%s+" .. lib.raw .. "%s*%(lua_State%s+%*L%)") then
@@ -242,6 +246,7 @@ end
 
 -- 从单个文件中解析出注释
 local function parse_file(file)
+    print("parse file " .. file)
     --[[
         目前需要导出的注释是按doxygen标准的
         分两种:
@@ -258,6 +263,7 @@ local function parse_file(file)
     for line in io.lines(file) do
         local lib_name = check_lib(line, file)
         if lib_name then
+            print("parse library found", lib_name)
             assert(not last_comment)
             libs[lib_name].cmts = cur_comment
         else
@@ -269,6 +275,7 @@ local function parse_file(file)
                     cur_comment = {}
                     classes[name].cmts = cur_comment;
                     classes[name].class_cmt = last_comment
+                    print("parse library done", name)
                 else
                     last_comment.pending = nil
                     table.insert(cur_comment, last_comment)
@@ -404,9 +411,9 @@ end
 
 local beg = os.clock()
 
-parse_lib_class()
-parse_comment()
-export_lib()
-export_class()
+parse_lib_class() -- 解析入口文件，查找所有需要导出的函数、变量
+parse_comment() -- 从各个文件解析对应函数的注释
+export_lib() -- 导出库注释，如util
+export_class() -- 导出类注释(需要创建对象，只能以:调用)
 
 print("export done, time " .. os.clock() - beg)

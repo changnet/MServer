@@ -61,8 +61,7 @@ public:
     /**
      * 设置socket的编译方式
      * @param conn_id 连接id
-     * @param codec_type
-     * 编码类型，见codec.h中的定义(bson、protobuf、flatbuffers...)
+     * @param codec_type 编码类型，见codec.h中的定义(bson、protobuf、flatbuffers...)
      */
     int32_t set_conn_codec(lua_State *L);
 
@@ -216,8 +215,7 @@ public:
      * @param conn_id 网关连接id
      * @param chunk_max 缓冲区数量
      * @param chunk_size 单个缓冲区大小
-     * @param action
-     * 缓冲区溢出处理方式，见socket.h中OverActionType定义(1断开，2阻塞)
+     * @param action 缓冲区溢出处理方式，见socket.h中OverActionType定义(1断开，2阻塞)
      */
     int32_t set_send_buffer_size(lua_State *L);
 

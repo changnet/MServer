@@ -13,6 +13,7 @@ LAcism::LAcism(lua_State *L)
     _patt.ptr = NULL;
     _patt.len = 0;
 
+    UNUSED(L);
     memset(&_memrpl, 0, sizeof(MemRpl));
 }
 
@@ -64,7 +65,8 @@ int32_t LAcism::on_replace(int32_t strnum, int32_t textpos, void *context)
 
 int32_t LAcism::do_replace(int32_t strnum, int32_t textpos)
 {
-    ASSERT((size_t) textpos >= _memrpl.text_pos, "acism do_replace buffer error");
+    ASSERT((size_t)textpos >= _memrpl.text_pos,
+           "acism do_replace buffer error");
 
     //匹配到的单词长度
     size_t pattv_len = _pattv[strnum].len;
@@ -82,8 +84,8 @@ int32_t LAcism::do_replace(int32_t strnum, int32_t textpos)
         return 0;
     }
 
-    size_t str_len   = textpos - pattv_len - _memrpl.text_pos;
-    size_t mem_len   = str_len + _memrpl.word_len + _memrpl.rpl_len;
+    size_t str_len = textpos - pattv_len - _memrpl.text_pos;
+    size_t mem_len = str_len + _memrpl.word_len + _memrpl.rpl_len;
 
     /* 重新分配替换后的内存，必须是<=，防止mem_len为0的情况 */
     if (_memrpl.rpl_size <= mem_len) _memrpl.reserved(mem_len);

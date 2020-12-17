@@ -213,7 +213,7 @@ end
 function Network_mgr:close(conn_id, flush)
 end
 
--- 获取某个连接的ip地址 TODO: 未实现
+-- 获取某个连接的ip地址
 -- @param conn_id 网关连接id
 function Network_mgr:address(conn_id)
 end
