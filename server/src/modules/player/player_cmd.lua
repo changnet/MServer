@@ -66,7 +66,7 @@ if "gateway" == g_app.srvname then
 end
 
 if "world" == g_app.srvname then
-    player_clt_cb( PLAYER.ENTERFUBEN, Player.enter_fuben )
+    player_clt_cb( PLAYER.ENTERDUNGEON, Player.enter_dungeon )
     player_mgr_clt_cb( PLAYER.ENTER,g_player_mgr.on_enter_world,true )
 
     player_mgr_srv_cb( SYS.PLAYER_OFFLINE,g_player_mgr.on_player_offline )

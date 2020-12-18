@@ -95,7 +95,7 @@ message SUpdateRes
 }
 
 // 玩家进入副本
-message CEnterFuben
+message CEnterDungeon
 {
     int32 id = 1; // 副本id
 }

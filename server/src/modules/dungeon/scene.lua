@@ -18,6 +18,11 @@ local Scene = oo.class( ... )
 local tmp_list = {}
 local g_entity_mgr = g_entity_mgr
 
+-- 获取场景配置
+function Scene:get_conf(id)
+    return scene_conf[id]
+end
+
 function Scene:__init(id,dungeon_id,dungeon_hdl)
     self.id = id
     self.dungeon_id  = dungeon_id
@@ -108,7 +113,7 @@ function Scene:entity_enter(entity,pix_x,pix_y)
     -- 先退出旧场景
     local old_scene = entity:get_scene()
     if old_scene then
-        ASSERT(old_scene ~= self,self.dungeon_id,self.id)
+        -- ASSERT(old_scene ~= self,self.dungeon_id,self.id)
         old_scene:entity_exit(entity)
     end
 

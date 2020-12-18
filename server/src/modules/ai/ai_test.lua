@@ -41,7 +41,7 @@ function AiTest:routine(ms_now)
     test:chat(self)
     test:ping(self)
     move:random_move(self)
-    move:switch_fuben(self)
+    move:switch_dungeon(self)
 end
 
 return AiTest

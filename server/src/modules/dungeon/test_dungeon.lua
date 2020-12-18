@@ -24,13 +24,13 @@ function TestDungeon:do_enter(pid,fb_id)
 
     local dungeon = g_dungeon_mgr:get_dungeon(handle)
 
-    dungeon:enter( player,dungeon:first_scene(),px,py )
+    dungeon:enter( player,dungeon:first_scene_id(),px,py )
 end
 
 local test = TestDungeon()
 
-local function enter_fuben(pid,fb_id)
+local function enter_test_dungeon(pid,fb_id)
     return test:do_enter(pid,fb_id)
 end
 
-g_rpc:declare("enter_test_dungeon",enter_fuben)
+g_rpc:declare("enter_test_dungeon",enter_test_dungeon)

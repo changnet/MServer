@@ -28,7 +28,7 @@ return
         sport = 10001,       -- s2s监听端口
         cip   = "::", -- c2s监听ip，在virtualbox的端口转发模式下，127.0.0.1转发不成功
         cport = 10002,       -- s2s监听端口
-        hip   = "::1", -- http监听ip
+        hip   = "::", -- http监听ip
         hport = 10003,       -- http监听端口
 
     },

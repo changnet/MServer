@@ -106,10 +106,9 @@ end
 
 -- 初始化场景属性
 function Loginout:on_init_property( entity,errno,pkt )
-    ASSERT( nil == entity.handle,"on_init_property already have handle")
+    -- 切换进程时，这里的数据会重新下发
 
     entity.handle = pkt.handle
-    PRINTF("%s init handle %d", entity.name, entity.handle)
 end
 
 -- 被顶号

@@ -169,12 +169,13 @@ function Player:on_login()
     -- 同步战斗属性到场景
     self.abt_sys:update_battle_abt( conn )
     -- 实体进入场景
-    g_rpc:proxy(conn):player_init_scene( self.pid,0,1,1,1 )
+    g_rpc:proxy(conn):player_init_scene(self.pid, nil, 0)
 
     g_log_mgr:login_or_logout( self.pid,LOG.LOGIN )
 
     self:set_session( conn.session )
 
+    self:send_pkt( PLAYER.ENTER,{} ) -- 通知前端玩家所有数据初始化完成已进入场景
     return true
 end
 
@@ -266,7 +267,7 @@ function Player:set_sys_abt( id,abt_list )
 end
 
 -- 进入某个副本
-function Player:enter_fuben( pkt )
+function Player:enter_dungeon( pkt )
     local id = pkt.id
     -- 先到对应的进程检测是否能够进入对应的副本，这里只是测试不用检测
 
@@ -288,13 +289,16 @@ function Player:enter_fuben( pkt )
         self.base:update( conn )
         -- 同步战斗属性到场景
         self.abt_sys:update_battle_abt( conn )
+        -- 在另一个进程初始化玩家场景
+        g_rpc:proxy(conn):player_init_scene(self.pid, nil, id)
+    else
+        -- 在同一进程，直接进入场景
+        g_rpc:proxy(conn):player_enter_dungeon( self.pid,id )
     end
-    -- 实体进入场景
-    g_rpc:proxy(conn):enter_test_dungeon( self.pid,id )
 
     self:set_session( session )
 
-    PRINT("player enter fuben",self.pid,id)
+    PRINT("player enter dungeon",self.pid,id)
 end
 
 return Player

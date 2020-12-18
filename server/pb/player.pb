@@ -1,5 +1,5 @@
 
-Ù
+Û
 player.protoplayer"
 	SSOffline
 pid (Rpid" 
@@ -37,6 +37,6 @@
 
 SUpdateRes
 res_type (RresType
-val (Rval"
-CEnterFuben
+val (Rval"
+CEnterDungeon
 id (Ridbproto3

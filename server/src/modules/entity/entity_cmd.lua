@@ -51,29 +51,40 @@ local function player_exit( pid )
     PRINT("area player exit:",pid)
 end
 
--- 玩家进入场景
+-- 玩家进入副本
+local function player_enter_dungeon(
+    pid, dungeon_hdl, dungeon_id, scene_id, x, y)
+    local player = g_entity_mgr:get_player(pid)
+    if not player then
+        ERROR("player_enter_dungeon no player found",pid)
+        return
+    end
+
+    g_dungeon_mgr:enter_dungeon(player, dungeon_hdl, dungeon_id, scene_id, x, y)
+end
+
+-- 玩家首次进入场景(跨进程切换副本也走这里)
 -- 在进入场景之前，必须已经同步玩家必要的数据(外显、战斗属性等)
-local function player_init_scene( pid,dungeon_id,scene_id,pix_x,pix_y )
+-- @param dungeon_hdl 副本句柄，用于进入特定副本
+-- @param dungeon_id 副本Id，用于进入特定的静态副本
+local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = g_entity_mgr:get_player(pid)
     if not player then
         ERROR("player_init_scene no player found",pid)
         return
     end
 
-    -- 下发实体属性
+    -- 下发场景相关实体属性
     player:send_property()
 
-    -- TODO:这里只进入测试场景
-    local px = math.random(0,128*64)
-    local py = math.random(0,64*64)
-    g_dungeon_mgr:enter_static_scene(player,scene_id,px,py)
+    g_dungeon_mgr:enter_dungeon(player, dungeon_hdl, dungeon_id, scene_id, x, y)
 
-    player:send_pkt( PLAYER.ENTER,{} )
-    PRINT("player init scene",pid,scene_id,px,py)
+    PRINT("player init scene",pid, scene_id, x, y)
 end
 
 g_rpc:declare( "player_exit",player_exit )
 g_rpc:declare( "player_init_scene",player_init_scene )
+g_rpc:declare( "player_enter_dungeon",player_enter_dungeon )
 g_rpc:declare( "player_update_base",player_update_base )
 g_rpc:declare( "player_update_battle_abt",player_update_battle_abt )
 

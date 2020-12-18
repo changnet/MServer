@@ -59,8 +59,8 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
         s = "player.SUpdateRes", i = 7
     },
     -- 进入副本
-    ENTERFUBEN = {
-        c = "player.CEnterFuben", i = 8
+    ENTERDUNGEON = {
+        c = "player.CEnterDungeon", i = 8
     },
 }
 

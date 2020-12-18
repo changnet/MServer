@@ -4,8 +4,8 @@ local MT = require "modules.move.move_header"
 
 local Move = oo.class( ... )
 
-local FB_MIN_SEC = 20
-local FB_MAX_SEC = 35
+local DG_MIN_SEC = 30
+local DG_MAX_SEC = 180
 
 -- 随机移动
 -- 这个是机器人用来模拟客户端移动的。怪物AI是直接在服务器移动，不能用这个
@@ -78,24 +78,24 @@ function Move:on_update_pos(entity,errno,pkt)
 end
 
 -- 切换副本，测试玩家在进程中切换
-function Move:switch_fuben(ai)
+function Move:switch_dungeon(ai)
     local now = ev:time()
-    if not ai.fuben_time then
-        ai.fuben_time = now + math.random(FB_MIN_SEC,FB_MAX_SEC)
+    if not ai.dungeon_time then
+        ai.dungeon_time = now + math.random(DG_MIN_SEC,DG_MAX_SEC)
     end
 
-    if ai.fuben_time > now then return end
+    if ai.dungeon_time > now then return end
 
     -- 随机切换一个副本
     local id = math.random(1,10)
     if id == (ai.fb_id or 0) then return end
 
-    ai.entity:send_pkt( PLAYER.ENTERFUBEN,{ id = id } )
-    ai.fuben_time = now + math.random(FB_MIN_SEC, FB_MIN_SEC)
+    ai.entity:send_pkt( PLAYER.ENTERDUNGEON,{ id = id } )
+    ai.dungeon_time = now + math.random(DG_MIN_SEC, DG_MAX_SEC)
 
     ai.fb_id = id
     local entity = ai.entity
-    PRINT("switch to new fuben",entity.name,id)
+    PRINT("switch to new dungeon",entity.name,id)
 end
 
 -- ************************************************************************** --
