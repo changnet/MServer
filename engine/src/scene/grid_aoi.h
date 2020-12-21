@@ -80,7 +80,7 @@ public:
 
     /**
      * 更新实体位置
-     * @param list 接收实体更新的实体列表
+     * @param list 接收实体更新的实体列表(mask & 0x1，一般是玩家)
      * @param list_in 接收实体进入的实体列表
      * @param list_out 接收实体消失的实体列表
      * @return <0错误，0正常，>0正常，但做了特殊处理

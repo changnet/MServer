@@ -184,19 +184,17 @@ int32_t GridAOI::exit_entity(EntityId id, EntityVector *list)
     struct EntityCtx *ctx = iter->second;
     _entity_set.erase(iter);
 
-    if (!ctx) return 2;
     bool ok = remove_grid_entity(ctx->_pos_x, ctx->_pos_y, ctx);
 
     // 是否需要返回关注自己离开场景的实体列表
     EntityVector *interest_me = ctx->_interest_me;
-    if (list && interest_me)
+    if (list)
     {
         list->insert(list->end(), interest_me->begin(), interest_me->end());
     }
 
-    // 从别人的interest_me列表删除
-    // 自己关注event才有可能出现在别人的interest列表中
-    if (ctx->_mask)
+    // 从别人的interest_me列表删除(自己关注event才有可能出现在别人的interest列表中)
+    if (ctx->_mask & INTEREST)
     {
         int32_t x = 0, y = 0, dx = 0, dy = 0;
         get_visual_range(x, y, dx, dy, ctx->_pos_x, ctx->_pos_y);
@@ -365,7 +363,12 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
         return -1;
     }
 
-    if (list) get_range_entity(list, it_x, it_y, it_dx, it_dy);
+    if (list)
+    {
+        each_range_entity(it_x, it_y, it_dx, it_dy, [list](EntityCtx *other) {
+            if (other->_mask & INTEREST) list->emplace_back(other);
+        });
+    }
 
     for (int32_t ix = old_x; ix <= old_dx; ix++)
     {

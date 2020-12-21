@@ -74,7 +74,7 @@ public:
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
      * @param mask 实体掩码
-     * @param tbl [optional]周围关注此实体进入事件的实体存放在此table中，数量设置在n字段
+     * @param tbl [optional]视野内新增实体存放在此table中，数量设置在n字段
      */
     int32_t enter_entity(lua_State *L);
 
@@ -84,8 +84,8 @@ public:
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
      * @param tbl [optional]周围关注此实体更新事件的实体存放在此table中，数量设置在n字段
-     * @param into [optional]周围关注此实体出现事件的实体存放在此table中，数量设置在n字段
-     * @param out [optional]周围关注此实体消失事件的实体存放在此table中，数量设置在n字段
+     * @param into [optional]视野内新增实体存放在此table中，数量设置在n字段
+     * @param out [optional]视野内消失实体存放在此table中，数量设置在n字段
      */
     int32_t update_entity(lua_State *L);
 
