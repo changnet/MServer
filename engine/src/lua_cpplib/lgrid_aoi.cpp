@@ -212,18 +212,15 @@ int32_t LGridAoi::update_entity(lua_State *L)
     int32_t x = (int32_t)luaL_checknumber(L, 2);
     int32_t y = (int32_t)luaL_checknumber(L, 3);
 
-    EntityVector *list     = nullptr;
     EntityVector *list_in  = nullptr;
     EntityVector *list_out = nullptr;
 
-    if (lua_istable(L, 4)) list = new_entity_vector();
-    if (lua_istable(L, 5)) list_in = new_entity_vector();
-    if (lua_istable(L, 6)) list_out = new_entity_vector();
+    if (lua_istable(L, 4)) list_in = new_entity_vector();
+    if (lua_istable(L, 5)) list_out = new_entity_vector();
 
-    int32_t ecode = GridAOI::update_entity(id, x, y, list, list_in, list_out);
-    if (0 > ecode)
+    int32_t ecode = GridAOI::update_entity(id, x, y, list_in, list_out);
+    if (0 != ecode)
     {
-        if (list) del_entity_vector(list);
         if (list_in) del_entity_vector(list_in);
         if (list_out) del_entity_vector(list_out);
 
@@ -234,25 +231,19 @@ int32_t LGridAoi::update_entity(lua_State *L)
         lua_pushinteger(L, ctx->_id);
         return true;
     };
-    if (list)
-    {
-        table_pack(L, 4, *list, filter);
-        del_entity_vector(list);
-    }
+
     if (list_in)
     {
-        table_pack(L, 5, *list_in, filter);
+        table_pack(L, 4, *list_in, filter);
         del_entity_vector(list_in);
     }
     if (list_out)
     {
-        table_pack(L, 6, *list_out, filter);
+        table_pack(L, 5, *list_out, filter);
         del_entity_vector(list_out);
     }
 
-    // 1表示该实体移动幅度过小，格子位置没有变化
-    lua_pushboolean(L, 1 != ecode);
-    return 1;
+    return 0;
 }
 
 // 两个位置在aoi中是否一致

@@ -169,11 +169,10 @@ local function update(aoi, id,x,y)
     entity.x  = x
     entity.y  = y
 
-    aoi:update_entity(id,x,y,tmp_list,list_in,list_out)
+    aoi:update_entity(id,x,y,list_in,list_out)
     -- PRINT("update pos", id, x, y, tmp_list.n, list_in.n, list_out.n )
 
     if is_valid then
-        valid_visual_list(entity,tmp_list)
         valid_in(entity, list_in)
         valid_out(entity, list_out)
         valid_interest_me(aoi, entity)
@@ -293,10 +292,9 @@ t_describe("test grid aoi", function()
         -- 对于怪物或者npc而言，应该有两个玩家对自己感兴趣
         aoi:get_interest_me_entity(99997, tmp_list)
         t_equal(tmp_list.n, 2)
-        local move = aoi:update_entity(99999,max_width,max_height,tmp_list)
-        t_assert(not move)
-        t_equal(tmp_list.n, 1)
-        t_equal(tmp_list[1], 99996)
+        aoi:update_entity(99999,max_width,max_height,list_in, list_out)
+        t_equal(list_in.n, 0)
+        t_equal(list_out.n, 0)
 
         -- 测试离开视野(临界值)
         update(aoi, 99996, max_width, max_height - visual_height - pix)

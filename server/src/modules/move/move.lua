@@ -150,7 +150,7 @@ function Move:moving( ms_now,no_time_chk )
     entity.pix_x = new_x
     entity.pix_y = new_y
 
-    scene.aoi:update_entity(entity.eid,new_x,new_y,nil,list_in,list_out)
+    scene.aoi:update_entity(entity.eid,new_x,new_y,list_in,list_out)
 
     -- 这些玩家看不到我了，告诉他们我消失了
     scene:broadcast_entity_disappear(entity,list_out)
