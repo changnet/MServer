@@ -61,7 +61,6 @@ end
 function Scene:broadcast_entity_appear(entity,eid_list,way)
     if eid_list.n <= 0 then return end
 
-
     local pid_list = {}
     local is_player = (ET.PLAYER == entity.et)
 
@@ -130,22 +129,32 @@ function Scene:entity_enter(entity,pix_x,pix_y)
     return self:broadcast_entity_appear(entity,tmp_list)
 end
 
--- 广播实体消失
--- @eid_list:eid列表，包含n字段表示数量
+-- 通知eid_list中的玩家，entity在视野中消失
+-- @param eid_list eid列表，包含n字段表示数量
 local exit_pkt = {}
-function Scene:broadcast_entity_disappear(entity,eid_list,way)
+function Scene:broadcast_entity_disappear(entity, eid_list, way, to_me)
     if eid_list.n <= 0 then return end
+
+    -- 是否通知自己(如果是下线、退出场景不用通知自己)
+    to_me = (to_me and ET.PLAYER == entity.et) and true or false
+
+    exit_pkt.way = way -- 退出方式，前端可根据该方式做特效
 
     -- 广播给周边的玩家该实体消失了
     local pid_list = {}
     for idx = 1,eid_list.n do
-        local tmp_entity = g_entity_mgr:get_entity( eid_list[idx] )
+        local eid = eid_list[idx]
+        local tmp_entity = g_entity_mgr:get_entity(eid)
 
         assert( ET.PLAYER == tmp_entity.et and tmp_entity.pid )
         table.insert( pid_list,tmp_entity.pid )
+
+        if to_me then
+            exit_pkt.handle = eid
+            entity:send_pkt(ENTITY.DISAPPEAR,exit_pkt)
+        end
     end
 
-    exit_pkt.way = 0 -- 如何退出
     exit_pkt.handle = entity.eid
     -- 1表示底层按玩家pid广播
     return g_network_mgr:clt_multicast(1,pid_list,ENTITY.DISAPPEAR,exit_pkt)

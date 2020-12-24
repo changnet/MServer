@@ -152,10 +152,10 @@ function Move:moving( ms_now,no_time_chk )
 
     scene.aoi:update_entity(entity.eid,new_x,new_y,list_in,list_out)
 
-    -- 这些玩家看不到我了，告诉他们我消失了
-    scene:broadcast_entity_disappear(entity,list_out)
-    -- 这些玩家看到我出现了
-    scene:broadcast_entity_appear(entity,list_in)
+    -- 通知客户端，这些玩家看不到我了，我也看不到他们了
+    scene:broadcast_entity_disappear(entity,list_out, 0, true)
+    -- 通知客户端，这些玩家看到我出现了，我也看到他们出现
+    scene:broadcast_entity_appear(entity,list_in, 0)
 
     return true
 end
