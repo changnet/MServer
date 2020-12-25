@@ -6,13 +6,11 @@
 #include <cstdlib>     /* c lib like malloc */
 #include <cstring>     /* memset memcpy */
 #include <ctime>       /* time function */
-#include <iostream>    /* c++ base support */
 #include <limits.h>    /* PATH_MAX */
 #include <sys/types.h> /* linux sys types like pid_t */
 #include <unistd.h>    /* POSIX api */
 
 // 常用的头文件，避免需要手动include
-#include <string>
 #include <vector>
 #include <algorithm>
 #include <unordered_map>

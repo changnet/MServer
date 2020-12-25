@@ -40,15 +40,15 @@ public:
         template<int32_t Ctx::*_pos>
         int32_t comp(const Ctx *other) const
         {
-            // 当坐标一致时，不同类型的节点在链表中有特定的位置，必须按
-            // 左边界>>>实体>>>右边界 这个顺序排列，不然移动视野边界的时候就可能会漏掉一些实体
             if (this->*_pos > other->*_pos)
             {
                 return 1;
             }
             else if (this->*_pos == other->*_pos)
             {
-                return type() - other->type();
+                // 当坐标一致时，不同类型的节点在链表中有特定的位置，必须按
+                // 左边界>>>实体>>>右边界 这个顺序排列，不然移动视野边界的时候就可能会漏掉一些实体
+                return other->type() - type();
             }
             return -1;
         }
@@ -172,6 +172,10 @@ private:
     void each_range_entity(Ctx *ctx, int32_t visual,
                            std::function<void (EntityCtx *ctx)> &&func);
 
+    /**
+     * 实体other进入ctx的视野范围
+     */
+    void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in);
     CtxPool *get_ctx_pool()
     {
         static thread_local CtxPool ctx_pool("link_aoi_ctx");
@@ -232,20 +236,7 @@ private:
 
     /// 把ctx从链表中删除
     template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
-    void remove_list(Ctx *&list, Ctx *ctx)
-    {
-        Ctx *prev = ctx->*_prev;
-        Ctx *next = ctx->*_next;
-        if (prev)
-        {
-            prev->*_next = next;
-        }
-        else
-        {
-            list = next;
-        }
-        if (next) next->*_prev = prev;
-    }
+    void remove_list(Ctx *&list, Ctx *ctx);
 
 private:
     // 每个轴需要一个双链表
@@ -259,7 +250,6 @@ private:
      */
     bool _use_y;
 
-    int32_t _max_visual;   /// 场景中最大的视野半径
     EntitySet _entity_set; /// 记录所有实体的数据
 };
 
@@ -287,4 +277,20 @@ void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *)> &&fu
     ctx->*_prev  = prev;
     ctx->*_next  = next;
     if (next) next->*_prev = ctx;
+}
+
+template <ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
+void ListAOI::remove_list(Ctx *&list, Ctx *ctx)
+{
+    Ctx *prev = ctx->*_prev;
+    Ctx *next = ctx->*_next;
+    if (prev)
+    {
+        prev->*_next = next;
+    }
+    else
+    {
+        list = next;
+    }
+    if (next) next->*_prev = prev;
 }
