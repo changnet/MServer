@@ -33,6 +33,10 @@ public:
         virtual int32_t type() const = 0;
         virtual EntityCtx *entity() { return nullptr; }
 
+        /**
+         * 对比两个节点的位置大小
+         * @return int32_t 左边<0，等于0，右边>0
+         */
         template<int32_t Ctx::*_pos>
         int32_t comp(const Ctx *other) const
         {
@@ -224,7 +228,7 @@ private:
 
     /// 把ctx插入到链表合适的地方
     template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
-    void insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *ctx)> *func);
+    void insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *ctx)> &&func);
 
     /// 把ctx从链表中删除
     template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
@@ -261,7 +265,7 @@ private:
 
 template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
           ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *ctx)> *func)
+void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *)> &&func)
 {
     if (!list)
     {
@@ -273,7 +277,7 @@ void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *ctx)> *
     Ctx *next = list;
     while (next && ctx->comp<_pos>(next) < 0)
     {
-        if (func) (*func)(next);
+        if (func) func(next);
 
         prev = next;
         next = next->*_next;

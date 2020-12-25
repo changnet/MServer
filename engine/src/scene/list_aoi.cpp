@@ -111,8 +111,41 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     bool interest = mask & INTEREST;
 
     // 分别插入三轴链表
-    insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(_first_x, ctx,
-                                                            nullptr);
+
+    // 先插入x轴左边界
+    insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
+        _first_x, &(ctx->_prev_v), nullptr);
+    // 插入x轴实体，并建立建立interest me列表
+    Ctx *prev_v = &(ctx->_prev_v);
+    insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
+        prev_v, ctx,
+        [this, ctx, list_me_in, list_other_in, interest, x, y, z](Ctx *other) {
+            int32_t type = other->type();
+            // 进入对方视野范围
+            if (CT_VISUAL_PREV == type)
+            {
+                EntityCtx *entity = other->entity();
+                if (in_visual(entity, x, y, z))
+                {
+                    if (entity->_mask & INTEREST)
+                    {
+                        ctx->_interest_me->emplace_back(entity);
+                    }
+                    if (list_other_in) list_other_in->emplace_back(entity);
+                }
+            }
+
+            // 对方进入我的视野范围
+            if (CT_ENTITY == type
+                && in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
+            {
+                if (interest)
+                {
+                    ((EntityCtx *)other)->_interest_me->push_back(ctx);
+                }
+                if (list_me_in) list_me_in->emplace_back((EntityCtx *)other);
+            }
+        });
     if (_use_y)
     {
         insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(_first_x, ctx,
