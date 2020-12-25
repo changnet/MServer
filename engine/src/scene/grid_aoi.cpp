@@ -312,7 +312,11 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
     if (!valid_pos(gx, gy, gx, gy)) return -1;
 
     struct EntityCtx *ctx = get_entity_ctx(id);
-    if (!ctx) return -2;
+    if (!ctx)
+    {
+        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        return -2;
+    }
 
     // 在同一个格子内移动AOI这边其实不用做任何处理
     if (gx == ctx->_pos_x && gy == ctx->_pos_y)

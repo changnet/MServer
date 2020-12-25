@@ -21,6 +21,7 @@ void ListAOI::EntityCtx::reset()
 
     _mask        = 0;
     _id          = 0;
+    _tick        = 0;
     _interest_me = nullptr;
 
     _next_v.reset();
@@ -36,11 +37,21 @@ ListAOI::ListAOI()
     _first_z = nullptr;
 
     _use_y      = true;
+    _tick       = 1; // 不能为0，不可以与EntityCtx中_tick的默认值一致
 }
 
 ListAOI::~ListAOI()
 {
     for (auto &iter : _entity_set) del_entity_ctx(iter.second);
+}
+
+// 获取实体的ctx
+struct ListAOI::EntityCtx *ListAOI::get_entity_ctx(EntityId id)
+{
+    EntitySet::const_iterator itr = _entity_set.find(id);
+    if (_entity_set.end() == itr) return nullptr;
+
+    return itr->second;
 }
 
 bool ListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx *ctx)
@@ -247,8 +258,107 @@ int32_t ListAOI::exit_entity(EntityId id, EntityVector *list)
 }
 
 int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
-                               EntityVector *list, EntityVector *list_in,
-                               EntityVector *list_out)
+                               EntityVector *list_me_in,
+                               EntityVector *list_other_in,
+                               EntityVector *list_me_out,
+                               EntityVector *list_other_out)
 {
+    struct EntityCtx *ctx = get_entity_ctx(id);
+    if (!ctx)
+    {
+        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        return -1;
+    }
+
+    _tick ++;
+    if (_tick == 0x7FFFFFFF)
+    {
+        _tick = 1;
+        for (auto iter = _entity_set.begin(); iter != _entity_set.end(); iter ++)
+        {
+            iter->second->_tick = 0;
+        }
+    }
+
+    // 先设置新坐标，这样方便检测
+    int32_t old_x = ctx->_pos_x;
+    int32_t old_y = ctx->_pos_y;
+    int32_t old_z = ctx->_pos_z;
+    ctx->_pos_x = x;
+    ctx->_pos_y = y;
+    ctx->_pos_z = z;
+
+    if (x > ctx->_pos_x)
+    {
+        // 向右移动视野的右边界，处理实体出现在我的视野
+        shift_list_next(&(ctx->_next_v), [this, ctx](Ctx *other) {
+            if (CT_ENTITY != other->type() || ((EntityCtx *)other)->_tick == _tick) return;
+
+            ((EntityCtx *)other)->_tick = _tick;
+            on_enter_range(other, ctx, list_me_in);
+        });
+
+        shift_list_next(ctx, [this, ctx, old_x, old_y, old_z](Ctx *other) {
+            if (other->_tick == _tick) return;
+
+            int32_t type = other->type();
+            if (CT_ENTITY == type) return;
+
+            EntityCtx *entity = other->entity();
+            if (entity->_tick == _tick) return;
+            other->_tick = _tick;
+            if (CT_VISUAL_NEXT == type)
+            {
+                // 从对方视野消失
+                if (in_visual(entity, old_x, old_y, old_z, ctx->_visual))
+                {
+                    remove_entity_from_vector(ctx->_interest_me, entity);
+                    if (list_other_out) list_other_out->emplace_back(entity);
+                }
+            }
+            else if (CT_VISUAL_PREV == type)
+            {
+                // 从对方视野出现
+                on_enter_range(ctx, other, list_other_in);
+            }
+        });
+
+        shift_list_next(&(ctx->_prev_v),
+            [this, ctx, old_x, old_y, old_z](Ctx *other) {
+            if (CT_ENTITY != other->type() || ((EntityCtx *)other)->_tick == _tick) return;
+
+            // 对方从我的视野消失
+            other->_tick = _tick;
+            if (in_visual(entity, old_x, old_y, old_z, ctx->_visual))
+            {
+                remove_entity_from_vector(other->_interest_me, ctx);
+                if (list_me_out) list_me_out->emplace_back(entity);
+            }
+        });
+    }
+    else if (x < ctx->_pos_x)
+    {
+        // 向左移动视野的右边界，处理实体在我的视野消失
+        shift_list_prev(ctx, [this, ctx, old_x, old_y, old_z](Ctx *other) {
+            if (other->_tick == _tick || ctx == other || CT_ENTITY != other->type()) return;
+
+            other->_tick = _tick;
+            if (in_visual(entity, old_x, old_y, old_z))
+            {
+                remove_entity_from_vector(entity->_interest_me, ctx);
+            }
+        })
+    }
+    // 移动实体本身
+    // 移动视野的左边界，处理实体在双方视野消失
+
+    /**
+     * 以同样的方式处理另外两轴，可能会出现重复，有几种方式去重
+     * 1. 用std::map或者std::unordered_map去重
+     * 2. 遍历数组去重
+     * 3. 通过判断坐标，是否重复在其他轴出现过
+     * 4. 在每个实体上加一个计数器，每次遍历到就加1，通过计数器判断是否重复(计数器重置则需要
+     *    重置所有实体的计数器，避免重复
+     */
     return 0;
 }

@@ -1,10 +1,6 @@
 #include "lgrid_aoi.h"
 #include "ltools.h"
 
-LGridAoi::~LGridAoi() {}
-
-LGridAoi::LGridAoi(lua_State *L) {}
-
 int32_t LGridAoi::set_visual_range(lua_State *L)
 {
     // 这里的宽高都是指像素

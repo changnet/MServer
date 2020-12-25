@@ -1,31 +1,22 @@
 #pragma once
 
-#include "../scene/grid_aoi.h"
+#include "../scene/list_aoi.h"
 #include <lua.hpp>
 
 /**
- * AOI算法，目前用格子地图实现
+ * AOI十字链表实现
  */
-class LGridAoi final: public GridAOI
+class LListkAoi final: public ListAOI
 {
 public:
-    ~LGridAoi() {}
-    explicit LGridAoi(lua_State *L) {}
+    ~LListkAoi() {}
+    explicit LListkAoi(lua_State *L) {}
 
     /**
-     * 设置地图大小
-     * @param width 地图像素宽度
-     * @param height 地图像素高度
-     * @param pix_grid 单个格子边长(像素)
+     * 是否使用y轴
      */
-    int32_t set_size(lua_State *L);
+    int32_t use_y(lua_State *L);
 
-    /**
-     * 设置实体视野大小，目前所有实体视野一样
-     * @param width 视野宽度(像素)
-     * @param height 视野高度(像素)
-     */
-    int32_t set_visual_range(lua_State *L);
 
     /**
      * 获取所有实体
@@ -88,13 +79,4 @@ public:
      * @param out [optional]视野内消失实体存放在此table中，数量设置在n字段
      */
     int32_t update_entity(lua_State *L);
-
-    /**
-     * 判断两个像素坐标是否在同一个格子中
-     * @param src_x 源位置x像素坐标
-     * @param src_y 源位置y像素坐标
-     * @param dst_x 目标位置x像素坐标
-     * @param dst_y 目标位置y像素坐标
-     */
-    int32_t is_same_pos(lua_State *L);
 };

@@ -96,7 +96,7 @@ public:
     public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
         uint8_t _mask;
-
+        int32_t _tick; /// 计数器，用于标记是否重复
         int32_t _visual; /// 视野大小(像素)
         EntityId _id;    /// 实体的唯一id，如玩家id
 
@@ -121,6 +121,9 @@ public:
     ListAOI(const ListAOI &&) = delete;
     ListAOI &operator=(const ListAOI &) = delete;
     ListAOI &operator=(const ListAOI &&) = delete;
+
+    /// 获取实体的指针
+    EntityCtx *get_entity_ctx(EntityId id);
 
     /**
      * @brief 实体进入场景
@@ -149,15 +152,17 @@ public:
 
     /**
      * 更新实体位置
-     * @param list 接收实体更新的实体列表
-     * @param list_in 接收实体进入的实体列表
-     * @param list_out 接收实体消失的实体列表
+     * @param list_me_in 该列表中实体出现在我的视野范围
+     * @param list_other_in 我出现在该列表中实体的视野范围内
+     * @param list_me_out 该列表中实体从我的视野范围消失
+     * @param list_other_out 我从该列表中实体的视野范围内消失
      * @return <0错误，0正常，>0正常，但做了特殊处理
      */
     int32_t update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
-                          EntityVector *list     = nullptr,
-                          EntityVector *list_in  = nullptr,
-                          EntityVector *list_out = nullptr);
+                          EntityVector *list_me_in     = nullptr,
+                          EntityVector *list_other_in  = nullptr,
+                          EntityVector *list_me_out    = nullptr,
+                          EntityVector *list_other_out = nullptr);
 
 private:
     // 这些pool做成局部static变量以避免影响内存统计
@@ -221,10 +226,10 @@ private:
     }
 
     /// 判断点(x,y,z)是否在ctx视野范围内
-    bool in_visual(EntityCtx *ctx, int32_t x, int32_t y, int32_t z)
+    bool in_visual(EntityCtx *ctx, int32_t x, int32_t y, int32_t z, int32_t visual = -1)
     {
         // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
-        int32_t visual = ctx->_visual;
+        if (-1 == visual) visual = ctx->_visual;
         return visual >= std::abs(ctx->_pos_x - x)
                && visual >= std::abs(ctx->_pos_z - z)
                && (!_use_y || visual >= std::abs(ctx->_pos_y - y));
@@ -238,17 +243,23 @@ private:
     template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
     void remove_list(Ctx *&list, Ctx *ctx);
 
-private:
-    // 每个轴需要一个双链表
-    Ctx *_first_x;
-    Ctx *_first_y;
-    Ctx *_first_z;
+    /// 把ctx移动到链表合适的地方
+    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    void shift_list(Ctx *ctx, std::function<void (Ctx *ctx)> &&func);
 
+protected:
     /**
      * 是否启用y轴
      * 如果不启用y轴，避免对y轴链表进行插入、删除操作
      */
     bool _use_y;
+
+    int32_t _tick; /// 计数器，用于标记是否重复
+
+        // 每个轴需要一个双向链表
+    Ctx *_first_x;
+    Ctx *_first_y;
+    Ctx *_first_z;
 
     EntitySet _entity_set; /// 记录所有实体的数据
 };
@@ -293,4 +304,10 @@ void ListAOI::remove_list(Ctx *&list, Ctx *ctx)
         list = next;
     }
     if (next) next->*_prev = prev;
+}
+
+template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
+          ListAOI::Ctx *ListAOI::Ctx::*_prev>
+void ListAOI::shift_list(Ctx *ctx, std::function<void (Ctx *)> &&func)
+{
 }
