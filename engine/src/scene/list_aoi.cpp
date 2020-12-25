@@ -36,8 +36,8 @@ ListAOI::ListAOI()
     _first_y = nullptr;
     _first_z = nullptr;
 
-    _use_y      = true;
-    _tick       = 1; // 不能为0，不可以与EntityCtx中_tick的默认值一致
+    _use_y = true;
+    _tick  = 1; // 不能为0，不可以与EntityCtx中_tick的默认值一致
 }
 
 ListAOI::~ListAOI()
@@ -95,7 +95,8 @@ void ListAOI::each_range_entity(Ctx *ctx, int32_t visual,
     }
 }
 
-void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in)
+void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
+                             EntityVector *list_in)
 {
     // 这里只是表示进入一个轴，最终是否在视野范围内要判断三轴
     if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
@@ -105,6 +106,21 @@ void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *lis
             other->_interest_me->push_back(ctx);
         }
         if (list_in) list_in->emplace_back(other);
+    }
+}
+
+void ListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other, int32_t old_x,
+                                int32_t old_y, int32_t old_z,
+                                EntityVector *list_out)
+{
+    // 判断旧视野
+    if (in_visual(other, old_x, old_y, old_z, ctx->_visual))
+    {
+        if (ctx->_mask & INTEREST)
+        {
+            remove_entity_from_vector(other->_interest_me, ctx);
+        }
+        if (list_out) list_out->emplace_back(other);
     }
 }
 
@@ -130,7 +146,7 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     ctx->_pos_z  = z;
     ctx->_visual = visual;
 
-    Ctx *cast_ctx = ctx;
+    Ctx *cast_ctx    = ctx;
     Ctx *cast_prev_v = &(ctx->_prev_v);
 
     // 先插入x轴视野左边界
@@ -139,8 +155,7 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 
     // 插入x轴实体，并建立建立interest me列表
     insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        cast_prev_v, ctx,
-        [this, ctx, list_me_in, list_other_in](Ctx *other) {
+        cast_prev_v, ctx, [this, ctx, list_me_in, list_other_in](Ctx *other) {
             int32_t type = other->type();
             // 进入对方视野范围
             if (CT_VISUAL_PREV == type)
@@ -174,19 +189,19 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     // 插入另外的二轴，由于x轴已经遍历了，所以这里不需要再处理视野问题
     if (_use_y)
     {
-        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(_first_y, &(ctx->_prev_v),
-                                                                nullptr);
-        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(cast_prev_v, ctx,
-                                                                nullptr);
-        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(cast_ctx, &(ctx->_next_v),
-                                                                nullptr);
+        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
+            _first_y, &(ctx->_prev_v), nullptr);
+        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(cast_prev_v,
+                                                                ctx, nullptr);
+        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
+            cast_ctx, &(ctx->_next_v), nullptr);
     }
     insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(_first_z, ctx,
                                                             nullptr);
     insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(cast_prev_v, ctx,
                                                             nullptr);
-    insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(cast_ctx, &(ctx->_next_v),
-                                                            nullptr);
+    insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(
+        cast_ctx, &(ctx->_next_v), nullptr);
 
     return true;
 }
@@ -270,11 +285,19 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         return -1;
     }
 
-    _tick ++;
-    if (_tick == 0x7FFFFFFF)
+    /**
+     * 在三轴中移动时，遍历的实体可能会出现重复，有几种方式去重
+     * 1. 用std::map或者std::unordered_map去重
+     * 2. 遍历数组去重
+     * 3. 通过判断坐标，是否重复在其他轴出现过
+     * 4. 在每个实体上加一个计数器，每次遍历到就加1，通过计数器判断是否重复(计数器重置则需要
+     *    重置所有实体的计数器，避免重复
+     */
+    _tick++;
+    if (_tick == 0xFFFFFFFF)
     {
         _tick = 1;
-        for (auto iter = _entity_set.begin(); iter != _entity_set.end(); iter ++)
+        for (auto iter = _entity_set.begin(); iter != _entity_set.end(); iter++)
         {
             iter->second->_tick = 0;
         }
@@ -284,81 +307,56 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     int32_t old_x = ctx->_pos_x;
     int32_t old_y = ctx->_pos_y;
     int32_t old_z = ctx->_pos_z;
-    ctx->_pos_x = x;
-    ctx->_pos_y = y;
-    ctx->_pos_z = z;
+    ctx->_pos_x   = x;
+    ctx->_pos_y   = y;
+    ctx->_pos_z   = z;
 
-    if (x > ctx->_pos_x)
+    shift_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
+        _first_x, ctx, list_me_in, list_other_in, list_me_out, list_other_out,
+        old_x, old_y, old_z, old_x);
+    if (_use_y)
     {
-        // 向右移动视野的右边界，处理实体出现在我的视野
-        shift_list_next(&(ctx->_next_v), [this, ctx](Ctx *other) {
-            if (CT_ENTITY != other->type() || ((EntityCtx *)other)->_tick == _tick) return;
-
-            ((EntityCtx *)other)->_tick = _tick;
-            on_enter_range(other, ctx, list_me_in);
-        });
-
-        shift_list_next(ctx, [this, ctx, old_x, old_y, old_z](Ctx *other) {
-            if (other->_tick == _tick) return;
-
-            int32_t type = other->type();
-            if (CT_ENTITY == type) return;
-
-            EntityCtx *entity = other->entity();
-            if (entity->_tick == _tick) return;
-            other->_tick = _tick;
-            if (CT_VISUAL_NEXT == type)
-            {
-                // 从对方视野消失
-                if (in_visual(entity, old_x, old_y, old_z, ctx->_visual))
-                {
-                    remove_entity_from_vector(ctx->_interest_me, entity);
-                    if (list_other_out) list_other_out->emplace_back(entity);
-                }
-            }
-            else if (CT_VISUAL_PREV == type)
-            {
-                // 从对方视野出现
-                on_enter_range(ctx, other, list_other_in);
-            }
-        });
-
-        shift_list_next(&(ctx->_prev_v),
-            [this, ctx, old_x, old_y, old_z](Ctx *other) {
-            if (CT_ENTITY != other->type() || ((EntityCtx *)other)->_tick == _tick) return;
-
-            // 对方从我的视野消失
-            other->_tick = _tick;
-            if (in_visual(entity, old_x, old_y, old_z, ctx->_visual))
-            {
-                remove_entity_from_vector(other->_interest_me, ctx);
-                if (list_me_out) list_me_out->emplace_back(entity);
-            }
-        });
+        shift_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
+            _first_y, ctx, list_me_in, list_other_in, list_me_out,
+            list_other_out, old_x, old_y, old_z, old_y);
     }
-    else if (x < ctx->_pos_x)
-    {
-        // 向左移动视野的右边界，处理实体在我的视野消失
-        shift_list_prev(ctx, [this, ctx, old_x, old_y, old_z](Ctx *other) {
-            if (other->_tick == _tick || ctx == other || CT_ENTITY != other->type()) return;
+    shift_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(
+        _first_z, ctx, list_me_in, list_other_in, list_me_out, list_other_out,
+        old_x, old_y, old_z, old_z);
 
-            other->_tick = _tick;
-            if (in_visual(entity, old_x, old_y, old_z))
-            {
-                remove_entity_from_vector(entity->_interest_me, ctx);
-            }
-        })
-    }
-    // 移动实体本身
-    // 移动视野的左边界，处理实体在双方视野消失
-
-    /**
-     * 以同样的方式处理另外两轴，可能会出现重复，有几种方式去重
-     * 1. 用std::map或者std::unordered_map去重
-     * 2. 遍历数组去重
-     * 3. 通过判断坐标，是否重复在其他轴出现过
-     * 4. 在每个实体上加一个计数器，每次遍历到就加1，通过计数器判断是否重复(计数器重置则需要
-     *    重置所有实体的计数器，避免重复
-     */
     return 0;
+}
+
+void ListAOI::on_shift_visual(EntityCtx *ctx, Ctx *other,
+                              EntityVector *list_me_in,
+                              EntityVector *list_me_out, int32_t old_x,
+                              int32_t old_y, int32_t old_z, int32_t shift_type)
+{
+    int32_t type = other->type();
+    if (CT_ENTITY != type || ((EntityCtx *)other)->_tick == _tick) return;
+
+    ((EntityCtx *)other)->_tick = _tick;
+
+    // 向各移动右边界或者向左移动左边界，检测其他实体进入视野。其他情况检测退出视野
+    shift_type == type ? on_enter_range(((EntityCtx *)other), ctx, list_me_in)
+                       : on_exit_old_range(ctx, (EntityCtx *)other, old_x,
+                                           old_y, old_z, list_me_out);
+}
+
+void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
+                              EntityVector *list_other_in,
+                              EntityVector *list_other_out, int32_t old_x,
+                              int32_t old_y, int32_t old_z, int32_t shift_type)
+{
+    int32_t type = other->type();
+    if (CT_ENTITY == type) return;
+
+    EntityCtx *entity = other->entity();
+    if (entity->_tick == _tick) return;
+
+    // 实体向右移动遇到右边界或者向左移动遇到左边界，则是离开目标视野。其他则是进入目标视野
+    entity->_tick = _tick;
+    shift_type == type
+        ? on_exit_old_range(entity, ctx, old_x, old_y, old_z, list_other_out)
+        : on_enter_range(ctx, entity, list_other_in);
 }
