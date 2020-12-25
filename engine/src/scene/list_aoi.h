@@ -9,35 +9,92 @@
 class ListAOI
 {
 public:
-    struct EntityCtx;
+    class EntityCtx;
     using EntityId     = int64_t; // 用来标识实体的唯一id
-    using EntityVector = std::vector<struct EntityCtx *>; // 实体列表
-    using EntitySet    = std::unordered_map<EntityId, struct EntityCtx *>;
+    using EntityVector = std::vector<EntityCtx *>; // 实体列表
+    using EntitySet    = std::unordered_map<EntityId, EntityCtx *>;
 
     /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
     static const int INTEREST = 0x1;
 
-    /**
-     * 场景中单个实体的类型、坐标等数据
-     */
-    struct EntityCtx
+    /// 链表中节点类型
+    enum CtxType
     {
-        /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
-        uint8_t _mask;
+        CT_VISUAL_PREV = -1, /// 视野左边界
+        CT_ENTITY      = 0, /// 实体本身
+        CT_VISUAL_NEXT = 1  /// 视野右边界
+    };
 
+    /// 链表中的节点基类
+    class Ctx
+    {
+    public:
+        virtual void reset();
+        virtual int32_t type() const = 0;
+        virtual EntityCtx *entity() { return nullptr; }
+
+        template<int32_t Ctx::*_pos>
+        int32_t comp(const Ctx *other) const
+        {
+            // 当坐标一致时，不同类型的节点在链表中有特定的位置，必须按
+            // 左边界>>>实体>>>右边界 这个顺序排列，不然移动视野边界的时候就可能会漏掉一些实体
+            if (this->*_pos > other->*_pos)
+            {
+                return 1;
+            }
+            else if (this->*_pos == other->*_pos)
+            {
+                return type() - other->type();
+            }
+            return -1;
+        }
+
+    public:
         int32_t _pos_x; // 像素坐标x
         int32_t _pos_y; // 像素坐标y
         int32_t _pos_z; // 像素坐标z
-        int32_t _visual;   // 视野大小(像素)
-        EntityId _id;
 
         // 每个轴需要一个双链表
-        EntityCtx *_next_x;
-        EntityCtx *_prev_x;
-        EntityCtx *_next_y;
-        EntityCtx *_prev_y;
-        EntityCtx *_next_z;
-        EntityCtx *_prev_z;
+        Ctx *_next_x;
+        Ctx *_prev_x;
+        Ctx *_next_y;
+        Ctx *_prev_y;
+        Ctx *_next_z;
+        Ctx *_prev_z;
+    };
+
+    /// 实体的视野左右边界
+    template<CtxType _type>
+    class VisualCtx final : public Ctx
+    {
+    public:
+        explicit VisualCtx(EntityCtx *ctx)
+        {
+            Ctx::reset();
+            _entity = ctx;
+        }
+        int32_t type() const override { return _type; }
+        EntityCtx *entity() override { return _entity; }
+
+    private:
+        EntityCtx *_entity; /// 该视野边界所属的实体
+    };
+
+    /// 场景中单个实体的类型、坐标等数据
+    class EntityCtx final : public Ctx
+    {
+    public:
+        explicit EntityCtx() : _next_v(this), _prev_v(this) {}
+        int32_t type() const override { return CT_ENTITY; }
+
+        void reset() override;
+
+    public:
+        /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
+        uint8_t _mask;
+
+        int32_t _visual; /// 视野大小(像素)
+        EntityId _id;    /// 实体的唯一id，如玩家id
 
         /**
          * 对我感兴趣的实体列表。比如我周围的玩家，需要看到我移动、放技能，都需要频繁广播给他们，
@@ -47,18 +104,9 @@ public:
          * 根据业务处理
          */
         EntityVector *_interest_me;
-    };
 
-    /// 记录视野相关信息
-    struct VisualRange
-    {
-        int32_t _visual;
-        int32_t _ref;
-        VisualRange(int32_t visual, int32_t ref)
-        {
-            _visual = visual;
-            _ref = ref;
-        }
+        VisualCtx<CT_VISUAL_NEXT> _next_v; /// 视野的左边界节点
+        VisualCtx<CT_VISUAL_PREV> _prev_v; /// 视野的右边界节点
     };
 
 public:
@@ -78,11 +126,14 @@ public:
      * @param z 像素坐标z
      * @param visual 视野
      * @param mask 掩码，由上层定义，影响interest_me列表
-     * @param list 在视野范围内的实体列表
+     * @param list_me_in 该列表中实体出现在我的视野范围
+     * @param list_other_in 我出现在该列表中实体的视野范围内
      * @return
      */
-    bool enter_entity(EntityId id, int32_t x, int32_t y, int32_t z, int32_t visual,
-                      uint8_t mask, EntityVector *list = nullptr);
+    bool enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+                      int32_t visual, uint8_t mask,
+                      EntityVector *list_me_in    = nullptr,
+                      EntityVector *list_other_in = nullptr);
 
     /**
      * @brief 实体退出场景
@@ -111,11 +162,11 @@ private:
 
     /// 从无序数组中删除一个实体
     static bool remove_entity_from_vector(EntityVector *list,
-                                          const struct EntityCtx *ctx);
+                                          const EntityCtx *ctx);
 
     /// 以ctx为中心，遍历指定范围内的实体
-    void each_range_entity(EntityCtx *ctx, int32_t visual,
-                           std::function<void(EntityCtx *)> &&func);
+    void each_range_entity(Ctx *ctx, int32_t visual,
+                           std::function<void (EntityCtx *ctx)> &&func);
 
     CtxPool *get_ctx_pool()
     {
@@ -144,27 +195,23 @@ private:
         return vt;
     }
 
-    void del_entity_ctx(struct EntityCtx *ctx)
+    void del_entity_ctx(EntityCtx *ctx)
     {
         del_entity_vector(ctx->_interest_me);
 
         get_ctx_pool()->destroy(ctx);
     }
 
-    struct EntityCtx *new_entity_ctx()
+    EntityCtx *new_entity_ctx()
     {
-        struct EntityCtx *ctx = get_ctx_pool()->construct();
+        EntityCtx *ctx = get_ctx_pool()->construct();
 
-        memset(ctx, 0, sizeof(*ctx));
+        ctx->reset();
         ctx->_interest_me = new_entity_vector();
 
         return ctx;
     }
 
-    /// 增加视野引用
-    void add_visual(int32_t visual);
-    /// 减少视野引用
-    void dec_visual(int32_t visual);
     /// 判断点(x,y,z)是否在ctx视野范围内
     bool in_visual(EntityCtx *ctx, int32_t x, int32_t y, int32_t z)
     {
@@ -176,36 +223,15 @@ private:
     }
 
     /// 把ctx插入到链表合适的地方
-    template <int32_t EntityCtx::*_pos, EntityCtx *EntityCtx::*_next,
-              EntityCtx *EntityCtx::*_prev>
-    void insert_list(EntityCtx *&list, EntityCtx *ctx)
-    {
-        if (!list)
-        {
-            list = ctx;
-            return;
-        }
-
-        EntityCtx *prev = list;
-        EntityCtx *next = list;
-        while (next && next->*_pos <= ctx->*_pos)
-        {
-            prev = next;
-            next = next->*_next;
-        }
-        // 把ctx插入到prev与next之间
-        prev->*_next = ctx;
-        ctx->*_prev  = prev;
-        ctx->*_next  = next;
-        if (next) next->*_prev = ctx;
-    }
+    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    void insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *ctx)> *func);
 
     /// 把ctx从链表中删除
-    template <EntityCtx *EntityCtx::*_next, EntityCtx *EntityCtx::*_prev>
-    void remove_list(EntityCtx *&list, EntityCtx *ctx)
+    template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    void remove_list(Ctx *&list, Ctx *ctx)
     {
-        EntityCtx *prev = ctx->*_prev;
-        EntityCtx *next = ctx->*_next;
+        Ctx *prev = ctx->*_prev;
+        Ctx *next = ctx->*_next;
         if (prev)
         {
             prev->*_next = next;
@@ -219,12 +245,9 @@ private:
 
 private:
     // 每个轴需要一个双链表
-    EntityCtx *_first_x;
-    EntityCtx *_last_x;
-    EntityCtx *_first_y;
-    EntityCtx *_last_y;
-    EntityCtx *_first_z;
-    EntityCtx *_last_z;
+    Ctx *_first_x;
+    Ctx *_first_y;
+    Ctx *_first_z;
 
     /**
      * 是否启用y轴
@@ -232,13 +255,32 @@ private:
      */
     bool _use_y;
 
-    int32_t _max_visual;      /// 场景中最大的视野半径
+    int32_t _max_visual;   /// 场景中最大的视野半径
     EntitySet _entity_set; /// 记录所有实体的数据
-
-    /**
-     * @brief 记录场景中所有的视野信息，用来维护_max_visual
-     * 如果每次_max_visual变化都需要遍历所有实体，消耗有点大。这个数组预计比较小，一般同一个场景中
-     * 不同视野的实体都是个位数
-     */
-    std::vector<VisualRange> _visual_ref;
 };
+
+template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
+          ListAOI::Ctx *ListAOI::Ctx::*_prev>
+void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void (Ctx *ctx)> *func)
+{
+    if (!list)
+    {
+        list = ctx;
+        return;
+    }
+
+    Ctx *prev = list;
+    Ctx *next = list;
+    while (next && ctx->comp<_pos>(next) < 0)
+    {
+        if (func) (*func)(next);
+
+        prev = next;
+        next = next->*_next;
+    }
+    // 把ctx插入到prev与next之间
+    prev->*_next = ctx;
+    ctx->*_prev  = prev;
+    ctx->*_next  = next;
+    if (next) next->*_prev = ctx;
+}
