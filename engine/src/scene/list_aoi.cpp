@@ -360,3 +360,18 @@ void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
         ? on_exit_old_range(entity, ctx, old_x, old_y, old_z, list_other_out)
         : on_enter_range(ctx, entity, list_other_in);
 }
+
+int32_t ListAOI::update_visual(EntityId id, int32_t visual,
+                               EntityVector *list_me_in,
+                               EntityVector *list_me_out)
+{
+    struct EntityCtx *ctx = get_entity_ctx(id);
+    if (!ctx)
+    {
+        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        return -1;
+    }
+
+    ctx->_visual = visual;
+    return 0;
+}

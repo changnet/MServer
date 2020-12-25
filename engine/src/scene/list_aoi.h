@@ -162,6 +162,16 @@ public:
                           EntityVector *list_me_out    = nullptr,
                           EntityVector *list_other_out = nullptr);
 
+    /**
+     * @brief 更新实体的视野
+     * @param id 实体的唯一id
+     * @param visual 新视野大小
+     * @param list_me_in 该列表中实体因视野扩大出现在我的视野范围
+     * @param list_me_out 该列表中实体因视野缩小从我的视野范围消失
+     */
+    int32_t update_visual(EntityId id, int32_t visual, EntityVector *list_me_in,
+                          EntityVector *list_me_out);
+
 private:
     // 这些pool做成局部static变量以避免影响内存统计
     using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
