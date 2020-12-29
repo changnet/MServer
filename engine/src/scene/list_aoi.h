@@ -95,6 +95,10 @@ public:
         explicit EntityCtx() : _next_v(this), _prev_v(this) {}
         int32_t type() const override { return CT_ENTITY; }
 
+        /// 这个实体是否拥有视野(一些怪物之类的不需要视野，可提高aoi的效率，需要附近的实体
+        /// 列表可通过get_visual_entity实时获取)
+        bool has_visual() const { return _visual > 0 && (_mask & INTEREST); }
+
         void reset() override;
         /// 更新视野坐标
         void update_visual(int32_t visual);
@@ -102,10 +106,10 @@ public:
     public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
         uint8_t _mask;
-        uint32_t _tick;  /// 计数器，用于标记是否重复
-        int32_t _visual; /// 视野大小(像素)
+        uint32_t _tick;      /// 计数器，用于标记是否重复
+        int32_t _visual;     /// 视野大小(像素)
         int32_t _old_visual; /// 旧的视野大小
-        EntityId _id;    /// 实体的唯一id，如玩家id
+        EntityId _id;        /// 实体的唯一id，如玩家id
 
         /**
          * 对我感兴趣的实体列表。比如我周围的玩家，需要看到我移动、放技能，都需要频繁广播给他们，
@@ -250,7 +254,7 @@ private:
     {
         // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
         if (-1 == visual) visual = ctx->_visual;
-        return visual >= std::abs(ctx->_pos_x - x)
+        return visual > 0 && visual >= std::abs(ctx->_pos_x - x)
                && visual >= std::abs(ctx->_pos_z - z)
                && (!_use_y || visual >= std::abs(ctx->_pos_y - y));
     }
@@ -259,15 +263,24 @@ private:
     template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
     void insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *ctx)> &&func);
 
+    /// 把ctx插入到链表合适的地方
+    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    void insert_entity(Ctx *&list, EntityCtx *ctx,
+                       std::function<void(Ctx *ctx)> &&func);
+
     /// 把ctx从链表中删除
     template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
     void remove_list(Ctx *&list, Ctx *ctx);
 
+    /// 把ctx从链表中删除
+    template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    void remove_entity(Ctx *&list, EntityCtx *ctx);
+
     /// 把ctx移动到链表合适的地方
     template <int32_t Ctx::*_new, int32_t Ctx::*_old, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
     void shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
-                    EntityVector *list_other_in, EntityVector *list_me_out,
-                    EntityVector *list_other_out);
+                      EntityVector *list_other_in, EntityVector *list_me_out,
+                      EntityVector *list_other_out);
 
     /**
      * 把ctx的视野边界移动到链表合适的地方
@@ -276,7 +289,7 @@ private:
      */
     template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
     void shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
-                    EntityVector *list_me_out, int32_t shift_type);
+                      EntityVector *list_me_out, int32_t shift_type);
 
     /// 向右移动到链表合适的地方
     template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
@@ -340,6 +353,34 @@ void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&fun
     if (next) next->*_prev = ctx;
 }
 
+template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
+          ListAOI::Ctx *ListAOI::Ctx::*_prev>
+void ListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
+                            std::function<void(Ctx *)> &&func)
+{
+    // 如果该实体不需要视野，则只插入单个实体，不插入视野边界，以
+    // 依次插入视野左边界、实体、视野右边界，每一个都以上一个为起点进行遍历，以提高插入效率
+    bool has = ctx->has_visual();
+
+    Ctx *&first = _first_x;
+    if (has)
+    {
+        insert_list<_pos, _next, _prev>(
+            list, &(ctx->_prev_v),
+            std::forward<std::function<void(Ctx *)> &&>(func));
+        first = &(ctx->_prev_v);
+    }
+    insert_list<_pos, _next, _prev>(
+        first, ctx, std::forward<std::function<void(Ctx *)> &&>(func));
+    if (has)
+    {
+        first = ctx;
+        insert_list<_pos, _next, _prev>(
+            first, &(ctx->_next_v),
+            std::forward<std::function<void(Ctx *)> &&>(func));
+    }
+}
+
 template <ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
 void ListAOI::remove_list(Ctx *&list, Ctx *ctx)
 {
@@ -356,11 +397,28 @@ void ListAOI::remove_list(Ctx *&list, Ctx *ctx)
     if (next) next->*_prev = prev;
 }
 
+template <ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
+void ListAOI::remove_entity(Ctx *&list, EntityCtx *ctx)
+{
+    bool has = ctx->has_visual();
+
+    // 从三轴中删除自己(依次从右视野、实体、左视野删起)
+    if (has)
+    {
+        remove_list<_next, _prev>(list, &(ctx->_next_v));
+    }
+    remove_list<_next, _prev>(_first_x, ctx);
+    if (has)
+    {
+        remove_list<_next, _prev>(_first_x, &(ctx->_prev_v));
+    }
+}
+
 template <int32_t ListAOI::Ctx::*_new, int32_t ListAOI::Ctx::*_old,
           ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
 void ListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
-                         EntityVector *list_other_in, EntityVector *list_me_out,
-                         EntityVector *list_other_out)
+                           EntityVector *list_other_in, EntityVector *list_me_out,
+                           EntityVector *list_other_out)
 {
     if (ctx->*_new > ctx->*_old)
     {
@@ -462,29 +520,25 @@ void ListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
     next->*_prev = ctx;
 }
 
-template <int32_t ListAOI::Ctx::*_pos,
-          ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
+template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
+          ListAOI::Ctx *ListAOI::Ctx::*_prev>
 void ListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
-                EntityVector *list_me_out, int32_t shift_type)
+                           EntityVector *list_me_out, int32_t shift_type)
 {
     if (shift_type > 0)
     {
         // 视野扩大，左边界左移，右边界右移
         shift_list_next<_pos, _next, _prev>(list, &(ctx->_next_v), list_me_in,
-                                            nullptr, list_me_out,
-                                            nullptr);
+                                            nullptr, list_me_out, nullptr);
         shift_list_prev<_pos, _next, _prev>(list, &(ctx->_prev_v), list_me_in,
-                                            nullptr, list_me_out,
-                                            nullptr);
+                                            nullptr, list_me_out, nullptr);
     }
     else if (shift_type < 0)
     {
         // 视野缩小，左边界右移，右边界左移
         shift_list_prev<_pos, _next, _prev>(list, &(ctx->_prev_v), list_me_in,
-                                            nullptr, list_me_out,
-                                            nullptr);
+                                            nullptr, list_me_out, nullptr);
         shift_list_next<_pos, _next, _prev>(list, &(ctx->_next_v), list_me_in,
-                                            nullptr, list_me_out,
-                                            nullptr);
+                                            nullptr, list_me_out, nullptr);
     }
 }

@@ -170,62 +170,22 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     ctx->update_pos(x, y, z);
     ctx->update_visual(visual);
 
-    Ctx *cast_ctx    = ctx;
-    Ctx *cast_prev_v = &(ctx->_prev_v);
-
-    // 先插入x轴视野左边界
-    insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        _first_x, &(ctx->_prev_v), nullptr);
-
-    // 插入x轴实体，并建立建立interest me列表
-    insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        cast_prev_v, ctx, [this, ctx, list_me_in, list_other_in](Ctx *other) {
-            int32_t type = other->type();
-            // 进入对方视野范围
-            if (CT_VISUAL_PREV == type)
-            {
-                on_enter_range(ctx, other->entity(), list_other_in);
-            }
-            // 对方进入我的视野范围
-            if (CT_ENTITY == type)
-            {
-                on_enter_range(other->entity(), ctx, list_me_in);
-            }
+    insert_entity<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
+        _first_x, ctx, [this, ctx, list_me_in, list_other_in](Ctx *other) {
+            CT_ENTITY == other->type()
+                // 对方进入我的视野范围
+                ? on_enter_range(ctx, other->entity(), list_me_in)
+                // 我进入对方视野范围
+                : on_enter_range(other->entity(), ctx, list_other_in);
         });
-
-    // 插入x轴视野右边界
-    insert_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        cast_ctx, &(ctx->_next_v),
-        [this, ctx, list_me_in, list_other_in](Ctx *other) {
-            int32_t type = other->type();
-            // 进入对方视野范围
-            if (CT_VISUAL_NEXT == type)
-            {
-                on_enter_range(ctx, other->entity(), list_other_in);
-            }
-            // 对方进入我的视野范围
-            if (CT_ENTITY == type)
-            {
-                on_enter_range(other->entity(), ctx, list_me_in);
-            }
-        });
-
     // 插入另外的二轴，由于x轴已经遍历了，所以这里不需要再处理视野问题
     if (_use_y)
     {
-        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
-            _first_y, &(ctx->_prev_v), nullptr);
-        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(cast_prev_v,
-                                                                ctx, nullptr);
-        insert_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
-            cast_ctx, &(ctx->_next_v), nullptr);
+        insert_entity<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(_first_y, ctx,
+                                                                  nullptr);
     }
-    insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(_first_z, ctx,
-                                                            nullptr);
-    insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(cast_prev_v, ctx,
-                                                            nullptr);
-    insert_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(
-        cast_ctx, &(ctx->_next_v), nullptr);
+    insert_entity<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(_first_z, ctx,
+                                                              nullptr);
 
     return true;
 }
@@ -238,51 +198,21 @@ int32_t ListAOI::exit_entity(EntityId id, EntityVector *list)
     EntityCtx *ctx = iter->second;
     _entity_set.erase(iter);
 
-    // 遍历整个视野范围，从别人的interest_me列表删除自己
-    if (ctx->_mask & INTEREST)
+    // 从别人的interest_me列表删除自己
+    if (ctx->has_visual())
     {
-        Ctx *next = ctx->_prev_v._next_x;
-        while (next != ctx)
-        {
-            assert(next);
-            if (CT_VISUAL_PREV == next->type())
-            {
-                EntityCtx *entity = next->entity();
-                if (in_visual(entity, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z))
-                {
-                    remove_entity_from_vector(entity->_interest_me, ctx);
-                }
-            }
-        }
-
-        next = ctx->_next_x;
-        while (next != &(ctx->_next_v))
-        {
-            assert(next);
-            if (CT_VISUAL_NEXT == next->type())
-            {
-                EntityCtx *entity = next->entity();
-                if (in_visual(entity, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z))
-                {
-                    remove_entity_from_vector(entity->_interest_me, ctx);
-                }
-            }
-        }
+        each_range_entity(ctx, ctx->_visual, [ctx](EntityCtx *other) {
+            remove_entity_from_vector(other->_interest_me, ctx);
+        });
     }
 
-    // 从三轴中删除自己(依次从右视野、实体、左视野删起)
-    remove_list<&Ctx::_next_x, &Ctx::_prev_x>(_first_x, &(ctx->_next_v));
-    remove_list<&Ctx::_next_x, &Ctx::_prev_x>(_first_x, ctx);
-    remove_list<&Ctx::_next_x, &Ctx::_prev_x>(_first_x, &(ctx->_prev_v));
+    // 从三轴中删除自己
+    remove_entity<&Ctx::_next_x, &Ctx::_prev_x>(_first_x, ctx);
     if (_use_y)
     {
-        remove_list<&Ctx::_next_y, &Ctx::_prev_y>(_first_y, &(ctx->_next_v));
-        remove_list<&Ctx::_next_y, &Ctx::_prev_y>(_first_y, ctx);
-        remove_list<&Ctx::_next_y, &Ctx::_prev_y>(_first_y, &(ctx->_prev_v));
+        remove_entity<&Ctx::_next_y, &Ctx::_prev_y>(_first_y, ctx);
     }
-    remove_list<&Ctx::_next_z, &Ctx::_prev_z>(_first_z, &(ctx->_next_v));
-    remove_list<&Ctx::_next_z, &Ctx::_prev_z>(_first_z, ctx);
-    remove_list<&Ctx::_next_z, &Ctx::_prev_z>(_first_z, &(ctx->_prev_v));
+    remove_entity<&Ctx::_next_z, &Ctx::_prev_z>(_first_z, ctx);
 
     // 是否需要返回关注自己离开场景的实体列表
     if (list)
@@ -385,8 +315,27 @@ int32_t ListAOI::update_visual(EntityId id, int32_t visual,
         return -1;
     }
 
-    int32_t shift_type = visual - ctx->_visual;
+    bool had = ctx->has_visual();
     ctx->update_visual(visual);
+    bool has = ctx->has_visual();
+
+    // 视野从有变无
+    if (had && !has)
+    {
+        // 遍历旧视野区间，从其他实体interest列表删除自己，其他实体从自己视野消失
+        each_range_entity(ctx, ctx->_old_visual,
+                          [this, ctx, list_me_out](EntityCtx *other) {
+                              on_exit_old_range(ctx, other, list_me_out);
+                          });
+        // 从链表删除左右视野节点
+        return 0;
+    }
+    // 视野从无变有
+    if (!had && has)
+    {
+    }
+    // 视野范围大小更新
+    int32_t shift_type = ctx->_visual - ctx->_old_visual;
     shift_visual<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, list_me_in, list_me_out, shift_type);
     if (_use_y)
