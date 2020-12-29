@@ -6,6 +6,9 @@ void ListAOI::Ctx::reset()
     _pos_x = 0;
     _pos_y = 0;
     _pos_z = 0;
+    _old_x = 0;
+    _old_y = 0;
+    _old_z = 0;
 
     _next_x = nullptr;
     _prev_x = nullptr;
@@ -15,6 +18,16 @@ void ListAOI::Ctx::reset()
     _prev_z = nullptr;
 }
 
+void ListAOI::Ctx::update_pos(int32_t x, int32_t y, int32_t z)
+{
+    _old_x = _pos_x;
+    _old_y = _pos_y;
+    _old_z = _pos_z;
+    _pos_x = x;
+    _pos_y = y;
+    _pos_z = z;
+}
+
 void ListAOI::EntityCtx::reset()
 {
     Ctx::reset();
@@ -22,10 +35,24 @@ void ListAOI::EntityCtx::reset()
     _mask        = 0;
     _id          = 0;
     _tick        = 0;
+    _visual      = 0;
+    _old_visual  = 0;
     _interest_me = nullptr;
 
     _next_v.reset();
     _prev_v.reset();
+}
+
+void ListAOI::EntityCtx::update_visual(int32_t visual)
+{
+    if (visual >= 0)
+    {
+        _old_visual = _visual;
+        _visual     = visual;
+    }
+
+    _prev_v.update_pos(_pos_x - _visual, _pos_y - _visual, _pos_z - _visual);
+    _next_v.update_pos(_pos_x + _visual, _pos_y + _visual, _pos_z + _visual);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -109,12 +136,11 @@ void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-void ListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other, int32_t old_x,
-                                int32_t old_y, int32_t old_z,
+void ListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
                                 EntityVector *list_out)
 {
     // 判断旧视野
-    if (in_visual(other, old_x, old_y, old_z, ctx->_visual))
+    if (in_visual(other, ctx->_old_x, ctx->_old_y, ctx->_old_z, ctx->_old_visual))
     {
         if (ctx->_mask & INTEREST)
         {
@@ -139,12 +165,10 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     EntityCtx *ctx    = new_entity_ctx();
     ret.first->second = ctx;
 
-    ctx->_id     = id;
-    ctx->_mask   = mask;
-    ctx->_pos_x  = x;
-    ctx->_pos_y  = y;
-    ctx->_pos_z  = z;
-    ctx->_visual = visual;
+    ctx->_id   = id;
+    ctx->_mask = mask;
+    ctx->update_pos(x, y, z);
+    ctx->update_visual(visual);
 
     Ctx *cast_ctx    = ctx;
     Ctx *cast_prev_v = &(ctx->_prev_v);
@@ -303,34 +327,26 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         }
     }
 
-    // 先设置新坐标，这样方便检测
-    int32_t old_x = ctx->_pos_x;
-    int32_t old_y = ctx->_pos_y;
-    int32_t old_z = ctx->_pos_z;
-    ctx->_pos_x   = x;
-    ctx->_pos_y   = y;
-    ctx->_pos_z   = z;
+    ctx->update_pos(x, y, z); // 先设置新坐标
+    ctx->update_visual(-1);   // 更新视野坐标
 
-    shift_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        _first_x, ctx, list_me_in, list_other_in, list_me_out, list_other_out,
-        old_x, old_y, old_z, old_x);
+    shift_entity<&Ctx::_pos_x, &Ctx::_old_x, &Ctx::_next_x, &Ctx::_prev_x>(
+        _first_x, ctx, list_me_in, list_other_in, list_me_out, list_other_out);
     if (_use_y)
     {
-        shift_list<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
+        shift_entity<&Ctx::_pos_y, &Ctx::_old_y, &Ctx::_next_y, &Ctx::_prev_y>(
             _first_y, ctx, list_me_in, list_other_in, list_me_out,
-            list_other_out, old_x, old_y, old_z, old_y);
+            list_other_out);
     }
-    shift_list<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(
-        _first_z, ctx, list_me_in, list_other_in, list_me_out, list_other_out,
-        old_x, old_y, old_z, old_z);
+    shift_entity<&Ctx::_pos_z, &Ctx::_old_z, &Ctx::_next_z, &Ctx::_prev_z>(
+        _first_z, ctx, list_me_in, list_other_in, list_me_out, list_other_out);
 
     return 0;
 }
 
 void ListAOI::on_shift_visual(EntityCtx *ctx, Ctx *other,
                               EntityVector *list_me_in,
-                              EntityVector *list_me_out, int32_t old_x,
-                              int32_t old_y, int32_t old_z, int32_t shift_type)
+                              EntityVector *list_me_out, int32_t shift_type)
 {
     int32_t type = other->type();
     if (CT_ENTITY != type || ((EntityCtx *)other)->_tick == _tick) return;
@@ -339,14 +355,12 @@ void ListAOI::on_shift_visual(EntityCtx *ctx, Ctx *other,
 
     // 向各移动右边界或者向左移动左边界，检测其他实体进入视野。其他情况检测退出视野
     shift_type == type ? on_enter_range(((EntityCtx *)other), ctx, list_me_in)
-                       : on_exit_old_range(ctx, (EntityCtx *)other, old_x,
-                                           old_y, old_z, list_me_out);
+                       : on_exit_old_range(ctx, (EntityCtx *)other, list_me_out);
 }
 
 void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
                               EntityVector *list_other_in,
-                              EntityVector *list_other_out, int32_t old_x,
-                              int32_t old_y, int32_t old_z, int32_t shift_type)
+                              EntityVector *list_other_out, int32_t shift_type)
 {
     int32_t type = other->type();
     if (CT_ENTITY == type) return;
@@ -356,9 +370,8 @@ void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
 
     // 实体向右移动遇到右边界或者向左移动遇到左边界，则是离开目标视野。其他则是进入目标视野
     entity->_tick = _tick;
-    shift_type == type
-        ? on_exit_old_range(entity, ctx, old_x, old_y, old_z, list_other_out)
-        : on_enter_range(ctx, entity, list_other_in);
+    shift_type == type ? on_exit_old_range(entity, ctx, list_other_out)
+                       : on_enter_range(ctx, entity, list_other_in);
 }
 
 int32_t ListAOI::update_visual(EntityId id, int32_t visual,
@@ -372,6 +385,16 @@ int32_t ListAOI::update_visual(EntityId id, int32_t visual,
         return -1;
     }
 
-    ctx->_visual = visual;
+    int32_t shift_type = visual - ctx->_visual;
+    ctx->update_visual(visual);
+    shift_visual<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
+        _first_x, ctx, list_me_in, list_me_out, shift_type);
+    if (_use_y)
+    {
+        shift_visual<&Ctx::_pos_y, &Ctx::_next_y, &Ctx::_prev_y>(
+            _first_y, ctx, list_me_in, list_me_out, shift_type);
+    }
+    shift_visual<&Ctx::_pos_z, &Ctx::_next_z, &Ctx::_prev_z>(
+        _first_z, ctx, list_me_in, list_me_out, shift_type);
     return 0;
 }
