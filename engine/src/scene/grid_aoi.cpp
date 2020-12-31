@@ -58,28 +58,14 @@ void GridAOI::set_size(int32_t width, int32_t height, int32_t pix_grid)
     memset(_entity_grid, 0, sizeof(EntityVector *) * _width * _height);
 }
 
-/**
- * 获取某一范围内实体
- * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
- * 传入的坐标均为像素坐标
- */
-int32_t GridAOI::get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
-                            int32_t destx, int32_t desty)
+int32_t GridAOI::each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
+                                   std::function<void(EntityCtx *)> &&func)
 {
     // 4个坐标必须为矩形的对角像素坐标,这里转换为左上角和右下角坐标
-    int32_t x  = srcx;
-    int32_t y  = srcy;
-    int32_t dx = destx;
-    int32_t dy = desty;
-    if (srcx > destx)
+    if (x > dx || y > dy)
     {
-        x  = destx;
-        dx = srcx;
-    }
-    if (srcy > desty)
-    {
-        y  = desty;
-        dy = srcy;
+        ERROR("%s invalid pos", __FUNCTION__);
+        return -1;
     }
 
     // 转换为格子坐标
@@ -90,11 +76,13 @@ int32_t GridAOI::get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
 
     if (!valid_pos(x, y, dx, dy)) return -1;
 
-    return get_range_entity(list, x, y, dx, dy);
+    raw_each_range_entity(x, y, dx, dy,
+                          std::forward<std::function<void(EntityCtx *)>>(func));
+    return 0;
 }
 
-void GridAOI::each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                                std::function<void(EntityCtx *)> &&func)
+void GridAOI::raw_each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
+                                    std::function<void(EntityCtx *)> &&func)
 {
     // 遍历范围内的所有格子
     // 注意坐标是格子的中心坐标，因为要包含当前格子，用<=
@@ -109,16 +97,6 @@ void GridAOI::each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
             }
         }
     }
-}
-
-// 获取矩形内的实体
-int32_t GridAOI::get_range_entity(EntityVector *list, int32_t x, int32_t y,
-                                  int32_t dx, int32_t dy)
-{
-    each_range_entity(x, y, dx, dy,
-                      [list](EntityCtx *ctx) { list->emplace_back(ctx); });
-
-    return 0;
 }
 
 bool GridAOI::remove_entity_from_vector(EntityVector *list,
@@ -214,7 +192,7 @@ void GridAOI::entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
 {
     uint8_t interest = ctx->_mask & INTEREST;
 
-    each_range_entity(x, y, dx, dy, [list, ctx, interest](EntityCtx *other) {
+    raw_each_range_entity(x, y, dx, dy, [list, ctx, interest](EntityCtx *other) {
         if (interest)
         {
             GridAOI::remove_entity_from_vector(other->_interest_me, ctx);
@@ -265,21 +243,21 @@ void GridAOI::entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
 {
     uint8_t interest          = ctx->_mask & INTEREST;
     EntityVector *interest_me = ctx->_interest_me;
-    each_range_entity(x, y, dx, dy,
-                      [list, ctx, interest_me, interest](EntityCtx *other) {
-                          // 自己对其他实体感兴趣，就把自己加到对方列表，这样对方有变化时才会推送数据给自己
-                          if (interest) other->_interest_me->push_back(ctx);
+    raw_each_range_entity(x, y, dx, dy,
+                          [list, ctx, interest_me, interest](EntityCtx *other) {
+                              // 自己对其他实体感兴趣，就把自己加到对方列表，这样对方有变化时才会推送数据给自己
+                              if (interest) other->_interest_me->push_back(ctx);
 
-                          // 别人对其他实体感兴趣，把别人加到自己的列表，这样自己有变化才会发数据给对方
-                          if (other->_mask & INTEREST)
-                          {
-                              interest_me->push_back(other);
-                          }
+                              // 别人对其他实体感兴趣，把别人加到自己的列表，这样自己有变化才会发数据给对方
+                              if (other->_mask & INTEREST)
+                              {
+                                  interest_me->push_back(other);
+                              }
 
-                          // 无论是否interest，都返回需要触发aoi事件的实体。假如玩家进入场景时，怪物对他不
-                          // interest，但需要把怪物的信息发送给玩家，这步由上层筛选
-                          if (list) list->push_back(other);
-                      });
+                              // 无论是否interest，都返回需要触发aoi事件的实体。假如玩家进入场景时，怪物对他不
+                              // interest，但需要把怪物的信息发送给玩家，这步由上层筛选
+                              if (list) list->push_back(other);
+                          });
 }
 
 /* 判断两个位置视野交集

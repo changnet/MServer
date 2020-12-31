@@ -665,3 +665,17 @@ void ListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     prev_v->*_next = next;
     next->*_prev   = prev_v;
 }
+
+void ListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
+{
+    // TODO 需要遍历特定坐标内的实体时，从三轴中的任意一轴都是等效，因此这里随意选择x轴
+    Ctx *ctx = _first_x;
+    while (ctx)
+    {
+        if (CT_ENTITY == ctx->type())
+        {
+            if (!func((EntityCtx *)ctx)) return;
+        }
+        ctx = ctx->_next_x;
+    }
+}

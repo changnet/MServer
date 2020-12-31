@@ -35,13 +35,13 @@
     } while (0)
 
 /* lua 5.3支持int64，在转换为bson时需要区分int32、int64 */
-static inline int32_t lua_isbit32(int64_t v)
+inline int32_t lua_isbit32(int64_t v)
 {
     return v >= INT_MIN && v <= INT_MAX;
 }
 
 /* 在lua目前的版本中,number >= integer，如果连number都无法支持64,将被强制截断 */
-static inline void lua_pushint64(lua_State *L, int64_t v)
+inline void lua_pushint64(lua_State *L, int64_t v)
 {
     if (v <= LUA_MAXINTEGER && v >= LUA_MININTEGER)
     {
@@ -57,7 +57,7 @@ static inline void lua_pushint64(lua_State *L, int64_t v)
  * 1).key全为int并且小于等于INT_MAX则为数组
  * 2).在元表指定__array为true则为数组
  */
-static inline int32_t lua_isarray(lua_State *L, int32_t index, int32_t *array,
+inline int32_t lua_isarray(lua_State *L, int32_t index, int32_t *array,
                                   int32_t *max_index)
 {
     double key = 0;
@@ -126,7 +126,7 @@ static inline int32_t lua_isarray(lua_State *L, int32_t index, int32_t *array,
 }
 
 /* 调试函数，打印当前lua 虚拟机栈 */
-static inline void stack_dump(lua_State *L)
+inline void stack_dump(lua_State *L)
 {
     int i;
     int top = lua_gettop(L);
@@ -154,7 +154,7 @@ static inline void stack_dump(lua_State *L)
 }
 
 /* debug.traceback in c */
-static inline int traceback(lua_State *L)
+inline int traceback(lua_State *L)
 {
     const char *msg = lua_tostring(L, 1);
     if (msg)
@@ -182,7 +182,7 @@ static inline int traceback(lua_State *L)
  * @param index table所在栈索引
  * @param n 数量n
  */
-static inline void table_pack_size(lua_State *L, int32_t index, int32_t n)
+inline void table_pack_size(lua_State *L, int32_t index, int32_t n)
 {
     lua_pushstring(L, "n");
     lua_pushinteger(L, n);
@@ -208,5 +208,3 @@ void table_pack(lua_State *L, int32_t index,const Container &container, Filter &
 
     table_pack_size(L, index, n);
 }
-
-

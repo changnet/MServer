@@ -68,11 +68,6 @@ public:
     void set_size(int32_t width, int32_t height, int32_t pix_grid);
 
     struct EntityCtx *get_entity_ctx(EntityId id);
-    /**
-     * 获取某一范围内实体。底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
-     */
-    int32_t get_entity(EntityVector *list, int32_t srcx, int32_t srcy,
-                       int32_t destx, int32_t desty);
 
     int32_t exit_entity(EntityId id, EntityVector *list = nullptr);
     int32_t enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask,
@@ -119,9 +114,13 @@ protected:
         return ctx;
     }
 
-    /** 获取矩形内的实体 */
-    int32_t get_range_entity(EntityVector *list, int32_t x, int32_t y,
-                             int32_t dx, int32_t dy);
+    /// 遍历矩形内的实体(坐标为像素坐标)
+    int32_t each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
+                           std::function<void(EntityCtx *)> &&func);
+
+    /// 遍历矩形内的实体，不检测范围(坐标为格子坐标)
+    void raw_each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
+                           std::function<void(EntityCtx *)> &&func);
 
     // 获取视野范围
     void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,
@@ -134,9 +133,6 @@ private:
     void insert_grid_entity(int32_t x, int32_t y, struct EntityCtx *ctx);
     /** 从格子列表内删除实体 */
     bool remove_grid_entity(int32_t x, int32_t y, const struct EntityCtx *ctx);
-    /** 遍历矩形内的实体 */
-    void each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                           std::function<void(EntityCtx *)> &&func);
     /// 处理实体进入某个范围
     void entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                             int32_t dx, int32_t dy, EntityVector *list = nullptr);

@@ -10,13 +10,12 @@ class LListkAoi final: public ListAOI
 {
 public:
     ~LListkAoi() {}
-    explicit LListkAoi(lua_State *L) {}
+    explicit LListkAoi(lua_State *L) { UNUSED(L); }
 
     /**
      * 是否使用y轴
      */
     int32_t use_y(lua_State *L);
-
 
     /**
      * 获取所有实体
@@ -37,10 +36,12 @@ public:
      * 底层这里只支持矩形，如果是其他形状的，上层根据实体位置再筛选即可
      * @param mask 掩码，根据mask获取特定类型的实体(0xF表示所有)
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
-     * @param src_x 矩形左上角x坐标
-     * @param src_y 矩形左上角y坐标
-     * @param dst_x 矩形右下角x坐标
-     * @param dst_y 矩形右下角y坐标
+     * @param src_x 长方体x轴起点坐标
+     * @param src_y 长方体y轴起点坐标
+     * @param src_z 长方体z轴起点坐标
+     * @param dst_x 长方体x轴终点坐标
+     * @param dst_y 长方体y轴终点坐标
+     * @param dst_z 长方体z轴终点坐标
      */
     int32_t get_entity(lua_State *L);
 

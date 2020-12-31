@@ -136,6 +136,9 @@ public:
     /// 获取实体的指针
     EntityCtx *get_entity_ctx(EntityId id);
 
+    /// 遍历x轴链表上的实体(直到func返回false)
+    void each_entity(std::function<bool(EntityCtx *)> &&func);
+
     /**
      * @brief 实体进入场景
      * @param id 实体唯一id
@@ -185,7 +188,7 @@ public:
     int32_t update_visual(EntityId id, int32_t visual, EntityVector *list_me_in,
                           EntityVector *list_me_out);
 
-private:
+protected:
     // 这些pool做成局部static变量以避免影响内存统计
     using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
     using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
