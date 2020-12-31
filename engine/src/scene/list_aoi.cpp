@@ -99,7 +99,7 @@ bool ListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx *ctx
     return false;
 }
 
-void ListAOI::each_range_entity(Ctx *ctx, int32_t visual,
+void ListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
                                 std::function<void(EntityCtx *)> &&func)
 {
     // 实体同时存在三轴链表上，只需要遍历其中一个链表即可

@@ -1,14 +1,14 @@
 #include "llist_aoi.h"
 #include "ltools.h"
 
-int32_t LListkAoi::use_y(lua_State *L)
+int32_t LListAoi::use_y(lua_State *L)
 {
     _use_y = lua_toboolean(L, 1);
 
     return 0;
 }
 
-int32_t LListkAoi::get_all_entity(lua_State *L)
+int32_t LListAoi::get_all_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
     int32_t mask = luaL_checkinteger(L, 1);
@@ -29,7 +29,7 @@ int32_t LListkAoi::get_all_entity(lua_State *L)
     return 0;
 }
 
-int32_t LListkAoi::get_interest_me_entity(lua_State *L)
+int32_t LListAoi::get_interest_me_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
 
@@ -51,7 +51,7 @@ int32_t LListkAoi::get_interest_me_entity(lua_State *L)
     return 0;
 }
 
-int32_t LListkAoi::get_entity(lua_State *L)
+int32_t LListAoi::get_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
     int32_t mask = luaL_checkinteger(L, 1);
@@ -88,6 +88,178 @@ int32_t LListkAoi::get_entity(lua_State *L)
     });
 
     table_pack_size(L, 2, n);
+
+    return 0;
+}
+
+
+int32_t LListAoi::get_visual_entity(lua_State *L)
+{
+    EntityId id  = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger(L, 2);
+    lUAL_CHECKTABLE(L, 3);
+
+    const struct EntityCtx *ctx = get_entity_ctx(id);
+    if (!ctx)
+    {
+        table_pack_size(L, 3, 0);
+        ERROR("no such entity found, id = %d", id);
+        return 0;
+    }
+
+    int32_t n = 0;
+    ListAOI::each_range_entity(ctx, ctx->_visual,
+                                   [L, mask, &n](const EntityCtx *ctx) {
+                                       if (mask & ctx->_mask)
+                                       {
+                                           ++n;
+                                           lua_pushinteger(L, ctx->_id);
+                                           lua_rawseti(L, 3, n);
+                                       }
+                                   });
+
+    table_pack_size(L, 3, n);
+
+    return 0;
+}
+
+int32_t LListAoi::update_visual(lua_State *L)
+{
+    EntityId id  = luaL_checkinteger(L, 1);
+    int32_t visual = luaL_checkinteger(L, 2);
+
+    EntityVector *list_me_in  = lua_istable(L, 3) ? new_entity_vector() : nullptr;
+    EntityVector *list_me_out = lua_istable(L, 4) ? new_entity_vector() : nullptr;
+
+    ListAOI::update_visual(id, visual, list_me_in, list_me_out);
+
+    if (list_me_in)
+    {
+        table_pack(L, 3, *list_me_in, [L](const EntityCtx *ctx) {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        });
+        del_entity_vector(list_me_in);
+    }
+    if (list_me_out)
+    {
+        table_pack(L, 4, *list_me_out, [L](const EntityCtx *ctx) {
+            lua_pushinteger(L, ctx->_id);
+            return true;
+        });
+        del_entity_vector(list_me_out);
+    }
+    return 0;
+}
+
+int32_t LListAoi::exit_entity(lua_State *L)
+{
+    EntityId id = luaL_checkinteger(L, 1);
+
+    EntityVector *list = lua_istable(L, 2) ? new_entity_vector() : nullptr;
+
+    int32_t ecode = ListAOI::exit_entity(id, list);
+    if (0 != ecode)
+    {
+        if (list) del_entity_vector(list);
+
+        return luaL_error(L, "aoi exit entity error:%d", ecode);
+    }
+
+    if (!list) return 0;
+
+    table_pack(L, 2, *list, [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
+    });
+
+    if (list) del_entity_vector(list);
+    return 0;
+}
+
+
+int32_t LListAoi::enter_entity(lua_State *L)
+{
+    EntityId id = luaL_checkinteger(L, 1);
+    // 实体像素坐标
+    int32_t x = luaL_checkinteger(L, 2);
+    int32_t y = luaL_checkinteger(L, 3);
+    int32_t z = luaL_checkinteger(L, 4);
+    int32_t visual = luaL_checkinteger(L, 5);
+    // 掩码，可用于区分玩家、怪物、npc等，由上层定义
+    uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 6));
+
+    EntityVector *list = lua_istable(L, 7) ? new_entity_vector() : nullptr;
+
+    int32_t ecode = ListAOI::enter_entity(id, x, y, z, visual, mask, list);
+    if (0 != ecode)
+    {
+        if (list) del_entity_vector(list);
+
+        return luaL_error(L, "aoi enter entity error:ecode = %d", ecode);
+    }
+
+    if (!list) return 0;
+
+    table_pack(L, 7, *list, [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
+    });
+
+    del_entity_vector(list);
+    return 0;
+}
+
+
+int32_t LListAoi::update_entity(lua_State *L)
+{
+    EntityId id = luaL_checkinteger(L, 1);
+    // 实体像素坐标
+    int32_t x = (int32_t)luaL_checknumber(L, 2);
+    int32_t y = (int32_t)luaL_checknumber(L, 3);
+    int32_t z = (int32_t)luaL_checknumber(L, 4);
+
+#define CHECK_LIST(list, index) \
+    EntityVector *list = lua_istable(L, index) ? new_entity_vector(): nullptr
+
+    CHECK_LIST(list_me_in, 5);
+    CHECK_LIST(list_other_in, 6);
+    CHECK_LIST(list_me_out, 7);
+    CHECK_LIST(list_other_out, 8);
+
+#undef CHECK_LIST
+
+    int32_t ecode = ListAOI::update_entity(id, x, y, z, list_me_in,
+        list_other_in, list_me_out, list_other_out);
+    if (0 != ecode)
+    {
+
+#define DEL_LIST(list) if (list) del_entity_vector(list)
+        DEL_LIST(list_me_in);
+        DEL_LIST(list_other_in);
+        DEL_LIST(list_me_out);
+        DEL_LIST(list_other_out);
+#undef DEL_LIST
+
+        return luaL_error(L, "aoi update entity error:%d", ecode);
+    }
+
+    auto filter = [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
+    };
+
+#define PACK_LIST(list, index)   \
+    do {\
+        if (list) {table_pack(L, index, *list, filter); del_entity_vector(list);}\
+    } while (0)
+
+    PACK_LIST(list_me_in, 5);
+    PACK_LIST(list_other_in, 6);
+    PACK_LIST(list_me_out, 7);
+    PACK_LIST(list_other_out, 8);
+
+#undef PACK_LIST
 
     return 0;
 }

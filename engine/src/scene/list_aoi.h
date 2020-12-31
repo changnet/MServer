@@ -180,7 +180,7 @@ public:
 
     /**
      * @brief 更新实体的视野
-     * @param id 实体的唯一id
+     * @param id id 实体唯一id
      * @param visual 新视野大小
      * @param list_me_in 该列表中实体因视野扩大出现在我的视野范围
      * @param list_me_out 该列表中实体因视野缩小从我的视野范围消失
@@ -198,7 +198,7 @@ protected:
                                           const EntityCtx *ctx);
 
     /// 以ctx为中心，遍历指定范围内的实体
-    void each_range_entity(Ctx *ctx, int32_t visual,
+    void each_range_entity(const Ctx *ctx, int32_t visual,
                            std::function<void(EntityCtx *ctx)> &&func);
 
     /// 实体other进入ctx的视野范围

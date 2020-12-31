@@ -6,11 +6,11 @@
 /**
  * AOI十字链表实现
  */
-class LListkAoi final: public ListAOI
+class LListAoi final: public ListAOI
 {
 public:
-    ~LListkAoi() {}
-    explicit LListkAoi(lua_State *L) { UNUSED(L); }
+    ~LListAoi() {}
+    explicit LListAoi(lua_State *L) { UNUSED(L); }
 
     /**
      * 是否使用y轴
@@ -54,6 +54,15 @@ public:
     int32_t get_visual_entity(lua_State *L);
 
     /**
+     * 更新实体视野范围
+     * @param id 实体的唯一id
+     * @param visual 新视野大小
+     * @param list_me_in 该列表中实体因视野扩大出现在我的视野范围
+     * @param list_me_out 该列表中实体因视野缩小从我的视野范围消失
+     */
+    int32_t update_visual(lua_State *L);
+
+    /**
      * 实体退出场景
      * @param id 唯一实体id
      * @param tbl [optional]interest_me存放在此table中，数量设置在n字段
@@ -65,6 +74,8 @@ public:
      * @param id 唯一实体id
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
+     * @param z 实体像素坐标z
+     * @param visual 视野大小
      * @param mask 实体掩码
      * @param tbl [optional]视野内新增实体存放在此table中，数量设置在n字段
      */
@@ -75,9 +86,10 @@ public:
      * @param id 唯一实体id
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
-     * @param tbl [optional]周围关注此实体更新事件的实体存放在此table中，数量设置在n字段
-     * @param into [optional]视野内新增实体存放在此table中，数量设置在n字段
-     * @param out [optional]视野内消失实体存放在此table中，数量设置在n字段
+     * @param list_me_in [optional]该列表中实体出现在我的视野范围
+     * @param list_other_in [optional]我出现在该列表中实体的视野范围内
+     * @param list_me_out [optional]该列表中实体从我的视野范围消失
+     * @param list_other_out [optional]我从该列表中实体的视野范围内消失
      */
     int32_t update_entity(lua_State *L);
 };

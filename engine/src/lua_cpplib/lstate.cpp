@@ -17,6 +17,7 @@
 #include "lstatistic.h"
 #include "ltimer.h"
 #include "lutil.h"
+#include "llist_aoi.h"
 
 #include "../net/socket.h"
 
@@ -62,6 +63,7 @@ int32_t luaopen_astar(lua_State *L);
 int32_t luaopen_acism(lua_State *L);
 int32_t luaopen_mongo(lua_State *L);
 int32_t luaopen_grid_aoi(lua_State *L);
+int32_t luaopen_list_aoi(lua_State *L);
 int32_t luaopen_network_mgr(lua_State *L);
 
 void LState::open_cpp()
@@ -86,6 +88,7 @@ void LState::open_cpp()
     luaopen_acism(L);
     luaopen_mongo(L);
     luaopen_grid_aoi(L);
+    luaopen_list_aoi(L);
     luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
@@ -269,6 +272,25 @@ int32_t luaopen_grid_aoi(lua_State *L)
     lc.def<&LGridAoi::update_entity>("update_entity");
 
     lc.def<&LGridAoi::is_same_pos>("is_same_pos");
+
+    return 0;
+}
+
+int32_t luaopen_list_aoi(lua_State *L)
+{
+    LClass<LListAoi> lc(L, "ListAoi");
+
+    lc.def<&LListAoi::use_y>("use_y");
+    lc.def<&LListAoi::update_visual>("update_visual");
+
+    lc.def<&LListAoi::get_entity>("get_entity");
+    lc.def<&LListAoi::get_all_entity>("get_all_entity");
+    lc.def<&LListAoi::get_visual_entity>("get_visual_entity");
+    lc.def<&LListAoi::get_interest_me_entity>("get_interest_me_entity");
+
+    lc.def<&LListAoi::exit_entity>("exit_entity");
+    lc.def<&LListAoi::enter_entity>("enter_entity");
+    lc.def<&LListAoi::update_entity>("update_entity");
 
     return 0;
 }
