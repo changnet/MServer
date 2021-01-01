@@ -191,12 +191,12 @@ int32_t LListAoi::enter_entity(lua_State *L)
 
     EntityVector *list = lua_istable(L, 7) ? new_entity_vector() : nullptr;
 
-    int32_t ecode = ListAOI::enter_entity(id, x, y, z, visual, mask, list);
-    if (0 != ecode)
+    bool ok = ListAOI::enter_entity(id, x, y, z, visual, mask, list);
+    if (!ok)
     {
         if (list) del_entity_vector(list);
 
-        return luaL_error(L, "aoi enter entity error:ecode = %d", ecode);
+        return luaL_error(L, "aoi enter entity error");
     }
 
     if (!list) return 0;

@@ -50,7 +50,8 @@ function App:exec()
 
     require "test.misc_test"
     require "test.https_test"
-    require "test.aoi_test"
+    require "test.grid_aoi_test"
+    require "test.list_aoi_test"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
     -- require "example.mysql_performance"
