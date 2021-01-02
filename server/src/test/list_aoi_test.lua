@@ -31,6 +31,7 @@ local entity_info = {}
 -- 是否在视野内
 local function in_visual_range(et,other)
     local visual = et.visual
+    if visual <= 0 then return false end
     if visual < math.abs(et.x - other.x) then return false end
 
     if is_use_y then
@@ -45,6 +46,8 @@ end
 -- 获取在自己视野范围内，并且关注事件的实体
 local function get_visual_list(et, mask)
     local ev_map = {}
+    if et.visual <= 0 then return ev_map end
+
     for id,other in pairs(entity_info) do
         if id ~= et.id and 0 ~= (mask & other.mask)
             and in_visual_range(et,other) then
@@ -69,8 +72,9 @@ local function valid_visual_list(et,list)
 
         -- 校验视野范围
         if not in_visual_range(et,other) then
-            PRINTF("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
-                et.id,et.x,et.y,other.id,other.x,other.y)
+            PRINTF("valid_visual_list fail,id = %d,\z
+                pos(%d,%d,%d) and id = %d,pos(%d,%d,%d)",
+                et.id,et.x,et.y,et.z,other.id,other.x,other.y,other.z)
             assert(false)
         end
 
@@ -80,7 +84,7 @@ local function valid_visual_list(et,list)
 
     return id_map
 end
-
+_aoi = nil
 -- 校验et在list里的实体视野范围内
 local function valid_other_visual_list(et,list)
     local id_map = {}
@@ -98,6 +102,11 @@ local function valid_other_visual_list(et,list)
             PRINTF("range fail,id = %d,pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)",
                 et.id,et.x,et.y,et.z, other.id,other.x,other.y, other.z)
             assert(false)
+        end
+
+        if (id_map[id]) then
+            PRINTF("id duplicate in %d", et.id)
+            vd(list)         _aoi:dump()
         end
 
         assert( nil == id_map[id] ) -- 校验返回的实体不会重复
@@ -261,7 +270,73 @@ local function exit(aoi, id)
     aoi:exit_entity(id,tmp_list)
 
     entity_info[id] = nil
-    if is_valid then valid_visual(entity, tmp_list, INTEREST) end
+    if is_valid then valid_other_visual_list(entity, tmp_list) end
+end
+
+-- 从table中随机一个值
+local function random_map(map, max_entity)
+    -- 随机大概会达到一个平衡的,随便取一个值
+    local srand = max_entity/3
+
+    local idx = 0
+    local hit = nil
+    for _, et in pairs(map) do
+        if not hit then hit = et end
+        idx = idx + 1
+        if idx >= srand then return et end
+    end
+
+    return hit
+end
+
+-- 随机退出、更新、进入进行批量测试
+local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
+    local exit_info = {}
+    local mask_opt = { ET_PLAYER, ET_NPC, ET_MONSTER }
+    for idx = 1,max_entity do
+        local x = math.random(0,max_x)
+        local y = math.random(0,max_y)
+        local z = math.random(0,max_z)
+        local mask = mask_opt[math.random(#mask_opt)]
+
+        local visual = 0
+        if ET_PLAYER == mask then visual = V_PLAYER end
+        local et = enter(aoi, idx, x, y, z, visual, mask)
+        if is_valid then valid_interest_me(aoi, et) end
+    end
+
+    -- 随机退出、更新、进入
+    for _ = 1,max_random do
+        local ev = math.random(1,3)
+        if 1 == ev then
+            local et = random_map(exit_info, max_entity)
+            if et then
+                local x = math.random(0,max_x)
+                local y = math.random(0,max_y)
+                local z = math.random(0,max_z)
+                local visual = 0
+                if ET_PLAYER == et.mask then visual = V_PLAYER end
+                local new_et = enter(aoi, et.id, x, y, z, visual, et.mask)
+                exit_info[et.id] = nil
+                if is_valid then  valid_interest_me(aoi, new_et) end
+            end
+        elseif 2 == ev then
+            local et = random_map(entity_info, max_entity)
+            if et then
+                local x = math.random(0,max_x)
+                local y = math.random(0,max_y)
+                local z = math.random(0,max_z)
+                update(aoi, et.id, x, y, z)
+                if is_valid then valid_interest_me(aoi, et) end
+            end
+        elseif 3 == ev then
+            local et = random_map(entity_info, max_entity)
+            if et then
+                exit(aoi, et.id)
+                exit_info[et.id] = et
+            end
+        end
+    end
 end
 
 t_describe("list aoi test", function()
@@ -338,9 +413,28 @@ t_describe("list aoi test", function()
         t_equal(tmp_list.n, 5)
         aoi:get_visual_entity(99996, 0xF, tmp_list)
         t_equal(tmp_list.n, 5)
+
+        -- 插入一个视野范围大到包含另一个实体的视野左右边界的实体
+        -- 这个要在C++那边处理id是否重复
+        enter(aoi, 99997, MAX_X - 1 - v,
+            MAX_Y - 1 - v, MAX_Z - 1 - v, V_PLAYER * 10, ET_PLAYER)
         -- 所有实体退出，保证链表为空
-        exit(99991)
+        exit(aoi, 99991)
+        exit(aoi, 99992)
+        exit(aoi, 99993)
+        exit(aoi, 99994)
+        exit(aoi, 99995)
+        exit(aoi, 99996)
+        exit(aoi, 99997)
+        aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
+            tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
+        t_equal(tmp_list.n, 0)
+        _aoi = aoi
         -- 随机测试
+        local max_entity = 2000
+        local max_random = 50000
+        random_test(
+            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
     t_it("list aoi perf", function()

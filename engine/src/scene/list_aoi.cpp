@@ -193,6 +193,8 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     ctx->update_pos(x, y, z);
     ctx->update_visual(visual);
 
+    update_tick();
+
     insert_entity<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, [this, ctx, list_me_in, list_other_in](Ctx *other) {
             if (CT_ENTITY == other->type())
@@ -207,8 +209,9 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
             {
                 // 我进入对方视野范围
                 EntityCtx *entity = other->entity();
-                if (ctx != entity)
+                if (ctx != entity && _tick != entity->_tick)
                 {
+                    entity->_tick = _tick;
                     on_enter_range(entity, ctx, list_other_in, false);
                 }
             }

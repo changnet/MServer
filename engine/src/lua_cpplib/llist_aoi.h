@@ -50,6 +50,7 @@ public:
      * @param id 实体id
      * @param mask 掩码，根据mask获取特定类型的实体(0xF表示所有)
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
+     * @param visual [optional]使用特定的视野而不是实体本身的视野
      */
     int32_t get_visual_entity(lua_State *L);
 

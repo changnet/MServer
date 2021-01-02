@@ -112,6 +112,10 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
     int32_t mask = luaL_checkinteger(L, 2);
     lUAL_CHECKTABLE(L, 3);
 
+    // 使用特定的视野而不是实体本身的
+    // 例如怪物没有视野，但有时候需要取怪物附近的实体
+    int32_t visual = luaL_optinteger(L, 4, -1);
+
     const struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
@@ -121,15 +125,17 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
     }
 
     int32_t n = 0;
-    ListAOI::each_range_entity(ctx, ctx->_visual,
-                               [L, mask, &n](const EntityCtx *ctx) {
-                                   if (mask & ctx->_mask)
-                                   {
-                                       ++n;
-                                       lua_pushinteger(L, ctx->_id);
-                                       lua_rawseti(L, 3, n);
-                                   }
-                               });
+    if (visual < 0) visual = ctx->_visual;
+    ListAOI::each_range_entity(
+        ctx, visual, [this, ctx, L, mask, visual, &n](const EntityCtx *other) {
+            if ((mask & other->_mask)
+                && in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z,
+                             visual))
+            {
+                lua_pushinteger(L, other->_id);
+                lua_rawseti(L, 3, ++n);
+            }
+        });
 
     table_pack_size(L, 3, n);
 

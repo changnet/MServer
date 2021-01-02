@@ -258,8 +258,8 @@ protected:
     }
 
     /// 判断点(x,y,z)是否在ctx视野范围内
-    bool in_visual(EntityCtx *ctx, int32_t x, int32_t y, int32_t z,
-                   int32_t visual = -1)
+    bool in_visual(const EntityCtx *ctx, int32_t x, int32_t y, int32_t z,
+                   int32_t visual = -1) const
     {
         // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
         if (-1 == visual) visual = ctx->_visual;
