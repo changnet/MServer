@@ -50,7 +50,7 @@ public:
             {
                 // 当坐标一致时，不同类型的节点在链表中有特定的位置，必须按
                 // 左边界>>>实体>>>右边界 这个顺序排列，不然移动视野边界的时候就可能会漏掉一些实体
-                return other->type() - type();
+                return type() - other->type();
             }
             return -1;
         }
@@ -202,12 +202,13 @@ protected:
                            std::function<void(EntityCtx *ctx)> &&func);
 
     /// 实体other进入ctx的视野范围
-    void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in);
+    void on_enter_range(EntityCtx *ctx, EntityCtx *other,
+        EntityVector *list_in, bool me = true);
     /// 实体other退出ctx的视野范围
-    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out);
+    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out, bool me = true);
     /// 实体other退出ctx的旧的视野范围
     void on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
-                           EntityVector *list_out);
+                           EntityVector *list_out, bool me = true);
 
     void dump(); /// 打印整个链表，用于调试
     CtxPool *get_ctx_pool()
@@ -312,7 +313,7 @@ protected:
                          EntityVector *list_other_in, EntityVector *list_me_out,
                          EntityVector *list_other_out);
     /// 移动视野边界时，检测其他实体在视野中的变化
-    void on_shift_visual(EntityCtx *ctx, Ctx *other, EntityVector *list_me_in,
+    void on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
                          EntityVector *list_me_out, int32_t shift_type);
     /// 移动实体时，检测自己在其他实体视野中的变化
     void on_shift_entity(EntityCtx *ctx, Ctx *other, EntityVector *list_other_in,

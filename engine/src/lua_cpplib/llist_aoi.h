@@ -87,6 +87,7 @@ public:
      * @param id 唯一实体id
      * @param x 实体像素坐标x
      * @param y 实体像素坐标y
+     * @param z 实体像素坐标z
      * @param list_me_in [optional]该列表中实体出现在我的视野范围
      * @param list_other_in [optional]我出现在该列表中实体的视野范围内
      * @param list_me_out [optional]该列表中实体从我的视野范围消失
