@@ -383,7 +383,7 @@ t_describe("list aoi test", function()
 
         -- 视野不一样时，两个实体能否相互看到
         local v = V_PLAYER * 2
-        enter(aoi, 99996, MAX_X - 1 - v,
+        local et6 = enter(aoi, 99996, MAX_X - 1 - v,
             MAX_Y - 1 - v, MAX_Z - 1 - v, v, ET_PLAYER)
         aoi:get_visual_entity(99996, 0xF, tmp_list)
         t_equal(tmp_list.n, 5)
@@ -414,10 +414,16 @@ t_describe("list aoi test", function()
         aoi:get_visual_entity(99996, 0xF, tmp_list)
         t_equal(tmp_list.n, 5)
 
-        -- 插入一个视野范围大到包含另一个实体的视野左右边界的实体
+        -- 更新位置时，当一个实体的实体指针、右视野指针依次在链表上移过另一个实体的
+        -- 视野左边界，另一个实体本身时，mark标记需要特殊处理
+        enter(aoi, 99997, et6.x - 1, et6.y - 1, et6.z - 1, v, ET_PLAYER)
+        print("hit now ================================")
+        update(aoi, 99997, 1, 1, 1)
+
+        -- 插入一个视野范围大到包含另一个实体(99996)的视野左右边界的实体
         -- 这个要在C++那边处理id是否重复
-        enter(aoi, 99997, MAX_X - 1 - v,
-            MAX_Y - 1 - v, MAX_Z - 1 - v, V_PLAYER * 10, ET_PLAYER)
+        enter(aoi, 99998, et6.x, et6.y, et6.z, V_PLAYER * 10, ET_PLAYER)
+
         -- 所有实体退出，保证链表为空
         exit(aoi, 99991)
         exit(aoi, 99992)
@@ -426,9 +432,11 @@ t_describe("list aoi test", function()
         exit(aoi, 99995)
         exit(aoi, 99996)
         exit(aoi, 99997)
+        exit(aoi, 99998)
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
             tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
+
         _aoi = aoi
         -- 随机测试
         local max_entity = 2000

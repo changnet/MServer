@@ -107,7 +107,7 @@ public:
     public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
         uint8_t _mask;
-        uint32_t _tick;      /// 计数器，用于标记是否重复
+        uint32_t _mark;      /// 计数器，用于标记是否重复
         int32_t _visual;     /// 视野大小(像素)
         int32_t _old_visual; /// 旧的视野大小
         EntityId _id;        /// 实体的唯一id，如玩家id
@@ -206,11 +206,10 @@ protected:
     void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in,
                         bool me = true);
     /// 实体other退出ctx的视野范围
-    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out,
-                       bool me = true);
+    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out);
     /// 实体other退出ctx的旧的视野范围
     void on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
-                           EntityVector *list_out, bool me = true);
+                           EntityVector *list_out, bool me);
 
     void dump(); /// 打印整个链表，用于调试
     CtxPool *get_ctx_pool()
@@ -255,6 +254,12 @@ protected:
         ctx->_interest_me = new_entity_vector();
 
         return ctx;
+    }
+
+    /// 是否已经被标记
+    bool had_mark(const EntityCtx *ctx) const
+    {
+        return _use_mark && (_mark == ctx->_mark);
     }
 
     /// 判断点(x,y,z)是否在ctx视野范围内
@@ -327,8 +332,8 @@ protected:
     /// 把ctx的视野边界节点移出链表
     int32_t remove_visual(EntityCtx *ctx, EntityVector *list_out);
 
-    /// 更新tick
-    void update_tick();
+    /// 更新mark
+    void update_mark();
 
 protected:
     /**
@@ -337,7 +342,8 @@ protected:
      */
     bool _use_y;
 
-    uint32_t _tick; /// 计数器，用于标记是否重复
+    uint32_t _mark; /// 计数器，用于标记是否重复
+    bool _use_mark; /// 是否启用标记
 
     // 每个轴需要一个双向链表
     Ctx *_first_x;
