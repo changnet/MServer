@@ -340,12 +340,13 @@ t_describe("test grid aoi", function()
 
     local max_query = 1000
     t_it(string.format(
-        "query test %d entity and %d times visual range",
+        "query visual test %d entity and %d times visual range",
         max_entity, max_query), function()
         for _ = 1, max_query do
             for id in pairs(entity_info) do
                 aoi:get_visual_entity(id, 0xF, tmp_list)
             end
         end
+        t_print("actually run " .. table.size(entity_info))
     end)
 end)

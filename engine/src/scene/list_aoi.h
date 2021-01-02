@@ -264,7 +264,10 @@ protected:
     /// 是否已经被标记
     bool had_mark(const EntityCtx *ctx) const
     {
-        return _use_mark && (_mark == ctx->_mark);
+        // > _mark表示在当前这次操作中被标记过
+        // == _now_mark表示是在同一个轴标记(例如移动x轴上的左边界、实体、右边界会遇到同一个
+        // 实体，但处理逻辑是不一样的，不会被认为是重复)
+        return (ctx->_mark >= _mark) && (ctx->_mark != _now_mark);
     }
 
     /// 判断点(x,y,z)是否在ctx视野范围内
@@ -347,8 +350,8 @@ protected:
      */
     bool _use_y;
 
-    uint32_t _mark; /// 计数器，用于标记是否重复
-    bool _use_mark; /// 是否启用标记
+    uint32_t _mark; /// 标记，用于标记同一个实体是否被处理过
+    uint32_t _now_mark; /// 当前使用的标记，用于区分在哪条轴使用
 
     // 每个轴需要一个双向链表
     Ctx *_first_x;

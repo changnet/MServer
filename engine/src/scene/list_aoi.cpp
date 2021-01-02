@@ -67,9 +67,9 @@ ListAOI::ListAOI()
     _first_y = nullptr;
     _first_z = nullptr;
 
-    _use_y = true;
-    _mark  = 1; // 不能为0，不可以与EntityCtx中_mark的默认值一致
-    _use_mark = true;
+    _use_y    = true;
+    _mark     = 0;
+    _now_mark = 0;
 }
 
 ListAOI::~ListAOI()
@@ -231,7 +231,10 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                 EntityCtx *entity = other->entity();
                 if (ctx != entity && !had_mark(entity))
                 {
-                    entity->_mark = _mark;
+                    // enter的时候，可能会跨越对方左右视野边界，这时候用_now_mark + 1
+                    // 来标记该实体已处理过。(虽然跨越对方两边视野边界时一定不会进入对方视野，
+                    // 不影响逻辑，但加个标记避免二次视野判断，应该可以提高效率)
+                    entity->_mark = _now_mark + 1;
                     on_enter_range(entity, ctx, list_other_in, false);
                 }
             }
@@ -294,15 +297,18 @@ void ListAOI::update_mark()
      * 4. 在每个实体上加一个计数器，每次遍历到就加1，通过计数器判断是否重复(计数器重置则需要
      *    重置所有实体的计数器，避免重复
      */
-    _mark++;
-    if (_mark == 0xFFFFFFFF)
+    if (_now_mark >= 0xFFFFFFFF - 3)
     {
-        _mark = 1;
+        _now_mark = 0;
         for (auto iter = _entity_set.begin(); iter != _entity_set.end(); iter++)
         {
             iter->second->_mark = 0;
         }
     }
+
+    // 最多有3轴，每轴使用一个标记
+    _now_mark += 3;
+    _mark = _now_mark;
 }
 
 int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
@@ -324,13 +330,8 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 
     update_mark();
 
-    // mark是用来防止三轴遍历时重复对同一个实体操作
-    // 在移动一条轴上的实体左边界、实体本身、右边界时也会对同个实体操作，但判断逻辑不一样，因此
-    // 先停用mark
-    _use_mark = false;
     shift_entity<&Ctx::_pos_x, &Ctx::_old_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, list_me_in, list_other_in, list_me_out, list_other_out);
-    _use_mark = true;
 
     if (_use_y)
     {
@@ -351,7 +352,7 @@ void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
     int32_t type = other->type();
     if (CT_ENTITY != type || had_mark((EntityCtx *)other)) return;
 
-    ((EntityCtx *)other)->_mark = _mark;
+    ((EntityCtx *)other)->_mark = _now_mark;
 
     EntityCtx *entity = ctx->entity();
 
@@ -377,7 +378,7 @@ void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
     if (had_mark(entity)) return;
 
     // 实体向右移动遇到右边界或者向左移动遇到左边界，则是离开目标视野。其他则是进入目标视野
-    entity->_mark = _mark;
+    entity->_mark = _now_mark;
     shift_type == type
         // ctx离开entity的视野，需要使用ctx的旧坐标，entity的视野，特殊处理
         ? on_exit_old_pos_range(entity, ctx, list_other_out, false)
@@ -564,6 +565,7 @@ void ListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
                            EntityVector *list_other_in, EntityVector *list_me_out,
                            EntityVector *list_other_out)
 {
+    _now_mark++;
     bool has = ctx->has_visual();
     if (ctx->*_new > ctx->*_old)
     {
@@ -675,6 +677,7 @@ template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
 void ListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
                            EntityVector *list_me_out, int32_t shift_type)
 {
+    _now_mark++;
     if (shift_type > 0)
     {
         // 视野扩大，左边界左移，右边界右移

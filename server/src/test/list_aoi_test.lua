@@ -20,6 +20,8 @@ local V_PLAYER = 256 -- 玩家的视野半径
 
 local is_valid -- 是否校验结果，perf时不校验
 local is_use_y -- 是否使用y轴
+local is_use_history -- 是否记录历史
+
 local tmp_list = {}
 local list_me_in = {}
 local list_other_in = {}
@@ -85,7 +87,7 @@ local function valid_visual_list(et,list)
 
     return id_map
 end
-_aoi = nil
+
 -- 校验et在list里的实体视野范围内
 local function valid_other_visual_list(et,list)
     local id_map = {}
@@ -111,7 +113,7 @@ local function valid_other_visual_list(et,list)
 
         if (id_map[id]) then
             PRINTF("id duplicate in %d", et.id)
-            vd(list)         _aoi:dump()
+            vd(list)
         end
 
         assert( nil == id_map[id] ) -- 校验返回的实体不会重复
@@ -128,8 +130,8 @@ local function valid_visual(et, list_me, list_other, mask)
     local id_map = valid_visual_list(et,list_me)
 
     -- 校验在视野范围的实体都在列表上
-    local visual_ev = get_visual_list(et, mask)
-    for id,other in pairs(visual_ev) do
+    local visual_et = get_visual_list(et, mask)
+    for id,other in pairs(visual_et) do
         if not id_map[id] then
             PRINTF("valid_visual fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)",
@@ -302,6 +304,8 @@ end
 
 local history = {}
 local function append_history(action, id, x, y, z, v, mask)
+    if not is_use_history then return end
+
     table.insert(history, {
         action = action,
         id = id,
@@ -313,6 +317,8 @@ local function append_history(action, id, x, y, z, v, mask)
     })
 end
 
+-- luacheck:ignore save_history
+-- 调试bug用
 local function save_history()
     local json = require "lua_parson"
 
@@ -320,6 +326,7 @@ local function save_history()
     json.encode_to_file(history, "list_aoi_his.json")
 end
 
+-- luacheck:ignore run_history
 local function run_history(load)
     local json = require "lua_parson"
     if load then
@@ -331,45 +338,21 @@ local function run_history(load)
     is_valid = true
     is_use_y = true
     local aoi = ListAoi()
-    for idx, his in ipairs(history) do
+    for _, his in ipairs(history) do
 
         local action = his.action
-        if  his.id == 691 or (his.id == 667 and idx >= 2636)  then
-            if "ENTER" == action then
-                enter(aoi, his.id, his.x, his.y, his.z, his.v, his.mask)
-            elseif "UPDATE" == action then
-                update(aoi, his.id, his.x, his.y, his.z)
-            elseif "EXIT" == action then
-                exit(aoi, his.id)
-            else
-                assert(false)
-            end
-
-            local et = entity_info[691]
-            -- if idx > 2629 then
-            --     PRINTF("%d %s index = %d, x = %d, y = %d, z = %d, v = %d",
-            --         his.id,
-            --         action, idx, his.x or -1, his.y or -1, his.z or -1, his.v or -1)
-            --     valid_interest_me(aoi, et)
-            -- end
-            if his.id == 691 then
-                valid_interest_me(aoi, et)
-                PRINTF("%d %s index = %d, x = %d, y = %d, z = %d, v = %d",
-                    his.id,
-                    action, idx, his.x or -1, his.y or -1, his.z or -1, his.v or -1)
-            elseif his.id == 667 then
-                PRINTF("%d %s index = %d, x = %d, y = %d, z = %d, v = %d",
-                    his.id,
-                    action, idx, his.x or -1, his.y or -1, his.z or -1, his.v or -1)
-                if et then valid_interest_me(aoi, et) end
-            end
+        if "ENTER" == action then
+            enter(aoi, his.id, his.x, his.y, his.z, his.v, his.mask)
+        elseif "UPDATE" == action then
+            update(aoi, his.id, his.x, his.y, his.z)
+        elseif "EXIT" == action then
+            exit(aoi, his.id)
+        else
+            assert(false)
         end
 
-        -- if idx == 2638 then
-        --     aoi:dump()
-        -- end
-
- 
+        -- 根据bug条件做不同处理
+        if his.id == 691 then aoi:dump() end
     end
     PRINTF("run done %d - %d", table.size(entity_info), table.size(exit_info))
 end
@@ -428,27 +411,19 @@ t_describe("list aoi test", function()
         is_use_y = true
         local aoi = ListAoi()
 
+        -- 当移动667时，x轴左移刚好跨过691视野左边界，y轴左移出视野，需要C++那边
+        -- 处理实体重复标记
         local et99981 = enter(aoi, 691, 2395, 17853, 570, 256, ET_PLAYER)
         enter(aoi, 667,  2446, 17851, 319, 256, ET_PLAYER)
-        --update(aoi, 667,   2856, 1294, 2000)
-        -- update(aoi, 667,   2446, 17851, 319)
-        aoi:dump()
         update(aoi, 667,   2260, 1581, 9303)
-        aoi:dump()
         valid_interest_me(aoi, et99981)
     end)
     t_it("base list aoi test", function()
+        entity_info = {}
+        exit_info = {}
         is_valid = true
         is_use_y = true
         local aoi = ListAoi()
-
-        local et99981 = enter(aoi, 99981, 2395, 17853, 570, 250, ET_PLAYER)
-        enter(aoi, 99982,  3617, 16410, 11036, 250, ET_PLAYER)
-        update(aoi, 99982,   2856, 1294, 2000)
-        update(aoi, 99982,   2446, 17851, 319)
-        update(aoi, 99982,   2260, 1581, 9303)
-
-        valid_interest_me(aoi, et99981)
 
         -- 测试进入临界值,坐标传入的都是像素，坐标从0开始，所以减1
         enter(aoi, 99991, 0, 0, 0, V_PLAYER, ET_PLAYER)
@@ -537,52 +512,87 @@ t_describe("list aoi test", function()
         exit(aoi, 99996)
         exit(aoi, 99997)
         exit(aoi, 99998)
-        exit(aoi, 99981)
-        exit(aoi, 99982)
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
             tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
 
-        _aoi = aoi
-
         -- 随机测试
-        -- local max_entity = 2000
-        -- local max_random = 50000
-        -- random_test(
-        --     aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
+        local max_entity = 2000
+        local max_random = 50000
+        is_use_history = false
+        random_test(
+            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
-    t_it("list aoi perf", function()
-        -- save_history()
-        is_valid = false
-        is_use_y = true
-        local aoi = ListAoi()
-    end)
+    -- 如果随机测试出现一些不好重现的问题，可以把整个过程记录下来，再慢慢排除
+    -- t_it("list aoi history", function()
+    --     entity_info = {}
+    --     exit_info = {}
 
-    t_it("list aoi perf no_y", function()
+    --     save_history()
+    --     run_history(true)
+    -- end)
+
+    local max_entity = 2000
+    local max_random = 50000
+    t_it(string.format(
+        "perf test no_y %d entity and %d times random move/exit/enter",
+        max_entity, max_random), function()
         entity_info = {}
         exit_info = {}
-        run_history(true)
+
         is_valid = false
         is_use_y = false
-        local aoi = ListAoi()
+        local aoi_no_y = ListAoi()
 
-        aoi:use_y(false)
+        aoi_no_y:use_y(false)
+        is_use_history = false
+        random_test(
+            aoi_no_y, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
-    t_it("list aoi query perf", function()
+    -- 下面这几个aoi共用一个aoi和entity_info之类的
+    local aoi = ListAoi()
+    t_it(string.format(
+        "perf test %d entity and %d times random move/exit/enter",
+        max_entity, max_random), function()
         is_valid = false
-        is_use_y = false
-        local aoi = ListAoi()
+        is_use_y = true
+        entity_info = {}
+        exit_info = {}
 
-        aoi:use_y(false)
+        is_use_history = false
+        random_test(
+            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
-    t_it("list aoi visual change perf", function()
-        is_valid = false
-        is_use_y = false
-        local aoi = ListAoi()
+    local max_query = 1000
+    t_it(string.format(
+        "query visual test %d entity and %d times visual range",
+        max_entity, max_query), function()
+        for _ = 1, max_query do
+            for id in pairs(entity_info) do
+                aoi:get_visual_entity(id, 0xF, tmp_list)
+            end
+        end
+        t_print("actually run " .. table.size(entity_info))
+    end)
 
-        aoi:use_y(false)
+    local max_change_visual = 1000
+    t_it(string.format(
+        "change visual test %d entity and %d times visual range",
+        max_entity, max_change_visual), function()
+
+        local cnt = 0
+        for _ = 1, max_change_visual do
+            for id, et in pairs(entity_info) do
+                if (et.visual > 0) then
+                    cnt = cnt + 1
+                    aoi:update_visual(id,
+                        V_PLAYER * math.random(1, 5), list_me_in, list_me_out)
+                end
+            end
+        end
+        t_print("actually run " .. cnt)
     end)
 end)
