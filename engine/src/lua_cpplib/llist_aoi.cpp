@@ -2,11 +2,17 @@
 #include "ltools.h"
 
 #define CHECK_LIST(list, index) \
-    EntityVector *list = lua_istable(L, index) ? new_entity_vector(): nullptr
-#define DEL_LIST(list) if (list) del_entity_vector(list)
-#define PACK_LIST(list, index, filter)   \
-    do {\
-        if (list) {table_pack(L, index, *list, filter); del_entity_vector(list);}\
+    EntityVector *list = lua_istable(L, index) ? new_entity_vector() : nullptr
+#define DEL_LIST(list) \
+    if (list) del_entity_vector(list)
+#define PACK_LIST(list, index, filter)           \
+    do                                           \
+    {                                            \
+        if (list)                                \
+        {                                        \
+            table_pack(L, index, *list, filter); \
+            del_entity_vector(list);             \
+        }                                        \
     } while (0)
 
 int32_t LListAoi::use_y(lua_State *L)
@@ -77,7 +83,6 @@ int32_t LListAoi::get_entity(lua_State *L)
     int32_t n = 0;
     ListAOI::each_entity([this, L, mask, &n, src_x, src_y, src_z, dst_x, dst_y,
                           dst_z](const EntityCtx *ctx) {
-
         if (ctx->_pos_x < src_x) return true;
         if (ctx->_pos_x > dst_x) return false;
 
@@ -101,7 +106,6 @@ int32_t LListAoi::get_entity(lua_State *L)
     return 0;
 }
 
-
 int32_t LListAoi::get_visual_entity(lua_State *L)
 {
     EntityId id  = luaL_checkinteger(L, 1);
@@ -118,14 +122,14 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
 
     int32_t n = 0;
     ListAOI::each_range_entity(ctx, ctx->_visual,
-                                   [L, mask, &n](const EntityCtx *ctx) {
-                                       if (mask & ctx->_mask)
-                                       {
-                                           ++n;
-                                           lua_pushinteger(L, ctx->_id);
-                                           lua_rawseti(L, 3, n);
-                                       }
-                                   });
+                               [L, mask, &n](const EntityCtx *ctx) {
+                                   if (mask & ctx->_mask)
+                                   {
+                                       ++n;
+                                       lua_pushinteger(L, ctx->_id);
+                                       lua_rawseti(L, 3, n);
+                                   }
+                               });
 
     table_pack_size(L, 3, n);
 
@@ -134,7 +138,7 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
 
 int32_t LListAoi::update_visual(lua_State *L)
 {
-    EntityId id  = luaL_checkinteger(L, 1);
+    EntityId id    = luaL_checkinteger(L, 1);
     int32_t visual = luaL_checkinteger(L, 2);
 
     CHECK_LIST(list_me_in, 3);
@@ -175,14 +179,13 @@ int32_t LListAoi::exit_entity(lua_State *L)
     return 0;
 }
 
-
 int32_t LListAoi::enter_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
     // 实体像素坐标
-    int32_t x = luaL_checkinteger(L, 2);
-    int32_t y = luaL_checkinteger(L, 3);
-    int32_t z = luaL_checkinteger(L, 4);
+    int32_t x      = luaL_checkinteger(L, 2);
+    int32_t y      = luaL_checkinteger(L, 3);
+    int32_t z      = luaL_checkinteger(L, 4);
     int32_t visual = luaL_checkinteger(L, 5);
     // 掩码，可用于区分玩家、怪物、npc等，由上层定义
     uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 6));
@@ -190,7 +193,8 @@ int32_t LListAoi::enter_entity(lua_State *L)
     CHECK_LIST(list_me_in, 7);
     CHECK_LIST(list_other_in, 8);
 
-    bool ok = ListAOI::enter_entity(id, x, y, z, visual, mask, list_me_in, list_other_in);
+    bool ok = ListAOI::enter_entity(id, x, y, z, visual, mask, list_me_in,
+                                    list_other_in);
     if (!ok)
     {
         DEL_LIST(list_me_in);
@@ -209,7 +213,6 @@ int32_t LListAoi::enter_entity(lua_State *L)
     return 0;
 }
 
-
 int32_t LListAoi::update_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
@@ -223,8 +226,8 @@ int32_t LListAoi::update_entity(lua_State *L)
     CHECK_LIST(list_me_out, 7);
     CHECK_LIST(list_other_out, 8);
 
-    int32_t ecode = ListAOI::update_entity(id, x, y, z, list_me_in,
-        list_other_in, list_me_out, list_other_out);
+    int32_t ecode = ListAOI::update_entity(
+        id, x, y, z, list_me_in, list_other_in, list_me_out, list_other_out);
     if (0 != ecode)
     {
 

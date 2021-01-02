@@ -35,6 +35,7 @@ public:
 
         /// 更新坐标
         void update_pos(int32_t x, int32_t y, int32_t z);
+        void update_old_pos();
 
         /**
          * 对比两个节点的位置大小
@@ -202,10 +203,11 @@ protected:
                            std::function<void(EntityCtx *ctx)> &&func);
 
     /// 实体other进入ctx的视野范围
-    void on_enter_range(EntityCtx *ctx, EntityCtx *other,
-        EntityVector *list_in, bool me = true);
+    void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in,
+                        bool me = true);
     /// 实体other退出ctx的视野范围
-    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out, bool me = true);
+    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out,
+                       bool me = true);
     /// 实体other退出ctx的旧的视野范围
     void on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
                            EntityVector *list_out, bool me = true);
@@ -277,7 +279,8 @@ protected:
 
     /// 把ctx的视野边界插入到链表合适的地方
     template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
-    void insert_visual_list(Ctx *&list, EntityCtx *ctx, std::function<void(Ctx *ctx)> &&func);
+    void insert_visual_list(Ctx *&list, EntityCtx *ctx,
+                            std::function<void(Ctx *ctx)> &&func);
 
     /// 把ctx从链表中删除
     template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
@@ -323,6 +326,9 @@ protected:
     int32_t insert_visual(EntityCtx *ctx, EntityVector *list_in);
     /// 把ctx的视野边界节点移出链表
     int32_t remove_visual(EntityCtx *ctx, EntityVector *list_out);
+
+    /// 更新tick
+    void update_tick();
 
 protected:
     /**

@@ -6,7 +6,7 @@
 /**
  * AOI十字链表实现
  */
-class LListAoi final: public ListAOI
+class LListAoi final : public ListAOI
 {
 public:
     ~LListAoi() {}

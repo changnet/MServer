@@ -19,11 +19,17 @@ void ListAOI::Ctx::reset()
     _prev_z = nullptr;
 }
 
-void ListAOI::Ctx::update_pos(int32_t x, int32_t y, int32_t z)
+void ListAOI::Ctx::update_old_pos()
 {
     _old_x = _pos_x;
     _old_y = _pos_y;
     _old_z = _pos_z;
+}
+
+void ListAOI::Ctx::update_pos(int32_t x, int32_t y, int32_t z)
+{
+    update_old_pos();
+
     _pos_x = x;
     _pos_y = y;
     _pos_z = z;
@@ -123,7 +129,8 @@ void ListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
     }
 }
 
-void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in, bool me)
+void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
+                             EntityVector *list_in, bool me)
 {
     // 这里只是表示进入一个轴，最终是否在视野范围内要判断三轴
     if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
@@ -254,19 +261,8 @@ int32_t ListAOI::exit_entity(EntityId id, EntityVector *list)
     return 0;
 }
 
-int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
-                               EntityVector *list_me_in,
-                               EntityVector *list_other_in,
-                               EntityVector *list_me_out,
-                               EntityVector *list_other_out)
+void ListAOI::update_tick()
 {
-    struct EntityCtx *ctx = get_entity_ctx(id);
-    if (!ctx)
-    {
-        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
-        return -1;
-    }
-
     /**
      * 在三轴中移动时，遍历的实体可能会出现重复，有几种方式去重
      * 1. 用std::map或者std::unordered_map去重
@@ -284,9 +280,25 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
             iter->second->_tick = 0;
         }
     }
+}
+
+int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+                               EntityVector *list_me_in,
+                               EntityVector *list_other_in,
+                               EntityVector *list_me_out,
+                               EntityVector *list_other_out)
+{
+    struct EntityCtx *ctx = get_entity_ctx(id);
+    if (!ctx)
+    {
+        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        return -1;
+    }
 
     ctx->update_pos(x, y, z); // 先设置新坐标
     ctx->update_visual(-1);   // 更新视野坐标
+
+    update_tick();
 
     shift_entity<&Ctx::_pos_x, &Ctx::_old_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, list_me_in, list_other_in, list_me_out, list_other_out);
@@ -302,8 +314,7 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     return 0;
 }
 
-void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other,
-                              EntityVector *list_me_in,
+void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
                               EntityVector *list_me_out, int32_t shift_type)
 {
     int32_t type = other->type();
@@ -318,8 +329,8 @@ void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other,
 
     // 向右移动右边界或者向左移动左边界，检测其他实体进入视野。其他情况检测退出视野
     shift_type == ctx->type()
-                    ? on_enter_range(entity, (EntityCtx *)other, list_me_in)
-                    : on_exit_old_range(entity, (EntityCtx *)other, list_me_out);
+        ? on_enter_range(entity, (EntityCtx *)other, list_me_in)
+        : on_exit_old_range(entity, (EntityCtx *)other, list_me_out);
 }
 
 void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
@@ -331,7 +342,7 @@ void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
 
     EntityCtx *entity = other->entity();
     // 视野边界移动时是按顺序先右中左，或者左中右移动的，不应该会跨过自己本身的实体
-    assert(entity != ctx );
+    assert(entity != ctx);
     if (entity->_tick == _tick) return;
 
     // 实体向右移动遇到右边界或者向左移动遇到左边界，则是离开目标视野。其他则是进入目标视野
@@ -358,6 +369,7 @@ int32_t ListAOI::update_visual(EntityId id, int32_t visual,
     // 视野从有变无
     if (had && !has)
     {
+        ctx->update_old_pos();
         return remove_visual(ctx, list_me_out);
     }
     // 视野从无变有
@@ -366,6 +378,10 @@ int32_t ListAOI::update_visual(EntityId id, int32_t visual,
         return insert_visual(ctx, list_me_in);
     }
     // 视野范围大小更新
+    update_tick();
+    // 视野变化需要对比旧位置、旧视野，保证旧位置和新位置同步
+    ctx->update_old_pos();
+
     int32_t shift_type = ctx->_visual - ctx->_old_visual;
     shift_visual<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, list_me_in, list_me_out, shift_type);
@@ -449,8 +465,8 @@ void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&fun
     }
     // 把ctx插入到prev与next之间
     prev ? prev->*_next = ctx : list = ctx;
-    ctx->*_prev = prev;
-    ctx->*_next = next;
+    ctx->*_prev                      = prev;
+    ctx->*_next                      = next;
     if (next) next->*_prev = ctx;
 }
 
@@ -469,8 +485,7 @@ void ListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
 
         Ctx *first = &(ctx->_prev_v);
         insert_list<_pos, _next, _prev>(
-            first, ctx,
-            std::forward<std::function<void(Ctx *)> &&>(func));
+            first, ctx, std::forward<std::function<void(Ctx *)> &&>(func));
 
         first = ctx;
         insert_list<_pos, _next, _prev>(
@@ -566,10 +581,10 @@ void ListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
     Ctx *next = ctx->*_next;
     while (next && ctx->comp<_pos>(next) > 0)
     {
-        is_entity ? on_shift_entity((EntityCtx *)ctx, next, list_other_in,
-                                    list_other_out, CT_VISUAL_NEXT)
-                  : on_shift_visual(ctx, next, list_me_in,
-                                    list_me_out, CT_VISUAL_NEXT);
+        is_entity
+            ? on_shift_entity((EntityCtx *)ctx, next, list_other_in,
+                              list_other_out, CT_VISUAL_NEXT)
+            : on_shift_visual(ctx, next, list_me_in, list_me_out, CT_VISUAL_NEXT);
 
         prev = next;
         next = next->*_next;
@@ -601,10 +616,10 @@ void ListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
     Ctx *prev = ctx->*_prev;
     while (prev && ctx->comp<_pos>(prev) < 0)
     {
-        is_entity ? on_shift_entity((EntityCtx *)ctx, prev, list_other_in,
-                                    list_other_out, CT_VISUAL_PREV)
-                  : on_shift_visual(ctx, prev, list_me_in,
-                                    list_me_out, CT_VISUAL_PREV);
+        is_entity
+            ? on_shift_entity((EntityCtx *)ctx, prev, list_other_in,
+                              list_other_out, CT_VISUAL_PREV)
+            : on_shift_visual(ctx, prev, list_me_in, list_me_out, CT_VISUAL_PREV);
         next = prev;
         prev = prev->*_prev;
     }
@@ -631,16 +646,16 @@ void ListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
     {
         // 视野扩大，左边界左移，右边界右移
         shift_list_next<_pos, _next, _prev>(list, &(ctx->_next_v), list_me_in,
-                                            nullptr, list_me_out, nullptr);
+                                            nullptr, nullptr, nullptr);
         shift_list_prev<_pos, _next, _prev>(list, &(ctx->_prev_v), list_me_in,
-                                            nullptr, list_me_out, nullptr);
+                                            nullptr, nullptr, nullptr);
     }
     else if (shift_type < 0)
     {
         // 视野缩小，左边界右移，右边界左移
-        shift_list_prev<_pos, _next, _prev>(list, &(ctx->_prev_v), list_me_in,
+        shift_list_prev<_pos, _next, _prev>(list, &(ctx->_next_v), nullptr,
                                             nullptr, list_me_out, nullptr);
-        shift_list_next<_pos, _next, _prev>(list, &(ctx->_next_v), list_me_in,
+        shift_list_next<_pos, _next, _prev>(list, &(ctx->_prev_v), nullptr,
                                             nullptr, list_me_out, nullptr);
     }
 }
@@ -710,11 +725,10 @@ void ListAOI::dump()
     PRINTF("XXXXXXXXXXXXXXXX");
     while (ctx)
     {
-        EntityId id = CT_ENTITY == ctx->type()
-            ? ((EntityCtx *)ctx)->_id
-            : ctx->entity()->_id;
+        EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id
+                                               : ctx->entity()->_id;
         PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
-            ctx->type(),id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+               ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
         ctx = ctx->_next_x;
     }
 
@@ -722,11 +736,10 @@ void ListAOI::dump()
     PRINTF("YYYYYYYYYYYYYYYY");
     while (ctx)
     {
-        EntityId id = CT_ENTITY == ctx->type()
-            ? ((EntityCtx *)ctx)->_id
-            : ctx->entity()->_id;
+        EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id
+                                               : ctx->entity()->_id;
         PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
-            ctx->type(),id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+               ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
         ctx = ctx->_next_y;
     }
 
@@ -734,11 +747,10 @@ void ListAOI::dump()
     PRINTF("ZZZZZZZZZZZZZZZZ");
     while (ctx)
     {
-        EntityId id = CT_ENTITY == ctx->type()
-            ? ((EntityCtx *)ctx)->_id
-            : ctx->entity()->_id;
+        EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id
+                                               : ctx->entity()->_id;
         PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
-            ctx->type(),id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+               ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
         ctx = ctx->_next_z;
     }
     PRINTF("================ <<");

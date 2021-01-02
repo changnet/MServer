@@ -246,13 +246,22 @@ local function update(aoi, id, x, y, z)
     aoi:update_entity(id, x, y, z,
         list_me_in, list_other_in, list_me_out, list_other_out)
     if is_valid then
-        vd(list_me_in)
         valid_in(entity, list_me_in)
         valid_other_in(entity, list_other_in)
         valid_out(entity, list_me_out)
         valid_other_out(entity, list_other_out)
         valid_interest_me(aoi, entity)
     end
+end
+
+local function exit(aoi, id)
+    local entity = entity_info[id]
+    assert(entity)
+
+    aoi:exit_entity(id,tmp_list)
+
+    entity_info[id] = nil
+    if is_valid then valid_visual(entity, tmp_list, INTEREST) end
 end
 
 t_describe("list aoi test", function()
@@ -308,7 +317,6 @@ t_describe("list aoi test", function()
 
         -- 视野增大(现在能看到99996了)
         aoi:update_visual(99995, v, tmp_list)
-        aoi:dump()
         t_equal(tmp_list.n, 1)
         t_equal(tmp_list[1], 99996)
         aoi:get_visual_entity(99995, 0xF, tmp_list)
@@ -321,8 +329,17 @@ t_describe("list aoi test", function()
         aoi:get_visual_entity(99995, 0xF, tmp_list)
         t_equal(tmp_list.n, 4)
         -- 视野为0
+        aoi:update_visual(99996, 0, nil, tmp_list)
+        t_equal(tmp_list.n, 5)
+        aoi:get_visual_entity(99996, 0xF, tmp_list)
+        t_equal(tmp_list.n, 0)
         -- 视野从0到不为0
+        aoi:update_visual(99996, V_PLAYER * 2, tmp_list)
+        t_equal(tmp_list.n, 5)
+        aoi:get_visual_entity(99996, 0xF, tmp_list)
+        t_equal(tmp_list.n, 5)
         -- 所有实体退出，保证链表为空
+        exit(99991)
         -- 随机测试
     end)
 
