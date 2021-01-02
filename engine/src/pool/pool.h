@@ -2,7 +2,7 @@
 
 #include "../global/global.h"
 
-// 内存池基类
+/// 内存池、对象池基类
 class Pool
 {
 public:
@@ -67,7 +67,7 @@ public:
     }
 
 public:
-    static constexpr int32_t MAX_POOL = 8;
+    static constexpr int32_t MAX_POOL = 16;
     static class Pool **get_pool_stat()
     {
         static class Pool *pool_stat[MAX_POOL] = {0};
