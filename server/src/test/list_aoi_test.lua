@@ -16,13 +16,15 @@ local ET_PLAYER = 2 + INTEREST -- 玩家，关注所有实体事件
 local ET_NPC = 4 -- npc，不关注任何事件
 local ET_MONSTER = 8 -- 怪物，不关注任何事件
 
-local V_PLAYER = 500 -- 玩家的视野
+local V_PLAYER = 256 -- 玩家的视野半径
 
 local is_valid -- 是否校验结果，perf时不校验
 local is_use_y -- 是否使用y轴
 local tmp_list = {}
-local list_in = {}
-local list_out = {}
+local list_me_in = {}
+local list_other_in = {}
+local list_me_out = {}
+local list_other_out = {}
 local entity_info = {}
 
 -- 是否在视野内
@@ -78,11 +80,37 @@ local function valid_visual_list(et,list)
     return id_map
 end
 
+-- 校验et在list里的实体视野范围内
+local function valid_other_visual_list(et,list)
+    local id_map = {}
+    local max = list.n
+    for idx = 1,max do
+        local id = list[idx]
+
+        assert(et.id ~= id) -- 返回列表不应该包含自己
+
+        -- 返回的实体有效并且关注事件
+        local other = entity_info[id]
+
+        -- 校验视野范围
+        if not in_visual_range(other, et) then
+            PRINTF("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+                et.id,et.x,et.y,other.id,other.x,other.y)
+            assert(false)
+        end
+
+        assert( nil == id_map[id] ) -- 校验返回的实体不会重复
+        id_map[id] = true
+    end
+
+    return id_map
+end
+
 
 -- 把list和自己视野内的实体进行交叉对比，校验list的正确性
-local function valid_visual(et, list, mask)
+local function valid_visual(et, list_me, list_other, mask)
     -- 校验list列表里的实体都在视野范围内
-    local id_map = valid_visual_list(et,list)
+    local id_map = valid_visual_list(et,list_me)
 
     -- 校验在视野范围的实体都在列表上
     local visual_ev = get_visual_list(et, mask)
@@ -104,6 +132,9 @@ local function valid_visual(et, list, mask)
         end
         assert(false)
     end
+
+    -- 校验自己在别人的视野范围内
+    valid_other_visual_list(et, list_other)
 end
 
 -- 测试实体进入aoi并校验结果
@@ -122,8 +153,8 @@ local function enter(aoi, id, x, y, z, visual, mask)
     entity.mask = mask
 
     -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
-    aoi:enter_entity(id,x,y,z, visual, mask,tmp_list)
-    if is_valid then valid_visual(entity,tmp_list, 0xF) end
+    aoi:enter_entity(id,x,y,z, visual, mask,list_me_in, list_other_in)
+    if is_valid then valid_visual(entity, list_me_in, list_other_in, 0xF) end
 
     return entity
 end
@@ -138,10 +169,34 @@ t_describe("list aoi test", function()
 
         -- 测试进入临界值
         enter(aoi, 99991, 0, 0, 0, V_PLAYER, ET_PLAYER)
-        enter(aoi, 99992, MAX_X, 0, 0, 0, ET_NPC)
-        enter(aoi, 99993, 0, MAX_Y, 0, 0, ET_MONSTER)
-        enter(aoi, 99994, 0, 0, MAX_Z, V_PLAYER, ET_PLAYER)
-        enter(aoi, 99995, MAX_X, MAX_Y, MAX_Z, V_PLAYER, ET_PLAYER)
+        aoi:dump()
+        enter(aoi, 99992, MAX_X - 1, 0, 0, 0, ET_NPC)
+        aoi:dump()
+        enter(aoi, 99993, 0, MAX_Y - 1, 0, 0, ET_MONSTER)
+        aoi:dump()
+        enter(aoi, 99994, 0, 0, MAX_Z - 1, V_PLAYER, ET_PLAYER)
+        aoi:dump()
+        enter(aoi, 99995, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, V_PLAYER, ET_PLAYER)
+        aoi:dump()
+
+        aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, tmp_list)
+        t_equal(tmp_list.n, table.size(entity_info))
+        aoi:get_all_entity(ET_PLAYER, tmp_list)
+        t_equal(tmp_list.n, 3)
+
+        aoi:get_entity(ET_PLAYER, tmp_list, 0, 0, 0, 0, 0, 0)
+        t_equal(tmp_list.n, 1)
+        aoi:get_entity(
+            ET_NPC, tmp_list, 0, MAX_X / 2, 0, MAX_Y - 1, 0, MAX_Z - 1)
+        t_equal(tmp_list.n, 0)
+
+
+        -- 进入其他人视野
+
+        aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
+            tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
+            vd(tmp_list)
+        t_equal(tmp_list.n, 5)
     end)
 
     t_it("list aoi perf", function()

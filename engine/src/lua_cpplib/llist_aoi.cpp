@@ -1,6 +1,14 @@
 #include "llist_aoi.h"
 #include "ltools.h"
 
+#define CHECK_LIST(list, index) \
+    EntityVector *list = lua_istable(L, index) ? new_entity_vector(): nullptr
+#define DEL_LIST(list) if (list) del_entity_vector(list)
+#define PACK_LIST(list, index, filter)   \
+    do {\
+        if (list) {table_pack(L, index, *list, filter); del_entity_vector(list);}\
+    } while (0)
+
 int32_t LListAoi::use_y(lua_State *L)
 {
     _use_y = lua_toboolean(L, 1);
@@ -58,17 +66,18 @@ int32_t LListAoi::get_entity(lua_State *L)
 
     lUAL_CHECKTABLE(L, 2);
 
-    // 矩形的两个对角像素坐标
+    // 各个轴上的起点、终点坐标
     int32_t src_x = luaL_checkinteger(L, 3);
-    int32_t src_y = luaL_checkinteger(L, 4);
-    int32_t src_z = luaL_checkinteger(L, 5);
-    int32_t dst_x = luaL_checkinteger(L, 6);
-    int32_t dst_y = luaL_checkinteger(L, 7);
+    int32_t dst_x = luaL_checkinteger(L, 4);
+    int32_t src_y = luaL_checkinteger(L, 5);
+    int32_t dst_y = luaL_checkinteger(L, 6);
+    int32_t src_z = luaL_checkinteger(L, 7);
     int32_t dst_z = luaL_checkinteger(L, 8);
 
     int32_t n = 0;
     ListAOI::each_entity([this, L, mask, &n, src_x, src_y, src_z, dst_x, dst_y,
                           dst_z](const EntityCtx *ctx) {
+
         if (ctx->_pos_x < src_x) return true;
         if (ctx->_pos_x > dst_x) return false;
 
@@ -128,27 +137,18 @@ int32_t LListAoi::update_visual(lua_State *L)
     EntityId id  = luaL_checkinteger(L, 1);
     int32_t visual = luaL_checkinteger(L, 2);
 
-    EntityVector *list_me_in  = lua_istable(L, 3) ? new_entity_vector() : nullptr;
-    EntityVector *list_me_out = lua_istable(L, 4) ? new_entity_vector() : nullptr;
+    CHECK_LIST(list_me_in, 3);
+    CHECK_LIST(list_me_out, 4);
 
     ListAOI::update_visual(id, visual, list_me_in, list_me_out);
 
-    if (list_me_in)
-    {
-        table_pack(L, 3, *list_me_in, [L](const EntityCtx *ctx) {
-            lua_pushinteger(L, ctx->_id);
-            return true;
-        });
-        del_entity_vector(list_me_in);
-    }
-    if (list_me_out)
-    {
-        table_pack(L, 4, *list_me_out, [L](const EntityCtx *ctx) {
-            lua_pushinteger(L, ctx->_id);
-            return true;
-        });
-        del_entity_vector(list_me_out);
-    }
+    auto filter = [L](const EntityCtx *ctx) {
+        lua_pushinteger(L, ctx->_id);
+        return true;
+    };
+    PACK_LIST(list_me_in, 3, filter);
+    PACK_LIST(list_me_out, 4, filter);
+
     return 0;
 }
 
@@ -156,24 +156,22 @@ int32_t LListAoi::exit_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
 
-    EntityVector *list = lua_istable(L, 2) ? new_entity_vector() : nullptr;
+    CHECK_LIST(list, 2);
 
     int32_t ecode = ListAOI::exit_entity(id, list);
     if (0 != ecode)
     {
-        if (list) del_entity_vector(list);
+        DEL_LIST(list);
 
         return luaL_error(L, "aoi exit entity error:%d", ecode);
     }
 
-    if (!list) return 0;
-
-    table_pack(L, 2, *list, [L](const EntityCtx *ctx) {
+    auto filter = [L](const EntityCtx *ctx) {
         lua_pushinteger(L, ctx->_id);
         return true;
-    });
+    };
+    PACK_LIST(list, 2, filter);
 
-    if (list) del_entity_vector(list);
     return 0;
 }
 
@@ -189,24 +187,25 @@ int32_t LListAoi::enter_entity(lua_State *L)
     // 掩码，可用于区分玩家、怪物、npc等，由上层定义
     uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 6));
 
-    EntityVector *list = lua_istable(L, 7) ? new_entity_vector() : nullptr;
+    CHECK_LIST(list_me_in, 7);
+    CHECK_LIST(list_other_in, 8);
 
-    bool ok = ListAOI::enter_entity(id, x, y, z, visual, mask, list);
+    bool ok = ListAOI::enter_entity(id, x, y, z, visual, mask, list_me_in, list_other_in);
     if (!ok)
     {
-        if (list) del_entity_vector(list);
+        DEL_LIST(list_me_in);
+        DEL_LIST(list_other_in);
 
         return luaL_error(L, "aoi enter entity error");
     }
 
-    if (!list) return 0;
-
-    table_pack(L, 7, *list, [L](const EntityCtx *ctx) {
+    auto filter = [L](const EntityCtx *ctx) {
         lua_pushinteger(L, ctx->_id);
         return true;
-    });
+    };
+    PACK_LIST(list_me_in, 7, filter);
+    PACK_LIST(list_other_in, 8, filter);
 
-    del_entity_vector(list);
     return 0;
 }
 
@@ -219,27 +218,20 @@ int32_t LListAoi::update_entity(lua_State *L)
     int32_t y = (int32_t)luaL_checknumber(L, 3);
     int32_t z = (int32_t)luaL_checknumber(L, 4);
 
-#define CHECK_LIST(list, index) \
-    EntityVector *list = lua_istable(L, index) ? new_entity_vector(): nullptr
-
     CHECK_LIST(list_me_in, 5);
     CHECK_LIST(list_other_in, 6);
     CHECK_LIST(list_me_out, 7);
     CHECK_LIST(list_other_out, 8);
-
-#undef CHECK_LIST
 
     int32_t ecode = ListAOI::update_entity(id, x, y, z, list_me_in,
         list_other_in, list_me_out, list_other_out);
     if (0 != ecode)
     {
 
-#define DEL_LIST(list) if (list) del_entity_vector(list)
         DEL_LIST(list_me_in);
         DEL_LIST(list_other_in);
         DEL_LIST(list_me_out);
         DEL_LIST(list_other_out);
-#undef DEL_LIST
 
         return luaL_error(L, "aoi update entity error:%d", ecode);
     }
@@ -249,17 +241,17 @@ int32_t LListAoi::update_entity(lua_State *L)
         return true;
     };
 
-#define PACK_LIST(list, index)   \
-    do {\
-        if (list) {table_pack(L, index, *list, filter); del_entity_vector(list);}\
-    } while (0)
+    PACK_LIST(list_me_in, 5, filter);
+    PACK_LIST(list_other_in, 6, filter);
+    PACK_LIST(list_me_out, 7, filter);
+    PACK_LIST(list_other_out, 8, filter);
 
-    PACK_LIST(list_me_in, 5);
-    PACK_LIST(list_other_in, 6);
-    PACK_LIST(list_me_out, 7);
-    PACK_LIST(list_other_out, 8);
+    return 0;
+}
 
-#undef PACK_LIST
+int32_t LListAoi::dump(lua_State *L)
+{
+    ListAOI::dump();
 
     return 0;
 }

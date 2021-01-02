@@ -209,6 +209,7 @@ protected:
     void on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
                            EntityVector *list_out);
 
+    void dump(); /// 打印整个链表，用于调试
     CtxPool *get_ctx_pool()
     {
         static thread_local CtxPool ctx_pool("link_aoi_ctx");

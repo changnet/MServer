@@ -187,11 +187,23 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 
     insert_entity<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, [this, ctx, list_me_in, list_other_in](Ctx *other) {
-            CT_ENTITY == other->type()
+            if (CT_ENTITY == other->type())
+            {
                 // 对方进入我的视野范围
-                ? on_enter_range(ctx, other->entity(), list_me_in)
+                if (ctx != other)
+                {
+                    on_enter_range(ctx, (EntityCtx *)other, list_me_in);
+                }
+            }
+            else
+            {
                 // 我进入对方视野范围
-                : on_enter_range(other->entity(), ctx, list_other_in);
+                EntityCtx *entity = other->entity();
+                if (ctx != entity)
+                {
+                    on_enter_range(entity, ctx, list_other_in);
+                }
+            }
         });
     // 插入另外的二轴，由于x轴已经遍历了，所以这里不需要再处理视野问题
     if (_use_y)
@@ -418,8 +430,8 @@ void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&fun
     }
 
     Ctx *next = list;
-    Ctx *prev = nullptr;
-    while (next && ctx->comp<_pos>(next) < 0)
+    Ctx *prev = list->*_prev;
+    while (next && ctx->comp<_pos>(next) > 0)
     {
         if (func) func(next);
 
@@ -438,26 +450,28 @@ template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
 void ListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
                             std::function<void(Ctx *)> &&func)
 {
-    // 如果该实体不需要视野，则只插入单个实体，不插入视野边界，以
+    // 如果该实体不需要视野，则只插入单个实体，不插入视野边界
     // 依次插入视野左边界、实体、视野右边界，每一个都以上一个为起点进行遍历，以提高插入效率
-    bool has = ctx->has_visual();
-
-    Ctx *&first = _first_x;
-    if (has)
+    if (ctx->has_visual())
     {
         insert_list<_pos, _next, _prev>(
             list, &(ctx->_prev_v),
             std::forward<std::function<void(Ctx *)> &&>(func));
-        first = &(ctx->_prev_v);
-    }
-    insert_list<_pos, _next, _prev>(
-        first, ctx, std::forward<std::function<void(Ctx *)> &&>(func));
-    if (has)
-    {
+
+        Ctx *first = &(ctx->_prev_v);
+        insert_list<_pos, _next, _prev>(
+            first, ctx,
+            std::forward<std::function<void(Ctx *)> &&>(func));
+
         first = ctx;
         insert_list<_pos, _next, _prev>(
             first, &(ctx->_next_v),
             std::forward<std::function<void(Ctx *)> &&>(func));
+    }
+    else
+    {
+        insert_list<_pos, _next, _prev>(
+            list, ctx, std::forward<std::function<void(Ctx *)> &&>(func));
     }
 }
 
@@ -541,7 +555,7 @@ void ListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
 
     Ctx *prev = nullptr;
     Ctx *next = ctx->*_next;
-    while (next && ctx->comp<_pos>(next) < 0)
+    while (next && ctx->comp<_pos>(next) > 0)
     {
         is_entity ? on_shift_entity((EntityCtx *)ctx, next, list_other_in,
                                     list_other_out, CT_VISUAL_NEXT)
@@ -576,7 +590,7 @@ void ListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
 
     Ctx *next = nullptr;
     Ctx *prev = ctx->*_prev;
-    while (prev && ctx->comp<_pos>(prev) > 0)
+    while (prev && ctx->comp<_pos>(prev) < 0)
     {
         is_entity ? on_shift_entity((EntityCtx *)ctx, prev, list_other_in,
                                     list_other_out, CT_VISUAL_PREV)
@@ -634,7 +648,7 @@ void ListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     // 向右遍历，把视野右边界插入到ctx右边合适的地方
     Ctx *next_v = &(ctx->_next_v);
     assert(!(next_v->*_prev) && !(next_v->*_next)); // 校验之前必定不在链表上
-    while (next && next_v->comp<_pos>(next) < 0)
+    while (next && next_v->comp<_pos>(next) > 0)
     {
         if (func) func(next);
 
@@ -652,7 +666,7 @@ void ListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     prev        = ctx->*_prev;
     Ctx *prev_v = &(ctx->_prev_v);
     assert(!(prev_v->*_next) && !(prev_v->*_prev)); // 校验之前必定不在链表上
-    while (prev && prev_v->comp<_pos>(prev) > 0)
+    while (prev && prev_v->comp<_pos>(prev) < 0)
     {
         if (func) func(prev);
 
@@ -678,4 +692,39 @@ void ListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
         }
         ctx = ctx->_next_x;
     }
+}
+
+void ListAOI::dump()
+{
+    PRINTF("================ >>");
+    Ctx *ctx = _first_x;
+    PRINTF("XXXXXXXXXXXXXXXX");
+    while (ctx)
+    {
+        EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id : -1;
+        PRINTF("(type = %d, id = " FMT64d ", x = %d, y = %d, z = %d",
+            ctx->type(),id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+        ctx = ctx->_next_x;
+    }
+
+    ctx = _first_y;
+    PRINTF("YYYYYYYYYYYYYYYY");
+    while (ctx)
+    {
+        EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id : -1;
+        PRINTF("(type = %d, id = " FMT64d ", x = %d, y = %d, z = %d",
+            ctx->type(),id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+        ctx = ctx->_next_y;
+    }
+
+    ctx = _first_z;
+    PRINTF("ZZZZZZZZZZZZZZZZ");
+    while (ctx)
+    {
+        EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id : -1;
+        PRINTF("(type = %d, id = " FMT64d ", x = %d, y = %d, z = %d",
+            ctx->type(),id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+        ctx = ctx->_next_z;
+    }
+    PRINTF("================ <<");
 }

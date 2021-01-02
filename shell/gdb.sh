@@ -43,12 +43,13 @@
 # man core
 # http://man7.org/linux/man-pages/man5/core.5.html
 
-cd ../server/bin
+PWD=../server/bin
 
 if [[ ! $2 ]]; then
     # ./gdb.sh core-master-4836 调试core文件
-    gdb master $1
+    gdb $PWD/master $1
 else
     # ./gdb.sh gateway 1 1 启动进程进行调试
+    cd $PWD
     gdb -args master $1 $2 $3 $4 $5
 fi

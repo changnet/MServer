@@ -37,10 +37,10 @@ public:
      * @param mask 掩码，根据mask获取特定类型的实体(0xF表示所有)
      * @param tbl 获取到的实体存放在此table中，数量设置在n字段
      * @param src_x 长方体x轴起点坐标
-     * @param src_y 长方体y轴起点坐标
-     * @param src_z 长方体z轴起点坐标
      * @param dst_x 长方体x轴终点坐标
+     * @param src_y 长方体y轴起点坐标
      * @param dst_y 长方体y轴终点坐标
+     * @param src_z 长方体z轴起点坐标
      * @param dst_z 长方体z轴终点坐标
      */
     int32_t get_entity(lua_State *L);
@@ -77,7 +77,8 @@ public:
      * @param z 实体像素坐标z
      * @param visual 视野大小
      * @param mask 实体掩码
-     * @param tbl [optional]视野内新增实体存放在此table中，数量设置在n字段
+     * @param list_me_in [optional]该列表中实体出现在我的视野范围
+     * @param list_other_in [optional]我出现在该列表中实体的视野范围内
      */
     int32_t enter_entity(lua_State *L);
 
@@ -92,4 +93,7 @@ public:
      * @param list_other_out [optional]我从该列表中实体的视野范围内消失
      */
     int32_t update_entity(lua_State *L);
+
+    /// 打印整个链表，用于调试
+    int32_t dump(lua_State *L);
 };
