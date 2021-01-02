@@ -324,6 +324,9 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 
     update_mark();
 
+    // mark是用来防止三轴遍历时重复对同一个实体操作
+    // 在移动一条轴上的实体左边界、实体本身、右边界时也会对同个实体操作，但判断逻辑不一样，因此
+    // 先停用mark
     _use_mark = false;
     shift_entity<&Ctx::_pos_x, &Ctx::_old_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, list_me_in, list_other_in, list_me_out, list_other_out);

@@ -27,6 +27,7 @@ local list_me_out = {}
 local list_other_out = {}
 
 local entity_info = {}
+local exit_info = {}
 
 -- 是否在视野内
 local function in_visual_range(et, other)
@@ -239,6 +240,8 @@ local function enter(aoi, id, x, y, z, visual, mask)
     entity.visual = visual
     entity.mask = mask
 
+    exit_info[id] = nil
+
     -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:enter_entity(id,x,y,z, visual, mask,list_me_in, list_other_in)
     if is_valid then
@@ -276,6 +279,7 @@ local function exit(aoi, id)
     aoi:exit_entity(id,tmp_list)
 
     entity_info[id] = nil
+    exit_info[id] = entity
     if is_valid then valid_other_visual_list(entity, tmp_list) end
 end
 
@@ -295,9 +299,83 @@ local function random_map(map, max_entity)
     return hit
 end
 
+
+local history = {}
+local function append_history(action, id, x, y, z, v, mask)
+    table.insert(history, {
+        action = action,
+        id = id,
+        x = x,
+        y = y,
+        z = z,
+        v = v,
+        mask = mask
+    })
+end
+
+local function save_history()
+    local json = require "lua_parson"
+
+    PRINTF("%d history action save !", #history)
+    json.encode_to_file(history, "list_aoi_his.json")
+end
+
+local function run_history(load)
+    local json = require "lua_parson"
+    if load then
+        history = json.decode_from_file("list_aoi_his.json")
+    end
+
+    PRINTF("%d history action load !", #history)
+
+    is_valid = true
+    is_use_y = true
+    local aoi = ListAoi()
+    for idx, his in ipairs(history) do
+
+        local action = his.action
+        if  his.id == 691 or (his.id == 667 and idx >= 2636)  then
+            if "ENTER" == action then
+                enter(aoi, his.id, his.x, his.y, his.z, his.v, his.mask)
+            elseif "UPDATE" == action then
+                update(aoi, his.id, his.x, his.y, his.z)
+            elseif "EXIT" == action then
+                exit(aoi, his.id)
+            else
+                assert(false)
+            end
+
+            local et = entity_info[691]
+            -- if idx > 2629 then
+            --     PRINTF("%d %s index = %d, x = %d, y = %d, z = %d, v = %d",
+            --         his.id,
+            --         action, idx, his.x or -1, his.y or -1, his.z or -1, his.v or -1)
+            --     valid_interest_me(aoi, et)
+            -- end
+            if his.id == 691 then
+                valid_interest_me(aoi, et)
+                PRINTF("%d %s index = %d, x = %d, y = %d, z = %d, v = %d",
+                    his.id,
+                    action, idx, his.x or -1, his.y or -1, his.z or -1, his.v or -1)
+            elseif his.id == 667 then
+                PRINTF("%d %s index = %d, x = %d, y = %d, z = %d, v = %d",
+                    his.id,
+                    action, idx, his.x or -1, his.y or -1, his.z or -1, his.v or -1)
+                if et then valid_interest_me(aoi, et) end
+            end
+        end
+
+        -- if idx == 2638 then
+        --     aoi:dump()
+        -- end
+
+ 
+    end
+    PRINTF("run done %d - %d", table.size(entity_info), table.size(exit_info))
+end
+
 -- 随机退出、更新、进入进行批量测试
 local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
-    local exit_info = {}
     local mask_opt = { ET_PLAYER, ET_NPC, ET_MONSTER }
     for idx = 1,max_entity do
         local x = math.random(0,max_x)
@@ -307,8 +385,8 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
 
         local visual = 0
         if ET_PLAYER == mask then visual = V_PLAYER end
+        append_history("ENTER", idx, x, y, z, visual, mask)
         enter(aoi, idx, x, y, z, visual, mask)
-        PRINTF("ENTER id = %4d, x = %6d, y = %6d, z = %6d", idx, x, y, z)
     end
 
     -- 随机退出、更新、进入
@@ -322,10 +400,8 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
                 local z = math.random(0,max_z)
                 local visual = 0
                 if ET_PLAYER == et.mask then visual = V_PLAYER end
+                append_history("ENTER", et.id, x, y, z, visual, et.mask)
                 enter(aoi, et.id, x, y, z, visual, et.mask)
-                exit_info[et.id] = nil
-                PRINTF(
-                    "ENTER id = %4d, x = %6d, y = %6d, z = %6d", et.id, x, y, z)
             end
         elseif 2 == ev then
             local et = random_map(entity_info, max_entity)
@@ -333,27 +409,46 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
                 local x = math.random(0,max_x)
                 local y = math.random(0,max_y)
                 local z = math.random(0,max_z)
+                append_history("UPDATE", et.id, x, y, z)
                 update(aoi, et.id, x, y, z)
-                PRINTF(
-                    "UPDATE id = %4d, x = %6d, y = %6d, z = %6d", et.id, x, y, z)
             end
         elseif 3 == ev then
             local et = random_map(entity_info, max_entity)
             if et then
+                append_history("EXIT", et.id)
                 exit(aoi, et.id)
-                exit_info[et.id] = et
-                PRINTF("EXIT id = %4d, x = %6d, y = %6d, z = %6d",
-                    et.id, et.x, et.y, et.z)
             end
         end
     end
 end
 
 t_describe("list aoi test", function()
+    t_it("list_aoi_bug", function()
+        is_valid = true
+        is_use_y = true
+        local aoi = ListAoi()
+
+        local et99981 = enter(aoi, 691, 2395, 17853, 570, 256, ET_PLAYER)
+        enter(aoi, 667,  2446, 17851, 319, 256, ET_PLAYER)
+        --update(aoi, 667,   2856, 1294, 2000)
+        -- update(aoi, 667,   2446, 17851, 319)
+        aoi:dump()
+        update(aoi, 667,   2260, 1581, 9303)
+        aoi:dump()
+        valid_interest_me(aoi, et99981)
+    end)
     t_it("base list aoi test", function()
         is_valid = true
         is_use_y = true
         local aoi = ListAoi()
+
+        local et99981 = enter(aoi, 99981, 2395, 17853, 570, 250, ET_PLAYER)
+        enter(aoi, 99982,  3617, 16410, 11036, 250, ET_PLAYER)
+        update(aoi, 99982,   2856, 1294, 2000)
+        update(aoi, 99982,   2446, 17851, 319)
+        update(aoi, 99982,   2260, 1581, 9303)
+
+        valid_interest_me(aoi, et99981)
 
         -- 测试进入临界值,坐标传入的都是像素，坐标从0开始，所以减1
         enter(aoi, 99991, 0, 0, 0, V_PLAYER, ET_PLAYER)
@@ -442,25 +537,32 @@ t_describe("list aoi test", function()
         exit(aoi, 99996)
         exit(aoi, 99997)
         exit(aoi, 99998)
+        exit(aoi, 99981)
+        exit(aoi, 99982)
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
             tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
 
         _aoi = aoi
+
         -- 随机测试
-        local max_entity = 2000
-        local max_random = 50000
-        random_test(
-            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
+        -- local max_entity = 2000
+        -- local max_random = 50000
+        -- random_test(
+        --     aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
     t_it("list aoi perf", function()
+        -- save_history()
         is_valid = false
         is_use_y = true
         local aoi = ListAoi()
     end)
 
-    t_it("list aoi perf no y", function()
+    t_it("list aoi perf no_y", function()
+        entity_info = {}
+        exit_info = {}
+        run_history(true)
         is_valid = false
         is_use_y = false
         local aoi = ListAoi()
