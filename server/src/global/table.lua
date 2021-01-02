@@ -131,7 +131,7 @@ end
 
 -- 导出table为字符串.
 -- table中不能包括thread、function、userdata，table之间不能相互引用
--- @pretty:是否美化
+-- @param pretty 是否格式化
 function table.dump( tbl,pretty )
     local dump_tbl = {}
     local dump_recursive = {}
@@ -152,10 +152,7 @@ function table.load( str )
     return chunk_f()
 end
 
---[[
-不计算Key为nil的情况
-如果使用了rawset,value可能为nil
-]]
+-- 计算table的大小，不计算Key为nil的情况(如果使用了rawset,value可能为nil)
 function table.size(t)
     local ret = 0
     local k
@@ -167,9 +164,7 @@ function table.size(t)
     return ret
 end
 
---[[
-清空一个table
-]]
+-- 清空一个table
 function table.clear(t)
     local k
     while true do
@@ -179,32 +174,22 @@ function table.clear(t)
     end
 end
 
---[[
-判断一个table是否为空
-]]
+-- 判断一个table是否为空
 function table.empty(t)
     return next(t) == nil
 end
 
---[[
-浅拷贝,shallow_copy
-]]
-function table.copy(t,mt)
+-- 浅拷贝
+function table.copy(t)
     local ct = {}
 
     for k,v in pairs(t) do ct[k] = v end
 
-    if mt then
-        setmetatable( ct,getmetatable(t) )
-    end
-
     return ct
 end
 
---[[
-深拷贝
-]]
-function table.deep_copy(t,mt)
+-- 深拷贝
+function table.deep_copy(t)
     if "table" ~= type(t) then return t end
 
     local ct = {}
@@ -213,25 +198,18 @@ function table.deep_copy(t,mt)
         ct[ table.deep_copy(k) ] = table.deep_copy(v)
     end
 
-    if mt then
-        setmetatable( ct,table.deep_copy(getmetatable(t)) )
-    end
+    local mt = getmetatable(t)
+    if mt then setmetatable(ct, t) end
 
     return ct
 end
 
---[[
-浅合并
-]]
-function table.merge(src,dest,mt)
+-- 把src中的内容合并到dest中
+function table.merge(src, dest)
     local ct = dest or {}
 
-    for k,v in pairs(src) do
+    for k, v in pairs(src) do
         ct[k] = v
-    end
-
-    if mt then
-        setmetatable( ct,getmetatable(src) )
     end
 
     return ct
@@ -327,4 +305,17 @@ function table.sort_ex(list, comp)
     end
 
     return list
+end
+
+local function default_equal(a, b) return a == b end
+
+-- 判断table中是否包含指定元素
+function table.contains(tbl, e, func)
+    func = func or default_equal
+
+    for _, v in pairs(tbl) do
+        if func(e, v) then return true end
+    end
+
+    return false
 end

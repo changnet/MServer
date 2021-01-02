@@ -29,7 +29,7 @@ local list_other_out = {}
 local entity_info = {}
 
 -- 是否在视野内
-local function in_visual_range(et,other)
+local function in_visual_range(et, other)
     local visual = et.visual
     if visual <= 0 then return false end
     if visual < math.abs(et.x - other.x) then return false end
@@ -96,6 +96,10 @@ local function valid_other_visual_list(et,list)
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
+        if not other then
+            PRINT("entity not found", et.id, id)
+            assert(false)
+        end
 
         -- 校验视野范围
         if not in_visual_range(other, et) then
@@ -171,8 +175,7 @@ local function valid_out(et, list)
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
-        assert(other and 0 ~= (other.mask & INTEREST),
-            string.format("id is %d",id))
+        assert(other)
 
         -- 校验视野范围
         if in_visual_range(et,other) then
@@ -238,7 +241,10 @@ local function enter(aoi, id, x, y, z, visual, mask)
 
     -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:enter_entity(id,x,y,z, visual, mask,list_me_in, list_other_in)
-    if is_valid then valid_visual(entity, list_me_in, list_other_in, 0xF) end
+    if is_valid then
+        valid_visual(entity, list_me_in, list_other_in, 0xF)
+        valid_interest_me(aoi, entity)
+    end
 
     return entity
 end
@@ -301,8 +307,8 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
 
         local visual = 0
         if ET_PLAYER == mask then visual = V_PLAYER end
-        local et = enter(aoi, idx, x, y, z, visual, mask)
-        if is_valid then valid_interest_me(aoi, et) end
+        enter(aoi, idx, x, y, z, visual, mask)
+        PRINTF("ENTER id = %4d, x = %6d, y = %6d, z = %6d", idx, x, y, z)
     end
 
     -- 随机退出、更新、进入
@@ -316,9 +322,10 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
                 local z = math.random(0,max_z)
                 local visual = 0
                 if ET_PLAYER == et.mask then visual = V_PLAYER end
-                local new_et = enter(aoi, et.id, x, y, z, visual, et.mask)
+                enter(aoi, et.id, x, y, z, visual, et.mask)
                 exit_info[et.id] = nil
-                if is_valid then  valid_interest_me(aoi, new_et) end
+                PRINTF(
+                    "ENTER id = %4d, x = %6d, y = %6d, z = %6d", et.id, x, y, z)
             end
         elseif 2 == ev then
             local et = random_map(entity_info, max_entity)
@@ -327,13 +334,16 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
                 local y = math.random(0,max_y)
                 local z = math.random(0,max_z)
                 update(aoi, et.id, x, y, z)
-                if is_valid then valid_interest_me(aoi, et) end
+                PRINTF(
+                    "UPDATE id = %4d, x = %6d, y = %6d, z = %6d", et.id, x, y, z)
             end
         elseif 3 == ev then
             local et = random_map(entity_info, max_entity)
             if et then
                 exit(aoi, et.id)
                 exit_info[et.id] = et
+                PRINTF("EXIT id = %4d, x = %6d, y = %6d, z = %6d",
+                    et.id, et.x, et.y, et.z)
             end
         end
     end
@@ -417,7 +427,6 @@ t_describe("list aoi test", function()
         -- 更新位置时，当一个实体的实体指针、右视野指针依次在链表上移过另一个实体的
         -- 视野左边界，另一个实体本身时，mark标记需要特殊处理
         enter(aoi, 99997, et6.x - 1, et6.y - 1, et6.z - 1, v, ET_PLAYER)
-        print("hit now ================================")
         update(aoi, 99997, 1, 1, 1)
 
         -- 插入一个视野范围大到包含另一个实体(99996)的视野左右边界的实体

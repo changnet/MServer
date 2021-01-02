@@ -144,48 +144,52 @@ void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
 }
 
 void ListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
-                            EntityVector *list_out)
+                            EntityVector *list_out, bool me)
 {
-    // 判断旧视野
     if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
     {
         if (ctx->_mask & INTEREST)
         {
             remove_entity_from_vector(other->_interest_me, ctx);
         }
-        if (list_out) list_out->emplace_back(other);
+
+        // "别人离开我的视野" "我离开别人的视野" 取决于ctx与other的位置
+        if (list_out) list_out->emplace_back(me ? other : ctx);
     }
 }
 
 void ListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
-                                EntityVector *list_out, bool me)
+                                EntityVector *list_out, bool me, int32_t visual)
 {
     // 判断旧视野
-    if (me)
+    // 当ctx的视野有变化（视野缩小）则需要使用ctx的旧坐标、旧视野来判断
+    // 当ctx的位置有变化，则只需要使用ctx的旧坐标，但视野是用的other的
+    if (-1 == visual) visual = ctx->_old_visual;
+    if (in_visual(other, ctx->_old_x, ctx->_old_y, ctx->_old_z, visual))
     {
-        // other从ctx的旧视野中退出
-        if (in_visual(other, ctx->_old_x, ctx->_old_y, ctx->_old_z,
-                      ctx->_old_visual))
+        if (ctx->_mask & INTEREST)
         {
-            if (ctx->_mask & INTEREST)
-            {
-                remove_entity_from_vector(other->_interest_me, ctx);
-            }
-            if (list_out) list_out->emplace_back(other);
+            remove_entity_from_vector(other->_interest_me, ctx);
         }
+
+        // "别人离开我的视野" "我离开别人的视野" 取决于ctx与other的位置
+        if (list_out) list_out->emplace_back(me ? other : ctx);
     }
-    else
+}
+
+void ListAOI::on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
+                                    EntityVector *list_out, bool me)
+{
+
+    if (in_visual(ctx, other->_old_x, other->_old_y, other->_old_z))
     {
-        // ctx从other的旧视野中退出
-        if (in_visual(ctx, other->_old_x, other->_old_y, other->_old_z,
-                      other->_old_visual))
+        if (ctx->_mask & INTEREST)
         {
-            if (other->_mask & INTEREST)
-            {
-                remove_entity_from_vector(ctx->_interest_me, other);
-            }
-            if (list_out) list_out->emplace_back(ctx);
+            remove_entity_from_vector(other->_interest_me, ctx);
         }
+
+        // "别人离开我的视野" "我离开别人的视野" 取决于ctx与other的位置
+        if (list_out) list_out->emplace_back(me ? other : ctx);
     }
 }
 
@@ -218,7 +222,7 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                 // 对方进入我的视野范围
                 if (ctx != other)
                 {
-                    on_enter_range(ctx, (EntityCtx *)other, list_me_in);
+                    on_enter_range(ctx, (EntityCtx *)other, list_me_in, true);
                 }
             }
             else
@@ -256,7 +260,7 @@ int32_t ListAOI::exit_entity(EntityId id, EntityVector *list)
     if (ctx->has_visual())
     {
         each_range_entity(ctx, ctx->_visual, [this, ctx](EntityCtx *other) {
-            on_exit_range(ctx, other, nullptr);
+            on_exit_range(ctx, other, nullptr, true);
         });
     }
 
@@ -353,7 +357,7 @@ void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
 
     // 向右移动右边界或者向左移动左边界，检测其他实体进入视野。其他情况检测退出视野
     shift_type == ctx->type()
-        ? on_enter_range(entity, (EntityCtx *)other, list_me_in)
+        ? on_enter_range(entity, (EntityCtx *)other, list_me_in, true)
         : on_exit_old_range(entity, (EntityCtx *)other, list_me_out, true);
 }
 
@@ -371,8 +375,10 @@ void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
 
     // 实体向右移动遇到右边界或者向左移动遇到左边界，则是离开目标视野。其他则是进入目标视野
     entity->_mark = _mark;
-    shift_type == type ? on_exit_range(entity, ctx, list_other_out)
-                       : on_enter_range(entity, ctx, list_other_in, false);
+    shift_type == type
+        // ctx离开entity的视野，需要使用ctx的旧坐标，entity的视野，特殊处理
+        ? on_exit_old_pos_range(entity, ctx, list_other_out, false)
+        : on_enter_range(entity, ctx, list_other_in, false);
 }
 
 int32_t ListAOI::update_visual(EntityId id, int32_t visual,
@@ -425,7 +431,7 @@ int32_t ListAOI::insert_visual(EntityCtx *ctx, EntityVector *list_in)
         _first_x, ctx, [this, ctx, list_in](Ctx *other) {
             if (CT_ENTITY == other->type())
             {
-                on_enter_range(ctx, (EntityCtx *)other, list_in);
+                on_enter_range(ctx, (EntityCtx *)other, list_in, true);
             }
         });
     if (_use_y)

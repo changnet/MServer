@@ -190,19 +190,16 @@ int32_t GridAOI::exit_entity(EntityId id, EntityVector *list)
 void GridAOI::entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                                 int32_t dx, int32_t dy, EntityVector *list)
 {
-    uint8_t interest = ctx->_mask & INTEREST;
-
-    raw_each_range_entity(x, y, dx, dy, [list, ctx, interest](EntityCtx *other) {
-        if (interest)
+    raw_each_range_entity(x, y, dx, dy, [list, ctx](EntityCtx *other) {
+        if (ctx->_mask & INTEREST)
         {
             GridAOI::remove_entity_from_vector(other->_interest_me, ctx);
         }
         if (other->_mask & INTEREST)
         {
             GridAOI::remove_entity_from_vector(ctx->_interest_me, other);
-
-            if (list) list->push_back(other);
         }
+        if (list) list->push_back(other);
     });
 }
 

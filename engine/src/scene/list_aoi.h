@@ -204,12 +204,17 @@ protected:
 
     /// 实体other进入ctx的视野范围
     void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in,
-                        bool me = true);
+                        bool me);
     /// 实体other退出ctx的视野范围
-    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out);
+    void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out,
+                       bool me);
     /// 实体other退出ctx的旧的视野范围
     void on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
-                           EntityVector *list_out, bool me);
+                           EntityVector *list_out, bool me, int32_t visual = -1);
+
+    /// 当other的位置有变化，离开ctx的视野，则只需要使用other的旧坐标，但视野是用的ctx的
+    void on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
+                                        EntityVector *list_out, bool me);
 
     void dump(); /// 打印整个链表，用于调试
     CtxPool *get_ctx_pool()

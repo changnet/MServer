@@ -121,8 +121,7 @@ local function valid_out(et, list)
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
-        assert(other and 0 ~= (other.mask & INTEREST),
-            string.format("id is %d",id))
+        assert(other)
 
         -- 校验视野范围
         if in_visual_range(et,other) then
