@@ -1,9 +1,9 @@
 #include <http_parser.h>
 
-#include "../../lua_cpplib/ltools.h"
-#include "../../system/static_global.h"
-#include "../socket.h"
-#include "http_packet.h"
+#include "../../lua_cpplib/ltools.hpp"
+#include "../../system/static_global.hpp"
+#include "../socket.hpp"
+#include "http_packet.hpp"
 
 #define ASSERT_PARSER_DATA() \
     ASSERT(parser && (parser->data), __FUNCTION__" no parser")

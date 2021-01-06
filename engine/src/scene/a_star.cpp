@@ -1,7 +1,7 @@
 #include <cmath> // for sqrt
 
-#include "a_star.h"
-#include "grid_map.h"
+#include "a_star.hpp"
+#include "grid_map.hpp"
 
 // 默认格子集合大小，128*128有点大，占128k内存了
 // 如果有超级大地图，那么可能要考虑用hash_map，虽然慢一点，至少不会爆内存

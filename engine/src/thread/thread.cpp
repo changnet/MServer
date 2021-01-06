@@ -3,9 +3,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "../net/socket.h"
-#include "../system/static_global.h"
-#include "thread.h"
+#include "../net/socket.hpp"
+#include "../system/static_global.hpp"
+#include "thread.hpp"
 
 Thread::Thread(const char *name)
 {

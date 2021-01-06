@@ -1,4 +1,4 @@
-#include "bson_codec.h"
+#include "bson_codec.hpp"
 
 BsonCodec::BsonCodec()
 {

@@ -1,7 +1,7 @@
 #include <lua.hpp>
 #include <sys/time.h>
 
-#include "../net/socket.h"
+#include "../net/socket.hpp"
 
 #include <arpa/inet.h>
 #include <cmath>
@@ -16,7 +16,7 @@
 #include <openssl/sha.h>
 #include <uuid/uuid.h>
 
-#include "lutil.h"
+#include "lutil.hpp"
 
 /**
  * 获取1970年以来的时间

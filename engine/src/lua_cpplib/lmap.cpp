@@ -1,5 +1,5 @@
-#include "lmap.h"
-#include "../scene/scene_include.h"
+#include "lmap.hpp"
+#include "../scene/scene_include.hpp"
 
 LMap::~LMap() {}
 

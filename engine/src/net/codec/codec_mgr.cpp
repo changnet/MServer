@@ -1,8 +1,8 @@
-#include "codec_mgr.h"
+#include "codec_mgr.hpp"
 
-#include "bson_codec.h"
-#include "flatbuffers_codec.h"
-#include "protobuf_codec.h"
+#include "bson_codec.hpp"
+#include "flatbuffers_codec.hpp"
+#include "protobuf_codec.hpp"
 
 CodecMgr::CodecMgr()
 {

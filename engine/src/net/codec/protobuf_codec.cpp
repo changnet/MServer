@@ -1,7 +1,7 @@
 #include <vector>
 
-#include "../net_header.h"
-#include "protobuf_codec.h"
+#include "../net_header.hpp"
+#include "protobuf_codec.hpp"
 
 #include <lua.hpp>
 #include <pbc.h>

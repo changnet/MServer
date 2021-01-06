@@ -1,6 +1,6 @@
-#include "ltimer.h"
-#include "../system/static_global.h"
-#include "ltools.h"
+#include "ltimer.hpp"
+#include "../system/static_global.hpp"
+#include "ltools.hpp"
 
 LTimer::LTimer(lua_State *L)
 {

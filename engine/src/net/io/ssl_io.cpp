@@ -1,5 +1,5 @@
-#include "../../system/static_global.h"
-#include "ssl_io.h"
+#include "../../system/static_global.hpp"
+#include "ssl_io.hpp"
 
 SSLIO::~SSLIO()
 {

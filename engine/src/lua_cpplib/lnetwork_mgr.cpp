@@ -1,11 +1,11 @@
-#include "lnetwork_mgr.h"
+#include "lnetwork_mgr.hpp"
 
-#include "../system/static_global.h"
-#include "ltools.h"
+#include "../system/static_global.hpp"
+#include "ltools.hpp"
 
-#include "../net/packet/http_packet.h"
-#include "../net/packet/stream_packet.h"
-#include "../net/packet/websocket_packet.h"
+#include "../net/packet/http_packet.hpp"
+#include "../net/packet/stream_packet.hpp"
+#include "../net/packet/websocket_packet.hpp"
 
 LNetworkMgr::~LNetworkMgr()
 {

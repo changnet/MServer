@@ -1,5 +1,5 @@
-#include "llist_aoi.h"
-#include "ltools.h"
+#include "llist_aoi.hpp"
+#include "ltools.hpp"
 
 #define CHECK_LIST(list, index) \
     EntityVector *list = lua_istable(L, index) ? new_entity_vector() : nullptr

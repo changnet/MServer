@@ -1,9 +1,9 @@
 #include <websocket_parser.h>
 
-#include "../../lua_cpplib/ltools.h"
-#include "../../system/static_global.h"
-#include "../socket.h"
-#include "websocket_packet.h"
+#include "../../lua_cpplib/ltools.hpp"
+#include "../../system/static_global.hpp"
+#include "../socket.hpp"
+#include "websocket_packet.hpp"
 
 /*
 https://tools.ietf.org/pdf/rfc6455.pdf sector 5.2 page28

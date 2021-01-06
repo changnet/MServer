@@ -1,11 +1,11 @@
 #include <signal.h>
 
-#include "lev.h"
-#include "ltools.h"
+#include "lev.hpp"
+#include "ltools.hpp"
 
-#include "../net/socket.h"
+#include "../net/socket.hpp"
 
-#include "../system/static_global.h"
+#include "../system/static_global.hpp"
 
 uint32_t LEV::sig_mask = 0;
 

@@ -1,5 +1,5 @@
-#include "statistic.h"
-#include "../system/static_global.h"
+#include "statistic.hpp"
+#include "../system/static_global.hpp"
 
 Statistic::~Statistic() {}
 

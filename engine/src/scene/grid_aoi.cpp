@@ -1,7 +1,7 @@
 #include <cmath>
 
-#include "grid_aoi.h"
-#include "../system/static_global.h"
+#include "grid_aoi.hpp"
+#include "../system/static_global.hpp"
 
 GridAOI::GridAOI()
 {

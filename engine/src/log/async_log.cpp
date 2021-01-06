@@ -1,5 +1,5 @@
-#include "async_log.h"
-#include "../system/static_global.h"
+#include "async_log.hpp"
+#include "../system/static_global.hpp"
 
 AsyncLog::AsyncLog() : Thread("thread_log") {}
 

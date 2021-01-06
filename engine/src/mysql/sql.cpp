@@ -1,4 +1,4 @@
-#include "sql.h"
+#include "sql.hpp"
 #include <errmsg.h>
 
 /* Call mysql_library_init() before any other MySQL functions. It is not

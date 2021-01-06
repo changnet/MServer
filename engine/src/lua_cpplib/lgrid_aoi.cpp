@@ -1,5 +1,5 @@
-#include "lgrid_aoi.h"
-#include "ltools.h"
+#include "lgrid_aoi.hpp"
+#include "ltools.hpp"
 
 int32_t LGridAoi::set_visual_range(lua_State *L)
 {

@@ -1,4 +1,4 @@
-#include "lrank.h"
+#include "lrank.hpp"
 
 int32_t LInsertionRank::remove(lua_State *L)
 {

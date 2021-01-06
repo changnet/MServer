@@ -1,8 +1,8 @@
-#include "static_global.h"
+#include "static_global.hpp"
 #include <openssl/ssl.h>
 
-#include "../mongo/mongo.h"
-#include "../mysql/sql.h"
+#include "../mongo/mongo.hpp"
+#include "../mysql/sql.hpp"
 
 class LEV *StaticGlobal::_ev                  = NULL;
 class LState *StaticGlobal::_state            = NULL;

@@ -5,13 +5,13 @@
 #include <sys/types.h>
 #include <netdb.h>
 
-#include "../system/static_global.h"
-#include "io/ssl_io.h"
-#include "packet/http_packet.h"
-#include "packet/stream_packet.h"
-#include "packet/websocket_packet.h"
-#include "packet/ws_stream_packet.h"
-#include "socket.h"
+#include "../system/static_global.hpp"
+#include "io/ssl_io.hpp"
+#include "packet/http_packet.hpp"
+#include "packet/stream_packet.hpp"
+#include "packet/websocket_packet.hpp"
+#include "packet/ws_stream_packet.hpp"
+#include "socket.hpp"
 
 #ifdef TCP_KEEP_ALIVE
     #define KEEP_ALIVE(x) Socket::keep_alive(x)

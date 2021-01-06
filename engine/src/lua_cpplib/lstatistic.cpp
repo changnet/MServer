@@ -1,5 +1,5 @@
-#include "lstatistic.h"
-#include "../system/static_global.h"
+#include "lstatistic.hpp"
+#include "../system/static_global.hpp"
 
 #define PUSH_STRING(name, val)   \
     do                           \

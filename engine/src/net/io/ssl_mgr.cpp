@@ -1,7 +1,7 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
-#include "ssl_mgr.h"
+#include "ssl_mgr.hpp"
 
 // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error

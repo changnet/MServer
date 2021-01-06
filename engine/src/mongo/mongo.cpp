@@ -1,4 +1,4 @@
-#include "mongo.h"
+#include "mongo.hpp"
 
 void Mongo::init()
 {

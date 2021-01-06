@@ -1,5 +1,5 @@
-#include "thread.h"
-#include "thread_mgr.h"
+#include "thread.hpp"
+#include "thread_mgr.hpp"
 
 ThreadMgr::ThreadMgr() {}
 

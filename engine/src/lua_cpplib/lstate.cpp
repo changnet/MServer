@@ -2,24 +2,24 @@
 #include <lrapidxml.hpp>
 #include <lua.hpp>
 
-#include "lacism.h"
-#include "lgrid_aoi.h"
-#include "lastar.h"
-#include "lclass.h"
-#include "lev.h"
-#include "llog.h"
-#include "lmap.h"
-#include "lmongo.h"
-#include "lnetwork_mgr.h"
-#include "lrank.h"
-#include "lsql.h"
-#include "lstate.h"
-#include "lstatistic.h"
-#include "ltimer.h"
-#include "lutil.h"
-#include "llist_aoi.h"
+#include "lacism.hpp"
+#include "lgrid_aoi.hpp"
+#include "lastar.hpp"
+#include "lclass.hpp"
+#include "lev.hpp"
+#include "llog.hpp"
+#include "lmap.hpp"
+#include "lmongo.hpp"
+#include "lnetwork_mgr.hpp"
+#include "lrank.hpp"
+#include "lsql.hpp"
+#include "lstate.hpp"
+#include "lstatistic.hpp"
+#include "ltimer.hpp"
+#include "lutil.hpp"
+#include "llist_aoi.hpp"
 
-#include "../net/socket.h"
+#include "../net/socket.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \

@@ -1,8 +1,8 @@
-#include "../config.h"
+#include "../config.hpp"
 
-#include "dbg_mem.h"
+#include "dbg_mem.hpp"
 
-#include "assert.h"
+#include "assert.hpp"
 
 #include <pthread.h>
 

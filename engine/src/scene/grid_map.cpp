@@ -1,5 +1,5 @@
-#include "grid_map.h"
-#include "../system/static_global.h"
+#include "grid_map.hpp"
+#include "../system/static_global.hpp"
 
 GridMap::GridMap()
 {

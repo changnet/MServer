@@ -1,6 +1,6 @@
-#include "lsql.h"
-#include "../system/static_global.h"
-#include "ltools.h"
+#include "lsql.hpp"
+#include "../system/static_global.hpp"
+#include "ltools.hpp"
 
 LSql::LSql(lua_State *L) : Thread("lsql")
 {

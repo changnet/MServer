@@ -1,5 +1,5 @@
-#include "lua_cpplib/lclass.h"
-#include "system/static_global.h"
+#include "lua_cpplib/lclass.hpp"
+#include "system/static_global.hpp"
 
 int32_t main(int32_t argc, char **argv)
 {

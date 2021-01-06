@@ -1,7 +1,7 @@
 #include <fcntl.h> // open O_RDONLY
 #include <sys/stat.h>
 
-#include "lacism.h"
+#include "lacism.hpp"
 
 LAcism::LAcism(lua_State *L)
 {

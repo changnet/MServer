@@ -1,4 +1,4 @@
-#include "buffer.h"
+#include "buffer.hpp"
 
 // 临时连续缓冲区
 static const uint32_t continuous_size       = MAX_PACKET_LEN;

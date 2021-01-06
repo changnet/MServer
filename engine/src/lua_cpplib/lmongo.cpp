@@ -1,11 +1,11 @@
-#include "lmongo.h"
+#include "lmongo.hpp"
 #include <cstdarg>
 #include <ctime> // for clock
 
-#include "ltools.h"
+#include "ltools.hpp"
 #include <lbson.h>
 
-#include "../system/static_global.h"
+#include "../system/static_global.hpp"
 
 LMongo::LMongo(lua_State *L) : Thread("lmongo")
 {

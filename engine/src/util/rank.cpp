@@ -1,5 +1,5 @@
-#include "rank.h"
-#include "../system/static_global.h"
+#include "rank.hpp"
+#include "../system/static_global.hpp"
 
 BaseRank::BaseRank()
 {

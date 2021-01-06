@@ -1,7 +1,7 @@
 #include <fcntl.h>
 
-#include "ev.h"
-#include "ev_watcher.h"
+#include "ev.hpp"
+#include "ev_watcher.hpp"
 
 EV::EV()
 {
