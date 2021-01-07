@@ -195,8 +195,61 @@ function build_env_once()
     echo "all done !!!"
 }
 
+function set_sys_env()
+{
+	# Starting in MongoDB 4.4, a startup error is generated if the ulimit value for number of open files is under 64000
+	cmd='cat /etc/security/limits.conf | grep -E "^[^#]*nofile"'
 
-build_env_once 2>&1 | tee $BUILD_ENV_LOG
+	r=`sh -c "$cmd" ||:`
+	if [[ "$r" ]]; then
+		echo "max number of open file descriptors already set, do nothing"
+		echo "$r"
+	else
+		# debian9如果是root用户，*是匹配不到的，不会生效。其他用户可以
+		echo "root               soft    nofile             65535" >> /etc/security/limits.conf
+		echo "root               hard    nofile             65535" >> /etc/security/limits.conf
+		
+		echo "set max number of open file descriptors"
+		sh -c "$cmd"
+	fi
 
-# 只要安装其中一个的话，把上面的代码临时注释掉即可
-# build_$1 2>&1 | tee $BUILD_ENV_LOG
+	cmd='cat /etc/security/limits.conf | grep -E "^[^#]*core"'
+	r=`sh -c "$cmd" ||:`
+	if [[ $r ]]; then
+		echo "limits the core file size  already set, do nothing"
+		echo $r
+	else
+		echo "root               soft    core             unlimited" >> /etc/security/limits.conf
+		echo "root               hard    core             unlimited" >> /etc/security/limits.conf
+		
+		echo "set limits the core file size"
+		sh -c "$cmd"
+	fi
+	
+	# 使用以下方式测试core dump是否正常
+	# $ sleep 10
+	# ^\Quit (core dumped)                #使用 Ctrl+\ 退出程序, 会产生 core dump
+	cmd='cat /etc/sysctl.d/99-sysctl.conf | grep -E "^[^#]*core_pattern"'
+	r=`sh -c "$cmd" ||:`
+	if [[ "$r" ]]; then
+		echo "core_pattern already set, do nothing"
+		echo "$r"
+	else
+		if [[ -f /usr/sbin/VBoxService ]]; then
+			# 以mount方式挂载到VirtualBox的方式没写写入core文件，其大小为0，因此把core文件写入到/tmp
+			echo "VirtualBox enviroment found, core file set to /tmp/"
+			echo "kernel.core_pattern = /tmp/core-%e-%p-%t" >> /etc/sysctl.d/99-sysctl.conf
+		else
+			echo "kernel.core_pattern = core-%e-%p-%t" >> /etc/sysctl.d/99-sysctl.conf
+		fi
+		sh -c "$cmd"
+	fi
+	
+	echo "set DONE, sys may NEED to reboot"
+}
+
+if [[ $1 ]]; then
+	$1 $2 $3
+else
+	build_env_once 2>&1 | tee $BUILD_ENV_LOG
+fi

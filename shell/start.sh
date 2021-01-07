@@ -8,9 +8,8 @@ cd ../server/bin
 # ./start.sh app srv_id
 # app的index会被自动计算出来
 
-# 以soft模式设置core文件大小及文件句柄数量
-# 通过virtualbox挂载NTFS到linux时，生成的core文件为0，这时要指定生成的文件不在挂载的文件系统
-# https://stackoverflow.com/questions/13403824/empty-core-dump-file-after-segmentation-fault
+# 以soft模式设置core文件大小及文件句柄数量，一般在./build_env.sh set_sys_env里设置
+# 不过这里强制设置一次
 ulimit -Sc unlimited
 ulimit -Sn 65535
 
