@@ -15,30 +15,36 @@ t_describe("http(s) test", function()
     -- 测试时发现，ipv6可以把ipv4的地址传进去
     local local_host = "::1" -- "127.0.0.1"
 
+    local clt_ssl
+    local srv_ssl
+    local vfy_ssl
+    local vfy_srv_ssl
+    local vfy_clt_ssl
+
     t_before( function()
+        clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
+
+        vfy_ssl = network_mgr:new_ssl_ctx(
+            network_mgr.SSLVT_TLS_CLT_AT, nil, nil, nil,
+            "/etc/ssl/certs/ca-certificates.crt")
+
+        srv_ssl = network_mgr:new_ssl_ctx(
+            network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
+            "../certs/srv_key.pem","mini_distributed_game_server" )
+
+        vfy_srv_ssl = network_mgr:new_ssl_ctx(
+            network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
+            "../certs/srv_key.pem","mini_distributed_game_server",
+            "../certs/ca.cer" )
+
+        vfy_clt_ssl = network_mgr:new_ssl_ctx(
+            network_mgr.SSLVT_TLS_CLT_AT, "../certs/client.cer",
+            "../certs/clt_key.pem","mini_distributed_game_server",
+            "../certs/ca.cer")
+
         local ip = util.gethostbyname(exp_host)
         t_print("target host address is", ip)
     end)
-
-    local clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
-
-    local srv_ssl = network_mgr:new_ssl_ctx(
-        network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
-        "../certs/srv_key.pem","mini_distributed_game_server" )
-
-    local vfy_ssl = network_mgr:new_ssl_ctx(
-        network_mgr.SSLVT_TLS_CLT_AT, nil, nil, nil,
-        "/etc/ssl/certs/ca-certificates.crt")
-
-    local vfy_srv_ssl = network_mgr:new_ssl_ctx(
-        network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
-        "../certs/srv_key.pem","mini_distributed_game_server",
-        "../certs/ca.cer" )
-
-    local vfy_clt_ssl = network_mgr:new_ssl_ctx(
-        network_mgr.SSLVT_TLS_CLT_AT, "../certs/client.cer",
-        "../certs/clt_key.pem","mini_distributed_game_server",
-        "../certs/ca.cer")
 
     t_it("http get " .. exp_host, function()
         t_wait(10000)

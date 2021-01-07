@@ -1,5 +1,5 @@
 #include "sql.hpp"
-#include <errmsg.h>
+#include <mariadb/errmsg.h>
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
  * thread-safe, so call it before threads are created, or protect the call with

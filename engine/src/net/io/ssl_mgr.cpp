@@ -120,7 +120,7 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     // ASN1只支持一个文件一个证书，pem可以将多个证书放到同一个文件
     if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
     {
-        ssl_error("new_ssl_ctx cert file");
+        ssl_error(cert_file);
         goto FAIL;
     }
 

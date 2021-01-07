@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../global/global.hpp"
-#include <mysql.h>
+#include <mariadb/mysql.h>
 #include <vector>
 
 #define SQL_FIELD_LEN 64

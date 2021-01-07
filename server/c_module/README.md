@@ -5,4 +5,10 @@
 https://stackoverflow.com/questions/31639483/lua-multiple-vms-detected-while-trying-to-add-extension-for-statically-linke
 
 
-cjson.so from ``luarocks install lua-cjson 2.1.0-1`` just for testing.
+cjson.so just for testing.
+```bash
+git clone https://github.com/mpx/lua-cjson.git
+cd lua-cjson
+make
+cp cjson.so ../MServer/server/c_module/
+```

@@ -20,15 +20,26 @@ set -x
 # KEY - 通常用来存放一个公钥或者私钥,并非X.509证书,编码同样的,可能是PEM,也可能是DER.
 # CSR - Certificate Signing Request,即证书签名请求,这个并不是证书,而是向权威证书颁发机构获得签名证书的申请,其核心内容是一个公钥(当然还附带了一些别的信息),在生成这个申请的时候,同时也会生成一个私钥,私钥要自己保管好
 
+NOW_PWD=`pwd`
+
 # 用于测试的密码
 OPENSSLPASS=mini_distributed_game_server
+
+# 位数太小会报错：error:140AB18F:SSL routines:SSL_CTX_use_certificate:ee key too small
+BITNUM=2048
+
+# sha256以下的算法不被支持了： SSL_CTX_use_certificate:ca md too weak
+DIGEST=-sha256
 
 # 用：locate openssl.cnf来确定openssl的配置文件，
 # 创建各个工作目录，如：dir		= ./demoCA		# TSA root directory
 # newcerts——存放CA指令生成的新证书
 # private——存放私钥
-mkdir -p ./demoCA/{private,public}
-cd ./demoCA
+DEMO_DIR=/tmp/demoCA
+
+rm -rf $DEMO_DIR
+mkdir -p $DEMO_DIR/{private,public}
+cd $DEMO_DIR
 
 # index.txt——OpenSSL定义的已签发证书的文本数据库文件，这个文件通常在初始化的时候是空的
 # serial——证书签发时使用的序列号参考文件，该文件的序列号是以16进制格式进行存放的，该文
@@ -51,10 +62,10 @@ openssl rand -out private/.rand 1000
 # genrsa——使用RSA算法产生私钥
 # -aes256——使用256位密钥的AES算法对私钥进行加密
 # -out——输出文件的路径
-# 1024——指定私钥长度
+# $BITNUM——指定私钥长度
 # -passout－密码输入方式，pass表示为明文指定密码
 # !!! 选择了加密方式，则必须要输入密码，不选择则可以无密码
-openssl genrsa -aes256 -out private/ca_key.pem -passout pass:$OPENSSLPASS 1024
+openssl genrsa -aes256 -out private/ca_key.pem -passout pass:$OPENSSLPASS $BITNUM
 
 # 使用私钥生成根证书签发申请文件(csr文件)
 # 证书要向证书颁发机构申请的，要向他们提交申请文件。这个文件包含申请组织的信息
@@ -76,12 +87,12 @@ openssl req -new -key private/ca_key.pem -passin pass:$OPENSSLPASS -out private/
 # x509——生成x509格式证书
 # req——输入csr文件
 # days——证书的有效期（天）
-# sha1——证书摘要采用sha1算法
+# $DIGEST——证书摘要采用签名算法，如sha1,sha256
 # extensions——按照openssl.cnf文件中配置的v3_ca项添加扩展
 # signkey——签发证书的私钥
 # in——要输入的csr文件
 # out——输出的cer证书文件
-openssl x509 -req -days 3650 -sha1 -extensions v3_ca -signkey \
+openssl x509 -req -days 3650 $DIGEST -extensions v3_ca -signkey \
 private/ca_key.pem -passin pass:$OPENSSLPASS -in private/ca.csr -out public/ca.cer
 
 ##################### 根证书完成 #################################
@@ -91,7 +102,7 @@ private/ca_key.pem -passin pass:$OPENSSLPASS -in private/ca.csr -out public/ca.c
 
 ################### 服务端证书 ###############################
 # 生成服务端私钥
-openssl genrsa -aes256 -out private/srv_key.pem -passout pass:$OPENSSLPASS 1024
+openssl genrsa -aes256 -out private/srv_key.pem -passout pass:$OPENSSLPASS $BITNUM
 # 申请
 openssl req -new -key private/srv_key.pem -passin pass:$OPENSSLPASS -out private/server.csr -subj \
 "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=server/CN=minidistributedgameserver.com"
@@ -102,7 +113,7 @@ openssl req -new -key private/srv_key.pem -passin pass:$OPENSSLPASS -out private
 # CAcreateserial——表示创建证书序列号文件(即上方提到的serial文件)，创建的序列号文件默认名称为-CA，指定的证书名称后加上.srl后缀
 # 注意：这里指定的-extensions的值为v3_req，在OpenSSL的配置中，v3_req配置的basicConstraints的值为CA:FALSE
 # 而前面生成根证书时，使用的-extensions值为v3_ca，v3_ca中指定的basicConstraints的值为CA:TRUE，表示该证书是颁发给CA机构的证书
-openssl x509 -req -days 3650 -sha1 -extensions v3_req -CA public/ca.cer -passin pass:$OPENSSLPASS -CAkey private/ca_key.pem \
+openssl x509 -req -days 3650 $DIGEST -extensions v3_req -CA public/ca.cer -passin pass:$OPENSSLPASS -CAkey private/ca_key.pem \
 -CAserial ca.srl -CAcreateserial -in private/server.csr -out public/server.cer
 
 
@@ -113,13 +124,13 @@ openssl x509 -req -days 3650 -sha1 -extensions v3_req -CA public/ca.cer -passin 
 # 员工需要在家里登录OA系统，那服务器必须验证这个用户为公司自己的员工。
 
 # 生成客户端私钥
-openssl genrsa -aes256 -out private/clt_key.pem -passout pass:$OPENSSLPASS 1024
+openssl genrsa -aes256 -out private/clt_key.pem -passout pass:$OPENSSLPASS $BITNUM
 # 申请
 openssl req -new -key private/clt_key.pem -passin pass:$OPENSSLPASS -out private/client.csr -subj \
 "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=client/CN=minidistributedgameserver.com"
 # 签发
 # 注意上方签发服务端证书时已经使用-CAcreateserial生成过ca.srl文件，因此这里不需要带上这个参数了
-openssl x509 -req -days 3650 -sha1 -extensions v3_req -CA public/ca.cer -passin pass:$OPENSSLPASS -CAkey private/ca_key.pem \
+openssl x509 -req -days 3650 $DIGEST -extensions v3_req -CA public/ca.cer -passin pass:$OPENSSLPASS -CAkey private/ca_key.pem \
 -CAserial ca.srl -in private/client.csr -out public/client.cer
 
 
@@ -129,3 +140,15 @@ openssl x509 -req -days 3650 -sha1 -extensions v3_req -CA public/ca.cer -passin 
 
 # 可用以下方法去掉密码
 openssl rsa -in private/srv_key.pem -passin pass:$OPENSSLPASS -out private/srv_key_no_passwd.pem
+
+# 复制需要的文件到对应目录
+SRV_CERT=$NOW_PWD/../server/certs/
+
+cp public/ca.cer $SRV_CERT
+cp public/client.cer $SRV_CERT
+cp public/server.cer $SRV_CERT
+cp private/clt_key.pem $SRV_CERT
+cp private/srv_key.pem $SRV_CERT
+cp private/srv_key_no_passwd.pem $SRV_CERT
+
+rm -r $DEMO_DIR

@@ -161,7 +161,9 @@ target_link_libraries(master
     mariadbclient.a
     mongoc-static-1.0.a
     bson-static-1.0.a
-    sasl2.a
 
-    ssl crypto dl rt pthread resolv z
+    # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
+
+    # mariadb使用了gnutls
+    ssl gnutls crypto dl rt pthread resolv z
 )
