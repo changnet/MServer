@@ -17,6 +17,11 @@ CLI=mariadb #mysql
 
 # systemctl restart mariadb
 
+# 用于开发、测试的帐号和用户名
+DEF_USR=test
+DEF_PWD=test
+DEF_DBN=test_999
+
 # 创建内网测试用户，正式服不要给这么高的权限并且要限制登录ip
 # ./mysql.sh new_user 管理员用户名 管理员密码 新用户名 新用户密码
 # ./mysql.sh new_user root 1 test test
@@ -45,6 +50,26 @@ $CLI -u$1 -p$2 $3 --default_character_set utf8 < "../project/log_schema.sql"
 function dump_struct()
 {
     mysqldump -u$1 -p$2 --default_character_set utf8 --no-data $3 > "../project/log_schema.sql"
+}
+
+# 安装数据库，初始初始化一个用于测试的用户名、密码以及一个测试用的日志数据库
+function install()
+{
+	export DEBIAN_FRONTEND="noninteractive"
+	debconf-set-selections <<< "mariadb-server mysql-server/root_password password $DEF_PWD"
+	debconf-set-selections <<< "mariadb-server mysql-server/root_password_again password $DEF_PWD" 
+
+	apt install -y mariadb-server
+	
+	# 使用root用户创建一个用于测试的帐号
+	echo "create user $DEF_USR"
+	new_user root $DEF_PWD $DEF_USR $DEF_PWD
+	
+	# 创建一个用于测试的数据库
+	echo "create test database $DEF_DBN"
+	new_log_schema $DEF_USR $DEF_PWD $DEF_DBN
+	
+	echo "all DONE !"
 }
 
 parameter=($@)

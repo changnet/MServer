@@ -23,11 +23,11 @@
 # 因此在文件中需要注意换行。比如for循环的大括号就不能换行
 # mongo 127.0.0.1:27013/mudrv -u test -p test < command.js
 
-# mongo 127.0.0.1:27013/admin是对的
-# mongo 127.0.0.1:27013 admin是错的，要在后面加数据库名，需要用--host和--port
-MONGO="mongo --host 127.0.0.1 --port 27013"
-TEST_MONGO="$MONGO -utest -ptest"
-ADMIN_MONGO="$MONGO -uxzc -p1"
+# 用于开发、测试的帐号和用户名
+DEF_USR=test
+DEF_PWD=test
+DEF_DBN=test_999
+DEF_ADM=admin
 
 # 创建数据库帐号管理员
 # mongodb和MySQL不一样，每个数据库都必须创建专属的帐号。而创建创建帐号需要帐号管理员
@@ -50,9 +50,9 @@ function admin()
 # userAdminAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的userAdmin权限
 # dbAdminAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的dbAdmin权限。
 # root：只在admin数据库中可用。超级账号，超级权限
-    $MONGO << EOF
+    mongo --host 127.0.0.1 --port 27017 << EOF
 use admin
-db.createUser( {user:"xzc",pwd:"1",roles:["userAdminAnyDatabase","dbAdminAnyDatabase"]} )
+db.createUser( {user:"$DEF_ADM",pwd:"$DEF_PWD",roles:["userAdminAnyDatabase","dbAdminAnyDatabase"]} )
 EOF
 }
 
@@ -63,21 +63,48 @@ function shell()
     $TEST_MONGO $1
 }
 
-# 创建测试用的数据库test_999
-# ./mongo.sh new_db
-function new_db()
-{
-    $ADMIN_MONGO admin << EOF
-use test_999
-db.createUser( {user:"test",pwd:"test",roles:["dbAdmin","readWrite"]} )
-EOF
-}
-
 # 运行mongo脚本文件
 # ./mongo.sh cmd test_999 mongo_clear
 function cmd()
 {
     $TEST_MONGO $3 < ../project/$4.ms
+}
+
+# 安装数据库并创建用于测试的用户
+function install()
+{
+	# https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/
+	MONGODB_V=4.4
+	# 获取debian的名字，如debian 10叫buster
+	CODENAME=`cat /etc/os-release | grep CODENAME | awk -F = '{ print $2 }'`
+	apt install -y gnupg
+	wget -qO - https://www.mongodb.org/static/pgp/server-$MONGODB_V.asc | apt-key add -
+	echo "deb http://repo.mongodb.org/apt/debian $CODENAME/mongodb-org/$MONGODB_V main" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+	apt update
+	apt install -y mongodb-org
+	
+	# mongodb默认没有启动数据库
+	systemctl start mongod
+	
+	# 创建管理员
+	echo "create administrator: $DEF_ADM"
+	admin
+	
+	# 加上安全选项
+	echo "stop mongodb and set security option"
+	systemctl stop mongod
+	sed -i -e 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/g' /etc/mongod.conf
+	sed -i -e 's/#security:/security:\n  authorization: enabled/g' /etc/mongod.conf
+	
+	# 创建测试用帐号
+	echo "start mongodb ..."
+	systemctl start mongod
+	sleep 5
+	echo "create test database: $DEF_DBN"
+	mongo --host 127.0.0.1 --port 27017 -u$DEF_ADM -p$DEF_PWD admin << EOF
+use $DEF_DBN
+db.createUser( {user:"$DEF_USR",pwd:"$DEF_PWD",roles:["dbAdmin","readWrite"]} )
+EOF
 }
 
 parameter=($@)
