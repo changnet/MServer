@@ -1,7 +1,8 @@
 一些和工程相关的配置、脚本都放这里
 
 PS:
-之前一直使用Makefile作为编译脚本，但越来越多的开发工具（Visual Studio、Visual Studio Code、Qt Creator、CLion）都支持CMake，因此必改用CMake了。
+1. 之前一直使用Makefile作为编译脚本，但越来越多的开发工具（Visual Studio、Visual Studio Code、Qt Creator、CLion）都支持CMake，因此必须改用CMake了。
+2. 尝试过把CMakeLists.txt放在project目录，但是Qt Creator对此支持不好，左边的目录无法只显示当前项目的目录，搜索也无法搜索头文件，只能识别cpp文件，最后只能放到engine目录了。
 
 ## Qt Creator
 https://www.qt.io/offline-installers
