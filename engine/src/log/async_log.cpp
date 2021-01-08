@@ -20,7 +20,7 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 }
 
 void AsyncLog::write(const char *path, const char *ctx, size_t len,
-                     LogOut out_type)
+                     LogType out_type)
 {
     static class EV *ev = StaticGlobal::ev();
 
@@ -30,7 +30,7 @@ void AsyncLog::write(const char *path, const char *ctx, size_t len,
     unlock();
 }
 
-void AsyncLog::raw_write(const char *path, LogOut out, const char *fmt,
+void AsyncLog::raw_write(const char *path, LogType out, const char *fmt,
                          va_list args)
 {
     static char ctx_buff[LOG_MAX_LENGTH];
@@ -52,7 +52,7 @@ void AsyncLog::raw_write(const char *path, LogOut out, const char *fmt,
 
     write(path, ctx_buff, len > LOG_MAX_LENGTH ? LOG_MAX_LENGTH : len, out);
 }
-void AsyncLog::raw_write(const char *path, LogOut out, const char *fmt, ...)
+void AsyncLog::raw_write(const char *path, LogType out, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

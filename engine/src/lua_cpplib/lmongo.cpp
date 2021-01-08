@@ -230,7 +230,7 @@ void LMongo::invoke_result()
         int64_t real            = StaticGlobal::ev()->ms_now() - res->_time;
         if (0 == res->_error.code)
         {
-            logger->raw_write("", LO_MONGODB,
+            logger->raw_write("", LT_MONGODB,
                               "%s.%s:%s real:" FMT64d " msec,thread:%.3f sec",
                               res->_clt, MQT_NAME[res->_mqt], res->_query, real,
                               res->_elaspe);
@@ -238,7 +238,7 @@ void LMongo::invoke_result()
         else
         {
             logger->raw_write(
-                "", LO_MONGODB,
+                "", LT_MONGODB,
                 "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
                 res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
                 res->_error.message, real, res->_elaspe);

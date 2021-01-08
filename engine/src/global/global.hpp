@@ -31,12 +31,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // 底层C日志相关函数，脚本最终也在调用C来打印日志
 
+#include "../log/log.hpp"
+
 // 主要是实现屏幕、文件双向输出。一开始考虑使用重定向、tee来实现，但是在跨平台、日志文件截断
 // 方面不太好用。nohub方式不停服无法截断日志文件，查看日志也不太方便
 
 extern void set_app_name(const char *name);
 extern void cerror_log(const char *prefix, const char *fmt, ...);
-extern void cprintf_log(const char *prefix, const char *fmt, ...);
+extern void cprintf_log(LogType type, const char *fmt, ...);
 extern void raw_cerror_log(time_t tm, const char *prefix, const char *fmt, ...);
 extern void raw_cprintf_log(time_t tm, const char *prefix, const char *fmt, ...);
 
@@ -59,18 +61,12 @@ extern std::string std_format(const char *fmt, ...);
 /* Qt style unused paramter handler */
 #define UNUSED(x) (void)x
 
-/* after c++0x,static define in glibc/assert/assert.h */
-#if __cplusplus < 201103L /* -std=gnu99 */
-    #define static_assert(x, msg) \
-        typedef char __STATIC_ASSERT__##__LINE__[(x) ? 1 : -1]
-#endif
-
 /* 分支预测，汇编优化。逻辑上不会改变cond的值 */
 #define EXPECT_FALSE(cond) __builtin_expect(!!(cond), 0)
 #define EXPECT_TRUE(cond)  __builtin_expect(!!(cond), 1)
 
 #ifdef _PRINTF_
-    #define PRINTF(...) cprintf_log("CP", __VA_ARGS__)
+    #define PRINTF(...) cprintf_log(LT_CPRINTF, __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
     #define PRINTF_R(...) raw_cprintf_log(::time(NULL), "CP", __VA_ARGS__)
 #else

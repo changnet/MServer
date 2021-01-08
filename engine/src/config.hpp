@@ -4,9 +4,6 @@
 // #define NMEM_DEBUG
 #define NDBG_MEM_TRACE
 
-/* print file and time when C++ error */
-#define _PFILETIME_
-
 /* print info to stdout with macro PRINTF */
 #define _PRINTF_
 
@@ -40,9 +37,6 @@
 
 /* 日志文件超时秒数 */
 #define LOG_FILE_TIMEOUT 600
-
-/* 日志是否打印app进程名,后面的数字表示进程名最大长度 */
-#define LOG_APP_NAME 32
 
 /* 单个包最大长度，与包头数据类型定义有关 */
 #define MAX_PACKET_LEN 65535

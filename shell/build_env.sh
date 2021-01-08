@@ -32,6 +32,7 @@ function build_tool_chain()
     echo "build tool chain ..."
     auto_apt_install gcc
     auto_apt_install g++
+    auto_apt_install gdb
     auto_apt_install make
 
     # flatbuffers and mongo will need those to build

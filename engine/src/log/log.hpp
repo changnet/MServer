@@ -3,7 +3,7 @@
 #include <ctime>
 #include <vector>
 
-#include "../global/global.hpp"
+#include "../global/types.hpp"
 
 class Pool;
 class LogOne;
@@ -11,13 +11,13 @@ class LogOne;
 // 日志输出类型
 typedef enum
 {
-    LO_FILE    = 1, // 输出到指定文件
-    LO_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
-    LO_MONGODB = 3, // mongodb日志
-    LO_CPRINTF = 4, // C异步PRINTF宏定义
+    LT_FILE    = 1, // 输出到指定文件
+    LT_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
+    LT_MONGODB = 3, // mongodb日志
+    LT_CPRINTF = 4, // C异步PRINTF宏定义
 
     LO_MAX
-} LogOut;
+} LogType;
 
 class Log
 {
@@ -46,14 +46,14 @@ public:
     size_t pending_size();
     bool inline empty() const { return _flush->empty(); }
     int32_t write_cache(time_t tm, const char *path, const char *ctx,
-                        size_t len, LogOut out);
+                        size_t len, LogType out);
 
 private:
     class LogOne *allocate_one(size_t len);
     void deallocate_one(class LogOne *one);
     bool flush_one_file(struct tm &ntm, const LogOne *one, const char *path,
                         const char *prefix = "");
-    int32_t flush_one_ctx(FILE *pf, const struct LogOne *one, struct tm &ntm,
+    int32_t flush_one_ctx(FILE *pf, const LogOne *one, struct tm &ntm,
                           const char *prefix);
 
 private:

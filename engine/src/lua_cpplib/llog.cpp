@@ -5,6 +5,7 @@
 
 LLog::LLog(lua_State *L)
 {
+    UNUSED(L);
     _log = NULL;
 }
 
@@ -19,6 +20,7 @@ LLog::~LLog()
 
 int32_t LLog::stop(lua_State *L)
 {
+    UNUSED(L);
     if (!_log || !_log->active())
     {
         ERROR("try to stop a inactive log thread");
@@ -61,14 +63,14 @@ int32_t LLog::write(lua_State *L)
     size_t len       = 0;
     const char *path = luaL_checkstring(L, 1);
     const char *ctx  = luaL_checklstring(L, 2, &len);
-    int32_t out_type = luaL_optinteger(L, 3, LO_FILE);
+    int32_t out_type = luaL_optinteger(L, 3, LT_FILE);
 
-    if (out_type < LO_FILE || out_type >= LO_MAX)
+    if (out_type < LT_FILE || out_type >= LO_MAX)
     {
         return luaL_error(L, "log output type error");
     }
 
-    tl->write(path, ctx, len, static_cast<LogOut>(out_type));
+    tl->write(path, ctx, len, static_cast<LogType>(out_type));
 
     return 0;
 }
@@ -80,7 +82,7 @@ int32_t LLog::plog(lua_State *L)
     // 这里要注意，不用%s，cprintf_log( "LP",ctx
     // )这样直接调用也是可以的。但是如果脚本传
     // 入的字符串带特殊符号，如%，则可能会出错
-    cprintf_log("LP", "%s", ctx);
+    cprintf_log(LT_LPRINTF, "%s", ctx);
 
     return 0;
 }

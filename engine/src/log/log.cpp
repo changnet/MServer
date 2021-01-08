@@ -17,7 +17,8 @@ static char error_path[PATH_MAX]   = "error";
 static char mongodb_path[PATH_MAX] = "mongodb";
 
 // app进程名
-static char app_name[LOG_APP_NAME] = {0};
+static const int LEN_APP_NAME      = 32;
+static char app_name[LEN_APP_NAME] = {0};
 
 /* 设置日志参数：是否后台，日志路径 */
 void set_log_args(bool dm, const char *ppath, const char *epath, const char *mpath)
@@ -31,85 +32,80 @@ void set_log_args(bool dm, const char *ppath, const char *epath, const char *mpa
 /* 设置app进程名 */
 void set_app_name(const char *name)
 {
-#ifdef LOG_APP_NAME
-    snprintf(app_name, LOG_APP_NAME, "%s", name);
-#endif
+    snprintf(app_name, LEN_APP_NAME, "%s", name);
 }
 
-// print file time，是否打印文件时间
-#ifdef _PFILETIME_
-    #ifdef LOG_APP_NAME
-        #define PFILETIME(f, ntm, prefix)                                   \
-            fprintf(f, "[%s%s%02d-%02d %02d:%02d:%02d]", app_name, prefix,  \
-                    (ntm.tm_mon + 1), ntm.tm_mday, ntm.tm_hour, ntm.tm_min, \
-                    ntm.tm_sec)
-    #else
-        #define PFILETIME(f, ntm, prefix)                                        \
-            fprintf(f, "[%s%02d-%02d %02d:%02d:%02d]", prefix, (ntm.tm_mon + 1), \
-                    ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec)
-    #endif
-#else
-    #define PFILETIME(f)
-#endif
+// print file time，打印时间到文件
+static inline int32_t print_time(FILE *f, const struct tm &ntm, const char *prefix)
+{
+    return fprintf(f, "[%s%s%02d-%02d %02d:%02d:%02d]", app_name, prefix,
+                   (ntm.tm_mon + 1), ntm.tm_mday, ntm.tm_hour, ntm.tm_min,
+                   ntm.tm_sec);
+}
 
-#define FORMAT_TO_FILE(f)       \
-    do                          \
-    {                           \
-        va_list args;           \
-        va_start(args, fmt);    \
-        vfprintf(f, fmt, args); \
-        va_end(args);           \
-        fprintf(f, "\n");       \
-    } while (0)
+// 同时输出日志到屏幕和文件
+static inline void tup_print(const time_t &ctm, const char *prefix,
+                             const char *path, FILE *screen, const char *fmt,
+                             va_list args)
+{
+    struct tm ntm;
+    ::localtime_r(&ctm, &ntm);
 
-// 这个本来想写成函数的，但是c++ 03不支持函数之间可变参传递
-// 要使用主循环的时间戳，不然服务器卡的时候会造成localtime时间与主循环时间戳不一致
-// 查找bug更麻烦
-#define RAW_FORMAT(ctm, prefix, path, screen, fmt) \
-    do                                             \
-    {                                              \
-        struct tm ntm;                             \
-        ::localtime_r(&ctm, &ntm);                 \
-        if (screen)                                \
-        {                                          \
-            PFILETIME(screen, ntm, prefix);        \
-            FORMAT_TO_FILE(screen);                \
-        }                                          \
-        FILE *pf = ::fopen(path, "ab+");           \
-        if (!pf) return;                           \
-        PFILETIME(pf, ntm, prefix);                \
-        FORMAT_TO_FILE(pf);                        \
-        ::fclose(pf);                              \
-    } while (0)
+    if (screen)
+    {
+        va_list args2;
+        va_copy(args2, args);
+
+        print_time(screen, ntm, prefix);
+        vfprintf(screen, fmt, args2);
+    }
+
+    FILE *file = ::fopen(path, "ab+");
+    if (EXPECT_TRUE(file))
+    {
+        print_time(file, ntm, prefix);
+        vfprintf(file, fmt, args);
+        ::fclose(file);
+    }
+}
 
 // 错误函数，同步写到文件，用主循环时间戳，线程不安全
 void cerror_log(const char *prefix, const char *fmt, ...)
 {
     time_t tm = StaticGlobal::ev()->now();
-    RAW_FORMAT(tm, prefix, error_path, (is_daemon ? NULL : stderr), fmt);
+    va_list args;
+    va_start(args, fmt);
+    tup_print(tm, prefix, error_path, (is_daemon ? nullptr : stderr), fmt, args);
+    va_end(args);
 }
 
 // 日志打印函数，异步写到文件，用主循环时间戳，线程不安全
-void cprintf_log(const char *prefix, const char *fmt, ...)
+void cprintf_log(LogType type, const char *fmt, ...)
 {
     static AsyncLog *logger = StaticGlobal::async_logger();
 
     va_list args;
     va_start(args, fmt);
-    logger->raw_write("", LO_CPRINTF, fmt, args);
+    logger->raw_write("", type, fmt, args);
     va_end(args);
 }
 
 // 错误函数，同步写到文件，不用主循环时间戳，线程安全
 void raw_cerror_log(time_t tm, const char *prefix, const char *fmt, ...)
 {
-    RAW_FORMAT(tm, prefix, error_path, (is_daemon ? NULL : stderr), fmt);
+    va_list args;
+    va_start(args, fmt);
+    tup_print(tm, prefix, error_path, (is_daemon ? nullptr : stderr), fmt, args);
+    va_end(args);
 }
 
 // 错误函数，同步写到文件，不用主循环时间戳，线程安全
 void raw_cprintf_log(time_t tm, const char *prefix, const char *fmt, ...)
 {
-    RAW_FORMAT(tm, prefix, printf_path, (is_daemon ? NULL : stdout), fmt);
+    va_list args;
+    va_start(args, fmt);
+    tup_print(tm, prefix, printf_path, (is_daemon ? NULL : stdout), fmt, args);
+    va_end(args);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +119,7 @@ public:
 
     time_t _tm;
     size_t _len;
-    LogOut _out;
+    LogType _out;
     char _path[LOG_PATH_MAX]; // TODO:这个路径是不是可以短一点，好占内存
 
     virtual Log::LogSize get_type() const             = 0;
@@ -199,7 +195,7 @@ bool Log::swap()
 
 // 主线程写入缓存，上层加锁
 int32_t Log::write_cache(time_t tm, const char *path, const char *ctx,
-                         size_t len, LogOut out)
+                         size_t len, LogType out)
 {
     ASSERT(path, "write log no file path");
 
@@ -220,10 +216,10 @@ int32_t Log::write_cache(time_t tm, const char *path, const char *ctx,
 }
 
 // 写入一项日志内容
-int32_t Log::flush_one_ctx(FILE *pf, const struct LogOne *one, struct tm &ntm,
+int32_t Log::flush_one_ctx(FILE *pf, const LogOne *one, struct tm &ntm,
                            const char *prefix)
 {
-    int byte = PFILETIME(pf, ntm, prefix);
+    int byte = print_time(pf, ntm, prefix);
 
     if (byte <= 0)
     {
@@ -282,7 +278,7 @@ void Log::flush()
 #define FORMAT_TO_SCREEN(screen, ntm, prefix, ctx) \
     do                                             \
     {                                              \
-        PFILETIME(screen, ntm, prefix);            \
+        print_time(screen, ntm, prefix);           \
         fprintf(screen, "%s\n", ctx);              \
     } while (0)
 
@@ -297,16 +293,16 @@ void Log::flush()
 
         switch (one->_out)
         {
-        case LO_FILE: flush_one_file(ntm, one, one->_path, ""); break;
-        case LO_LPRINTF:
+        case LT_FILE: flush_one_file(ntm, one, one->_path, ""); break;
+        case LT_LPRINTF:
             flush_one_file(ntm, one, printf_path, "LP");
             if (!is_daemon)
             {
                 FORMAT_TO_SCREEN(stdout, ntm, "LP", one->get_ctx());
             }
             break;
-        case LO_MONGODB: flush_one_file(ntm, one, mongodb_path, ""); break;
-        case LO_CPRINTF:
+        case LT_MONGODB: flush_one_file(ntm, one, mongodb_path, ""); break;
+        case LT_CPRINTF:
             flush_one_file(ntm, one, printf_path, "CP");
             if (!is_daemon)
             {
