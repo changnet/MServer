@@ -48,7 +48,7 @@ message("   CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 # message("   CMAKE_CXX_FLAGS_MINSIZEREL = ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
 # 设置的参数能被子目录继承，子目录可以选择覆盖
-set(SRC_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/../engine")
+set(SRC_ROOT_PATH ".")
 set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/.libs")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
@@ -71,7 +71,7 @@ target_include_directories(lua_bson PRIVATE
 
 # lua_flatbuffers
 file(GLOB SRC_LIST "${DEPS_PATH}/lua_flatbuffers/*.cpp")
-list(REMOVE_ITEM SRC_LIST "${DEPS_PATH}/lua_flatbuffers/cpp_test.cpp")
+list(REMOVE_ITEM SRC_LIST "${CMAKE_CURRENT_LIST_DIR}/${DEPS_PATH}/lua_flatbuffers/cpp_test.cpp")
 add_library(lua_flatbuffers STATIC ${SRC_LIST})
 
 # https://cmake.org/cmake/help/latest/command/target_link_libraries.html#libraries-for-both-a-target-and-its-dependents

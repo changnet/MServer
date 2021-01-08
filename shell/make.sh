@@ -24,5 +24,5 @@ done
 # make VERBOSE=1 可以显示详细的编译过程
 # 支持只编译单个target的，如 make master
 time (cd $BUILD_DIR;
-    cmake ../../../project/ ${c[0]} ${c[1]} ${c[2]};
+    cmake ../../../engine/ ${c[0]} ${c[1]} ${c[2]};
     make ${m[0]} ${m[1]} ${m[2]})
