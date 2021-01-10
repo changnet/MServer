@@ -85,6 +85,8 @@ function install()
 	
 	# mongodb默认没有启动数据库
 	systemctl start mongod
+	echo "wait for mongodb start ..."
+	sleep 15
 	
 	# 创建管理员
 	echo "create administrator: $DEF_ADM"
@@ -99,7 +101,8 @@ function install()
 	# 创建测试用帐号
 	echo "start mongodb ..."
 	systemctl start mongod
-	sleep 5
+	echo "wait for mongodb start ..."
+	sleep 15
 	echo "create test database: $DEF_DBN"
 	mongo --host 127.0.0.1 --port 27017 -u$DEF_ADM -p$DEF_PWD admin << EOF
 use $DEF_DBN

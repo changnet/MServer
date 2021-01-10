@@ -51,7 +51,7 @@ function build_library()
     # mariadb的dev包不区分client和server，libmariadbclient-dev只是一个空包，引用libmariadb-dev。
     # 见https://packages.debian.org/buster/libmariadbclient-dev
     # 因此直接安装libmariadb-dev
-    auto_apt_install llibmariadb-dev
+    auto_apt_install libmariadb-dev
     auto_apt_install libreadline-dev
 }
 
@@ -254,3 +254,4 @@ if [[ $1 ]]; then
 else
 	build_env_once 2>&1 | tee $BUILD_ENV_LOG
 fi
+
