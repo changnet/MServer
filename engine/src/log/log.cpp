@@ -58,6 +58,7 @@ static inline void tup_print(const time_t &ctm, const char *prefix,
 
         print_time(screen, ntm, prefix);
         vfprintf(screen, fmt, args2);
+        fprintf(screen, "\n");
     }
 
     FILE *file = ::fopen(path, "ab+");
@@ -65,6 +66,7 @@ static inline void tup_print(const time_t &ctm, const char *prefix,
     {
         print_time(file, ntm, prefix);
         vfprintf(file, fmt, args);
+        fprintf(file, "\n");
         ::fclose(file);
     }
 }
