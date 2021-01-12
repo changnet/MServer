@@ -13,8 +13,8 @@ struct lua_State;
 class LNetworkMgr
 {
 private:
-    typedef StdMap<int32_t, CmdCfg> cmd_map_t;
-    typedef StdMap<uint32_t, class Socket *> socket_map_t;
+    typedef std::unordered_map<int32_t, CmdCfg> cmd_map_t;
+    typedef std::unordered_map<uint32_t, class Socket *> socket_map_t;
 
 public:
     ~LNetworkMgr();
@@ -334,9 +334,9 @@ private:
 
     std::vector<uint32_t> _deleting; /* 异步删除的socket */
     /* owner-conn_id 映射,ssc数据包转发时需要 */
-    StdMap<Owner, uint32_t> _owner_map;
-    StdMap<Owner, int32_t> _owner_session; /* owner-session映射 */
+    std::unordered_map<Owner, uint32_t> _owner_map;
+    std::unordered_map<Owner, int32_t> _owner_session; /* owner-session映射 */
 
-    StdMap<int32_t, uint32_t> _session_map;    /* session-conn_id 映射 */
-    StdMap<uint32_t, Owner> _conn_session_map; /* conn_id-session 映射 */
+    std::unordered_map<int32_t, uint32_t> _session_map; /* session-conn_id 映射 */
+    std::unordered_map<uint32_t, Owner> _conn_session_map; /* conn_id-session 映射 */
 };

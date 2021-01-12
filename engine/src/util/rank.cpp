@@ -33,7 +33,8 @@ insertion_rank::~insertion_rank()
 
 void insertion_rank::clear()
 {
-    StdMap<object_id_t, Object *>::const_iterator iter = _object_set.begin();
+    std::unordered_map<object_id_t, Object *>::const_iterator iter =
+        _object_set.begin();
     for (; iter != _object_set.end(); iter++)
     {
         delete iter->second;
@@ -102,7 +103,8 @@ void insertion_rank::raw_remove(Object *object)
 
 int32_t insertion_rank::remove(object_id_t id)
 {
-    StdMap<object_id_t, Object *>::const_iterator iter = _object_set.find(id);
+    std::unordered_map<object_id_t, Object *>::const_iterator iter =
+        _object_set.find(id);
     if (iter == _object_set.end()) return -1;
 
     raw_remove(iter->second);
@@ -133,7 +135,7 @@ int32_t insertion_rank::insert(object_id_t id, factor_t factor, int32_t max_idx)
     }
 
     // 防止重复
-    std::pair<StdMap<object_id_t, Object *>::iterator, bool> ret;
+    std::pair<std::unordered_map<object_id_t, Object *>::iterator, bool> ret;
     ret = _object_set.insert(std::pair<object_id_t, Object *>(id, NULL));
     if (false == ret.second) return 3;
 
@@ -163,7 +165,8 @@ int32_t insertion_rank::update(object_id_t id, raw_factor_t factor,
 {
     if (EXPECT_FALSE(factor_idx <= 0 || factor_idx > MAX_RANK_FACTOR)) return 1;
 
-    StdMap<object_id_t, Object *>::iterator iter = _object_set.find(id);
+    std::unordered_map<object_id_t, Object *>::iterator iter =
+        _object_set.find(id);
     if (iter == _object_set.end()) return 2;
 
     Object *object          = iter->second;
@@ -182,7 +185,8 @@ int32_t insertion_rank::update(object_id_t id, raw_factor_t factor,
 // 通过id取排名，返回排名(从1开始),出错返回 -1
 int32_t insertion_rank::get_rank_by_id(object_id_t id) const
 {
-    StdMap<object_id_t, Object *>::const_iterator iter = _object_set.find(id);
+    std::unordered_map<object_id_t, Object *>::const_iterator iter =
+        _object_set.find(id);
     if (iter == _object_set.end()) return -1;
 
     // 返回排名(从1开始)
@@ -192,7 +196,8 @@ int32_t insertion_rank::get_rank_by_id(object_id_t id) const
 // 根据id取排序因子
 const BaseRank::raw_factor_t *insertion_rank::get_factor(object_id_t id) const
 {
-    StdMap<object_id_t, Object *>::const_iterator iter = _object_set.find(id);
+    std::unordered_map<object_id_t, Object *>::const_iterator iter =
+        _object_set.find(id);
     if (iter == _object_set.end()) return NULL;
 
     return iter->second->_factor;

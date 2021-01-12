@@ -145,11 +145,11 @@ public:
         time_t _time; // 时间戳，各个socket时间不一样，要分开统计
     };
 
-    typedef StdMap<int32_t, PktCounter> PktCounterType;
-    typedef StdMap<std::string, PktCounter> RPCCounterType;
+    typedef std::unordered_map<int32_t, PktCounter> PktCounterType;
+    typedef std::unordered_map<std::string, PktCounter> RPCCounterType;
 
-    typedef StdMap<uint32_t, TrafficCounter> SocketTrafficType;
-    typedef StdMap<std::string, struct BaseCounter> BaseCounterType;
+    typedef std::unordered_map<uint32_t, TrafficCounter> SocketTrafficType;
+    typedef std::unordered_map<std::string, struct BaseCounter> BaseCounterType;
 
 public:
     ~Statistic();

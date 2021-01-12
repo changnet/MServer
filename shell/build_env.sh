@@ -116,7 +116,11 @@ function build_mongo_driver()
     
     # OpenSSL is required for authentication or for SSL connections to MongoDB. Kerberos or LDAP support requires Cyrus SASL.
     # 暂时不用SASL库
-    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DCMAKE_BUILD_TYPE=Release -DENABLE_SASL=OFF -DENABLE_STATIC=ON -DENABLE_BSON=ON ..
+    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
+		-DCMAKE_BUILD_TYPE=Release -DENABLE_SASL=OFF \
+		-DENABLE_STATIC=ON -DENABLE_BSON=ON \
+		-DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF \
+		..
     # --with-libbson=[auto/system/bundled]
     # 强制使用附带的bson库，不然之前系统编译的bson库可能编译参数不一致(比如不会生成静态bson库)
     # ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled

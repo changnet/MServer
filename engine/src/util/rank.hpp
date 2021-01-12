@@ -98,7 +98,7 @@ private:
 
     int32_t _max_list;
     Object **_object_list;
-    StdMap<object_id_t, Object *> _object_set;
+    std::unordered_map<object_id_t, Object *> _object_set;
 };
 
 /* 桶排序，只是桶分得比较细，演变成了有序hash map

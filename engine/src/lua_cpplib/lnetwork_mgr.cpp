@@ -181,7 +181,7 @@ int32_t LNetworkMgr::address(lua_State *L)
 
     int port = 0;
     char buf[128]; // INET6_ADDRSTRLEN
-    if (!itr->second->address(buf,sizeof(buf), &port))
+    if (!itr->second->address(buf, sizeof(buf), &port))
     {
         return luaL_error(L, strerror(errno));
     }
@@ -291,7 +291,8 @@ const CmdCfg *LNetworkMgr::get_sc_cmd(int32_t cmd) const
 /* 通过所有者查找连接id */
 uint32_t LNetworkMgr::get_conn_id_by_owner(Owner owner) const
 {
-    StdMap<Owner, uint32_t>::const_iterator itr = _owner_map.find(owner);
+    std::unordered_map<Owner, uint32_t>::const_iterator itr =
+        _owner_map.find(owner);
     if (itr == _owner_map.end())
     {
         return 0;
@@ -303,7 +304,8 @@ uint32_t LNetworkMgr::get_conn_id_by_owner(Owner owner) const
 /* 通过session获取socket连接 */
 class Socket *LNetworkMgr::get_conn_by_session(int32_t session) const
 {
-    StdMap<int32_t, uint32_t>::const_iterator itr = _session_map.find(session);
+    std::unordered_map<int32_t, uint32_t>::const_iterator itr =
+        _session_map.find(session);
     if (itr == _session_map.end()) return NULL;
 
     socket_map_t::const_iterator sk_itr = _socket_map.find(itr->second);
@@ -324,7 +326,7 @@ class Socket *LNetworkMgr::get_conn_by_conn_id(uint32_t conn_id) const
 /* 通过conn_id获取session */
 int32_t LNetworkMgr::get_session_by_conn_id(uint32_t conn_id) const
 {
-    StdMap<uint32_t, int32_t>::const_iterator itr =
+    std::unordered_map<uint32_t, int32_t>::const_iterator itr =
         _conn_session_map.find(conn_id);
     if (itr == _conn_session_map.end()) return 0;
 
@@ -861,7 +863,8 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
         return -1;
     }
 
-    StdMap<Owner, int32_t>::const_iterator iter = _owner_session.find(object_id);
+    std::unordered_map<Owner, int32_t>::const_iterator iter =
+        _owner_session.find(object_id);
     if (iter == _owner_session.end())
     {
         ERROR("cs_dispatch cmd(%d) "
@@ -1145,7 +1148,8 @@ int32_t LNetworkMgr::get_player_session(lua_State *L)
 {
     Owner owner = luaL_checkinteger(L, 1);
 
-    StdMap<Owner, int32_t>::const_iterator iter = _owner_session.find(owner);
+    std::unordered_map<Owner, int32_t>::const_iterator iter =
+        _owner_session.find(owner);
 
     lua_pushinteger(L, iter == _owner_session.end() ? -1 : iter->second);
 

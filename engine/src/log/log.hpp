@@ -60,6 +60,6 @@ private:
     LogOneList *_cache; // 主线程写入缓存队列
     LogOneList *_flush; // 日志线程写入文件队列
 
-    StdMap<std::string, FILE *> _files;
+    std::unordered_map<std::string, FILE *> _files;
     class Pool *_ctx_pool[LS_MAX];
 };

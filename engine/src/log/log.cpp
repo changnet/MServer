@@ -358,7 +358,7 @@ void Log::deallocate_one(class LogOne *one)
 void Log::close_files()
 {
     // 暂时保留文件名，以免频繁创建，应该也不是很多
-    StdMap<std::string, FILE *>::iterator itr = _files.begin();
+    std::unordered_map<std::string, FILE *>::iterator itr = _files.begin();
     while (itr != _files.end())
     {
         FILE *pf = itr->second;

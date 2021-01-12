@@ -16,7 +16,7 @@
 
 #include "types.hpp"
 
-extern void global_mem_counter(int32_t &counter, int32_t &counters);
+extern void global_mem_counter(int64_t &counter, int64_t &counters);
 
 #ifndef NDBG_MEM_TRACE
 

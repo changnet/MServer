@@ -1,24 +1,15 @@
 #include "../config.hpp"
 
 #include "dbg_mem.hpp"
-
 #include "assert.hpp"
 
-#include <pthread.h>
+#include <new> // std::nothrow_t
+#include <atomic>
+#include <cstdlib> // malloc free
 
-#undef new
-
-#if __cplusplus < 201103L /* < C++11 */
-    #define NOEXCEPT throw()
-    #define EXCEPT   throw(std::bad_alloc)
-#else /* if support C++ 2011 */
-    #define NOEXCEPT noexcept
-    #define EXCEPT
-#endif
-
-int32_t g_counter  = 0;
-int32_t g_counters = 0;
-void global_mem_counter(int32_t &counter, int32_t &counters)
+static std::atomic<int64_t> g_counter(0);
+static std::atomic<int64_t> g_counters(0);
+void global_mem_counter(int64_t &counter, int64_t &counters)
 {
     counter  = g_counter;
     counters = g_counters;
@@ -26,104 +17,56 @@ void global_mem_counter(int32_t &counter, int32_t &counters)
 
 #ifndef NMEM_DEBUG
 
-/* Static initialization
- * https://en.cppreference.com/w/cpp/language/initialization
- * this initialization happens before any dynamic initialization.
- * static initialization order fiasco(https://isocpp.org/wiki/faq/ctors)
- * we use this to make sure no other static variable allocate memory before
- * memory counter initialization.
- */
-
-static inline pthread_mutex_t *mem_mutex()
+void *operator new(size_t size)
 {
-    static pthread_mutex_t _mutex;
-    ASSERT(0 == pthread_mutex_init(&_mutex, NULL),
-           "global memory counter mutex error");
-
-    return &_mutex;
-}
-
-void *operator new(size_t size) EXCEPT
-{
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     ++g_counter;
-    pthread_mutex_unlock(mutex);
 
     return ::malloc(size);
 }
 
-void *operator new(size_t size, const std::nothrow_t &nothrow_value) NOEXCEPT
+void *operator new(size_t size, const std::nothrow_t &nothrow_value) noexcept
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     ++g_counter;
-    pthread_mutex_unlock(mutex);
 
     return ::malloc(size);
 }
 
-void operator delete(void *ptr)NOEXCEPT
+void operator delete(void *ptr) noexcept
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     --g_counter;
-    pthread_mutex_unlock(mutex);
 
     ::free(ptr);
 }
 
-void operator delete(void *ptr, const std::nothrow_t &nothrow_value)NOEXCEPT
+void operator delete(void *ptr, const std::nothrow_t &nothrow_value) noexcept
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     --g_counter;
-    pthread_mutex_unlock(mutex);
 
     ::free(ptr);
 }
 
-void *operator new[](size_t size) EXCEPT
+void *operator new[](size_t size)
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     ++g_counters;
-    pthread_mutex_unlock(mutex);
+
     return ::malloc(size);
 }
 
-void *operator new[](size_t size, const std::nothrow_t &nothrow_value) NOEXCEPT
+void *operator new[](size_t size, const std::nothrow_t &nothrow_value) noexcept
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     ++g_counters;
-    pthread_mutex_unlock(mutex);
     return ::malloc(size);
 }
 
-void operator delete[](void *ptr) NOEXCEPT
+void operator delete[](void *ptr) noexcept
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     --g_counters;
-    pthread_mutex_unlock(mutex);
     ::free(ptr);
 }
 
-void operator delete[](void *ptr, const std::nothrow_t &nothrow_value) NOEXCEPT
+void operator delete[](void *ptr, const std::nothrow_t &nothrow_value) noexcept
 {
-    pthread_mutex_t *mutex = mem_mutex();
-
-    pthread_mutex_lock(mutex);
     --g_counters;
-    pthread_mutex_unlock(mutex);
     ::free(ptr);
 }
 

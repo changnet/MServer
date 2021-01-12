@@ -174,14 +174,14 @@ int32_t ssl_uninit()
  */
 void on_exit()
 {
-    int32_t counter  = 0;
-    int32_t counters = 0;
+    int64_t counter  = 0;
+    int64_t counters = 0;
     global_mem_counter(counter, counters);
 
     // 直接用PRINTF会导致重新创建ev取时间
     // PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
 
-    PRINTF_R("new counter:%d    ----   new[] counter:%d", counter, counters);
+    PRINTF_R("new = " FMT64d " ----  new[] =" FMT64d, counter, counters);
     // back_trace();
 }
 
