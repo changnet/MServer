@@ -10,7 +10,7 @@ local json = require "lua_parson"
 ]]
 function WebStat:exec( conn,fields,body )
     -- 未指定进程名或者查询的是当前进程
-    if "" == body or body == g_app.srvname then
+    if "" == body or body == g_app.name then
         local total_stat = g_stat.collect()
 
         local ctx = json.encode(total_stat)

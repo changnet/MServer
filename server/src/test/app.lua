@@ -19,8 +19,8 @@ end
 local App = oo.class( ... )
 
 -- 初始化
-function App:__init( ... )
-    self.command,self.srvname,self.srvindex,self.srvid, self.filter = ...
+function App:__init( cmd, opts )
+    self.cmd, self.name, self.filter = cmd, opts.app, opts.filter
 end
 
 -- 重写关服接口

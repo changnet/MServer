@@ -134,7 +134,7 @@ end
 function CommandMgr:serialize_statistic( reset )
     if not self.cmd_perf then return false end
 
-    local path = string.format( "%s_%s",self.cmd_perf,g_app.srvname )
+    local path = string.format( "%s_%s",self.cmd_perf,g_app.name )
 
     g_log_mgr:raw_file_printf( path,
         "%s ~ %s:",time.date(self.stat_tm),time.date(ev:time()))
@@ -148,7 +148,7 @@ function CommandMgr:serialize_statistic( reset )
     self:raw_serialize_statistic( path,"css_cmd:",self.css_stat )
 
     g_log_mgr:raw_file_printf(
-        path,"%s.%d end %s",g_app.srvname,g_app.srvindex,"\n\n" )
+        path,"%s.%d end %s",g_app.name,g_app.index,"\n\n" )
     if reset then
         self.cs_stat  = {}
         self.ss_stat  = {}

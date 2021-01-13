@@ -8,8 +8,8 @@ local network_mgr = network_mgr
 local NetworkMgr = oo.singleton( ... )
 
 -- 目前暂定只有一个网关，一个世界
-local gateway_session = g_app:srv_session( "gateway",1,tonumber(g_app.srvid) )
-local world_session = g_app:srv_session( "world",1,tonumber(g_app.srvid) )
+local gateway_session = g_app:srv_session( "gateway",1,tonumber(g_app.id) )
+local world_session = g_app:srv_session( "world",1,tonumber(g_app.id) )
 
 function NetworkMgr:__init()
     self.srv = {}  -- session为key，连接对象为value
@@ -25,10 +25,10 @@ function NetworkMgr:__init()
 
     self.srv_waiting = {} -- 等待重连的服务器连接
 
-    local index = tonumber( g_app.srvindex )
-    local srvid = tonumber( g_app.srvid )
+    local index = tonumber( g_app.index )
+    local id = tonumber( g_app.id )
     for name,_ in pairs( SRV_NAME ) do
-        self.name_srv[name] = g_app:srv_session( name,index,srvid )
+        self.name_srv[name] = g_app:srv_session( name,index,id )
     end
 
     g_app:reg_5s_timer( self,self.do_timer )
@@ -100,10 +100,10 @@ function NetworkMgr:srv_register( conn,pkt )
         return false
     end
 
-    local _, _, srvid = g_app:srv_session_parse( pkt.session )
-    if srvid ~= tonumber(g_app.srvid) then
-        ERROR( "NetworkMgr:srv_register srvid not match,expect %s,got %d",
-            g_app.srvid,srvid )
+    local _, _, id = g_app:srv_session_parse( pkt.session )
+    if id ~= tonumber(g_app.id) then
+        ERROR( "NetworkMgr:srv_register id not match,expect %s,got %d",
+            g_app.id,id )
         return
     end
 

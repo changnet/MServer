@@ -39,7 +39,7 @@ local function rpc_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
     g_mail_mgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
 end
 
-if "world" == g_app.srvname then
+if "world" == g_app.name then
     g_rpc:declare( "rpc_send_mail",rpc_send_mail )
     g_rpc:declare( "rpc_send_sys_mail",rpc_send_sys_mail )
 

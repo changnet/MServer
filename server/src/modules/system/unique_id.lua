@@ -74,7 +74,7 @@ table: 0x18eb940
     }
 }
 ]]
-function UniqueId:on_player_id( srvid,raw_cb,ecode,res )
+function UniqueId:on_player_id( id,raw_cb,ecode,res )
     if 0 ~= ecode or 1 ~= res.ok then
         ERROR( "update player id error" )
         return
@@ -88,21 +88,21 @@ function UniqueId:on_player_id( srvid,raw_cb,ecode,res )
         return
     end
 
-    local _srvid = srvid & 0xFFFF -- 保证为16bit
+    local _id = id & 0xFFFF -- 保证为16bit
     local _seed  = seed  & 0xFFFF
 
-    -- 一个int32类型，前16bit为srvid，后16bit为自增。自增数量放数据库
+    -- 一个int32类型，前16bit为id，后16bit为自增。自增数量放数据库
     -- 合服后，必须取所有合服中最大值
-    local pid =  ( _srvid << 16 ) | _seed
+    local pid =  ( _id << 16 ) | _seed
     self.unique_seed[UNIQUEID.PLAYER] = seed
 
     return raw_cb( pid )
 end
 
 -- 产生一个玩家pid
-function UniqueId:player_id( srvid,raw_cb )
+function UniqueId:player_id( id,raw_cb )
     local callback = function( ... )
-        self:on_player_id( srvid,raw_cb,... )
+        self:on_player_id( id,raw_cb,... )
     end
 
     -- new = true, -- 返回Modify后的值

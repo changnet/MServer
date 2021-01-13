@@ -40,8 +40,10 @@ end
 local App = oo.class( ... )
 
 -- 初始化
-function App:__init( ... )
-    self.command,self.srvname,self.srvindex,self.srvid = ...
+function App:__init( cmd, opts )
+    self.cmd,self.name,self.index,self.id = cmd, opts.name,
+        assert(opts.index, "miss argument --index"),
+        assert(opts.id, "miss argument --id")
 end
 
 -- 重写关服接口

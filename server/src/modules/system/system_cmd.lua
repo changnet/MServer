@@ -50,7 +50,7 @@ end
 
 g_rpc:declare( "rpc_gm",rpc_gm,-1 )
 
-if "gateway" == g_app.srvname then
+if "gateway" == g_app.name then
     g_rpc:declare( "set_player_session",set_player_session )
 end
 

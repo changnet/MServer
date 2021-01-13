@@ -23,7 +23,7 @@ end
 -- @op:日志操作，用于跟踪附件资源产出。参考log_header
 function MailMgr:send_mail( pid,title,ctx,attachment,op )
     -- 邮件数据统一在world处理，不是该进程则转
-    if "world" ~= g_app.srvname then
+    if "world" ~= g_app.name then
         return g_rpc:rpc_send_mail( pid,title,ctx,attachment,op )
     end
 
@@ -129,7 +129,7 @@ function MailMgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
         return
     end
 
-    if "world" ~= g_app.srvname then
+    if "world" ~= g_app.name then
         return g_rpc:rpc_send_sys_mail(
             title,ctx,attachment,op,expire,level,vip )
     end
@@ -171,7 +171,7 @@ end
 
 -- 存库
 function MailMgr:db_save()
-    local query = string.format('{"_id":%d}',g_app.srvindex)
+    local query = string.format('{"_id":%d}',g_app.index)
     g_mongodb:update( "sys_mail",query,{ list = self.list },true )
 end
 
@@ -181,7 +181,7 @@ function MailMgr:db_load()
         self:on_db_loaded( ... )
     end
 
-    local query = string.format('{"_id":%d}',g_app.srvindex)
+    local query = string.format('{"_id":%d}',g_app.index)
     g_mongodb:find( "sys_mail",query,nil,callback )
 end
 

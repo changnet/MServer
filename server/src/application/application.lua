@@ -77,13 +77,16 @@ function sig_handler( signum )
 end
 
 -- 初始化
-function Application:__init( ... )
+function Application:__init( cmd, opts )
     self.init_list = {} -- 初始化列表
-    self.command,self.srvname,self.srvindex,self.srvid = ...
+    self.cmd, self.name, self.index, self.id =
+        cmd, opts.app,
+        assert(tonumber(opts.index), "miss argument --index"),
+        assert(tonumber(opts.id), "miss argument --id")
 
     self.starttime = ev:time()
     self.session = self:srv_session(
-        self.srvname,tonumber(self.srvindex),tonumber(self.srvid) )
+        self.name,tonumber(self.index),tonumber(self.id) )
 
     -- 设置当前session到C++
     network_mgr:set_curr_session( self.session )
@@ -96,25 +99,25 @@ end
 -- 生成服务器session id
 -- @name  服务器名称，如gateway、world...
 -- @index 服务器索引，如多个gateway，分别为1,2...
--- @srvid 服务器id，与运维相关。开了第N个服
-function Application:srv_session( name,index,srvid )
+-- @id 服务器id，与运维相关。开了第N个服
+function Application:srv_session( name,index,id )
     local ty = SRV_NAME[name]
 
     assert( ty,"server name type not define" )
     assert( index < (1 << 24),"server index out of boundry" )
-    assert( srvid < (1 << 16),   "server id out of boundry" )
+    assert( id < (1 << 16),   "server id out of boundry" )
 
-    -- int32 ,8bits is ty,8bits is index,16bits is srvid
-    return (ty << 24) + (index <<16) + srvid
+    -- int32 ,8bits is ty,8bits is index,16bits is id
+    return (ty << 24) + (index <<16) + id
 end
 
 -- 解析session id
 function Application:srv_session_parse( session )
     local ty = session >> 24;
     local index = (session >> 16) & 0xFF
-    local srvid = session & 0xFFFF
+    local id = session & 0xFFFF
 
-    return ty,index,srvid
+    return ty,index,id
 end
 
 -- 信号处理
@@ -201,7 +204,7 @@ function Application:final_initialize()
     self.timer = g_timer_mgr:interval( next,5, -1, self,self.do_timer )
 
     self.ok = true
-    PRINTF( "%s server(0x%.8X) start OK",self.srvname,self.session )
+    PRINTF( "%s server(0x%.8X) start OK",self.name,self.session )
 end
 
 

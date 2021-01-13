@@ -1,38 +1,57 @@
 #!/bin/bash
 
-parameter=($@)
-applications=(gateway world area area)
-
-cd ../server/bin
-
-# ./start.sh app srv_id
-# app的index会被自动计算出来
+DEF_ID=1
+DEF_INDEX=1
+DEF_APP=(gateway world area area)
 
 # 以soft模式设置core文件大小及文件句柄数量，一般在./build_env.sh set_sys_env里设置
 # 不过这里强制设置一次
 ulimit -Sc unlimited
 ulimit -Sn 65535
 
-# ./start.sh all 1 表示开启所有进程
-if [ "${parameter[0]}" == "all" ]; then
-    for app in ${applications[@]}
+# 进入bin所在目录，保证工作目录在bin
+cd ../server/bin
+
+BIN=`pwd`/master
+
+# ./start.sh 不带任何参数表示启动服务器
+if [ ! $1 ]; then
+    for app in ${DEF_APP[@]}
     do
         if [ "$app" == "$last_app" ]; then
             last_idx=$(($last_idx + 1))
         else
-            last_idx=1
+            last_idx=$DEF_INDEX
             last_app=$app
         fi
 
-        ./master $app $last_idx ${parameter[@]:1} &
+        $BIN --app=$app --index=$last_idx --id=$DEF_ID &
         sleep 3
     done
 else
-    # ./start.sh gateway 1 1 表示开启gateway进程
-    idx=${parameter[2]}
-    if [ ! $idx ]; then
-        idx=1
+    # 以--开头的参数，表示外部指定了全部参数，这里不需要补全
+    app=$1
+    if [ "$(expr substr $app 1 2)" == "--" ]; then
+        $BIN $1 $2 $3 $4 $5
+        exit 0
     fi
 
-    ./master ${parameter[0]} $idx ${parameter[1]} ${parameter[3]}
+    # ./start.sh test 表示开启test进程，后面参数由可接--filter等特殊参数
+    if [ "$app" == "test" ]; then
+        $BIN --app=test $2 $3 $4 $5
+        exit 0
+    fi
+
+    # 其他选择 ./start.sh gateway 表示启动gateway，后面的参数不传就自动补全
+    index=$2
+    if [ ! $idx ]; then
+        index=$DEF_INDEX
+    fi
+
+    id=$3
+    if [ ! $id ]; then
+        id=$DEF_ID
+    fi
+
+    $BIN --app=$app --index=$index --id=$id
 fi

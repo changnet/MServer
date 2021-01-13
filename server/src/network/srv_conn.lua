@@ -59,10 +59,10 @@ function SrvConn:conn_name( session )
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
-    local _,index,srvid =
+    local _,index,id =
         g_app:srv_session_parse( session or self.session )
 
-    return string.format( "%s(I%d.S%d)",self.name,index,srvid )
+    return string.format( "%s(I%d.S%d)",self.name,index,id )
 end
 
 -- 监听服务器连接
@@ -159,7 +159,7 @@ end
 function SrvConn:send_register()
     local pkt =
     {
-        name    = g_app.srvname,
+        name    = g_app.name,
         session = g_app.session,
         timestamp = ev:time(),
     }

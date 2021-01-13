@@ -26,7 +26,7 @@ local AttributeSys = require "modules.attribute.attribute_sys"
 local RES = RES
 local method_thunk = method_thunk
 
-local static_session = g_app:srv_session( "area",1,tonumber(g_app.srvid) )
+local static_session = g_app:srv_session( "area",1,tonumber(g_app.id) )
 
 local AREA_SESSION = {}
 
@@ -276,7 +276,7 @@ function Player:enter_dungeon( pkt )
 
     local session = AREA_SESSION[index]
     if not session then
-        session = g_app:srv_session( "area",index,tonumber(g_app.srvid) )
+        session = g_app:srv_session( "area",index,tonumber(g_app.id) )
         AREA_SESSION[index] = session
     end
 

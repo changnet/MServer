@@ -19,7 +19,7 @@ E = require "modules.system.error"
 -- 加载服务器配置
 -- 部分服务器配置不支持热更，很多字段，比如端口id你热更了，也不可能改变
 g_setting = require "setting.setting" -- no_update_require
-g_app_setting = g_setting[g_app.srvname]
+g_app_setting = g_setting[g_app.name]
 assert( g_app_setting,"no server conf found" )
 
 -- !!! 放到这里的，一定要是singleton，不然会被销毁重建
@@ -57,7 +57,7 @@ g_dungeon_mgr = nil
 
 --==============================================================================
 -- 仅在gateway使用
-if "gateway" == g_app.srvname then
+if "gateway" == g_app.name then
     g_httpd       = require "http.httpd"
     g_account_mgr = require "modules.account.account_mgr"
 
@@ -68,7 +68,7 @@ if "gateway" == g_app.srvname then
 end
 --==============================================================================
 -- 仅在world使用
-if "world" == g_app.srvname then
+if "world" == g_app.name then
     g_player_mgr  = require "modules.player.player_mgr"
 
     g_mongodb_mgr = require "mongodb.mongodb_mgr"
@@ -76,7 +76,7 @@ if "world" == g_app.srvname then
 end
 --==============================================================================
 -- 仅在area使用
-if "area" == g_app.srvname then
+if "area" == g_app.name then
     g_map_mgr = require "modules.dungeon.map_mgr"
     g_entity_mgr = require "modules.entity.entity_mgr"
     g_dungeon_mgr = require "modules.dungeon.dungeon_mgr"
@@ -98,18 +98,18 @@ require "modules.player.player_cmd" -- 玩家基础模块
 require "modules.mail.mail_cmd"     -- 邮件模块
 
 -- 仅在gateway使用
--- if "gateway" == g_app.srvname then
+-- if "gateway" == g_app.name then
 -- end
 
 -- 仅在world使用
-if "world" == g_app.srvname then
+if "world" == g_app.name then
     require "modules.chat.chat_cmd" -- 聊天
     require "modules.bag.bag_cmd"   -- 背包
     require "modules.misc.misc_cmd"     -- 杂七杂八的小功能
 end
 
 -- 仅在area使用
-if "area" == g_app.srvname then
+if "area" == g_app.name then
     require "modules.entity.entity_cmd" -- 实体相关
     require "modules.dungeon.test_dungeon" -- 测试不同场景进程中切换
 end

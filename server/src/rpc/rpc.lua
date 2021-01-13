@@ -87,7 +87,7 @@ end
 function Rpc:serialize_statistic( reset )
     if not self.rpc_perf then return false end
 
-    local path = string.format( "%s_%s",self.rpc_perf,g_app.srvname )
+    local path = string.format( "%s_%s",self.rpc_perf,g_app.name )
 
     local stat_name = {}
     for k in pairs( self.stat ) do table.insert( stat_name,k ) end
@@ -111,7 +111,7 @@ function Rpc:serialize_statistic( reset )
     end
 
     g_log_mgr:raw_file_printf(
-        path,"%s.%d end %s",g_app.srvname,g_app.srvindex,"\n\n" )
+        path,"%s.%d end %s",g_app.name,g_app.index,"\n\n" )
 
     if reset then
         self.stat = {}

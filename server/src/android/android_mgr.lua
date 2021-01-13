@@ -16,10 +16,10 @@ function AndroidMgr:set_android_conn(conn_id,android)
 end
 
 function AndroidMgr:start()
-    local srvindex = tonumber(g_app.srvindex) -- 平台
-    local srvid = tonumber(g_app.srvid) -- 服务器
-    for index = 1,srvid do
-        local idx = ( srvindex << 16 ) | index
+    local srv_index = tonumber(g_app.index) -- 平台
+    local id = tonumber(g_app.id) -- 服务器
+    for index = 1,id do
+        local idx = ( srv_index << 16 ) | index
         self.android[idx] = Android( idx )
     end
 end

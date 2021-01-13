@@ -39,16 +39,16 @@ end
 -- 自动转发gm到对应的服务器
 -- TODO:暂时不考虑存在多个同名服务器的情况
 function GM:auto_forward( where,player,cmd,args )
-    local srvname = forward_map[cmd]
-    if not srvname or g_app.srvname == srvname then return false end
+    local app_name = forward_map[cmd]
+    if not app_name or g_app.name == app_name then return false end
 
-    local srv_conn = g_network_mgr:get_conn_by_name( srvname )
+    local srv_conn = g_network_mgr:get_conn_by_name( app_name )
     if not srv_conn then
         ERROR("gm auto forward no conn found:%s",cmd)
         return true
     end
 
-    g_rpc:proxy(srv_conn):rpc_gm( g_app.srvname,cmd,table.unpack( args ) )
+    g_rpc:proxy(srv_conn):rpc_gm( g_app.name,cmd,table.unpack( args ) )
     return true
 end
 
@@ -86,24 +86,24 @@ end
 -- 广播gm
 function GM:broadcast( cmd,... )
     -- 仅允许网关广播
-    ASSERT( cmd and g_app.srvname == "gateway" )
+    ASSERT( cmd and g_app.name == "gateway" )
 
     -- 目前服务器没有同一个name多开，直接通过名字对比
-    for srvname in pairs( SRV_NAME ) do
-        if g_app.srvname ~= srvname then
-            local srv_conn = g_network_mgr:get_conn_by_name( srvname )
+    for app_name in pairs( SRV_NAME ) do
+        if g_app.name ~= app_name then
+            local srv_conn = g_network_mgr:get_conn_by_name( app_name )
             if srv_conn then
-                g_rpc:proxy( srv_conn):rpc_gm( g_app.srvname,cmd,... )
+                g_rpc:proxy( srv_conn):rpc_gm( g_app.name,cmd,... )
             end
         end
     end
 end
 
 -- 注册gm指令
--- @srvname:真正运行该gm的服务器名
-function GM:reg_cmd( cmd,gm_func,srvname )
+-- @app_name:真正运行该gm的服务器名
+function GM:reg_cmd( cmd,gm_func,app_name )
     gm_map[cmd] = gm_func
-    forward_map[cmd] = srvname
+    forward_map[cmd] = app_name
 end
 
 --------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ end
 -- 全局热更，会更新其他进程
 function GM:ghf()
     hot_fix()
-    if g_app.srvname == "gateway" then self:broadcast( "hf" ) end
+    if g_app.name == "gateway" then self:broadcast( "hf" ) end
 end
 
 -- ping一下服务器间的延迟，看卡不卡
@@ -136,7 +136,7 @@ function GM:rpc_perf( reset )
         return false,"rpc_perf not set,set it with:@set_rpc_perf log/rpc_perf 1"
     end
 
-    if g_app.srvname == "gateway" then self:broadcast( "rpc_perf",reset ) end
+    if g_app.name == "gateway" then self:broadcast( "rpc_perf",reset ) end
 
     return true
 end
@@ -146,7 +146,7 @@ end
 function GM:set_rpc_perf( perf,reset )
     g_rpc:set_statistic( perf,reset )
 
-    if g_app.srvname == "gateway" then
+    if g_app.name == "gateway" then
         self:broadcast( "set_rpc_perf",perf,reset )
     end
 
@@ -160,7 +160,7 @@ function GM:cmd_perf( reset )
         return false,"rpc_perf not set,set it with:@set_cmd_perf log/cmd_perf 1"
     end
 
-    if g_app.srvname == "gateway" then self:broadcast( "cmd_perf",reset ) end
+    if g_app.name == "gateway" then self:broadcast( "cmd_perf",reset ) end
 
     return true
 end
@@ -170,7 +170,7 @@ end
 function GM:set_cmd_perf( perf,reset )
     g_command_mgr:set_statistic( perf,reset )
 
-    if g_app.srvname == "gateway" then
+    if g_app.name == "gateway" then
         self:broadcast( "set_cmd_perf",perf,reset )
     end
 
@@ -181,7 +181,7 @@ end
 -- @set_gc_stat 1
 function GM:set_gc_stat( set,reset )
     ev:set_gc_stat( set and true or false,reset and true or false )
-    if g_app.srvname == "gateway" then
+    if g_app.name == "gateway" then
         self:broadcast( "set_gc_stat",set,reset )
     end
 
