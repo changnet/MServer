@@ -58,7 +58,7 @@ function App:exec()
     -- require "example.log_performance"
     -- require "example.stream_performance"
     -- require "example.websocket_performance"
-    -- require "example.words_filter_performance"
+    require "test.words_filter_test"
     -- require "example.scene_performance"
     -- require "example.rank_performance"
     -- require "example.other_performance"
