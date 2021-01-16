@@ -38,7 +38,10 @@ else
 
     # ./start.sh test 表示开启test进程，后面参数由可接--filter等特殊参数
     if [ "$app" == "test" ]; then
-        $BIN --app=test $2 $3 $4 $5
+		# https://www.gnu.org/software/bash/manual/bash.html#Shell-Parameter-Expansion
+		# 如果P2存在，则传"$P2"而不是直接传$P2，这样允许参数里包含空格
+		P2=$2
+        $BIN --app=test ${P2:+"$P2"} $3 $4 $5
         exit 0
     fi
 

@@ -181,7 +181,7 @@ void on_exit()
     // 直接用PRINTF会导致重新创建ev取时间
     // PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
 
-    PRINTF_R("new = " FMT64d " ----  new[] =" FMT64d, counter, counters);
+    PRINTF_R("new = " FMT64d " ----  new[] = " FMT64d, counter, counters);
     // back_trace();
 }
 
