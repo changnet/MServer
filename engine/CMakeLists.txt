@@ -103,6 +103,7 @@ add_library(websocket_parser STATIC
 # aho-corasick
 add_library(acism STATIC
     ${DEPS_PATH}/aho-corasick/acism.c
+    ${DEPS_PATH}/aho-corasick/msutil.c
     ${DEPS_PATH}/aho-corasick/acism_create.c
     ${DEPS_PATH}/aho-corasick/acism_dump.c
     ${DEPS_PATH}/aho-corasick/acism_file.c

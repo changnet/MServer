@@ -45,12 +45,13 @@ t_describe("acism words filter test", function()
         t_equal(acism:scan("出售枪支是非法的"), 12)
 
         -- 替换
-        t_equal(acism:replace("A","*"), "*")
-        t_equal(acism:replace("枪支","***"), "***")
-        t_equal(acism:replace("出售枪支是非法的","***"), "出售***是非法的")
-        t_equal(acism:replace("匹配不到我","***"), "匹配不到我")
-        t_equal(acism:replace("这枪支是A货","***"), "这***是***货")
-        t_equal(acism:replace("AAAAAAAA","*"), "*")
+        local ch = "*"
+        t_equal(acism:replace("A",ch), "*")
+        t_equal(acism:replace("枪支",ch), "******")
+        t_equal(acism:replace("出售枪支是非法的",ch), "出售******是非法的")
+        t_equal(acism:replace("匹配不到我",ch), "匹配不到我")
+        t_equal(acism:replace("这枪支是A货",ch), "这******是*货")
+        t_equal(acism:replace("AAAAAAAA",ch), "********")
     end)
 
     t_it(string.format("acism scan perf test: %d words", #PERF_WORDS),
