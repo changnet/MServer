@@ -2,8 +2,10 @@
 
 static inline int isspace_ex(int c)
 {
-    return (c == '\t' || c == '\n' ||
-        c == '\v' || c == '\f' || c == '\r' || c == ' ' ? 1 : 0);
+    return (c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r'
+                    || c == ' '
+                ? 1
+                : 0);
 }
 
 LAcism::LAcism(lua_State *L)
@@ -52,13 +54,15 @@ int32_t LAcism::scan(lua_State *L)
     MEMREF text;
     text.ptr = luaL_checklstring(L, 1, &(text.len));
 
-    int32_t pos = acism_scan(_psp, text,
+    int32_t pos = acism_scan(
+        _psp, text,
         [](int32_t str_num, int32_t text_pos, void *fn_data) {
             (void)str_num;
             (void)fn_data;
 
             return text_pos; // 返回非0表示不再匹配
-        }, nullptr, _case_sensitive);
+        },
+        nullptr, _case_sensitive);
 
     lua_pushinteger(L, pos);
     return 1;
@@ -85,7 +89,7 @@ int32_t LAcism::replace(lua_State *L)
         return luaL_error(L, "replace text too large: %d", text.len);
     }
 
-    //https://stackoverflow.com/questions/28746744/passing-capturing-lambda-as-function-pointer
+    // https://stackoverflow.com/questions/28746744/passing-capturing-lambda-as-function-pointer
     // lambda capture变量后，无法直接转为函数指针，这里需要构建一个data传参数
     struct FnData
     {
@@ -96,30 +100,32 @@ int32_t LAcism::replace(lua_State *L)
         char buff[MAX_TEXT];
     } thread_local fn_data;
 
-    fn_data.ch = *ch;
-    fn_data.pos = 0;
+    fn_data.ch    = *ch;
+    fn_data.pos   = 0;
     fn_data.pattv = _pattv;
-    fn_data.raw = text.ptr;
+    fn_data.raw   = text.ptr;
 
-    (void)acism_scan(_psp, text,
-        [](int32_t str_num, int32_t text_pos, void *fn_data) {
+    (void)acism_scan(
+        _psp, text,
+        [](int32_t str_num, int32_t text_pos, void *data) {
             // @param str_num 匹配到的字库索引
             // @param text_pos 在原字符串中匹配结束的位置
             // @param fn_data 自定义数据
 
-            FnData *d = (FnData *)fn_data;
-            size_t &pos = d->pos;
+            (void)data;
+            size_t &pos = fn_data.pos;
             // 把未发生替换的那部分复制到缓存区
-            while (pos < text_pos - d->pattv[str_num].len)
+            while (pos < text_pos - fn_data.pattv[str_num].len)
             {
-                d->buff[pos] = d->raw[pos];
+                fn_data.buff[pos] = fn_data.raw[pos];
                 pos++;
             }
             // 把需要替换的，都写入需要替换的字符
-            while (pos < (size_t)text_pos) d->buff[pos++] = d->ch;
+            while (pos < (size_t)text_pos) fn_data.buff[pos++] = fn_data.ch;
 
             return 0; // 返回0表示继续匹配
-        }, &fn_data, _case_sensitive);
+        },
+        nullptr, _case_sensitive);
 
     // 没有发生替换，无需拷贝字符串
     if (!fn_data.pos)
@@ -133,7 +139,7 @@ int32_t LAcism::replace(lua_State *L)
         while (pos < text.len)
         {
             fn_data.buff[pos] = text.ptr[pos];
-            pos ++;
+            pos++;
         }
         lua_pushlstring(L, fn_data.buff, pos);
     }
@@ -173,8 +179,8 @@ int32_t LAcism::load_from_file(lua_State *L)
     }
 
     int32_t npatts = 0;
-    _pattv = refsplit(_patt.ptr, '\n', &npatts);
-    _psp   = acism_create(_pattv, npatts);
+    _pattv         = refsplit(_patt.ptr, '\n', &npatts);
+    _psp           = acism_create(_pattv, npatts);
 
     lua_pushinteger(L, npatts);
     return 1;

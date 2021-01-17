@@ -45,11 +45,6 @@ public:
      * @return 加载的关键字数量
      */
     int32_t load_from_file(lua_State *L);
-
-    int32_t do_replace(int32_t strnum, int32_t textpos);
-
-    static int32_t on_match(int32_t strnum, int32_t textpos, MEMREF const *pattv);
-    static int32_t on_replace(int32_t strnum, int32_t textpos, void *context);
 private:
     ACISM *_psp; /// AC自动机的数据结构
     MEMBUF _patt; /// pattern，字库内容
