@@ -28,6 +28,11 @@ public:
             // 需要保证索引节点(0 == _id)小于实体，这样坐标一样时索引必须在实体左边
             return _pos_x == other._pos_x ? (0 == _id) : _pos_x < other._pos_x;
         }
+        bool operator>(const EntityCtx &other) const
+        {
+            // 需要保证索引节点(0 == _id)小于实体，这样坐标一样时索引必须在实体左边
+            return _pos_x == other._pos_x ? (0 != _id) : _pos_x > other._pos_x;
+        }
 
     public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
@@ -174,6 +179,9 @@ private:
         return ctx;
     }
 
+    /// 获取实体的指针
+    EntityCtx *get_entity_ctx(EntityId id);
+
     void add_visual(int32_t visual);
     void del_visual(int32_t visual);
 
@@ -195,12 +203,20 @@ private:
     /// 以ctx为中心，遍历指定范围内的实体
     void each_range_entity(const EntityCtx *ctx, int32_t visual,
                            std::function<void(EntityCtx *ctx)> &&func);
+    /// 以ctx为中心，遍历指定范围内的实体
+    void each_range_entity(const EntityCtx *ctx, int32_t prev_visual,
+                           int32_t next_visual,
+                           std::function<void(EntityCtx *ctx)> &&func);
     /// 实体other进入ctx的视野范围
     void on_enter_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_in,
                         bool me);
     /// 实体other退出ctx的视野范围
     void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out,
                        bool me);
+    /// 实体在ctx的视野范围内变化
+    void on_change_me_range(EntityCtx *ctx, EntityCtx *other, bool is_in_me,
+                            bool was_in_me, EntityVector *list_me_in,
+                            EntityVector *list_me_out);
 
 private:
     int32_t _max_visual;
