@@ -214,9 +214,10 @@ protected:
 
     /// 当other的位置有变化，离开ctx的视野，则只需要使用other的旧坐标，但视野是用的ctx的
     void on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
-                                        EntityVector *list_out, bool me);
+                               EntityVector *list_out, bool me);
 
     void dump(); /// 打印整个链表，用于调试
+
     CtxPool *get_ctx_pool()
     {
         static thread_local CtxPool ctx_pool("link_aoi_ctx");
