@@ -142,13 +142,13 @@ protected:
     using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
     CtxPool *get_ctx_pool()
     {
-        static thread_local CtxPool ctx_pool("link_aoi_ctx");
+        static thread_local CtxPool ctx_pool("skip_link_aoi_ctx");
 
         return &ctx_pool;
     }
     EntityVectorPool *get_vector_pool()
     {
-        static thread_local EntityVectorPool ctx_pool("link_aoi_vector");
+        static thread_local EntityVectorPool ctx_pool("skip_link_aoi_vector");
 
         return &ctx_pool;
     }

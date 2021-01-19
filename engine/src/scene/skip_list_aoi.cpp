@@ -213,9 +213,9 @@ bool SkipListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 
     each_range_entity(ctx, _max_visual,
                       [this, ctx, list_me_in, list_other_in](EntityCtx *other) {
-                          // 自己出现在别人的视野
-                          on_enter_range(ctx, other, list_me_in, true);
                           // 别人出现在自己的视野
+                          on_enter_range(ctx, other, list_me_in, true);
+                          // 自己出现在别人的视野
                           on_enter_range(other, ctx, list_other_in, false);
                       });
 

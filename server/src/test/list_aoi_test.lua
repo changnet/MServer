@@ -87,7 +87,7 @@ local function valid_visual_list(et,list)
 
     return id_map
 end
-
+local daoi
 -- 校验et在list里的实体视野范围内
 local function valid_other_visual_list(et,list)
     local id_map = {}
@@ -123,7 +123,6 @@ local function valid_other_visual_list(et,list)
     return id_map
 end
 
-local daoi
 -- 把list和自己视野内的实体进行交叉对比，校验list的正确性
 local function valid_visual(et, list_me, list_other, mask)
     -- 校验list列表里的实体都在视野范围内
@@ -136,7 +135,6 @@ local function valid_visual(et, list_me, list_other, mask)
             PRINTF("valid_visual fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)",
                 et.id,et.x,et.y, et.z, other.id, other.x, other.y, other.z)
-                daoi:dump()
             assert(false)
         end
 
@@ -339,21 +337,49 @@ local function run_history(load)
     is_valid = true
     is_use_y = true
     local aoi = ListAoi()
-    for _, his in ipairs(history) do
+    aoi:set_index(400, MAX_X)
+    for idx, his in ipairs(history) do
+        if true then
+            local action = his.action
+            if idx == 674 or idx == 1587 then
+            PRINTF("%d %s id = %d, x = %d, y = %d, z = %d, v = %d",
+                idx, action, his.id, his.x or -1, his.y or -1, his.z or -1,
+                his.v)
+            end
+            -- 根据bug条件做不同处理
+            if idx == 2590 then
+                local entity = entity_info[his.id]
 
-        local action = his.action
-        if "ENTER" == action then
-            enter(aoi, his.id, his.x, his.y, his.z, his.v, his.mask)
-        elseif "UPDATE" == action then
-            update(aoi, his.id, his.x, his.y, his.z)
-        elseif "EXIT" == action then
-            exit(aoi, his.id)
-        else
-            assert(false)
+                entity.x = his.x
+                entity.y = his.y
+                entity.z = his.z
+                -- aoi:dump()
+                aoi:get_interest_me_entity(his.id, list_other_in)
+                for n = 1, list_other_in.n do
+                    PRINT(list_other_in[n])
+                end
+                PRINT("=======================")
+                aoi:update_entity(his.id, his.x, his.y, his.z,
+                    list_me_in, list_other_in, list_me_out, list_other_out)
+                -- aoi:dump()
+                aoi:get_interest_me_entity(his.id, list_other_in)
+                for n = 1, list_other_in.n do
+                    PRINT(list_other_in[n])
+                end
+                valid_interest_me(aoi, entity_info[his.id])
+                return
+            end
+
+            if "ENTER" == action then
+                enter(aoi, his.id, his.x, his.y, his.z, his.v, his.mask)
+            elseif "UPDATE" == action then
+                update(aoi, his.id, his.x, his.y, his.z)
+            elseif "EXIT" == action then
+                exit(aoi, his.id)
+            else
+                assert(false)
+            end
         end
-
-        -- 根据bug条件做不同处理
-        if his.id == 691 then aoi:dump() end
     end
     PRINTF("run done %d - %d", table.size(entity_info), table.size(exit_info))
 end
@@ -518,25 +544,24 @@ t_describe("list aoi test", function()
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
             tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
-        local r_aoi = ListAoi()
-        r_aoi:set_index(400, MAX_X)
-daoi = r_aoi
+
+daoi = aoi
         -- 随机测试
         local max_entity = 2000
         local max_random = 50000
-        is_use_history = false
+        is_use_history = true
         random_test(
-            r_aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
+            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
     -- 如果随机测试出现一些不好重现的问题，可以把整个过程记录下来，再慢慢排除
-    -- t_it("list aoi history", function()
-    --     entity_info = {}
-    --     exit_info = {}
+    t_it("base list aoi history", function()
+        entity_info = {}
+        exit_info = {}
 
-    --     save_history()
-    --     run_history(true)
-    -- end)
+        -- save_history()
+        run_history(true)
+    end)
 
     local max_entity = 2000
     local max_random = 50000
