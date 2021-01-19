@@ -1,6 +1,12 @@
 #pragma once
 
-#include "../scene/list_aoi.hpp"
+#ifdef USE_ORTH_LIST_AOI
+    #include "../scene/list_aoi.hpp"
+using ListAOI = ListAOI;
+#else
+    #include "../scene/skip_list_aoi.hpp"
+using ListAOI = SkipListAOI;
+#endif
 #include <lua.hpp>
 
 /**
@@ -12,10 +18,11 @@ public:
     ~LListAoi() {}
     explicit LListAoi(lua_State *L) { UNUSED(L); }
 
-    /**
-     * 是否使用y轴
-     */
+    /// 是否使用y轴，仅十字链表可用
     int32_t use_y(lua_State *L);
+
+    /// 设置索引参数，仅跳表可用
+    int32_t set_index(lua_State *L);
 
     /**
      * 获取所有实体

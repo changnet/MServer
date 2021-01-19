@@ -17,8 +17,21 @@
 
 int32_t LListAoi::use_y(lua_State *L)
 {
+#ifdef USE_ORTH_LIST_AOI
     _use_y = lua_toboolean(L, 1);
+#else
+    UNUSED(L);
+#endif
+    return 0;
+}
 
+int32_t LListAoi::set_index(lua_State *L)
+{
+#ifdef USE_ORTH_LIST_AOI
+    UNUSED(L);
+#else
+    ListAOI::set_index(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
+#endif
     return 0;
 }
 
@@ -81,12 +94,14 @@ int32_t LListAoi::get_entity(lua_State *L)
     int32_t dst_z = luaL_checkinteger(L, 8);
 
     int32_t n = 0;
-    ListAOI::each_entity([this, L, mask, &n, src_x, src_y, src_z, dst_x, dst_y,
+    ListAOI::each_entity([L, mask, &n, src_x, src_y, src_z, dst_x, dst_y,
                           dst_z](const EntityCtx *ctx) {
         if (ctx->_pos_x < src_x) return true;
         if (ctx->_pos_x > dst_x) return false;
 
+#ifdef USE_ORTH_LIST_AOI
         if (_use_y)
+#endif
         {
             if (ctx->_pos_y < src_y || ctx->_pos_y > dst_y) return true;
         }
@@ -260,6 +275,7 @@ int32_t LListAoi::update_entity(lua_State *L)
 
 int32_t LListAoi::dump(lua_State *L)
 {
+    UNUSED(L);
     ListAOI::dump();
 
     return 0;

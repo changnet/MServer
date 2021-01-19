@@ -1,7 +1,7 @@
 #include <cmath>
 #include "skip_list_aoi.hpp"
 
-void SkipListAoi::EntityCtx::reset()
+void SkipListAOI::EntityCtx::reset()
 {
     _mask  = 0;
     _pos_x = 0;
@@ -13,19 +13,19 @@ void SkipListAoi::EntityCtx::reset()
     _interest_me = nullptr;
 }
 
-SkipListAoi::SkipListAoi()
+SkipListAOI::SkipListAOI()
 {
     _index      = 0;
     _max_visual = 0;
 }
 
-SkipListAoi::~SkipListAoi()
+SkipListAOI::~SkipListAOI()
 {
     _list.clear();
     _indexer.clear();
 }
 
-struct SkipListAoi::EntityCtx *SkipListAoi::get_entity_ctx(EntityId id)
+struct SkipListAOI::EntityCtx *SkipListAOI::get_entity_ctx(EntityId id)
 {
     EntitySet::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return nullptr;
@@ -33,7 +33,7 @@ struct SkipListAoi::EntityCtx *SkipListAoi::get_entity_ctx(EntityId id)
     return itr->second;
 }
 
-void SkipListAoi::add_visual(int32_t visual)
+void SkipListAOI::add_visual(int32_t visual)
 {
     assert(visual);
 
@@ -50,7 +50,7 @@ void SkipListAoi::add_visual(int32_t visual)
     if (visual > _max_visual) _max_visual = visual;
 }
 
-void SkipListAoi::del_visual(int32_t visual)
+void SkipListAOI::del_visual(int32_t visual)
 {
     assert(visual);
 
@@ -74,7 +74,7 @@ void SkipListAoi::del_visual(int32_t visual)
     assert(false);
 }
 
-void SkipListAoi::set_index(int32_t index, int32_t max_x)
+void SkipListAOI::set_index(int32_t index, int32_t max_x)
 {
     // 这个只能在aoi初始化时设置一次
     assert(!_index && index && max_x > 0);
@@ -98,7 +98,7 @@ void SkipListAoi::set_index(int32_t index, int32_t max_x)
     }
 }
 
-void SkipListAoi::each_range_entity(const EntityCtx *ctx, int32_t prev_visual,
+void SkipListAOI::each_range_entity(const EntityCtx *ctx, int32_t prev_visual,
                                     int32_t next_visual,
                                     std::function<void(EntityCtx *ctx)> &&func)
 {
@@ -118,14 +118,14 @@ void SkipListAoi::each_range_entity(const EntityCtx *ctx, int32_t prev_visual,
     }
 }
 
-void SkipListAoi::each_range_entity(const EntityCtx *ctx, int32_t visual,
+void SkipListAOI::each_range_entity(const EntityCtx *ctx, int32_t visual,
                                     std::function<void(EntityCtx *)> &&func)
 {
     each_range_entity(ctx, ctx->_pos_x - visual, ctx->_pos_x + visual,
                       std::forward<std::function<void(EntityCtx *)> &&>(func));
 }
 
-bool SkipListAoi::remove_entity_from_vector(EntityVector *list,
+bool SkipListAOI::remove_entity_from_vector(EntityVector *list,
                                             const EntityCtx *ctx)
 {
     for (auto &value : *list)
@@ -143,11 +143,11 @@ bool SkipListAoi::remove_entity_from_vector(EntityVector *list,
     return false;
 }
 
-void SkipListAoi::on_enter_range(EntityCtx *ctx, EntityCtx *other,
+void SkipListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
                                  EntityVector *list_in, bool me)
 {
     // 这里只是表示进入一个轴，最终是否在视野范围内要判断三轴
-    if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
+    if (in_visual(ctx, other))
     {
         if (ctx->_mask & INTEREST)
         {
@@ -159,10 +159,10 @@ void SkipListAoi::on_enter_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-void SkipListAoi::on_exit_range(EntityCtx *ctx, EntityCtx *other,
+void SkipListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
                                 EntityVector *list_out, bool me)
 {
-    if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
+    if (in_visual(ctx, other))
     {
         if (ctx->_mask & INTEREST)
         {
@@ -174,7 +174,7 @@ void SkipListAoi::on_exit_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-bool SkipListAoi::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+bool SkipListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                                int32_t visual, uint8_t mask,
                                EntityVector *list_me_in,
                                EntityVector *list_other_in)
@@ -222,7 +222,7 @@ bool SkipListAoi::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     return true;
 }
 
-int32_t SkipListAoi::exit_entity(EntityId id, EntityVector *list)
+int32_t SkipListAOI::exit_entity(EntityId id, EntityVector *list)
 {
     EntitySet::iterator iter = _entity_set.find(id);
     if (_entity_set.end() == iter) return 1;
@@ -253,32 +253,31 @@ int32_t SkipListAoi::exit_entity(EntityId id, EntityVector *list)
     return 0;
 }
 
-void SkipListAoi::on_change_me_range(EntityCtx *ctx, EntityCtx *other,
-                                     bool is_in_me, bool was_in_me,
-                                     EntityVector *list_me_in,
-                                     EntityVector *list_me_out)
+void SkipListAOI::on_change_range(EntityCtx *ctx, EntityCtx *other, bool is_in,
+                                  bool was_in, EntityVector *list_in,
+                                  EntityVector *list_out, bool me)
 {
-    if (is_in_me && !was_in_me)
+    if (is_in && !was_in)
     {
         // 进入我视野
         if (ctx->_mask & INTEREST)
         {
             other->_interest_me->emplace_back(ctx);
         }
-        if (list_me_in) list_me_in->emplace_back(other);
+        if (list_in) list_in->emplace_back(me ? other : ctx);
     }
-    else if (!is_in_me && was_in_me)
+    else if (!is_in && was_in)
     {
         // 离开我视野
         if (ctx->_mask & INTEREST)
         {
             remove_entity_from_vector(other->_interest_me, ctx);
         }
-        if (list_me_out) list_me_out->emplace_back(other);
+        if (list_out) list_out->emplace_back(me ? other : ctx);
     }
 }
 
-int32_t SkipListAoi::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                                    EntityVector *list_me_in,
                                    EntityVector *list_other_in,
                                    EntityVector *list_me_out,
@@ -329,40 +328,22 @@ int32_t SkipListAoi::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         ctx, prev_visual, next_visual,
         [this, ctx, old_x, old_y, old_z, list_me_in, list_other_in, list_me_out,
          list_other_out](EntityCtx *other) {
-            bool is_in_me =
-                in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z);
+            bool is_in_me  = in_visual(ctx, other);
             bool was_in_me = in_visual(other, old_x, old_y, old_z, ctx->_visual);
-            on_change_me_range(ctx, other, is_in_me, was_in_me, list_me_in,
-                               list_me_out);
+            on_change_range(ctx, other, is_in_me, was_in_me, list_me_in,
+                            list_me_out, true);
 
-            bool is_in_other =
-                in_visual(other, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+            bool is_in_other = in_visual(other, ctx);
             bool was_in_other =
                 in_visual(other, old_x, old_y, old_z, ctx->_visual);
-            if (is_in_other && !was_in_other)
-            {
-                // 进入对方视野
-                if (other->_mask & INTEREST)
-                {
-                    ctx->_interest_me->emplace_back(other);
-                }
-                if (list_other_in) list_other_in->emplace_back(other);
-            }
-            else if (!is_in_other && was_in_other)
-            {
-                // 离开对方视野
-                if (other->_mask & INTEREST)
-                {
-                    remove_entity_from_vector(ctx->_interest_me, other);
-                }
-                if (list_other_out) list_other_out->emplace_back(other);
-            }
+            on_change_range(other, ctx, is_in_other, was_in_other,
+                            list_other_in, list_other_out, false);
         });
 
     return 0;
 }
 
-int32_t SkipListAoi::update_visual(EntityId id, int32_t visual,
+int32_t SkipListAOI::update_visual(EntityId id, int32_t visual,
                                    EntityVector *list_me_in,
                                    EntityVector *list_me_out)
 {
@@ -372,12 +353,13 @@ int32_t SkipListAoi::update_visual(EntityId id, int32_t visual,
         ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
         return -1;
     }
-    assert(visual != ctx->_visual);
+    assert(visual != ctx->_visual && ctx->_mask & INTEREST);
 
     int32_t old_visual = ctx->_visual;
 
     del_visual(old_visual);
     ctx->_visual = visual;
+    add_visual(visual);
 
     // 不用取_max_visual，因为只是自己的视野变化了，与其他人无关
     int32_t max_visual  = std::max(old_visual, visual);
@@ -386,13 +368,31 @@ int32_t SkipListAoi::update_visual(EntityId id, int32_t visual,
     each_range_entity(
         ctx, prev_visual, next_visual,
         [this, ctx, old_visual, list_me_in, list_me_out](EntityCtx *other) {
-            bool is_in_me =
-                in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z);
+            bool is_in_me  = in_visual(ctx, other);
             bool was_in_me = in_visual(ctx, other->_pos_x, other->_pos_y,
                                        other->_pos_z, old_visual);
-            on_change_me_range(ctx, other, is_in_me, was_in_me, list_me_in,
-                               list_me_out);
+            on_change_range(ctx, other, is_in_me, was_in_me, list_me_in,
+                            list_me_out, true);
         });
 
     return 0;
+}
+
+void SkipListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
+{
+    for (auto x : _list)
+    {
+        if (x->_id) func(x);
+    }
+}
+
+void SkipListAOI::dump() const
+{
+    PRINTF("================ >>");
+    for (auto x : _list)
+    {
+        PRINTF("(id = " FMT64d ", x = %5d, y = %5d, z = %5d", x->_id, x->_pos_x,
+               x->_pos_y, x->_pos_z);
+    }
+    PRINTF("================ <<");
 }

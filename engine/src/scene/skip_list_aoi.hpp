@@ -7,7 +7,7 @@
 /**
  * 使用跳表实现的单链表AOI
  */
-class SkipListAoi
+class SkipListAOI
 {
 public:
     class EntityCtx;
@@ -66,13 +66,19 @@ public:
     };
 
 public:
-    SkipListAoi();
-    virtual ~SkipListAoi();
+    SkipListAOI();
+    virtual ~SkipListAOI();
 
-    SkipListAoi(const SkipListAoi &)  = delete;
-    SkipListAoi(const SkipListAoi &&) = delete;
-    SkipListAoi &operator=(const SkipListAoi &) = delete;
-    SkipListAoi &operator=(const SkipListAoi &&) = delete;
+    SkipListAOI(const SkipListAOI &)  = delete;
+    SkipListAOI(const SkipListAOI &&) = delete;
+    SkipListAOI &operator=(const SkipListAOI &) = delete;
+    SkipListAOI &operator=(const SkipListAOI &&) = delete;
+
+    /// 打印整个链表，用于调试
+    void dump() const;
+
+    /// 遍历x轴链表上的实体(直到func返回false)
+    void each_entity(std::function<bool(EntityCtx *)> &&func);
 
     /**
      * @brief 设置索引参数
@@ -130,7 +136,7 @@ public:
     int32_t update_visual(EntityId id, int32_t visual, EntityVector *list_me_in,
                           EntityVector *list_me_out);
 
-private:
+protected:
     // 这些pool做成局部static变量以避免影响内存统计
     using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
     using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
@@ -191,13 +197,17 @@ private:
 
     /// 判断点(x,y,z)是否在ctx视野范围内
     bool in_visual(const EntityCtx *ctx, int32_t x, int32_t y, int32_t z,
-                   int32_t visual = -1) const
+                   int32_t visual) const
     {
         // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
-        if (-1 == visual) visual = ctx->_visual;
         return visual > 0 && visual >= std::abs(ctx->_pos_x - x)
                && visual >= std::abs(ctx->_pos_z - z)
                && visual >= std::abs(ctx->_pos_y - y);
+    }
+    bool in_visual(const EntityCtx *ctx, const EntityCtx *other) const
+    {
+        return in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z,
+                         ctx->_visual);
     }
 
     /// 以ctx为中心，遍历指定范围内的实体
@@ -214,11 +224,11 @@ private:
     void on_exit_range(EntityCtx *ctx, EntityCtx *other, EntityVector *list_out,
                        bool me);
     /// 实体在ctx的视野范围内变化
-    void on_change_me_range(EntityCtx *ctx, EntityCtx *other, bool is_in_me,
-                            bool was_in_me, EntityVector *list_me_in,
-                            EntityVector *list_me_out);
+    void on_change_range(EntityCtx *ctx, EntityCtx *other, bool is_in,
+                         bool was_in, EntityVector *list_in,
+                         EntityVector *list_out, bool me);
 
-private:
+protected:
     int32_t _max_visual;
     std::vector<Visual> _visual;
 
