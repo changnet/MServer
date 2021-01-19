@@ -1,8 +1,8 @@
-#include "list_aoi.hpp"
+#include "orth_list_aoi.hpp"
 
 // /////////////////////////////////////////////////////////////////////////////
 
-void ListAOI::Ctx::reset()
+void OrthListAOI::Ctx::reset()
 {
     _pos_x = 0;
     _pos_y = 0;
@@ -19,14 +19,14 @@ void ListAOI::Ctx::reset()
     _prev_z = nullptr;
 }
 
-void ListAOI::Ctx::update_old_pos()
+void OrthListAOI::Ctx::update_old_pos()
 {
     _old_x = _pos_x;
     _old_y = _pos_y;
     _old_z = _pos_z;
 }
 
-void ListAOI::Ctx::update_pos(int32_t x, int32_t y, int32_t z)
+void OrthListAOI::Ctx::update_pos(int32_t x, int32_t y, int32_t z)
 {
     update_old_pos();
 
@@ -35,7 +35,7 @@ void ListAOI::Ctx::update_pos(int32_t x, int32_t y, int32_t z)
     _pos_z = z;
 }
 
-void ListAOI::EntityCtx::reset()
+void OrthListAOI::EntityCtx::reset()
 {
     Ctx::reset();
 
@@ -50,7 +50,7 @@ void ListAOI::EntityCtx::reset()
     _prev_v.reset();
 }
 
-void ListAOI::EntityCtx::update_visual(int32_t visual)
+void OrthListAOI::EntityCtx::update_visual(int32_t visual)
 {
     _old_visual = _visual;
     _visual     = visual;
@@ -61,7 +61,7 @@ void ListAOI::EntityCtx::update_visual(int32_t visual)
 
 // /////////////////////////////////////////////////////////////////////////////
 
-ListAOI::ListAOI()
+OrthListAOI::OrthListAOI()
 {
     _first_x = nullptr;
     _first_y = nullptr;
@@ -72,13 +72,13 @@ ListAOI::ListAOI()
     _now_mark = 0;
 }
 
-ListAOI::~ListAOI()
+OrthListAOI::~OrthListAOI()
 {
     for (auto &iter : _entity_set) del_entity_ctx(iter.second);
 }
 
 // 获取实体的ctx
-struct ListAOI::EntityCtx *ListAOI::get_entity_ctx(EntityId id)
+struct OrthListAOI::EntityCtx *OrthListAOI::get_entity_ctx(EntityId id)
 {
     EntitySet::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return nullptr;
@@ -86,7 +86,7 @@ struct ListAOI::EntityCtx *ListAOI::get_entity_ctx(EntityId id)
     return itr->second;
 }
 
-bool ListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx *ctx)
+bool OrthListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx *ctx)
 {
     for (auto &value : *list)
     {
@@ -103,7 +103,7 @@ bool ListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx *ctx
     return false;
 }
 
-void ListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
+void OrthListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
                                 std::function<void(EntityCtx *)> &&func)
 {
     // 实体同时存在三轴链表上，只需要遍历其中一个链表即可
@@ -127,7 +127,7 @@ void ListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
     }
 }
 
-void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
+void OrthListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
                              EntityVector *list_in, bool me)
 {
     // 这里只是表示进入一个轴，最终是否在视野范围内要判断三轴
@@ -143,7 +143,7 @@ void ListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-void ListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
+void OrthListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
                             EntityVector *list_out, bool me)
 {
     if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
@@ -158,7 +158,7 @@ void ListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-void ListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
+void OrthListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
                                 EntityVector *list_out, bool me, int32_t visual)
 {
     // 判断旧视野
@@ -177,7 +177,7 @@ void ListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-void ListAOI::on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
+void OrthListAOI::on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
                                     EntityVector *list_out, bool me)
 {
 
@@ -193,7 +193,7 @@ void ListAOI::on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
-bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+bool OrthListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                            int32_t visual, uint8_t mask,
                            EntityVector *list_me_in, EntityVector *list_other_in)
 {
@@ -251,7 +251,7 @@ bool ListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     return true;
 }
 
-int32_t ListAOI::exit_entity(EntityId id, EntityVector *list)
+int32_t OrthListAOI::exit_entity(EntityId id, EntityVector *list)
 {
     EntitySet::iterator iter = _entity_set.find(id);
     if (_entity_set.end() == iter) return 1;
@@ -287,7 +287,7 @@ int32_t ListAOI::exit_entity(EntityId id, EntityVector *list)
     return 0;
 }
 
-void ListAOI::update_mark()
+void OrthListAOI::update_mark()
 {
     /**
      * 在三轴中移动时，遍历的实体可能会出现重复，有几种方式去重
@@ -311,7 +311,7 @@ void ListAOI::update_mark()
     _mark = _now_mark;
 }
 
-int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+int32_t OrthListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                                EntityVector *list_me_in,
                                EntityVector *list_other_in,
                                EntityVector *list_me_out,
@@ -346,7 +346,7 @@ int32_t ListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     return 0;
 }
 
-void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
+void OrthListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
                               EntityVector *list_me_out, int32_t shift_type)
 {
     int32_t type = other->type();
@@ -365,7 +365,7 @@ void ListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
         : on_exit_old_range(entity, (EntityCtx *)other, list_me_out, true);
 }
 
-void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
+void OrthListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
                               EntityVector *list_other_in,
                               EntityVector *list_other_out, int32_t shift_type)
 {
@@ -385,7 +385,7 @@ void ListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
         : on_enter_range(entity, ctx, list_other_in, false);
 }
 
-int32_t ListAOI::update_visual(EntityId id, int32_t visual,
+int32_t OrthListAOI::update_visual(EntityId id, int32_t visual,
                                EntityVector *list_me_in,
                                EntityVector *list_me_out)
 {
@@ -429,7 +429,7 @@ int32_t ListAOI::update_visual(EntityId id, int32_t visual,
     return 0;
 }
 
-int32_t ListAOI::insert_visual(EntityCtx *ctx, EntityVector *list_in)
+int32_t OrthListAOI::insert_visual(EntityCtx *ctx, EntityVector *list_in)
 {
     insert_visual_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
         _first_x, ctx, [this, ctx, list_in](Ctx *other) {
@@ -448,7 +448,7 @@ int32_t ListAOI::insert_visual(EntityCtx *ctx, EntityVector *list_in)
     return 0;
 }
 
-int32_t ListAOI::remove_visual(EntityCtx *ctx, EntityVector *list_out)
+int32_t OrthListAOI::remove_visual(EntityCtx *ctx, EntityVector *list_out)
 {
     // 遍历旧视野区间，从其他实体interest列表删除自己，其他实体从自己视野消失
     each_range_entity(ctx, ctx->_old_visual,
@@ -478,9 +478,9 @@ int32_t ListAOI::remove_visual(EntityCtx *ctx, EntityVector *list_out)
 // 函数模板的实现放下面
 // /////////////////////////////////////////////////////////////////////////////
 
-template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
-          ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&func)
+template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&func)
 {
     if (!list)
     {
@@ -504,9 +504,9 @@ void ListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&fun
     if (next) next->*_prev = ctx;
 }
 
-template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
-          ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
+template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
                             std::function<void(Ctx *)> &&func)
 {
     // 如果该实体不需要视野，则只插入单个实体，不插入视野边界
@@ -533,8 +533,8 @@ void ListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
     }
 }
 
-template <ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::remove_list(Ctx *&list, Ctx *ctx)
+template <OrthListAOI::Ctx *OrthListAOI::Ctx::*_next, OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::remove_list(Ctx *&list, Ctx *ctx)
 {
     Ctx *prev = ctx->*_prev;
     Ctx *next = ctx->*_next;
@@ -542,8 +542,8 @@ void ListAOI::remove_list(Ctx *&list, Ctx *ctx)
     if (next) next->*_prev = prev;
 }
 
-template <ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::remove_entity(Ctx *&list, EntityCtx *ctx)
+template <OrthListAOI::Ctx *OrthListAOI::Ctx::*_next, OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::remove_entity(Ctx *&list, EntityCtx *ctx)
 {
     bool has = ctx->has_visual();
 
@@ -559,9 +559,9 @@ void ListAOI::remove_entity(Ctx *&list, EntityCtx *ctx)
     }
 }
 
-template <int32_t ListAOI::Ctx::*_new, int32_t ListAOI::Ctx::*_old,
-          ListAOI::Ctx *ListAOI::Ctx::*_next, ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
+template <int32_t OrthListAOI::Ctx::*_new, int32_t OrthListAOI::Ctx::*_old,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_next, OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
                            EntityVector *list_other_in, EntityVector *list_me_out,
                            EntityVector *list_other_out)
 {
@@ -603,9 +603,9 @@ void ListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
     }
 }
 
-template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
-          ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
+template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
                               EntityVector *list_other_in,
                               EntityVector *list_me_out,
                               EntityVector *list_other_out)
@@ -638,9 +638,9 @@ void ListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
     if (next) next->*_prev = ctx;
 }
 
-template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
-          ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
+template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
                               EntityVector *list_other_in,
                               EntityVector *list_me_out,
                               EntityVector *list_other_out)
@@ -672,9 +672,9 @@ void ListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
     next->*_prev = ctx;
 }
 
-template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
-          ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
+template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
                            EntityVector *list_me_out, int32_t shift_type)
 {
     _now_mark++;
@@ -696,9 +696,9 @@ void ListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
     }
 }
 
-template <int32_t ListAOI::Ctx::*_pos, ListAOI::Ctx *ListAOI::Ctx::*_next,
-          ListAOI::Ctx *ListAOI::Ctx::*_prev>
-void ListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
+template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
                                  std::function<void(Ctx *)> &&func)
 {
 
@@ -740,7 +740,7 @@ void ListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
     next->*_prev   = prev_v;
 }
 
-void ListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
+void OrthListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
 {
     // TODO 需要遍历特定坐标内的实体时，从三轴中的任意一轴都是等效，因此这里随意选择x轴
     Ctx *ctx = _first_x;
@@ -754,7 +754,7 @@ void ListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
     }
 }
 
-void ListAOI::dump()
+void OrthListAOI::dump()
 {
     PRINTF("================ >>");
     Ctx *ctx = _first_x;

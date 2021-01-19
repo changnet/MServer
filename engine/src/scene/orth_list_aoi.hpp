@@ -4,9 +4,9 @@
 #include "../pool/object_pool.hpp"
 
 /**
- * @brief 基于链表实现的三坐标AOI算法，支持单个实体可变视野
+ * @brief 基于十字链表(Orthogonal List)实现的三坐标AOI算法，支持单个实体可变视野
  */
-class ListAOI
+class OrthListAOI
 {
 public:
     class EntityCtx;
@@ -126,13 +126,13 @@ public:
     };
 
 public:
-    ListAOI();
-    virtual ~ListAOI();
+    OrthListAOI();
+    virtual ~OrthListAOI();
 
-    ListAOI(const ListAOI &)  = delete;
-    ListAOI(const ListAOI &&) = delete;
-    ListAOI &operator=(const ListAOI &) = delete;
-    ListAOI &operator=(const ListAOI &&) = delete;
+    OrthListAOI(const OrthListAOI &)  = delete;
+    OrthListAOI(const OrthListAOI &&) = delete;
+    OrthListAOI &operator=(const OrthListAOI &) = delete;
+    OrthListAOI &operator=(const OrthListAOI &&) = delete;
 
     /// 获取实体的指针
     EntityCtx *get_entity_ctx(EntityId id);

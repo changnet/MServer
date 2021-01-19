@@ -1,8 +1,8 @@
 #pragma once
-
+#define USE_ORTH_LIST_AOI
 #ifdef USE_ORTH_LIST_AOI
-    #include "../scene/list_aoi.hpp"
-using ListAOI = ListAOI;
+    #include "../scene/orth_list_aoi.hpp"
+using ListAOI = OrthListAOI;
 #else
     #include "../scene/skip_list_aoi.hpp"
 using ListAOI = SkipListAOI;
@@ -10,7 +10,7 @@ using ListAOI = SkipListAOI;
 #include <lua.hpp>
 
 /**
- * AOI十字链表实现
+ * AOI链表实现
  */
 class LListAoi final : public ListAOI
 {
