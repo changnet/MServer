@@ -78,7 +78,7 @@ OrthListAOI::~OrthListAOI()
 }
 
 // 获取实体的ctx
-struct OrthListAOI::EntityCtx *OrthListAOI::get_entity_ctx(EntityId id)
+OrthListAOI::EntityCtx *OrthListAOI::get_entity_ctx(EntityId id)
 {
     EntitySet::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return nullptr;
@@ -317,7 +317,7 @@ int32_t OrthListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                                EntityVector *list_me_out,
                                EntityVector *list_other_out)
 {
-    struct EntityCtx *ctx = get_entity_ctx(id);
+    EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
@@ -389,7 +389,7 @@ int32_t OrthListAOI::update_visual(EntityId id, int32_t visual,
                                EntityVector *list_me_in,
                                EntityVector *list_me_out)
 {
-    struct EntityCtx *ctx = get_entity_ctx(id);
+    EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);

@@ -21,11 +21,11 @@ SkipListAOI::SkipListAOI()
 
 SkipListAOI::~SkipListAOI()
 {
-    _list.clear();
-    _indexer.clear();
+    for (auto iter : _indexer) del_entity_ctx(iter);
+    for (auto iter : _entity_set) del_entity_ctx(iter.second);
 }
 
-struct SkipListAOI::EntityCtx *SkipListAOI::get_entity_ctx(EntityId id)
+class SkipListAOI::EntityCtx *SkipListAOI::get_entity_ctx(EntityId id)
 {
     EntitySet::const_iterator itr = _entity_set.find(id);
     if (_entity_set.end() == itr) return nullptr;
@@ -214,7 +214,7 @@ bool SkipListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     each_range_entity(ctx, _max_visual,
                       [this, ctx, list_me_in, list_other_in](EntityCtx *other) {
                           // 自己出现在别人的视野
-                          on_enter_range(ctx, other, list_me_in, false);
+                          on_enter_range(ctx, other, list_me_in, true);
                           // 别人出现在自己的视野
                           on_enter_range(other, ctx, list_other_in, false);
                       });
@@ -260,19 +260,13 @@ void SkipListAOI::on_change_range(EntityCtx *ctx, EntityCtx *other, bool is_in,
     if (is_in && !was_in)
     {
         // 进入我视野
-        if (ctx->_mask & INTEREST)
-        {
-            other->_interest_me->emplace_back(ctx);
-        }
+        other->_interest_me->emplace_back(ctx);
         if (list_in) list_in->emplace_back(me ? other : ctx);
     }
     else if (!is_in && was_in)
     {
         // 离开我视野
-        if (ctx->_mask & INTEREST)
-        {
-            remove_entity_from_vector(other->_interest_me, ctx);
-        }
+        remove_entity_from_vector(other->_interest_me, ctx);
         if (list_out) list_out->emplace_back(me ? other : ctx);
     }
 }
@@ -283,7 +277,7 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                                    EntityVector *list_me_out,
                                    EntityVector *list_other_out)
 {
-    struct EntityCtx *ctx = get_entity_ctx(id);
+    EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
@@ -299,6 +293,7 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     ctx->_pos_z = z;
 
     // 一般来说，update的时候是因为玩家移动，变化比较小，因此不需要用索引来定位，直接在链表中移动
+    bool update         = false;
     auto iter           = ctx->_iter;
     int32_t prev_visual = 0;
     int32_t next_visual = 0;
@@ -307,18 +302,34 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         next_visual = x + _max_visual;
         prev_visual = old_x - _max_visual;
 
-        while (iter != _list.begin() && *ctx > **iter) --iter;
+        ++iter;
+        while (iter != _list.end() && **iter < *ctx)
+        {
+            ++iter;
+            update = true;
+        }
     }
-    else
+    else if (x < old_x)
     {
         prev_visual = x - _max_visual;
         next_visual = old_x + _max_visual;
 
-        while (iter != _list.end() && **iter < *ctx) ++iter;
+        --iter;
+        while (iter != _list.begin() && *ctx > **iter)
+        {
+            --iter;
+            update = true;
+        }
+        if (update) ++iter; // iter不会指向_list.begin，也肯定不会指向它
+    }
+    else
+    {
+        prev_visual = x - _max_visual;
+        next_visual = x + _max_visual;
     }
 
     // 在iter之前插入当前实体
-    if (iter != ctx->_iter)
+    if (update)
     {
         _list.erase(ctx->_iter);
         ctx->_iter = _list.insert(iter, ctx);
@@ -328,16 +339,25 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         ctx, prev_visual, next_visual,
         [this, ctx, old_x, old_y, old_z, list_me_in, list_other_in, list_me_out,
          list_other_out](EntityCtx *other) {
-            bool is_in_me  = in_visual(ctx, other);
-            bool was_in_me = in_visual(other, old_x, old_y, old_z, ctx->_visual);
-            on_change_range(ctx, other, is_in_me, was_in_me, list_me_in,
-                            list_me_out, true);
+            // 只有我对目标interest，对方才会在我视野范围内变化
+            if (ctx->_visual && ctx->_mask & INTEREST)
+            {
+                bool is_in_me = in_visual(ctx, other);
+                bool was_in_me =
+                    in_visual(other, old_x, old_y, old_z, ctx->_visual);
+                on_change_range(ctx, other, is_in_me, was_in_me, list_me_in,
+                                list_me_out, true);
+            }
 
-            bool is_in_other = in_visual(other, ctx);
-            bool was_in_other =
-                in_visual(other, old_x, old_y, old_z, ctx->_visual);
-            on_change_range(other, ctx, is_in_other, was_in_other,
-                            list_other_in, list_other_out, false);
+            // 只有目标对我interest，我才会在对方视野范围内变化
+            if (other->_visual && other->_mask & INTEREST)
+            {
+                bool is_in_other = in_visual(other, ctx);
+                bool was_in_other =
+                    in_visual(other, old_x, old_y, old_z, other->_visual);
+                on_change_range(other, ctx, is_in_other, was_in_other,
+                                list_other_in, list_other_out, false);
+            }
         });
 
     return 0;
@@ -347,19 +367,20 @@ int32_t SkipListAOI::update_visual(EntityId id, int32_t visual,
                                    EntityVector *list_me_in,
                                    EntityVector *list_me_out)
 {
-    struct EntityCtx *ctx = get_entity_ctx(id);
+    EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
         return -1;
     }
-    assert(visual != ctx->_visual && ctx->_mask & INTEREST);
+    if (visual == ctx->_visual) return 0;
+    assert(ctx->_mask & INTEREST);
 
     int32_t old_visual = ctx->_visual;
 
-    del_visual(old_visual);
+    if (old_visual) del_visual(old_visual);
     ctx->_visual = visual;
-    add_visual(visual);
+    if (visual) add_visual(visual);
 
     // 不用取_max_visual，因为只是自己的视野变化了，与其他人无关
     int32_t max_visual  = std::max(old_visual, visual);

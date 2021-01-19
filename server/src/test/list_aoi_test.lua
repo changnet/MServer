@@ -68,7 +68,7 @@ local function valid_visual_list(et,list)
     for idx = 1,max do
         local id = list[idx]
 
-        assert(et.id ~= id) -- 返回列表不应该包含自己
+        assert(et.id ~= id, id) -- 返回列表不应该包含自己
 
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
@@ -123,7 +123,7 @@ local function valid_other_visual_list(et,list)
     return id_map
 end
 
-
+local daoi
 -- 把list和自己视野内的实体进行交叉对比，校验list的正确性
 local function valid_visual(et, list_me, list_other, mask)
     -- 校验list列表里的实体都在视野范围内
@@ -136,6 +136,7 @@ local function valid_visual(et, list_me, list_other, mask)
             PRINTF("valid_visual fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)",
                 et.id,et.x,et.y, et.z, other.id, other.x, other.y, other.z)
+                daoi:dump()
             assert(false)
         end
 
@@ -425,13 +426,14 @@ t_describe("list aoi test", function()
         is_use_y = true
         local aoi = ListAoi()
 
+        aoi:set_index(400, MAX_X)
+
         -- 测试进入临界值,坐标传入的都是像素，坐标从0开始，所以减1
         enter(aoi, 99991, 0, 0, 0, V_PLAYER, ET_PLAYER)
         enter(aoi, 99992, MAX_X - 1, 0, 0, 0, ET_NPC)
         enter(aoi, 99993, 0, MAX_Y - 1, 0, 0, ET_MONSTER)
         enter(aoi, 99994, 0, 0, MAX_Z - 1, V_PLAYER, ET_PLAYER)
         enter(aoi, 99995, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, V_PLAYER, ET_PLAYER)
-
 
         aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, tmp_list)
         t_equal(tmp_list.n, table.size(entity_info))
@@ -444,9 +446,10 @@ t_describe("list aoi test", function()
             ET_NPC, tmp_list, 0, MAX_X / 2, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
 
-        -- 进入其他人视野
         update(aoi, 99991, MAX_X - 1 - V_PLAYER,
             MAX_Y - 1 - V_PLAYER, MAX_Z - 1 - V_PLAYER)
+
+        -- 进入其他人视野
         update(aoi, 99992, MAX_X - 1, MAX_Y - 1, MAX_Z - 1)
         update(aoi, 99993, MAX_X - 1, MAX_Y - 1, MAX_Z - 1)
         update(aoi, 99994, MAX_X - 1, MAX_Y - 1, MAX_Z - 1)
@@ -515,13 +518,15 @@ t_describe("list aoi test", function()
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER,
             tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
-
+        local r_aoi = ListAoi()
+        r_aoi:set_index(400, MAX_X)
+daoi = r_aoi
         -- 随机测试
         local max_entity = 2000
         local max_random = 50000
         is_use_history = false
         random_test(
-            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
+            r_aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
     -- 如果随机测试出现一些不好重现的问题，可以把整个过程记录下来，再慢慢排除
@@ -545,6 +550,8 @@ t_describe("list aoi test", function()
         is_use_y = false
         local aoi_no_y = ListAoi()
 
+        aoi_no_y:set_index(400, MAX_X)
+
         aoi_no_y:use_y(false)
         is_use_history = false
         random_test(
@@ -552,7 +559,7 @@ t_describe("list aoi test", function()
     end)
 
     -- 下面这几个aoi共用一个aoi和entity_info之类的
-    local aoi = ListAoi()
+    local share_aoi
     t_it(string.format(
         "perf test %d entity and %d times random move/exit/enter",
         max_entity, max_random), function()
@@ -561,9 +568,12 @@ t_describe("list aoi test", function()
         entity_info = {}
         exit_info = {}
 
+        share_aoi = ListAoi()
+        share_aoi:set_index(400, MAX_X)
+
         is_use_history = false
         random_test(
-            aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
+            share_aoi, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
     end)
 
     local max_query = 1000
@@ -572,7 +582,7 @@ t_describe("list aoi test", function()
         max_entity, max_query), function()
         for _ = 1, max_query do
             for id in pairs(entity_info) do
-                aoi:get_visual_entity(id, 0xF, tmp_list)
+                share_aoi:get_visual_entity(id, 0xF, tmp_list)
             end
         end
         t_print("actually run " .. table.size(entity_info))
@@ -588,7 +598,7 @@ t_describe("list aoi test", function()
             for id, et in pairs(entity_info) do
                 if (et.visual > 0) then
                     cnt = cnt + 1
-                    aoi:update_visual(id,
+                    share_aoi:update_visual(id,
                         V_PLAYER * math.random(1, 5), list_me_in, list_me_out)
                 end
             end

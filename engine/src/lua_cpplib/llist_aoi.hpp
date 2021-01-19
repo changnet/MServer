@@ -1,5 +1,5 @@
 #pragma once
-#define USE_ORTH_LIST_AOI
+
 #ifdef USE_ORTH_LIST_AOI
     #include "../scene/orth_list_aoi.hpp"
 using ListAOI = OrthListAOI;

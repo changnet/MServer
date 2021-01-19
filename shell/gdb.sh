@@ -10,5 +10,6 @@ if [[ ! $2 ]]; then
 else
     # ./gdb.sh gateway 1 1 启动进程进行调试
     cd $PWD
-    gdb -args master --app=$1 $2 $3 $4 $5
+    P2=$2
+    gdb -args master --app=$1 ${P2:+"$P2"} $3 $4 $5
 fi
