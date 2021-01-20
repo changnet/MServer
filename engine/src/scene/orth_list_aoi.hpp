@@ -216,7 +216,7 @@ protected:
     void on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
                                EntityVector *list_out, bool me);
 
-    void dump(); /// 打印整个链表，用于调试
+    bool valid_dump(bool dump) const; /// 打印整个链表，用于调试
 
     CtxPool *get_ctx_pool()
     {

@@ -275,10 +275,10 @@ int32_t LListAoi::update_entity(lua_State *L)
     return 0;
 }
 
-int32_t LListAoi::dump(lua_State *L)
+int32_t LListAoi::valid_dump(lua_State *L)
 {
-    UNUSED(L);
-    ListAOI::dump();
+    bool dump = lua_toboolean(L, 1);
+    lua_pushboolean(L, ListAOI::valid_dump(dump));
 
-    return 0;
+    return 1;
 }

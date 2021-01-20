@@ -86,7 +86,8 @@ OrthListAOI::EntityCtx *OrthListAOI::get_entity_ctx(EntityId id)
     return itr->second;
 }
 
-bool OrthListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx *ctx)
+bool OrthListAOI::remove_entity_from_vector(EntityVector *list,
+                                            const EntityCtx *ctx)
 {
     for (auto &value : *list)
     {
@@ -104,7 +105,7 @@ bool OrthListAOI::remove_entity_from_vector(EntityVector *list, const EntityCtx 
 }
 
 void OrthListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
-                                std::function<void(EntityCtx *)> &&func)
+                                    std::function<void(EntityCtx *)> &&func)
 {
     // 实体同时存在三轴链表上，只需要遍历其中一个链表即可
 
@@ -128,7 +129,7 @@ void OrthListAOI::each_range_entity(const Ctx *ctx, int32_t visual,
 }
 
 void OrthListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
-                             EntityVector *list_in, bool me)
+                                 EntityVector *list_in, bool me)
 {
     // 这里只是表示进入一个轴，最终是否在视野范围内要判断三轴
     if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
@@ -144,7 +145,7 @@ void OrthListAOI::on_enter_range(EntityCtx *ctx, EntityCtx *other,
 }
 
 void OrthListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
-                            EntityVector *list_out, bool me)
+                                EntityVector *list_out, bool me)
 {
     if (in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z))
     {
@@ -159,7 +160,8 @@ void OrthListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
 }
 
 void OrthListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
-                                EntityVector *list_out, bool me, int32_t visual)
+                                    EntityVector *list_out, bool me,
+                                    int32_t visual)
 {
     // 判断旧视野
     // 当ctx的视野有变化（视野缩小）则需要使用ctx的旧坐标、旧视野来判断
@@ -178,7 +180,7 @@ void OrthListAOI::on_exit_old_range(EntityCtx *ctx, EntityCtx *other,
 }
 
 void OrthListAOI::on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
-                                    EntityVector *list_out, bool me)
+                                        EntityVector *list_out, bool me)
 {
 
     if (in_visual(ctx, other->_old_x, other->_old_y, other->_old_z))
@@ -194,8 +196,9 @@ void OrthListAOI::on_exit_old_pos_range(EntityCtx *ctx, EntityCtx *other,
 }
 
 bool OrthListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
-                           int32_t visual, uint8_t mask,
-                           EntityVector *list_me_in, EntityVector *list_other_in)
+                               int32_t visual, uint8_t mask,
+                               EntityVector *list_me_in,
+                               EntityVector *list_other_in)
 {
     // 防止重复进入场景
     auto ret = _entity_set.emplace(id, nullptr);
@@ -312,10 +315,10 @@ void OrthListAOI::update_mark()
 }
 
 int32_t OrthListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
-                               EntityVector *list_me_in,
-                               EntityVector *list_other_in,
-                               EntityVector *list_me_out,
-                               EntityVector *list_other_out)
+                                   EntityVector *list_me_in,
+                                   EntityVector *list_other_in,
+                                   EntityVector *list_me_out,
+                                   EntityVector *list_other_out)
 {
     EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
@@ -347,7 +350,7 @@ int32_t OrthListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 }
 
 void OrthListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in,
-                              EntityVector *list_me_out, int32_t shift_type)
+                                  EntityVector *list_me_out, int32_t shift_type)
 {
     int32_t type = other->type();
     if (CT_ENTITY != type || had_mark((EntityCtx *)other)) return;
@@ -366,8 +369,9 @@ void OrthListAOI::on_shift_visual(Ctx *ctx, Ctx *other, EntityVector *list_me_in
 }
 
 void OrthListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
-                              EntityVector *list_other_in,
-                              EntityVector *list_other_out, int32_t shift_type)
+                                  EntityVector *list_other_in,
+                                  EntityVector *list_other_out,
+                                  int32_t shift_type)
 {
     int32_t type = other->type();
     if (CT_ENTITY == type) return;
@@ -386,8 +390,8 @@ void OrthListAOI::on_shift_entity(EntityCtx *ctx, Ctx *other,
 }
 
 int32_t OrthListAOI::update_visual(EntityId id, int32_t visual,
-                               EntityVector *list_me_in,
-                               EntityVector *list_me_out)
+                                   EntityVector *list_me_in,
+                                   EntityVector *list_me_out)
 {
     EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
@@ -480,7 +484,8 @@ int32_t OrthListAOI::remove_visual(EntityCtx *ctx, EntityVector *list_out)
 
 template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
           OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
-void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &&func)
+void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx,
+                              std::function<void(Ctx *)> &&func)
 {
     if (!list)
     {
@@ -507,7 +512,7 @@ void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *)> &
 template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
           OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
 void OrthListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
-                            std::function<void(Ctx *)> &&func)
+                                std::function<void(Ctx *)> &&func)
 {
     // 如果该实体不需要视野，则只插入单个实体，不插入视野边界
     // 依次插入视野左边界、实体、视野右边界，每一个都以上一个为起点进行遍历，以提高插入效率
@@ -533,7 +538,8 @@ void OrthListAOI::insert_entity(Ctx *&list, EntityCtx *ctx,
     }
 }
 
-template <OrthListAOI::Ctx *OrthListAOI::Ctx::*_next, OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+template <OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
 void OrthListAOI::remove_list(Ctx *&list, Ctx *ctx)
 {
     Ctx *prev = ctx->*_prev;
@@ -542,7 +548,8 @@ void OrthListAOI::remove_list(Ctx *&list, Ctx *ctx)
     if (next) next->*_prev = prev;
 }
 
-template <OrthListAOI::Ctx *OrthListAOI::Ctx::*_next, OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+template <OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
 void OrthListAOI::remove_entity(Ctx *&list, EntityCtx *ctx)
 {
     bool has = ctx->has_visual();
@@ -560,10 +567,13 @@ void OrthListAOI::remove_entity(Ctx *&list, EntityCtx *ctx)
 }
 
 template <int32_t OrthListAOI::Ctx::*_new, int32_t OrthListAOI::Ctx::*_old,
-          OrthListAOI::Ctx *OrthListAOI::Ctx::*_next, OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
-void OrthListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
-                           EntityVector *list_other_in, EntityVector *list_me_out,
-                           EntityVector *list_other_out)
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
+          OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
+void OrthListAOI::shift_entity(Ctx *&list, EntityCtx *ctx,
+                               EntityVector *list_me_in,
+                               EntityVector *list_other_in,
+                               EntityVector *list_me_out,
+                               EntityVector *list_other_out)
 {
     _now_mark++;
     bool has = ctx->has_visual();
@@ -606,9 +616,9 @@ void OrthListAOI::shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me
 template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
           OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
 void OrthListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
-                              EntityVector *list_other_in,
-                              EntityVector *list_me_out,
-                              EntityVector *list_other_out)
+                                  EntityVector *list_other_in,
+                                  EntityVector *list_me_out,
+                                  EntityVector *list_other_out)
 {
     bool is_entity = CT_ENTITY == ctx->type();
 
@@ -641,9 +651,9 @@ void OrthListAOI::shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in
 template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
           OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
 void OrthListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
-                              EntityVector *list_other_in,
-                              EntityVector *list_me_out,
-                              EntityVector *list_other_out)
+                                  EntityVector *list_other_in,
+                                  EntityVector *list_me_out,
+                                  EntityVector *list_other_out)
 {
     bool is_entity = CT_ENTITY == ctx->type();
 
@@ -674,8 +684,9 @@ void OrthListAOI::shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in
 
 template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
           OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
-void OrthListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
-                           EntityVector *list_me_out, int32_t shift_type)
+void OrthListAOI::shift_visual(Ctx *&list, EntityCtx *ctx,
+                               EntityVector *list_me_in,
+                               EntityVector *list_me_out, int32_t shift_type)
 {
     _now_mark++;
     if (shift_type > 0)
@@ -699,7 +710,7 @@ void OrthListAOI::shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me
 template <int32_t OrthListAOI::Ctx::*_pos, OrthListAOI::Ctx *OrthListAOI::Ctx::*_next,
           OrthListAOI::Ctx *OrthListAOI::Ctx::*_prev>
 void OrthListAOI::insert_visual_list(Ctx *&list, EntityCtx *ctx,
-                                 std::function<void(Ctx *)> &&func)
+                                     std::function<void(Ctx *)> &&func)
 {
 
     Ctx *prev = ctx;
@@ -754,40 +765,69 @@ void OrthListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
     }
 }
 
-void OrthListAOI::dump()
+bool OrthListAOI::valid_dump(bool dump) const
 {
-    PRINTF("================ >>");
+#define DUMP_PRINTF(...) \
+    if (dump) PRINTF(__VA_ARGS__)
+
+    bool ok   = true;
+    Ctx *last = nullptr;
+    DUMP_PRINTF("================ >>");
     Ctx *ctx = _first_x;
-    PRINTF("XXXXXXXXXXXXXXXX");
+    DUMP_PRINTF("XXXXXXXXXXXXXXXX");
     while (ctx)
     {
         EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id
                                                : ctx->entity()->_id;
-        PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
-               ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
-        ctx = ctx->_next_x;
+        DUMP_PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
+                    ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+        if (last && last->comp<&Ctx::_pos_x>(ctx) > 0)
+        {
+            DUMP_PRINTF("dump error");
+            ok = false;
+        }
+        last = ctx;
+        ctx  = ctx->_next_x;
     }
 
-    ctx = _first_y;
-    PRINTF("YYYYYYYYYYYYYYYY");
+    last = nullptr;
+    ctx  = _first_y;
+    DUMP_PRINTF("YYYYYYYYYYYYYYYY");
     while (ctx)
     {
         EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id
                                                : ctx->entity()->_id;
-        PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
-               ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
-        ctx = ctx->_next_y;
+        DUMP_PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
+                    ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+        if (last && last->comp<&Ctx::_pos_y>(ctx) > 0)
+        {
+            DUMP_PRINTF("dump error");
+            ok = false;
+        }
+        last = ctx;
+        ctx  = ctx->_next_y;
     }
 
-    ctx = _first_z;
-    PRINTF("ZZZZZZZZZZZZZZZZ");
+    last = nullptr;
+    ctx  = _first_z;
+    DUMP_PRINTF("ZZZZZZZZZZZZZZZZ");
     while (ctx)
     {
         EntityId id = CT_ENTITY == ctx->type() ? ((EntityCtx *)ctx)->_id
                                                : ctx->entity()->_id;
-        PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
-               ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
-        ctx = ctx->_next_z;
+        DUMP_PRINTF("(type = %2d, id = " FMT64d ", x = %5d, y = %5d, z = %5d",
+                    ctx->type(), id, ctx->_pos_x, ctx->_pos_y, ctx->_pos_z);
+        if (last && last->comp<&Ctx::_pos_z>(ctx) > 0)
+        {
+            DUMP_PRINTF("dump error");
+            ok = false;
+        }
+        last = ctx;
+        ctx  = ctx->_next_z;
     }
-    PRINTF("================ <<");
+    DUMP_PRINTF("================ <<");
+
+#undef DUMP_PRINTF
+
+    return ok;
 }

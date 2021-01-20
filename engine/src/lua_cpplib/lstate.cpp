@@ -280,7 +280,7 @@ int32_t luaopen_list_aoi(lua_State *L)
 {
     LClass<LListAoi> lc(L, "ListAoi");
 
-    lc.def<&LListAoi::dump>("dump");
+    lc.def<&LListAoi::valid_dump>("valid_dump");
     lc.def<&LListAoi::use_y>("use_y");
     lc.def<&LListAoi::set_index>("set_index");
     lc.def<&LListAoi::update_visual>("update_visual");

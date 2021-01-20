@@ -26,12 +26,14 @@ public:
         bool operator<(const EntityCtx &other) const
         {
             // 需要保证索引节点(0 == _id)小于实体，这样坐标一样时索引必须在实体左边
-            return _pos_x == other._pos_x ? (0 == _id) : _pos_x < other._pos_x;
+            return _pos_x == other._pos_x ? (0 == _id && 0 != other._id)
+                                          : _pos_x < other._pos_x;
         }
         bool operator>(const EntityCtx &other) const
         {
             // 需要保证索引节点(0 == _id)小于实体，这样坐标一样时索引必须在实体左边
-            return _pos_x == other._pos_x ? (0 != _id) : _pos_x > other._pos_x;
+            return _pos_x == other._pos_x ? (0 == other._id && 0 != _id)
+                                          : _pos_x > other._pos_x;
         }
 
     public:
@@ -75,7 +77,7 @@ public:
     SkipListAOI &operator=(const SkipListAOI &&) = delete;
 
     /// 打印整个链表，用于调试
-    void dump() const;
+    bool valid_dump(bool dump) const;
 
     /// 遍历x轴链表上的实体(直到func返回false)
     void each_entity(std::function<bool(EntityCtx *)> &&func);
@@ -227,6 +229,17 @@ protected:
     void on_change_range(EntityCtx *ctx, EntityCtx *other, bool is_in,
                          bool was_in, EntityVector *list_in,
                          EntityVector *list_out, bool me);
+
+    int32_t update_entity_short(EntityCtx *ctx, int32_t old_x, int32_t old_y,
+                                int32_t old_z, EntityVector *list_me_in,
+                                EntityVector *list_other_in,
+                                EntityVector *list_me_out,
+                                EntityVector *list_other_out);
+    int32_t update_entity_long(EntityCtx *ctx, int32_t old_x, int32_t old_y,
+                               int32_t old_z, EntityVector *list_me_in,
+                               EntityVector *list_other_in,
+                               EntityVector *list_me_out,
+                               EntityVector *list_other_out);
 
 protected:
     int32_t _max_visual;

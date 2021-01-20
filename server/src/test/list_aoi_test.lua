@@ -341,11 +341,12 @@ local function run_history(load)
     for idx, his in ipairs(history) do
         if true then
             local action = his.action
-            if idx == 674 or idx == 1587 then
-            PRINTF("%d %s id = %d, x = %d, y = %d, z = %d, v = %d",
-                idx, action, his.id, his.x or -1, his.y or -1, his.z or -1,
-                his.v)
+            if true then
+                PRINTF("%d %s id = %d, x = %d, y = %d, z = %d, v = %d",
+                    idx, action, his.id, his.x or -1, his.y or -1, his.z or -1,
+                    his.v or -1)
             end
+
             -- 根据bug条件做不同处理
             if idx == 2590 then
                 local entity = entity_info[his.id]
@@ -353,7 +354,6 @@ local function run_history(load)
                 entity.x = his.x
                 entity.y = his.y
                 entity.z = his.z
-                -- aoi:dump()
                 aoi:get_interest_me_entity(his.id, list_other_in)
                 for n = 1, list_other_in.n do
                     PRINT(list_other_in[n])
@@ -378,6 +378,10 @@ local function run_history(load)
                 exit(aoi, his.id)
             else
                 assert(false)
+            end
+
+            if idx == 2007 or idx == 2008 then
+                assert(aoi:valid_dump(true))
             end
         end
     end
@@ -437,6 +441,7 @@ t_describe("list aoi test", function()
         is_valid = true
         is_use_y = true
         local aoi = ListAoi()
+        aoi:set_index(400, MAX_X)
 
         -- 当移动667时，x轴左移刚好跨过691视野左边界，y轴左移出视野，需要C++那边
         -- 处理实体重复标记
@@ -555,13 +560,13 @@ daoi = aoi
     end)
 
     -- 如果随机测试出现一些不好重现的问题，可以把整个过程记录下来，再慢慢排除
-    t_it("base list aoi history", function()
-        entity_info = {}
-        exit_info = {}
+    -- t_it("base list aoi history", function()
+    --     entity_info = {}
+    --     exit_info = {}
 
-        -- save_history()
-        run_history(true)
-    end)
+    --     -- save_history()
+    --     run_history(true)
+    -- end)
 
     local max_entity = 2000
     local max_random = 50000

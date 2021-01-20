@@ -103,6 +103,9 @@ public:
      */
     int32_t update_entity(lua_State *L);
 
-    /// 打印整个链表，用于调试
-    int32_t dump(lua_State *L);
+    /**
+     * 打印整个链表，用于调试
+     * @param dump 是否打印链表数据
+     */
+    int32_t valid_dump(lua_State *L);
 };

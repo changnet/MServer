@@ -271,27 +271,14 @@ void SkipListAOI::on_change_range(EntityCtx *ctx, EntityCtx *other, bool is_in,
     }
 }
 
-int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
-                                   EntityVector *list_me_in,
-                                   EntityVector *list_other_in,
-                                   EntityVector *list_me_out,
-                                   EntityVector *list_other_out)
+int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
+                                         int32_t old_y, int32_t old_z,
+                                         EntityVector *list_me_in,
+                                         EntityVector *list_other_in,
+                                         EntityVector *list_me_out,
+                                         EntityVector *list_other_out)
 {
-    EntityCtx *ctx = get_entity_ctx(id);
-    if (!ctx)
-    {
-        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
-        return -1;
-    }
-
-    int32_t old_x = ctx->_pos_x;
-    int32_t old_y = ctx->_pos_y;
-    int32_t old_z = ctx->_pos_z;
-
-    ctx->_pos_x = x;
-    ctx->_pos_y = y;
-    ctx->_pos_z = z;
-
+    int32_t x = ctx->_pos_x;
     // 一般来说，update的时候是因为玩家移动，变化比较小，因此不需要用索引来定位，直接在链表中移动
     bool update         = false;
     auto iter           = ctx->_iter;
@@ -315,7 +302,7 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         next_visual = old_x + _max_visual;
 
         --iter;
-        while (iter != _list.begin() && *ctx > **iter)
+        while (iter != _list.begin() && **iter > *ctx)
         {
             --iter;
             update = true;
@@ -363,6 +350,93 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     return 0;
 }
 
+int32_t SkipListAOI::update_entity_long(EntityCtx *ctx, int32_t old_x,
+                                        int32_t old_y, int32_t old_z,
+                                        EntityVector *list_me_in,
+                                        EntityVector *list_other_in,
+                                        EntityVector *list_me_out,
+                                        EntityVector *list_other_out)
+{
+    // 遍历旧视野，这个范围内的实体现在肯定不在新位置的视野范围内(is_in_xxx必定为false)
+    each_range_entity(
+        ctx, _max_visual,
+        [this, ctx, old_x, old_y, old_z, list_me_in, list_other_in, list_me_out,
+         list_other_out](EntityCtx *other) {
+            // 只有我对目标interest，对方才会在我视野范围内变化
+            if (ctx->_visual && ctx->_mask & INTEREST)
+            {
+                bool was_in_me =
+                    in_visual(other, old_x, old_y, old_z, ctx->_visual);
+                on_change_range(ctx, other, false, was_in_me, list_me_in,
+                                list_me_out, true);
+            }
+
+            // 只有目标对我interest，我才会在对方视野范围内变化
+            if (other->_visual && other->_mask & INTEREST)
+            {
+                bool was_in_other =
+                    in_visual(other, old_x, old_y, old_z, other->_visual);
+                on_change_range(other, ctx, false, was_in_other, list_other_in,
+                                list_other_out, false);
+            }
+        });
+    // 移动实体到链表中的新位置
+    // 遍历新视野，这个范围内的实体现在肯定不在新位置的视野范围内(was_in_xxx必定为false)
+    each_range_entity(ctx, _max_visual,
+                      [this, ctx, list_me_in, list_other_in, list_me_out,
+                       list_other_out](EntityCtx *other) {
+                          // 只有我对目标interest，对方才会在我视野范围内变化
+                          if (ctx->_visual && ctx->_mask & INTEREST)
+                          {
+                              bool is_in_me = in_visual(ctx, other);
+                              on_change_range(ctx, other, is_in_me, false,
+                                              list_me_in, list_me_out, true);
+                          }
+
+                          // 只有目标对我interest，我才会在对方视野范围内变化
+                          if (other->_visual && other->_mask & INTEREST)
+                          {
+                              bool is_in_other = in_visual(other, ctx);
+                              on_change_range(other, ctx, is_in_other, false,
+                                              list_other_in, list_other_out,
+                                              false);
+                          }
+                      });
+    return 0;
+}
+
+int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
+                                   EntityVector *list_me_in,
+                                   EntityVector *list_other_in,
+                                   EntityVector *list_me_out,
+                                   EntityVector *list_other_out)
+{
+    EntityCtx *ctx = get_entity_ctx(id);
+    if (!ctx)
+    {
+        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        return -1;
+    }
+
+    int32_t old_x = ctx->_pos_x;
+    int32_t old_y = ctx->_pos_y;
+    int32_t old_z = ctx->_pos_z;
+
+    ctx->_pos_x = x;
+    ctx->_pos_y = y;
+    ctx->_pos_z = z;
+
+    /**
+     * 如果移动距离比较小，两个位置的视野有重叠，那么遍历两个视野的并集即可
+     * 如果移动距离比较大，两个位置的视野有重叠，那么分开遍历，避免遍历两个视野之间无效的实体
+     */
+    return std::abs(x - old_x) > 2 * _max_visual
+               ? update_entity_long(ctx, old_x, old_y, old_z, list_me_in,
+                                    list_other_in, list_me_out, list_other_out)
+               : update_entity_short(ctx, old_x, old_y, old_z, list_me_in,
+                                     list_other_in, list_me_out, list_other_out);
+}
+
 int32_t SkipListAOI::update_visual(EntityId id, int32_t visual,
                                    EntityVector *list_me_in,
                                    EntityVector *list_me_out)
@@ -407,13 +481,28 @@ void SkipListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
     }
 }
 
-void SkipListAOI::dump() const
+bool SkipListAOI::valid_dump(bool dump) const
 {
-    PRINTF("================ >>");
+#define DUMP_PRINTF(...) \
+    if (dump) PRINTF(__VA_ARGS__)
+
+    bool ok         = true;
+    EntityCtx *last = nullptr;
+    DUMP_PRINTF("================ >>");
     for (auto x : _list)
     {
-        PRINTF("(id = " FMT64d ", x = %5d, y = %5d, z = %5d", x->_id, x->_pos_x,
-               x->_pos_y, x->_pos_z);
+        DUMP_PRINTF("id = " FMT64d ", x = %5d, y = %5d, z = %5d", x->_id,
+                    x->_pos_x, x->_pos_y, x->_pos_z);
+        if (last && *last > *x)
+        {
+            DUMP_PRINTF("dump error");
+            ok = false;
+        }
+        last = x;
     }
-    PRINTF("================ <<");
+    DUMP_PRINTF("================ <<");
+
+#undef DUMP_PRINTF
+
+    return ok;
 }
