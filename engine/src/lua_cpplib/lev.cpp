@@ -38,8 +38,6 @@ int32_t LEV::exit(lua_State *L)
 
 int32_t LEV::backend(lua_State *L)
 {
-    ASSERT(backend_fd >= 0, "backend uninit");
-
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 停止主动gc,用自己的策略控制gc */
 
@@ -49,6 +47,7 @@ int32_t LEV::backend(lua_State *L)
 
 int32_t LEV::time_update(lua_State *L)
 {
+    UNUSED(L);
     EV::time_update();
     return 0;
 }

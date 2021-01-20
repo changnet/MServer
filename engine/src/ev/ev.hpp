@@ -1,20 +1,6 @@
 #pragma once
 
-/*
- * for epoll
- * 1.closing a file descriptor cause it to be removed from all
- *   poll sets automatically。（not dup fork,see man page)
- * 2.EPOLL_CTL_MOD操作可能会使得某些event被忽略(如当前有已有一个读事件，但忽然改为只监听
- *   写事件)，可能会导致这个事件丢失，尤其是使用ET模式时。
- * 3.采用pending、fdchanges、anfds队列，同时要保证在处理pending时(此时会触发很多事件)，不会
- *   导致其他数据指针悬空(比如delete某个watcher导致anfds指针悬空)。
- * 4.与libev的自动调整不同，单次poll的事件数量是固定的。因此，当io事件很多时，可能会导致
- *   epoll_wait数组一次装不下，可以有某个fd永远未被读取(ET模式下将会导致下次不再触发)。
- *   这时需要调整事件大小，重新编译。
- */
-
 #include "../global/global.hpp"
-#include <sys/epoll.h>
 
 #define MIN_TIMEJUMP \
     1. /* minimum timejump that gets detected (if monotonic clock available) */
@@ -31,6 +17,8 @@
 #define HPARENT(k)        ((k) >> 1)
 #define UPHEAP_DONE(p, k) (!(p))
 
+using EvTstamp = double;
+
 /* eventmask, revents, events... */
 enum
 {
@@ -42,17 +30,15 @@ enum
     EV_ERROR = (int)0x80000000  /* sent when an error occurs */
 };
 
-typedef double EvTstamp;
-
-class EVWatcher;
 class EVIO;
 class EVTimer;
+class EVWatcher;
+class EVBackend;
 
 /* file descriptor info structure */
 typedef struct
 {
     EVIO *w;
-    uint8_t reify; /* EPOLL_CTL_ADD、EPOLL_CTL_MOD、EPOLL_CTL_DEL */
     uint8_t emask; /* epoll event register in epoll */
 } ANFD;
 
@@ -96,6 +82,7 @@ public:
     inline EvTstamp now() { return ev_rt_now; }
 
 protected:
+    friend class EVBackend;
     volatile bool loop_done;
     ANFD *anfds;
     uint32_t anfdmax;
@@ -112,8 +99,7 @@ protected:
     uint32_t timermax;
     uint32_t timercnt;
 
-    int32_t backend_fd;
-    epoll_event epoll_events[EPOLL_MAXEV];
+    EVBackend *backend;
 
     int64_t ev_now_ms; // 主循环时间，毫秒
     EvTstamp ev_rt_now;
@@ -121,16 +107,18 @@ protected:
     EvTstamp mn_now;    /* monotonic clock "now" */
     EvTstamp rtmn_diff; /* difference realtime - monotonic time */
 protected:
-    virtual void running(int64_t ms) = 0;
+    virtual void running(int64_t ms)                   = 0;
     virtual void after_run(int64_t old_ms, int64_t ms) = 0;
 
     virtual EvTstamp wait_time();
-    void fd_change(int32_t fd);
+    void fd_change(int32_t fd)
+    {
+        ++fdchangecnt;
+        ARRAY_RESIZE(ANCHANGE, fdchanges, fdchangemax, fdchangecnt, ARRAY_NOINIT);
+        fdchanges[fdchangecnt - 1] = fd;
+    }
     void fd_reify();
-    void backend_init();
-    void backend_modify(int32_t fd, int32_t events, int32_t reify);
     void time_update();
-    void backend_poll(EvTstamp timeout);
     void fd_event(int32_t fd, int32_t revents);
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();

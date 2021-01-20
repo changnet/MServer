@@ -3,6 +3,11 @@
 #include "ev.hpp"
 #include "ev_watcher.hpp"
 
+#define USE_EPOLL
+#ifdef USE_EPOLL
+    #include "ev_epoll.inl"
+#endif
+
 EV::EV()
 {
     anfds   = NULL;
@@ -26,7 +31,7 @@ EV::EV()
     now_floor = mn_now;
     rtmn_diff = ev_rt_now - mn_now;
 
-    backend_init();
+    backend = new EVBackend();
 }
 
 EV::~EV()
@@ -46,17 +51,11 @@ EV::~EV()
     delete[] timers;
     timers = NULL;
 
-    if (backend_fd >= 0)
-    {
-        ::close(backend_fd);
-        backend_fd = -1;
-    }
+    delete backend;
 }
 
 int32_t EV::run()
 {
-    ASSERT(backend_fd >= 0, "backend uninit");
-
     /* 加载脚本时，可能会卡比较久，因此必须time_update
      * 必须先调用fd_reify、timers_reify才进入backend_poll，否则因为没有初始化fd、timer
      * 导致阻塞一段时间后才能收到数据
@@ -71,7 +70,7 @@ int32_t EV::run()
     loop_done = false;
     while (EXPECT_TRUE(!loop_done))
     {
-        backend_poll(wait_time());
+        backend->backend_poll(this, wait_time());
 
         /* update ev_rt_now, do magic */
         time_update();
@@ -116,9 +115,7 @@ int32_t EV::io_start(EVIO *w)
     /* 与原libev不同，现在同一个fd只能有一个watcher */
     ASSERT(!(anfd->w), "duplicate fd");
 
-    anfd->w     = w;
-    anfd->reify = anfd->emask ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
-
+    anfd->w = w;
     fd_change(fd);
 
     return 1;
@@ -134,20 +131,12 @@ int32_t EV::io_stop(EVIO *w)
     ASSERT(fd >= 0 && uint32_t(fd) < anfdmax,
            "illegal fd (must stay constant after start!)");
 
-    ANFD *anfd  = anfds + fd;
-    anfd->w     = 0;
-    anfd->reify = anfd->emask ? EPOLL_CTL_DEL : 0;
+    ANFD *anfd = anfds + fd;
+    anfd->w    = 0;
 
     fd_change(fd);
 
     return 0;
-}
-
-void EV::fd_change(int32_t fd)
-{
-    ++fdchangecnt;
-    ARRAY_RESIZE(ANCHANGE, fdchanges, fdchangemax, fdchangecnt, ARRAY_NOINIT);
-    fdchanges[fdchangecnt - 1] = fd;
 }
 
 void EV::fd_reify()
@@ -157,91 +146,13 @@ void EV::fd_reify()
         int32_t fd = fdchanges[i];
         ANFD *anfd = anfds + fd;
 
-        int32_t reify = anfd->reify;
-        /* 一个fd在fd_reify之前start,再stop会出现这种情况 */
-        if (EXPECT_FALSE(0 == reify))
-        {
-            ERROR("fd change,but not reify");
-            continue;
-        }
+        int32_t events = anfd->w ? (anfd->w)->events : 0;
 
-        int32_t events = EPOLL_CTL_DEL == reify ? 0 : (anfd->w)->events;
-
-        backend_modify(fd, events, reify);
+        backend->backend_modify(fd, anfd->emask, events);
         anfd->emask = events;
     }
 
     fdchangecnt = 0;
-}
-
-/* event loop 只是监听fd，不负责fd的打开或者关闭。
- * 但是，如果一个fd被关闭，epoll会自动解除监听，而我们并不知道它是否已解除。
- * 因此，在处理EPOLL_CTL_DEL时，返回EBADF表明是自动解除。或者在epoll_ctl之前
- * 调用fcntl(fd,F_GETFD)判断fd是否被关闭，但效率与直接调用epoll_ctl一样。
- * libev和libevent均采用类似处理方法。但它们由于考虑dup、fork、thread等特性，
- * 处理更为复杂。
- */
-void EV::backend_modify(int32_t fd, int32_t events, int32_t reify)
-{
-    struct epoll_event ev;
-    /* valgrind: uninitialised byte(s) */
-    memset(&ev, 0, sizeof(ev));
-
-    ev.data.fd = fd;
-    ev.events  = (events & EV_READ ? EPOLLIN : 0)
-                | (events & EV_WRITE ? EPOLLOUT : 0) /* | EPOLLET */;
-    /* pre-2.6.9 kernels require a non-null pointer with EPOLL_CTL_DEL, */
-    /* The default behavior for epoll is Level Triggered. */
-    /* LT(Level Triggered)同时支持block和no-block，持续通知 */
-    /* ET(Edge Trigger)只支持no-block，一个事件只通知一次 */
-    if (EXPECT_TRUE(!epoll_ctl(backend_fd, reify, fd, &ev))) return;
-
-    switch (errno)
-    {
-    case EBADF:
-        /* libev是不处理EPOLL_CTL_DEL的，因为fd被关闭时会自动从epoll中删除
-         * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll自动删除，这时特殊处理
-         */
-        if (EPOLL_CTL_DEL == reify) return;
-        ASSERT(false, "ev::backend_modify EBADF");
-        break;
-    case EEXIST: ERROR("ev::backend_modify EEXIST"); break;
-    case EINVAL: ASSERT(false, "ev::backend_modify EINVAL"); break;
-    case ENOENT:
-        /* ENOENT：fd不属于这个backend_fd管理的fd
-         * epoll在连接断开时，会把fd从epoll中删除，但ev中仍保留相关数据
-         * 如果这时在同一轮主循环中产生新连接，系统会分配同一个fd
-         * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
-         */
-        if (EPOLL_CTL_DEL == reify) return;
-        if (EXPECT_TRUE(!epoll_ctl(backend_fd, EPOLL_CTL_ADD, fd, &ev))) return;
-        ASSERT(false, "ev::backend_modify ENOENT");
-        break;
-    case ENOMEM: ASSERT(false, "ev::backend_modify ENOMEM"); break;
-    case ENOSPC: ASSERT(false, "ev::backend_modify ENOSPC"); break;
-    case EPERM:
-        // 一个fd被epoll自动删除后，可能会被分配到其他用处，比如打开了个文件
-        if (EPOLL_CTL_DEL == reify) return;
-        ASSERT(false, "ev::backend_modify EPERM");
-        break;
-    default: ERROR("unknow ev error"); break;
-    }
-}
-
-void EV::backend_init()
-{
-#ifdef EPOLL_CLOEXEC
-    backend_fd = epoll_create1(EPOLL_CLOEXEC);
-
-    if (backend_fd < 0 && (errno == EINVAL || errno == ENOSYS))
-#endif
-        backend_fd = epoll_create(256);
-
-    if (backend_fd < 0 || fcntl(backend_fd, F_SETFD, FD_CLOEXEC) < 0)
-    {
-        FATAL("libev backend init fail:%s", strerror(errno));
-        return;
-    }
 }
 
 EvTstamp EV::get_time()
@@ -323,36 +234,6 @@ void EV::time_update()
 
     /* no timer adjustment, as the monotonic clock doesn't jump */
     /* timers_reschedule (loop, rtmn_diff - odiff) */
-}
-
-void EV::backend_poll(EvTstamp timeout)
-{
-    /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs,
-     * which is below the default libev max wait time, however.
-     */
-    int32_t eventcnt = epoll_wait(backend_fd, epoll_events, EPOLL_MAXEV, timeout);
-    if (EXPECT_FALSE(eventcnt < 0))
-    {
-        if (errno != EINTR)
-        {
-            FATAL("ev::backend_poll epoll wait errno(%d)", errno);
-        }
-
-        return;
-    }
-
-    for (int32_t i = 0; i < eventcnt; ++i)
-    {
-        struct epoll_event *ev = epoll_events + i;
-
-        int fd  = ev->data.fd;
-        int got = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
-                  | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ : 0);
-
-        ASSERT(got & anfds[fd].emask, "catch not interested event");
-
-        fd_event(fd, got);
-    }
 }
 
 void EV::fd_event(int32_t fd, int32_t revents)

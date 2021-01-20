@@ -16,9 +16,6 @@
 /* is assert work ? */
 //#define NDEBUG
 
-/* epoll max events one poll */
-#define EPOLL_MAXEV 8192
-
 /* buffer chunk size for socket recv or send */
 #define BUFFER_CHUNK 8192
 /* 大型buffer缓冲区分界线，采用不同的内存分配策略 */
