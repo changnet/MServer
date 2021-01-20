@@ -87,7 +87,7 @@ local function valid_visual_list(et,list)
 
     return id_map
 end
-local daoi
+
 -- 校验et在list里的实体视野范围内
 local function valid_other_visual_list(et,list)
     local id_map = {}
@@ -434,6 +434,8 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
             end
         end
     end
+
+    if is_valid then assert(aoi:valid_dump(false)) end
 end
 
 t_describe("list aoi test", function()
@@ -550,7 +552,6 @@ t_describe("list aoi test", function()
             tmp_list, 0, MAX_X - 1, 0, MAX_Y - 1, 0, MAX_Z - 1)
         t_equal(tmp_list.n, 0)
 
-daoi = aoi
         -- 随机测试
         local max_entity = 2000
         local max_random = 50000
@@ -571,7 +572,7 @@ daoi = aoi
     local max_entity = 2000
     local max_random = 50000
     t_it(string.format(
-        "perf test no_y %d entity and %d times random move/exit/enter",
+        "perf test no_y(more index) %d entity and %d times random M/E/E",
         max_entity, max_random), function()
         entity_info = {}
         exit_info = {}
@@ -580,7 +581,25 @@ daoi = aoi
         is_use_y = false
         local aoi_no_y = ListAoi()
 
-        aoi_no_y:set_index(400, MAX_X)
+        aoi_no_y:set_index(100, MAX_X)
+
+        aoi_no_y:use_y(false)
+        is_use_history = false
+        random_test(
+            aoi_no_y, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, max_entity, max_random)
+    end)
+
+    t_it(string.format(
+        "perf test 1 index %d entity and %d times random move/exit/enter",
+        max_entity, max_random), function()
+        entity_info = {}
+        exit_info = {}
+
+        is_valid = false
+        is_use_y = false
+        local aoi_no_y = ListAoi()
+
+        aoi_no_y:set_index(1, MAX_X)
 
         aoi_no_y:use_y(false)
         is_use_history = false

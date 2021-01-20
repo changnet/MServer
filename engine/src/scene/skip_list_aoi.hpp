@@ -212,6 +212,11 @@ protected:
                          ctx->_visual);
     }
 
+    /// 把实体插入链表
+    void insert_entity(EntityCtx *ctx);
+    /// 移动实体到链表合适位置
+    void shift_entity(EntityCtx *ctx, int32_t old_x);
+
     /// 以ctx为中心，遍历指定范围内的实体
     void each_range_entity(const EntityCtx *ctx, int32_t visual,
                            std::function<void(EntityCtx *ctx)> &&func);

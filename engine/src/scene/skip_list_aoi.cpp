@@ -174,6 +174,18 @@ void SkipListAOI::on_exit_range(EntityCtx *ctx, EntityCtx *other,
     }
 }
 
+void SkipListAOI::insert_entity(EntityCtx *ctx)
+{
+    // 插入链表
+    assert(_index && _indexer.size() > size_t(ctx->_pos_x / _index));
+
+    auto iter = _indexer[ctx->_pos_x / _index]->_iter;
+    while (iter != _list.end() && **iter < *ctx) ++iter;
+
+    // 在iter之前插入当前实体
+    ctx->_iter = _list.insert(iter, ctx);
+}
+
 bool SkipListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
                                int32_t visual, uint8_t mask,
                                EntityVector *list_me_in,
@@ -202,15 +214,7 @@ bool SkipListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
         add_visual(visual);
     }
 
-    // 插入链表
-    assert(_index && _indexer.size() > size_t(x / _index));
-
-    auto iter = _indexer[x / _index]->_iter;
-    while (iter != _list.end() && **iter < *ctx) ++iter;
-
-    // 在iter之前插入当前实体
-    ctx->_iter = _list.insert(iter, ctx);
-
+    insert_entity(ctx);
     each_range_entity(ctx, _max_visual,
                       [this, ctx, list_me_in, list_other_in](EntityCtx *other) {
                           // 别人出现在自己的视野
@@ -271,23 +275,13 @@ void SkipListAOI::on_change_range(EntityCtx *ctx, EntityCtx *other, bool is_in,
     }
 }
 
-int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
-                                         int32_t old_y, int32_t old_z,
-                                         EntityVector *list_me_in,
-                                         EntityVector *list_other_in,
-                                         EntityVector *list_me_out,
-                                         EntityVector *list_other_out)
+void SkipListAOI::shift_entity(EntityCtx *ctx, int32_t old_x)
 {
-    int32_t x = ctx->_pos_x;
-    // 一般来说，update的时候是因为玩家移动，变化比较小，因此不需要用索引来定位，直接在链表中移动
-    bool update         = false;
-    auto iter           = ctx->_iter;
-    int32_t prev_visual = 0;
-    int32_t next_visual = 0;
+    bool update = false;
+    int32_t x   = ctx->_pos_x;
+    auto iter   = ctx->_iter;
     if (x > old_x)
     {
-        next_visual = x + _max_visual;
-        prev_visual = old_x - _max_visual;
 
         ++iter;
         while (iter != _list.end() && **iter < *ctx)
@@ -298,9 +292,6 @@ int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
     }
     else if (x < old_x)
     {
-        prev_visual = x - _max_visual;
-        next_visual = old_x + _max_visual;
-
         --iter;
         while (iter != _list.begin() && **iter > *ctx)
         {
@@ -309,11 +300,6 @@ int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
         }
         if (update) ++iter; // iter不会指向_list.begin，也肯定不会指向它
     }
-    else
-    {
-        prev_visual = x - _max_visual;
-        next_visual = x + _max_visual;
-    }
 
     // 在iter之前插入当前实体
     if (update)
@@ -321,6 +307,30 @@ int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
         _list.erase(ctx->_iter);
         ctx->_iter = _list.insert(iter, ctx);
     }
+}
+
+int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
+                                         int32_t old_y, int32_t old_z,
+                                         EntityVector *list_me_in,
+                                         EntityVector *list_other_in,
+                                         EntityVector *list_me_out,
+                                         EntityVector *list_other_out)
+{
+    int32_t x           = ctx->_pos_x;
+    int32_t prev_visual = 0;
+    int32_t next_visual = 0;
+    if (x > old_x)
+    {
+        next_visual = x + _max_visual;
+        prev_visual = old_x - _max_visual;
+    }
+    else
+    {
+        prev_visual = x - _max_visual;
+        next_visual = old_x + _max_visual;
+    }
+
+    shift_entity(ctx, old_x);
 
     each_range_entity(
         ctx, prev_visual, next_visual,
@@ -359,7 +369,7 @@ int32_t SkipListAOI::update_entity_long(EntityCtx *ctx, int32_t old_x,
 {
     // 遍历旧视野，这个范围内的实体现在肯定不在新位置的视野范围内(is_in_xxx必定为false)
     each_range_entity(
-        ctx, _max_visual,
+        ctx, old_x - _max_visual, old_x + _max_visual,
         [this, ctx, old_x, old_y, old_z, list_me_in, list_other_in, list_me_out,
          list_other_out](EntityCtx *other) {
             // 只有我对目标interest，对方才会在我视野范围内变化
@@ -380,7 +390,22 @@ int32_t SkipListAOI::update_entity_long(EntityCtx *ctx, int32_t old_x,
                                 list_other_out, false);
             }
         });
-    // 移动实体到链表中的新位置
+    /*
+     * 移动实体到链表中的新位置
+     * TODO 很难判断是使用insert还是shift快一些，现在默认两位置至少跨一个index范围才使用
+     * 索引插入的方式
+     */
+    int32_t old_index = old_x / _index;
+    int32_t new_index = ctx->_pos_x / _index;
+    if (std::abs(new_index - old_index) > 1)
+    {
+        _list.erase(ctx->_iter);
+        insert_entity(ctx);
+    }
+    else
+    {
+        shift_entity(ctx, old_x);
+    }
     // 遍历新视野，这个范围内的实体现在肯定不在新位置的视野范围内(was_in_xxx必定为false)
     each_range_entity(ctx, _max_visual,
                       [this, ctx, list_me_in, list_other_in, list_me_out,
@@ -430,7 +455,7 @@ int32_t SkipListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
      * 如果移动距离比较小，两个位置的视野有重叠，那么遍历两个视野的并集即可
      * 如果移动距离比较大，两个位置的视野有重叠，那么分开遍历，避免遍历两个视野之间无效的实体
      */
-    return std::abs(x - old_x) > 2 * _max_visual
+    return (std::abs(x - old_x) > 2 * _max_visual)
                ? update_entity_long(ctx, old_x, old_y, old_z, list_me_in,
                                     list_other_in, list_me_out, list_other_out)
                : update_entity_short(ctx, old_x, old_y, old_z, list_me_in,
