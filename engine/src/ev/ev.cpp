@@ -1,9 +1,10 @@
 #include "ev.hpp"
 #include "ev_watcher.hpp"
 
-#define USE_EPOLL
 #ifdef USE_EPOLL
     #include "ev_epoll.inl"
+#else
+    #include "ev_poll.inl"
 #endif
 
 EV::EV()
