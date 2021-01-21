@@ -134,6 +134,7 @@ target_include_directories(master PRIVATE
     ${DEPS_PATH}/lua_bson
     ${DEPS_PATH}/websocket-parser
 
+    ${LIB_PREFIX}/usr/include
     ${LIB_PREFIX}/usr/local/include
     ${LIB_PREFIX}/usr/include/mysql
     ${LIB_PREFIX}/usr/local/include/libmongoc-1.0

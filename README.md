@@ -13,10 +13,10 @@ games.
 
 ## Dependencies
 * Linux
-* G++ (>= C++11,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
-* MySQL
+* GCC (C++11 or above,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
+* MariaDB
 * MongoDB
-* Lua 5.3
+* Lua (5.3 or above)
 * protobuf
 
 ## Build & Usage
@@ -26,15 +26,17 @@ See it at [Wiki](https://github.com/changnet/MServer/wiki/Build)
 ## Features
 
  * Hotfix
- * Multi thread log
+ * Async log
  * RPC(bson RPC)
- * Network(Tcp、Http、websocket), with SSL and ipv6 support
  * Lua OOP development
- * Protocol auto serialize/deserialize(protobuf、FlatBuffers)
- * Async and coroutine sync DB operation for MySQL、MongoDB
- * AC algorithm wordfilter
+ * Scene(map、navigation、aoi)
+ * AC algorithm words filter
  * Crypto(md5、base64、sha1、uuid ...)
  * JSON、XML serialize/deserialize
+ * Network(Tcp、Http、websocket), with SSL and ipv6 support
+ * Protocol auto serialize/deserialize(protobuf、FlatBuffers)
+ * Async and coroutine sync DB operation for MariaDB、MongoDB
+
 
 ## Process Architecture
 
@@ -48,23 +50,23 @@ See it at [Wiki](https://github.com/changnet/MServer/wiki/Build)
 |              Lua C++ Driver                      |
 |                                                  |
 +--------------------------------------------------+
-| +-------+ +--------------------+ +----------+    |  thread   +---------+      +---------+
-| |  SSL  | | Tcp/Http/Websocket | | Protobuf |    <----------->   Log   +------>  Files  |
-| +-------+ +--------------------+ +----------+    |           +---------+      +---------+
+| +-------+ +--------------------+ +----------+    |  thread   +---------+      +----------------+
+| |  SSL  | | Tcp/Http/Websocket | | Protobuf |    <----------->   Log   +------>   Disk Files   |
+| +-------+ +--------------------+ +----------+    |           +---------+      +----------------+
 |                                                  |
-| +--------+ +----------+ +-------+                |  thread   +---------+      +---------+
-| | Crypto | | JSON/XML | |  RPC  |                <-----------> MySQL   +------>MySQL DB |
-| +--------+ +----------+ +-------+                |           +---------+      +---------+
+| +--------+ +----------+ +-------+                |  thread   +---------+      +----------------+
+| | Crypto | | JSON/XML | |  RPC  |                <-----------> MariaDB +------> MariaDB Server |
+| +--------+ +----------+ +-------+                |           +---------+      +----------------+
 |                                                  |
-| +------------+ +-------------+                   |  thread   +---------+      +---------+
-| | WordFilter | | FlatBuffers |                   <----------->MongoDB  +------>   DB    |
-| +------------+ +-------------+                   |           +---------+      +---------+
+| +------------+ +-------------+                   |  thread   +---------+      +----------------+
+| | WordFilter | | FlatBuffers |                   <-----------> MongoDB +------> MongoDB Server |
+| +------------+ +-------------+                   |           +---------+      +----------------+
 +--------------------------------------------------+
 ```
 
 ## Note
 
-* In latest version,FlatBuffers isn't being tested,may not work properly
+* In latest version, FlatBuffers isn't being tested, may not work properly
 * Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
 * using excel to manage config file.https://github.com/changnet/py_exceltools
 

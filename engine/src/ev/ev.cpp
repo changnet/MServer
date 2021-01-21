@@ -1,5 +1,3 @@
-#include <fcntl.h>
-
 #include "ev.hpp"
 #include "ev_watcher.hpp"
 
@@ -10,18 +8,18 @@
 
 EV::EV()
 {
-    anfds   = NULL;
+    anfds   = nullptr;
     anfdmax = 0;
 
-    pendings   = NULL;
+    pendings   = nullptr;
     pendingmax = 0;
     pendingcnt = 0;
 
-    fdchanges   = NULL;
+    fdchanges   = nullptr;
     fdchangemax = 0;
     fdchangecnt = 0;
 
-    timers   = NULL;
+    timers   = nullptr;
     timermax = 0;
     timercnt = 0;
 
@@ -36,22 +34,23 @@ EV::EV()
 
 EV::~EV()
 {
-    /* it's safe to delete NULL pointer,
-     * and to avoid oclint error:unnecessary null check for dealloc
+    /* it's safe to delete nullptr pointer,
+     * and to avoid oclint error:unnecessary nullptr check for dealloc
      */
     delete[] anfds;
-    anfds = NULL;
+    anfds = nullptr;
 
     delete[] pendings;
-    pendings = NULL;
+    pendings = nullptr;
 
     delete[] fdchanges;
-    fdchanges = NULL;
+    fdchanges = nullptr;
 
     delete[] timers;
-    timers = NULL;
+    timers = nullptr;
 
     delete backend;
+    backend = nullptr;
 }
 
 int32_t EV::run()
@@ -70,7 +69,7 @@ int32_t EV::run()
     loop_done = false;
     while (EXPECT_TRUE(!loop_done))
     {
-        backend->backend_poll(this, wait_time());
+        backend->wait(this, wait_time());
 
         /* update ev_rt_now, do magic */
         time_update();
@@ -148,7 +147,7 @@ void EV::fd_reify()
 
         int32_t events = anfd->w ? (anfd->w)->events : 0;
 
-        backend->backend_modify(fd, anfd->emask, events);
+        backend->modify(fd, anfd->emask, events);
         anfd->emask = events;
     }
 

@@ -11,10 +11,17 @@
  *   这时需要调整事件大小，重新编译。
  */
 
+#include <fcntl.h>
 #include <sys/epoll.h>
 #include "ev.hpp"
 
 /// epoll max events one poll
+/* https://man7.org/linux/man-pages/man2/epoll_wait.2.html
+ * If more than maxevents file descriptors are ready when
+ * epoll_wait() is called, then successive epoll_wait() calls will
+ * round robin through the set of ready file descriptors.  This
+ * behavior helps avoid starvation scenarios
+ */
 static const int32_t EPOLL_MAXEV = 8192;
 
 /// backend using epoll implement
@@ -24,46 +31,45 @@ public:
     EVBackend();
     ~EVBackend();
 
-    void backend_init();
-    void backend_poll(class EV *ev_loop, EvTstamp timeout);
-    void backend_modify(int32_t fd, int32_t old_ev, int32_t new_ev);
+    void wait(class EV *ev_loop, EvTstamp timeout);
+    void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
+
 private:
-    int32_t backend_fd;
-    epoll_event epoll_events[EPOLL_MAXEV];
+    int32_t _ep_fd;
+    epoll_event _ep_ev[EPOLL_MAXEV];
 };
 
 EVBackend::EVBackend()
 {
 #ifdef EPOLL_CLOEXEC
-    backend_fd = epoll_create1(EPOLL_CLOEXEC);
+    _ep_fd = epoll_create1(EPOLL_CLOEXEC);
 
-    if (backend_fd < 0 && (errno == EINVAL || errno == ENOSYS))
+    if (_ep_fd < 0 && (errno == EINVAL || errno == ENOSYS))
 #endif
-        backend_fd = epoll_create(256);
-
-    if (backend_fd < 0 || fcntl(backend_fd, F_SETFD, FD_CLOEXEC) < 0)
     {
-        FATAL("libev backend init fail:%s", strerror(errno));
-        return;
+        _ep_fd = epoll_create(256);
+        if (_ep_fd < 0 || fcntl(_ep_fd, F_SETFD, FD_CLOEXEC) < 0)
+        {
+            FATAL("libev backend init fail:%s", strerror(errno));
+            return;
+        }
     }
+    ASSERT(_ep_fd >= 0, "fail to create epoll");
 }
 
 EVBackend::~EVBackend()
 {
-    if (backend_fd >= 0)
+    if (_ep_fd >= 0)
     {
-        ::close(backend_fd);
-        backend_fd = -1;
+        ::close(_ep_fd);
+        _ep_fd = -1;
     }
 }
 
-void EVBackend::backend_poll(EV *ev_loop, EvTstamp timeout)
+void EVBackend::wait(EV *ev_loop, EvTstamp timeout)
 {
-    /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs,
-     * which is below the default libev max wait time, however.
-     */
-    int32_t eventcnt = epoll_wait(backend_fd, epoll_events, EPOLL_MAXEV, timeout);
-    if (EXPECT_FALSE(eventcnt < 0))
+    int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, timeout);
+    if (EXPECT_FALSE(ev_count < 0))
     {
         if (errno != EINTR)
         {
@@ -73,18 +79,17 @@ void EVBackend::backend_poll(EV *ev_loop, EvTstamp timeout)
         return;
     }
 
-    for (int32_t i = 0; i < eventcnt; ++i)
+    for (int32_t i = 0; i < ev_count; ++i)
     {
-        struct epoll_event *ev = epoll_events + i;
+        struct epoll_event *ev = _ep_ev + i;
 
-        int fd  = ev->data.fd;
-        int got = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
-                  | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ : 0);
+        int32_t events =
+            (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
+            | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ : 0);
 
-        ev_loop->fd_event(fd, got);
+        ev_loop->fd_event(ev->data.fd, events);
     }
 }
-
 
 /* event loop 只是监听fd，不负责fd的打开或者关闭。
  * 但是，如果一个fd被关闭，epoll会自动解除监听，而我们并不知道它是否已解除。
@@ -93,7 +98,7 @@ void EVBackend::backend_poll(EV *ev_loop, EvTstamp timeout)
  * libev和libevent均采用类似处理方法。但它们由于考虑dup、fork、thread等特性，
  * 处理更为复杂。
  */
-void EVBackend::backend_modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */
@@ -106,7 +111,7 @@ void EVBackend::backend_modify(int32_t fd, int32_t old_ev, int32_t new_ev)
      * ET(Edge Trigger)只支持no-block，一个事件只通知一次
      * epoll默认是LT模式
      */
-    ev.events  = (new_ev & EV_READ ? EPOLLIN : 0)
+    ev.events = (new_ev & EV_READ ? EPOLLIN : 0)
                 | (new_ev & EV_WRITE ? EPOLLOUT : 0) /* | EPOLLET */;
 
     /**
@@ -126,7 +131,7 @@ void EVBackend::backend_modify(int32_t fd, int32_t old_ev, int32_t new_ev)
         if (!old_ev) return;
     }
 
-    if (EXPECT_TRUE(!epoll_ctl(backend_fd, op, fd, &ev))) return;
+    if (EXPECT_TRUE(!epoll_ctl(_ep_fd, op, fd, &ev))) return;
 
     switch (errno)
     {
@@ -141,15 +146,14 @@ void EVBackend::backend_modify(int32_t fd, int32_t old_ev, int32_t new_ev)
         /*
          * 上一个fd关闭了，系统又分配了同一个fd
          */
-        if (EXPECT_TRUE(!epoll_ctl(backend_fd, EPOLL_CTL_MOD, fd, &ev)))
+        if (old_ev == new_ev) return;
+        if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)))
         {
             return;
         }
         ASSERT(false, "ev::backend_modify EEXIST");
         break;
-    case EINVAL:
-        ASSERT(false, "ev::backend_modify EINVAL");
-        break;
+    case EINVAL: ASSERT(false, "ev::backend_modify EINVAL"); break;
     case ENOENT:
         /* ENOENT：fd不属于这个backend_fd管理的fd
          * epoll在连接断开时，会把fd从epoll中删除，但ev中仍保留相关数据
@@ -157,7 +161,7 @@ void EVBackend::backend_modify(int32_t fd, int32_t old_ev, int32_t new_ev)
          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
          */
         if (EPOLL_CTL_DEL == op) return;
-        if (EXPECT_TRUE(!epoll_ctl(backend_fd, EPOLL_CTL_ADD, fd, &ev)))
+        if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_ADD, fd, &ev)))
         {
             return;
         }
