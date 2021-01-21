@@ -124,6 +124,23 @@ link_directories(
 file(GLOB_RECURSE SRC_LIST "${SRC_ROOT_PATH}/src/*.cpp")
 add_executable(master ${SRC_LIST})
 
+# 是否支持epoll
+find_path(
+    EPOLL_HEADER sys/epoll.h
+    PATHS /usr/include # /usr/include/x86_64-linux-gnu/sys/epoll.h
+)
+if (EPOLL_HEADER)
+    message("found ${EPOLL_HEADER}/sys/epoll.h")
+    set(USE_EPOLL 1)
+endif()
+
+# 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
+file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
+target_compile_definitions(
+    master
+    PRIVATE -DUSE_EPOLL=${USE_EPOLL}
+)
+
 target_include_directories(master PRIVATE
     ${DEPS_PATH}/pbc
     ${DEPS_PATH}/lua_parson

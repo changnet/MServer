@@ -45,6 +45,40 @@ int32_t LEV::backend(lua_State *L)
     return 0;
 }
 
+int32_t LEV::kernel_info(lua_State *L)
+{
+#ifdef __linux__
+    const char *env = "linux";
+#elif __CYGWIN__
+    const char *evn        = "cygwin";
+#else
+    const char *env = "unknow";
+#endif
+
+#ifdef __MINGW64__
+    const char *complier   = "mingw64";
+    const char *complier_v = __VERSION__;
+#elif __MINGW32__
+    const char *complier   = "mingw32";
+    const char *complier_v = __VERSION__;
+#elif __GNUC__
+    // https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
+    const char *complier   = "gcc";
+    const char *complier_v = __VERSION__;
+#else
+    const char *complier   = "unknow";
+    const char *complier_v = "unknow";
+#endif
+
+    lua_pushstring(L, env);
+    lua_pushstring(L, complier);
+    lua_pushstring(L, complier_v);
+    lua_pushstring(L, backend_kernel());
+    lua_pushstring(L, __TIMESTAMP__);
+
+    return 5;
+}
+
 int32_t LEV::time_update(lua_State *L)
 {
     UNUSED(L);

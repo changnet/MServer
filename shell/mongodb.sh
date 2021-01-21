@@ -83,6 +83,9 @@ function install()
 	apt update
 	apt install -y mongodb-org
 	
+	# mongodb默认在OS启动时没有启动数据库，需要手动开启
+	systemctl enable mongod
+
 	# mongodb默认没有启动数据库
 	systemctl start mongod
 	echo "wait for mongodb start ..."

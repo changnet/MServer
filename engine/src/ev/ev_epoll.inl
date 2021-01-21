@@ -15,6 +15,8 @@
 #include <sys/epoll.h>
 #include "ev.hpp"
 
+const char *BACKEND_KERNEL = "epoll";
+
 /// epoll max events one poll
 /* https://man7.org/linux/man-pages/man2/epoll_wait.2.html
  * If more than maxevents file descriptors are ready when
