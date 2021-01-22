@@ -12,6 +12,7 @@
 
 // 常用的头文件，避免需要手动include
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <unordered_map>
 

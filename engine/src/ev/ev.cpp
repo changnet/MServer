@@ -1,7 +1,7 @@
 #include "ev.hpp"
 #include "ev_watcher.hpp"
 
-#ifdef USE_EPOLL
+#if USE_EPOLL == 1
     #include "ev_epoll.inl"
 #else
     #include "ev_poll.inl"

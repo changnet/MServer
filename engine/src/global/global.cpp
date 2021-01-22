@@ -1,10 +1,13 @@
 #include "global.hpp"
 
-#include <execinfo.h> /* for backtrace */
+#ifdef __linux__ 
+	#include <execinfo.h> /* for backtrace */
+#endif
 
 /* -rdynamic need while linking. to a file,try backtrace_symbols_fd */
 void back_trace(void)
 {
+#ifdef __linux__
     void *array[50] = {0};
     size_t size;
     char **strings;
@@ -17,6 +20,7 @@ void back_trace(void)
         printf("%s\n", strings[i]);
     }
     free(strings);
+#endif
 }
 
 /* test.cpp:40: int main(): log assertion `("wrong",0)' failed. */

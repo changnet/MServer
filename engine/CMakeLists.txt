@@ -132,6 +132,8 @@ find_path(
 if (EPOLL_HEADER)
     message("found ${EPOLL_HEADER}/sys/epoll.h")
     set(USE_EPOLL 1)
+else()
+	set(USE_EPOLL 0)
 endif()
 
 # 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新

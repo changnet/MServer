@@ -50,7 +50,7 @@ int32_t LEV::kernel_info(lua_State *L)
 #ifdef __linux__
     const char *env = "linux";
 #elif __CYGWIN__
-    const char *evn        = "cygwin";
+    const char *env = "cygwin";
 #else
     const char *env = "unknow";
 #endif

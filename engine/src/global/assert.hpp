@@ -6,20 +6,7 @@
     #define ASSERT(...)
 #else
 #define __ASSERT1(expr) assert(expr)
-
-// __ASSERT_VOID_CAST is linux implement
-#ifdef __linux__
-    #define __ASSERT2(expr, why)                                           \
-        ((expr) ? __ASSERT_VOID_CAST(0)                                    \
-                : __assert_fail(__STRING((why, expr)), __FILE__, __LINE__, \
-                                __ASSERT_FUNCTION))
-#else
-    #define __ASSERT2(expr, why)                                            \
-        (void)((!!(expr))                                                   \
-               || (_wassert(_CRT_WIDE(#why "," #expr), _CRT_WIDE(__FILE__), \
-                            __LINE__),                                      \
-                   0))
-#endif /* __linux__ */
+#define __ASSERT2(expr, why) assert(expr)
 
 #define __EXPAND(_1, _2, ASSERT_EXPR, ...) ASSERT_EXPR
 
