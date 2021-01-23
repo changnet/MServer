@@ -35,9 +35,9 @@ else()
     message(FATAL_ERROR "Unknow CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 endif()
 
-message("CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
-message("   CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
-message("   CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
+message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 # message("   CMAKE_C_FLAGS_DEBUG = ${CMAKE_C_FLAGS_DEBUG}")
 # message("   CMAKE_C_FLAGS_RELEASE = ${CMAKE_C_FLAGS_RELEASE}")
 # message("   CMAKE_C_FLAGS_RELWITHDEBINFO = ${CMAKE_C_FLAGS_RELWITHDEBINFO}")
@@ -130,14 +130,15 @@ find_path(
     PATHS /usr/include # /usr/include/x86_64-linux-gnu/sys/epoll.h
 )
 if (EPOLL_HEADER)
-    message("found ${EPOLL_HEADER}/sys/epoll.h")
+    message(STATUS "Found ${EPOLL_HEADER}/sys/epoll.h, using epoll backend")
     set(USE_EPOLL 1)
 else()
-	set(USE_EPOLL 0)
+    set(USE_EPOLL 0)
 endif()
 
 # 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
-file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
+# 在make.sh脚本里做
+# file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
 target_compile_definitions(
     master
     PRIVATE -DUSE_EPOLL=${USE_EPOLL}
