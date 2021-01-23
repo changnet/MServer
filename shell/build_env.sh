@@ -116,11 +116,21 @@ function build_mongo_driver()
     
     # OpenSSL is required for authentication or for SSL connections to MongoDB. Kerberos or LDAP support requires Cyrus SASL.
     # 暂时不用SASL库
-    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
-		-DCMAKE_BUILD_TYPE=Release -DENABLE_SASL=OFF \
-		-DENABLE_STATIC=ON -DENABLE_BSON=ON \
-		-DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF \
-		..
+    if [ "$env" == "LINUX" ]; then
+		cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
+			-DCMAKE_BUILD_TYPE=Release -DENABLE_SASL=OFF \
+			-DENABLE_STATIC=ON -DENABLE_BSON=ON \
+			-DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF \
+			..
+	else
+		# cygwin的resolve库不完整，__ns_parserr之类的函数没有实现
+	    cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
+			-DCMAKE_BUILD_TYPE=Release -DENABLE_SASL=OFF \
+			-DENABLE_STATIC=ON -DENABLE_BSON=ON \
+			-DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF \
+			-DENABLE_SRV=OFF \
+			..
+	fi
     # --with-libbson=[auto/system/bundled]
     # 强制使用附带的bson库，不然之前系统编译的bson库可能编译参数不一致(比如不会生成静态bson库)
     # ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
@@ -137,7 +147,10 @@ function build_flatbuffers()
     cmake flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
     make -C flatbuffers-$FBB_VER all
     make -C flatbuffers-$FBB_VER install
-    ldconfig -v
+    
+    if [ "$env" == "LINUX" ]; then
+		ldconfig -v
+	fi
 }
 
 # 编译protobuf库并安装
@@ -181,10 +194,12 @@ function build_env_once()
     cp $RAWPKTDIR/* $PKGDIR/
 
 	if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+		env=LINUX
 		echo "env = LINUX"
 		build_tool_chain
 		build_library
 	elif [ "$(expr substr $(uname -s) 1 9)" == "CYGWIN_NT" ]; then
+		env=CYGWIN
 	    echo "env = CYGWIN"
 	fi
 

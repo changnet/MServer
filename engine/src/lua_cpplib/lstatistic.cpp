@@ -105,7 +105,8 @@ void LStatistic::dump_thread(lua_State *L)
 
         lua_createtable(L, 0, 3);
 
-        PUSH_INTEGER("id", thread->get_id());
+        // 在高版本pthread_t不再是数字
+        // PUSH_INTEGER("id", thread->get_id());
 
         PUSH_STRING("name", thread->get_name());
 
