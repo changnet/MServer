@@ -100,7 +100,7 @@ function build_sasl()
 # http://mongoc.org/
 # https://github.com/mongodb/mongo-c-driver/releases/download/1.14.0/mongo-c-driver-1.14.0.tar.gz
 # http://mongoc.org/libmongoc/current/installing.html
-function build_mongo_driver()
+function build_mongoc()
 {
     # 如果出现aclocal-1.14: command not found,安装automake，版本不对
     # 则修改以下两个文件的am__api_version='1.15'，然后重新./configure
@@ -144,13 +144,12 @@ function build_flatbuffers()
 
     FBB_VER=1.11.0
     tar -zxvf flatbuffers-$FBB_VER.tar.gz
-    cmake flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
+    cmake -DFLATBUFFERS_BUILD_FLATHASH=OFF \
+    	-DFLATBUFFERS_BUILD_GRPCTEST=OFF \
+    	-DFLATBUFFERS_BUILD_TESTS=OFF \
+    	flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
     make -C flatbuffers-$FBB_VER all
     make -C flatbuffers-$FBB_VER install
-    
-    if [ "$env" == "LINUX" ]; then
-		ldconfig -v
-	fi
 }
 
 # 编译protobuf库并安装
@@ -205,7 +204,7 @@ function build_env_once()
 
     build_lua
     # build_sasl
-    build_mongo_driver
+    build_mongoc
     build_flatbuffers
     install_protoc
 

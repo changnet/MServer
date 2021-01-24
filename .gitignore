@@ -9,7 +9,7 @@
 *.user*
 
 # 临时生成的文件
-engine/include
+engine/build
 
 setting.lua
 

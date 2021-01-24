@@ -17,11 +17,6 @@ project(MServer)
 # (新版本-lmysqlclient_r与-lmysqlclient是一样的)
 # -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    set(LIB_PREFIX "D:/cygwin64/")
-    message("Using CYGWIN LIBRARY ${LIB_PREFIX}")
-endif()
-
 if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug )
 endif()
@@ -154,11 +149,8 @@ target_include_directories(master PRIVATE
     ${DEPS_PATH}/lua_bson
     ${DEPS_PATH}/websocket-parser
 
-    ${LIB_PREFIX}/usr/include
-    ${LIB_PREFIX}/usr/local/include
-    ${LIB_PREFIX}/usr/include/mysql
-    ${LIB_PREFIX}/usr/local/include/libmongoc-1.0
-    ${LIB_PREFIX}/usr/local/include/libbson-1.0
+    /usr/local/include/libmongoc-1.0
+    /usr/local/include/libbson-1.0
 )
 
 # 库文件，必须 在add_executable之后
