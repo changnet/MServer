@@ -1,10 +1,6 @@
 #include "async_log.hpp"
 #include "../system/static_global.hpp"
 
-AsyncLog::AsyncLog() : Thread("thread_log") {}
-
-AsyncLog::~AsyncLog() {}
-
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
     lock();
@@ -60,18 +56,16 @@ void AsyncLog::raw_write(const char *path, LogType out, const char *fmt, ...)
     va_end(args);
 }
 
-// 线程结束之前清理函数
 bool AsyncLog::uninitialize()
 {
-    routine(NT_NONE);
+    // 线程结束之前清理函数
+    routine();
     return true;
 }
 
 // 线程主循环
-void AsyncLog::routine(NotifyType notify)
+void AsyncLog::routine()
 {
-    UNUSED(notify);
-
     do
     {
         /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */

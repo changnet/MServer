@@ -86,7 +86,7 @@ size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
     return finished_sz + unfinished_sz;
 }
 
-void LMongo::routine(NotifyType notify)
+void LMongo::routine()
 {
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
@@ -145,7 +145,7 @@ void LMongo::push_query(const struct MongoQuery *query)
     _query.push(query);
     unlock();
 
-    if (_notify) notify_child(NT_CUSTOM);
+    if (_notify) mark(S_SDATA);
 }
 
 int32_t LMongo::count(lua_State *L)
@@ -321,7 +321,7 @@ void LMongo::push_result(const struct MongoResult *result)
     _result.push(result);
     unlock();
 
-    if (is_notify) notify_parent(NT_CUSTOM);
+    if (is_notify) mark(S_MDATA);
 }
 
 /* 在子线程触发查询命令 */

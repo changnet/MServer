@@ -69,7 +69,7 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
 
-    _async_log->start(1, 0);
+    _async_log->start(1000000);
 
     // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙
     // 关不了服。stop的时候会处理所有日志

@@ -1,14 +1,12 @@
 #pragma once
 
-#include "../global/global.hpp"
 #include <map>
-#include <pthread.h>
+#include "thread.hpp"
 
-class Thread;
 class ThreadMgr
 {
 public:
-    typedef std::map<pthread_t, class Thread *> ThreadMap;
+    using ThreadMap = std::map<int32_t, class Thread *>;
 
 public:
     ThreadMgr();

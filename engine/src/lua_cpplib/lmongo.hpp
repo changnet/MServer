@@ -15,7 +15,7 @@ struct lua_State;
 /**
  * MongoDB 数据库操作
  */
-class LMongo : public Thread
+class LMongo final : public Thread
 {
 public:
     ~LMongo();
@@ -98,14 +98,13 @@ public:
      */
     int32_t find_and_modify(lua_State *L);
 
-    size_t busy_job(size_t *finished = NULL, size_t *unfinished = NULL);
+    size_t busy_job(size_t *finished   = nullptr,
+                    size_t *unfinished = nullptr) override;
 
 private:
-    /* for thread */
-    bool uninitialize();
-    bool initialize();
-    void routine(NotifyType notify);
-    void notification(NotifyType notify);
+    void routine() override;
+    bool uninitialize() override;
+    bool initialize() override;
 
     void invoke_result();
     void invoke_command();
