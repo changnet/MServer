@@ -16,7 +16,7 @@ void Statistic::add_c_obj(const char *what, int32_t count)
     }
     else
     {
-        ASSERT(counter._cur >= 0, "add_c_obj count < 0");
+        assert(counter._cur >= 0);
     }
 }
 
@@ -31,7 +31,7 @@ void Statistic::add_c_lua_obj(const char *what, int32_t count)
     }
     else
     {
-        ASSERT(counter._cur >= 0, "add_c_lua_obj count < 0");
+        assert(counter._cur >= 0);
     }
 }
 
@@ -60,16 +60,14 @@ void Statistic::remove_socket_traffic(uint32_t conn_id)
     // 一个connect失败的socket，也是没调用socket::start
     // 但它们会调用stop，会尝试从_socket_traffic中删除。目前暂时没法区分，也没必要区分
 
-    // ASSERT(_socket_traffic.end() != _socket_traffic.find(conn_id),
-    //    "socket traffic del statistic corruption",);
+    // assert(_socket_traffic.end() != _socket_traffic.find(conn_id));
 
     _socket_traffic.erase(conn_id);
 }
 
 void Statistic::insert_socket_traffic(uint32_t conn_id)
 {
-    ASSERT(_socket_traffic.end() == _socket_traffic.find(conn_id),
-           "socket traffic new statistic corruption");
+    assert(_socket_traffic.end() == _socket_traffic.find(conn_id));
 
     _socket_traffic[conn_id]._time = StaticGlobal::ev()->now();
 }
@@ -77,7 +75,7 @@ void Statistic::insert_socket_traffic(uint32_t conn_id)
 void Statistic::add_send_traffic(uint32_t conn_id, Socket::ConnType type,
                                  uint32_t val)
 {
-    ASSERT(type > Socket::CT_NONE && type < Socket::CT_MAX);
+    assert(type > Socket::CT_NONE && type < Socket::CT_MAX);
 
     _total_traffic[type]._send += val;
     _socket_traffic[conn_id]._send += val;
@@ -86,7 +84,7 @@ void Statistic::add_send_traffic(uint32_t conn_id, Socket::ConnType type,
 void Statistic::add_recv_traffic(uint32_t conn_id, Socket::ConnType type,
                                  uint32_t val)
 {
-    ASSERT(type > Socket::CT_NONE && type < Socket::CT_MAX);
+    assert(type > Socket::CT_NONE && type < Socket::CT_MAX);
 
     _total_traffic[type]._recv += val;
     _socket_traffic[conn_id]._recv += val;
@@ -115,7 +113,7 @@ void Statistic::add_rpc_count(const char *cmd, int32_t size, int64_t msec)
 void Statistic::add_pkt_count(int32_t type, int32_t cmd, int32_t size,
                               int64_t msec)
 {
-    ASSERT(type > SPT_NONE && type < SPT_MAXT, "cmd type error");
+    assert(type > SPT_NONE && type < SPT_MAXT);
 
     PktCounter &pkt = _pkt_count[type][cmd];
     pkt._size += size;

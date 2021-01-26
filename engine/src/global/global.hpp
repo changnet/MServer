@@ -18,10 +18,6 @@
 
 #include "../config.hpp" /* config paramter */
 
-/* assert with error msg,third parted code not include this file will work fine
-   with old assert.
-*/
-#include "assert.hpp"
 #include "types.hpp" /* base data type */
 
 // those functions are easily make mistake,not allow to use project"
@@ -94,21 +90,6 @@ extern std::string std_format(const char *fmt, ...);
     {                       \
         ERROR(__VA_ARGS__); \
         ::abort();          \
-    } while (0)
-
-extern void __log_assert_fail(const char *__assertion, const char *__file,
-                              unsigned int __line, const char *__function);
-
-/* This prints an "log assertion failed" message and return,not abort.  */
-#define LOG_ASSERT(why, expr, ...)                                       \
-    do                                                                   \
-    {                                                                    \
-        if (!(expr))                                                     \
-        {                                                                \
-            __log_assert_fail(__STRING((why, expr)), __FILE__, __LINE__, \
-                              __ASSERT_FUNCTION);                        \
-            return __VA_ARGS__;                                          \
-        }                                                                \
     } while (0)
 
 #define ARRAY_RESIZE(type, base, cur, cnt, init)            \

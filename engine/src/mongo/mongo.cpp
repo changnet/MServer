@@ -17,7 +17,7 @@ Mongo::Mongo()
 
 Mongo::~Mongo()
 {
-    ASSERT(NULL == _conn, "mongo db not clean yet");
+    assert(NULL == _conn);
 }
 
 void Mongo::set(const char *ip, const int32_t port, const char *usr,
@@ -33,7 +33,7 @@ void Mongo::set(const char *ip, const int32_t port, const char *usr,
 
 int32_t Mongo::connect()
 {
-    ASSERT(!_conn, "mongo duplicate connect");
+    assert(!_conn);
 
     char uri[PATH_MAX];
     /* "mongodb://user:password@localhost/?authSource=mydb" */
@@ -62,7 +62,7 @@ void Mongo::disconnect()
 
 int32_t Mongo::ping()
 {
-    ASSERT(_conn, "try to ping a inactive mongo");
+    assert(_conn);
 
     bson_t ping;
     bson_init(&ping);
@@ -100,8 +100,8 @@ int32_t Mongo::ping()
 
 bool Mongo::count(const struct MongoQuery *mq, struct MongoResult *res)
 {
-    ASSERT(mq, "mongo count,empty query");
-    ASSERT(_conn, "mongo count,inactivity connection");
+    assert(mq);
+    assert(_conn);
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);
@@ -129,8 +129,8 @@ bool Mongo::count(const struct MongoQuery *mq, struct MongoResult *res)
 
 bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
 {
-    ASSERT(mq, "mongo find,empty query");
-    ASSERT(_conn, "mongo find,inactivity connection");
+    assert(mq);
+    assert(_conn);
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);
@@ -160,7 +160,7 @@ bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
         bool r = BSON_APPEND_DOCUMENT(doc, index_buff, sub_doc);
         index++;
 
-        ASSERT(r, "bson append document err");
+        assert(r);
         UNUSED(r);
     }
 
@@ -184,13 +184,13 @@ bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
 
 bool Mongo::find_and_modify(const struct MongoQuery *mq, struct MongoResult *res)
 {
-    ASSERT(mq, "mongo find_and_modify,empty query");
-    ASSERT(_conn, "mongo find_and_modify,inactivity connection");
+    assert(mq);
+    assert(_conn);
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);
 
-    ASSERT(NULL == res->_data, "mongo find_and modify data dirty");
+    assert(NULL == res->_data);
 
     res->_data = bson_new();
     bool ok    = mongoc_collection_find_and_modify(
@@ -211,8 +211,8 @@ bool Mongo::find_and_modify(const struct MongoQuery *mq, struct MongoResult *res
 
 bool Mongo::insert(const struct MongoQuery *mq, struct MongoResult *res)
 {
-    ASSERT(mq, "mongo insert,empty query");
-    ASSERT(_conn, "mongo insert,inactivity connection");
+    assert(mq);
+    assert(_conn);
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);
@@ -227,8 +227,8 @@ bool Mongo::insert(const struct MongoQuery *mq, struct MongoResult *res)
 
 bool Mongo::update(const struct MongoQuery *mq, struct MongoResult *res)
 {
-    ASSERT(mq, "mongo update,empty query");
-    ASSERT(_conn, "mongo update,inactivity connection");
+    assert(mq);
+    assert(_conn);
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);
@@ -245,8 +245,8 @@ bool Mongo::update(const struct MongoQuery *mq, struct MongoResult *res)
 
 bool Mongo::remove(const struct MongoQuery *mq, struct MongoResult *res)
 {
-    ASSERT(mq, "mongo update,empty query");
-    ASSERT(_conn, "mongo update,inactivity connection");
+    assert(mq);
+    assert(_conn);
 
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);

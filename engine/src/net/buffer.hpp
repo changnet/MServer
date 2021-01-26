@@ -67,12 +67,12 @@ private:
         inline void remove(uint32_t len)
         {
             _beg += len;
-            ASSERT(_end >= _beg, "chunk remove corruption");
+            assert(_end >= _beg);
         }
         inline void add_used_offset(uint32_t len)
         {
             _end += len;
-            ASSERT(_max >= _end, "chunk append corruption");
+            assert(_max >= _end);
         }
         inline void append(const void *data, const uint32_t len)
         {
@@ -200,7 +200,7 @@ public:
             // 不允许前面有一个空的chunk
             if (0 == _front->used_size())
             {
-                ASSERT(_back == _front->_next, "buffer link corruption");
+                assert(_back == _front->_next);
 
                 del_chunk(_front);
                 _front = _back;
@@ -219,7 +219,7 @@ public:
         _chunk_ctx_size = ctx_size;
 
         // 设置的chunk大小必须是等长内存池的N倍
-        ASSERT(0 == ctx_size % BUFFER_CHUNK, "illegal buffer chunk size");
+        assert(0 == ctx_size % BUFFER_CHUNK);
     }
 
     // 当前缓冲区是否超了设定值
@@ -242,7 +242,7 @@ private:
 
     inline void del_chunk(Chunk *chunk)
     {
-        ASSERT(_chunk_size > 0, "chunk size corruption");
+        assert(_chunk_size > 0);
 
         _chunk_size--;
         del_ctx(chunk->_ctx, chunk->_max);
@@ -263,7 +263,7 @@ private:
             new_size = (new_size / BUFFER_CHUNK + 1) * BUFFER_CHUNK;
         }
 
-        ASSERT(new_size > 0, "buffer chunk ctx size error");
+        assert(new_size > 0);
 
         size = new_size;
 
@@ -275,8 +275,7 @@ private:
 
     inline void del_ctx(char *ctx, uint32_t size)
     {
-        ASSERT(size > 0 && (0 == size % BUFFER_CHUNK),
-               "illegal buffer chunk ctx size error");
+        assert(size > 0 && (0 == size % BUFFER_CHUNK));
 
         ctx_pool_t *pool = get_ctx_pool();
         pool->ordered_free(ctx, size / BUFFER_CHUNK);

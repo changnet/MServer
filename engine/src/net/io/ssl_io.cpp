@@ -22,7 +22,7 @@ SSLIO::SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send)
  */
 int32_t SSLIO::recv(int32_t &byte)
 {
-    ASSERT(_fd > 0, "io recv fd invalid");
+    assert(_fd > 0);
 
     byte = 0;
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
@@ -68,13 +68,13 @@ int32_t SSLIO::recv(int32_t &byte)
  */
 int32_t SSLIO::send(int32_t &byte)
 {
-    ASSERT(_fd > 0, "io send fd invalid");
+    assert(_fd > 0);
 
     byte = 0;
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
     size_t bytes = _send->get_used_size();
-    ASSERT(bytes > 0, "io send without data");
+    assert(bytes > 0);
 
     int32_t len = SSL_write(_ssl_ctx, _send->get_used_ctx(), bytes);
     if (EXPECT_TRUE(len > 0))

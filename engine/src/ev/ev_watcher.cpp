@@ -23,11 +23,11 @@ EVIO::~EVIO()
 
 void EVIO::start()
 {
-    ASSERT(_loop, "ev_io::start with NULL loop");
-    ASSERT(events, "ev_io::start without event");
-    ASSERT(_cb, "ev_io::start without callback");
-    ASSERT(fd >= 0, "ev_io::start with negative fd");
-    ASSERT(!_active, "ev_io::start a active watcher");
+    assert(_loop);
+    assert(events);
+    assert(_cb);
+    assert(fd >= 0);
+    assert(!_active);
 
     _active = _loop->io_start(this);
 }
@@ -87,11 +87,11 @@ void EVTimer::set_time_jump(bool jump)
 
 void EVTimer::start()
 {
-    ASSERT(_loop, "ev_timer::start with NULL loop");
-    ASSERT(at >= 0., "ev_timer::start with negative after");
-    ASSERT(repeat >= 0., "ev_timer::start with negative repeat");
-    ASSERT(_cb, "ev_timer::start without callback");
-    ASSERT(!_active, "start a active timer");
+    assert(_loop);
+    assert(at >= 0.);
+    assert(repeat >= 0.);
+    assert(_cb);
+    assert(!_active);
 
     _loop->timer_start(this);
 }

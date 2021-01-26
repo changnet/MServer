@@ -56,7 +56,7 @@ EVBackend::EVBackend()
             return;
         }
     }
-    ASSERT(_ep_fd >= 0, "fail to create epoll");
+    assert(_ep_fd >= 0);
 }
 
 EVBackend::~EVBackend()
@@ -142,7 +142,7 @@ void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
          * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll自动删除，这时特殊处理
          */
         if (EPOLL_CTL_DEL == op) return;
-        ASSERT(false, "ev::backend_modify EBADF");
+        assert(false);
         break;
     case EEXIST:
         /*
@@ -153,9 +153,9 @@ void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
         {
             return;
         }
-        ASSERT(false, "ev::backend_modify EEXIST");
+        assert(false);
         break;
-    case EINVAL: ASSERT(false, "ev::backend_modify EINVAL"); break;
+    case EINVAL: assert(false); break;
     case ENOENT:
         /* ENOENT：fd不属于这个backend_fd管理的fd
          * epoll在连接断开时，会把fd从epoll中删除，但ev中仍保留相关数据
@@ -167,14 +167,14 @@ void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
         {
             return;
         }
-        ASSERT(false, "ev::backend_modify ENOENT");
+        assert(false);
         break;
-    case ENOMEM: ASSERT(false, "ev::backend_modify ENOMEM"); break;
-    case ENOSPC: ASSERT(false, "ev::backend_modify ENOSPC"); break;
+    case ENOMEM: assert(false); break;
+    case ENOSPC: assert(false); break;
     case EPERM:
         // 一个fd被epoll自动删除后，可能会被分配到其他用处，比如打开了个文件，不是有效socket
         if (EPOLL_CTL_DEL == op) return;
-        ASSERT(false, "ev::backend_modify EPERM");
+        assert(false);
         break;
     default: ERROR("unknow ev error"); break;
     }

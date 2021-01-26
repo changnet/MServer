@@ -113,7 +113,7 @@ int32_t EV::io_start(EVIO *w)
     ANFD *anfd = anfds + fd;
 
     /* 与原libev不同，现在同一个fd只能有一个watcher */
-    ASSERT(!(anfd->w), "duplicate fd");
+    assert(!(anfd->w));
 
     anfd->w = w;
     fd_change(fd);
@@ -128,8 +128,7 @@ int32_t EV::io_stop(EVIO *w)
     if (EXPECT_FALSE(!w->is_active())) return 0;
 
     int32_t fd = w->fd;
-    ASSERT(fd >= 0 && uint32_t(fd) < anfdmax,
-           "illegal fd (must stay constant after start!)");
+    assert(fd >= 0 && uint32_t(fd) < anfdmax);
 
     ANFD *anfd = anfds + fd;
     anfd->w    = 0;
@@ -239,7 +238,7 @@ void EV::time_update()
 void EV::fd_event(int32_t fd, int32_t revents)
 {
     ANFD *anfd = anfds + fd;
-    ASSERT(anfd->w, "fd event no watcher");
+    assert(anfd->w);
     feed_event(anfd->w, revents);
 }
 
@@ -288,7 +287,7 @@ void EV::timers_reify()
     {
         EVTimer *w = timers[HEAP0];
 
-        ASSERT(w->is_active(), "libev: invalid timer detected");
+        assert(w->is_active());
 
         /* first reschedule or stop timer */
         if (w->repeat)
@@ -309,7 +308,7 @@ void EV::timers_reify()
                 }
             }
 
-            ASSERT(w->repeat > 0., "libev: negative ev_timer repeat value");
+            assert(w->repeat > 0.);
 
             down_heap(timers, timercnt, HEAP0);
         }
@@ -326,7 +325,7 @@ int32_t EV::timer_start(EVTimer *w)
 {
     w->at += mn_now;
 
-    ASSERT(w->repeat >= 0., "libev: negative repeat value");
+    assert(w->repeat >= 0.);
 
     ++timercnt;
     int32_t active = timercnt + HEAP0 - 1;
@@ -334,7 +333,7 @@ int32_t EV::timer_start(EVTimer *w)
     timers[active] = w;
     up_heap(timers, active);
 
-    ASSERT(timers[w->_active] == w, "libev: internal timer heap corruption");
+    assert(timers[w->_active] == w);
 
     return active;
 }
@@ -348,7 +347,7 @@ int32_t EV::timer_stop(EVTimer *w)
     {
         int32_t active = w->_active;
 
-        ASSERT(timers[active] == w, "libev: internal timer heap corruption");
+        assert(timers[active] == w);
 
         --timercnt;
 

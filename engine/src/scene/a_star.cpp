@@ -204,7 +204,7 @@ struct AStar::Node *AStar::pop_open_set()
 bool AStar::backtrace_path(const struct Node *dest, int32_t dx, int32_t dy,
                            uint16_t height)
 {
-    ASSERT(0 == _path.size(), "a start path not clear");
+    assert(0 == _path.size());
 
     // 102400防止逻辑出错
     while (dest && _path.size() < 1024000)

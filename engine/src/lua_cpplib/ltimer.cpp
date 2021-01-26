@@ -65,7 +65,7 @@ int32_t LTimer::active(lua_State *L)
 
 void LTimer::callback(EVTimer &w, int32_t revents)
 {
-    ASSERT(!(EV_ERROR & revents), "libev timer cb error");
+    assert(!(EV_ERROR & revents));
 
     static lua_State *L = StaticGlobal::state();
 

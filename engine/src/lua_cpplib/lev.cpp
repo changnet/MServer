@@ -50,7 +50,7 @@ int32_t LEV::kernel_info(lua_State *L)
 #ifdef __linux__
     const char *env = "linux";
 #elif __CYGWIN__
-    const char *env = "cygwin";
+    const char *env        = "cygwin";
 #else
     const char *env = "unknow";
 #endif
@@ -229,7 +229,7 @@ int32_t LEV::pending_send(class Socket *s)
 
 void LEV::remove_pending(int32_t pending)
 {
-    ASSERT(pending > 0 && pending < ansendingmax, "illegal remove pending");
+    assert(pending > 0 && pending < ansendingmax);
 
     ansendings[pending] = NULL;
 }
@@ -254,7 +254,7 @@ void LEV::invoke_sending()
             continue;
         }
 
-        ASSERT(pending == skt->get_pending(), "pending index not match");
+        assert(pending == skt->get_pending());
 
         /* 处理发送,
          * return: < 0 error,= 0 success,> 0 bytes still need to be send
@@ -268,13 +268,12 @@ void LEV::invoke_sending()
             ansendings[pos] = skt;
             skt->set_pending(pos);
         }
-        ASSERT(pos == skt->get_pending(), "new pending index not match");
+        assert(pos == skt->get_pending());
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 
     ansendingcnt = pos;
-    ASSERT(ansendingcnt >= 0 && ansendingcnt < ansendingmax,
-           "invoke sending sending counter fail");
+    assert(ansendingcnt >= 0 && ansendingcnt < ansendingmax);
 }
 
 void LEV::invoke_app_ev(int64_t ms_now)

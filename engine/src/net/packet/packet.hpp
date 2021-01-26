@@ -47,14 +47,14 @@ public:
     virtual int32_t raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
                                  size_t size)
     {
-        ASSERT(false, "should never call base function");
+        assert(false);
         return -1;
     }
     /* 打包服务器发往服务器的数据包，用于广播 */
     virtual int32_t raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
                                 const char *ctx, size_t size)
     {
-        ASSERT(false, "should never call base function");
+        assert(false);
         return -1;
     }
 

@@ -30,9 +30,9 @@ Thread::Thread(const char *name)
 
 Thread::~Thread()
 {
-    ASSERT(!_run, "thread still running");
-    ASSERT(!_watcher.is_active(), "io watcher not close");
-    ASSERT(-1 == _fd[0] && -1 == _fd[1], "socket pair not close");
+    assert(!_run);
+    assert(!_watcher.is_active());
+    assert(-1 == _fd[0] && -1 == _fd[1]);
 
     if (!_join) pthread_detach(pthread_self());
 
@@ -118,7 +118,7 @@ void Thread::stop()
         return;
     }
 
-    ASSERT(0 != _id, "thread join zero thread id");
+    assert(0 != _id);
 
     _run = false;
     notify_child(NT_EXIT);
@@ -196,7 +196,7 @@ void Thread::do_routine()
 void *Thread::start_routine(void *arg)
 {
     class Thread *_thread = static_cast<class Thread *>(arg);
-    ASSERT(_thread, "thread start routine got NULL argument");
+    assert(_thread);
 
     signal_block(); /* 子线程不处理外部信号 */
 
@@ -219,7 +219,7 @@ void *Thread::start_routine(void *arg)
 
 void Thread::notify_child(NotifyType notify)
 {
-    ASSERT(_fd[1] >= 0, "notify_child:socket pair not open");
+    assert(_fd[1] >= 0);
 
     int8_t val = static_cast<int8_t>(notify);
     int32_t sz = ::write(_fd[0], &val, sizeof(int8_t));
@@ -231,7 +231,7 @@ void Thread::notify_child(NotifyType notify)
 
 void Thread::notify_parent(NotifyType notify)
 {
-    ASSERT(_fd[0] >= 0, "notify_parent:socket pair not open");
+    assert(_fd[0] >= 0);
 
     int8_t val = static_cast<int8_t>(notify);
     int32_t sz = ::write(_fd[1], &val, sizeof(int8_t));
@@ -249,7 +249,7 @@ void Thread::io_cb(EVIO &w, int32_t revents)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
-            ASSERT(false, "non-block socket,should not happen");
+            assert(false);
             return;
         }
 

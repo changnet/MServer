@@ -160,7 +160,7 @@ Log::Log()
 
 Log::~Log()
 {
-    ASSERT(_cache->empty() && _flush->empty(), "log not flush");
+    assert(_cache->empty() && _flush->empty());
 
     delete _cache;
     delete _flush;
@@ -199,7 +199,7 @@ bool Log::swap()
 int32_t Log::write_cache(time_t tm, const char *path, const char *ctx,
                          size_t len, LogType out)
 {
-    ASSERT(path, "write log no file path");
+    assert(path);
 
     class LogOne *one = allocate_one(len + 1);
     if (!one)
@@ -348,7 +348,7 @@ class LogOne *Log::allocate_one(size_t len)
 //回收一个日志缓存对象到内存池
 void Log::deallocate_one(class LogOne *one)
 {
-    ASSERT(one, "deallocate one NULL log ctx");
+    assert(one);
 
     LogSize lt = one->get_type();
 

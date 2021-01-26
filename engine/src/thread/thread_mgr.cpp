@@ -8,7 +8,7 @@ ThreadMgr::~ThreadMgr() {}
 /* 添加一个待管理thread */
 void ThreadMgr::push(class Thread *thd)
 {
-    ASSERT(thd, "thread mgr push NULL");
+    assert(thd);
 
     _threads[thd->get_id()] = thd;
 }

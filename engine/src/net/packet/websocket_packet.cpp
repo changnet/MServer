@@ -81,7 +81,7 @@ page33
 // 解析完websocket的header
 int32_t on_frame_header(struct websocket_parser *parser)
 {
-    ASSERT(parser && parser->data, "websocket parser NULL");
+    assert(parser && parser->data);
 
     class WebsocketPacket *ws_packet =
         static_cast<class WebsocketPacket *>(parser->data);
@@ -106,7 +106,7 @@ int32_t on_frame_header(struct websocket_parser *parser)
 int32_t on_frame_body(struct websocket_parser *parser, const char *at,
                       size_t length)
 {
-    ASSERT(parser && parser->data, "websocket parser NULL");
+    assert(parser && parser->data);
 
     class WebsocketPacket *ws_packet =
         static_cast<class WebsocketPacket *>(parser->data);
@@ -139,7 +139,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
 // 数据帧完成
 int32_t on_frame_end(struct websocket_parser *parser)
 {
-    ASSERT(parser && parser->data, "websocket parser NULL");
+    assert(parser && parser->data);
 
     class WebsocketPacket *ws_packet =
         static_cast<class WebsocketPacket *>(parser->data);
@@ -274,7 +274,7 @@ int32_t WebsocketPacket::unpack()
 /* http-parser在解析完握手数据时，会触发一次message_complete */
 int32_t WebsocketPacket::on_message_complete(bool upgrade)
 {
-    ASSERT(upgrade && !_is_upgrade, "should be upgrade");
+    assert(upgrade && !_is_upgrade);
 
     _is_upgrade = true;
     invoke_handshake();
@@ -314,7 +314,7 @@ int32_t WebsocketPacket::invoke_handshake()
     }
 
     static lua_State *L = StaticGlobal::state();
-    ASSERT(0 == lua_gettop(L), "lua stack dirty");
+    assert(0 == lua_gettop(L));
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "handshake_new");
@@ -336,7 +336,7 @@ int32_t WebsocketPacket::invoke_handshake()
 int32_t WebsocketPacket::on_frame_end()
 {
     static lua_State *L = StaticGlobal::state();
-    ASSERT(0 == lua_gettop(L), "lua stack dirty");
+    assert(0 == lua_gettop(L));
 
     uint32_t size   = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
@@ -360,7 +360,7 @@ int32_t WebsocketPacket::on_frame_end()
 int32_t WebsocketPacket::on_ctrl_end()
 {
     static lua_State *L = StaticGlobal::state();
-    ASSERT(0 == lua_gettop(L), "lua stack dirty");
+    assert(0 == lua_gettop(L));
 
     uint32_t size   = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);

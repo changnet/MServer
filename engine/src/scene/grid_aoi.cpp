@@ -359,7 +359,7 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
             }
         }
 
-        ASSERT(iy <= idy, "rectangle difference fail");
+        assert(iy <= idy);
         entity_exit_range(ctx, ix, iy, ix, idy, list_out);
     }
 
@@ -385,7 +385,7 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
             }
         }
 
-        ASSERT(iy <= idy, "rectangle difference fail");
+        assert(iy <= idy);
         entity_enter_range(ctx, ix, iy, ix, idy, list_in);
     }
 

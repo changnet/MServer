@@ -43,7 +43,7 @@ void Buffer::clear()
     }
 
     _front->clear();
-    ASSERT(_back == _front, "buffer link corruption");
+    assert(_back == _front);
 }
 
 // 添加数据
@@ -106,7 +106,7 @@ void Buffer::remove(uint32_t len)
         Chunk *tmp = _front;
 
         _front = _front->_next;
-        ASSERT(_front && len > used, "no more chunk to remove");
+        assert(_front && len > used);
 
         len -= used;
         del_chunk(tmp);
@@ -134,8 +134,7 @@ const char *Buffer::to_continuous_ctx(uint32_t len)
     do
     {
         uint32_t next_used = std::min(len - used, next->used_size());
-        ASSERT(used + next_used <= continuous_size,
-               "continuous buffer overflow !!!");
+        assert(used + next_used <= continuous_size);
 
         memcpy(continuous_ctx + used, next->used_ctx(), next_used);
 
@@ -143,7 +142,7 @@ const char *Buffer::to_continuous_ctx(uint32_t len)
         next = next->_next;
     } while (next && used < len);
 
-    ASSERT(used == len, "to_continuous_ctx fail");
+    assert(used == len);
     return continuous_ctx;
 }
 
@@ -162,8 +161,7 @@ const char *Buffer::all_to_continuous_ctx(uint32_t &len)
     do
     {
         uint32_t next_used = next->used_size();
-        ASSERT(used + next_used <= continuous_size,
-               "continuous buffer overflow !!!");
+        assert(used + next_used <= continuous_size);
 
         memcpy(continuous_ctx + used, next->used_ctx(), next_used);
 
@@ -172,7 +170,7 @@ const char *Buffer::all_to_continuous_ctx(uint32_t &len)
     } while (next);
 
     len = used;
-    ASSERT(used > 0, "all_to_continuous_ctx fail");
+    assert(used > 0);
 
     // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
     PRINTF("using all continuous buffer:%d", len);

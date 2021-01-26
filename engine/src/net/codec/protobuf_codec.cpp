@@ -235,7 +235,7 @@ const char *lprotobuf::last_error()
 
 void lprotobuf::get_buffer(struct pbc_slice &slice)
 {
-    ASSERT(_write_msg, "no write message found");
+    assert(_write_msg);
 
     pbc_wmessage_buffer(_write_msg, &slice);
 }
@@ -384,7 +384,7 @@ int32_t lprotobuf::encode(lua_State *L, const char *object, int32_t index)
 {
     reset();
 
-    ASSERT(NULL == _write_msg, "protobuf write message not clear");
+    assert(NULL == _write_msg);
 
     _write_msg = pbc_wmessage_new(_env, object);
     if (!_write_msg)

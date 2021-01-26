@@ -1,7 +1,6 @@
 #include "../config.hpp"
 
 #include "dbg_mem.hpp"
-#include "assert.hpp"
 
 #include <new> // std::nothrow_t
 #include <atomic>

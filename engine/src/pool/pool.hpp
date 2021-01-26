@@ -18,7 +18,7 @@ public:
             }
         }
 
-        ASSERT(false, "cant not del from stat");
+        assert(false);
     }
     explicit Pool(const char *name)
     {
@@ -39,7 +39,7 @@ public:
         }
 
         // 目前C++的逻辑不涉及具体业务逻辑，内存池数量应该是可以预估的
-        ASSERT(false, "cant not add to stat");
+        assert(false);
     }
 
     int64_t get_max_new() const { return _max_new; }
@@ -58,12 +58,12 @@ public:
      */
     virtual void *construct_any()
     {
-        ASSERT(false, "can NOT call base construct_any");
+        assert(false);
         return NULL;
     }
     virtual void destroy_any(void *const object, bool is_free = false)
     {
-        ASSERT(false, "can NOT call base destroy_any");
+        assert(false);
     }
 
 public:

@@ -6,7 +6,7 @@
 #include "http_packet.hpp"
 
 #define ASSERT_PARSER_DATA() \
-    ASSERT(parser && (parser->data), __FUNCTION__" no parser")
+    assert(parser && (parser->data))
 
 // 开始解析报文，第一个回调的函数，在这里初始化数据
 int32_t on_message_begin(http_parser *parser)
@@ -200,7 +200,7 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
 {
     UNUSED(upgrade);
     static lua_State *L = StaticGlobal::state();
-    ASSERT(0 == lua_gettop(L), "lua stack dirty");
+    assert(0 == lua_gettop(L));
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");

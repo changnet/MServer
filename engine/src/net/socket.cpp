@@ -63,7 +63,7 @@ Socket::~Socket()
     _packet = NULL;
 
     C_OBJECT_DEC("socket");
-    ASSERT(0 == _pending && -1 == _w.fd, "socket not clean");
+    assert(0 == _pending && -1 == _w.fd);
 }
 
 void Socket::stop(bool flush)
@@ -111,7 +111,7 @@ void Socket::stop(bool flush)
 
 int32_t Socket::recv()
 {
-    ASSERT(_io, "socket recv without io control");
+    assert(_io);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
@@ -151,7 +151,7 @@ int32_t Socket::send()
         C_SEND_TRAFFIC_ADD(_conn_id, _conn_ty, byte); \
     } while (0)
 
-    ASSERT(_io, "socket send without io control");
+    assert(_io);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 去除发送标识，因为发送时，pending标识会变。
@@ -336,14 +336,14 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
  */
 void Socket::start(int32_t fd)
 {
-    ASSERT(0 == _send.get_used_size() && 0 == _send.get_used_size());
+    assert(0 == _send.get_used_size() && 0 == _send.get_used_size());
 
     if (fd > 0 && _w.fd > 0)
     {
-        ASSERT(false, "socket already exist");
+        assert(false);
     }
     fd = fd > 0 ? fd : _w.fd;
-    ASSERT(fd > 0, "socket not invalid");
+    assert(fd > 0);
 
     if (fd > 0) // 新创建的socket
     {
@@ -361,7 +361,7 @@ void Socket::start(int32_t fd)
 
 int32_t Socket::connect(const char *host, int32_t port)
 {
-    ASSERT(_w.fd < 0, "socket fd dirty");
+    assert(_w.fd < 0);
 
     // 创建新socket并设置为非阻塞
     int32_t fd = ::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);

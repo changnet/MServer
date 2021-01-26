@@ -58,10 +58,10 @@ inline void lua_pushint64(lua_State *L, int64_t v)
  * 2).在元表指定__array为true则为数组
  */
 inline int32_t lua_isarray(lua_State *L, int32_t index, int32_t *array,
-                                  int32_t *max_index)
+                           int32_t *max_index)
 {
     double key = 0;
-    ASSERT(array && max_index, "lua_isarray empty input argument");
+    assert(array && max_index);
 
     /* set default value */
     *array     = 0;
@@ -194,7 +194,8 @@ inline void table_pack_size(lua_State *L, int32_t index, int32_t n)
  * @param filter 把需要打包的数据放到堆栈并返回true
  */
 template <typename Container, typename Filter>
-void table_pack(lua_State *L, int32_t index,const Container &container, Filter &&filter)
+void table_pack(lua_State *L, int32_t index, const Container &container,
+                Filter &&filter)
 {
     int32_t n = 0;
     for (auto &iter : container)
