@@ -24,9 +24,11 @@ function cp_r()
 LUA_FILES=( "lua.h" "lua.hpp" "luaconf.h" "lualib.h" "lauxlib.h" )
 cp_r /usr/local/include LUA_FILES
 
+# mariadb
+cp -r /usr/include/mariadb $DST
+
 MONGO_FILES=("mongoc" "mongoc.h")
 cp_r /usr/local/include/libmongoc-1.0 MONGO_FILES
-
 
 BSON_FILES=("bson" "bson.h")
 cp_r /usr/local/include/libbson-1.0 BSON_FILES
@@ -38,6 +40,9 @@ cp_r /usr/include/ USR_FILES
 #  "sys/epoll.h" "bits/epoll.h"  "bits/sigset.h" "sys/socket.h"
 GNU_FILES=("openssl/opensslconf.h")
 cp_r /usr/include/x86_64-linux-gnu GNU_FILES
+
+# flatbuffers
+cp -r /usr/local/include/flatbuffers $DST
 
 echo "done"
 

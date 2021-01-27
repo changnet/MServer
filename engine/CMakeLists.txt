@@ -131,8 +131,24 @@ else()
     set(USE_EPOLL 0)
 endif()
 
+# 通过查找lua.hpp来判断本机是否安装了对应的环境
+# 如果没安装并且存在include文件夹表示为cross edit(即在没安装环境下交叉写代码)，这时可以用
+# build_include.sh这个脚本从其他地方拷贝所需的头文件用于代码提示
+set(CROSS_INL_PATH "${SRC_ROOT_PATH}/include")
+# EXISTS需要绝对路径
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${CROSS_INL_PATH})
+    find_path(
+        LUA_HEADER lua.hpp
+        # PATHS /usr/include # /usr/include/x86_64-linux-gnu/sys/epoll.h
+    )
+    if (NOT LUA_HEADER)
+        set(INL_PATH ${CROSS_INL_PATH})
+        message(STATUS "No header found, using cross edit header")
+    endif()
+endif()
+
 # 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
-# 在make.sh脚本里做
+# 在make.sh脚本里做，在这里做会导致每次都编译master
 # file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
 target_compile_definitions(
     master
@@ -151,6 +167,7 @@ target_include_directories(master PRIVATE
 
     /usr/local/include/libmongoc-1.0
     /usr/local/include/libbson-1.0
+    ${INL_PATH}
 )
 
 # 库文件，必须 在add_executable之后

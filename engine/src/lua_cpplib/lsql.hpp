@@ -1,10 +1,11 @@
 #pragma once
 
+#include <lua.hpp>
+#include <queue>
+
 #include "../global/global.hpp"
 #include "../mysql/sql.hpp"
 #include "../thread/thread.hpp"
-#include <lua.hpp>
-#include <queue>
 
 /**
  * MySQL、MariaDB 操作

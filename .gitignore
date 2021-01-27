@@ -10,6 +10,7 @@
 
 # 临时生成的文件
 engine/build
+engine/include
 
 setting.lua
 
