@@ -20,8 +20,7 @@ public:
     int32_t stop(lua_State *L);
 
     /**
-     * 启动日志线程，sec和usec时间是叠加的
-     * @param sec 可选参数，每隔多少秒数写入一次文件
+     * 启动日志线程
      * @param usec 可选参数，每隔多少微秒写入一次文件
      */
     int32_t start(lua_State *L);

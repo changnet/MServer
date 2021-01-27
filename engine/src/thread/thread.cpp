@@ -74,22 +74,21 @@ void Thread::spawn(int32_t us)
     }
 
     std::chrono::microseconds timeout(us);
-    while (_status & S_RUN)
+
     {
         // unique_lock在构建时会加锁，然后由wait_for解锁并进入等待
         // 当条件满足时，wait_for返回并加锁，最后unique_lock析构时解锁
-        // TODO 把lock放for外面，这里手动lock会不会高效一些
         std::unique_lock<std::mutex> ul(_mutex);
+        while (_status & S_RUN)
+        {
+            // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
+            // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
+            _cv.wait_for(ul, timeout);
 
-        // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
-        // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
-        _cv.wait_for(ul, timeout);
-
-        ul.unlock(); // 手动把锁释放掉，因为处理逻辑过程中需要根据粒度自已加锁解锁
-
-        mark(S_BUSY);
-        this->routine();
-        unmark(S_BUSY);
+            mark(S_BUSY);
+            this->routine(ul);
+            unmark(S_BUSY);
+        }
     }
 
     if (!uninitialize()) /* 清理 */

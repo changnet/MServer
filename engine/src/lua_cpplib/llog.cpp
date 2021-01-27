@@ -40,12 +40,11 @@ int32_t LLog::start(lua_State *L)
         return 0;
     }
 
-    /* 设定多少秒写入一次 */
-    int32_t sec  = luaL_optinteger(L, 1, 5);
-    int32_t usec = luaL_optinteger(L, 2, 0);
+    /* 设定多久写入一次文件 */
+    int32_t usec = luaL_optinteger(L, 2, 5000000);
 
     _log = new AsyncLog();
-    _log->start(sec, usec);
+    _log->start(usec);
 
     return 0;
 }

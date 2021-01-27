@@ -102,20 +102,17 @@ public:
                     size_t *unfinished = nullptr) override;
 
 private:
-    void routine() override;
+    void routine(std::unique_lock<std::mutex> &ul) override;
+    void main_routine() override;
     bool uninitialize() override;
     bool initialize() override;
 
-    void invoke_result();
-    void invoke_command();
+    struct MongoResult *do_command(const struct MongoQuery *query);
+    void do_result(lua_State *L, const struct MongoResult *res);
 
     void push_query(const struct MongoQuery *query);
-    void push_result(const struct MongoResult *result);
     bson_t *string_or_table_to_bson(lua_State *L, int index, int opt = -1,
                                     bson_t *bs = END_BSON, ...);
-
-    const struct MongoResult *pop_result();
-    const struct MongoQuery *pop_query();
 
 private:
     class Mongo _mongo;

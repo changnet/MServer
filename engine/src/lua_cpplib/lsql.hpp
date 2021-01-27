@@ -9,7 +9,7 @@
 /**
  * MySQL、MariaDB 操作
  */
-class LSql : public Thread
+class LSql final : public Thread
 {
 public:
     explicit LSql(lua_State *L);
@@ -44,27 +44,23 @@ public:
      */
     int32_t do_sql(lua_State *L);
 
-    size_t busy_job(size_t *finished = NULL, size_t *unfinished = NULL);
+    size_t busy_job(size_t *finished   = nullptr,
+                    size_t *unfinished = nullptr) override;
 
 private:
-    bool uninitialize();
-    bool initialize();
+    bool uninitialize() override;
+    bool initialize() override;
 
-    void invoke_result();
+    void do_result(lua_State *L, struct SqlResult *res);
 
-    void invoke_sql(bool is_return = true);
-    void push_result(int32_t id, struct sql_res *res);
+    struct sql_res *do_sql(const struct SqlQuery *query);
 
-    void routine(NotifyType notify);
-    void notification(NotifyType notify);
+    void main_routine() override;
+    void routine(std::unique_lock<std::mutex> &ul) override;
 
     int32_t mysql_to_lua(lua_State *L, const struct sql_res *res);
     int32_t field_to_lua(lua_State *L, const struct SqlField &field,
                          const struct SqlCol &col);
-
-    const struct SqlQuery *pop_query();
-    void push_query(const struct SqlQuery *query);
-    int32_t pop_result(struct SqlResult &res);
 
 private:
     class Sql _sql;

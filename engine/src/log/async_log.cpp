@@ -56,34 +56,24 @@ void AsyncLog::raw_write(const char *path, LogType out, const char *fmt, ...)
     va_end(args);
 }
 
-bool AsyncLog::uninitialize()
-{
-    // 线程结束之前清理函数
-    routine();
-    return true;
-}
-
 // 线程主循环
-void AsyncLog::routine()
+void AsyncLog::routine(std::unique_lock<std::mutex> &ul)
 {
     do
     {
         /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
-        lock();
         _log.swap();
-        unlock();
 
         // 日志线程写入文件
+        ul.unlock();
         _log.flush();
+        ul.lock();
 
         // 回收内存
-        lock();
         _log.collect_mem();
-        unlock();
 
-        lock();
+        // 把新的数据交换到日志线程
         _log.swap();
-        unlock();
     } while (!_log.empty());
 
     _log.close_files();

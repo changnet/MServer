@@ -1,6 +1,6 @@
 #include "lmongo.hpp"
 #include <cstdarg>
-#include <ctime> // for clock
+#include <chrono>
 
 #include "ltools.hpp"
 #include <lbson.h>
@@ -86,7 +86,7 @@ size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
     return finished_sz + unfinished_sz;
 }
 
-void LMongo::routine()
+void LMongo::routine(std::unique_lock<std::mutex> &ul)
 {
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
@@ -94,7 +94,17 @@ void LMongo::routine()
     if (_mongo.ping()) return;
 
     _valid = 1;
-    invoke_command();
+    while (!_query.empty())
+    {
+        const struct MongoQuery *query = _query.front();
+        _query.pop();
+
+        ul.unlock();
+        struct MongoResult *res = do_command(query);
+        delete query;
+        ul.lock();
+        if (res) _result.push(res);
+    }
 }
 
 bool LMongo::uninitialize()
@@ -104,48 +114,44 @@ bool LMongo::uninitialize()
         ERROR("mongo ping fail at cleanup,data may lost");
         /* TODO:write to file */
     }
-    else
-    {
-        invoke_command();
-    }
 
     _mongo.disconnect();
 
     return true;
 }
 
-void LMongo::notification(NotifyType notify)
+void LMongo::main_routine()
 {
-    if (NT_CUSTOM == notify)
+    static lua_State *L = StaticGlobal::state();
+    LUA_PUSHTRACEBACK(L);
+
+    while (true)
     {
-        invoke_result();
+        lock();
+        if (_result.empty())
+        {
+            unlock();
+            break;
+        }
+        const struct MongoResult *res = _result.front();
+        _result.pop();
+        unlock();
+
+        do_result(L, res);
+
+        delete res;
     }
-    else if (NT_ERROR == notify)
-    {
-        ERROR("mongo thread error");
-    }
-    else
-    {
-        assert(false);
-    }
+
+    lua_pop(L, 1); /* remove stacktrace */
 }
 
 void LMongo::push_query(const struct MongoQuery *query)
 {
-    /* socket缓冲区大小是有限制的。如果query队列不为空，则表示已通知过子线程，无需再
-     * 次通知。避免写入socket缓冲区满造成Resource temporarily unavailable
-     */
-    bool _notify = false;
-
     lock();
-    if (_query.empty()) /* 不要使用_query.size() */
-    {
-        _notify = true;
-    }
     _query.push(query);
     unlock();
 
-    if (_notify) mark(S_SDATA);
+    wakeup();
 }
 
 int32_t LMongo::count(lua_State *L)
@@ -199,183 +205,108 @@ int32_t LMongo::count(lua_State *L)
     return 0;
 }
 
-const struct MongoResult *LMongo::pop_result()
+void LMongo::do_result(lua_State *L, const struct MongoResult *res)
 {
-    const struct MongoResult *res = NULL;
-
-    lock();
-    if (!_result.empty())
+    // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
+    // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
+    // 原因是ev那边频繁收到协议，导致数据库与子线程通信的fd一直没被epoll触发
+    static AsyncLog *logger = StaticGlobal::async_logger();
+    int64_t real            = StaticGlobal::ev()->ms_now() - res->_time;
+    if (0 == res->_error.code)
     {
-        res = _result.front();
-        _result.pop();
+        logger->raw_write(
+            "", LT_MONGODB, "%s.%s:%s real:" FMT64d " msec,thread:%.3f msec",
+            res->_clt, MQT_NAME[res->_mqt], res->_query, real, res->_elaspe);
     }
-
-    unlock();
-
-    return res;
-}
-
-void LMongo::invoke_result()
-{
-    static lua_State *L = StaticGlobal::state();
-    LUA_PUSHTRACEBACK(L);
-
-    const struct MongoResult *res = NULL;
-    while ((res = pop_result()))
+    else
     {
-        // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
-        // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
-        // 原因是ev那边频繁收到协议，导致数据库与子线程通信的fd一直没被epoll触发
-        static AsyncLog *logger = StaticGlobal::async_logger();
-        int64_t real            = StaticGlobal::ev()->ms_now() - res->_time;
-        if (0 == res->_error.code)
+        logger->raw_write(
+            "", LT_MONGODB,
+            "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
+            res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
+            res->_error.message, real, res->_elaspe);
+
+        ERROR("%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
+              res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
+              res->_error.message, real, res->_elaspe);
+    }
+    // 为0表示不需要回调到脚本
+    if (0 == res->_qid) return;
+
+    lua_getglobal(L, "mongodb_read_event");
+
+    lua_pushinteger(L, _dbid);
+    lua_pushinteger(L, res->_qid);
+    lua_pushinteger(L, res->_error.code);
+
+    int32_t nargs = 3;
+    if (res->_data)
+    {
+        struct error_collector error;
+        bson_type_t root_type =
+            res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
+
+        if (lbs_do_decode(L, res->_data, root_type, &error) < 0)
         {
-            logger->raw_write("", LT_MONGODB,
-                              "%s.%s:%s real:" FMT64d " msec,thread:%.3f sec",
-                              res->_clt, MQT_NAME[res->_mqt], res->_query, real,
-                              res->_elaspe);
+            lua_pop(L, 4);
+            ERROR("mongo result decode error:%s", error.what);
+
+            // 即使出错，也回调到脚本
         }
         else
         {
-            logger->raw_write(
-                "", LT_MONGODB,
-                "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
-                res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
-                res->_error.message, real, res->_elaspe);
-
-            ERROR("%s.%s:%s,code:%d,msg:%s,real:" FMT64d
-                  "  msec,thread:%.3f sec",
-                  res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
-                  res->_error.message, real, res->_elaspe);
+            nargs++;
         }
-        // 为0表示不需要回调到脚本
-        if (0 == res->_qid)
-        {
-            delete res;
-            continue;
-        }
-
-        lua_getglobal(L, "mongodb_read_event");
-
-        lua_pushinteger(L, _dbid);
-        lua_pushinteger(L, res->_qid);
-        lua_pushinteger(L, res->_error.code);
-
-        int32_t nargs = 3;
-        if (res->_data)
-        {
-            struct error_collector error;
-            bson_type_t root_type =
-                res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
-
-            if (lbs_do_decode(L, res->_data, root_type, &error) < 0)
-            {
-                lua_pop(L, 4);
-                ERROR("mongo result decode error:%s", error.what);
-
-                // 即使出错，也回调到脚本
-            }
-            else
-            {
-                nargs++;
-            }
-        }
-
-        if (LUA_OK != lua_pcall(L, nargs, 0, 1))
-        {
-            ERROR("mongo call back error:%s", lua_tostring(L, -1));
-            lua_pop(L, 1); /* remove error message */
-        }
-
-        delete res;
     }
-    lua_pop(L, 1); /* remove stacktrace */
-}
 
-const struct MongoQuery *LMongo::pop_query()
-{
-    const struct MongoQuery *query = NULL;
-
-    lock();
-    if (!_query.empty())
+    if (LUA_OK != lua_pcall(L, nargs, 0, 1))
     {
-        query = _query.front();
-        _query.pop();
+        ERROR("mongo call back error:%s", lua_tostring(L, -1));
+        lua_pop(L, 1); /* remove error message */
     }
-
-    unlock();
-
-    return query;
-}
-
-/* 缓冲区大小有限，如果已经通知过了，则不需要重复通知 */
-void LMongo::push_result(const struct MongoResult *result)
-{
-    bool is_notify = false;
-
-    lock();
-    if (_result.empty())
-    {
-        is_notify = true;
-    }
-    _result.push(result);
-    unlock();
-
-    if (is_notify) mark(S_MDATA);
 }
 
 /* 在子线程触发查询命令 */
-void LMongo::invoke_command()
+MongoResult *LMongo::do_command(const struct MongoQuery *query)
 {
-    const struct MongoQuery *query = NULL;
-    while ((query = pop_query()))
+    bool ok                 = false;
+    auto begin              = std::chrono::steady_clock::now();
+    struct MongoResult *res = new MongoResult();
+    switch (query->_mqt)
     {
-        bool ok                 = false;
-        clock_t begin           = clock();
-        struct MongoResult *res = new MongoResult();
-        switch (query->_mqt)
-        {
-        case MQT_COUNT: ok = _mongo.count(query, res); break;
-        case MQT_FIND: ok = _mongo.find(query, res); break;
-        case MQT_FMOD: ok = _mongo.find_and_modify(query, res); break;
-        case MQT_INSERT: ok = _mongo.insert(query, res); break;
-        case MQT_UPDATE: ok = _mongo.update(query, res); break;
-        case MQT_REMOVE: ok = _mongo.remove(query, res); break;
-        default:
-        {
-            ERROR("unknow handle mongo command type:%d\n", query->_mqt);
-            delete res;
-            delete query;
-            continue;
-        }
-        }
-
-        if (ok)
-        {
-            assert(0 == res->_error.code);
-        }
-        else
-        {
-            assert(0 != res->_error.code);
-        }
-
-        res->_qid  = query->_qid;
-        res->_mqt  = query->_mqt;
-        res->_time = query->_time;
-        snprintf(res->_clt, MONGO_VAR_LEN, "%s", query->_clt);
-        res->_elaspe = ((float)(clock() - begin)) / CLOCKS_PER_SEC;
-
-        if (query->_query)
-        {
-            char *ctx = bson_as_json(query->_query, NULL);
-            snprintf(res->_query, MONGO_VAR_LEN, "%s", ctx);
-            bson_free(ctx);
-        }
-
-        push_result(res);
-
-        delete query;
+    case MQT_COUNT: ok = _mongo.count(query, res); break;
+    case MQT_FIND: ok = _mongo.find(query, res); break;
+    case MQT_FMOD: ok = _mongo.find_and_modify(query, res); break;
+    case MQT_INSERT: ok = _mongo.insert(query, res); break;
+    case MQT_UPDATE: ok = _mongo.update(query, res); break;
+    case MQT_REMOVE: ok = _mongo.remove(query, res); break;
+    default:
+    {
+        ERROR("unknow handle mongo command type:%d\n", query->_mqt);
+        delete res;
+        return nullptr;
     }
+    }
+
+    assert((ok && 0 == res->_error.code) || (!ok && 0 != res->_error.code));
+
+    res->_qid  = query->_qid;
+    res->_mqt  = query->_mqt;
+    res->_time = query->_time;
+    snprintf(res->_clt, MONGO_VAR_LEN, "%s", query->_clt);
+
+    auto end = std::chrono::steady_clock::now();
+    res->_elaspe =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+    if (query->_query)
+    {
+        char *ctx = bson_as_json(query->_query, NULL);
+        snprintf(res->_query, MONGO_VAR_LEN, "%s", ctx);
+        bson_free(ctx);
+    }
+
+    return res;
 }
 
 // 把对应的json字符串或者lua table参数转换为bson

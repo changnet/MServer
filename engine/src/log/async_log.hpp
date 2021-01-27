@@ -7,7 +7,7 @@
 class AsyncLog final : public Thread
 {
 public:
-    AsyncLog(){};
+    AsyncLog() : Thread("AsyncLog"){};
     ~AsyncLog(){};
 
     size_t busy_job(size_t *finished   = nullptr,
@@ -19,9 +19,7 @@ public:
 
 private:
     // 线程相关，重写基类相关函数
-    void routine() override;
-    bool uninitialize() override;
-    bool initialize() override { return true; }
+    void routine(std::unique_lock<std::mutex> &ul) override;
 
 private:
     class Log _log;
