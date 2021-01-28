@@ -1,6 +1,19 @@
 #include "ev.hpp"
 #include "ev_watcher.hpp"
 
+// minimum timejump that gets detected (if monotonic clock available)
+#define MIN_TIMEJUMP 1.
+
+/*
+ * the heap functions want a real array index. array index 0 is guaranteed to
+ * not be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP
+ * gives the branching factor of the d-tree.
+ */
+
+#define HEAP0             1
+#define HPARENT(k)        ((k) >> 1)
+#define UPHEAP_DONE(p, k) (!(p))
+
 #if USE_EPOLL == 1
     #include "ev_epoll.inl"
 #else
@@ -54,25 +67,11 @@ EV::~EV()
     backend = nullptr;
 }
 
-int32_t EV::run()
+int32_t EV::loop()
 {
-    /* 加载脚本时，可能会卡比较久，因此必须time_update
-     * 必须先调用fd_reify、timers_reify才进入backend_poll，否则因为没有初始化fd、timer
-     * 导致阻塞一段时间后才能收到数据
-     * backend_poll得放在invoke_pending、running之前，因为这些逻辑可能会终止循环。放在
-     * 后面会增加一次backend_poll，这个时间可能为60秒(导致关服要等60秒)
-     */
-    time_update();
-    fd_reify();
-    timers_reify();
-    time_update();
-
     loop_done = false;
-    while (EXPECT_TRUE(!loop_done))
+    do
     {
-        backend->wait(this, wait_time());
-
-        /* update ev_rt_now, do magic */
         time_update();
         int64_t old_now_ms = ev_now_ms;
 
@@ -81,18 +80,20 @@ int32_t EV::run()
          */
         invoke_pending();
 
-        running(ev_now_ms);
+        running();
 
-        fd_reify(); /* update fd-related kernel structures */
+        // 把fd变更设置到epoll中去
+        fd_reify();
 
-        /* queue pending timers and reschedule them */
-        timers_reify(); /* relative timers called last */
+        // 处理timer变更
+        timers_reify();
 
-        /* update time to cancel out callback processing overhead */
         time_update();
 
-        after_run(old_now_ms, ev_now_ms);
-    } /* while */
+        after_run(old_now_ms);
+
+        backend->wait(this, wait_time());
+    } while (EXPECT_TRUE(!loop_done));
 
     return 0;
 }
@@ -197,18 +198,26 @@ void EV::time_update()
 {
     update_clock();
 
-    /* only fetch the realtime clock every 0.5*MIN_TIMEJUMP seconds */
-    /* interpolate in the meantime */
+    /* 直接计算出UTC时间而不通过get_time获取
+     * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
+     * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
+     */
     if (mn_now - now_floor < MIN_TIMEJUMP * .5)
     {
         ev_rt_now = rtmn_diff + mn_now;
         return;
     }
 
-    now_floor = mn_now;
-    ev_rt_now = get_time();
+    now_floor         = mn_now;
+    ev_rt_now         = get_time();
+    EvTstamp old_diff = rtmn_diff;
 
-    /* loop a few times, before making important decisions.
+    /* 当两次diff相差比较大时，说明有人调了UTC时间。由于clock_gettime是一个syscall，可能
+     * 出现mn_now是调整前，ev_rt_now为调整后的情况。
+     * 必须循环几次保证mn_now和ev_rt_now取到的都是调整后的时间
+     *
+     * 参考libev
+     * loop a few times, before making important decisions.
      * on the choice of "4": one iteration isn't enough,
      * in case we get preempted during the calls to
      * get_time and get_clock. a second call is almost guaranteed
@@ -220,9 +229,10 @@ void EV::time_update()
     {
         rtmn_diff = ev_rt_now - mn_now;
 
-        if (EXPECT_TRUE(mn_now - now_floor < MIN_TIMEJUMP * .5))
+        EvTstamp diff = old_diff - rtmn_diff;
+        if (EXPECT_TRUE((diff < 0. ? -diff : diff) < MIN_TIMEJUMP))
         {
-            return; /* all is well */
+            return;
         }
 
         ev_rt_now = get_time();
@@ -230,9 +240,6 @@ void EV::time_update()
         update_clock();
         now_floor = mn_now;
     }
-
-    /* no timer adjustment, as the monotonic clock doesn't jump */
-    /* timers_reschedule (loop, rtmn_diff - odiff) */
 }
 
 void EV::fd_event(int32_t fd, int32_t revents)
@@ -439,7 +446,7 @@ EvTstamp EV::wait_time()
 {
     EvTstamp waittime = 0.;
 
-    waittime = MAX_BLOCKTIME;
+    waittime = BACKEND_MAX_TM;
 
     if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
     {
@@ -451,9 +458,9 @@ EvTstamp EV::wait_time()
 
     /* at this point, we NEED to wait, so we have to ensure */
     /* to pass a minimum nonzero value to the backend */
-    if (EXPECT_FALSE(waittime < EPOLL_MIN_TM))
+    if (EXPECT_FALSE(waittime < BACKEND_MIN_TM))
     {
-        waittime = EPOLL_MIN_TM;
+        waittime = BACKEND_MIN_TM;
     }
 
     return waittime;

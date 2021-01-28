@@ -2,23 +2,6 @@
 
 #include "../global/global.hpp"
 
-#define MIN_TIMEJUMP \
-    1. /* minimum timejump that gets detected (if monotonic clock available) */
-#define MAX_BLOCKTIME \
-    59.743 /* never wait longer than this time (to detect time jumps) */
-
-/*
- * the heap functions want a real array index. array index 0 is guaranteed to
- * not be in-use at any time. the first heap entry is at array [HEAP0]. DHEAP
- * gives the branching factor of the d-tree.
- */
-
-#define HEAP0             1
-#define HPARENT(k)        ((k) >> 1)
-#define UPHEAP_DONE(p, k) (!(p))
-
-using EvTstamp = double;
-
 /* eventmask, revents, events... */
 enum
 {
@@ -53,9 +36,10 @@ typedef struct
 typedef EVTimer *ANHE;
 typedef int32_t ANCHANGE;
 
-/* epoll does sometimes return early, this is just to avoid the worst */
-// TODO:尚不清楚这个机制(libev的 backend_mintime = 1e-3秒)，应该是要传个非0值
-#define EPOLL_MIN_TM 1
+#define BACKEND_MIN_TM 1      ///< 主循环最小循环时间 毫秒
+#define BACKEND_MAX_TM 59.743 ///< 主循环最大阻塞时间 毫秒
+
+using EvTstamp = double;
 
 extern const char *BACKEND_KERNEL;
 
@@ -66,7 +50,7 @@ public:
     EV();
     virtual ~EV();
 
-    int32_t run();
+    int32_t loop();
     int32_t quit();
 
     int32_t io_start(EVIO *w);
@@ -82,7 +66,6 @@ public:
 
     inline int64_t ms_now() { return ev_now_ms; }
     inline EvTstamp now() { return ev_rt_now; }
-    inline const char *backend_kernel() { return BACKEND_KERNEL; }
 
 protected:
     friend class EVBackend;
@@ -104,14 +87,14 @@ protected:
 
     EVBackend *backend;
 
-    int64_t ev_now_ms; // 主循环时间，毫秒
-    EvTstamp ev_rt_now;
-    EvTstamp now_floor; /* last time we refreshed rt_time */
-    EvTstamp mn_now;    /* monotonic clock "now" */
-    EvTstamp rtmn_diff; /* difference realtime - monotonic time */
+    int64_t ev_now_ms; ///< 起服到现在的毫秒
+    EvTstamp ev_rt_now; ///< UTC时间戳(秒，但这个是double，可精确到0.5秒)
+    EvTstamp now_floor; ///< 上一次更新UTC的MONOTONIC时间
+    EvTstamp mn_now;    ///< 起服到现在的秒数(CLOCK_MONOTONIC)
+    EvTstamp rtmn_diff; ///< UTC时间与MONOTONIC时间的差值
 protected:
-    virtual void running(int64_t ms)                   = 0;
-    virtual void after_run(int64_t old_ms, int64_t ms) = 0;
+    virtual void running()                 = 0;
+    virtual void after_run(int64_t old_ms) = 0;
 
     virtual EvTstamp wait_time();
     void fd_change(int32_t fd)

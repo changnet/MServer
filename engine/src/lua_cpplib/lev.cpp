@@ -1,5 +1,3 @@
-#include <signal.h>
-
 #include "lev.hpp"
 #include "ltools.hpp"
 
@@ -12,11 +10,10 @@ LEV::LEV()
     ansendingmax = 0;
     ansendingcnt = 0;
 
-    _lua_gc_tm       = 0;
-    _critical_tm     = -1;
-    _app_ev_interval = 0;
+    _critical_tm = -1;
 
-    _lua_gc_stat = false;
+    _lua_gc_stat       = false;
+    _lua_gc._repeat_ms = 1000;
 }
 
 LEV::~LEV()
@@ -39,7 +36,7 @@ int32_t LEV::backend(lua_State *L)
     loop_done = false;
     lua_gc(L, LUA_GCSTOP, 0); /* 停止主动gc,用自己的策略控制gc */
 
-    run(); /* this won't return until backend stop */
+    loop(); /* this won't return until backend stop */
     return 0;
 }
 
@@ -71,7 +68,7 @@ int32_t LEV::kernel_info(lua_State *L)
     lua_pushstring(L, env);
     lua_pushstring(L, complier);
     lua_pushstring(L, complier_v);
-    lua_pushstring(L, backend_kernel());
+    lua_pushstring(L, BACKEND_KERNEL);
     lua_pushstring(L, __TIMESTAMP__);
 
     return 5;
@@ -165,7 +162,8 @@ int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
         return luaL_error(L, "illegal argument");
     }
 
-    _app_ev_interval = interval;
+    _app_ev._repeat_ms = interval;
+    _app_ev._next_time = ev_now_ms;
     return 0;
 }
 
@@ -263,18 +261,21 @@ void LEV::invoke_sending()
     assert(ansendingcnt >= 0 && ansendingcnt < ansendingmax);
 }
 
-void LEV::invoke_app_ev(int64_t ms_now)
+EvTstamp LEV::next_periodic(Periodic &periodic)
+{
+    // 未启用
+    if (!periodic._repeat_ms) return BACKEND_MAX_TM;
+
+    return 0;
+}
+
+EvTstamp LEV::invoke_app_ev()
 {
     static lua_State *L = StaticGlobal::state();
 
-    if (!_app_ev_interval || _next_app_ev_tm > ms_now) return;
-
-    // TODO:以当前时间为起点。服务器卡了，回调次数就少了，以后有需要再改
-    _next_app_ev_tm = ms_now + _app_ev_interval;
-
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
-    lua_pushinteger(L, ms_now);
+    lua_pushinteger(L, ev_now_ms);
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
         ERROR("invoke_app_ev fail:%s", lua_tostring(L, -1));
@@ -282,13 +283,15 @@ void LEV::invoke_app_ev(int64_t ms_now)
     }
 
     lua_pop(L, 1); /* remove traceback */
+
+    return _app_ev._repeat_ms;
 }
 
 // 计算距离下一次循环时的时间(毫秒)
 EvTstamp LEV::wait_time()
 {
     // TODO:如果有数据未发送，尽快发送(暂定10毫秒，后面再做调试)
-    if (ansendingcnt > 0) return EPOLL_MIN_TM;
+    if (ansendingcnt > 0) return BACKEND_MIN_TM;
 
     EvTstamp waittime = EV::wait_time();
 
@@ -298,47 +301,49 @@ EvTstamp LEV::wait_time()
         waittime = std::min((_next_app_ev_tm - ev_now_ms), (int64_t)waittime);
     }
 
-    if (EXPECT_FALSE(waittime < EPOLL_MIN_TM))
+    if (EXPECT_FALSE(waittime < BACKEND_MIN_TM))
     {
-        waittime = EPOLL_MIN_TM;
+        waittime = BACKEND_MIN_TM;
     }
 
     return waittime;
 }
 
-void LEV::running(int64_t ms_now)
+EvTstamp LEV::invoke_luagc()
 {
-    invoke_sending();
-    invoke_signal();
-    invoke_app_ev(ms_now);
-
-    StaticGlobal::network_mgr()->invoke_delete();
-
     static lua_State *L = StaticGlobal::state();
 
     // TODO:每秒gc一个步骤，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
-    if (_lua_gc_tm != ev_rt_now)
+    if (!_lua_gc_stat)
     {
-        _lua_gc_tm = ev_rt_now;
-
-        if (!_lua_gc_stat)
-        {
-            lua_gc(L, LUA_GCSTEP, 100);
-        }
-        else
-        {
-            STAT_TIME_BEG();
-            lua_gc(L, LUA_GCSTEP, 100);
-            StaticGlobal::statistic()->add_lua_gc(STAT_TIME_END());
-        }
+        lua_gc(L, LUA_GCSTEP, 100);
     }
+    else
+    {
+        STAT_TIME_BEG();
+        lua_gc(L, LUA_GCSTEP, 100);
+        StaticGlobal::statistic()->add_lua_gc(STAT_TIME_END());
+    }
+
+    return 5000;
 }
 
-void LEV::after_run(int64_t ms_old, int64_t ms_now)
+void LEV::running()
+{
+    invoke_sending();
+    invoke_signal();
+    if (next_periodic(_app_ev)) invoke_app_ev();
+    if (next_periodic(_lua_gc)) invoke_luagc();
+
+    StaticGlobal::network_mgr()->invoke_delete();
+}
+
+void LEV::after_run(int64_t ms_old)
 {
     if (EXPECT_FALSE(_critical_tm < 0)) return;
 
-    int64_t ms = ms_now - ms_old;
+    // 如果主循环被阻塞太久，打印日志
+    int64_t ms = ev_now_ms - ms_old;
     if (ms > _critical_tm)
     {
         PRINTF("ev busy:%d msec", ms);

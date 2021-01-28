@@ -13,8 +13,19 @@ class Socket;
 /**
  * event loop, 事件主循环
  */
-class LEV : public EV
+class LEV final : public EV
 {
+public:
+    /**
+     * @brief 定时重复执行的事件
+     * TODO 发起一个timer也可以，但不太确实这些固定的事件对timer性能的影响
+     */
+    struct Periodic
+    {
+        int32_t _repeat_ms; // 多少毫秒重复一次
+        int64_t _next_time; // 下次执行时间
+    };
+
 public:
     ~LEV();
     explicit LEV();
@@ -100,13 +111,16 @@ public:
     void remove_pending(int32_t pending);
 
 private:
-    void running(int64_t ms_now);
+    void running() override;
+    EvTstamp wait_time() override;
+    void after_run(int64_t old_ms_now) override;
+
     void invoke_signal();
     void invoke_sending();
-    void invoke_app_ev(int64_t ms_now);
-    void after_run(int64_t old_ms_now, int64_t ms_now);
+    EvTstamp invoke_luagc();
+    EvTstamp invoke_app_ev();
 
-    EvTstamp wait_time();
+    EvTstamp next_periodic(Periodic &periodic);
 
 private:
     typedef class Socket *ANSENDING;
@@ -116,10 +130,10 @@ private:
     int32_t ansendingmax;
     int32_t ansendingcnt;
 
-    int32_t _critical_tm;     // 每次主循环的临界时间，毫秒
-    EvTstamp _lua_gc_tm;      // 上一次gc的时间戳
-    int64_t _next_app_ev_tm;  // 下次运行脚本主循环的时间戳
-    int32_t _app_ev_interval; // 多少毫秒加高一次到脚本
+    int32_t _critical_tm; // 每次主循环的临界时间，毫秒
+
+    Periodic _lua_gc; // 定时执行lua gc
+    Periodic _app_ev; // 定时回调到脚本
 
     bool _lua_gc_stat; // 是否统计lua gc时间
 };
