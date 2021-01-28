@@ -4,14 +4,14 @@
 #include "../mongo/mongo.hpp"
 #include "../mysql/sql.hpp"
 
-class LEV *StaticGlobal::_ev                  = NULL;
-class LState *StaticGlobal::_state            = NULL;
-class SSLMgr *StaticGlobal::_ssl_mgr          = NULL;
-class CodecMgr *StaticGlobal::_codec_mgr      = NULL;
-class Statistic *StaticGlobal::_statistic     = NULL;
-class AsyncLog *StaticGlobal::_async_log      = NULL;
-class ThreadMgr *StaticGlobal::_thread_mgr    = NULL;
-class LNetworkMgr *StaticGlobal::_network_mgr = NULL;
+class LEV *StaticGlobal::_ev                  = nullptr;
+class LState *StaticGlobal::_state            = nullptr;
+class SSLMgr *StaticGlobal::_ssl_mgr          = nullptr;
+class CodecMgr *StaticGlobal::_codec_mgr      = nullptr;
+class Statistic *StaticGlobal::_statistic     = nullptr;
+class AsyncLog *StaticGlobal::_async_log      = nullptr;
+class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
+class LNetworkMgr *StaticGlobal::_network_mgr = nullptr;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::_initializer;
@@ -113,7 +113,7 @@ int32_t ssl_init()
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
 #else
-    OPENSSL_init_ssl(0, NULL);
+    OPENSSL_init_ssl(0, nullptr);
 #endif
 
     SSL_load_error_strings();

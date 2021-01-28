@@ -107,7 +107,6 @@ private:
     void after_run(int64_t old_ms_now, int64_t ms_now);
 
     EvTstamp wait_time();
-    static void sig_handler(int32_t signum);
 
 private:
     typedef class Socket *ANSENDING;
@@ -123,6 +122,4 @@ private:
     int32_t _app_ev_interval; // 多少毫秒加高一次到脚本
 
     bool _lua_gc_stat; // 是否统计lua gc时间
-
-    static uint32_t sig_mask;
 };

@@ -1,7 +1,8 @@
-#include <signal.h>
+#include <csignal>
 #include "thread.hpp"
 #include "../system/static_global.hpp"
 
+std::atomic<uint32_t> Thread::_sig_mask(0);
 std::atomic<int32_t> Thread::_id_seed(0);
 
 Thread::Thread(const char *name)
@@ -28,12 +29,42 @@ void Thread::signal_block()
      * 因此，对于1，当前框架并未使用。对于2，默认abort并coredump。对于3，我们希望主线程
      * 收到而不希望子线程收到，故在这里要block掉。
      */
+
+    /* TODO csignal中提供了部分信号处理的接口，但没提供屏蔽信号的
+     * linux下，使用pthread的接口应该是兼容的，但无法保证所有std::thread的实现都使用
+     * pthread。因此不屏蔽子线程信号了，直接存起来，由主线程定时处理
+     */
+
+    /*
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
     sigaddset(&mask, SIGTERM);
 
-    pthread_sigmask(SIG_BLOCK, &mask, NULL);
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);*/
+}
+
+void Thread::sig_handler(int32_t signum)
+{
+    // 把有线程收到的信号存这里，由主线程定时处理
+    _sig_mask |= (1 << signum);
+}
+
+void Thread::signal(int32_t sig, int32_t action)
+{
+    /* check /usr/include/bits/signum.h for more */
+    if (0 == action)
+    {
+        ::signal(sig, SIG_DFL);
+    }
+    else if (1 == action)
+    {
+        ::signal(sig, SIG_IGN);
+    }
+    else
+    {
+        ::signal(sig, sig_handler);
+    }
 }
 
 /* 开始线程 */
@@ -50,6 +81,8 @@ bool Thread::start(int32_t us)
 /* 终止线程 */
 void Thread::stop()
 {
+    // 只能在主线程调用
+    assert(std::this_thread::get_id() != _thread.get_id());
     if (!active())
     {
         ERROR("thread::stop:thread not running");
@@ -57,6 +90,7 @@ void Thread::stop()
     }
 
     unmark(S_RUN);
+    wakeup();
     _thread.join();
 
     StaticGlobal::thread_mgr()->pop(_id);

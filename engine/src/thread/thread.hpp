@@ -143,8 +143,34 @@ void child()
 class Thread
 {
 public:
+    /// 线程的状态，按位取值
+    enum Status
+    {
+        S_NONE  = 0,
+        S_EXIT  = 1,   /// 子线程退出
+        S_ERROR = 2,   /// 子线程发生错误
+        S_RUN   = 4,   /// 子线程是否已启动
+        S_JOIN  = 16,  /// 子线程是否已join
+        S_BUSY  = 32,  /// 子线程是否繁忙
+        S_WAIT  = 64,  /// 当关服的时候，是否需要等待这个线程
+        S_MDATA = 128, /// 主线程有数据需要处理
+        S_SDATA = 256, /// 子线程有数据需要处理
+    };
+
+public:
     virtual ~Thread();
     explicit Thread(const char *name);
+
+    /// 注册信号处理
+    static void signal(int32_t sig, int32_t action);
+    /// 获取信号掩码并重置原有信号掩码
+    static int32_t signal_mask_once()
+    {
+        int32_t sig_mask = _sig_mask;
+
+        _sig_mask = 0;
+        return sig_mask;
+    }
 
     /// 停止线程
     void stop();
@@ -178,21 +204,6 @@ public:
     }
 
     static void signal_block();
-
-public:
-    /// 线程的状态，按位取值
-    enum Status
-    {
-        S_NONE  = 0,
-        S_EXIT  = 1,   /// 子线程退出
-        S_ERROR = 2,   /// 子线程发生错误
-        S_RUN   = 4,   /// 子线程是否已启动
-        S_JOIN  = 16,  /// 子线程是否已join
-        S_BUSY  = 32,  /// 子线程是否繁忙
-        S_WAIT  = 64,  /// 当关服的时候，是否需要等待这个线程
-        S_MDATA = 128, /// 主线程有数据需要处理
-        S_SDATA = 256, /// 子线程有数据需要处理
-    };
 
 protected:
     /// 标记状态
@@ -233,6 +244,7 @@ protected:
 
 private:
     void spawn(int32_t us);
+    static void sig_handler(int32_t signum);
 
 private:
     int32_t _id;                  /// 线程自定义id
@@ -242,6 +254,10 @@ private:
     std::mutex _mutex;
     std::thread _thread;
     std::condition_variable _cv;
+
+    /// 各线程收到的信号统一存这里，由主线程处理
+    /// 一般的做法是子线程屏蔽信号，由主线程接收，但c++标准里不提供屏蔽的接口
+    static std::atomic<uint32_t> _sig_mask;
 
     // 用于产生自定义线程id
     // std::thread::id不能保证为数字(linux下一般为pthread_t)，不方便传参

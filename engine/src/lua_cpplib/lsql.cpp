@@ -49,7 +49,7 @@ int32_t LSql::start(lua_State *L)
 
     _sql.set(host, port, usr, pwd, dbname);
 
-    Thread::start(5); /* 10s ping一下mysql */
+    Thread::start(5000000); /* N秒 ping一下mysql */
     return 0;
 }
 
@@ -145,6 +145,7 @@ struct sql_res *LSql::do_sql(const struct SqlQuery *query)
 
 int32_t LSql::stop(lua_State *L)
 {
+    UNUSED(L);
     _valid = -1;
     Thread::stop();
 

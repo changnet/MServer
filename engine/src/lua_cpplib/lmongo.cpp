@@ -31,7 +31,7 @@ int32_t LMongo::start(lua_State *L)
     const char *db     = luaL_checkstring(L, 5);
 
     _mongo.set(ip, port, usr, pwd, db);
-    Thread::start(5);
+    Thread::start(5000000);
 
     return 0;
 }

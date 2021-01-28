@@ -4,10 +4,7 @@
 #include "ltools.hpp"
 
 #include "../net/socket.hpp"
-
 #include "../system/static_global.hpp"
-
-uint32_t LEV::sig_mask = 0;
 
 LEV::LEV()
 {
@@ -32,6 +29,7 @@ LEV::~LEV()
 
 int32_t LEV::exit(lua_State *L)
 {
+    UNUSED(L);
     EV::quit();
     return 0;
 }
@@ -146,20 +144,14 @@ int32_t LEV::set_gc_stat(lua_State *L)
 
 int32_t LEV::signal(lua_State *L)
 {
-    int32_t sig        = luaL_checkinteger(L, 1);
-    int32_t sig_action = luaL_optinteger(L, 2, -1);
+    int32_t sig    = luaL_checkinteger(L, 1);
+    int32_t action = luaL_optinteger(L, 2, -1);
     if (sig < 1 || sig > 31)
     {
         return luaL_error(L, "illegal signal id:%d", sig);
     }
 
-    /* check /usr/include/bits/signum.h for more */
-    if (0 == sig_action)
-        ::signal(sig, SIG_DFL);
-    else if (1 == sig_action)
-        ::signal(sig, SIG_IGN);
-    else
-        ::signal(sig, sig_handler);
+    Thread::signal(sig, action);
 
     return 0;
 }
@@ -184,18 +176,14 @@ int32_t LEV::set_critical_time(lua_State *L) // 设置主循环临界时间
     return 0;
 }
 
-void LEV::sig_handler(int32_t signum)
-{
-    sig_mask |= (1 << signum);
-}
-
 void LEV::invoke_signal()
 {
     static lua_State *L = StaticGlobal::state();
     LUA_PUSHTRACEBACK(L);
 
-    int signum  = 0;
-    int32_t top = lua_gettop(L);
+    int signum       = 0;
+    int32_t top      = lua_gettop(L);
+    int32_t sig_mask = Thread::signal_mask_once();
     while (sig_mask != 0)
     {
         if (sig_mask & 1)
@@ -212,7 +200,6 @@ void LEV::invoke_signal()
         sig_mask = (sig_mask >> 1);
     }
 
-    sig_mask = 0;
     lua_remove(L, top); /* remove traceback */
 }
 
