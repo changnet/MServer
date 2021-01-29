@@ -36,8 +36,8 @@ typedef struct
 typedef EVTimer *ANHE;
 typedef int32_t ANCHANGE;
 
-#define BACKEND_MIN_TM 1      ///< 主循环最小循环时间 毫秒
-#define BACKEND_MAX_TM 59.743 ///< 主循环最大阻塞时间 毫秒
+#define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
+#define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
 
 using EvTstamp = double;
 
@@ -86,6 +86,8 @@ protected:
     uint32_t timercnt;
 
     EVBackend *backend;
+    EvTstamp _busy_time;    ///< 上一次执行消耗的时间，毫秒
+    EvTstamp _backend_time; ///< backend执行的时间，毫秒
 
     int64_t ev_now_ms; ///< 起服到现在的毫秒
     EvTstamp ev_rt_now; ///< UTC时间戳(秒，但这个是double，可精确到0.5秒)
@@ -93,10 +95,8 @@ protected:
     EvTstamp mn_now;    ///< 起服到现在的秒数(CLOCK_MONOTONIC)
     EvTstamp rtmn_diff; ///< UTC时间与MONOTONIC时间的差值
 protected:
-    virtual void running()                 = 0;
-    virtual void after_run(int64_t old_ms) = 0;
+    virtual void running() = 0;
 
-    virtual EvTstamp wait_time();
     void fd_change(int32_t fd)
     {
         ++fdchangecnt;

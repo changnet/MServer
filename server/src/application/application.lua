@@ -3,11 +3,13 @@
 -- xzc
 
 -- app进程基类
+local Application = oo.class( ... )
 
 require "modules.system.define"
 local AutoId = require "modules.system.auto_id"
 
-local Application = oo.class( ... )
+local g_app = nil
+local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
 
 -- 信号处理，默认情况下退出
 --[[
@@ -62,8 +64,6 @@ local Application = oo.class( ... )
 ]]
 local sig_action = {} -- 注意，这个热更要重新注册。关服的话为默认action则无所谓
 
-
-
 function sig_handler( signum )
     if sig_action[signum] then return sig_action[signum]() end
 
@@ -76,54 +76,43 @@ function sig_handler( signum )
     end
 end
 
+-- 主循环，由C++回调
+function application_ev(ms_now)
+    if ms_now > next_gc then
+        next_gc = ms_now + 1000 -- 多久执行一次？
+        if collectgarbage("step", 100) then
+            PRINTF("gc finished, mem %f kb", collectgarbage("count"))
+        end
+    end
+    g_app:ev(ms_now)
+end
+--//////////////////////////////////////////////////////////////////////////////
+
 -- 初始化
 function Application:__init( cmd, opts )
+    g_app = self
     self.init_list = {} -- 初始化列表
-    self.cmd, self.name, self.index, self.id =
-        cmd, opts.app,
-        assert(tonumber(opts.index), "miss argument --index"),
-        assert(tonumber(opts.id), "miss argument --id")
+    -- self.cmd, self.name, self.index, self.id =
+    --     cmd, opts.app,
+    --     assert(tonumber(opts.index), "miss argument --index"),
+    --     assert(tonumber(opts.id), "miss argument --id")
 
-    self.starttime = ev:time()
-    self.session = self:srv_session(
-        self.name,tonumber(self.index),tonumber(self.id) )
+    -- self.start_time = ev:time()
+    -- self.session = self:srv_session(
+    --     self.name,tonumber(self.index),tonumber(self.id) )
 
-    -- 设置当前session到C++
-    network_mgr:set_curr_session( self.session )
+    -- -- 设置当前session到C++
+    -- network_mgr:set_curr_session( self.session )
 
-    -- 系统定时器
-    self.timer_5scb = {}
-    self.auto_id = AutoId()
-end
+    -- -- 系统定时器
+    -- self.timer_5scb = {}
+    -- self.auto_id = AutoId()
+    -- 停用自动增量gc，在主循环里手动调用(TODO: 测试5.4的新gc效果)
+    collectgarbage("stop")
 
--- 生成服务器session id
--- @name  服务器名称，如gateway、world...
--- @index 服务器索引，如多个gateway，分别为1,2...
--- @id 服务器id，与运维相关。开了第N个服
-function Application:srv_session( name,index,id )
-    local ty = SRV_NAME[name]
-
-    assert( ty,"server name type not define" )
-    assert( index < (1 << 24),"server index out of boundry" )
-    assert( id < (1 << 16),   "server id out of boundry" )
-
-    -- int32 ,8bits is ty,8bits is index,16bits is id
-    return (ty << 24) + (index <<16) + id
-end
-
--- 解析session id
-function Application:srv_session_parse( session )
-    local ty = session >> 24;
-    local index = (session >> 16) & 0xFF
-    local id = session & 0xFFFF
-
-    return ty,index,id
-end
-
--- 信号处理
-function Application:reg_sig_action( signum,action )
-    ev:signal( signum )
-    sig_action[signum] = action
+    -- 关服信号
+    ev:signal(2)
+    ev:signal(15)
 end
 
 -- 准备关服
@@ -138,25 +127,11 @@ function Application:check_shutdown()
         return true
     end
 
-
     SYNC_PRINTF(
         "thread %s busy,%d finished job,%d unfinished job,waiting ...",
         who,finished,unfinished )
 
     return false
-end
-
--- 关服处理
-function Application:shutdown()
-    g_log_mgr:close() -- 关闭文件日志线程及数据库日志线程
-    g_mysql_mgr:stop() -- 关闭mysql连接
-
-    ev:exit()
-end
-
--- 加载各个子模块
-function Application:module_initialize()
-    require "modules.module_header"
 end
 
 -- 设置初始化后续动作
@@ -187,12 +162,12 @@ end
 
 -- 进程初始化
 function Application:initialize()
-    if g_setting.gc_stat then ev:set_gc_stat( true ) end
+    -- if not g_command_mgr:load_schema() then
+    --     os.exit( 1 )
+    -- end
+    if #self.init_list == 0 then return self:final_initialize() end
 
-    if not g_command_mgr:load_schema() then
-        os.exit( 1 )
-    end
-    for _,init in pairs( self.init_list ) do
+    for _, init in pairs( self.init_list ) do
         if not init.after and init.action then init.action( self ) end
     end
 end
@@ -200,13 +175,59 @@ end
 -- 初始化完成
 function Application:final_initialize()
     -- 修正为整点触发(X分0秒)，但后面调时间就不对了
-    local next = 5 - (ev:time() % 5)
-    self.timer = g_timer_mgr:interval( next,5, -1, self,self.do_timer )
+    -- local next = 5 - (ev:time() % 5)
+    -- self.timer = g_timer_mgr:interval( next,5, -1, self,self.do_timer )
 
     self.ok = true
-    PRINTF( "%s server(0x%.8X) start OK",self.name,self.session )
+    PRINTF( "Application %s initialize OK",self.name )
 end
 
+
+-- 关服处理
+function Application:shutdown()
+    ev:exit()
+end
+
+-- 运行进程
+function Application:exec()
+    self:initialize()
+
+    ev:backend()
+end
+
+-- 主循环
+function Application:ev(ms_now)
+end
+
+-- /////////////////////////////////////////////////////////////////////////////
+-- 生成服务器session id
+-- @name  服务器名称，如gateway、world...
+-- @index 服务器索引，如多个gateway，分别为1,2...
+-- @id 服务器id，与运维相关。开了第N个服
+function Application:srv_session( name,index,id )
+    local ty = SRV_NAME[name]
+
+    assert( ty,"server name type not define" )
+    assert( index < (1 << 24),"server index out of boundry" )
+    assert( id < (1 << 16),   "server id out of boundry" )
+
+    -- int32 ,8bits is ty,8bits is index,16bits is id
+    return (ty << 24) + (index <<16) + id
+end
+
+-- 解析session id
+function Application:srv_session_parse( session )
+    local ty = session >> 24;
+    local index = (session >> 16) & 0xFF
+    local id = session & 0xFFFF
+
+    return ty,index,id
+end
+
+-- 加载各个子模块
+function Application:module_initialize()
+    require "modules.module_header"
+end
 
 -- 定时器事件
 function Application:do_timer()
@@ -226,15 +247,6 @@ function Application:remove_5s_timer( id )
     self.timer_5scb[id] = nil
 end
 
--- 运行进程
-function Application:exec()
-    self:reg_sig_action( 2 )
-    self:reg_sig_action( 15 )
-
-    self:initialize()
-
-    ev:backend()
-end
 
 -- 连接db
 function Application:db_initialize()

@@ -8,26 +8,17 @@ json = require "lua_parson"
 
 g_timer_mgr = require "timer.timer_mgr"
 
-function sig_handler( signum )
-    if g_mysql_mgr   then g_mysql_mgr:stop()   end
-    if g_mongodb_mgr then g_mongodb_mgr:stop() end
+local Application = require "application.application"
 
-    if g_log_mgr then g_log_mgr:stop(); end
-    ev:exit()
-end
-
-local App = oo.class( ... )
+local App = oo.class( ...,Application )
 
 -- 初始化
 function App:__init( cmd, opts )
+    Application.__init(self)
     self.cmd, self.name, self.filter = cmd, opts.app, opts.filter
 end
 
--- 重写关服接口
-function App:exec()
-    ev:signal( 2 );
-    ev:signal( 15 );
-
+function App:final_initialize()
     require "global.test"
     t_setup({
         print = PRINT,
@@ -41,7 +32,7 @@ function App:exec()
             end
         },
         -- 过滤器，允许只执行一部分测试
-        -- ./start.sh test 1 1 https 只执行名字包含https的测试
+        -- ./start.sh test --filter=https 只执行名字包含https的测试
         filter = self.filter,
         time_update = function()
             ev:time_update()
@@ -65,7 +56,6 @@ function App:exec()
 
     -- vd( statistic.dump() )
     t_run()
-    ev:backend()
 end
 
 return App

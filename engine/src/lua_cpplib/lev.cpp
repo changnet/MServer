@@ -10,10 +10,8 @@ LEV::LEV()
     ansendingmax = 0;
     ansendingcnt = 0;
 
-    _critical_tm = -1;
-
-    _lua_gc_stat       = false;
-    _lua_gc._repeat_ms = 1000;
+    _critical_tm       = -1;
+    _app_ev._repeat_ms = 60000;
 }
 
 LEV::~LEV()
@@ -33,8 +31,8 @@ int32_t LEV::exit(lua_State *L)
 
 int32_t LEV::backend(lua_State *L)
 {
+    UNUSED(L);
     loop_done = false;
-    lua_gc(L, LUA_GCSTOP, 0); /* 停止主动gc,用自己的策略控制gc */
 
     loop(); /* this won't return until backend stop */
     return 0;
@@ -124,19 +122,6 @@ int32_t LEV::real_ms_time(lua_State *L)
 {
     lua_pushinteger(L, get_ms_time());
     return 1;
-}
-
-// 设置lua gc参数
-int32_t LEV::set_gc_stat(lua_State *L)
-{
-    _lua_gc_stat = lua_toboolean(L, 1);
-
-    if (lua_isboolean(L, 2) && lua_toboolean(L, 2))
-    {
-        StaticGlobal::statistic()->reset_lua_gc();
-    }
-
-    return 0;
 }
 
 int32_t LEV::signal(lua_State *L)
@@ -258,15 +243,35 @@ void LEV::invoke_sending()
     }
 
     ansendingcnt = pos;
+    // 如果还有数据未发送，尽快下发
+    // TODO 这个取值大概是多少合适？
+    if (ansendingcnt > 0) _backend_time = BACKEND_MIN_TM;
     assert(ansendingcnt >= 0 && ansendingcnt < ansendingmax);
 }
 
 EvTstamp LEV::next_periodic(Periodic &periodic)
 {
-    // 未启用
-    if (!periodic._repeat_ms) return BACKEND_MAX_TM;
+    EvTstamp tm = periodic._next_time - ev_now_ms;
+    if (tm <= 0)
+    {
+        if (_backend_time > periodic._repeat_ms)
+        {
+            _backend_time = periodic._repeat_ms;
+        }
 
-    return 0;
+        // TODO 当主循环卡了，这两个表现是不一样的，后续有需要再改
+        // periodic._next_time += periodic._repeat_ms;
+        periodic._next_time = ev_now_ms + periodic._repeat_ms;
+        return true;
+    }
+    else
+    {
+        if (_backend_time > tm)
+        {
+            _backend_time = tm;
+        }
+        return false;
+    }
 }
 
 EvTstamp LEV::invoke_app_ev()
@@ -287,65 +292,17 @@ EvTstamp LEV::invoke_app_ev()
     return _app_ev._repeat_ms;
 }
 
-// 计算距离下一次循环时的时间(毫秒)
-EvTstamp LEV::wait_time()
-{
-    // TODO:如果有数据未发送，尽快发送(暂定10毫秒，后面再做调试)
-    if (ansendingcnt > 0) return BACKEND_MIN_TM;
-
-    EvTstamp waittime = EV::wait_time();
-
-    // 在定时器和下一次脚本回调之间选一个最接近的数据
-    if (_app_ev_interval)
-    {
-        waittime = std::min((_next_app_ev_tm - ev_now_ms), (int64_t)waittime);
-    }
-
-    if (EXPECT_FALSE(waittime < BACKEND_MIN_TM))
-    {
-        waittime = BACKEND_MIN_TM;
-    }
-
-    return waittime;
-}
-
-EvTstamp LEV::invoke_luagc()
-{
-    static lua_State *L = StaticGlobal::state();
-
-    // TODO:每秒gc一个步骤，太频繁浪费性能,间隔太大导致内存累积，需要根据项目调整
-    if (!_lua_gc_stat)
-    {
-        lua_gc(L, LUA_GCSTEP, 100);
-    }
-    else
-    {
-        STAT_TIME_BEG();
-        lua_gc(L, LUA_GCSTEP, 100);
-        StaticGlobal::statistic()->add_lua_gc(STAT_TIME_END());
-    }
-
-    return 5000;
-}
-
 void LEV::running()
 {
+    // 如果主循环被阻塞太久，打印日志
+    if (_busy_time > _critical_tm)
+    {
+        PRINTF("ev busy:%.3f msec", _busy_time);
+    }
+
     invoke_sending();
     invoke_signal();
     if (next_periodic(_app_ev)) invoke_app_ev();
-    if (next_periodic(_lua_gc)) invoke_luagc();
 
     StaticGlobal::network_mgr()->invoke_delete();
-}
-
-void LEV::after_run(int64_t ms_old)
-{
-    if (EXPECT_FALSE(_critical_tm < 0)) return;
-
-    // 如果主循环被阻塞太久，打印日志
-    int64_t ms = ev_now_ms - ms_old;
-    if (ms > _critical_tm)
-    {
-        PRINTF("ev busy:%d msec", ms);
-    }
 }

@@ -100,24 +100,14 @@ public:
      */
     int32_t set_app_ev(lua_State *L);
 
-    /**
-     * 设置脚本gc统计
-     * @param stat boolean,是否统计gc
-     * @param reset 可选参数，boolean，是否重置之前的统计数据
-     */
-    int32_t set_gc_stat(lua_State *L);
-
     int32_t pending_send(class Socket *s);
     void remove_pending(int32_t pending);
 
 private:
     void running() override;
-    EvTstamp wait_time() override;
-    void after_run(int64_t old_ms_now) override;
 
     void invoke_signal();
     void invoke_sending();
-    EvTstamp invoke_luagc();
     EvTstamp invoke_app_ev();
 
     EvTstamp next_periodic(Periodic &periodic);
@@ -132,8 +122,5 @@ private:
 
     int32_t _critical_tm; // 每次主循环的临界时间，毫秒
 
-    Periodic _lua_gc; // 定时执行lua gc
     Periodic _app_ev; // 定时回调到脚本
-
-    bool _lua_gc_stat; // 是否统计lua gc时间
 };

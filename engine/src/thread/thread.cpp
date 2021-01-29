@@ -70,6 +70,9 @@ void Thread::signal(int32_t sig, int32_t action)
 /* 开始线程 */
 bool Thread::start(int32_t us)
 {
+    // 只能在主线程调用，threadmgr没加锁
+    assert(std::this_thread::get_id() != _thread.get_id());
+
     mark(S_RUN);
     _thread = std::thread(&Thread::spawn, this, us);
 
@@ -81,7 +84,7 @@ bool Thread::start(int32_t us)
 /* 终止线程 */
 void Thread::stop()
 {
-    // 只能在主线程调用
+    // 只能在主线程调用，threadmgr没加锁
     assert(std::this_thread::get_id() != _thread.get_id());
     if (!active())
     {
@@ -108,7 +111,6 @@ void Thread::spawn(int32_t us)
     }
 
     std::chrono::microseconds timeout(us);
-
     {
         // unique_lock在构建时会加锁，然后由wait_for解锁并进入等待
         // 当条件满足时，wait_for返回并加锁，最后unique_lock析构时解锁

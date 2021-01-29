@@ -39,18 +39,13 @@ function App:final_initialize()
     g_entity_mgr = _G.g_entity_mgr
 end
 
--- 重写关服接口
-function App:shutdown()
-    Application.shutdown( self )
-end
-
 -- 加载全服邮件
 function App:dungeon_initialize()
     g_dungeon_mgr:init_static_dungeon()
 end
 
--- 主事件循环，设置了ev:set_app_ev后由C++回调
-function application_ev( ms_now )
+-- 主事件循环
+function App:ev( ms_now )
     g_entity_mgr:routine( ms_now )
 end
 

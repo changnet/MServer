@@ -43,7 +43,10 @@ EV::EV()
     now_floor = mn_now;
     rtmn_diff = ev_rt_now - mn_now;
 
-    backend = new EVBackend();
+    _busy_time = 0;
+
+    backend       = new EVBackend();
+    _backend_time = BACKEND_MAX_TM;
 }
 
 EV::~EV()
@@ -69,31 +72,50 @@ EV::~EV()
 
 int32_t EV::loop()
 {
-    loop_done = false;
-    do
+    // 脚本可能加载了很久才进入loop，需要及时更新时间
+    time_update();
+
+    /*
+     * 这个循环里执行的顺序有特殊要求
+     * 1. 检测loop_done必须在invoke_pending之后，中间不能执行wait，不然设置loop_done
+     * 为false后无法停服
+     * 2. wait的前后必须执行time_update，不然计算出来的时间不准
+     * 3. 计算wait的时间必须在wait之前，不能在invoke_pending的时候一般执行逻辑一边计算。
+     * 因为执行逻辑可能会耗很长时间，那时候计算的时间是不准的
+     */
+
+    loop_done       = false;
+    int64_t last_ms = ev_now_ms;
+    while (EXPECT_TRUE(!loop_done))
     {
-        time_update();
-        int64_t old_now_ms = ev_now_ms;
-
-        /* 先处理完上一次的阻塞的IO和定时器再调用 fd_reify和timers_reify
-         * 因为在处理过程中可能会增删fd、timer
-         */
-        invoke_pending();
-
-        running();
-
         // 把fd变更设置到epoll中去
         fd_reify();
+
+        time_update();
+        _backend_time = ev_now_ms - last_ms;
+
+        EvTstamp backend_time = BACKEND_MAX_TM;
+        if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
+        {
+            EvTstamp to = 1e3 * ((timers[HEAP0])->at - mn_now);
+            if (backend_time > to) backend_time = to;
+        }
+        if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
+        {
+            backend_time = BACKEND_MIN_TM;
+        }
+        backend->wait(this, backend_time);
+
+        time_update();
 
         // 处理timer变更
         timers_reify();
 
-        time_update();
+        // 触发io和timer事件
+        invoke_pending();
 
-        after_run(old_now_ms);
-
-        backend->wait(this, wait_time());
-    } while (EXPECT_TRUE(!loop_done));
+        running(); // 执行其他逻辑
+    }
 
     return 0;
 }
@@ -439,29 +461,4 @@ void EV::reheap(ANHE *heap, int32_t N)
     {
         up_heap(heap, i + HEAP0);
     }
-}
-
-/* calculate blocking time,milliseconds */
-EvTstamp EV::wait_time()
-{
-    EvTstamp waittime = 0.;
-
-    waittime = BACKEND_MAX_TM;
-
-    if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
-    {
-        EvTstamp to = (timers[HEAP0])->at - mn_now;
-        if (waittime > to) waittime = to;
-    }
-
-    waittime = waittime * 1e3; // to milliseconds
-
-    /* at this point, we NEED to wait, so we have to ensure */
-    /* to pass a minimum nonzero value to the backend */
-    if (EXPECT_FALSE(waittime < BACKEND_MIN_TM))
-    {
-        waittime = BACKEND_MIN_TM;
-    }
-
-    return waittime;
 }
