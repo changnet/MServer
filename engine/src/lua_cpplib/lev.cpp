@@ -245,7 +245,7 @@ void LEV::invoke_sending()
     ansendingcnt = pos;
     // 如果还有数据未发送，尽快下发
     // TODO 这个取值大概是多少合适？
-    if (ansendingcnt > 0) _backend_time = BACKEND_MIN_TM;
+    if (ansendingcnt > 0) _backend_time_coarse = BACKEND_MIN_TM;
     assert(ansendingcnt >= 0 && ansendingcnt < ansendingmax);
 }
 
@@ -254,9 +254,9 @@ EvTstamp LEV::next_periodic(Periodic &periodic)
     EvTstamp tm = periodic._next_time - ev_now_ms;
     if (tm <= 0)
     {
-        if (_backend_time > periodic._repeat_ms)
+        if (_backend_time_coarse > periodic._repeat_ms)
         {
-            _backend_time = periodic._repeat_ms;
+            _backend_time_coarse = periodic._repeat_ms;
         }
 
         // TODO 当主循环卡了，这两个表现是不一样的，后续有需要再改
@@ -266,9 +266,9 @@ EvTstamp LEV::next_periodic(Periodic &periodic)
     }
     else
     {
-        if (_backend_time > tm)
+        if (_backend_time_coarse > tm)
         {
-            _backend_time = tm;
+            _backend_time_coarse = tm;
         }
         return false;
     }

@@ -45,8 +45,8 @@ EV::EV()
 
     _busy_time = 0;
 
-    backend       = new EVBackend();
-    _backend_time = BACKEND_MAX_TM;
+    backend              = new EVBackend();
+    _backend_time_coarse = BACKEND_MAX_TM;
 }
 
 EV::~EV()
@@ -92,9 +92,9 @@ int32_t EV::loop()
         fd_reify();
 
         time_update();
-        _backend_time = ev_now_ms - last_ms;
+        _busy_time = ev_now_ms - last_ms;
 
-        EvTstamp backend_time = BACKEND_MAX_TM;
+        EvTstamp backend_time = _backend_time_coarse;
         if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
         {
             EvTstamp to = 1e3 * ((timers[HEAP0])->at - mn_now);
@@ -107,6 +107,11 @@ int32_t EV::loop()
         backend->wait(this, backend_time);
 
         time_update();
+
+        last_ms = ev_now_ms;
+
+        // 这个时间由执行逻辑时计算出来，使用这个时间的说明对精度要求不高
+        _backend_time_coarse = BACKEND_MAX_TM;
 
         // 处理timer变更
         timers_reify();
