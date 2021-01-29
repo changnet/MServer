@@ -129,6 +129,17 @@ void child()
     }
 }
 ```
+
+////////////////////////////////////////////////////////////////////////////////
+!!!!!!!! 关于线程唤醒
+子线程是单任务的（写文件、操作数据库等），因此可以用阻塞的方式等待数据，采用socket、
+socketpair、condition_variable问题都不大。但当子线程返回数据给主线程时，主线程是多任务的，
+可能处理于epoll_wait，无法用condition_variable来唤醒。
+
+旧版本(pthread版本)使用socketpair来唤醒主线程。现在使用std::thread后，由于socketpair不是
+C++标准的内容，改用busy wait的方式，即主线程每5ms查询一次子线程的数据。
+
+改用busy wait后，空载CPU会上涨1%左右
 */
 
 #include <mutex>
@@ -203,6 +214,9 @@ public:
         _status = busy ? _status | S_WAIT : _status & (~S_WAIT);
     }
 
+    // 主线程逻辑
+    virtual void main_routine() {}
+
     static void signal_block();
 
 protected:
@@ -239,8 +253,6 @@ protected:
 
     // 子线程逻辑(注意执行该函数已持有锁，如果执行耗时操作需要解锁)
     virtual void routine(std::unique_lock<std::mutex> &ul) = 0;
-    // 主线程逻辑
-    virtual void main_routine() {}
 
 private:
     void spawn(int32_t us);

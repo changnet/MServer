@@ -108,9 +108,9 @@ private:
 
     void invoke_signal();
     void invoke_sending();
-    EvTstamp invoke_app_ev();
+    void invoke_app_ev();
 
-    EvTstamp next_periodic(Periodic &periodic);
+    bool next_periodic(Periodic &periodic);
 
 private:
     typedef class Socket *ANSENDING;
@@ -123,4 +123,5 @@ private:
     int32_t _critical_tm; // 每次主循环的临界时间，毫秒
 
     Periodic _app_ev; // 定时回调到脚本
+    Periodic _thread_routine; // 定时处理线程数据
 };

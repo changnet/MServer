@@ -89,16 +89,13 @@ void LStatistic::dump_base_counter(const Statistic::BaseCounterType &counter,
 
 void LStatistic::dump_thread(lua_State *L)
 {
-    const ThreadMgr::ThreadMap &threads =
-        StaticGlobal::thread_mgr()->get_threads();
+    auto &threads = StaticGlobal::thread_mgr()->get_threads();
 
     int32_t index = 1;
     lua_newtable(L);
-    ThreadMgr::ThreadMap::const_iterator itr = threads.begin();
-    while (itr != threads.end())
-    {
-        class Thread *thread = itr->second;
 
+    for (auto &thread : threads)
+    {
         size_t finished   = 0;
         size_t unfinished = 0;
         thread->busy_job(&finished, &unfinished);
@@ -117,7 +114,6 @@ void LStatistic::dump_thread(lua_State *L)
         lua_rawseti(L, -2, index);
 
         index++;
-        itr++;
     }
 }
 

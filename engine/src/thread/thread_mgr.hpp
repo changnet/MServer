@@ -1,26 +1,29 @@
 #pragma once
 
-#include <map>
 #include "thread.hpp"
 
+/// 线程管理
 class ThreadMgr
 {
-public:
-    using ThreadMap = std::map<int32_t, class Thread *>;
-
 public:
     ThreadMgr();
     ~ThreadMgr();
 
-    void pop(pthread_t thd_id);
+    void pop(int32_t thd_id);
     void push(class Thread *thd);
 
+    /// 停止所有线程
     void stop();
+
+    /// 主线程定时处理子线程的数据
+    void main_routine();
+
+    /// 查找当前繁忙的子线程
     const char *who_is_busy(size_t &finished, size_t &unfinished,
                             bool skip = false);
 
-    const ThreadMap &get_threads() const { return _threads; }
+    const std::vector<Thread *> &get_threads() const { return _threads; }
 
 private:
-    ThreadMap _threads;
+    std::vector<Thread *> _threads;
 };
