@@ -86,9 +86,6 @@ void LSql::main_routine(int32_t ev)
 
 void LSql::routine(std::unique_lock<std::mutex> &ul)
 {
-    // 初始化时连接不成功，现在重新尝试
-    if (!_is_cn && 0 == connect()) wakeup_main(S_READY);
-
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
      */
@@ -105,7 +102,8 @@ void LSql::routine(std::unique_lock<std::mutex> &ul)
         delete query;
         ul.lock();
 
-        if (res)
+        // 当查询结果为空时，res为nullptr，但仍然需要回调到脚本
+        if (id > 0)
         {
             _result.emplace(SqlResult{id, get_errno(), res});
             wakeup_main(S_MDATA);
@@ -123,25 +121,16 @@ struct sql_res *LSql::do_sql(const struct SqlQuery *query)
     {
         ERROR("sql query error:%s", error());
         ERROR("sql will not exec:%s", stmt);
-    }
-    else
-    {
-        /* 对于select之类的查询，即使不需要回调，也要取出结果
-         * 不然将会导致连接不同步
-         */
-        if (result(&res))
-        {
-            ERROR("sql result error[%s]:%s", stmt, error());
-        }
+        return nullptr;
     }
 
-    if (query->_id > 0)
+    // 对于select之类的查询，即使不需要回调，也要取出结果不然将会导致连接不同步
+    if (result(&res))
     {
-        return res;
+        ERROR("sql result error[%s]:%s", stmt, error());
     }
 
-    delete res;
-    return nullptr;
+    return res;
 }
 
 int32_t LSql::stop(lua_State *L)
@@ -184,7 +173,7 @@ void LSql::on_ready(lua_State *L)
 
     if (LUA_OK != lua_pcall(L, 2, 0, 1))
     {
-        ERROR("sql call back error:%s", lua_tostring(L, -1));
+        ERROR("sql on ready error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
 
@@ -199,13 +188,11 @@ void LSql::on_result(lua_State *L, struct SqlResult *res)
     lua_pushinteger(L, res->_id);
     lua_pushinteger(L, res->_ecode);
 
-    int32_t nargs = 4;
-    int32_t args  = mysql_to_lua(L, res->_res);
-    if (args > 0) nargs += args;
+    int32_t args = 4 + mysql_to_lua(L, res->_res);
 
-    if (LUA_OK != lua_pcall(L, nargs, 0, 1))
+    if (LUA_OK != lua_pcall(L, args, 0, 1))
     {
-        ERROR("sql call back error:%s", lua_tostring(L, -1));
+        ERROR("sql on result error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
 }
@@ -301,13 +288,16 @@ bool LSql::initialize()
     int32_t ok = option();
     if (ok) goto FAIL;
 
-    ok = connect();
-    if (ok > 0) goto FAIL;
+    do
+    {
+        // 初始化正常，但没连上mysql，是需要稍后重试
+        ok = connect();
+        if (0 == ok) break;
+        if (ok > 0) goto FAIL;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    } while (active());
 
-    // 初始化正常，但没连上mysql，是需要稍后重试
-    if (-1 == ok) return true;
-
-    wakeup_main(S_READY);
+    if (0 == ok) wakeup_main(S_READY);
 
     return true;
 

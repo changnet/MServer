@@ -244,7 +244,7 @@ protected:
     void wakeup_main(int32_t status)
     {
         // 采用busy wait的方式后，只需要设置一个标识就可以了
-        _main_ev &= status;
+        _main_ev |= status;
     }
 
     virtual bool initialize() { return true; }   /* 子线程初始化 */

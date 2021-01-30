@@ -9,7 +9,7 @@ local Mysql   = require "mysql.mysql"
 local max_insert = 100000
 local Mysql_performance = {}
 local create_table_str =
-"CREATE TABLE `perf_test` IF NOT EXISTS (\
+"CREATE TABLE IF NOT EXISTS `perf_test` (\
   `auto_id` INT NOT NULL AUTO_INCREMENT,\
   `id` INT NULL DEFAULT 0,\
   `desc` VARCHAR(45) NULL,\
@@ -30,14 +30,31 @@ t_describe("sql test", function()
         mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
             g_setting.mysql_user, g_setting.mysql_pwd,g_setting.mysql_db,
             function()
-                t_print("mysql ready ...")
+                t_print(string.format("mysql(%s:%d) ready ...",
+                    g_setting.mysql_ip, g_setting.mysql_port))
                 mysql:exec_cmd(create_table_str)
                 mysql:exec_cmd("TRUNCATE perf_test")
+
+                -- 插入
+                mysql:insert("insert into perf_test (id,`desc`,amount) values \z
+                    (1,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
+                mysql:insert("insert into perf_test (id,`desc`,amount) values \z
+                    (2,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
+                -- 更新
+                mysql:update("update perf_test set amount = 99999 where id = 1")
+                -- 删除
+                mysql:exec_cmd("delete from perf_test where id = 2")
+                -- 查询
+                mysql:select("select * from perf_test", function(ecode, res)
+                    t_equal(ecode, 0)
+                    vd(res)
+                    t_done()
+                end)
             end)
     end)
 
     t_after(function()
-        mysql:stop()
+        -- mysql:stop()
     end)
 end)
 

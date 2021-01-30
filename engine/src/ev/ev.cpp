@@ -46,7 +46,7 @@ EV::EV()
     _busy_time = 0;
 
     backend              = new EVBackend();
-    _backend_time_coarse = BACKEND_MAX_TM + ev_now_ms;
+    _backend_time_coarse = 0;
 }
 
 EV::~EV()

@@ -12,7 +12,9 @@ LEV::LEV()
 
     _critical_tm       = -1;
     _app_ev._repeat_ms = 60000;
+    _app_ev._next_time = 0;
     _thread_routine._repeat_ms = 5;
+    _thread_routine._next_time = 0;
 }
 
 LEV::~LEV()

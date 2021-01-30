@@ -35,6 +35,10 @@ local mysql_mgr = MysqlMgr()
 -- 底层回调无法回调到对应的mysql对象，只能在这里做一次分发
 function mysql_event(ev, id, qid, ecode, res)
     local sql = mysql_mgr.sql[id]
+    if not sql then
+        ERROR("mysql event no sql found: id = %d", id)
+        return
+    end
     if ev == S_READY then
         sql:on_ready()
     elseif ev == S_MDATA then

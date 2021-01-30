@@ -2,7 +2,7 @@
 -- 2015-11-20
 -- xzc
 
--- mysql数据存储处理
+-- mysql数据存储处理(TODO: 提供一个转义接口，现在只是存日志，暂用不着)
 
 local Sql = require "Sql"
 local mysql_mgr = require "mysql.mysql_mgr"
@@ -29,7 +29,7 @@ function Mysql:on_data( qid,ecode,res )
     local func = self.query[qid]
     if func then
         self.query[qid] = nil
-        xpcall( func,__G__TRACKBACK,ecode,res )
+        xpcall(func,__G__TRACKBACK, ecode, res)
     else
         ERROR("mysql result no call back found: id = %d, qid = %d",self.id, qid)
     end
@@ -60,9 +60,12 @@ function Mysql:exec_cmd( stmt )
     return self.sql:do_sql( 0,stmt )
 end
 
-function Mysql:select( this,method,stmt )
+-- 查询
+-- @param stmt 需要执行的sql语句
+-- @param on_select 查询回调函数
+function Mysql:select( stmt, on_select)
     local id = self.auto_id:next_id( self.query )
-    self.query[id] = function( ... ) return method( this,... ) end
+    self.query[id] = function(ecode, res) return on_select(ecode, res) end
 
     self.sql:do_sql( id,stmt )
 end
