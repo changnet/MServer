@@ -59,6 +59,7 @@ local function main( cmd, ... )
 
     local name = assert(opts.app, "miss argument --app")
 
+    ev:set_app_ev(250)
     -- 设置主循环临界时间，目前只用来输出日志,检测卡主循环
     ev:set_critical_time(1000)
 

@@ -164,8 +164,6 @@ public:
         S_JOIN  = 16,  /// 子线程是否已join
         S_BUSY  = 32,  /// 子线程是否繁忙
         S_WAIT  = 64,  /// 当关服的时候，是否需要等待这个线程
-        S_MDATA = 128, /// 主线程有数据需要处理
-        S_SDATA = 256, /// 子线程有数据需要处理
     };
 
 public:
@@ -234,6 +232,25 @@ protected:
         // std::lock_guard<std::mutex> guard(_mutex);
         _cv.notify_one();
     }
+    /// 唤醒主线程
+    void wakeup_main()
+    {
+        // 采用busy wait的方式后，只需要设置一个标识就可以了
+        _main_flag ++;
+        if (EXPECT_FALSE(_main_flag == 0xFFFFFFFF)) _main_flag = 0;
+    }
+
+    /// main flag是否有变化
+    bool main_flag_once()
+    {
+        // 注意_main_flag的值在判断是否等于和赋值是值可能不一样，因为子线程可能在两次取值之
+        // 之间修改了，但这没什么不影响
+        uint32_t flag = _main_flag;
+        if (_last_main_flag == flag) return false;
+
+        _last_main_flag = flag;
+        return true;
+    }
 
     virtual bool initialize() { return true; }   /* 子线程初始化 */
     virtual bool uninitialize() { return true; } /* 子线程清理 */
@@ -258,7 +275,7 @@ private:
     void spawn(int32_t us);
     static void sig_handler(int32_t signum);
 
-private:
+protected:
     int32_t _id;                  /// 线程自定义id
     const char *_name;            /// 线程名字，日志用而已
     std::atomic<int32_t> _status; /// 线程状态，参考 Status 枚举
@@ -266,6 +283,10 @@ private:
     std::mutex _mutex;
     std::thread _thread;
     std::condition_variable _cv;
+
+    /// 用一个flag来表示主线程是否有数据需要处理，比加锁再去判断队列是否为空高效得多
+    std::atomic<uint32_t> _main_flag;
+    uint32_t _last_main_flag;
 
     /// 各线程收到的信号统一存这里，由主线程处理
     /// 一般的做法是子线程屏蔽信号，由主线程接收，但c++标准里不提供屏蔽的接口

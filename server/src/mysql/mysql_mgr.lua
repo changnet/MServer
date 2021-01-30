@@ -25,6 +25,7 @@ function MysqlMgr:stop()
     for _,mysql in pairs( self.mysql ) do
         mysql:stop()
     end
+    self.mysql = {}
 end
 
 

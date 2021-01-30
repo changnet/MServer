@@ -8,7 +8,18 @@ LSql::LSql(lua_State *L) : Thread("lsql")
     _dbid  = luaL_checkinteger(L, 2);
 }
 
-LSql::~LSql() {}
+LSql::~LSql()
+{
+    if (!_query.empty())
+    {
+        ERROR("SQL query not finish, data may lost");
+    }
+
+    if (!_result.empty())
+    {
+        ERROR("SQL result not finish, ignore");
+    }
+}
 
 size_t LSql::busy_job(size_t *finished, size_t *unfinished)
 {
@@ -55,6 +66,9 @@ int32_t LSql::start(lua_State *L)
 
 void LSql::main_routine()
 {
+    // 用一个atomic变量判断是否需要遍历_result比加锁再判断队列要快
+    if (main_flag_once()) return;
+
     static lua_State *L = StaticGlobal::state();
     LUA_PUSHTRACEBACK(L);
 
@@ -108,6 +122,7 @@ void LSql::routine(std::unique_lock<std::mutex> &ul)
             result._ecode = _sql.get_errno();
             result._res   = res;
             _result.push(result);
+            wakeup_main();
         }
     }
 }

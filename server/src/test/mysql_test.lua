@@ -1,56 +1,45 @@
--- mysql_performance.lua
+-- mysql_test.lua
 -- 2016-03-08
 -- xzc
 
 -- mysql测试用例
 
---[[
-忘记root密码：
-/etc/init.d/mysql stop
-mysqld -nt --skip-grant-tables &
-无密码进入：mysql -uroot -p
-use mysql;
-update user set password=password("1") where user="root";
-flush privileges;
-exit;
-
-/etc/init.d/mysql start
-现在用新密码进入
-
-
-mysql> CREATE USER 'test'@'%' IDENTIFIED BY 'test';
-mysql> GRANT ALL PRIVILEGES ON *.* TO 'test'@'%' WITH GRANT OPTION;
-
-sudo vi /etc/mysql/my.cnf
-#bind_address = 127.0.0.1
-/etc/init.d/mysql restart
-
-CREATE SCHEMA `game_test` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
-use game_test;
-CREATE TABLE `game_test`.`item` (
-  `auto_id` INT NOT NULL AUTO_INCREMENT,
-  `id` INT NULL DEFAULT 0,
-  `desc` VARCHAR(45) NULL,
-  `amount` INT NULL DEFAULT 0,
-  PRIMARY KEY (`auto_id`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC))
-ENGINE = InnoDB
-DEFAULT CHARACTER SET = utf8
-COLLATE = utf8_general_ci;
-
-
-if server start fail,check:
-/var/log/mysql.err
-/var/log/mysql.log
-/var/log/syslog
-]]
-
-g_mysql_mgr   = require "mysql.mysql_mgr"
-local g_mysql = g_mysql_mgr:new()
-g_mysql:start( "127.0.0.1",3306,"test","test","game_test" )
+local g_mysql_mgr   = require "mysql.mysql_mgr"
 
 local max_insert = 100000
 local Mysql_performance = {}
+local create_table_str =
+"CREATE TABLE `perf_test` IF NOT EXISTS (\
+  `auto_id` INT NOT NULL AUTO_INCREMENT,\
+  `id` INT NULL DEFAULT 0,\
+  `desc` VARCHAR(45) NULL,\
+  `amount` INT NULL DEFAULT 0,\
+  PRIMARY KEY (`auto_id`),\
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC))\
+ENGINE = InnoDB\
+DEFAULT CHARACTER SET = utf8\
+COLLATE = utf8_general_ci;"
+
+t_describe("sql test", function()
+    local g_mysql
+    t_before(function()
+        local g_setting = require "setting.setting"
+        g_mysql = g_mysql_mgr:new()
+        g_mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
+            g_setting.mysql_user, g_setting.mysql_pwd,g_setting.mysql_db)
+
+        g_mysql:exec_cmd(create_table_str)
+        g_mysql:exec_cmd("TRUNCATE perf_test")
+    end)
+
+    t_it("sql base test", function()
+        -- 保证
+    end)
+
+    t_after(function()
+        g_mysql_mgr:stop()
+    end)
+end)
 
 --[[
 默认配置下：30条/s
@@ -90,8 +79,3 @@ function Mysql_performance:on_select_test( ecode,res )
 
     f_tm_stop( "mysql test done" )
 end
-
-f_tm_start()
-Mysql_performance:insert_test()
-Mysql_performance:update_test()
-Mysql_performance:select_test()

@@ -61,8 +61,7 @@ int32_t Sql::connect()
         return 1;
     }
 
-    /* mysql_options的时间精度都为秒级
-     */
+    // mysql_options的时间精度都为秒级
     uint32_t connect_timeout = 60;
     uint32_t read_timeout    = 30;
     uint32_t write_timeout   = 30;

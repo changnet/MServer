@@ -10,6 +10,9 @@ Thread::Thread(const char *name)
     _name   = name;
     _id     = ++_id_seed;
     _status = S_NONE;
+
+    _main_flag = 0;
+    _last_main_flag = 0;
 }
 
 Thread::~Thread()

@@ -45,7 +45,7 @@ function App:final_initialize()
     require "test.list_aoi_test"
     -- require "example.mt_performance"
     -- require "example.mongo_performance"
-    -- require "example.mysql_performance"
+    require "test.mysql_test"
     -- require "example.log_performance"
     -- require "example.stream_performance"
     -- require "example.websocket_performance"

@@ -10,6 +10,8 @@ local AutoId = require "modules.system.auto_id"
 
 local g_app = nil
 local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
+local gc_counter = 0 -- 完成gc的次数
+local gc_counter_tm = 0 -- 上一次完成gc的时间
 
 -- 信号处理，默认情况下退出
 --[[
@@ -81,7 +83,14 @@ function application_ev(ms_now)
     if ms_now > next_gc then
         next_gc = ms_now + 1000 -- 多久执行一次？
         if collectgarbage("step", 100) then
-            PRINTF("gc finished, mem %f kb", collectgarbage("count"))
+            -- 当脚本占用的内存比较低时，gc完成的时间很快的，需要控制一下日志打印的速度
+            gc_counter = gc_counter + 1
+            if ms_now - gc_counter_tm > 60000 then
+                PRINTF("gc finished %d times, now use mem %f kb",
+                    gc_counter, collectgarbage("count"))
+                gc_counter = 0
+                gc_counter_tm = ms_now
+            end
         end
     end
     g_app:ev(ms_now)
