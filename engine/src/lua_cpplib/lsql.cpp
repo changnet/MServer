@@ -4,7 +4,6 @@
 
 LSql::LSql(lua_State *L) : Thread("lsql")
 {
-    _valid = -1;
     _dbid  = luaL_checkinteger(L, 2);
 }
 
@@ -36,14 +35,6 @@ size_t LSql::busy_job(size_t *finished, size_t *unfinished)
     return finished_sz + unfinished_sz;
 }
 
-// 是否有效(只判断是否连接上，后续断线等不检测)
-int32_t LSql::valid(lua_State *L)
-{
-    lua_pushinteger(L, _valid);
-
-    return 1;
-}
-
 /* 连接mysql并启动线程 */
 int32_t LSql::start(lua_State *L)
 {
@@ -58,18 +49,17 @@ int32_t LSql::start(lua_State *L)
     const char *pwd    = luaL_checkstring(L, 4);
     const char *dbname = luaL_checkstring(L, 5);
 
-    _sql.set(host, port, usr, pwd, dbname);
+    set(host, port, usr, pwd, dbname);
 
     Thread::start(5000000); /* N秒 ping一下mysql */
     return 0;
 }
 
-void LSql::main_routine()
+void LSql::main_routine(int32_t ev)
 {
-    // 用一个atomic变量判断是否需要遍历_result比加锁再判断队列要快
-    if (main_flag_once()) return;
-
     static lua_State *L = StaticGlobal::state();
+    if (EXPECT_FALSE(ev & S_READY)) on_ready(L);
+
     LUA_PUSHTRACEBACK(L);
 
     while (true)
@@ -88,7 +78,7 @@ void LSql::main_routine()
         unlock();
 
         delete res._res;
-        do_result(L, &res);
+        on_result(L, &res);
     }
 
     lua_pop(L, 1); /* remove traceback */
@@ -96,12 +86,13 @@ void LSql::main_routine()
 
 void LSql::routine(std::unique_lock<std::mutex> &ul)
 {
+    // 初始化时连接不成功，现在重新尝试
+    if (!_is_cn && 0 == connect()) wakeup_main(S_READY);
+
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
      */
-    if (0 != _sql.ping()) return;
-
-    _valid = 1;
+    if (0 != ping()) return;
 
     while (!_query.empty())
     {
@@ -116,13 +107,8 @@ void LSql::routine(std::unique_lock<std::mutex> &ul)
 
         if (res)
         {
-            struct SqlResult result;
-
-            result._id    = id;
-            result._ecode = _sql.get_errno();
-            result._res   = res;
-            _result.push(result);
-            wakeup_main();
+            _result.emplace(SqlResult{id, get_errno(), res});
+            wakeup_main(S_MDATA);
         }
     }
 }
@@ -133,9 +119,9 @@ struct sql_res *LSql::do_sql(const struct SqlQuery *query)
     assert(stmt && query->_size > 0);
 
     struct sql_res *res = nullptr;
-    if (EXPECT_FALSE(_sql.query(stmt, query->_size)))
+    if (EXPECT_FALSE(this->query(stmt, query->_size)))
     {
-        ERROR("sql query error:%s", _sql.error());
+        ERROR("sql query error:%s", error());
         ERROR("sql will not exec:%s", stmt);
     }
     else
@@ -143,9 +129,9 @@ struct sql_res *LSql::do_sql(const struct SqlQuery *query)
         /* 对于select之类的查询，即使不需要回调，也要取出结果
          * 不然将会导致连接不同步
          */
-        if (_sql.result(&res))
+        if (result(&res))
         {
-            ERROR("sql result error[%s]:%s", stmt, _sql.error());
+            ERROR("sql result error[%s]:%s", stmt, error());
         }
     }
 
@@ -161,7 +147,6 @@ struct sql_res *LSql::do_sql(const struct SqlQuery *query)
 int32_t LSql::stop(lua_State *L)
 {
     UNUSED(L);
-    _valid = -1;
     Thread::stop();
 
     return 0;
@@ -190,14 +175,31 @@ int32_t LSql::do_sql(lua_State *L)
     return 0;
 }
 
-void LSql::do_result(lua_State *L, struct SqlResult *res)
+void LSql::on_ready(lua_State *L)
 {
-    lua_getglobal(L, "mysql_read_event");
+    LUA_PUSHTRACEBACK(L);
+    lua_getglobal(L, "mysql_event");
+    lua_pushinteger(L, S_READY);
+    lua_pushinteger(L, _dbid);
+
+    if (LUA_OK != lua_pcall(L, 2, 0, 1))
+    {
+        ERROR("sql call back error:%s", lua_tostring(L, -1));
+        lua_pop(L, 1); /* remove error message */
+    }
+
+    lua_pop(L, 1);
+}
+
+void LSql::on_result(lua_State *L, struct SqlResult *res)
+{
+    lua_getglobal(L, "mysql_event");
+    lua_pushinteger(L, S_MDATA);
     lua_pushinteger(L, _dbid);
     lua_pushinteger(L, res->_id);
     lua_pushinteger(L, res->_ecode);
 
-    int32_t nargs = 3;
+    int32_t nargs = 4;
     int32_t args  = mysql_to_lua(L, res->_res);
     if (args > 0) nargs += args;
 
@@ -280,13 +282,13 @@ int32_t LSql::mysql_to_lua(lua_State *L, const struct sql_res *res)
 
 bool LSql::uninitialize()
 {
-    if (_sql.ping())
+    if (ping())
     {
-        ERROR("mysql ping fail at cleanup,data may lost:%s", _sql.error());
+        ERROR("mysql ping fail at cleanup,data may lost:%s", error());
         /* TODO write to file ? */
     }
 
-    _sql.disconnect();
+    disconnect();
     mysql_thread_end();
 
     return true;
@@ -296,20 +298,20 @@ bool LSql::initialize()
 {
     mysql_thread_init();
 
-    int32_t ok = _sql.connect();
-    if (ok > 0)
-    {
-        _valid = 0;
-        mysql_thread_end();
-        ERROR("Sql error");
-        return false;
-    }
-    else if (-1 == ok)
-    {
-        // 初始化正常，但是需要稍后重试
-        return true;
-    }
+    int32_t ok = option();
+    if (ok) goto FAIL;
 
-    _valid = 1;
+    ok = connect();
+    if (ok > 0) goto FAIL;
+
+    // 初始化正常，但没连上mysql，是需要稍后重试
+    if (-1 == ok) return true;
+
+    wakeup_main(S_READY);
+
     return true;
+
+FAIL:
+    mysql_thread_end();
+    return false;
 }

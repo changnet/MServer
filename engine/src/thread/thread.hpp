@@ -164,6 +164,8 @@ public:
         S_JOIN  = 16,  /// 子线程是否已join
         S_BUSY  = 32,  /// 子线程是否繁忙
         S_WAIT  = 64,  /// 当关服的时候，是否需要等待这个线程
+        S_READY = 126, /// 子线程准备完毕
+        S_MDATA = 256, /// 主线程有数据需要处理
     };
 
 public:
@@ -212,8 +214,14 @@ public:
         _status = busy ? _status | S_WAIT : _status & (~S_WAIT);
     }
 
+    /// 主线程需要处理的事件
+    inline int32_t main_event_once()
+    {
+        return _main_ev.exchange(0);
+    }
+
     // 主线程逻辑
-    virtual void main_routine() {}
+    virtual void main_routine(int32_t ev) {}
 
     static void signal_block();
 
@@ -233,23 +241,10 @@ protected:
         _cv.notify_one();
     }
     /// 唤醒主线程
-    void wakeup_main()
+    void wakeup_main(int32_t status)
     {
         // 采用busy wait的方式后，只需要设置一个标识就可以了
-        _main_flag ++;
-        if (EXPECT_FALSE(_main_flag == 0xFFFFFFFF)) _main_flag = 0;
-    }
-
-    /// main flag是否有变化
-    bool main_flag_once()
-    {
-        // 注意_main_flag的值在判断是否等于和赋值是值可能不一样，因为子线程可能在两次取值之
-        // 之间修改了，但这没什么不影响
-        uint32_t flag = _main_flag;
-        if (_last_main_flag == flag) return false;
-
-        _last_main_flag = flag;
-        return true;
+        _main_ev &= status;
     }
 
     virtual bool initialize() { return true; }   /* 子线程初始化 */
@@ -282,11 +277,11 @@ protected:
 
     std::mutex _mutex;
     std::thread _thread;
+    // TODO C＋＋20可以wait一个atomic变量，到时优化一下
     std::condition_variable _cv;
 
     /// 用一个flag来表示主线程是否有数据需要处理，比加锁再去判断队列是否为空高效得多
-    std::atomic<uint32_t> _main_flag;
-    uint32_t _last_main_flag;
+    std::atomic<int32_t> _main_ev;
 
     /// 各线程收到的信号统一存这里，由主线程处理
     /// 一般的做法是子线程屏蔽信号，由主线程接收，但c++标准里不提供屏蔽的接口

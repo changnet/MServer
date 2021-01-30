@@ -40,7 +40,8 @@ void ThreadMgr::main_routine()
 {
     for (auto thread : _threads)
     {
-        thread->main_routine();
+        int32_t ev = thread->main_event_once();
+        if (ev) thread->main_routine(ev);
     }
 }
 

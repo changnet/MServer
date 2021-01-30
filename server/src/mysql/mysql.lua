@@ -5,59 +5,57 @@
 -- mysql数据存储处理
 
 local Sql = require "Sql"
+local mysql_mgr = require "mysql.mysql_mgr"
 local AutoId = require "modules.system.auto_id"
 
 local Mysql = oo.class( ... )
 
-function Mysql:__init( dbid )
+function Mysql:__init()
+    local id = mysql_mgr:next_id()
+
+    self.id = id
     self.auto_id = AutoId()
     self.query   = {}
-    self.sql     = Sql( dbid )
+    self.sql     = Sql(id)
 end
 
--- 定时器回调
-function Mysql:do_timer()
-   -- -1未连接或者连接中，0 连接失败，1 连接成功
-   local ok = self.sql:valid()
-   if -1 == ok then return end
-
-   g_timer_mgr:stop( self.timer )
-   self.timer = nil
-
-   if 0 == ok then
-       ERROR( "mysql connect error" )
-       return
-   end
-
-   if self.conn_cb then
-       self.conn_cb()
-       self.conn_cb = nil
-   end
+-- 连接成功回调
+function Mysql:on_ready()
+    if self.on_ready then self.on_ready() end
 end
 
-function Mysql:read_event( qid,ecode,res )
-    if self.query[qid] then
-        xpcall( self.query[qid],__G__TRACKBACK,ecode,res )
+-- 收到db返回的数据
+function Mysql:on_data( qid,ecode,res )
+    local func = self.query[qid]
+    if func then
         self.query[qid] = nil
+        xpcall( func,__G__TRACKBACK,ecode,res )
     else
-        ERROR( "mysql result no call back found" )
+        ERROR("mysql result no call back found: id = %d, qid = %d",self.id, qid)
     end
 end
 
-function Mysql:start( ip,port,usr,pwd,db,callback )
-    self.sql:start( ip,port,usr,pwd,db )
+-- 异步连接mysql
+-- @param ip 数据库地址
+-- @param port 数据库端口
+-- @param user 数据库用户名
+-- @param pwd 数据库密码
+-- @param db 数据库名
+-- @param on_ready 连接成功回调
+function Mysql:start(ip, port, usr, pwd, db, on_ready)
+    self.on_ready = on_ready
 
-    -- 连接成功后回调
-    if callback then
-        self.conn_cb = callback
-        self.timer = g_timer_mgr:interval( 1,1,-1,self,self.do_timer )
-    end
+    mysql_mgr:push(self)
+    self.sql:start(ip, port, usr, pwd, db)
 end
 
+-- 关闭数据库连接
 function Mysql:stop()
+    mysql_mgr:pop(self.id)
     self.sql:stop()
 end
 
+-- 执行sql语句
 function Mysql:exec_cmd( stmt )
     return self.sql:do_sql( 0,stmt )
 end

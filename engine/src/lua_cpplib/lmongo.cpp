@@ -120,7 +120,7 @@ bool LMongo::uninitialize()
     return true;
 }
 
-void LMongo::main_routine()
+void LMongo::main_routine(int32_t ev)
 {
     static lua_State *L = StaticGlobal::state();
     LUA_PUSHTRACEBACK(L);

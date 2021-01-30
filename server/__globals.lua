@@ -130,7 +130,7 @@ return {
 "lua_rapidxml", -- engine/lua_rapidxml.lua
 "method_thunk", -- src/global/name.lua
 "mongodb_read_event", -- src/mongodb/mongodb_mgr.lua
-"mysql_read_event", -- src/mysql/mysql_mgr.lua
+"mysql_event", -- src/mysql/mysql_mgr.lua
 "no_update_require", -- src/global/require.lua
 "oo", -- src/global/oo.lua
 "raw_table_dump", -- src/global/table.lua

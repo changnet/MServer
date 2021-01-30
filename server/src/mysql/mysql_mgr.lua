@@ -4,37 +4,44 @@
 
 -- mysql连接管理
 
-local Mysql = require "mysql.mysql"
+local Sql = require "Sql"
 local MysqlMgr = oo.singleton( ... )
 
+local S_READY = Sql.S_READY
+local S_MDATA = Sql.S_MDATA
+
 function MysqlMgr:__init()
-    self.dbid  = 0
-    self.mysql = {}
+    self.id  = 0
+    self.sql = {}
 end
 
-function MysqlMgr:new()
-    self.dbid = self.dbid + 1
+-- 产生一个唯一db id
+function MysqlMgr:next_id()
+    self.id = self.id + 1
 
-    local mysql = Mysql( self.dbid )
-    self.mysql[self.dbid] = mysql
-
-    return mysql
+    return self.id
 end
 
-function MysqlMgr:stop()
-    for _,mysql in pairs( self.mysql ) do
-        mysql:stop()
-    end
-    self.mysql = {}
+function MysqlMgr:push(db)
+    self.sql[db.id] = db
 end
 
+function MysqlMgr:pop(id)
+    self.sql[id] = nil
+end
 
 local mysql_mgr = MysqlMgr()
 
---  底层回调很难回调到对应的mysql对象，只能在这里做一次分发
-function mysql_read_event( dbid,qid,ecode,res )
-    local mysql = mysql_mgr.mysql[dbid]
-    mysql:read_event( qid,ecode,res )
+-- 底层回调无法回调到对应的mysql对象，只能在这里做一次分发
+function mysql_event(ev, id, qid, ecode, res)
+    local sql = mysql_mgr.sql[id]
+    if ev == S_READY then
+        sql:on_ready()
+    elseif ev == S_MDATA then
+        sql:on_data(qid, ecode, res)
+    else
+        assert(false)
+    end
 end
 
 return mysql_mgr

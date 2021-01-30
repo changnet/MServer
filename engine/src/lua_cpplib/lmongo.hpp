@@ -103,7 +103,7 @@ public:
 
 private:
     void routine(std::unique_lock<std::mutex> &ul) override;
-    void main_routine() override;
+    void main_routine(int32_t ev) override;
     bool uninitialize() override;
     bool initialize() override;
 

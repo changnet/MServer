@@ -2,16 +2,18 @@
 
 #include "sql_def.hpp"
 
+/// MySQL/MariaDB 数据库基础操作
 class Sql
 {
 public:
     Sql();
-    ~Sql();
+    virtual ~Sql();
 
     void set(const char *host, const int32_t port, const char *usr,
              const char *pwd, const char *dbname);
 
     int32_t ping();
+    int32_t option();
     int32_t connect();
     void disconnect();
     const char *error();
@@ -21,16 +23,14 @@ public:
 
     static void library_init();
     static void library_end(); /* 释放sql库，仅在程序不再使用sql时调用 */
-private:
-    int32_t raw_connect();
 
-private:
+protected:
     bool _is_cn;
     MYSQL *_conn;
 
-    int32_t _port;
-    char _host[SQL_VAR_LEN];
-    char _usr[SQL_VAR_LEN];
-    char _pwd[SQL_VAR_LEN];
-    char _dbname[SQL_VAR_LEN];
+    int32_t _port; ///< 数据库端口
+    std::string _host; ///< 数据库ip地址
+    std::string _usr; ///< 数据库用户名
+    std::string _pwd; ///< 数据库密码
+    std::string _dbname; ///< 数据库名
 };

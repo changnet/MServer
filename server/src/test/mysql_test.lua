@@ -4,7 +4,7 @@
 
 -- mysql测试用例
 
-local g_mysql_mgr   = require "mysql.mysql_mgr"
+local Mysql   = require "mysql.mysql"
 
 local max_insert = 100000
 local Mysql_performance = {}
@@ -21,23 +21,23 @@ DEFAULT CHARACTER SET = utf8\
 COLLATE = utf8_general_ci;"
 
 t_describe("sql test", function()
-    local g_mysql
-    t_before(function()
-        local g_setting = require "setting.setting"
-        g_mysql = g_mysql_mgr:new()
-        g_mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
-            g_setting.mysql_user, g_setting.mysql_pwd,g_setting.mysql_db)
-
-        g_mysql:exec_cmd(create_table_str)
-        g_mysql:exec_cmd("TRUNCATE perf_test")
-    end)
-
+    local mysql
     t_it("sql base test", function()
-        -- 保证
+        t_wait(10000)
+
+        mysql = Mysql()
+        local g_setting = require "setting.setting"
+        mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
+            g_setting.mysql_user, g_setting.mysql_pwd,g_setting.mysql_db,
+            function()
+                t_print("mysql ready ...")
+                mysql:exec_cmd(create_table_str)
+                mysql:exec_cmd("TRUNCATE perf_test")
+            end)
     end)
 
     t_after(function()
-        g_mysql_mgr:stop()
+        mysql:stop()
     end)
 end)
 

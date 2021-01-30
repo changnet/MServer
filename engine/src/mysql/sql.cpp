@@ -7,7 +7,7 @@
  */
 void Sql::library_init()
 {
-    int32_t ecode = mysql_library_init(0, NULL, NULL);
+    int32_t ecode = mysql_library_init(0, nullptr, nullptr);
     assert(0 == ecode);
     UNUSED(ecode);
 }
@@ -23,19 +23,14 @@ void Sql::library_end()
 Sql::Sql()
 {
     _is_cn = false;
-    _conn  = NULL;
-
-    _host[0]   = '\0';
-    _usr[0]    = '\0';
-    _pwd[0]    = '\0';
-    _dbname[0] = '\0';
+    _conn  = nullptr;
 
     _port = 0;
 }
 
 Sql::~Sql()
 {
-    assert(NULL == _conn);
+    assert(!_conn);
 }
 
 void Sql::set(const char *host, const int32_t port, const char *usr,
@@ -43,18 +38,18 @@ void Sql::set(const char *host, const int32_t port, const char *usr,
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
     _port = port;
-    snprintf(_host, SQL_VAR_LEN, "%s", host);
-    snprintf(_usr, SQL_VAR_LEN, "%s", usr);
-    snprintf(_pwd, SQL_VAR_LEN, "%s", pwd);
-    snprintf(_dbname, SQL_VAR_LEN, "%s", dbname);
+    _host = host;
+    _usr = usr;
+    _pwd = pwd;
+    _dbname = dbname;
 }
 
 /* 连接数据库 */
-int32_t Sql::connect()
+int32_t Sql::option()
 {
-    assert(NULL == _conn);
+    assert(nullptr == _conn);
 
-    _conn = mysql_init(NULL);
+    _conn = mysql_init(nullptr);
     if (!_conn)
     {
         ERROR("mysql init fail:%s\n", mysql_error(_conn));
@@ -77,32 +72,30 @@ int32_t Sql::connect()
         ERROR("mysql option fail:%s\n", mysql_error(_conn));
 
         mysql_close(_conn);
-        _conn = NULL;
+        _conn = nullptr;
 
         return 1;
     }
 
-    return raw_connect();
+    return 0;
 }
 
-// 连接逻辑
-int32_t Sql::raw_connect()
+int32_t Sql::connect()
 {
     /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
      * fails, you must repeat the mysql_options() calls before trying to connect
      * again. With this option, the mysql_options() calls need not be repeated
      */
-    if (mysql_real_connect(_conn, _host, _usr, _pwd, _dbname, _port, NULL,
-                           CLIENT_REMEMBER_OPTIONS))
+    if (mysql_real_connect(_conn, _host.c_str(), _usr.c_str(), _pwd.c_str(),
+        _dbname.c_str(), _port, nullptr, CLIENT_REMEMBER_OPTIONS))
     {
         _is_cn = true;
         return 0;
     }
 
-    /* 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
-     */
-    uint32_t eno = mysql_errno(_conn);
-    if (CR_SERVER_LOST == eno || CR_CONN_HOST_ERROR == eno)
+    // 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
+    uint32_t ok = mysql_errno(_conn);
+    if (CR_SERVER_LOST == ok || CR_CONN_HOST_ERROR == ok)
     {
         ERROR("mysql will try again:%s\n", mysql_error(_conn));
         return -1;
@@ -110,8 +103,9 @@ int32_t Sql::raw_connect()
 
     ERROR("mysql real connect fail:%s\n", mysql_error(_conn));
 
-    mysql_close(_conn);
-    _conn = NULL;
+    // 暂不关闭，下次重试
+    // mysql_close(_conn);
+    // _conn = nullptr;
 
     return 1;
 }
@@ -119,43 +113,22 @@ int32_t Sql::raw_connect()
 void Sql::disconnect()
 {
     assert(_conn);
-    if (!_conn) return;
 
     mysql_close(_conn);
-    _conn = NULL;
+    _conn = nullptr;
 }
 
 int32_t Sql::ping()
 {
     assert(_conn);
-    if (!_conn)
-    {
-        ERROR("mysql ping invalid connection");
-        return 1;
-    }
 
-    // 初始化时连接不成功，现在重新尝试
-    if (!_is_cn)
-    {
-        int32_t ok = raw_connect();
-        if (-1 == ok)
-        {
-            return -1; // 需要继续尝试
-        }
-        else if (ok > 0)
-        {
-            return 1; // 错误
-        }
-        _is_cn = true;
-    }
-
-    int32_t eno = mysql_ping(_conn);
-    if (eno)
+    int32_t e = mysql_ping(_conn);
+    if (e)
     {
         ERROR("mysql ping error:%s\n", mysql_error(_conn));
     }
 
-    return eno;
+    return e;
 }
 
 const char *Sql::error()

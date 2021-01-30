@@ -130,11 +130,13 @@ int32_t luaopen_sql(lua_State *L)
 {
 
     LClass<LSql> lc(L, "Sql");
-    lc.def<&LSql::valid>("valid");
     lc.def<&LSql::start>("start");
     lc.def<&LSql::stop>("stop");
 
     lc.def<&LSql::do_sql>("do_sql");
+
+    lc.set(LSql::S_READY, "S_READY");
+    lc.set(LSql::S_MDATA, "S_MDATA");
 
     return 0;
 }

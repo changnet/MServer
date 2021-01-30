@@ -5,7 +5,6 @@
 
 
 #define SQL_FIELD_LEN 64
-#define SQL_VAR_LEN   64
 
 /*
 enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,

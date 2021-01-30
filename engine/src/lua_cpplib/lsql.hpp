@@ -10,17 +10,11 @@
 /**
  * MySQL、MariaDB 操作
  */
-class LSql final : public Thread
+class LSql final : public Sql, public Thread
 {
 public:
     explicit LSql(lua_State *L);
     ~LSql();
-
-    /**
-     * 校验当前与数据库连接是否成功，注：不校验因网络问题暂时断开的情况
-     * @return boolean
-     */
-    int32_t valid(lua_State *L);
 
     /**
      * 启动子线程并连接数据库，注：该操作是异步的
@@ -52,11 +46,12 @@ private:
     bool uninitialize() override;
     bool initialize() override;
 
-    void do_result(lua_State *L, struct SqlResult *res);
+    void on_ready(lua_State *L);
+    void on_result(lua_State *L, struct SqlResult *res);
 
     struct sql_res *do_sql(const struct SqlQuery *query);
 
-    void main_routine() override;
+    void main_routine(int32_t ev) override;
     void routine(std::unique_lock<std::mutex> &ul) override;
 
     int32_t mysql_to_lua(lua_State *L, const struct sql_res *res);
@@ -64,10 +59,7 @@ private:
                          const struct SqlCol &col);
 
 private:
-    class Sql _sql;
-
     int32_t _dbid;
-    int32_t _valid; // -1连接中，0失败，1成功
 
     std::queue<struct SqlResult> _result;
     std::queue<const struct SqlQuery *> _query;
