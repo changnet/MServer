@@ -144,23 +144,16 @@ int32_t Sql::query(const char *stmt, size_t size)
     /* Client error message numbers are listed in the MySQL errmsg.h header
      * file. Server error message numbers are listed in mysqld_error.h
      */
-    if (mysql_real_query(_conn, stmt, size))
+    if (EXPECT_FALSE(mysql_real_query(_conn, stmt, size)))
     {
-        int32_t ecode = mysql_errno(_conn);
-        if (CR_SERVER_LOST == ecode || CR_SERVER_GONE_ERROR == ecode)
+        int32_t e = mysql_errno(_conn);
+        if (CR_SERVER_LOST != e && CR_SERVER_GONE_ERROR != e)
         {
-            /* reconnect and try again */
-            if (mysql_ping(_conn))
-            {
-                return mysql_errno(_conn);
-            }
-
-            if (mysql_real_query(_conn, stmt, size))
-            {
-                return mysql_errno(_conn);
-            }
+            return e;
         }
-        else
+
+        // reconnect and try again
+        if (mysql_ping(_conn) || mysql_real_query(_conn, stmt, size))
         {
             return mysql_errno(_conn);
         }

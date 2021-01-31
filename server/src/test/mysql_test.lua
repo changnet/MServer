@@ -6,13 +6,13 @@
 
 local Mysql   = require "mysql.mysql"
 
-local max_insert = 100000
-local Mysql_performance = {}
+local max_insert = 10000
+
 local create_table_str =
 "CREATE TABLE IF NOT EXISTS `perf_test` (\
   `auto_id` INT NOT NULL AUTO_INCREMENT,\
   `id` INT NULL DEFAULT 0,\
-  `desc` VARCHAR(45) NULL,\
+  `desc` VARCHAR(256) NULL,\
   `amount` INT NULL DEFAULT 0,\
   PRIMARY KEY (`auto_id`),\
   UNIQUE INDEX `id_UNIQUE` (`id` ASC))\
@@ -32,8 +32,12 @@ t_describe("sql test", function()
             function()
                 t_print(string.format("mysql(%s:%d) ready ...",
                     g_setting.mysql_ip, g_setting.mysql_port))
+
+                -- TODO TRUNCATE和DROP TABLE会卡3秒左右，不太清楚为什么
+                -- mysql:exec_cmd("TRUNCATE perf_test")
+                mysql:exec_cmd("DROP TABLE IF EXISTS perf_test")
                 mysql:exec_cmd(create_table_str)
-                mysql:exec_cmd("TRUNCATE perf_test")
+                mysql:exec_cmd("delete from perf_test")
 
                 -- 插入
                 mysql:insert("insert into perf_test (id,`desc`,amount) values \z
@@ -47,14 +51,76 @@ t_describe("sql test", function()
                 -- 查询
                 mysql:select("select * from perf_test", function(ecode, res)
                     t_equal(ecode, 0)
-                    vd(res)
+                    t_equal(#res, 1)
+                    t_equal(res[1].id, 1)
+                    t_equal(res[1].amount, 99999)
+                end)
+                mysql:insert("insert into perf_test (id,`desc`,amount) values \z
+                (3,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
+
+                mysql:exec_cmd("delete from perf_test")
+                mysql:select("select * from perf_test", function(ecode, res)
+                    t_equal(ecode, 0)
+                    t_equal(res, nil) -- 当查询结果为空时，res为nil
                     t_done()
                 end)
             end)
     end)
 
+    t_it(string.format("sql perf %d insert transaction mode", max_insert),
+        function()
+            t_wait(20000)
+            mysql:exec_cmd( "START TRANSACTION" )
+
+            -- desc是mysql关键字，因此需要加``
+            for i = 1,max_insert do
+                mysql:insert(string.format(
+                    "insert into perf_test (id,`desc`,amount) values \z
+                    (%d,'%s',%d)",
+                    i,"just test itemmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",i*10 ) )
+            end
+
+            mysql:exec_cmd("COMMIT")
+            mysql:select("select * from perf_test", function(ecode, res)
+                t_equal(ecode, 0)
+                t_equal(#res, max_insert)
+                t_done()
+            end)
+        end)
+
+    -- 用来保证下一个测试时表是空的
+    t_it("sql delete", function()
+        t_wait(20000)
+        mysql:exec_cmd("delete from perf_test")
+        mysql:select("select * from perf_test", function(ecode, res)
+            t_equal(ecode, 0)
+            t_equal(res, nil)
+            t_done()
+        end)
+    end)
+
+    t_it(string.format("sql perf %d insert", max_insert),
+        function()
+            t_wait(20000)
+
+            -- desc是mysql关键字，因此需要加``
+            for i = 1,max_insert do
+                mysql:insert(string.format(
+                    "insert into perf_test (id,`desc`,amount) values \z
+                    (%d,'%s',%d)",
+                    max_insert + i,
+                    "just test itemmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",i*10 ) )
+            end
+
+            mysql:select("select * from perf_test", function(ecode, res)
+                t_equal(ecode, 0)
+                t_equal(#res, max_insert)
+                t_done()
+            end)
+        end)
+
     t_after(function()
-        -- mysql:stop()
+        mysql:stop()
     end)
 end)
 
@@ -64,35 +130,3 @@ end)
 innodb_flush_log_at_trx_commit = 0,不用事务，100000总共7s
 ]]
 
-function Mysql_performance:insert_test()
-    print( "start mysql insert test",max_insert )
-    g_mysql:exec_cmd( "START TRANSACTION" )
-
-    -- desc是mysql关键字，因此需要加``
-    for i = 1,max_insert do
-        local str = string.format(
-            "insert into item (id,`desc`,amount) values (%d,'%s',%d)",
-            i,"just test item",i*10 )
-        g_mysql:insert( str )
-    end
-
-    g_mysql:exec_cmd( "COMMIT" )
-end
-
-function Mysql_performance:update_test()
-    print( "start mysql update test" )
-    g_mysql:update( "update item set amount = 99999999 where id = 1" )
-end
-
-function Mysql_performance:select_test()
-    print( "start mysql select test" )
-    g_mysql:select( self,self.on_select_test,
-        "select * from item order by amount desc limit 50" )
-end
-
-function Mysql_performance:on_select_test( ecode,res )
-    print( "mysql select return ",ecode )
-    vd( res )
-
-    f_tm_stop( "mysql test done" )
-end

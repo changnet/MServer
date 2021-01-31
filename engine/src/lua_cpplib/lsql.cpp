@@ -77,8 +77,8 @@ void LSql::main_routine(int32_t ev)
 
         unlock();
 
-        delete res._res;
         on_result(L, &res);
+        delete res._res;
     }
 
     lua_pop(L, 1); /* remove traceback */
