@@ -227,7 +227,7 @@ protected:
     void mark(int32_t status) { _status |= status; }
     /// 取消状态
     void unmark(int32_t status) { _status &= ~status; }
-    /// 唤醒子线程
+    /// 唤醒子线程(调用时需要加锁)
     void wakeup(int32_t status)
     {
         {

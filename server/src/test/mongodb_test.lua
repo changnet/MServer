@@ -1,17 +1,26 @@
--- mongo_performance.lua
+-- mongodb_test.lua
 -- 2016-03-07
 -- xzc
 
 -- mongo db 测试用例
 
-g_mongodb_mgr = require "mongodb.mongodb_mgr"
-g_mongodb = g_mongodb_mgr:new()
-
-g_mongodb:start( "127.0.0.1",27013,"test","test","mudrv" )
-
 local max_insert = 100000
 local collection = "item"
 local json = require "lua_parson"
+
+t_describe("mongodb test", function()
+    local mongodb
+    t_it("mongodb base test", function()
+        t_wait(10000)
+
+        g_mongodb_mgr = require "mongodb.mongodb_mgr"
+        mongodb = g_mongodb_mgr:new()
+
+        local g_setting = require "setting.setting"
+        mongodb:start(g_setting.mongo_ip, g_setting.mongo_port,
+            g_setting.mongo_user, g_setting.mongo_pwd, g_setting.mongo_db)
+    end)
+end)
 
 local Mongo_performan = {}
 
@@ -117,11 +126,3 @@ function Mongo_performan:remove_test()
     print( "start remove test" )
     g_mongodb:remove( collection,'{"_id":{"$gt":20,"$lt":30}}',true )
 end
-
-Mongo_performan:table_insert_test()
-Mongo_performan:count_test()
-Mongo_performan:json_insertion_test()
-Mongo_performan:find_test()
-Mongo_performan:update_test()
-Mongo_performan:sort_test()
-Mongo_performan:remove_test()
