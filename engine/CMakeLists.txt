@@ -22,10 +22,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     set(CMAKE_C_FLAGS "-O0 -g -pipe -Wall -pedantic")
-    set(CMAKE_CXX_FLAGS "-O0 -g -pipe -Wall -pedantic -std=c++11")
+    set(CMAKE_CXX_FLAGS "-O0 -g -pipe -Wall -pedantic -std=c++17")
 elseif(CMAKE_BUILD_TYPE MATCHES Release)
     set(CMAKE_C_FLAGS "-O2 -g -pipe -Wall -DNDEBUG -pedantic")
-    set(CMAKE_CXX_FLAGS "-O2 -g -pipe -Wall -pedantic -DNDEBUG -std=c++11")
+    set(CMAKE_CXX_FLAGS "-O2 -g -pipe -Wall -pedantic -DNDEBUG -std=c++17")
 else()
     message(FATAL_ERROR "Unknow CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 endif()
@@ -196,5 +196,5 @@ target_link_libraries(master
     # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
 
     # mariadb使用了gnutls
-    ssl gnutls crypto dl rt pthread resolv z
+    ssl gnutls crypto dl rt pthread resolv z stdc++fs
 )

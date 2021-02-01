@@ -1,14 +1,6 @@
 #include <lua.hpp>
-#include <sys/time.h>
 
-#include "../net/socket.hpp"
-
-#include <arpa/inet.h>
-#include <cmath>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <filesystem> // create_directories
 
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
@@ -17,6 +9,7 @@
 #include <uuid/uuid.h>
 
 #include "lutil.hpp"
+#include "../net/socket.hpp" // get_addr_info
 
 /**
  * 以阻塞方式获取域名对应的ip
@@ -402,36 +395,19 @@ static int32_t mkdir_p(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
 
-    if (!path || 0 == strcmp(path, ""))
+    // 未创建对返回false（包括目录已存在不需要创建）
+    std::error_code e;
+    bool ok = std::filesystem::create_directories(path, e);
+    if (!ok && e)
     {
+        ERROR("create_directories %s fail:%s", path, e.message().c_str());
+
         lua_pushboolean(L, 0);
-        return 1;
     }
-
-    char dir_path[PATH_MAX];
-    int32_t len = strlen(path);
-
-    for (int32_t i = 0; i <= len && i < PATH_MAX; i++)
+    else
     {
-        dir_path[i] = *(path + i);
-        if (('\0' == dir_path[i] || dir_path[i] == '/') && i > 0)
-        {
-            dir_path[i] = '\0';
-            if (::access(dir_path, F_OK) < 0) /* test if file already exist */
-            {
-                if (::mkdir(dir_path, S_IRWXU) < 0)
-                {
-                    ERROR("mkdir -p %s fail:%s", dir_path, strerror(errno));
-
-                    lua_pushboolean(L, 0);
-                    return 1;
-                }
-            }
-            dir_path[i] = '/';
-        }
+        lua_pushboolean(L, 1);
     }
-
-    lua_pushboolean(L, 1);
     return 1;
 }
 
