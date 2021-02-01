@@ -99,12 +99,18 @@ t_describe("sql test", function()
         end)
     end)
 
-    t_it(string.format("sql perf %d insert", max_insert),
+    --[[
+    默认配置下：30~100条/s
+    当作一个事务插入，100000总共花4s
+    启用innodb_flush_log_at_trx_commit = 0,不用事务，100000总共7s
+    ]]
+    local n_insert = max_insert / 20 -- 太多了完成不了测试的
+    t_it(string.format("sql perf %d insert", n_insert),
         function()
             t_wait(20000)
 
             -- desc是mysql关键字，因此需要加``
-            for i = 1,max_insert do
+            for i = 1, n_insert do
                 mysql:insert(string.format(
                     "insert into perf_test (id,`desc`,amount) values \z
                     (%d,'%s',%d)",
@@ -114,7 +120,7 @@ t_describe("sql test", function()
 
             mysql:select("select * from perf_test", function(ecode, res)
                 t_equal(ecode, 0)
-                t_equal(#res, max_insert)
+                t_equal(#res, n_insert)
                 t_done()
             end)
         end)
@@ -123,10 +129,3 @@ t_describe("sql test", function()
         mysql:stop()
     end)
 end)
-
---[[
-默认配置下：30条/s
-当作一个事务，100000总共花4s
-innodb_flush_log_at_trx_commit = 0,不用事务，100000总共7s
-]]
-

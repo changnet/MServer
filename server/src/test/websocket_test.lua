@@ -188,7 +188,7 @@ end
 
 -- 用官方的服务器测试作为client是否正常
 -- local ws_url = "echo.websocket.org"
--- local ip1,ip2 = util.gethostbyname( ws_url )
+-- local ip1,ip2 = util.get_addr_info( ws_url )
 
 -- 这里创建的对象要放到全局引用，不然会被释放掉，就没法回调了
 

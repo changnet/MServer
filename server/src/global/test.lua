@@ -188,7 +188,7 @@ local function equal(got, expect)
 end
 
 local function test_one_it(i)
-    local tm = os.clock()
+    local tm = T.clock()
     local ok, msg = xpcall(i.func, error_msgh)
     if not ok then
         T.fail = T.fail + 1
@@ -219,7 +219,7 @@ local function test_one_it(i)
         return
     end
 
-    tm = math.ceil((os.clock() - tm) * 1000)
+    tm = T.clock() - tm
 
     T.pass = T.pass + 1
     if tm > 1 then
@@ -274,6 +274,13 @@ local function run_one_describe(d)
     end
 end
 
+local function resume()
+    local ok, msg = coroutine.resume(T.co)
+    if not ok then
+        error(msg)
+    end
+end
+
 -- ///////////////// test interface ////////////////////////////////////////////
 -- 打印测试信息
 function t_print(...)
@@ -295,7 +302,7 @@ function t_equal(got, expect)
         assert(false, TEST_FAIL)
     else
         T.i_now.status = FAIL
-        coroutine.resume(T.co)
+        resume()
     end
 end
 
@@ -311,7 +318,7 @@ function t_assert(expr)
         assert(false, TEST_FAIL)
     else
         T.i_now.status = FAIL
-        coroutine.resume(T.co)
+        resume()
     end
 end
 
@@ -348,7 +355,7 @@ function t_wait(timeout)
 
     T.i_now.status = PEND
     T.i_now.timer = T.timer.new(timeout or 2000, function()
-        coroutine.resume(T.co)
+        resume()
     end)
 end
 
@@ -358,7 +365,7 @@ function t_done()
 
     T.i_now.timer = nil
     T.i_now.status = nil
-    coroutine.resume(T.co)
+    resume()
 end
 
 -- 测试前运行的函数
@@ -393,8 +400,13 @@ function t_setup(params)
         print_func(...)
     end
 
+    -- os.clock在linux下是不包含sleep时间的，并且可能会溢出
+    T.clock = params.clock or function()
+        return math.ceil(os.clock() * 1000)
+    end
+
     -- 过滤器，允许只执行一部分测试
-    -- ./start.sh test 1 1 https 只执行名字包含https的测试
+    -- ./start.sh test --filter=https 只执行名字包含https的测试
     T.filter = params.filter
 end
 
@@ -410,7 +422,7 @@ end
 
 -- run current test session
 local function run()
-    T.time = os.clock()
+    T.time = T.clock()
 
     -- 收集所有测试
     for _, d in pairs(T.d) do
@@ -430,7 +442,7 @@ local function run()
 
     local pass = T.pass
     local fail = T.fail
-    local time = math.ceil((os.clock() - T.time) * 1000)
+    local time = T.clock() - T.time
     T.print(string.format("%s, %s (%dms)",
         G("%d passing", pass),
         fail > 0 and R("%d failing", fail) or G("0 failing"),
@@ -443,7 +455,7 @@ end
 function t_run()
     T.co = coroutine.create(run)
 
-    coroutine.resume(T.co)
+    return resume()
 end
 
 -- /////////////////////////////////////////////////////////////////////////////

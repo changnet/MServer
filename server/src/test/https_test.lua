@@ -42,7 +42,7 @@ t_describe("http(s) test", function()
             "../certs/clt_key.pem","mini_distributed_game_server",
             "../certs/ca.cer")
 
-        local ip = util.gethostbyname(exp_host)
+        local ip = util.get_addr_info(exp_host)
         t_print("target host address is", ip)
     end)
 

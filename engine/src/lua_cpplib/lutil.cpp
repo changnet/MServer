@@ -19,30 +19,11 @@
 #include "lutil.hpp"
 
 /**
- * 获取1970年以来的时间
- * clock_gettime(CLOCK_MONOTONIC)是内核调用，并且不受time jump影响
- * gettimeofday是用户空间调用
- * @return 秒 微秒
- */
-static int32_t timeofday(lua_State *L)
-{
-    struct timeval tv;
-    if (gettimeofday(&tv, NULL) == 0)
-    {
-        lua_pushnumber(L, tv.tv_sec);
-        lua_pushnumber(L, tv.tv_usec);
-        return 2;
-    }
-
-    return 0;
-}
-
-/**
  * 以阻塞方式获取域名对应的ip
  * @param name 域名，如：www.openssl.com
  * @return ip1 ip2 ...
  */
-static int32_t gethost(lua_State *L)
+static int32_t get_addr_info(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
     if (!name) return luaL_error(L, "gethost illegal argument");
@@ -461,10 +442,9 @@ static const luaL_Reg utillib[] = {{"md5", md5},
                                    {"mkdir_p", mkdir_p},
                                    {"get_pid", get_pid},
                                    {"sha1_raw", sha1_raw},
-                                   {"timeofday", timeofday},
                                    {"what_error", what_error},
                                    {"uuid_short", uuid_short},
-                                   {"gethostbyname", gethost},
+                                   {"get_addr_info", get_addr_info},
                                    {"uuid_short_parse", uuid_short_parse},
                                    {NULL, NULL}};
 

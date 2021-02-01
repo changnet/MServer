@@ -41,7 +41,7 @@ end
 -- @param on_connect 连接成功(或失败)时的回调函数
 -- @param on_command 收到请求时回调函数，不需要可为nil
 function HttpConn:connect( host, port, on_connect, on_command )
-    self.ip = util.gethostbyname(host)
+    self.ip = util.get_addr_info(host)
     -- 这个host需要注意，实测对www.example.com请求时，如果host为一个ip，是会返回404的
     self.host = host
     self.port = port

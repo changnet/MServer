@@ -36,7 +36,8 @@ function App:final_initialize()
         filter = self.filter,
         time_update = function()
             ev:time_update()
-        end
+        end,
+        clock = function() return ev:real_ms_time() end
     })
 
     require "test.misc_test"
