@@ -11,6 +11,7 @@ Thread::Thread(const char *name)
     _id     = ++_id_seed;
     _status = S_NONE;
 
+    _ev      = 0;
     _main_ev = 0;
 }
 
@@ -97,7 +98,7 @@ void Thread::stop()
     }
 
     unmark(S_RUN);
-    wakeup();
+    wakeup(S_RUN);
     _thread.join();
 
     StaticGlobal::thread_mgr()->pop(_id);
@@ -121,13 +122,19 @@ void Thread::spawn(int32_t us)
         std::unique_lock<std::mutex> ul(_mutex);
         while (_status & S_RUN)
         {
-            // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
-            // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
-            _cv.wait_for(ul, timeout);
+            int32_t ev = _ev.exchange(0);
+            if (!ev)
+            {
+                // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
+                // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
+                _cv.wait_for(ul, timeout);
+            }
 
+            ul.unlock();
             mark(S_BUSY);
-            this->routine(ul);
+            this->routine(ev);
             unmark(S_BUSY);
+            ul.lock();
         }
     }
 

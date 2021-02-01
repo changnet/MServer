@@ -19,7 +19,7 @@ public:
 
 private:
     // 线程相关，重写基类相关函数
-    void routine(std::unique_lock<std::mutex> &ul) override;
+    void routine(int32_t ev) override;
 
 private:
     class Log _log;

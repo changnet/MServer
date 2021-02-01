@@ -102,7 +102,7 @@ public:
                     size_t *unfinished = nullptr) override;
 
 private:
-    void routine(std::unique_lock<std::mutex> &ul) override;
+    void routine(int32_t ev) override;
     void main_routine(int32_t ev) override;
     bool uninitialize() override;
     bool initialize() override;

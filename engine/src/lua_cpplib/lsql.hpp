@@ -52,7 +52,7 @@ private:
     struct sql_res *do_sql(const struct SqlQuery *query);
 
     void main_routine(int32_t ev) override;
-    void routine(std::unique_lock<std::mutex> &ul) override;
+    void routine(int32_t ev) override;
 
     int32_t mysql_to_lua(lua_State *L, const struct sql_res *res);
     int32_t field_to_lua(lua_State *L, const struct SqlField &field,

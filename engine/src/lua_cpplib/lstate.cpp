@@ -136,7 +136,7 @@ int32_t luaopen_sql(lua_State *L)
     lc.def<&LSql::do_sql>("do_sql");
 
     lc.set(LSql::S_READY, "S_READY");
-    lc.set(LSql::S_MDATA, "S_MDATA");
+    lc.set(LSql::S_DATA, "S_MDATA");
 
     return 0;
 }

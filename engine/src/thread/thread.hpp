@@ -165,7 +165,7 @@ public:
         S_BUSY  = 32,  /// 子线程是否繁忙
         S_WAIT  = 64,  /// 当关服的时候，是否需要等待这个线程
         S_READY = 126, /// 子线程准备完毕
-        S_MDATA = 256, /// 主线程有数据需要处理
+        S_DATA  = 256, /// 线程有数据需要处理
     };
 
 public:
@@ -215,10 +215,7 @@ public:
     }
 
     /// 主线程需要处理的事件
-    inline int32_t main_event_once()
-    {
-        return _main_ev.exchange(0);
-    }
+    inline int32_t main_event_once() { return _main_ev.exchange(0); }
 
     // 主线程逻辑
     virtual void main_routine(int32_t ev) {}
@@ -231,13 +228,20 @@ protected:
     /// 取消状态
     void unmark(int32_t status) { _status &= ~status; }
     /// 唤醒子线程
-    void wakeup()
+    void wakeup(int32_t status)
     {
+        {
+            // 这里需要lock而wakeup_main不需要是因为主线程会不断地调用main_routine，
+            // 来检测_main_ev。但子线程如果不加锁，一旦检测_ev为0，进入wait后只能等超
+            // 时了(锁放外部了，因为好多调用地方都刚好需要加锁)
+            // std::lock_guard<std::mutex> guard(_mutex);
+            _ev |= status;
+        }
+
         // https://en.cppreference.com/w/cpp/thread/condition_variable/notify_one
         // The notifying thread does not need to hold the lock on the same mutex
         // as the one held by the waiting thread(s); in fact doing so is a
         // pessimization
-        // std::lock_guard<std::mutex> guard(_mutex);
         _cv.notify_one();
     }
     /// 唤醒主线程
@@ -250,21 +254,13 @@ protected:
     virtual bool initialize() { return true; }   /* 子线程初始化 */
     virtual bool uninitialize() { return true; } /* 子线程清理 */
 
-    /// 加锁，只能在主线程调用
-    inline void lock()
-    {
-        assert(std::this_thread::get_id() != _thread.get_id());
-        _mutex.lock();
-    }
-    /// 解锁，只能在主线程调用
-    inline void unlock()
-    {
-        assert(std::this_thread::get_id() != _thread.get_id());
-        _mutex.unlock();
-    }
+    /// 加锁
+    inline void lock() { _mutex.lock(); }
+    /// 解锁
+    inline void unlock() { _mutex.unlock(); }
 
-    // 子线程逻辑(注意执行该函数已持有锁，如果执行耗时操作需要解锁)
-    virtual void routine(std::unique_lock<std::mutex> &ul) = 0;
+    /// 子线程逻辑
+    virtual void routine(int32_t ev) = 0;
 
 private:
     void spawn(int32_t us);
@@ -280,7 +276,9 @@ protected:
     // TODO C＋＋20可以wait一个atomic变量，到时优化一下
     std::condition_variable _cv;
 
-    /// 用一个flag来表示主线程是否有数据需要处理，比加锁再去判断队列是否为空高效得多
+    /// 子线程需要处理的事件
+    std::atomic<int32_t> _ev;
+    /// 用一个flag来表示线程是否有数据需要处理，比加锁再去判断队列是否为空高效得多
     std::atomic<int32_t> _main_ev;
 
     /// 各线程收到的信号统一存这里，由主线程处理

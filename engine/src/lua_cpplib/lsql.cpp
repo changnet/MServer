@@ -4,7 +4,7 @@
 
 LSql::LSql(lua_State *L) : Thread("lsql")
 {
-    _dbid  = luaL_checkinteger(L, 2);
+    _dbid = luaL_checkinteger(L, 2);
 }
 
 LSql::~LSql()
@@ -62,15 +62,9 @@ void LSql::main_routine(int32_t ev)
 
     LUA_PUSHTRACEBACK(L);
 
-    while (true)
+    lock();
+    while (!_result.empty())
     {
-        lock();
-        if (_result.empty())
-        {
-            unlock();
-            return;
-        }
-
         /* sql_result是一个比较小的结构体，因此不使用指针 */
         struct SqlResult res = _result.front();
         _result.pop();
@@ -79,36 +73,42 @@ void LSql::main_routine(int32_t ev)
 
         on_result(L, &res);
         delete res._res;
+
+        lock();
     }
+    unlock();
 
     lua_pop(L, 1); /* remove traceback */
 }
 
-void LSql::routine(std::unique_lock<std::mutex> &ul)
+void LSql::routine(int32_t ev)
 {
+    UNUSED(ev);
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
      */
     if (0 != ping()) return;
 
+    lock();
     while (!_query.empty())
     {
         const struct SqlQuery *query = _query.front();
         _query.pop();
 
-        int32_t id = query->_id;
-        ul.unlock();
+        unlock();
+        int32_t id          = query->_id;
         struct sql_res *res = do_sql(query);
         delete query;
-        ul.lock();
+        lock();
 
         // 当查询结果为空时，res为nullptr，但仍然需要回调到脚本
         if (id > 0)
         {
             _result.emplace(SqlResult{id, get_errno(), res});
-            wakeup_main(S_MDATA);
+            wakeup_main(S_DATA);
         }
     }
+    unlock();
 }
 
 struct sql_res *LSql::do_sql(const struct SqlQuery *query)
@@ -158,8 +158,10 @@ int32_t LSql::do_sql(lua_State *L)
 
     struct SqlQuery *query = new SqlQuery(id, size, stmt);
 
+    lock();
     _query.push(query);
-    wakeup();
+    wakeup(S_DATA);
+    unlock();
 
     return 0;
 }
@@ -183,7 +185,7 @@ void LSql::on_ready(lua_State *L)
 void LSql::on_result(lua_State *L, struct SqlResult *res)
 {
     lua_getglobal(L, "mysql_event");
-    lua_pushinteger(L, S_MDATA);
+    lua_pushinteger(L, S_DATA);
     lua_pushinteger(L, _dbid);
     lua_pushinteger(L, res->_id);
     lua_pushinteger(L, res->_ecode);

@@ -86,7 +86,7 @@ size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
     return finished_sz + unfinished_sz;
 }
 
-void LMongo::routine(std::unique_lock<std::mutex> &ul)
+void LMongo::routine(int32_t ev)
 {
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
@@ -94,17 +94,19 @@ void LMongo::routine(std::unique_lock<std::mutex> &ul)
     if (_mongo.ping()) return;
 
     _valid = 1;
+    lock();
     while (!_query.empty())
     {
         const struct MongoQuery *query = _query.front();
         _query.pop();
 
-        ul.unlock();
+        unlock();
         struct MongoResult *res = do_command(query);
         delete query;
-        ul.lock();
+        lock();
         if (res) _result.push(res);
     }
+    unlock();
 }
 
 bool LMongo::uninitialize()
@@ -149,9 +151,8 @@ void LMongo::push_query(const struct MongoQuery *query)
 {
     lock();
     _query.push(query);
+    wakeup(S_DATA);
     unlock();
-
-    wakeup();
 }
 
 int32_t LMongo::count(lua_State *L)
