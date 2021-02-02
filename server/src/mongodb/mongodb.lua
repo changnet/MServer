@@ -23,9 +23,9 @@ function Mongodb:on_ready()
     if self.on_ready then self.on_ready() end
 end
 
-function Mongodb:on_data( qid,ecode,res )
+function Mongodb:on_data( qid,e,res )
     if self.cb[qid] then
-        xpcall( self.cb[qid],__G__TRACKBACK,ecode,res )
+        xpcall(self.cb[qid],__G__TRACKBACK,e,res)
         self.cb[qid] = nil
     else
         ERROR( "mongo event no call back found" )
@@ -45,60 +45,76 @@ function Mongodb:stop()
     return self.mongodb:stop()
 end
 
-function Mongodb:count( collection,query,opts,callback )
+function Mongodb:make_cb(callback)
+    if not callback then return 0 end
+
     local id = self.auto_id:next_id( self.cb )
     self.cb[id] = callback
-    return self.mongodb:count( id,collection,query,opts )
+
+    return id
 end
 
-function Mongodb:find( collection,query,opts,callback )
-    local id = self.auto_id:next_id( self.cb )
-    self.cb[id] = callback
-    return self.mongodb:find( id,collection,query,opts )
+-- 查询数量http://mongoc.org/libmongoc/current/mongoc_collection_count_documents.html
+-- @param collection 表名
+-- @param filter 过滤条件，如{"_id": 1}
+-- @param opts 参数，如 {"skip":5, "limit": 10, "sort":{"_id": -1}}
+-- @param callback 回调函数
+function Mongodb:count(collection, filter, opts, callback)
+    local id = self:make_cb(callback)
+    return self.mongodb:count(id, collection, filter,opts)
+end
+
+-- 查询(http://mongoc.org/libmongoc/current/mongoc_collection_find_with_opts.html)
+-- @param collection 表名
+-- @param filter 过滤条件，如{"_id": 1}
+-- @param opts 参数，如 {"skip":5, "limit": 10, "sort":{"_id": -1}}
+-- @param callback 回调函数
+function Mongodb:find(collection, filter, opts, callback)
+    local id = self:make_cb(callback)
+    return self.mongodb:find(id, collection, filter, opts)
 end
 
 -- 查询对应的记录并修改
--- @query 查询条件
--- @sort 排序条件
--- @updata 更新条件
--- @fields 返回的字段
--- @remove 是否删除记录
--- @upsert 如果记录不存在则插入
--- @new 返回更改后的值
+-- @param query 查询条件
+-- @param sort 排序条件
+-- @param updata 更新条件
+-- @param fields 返回的字段
+-- @param remove boolean 是否删除记录
+-- @param upsert boolean 如果记录不存在则插入
+-- @param new boolean 是否返回更改后的值
 function Mongodb:find_and_modify(
     collection,query,sort,update,fields,remove,upsert,new,callback )
 
-    local id = self.auto_id:next_id( self.cb )
-    self.cb[id] = callback
+    local id = self:make_cb(callback)
     return self.mongodb:find_and_modify(
         id,collection,query,sort,update,fields,remove,upsert,new )
 end
 
 function Mongodb:insert( collection,info,callback )
-    local id = 0
-    if callback then
-        id = self.auto_id:next_id( self.cb )
-        self.cb[id] = callback
-    end
+    local id = self:make_cb(callback)
     return self.mongodb:insert( id,collection,info )
 end
 
-function Mongodb:update( collection,query,info,upsert,multi,callback )
-    local id = 0
-    if callback then
-        id = self.auto_id:next_id( self.cb )
-        self.cb[id] = callback
-    end
-    return self.mongodb:update( id,collection,query,info,upsert,multi )
+-- 更新
+-- @param selector 选择条件，如{"_id": 1}
+-- @param info 需要更新的数据，如{"$set":{"amount":999999999}}
+-- @param upsert boolean 不存在是是否插入数据
+-- @param multi boolean 是否更新多个记录
+-- @param callback 回调函数
+function Mongodb:update(collection, selector, info, upsert, multi, callback)
+    -- http://mongoc.org/libmongoc/current/mongoc_collection_update.html
+    -- TODO Superseded by mongoc_collection_update_one(),
+    -- mongoc_collection_update_many(), and mongoc_collection_replace_one().
+    -- 需要换成新接口？但这个接口并没有标记为deprecated
+    local id = self:make_cb(callback)
+    return self.mongodb:update(id, collection, selector, info, upsert, multi)
 end
 
-function Mongodb:remove( collection,query,multi,callback )
-    local id = 0
-    if callback then
-        id = self.auto_id:next_id( self.cb )
-        self.cb[id] = callback
-    end
-    return self.mongodb:remove( id,collection,query,multi )
+-- 删除
+-- @single 是否只删除单个记录，默认全部删除
+function Mongodb:remove( collection,query,single,callback )
+    local id = self:make_cb(callback)
+    return self.mongodb:remove(id,collection,query,single)
 end
 
 -- 不提供索引函数，请开服使用脚本创建索引。

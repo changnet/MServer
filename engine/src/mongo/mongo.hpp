@@ -128,12 +128,12 @@ struct MongoQuery
                  | (multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE);
     }
 
-    void set_remove(const char *clt, bson_t *query, int32_t multi)
+    void set_remove(const char *clt, bson_t *query, int32_t single)
     {
         snprintf(_clt, MONGO_VAR_LEN, "%s", clt);
 
         _query = query;
-        _flags = multi ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
+        _flags = single ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
     }
 };
 

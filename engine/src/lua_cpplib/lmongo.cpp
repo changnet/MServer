@@ -102,7 +102,11 @@ void LMongo::routine(int32_t ev)
         struct MongoResult *res = do_command(query);
         delete query;
         lock();
-        if (res) _result.push(res);
+        if (res)
+        {
+            _result.push(res);
+            wakeup_main(S_DATA);
+        }
     }
     unlock();
 }
@@ -464,7 +468,6 @@ int32_t LMongo::insert(lua_State *L)
     return 0;
 }
 
-/* update( id,collections,query,update,upsert,multi ) */
 int32_t LMongo::update(lua_State *L)
 {
     if (!active())
@@ -494,7 +497,6 @@ int32_t LMongo::update(lua_State *L)
     return 0;
 }
 
-/* remove( id,collections,query,multi ) */
 int32_t LMongo::remove(lua_State *L)
 {
     if (!active())
@@ -511,11 +513,11 @@ int32_t LMongo::remove(lua_State *L)
 
     bson_t *query = string_or_table_to_bson(L, 3);
 
-    int32_t multi = lua_toboolean(L, 4);
+    int32_t single = lua_toboolean(L, 4);
 
     struct MongoQuery *mongo_remove = new MongoQuery();
     mongo_remove->set(id, MQT_REMOVE);
-    mongo_remove->set_remove(collection, query, multi);
+    mongo_remove->set_remove(collection, query, single);
 
     push_query(mongo_remove);
 

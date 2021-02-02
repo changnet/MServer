@@ -78,7 +78,7 @@ public:
      * @param id 唯一id，查询结果根据此id回调
      * @param collection 集合名，即表名
      * @param query 查询条件，json字符串或者lua table
-     * @param multi 旧版本参数，已废弃
+     * @param single 是否仅删除单个记录(默认全部删除)
      */
     int32_t remove(lua_State *L);
 
