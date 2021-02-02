@@ -58,6 +58,7 @@ int32_t LSql::start(lua_State *L)
 void LSql::main_routine(int32_t ev)
 {
     static lua_State *L = StaticGlobal::state();
+
     if (EXPECT_FALSE(ev & S_READY)) on_ready(L);
 
     LUA_PUSHTRACEBACK(L);

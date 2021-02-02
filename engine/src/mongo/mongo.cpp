@@ -50,8 +50,7 @@ int32_t Mongo::connect()
      * 默认10s超时.超服时阻塞,应该可以接受.尝试ping一下，失败也不一定说明有问题
      * 需要关注日志。
      */
-    int32_t ok = ping();
-    return 0 == ok ? 0 : -1;
+    return 0;
 }
 
 void Mongo::disconnect()

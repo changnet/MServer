@@ -4,7 +4,7 @@
 
 -- mysql测试用例
 
-local Mysql   = require "mysql.mysql"
+local Mysql = require "mysql.mysql"
 
 local max_insert = 10000
 

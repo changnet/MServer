@@ -1,16 +1,17 @@
-#include "lmongo.hpp"
 #include <cstdarg>
 #include <chrono>
 
-#include "ltools.hpp"
 #include <lbson.h>
 
+#include "ltools.hpp"
+#include "lmongo.hpp"
 #include "../system/static_global.hpp"
+
+#define MONGODB_EVENT "mongodb_event"
 
 LMongo::LMongo(lua_State *L) : Thread("lmongo")
 {
-    _valid = -1;
-    _dbid  = luaL_checkinteger(L, 2);
+    _dbid = luaL_checkinteger(L, 2);
 }
 
 LMongo::~LMongo() {}
@@ -30,7 +31,7 @@ int32_t LMongo::start(lua_State *L)
     const char *pwd    = luaL_checkstring(L, 4);
     const char *db     = luaL_checkstring(L, 5);
 
-    _mongo.set(ip, port, usr, pwd, db);
+    set(ip, port, usr, pwd, db);
     Thread::start(5000000);
 
     return 0;
@@ -38,36 +39,33 @@ int32_t LMongo::start(lua_State *L)
 
 int32_t LMongo::stop(lua_State *L)
 {
-    _valid = -1;
+    UNUSED(L);
     Thread::stop();
 
     return 0;
 }
 
-// 该连接是否已连接上(不是当前状态，仅仅是第一次连接上)
-int32_t LMongo::valid(lua_State *L)
-{
-    lua_pushinteger(L, _valid);
-
-    return 1;
-}
-
 bool LMongo::initialize()
 {
-    int32_t ok = _mongo.connect();
-    if (ok > 0)
+    if (connect())
     {
-        _valid = 0;
         ERROR("mongo connect fail");
         return false;
     }
-    else if (-1 == ok)
-    {
-        // 初始化正常，但是没ping通，需要重试
-        return true;
-    }
 
-    _valid = 1;
+    // 不断地重试，直到连上重试
+    int32_t ok = 0;
+    do
+    {
+        ok = ping();
+        if (0 == ok) break;
+        if (ok > 0) return false;
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    } while (active());
+
+    if (0 == ok) wakeup_main(S_READY);
+
     return true;
 }
 
@@ -88,12 +86,12 @@ size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
 
 void LMongo::routine(int32_t ev)
 {
+    UNUSED(ev);
     /* 如果某段时间连不上，只能由下次超时后触发
      * 超时时间由thread::start参数设定
      */
-    if (_mongo.ping()) return;
+    if (ping()) return;
 
-    _valid = 1;
     lock();
     while (!_query.empty())
     {
@@ -111,20 +109,33 @@ void LMongo::routine(int32_t ev)
 
 bool LMongo::uninitialize()
 {
-    if (_mongo.ping())
-    {
-        ERROR("mongo ping fail at cleanup,data may lost");
-        /* TODO:write to file */
-    }
-
-    _mongo.disconnect();
+    disconnect();
 
     return true;
+}
+
+void LMongo::on_ready(lua_State *L)
+{
+    LUA_PUSHTRACEBACK(L);
+    lua_getglobal(L, MONGODB_EVENT);
+    lua_pushinteger(L, S_READY);
+    lua_pushinteger(L, _dbid);
+
+    if (LUA_OK != lua_pcall(L, 2, 0, 1))
+    {
+        ERROR("mongodb on ready error:%s", lua_tostring(L, -1));
+        lua_pop(L, 1); /* remove error message */
+    }
+
+    lua_pop(L, 1);
 }
 
 void LMongo::main_routine(int32_t ev)
 {
     static lua_State *L = StaticGlobal::state();
+
+    if (EXPECT_FALSE(ev & S_READY)) on_ready(L);
+
     LUA_PUSHTRACEBACK(L);
 
     while (true)
@@ -139,7 +150,7 @@ void LMongo::main_routine(int32_t ev)
         _result.pop();
         unlock();
 
-        do_result(L, res);
+        on_result(L, res);
 
         delete res;
     }
@@ -206,7 +217,7 @@ int32_t LMongo::count(lua_State *L)
     return 0;
 }
 
-void LMongo::do_result(lua_State *L, const struct MongoResult *res)
+void LMongo::on_result(lua_State *L, const struct MongoResult *res)
 {
     // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
     // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
@@ -234,13 +245,14 @@ void LMongo::do_result(lua_State *L, const struct MongoResult *res)
     // 为0表示不需要回调到脚本
     if (0 == res->_qid) return;
 
-    lua_getglobal(L, "mongodb_read_event");
+    lua_getglobal(L, MONGODB_EVENT);
 
+    lua_pushinteger(L, S_DATA);
     lua_pushinteger(L, _dbid);
     lua_pushinteger(L, res->_qid);
     lua_pushinteger(L, res->_error.code);
 
-    int32_t nargs = 3;
+    int32_t nargs = 4;
     if (res->_data)
     {
         struct error_collector error;
@@ -275,12 +287,12 @@ MongoResult *LMongo::do_command(const struct MongoQuery *query)
     struct MongoResult *res = new MongoResult();
     switch (query->_mqt)
     {
-    case MQT_COUNT: ok = _mongo.count(query, res); break;
-    case MQT_FIND: ok = _mongo.find(query, res); break;
-    case MQT_FMOD: ok = _mongo.find_and_modify(query, res); break;
-    case MQT_INSERT: ok = _mongo.insert(query, res); break;
-    case MQT_UPDATE: ok = _mongo.update(query, res); break;
-    case MQT_REMOVE: ok = _mongo.remove(query, res); break;
+    case MQT_COUNT: ok = Mongo::count(query, res); break;
+    case MQT_FIND: ok = Mongo::find(query, res); break;
+    case MQT_FMOD: ok = Mongo::find_and_modify(query, res); break;
+    case MQT_INSERT: ok = Mongo::insert(query, res); break;
+    case MQT_UPDATE: ok = Mongo::update(query, res); break;
+    case MQT_REMOVE: ok = Mongo::remove(query, res); break;
     default:
     {
         ERROR("unknow handle mongo command type:%d\n", query->_mqt);

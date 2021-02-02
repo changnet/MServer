@@ -3,12 +3,12 @@
 -- xzc
 
 -- mysql连接管理
-
-local Sql = require "Sql"
 local MysqlMgr = oo.singleton( ... )
 
+local Sql = require "Sql"
+
 local S_READY = Sql.S_READY
-local S_MDATA = Sql.S_MDATA
+local S_DATA = Sql.S_DATA
 
 function MysqlMgr:__init()
     self.id  = 0
@@ -41,7 +41,7 @@ function mysql_event(ev, id, qid, ecode, res)
     end
     if ev == S_READY then
         sql:on_ready()
-    elseif ev == S_MDATA then
+    elseif ev == S_DATA then
         sql:on_data(qid, ecode, res)
     else
         assert(false)

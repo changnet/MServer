@@ -15,7 +15,7 @@ struct lua_State;
 /**
  * MongoDB 数据库操作
  */
-class LMongo final : public Thread
+class LMongo final : public Mongo, public Thread
 {
 public:
     ~LMongo();
@@ -36,12 +36,6 @@ public:
      * 等待主线程取回结果
      */
     int32_t stop(lua_State *L);
-
-    /**
-     * 校验当前与数据库连接是否成功，注：不校验因网络问题暂时断开的情况
-     * @return boolean
-     */
-    int32_t valid(lua_State *L);
 
     /**
      * 查询
@@ -107,17 +101,16 @@ private:
     bool uninitialize() override;
     bool initialize() override;
 
+    void on_ready(lua_State *L);
+
     struct MongoResult *do_command(const struct MongoQuery *query);
-    void do_result(lua_State *L, const struct MongoResult *res);
+    void on_result(lua_State *L, const struct MongoResult *res);
 
     void push_query(const struct MongoQuery *query);
     bson_t *string_or_table_to_bson(lua_State *L, int index, int opt = -1,
                                     bson_t *bs = END_BSON, ...);
 
 private:
-    class Mongo _mongo;
-
-    int32_t _valid;
     int32_t _dbid;
 
     std::queue<const struct MongoQuery *> _query;

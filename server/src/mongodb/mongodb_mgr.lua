@@ -2,37 +2,49 @@
 -- 2016-05-22
 -- xzc
 
-local Mongodb = require "mongodb.mongodb"
+-- mongodb连接管理
 local MongodbMgr = oo.singleton( ... )
 
+local Mongo = require "Mongo"
+
+local S_READY = Mongo.S_READY
+local S_DATA = Mongo.S_DATA
+
 function MongodbMgr:__init()
-    self.dbid = 0
-    self.mongodb = {}
+    self.id = 0
+    self.db = {}
 end
 
--- 新增db连接
-function MongodbMgr:new()
-    self.dbid = self.dbid + 1
-
-     local mongodb = Mongodb( self.dbid )
-
-     self.mongodb[self.dbid] = mongodb
-     return mongodb
+-- 产生唯一的数据库id
+function MongodbMgr:next_id()
+    self.id = self.id + 1
+     return self.id
 end
 
--- 断开所有db(阻塞)
-function MongodbMgr:stop()
-    for _,db in pairs( self.mongodb ) do
-        db:stop()
+function MongodbMgr:push(db)
+    self.db[db.id] = db
+end
+
+function MongodbMgr:pop(id)
+    self.db[id] = nil
+end
+
+local mgr = MongodbMgr()
+
+function mongodb_event(ev, id, qid, ecode, res)
+    local db = mgr.db[id]
+    if not db then
+        ERROR("mongodb event no db found: id = %d", id)
+        return
+    end
+    if ev == S_READY then
+        db:on_ready()
+    elseif ev == S_DATA then
+        db:on_data(qid, ecode, res)
+    else
+        assert(false)
     end
 end
 
-local db_mgr = MongodbMgr()
-
-function mongodb_read_event( dbid,qid,ecode,res )
-    local db = db_mgr.mongodb[dbid]
-    db:read_event( qid,ecode,res )
-end
-
-return db_mgr
+return mgr
 

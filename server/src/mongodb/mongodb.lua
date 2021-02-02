@@ -2,41 +2,28 @@
 -- 2015-12-05
 -- xzc
 
--- mongo db 数据存储
+-- mongodb 数据存储
+local Mongodb = oo.class( ... )
 
 local Mongo = require "Mongo"
 local AutoId = require "modules.system.auto_id"
+local mongodb_mgr = require "mongodb.mongodb_mgr"
 
-local Mongodb = oo.class( ... )
-
-function Mongodb:__init( dbid )
+function Mongodb:__init()
+    self.id = mongodb_mgr:next_id()
     self.auto_id = AutoId()
-    self.mongodb = Mongo( dbid )
+    self.mongodb = Mongo(self.id)
 
     self.cb = {}
 end
 
--- 利用定时器来检测是否已连接上数据库
-function Mongodb:do_timer()
-    -- -1未连接或者连接中，0 连接失败，1 连接成功
-    local ok = self.mongodb:valid()
-    if -1 == ok then return end
 
-    g_timer_mgr:stop( self.timer )
-    self.timer = nil
-
-    if 0 == ok then
-        ERROR( "mongo db connect error" )
-        return
-    end
-
-    if self.conn_cb then
-        self.conn_cb()
-        self.conn_cb = nil
-    end
+-- 连接成功回调
+function Mongodb:on_ready()
+    if self.on_ready then self.on_ready() end
 end
 
-function Mongodb:read_event( qid,ecode,res )
+function Mongodb:on_data( qid,ecode,res )
     if self.cb[qid] then
         xpcall( self.cb[qid],__G__TRACKBACK,ecode,res )
         self.cb[qid] = nil
@@ -45,22 +32,17 @@ function Mongodb:read_event( qid,ecode,res )
     end
 end
 
--- 开始连接数据库，这个在另一个线程操作，是异步的，需要定时查询连接结果
-function Mongodb:start( ip,port,usr,pwd,db,callback )
-    self.mongodb:start( ip,port,usr,pwd,db )
+-- 开始连接数据库
+function Mongodb:start(ip, port, usr, pwd, db, on_ready)
+    self.on_ready = on_ready
 
-    if callback then
-        self.conn_cb = callback
-        self.timer = g_timer_mgr:interval( 1,1,-1,self,self.do_timer )
-    end
+    mongodb_mgr:push(self)
+    self.mongodb:start( ip,port,usr,pwd,db )
 end
 
 function Mongodb:stop()
+    mongodb_mgr:pop(self.id)
     return self.mongodb:stop()
-end
-
-function Mongodb:valid()
-    return self.mongodb:valid()
 end
 
 function Mongodb:count( collection,query,opts,callback )
@@ -119,16 +101,8 @@ function Mongodb:remove( collection,query,multi,callback )
     return self.mongodb:remove( id,collection,query,multi )
 end
 
-
--- >>>>>>>>>>>>>>>>>> coroutine 同步处理 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-local MongodbSync = require "mongodb.mongodb_sync"
-
-function Mongodb:new_sync( routine,... )
-    local co = coroutine.create( routine )
-    return MongodbSync( self,co )
-end
-
--- 不提供索引函数，请开服使用脚本创建索引。见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/
+-- 不提供索引函数，请开服使用脚本创建索引。
+-- 见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/
 --[[
 db.collection.getIndexes() 查看已有索引
 db.collection.dropIndex( name ) 删除索引

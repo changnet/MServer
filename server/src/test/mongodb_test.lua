@@ -8,17 +8,28 @@ local max_insert = 100000
 local collection = "item"
 local json = require "lua_parson"
 
+local Mongodb = require "mongodb.mongodb"
+
 t_describe("mongodb test", function()
     local mongodb
     t_it("mongodb base test", function()
         t_wait(10000)
 
-        g_mongodb_mgr = require "mongodb.mongodb_mgr"
-        mongodb = g_mongodb_mgr:new()
+        mongodb = Mongodb()
 
         local g_setting = require "setting.setting"
         mongodb:start(g_setting.mongo_ip, g_setting.mongo_port,
-            g_setting.mongo_user, g_setting.mongo_pwd, g_setting.mongo_db)
+            g_setting.mongo_user, g_setting.mongo_pwd, g_setting.mongo_db,
+            function()
+                t_print(string.format("mongodb(%s:%d) ready ...",
+                g_setting.mongo_ip, g_setting.mongo_port))
+
+                t_done()
+            end)
+    end)
+
+    t_after(function()
+        mongodb:stop()
     end)
 end)
 

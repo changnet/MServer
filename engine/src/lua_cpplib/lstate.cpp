@@ -136,7 +136,7 @@ int32_t luaopen_sql(lua_State *L)
     lc.def<&LSql::do_sql>("do_sql");
 
     lc.set(LSql::S_READY, "S_READY");
-    lc.set(LSql::S_DATA, "S_MDATA");
+    lc.set(LSql::S_DATA, "S_DATA");
 
     return 0;
 }
@@ -146,7 +146,6 @@ int32_t luaopen_mongo(lua_State *L)
     LClass<LMongo> lc(L, "Mongo");
     lc.def<&LMongo::start>("start");
     lc.def<&LMongo::stop>("stop");
-    lc.def<&LMongo::valid>("valid");
 
     lc.def<&LMongo::count>("count");
     lc.def<&LMongo::find>("find");
@@ -154,6 +153,9 @@ int32_t luaopen_mongo(lua_State *L)
     lc.def<&LMongo::update>("update");
     lc.def<&LMongo::remove>("remove");
     lc.def<&LMongo::find_and_modify>("find_and_modify");
+
+    lc.set(LMongo::S_READY, "S_READY");
+    lc.set(LMongo::S_DATA, "S_DATA");
 
     return 0;
 }

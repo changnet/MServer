@@ -129,7 +129,7 @@ return {
 "lua_parson", -- engine/lua_parson.lua
 "lua_rapidxml", -- engine/lua_rapidxml.lua
 "method_thunk", -- src/global/name.lua
-"mongodb_read_event", -- src/mongodb/mongodb_mgr.lua
+"mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "no_update_require", -- src/global/require.lua
 "oo", -- src/global/oo.lua

@@ -22,6 +22,13 @@ end
 
 local MongodbSync = oo.class( ... )
 
+-- local MongodbSync = require "mongodb.mongodb_sync"
+
+-- function Mongodb:new_sync( routine,... )
+--     local co = coroutine.create( routine )
+--     return MongodbSync( self,co )
+-- end
+
 function MongodbSync:__init( mongodb,co )
     self.co = co
     self.mongodb = mongodb
