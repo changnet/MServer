@@ -9,6 +9,7 @@ local collection = "perf_test"
 local json = require "lua_parson"
 
 local Mongodb = require "mongodb.mongodb"
+local SyncMongodb = require "mongodb.sync_mongodb"
 
 t_describe("mongodb test", function()
     local mongodb
@@ -171,7 +172,14 @@ t_describe("mongodb test", function()
         end)
 
         t_it("mongodb coroutine sync test", function()
-            
+            t_wait(1000)
+            local sync_mongodb = SyncMongodb(mongodb, function(sync_db)
+                local e, res = sync_db:count(collection, '{}')
+                t_equal(e, 0)
+                t_equal(res.count, 0)
+                t_done()
+            end)
+            sync_mongodb:start(sync_mongodb)
         end)
 
     t_after(function()

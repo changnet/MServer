@@ -12,14 +12,14 @@ local App = oo.class( ...,SrvApp )
 function App:__init( ... )
     SrvApp.__init( self,... )
 
-    self:set_initialize( "area",nil,nil,2 ) -- 等待一个area服连接OK
+    self:set_initialize( "area", nil, nil, 2 ) -- 等待一个area服连接OK
     self:set_initialize( "world" ) -- 等待一个world服OK
-    self:set_initialize( "db_logger",nil,self.db_logger_initialize ) -- db日志
-    self:set_initialize( "db_conn",nil,self.db_initialize ) -- 等待连接db
+    self:set_initialize( "db_logger", self.db_logger_initialize ) -- db日志
+    self:set_initialize( "db_conn", self.db_initialize ) -- 等待连接db
     -- 等待自增id数据加载
-    self:set_initialize( "uniqueid_data","db_conn",self.uniqueid_initialize )
+    self:set_initialize( "uniqueid_data", self.uniqueid_initialize, "db_conn" )
     -- 等待帐号数据加载
-    self:set_initialize( "acc_data","db_conn",self.acc_initialize )
+    self:set_initialize( "acc_data", self.acc_initialize, "db_conn" )
 end
 
 -- 重写初始化入口

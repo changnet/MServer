@@ -21,6 +21,8 @@ local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 local Bag  = require "modules.bag.bag"
 local Mail = require "modules.mail.mail"
+
+local SyncMongodb = require "mongodb.sync_mongodb"
 local AttributeSys = require "modules.attribute.attribute_sys"
 
 local RES = RES
@@ -96,10 +98,10 @@ function Player:is_new()
 end
 
 -- 开始从db加载各模块数据
-function Player:module_db_load( sync_db )
+function Player:module_db_load()
     -- 根据顺序加载数据库数据
     for step,module in pairs( sub_module ) do
-        local ok = self[module.name]:db_load( sync_db )
+        local ok = self[module.name]:db_load(self.sync_db)
         if not ok then
             ERROR( "player db load error,pid %d,step %d",self.pid,step )
             return false
@@ -135,10 +137,10 @@ end
 
 -- 开始加载数据
 function Player:db_load()
-    local sync_db = g_mongodb:new_sync( self.module_db_load,self )
+    local sync_db = SyncMongodb(g_mongodb, self.module_db_load)
 
     self.sync_db = sync_db
-    return sync_db:start( self,sync_db )
+    return sync_db:start(self)
 end
 
 -- 获取同步加载db(只在登录过程中有效)

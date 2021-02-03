@@ -17,12 +17,14 @@ function App:__init( ... )
 
     self:set_initialize( "world" ) -- 等待一个world服连接OK
     self:set_initialize( "gateway" ) -- 等待一个world服连接OK
-    self:set_initialize( "dungeon",nil,self.dungeon_initialize ) -- 加载副本数据
+    self:set_initialize( "dungeon", self.dungeon_initialize ) -- 加载副本数据
 end
 
 -- 重写初始化入口
 function App:initialize()
     self:module_initialize() -- 加载子模块
+
+    g_entity_mgr = _G.g_entity_mgr
 
     -- 主动连接到gateway和world
     g_network_mgr:connect_srv( g_app_setting.servers )
@@ -35,8 +37,6 @@ function App:final_initialize()
     ev:set_app_ev( 200 ) -- 200毫秒回调一次主循环
 
     SrvApp.final_initialize( self )
-
-    g_entity_mgr = _G.g_entity_mgr
 end
 
 -- 加载全服邮件

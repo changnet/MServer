@@ -20,13 +20,12 @@ end
 
 -- 初始化db日志
 function LogMgr:db_logger_init()
-    local callback = function()
-        self:on_db_logger_init()
-    end
-
     self.db_logger = Mysql()
     self.db_logger:start( g_setting.mysql_ip,g_setting.mysql_port,
-        g_setting.mysql_user,g_setting.mysql_pwd,g_setting.mysql_db,callback )
+        g_setting.mysql_user,g_setting.mysql_pwd,g_setting.mysql_db,function()
+            self:on_db_logger_init()
+        end
+     )
 end
 
 -- db日志初始化完成

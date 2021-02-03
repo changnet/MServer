@@ -40,13 +40,15 @@ local function get_opt(...)
 end
 
 -- 打印内核参数
-local function log_kernel(opts)
+local function log_app_info(opts)
     local env, complier, complier_v, backend, build_time = ev:kernel_info()
-    SYNC_PRINTF("starting %s", table.concat(opts, " "))
-    SYNC_PRINTF("env: %s", env)
-    SYNC_PRINTF("backend: %s", backend)
-    SYNC_PRINTF("complier: %s %s", complier, complier_v)
-    SYNC_PRINTF("build time: %s", build_time)
+    SYNC_PRINT("#####################################################")
+    SYNC_PRINTF("## starting %s", table.concat(opts, " "))
+    SYNC_PRINTF("## env: %s", env)
+    SYNC_PRINTF("## backend: %s", backend)
+    SYNC_PRINTF("## complier: %s %s", complier, complier_v)
+    SYNC_PRINTF("## build time: %s", build_time)
+    SYNC_PRINT("#####################################################")
 end
 
 local function main( cmd, ... )
@@ -82,7 +84,7 @@ local function main( cmd, ... )
         string.char(string.byte(name) - 32), opts.index or 0)
     if not opts.deamon then Log.set_name( app_name ) end
 
-    log_kernel(raw_opts)
+    log_app_info(raw_opts)
 
     local App = require( string.format( "%s.app",name ) )
 

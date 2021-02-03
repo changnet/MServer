@@ -93,13 +93,12 @@ end
 
 -- 连接db
 function SrvApp:db_initialize()
-    local callback = function()
-        self:one_initialized( "db_conn" )
-    end
     -- 连接数据库
     g_mongodb:start( g_setting.mongo_ip,
         g_setting.mongo_port,g_setting.mongo_user,
-        g_setting.mongo_pwd,g_setting.mongo_db,callback )
+        g_setting.mongo_pwd,g_setting.mongo_db,function()
+            self:one_initialized( "db_conn" )
+        end )
 end
 
 -- 加载自增id

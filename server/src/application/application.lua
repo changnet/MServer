@@ -97,7 +97,8 @@ end
 -- 初始化
 function Application:__init()
     g_app = self
-    self.init_list = {} -- 初始化列表
+    self.step_cnt = 0
+    self.init_step = {} -- 初始化列表
 
     -- 停用自动增量gc，在主循环里手动调用(TODO: 测试5.4的新gc效果)
     collectgarbage("stop")
@@ -126,47 +127,79 @@ function Application:check_shutdown()
     return false
 end
 
--- 设置初始化后续动作
--- val：数量，比如说可能需要等待多个场景服务器连接
-function Application:set_initialize( name,after,action,val )
-    self.init_list[name] = {after = after,action = action,val = val or 1 }
+-- 添加进程初始化步骤
+-- @param name 名字，用于打印日志
+-- @param func 初始调用的函数
+-- @param after 在某个步骤初始化完成后执行
+-- @param count 初始化次数，例如：需要等待多个场景服务器连接
+function Application:set_initialize( name,func, after, count )
+    assert(not self.init_step[name])
+
+    self.step_cnt = self.step_cnt + 1
+    self.init_step[name] = {after = after, func = func, count = count or 1 }
 end
 
 -- 一个初始化完成
 function Application:one_initialized( name,val )
-    local init = self.init_list[name]
-    if not init then
-        return ERROR( "unknow initialize action:%s",name )
+    local step = self.init_step[name]
+    if not step then
+        return ERROR( "unknow initialize step:%s",name )
     end
 
-    init.val = init.val - (val or 1)
-    if init.val <= 0 then
-        self.init_list[name] = nil
-        PRINTF( "initialize one action OK:%s",name )
+    step.cnt = 1 + (step.cnt or 0)
+    if step.cnt >= step.count then
+        self.init_step[name] = nil
+        PRINTF("initialize step(%d/%d) OK:%s(%d/%d)",
+            self.step_cnt - table.size(self.init_step), self.step_cnt,
+            name, step.cnt, step.count)
 
-        for _, step in pairs( self.init_list ) do
-            if step.after == name then step.action( self ) end
+        for _, next_step in pairs( self.init_step ) do
+            if next_step.after == name then
+                next_step.tm = ev:time() -- 重置下初始化时间
+                next_step.func( self )
+            end
         end
     end
 
-    if table.empty( self.init_list ) then self:final_initialize() end
+    if table.empty( self.init_step ) then
+        self.step_cnt = nil
+        self:final_initialize()
+    end
 end
 
 -- 进程初始化
 function Application:initialize()
-    if #self.init_list == 0 then return self:final_initialize() end
+    if table.empty(self.init_step) then return self:final_initialize() end
 
-    for _, init in pairs( self.init_list ) do
-        if not init.after and init.action then init.action( self ) end
+    self.check_init_timer =
+        g_timer_mgr:interval(15, 15, -1, self, self.check_init_step)
+
+    for _, step in pairs( self.init_step ) do
+        step.tm = ev:time()
+        if not step.after and step.func then
+            step.func(self)
+        end
+    end
+end
+
+-- 检测哪些初始化未完成
+function Application:check_init_step()
+    local now = ev:time()
+    for name, step in pairs(self.init_step) do
+        if step.tm and now - step.tm > 15 then
+            PRINTF("waitting for initialize step(%d/%d): %s",
+            self.step_cnt - table.size(self.init_step), self.step_cnt, name)
+        end
+    end
+
+    if table.empty(self.init_step) then
+        g_timer_mgr:stop(self.check_init_timer)
+        self.check_init_timer = nil
     end
 end
 
 -- 初始化完成
 function Application:final_initialize()
-    -- 修正为整点触发(X分0秒)，但后面调时间就不对了
-    -- local next = 5 - (ev:time() % 5)
-    -- self.timer = g_timer_mgr:interval( next,5, -1, self,self.do_timer )
-
     self.ok = true
     PRINTF( "Application %s initialize OK",self.name )
 end
