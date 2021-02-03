@@ -5,15 +5,15 @@
 -- 场景服入口
 
 
-local Application = require "application.application"
+local SrvApp = require "application.srv_app"
 
-local App = oo.class( ...,Application )
+local App = oo.class( ..., SrvApp )
 
 local g_entity_mgr = nil
 
 -- 初始化
 function App:__init( ... )
-    Application.__init( self,... )
+    SrvApp.__init( self,... )
 
     self:set_initialize( "world" ) -- 等待一个world服连接OK
     self:set_initialize( "gateway" ) -- 等待一个world服连接OK
@@ -27,14 +27,14 @@ function App:initialize()
     -- 主动连接到gateway和world
     g_network_mgr:connect_srv( g_app_setting.servers )
 
-    Application.initialize( self )
+    SrvApp.initialize( self )
 end
 
 -- 重写初始化结束入口
 function App:final_initialize()
     ev:set_app_ev( 200 ) -- 200毫秒回调一次主循环
 
-    Application.final_initialize( self )
+    SrvApp.final_initialize( self )
 
     g_entity_mgr = _G.g_entity_mgr
 end

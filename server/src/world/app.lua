@@ -4,13 +4,13 @@
 
 -- world进程app
 
-local Application = require "application.application"
+local SrvApp = require "application.srv_app"
 
-local App = oo.class( ...,Application )
+local App = oo.class( ..., SrvApp )
 
 -- 初始化
 function App:__init( ... )
-    Application.__init( self,... )
+    SrvApp.__init( self,... )
 
     self:set_initialize( "area",nil,nil,2 ) -- 等待2个area服连接OK
     self:set_initialize( "gateway" ) -- 等待一个gateway服连接OK
@@ -30,14 +30,14 @@ function App:initialize()
 
     g_network_mgr:connect_srv( g_app_setting.servers )
 
-    Application.initialize( self )
+    SrvApp.initialize( self )
 end
 
 -- 重写关服接口
 function App:shutdown()
-    g_mongodb_mgr:stop() -- 关闭所有数据库链接
+    g_mongodb:stop() -- 关闭所有数据库链接
 
-    Application.shutdown( self )
+    SrvApp.shutdown( self )
 end
 
 -- 加载全服邮件

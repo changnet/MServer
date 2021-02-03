@@ -170,6 +170,10 @@ t_describe("mongodb test", function()
             end)
         end)
 
+        t_it("mongodb coroutine sync test", function()
+            
+        end)
+
     t_after(function()
         mongodb:stop()
     end)

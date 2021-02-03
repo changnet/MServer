@@ -20,16 +20,13 @@ local function after_coroutine_start( co,ok,args,... )
     return false
 end
 
+--//////////////////////////////////////////////////////////////////////////////
+
 local MongodbSync = oo.class( ... )
 
--- local MongodbSync = require "mongodb.mongodb_sync"
+function MongodbSync:__init(mongodb, routine)
+    local co = coroutine.create( routine )
 
--- function Mongodb:new_sync( routine,... )
---     local co = coroutine.create( routine )
---     return MongodbSync( self,co )
--- end
-
-function MongodbSync:__init( mongodb,co )
     self.co = co
     self.mongodb = mongodb
     self.callback = function( ecode,res )

@@ -5,9 +5,6 @@
 -- app进程基类
 local Application = oo.class( ... )
 
-require "modules.system.define"
-local AutoId = require "modules.system.auto_id"
-
 local g_app = nil
 local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
 local gc_counter = 0 -- 完成gc的次数
@@ -98,24 +95,10 @@ end
 --//////////////////////////////////////////////////////////////////////////////
 
 -- 初始化
-function Application:__init( cmd, opts )
+function Application:__init()
     g_app = self
     self.init_list = {} -- 初始化列表
-    -- self.cmd, self.name, self.index, self.id =
-    --     cmd, opts.app,
-    --     assert(tonumber(opts.index), "miss argument --index"),
-    --     assert(tonumber(opts.id), "miss argument --id")
 
-    -- self.start_time = ev:time()
-    -- self.session = self:srv_session(
-    --     self.name,tonumber(self.index),tonumber(self.id) )
-
-    -- -- 设置当前session到C++
-    -- network_mgr:set_curr_session( self.session )
-
-    -- -- 系统定时器
-    -- self.timer_5scb = {}
-    -- self.auto_id = AutoId()
     -- 停用自动增量gc，在主循环里手动调用(TODO: 测试5.4的新gc效果)
     collectgarbage("stop")
 
@@ -171,9 +154,6 @@ end
 
 -- 进程初始化
 function Application:initialize()
-    -- if not g_command_mgr:load_schema() then
-    --     os.exit( 1 )
-    -- end
     if #self.init_list == 0 then return self:final_initialize() end
 
     for _, init in pairs( self.init_list ) do
@@ -206,76 +186,6 @@ end
 
 -- 主循环
 function Application:ev(ms_now)
-end
-
--- /////////////////////////////////////////////////////////////////////////////
--- 生成服务器session id
--- @name  服务器名称，如gateway、world...
--- @index 服务器索引，如多个gateway，分别为1,2...
--- @id 服务器id，与运维相关。开了第N个服
-function Application:srv_session( name,index,id )
-    local ty = SRV_NAME[name]
-
-    assert( ty,"server name type not define" )
-    assert( index < (1 << 24),"server index out of boundry" )
-    assert( id < (1 << 16),   "server id out of boundry" )
-
-    -- int32 ,8bits is ty,8bits is index,16bits is id
-    return (ty << 24) + (index <<16) + id
-end
-
--- 解析session id
-function Application:srv_session_parse( session )
-    local ty = session >> 24;
-    local index = (session >> 16) & 0xFF
-    local id = session & 0xFFFF
-
-    return ty,index,id
-end
-
--- 加载各个子模块
-function Application:module_initialize()
-    require "modules.module_header"
-end
-
--- 定时器事件
-function Application:do_timer()
-    for _,cb in pairs( self.timer_5scb ) do cb() end
-end
-
--- 注册1s定时器
-function Application:reg_5s_timer( this,method )
-    local id = self.auto_id:next_id()
-
-    self.timer_5scb[id] = method_thunk( this,method )
-    return id
-end
-
--- 取消1s定时器
-function Application:remove_5s_timer( id )
-    self.timer_5scb[id] = nil
-end
-
-
--- 连接db
-function Application:db_initialize()
-    local callback = function()
-        self:one_initialized( "db_conn" )
-    end
-    -- 连接数据库
-    g_mongodb:start( g_setting.mongo_ip,
-        g_setting.mongo_port,g_setting.mongo_user,
-        g_setting.mongo_pwd,g_setting.mongo_db,callback )
-end
-
--- 加载自增id
-function Application:uniqueid_initialize()
-    g_unique_id:db_load()
-end
-
--- 初始化db日志
-function Application:db_logger_initialize()
-    g_log_mgr:db_logger_init()
 end
 
 return Application

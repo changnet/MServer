@@ -35,7 +35,6 @@ g_command_mgr = require "modules.command.command_mgr"
 g_network_mgr = require "network.network_mgr"
 g_res         = require "modules.res.res"
 g_gm          = require "modules.system.gm"
-g_mysql_mgr   = require "mysql.mysql_mgr"
 g_player_ev   = require "modules.event.player_event"
 g_system_ev   = require "modules.event.system_event"
 g_lang        = require "modules.lang.lang"
@@ -48,8 +47,7 @@ g_stat        = require "modules.system.statistic"
 
 g_httpd = nil
 g_account_mgr = nil
-g_mongodb_mgr = nil
-g_mongodb = g_mongodb
+g_mongodb = nil
 g_player_mgr = nil
 g_map_mgr = nil
 g_entity_mgr = nil
@@ -63,16 +61,16 @@ if "gateway" == g_app.name then
 
     -- db对象的创建，有点特殊。它是全局对象，但不是单例。可以根据业务创建多个db提高效率
     -- 不要多次调用new创建多个对象
-    g_mongodb_mgr = require "mongodb.mongodb_mgr"
-    if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
+    local Mongodb = require "mongodb.mongodb"
+    if not g_mongodb then g_mongodb = Mongodb() end
 end
 --==============================================================================
 -- 仅在world使用
 if "world" == g_app.name then
     g_player_mgr  = require "modules.player.player_mgr"
 
-    g_mongodb_mgr = require "mongodb.mongodb_mgr"
-    if not g_mongodb then g_mongodb = g_mongodb_mgr:new() end
+    local Mongodb = require "mongodb.mongodb"
+    if not g_mongodb then g_mongodb = Mongodb() end
 end
 --==============================================================================
 -- 仅在area使用

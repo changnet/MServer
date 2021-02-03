@@ -5,6 +5,7 @@
 -- 日志管理
 
 require "modules.log.log_header"
+local Mysql = require "mysql.mysql"
 
 local LogMgr = oo.singleton( ... )
 
@@ -23,7 +24,7 @@ function LogMgr:db_logger_init()
         self:on_db_logger_init()
     end
 
-    self.db_logger = g_mysql_mgr:new()
+    self.db_logger = Mysql()
     self.db_logger:start( g_setting.mysql_ip,g_setting.mysql_port,
         g_setting.mysql_user,g_setting.mysql_pwd,g_setting.mysql_db,callback )
 end

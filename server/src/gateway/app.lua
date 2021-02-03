@@ -4,13 +4,13 @@
 
 -- 网关进程app
 
-local Application = require "application.application"
+local SrvApp = require "application.srv_app"
 
-local App = oo.class( ...,Application )
+local App = oo.class( ...,SrvApp )
 
 -- 初始化
 function App:__init( ... )
-    Application.__init( self,... )
+    SrvApp.__init( self,... )
 
     self:set_initialize( "area",nil,nil,2 ) -- 等待一个area服连接OK
     self:set_initialize( "world" ) -- 等待一个world服OK
@@ -36,7 +36,7 @@ function App:initialize()
         os.exit( 1 )
     end
 
-    Application.initialize( self )
+    SrvApp.initialize( self )
 end
 
 -- 重写初始化结束入口
@@ -46,14 +46,14 @@ function App:final_initialize()
         os.exit( 1 )
     end
 
-    Application.final_initialize( self )
+    SrvApp.final_initialize( self )
 end
 
 -- 重写关服接口
 function App:shutdown()
-    g_mongodb_mgr:stop() -- 关闭所有数据库链接
+    g_mongodb:stop() -- 关闭所有数据库链接
 
-    Application.shutdown( self )
+    SrvApp.shutdown( self )
 end
 
 -- 帐号数据初始化
