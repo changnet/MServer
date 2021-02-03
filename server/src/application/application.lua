@@ -71,7 +71,7 @@ function sig_handler( signum )
     g_app:prepare_shutdown()
 
     if not g_app:check_shutdown() then
-        return g_app:reg_5s_timer( g_app,g_app.check_shutdown )
+        return g_timer_mgr:interval(5 ,5, -1, g_app, g_app.check_shutdown)
     end
 end
 

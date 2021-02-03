@@ -36,7 +36,7 @@ end
 -- 关闭文件日志线程及数据库日志线程
 function LogMgr:close()
     -- self.async_file:stop()
-    -- db则由g_mysql_mgr去管理
+    self.db_logger:stop()
 end
 
 -- 记录登录、退出日志

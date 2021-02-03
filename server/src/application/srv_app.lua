@@ -88,7 +88,10 @@ function SrvApp:final_initialize()
     local next = 5 - (ev:time() % 5)
     self.timer = g_timer_mgr:interval( next,5, -1, self,self.do_timer )
 
-    Application.final_initialize(self)
+    -- Application.final_initialize(self)
+    self.ok = true
+    PRINTF( "App %s(index = %d, id = %d, 0x%.8X) start OK",
+        self.name, self.index, self.id, self.session)
 end
 
 -- 连接db

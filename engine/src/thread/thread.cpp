@@ -13,6 +13,8 @@ Thread::Thread(const char *name)
 
     _ev      = 0;
     _main_ev = 0;
+
+    set_wait_busy(true); // 默认关服时都是需要待所有任务处理才能结束
 }
 
 Thread::~Thread()
