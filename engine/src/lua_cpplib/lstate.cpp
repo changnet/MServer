@@ -28,6 +28,41 @@
         lua_pop(L, 1); /* remove lib */  \
     } while (0)
 
+static void __dbg_break_hook(lua_State *L, lua_Debug *ar)
+{
+    UNUSED(ar);
+    lua_sethook(L, nullptr, 0, 0);
+    luaL_error(L, __FUNCTION__);
+}
+
+void __dbg_break()
+{
+    // 当程序死循环时，用gdb attach到进程
+    // call __dbg_break()
+    // 然后继续执行，应该能中断lua的执行
+    // 注意：由于无法取得coroutine的L指针，无法中断coroutine中的逻辑（考虑把正在执行的
+    // coroutine设置到一个global值，然后用getglobal取值）
+    // 注意：对正在执行程序的影响未知
+    lua_State *L = StaticGlobal::state();
+
+    lua_sethook(L, __dbg_break_hook,
+                LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
+}
+
+const char *__dbg_traceback()
+{
+    // 当程序死循环时，用gdb attach到进程
+    // call __dbg_traceback()
+    // 然后继续执行，应该能打印出lua当前的堆栈
+    // 注意：由于无法取得coroutine的L指针，无法打印coroutine中的堆栈
+    // 注意：对正在执行程序的影响未知
+    lua_State *L = StaticGlobal::state();
+
+    luaL_traceback(L, L, nullptr, 0);
+
+    return lua_tostring(L, -1);
+}
+
 LState::LState()
 {
     /* 初始化lua */
