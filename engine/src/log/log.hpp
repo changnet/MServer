@@ -9,15 +9,16 @@ class Pool;
 class LogOne;
 
 // 日志输出类型
-typedef enum
+enum LogType
 {
+    LT_NONE    = 0,
     LT_FILE    = 1, // 输出到指定文件
     LT_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
     LT_MONGODB = 3, // mongodb日志
     LT_CPRINTF = 4, // C异步PRINTF宏定义
 
     LO_MAX
-} LogType;
+};
 
 class Log
 {

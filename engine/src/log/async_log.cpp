@@ -1,5 +1,22 @@
+#include <fstream>
+
 #include "async_log.hpp"
 #include "../system/static_global.hpp"
+
+const char *format_time(int64_t time)
+{
+    thread_local char time_str[32];
+    thread_local int64_t time_cache = 0;
+
+    struct tm ntm;
+    ::localtime_r(&time, &ntm);
+
+    //    snprintf(time_str, "[%s%s%02d-%02d %02d:%02d:%02d]", app_name, prefix,
+    //                       (ntm.tm_mon + 1), ntm.tm_mday, ntm.tm_hour,
+    //                       ntm.tm_min, ntm.tm_sec)
+
+    return time_str;
+}
 
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
@@ -18,11 +35,46 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 void AsyncLog::write(const char *path, const char *ctx, size_t len,
                      LogType out_type)
 {
-    static class EV *ev = StaticGlobal::ev();
+    assert(path);
+    thread_local std::string k;
+    k.assign(path);
+
+    int64_t now = StaticGlobal::ev()->now();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
-    _log.write_cache(ev->now(), path, ctx, len, out_type);
+    struct Device &device = _device[path];
+    if (!device._type)
+    {
+        device._type = out_type;
+        device_reserve(device, now);
+    }
+
+    assert(device._type == out_type);
+    assert(!device._buff.empty());
+
+    struct Buffer *buff = device_reserve(device, now);
+
+    size_t cpy_len = std::min(sizeof(buff->_buff), len);
+    memcpy(buff->_buff, ctx, cpy_len);
+    buff->_used += cpy_len;
+
+    // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为0
+    if (EXPECT_FALSE(cpy_len < len))
+    {
+        size_t cur_len = cpy_len;
+        do
+        {
+            buff = device_reserve(device, 0);
+
+            cpy_len = std::min(sizeof(buff->_buff), len - cur_len);
+            memcpy(buff->_buff, ctx + cur_len, cpy_len);
+
+            cur_len += cpy_len;
+            buff->_used += cpy_len;
+        } while (cur_len < len);
+    }
+
     unlock();
 }
 
@@ -56,27 +108,74 @@ void AsyncLog::raw_write(const char *path, LogType out, const char *fmt, ...)
     va_end(args);
 }
 
+void AsyncLog::write_device(LogType type, const std::string &path,
+                            const BufferList &buffers)
+{
+    switch (type)
+    {
+    case LT_FILE: break;
+    case LT_LPRINTF: break;
+    case LT_CPRINTF: break;
+    }
+
+    std::ofstream file;
+    file.open(path, std::ios::out | std::ios::app | std::ios::binary);
+
+    if (!file.good()) return;
+
+    for (auto buffer : buffers)
+    {
+        file.write(buffer->_buff, buffer->_used);
+    }
+
+    file.close();
+}
+
 // 线程主循环
 void AsyncLog::routine(int32_t ev)
 {
     UNUSED(ev);
-    lock();
-    /* 把主线程缓存的数据交换到日志线程，尽量减少锁竞争 */
-    _log.swap();
-    while (!_log.empty())
+
+    // https://en.cppreference.com/w/cpp/container/unordered_map/erase
+    // https://stackoverflow.com/questions/38468844/erasing-elements-from-unordered-map-in-a-loop
+    // The order of the elements that are not erased is preserved. (This makes
+    // it possible to erase individual elements while iterating through the
+    // container.)
+    // C++14以后，允许在循环中删除
+    static_assert(__cplusplus > 201402L);
+
+    auto now = std::chrono::steady_clock::now();
+    while (true)
     {
-        // 日志线程写入文件
-        unlock();
-        _log.flush();
+        LogType type            = LT_NONE;
+        const std::string *path = nullptr;
+        _writing_buffers.clear();
+
         lock();
+        for (auto iter = _device.begin(); iter != _device.end(); iter++)
+        {
+            auto &device = iter->second;
+            if (!device._buff.empty())
+            {
+                path         = &(iter->first);
+                device._time = now;
+                _writing_buffers.assign(device._buff.begin(), device._buff.end());
 
-        // 回收内存
-        _log.collect_mem();
+                // 这里有点问题，如果日志量很大，可能会饿死其他文件。导致某些文件一下没写入
+                break;
+            }
+            else if (std::chrono::duration_cast<std::chrono::seconds>(
+                         now - device._time)
+                         .count()
+                     > 5 * 60)
+            {
+                iter = _device.erase(iter);
+            }
+        }
+        unlock();
 
-        // 把新的数据交换到日志线程
-        _log.swap();
+        if (!path) break;
+
+        write_device(type, *path, _writing_buffers);
     }
-    unlock();
-
-    _log.close_files();
 }
