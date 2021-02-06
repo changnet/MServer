@@ -1,12 +1,12 @@
 #pragma once
 
-#include <ctime>
-#include <vector>
+// 主要是实现屏幕、文件双向输出。一开始考虑使用重定向、tee来实现，但是在跨平台、日志文件截断
+// 方面不太好用。nohub方式不停服无法截断日志文件，查看日志也不太方便
 
+#include <cstdio>
+
+#include "../config.hpp"
 #include "../global/types.hpp"
-
-class Pool;
-class LogOne;
 
 // 日志输出类型
 enum LogType
@@ -14,53 +14,52 @@ enum LogType
     LT_NONE    = 0,
     LT_FILE    = 1, // 输出到指定文件
     LT_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
-    LT_MONGODB = 3, // mongodb日志
+    LT_LERROR  = 3, // mongodb日志
     LT_CPRINTF = 4, // C异步PRINTF宏定义
+    LT_CERROR  = 5, // C异步错误日志
 
     LO_MAX
 };
 
-class Log
-{
-public:
-    // 将日志内容分为小、中、大三种类型。避免内存碎片化
-    typedef enum
-    {
-        LS_S = 0, // small
-        LS_M = 1, // middle
-        LS_L = 2, // large
+void set_app_name(const char *name);
 
-        LS_MAX
-    } LogSize;
+/**
+ * 设置日志参数
+ * @dm: deamon，是否守护进程。为守护进程不会输出日志到stdcerr
+ * @ppath: printf path,打印日志的文件路径
+ * @epath: error path,错误日志的文件路径
+ * @mpath: mongodb path,mongodb日志路径
+ */
+void set_log_args(bool dm, const char *ppath, const char *epath,
+                  const char *mpath);
 
-    // 单次写入的日志
-    typedef std::vector<class LogOne *> LogOneList;
+void write_prefix(FILE *stream, const char *prefix, int64_t time);
 
-public:
-    Log();
-    ~Log();
+/// 当前是否以后台模式运行
+bool is_deamon();
 
-    bool swap();
-    void flush();
-    void close_files();
-    void collect_mem();
-    size_t pending_size();
-    bool inline empty() const { return _flush->empty(); }
-    int32_t write_cache(time_t tm, const char *path, const char *ctx,
-                        size_t len, LogType out);
+// /////////////////////////////////////////////////////////////////////////////
+// 以下函数不直接调用，由宏定义调用
+void __tup_error(const char *fmt, ...);
+void __tup_print(const char *fmt, ...);
+void __async_error(const char *fmt, ...);
+void __async_print(const char *fmt, ...);
+// /////////////////////////////////////////////////////////////////////////////
 
-private:
-    class LogOne *allocate_one(size_t len);
-    void deallocate_one(class LogOne *one);
-    bool flush_one_file(struct tm &ntm, const LogOne *one, const char *path,
-                        const char *prefix = "");
-    int32_t flush_one_ctx(FILE *pf, const LogOne *one, struct tm &ntm,
-                          const char *prefix);
+#ifdef _PRINTF_
+    #define PRINTF(...) __async_print(__VA_ARGS__)
+    // 线程安全，并且不需要依赖lev的时间
+    #define PRINTF_R(...) __tup_print(__VA_ARGS__)
+#else
+    #define PRINTF(...)
+    #define PRINTF_R(...)
+#endif
 
-private:
-    LogOneList *_cache; // 主线程写入缓存队列
-    LogOneList *_flush; // 日志线程写入文件队列
-
-    std::unordered_map<std::string, FILE *> _files;
-    class Pool *_ctx_pool[LS_MAX];
-};
+#ifdef _ERROR_
+    #define ERROR(...) __async_error(__VA_ARGS__)
+    // 线程安全，并且不需要依赖lev的时间
+    #define ERROR_R(...) __tup_error(__VA_ARGS__)
+#else
+    #define ERROR(...)
+    #define ERROR_R(...)
+#endif

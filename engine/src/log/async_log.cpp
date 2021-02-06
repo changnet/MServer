@@ -1,27 +1,15 @@
 #include <fstream>
 
 #include "async_log.hpp"
-#include "../system/static_global.hpp"
-
-const char *format_time(int64_t time)
-{
-    thread_local char time_str[32];
-    thread_local int64_t time_cache = 0;
-
-    struct tm ntm;
-    ::localtime_r(&time, &ntm);
-
-    //    snprintf(time_str, "[%s%s%02d-%02d %02d:%02d:%02d]", app_name, prefix,
-    //                       (ntm.tm_mon + 1), ntm.tm_mday, ntm.tm_hour,
-    //                       ntm.tm_min, ntm.tm_sec)
-
-    return time_str;
-}
 
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
     lock();
-    size_t unfinished_sz = _log.pending_size();
+    size_t unfinished_sz = 0;
+    for (auto iter = _device.begin(); iter != _device.end(); iter++)
+    {
+        unfinished_sz += iter->second._buff.size();
+    }
 
     if (is_busy()) unfinished_sz += 1;
     unlock();
@@ -32,28 +20,25 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
     return unfinished_sz;
 }
 
-void AsyncLog::write(const char *path, const char *ctx, size_t len,
-                     LogType out_type)
+void AsyncLog::append(const char *path, LogType type, int64_t time,
+                      const char *ctx, size_t len)
 {
     assert(path);
     thread_local std::string k;
     k.assign(path);
-
-    int64_t now = StaticGlobal::ev()->now();
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
     struct Device &device = _device[path];
     if (!device._type)
     {
-        device._type = out_type;
-        device_reserve(device, now);
+        device._type = type;
     }
 
-    assert(device._type == out_type);
+    assert(device._type == type);
     assert(!device._buff.empty());
 
-    struct Buffer *buff = device_reserve(device, now);
+    struct Buffer *buff = device_reserve(device, time);
 
     size_t cpy_len = std::min(sizeof(buff->_buff), len);
     memcpy(buff->_buff, ctx, cpy_len);
@@ -78,34 +63,40 @@ void AsyncLog::write(const char *path, const char *ctx, size_t len,
     unlock();
 }
 
-void AsyncLog::raw_write(const char *path, LogType out, const char *fmt,
-                         va_list args)
+void AsyncLog::write_buffer(FILE *stream, const char *prefix,
+                            const BufferList &buffers)
 {
-    static char ctx_buff[LOG_MAX_LENGTH];
+    assert(!buffers.empty());
 
-    int32_t len = vsnprintf(ctx_buff, LOG_MAX_LENGTH, fmt, args);
-
-    /* snprintf
-     * 错误返回-1
-     * 缓冲区不足，返回需要的缓冲区长度(即返回值>=缓冲区长度表示被截断)
-     * 正确返回写入的字符串长度
-     * 上面的返回值都不包含0结尾的长度
-     */
-
-    if (len < 0)
+    bool first = true;
+    for (auto buffer : buffers)
     {
-        ERROR("raw_write snprintf fail");
+        if (buffer->_time)
+        {
+            if (!first) fputc('\n', stream);
+            write_prefix(stream, prefix, buffer->_time);
+        }
+
+        first = false;
+        fwrite(buffer->_buff, 1, buffer->_used, stream);
+    }
+    fputc('\n', stream);
+}
+
+void AsyncLog::write_file(const char *path, const char *prefix,
+                          const BufferList &buffers)
+{
+    FILE *stream = ::fopen(path, "ab+");
+    if (!stream)
+    {
+        ERROR_R("can't open log file(%s):%s\n", path, strerror(errno));
+
+        // TODO:这个异常处理有问题
+        // 打开不了文件，可能是权限、路径、磁盘满，这里先全部标识为已写入，丢日志
         return;
     }
-
-    write(path, ctx_buff, len > LOG_MAX_LENGTH ? LOG_MAX_LENGTH : len, out);
-}
-void AsyncLog::raw_write(const char *path, LogType out, const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    raw_write(path, out, fmt, args);
-    va_end(args);
+    write_buffer(stream, prefix, buffers);
+    ::fclose(stream);
 }
 
 void AsyncLog::write_device(LogType type, const std::string &path,
@@ -113,22 +104,27 @@ void AsyncLog::write_device(LogType type, const std::string &path,
 {
     switch (type)
     {
-    case LT_FILE: break;
-    case LT_LPRINTF: break;
-    case LT_CPRINTF: break;
-    }
-
-    std::ofstream file;
-    file.open(path, std::ios::out | std::ios::app | std::ios::binary);
-
-    if (!file.good()) return;
-
-    for (auto buffer : buffers)
+    case LT_FILE:
     {
-        file.write(buffer->_buff, buffer->_used);
+        write_file(path.c_str(), "", buffers);
+        break;
     }
-
-    file.close();
+    case LT_LPRINTF:
+    {
+        write_file(path.c_str(), "LP", buffers);
+        if (!is_deamon()) write_buffer(stdout, "LP", buffers);
+        break;
+    }
+    case LT_CPRINTF:
+    {
+        {
+            write_file(path.c_str(), "CP", buffers);
+            if (!is_deamon()) write_buffer(stdout, "CP", buffers);
+            break;
+        }
+    }
+    default: assert(false); break;
+    }
 }
 
 // 线程主循环

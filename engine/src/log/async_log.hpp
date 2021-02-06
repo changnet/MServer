@@ -34,9 +34,8 @@ public:
     size_t busy_job(size_t *finished   = nullptr,
                     size_t *unfinished = nullptr) override;
 
-    void raw_write(const char *path, LogType out, const char *fmt, ...);
-    void write(const char *path, const char *ctx, size_t len, LogType out_type);
-    void raw_write(const char *path, LogType out, const char *fmt, va_list args);
+    void append(const char *path, LogType type, int64_t time, const char *ctx,
+                size_t len);
 
 private:
     using BufferPool = ObjectPool<Buffer, 256, 256>;
@@ -44,6 +43,10 @@ private:
     // 线程相关，重写基类相关函数
     void routine(int32_t ev) override;
 
+    void write_buffer(FILE *stream, const char *prefix,
+                      const BufferList &buffers);
+    void write_file(const char *path, const char *prefix,
+                    const BufferList &buffers);
     void write_device(LogType type, const std::string &path,
                       const BufferList &buffers);
 

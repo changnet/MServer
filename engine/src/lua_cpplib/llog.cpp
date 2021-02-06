@@ -62,14 +62,10 @@ int32_t LLog::write(lua_State *L)
     size_t len       = 0;
     const char *path = luaL_checkstring(L, 1);
     const char *ctx  = luaL_checklstring(L, 2, &len);
-    int32_t out_type = luaL_optinteger(L, 3, LT_FILE);
+    int64_t time     = luaL_optinteger(L, 3, 0);
+    if (!time) time = StaticGlobal::ev()->now();
 
-    if (out_type < LT_FILE || out_type >= LO_MAX)
-    {
-        return luaL_error(L, "log output type error");
-    }
-
-    tl->write(path, ctx, len, static_cast<LogType>(out_type));
+    tl->append(path, LT_FILE, time, ctx, len);
 
     return 0;
 }
@@ -77,11 +73,11 @@ int32_t LLog::write(lua_State *L)
 // 用于实现stdout、文件双向输出日志打印函数
 int32_t LLog::plog(lua_State *L)
 {
-    const char *ctx = luaL_checkstring(L, 1);
-    // 这里要注意，不用%s，cprintf_log( "LP",ctx
-    // )这样直接调用也是可以的。但是如果脚本传
-    // 入的字符串带特殊符号，如%，则可能会出错
-    cprintf_log(LT_LPRINTF, "%s", ctx);
+    size_t len      = 0;
+    const char *ctx = luaL_checklstring(L, 1, &len);
+
+    StaticGlobal::async_logger()->append("", LT_LPRINTF,
+                                         StaticGlobal::ev()->now(), ctx, len);
 
     return 0;
 }
@@ -89,8 +85,11 @@ int32_t LLog::plog(lua_State *L)
 // 用于实现stdout、文件双向输出日志打印函数
 int32_t LLog::elog(lua_State *L)
 {
-    const char *ctx = luaL_checkstring(L, 1);
-    cerror_log("LE", "%s", ctx);
+    size_t len      = 0;
+    const char *ctx = luaL_checklstring(L, 1, &len);
+
+    StaticGlobal::async_logger()->append("", LT_LERROR,
+                                         StaticGlobal::ev()->now(), ctx, len);
 
     return 0;
 }

@@ -226,7 +226,7 @@ void LMongo::on_result(lua_State *L, const struct MongoResult *res)
     // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
     // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
     // 原因是ev那边频繁收到协议，导致数据库与子线程通信的fd一直没被epoll触发
-    static AsyncLog *logger = StaticGlobal::async_logger();
+    /*static AsyncLog *logger = StaticGlobal::async_logger();
     int64_t real            = StaticGlobal::ev()->ms_now() - res->_time;
     if (0 == res->_error.code)
     {
@@ -245,7 +245,7 @@ void LMongo::on_result(lua_State *L, const struct MongoResult *res)
         ERROR("%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
               res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
               res->_error.message, real, res->_elaspe);
-    }
+    }*/
     // 为0表示不需要回调到脚本
     if (0 == res->_qid) return;
 
