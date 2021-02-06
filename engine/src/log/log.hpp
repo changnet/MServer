@@ -38,6 +38,11 @@ void write_prefix(FILE *stream, const char *prefix, int64_t time);
 /// 当前是否以后台模式运行
 bool is_deamon();
 
+/// 获取错误日志路径
+const char *get_error_path();
+/// 获取打印日志路径
+const char *get_printf_path();
+
 // /////////////////////////////////////////////////////////////////////////////
 // 以下函数不直接调用，由宏定义调用
 void __tup_error(const char *fmt, ...);

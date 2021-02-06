@@ -76,7 +76,7 @@ int32_t LLog::plog(lua_State *L)
     size_t len      = 0;
     const char *ctx = luaL_checklstring(L, 1, &len);
 
-    StaticGlobal::async_logger()->append("", LT_LPRINTF,
+    StaticGlobal::async_logger()->append(get_printf_path(), LT_LPRINTF,
                                          StaticGlobal::ev()->now(), ctx, len);
 
     return 0;
@@ -88,7 +88,7 @@ int32_t LLog::elog(lua_State *L)
     size_t len      = 0;
     const char *ctx = luaL_checklstring(L, 1, &len);
 
-    StaticGlobal::async_logger()->append("", LT_LERROR,
+    StaticGlobal::async_logger()->append(get_error_path(), LT_LERROR,
                                          StaticGlobal::ev()->now(), ctx, len);
 
     return 0;

@@ -46,6 +46,16 @@ bool is_deamon()
     return deamon_mode;
 }
 
+const char *get_error_path()
+{
+    return error_path;
+}
+
+const char *get_printf_path()
+{
+    return printf_path;
+}
+
 /* 设置app进程名 */
 void set_app_name(const char *name)
 {
