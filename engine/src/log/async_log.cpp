@@ -86,7 +86,7 @@ void AsyncLog::write_device(const char *path, const BufferList &buffers)
     size_t size = buffers.size();
     for (size_t i = 0; i < size; i++)
     {
-        int32_t flag         = i == size ? -1 : i;
+        int32_t flag         = i == (size - 1) ? -1 : i;
         const Buffer *buffer = buffers[i];
         switch (buffer->_type)
         {
