@@ -37,13 +37,13 @@ public:
      * stdout、文件双向输出日志打印函数
      * @param ctx 日志内容
      */
-    static int32_t plog(lua_State *L);
+    int32_t plog(lua_State *L);
 
     /**
      * stdout、文件双向输出错误日志函数
      * @param ctx 日志内容
      */
-    static int32_t elog(lua_State *L);
+    int32_t elog(lua_State *L);
 
     /**
      * 设置日志参数

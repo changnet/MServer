@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include "../pool/object_pool.hpp"
+#include "../pool/cache_pool.hpp"
 
 /**
  * @brief 基于十字链表(Orthogonal List)实现的三坐标AOI算法，支持单个实体可变视野
@@ -191,8 +191,8 @@ public:
 
 protected:
     // 这些pool做成局部static变量以避免影响内存统计
-    using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
-    using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
+    using CtxPool          = CachePool<EntityCtx, 10240, 1024>;
+    using EntityVectorPool = CachePool<EntityVector, 10240, 1024>;
 
     /// 从无序数组中删除一个实体
     static bool remove_entity_from_vector(EntityVector *list,

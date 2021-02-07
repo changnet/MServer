@@ -52,9 +52,9 @@ int32_t LLog::start(lua_State *L)
 int32_t LLog::write(lua_State *L)
 {
     // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
-    class AsyncLog *tl = _log ? _log : StaticGlobal::async_logger();
+    class AsyncLog *logger = _log ? _log : StaticGlobal::async_logger();
 
-    if (!tl->active())
+    if (!logger->active())
     {
         return luaL_error(L, "log thread inactive");
     }
@@ -65,7 +65,7 @@ int32_t LLog::write(lua_State *L)
     int64_t time     = luaL_optinteger(L, 3, 0);
     if (!time) time = StaticGlobal::ev()->now();
 
-    tl->append(path, LT_FILE, time, ctx, len);
+    logger->append(path, LT_FILE, time, ctx, len);
 
     return 0;
 }

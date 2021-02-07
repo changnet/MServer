@@ -14,7 +14,7 @@ enum LogType
     LT_NONE    = 0,
     LT_FILE    = 1, // 输出到指定文件
     LT_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
-    LT_LERROR  = 3, // mongodb日志
+    LT_LERROR  = 3, // lua错误日志
     LT_CPRINTF = 4, // C异步PRINTF宏定义
     LT_CERROR  = 5, // C异步错误日志
 
@@ -45,25 +45,25 @@ const char *get_printf_path();
 
 // /////////////////////////////////////////////////////////////////////////////
 // 以下函数不直接调用，由宏定义调用
-void __tup_error(const char *fmt, ...);
-void __tup_print(const char *fmt, ...);
-void __async_error(const char *fmt, ...);
-void __async_print(const char *fmt, ...);
+void __sync_log(const char *path, FILE *stream, const char *prefix,
+                const char *fmt, ...);
+void __async_log(const char *path, LogType type, const char *fmt, ...);
 // /////////////////////////////////////////////////////////////////////////////
 
 #ifdef _PRINTF_
-    #define PRINTF(...) __async_print(__VA_ARGS__)
+    #define PRINTF(...) __async_log(get_printf_path(), LT_CPRINTF, __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
-    #define PRINTF_R(...) __tup_print(__VA_ARGS__)
+    #define PRINTF_R(...) \
+        __sync_log(get_printf_path(), stdout, "CP", __VA_ARGS__)
 #else
     #define PRINTF(...)
     #define PRINTF_R(...)
 #endif
 
 #ifdef _ERROR_
-    #define ERROR(...) __async_error(__VA_ARGS__)
+    #define ERROR(...) __async_log(get_error_path(), LT_CERROR, __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
-    #define ERROR_R(...) __tup_error(__VA_ARGS__)
+    #define ERROR_R(...) __sync_log(get_error_path(), stderr, "CE", __VA_ARGS__)
 #else
     #define ERROR(...)
     #define ERROR_R(...)

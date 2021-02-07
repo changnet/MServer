@@ -11,17 +11,31 @@ class AsyncLog final : public Thread
 {
 public:
     /// 日志缓冲区
-    struct Buffer
+    class Buffer
     {
+    public:
+        friend class AsyncLog;
+        explicit Buffer(int64_t time)
+        {
+            _time = time;
+            _used = 0;
+        }
+
+    private:
         int64_t _time;   /// 日志UTC时间戳
         size_t _used;    /// 缓冲区已使用大小
         char _buff[512]; /// 日志缓冲区
     };
-    using BufferList = std::vector<struct Buffer *>;
+    using BufferList = std::vector<Buffer *>;
 
     /// 日志设备(如file、stdout)
-    struct Device
+    class Device
     {
+    public:
+        friend class AsyncLog;
+        Device() { _type = LT_NONE; }
+
+    private:
         LogType _type;                               /// 设备类型
         BufferList _buff;                            /// 待写入的日志
         std::chrono::steady_clock::time_point _time; /// 上次修改时间
@@ -47,14 +61,13 @@ private:
                       const BufferList &buffers);
     void write_file(const char *path, const char *prefix,
                     const BufferList &buffers);
-    void write_device(LogType type, const std::string &path,
-                      const BufferList &buffers);
+    void write_device(LogType type, const char *path, const BufferList &buffers);
 
-    struct Buffer *device_reserve(struct Device &device, int64_t time)
+    Buffer *device_reserve(Device &device, int64_t time)
     {
-        struct Buffer *buff = _buffer_pool.construct();
+        Buffer *buff = _buffer_pool.construct(time);
 
-        buff->_time = time;
+        // buff->_time = time;
         device._buff.push_back(buff);
 
         return buff;

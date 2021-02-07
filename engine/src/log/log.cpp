@@ -109,28 +109,16 @@ static void tup_stream(const char *path, FILE *std_stream, time_t tm,
     ::fclose(stream);
 }
 
-void __tup_error(const char *fmt, ...)
+void __sync_log(const char *path, FILE *stream, const char *prefix,
+                const char *fmt, ...)
 {
     FORMAT();
-    tup_stream(error_path, stderr, time(nullptr), "CE", buffer);
+    tup_stream(path, stream, time(nullptr), prefix, buffer);
 }
 
-void __tup_print(const char *fmt, ...)
+void __async_log(const char *path, LogType type, const char *fmt, ...)
 {
     FORMAT();
-    tup_stream(printf_path, stderr, time(nullptr), "CP", buffer);
-}
-
-void __async_error(const char *fmt, ...)
-{
-    FORMAT();
-    StaticGlobal::async_logger()->append(
-        error_path, LT_CERROR, StaticGlobal::ev()->now(), buffer, buffer_len);
-}
-
-void __async_print(const char *fmt, ...)
-{
-    FORMAT();
-    StaticGlobal::async_logger()->append(
-        printf_path, LT_CPRINTF, StaticGlobal::ev()->now(), buffer, buffer_len);
+    StaticGlobal::async_logger()->append(path, type, StaticGlobal::ev()->now(),
+                                         buffer, buffer_len);
 }

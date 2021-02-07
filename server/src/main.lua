@@ -42,13 +42,13 @@ end
 -- 打印内核参数
 local function log_app_info(opts)
     local env, complier, complier_v, backend, build_time = ev:kernel_info()
-    SYNC_PRINT("#####################################################")
-    SYNC_PRINTF("## starting %s", table.concat(opts, " "))
-    SYNC_PRINTF("## env: %s", env)
-    SYNC_PRINTF("## backend: %s", backend)
-    SYNC_PRINTF("## complier: %s %s", complier, complier_v)
-    SYNC_PRINTF("## build time: %s", build_time)
-    SYNC_PRINT("#####################################################")
+    PRINT("#####################################################")
+    PRINTF("## starting %s", table.concat(opts, " "))
+    PRINTF("## env: %s", env)
+    PRINTF("## backend: %s", backend)
+    PRINTF("## complier: %s %s", complier, complier_v)
+    PRINTF("## build time: %s", build_time)
+    PRINT("#####################################################")
 end
 
 local function main( cmd, ... )

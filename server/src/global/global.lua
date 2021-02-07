@@ -75,63 +75,42 @@ function __G_C_TRACKBACK( msg,co )
     return table.concat( info_table )
 end
 
--- 同步print log,只打印，不格式化
-function SYNC_PRINT( any,... )
-    local args_num = select( "#",... )
-
-    -- if not ( ... ) then ... end 这种写法当...的第一个参数是nil就不对了
-    if 0 == args_num then return Log.plog( tostring(any) ) end
-
-    -- 如果有多个参数，则合并起来输出，类似Lua的print函数
-    Log.plog( table.concat_any( "    ",any,... ) )
-end
-
--- 同步print format log,以第一个为format参数，格式化后面的参数
-function SYNC_PRINTF( fmt,any,... )
-    -- 默认为c方式的print字符串格式化打印方式
-    if any and "string" == type( fmt ) then
-        Log.plog( string.format( fmt,any,... ) )
-    else
-        SYNC_PRINT( fmt,any,... )
-    end
-end
-
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效
-function PRINT( any,... )
+function PRINT(any,...)
     local args_num = select( "#",... )
     if 0 == args_num then
-        return async_logger:write( "",tostring(any),2 )
+        return async_logger:plog(tostring(any))
     end
 
     -- 如果有多个参数，则合并起来输出，类似Lua的print函数
-    async_logger:write( "",table.concat_any( "    ",any,... ),2 )
+    async_logger:plog(table.concat_any( "    ",any,... ))
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
 function PRINTF( fmt,any,... )
     -- 默认为c方式的print字符串格式化打印方式
     if any and "string" == type( fmt ) then
-        return async_logger:write( "",string.format( fmt,any,... ),2 )
+        return async_logger:plog(string.format( fmt,any,... ))
     else
-        return PRINT( fmt,any,... )
+        return PRINT(fmt,any,...)
     end
 end
 
 --错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
 function ERROR( fmt,any,... )
     if any and "string" == type( fmt ) then
-        return Log.elog( string.format( fmt,any,... ) )
+        return async_logger:elog( string.format( fmt,any,... ) )
     end
 
     if any then
-        Log.elog( table.concat_any( "    ",fmt,any,... ) )
+        async_logger:elog( table.concat_any( "    ",fmt,any,... ) )
     else
-        Log.elog( tostring(fmt) )
+        async_logger:elog( tostring(fmt) )
     end
 end
 
 function ASSERT( expr,... )
-    if expr then return end
+    if expr then return expr end
 
     local msg = table.concat_any( "    ",... )
     return error(msg)

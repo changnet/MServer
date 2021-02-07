@@ -24,21 +24,20 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
                       const char *ctx, size_t len)
 {
     assert(path);
-    thread_local std::string k;
-    k.assign(path);
+    thread_local std::string str_path;
+    str_path.assign(path);
 
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
-    struct Device &device = _device[path];
+    Device &device = _device[str_path];
     if (!device._type)
     {
         device._type = type;
     }
 
     assert(device._type == type);
-    assert(!device._buff.empty());
 
-    struct Buffer *buff = device_reserve(device, time);
+    Buffer *buff = device_reserve(device, time);
 
     size_t cpy_len = std::min(sizeof(buff->_buff), len);
     memcpy(buff->_buff, ctx, cpy_len);
@@ -99,29 +98,39 @@ void AsyncLog::write_file(const char *path, const char *prefix,
     ::fclose(stream);
 }
 
-void AsyncLog::write_device(LogType type, const std::string &path,
+void AsyncLog::write_device(LogType type, const char *path,
                             const BufferList &buffers)
 {
     switch (type)
     {
     case LT_FILE:
     {
-        write_file(path.c_str(), "", buffers);
+        write_file(path, "", buffers);
         break;
     }
     case LT_LPRINTF:
     {
-        write_file(path.c_str(), "LP", buffers);
+        write_file(path, "LP", buffers);
         if (!is_deamon()) write_buffer(stdout, "LP", buffers);
+        break;
+    }
+    case LT_LERROR:
+    {
+        write_file(path, "LE", buffers);
+        if (!is_deamon()) write_buffer(stdout, "LE", buffers);
         break;
     }
     case LT_CPRINTF:
     {
-        {
-            write_file(path.c_str(), "CP", buffers);
-            if (!is_deamon()) write_buffer(stdout, "CP", buffers);
-            break;
-        }
+        write_file(path, "CP", buffers);
+        if (!is_deamon()) write_buffer(stdout, "CP", buffers);
+        break;
+    }
+    case LT_CERROR:
+    {
+        write_file(path, "CE", buffers);
+        if (!is_deamon()) write_buffer(stdout, "CE", buffers);
+        break;
     }
     default: assert(false); break;
     }
@@ -141,23 +150,25 @@ void AsyncLog::routine(int32_t ev)
     static_assert(__cplusplus > 201402L);
 
     auto now = std::chrono::steady_clock::now();
+
+    lock();
     while (true)
     {
-        LogType type            = LT_NONE;
-        const std::string *path = nullptr;
-        _writing_buffers.clear();
+        LogType type     = LT_NONE;
+        const char *path = nullptr;
 
-        lock();
+        // 这里有点问题，如果日志量很大，可能会饿死其他文件。导致某些文件一下没写入
         for (auto iter = _device.begin(); iter != _device.end(); iter++)
         {
             auto &device = iter->second;
             if (!device._buff.empty())
             {
-                path         = &(iter->first);
-                device._time = now;
+                type = device._type;
+                path = iter->first.c_str();
                 _writing_buffers.assign(device._buff.begin(), device._buff.end());
 
-                // 这里有点问题，如果日志量很大，可能会饿死其他文件。导致某些文件一下没写入
+                device._time = now;
+                device._buff.clear();
                 break;
             }
             else if (std::chrono::duration_cast<std::chrono::seconds>(
@@ -168,10 +179,16 @@ void AsyncLog::routine(int32_t ev)
                 iter = _device.erase(iter);
             }
         }
-        unlock();
 
         if (!path) break;
 
-        write_device(type, *path, _writing_buffers);
+        unlock();
+        write_device(type, path, _writing_buffers);
+        lock();
+
+        // 回收缓冲区
+        for (auto buffer : _writing_buffers) _buffer_pool.destroy(buffer);
+        _writing_buffers.clear();
     }
+    unlock();
 }

@@ -66,7 +66,7 @@ local sig_action = {} -- 注意，这个热更要重新注册。关服的话为�
 function sig_handler( signum )
     if sig_action[signum] then return sig_action[signum]() end
 
-    SYNC_PRINTF( "catch signal %d,prepare to shutdown ...",signum )
+    PRINTF( "catch signal %d,prepare to shutdown ...",signum )
 
     g_app:prepare_shutdown()
 
@@ -120,7 +120,7 @@ function Application:check_shutdown()
         return true
     end
 
-    SYNC_PRINTF(
+    PRINTF(
         "thread %s busy,%d finished job,%d unfinished job,waiting ...",
         who,finished,unfinished )
 

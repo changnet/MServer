@@ -2,7 +2,7 @@
 
 #include <list>
 #include <functional>
-#include "../pool/object_pool.hpp"
+#include "../pool/cache_pool.hpp"
 
 /**
  * 使用跳表实现的单链表AOI
@@ -140,8 +140,8 @@ public:
 
 protected:
     // 这些pool做成局部static变量以避免影响内存统计
-    using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
-    using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
+    using CtxPool          = CachePool<EntityCtx, 10240, 1024>;
+    using EntityVectorPool = CachePool<EntityVector, 10240, 1024>;
     CtxPool *get_ctx_pool()
     {
         static thread_local CtxPool ctx_pool("skip_link_aoi_ctx");

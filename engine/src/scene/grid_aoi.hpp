@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../pool/object_pool.hpp"
+#include "../pool/cache_pool.hpp"
 #include <functional> /* std::function */
 
 /**
@@ -52,10 +52,10 @@ public:
     GridAOI();
     virtual ~GridAOI();
 
-    GridAOI(const GridAOI &) = delete;
+    GridAOI(const GridAOI &)  = delete;
     GridAOI(const GridAOI &&) = delete;
-    GridAOI& operator=(const GridAOI&) = delete;
-    GridAOI& operator=(const GridAOI&&) = delete;
+    GridAOI &operator=(const GridAOI &) = delete;
+    GridAOI &operator=(const GridAOI &&) = delete;
 
     /** 根据像素坐标判断是否在同一个格子内 */
     bool is_same_pos(int32_t x, int32_t y, int32_t dx, int32_t dy)
@@ -116,11 +116,11 @@ protected:
 
     /// 遍历矩形内的实体(坐标为像素坐标)
     int32_t each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                           std::function<void(EntityCtx *)> &&func);
+                              std::function<void(EntityCtx *)> &&func);
 
     /// 遍历矩形内的实体，不检测范围(坐标为格子坐标)
     void raw_each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
-                           std::function<void(EntityCtx *)> &&func);
+                               std::function<void(EntityCtx *)> &&func);
 
     // 获取视野范围
     void get_visual_range(int32_t &x, int32_t &y, int32_t &dx, int32_t &dy,
@@ -154,8 +154,8 @@ private:
 
 private:
     // 这些pool做成局部static变量以避免影响内存统计
-    using CtxPool          = ObjectPool<EntityCtx, 10240, 1024>;
-    using EntityVectorPool = ObjectPool<EntityVector, 10240, 1024>;
+    using CtxPool          = CachePool<EntityCtx, 10240, 1024>;
+    using EntityVectorPool = CachePool<EntityVector, 10240, 1024>;
 
     CtxPool *get_ctx_pool()
     {
