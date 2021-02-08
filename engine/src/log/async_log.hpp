@@ -58,7 +58,7 @@ private:
     void routine(int32_t ev) override;
 
     void write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
-                      int32_t flag);
+                      bool beg, bool end);
     void write_device(const char *path, const BufferList &buffers);
 
     Buffer *device_reserve(Device &device, int64_t time, LogType type)
