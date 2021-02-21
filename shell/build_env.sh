@@ -52,7 +52,6 @@ function build_library()
     # 见https://packages.debian.org/buster/libmariadbclient-dev
     # 因此直接安装libmariadb-dev
     auto_apt_install libmariadb-dev
-    auto_apt_install libreadline-dev
 }
 
 function build_lua()
