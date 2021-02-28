@@ -2,6 +2,122 @@
 
 #include "async_log.hpp"
 
+////////////////////////////////////////////////////////////////////////////////
+AsyncLog::Policy::Policy()
+{
+    _data = 0;
+    _data2 = 0;
+    _file = nullptr;
+    _type = PT_NONE;
+}
+AsyncLog::Policy::~Policy()
+{
+    close_stream();
+}
+
+void AsyncLog::Policy::close_stream()
+{
+    if (_file) ::fclose(_file);
+}
+
+void AsyncLog::Policy::init_policy(const char *path)
+{
+    std::string str(path);
+
+    /// 按天切分
+    size_t pos = str.find("%DAILY%");
+    if (pos != std::string::npos)
+    {
+        _data = -86400;
+        _type = PT_DAILY;
+        return;
+    }
+
+    /// 按文件大小切分 runtime%SIZE1024%表示文件大小为1024
+    pos = str.find("%SIZE");
+    if (pos != std::string::npos)
+    {
+        size_t spos = str.find("%", pos + 5);
+        if (spos != std::string::npos)
+        {
+            _data = std::stoll(str.substr(pos + 5, spos));
+            _data2 = _data + 1; // 保证下次触发文件切换
+            _type = PT_SIZE;
+            return;
+        }
+    }
+
+    /// 不需要切分，传的即文件名
+    _type = PT_NORMAL;
+    _path.assign(path);
+}
+
+FILE *AsyncLog::Policy::get_stream(const char *path, int64_t param)
+{
+    if (PT_NONE == _type) init_policy(path);
+
+    switch(_type)
+    {
+    case PT_DAILY:
+    {
+        if (param < _data || param > _data + 86400)
+        {
+            close_stream();
+
+            struct tm ntm;
+            ::localtime_r(&param, &ntm);
+
+            ntm.tm_hour = 0;
+            ntm.tm_min  = 0;
+            ntm.tm_sec  = 0;
+            _data = std::mktime(&ntm);
+
+            // 修正文件名 runtime&DAILY% 转换为 runtime2021-02-28
+            char date[64];
+            int len = snprintf(date, sizeof(date), "%04d-%02d-%02d",
+                ntm.tm_year, ntm.tm_mon + 1, ntm.tm_mday);
+
+            _path.assign(path);
+            _path.replace(_path.begin(), _path.end(), date, len);
+        }
+        break;
+    }
+    case PT_SIZE:
+    {
+        if (param > _data)
+        {
+            close_stream();
+
+            // runtime%SIZE1024% 将会依次替换成文件runtime.1、runtime.2、runtime.3
+            // TODO 这个没想好怎么做，原本这个是参照linux /var/log里的日志机制
+            // 但是看了下 runtime.1、runtime.2、runtime.3 是1最新，也就是说，产生一个新
+            // 文件需要修改所有旧文件。。。这个机制不太适合吧
+
+            _path.assign(path);
+            size_t pos = _path.find("%SIZE");
+            size_t spos = _path.find("%", pos + 5);
+            _path.replace(pos, spos - pos, ".1");
+        }
+        break;
+    }
+    case PT_NORMAL: break;
+    default : assert(false); return nullptr;
+    }
+
+    if (!_file)
+    {
+        _file = ::fopen(_path.c_str(), "ab+");
+        if (!_file)
+        {
+            ERROR_R("can't open log file(%s):%s\n", _path.c_str(), strerror(errno));
+            return nullptr;
+        }
+    }
+
+    return _file;
+}
+////////////////////////////////////////////////////////////////////////////////
+
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
     lock();
@@ -70,25 +186,15 @@ void AsyncLog::write_buffer(FILE *stream, const char *prefix,
     if (end) fputc('\n', stream);
 }
 
-void AsyncLog::write_device(const char *path, const BufferList &buffers)
+void AsyncLog::write_device(const char *path, Policy *policy, const BufferList &buffers)
 {
-    // TODO 目前所有类型都需要写文件，如果以后有不写文件的类型，把path设置为""即可
-    FILE *stream = ::fopen(path, "ab+");
-    if (!stream)
-    {
-        ERROR_R("can't open log file(%s):%s\n", path, strerror(errno));
-
-        // TODO:这个异常处理有问题
-        // 打开不了文件，可能是权限、路径、磁盘满，这里先全部标识为已写入，丢日志
-        return;
-    }
-
     size_t size = buffers.size();
     for (size_t i = 0; i < size; i++)
     {
         bool beg             = 0 == i;
         bool end             = i == size - 1;
         const Buffer *buffer = buffers[i];
+        FILE *stream = policy->get_stream(path, buffer->_time);
         switch (buffer->_type)
         {
         case LT_FILE:
@@ -124,7 +230,7 @@ void AsyncLog::write_device(const char *path, const BufferList &buffers)
         }
     }
 
-    ::fclose(stream);
+    // policy->close_stream();
 }
 
 // 线程主循环
@@ -145,6 +251,7 @@ void AsyncLog::routine(int32_t ev)
     lock();
     while (true)
     {
+        Policy *policy = nullptr;
         const char *path = nullptr;
 
         // 这里有点问题，如果日志量很大，可能会饿死其他文件。导致某些文件一下没写入
@@ -154,25 +261,32 @@ void AsyncLog::routine(int32_t ev)
             if (!device._buff.empty())
             {
                 path = iter->first.c_str();
+                policy = &device._policy;
                 _writing_buffers.assign(device._buff.begin(), device._buff.end());
 
                 device._time = now;
                 device._buff.clear();
                 break;
             }
-            else if (std::chrono::duration_cast<std::chrono::seconds>(
-                         now - device._time)
-                         .count()
-                     > 5 * 60)
+
+            int64_t sec = std::chrono::duration_cast<std::chrono::seconds>(
+                         now - device._time).count();
+            if (sec > 5 * 60)
             {
                 iter = _device.erase(iter);
+            }
+            else if (sec > 10)
+            {
+                // 每次都关闭文件，性能太差
+                // 一直不关闭文件，有时候需要在外部修改文件又没办法，暂每10秒关闭一次
+                device._policy.close_stream();
             }
         }
 
         if (!path) break;
 
         unlock();
-        write_device(path, _writing_buffers);
+        write_device(path, policy, _writing_buffers);
         lock();
 
         // 回收缓冲区

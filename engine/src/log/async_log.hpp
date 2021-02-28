@@ -6,7 +6,7 @@
 #include "../pool/object_pool.hpp"
 #include "log.hpp"
 
-// 多线程日志
+/// 多线程异步日志
 class AsyncLog final : public Thread
 {
 public:
@@ -30,6 +30,33 @@ public:
     };
     using BufferList = std::vector<Buffer *>;
 
+    /// 文件切分策略
+    class Policy
+    {
+    public:
+        enum PolicyType
+        {
+            PT_NONE   = 0, /// 未定义
+            PT_NORMAL = 1, /// 不变
+            PT_DAILY  = 2, /// 每天一个文件，文件名包含%DAILY%
+            PT_SIZE   = 3, /// 按大小分文件，文件名包含%SIZE1024%
+        };
+
+        Policy();
+        ~Policy();
+
+        void close_stream(); /// 关闭文件
+        FILE *get_stream(const char *path, int64_t param); /// 获取文件流
+    private:
+        void init_policy(const char *path);
+    private:
+        FILE *_file; /// 写入的文件句柄，减少文件打开、关闭
+        PolicyType _type; /// 文件切分策略
+        int64_t _data; /// 用于切分文件的参数
+        int64_t _data2; /// 用于切分文件的参数
+        std::string _path; /// 真正的文件路径
+    };
+
     /// 日志设备(如file、stdout)
     class Device
     {
@@ -37,6 +64,8 @@ public:
         friend class AsyncLog;
 
     private:
+        Policy _policy; /// 文件切分策略
+
         BufferList _buff;                            /// 待写入的日志
         std::chrono::steady_clock::time_point _time; /// 上次修改时间
     };
@@ -59,7 +88,7 @@ private:
 
     void write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
                       bool beg, bool end);
-    void write_device(const char *path, const BufferList &buffers);
+    void write_device(const char *path, Policy *policy, const BufferList &buffers);
 
     Buffer *device_reserve(Device &device, int64_t time, LogType type)
     {
