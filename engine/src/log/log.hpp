@@ -33,7 +33,7 @@ void set_app_name(const char *name);
 void set_log_args(bool dm, const char *ppath, const char *epath,
                   const char *mpath);
 
-void write_prefix(FILE *stream, const char *prefix, int64_t time);
+size_t write_prefix(FILE *stream, const char *prefix, int64_t time);
 
 /// 当前是否以后台模式运行
 bool is_deamon();

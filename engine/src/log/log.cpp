@@ -62,11 +62,12 @@ void set_app_name(const char *name)
     snprintf(app_name, LEN_APP_NAME, "%s", name);
 }
 
-void write_prefix(FILE *stream, const char *prefix, int64_t time)
+size_t write_prefix(FILE *stream, const char *prefix, int64_t time)
 {
     thread_local char prefix_str[128];
     thread_local char prefix_cache[32];
     thread_local int64_t time_cache = 0;
+    thread_local int32_t prefix_len = 0;
 
     // 日志线程大约1秒输出一次日志，时间戳精度也是1秒。从日志结果看，这个缓存命中很高
     if (time != time_cache || 0 != strcmp(prefix, prefix_cache))
@@ -78,10 +79,10 @@ void write_prefix(FILE *stream, const char *prefix, int64_t time)
                  ntm.tm_min, ntm.tm_sec);
 
         time_cache = time;
-        snprintf(prefix_cache, sizeof(prefix_cache), "%s", prefix);
+        prefix_len = snprintf(prefix_cache, sizeof(prefix_cache), "%s", prefix);
     }
 
-    fputs(prefix_str, stream);
+    return fwrite(prefix_str, 1, prefix_len, stream);
 }
 
 static void tup_stream(const char *path, FILE *std_stream, time_t tm,

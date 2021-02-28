@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include "../global/global.hpp"
 
 /* eventmask, revents, events... */
@@ -91,9 +92,9 @@ protected:
 
     int64_t ev_now_ms; ///< 起服到现在的毫秒
     EvTstamp ev_rt_now; ///< UTC时间戳(秒，但这个是double，可精确到0.5秒)
-    EvTstamp now_floor; ///< 上一次更新UTC的MONOTONIC时间
-    EvTstamp mn_now;    ///< 起服到现在的秒数(CLOCK_MONOTONIC)
-    EvTstamp rtmn_diff; ///< UTC时间与MONOTONIC时间的差值
+    EvTstamp now_floor;           ///< 上一次更新UTC的MONOTONIC时间
+    std::atomic<EvTstamp> mn_now; ///< 起服到现在的秒数(CLOCK_MONOTONIC)
+    EvTstamp rtmn_diff;           ///< UTC时间与MONOTONIC时间的差值
 protected:
     virtual void running() = 0;
 

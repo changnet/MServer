@@ -30,14 +30,18 @@ public:
     };
     using BufferList = std::vector<Buffer *>;
 
-    /// 文件切分策略
+    /**
+     * 类似linux /var/log下的日志策略
+     * runtime%DAILY% 当天日志为runtime，其他的重命名为runtime20210122
+     * runtime%SIZE1024% 当前日志为runtime,达到1024大小后，会备份为runtime.1
+     */
     class Policy
     {
     public:
         enum PolicyType
         {
             PT_NONE   = 0, /// 未定义
-            PT_NORMAL = 1, /// 不变
+            PT_NORMAL = 1, /// 单个文件
             PT_DAILY  = 2, /// 每天一个文件，文件名包含%DAILY%
             PT_SIZE   = 3, /// 按大小分文件，文件名包含%SIZE1024%
         };
@@ -45,16 +49,25 @@ public:
         Policy();
         ~Policy();
 
+        PolicyType get_type() const { return _type; }
         void close_stream(); /// 关闭文件
-        FILE *get_stream(const char *path, int64_t param); /// 获取文件流
+        FILE *open_stream(); /// 获取文件流
+
+        void init_policy(const std::string &path);
+        void trigger_size_rollover(int64_t size);
+        void trigger_daily_rollover(int64_t now);
+
     private:
-        void init_policy(const char *path);
+        bool init_size_policy(const std::string &path);
+        bool init_daily_policy(const std::string &path);
+
     private:
         FILE *_file; /// 写入的文件句柄，减少文件打开、关闭
-        PolicyType _type; /// 文件切分策略
-        int64_t _data; /// 用于切分文件的参数
-        int64_t _data2; /// 用于切分文件的参数
-        std::string _path; /// 真正的文件路径
+        PolicyType _type;      /// 文件切分策略
+        int64_t _data;         /// 用于切分文件的参数
+        int64_t _data2;        /// 用于切分文件的参数
+        std::string _path;     /// 当前写入的文件路径
+        std::string _raw_path; /// 原始带格式化的文件路径
     };
 
     /// 日志设备(如file、stdout)
@@ -66,8 +79,8 @@ public:
     private:
         Policy _policy; /// 文件切分策略
 
-        BufferList _buff;                            /// 待写入的日志
-        std::chrono::steady_clock::time_point _time; /// 上次修改时间
+        BufferList _buff; /// 待写入的日志
+        time_t _time;     /// 上次修改时间
     };
 
 public:
@@ -86,9 +99,9 @@ private:
     // 线程相关，重写基类相关函数
     void routine(int32_t ev) override;
 
-    void write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
-                      bool beg, bool end);
-    void write_device(const char *path, Policy *policy, const BufferList &buffers);
+    size_t write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
+                        bool beg, bool end);
+    void write_device(Policy *policy, const BufferList &buffers);
 
     Buffer *device_reserve(Device &device, int64_t time, LogType type)
     {
