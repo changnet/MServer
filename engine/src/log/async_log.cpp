@@ -398,9 +398,9 @@ void AsyncLog::routine(int32_t ev)
         for (auto iter = _device.begin(); iter != _device.end(); iter++)
         {
             auto &device = iter->second;
+            policy       = &device._policy;
             if (!device._buff.empty())
             {
-                policy = &device._policy;
                 _writing_buffers.assign(device._buff.begin(), device._buff.end());
 
                 device._time = now;

@@ -13,9 +13,9 @@ void ThreadMgr::push(class Thread *thd)
 
 void ThreadMgr::pop(int32_t thd_id)
 {
-    for (auto iter = _threads.begin(); iter != _threads.end(); iter ++)
+    for (auto iter = _threads.begin(); iter != _threads.end(); iter++)
     {
-        if ((*iter)->get_id())
+        if ((*iter)->get_id() == thd_id)
         {
             _threads.erase(iter);
             return;

@@ -233,7 +233,7 @@ protected:
         {
             // 这里需要lock而wakeup_main不需要是因为主线程会不断地调用main_routine，
             // 来检测_main_ev。但子线程如果不加锁，一旦检测_ev为0，进入wait后只能等超
-            // 时了(锁放外部了，因为好多调用地方都刚好需要加锁)
+            // 时了
             // std::lock_guard<std::mutex> guard(_mutex);
             _ev |= status;
         }

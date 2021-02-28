@@ -74,12 +74,13 @@ size_t write_prefix(FILE *stream, const char *prefix, int64_t time)
     {
         struct tm ntm;
         ::localtime_r(&time, &ntm);
-        snprintf(prefix_str, sizeof(prefix_str), "[%s%s%02d-%02d %02d:%02d:%02d]",
-                 app_name, prefix, (ntm.tm_mon + 1), ntm.tm_mday, ntm.tm_hour,
-                 ntm.tm_min, ntm.tm_sec);
+        prefix_len = snprintf(prefix_str, sizeof(prefix_str),
+                              "[%s%s%02d-%02d %02d:%02d:%02d]", app_name,
+                              prefix, (ntm.tm_mon + 1), ntm.tm_mday,
+                              ntm.tm_hour, ntm.tm_min, ntm.tm_sec);
 
         time_cache = time;
-        prefix_len = snprintf(prefix_cache, sizeof(prefix_cache), "%s", prefix);
+        snprintf(prefix_cache, sizeof(prefix_cache), "%s", prefix);
     }
 
     return fwrite(prefix_str, 1, prefix_len, stream);

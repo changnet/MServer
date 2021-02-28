@@ -4,31 +4,49 @@
 
 local util = require "util"
 
-local printf_log = "print log ....................................... %d"
-local min_log = "add min log ........................................ %d"
-local mid_log = "add mid log ........................................ %d"
-    .. " ................................................... mid log"
-local max_log = "add max log ........................................ %d"
-    .. " ................................................... max log"
+t_describe("log test", function()
+    local logger = nil
+    local max_insert = 1024
+    local log_fmt = "lllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+        .. "lllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+        .. "lllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+        .. "log 日志 %d"
+    t_before(function()
+        -- 如果不存在，则创建日志目录
+        util.mkdir_p( "log")
 
-for _ = 1,256 do
-    max_log = max_log .. "\n..................................................."
-        .. " max log"
-end
+        -- 删除旧的测试日志
+        util.file_rm("log/test_log_size")
+        util.file_rm("log/test_log_size.1")
+        util.file_rm("log/test_log_size.2")
+        util.file_rm("log/test_log_size.3")
+        util.file_rm("log/test_log_size.3")
+        util.file_rm("log/test_log_daily")
 
-print( "max log length",string.len(max_log) )
+        local tm = time.ctime()
+        util.file_rm("log/test_log_daily")
+        util.file_rm(string.format(
+            "log/test_log_daily%d%02d%02d", tm.year, tm.month, tm.day))
 
-local Log = require "Log"
+        -- 创建独立的线程
+        logger = Log()
+        logger:start( 3,0 )
+    end)
+    t_it("log base test", function()
+        -- 测试daily
+        -- 按天滚动日志不太好测试，不过由于runtime是基于这个的，应该也不需要怎么测试
+        -- 1. 测试时调时间， 弄一个接口修改文件日期为昨天
 
-g_log_mgr = Log()
-g_log_mgr:start( 3,0 );
+        -- 测试size及其滚动
+        for i = 1,max_insert do
+            logger:write(
+                "log/test_log_size%SIZE20480%", string.format(log_fmt,i))
+        end
+        -- 测试logfile
+        -- 测试file
+    end)
 
-util.mkdir_p( "log")
-
-local max_insert = 1024
-for i = 1,max_insert do
-    g_log_mgr:write( "log/min.log",string.format( min_log,i) )
-    g_log_mgr:write( "log/mid.log",string.format( mid_log,i) )
-    g_log_mgr:write( "log/max.log",string.format( max_log,i) )
-    g_log_mgr:write( "",string.format(printf_log,i),2 )
-end
+    t_after(function()
+        logger:stop()
+    end)
+end)
