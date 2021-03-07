@@ -53,13 +53,18 @@ public:
         void close_stream(); /// 关闭文件
         FILE *open_stream(); /// 获取文件流
 
-        void init_policy(const std::string &path);
+        void init_policy();
+        void init_path(const std::string &path);
         void trigger_size_rollover(int64_t size);
         void trigger_daily_rollover(int64_t now);
+        bool is_daily_rollover(int64_t now)
+        {
+            return now < _data || now > _data + 86400;
+        }
 
     private:
-        bool init_size_policy(const std::string &path);
-        bool init_daily_policy(const std::string &path);
+        bool init_size_policy();
+        bool init_daily_policy();
 
     private:
         FILE *_file; /// 写入的文件句柄，减少文件打开、关闭

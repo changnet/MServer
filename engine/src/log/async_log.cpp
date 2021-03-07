@@ -18,12 +18,17 @@ AsyncLog::Policy::~Policy()
 
 void AsyncLog::Policy::close_stream()
 {
-    if (_file) ::fclose(_file);
+    if (_file)
+    {
+        ::fclose(_file);
+        _file = nullptr;
+    }
 }
 
 void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 {
-    assert(PT_NONE != _type);
+    if (Policy::PT_NONE == _type) init_policy();
+
     // 还在同一天
     if (PT_DAILY != _type || now >= _data || now <= _data + 86400) return;
 
@@ -67,7 +72,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 
 void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 {
-    assert(PT_NONE != _type);
+    if (Policy::PT_NONE == _type) init_policy();
     if (PT_SIZE != _type) return;
 
     _data2 += size;
@@ -141,25 +146,25 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     }
 }
 
-bool AsyncLog::Policy::init_size_policy(const std::string &path)
+bool AsyncLog::Policy::init_size_policy()
 {
     /// 按文件大小切分 runtime%SIZE1024%表示文件大小为1024
-    size_t pos = path.find("%SIZE");
+    size_t pos = _raw_path.find("%SIZE");
     if (pos == std::string::npos) return false;
 
-    size_t spos = path.find("%", pos + 5);
+    size_t spos = _raw_path.find("%", pos + 5);
     if (spos == std::string::npos) return false;
 
     // 把runtime%SIZE1024%改成runtime用于写入日志
-    _path.assign(path);
+    _path.assign(_raw_path);
     _path.replace(pos, spos - pos, "");
 
-    // 把runtime%SIZE1024%改成runtime.%d，用于稍后格式化成runtime.1
-    _raw_path.assign(path);
-    _path.replace(pos, spos - pos, ".%d");
-
+    // 日志文件的大小上限
     _type = PT_SIZE;
-    _data = std::stoll(path.substr(pos + 5, spos)); // 日志文件的大小上限
+    _data = std::stoll(_raw_path.substr(pos + 5, spos));
+
+    // 把runtime%SIZE1024%改成runtime.%d，用于稍后格式化成runtime.1
+    _raw_path.replace(pos, spos - pos, ".%d");
 
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
@@ -183,16 +188,13 @@ bool AsyncLog::Policy::init_size_policy(const std::string &path)
     return true;
 }
 
-bool AsyncLog::Policy::init_daily_policy(const std::string &path)
+bool AsyncLog::Policy::init_daily_policy()
 {
     /// 按天切分
-    size_t pos = path.find("%DAILY%");
+    size_t pos = _raw_path.find("%DAILY%");
     if (pos == std::string::npos) return false;
 
-    // 获取当前文件的最后修改时间
-    _raw_path.assign(path);
-
-    _path.assign(path);
+    _path.assign(_raw_path);
     _path.replace(_path.begin(), _path.end(), "%DAILY%", "");
 
     _data = -86400;
@@ -214,14 +216,19 @@ bool AsyncLog::Policy::init_daily_policy(const std::string &path)
     return true;
 }
 
-void AsyncLog::Policy::init_policy(const std::string &path)
+void AsyncLog::Policy::init_path(const std::string &path)
 {
-    if (init_daily_policy(path)) return;
-    if (init_size_policy(path)) return;
+    _raw_path.assign(path);
+}
+
+void AsyncLog::Policy::init_policy()
+{
+    if (init_daily_policy()) return;
+    if (init_size_policy()) return;
 
     /// 不需要切分，传的即文件名
     _type = PT_NORMAL;
-    _path.assign(path);
+    _path.assign(_raw_path);
 }
 
 FILE *AsyncLog::Policy::open_stream()
@@ -271,9 +278,11 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
     Device &device = _device[str_path];
+    // 这里不要初始化，因为初始化可能会涉及IO操作，需要放到子线程
     if (Policy::PT_NONE == device._policy.get_type())
     {
-        device._policy.init_policy(str_path);
+        device._policy.init_path(str_path);
+        // device._policy.init_policy(str_path);
     }
     Buffer *buff = device_reserve(device, time, type);
 
@@ -334,8 +343,9 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers)
         bool beg             = 0 == i;
         bool end             = i == size - 1;
         const Buffer *buffer = buffers[i];
-        FILE *stream         = policy->open_stream();
+
         policy->trigger_daily_rollover(buffer->_time);
+        FILE *stream         = policy->open_stream();
         switch (buffer->_type)
         {
         case LT_FILE:
@@ -387,55 +397,60 @@ void AsyncLog::routine(int32_t ev)
     // C++14以后，允许在循环中删除
     static_assert(__cplusplus > 201402L);
 
-    auto now = StaticGlobal::ev()->now();
+    bool busy = true;
+    auto now  = StaticGlobal::ev()->now();
 
     lock();
-    while (true)
+    while(busy)
     {
-        Policy *policy = nullptr;
-
-        // 这里有点问题，如果日志量很大，可能会饿死其他文件。导致某些文件一下没写入
+        busy = false;
         for (auto iter = _device.begin(); iter != _device.end(); iter++)
         {
-            auto &device = iter->second;
-            policy       = &device._policy;
+            Device &device = iter->second;
+            Policy &policy = device._policy;
             if (!device._buff.empty())
             {
-                _writing_buffers.assign(device._buff.begin(), device._buff.end());
-
                 device._time = now;
-                device._buff.clear();
-                break;
-            }
+                _writing_buffers.swap(device._buff);
 
-            int64_t sec = now - device._time;
-            if (sec > 5 * 60)
+                unlock();
+                write_device(&policy, _writing_buffers);
+                lock();
+
+                // 回收缓冲区
+                for (auto buffer : _writing_buffers)
+                    _buffer_pool.destroy(buffer);
+                _writing_buffers.clear();
+
+                busy = true;
+            }
+            else
             {
-                if (Policy::PT_DAILY == policy->get_type())
+                // 关闭长时间不使用的设备
+                int64_t sec = now - device._time;
+                // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush ??)
+                if (sec > 10) policy.close_stream();
+
+                if (Policy::PT_DAILY == policy.get_type())
                 {
-                    policy->close_stream();
+                    // 当没有日志写入时，10秒检测一次日期切换
+                    if (sec > 10)
+                    {
+                        device._time = now;
+                        if (policy.is_daily_rollover(now))
+                        {
+                            unlock();
+                            policy.trigger_daily_rollover(now);
+                            lock();
+                        }
+                    }
                 }
                 else
                 {
-                    iter = _device.erase(iter);
+                    if (sec > 300) iter = _device.erase(iter);
                 }
             }
-            else if (sec > 10)
-            {
-                // 当没有日志写入时，10秒检测一次日期切换
-                policy->trigger_daily_rollover(now);
-            }
         }
-
-        if (!policy) break;
-
-        unlock();
-        write_device(policy, _writing_buffers);
-        lock();
-
-        // 回收缓冲区
-        for (auto buffer : _writing_buffers) _buffer_pool.destroy(buffer);
-        _writing_buffers.clear();
     }
     unlock();
 }
