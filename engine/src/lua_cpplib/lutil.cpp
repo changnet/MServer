@@ -411,27 +411,10 @@ static int32_t mkdir_p(lua_State *L)
     return 1;
 }
 
-/**
- * 删除文件
- * @return 如果成功，返回nil，如果失败，返回error message
- */
-int32_t file_rm(lua_State *L)
-{
-    const char *path = luaL_checkstring(L, 1);
-
-    // 未创建对返回false（包括目录已存在不需要创建）
-    std::error_code e;
-    if (std::filesystem::remove(path, e)) return 0;
-
-    lua_pushstring(L, e.message().c_str());
-    return 1;
-}
-
 static const luaL_Reg utillib[] = {{"md5", md5},
                                    {"uuid", uuid},
                                    {"sha1", sha1},
                                    {"base64", base64},
-                                   {"file_rm", file_rm},
                                    {"mkdir_p", mkdir_p},
                                    {"get_pid", get_pid},
                                    {"sha1_raw", sha1_raw},
@@ -439,7 +422,7 @@ static const luaL_Reg utillib[] = {{"md5", md5},
                                    {"uuid_short", uuid_short},
                                    {"get_addr_info", get_addr_info},
                                    {"uuid_short_parse", uuid_short_parse},
-                                   {NULL, NULL}};
+                                   {nullptr, nullptr}};
 
 int32_t luaopen_util(lua_State *L)
 {

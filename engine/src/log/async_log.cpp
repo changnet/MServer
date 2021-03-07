@@ -20,6 +20,7 @@ void AsyncLog::Policy::close_stream()
 {
     if (_file)
     {
+        ::fflush(_file);
         ::fclose(_file);
         _file = nullptr;
     }
@@ -198,7 +199,7 @@ bool AsyncLog::Policy::init_daily_policy()
     if (pos == std::string::npos) return false;
 
     _path.assign(_raw_path);
-    _path.replace(_path.begin(), _path.end(), "%DAILY%", "");
+    _path.replace(pos, strlen("%DAILY%"), "");
 
     _data = -86400;
     _type = PT_DAILY;
@@ -461,4 +462,13 @@ void AsyncLog::routine(int32_t ev)
         }
     }
     unlock();
+}
+
+bool AsyncLog::uninitialize()
+{
+    routine(0);
+
+    _device.clear(); // 保证文件句柄被销毁并写入文件
+
+    return true;
 }
