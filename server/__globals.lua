@@ -165,4 +165,5 @@ return {
 "vd", -- src/global/global.lua
 "ws_listen", -- src/test/websocket_test.lua
 "ws_local_conn", -- src/test/websocket_test.lua
+"g_async_log",
 }

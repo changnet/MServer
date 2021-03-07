@@ -26,12 +26,19 @@ public:
     int32_t start(lua_State *L);
 
     /**
-     * 写入日志内容
+     * 写入日志到指定文件
      * @param path 日志文件路径
      * @param ctx 日志内容
-     * @param out_type 日志类型，参考 LogOut 枚举
+     * @param time 日志时间，不传则为当前主循环时间
      */
-    int32_t write(lua_State *L);
+    int32_t append_log_file(lua_State *L);
+
+    /**
+     * 写入字符串到指定文件，不加日志前缀，不自动换行
+     * @param path 文件路径
+     * @param ctx 内容
+     */
+    int32_t append_file(lua_State *L);
 
     /**
      * stdout、文件双向输出日志打印函数

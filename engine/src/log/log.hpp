@@ -12,11 +12,12 @@
 enum LogType
 {
     LT_NONE    = 0,
-    LT_FILE    = 1, // 输出到指定文件
+    LT_LOGFILE = 1, // 写入日志到指定文件
     LT_LPRINTF = 2, // 用于lua实现异步PRINTF宏定义
     LT_LERROR  = 3, // lua错误日志
     LT_CPRINTF = 4, // C异步PRINTF宏定义
     LT_CERROR  = 5, // C异步错误日志
+    LT_FILE    = 6, // 写入内容到文件，但不包含时间的日志前缀，不会自动换行
 
     LO_MAX
 };

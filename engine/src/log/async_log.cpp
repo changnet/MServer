@@ -53,7 +53,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
-    if (!e)
+    if (e)
     {
         ERROR_R("rename daily check file exist file error %s %s", _path.c_str(),
                 e.message().c_str());
@@ -62,7 +62,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     if (ok)
     {
         std::filesystem::rename(_path, path, e);
-        if (!e)
+        if (e)
         {
             ERROR_R("rename daily log file error %s %s", path.c_str(),
                     e.message().c_str());
@@ -96,7 +96,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
         old_path.assign(old_buff);
         bool ok = std::filesystem::exists(old_path, e);
-        if (!e)
+        if (e)
         {
             ERROR_R("rename size check file exist file error %s %s",
                     _path.c_str(), e.message().c_str());
@@ -116,7 +116,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         new_path.assign(new_buff);
         old_path.assign(old_buff);
         std::filesystem::rename(old_path, new_path, e);
-        if (!e)
+        if (e)
         {
             ERROR_R("rename size file error %s %s", new_path.c_str(),
                     e.message().c_str());
@@ -126,7 +126,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
     // 把runtime命名为runtime.1
     bool ok = std::filesystem::exists(_path, e);
-    if (!e)
+    if (e)
     {
         ERROR_R("rename size check current file exist file error %s %s",
                 _path.c_str(), e.message().c_str());
@@ -136,8 +136,9 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     if (ok)
     {
         snprintf(new_buff, sizeof(new_buff), _raw_path.c_str(), 1);
+        new_path.assign(new_buff);
         std::filesystem::rename(_path, new_path, e);
-        if (!e)
+        if (e)
         {
             ERROR_R("rename size current file error %s %s", _path.c_str(),
                     e.message().c_str());
@@ -157,18 +158,20 @@ bool AsyncLog::Policy::init_size_policy()
 
     // 把runtime%SIZE1024%改成runtime用于写入日志
     _path.assign(_raw_path);
-    _path.replace(pos, spos - pos, "");
+
+    size_t replace_len = spos - pos + 1;
+    _path.replace(pos, replace_len, "");
 
     // 日志文件的大小上限
     _type = PT_SIZE;
     _data = std::stoll(_raw_path.substr(pos + 5, spos));
 
     // 把runtime%SIZE1024%改成runtime.%d，用于稍后格式化成runtime.1
-    _raw_path.replace(pos, spos - pos, ".%d");
+    _raw_path.replace(pos, replace_len, ".%d");
 
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
-    if (!e)
+    if (e)
     {
         ERROR_R("init size policy check file exist file error %s %s",
                 _path.c_str(), e.message().c_str());
@@ -177,7 +180,7 @@ bool AsyncLog::Policy::init_size_policy()
     if (ok)
     {
         _data2 = std::filesystem::file_size(_path, e);
-        if (!e)
+        if (e)
         {
             ERROR_R("init size policy file size exist file error %s %s",
                     _path.c_str(), e.message().c_str());
@@ -202,7 +205,7 @@ bool AsyncLog::Policy::init_daily_policy()
 
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
-    if (!e)
+    if (e)
     {
         ERROR_R("rename daily initfile exist file error %s %s", _path.c_str(),
                 e.message().c_str());
@@ -348,7 +351,7 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers)
         FILE *stream         = policy->open_stream();
         switch (buffer->_type)
         {
-        case LT_FILE:
+        case LT_LOGFILE:
         {
             bytes = write_buffer(stream, "", buffer, beg, end);
             break;
@@ -375,6 +378,11 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers)
         {
             bytes = write_buffer(stream, "CE", buffer, beg, end);
             if (!is_deamon()) write_buffer(stderr, "CE", buffer, beg, end);
+            break;
+        }
+        case LT_FILE:
+        {
+            bytes = fwrite(buffer->_buff, 1, buffer->_used, stream);
             break;
         }
         default: assert(false); break;

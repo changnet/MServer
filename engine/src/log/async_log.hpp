@@ -103,6 +103,7 @@ private:
 
     // 线程相关，重写基类相关函数
     void routine(int32_t ev) override;
+    bool uninitialize() { routine(0); return true; }
 
     size_t write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
                         bool beg, bool end);

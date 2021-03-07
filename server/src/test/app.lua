@@ -47,7 +47,7 @@ function App:final_initialize()
     -- require "example.mt_performance"
     require "test.mongodb_test"
     require "test.mysql_test"
-    -- require "example.log_performance"
+    require "test.log_test"
     -- require "example.stream_performance"
     -- require "example.websocket_performance"
     require "test.words_filter_test"

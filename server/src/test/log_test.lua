@@ -2,6 +2,7 @@
 -- 2016-03-09
 -- xzc
 
+local Log  = require "Log"
 local util = require "util"
 
 t_describe("log test", function()
@@ -30,7 +31,7 @@ t_describe("log test", function()
 
         -- 创建独立的线程
         logger = Log()
-        logger:start( 3,0 )
+        logger:start(3000000) -- 3000000微秒写入一次
     end)
     t_it("log base test", function()
         -- 测试daily
@@ -39,7 +40,7 @@ t_describe("log test", function()
 
         -- 测试size及其滚动
         for i = 1,max_insert do
-            logger:write(
+            logger:append_log_file(
                 "log/test_log_size%SIZE20480%", string.format(log_fmt,i))
         end
         -- 测试logfile
@@ -47,6 +48,7 @@ t_describe("log test", function()
     end)
 
     t_after(function()
+        -- 这里会阻塞到文件写入完成
         logger:stop()
     end)
 end)

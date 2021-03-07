@@ -6,14 +6,18 @@
 
 -- 设置lua文件搜索路径
 package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
--- 设置c库搜索路径
+-- 设置c库搜索路径，用于直接加载so或者dll的lua模块
 package.cpath = "../c_module/?.so;" .. package.cpath
-
-require "global.oo"
-require "global.require" -- 需要热更的文件，必须放在这后面
 
 local Log  = require "Log"
 local util = require "util"
+
+-- 创建一个用于全局打印日志的日志对象
+g_async_log = Log()
+
+require "global.oo" -- 这个文件不能热更
+require "global.require" -- 需要热更的文件，必须放在这后面
+
 require "global.global" -- 这个要放require后面，它是可以热更的
 local time = require "global.time"
 

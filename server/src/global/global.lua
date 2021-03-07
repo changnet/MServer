@@ -4,10 +4,7 @@
 
 --常用的全局函数
 
-local Log = require "Log"
-
-__g_async_log = Log()
-local async_logger = __g_async_log
+local async_logger = g_async_log
 
 local function to_readable( val )
     if type(val) == "string" then

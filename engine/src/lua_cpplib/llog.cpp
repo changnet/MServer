@@ -49,7 +49,7 @@ int32_t LLog::start(lua_State *L)
     return 0;
 }
 
-int32_t LLog::write(lua_State *L)
+int32_t LLog::append_log_file(lua_State *L)
 {
     // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
     class AsyncLog *logger = _log ? _log : StaticGlobal::async_logger();
@@ -65,7 +65,26 @@ int32_t LLog::write(lua_State *L)
     int64_t time     = luaL_optinteger(L, 3, 0);
     if (!time) time = StaticGlobal::ev()->now();
 
-    logger->append(path, LT_FILE, time, ctx, len);
+    logger->append(path, LT_LOGFILE, time, ctx, len);
+
+    return 0;
+}
+
+int32_t LLog::append_file(lua_State *L)
+{
+    // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
+    class AsyncLog *logger = _log ? _log : StaticGlobal::async_logger();
+
+    if (!logger->active())
+    {
+        return luaL_error(L, "log thread inactive");
+    }
+
+    size_t len       = 0;
+    const char *path = luaL_checkstring(L, 1);
+    const char *ctx  = luaL_checklstring(L, 2, &len);
+
+    logger->append(path, LT_FILE, 0, ctx, len);
 
     return 0;
 }

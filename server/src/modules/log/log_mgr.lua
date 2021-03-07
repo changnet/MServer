@@ -15,7 +15,7 @@ function LogMgr:__init()
     -- local async_file = Log()
     -- async_file:start( 3,0 ); -- 暂不启用另外的线程
 
-    self.async_file = __g_async_log -- async_file
+    self.async_file = g_async_log -- async_file
 end
 
 -- 初始化db日志
@@ -60,19 +60,19 @@ end
 -- @who:玩家pid，如果是系统邮件，则为sys
 function LogMgr:add_mail_log( who,mail )
     local ctx = string.format("add_mail:%s,%s",tostring(who),table.dump(mail))
-    self.async_file:write( "log/mail_log",ctx)
+    self.async_file:append_log_file( "log/mail_log",ctx)
 end
 
 -- 记录删除邮件操作日志
 -- @who:玩家pid，如果是系统邮件，则为sys
 function LogMgr:del_mail_log( who,mail )
     local ctx = string.format("del_mail:%s,%s",tostring(who),table.dump(mail))
-    self.async_file:write( "log/mail_log",ctx )
+    self.async_file:append_log_file( "log/mail_log",ctx )
 end
 
 -- 自定义写文件
 function LogMgr:raw_file_printf( path,... )
-    return self.async_file:write( path,string.format(...) )
+    return self.async_file:append_log_file( path,string.format(...) )
 end
 
 local log_mgr = LogMgr()

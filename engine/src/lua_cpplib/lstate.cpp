@@ -200,9 +200,13 @@ int32_t luaopen_log(lua_State *L)
     LClass<LLog> lc(L, "Log");
     lc.def<&LLog::stop>("stop");
     lc.def<&LLog::start>("start");
-    lc.def<&LLog::write>("write");
+
     lc.def<&LLog::plog>("plog");
     lc.def<&LLog::elog>("elog");
+
+    lc.def<&LLog::append_file>("append_file");
+    lc.def<&LLog::append_log_file>("append_log_file");
+
     lc.def<&LLog::set_args>("set_args");
     lc.def<&LLog::set_name>("set_name");
 
