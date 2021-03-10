@@ -1,40 +1,32 @@
 #include <lua.hpp>
 
-#include "../system/static_global.hpp"
 #include "llog.hpp"
+#include "../system/static_global.hpp"
 
 LLog::LLog(lua_State *L)
 {
     UNUSED(L);
-    _log = NULL;
 }
 
-LLog::~LLog()
-{
-    if (_log)
-    {
-        delete _log;
-        _log = NULL;
-    }
-}
+LLog::~LLog() {}
 
 int32_t LLog::stop(lua_State *L)
 {
     UNUSED(L);
-    if (!_log || !_log->active())
+    if (active())
     {
         ERROR("try to stop a inactive log thread");
         return 0;
     }
 
-    _log->stop();
+    AsyncLog::stop();
 
     return 0;
 }
 
 int32_t LLog::start(lua_State *L)
 {
-    if (_log)
+    if (active())
     {
         luaL_error(L, "log thread already active");
         return 0;
@@ -43,18 +35,14 @@ int32_t LLog::start(lua_State *L)
     /* 设定多久写入一次文件 */
     int32_t usec = luaL_optinteger(L, 2, 5000000);
 
-    _log = new AsyncLog();
-    _log->start(usec);
+    AsyncLog::start(usec);
 
     return 0;
 }
 
 int32_t LLog::append_log_file(lua_State *L)
 {
-    // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
-    class AsyncLog *logger = _log ? _log : StaticGlobal::async_logger();
-
-    if (!logger->active())
+    if (!active())
     {
         return luaL_error(L, "log thread inactive");
     }
@@ -65,17 +53,14 @@ int32_t LLog::append_log_file(lua_State *L)
     int64_t time     = luaL_optinteger(L, 3, 0);
     if (!time) time = StaticGlobal::ev()->now();
 
-    logger->append(path, LT_LOGFILE, time, ctx, len);
+    append(path, LT_LOGFILE, time, ctx, len);
 
     return 0;
 }
 
 int32_t LLog::append_file(lua_State *L)
 {
-    // 如果从lua开始了一个独立线程，那么就用该线程写。否则共用全局异步日志线程
-    class AsyncLog *logger = _log ? _log : StaticGlobal::async_logger();
-
-    if (!logger->active())
+    if (!active())
     {
         return luaL_error(L, "log thread inactive");
     }
@@ -84,7 +69,7 @@ int32_t LLog::append_file(lua_State *L)
     const char *path = luaL_checkstring(L, 1);
     const char *ctx  = luaL_checklstring(L, 2, &len);
 
-    logger->append(path, LT_FILE, 0, ctx, len);
+    append(path, LT_FILE, 0, ctx, len);
 
     return 0;
 }
@@ -113,15 +98,24 @@ int32_t LLog::elog(lua_State *L)
     return 0;
 }
 
+int32_t LLog::set_option(lua_State *L)
+{
+    const char *path = luaL_checkstring(L, 1);
+    int32_t type     = luaL_checkinteger(L, 2);
+    int64_t opt_val  = luaL_optinteger(L, 3, 0);
+
+    set_policy(path, type, opt_val);
+    return 0;
+}
+
 // 设置日志参数
-int32_t LLog::set_args(lua_State *L)
+int32_t LLog::set_std_option(lua_State *L)
 {
     bool dm           = lua_toboolean(L, 1);
     const char *ppath = luaL_checkstring(L, 2);
     const char *epath = luaL_checkstring(L, 3);
-    const char *mpath = luaL_checkstring(L, 4);
 
-    set_log_args(dm, ppath, epath, mpath);
+    set_log_args(dm, ppath, epath);
     return 0;
 }
 

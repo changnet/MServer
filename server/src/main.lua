@@ -12,14 +12,10 @@ package.cpath = "../c_module/?.so;" .. package.cpath
 local Log  = require "Log"
 local util = require "util"
 
--- 创建一个用于全局打印日志的日志对象
-g_async_log = Log()
-
 require "global.oo" -- 这个文件不能热更
 require "global.require" -- 需要热更的文件，必须放在这后面
 
 require "global.global" -- 这个要放require后面，它是可以热更的
-local time = require "global.time"
 
 -- 当前进程application对象
 g_app = nil
@@ -63,7 +59,7 @@ local function main( cmd, ... )
     util.mkdir_p( "runtime" ) -- 创建运行时数据存储目录
     util.mkdir_p( "runtime/rank" ) -- 创建运行时排行榜数据存储目录
 
-    local name = assert(opts.app, "miss argument --app")
+    local name = assert(opts.app, "missing argument --app")
 
     ev:set_app_ev(250)
     -- 设置主循环临界时间，目前只用来输出日志,检测卡主循环
@@ -71,15 +67,12 @@ local function main( cmd, ... )
 
     -- 设置错误日志、打印日志
     -- 如果你的服务器是分布式的，包含多个进程，则注意名字要区分开来
-    local tm = time.ctime()
-
     -- win下文件名不支持特殊字符的，比如":"
-    local epath = string.format( "log/%s_error",name )
-    local mpath = string.format( "log/%s_mongo",name )
-    local ppath = string.format(
-        "log/%s#%04d-%02d-%02d#%02d_%02d_%02d",
-        name,tm.year,tm.month,tm.day,tm.hour,tm.min,tm.sec )
-    Log.set_args( opts.deamon, ppath, epath, mpath )
+    local epath = string.format("log/%s_error", name)
+    local ppath = string.format("log/%s_runtime", name)
+    Log.set_std_option(opts.deamon, ppath, epath) -- 设置C++用的日志参数
+    g_async_log:set_option(ppath, Log.PT_DAILY)
+    g_async_log:set_option(epath, Log.PT_SIZE, 1024 * 1024 * 10)
 
     -- 非后台模式，打印进程名到屏幕，否则多个进程在同一终端开户时不好区分日志
     -- 取首字母大写即可，不用全名，如果以后有重名再改
@@ -96,4 +89,12 @@ local function main( cmd, ... )
     g_app:exec()
 end
 
-xpcall( main, __G__TRACKBACK,... )
+-- 由于日志线程未启动，不能直接使用__G__TRACKBACK
+local function __traceback( msg,co )
+    local stack_trace = debug.traceback( co )
+    local info_table = { tostring(msg),"\n",stack_trace }
+
+    print(table.concat( info_table ))
+end
+
+xpcall(main, __traceback, ...)

@@ -10,6 +10,9 @@ int32_t main(int32_t argc, char **argv)
     LClass<LEV>::push(L, StaticGlobal::lua_ev(), false);
     lua_setglobal(L, "ev");
 
+    LClass<LLog>::push(L, StaticGlobal::async_logger(), false);
+    lua_setglobal(L, "g_async_log");
+
     LClass<LNetworkMgr>::push(L, StaticGlobal::network_mgr(), false);
     lua_setglobal(L, "network_mgr");
 

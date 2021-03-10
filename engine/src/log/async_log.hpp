@@ -1,13 +1,11 @@
 #pragma once
 
-#include <chrono>
-
 #include "../thread/thread.hpp"
 #include "../pool/object_pool.hpp"
 #include "log.hpp"
 
 /// 多线程异步日志
-class AsyncLog final : public Thread
+class AsyncLog : public Thread
 {
 public:
     /// 日志缓冲区
@@ -50,11 +48,10 @@ public:
         ~Policy();
 
         PolicyType get_type() const { return _type; }
-        void close_stream(); /// 关闭文件
-        FILE *open_stream(); /// 获取文件流
+        void close_stream();                 /// 关闭文件
+        FILE *open_stream(const char *path); /// 获取文件流
 
-        void init_policy();
-        void init_path(const std::string &path);
+        void init_policy(const char *path, int32_t type, int64_t opt_val);
         void trigger_size_rollover(int64_t size);
         void trigger_daily_rollover(int64_t now);
         bool is_daily_rollover(int64_t now)
@@ -63,7 +60,7 @@ public:
         }
 
     private:
-        bool init_size_policy();
+        bool init_size_policy(int64_t size);
         bool init_daily_policy();
 
     private:
@@ -90,11 +87,12 @@ public:
 
 public:
     AsyncLog() : Thread("AsyncLog"), _buffer_pool("AsyncLog"){};
-    ~AsyncLog(){};
+    virtual ~AsyncLog(){};
 
     size_t busy_job(size_t *finished   = nullptr,
                     size_t *unfinished = nullptr) override;
 
+    void set_policy(const char *path, int32_t type, int64_t opt_val);
     void append(const char *path, LogType type, int64_t time, const char *ctx,
                 size_t len);
 
@@ -107,7 +105,8 @@ private:
 
     size_t write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
                         bool beg, bool end);
-    void write_device(Policy *policy, const BufferList &buffers);
+    void write_device(Policy *policy, const BufferList &buffers,
+                      const char *path);
 
     Buffer *device_reserve(Device &device, int64_t time, LogType type)
     {

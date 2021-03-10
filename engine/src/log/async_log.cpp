@@ -28,8 +28,6 @@ void AsyncLog::Policy::close_stream()
 
 void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 {
-    if (Policy::PT_NONE == _type) init_policy();
-
     // 还在同一天
     if (PT_DAILY != _type || now >= _data || now <= _data + 86400) return;
 
@@ -73,7 +71,6 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 
 void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 {
-    if (Policy::PT_NONE == _type) init_policy();
     if (PT_SIZE != _type) return;
 
     _data2 += size;
@@ -148,28 +145,16 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     }
 }
 
-bool AsyncLog::Policy::init_size_policy()
+bool AsyncLog::Policy::init_size_policy(int64_t size)
 {
-    /// 按文件大小切分 runtime%SIZE1024%表示文件大小为1024
-    size_t pos = _raw_path.find("%SIZE");
-    if (pos == std::string::npos) return false;
+    _data = size;
+    if (_data <= 0)
+    {
+        _data = 1024 * 1024 * 10;
+        ERROR_R("size illegal, reset to default 1024 * 1024 * 10");
+    }
 
-    size_t spos = _raw_path.find("%", pos + 5);
-    if (spos == std::string::npos) return false;
-
-    // 把runtime%SIZE1024%改成runtime用于写入日志
-    _path.assign(_raw_path);
-
-    size_t replace_len = spos - pos + 1;
-    _path.replace(pos, replace_len, "");
-
-    // 日志文件的大小上限
-    _type = PT_SIZE;
-    _data = std::stoll(_raw_path.substr(pos + 5, spos));
-
-    // 把runtime%SIZE1024%改成runtime.%d，用于稍后格式化成runtime.1
-    _raw_path.replace(pos, replace_len, ".%d");
-
+    // 读取文件大小
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
     if (e)
@@ -194,16 +179,9 @@ bool AsyncLog::Policy::init_size_policy()
 
 bool AsyncLog::Policy::init_daily_policy()
 {
-    /// 按天切分
-    size_t pos = _raw_path.find("%DAILY%");
-    if (pos == std::string::npos) return false;
-
-    _path.assign(_raw_path);
-    _path.replace(pos, strlen("%DAILY%"), "");
-
     _data = -86400;
-    _type = PT_DAILY;
 
+    // 读取已有日志文件的日期
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
     if (e)
@@ -220,24 +198,21 @@ bool AsyncLog::Policy::init_daily_policy()
     return true;
 }
 
-void AsyncLog::Policy::init_path(const std::string &path)
+void AsyncLog::Policy::init_policy(const char *path, int32_t type, int64_t opt_val)
 {
-    _raw_path.assign(path);
+    _path.assign(path);
+    _type = static_cast<Policy::PolicyType>(type);
+    switch (type)
+    {
+    case PT_DAILY: init_daily_policy(); break;
+    case PT_SIZE: init_size_policy(opt_val); break;
+    default: break;
+    }
 }
 
-void AsyncLog::Policy::init_policy()
+FILE *AsyncLog::Policy::open_stream(const char *path)
 {
-    if (init_daily_policy()) return;
-    if (init_size_policy()) return;
-
-    /// 不需要切分，传的即文件名
-    _type = PT_NORMAL;
-    _path.assign(_raw_path);
-}
-
-FILE *AsyncLog::Policy::open_stream()
-{
-    assert(PT_NONE != _type);
+    if (PT_NONE == _type) _path.assign(path);
 
     if (!_file)
     {
@@ -272,6 +247,15 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
     return unfinished_sz;
 }
 
+void AsyncLog::set_policy(const char *path, int32_t type, int64_t opt_val)
+{
+    lock();
+    Device &device = _device[path];
+    unlock();
+
+    device._policy.init_policy(path, type, opt_val);
+}
+
 void AsyncLog::append(const char *path, LogType type, int64_t time,
                       const char *ctx, size_t len)
 {
@@ -279,16 +263,9 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     thread_local std::string str_path;
     str_path.assign(path);
 
-    /* 时间必须取主循环的帧，不能取即时的时间戳 */
     lock();
     Device &device = _device[str_path];
-    // 这里不要初始化，因为初始化可能会涉及IO操作，需要放到子线程
-    if (Policy::PT_NONE == device._policy.get_type())
-    {
-        device._policy.init_path(str_path);
-        // device._policy.init_policy(str_path);
-    }
-    Buffer *buff = device_reserve(device, time, type);
+    Buffer *buff   = device_reserve(device, time, type);
 
     size_t cpy_len = std::min(sizeof(buff->_buff), len);
     memcpy(buff->_buff, ctx, cpy_len);
@@ -338,7 +315,8 @@ size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
     return bytes;
 }
 
-void AsyncLog::write_device(Policy *policy, const BufferList &buffers)
+void AsyncLog::write_device(Policy *policy, const BufferList &buffers,
+                            const char *path)
 {
     size_t size = buffers.size();
     for (size_t i = 0; i < size; i++)
@@ -349,7 +327,12 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers)
         const Buffer *buffer = buffers[i];
 
         policy->trigger_daily_rollover(buffer->_time);
-        FILE *stream         = policy->open_stream();
+        FILE *stream = policy->open_stream(path);
+        if (!stream)
+        {
+            ERROR_R("unable to open log stream: %s", path);
+            continue;
+        }
         switch (buffer->_type)
         {
         case LT_LOGFILE:
@@ -410,7 +393,7 @@ void AsyncLog::routine(int32_t ev)
     auto now  = StaticGlobal::ev()->now();
 
     lock();
-    while(busy)
+    while (busy)
     {
         busy = false;
         for (auto iter = _device.begin(); iter != _device.end(); iter++)
@@ -423,7 +406,7 @@ void AsyncLog::routine(int32_t ev)
                 _writing_buffers.swap(device._buff);
 
                 unlock();
-                write_device(&policy, _writing_buffers);
+                write_device(&policy, _writing_buffers, iter->first.c_str());
                 lock();
 
                 // 回收缓冲区

@@ -9,7 +9,7 @@ class LState *StaticGlobal::_state            = nullptr;
 class SSLMgr *StaticGlobal::_ssl_mgr          = nullptr;
 class CodecMgr *StaticGlobal::_codec_mgr      = nullptr;
 class Statistic *StaticGlobal::_statistic     = nullptr;
-class AsyncLog *StaticGlobal::_async_log      = nullptr;
+class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
 class LNetworkMgr *StaticGlobal::_network_mgr = nullptr;
 
@@ -63,13 +63,13 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
     _statistic   = new class Statistic();
     _ev          = new class LEV();
     _thread_mgr  = new class ThreadMgr();
-    _async_log   = new class AsyncLog();
     _state       = new class LState();
+    _async_log   = new class LLog(_state->state());
     _codec_mgr   = new class CodecMgr();
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
 
-    _async_log->start(1000000);
+    _async_log->AsyncLog::start(1000000);
 
     // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙
     // 关不了服。stop的时候会处理所有日志
@@ -86,7 +86,7 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
  */
 void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
 {
-    _async_log->stop();
+    _async_log->AsyncLog::stop();
     _thread_mgr->stop();
     _network_mgr->clear();
 

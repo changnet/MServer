@@ -26,13 +26,11 @@ void set_app_name(const char *name);
 
 /**
  * 设置日志参数
- * @dm: deamon，是否守护进程。为守护进程不会输出日志到stdcerr
+ * @deamon: deamon，是否守护进程。为守护进程不会输出日志到stdcerr
  * @ppath: printf path,打印日志的文件路径
  * @epath: error path,错误日志的文件路径
- * @mpath: mongodb path,mongodb日志路径
  */
-void set_log_args(bool dm, const char *ppath, const char *epath,
-                  const char *mpath);
+void set_log_args(bool deamon, const char *ppath, const char *epath);
 
 size_t write_prefix(FILE *stream, const char *prefix, int64_t time);
 

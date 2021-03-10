@@ -11,8 +11,7 @@ static bool deamon_mode =
     false; /* 是否后台运行。后台运行则不输出日志到stdout */
 static char printf_path[PATH_MAX] = "printf";
 // 防止上层应用来不及设置日志参数就发生错误，默认输出到工作目录error文件
-static char error_path[PATH_MAX]   = "error";
-static char mongodb_path[PATH_MAX] = "mongodb";
+static char error_path[PATH_MAX] = "error";
 
 // app进程名
 static const int32_t LEN_APP_NAME  = 32;
@@ -33,12 +32,11 @@ thread_local char buffer[20480];
     } while (0)
 
 /* 设置日志参数：是否后台，日志路径 */
-void set_log_args(bool dm, const char *ppath, const char *epath, const char *mpath)
+void set_log_args(bool deamon, const char *ppath, const char *epath)
 {
-    deamon_mode = dm;
+    deamon_mode = deamon;
     snprintf(printf_path, PATH_MAX, "%s", ppath);
     snprintf(error_path, PATH_MAX, "%s", epath);
-    snprintf(mongodb_path, PATH_MAX, "%s", mpath);
 }
 
 bool is_deamon()

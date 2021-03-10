@@ -1,14 +1,13 @@
 #pragma once
 
-#include "../global/global.hpp"
+#include "../log/async_log.hpp"
 
 struct lua_State;
-class AsyncLog;
 
 /**
  * 异步日志
  */
-class LLog
+class LLog final : public AsyncLog
 {
 public:
     ~LLog();
@@ -53,20 +52,23 @@ public:
     int32_t elog(lua_State *L);
 
     /**
-     * 设置日志参数
+     * 设置某个日志参数
+     * @param path 日志的输出路径，用于区分日志
+     * @param type 类型，详见PolicyType的定义
+     */
+    int32_t set_option(lua_State *L);
+
+    /**
+     * 设置printf、error等基础日志参数
      * @param is_daemon 是否后台进程，后台进程不在stdout打印日志
      * @param ppath print普通日志的输出路径
      * @param epath error错误日志的输出路径
-     * @param mpath mongodb日志的输出路径
      */
-    static int32_t set_args(lua_State *L);
+    static int32_t set_std_option(lua_State *L);
 
     /**
      * 设置进程名，比如gateway world，输出的日志会加上名字
      * @param name 进程名
      */
     static int32_t set_name(lua_State *L);
-
-private:
-    class AsyncLog *_log;
 };

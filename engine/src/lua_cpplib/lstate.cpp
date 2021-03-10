@@ -207,8 +207,13 @@ int32_t luaopen_log(lua_State *L)
     lc.def<&LLog::append_file>("append_file");
     lc.def<&LLog::append_log_file>("append_log_file");
 
-    lc.def<&LLog::set_args>("set_args");
     lc.def<&LLog::set_name>("set_name");
+    lc.def<&LLog::set_option>("set_option");
+    lc.def<&LLog::set_std_option>("set_std_option");
+
+    lc.set(AsyncLog::Policy::PT_NORMAL, "PT_NORMAL");
+    lc.set(AsyncLog::Policy::PT_DAILY, "PT_DAILY");
+    lc.set(AsyncLog::Policy::PT_SIZE, "PT_SIZE");
 
     return 0;
 }

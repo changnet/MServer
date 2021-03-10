@@ -4,7 +4,12 @@
 
 local Log  = require "Log"
 local util = require "util"
+local time = require "global.time"
 
+-- 这个不能放局部函数
+-- 因为C++需要在底层启动一个线程，有概率线程还未启动成功，lua中就执行完测试函数
+-- 通过gc销毁logger了
+local logger
 t_describe("log test", function()
     t_it("log base test", function()
         local max_insert = 1024
@@ -18,7 +23,7 @@ t_describe("log test", function()
         util.mkdir_p( "log")
 
         -- 创建独立的线程
-        local logger = Log()
+        logger = Log()
         logger:start(3000000) -- 3000000微秒写入一次
 
         -- 测试daily
@@ -28,16 +33,18 @@ t_describe("log test", function()
         os.remove("log/test_log_daily")
         os.remove(string.format(
             "log/test_log_daily%d%02d%02d", tm.year, tm.month, tm.day))
+        logger:set_option("log/test_log_daily", Log.PT_DAILY)
 
         local half = max_insert / 2
         local yesterday = ev:time() - 86400
         for i = 1,half do
             logger:append_log_file(
-                "log/test_log_daily%DAILY%", string.format(log_fmt,i), yesterday)
+                "log/test_log_daily",
+                string.format(log_fmt,i), yesterday)
         end
         for i = half,max_insert do
             logger:append_log_file(
-                "log/test_log_daily%DAILY%", string.format(log_fmt,i))
+                "log/test_log_daily", string.format(log_fmt,i))
         end
 
         -- plog和elog会在屏幕打印数据，就不测试了。平常看runtime就可以了
@@ -50,12 +57,13 @@ t_describe("log test", function()
         for i = 1, 10 do
             os.remove("log/test_log_size." .. i)
         end
+        logger:set_option("log/test_log_size", Log.PT_SIZE, 20480)
         for i = 1,max_insert do
             logger:append_log_file(
-                "log/test_log_size%SIZE20480%", string.format(log_fmt,i))
+                "log/test_log_size", string.format(log_fmt,i))
         end
 
-        -- 测试file
+        -- 测试file，这个可以不调用set_option
         os.remove("log/test_file")
         for i = 1,max_insert do
             logger:append_file("log/test_file", string.format(log_fmt,i))

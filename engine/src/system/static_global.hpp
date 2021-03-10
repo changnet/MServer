@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../log/async_log.hpp"
+#include "../lua_cpplib/llog.hpp"
 #include "../lua_cpplib/lev.hpp"
 #include "../lua_cpplib/lnetwork_mgr.hpp"
 #include "../lua_cpplib/lstate.hpp"
@@ -31,7 +31,7 @@ public:
     static class SSLMgr *ssl_mgr() { return _ssl_mgr; }
     static class CodecMgr *codec_mgr() { return _codec_mgr; }
     static class Statistic *statistic() { return _statistic; }
-    static class AsyncLog *async_logger() { return _async_log; }
+    static class LLog *async_logger() { return _async_log; }
     static class ThreadMgr *thread_mgr() { return _thread_mgr; }
     static class LNetworkMgr *network_mgr() { return _network_mgr; }
 
@@ -49,7 +49,7 @@ private:
     static class SSLMgr *_ssl_mgr;
     static class CodecMgr *_codec_mgr;
     static class Statistic *_statistic;
-    static class AsyncLog *_async_log;
+    static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;
     static class LNetworkMgr *_network_mgr;
 
