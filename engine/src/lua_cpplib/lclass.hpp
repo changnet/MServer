@@ -28,7 +28,7 @@ public:
 
     /* 在构造函数中不要调用virtual函数取c_new_func，只能当参数传进进来了 */
     explicit LBaseClass(lua_State *L, const char *classname,
-                        lua_CFunction c_new_func = NULL)
+                        lua_CFunction c_new_func = nullptr)
         : L(L)
     {
         _class_name = classname;
@@ -86,19 +86,19 @@ public:
 
         C_LUA_OBJECT_ADD(_class_name);
 
+        // 只有用lcalss定义了对应类的对象能push到lua，因此这里的metatable必须存在
         luaL_getmetatable(L, _class_name);
-        /* metatable on stack now,can not be nil */
 
         /* 如果不自动gc，则需要在metatable中设置一张名为_notgc的表。以userdata
-           为key的weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的
-        */
+         * 为key的weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的
+         */
         if (!gc)
         {
             subtable(L, 2, "_notgc", "k");
 
-            lua_pushvalue(L, 1);   /* 复制userdata到栈顶 */
-            lua_pushboolean(L, 0); /* do not delete memory */
-            lua_settable(L, -3); /* _notgc[userdata] = 1 and pop _notgc table*/
+            lua_pushvalue(L, 1); /* 复制userdata到栈顶 */
+            lua_pushboolean(L, 1);
+            lua_settable(L, -3); /* _notgc[userdata] = true */
 
             lua_pop(L, 1); /* drop _notgc out of stack */
         }
@@ -179,7 +179,7 @@ private:
     static int tostring(lua_State *L)
     {
         T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
-        if (ptr != NULL)
+        if (ptr != nullptr)
         {
             lua_pushfstring(L, "%s: %p", _class_name, *ptr);
             return 1;
@@ -198,12 +198,12 @@ private:
             lua_pushvalue(L, 1);
             lua_gettable(L, -2);
             /* gc = true表示执行gc函数 */
-            if (!lua_toboolean(L, -1)) return 0;
+            if (lua_toboolean(L, -1)) return 0;
         }
 
         T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
-        if (*ptr != NULL) delete *ptr;
-        *ptr = NULL;
+        if (*ptr != nullptr) delete *ptr;
+        *ptr = nullptr;
 
         return 0;
     }
@@ -240,7 +240,7 @@ private:
     {
         T **ptr = (T **)luaL_checkudata(
             L, 1, _class_name); /* get 'self', or if you prefer, 'this' */
-        if (EXPECT_FALSE(ptr == NULL || *ptr == NULL))
+        if (EXPECT_FALSE(ptr == nullptr || *ptr == nullptr))
         {
             return luaL_error(L, "%s calling method with null pointer",
                               _class_name);
@@ -257,7 +257,7 @@ protected:
     static const char *_class_name;
 };
 
-template <class T> const char *LBaseClass<T>::_class_name = NULL;
+template <class T> const char *LBaseClass<T>::_class_name = nullptr;
 
 template <class T> class LClass : public LBaseClass<T>
 {

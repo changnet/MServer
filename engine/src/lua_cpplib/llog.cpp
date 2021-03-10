@@ -13,7 +13,7 @@ LLog::~LLog() {}
 int32_t LLog::stop(lua_State *L)
 {
     UNUSED(L);
-    if (active())
+    if (!active())
     {
         ERROR("try to stop a inactive log thread");
         return 0;

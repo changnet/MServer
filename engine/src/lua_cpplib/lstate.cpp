@@ -85,7 +85,7 @@ LState::~LState()
      * by this state
      */
     lua_close(L);
-    L = NULL;
+    L = nullptr;
 }
 
 int32_t luaopen_ev(lua_State *L);

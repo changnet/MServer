@@ -36,13 +36,10 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     struct tm ntm;
     ::localtime_r(&_data, &ntm);
 
-    // 修正文件名 runtime&DAILY% 转换为 runtime2021-02-28
-    char date[64];
-    int len = snprintf(date, sizeof(date), "%04d-%02d-%02d", ntm.tm_year,
-                       ntm.tm_mon + 1, ntm.tm_mday);
-
-    std::string path(_raw_path);
-    path.replace(path.begin(), path.end(), date, len);
+    // 修正文件名 runtime 转换为 runtime20210228
+    char new_path[256];
+    snprintf(new_path, sizeof(new_path), "%s%04d%02d%02d", _path.c_str(),
+             ntm.tm_year, ntm.tm_mon + 1, ntm.tm_mday);
 
     ::localtime_r(&now, &ntm);
     ntm.tm_hour = 0;
@@ -60,10 +57,10 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     }
     if (ok)
     {
-        std::filesystem::rename(_path, path, e);
+        std::filesystem::rename(_path, new_path, e);
         if (e)
         {
-            ERROR_R("rename daily log file error %s %s", path.c_str(),
+            ERROR_R("rename daily log file error %s %s", _path.c_str(),
                     e.message().c_str());
         }
     }
@@ -90,7 +87,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     int32_t max_index = 0;
     for (int32_t i = max_index + 1; i < 1024; i++)
     {
-        snprintf(old_buff, sizeof(old_buff), _raw_path.c_str(), i);
+        snprintf(old_buff, sizeof(old_buff), "%s.%d", _path.c_str(), i);
 
         old_path.assign(old_buff);
         bool ok = std::filesystem::exists(old_path, e);
@@ -108,8 +105,8 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
     for (int32_t i = max_index + 1; i > 1; i--)
     {
-        snprintf(new_buff, sizeof(new_buff), _raw_path.c_str(), i);
-        snprintf(old_buff, sizeof(old_buff), _raw_path.c_str(), i - 1);
+        snprintf(new_buff, sizeof(new_buff), "%s.%d", _path.c_str(), i);
+        snprintf(old_buff, sizeof(old_buff), "%s.%d", _path.c_str(), i - 1);
 
         new_path.assign(new_buff);
         old_path.assign(old_buff);
@@ -133,7 +130,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
     if (ok)
     {
-        snprintf(new_buff, sizeof(new_buff), _raw_path.c_str(), 1);
+        snprintf(new_buff, sizeof(new_buff), "%s.%d", _path.c_str(), 1);
         new_path.assign(new_buff);
         std::filesystem::rename(_path, new_path, e);
         if (e)
@@ -228,7 +225,6 @@ FILE *AsyncLog::Policy::open_stream(const char *path)
     return _file;
 }
 ////////////////////////////////////////////////////////////////////////////////
-
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
     lock();
@@ -411,7 +407,9 @@ void AsyncLog::routine(int32_t ev)
 
                 // 回收缓冲区
                 for (auto buffer : _writing_buffers)
+                {
                     _buffer_pool.destroy(buffer);
+                }
                 _writing_buffers.clear();
 
                 busy = true;
@@ -423,23 +421,21 @@ void AsyncLog::routine(int32_t ev)
                 // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush ??)
                 if (sec > 10) policy.close_stream();
 
-                if (Policy::PT_DAILY == policy.get_type())
+                auto type = policy.get_type();
+                if (Policy::PT_DAILY == type && sec > 10)
                 {
                     // 当没有日志写入时，10秒检测一次日期切换
-                    if (sec > 10)
+                    device._time = now;
+                    if (policy.is_daily_rollover(now))
                     {
-                        device._time = now;
-                        if (policy.is_daily_rollover(now))
-                        {
-                            unlock();
-                            policy.trigger_daily_rollover(now);
-                            lock();
-                        }
+                        unlock();
+                        policy.trigger_daily_rollover(now);
+                        lock();
                     }
                 }
-                else
+                else if (Policy::PT_NORMAL == type && sec > 300)
                 {
-                    if (sec > 300) iter = _device.erase(iter);
+                    iter = _device.erase(iter);
                 }
             }
         }

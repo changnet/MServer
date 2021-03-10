@@ -6,10 +6,6 @@ local Log  = require "Log"
 local util = require "util"
 local time = require "global.time"
 
--- 这个不能放局部函数
--- 因为C++需要在底层启动一个线程，有概率线程还未启动成功，lua中就执行完测试函数
--- 通过gc销毁logger了
-local logger
 t_describe("log test", function()
     t_it("log base test", function()
         local max_insert = 1024
@@ -23,7 +19,7 @@ t_describe("log test", function()
         util.mkdir_p( "log")
 
         -- 创建独立的线程
-        logger = Log()
+        local logger = Log()
         logger:start(3000000) -- 3000000微秒写入一次
 
         -- 测试daily

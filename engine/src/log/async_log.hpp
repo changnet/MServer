@@ -86,8 +86,8 @@ public:
     };
 
 public:
-    AsyncLog() : Thread("AsyncLog"), _buffer_pool("AsyncLog"){};
     virtual ~AsyncLog(){};
+    AsyncLog() : Thread("AsyncLog"), _buffer_pool("AsyncLog"){};
 
     size_t busy_job(size_t *finished   = nullptr,
                     size_t *unfinished = nullptr) override;
@@ -101,7 +101,7 @@ private:
 
     // 线程相关，重写基类相关函数
     void routine(int32_t ev) override;
-    bool uninitialize();
+    bool uninitialize() override;
 
     size_t write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
                         bool beg, bool end);
