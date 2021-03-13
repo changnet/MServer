@@ -62,6 +62,7 @@ public:
     private:
         bool init_size_policy(int64_t size);
         bool init_daily_policy();
+        static time_t day_begin(time_t now);
 
     private:
         FILE *_file; /// 写入的文件句柄，减少文件打开、关闭
@@ -69,7 +70,6 @@ public:
         int64_t _data;         /// 用于切分文件的参数
         int64_t _data2;        /// 用于切分文件的参数
         std::string _path;     /// 当前写入的文件路径
-        std::string _raw_path; /// 原始带格式化的文件路径
     };
 
     /// 日志设备(如file、stdout)

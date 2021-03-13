@@ -26,10 +26,21 @@ void AsyncLog::Policy::close_stream()
     }
 }
 
+time_t AsyncLog::Policy::day_begin(time_t now)
+{
+    struct tm ntm;
+    ::localtime_r(&now, &ntm);
+    ntm.tm_hour = 0;
+    ntm.tm_min  = 0;
+    ntm.tm_sec  = 0;
+
+    return std::mktime(&ntm);
+}
+
 void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 {
     // 还在同一天
-    if (PT_DAILY != _type || now >= _data || now <= _data + 86400) return;
+    if (PT_DAILY != _type || (now >= _data && now <= _data + 86400)) return;
 
     close_stream();
 
@@ -39,13 +50,9 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     // 修正文件名 runtime 转换为 runtime20210228
     char new_path[256];
     snprintf(new_path, sizeof(new_path), "%s%04d%02d%02d", _path.c_str(),
-             ntm.tm_year, ntm.tm_mon + 1, ntm.tm_mday);
+             ntm.tm_year + 1900, ntm.tm_mon + 1, ntm.tm_mday);
 
-    ::localtime_r(&now, &ntm);
-    ntm.tm_hour = 0;
-    ntm.tm_min  = 0;
-    ntm.tm_sec  = 0;
-    _data       = std::mktime(&ntm);
+    _data = day_begin(now);
 
     std::error_code e;
     bool ok = std::filesystem::exists(_path, e);
@@ -87,7 +94,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     int32_t max_index = 0;
     for (int32_t i = max_index + 1; i < 1024; i++)
     {
-        snprintf(old_buff, sizeof(old_buff), "%s.%d", _path.c_str(), i);
+        snprintf(old_buff, sizeof(old_buff), "%s.%03d", _path.c_str(), i);
 
         old_path.assign(old_buff);
         bool ok = std::filesystem::exists(old_path, e);
@@ -105,8 +112,8 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
     for (int32_t i = max_index + 1; i > 1; i--)
     {
-        snprintf(new_buff, sizeof(new_buff), "%s.%d", _path.c_str(), i);
-        snprintf(old_buff, sizeof(old_buff), "%s.%d", _path.c_str(), i - 1);
+        snprintf(new_buff, sizeof(new_buff), "%s.%03d", _path.c_str(), i);
+        snprintf(old_buff, sizeof(old_buff), "%s.%03d", _path.c_str(), i - 1);
 
         new_path.assign(new_buff);
         old_path.assign(old_buff);
@@ -130,7 +137,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
     if (ok)
     {
-        snprintf(new_buff, sizeof(new_buff), "%s.%d", _path.c_str(), 1);
+        snprintf(new_buff, sizeof(new_buff), "%s.%03d", _path.c_str(), 1);
         new_path.assign(new_buff);
         std::filesystem::rename(_path, new_path, e);
         if (e)
@@ -176,7 +183,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
 
 bool AsyncLog::Policy::init_daily_policy()
 {
-    _data = -86400;
+    _data = StaticGlobal::ev()->now();;
 
     // 读取已有日志文件的日期
     std::error_code e;
@@ -185,13 +192,15 @@ bool AsyncLog::Policy::init_daily_policy()
     {
         ERROR_R("rename daily initfile exist file error %s %s", _path.c_str(),
                 e.message().c_str());
-        return true; // 即使获取不了上次文件的时间，也按天切分文件
+        ok = false; // 即使获取不了上次文件的时间，也按天切分文件
     }
     if (ok)
     {
         auto ftime = std::filesystem::last_write_time(_path);
         _data      = decltype(ftime)::clock::to_time_t(ftime);
     }
+
+    _data = day_begin(_data);
     return true;
 }
 
