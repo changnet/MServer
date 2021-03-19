@@ -10,7 +10,7 @@
  * gives the branching factor of the d-tree.
  */
 
-#define HEAP0             1
+#define HEAP0             1 // 二叉堆的位置0不用，数据从1开始存放
 #define HPARENT(k)        ((k) >> 1)
 #define UPHEAP_DONE(p, k) (!(p))
 
@@ -22,9 +22,14 @@
 
 EV::EV()
 {
-    timers   = nullptr;
-    timermax = 0;
-    timercnt = 0;
+    _fds.reserve(1024);
+    _fd_changes.reserve(1024);
+    _pendings.reserve(1024);
+    _timers.reserve(1024);
+
+    // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
+    _timercnt = 0;
+    _timers.resize(1024, nullptr);
 
     ev_rt_now = get_time();
 
@@ -34,17 +39,14 @@ EV::EV()
 
     _busy_time = 0;
 
-    backend              = new EVBackend();
+    _backend              = new EVBackend();
     _backend_time_coarse = 0;
 }
 
 EV::~EV()
 {
-    delete[] timers;
-    timers = nullptr;
-
-    delete backend;
-    backend = nullptr;
+    delete _backend;
+    _backend = nullptr;
 }
 
 int32_t EV::loop()
@@ -72,16 +74,16 @@ int32_t EV::loop()
         _busy_time = ev_now_ms - last_ms;
 
         EvTstamp backend_time = _backend_time_coarse - ev_now_ms;
-        if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
+        if (_timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
         {
-            EvTstamp to = 1e3 * ((timers[HEAP0])->_at - mn_now);
+            EvTstamp to = 1e3 * ((_timers[HEAP0])->_at - mn_now);
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
         {
             backend_time = BACKEND_MIN_TM;
         }
-        backend->wait(this, backend_time);
+        _backend->wait(this, backend_time);
 
         time_update();
 
@@ -146,12 +148,12 @@ void EV::fd_reify()
         if (io)
         {
             int32_t events = io->_events;
-            backend->modify(fd, io->_emask, events);
+            _backend->modify(fd, io->_emask, events);
             io->_emask = events;
         }
         else
         {
-            backend->modify(fd, 0, 0); // 移除该socket
+            _backend->modify(fd, 0, 0); // 移除该socket
         }
     }
 
@@ -278,6 +280,7 @@ void EV::invoke_pending()
             w->_revents = 0;
         }
     }
+    _pendings.clear();
 }
 
 void EV::clear_pending(EVWatcher *w)
@@ -292,9 +295,9 @@ void EV::clear_pending(EVWatcher *w)
 
 void EV::timers_reify()
 {
-    while (timercnt && (timers[HEAP0])->_at < mn_now)
+    while (_timercnt && (_timers[HEAP0])->_at < mn_now)
     {
-        EVTimer *w = timers[HEAP0];
+        EVTimer *w = _timers[HEAP0];
 
         assert(w->active());
 
@@ -307,7 +310,7 @@ void EV::timers_reify()
 
             assert(w->_repeat > 0.);
 
-            down_heap(timers, timercnt, HEAP0);
+            down_heap(_timers.data(), _timercnt, HEAP0);
         }
         else
         {
@@ -324,13 +327,17 @@ int32_t EV::timer_start(EVTimer *w)
 
     assert(w->_repeat >= 0.);
 
-    ++timercnt;
-    int32_t active = timercnt + HEAP0 - 1;
-    ARRAY_RESIZE(ANHE, timers, timermax, uint32_t(active + 1), ARRAY_NOINIT);
-    timers[active] = w;
-    up_heap(timers, active);
+    ++_timercnt;
+    int32_t active = _timercnt + HEAP0 - 1;
+    if (_timers.size() < (size_t)active + 1)
+    {
+        _timers.resize(active + 1024, nullptr);
+    }
 
-    assert(timers[w->_active] == w);
+    _timers[active] = w;
+    up_heap(_timers.data(), active);
+
+    assert(active >= 1 && _timers[w->_active] == w);
 
     return active;
 }
@@ -344,16 +351,16 @@ int32_t EV::timer_stop(EVTimer *w)
     {
         int32_t active = w->_active;
 
-        assert(timers[active] == w);
+        assert(_timers[active] == w);
 
-        --timercnt;
+        --_timercnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (EXPECT_TRUE((uint32_t)active < timercnt + HEAP0))
+        if (EXPECT_TRUE(active < _timercnt + HEAP0))
         {
-            // 把当前最后一个timer(timercnt + HEAP0)覆盖当前timer的位置，再重新调整
-            timers[active] = timers[timercnt + HEAP0];
-            adjust_heap(timers, timercnt, active);
+            // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
+            _timers[active] = _timers[_timercnt + HEAP0];
+            adjust_heap(_timers.data(), _timercnt, active);
         }
     }
 
@@ -363,9 +370,9 @@ int32_t EV::timer_stop(EVTimer *w)
     return 0;
 }
 
-void EV::down_heap(ANHE *heap, int32_t N, int32_t k)
+void EV::down_heap(HeapNode *heap, int32_t N, int32_t k)
 {
-    ANHE he = heap[k];
+    HeapNode he = heap[k];
 
     for (;;)
     {
@@ -388,9 +395,9 @@ void EV::down_heap(ANHE *heap, int32_t N, int32_t k)
     he->_active = k;
 }
 
-void EV::up_heap(ANHE *heap, int32_t k)
+void EV::up_heap(HeapNode *heap, int32_t k)
 {
-    ANHE he = heap[k];
+    HeapNode he = heap[k];
 
     for (;;)
     {
@@ -407,7 +414,7 @@ void EV::up_heap(ANHE *heap, int32_t k)
     he->_active = k;
 }
 
-void EV::adjust_heap(ANHE *heap, int32_t N, int32_t k)
+void EV::adjust_heap(HeapNode *heap, int32_t N, int32_t k)
 {
     if (k > HEAP0 && (heap[k])->_at <= (heap[HPARENT(k)])->_at)
     {
@@ -419,7 +426,7 @@ void EV::adjust_heap(ANHE *heap, int32_t N, int32_t k)
     }
 }
 
-void EV::reheap(ANHE *heap, int32_t N)
+void EV::reheap(HeapNode *heap, int32_t N)
 {
     /* we don't use floyds algorithm, upheap is simpler and is more
      * cache-efficient also, this is easy to implement and correct

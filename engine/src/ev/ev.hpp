@@ -19,11 +19,11 @@ class EVTimer;
 class EVWatcher;
 class EVBackend;
 
-typedef EVTimer *ANHE;
 #define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
 #define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
 
 using EvTstamp = double;
+using HeapNode = EVTimer *;
 
 extern const char *BACKEND_KERNEL;
 
@@ -59,11 +59,14 @@ protected:
     std::vector<int32_t> _fd_changes; /// 已经改变，等待设置到内核的io watcher
     std::vector<EVWatcher *> _pendings; /// 触发了事件，等待处理的watcher
 
-    ANHE *timers;
-    uint32_t timermax;
-    uint32_t timercnt;
+    /**
+     * 当前拥有的timer数量
+     * 额外使用一个计数器管理timer，可以不用对_timers进行pop之类的操作
+     */
+    int32_t _timercnt;
+    std::vector<EVTimer *> _timers; /// 所有的timer watcher
 
-    EVBackend *backend;
+    EVBackend *_backend;
     EvTstamp _busy_time;           ///< 上一次执行消耗的时间，毫秒
     EvTstamp _backend_time_coarse; ///< backend阻塞结束的时间戳
 
@@ -95,8 +98,8 @@ protected:
     void invoke_pending();
     void clear_pending(EVWatcher *w);
     void timers_reify();
-    void down_heap(ANHE *heap, int32_t N, int32_t k);
-    void up_heap(ANHE *heap, int32_t k);
-    void adjust_heap(ANHE *heap, int32_t N, int32_t k);
-    void reheap(ANHE *heap, int32_t N);
+    void down_heap(HeapNode *heap, int32_t N, int32_t k);
+    void up_heap(HeapNode *heap, int32_t k);
+    void adjust_heap(HeapNode *heap, int32_t N, int32_t k);
+    void reheap(HeapNode *heap, int32_t N);
 };
