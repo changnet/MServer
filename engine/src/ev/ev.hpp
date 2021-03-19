@@ -19,24 +19,7 @@ class EVTimer;
 class EVWatcher;
 class EVBackend;
 
-/* file descriptor info structure */
-typedef struct
-{
-    EVIO *w;
-    uint8_t emask; /* epoll event register in epoll */
-} ANFD;
-
-/* stores the pending event set for a given watcher */
-typedef struct
-{
-    EVWatcher *w;
-    int events; /* the pending event set for the given watcher */
-} ANPENDING;
-
-/* timer heap element */
 typedef EVTimer *ANHE;
-typedef int32_t ANCHANGE;
-
 #define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
 #define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
 
@@ -70,17 +53,11 @@ public:
 
 protected:
     friend class EVBackend;
-    volatile bool loop_done;
-    ANFD *anfds;
-    uint32_t anfdmax;
+    volatile bool _done; /// 主循环是否已结束
 
-    ANPENDING *pendings;
-    uint32_t pendingmax;
-    uint32_t pendingcnt;
-
-    ANCHANGE *fdchanges;
-    uint32_t fdchangemax;
-    uint32_t fdchangecnt;
+    std::vector<EVIO *> _fds; /// 所有的的io watcher
+    std::vector<int32_t> _fd_changes; /// 已经改变，等待设置到内核的io watcher
+    std::vector<EVWatcher *> _pendings; /// 触发了事件，等待处理的watcher
 
     ANHE *timers;
     uint32_t timermax;
@@ -91,7 +68,7 @@ protected:
     EvTstamp _backend_time_coarse; ///< backend阻塞结束的时间戳
 
     int64_t ev_now_ms; ///< 起服到现在的毫秒
-    EvTstamp ev_rt_now; ///< UTC时间戳(秒，但这个是double，可精确到0.5秒)
+    std::atomic<EvTstamp> ev_rt_now; ///< UTC时间戳(秒，但这个是double，可精确到0.5秒)
     EvTstamp now_floor;           ///< 上一次更新UTC的MONOTONIC时间
     std::atomic<EvTstamp> mn_now; ///< 起服到现在的秒数(CLOCK_MONOTONIC)
     EvTstamp rtmn_diff;           ///< UTC时间与MONOTONIC时间的差值
@@ -108,10 +85,9 @@ protected:
 
     void fd_change(int32_t fd)
     {
-        ++fdchangecnt;
-        ARRAY_RESIZE(ANCHANGE, fdchanges, fdchangemax, fdchangecnt, ARRAY_NOINIT);
-        fdchanges[fdchangecnt - 1] = fd;
+        _fd_changes.emplace_back(fd);
     }
+
     void fd_reify();
     void time_update();
     void fd_event(int32_t fd, int32_t revents);

@@ -67,7 +67,7 @@ public:
     int32_t send();
 
     /// 开始接受socket数据
-    void start(int32_t fd = 0);
+    void start(int32_t fd = -1);
     void stop(bool flush = false);
     int32_t validate();
     void pending_send();

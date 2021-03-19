@@ -22,17 +22,6 @@
 
 EV::EV()
 {
-    anfds   = nullptr;
-    anfdmax = 0;
-
-    pendings   = nullptr;
-    pendingmax = 0;
-    pendingcnt = 0;
-
-    fdchanges   = nullptr;
-    fdchangemax = 0;
-    fdchangecnt = 0;
-
     timers   = nullptr;
     timermax = 0;
     timercnt = 0;
@@ -51,18 +40,6 @@ EV::EV()
 
 EV::~EV()
 {
-    /* it's safe to delete nullptr pointer,
-     * and to avoid oclint error:unnecessary nullptr check for dealloc
-     */
-    delete[] anfds;
-    anfds = nullptr;
-
-    delete[] pendings;
-    pendings = nullptr;
-
-    delete[] fdchanges;
-    fdchanges = nullptr;
-
     delete[] timers;
     timers = nullptr;
 
@@ -84,9 +61,9 @@ int32_t EV::loop()
      * 因为执行逻辑可能会耗很长时间，那时候计算的时间是不准的
      */
 
-    loop_done       = false;
+    _done       = false;
     int64_t last_ms = ev_now_ms;
-    while (EXPECT_TRUE(!loop_done))
+    while (EXPECT_TRUE(!_done))
     {
         // 把fd变更设置到epoll中去
         fd_reify();
@@ -128,7 +105,7 @@ int32_t EV::loop()
 
 int32_t EV::quit()
 {
-    loop_done = true;
+    _done = true;
 
     return 0;
 }
@@ -137,14 +114,10 @@ int32_t EV::io_start(EVIO *w)
 {
     int32_t fd = w->_fd;
 
-    ARRAY_RESIZE(ANFD, anfds, anfdmax, uint32_t(fd + 1), ARRAY_ZERO);
+    if (EXPECT_FALSE(fd >= (int32_t)_fds.size())) _fds.resize(fd + 1, nullptr);
 
-    ANFD *anfd = anfds + fd;
+    _fds[fd] = w;
 
-    /* 与原libev不同，现在同一个fd只能有一个watcher */
-    assert(!(anfd->w));
-
-    anfd->w = w;
     fd_change(fd);
 
     return 1;
@@ -157,11 +130,9 @@ int32_t EV::io_stop(EVIO *w)
     if (EXPECT_FALSE(!w->active())) return 0;
 
     int32_t fd = w->_fd;
-    assert(fd >= 0 && uint32_t(fd) < anfdmax);
+    assert(fd >= 0 && uint32_t(fd) < _fds.size());
 
-    ANFD *anfd = anfds + fd;
-    anfd->w    = 0;
-
+    _fds[fd] = nullptr;
     fd_change(fd);
 
     return 0;
@@ -169,18 +140,22 @@ int32_t EV::io_stop(EVIO *w)
 
 void EV::fd_reify()
 {
-    for (uint32_t i = 0; i < fdchangecnt; i++)
+    for (auto fd : _fd_changes)
     {
-        int32_t fd = fdchanges[i];
-        ANFD *anfd = anfds + fd;
-
-        int32_t events = anfd->w ? (anfd->w)->_events : 0;
-
-        backend->modify(fd, anfd->emask, events);
-        anfd->emask = events;
+        EVIO *io = _fds[fd];
+        if (io)
+        {
+            int32_t events = io->_events;
+            backend->modify(fd, io->_emask, events);
+            io->_emask = events;
+        }
+        else
+        {
+            backend->modify(fd, 0, 0); // 移除该socket
+        }
     }
 
-    fdchangecnt = 0;
+    _fd_changes.clear();
 }
 
 EvTstamp EV::get_time()
@@ -272,47 +247,46 @@ void EV::time_update()
 
 void EV::fd_event(int32_t fd, int32_t revents)
 {
-    ANFD *anfd = anfds + fd;
-    assert(anfd->w);
-    feed_event(anfd->w, revents);
+    assert(fd >= 0 && fd < (int32_t)_fds.size());
+
+    EVIO *io = _fds[fd];
+
+    assert(io);
+    feed_event(io, revents);
 }
 
 void EV::feed_event(EVWatcher *w, int32_t revents)
 {
-    if (EXPECT_FALSE(w->_pending))
+    // 已经在待处理队列里了，则设置事件即可
+    w->_revents |= revents;
+    if (EXPECT_TRUE(!w->_pending))
     {
-        pendings[w->_pending - 1].events |= revents;
-    }
-    else
-    {
-        w->_pending = ++pendingcnt;
-        ARRAY_RESIZE(ANPENDING, pendings, pendingmax, pendingcnt, ARRAY_NOINIT);
-        pendings[w->_pending - 1].w      = w;
-        pendings[w->_pending - 1].events = revents;
+        _pendings.emplace_back(w);
+        w->_pending = _pendings.size();
     }
 }
 
 void EV::invoke_pending()
 {
-    while (pendingcnt)
+    for (auto w : _pendings)
     {
-        ANPENDING *p = pendings + --pendingcnt;
-
-        EVWatcher *w = p->w;
-        if (EXPECT_TRUE(w)) /* 调用了clear_pending */
+        // 可能其他事件调用了clear_pending导致当前watcher无效了
+        if (EXPECT_TRUE(w->_pending))
         {
             w->_pending = 0;
-            w->_cb(p->events);
+            w->_cb(w->_revents);
+            w->_revents = 0;
         }
     }
 }
 
 void EV::clear_pending(EVWatcher *w)
 {
+    // 如果这个watcher在pending队列中，不需要删除，只需要设置标识即可
     if (w->_pending)
     {
-        pendings[w->_pending - 1].w = 0;
-        w->_pending                 = 0;
+        w->_revents = 0;
+        w->_pending = 0;
     }
 }
 

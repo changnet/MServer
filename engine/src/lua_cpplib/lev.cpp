@@ -35,7 +35,7 @@ int32_t LEV::exit(lua_State *L)
 int32_t LEV::backend(lua_State *L)
 {
     UNUSED(L);
-    loop_done = false;
+    _done = false;
 
     loop(); /* this won't return until backend stop */
     return 0;

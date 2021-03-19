@@ -5,7 +5,9 @@
 #include "ev.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
-/* 公共基类以实现多态 */
+/**
+ * watcher公共基类以实现多态
+ */
 class EVWatcher
 {
 public:
@@ -23,7 +25,7 @@ public:
      * 类似于std::bind，直接绑定回调函数
      */
     template <typename Fn, typename T>
-    void bind(Fn&& fn, T&& t)
+    void bind(Fn&& fn, T *t)
     {
         _cb = std::bind(fn, t, std::placeholders::_1);
     }
@@ -34,6 +36,7 @@ protected:
     EV *_loop;
     bool _active;
     int32_t _pending;
+    int32_t _revents; /// 等待处理的事件
 
     std::function<void(int32_t)> _cb; // 回调函数
 };
@@ -60,8 +63,9 @@ public:
 private:
     friend class EV;
 
+    uint8_t _emask; /// 已经设置到内核(epoll、poll)的事件
     int32_t _fd; /// io描述符
-    int32_t _events; /// 关注的事件
+    int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
 };
 
 ////////////////////////////////////////////////////////////////////////////////

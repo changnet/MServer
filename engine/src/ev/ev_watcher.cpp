@@ -4,11 +4,13 @@ EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
     _active  = 0;
     _pending = 0;
+    _revents = 0;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 EVIO::EVIO(EV *loop) : EVWatcher(loop)
 {
+    _emask  = 0;
     _fd     = -1;
     _events = 0;
 }
