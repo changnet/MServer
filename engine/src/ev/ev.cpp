@@ -154,7 +154,7 @@ int32_t EV::io_stop(EVIO *w)
 {
     clear_pending(w);
 
-    if (EXPECT_FALSE(!w->is_active())) return 0;
+    if (EXPECT_FALSE(!w->active())) return 0;
 
     int32_t fd = w->fd;
     assert(fd >= 0 && uint32_t(fd) < anfdmax);
@@ -302,7 +302,7 @@ void EV::invoke_pending()
         if (EXPECT_TRUE(w)) /* 调用了clear_pending */
         {
             w->_pending = 0;
-            w->_cb(w, p->events);
+            w->_cb(p->events);
         }
     }
 }
@@ -322,7 +322,7 @@ void EV::timers_reify()
     {
         EVTimer *w = timers[HEAP0];
 
-        assert(w->is_active());
+        assert(w->active());
 
         /* first reschedule or stop timer */
         if (w->repeat)
@@ -377,7 +377,7 @@ int32_t EV::timer_start(EVTimer *w)
 int32_t EV::timer_stop(EVTimer *w)
 {
     clear_pending(w);
-    if (EXPECT_FALSE(!w->is_active())) return 0;
+    if (EXPECT_FALSE(!w->active())) return 0;
 
     {
         int32_t active = w->_active;

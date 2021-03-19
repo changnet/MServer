@@ -7,7 +7,7 @@
 /**
  * 定时器
  */
-class LTimer
+class LTimer final
 {
 public:
     explicit LTimer(lua_State *L);
@@ -37,7 +37,7 @@ public:
      */
     int32_t active(lua_State *L);
 
-    void callback(EVTimer &w, int32_t revents);
+    void callback(int32_t revents);
 
 private:
     int32_t _timer_id;

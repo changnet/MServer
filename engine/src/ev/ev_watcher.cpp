@@ -4,12 +4,10 @@ EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
     _active  = 0;
     _pending = 0;
-    _data    = NULL;
-    _cb      = NULL;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-EVIO::EVIO(EV *loop) : EVBase<EVIO>(loop)
+EVIO::EVIO(EV *loop) : EVWatcher(loop)
 {
     fd     = -1;
     events = 0;
@@ -67,7 +65,7 @@ void EVIO::start(int32_t fd, int32_t events)
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-EVTimer::EVTimer(EV *loop) : EVBase<EVTimer>(loop)
+EVTimer::EVTimer(EV *loop) : EVWatcher(loop)
 {
     tj     = false;
     at     = 0.;

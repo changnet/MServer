@@ -14,7 +14,7 @@ class LEV;
  * 这里封装了基本的网络操作
  * ev_io、eventloop、getsockopt这类操作都不再给子类或外部调用
  */
-class Socket
+class Socket final
 {
 public:
     typedef enum
@@ -38,12 +38,16 @@ public:
     } OverActionType;
 
 public:
-    virtual ~Socket();
+    ~Socket();
     explicit Socket(uint32_t conn_id, ConnType conn_ty);
 
+    /// 把一个文件描述符设置为阻塞
     static int32_t block(int32_t fd);
+    /// 把一个文件描述符设置为非阻塞
     static int32_t non_block(int32_t fd);
+    /// 启用TCP的keep alive
     static int32_t keep_alive(int32_t fd);
+    /// 启用TCP的 user timeout
     static int32_t user_timeout(int32_t fd);
 
     /**
@@ -55,13 +59,14 @@ public:
     static int32_t get_addr_info(std::vector<std::string> &addrs,
                                  const char *host);
 
-    void listen_cb();
-    void command_cb();
-    void connect_cb();
+    void listen_cb(int32_t revents);
+    void command_cb(int32_t revents);
+    void connect_cb(int32_t revents);
 
     int32_t recv();
     int32_t send();
 
+    /// 开始接受socket数据
     void start(int32_t fd = 0);
     void stop(bool flush = false);
     int32_t validate();
@@ -82,17 +87,12 @@ public:
     int32_t init_accept();
     int32_t init_connect();
 
+    /// 添加待发送数据
     inline void append(const void *data, uint32_t len)
     {
         _send.append(data, len);
 
         pending_send();
-    }
-
-    template <class K, void (K::*method)()> void set(K *object)
-    {
-        this->_this   = object;
-        this->_method = &Socket::method_thunk<K, method>;
     }
 
     int32_t set_io(IO::IOT io_type, int32_t param);
@@ -105,10 +105,9 @@ public:
     inline int32_t fd() const { return _w.fd; }
     inline uint32_t conn_id() const { return _conn_id; }
     inline ConnType conn_type() const { return _conn_ty; }
-    inline bool active() const { return _w.is_active(); }
+    inline bool active() const { return _w.active(); }
     inline class Buffer &recv_buffer() { return _recv; }
     inline class Buffer &send_buffer() { return _send; }
-    inline void io_cb(EVIO &w, int32_t revents) { (this->*_method)(); }
 
     inline int32_t get_pending() const { return _pending; }
     inline int32_t set_pending(int32_t pending) { return _pending = pending; }
@@ -155,15 +154,5 @@ private:
     class IO *_io;
     class Packet *_packet;
     Codec::CodecType _codec_ty;
-    OverActionType _over_action;
-
-    /* 采用模板类这里就可以直接保存对应类型的对象指针及成员函数，模板函数只能用void类型
-     */
-    void *_this;
-    void (Socket::*_method)();
-
-    template <class K, void (K::*method)()> void method_thunk()
-    {
-        (static_cast<K *>(this->_this)->*method)();
-    }
+    OverActionType _over_action; /// 缓冲区溢出时，采取的措施
 };

@@ -7,7 +7,7 @@ LTimer::LTimer(lua_State *L)
     _timer_id = luaL_checkinteger(L, 2);
 
     _timer.set(StaticGlobal::ev());
-    _timer.set<LTimer, &LTimer::callback>(this);
+    _timer.bind(&LTimer::callback, this);
 }
 
 LTimer::~LTimer() {}
@@ -34,7 +34,7 @@ int32_t LTimer::set(lua_State *L)
 int32_t LTimer::start(lua_State *L)
 {
     /* 理论上可以多次start而不影响，但会有性能上的消耗 */
-    if (_timer.is_active())
+    if (_timer.active())
     {
         return luaL_error(L, "timer already start");
     }
@@ -58,12 +58,12 @@ int32_t LTimer::stop(lua_State *L)
 
 int32_t LTimer::active(lua_State *L)
 {
-    lua_pushboolean(L, _timer.is_active());
+    lua_pushboolean(L, _timer.active());
 
     return 1;
 }
 
-void LTimer::callback(EVTimer &w, int32_t revents)
+void LTimer::callback(int32_t revents)
 {
     assert(!(EV_ERROR & revents));
 

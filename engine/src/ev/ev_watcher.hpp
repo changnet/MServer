@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "ev.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -7,76 +9,46 @@
 class EVWatcher
 {
 public:
-    int32_t _active;
-    int32_t _pending;
-    void *_data;
-    void (*_cb)(EVWatcher *w, int32_t revents);
-    EV *_loop;
-
-public:
     explicit EVWatcher(EV *loop);
 
     virtual ~EVWatcher() {}
-};
 
-////////////////////////////////////////////////////////////////////////////////
-template <class Watcher> class EVBase : public EVWatcher
-{
-public:
-    explicit EVBase(EV *loop) : EVWatcher(loop) {}
+    /// 当前watcher是否被激活
+    bool active() const { return _active; }
 
-    virtual ~EVBase() {}
-
+    /// 设置主循环指针
     void set(EV *loop) { _loop = loop; }
 
-    void set_(void *data, void (*cb)(EVWatcher *w, int revents))
+    /**
+     * 类似于std::bind，直接绑定回调函数
+     */
+    template <typename Fn, typename T>
+    void bind(Fn&& fn, T&& t)
     {
-        this->_data = (void *)data;
-        this->_cb   = cb;
+        _cb = std::bind(fn, t, std::placeholders::_1);
     }
 
-    bool is_active() const { return _active; }
+protected:
+    friend class EV;
+    bool _active;
+    int32_t _pending;
+    EV *_loop;
 
-    // function callback(no object)
-    template <void (*function)(Watcher &w, int32_t)> void set(void *data = NULL)
-    {
-        set_(data, function_thunk<function>);
-    }
-
-    template <void (*function)(Watcher &w, int32_t)>
-    static void function_thunk(EVWatcher *w, int32_t revents)
-    {
-        function(*static_cast<Watcher *>(w), revents);
-    }
-
-    // method callback
-    template <class K, void (K::*method)(Watcher &w, int32_t)>
-    void set(K *object)
-    {
-        set_(object, method_thunk<K, method>);
-    }
-
-    template <class K, void (K::*method)(Watcher &w, int32_t)>
-    static void method_thunk(EVWatcher *w, int32_t revents)
-    {
-        (static_cast<K *>(w->_data)->*method)(*static_cast<Watcher *>(w),
-                                              revents);
-    }
+    std::function<void(int32_t)> _cb; // 回调函数
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class EVIO : public EVBase<EVIO>
+class EVIO final: public EVWatcher
 {
 public:
     int32_t fd;
     int32_t events;
 
 public:
-    using EVBase<EVIO>::set;
-
-    explicit EVIO(EV *_loop = NULL);
-
     ~EVIO();
+    explicit EVIO(EV *_loop = nullptr);
+
+    using EVWatcher::set;
 
     void start();
 
@@ -90,7 +62,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class EVTimer : public EVBase<EVTimer>
+class EVTimer final: public EVWatcher
 {
 public:
     bool tj; // time jump
@@ -98,11 +70,10 @@ public:
     EvTstamp repeat;
 
 public:
-    using EVBase<EVTimer>::set;
-
-    explicit EVTimer(EV *_loop = NULL);
-
     ~EVTimer();
+    explicit EVTimer(EV *_loop = nullptr);
+
+    using EVWatcher::set;
 
     void set_time_jump(bool jump);
 

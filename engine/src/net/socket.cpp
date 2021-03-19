@@ -51,6 +51,8 @@ Socket::Socket(uint32_t conn_id, ConnType conn_ty)
     _codec_ty    = Codec::CDC_NONE;
     _over_action = OAT_NONE;
 
+    _w.set(StaticGlobal::ev());
+
     C_OBJECT_ADD("socket");
 }
 
@@ -112,7 +114,7 @@ void Socket::stop(bool flush)
 int32_t Socket::recv()
 {
     assert(_io);
-    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32_t byte = 0;
@@ -331,30 +333,19 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
     return 0;
 }
 
-/* 设置为开始读取数据
- * 该socket之前可能已经active
- */
 void Socket::start(int32_t fd)
 {
     assert(0 == _send.get_used_size() && 0 == _send.get_used_size());
 
-    if (fd > 0 && _w.fd > 0)
-    {
-        assert(false);
-    }
-    fd = fd > 0 ? fd : _w.fd;
-    assert(fd > 0);
+    // connect成功时，已有fd
+    // accept成功时，需要从外部传入fd
+    assert((fd <= 0 && _w.fd > 0) || (fd > 0 && _w.fd < 0));
 
-    if (fd > 0) // 新创建的socket
-    {
-        _w.set(StaticGlobal::ev());
-        _w.set<Socket, &Socket::io_cb>(this);
-    }
+    // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
+    _w.set(fd > 0 ? fd : _w.fd, EV_READ);
+    _w.bind(&Socket::command_cb, this);
 
-    set<Socket, &Socket::command_cb>(this);
-    _w.set(fd, EV_READ); /* 将之前的write改为read */
-
-    if (!_w.is_active()) _w.start();
+    if (!_w.active()) _w.start();
 
     C_SOCKET_TRAFFIC_NEW(_conn_id);
 }
@@ -401,10 +392,7 @@ int32_t Socket::connect(const char *host, int32_t port)
         return -1;
     }
 
-    set<Socket, &Socket::connect_cb>(this);
-
-    _w.set(StaticGlobal::ev());
-    _w.set<Socket, &Socket::io_cb>(this);
+    _w.bind(&Socket::connect_cb, this);
     _w.start(fd, EV_WRITE);
 
     return fd;
@@ -509,10 +497,7 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    set<Socket, &Socket::listen_cb>(this);
-
-    _w.set(StaticGlobal::ev());
-    _w.set<Socket, &Socket::io_cb>(this);
+    _w.bind(&Socket::listen_cb, this);
     _w.start(fd, EV_READ);
 
     return fd;
@@ -529,7 +514,7 @@ void Socket::pending_send()
     _pending = StaticGlobal::lua_ev()->pending_send(this);
 }
 
-void Socket::listen_cb()
+void Socket::listen_cb(int32_t revents)
 {
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     while (Socket::active())
@@ -567,22 +552,22 @@ void Socket::listen_cb()
     }
 }
 
-/*
- * connect回调
- * man connect
- * It is possible to select(2) or poll(2) for completion by selecting the socket
- * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to
- * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
- * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
- * of  the  usual  error  codes  listed  here,explaining the reason for the
- * failure)
- * 1）连接成功建立时，socket
- * 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
- * 2）连接建立失败时，socket 描述字既可读又可写。
- * （由于有未决的错误，从而可读又可写）
- */
-void Socket::connect_cb()
+void Socket::connect_cb(int32_t revents)
 {
+    /*
+     * connect回调
+     * man connect
+     * It is possible to select(2) or poll(2) for completion by selecting the socket
+     * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to
+     * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
+     * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
+     * of  the  usual  error  codes  listed  here,explaining the reason for the
+     * failure)
+     * 1）连接成功建立时，socket
+     * 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
+     * 2）连接建立失败时，socket 描述字既可读又可写。
+     * （由于有未决的错误，从而可读又可写）
+     */
     int32_t ecode = Socket::validate();
 
     if (0 == ecode)
@@ -594,7 +579,7 @@ void Socket::connect_cb()
     }
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
-    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     bool is_ok = network_mgr->connect_new(_conn_id, ecode);
 
     if (EXPECT_TRUE(is_ok && 0 == ecode))
@@ -607,7 +592,7 @@ void Socket::connect_cb()
     }
 }
 
-void Socket::command_cb()
+void Socket::command_cb(int32_t revents)
 {
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
