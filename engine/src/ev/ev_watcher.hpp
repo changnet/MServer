@@ -30,9 +30,10 @@ public:
 
 protected:
     friend class EV;
+
+    EV *_loop;
     bool _active;
     int32_t _pending;
-    EV *_loop;
 
     std::function<void(int32_t)> _cb; // 回调函数
 };
@@ -41,47 +42,62 @@ protected:
 class EVIO final: public EVWatcher
 {
 public:
-    int32_t fd;
-    int32_t events;
-
-public:
     ~EVIO();
     explicit EVIO(EV *_loop = nullptr);
 
-    using EVWatcher::set;
+    /// 获取io描述符
+    int32_t get_fd() const { return _fd; }
+    /// 设置io描述符
+    void set_fd(int32_t fd) { _fd = fd; }
 
     void start();
 
     void stop();
 
+    using EVWatcher::set;
     void set(int32_t fd, int32_t events);
 
-    void set(int32_t events);
+private:
+    friend class EV;
 
-    void start(int32_t fd, int32_t events);
+    int32_t _fd; /// io描述符
+    int32_t _events; /// 关注的事件
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class EVTimer final: public EVWatcher
 {
 public:
-    bool tj; // time jump
-    EvTstamp at;
-    EvTstamp repeat;
-
+    /// 当时间出现偏差时，定时器的调整策略
+    enum Policy
+    {
+        P_NONE   = 0, /// 默认方式，调整为当前时间
+        P_ALIGN  = 1, /// 对齐到特定时间
+        P_SPIN   = 2, /// 自旋
+    };
 public:
     ~EVTimer();
     explicit EVTimer(EV *_loop = nullptr);
 
-    using EVWatcher::set;
+    EvTstamp at() const { return _at; }
+    EvTstamp repeat() const { return _repeat; }
 
-    void set_time_jump(bool jump);
+    void set_policy(int32_t policy);
 
     void start();
 
     void stop();
 
+    /// 重新调整定时器
+    void reschedule(EvTstamp now);
+
+    using EVWatcher::set;
     void set(EvTstamp after, EvTstamp repeat = 0.);
 
-    void start(EvTstamp after, EvTstamp repeat = 0.);
+private:
+    friend class EV;
+
+    int32_t _policy;
+    EvTstamp _at;
+    EvTstamp _repeat;
 };

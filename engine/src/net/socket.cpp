@@ -65,7 +65,7 @@ Socket::~Socket()
     _packet = NULL;
 
     C_OBJECT_DEC("socket");
-    assert(0 == _pending && -1 == _w.fd);
+    assert(0 == _pending && -1 == _w.get_fd());
 }
 
 void Socket::stop(bool flush)
@@ -98,11 +98,11 @@ void Socket::stop(bool flush)
         }
     }
 
-    if (_w.fd > 0)
+    if (_w.get_fd() > 0)
     {
-        ::close(_w.fd);
+        ::close(_w.get_fd());
         _w.stop();
-        _w.fd = -1; /* must after stop */
+        _w.set_fd(-1); /* must after stop */
     }
 
     _recv.clear();
@@ -339,10 +339,10 @@ void Socket::start(int32_t fd)
 
     // connect成功时，已有fd
     // accept成功时，需要从外部传入fd
-    assert((fd <= 0 && _w.fd > 0) || (fd > 0 && _w.fd < 0));
+    assert((fd < 0 && _w.get_fd() > 0) || (fd > 0 && _w.get_fd() < 0));
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    _w.set(fd > 0 ? fd : _w.fd, EV_READ);
+    _w.set(fd > 0 ? fd : _w.get_fd(), EV_READ);
     _w.bind(&Socket::command_cb, this);
 
     if (!_w.active()) _w.start();
@@ -352,7 +352,7 @@ void Socket::start(int32_t fd)
 
 int32_t Socket::connect(const char *host, int32_t port)
 {
-    assert(_w.fd < 0);
+    assert(_w.get_fd() < 0);
 
     // 创建新socket并设置为非阻塞
     int32_t fd = ::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
@@ -393,7 +393,8 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
     _w.bind(&Socket::connect_cb, this);
-    _w.start(fd, EV_WRITE);
+    _w.set(fd, EV_WRITE);
+    _w.start();
 
     return fd;
 }
@@ -402,7 +403,7 @@ int32_t Socket::validate()
 {
     int32_t err   = 0;
     socklen_t len = sizeof(err);
-    if (getsockopt(_w.fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0)
+    if (getsockopt(_w.get_fd(), SOL_SOCKET, SO_ERROR, &err, &len) < 0)
     {
         return errno;
     }
@@ -412,14 +413,14 @@ int32_t Socket::validate()
 
 const char *Socket::address(char *buf, size_t len, int *port)
 {
-    if (_w.fd < 0) return NULL;
+    if (_w.get_fd() < 0) return NULL;
 
     struct sockaddr_in_x addr;
 
     memset(&addr, 0, sizeof(addr));
     socklen_t addr_len = sizeof(addr);
 
-    if (getpeername(_w.fd, (struct sockaddr *)&addr, &addr_len) < 0)
+    if (getpeername(_w.get_fd(), (struct sockaddr *)&addr, &addr_len) < 0)
     {
         ERROR("socket::address getpeername error: %s\n", strerror(errno));
         return NULL;
@@ -498,7 +499,8 @@ int32_t Socket::listen(const char *host, int32_t port)
     }
 
     _w.bind(&Socket::listen_cb, this);
-    _w.start(fd, EV_READ);
+    _w.set(fd, EV_READ);
+    _w.start();
 
     return fd;
 
@@ -519,7 +521,7 @@ void Socket::listen_cb(int32_t revents)
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     while (Socket::active())
     {
-        int32_t new_fd = ::accept(_w.fd, NULL, NULL);
+        int32_t new_fd = ::accept(_w.get_fd(), NULL, NULL);
         if (new_fd < 0)
         {
             if (EAGAIN != errno && EWOULDBLOCK != errno)
@@ -687,14 +689,14 @@ int32_t Socket::io_status_check(int32_t ecode)
 
 int32_t Socket::init_accept()
 {
-    int32_t ecode = _io->init_accept(_w.fd);
+    int32_t ecode = _io->init_accept(_w.get_fd());
 
     return io_status_check(ecode);
 }
 
 int32_t Socket::init_connect()
 {
-    int32_t ecode = _io->init_connect(_w.fd);
+    int32_t ecode = _io->init_connect(_w.get_fd());
 
     return io_status_check(ecode);
 }

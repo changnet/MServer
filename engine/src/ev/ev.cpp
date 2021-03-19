@@ -97,7 +97,7 @@ int32_t EV::loop()
         EvTstamp backend_time = _backend_time_coarse - ev_now_ms;
         if (timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
         {
-            EvTstamp to = 1e3 * ((timers[HEAP0])->at - mn_now);
+            EvTstamp to = 1e3 * ((timers[HEAP0])->_at - mn_now);
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
@@ -135,7 +135,7 @@ int32_t EV::quit()
 
 int32_t EV::io_start(EVIO *w)
 {
-    int32_t fd = w->fd;
+    int32_t fd = w->_fd;
 
     ARRAY_RESIZE(ANFD, anfds, anfdmax, uint32_t(fd + 1), ARRAY_ZERO);
 
@@ -156,7 +156,7 @@ int32_t EV::io_stop(EVIO *w)
 
     if (EXPECT_FALSE(!w->active())) return 0;
 
-    int32_t fd = w->fd;
+    int32_t fd = w->_fd;
     assert(fd >= 0 && uint32_t(fd) < anfdmax);
 
     ANFD *anfd = anfds + fd;
@@ -174,7 +174,7 @@ void EV::fd_reify()
         int32_t fd = fdchanges[i];
         ANFD *anfd = anfds + fd;
 
-        int32_t events = anfd->w ? (anfd->w)->events : 0;
+        int32_t events = anfd->w ? (anfd->w)->_events : 0;
 
         backend->modify(fd, anfd->emask, events);
         anfd->emask = events;
@@ -318,38 +318,26 @@ void EV::clear_pending(EVWatcher *w)
 
 void EV::timers_reify()
 {
-    while (timercnt && (timers[HEAP0])->at < mn_now)
+    while (timercnt && (timers[HEAP0])->_at < mn_now)
     {
         EVTimer *w = timers[HEAP0];
 
         assert(w->active());
 
-        /* first reschedule or stop timer */
-        if (w->repeat)
+        if (w->_repeat)
         {
-            w->at += w->repeat;
+            w->_at += w->_repeat;
 
-            // 当前用的是MN定时器，所以不存在用户调时间的问题
-            // 但可能存在卡主循环的情况，libev默认情况下是修正为当前时间
-            // 但在游戏逻辑中，多数情况还是需要按次数触发
-            // 有些定时器修正为整点(刚好0秒的时候)触发的，因引不要随意修正为当前时间
-            if (w->at < mn_now && w->tj)
-            {
-                // w->at = mn_now // libev默认的处理方式
-                // tj = time jump，这个间隔不太可能太大，直接循环比较快
-                while (w->at < mn_now)
-                {
-                    w->at += w->repeat;
-                }
-            }
+            // 如果时间出现偏差，重新调整定时器
+            if (EXPECT_FALSE(w->_at < mn_now)) w->reschedule(mn_now);
 
-            assert(w->repeat > 0.);
+            assert(w->_repeat > 0.);
 
             down_heap(timers, timercnt, HEAP0);
         }
         else
         {
-            w->stop(); /* nonrepeating: stop timer */
+            w->stop();
         }
 
         feed_event(w, EV_TIMER);
@@ -358,9 +346,9 @@ void EV::timers_reify()
 
 int32_t EV::timer_start(EVTimer *w)
 {
-    w->at += mn_now;
+    w->_at += mn_now;
 
-    assert(w->repeat >= 0.);
+    assert(w->_repeat >= 0.);
 
     ++timercnt;
     int32_t active = timercnt + HEAP0 - 1;
@@ -395,7 +383,7 @@ int32_t EV::timer_stop(EVTimer *w)
         }
     }
 
-    w->at -= mn_now;
+    w->_at -= mn_now;
     w->_active = 0;
 
     return 0;
@@ -413,9 +401,9 @@ void EV::down_heap(ANHE *heap, int32_t N, int32_t k)
         if (c >= N + HEAP0) break;
 
         // 取左节点(N*2)还是取右节点(N*2+1)
-        c += c + 1 < N + HEAP0 && (heap[c])->at > (heap[c + 1])->at ? 1 : 0;
+        c += c + 1 < N + HEAP0 && (heap[c])->_at > (heap[c + 1])->_at ? 1 : 0;
 
-        if (he->at <= (heap[c])->at) break;
+        if (he->_at <= (heap[c])->_at) break;
 
         heap[k]            = heap[c];
         (heap[k])->_active = k;
@@ -434,7 +422,7 @@ void EV::up_heap(ANHE *heap, int32_t k)
     {
         int p = HPARENT(k);
 
-        if (UPHEAP_DONE(p, k) || (heap[p])->at <= he->at) break;
+        if (UPHEAP_DONE(p, k) || (heap[p])->_at <= he->_at) break;
 
         heap[k]            = heap[p];
         (heap[k])->_active = k;
@@ -447,7 +435,7 @@ void EV::up_heap(ANHE *heap, int32_t k)
 
 void EV::adjust_heap(ANHE *heap, int32_t N, int32_t k)
 {
-    if (k > HEAP0 && (heap[k])->at <= (heap[HPARENT(k)])->at)
+    if (k > HEAP0 && (heap[k])->_at <= (heap[HPARENT(k)])->_at)
     {
         up_heap(heap, k);
     }

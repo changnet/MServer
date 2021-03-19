@@ -102,7 +102,7 @@ public:
     class Packet *get_packet() const { return _packet; }
     Codec::CodecType get_codec_type() const { return _codec_ty; }
 
-    inline int32_t fd() const { return _w.fd; }
+    inline int32_t fd() const { return _w.get_fd(); }
     inline uint32_t conn_id() const { return _conn_id; }
     inline ConnType conn_type() const { return _conn_ty; }
     inline bool active() const { return _w.active(); }
