@@ -71,7 +71,8 @@ function sig_handler( signum )
     g_app:prepare_shutdown()
 
     if not g_app:check_shutdown() then
-        return g_timer_mgr:interval(5 ,5, -1, g_app, g_app.check_shutdown)
+        return g_timer_mgr:interval(
+            5000 , 5000, -1, g_app, g_app.check_shutdown)
     end
 end
 
@@ -172,7 +173,7 @@ function Application:initialize()
     if table.empty(self.init_step) then return self:final_initialize() end
 
     self.check_init_timer =
-        g_timer_mgr:interval(15, 15, -1, self, self.check_init_step)
+        g_timer_mgr:interval(15000, 15000, -1, self, self.check_init_step)
 
     for _, step in pairs( self.init_step ) do
         step.tm = ev:time()

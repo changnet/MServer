@@ -86,7 +86,7 @@ end
 function SrvApp:final_initialize()
     -- 修正为整点触发(X分0秒)，但后面调时间就不对了
     local next = 5 - (ev:time() % 5)
-    self.timer = g_timer_mgr:interval( next,5, -1, self,self.do_timer )
+    self.timer = g_timer_mgr:interval(next * 1000, 5000, -1, self,self.do_timer)
 
     -- Application.final_initialize(self)
     self.ok = true

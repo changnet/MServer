@@ -14,12 +14,12 @@ LTimer::~LTimer() {}
 
 int32_t LTimer::set(lua_State *L)
 {
-    EvTstamp after  = static_cast<EvTstamp>(luaL_checknumber(L, 1));
-    EvTstamp repeat = static_cast<EvTstamp>(luaL_optnumber(L, 2, 0.));
+    int64_t after  = static_cast<int64_t>(luaL_checkinteger(L, 1));
+    int64_t repeat = static_cast<int64_t>(luaL_optinteger(L, 2, 0));
 
     int32_t policy = luaL_optinteger(L, 3, 0);
 
-    if (after < 0. or repeat < 0.)
+    if (after < 0 or repeat < 0)
     {
         return luaL_error(L, "negative timer argument");
     }
@@ -38,7 +38,7 @@ int32_t LTimer::start(lua_State *L)
         return luaL_error(L, "timer already start");
     }
 
-    if (_timer.at() <= 0. && _timer.repeat() <= 0.)
+    if (_timer.at() <= 0 && _timer.repeat() <= 0)
     {
         return luaL_error(L, "timer no repeater interval set");
     }

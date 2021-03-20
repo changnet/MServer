@@ -81,13 +81,13 @@ int32_t LEV::time_update(lua_State *L)
 // 帧时间
 int32_t LEV::time(lua_State *L)
 {
-    lua_pushinteger(L, ev_rt_now);
+    lua_pushinteger(L, _rt_time);
     return 1;
 }
 
 int32_t LEV::ms_time(lua_State *L) // 帧时间，ms
 {
-    lua_pushinteger(L, ev_now_ms);
+    lua_pushinteger(L, _mn_time);
     return 1;
 }
 
@@ -112,14 +112,14 @@ int32_t LEV::who_busy(lua_State *L) // 看下哪条线程繁忙
 // 实时时间
 int32_t LEV::real_time(lua_State *L)
 {
-    lua_pushinteger(L, get_time());
+    lua_pushinteger(L, get_real_time());
     return 1;
 }
 
 // 实时时间
 int32_t LEV::real_ms_time(lua_State *L)
 {
-    lua_pushinteger(L, get_ms_time());
+    lua_pushinteger(L, get_monotonic_time());
     return 1;
 }
 
@@ -147,7 +147,7 @@ int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
     }
 
     _app_ev._repeat_ms = interval;
-    _app_ev._next_time = ev_now_ms;
+    _app_ev._next_time = _mn_time;
     return 0;
 }
 
@@ -246,20 +246,20 @@ void LEV::invoke_sending()
 
     _sendingcnt = pos;
     // 如果还有数据未发送，尽快下发 TODO 这个取值大概是多少合适？
-    if (_sendingcnt > 0) set_backend_time_coarse(ev_now_ms + BACKEND_MIN_TM);
+    if (_sendingcnt > 0) set_backend_time_coarse(_mn_time + BACKEND_MIN_TM);
     assert(_sendingcnt >= 0 && _sendingcnt < (int32_t)_sendings.size());
 }
 
 bool LEV::next_periodic(Periodic &periodic)
 {
     bool timeout = false;
-    EvTstamp tm = periodic._next_time - ev_now_ms;
+    int64_t tm = periodic._next_time - _mn_time;
     if (tm <= 0)
     {
         timeout = true;
         // TODO 当主循环卡了，这两个表现是不一样的，后续有需要再改
         // periodic._next_time += periodic._repeat_ms;
-        periodic._next_time = ev_now_ms + periodic._repeat_ms;
+        periodic._next_time = _mn_time + periodic._repeat_ms;
     }
 
     set_backend_time_coarse(periodic._next_time);
@@ -273,7 +273,7 @@ void LEV::invoke_app_ev()
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
-    lua_pushinteger(L, ev_now_ms);
+    lua_pushinteger(L, _mn_time);
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
         ERROR("invoke_app_ev fail:%s", lua_tostring(L, -1));
@@ -288,7 +288,7 @@ void LEV::running()
     // 如果主循环被阻塞太久，打印日志
     if (_busy_time > _critical_tm)
     {
-        PRINTF("ev busy:%.3f msec", _busy_time);
+        PRINTF("ev busy: " FMT64d "msec", _busy_time);
     }
 
     invoke_sending();

@@ -31,11 +31,11 @@ EV::EV()
     _timercnt = 0;
     _timers.resize(1024, nullptr);
 
-    ev_rt_now = get_time();
+    _rt_time = get_real_time();
 
-    update_clock();
-    now_floor = mn_now;
-    rtmn_diff = ev_rt_now - mn_now;
+    _mn_time = get_monotonic_time();
+    _last_rt_update = _mn_time;
+    _rtmn_diff = _rt_time * 1e3 - _mn_time;
 
     _busy_time = 0;
 
@@ -64,19 +64,19 @@ int32_t EV::loop()
      */
 
     _done       = false;
-    int64_t last_ms = ev_now_ms;
+    int64_t last_ms = _mn_time;
     while (EXPECT_TRUE(!_done))
     {
         // 把fd变更设置到epoll中去
         fd_reify();
 
         time_update();
-        _busy_time = ev_now_ms - last_ms;
+        _busy_time = _mn_time - last_ms;
 
-        EvTstamp backend_time = _backend_time_coarse - ev_now_ms;
+        int64_t backend_time = _backend_time_coarse - _mn_time;
         if (_timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
         {
-            EvTstamp to = 1e3 * ((_timers[HEAP0])->_at - mn_now);
+            int64_t to = 1e3 * ((_timers[HEAP0])->_at - _mn_time);
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
@@ -87,11 +87,11 @@ int32_t EV::loop()
 
         time_update();
 
-        last_ms = ev_now_ms;
+        last_ms = _mn_time;
 
         // 不同的逻辑会预先设置主循环下次阻塞的时间。在执行其他逻辑时，可能该时间已经过去了
         // 这说明主循环比较繁忙，会被修正为BACKEND_MIN_TM，而不是精确的按预定时间执行
-        _backend_time_coarse = BACKEND_MAX_TM + ev_now_ms;
+        _backend_time_coarse = BACKEND_MAX_TM + _mn_time;
 
         // 处理timer变更
         timers_reify();
@@ -163,62 +163,56 @@ void EV::fd_reify()
     _fd_changes.clear();
 }
 
-EvTstamp EV::get_time()
+int64_t EV::get_real_time()
 {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts); // more precise then gettimeofday
-    return ts.tv_sec + ts.tv_nsec * 1e-9;
+    clock_gettime(CLOCK_REALTIME, &ts);
+
+    // UTC时间，只需要精确到秒数就可以了。需要精度高的一般用monotonic_time
+    // return ts.tv_sec + ts.tv_nsec * 1e-9;
+    return ts.tv_sec; 
 }
 
-int64_t EV::get_ms_time()
+int64_t EV::get_monotonic_time()
 {
+    /*
+     * 获取当前时钟
+     * CLOCK_REALTIME:
+     * 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。
+     * CLOCK_REALTIME_COARSE:
+     * 系统实时时间，比起CLOCK_REALTIME有更快的获取速度，更低一些的精确度。
+     * CLOCK_MONOTONIC:
+     * 从系统启动这一刻开始计时，即使系统时间被用户改变，也不受影响。系统休眠时不会计时。受adjtime和NTP影响。
+     * CLOCK_MONOTONIC_COARSE:
+     * 如同CLOCK_MONOTONIC，但有更快的获取速度和更低一些的精确度。受NTP影响。
+     * CLOCK_MONOTONIC_RAW:
+     * 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
+     * CLOCK_BOOTTIME:
+     * 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
+     */
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
     return ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
 }
 
-/*
- * 获取当前时钟
- * CLOCK_REALTIME:
- * 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。
- * CLOCK_REALTIME_COARSE:
- * 系统实时时间，比起CLOCK_REALTIME有更快的获取速度，更低一些的精确度。
- * CLOCK_MONOTONIC:
- * 从系统启动这一刻开始计时，即使系统时间被用户改变，也不受影响。系统休眠时不会计时。受adjtime和NTP影响。
- * CLOCK_MONOTONIC_COARSE:
- * 如同CLOCK_MONOTONIC，但有更快的获取速度和更低一些的精确度。受NTP影响。
- * CLOCK_MONOTONIC_RAW:
- * 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
- * CLOCK_BOOTTIME:
- * 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
- */
-void EV::update_clock()
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    mn_now    = ts.tv_sec + ts.tv_nsec * 1e-9;
-    ev_now_ms = ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
-}
-
 void EV::time_update()
 {
-    update_clock();
+    _mn_time = get_monotonic_time();
 
     /* 直接计算出UTC时间而不通过get_time获取
      * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
      * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
      */
-    if (mn_now - now_floor < MIN_TIMEJUMP * .5)
+    if (_mn_time - _last_rt_update < MIN_TIMEJUMP * .5)
     {
-        ev_rt_now = rtmn_diff + mn_now;
+        _rt_time = 1e-3 * (_rtmn_diff + _mn_time);
         return;
     }
 
-    now_floor         = mn_now;
-    ev_rt_now         = get_time();
-    EvTstamp old_diff = rtmn_diff;
+    _last_rt_update   = _mn_time;
+    _rt_time         = get_real_time();
+    int64_t old_diff = _rtmn_diff;
 
     /* 当两次diff相差比较大时，说明有人调了UTC时间。由于clock_gettime是一个syscall，可能
      * 出现mn_now是调整前，ev_rt_now为调整后的情况。
@@ -235,18 +229,18 @@ void EV::time_update()
      */
     for (int32_t i = 4; --i;)
     {
-        rtmn_diff = ev_rt_now - mn_now;
+        _rtmn_diff = _rt_time * 1e3  - _mn_time;
 
-        EvTstamp diff = old_diff - rtmn_diff;
+        int64_t diff = old_diff - _rtmn_diff;
         if (EXPECT_TRUE((diff < 0. ? -diff : diff) < MIN_TIMEJUMP))
         {
             return;
         }
 
-        ev_rt_now = get_time();
+        _rt_time = get_real_time();
 
-        update_clock();
-        now_floor = mn_now;
+        _mn_time = get_monotonic_time();
+        _last_rt_update = _mn_time;
     }
 }
 
@@ -298,7 +292,7 @@ void EV::clear_pending(EVWatcher *w)
 
 void EV::timers_reify()
 {
-    while (_timercnt && (_timers[HEAP0])->_at < mn_now)
+    while (_timercnt && (_timers[HEAP0])->_at < _mn_time)
     {
         EVTimer *w = _timers[HEAP0];
 
@@ -309,7 +303,7 @@ void EV::timers_reify()
             w->_at += w->_repeat;
 
             // 如果时间出现偏差，重新调整定时器
-            if (EXPECT_FALSE(w->_at < mn_now)) w->reschedule(mn_now);
+            if (EXPECT_FALSE(w->_at < _mn_time)) w->reschedule(_mn_time);
 
             assert(w->_repeat > 0.);
 
@@ -326,7 +320,7 @@ void EV::timers_reify()
 
 int32_t EV::timer_start(EVTimer *w)
 {
-    w->_at += mn_now;
+    w->_at += _mn_time;
 
     assert(w->_repeat >= 0.);
 
@@ -367,7 +361,7 @@ int32_t EV::timer_stop(EVTimer *w)
         }
     }
 
-    w->_at -= mn_now;
+    w->_at -= _mn_time;
     w->_active = 0;
 
     return 0;

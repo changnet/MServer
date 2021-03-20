@@ -24,7 +24,7 @@ function App:final_initialize()
         print = PRINT,
         timer = {
             new = function(timeout, func)
-                return g_timer_mgr:timeout(timeout/1000, func)
+                return g_timer_mgr:timeout(timeout, func)
             end,
 
             del = function(timer_id)

@@ -28,8 +28,8 @@ function TimerMgr:get_next_id()
 end
 
 -- 创建按间隔循环的定时器
--- @param after 延迟N秒启动定时器，可以是小数，精度是毫秒级的
--- @param sec 循环间隔，单位秒，可以是小数，精度是毫秒级的，0表示不循环
+-- @param after 延迟N毫秒启动定时器
+-- @param sec 循环间隔，单位毫秒，0表示不循环
 -- @param times 循环次数，-1表示永久
 -- @param this 回调对象，没有可以不传此参数
 -- @param method 回调函数
@@ -65,7 +65,7 @@ function TimerMgr:interval( after,sec,times,this,method,... )
 end
 
 -- 创建一次延时回调
--- @param after 延迟N秒启动定时器，可以是小数，精度是毫秒级的
+-- @param after 延迟N毫秒启动定时器
 -- @param this 回调对象，没有可以不传此参数
 -- @param method 回调函数
 -- @param ... 其他回调参数

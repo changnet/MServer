@@ -33,7 +33,7 @@ public:
     EVBackend();
     ~EVBackend();
 
-    void wait(class EV *ev_loop, EvTstamp timeout);
+    void wait(class EV *ev_loop, int64_t timeout);
     void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
 
 private:
@@ -68,7 +68,7 @@ EVBackend::~EVBackend()
     }
 }
 
-void EVBackend::wait(EV *ev_loop, EvTstamp timeout)
+void EVBackend::wait(EV *ev_loop, int64_t timeout)
 {
     int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, timeout);
     if (EXPECT_FALSE(ev_count < 0))

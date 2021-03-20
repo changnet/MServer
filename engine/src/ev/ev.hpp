@@ -22,7 +22,6 @@ class EVBackend;
 #define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
 #define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
 
-using EvTstamp = double;
 using HeapNode = EVTimer *;
 
 extern const char *BACKEND_KERNEL;
@@ -43,13 +42,11 @@ public:
     int32_t timer_start(EVTimer *w);
     int32_t timer_stop(EVTimer *w);
 
-    static int64_t get_ms_time();
-    static EvTstamp get_time();
+    static int64_t get_monotonic_time();
+    static int64_t get_real_time();
 
-    void update_clock();
-
-    inline int64_t ms_now() { return ev_now_ms; }
-    inline EvTstamp now() { return ev_rt_now; }
+    inline int64_t ms_now() { return _mn_time; }
+    inline int64_t now() { return _rt_time; }
 
 protected:
     friend class EVBackend;
@@ -67,18 +64,22 @@ protected:
     std::vector<EVTimer *> _timers; /// 所有的timer watcher
 
     EVBackend *_backend;
-    EvTstamp _busy_time;           ///< 上一次执行消耗的时间，毫秒
-    EvTstamp _backend_time_coarse; ///< backend阻塞结束的时间戳
+    int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
+    int64_t _backend_time_coarse; ///< backend阻塞结束的时间戳
 
-    int64_t ev_now_ms; ///< 起服到现在的毫秒
-    std::atomic<EvTstamp> ev_rt_now; ///< UTC时间戳(秒，但这个是double，可精确到0.5秒)
-    EvTstamp now_floor;           ///< 上一次更新UTC的MONOTONIC时间
-    std::atomic<EvTstamp> mn_now; ///< 起服到现在的秒数(CLOCK_MONOTONIC)
-    EvTstamp rtmn_diff;           ///< UTC时间与MONOTONIC时间的差值
+    int64_t _mn_time; ///< 起服到现在的毫秒
+    std::atomic<int64_t> _rt_time; ///< UTC时间戳(CLOCK_REALTIME,秒)
+    int64_t _last_rt_update; ///< 上一次更新UTC的MONOTONIC时间
+
+    /**
+     * UTC时间与MONOTONIC时间的差值，用于通过mn_now直接计算出rt_now而
+     * 不需要通过clock_gettime来得到rt_now，以提高效率
+     */
+    int64_t _rtmn_diff;
 protected:
     virtual void running() = 0;
 
-    void set_backend_time_coarse(EvTstamp backend_time)
+    void set_backend_time_coarse(int64_t backend_time)
     {
         if (_backend_time_coarse > backend_time)
         {

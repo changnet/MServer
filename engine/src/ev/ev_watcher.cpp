@@ -66,7 +66,7 @@ void EVTimer::set_policy(int32_t policy)
     _policy = policy;
 }
 
-void EVTimer::reschedule(EvTstamp now)
+void EVTimer::reschedule(int64_t now)
 {
     /**
      * 当前用的是CLOCK_MONOTONIC时间，所以不存在用户调时间的问题
@@ -113,7 +113,7 @@ void EVTimer::stop()
     _loop->timer_stop(this);
 }
 
-void EVTimer::set(EvTstamp after, EvTstamp repeat)
+void EVTimer::set(int64_t after, int64_t repeat)
 {
     int32_t old_active = _active;
 
