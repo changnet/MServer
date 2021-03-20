@@ -11,7 +11,6 @@
 #include "lmap.hpp"
 #include "lmongo.hpp"
 #include "lnetwork_mgr.hpp"
-#include "lrank.hpp"
 #include "lsql.hpp"
 #include "lstate.hpp"
 #include "lstatistic.hpp"
@@ -63,73 +62,7 @@ const char *__dbg_traceback()
     return lua_tostring(L, -1);
 }
 
-LState::LState()
-{
-    /* 初始化lua */
-    L = luaL_newstate();
-    if (!L)
-    {
-        ERROR("lua new state fail\n");
-        exit(1);
-    }
-    luaL_openlibs(L);
-    open_cpp();
-}
-
-LState::~LState()
-{
-    assert(0 == lua_gettop(L));
-
-    /* Destroys all objects in the given Lua state (calling the corresponding
-     * garbage-collection metamethods, if any) and frees all dynamic memory used
-     * by this state
-     */
-    lua_close(L);
-    L = nullptr;
-}
-
-int32_t luaopen_ev(lua_State *L);
-int32_t luaopen_sql(lua_State *L);
-int32_t luaopen_log(lua_State *L);
-int32_t luaopen_map(lua_State *L);
-int32_t luaopen_rank(lua_State *L);
-int32_t luaopen_timer(lua_State *L);
-int32_t luaopen_astar(lua_State *L);
-int32_t luaopen_acism(lua_State *L);
-int32_t luaopen_mongo(lua_State *L);
-int32_t luaopen_grid_aoi(lua_State *L);
-int32_t luaopen_list_aoi(lua_State *L);
-int32_t luaopen_network_mgr(lua_State *L);
-
-void LState::open_cpp()
-{
-    /* ============================库方式调用================================== */
-    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-    LUA_LIB_OPEN("util", luaopen_util);
-    LUA_LIB_OPEN("statistic", luaopen_statistic);
-    LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
-    LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
-    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-
-    /* ============================对象方式调用================================ */
-    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-    luaopen_ev(L);
-    luaopen_sql(L);
-    luaopen_log(L);
-    luaopen_map(L);
-    luaopen_rank(L);
-    luaopen_timer(L);
-    luaopen_astar(L);
-    luaopen_acism(L);
-    luaopen_mongo(L);
-    luaopen_grid_aoi(L);
-    luaopen_list_aoi(L);
-    luaopen_network_mgr(L);
-    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-
-    /* when debug,make sure lua stack clean after init */
-    assert(0 == lua_gettop(L));
-}
+////////////////////////////////////////////////////////////////////////////////
 
 int32_t luaopen_ev(lua_State *L)
 {
@@ -359,29 +292,6 @@ int32_t luaopen_map(lua_State *L)
     return 0;
 }
 
-int32_t luaopen_rank(lua_State *L)
-{
-    LClass<LInsertionRank> lc_insertion_rank(L, "InsertionRank");
-    lc_insertion_rank.def<&LInsertionRank::clear>("clear");
-    lc_insertion_rank.def<&LInsertionRank::remove>("remove");
-    lc_insertion_rank.def<&LInsertionRank::insert>("insert");
-    lc_insertion_rank.def<&LInsertionRank::update>("update");
-    lc_insertion_rank.def<&LInsertionRank::get_count>("get_count");
-    lc_insertion_rank.def<&LInsertionRank::set_max_count>("set_max_count");
-    lc_insertion_rank.def<&LInsertionRank::get_max_factor>("get_max_factor");
-    lc_insertion_rank.def<&LInsertionRank::get_factor>("get_factor");
-    lc_insertion_rank.def<&LInsertionRank::get_rank_by_id>("get_rank_by_id");
-    lc_insertion_rank.def<&LInsertionRank::get_id_by_rank>("get_id_by_rank");
-
-    LClass<lBucketRank> lc_bucket_rank(L, "BucketRank");
-    lc_bucket_rank.def<&lBucketRank::clear>("clear");
-    lc_bucket_rank.def<&lBucketRank::insert>("insert");
-    lc_bucket_rank.def<&lBucketRank::get_count>("get_count");
-    lc_bucket_rank.def<&lBucketRank::get_top_n>("get_top_n");
-
-    return 0;
-}
-
 int32_t luaopen_astar(lua_State *L)
 {
     LClass<LAstar> lc(L, "Astar");
@@ -389,4 +299,60 @@ int32_t luaopen_astar(lua_State *L)
     lc.def<&LAstar::search>("search");
 
     return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+LState::LState()
+{
+    /* 初始化lua */
+    L = luaL_newstate();
+    if (!L)
+    {
+        ERROR("lua new state fail\n");
+        exit(1);
+    }
+    luaL_openlibs(L);
+    open_cpp();
+}
+
+LState::~LState()
+{
+    assert(0 == lua_gettop(L));
+
+    /* Destroys all objects in the given Lua state (calling the corresponding
+     * garbage-collection metamethods, if any) and frees all dynamic memory used
+     * by this state
+     */
+    lua_close(L);
+    L = nullptr;
+}
+
+void LState::open_cpp()
+{
+    /* ============================库方式调用================================== */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    LUA_LIB_OPEN("util", luaopen_util);
+    LUA_LIB_OPEN("statistic", luaopen_statistic);
+    LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
+    LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
+    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
+
+    /* ============================对象方式调用================================ */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    luaopen_ev(L);
+    luaopen_sql(L);
+    luaopen_log(L);
+    luaopen_map(L);
+    luaopen_timer(L);
+    luaopen_astar(L);
+    luaopen_acism(L);
+    luaopen_mongo(L);
+    luaopen_grid_aoi(L);
+    luaopen_list_aoi(L);
+    luaopen_network_mgr(L);
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+
+    /* when debug,make sure lua stack clean after init */
+    assert(0 == lua_gettop(L));
 }

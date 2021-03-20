@@ -51,22 +51,5 @@ extern std::string std_format(const char *fmt, ...);
         ::abort();          \
     } while (0)
 
-#define ARRAY_RESIZE(type, base, cur, cnt, init)            \
-    if ((cnt) > (cur))                                      \
-    {                                                       \
-        uint32_t size = cur > 0 ? cur : 16;                 \
-        while (size < (uint32_t)cnt)                        \
-        {                                                   \
-            size *= 2;                                      \
-        }                                                   \
-        type *tmp = new type[size];                         \
-        init(tmp, sizeof(type) * size);                     \
-        if (cur > 0) memcpy(tmp, base, sizeof(type) * cur); \
-        delete[] base;                                      \
-        base = tmp;                                         \
-        cur  = size;                                        \
-    }
-
+/// 求C数组的数量
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
-#define ARRAY_NOINIT(base, size)
-#define ARRAY_ZERO(base, size) memset((void *)(base), 0, size)

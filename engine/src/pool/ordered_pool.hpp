@@ -1,20 +1,20 @@
 #pragma once
 
-/* 等长内存池，参考了boost内存池(boolst/pool/pool.hpp).分配的内存只能是ordered_size
+#include "pool.hpp"
+
+/**
+ * 等长内存池，参考了boost内存池(boolst/pool/pool.hpp).分配的内存只能是ordered_size
  * 的n倍。每一个n都形成一个空闲链表，利用率比boost低。
  * 1.分配出去的内存不再受池的管理
  * 2.所有内存在池销毁时会释放(包括未归还的)
  * 3.没有约束内存对齐。因此用的是系统默认对齐，在linux 32/64bit应该是OK的
  * 4.最小内存块不能小于一个指针长度(4/8 bytes)
  */
-
-#include "pool.hpp"
-
 template <uint32_t ordered_size> class OrderedPool : public Pool
 {
 public:
     explicit OrderedPool(const char *name)
-        : Pool(name), anpts(NULL), anptmax(0), block_list(NULL)
+        : Pool(name), anpts(nullptr), anptmax(0), block_list(nullptr)
     {
         assert(ordered_size >= sizeof(void *));
     }
@@ -42,7 +42,19 @@ public:
     char *ordered_malloc(uint32_t n, uint32_t chunk_size)
     {
         assert(n > 0 && chunk_size > 0);
-        ARRAY_RESIZE(NODE, anpts, anptmax, n + 1, ARRAY_ZERO);
+        if (EXPECT_FALSE(anptmax < n + 1))
+        {
+            size_t size = 16;
+            while (size < n + 1) size *= 2;
+
+            NODE *tmp = new NODE[size];
+            memset(tmp, 0, sizeof(NODE) * size);
+
+            if (anptmax > 0) memcpy(tmp, anpts, sizeof(NODE) * anptmax);
+            delete []anpts;
+            anpts = tmp;
+            anptmax = size;
+        }
         void *ptr = anpts[n];
         if (ptr)
         {
@@ -82,7 +94,7 @@ private:
         if (anpts)
         {
             delete[] anpts;
-            anpts = NULL;
+            anpts = nullptr;
         }
 
         anptmax = 0;
@@ -95,7 +107,7 @@ private:
             delete[] _ptr;
         }
 
-        block_list = NULL;
+        block_list = nullptr;
     }
 
     /* 一块内存的指针是ptr,这块内存的前几个字节储存了下一块内存的指针地址
