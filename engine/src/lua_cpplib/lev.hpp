@@ -113,12 +113,11 @@ private:
     bool next_periodic(Periodic &periodic);
 
 private:
-    typedef class Socket *ANSENDING;
-
-    /* 待发送队列 */
-    ANSENDING *ansendings;
-    int32_t ansendingmax;
-    int32_t ansendingcnt;
+    /**
+     * 用一个计数器来管理vector，可以避免对vector进行pop、resize之类的操作
+     */
+    int32_t _sendingcnt;
+    std::vector<Socket *> _sendings; /// 待发送数据的socket
 
     int32_t _critical_tm; // 每次主循环的临界时间，毫秒
 

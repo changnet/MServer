@@ -480,6 +480,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
     if (0 == ok)
     {
+        errno = EADDRNOTAVAIL; // Address not available
         ERROR("invalid host format: %s", host);
         goto FAIL;
     }

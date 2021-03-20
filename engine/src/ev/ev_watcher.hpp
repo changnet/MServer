@@ -16,7 +16,7 @@ public:
     virtual ~EVWatcher() {}
 
     /// 当前watcher是否被激活
-    bool active() const { return _active; }
+    bool active() const { return 0 != _active; }
 
     /// 设置主循环指针
     void set(EV *loop) { _loop = loop; }
@@ -34,8 +34,8 @@ protected:
     friend class EV;
 
     EV *_loop;
-    bool _active;
-    int32_t _pending;
+    int32_t _active; /// 定时器用作数组下标，io只是标记一下
+    int32_t _pending; /// 在待处理watcher数组中的下标
     int32_t _revents; /// 等待处理的事件
 
     std::function<void(int32_t)> _cb; // 回调函数

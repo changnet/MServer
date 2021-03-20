@@ -6,9 +6,8 @@
 
 LEV::LEV()
 {
-    ansendings   = NULL;
-    ansendingmax = 0;
-    ansendingcnt = 0;
+    _sendingcnt = 0;
+    _sendings.resize(1024, nullptr);
 
     _critical_tm       = -1;
     _app_ev._repeat_ms = 60000;
@@ -19,10 +18,7 @@ LEV::LEV()
 
 LEV::~LEV()
 {
-    if (ansendings) delete[] ansendings;
-    ansendings   = NULL;
-    ansendingcnt = 0;
-    ansendingmax = 0;
+    _sendingcnt = 0;
 }
 
 int32_t LEV::exit(lua_State *L)
@@ -191,20 +187,23 @@ void LEV::invoke_signal()
 
 int32_t LEV::pending_send(class Socket *s)
 {
-    // 0位是空的，不使用
-    ++ansendingcnt;
-    ARRAY_RESIZE(ANSENDING, ansendings, ansendingmax, ansendingcnt + 1,
-                 ARRAY_NOINIT);
-    ansendings[ansendingcnt] = s;
+    // 0位是空的，不使用，方便pending的计数
+    ++_sendingcnt;
+    if (EXPECT_FALSE(_sendings.size() < (size_t)_sendingcnt + 1))
+    {
+        _sendings.resize(_sendingcnt + 1024);
+    }
 
-    return ansendingcnt;
+    _sendings[_sendingcnt] = s;
+
+    return _sendingcnt;
 }
 
 void LEV::remove_pending(int32_t pending)
 {
-    assert(pending > 0 && pending < ansendingmax);
+    assert(pending > 0 && pending <= _sendingcnt);
 
-    ansendings[pending] = NULL;
+    _sendings[pending] = nullptr;
 }
 
 /* 把数据攒到一起，一次发送
@@ -214,15 +213,15 @@ void LEV::remove_pending(int32_t pending)
  */
 void LEV::invoke_sending()
 {
-    if (ansendingcnt <= 0) return;
+    if (_sendingcnt <= 0) return;
 
     int32_t pos       = 0;
-    class Socket *skt = NULL;
+    class Socket *skt = nullptr;
 
     /* 0位是空的，不使用 */
-    for (int32_t pending = 1; pending <= ansendingcnt; pending++)
+    for (int32_t pending = 1; pending <= _sendingcnt; pending++)
     {
-        if (!(skt = ansendings[pending])) /* 可能调用了remove_sending */
+        if (!(skt = _sendings[pending])) /* 可能调用了remove_sending */
         {
             continue;
         }
@@ -238,17 +237,17 @@ void LEV::invoke_sending()
         if (pending > pos)
         {
             ++pos;
-            ansendings[pos] = skt;
+            _sendings[pos] = skt;
             skt->set_pending(pos);
         }
         assert(pos == skt->get_pending());
         /* 数据未发送完，也不需要移动，则do nothing */
     }
 
-    ansendingcnt = pos;
+    _sendingcnt = pos;
     // 如果还有数据未发送，尽快下发 TODO 这个取值大概是多少合适？
-    if (ansendingcnt > 0) set_backend_time_coarse(ev_now_ms + BACKEND_MIN_TM);
-    assert(ansendingcnt >= 0 && ansendingcnt < ansendingmax);
+    if (_sendingcnt > 0) set_backend_time_coarse(ev_now_ms + BACKEND_MIN_TM);
+    assert(_sendingcnt >= 0 && _sendingcnt < (int32_t)_sendings.size());
 }
 
 bool LEV::next_periodic(Periodic &periodic)

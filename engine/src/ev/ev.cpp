@@ -114,12 +114,14 @@ int32_t EV::quit()
 
 int32_t EV::io_start(EVIO *w)
 {
+    assert(!w->active());
+
     int32_t fd = w->_fd;
 
     if (EXPECT_FALSE(fd >= (int32_t)_fds.size())) _fds.resize(fd + 1, nullptr);
 
     _fds[fd] = w;
-
+    w->_active = 1;
     fd_change(fd);
 
     return 1;
@@ -135,6 +137,7 @@ int32_t EV::io_stop(EVIO *w)
     assert(fd >= 0 && uint32_t(fd) < _fds.size());
 
     _fds[fd] = nullptr;
+    w->_active = 0;
     fd_change(fd);
 
     return 0;
