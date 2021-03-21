@@ -59,12 +59,13 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
      * 在头文件中的顺序不重要，这里实现的顺序才是运行时的顺序
      */
 
-    // 状态统计，独立的
-    _statistic   = new class Statistic();
-    _ev          = new class LEV();
+    // 先创建日志线程，保证其他模块能使用 ERROR 日志。如果在此之前需要日志用 ERROR_R
     _thread_mgr  = new class ThreadMgr();
+    _async_log   = new class LLog(nullptr);
+    _ev          = new class LEV();
+
+    _statistic   = new class Statistic();
     _state       = new class LState();
-    _async_log   = new class LLog(_state->state());
     _codec_mgr   = new class CodecMgr();
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
@@ -86,18 +87,20 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
  */
 void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
 {
-    _async_log->AsyncLog::stop();
-    _thread_mgr->stop();
+    _thread_mgr->stop(_async_log);
     _network_mgr->clear();
 
     delete _network_mgr;
     delete _ssl_mgr;
     delete _codec_mgr;
     delete _state;
-    delete _async_log;
-    delete _thread_mgr;
-    delete _ev;
     delete _statistic;
+
+    // 在最后面停止日志线程，保证其他模块写的日志还有效
+    _async_log->AsyncLog::stop();
+    delete _thread_mgr;
+    delete _async_log;
+    delete _ev;
 }
 
 // 初始化ssl库

@@ -268,7 +268,7 @@ private:
 
 protected:
     int32_t _id;                  /// 线程自定义id
-    const char *_name;            /// 线程名字，日志用而已
+    char _name[128];            /// 线程名字，日志用而已
     std::atomic<int32_t> _status; /// 线程状态，参考 Status 枚举
 
     std::mutex _mutex;

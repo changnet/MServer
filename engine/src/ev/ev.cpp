@@ -2,7 +2,7 @@
 #include "ev_watcher.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)
-#define MIN_TIMEJUMP 1.
+#define MIN_TIMEJUMP 1000
 
 /*
  * the heap functions want a real array index. array index 0 is guaranteed to

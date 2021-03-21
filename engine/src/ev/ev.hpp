@@ -65,7 +65,7 @@ protected:
 
     EVBackend *_backend;
     int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
-    int64_t _backend_time_coarse; ///< backend阻塞结束的时间戳
+    int64_t _backend_time_coarse; ///< 预计下次backend等待结束的时间戳
 
     int64_t _mn_time; ///< 起服到现在的毫秒
     std::atomic<int64_t> _rt_time; ///< UTC时间戳(CLOCK_REALTIME,秒)

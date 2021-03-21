@@ -12,12 +12,12 @@ void Mongo::cleanup()
 
 Mongo::Mongo()
 {
-    _conn = NULL;
+    _conn = nullptr;
 }
 
 Mongo::~Mongo()
 {
-    assert(NULL == _conn);
+    assert(nullptr == _conn);
 }
 
 void Mongo::set(const char *ip, const int32_t port, const char *usr,
@@ -56,7 +56,7 @@ int32_t Mongo::connect()
 void Mongo::disconnect()
 {
     if (_conn) mongoc_client_destroy(_conn);
-    _conn = NULL;
+    _conn = nullptr;
 }
 
 int32_t Mongo::ping()
@@ -70,7 +70,7 @@ int32_t Mongo::ping()
 
     /* cursor总是需要释放 */
     mongoc_cursor_t *cursor = mongoc_database_command(
-        database, (mongoc_query_flags_t)0, 0, 1, 0, &ping, NULL, NULL);
+        database, (mongoc_query_flags_t)0, 0, 1, 0, &ping, nullptr, nullptr);
 
     const bson_t *reply;
     if (mongoc_cursor_next(cursor, &reply))
@@ -107,13 +107,13 @@ bool Mongo::count(const struct MongoQuery *mq, struct MongoResult *res)
 
     // opts = {"skip":1,"limit":5}
     int64_t count = mongoc_collection_count_documents(
-        collection, mq->_query, mq->_opts, NULL, NULL, &res->_error);
+        collection, mq->_query, mq->_opts, nullptr, nullptr, &res->_error);
 
     mongoc_collection_destroy(collection);
 
     if (count < 0) /* 如果失败，返回-1 */
     {
-        res->_data = NULL;
+        res->_data = nullptr;
 
         return false;
     }
@@ -135,12 +135,12 @@ bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
         mongoc_client_get_collection(_conn, _db, mq->_clt);
 
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-        collection, mq->_query, mq->_fields, NULL);
+        collection, mq->_query, mq->_fields, nullptr);
 
     int32_t index = 0;
     bson_t *doc   = bson_new();
 
-    const bson_t *sub_doc = NULL;
+    const bson_t *sub_doc = nullptr;
     while (mongoc_cursor_next(cursor, &sub_doc))
     {
         /* The bson objects set in this function are ephemeral and good until
@@ -167,7 +167,7 @@ bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
     {
         ERROR_R("mongoc_cursor_error");
         bson_destroy(doc);
-        res->_data = NULL;
+        res->_data = nullptr;
 
         mongoc_collection_destroy(collection);
         return false;
@@ -189,7 +189,7 @@ bool Mongo::find_and_modify(const struct MongoQuery *mq, struct MongoResult *res
     mongoc_collection_t *collection =
         mongoc_client_get_collection(_conn, _db, mq->_clt);
 
-    assert(NULL == res->_data);
+    assert(nullptr == res->_data);
 
     res->_data = bson_new();
     bool ok    = mongoc_collection_find_and_modify(
@@ -200,7 +200,7 @@ bool Mongo::find_and_modify(const struct MongoQuery *mq, struct MongoResult *res
     if (!ok)
     {
         bson_destroy(res->_data);
-        res->_data = NULL;
+        res->_data = nullptr;
 
         return false;
     }
@@ -217,7 +217,7 @@ bool Mongo::insert(const struct MongoQuery *mq, struct MongoResult *res)
         mongoc_client_get_collection(_conn, _db, mq->_clt);
 
     bool ok = mongoc_collection_insert(collection, MONGOC_INSERT_NONE,
-                                       mq->_query, NULL, &res->_error);
+                                       mq->_query, nullptr, &res->_error);
 
     mongoc_collection_destroy(collection);
 
@@ -235,7 +235,7 @@ bool Mongo::update(const struct MongoQuery *mq, struct MongoResult *res)
     mongoc_update_flags_t flags = (mongoc_update_flags_t)mq->_flags;
 
     bool ok = mongoc_collection_update(collection, flags, mq->_query,
-                                       mq->_update, NULL, &res->_error);
+                                       mq->_update, nullptr, &res->_error);
 
     mongoc_collection_destroy(collection);
 
@@ -252,7 +252,7 @@ bool Mongo::remove(const struct MongoQuery *mq, struct MongoResult *res)
 
     bool ok =
         mongoc_collection_remove(collection, (mongoc_remove_flags_t)mq->_flags,
-                                 mq->_query, NULL, &res->_error);
+                                 mq->_query, nullptr, &res->_error);
 
     mongoc_collection_destroy(collection);
 

@@ -14,7 +14,28 @@ LMongo::LMongo(lua_State *L) : Thread("lmongo")
     _dbid = luaL_checkinteger(L, 2);
 }
 
-LMongo::~LMongo() {}
+LMongo::~LMongo()
+{
+    if (!_query.empty())
+    {
+        ERROR("mongo query not clean, abort");
+        while (!_query.empty())
+        {
+            delete _query.front();
+            _query.pop();
+        }
+    }
+
+    if (!_result.empty())
+    {
+        ERROR("mongo result not clean, abort");
+        while (!_result.empty())
+        {
+            delete _result.front();
+            _result.pop();
+        }
+    }
+}
 
 // 连接数据库
 // 由于是开启线程去连接，并且是异步的，需要上层定时调用valid来检测是否连接上
@@ -58,9 +79,18 @@ bool LMongo::initialize()
     do
     {
         ok = ping();
-        if (0 == ok) break;
-        if (ok > 0) return false;
 
+        // 连接成功
+        if (0 == ok) break;
+
+        // 连接出错，直接退出
+        if (ok > 0)
+        {
+            disconnect();
+            return false;
+        }
+
+        // 连接进行中，继续阻塞等待
         std::this_thread::sleep_for(std::chrono::seconds(1));
     } while (active());
 

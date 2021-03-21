@@ -7,7 +7,7 @@ std::atomic<int32_t> Thread::_id_seed(0);
 
 Thread::Thread(const char *name)
 {
-    _name   = name;
+    snprintf(_name, sizeof(_name), "%s", name);
     _id     = ++_id_seed;
     _status = S_NONE;
 
@@ -91,7 +91,7 @@ bool Thread::start(int32_t us)
 /* 终止线程 */
 void Thread::stop()
 {
-    // 只能在主线程调用，threadmgr没加锁
+    // 只能在主线程调用，thread_mgr没加锁
     assert(std::this_thread::get_id() != _thread.get_id());
     if (!active())
     {
@@ -113,7 +113,7 @@ void Thread::spawn(int32_t us)
 
     if (!initialize()) /* 初始化 */
     {
-        ERROR("thread initialize fail");
+        ERROR("%s thread initialize fail", _name);
         return;
     }
 
@@ -142,7 +142,7 @@ void Thread::spawn(int32_t us)
 
     if (!uninitialize()) /* 清理 */
     {
-        ERROR("thread uninitialize fail");
+        ERROR("%s thread uninitialize fail", _name);
         return;
     }
 }

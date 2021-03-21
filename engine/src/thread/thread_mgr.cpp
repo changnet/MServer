@@ -23,14 +23,14 @@ void ThreadMgr::pop(int32_t thd_id)
     }
 }
 
-void ThreadMgr::stop()
+void ThreadMgr::stop(const Thread *exclude)
 {
     // 循环里会改变_threads，需要复制一份
     std::vector<Thread *> threads(_threads);
 
     for (auto thread : threads)
     {
-        thread->stop();
+        if (thread != exclude) thread->stop();
     }
 
     _threads.clear();

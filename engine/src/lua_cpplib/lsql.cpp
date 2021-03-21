@@ -12,11 +12,22 @@ LSql::~LSql()
     if (!_query.empty())
     {
         ERROR("SQL query not finish, data may lost");
+        while (!_query.empty())
+        {
+            delete _query.front();
+            _query.pop();
+        }
     }
 
     if (!_result.empty())
     {
         ERROR("SQL result not finish, ignore");
+        while (!_result.empty())
+        {
+            struct SqlResult &res = _result.front();
+            delete res._res;
+            _result.pop();
+        }
     }
 }
 
@@ -296,7 +307,11 @@ bool LSql::initialize()
         // 初始化正常，但没连上mysql，是需要稍后重试
         ok = connect();
         if (0 == ok) break;
-        if (ok > 0) goto FAIL;
+        if (ok > 0)
+        {
+            disconnect();
+            goto FAIL;
+        }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     } while (active());
 

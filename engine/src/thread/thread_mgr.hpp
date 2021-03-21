@@ -13,7 +13,7 @@ public:
     void push(class Thread *thd);
 
     /// 停止所有线程
-    void stop();
+    void stop(const Thread *exclude = nullptr);
 
     /// 主线程定时处理子线程的数据
     void main_routine();
