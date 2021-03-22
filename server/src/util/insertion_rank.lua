@@ -4,7 +4,7 @@
 
 -- 插入法排序
 -- 适用于频繁更新，快速根据排名获取id，或者根据id获取排名的情况
--- 底层提供排名算法，脚本负责其他数据处理及持久化
+local InsertionRank = oo.class( ... )
 
 -- 注：在rank_performance.lua中测试发现，使用当前作rank和直接用底层rank，效率会慢
 -- 一倍，rank cost	5125	microsecond ==>> rank cost	9255	microsecond
@@ -12,95 +12,151 @@
 
 
 local json = require "lua_parson"
-local InsertionRankCore = require "InsertionRank"
 
-local InsertionRank = oo.class( ... )
-
-function InsertionRank:__init()
-    self.object = {} -- 存储排行对象附带的数据
-    self.rank = InsertionRankCore()
+function InsertionRank:__init(name, max)
+    self.list = {} -- 排行对象数组
+    self.hash = {} -- 以id为key的object
+    self.name = name
+    self.max  = max or 1024000
 end
 
+--- 重置排行榜(注意不会重置文件内容)
 function InsertionRank:clear()
-    self.object = {}
-    return self.rank:clear()
+    self.list = {}
+    self.hash = {}
+    self.modify = false
 end
 
-function InsertionRank:remove( id )
-    self.object[id] = nil
-    return self.rank:remove( id )
+-- 根据id删除排行的object
+function InsertionRank:remove(id)
+    -- self.list[id] = nil
 end
 
--- 插入一个排序对象，返回对象数据
--- insert(id,factor1,factor2,factor3),可带多个排序因子
-function InsertionRank:insert( id,... )
-    self.rank:insert( id,... )
-
-    local object = {}
-    object.__ID = id
-    object.__FACTOR = { ... }
-    self.object[id] = object
-    return object
+-- 获取当前排行榜的object数量
+function InsertionRank:count()
+    return #self.list
 end
 
--- 更新某个排序因子
-function InsertionRank:update( id,factor,idx )
-    idx = idx or 1
-    self.rank:update( id,factor,idx )
-
-    self.object[id].__FACTOR[idx] = factor
+-- 根据id获取排行榜中的object
+function InsertionRank:get_object(id)
+    return self.hash[id]
 end
 
-function InsertionRank:get_count()
-    return self.rank:get_count()
+-- 根据id获取排行
+-- @return number,排行，从1开始。0表示不在排行榜内
+function InsertionRank:get_index_by_id(id)
 end
 
-function InsertionRank:set_max_count( max_count )
-    return self.rank:set_max_count( max_count )
+-- 根据排行获取id
+-- @param index 排行，从1开始
+function InsertionRank:get_id_by_index(index)
 end
 
-function InsertionRank:get_max_factor()
-    return self.rank:get_max_factor()
-end
+-- 向上移动到合适位置
+-- @return 位置变化时，返回新位置，否则返回nil
+function InsertionRank:shift_up(object)
+    local comp = self.comp
+    local list = self.list
 
-function InsertionRank:get_factor( id )
-    return self.rank:get_factor( id )
-end
+    -- 从object当前的位置往数组开始位置(1)移动
+    local index = nil
+    for i = object.__i - 1, 1, -1 do
+        local prev_obj = list[i]
+        if comp(object, prev_obj) <= 0 then break end
 
-function InsertionRank:get_rank_by_id( id )
-    return self.rank:get_rank_by_id( id )
-end
+        prev_obj.__i = i + 1
+        list[i + 1] = prev_obj
 
-function InsertionRank:get_id_by_rank( rank )
-    return self.rank:get_id_by_rank( rank )
-end
-
--- 保存到文件，通常在runtime\rank文件夹内
-function InsertionRank:save( path )
-    -- 按排序顺序写入文件，这样方便查看
-    local sort_object = {}
-    local count = self.rank:get_count();
-    for idx = 1,count do
-        local id = self.rank:get_id_by_rank(idx);
-        table.insert(sort_object,self.object[id])
+        index = i
     end
 
-    json.encode_to_file( sort_object,path,true )
+    if index then
+        object.__i = index
+        list[index] = object
+    end
+
+    return index
 end
 
--- 从文件加载,这个函数不会主动clear
-function InsertionRank:load( path )
-    local sort_object = json.decode_from_file( path )
+-- 向下移动到合适位置
+-- @return 位置变化时，返回新位置，否则返回nil
+function InsertionRank:shift_down(object)
+    local comp = self.comp
+    local list = self.list
 
-    for _,object in pairs(sort_object) do
-        local id = object.__ID
-        self.object[id] = object
-        self.rank:insert(id,table.unpack(object.__FACTOR))
+    local index = nil
+    for i = object.__i + 1, #list do
+        local next_obj = list[i]
+        if comp(next_obj, object) <= 0 then break end
+
+        next_obj.__i = i - 1
+        list[i - 1] = next_obj
+
+        index = i
+    end
+
+    if index then
+        object.__i = index
+        list[index] = object
+    end
+
+    return index
+end
+
+-- 直接插入一个object到排行榜
+function InsertionRank:insert(object)
+    self.hash[object.__h] = object
+    table.insert(self.list, object)
+
+    object.__i = #self.list
+
+    self:shift_up(object)
+    if #self.list > self.max then
+        local last = self.list[#self.list]
+
+        self.hash[last.__h] = nil
+        table.remove(self.list, #self.list)
     end
 end
 
-function InsertionRank:get_object( id )
-    return self.object[id]
+-- 设置object的排序因子(仅用于单因子排序)
+-- @return object, upsert 被更新的object，是否新增
+function InsertionRank:set_factor(id, f)
+    local upsert = false
+    local object = self.list[id]
+    if not object then
+        object = {
+            __f = f,
+            __h = id
+        }
+        self:insert(object)
+        return object, true
+    end
+
+    self:shift_up(object)
+    return object, upsert
+end
+
+-- 增加object的排序因子(仅用于单因子排序)
+function InsertionRank:add_factor(id, f)
+end
+
+-- 保存到文件，通常在runtime/rank文件夹内
+-- @param path 保存的路径，不传默认存到runtime/rank/self.name
+function InsertionRank:save(path)
+    if not path then
+        path = "runtime/rank/" .. self.name
+    end
+    json.encode_to_file(self.list, path, true)
+end
+
+-- 从文件加载排行排行榜
+-- @param path 保存的路径，不传默认使用runtime/rank/self.name
+function InsertionRank:load(path)
+    if not path then
+        path = "runtime/rank/" .. self.name
+    end
+    self.list = json.decode_from_file( path )
 end
 
 return InsertionRank
