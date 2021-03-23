@@ -1,91 +1,69 @@
 -- 排行榜算法测试
 
-local BucketRank = require "util.bucket_rank"
+-- local BucketRank = require "util.bucket_rank"
 local InsertionRank = require "util.insertion_rank"
--- local InsertionRank = require "InsertionRank"
 
-local function dump(rank)
-    local count = rank:get_count()
-    for idx = 1,count do
-        local id = rank:get_id_by_rank(idx)
-        local ft1,ft2,ft3 = rank:get_factor(id)
-        PRINT(idx,id,ft1,ft2,ft3)
-    end
-end
+t_describe("rank utils test", function()
+    t_it("insertion rank base test", function()
+        local rank = InsertionRank()
 
-local irank = InsertionRank()
+        local object, upsert = rank:set_factor(1, 9)
+        t_equal(upsert, true)
+        t_equal(1 == rank:get_index(object))
 
+        rank:set_factor(2, 999)
+        rank:set_factor(3, 2)
+        object, upsert = rank:add_factor(1, 1)
+        t_assert(not upsert)
+        t_equal(rank:get_index(object), 2)
 
-irank:insert(1,999,999,999)
-irank:update(1,9999,3)
-irank:insert(2,999,998,999)
-irank:insert(3,991,998,999)
+        -- 排序稳定性测试
+        object, upsert = rank:add_factor(4, 10)
+        t_equal(upsert, true)
+        t_equal(3 == rank:get_index(object))
 
-irank:update(2,1000)
-irank:remove(1)
-irank:update(3,992)
+        -- 随机排序测试
+        local max_id = 500
+        rank:clear()
+        for i = 1, max_id do
+            rank:set_factor(i, math.random(1, 10240000))
+        end
+        for i = 1, max_id do
+            rank:add_factor(i, math.random(1, 10240000))
+        end
 
-dump(irank)
+        rank:remove(1) -- 测试remove
+        local max_count = rank:get_count()
+        t_equal(max_count, max_id - 1)
 
-irank:clear()
+        -- 校验排行榜的正确性
+        local last = 0
+        for i = 2, max_count + 1 do
+            object = rank:get_object_by_index(i)
+            local f = rank:get_factor(object)
 
--- 随机性能测试
-f_tm_start()
+            t_assert(f > last)
+            last = f
+        end
 
-local max_object = 1000
-local max_random = 200000000
+        -- 排序上限测试
+        rank:clear()
 
-irank:set_max_count(96)
+        max_id = 10
+        rank:set_max(max_id / 2)
+        for i = 1, max_id do
+            rank:set_factor(i, math.random(1, 1024000))
+        end
+        t_equal(rank:get_count(), max_id / 2)
 
-for idx = 1,max_object do
-    local ft1 = math.random(1,max_random)
-    local ft2 = math.random(1,max_random)
-    local ft3 = math.random(1,max_random)
+        -- 多因子排序测试
+        -- 文件save、load测试
+        -- 默认的升序、倒序测试
+        -- 自定义comp函数测试
+        -- 自定义comp函数热更问题
+    end)
 
-    local object = irank:insert(idx,ft1,ft2,ft3)
-    object.name = "ee[ee\"hh"
-    object.level = idx
-end
+    t_it("insertion rank perf test", function()
+    end)
+end)
 
-for _ = 1,max_object do
-    local idx = math.random(1,3)
-    local ft1 = math.random(1,max_random)
-
-    irank:update(idx,ft1,idx)
-end
-
-for _ = 1,max_object/2 do
-    irank:remove(math.random(1,max_object))
-end
-
-f_tm_stop("rank cost") -- 1000 max_object,rank cost	5789	microsecond
-
-dump(irank)
-
-irank:save("runtime/rank/test.rank")
-
-irank:clear()
-irank:load("runtime/rank/test.rank")
-dump(irank)
--- vd(irank.object)
-
-
-local random_f = {}
-for _ = 1,1000000 do
-    table.insert(random_f,math.random(1,100))
-end
-
-irank:clear()
-brank = BucketRank()
-
-f_tm_start()
-for idx = 1,#random_f do
-    irank:insert(idx,random_f[idx])
-end
-f_tm_stop("insert rank cost")
-
-f_tm_start()
-for idx = 1,#random_f do
-    brank:insert(idx,random_f[idx])
-end
-f_tm_stop("bucket rank cost")

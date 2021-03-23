@@ -52,7 +52,7 @@ function App:final_initialize()
     -- require "example.websocket_performance"
     require "test.words_filter_test"
     -- require "example.scene_performance"
-    -- require "example.rank_performance"
+    require "test.rank_test"
     -- require "example.other_performance"
 
     -- vd( statistic.dump() )

@@ -13,11 +13,24 @@ local InsertionRank = oo.class( ... )
 
 local json = require "lua_parson"
 
+local function comp_desc(src, dst)
+    if src.__f == dst.__f then return 0 end
+
+    return src.__f > dst.__f and 1 or -1
+end
+
+local function comp_asc(src, dst)
+    if src.__f == dst.__f then return 0 end
+
+    return src.__f > dst.__f and -1 or 1
+end
+
 function InsertionRank:__init(name, max)
     self.list = {} -- 排行对象数组
     self.hash = {} -- 以id为key的object
     self.name = name
     self.max  = max or 1024000
+    self.comp = comp_desc -- 默认降序排列
 end
 
 --- 重置排行榜(注意不会重置文件内容)
@@ -27,9 +40,35 @@ function InsertionRank:clear()
     self.modify = false
 end
 
+-- 设置排行榜最大数量，超过此数量的不会在排行榜中保留
+function InsertionRank:set_max(max)
+    self.max = max
+end
+
+-- 使用默认的升序排序
+function InsertionRank:using_asc()
+    self.comp = comp_asc
+end
+
+-- 使用自定义的排序函数
+function InsertionRank:set_comp(comp)
+    self.comp = assert(comp)
+end
+
 -- 根据id删除排行的object
 function InsertionRank:remove(id)
-    -- self.list[id] = nil
+    local object = self.hash[id]
+    if not object then return end
+
+    local list = self.list
+    for i = object.__i + 1, #list do
+        local next_obj = list[i]
+
+        next_obj.__i = i - 1
+        list[i - 1] = next_obj
+    end
+
+    table.remove(self.list)
 end
 
 -- 获取当前排行榜的object数量
@@ -42,14 +81,45 @@ function InsertionRank:get_object(id)
     return self.hash[id]
 end
 
+-- 根据id获取排行榜中的object，如果不存在则创建(但不插入排行榜，
+-- 需要调用insert或者adjust)
+function InsertionRank:new_object(id, f)
+    return self.hash[id] or {
+        __f = f, -- factor
+        __h = id -- hash
+        -- __i = i -- index
+    }
+end
+
+-- 根据object取排行
+function InsertionRank:get_index(object)
+    return object.__i
+end
+
+-- 根据object取排行
+function InsertionRank:get_factor(object)
+    return object.__f
+end
+
+
 -- 根据id获取排行
 -- @return number,排行，从1开始。0表示不在排行榜内
 function InsertionRank:get_index_by_id(id)
+    local object = self.hash[id]
+
+    return object and object.__i or 0
 end
 
 -- 根据排行获取id
 -- @param index 排行，从1开始
 function InsertionRank:get_id_by_index(index)
+    local object = self.list[index]
+    return object and object.__h
+end
+
+-- 根据排行取object
+function InsertionRank:get_object_by_index(index)
+    return self.list[index]
 end
 
 -- 向上移动到合适位置
@@ -122,23 +192,41 @@ end
 -- 设置object的排序因子(仅用于单因子排序)
 -- @return object, upsert 被更新的object，是否新增
 function InsertionRank:set_factor(id, f)
-    local upsert = false
-    local object = self.list[id]
+    local object = self.hash[id]
     if not object then
-        object = {
-            __f = f,
-            __h = id
-        }
+        object = self:new_object(id, f)
         self:insert(object)
         return object, true
     end
 
-    self:shift_up(object)
-    return object, upsert
+    object.__f = f
+    -- 不清楚移动的位置，只能一一尝试
+    if not self:shift_up(object) then self:shift_down(object) end
+    return object
+end
+
+-- 修改多个排序因子后，重新调整object的位置
+function InsertionRank:adjust(object)
+    if not object.__i then return self:insert(object) end
+
+    -- 不清楚移动的位置，只能一一尝试
+    return self:shift_up(object) or self:shift_down(object)
 end
 
 -- 增加object的排序因子(仅用于单因子排序)
+-- @return object, upsert 被更新的object，是否新增
 function InsertionRank:add_factor(id, f)
+    local object = self.hash[id]
+    if not object then
+        object = self:new_object(id, f)
+        self:insert(object)
+        return object, true
+    end
+
+    object.__f = f + object.__f
+    -- 不清楚移动的位置，只能一一尝试
+    if not self:shift_up(object) then self:shift_down(object) end
+    return object
 end
 
 -- 保存到文件，通常在runtime/rank文件夹内
