@@ -3,26 +3,24 @@
 -- 2018-11-11
 
 -- 插入法排序
--- 适用于频繁更新，快速根据排名获取id，或者根据id获取排名的情况
 local InsertionRank = oo.class( ... )
 
--- 注：在rank_performance.lua中测试发现，使用当前作rank和直接用底层rank，效率会慢
--- 一倍，rank cost	5125	microsecond ==>> rank cost	9255	microsecond
--- 如果排行榜不考虑持久化，也不需要记录额外的数据，考虑直接用底层rank
-
+-- 适用于频繁更新，快速根据排名获取id，或者根据id获取排名的情况。比如游戏里常见的伤害
+-- 排行榜，人数不多，名次基本不变化，伤害高的一直在前面，但更新频繁，玩家1秒可能会打出
+-- 多次伤害
 
 local json = require "lua_parson"
 
 local function comp_desc(src, dst)
-    if src.__f == dst.__f then return 0 end
+    if src.f == dst.f then return 0 end
 
-    return src.__f > dst.__f and 1 or -1
+    return src.f > dst.f and 1 or -1
 end
 
 local function comp_asc(src, dst)
-    if src.__f == dst.__f then return 0 end
+    if src.f == dst.f then return 0 end
 
-    return src.__f > dst.__f and -1 or 1
+    return src.f > dst.f and -1 or 1
 end
 
 function InsertionRank:__init(name, max)
@@ -61,10 +59,10 @@ function InsertionRank:remove(id)
     if not object then return end
 
     local list = self.list
-    for i = object.__i + 1, #list do
+    for i = object.i + 1, #list do
         local next_obj = list[i]
 
-        next_obj.__i = i - 1
+        next_obj.i = i - 1
         list[i - 1] = next_obj
     end
 
@@ -85,20 +83,20 @@ end
 -- 需要调用insert或者adjust)
 function InsertionRank:new_object(id, f)
     return self.hash[id] or {
-        __f = f, -- factor
-        __h = id -- hash
-        -- __i = i -- index
+        f = f, -- factor
+        h = id -- hash
+        -- i = i -- index
     }
 end
 
 -- 根据object取排行
 function InsertionRank:get_index(object)
-    return object.__i
+    return object.i
 end
 
 -- 根据object取排行
 function InsertionRank:get_factor(object)
-    return object.__f
+    return object.f
 end
 
 
@@ -107,14 +105,14 @@ end
 function InsertionRank:get_index_by_id(id)
     local object = self.hash[id]
 
-    return object and object.__i or 0
+    return object and object.i or 0
 end
 
 -- 根据排行获取id
 -- @param index 排行，从1开始
 function InsertionRank:get_id_by_index(index)
     local object = self.list[index]
-    return object and object.__h
+    return object and object.h
 end
 
 -- 根据排行取object
@@ -130,18 +128,18 @@ function InsertionRank:shift_up(object)
 
     -- 从object当前的位置往数组开始位置(1)移动
     local index = nil
-    for i = object.__i - 1, 1, -1 do
+    for i = object.i - 1, 1, -1 do
         local prev_obj = list[i]
         if comp(object, prev_obj) <= 0 then break end
 
-        prev_obj.__i = i + 1
+        prev_obj.i = i + 1
         list[i + 1] = prev_obj
 
         index = i
     end
 
     if index then
-        object.__i = index
+        object.i = index
         list[index] = object
     end
 
@@ -155,18 +153,18 @@ function InsertionRank:shift_down(object)
     local list = self.list
 
     local index = nil
-    for i = object.__i + 1, #list do
+    for i = object.i + 1, #list do
         local next_obj = list[i]
         if comp(next_obj, object) <= 0 then break end
 
-        next_obj.__i = i - 1
+        next_obj.i = i - 1
         list[i - 1] = next_obj
 
         index = i
     end
 
     if index then
-        object.__i = index
+        object.i = index
         list[index] = object
     end
 
@@ -175,16 +173,16 @@ end
 
 -- 直接插入一个object到排行榜
 function InsertionRank:insert(object)
-    self.hash[object.__h] = object
+    self.hash[object.h] = object
     table.insert(self.list, object)
 
-    object.__i = #self.list
+    object.i = #self.list
 
     self:shift_up(object)
     if #self.list > self.max then
         local last = self.list[#self.list]
 
-        self.hash[last.__h] = nil
+        self.hash[last.h] = nil
         table.remove(self.list, #self.list)
     end
 end
@@ -199,7 +197,7 @@ function InsertionRank:set_factor(id, f)
         return object, true
     end
 
-    object.__f = f
+    object.f = f
     -- 不清楚移动的位置，只能一一尝试
     if not self:shift_up(object) then self:shift_down(object) end
     return object
@@ -207,7 +205,7 @@ end
 
 -- 修改多个排序因子后，重新调整object的位置
 function InsertionRank:adjust(object)
-    if not object.__i then return self:insert(object) end
+    if not object.i then return self:insert(object) end
 
     -- 不清楚移动的位置，只能一一尝试
     return self:shift_up(object) or self:shift_down(object)
@@ -223,7 +221,7 @@ function InsertionRank:add_factor(id, f)
         return object, true
     end
 
-    object.__f = f + object.__f
+    object.f = f + object.f
     -- 不清楚移动的位置，只能一一尝试
     if not self:shift_up(object) then self:shift_down(object) end
     return object
@@ -235,7 +233,7 @@ function InsertionRank:save(path)
     if not path then
         path = "runtime/rank/" .. self.name
     end
-    json.encode_to_file(self.list, path, true)
+    json.encode_to_file(self.list, path)
 end
 
 -- 从文件加载排行排行榜
@@ -244,7 +242,7 @@ function InsertionRank:load(path)
     if not path then
         path = "runtime/rank/" .. self.name
     end
-    self.list = json.decode_from_file( path )
+    self.list = json.decode_from_file(path)
 end
 
 return InsertionRank

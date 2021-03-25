@@ -68,8 +68,8 @@ local function main( cmd, ... )
     -- 设置错误日志、打印日志
     -- 如果你的服务器是分布式的，包含多个进程，则注意名字要区分开来
     -- win下文件名不支持特殊字符的，比如":"
-    local epath = string.format("log/%s_error", name)
-    local ppath = string.format("log/%s_runtime", name)
+    local epath = string.format("log/%s%02d_error", name, opts.index or 0)
+    local ppath = string.format("log/%s%02d_runtime", name, opts.index or 0)
     Log.set_std_option(opts.deamon, ppath, epath) -- 设置C++用的日志参数
     g_async_log:set_option(ppath, Log.PT_DAILY)
     g_async_log:set_option(epath, Log.PT_SIZE, 1024 * 1024 * 10)
