@@ -8,7 +8,6 @@
 #include <ctime>       /* time function */
 #include <limits.h>    /* PATH_MAX */
 #include <sys/types.h> /* linux sys types like pid_t */
-#include <unistd.h>    /* POSIX api */
 
 // 常用的头文件，避免需要手动include
 #include <vector>

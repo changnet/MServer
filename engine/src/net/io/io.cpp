@@ -1,3 +1,9 @@
+#ifdef _WIN64
+    #include <WinSock2.h>
+#else
+    #include <sys/socket.h>
+#endif
+
 #include "io.hpp"
 
 IO::IO(class Buffer *recv, class Buffer *send)
@@ -10,8 +16,8 @@ IO::IO(class Buffer *recv, class Buffer *send)
 IO::~IO()
 {
     _fd   = -1;
-    _recv = NULL;
-    _send = NULL;
+    _recv = nullptr;
+    _send = nullptr;
 }
 
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
@@ -24,7 +30,7 @@ int32_t IO::recv(int32_t &byte)
 
     // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
     uint32_t size = _recv->get_space_size();
-    int32_t len   = ::read(_fd, _recv->get_space_ctx(), size);
+    int32_t len   = ::recv(_fd, _recv->get_space_ctx(), size, 0);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;
@@ -53,7 +59,7 @@ int32_t IO::send(int32_t &byte)
     size_t bytes = _send->get_used_size();
     assert(bytes > 0);
 
-    int32_t len = ::write(_fd, _send->get_used_ctx(), bytes);
+    int32_t len = ::send(_fd, _send->get_used_ctx(), bytes, 0);
 
     if (EXPECT_TRUE(len > 0))
     {
