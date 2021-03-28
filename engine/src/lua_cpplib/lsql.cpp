@@ -138,6 +138,7 @@ void LSql::exec_sql(const SqlQuery *query, SqlResult *res)
 
     if (EXPECT_FALSE(this->query(stmt, query->_size)))
     {
+        if (res) res->_ecode = -1;
         ERROR("sql query error:%s", error());
         ERROR("sql will not exec:%s", stmt);
         return;
