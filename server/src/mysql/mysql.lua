@@ -25,13 +25,14 @@ function Mysql:on_ready()
 end
 
 -- 收到db返回的数据
-function Mysql:on_data( qid,ecode,res )
+function Mysql:on_data(qid, ecode, res)
     local func = self.query[qid]
     if func then
         self.query[qid] = nil
         xpcall(func,__G__TRACKBACK, ecode, res)
     else
-        ERROR("mysql result no call back found: id = %d, qid = %d",self.id, qid)
+        ERROR("mysql result no call back found: db id = %d, query id = %d",
+            self.id, qid)
     end
 end
 

@@ -1,11 +1,12 @@
 #pragma once
 
-#include <lua.hpp>
 #include <queue>
 
-#include "../global/global.hpp"
 #include "../mysql/sql.hpp"
 #include "../thread/thread.hpp"
+#include "../pool/cache_pool.hpp"
+
+struct lua_State;
 
 /**
  * MySQL、MariaDB 操作
@@ -22,7 +23,7 @@ public:
      * @param port 数据库端口
      * @param usr  登录用户名
      * @param pwd  登录密码
-     * @param dbname 数据库名
+     * @param db_name 数据库名
      */
     int32_t start(lua_State *L);
 
@@ -47,20 +48,23 @@ private:
     bool initialize() override;
 
     void on_ready(lua_State *L);
-    void on_result(lua_State *L, struct SqlResult *res);
+    void on_result(lua_State *L, SqlResult *res);
 
-    struct sql_res *do_sql(const struct SqlQuery *query);
+    void exec_sql(const SqlQuery *query, SqlResult *res);
 
     void main_routine(int32_t ev) override;
     void routine(int32_t ev) override;
 
-    int32_t mysql_to_lua(lua_State *L, const struct sql_res *res);
-    int32_t field_to_lua(lua_State *L, const struct SqlField &field,
-                         const struct SqlCol &col);
+    int32_t mysql_to_lua(lua_State *L, const SqlResult *res);
+    int32_t field_to_lua(lua_State *L,
+        const SqlField &field, const char *value, size_t size);
 
 private:
     int32_t _dbid;
 
-    std::queue<struct SqlResult> _result;
-    std::queue<const struct SqlQuery *> _query;
+    std::queue<SqlQuery *> _query;
+    std::queue<SqlResult *> _result;
+
+    CachePool<SqlQuery, 512, 256> _query_pool;
+    CachePool<SqlResult, 512, 256> _result_pool;
 };

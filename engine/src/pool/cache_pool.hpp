@@ -4,7 +4,8 @@
 
 /**
  * 对象缓存池
- * 与object_pool的区别是这里不处理对象的构造、析构，允许缓存vector、list之类的对象
+ * 与object_pool的区别是这里不处理对象的构造、析构，允许缓存vector、list之类的对象。复用时
+ * 需要手动处理对象重置
  * @tparam msize 池中缓存最大对象数量
  * @tparam nsize 每次分配的对象数量
  */

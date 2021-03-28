@@ -20,6 +20,82 @@ void Sql::library_end()
     mysql_library_end();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+void Sql::SqlCol::clear()
+{
+    if (_value_ex)
+    {
+        delete []_value_ex;
+        _value_ex = nullptr;
+    }
+}
+void Sql::SqlCol::set(const char *value, size_t size)
+{
+    _size           = size; /* 注意没加1 */
+    char *mem_value = _value;
+
+    // mysql把所有类型的数据都存为char数组，对于int、double之类的，使用_value避免内存
+    // 分配，对于text、blob之类的，只能根据大小重新分配内存
+    // TODO 是否要搞一个内存池，或者把_value的默认值再调大些?
+    if (_size >= sizeof(_value))
+    {
+        _value_ex = new char[size + 1];
+        mem_value = _value_ex;
+    }
+
+    // 无论何种数据类型(包括寸进制)，都统一加\0方便后面转换为int之类时可以直接atoi
+    memcpy(mem_value, value, size);
+    mem_value[size] = '\0';
+}
+
+Sql::SqlQuery::SqlQuery()
+{
+    _id = 0;
+    _size = 0;
+    _stmt_ex = nullptr;
+}
+
+Sql::SqlQuery::~SqlQuery()
+{
+    if (_stmt_ex) delete[] _stmt_ex;
+
+    _id      = 0;
+    _size    = 0;
+    _stmt_ex = nullptr;
+}
+
+void Sql::SqlQuery::clear()
+{
+    if (_stmt_ex)
+    {
+        delete []_stmt_ex;
+        _stmt_ex = nullptr;
+    }
+}
+
+void Sql::SqlQuery::set(int32_t id, size_t size, const char *stmt)
+{
+    _id   = id;
+    _size = size;
+
+    char *mem_stmt = _stmt;
+    if (size >= sizeof(_stmt))
+    {
+        _stmt_ex = new char[size + 1];
+        mem_stmt = _stmt_ex;
+    }
+    memcpy(mem_stmt, stmt, size);
+    mem_stmt[size] = 0; // 保证0结尾，因为有些地方需要打印stmt
+}
+
+void Sql::SqlResult::clear()
+{
+    for (auto &cols : _rows)
+    {
+        for (auto &col : cols) col.clear();
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
 Sql::Sql()
 {
     _is_cn = false;
@@ -37,14 +113,13 @@ void Sql::set(const char *host, const int32_t port, const char *usr,
               const char *pwd, const char *dbname)
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
-    _port = port;
-    _host = host;
-    _usr = usr;
-    _pwd = pwd;
-    _dbname = dbname;
+    _port    = port;
+    _host    = host;
+    _usr     = usr;
+    _pwd     = pwd;
+    _db_name = dbname;
 }
 
-/* 连接数据库 */
 int32_t Sql::option()
 {
     assert(nullptr == _conn);
@@ -87,7 +162,8 @@ int32_t Sql::connect()
      * again. With this option, the mysql_options() calls need not be repeated
      */
     if (mysql_real_connect(_conn, _host.c_str(), _usr.c_str(), _pwd.c_str(),
-        _dbname.c_str(), _port, nullptr, CLIENT_REMEMBER_OPTIONS))
+                           _db_name.c_str(), _port, nullptr,
+                           CLIENT_REMEMBER_OPTIONS))
     {
         _is_cn = true;
         return 0;
@@ -162,7 +238,57 @@ int32_t Sql::query(const char *stmt, size_t size)
     return 0; /* same as mysql_real_query,return 0 if success */
 }
 
-int32_t Sql::result(struct sql_res **res)
+void Sql::fetch_result(MYSQL_RES *result, SqlResult *res)
+{
+    if (!res) return; // 部分操作不需要返回结果，如update
+
+    uint32_t num_rows   = mysql_num_rows(result);
+    uint32_t num_fields = mysql_num_fields(result);
+    assert(num_fields >= 0);
+
+    res->_ecode    = 0;
+    res->_num_rows = num_rows;
+    res->_num_cols = num_fields;
+    res->_fields.resize(num_fields);
+    res->_rows.resize(num_rows);
+
+    if (0 >= num_rows) return; /* we got empty set */
+
+    uint32_t index = 0;
+    MYSQL_FIELD *field;
+    auto &fields = res->_fields;
+    while ((field = mysql_fetch_field(result)))
+    {
+        assert(index < num_fields);
+        fields[index]._type = field->type;
+        snprintf(fields[index]._name, sizeof(fields[index]._name), "%s",
+                 field->name);
+
+        ++index;
+    }
+
+    MYSQL_ROW row;
+
+    index = 0;
+    while ((row = mysql_fetch_row(result)))
+    {
+        SqlResult::SqlRow &res_row = res->_rows[index];
+        res_row.resize(num_fields);
+
+        /* mysql_fetch_lengths() is valid only for the current row of the
+         * result set
+         */
+        size_t *lengths = mysql_fetch_lengths(result);
+        for (uint32_t i = 0; i < num_fields; i++)
+        {
+            res_row[i].set(row[i], lengths[i]);
+        }
+
+        ++index;
+    }
+}
+
+int32_t Sql::result(SqlResult *res)
 {
     assert(_conn);
 
@@ -177,61 +303,20 @@ int32_t Sql::result(struct sql_res **res)
     MYSQL_RES *result = mysql_store_result(_conn);
     if (result)
     {
-        uint32_t num_rows = mysql_num_rows(result);
-        if (0 >= num_rows) /* we got empty set */
-        {
-            mysql_free_result(result);
-
-            return 0; /* success */
-        }
-
-        uint32_t num_fields = mysql_num_fields(result);
-        assert(num_fields > 0);
-
-        /* 注意使用resize来避免内存重新分配以及push_back产生的拷贝消耗 */
-        *res              = new sql_res();
-        (*res)->_num_rows = num_rows;
-        (*res)->_num_cols = num_fields;
-        (*res)->_fields.resize(num_fields);
-        (*res)->_rows.resize(num_rows);
-
-        uint32_t index = 0;
-        MYSQL_FIELD *field;
-        while ((field = mysql_fetch_field(result)))
-        {
-            assert(index < num_fields);
-            (*res)->_fields[index]._type = field->type;
-            snprintf((*res)->_fields[index]._name, SQL_FIELD_LEN, "%s",
-                     field->name);
-
-            ++index;
-        }
-
-        MYSQL_ROW row;
-
-        index = 0;
-        while ((row = mysql_fetch_row(result)))
-        {
-            struct SqlRow &res_row = (*res)->_rows[index];
-            res_row._cols.resize(num_fields);
-
-            /* mysql_fetch_lengths() is valid only for the current row of the
-             * result set
-             */
-            size_t *lengths = mysql_fetch_lengths(result);
-            for (uint32_t i = 0; i < num_fields; i++)
-            {
-                res_row._cols[i].set(row[i], lengths[i]);
-            }
-
-            ++index;
-        }
+        fetch_result(result, res);
         mysql_free_result(result);
-
         return 0; /* success */
     }
 
-    return mysql_errno(_conn);
+    int32_t ok = mysql_errno(_conn);
+    if (res)
+    {
+        res->_ecode    = ok;
+        res->_num_cols = 0;
+        res->_num_rows = 0;
+    }
+
+    return ok;
 }
 
 uint32_t Sql::get_errno()
