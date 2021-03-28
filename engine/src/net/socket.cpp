@@ -1,9 +1,14 @@
-#include <arpa/inet.h> /* htons */
 #include <fcntl.h>
-#include <netinet/tcp.h> /* for keep-alive */
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <netdb.h>
+#ifdef _WIN64
+    #include <WinSock2.h>
+#else
+    #include <netdb.h>
+    #include <arpa/inet.h>   /* htons */
+    #include <unistd.h>      /* POSIX api, like close */
+    #include <netinet/tcp.h> /* for keep-alive */
+    #include <sys/socket.h>
+#endif
 
 #include "../system/static_global.hpp"
 #include "io/ssl_io.hpp"
@@ -560,13 +565,12 @@ void Socket::connect_cb(int32_t revents)
     /*
      * connect回调
      * man connect
-     * It is possible to select(2) or poll(2) for completion by selecting the socket
-     * for writing.  After select(2) indicates  writability,  use getsockopt(2)  to
-     * read the SO_ERROR option at level SOL_SOCKET to determine whether connect()
-     * completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one
-     * of  the  usual  error  codes  listed  here,explaining the reason for the
-     * failure)
-     * 1）连接成功建立时，socket
+     * It is possible to select(2) or poll(2) for completion by selecting the
+     * socket for writing.  After select(2) indicates  writability,  use
+     * getsockopt(2)  to read the SO_ERROR option at level SOL_SOCKET to
+     * determine whether connect() completed successfully (SO_ERROR is zero) or
+     * unsuccessfully (SO_ERROR is one of  the  usual  error  codes  listed
+     * here,explaining the reason for the failure) 1）连接成功建立时，socket
      * 描述字变为可写。（连接建立时，写缓冲区空闲，所以可写）
      * 2）连接建立失败时，socket 描述字既可读又可写。
      * （由于有未决的错误，从而可读又可写）
@@ -583,7 +587,7 @@ void Socket::connect_cb(int32_t revents)
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
     class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    bool is_ok = network_mgr->connect_new(_conn_id, ecode);
+    bool is_ok                     = network_mgr->connect_new(_conn_id, ecode);
 
     if (EXPECT_TRUE(is_ok && 0 == ecode))
     {

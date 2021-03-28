@@ -376,17 +376,6 @@ static int32_t base64(lua_State *L)
 }
 
 /**
- * 获取当前进程pid
- * @return 当前进程pid
- */
-static int32_t get_pid(lua_State *L)
-{
-    lua_pushinteger(L, ::getpid());
-
-    return 1;
-}
-
-/**
  * 如果不存在则创建多层目录，和shell指令mkdir -p效果一致
  * @param path linux下路径 path/to/dir
  * @return boolean
@@ -416,7 +405,6 @@ static const luaL_Reg utillib[] = {{"md5", md5},
                                    {"sha1", sha1},
                                    {"base64", base64},
                                    {"mkdir_p", mkdir_p},
-                                   {"get_pid", get_pid},
                                    {"sha1_raw", sha1_raw},
                                    {"what_error", what_error},
                                    {"uuid_short", uuid_short},

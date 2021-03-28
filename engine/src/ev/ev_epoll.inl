@@ -12,7 +12,9 @@
  */
 
 #include <fcntl.h>
+#include <unistd.h> /* POSIX api, like close */
 #include <sys/epoll.h>
+
 #include "ev.hpp"
 
 const char *BACKEND_KERNEL = "epoll";
