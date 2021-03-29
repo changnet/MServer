@@ -1,5 +1,6 @@
+#include "../global/platform.hpp"
 // unable localtime_r in mingw
-#ifdef __MINGW64__
+#ifdef __MINGW__
     #define _POSIX_THREAD_SAFE_FUNCTIONS 200112L
 #endif
 

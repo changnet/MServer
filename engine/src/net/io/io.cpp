@@ -1,4 +1,5 @@
-#ifdef _WIN64
+#include "../../global/platform.hpp"
+#ifdef __windows__
     #include <WinSock2.h>
 #else
     #include <sys/socket.h>
