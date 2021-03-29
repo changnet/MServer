@@ -9,9 +9,9 @@ LEV::LEV()
     _sendingcnt = 0;
     _sendings.resize(1024, nullptr);
 
-    _critical_tm       = -1;
-    _app_ev._repeat_ms = 60000;
-    _app_ev._next_time = 0;
+    _critical_tm               = -1;
+    _app_ev._repeat_ms         = 60000;
+    _app_ev._next_time         = 0;
     _thread_routine._repeat_ms = 5;
     _thread_routine._next_time = 0;
 }
@@ -39,33 +39,10 @@ int32_t LEV::backend(lua_State *L)
 
 int32_t LEV::kernel_info(lua_State *L)
 {
-#ifdef __linux__
-    const char *env = "linux";
-#elif __CYGWIN__
-    const char *env        = "cygwin";
-#else
-    const char *env = "unknow";
-#endif
-
-#ifdef __MINGW64__
-    const char *complier   = "mingw64";
-    const char *complier_v = __VERSION__;
-#elif __MINGW32__
-    const char *complier   = "mingw32";
-    const char *complier_v = __VERSION__;
-#elif __GNUC__
-    // https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
-    const char *complier   = "gcc";
-    const char *complier_v = __VERSION__;
-#else
-    const char *complier   = "unknow";
-    const char *complier_v = "unknow";
-#endif
-
-    lua_pushstring(L, env);
-    lua_pushstring(L, complier);
-    lua_pushstring(L, complier_v);
-    lua_pushstring(L, BACKEND_KERNEL);
+    lua_pushstring(L, __OS_NAME__);
+    lua_pushstring(L, __COMPLIER_);
+    lua_pushstring(L, __VERSION__);
+    lua_pushstring(L, __BACKEND__);
     lua_pushstring(L, __TIMESTAMP__);
 
     return 5;
@@ -253,7 +230,7 @@ void LEV::invoke_sending()
 bool LEV::next_periodic(Periodic &periodic)
 {
     bool timeout = false;
-    int64_t tm = periodic._next_time - _mn_time;
+    int64_t tm   = periodic._next_time - _mn_time;
     if (tm <= 0)
     {
         timeout = true;

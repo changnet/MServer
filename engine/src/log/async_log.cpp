@@ -1,3 +1,8 @@
+// unable localtime_r in mingw
+#ifdef __MINGW64__
+    #define _POSIX_THREAD_SAFE_FUNCTIONS 200112L
+#endif
+
 #include <filesystem>
 
 #include "async_log.hpp"
@@ -183,7 +188,8 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
 
 bool AsyncLog::Policy::init_daily_policy()
 {
-    _data = StaticGlobal::ev()->now();;
+    _data = StaticGlobal::ev()->now();
+    ;
 
     // 读取已有日志文件的日期
     std::error_code e;
@@ -197,7 +203,17 @@ bool AsyncLog::Policy::init_daily_policy()
     if (ok)
     {
         auto ftime = std::filesystem::last_write_time(_path);
-        _data      = decltype(ftime)::clock::to_time_t(ftime);
+#ifdef __windows__
+        // https://developercommunity.visualstudio.com/t/stdfilesystemfile-time-type-does-not-allow-easy-co/251213
+        // windows的文件时间戳从1601年开始，在C++20之前，无法用clock_cast把ftime转换为time_t
+        // Between Jan 1, 1601 and Jan 1, 1970 there are 11644473600 seconds
+        using namespace std::chrono_literals;
+        _data = std::chrono::duration_cast<std::chrono::seconds>(
+                    ftime.time_since_epoch() - 11644473600s)
+                    .count();
+#else
+        _data = decltype(ftime)::clock::to_time_t(ftime);
+#endif
     }
 
     _data = day_begin(_data);

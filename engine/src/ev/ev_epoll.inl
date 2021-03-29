@@ -17,7 +17,7 @@
 
 #include "ev.hpp"
 
-const char *BACKEND_KERNEL = "epoll";
+const char *__BACKEND__ = "epoll";
 
 /// epoll max events one poll
 /* https://man7.org/linux/man-pages/man2/epoll_wait.2.html

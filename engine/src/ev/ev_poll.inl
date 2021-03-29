@@ -1,7 +1,7 @@
 #include <poll.h>
 #include "ev.hpp"
 
-const char *BACKEND_KERNEL = "poll";
+const char *__BACKEND__ = "poll";
 
 /// backend using poll implement
 class EVBackend final

@@ -24,7 +24,7 @@ class EVBackend;
 
 using HeapNode = EVTimer *;
 
-extern const char *BACKEND_KERNEL;
+extern const char *__BACKEND__;
 
 // event loop
 class EV
@@ -67,15 +67,16 @@ protected:
     int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
     int64_t _backend_time_coarse; ///< 预计下次backend等待结束的时间戳
 
-    int64_t _mn_time; ///< 起服到现在的毫秒
+    int64_t _mn_time;              ///< 起服到现在的毫秒
     std::atomic<int64_t> _rt_time; ///< UTC时间戳(CLOCK_REALTIME,秒)
-    int64_t _last_rt_update; ///< 上一次更新UTC的MONOTONIC时间
+    int64_t _last_rt_update;       ///< 上一次更新UTC的MONOTONIC时间
 
     /**
      * UTC时间与MONOTONIC时间的差值，用于通过mn_now直接计算出rt_now而
      * 不需要通过clock_gettime来得到rt_now，以提高效率
      */
     int64_t _rtmn_diff;
+
 protected:
     virtual void running() = 0;
 
@@ -87,10 +88,7 @@ protected:
         }
     }
 
-    void fd_change(int32_t fd)
-    {
-        _fd_changes.emplace_back(fd);
-    }
+    void fd_change(int32_t fd) { _fd_changes.emplace_back(fd); }
 
     void fd_reify();
     void time_update();
