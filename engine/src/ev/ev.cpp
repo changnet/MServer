@@ -16,6 +16,8 @@
 
 #if USE_EPOLL == 1
     #include "ev_epoll.inl"
+#elif USE_SELECT == 1
+    #include "ev_select.inl"
 #else
     #include "ev_poll.inl"
 #endif
@@ -33,13 +35,13 @@ EV::EV()
 
     _rt_time = get_real_time();
 
-    _mn_time = get_monotonic_time();
+    _mn_time        = get_monotonic_time();
     _last_rt_update = _mn_time;
-    _rtmn_diff = _rt_time * 1e3 - _mn_time;
+    _rtmn_diff      = _rt_time * 1e3 - _mn_time;
 
     _busy_time = 0;
 
-    _backend              = new EVBackend();
+    _backend             = new EVBackend();
     _backend_time_coarse = 0;
 }
 
@@ -63,7 +65,7 @@ int32_t EV::loop()
      * 因为执行逻辑可能会耗很长时间，那时候计算的时间是不准的
      */
 
-    _done       = false;
+    _done           = false;
     int64_t last_ms = _mn_time;
     while (EXPECT_TRUE(!_done))
     {
@@ -120,7 +122,7 @@ int32_t EV::io_start(EVIO *w)
 
     if (EXPECT_FALSE(fd >= (int32_t)_fds.size())) _fds.resize(fd + 1, nullptr);
 
-    _fds[fd] = w;
+    _fds[fd]   = w;
     w->_active = 1;
     fd_change(fd);
 
@@ -136,7 +138,7 @@ int32_t EV::io_stop(EVIO *w)
     int32_t fd = w->_fd;
     assert(fd >= 0 && uint32_t(fd) < _fds.size());
 
-    _fds[fd] = nullptr;
+    _fds[fd]   = nullptr;
     w->_active = 0;
     fd_change(fd);
 
@@ -170,7 +172,7 @@ int64_t EV::get_real_time()
 
     // UTC时间，只需要精确到秒数就可以了。需要精度高的一般用monotonic_time
     // return ts.tv_sec + ts.tv_nsec * 1e-9;
-    return ts.tv_sec; 
+    return ts.tv_sec;
 }
 
 int64_t EV::get_monotonic_time()
@@ -210,7 +212,7 @@ void EV::time_update()
         return;
     }
 
-    _last_rt_update   = _mn_time;
+    _last_rt_update  = _mn_time;
     _rt_time         = get_real_time();
     int64_t old_diff = _rtmn_diff;
 
@@ -229,7 +231,7 @@ void EV::time_update()
      */
     for (int32_t i = 4; --i;)
     {
-        _rtmn_diff = _rt_time * 1e3  - _mn_time;
+        _rtmn_diff = _rt_time * 1e3 - _mn_time;
 
         int64_t diff = old_diff - _rtmn_diff;
         if (EXPECT_TRUE((diff < 0. ? -diff : diff) < MIN_TIMEJUMP))
@@ -239,7 +241,7 @@ void EV::time_update()
 
         _rt_time = get_real_time();
 
-        _mn_time = get_monotonic_time();
+        _mn_time        = get_monotonic_time();
         _last_rt_update = _mn_time;
     }
 }
