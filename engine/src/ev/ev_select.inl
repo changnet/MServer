@@ -5,7 +5,7 @@
     #ifdef FD_SETSIZE
         #error "FD_SETSIZE already define"
     #endif
-    #define FD_SETSIZE 10240
+    #define FD_SETSIZE 1024
     #include <winsock2.h>
 #else
     #include <sys/select.h>
@@ -30,6 +30,9 @@ const char *__BACKEND__ = "select";
  *
  * select的效率
  * 在连接比较少的时候，还是很高效的。目前也只是用来做兼容，生产环境并不打算用这个，不用太在意效率
+ * 如果需要在win做生产环境，考虑下：https://github.com/piscisaureus/wepoll
+ * win下还有一个来源于gnulib的poll模拟，可以直接使用，不过是GPL协议。
+ * git有使用这个库：https://github.com/git/git/blob/master/compat/poll/poll.h
  *
  * select的限制
  * https://moythreads.com/wordpress/2009/12/22/select-system-call-limitation/

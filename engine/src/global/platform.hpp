@@ -6,6 +6,7 @@
 #elif defined(_WIN32) || defined(_WIN64)
     #define __windows__
     #define __OS_NAME__ "windows"
+    #define WIN32_LEAN_AND_MEAN
 #endif
 
 #ifdef __MINGW64__

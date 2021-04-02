@@ -1,8 +1,7 @@
-#include <fcntl.h>
-#include <sys/types.h>
-#ifdef _WIN64
-    #include <WinSock2.h>
-#else
+#include "socket_compat.hpp"
+#ifndef __windows__
+    #include <fcntl.h>
+    #include <sys/types.h>
     #include <netdb.h>
     #include <arpa/inet.h>   /* htons */
     #include <unistd.h>      /* POSIX api, like close */
@@ -10,13 +9,13 @@
     #include <sys/socket.h>
 #endif
 
-#include "../system/static_global.hpp"
+#include "socket.hpp"
 #include "io/ssl_io.hpp"
 #include "packet/http_packet.hpp"
 #include "packet/stream_packet.hpp"
 #include "packet/websocket_packet.hpp"
 #include "packet/ws_stream_packet.hpp"
-#include "socket.hpp"
+#include "../system/static_global.hpp"
 
 #ifdef TCP_KEEP_ALIVE
     #define KEEP_ALIVE(x) Socket::keep_alive(x)
@@ -195,7 +194,7 @@ int32_t Socket::send()
         {
             do
             {
-                usleep(500000);
+                std::this_thread::sleep_for(std::chrono::microseconds(500));
                 ERROR("socket send buffer overflow,pending,"
                       "object:" FMT64d ",conn:%d,buffer size:%d",
                       _object_id, _conn_id, _send.get_all_used_size());
@@ -212,22 +211,33 @@ int32_t Socket::send()
 
 int32_t Socket::block(int32_t fd)
 {
+#ifdef __windows__
+    // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket
+    u_long flag = 1;
+    return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
+#else
     int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
     if (flags == -1) return -1;
 
     flags &= ~O_NONBLOCK;
 
     return fcntl(fd, F_SETFL, flags);
+#endif
 }
 
 int32_t Socket::non_block(int32_t fd)
 {
+#ifdef __windows__
+    u_long flag = 0;
+    return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
+#else
     int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
     if (flags == -1) return -1;
 
     flags |= O_NONBLOCK;
 
     return fcntl(fd, F_SETFL, flags);
+#endif
 }
 
 /* keepalive并不是TCP规范的一部分。在Host Requirements

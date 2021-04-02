@@ -3,6 +3,10 @@
 
 const char *__BACKEND__ = "poll";
 
+// 我加这个是以为mingw支持poll，做完之后发现是不支持的
+// gnulib有poll模拟，可以直接使用，不过是GPL协议。
+// git有使用这个库：https://github.com/git/git/blob/master/compat/poll/poll.h
+
 /// backend using poll implement
 class EVBackend final
 {
