@@ -27,11 +27,12 @@ inline const char *strerror_ex(int32_t e)
     // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
     char buff[512] = {0};
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                  nullptr, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                  buff, sizeof(buff), nullptr);
+                  nullptr, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buff,
+                  sizeof(buff), nullptr);
 }
 #else
-    #include <sys/select.h>
+    #include <cstring>
+    #include <sys/socket.h>
 using SOCKET = int32_t; // 兼容windows代码
 
 inline bool is_socket_valid(SOCKET fd)

@@ -103,16 +103,16 @@ private:
 
     void on_ready(lua_State *L);
 
-    struct MongoResult *do_command(const struct MongoQuery *query);
-    void on_result(lua_State *L, const struct MongoResult *res);
+    MongoResult *do_command(const MongoQuery *query);
+    void on_result(lua_State *L, const MongoResult *res);
 
-    void push_query(const struct MongoQuery *query);
+    void push_query(const MongoQuery *query);
     bson_t *string_or_table_to_bson(lua_State *L, int index, int opt = -1,
                                     bson_t *bs = END_BSON, ...);
 
 private:
     int32_t _dbid;
 
-    std::queue<const struct MongoQuery *> _query;
-    std::queue<const struct MongoResult *> _result;
+    std::queue<const MongoQuery *> _query;
+    std::queue<const MongoResult *> _result;
 };

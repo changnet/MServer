@@ -97,7 +97,7 @@ int32_t Mongo::ping()
     return ecode;
 }
 
-bool Mongo::count(const struct MongoQuery *mq, struct MongoResult *res)
+bool Mongo::count(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
     assert(_conn);
@@ -126,7 +126,7 @@ bool Mongo::count(const struct MongoQuery *mq, struct MongoResult *res)
     return true;
 }
 
-bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
+bool Mongo::find(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
     assert(_conn);
@@ -181,7 +181,7 @@ bool Mongo::find(const struct MongoQuery *mq, struct MongoResult *res)
     return true;
 }
 
-bool Mongo::find_and_modify(const struct MongoQuery *mq, struct MongoResult *res)
+bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
     assert(_conn);
@@ -208,7 +208,7 @@ bool Mongo::find_and_modify(const struct MongoQuery *mq, struct MongoResult *res
     return true;
 }
 
-bool Mongo::insert(const struct MongoQuery *mq, struct MongoResult *res)
+bool Mongo::insert(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
     assert(_conn);
@@ -224,7 +224,7 @@ bool Mongo::insert(const struct MongoQuery *mq, struct MongoResult *res)
     return ok;
 }
 
-bool Mongo::update(const struct MongoQuery *mq, struct MongoResult *res)
+bool Mongo::update(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
     assert(_conn);
@@ -242,7 +242,7 @@ bool Mongo::update(const struct MongoQuery *mq, struct MongoResult *res)
     return ok;
 }
 
-bool Mongo::remove(const struct MongoQuery *mq, struct MongoResult *res)
+bool Mongo::remove(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
     assert(_conn);

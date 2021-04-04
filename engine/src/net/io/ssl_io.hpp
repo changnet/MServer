@@ -1,5 +1,7 @@
 #pragma once
 
+#include <openssl/ssl.h>
+
 #include "io.hpp"
 
 class SSLIO : public IO
@@ -31,5 +33,5 @@ private:
 
 private:
     int32_t _ssl_id;
-    SSL *_ssl_ctx; // SSL_CTX，不要在头文件包含ssl.h，编译会增加将近1M
+    SSL *_ssl_ctx;
 };

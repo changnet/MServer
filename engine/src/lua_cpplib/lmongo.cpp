@@ -125,11 +125,11 @@ void LMongo::routine(int32_t ev)
     lock();
     while (!_query.empty())
     {
-        const struct MongoQuery *query = _query.front();
+        const MongoQuery *query = _query.front();
         _query.pop();
 
         unlock();
-        struct MongoResult *res = do_command(query);
+        MongoResult *res = do_command(query);
         delete query;
         lock();
         if (res)
@@ -180,7 +180,7 @@ void LMongo::main_routine(int32_t ev)
             unlock();
             break;
         }
-        const struct MongoResult *res = _result.front();
+        const MongoResult *res = _result.front();
         _result.pop();
         unlock();
 
@@ -192,7 +192,7 @@ void LMongo::main_routine(int32_t ev)
     lua_pop(L, 1); /* remove stacktrace */
 }
 
-void LMongo::push_query(const struct MongoQuery *query)
+void LMongo::push_query(const MongoQuery *query)
 {
     lock();
     _query.push(query);
@@ -242,7 +242,7 @@ int32_t LMongo::count(lua_State *L)
         }
     }
 
-    struct MongoQuery *mongo_count = new MongoQuery();
+    MongoQuery *mongo_count = new MongoQuery();
     mongo_count->set(id, MQT_COUNT); /* count必须有返回 */
     mongo_count->set_count(collection, query, opts);
 
@@ -251,31 +251,8 @@ int32_t LMongo::count(lua_State *L)
     return 0;
 }
 
-void LMongo::on_result(lua_State *L, const struct MongoResult *res)
+void LMongo::on_result(lua_State *L, const MongoResult *res)
 {
-    // 发起请求到返回主线程的时间，毫秒.thread是db线程耗时
-    // 测试时发现数据库会有被饿死的情况，即主循环的消耗的时间很少，但db回调要很久才触发
-    // 原因是ev那边频繁收到协议，导致数据库与子线程通信的fd一直没被epoll触发
-    /*static AsyncLog *logger = StaticGlobal::async_logger();
-    int64_t real            = StaticGlobal::ev()->ms_now() - res->_time;
-    if (0 == res->_error.code)
-    {
-        logger->raw_write(
-            "", LT_MONGODB, "%s.%s:%s real:" FMT64d " msec,thread:%.3f msec",
-            res->_clt, MQT_NAME[res->_mqt], res->_query, real, res->_elaspe);
-    }
-    else
-    {
-        logger->raw_write(
-            "", LT_MONGODB,
-            "%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
-            res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
-            res->_error.message, real, res->_elaspe);
-
-        ERROR("%s.%s:%s,code:%d,msg:%s,real:" FMT64d "  msec,thread:%.3f sec",
-              res->_clt, MQT_NAME[res->_mqt], res->_query, res->_error.code,
-              res->_error.message, real, res->_elaspe);
-    }*/
     // 为0表示不需要回调到脚本
     if (0 == res->_qid) return;
 
@@ -314,11 +291,11 @@ void LMongo::on_result(lua_State *L, const struct MongoResult *res)
 }
 
 /* 在子线程触发查询命令 */
-MongoResult *LMongo::do_command(const struct MongoQuery *query)
+Mongo::MongoResult *LMongo::do_command(const MongoQuery *query)
 {
     bool ok                 = false;
     auto begin              = std::chrono::steady_clock::now();
-    struct MongoResult *res = new MongoResult();
+    MongoResult *res = new MongoResult();
     switch (query->_mqt)
     {
     case MQT_COUNT: ok = Mongo::count(query, res); break;
@@ -339,8 +316,7 @@ MongoResult *LMongo::do_command(const struct MongoQuery *query)
 
     res->_qid  = query->_qid;
     res->_mqt  = query->_mqt;
-    res->_time = query->_time;
-    snprintf(res->_clt, MONGO_VAR_LEN, "%s", query->_clt);
+    snprintf(res->_clt, sizeof(res->_clt), "%s", query->_clt);
 
     auto end = std::chrono::steady_clock::now();
     res->_elaspe =
@@ -349,7 +325,7 @@ MongoResult *LMongo::do_command(const struct MongoQuery *query)
     if (query->_query)
     {
         char *ctx = bson_as_json(query->_query, NULL);
-        snprintf(res->_query, MONGO_VAR_LEN, "%s", ctx);
+        snprintf(res->_query, sizeof(res->_query), "%s", ctx);
         bson_free(ctx);
     }
 
@@ -429,7 +405,7 @@ int32_t LMongo::find(lua_State *L)
     bson_t *query = string_or_table_to_bson(L, 3, 1);
     bson_t *opts  = string_or_table_to_bson(L, 4, 0, query, END_BSON);
 
-    struct MongoQuery *mongo_find = new MongoQuery();
+    MongoQuery *mongo_find = new MongoQuery();
     mongo_find->set(id, MQT_FIND); /* count必须有返回 */
     mongo_find->set_find(collection, query, opts);
 
@@ -463,7 +439,7 @@ int32_t LMongo::find_and_modify(lua_State *L)
     bool _upsert = lua_toboolean(L, 8);
     bool _new    = lua_toboolean(L, 9);
 
-    struct MongoQuery *mongo_fmod = new MongoQuery();
+    MongoQuery *mongo_fmod = new MongoQuery();
     mongo_fmod->set(id, MQT_FMOD);
     mongo_fmod->set_find_modify(collection, query, sort, update, fields,
                                 _remove, _upsert, _new);
@@ -489,7 +465,7 @@ int32_t LMongo::insert(lua_State *L)
 
     bson_t *query = string_or_table_to_bson(L, 3);
 
-    struct MongoQuery *mongo_insert = new MongoQuery();
+    MongoQuery *mongo_insert = new MongoQuery();
     mongo_insert->set(id, MQT_INSERT);
     mongo_insert->set_insert(collection, query);
 
@@ -518,7 +494,7 @@ int32_t LMongo::update(lua_State *L)
     int32_t upsert = lua_toboolean(L, 5);
     int32_t multi  = lua_toboolean(L, 6);
 
-    struct MongoQuery *mongo_update = new MongoQuery();
+    MongoQuery *mongo_update = new MongoQuery();
     mongo_update->set(id, MQT_UPDATE);
     mongo_update->set_update(collection, query, update, upsert, multi);
 
@@ -545,7 +521,7 @@ int32_t LMongo::remove(lua_State *L)
 
     int32_t single = lua_toboolean(L, 4);
 
-    struct MongoQuery *mongo_remove = new MongoQuery();
+    MongoQuery *mongo_remove = new MongoQuery();
     mongo_remove->set(id, MQT_REMOVE);
     mongo_remove->set_remove(collection, query, single);
 
