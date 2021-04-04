@@ -26,16 +26,18 @@ public:
     class MongoQuery
     {
     public:
-        MongoQuery()
+        explicit MongoQuery(int32_t qid, MongoQueryType mqt,
+            const char *clt, bson_t *query, bson_t *opts = nullptr)
         {
-            _mqt    = MQT_NONE;
-            _qid    = 0;
-            _clt[0] = '\0';
+            _mqt = mqt;
+            _qid = qid;
+            _opts   = opts;
+            _query  = query;
+            snprintf(_clt, sizeof(_clt), "%s", clt);
+
             _remove = false;
             _upsert = false;
             _new    = false;
-            _opts   = nullptr;
-            _query  = nullptr;
             _fields = nullptr;
             _sort   = nullptr;
             _update = nullptr;
@@ -48,73 +50,13 @@ public:
             if (_fields) bson_destroy(_fields);
             if (_sort) bson_destroy(_sort);
             if (_update) bson_destroy(_update);
+            if (_opts) bson_destroy(_opts);
 
             _query  = nullptr;
             _fields = nullptr;
             _sort   = nullptr;
             _update = nullptr;
-        }
-
-        void set(int32_t qid, MongoQueryType mqt)
-        {
-            _qid = qid;
-            _mqt = mqt;
-        }
-
-        void set_count(const char *clt, bson_t *query, bson_t *opts)
-        {
-            snprintf(_clt, sizeof(_clt), "%s", clt);
-
-            _opts  = opts;
-            _query = query;
-        }
-
-        void set_find(const char *clt, bson_t *query, bson_t *fields = nullptr)
-        {
-            snprintf(_clt, sizeof(_clt), "%s", clt);
-
-            _query  = query;
-            _fields = fields;
-        }
-
-        void set_find_modify(const char *clt, bson_t *query, bson_t *sort,
-                             bson_t *update, bson_t *fields = nullptr,
-                             bool is_remove = false, bool upsert = false,
-                             bool is_new = false)
-        {
-            snprintf(_clt, sizeof(_clt), "%s", clt);
-            _query  = query;
-            _sort   = sort;
-            _update = update;
-            _fields = fields;
-            _remove = is_remove;
-            _upsert = upsert;
-            _new    = is_new;
-        }
-
-        void set_insert(const char *clt, bson_t *query)
-        {
-            snprintf(_clt, sizeof(_clt), "%s", clt);
-            _query = query;
-        }
-
-        void set_update(const char *clt, bson_t *query, bson_t *update,
-                        int32_t upsert, int32_t multi)
-        {
-            snprintf(_clt, sizeof(_clt), "%s", clt);
-            _query  = query;
-            _update = update;
-
-            _flags = (upsert ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE)
-                     | (multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE);
-        }
-
-        void set_remove(const char *clt, bson_t *query, int32_t single)
-        {
-            snprintf(_clt, sizeof(_clt), "%s", clt);
-
-            _query = query;
-            _flags = single ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
+            _opts   = nullptr;
         }
 
     private:
@@ -138,15 +80,12 @@ public:
     class MongoResult
     {
     public:
-        MongoResult()
+        explicit MongoResult(int32_t qid, MongoQueryType mqt)
         {
-            _qid    = 0;
+            _qid    = qid;
             _elaspe = 0.0;
             _data   = nullptr;
-            _mqt    = MQT_NONE;
-
-            _clt[0]   = '\0';
-            _query[0] = '\0';
+            _mqt    = mqt;
 
             // mongodb的api，在没有错误时，传入的bson_error_t是没有设置为0的
             memset(&_error, 0, sizeof(bson_error_t));
@@ -170,8 +109,6 @@ public:
         bson_t *_data;
         float _elaspe; // 消耗的时间，秒
         bson_error_t _error;
-        char _clt[MONGO_VAR_LEN];   // collection
-        char _query[MONGO_VAR_LEN]; // 查询条件，日志用
     };
 
 public:

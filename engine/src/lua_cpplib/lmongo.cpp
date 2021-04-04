@@ -9,7 +9,8 @@
 
 #define MONGODB_EVENT "mongodb_event"
 
-LMongo::LMongo(lua_State *L) : Thread("lmongo")
+LMongo::LMongo(lua_State *L)
+    : Thread("lmongo"), _query_pool("lmongo"), _result_pool("lmongo")
 {
     _dbid = luaL_checkinteger(L, 2);
 }
@@ -21,7 +22,7 @@ LMongo::~LMongo()
         ERROR("mongo query not clean, abort");
         while (!_query.empty())
         {
-            delete _query.front();
+            _query_pool.destroy(_query.front());
             _query.pop();
         }
     }
@@ -31,7 +32,7 @@ LMongo::~LMongo()
         ERROR("mongo result not clean, abort");
         while (!_result.empty())
         {
-            delete _result.front();
+            _result_pool.destroy(_result.front());
             _result.pop();
         }
     }
@@ -125,17 +126,24 @@ void LMongo::routine(int32_t ev)
     lock();
     while (!_query.empty())
     {
-        const MongoQuery *query = _query.front();
+        MongoQuery *query = _query.front();
         _query.pop();
 
+        MongoResult *res = _result_pool.construct(query->_qid, query->_mqt);
+
         unlock();
-        MongoResult *res = do_command(query);
-        delete query;
+        bool ok = do_command(query, res);
         lock();
-        if (res)
+
+        _query_pool.destroy(query);
+        if (ok)
         {
             _result.push(res);
             wakeup_main(S_DATA);
+        }
+        else
+        {
+            _result_pool.destroy(res);
         }
     }
     unlock();
@@ -172,83 +180,29 @@ void LMongo::main_routine(int32_t ev)
 
     LUA_PUSHTRACEBACK(L);
 
-    while (true)
+    lock();
+    while (!_result.empty())
     {
-        lock();
-        if (_result.empty())
-        {
-            unlock();
-            break;
-        }
-        const MongoResult *res = _result.front();
+        MongoResult *res = _result.front();
         _result.pop();
+
         unlock();
-
         on_result(L, res);
+        lock();
 
-        delete res;
+        _result_pool.destroy(res);
     }
+    unlock();
 
     lua_pop(L, 1); /* remove stacktrace */
 }
 
-void LMongo::push_query(const MongoQuery *query)
+void LMongo::push_query(MongoQuery *query)
 {
     lock();
     _query.push(query);
     wakeup(S_DATA);
     unlock();
-}
-
-int32_t LMongo::count(lua_State *L)
-{
-    if (!active())
-    {
-        return luaL_error(L, "mongo thread not active");
-    }
-
-    int32_t id             = luaL_checkinteger(L, 1);
-    const char *collection = luaL_checkstring(L, 2);
-    if (!collection)
-    {
-        return luaL_error(L, "mongo count:collection not specify");
-    }
-
-    const char *str_query = luaL_optstring(L, 3, NULL);
-    const char *str_opts  = luaL_optstring(L, 4, NULL);
-
-    bson_t *query = NULL;
-    if (str_query)
-    {
-        bson_error_t error;
-        query = bson_new_from_json(reinterpret_cast<const uint8_t *>(str_query),
-                                   -1, &error);
-        if (!query)
-        {
-            return luaL_error(L, error.message);
-        }
-    }
-
-    bson_t *opts = NULL;
-    if (str_opts)
-    {
-        bson_error_t error;
-        opts = bson_new_from_json(reinterpret_cast<const uint8_t *>(str_opts),
-                                  -1, &error);
-        if (!opts)
-        {
-            bson_free(query);
-            return luaL_error(L, error.message);
-        }
-    }
-
-    MongoQuery *mongo_count = new MongoQuery();
-    mongo_count->set(id, MQT_COUNT); /* count必须有返回 */
-    mongo_count->set_count(collection, query, opts);
-
-    push_query(mongo_count);
-
-    return 0;
 }
 
 void LMongo::on_result(lua_State *L, const MongoResult *res)
@@ -291,11 +245,10 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
 }
 
 /* 在子线程触发查询命令 */
-Mongo::MongoResult *LMongo::do_command(const MongoQuery *query)
+bool LMongo::do_command(const MongoQuery *query, MongoResult *res)
 {
-    bool ok                 = false;
-    auto begin              = std::chrono::steady_clock::now();
-    MongoResult *res = new MongoResult();
+    bool ok          = false;
+    auto begin       = std::chrono::steady_clock::now();
     switch (query->_mqt)
     {
     case MQT_COUNT: ok = Mongo::count(query, res); break;
@@ -307,33 +260,19 @@ Mongo::MongoResult *LMongo::do_command(const MongoQuery *query)
     default:
     {
         ERROR("unknow handle mongo command type:%d\n", query->_mqt);
-        delete res;
-        return nullptr;
+        return false;
     }
     }
 
     assert((ok && 0 == res->_error.code) || (!ok && 0 != res->_error.code));
 
-    res->_qid  = query->_qid;
-    res->_mqt  = query->_mqt;
-    snprintf(res->_clt, sizeof(res->_clt), "%s", query->_clt);
-
     auto end = std::chrono::steady_clock::now();
     res->_elaspe =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 
-    if (query->_query)
-    {
-        char *ctx = bson_as_json(query->_query, NULL);
-        snprintf(res->_query, sizeof(res->_query), "%s", ctx);
-        bson_free(ctx);
-    }
-
-    return res;
+    return true;
 }
 
-// 把对应的json字符串或者lua table参数转换为bson
-// @opt:可选参数：0 表示可以传入nil，返回NULL;1 表示未传入参数则创建一个新的bson
 bson_t *LMongo::string_or_table_to_bson(lua_State *L, int index, int opt,
                                         bson_t *bs, ...)
 {
@@ -348,21 +287,20 @@ bson_t *LMongo::string_or_table_to_bson(lua_State *L, int index, int opt,
         va_end(args);                                                            \
     } while (0)
 
-    bson_t *bson = NULL;
+    bson_t *bson = nullptr;
     if (lua_istable(L, index)) // 自动将lua table 转化为bson
     {
         struct error_collector error;
-        if (!(bson = lbs_do_encode(L, index, NULL, &error)))
+        if (!(bson = lbs_do_encode(L, index, nullptr, &error)))
         {
             CLEAN_BSON(bs);
             luaL_error(L, "table to bson error:%s", error.what);
-            return NULL;
+            return nullptr;
         }
 
         return bson;
     }
-
-    if (lua_isstring(L, index)) // json字符串
+    else if (lua_isstring(L, index)) // json字符串
     {
         const char *json = lua_tostring(L, index);
         bson_error_t error;
@@ -372,19 +310,72 @@ bson_t *LMongo::string_or_table_to_bson(lua_State *L, int index, int opt,
         {
             CLEAN_BSON(bs);
             luaL_error(L, "json to bson error:%s", error.message);
-            return NULL;
+            return nullptr;
         }
 
         return bson;
     }
 
-    if (0 == opt) return NULL;
+    if (0 == opt) return nullptr;
     if (1 == opt) return bson_new();
 
     luaL_error(L, "argument #%d expect table or json string", index);
-    return NULL;
+    return nullptr;
 
 #undef CLEAN_BSON
+}
+
+int32_t LMongo::count(lua_State *L)
+{
+    if (!active())
+    {
+        return luaL_error(L, "mongo thread not active");
+    }
+
+    int32_t id             = luaL_checkinteger(L, 1);
+    const char *collection = luaL_checkstring(L, 2);
+    if (!collection)
+    {
+        return luaL_error(L, "mongo count:collection not specify");
+    }
+
+    const char *str_query = luaL_optstring(L, 3, nullptr);
+    const char *str_opts  = luaL_optstring(L, 4, nullptr);
+
+    bson_t *query = nullptr;
+    if (str_query)
+    {
+        bson_error_t error;
+        query = bson_new_from_json(reinterpret_cast<const uint8_t *>(str_query),
+                                   -1, &error);
+        if (!query)
+        {
+            return luaL_error(L, error.message);
+        }
+    }
+
+    bson_t *opts = nullptr;
+    if (str_opts)
+    {
+        bson_error_t error;
+        opts = bson_new_from_json(reinterpret_cast<const uint8_t *>(str_opts),
+                                  -1, &error);
+        if (!opts)
+        {
+            bson_free(query);
+            return luaL_error(L, error.message);
+        }
+    }
+
+    lock();
+    MongoQuery *mongo_count =
+        _query_pool.construct(id, MQT_COUNT, collection, query, opts);
+
+    _query.push(mongo_count);
+    wakeup(S_DATA);
+    unlock();
+
+    return 0;
 }
 
 /* find( id,collection,query,fields ) */
@@ -402,19 +393,21 @@ int32_t LMongo::find(lua_State *L)
         return luaL_error(L, "mongo find:collection not specify");
     }
 
-    bson_t *query = string_or_table_to_bson(L, 3, 1);
-    bson_t *opts  = string_or_table_to_bson(L, 4, 0, query, END_BSON);
+    bson_t *query  = string_or_table_to_bson(L, 3, 1);
+    bson_t *fields = string_or_table_to_bson(L, 4, 0, query, END_BSON);
 
-    MongoQuery *mongo_find = new MongoQuery();
-    mongo_find->set(id, MQT_FIND); /* count必须有返回 */
-    mongo_find->set_find(collection, query, opts);
+    lock();
+    MongoQuery *mongo_find =
+        _query_pool.construct(id, MQT_FIND, collection, query);
+    mongo_find->_fields = fields;
 
-    push_query(mongo_find);
+    _query.push(mongo_find);
+    wakeup(S_DATA);
+    unlock();
 
     return 0;
 }
 
-/* find( id,collection,query,sort,update,fields,remove,upsert,new ) */
 int32_t LMongo::find_and_modify(lua_State *L)
 {
     if (!active())
@@ -435,16 +428,25 @@ int32_t LMongo::find_and_modify(lua_State *L)
     bson_t *fields =
         string_or_table_to_bson(L, 6, 0, query, sort, update, END_BSON);
 
-    bool _remove = lua_toboolean(L, 7);
-    bool _upsert = lua_toboolean(L, 8);
-    bool _new    = lua_toboolean(L, 9);
+    bool remove  = lua_toboolean(L, 7);
+    bool upsert  = lua_toboolean(L, 8);
+    bool newsert = lua_toboolean(L, 9);
 
-    MongoQuery *mongo_fmod = new MongoQuery();
-    mongo_fmod->set(id, MQT_FMOD);
-    mongo_fmod->set_find_modify(collection, query, sort, update, fields,
-                                _remove, _upsert, _new);
+    lock();
+    MongoQuery *mongo_fmod =
+        _query_pool.construct(id, MQT_FMOD, collection, query);
 
-    push_query(mongo_fmod);
+    mongo_fmod->_sort   = sort;
+    mongo_fmod->_update = update;
+    mongo_fmod->_fields = fields;
+    mongo_fmod->_remove = remove;
+    mongo_fmod->_upsert = upsert;
+    mongo_fmod->_new    = newsert;
+
+    _query.push(mongo_fmod);
+    wakeup(S_DATA);
+    unlock();
+
     return 0;
 }
 
@@ -465,11 +467,13 @@ int32_t LMongo::insert(lua_State *L)
 
     bson_t *query = string_or_table_to_bson(L, 3);
 
-    MongoQuery *mongo_insert = new MongoQuery();
-    mongo_insert->set(id, MQT_INSERT);
-    mongo_insert->set_insert(collection, query);
+    lock();
+    MongoQuery *mongo_insert =
+        _query_pool.construct(id, MQT_INSERT, collection, query);
 
-    push_query(mongo_insert);
+    _query.push(mongo_insert);
+    wakeup(S_DATA);
+    unlock();
 
     return 0;
 }
@@ -494,11 +498,17 @@ int32_t LMongo::update(lua_State *L)
     int32_t upsert = lua_toboolean(L, 5);
     int32_t multi  = lua_toboolean(L, 6);
 
-    MongoQuery *mongo_update = new MongoQuery();
-    mongo_update->set(id, MQT_UPDATE);
-    mongo_update->set_update(collection, query, update, upsert, multi);
+    lock();
+    MongoQuery *mongo_update =
+        _query_pool.construct(id, MQT_UPDATE, collection, query);
+    mongo_update->_update = update;
+    mongo_update->_flags =
+        (upsert ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE)
+        | (multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE);
 
-    push_query(mongo_update);
+    _query.push(mongo_update);
+    wakeup(S_DATA);
+    unlock();
 
     return 0;
 }
@@ -521,11 +531,15 @@ int32_t LMongo::remove(lua_State *L)
 
     int32_t single = lua_toboolean(L, 4);
 
-    MongoQuery *mongo_remove = new MongoQuery();
-    mongo_remove->set(id, MQT_REMOVE);
-    mongo_remove->set_remove(collection, query, single);
+    lock();
+    MongoQuery *mongo_remove =
+        _query_pool.construct(id, MQT_REMOVE, collection, query);
+    mongo_remove->_flags =
+        single ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
 
-    push_query(mongo_remove);
+    _query.push(mongo_remove);
+    wakeup(S_DATA);
+    unlock();
 
     return 0;
 }

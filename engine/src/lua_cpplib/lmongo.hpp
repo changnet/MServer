@@ -4,10 +4,13 @@
 
 #include "../mongo/mongo.hpp"
 #include "../thread/thread.hpp"
+#include "../pool/object_pool.hpp"
 
-// 由于指针可能是NULL，故用-1来表示。但是这并不百分百安全。不过在这里，顶多只是内存泄漏
-// sbrk有类似的用法 The UNIX sbrk() function relies on this working, in that it
-// returns -1 as a pointer value to indicate a particular situation
+/**
+ * 由于指针可能是NULL，故用-1来表示。但是这并不百分百安全。不过在这里，顶多只是内存泄漏
+ * sbrk有类似的用法 The UNIX sbrk() function relies on this working, in that it
+ * returns -1 as a pointer value to indicate a particular situation
+ */
 #define END_BSON (bson_t *)-1
 
 struct lua_State;
@@ -103,16 +106,23 @@ private:
 
     void on_ready(lua_State *L);
 
-    MongoResult *do_command(const MongoQuery *query);
+    bool do_command(const MongoQuery *query, MongoResult *res);
     void on_result(lua_State *L, const MongoResult *res);
 
-    void push_query(const MongoQuery *query);
+    void push_query(MongoQuery *query);
+
+    /**
+     * 把对应的json字符串或者lua table参数转换为bson
+     * @param opt 可选参数：0 表示可以传入nil，返回NULL;1 表示未传入参数则创建一个新的bson
+     */
     bson_t *string_or_table_to_bson(lua_State *L, int index, int opt = -1,
                                     bson_t *bs = END_BSON, ...);
 
 private:
     int32_t _dbid;
 
-    std::queue<const MongoQuery *> _query;
-    std::queue<const MongoResult *> _result;
+    std::queue<MongoQuery *> _query;
+    std::queue<MongoResult *> _result;
+    ObjectPool<MongoQuery, 512, 256> _query_pool;
+    ObjectPool<MongoResult, 512, 256> _result_pool;
 };
