@@ -109,8 +109,6 @@ private:
     bool do_command(const MongoQuery *query, MongoResult *res);
     void on_result(lua_State *L, const MongoResult *res);
 
-    void push_query(MongoQuery *query);
-
     /**
      * 把对应的json字符串或者lua table参数转换为bson
      * @param opt 可选参数：0 表示可以传入nil，返回NULL;1 表示未传入参数则创建一个新的bson

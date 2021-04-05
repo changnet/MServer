@@ -197,14 +197,6 @@ void LMongo::main_routine(int32_t ev)
     lua_pop(L, 1); /* remove stacktrace */
 }
 
-void LMongo::push_query(MongoQuery *query)
-{
-    lock();
-    _query.push(query);
-    wakeup(S_DATA);
-    unlock();
-}
-
 void LMongo::on_result(lua_State *L, const MongoResult *res)
 {
     // 为0表示不需要回调到脚本
@@ -339,33 +331,8 @@ int32_t LMongo::count(lua_State *L)
         return luaL_error(L, "mongo count:collection not specify");
     }
 
-    const char *str_query = luaL_optstring(L, 3, nullptr);
-    const char *str_opts  = luaL_optstring(L, 4, nullptr);
-
-    bson_t *query = nullptr;
-    if (str_query)
-    {
-        bson_error_t error;
-        query = bson_new_from_json(reinterpret_cast<const uint8_t *>(str_query),
-                                   -1, &error);
-        if (!query)
-        {
-            return luaL_error(L, error.message);
-        }
-    }
-
-    bson_t *opts = nullptr;
-    if (str_opts)
-    {
-        bson_error_t error;
-        opts = bson_new_from_json(reinterpret_cast<const uint8_t *>(str_opts),
-                                  -1, &error);
-        if (!opts)
-        {
-            bson_free(query);
-            return luaL_error(L, error.message);
-        }
-    }
+    bson_t *query  = string_or_table_to_bson(L, 3, 0);
+    bson_t *opts   = string_or_table_to_bson(L, 4, 0, query, END_BSON);
 
     lock();
     MongoQuery *mongo_count =
@@ -378,7 +345,6 @@ int32_t LMongo::count(lua_State *L)
     return 0;
 }
 
-/* find( id,collection,query,fields ) */
 int32_t LMongo::find(lua_State *L)
 {
     if (!active())
@@ -393,13 +359,12 @@ int32_t LMongo::find(lua_State *L)
         return luaL_error(L, "mongo find:collection not specify");
     }
 
-    bson_t *query  = string_or_table_to_bson(L, 3, 1);
-    bson_t *fields = string_or_table_to_bson(L, 4, 0, query, END_BSON);
+    bson_t *query = string_or_table_to_bson(L, 3, 1);
+    bson_t *opts  = string_or_table_to_bson(L, 4, 0, query, END_BSON);
 
     lock();
     MongoQuery *mongo_find =
-        _query_pool.construct(id, MQT_FIND, collection, query);
-    mongo_find->_fields = fields;
+        _query_pool.construct(id, MQT_FIND, collection, query, opts);
 
     _query.push(mongo_find);
     wakeup(S_DATA);
@@ -430,7 +395,7 @@ int32_t LMongo::find_and_modify(lua_State *L)
 
     bool remove  = lua_toboolean(L, 7);
     bool upsert  = lua_toboolean(L, 8);
-    bool newsert = lua_toboolean(L, 9);
+    bool ret_new = lua_toboolean(L, 9);
 
     lock();
     MongoQuery *mongo_fmod =
@@ -439,9 +404,10 @@ int32_t LMongo::find_and_modify(lua_State *L)
     mongo_fmod->_sort   = sort;
     mongo_fmod->_update = update;
     mongo_fmod->_fields = fields;
+
     mongo_fmod->_remove = remove;
     mongo_fmod->_upsert = upsert;
-    mongo_fmod->_new    = newsert;
+    mongo_fmod->_new    = ret_new;
 
     _query.push(mongo_fmod);
     wakeup(S_DATA);

@@ -83,12 +83,13 @@ public:
         explicit MongoResult(int32_t qid, MongoQueryType mqt)
         {
             _qid    = qid;
-            _elaspe = 0.0;
+            _elaspe = 0;
             _data   = nullptr;
             _mqt    = mqt;
 
             // mongodb的api，在没有错误时，传入的bson_error_t是没有设置为0的
-            memset(&_error, 0, sizeof(bson_error_t));
+            _error.code = 0;
+            // memset(&_error, 0, sizeof(bson_error_t));
         }
 
         ~MongoResult()
@@ -107,7 +108,7 @@ public:
         int32_t _qid;
         MongoQueryType _mqt;
         bson_t *_data;
-        float _elaspe; // 消耗的时间，秒
+        int64_t _elaspe; // 消耗的时间，毫秒
         bson_error_t _error;
     };
 
@@ -133,6 +134,8 @@ public:
     bool find_and_modify(const MongoQuery *mq, MongoResult *res);
 
 private:
+    mongoc_collection_t *get_collection(const char *collection);
+private:
     int32_t _port;
     char _ip[MONGO_VAR_LEN];
     char _usr[MONGO_VAR_LEN];
@@ -140,4 +143,5 @@ private:
     char _db[MONGO_VAR_LEN];
 
     mongoc_client_t *_conn;
+    std::unordered_map<std::string, mongoc_collection_t *> _collection;
 };
