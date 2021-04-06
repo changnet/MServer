@@ -49,6 +49,9 @@ public:
     ~SSLMgr();
     explicit SSLMgr();
 
+    static void library_end();
+    static void library_init();
+
     static void ssl_error(const char *what);
     static void dump_x509(const SSL *ctx);
 

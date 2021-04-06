@@ -1,5 +1,4 @@
 #include "static_global.hpp"
-#include <openssl/ssl.h>
 
 #include "../mongo/mongo.hpp"
 #include "../mysql/sql.hpp"
@@ -16,8 +15,6 @@ class LNetworkMgr *StaticGlobal::_network_mgr = nullptr;
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::_initializer;
 
-int32_t ssl_init();
-int32_t ssl_uninit();
 /* will be called while process exit */
 void on_exit();
 /* will be called while allocate memory failed with new */
@@ -36,16 +33,18 @@ StaticGlobal::initializer::initializer()
 
     std::set_new_handler(on_new_fail);
 
-    ssl_init();
+    SSLMgr::library_init();
     Sql::library_init();
     Mongo::init();
+    Socket::library_init();
 }
 
 StaticGlobal::initializer::~initializer()
 {
     Sql::library_end();
     Mongo::cleanup();
-    ssl_uninit();
+    SSLMgr::library_end();
+    Socket::library_end();
 }
 
 // 业务都放这里逻辑初始化
@@ -60,9 +59,9 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
      */
 
     // 先创建日志线程，保证其他模块能使用 ERROR 日志。如果在此之前需要日志用 ERROR_R
-    _thread_mgr  = new class ThreadMgr();
-    _async_log   = new class LLog(nullptr);
-    _ev          = new class LEV();
+    _thread_mgr = new class ThreadMgr();
+    _async_log  = new class LLog(nullptr);
+    _ev         = new class LEV();
 
     _statistic   = new class Statistic();
     _state       = new class LState();
@@ -101,73 +100,6 @@ void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
     delete _thread_mgr;
     delete _async_log;
     delete _ev;
-}
-
-// 初始化ssl库
-int32_t ssl_init()
-{
-/* sha1、base64等库需要用到的
- * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
- * ssl初始化是不可重入的。在初始化期间不要再调用任何相关的ssl函数
- * ssl可以初始化多次，在openssl\crypto\init.c中通过RUN_ONCE来控制
- */
-
-// OPENSSL_VERSION_NUMBER定义在/usr/include/openssl/opensslv.h
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-    SSL_library_init();
-#else
-    OPENSSL_init_ssl(0, nullptr);
-#endif
-
-    SSL_load_error_strings();
-    ERR_load_BIO_strings();
-    OpenSSL_add_all_algorithms();
-
-    return 0;
-}
-
-int32_t ssl_uninit()
-{
-    /* The OPENSSL_cleanup() function deinitialises OpenSSL (both libcrypto and
-     * libssl). All resources allocated by OpenSSL are freed. Typically there
-     * should be no need to call this function directly as it is initiated
-     * automatically on application exit. This is done via the standard C
-     * library atexit() function. In the event that the application will close
-     * in a manner that will not call the registered atexit() handlers then the
-     * application should call OPENSSL_cleanup() directly. Developers of
-     * libraries using OpenSSL are discouraged from calling this function and
-     * should instead, typically, rely on auto-deinitialisation. This is to
-     * avoid error conditions where both an application and a library it depends
-     * on both use OpenSSL, and the library deinitialises it before the
-     * application has finished using it.
-     */
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-    // stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
-    FIPS_mode_set(0);
-    CRYPTO_set_locking_callback(nullptr);
-    CRYPTO_set_id_callback(nullptr);
-
-    ERR_remove_state(0);
-
-    SSL_COMP_free_compression_methods();
-
-    ENGINE_cleanup();
-
-    CONF_modules_free();
-    CONF_modules_unload(1);
-
-    COMP_zlib_cleanup();
-
-    ERR_free_strings();
-    EVP_cleanup();
-
-    CRYPTO_cleanup_all_ex_data();
-#else
-    OPENSSL_cleanup();
-#endif
-
-    return 0;
 }
 
 /* https://isocpp.org/files/papers/N3690.pdf

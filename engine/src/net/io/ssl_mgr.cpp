@@ -3,6 +3,67 @@
 
 #include "ssl_mgr.hpp"
 
+void SSLMgr::library_end()
+{
+    /* The OPENSSL_cleanup() function deinitialises OpenSSL (both libcrypto and
+     * libssl). All resources allocated by OpenSSL are freed. Typically there
+     * should be no need to call this function directly as it is initiated
+     * automatically on application exit. This is done via the standard C
+     * library atexit() function. In the event that the application will close
+     * in a manner that will not call the registered atexit() handlers then the
+     * application should call OPENSSL_cleanup() directly. Developers of
+     * libraries using OpenSSL are discouraged from calling this function and
+     * should instead, typically, rely on auto-deinitialisation. This is to
+     * avoid error conditions where both an application and a library it depends
+     * on both use OpenSSL, and the library deinitialises it before the
+     * application has finished using it.
+     */
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    // stackoverflow.com/questions/29845527/how-to-properly-uninitialize-openssl
+    FIPS_mode_set(0);
+    CRYPTO_set_locking_callback(nullptr);
+    CRYPTO_set_id_callback(nullptr);
+
+    ERR_remove_state(0);
+
+    SSL_COMP_free_compression_methods();
+
+    ENGINE_cleanup();
+
+    CONF_modules_free();
+    CONF_modules_unload(1);
+
+    COMP_zlib_cleanup();
+
+    ERR_free_strings();
+    EVP_cleanup();
+
+    CRYPTO_cleanup_all_ex_data();
+#else
+    OPENSSL_cleanup();
+#endif
+}
+void SSLMgr::library_init()
+{
+/* sha1、base64等库需要用到的
+ * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
+ * ssl初始化是不可重入的。在初始化期间不要再调用任何相关的ssl函数
+ * ssl可以初始化多次，在openssl\crypto\init.c中通过RUN_ONCE来控制
+ */
+
+// OPENSSL_VERSION_NUMBER定义在/usr/include/openssl/opensslv.h
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    SSL_library_init();
+#else
+    OPENSSL_init_ssl(0, nullptr);
+#endif
+
+    SSL_load_error_strings();
+    ERR_load_BIO_strings();
+    OpenSSL_add_all_algorithms();
+}
+
 // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
 void SSLMgr::ssl_error(const char *what)

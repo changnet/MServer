@@ -6,11 +6,9 @@
 #ifdef __windows__
     // define the manifest FD_SETSIZE in every source file before including the
     // Winsock2.h header file
-    #ifdef FD_SETSIZE
-        #error "FD_SETSIZE already define"
-    #endif
     #define FD_SETSIZE 1024
     #include <winsock2.h>
+    #include <ws2tcpip.h>
 
 inline void close(SOCKET fd)
 {

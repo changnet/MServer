@@ -43,10 +43,31 @@
     #define sockaddr_in_x sockaddr_in6
 #endif
 
+void Socket::library_end()
+{
+#ifdef __windows__
+    WSACleanup();
+#endif
+}
+
+void Socket::library_init()
+{
+#ifdef __windows__
+    // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsastartup
+    WSADATA wsaData;
+    WORD wVersionRequested = MAKEWORD(2, 2);
+    ;
+
+    int32_t err = WSAStartup(wVersionRequested, &wsaData);
+    assert(0 == err && 2 == LOBYTE(wsaData.wVersion)
+           && 2 == HIBYTE(wsaData.wVersion));
+#endif
+}
+
 Socket::Socket(uint32_t conn_id, ConnType conn_ty)
 {
-    _io        = NULL;
-    _packet    = NULL;
+    _io        = nullptr;
+    _packet    = nullptr;
     _object_id = 0;
 
     _pending     = 0;
@@ -65,8 +86,8 @@ Socket::~Socket()
     delete _io;
     delete _packet;
 
-    _io     = NULL;
-    _packet = NULL;
+    _io     = nullptr;
+    _packet = nullptr;
 
     C_OBJECT_DEC("socket");
     assert(0 == _pending && -1 == _w.get_fd());
@@ -259,9 +280,16 @@ int32_t Socket::non_block(int32_t fd)
  */
 int32_t Socket::keep_alive(int32_t fd)
 {
+    int32_t ret = 0;
+#ifdef __windows__
+    // https://docs.microsoft.com/en-us/windows/win32/winsock/so-keepalive
+    // windows下，keep alive的interval之类的是通过注册表来控制的
+    DWORD optval;
+    int32_t optlen = sizeof(optval);
+    ret = getsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&optval, &optlen);
+#else
     int32_t optval = 1;
     int32_t optlen = sizeof(optval);
-    int32_t ret    = 0;
 
     // open keep alive
     ret = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
@@ -281,7 +309,7 @@ int32_t Socket::keep_alive(int32_t fd)
 
     optlen = sizeof(tcp_keepalive_probes);
     ret = setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &tcp_keepalive_probes, optlen);
-
+#endif
     return ret;
 }
 
@@ -317,9 +345,9 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
     hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
 #endif
     hints.ai_protocol  = 0; /* Any protocol */
-    hints.ai_canonname = NULL;
-    hints.ai_addr      = NULL;
-    hints.ai_next      = NULL;
+    hints.ai_canonname = nullptr;
+    hints.ai_addr      = nullptr;
+    hints.ai_next      = nullptr;
 
     struct addrinfo *result;
     if (0 != getaddrinfo(host, nullptr, &hints, &result))
@@ -329,7 +357,7 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
     }
 
     char buf[INET6_ADDRSTRLEN];
-    for (struct addrinfo *rp = result; rp != NULL; rp = rp->ai_next)
+    for (struct addrinfo *rp = result; rp != nullptr; rp = rp->ai_next)
     {
         if (inet_ntop(rp->ai_family,
                       &((struct sockaddr_in_x *)rp->ai_addr)->sin_addr_x, buf,
@@ -418,7 +446,7 @@ int32_t Socket::validate()
 {
     int32_t err   = 0;
     socklen_t len = sizeof(err);
-    if (getsockopt(_w.get_fd(), SOL_SOCKET, SO_ERROR, &err, &len) < 0)
+    if (getsockopt(_w.get_fd(), SOL_SOCKET, SO_ERROR, (char *)&err, &len))
     {
         return errno;
     }
@@ -428,7 +456,7 @@ int32_t Socket::validate()
 
 const char *Socket::address(char *buf, size_t len, int *port)
 {
-    if (_w.get_fd() < 0) return NULL;
+    if (_w.get_fd() < 0) return nullptr;
 
     struct sockaddr_in_x addr;
 
@@ -438,7 +466,7 @@ const char *Socket::address(char *buf, size_t len, int *port)
     if (getpeername(_w.get_fd(), (struct sockaddr *)&addr, &addr_len) < 0)
     {
         ERROR("socket::address getpeername error: %s\n", strerror(errno));
-        return NULL;
+        return nullptr;
     }
 
     if (port)
@@ -534,10 +562,11 @@ void Socket::pending_send()
 
 void Socket::listen_cb(int32_t revents)
 {
+    UNUSED(revents);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     while (Socket::active())
     {
-        int32_t new_fd = ::accept(_w.get_fd(), NULL, NULL);
+        int32_t new_fd = ::accept(_w.get_fd(), nullptr, nullptr);
         if (new_fd < 0)
         {
             if (EAGAIN != errno && EWOULDBLOCK != errno)
@@ -572,6 +601,7 @@ void Socket::listen_cb(int32_t revents)
 
 void Socket::connect_cb(int32_t revents)
 {
+    UNUSED(revents);
     /*
      * connect回调
      * man connect
@@ -611,6 +641,7 @@ void Socket::connect_cb(int32_t revents)
 
 void Socket::command_cb(int32_t revents)
 {
+    UNUSED(revents);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 在脚本报错的情况下，可能无法设置 io和packet */
@@ -645,7 +676,7 @@ void Socket::command_cb(int32_t revents)
 int32_t Socket::set_io(IO::IOT io_type, int32_t param)
 {
     delete _io;
-    _io = NULL;
+    _io = nullptr;
 
     switch (io_type)
     {
@@ -661,7 +692,7 @@ int32_t Socket::set_packet(Packet::PacketType packet_type)
 {
     /* 如果有旧的，需要先删除 */
     delete _packet;
-    _packet = NULL;
+    _packet = nullptr;
 
     switch (packet_type)
     {

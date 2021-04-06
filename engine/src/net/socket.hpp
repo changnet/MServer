@@ -41,6 +41,9 @@ public:
     ~Socket();
     explicit Socket(uint32_t conn_id, ConnType conn_ty);
 
+    static void library_end();
+    static void library_init();
+
     /// 把一个文件描述符设置为阻塞
     static int32_t block(int32_t fd);
     /// 把一个文件描述符设置为非阻塞
