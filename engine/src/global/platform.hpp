@@ -7,14 +7,16 @@
     #define __windows__
     #define __OS_NAME__ "windows"
     #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+    #define PATH_MAX MAX_PATH
 #endif
 
 #ifdef __MINGW64__
     #define __MINGW__
     #define __COMPLIER_ "mingw64"
-    // __VERSION__已定义
+// __VERSION__已定义
 #elif __GNUC__
     // https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
     #define __COMPLIER_ "gcc"
-    // __VERSION__已定义
+// __VERSION__已定义
 #endif
