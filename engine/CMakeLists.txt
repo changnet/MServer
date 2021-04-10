@@ -30,6 +30,7 @@ else()
     message(FATAL_ERROR "Unknow CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 endif()
 
+message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
@@ -131,20 +132,24 @@ else()
     set(USE_EPOLL 0)
 endif()
 
-# 通过查找lua.hpp来判断本机是否安装了对应的环境
-# 如果没安装并且存在include文件夹表示为cross edit(即在没安装环境下交叉写代码)，这时可以用
-# build_include.sh这个脚本从其他地方拷贝所需的头文件用于代码提示
-set(CROSS_INL_PATH "${SRC_ROOT_PATH}/include")
+# 检测是否有vcpkg环境
+# https://gitlab.kitware.com/cmake/community/-/wikis/doc/tutorials/How-To-Write-Platform-Checks
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+    # 优先查找.lib类型的静态库
+    # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    set(VCPKG_PATH "vcpkg_win_x64")
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    set(VCPKG_PATH "vcpkg_linux_x64")
+    # 优先查找.a类型的静态库
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()
+message(STATUS "CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES}")
 # EXISTS需要绝对路径
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${CROSS_INL_PATH})
-    find_path(
-        LUA_HEADER lua.hpp
-        # PATHS /usr/include # /usr/include/x86_64-linux-gnu/sys/epoll.h
-    )
-    if (NOT LUA_HEADER)
-        set(INL_PATH ${CROSS_INL_PATH})
-        message(STATUS "No header found, using cross edit header")
-    endif()
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH})
+    message(STATUS "using vcpkg root ${VCPKG_PATH}")
+    set(CMAKE_TOOLCHAIN_FILE
+        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/scripts/buildsystems/vcpkg.cmake
+        CACHE STRING "Vcpkg toolchain file")
 endif()
 
 # 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
