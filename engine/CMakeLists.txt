@@ -49,62 +49,7 @@ set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/.libs")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 
-# pbc
-file(GLOB SRC_LIST "${DEPS_PATH}/pbc/src/*.c")
-add_library(pbc STATIC ${SRC_LIST})
-target_include_directories(pbc PRIVATE
-    ${DEPS_PATH}/pbc
-)
-# http-parser
-add_library(http_parser STATIC ${DEPS_PATH}/http-parser/http_parser.c)
-
-# lua_bson
-add_library(lua_bson STATIC ${DEPS_PATH}/lua_bson/lbson.c)
-target_include_directories(lua_bson PRIVATE
-    /usr/local/include/libbson-1.0
-)
-# target_link_libraries(lua_bson bson-static-1.0)
-
-# lua_flatbuffers
-file(GLOB SRC_LIST "${DEPS_PATH}/lua_flatbuffers/*.cpp")
-list(REMOVE_ITEM SRC_LIST "${CMAKE_CURRENT_LIST_DIR}/${DEPS_PATH}/lua_flatbuffers/cpp_test.cpp")
-add_library(lua_flatbuffers STATIC ${SRC_LIST})
-
-# https://cmake.org/cmake/help/latest/command/target_link_libraries.html#libraries-for-both-a-target-and-its-dependents
-# Library dependencies are transitive by default with this signature. 
-# When this target is linked into another target then the libraries linked to
-# this target will appear on the link line for the other target too.
-# target_link_libraries(lua_flatbuffers flatbuffers)
-
-#lua_parson
-add_library(lua_parson STATIC
-    ${DEPS_PATH}/lua_parson/lparson.c
-    ${DEPS_PATH}/lua_parson/parson/parson.c
-)
-target_include_directories(lua_parson PRIVATE
-    ${DEPS_PATH}/lua_parson/parson
-)
-
-# lua_rapidxml
-add_library(lua_rapidxml STATIC ${DEPS_PATH}/lua_rapidxml/lrapidxml.cpp)
-target_include_directories(lua_rapidxml PRIVATE
-    ${DEPS_PATH}/lua_rapidxml/rapidxml
-)
-
-# websocket-parser
-add_library(websocket_parser STATIC
-    ${DEPS_PATH}/websocket-parser/websocket_parser.c
-)
-
-# aho-corasick
-add_library(acism STATIC
-    ${DEPS_PATH}/aho-corasick/acism.c
-    ${DEPS_PATH}/aho-corasick/msutil.c
-    ${DEPS_PATH}/aho-corasick/acism_create.c
-    ${DEPS_PATH}/aho-corasick/acism_dump.c
-    ${DEPS_PATH}/aho-corasick/acism_file.c
-)
-
+add_subdirectory(deps)
 
 # master
 
