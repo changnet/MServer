@@ -5,6 +5,9 @@
 # visual studio code project
 .vscode
 
+# visual studio project directory
+*.vs
+
 # qt creator project file
 *.user*
 

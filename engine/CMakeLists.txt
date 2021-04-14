@@ -1,5 +1,29 @@
 cmake_minimum_required(VERSION 3.5)
 
+# 检测是否有vcpkg环境
+# https://vcpkg.readthedocs.io/en/latest/users/integration/
+# The CMAKE_TOOLCHAIN_FILE setting simply must be set before the project() directive is first called
+# 在project之前 CMAKE_SYSTEM_NAME 是无效的，只能用内置的win32、UNIX
+if (WIN32)
+    # 优先查找.lib类型的静态库
+    # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    set(VCPKG_PATH "vcpkg_win_x64")
+elseif(UNIX)
+    set(VCPKG_PATH "vcpkg_linux_x64")
+    # 优先查找.a类型的静态库
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()
+
+# EXISTS需要绝对路径
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH})
+    message(STATUS "using vcpkg root ${VCPKG_PATH}")
+    set(CMAKE_TOOLCHAIN_FILE
+        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/scripts/buildsystems/vcpkg.cmake
+        CACHE STRING "Vcpkg toolchain file")
+    set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+endif()
+
+
 project(MServer)
 
 # 设置编译参数
@@ -20,18 +44,34 @@ project(MServer)
 if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug )
 endif()
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set(CMAKE_C_FLAGS "-O0 -g -pipe -Wall -pedantic")
-    set(CMAKE_CXX_FLAGS "-O0 -g -pipe -Wall -pedantic -std=c++17")
-elseif(CMAKE_BUILD_TYPE MATCHES Release)
-    set(CMAKE_C_FLAGS "-O2 -g -pipe -Wall -DNDEBUG -pedantic")
-    set(CMAKE_CXX_FLAGS "-O2 -g -pipe -Wall -pedantic -DNDEBUG -std=c++17")
-else()
-    message(FATAL_ERROR "Unknow CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+
+set(CMAKE_CXX_STANDARD 17)
+
+# win和linux下编译选项详见：https://github.com/Samsung/netcoredbg/blob/master/compileoptions.cmake
+if(WIN32)
+	#https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-160
+	# use the multithread, static (debug) version of the run-time library LIBCMTD.lib
+	# add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/MT>)  
+	# add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Checked>>:/MTd>) 
+
+	# add_compile_options(/W3) # set warning level to 3
+	add_compile_options(/WX) # treat warnings as errors
+	add_compile_options(/Zc:forScope) # C++ language conformance: enforce Standard C++ for scoping rules
+	add_compile_options(/source-charset:utf-8) # Force MSVC to compile source as UTF-8.
+	add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Relwithdebinfo>>:/Zi>) # enable debugging information
+
+	# 优化选项
+	# https://docs.microsoft.com/en-us/cpp/build/reference/o1-o2-minimize-size-maximize-speed?view=msvc-160
+	add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/O2>)
+	add_compile_options($<$<OR:$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>,$<CONFIG:Checked>>:/O1>)
+elseif(UNIX)
+	add_compile_options(-pipe -Wall -pedantic)
 endif()
 
-message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+message(STATUS "CMAKE_FIND_LIBRARY_SUFFIXES = ${CMAKE_FIND_LIBRARY_SUFFIXES}")
+message(STATUS "CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE}")
 message(STATUS "CMAKE_C_FLAGS = ${CMAKE_C_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 # message("   CMAKE_C_FLAGS_DEBUG = ${CMAKE_C_FLAGS_DEBUG}")
@@ -77,26 +117,6 @@ else()
     set(USE_EPOLL 0)
 endif()
 
-# 检测是否有vcpkg环境
-# https://gitlab.kitware.com/cmake/community/-/wikis/doc/tutorials/How-To-Write-Platform-Checks
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
-    # 优先查找.lib类型的静态库
-    # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
-    set(VCPKG_PATH "vcpkg_win_x64")
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-    set(VCPKG_PATH "vcpkg_linux_x64")
-    # 优先查找.a类型的静态库
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-endif()
-message(STATUS "CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES}")
-# EXISTS需要绝对路径
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH})
-    message(STATUS "using vcpkg root ${VCPKG_PATH}")
-    set(CMAKE_TOOLCHAIN_FILE
-        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/scripts/buildsystems/vcpkg.cmake
-        CACHE STRING "Vcpkg toolchain file")
-endif()
-
 # 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
 # 在make.sh脚本里做，在这里做会导致每次都编译master
 # file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
@@ -117,14 +137,13 @@ target_include_directories(master PRIVATE
 
     /usr/local/include/libmongoc-1.0
     /usr/local/include/libbson-1.0
-    ${INL_PATH}
 )
 
 # 库文件，必须 在add_executable之后
 # 默认情况下，加.a后缀的是static链接，其他是dynamic链接
 # 静态链接是为了方便部署，运维安装完系统后，不用额外安装的库静态链接，如 pthread、rt
 # 其他的需要静态链接
-target_link_libraries(master
+target_link_libraries(master PRIVATE
     # 需要编译的库，可以写成acism或者acism.a。前者与上面的add_library同名，cmake会
     # 自动解决依赖关系，后者表示静态链接，但不会产生依赖关系
     pbc
@@ -135,16 +154,46 @@ target_link_libraries(master
     lua_flatbuffers
     lua_bson
     websocket_parser
-
-    lua.a
-    uuid.a
-    flatbuffers.a
-    mariadbclient.a
-    mongoc-static-1.0.a
-    bson-static-1.0.a
-
-    # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
-
-    # mariadb使用了gnutls
-    ssl gnutls crypto dl rt pthread resolv z stdc++fs
 )
+
+if(WIN32)
+    #include(FindLua)
+    find_package(Lua REQUIRED)
+    find_package(libmongoc-1.0 CONFIG REQUIRED)
+    find_package(OpenSSL REQUIRED)
+    find_package(unofficial-libmariadb CONFIG REQUIRED)
+    find_package(Flatbuffers CONFIG REQUIRED)
+
+    target_include_directories(master PRIVATE
+        ${LUA_INCLUDE_DIR}
+        ${MONGOC_INCLUDE_DIRS}
+    )
+    target_link_libraries(master PRIVATE
+        ${LUA_LIBRARIES}
+        ${MONGOC_LIBRARIES}
+        OpenSSL::SSL OpenSSL::Crypto
+        libmariadb mariadbclient
+        flatbuffers::flatbuffers
+    )
+    target_compile_definitions(master PRIVATE
+        ${MONGOC_DEFINITIONS}
+    )
+elseif(UNIX)
+    target_include_directories(master PRIVATE
+        /usr/local/include/libmongoc-1.0
+        /usr/local/include/libbson-1.0
+    )
+    target_link_libraries(master PRIVATE
+        lua.a
+        uuid.a
+        flatbuffers.a
+        mariadbclient.a
+        mongoc-static-1.0.a
+        bson-static-1.0.a
+
+        # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
+
+        # mariadb使用了gnutls
+        ssl gnutls crypto dl rt pthread resolv z stdc++fs
+    )
+endif()
