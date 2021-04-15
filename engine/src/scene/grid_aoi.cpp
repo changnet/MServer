@@ -64,7 +64,7 @@ int32_t GridAOI::each_range_entity(int32_t x, int32_t y, int32_t dx, int32_t dy,
     // 4个坐标必须为矩形的对角像素坐标,这里转换为左上角和右下角坐标
     if (x > dx || y > dy)
     {
-        ERROR("%s invalid pos", __FUNCTION__);
+        ELOG("%s invalid pos", __FUNCTION__);
         return -1;
     }
 
@@ -286,7 +286,7 @@ int32_t GridAOI::update_entity(EntityId id, int32_t x, int32_t y,
     struct EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
-        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        ELOG("%s no ctx found: " FMT64d, __FUNCTION__, id);
         return -2;
     }
 

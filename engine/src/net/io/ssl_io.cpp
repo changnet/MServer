@@ -129,20 +129,20 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     SSL_CTX *base_ctx = ctx_mgr->get_ssl_ctx(_ssl_id);
     if (!base_ctx)
     {
-        ERROR("ssl io init ssl ctx no base ctx found: %d", _ssl_id);
+        ELOG("ssl io init ssl ctx no base ctx found: %d", _ssl_id);
         return -1;
     }
 
     _ssl_ctx = SSL_new(base_ctx);
     if (!_ssl_ctx)
     {
-        ERROR("ssl io init ssl SSL_new fail");
+        ELOG("ssl io init ssl SSL_new fail");
         return -1;
     }
 
     if (!SSL_set_fd(_ssl_ctx, fd))
     {
-        ERROR("ssl io init ssl SSL_set_fd fail");
+        ELOG("ssl io init ssl SSL_set_fd fail");
         return -1;
     }
 

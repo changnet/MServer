@@ -64,7 +64,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     bool ok = std::filesystem::exists(_path, e);
     if (e)
     {
-        ERROR_R("rename daily check file exist file error %s %s", _path.c_str(),
+        ELOG_R("rename daily check file exist file error %s %s", _path.c_str(),
                 e.message().c_str());
         return;
     }
@@ -73,7 +73,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
         std::filesystem::rename(_path, new_path, e);
         if (e)
         {
-            ERROR_R("rename daily log file error %s %s", _path.c_str(),
+            ELOG_R("rename daily log file error %s %s", _path.c_str(),
                     e.message().c_str());
         }
     }
@@ -106,7 +106,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         bool ok = std::filesystem::exists(old_path, e);
         if (e)
         {
-            ERROR_R("rename size check file exist file error %s %s",
+            ELOG_R("rename size check file exist file error %s %s",
                     _path.c_str(), e.message().c_str());
             return;
         }
@@ -126,7 +126,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         std::filesystem::rename(old_path, new_path, e);
         if (e)
         {
-            ERROR_R("rename size file error %s %s", new_path.c_str(),
+            ELOG_R("rename size file error %s %s", new_path.c_str(),
                     e.message().c_str());
             return;
         }
@@ -136,7 +136,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     bool ok = std::filesystem::exists(_path, e);
     if (e)
     {
-        ERROR_R("rename size check current file exist file error %s %s",
+        ELOG_R("rename size check current file exist file error %s %s",
                 _path.c_str(), e.message().c_str());
         return;
     }
@@ -148,7 +148,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         std::filesystem::rename(_path, new_path, e);
         if (e)
         {
-            ERROR_R("rename size current file error %s %s", _path.c_str(),
+            ELOG_R("rename size current file error %s %s", _path.c_str(),
                     e.message().c_str());
             return;
         }
@@ -161,7 +161,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
     if (_data <= 0)
     {
         _data = 1024 * 1024 * 10;
-        ERROR_R("size illegal, reset to default 1024 * 1024 * 10");
+        ELOG_R("size illegal, reset to default 1024 * 1024 * 10");
     }
 
     // 读取文件大小
@@ -169,7 +169,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
     bool ok = std::filesystem::exists(_path, e);
     if (e)
     {
-        ERROR_R("init size policy check file exist file error %s %s",
+        ELOG_R("init size policy check file exist file error %s %s",
                 _path.c_str(), e.message().c_str());
         return true;
     }
@@ -178,7 +178,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
         _data2 = std::filesystem::file_size(_path, e);
         if (e)
         {
-            ERROR_R("init size policy file size exist file error %s %s",
+            ELOG_R("init size policy file size exist file error %s %s",
                     _path.c_str(), e.message().c_str());
             return true;
         }
@@ -197,7 +197,7 @@ bool AsyncLog::Policy::init_daily_policy()
     bool ok = std::filesystem::exists(_path, e);
     if (e)
     {
-        ERROR_R("rename daily initfile exist file error %s %s", _path.c_str(),
+        ELOG_R("rename daily initfile exist file error %s %s", _path.c_str(),
                 e.message().c_str());
         ok = false; // 即使获取不了上次文件的时间，也按天切分文件
     }
@@ -242,7 +242,7 @@ FILE *AsyncLog::Policy::open_stream(const char *path)
         _file = ::fopen(_path.c_str(), "ab+");
         if (!_file)
         {
-            ERROR_R("can't open log file(%s):%s\n", _path.c_str(),
+            ELOG_R("can't open log file(%s):%s\n", _path.c_str(),
                     strerror(errno));
             return nullptr;
         }
@@ -352,7 +352,7 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers,
         FILE *stream = policy->open_stream(path);
         if (!stream)
         {
-            ERROR_R("unable to open log stream: %s", path);
+            ELOG_R("unable to open log stream: %s", path);
             continue;
         }
         switch (buffer->_type)

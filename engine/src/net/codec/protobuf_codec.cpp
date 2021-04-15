@@ -127,7 +127,7 @@ int32_t lprotobuf::load_file(const char *path)
     std::ifstream ifs(path, std::ifstream::binary | std::ifstream::in);
     if (!ifs.good())
     {
-        ERROR("can NOT open file(%s):%s", path, strerror(errno));
+        ELOG("can NOT open file(%s):%s", path, strerror(errno));
         return -1;
     }
 
@@ -139,7 +139,7 @@ int32_t lprotobuf::load_file(const char *path)
     if (!ifs.good() or len <= 0)
     {
         ifs.close();
-        ERROR("get file length error:%s", path);
+        ELOG("get file length error:%s", path);
         return -1;
     }
 
@@ -152,7 +152,7 @@ int32_t lprotobuf::load_file(const char *path)
     {
         ifs.close();
         delete (char *)slice.buffer;
-        ERROR("read file content error:%s", path);
+        ELOG("read file content error:%s", path);
         return -1;
     }
     ifs.close();
@@ -160,7 +160,7 @@ int32_t lprotobuf::load_file(const char *path)
     if (0 != pbc_register(_env, &slice))
     {
         delete (char *)slice.buffer;
-        ERROR("pbc register error(%s):%s", path, pbc_error(_env));
+        ELOG("pbc register error(%s):%s", path, pbc_error(_env));
         return -1;
     }
 
@@ -174,7 +174,7 @@ int32_t lprotobuf::load_path(const char *path, const char *suffix)
     int sz = snprintf(file_path, PATH_MAX, "%s/", path);
     if (sz <= 0)
     {
-        ERROR("path too long:%s", path);
+        ELOG("path too long:%s", path);
 
         return -1;
     }
@@ -182,7 +182,7 @@ int32_t lprotobuf::load_path(const char *path, const char *suffix)
     DIR *dir = opendir(path);
     if (!dir)
     {
-        ERROR("can not open directory(%s):%s", path, strerror(errno));
+        ELOG("can not open directory(%s):%s", path, strerror(errno));
 
         return -1;
     }
@@ -373,7 +373,7 @@ int32_t lprotobuf::push_value(lua_State *L, int type, const char *object,
     }
     default:
         // 由于pbc解析过程无法中止，这里返回错误也没什么意义
-        ERROR("protobuf unknown type %s", object);
+        ELOG("protobuf unknown type %s", object);
         break;
     }
 
@@ -593,7 +593,7 @@ int32_t ProtobufCodec::decode(lua_State *L, const char *buffer, int32_t len,
 {
     if (_lprotobuf->decode(L, cfg->_object, buffer, len) < 0)
     {
-        ERROR("protobuf decode:%s", _lprotobuf->last_error());
+        ELOG("protobuf decode:%s", _lprotobuf->last_error());
         return -1;
     }
 
@@ -610,7 +610,7 @@ int32_t ProtobufCodec::encode(lua_State *L, int32_t index, const char **buffer,
 {
     if (_lprotobuf->encode(L, cfg->_object, index) < 0)
     {
-        ERROR("protobuf encode:%s", _lprotobuf->last_error());
+        ELOG("protobuf encode:%s", _lprotobuf->last_error());
         return -1;
     }
 

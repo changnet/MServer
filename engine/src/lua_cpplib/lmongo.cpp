@@ -19,7 +19,7 @@ LMongo::~LMongo()
 {
     if (!_query.empty())
     {
-        ERROR("mongo query not clean, abort");
+        ELOG("mongo query not clean, abort");
         while (!_query.empty())
         {
             _query_pool.destroy(_query.front());
@@ -29,7 +29,7 @@ LMongo::~LMongo()
 
     if (!_result.empty())
     {
-        ERROR("mongo result not clean, abort");
+        ELOG("mongo result not clean, abort");
         while (!_result.empty())
         {
             _result_pool.destroy(_result.front());
@@ -71,7 +71,7 @@ bool LMongo::initialize()
 {
     if (connect())
     {
-        ERROR("mongo connect fail");
+        ELOG("mongo connect fail");
         return false;
     }
 
@@ -165,7 +165,7 @@ void LMongo::on_ready(lua_State *L)
 
     if (LUA_OK != lua_pcall(L, 2, 0, 1))
     {
-        ERROR("mongodb on ready error:%s", lua_tostring(L, -1));
+        ELOG("mongodb on ready error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
 
@@ -219,7 +219,7 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
         if (lbs_do_decode(L, res->_data, root_type, &error) < 0)
         {
             lua_pop(L, 4);
-            ERROR("mongo result decode error:%s", error.what);
+            ELOG("mongo result decode error:%s", error.what);
 
             // 即使出错，也回调到脚本
         }
@@ -231,7 +231,7 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
 
     if (LUA_OK != lua_pcall(L, nargs, 0, 1))
     {
-        ERROR("mongo call back error:%s", lua_tostring(L, -1));
+        ELOG("mongo call back error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
 }
@@ -251,7 +251,7 @@ bool LMongo::do_command(const MongoQuery *query, MongoResult *res)
     case MQT_REMOVE: ok = Mongo::remove(query, res); break;
     default:
     {
-        ERROR("unknow handle mongo command type:%d\n", query->_mqt);
+        ELOG("unknow handle mongo command type:%d\n", query->_mqt);
         return false;
     }
     }

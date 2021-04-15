@@ -127,7 +127,7 @@ int32_t Sql::option()
     _conn = mysql_init(nullptr);
     if (!_conn)
     {
-        ERROR("mysql init fail:%s\n", mysql_error(_conn));
+        ELOG("mysql init fail:%s\n", mysql_error(_conn));
         return 1;
     }
 
@@ -144,7 +144,7 @@ int32_t Sql::option()
         /*|| mysql_options( conn, MYSQL_INIT_COMMAND,"SET autocommit=0" ) */
     )
     {
-        ERROR("mysql option fail:%s\n", mysql_error(_conn));
+        ELOG("mysql option fail:%s\n", mysql_error(_conn));
 
         mysql_close(_conn);
         _conn = nullptr;
@@ -173,11 +173,11 @@ int32_t Sql::connect()
     uint32_t ok = mysql_errno(_conn);
     if (CR_SERVER_LOST == ok || CR_CONN_HOST_ERROR == ok)
     {
-        ERROR("mysql will try again:%s\n", mysql_error(_conn));
+        ELOG("mysql will try again:%s\n", mysql_error(_conn));
         return -1;
     }
 
-    ERROR("mysql real connect fail:%s\n", mysql_error(_conn));
+    ELOG("mysql real connect fail:%s\n", mysql_error(_conn));
 
     // 暂不关闭，下次重试
     // mysql_close(_conn);
@@ -201,7 +201,7 @@ int32_t Sql::ping()
     int32_t e = mysql_ping(_conn);
     if (e)
     {
-        ERROR("mysql ping error:%s\n", mysql_error(_conn));
+        ELOG("mysql ping error:%s\n", mysql_error(_conn));
     }
 
     return e;

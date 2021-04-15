@@ -48,7 +48,7 @@ typedef int32_t Owner;
         size_t hl = sizeof(h) + l;                                       \
         if (hl > MAX_PACKET_LEN)                                         \
         {                                                                \
-            ERROR("packet(%d) length(%d) overflow:%s", cmd, (int32_t)hl, \
+            ELOG("packet(%d) length(%d) overflow:%s", cmd, (int32_t)hl, \
                   __FUNCTION__);                                         \
             SET_FAIL;                                                    \
             return -1;                                                   \

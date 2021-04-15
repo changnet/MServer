@@ -151,7 +151,7 @@ void LEV::invoke_signal()
             lua_pushinteger(L, signum);
             if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, top)))
             {
-                ERROR("signal call lua fail:%s", lua_tostring(L, -1));
+                ELOG("signal call lua fail:%s", lua_tostring(L, -1));
                 lua_pop(L, 1); /* pop error message */
             }
         }
@@ -253,7 +253,7 @@ void LEV::invoke_app_ev()
     lua_pushinteger(L, _mn_time);
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
-        ERROR("invoke_app_ev fail:%s", lua_tostring(L, -1));
+        ELOG("invoke_app_ev fail:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* pop error message */
     }
 
@@ -265,7 +265,7 @@ void LEV::running()
     // 如果主循环被阻塞太久，打印日志
     if (_busy_time > _critical_tm)
     {
-        PRINTF("ev busy: " FMT64d "msec", _busy_time);
+        PLOG("ev busy: " FMT64d "msec", _busy_time);
     }
 
     invoke_sending();

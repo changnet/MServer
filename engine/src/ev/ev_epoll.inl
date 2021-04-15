@@ -178,6 +178,6 @@ void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
         if (EPOLL_CTL_DEL == op) return;
         assert(false);
         break;
-    default: ERROR("unknow ev error"); break;
+    default: ELOG("unknow ev error"); break;
     }
 }

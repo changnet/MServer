@@ -242,7 +242,7 @@ void LStatistic::dump_socket(lua_State *L)
         class Socket *sk = nm->get_conn_by_conn_id(itr->first);
         if (!sk)
         {
-            ERROR("dump_socket no such socket found:", conn_id);
+            ELOG("dump_socket no such socket found:", conn_id);
         }
         else
         {

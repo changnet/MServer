@@ -47,9 +47,9 @@ void StreamPacket::dispatch(const struct base_header *header)
         process_ss_command(reinterpret_cast<const struct s2s_header *>(header));
         break;
     default:
-        ERROR("stream_packet dispatch "
-              "unknow connect type:%d",
-              _socket->conn_type());
+        ELOG("stream_packet dispatch "
+             "unknow connect type:%d",
+             _socket->conn_type());
         return;
     }
 }
@@ -64,7 +64,7 @@ void StreamPacket::sc_command(const struct s2c_header *header)
     const CmdCfg *cmd_cfg = network_mgr->get_sc_cmd(header->_cmd);
     if (!cmd_cfg)
     {
-        ERROR("sc_command cmd(%d) cfg not found", header->_cmd);
+        ELOG("sc_command cmd(%d) cfg not found", header->_cmd);
         return;
     }
 
@@ -84,7 +84,7 @@ void StreamPacket::sc_command(const struct s2c_header *header)
         StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
     if (!decoder)
     {
-        ERROR("command_new no codec conf found: %d", header->_cmd);
+        ELOG("command_new no codec conf found: %d", header->_cmd);
         lua_settop(L, 0);
         return;
     }
@@ -97,7 +97,7 @@ void StreamPacket::sc_command(const struct s2c_header *header)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3 + cnt, 0, 1)))
     {
-        ERROR("sc_command:%s", lua_tostring(L, -1));
+        ELOG("sc_command:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -131,7 +131,7 @@ void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
     const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd(cmd);
     if (!cmd_cfg)
     {
-        ERROR("cs_command cmd(%d) no cmd cfg found", cmd);
+        ELOG("cs_command cmd(%d) no cmd cfg found", cmd);
         return;
     }
 
@@ -146,7 +146,7 @@ void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
     Codec *decoder = StaticGlobal::codec_mgr()->get_codec(codec_ty);
     if (!decoder)
     {
-        ERROR("command_new no codec found:%d", cmd);
+        ELOG("command_new no codec found:%d", cmd);
         lua_settop(L, 0);
         return;
     }
@@ -159,7 +159,7 @@ void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2 + cnt, 0, 1)))
     {
-        ERROR("cs_command:%s", lua_tostring(L, -1));
+        ELOG("cs_command:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -181,9 +181,9 @@ void StreamPacket::process_ss_command(const s2s_header *header)
     case SPT_CBCP: ssc_multicast(header); return;
     default:
     {
-        ERROR("unknow server "
-              "packet:cmd %d,packet type %d",
-              header->_cmd, header->_packet);
+        ELOG("unknow server "
+             "packet:cmd %d,packet type %d",
+             header->_cmd, header->_packet);
         return;
     }
     }
@@ -197,7 +197,7 @@ void StreamPacket::ss_dispatch(const s2s_header *header)
     const CmdCfg *cmd_cfg = network_mgr->get_ss_cmd(header->_cmd);
     if (!cmd_cfg)
     {
-        ERROR("ss_dispatch cmd(%d) no cmd cfg found", header->_cmd);
+        ELOG("ss_dispatch cmd(%d) no cmd cfg found", header->_cmd);
         return;
     }
 
@@ -211,7 +211,7 @@ void StreamPacket::ss_dispatch(const s2s_header *header)
     //         network_mgr->get_conn_by_session( cmd_cfg->_session );
     //     if ( !dest_sk )
     //     {
-    //         ERROR( "server packet forwarding "
+    //         ELOG( "server packet forwarding "
     //             "no destination found.cmd:%d",header->_cmd );
     //         return;
     //     }
@@ -219,7 +219,7 @@ void StreamPacket::ss_dispatch(const s2s_header *header)
     //     bool is_ok = dest_sk->append( header,PACKET_LENGTH( header ) );
     //     if ( !is_ok )
     //     {
-    //         ERROR( "server packet forwrding "
+    //         ELOG( "server packet forwrding "
     //             "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header
     //             )) );
     //     }
@@ -250,7 +250,7 @@ void StreamPacket::ss_command(const s2s_header *header, const CmdCfg *cmd_cfg)
         StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
     if (!decoder)
     {
-        ERROR("ss command_new no codec found:%d", header->_cmd);
+        ELOG("ss command_new no codec found:%d", header->_cmd);
         lua_settop(L, 0);
         return;
     }
@@ -263,7 +263,7 @@ void StreamPacket::ss_command(const s2s_header *header, const CmdCfg *cmd_cfg)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4 + cnt, 0, 1)))
     {
-        ERROR("ss_command:%s", lua_tostring(L, -1));
+        ELOG("ss_command:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -282,7 +282,7 @@ void StreamPacket::css_command(const s2s_header *header)
     const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd(header->_cmd);
     if (!cmd_cfg)
     {
-        ERROR("css_command cmd(%d) no cmd cfg found", header->_cmd);
+        ELOG("css_command cmd(%d) no cmd cfg found", header->_cmd);
         return;
     }
 
@@ -300,7 +300,7 @@ void StreamPacket::css_command(const s2s_header *header)
         static_cast<Codec::CodecType>(header->_codec));
     if (!decoder)
     {
-        ERROR("css_command_new no codec found:%d", header->_cmd);
+        ELOG("css_command_new no codec found:%d", header->_cmd);
         lua_settop(L, 0);
         return;
     }
@@ -313,7 +313,7 @@ void StreamPacket::css_command(const s2s_header *header)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3 + cnt, 0, 1)))
     {
-        ERROR("css_command:%s", lua_tostring(L, -1));
+        ELOG("css_command:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -329,13 +329,13 @@ void StreamPacket::ssc_command(const s2s_header *header)
     class Socket *sk = network_mgr->get_conn_by_owner(header->_owner);
     if (!sk)
     {
-        ERROR("ssc packet no clt connect found");
+        ELOG("ssc packet no clt connect found");
         return;
     }
 
     if (Socket::CT_SCCN != sk->conn_type())
     {
-        ERROR("ssc packet destination conn is not a clt");
+        ELOG("ssc packet destination conn is not a clt");
         return;
     }
 
@@ -368,7 +368,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
     if (cnt < 1) // rpc调用至少要带参数名
     {
         lua_settop(L, 0);
-        ERROR("rpc command miss function name");
+        ELOG("rpc command miss function name");
         return;
     }
 
@@ -382,7 +382,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
 
     if (LUA_OK != ecode)
     {
-        ERROR("rpc command:%s", lua_tostring(L, -1));
+        ELOG("rpc command:%s", lua_tostring(L, -1));
         lua_settop(L, 0); /* remove error object and traceback */
         return;
     }
@@ -415,7 +415,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     }
     if (LUA_OK != lua_pcall(L, 3 + cnt, 0, 1))
     {
-        ERROR("rpc_return:%s", lua_tostring(L, -1));
+        ELOG("rpc_return:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -755,7 +755,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
 
         if (idx >= MAX_CLT_CAST)
         {
-            ERROR("pack_ssc_multicast too many id in list:%d", idx);
+            ELOG("pack_ssc_multicast too many id in list:%d", idx);
             lua_pop(L, 2);
             break;
         }
@@ -821,18 +821,18 @@ void StreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
     class Socket *sk = network_mgr->get_conn_by_owner(owner);
     if (!sk)
     {
-        ERROR("ssc_one_multicast no clt connect found");
+        ELOG("ssc_one_multicast no clt connect found");
         return;
     }
     if (Socket::CT_SCCN != sk->conn_type())
     {
-        ERROR("ssc_one_multicast destination conn is not a clt");
+        ELOG("ssc_one_multicast destination conn is not a clt");
         return;
     }
     class Packet *sk_packet = sk->get_packet();
     if (!sk_packet)
     {
-        ERROR("ssc_one_multicast no packet found");
+        ELOG("ssc_one_multicast no packet found");
         return;
     }
     sk_packet->raw_pack_clt(cmd, ecode, ctx, size);
@@ -846,7 +846,7 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
     int32_t count         = static_cast<int32_t>(*(raw_list + 1));
     if (MAX_CLT_CAST < count)
     {
-        ERROR("ssc_multicast too many to cast:%d", count);
+        ELOG("ssc_multicast too many to cast:%d", count);
         return;
     }
 
@@ -858,7 +858,7 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
 
     if (size < 0)
     {
-        ERROR("ssc_multicast packet length broken");
+        ELOG("ssc_multicast packet length broken");
         return;
     }
 
@@ -876,7 +876,7 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
     // 如果不是根据pid广播，那么这个list就是自定义参数，参数不能太多
     if (count > 16) // 限制一下参数，防止lua栈溢出
     {
-        ERROR("ssc_multicast too many argument");
+        ELOG("ssc_multicast too many argument");
         return;
     }
 
@@ -893,14 +893,14 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
     }
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, count + 1, 1, 1)))
     {
-        ERROR("clt_multicast_new:%s", lua_tostring(L, -1));
+        ELOG("clt_multicast_new:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
     }
     if (!lua_istable(L, -1))
     {
-        ERROR("clt_multicast_new do NOT return a table");
+        ELOG("clt_multicast_new do NOT return a table");
         lua_settop(L, 0);
         return;
     }
@@ -910,7 +910,7 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
         if (!lua_isinteger(L, -1))
         {
             lua_settop(L, 0);
-            ERROR("ssc_multicast list expect integer");
+            ELOG("ssc_multicast list expect integer");
             return;
         }
         Owner owner = static_cast<Owner>(lua_tointeger(L, -1));

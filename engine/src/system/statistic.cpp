@@ -94,7 +94,7 @@ void Statistic::add_rpc_count(const char *cmd, int32_t size, int64_t msec)
 {
     if (!cmd)
     {
-        ERROR("rpc cmd not found");
+        ELOG("rpc cmd not found");
         return;
     }
 

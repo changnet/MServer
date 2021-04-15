@@ -14,12 +14,103 @@
 #define HPARENT(k)        ((k) >> 1)
 #define UPHEAP_DONE(p, k) (!(p))
 
-#if USE_EPOLL == 1
+#ifndef BACKEND
+    #define BACKEND -1
+#endif
+
+#if BACKEND == 1
     #include "ev_epoll.inl"
-#elif USE_SELECT == 1
-    #include "ev_select.inl"
-#else
+#elif BACKEND == 2
     #include "ev_poll.inl"
+#else
+    #include "ev_select.inl"
+#endif
+
+#if defined(__windows__) && !defined(__MINGW__)
+// https://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
+// https://github.com/msys2-contrib/mingw-w64/blob/master/mingw-w64-libraries/winpthreads/src/clock.c
+
+    #define CLOCK_REALTIME           0
+    #define CLOCK_MONOTONIC          1
+    #define CLOCK_PROCESS_CPUTIME_ID 2
+    #define CLOCK_THREAD_CPUTIME_ID  3
+
+    #define POW10_7              10000000
+    #define POW10_9              1000000000
+    #define DELTA_EPOCH_IN_100NS INT64_C(116444736000000000)
+
+typedef int clockid_t;
+
+int clock_gettime(clockid_t clock_id, struct timespec *tp)
+{
+    unsigned __int64 t;
+    LARGE_INTEGER pf, pc;
+    union {
+        unsigned __int64 u64;
+        FILETIME ft;
+    } ct, et, kt, ut;
+
+    switch (clock_id)
+    {
+    case CLOCK_REALTIME:
+    {
+        GetSystemTimeAsFileTime(&ct.ft);
+        t           = ct.u64 - DELTA_EPOCH_IN_100NS;
+        tp->tv_sec  = t / POW10_7;
+        tp->tv_nsec = ((int)(t % POW10_7)) * 100;
+
+        return 0;
+    }
+
+    case CLOCK_MONOTONIC:
+    {
+        if (QueryPerformanceFrequency(&pf) == 0) return -1;
+
+        if (QueryPerformanceCounter(&pc) == 0) return -1;
+
+        tp->tv_sec = pc.QuadPart / pf.QuadPart;
+        tp->tv_nsec =
+            (int)(((pc.QuadPart % pf.QuadPart) * POW10_9 + (pf.QuadPart >> 1))
+                  / pf.QuadPart);
+        if (tp->tv_nsec >= POW10_9)
+        {
+            tp->tv_sec++;
+            tp->tv_nsec -= POW10_9;
+        }
+
+        return 0;
+    }
+
+    case CLOCK_PROCESS_CPUTIME_ID:
+    {
+        if (0
+            == GetProcessTimes(GetCurrentProcess(), &ct.ft, &et.ft, &kt.ft,
+                               &ut.ft))
+            return -1;
+        t           = kt.u64 + ut.u64;
+        tp->tv_sec  = t / POW10_7;
+        tp->tv_nsec = ((int)(t % POW10_7)) * 100;
+
+        return 0;
+    }
+
+    case CLOCK_THREAD_CPUTIME_ID:
+    {
+        if (0 == GetThreadTimes(GetCurrentThread(), &ct.ft, &et.ft, &kt.ft, &ut.ft))
+            return -1;
+        t           = kt.u64 + ut.u64;
+        tp->tv_sec  = t / POW10_7;
+        tp->tv_nsec = ((int)(t % POW10_7)) * 100;
+
+        return 0;
+    }
+
+    default: break;
+    }
+
+    return -1;
+}
+
 #endif
 
 EV::EV()

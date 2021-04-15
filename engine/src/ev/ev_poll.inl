@@ -37,9 +37,9 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
         switch (errno)
         {
         case EINTR: return;
-        case ENOMEM: ERROR("poll ENOMEM"); return;
+        case ENOMEM: ELOG("poll ENOMEM"); return;
         default:
-            ERROR("poll fatal, %s(%d)", strerror(errno), errno);
+            ELOG("poll fatal, %s(%d)", strerror(errno), errno);
             assert(false);
             return;
         }
@@ -51,7 +51,7 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
 
         if (EXPECT_FALSE(p->revents & POLLNVAL))
         {
-            ERROR("poll invalid fd: %d", p->fd);
+            ELOG("poll invalid fd: %d", p->fd);
             assert(false);
         }
         else

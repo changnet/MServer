@@ -45,11 +45,11 @@ extern std::string std_format(const char *fmt, ...);
 /* terminated without destroying any object and without calling any of the
  * functions passed to atexit or at_quick_exit
  */
-#define FATAL(...)          \
-    do                      \
-    {                       \
-        ERROR(__VA_ARGS__); \
-        ::abort();          \
+#define FATAL(...)         \
+    do                     \
+    {                      \
+        ELOG(__VA_ARGS__); \
+        ::abort();         \
     } while (0)
 
 /// 求C数组的数量

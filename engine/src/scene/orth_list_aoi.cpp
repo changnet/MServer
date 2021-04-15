@@ -204,7 +204,7 @@ bool OrthListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     auto ret = _entity_set.emplace(id, nullptr);
     if (false == ret.second)
     {
-        ERROR("%s entity already in scene " FMT64d, __FUNCTION__, id);
+        ELOG("%s entity already in scene " FMT64d, __FUNCTION__, id);
         return false;
     }
 
@@ -323,7 +323,7 @@ int32_t OrthListAOI::update_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
-        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        ELOG("%s no ctx found: " FMT64d, __FUNCTION__, id);
         return -1;
     }
 
@@ -396,7 +396,7 @@ int32_t OrthListAOI::update_visual(EntityId id, int32_t visual,
     EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
-        ERROR("%s no ctx found: " FMT64d, __FUNCTION__, id);
+        ELOG("%s no ctx found: " FMT64d, __FUNCTION__, id);
         return -1;
     }
 
@@ -768,7 +768,7 @@ void OrthListAOI::each_entity(std::function<bool(EntityCtx *)> &&func)
 bool OrthListAOI::valid_dump(bool dump) const
 {
 #define DUMP_PRINTF(...) \
-    if (dump) PRINTF(__VA_ARGS__)
+    if (dump) PLOG(__VA_ARGS__)
 
     bool ok   = true;
     Ctx *last = nullptr;

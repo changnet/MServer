@@ -309,7 +309,7 @@ LState::LState()
     L = luaL_newstate();
     if (!L)
     {
-        ERROR("lua new state fail\n");
+        ELOG("lua new state fail\n");
         exit(1);
     }
     luaL_openlibs(L);

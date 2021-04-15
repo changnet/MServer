@@ -126,7 +126,7 @@ const char *Buffer::to_continuous_ctx(uint32_t len)
     }
 
     // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
-    PRINTF("using continuous buffer:%d", len);
+    PLOG("using continuous buffer:%d", len);
 
     uint32_t used     = 0;
     const Chunk *next = _front;
@@ -173,7 +173,7 @@ const char *Buffer::all_to_continuous_ctx(uint32_t &len)
     assert(used > 0);
 
     // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
-    PRINTF("using all continuous buffer:%d", len);
+    PLOG("using all continuous buffer:%d", len);
 
     return continuous_ctx;
 }

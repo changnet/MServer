@@ -95,7 +95,7 @@ void Thread::stop()
     assert(std::this_thread::get_id() != _thread.get_id());
     if (!active())
     {
-        ERROR("thread::stop:thread not running");
+        ELOG("thread::stop:thread not running");
         return;
     }
 
@@ -113,7 +113,7 @@ void Thread::spawn(int32_t us)
 
     if (!initialize()) /* 初始化 */
     {
-        ERROR("%s thread initialize fail", _name);
+        ELOG("%s thread initialize fail", _name);
         return;
     }
 
@@ -142,7 +142,7 @@ void Thread::spawn(int32_t us)
 
     if (!uninitialize()) /* 清理 */
     {
-        ERROR("%s thread uninitialize fail", _name);
+        ELOG("%s thread uninitialize fail", _name);
         return;
     }
 }

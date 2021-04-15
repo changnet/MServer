@@ -389,7 +389,7 @@ static int32_t mkdir_p(lua_State *L)
     bool ok = std::filesystem::create_directories(path, e);
     if (!ok && e)
     {
-        ERROR("create_directories %s fail:%s", path, e.message().c_str());
+        ELOG("create_directories %s fail:%s", path, e.message().c_str());
 
         lua_pushboolean(L, 0);
     }

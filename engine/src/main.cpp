@@ -33,7 +33,7 @@ int32_t main(int32_t argc, char **argv)
     if (LUA_OK != luaL_loadfile(L, script_path))
     {
         const char *err_msg = lua_tostring(L, -1);
-        ERROR("load lua enterance file error:%s", err_msg);
+        ELOG("load lua enterance file error:%s", err_msg);
 
         return 1;
     }
@@ -49,7 +49,7 @@ int32_t main(int32_t argc, char **argv)
     if (LUA_OK != lua_pcall(L, cnt, 0, 0))
     {
         const char *err_msg = lua_tostring(L, -1);
-        ERROR("call lua enterance file error:%s", err_msg);
+        ELOG("call lua enterance file error:%s", err_msg);
 
         return 1;
     }

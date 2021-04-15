@@ -9,7 +9,7 @@
     #include <winsock2.h>
 #else
     #include <sys/select.h>
-    using SOCKET = int32_t // 兼容windows代码
+using SOCKET = int32_t // 兼容windows代码
 #endif
 
 #include "ev_watcher.hpp"
@@ -78,9 +78,7 @@ EVBackend::EVBackend()
     FD_ZERO(&_wi_fd_set);
 }
 
-EVBackend::~EVBackend()
-{
-}
+EVBackend::~EVBackend() {}
 
 void EVBackend::wait(class EV *ev_loop, int64_t timeout)
 {
@@ -101,7 +99,7 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
 #endif
 
     struct timeval tv;
-    tv.tv_sec = timeout / 1000;
+    tv.tv_sec  = timeout / 1000;
     tv.tv_usec = (timeout % 1000) * 1000;
     int32_t ok = select(size, &_ro_fd_set, &_wo_fd_set, ex_fd_set, &tv);
     if (EXPECT_FALSE(ok < 0))
@@ -109,36 +107,33 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
 #ifdef __windows__
         // https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-select
         errno = WSAGetLastError();
-        switch(errno)
+        switch (errno)
         {
         case WSAEINTR: return;
-        case WSANOTINITIALISED:
-            FATAL("WSAStartup not call");
-            return;
+        case WSANOTINITIALISED: FATAL("WSAStartup not call"); return;
         case WSAEINVAL:
             // 当需要监听的socket数量为0时，会触发这个错误
             // The time-out value is not valid, or all three descriptor parameters were null.
             Sleep(timeout);
             return;
-        default:
-            ERROR("select backend error(%d):%s", errno, strerror(errno));
+        default: ELOG("select backend error(%d):%s", errno, strerror(errno));
         }
 #else
         // https://man7.org/linux/man-pages/man2/select.2.html
         if (errno == EINTR) return;
         // 其他错误，EBADF、EINVAL、ENOMEM除了打个日志，没啥可以处理的了
-        ERROR("select backend error(%d):%s", errno, strerror(errno));
+        ELOG("select backend error(%d):%s", errno, strerror(errno));
 #endif
         return;
     }
 
-    for (auto &watcher: ev_loop->_fds)
+    for (auto &watcher : ev_loop->_fds)
     {
         // 只用设置过mask的才会在select的数组中
         if (!watcher->get_mask()) continue;
 
         int32_t events = 0;
-        int32_t fd = watcher->get_fd();
+        int32_t fd     = watcher->get_fd();
         if (FD_ISSET(fd, &_ro_fd_set)) events |= EV_READ;
         if (FD_ISSET(fd, &_wo_fd_set)) events |= EV_WRITE;
         if (ex_fd_set && FD_ISSET(fd, ex_fd_set)) events |= EV_WRITE;

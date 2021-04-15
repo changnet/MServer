@@ -49,21 +49,21 @@ void __sync_log(const char *path, FILE *stream, const char *prefix,
 void __async_log(const char *path, LogType type, const char *fmt, ...);
 // /////////////////////////////////////////////////////////////////////////////
 
-#ifdef _PRINTF_
-    #define PRINTF(...) __async_log(get_printf_path(), LT_CPRINTF, __VA_ARGS__)
+#ifdef _PLOG_
+    #define PLOG(...) __async_log(get_printf_path(), LT_CPRINTF, __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
     #define PRINTF_R(...) \
         __sync_log(get_printf_path(), stdout, "CP", __VA_ARGS__)
 #else
-    #define PRINTF(...)
-    #define PRINTF_R(...)
+    #define PLOG(...)
+    #define PLOG_R(...)
 #endif
 
-#ifdef _ERROR_
-    #define ERROR(...) __async_log(get_error_path(), LT_CERROR, __VA_ARGS__)
+#ifdef _ELOG_
+    #define ELOG(...) __async_log(get_error_path(), LT_CERROR, __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
-    #define ERROR_R(...) __sync_log(get_error_path(), stderr, "CE", __VA_ARGS__)
+    #define ELOG_R(...) __sync_log(get_error_path(), stderr, "CE", __VA_ARGS__)
 #else
-    #define ERROR(...)
-    #define ERROR_R(...)
+    #define ELOG(...)
+    #define ELOG_R(...)
 #endif

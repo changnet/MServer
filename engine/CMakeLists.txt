@@ -3,15 +3,13 @@ cmake_minimum_required(VERSION 3.5)
 # 检测是否有vcpkg环境
 # https://vcpkg.readthedocs.io/en/latest/users/integration/
 # The CMAKE_TOOLCHAIN_FILE setting simply must be set before the project() directive is first called
-# 在project之前 CMAKE_SYSTEM_NAME 是无效的，只能用内置的win32、UNIX
-if (WIN32)
-    # 优先查找.lib类型的静态库
-    # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
+# 在project之前 CMAKE_SYSTEM_NAME 是无效的
+if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+    set(WINDOWS TRUE)
     set(VCPKG_PATH "vcpkg_win_x64")
-elseif(UNIX)
+elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+    set(LINUX TRUE)
     set(VCPKG_PATH "vcpkg_linux_x64")
-    # 优先查找.a类型的静态库
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 endif()
 
 # EXISTS需要绝对路径
@@ -48,24 +46,31 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 
 # win和linux下编译选项详见：https://github.com/Samsung/netcoredbg/blob/master/compileoptions.cmake
-if(WIN32)
-	#https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-160
-	# use the multithread, static (debug) version of the run-time library LIBCMTD.lib
-	# add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/MT>)  
-	# add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Checked>>:/MTd>) 
+if(WINDOWS)
+    set(BACKEND 3) # select
+    # 优先查找.lib类型的静态库
+    # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
-	# add_compile_options(/W3) # set warning level to 3
-	add_compile_options(/WX) # treat warnings as errors
-	add_compile_options(/Zc:forScope) # C++ language conformance: enforce Standard C++ for scoping rules
-	add_compile_options(/source-charset:utf-8) # Force MSVC to compile source as UTF-8.
-	add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Relwithdebinfo>>:/Zi>) # enable debugging information
+    #https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-160
+    # use the multithread, static (debug) version of the run-time library LIBCMTD.lib
+    # add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/MT>)
+    # add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Checked>>:/MTd>)
 
-	# 优化选项
-	# https://docs.microsoft.com/en-us/cpp/build/reference/o1-o2-minimize-size-maximize-speed?view=msvc-160
-	add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/O2>)
-	add_compile_options($<$<OR:$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>,$<CONFIG:Checked>>:/O1>)
-elseif(UNIX)
-	add_compile_options(-pipe -Wall -pedantic)
+    # add_compile_options(/W3) # set warning level to 3
+    add_compile_options(/WX) # treat warnings as errors
+    add_compile_options(/Zc:forScope) # C++ language conformance: enforce Standard C++ for scoping rules
+    add_compile_options(/source-charset:utf-8) # Force MSVC to compile source as UTF-8.
+    add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Relwithdebinfo>>:/Zi>) # enable debugging information
+
+    # 优化选项
+    # https://docs.microsoft.com/en-us/cpp/build/reference/o1-o2-minimize-size-maximize-speed?view=msvc-160
+    add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/O2>)
+    add_compile_options($<$<OR:$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>,$<CONFIG:Checked>>:/O1>)
+elseif(LINUX)
+    SET(BACKEND 1) # epoll
+    # 优先查找.a类型的静态库
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
+    add_compile_options(-pipe -Wall -pedantic)
 endif()
 
 message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
@@ -105,24 +110,12 @@ link_directories(
 file(GLOB_RECURSE SRC_LIST "${SRC_ROOT_PATH}/src/*.cpp")
 add_executable(master ${SRC_LIST})
 
-# 是否支持epoll
-find_path(
-    EPOLL_HEADER sys/epoll.h
-    PATHS /usr/include # /usr/include/x86_64-linux-gnu/sys/epoll.h
-)
-if (EPOLL_HEADER)
-    message(STATUS "Found ${EPOLL_HEADER}/sys/epoll.h, using epoll backend")
-    set(USE_EPOLL 1)
-else()
-    set(USE_EPOLL 0)
-endif()
-
 # 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
 # 在make.sh脚本里做，在这里做会导致每次都编译master
 # file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
 target_compile_definitions(
     master
-    PRIVATE -DUSE_EPOLL=${USE_EPOLL}
+    PRIVATE BACKEND=${BACKEND}
 )
 
 target_include_directories(master PRIVATE

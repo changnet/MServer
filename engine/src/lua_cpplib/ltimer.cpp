@@ -74,7 +74,7 @@ void LTimer::callback(int32_t revents)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
-        ERROR("timer call back fail:%s\n", lua_tostring(L, -1));
+        ELOG("timer call back fail:%s\n", lua_tostring(L, -1));
         lua_pop(L, 2); /* remove error message traceback */
         return;
     }

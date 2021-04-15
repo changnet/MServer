@@ -58,7 +58,7 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
      * 在头文件中的顺序不重要，这里实现的顺序才是运行时的顺序
      */
 
-    // 先创建日志线程，保证其他模块能使用 ERROR 日志。如果在此之前需要日志用 ERROR_R
+    // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
     _thread_mgr = new class ThreadMgr();
     _async_log  = new class LLog(nullptr);
     _ev         = new class LEV();
@@ -114,7 +114,7 @@ void on_exit()
     global_mem_counter(counter, counters);
 
     // 直接用PRINTF会导致重新创建ev取时间
-    // PRINTF( "new counter:%d    ----   new[] counter:%d",counter,counters );
+    // PLOG( "new counter:%d    ----   new[] counter:%d",counter,counters );
 
     PRINTF_R("new = " FMT64d " ----  new[] = " FMT64d, counter, counters);
     // back_trace();

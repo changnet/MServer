@@ -29,7 +29,7 @@ int32_t FlatbuffersCodec::decode(lua_State *L, const char *buffer, int32_t len,
 {
     if (_lflatbuffers->decode(L, cfg->_schema, cfg->_object, buffer, len) < 0)
     {
-        ERROR("flatbuffers decode:%s", _lflatbuffers->last_error());
+        ELOG("flatbuffers decode:%s", _lflatbuffers->last_error());
         return -1;
     }
 
@@ -45,7 +45,7 @@ int32_t FlatbuffersCodec::encode(lua_State *L, int32_t index,
 {
     if (_lflatbuffers->encode(L, cfg->_schema, cfg->_object, index) < 0)
     {
-        ERROR("flatbuffers encode:%s", _lflatbuffers->last_error());
+        ELOG("flatbuffers encode:%s", _lflatbuffers->last_error());
         return -1;
     }
 

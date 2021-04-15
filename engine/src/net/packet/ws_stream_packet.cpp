@@ -143,7 +143,7 @@ int32_t WSStreamPacket::on_frame_end()
     const char *data_ctx = _body.all_to_continuous_ctx(data_size);
     if (data_size < sizeof(struct c2s_header))
     {
-        ERROR("ws_stream_packet on_frame_end packet incomplete");
+        ELOG("ws_stream_packet on_frame_end packet incomplete");
         return 0;
     }
     const struct c2s_header *header =
@@ -152,7 +152,7 @@ int32_t WSStreamPacket::on_frame_end()
     int cmd = header->_cmd;
     if (data_size < header->_length)
     {
-        ERROR("ws_stream_packet on_frame_end packet length error:%d", cmd);
+        ELOG("ws_stream_packet on_frame_end packet length error:%d", cmd);
         return 0;
     }
 
@@ -175,7 +175,7 @@ int32_t WSStreamPacket::sc_command()
     const char *data_ctx = _body.all_to_continuous_ctx(data_size);
     if (data_size < sizeof(struct s2c_header))
     {
-        ERROR("ws_stream_packet sc_command packet incomplete");
+        ELOG("ws_stream_packet sc_command packet incomplete");
         return 0;
     }
 
@@ -185,14 +185,14 @@ int32_t WSStreamPacket::sc_command()
     int cmd = header->_cmd;
     if (data_size < header->_length)
     {
-        ERROR("ws_stream_packet sc_command packet length error:%d", cmd);
+        ELOG("ws_stream_packet sc_command packet length error:%d", cmd);
         return 0;
     }
 
     const CmdCfg *cmd_cfg = network_mgr->get_sc_cmd(cmd);
     if (!cmd_cfg)
     {
-        ERROR("sc_command cmd(%d) no cmd cfg found", cmd);
+        ELOG("sc_command cmd(%d) no cmd cfg found", cmd);
         return 0;
     }
 
@@ -215,7 +215,7 @@ int32_t WSStreamPacket::sc_command()
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3 + cnt, 0, 1)))
     {
-        ERROR("websocket stream sc_command:%s", lua_tostring(L, -1));
+        ELOG("websocket stream sc_command:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */
@@ -233,7 +233,7 @@ int32_t WSStreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
     const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd(cmd);
     if (!cmd_cfg)
     {
-        ERROR("cs_command cmd(%d) no cmd cfg found", cmd);
+        ELOG("cs_command cmd(%d) no cmd cfg found", cmd);
         return 0;
     }
 
@@ -253,7 +253,7 @@ int32_t WSStreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2 + cnt, 0, 1)))
     {
-        ERROR("websocket stream cs_command:%s", lua_tostring(L, -1));
+        ELOG("websocket stream cs_command:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */
@@ -284,7 +284,7 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
     class Buffer &send = _socket->send_buffer();
     if (!send.reserved(frame_size))
     {
-        ERROR("ws stream raw_pack_clt can not reserve memory");
+        ELOG("ws stream raw_pack_clt can not reserve memory");
         return -1;
     }
 

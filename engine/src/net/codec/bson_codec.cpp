@@ -34,7 +34,7 @@ int32_t BsonCodec::decode(lua_State *L, const char *buffer, int32_t len,
     const bson_t *doc = bson_reader_read(reader, NULL);
     if (!doc)
     {
-        ERROR("invalid bson buffer");
+        ELOG("invalid bson buffer");
         bson_reader_destroy(reader);
         return -1;
     }
@@ -46,7 +46,7 @@ int32_t BsonCodec::decode(lua_State *L, const char *buffer, int32_t len,
     bson_reader_destroy(reader);
     if (args < 0)
     {
-        ERROR("bson decode:%s", ec.what);
+        ELOG("bson decode:%s", ec.what);
         return -1;
     }
 
@@ -67,7 +67,7 @@ int32_t BsonCodec::encode(lua_State *L, int32_t index, const char **buffer,
     if (0 != lbs_do_encode_stack(L, _bson_doc, index, &ec))
     {
         finalize();
-        ERROR("bson encode %s", ec.what);
+        ELOG("bson encode %s", ec.what);
 
         return -1;
     }

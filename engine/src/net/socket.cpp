@@ -117,7 +117,7 @@ void Socket::stop(bool flush)
                 try_times++;
                 if (try_times > 32)
                 {
-                    ERROR("socket flush data try too many times:%d", try_times);
+                    ELOG("socket flush data try too many times:%d", try_times);
                 }
             } while (2 == code && try_times < 512);
         }
@@ -198,7 +198,7 @@ int32_t Socket::send()
         // 对于客户端这种不重要的，可以断开连接
         if (OAT_KILL == _over_action)
         {
-            ERROR("socket send buffer overflow,kill connection,"
+            ELOG("socket send buffer overflow,kill connection,"
                   "object:" FMT64d ",conn:%d,buffer size:%d",
                   _object_id, _conn_id, _send.get_all_used_size());
 
@@ -216,7 +216,7 @@ int32_t Socket::send()
             do
             {
                 std::this_thread::sleep_for(std::chrono::microseconds(500));
-                ERROR("socket send buffer overflow,pending,"
+                ELOG("socket send buffer overflow,pending,"
                       "object:" FMT64d ",conn:%d,buffer size:%d",
                       _object_id, _conn_id, _send.get_all_used_size());
 
@@ -352,7 +352,7 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
     struct addrinfo *result;
     if (0 != getaddrinfo(host, nullptr, &hints, &result))
     {
-        ERROR("getaddrinfo: %s", strerror(errno));
+        ELOG("getaddrinfo: %s", strerror(errno));
         return -1;
     }
 
@@ -367,7 +367,7 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
         }
         else
         {
-            ERROR("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
+            ELOG("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
             return -1;
         }
     }
@@ -416,7 +416,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     int32_t ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
     if (0 == ok)
     {
-        ERROR("invalid host format: %s", host);
+        ELOG("invalid host format: %s", host);
         ::close(fd);
         return -1;
     }
@@ -465,7 +465,7 @@ const char *Socket::address(char *buf, size_t len, int *port)
 
     if (getpeername(_w.get_fd(), (struct sockaddr *)&addr, &addr_len) < 0)
     {
-        ERROR("socket::address getpeername error: %s\n", strerror(errno));
+        ELOG("socket::address getpeername error: %s\n", strerror(errno));
         return nullptr;
     }
 
@@ -524,7 +524,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     if (0 == ok)
     {
         errno = EADDRNOTAVAIL; // Address not available
-        ERROR("invalid host format: %s", host);
+        ELOG("invalid host format: %s", host);
         goto FAIL;
     }
     else if (ok < 0)
@@ -571,7 +571,7 @@ void Socket::listen_cb(int32_t revents)
         {
             if (EAGAIN != errno && EWOULDBLOCK != errno)
             {
-                ERROR("socket::accept:%s\n", strerror(errno));
+                ELOG("socket::accept:%s\n", strerror(errno));
                 return;
             }
 
@@ -649,7 +649,7 @@ void Socket::command_cb(int32_t revents)
     {
         Socket::stop();
         network_mgr->connect_del(_conn_id);
-        ERROR("socket command no io or packet set,socket disconnect");
+        ELOG("socket command no io or packet set,socket disconnect");
         return;
     }
 
@@ -668,7 +668,7 @@ void Socket::command_cb(int32_t revents)
     {
         Socket::stop();
         network_mgr->connect_del(_conn_id);
-        ERROR("socket command unpack data fail");
+        ELOG("socket command unpack data fail");
         return;
     }
 }

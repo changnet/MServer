@@ -42,7 +42,7 @@ int32_t Mongo::connect()
     _conn = mongoc_client_new(uri);
     if (!_conn)
     {
-        ERROR("parse mongo uri fail\n");
+        ELOG("parse mongo uri fail\n");
         return 1;
     }
 
@@ -97,7 +97,7 @@ int32_t Mongo::ping()
     int32_t ecode = mongoc_cursor_error(cursor, &error);
     if (ecode)
     {
-        ERROR_R("mongo ping error(%d):%s", error.code, error.message);
+        ELOG_R("mongo ping error(%d):%s", error.code, error.message);
     }
 
     mongoc_cursor_destroy(cursor);
@@ -195,7 +195,7 @@ bool Mongo::find(const MongoQuery *mq, MongoResult *res)
 
     if (mongoc_cursor_error(cursor, &res->_error))
     {
-        ERROR_R("mongoc_cursor_error");
+        ELOG_R("mongoc_cursor_error");
         bson_destroy(doc);
         res->_data = nullptr;
 

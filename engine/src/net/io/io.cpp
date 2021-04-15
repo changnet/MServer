@@ -39,7 +39,7 @@ int32_t IO::recv(int32_t &byte)
     /* error happen */
     if (errno != EAGAIN && errno != EWOULDBLOCK)
     {
-        ERROR("io send:%s", strerror(errno));
+        ELOG("io send:%s", strerror(errno));
         return -1;
     }
 
@@ -69,7 +69,7 @@ int32_t IO::send(int32_t &byte)
     /* error happen */
     if (errno != EAGAIN && errno != EWOULDBLOCK)
     {
-        ERROR("io send:%s", strerror(errno));
+        ELOG("io send:%s", strerror(errno));
         return -1;
     }
 

@@ -15,7 +15,7 @@ LSql::~LSql()
     // 线程对象销毁时，子线程已停止，操作不需要再加锁
     if (!_query.empty())
     {
-        ERROR("SQL query not finish, data may lost");
+        ELOG("SQL query not finish, data may lost");
         while (!_query.empty())
         {
             delete _query.front();
@@ -25,7 +25,7 @@ LSql::~LSql()
 
     if (!_result.empty())
     {
-        ERROR("SQL result not finish, ignore");
+        ELOG("SQL result not finish, ignore");
         while (!_result.empty())
         {
             _result_pool.destroy(_result.front());
@@ -139,8 +139,8 @@ void LSql::exec_sql(const SqlQuery *query, SqlResult *res)
     if (EXPECT_FALSE(this->query(stmt, query->_size)))
     {
         if (res) res->_ecode = -1;
-        ERROR("sql query error:%s", error());
-        ERROR("sql will not exec:%s", stmt);
+        ELOG("sql query error:%s", error());
+        ELOG("sql will not exec:%s", stmt);
         return;
     }
 
@@ -148,7 +148,7 @@ void LSql::exec_sql(const SqlQuery *query, SqlResult *res)
     if (res) res->clear();
     if (result(res))
     {
-        ERROR("sql result error[%s]:%s", stmt, error());
+        ELOG("sql result error[%s]:%s", stmt, error());
     }
 }
 
@@ -197,7 +197,7 @@ void LSql::on_ready(lua_State *L)
 
     if (LUA_OK != lua_pcall(L, 2, 0, 1))
     {
-        ERROR("sql on ready error:%s", lua_tostring(L, -1));
+        ELOG("sql on ready error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
 
@@ -216,7 +216,7 @@ void LSql::on_result(lua_State *L, SqlResult *res)
 
     if (LUA_OK != lua_pcall(L, args, 0, 1))
     {
-        ERROR("sql on result error:%s", lua_tostring(L, -1));
+        ELOG("sql on result error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
     lua_pop(L, 1); /* remove traceback */
@@ -250,7 +250,7 @@ int32_t LSql::field_to_lua(lua_State *L, const SqlField &field,
     case MYSQL_TYPE_STRING: lua_pushlstring(L, value, size); break;
     default:
         lua_pushnil(L);
-        ERROR("unknow mysql type:%d\n", field._type);
+        ELOG("unknow mysql type:%d\n", field._type);
         break;
     }
 
@@ -295,7 +295,7 @@ bool LSql::uninitialize()
 {
     if (ping())
     {
-        ERROR("mysql ping fail at cleanup,data may lost:%s", error());
+        ELOG("mysql ping fail at cleanup,data may lost:%s", error());
         /* TODO write to file ? */
     }
 

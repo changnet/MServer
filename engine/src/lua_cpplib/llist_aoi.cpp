@@ -66,7 +66,7 @@ int32_t LListAoi::get_interest_me_entity(lua_State *L)
     if (!ctx)
     {
         table_pack_size(L, 2, 0);
-        ERROR("no such entity found, id = %d", id);
+        ELOG("no such entity found, id = %d", id);
         return 0;
     }
 
@@ -137,7 +137,7 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
     if (!ctx)
     {
         table_pack_size(L, 3, 0);
-        ERROR("no such entity found, id = %d", id);
+        ELOG("no such entity found, id = %d", id);
         return 0;
     }
 

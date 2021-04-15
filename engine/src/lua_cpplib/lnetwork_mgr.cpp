@@ -39,7 +39,7 @@ void LNetworkMgr::invoke_delete()
         socket_map_t::iterator sk_itr = _socket_map.find(*itr);
         if (sk_itr == _socket_map.end())
         {
-            ERROR("no socket to delete");
+            ELOG("no socket to delete");
             continue;
         }
 
@@ -652,7 +652,7 @@ class Socket *LNetworkMgr::get_conn_by_owner(Owner owner) const
     Socket *sk = itr->second;
     if (sk->get_object_id() != owner)
     {
-        ERROR("get_conn_by_owner not match:%d,conn = %d", owner, sk->conn_id());
+        ELOG("get_conn_by_owner not match:%d,conn = %d", owner, sk->conn_id());
         return NULL;
     }
 
@@ -679,7 +679,7 @@ bool LNetworkMgr::accept_new(uint32_t conn_id, class Socket *new_sk)
          * 为了防止死链，这里直接删除此连接
          */
         _deleting.push_back(new_conn_id);
-        ERROR("accept new socket:%s", lua_tostring(L, -1));
+        ELOG("accept new socket:%s", lua_tostring(L, -1));
 
         lua_pop(L, 2); /* remove traceback and error object */
         return false;
@@ -705,7 +705,7 @@ bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
          * 为了防止死链，这里直接删除此连接
          */
         _deleting.push_back(conn_id);
-        ERROR("connect_new:%s", lua_tostring(L, -1));
+        ELOG("connect_new:%s", lua_tostring(L, -1));
 
         lua_pop(L, 2); /* remove traceback and error object */
         return false;
@@ -730,7 +730,7 @@ bool LNetworkMgr::connect_del(uint32_t conn_id)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
-        ERROR("conn_del:%s", lua_tostring(L, -1));
+        ELOG("conn_del:%s", lua_tostring(L, -1));
 
         lua_pop(L, 2); /* remove traceback and error object */
         return false;
@@ -843,7 +843,7 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
     const CmdCfg *cmd_cfg = get_cs_cmd(cmd);
     if (EXPECT_FALSE(!cmd_cfg))
     {
-        ERROR("cs_dispatch cmd(%d) no cmd cfg found", cmd);
+        ELOG("cs_dispatch cmd(%d) no cmd cfg found", cmd);
         return -1;
     }
 
@@ -859,7 +859,7 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
      */
     if (EXPECT_FALSE(!object_id))
     {
-        ERROR("cs_dispatch cmd(%d) socket do NOT have object", cmd);
+        ELOG("cs_dispatch cmd(%d) socket do NOT have object", cmd);
         return -1;
     }
 
@@ -867,7 +867,7 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
         _owner_session.find(object_id);
     if (iter == _owner_session.end())
     {
-        ERROR("cs_dispatch cmd(%d) "
+        ELOG("cs_dispatch cmd(%d) "
               "no session to forwarding:%d-" FMT64d,
               cmd, object_id);
         return -1;
@@ -893,7 +893,7 @@ bool LNetworkMgr::cs_dispatch(int32_t cmd, const class Socket *src_sk,
     class Socket *dest_sk = get_conn_by_session(session);
     if (!dest_sk)
     {
-        ERROR("client packet forwarding no destination found.cmd:%d", cmd);
+        ELOG("client packet forwarding no destination found.cmd:%d", cmd);
         return true; /* 如果转发失败，也相当于转发了 */
     }
 
@@ -975,7 +975,7 @@ int32_t LNetworkMgr::srv_multicast(lua_State *L)
     if (len < 0)
     {
         encoder->finalize();
-        ERROR("srv_multicast encode error");
+        ELOG("srv_multicast encode error");
         return 0;
     }
 
@@ -1001,13 +1001,13 @@ int32_t LNetworkMgr::srv_multicast(lua_State *L)
         class Packet *pkt = raw_check_packet(L, conn_id, Socket::CT_SSCN);
         if (!pkt)
         {
-            ERROR("srv_multicast conn not found:%ud", conn_id);
+            ELOG("srv_multicast conn not found:%ud", conn_id);
             continue;
         }
 
         if (pkt->raw_pack_ss(cmd, ecode, _session, buffer, len) < 0)
         {
-            ERROR("srv_multicast can not raw_pack_ss:%ud", conn_id);
+            ELOG("srv_multicast can not raw_pack_ss:%ud", conn_id);
             continue;
         }
     }
@@ -1062,7 +1062,7 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
     if (len < 0)
     {
         encoder->finalize();
-        ERROR("clt_multicast encode error");
+        ELOG("clt_multicast encode error");
         return 0;
     }
 
@@ -1088,13 +1088,13 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
         class Packet *pkt = raw_check_packet(L, conn_id, Socket::CT_SSCN);
         if (!pkt)
         {
-            ERROR("clt_multicast conn not found:%ud", conn_id);
+            ELOG("clt_multicast conn not found:%ud", conn_id);
             continue;
         }
 
         if (pkt->raw_pack_clt(cmd, ecode, buffer, len) < 0)
         {
-            ERROR("clt_multicast can not raw_pack_ss:%ud", conn_id);
+            ELOG("clt_multicast can not raw_pack_ss:%ud", conn_id);
             continue;
         }
     }

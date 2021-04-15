@@ -95,7 +95,7 @@ int32_t on_frame_header(struct websocket_parser *parser)
     {
         if (!body.reserved(parser->length))
         {
-            ERROR("websocket cant not allocate memory");
+            ELOG("websocket cant not allocate memory");
             return -1;
         }
     }
@@ -121,7 +121,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
         // 法reserved超过一个chunk大小的连续缓冲区
         if (body.get_space_size() < length)
         {
-            ERROR("websocket packet on frame body overflow:%d,%d",
+            ELOG("websocket packet on frame body overflow:%d,%d",
                   body.get_used_size(), body.get_space_size());
             return -1;
         }
@@ -309,7 +309,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     if (NULL == key_str && NULL == accept_str)
     {
-        ERROR("websocket handshake header field not found");
+        ELOG("websocket handshake header field not found");
         return -1;
     }
 
@@ -324,7 +324,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
     {
-        ERROR("websocket handshake:%s", lua_tostring(L, -1));
+        ELOG("websocket handshake:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */
@@ -348,7 +348,7 @@ int32_t WebsocketPacket::on_frame_end()
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2, 0, 1)))
     {
-        ERROR("websocket command:%s", lua_tostring(L, -1));
+        ELOG("websocket command:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */
@@ -374,7 +374,7 @@ int32_t WebsocketPacket::on_ctrl_end()
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
     {
-        ERROR("websocket ctrl:%s", lua_tostring(L, -1));
+        ELOG("websocket ctrl:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */

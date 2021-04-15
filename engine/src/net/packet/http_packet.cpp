@@ -170,7 +170,7 @@ int32_t HttpPacket::unpack()
     if (nparsed != (int32_t)size) /* error */
     {
         int32_t no = _parser->http_errno;
-        ERROR("http parse error(%d):%s", no,
+        ELOG("http parse error(%d):%s", no,
               http_errno_name(static_cast<enum http_errno>(no)));
 
         return -1;
@@ -220,7 +220,7 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 6, 0, 1)))
     {
-        ERROR("command_new:%s", lua_tostring(L, -1));
+        ELOG("command_new:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */
@@ -269,7 +269,7 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
     // table赋值时，需要一个额外的栈
     if (!lua_checkstack(L, 2))
     {
-        ERROR("http unpack header stack over flow");
+        ELOG("http unpack header stack over flow");
         return -1;
     }
 

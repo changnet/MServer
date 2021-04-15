@@ -68,12 +68,12 @@ void SSLMgr::library_init()
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
 void SSLMgr::ssl_error(const char *what)
 {
-    ERROR("%s errno(%d:%s)", what, errno, strerror(errno));
+    ELOG("%s errno(%d:%s)", what, errno, strerror(errno));
 
     int32_t eno = 0;
     while (0 != (eno = ERR_get_error()))
     {
-        ERROR("    %s", ERR_error_string(eno, NULL));
+        ELOG("    %s", ERR_error_string(eno, NULL));
     }
 }
 
@@ -86,11 +86,11 @@ void SSLMgr::dump_x509(const SSL *ctx)
 
         // 证书拥有者
         X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
-        PRINTF("x509 subject name: %s", buf);
+        PLOG("x509 subject name: %s", buf);
 
         // 颁发者
         X509_NAME_oneline(X509_get_issuer_name(cert), buf, sizeof(buf));
-        PRINTF("x509 issuer name: %s", buf);
+        PLOG("x509 issuer name: %s", buf);
 
         X509_free(cert);
     }
@@ -137,7 +137,7 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     // 新版本中无需指定版本号，用上面的自动协商·
     // warning: ‘const SSL_METHOD* TLSv1_2_method()’ is deprecated
     // case SSLV_TLS_GEN_12 : method = TLSv1_2_method(); break;
-    default: ERROR("new_ssl_ctx:unknow ssl version"); return -1;
+    default: ELOG("new_ssl_ctx:unknow ssl version"); return -1;
     }
 
     // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
