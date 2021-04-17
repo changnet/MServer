@@ -115,8 +115,8 @@ void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
      * ET(Edge Trigger)只支持no-block，一个事件只通知一次
      * epoll默认是LT模式
      */
-    ev.events = (new_ev & EV_READ ? EPOLLIN : 0)
-                | (new_ev & EV_WRITE ? EPOLLOUT : 0) /* | EPOLLET */;
+    ev.events = (new_ev & EV_READ ? (int32_t)EPOLLIN : 0)
+                | (new_ev & EV_WRITE ? (int32_t)EPOLLOUT : 0) /* | EPOLLET */;
 
     /**
      * socket被关闭时，内核自动从epoll中删除。这时执行EPOLL_CTL_DEL会触发EBADF

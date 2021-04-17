@@ -51,6 +51,7 @@ if(WINDOWS)
     # 优先查找.lib类型的静态库
     # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
+    # 以下有些参数是默认的，不需要重复加，通过编译日志可以看出有哪些参数
     #https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=msvc-160
     # use the multithread, static (debug) version of the run-time library LIBCMTD.lib
     # add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/MT>)
@@ -70,7 +71,7 @@ elseif(LINUX)
     SET(BACKEND 1) # epoll
     # 优先查找.a类型的静态库
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
-    add_compile_options(-pipe -Wall -pedantic)
+    add_compile_options(-pipe -Wall -Wextra -Wformat=1 -Wno-unused-parameter -pedantic)
 endif()
 
 message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
