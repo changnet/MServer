@@ -24,21 +24,6 @@ endif()
 
 project(MServer)
 
-# 设置编译参数
-# -pipe 使用pipe而不是临时文件，对代码无影响
-# -Wall This enables all the warnings
-# -g gdb debug option
-# -s:直接生成与运用strip同样效果的可执行文件（删除了所有符号信息）
-# -Wl,rpath 指定运行时库文件(so)路径，便携程序可用
-# -w 关闭所有告警
-# -rdynamic 却是一个 连接选项 ，它将指示连接器把所有符号（而不仅仅只是程序已使用到的外
-#    部符号）都添加到动态符号表（即.dynsym表）里，以便那些通过 dlopen() 或 backtrace()
-#    (这一系列函数使用.dynsym表内符号)这样的函数使用。
-# 如果不知道mongo库文件位置，可用echo $(pkg-config --cflags --libs libmongoc-1.0)查看
-# mysql库根据安装方法不同，位置不本样，可用mysql_config查看
-# (新版本-lmysqlclient_r与-lmysqlclient是一样的)
-# -std=C++98 -std=c++03 -std=c++0x(c++ tr1) -std=c++11 -std=C++14
-
 if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug )
 endif()
@@ -71,7 +56,7 @@ elseif(LINUX)
     SET(BACKEND 1) # epoll
     # 优先查找.a类型的静态库
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
-    add_compile_options(-pipe -Wall -Wextra -Wformat=1 -Wno-unused-parameter -pedantic)
+    add_compile_options(-pipe -Wall -pedantic)
 endif()
 
 message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
@@ -98,6 +83,11 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 add_subdirectory(deps)
 
 # master
+
+# 自己写的代码，额外加一些检测。第三方库不需要这么严格的检测
+if(LINUX)
+	add_compile_options(-Wextra -Wformat=1 -Wno-unused-parameter)
+endif()
 
 # 把库的符号包含到生成的exe中，lua直接require so库时才可以找到符号
 # 新版本用 target_link_options
@@ -128,9 +118,6 @@ target_include_directories(master PRIVATE
     ${DEPS_PATH}/lua_flatbuffers
     ${DEPS_PATH}/lua_bson
     ${DEPS_PATH}/websocket-parser
-
-    /usr/local/include/libmongoc-1.0
-    /usr/local/include/libbson-1.0
 )
 
 # 库文件，必须 在add_executable之后

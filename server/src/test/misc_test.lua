@@ -4,6 +4,7 @@
 
 local json = require "lua_parson"
 local xml = require "lua_rapidxml"
+local util = require "util"
 
 local js = [==[
 {
@@ -254,5 +255,29 @@ t_describe("util.head test", function()
     -- 参考boost，加一个id，对比id的大小实现稳定heap https://www.boost.org/doc/libs/develop/doc/html/heap.html
     t_it("heap stable", function()
         t_print("UNIMPLEMENTED !!")
+    end)
+end)
+
+t_describe("crypto test", function()
+    local str0 = "123456789"
+    local str1 = "abcdefghi"
+    local str = str0 .. str1
+
+    t_it("md5", function()
+        t_equal(util.md5(str), "60ff7843f0d81d2666e2f00b242dd467")
+        t_equal(util.md5(true, str), "60FF7843F0D81D2666E2F00B242DD467")
+        t_equal(util.md5(str), util.md5(str0, str1))
+        t_equal(util.md5(true, str), util.md5(true, str0, str1))
+    end)
+
+    t_it("sha1", function()
+        t_equal(util.sha1(str), "e34f10117b9d903e5c4c7e751c57db0426c33661")
+        t_equal(util.sha1(true, str),"E34F10117B9D903E5C4C7E751C57DB0426C33661")
+        t_equal(util.sha1(str), util.sha1(str0, str1))
+        t_equal(util.sha1(true, str), util.sha1(true, str0, str1))
+    end)
+
+    t_it("base64", function()
+        t_equal(util.base64(str), "MTIzNDU2Nzg5YWJjZGVmZ2hp")
     end)
 end)

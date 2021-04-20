@@ -44,9 +44,8 @@ static int32_t md5(lua_State *L)
 {
     size_t len;
     MD5_CTX md;
-    char buf[33];
     const char *ptr;
-    unsigned char dgst[16];
+    unsigned char dgst[MD5_DIGEST_LENGTH];
 
     int32_t index   = 1;
     const char *fmt = "%02x"; // default format to lower
@@ -72,12 +71,13 @@ static int32_t md5(lua_State *L)
     }
 
     MD5_Final(dgst, &md);
+    char buf[MD5_DIGEST_LENGTH * 2 + 1];
     for (int32_t i = 0; i < 16; ++i)
     {
         //--%02x即16进制输出，占2个字节
         snprintf(buf + i * 2, 3, fmt, dgst[i]);
     }
-    lua_pushlstring(L, buf, 32);
+    lua_pushlstring(L, buf, MD5_DIGEST_LENGTH * 2);
 
     return 1;
 }
@@ -188,7 +188,7 @@ inline char uuid_short_char(lua_State *L, const char c)
         49, 50, 51, -1, -1, -1, -1, -1 // 112 ~ 127
     };
 
-    if (c < 0 || c > 127 || digest[(int)c] < 0)
+    if (c < 0 || digest[(int)c] < 0)
     {
         return luaL_error(L, "uuid short string invalid character:%c", c);
     }
@@ -316,7 +316,7 @@ static int32_t sha1(lua_State *L)
 
     _raw_sha1(L, index, sha1);
 
-    char buf[SHA_DIGEST_LENGTH * 2];
+    char buf[SHA_DIGEST_LENGTH * 2 + 1];
     for (int32_t i = 0; i < SHA_DIGEST_LENGTH; ++i)
     {
         //--%02x即16进制输出，占2个字节
