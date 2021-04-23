@@ -6,10 +6,16 @@
 #include <openssl/evp.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
-#include <uuid/uuid.h>
 
 #include "lutil.hpp"
-#include "../net/socket.hpp" // get_addr_info
+#include "../net/socket.hpp"        // get_addr_info
+#include "../net/socket_compat.hpp" // strerror_ex
+
+#ifdef __windows__
+    #include <rpc.h>
+#else
+    #include <uuid/uuid.h>
+#endif
 
 /**
  * 以阻塞方式获取域名对应的ip
@@ -89,14 +95,31 @@ static int32_t md5(lua_State *L)
  */
 static int32_t uuid(lua_State *L)
 {
+    bool upper = lua_toboolean(L, 1);
+#ifdef __windows__
+    UUID uuid;
+    UuidCreate(&uuid);
+    char *b;
+    UuidToStringA(&uuid, (RPC_CSTR *)&b);
+    if (upper)
+    {
+        int32_t i = 0;
+        while (b[i])
+        {
+            b[i] = toupper(b[i]);
+            i++;
+        }
+    }
+    lua_pushstring(L, b);
+    RpcStringFreeA((RPC_CSTR *)&b);
+#else
     uuid_t u;
     char b[40] = {0};
-
-    bool upper = lua_toboolean(L, 1);
 
     uuid_generate(u);
     upper ? uuid_unparse_upper(u, b) : uuid_unparse_lower(u, b);
     lua_pushstring(L, b);
+#endif
 
     return 1;
 }
@@ -107,6 +130,9 @@ static int32_t uuid(lua_State *L)
  */
 static int32_t uuid_short(lua_State *L)
 {
+#ifdef __windows__
+    luaL_error(L, "uuid_short unsupported in this platform");
+#else
     static const char *digest =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
     uuid_t u;
@@ -163,7 +189,7 @@ static int32_t uuid_short(lua_State *L)
     *cur_char = digest[(int)val];
 
     lua_pushstring(L, out);
-
+#endif
     return 1;
 }
 
@@ -203,6 +229,9 @@ inline char uuid_short_char(lua_State *L, const char c)
  */
 static int32_t uuid_short_parse(lua_State *L)
 {
+#ifdef __windows__
+    luaL_error(L, "uuid_short_parse unsupported in this platform");
+#else
     size_t len           = 0;
     const char *str_uuid = lua_tolstring(L, 1, &len);
 
@@ -250,7 +279,7 @@ static int32_t uuid_short_parse(lua_State *L)
     char b[40] = {0};
     uuid_unparse(u, b);
     lua_pushstring(L, b);
-
+#endif
     return 1;
 }
 
@@ -263,7 +292,7 @@ static int32_t what_error(lua_State *L)
 {
     int32_t eno = luaL_checkinteger(L, 1);
 
-    lua_pushstring(L, strerror(eno));
+    lua_pushstring(L, io_strerror(eno));
 
     return 1;
 }

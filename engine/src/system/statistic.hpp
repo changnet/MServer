@@ -150,7 +150,7 @@ public:
     typedef std::unordered_map<std::string, PktCounter> RPCCounterType;
 
     typedef std::unordered_map<uint32_t, TrafficCounter> SocketTrafficType;
-    typedef std::unordered_map<std::string, struct BaseCounter> BaseCounterType;
+    typedef std::unordered_map<std::string, BaseCounter> BaseCounterType;
 
 public:
     ~Statistic();

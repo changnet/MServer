@@ -182,7 +182,7 @@ public:
      * @len:len为0表示不需要确定预分配
      * 注意当len不为0时而当前chunk空间不足，会直接申请下一个chunk，数据包并不是连续的
      */
-    inline bool __attribute__((warn_unused_result)) reserved(uint32_t len = 0)
+    inline bool reserved(uint32_t len = 0)
     {
         // 正常情况下不会分配这么大，但防止websocket时别人恶意传长度
         if (EXPECT_FALSE(len > BUFFER_CHUNK * 10)) return false;

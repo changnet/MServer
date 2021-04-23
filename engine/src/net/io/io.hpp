@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../buffer.hpp"
+class Buffer;
 
 /* socket input output control */
 class IO

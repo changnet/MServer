@@ -1,9 +1,3 @@
-#include "../global/platform.hpp"
-// unable localtime_r in mingw
-#ifdef __MINGW__
-    #define _POSIX_THREAD_SAFE_FUNCTIONS 200112L
-#endif
-
 #include <filesystem>
 
 #include "async_log.hpp"
@@ -65,7 +59,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     if (e)
     {
         ELOG_R("rename daily check file exist file error %s %s", _path.c_str(),
-                e.message().c_str());
+               e.message().c_str());
         return;
     }
     if (ok)
@@ -74,7 +68,7 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
         if (e)
         {
             ELOG_R("rename daily log file error %s %s", _path.c_str(),
-                    e.message().c_str());
+                   e.message().c_str());
         }
     }
 }
@@ -107,7 +101,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         if (e)
         {
             ELOG_R("rename size check file exist file error %s %s",
-                    _path.c_str(), e.message().c_str());
+                   _path.c_str(), e.message().c_str());
             return;
         }
 
@@ -127,7 +121,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         if (e)
         {
             ELOG_R("rename size file error %s %s", new_path.c_str(),
-                    e.message().c_str());
+                   e.message().c_str());
             return;
         }
     }
@@ -137,7 +131,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     if (e)
     {
         ELOG_R("rename size check current file exist file error %s %s",
-                _path.c_str(), e.message().c_str());
+               _path.c_str(), e.message().c_str());
         return;
     }
 
@@ -149,7 +143,7 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
         if (e)
         {
             ELOG_R("rename size current file error %s %s", _path.c_str(),
-                    e.message().c_str());
+                   e.message().c_str());
             return;
         }
     }
@@ -170,7 +164,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
     if (e)
     {
         ELOG_R("init size policy check file exist file error %s %s",
-                _path.c_str(), e.message().c_str());
+               _path.c_str(), e.message().c_str());
         return true;
     }
     if (ok)
@@ -179,7 +173,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
         if (e)
         {
             ELOG_R("init size policy file size exist file error %s %s",
-                    _path.c_str(), e.message().c_str());
+                   _path.c_str(), e.message().c_str());
             return true;
         }
     }
@@ -198,7 +192,7 @@ bool AsyncLog::Policy::init_daily_policy()
     if (e)
     {
         ELOG_R("rename daily initfile exist file error %s %s", _path.c_str(),
-                e.message().c_str());
+               e.message().c_str());
         ok = false; // 即使获取不了上次文件的时间，也按天切分文件
     }
     if (ok)
@@ -243,7 +237,7 @@ FILE *AsyncLog::Policy::open_stream(const char *path)
         if (!_file)
         {
             ELOG_R("can't open log file(%s):%s\n", _path.c_str(),
-                    strerror(errno));
+                   strerror(errno));
             return nullptr;
         }
     }

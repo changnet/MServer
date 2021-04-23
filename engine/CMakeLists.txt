@@ -28,6 +28,7 @@ if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug )
 endif()
 
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 # win和linux下编译选项详见：https://github.com/Samsung/netcoredbg/blob/master/compileoptions.cmake
@@ -43,10 +44,13 @@ if(WINDOWS)
     # add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Checked>>:/MTd>)
 
     # add_compile_options(/W3) # set warning level to 3
-    add_compile_options(/WX) # treat warnings as errors
+    # add_compile_options(/WX) # treat warnings as errors
     add_compile_options(/Zc:forScope) # C++ language conformance: enforce Standard C++ for scoping rules
     add_compile_options(/source-charset:utf-8) # Force MSVC to compile source as UTF-8.
     add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Relwithdebinfo>>:/Zi>) # enable debugging information
+
+    # https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+    add_compile_options(/Zc:__cplusplus) # 使用新的__cplusplus值，否则在win下这个值一直是199711L
 
     # 优化选项
     # https://docs.microsoft.com/en-us/cpp/build/reference/o1-o2-minimize-size-maximize-speed?view=msvc-160

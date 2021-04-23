@@ -6,10 +6,10 @@ int32_t LAstar::search(lua_State *L) // 寻路
 {
     class LMap **udata = (class LMap **)luaL_checkudata(L, 1, "Map");
 
-    int32_t x  = luaL_checkinteger(L, 2); // 起点坐标x
-    int32_t y  = luaL_checkinteger(L, 3); // 起点坐标x
-    int32_t dx = luaL_checkinteger(L, 4); // 终点坐标x
-    int32_t dy = luaL_checkinteger(L, 5); // 终点坐标x
+    int32_t x  = (int32_t)luaL_checkinteger(L, 2); // 起点坐标x
+    int32_t y  = (int32_t)luaL_checkinteger(L, 3); // 起点坐标x
+    int32_t dx = (int32_t)luaL_checkinteger(L, 4); // 终点坐标x
+    int32_t dy = (int32_t)luaL_checkinteger(L, 5); // 终点坐标x
 
     // 路径放到一个table里，但是C++里不会创建，由脚本那边传入并缓存，防止频繁创建引发gc
     const static int32_t tbl_stack = 6;

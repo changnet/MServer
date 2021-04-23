@@ -35,12 +35,21 @@
 extern std::string std_format(const char *fmt, ...);
 #define STD_FMT(...) std_format(__VA_ARGS__)
 
+// 把常量值转成字符串
+// https://gcc.gnu.org/onlinedocs/gcc-9.2.0/cpp/Stringizing.html
+#define STR(s) #s
+
 /* Qt style unused paramter handler */
 #define UNUSED(x) (void)x
 
 /* 分支预测，汇编优化。逻辑上不会改变cond的值 */
-#define EXPECT_FALSE(cond) __builtin_expect(!!(cond), 0)
-#define EXPECT_TRUE(cond)  __builtin_expect(!!(cond), 1)
+#ifdef __windows__
+    #define EXPECT_FALSE(cond) cond
+    #define EXPECT_TRUE(cond)  cond
+#else
+    #define EXPECT_FALSE(cond) __builtin_expect(!!(cond), 0)
+    #define EXPECT_TRUE(cond)  __builtin_expect(!!(cond), 1)
+#endif
 
 /* terminated without destroying any object and without calling any of the
  * functions passed to atexit or at_quick_exit
