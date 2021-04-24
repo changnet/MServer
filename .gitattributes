@@ -8,3 +8,6 @@
 *.graphml binary
 *.png binary
 *.so binary
+
+# make github language ignore pb files
+server/pb/* linguist-documentation

@@ -67,7 +67,7 @@ function shell()
 # ./mongo.sh cmd test_999 mongo_clear
 function cmd()
 {
-    $TEST_MONGO $3 < ../project/$4.ms
+    $TEST_MONGO $3 < ../project/$4.js
 }
 
 # 安装数据库并创建用于测试的用户
