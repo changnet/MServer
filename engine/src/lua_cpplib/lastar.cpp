@@ -20,9 +20,9 @@ int32_t LAstar::search(lua_State *L) // 寻路
 
     if (!AStar::search(map, x, y, dx, dy)) return 0;
 
-    const std::vector<uint16_t> &path = AStar::get_path();
+    const std::vector<int32_t> &path = AStar::get_path();
 
-    size_t path_sz = path.size();
+    int32_t path_sz = (int32_t)path.size();
     // 路径依次存各个点的x,y坐标，应该是成双的
     if (0 != path_sz % 2) return 0;
 

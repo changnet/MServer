@@ -90,7 +90,7 @@ add_subdirectory(deps)
 
 # 自己写的代码，额外加一些检测。第三方库不需要这么严格的检测
 if(LINUX)
-	add_compile_options(-Wextra -Wformat=1 -Wno-unused-parameter)
+	add_compile_options(-Wextra -Wconversion -Wformat=1 -Wno-unused-parameter)
 endif()
 
 # 把库的符号包含到生成的exe中，lua直接require so库时才可以找到符号

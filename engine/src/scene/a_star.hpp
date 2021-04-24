@@ -19,10 +19,10 @@ public:
         uint8_t mask; // 是否close
         int32_t g; // a*算法中f = g + h中的g，代表从起始位置到该格子的开销
         int32_t h; // a*算法中f = g + h中的h，代表该格子到目标节点预估的开销
-        uint16_t x;  // 该格子的x坐标
-        uint16_t y;  // 该格子的y坐标
-        uint16_t px; // 该格子的父格子x坐标
-        uint16_t py; // 该格子的父格子y坐标
+        int32_t x;  // 该格子的x坐标
+        int32_t y;  // 该格子的y坐标
+        int32_t px; // 该格子的父格子x坐标
+        int32_t py; // 该格子的父格子y坐标
     };
 
 public:
@@ -35,16 +35,16 @@ public:
      */
     bool search(const GridMap *map, int32_t x, int32_t y, int32_t dx, int32_t dy);
     // 获取路径
-    const std::vector<uint16_t> &get_path() const { return _path; }
+    const std::vector<int32_t> &get_path() const { return _path; }
 
 private:
     struct Node *pop_open_set();
     bool backtrace_path(const struct Node *dest, int32_t dx, int32_t dy,
-                        uint16_t height);
+                        int32_t height);
     bool do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
                    int32_t dy);
-    struct Node *new_node(uint16_t x, uint16_t y, uint16_t px = 0,
-                          uint16_t py = 0);
+    struct Node *new_node(int32_t x, int32_t y, int32_t px = 0,
+                          int32_t py = 0);
 
     /* 启发函数的选择，下面的连接说明各个算法的适用场景及效率
      * http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
@@ -77,7 +77,7 @@ private:
 private:
     struct Node **_node_set; // 记录当前寻路格子集合
     struct Node *_node_pool; // 格子对象内存池
-    std::vector<uint16_t> _path; // 生成的路径，反向并且每两个元素表示一个格子
+    std::vector<int32_t> _path; // 生成的路径，反向并且每两个元素表示一个格子
     std::vector<struct Node *> _open_set; // 记录算法运行过程中待处理的格子
 
     int32_t _set_max;  // 当前集合大小

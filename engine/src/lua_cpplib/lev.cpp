@@ -102,8 +102,8 @@ int32_t LEV::real_ms_time(lua_State *L)
 
 int32_t LEV::signal(lua_State *L)
 {
-    int32_t sig    = luaL_checkinteger(L, 1);
-    int32_t action = luaL_optinteger(L, 2, -1);
+    int32_t sig    = (int32_t)luaL_checkinteger(L, 1);
+    int32_t action = (int32_t)luaL_optinteger(L, 2, -1);
     if (sig < 1 || sig > 31)
     {
         return luaL_error(L, "illegal signal id:%d", sig);
@@ -117,7 +117,7 @@ int32_t LEV::signal(lua_State *L)
 int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
 {
     // 主循环不要设置太长的循环时间，如果太长用定时器就好了
-    int32_t interval = luaL_checkinteger(L, 1);
+    int32_t interval = (int32_t)luaL_checkinteger(L, 1);
     if (interval < 0 || interval > 1000)
     {
         return luaL_error(L, "illegal argument");
@@ -130,7 +130,7 @@ int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
 
 int32_t LEV::set_critical_time(lua_State *L) // 设置主循环临界时间
 {
-    _critical_tm = luaL_checkinteger(L, 1);
+    _critical_tm = (int32_t)luaL_checkinteger(L, 1);
 
     return 0;
 }

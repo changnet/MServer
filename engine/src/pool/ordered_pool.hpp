@@ -36,15 +36,16 @@ public:
         _max_now += n;
     }
 
-    /* 分配一块大小为n个ordered_size的内存
-     * @chunk_size:预分配的数量(因为内存大小不一，分配策划需要根据逻辑来定)
+    /**
+     * 分配一块大小为n个ordered_size的内存
+     * @param chunk_size 预分配的数量(因为内存大小不一，分配策划需要根据逻辑来定)
      */
     char *ordered_malloc(uint32_t n, uint32_t chunk_size)
     {
         assert(n > 0 && chunk_size > 0);
         if (EXPECT_FALSE(anptmax < n + 1))
         {
-            size_t size = 16;
+            uint32_t size = 16;
             while (size < n + 1) size *= 2;
 
             NODE *tmp = new NODE[size];

@@ -18,8 +18,8 @@
 
 AStar::AStar()
 {
-    _node_set  = NULL; // 记录当前寻路格子数据
-    _node_pool = NULL; // 格子对象内存池
+    _node_set  = nullptr; // 记录当前寻路格子数据
+    _node_pool = nullptr; // 格子对象内存池
 
     _set_max  = 0;
     _pool_max = 0; // 内存池格子数量
@@ -31,8 +31,8 @@ AStar::~AStar()
     delete[] _node_set;
     delete[] _node_pool;
 
-    _node_set  = NULL;
-    _node_pool = NULL;
+    _node_set  = nullptr;
+    _node_pool = nullptr;
 
     _set_max  = 0;
     _pool_max = 0; // 内存池格子数量
@@ -53,8 +53,8 @@ bool AStar::search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
         return false;
     }
 
-    uint16_t width  = map->get_width();
-    uint16_t height = map->get_height();
+    int32_t width  = map->get_width();
+    int32_t height = map->get_height();
     // 分配格子集合，每次寻路时只根据当前地图只增不减
     if (_set_max < width * height)
     {
@@ -99,13 +99,13 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
         {1, -1}, {1, 1}, {-1, 1}, {-1, -1} // 东北-东南-西南-西北
     };
 
-    uint16_t height           = map->get_height();
+    int32_t height           = map->get_height();
     struct Node *parent       = new_node(x, y);
     _node_set[x * height + y] = parent;
     while (parent)
     {
-        uint16_t px = parent->x;
-        uint16_t py = parent->y;
+        int32_t px = parent->x;
+        int32_t py = parent->y;
         // 到达目标
         if (px == dx && py == dy)
         {
@@ -177,11 +177,11 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
 struct AStar::Node *AStar::pop_open_set()
 {
     size_t open_sz = _open_set.size();
-    if (0 == open_sz) return NULL;
+    if (0 == open_sz) return nullptr;
 
     int32_t parent_f    = -1;
     size_t parent_idx   = -1;
-    struct Node *parent = NULL;
+    struct Node *parent = nullptr;
     for (size_t idx = 0; idx < open_sz; idx++)
     {
         struct Node *nd = _open_set[idx];
@@ -202,15 +202,15 @@ struct AStar::Node *AStar::pop_open_set()
 
 // 从终点回溯到起点并得到路径
 bool AStar::backtrace_path(const struct Node *dest, int32_t dx, int32_t dy,
-                           uint16_t height)
+                           int32_t height)
 {
     assert(0 == _path.size());
 
     // 102400防止逻辑出错
     while (dest && _path.size() < 1024000)
     {
-        uint16_t x = dest->x;
-        uint16_t y = dest->y;
+        int32_t x = dest->x;
+        int32_t y = dest->y;
         _path.push_back(x);
         _path.push_back(y);
 
@@ -225,12 +225,12 @@ bool AStar::backtrace_path(const struct Node *dest, int32_t dx, int32_t dy,
 }
 
 // 从内存池取一个格子对象
-struct AStar::Node *AStar::new_node(uint16_t x, uint16_t y, uint16_t px,
-                                    uint16_t py)
+struct AStar::Node *AStar::new_node(int32_t x, int32_t y, int32_t px,
+                                    int32_t py)
 {
     // 如果预分配的都用完了，就不找了
     // 继续再找对于服务器而言也太低效，建议上导航坐标或者针对玩法优化
-    if (_pool_idx >= _pool_max) return NULL;
+    if (_pool_idx >= _pool_max) return nullptr;
     struct Node *nd = _node_pool + _pool_idx;
 
     _pool_idx++;
@@ -280,5 +280,6 @@ int32_t AStar::euclidean(int32_t x, int32_t y, int32_t gx, int32_t gy)
     int32_t dx = abs(x - gx);
     int32_t dy = abs(y - gy);
     // 这个算法有sqrt，会慢一点，不过现在的游戏大多数是可以任意角度行走的
-    return D * sqrt(dx * dx + dy * dy);
+    // TODO 这里强转成int32，实际用double会准确一些
+    return int32_t(D * sqrt(dx * dx + dy * dy));
 }

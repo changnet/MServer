@@ -34,8 +34,8 @@ public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
         uint8_t _mask;
 
-        uint16_t _pos_x; // 格子坐标，x
-        uint16_t _pos_y; // 格子坐标，y
+        int32_t _pos_x; // 格子坐标，x
+        int32_t _pos_y; // 格子坐标，y
         EntityId _id;
 
         /**

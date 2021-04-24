@@ -52,8 +52,8 @@ void EVIO::set(int32_t fd, int32_t events)
 EVTimer::EVTimer(EV *loop) : EVWatcher(loop)
 {
     _policy = P_NONE;
-    _at     = 0.;
-    _repeat = 0.;
+    _at     = 0;
+    _repeat = 0;
 }
 
 EVTimer::~EVTimer()
@@ -100,8 +100,8 @@ void EVTimer::reschedule(int64_t now)
 void EVTimer::start()
 {
     assert(_loop);
-    assert(_at >= 0.);
-    assert(_repeat >= 0.);
+    assert(_at >= 0);
+    assert(_repeat >= 0);
     assert(_cb);
     assert(!_active);
 

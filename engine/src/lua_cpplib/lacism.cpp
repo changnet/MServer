@@ -174,7 +174,7 @@ int32_t LAcism::load_from_file(lua_State *L)
     {
         for (size_t i = 0; i < _patt.len; i++)
         {
-            *(_patt.ptr + i) = ::tolower(*(_patt.ptr + i));
+            *(_patt.ptr + i) = (char)::tolower(*(_patt.ptr + i));
         }
     }
 

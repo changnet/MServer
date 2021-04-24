@@ -6,7 +6,7 @@ GridMap::GridMap()
     _id       = 0;
     _width    = 0;
     _height   = 0;
-    _grid_set = NULL;
+    _grid_set = nullptr;
 
     C_OBJECT_ADD("grid_map");
 }
@@ -25,9 +25,9 @@ bool GridMap::load_file(const char *path)
 }
 
 // 设置地图信息
-bool GridMap::set(int32_t id, uint16_t width, uint16_t height)
+bool GridMap::set(int32_t id, int32_t width, int32_t height)
 {
-    assert(NULL == _grid_set);
+    assert(nullptr == _grid_set);
 
     if (MAX_MAP_GRID < width || MAX_MAP_GRID < height) return false;
 
@@ -43,7 +43,7 @@ bool GridMap::set(int32_t id, uint16_t width, uint16_t height)
 }
 
 // 填充地图信息
-bool GridMap::fill(uint16_t x, uint16_t y, int8_t cost)
+bool GridMap::fill(int32_t x, int32_t y, int8_t cost)
 {
     if (x >= _width || y >= _height) return false;
 

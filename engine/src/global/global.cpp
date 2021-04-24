@@ -42,13 +42,10 @@ void back_trace(void)
 {
 #ifdef __linux__
     void *array[50] = {0};
-    size_t size;
-    char **strings;
+    int32_t size   = backtrace(array, 50);
+    char **strings = backtrace_symbols(array, size);
 
-    size    = backtrace(array, 50);
-    strings = backtrace_symbols(array, size);
-
-    for (size_t i = 0; i < size; i++)
+    for (int32_t i = 0; i < size; i++)
     {
         printf("%s\n", strings[i]);
     }

@@ -407,7 +407,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     struct sockaddr_in_x sk_socket;
     memset(&sk_socket, 0, sizeof(sk_socket));
     sk_socket.sin_family_x = AF_INET_X;
-    sk_socket.sin_port_x   = htons(port);
+    sk_socket.sin_port_x   = htons((uint16_t)port);
 
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
@@ -474,7 +474,7 @@ const char *Socket::address(char *buf, size_t len, int *port)
         *port = ntohs(addr.sin_port_x);
     }
 
-    return inet_ntop(AF_INET_X, &addr.sin_addr_x, buf, len);
+    return inet_ntop(AF_INET_X, &addr.sin_addr_x, buf, (socklen_t)len);
 }
 
 int32_t Socket::listen(const char *host, int32_t port)
@@ -518,7 +518,7 @@ int32_t Socket::listen(const char *host, int32_t port)
 
     memset(&sk_socket, 0, sizeof(sk_socket));
     sk_socket.sin_family_x = AF_INET_X;
-    sk_socket.sin_port_x   = htons(port);
+    sk_socket.sin_port_x   = htons((uint16_t)port);
 
     ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
     if (0 == ok)

@@ -22,7 +22,7 @@ GridAOI::~GridAOI()
 
     _entity_set.clear();
 
-    for (int i = 0; i < _width * _height; i++)
+    for (int32_t i = 0; i < _width * _height; i++)
     {
         delete _entity_grid[i];
     }
