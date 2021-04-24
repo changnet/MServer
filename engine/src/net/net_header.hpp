@@ -44,11 +44,11 @@ typedef int32_t Owner;
 #define SET_HEADER_LENGTH(h, l, cmd, SET_FAIL)                           \
     do                                                                   \
     {                                                                    \
-        if (l < 0) SET_FAIL;                                             \
+        if ((int32_t)l < 0) SET_FAIL;                                    \
         size_t hl = sizeof(h) + l;                                       \
         if (hl > MAX_PACKET_LEN)                                         \
         {                                                                \
-            ELOG("packet(%d) length(%d) overflow:%s", cmd, (int32_t)hl, \
+            ELOG("packet(%d) length(%d) overflow:%s", cmd, (int32_t)hl,  \
                   __FUNCTION__);                                         \
             SET_FAIL;                                                    \
             return -1;                                                   \

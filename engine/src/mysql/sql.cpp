@@ -244,7 +244,6 @@ void Sql::fetch_result(MYSQL_RES *result, SqlResult *res)
 
     uint32_t num_rows   = mysql_num_rows(result);
     uint32_t num_fields = mysql_num_fields(result);
-    assert(num_fields >= 0);
 
     res->_ecode    = 0;
     res->_num_rows = num_rows;

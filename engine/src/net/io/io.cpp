@@ -1,6 +1,7 @@
 #include "../socket_compat.hpp"
 
 #include "io.hpp"
+#include "../buffer.hpp"
 
 IO::IO(class Buffer *recv, class Buffer *send)
 {
