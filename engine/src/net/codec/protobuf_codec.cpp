@@ -1,18 +1,13 @@
 #include <vector>
 
 #include "../net_header.hpp"
-#include "protobuf_codec.hpp"
-
 #include <lua.hpp>
 #include <pbc.h>
 
-/* linux open dir */
-#include <dirent.h>
-#include <libgen.h> /* for basename */
-#include <sys/stat.h>
-#include <sys/types.h>
-
 #include <fstream>
+#include <filesystem>
+
+#include "protobuf_codec.hpp"
 
 /* check if suffix match */
 static int is_suffix_file(const char *path, const char *suffix)
@@ -136,7 +131,7 @@ int32_t lprotobuf::load_file(const char *path)
     int32_t len = ifs.tellg();
     ifs.seekg(0, ifs.beg);
 
-    if (!ifs.good() or len <= 0)
+    if (!ifs.good() || len <= 0)
     {
         ifs.close();
         ELOG("get file length error:%s", path);
@@ -179,36 +174,29 @@ int32_t lprotobuf::load_path(const char *path, const char *suffix)
         return -1;
     }
 
-    DIR *dir = opendir(path);
-    if (!dir)
+    int count         = 0;
+    std::error_code e;
+    std::filesystem::directory_iterator dir_iter(path, e);
+    if (e)
     {
-        ELOG("can not open directory(%s):%s", path, strerror(errno));
+        ELOG("can not open directory(%s):%s", path, e.message());
 
         return -1;
     }
-
-    int count         = 0;
-    struct dirent *dt = NULL;
-    while ((dt = readdir(dir)))
+    for (auto &p : dir_iter)
     {
-        snprintf(file_path + sz, PATH_MAX, "%s", dt->d_name);
+        if (!p.is_regular_file()) continue;
 
-        struct stat path_stat;
-        stat(file_path, &path_stat);
+        const char *c_path = p.path().string().c_str();
+        if (!is_suffix_file(c_path, suffix)) continue;
 
-        if (S_ISREG(path_stat.st_mode) && is_suffix_file(dt->d_name, suffix))
+        if (load_file(c_path) < 0)
         {
-
-            if (load_file(file_path) < 0)
-            {
-                closedir(dir);
-                return -1;
-            }
-            ++count;
+            return -1;
         }
+        ++count;
     }
 
-    closedir(dir);
     return count;
 }
 

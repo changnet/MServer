@@ -19,7 +19,7 @@ int32_t LTimer::set(lua_State *L)
 
     int32_t policy = luaL_optinteger(L, 3, 0);
 
-    if (after < 0 or repeat < 0)
+    if (after < 0 || repeat < 0)
     {
         return luaL_error(L, "negative timer argument");
     }

@@ -1,5 +1,5 @@
 #include "sql.hpp"
-#include <mariadb/errmsg.h>
+#include <errmsg.h>
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
  * thread-safe, so call it before threads are created, or protect the call with
@@ -277,7 +277,7 @@ void Sql::fetch_result(MYSQL_RES *result, SqlResult *res)
         /* mysql_fetch_lengths() is valid only for the current row of the
          * result set
          */
-        size_t *lengths = mysql_fetch_lengths(result);
+        unsigned long *lengths = mysql_fetch_lengths(result);
         for (uint32_t i = 0; i < num_fields; i++)
         {
             res_row[i].set(row[i], lengths[i]);

@@ -62,7 +62,7 @@ int32_t LListAoi::get_interest_me_entity(lua_State *L)
 
     lUAL_CHECKTABLE(L, 2);
 
-    const struct EntityCtx *ctx = get_entity_ctx(id);
+    const EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         table_pack_size(L, 2, 0);
@@ -133,7 +133,7 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
     // 例如怪物没有视野，但有时候需要取怪物附近的实体
     int32_t visual = luaL_optinteger(L, 4, -1);
 
-    const struct EntityCtx *ctx = get_entity_ctx(id);
+    const EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
     {
         table_pack_size(L, 3, 0);

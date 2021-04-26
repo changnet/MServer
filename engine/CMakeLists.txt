@@ -165,6 +165,7 @@ if(WIN32)
     )
 elseif(UNIX)
     target_include_directories(master PRIVATE
+        /usr/include/mariadb
         /usr/local/include/libmongoc-1.0
         /usr/local/include/libbson-1.0
     )

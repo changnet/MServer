@@ -72,7 +72,7 @@ void LStatistic::dump_base_counter(const Statistic::BaseCounterType &counter,
     Statistic::BaseCounterType::const_iterator itr = counter.begin();
     while (itr != counter.end())
     {
-        const struct Statistic::BaseCounter &bc = itr->second;
+        const Statistic::BaseCounter &bc = itr->second;
         lua_createtable(L, 0, 3);
 
         PUSH_STRING("name", itr->first.c_str());
