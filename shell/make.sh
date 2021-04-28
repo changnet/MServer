@@ -12,15 +12,7 @@ mkdir -p $BUILD_DIR
 
 m=()
 c=()
-for p in "$@"
-do
-    # start with -D, like -DCMAKE_BUILD_TYPE=Release
-    if [[ "$p" == -D* ]]; then
-        c+=($p)
-    else
-        m+=($p)
-    fi
-done
+
 
 function do_cmake()
 {
@@ -41,6 +33,23 @@ function do_make()
 	
 	make ${m[0]} ${m[1]} ${m[2]}
 }
+
+# ./make.sh cmake表示重新执行cmake
+if [[ "$1" == "cmake" ]]; then
+	cd $BUILD_DIR;
+	cmake $ENGINE_DIR ${c[0]} ${c[1]} ${c[2]}
+	exit 0
+fi
+
+for p in "$@"
+do
+    # start with -D, like -DCMAKE_BUILD_TYPE=Release
+    if [[ "$p" == -D* ]]; then
+        c+=($p)
+    else
+        m+=($p)
+    fi
+done
 
 # make VERBOSE=1 可以显示详细的编译过程
 # 支持只编译单个target的，如 make master

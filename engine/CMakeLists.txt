@@ -84,6 +84,14 @@ set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/.libs")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 
+if(WINDOWS)
+    find_package(Lua REQUIRED)
+elif(LINUX)
+    # debian 10的cmake版本还不支持find
+    find_package(Lua REQUIRED)
+    set(LUA_INCLUDE_DIR /usr/local/include)
+endif()
+
 add_subdirectory(deps)
 
 # master
@@ -141,9 +149,7 @@ target_link_libraries(master PRIVATE
     websocket_parser
 )
 
-if(WIN32)
-    #include(FindLua)
-    find_package(Lua REQUIRED)
+if(WINDOWS)
     find_package(libmongoc-1.0 CONFIG REQUIRED)
     find_package(OpenSSL REQUIRED)
     find_package(unofficial-libmariadb CONFIG REQUIRED)
