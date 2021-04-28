@@ -6,6 +6,10 @@ add_library(pbc STATIC ${SRC_LIST})
 target_include_directories(pbc PRIVATE
     pbc
 )
+if(WINDOWS)
+    target_compile_options(pbc PRIVATE /TP) # 强制以C++编译，这是pbc VC工程的设定。里面有些bool等类型，C编译不过
+endif()
+
 # http-parser
 add_library(http_parser STATIC http-parser/http_parser.c)
 

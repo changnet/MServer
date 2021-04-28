@@ -86,9 +86,10 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 
 if(WINDOWS)
     find_package(Lua REQUIRED)
-elif(LINUX)
-    # debian 10的cmake版本还不支持find
-    find_package(Lua REQUIRED)
+elseif(LINUX)
+    # debian 10的cmake 3.13版本还不支持findLua 5.4
+    # find_package(Lua CONFIG REQUIRED)
+    set(LUA_LIBRARIES /usr/local/lib)
     set(LUA_INCLUDE_DIR /usr/local/include)
 endif()
 
@@ -99,12 +100,11 @@ add_subdirectory(deps)
 # 自己写的代码，额外加一些检测。第三方库不需要这么严格的检测
 if(LINUX)
 	add_compile_options(-Wextra -Wconversion -Wformat=1 -Wno-unused-parameter)
+	# 把库的符号包含到生成的exe中，lua直接require so库时才可以找到符号
+	# 新版本用 target_link_options
+	# -E等同于 --export-dynamic 或者 -rdynamic
+	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-E")
 endif()
-
-# 把库的符号包含到生成的exe中，lua直接require so库时才可以找到符号
-# 新版本用 target_link_options
-# -E等同于 --export-dynamic 或者 -rdynamic
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,-E")
 
 # deps库的目录(cmake 3.13后请使用 target_link_directories)
 link_directories(
@@ -160,6 +160,8 @@ if(WINDOWS)
         ${MONGOC_INCLUDE_DIRS}
     )
     target_link_libraries(master PRIVATE
+        Rpcrt4 # uuidCreate
+        Dbghelp # MiniDumpWriteDump
         ${LUA_LIBRARIES}
         ${MONGOC_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
