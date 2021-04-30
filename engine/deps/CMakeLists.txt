@@ -7,7 +7,8 @@ target_include_directories(pbc PRIVATE
     pbc
 )
 if(WINDOWS)
-    target_compile_options(pbc PRIVATE /TP) # 强制以C++编译，这是pbc VC工程的设定。里面有些bool等类型，C编译不过
+    # 强制以C++编译，这是pbc VC工程的设定。里面有些bool等类型，C编译不过
+    target_compile_options(pbc PRIVATE /TP /wd4146 /wd4273 /wd4244 /wd4018 /wd4267)
 endif()
 
 # http-parser
