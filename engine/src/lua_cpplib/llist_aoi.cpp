@@ -30,7 +30,7 @@ int32_t LListAoi::set_index(lua_State *L)
 #ifdef USE_ORTH_LIST_AOI
     UNUSED(L);
 #else
-    ListAOI::set_index(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2));
+    ListAOI::set_index(luaL_checkinteger32(L, 1), luaL_checkinteger32(L, 2));
 #endif
     return 0;
 }
@@ -38,7 +38,7 @@ int32_t LListAoi::set_index(lua_State *L)
 int32_t LListAoi::get_all_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
-    int32_t mask = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger32(L, 1);
 
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
@@ -81,17 +81,17 @@ int32_t LListAoi::get_interest_me_entity(lua_State *L)
 int32_t LListAoi::get_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
-    int32_t mask = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger32(L, 1);
 
     lUAL_CHECKTABLE(L, 2);
 
     // 各个轴上的起点、终点坐标
-    int32_t src_x = luaL_checkinteger(L, 3);
-    int32_t dst_x = luaL_checkinteger(L, 4);
-    int32_t src_y = luaL_checkinteger(L, 5);
-    int32_t dst_y = luaL_checkinteger(L, 6);
-    int32_t src_z = luaL_checkinteger(L, 7);
-    int32_t dst_z = luaL_checkinteger(L, 8);
+    int32_t src_x = luaL_checkinteger32(L, 3);
+    int32_t dst_x = luaL_checkinteger32(L, 4);
+    int32_t src_y = luaL_checkinteger32(L, 5);
+    int32_t dst_y = luaL_checkinteger32(L, 6);
+    int32_t src_z = luaL_checkinteger32(L, 7);
+    int32_t dst_z = luaL_checkinteger32(L, 8);
 
     int32_t n = 0;
     ListAOI::each_entity([this, L, mask, &n, src_x, src_y, src_z, dst_x, dst_y,
@@ -126,12 +126,12 @@ int32_t LListAoi::get_entity(lua_State *L)
 int32_t LListAoi::get_visual_entity(lua_State *L)
 {
     EntityId id  = luaL_checkinteger(L, 1);
-    int32_t mask = luaL_checkinteger(L, 2);
+    int32_t mask = luaL_checkinteger32(L, 2);
     lUAL_CHECKTABLE(L, 3);
 
     // 使用特定的视野而不是实体本身的
     // 例如怪物没有视野，但有时候需要取怪物附近的实体
-    int32_t visual = luaL_optinteger(L, 4, -1);
+    int32_t visual = luaL_optinteger32(L, 4, -1);
 
     const EntityCtx *ctx = get_entity_ctx(id);
     if (!ctx)
@@ -162,7 +162,7 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
 int32_t LListAoi::update_visual(lua_State *L)
 {
     EntityId id    = luaL_checkinteger(L, 1);
-    int32_t visual = luaL_checkinteger(L, 2);
+    int32_t visual = luaL_checkinteger32(L, 2);
 
     CHECK_LIST(list_me_in, 3);
     CHECK_LIST(list_me_out, 4);
@@ -206,10 +206,10 @@ int32_t LListAoi::enter_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
     // 实体像素坐标
-    int32_t x      = luaL_checkinteger(L, 2);
-    int32_t y      = luaL_checkinteger(L, 3);
-    int32_t z      = luaL_checkinteger(L, 4);
-    int32_t visual = luaL_checkinteger(L, 5);
+    int32_t x      = luaL_checkinteger32(L, 2);
+    int32_t y      = luaL_checkinteger32(L, 3);
+    int32_t z      = luaL_checkinteger32(L, 4);
+    int32_t visual = luaL_checkinteger32(L, 5);
     // 掩码，可用于区分玩家、怪物、npc等，由上层定义
     uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 6));
 

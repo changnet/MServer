@@ -1,4 +1,5 @@
 #include "lmap.hpp"
+#include "ltools.hpp"
 #include "../scene/scene_include.hpp"
 
 LMap::~LMap() {}
@@ -13,9 +14,9 @@ int32_t LMap::load(lua_State *L) // 加载地图数据
 
 int32_t LMap::set(lua_State *L) // 设置地图信息(用于动态创建地图)
 {
-    int32_t id     = luaL_checkinteger(L, 1);
-    int32_t width  = luaL_checkinteger(L, 2);
-    int32_t height = luaL_checkinteger(L, 3);
+    int32_t id     = luaL_checkinteger32(L, 1);
+    int32_t width  = luaL_checkinteger32(L, 2);
+    int32_t height = luaL_checkinteger32(L, 3);
 
     if (width < 0 || height < 0) return 0;
 
@@ -27,9 +28,9 @@ int32_t LMap::set(lua_State *L) // 设置地图信息(用于动态创建地图)
 
 int32_t LMap::fill(lua_State *L) // (用于动态创建地图)
 {
-    int32_t x    = luaL_checkinteger(L, 1); // 填充的坐标x
-    int32_t y    = luaL_checkinteger(L, 2); // 填充的坐标y
-    int32_t cost = luaL_checkinteger(L, 3); // 该格子的消耗
+    int32_t x    = luaL_checkinteger32(L, 1); // 填充的坐标x
+    int32_t y    = luaL_checkinteger32(L, 2); // 填充的坐标y
+    int32_t cost = luaL_checkinteger32(L, 3); // 该格子的消耗
 
     bool ok = GridMap::fill(x, y, cost);
 

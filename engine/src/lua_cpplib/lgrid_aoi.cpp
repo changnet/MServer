@@ -4,8 +4,8 @@
 int32_t LGridAoi::set_visual_range(lua_State *L)
 {
     // 这里的宽高都是指像素
-    int32_t width  = luaL_checkinteger(L, 1);
-    int32_t height = luaL_checkinteger(L, 2);
+    int32_t width  = luaL_checkinteger32(L, 1);
+    int32_t height = luaL_checkinteger32(L, 2);
     GridAOI::set_visual_range(width, height);
 
     return 0;
@@ -14,9 +14,9 @@ int32_t LGridAoi::set_visual_range(lua_State *L)
 int32_t LGridAoi::set_size(lua_State *L)
 {
     // 这里的宽高都是指像素，因为地图的大小可能并不刚好符合格子数，后面再做转换
-    int32_t width    = luaL_checkinteger(L, 1);
-    int32_t height   = luaL_checkinteger(L, 2);
-    int32_t pix_grid = luaL_checkinteger(L, 3);
+    int32_t width    = luaL_checkinteger32(L, 1);
+    int32_t height   = luaL_checkinteger32(L, 2);
+    int32_t pix_grid = luaL_checkinteger32(L, 3);
 
     GridAOI::set_size(width, height, pix_grid);
 
@@ -27,7 +27,7 @@ int32_t LGridAoi::set_size(lua_State *L)
 int32_t LGridAoi::get_all_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
-    int32_t mask = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger32(L, 1);
 
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
@@ -72,15 +72,15 @@ int32_t LGridAoi::get_interest_me_entity(lua_State *L)
 int32_t LGridAoi::get_entity(lua_State *L)
 {
     // 可以多个实体类型，按位表示
-    int32_t mask = luaL_checkinteger(L, 1);
+    int32_t mask = luaL_checkinteger32(L, 1);
 
     lUAL_CHECKTABLE(L, 2);
 
     // 矩形的两个对角像素坐标
-    int32_t src_x = luaL_checkinteger(L, 3);
-    int32_t src_y = luaL_checkinteger(L, 4);
-    int32_t dst_x = luaL_checkinteger(L, 5);
-    int32_t dst_y = luaL_checkinteger(L, 6);
+    int32_t src_x = luaL_checkinteger32(L, 3);
+    int32_t src_y = luaL_checkinteger32(L, 4);
+    int32_t dst_x = luaL_checkinteger32(L, 5);
+    int32_t dst_y = luaL_checkinteger32(L, 6);
 
     int32_t n     = 0;
     int32_t ecode = GridAOI::each_range_entity(
@@ -104,7 +104,7 @@ int32_t LGridAoi::get_entity(lua_State *L)
 int32_t LGridAoi::get_visual_entity(lua_State *L)
 {
     EntityId id  = luaL_checkinteger(L, 1);
-    int32_t mask = luaL_checkinteger(L, 2);
+    int32_t mask = luaL_checkinteger32(L, 2);
     lUAL_CHECKTABLE(L, 3);
 
     const struct EntityCtx *ctx = get_entity_ctx(id);
@@ -166,8 +166,8 @@ int32_t LGridAoi::enter_entity(lua_State *L)
 {
     EntityId id = luaL_checkinteger(L, 1);
     // 实体像素坐标
-    int32_t x = luaL_checkinteger(L, 2);
-    int32_t y = luaL_checkinteger(L, 3);
+    int32_t x = luaL_checkinteger32(L, 2);
+    int32_t y = luaL_checkinteger32(L, 3);
     // 掩码，可用于区分玩家、怪物、npc等，由上层定义
     uint8_t mask = static_cast<uint8_t>(luaL_checkinteger(L, 4));
 

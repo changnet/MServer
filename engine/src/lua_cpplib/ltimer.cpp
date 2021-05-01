@@ -4,7 +4,7 @@
 
 LTimer::LTimer(lua_State *L)
 {
-    _timer_id = luaL_checkinteger(L, 2);
+    _timer_id = (int32_t)luaL_checkinteger(L, 2);
 
     _timer.set(StaticGlobal::ev());
     _timer.bind(&LTimer::callback, this);
@@ -17,7 +17,7 @@ int32_t LTimer::set(lua_State *L)
     int64_t after  = static_cast<int64_t>(luaL_checkinteger(L, 1));
     int64_t repeat = static_cast<int64_t>(luaL_optinteger(L, 2, 0));
 
-    int32_t policy = luaL_optinteger(L, 3, 0);
+    int32_t policy = luaL_optinteger32(L, 3, 0);
 
     if (after < 0 || repeat < 0)
     {

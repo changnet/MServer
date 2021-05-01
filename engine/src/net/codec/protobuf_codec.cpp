@@ -437,7 +437,7 @@ int32_t lprotobuf::raw_encode_field(lua_State *L, struct pbc_wmessage *wmsg,
     case PBC_INT64:
     {
         LUAL_CHECK(integer)
-        int64_t val = (int64_t)(lua_tointeger(L, index));
+        int64_t val = (int64_t)lua_tointeger(L, index);
         uint32_t hi = (uint32_t)(val >> 32);
         pbc_wmessage_integer(wmsg, key, (uint32_t)val, hi);
     }
@@ -458,7 +458,7 @@ int32_t lprotobuf::raw_encode_field(lua_State *L, struct pbc_wmessage *wmsg,
     case PBC_ENUM:
     {
         LUAL_CHECK(integer)
-        int32_t val = lua_tointeger(L, index);
+        int32_t val = (int32_t)lua_tointeger(L, index);
         pbc_wmessage_integer(wmsg, key, (uint32_t)val, 0);
     }
     break;

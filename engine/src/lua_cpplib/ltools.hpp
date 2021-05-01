@@ -209,3 +209,7 @@ void table_pack(lua_State *L, int32_t index, const Container &container,
 
     table_pack_size(L, index, n);
 }
+
+// 强制转换类型时，避免警告
+#define luaL_checkinteger32 (int32_t)luaL_checkinteger
+#define luaL_optinteger32 (int32_t)luaL_optinteger

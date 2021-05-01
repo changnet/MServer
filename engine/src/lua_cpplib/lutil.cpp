@@ -8,6 +8,7 @@
 #include <openssl/sha.h>
 
 #include "lutil.hpp"
+#include "ltools.hpp"
 #include "../net/socket.hpp"        // get_addr_info
 #include "../net/socket_compat.hpp" // strerror_ex
 
@@ -290,7 +291,7 @@ static int32_t uuid_short_parse(lua_State *L)
  */
 static int32_t what_error(lua_State *L)
 {
-    int32_t eno = luaL_checkinteger(L, 1);
+    int32_t eno = luaL_checkinteger32(L, 1);
 
     lua_pushstring(L, io_strerror(eno));
 

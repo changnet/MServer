@@ -19,7 +19,7 @@ int32_t WSStreamPacket::pack_clt(lua_State *L, int32_t index)
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
-    int32_t cmd    = luaL_checkinteger(L, index);
+    int32_t cmd    = luaL_checkinteger32(L, index);
     uint16_t ecode = luaL_checkinteger(L, index + 1);
 
     websocket_flags flags =

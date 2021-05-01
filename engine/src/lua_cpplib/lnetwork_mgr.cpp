@@ -73,11 +73,11 @@ uint32_t LNetworkMgr::new_connect_id()
  */
 int32_t LNetworkMgr::set_cs_cmd(lua_State *L)
 {
-    int32_t cmd        = luaL_checkinteger(L, 1);
+    int32_t cmd        = luaL_checkinteger32(L, 1);
     const char *schema = luaL_checkstring(L, 2);
     const char *object = luaL_checkstring(L, 3);
-    int32_t mask       = luaL_optinteger(L, 4, 0);
-    int32_t session    = luaL_optinteger(L, 5, _session);
+    int32_t mask       = luaL_optinteger32(L, 4, 0);
+    int32_t session    = luaL_optinteger32(L, 5, _session);
 
     CmdCfg &cfg  = _cs_cmd_map[cmd];
     cfg._cmd     = cmd;
@@ -95,11 +95,11 @@ int32_t LNetworkMgr::set_cs_cmd(lua_State *L)
  */
 int32_t LNetworkMgr::set_ss_cmd(lua_State *L)
 {
-    int32_t cmd        = luaL_checkinteger(L, 1);
+    int32_t cmd        = luaL_checkinteger32(L, 1);
     const char *schema = luaL_checkstring(L, 2);
     const char *object = luaL_checkstring(L, 3);
-    int32_t mask       = luaL_optinteger(L, 4, 0);
-    int32_t session    = luaL_optinteger(L, 5, _session);
+    int32_t mask       = luaL_optinteger32(L, 4, 0);
+    int32_t session    = luaL_optinteger32(L, 5, _session);
 
     CmdCfg &cfg  = _ss_cmd_map[cmd];
     cfg._cmd     = cmd;
@@ -117,11 +117,11 @@ int32_t LNetworkMgr::set_ss_cmd(lua_State *L)
  */
 int32_t LNetworkMgr::set_sc_cmd(lua_State *L)
 {
-    int32_t cmd        = luaL_checkinteger(L, 1);
+    int32_t cmd        = luaL_checkinteger32(L, 1);
     const char *schema = luaL_checkstring(L, 2);
     const char *object = luaL_checkstring(L, 3);
-    int32_t mask       = luaL_optinteger(L, 4, 0);
-    int32_t session    = luaL_optinteger(L, 5, _session);
+    int32_t mask       = luaL_optinteger32(L, 4, 0);
+    int32_t session    = luaL_optinteger32(L, 5, _session);
 
     CmdCfg &cfg  = _sc_cmd_map[cmd];
     cfg._cmd     = cmd;
@@ -139,7 +139,7 @@ int32_t LNetworkMgr::set_sc_cmd(lua_State *L)
  */
 int32_t LNetworkMgr::close(lua_State *L)
 {
-    uint32_t conn_id = luaL_checkinteger(L, 1);
+    uint32_t conn_id = luaL_checkinteger32(L, 1);
     bool flush       = lua_toboolean(L, 2);
 
     socket_map_t::iterator itr = _socket_map.find(conn_id);
@@ -171,7 +171,7 @@ int32_t LNetworkMgr::close(lua_State *L)
  */
 int32_t LNetworkMgr::address(lua_State *L)
 {
-    uint32_t conn_id = luaL_checkinteger(L, 1);
+    uint32_t conn_id = luaL_checkinteger32(L, 1);
 
     socket_map_t::iterator itr = _socket_map.find(conn_id);
     if (itr == _socket_map.end())
@@ -202,8 +202,8 @@ int32_t LNetworkMgr::listen(lua_State *L)
         return luaL_error(L, "host not specify");
     }
 
-    int32_t port      = luaL_checkinteger(L, 2);
-    int32_t conn_type = luaL_checkinteger(L, 3);
+    int32_t port      = luaL_checkinteger32(L, 2);
+    int32_t conn_type = luaL_checkinteger32(L, 3);
     if (conn_type <= Socket::CT_NONE || conn_type >= Socket::CT_MAX)
     {
         return luaL_error(L, "illegal connection type");
@@ -237,8 +237,8 @@ int32_t LNetworkMgr::connect(lua_State *L)
         return luaL_error(L, "host not specify");
     }
 
-    int32_t port      = luaL_checkinteger(L, 2);
-    int32_t conn_type = luaL_checkinteger(L, 3);
+    int32_t port      = luaL_checkinteger32(L, 2);
+    int32_t conn_type = luaL_checkinteger32(L, 3);
     if (conn_type <= Socket::CT_NONE || conn_type >= Socket::CT_MAX)
     {
         return luaL_error(L, "illegal connection type");
@@ -336,7 +336,7 @@ int32_t LNetworkMgr::get_session_by_conn_id(uint32_t conn_id) const
 /* 加载schema文件 */
 int32_t LNetworkMgr::load_one_schema(lua_State *L)
 {
-    int32_t type     = luaL_checkinteger(L, 1);
+    int32_t type     = luaL_checkinteger32(L, 1);
     const char *path = luaL_checkstring(L, 2);
 
     if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return -1;
@@ -390,7 +390,7 @@ int32_t LNetworkMgr::unset_conn_owner(lua_State *L)
 int32_t LNetworkMgr::set_conn_session(lua_State *L)
 {
     uint32_t conn_id = static_cast<uint32_t>(luaL_checkinteger(L, 1));
-    int32_t session  = luaL_checkinteger(L, 2);
+    int32_t session  = luaL_checkinteger32(L, 2);
 
     const class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -589,10 +589,10 @@ int32_t LNetworkMgr::send_raw_packet(lua_State *L)
 /* 设置发送缓冲区大小 */
 int32_t LNetworkMgr::set_send_buffer_size(lua_State *L)
 {
-    uint32_t conn_id    = luaL_checkinteger(L, 1);
-    uint32_t max        = luaL_checkinteger(L, 2);
-    uint32_t ctx_size   = luaL_checkinteger(L, 3);
-    int32_t over_action = luaL_optinteger(L, 4, Socket::OAT_NONE);
+    uint32_t conn_id    = luaL_checkinteger32(L, 1);
+    uint32_t max        = luaL_checkinteger32(L, 2);
+    uint32_t ctx_size   = luaL_checkinteger32(L, 3);
+    int32_t over_action = luaL_optinteger32(L, 4, Socket::OAT_NONE);
 
     socket_map_t::iterator itr = _socket_map.find(conn_id);
     if (itr == _socket_map.end())
@@ -615,9 +615,9 @@ int32_t LNetworkMgr::set_send_buffer_size(lua_State *L)
 /* 设置接收缓冲区大小 */
 int32_t LNetworkMgr::set_recv_buffer_size(lua_State *L)
 {
-    uint32_t conn_id  = luaL_checkinteger(L, 1);
-    uint32_t max      = luaL_checkinteger(L, 2);
-    uint32_t ctx_size = luaL_checkinteger(L, 3);
+    uint32_t conn_id  = luaL_checkinteger32(L, 1);
+    uint32_t max      = luaL_checkinteger32(L, 2);
+    uint32_t ctx_size = luaL_checkinteger32(L, 3);
 
     socket_map_t::iterator itr = _socket_map.find(conn_id);
     if (itr == _socket_map.end())
@@ -745,9 +745,9 @@ bool LNetworkMgr::connect_del(uint32_t conn_id)
  */
 int32_t LNetworkMgr::set_conn_io(lua_State *L)
 {
-    uint32_t conn_id = luaL_checkinteger(L, 1);
-    int32_t io_type  = luaL_checkinteger(L, 2);
-    int32_t io_param = luaL_optinteger(L, 3, 0);
+    uint32_t conn_id = luaL_checkinteger32(L, 1);
+    int32_t io_type  = luaL_checkinteger32(L, 2);
+    int32_t io_param = luaL_optinteger32(L, 3, 0);
 
     class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -770,8 +770,8 @@ int32_t LNetworkMgr::set_conn_io(lua_State *L)
 
 int32_t LNetworkMgr::set_conn_codec(lua_State *L) /* 设置socket的编译方式 */
 {
-    uint32_t conn_id   = luaL_checkinteger(L, 1);
-    int32_t codec_type = luaL_checkinteger(L, 2);
+    uint32_t conn_id   = luaL_checkinteger32(L, 1);
+    int32_t codec_type = luaL_checkinteger32(L, 2);
 
     class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -794,8 +794,8 @@ int32_t LNetworkMgr::set_conn_codec(lua_State *L) /* 设置socket的编译方式
 
 int32_t LNetworkMgr::set_conn_packet(lua_State *L) /* 设置socket的打包方式 */
 {
-    uint32_t conn_id    = luaL_checkinteger(L, 1);
-    int32_t packet_type = luaL_checkinteger(L, 2);
+    uint32_t conn_id    = luaL_checkinteger32(L, 1);
+    int32_t packet_type = luaL_checkinteger32(L, 2);
 
     class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -817,7 +817,7 @@ int32_t LNetworkMgr::set_conn_packet(lua_State *L) /* 设置socket的打包方�
 
 int32_t LNetworkMgr::new_ssl_ctx(lua_State *L) /* 创建一个ssl上下文 */
 {
-    int32_t sslv          = luaL_checkinteger(L, 1);
+    int32_t sslv          = luaL_checkinteger32(L, 1);
     const char *cert_file = lua_tostring(L, 2);
 
     const char *key_file = lua_tostring(L, 3);
@@ -943,9 +943,9 @@ int32_t LNetworkMgr::srv_multicast(lua_State *L)
         return luaL_error(L, "expect table,got %s",
                           lua_typename(L, lua_type(L, 1)));
     }
-    int32_t codec_ty = luaL_checkinteger(L, 2);
-    int32_t cmd      = luaL_checkinteger(L, 3);
-    int32_t ecode    = luaL_checkinteger(L, 4);
+    int32_t codec_ty = luaL_checkinteger32(L, 2);
+    int32_t cmd      = luaL_checkinteger32(L, 3);
+    int32_t ecode    = luaL_checkinteger32(L, 4);
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
         return luaL_error(L, "illegal codec type");
@@ -1030,9 +1030,9 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
         return luaL_error(L, "expect table,got %s",
                           lua_typename(L, lua_type(L, 1)));
     }
-    int32_t codec_ty = luaL_checkinteger(L, 2);
-    int32_t cmd      = luaL_checkinteger(L, 3);
-    int32_t ecode    = luaL_checkinteger(L, 4);
+    int32_t codec_ty = luaL_checkinteger32(L, 2);
+    int32_t cmd      = luaL_checkinteger32(L, 3);
+    int32_t ecode    = luaL_checkinteger32(L, 4);
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
         return luaL_error(L, "illegal codec type");
@@ -1129,7 +1129,7 @@ int32_t LNetworkMgr::ssc_multicast(lua_State *L)
 int32_t LNetworkMgr::set_player_session(lua_State *L)
 {
     Owner owner     = luaL_checkinteger(L, 1);
-    int32_t session = luaL_checkinteger(L, 2);
+    int32_t session = luaL_checkinteger32(L, 2);
 
     if (session <= 0)
     {
@@ -1146,7 +1146,7 @@ int32_t LNetworkMgr::set_player_session(lua_State *L)
 // 设置玩家当前所在的session
 int32_t LNetworkMgr::get_player_session(lua_State *L)
 {
-    Owner owner = luaL_checkinteger(L, 1);
+    Owner owner = (Owner)luaL_checkinteger(L, 1);
 
     std::unordered_map<Owner, int32_t>::const_iterator iter =
         _owner_session.find(owner);

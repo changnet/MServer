@@ -1,6 +1,7 @@
 #include <lua.hpp>
 
 #include "llog.hpp"
+#include "ltools.hpp"
 #include "../system/static_global.hpp"
 
 LLog::LLog(lua_State *L)
@@ -33,7 +34,7 @@ int32_t LLog::start(lua_State *L)
     }
 
     /* 设定多久写入一次文件 */
-    int32_t usec = luaL_optinteger(L, 2, 5000000);
+    int32_t usec = luaL_optinteger32(L, 2, 5000000);
 
     AsyncLog::start(usec);
 
@@ -101,7 +102,7 @@ int32_t LLog::elog(lua_State *L)
 int32_t LLog::set_option(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
-    int32_t type     = luaL_checkinteger(L, 2);
+    int32_t type     = luaL_checkinteger32(L, 2);
     int64_t opt_val  = luaL_optinteger(L, 3, 0);
 
     set_policy(path, type, opt_val);

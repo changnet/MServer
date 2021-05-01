@@ -12,7 +12,7 @@
 LMongo::LMongo(lua_State *L)
     : Thread("lmongo"), _query_pool("lmongo"), _result_pool("lmongo")
 {
-    _dbid = luaL_checkinteger(L, 2);
+    _dbid = luaL_checkinteger32(L, 2);
 }
 
 LMongo::~LMongo()
@@ -48,7 +48,7 @@ int32_t LMongo::start(lua_State *L)
     }
 
     const char *ip     = luaL_checkstring(L, 1);
-    const int32_t port = luaL_checkinteger(L, 2);
+    const int32_t port = luaL_checkinteger32(L, 2);
     const char *usr    = luaL_checkstring(L, 3);
     const char *pwd    = luaL_checkstring(L, 4);
     const char *db     = luaL_checkstring(L, 5);
@@ -324,7 +324,7 @@ int32_t LMongo::count(lua_State *L)
         return luaL_error(L, "mongo thread not active");
     }
 
-    int32_t id             = luaL_checkinteger(L, 1);
+    int32_t id             = luaL_checkinteger32(L, 1);
     const char *collection = luaL_checkstring(L, 2);
     if (!collection)
     {
@@ -352,7 +352,7 @@ int32_t LMongo::find(lua_State *L)
         return luaL_error(L, "mongo thread not active");
     }
 
-    int32_t id             = luaL_checkinteger(L, 1);
+    int32_t id             = luaL_checkinteger32(L, 1);
     const char *collection = luaL_checkstring(L, 2);
     if (!collection)
     {
@@ -380,7 +380,7 @@ int32_t LMongo::find_and_modify(lua_State *L)
         return luaL_error(L, "mongo thread not active");
     }
 
-    int32_t id             = luaL_checkinteger(L, 1);
+    int32_t id             = luaL_checkinteger32(L, 1);
     const char *collection = luaL_checkstring(L, 2);
     if (!collection)
     {
@@ -424,7 +424,7 @@ int32_t LMongo::insert(lua_State *L)
         return luaL_error(L, "mongo thread not active");
     }
 
-    int32_t id             = luaL_checkinteger(L, 1);
+    int32_t id             = luaL_checkinteger32(L, 1);
     const char *collection = luaL_checkstring(L, 2);
     if (!collection)
     {
@@ -451,7 +451,7 @@ int32_t LMongo::update(lua_State *L)
         return luaL_error(L, "mongo thread not active");
     }
 
-    int32_t id             = luaL_checkinteger(L, 1);
+    int32_t id             = luaL_checkinteger32(L, 1);
     const char *collection = luaL_checkstring(L, 2);
     if (!collection)
     {
@@ -486,7 +486,7 @@ int32_t LMongo::remove(lua_State *L)
         return luaL_error(L, "mongo thread not active");
     }
 
-    int32_t id             = luaL_checkinteger(L, 1);
+    int32_t id             = luaL_checkinteger32(L, 1);
     const char *collection = luaL_checkstring(L, 2);
     if (!collection)
     {

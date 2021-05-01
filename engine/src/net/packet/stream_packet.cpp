@@ -482,8 +482,8 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
     STAT_TIME_BEG();
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd   = luaL_checkinteger(L, index);
-    int32_t ecode = luaL_checkinteger(L, index + 1);
+    int32_t cmd   = luaL_checkinteger32(L, index);
+    int32_t ecode = luaL_checkinteger32(L, index + 1);
 
     const CmdCfg *cfg = network_mgr->get_sc_cmd(cmd);
     if (!cfg)
@@ -528,7 +528,7 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
 
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd = luaL_checkinteger(L, index);
+    int32_t cmd = luaL_checkinteger32(L, index);
 
     if (!lua_istable(L, index + 1))
     {
@@ -574,8 +574,8 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
     STAT_TIME_BEG();
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd   = luaL_checkinteger(L, index);
-    int32_t ecode = luaL_checkinteger(L, index + 1);
+    int32_t cmd   = luaL_checkinteger32(L, index);
+    int32_t ecode = luaL_checkinteger32(L, index + 1);
 
     if (!lua_istable(L, index + 2))
     {
@@ -622,7 +622,7 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
 
 int32_t StreamPacket::pack_rpc(lua_State *L, int32_t index)
 {
-    int32_t unique_id = luaL_checkinteger(L, index);
+    int32_t unique_id = luaL_checkinteger32(L, index);
     // ecode默认0
     return do_pack_rpc(L, unique_id, 0, SPT_RPCS, index + 1);
 }
@@ -634,9 +634,9 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     Owner owner      = luaL_checkinteger(L, index);
-    int32_t codec_ty = luaL_checkinteger(L, index + 1);
-    int32_t cmd      = luaL_checkinteger(L, index + 2);
-    int32_t ecode    = luaL_checkinteger(L, index + 3);
+    int32_t codec_ty = luaL_checkinteger32(L, index + 1);
+    int32_t cmd      = luaL_checkinteger32(L, index + 2);
+    int32_t ecode    = luaL_checkinteger32(L, index + 3);
 
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
@@ -732,10 +732,10 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     Owner list[MAX_CLT_CAST] = {0};
-    int32_t mask             = luaL_checkinteger(L, index);
-    int32_t codec_ty         = luaL_checkinteger(L, index + 2);
-    int32_t cmd              = luaL_checkinteger(L, index + 3);
-    int32_t ecode            = luaL_checkinteger(L, index + 4);
+    int32_t mask             = luaL_checkinteger32(L, index);
+    int32_t codec_ty         = luaL_checkinteger32(L, index + 2);
+    int32_t cmd              = luaL_checkinteger32(L, index + 3);
+    int32_t ecode            = luaL_checkinteger32(L, index + 4);
 
     lUAL_CHECKTABLE(L, index + 1);
     lUAL_CHECKTABLE(L, index + 5);

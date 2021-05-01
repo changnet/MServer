@@ -128,7 +128,7 @@ EV::EV()
 
     _mn_time        = get_monotonic_time();
     _last_rt_update = _mn_time;
-    _rtmn_diff      = _rt_time * 1e3 - _mn_time;
+    _rtmn_diff      = _rt_time * 1000 - _mn_time;
 
     _busy_time = 0;
 
@@ -169,7 +169,7 @@ int32_t EV::loop()
         int64_t backend_time = _backend_time_coarse - _mn_time;
         if (_timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
         {
-            int64_t to = 1e3 * ((_timers[HEAP0])->_at - _mn_time);
+            int64_t to = 1000 * ((_timers[HEAP0])->_at - _mn_time);
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
@@ -286,7 +286,7 @@ int64_t EV::get_monotonic_time()
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return ts.tv_sec * 1e3 + ts.tv_nsec * 1e-6;
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 void EV::time_update()
@@ -297,9 +297,9 @@ void EV::time_update()
      * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
      * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
      */
-    if (_mn_time - _last_rt_update < MIN_TIMEJUMP * .5)
+    if (_mn_time - _last_rt_update < MIN_TIMEJUMP / 2)
     {
-        _rt_time = 1e-3 * (_rtmn_diff + _mn_time);
+        _rt_time = (_rtmn_diff + _mn_time) / 1000;
         return;
     }
 
@@ -322,10 +322,10 @@ void EV::time_update()
      */
     for (int32_t i = 4; --i;)
     {
-        _rtmn_diff = _rt_time * 1e3 - _mn_time;
+        _rtmn_diff = _rt_time * 1000 - _mn_time;
 
         int64_t diff = old_diff - _rtmn_diff;
-        if (EXPECT_TRUE((diff < 0. ? -diff : diff) < MIN_TIMEJUMP))
+        if (EXPECT_TRUE((diff < 0 ? -diff : diff) < MIN_TIMEJUMP))
         {
             return;
         }
@@ -354,7 +354,7 @@ void EV::feed_event(EVWatcher *w, int32_t revents)
     if (EXPECT_TRUE(!w->_pending))
     {
         _pendings.emplace_back(w);
-        w->_pending = _pendings.size();
+        w->_pending = (int32_t)_pendings.size();
     }
 }
 
@@ -398,7 +398,7 @@ void EV::timers_reify()
             // 如果时间出现偏差，重新调整定时器
             if (EXPECT_FALSE(w->_at < _mn_time)) w->reschedule(_mn_time);
 
-            assert(w->_repeat > 0.);
+            assert(w->_repeat > 0);
 
             down_heap(_timers.data(), _timercnt, HEAP0);
         }
@@ -415,7 +415,7 @@ int32_t EV::timer_start(EVTimer *w)
 {
     w->_at += _mn_time;
 
-    assert(w->_repeat >= 0.);
+    assert(w->_repeat >= 0);
 
     ++_timercnt;
     int32_t active = _timercnt + HEAP0 - 1;

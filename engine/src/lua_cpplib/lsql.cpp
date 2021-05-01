@@ -7,7 +7,7 @@
 LSql::LSql(lua_State *L)
     : Thread("lsql"), _query_pool("lsql_query"), _result_pool("lsql_result")
 {
-    _dbid = luaL_checkinteger(L, 2);
+    _dbid = luaL_checkinteger32(L, 2);
 }
 
 LSql::~LSql()
@@ -58,7 +58,7 @@ int32_t LSql::start(lua_State *L)
     }
 
     const char *host   = luaL_checkstring(L, 1);
-    const int32_t port = luaL_checkinteger(L, 2);
+    const int32_t port = luaL_checkinteger32(L, 2);
     const char *usr    = luaL_checkstring(L, 3);
     const char *pwd    = luaL_checkstring(L, 4);
     const char *dbname = luaL_checkstring(L, 5);
@@ -168,7 +168,7 @@ int32_t LSql::do_sql(lua_State *L)
     }
 
     size_t size      = 0;
-    int32_t id       = luaL_checkinteger(L, 1);
+    int32_t id       = luaL_checkinteger32(L, 1);
     const char *stmt = luaL_checklstring(L, 2, &size);
     if (!stmt || size == 0)
     {
@@ -235,7 +235,7 @@ int32_t LSql::field_to_lua(lua_State *L, const SqlField &field,
     case MYSQL_TYPE_INT24:
         lua_pushinteger(L, static_cast<LUA_INTEGER>(atoi(value)));
         break;
-    case MYSQL_TYPE_LONGLONG: lua_pushint64(L, atoll(value)); break;
+    case MYSQL_TYPE_LONGLONG: lua_pushinteger(L, atoll(value)); break;
     case MYSQL_TYPE_FLOAT:
     case MYSQL_TYPE_DOUBLE:
     case MYSQL_TYPE_DECIMAL:

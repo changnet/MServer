@@ -72,7 +72,7 @@ EVBackend::~EVBackend()
 
 void EVBackend::wait(EV *ev_loop, int64_t timeout)
 {
-    int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, timeout);
+    int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, (int32_t)timeout);
     if (EXPECT_FALSE(ev_count < 0))
     {
         if (errno != EINTR)
