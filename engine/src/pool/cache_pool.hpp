@@ -9,7 +9,7 @@
  * @tparam msize 池中缓存最大对象数量
  * @tparam nsize 每次分配的对象数量
  */
-template <typename T, uint32_t msize = 1024, uint32_t nsize = 1024>
+template <typename T, size_t msize = 1024, size_t nsize = 1024>
 class CachePool : public Pool
 {
 public:
@@ -29,7 +29,7 @@ public:
     {
         if (EXPECT_FALSE(_objs.empty()))
         {
-            for (uint32_t i = 0; i < nsize; i++) _objs.push_back(new T());
+            for (size_t i = 0; i < nsize; i++) _objs.push_back(new T());
         }
 
         T *obj = _objs.back();

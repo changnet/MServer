@@ -91,7 +91,7 @@ public:
     int32_t init_connect();
 
     /// 添加待发送数据
-    inline void append(const void *data, uint32_t len)
+    inline void append(const void *data, size_t len)
     {
         _send.append(data, len);
 
@@ -115,11 +115,11 @@ public:
     inline int32_t get_pending() const { return _pending; }
     inline int32_t set_pending(int32_t pending) { return _pending = pending; }
 
-    inline void set_recv_size(uint32_t max, uint32_t ctx_size)
+    inline void set_recv_size(size_t max, size_t ctx_size)
     {
         _recv.set_buffer_size(max, ctx_size);
     }
-    inline void set_send_size(uint32_t max, uint32_t ctx_size, OverActionType oa)
+    inline void set_send_size(size_t max, size_t ctx_size, OverActionType oa)
     {
         _over_action = oa;
         _send.set_buffer_size(max, ctx_size);

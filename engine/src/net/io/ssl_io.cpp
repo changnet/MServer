@@ -30,8 +30,8 @@ int32_t SSLIO::recv(int32_t &byte)
     if (!_recv->reserved()) return -1; /* no more memory */
 
     // ERR_clear_error
-    uint32_t size = _recv->get_space_size();
-    int32_t len   = SSL_read(_ssl_ctx, _recv->get_space_ctx(), size);
+    size_t size = _recv->get_space_size();
+    int32_t len   = SSL_read(_ssl_ctx, _recv->get_space_ctx(), (int32_t)size);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;
@@ -76,7 +76,7 @@ int32_t SSLIO::send(int32_t &byte)
     size_t bytes = _send->get_used_size();
     assert(bytes > 0);
 
-    int32_t len = SSL_write(_ssl_ctx, _send->get_used_ctx(), bytes);
+    int32_t len = SSL_write(_ssl_ctx, _send->get_used_ctx(), (int32_t)bytes);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;

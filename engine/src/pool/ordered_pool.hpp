@@ -10,7 +10,7 @@
  * 3.没有约束内存对齐。因此用的是系统默认对齐，在linux 32/64bit应该是OK的
  * 4.最小内存块不能小于一个指针长度(4/8 bytes)
  */
-template <uint32_t ordered_size> class OrderedPool : public Pool
+template <size_t ordered_size> class OrderedPool : public Pool
 {
 public:
     explicit OrderedPool(const char *name)
@@ -24,7 +24,7 @@ public:
     virtual void purge() { clear(); }
     virtual size_t get_sizeof() const { return ordered_size; }
 
-    void ordered_free(char *const ptr, uint32_t n)
+    void ordered_free(char *const ptr, size_t n)
     {
         assert(anptmax >= n && ptr);
 
@@ -40,12 +40,12 @@ public:
      * 分配一块大小为n个ordered_size的内存
      * @param chunk_size 预分配的数量(因为内存大小不一，分配策划需要根据逻辑来定)
      */
-    char *ordered_malloc(uint32_t n, uint32_t chunk_size)
+    char *ordered_malloc(size_t n, size_t chunk_size)
     {
         assert(n > 0 && chunk_size > 0);
         if (EXPECT_FALSE(anptmax < n + 1))
         {
-            uint32_t size = 16;
+            size_t size = 16;
             while (size < n + 1) size *= 2;
 
             NODE *tmp = new NODE[size];
@@ -67,7 +67,7 @@ public:
         /* 每次固定申请chunk_size块大小为(n*ordered_size)内存
          * 不用指数增长方式因为内存分配过大可能会失败
          */
-        uint32_t partition_sz = n * ordered_size;
+        size_t partition_sz = n * ordered_size;
         assert(UINT_MAX / partition_sz > chunk_size);
 
         uint64_t block_size = sizeof(void *) + chunk_size * partition_sz;
@@ -127,15 +127,15 @@ private:
      * @npartition    单块内存数量
      * @n             等长系数
      */
-    inline void *segregate(void *const ptr, uint32_t partition_sz,
-                           uint32_t npartition, uint32_t n)
+    inline void *segregate(void *const ptr, size_t partition_sz,
+                           size_t npartition, size_t n)
     {
         assert(anptmax > n);
         /* in case ordered_malloc new only one chunk */
         if (npartition <= 0) return anpts[n];
 
         char *last = static_cast<char *>(ptr);
-        for (uint32_t i = 1; i < npartition; i++)
+        for (size_t i = 1; i < npartition; i++)
         {
             char *next   = last + partition_sz;
             nextof(last) = next;
@@ -150,7 +150,7 @@ private:
     typedef void *NODE;
 
     NODE *anpts; /* 空闲内存块链表数组,倍数n为下标 */
-    uint32_t anptmax;
+    size_t anptmax;
 
     void *block_list; /* 从系统分配的内存块链表 */
 };

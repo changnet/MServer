@@ -20,7 +20,7 @@ int32_t WSStreamPacket::pack_clt(lua_State *L, int32_t index)
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
     int32_t cmd    = luaL_checkinteger32(L, index);
-    uint16_t ecode = luaL_checkinteger(L, index + 1);
+    uint16_t ecode = (uint16_t)luaL_checkinteger(L, index + 1);
 
     websocket_flags flags =
         static_cast<websocket_flags>(luaL_checkinteger(L, index + 2));
@@ -68,7 +68,7 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !_is_upgrade ) return luaL_error( L,"websocket not upgrade" );
 
-    int cmd = luaL_checkinteger(L, index);
+    int32_t cmd = luaL_checkinteger32(L, index);
     websocket_flags flags =
         static_cast<websocket_flags>(luaL_checkinteger(L, index + 1));
 
@@ -139,7 +139,7 @@ int32_t WSStreamPacket::on_frame_end()
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 服务器收到的包，看要不要转发 */
-    uint32_t data_size   = 0;
+    size_t data_size   = 0;
     const char *data_ctx = _body.all_to_continuous_ctx(data_size);
     if (data_size < sizeof(struct c2s_header))
     {
@@ -149,14 +149,15 @@ int32_t WSStreamPacket::on_frame_end()
     const struct c2s_header *header =
         reinterpret_cast<const struct c2s_header *>(data_ctx);
 
-    int cmd = header->_cmd;
+    uint16_t cmd = header->_cmd;
     if (data_size < header->_length)
     {
-        ELOG("ws_stream_packet on_frame_end packet length error:%d", cmd);
+        ELOG("ws_stream_packet on_frame_end packet length error:%d",
+            (int32_t)cmd);
         return 0;
     }
 
-    uint32_t size   = data_size - sizeof(*header);
+    size_t size   = data_size - sizeof(*header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
     if (network_mgr->cs_dispatch(cmd, _socket, ctx, size)) return 0;
 
@@ -171,7 +172,7 @@ int32_t WSStreamPacket::sc_command()
 
     assert(0 == lua_gettop(L));
 
-    uint32_t data_size   = 0;
+    size_t data_size   = 0;
     const char *data_ctx = _body.all_to_continuous_ctx(data_size);
     if (data_size < sizeof(struct s2c_header))
     {
@@ -202,7 +203,7 @@ int32_t WSStreamPacket::sc_command()
     lua_pushinteger(L, cmd);
     lua_pushinteger(L, header->_errno);
 
-    uint32_t size   = data_size - sizeof(*header);
+    size_t size   = data_size - sizeof(*header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
     Codec *decoder =
         StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
@@ -244,7 +245,7 @@ int32_t WSStreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
 
     Codec *decoder =
         StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    int32_t cnt = decoder->decode(L, ctx, size, cmd_cfg);
+    int32_t cnt = decoder->decode(L, ctx, (int32_t)size, cmd_cfg);
     if (cnt < 0)
     {
         lua_settop(L, 0);

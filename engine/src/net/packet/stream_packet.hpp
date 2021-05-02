@@ -47,8 +47,8 @@ private:
     void rpc_command(const s2s_header *header);
     void rpc_return(const s2s_header *header);
     void ssc_multicast(const s2s_header *header);
-    int32_t do_pack_rpc(lua_State *L, int32_t unique_id, int32_t ecode,
+    int32_t do_pack_rpc(lua_State *L, int32_t unique_id, uint16_t ecode,
                         uint16_t pkt, int32_t index);
     void ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
-                           const char *ctx, int32_t size);
+                           const char *ctx, size_t size);
 };

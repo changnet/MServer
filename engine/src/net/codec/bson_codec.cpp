@@ -23,7 +23,7 @@ void BsonCodec::finalize()
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t BsonCodec::decode(lua_State *L, const char *buffer, int32_t len,
+int32_t BsonCodec::decode(lua_State *L, const char *buffer, size_t len,
                           const CmdCfg *cfg)
 {
     UNUSED(cfg);

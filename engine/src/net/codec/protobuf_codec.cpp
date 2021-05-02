@@ -128,7 +128,7 @@ int32_t lprotobuf::load_file(const char *path)
 
     // get length of file:
     ifs.seekg(0, ifs.end);
-    int32_t len = ifs.tellg();
+    int32_t len = static_cast<int32_t>(ifs.tellg());
     ifs.seekg(0, ifs.beg);
 
     if (!ifs.good() || len <= 0)
@@ -576,7 +576,7 @@ int32_t ProtobufCodec::load_path(const char *path)
  * 解码数据包
  * @return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t ProtobufCodec::decode(lua_State *L, const char *buffer, int32_t len,
+int32_t ProtobufCodec::decode(lua_State *L, const char *buffer, size_t len,
                               const CmdCfg *cfg)
 {
     if (_lprotobuf->decode(L, cfg->_object, buffer, len) < 0)

@@ -24,7 +24,7 @@ int32_t FlatbuffersCodec::load_path(const char *path)
 /* 解码数据包
  * return: <0 error,otherwise the number of parameter push to stack
  */
-int32_t FlatbuffersCodec::decode(lua_State *L, const char *buffer, int32_t len,
+int32_t FlatbuffersCodec::decode(lua_State *L, const char *buffer, size_t len,
                                  const CmdCfg *cfg)
 {
     if (_lflatbuffers->decode(L, cfg->_schema, cfg->_object, buffer, len) < 0)

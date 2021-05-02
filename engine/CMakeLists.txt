@@ -172,7 +172,8 @@ if(WINDOWS)
         ${MONGOC_DEFINITIONS}
     )
 elseif(UNIX)
-    target_include_directories(master PRIVATE
+    # 用system指定这些目录为系统目录，去除bson中的一些编译警告
+    target_include_directories(master SYSTEM PRIVATE
         /usr/include/mariadb
         /usr/local/include/libmongoc-1.0
         /usr/local/include/libbson-1.0

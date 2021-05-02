@@ -250,7 +250,7 @@ int32_t WebsocketPacket::unpack()
 
     class Buffer &recv = _socket->recv_buffer();
 
-    uint32_t size   = 0;
+    size_t size   = 0;
     const char *ctx = recv.all_to_continuous_ctx(size);
     if (size == 0) return 0;
 
@@ -338,7 +338,7 @@ int32_t WebsocketPacket::on_frame_end()
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    uint32_t size   = 0;
+    size_t size   = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
 
     LUA_PUSHTRACEBACK(L);
@@ -362,7 +362,7 @@ int32_t WebsocketPacket::on_ctrl_end()
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    uint32_t size   = 0;
+    size_t size   = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
 
     LUA_PUSHTRACEBACK(L);

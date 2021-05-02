@@ -31,14 +31,14 @@ static int32_t get_addr_info(lua_State *L)
     std::vector<std::string> addrs;
     if (0 != Socket::get_addr_info(addrs, name))
     {
-        return luaL_error(L, "get host fail");
+        return luaL_error(L, "get_addr_info fail");
     }
 
     for (auto &x : addrs)
     {
         lua_pushstring(L, x.c_str());
     }
-    return addrs.size();
+    return static_cast<int32_t>(addrs.size());
 }
 
 /**
@@ -166,13 +166,13 @@ static int32_t uuid_short(lua_State *L)
         /* 1111 0000取高4bit，右移4bit得到低4bit，加上上一步val的高2bit，得6bit */
         /* 0000 1111取低4bit，左移2bit暂存到val的2~5bit */
         fragment = *uuid++;
-        val |= (fragment & 0x0f0) >> 4;
+        val |= char((fragment & 0x0f0) >> 4);
         *cur_char++ = digest[(int)val];
         val         = (fragment & 0x00f) << 2;
 
         /* 1100 0000先取高2bit，右移6bit，加上上一步val的高4bit,得6bit */
         fragment = *uuid++;
-        val |= (fragment & 0x0c0) >> 6;
+        val |= char((fragment & 0x0c0) >> 6);
         *cur_char++ = digest[(int)val];
         val         = (fragment & 0x03f) << 0;
 
@@ -217,7 +217,8 @@ inline char uuid_short_char(lua_State *L, const char c)
 
     if (c < 0 || digest[(int)c] < 0)
     {
-        return luaL_error(L, "uuid short string invalid character:%c", c);
+        luaL_error(L, "uuid short string invalid character:%c", c);
+        return 0;
     }
 
     return digest[(int)c];
@@ -250,28 +251,28 @@ static int32_t uuid_short_parse(lua_State *L)
     {
         fragment = uuid_short_char(L, *str_uuid++);
         // 0011 1111 填充高6bit
-        *uuid = (fragment & 0x03f) << 2;
+        *uuid = char((fragment & 0x03f) << 2);
 
         fragment = uuid_short_char(L, *str_uuid++);
         // 0011 0000 取6bit中的高2bit，加上一步骤的6bit，填充完一个char
-        *uuid++ |= (fragment & 0x030) >> 4;
+        *uuid++ |= char((fragment & 0x030) >> 4);
         // 0000 1111 取剩余下4bit填充到一个新char的高4bit
-        *uuid = (fragment & 0x00f) << 4;
+        *uuid = char((fragment & 0x00f) << 4);
 
         fragment = uuid_short_char(L, *str_uuid++);
         // 0011 1100 取6bit中的高4bit，加上一步骤的4bit，填充完一个char
-        *uuid++ |= (fragment & 0x03c) >> 2;
+        *uuid++ |= char((fragment & 0x03c) >> 2);
         // 0000 0011 取剩余的2bit，填充到一个新char的高2bit
-        *uuid = (fragment & 0x003) << 6;
+        *uuid = char((fragment & 0x003) << 6);
 
         fragment = uuid_short_char(L, *str_uuid++);
         // 0011 1111 填充低6bit,加上一步骤的2bit，填充完一个char
-        *uuid++ |= (fragment & 0x03f);
+        *uuid++ |= char(fragment & 0x03f);
     }
 
     fragment = uuid_short_char(L, *str_uuid++);
     // 0011 1111 填充高6bit
-    *uuid = (fragment & 0x03f) << 2;
+    *uuid = char((fragment & 0x03f) << 2);
 
     fragment = uuid_short_char(L, *str_uuid);
     // 0000 0011 取剩余的2bit，填充到一个char的低2bit
@@ -393,9 +394,9 @@ static int32_t base64(lua_State *L)
     // warning: value computed is not used [-Wunused-value]
     (void)BIO_set_close(base64, BIO_CLOSE);
 
-    if (BIO_write(base64, str, len) && BIO_flush(base64))
+    if (BIO_write(base64, str, (int32_t)len) && BIO_flush(base64))
     {
-        BUF_MEM *bptr = NULL;
+        BUF_MEM *bptr = nullptr;
         BIO_get_mem_ptr(base64, &bptr);
         lua_pushlstring(L, bptr->data, bptr->length);
     }

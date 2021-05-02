@@ -68,7 +68,7 @@ void StreamPacket::sc_command(const struct s2c_header *header)
         return;
     }
 
-    int32_t size = PACKET_BUFFER_LEN(header);
+    size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
@@ -110,8 +110,8 @@ void StreamPacket::cs_dispatch(const struct c2s_header *header)
 {
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd     = header->_cmd;
-    int32_t size    = PACKET_BUFFER_LEN(header);
+    uint16_t cmd     = header->_cmd;
+    size_t size    = PACKET_BUFFER_LEN(header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
@@ -235,7 +235,7 @@ void StreamPacket::ss_command(const s2s_header *header, const CmdCfg *cmd_cfg)
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    int32_t size = PACKET_BUFFER_LEN(header);
+    size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
@@ -286,7 +286,7 @@ void StreamPacket::css_command(const s2s_header *header)
         return;
     }
 
-    int32_t size = PACKET_BUFFER_LEN(header);
+    size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
@@ -339,7 +339,7 @@ void StreamPacket::ssc_command(const s2s_header *header)
         return;
     }
 
-    int32_t size            = PACKET_BUFFER_LEN(header);
+    size_t size            = PACKET_BUFFER_LEN(header);
     const char *ctx         = reinterpret_cast<const char *>(header + 1);
     class Packet *sk_packet = sk->get_packet();
     sk_packet->raw_pack_clt(header->_cmd, header->_errno, ctx, size);
@@ -351,7 +351,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    int32_t size = PACKET_BUFFER_LEN(header);
+    size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
@@ -364,7 +364,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
 
     // rpc解析方式目前固定为bson
     Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CDC_BSON);
-    int32_t cnt    = decoder->decode(L, buffer, size, NULL);
+    int32_t cnt    = decoder->decode(L, buffer, size, nullptr);
     if (cnt < 1) // rpc调用至少要带参数名
     {
         lua_settop(L, 0);
@@ -377,7 +377,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if (unique_id > 0)
     {
-        do_pack_rpc(L, unique_id, ecode, SPT_RPCR, top + 1);
+        do_pack_rpc(L, unique_id, LUA_OK == ecode ? 0 : 0xFFFF, SPT_RPCR, top + 1);
     }
 
     if (LUA_OK != ecode)
@@ -396,7 +396,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    int32_t size       = PACKET_BUFFER_LEN(header);
+    size_t size       = PACKET_BUFFER_LEN(header);
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
     LUA_PUSHTRACEBACK(L);
@@ -411,7 +411,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     {
         // rpc解析方式目前固定为bson
         Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CDC_BSON);
-        cnt            = decoder->decode(L, buffer, size, NULL);
+        cnt            = decoder->decode(L, buffer, size, nullptr);
     }
     if (LUA_OK != lua_pcall(L, 3 + cnt, 0, 1))
     {
@@ -427,24 +427,24 @@ void StreamPacket::rpc_return(const s2s_header *header)
 
 /* 打包rpc数据包 */
 int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
-                                  int32_t ecode, uint16_t pkt, int32_t index)
+                                  uint16_t ecode, uint16_t pkt, int32_t index)
 {
     STAT_TIME_BEG();
 
     int32_t len        = 0;
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     Codec *encoder     = StaticGlobal::codec_mgr()->get_codec(Codec::CDC_BSON);
 
     if (LUA_OK == ecode)
     {
-        len = encoder->encode(L, index, &buffer, NULL);
+        len = encoder->encode(L, index, &buffer, nullptr);
         if (len < 0)
         {
             // 发送时，出错就不发了
             // 返回时，出错也应该告知另一进程出错了
             if (SPT_RPCS == pkt) return -1;
             len   = 0;
-            ecode = -1;
+            ecode = 0xFFFF - 1;
         }
     }
 
@@ -483,7 +483,7 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     int32_t cmd   = luaL_checkinteger32(L, index);
-    int32_t ecode = luaL_checkinteger32(L, index + 1);
+    uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 1));
 
     const CmdCfg *cfg = network_mgr->get_sc_cmd(cmd);
     if (!cfg)
@@ -498,7 +498,7 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
         return luaL_error(L, "no codec conf found: %d", cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, index + 2, &buffer, cfg);
     if (len < 0) return -1;
 
@@ -549,7 +549,7 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
         return luaL_error(L, "no codec conf found: %d", cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, index + 1, &buffer, cfg);
     if (len < 0) return -1;
 
@@ -575,7 +575,7 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     int32_t cmd   = luaL_checkinteger32(L, index);
-    int32_t ecode = luaL_checkinteger32(L, index + 1);
+    uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 1));
 
     if (!lua_istable(L, index + 2))
     {
@@ -596,7 +596,7 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
         return luaL_error(L, "no codec found: %d", cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, index + 2, &buffer, cfg);
     if (len < 0) return -1;
 
@@ -633,10 +633,10 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
 
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    Owner owner      = luaL_checkinteger(L, index);
+    Owner owner      = static_cast<Owner>(luaL_checkinteger(L, index));
     int32_t codec_ty = luaL_checkinteger32(L, index + 1);
     int32_t cmd      = luaL_checkinteger32(L, index + 2);
-    int32_t ecode    = luaL_checkinteger32(L, index + 3);
+    uint16_t ecode    = static_cast<uint16_t>(luaL_checkinteger(L, index + 3));
 
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
@@ -662,7 +662,7 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
         return luaL_error(L, "no command conf found: %d", cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, index + 4, &buffer, cfg);
     if (len < 0) return -1;
 
@@ -735,7 +735,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     int32_t mask             = luaL_checkinteger32(L, index);
     int32_t codec_ty         = luaL_checkinteger32(L, index + 2);
     int32_t cmd              = luaL_checkinteger32(L, index + 3);
-    int32_t ecode            = luaL_checkinteger32(L, index + 4);
+    uint16_t ecode           = static_cast<uint16_t>(luaL_checkinteger(L, index + 4));
 
     lUAL_CHECKTABLE(L, index + 1);
     lUAL_CHECKTABLE(L, index + 5);
@@ -786,7 +786,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
         return luaL_error(L, "no command conf found: %d", cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, index + 5, &buffer, cfg);
     if (len < 0) return -1;
 
@@ -814,7 +814,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
 
 // 转发到一个客户端
 void StreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
-                                     const char *ctx, int32_t size)
+                                     const char *ctx, size_t size)
 {
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
@@ -851,16 +851,18 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
     }
 
     // 长度记得包含mask和count本身这两个变量
+    size_t size         = PACKET_BUFFER_LEN(header);
     size_t raw_list_len = sizeof(Owner) * (count + 2);
-    int32_t size        = PACKET_BUFFER_LEN(header) - raw_list_len;
     const char *ctx     = reinterpret_cast<const char *>(header + 1);
-    ctx += raw_list_len;
 
-    if (size < 0)
+    if (size < raw_list_len)
     {
         ELOG("ssc_multicast packet length broken");
         return;
     }
+
+    ctx += raw_list_len;
+    size -= raw_list_len;
 
     // 根据玩家pid广播，底层直接处理
     if (CLT_MC_OWNER == mask)

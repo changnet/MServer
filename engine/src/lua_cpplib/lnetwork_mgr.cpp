@@ -44,7 +44,7 @@ void LNetworkMgr::invoke_delete()
         }
 
         const class Socket *sk = sk_itr->second;
-        assert(NULL != sk && sk->fd() <= 0);
+        assert(nullptr != sk && sk->fd() <= 0);
 
         delete sk;
         _socket_map.erase(sk_itr);
@@ -265,7 +265,7 @@ int32_t LNetworkMgr::connect(lua_State *L)
 const CmdCfg *LNetworkMgr::get_cs_cmd(int32_t cmd) const
 {
     cmd_map_t::const_iterator itr = _cs_cmd_map.find(cmd);
-    if (itr == _cs_cmd_map.end()) return NULL;
+    if (itr == _cs_cmd_map.end()) return nullptr;
 
     return &(itr->second);
 }
@@ -274,7 +274,7 @@ const CmdCfg *LNetworkMgr::get_cs_cmd(int32_t cmd) const
 const CmdCfg *LNetworkMgr::get_ss_cmd(int32_t cmd) const
 {
     cmd_map_t::const_iterator itr = _ss_cmd_map.find(cmd);
-    if (itr == _ss_cmd_map.end()) return NULL;
+    if (itr == _ss_cmd_map.end()) return nullptr;
 
     return &(itr->second);
 }
@@ -283,7 +283,7 @@ const CmdCfg *LNetworkMgr::get_ss_cmd(int32_t cmd) const
 const CmdCfg *LNetworkMgr::get_sc_cmd(int32_t cmd) const
 {
     cmd_map_t::const_iterator itr = _sc_cmd_map.find(cmd);
-    if (itr == _sc_cmd_map.end()) return NULL;
+    if (itr == _sc_cmd_map.end()) return nullptr;
 
     return &(itr->second);
 }
@@ -306,10 +306,10 @@ class Socket *LNetworkMgr::get_conn_by_session(int32_t session) const
 {
     std::unordered_map<int32_t, uint32_t>::const_iterator itr =
         _session_map.find(session);
-    if (itr == _session_map.end()) return NULL;
+    if (itr == _session_map.end()) return nullptr;
 
     socket_map_t::const_iterator sk_itr = _socket_map.find(itr->second);
-    if (sk_itr == _socket_map.end()) return NULL;
+    if (sk_itr == _socket_map.end()) return nullptr;
 
     return sk_itr->second;
 }
@@ -318,7 +318,7 @@ class Socket *LNetworkMgr::get_conn_by_session(int32_t session) const
 class Socket *LNetworkMgr::get_conn_by_conn_id(uint32_t conn_id) const
 {
     socket_map_t::const_iterator itr = _socket_map.find(conn_id);
-    if (itr == _socket_map.end()) return NULL;
+    if (itr == _socket_map.end()) return nullptr;
 
     return itr->second;
 }
@@ -352,7 +352,7 @@ int32_t LNetworkMgr::load_one_schema(lua_State *L)
 int32_t LNetworkMgr::set_conn_owner(lua_State *L)
 {
     uint32_t conn_id = static_cast<uint32_t>(luaL_checkinteger(L, 1));
-    Owner owner      = luaL_checkinteger(L, 2);
+    Owner owner      = static_cast<Owner>(luaL_checkinteger(L, 2));
 
     class Socket *sk = get_conn_by_conn_id(conn_id);
     if (!sk)
@@ -375,7 +375,7 @@ int32_t LNetworkMgr::set_conn_owner(lua_State *L)
 int32_t LNetworkMgr::unset_conn_owner(lua_State *L)
 {
     uint32_t conn_id = static_cast<uint32_t>(luaL_checkinteger(L, 1));
-    Owner owner      = luaL_checkinteger(L, 2);
+    Owner owner      = static_cast<Owner>(luaL_checkinteger(L, 2));
 
     _owner_map.erase(owner);
 
@@ -412,7 +412,7 @@ int32_t LNetworkMgr::set_conn_session(lua_State *L)
 /* 设置当前进程的session */
 int32_t LNetworkMgr::set_curr_session(lua_State *L)
 {
-    _session = luaL_checkinteger(L, 1);
+    _session = luaL_checkinteger32(L, 1);
     return 0;
 }
 
@@ -430,21 +430,21 @@ class Packet *LNetworkMgr::raw_check_packet(lua_State *L, uint32_t conn_id,
     if (!sk)
     {
         luaL_error(L, "invalid socket");
-        return NULL;
+        return nullptr;
     }
 
     // CNT_NONE表示不需要检测连接类型
     if (Socket::CT_NONE != conn_ty && conn_ty != sk->conn_type())
     {
         luaL_error(L, "illegal socket connecte type");
-        return NULL;
+        return nullptr;
     }
 
     class Packet *pkt = sk->get_packet();
     if (!pkt)
     {
         luaL_error(L, "no packet found");
-        return NULL;
+        return nullptr;
     }
 
     return pkt;
@@ -637,12 +637,12 @@ class Socket *LNetworkMgr::get_conn_by_owner(Owner owner) const
     uint32_t dest_conn = get_conn_id_by_owner(owner);
     if (!dest_conn) // 客户端刚好断开或者当前进程不是网关 ?
     {
-        return NULL;
+        return nullptr;
     }
     socket_map_t::const_iterator itr = _socket_map.find(dest_conn);
     if (itr == _socket_map.end())
     {
-        return NULL;
+        return nullptr;
     }
 
     /* 由网关转发给客户的数据包，是根据_socket_map来映射连接的。
@@ -653,7 +653,7 @@ class Socket *LNetworkMgr::get_conn_by_owner(Owner owner) const
     if (sk->get_object_id() != owner)
     {
         ELOG("get_conn_by_owner not match:%d,conn = %d", owner, sk->conn_id());
-        return NULL;
+        return nullptr;
     }
 
     return sk;
@@ -843,7 +843,7 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
     const CmdCfg *cmd_cfg = get_cs_cmd(cmd);
     if (EXPECT_FALSE(!cmd_cfg))
     {
-        ELOG("cs_dispatch cmd(%d) no cmd cfg found", cmd);
+        ELOG("get_cmd_session cmd(%d) no cmd cfg found", cmd);
         return -1;
     }
 
@@ -859,15 +859,14 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
      */
     if (EXPECT_FALSE(!object_id))
     {
-        ELOG("cs_dispatch cmd(%d) socket do NOT have object", cmd);
+        ELOG("get_cmd_session cmd(%d) socket do NOT have object", cmd);
         return -1;
     }
 
-    std::unordered_map<Owner, int32_t>::const_iterator iter =
-        _owner_session.find(object_id);
+    auto iter = _owner_session.find(static_cast<Owner>(object_id));
     if (iter == _owner_session.end())
     {
-        ELOG("cs_dispatch cmd(%d) "
+        ELOG("get_cmd_session cmd(%d) "
               "no session to forwarding:%d-" FMT64d,
               cmd, object_id);
         return -1;
@@ -876,10 +875,7 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
     return iter->second;
 }
 
-/* 把客户端数据包转发给另一服务器
- * 这个函数如果返回false，则会将协议在当前进程派发
- */
-bool LNetworkMgr::cs_dispatch(int32_t cmd, const class Socket *src_sk,
+bool LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
                               const char *ctx, size_t size) const
 {
     int64_t object_id = src_sk->get_object_id();
@@ -944,8 +940,8 @@ int32_t LNetworkMgr::srv_multicast(lua_State *L)
                           lua_typename(L, lua_type(L, 1)));
     }
     int32_t codec_ty = luaL_checkinteger32(L, 2);
-    int32_t cmd      = luaL_checkinteger32(L, 3);
-    int32_t ecode    = luaL_checkinteger32(L, 4);
+    uint16_t cmd     = static_cast<uint16_t>(luaL_checkinteger(L, 3));
+    uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, 4));
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
         return luaL_error(L, "illegal codec type");
@@ -960,17 +956,17 @@ int32_t LNetworkMgr::srv_multicast(lua_State *L)
     const CmdCfg *cfg = get_ss_cmd(cmd);
     if (!cfg)
     {
-        return luaL_error(L, "no command conf found: %d", cmd);
+        return luaL_error(L, "no command conf found: %d", (int32_t)cmd);
     }
 
     Codec *encoder = StaticGlobal::codec_mgr()->get_codec(
         static_cast<Codec::CodecType>(codec_ty));
     if (!cfg)
     {
-        return luaL_error(L, "no codec conf found: %d", cmd);
+        return luaL_error(L, "no codec conf found: %d", (int32_t)cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, 5, &buffer, cfg);
     if (len < 0)
     {
@@ -1031,8 +1027,8 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
                           lua_typename(L, lua_type(L, 1)));
     }
     int32_t codec_ty = luaL_checkinteger32(L, 2);
-    int32_t cmd      = luaL_checkinteger32(L, 3);
-    int32_t ecode    = luaL_checkinteger32(L, 4);
+    uint16_t cmd      = static_cast<uint16_t>(luaL_checkinteger(L, 3));
+    uint16_t ecode    = static_cast<uint16_t>(luaL_checkinteger(L, 4));
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
         return luaL_error(L, "illegal codec type");
@@ -1047,17 +1043,17 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
     const CmdCfg *cfg = get_sc_cmd(cmd);
     if (!cfg)
     {
-        return luaL_error(L, "no command conf found: %d", cmd);
+        return luaL_error(L, "no command conf found: %d", (int32_t)cmd);
     }
 
     Codec *encoder = StaticGlobal::codec_mgr()->get_codec(
         static_cast<Codec::CodecType>(codec_ty));
     if (!cfg)
     {
-        return luaL_error(L, "no codec conf found: %d", cmd);
+        return luaL_error(L, "no codec conf found: %d", (int32_t)cmd);
     }
 
-    const char *buffer = NULL;
+    const char *buffer = nullptr;
     int32_t len        = encoder->encode(L, 5, &buffer, cfg);
     if (len < 0)
     {
@@ -1128,7 +1124,7 @@ int32_t LNetworkMgr::ssc_multicast(lua_State *L)
 // 设置玩家当前所在的session
 int32_t LNetworkMgr::set_player_session(lua_State *L)
 {
-    Owner owner     = luaL_checkinteger(L, 1);
+    Owner owner     = static_cast<Owner>(luaL_checkinteger(L, 1));
     int32_t session = luaL_checkinteger32(L, 2);
 
     if (session <= 0)

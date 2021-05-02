@@ -141,7 +141,7 @@ HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 int32_t HttpPacket::unpack()
 {
     class Buffer &recv = _socket->recv_buffer();
-    uint32_t size      = recv.get_used_size();
+    size_t size      = recv.get_used_size();
     if (size == 0) return 0;
 
     /* 注意：解析完成后，是由http-parser回调脚本的，这时脚本那边可能会关闭socket
@@ -149,7 +149,7 @@ int32_t HttpPacket::unpack()
      * http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
      * 不用check_all_used_ctx
      */
-    int32_t nparsed =
+    size_t nparsed =
         http_parser_execute(_parser, &settings, recv.get_used_ctx(), size);
 
     /* web_socket报文,暂时不用回调到上层
@@ -167,7 +167,7 @@ int32_t HttpPacket::unpack()
     }
 
     recv.clear();                 // http_parser不需要旧缓冲区
-    if (nparsed != (int32_t)size) /* error */
+    if (nparsed != size) /* error */
     {
         int32_t no = _parser->http_errno;
         ELOG("http parse error(%d):%s", no,

@@ -1,7 +1,7 @@
 #include "buffer.hpp"
 
 // 临时连续缓冲区
-static const uint32_t continuous_size       = MAX_PACKET_LEN;
+static const size_t continuous_size       = MAX_PACKET_LEN;
 static char continuous_ctx[continuous_size] = {0};
 
 Buffer::Buffer()
@@ -47,10 +47,10 @@ void Buffer::clear()
 }
 
 // 添加数据
-void Buffer::append(const void *raw_data, const uint32_t len)
+void Buffer::append(const void *raw_data, const size_t len)
 {
     const char *data   = reinterpret_cast<const char *>(raw_data);
-    uint32_t append_sz = 0;
+    size_t append_sz = 0;
     do
     {
         if (!reserved())
@@ -59,9 +59,9 @@ void Buffer::append(const void *raw_data, const uint32_t len)
             return;
         }
 
-        uint32_t space = _back->space_size();
+        size_t space = _back->space_size();
 
-        uint32_t size = std::min(space, len - append_sz);
+        size_t size = std::min(space, len - append_sz);
         _back->append(data + append_sz, size);
 
         append_sz += size;
@@ -72,11 +72,11 @@ void Buffer::append(const void *raw_data, const uint32_t len)
 }
 
 // 删除数据
-void Buffer::remove(uint32_t len)
+void Buffer::remove(size_t len)
 {
     do
     {
-        uint32_t used = _front->used_size();
+        size_t used = _front->used_size();
 
         // 这个chunk还有其他数据
         if (used > len)
@@ -117,7 +117,7 @@ void Buffer::remove(uint32_t len)
  * protobuf这些都要求内存在连续缓冲区才能解析
  * TODO:这是采用这种设计缺点之二
  */
-const char *Buffer::to_continuous_ctx(uint32_t len)
+const char *Buffer::to_continuous_ctx(size_t len)
 {
     // 大多数情况下，是在同一个chunk的，如果不是，调整下chunk的大小，否则影响效率
     if (EXPECT_TRUE(_front->used_size() >= len))
@@ -128,12 +128,12 @@ const char *Buffer::to_continuous_ctx(uint32_t len)
     // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
     PLOG("using continuous buffer:%d", len);
 
-    uint32_t used     = 0;
+    size_t used     = 0;
     const Chunk *next = _front;
 
     do
     {
-        uint32_t next_used = std::min(len - used, next->used_size());
+        size_t next_used = std::min(len - used, next->used_size());
         assert(used + next_used <= continuous_size);
 
         memcpy(continuous_ctx + used, next->used_ctx(), next_used);
@@ -147,7 +147,7 @@ const char *Buffer::to_continuous_ctx(uint32_t len)
 }
 
 // 把所有数据放到一块连续缓冲区中
-const char *Buffer::all_to_continuous_ctx(uint32_t &len)
+const char *Buffer::all_to_continuous_ctx(size_t &len)
 {
     if (EXPECT_TRUE(!_front->_next))
     {
@@ -155,12 +155,12 @@ const char *Buffer::all_to_continuous_ctx(uint32_t &len)
         return _front->used_ctx();
     }
 
-    uint32_t used     = 0;
+    size_t used     = 0;
     const Chunk *next = _front;
 
     do
     {
-        uint32_t next_used = next->used_size();
+        size_t next_used = next->used_size();
         assert(used + next_used <= continuous_size);
 
         memcpy(continuous_ctx + used, next->used_ctx(), next_used);
