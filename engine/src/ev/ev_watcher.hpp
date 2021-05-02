@@ -58,14 +58,14 @@ public:
     void stop();
 
     using EVWatcher::set;
-    void set(int32_t fd, int32_t events);
+    void set(int32_t fd, uint8_t events);
 
 private:
     friend class EV;
 
     uint8_t _emask;  /// 已经设置到内核(epoll、poll)的事件
+    uint8_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
     int32_t _fd;     /// io描述符
-    int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
 };
 
 ////////////////////////////////////////////////////////////////////////////////

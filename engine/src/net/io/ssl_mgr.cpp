@@ -70,7 +70,7 @@ void SSLMgr::ssl_error(const char *what)
 {
     ELOG("%s errno(%d:%s)", what, errno, strerror(errno));
 
-    int32_t eno = 0;
+    uint64_t eno = 0;
     while (0 != (eno = ERR_get_error()))
     {
         ELOG("    %s", ERR_error_string(eno, NULL));

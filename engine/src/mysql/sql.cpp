@@ -242,7 +242,7 @@ void Sql::fetch_result(MYSQL_RES *result, SqlResult *res)
 {
     if (!res) return; // 部分操作不需要返回结果，如update
 
-    uint32_t num_rows   = mysql_num_rows(result);
+    uint32_t num_rows   = static_cast<uint32_t>(mysql_num_rows(result));
     uint32_t num_fields = mysql_num_fields(result);
 
     res->_ecode    = 0;

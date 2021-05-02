@@ -32,7 +32,8 @@ int32_t LMap::fill(lua_State *L) // (用于动态创建地图)
     int32_t y    = luaL_checkinteger32(L, 2); // 填充的坐标y
     int32_t cost = luaL_checkinteger32(L, 3); // 该格子的消耗
 
-    bool ok = GridMap::fill(x, y, cost);
+    assert(cost >= -255 && cost <= 255);
+    bool ok = GridMap::fill(x, y, static_cast<int8_t>(cost));
 
     lua_pushboolean(L, ok);
     return 1;

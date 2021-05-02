@@ -36,7 +36,7 @@ void EVIO::stop()
     _active = _loop->io_stop(this);
 }
 
-void EVIO::set(int32_t fd, int32_t events)
+void EVIO::set(int32_t fd, uint8_t events)
 {
     int32_t old_active = _active;
     if (old_active) stop();

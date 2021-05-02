@@ -128,16 +128,17 @@ public:
     inline int64_t get_object_id() const { return _object_id; }
     inline void set_object_id(int64_t oid) { _object_id = oid; }
 
-    /* 获取统计数据
-     * @schunk:发送缓冲区分配的内存块
-     * @rchunk:接收缓冲区分配的内存块
-     * @smem:发送缓冲区分配的内存大小
-     * @rmem:接收缓冲区分配的内在大小
-     * @spending:待发送的数据
-     * @rpending:待处理的数据
+    /**
+     * 获取统计数据
+     * @param schunk 发送缓冲区分配的内存块
+     * @param rchunk 接收缓冲区分配的内存块
+     * @param smem 发送缓冲区分配的内存大小
+     * @param rmem 接收缓冲区分配的内在大小
+     * @param spending 待发送的数据
+     * @param rpending 待处理的数据
      */
-    void get_stat(uint32_t &schunk, uint32_t &rchunk, uint32_t &smem,
-                  uint32_t &rmem, uint32_t &spending, uint32_t &rpending);
+    void get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
+                  size_t &rmem, size_t &spending, size_t &rpending);
 
 private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写

@@ -246,12 +246,12 @@ void LStatistic::dump_socket(lua_State *L)
         }
         else
         {
-            uint32_t smem     = 0;
-            uint32_t rmem     = 0;
-            uint32_t schunk   = 0;
-            uint32_t rchunk   = 0;
-            uint32_t spending = 0;
-            uint32_t rpending = 0;
+            size_t smem     = 0;
+            size_t rmem     = 0;
+            size_t schunk   = 0;
+            size_t rchunk   = 0;
+            size_t spending = 0;
+            size_t rpending = 0;
             sk->get_stat(schunk, rchunk, smem, rmem, spending, rpending);
 
             // object_id，如果是客户端连接，则是玩家pid，其他情况没什么用

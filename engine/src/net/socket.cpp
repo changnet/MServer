@@ -755,8 +755,8 @@ int32_t Socket::init_connect()
  * @spending:待发送的数据
  * @rpending:待处理的数据
  */
-void Socket::get_stat(uint32_t &schunk, uint32_t &rchunk, uint32_t &smem,
-                      uint32_t &rmem, uint32_t &spending, uint32_t &rpending)
+void Socket::get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
+                      size_t &rmem, size_t &spending, size_t &rpending)
 {
     schunk = _send.get_chunk_size();
     rchunk = _recv.get_chunk_size();
