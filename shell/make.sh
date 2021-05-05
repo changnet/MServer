@@ -2,8 +2,8 @@
 
 # --makefile中的路径是相对于源码路径的
 
-# TODO 用realpath取绝对路径比较小，但是那样的话cmake的日志也是绝对路径，太难看了
-BUILD_DIR=../server/bin/.build
+# TODO 可以用realpath取绝对路径，但是那样的话cmake的日志也是绝对路径，太难看了
+BUILD_DIR=../server/bin/linux-x64
 ENGINE_DIR=../../../engine
 mkdir -p $BUILD_DIR
 

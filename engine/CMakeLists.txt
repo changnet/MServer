@@ -81,7 +81,7 @@ message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 # 设置的参数能被子目录继承，子目录可以选择覆盖
 set(SRC_ROOT_PATH ".")
 set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
-set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/.libs")
+set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/libs")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 
 if(WINDOWS)
@@ -92,6 +92,8 @@ elseif(LINUX)
     set(LUA_LIBRARIES /usr/local/lib)
     set(LUA_INCLUDE_DIR /usr/local/include)
 endif()
+
+find_package(mongoc-1.0 CONFIG REQUIRED)
 
 add_subdirectory(deps)
 
@@ -150,7 +152,6 @@ target_link_libraries(master PRIVATE
 )
 
 if(WINDOWS)
-    find_package(libmongoc-1.0 CONFIG REQUIRED)
     find_package(OpenSSL REQUIRED)
     find_package(unofficial-libmariadb CONFIG REQUIRED)
     find_package(Flatbuffers CONFIG REQUIRED)
@@ -175,16 +176,13 @@ elseif(UNIX)
     # 用system指定这些目录为系统目录，去除bson中的一些编译警告
     target_include_directories(master SYSTEM PRIVATE
         /usr/include/mariadb
-        /usr/local/include/libmongoc-1.0
-        /usr/local/include/libbson-1.0
     )
     target_link_libraries(master PRIVATE
         lua.a
         uuid.a
         flatbuffers.a
         mariadbclient.a
-        mongoc-static-1.0.a
-        bson-static-1.0.a
+        mongo::mongoc_static
 
         # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
 

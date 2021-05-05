@@ -15,13 +15,12 @@ endif()
 add_library(http_parser STATIC http-parser/http_parser.c)
 
 # lua_bson
-find_package(libbson-1.0 CONFIG REQUIRED)
+find_package(bson-1.0 CONFIG REQUIRED)
 add_library(lua_bson STATIC lua_bson/lbson.c)
 target_include_directories(lua_bson PRIVATE
-    ${BSON_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
 )
-# target_link_libraries(lua_bson bson-static-1.0)
+target_link_libraries(lua_bson PRIVATE mongo::bson_shared)
 
 # lua_flatbuffers
 file(GLOB SRC_LIST "lua_flatbuffers/*.cpp")

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <bson.h>
-#include <mongoc.h>
+#include <bson/bson.h>
+#include <mongoc/mongoc.h>
 
 #include "../global/global.hpp"
 
@@ -26,13 +26,13 @@ public:
     class MongoQuery
     {
     public:
-        explicit MongoQuery(int32_t qid, MongoQueryType mqt,
-            const char *clt, bson_t *query, bson_t *opts = nullptr)
+        explicit MongoQuery(int32_t qid, MongoQueryType mqt, const char *clt,
+                            bson_t *query, bson_t *opts = nullptr)
         {
-            _mqt = mqt;
-            _qid = qid;
-            _opts   = opts;
-            _query  = query;
+            _mqt   = mqt;
+            _qid   = qid;
+            _opts  = opts;
+            _query = query;
             snprintf(_clt, sizeof(_clt), "%s", clt);
 
             _remove = false;
@@ -135,6 +135,7 @@ public:
 
 private:
     mongoc_collection_t *get_collection(const char *collection);
+
 private:
     int32_t _port;
     char _ip[MONGO_VAR_LEN];
