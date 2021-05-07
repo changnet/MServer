@@ -158,19 +158,15 @@ if(WINDOWS)
 
     target_include_directories(master PRIVATE
         ${LUA_INCLUDE_DIR}
-        ${MONGOC_INCLUDE_DIRS}
     )
     target_link_libraries(master PRIVATE
         Rpcrt4 # uuidCreate
         Dbghelp # MiniDumpWriteDump
         ${LUA_LIBRARIES}
-        ${MONGOC_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
         libmariadb mariadbclient
         flatbuffers::flatbuffers
-    )
-    target_compile_definitions(master PRIVATE
-        ${MONGOC_DEFINITIONS}
+        mongo::mongoc_shared
     )
 elseif(UNIX)
     # 用system指定这些目录为系统目录，去除bson中的一些编译警告

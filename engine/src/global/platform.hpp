@@ -43,5 +43,5 @@ inline const char *io_strerror(int32_t e)
 #elif _MSC_VER
     #define __COMPLIER_ "MSVC"
 
-    #define __VERSION__ STR(_MSC_FULL_VER)
+    #define __VERSION__ XSTR(_MSC_FULL_VER)
 #endif

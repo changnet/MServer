@@ -37,7 +37,15 @@ extern std::string std_format(const char *fmt, ...);
 
 // 把常量值转成字符串
 // https://gcc.gnu.org/onlinedocs/gcc-9.2.0/cpp/Stringizing.html
+/**
+ * 把变量s转换成常量字符串
+ */
 #define STR(s) #s
+
+/**
+ * 把常量、宏转换为常量字符串
+ */
+#define XSTR(s) STR(s)
 
 /* Qt style unused paramter handler */
 #define UNUSED(x) (void)x
