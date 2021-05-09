@@ -184,7 +184,6 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
 bool AsyncLog::Policy::init_daily_policy()
 {
     _data = StaticGlobal::ev()->now();
-    ;
 
     // 读取已有日志文件的日期
     std::error_code e;
@@ -327,6 +326,11 @@ size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
         bytes++;
         fputc('\n', stream);
     }
+
+#ifdef __windows__
+    // 在win的MYSY2(包括git bash)会缓存输出，直到程序关闭或者缓存区满，因此需要手动刷新
+    if (stdout == stream || stderr == stream) fflush(stream);
+#endif
 
     return bytes;
 }
