@@ -4,9 +4,6 @@
 #include "../global/platform.hpp"
 
 #ifdef __windows__
-    // define the manifest FD_SETSIZE in every source file before including the
-    // Winsock2.h header file
-    #define FD_SETSIZE 1024
     #include <winsock2.h>
     #include <ws2tcpip.h>
 

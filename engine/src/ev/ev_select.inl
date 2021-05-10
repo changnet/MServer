@@ -1,11 +1,6 @@
 #include "../global/platform.hpp"
 #ifdef __windows__
-    // define the manifest FD_SETSIZE in every source file before including the
-    // Winsock2.h header file
-    #ifdef FD_SETSIZE
-        #error "FD_SETSIZE already define"
-    #endif
-    #define FD_SETSIZE 1024
+    // 如果要修改select支持的socket数量，编译的时候定义FD_SETSIZE的大小
     #include <winsock2.h>
 #else
     #include <sys/select.h>
@@ -99,9 +94,9 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
 #endif
 
     struct timeval tv;
-    tv.tv_sec  = timeout / 1000;
-    tv.tv_usec = (timeout % 1000) * 1000;
-    int32_t ok = select(size, &_ro_fd_set, &_wo_fd_set, ex_fd_set, &tv);
+    tv.tv_sec  = long(timeout / 1000);
+    tv.tv_usec = long((timeout % 1000) * 1000);
+    int32_t ok = select((int32_t)size, &_ro_fd_set, &_wo_fd_set, ex_fd_set, &tv);
     if (EXPECT_FALSE(ok < 0))
     {
 #ifdef __windows__
@@ -114,7 +109,7 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
         case WSAEINVAL:
             // 当需要监听的socket数量为0时，会触发这个错误
             // The time-out value is not valid, or all three descriptor parameters were null.
-            Sleep(timeout);
+            Sleep((DWORD)timeout);
             return;
         default: ELOG("select backend error(%d):%s", errno, strerror(errno));
         }

@@ -875,22 +875,22 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
     return iter->second;
 }
 
-bool LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
+int32_t LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
                               const char *ctx, size_t size) const
 {
     int64_t object_id = src_sk->get_object_id();
     int32_t session   = get_cmd_session(object_id, cmd);
-    if (session < 0) return true;
+    if (session < 0) return 0;
 
     // 在当前进程处理，不需要转发
-    if (session == _session) return false;
+    if (session == _session) return -1;
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
     class Socket *dest_sk = get_conn_by_session(session);
     if (!dest_sk)
     {
         ELOG("client packet forwarding no destination found.cmd:%d", cmd);
-        return true; /* 如果转发失败，也相当于转发了 */
+        return 0; /* 如果转发失败，也相当于转发了 */
     }
 
     Codec::CodecType codec_ty = src_sk->get_codec_type();
@@ -908,7 +908,7 @@ bool LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
     send.append(ctx, size);
 
     dest_sk->pending_send();
-    return true;
+    return 0;
 }
 
 /* 发送ping-pong等数据包 */

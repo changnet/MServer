@@ -27,7 +27,7 @@ int32_t IO::recv(int32_t &byte)
 
     // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
     size_t size = _recv->get_space_size();
-    int32_t len   = (int32_t)::recv(_fd, _recv->get_space_ctx(), size, 0);
+    int32_t len   = (int32_t)::recv(_fd, _recv->get_space_ctx(), (int32_t)size, 0);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;
@@ -56,7 +56,7 @@ int32_t IO::send(int32_t &byte)
     size_t bytes = _send->get_used_size();
     assert(bytes > 0);
 
-    int32_t len = (int32_t)::send(_fd, _send->get_used_ctx(), bytes, 0);
+    int32_t len = (int32_t)::send(_fd, _send->get_used_ctx(), (int32_t)bytes, 0);
 
     if (EXPECT_TRUE(len > 0))
     {

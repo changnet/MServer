@@ -11,12 +11,6 @@
     #define __windows__
     #define __OS_NAME__ "windows"
 
-    #define NOMINMAX // windows.h会覆盖std中的std::max和std::min
-    #define WIN32_LEAN_AND_MEAN
-    // 去掉不使用fopen_s strerror_s提示
-    // 这些函数是winddows下的，虽然C11里有，但是可选的，GCC即使使用C11标准也没实现这些函数
-    // https://stackoverflow.com/questions/47867130/stdc-lib-ext1-availability-in-gcc-and-clang
-    #define _CRT_SECURE_NO_WARNINGS
     #include <windows.h>
     #define PATH_MAX                MAX_PATH
     #define localtime_r(timer, buf) localtime_s(buf, timer)

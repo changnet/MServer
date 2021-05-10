@@ -159,7 +159,7 @@ int32_t WSStreamPacket::on_frame_end()
 
     size_t size   = data_size - sizeof(*header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
-    if (network_mgr->cs_dispatch(cmd, _socket, ctx, size)) return 0;
+    if (0 != network_mgr->cs_dispatch(cmd, _socket, ctx, size)) return 0;
 
     return cs_command(cmd, ctx, size);
 }

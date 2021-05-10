@@ -115,7 +115,7 @@ void StreamPacket::cs_dispatch(const struct c2s_header *header)
     const char *ctx = reinterpret_cast<const char *>(header + 1);
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    if (network_mgr->cs_dispatch(cmd, _socket, ctx, size)) return;
+    if (0 != network_mgr->cs_dispatch(cmd, _socket, ctx, size)) return;
 
     cs_command(cmd, ctx, size); /* 在当前进程处理 */
 }

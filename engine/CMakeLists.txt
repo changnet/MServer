@@ -115,13 +115,15 @@ link_directories(
 file(GLOB_RECURSE SRC_LIST "${SRC_ROOT_PATH}/src/*.cpp")
 add_executable(master ${SRC_LIST})
 
-# 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
-# 在make.sh脚本里做，在这里做会导致每次都编译master
-# file(TOUCH "${SRC_ROOT_PATH}/src/lua_cpplib/lev.cpp")
-target_compile_definitions(
-    master
-    PRIVATE BACKEND=${BACKEND}
-)
+target_compile_definitions(master PRIVATE BACKEND=${BACKEND})
+if(WINDOWS)
+    target_compile_definitions(master PRIVATE
+        NOMINMAX # windows.h会覆盖std中的std::max和std::min
+        WIN32_LEAN_AND_MEAN
+        _CRT_SECURE_NO_WARNINGS # 去掉不使用_s函数的警告
+        FD_SETSIZE=128 # select支持的socket数量
+    )
+endif()
 
 target_include_directories(master PRIVATE
     ${DEPS_PATH}/pbc

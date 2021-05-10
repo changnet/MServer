@@ -319,7 +319,7 @@ t_describe("test grid aoi", function()
         random_test(aoi, max_width, max_height, max_entity, max_random)
     end)
 
-    local aoi = Aoi()
+    local aoi = nil
     local max_entity = 2000
     local max_random = 50000
     t_it(string.format(
@@ -327,6 +327,7 @@ t_describe("test grid aoi", function()
         max_entity, max_random), function()
         is_valid = false
         entity_info = {}
+        if not aoi then aoi = Aoi() end
 
         aoi:set_size(width, height, pix)
         aoi:set_visual_range(visual_width, visual_height)
@@ -342,6 +343,7 @@ t_describe("test grid aoi", function()
     t_it(string.format(
         "query visual test %d entity and %d times visual range",
         max_entity, max_query), function()
+        if not aoi then aoi = Aoi() end
         for _ = 1, max_query do
             for id in pairs(entity_info) do
                 aoi:get_visual_entity(id, 0xF, tmp_list)
