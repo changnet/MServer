@@ -4,12 +4,12 @@
 
 // https://blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
 #if defined(__linux__)
-    #define __OS_NAME__ "linux"
+    #define __OS_NAME__ "LINUX"
     #define io_errno    errno
     #define io_strerror strerror
 #elif defined(_WIN32) || defined(_WIN64)
     #define __windows__
-    #define __OS_NAME__ "windows"
+    #define __OS_NAME__ "WINDOWS"
 
     #include <windows.h>
     #define PATH_MAX                MAX_PATH

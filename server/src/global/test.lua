@@ -330,7 +330,17 @@ function t_describe(title, func)
 end
 
 -- 创建一个具体的测试
-function t_it(title, func)
+-- @param title 测试名字
+-- @param mask 可选参数，是否执行此测试
+-- @param func 测试函数
+function t_it(title, mask, func)
+    -- 根据条件判断是否执行此测试
+    if not mask then return end
+
+    -- 修正可选参数mask
+    if not func then func = mask end
+    assert(func)
+
     local should_run = T.d_now.should_run
     if not should_run and T.filter then
         should_run = string.find(title, T.filter)

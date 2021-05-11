@@ -76,7 +76,6 @@ int32_t luaopen_ev(lua_State *L)
     lc.def<&LEV::real_time>("real_time");
     lc.def<&LEV::set_app_ev>("set_app_ev");
     lc.def<&LEV::time_update>("time_update");
-    lc.def<&LEV::kernel_info>("kernel_info");
     lc.def<&LEV::real_ms_time>("real_ms_time");
     lc.def<&LEV::set_critical_time>("set_critical_time");
 
@@ -313,6 +312,24 @@ LState::LState()
         exit(1);
     }
     luaL_openlibs(L);
+
+    // export env variable
+#define SET_ENV_VAR(v)    \
+    lua_pushstring(L, v); \
+    lua_setglobal(L, #v)
+
+    SET_ENV_VAR(__OS_NAME__);
+    SET_ENV_VAR(__COMPLIER_);
+    SET_ENV_VAR(__VERSION__);
+    SET_ENV_VAR(__BACKEND__);
+    SET_ENV_VAR(__TIMESTAMP__);
+
+#undef SET_ENV_VAR
+
+    // 在脚本中，设置LINUX、WINDOWS等系统名为true
+    lua_pushboolean(L, 1);
+    lua_setglobal(L, __OS_NAME__);
+
     open_cpp();
 }
 

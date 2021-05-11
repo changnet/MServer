@@ -12,7 +12,14 @@ max_comment_line_length = 256 -- 注释行长
 read_globals =
 {
     "ev",
-    "network_mgr"
+    "network_mgr",
+    "__OS_NAME__",
+    "__BACKEND__",
+    "__COMPLIER_",
+    "__VERSION__",
+    "__TIMESTAMP__",
+    "LINUX",
+    "WINDOWS",
 }
 
 -- 可读可写全局变量

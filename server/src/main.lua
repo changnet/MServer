@@ -41,14 +41,13 @@ end
 
 -- 打印内核参数
 local function log_app_info(opts)
-    local env, complier, complier_v, backend, build_time = ev:kernel_info()
     PRINT("#####################################################")
     PRINTF("## starting %s", table.concat(opts, " "))
-    PRINTF("## env: %s", env)
+    PRINTF("## OS: %s", __OS_NAME__)
     PRINTF("## %s", _VERSION)
-    PRINTF("## backend: %s", backend)
-    PRINTF("## complier: %s %s", complier, complier_v)
-    PRINTF("## build time: %s", build_time)
+    PRINTF("## backend: %s", __BACKEND__)
+    PRINTF("## complier: %s %s", __COMPLIER_, __VERSION__)
+    PRINTF("## build time: %s", __TIMESTAMP__)
     PRINT("#####################################################")
 end
 

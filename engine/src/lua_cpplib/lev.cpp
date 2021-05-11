@@ -37,17 +37,6 @@ int32_t LEV::backend(lua_State *L)
     return 0;
 }
 
-int32_t LEV::kernel_info(lua_State *L)
-{
-    lua_pushstring(L, __OS_NAME__);
-    lua_pushstring(L, __COMPLIER_);
-    lua_pushstring(L, __VERSION__);
-    lua_pushstring(L, __BACKEND__);
-    lua_pushstring(L, __TIMESTAMP__);
-
-    return 5;
-}
-
 int32_t LEV::time_update(lua_State *L)
 {
     UNUSED(L);

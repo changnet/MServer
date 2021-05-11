@@ -24,9 +24,11 @@ t_describe("http(s) test", function()
     t_before( function()
         clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
 
-        vfy_ssl = network_mgr:new_ssl_ctx(
-            network_mgr.SSLVT_TLS_CLT_AT, nil, nil, nil,
-            "/etc/ssl/certs/ca-certificates.crt")
+        if LINUX then
+            vfy_ssl = network_mgr:new_ssl_ctx(
+                network_mgr.SSLVT_TLS_CLT_AT, nil, nil, nil,
+                "/etc/ssl/certs/ca-certificates.crt")
+        end
 
         srv_ssl = network_mgr:new_ssl_ctx(
             network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
@@ -209,7 +211,7 @@ t_describe("http(s) test", function()
         end)
     end)
 
-    t_it("https valify and get " .. exp_host, function()
+    t_it("https valify and get " .. exp_host, vfy_ssl, function()
         t_wait(10000)
 
         local conn = HttpConn()

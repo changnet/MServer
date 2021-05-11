@@ -67,7 +67,7 @@ add_library(acism STATIC
     aho-corasick/acism_dump.c
     aho-corasick/acism_file.c
 )
-if(WIDOWS)
+if(WINDOWS)
     target_compile_definitions(acism PRIVATE _CRT_SECURE_NO_WARNINGS )
     target_compile_options(acism PRIVATE /wd4013 /wd4477 /wd4273 /wd4244 /wd4267)
 endif()
