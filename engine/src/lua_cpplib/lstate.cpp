@@ -314,21 +314,30 @@ LState::LState()
     luaL_openlibs(L);
 
     // export env variable
-#define SET_ENV_VAR(v)    \
+#define SET_ENV_STR(v)    \
     lua_pushstring(L, v); \
     lua_setglobal(L, #v)
 
-    SET_ENV_VAR(__OS_NAME__);
-    SET_ENV_VAR(__COMPLIER_);
-    SET_ENV_VAR(__VERSION__);
-    SET_ENV_VAR(__BACKEND__);
-    SET_ENV_VAR(__TIMESTAMP__);
+    SET_ENV_STR(__OS_NAME__);
+    SET_ENV_STR(__COMPLIER_);
+    SET_ENV_STR(__VERSION__);
+    SET_ENV_STR(__BACKEND__);
+    SET_ENV_STR(__TIMESTAMP__);
 
-#undef SET_ENV_VAR
+#undef SET_ENV_STR
+
+#define SET_ENV_BOOL(v)      \
+    lua_pushboolean(L, 1); \
+    lua_setglobal(L, v)
 
     // 在脚本中，设置LINUX、WINDOWS等系统名为true
-    lua_pushboolean(L, 1);
-    lua_setglobal(L, __OS_NAME__);
+    SET_ENV_BOOL(__OS_NAME__);
+    #ifdef __IPV4__
+    SET_ENV_BOOL("IPV4");
+    #else
+    SET_ENV_BOOL("IPV6");
+    #endif
+#undef SET_ENV_BOOL
 
     open_cpp();
 }

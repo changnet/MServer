@@ -183,7 +183,7 @@ int32_t LNetworkMgr::address(lua_State *L)
     char buf[128]; // INET6_ADDRSTRLEN
     if (!itr->second->address(buf, sizeof(buf), &port))
     {
-        return luaL_error(L, strerror(errno));
+        return luaL_error(L, Socket::str_error());
     }
 
     lua_pushstring(L, buf);
@@ -217,7 +217,7 @@ int32_t LNetworkMgr::listen(lua_State *L)
     if (fd < 0)
     {
         delete _socket;
-        return luaL_error(L, strerror(errno));
+        return luaL_error(L, Socket::str_error());
     }
 
     _socket_map[conn_id] = _socket;
@@ -249,10 +249,10 @@ int32_t LNetworkMgr::connect(lua_State *L)
         new class Socket(conn_id, static_cast<Socket::ConnType>(conn_type));
 
     int32_t fd = _socket->connect(host, port);
-    if (fd < 0)
+    if (!Socket::fd_valid(fd))
     {
         delete _socket;
-        luaL_error(L, strerror(errno));
+        luaL_error(L, Socket::str_error());
         return 0;
     }
 

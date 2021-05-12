@@ -140,6 +140,11 @@ public:
     void get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
                   size_t &rmem, size_t &spending, size_t &rpending);
 
+    /// 获取socket错误日志
+    static const char *str_error();
+    /// 判断创建出来的fd是否有效
+    static bool fd_valid(int32_t fd);
+
 private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32_t io_status_check(int32_t ecode);

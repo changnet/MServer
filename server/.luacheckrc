@@ -20,6 +20,8 @@ read_globals =
     "__TIMESTAMP__",
     "LINUX",
     "WINDOWS",
+    "IPV4",
+    "IPV6"
 }
 
 -- 可读可写全局变量

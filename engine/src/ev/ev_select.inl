@@ -111,7 +111,16 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
             // The time-out value is not valid, or all three descriptor parameters were null.
             Sleep((DWORD)timeout);
             return;
-        default: ELOG("select backend error(%d):%s", errno, strerror(errno));
+        default:
+        {
+            // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
+            char buff[256] = {0};
+            FormatMessage(
+                FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                nullptr, errno, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buff,
+                sizeof(buff), nullptr);
+            ELOG("select backend error(%d):%s", errno, buff);
+        }
         }
 #else
         // https://man7.org/linux/man-pages/man2/select.2.html
@@ -125,7 +134,7 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
     for (auto &watcher : ev_loop->_fds)
     {
         // 只用设置过mask的才会在select的数组中
-        if (!watcher->get_mask()) continue;
+        if (!watcher || !watcher->get_mask()) continue;
 
         int32_t events = 0;
         int32_t fd     = watcher->get_fd();

@@ -29,7 +29,7 @@
     #define USER_TIMEOUT(x)
 #endif
 
-#ifdef USE_IP_V4
+#ifdef __IPV4__
     #define AF_INET_X     AF_INET
     #define sin_addr_x    sin_addr
     #define sin_port_x    sin_port
@@ -61,6 +61,30 @@ void Socket::library_init()
     int32_t err = WSAStartup(wVersionRequested, &wsaData);
     assert(0 == err && 2 == LOBYTE(wsaData.wVersion)
            && 2 == HIBYTE(wsaData.wVersion));
+#endif
+}
+
+const char *Socket::str_error()
+{
+#ifdef __windows__
+    int32_t e = WSAGetLastError();
+    // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
+    thread_local char buff[512] = {0};
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                  nullptr, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buff,
+                  sizeof(buff), nullptr);
+    return buff;
+#else
+    return strerror(errno);
+#endif
+}
+
+bool Socket::fd_valid(int32_t fd)
+{
+#ifdef __windows__
+    return fd != INVALID_SOCKET;
+#else
+    return fd >= 0;
 #endif
 }
 
@@ -339,7 +363,7 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family   = AF_INET_X; /* Allow IPv4 or IPv6 */
     hints.ai_socktype = SOCK_STREAM;
-#ifdef USE_IP_V4
+#ifdef __IPV4__
     hints.ai_flags = 0;
 #else
     hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
@@ -378,14 +402,21 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
 
 void Socket::start(int32_t fd)
 {
-    assert(0 == _send.get_used_size() && 0 == _send.get_used_size());
+    assert(0 == _send.get_used_size() && 0 == _recv.get_used_size());
 
-    // connect成功时，已有fd
-    // accept成功时，需要从外部传入fd
-    assert((fd < 0 && _w.get_fd() > 0) || (fd > 0 && _w.get_fd() < 0));
+    // connect成功时，已有fd, accept成功时，需要从外部传入fd
+    if (fd_valid(fd))
+    {
+        assert(!fd_valid(_w.get_fd()));
+    }
+    else
+    {
+        fd = _w.get_fd();
+        assert(fd_valid(fd));
+    }
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    _w.set(fd > 0 ? fd : _w.get_fd(), EV_READ);
+    _w.set(fd, EV_READ);
     _w.bind(&Socket::command_cb, this);
 
     if (!_w.active()) _w.start();
@@ -395,25 +426,25 @@ void Socket::start(int32_t fd)
 
 int32_t Socket::connect(const char *host, int32_t port)
 {
-    assert(_w.get_fd() < 0);
+    assert(!fd_valid(_w.get_fd()));
 
     // 创建新socket并设置为非阻塞
-    int32_t fd = ::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (fd < 0 || non_block(fd) < 0)
+    int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
+    if (!fd_valid(fd) || non_block(fd) < 0)
     {
         return -1;
     }
 
-    struct sockaddr_in_x sk_socket;
-    memset(&sk_socket, 0, sizeof(sk_socket));
-    sk_socket.sin_family_x = AF_INET_X;
-    sk_socket.sin_port_x   = htons((uint16_t)port);
+    struct sockaddr_in_x addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family_x = AF_INET_X;
+    addr.sin_port_x   = htons((uint16_t)port);
 
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
     // IPv6 address must be supplied in src instead
     // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip
-    int32_t ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
+    int32_t ok = inet_pton(AF_INET_X, host, &addr.sin_addr_x);
     if (0 == ok)
     {
         ELOG("invalid host format: %s", host);
@@ -427,12 +458,21 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
     /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
-    if (::connect(fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0
-        && errno != EINPROGRESS)
+    if (::connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        ::close(fd);
+#ifdef __windows__
+        int32_t e = WSAGetLastError();
+        if (e != WSAEINPROGRESS)
+#else
+        int32_t e = errno;
+        if (e != WSAEINPROGRESS)
+#endif
+        {
+            ELOG("%s:%d %s(%d)", host, port, str_error(), e);
+            ::close(fd);
 
-        return -1;
+            return -1;
+        }
     }
 
     _w.bind(&Socket::connect_cb, this);
@@ -456,7 +496,7 @@ int32_t Socket::validate()
 
 const char *Socket::address(char *buf, size_t len, int *port)
 {
-    if (_w.get_fd() < 0) return nullptr;
+    if (!fd_valid(_w.get_fd())) return nullptr;
 
     struct sockaddr_in_x addr;
 
@@ -479,8 +519,8 @@ const char *Socket::address(char *buf, size_t len, int *port)
 
 int32_t Socket::listen(const char *host, int32_t port)
 {
-    int32_t fd = ::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (fd < 0)
+    int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
+    if (!fd_valid(fd))
     {
         return -1;
     }
@@ -506,7 +546,7 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-#ifndef USE_IP_V4
+#ifndef __IPV4__
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
     optval = 0;
     if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval))
@@ -566,8 +606,8 @@ void Socket::listen_cb(int32_t revents)
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     while (Socket::active())
     {
-        int32_t new_fd = ::accept(_w.get_fd(), nullptr, nullptr);
-        if (new_fd < 0)
+        int32_t new_fd = (int32_t)::accept(_w.get_fd(), nullptr, nullptr);
+        if (!fd_valid(new_fd))
         {
             if (EAGAIN != errno && EWOULDBLOCK != errno)
             {
@@ -661,7 +701,7 @@ void Socket::command_cb(int32_t revents)
     do
     {
         if ((ret = _packet->unpack()) <= 0) return;
-    } while (fd() > 0);
+    } while (fd_valid(fd()));
 
     // 解析过程中错误，断开链接
     if (EXPECT_FALSE(ret < 0))

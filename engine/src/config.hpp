@@ -71,4 +71,4 @@
 #define MAX_MAP_GRID 256
 
 // 是否使用ipv4(默认使用ipv6双栈)
-// #define USE_IP_V4
+#define __IPV4__ "IPV4"

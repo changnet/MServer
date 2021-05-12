@@ -12,8 +12,8 @@ t_describe("http(s) test", function()
     -- local exp_host = "www.example.com"
     local exp_host = "postman-echo.com"
 
-    -- 测试时发现，ipv6可以把ipv4的地址传进去
-    local local_host = "::1" -- "127.0.0.1"
+    local local_host = "::1"
+    if IPV4 then local_host = "127.0.0.1" end
 
     local clt_ssl
     local srv_ssl
@@ -48,7 +48,7 @@ t_describe("http(s) test", function()
         t_print("target host address is", ip)
     end)
 
-    t_it("http get " .. exp_host, function()
+    t_it("http_get " .. exp_host, function()
         t_wait(10000)
 
         local conn = HttpConn()
