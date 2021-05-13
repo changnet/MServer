@@ -48,6 +48,7 @@ local function log_app_info(opts)
     PRINTF("## backend: %s", __BACKEND__)
     PRINTF("## complier: %s %s", __COMPLIER_, __VERSION__)
     PRINTF("## build time: %s", __TIMESTAMP__)
+    PRINTF("## using %s", IPV4 or IPV6)
     PRINT("#####################################################")
 end
 

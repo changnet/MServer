@@ -70,7 +70,8 @@ const char *Socket::str_error()
     int32_t e = WSAGetLastError();
     // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
     thread_local char buff[512] = {0};
-    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
+                      | FORMAT_MESSAGE_MAX_WIDTH_MASK,
                   nullptr, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buff,
                   sizeof(buff), nullptr);
     return buff;
@@ -85,6 +86,15 @@ bool Socket::fd_valid(int32_t fd)
     return fd != INVALID_SOCKET;
 #else
     return fd >= 0;
+#endif
+}
+
+int32_t Socket::error_no()
+{
+#ifdef __windows__
+    return WSAGetLastError();
+#else
+    return errno;
 #endif
 }
 
@@ -147,7 +157,7 @@ void Socket::stop(bool flush)
         }
     }
 
-    if (_w.get_fd() > 0)
+    if (fd_valid(_w.get_fd()))
     {
         ::close(_w.get_fd());
         _w.stop();
@@ -258,7 +268,7 @@ int32_t Socket::block(int32_t fd)
 {
 #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket
-    u_long flag = 1;
+    u_long flag = 0;
     return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
 #else
     int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
@@ -273,7 +283,7 @@ int32_t Socket::block(int32_t fd)
 int32_t Socket::non_block(int32_t fd)
 {
 #ifdef __windows__
-    u_long flag = 0;
+    u_long flag = 1;
     return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
 #else
     int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
@@ -460,12 +470,11 @@ int32_t Socket::connect(const char *host, int32_t port)
     /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
     if (::connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
+        int32_t e = error_no();
 #ifdef __windows__
-        int32_t e = WSAGetLastError();
-        if (e != WSAEINPROGRESS)
+        if (e != WSAEINPROGRESS && e != WSAEWOULDBLOCK)
 #else
-        int32_t e = errno;
-        if (e != WSAEINPROGRESS)
+        if (e != EINPROGRESS)
 #endif
         {
             ELOG("%s:%d %s(%d)", host, port, str_error(), e);
@@ -609,9 +618,14 @@ void Socket::listen_cb(int32_t revents)
         int32_t new_fd = (int32_t)::accept(_w.get_fd(), nullptr, nullptr);
         if (!fd_valid(new_fd))
         {
-            if (EAGAIN != errno && EWOULDBLOCK != errno)
+            int32_t e = error_no();
+#ifdef __windows__
+            if (WSAEWOULDBLOCK != e)
+#else
+            if (EAGAIN != e && EWOULDBLOCK != e)
+#endif
             {
-                ELOG("socket::accept:%s\n", strerror(errno));
+                ELOG("socket::accept:%s\n", str_error());
                 return;
             }
 

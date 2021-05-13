@@ -48,7 +48,7 @@ t_describe("http(s) test", function()
         t_print("target host address is", ip)
     end)
 
-    t_it("http_get " .. exp_host, function()
+    t_it("http get " .. exp_host, function()
         t_wait(10000)
 
         local conn = HttpConn()

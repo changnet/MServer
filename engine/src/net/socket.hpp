@@ -144,6 +144,8 @@ public:
     static const char *str_error();
     /// 判断创建出来的fd是否有效
     static bool fd_valid(int32_t fd);
+    /// 获取socket的错误码
+    static int32_t error_no();
 
 private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写

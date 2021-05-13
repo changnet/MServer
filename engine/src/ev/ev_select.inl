@@ -157,16 +157,15 @@ void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
     {
         FD_SET((SOCKET)fd, &_ri_fd_set);
     }
-    else if ((old_ev & EV_READ) && !(new_ev & EV_READ))
-    {
-        FD_CLR((SOCKET)fd, &_ri_fd_set);
-    }
     if ((new_ev & EV_WRITE) && !(old_ev & EV_WRITE))
     {
         FD_SET((SOCKET)fd, &_wi_fd_set);
     }
-    else if ((old_ev & EV_WRITE) && !(new_ev & EV_WRITE))
+
+    // 移除时，由于无法知道old_ev值，保证socket从backend中删除
+    if (!old_ev && !new_ev)
     {
+        FD_CLR((SOCKET)fd, &_ri_fd_set);
         FD_CLR((SOCKET)fd, &_wi_fd_set);
     }
 }
