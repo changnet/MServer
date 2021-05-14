@@ -7,7 +7,11 @@
 -- 设置lua文件搜索路径
 package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
 -- 设置c库搜索路径，用于直接加载so或者dll的lua模块
-package.cpath = "../c_module/?.so;" .. package.cpath
+if WINDOWS then
+    package.cpath = "../c_module/?.dll;" .. package.cpath
+else
+    package.cpath = "../c_module/?.so;" .. package.cpath
+end
 
 local Log  = require "Log"
 local util = require "util"
