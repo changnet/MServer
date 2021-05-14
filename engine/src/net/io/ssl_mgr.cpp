@@ -1,6 +1,7 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
+#include "../socket.hpp"
 #include "ssl_mgr.hpp"
 
 void SSLMgr::library_end()
@@ -68,7 +69,7 @@ void SSLMgr::library_init()
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
 void SSLMgr::ssl_error(const char *what)
 {
-    ELOG("%s errno(%d:%s)", what, errno, strerror(errno));
+    ELOG("%s errno(%d:%s)", what, Socket::error_no(), Socket::str_error());
 
     unsigned long eno = 0;
     while (0 != (eno = ERR_get_error()))

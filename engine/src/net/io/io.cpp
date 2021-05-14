@@ -1,7 +1,7 @@
 #include "../socket_compat.hpp"
 
 #include "io.hpp"
-#include "../buffer.hpp"
+#include "../socket.hpp"
 
 IO::IO(class Buffer *recv, class Buffer *send)
 {
@@ -38,9 +38,9 @@ int32_t IO::recv(int32_t &byte)
     if (0 == len) return -1; // 对方主动断开
 
     /* error happen */
-    if (errno != EAGAIN && errno != EWOULDBLOCK)
+    if (Socket::is_error())
     {
-        ELOG("io send:%s", strerror(errno));
+        ELOG("io recv:%s(%d)", Socket::str_error(), Socket::error_no());
         return -1;
     }
 
@@ -68,9 +68,9 @@ int32_t IO::send(int32_t &byte)
     if (0 == len) return -1; // 对方主动断开
 
     /* error happen */
-    if (errno != EAGAIN && errno != EWOULDBLOCK)
+    if (Socket::is_error())
     {
-        ELOG("io send:%s", strerror(errno));
+        ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
         return -1;
     }
 

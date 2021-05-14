@@ -54,7 +54,7 @@ int32_t SSLIO::recv(int32_t &byte)
     // 非主动断开，打印错误日志
     // 在实际测试中，chrome会直接断开链接，而firefox则会关闭SSL */
     if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode && 0 == errno))
+        || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
     {
         return -1;
     }
@@ -89,7 +89,7 @@ int32_t SSLIO::send(int32_t &byte)
 
     // 非主动断开，打印错误日志
     if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode && 0 == errno))
+        || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
     {
         return -1;
     }

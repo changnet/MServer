@@ -98,6 +98,16 @@ int32_t Socket::error_no()
 #endif
 }
 
+int32_t Socket::is_error()
+{
+    int32_t e = error_no();
+#ifdef __windows__
+    return e && e != WSAEINPROGRESS && e != WSAEWOULDBLOCK;
+#else
+    return e && e != EAGAIN && e != EWOULDBLOCK && e != EINPROGRESS;
+#endif
+}
+
 Socket::Socket(uint32_t conn_id, ConnType conn_ty)
 {
     _io        = nullptr;
@@ -470,14 +480,9 @@ int32_t Socket::connect(const char *host, int32_t port)
     /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
     if (::connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        int32_t e = error_no();
-#ifdef __windows__
-        if (e != WSAEINPROGRESS && e != WSAEWOULDBLOCK)
-#else
-        if (e != EINPROGRESS)
-#endif
+        if (is_error())
         {
-            ELOG("%s:%d %s(%d)", host, port, str_error(), e);
+            ELOG("%s:%d %s(%d)", host, port, str_error(), error_no());
             ::close(fd);
 
             return -1;

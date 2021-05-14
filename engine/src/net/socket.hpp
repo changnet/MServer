@@ -146,6 +146,8 @@ public:
     static bool fd_valid(int32_t fd);
     /// 获取socket的错误码
     static int32_t error_no();
+    /// 是否真正出现了错误
+    static int32_t is_error();
 
 private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写

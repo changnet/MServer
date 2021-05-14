@@ -51,8 +51,11 @@ public:
             NODE *tmp = new NODE[size];
             memset(tmp, 0, sizeof(NODE) * size);
 
-            if (anptmax > 0) memcpy(tmp, anpts, sizeof(NODE) * anptmax);
-            delete []anpts;
+            if (anptmax > 0)
+            {
+                memcpy(tmp, anpts, sizeof(NODE) * anptmax);
+                delete[] anpts;
+            }
             anpts = tmp;
             anptmax = size;
         }
