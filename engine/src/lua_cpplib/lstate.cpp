@@ -330,7 +330,7 @@ LState::LState()
     lua_pushstring(L, v); \
     lua_setglobal(L, v)
 
-#ifdef __IPV4__
+#ifdef IP_V4
        SET_ENV_STR("IPV4");
 #else
         SET_ENV_STR("IPV6");

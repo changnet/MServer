@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../global/global.hpp"
+
 class Buffer;
 
 /* socket input output control */

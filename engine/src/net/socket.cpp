@@ -1,14 +1,3 @@
-#include "socket_compat.hpp"
-#ifndef __windows__
-    #include <fcntl.h>
-    #include <sys/types.h>
-    #include <netdb.h>
-    #include <arpa/inet.h>   /* htons */
-    #include <unistd.h>      /* POSIX api, like close */
-    #include <netinet/tcp.h> /* for keep-alive */
-    #include <sys/socket.h>
-#endif
-
 #include "socket.hpp"
 #include "io/ssl_io.hpp"
 #include "packet/http_packet.hpp"
@@ -16,6 +5,26 @@
 #include "packet/websocket_packet.hpp"
 #include "packet/ws_stream_packet.hpp"
 #include "../system/static_global.hpp"
+
+#ifdef __windows__
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+
+inline void close(SOCKET fd)
+{
+    closesocket(fd);
+}
+#else
+    #include <fcntl.h>
+    #include <sys/types.h>
+    #include <netdb.h>
+    #include <arpa/inet.h>   /* htons */
+    #include <unistd.h>      /* POSIX api, like close */
+    #include <netinet/tcp.h> /* for keep-alive */
+    #include <sys/socket.h>
+
+using SOCKET = int32_t; // 兼容windows代码
+#endif
 
 #ifdef TCP_KEEP_ALIVE
     #define KEEP_ALIVE(x) Socket::keep_alive(x)
@@ -29,7 +38,7 @@
     #define USER_TIMEOUT(x)
 #endif
 
-#ifdef __IPV4__
+#ifdef IP_V4
     #define AF_INET_X     AF_INET
     #define sin_addr_x    sin_addr
     #define sin_port_x    sin_port
@@ -64,10 +73,10 @@ void Socket::library_init()
 #endif
 }
 
-const char *Socket::str_error()
+const char *Socket::str_error(int32_t e)
 {
+    if (-1 == e) e = Socket::error_no();
 #ifdef __windows__
-    int32_t e = WSAGetLastError();
     // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
     thread_local char buff[512] = {0};
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
@@ -76,7 +85,7 @@ const char *Socket::str_error()
                   sizeof(buff), nullptr);
     return buff;
 #else
-    return strerror(errno);
+    return strerror(e);
 #endif
 }
 
@@ -377,13 +386,19 @@ int32_t Socket::user_timeout(int32_t fd)
 #endif
 }
 
+int32_t Socket::non_ipv6only(int32_t fd)
+{
+    int32_t optval = 0;
+    return setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval));
+}
+
 int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family   = AF_INET_X; /* Allow IPv4 or IPv6 */
     hints.ai_socktype = SOCK_STREAM;
-#ifdef __IPV4__
+#ifdef IP_V4
     hints.ai_flags = 0;
 #else
     hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
@@ -455,6 +470,13 @@ int32_t Socket::connect(const char *host, int32_t port)
         return -1;
     }
 
+#ifndef IP_V4
+    if (non_ipv6only(fd))
+    {
+        return -1;
+    }
+#endif
+
     struct sockaddr_in_x addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family_x = AF_INET_X;
@@ -463,7 +485,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
     // IPv6 address must be supplied in src instead
-    // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip
+    // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip，只支持::ffff:127.0.0.1这种
     int32_t ok = inet_pton(AF_INET_X, host, &addr.sin_addr_x);
     if (0 == ok)
     {
@@ -502,7 +524,7 @@ int32_t Socket::validate()
     socklen_t len = sizeof(err);
     if (getsockopt(_w.get_fd(), SOL_SOCKET, SO_ERROR, (char *)&err, &len))
     {
-        return errno;
+        return error_no();
     }
 
     return err;
@@ -560,11 +582,9 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-#ifndef __IPV4__
+#ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    optval = 0;
-    if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval))
-        < 0)
+    if (non_ipv6only(fd))
     {
         goto FAIL;
     }

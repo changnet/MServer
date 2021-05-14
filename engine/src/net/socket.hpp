@@ -52,6 +52,8 @@ public:
     static int32_t keep_alive(int32_t fd);
     /// 启用TCP的 user timeout
     static int32_t user_timeout(int32_t fd);
+    /// 启用IPV6双栈
+    static int32_t non_ipv6only(int32_t fd);
 
     /**
      * @brief 根据域名获取ip地址，此函数会阻塞
@@ -141,7 +143,7 @@ public:
                   size_t &rmem, size_t &spending, size_t &rpending);
 
     /// 获取socket错误日志
-    static const char *str_error();
+    static const char *str_error(int32_t e = -1);
     /// 判断创建出来的fd是否有效
     static bool fd_valid(int32_t fd);
     /// 获取socket的错误码

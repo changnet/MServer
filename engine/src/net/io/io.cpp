@@ -1,7 +1,9 @@
-#include "../socket_compat.hpp"
-
 #include "io.hpp"
 #include "../socket.hpp"
+
+#ifdef __windows__
+    #include <winsock2.h>
+#endif
 
 IO::IO(class Buffer *recv, class Buffer *send)
 {
