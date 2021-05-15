@@ -25,10 +25,10 @@ function do_cmake()
 
 function do_make()
 {
-	# 这个文件里包含一个编译时间，每次编译都改一下时间，不会__TIMESTAMP__不会更新
+	# 这个文件里包含一个编译时间，每次编译都改一下时间，不然__TIMESTAMP__不会更新
 	name=`find $ENGINE_DIR -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
 	if [[ $(basename $name) != "lev.cpp" ]]; then
-		touch $ENGINE_DIR/src/lua_cpplib/lev.cpp
+		touch $ENGINE_DIR/src/lua_cpplib/lstate.cpp
 	fi
 	
 	make ${m[0]} ${m[1]} ${m[2]}

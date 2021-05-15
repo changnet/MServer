@@ -15,7 +15,8 @@ local App = oo.class( ...,Application )
 -- 初始化
 function App:__init( cmd, opts )
     Application.__init(self)
-    self.cmd, self.name, self.filter = cmd, opts.app, opts.filter
+    self.cmd, self.name, self.filter, self.skip
+        = cmd, opts.app, opts.filter, opts.skip
 end
 
 function App:final_initialize()
@@ -31,6 +32,9 @@ function App:final_initialize()
                 return g_timer_mgr:stop(timer_id)
             end
         },
+        -- 跳过这些测试
+        -- ./start.sh test --skip='mongodb;sql'
+        skip = self.skip,
         -- 过滤器，允许只执行一部分测试
         -- ./start.sh test --filter=https 只执行名字包含https的测试
         filter = self.filter,

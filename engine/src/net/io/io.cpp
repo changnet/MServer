@@ -3,6 +3,8 @@
 
 #ifdef __windows__
     #include <winsock2.h>
+#else
+    #include <sys/socket.h>
 #endif
 
 IO::IO(class Buffer *recv, class Buffer *send)
@@ -29,7 +31,7 @@ int32_t IO::recv(int32_t &byte)
 
     // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
     size_t size = _recv->get_space_size();
-    int32_t len   = (int32_t)::recv(_fd, _recv->get_space_ctx(), (int32_t)size, 0);
+    int32_t len = (int32_t)::recv(_fd, _recv->get_space_ctx(), (int32_t)size, 0);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;

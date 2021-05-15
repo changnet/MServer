@@ -266,6 +266,14 @@ local function run_one_describe(d)
     if T.filter then
         should_run = string.find(d.title, T.filter)
     end
+    if T.skip then
+        for _, pattern in pairs(T.skip) do
+            if string.find(d.title, pattern) then
+                should_run = false
+                break;
+            end
+        end
+    end
 
     d.should_run = should_run
     local ok, msg = xpcall(d.func, error_msgh)
@@ -341,9 +349,19 @@ function t_it(title, mask, func)
     if not func then func = mask end
     assert(func)
 
+    -- 如果一个descript被过滤掉，那么看下它的所有it是否被过滤掉
     local should_run = T.d_now.should_run
     if not should_run and T.filter then
         should_run = string.find(title, T.filter)
+    end
+    -- 如果该测试需要执行，那判断下是否需要跳过
+    if should_run and T.skip then
+        for _, pattern in pairs(T.skip) do
+            if string.find(title, pattern) then
+                should_run = false
+                break;
+            end
+        end
     end
     if not should_run then return end
 
@@ -418,6 +436,14 @@ function t_setup(params)
     -- 过滤器，允许只执行一部分测试
     -- ./start.sh test --filter=https 只执行名字包含https的测试
     T.filter = params.filter
+
+    -- 跳过多个测试，以;分隔
+    if params.skip then
+        T.skip = {}
+        string.gsub(params.skip, '[^;]+', function(w)
+            table.insert(T.skip, w)
+        end)
+    end
 end
 
 -- reset the test session
@@ -443,7 +469,10 @@ local function run()
 
     -- 执行测试
     if T.filter then
-        T.print(Y("Using filter: %s", T.filter))
+        T.print(Y("filter: %s", T.filter))
+    end
+    if T.skip then
+        T.print(Y("skip: %s", table.concat(T.skip, ';')))
     end
 
     for _, d in pairs(T.d) do
