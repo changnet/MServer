@@ -59,6 +59,28 @@ void Thread::sig_handler(int32_t signum)
 
 void Thread::signal(int32_t sig, int32_t action)
 {
+    /**
+     * https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/signal?view=msvc-160
+     * win下支持signal，只是支持不是很好
+     * https://docs.microsoft.com/en-us/windows/console/handlerroutine
+     * SetConsoleCtrlHandler这一套，才是win下原生的事件，测试后发现ctrl c、ctrl break这两个在signal和SetConsoleCtrlHandler
+     * 中都能触发，可以用 https://docs.microsoft.com/en-us/windows/console/registering-a-control-handler-function 来测试
+     * 
+     * taskkill会在SetConsoleCtrlHandler中产生一个CTRL_CLOSE_EVENT事件，但这个事件如果返回false，则操作系统查找下一个处理
+     * 信号的函数并调用，直到返回true，没找到默认就会终止进程。如果返回true，则操作系统会直接终止进程。无论如何，这个事件无法
+     * 屏蔽并且最终都会终止进程，如果在进程里sleep，5秒后操作系统也会直接终止进程。
+     *
+     * 使用powershell的stop-process来终止程序，则不会收到任何事件、信号，进程直接就退出了
+     * 
+     * 除了在控制台按ctrl c，目前win下没找到任何办法向一个进程发送ctrl c信号。一些第三方的工具(windows-kill、SendSignal等，
+     * 都是attach到进程的console，通过GenerateConsoleCtrlEvent来产生依赖)，但start进程的方式不一样(例如 /b 参数)，这些工具
+     * 经常不适用
+     * 
+     * 因此，目前win下没办法像linux下那样通过脚本来安全kill掉进程，taskkill那5秒的时间一般也不足以关掉一个游戏服务器
+     * 所以CTRL_CLOSE_EVENT这个事件这里也不处理了
+     * 
+     * node.js(libuv)的处理方式：https://github.com/libuv/libuv/blob/master/src/win/signal.c
+     */
     /* check /usr/include/bits/signum.h for more */
     if (0 == action)
     {

@@ -1,19 +1,18 @@
 -- network_mgr 网络连接管理
-
-local util          = require "util"
-local SrvConn      = require "network.srv_conn"
-local CltConn      = require "network.clt_conn"
+local util = require "util"
+local SrvConn = require "network.srv_conn"
+local CltConn = require "network.clt_conn"
 
 local network_mgr = network_mgr
-local NetworkMgr = oo.singleton( ... )
+local NetworkMgr = oo.singleton(...)
 
 -- 目前暂定只有一个网关，一个世界
-local gateway_session = g_app:srv_session( "gateway",1,tonumber(g_app.id) )
-local world_session = g_app:srv_session( "world",1,tonumber(g_app.id) )
+local gateway_session = g_app:srv_session("gateway", 1, tonumber(g_app.id))
+local world_session = g_app:srv_session("world", 1, tonumber(g_app.id))
 
 function NetworkMgr:__init()
-    self.srv = {}  -- session为key，连接对象为value
-    self.clt = {}  -- pid为key，连接对象为value
+    self.srv = {} -- session为key，连接对象为value
+    self.clt = {} -- pid为key，连接对象为value
 
     self.srv_conn = {} -- conn_id为key，服务器连接对象为value
     self.clt_conn = {} -- conn_id为key，客户端连接对象为value
@@ -21,60 +20,60 @@ function NetworkMgr:__init()
     self.srv_listen_conn = nil -- 监听服务器连接
     self.clt_listen_conn = nil -- 监听客户端连接
 
-    self.name_srv   = {}  -- 进程名为key，session为value
+    self.name_srv = {} -- 进程名为key，session为value
 
     self.srv_waiting = {} -- 等待重连的服务器连接
 
-    local index = tonumber( g_app.index )
-    local id = tonumber( g_app.id )
-    for name,_ in pairs( SRV_NAME ) do
-        self.name_srv[name] = g_app:srv_session( name,index,id )
+    local index = tonumber(g_app.index)
+    local id = tonumber(g_app.id)
+    for name, _ in pairs(SRV_NAME) do
+        self.name_srv[name] = g_app:srv_session(name, index, id)
     end
 
-    g_app:reg_5s_timer( self,self.do_timer )
+    g_app:reg_5s_timer(self, self.do_timer)
 end
 
 --  监听服务器连接
-function NetworkMgr:srv_listen( ip,port )
+function NetworkMgr:srv_listen(ip, port)
     self.srv_listen_conn = SrvConn()
-    self.srv_listen_conn:listen( ip,port )
+    self.srv_listen_conn:listen(ip, port)
 
-    PRINTF( "listen for server at %s:%d",ip,port )
+    PRINTF("listen for server at %s:%d", ip, port)
     return true
 end
 
 --  监听客户端连接
-function NetworkMgr:clt_listen( ip,port )
+function NetworkMgr:clt_listen(ip, port)
     self.clt_listen_conn = CltConn()
-    self.clt_listen_conn:listen( ip,port )
+    self.clt_listen_conn:listen(ip, port)
 
-    PRINTF( "listen for client at %s:%d",ip,port )
+    PRINTF("listen for client at %s:%d", ip, port)
     return true
 end
 
 -- 主动连接其他服务器
-function NetworkMgr:connect_srv( srvs )
-    for _,srv in pairs( srvs ) do
+function NetworkMgr:connect_srv(srvs)
+    for _, srv in pairs(srvs) do
         local conn = SrvConn()
 
         conn.auto_conn = true
-        local conn_id = conn:connect( srv.ip,srv.port )
+        local conn_id = conn:connect(srv.ip, srv.port)
 
         self.srv_conn[conn_id] = conn
-        PRINTF( "connect to %s:%d",srv.ip,srv.port )
+        PRINTF("connect to %s:%d", srv.ip, srv.port)
     end
 end
 
 -- 重新连接到其他服务器
-function NetworkMgr:reconnect_srv( conn )
+function NetworkMgr:reconnect_srv(conn)
     local conn_id = conn:reconnect()
 
     self.srv_conn[conn_id] = conn
-    PRINTF( "reconnect to %s:%d",conn.ip,conn.port )
+    PRINTF("reconnect to %s:%d", conn.ip, conn.port)
 end
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
-function NetworkMgr:clt_close( clt_conn )
+function NetworkMgr:clt_close(clt_conn)
     self.clt_conn[clt_conn.conn_id] = nil
     if clt_conn.pid then self.clt[clt_conn.pid] = nil end
 
@@ -82,54 +81,54 @@ function NetworkMgr:clt_close( clt_conn )
 end
 
 -- 根据pid主动关闭客户端连接
-function NetworkMgr:clt_close_by_pid( pid )
+function NetworkMgr:clt_close_by_pid(pid)
     local conn = self.clt[pid]
     if not conn then
-        ERROR( "clt_close_by_pid no conn found:%d",pid )
+        ERROR("clt_close_by_pid no conn found:%d", pid)
         return
     end
 
-    self:clt_close( conn )
+    self:clt_close(conn)
 end
 
 -- 服务器认证
-function NetworkMgr:srv_register( conn,pkt )
-    local auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
+function NetworkMgr:srv_register(conn, pkt)
+    local auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
     if pkt.auth ~= auth then
-        ERROR( "NetworkMgr:srv_register fail,session %d",pkt.session )
+        ERROR("NetworkMgr:srv_register fail,session %d", pkt.session)
         return false
     end
 
-    local _, _, id = g_app:srv_session_parse( pkt.session )
+    local _, _, id = g_app:srv_session_parse(pkt.session)
     if id ~= tonumber(g_app.id) then
-        ERROR( "NetworkMgr:srv_register id not match,expect %s,got %d",
-            g_app.id,id )
+        ERROR("NetworkMgr:srv_register id not match,expect %s,got %d", g_app.id,
+              id)
         return
     end
 
     if self.srv[pkt.session] then
-        ERROR( "NetworkMgr:srv_register session conflict:%d",pkt.session )
+        ERROR("NetworkMgr:srv_register session conflict:%d", pkt.session)
         return false
     end
 
     self.srv[pkt.session] = conn
-    network_mgr:set_conn_session( conn.conn_id,pkt.session )
+    network_mgr:set_conn_session(conn.conn_id, pkt.session)
     return true
 end
 
 -- 检查一个连接超时
 local tm_pkt = {response = true}
-function NetworkMgr:check_one_timeout( srv_conn,check_time )
+function NetworkMgr:check_one_timeout(srv_conn, check_time)
     if not srv_conn.conn_ok then return end -- 还没连接成功的不检查
 
-    local ts = srv_conn:check( check_time )
+    local ts = srv_conn:check(check_time)
     if ts > SRV_ALIVE_TIMES then
-        PRINTF( "%s server timeout",srv_conn:conn_name() )
+        PRINTF("%s server timeout", srv_conn:conn_name())
 
-        self:close_srv_conn( srv_conn )
+        self:close_srv_conn(srv_conn)
         if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
     elseif ts > 0 and srv_conn.auth then
-        srv_conn:send_pkt( SYS.BEAT,tm_pkt )
+        srv_conn:send_pkt(SYS.BEAT, tm_pkt)
     end
 end
 
@@ -137,97 +136,83 @@ end
 function NetworkMgr:do_timer()
     -- 重连
     local waiting = self.srv_waiting
-    if not table.empty( waiting ) then self.srv_waiting = {} end
-    for conn in pairs( waiting ) do
-        self:reconnect_srv( conn )
-    end
+    if not table.empty(waiting) then self.srv_waiting = {} end
+    for conn in pairs(waiting) do self:reconnect_srv(conn) end
 
     local check_time = ev:time() - SRV_ALIVE_INTERVAL
-    for _, srv_conn in pairs( self.srv_conn ) do
-        self:check_one_timeout( srv_conn,check_time )
+    for _, srv_conn in pairs(self.srv_conn) do
+        self:check_one_timeout(srv_conn, check_time)
     end
 end
 
 -- 获取服务器连接
-function NetworkMgr:get_srv_conn( session )
-    return self.srv[session]
-end
+function NetworkMgr:get_srv_conn(session) return self.srv[session] end
 
 -- 获取所有服务器连接
-function NetworkMgr:get_all_srv_conn()
-    return self.srv
-end
+function NetworkMgr:get_all_srv_conn() return self.srv end
 
 -- 获取网关连接(在非网关服务器进程获取)
-function NetworkMgr:get_gateway_conn()
-    return self.srv[gateway_session]
-end
+function NetworkMgr:get_gateway_conn() return self.srv[gateway_session] end
 
 -- 在非网关进程直接发送数据到客户端
-function NetworkMgr:send_clt_pkt( pid,cmd,pkt,ecode )
+function NetworkMgr:send_clt_pkt(pid, cmd, pkt, ecode)
     local srv_conn = self.srv[gateway_session]
-    return srv_conn:send_clt_pkt( pid,cmd,pkt,ecode )
+    return srv_conn:send_clt_pkt(pid, cmd, pkt, ecode)
 end
 
 -- 发送服务器数据包到网关(现在同一类型只有一个进程才能这样做)
-function NetworkMgr:send_gateway_pkt( cmd,pkt,ecode )
+function NetworkMgr:send_gateway_pkt(cmd, pkt, ecode)
     local srv_conn = self.srv[gateway_session]
 
-    return srv_conn:send_pkt( cmd,pkt,ecode )
+    return srv_conn:send_pkt(cmd, pkt, ecode)
 end
 
 -- 发送服务器数据包到世界服(现在同一类型只有一个进程才能这样做)
-function NetworkMgr:send_world_pkt( cmd,pkt,ecode )
+function NetworkMgr:send_world_pkt(cmd, pkt, ecode)
     local srv_conn = self.srv[world_session]
 
-    return srv_conn:send_pkt( cmd,pkt,ecode )
+    return srv_conn:send_pkt(cmd, pkt, ecode)
 end
 
 -- 设置客户端连接
-function NetworkMgr:bind_role( pid,clt_conn )
-    ASSERT( nil == self.clt[pid], "player already have a conn" )
+function NetworkMgr:bind_role(pid, clt_conn)
+    ASSERT(nil == self.clt[pid], "player already have a conn")
 
-    clt_conn:bind_role( pid )
+    clt_conn:bind_role(pid)
     self.clt[pid] = clt_conn
 end
 
 -- 获取客户端连接
-function NetworkMgr:get_clt_conn( pid )
-    return self.clt[pid]
-end
+function NetworkMgr:get_clt_conn(pid) return self.clt[pid] end
 
 -- 根据conn_id获取连接
-function NetworkMgr:get_conn( conn_id )
+function NetworkMgr:get_conn(conn_id)
     return self.clt_conn[conn_id] or self.srv_conn[conn_id]
 end
 
 -- 根据服务器名字获取连接
-function NetworkMgr:get_conn_by_name( name )
+function NetworkMgr:get_conn_by_name(name)
     local session = self.name_srv[name]
-    if not session then
-        return error( "no such server:" .. name )
-    end
+    if not session then return error("no such server:" .. name) end
 
     return self.srv[session]
 end
 
 -- 主动关闭服务器链接
-function NetworkMgr:close_srv_conn( conn )
+function NetworkMgr:close_srv_conn(conn)
     conn:close()
-    g_conn_mgr:set_conn( conn.conn_id,nil )
+    g_conn_mgr:set_conn(conn.conn_id, nil)
 
     if conn.session then self.srv[conn.session] = nil end
     self.srv_conn[conn.conn_id] = nil
 end
 
 -- 服务器广播
-function NetworkMgr:srv_multicast( cmd,pkt,ecode )
+function NetworkMgr:srv_multicast(cmd, pkt, ecode)
     local conn_list = {}
-    for _,conn in pairs( self.srv ) do
-        table.insert( conn_list,conn.conn_id )
-    end
-    return network_mgr:srv_multicast(
-        conn_list,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
+    for _, conn in pairs(self.srv) do table.insert(conn_list, conn.conn_id) end
+    return network_mgr:srv_multicast(conn_list, network_mgr.CDC_PROTOBUF, cmd.i,
+                                     ecode or 0, pkt)
 end
 
 -- 客户端广播
@@ -236,93 +221,94 @@ end
 -- @args_list:参数列表，根据掩码，这个参数可能是玩家id，也可能是自定义参数
 --  如果是玩家id，网关底层会自动转发。如果是自定义参数，如连接id，等级要求...
 -- 回调clt_multicast_new时会把args_list传回脚本，需要脚本定义处理方式
-function NetworkMgr:clt_multicast( mask,args_list,cmd,pkt,ecode )
+function NetworkMgr:clt_multicast(mask, args_list, cmd, pkt, ecode)
     local srv_conn = self:get_gateway_conn()
-    return network_mgr:ssc_multicast( srv_conn.conn_id,
-        mask,args_list,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
+    return network_mgr:ssc_multicast(srv_conn.conn_id, mask, args_list,
+                                     network_mgr.CDC_PROTOBUF, cmd.i,
+                                     ecode or 0, pkt)
 end
 
 -- 客户端广播(直接发给客户端，仅网关可用)
 -- @conn_list: 客户端conn_id列表
-function NetworkMgr:raw_clt_multicast( conn_list,cmd,pkt,ecode )
-    return network_mgr:clt_multicast(
-        conn_list,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
+function NetworkMgr:raw_clt_multicast(conn_list, cmd, pkt, ecode)
+    return network_mgr:clt_multicast(conn_list, network_mgr.CDC_PROTOBUF, cmd.i,
+                                     ecode or 0, pkt)
 end
 
 -- 底层accept回调
-function NetworkMgr:srv_conn_accept( conn_id,conn )
+function NetworkMgr:srv_conn_accept(conn_id, conn)
     self.srv_conn[conn_id] = conn
 
-    PRINTF( "accept server connection:%d",conn_id )
+    PRINTF("accept server connection:%d", conn_id)
 
     conn:send_register()
 end
 
 -- 新增客户端连接
-function NetworkMgr:clt_conn_accept( conn_id,conn )
+function NetworkMgr:clt_conn_accept(conn_id, conn)
     self.clt_conn[conn_id] = conn
 
-    PRINTF( "accept client connection:%d",conn_id )
+    PRINTF("accept client connection:%d", conn_id)
 end
 
 -- 服务器之间连接成功
-function NetworkMgr:srv_conn_new( conn_id,ecode )
+function NetworkMgr:srv_conn_new(conn_id, ecode)
     local conn = self.srv_conn[conn_id]
     if 0 ~= ecode then
-        PRINTF( "connect(%d) to %s:%d error:%s",
-            conn_id,conn.ip,conn.port,util.what_error( ecode ) )
+        PRINTF("connect(%d) to %s:%d error:%s", conn_id, conn.ip, conn.port,
+               util.what_error(ecode))
         self.srv_conn[conn_id] = nil
 
         if conn.auto_conn then self.srv_waiting[conn] = 1 end
         return
     end
 
-    PRINTF( "connect(%d) to %s:%d establish",conn_id,conn.ip,conn.port)
+    PRINTF("connect(%d) to %s:%d establish", conn_id, conn.ip, conn.port)
 
     conn:send_register()
 end
 
 -- 底层连接断开回调
-function NetworkMgr:srv_conn_del( conn_id )
+function NetworkMgr:srv_conn_del(conn_id)
     local conn = self.srv_conn[conn_id]
 
     if conn.session then self.srv[conn.session] = nil end
     self.srv_conn[conn_id] = nil
 
-    PRINTF( "%s connect del",conn:conn_name() )
+    PRINTF("%s connect del", conn:conn_name())
 
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then self.srv_waiting[conn] = 1 end
 end
 
 -- 客户端连接断开回调
-function NetworkMgr:clt_conn_del( conn_id )
+function NetworkMgr:clt_conn_del(conn_id)
     local conn = self.clt_conn[conn_id]
-    g_account_mgr:role_offline( conn_id )
+    g_account_mgr:role_offline(conn_id)
 
     self.clt_conn[conn_id] = nil
     -- 如果已经登录，通知其他服玩家下线
     if conn.pid then
         self.clt[conn.pid] = nil
-        local pkt = { pid = conn.pid }
-        g_network_mgr:send_world_pkt( SYS.PLAYER_OFFLINE,pkt )
+        local pkt = {pid = conn.pid}
+        g_network_mgr:send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
     end
 
-    PRINTF( "client connect del:%d",conn_id )
+    PRINTF("client connect del:%d", conn_id)
 end
 
 -- 此函数必须返回一个value为玩家id的table
 -- CLTCAST定义在define.lua
-function clt_multicast_new( mask,... )
+function clt_multicast_new(mask, ...)
     if mask == CLTCAST.WORLD then
         local pid_list = {}
-        for pid in pairs( g_network_mgr.clt ) do
-            table.insert( pid_list,pid )
+        for pid in pairs(g_network_mgr.clt) do
+            table.insert(pid_list, pid)
         end
         return pid_list
-    -- elseif mask == CLTCAST.LEVEL then
+        -- elseif mask == CLTCAST.LEVEL then
     else
-        ERROR("clt_multicast_new unknow mask",mask)
+        ERROR("clt_multicast_new unknow mask", mask)
     end
 end
 

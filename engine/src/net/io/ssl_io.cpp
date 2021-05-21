@@ -22,7 +22,7 @@ SSLIO::SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send)
  */
 int32_t SSLIO::recv(int32_t &byte)
 {
-    assert(_fd > 0);
+    assert(Socket::fd_valid(_fd));
 
     byte = 0;
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
@@ -68,7 +68,7 @@ int32_t SSLIO::recv(int32_t &byte)
  */
 int32_t SSLIO::send(int32_t &byte)
 {
-    assert(_fd > 0);
+    assert(Socket::fd_valid(_fd));
 
     byte = 0;
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();

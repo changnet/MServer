@@ -12,20 +12,20 @@ set BIN=%cd%/master.exe
 
 if "%1" == "" (
     for %%a in %DEF_APP% do (
-        if "%%a" == "%last_app%" (
-            set /a last_idx=%last_idx% + 1
+        if "%%a" == "!last_app!" (
+            set /a last_idx=!last_idx! + 1
         ) else (
             set last_idx=%DEF_INDEX%
             set last_app=%%a
         )
 
-        start /b "%%a --index=!last_idx!" %BIN% --app=%%a --index=!last_idx! --id=%DEF_ID%
+        start "%%a --index=!last_idx!" %BIN% --app=%%a --index=!last_idx! --id=%DEF_ID%
         timeout 3 > nul
     )
-    pause
     exit 0
 ) else (
-    app=%1
+    REM win下貌似没有function，只能重复写了
+    set app=%1
     if "%app:~0, 2%" == "--" (
         %BIN% %1 %2 %3 %4 %5
         exit 0
@@ -36,15 +36,15 @@ if "%1" == "" (
         exit 0
     )
 
-    index=%2
+    set index=%2
     if "%index%" == "" (
-        index=$DEF_INDEX
+        set index=%DEF_INDEX%
     )
 
-    id=%3
+    set id=%3
     if "%id%" == "" (
-        id=$DEF_ID
+        set id=%DEF_ID%
     )
 
-    %BIN% --app=$app --index=$index --id=$id
+    %BIN% --app=!app! --index=!index! --id=!id!
 )

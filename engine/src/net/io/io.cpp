@@ -24,7 +24,7 @@ IO::~IO()
 // 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32_t IO::recv(int32_t &byte)
 {
-    assert(_fd > 0);
+    assert(Socket::fd_valid(_fd));
 
     byte = 0;
     if (!_recv->reserved()) return -1; /* no more memory */
@@ -54,7 +54,7 @@ int32_t IO::recv(int32_t &byte)
 // * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32_t IO::send(int32_t &byte)
 {
-    assert(_fd > 0);
+    assert(Socket::fd_valid(_fd));
 
     byte         = 0;
     size_t bytes = _send->get_used_size();

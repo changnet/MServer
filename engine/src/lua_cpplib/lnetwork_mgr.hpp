@@ -314,7 +314,7 @@ public:
 
     /**
      * 把客户端数据包转发给另一服务器
-     * 这个函数如果返回false，则会将协议在当前进程派发
+     * @return <0 出错，0 未处理 1 已转发到其他服务器
      */
     int32_t cs_dispatch(uint16_t cmd, const class Socket *src_sk, const char *ctx,
                      size_t size) const;

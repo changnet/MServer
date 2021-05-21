@@ -111,10 +111,8 @@ function CommandMgr:raw_serialize_statistic(path, stat_name, stat_list)
 
     for _, cmd in pairs(stat_cmd) do
         local stat = stat_list[cmd]
-        g_log_mgr:raw_file_printf(path, "%-16s %-16d %-16d %-16d %-16d %-16d",
-                                  string.format("%2d-%d",
-                                                self:dismantle_cmd(cmd)),
-                                  stat.ts, stat.ms, stat.max, stat.min,
+        g_log_mgr:raw_file_printf(path, "%-16d %-16d %-16d %-16d %-16d %-16d",
+                                  cmd, stat.ts, stat.ms, stat.max, stat.min,
                                   math.ceil(stat.ms / stat.ts))
     end
 end
@@ -157,14 +155,6 @@ function CommandMgr:load_schema()
     PRINTF("load flatbuffers schema:%d", ffs)
 
     return (pfs >= 0 and ffs >= 0)
-end
-
--- 拆分协议为模块 + 功能
-function CommandMgr:dismantle_cmd(cmd)
-    local f = cmd & 0x000F
-    local m = cmd >> 0x0008
-
-    return m, f
 end
 
 -- 注册客户端协议处理
@@ -212,13 +202,11 @@ function CommandMgr:srv_dispatch(srv_conn, cmd, ...)
 
     local handler = cfg.handler
     if not cfg.handler then
-        return ERROR("srv_dispatch:cmd [%d-%d] no handle function found",
-                     self:dismantle_cmd(cmd))
+        return ERROR("srv_dispatch:cmd %d no handle function found", cmd)
     end
 
     if not srv_conn.auth and not cfg.noauth then
-        return ERROR("clt_dispatch:try to call auth cmd [%d-%d]",
-                     self:dismantle_cmd(cmd))
+        return ERROR("clt_dispatch:try to call auth cmd %d", cmd)
     end
 
     if self.cmd_perf then
@@ -236,13 +224,11 @@ function CommandMgr:clt_dispatch(clt_conn, cmd, ...)
 
     local handler = cfg.handler
     if not cfg.handler then
-        return ERROR("clt_dispatch:cmd [%d-%d] no handle function found",
-                     self:dismantle_cmd(cmd))
+        return ERROR("clt_dispatch:cmd %d no handle function found", cmd)
     end
 
     if not clt_conn.auth and not cfg.noauth then
-        return ERROR("clt_dispatch:try to call auth cmd [%d-%d]",
-                     self:dismantle_cmd(cmd))
+        return ERROR("clt_dispatch:try to call auth cmd %d", cmd)
     end
 
     if self.cmd_perf then
@@ -260,20 +246,18 @@ function CommandMgr:clt_dispatch_ex(srv_conn, pid, cmd, ...)
 
     local handler = cfg.handler
     if not cfg.handler then
-        return ERROR("clt_dispatch_ex:cmd [%d-%d] no handle function found",
-                     self:dismantle_cmd(cmd))
+        return ERROR("clt_dispatch_ex:cmd %d no handle function found", cmd)
     end
 
     -- 判断这个服务器连接是已认证的
     if not srv_conn.auth then
-        return ERROR("clt_dispatch_ex:srv conn not auth,cmd [%d-%d]",
-                     self:dismantle_cmd(cmd))
+        return ERROR("clt_dispatch_ex:srv conn not auth,cmd %d", cmd)
     end
 
     -- 判断这个玩家是已认证的
     if not cfg.noauth and not self.auth_pid[pid] then
-        return ERROR("clt_dispatch_ex:player not auth,pid [%d],cmd [%d-%d]",
-                     pid, self:dismantle_cmd(cmd))
+        return
+            ERROR("clt_dispatch_ex:player not auth,pid [%d],cmd %d", pid, cmd)
     end
 
     if self.cmd_perf then
