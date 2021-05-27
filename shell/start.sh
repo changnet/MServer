@@ -14,6 +14,29 @@ cd ../server/bin
 
 BIN=`pwd`/master
 
+function fmt_args()
+{
+    p=$1
+    d=$2
+    v=$3
+    
+    # 未传参，使用默认参数
+    if [ ! "$v" ]; then
+        echo "--$p=$d"
+        return 0
+    fi
+
+    prefix=`echo $v | cut -c1-2`
+    if [ "$prefix" == "--" ]; then
+        echo "$v"
+        return 0
+    fi
+
+    # 如果传了参数，但未以--开头，则表示需要补上一部分参数，这样允许简化起服参数
+    # 如 ./start.sh gateway
+    echo "--$p=$v"
+}
+
 # ./start.sh 不带任何参数表示启动服务器
 if [ ! $1 ]; then
     for app in ${DEF_APP[@]}
@@ -29,32 +52,9 @@ if [ ! $1 ]; then
         sleep 3
     done
 else
-    # 以--开头的参数，表示外部指定了全部参数，这里不需要补全
-    app=$1
-    if [ "$(expr substr $app 1 2)" == "--" ]; then
-        $BIN $1 $2 $3 $4 $5
-        exit 0
-    fi
+    app=`fmt_args app test $1`
+    index=`fmt_args index $DEF_INDEX "$2"`
+    id=`fmt_args id $DEF_ID "$3"`
 
-    # ./start.sh test 表示开启test进程，后面参数由可接--filter等特殊参数
-    if [ "$app" == "test" ]; then
-		# https://www.gnu.org/software/bash/manual/bash.html#Shell-Parameter-Expansion
-		# 如果P2存在，则传"$P2"而不是直接传$P2，这样允许参数里包含空格
-		P2=$2
-        $BIN --app=test ${P2:+"$P2"} $3 $4 $5
-        exit 0
-    fi
-
-    # 其他选择 ./start.sh gateway 表示启动gateway，后面的参数不传就自动补全
-    index=$2
-    if [ ! $idx ]; then
-        index=$DEF_INDEX
-    fi
-
-    id=$3
-    if [ ! $id ]; then
-        id=$DEF_ID
-    fi
-
-    $BIN --app=$app --index=$index --id=$id
+    $BIN $app "$index" "$id" $4 $5 $6
 fi
