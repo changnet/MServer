@@ -10,5 +10,8 @@
 *.so binary
 *.dll binary
 
+# windows batch files that will always have CRLF line endings on checkout.
+*.bat text eol=crlf
+
 # make github language ignore pb files
 server/pb/* linguist-documentation

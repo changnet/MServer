@@ -33,7 +33,9 @@ local function get_opt(...)
 
         -- 按"="号拆分参数(--app=gateway)，也可能没有等号(--daemon)
         local k, v = string.match(opt, "^%-%-(%w+)=?([%w ;]*)")
-        if not k then error("invalid argument: " .. opt) end
+        if not k or not v or v == "" then
+            error("invalid argument: " .. opt)
+        end
 
         opts[k] = v -- 如果没有等号，v为一个空字符串
     end

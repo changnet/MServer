@@ -9,7 +9,7 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 set bin=master.exe
 set DEF_ID=1
 set DEF_INDEX=1
-set DEF_APP=(android gateway  world area area)
+set DEF_APP=(gateway  world area area)
 
 REM %~dp0和%cd%都可以 %cd%\..\server\bin
 call :to_absolute_path %cd%\..\server\bin bin_dir
@@ -34,7 +34,6 @@ for %%a in %DEF_APP% do (
         echo "find %%a --index=!last_idx!, process id = !proc_id!"
         call :kill_proc !proc_id!
     )
-    timeout 3 > nul
 )
 
 goto :eof
@@ -63,6 +62,16 @@ REM 终止进程 kill_proc pid
 :kill_proc
 REM taskkill -T -PID 9424 taskkill只能直接杀，不能安全终止。见C++中Thread::signal注释
 cscript //E:JScript //nologo "%~f0" %1
+for /l %%x in (1, 1, 180) do (
+    timeout 1 > nul
+    REM tasklist不管有没有找到对应的进程，返回值都是0，需要用findstr来过滤下
+    tasklist /FI "PID EQ %1" | findstr %1
+    if 0 == %errorlevel% (
+        goto :eof
+    )
+    echo "    process %1 still runing, wait ..."
+)
+echo "    can NOT kill process %1, abort"
 goto :eof
 
 REM 把相对路径转换为绝对路径 https://stackoverflow.com/questions/1645843/resolve-absolute-path-from-relative-path-and-or-file-name
