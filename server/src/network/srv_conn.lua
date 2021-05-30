@@ -1,11 +1,10 @@
 -- srv_conn server connection
-
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 
-local SrvConn = oo.class( ... )
+local SrvConn = oo.class(...)
 
-function SrvConn:__init( conn_id )
+function SrvConn:__init(conn_id)
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
@@ -15,23 +14,25 @@ function SrvConn:__init( conn_id )
 end
 
 -- 发送数据包
-function SrvConn:send_pkt( cmd,pkt,ecode )
-    return network_mgr:send_s2s_packet( self.conn_id,cmd.i,ecode or 0,pkt )
+function SrvConn:send_pkt(cmd, pkt, ecode)
+    return network_mgr:send_s2s_packet(self.conn_id, cmd.i, ecode or 0, pkt)
 end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
-function SrvConn:send_clt_pkt( pid,cmd,pkt,ecode )
-    return network_mgr:send_ssc_packet(
-        self.conn_id,pid,network_mgr.CDC_PROTOBUF,cmd.i,ecode or 0,pkt )
+function SrvConn:send_clt_pkt(pid, cmd, pkt, ecode)
+    return network_mgr:send_ssc_packet(self.conn_id, pid,
+                                       network_mgr.CDC_PROTOBUF, cmd.i,
+                                       ecode or 0, pkt)
 end
 
 -- 发送数据包
-function SrvConn:send_rpc_pkt( unique_id,method_name,... )
-    return network_mgr:send_rpc_packet( self.conn_id,unique_id,method_name,... )
+function SrvConn:send_rpc_pkt(unique_id, method_name, ...)
+    return
+        network_mgr:send_rpc_packet(self.conn_id, unique_id, method_name, ...)
 end
 
 -- timeout check
-function SrvConn:check( check_time )
+function SrvConn:check(check_time)
     if self.beat < check_time then
         self.fchk = self.fchk + 1
 
@@ -43,7 +44,7 @@ function SrvConn:check( check_time )
 end
 
 -- 认证成功
-function SrvConn:authorized( pkt )
+function SrvConn:authorized(pkt)
     self.auth = true
     self.name = pkt.name
     self.session = pkt.session
@@ -55,34 +56,33 @@ function SrvConn:base_name()
 end
 
 -- 获取该连接名称
-function SrvConn:conn_name( session )
+function SrvConn:conn_name(session)
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
-    local _,index,id =
-        g_app:srv_session_parse( session or self.session )
+    local _, index, id = g_app:srv_session_parse(session or self.session)
 
-    return string.format( "%s(I%d.S%d)",self.name,index,id )
+    return string.format("%s(I%d.S%d)", self.name, index, id)
 end
 
 -- 监听服务器连接
-function SrvConn:listen( ip,port )
-    self.conn_id = network_mgr:listen( ip,port,network_mgr.CNT_SSCN )
+function SrvConn:listen(ip, port)
+    self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SSCN)
 
-    g_conn_mgr:set_conn( self.conn_id,self )
+    g_conn_mgr:set_conn(self.conn_id, self)
 end
 
 function SrvConn:raw_connect()
     self.conn_ok = false
-    self.conn_id = network_mgr:connect( self.ip,self.port,network_mgr.CNT_SSCN )
+    self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CNT_SSCN)
 
-    g_conn_mgr:set_conn( self.conn_id,self )
+    g_conn_mgr:set_conn(self.conn_id, self)
 
     return self.conn_id
 end
 
 -- 连接到其他服务器
-function SrvConn:connect( ip,port )
+function SrvConn:connect(ip, port)
     self.ip = ip
     self.port = port
 
@@ -98,73 +98,72 @@ function SrvConn:reconnect()
 end
 
 -- 重新连接
-function SrvConn:set_conn_param( conn_id )
-    network_mgr:set_conn_io( conn_id,network_mgr.IOT_NONE )
-    network_mgr:set_conn_codec( conn_id,network_mgr.CDC_PROTOBUF )
-    network_mgr:set_conn_packet( conn_id,network_mgr.PKT_STREAM )
+function SrvConn:set_conn_param(conn_id)
+    network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
+    network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
+    network_mgr:set_conn_packet(conn_id, network_mgr.PKT_STREAM)
 
     -- 设置服务器之间链接缓冲区大小：
     -- 发送的话可能会累加，要设置大些.16777216 = 16MB，最大累加16*64 = 1024M
     -- 接收的话现在是收到数据立马解析完，不需要很大
     -- set_send_buffer_size最后一个参数表示over_action，2 = 溢出后阻塞
-    network_mgr:set_send_buffer_size( conn_id,64,16777216,2 )
-    network_mgr:set_recv_buffer_size( conn_id,8,8388608 ) -- 8M
+    network_mgr:set_send_buffer_size(conn_id, 64, 16777216, 2)
+    network_mgr:set_recv_buffer_size(conn_id, 8, 8388608) -- 8M
 end
 
 -- 接受新的连接
-function SrvConn:conn_accept( new_conn_id )
-    self:set_conn_param( new_conn_id )
+function SrvConn:conn_accept(new_conn_id)
+    self:set_conn_param(new_conn_id)
 
-    local new_conn = SrvConn( new_conn_id )
-    g_network_mgr:srv_conn_accept( new_conn_id,new_conn )
+    local new_conn = SrvConn(new_conn_id)
+    g_network_mgr:srv_conn_accept(new_conn_id, new_conn)
 
     return new_conn
 end
 
 -- 连接成功
-function SrvConn:conn_new( ecode )
+function SrvConn:conn_new(ecode)
     if 0 == ecode then
         self.conn_ok = true
-        self:set_conn_param( self.conn_id )
+        self:set_conn_param(self.conn_id)
     end
 
-    return g_network_mgr:srv_conn_new( self.conn_id,ecode )
+    return g_network_mgr:srv_conn_new(self.conn_id, ecode)
 end
 
 -- 连接断开
 function SrvConn:conn_del()
     self.conn_ok = false
-    g_conn_mgr:set_conn( self.conn_id,nil )
-    return g_network_mgr:srv_conn_del( self.conn_id )
+    g_conn_mgr:set_conn(self.conn_id, nil)
+    return g_network_mgr:srv_conn_del(self.conn_id)
 end
 
 -- 服务器之间消息回调
-function SrvConn:command_new( session,cmd,errno,pkt )
+function SrvConn:command_new(session, cmd, errno, pkt)
     self.beat = ev:time()
-    return g_command_mgr:srv_dispatch( self,cmd,pkt )
+    return g_command_mgr:srv_dispatch(self, cmd, pkt)
 end
 
 -- 转发的客户端消息
-function SrvConn:css_command_new( pid,cmd,... )
-    return g_command_mgr:clt_dispatch_ex( self,pid,cmd,... )
+function SrvConn:css_command_new(pid, cmd, ...)
+    return g_command_mgr:clt_dispatch_ex(self, pid, cmd, ...)
 end
 
 -- 主动关闭连接
 function SrvConn:close()
     self.conn_ok = false
-    return network_mgr:close( self.conn_id )
+    return network_mgr:close(self.conn_id)
 end
 
 -- 发送认证数据
 function SrvConn:send_register()
-    local pkt =
-    {
-        name    = g_app.name,
+    local pkt = {
+        name = g_app.name,
         session = g_app.session,
-        timestamp = ev:time(),
+        timestamp = ev:time()
     }
-    pkt.auth = util.md5( SRV_KEY,pkt.timestamp,pkt.session )
-    self:send_pkt( SYS.REG,pkt )
+    pkt.auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
+    self:send_pkt(SYS.REG, pkt)
 end
 
 return SrvConn

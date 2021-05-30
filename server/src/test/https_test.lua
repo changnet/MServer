@@ -1,7 +1,6 @@
 -- http(s)_test.lua
 -- 2017-12-11
 -- xzc
-
 local network_mgr = network_mgr
 local HttpConn = require "http.http_conn"
 g_conn_mgr = require "network.conn_mgr"
@@ -21,28 +20,31 @@ t_describe("http(s) test", function()
     local vfy_srv_ssl
     local vfy_clt_ssl
 
-    t_before( function()
+    t_before(function()
         clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
 
         if LINUX then
-            vfy_ssl = network_mgr:new_ssl_ctx(
-                network_mgr.SSLVT_TLS_CLT_AT, nil, nil, nil,
-                "/etc/ssl/certs/ca-certificates.crt")
+            vfy_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT, nil,
+                                              nil, nil,
+                                              "/etc/ssl/certs/ca-certificates.crt")
         end
 
-        srv_ssl = network_mgr:new_ssl_ctx(
-            network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
-            "../certs/srv_key.pem","mini_distributed_game_server" )
+        srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
+                                          "../certs/server.cer",
+                                          "../certs/srv_key.pem",
+                                          "mini_distributed_game_server")
 
-        vfy_srv_ssl = network_mgr:new_ssl_ctx(
-            network_mgr.SSLVT_TLS_SRV_AT, "../certs/server.cer",
-            "../certs/srv_key.pem","mini_distributed_game_server",
-            "../certs/ca.cer" )
+        vfy_srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
+                                              "../certs/server.cer",
+                                              "../certs/srv_key.pem",
+                                              "mini_distributed_game_server",
+                                              "../certs/ca.cer")
 
-        vfy_clt_ssl = network_mgr:new_ssl_ctx(
-            network_mgr.SSLVT_TLS_CLT_AT, "../certs/client.cer",
-            "../certs/clt_key.pem","mini_distributed_game_server",
-            "../certs/ca.cer")
+        vfy_clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT,
+                                              "../certs/client.cer",
+                                              "../certs/clt_key.pem",
+                                              "mini_distributed_game_server",
+                                              "../certs/ca.cer")
 
         local ip = util.get_addr_info(exp_host)
         t_print("target host address is", ip)
@@ -57,12 +59,12 @@ t_describe("http(s) test", function()
             t_equal(ecode, 0)
 
             conn:get("/get", nil,
-                function(__conn, http_type, code, method, url, body)
-                    t_equal(http_type, 1)
-                    t_equal(code, 200)
-                    conn:close()
-                    t_done()
-                end)
+                     function(__conn, http_type, code, method, url, body)
+                t_equal(http_type, 1)
+                t_equal(code, 200)
+                conn:close()
+                t_done()
+            end)
         end)
     end)
 
@@ -75,12 +77,12 @@ t_describe("http(s) test", function()
             t_equal(ecode, 0)
 
             conn:post("/post", nil,
-                function(__conn, http_type, code, method, url, body)
-                    t_equal(http_type, 1)
-                    t_equal(code, 200)
-                    conn:close()
-                    t_done()
-                end)
+                      function(__conn, http_type, code, method, url, body)
+                t_equal(http_type, 1)
+                t_equal(code, 200)
+                conn:close()
+                t_done()
+            end)
         end)
     end)
 
@@ -93,44 +95,43 @@ t_describe("http(s) test", function()
 
         local srvConn = HttpConn()
         srvConn:listen(local_host, port, nil,
-            function(conn, http_type, code, method, url, body)
-                t_equal(http_type, 0)
+                       function(conn, http_type, code, method, url, body)
+            t_equal(http_type, 0)
 
-                -- 1 = GET, 3 = POST
-                if "/get" == url then
-                    t_equal(method, 1)
-                else
-                    t_equal(url, "/post")
-                    t_equal(method, 3)
-                end
+            -- 1 = GET, 3 = POST
+            if "/get" == url then
+                t_equal(method, 1)
+            else
+                t_equal(url, "/post")
+                t_equal(method, 3)
+            end
 
-                local addr = network_mgr:address(conn.conn_id)
+            local addr = network_mgr:address(conn.conn_id)
 
-                t_print("accept http from", addr)
-                t_equal(addr, local_host)
-                conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-            end)
+            t_print("accept http from", addr)
+            t_equal(addr, local_host)
+            conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+        end)
 
         local cltConn = HttpConn()
         cltConn:connect(local_host, port, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,
-                function(_, http_type, code, method, url, body)
-                    local header = cltConn:get_header()
-                    t_equal(code, 200)
-                    t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+                        function(_, http_type, code, method, url, body)
+                local header = cltConn:get_header()
+                t_equal(code, 200)
+                t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
-                    cltConn:post("/post", nil,
-                        function(_, http_type2, code2, method2, url2, body2)
-                            t_equal(code2, 200)
-                            cltConn:close()
-                            t_done()
-                        end)
+                cltConn:post("/post", nil,
+                             function(_, http_type2, code2, method2, url2, body2)
+                    t_equal(code2, 200)
+                    cltConn:close()
+                    t_done()
                 end)
+            end)
         end)
     end)
-
 
     t_it("https get " .. exp_host, function()
         t_wait(10000)
@@ -141,12 +142,12 @@ t_describe("http(s) test", function()
             t_equal(ecode, 0)
 
             conn:get("/get", nil,
-                function(__conn, http_type, code, method, url, body)
-                    t_equal(http_type, 1)
-                    t_equal(code, 200)
-                    conn:close()
-                    t_done()
-                end)
+                     function(__conn, http_type, code, method, url, body)
+                t_equal(http_type, 1)
+                t_equal(code, 200)
+                conn:close()
+                t_done()
+            end)
         end)
     end)
 
@@ -159,12 +160,12 @@ t_describe("http(s) test", function()
             t_equal(ecode, 0)
 
             conn:post("/post", nil,
-                function(__conn, http_type, code, method, url, body)
-                    t_equal(http_type, 1)
-                    t_equal(code, 200)
-                    conn:close()
-                    t_done()
-                end)
+                      function(__conn, http_type, code, method, url, body)
+                t_equal(http_type, 1)
+                t_equal(code, 200)
+                conn:close()
+                t_done()
+            end)
         end)
     end)
 
@@ -177,37 +178,37 @@ t_describe("http(s) test", function()
 
         local srvConn = HttpConn()
         srvConn:listen_s(local_host, port, srv_ssl, nil,
-            function(conn, http_type, code, method, url, body)
-                t_equal(http_type, 0)
+                         function(conn, http_type, code, method, url, body)
+            t_equal(http_type, 0)
 
-                -- 1 = GET, 3 = POST
-                if "/get" == url then
-                    t_equal(method, 1)
-                else
-                    t_equal(url, "/post")
-                    t_equal(method, 3)
-                end
+            -- 1 = GET, 3 = POST
+            if "/get" == url then
+                t_equal(method, 1)
+            else
+                t_equal(url, "/post")
+                t_equal(method, 3)
+            end
 
-                conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-            end)
+            conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+        end)
 
         local cltConn = HttpConn()
         cltConn:connect_s(local_host, port, clt_ssl, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,
-                function(_, http_type, code, method, url, body)
-                    local header = cltConn:get_header()
-                    t_equal(code, 200)
-                    t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+                        function(_, http_type, code, method, url, body)
+                local header = cltConn:get_header()
+                t_equal(code, 200)
+                t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
-                    cltConn:post("/post", nil,
-                        function(_, http_type2, code2, method2, url2, body2)
-                            t_equal(code2, 200)
-                            cltConn:close()
-                            t_done()
-                        end)
+                cltConn:post("/post", nil,
+                             function(_, http_type2, code2, method2, url2, body2)
+                    t_equal(code2, 200)
+                    cltConn:close()
+                    t_done()
                 end)
+            end)
         end)
     end)
 
@@ -220,15 +221,14 @@ t_describe("http(s) test", function()
             t_equal(ecode, 0)
 
             conn:get("/get", nil,
-                function(__conn, http_type, code, method, url, body)
-                    t_equal(http_type, 1)
-                    t_equal(code, 200)
-                    conn:close()
-                    t_done()
-                end)
+                     function(__conn, http_type, code, method, url, body)
+                t_equal(http_type, 1)
+                t_equal(code, 200)
+                conn:close()
+                t_done()
+            end)
         end)
     end)
-
 
     t_it("https two-way valify local server test", function()
         t_wait(10000)
@@ -239,37 +239,37 @@ t_describe("http(s) test", function()
 
         local srvConn = HttpConn()
         srvConn:listen_s(local_host, port, vfy_srv_ssl, nil,
-            function(conn, http_type, code, method, url, body)
-                t_equal(http_type, 0)
+                         function(conn, http_type, code, method, url, body)
+            t_equal(http_type, 0)
 
-                -- 1 = GET, 3 = POST
-                if "/get" == url then
-                    t_equal(method, 1)
-                else
-                    t_equal(url, "/post")
-                    t_equal(method, 3)
-                end
+            -- 1 = GET, 3 = POST
+            if "/get" == url then
+                t_equal(method, 1)
+            else
+                t_equal(url, "/post")
+                t_equal(method, 3)
+            end
 
-                conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-            end)
+            conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+        end)
 
         local cltConn = HttpConn()
         cltConn:connect_s(local_host, port, vfy_clt_ssl, function(_, ecode)
             t_equal(ecode, 0)
 
             cltConn:get("/get", nil,
-                function(_, http_type, code, method, url, body)
-                    local header = cltConn:get_header()
-                    t_equal(code, 200)
-                    t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+                        function(_, http_type, code, method, url, body)
+                local header = cltConn:get_header()
+                t_equal(code, 200)
+                t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
-                    cltConn:post("/post", nil,
-                        function(_, http_type2, code2, method2, url2, body2)
-                            t_equal(code2, 200)
-                            cltConn:close()
-                            t_done()
-                        end)
+                cltConn:post("/post", nil,
+                             function(_, http_type2, code2, method2, url2, body2)
+                    t_equal(code2, 200)
+                    cltConn:close()
+                    t_done()
                 end)
+            end)
         end)
     end)
 end)

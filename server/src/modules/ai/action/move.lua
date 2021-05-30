@@ -1,8 +1,7 @@
 -- AI移动相关action
-
 local MT = require "modules.move.move_header"
 
-local Move = oo.class( ... )
+local Move = oo.class(...)
 
 local DG_MIN_SEC = 30
 local DG_MAX_SEC = 180
@@ -13,22 +12,23 @@ function Move:random_move(ai)
     if ai.moving then return false end
 
     -- 在dungeon_mgr中初始化的场景大小
-    local px = math.random(0,128*64 - 1)
-    local py = math.random(0,64*64 - 1)
-    ai.entity:send_pkt( ENTITY.MOVE,{ way = MT.WALK,pix_x = px,pix_y = py } )
+    local px = math.random(0, 128 * 64 - 1)
+    local py = math.random(0, 64 * 64 - 1)
+    ai.entity:send_pkt(ENTITY.MOVE, {way = MT.WALK, pix_x = px, pix_y = py})
 
     ai.moving = true
     ai.dx = px
     ai.dy = py
-    PRINTF("move to %d,%d(%d,%d)",math.floor(px/64),math.floor(py/64),px,py)
+    PRINTF("move to %d,%d(%d,%d)", math.floor(px / 64), math.floor(py / 64), px,
+           py)
     return true
 end
 
 -- 玩家进入场景
-function Move:on_enter_scene(entity,errno,pkt)
+function Move:on_enter_scene(entity, errno, pkt)
     local dungeon_id = pkt.dungeon_id or 0 -- pbc里int为0发不过来
-    PRINTF("%s(%d) enter scene %d:%d",
-        entity.name,entity.pid,dungeon_id,pkt.scene_id)
+    PRINTF("%s(%d) enter scene %d:%d", entity.name, entity.pid, dungeon_id,
+           pkt.scene_id)
 
     -- 设置位置信息
     entity.dungeon_id = dungeon_id
@@ -42,38 +42,38 @@ function Move:on_enter_scene(entity,errno,pkt)
 end
 
 -- 某个实体移动
-function Move:on_move(entity,errno,pkt)
+function Move:on_move(entity, errno, pkt)
     if entity.handle == pkt.handle then
         entity.ai.moving = true
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
 
-        PRINT("move my pos to",entity.name,pkt.pix_x,pkt.pix_y)
+        PRINT("move my pos to", entity.name, pkt.pix_x, pkt.pix_y)
     else
-        PRINT("other move pos at",pkt.pix_x,pkt.pix_y)
+        PRINT("other move pos at", pkt.pix_x, pkt.pix_y)
     end
 end
 
-function Move:on_appear(entity,errno,pkt)
-    PRINT("entity appear:",pkt.name,pkt.pix_x,pkt.pix_y)
+function Move:on_appear(entity, errno, pkt)
+    PRINT("entity appear:", pkt.name, pkt.pix_x, pkt.pix_y)
 end
 
 -- 实体消失
-function Move:on_disappear(entity,errno,pkt)
-    PRINT("entity disappear:",pkt.handle)
+function Move:on_disappear(entity, errno, pkt)
+    PRINT("entity disappear:", pkt.handle)
 end
 
 -- 服务器强制重置实体位置
-function Move:on_update_pos(entity,errno,pkt)
+function Move:on_update_pos(entity, errno, pkt)
     if entity.handle == pkt.handle then
         entity.ai.moving = false
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
-        PRINT("update my pos at",entity.name,pkt.pix_x,pkt.pix_y)
+        PRINT("update my pos at", entity.name, pkt.pix_x, pkt.pix_y)
     else
-        PRINT("update other pos at",pkt.pix_x,pkt.pix_y, pkt.handle)
+        PRINT("update other pos at", pkt.pix_x, pkt.pix_y, pkt.handle)
     end
 end
 
@@ -81,37 +81,37 @@ end
 function Move:switch_dungeon(ai)
     local now = ev:time()
     if not ai.dungeon_time then
-        ai.dungeon_time = now + math.random(DG_MIN_SEC,DG_MAX_SEC)
+        ai.dungeon_time = now + math.random(DG_MIN_SEC, DG_MAX_SEC)
     end
 
     if ai.dungeon_time > now then return end
 
     -- 随机切换一个副本
-    local id = math.random(1,10)
+    local id = math.random(1, 10)
     if id == (ai.fb_id or 0) then return end
 
-    ai.entity:send_pkt( PLAYER.ENTERDUNGEON,{ id = id } )
+    ai.entity:send_pkt(PLAYER.ENTERDUNGEON, {id = id})
     ai.dungeon_time = now + math.random(DG_MIN_SEC, DG_MAX_SEC)
 
     ai.fb_id = id
     local entity = ai.entity
-    PRINT("switch to new dungeon",entity.name,id)
+    PRINT("switch to new dungeon", entity.name, id)
 end
 
 -- ************************************************************************** --
 
-local function cmd_cb( cmd,cb )
-    local raw_cb = function (android,errno,pkt)
-        return cb(Move,android,errno,pkt)
+local function cmd_cb(cmd, cb)
+    local raw_cb = function(android, errno, pkt)
+        return cb(Move, android, errno, pkt)
     end
 
-    g_android_cmd:cmd_register( cmd,raw_cb )
+    g_android_cmd:cmd_register(cmd, raw_cb)
 end
 
-cmd_cb( ENTITY.MOVE,Move.on_move)
-cmd_cb( ENTITY.APPEAR,Move.on_appear)
-cmd_cb( ENTITY.POS,Move.on_update_pos)
-cmd_cb( ENTITY.DISAPPEAR,Move.on_disappear)
-cmd_cb( ENTITY.ENTERSCENE,Move.on_enter_scene)
+cmd_cb(ENTITY.MOVE, Move.on_move)
+cmd_cb(ENTITY.APPEAR, Move.on_appear)
+cmd_cb(ENTITY.POS, Move.on_update_pos)
+cmd_cb(ENTITY.DISAPPEAR, Move.on_disappear)
+cmd_cb(ENTITY.ENTERSCENE, Move.on_enter_scene)
 
 return Move

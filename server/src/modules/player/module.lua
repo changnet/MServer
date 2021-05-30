@@ -1,12 +1,10 @@
 -- module.lua
 -- 2018-02-06
 -- xzc
-
 -- 玩家子模块基类
+local Module = oo.class(...)
 
-local Module = oo.class( ... )
-
-function Module:__init( pid,player )
+function Module:__init(pid, player)
     self.pid = pid
     self.player = player
 end
@@ -19,14 +17,14 @@ end
 
 -- 数据加载接口，自动调用
 -- 必须返回操作结果
-function Module:db_load( sync_db )
+function Module:db_load(sync_db)
     return true
 end
 
 -- 数据加载完成自动调用，用于初始化从数据库加载的数据
 -- @is_new:是否新创建的玩家
 -- 必须返回操作结果
-function Module:on_init( is_new )
+function Module:on_init(is_new)
     return true
 end
 

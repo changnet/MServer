@@ -1,11 +1,8 @@
 -- async_worker_header.lua
 -- xzc
 -- 2018-12-18
-
 -- 异步执行 宏定义
-
-ASYNC =
-{
+ASYNC = {
     -- 刷新玩家属性
     -- 同步玩家属性
     -- 怪物重用

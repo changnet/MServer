@@ -1,12 +1,10 @@
 -- mail_mgr.lua
 -- 2018-05-20
 -- xzc
-
 -- 全服邮件 管理
-
 local TimeId = require "modules.system.time_id"
 
-local MailMgr = oo.singleton( ... )
+local MailMgr = oo.singleton(...)
 
 function MailMgr:__init()
     self.list = {}
@@ -21,68 +19,68 @@ end
 -- @ctx:邮件内容
 -- @attachment:通用奖励格式，参考res.lua
 -- @op:日志操作，用于跟踪附件资源产出。参考log_header
-function MailMgr:send_mail( pid,title,ctx,attachment,op )
+function MailMgr:send_mail(pid, title, ctx, attachment, op)
     -- 邮件数据统一在world处理，不是该进程则转
     if "world" ~= g_app.name then
-        return g_rpc:rpc_send_mail( pid,title,ctx,attachment,op )
+        return g_rpc:rpc_send_mail(pid, title, ctx, attachment, op)
     end
 
-    return self:raw_send_mail( pid,title,ctx,attachment,op )
+    return self:raw_send_mail(pid, title, ctx, attachment, op)
 end
 
-function MailMgr:raw_send_mail( pid,title,ctx,attachment,op )
+function MailMgr:raw_send_mail(pid, title, ctx, attachment, op)
     local mail = {}
-    mail.id    = self.time_id:next_id()
-    mail.op    = op
-    mail.ctx   = ctx
+    mail.id = self.time_id:next_id()
+    mail.op = op
+    mail.ctx = ctx
     mail.title = title
     mail.attachment = attachment
 
     -- 个人邮件不能同时发送超过65535
     -- 如果实在是在线人数太多,又不能发全服邮件，则考虑改一下time_id的位数，或者延迟几秒多次发
     if mail.id < 0 then
-        ERROR("raw_send_mail:can NOT allocate mail id,%s",table.dump(mail))
+        ERROR("raw_send_mail:can NOT allocate mail id,%s", table.dump(mail))
         return
     end
 
     -- 检测pid是否有效
-    if not g_player_mgr:is_pid_exist( pid ) then
-        ERROR("raw_send_mail:pid not exist,%s",table.dump(mail))
+    if not g_player_mgr:is_pid_exist(pid) then
+        ERROR("raw_send_mail:pid not exist,%s", table.dump(mail))
         return
     end
 
-    g_log_mgr:add_mail_log( pid,mail )
+    g_log_mgr:add_mail_log(pid, mail)
 
-    local player = g_player_mgr:get_player( pid )
+    local player = g_player_mgr:get_player(pid)
     if player then
         player:get_module("mail"):add_mail(mail)
         return
     end
 
-    self:add_offline_mail( pid,mail )
+    self:add_offline_mail(pid, mail)
 
     -- 正在登录中的玩家，标识一下需要重新加载邮件数据(他不一定能成功登录，可能不存库)
     -- 另一种是完全不在线,则由他登录时再加载邮件
-    local raw_player = g_player_mgr:get_raw_player( pid )
+    local raw_player = g_player_mgr:get_raw_player(pid)
     if raw_player then raw_player:get_module("mail"):set_reload() end
 end
 
 -- 添加个人离线邮件
-function MailMgr:add_offline_mail( pid,mail )
+function MailMgr:add_offline_mail(pid, mail)
     -- list.N，mongodb 2.2+版本后语法，表示list数组中第N个元素不存在时才插入(从0开始)
     -- 防止玩家太久不上线邮箱爆了
-    local query = string.format(
-        '{"_id":%d,"list.%d":{"$exists":false}}',pid,MAX_MAIL - 1 )
-    local update = { ["$push"] = {["list"] = mail} }
+    local query = string.format('{"_id":%d,"list.%d":{"$exists":false}}', pid,
+                                MAX_MAIL - 1)
+    local update = {["$push"] = {["list"] = mail}}
 
-    local cb = function( ecode,res )
-        self:on_offline_mail( pid,mail,ecode,res )
+    local cb = function(ecode, res)
+        self:on_offline_mail(pid, mail, ecode, res)
     end
 
     -- 不能upsert,否则当邮箱满了的时候就会尝试插入新记录
     -- 新玩家时有初始化邮箱的
-    return g_mongodb:find_and_modify(
-        "mail",query,nil,update,{list = 0},false,false,false,cb )
+    return g_mongodb:find_and_modify("mail", query, nil, update, {list = 0},
+                                     false, false, false, cb)
 
     -- 使用update也可以，但是就没法知道返回值了
     -- g_mongodb:update( "mail",
@@ -107,10 +105,10 @@ table: 0x2b8cff0
 }
 
 ]]
-function MailMgr:on_offline_mail( pid,mail,ecode,res )
+function MailMgr:on_offline_mail(pid, mail, ecode, res)
     if 0 == ecode and res.lastErrorObject.n == 1 then return end
     -- 如果插入失败，记录一下日志
-    g_log_mgr:add_mail_log( string.format("offline_mail_error_%d",pid),mail )
+    g_log_mgr:add_mail_log(string.format("offline_mail_error_%d", pid), mail)
 end
 
 -- 发送系统邮件
@@ -123,79 +121,81 @@ end
 -- @expire:超过这个时间戳此邮件失效(已发给玩家的不影响，只是这时候登录的玩家就不会收到了)
 -- @level: >= 此等级的玩家才能收到
 -- @vip:达到此vip等级才能收到
-function MailMgr:send_sys_mail( title,ctx,attachment,op,expire,level,vip )
+function MailMgr:send_sys_mail(title, ctx, attachment, op, expire, level, vip)
     if not title or not ctx then
-        ERROR("send sys mail,no title(%s) or ctx(%s)",title,ctx)
+        ERROR("send sys mail,no title(%s) or ctx(%s)", title, ctx)
         return
     end
 
     if "world" ~= g_app.name then
-        return g_rpc:rpc_send_sys_mail(
-            title,ctx,attachment,op,expire,level,vip )
+        return g_rpc:rpc_send_sys_mail(title, ctx, attachment, op, expire,
+                                       level, vip)
     end
 
-    return self:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
+    return
+        self:raw_send_sys_mail(title, ctx, attachment, op, expire, level, vip)
 end
 
-function MailMgr:raw_send_sys_mail( title,ctx,attachment,op,expire,level,vip )
-    local mail  = {}
-    mail.id     = self.time_id:next_id()
-    mail.op     = op
-    mail.ctx    = ctx
-    mail.vip    = vip
-    mail.title  = title
-    mail.level  = level
+function MailMgr:raw_send_sys_mail(title, ctx, attachment, op, expire, level,
+                                   vip)
+    local mail = {}
+    mail.id = self.time_id:next_id()
+    mail.op = op
+    mail.ctx = ctx
+    mail.vip = vip
+    mail.title = title
+    mail.level = level
     mail.expire = expire
     mail.attachment = attachment
 
     if mail.id < 0 then
-        ERROR("raw_send_sys_mail:can NOT allocate mail id,%s",table.dump(mail))
+        ERROR("raw_send_sys_mail:can NOT allocate mail id,%s", table.dump(mail))
         return
     end
 
-    table.insert( self.list,mail )
-    g_log_mgr:add_mail_log("sys",mail)
+    table.insert(self.list, mail)
+    g_log_mgr:add_mail_log("sys", mail)
 
     self:truncate()
     self:db_save() -- 系统邮件不多，直接存库
-    self:dispatch_sys_mail( mail )
+    self:dispatch_sys_mail(mail)
 end
 
 -- 把新增的全服邮件派发给在线的玩家
-function MailMgr:dispatch_sys_mail( mail )
+function MailMgr:dispatch_sys_mail(mail)
     local players = g_player_mgr:get_all_player()
-    for _,player in pairs( players ) do
-        player:get_module("mail"):add_sys_mail( mail )
+    for _, player in pairs(players) do
+        player:get_module("mail"):add_sys_mail(mail)
     end
 end
 
 -- 存库
 function MailMgr:db_save()
-    local query = string.format('{"_id":%d}',g_app.index)
-    g_mongodb:update( "sys_mail",query,{ list = self.list },true )
+    local query = string.format('{"_id":%d}', g_app.index)
+    g_mongodb:update("sys_mail", query, {list = self.list}, true)
 end
 
 -- 读库
 function MailMgr:db_load()
-    local callback = function( ... )
-        self:on_db_loaded( ... )
+    local callback = function(...)
+        self:on_db_loaded(...)
     end
 
-    local query = string.format('{"_id":%d}',g_app.index)
-    g_mongodb:find( "sys_mail",query,nil,callback )
+    local query = string.format('{"_id":%d}', g_app.index)
+    g_mongodb:find("sys_mail", query, nil, callback)
 end
 
 -- db数据加载回调
-function MailMgr:on_db_loaded( ecode,res )
+function MailMgr:on_db_loaded(ecode, res)
     if 0 ~= ecode then
-        ERROR( "sys mail db load error" )
+        ERROR("sys mail db load error")
         return
     end
 
     -- 新服没有全服邮件数据
     if res and res[1] then self.list = res[1].list end
 
-    g_app:one_initialized( "sys_mail",1 )
+    g_app:one_initialized("sys_mail", 1)
 end
 
 -- 删除多出的邮件
@@ -203,9 +203,9 @@ function MailMgr:truncate()
     -- TODO:是不是要先找过期了的
     while #self.list > MAX_SYS_MAIL do
         local old_mail = self.list[1]
-        table.remove( self.list,1 )
+        table.remove(self.list, 1)
 
-        g_log_mgr:del_mail_log( "sys",old_mail )
+        g_log_mgr:del_mail_log("sys", old_mail)
     end
 end
 
@@ -215,17 +215,17 @@ function MailMgr:get_now_id()
 end
 
 -- 检查是否有新的全服邮件
-function MailMgr:check_new_sys_mail( player,mail_box,sys_id )
+function MailMgr:check_new_sys_mail(player, mail_box, sys_id)
     local new_cnt = 0
 
     -- 邮件是按时间倒序排列的
-    for idx = #self.list,1,-1 do
+    for idx = #self.list, 1, -1 do
         local mail = self.list[idx]
         if mail.id <= sys_id then break end
 
-        if self:check_mail_limit( mail,player ) then
+        if self:check_mail_limit(mail, player) then
             new_cnt = new_cnt + 1
-            mail_box:raw_add_sys_mail( mail )
+            mail_box:raw_add_sys_mail(mail)
         end
     end
 
@@ -233,7 +233,7 @@ function MailMgr:check_new_sys_mail( player,mail_box,sys_id )
 end
 
 -- 检查邮件条件
-function MailMgr:check_mail_limit( mail,player )
+function MailMgr:check_mail_limit(mail, player)
     --  过期
     if mail.expire and ev:time() >= mail.expire then return false end
     -- 等级限制

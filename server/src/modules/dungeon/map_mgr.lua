@@ -1,13 +1,11 @@
 -- map_mgr.lua
 -- xzc
 -- 2018-12-30
-
 -- 地图数据管理
-
 local Map = require "Map"
 local Astar = require "Astar"
 
-local MapMgr = oo.singleton( ... )
+local MapMgr = oo.singleton(...)
 
 function MapMgr:__init()
     self.map = {} -- map id为key
@@ -19,11 +17,11 @@ end
 -- @id:地图id，不能重复
 -- @width:宽度(格子数)
 -- @height:高度(格子数)
-function MapMgr:create_map( id,width,height )
+function MapMgr:create_map(id, width, height)
     assert(nil == self.map[id])
 
     local map = Map()
-    map:set(id,width,height)
+    map:set(id, width, height)
 
     self.map[id] = map
 
@@ -31,7 +29,7 @@ function MapMgr:create_map( id,width,height )
 end
 
 -- 获取地图对象
-function MapMgr:get_map( id )
+function MapMgr:get_map(id)
     return self.map[id]
 end
 

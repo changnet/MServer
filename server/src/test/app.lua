@@ -10,13 +10,13 @@ g_timer_mgr = require "timer.timer_mgr"
 
 local Application = require "application.application"
 
-local App = oo.class( ...,Application )
+local App = oo.class(..., Application)
 
 -- 初始化
-function App:__init( cmd, opts )
+function App:__init(cmd, opts)
     Application.__init(self)
-    self.cmd, self.name, self.filter, self.skip
-        = cmd, opts.app, opts.filter, opts.skip
+    self.cmd, self.name, self.filter, self.skip = cmd, opts.app, opts.filter,
+                                                  opts.skip
 end
 
 function App:final_initialize()
@@ -41,7 +41,9 @@ function App:final_initialize()
         time_update = function()
             ev:time_update()
         end,
-        clock = function() return ev:real_ms_time() end
+        clock = function()
+            return ev:real_ms_time()
+        end
     })
 
     require "test.misc_test"

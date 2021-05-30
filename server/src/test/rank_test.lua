@@ -1,5 +1,4 @@
 -- 排行榜算法测试
-
 --[[
 这套东西最早是在C++做的。数据是放在脚本，排序C++来做，通过id来关联，后来发现在脚本做就
 能满足需求，就从C++迁移过来了。
@@ -17,9 +16,7 @@
 
 InsertionRank 是针对数量不多，排名变化不频繁，需要根据id取排序的需求来做的。比如游戏里
 常见的伤害排行榜
-]]
-
-local InsertionRank = require "util.insertion_rank"
+]] local InsertionRank = require "util.insertion_rank"
 
 local MAX_VAL = 1024000
 
@@ -52,9 +49,7 @@ t_describe("rank utils test", function()
             object.level = math.random(1, MAX_VAL)
             object.fight = math.random(1, MAX_VAL)
         end
-        for i = 1, max_id do
-            rank:add_factor(i, math.random(1, MAX_VAL))
-        end
+        for i = 1, max_id do rank:add_factor(i, math.random(1, MAX_VAL)) end
 
         rank:remove(1) -- 测试remove
         local max_count = rank:count()
@@ -77,16 +72,14 @@ t_describe("rank utils test", function()
         t_equal(other:count(), rank:count())
         for i = 1, other:count() do
             local other_obj = other:get_object_by_index(i)
-            local rank_obj  = rank:get_object_by_index(i)
+            local rank_obj = rank:get_object_by_index(i)
             t_equal(other_obj, rank_obj)
         end
 
         -- 上面默认倒序排列，现在测试升序
         rank:clear()
         rank:using_asc()
-        for i = 1, max_id do
-            rank:set_factor(i, math.random(1, MAX_VAL))
-        end
+        for i = 1, max_id do rank:set_factor(i, math.random(1, MAX_VAL)) end
         -- 校验排行榜的正确性
         last = 0
         for i = 2, max_count + 1 do
@@ -101,9 +94,7 @@ t_describe("rank utils test", function()
         rank:clear()
         max_id = 10
         rank:set_max(max_id / 2)
-        for i = 1, max_id do
-            rank:set_factor(i, math.random(1, 1024000))
-        end
+        for i = 1, max_id do rank:set_factor(i, math.random(1, 1024000)) end
         t_equal(rank:count(), max_id / 2)
 
         -- 多因子排序测试(自定义comp函数测试)
@@ -117,7 +108,9 @@ t_describe("rank utils test", function()
             -- 先对比积分
             if a.f ~= b.f then return a.f > b.f and 1 or -1 end
             -- 积分一样，对比等级
-            if a.level ~= b.level then return a.level > b.level and 1 or -1 end
+            if a.level ~= b.level then
+                return a.level > b.level and 1 or -1
+            end
             -- 等级也一样，对比战力
             if a.fight == b.fight then return 0 end
             return a.fight > b.fight and 1 or -1
@@ -153,17 +146,17 @@ t_describe("rank utils test", function()
 
     local MAX_PERF = 512
     local MAX_UPDATE = 100000
-    t_it(string.format("insertion rank %d object %d update perf test",
-        MAX_PERF, MAX_UPDATE),
-        function()
+    t_it(
+        string.format("insertion rank %d object %d update perf test", MAX_PERF,
+                      MAX_UPDATE), function()
             local rank = InsertionRank()
             for i = 1, MAX_PERF do
                 rank:set_factor(i, math.random(1, MAX_VAL))
             end
             for _ = 1, MAX_UPDATE do
-                rank:set_factor(
-                    math.random(1, MAX_PERF), math.random(1, MAX_VAL))
+                rank:set_factor(math.random(1, MAX_PERF),
+                                math.random(1, MAX_VAL))
             end
-    end)
+        end)
 end)
 

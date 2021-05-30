@@ -146,13 +146,19 @@ function NetworkMgr:do_timer()
 end
 
 -- 获取服务器连接
-function NetworkMgr:get_srv_conn(session) return self.srv[session] end
+function NetworkMgr:get_srv_conn(session)
+    return self.srv[session]
+end
 
 -- 获取所有服务器连接
-function NetworkMgr:get_all_srv_conn() return self.srv end
+function NetworkMgr:get_all_srv_conn()
+    return self.srv
+end
 
 -- 获取网关连接(在非网关服务器进程获取)
-function NetworkMgr:get_gateway_conn() return self.srv[gateway_session] end
+function NetworkMgr:get_gateway_conn()
+    return self.srv[gateway_session]
+end
 
 -- 在非网关进程直接发送数据到客户端
 function NetworkMgr:send_clt_pkt(pid, cmd, pkt, ecode)
@@ -183,7 +189,9 @@ function NetworkMgr:bind_role(pid, clt_conn)
 end
 
 -- 获取客户端连接
-function NetworkMgr:get_clt_conn(pid) return self.clt[pid] end
+function NetworkMgr:get_clt_conn(pid)
+    return self.clt[pid]
+end
 
 -- 根据conn_id获取连接
 function NetworkMgr:get_conn(conn_id)

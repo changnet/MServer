@@ -1,20 +1,18 @@
---max_heap.lua
---Jan 30, 2015
---cxd
---最大堆排序算法
-
+-- max_heap.lua
+-- Jan 30, 2015
+-- cxd
+-- 最大堆排序算法
 -- 用完全二叉树实现，用数组存储，
 -- 节点的左子节点是 2*index，
 -- 节点的右子节点是 2*index+1，
 -- 每一个节点大于（或等于）这个节点的子节点，但左右子节点的大小则不固定
-
-local MaxHeap = oo.class( ... )
+local MaxHeap = oo.class(...)
 
 function MaxHeap:__init()
-    self.heap       = {}
-    self.map_list   = {}
-    self.count      = 0
-    self.next_id    = 1
+    self.heap = {}
+    self.map_list = {}
+    self.count = 0
+    self.next_id = 1
 end
 
 function MaxHeap:alloc_id()
@@ -36,9 +34,9 @@ function MaxHeap:size()
 end
 
 function MaxHeap:clear()
-    self.heap       = {}
-    self.map_list   = {}
-    self.count      = 0
+    self.heap = {}
+    self.map_list = {}
+    self.count = 0
 end
 
 function MaxHeap:shift_up(i, e)
@@ -62,9 +60,7 @@ function MaxHeap:shift_down(i, e)
             c = c + 1
         end
 
-        if e.key > self.heap[c].key then
-            break
-        end
+        if e.key > self.heap[c].key then break end
 
         local o = self.heap[c]
         self.heap[i] = o

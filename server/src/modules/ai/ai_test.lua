@@ -1,14 +1,13 @@
 -- 用来测试AI
-
 local AST = require "modules.ai.ai_header"
 
 local test = require "modules.ai.action.test"
 local move = require "modules.ai.action.move"
 local loginout = require "modules.ai.action.loginout"
 
-local AiTest = oo.class( ... )
+local AiTest = oo.class(...)
 
-function AiTest:__init(entity,conf)
+function AiTest:__init(entity, conf)
     self.entity = entity
     self.state = AST.OFF
     self.ai_conf = conf
@@ -19,9 +18,7 @@ function AiTest:routine(ms_now)
     local state = self.state
 
     -- 登录
-    if state == AST.OFF then
-        return loginout:check_and_login(self)
-    end
+    if state == AST.OFF then return loginout:check_and_login(self) end
 
     -- 正常登录中，等待登录完成
     if state == AST.LOGIN then return end

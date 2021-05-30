@@ -1,19 +1,18 @@
---min_heap.lua
---Jan 26, 2015
---cxd
---最小堆排序算法(无序，最小key值在top)
+-- min_heap.lua
+-- Jan 26, 2015
+-- cxd
+-- 最小堆排序算法(无序，最小key值在top)
 -- 用完全二叉树实现，用数组存储，
 -- 节点的左子节点是 2*index，
 -- 节点的右子节点是 2*index+1，
 -- 每一个节点大于（或等于）这个节点的子节点，但左右子节点的大小则不固定
-
-local MinHeap = oo.class( ... )
+local MinHeap = oo.class(...)
 
 function MinHeap:__init()
-    self.heap       = {}
-    self.map_list   = {}
-    self.count      = 0
-    self.next_id    = 1
+    self.heap = {}
+    self.map_list = {}
+    self.count = 0
+    self.next_id = 1
 end
 
 function MinHeap:alloc_id()
@@ -35,9 +34,9 @@ function MinHeap:size()
 end
 
 function MinHeap:clear()
-    self.heap       = {}
-    self.map_list   = {}
-    self.count      = 0
+    self.heap = {}
+    self.map_list = {}
+    self.count = 0
 end
 
 function MinHeap:shift_up(i, e)
@@ -61,9 +60,7 @@ function MinHeap:shift_down(i, e)
             c = c + 1
         end
 
-        if e.key < self.heap[c].key then
-            break
-        end
+        if e.key < self.heap[c].key then break end
 
         local o = self.heap[c]
         self.heap[i] = o

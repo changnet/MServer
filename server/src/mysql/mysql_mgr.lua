@@ -1,9 +1,8 @@
 -- mysql_mgr.lua
 -- 2017-05-26
 -- xzc
-
 -- mysql连接管理
-local MysqlMgr = oo.singleton( ... )
+local MysqlMgr = oo.singleton(...)
 
 local Sql = require "Sql"
 
@@ -11,7 +10,7 @@ local S_READY = Sql.S_READY
 local S_DATA = Sql.S_DATA
 
 function MysqlMgr:__init()
-    self.id  = 0
+    self.id = 0
     self.sql = {}
 end
 

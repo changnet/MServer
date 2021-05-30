@@ -1,12 +1,9 @@
 -- attribute_header.lua
 -- xzc
 -- 2018-12-01
-
 -- 战斗属性宏定义
-
 -- 属性类型定义 attribute type
-ABT =
-{
+ABT = {
     NONE = 0, -- 无效
     HP = 1, -- 血量
     MAX_HP = 2, -- 最大血量
@@ -19,8 +16,7 @@ ABT =
 }
 
 -- 属性系统定义
-ABTSYS =
-{
+ABTSYS = {
     NONE = 0, -- 无效
     SYNC = 1, -- world中的玩家属性同步到area，放到一个系统中
     BASE = 2, -- 等级基础属性

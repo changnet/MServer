@@ -1,16 +1,14 @@
 -- attribute_sys.lua
 -- xzc
 -- 2018-12-02
-
 -- 玩家属性系统
-
 require "modules.attribute.attribute_header"
 local Attribute = require "modules.attribute.attribute"
 
 local ABTSYS = ABTSYS
-local AttributeSys = oo.class( ... )
+local AttributeSys = oo.class(...)
 
-function AttributeSys:__init( pid )
+function AttributeSys:__init(pid)
     self.pid = pid
     self.sys = {} -- attribute_header.lua中定义的系统id为key
 
@@ -43,17 +41,17 @@ function AttributeSys:get_one_final_attr(id)
 end
 
 -- 添加属性到某个系统
-function AttributeSys:add_sys_abt( id,abt_list )
+function AttributeSys:add_sys_abt(id, abt_list)
     local sys = self:get_sys(id)
-    return sys:push( abt_list )
+    return sys:push(abt_list)
 end
 
 -- 设置某个系统属性
-function AttributeSys:set_sys_abt( id,abt_list )
+function AttributeSys:set_sys_abt(id, abt_list)
     local sys = self:get_sys(id)
 
     sys:clear()
-    return sys:push( abt_list )
+    return sys:push(abt_list)
 end
 
 -- 标识是否变动
@@ -73,9 +71,7 @@ end
 function AttributeSys:calc_final_abt()
     self.final_abt:clear()
 
-    for _,sys in pairs( self.sys ) do
-        self.final_abt:merge( sys )
-    end
+    for _, sys in pairs(self.sys) do self.final_abt:merge(sys) end
 
     -- 最终总战力
     self.final_fv = self.final_abt:calc_fight_value()
@@ -85,15 +81,15 @@ end
 
 -- 把属性同步到场景
 -- @conn: 指定更新属性的连接，不指定的话说明玩家已经进入对应的场景，从pid取就可以了
-function AttributeSys:update_battle_abt( conn )
+function AttributeSys:update_battle_abt(conn)
     -- TODO: 这里需要优化一下，看下是不是要改成protobuf同步
     local abt_list = {}
-    for k,v in pairs( self.final_abt.attribute ) do
-        table.insert(abt_list,k)
-        table.insert(abt_list,v)
+    for k, v in pairs(self.final_abt.attribute) do
+        table.insert(abt_list, k)
+        table.insert(abt_list, v)
     end
 
-    g_rpc:proxy(conn or self.pid):player_update_battle_abt( self.pid,abt_list )
+    g_rpc:proxy(conn or self.pid):player_update_battle_abt(self.pid, abt_list)
 end
 
 return AttributeSys

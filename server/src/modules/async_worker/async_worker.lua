@@ -1,9 +1,7 @@
 -- async_worker.lua
 -- xzc
 -- 2018-12-18
-
 -- 执行异步逻辑
-
 -- 1. 所有事件类型在header中定义
 -- 2. 因涉及热更问题，不要直接直接对象的函数
 --    考虑回调固定函数根据事件处理，或者wrap在一个函数中
@@ -12,8 +10,7 @@
 -- 4. 延迟N毫秒执行
 --    用timer可以做，但不划算，考虑在底层循环加一个回调，现在暂时不做
 -- 5. 异步执行时再添加、修改异步数据循环修改数据
-
-local AsyncWorker = oo.singleton( ... )
+local AsyncWorker = oo.singleton(...)
 
 function AsyncWorker:__init()
 end

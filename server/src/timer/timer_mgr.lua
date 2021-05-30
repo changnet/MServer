@@ -1,13 +1,11 @@
 -- timer_mgr.lua
 -- 2017-05-26
 -- xzc
-
 -- 定时器管理
-
 local LIMIT = require "global.limits"
 
 local Timer = require "Timer"
-local TimerMgr = oo.singleton( ... )
+local TimerMgr = oo.singleton(...)
 
 local method_thunk = method_thunk
 
@@ -35,24 +33,21 @@ end
 -- @param method 回调函数
 -- @param ... 其他回调参数
 -- @return 定时器id
-function TimerMgr:interval( after,sec,times,this,method,... )
+function TimerMgr:interval(after, sec, times, this, method, ...)
     assert(sec >= 0, "repeat interval MUST > 0")
 
     local timer_id = self:get_next_id()
 
-    local timer = Timer( timer_id )
-    timer:set( after,sec )
+    local timer = Timer(timer_id)
+    timer:set(after, sec)
 
     local cb
     if "function" == type(this) then
         cb = func_thunk(this, method, ...)
     else
-        cb = method_thunk( this,method,... )
+        cb = method_thunk(this, method, ...)
     end
-    local info = {
-        cb = cb,
-        timer = timer,
-    }
+    local info = {cb = cb, timer = timer}
 
     if times >= 0 then
         info.ts = 0
@@ -75,7 +70,7 @@ function TimerMgr:timeout(after, this, method, ...)
 end
 
 -- 停止定时器
-function TimerMgr:stop( timer_id )
+function TimerMgr:stop(timer_id)
     local info = self.timer[timer_id]
     if not info then return end
 
@@ -89,16 +84,16 @@ local timer_mgr = TimerMgr()
 --[[
     C++ 统一回调这个函数，根据timer_id区分
 ]]
-function timer_event( timer_id )
+function timer_event(timer_id)
     local timer = timer_mgr.timer[timer_id]
     if not timer then
-        ERROR( "timer no cb found,abort %d",timer_id )
-        return timer_mgr:stop( timer_id )
+        ERROR("timer no cb found,abort %d", timer_id)
+        return timer_mgr:stop(timer_id)
     end
 
     if timer.times then
         timer.ts = timer.ts + 1
-        if timer.ts >= timer.times then timer_mgr:stop( timer_id ) end
+        if timer.ts >= timer.times then timer_mgr:stop(timer_id) end
     end
 
     return timer.cb()

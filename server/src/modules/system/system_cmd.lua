@@ -1,4 +1,3 @@
-
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
@@ -6,57 +5,54 @@ local g_network_mgr = g_network_mgr
 local g_rpc = g_rpc
 
 -- 收到另一个服务器主动同步
-local function srv_reg( srv_conn,pkt )
-    if not g_network_mgr:srv_register( srv_conn,pkt ) then return false end
-    srv_conn:authorized( pkt )
+local function srv_reg(srv_conn, pkt)
+    if not g_network_mgr:srv_register(srv_conn, pkt) then return false end
+    srv_conn:authorized(pkt)
 
     local _pkt = g_command_mgr:command_pkt()
-    srv_conn:send_pkt( SYS.CMD_SYNC,_pkt )
-    srv_conn:send_pkt( SYS.SYNC_DONE,{} )
+    srv_conn:send_pkt(SYS.CMD_SYNC, _pkt)
+    srv_conn:send_pkt(SYS.SYNC_DONE, {})
 
-    PRINTF( "%s register succes:session %d",
-        srv_conn:conn_name(),srv_conn.session )
+    PRINTF("%s register succes:session %d", srv_conn:conn_name(),
+           srv_conn.session)
 end
 
 -- 同步对方指令数据
-local function srv_cmd_sync( srv_conn,pkt )
-    g_command_mgr:other_cmd_register( srv_conn,pkt )
+local function srv_cmd_sync(srv_conn, pkt)
+    g_command_mgr:other_cmd_register(srv_conn, pkt)
 end
 
 -- 对方服务器数据同步完成
-local function srv_sync_done( srv_conn,pkt )
-    g_app:one_initialized( srv_conn:base_name(),1 )
+local function srv_sync_done(srv_conn, pkt)
+    g_app:one_initialized(srv_conn:base_name(), 1)
 end
 
 -- 服务器之间心跳包
-local beat_pkt = { response = false }
-local function srv_beat( srv_conn,pkt )
-    if pkt.response then
-        srv_conn:send_pkt( SYS.BEAT,beat_pkt )
-    end
+local beat_pkt = {response = false}
+local function srv_beat(srv_conn, pkt)
+    if pkt.response then srv_conn:send_pkt(SYS.BEAT, beat_pkt) end
 
     -- 在这里不用更新自己的心跳，因为在on_command里已自动更新
 end
 
 -- 其他服务器通过rpc调用gm
-local function rpc_gm( where,cmd,... )
-    g_gm:raw_exec( where,nil,cmd,... )
+local function rpc_gm(where, cmd, ...)
+    g_gm:raw_exec(where, nil, cmd, ...)
 end
 
 -- 设置玩家所在的session
-local function set_player_session( pid,session )
-    network_mgr:set_player_session( pid,session )
+local function set_player_session(pid, session)
+    network_mgr:set_player_session(pid, session)
 end
 
-g_rpc:declare( "rpc_gm",rpc_gm,-1 )
+g_rpc:declare("rpc_gm", rpc_gm, -1)
 
 if "gateway" == g_app.name then
-    g_rpc:declare( "set_player_session",set_player_session )
+    g_rpc:declare("set_player_session", set_player_session)
 end
 
-
 -- 这里注册系统模块的协议处理
-g_command_mgr:srv_register( SYS.BEAT,srv_beat,true )
-g_command_mgr:srv_register( SYS.REG,srv_reg,true,true )
-g_command_mgr:srv_register( SYS.CMD_SYNC,srv_cmd_sync,true )
-g_command_mgr:srv_register( SYS.SYNC_DONE,srv_sync_done,true )
+g_command_mgr:srv_register(SYS.BEAT, srv_beat, true)
+g_command_mgr:srv_register(SYS.REG, srv_reg, true, true)
+g_command_mgr:srv_register(SYS.CMD_SYNC, srv_cmd_sync, true)
+g_command_mgr:srv_register(SYS.SYNC_DONE, srv_sync_done, true)

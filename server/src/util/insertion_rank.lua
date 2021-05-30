@@ -1,9 +1,8 @@
 -- insertion_rank
 -- xzc
 -- 2018-11-11
-
 -- 插入法排序
-local InsertionRank = oo.class( ... )
+local InsertionRank = oo.class(...)
 
 -- 适用于频繁更新，快速根据排名获取id，或者根据id获取排名的情况。比如游戏里常见的伤害
 -- 排行榜，人数不多，名次基本不变化，伤害高的一直在前面，但更新频繁，玩家1秒可能会打出
@@ -27,7 +26,7 @@ function InsertionRank:__init(name, max)
     self.list = {} -- 排行对象数组
     self.hash = {} -- 以id为key的object
     self.name = name
-    self.max  = max or 1024000
+    self.max = max or 1024000
     self.comp = comp_desc -- 默认降序排列
 end
 
@@ -98,7 +97,6 @@ end
 function InsertionRank:get_factor(object)
     return object.f
 end
-
 
 -- 根据id获取排行
 -- @return number,排行，从1开始。0表示不在排行榜内
@@ -230,18 +228,14 @@ end
 -- 保存到文件，通常在runtime/rank文件夹内
 -- @param path 保存的路径，不传默认存到runtime/rank/self.name
 function InsertionRank:save(path)
-    if not path then
-        path = "runtime/rank/" .. self.name
-    end
+    if not path then path = "runtime/rank/" .. self.name end
     json.encode_to_file(self.list, path)
 end
 
 -- 从文件加载排行排行榜
 -- @param path 保存的路径，不传默认使用runtime/rank/self.name
 function InsertionRank:load(path)
-    if not path then
-        path = "runtime/rank/" .. self.name
-    end
+    if not path then path = "runtime/rank/" .. self.name end
     self.list = json.decode_from_file(path)
 end
 

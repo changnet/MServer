@@ -67,7 +67,9 @@ function CommandMgr:check_timer()
     end
 end
 
-function CommandMgr:do_timer() self:serialize_statistic(true) end
+function CommandMgr:do_timer()
+    self:serialize_statistic(true)
+end
 
 -- 设置统计log文件
 function CommandMgr:set_statistic(perf, reset)

@@ -29,7 +29,7 @@ end
 -- @center_x: 圆心y轴坐标
 -- @radius: 半径
 function graph.within_circle(x, y, center_x, center_y, radius)
-    return (x - center_x)^2 + (y - center_y)^2 <= radius^2
+    return (x - center_x) ^ 2 + (y - center_y) ^ 2 <= radius ^ 2
 end
 
 -- 以坐标原点为中心，从src到dst是否按顺时间旋转
@@ -52,8 +52,8 @@ end
 -- @center_x: 圆心x轴坐标
 -- @center_x: 圆心y轴坐标
 -- @radius: 半径
-function graph.within_circle_sector(
-    x, y, beg_x, beg_y, end_x, end_y, center_x, center_y, radius)
+function graph.within_circle_sector(x, y, beg_x, beg_y, end_x, end_y, center_x,
+                                    center_y, radius)
     -- https://stackoverflow.com/questions/13652518/efficiently-find-points-inside-a-circle-sector
     -- https://www.cnblogs.com/newbeeyu/p/5859382.html
 
@@ -67,9 +67,7 @@ function graph.within_circle_sector(
     -- 3. 目标点与圆心的距离在半径范围内
 
     if graph.is_clockwise(beg_x, beg_y, zero_x, zero_y) then return false end
-    if not graph.is_clockwise(end_x, end_y, zero_x, zero_y) then
-        return false
-    end
+    if not graph.is_clockwise(end_x, end_y, zero_x, zero_y) then return false end
 
     return graph.within_circle(zero_x, zero_y, 0, 0, radius)
 end
@@ -131,8 +129,8 @@ end
 -- @radius: 半径
 -- @beg_angle: 开始的角度
 -- @end_angle: 结束的角度
-function graph.within_circle_range(
-    x, y, center_x, center_y, radius, beg_angle, end_angle)
+function graph.within_circle_range(x, y, center_x, center_y, radius, beg_angle,
+                                   end_angle)
     -- 假如激光炮可移动角度是90度，求开炮时命中的目标
     -- 那么以炮为中心，射程为半径
     -- 以开炮目标坐标计算出初始角度，结合移动角度计算出角度范围
@@ -153,8 +151,8 @@ end
 -- @src: 源矩形，xl、yl(是左上角坐标，left)，xr、yr是右下角下标，right
 -- @dst: 目标矩形左上角和右下角坐标
 -- @return 是否重叠，左上角坐标，右下角坐标
-function graph.rectangle_intersection(
-    src_xl, src_yl, src_xr, src_yr, dst_xl, dst_yl, dst_xr, dst_yr)
+function graph.rectangle_intersection(src_xl, src_yl, src_xr, src_yr, dst_xl,
+                                      dst_yl, dst_xr, dst_yr)
 
     local xl = max(src_xl, dst_xl)
     local xr = min(src_xr, dst_xr)
@@ -197,9 +195,9 @@ function graph.within_polygon(vert_x, vert_y, x, y)
 
     local j = #vert_y
     for i = 0, #vert_x do
-        if (vert_y[i] > y) ~= (vert_y[j] > y)
-            and (x < (vert_x[j] - vert_x[i])
-            * (y -vert_y[i]) / (vert_y[j] - vert_y[i]) + vert_x[i]) then
+        if (vert_y[i] > y) ~= (vert_y[j] > y) and
+            (x < (vert_x[j] - vert_x[i]) * (y - vert_y[i]) /
+                (vert_y[j] - vert_y[i]) + vert_x[i]) then
 
             j = i
             within = not within

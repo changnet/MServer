@@ -1,16 +1,14 @@
 -- define.lua 服务器全局定义
 -- 2017-03-28
 -- xzc
-
 -- 服务器类型定义
-SRV_NAME =
-{
+SRV_NAME = {
     gateway = 1,
-    world   = 2,
-    area    = 3,
+    world = 2,
+    area = 3,
 
     -- 以下服务器为特殊用途
-    test    = 9 -- 测试用例
+    test = 9 -- 测试用例
 }
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
@@ -23,24 +21,19 @@ MAX_MAIL = 200
 MAX_SYS_MAIL = 500
 
 -- 服务器连接超时设定(秒)
-SRV_ALIVE_INTERVAL   = 5
-SRV_ALIVE_TIMES      = 5
+SRV_ALIVE_INTERVAL = 5
+SRV_ALIVE_TIMES = 5
 
 -- 接入平台
-PLATFORM =
-{
-    [999] = "test",
-}
+PLATFORM = {[999] = "test"}
 
-UNIQUEID =
-{
-    PLAYER = 1, -- 玩家pid
+UNIQUEID = {
+    PLAYER = 1 -- 玩家pid
 }
 
 -- 自定义客户端广播方式
-CLTCAST =
-{
-    PIDS  = 1, -- 这个在底层直接处理
+CLTCAST = {
+    PIDS = 1, -- 这个在底层直接处理
     WORLD = 2, -- 全服广播，但仅限于已Enter World的玩家
-    LEVEL = 3, -- 按等级筛选玩家
+    LEVEL = 3 -- 按等级筛选玩家
 }

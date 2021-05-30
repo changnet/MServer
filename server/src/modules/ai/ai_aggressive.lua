@@ -1,6 +1,5 @@
 -- 主动攻击 怪物AI
-
-local AiAggressive = oo.class( ... )
+local AiAggressive = oo.class(...)
 
 function AiAggressive.routine()
 end

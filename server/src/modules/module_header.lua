@@ -1,8 +1,6 @@
 -- 各模块加载入口
 -- global对象的创建都放在这里，方便热更
-
 -- 非global对象不要放这里，应该由对应模块的入口文件xx_cmd引用。
-
 -- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
 require "global.global"
 require "global.table"
@@ -20,29 +18,29 @@ E = require "modules.system.error"
 -- 部分服务器配置不支持热更，很多字段，比如端口id你热更了，也不可能改变
 g_setting = require "setting.setting" -- no_update_require
 g_app_setting = g_setting[g_app.name]
-assert( g_app_setting,"no server conf found" )
+assert(g_app_setting, "no server conf found")
 
 -- !!! 放到这里的，一定要是singleton，不然会被销毁重建
 -- TODO:找个方法检测一下是否singleton
 
-g_log_mgr     = require "modules.log.log_mgr"
-g_unique_id   = require "modules.system.unique_id"
-g_conn_mgr    = require "network.conn_mgr"
-g_timer_mgr   = require "timer.timer_mgr"
-g_rpc         = require "rpc.rpc"
-g_authorize   = require "modules.system.authorize"
+g_log_mgr = require "modules.log.log_mgr"
+g_unique_id = require "modules.system.unique_id"
+g_conn_mgr = require "network.conn_mgr"
+g_timer_mgr = require "timer.timer_mgr"
+g_rpc = require "rpc.rpc"
+g_authorize = require "modules.system.authorize"
 g_command_mgr = require "modules.command.command_mgr"
 g_network_mgr = require "network.network_mgr"
-g_res         = require "modules.res.res"
-g_gm          = require "modules.system.gm"
-g_player_ev   = require "modules.event.player_event"
-g_system_ev   = require "modules.event.system_event"
-g_lang        = require "modules.lang.lang"
-g_mail_mgr    = require "modules.mail.mail_mgr"
-g_ping        = require "modules.system.ping"
-g_stat        = require "modules.system.statistic"
+g_res = require "modules.res.res"
+g_gm = require "modules.system.gm"
+g_player_ev = require "modules.event.player_event"
+g_system_ev = require "modules.event.system_event"
+g_lang = require "modules.lang.lang"
+g_mail_mgr = require "modules.mail.mail_mgr"
+g_ping = require "modules.system.ping"
+g_stat = require "modules.system.statistic"
 
---==============================================================================
+-- ==============================================================================
 -- 下面是一些根据app创建的全局变量，前置声明用于消除luacheck的检测问题
 
 g_httpd = nil
@@ -53,10 +51,10 @@ g_map_mgr = nil
 g_entity_mgr = nil
 g_dungeon_mgr = nil
 
---==============================================================================
+-- ==============================================================================
 -- 仅在gateway使用
 if "gateway" == g_app.name then
-    g_httpd       = require "http.httpd"
+    g_httpd = require "http.httpd"
     g_account_mgr = require "modules.account.account_mgr"
 
     -- db对象的创建，有点特殊。它是全局对象，但不是单例。可以根据业务创建多个db提高效率
@@ -64,15 +62,15 @@ if "gateway" == g_app.name then
     local Mongodb = require "mongodb.mongodb"
     if not g_mongodb then g_mongodb = Mongodb() end
 end
---==============================================================================
+-- ==============================================================================
 -- 仅在world使用
 if "world" == g_app.name then
-    g_player_mgr  = require "modules.player.player_mgr"
+    g_player_mgr = require "modules.player.player_mgr"
 
     local Mongodb = require "mongodb.mongodb"
     if not g_mongodb then g_mongodb = Mongodb() end
 end
---==============================================================================
+-- ==============================================================================
 -- 仅在area使用
 if "area" == g_app.name then
     g_map_mgr = require "modules.dungeon.map_mgr"
@@ -93,7 +91,7 @@ end
 -- 公用
 require "modules.system.system_cmd" -- 系统模块
 require "modules.player.player_cmd" -- 玩家基础模块
-require "modules.mail.mail_cmd"     -- 邮件模块
+require "modules.mail.mail_cmd" -- 邮件模块
 
 -- 仅在gateway使用
 -- if "gateway" == g_app.name then
@@ -102,8 +100,8 @@ require "modules.mail.mail_cmd"     -- 邮件模块
 -- 仅在world使用
 if "world" == g_app.name then
     require "modules.chat.chat_cmd" -- 聊天
-    require "modules.bag.bag_cmd"   -- 背包
-    require "modules.misc.misc_cmd"     -- 杂七杂八的小功能
+    require "modules.bag.bag_cmd" -- 背包
+    require "modules.misc.misc_cmd" -- 杂七杂八的小功能
 end
 
 -- 仅在area使用

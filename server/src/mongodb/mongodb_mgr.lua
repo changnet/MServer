@@ -1,9 +1,8 @@
 -- mongodb_mgr.lua mongodb连接管理
 -- 2016-05-22
 -- xzc
-
 -- mongodb连接管理
-local MongodbMgr = oo.singleton( ... )
+local MongodbMgr = oo.singleton(...)
 
 local Mongo = require "Mongo"
 
@@ -18,7 +17,7 @@ end
 -- 产生唯一的数据库id
 function MongodbMgr:next_id()
     self.id = self.id + 1
-     return self.id
+    return self.id
 end
 
 function MongodbMgr:push(db)

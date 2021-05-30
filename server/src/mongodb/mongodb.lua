@@ -1,9 +1,8 @@
 -- mongodb.lua
 -- 2015-12-05
 -- xzc
-
 -- mongodb 数据存储
-local Mongodb = oo.class( ... )
+local Mongodb = oo.class(...)
 
 local Mongo = require "Mongo"
 local AutoId = require "modules.system.auto_id"
@@ -17,18 +16,17 @@ function Mongodb:__init()
     self.cb = {}
 end
 
-
 -- 连接成功回调
 function Mongodb:on_ready()
     if self.on_ready then self.on_ready() end
 end
 
-function Mongodb:on_data( qid,e,res )
+function Mongodb:on_data(qid, e, res)
     if self.cb[qid] then
-        xpcall(self.cb[qid],__G__TRACKBACK,e,res)
+        xpcall(self.cb[qid], __G__TRACKBACK, e, res)
         self.cb[qid] = nil
     else
-        ERROR( "mongo event no call back found" )
+        ERROR("mongo event no call back found")
     end
 end
 
@@ -37,7 +35,7 @@ function Mongodb:start(ip, port, usr, pwd, db, on_ready)
     self.on_ready = on_ready
 
     mongodb_mgr:push(self)
-    self.mongodb:start( ip,port,usr,pwd,db )
+    self.mongodb:start(ip, port, usr, pwd, db)
 end
 
 function Mongodb:stop()
@@ -48,7 +46,7 @@ end
 function Mongodb:make_cb(callback)
     if not callback then return 0 end
 
-    local id = self.auto_id:next_id( self.cb )
+    local id = self.auto_id:next_id(self.cb)
     self.cb[id] = callback
 
     return id
@@ -61,7 +59,7 @@ end
 -- @param callback 回调函数
 function Mongodb:count(collection, filter, opts, callback)
     local id = self:make_cb(callback)
-    return self.mongodb:count(id, collection, filter,opts)
+    return self.mongodb:count(id, collection, filter, opts)
 end
 
 -- 查询(http://mongoc.org/libmongoc/current/mongoc_collection_find_with_opts.html)
@@ -82,17 +80,17 @@ end
 -- @param remove boolean 是否删除记录
 -- @param upsert boolean 如果记录不存在则插入
 -- @param new boolean 是否返回更改后的值
-function Mongodb:find_and_modify(
-    collection,query,sort,update,fields,remove,upsert,new,callback )
+function Mongodb:find_and_modify(collection, query, sort, update, fields,
+                                 remove, upsert, new, callback)
 
     local id = self:make_cb(callback)
-    return self.mongodb:find_and_modify(
-        id,collection,query,sort,update,fields,remove,upsert,new )
+    return self.mongodb:find_and_modify(id, collection, query, sort, update,
+                                        fields, remove, upsert, new)
 end
 
-function Mongodb:insert( collection,info,callback )
+function Mongodb:insert(collection, info, callback)
     local id = self:make_cb(callback)
-    return self.mongodb:insert( id,collection,info )
+    return self.mongodb:insert(id, collection, info)
 end
 
 -- 更新
@@ -112,9 +110,9 @@ end
 
 -- 删除
 -- @single 是否只删除单个记录，默认全部删除
-function Mongodb:remove( collection,query,single,callback )
+function Mongodb:remove(collection, query, single, callback)
     local id = self:make_cb(callback)
-    return self.mongodb:remove(id,collection,query,single)
+    return self.mongodb:remove(id, collection, query, single)
 end
 
 -- 不提供索引函数，请开服使用脚本创建索引。

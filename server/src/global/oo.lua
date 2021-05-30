@@ -1,20 +1,20 @@
 -- Object Oriented
 oo = {}
 
-local class_name = {}       -- 类列表，类为k，name为v
-local name_class = {}       -- 类列表，name为k，类为v
+local class_name = {} -- 类列表，类为k，name为v
+local name_class = {} -- 类列表，name为k，类为v
 
-local object     = {}       -- 已创建对象列表，对象为k，name为value
-local singleton  = {}       -- 单例，类为k，v为实例
+local object = {} -- 已创建对象列表，对象为k，name为value
+local singleton = {} -- 单例，类为k，v为实例
 
-local obj_count  = {}        -- 对象创建次数列表
-local stat_flag  = true      -- 是否记录数据
+local obj_count = {} -- 对象创建次数列表
+local stat_flag = true -- 是否记录数据
 
-setmetatable(object, {["__mode"]='k'})
-setmetatable(singleton, {["__mode"]='v'})
+setmetatable(object, {["__mode"] = 'k'})
+setmetatable(singleton, {["__mode"] = 'v'})
 
---******************************************************************************
-local class_base = {}  --默认基类
+-- ******************************************************************************
+local class_base = {} -- 默认基类
 
 -- default construnctor
 function class_base:__init()
@@ -34,7 +34,7 @@ function class_base:isa(clz)
     end
     return false
 end
---******************************************************************************
+-- ******************************************************************************
 -- 创建lua对象
 local function new(clz, ...)
     local obj = {}
@@ -42,7 +42,7 @@ local function new(clz, ...)
     setmetatable(obj, clz)
     obj:__init(...)
 
-    if stat_flag then                  --check
+    if stat_flag then -- check
         local name = class_name[clz] or "none"
         object[obj] = name
         obj_count[name] = (obj_count[name] or 0) + 1
@@ -52,23 +52,21 @@ local function new(clz, ...)
 end
 
 -- 创建单例
-local function new_singleton( clz,... )
-    if not singleton[clz] then
-        singleton[clz] = new( clz,... )
-    end
+local function new_singleton(clz, ...)
+    if not singleton[clz] then singleton[clz] = new(clz, ...) end
 
     return singleton[clz]
 end
 
---******************************************************************************
+-- ******************************************************************************
 -- 创建惰性继承类，无法实现多继承
 -- 惰性继承用元表实现继承，这样如果单一更新其中一个文件，则所有对象(包括子类都会被更新)
 -- luacheck: ignore lazy_class
-local function lazy_class(new_method,clz,super)
+local function lazy_class(new_method, clz, super)
     super = super or class_base
     rawset(clz, "__super", super)
     -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
-    rawset(clz, "__index",clz)
+    rawset(clz, "__index", clz)
     -- 设置自己的metatable为父类，这样才能调用父类函数
     setmetatable(clz, {__index = super, __call = new_method})
 
@@ -80,23 +78,23 @@ end
 -- 要求热更时，能热更所有文件(基类有更新，则子类也需要更新)
 -- 使用这个继承，设计框架时要注意引用先后关系
 -- 先热更子类，再热更基类就出现子类用了旧的基类函数
-local function fast_class(new_method,clz,super,...)
+local function fast_class(new_method, clz, super, ...)
     super = super or class_base
 
-    local supers = { super,... }
+    local supers = {super, ...}
 
     -- 多重继承或多继承时，各个基类必须按 s3,s2,s1... 顺序传进来
     -- 而同名函数则会按 s1覆盖s0,s2覆盖s1,s3覆盖s2 的顺序
-    for idx = #supers,1,-1 do
+    for idx = #supers, 1, -1 do
         -- 复制基类函数到子类
         local clz_base = supers[idx]
-        for k,v in pairs(clz_base) do clz[k] = v end
+        for k, v in pairs(clz_base) do clz[k] = v end
     end
 
     -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
-    rawset(clz, "__index",clz)
+    rawset(clz, "__index", clz)
     -- 设置自己的metatable为父类，这样才能调用父类函数
-    setmetatable(clz, { __call = new_method })
+    setmetatable(clz, {__call = new_method})
 
     return clz
 end
@@ -111,46 +109,44 @@ end
     但lua5.3 require传入两个参数，因此super的类型需要判断一下
     oo.class( ...,s3,s2,s1,s0 )这种写法，会让 ... 只取第一个值
 ]]
-local function raw_class(new_method,name,super,...)
+local function raw_class(new_method, name, super, ...)
     local clz = {}
     if type(name) == "string" then
         -- 如果已经存在，则是热更，先把旧函数都清空
         if name_class[name] ~= nil then
             clz = name_class[name]
-            for k in pairs(clz) do
-                clz[k] = nil
-            end
+            for k in pairs(clz) do clz[k] = nil end
         else
             name_class[name] = clz
         end
 
-        if stat_flag then    -- 状态统计
+        if stat_flag then -- 状态统计
             class_name[clz] = name
         end
     else
-        error( "oo class no name specify" )
+        error("oo class no name specify")
         return
     end
 
     if "table" == type(super) then
         -- lazy_class(new_method,clz,super,...)
-        return fast_class(new_method,clz,super,...)
+        return fast_class(new_method, clz, super, ...)
     else
-        return fast_class(new_method,clz,...)
+        return fast_class(new_method, clz, ...)
     end
 end
 
 -- 声明普通类
-function oo.class(name,...)
-    return raw_class(new,name,...)
+function oo.class(name, ...)
+    return raw_class(new, name, ...)
 end
 
 -- 声明lua单例类
-function oo.singleton(name,...)
-    return raw_class(new_singleton,name,...)
+function oo.singleton(name, ...)
+    return raw_class(new_singleton, name, ...)
 end
 
---******************************************************************************
+-- ******************************************************************************
 
 -- 获取基类元表(clz是元表而不是对象)
 function oo.superclassof(clz)
@@ -183,10 +179,9 @@ function oo.stat()
     stat.cur = cur_count
 
     stat.max = {}
-    for k,v in pairs(obj_count) do stat.max[k] = v end
+    for k, v in pairs(obj_count) do stat.max[k] = v end
 
     return stat
 end
-
 
 return oo

@@ -1,9 +1,8 @@
 -- application.lua
 -- 2018-04-04
 -- xzc
-
 -- app进程基类
-local Application = oo.class( ... )
+local Application = oo.class(...)
 
 local g_app = nil
 local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
@@ -63,16 +62,15 @@ local gc_counter_tm = 0 -- 上一次完成gc的时间
 ]]
 local sig_action = {} -- 注意，这个热更要重新注册。关服的话为默认action则无所谓
 
-function sig_handler( signum )
+function sig_handler(signum)
     if sig_action[signum] then return sig_action[signum]() end
 
-    PRINTF( "catch signal %d,prepare to shutdown ...",signum )
+    PRINTF("catch signal %d,prepare to shutdown ...", signum)
 
     g_app:prepare_shutdown()
 
     if not g_app:check_shutdown() then
-        return g_timer_mgr:interval(
-            5000 , 5000, -1, g_app, g_app.check_shutdown)
+        return g_timer_mgr:interval(5000, 5000, -1, g_app, g_app.check_shutdown)
     end
 end
 
@@ -84,8 +82,8 @@ function application_ev(ms_now)
             -- 当脚本占用的内存比较低时，gc完成的时间很快的，需要控制一下日志打印的速度
             gc_counter = gc_counter + 1
             if ms_now - gc_counter_tm > 60000 then
-                PRINTF("gc finished %d times, now use mem %f kb",
-                    gc_counter, collectgarbage("count"))
+                PRINTF("gc finished %d times, now use mem %f kb", gc_counter,
+                       collectgarbage("count"))
                 gc_counter = 0
                 gc_counter_tm = ms_now
             end
@@ -93,7 +91,7 @@ function application_ev(ms_now)
     end
     g_app:ev(ms_now)
 end
---//////////////////////////////////////////////////////////////////////////////
+-- //////////////////////////////////////////////////////////////////////////////
 
 -- 初始化
 function Application:__init()
@@ -115,15 +113,14 @@ end
 
 -- 检测能否关服
 function Application:check_shutdown()
-    local who,finished,unfinished = ev:who_busy( true )
+    local who, finished, unfinished = ev:who_busy(true)
     if not who then
         self:shutdown()
         return true
     end
 
-    PRINTF(
-        "thread %s busy,%d finished job,%d unfinished job,waiting ...",
-        who,finished,unfinished )
+    PRINTF("thread %s busy,%d finished job,%d unfinished job,waiting ...", who,
+           finished, unfinished)
 
     return false
 end
@@ -133,36 +130,34 @@ end
 -- @param func 初始调用的函数
 -- @param after 在某个步骤初始化完成后执行
 -- @param count 初始化次数，例如：需要等待多个场景服务器连接
-function Application:set_initialize( name,func, after, count )
+function Application:set_initialize(name, func, after, count)
     assert(not self.init_step[name])
 
     self.step_cnt = self.step_cnt + 1
-    self.init_step[name] = {after = after, func = func, count = count or 1 }
+    self.init_step[name] = {after = after, func = func, count = count or 1}
 end
 
 -- 一个初始化完成
-function Application:one_initialized( name,val )
+function Application:one_initialized(name, val)
     local step = self.init_step[name]
-    if not step then
-        return ERROR( "unknow initialize step:%s",name )
-    end
+    if not step then return ERROR("unknow initialize step:%s", name) end
 
     step.cnt = 1 + (step.cnt or 0)
     if step.cnt >= step.count then
         self.init_step[name] = nil
         PRINTF("initialize step(%d/%d) OK:%s(%d/%d)",
-            self.step_cnt - table.size(self.init_step), self.step_cnt,
-            name, step.cnt, step.count)
+               self.step_cnt - table.size(self.init_step), self.step_cnt, name,
+               step.cnt, step.count)
 
-        for _, next_step in pairs( self.init_step ) do
+        for _, next_step in pairs(self.init_step) do
             if next_step.after == name then
                 next_step.tm = ev:time() -- 重置下初始化时间
-                next_step.func( self )
+                next_step.func(self)
             end
         end
     end
 
-    if table.empty( self.init_step ) then
+    if table.empty(self.init_step) then
         self.step_cnt = nil
         self:final_initialize()
     end
@@ -172,14 +167,12 @@ end
 function Application:initialize()
     if table.empty(self.init_step) then return self:final_initialize() end
 
-    self.check_init_timer =
-        g_timer_mgr:interval(15000, 15000, -1, self, self.check_init_step)
+    self.check_init_timer = g_timer_mgr:interval(15000, 15000, -1, self,
+                                                 self.check_init_step)
 
-    for _, step in pairs( self.init_step ) do
+    for _, step in pairs(self.init_step) do
         step.tm = ev:time()
-        if not step.after and step.func then
-            step.func(self)
-        end
+        if not step.after and step.func then step.func(self) end
     end
 end
 
@@ -189,7 +182,8 @@ function Application:check_init_step()
     for name, step in pairs(self.init_step) do
         if step.tm and now - step.tm > 15 then
             PRINTF("waitting for initialize step(%d/%d): %s",
-            self.step_cnt - table.size(self.init_step), self.step_cnt, name)
+                   self.step_cnt - table.size(self.init_step), self.step_cnt,
+                   name)
         end
     end
 
@@ -202,9 +196,8 @@ end
 -- 初始化完成
 function Application:final_initialize()
     self.ok = true
-    PRINTF( "Application %s initialize OK",self.name )
+    PRINTF("Application %s initialize OK", self.name)
 end
-
 
 -- 关服处理
 function Application:shutdown()

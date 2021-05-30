@@ -1,5 +1,4 @@
 -- simple test facility
-
 --[[
 1. 所用测试的api都以t_xx形式命名，表示这是一个测试用的接口，请勿用于业务逻辑
 2. 一些参数可通过t_setup设置，具体查看t_steup接口
@@ -36,13 +35,10 @@ it("async test", function(wait, done)
     end
 end)
 ```
-]]
-
--- https://stackoverflow.com/questions/1718403/enable-bash-output-color-with-lua-script
+]] -- https://stackoverflow.com/questions/1718403/enable-bash-output-color-with-lua-script
 -- Note the \27. Whenever Lua sees a \ followed by a decimal number, it converts
 -- this decimal number into its ASCII equivalent. I used \27 to obtain the bash
 -- \033 ESC character
-
 -- https://en.wikipedia.org/wiki/ANSI_escape_code
 -- 1;32;41m 表示1加粗，32前景色为绿，41背景色为红。这些颜色可以组合使用，用;隔开
 -- 0 - Normal Style
@@ -53,7 +49,6 @@ end)
 -- 5 - Blinking
 -- 7 - Reverse
 -- 8 - Invisible
-
 -- NONE RED BLUE GREEN YELLOW WHITE
 -- local function N(fmt, ...)
 --     return string.format(fmt, ...)
@@ -75,9 +70,7 @@ end
 -- end
 -- /////////////////////////////////////////////////////////////////////////////
 -- data storage for test
-_G.__test = {
-    print = print
-}
+_G.__test = {print = print}
 local T = _G.__test
 
 -- /////////////////////////////////////////////////////////////////////////////
@@ -89,7 +82,7 @@ local Describe = {}
 -- @param func test callback function
 function Describe:__init(title, func)
     self.title = title
-    self.func  = func
+    self.func = func
     self.i = {} -- it block
 
     assert(not T.d_now, "recursive describe test not support now")
@@ -113,7 +106,7 @@ local It = {}
 -- @param func test callback function
 function It:__init(title, func)
     self.title = title
-    self.func  = func
+    self.func = func
 
     assert(not T.i_now, "it block must NOT called inside another it block")
     assert(T.d_now, "it block MUST called inside describe describe block")
@@ -131,9 +124,9 @@ setmetatable(It, {
 
 -- /////////////////// internal test function //////////////////////////////////
 
-local OK     = "[  OK] "
-local FAIL   = "[FAIL] "
-local PEND   = "[PEND] "
+local OK = "[  OK] "
+local FAIL = "[FAIL] "
+local PEND = "[PEND] "
 local TEST_FAIL = "__test_fail__"
 
 local function append_msg(msg)
@@ -162,9 +155,9 @@ local function dump(o)
     if type(o) ~= 'table' then return tostring(o) end
 
     local s = '{ '
-    for k,v in pairs(o) do
-        if type(k) ~= 'number' then k = '"' .. k.. '"' end
-        s = s .. '['..k..'] = ' .. dump(v) .. ','
+    for k, v in pairs(o) do
+        if type(k) ~= 'number' then k = '"' .. k .. '"' end
+        s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
     end
     return s .. '} '
 end
@@ -192,14 +185,11 @@ local function test_one_it(i)
     local ok, msg = xpcall(i.func, error_msgh)
     if not ok then
         T.fail = T.fail + 1
-        if not msg:find(TEST_FAIL) then
-            append_msg(msg)
-        end
+        if not msg:find(TEST_FAIL) then append_msg(msg) end
         T.print(R(FAIL .. i.title))
         print_msg(i)
         return
     end
-
 
     -- 进入异步等待
     if i.status == PEND then coroutine.yield() end
@@ -238,9 +228,7 @@ local function test_one_describe(d)
     -- 执行before函数
     for _, func in pairs(d.before or {}) do
         local ok, msg = xpcall(func, error_msgh)
-        if not ok then
-            T.print(R("%s", msg))
-        end
+        if not ok then T.print(R("%s", msg)) end
     end
 
     T.d_now = d
@@ -253,9 +241,7 @@ local function test_one_describe(d)
     -- 执行before函数
     for _, func in pairs(d.after or {}) do
         local ok, msg = xpcall(func, error_msgh)
-        if not ok then
-            T.print(R("%s", msg))
-        end
+        if not ok then T.print(R("%s", msg)) end
     end
 
     T.d_now = nil
@@ -263,30 +249,24 @@ end
 
 local function run_one_describe(d)
     local should_run = true
-    if T.filter then
-        should_run = string.find(d.title, T.filter)
-    end
+    if T.filter then should_run = string.find(d.title, T.filter) end
     if T.skip then
         for _, pattern in pairs(T.skip) do
             if string.find(d.title, pattern) then
                 should_run = false
-                break;
+                break
             end
         end
     end
 
     d.should_run = should_run
     local ok, msg = xpcall(d.func, error_msgh)
-    if not ok then
-        T.print(R(msg))
-    end
+    if not ok then T.print(R(msg)) end
 end
 
 local function resume()
     local ok, msg = coroutine.resume(T.co)
-    if not ok then
-        error(msg)
-    end
+    if not ok then error(msg) end
 end
 
 -- ///////////////// test interface ////////////////////////////////////////////
@@ -301,8 +281,8 @@ function t_equal(got, expect)
     if equal(got, expect) then return end
 
     -- show msg late and abort current test
-    local msg = debug.traceback(string.format(
-        "got: %s, expect: %s",dump(got), dump(expect)), 2)
+    local msg = debug.traceback(string.format("got: %s, expect: %s", dump(got),
+                                              dump(expect)), 2)
 
     append_msg(msg)
 
@@ -359,7 +339,7 @@ function t_it(title, mask, func)
         for _, pattern in pairs(T.skip) do
             if string.find(title, pattern) then
                 should_run = false
-                break;
+                break
             end
         end
     end
@@ -419,7 +399,8 @@ function t_setup(params)
     T.timer = params.timer
 
     local print_func = params.print or print
-    local time_update = params.time_update or function() end
+    local time_update = params.time_update or function()
+    end
     -- log outpout function if not using std print
     T.print = function(...)
         -- 测试时，需要在一帧里跑很多逻辑，耗时太长，这时需要手动更新主循环时间，不然
@@ -468,24 +449,17 @@ local function run()
     end
 
     -- 执行测试
-    if T.filter then
-        T.print(Y("filter: %s", T.filter))
-    end
-    if T.skip then
-        T.print(Y("skip: %s", table.concat(T.skip, ';')))
-    end
+    if T.filter then T.print(Y("filter: %s", T.filter)) end
+    if T.skip then T.print(Y("skip: %s", table.concat(T.skip, ';'))) end
 
-    for _, d in pairs(T.d) do
-        test_one_describe(d)
-    end
+    for _, d in pairs(T.d) do test_one_describe(d) end
 
     local pass = T.pass
     local fail = T.fail
     local time = T.clock() - T.time
-    T.print(string.format("%s, %s (%dms)",
-        G("%d passing", pass),
-        fail > 0 and R("%d failing", fail) or G("0 failing"),
-        time))
+    T.print(string.format("%s, %s (%dms)", G("%d passing", pass),
+                          fail > 0 and R("%d failing", fail) or G("0 failing"),
+                          time))
 
     T.co = nil
 end
