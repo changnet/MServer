@@ -44,6 +44,7 @@ const char *get_printf_path();
 
 // /////////////////////////////////////////////////////////////////////////////
 // 以下函数不直接调用，由宏定义调用
+
 void __sync_log(const char *path, FILE *stream, const char *prefix,
                 const char *fmt, ...);
 void __async_log(const char *path, LogType type, const char *fmt, ...);
@@ -52,17 +53,24 @@ void __async_log(const char *path, LogType type, const char *fmt, ...);
 #ifdef _PLOG_
     #define PLOG(...) __async_log(get_printf_path(), LT_CPRINTF, __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
-    #define PRINTF_R(...) \
+    #define PLOG_R(...) \
         __sync_log(get_printf_path(), stdout, "CP", __VA_ARGS__)
 #else
     #define PLOG(...)
     #define PLOG_R(...)
 #endif
 
+//TODO ## __VA_ARGS__ 中的##在ELOG("test") 这种只有一个参数的情况下去掉前面的逗号，但这不是标准的用法。
+// C++ 20之后 ## __VA_ARGS__ 改成 __VA_OPT__(,) __VA_ARGS__
+
 #ifdef _ELOG_
-    #define ELOG(...) __async_log(get_error_path(), LT_CERROR, __VA_ARGS__)
+    #define ELOG(fmt, ...)                       \
+        __async_log(get_error_path(), LT_CERROR, \
+                    __FILE__ ":" XSTR(__LINE__) " " fmt, ## __VA_ARGS__)
     // 线程安全，并且不需要依赖lev的时间
-    #define ELOG_R(...) __sync_log(get_error_path(), stderr, "CE", __VA_ARGS__)
+    #define ELOG_R(fmt, ...)                       \
+        __sync_log(get_error_path(), stderr, "CE", \
+                   __FILE__ ":" XSTR(__LINE__) " " fmt, ##__VA_ARGS__)
 #else
     #define ELOG(...)
     #define ELOG_R(...)

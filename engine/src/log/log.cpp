@@ -57,8 +57,8 @@ void set_app_name(const char *name)
 
 size_t write_prefix(FILE *stream, const char *prefix, int64_t time)
 {
-    thread_local char prefix_str[128];
-    thread_local char prefix_cache[32];
+    thread_local char prefix_str[128]  = {0};
+    thread_local char prefix_cache[32] = {0};
     thread_local int64_t time_cache = 0;
     thread_local int32_t prefix_len = 0;
 
