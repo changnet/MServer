@@ -51,9 +51,8 @@ end
 -- 用于lua错误信息处理
 function __G__TRACKBACK(msg, co)
     local stack_trace = debug.traceback(co)
-    local info_table = {tostring(msg), "\n", stack_trace}
-    local str = table.concat(info_table)
 
+    local str = tostring(msg) .. "\n" .. stack_trace
     Log.elog(str)
     return msg
 end
@@ -61,41 +60,23 @@ end
 -- 用于底层C错误信息处理
 function __G_C_TRACKBACK(msg, co)
     local stack_trace = debug.traceback(co)
-    local info_table = {tostring(msg), "\n", stack_trace}
 
-    return table.concat(info_table)
+    return tostring(msg) .. "\n" .. stack_trace
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效
-function PRINT(any, ...)
-    local args_num = select("#", ...)
-    if 0 == args_num then return async_logger:plog(tostring(any)) end
-
-    -- 如果有多个参数，则合并起来输出，类似Lua的print函数
-    async_logger:plog(table.concat_any("    ", any, ...))
+function PRINT(...)
+    return async_logger:plog(...)
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
-function PRINTF(fmt, any, ...)
-    -- 默认为c方式的print字符串格式化打印方式
-    if any and "string" == type(fmt) then
-        return async_logger:plog(string.format(fmt, any, ...))
-    else
-        return PRINT(fmt, any, ...)
-    end
+function PRINTF(fmt, ...)
+    return async_logger:plog(string.format(fmt, ...))
 end
 
 -- 错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function ERROR(fmt, any, ...)
-    if any and "string" == type(fmt) then
-        return async_logger:elog(string.format(fmt, any, ...))
-    end
-
-    if any then
-        async_logger:elog(table.concat_any("    ", fmt, any, ...))
-    else
-        async_logger:elog(tostring(fmt))
-    end
+function ERROR(...)
+    return async_logger:elog(table.concat_any("    ", ...))
 end
 
 function ASSERT(expr, ...)
