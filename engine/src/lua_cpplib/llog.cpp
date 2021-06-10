@@ -130,7 +130,7 @@ int32_t LLog::plog(lua_State *L)
         {
             int32_t num = lua_isinteger(L, i)
                               ? snprintf(buff + used, sizeof(buff) - used,
-                                         FMT64d, lua_tointeger(L, i))
+                                         LUA_INTEGER_FMT, lua_tointeger(L, i))
                               : snprintf(buff + used, sizeof(buff) - used, "%f",
                                          lua_tonumber(L, i));
             if (num <= 0)

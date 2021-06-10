@@ -9,7 +9,7 @@ function SrvConn:__init(conn_id)
     self.beat = 0
     self.fchk = 0 -- fail check
     self.session = 0
-    self.conn_id = conn_id
+    self.conn_id = conn_id -- accept才需要传该conn_id，listen、connect会自动产生一个新的
     self.auto_conn = false -- 是否自动重连
 end
 

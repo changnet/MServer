@@ -108,7 +108,7 @@ function It:__init(title, func)
     self.title = title
     self.func = func
 
-    assert(not T.i_now, "it block must NOT called inside another it block")
+    assert(not T.now, "it block must NOT called inside another it block")
     assert(T.d_now, "it block MUST called inside describe describe block")
 end
 
@@ -130,15 +130,17 @@ local PEND = "[PEND] "
 local TEST_FAIL = "__test_fail__"
 
 local function append_msg(msg)
-    if not T.i_now.msg then T.i_now.msg = {} end
+    if not T.now.msg then T.now.msg = {} end
 
-    table.insert(T.i_now.msg, msg)
+    table.insert(T.now.msg, msg)
 end
 
-local function print_msg(i)
-    if not i.msg then return end
+-- 打印obj的消息
+-- @param obj 正在执行的t_before、t_it等对象
+local function print_msg(obj)
+    if not obj.msg then return end
 
-    for _, msg in pairs(i.msg) do
+    for _, msg in pairs(obj.msg) do
         for s in msg:gmatch("[^\r\n]+") do
             -- T.print(R(INDENT .. s))
             T.print(R(s))
@@ -175,6 +177,36 @@ local function equal(got, expect)
     end
     for k, v in pairs(got) do
         if not equal(expect[k], v) then return false end
+    end
+
+    return true
+end
+
+-- 执行一个before函数
+local function test_one_before(b)
+    local ok, msg = xpcall(b.func, error_msgh)
+    if not ok then
+        T.fail = T.fail + #(T.d_now.i)
+        T.print(R("%s%s before %s", FAIL, T.d_now.title, msg))
+        return false
+    end
+
+    -- 进入异步等待
+    if b.status == PEND then coroutine.yield() end
+
+    -- 异步超时
+    if b.status == PEND then
+        T.fail = T.fail + #(T.d_now.i)
+        T.print(R("%s%s before (timeout)", FAIL, T.d_now.title))
+        return false
+    end
+
+    -- 异步失败
+    if b.status == FAIL then
+        T.fail = T.fail + #(T.d_now.i)
+        T.print(R(FAIL .. T.d_now.title))
+        print_msg(b)
+        return false
     end
 
     return true
@@ -219,26 +251,33 @@ local function test_one_it(i)
     end
 end
 
+-- 执行一个describe测试
+-- @param d describe
 local function test_one_describe(d)
     -- 被过滤掉，这个测试不需要执行
     if not d.should_run and 0 == #d.i then return end
 
     T.print(B(d.title))
-
-    -- 执行before函数
-    for _, func in pairs(d.before or {}) do
-        local ok, msg = xpcall(func, error_msgh)
-        if not ok then T.print(R("%s", msg)) end
-    end
-
     T.d_now = d
-    for _, i in pairs(d.i) do
-        T.i_now = i
-        test_one_it(i)
-        T.i_now = nil
-    end
 
     -- 执行before函数
+    for _, b in pairs(d.before or {}) do
+        T.now = b
+        local ok = test_one_before(b)
+        T.now = nil
+        if not ok then
+            T.d_now = nil
+            return
+        end
+    end
+
+    for _, i in pairs(d.i) do
+        T.now = i
+        test_one_it(i)
+        T.now = nil
+    end
+
+    -- 执行after函数
     for _, func in pairs(d.after or {}) do
         local ok, msg = xpcall(func, error_msgh)
         if not ok then T.print(R("%s", msg)) end
@@ -289,7 +328,7 @@ function t_equal(got, expect)
     if "running" == coroutine.status(T.co) then
         assert(false, TEST_FAIL)
     else
-        T.i_now.status = FAIL
+        T.now.status = FAIL
         resume()
     end
 end
@@ -305,7 +344,7 @@ function t_assert(expr)
     if "running" == coroutine.status(T.co) then
         assert(false, TEST_FAIL)
     else
-        T.i_now.status = FAIL
+        T.now.status = FAIL
         resume()
     end
 end
@@ -359,20 +398,20 @@ end
 
 -- 设置当前测试异步超时时间(毫秒)
 function t_wait(timeout)
-    assert(not T.i_now.timer, "call wait multi times")
+    assert(not T.now.timer, "call wait multi times")
 
-    T.i_now.status = PEND
-    T.i_now.timer = T.timer.new(timeout or 2000, function()
+    T.now.status = PEND
+    T.now.timer = T.timer.new(timeout or 2000, function()
         resume()
     end)
 end
 
 -- 结束当前异步测试
 function t_done()
-    T.timer.del(T.i_now.timer)
+    T.timer.del(T.now.timer)
 
-    T.i_now.timer = nil
-    T.i_now.status = nil
+    T.now.timer = nil
+    T.now.status = nil
     resume()
 end
 
@@ -382,7 +421,7 @@ function t_before(func)
 
     if not T.d_now.before then T.d_now.before = {} end
 
-    table.insert(T.d_now.before, func)
+    table.insert(T.d_now.before, {func = func})
 end
 
 -- 测试后运行的函数
@@ -431,7 +470,7 @@ end
 function t_reset()
     T.d = {}
     T.d_now = nil
-    T.i_now = nil
+    T.now = nil -- 正在执行的t_before、t_it等函数
     T.pass = 0
     T.fail = 0
     T.time = 0
