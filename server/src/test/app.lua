@@ -59,6 +59,7 @@ function App:final_initialize()
     require "test.words_filter_test"
     -- require "example.scene_performance"
     require "test.rank_test"
+    require "test.rpc_test"
     -- require "example.other_performance"
 
     -- vd( statistic.dump() )

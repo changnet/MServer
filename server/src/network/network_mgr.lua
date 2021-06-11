@@ -53,14 +53,16 @@ end
 
 -- 主动连接其他服务器
 function NetworkMgr:connect_srv(srvs)
-    for _, srv in pairs(srvs) do
+    for _, srvName in pairs(srvs) do
+        local appSetting = g_setting[srvName]
         local conn = SrvConn()
 
         conn.auto_conn = true
-        local conn_id = conn:connect(srv.ip, srv.port)
+        local conn_id = conn:connect(appSetting.sip, appSetting.sport)
 
         self.srv_conn[conn_id] = conn
-        PRINTF("connect to %s:%d", srv.ip, srv.port)
+        PRINTF("connect to %s at %s:%d",
+            srvName, appSetting.sip, appSetting.sport)
     end
 end
 

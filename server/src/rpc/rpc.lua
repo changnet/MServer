@@ -1,16 +1,18 @@
 -- rpc调用
 --[[
-1. 所有rpc调用在起服时都必须向其他进程注册
-2. 收到其他进程的rpc注册，会在rpc本身生成一个函数，不是在metatable，而是在数据层self，这样不
-   影响热更
-3. 无返回调用的时候，可以用 g_rpc:method_name直接调用
-4. 需要指定进程或者返回的时候，用 g_rpc:proxy(srv_conn,cb,...):method_name调用
-5. proxy这里会引用一些对象，如果调用出错无返回，将导致这些对象无法释放。一般脚本报错，
-   底层是有rpc返回的。如果是因为连接断开，可在连接断开时检测处理。因为涉及到数据准确性，后续再
-   看看有没有其他方法处理。目前暂不处理
-6. proxy里引用的回调函数，可能是需要热更的。这里会把成员函数转换成名字，不影响热更。如果是
-   local函数，是没法热更的。建议放在对象中。如果一定要热更，参考name.lua的处理
-]] local AutoId = require "modules.system.auto_id"
+1. 旧版参考其他rpc库(如python xmlrpc: https://docs.python.org/3/library/xmlrpc.html)
+   做过一个需要注册的rpc，调用时能直接通过函数名调用，并且自动识别目标链接
+   如 rpc:foo() 中的foo是注册时生成的函数名，并且自动发往注册的链接
+
+   但这有几个问题
+   1. 注册过程繁琐，包括热更、多进程同名(如多个场景进程)
+   2. 代码提示、跳转不正常
+
+2. 关于热更
+    回调函数直接存的指针，因此是不能热更的，但是单次rpc调用时间很短，也不需要考虑热更
+]]
+
+local AutoId = require "modules.system.auto_id"
 
 local Rpc = oo.singleton(...)
 
