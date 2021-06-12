@@ -62,6 +62,8 @@ function App:final_initialize()
     require "test.rpc_test"
     -- require "example.other_performance"
 
+    make_func_name()
+
     -- vd( statistic.dump() )
     t_run()
 end

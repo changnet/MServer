@@ -7,15 +7,6 @@
 -- 这里提供一个机制取对象(oo.lua)中的成员函数，做了缓存之后，也不会有效率问题
 -- 如果是local函数，那没有通用的方法可以取，只能通过手动注册。
 -- 这个仅限于定时器、rpc等特殊调用，一般情况下，还是用对象来做吧
---[[
--- 你这样用法，foo做为回调函数就不影响热更
-local function foo()
-end
-__reg_func(foo,"foo")
-g_rpc:proxy(foo):back_to_foo( ... )
-]]
-
--- ！！！local函数调用当前在定时器、rpc中都去掉了，因为手动注册函数这个不优雅，以后有需求再加
 
 local method_names = {}
 local func_names = {}
@@ -24,17 +15,24 @@ local names_func = {}
 setmetatable(method_names, {["__mode"] = 'k'})
 setmetatable(func_names, {["__mode"] = 'k'})
 
-local function raw_name(mt, method)
+-- 从对象元表里查找成员函数的名字
+-- @param mt 对象的元表
+-- @param method 需要查找的函数名字
+-- @return  函数的名字
+local function find_method_name(mt, method)
     if not mt then return nil end
 
     for k, v in pairs(mt) do if v == method then return k end end
 
     -- 当前类找不到，再找基类
-    return raw_name(oo.classof(mt), method)
+    return find_method_name(oo.classof(mt), method)
 end
 
--- 取对象中的函数名，目前只对oo中的对象函数有用，对标C的 __func__ 宏
-function __method(this, method)
+-- 取对象中的函数名，目前只对oo中的对象函数有用，类似C的 __func__ 宏
+-- @param this 通过oo创建的对象
+-- @param method 需要查找的函数名字
+-- @return  函数的名字
+function method_name(this, method)
     local name = method_names[method]
     if name then
         if -1 == name then return nil end -- 已查找过但找不到名字的，标为-1
@@ -47,22 +45,23 @@ function __method(this, method)
         return nil
     end
 
-    name = raw_name(oo.classof(this), method)
+    name = find_method_name(oo.classof(this), method)
 
     method_names[method] = name or -1
     return name
 end
 
--- 成员函数调用及其参数转换为函数调用
--- 需要通过名字调用，因为会热更
--- @p0 ...: paramN,可变参数，因为不能用...，但也没必要用table.pack
--- cannot use '...' outside a vararg function near '...'
+-- 成员函数调用及其参数转换为一个函数调用，类似C++中的std::bind
+-- @param this 对象
+-- @param method 成员函数名
+-- @param p0 ... 其他回调参数，不需要可以不选择
 function method_thunk(this, method, p0, p1, p2, p3, p4, p5)
-    assert(this and method, "method_thunk nil object or method")
+    -- p0, p1 ... 可变参数，因为不能用...，
+    -- cannot use '...' outside a vararg function near '...'
+    -- 但也没必要用table.pack
 
     -- 需要通过函数名去调用，因为函数可能被热更
-    local name = __method(this, method)
-    if not name then return error("no method found") end
+    local name = assert(method_name(this, method), "no method found")
 
     -- method用不着了，这里没必要继承引用旧函数，不然热更的时候不会gc
     -- ps:高版本的lua(5.3)会自动判断这些upvalue是否被引用。而低版本则不会
@@ -89,14 +88,63 @@ function func_thunk(func, p0, p1, p2, p3, p4, p5)
     end
 end
 
-function __reg_func(func, name)
-    assert(nil == func_names[func])
+-- 注册一个函数名
+function reg_func(name, func)
+    -- 唯函数名和函数指针是一一对应的
+    assert(not func_names[func], name)
+    assert(not names_func[name], name)
 
     func_names[func] = name
     names_func[name] = func
 end
 
--- 取local函数名，仅对手动注册过的函数有效，对标C的 __func__ 宏
-function __func(func)
+-- 取函数名，仅对手动注册过的函数有效，类似C的 __func__ 宏
+-- 要么是全局函数、二级函数或者手动注册的函数才取得到名字
+function func_name(func)
     return func_names[func]
+end
+
+-- 通过遍历全局表，生成函数及其对应的名字
+function make_func_name()
+    -- 这个函数尽量在所有模块加载完成之后，配置、数据对象创建之前调用，避免搜索过多无效的数据
+    -- 这里仅处理全局函数和二级函数，其他的太多处理不过来
+    local tm = os.clock()
+
+    -- 做名字、指针映射是为了方便rpc、定时器等回调，因此需要名字和指针一一对应
+    -- 但有不少模块其实是有同名、同函数的情况（如math.atan和math.atan2是同一个函数）
+    -- 因此这里排除一些有冲突的模块，反正在rpc、定时器里它们也用不到
+    local exclude = {
+        _G = true, -- 有一个_G._G需要排除，https://www.lua.org/pil/14.html
+        os = true,
+        io = true,
+        utf8 = true,
+        math = true, -- atan和atan2是同一个函数
+        table = true,
+        debug = true,
+        __test = true,
+        string = true,
+        coroutine = true,
+        json = true,
+        lua_parson = true, -- 重命名为json了
+        lua_rapidxml = true,
+    }
+
+    local count = 0
+    local reg = reg_func
+    for name, value in pairs(_G) do
+        local t = type(value)
+        if "function" == t then
+            reg(name, value)
+            count = count + 1
+        elseif "table" == t and not exclude[name] then
+            for sub_name, sub_value in pairs(value) do
+                if "function" == type(sub_value) then
+                    reg(sub_name, sub_value)
+                    count = count + 1
+                end
+            end
+        end
+    end
+    PRINTF("make func name done, %d functions in %.2f sec",
+        count, os.clock() - tm)
 end

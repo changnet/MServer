@@ -1,4 +1,4 @@
--- auto export by lua-tags 164 symbols
+-- auto export by lua-tags 154 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,7 +7,6 @@ return {
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "Acism", -- engine/acism.lua
-"Aoi", -- engine/aoi.lua
 "Astar", -- engine/astar.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
@@ -21,6 +20,7 @@ return {
 "ERROR", -- src/global/global.lua
 "ET", -- src/modules/entity/entity_header.lua
 "Ev", -- engine/ev.lua
+"GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
 "LOG", -- src/modules/log/log_header.lua
@@ -48,8 +48,6 @@ return {
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
 "SRV_NAME", -- src/modules/system/define.lua
-"SYNC_PRINT", -- src/global/global.lua
-"SYNC_PRINTF", -- src/global/global.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
 "SYSTEM_EV", -- src/modules/event/event_header.lua
@@ -59,15 +57,11 @@ return {
 "UNIQUEID", -- src/modules/system/define.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
-"__func", -- src/global/name.lua
-"__g_async_log", -- src/global/global.lua
-"__method", -- src/global/name.lua
-"__reg_func", -- src/global/name.lua
 "__test", -- src/global/test.lua
 "application_ev", -- src/android/app.lua
-"application_ev", -- src/area/app.lua
-"brank", -- src/test/rank_test.lua
+"application_ev", -- src/application/application.lua
 "clt_multicast_new", -- src/network/network_mgr.lua
+"cnt", -- src/test/mt_test.lua
 "command_new", -- src/android/android_cmd.lua
 "command_new", -- src/network/conn_mgr.lua
 "conn_accept", -- src/network/conn_mgr.lua
@@ -77,8 +71,7 @@ return {
 "conn_new", -- src/network/conn_mgr.lua
 "css_command_new", -- src/network/conn_mgr.lua
 "ctrl_new", -- src/network/conn_mgr.lua
-"f_tm_start", -- src/global/global.lua
-"f_tm_stop", -- src/global/global.lua
+"func_name", -- src/global/name.lua
 "func_thunk", -- src/global/name.lua
 "g_account_mgr", -- src/modules/module_header.lua
 "g_ai_mgr", -- src/android/app.lua
@@ -90,21 +83,16 @@ return {
 "g_command_mgr", -- src/modules/module_header.lua
 "g_conn_mgr", -- src/modules/module_header.lua
 "g_conn_mgr", -- src/test/https_test.lua
+"g_conn_mgr", -- src/test/rpc_test.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
 "g_gm", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
 "g_lang", -- src/modules/module_header.lua
 "g_log_mgr", -- src/modules/module_header.lua
-"g_log_mgr", -- src/test/log_test.lua
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
-"g_mongodb", -- src/test/mongo_test.lua
-"g_mongodb_mgr", -- src/modules/module_header.lua
-"g_mongodb_mgr", -- src/test/mongo_test.lua
-"g_mysql_mgr", -- src/modules/module_header.lua
-"g_mysql_mgr", -- src/test/mysql_test.lua
 "g_network_mgr", -- src/modules/module_header.lua
 "g_ping", -- src/modules/module_header.lua
 "g_player_ev", -- src/modules/module_header.lua
@@ -128,12 +116,15 @@ return {
 "load_global_define", -- src/global/global.lua
 "lua_parson", -- engine/lua_parson.lua
 "lua_rapidxml", -- engine/lua_rapidxml.lua
+"make_func_name", -- src/global/name.lua
+"method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "no_update_require", -- src/global/require.lua
 "oo", -- src/global/oo.lua
 "raw_table_dump", -- src/global/table.lua
+"reg_func", -- src/global/name.lua
 "require", -- src/global/require.lua
 "require_conf", -- src/global/require_conf.lua
 "require_kv_conf", -- src/global/require_conf.lua
@@ -141,7 +132,6 @@ return {
 "rpc_command_return", -- src/rpc/rpc.lua
 "sig_handler", -- src/android/app.lua
 "sig_handler", -- src/application/application.lua
-"sig_handler", -- src/test/app.lua
 "statistic", -- engine/statistic.lua
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua
@@ -165,5 +155,4 @@ return {
 "vd", -- src/global/global.lua
 "ws_listen", -- src/test/websocket_test.lua
 "ws_local_conn", -- src/test/websocket_test.lua
-"g_async_log",
 }
