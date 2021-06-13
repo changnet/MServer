@@ -300,24 +300,29 @@ public:
     /* 通过conn_id获取session */
     int32_t get_session_by_conn_id(uint32_t conn_id) const;
 
-    /* 获取指令配置 */
+    /// 获取指令配置
     const CmdCfg *get_cs_cmd(int32_t cmd) const;
     const CmdCfg *get_ss_cmd(int32_t cmd) const;
     const CmdCfg *get_sc_cmd(int32_t cmd) const;
-    /* 获取当前服务器session */
+    /// 获取当前服务器session
     int32_t get_curr_session() const { return _session; }
     uint32_t new_connect_id(); /* 获取新connect_id */
 
+    /// 连接建立完成
+    bool connect_ok(uint32_t conn_id);
+    /// 连接被销毁（断开）
     bool connect_del(uint32_t conn_id);
+    /// 连接成功，需要执行始化
     bool connect_new(uint32_t conn_id, int32_t ecode);
+    /// 接受连接成功，需要执行始化
     bool accept_new(uint32_t conn_id, class Socket *new_sk);
 
     /**
      * 把客户端数据包转发给另一服务器
      * @return <0 出错，0 未处理 1 已转发到其他服务器
      */
-    int32_t cs_dispatch(uint16_t cmd, const class Socket *src_sk, const char *ctx,
-                     size_t size) const;
+    int32_t cs_dispatch(uint16_t cmd, const class Socket *src_sk,
+                        const char *ctx, size_t size) const;
 
 private:
     void delete_socket(uint32_t conn_id);

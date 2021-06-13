@@ -1,4 +1,4 @@
--- auto export by lua-tags 154 symbols
+-- auto export by lua-tags 156 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -69,10 +69,11 @@ return {
 "conn_del", -- src/network/conn_mgr.lua
 "conn_new", -- src/android/android_cmd.lua
 "conn_new", -- src/network/conn_mgr.lua
+"conn_ok", -- src/network/conn_mgr.lua
 "css_command_new", -- src/network/conn_mgr.lua
 "ctrl_new", -- src/network/conn_mgr.lua
-"func_name", -- src/global/name.lua
 "func_thunk", -- src/global/name.lua
+"func_to_name", -- src/global/name.lua
 "g_account_mgr", -- src/modules/module_header.lua
 "g_ai_mgr", -- src/android/app.lua
 "g_android_cmd", -- src/android/app.lua
@@ -121,6 +122,7 @@ return {
 "method_thunk", -- src/global/name.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
+"name_to_func", -- src/global/name.lua
 "no_update_require", -- src/global/require.lua
 "oo", -- src/global/oo.lua
 "raw_table_dump", -- src/global/table.lua

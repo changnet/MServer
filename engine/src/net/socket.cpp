@@ -252,8 +252,8 @@ int32_t Socket::send()
         if (OAT_KILL == _over_action)
         {
             ELOG("socket send buffer overflow,kill connection,"
-                  "object:" FMT64d ",conn:%d,buffer size:%d",
-                  _object_id, _conn_id, _send.get_all_used_size());
+                 "object:" FMT64d ",conn:%d,buffer size:%d",
+                 _object_id, _conn_id, _send.get_all_used_size());
 
             Socket::stop();
             network_mgr->connect_del(_conn_id);
@@ -270,8 +270,8 @@ int32_t Socket::send()
             {
                 std::this_thread::sleep_for(std::chrono::microseconds(500));
                 ELOG("socket send buffer overflow,pending,"
-                      "object:" FMT64d ",conn:%d,buffer size:%d",
-                      _object_id, _conn_id, _send.get_all_used_size());
+                     "object:" FMT64d ",conn:%d,buffer size:%d",
+                     _object_id, _conn_id, _send.get_all_used_size());
 
                 IO_SEND();
             } while (_send.is_overflow());
@@ -389,7 +389,8 @@ int32_t Socket::user_timeout(int32_t fd)
 int32_t Socket::non_ipv6only(int32_t fd)
 {
     int32_t optval = 0;
-    return setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval));
+    return setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
+                      sizeof(optval));
 }
 
 int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
@@ -706,9 +707,10 @@ void Socket::connect_cb(int32_t revents)
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
     class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    bool is_ok                     = network_mgr->connect_new(_conn_id, ecode);
+    bool ok                        = network_mgr->connect_new(_conn_id, ecode);
 
-    if (EXPECT_TRUE(is_ok && 0 == ecode))
+    // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
+    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_w.get_fd())))
     {
         init_connect();
     }
@@ -759,8 +761,8 @@ int32_t Socket::set_io(IO::IOT io_type, int32_t param)
 
     switch (io_type)
     {
-    case IO::IOT_NONE: _io = new IO(&_recv, &_send); break;
-    case IO::IOT_SSL: _io = new SSLIO(param, &_recv, &_send); break;
+    case IO::IOT_NONE: _io = new IO(_conn_id, &_recv, &_send); break;
+    case IO::IOT_SSL: _io = new SSLIO(_conn_id, param, &_recv, &_send); break;
     default: return -1;
     }
 

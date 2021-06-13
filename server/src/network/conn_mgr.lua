@@ -28,9 +28,14 @@ function conn_accept(conn_id, new_conn_id)
     conn_mgr.conn[new_conn_id] = new_conn
 end
 
--- 连接成功
+-- 连接进行初始化
 function conn_new(conn_id, ...)
     return conn_mgr.conn[conn_id]:conn_new(...)
+end
+
+-- 连接成功
+function conn_ok(conn_id, ...)
+    return conn_mgr.conn[conn_id]:conn_ok(...)
 end
 
 -- 连接断开

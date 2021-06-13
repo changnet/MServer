@@ -33,13 +33,12 @@ void LNetworkMgr::clear() /* 清除所有网络数据，不通知上层脚本 */
 /* 删除无效的连接 */
 void LNetworkMgr::invoke_delete()
 {
-    std::vector<uint32_t>::iterator itr = _deleting.begin();
-    for (; itr != _deleting.end(); itr++)
+    for (const auto &conn_id : _deleting)
     {
-        socket_map_t::iterator sk_itr = _socket_map.find(*itr);
+        socket_map_t::iterator sk_itr = _socket_map.find(conn_id);
         if (sk_itr == _socket_map.end())
         {
-            ELOG("no socket to delete");
+            ELOG("no socket to delete: conn_id = %d", conn_id);
             continue;
         }
 
@@ -226,9 +225,6 @@ int32_t LNetworkMgr::listen(lua_State *L)
     return 1;
 }
 
-/* 主动连接其他服务器
- * network_mgr:connect( host,port,conn_type )
- */
 int32_t LNetworkMgr::connect(lua_State *L)
 {
     const char *host = luaL_checkstring(L, 1);
@@ -689,7 +685,6 @@ bool LNetworkMgr::accept_new(uint32_t conn_id, class Socket *new_sk)
     return true;
 }
 
-/* 连接回调 */
 bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
 {
     static lua_State *L = StaticGlobal::state();
@@ -717,7 +712,26 @@ bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
     return true;
 }
 
-/* 断开回调 */
+bool LNetworkMgr::connect_ok(uint32_t conn_id)
+{
+    static lua_State *L = StaticGlobal::state();
+    LUA_PUSHTRACEBACK(L);
+
+    lua_getglobal(L, "conn_ok");
+    lua_pushinteger(L, conn_id);
+
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
+    {
+        ELOG("conn_ok:%s", lua_tostring(L, -1));
+
+        lua_pop(L, 2); /* remove traceback and error object */
+        return false;
+    }
+    lua_pop(L, 1); /* remove traceback */
+
+    return true;
+}
+
 bool LNetworkMgr::connect_del(uint32_t conn_id)
 {
     _deleting.push_back(conn_id);
@@ -867,8 +881,8 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
     if (iter == _owner_session.end())
     {
         ELOG("get_cmd_session cmd(%d) "
-              "no session to forwarding:%d-" FMT64d,
-              cmd, object_id);
+             "no session to forwarding:%d-" FMT64d,
+             cmd, object_id);
         return -1;
     }
 
@@ -876,7 +890,7 @@ int32_t LNetworkMgr::get_cmd_session(int64_t object_id, int32_t cmd) const
 }
 
 int32_t LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
-                              const char *ctx, size_t size) const
+                                 const char *ctx, size_t size) const
 {
     int64_t object_id = src_sk->get_object_id();
     int32_t session   = get_cmd_session(object_id, cmd);
@@ -1031,8 +1045,8 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
                           lua_typename(L, lua_type(L, 1)));
     }
     int32_t codec_ty = luaL_checkinteger32(L, 2);
-    uint16_t cmd      = static_cast<uint16_t>(luaL_checkinteger(L, 3));
-    uint16_t ecode    = static_cast<uint16_t>(luaL_checkinteger(L, 4));
+    uint16_t cmd     = static_cast<uint16_t>(luaL_checkinteger(L, 3));
+    uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, 4));
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
         return luaL_error(L, "illegal codec type");

@@ -73,7 +73,7 @@ function SrvConn:listen(ip, port)
 end
 
 function SrvConn:raw_connect()
-    self.conn_ok = false
+    self.ok = false
     self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CNT_SSCN)
 
     g_conn_mgr:set_conn(self.conn_id, self)
@@ -121,20 +121,24 @@ function SrvConn:conn_accept(new_conn_id)
     return new_conn
 end
 
--- 连接成功
+-- 连接进行初始化
 function SrvConn:conn_new(ecode)
     if 0 == ecode then
-        self.conn_ok = true
+        self.ok = true
         self:set_conn_param(self.conn_id)
+    else
+        return g_network_mgr:srv_conn_new(self.conn_id, ecode)
     end
+end
 
-    return g_network_mgr:srv_conn_new(self.conn_id, ecode)
+-- 连接成功
+function SrvConn:conn_ok()
+    return g_network_mgr:srv_conn_new(self.conn_id, 0)
 end
 
 -- 连接断开
 function SrvConn:conn_del()
-    self.conn_ok = false
-    g_conn_mgr:set_conn(self.conn_id, nil)
+    self.ok = false
     return g_network_mgr:srv_conn_del(self.conn_id)
 end
 
@@ -151,7 +155,7 @@ end
 
 -- 主动关闭连接
 function SrvConn:close()
-    self.conn_ok = false
+    self.ok = false
     return network_mgr:close(self.conn_id)
 end
 

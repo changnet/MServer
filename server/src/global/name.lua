@@ -100,8 +100,13 @@ end
 
 -- 取函数名，仅对手动注册过的函数有效，类似C的 __func__ 宏
 -- 要么是全局函数、二级函数或者手动注册的函数才取得到名字
-function func_name(func)
+function func_to_name(func)
     return func_names[func]
+end
+
+-- 根据函数名取函数指针
+function name_to_func(name)
+    return names_func[name]
 end
 
 -- 通过遍历全局表，生成函数及其对应的名字

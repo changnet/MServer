@@ -1,5 +1,6 @@
 #include "io.hpp"
 #include "../socket.hpp"
+#include "../../system/static_global.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>
@@ -7,9 +8,11 @@
     #include <sys/socket.h>
 #endif
 
-IO::IO(class Buffer *recv, class Buffer *send)
+IO::IO(uint32_t conn_id, class Buffer *recv, class Buffer *send)
 {
     _fd = -1; // 创建一个io的时候，fd可能还未创建，后面再设置
+    _conn_id = conn_id;
+
     _recv = recv;
     _send = send;
 }
@@ -80,4 +83,26 @@ int32_t IO::send(int32_t &byte)
 
     /* need to try again */
     return 2;
+}
+
+int32_t IO::init_accept(int32_t fd)
+{
+    _fd = fd;
+    init_ok();
+
+    return 0;
+}
+
+int32_t IO::init_connect(int32_t fd)
+{
+    _fd = fd;
+    init_ok();
+
+    return 0;
+}
+
+void IO::init_ok() const
+{
+    class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    network_mgr->connect_ok(_conn_id);
 }

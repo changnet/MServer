@@ -121,7 +121,7 @@ end
 -- 检查一个连接超时
 local tm_pkt = {response = true}
 function NetworkMgr:check_one_timeout(srv_conn, check_time)
-    if not srv_conn.conn_ok then return end -- 还没连接成功的不检查
+    if not srv_conn.ok then return end -- 还没连接成功的不检查
 
     local ts = srv_conn:check(check_time)
     if ts > SRV_ALIVE_TIMES then

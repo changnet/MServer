@@ -6,14 +6,15 @@ SSLIO::~SSLIO()
     if (_ssl_ctx)
     {
         SSL_free(_ssl_ctx);
-        _ssl_ctx = NULL;
+        _ssl_ctx = nullptr;
     }
 }
 
-SSLIO::SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send)
-    : IO(recv, send)
+SSLIO::SSLIO(int32_t ssl_id, uint32_t conn_id, class Buffer *recv,
+             class Buffer *send)
+    : IO(conn_id, recv, send)
 {
-    _ssl_ctx = NULL;
+    _ssl_ctx = nullptr;
     _ssl_id  = ssl_id;
 }
 
@@ -31,7 +32,7 @@ int32_t SSLIO::recv(int32_t &byte)
 
     // ERR_clear_error
     size_t size = _recv->get_space_size();
-    int32_t len   = SSL_read(_ssl_ctx, _recv->get_space_ctx(), (int32_t)size);
+    int32_t len = SSL_read(_ssl_ctx, _recv->get_space_ctx(), (int32_t)size);
     if (EXPECT_TRUE(len > 0))
     {
         byte = len;
@@ -149,7 +150,6 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     return 0;
 }
 
-// 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
 int32_t SSLIO::do_handshake()
 {
     int32_t ecode = SSL_do_handshake(_ssl_ctx);
@@ -157,6 +157,7 @@ int32_t SSLIO::do_handshake()
     {
         // SSLMgr::dump_x509(_ssl_ctx);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
+        init_ok();
         return 0 == _send->get_used_size() ? 0 : 2;
     }
 

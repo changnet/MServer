@@ -8,7 +8,8 @@ class SSLIO : public IO
 {
 public:
     ~SSLIO();
-    explicit SSLIO(int32_t ssl_id, class Buffer *recv, class Buffer *send);
+    explicit SSLIO(int32_t ssl_id, uint32_t conn_id, class Buffer *recv,
+                   class Buffer *send);
 
     /* 接收数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写

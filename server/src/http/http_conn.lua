@@ -18,6 +18,10 @@ end
 function HttpConn:conn_del()
 end
 
+function HttpConn:conn_ok()
+    if self.on_connect then return self.on_connect(self, ecode) end
+end
+
 -- 收到消息
 -- @param http_type enum http_parser_type 0请求request，1 返回respond
 -- @param code 错误码，如404，仅response有用
@@ -119,8 +123,6 @@ function HttpConn:conn_new(ecode)
         network_mgr:set_conn_codec(self.conn_id, network_mgr.CDC_NONE)
         network_mgr:set_conn_packet(self.conn_id, network_mgr.PKT_HTTP)
     end
-
-    if self.on_connect then return self.on_connect(self, ecode) end
 end
 
 -- 发起get请求
