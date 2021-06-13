@@ -730,7 +730,7 @@ void Socket::command_cb(int32_t revents)
     {
         Socket::stop();
         network_mgr->connect_del(_conn_id);
-        ELOG("socket command no io or packet set,socket disconnect");
+        ELOG("no io or packet set,socket disconnect: %d", _conn_id);
         return;
     }
 

@@ -12,6 +12,9 @@
     回调函数直接存的指针，因此是不能热更的，但是单次rpc调用时间很短，也不需要考虑热更
 ]]
 
+local name_to_func = name_to_func
+local func_to_name = func_to_name
+
 local AutoId = require "modules.system.auto_id"
 
 local Rpc = oo.singleton(...)
@@ -21,9 +24,10 @@ function Rpc:__init()
 
     self.auto_id = AutoId()
 
+    self.last_e = 0 -- 上一次rpc返回的错误码
+
     self.stat = {}
     self.stat_tm = ev:time()
-    self.rpc_perf = g_setting.rpc_perf
 end
 
 function Rpc:do_timer()
@@ -100,6 +104,11 @@ function Rpc:last_conn()
     return g_network_mgr:get_conn(self.last_conn_id)
 end
 
+-- 上一次rpc返回的错误码
+function Rpc:last_error()
+    return self.last_e
+end
+
 -- 生成一个可变参回调函数
 local function func_chunk(cb, ...)
     -- 由于回调参数是可变的，rpc返回的参数也是可变的，但显然没有 cb_func( ...,... )
@@ -154,9 +163,9 @@ end
 
 -- 通过链接对象执行rpc调用
 -- @param conn 进程之间的socket连接对象
--- @param name 需要调用的函数名
+-- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:conn_call(conn, name, ...)
+function Rpc:conn_call(conn, func, ...)
     -- 如果不需要回调，则call_id为0
     local call_id = 0
     if self.next_cb_func then
@@ -166,17 +175,19 @@ function Rpc:conn_call(conn, name, ...)
         self.next_cb_func = nil
     end
 
-    return conn:send_rpc_pkt(call_id, method_name, ...)
+    local name = func_to_name(func)
+
+    return conn:send_rpc_pkt(call_id, name, ...)
 end
 
 -- 通过session执行rpc调用
 -- @param session 进程的session，如GATEWAY
--- @param name 需要调用的函数名
+-- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:call(session, name, ...)
+function Rpc:call(session, func, ...)
     local conn = g_network_mgr:get_srv_conn(session)
 
-    return self:conn_call(conn, name, ...)
+    return self:conn_call(conn, func, ...)
 end
 
 -- /////////////////////////////////////////////////////////////////////////////
@@ -184,8 +195,6 @@ end
 -- /////////////////////////////////////////////////////////////////////////////
 
 local rpc = Rpc()
-
-local name_to_func = name_to_func
 
 -- 为了实现可变参数不用table.pack，只能再wrap一层
 local function args_wrap(method_name, beg, ...)
@@ -197,7 +206,7 @@ end
 function rpc_command_new(conn_id, rpc_id, method_name, ...)
     -- 把参数平铺到栈上，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
     rpc.last_conn_id = conn_id
-    local func = name_to_func[method_name]
+    local func = name_to_func(method_name)
     if not func then
         return error(string.format("rpc:[%s] was not declared", method_name))
     end
@@ -210,7 +219,8 @@ function rpc_command_new(conn_id, rpc_id, method_name, ...)
 end
 
 -- 收到rpc调用，由C++触发
-function rpc_command_return(conn_id, rpc_id, ecode, ...)
+function rpc_command_return(conn_id, rpc_id, e, ...)
+    rpc.last_e = e
     rpc.last_conn_id = conn_id
     local callback = rpc.callback[rpc_id]
     if not callback then
@@ -219,7 +229,7 @@ function rpc_command_return(conn_id, rpc_id, ecode, ...)
     end
     rpc.callback[rpc_id] = nil
 
-    return callback(ecode, ...)
+    return callback(...)
 end
 
 return rpc
