@@ -1,5 +1,4 @@
 -- rpc调用测试
-local network_mgr = network_mgr
 local SrvConn = require "network.srv_conn"
 g_conn_mgr = require "network.conn_mgr"
 local rpc = require "rpc.rpc"
@@ -41,6 +40,29 @@ t_describe("rpc test", function()
     local local_port = 1099
     if IPV4 then local_host = "127.0.0.1" end
 
+    local PERF_TIMES = 1000
+    local params = {
+        true,
+        0x7FFFFFFFFFFFFFFF,
+        "strrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        0xFFFFFFFFFFFFFFFF,
+        false,
+        9999999999.5555555,
+        nil,
+        1000,
+        {
+            true,
+            0x7FFFFFFFFFFFFFFF,
+            "strrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+            0xFFFFFFFFFFFFFFFF,
+            false,
+            9999999999.5555555,
+            nil,
+            1000,
+            {1, true, nil, "str", 9.009, false, {}}
+        }
+    }
+
     -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的conn_accept等函数
     t_before(function()
         clt_conn = RpcConn()
@@ -52,27 +74,7 @@ t_describe("rpc test", function()
     end)
     t_it("rpc base test", function()
         t_wait(2000)
-        local params = {
-            true,
-            0x7FFFFFFFFFFFFFFF,
-            "strrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
-            0xFFFFFFFFFFFFFFFF,
-            false,
-            9999999999.5555555,
-            nil,
-            1000,
-            {
-                true,
-                0x7FFFFFFFFFFFFFFF,
-                "strrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
-                0xFFFFFFFFFFFFFFFF,
-                false,
-                9999999999.5555555,
-                nil,
-                1000,
-                {1, true, nil, "str", 9.009, false, {}}
-            }
-        }
+
         local counter = 0
         local rpc_empty_query = function(p1)
             t_equal(p1, nil)
@@ -131,13 +133,56 @@ t_describe("rpc test", function()
         rpc:proxy(rpc_empty_reponse):conn_call(
             clt_conn, rpc_query, table.unpack(params))
     end)
-    t_it("rpc performance test", function()
-        -- 不等待返回，直接发送
+    t_it(string.format("rpc performance test %d", PERF_TIMES), function()
+        t_wait(5000)
+
+        -- 不等待返回，直接发送，这种其实是取决于缓冲区
+
+        local count = 0
+        local rpc_perf_query = function(...)
+            return ...
+        end
+        local rpc_perf_response = function(...)
+            count = count + 1
+            if count == PERF_TIMES then t_done() end
+        end
+
+        reg_func("rpc_perf_query", rpc_perf_query)
+        reg_func("rpc_perf_response", rpc_perf_response)
+
+        for _ = 1, PERF_TIMES do
+            rpc:proxy(rpc_perf_response):conn_call(
+                clt_conn, rpc_perf_query, table.unpack(params))
+        end
     end)
 
-    t_it("rpc pingpong performance test", function()
-        -- 一来一回进行测试
-    end)
+    t_it(string.format("rpc pingpong performance test %d", PERF_TIMES),
+        function()
+            t_wait(5000)
+            -- 一来一回进行测试
+            local count = 0
+            local rpc_pingpong_query = function(...)
+                return ...
+            end
+
+            local rpc_pingpong_response = nil -- luacheck要前置声明
+            rpc_pingpong_response = function(...)
+                count = count + 1
+                if count == PERF_TIMES then
+                    t_done()
+                else
+                    rpc:proxy(rpc_pingpong_response):conn_call(
+                        clt_conn, rpc_pingpong_query, table.unpack(params))
+                end
+            end
+
+            reg_func("rpc_pingpong_query", rpc_pingpong_query)
+            reg_func("rpc_pingpong_response", rpc_pingpong_response)
+
+            rpc:proxy(rpc_pingpong_response):conn_call(
+                clt_conn, rpc_pingpong_query, table.unpack(params))
+        end
+    )
 
     t_after(function()
         srv_conn:close()
