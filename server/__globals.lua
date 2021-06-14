@@ -82,9 +82,9 @@ return {
 "g_app_setting", -- src/modules/module_header.lua
 "g_authorize", -- src/modules/module_header.lua
 "g_command_mgr", -- src/modules/module_header.lua
+"g_conn_mgr", -- src/test/rpc_test.lua
 "g_conn_mgr", -- src/modules/module_header.lua
 "g_conn_mgr", -- src/test/https_test.lua
-"g_conn_mgr", -- src/test/rpc_test.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
 "g_gm", -- src/modules/module_header.lua

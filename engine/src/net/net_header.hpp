@@ -41,19 +41,18 @@ typedef int32_t Owner;
         return luaL_error(L, "packet size error"); \
     } while (0)
 
-#define SET_HEADER_LENGTH(h, l, cmd, SET_FAIL)                           \
-    do                                                                   \
-    {                                                                    \
-        if ((int32_t)l < 0) SET_FAIL;                                    \
-        size_t hl = sizeof(h) + l;                                       \
-        if (hl > MAX_PACKET_LEN)                                         \
-        {                                                                \
-            ELOG("packet(%d) length(%d) overflow:%s", cmd, (int32_t)hl,  \
-                  __FUNCTION__);                                         \
-            SET_FAIL;                                                    \
-            return -1;                                                   \
-        }                                                                \
-        h._length = static_cast<packet_size_t>(hl);                      \
+#define SET_HEADER_LENGTH(h, l, cmd, SET_FAIL)                        \
+    do                                                                \
+    {                                                                 \
+        if ((int32_t)l < 0) SET_FAIL;                                 \
+        size_t hl = sizeof(h) + l;                                    \
+        if (hl > MAX_PACKET_LEN)                                      \
+        {                                                             \
+            ELOG("packet(%d) length(%d) overflow", cmd, (int32_t)hl); \
+            SET_FAIL;                                                 \
+            return -1;                                                \
+        }                                                             \
+        h._length = static_cast<packet_size_t>(hl);                   \
     } while (0)
 
 /* 根据一个header指针获取header后buffer的长度 */

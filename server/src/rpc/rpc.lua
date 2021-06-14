@@ -147,7 +147,19 @@ local function func_chunk(cb, ...)
 
     local args = table.pack(...)
     return function(...)
-        return cb(table.unpack(args), ...)
+        -- 唉，这样不行哎。当后面有其他参数时，unpack只返回第一个参数
+        -- return cb(table.unpack(args), ...)
+        local n = args.n
+        local count = select("#", ...)
+        for i = 1, count do
+            -- args[n + i] = select(i, ...)
+            rawset(args, n + i, select(i, ...))
+        end
+
+        -- table.pack打包的参数中允许包含nil
+        -- 但当 args[n + i] = xx或者 rawset 中包含nil时，unpack无法解包出nil
+        -- 这时候需要强制指定unpack的后两个参数
+        return cb(table.unpack(args, 1, n + count))
     end
 end
 

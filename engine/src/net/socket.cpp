@@ -142,6 +142,9 @@ Socket::~Socket()
     _io     = nullptr;
     _packet = nullptr;
 
+    _recv.clear();
+    _send.clear();
+
     C_OBJECT_DEC("socket");
     assert(0 == _pending && -1 == _w.get_fd());
 }
@@ -183,8 +186,11 @@ void Socket::stop(bool flush)
         _w.set_fd(-1); /* must after stop */
     }
 
-    _recv.clear();
-    _send.clear();
+    // 这里不能清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
+    // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
+    // 例如 StreamPacket::unpack 在dispatch后会删掉已处理的缓冲区
+    // _recv.clear();
+    // _send.clear();
 
     C_SOCKET_TRAFFIC_DEL(_conn_id);
 }

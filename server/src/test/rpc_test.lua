@@ -103,9 +103,11 @@ t_describe("rpc test", function()
         local rpc_empty_reponse = function(...)
             t_equal(rpc:last_error(), 0)
             t_equal({...}, params)
+            counter = counter + 1
 
             -- 最后一个函数执行完，校验结果并结束测试
-            t_equal(counter, 3)
+            -- 8 = 两次单向(2) + 3次双向(3 * 2)
+            t_equal(counter, 8)
             t_done()
         end
 
@@ -116,18 +118,18 @@ t_describe("rpc test", function()
         reg_func("rpc_empty_reponse", rpc_empty_reponse)
 
         -- 无返回，无参数
-        -- rpc:conn_call(clt_conn, rpc_empty_query)
+        rpc:conn_call(clt_conn, rpc_empty_query)
         -- 无返回，有参数
-        -- rpc:conn_call(clt_conn, rpc_query, table.unpack(params))
+        rpc:conn_call(clt_conn, rpc_query, table.unpack(params))
         -- 有返回，有回调参数
         rpc:proxy(rpc_reponse, table.unpack(params)):conn_call(
             clt_conn, rpc_query, table.unpack(params))
         -- 有返回，有少量回调参数
-        -- rpc:proxy(rpc_min_reponse, params[1], params[2], params[3]):conn_call(
-        --     clt_conn, rpc_query, table.unpack(params))
+        rpc:proxy(rpc_min_reponse, params[1], params[2], params[3]):conn_call(
+            clt_conn, rpc_query, table.unpack(params))
         -- 有返回，无回调参数
-        -- rpc:proxy(rpc_empty_reponse):conn_call(
-        --     clt_conn, rpc_query, table.unpack(params))
+        rpc:proxy(rpc_empty_reponse):conn_call(
+            clt_conn, rpc_query, table.unpack(params))
     end)
     t_it("rpc performance test", function()
         -- 不等待返回，直接发送

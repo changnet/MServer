@@ -1,7 +1,7 @@
 #include "buffer.hpp"
 
 // 临时连续缓冲区
-static const size_t continuous_size       = MAX_PACKET_LEN;
+static const size_t continuous_size         = MAX_PACKET_LEN;
 static char continuous_ctx[continuous_size] = {0};
 
 Buffer::Buffer()
@@ -49,7 +49,7 @@ void Buffer::clear()
 // 添加数据
 void Buffer::append(const void *raw_data, const size_t len)
 {
-    const char *data   = reinterpret_cast<const char *>(raw_data);
+    const char *data = reinterpret_cast<const char *>(raw_data);
     size_t append_sz = 0;
     do
     {
@@ -128,7 +128,7 @@ const char *Buffer::to_continuous_ctx(size_t len)
     // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
     PLOG("using continuous buffer:%d", len);
 
-    size_t used     = 0;
+    size_t used       = 0;
     const Chunk *next = _front;
 
     do
@@ -155,7 +155,7 @@ const char *Buffer::all_to_continuous_ctx(size_t &len)
         return _front->used_ctx();
     }
 
-    size_t used     = 0;
+    size_t used       = 0;
     const Chunk *next = _front;
 
     do

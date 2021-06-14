@@ -8,7 +8,6 @@ StreamPacket::StreamPacket(class Socket *sk) : Packet(sk) {}
 
 StreamPacket::~StreamPacket() {}
 
-/* 解析二进制流数据包 */
 int32_t StreamPacket::unpack()
 {
     class Buffer &recv = _socket->recv_buffer();
@@ -110,8 +109,8 @@ void StreamPacket::cs_dispatch(const struct c2s_header *header)
 {
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    uint16_t cmd     = header->_cmd;
-    size_t size    = PACKET_BUFFER_LEN(header);
+    uint16_t cmd    = header->_cmd;
+    size_t size     = PACKET_BUFFER_LEN(header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
 
     /* 这个指令不是在当前进程处理，自动转发到对应进程 */
@@ -339,7 +338,7 @@ void StreamPacket::ssc_command(const s2s_header *header)
         return;
     }
 
-    size_t size            = PACKET_BUFFER_LEN(header);
+    size_t size             = PACKET_BUFFER_LEN(header);
     const char *ctx         = reinterpret_cast<const char *>(header + 1);
     class Packet *sk_packet = sk->get_packet();
     sk_packet->raw_pack_clt(header->_cmd, header->_errno, ctx, size);
@@ -377,7 +376,8 @@ void StreamPacket::rpc_command(const s2s_header *header)
     // unique_id是rpc调用的唯一标识，如果不为0，则需要返回结果
     if (unique_id > 0)
     {
-        do_pack_rpc(L, unique_id, LUA_OK == ecode ? 0 : 0xFFFF, SPT_RPCR, top + 1);
+        do_pack_rpc(L, unique_id, LUA_OK == ecode ? 0 : 0xFFFF, SPT_RPCR,
+                    top + 1);
     }
 
     if (LUA_OK != ecode)
@@ -396,7 +396,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    size_t size       = PACKET_BUFFER_LEN(header);
+    size_t size        = PACKET_BUFFER_LEN(header);
     const char *buffer = reinterpret_cast<const char *>(header + 1);
 
     LUA_PUSHTRACEBACK(L);
@@ -482,7 +482,7 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
     STAT_TIME_BEG();
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd   = luaL_checkinteger32(L, index);
+    int32_t cmd    = luaL_checkinteger32(L, index);
     uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 1));
 
     const CmdCfg *cfg = network_mgr->get_sc_cmd(cmd);
@@ -574,7 +574,7 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
     STAT_TIME_BEG();
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd   = luaL_checkinteger32(L, index);
+    int32_t cmd    = luaL_checkinteger32(L, index);
     uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 1));
 
     if (!lua_istable(L, index + 2))
@@ -636,7 +636,7 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     Owner owner      = static_cast<Owner>(luaL_checkinteger(L, index));
     int32_t codec_ty = luaL_checkinteger32(L, index + 1);
     int32_t cmd      = luaL_checkinteger32(L, index + 2);
-    uint16_t ecode    = static_cast<uint16_t>(luaL_checkinteger(L, index + 3));
+    uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, index + 3));
 
     if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
     {
@@ -735,7 +735,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     int32_t mask             = luaL_checkinteger32(L, index);
     int32_t codec_ty         = luaL_checkinteger32(L, index + 2);
     int32_t cmd              = luaL_checkinteger32(L, index + 3);
-    uint16_t ecode           = static_cast<uint16_t>(luaL_checkinteger(L, index + 4));
+    uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 4));
 
     lUAL_CHECKTABLE(L, index + 1);
     lUAL_CHECKTABLE(L, index + 5);
