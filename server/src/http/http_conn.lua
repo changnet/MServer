@@ -19,7 +19,8 @@ function HttpConn:conn_del()
 end
 
 function HttpConn:conn_ok()
-    if self.on_connect then return self.on_connect(self, ecode) end
+    if self.on_connect then return self.on_connect(self, 0) end
+    if self.on_accept then self.on_accept(self) end
 end
 
 -- 收到消息
@@ -95,33 +96,35 @@ function HttpConn:listen_s(ip, port, ssl, on_accept, on_command)
     return self:listen(ip, port, on_accept, on_command)
 end
 
+-- 初始化连接参数
+function HttpConn:init_conn(conn_id, ssl)
+    if ssl then
+        network_mgr:set_conn_io(conn_id, network_mgr.IOT_SSL, ssl)
+    else
+        network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
+    end
+    network_mgr:set_conn_codec(conn_id, network_mgr.CDC_NONE)
+    network_mgr:set_conn_packet(conn_id, network_mgr.PKT_HTTP)
+end
+
 -- 有新的连接进来
 function HttpConn:conn_accept(new_conn_id)
-    if self.ssl then
-        network_mgr:set_conn_io(new_conn_id, network_mgr.IOT_SSL, self.ssl)
-    else
-        network_mgr:set_conn_io(new_conn_id, network_mgr.IOT_NONE)
-    end
-    network_mgr:set_conn_codec(new_conn_id, network_mgr.CDC_NONE)
-    network_mgr:set_conn_packet(new_conn_id, network_mgr.PKT_HTTP)
-
     local new_conn = HttpConn(new_conn_id)
 
+    -- 继承一些参数
+    new_conn.ssl = self.ssl
     new_conn.on_command = self.on_command
-    if self.on_accept then self:on_accept(new_conn) end
+    new_conn:init_conn(new_conn_id, self.ssl)
+
     return new_conn
 end
 
 -- 连接成功(或失败)
 function HttpConn:conn_new(ecode)
     if 0 == ecode then
-        if self.ssl then
-            network_mgr:set_conn_io(self.conn_id, network_mgr.IOT_SSL, self.ssl)
-        else
-            network_mgr:set_conn_io(self.conn_id, network_mgr.IOT_NONE)
-        end
-        network_mgr:set_conn_codec(self.conn_id, network_mgr.CDC_NONE)
-        network_mgr:set_conn_packet(self.conn_id, network_mgr.PKT_HTTP)
+        self:init_conn(self.conn_id, self.ssl)
+    else
+        if self.on_connect then return self.on_connect(self, ecode) end
     end
 end
 

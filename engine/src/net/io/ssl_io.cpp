@@ -10,7 +10,7 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(int32_t ssl_id, uint32_t conn_id, class Buffer *recv,
+SSLIO::SSLIO(uint32_t conn_id, int32_t ssl_id, class Buffer *recv,
              class Buffer *send)
     : IO(conn_id, recv, send)
 {
@@ -157,6 +157,7 @@ int32_t SSLIO::do_handshake()
     {
         // SSLMgr::dump_x509(_ssl_ctx);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
+        // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
         init_ok();
         return 0 == _send->get_used_size() ? 0 : 2;
     }
