@@ -219,7 +219,6 @@ void LSql::on_result(lua_State *L, SqlResult *res)
         ELOG("sql on result error:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* remove error message */
     }
-    lua_pop(L, 1); /* remove traceback */
 }
 
 int32_t LSql::field_to_lua(lua_State *L, const SqlField &field,
