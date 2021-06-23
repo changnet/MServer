@@ -25,7 +25,6 @@ assert(g_app_setting, "no server conf found")
 
 g_log_mgr = require "modules.log.log_mgr"
 g_unique_id = require "modules.system.unique_id"
-g_conn_mgr = require "network.conn_mgr"
 g_timer_mgr = require "timer.timer_mgr"
 g_rpc = require "rpc.rpc"
 g_authorize = require "modules.system.authorize"

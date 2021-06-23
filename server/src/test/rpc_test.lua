@@ -1,6 +1,5 @@
 -- rpc调用测试
 local SrvConn = require "network.srv_conn"
-g_conn_mgr = require "network.conn_mgr"
 local rpc = require "rpc.rpc"
 
 local srv_conn = nil
@@ -17,7 +16,7 @@ function RpcConn:conn_accept(new_conn_id)
 end
 
 function RpcConn:conn_del()
-    g_conn_mgr:set_conn(self.conn_id, nil)
+    self:set_conn(self.conn_id, nil)
 end
 
 function RpcConn:conn_new(ecode)
@@ -26,7 +25,7 @@ function RpcConn:conn_new(ecode)
     self:set_conn_param(self.conn_id)
 end
 function RpcConn:conn_del()
-    g_conn_mgr:set_conn(self.conn_id, nil)
+    self:set_conn(self.conn_id, nil)
 end
 
 function RpcConn:conn_ok()

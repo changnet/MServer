@@ -1,15 +1,20 @@
 -- http_conn.lua
---- 2017-12-16
+-- 2017-12-16
 -- xzc
--- http连接
+
+
+
 local HTTP = require "http.http_header"
+
+local Conn = require "network.conn"
 
 local PAGE_GET = HTTP.PGET
 local PAGE_POST = HTTP.PPOST
 
 local network_mgr = network_mgr
 
-local HttpConn = oo.class(...)
+-- http连接
+local HttpConn = oo.class(..., Conn)
 
 function HttpConn:__init(conn_id)
     self.conn_id = conn_id -- 通过accept创建时需要直接指定
@@ -53,7 +58,7 @@ function HttpConn:connect(host, port, on_connect, on_command)
 
     self.conn_id = network_mgr:connect(self.ip, port, network_mgr.CNT_CSCN)
 
-    g_conn_mgr:set_conn(self.conn_id, self)
+    self:set_conn(self.conn_id, self)
 end
 
 -- 以https试连接到其他服务器
@@ -71,7 +76,7 @@ end
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
 function HttpConn:close(flush)
-    g_conn_mgr:set_conn(self.conn_id, nil)
+    self:set_conn(self.conn_id, nil)
     return network_mgr:close(self.conn_id, flush)
 end
 
@@ -83,7 +88,7 @@ function HttpConn:listen(ip, port, on_accept, on_command)
     self.on_command = on_command
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
 
-    g_conn_mgr:set_conn(self.conn_id, self)
+    self:set_conn(self.conn_id, self)
     return true
 end
 

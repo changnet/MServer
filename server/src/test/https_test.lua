@@ -3,7 +3,6 @@
 -- xzc
 local network_mgr = network_mgr
 local HttpConn = require "http.http_conn"
-g_conn_mgr = require "network.conn_mgr"
 
 t_describe("http(s) test", function()
     -- 产生一个缓存，避免下面连接时查询dns导致测试超时

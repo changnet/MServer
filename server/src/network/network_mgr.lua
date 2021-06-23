@@ -211,7 +211,7 @@ end
 -- 主动关闭服务器链接
 function NetworkMgr:close_srv_conn(conn)
     conn:close()
-    g_conn_mgr:set_conn(conn.conn_id, nil)
+    self:set_conn(conn.conn_id, nil)
 
     if conn.session then self.srv[conn.session] = nil end
     self.srv_conn[conn.conn_id] = nil

@@ -2,7 +2,10 @@
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 
-local SrvConn = oo.class(...)
+local Conn = require "network.conn"
+
+-- 服务器之间的链接
+local SrvConn = oo.class(..., Conn)
 
 function SrvConn:__init(conn_id)
     self.auth = false
@@ -69,14 +72,14 @@ end
 function SrvConn:listen(ip, port)
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SSCN)
 
-    g_conn_mgr:set_conn(self.conn_id, self)
+    self:set_conn(self.conn_id, self)
 end
 
 function SrvConn:raw_connect()
     self.ok = false
     self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CNT_SSCN)
 
-    g_conn_mgr:set_conn(self.conn_id, self)
+    self:set_conn(self.conn_id, self)
 
     return self.conn_id
 end

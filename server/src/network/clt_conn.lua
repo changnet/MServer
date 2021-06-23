@@ -24,7 +24,10 @@ local util = require "util"
 local network_mgr = network_mgr
 local g_command_mgr = g_command_mgr
 
-local CltConn = oo.class(...)
+local Conn = require "network.conn"
+
+-- 与客户端的连接
+local CltConn = oo.class(..., Conn)
 
 function CltConn:__init(conn_id)
     self.auth = false
@@ -74,13 +77,13 @@ end
 function CltConn:listen(ip, port)
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
 
-    g_conn_mgr:set_conn(self.conn_id, self)
+    self:set_conn(self.conn_id, self)
 end
 
 -- 连接断开
 function CltConn:conn_del()
     -- 这个会自动解除
-    -- g_conn_mgr:set_conn( self.conn_id,nil )
+    -- self:set_conn( self.conn_id,nil )
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
     return g_network_mgr:clt_conn_del(self.conn_id)
@@ -112,7 +115,7 @@ end
 
 -- 主动关闭连接
 function CltConn:close()
-    g_conn_mgr:set_conn(self.conn_id, nil)
+    self:set_conn(self.conn_id, nil)
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
     return network_mgr:close(self.conn_id)
