@@ -69,7 +69,7 @@ if "world" == g_app.name then
     player_mgr_srv_cb(SYS.PLAYER_OFFLINE, g_player_mgr.on_player_offline)
     player_mgr_srv_cb(SYS.PLAYER_OTHERWHERE, g_player_mgr.on_login_otherwhere)
 
-    g_player_ev:register(PLAYER_EV.ENTER, player_base_cb(Base.send_info))
+    PE.reg(PE_ENTER, player_base_cb(Base.send_info))
     g_res:reg_player_res(RES.GOLD, Player.get_gold, Player.add_gold,
                          Player.dec_gold)
 end

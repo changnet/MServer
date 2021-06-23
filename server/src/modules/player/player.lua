@@ -154,7 +154,7 @@ end
 function Player:on_login()
     for _, module in pairs(sub_module) do self[module.name]:on_login() end
 
-    g_player_ev:fire_event(PLAYER_EV.ENTER, self)
+    PE.fire_event(PE_ENTER, self)
 
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
@@ -194,7 +194,7 @@ function Player:on_logout()
     end
 
     -- 退出事件
-    g_player_ev:fire_event(PLAYER_EV.EXIT, self)
+    PE.fire_event(PE_EXIT, self)
 
     -- 各个子模块退出处理
     for _, module in pairs(sub_module) do self[module.name]:on_logout() end

@@ -1,4 +1,4 @@
--- auto export by lua-tags 156 symbols
+-- auto export by lua-tags 159 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -36,21 +36,26 @@ return {
 "Map", -- engine/map.lua
 "Mongo", -- engine/mongo.lua
 "Network_mgr", -- engine/network_mgr.lua
+"PE", -- src/modules/event/player_event.lua
+"PE_CONN", -- src/modules/event/event_header.lua
+"PE_DEATH", -- src/modules/event/event_header.lua
+"PE_ENTER", -- src/modules/event/event_header.lua
+"PE_EXIT", -- src/modules/event/event_header.lua
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
-"PLAYER_EV", -- src/modules/event/event_header.lua
 "PRINT", -- src/global/global.lua
 "PRINTF", -- src/global/global.lua
 "PROP", -- src/modules/property/property.lua
 "RES", -- src/modules/res/res_header.lua
+"SE", -- src/modules/event/system_event.lua
+"SE_READY", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
 "SRV_NAME", -- src/modules/system/define.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
-"SYSTEM_EV", -- src/modules/event/event_header.lua
 "Sql", -- engine/sql.lua
 "TIPS", -- src/modules/lang/lang_header.lua
 "Timer", -- engine/timer.lua
@@ -82,9 +87,9 @@ return {
 "g_app_setting", -- src/modules/module_header.lua
 "g_authorize", -- src/modules/module_header.lua
 "g_command_mgr", -- src/modules/module_header.lua
-"g_conn_mgr", -- src/test/rpc_test.lua
 "g_conn_mgr", -- src/modules/module_header.lua
 "g_conn_mgr", -- src/test/https_test.lua
+"g_conn_mgr", -- src/test/rpc_test.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
 "g_gm", -- src/modules/module_header.lua
@@ -96,14 +101,12 @@ return {
 "g_mongodb", -- src/modules/module_header.lua
 "g_network_mgr", -- src/modules/module_header.lua
 "g_ping", -- src/modules/module_header.lua
-"g_player_ev", -- src/modules/module_header.lua
 "g_player_mgr", -- src/modules/module_header.lua
 "g_res", -- src/modules/module_header.lua
 "g_rpc", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_stat", -- src/modules/module_header.lua
-"g_system_ev", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/android/app.lua
 "g_timer_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/test/app.lua

@@ -4,7 +4,7 @@
 std = "lua53"
 
 max_line_length = 120 -- 行长，包括注释
-max_code_line_length = 80 -- 代码行长，不包括注释
+max_code_line_length = 80 + 8 -- 代码行长，不包括注释(留一点余量，有些格式化工具允许多出几个字符)
 max_string_line_length = 120 -- 暂时没生效，后面再看看为啥
 max_comment_line_length = 256 -- 注释行长
 

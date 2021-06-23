@@ -27,5 +27,5 @@ local function role_welcome_cmd_cb(cmd, func)
     g_command_mgr:clt_register(cmd, cb)
 end
 
-g_player_ev:register(PLAYER_EV.ENTER, role_welcome_cb(role_welcome.on_enter))
+PE.reg(PE_ENTER, role_welcome_cb(role_welcome.on_enter))
 role_welcome_cmd_cb(MISC.WELCOME_GET, role_welcome.handle_award)

@@ -96,7 +96,7 @@ function Loginout:on_enter_world(entity, errno, pkt)
     entity.ai.logout_time = ev:time() + math.random(60, param.logout_time)
 
     PRINTF("%s enter world success", entity.name)
-    -- g_player_ev:fire_event( PLAYER_EV.ENTER,entity )
+    -- PE.fire_event( PE_ENTER,entity )
 end
 
 -- 初始化场景属性
