@@ -47,28 +47,7 @@ function CommandMgr:__init()
     self.ss_stat = {}
     self.css_stat = {}
     self.stat_tm = ev:time()
-    self.cmd_perf = g_setting.cmd_perf
-
-    self:check_timer() -- 开启状态统计定时器
-end
-
--- 检测是否需要开启定时器定时写统计信息到文件
-function CommandMgr:check_timer()
-    if not self.cmd_perf and self.timer then
-        g_timer_mgr:stop(self.timer)
-
-        self.timer = nil
-        return
-    end
-
-    if self.cmd_perf and not self.timer then
-        self.timer = g_timer_mgr:interval(1800000, 1800000, -1, self,
-                                          self.do_timer)
-    end
-end
-
-function CommandMgr:do_timer()
-    self:serialize_statistic(true)
+    self.cmd_perf = false
 end
 
 -- 设置统计log文件
@@ -83,8 +62,6 @@ function CommandMgr:set_statistic(perf, reset)
     end
 
     self.cmd_perf = perf
-
-    self:check_timer()
 end
 
 -- 更新耗时统计
@@ -282,16 +259,6 @@ function CommandMgr:clt_cmd()
     return cmds
 end
 
--- 获取当前进程处理的服务端指令
-function CommandMgr:srv_cmd()
-    local cmds = {}
-    for cmd, cfg in pairs(self.ss) do
-        if cfg.handler and not cfg.noreg then table.insert(cmds, cmd) end
-    end
-
-    return cmds
-end
-
 -- 注册其他服务器指令,以实现协议自动转发
 function CommandMgr:other_cmd_register(srv_conn, pkt)
     local base_name = srv_conn:base_name()
@@ -304,11 +271,9 @@ function CommandMgr:other_cmd_register(srv_conn, pkt)
     self.app_reg[base_name] = true
 
     local mask = 0
-    local multi_process = false
     local app_setting = g_setting[base_name]
     if app_setting.process and app_setting.process > 1 then
         mask = 2 -- 标记为需要动态转发，见C++ MK_DYNAMIC定义
-        multi_process = true
     end
 
     local session = srv_conn.session
@@ -325,23 +290,6 @@ function CommandMgr:other_cmd_register(srv_conn, pkt)
         local raw_cfg = cs_map[cmd]
         network_mgr:set_cs_cmd(cmd, string.match(raw_cfg.c, "^(%w+)%.%w+$"),
                                raw_cfg.c, mask, session)
-    end
-
-    -- 记录该服务器所处理的ss指令
-    for _, cmd in pairs(pkt.srv_cmd or {}) do
-        local _cfg = self.ss[cmd]
-        ASSERT(_cfg, "other_cmd_register no such srv cmd", cmd)
-        ASSERT(_cfg, "other_cmd_register srv cmd register conflict", cmd)
-
-        _cfg.session = session
-        local raw_cfg = ss_map[cmd]
-        network_mgr:set_ss_cmd(cmd, string.match(raw_cfg.s, "^(%w+)%.%w+$"),
-                               raw_cfg.s, 0, session)
-    end
-
-    -- 记录该服务器所处理的rpc指令
-    for _, cmd in pairs(pkt.rpc_cmd or {}) do
-        g_rpc:register(cmd, session, multi_process)
     end
 
     PRINTF("register cmd from %s", srv_conn:conn_name())
