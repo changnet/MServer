@@ -430,7 +430,43 @@ static int32_t mkdir_p(lua_State *L)
     return 1;
 }
 
-static const luaL_Reg utillib[] = {{"md5", md5},
+/**
+ * 递归列出指定目录中的文件，和shell指令ls效果一致
+ * @param path linux下路径 path/to/dir
+ * @return table 指定目录下的文件数组(包括目录，但不包括.和..这两个特殊目录)
+ */
+static int32_t ls(lua_State *L)
+{
+    const char *path = luaL_checkstring(L, 1);
+
+    // https://en.cppreference.com/w/cpp/filesystem/recursive_directory_iterator
+    // The special pathnames dot and dot-dot are skipped.
+    std::error_code e;
+    std::filesystem::recursive_directory_iterator dir_iter(path, e);
+    if (e)
+    {
+        luaL_error(L, "can not open directory(%s):%s", path, e.message());
+
+        return 0;
+    }
+
+    int32_t index = 0;
+    lua_newtable(L);
+    for (auto &p : dir_iter)
+    {
+        if (!p.is_regular_file()) continue;
+
+        const std::string &&s_path = p.path().string();
+
+        lua_pushstring(L, s_path.c_str());
+        lua_rawseti(L, -1, ++index);
+    }
+
+    return 1;
+}
+
+static const luaL_Reg utillib[] = {{"ls", ls},
+                                   {"md5", md5},
                                    {"uuid", uuid},
                                    {"sha1", sha1},
                                    {"base64", base64},

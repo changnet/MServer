@@ -559,17 +559,24 @@ void ProtobufCodec::finalize()
     }
 }
 
+void ProtobufCodec::reset()
+{
+    delete _lprotobuf;
+    _lprotobuf = new class lprotobuf();
+}
+
 int32_t ProtobufCodec::load_path(const char *path)
 {
     // pbc并没有什么unregister之类的函数，只能把整个对象销毁重建了
-    if (_is_proto_loaded)
-    {
-        delete _lprotobuf;
-        _lprotobuf = new class lprotobuf();
-    }
+    if (_is_proto_loaded) reset();
 
     _is_proto_loaded = true;
     return _lprotobuf->load_path(path);
+}
+
+int32_t ProtobufCodec::load_file(const char* path)
+{
+    return _lprotobuf->load_file(path);
 }
 
 /**

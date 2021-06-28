@@ -20,19 +20,29 @@ CodecMgr::~CodecMgr()
         if (_codecs[idx])
         {
             delete _codecs[idx];
-            _codecs[idx] = NULL;
+            _codecs[idx] = nullptr;
         }
     }
 }
 
+void CodecMgr::reset(Codec::CodecType type) const
+{
+    if (_codecs[type]) _codecs[type]->reset();
+}
+
 int32_t CodecMgr::load_one_schema(Codec::CodecType type, const char *path) const
 {
-    return NULL == _codecs[type] ? -1 : _codecs[type]->load_path(path);
+    return nullptr == _codecs[type] ? -1 : _codecs[type]->load_path(path);
+}
+
+int32_t CodecMgr::load_one_schema_file(Codec::CodecType type, const char *path) const
+{
+    return nullptr == _codecs[type] ? -1 : _codecs[type]->load_file(path);
 }
 
 class Codec *CodecMgr::get_codec(Codec::CodecType type)
 {
-    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return NULL;
+    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return nullptr;
 
     return _codecs[type];
 }

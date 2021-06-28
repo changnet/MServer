@@ -10,7 +10,9 @@ public:
     ~ProtobufCodec();
 
     void finalize();
+    void reset();
     int32_t load_path(const char *path);
+    int32_t load_file(const char *path);
 
     /* 解码数据包
      * return: <0 error,otherwise the number of parameter push to stack

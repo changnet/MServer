@@ -25,23 +25,37 @@ public:
     Codec() {}
     virtual ~Codec() {}
 
-    /* 解码数据包
-     * return: <0 error,otherwise the number of parameter push to stack
+    /**
+     * 重置所有协议描述文件，用于热更
+     */
+    virtual void reset() = 0;
+    /**
+     * 解码数据包
+     * @return  <0 error,otherwise the number of parameter push to stack
      */
     virtual int32_t decode(lua_State *L, const char *buffer, size_t len,
                            const CmdCfg *cfg) = 0;
-    /* 编码数据包
-     * return: <0 error,otherwise the length of buffer
+    /**
+     * 编码数据包
+     * return  <0 error,otherwise the length of buffer
      */
     virtual int32_t encode(lua_State *L, int32_t index, const char **buffer,
                            const CmdCfg *cfg) = 0;
 
-    /* 解码、编码结束，处理后续工作
+    /**
+     * 解码、编码结束，处理后续工作
      */
     virtual void finalize() = 0;
 
-    /* 加载schema文件
-     * @path: schema文件所在路径
+    /**
+     * 从目录加载所有schema文件
+     * @param path schema文件所在路径
      */
     virtual int32_t load_path(const char *path) = 0;
+
+    /**
+     * 加载单个schema文件
+     * @param path schema文件所在路径
+     */
+    virtual int32_t load_file(const char *path) = 0;
 };

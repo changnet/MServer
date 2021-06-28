@@ -13,6 +13,7 @@ read_globals =
 {
     "ev",
     "network_mgr",
+    "g_async_log",
     "__OS_NAME__",
     "__BACKEND__",
     "__COMPLIER_",

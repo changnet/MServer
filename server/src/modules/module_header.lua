@@ -23,6 +23,7 @@ assert(g_app_setting, "no server conf found")
 -- !!! 放到这里的，一定要是singleton，不然会被销毁重建
 -- TODO:找个方法检测一下是否singleton
 
+g_stat_mgr = require "statistic.statistic_mgr"
 g_log_mgr = require "modules.log.log_mgr"
 g_unique_id = require "modules.system.unique_id"
 g_timer_mgr = require "timer.timer_mgr"

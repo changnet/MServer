@@ -11,14 +11,25 @@ FlatbuffersCodec::FlatbuffersCodec()
 FlatbuffersCodec::~FlatbuffersCodec()
 {
     delete _lflatbuffers;
-    _lflatbuffers = NULL;
+    _lflatbuffers = nullptr;
 }
 
 void FlatbuffersCodec::finalize() {}
 
+void FlatbuffersCodec::reset()
+{
+    delete _lflatbuffers;
+    _lflatbuffers = nullptr;
+}
+
 int32_t FlatbuffersCodec::load_path(const char *path)
 {
     return _lflatbuffers->load_bfbs_path(path);
+}
+
+int32_t FlatbuffersCodec::load_file(const char *path)
+{
+    return _lflatbuffers->load_bfbs_file(path);
 }
 
 /* 解码数据包

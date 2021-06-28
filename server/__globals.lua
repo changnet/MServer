@@ -1,4 +1,4 @@
--- auto export by lua-tags 156 symbols
+-- auto export by lua-tags 158 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -14,6 +14,7 @@ return {
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
+"Cmd", -- src/modules/command/command_mgr.lua
 "E", -- src/modules/module_header.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
@@ -104,6 +105,7 @@ return {
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_stat", -- src/modules/module_header.lua
+"g_stat_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/android/app.lua
 "g_timer_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/test/app.lua

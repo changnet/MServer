@@ -101,11 +101,24 @@ public:
     int32_t set_curr_session(lua_State *L);
 
     /**
+     * 重置协议描述文件
+     * @param codec_type 编码方式(protobuf、flatbuffers)
+     */
+    int32_t reset_schema(lua_State *L);
+
+    /**
      * 加载某个目录下的所有schema文件(比如protobuf的pb文件)
      * @param codec_type 编码方式(protobuf、flatbuffers)
      * @param path 目录路径
      */
     int32_t load_one_schema(lua_State *L);
+
+    /**
+     * 加载某个schema文件(比如protobuf的pb文件)
+     * @param codec_type 编码方式(protobuf、flatbuffers)
+     * @param path 文件路径
+     */
+    int32_t load_one_schema_file(lua_State *L);
 
     /**
      * 获取http报文头数据

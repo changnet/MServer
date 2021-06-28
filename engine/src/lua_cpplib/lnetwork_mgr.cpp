@@ -329,13 +329,24 @@ int32_t LNetworkMgr::get_session_by_conn_id(uint32_t conn_id) const
     return itr->second;
 }
 
-/* 加载schema文件 */
+int32_t LNetworkMgr::reset_schema(lua_State *L)
+{
+    int32_t type     = luaL_checkinteger32(L, 1);
+
+    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return 0;
+
+    StaticGlobal::codec_mgr()->reset(
+        static_cast<Codec::CodecType>(type));
+
+    return 0;
+}
+
 int32_t LNetworkMgr::load_one_schema(lua_State *L)
 {
     int32_t type     = luaL_checkinteger32(L, 1);
     const char *path = luaL_checkstring(L, 2);
 
-    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return -1;
+    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return 0;
 
     int32_t count = StaticGlobal::codec_mgr()->load_one_schema(
         static_cast<Codec::CodecType>(type), path);
@@ -344,7 +355,20 @@ int32_t LNetworkMgr::load_one_schema(lua_State *L)
     return 1;
 }
 
-/* 设置(客户端)连接所有者 */
+int32_t LNetworkMgr::load_one_schema_file(lua_State *L)
+{
+    int32_t type     = luaL_checkinteger32(L, 1);
+    const char *path = luaL_checkstring(L, 2);
+
+    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return -1;
+
+    int32_t count = StaticGlobal::codec_mgr()->load_one_schema_file(
+        static_cast<Codec::CodecType>(type), path);
+
+    lua_pushinteger(L, count);
+    return 1;
+}
+
 int32_t LNetworkMgr::set_conn_owner(lua_State *L)
 {
     uint32_t conn_id = static_cast<uint32_t>(luaL_checkinteger(L, 1));

@@ -168,7 +168,9 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::close>("close");
     lc.def<&LNetworkMgr::listen>("listen");
     lc.def<&LNetworkMgr::connect>("connect");
+    lc.def<&LNetworkMgr::reset_schema>("reset_schema");
     lc.def<&LNetworkMgr::load_one_schema>("load_one_schema");
+    lc.def<&LNetworkMgr::load_one_schema_file>("load_one_schema_file");
     lc.def<&LNetworkMgr::set_curr_session>("set_curr_session");
 
     lc.def<&LNetworkMgr::set_conn_session>("set_conn_session");

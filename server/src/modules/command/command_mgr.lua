@@ -1,5 +1,9 @@
 -- 消息管理
+
+local lutil = require "lutil"
 local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
+
+local stat = g_stat_mgr:get("cmd")
 
 local CS = load_global_define("proto.auto_cs", true)
 local SS = load_global_define("proto.auto_ss", true)
@@ -25,115 +29,43 @@ end
 for _, m in pairs(SS) do for _, mm in pairs(m) do ss_map[mm.i] = mm end end
 
 local SESSION = g_app.session
+local auth_pid = g_authorize:get_player_data()
 
-local g_rpc = g_rpc
+-- 指令注册及分发模块
+Cmd = {}
 
-local CommandMgr = oo.singleton(...)
+-- 加载协议描述文件，如protobuf、flatbuffers
+-- @param schema_type 类型，如 CDC_PROTOBUF
+-- @param path 协议描述文件路径，采用linux的路径，如/home/test
+-- @param priority 优先加载的文件数组，如果没有顺序依赖可以不传
+function Cmd.load_schema(schema_type, path, priority)
+    local tm = ev:real_ms_time()
+    if g_app.ok then network_mgr:reset_schema(schema_type) end
 
-function CommandMgr:__init()
-    self.ss = {} -- 记录服务器之间回调函数
-    for i in pairs(ss_map) do self.ss[i] = {} end
+    local count = 0
 
-    self.cs = {} -- 记录客户端-服务器之间的回调函数
-    for i, mm in pairs(cs_map) do if mm.c then self.cs[i] = {} end end
-
-    self.app_reg = {} -- 哪些进程已注册过了
-
-    -- 引用授权数据，防止频繁调用函数
-    self.auth_pid = g_authorize:get_player_data()
-
-    -- 状态统计数据
-    self.cs_stat = {}
-    self.ss_stat = {}
-    self.css_stat = {}
-    self.stat_tm = ev:time()
-    self.cmd_perf = false
-end
-
--- 设置统计log文件
-function CommandMgr:set_statistic(perf, reset)
-    -- 如果之前正在统计，先写入旧的
-    if self.cmd_perf and (not perf or reset) then self:serialize_statistic() end
-
-    -- 如果之前没在统计，或者强制重置，则需要重设stat_tm
-    if not self.cmd_perf or reset then
-        self.stat = {}
-        self.stat_tm = ev.time()
-    end
-
-    self.cmd_perf = perf
-end
-
--- 更新耗时统计
-function CommandMgr:update_statistic(stat_list, cmd, ms)
-    local stat = stat_list[cmd]
-    if not stat then
-        stat = {ms = 0, ts = 0, max = 0, min = 0}
-        stat_list[cmd] = stat
-    end
-
-    stat.ms = stat.ms + ms
-    stat.ts = stat.ts + 1
-    if ms > stat.max then stat.max = ms end
-    if 0 == stat.min or ms < stat.min then stat.min = ms end
-end
-
--- 写入耗时统计到文件
-function CommandMgr:raw_serialize_statistic(path, stat_name, stat_list)
-    local stat_cmd = {}
-    for k in pairs(stat_list) do table.insert(stat_cmd, k) end
-
-    -- 按名字排序，方便对比查找
-    table.sort(stat_cmd)
-
-    g_log_mgr:raw_file_printf(path, "%s", stat_name)
-
-    for _, cmd in pairs(stat_cmd) do
-        local stat = stat_list[cmd]
-        g_log_mgr:raw_file_printf(path, "%-16d %-16d %-16d %-16d %-16d %-16d",
-                                  cmd, stat.ts, stat.ms, stat.max, stat.min,
-                                  math.ceil(stat.ms / stat.ts))
-    end
-end
-
--- 写入耗时统计到文件
-function CommandMgr:serialize_statistic(reset)
-    if not self.cmd_perf then return false end
-
-    local path = string.format("%s_%s", self.cmd_perf, g_app.name)
-
-    g_log_mgr:raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
-                              time.date(ev:time()))
-    -- 指令 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
-    g_log_mgr:raw_file_printf(path, "%-16s %-16s %-16s %-16s %-16s %-16s",
-                              "cmd", "count", "msec", "max", "min", "avg")
-
-    self:raw_serialize_statistic(path, "cs_cmd:", self.cs_stat)
-    self:raw_serialize_statistic(path, "ss_cmd:", self.ss_stat)
-    self:raw_serialize_statistic(path, "css_cmd:", self.css_stat)
-
-    g_log_mgr:raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
-                              "\n\n")
-    if reset then
-        self.cs_stat = {}
-        self.ss_stat = {}
-        self.css_stat = {}
-        self.stat_tm = ev:time()
-    end
-
-    return true
-end
-
--- 加载二进制flatbuffers schema文件
-function CommandMgr:load_schema()
     -- 注意：pbc中如果一个pb文件引用了另一个pb文件中的message，则另一个文件必须优先加载
-    local pfs = network_mgr:load_one_schema(network_mgr.CDC_PROTOBUF, "../pb")
-    PRINTF("load protocol schema:%d", pfs)
+    local loaded = nil
+    if priority then
+        loaded = {}
+        for _, file in pairs(priority) do
+            loaded[file] = true
+            count = count + 1
+            network_mgr:load_one_schema_file(schema_type, file)
+        end
+    end
 
-    local ffs = network_mgr:load_one_schema(network_mgr.CDC_FLATBUF, "../fbs")
-    PRINTF("load flatbuffers schema:%d", ffs)
+    local files = lutil.ls(path)
+    for _, file in pairs(files or {}) do
+        if not loaded[file] then
+            count = count + 1
+            network_mgr:load_one_schema_file(schema_type, file)
+        end
+    end
 
-    return (pfs >= 0 and ffs >= 0)
+    PRINTF("load %d scehma files, time %dms", count, ev:real_ms_time() - tm)
+
+    return count > 0
 end
 
 -- 注册客户端协议处理
