@@ -1,4 +1,4 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 156 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -67,24 +67,16 @@ return {
 "application_ev", -- src/android/app.lua
 "application_ev", -- src/application/application.lua
 "clt_multicast_new", -- src/network/network_mgr.lua
-"cnt", -- src/test/mt_test.lua
 "command_new", -- src/android/android_cmd.lua
 "command_new", -- src/network/conn.lua
-"command_new", -- src/network/conn_mgr.lua
 "conn_accept", -- src/network/conn.lua
-"conn_accept", -- src/network/conn_mgr.lua
 "conn_del", -- src/android/android_cmd.lua
 "conn_del", -- src/network/conn.lua
-"conn_del", -- src/network/conn_mgr.lua
 "conn_new", -- src/android/android_cmd.lua
 "conn_new", -- src/network/conn.lua
-"conn_new", -- src/network/conn_mgr.lua
 "conn_ok", -- src/network/conn.lua
-"conn_ok", -- src/network/conn_mgr.lua
 "css_command_new", -- src/network/conn.lua
-"css_command_new", -- src/network/conn_mgr.lua
 "ctrl_new", -- src/network/conn.lua
-"ctrl_new", -- src/network/conn_mgr.lua
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua
 "g_account_mgr", -- src/modules/module_header.lua
@@ -119,7 +111,6 @@ return {
 "graph", -- src/global/graph.lua
 "handshake_new", -- src/android/android_cmd.lua
 "handshake_new", -- src/network/conn.lua
-"handshake_new", -- src/network/conn_mgr.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "hot_fix_script", -- src/modules/system/hot_fix.lua
 "json", -- src/test/app.lua

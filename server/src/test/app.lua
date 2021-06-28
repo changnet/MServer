@@ -50,7 +50,7 @@ function App:final_initialize()
     require "test.https_test"
     require "test.grid_aoi_test"
     require "test.list_aoi_test"
-    -- require "example.mt_performance"
+    require "test.mt_test"
     require "test.mongodb_test"
     require "test.mysql_test"
     require "test.log_test"
