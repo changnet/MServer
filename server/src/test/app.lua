@@ -60,6 +60,7 @@ function App:final_initialize()
     -- require "example.scene_performance"
     require "test.rank_test"
     require "test.rpc_test"
+    require "test.protobuf_test"
     -- require "example.other_performance"
 
     make_func_name()
