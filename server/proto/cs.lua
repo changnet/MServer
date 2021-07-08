@@ -30,8 +30,8 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 心跳包
     PING = {
-        s = "player.SPing",
-        c = "player.CPing"
+        s = "player.PingPong",
+        c = "player.PingPong"
     }, -- 同时用来显示ping值
     -- 创角
     CREATE = {

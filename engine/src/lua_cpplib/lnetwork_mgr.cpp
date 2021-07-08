@@ -362,10 +362,10 @@ int32_t LNetworkMgr::load_one_schema_file(lua_State *L)
 
     if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return -1;
 
-    int32_t count = StaticGlobal::codec_mgr()->load_one_schema_file(
+    int32_t e = StaticGlobal::codec_mgr()->load_one_schema_file(
         static_cast<Codec::CodecType>(type), path);
 
-    lua_pushinteger(L, count);
+    lua_pushinteger(L, e);
     return 1;
 }
 

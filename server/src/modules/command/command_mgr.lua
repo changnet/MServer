@@ -1,6 +1,6 @@
 -- 消息管理
 
-local lutil = require "lutil"
+local util = require "util"
 local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
 
 local stat = g_stat_mgr:get("cmd")
@@ -34,32 +34,41 @@ local auth_pid = g_authorize:get_player_data()
 -- 指令注册及分发模块
 Cmd = {}
 
+local cs_handler = {} -- 注册的客户端回调函数
+local ss_handler = {} -- 注册的服务器之间通信回调
+
 -- 加载协议描述文件，如protobuf、flatbuffers
 -- @param schema_type 类型，如 CDC_PROTOBUF
 -- @param path 协议描述文件路径，采用linux的路径，如/home/test
 -- @param priority 优先加载的文件数组，如果没有顺序依赖可以不传
-function Cmd.load_schema(schema_type, path, priority)
+-- @param suffix 文件名后缀
+function Cmd.load_schema(schema_type, path, priority, suffix)
     local tm = ev:real_ms_time()
     if g_app.ok then network_mgr:reset_schema(schema_type) end
 
     local count = 0
 
     -- 注意：pbc中如果一个pb文件引用了另一个pb文件中的message，则另一个文件必须优先加载
-    local loaded = nil
+    local loaded = {}
     if priority then
-        loaded = {}
         for _, file in pairs(priority) do
             loaded[file] = true
             count = count + 1
-            network_mgr:load_one_schema_file(schema_type, file)
+            if 0 ~= network_mgr:load_one_schema_file(schema_type, file) then
+                PRINTF("fail to load %s", file)
+                return false
+            end
         end
     end
 
-    local files = lutil.ls(path)
+    local files = util.ls(path)
     for _, file in pairs(files or {}) do
-        if not loaded[file] then
+        if not loaded[file] and string.end_with(file, suffix) then
             count = count + 1
-            network_mgr:load_one_schema_file(schema_type, file)
+            if 0 ~= network_mgr:load_one_schema_file(schema_type, file) then
+                PRINTF("fail to load %s", file)
+                return false
+            end
         end
     end
 
@@ -69,46 +78,43 @@ function Cmd.load_schema(schema_type, path, priority)
 end
 
 -- 注册客户端协议处理
-function CommandMgr:clt_register(cmd, handler, noauth)
+-- @param noauth 处理此协议时，不要求该链接可信
+function Cmd.reg(cmd, handler, noauth)
     local i = cmd.i
-    local cfg = self.cs[i]
-    if not cfg then return error("clt_register:cmd not define: " .. i) end
 
-    cfg.handler = handler
-    cfg.noauth = noauth -- 处理此协议时，不要求该链接可信
+    cs_handler[i] = {
+        noauth = noauth,
+        handler = assert(handler)
+    }
 
     network_mgr:set_cs_cmd(i, string.match(cmd.c, "^(%w+)%.%w+$"), cmd.c, 0,
                            SESSION)
 end
 
 -- 注册服务器协议处理
--- @noauth    -- 处理此协议时，不要求该链接可信
--- @noreg     -- 此协议不需要注册到其他服务器
-function CommandMgr:srv_register(cmd, handler, noreg, noauth)
+-- @param noauth 处理此协议时，不要求该链接可信
+function Cmd.reg_srv(cmd, handler, noreg, noauth)
     local i = cmd.i
-    local cfg = self.ss[i]
-    if not cfg then return error("srv_register:cmd not define: " .. i) end
 
-    cfg.handler = handler
-    cfg.noauth = noauth
-    cfg.noreg = noreg
+    ss_handler[i] = {
+        noauth = noauth,
+        handler = assert(handler)
+    }
 
     network_mgr:set_ss_cmd(i, string.match(cmd.s, "^(%w+)%.%w+$"), cmd.s, 0,
                            SESSION)
 end
 
 -- 本进程需要注册的指令
-function CommandMgr:command_pkt()
+function Cmd:command_pkt()
     local pkt = {}
     pkt.clt_cmd = self:clt_cmd()
-    pkt.srv_cmd = self:srv_cmd()
-    pkt.rpc_cmd = g_rpc:rpc_cmd()
 
     return pkt
 end
 
 -- 发分服务器协议
-function CommandMgr:srv_dispatch(srv_conn, cmd, ...)
+function Cmd:srv_dispatch(srv_conn, cmd, ...)
     local cfg = self.ss[cmd]
 
     local handler = cfg.handler
@@ -117,7 +123,7 @@ function CommandMgr:srv_dispatch(srv_conn, cmd, ...)
     end
 
     if not srv_conn.auth and not cfg.noauth then
-        return ERROR("clt_dispatch:try to call auth cmd %d", cmd)
+        return ERROR("srv_dispatch:try to call auth cmd %d", cmd)
     end
 
     if self.cmd_perf then
@@ -130,11 +136,9 @@ function CommandMgr:srv_dispatch(srv_conn, cmd, ...)
 end
 
 -- 分发协议
-function CommandMgr:clt_dispatch(clt_conn, cmd, ...)
-    local cfg = self.cs[cmd]
-
-    local handler = cfg.handler
-    if not cfg.handler then
+function Cmd.clt_dispatch(clt_conn, cmd, ...)
+    local cfg = cs_handler[cmd]
+    if not cfg then
         return ERROR("clt_dispatch:cmd %d no handle function found", cmd)
     end
 
@@ -142,17 +146,18 @@ function CommandMgr:clt_dispatch(clt_conn, cmd, ...)
         return ERROR("clt_dispatch:try to call auth cmd %d", cmd)
     end
 
-    if self.cmd_perf then
-        local beg = ev:real_ms_time()
+    local handler = cfg.handler
+    if stat then
+        --local beg = ev:real_ms_time()
         handler(clt_conn, ...)
-        return self:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
+        -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
     else
         return handler(clt_conn, ...)
     end
 end
 
 -- 分发网关转发的客户端协议
-function CommandMgr:clt_dispatch_ex(srv_conn, pid, cmd, ...)
+function Cmd:clt_dispatch_ex(srv_conn, pid, cmd, ...)
     local cfg = self.cs[cmd]
 
     local handler = cfg.handler
@@ -182,7 +187,7 @@ function CommandMgr:clt_dispatch_ex(srv_conn, pid, cmd, ...)
 end
 
 -- 获取当前进程处理的客户端指令
-function CommandMgr:clt_cmd()
+function Cmd:clt_cmd()
     local cmds = {}
     for cmd, cfg in pairs(self.cs) do
         if cfg.handler then table.insert(cmds, cmd) end
@@ -192,7 +197,7 @@ function CommandMgr:clt_cmd()
 end
 
 -- 注册其他服务器指令,以实现协议自动转发
-function CommandMgr:other_cmd_register(srv_conn, pkt)
+function Cmd:other_cmd_register(srv_conn, pkt)
     local base_name = srv_conn:base_name()
     -- 同一类服务，他们的协议是一样的，只不过需要做动态转发，无需再注册一次
     if self.app_reg[base_name] then
@@ -229,6 +234,4 @@ function CommandMgr:other_cmd_register(srv_conn, pkt)
     return true
 end
 
-local command_mgr = CommandMgr()
-
-return command_mgr
+return Cmd

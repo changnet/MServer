@@ -46,6 +46,10 @@ function App:final_initialize()
         end
     })
 
+    -- 随机一个session，部分功能用到，如测试协议派发时
+    self.session = 0x10001
+    network_mgr:set_curr_session(self.session)
+
     require "test.misc_test"
     require "test.https_test"
     require "test.grid_aoi_test"

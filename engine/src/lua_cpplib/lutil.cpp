@@ -459,7 +459,7 @@ static int32_t ls(lua_State *L)
         const std::string &&s_path = p.path().string();
 
         lua_pushstring(L, s_path.c_str());
-        lua_rawseti(L, -1, ++index);
+        lua_rawseti(L, -2, ++index);
     }
 
     return 1;
