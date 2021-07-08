@@ -55,6 +55,32 @@ message SEnterWorld
 {
 }
 
+// 用于简单协议效率测试
+message PingPongLite
+{
+    message SubMsg
+    {
+        bool b1 = 1;
+        int64 i1 = 2;
+        string s = 3;
+        int64 i2 = 4;
+        bool b2 = 5;
+        double d1 = 6;
+        int32 i3 = 7;
+    }
+
+    bool b1 = 1;
+    int64 i1 = 2;
+    string s = 3;
+    int64 i2 = 4;
+    bool b2 = 5;
+    double d1 = 6;
+    int32 i3 = 7;
+
+    SubMsg msg = 8;
+}
+
+// 用于复杂协议校验
 message PingPong
 {
     message SubMsg

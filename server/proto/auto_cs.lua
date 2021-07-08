@@ -30,11 +30,16 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
         s = "player.SLogin", c = "player.CLogin", i = 1
 
     },
-    -- 心跳包
+    -- 测试用的包
     PING = {
-        s = "player.SPing", c = "player.CPing", i = 2
+        s = "player.PingPong", c = "player.PingPong", i = 2
 
-    }, -- 同时用来显示ping值
+    },
+    -- 测试用的包
+    PING_LITE = {
+        s = "player.PingPongLite", c = "player.PingPongLite", i = 24
+
+    },
     -- 创角
     CREATE = {
         s = "player.SCreateRole", c = "player.CCreateRole", i = 3

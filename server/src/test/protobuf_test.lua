@@ -41,7 +41,41 @@ t_describe("protobuf test", function()
     local local_port = 2099
     if IPV4 then local_host = "127.0.0.1" end
 
+    -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
+    -- -9223372036854775808在lua中会被解析为一个number而不是整型
+    -- 使用 -9223372036854775808|0 或者 math.mininteger
+
+    local pp_pkt = nil
     t_before(function()
+        pp_pkt = {
+            d1 = -99999999999999.55555,
+            d2 = 99999999999999.55555,
+            f1 = -11111111.55555,
+            f2 = 11111111.55555,
+            i1 = -2147483648;
+            i2 = 2147483647;
+            i641 = math.mininteger,
+            i642 = math.maxinteger,
+            b1 = true,
+            b2 = false,
+            s1 = "",
+            s2 = string.rep("ssssssssss", 512),
+            by1 = "";
+            by2 = string.rep("ssssssssss", 512);
+            ui1 = 1,
+            ui2 = 4294967295,
+            ui641 = 1,
+            ui642 = 0xffffffffffffffff,
+            -- fix相当于 uint32, sint才是有符号的
+            f321 = 2147483648,
+            f322 = 2147483647,
+            f641 = 1,
+            f642 = 0xffffffffffffffff,
+            i_list = {1,2,3,4,5,99999,55555,111111111},
+        }
+        pp_pkt.msg1 = pp_pkt
+        pp_pkt.msg_list = { pp_pkt, pp_pkt, pp_pkt}
+
         -- 加载协议文件
         local ok = Cmd.load_schema(
             network_mgr.CDC_PROTOBUF, "../pb", nil, "pb")
@@ -62,13 +96,11 @@ t_describe("protobuf test", function()
     end)
     t_it("protobuf base", function()
         Cmd.reg(PLAYER.PING, function(conn, pkt)
+            vd(pkt)
             t_done()
         end, true)
 
-        clt_conn:send_pkt(PLAYER.PING, {
-            index = 1,
-            context = "abc"
-        })
+        clt_conn:send_pkt(PLAYER.PING, pp_pkt)
 
         t_wait()
     end)

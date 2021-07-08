@@ -28,11 +28,16 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
         s = "player.SLogin",
         c = "player.CLogin"
     },
-    -- 心跳包
+    -- 测试用的包
     PING = {
         s = "player.PingPong",
         c = "player.PingPong"
-    }, -- 同时用来显示ping值
+    },
+    -- 测试用的包
+    PING_LITE = {
+        s = "player.PingPongLite",
+        c = "player.PingPongLite"
+    },
     -- 创角
     CREATE = {
         s = "player.SCreateRole",
