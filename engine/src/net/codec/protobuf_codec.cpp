@@ -341,8 +341,8 @@ int32_t lprotobuf::push_value(lua_State *L, int type, const char *object,
 {
     switch (type)
     {
-    case PBC_FIXED32:
-    case PBC_INT: lua_pushinteger(L, (int)v->i.low); break;
+    case PBC_FIXED32: lua_pushinteger(L, (uint32_t)v->i.low); break;
+    case PBC_INT: lua_pushinteger(L, (int32_t)v->i.low); break;
     case PBC_REAL: lua_pushnumber(L, v->f); break;
     case PBC_BOOL: lua_pushboolean(L, v->i.low); break;
     case PBC_ENUM: lua_pushstring(L, v->e.name); break;
@@ -355,6 +355,7 @@ int32_t lprotobuf::push_value(lua_State *L, int type, const char *object,
     case PBC_UINT:
     case PBC_INT64:
     {
+        // TODO 由于需要用位移，需要用uint64_t，由于lua不支持uint64_t，所以fixed64也是按int64_t来处理
         uint64_t v64 = (uint64_t)(v->i.hi) << 32 | (uint64_t)(v->i.low);
         lua_pushinteger(L, v64);
         break;

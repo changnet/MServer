@@ -173,10 +173,16 @@ local function equal(got, expect)
 
     -- test two table equal
     for k, v in pairs(expect) do
-        if not equal(got[k], v) then return false end
+        if not equal(got[k], v) then
+            T.print("value of key " .. k .. " not match")
+            return false
+        end
     end
     for k, v in pairs(got) do
-        if not equal(expect[k], v) then return false end
+        if not equal(expect[k], v) then
+            T.print("value of key " .. k .. " not match")
+            return false
+        end
     end
 
     return true
