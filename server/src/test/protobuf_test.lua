@@ -41,14 +41,17 @@ t_describe("protobuf test", function()
     local local_port = 2099
     if IPV4 then local_host = "127.0.0.1" end
 
+    local PERF_TIMES = 1000
+
     -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
     -- 使用 -9223372036854775808|0 或者 math.mininteger
 
-    local pp_pkt = nil
-    local rep_cnt = 1 -- 512的时候，整个包达到50000多字节了
+    local base_pkt = nil -- 基准测试用的包，主要用于各种临界条件测试
+    local lite_pkt = nil -- 简单的测试包，更接近于日常通信用的包
+    local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     t_before(function()
-        pp_pkt = {
+        base_pkt = {
             d1 = -99999999999999.55555,
             d2 = 99999999999999.55555,
             -- float的精度超级差，基本在0.5，过不了t_equal
@@ -75,10 +78,28 @@ t_describe("protobuf test", function()
             f641 = 1,
             f642 = math.maxinteger, -- 0xffffffffffffffff, lua不支持uint64_t
         }
-        local cpy = table.copy(pp_pkt)
-        pp_pkt.msg1 = cpy
-        pp_pkt.i_list = {1,2,3,4,5,99999,55555,111111111}
-        pp_pkt.msg_list = { cpy, cpy, cpy}
+        local cpy = table.copy(base_pkt)
+        base_pkt.msg1 = cpy
+        base_pkt.i_list = {1,2,3,4,5,99999,55555,111111111}
+        base_pkt.msg_list = { cpy, cpy, cpy}
+
+        lite_pkt = {
+            b1 = true,
+            i1 = math.maxinteger,
+            s = "sssssssssssssssssssssssssssssssssssssssssssssssssss",
+            i2 = math.mininteger,
+            d1 = 99999999999999.55555,
+            i3 = 2147483647,
+
+            msg = {
+                b1 = true,
+                i1 = math.maxinteger,
+                s = "sssssssssssssssssssssssssssssssssssssssssssssssssss",
+                i2 = math.mininteger,
+                d1 = 99999999999999.55555,
+                i3 = 2147483647,
+            }
+        }
 
         -- 加载协议文件
         local ok = Cmd.load_schema(
@@ -100,27 +121,59 @@ t_describe("protobuf test", function()
     end)
     t_it("protobuf base", function()
         Cmd.reg(PLAYER.PING, function(conn, pkt)
-            t_equal(pkt, pp_pkt)
+            t_equal(pkt, base_pkt)
             conn:send_pkt(PLAYER.PING, pkt)
         end, true)
         clt_conn.command_new = function(self, cmd, e, pkt)
             t_equal(cmd, PLAYER.PING.i)
-            t_equal(pkt, pp_pkt)
+            t_equal(pkt, base_pkt)
             t_done()
         end
 
-        clt_conn:send_pkt(PLAYER.PING, pp_pkt)
+        clt_conn:send_pkt(PLAYER.PING, base_pkt)
 
         t_wait()
     end)
-    t_it("protobuf perf", function()
-        Cmd.reg(PLAYER.PING, function(conn, pkt)
+    t_it(string.format("protobuf performance test %d", PERF_TIMES), function()
+        local count = 0
+        Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
+            conn:send_pkt(PLAYER.PING_LITE, pkt)
         end, true)
+        clt_conn.command_new = function(self, cmd, e, pkt)
+            t_equal(cmd, PLAYER.PING_LITE.i)
+            count = count + 1
 
-        -- clt_conn:send_pkt(PLAYER.PING, {
-        --     index = 1,
-        --     context = "abc"
-        -- }, 0)
+            if count >= PERF_TIMES then t_done() end
+        end
+
+        -- 一次性发送大量数据，测试缓冲区及打包效率
+        -- 由于大量的包堆在缓冲区，需要用到多个缓冲区块，有很多using continuous buffer日志
+        for _ = 1, PERF_TIMES do
+            clt_conn:send_pkt(PLAYER.PING_LITE, lite_pkt)
+        end
+
+        t_wait()
+    end)
+    t_it(string.format("protobuf pingpong test %d", PERF_TIMES), function()
+        local count = 0
+        Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
+            conn:send_pkt(PLAYER.PING_LITE, pkt)
+        end, true)
+        clt_conn.command_new = function(self, cmd, e, pkt)
+            t_equal(cmd, PLAYER.PING_LITE.i)
+            count = count + 1
+
+            if count >= PERF_TIMES then
+                t_done()
+            else
+                clt_conn:send_pkt(PLAYER.PING_LITE, lite_pkt)
+            end
+        end
+
+        -- 测试来回发送数据，这个取决于打包、传输效率
+        clt_conn:send_pkt(PLAYER.PING_LITE, lite_pkt)
+
+        t_wait()
     end)
 
     t_after(function()
