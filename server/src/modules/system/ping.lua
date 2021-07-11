@@ -101,7 +101,7 @@ end
 g_rpc:declare("rpc_ping", rpc_ping, -1)
 
 if "gateway" == g_app.name then
-    g_command_mgr:clt_register(PLAYER.PING, player_ping)
+    Cmd.reg(PLAYER.PING, player_ping)
 end
 
 return ping

@@ -75,7 +75,9 @@ end
 
 -- 进程初始化
 function SrvApp:initialize()
-    if not g_command_mgr:load_schema() then os.exit(1) end
+    if not Cmd.load_protobuf() then
+        os.exit(1)
+    end
 
     Application.initialize(self)
 end

@@ -117,7 +117,7 @@ end
 
 -- 消息回调
 function CltConn:command_new(cmd, ...)
-    return Cmd.clt_dispatch(self, cmd, ...)
+    return Cmd.dispatch_clt(self, cmd, ...)
 end
 
 function CltConn:ctrl_new(flag, body)

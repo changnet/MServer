@@ -96,7 +96,7 @@ local function entity_player_clt_cb(cmd, cb_func)
         return cb_func(player, conn, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb)
+    Cmd.reg(cmd, cb)
 end
 
 entity_player_clt_cb(ENTITY.MOVE, EntityPlayer.do_move)

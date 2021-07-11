@@ -14,7 +14,7 @@ local Mail = require "modules.mail.mail"
 --         return func( player:get_module("mail"),pkt )
 --     end
 
---     g_command_mgr:clt_register( cmd,cb )
+--     Cmd.reg( cmd,cb )
 -- end
 
 -- 邮件管理器回调
@@ -24,7 +24,7 @@ local function mail_mgr_cb(cmd, func)
         return func(g_mail_mgr, player, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb)
+    Cmd.reg(cmd, cb)
 end
 
 -- 其他服发邮件时通过rpc发送个人邮件到world进程处理

@@ -1,5 +1,4 @@
 -- 玩家相关协议处理
-local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 local g_player_mgr = g_player_mgr
 
@@ -11,7 +10,7 @@ local function account_mgr_clt_cb(cmd, cb_func, noauth)
         return cb_func(g_account_mgr, clt_conn, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb, noauth)
+    Cmd.reg(cmd, cb, noauth)
 end
 
 local function player_mgr_clt_cb(cmd, cb_func, noauth)
@@ -19,7 +18,7 @@ local function player_mgr_clt_cb(cmd, cb_func, noauth)
         return cb_func(g_player_mgr, clt_conn, pid, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb, noauth)
+    Cmd.reg(cmd, cb, noauth)
 end
 
 local function player_mgr_srv_cb(cmd, cb_func)
@@ -27,7 +26,7 @@ local function player_mgr_srv_cb(cmd, cb_func)
         return cb_func(g_player_mgr, srv_conn, pkt)
     end
 
-    g_command_mgr:srv_register(cmd, cb)
+    Cmd.reg_srv(cmd, cb)
 end
 
 -- 基础模块回调
@@ -44,7 +43,7 @@ local function player_clt_cb(cmd, cb_func)
         return cb_func(player, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb)
+    Cmd.reg(cmd, cb)
 end
 
 -- 强制玩家断开连接，网关用

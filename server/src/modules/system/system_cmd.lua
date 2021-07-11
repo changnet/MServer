@@ -1,5 +1,4 @@
 local network_mgr = network_mgr
-local g_command_mgr = g_command_mgr
 local g_network_mgr = g_network_mgr
 
 local g_rpc = g_rpc
@@ -8,6 +7,7 @@ local g_rpc = g_rpc
 local function srv_reg(srv_conn, pkt)
     if not g_network_mgr:srv_register(srv_conn, pkt) then return false end
     srv_conn:authorized(pkt)
+
 
     local _pkt = g_command_mgr:command_pkt()
     srv_conn:send_pkt(SYS.CMD_SYNC, _pkt)
@@ -52,7 +52,7 @@ if "gateway" == g_app.name then
 end
 
 -- 这里注册系统模块的协议处理
-g_command_mgr:srv_register(SYS.BEAT, srv_beat, true)
-g_command_mgr:srv_register(SYS.REG, srv_reg, true, true)
-g_command_mgr:srv_register(SYS.CMD_SYNC, srv_cmd_sync, true)
-g_command_mgr:srv_register(SYS.SYNC_DONE, srv_sync_done, true)
+Cmd.reg_srv(SYS.BEAT, srv_beat)
+Cmd.reg_srv(SYS.REG, srv_reg, true)
+Cmd.reg_srv(SYS.CMD_SYNC, srv_cmd_sync)
+Cmd.reg_srv(SYS.SYNC_DONE, srv_sync_done)

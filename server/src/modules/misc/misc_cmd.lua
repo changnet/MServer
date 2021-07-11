@@ -24,7 +24,7 @@ local function role_welcome_cmd_cb(cmd, func)
         return func(role_welcome, player, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb)
+    Cmd.reg(cmd, cb)
 end
 
 PE.reg(PE_ENTER, role_welcome_cb(role_welcome.on_enter))

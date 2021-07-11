@@ -13,7 +13,7 @@ local function chat_clt_cb(cmd, cb_func)
         return cb_func(player.chat, conn, pkt)
     end
 
-    g_command_mgr:clt_register(cmd, cb)
+    Cmd.reg(cmd, cb)
 end
 
 chat_clt_cb(CHAT.DOCHAT, Chat.do_chat)

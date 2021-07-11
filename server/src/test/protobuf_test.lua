@@ -102,8 +102,7 @@ t_describe("protobuf test", function()
         }
 
         -- 加载协议文件
-        local ok = Cmd.load_schema(
-            network_mgr.CDC_PROTOBUF, "../pb", nil, "pb")
+        local ok = Cmd.load_protobuf()
         t_equal(ok, true)
 
         -- 建立一个客户端、一个服务端连接，模拟通信

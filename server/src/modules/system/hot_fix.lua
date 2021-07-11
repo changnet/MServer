@@ -4,17 +4,6 @@
 -- 热更逻辑
 local util = require "util"
 
--- 热更协议
-local function fix_proto()
-    local pkt = g_command_mgr:command_pkt()
-    g_network_mgr:srv_multicast(SYS.CMD_SYNC, pkt)
-end
-
--- 热更schema文件
-local function fix_schema()
-    g_command_mgr:load_schema()
-end
-
 -- 热更脚本
 local function fix_script()
     -- 清除脚本
@@ -28,8 +17,8 @@ function hot_fix()
     local sec, usec = util.timeofday()
 
     fix_script()
-    fix_proto()
-    fix_schema()
+    Cmd.sync_cmd()
+    Cmd.load_protobuf() -- 热更schema文件
 
     local nsec, nusec = util.timeofday()
     local msec = (nsec - sec) * 1000000 + nusec - usec

@@ -1,6 +1,5 @@
 -- srv_conn server connection
 local network_mgr = network_mgr
-local g_command_mgr = g_command_mgr
 
 local Conn = require "network.conn"
 
@@ -54,8 +53,14 @@ function SrvConn:authorized(pkt)
 end
 
 -- 获取基本类型名字(gateway、world)
-function SrvConn:base_name()
-    return self.name
+function SrvConn:base_name(session_type)
+    if not session_type then
+        session_type = g_app:srv_session_parse(self.session)
+    end
+    for name, ty in pairs(SRV_NAME) do
+        if ty == session_type then return name end
+    end
+    return nil
 end
 
 -- 获取该连接名称
@@ -63,9 +68,9 @@ function SrvConn:conn_name(session)
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
-    local _, index, id = g_app:srv_session_parse(session or self.session)
+    local ty, index, id = g_app:srv_session_parse(session or self.session)
 
-    return string.format("%s(I%d.S%d)", self.name, index, id)
+    return string.format("%s(I%d.S%d)", self:base_name(ty), index, id)
 end
 
 -- 监听服务器连接
@@ -148,12 +153,12 @@ end
 -- 服务器之间消息回调
 function SrvConn:command_new(session, cmd, errno, pkt)
     self.beat = ev:time()
-    return g_command_mgr:srv_dispatch(self, cmd, pkt)
+    return Cmd:dispatch_srv(self, cmd, pkt)
 end
 
 -- 转发的客户端消息
 function SrvConn:css_command_new(pid, cmd, ...)
-    return g_command_mgr:clt_dispatch_ex(self, pid, cmd, ...)
+    return Cmd:dispatch_css(self, pid, cmd, ...)
 end
 
 -- 主动关闭连接
