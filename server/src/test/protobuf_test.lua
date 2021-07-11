@@ -3,7 +3,7 @@
 g_authorize = require "modules.system.authorize"
 g_stat_mgr = require "statistic.statistic_mgr"
 
-require "modules.command.command_mgr"
+require "network.cmd"
 local CltConn = require "network.clt_conn"
 
 local srv_conn = nil

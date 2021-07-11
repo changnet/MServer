@@ -1,4 +1,4 @@
--- auto export by lua-tags 160 symbols
+-- auto export by lua-tags 161 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -14,6 +14,7 @@ return {
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
+"Cmd", -- src/network/cmd.lua
 "Cmd", -- src/modules/command/command_mgr.lua
 "E", -- src/modules/module_header.lua
 "ENTITY", -- proto/auto_cs.lua

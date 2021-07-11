@@ -22,7 +22,6 @@ local WS_FINAL_FRAME = 0x10
 
 local util = require "util"
 local network_mgr = network_mgr
-local g_command_mgr = g_command_mgr
 
 local Conn = require "network.conn"
 
