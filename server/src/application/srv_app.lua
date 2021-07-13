@@ -8,15 +8,19 @@ local SrvApp = oo.class(..., Application)
 function SrvApp:__init(cmd, opts)
     Application.__init(self)
 
-    self.cmd, self.name, self.index, self.id = cmd, opts.app, assert(
-                                                   tonumber(opts.index),
-                                                   "miss argument --index"),
-                                               assert(tonumber(opts.id),
-                                                      "miss argument --id")
+    self.cmd = cmd
+    self.name = opts.app
+    self.index = assert(tonumber(opts.index), "miss argument --index")
+    self.id = assert(tonumber(opts.id), "miss argument --id")
 
     self.start_time = ev:time()
-    self.session = self:srv_session(self.name, tonumber(self.index),
-                                    tonumber(self.id))
+
+    GSE = self:encode_session(GATEWAY, self.index, self.id)
+    WSE = self:encode_session(WORLD, self.index, self.id)
+    ASE = self:encode_session(AREA, 1, self.id)
+
+    APP_TYPE = APP[string.upper(self.name)]
+    self.session = self:encode_session(APP_TYPE, self.index, self.id)
 
     -- 设置当前session到C++
     network_mgr:set_curr_session(self.session)
@@ -27,22 +31,21 @@ function SrvApp:__init(cmd, opts)
 end
 
 -- 生成服务器session id
--- @name  服务器名称，如gateway、world...
--- @index 服务器索引，如多个gateway，分别为1,2...
--- @id 服务器id，与运维相关。开了第N个服
-function SrvApp:srv_session(name, index, id)
-    APP_TYPE = APP[string.upper(name)]
-
-    assert(APP_TYPE, "server name type not define")
+-- @param name  服务器类型，如gateway、world...，见APP类型定义
+-- @param index 服务器索引，如多个gateway，分别为1,2...
+-- @param id 服务器id，与运维相关。开了第N个服
+function SrvApp:encode_session(app_type, index, id)
+    assert(app_type, "server name type not define")
     assert(index < (1 << 24), "server index out of boundry")
     assert(id < (1 << 16), "server id out of boundry")
 
     -- int32 ,8bits is ty,8bits is index,16bits is id
-    return (APP_TYPE << 24) + (index << 16) + id
+    return (app_type << 24) + (index << 16) + id
 end
 
 -- 解析session id
-function SrvApp:srv_session_parse(session)
+-- @return 服务器id，服务器索引，服务器id
+function SrvApp:decode_session(session)
     local ty = session >> 24;
     local index = (session >> 16) & 0xFF
     local id = session & 0xFFFF

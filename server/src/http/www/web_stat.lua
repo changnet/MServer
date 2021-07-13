@@ -5,7 +5,7 @@ local json = require "lua_parson"
 
 --[[
     curl 127.0.0.1:10003/web_stat
-    curl -l --data 'gateway' 127.0.0.1:10003/web_stat
+    curl -l --data 'area 2' 127.0.0.1:10003/web_stat
 ]]
 function WebStat:exec(conn, fields, body)
     -- 未指定进程名或者查询的是当前进程
@@ -17,8 +17,17 @@ function WebStat:exec(conn, fields, body)
         return HTTP.OK_NIL, ctx
     end
 
+    local app = string.split(body, " ", true)
+
     -- 通过rpc获取其他进程数据
-    local srv_conn = g_srv_mgr:get_conn_by_name(body)
+    local app_type = APP[string.upper(app[1])]
+    if not app_type then
+        PRINTF("invalid app name: %s", app[1])
+        return HTTP.INVALID, body
+    end
+
+    local session = g_app:encode_session(app_type, app[2] or 1, g_app.id)
+    local srv_conn = g_srv_mgr:get_conn_by_session(session)
     if not srv_conn then return HTTP.INVALID, body end
 
     -- TODO:这个rpc调用有问题，不能引用conn为up value的，conn可能会被客户端断开

@@ -121,7 +121,7 @@ function Cmd:sync_cmd(conn)
     -- 其他进程需要同步该进程所需要的客户端指令，以实现指令自动分发到对应的进程
 
     if not conn then
-        conn = g_srv_mgr:get_conn_by_name("gateway")
+        conn = g_srv_mgr:get_conn_by_session(GSE)
     end
 
     local cmds = {}

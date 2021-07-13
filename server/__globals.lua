@@ -1,4 +1,4 @@
--- auto export by lua-tags 167 symbols
+-- auto export by lua-tags 170 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -6,6 +6,7 @@ return {
 "APP", -- src/modules/system/define.lua
 "APP_TYPE", -- src/modules/system/define.lua
 "AREA", -- src/modules/system/define.lua
+"ASE", -- src/modules/system/define.lua
 "ASSERT", -- src/global/global.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
@@ -27,6 +28,7 @@ return {
 "ET", -- src/modules/entity/entity_header.lua
 "Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
+"GSE", -- src/modules/system/define.lua
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
@@ -68,6 +70,7 @@ return {
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua
+"WSE", -- src/modules/system/define.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__conn", -- src/network/conn.lua

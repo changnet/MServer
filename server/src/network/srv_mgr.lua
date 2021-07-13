@@ -45,7 +45,7 @@ function SrvMgr:srv_register(conn, pkt)
         return false
     end
 
-    local _, _, id = g_app:srv_session_parse(pkt.session)
+    local _, _, id = g_app:decode_session(pkt.session)
     if id ~= tonumber(g_app.id) then
         ERROR("SrvMgr:srv_register id not match,expect %s,got %d", g_app.id,
               id)
@@ -92,7 +92,7 @@ function SrvMgr:do_timer()
 end
 
 -- 获取服务器连接
-function SrvMgr:get_srv_conn(session)
+function SrvMgr:get_conn_by_session(session)
     return self.srv[session]
 end
 
@@ -130,7 +130,7 @@ end
 
 -- 根据conn_id获取连接
 function SrvMgr:get_conn(conn_id)
-    return self.clt_conn[conn_id] or self.srv_conn[conn_id]
+    return self.srv_conn[conn_id]
 end
 
 -- 主动关闭服务器链接

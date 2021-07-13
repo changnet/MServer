@@ -47,7 +47,7 @@ end
 
 -- 根据conn_id获取连接
 function CltMgr:get_conn(conn_id)
-    return self.clt_conn[conn_id] or self.srv_conn[conn_id]
+    return self.clt_conn[conn_id]
 end
 
 

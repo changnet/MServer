@@ -14,6 +14,11 @@ DEFINE_END(APP)
 -- 当前进程服务器类型，起服时赋值
 APP_TYPE = 0
 
+-- 定义几个常用的连接session，起服时赋值
+GSE = 0 -- gateway session，网关连接
+WSE = 0 -- world session，世界服连接
+ASE = 0 -- area session, 第一个场景服连接
+
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"
 

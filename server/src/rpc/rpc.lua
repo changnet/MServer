@@ -197,7 +197,7 @@ end
 -- @param func 需要调用的函数
 -- @param ... 参数
 function Rpc:call(session, func, ...)
-    local conn = g_srv_mgr:get_srv_conn(session)
+    local conn = g_srv_mgr:get_conn_by_session(session)
 
     return self:conn_call(conn, func, ...)
 end

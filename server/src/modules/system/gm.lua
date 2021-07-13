@@ -33,12 +33,13 @@ function GM:exec(where, player, context)
 end
 
 -- 自动转发gm到对应的服务器
--- TODO:暂时不考虑存在多个同名服务器的情况
+-- TODO:暂时不考虑存在多个同名服务器的情况，有同名的需要对应的gm逻辑里自己转
 function GM:auto_forward(where, player, cmd, args)
-    local app_name = forward_map[cmd]
-    if not app_name or g_app.name == app_name then return false end
+    local app_type = forward_map[cmd]
+    if not app_type or APP_TYPE == app_type then return false end
 
-    local srv_conn = g_srv_mgr:get_conn_by_name(app_name)
+    local session = g_app:encode_session(app_type, 1, g_app.id)
+    local srv_conn = g_srv_mgr:get_conn_by_session(session)
     if not srv_conn then
         ERROR("gm auto forward no conn found:%s", cmd)
         return true
@@ -93,10 +94,10 @@ function GM:broadcast(cmd, ...)
 end
 
 -- 注册gm指令
--- @app_name:真正运行该gm的服务器名
-function GM:reg_cmd(cmd, gm_func, app_name)
+-- @param app_type 真正运行该gm的服务器类型
+function GM:reg(cmd, gm_func, app_type)
     gm_map[cmd] = gm_func
-    forward_map[cmd] = app_name
+    forward_map[cmd] = app_type
 end
 
 --------------------------------------------------------------------------------

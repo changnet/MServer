@@ -2,15 +2,15 @@
 -- 2015-12-03
 -- xzc
 -- string library extend function
---[[
-拆分字符串
-@param str 需要拆分的字符串
-@param delimeter 分隔符
-@param plain 分隔符是否为启用正则，true为不启用
 
-string.split("2.0.0.2","%.")
-string.split("2.0.0.2",".",true)
-]] function string.split(str, delimiter, plain)
+-- 拆分字符串
+-- @param str 需要拆分的字符串
+-- @param delimeter 分隔符
+-- @param plain 是否把delimeter当作普通文本，true表示delimeter不启用正则
+-- @return 分隔后的数组
+function string.split(str, delimiter, plain)
+    -- string.split("2.0.0.2","%.") -- 使用正则分隔
+    -- string.split("2.0.0.2",".",true) -- 不使用正则分隔
     local search_pos = 1
     local sub_tab_len = 0
     local sub_str_tab = {}

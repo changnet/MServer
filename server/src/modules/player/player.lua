@@ -26,8 +26,6 @@ local AttributeSys = require "modules.attribute.attribute_sys"
 local RES = RES
 local method_thunk = method_thunk
 
-local static_session = g_app:srv_session("area", 1, tonumber(g_app.id))
-
 local AREA_SESSION = {}
 
 -- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
@@ -159,7 +157,7 @@ function Player:on_login()
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
 
-    local conn = g_srv_mgr:get_srv_conn(static_session)
+    local conn = g_srv_mgr:get_conn_by_session(ASE)
     -- 同步基础属性，名字、外显等
     self.base:update(conn)
     -- 同步战斗属性到场景
@@ -268,11 +266,11 @@ function Player:enter_dungeon(pkt)
 
     local session = AREA_SESSION[index]
     if not session then
-        session = g_app:srv_session("area", index, tonumber(g_app.id))
+        session = g_app:encode_session("area", index, tonumber(g_app.id))
         AREA_SESSION[index] = session
     end
 
-    local conn = g_srv_mgr:get_srv_conn(session)
+    local conn = g_srv_mgr:get_conn_by_session(session)
 
     -- 然后玩家从当前进程退出场景
     if session ~= network_mgr:get_player_session(self.pid) then

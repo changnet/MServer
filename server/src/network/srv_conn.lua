@@ -54,7 +54,7 @@ end
 -- 获取基本类型名字(gateway、world)，见APP服务器类型定义，通常用于打印日志
 function SrvConn:base_name(session_type)
     if not session_type then
-        session_type = g_app:srv_session_parse(self.session)
+        session_type = g_app:decode_session(self.session)
     end
     for name, ty in pairs(APP) do
         if ty == session_type then return name end
@@ -67,7 +67,7 @@ function SrvConn:conn_name(session)
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
-    local ty, index, id = g_app:srv_session_parse(session or self.session)
+    local ty, index, id = g_app:decode_session(session or self.session)
 
     return string.format("%s(I%d.S%d)", self:base_name(ty), index, id)
 end
