@@ -1,8 +1,11 @@
--- auto export by lua-tags 159 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
+"APP", -- src/modules/system/define.lua
+"APP_TYPE", -- src/modules/system/define.lua
+"AREA", -- src/modules/system/define.lua
 "ASSERT", -- src/global/global.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
@@ -15,12 +18,15 @@ return {
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Cmd", -- src/network/cmd.lua
+"DEFINE_BEG", -- src/global/require.lua
+"DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
 "ERROR", -- src/global/global.lua
 "ET", -- src/modules/entity/entity_header.lua
 "Ev", -- engine/ev.lua
+"GATEWAY", -- src/modules/system/define.lua
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
@@ -54,13 +60,14 @@ return {
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
-"SRV_NAME", -- src/modules/system/define.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
 "Sql", -- engine/sql.lua
+"TEST", -- src/modules/system/define.lua
 "TIPS", -- src/modules/lang/lang_header.lua
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
+"WORLD", -- src/modules/system/define.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__conn", -- src/network/conn.lua
@@ -117,7 +124,6 @@ return {
 "hot_fix", -- src/modules/system/hot_fix.lua
 "hot_fix_script", -- src/modules/system/hot_fix.lua
 "json", -- src/test/app.lua
-"load_global_define", -- src/global/global.lua
 "lua_parson", -- engine/lua_parson.lua
 "lua_rapidxml", -- engine/lua_rapidxml.lua
 "make_func_name", -- src/global/name.lua
@@ -126,13 +132,14 @@ return {
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "name_to_func", -- src/global/name.lua
-"no_update_require", -- src/global/require.lua
 "oo", -- src/global/oo.lua
 "raw_table_dump", -- src/global/table.lua
 "reg_func", -- src/global/name.lua
 "require", -- src/global/require.lua
 "require_conf", -- src/global/require_conf.lua
+"require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require_conf.lua
+"require_no_update", -- src/global/require.lua
 "rpc_command_new", -- src/rpc/rpc.lua
 "rpc_command_return", -- src/rpc/rpc.lua
 "sig_handler", -- src/android/app.lua

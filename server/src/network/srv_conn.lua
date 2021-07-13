@@ -48,22 +48,21 @@ end
 -- 认证成功
 function SrvConn:authorized(pkt)
     self.auth = true
-    self.name = pkt.name
     self.session = pkt.session
 end
 
--- 获取基本类型名字(gateway、world)
+-- 获取基本类型名字(gateway、world)，见APP服务器类型定义，通常用于打印日志
 function SrvConn:base_name(session_type)
     if not session_type then
         session_type = g_app:srv_session_parse(self.session)
     end
-    for name, ty in pairs(SRV_NAME) do
+    for name, ty in pairs(APP) do
         if ty == session_type then return name end
     end
     return nil
 end
 
--- 获取该连接名称
+-- 获取该连接名称，包括基础名字，索引，服务器id，通常用于打印日志
 function SrvConn:conn_name(session)
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
@@ -170,7 +169,6 @@ end
 -- 发送认证数据
 function SrvConn:send_register()
     local pkt = {
-        name = g_app.name,
         session = g_app.session,
         timestamp = ev:time()
     }

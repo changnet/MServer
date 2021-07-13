@@ -15,7 +15,7 @@ local handshake_handler = {}
 local network_mgr = network_mgr
 
 do
-    local cs = load_global_define("proto.auto_cs", true)
+    local cs = require_define("proto.auto_cs", true)
 
     local fs = network_mgr:load_one_schema(network_mgr.CDC_PROTOBUF, "../pb")
     PRINTF("android load protocol schema:%d", fs)

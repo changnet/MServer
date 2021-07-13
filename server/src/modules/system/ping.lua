@@ -98,9 +98,9 @@ local function rpc_ping(id)
     return id
 end
 
-g_rpc:declare("rpc_ping", rpc_ping, -1)
+reg_func("rpc_ping", rpc_ping)
 
-if "gateway" == g_app.name then
+if GATEWAY == APP_TYPE then
     Cmd.reg(PLAYER.PING, player_ping)
 end
 

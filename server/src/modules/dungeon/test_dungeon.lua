@@ -32,4 +32,4 @@ local function enter_test_dungeon(pid, fb_id)
     return test:do_enter(pid, fb_id)
 end
 
-g_rpc:declare("enter_test_dungeon", enter_test_dungeon)
+reg_func("enter_test_dungeon", enter_test_dungeon)

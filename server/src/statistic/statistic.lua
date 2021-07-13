@@ -34,6 +34,6 @@ local function rpc_stat()
     return stat:collect()
 end
 
-g_rpc:declare("rpc_stat", rpc_stat, -1)
+reg_func("rpc_stat", rpc_stat)
 
 return stat

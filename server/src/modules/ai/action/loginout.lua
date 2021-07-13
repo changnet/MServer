@@ -3,7 +3,7 @@ local AST = require "modules.ai.ai_header"
 
 local Loginout = oo.class(...)
 
-g_setting = require "setting.setting" -- no_update_require
+g_setting = require "setting.setting" -- require_no_update
 
 -- 检查是否执行登录
 function Loginout:check_and_login(ai)

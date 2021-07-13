@@ -1,15 +1,18 @@
 -- define.lua 服务器全局定义
 -- 2017-03-28
 -- xzc
--- 服务器类型定义
-SRV_NAME = {
-    gateway = 1,
-    world = 2,
-    area = 3,
 
-    -- 以下服务器为特殊用途
-    test = 9 -- 测试用例
-}
+-- 服务器类型定义
+APP = {}
+DEFINE_BEG(APP)
+GATEWAY = 0x1 -- 网关
+WORLD   = 0x2 -- 世界服
+AREA    = 0x3 -- 场景区域服务器
+TEST    = 0x9 -- 执行测试用例
+DEFINE_END(APP)
+
+-- 当前进程服务器类型，起服时赋值
+APP_TYPE = 0
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"

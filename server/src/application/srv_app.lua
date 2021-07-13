@@ -31,14 +31,14 @@ end
 -- @index 服务器索引，如多个gateway，分别为1,2...
 -- @id 服务器id，与运维相关。开了第N个服
 function SrvApp:srv_session(name, index, id)
-    local ty = SRV_NAME[name]
+    APP_TYPE = APP[string.upper(name)]
 
-    assert(ty, "server name type not define")
+    assert(APP_TYPE, "server name type not define")
     assert(index < (1 << 24), "server index out of boundry")
     assert(id < (1 << 16), "server id out of boundry")
 
     -- int32 ,8bits is ty,8bits is index,16bits is id
-    return (ty << 24) + (index << 16) + id
+    return (APP_TYPE << 24) + (index << 16) + id
 end
 
 -- 解析session id

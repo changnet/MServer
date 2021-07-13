@@ -21,7 +21,7 @@ end
 -- @op:日志操作，用于跟踪附件资源产出。参考log_header
 function MailMgr:send_mail(pid, title, ctx, attachment, op)
     -- 邮件数据统一在world处理，不是该进程则转
-    if "world" ~= g_app.name then
+    if WORLD == APP_TYPE then
         return g_rpc:rpc_send_mail(pid, title, ctx, attachment, op)
     end
 
@@ -127,7 +127,7 @@ function MailMgr:send_sys_mail(title, ctx, attachment, op, expire, level, vip)
         return
     end
 
-    if "world" ~= g_app.name then
+    if WORLD == APP_TYPE then
         return g_rpc:rpc_send_sys_mail(title, ctx, attachment, op, expire,
                                        level, vip)
     end

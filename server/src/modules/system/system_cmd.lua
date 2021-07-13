@@ -45,10 +45,10 @@ local function set_player_session(pid, session)
     network_mgr:set_player_session(pid, session)
 end
 
-g_rpc:declare("rpc_gm", rpc_gm, -1)
+reg_func("rpc_gm", rpc_gm)
 
-if "gateway" == g_app.name then
-    g_rpc:declare("set_player_session", set_player_session)
+if GATEWAY == APP_TYPE then
+    reg_func("set_player_session", set_player_session)
 end
 
 -- 这里注册系统模块的协议处理

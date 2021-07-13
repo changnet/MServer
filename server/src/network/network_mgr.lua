@@ -20,15 +20,7 @@ function NetworkMgr:__init()
     self.srv_listen_conn = nil -- 监听服务器连接
     self.clt_listen_conn = nil -- 监听客户端连接
 
-    self.name_srv = {} -- 进程名为key，session为value
-
     self.srv_waiting = {} -- 等待重连的服务器连接
-
-    local index = tonumber(g_app.index)
-    local id = tonumber(g_app.id)
-    for name, _ in pairs(SRV_NAME) do
-        self.name_srv[name] = g_app:srv_session(name, index, id)
-    end
 
     g_app:reg_5s_timer(self, self.do_timer)
 end
@@ -198,14 +190,6 @@ end
 -- 根据conn_id获取连接
 function NetworkMgr:get_conn(conn_id)
     return self.clt_conn[conn_id] or self.srv_conn[conn_id]
-end
-
--- 根据服务器名字获取连接
-function NetworkMgr:get_conn_by_name(name)
-    local session = self.name_srv[name]
-    if not session then return error("no such server:" .. name) end
-
-    return self.srv[session]
 end
 
 -- 主动关闭服务器链接

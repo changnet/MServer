@@ -79,11 +79,11 @@ local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     PRINT("player init scene", pid, scene_id, x, y)
 end
 
-g_rpc:declare("player_exit", player_exit)
-g_rpc:declare("player_init_scene", player_init_scene)
-g_rpc:declare("player_enter_dungeon", player_enter_dungeon)
-g_rpc:declare("player_update_base", player_update_base)
-g_rpc:declare("player_update_battle_abt", player_update_battle_abt)
+reg_func("player_exit", player_exit)
+reg_func("player_init_scene", player_init_scene)
+reg_func("player_enter_dungeon", player_enter_dungeon)
+reg_func("player_update_base", player_update_base)
+reg_func("player_update_battle_abt", player_update_battle_abt)
 
 --------------------------------------------------------------------------------
 local EntityPlayer = require "modules.entity.entity_player"

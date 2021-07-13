@@ -55,13 +55,13 @@ local function kill_player_connect(pid)
 end
 
 -- 这里注册系统模块的协议处理
-if "gateway" == g_app.name then
-    g_rpc:declare("kill_player_connect", kill_player_connect)
+if GATEWAY == APP_TYPE then
+    reg_func("kill_player_connect", kill_player_connect)
     account_mgr_clt_cb(PLAYER.LOGIN, g_account_mgr.player_login, true)
     account_mgr_clt_cb(PLAYER.CREATE, g_account_mgr.create_role, true)
 end
 
-if "world" == g_app.name then
+if WORLD == APP_TYPE then
     player_clt_cb(PLAYER.ENTERDUNGEON, Player.enter_dungeon)
     player_mgr_clt_cb(PLAYER.ENTER, g_player_mgr.on_enter_world, true)
 
