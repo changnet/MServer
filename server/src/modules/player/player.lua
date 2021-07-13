@@ -2,7 +2,7 @@
 -- 2017-04-03
 -- xzc
 -- 玩家对象
-local g_network_mgr = g_network_mgr
+
 local AutoId = require "modules.system.auto_id"
 
 --[[
@@ -68,7 +68,7 @@ end
 
 -- 发送数据包到客户端
 function Player:send_pkt(cmd, pkt, ecode)
-    return g_network_mgr:send_clt_pkt(self.pid, cmd, pkt, ecode)
+    return g_srv_mgr:send_clt_pkt(self.pid, cmd, pkt, ecode)
 end
 
 -- 定时器事件
@@ -159,7 +159,7 @@ function Player:on_login()
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
 
-    local conn = g_network_mgr:get_srv_conn(static_session)
+    local conn = g_srv_mgr:get_srv_conn(static_session)
     -- 同步基础属性，名字、外显等
     self.base:update(conn)
     -- 同步战斗属性到场景
@@ -272,7 +272,7 @@ function Player:enter_dungeon(pkt)
         AREA_SESSION[index] = session
     end
 
-    local conn = g_network_mgr:get_srv_conn(session)
+    local conn = g_srv_mgr:get_srv_conn(session)
 
     -- 然后玩家从当前进程退出场景
     if session ~= network_mgr:get_player_session(self.pid) then

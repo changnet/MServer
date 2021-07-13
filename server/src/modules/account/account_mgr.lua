@@ -69,7 +69,7 @@ function AccountMgr:player_login(clt_conn, pkt)
     self.conn_acc[conn_id] = role_info
 
     clt_conn:authorized()
-    if role_info.pid then g_network_mgr:bind_role(role_info.pid, clt_conn) end
+    if role_info.pid then g_clt_mgr:bind_role(role_info.pid, clt_conn) end
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
     clt_conn:send_pkt(PLAYER.LOGIN, role_info)
@@ -163,9 +163,9 @@ function AccountMgr:on_acc_create(acc_info, role_info, ecode, res)
     self.role_acc[pid] = role_info
 
     -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = g_network_mgr:get_conn(role_info.conn_id)
+    local clt_conn = g_clt_mgr:get_conn(role_info.conn_id)
     if clt_conn then
-        g_network_mgr:bind_role(pid, clt_conn)
+        g_clt_mgr:bind_role(pid, clt_conn)
         self:send_role_create(role_info)
     end
 end
@@ -173,7 +173,7 @@ end
 -- 发送角色创建结果
 function AccountMgr:send_role_create(role_info, ecode)
     -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = g_network_mgr:get_conn(role_info.conn_id)
+    local clt_conn = g_clt_mgr:get_conn(role_info.conn_id)
     if not clt_conn then return end
 
     clt_conn:send_pkt(PLAYER.CREATE, role_info, ecode)
@@ -202,17 +202,17 @@ end
 -- 帐号在其他地方登录
 function AccountMgr:login_otherwhere(role_info)
     -- 告诉原连接被顶号
-    local old_conn = g_network_mgr:get_conn(role_info.conn_id)
+    local old_conn = g_clt_mgr:get_conn(role_info.conn_id)
     old_conn:send_pkt(PLAYER.OTHER, {})
 
     -- 通知其他服务器玩家下线
     if role_info.pid then
         local pkt = {pid = role_info.pid}
-        g_network_mgr:send_world_pkt(SYS.PLAYER_OTHERWHERE, pkt)
+        g_clt_mgr:send_world_pkt(SYS.PLAYER_OTHERWHERE, pkt)
     end
 
     -- 关闭旧客户端连接
-    g_network_mgr:clt_close(old_conn)
+    g_clt_mgr:clt_close(old_conn)
 end
 
 -- 加载帐号数据

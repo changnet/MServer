@@ -1,4 +1,4 @@
--- auto export by lua-tags 166 symbols
+-- auto export by lua-tags 167 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -74,7 +74,7 @@ return {
 "__test", -- src/global/test.lua
 "application_ev", -- src/android/app.lua
 "application_ev", -- src/application/application.lua
-"clt_multicast_new", -- src/network/network_mgr.lua
+"clt_multicast_new", -- src/network/clt_mgr.lua
 "command_new", -- src/android/android_cmd.lua
 "command_new", -- src/network/conn.lua
 "conn_accept", -- src/network/conn.lua
@@ -95,6 +95,7 @@ return {
 "g_app_setting", -- src/modules/module_header.lua
 "g_authorize", -- src/modules/module_header.lua
 "g_authorize", -- src/test/protobuf_test.lua
+"g_clt_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
 "g_gm", -- src/modules/module_header.lua
@@ -104,13 +105,13 @@ return {
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
-"g_network_mgr", -- src/modules/module_header.lua
 "g_ping", -- src/modules/module_header.lua
 "g_player_mgr", -- src/modules/module_header.lua
 "g_res", -- src/modules/module_header.lua
 "g_rpc", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
+"g_srv_mgr", -- src/modules/module_header.lua
 "g_stat", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua

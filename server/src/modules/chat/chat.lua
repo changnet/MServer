@@ -54,7 +54,7 @@ function Chat:world_chat(conn, pkt)
     rpkt.context = pkt.context
     rpkt.channel = CHAT.CHL_PRIVATE
 
-    g_network_mgr:clt_multicast(2, {}, CHAT.DOCHAT, rpkt)
+    g_srv_mgr:clt_multicast(2, {}, CHAT.DOCHAT, rpkt)
 end
 
 channel_func[CHAT.CHL_WORLD] = Chat.world_chat

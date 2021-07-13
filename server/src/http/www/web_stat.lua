@@ -18,7 +18,7 @@ function WebStat:exec(conn, fields, body)
     end
 
     -- 通过rpc获取其他进程数据
-    local srv_conn = g_network_mgr:get_conn_by_name(body)
+    local srv_conn = g_srv_mgr:get_conn_by_name(body)
     if not srv_conn then return HTTP.INVALID, body end
 
     -- TODO:这个rpc调用有问题，不能引用conn为up value的，conn可能会被客户端断开

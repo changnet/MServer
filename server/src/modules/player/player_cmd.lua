@@ -1,5 +1,5 @@
 -- 玩家相关协议处理
-local g_network_mgr = g_network_mgr
+
 local g_player_mgr = g_player_mgr
 
 local Base = require "modules.player.base"
@@ -51,7 +51,7 @@ local function kill_player_connect(pid)
     PRINTF("kill player conn:%d", pid)
 
     g_account_mgr:role_offline_by_pid(pid)
-    g_network_mgr:clt_close_by_pid(pid)
+    g_srv_mgr:clt_close_by_pid(pid)
 end
 
 -- 这里注册系统模块的协议处理

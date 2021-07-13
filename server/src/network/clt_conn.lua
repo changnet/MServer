@@ -112,7 +112,7 @@ function CltConn:conn_del()
     -- self:set_conn( self.conn_id,nil )
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
-    return g_network_mgr:clt_conn_del(self.conn_id)
+    return g_clt_mgr:clt_conn_del(self.conn_id)
 end
 
 -- 消息回调
@@ -152,7 +152,7 @@ function CltConn:conn_accept(new_conn_id)
     local new_conn = CltConn(new_conn_id)
 
     new_conn:set_conn_param(new_conn_id)
-    g_network_mgr:clt_conn_accept(new_conn_id, new_conn)
+    g_clt_mgr:clt_conn_accept(new_conn_id, new_conn)
 
     return new_conn
 end

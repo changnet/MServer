@@ -38,7 +38,7 @@ function GM:auto_forward(where, player, cmd, args)
     local app_name = forward_map[cmd]
     if not app_name or g_app.name == app_name then return false end
 
-    local srv_conn = g_network_mgr:get_conn_by_name(app_name)
+    local srv_conn = g_srv_mgr:get_conn_by_name(app_name)
     if not srv_conn then
         ERROR("gm auto forward no conn found:%s", cmd)
         return true
@@ -84,7 +84,7 @@ function GM:broadcast(cmd, ...)
     -- 仅允许网关广播
     ASSERT(cmd and APP_TYPE == GATEWAY)
 
-    local conn_list = g_network_mgr:get_all_srv_conn()
+    local conn_list = g_srv_mgr:get_all_srv_conn()
     for _, srv_conn in pairs(conn_list) do
         if srv_conn.auth then
             g_rpc:proxy(srv_conn):rpc_gm(g_app.name, cmd, ...)

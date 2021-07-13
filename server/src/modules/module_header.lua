@@ -30,7 +30,7 @@ g_timer_mgr = require "timer.timer_mgr"
 g_rpc = require "rpc.rpc"
 g_authorize = require "modules.system.authorize"
 require "network.cmd"
-g_network_mgr = require "network.network_mgr"
+g_srv_mgr = require "network.srv_mgr"
 g_res = require "modules.res.res"
 g_gm = require "modules.system.gm"
 require "modules.event.player_event"
@@ -43,6 +43,7 @@ g_stat = require "modules.system.statistic"
 -- ==============================================================================
 -- 下面是一些根据app创建的全局变量，前置声明用于消除luacheck的检测问题
 
+g_clt_mgr = nil
 g_httpd = nil
 g_account_mgr = nil
 g_mongodb = nil
@@ -55,6 +56,7 @@ g_dungeon_mgr = nil
 -- 仅在gateway使用
 if GATEWAY == APP_TYPE then
     g_httpd = require "http.httpd"
+    g_clt_mgr = require "network.clt_mgr"
     g_account_mgr = require "modules.account.account_mgr"
 
     -- db对象的创建，有点特殊。它是全局对象，但不是单例。可以根据业务创建多个db提高效率

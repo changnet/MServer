@@ -123,7 +123,7 @@ function SrvConn:conn_accept(new_conn_id)
     self:set_conn_param(new_conn_id)
 
     local new_conn = SrvConn(new_conn_id)
-    g_network_mgr:srv_conn_accept(new_conn_id, new_conn)
+    g_srv_mgr:srv_conn_accept(new_conn_id, new_conn)
 
     return new_conn
 end
@@ -134,19 +134,19 @@ function SrvConn:conn_new(ecode)
         self.ok = true
         self:set_conn_param(self.conn_id)
     else
-        return g_network_mgr:srv_conn_new(self.conn_id, ecode)
+        return g_srv_mgr:srv_conn_new(self.conn_id, ecode)
     end
 end
 
 -- 连接成功
 function SrvConn:conn_ok()
-    return g_network_mgr:srv_conn_new(self.conn_id, 0)
+    return g_srv_mgr:srv_conn_new(self.conn_id, 0)
 end
 
 -- 连接断开
 function SrvConn:conn_del()
     self.ok = false
-    return g_network_mgr:srv_conn_del(self.conn_id)
+    return g_srv_mgr:srv_conn_del(self.conn_id)
 end
 
 -- 服务器之间消息回调

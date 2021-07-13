@@ -2,7 +2,6 @@
 -- xzc
 -- 2018-11-20
 -- 玩家实体，用于在场景显示
-local g_network_mgr = g_network_mgr
 
 local Entity = require "modules.entity.entity"
 local EntityAnimal = require "modules.entity.entity_animal"
@@ -15,7 +14,7 @@ end
 
 -- 发送数据包
 function EntityPlayer:send_pkt(cmd, pkt, ecode)
-    return g_network_mgr:send_clt_pkt(self.pid, cmd, pkt, ecode)
+    return g_srv_mgr:send_clt_pkt(self.pid, cmd, pkt, ecode)
 end
 
 -- 同步来自gw的基础属性

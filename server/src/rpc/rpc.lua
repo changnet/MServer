@@ -101,7 +101,7 @@ end
 
 -- 获取上一次rpc回调、返回的连接
 function Rpc:last_conn()
-    return g_network_mgr:get_conn(self.last_conn_id)
+    return g_srv_mgr:get_conn(self.last_conn_id)
 end
 
 -- 上一次rpc返回的错误码
@@ -197,7 +197,7 @@ end
 -- @param func 需要调用的函数
 -- @param ... 参数
 function Rpc:call(session, func, ...)
-    local conn = g_network_mgr:get_srv_conn(session)
+    local conn = g_srv_mgr:get_srv_conn(session)
 
     return self:conn_call(conn, func, ...)
 end
