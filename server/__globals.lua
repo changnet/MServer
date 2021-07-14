@@ -1,4 +1,4 @@
--- auto export by lua-tags 170 symbols
+-- auto export by lua-tags 176 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -74,6 +74,7 @@ return {
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__conn", -- src/network/conn.lua
+"__global_storage", -- src/global/global.lua
 "__test", -- src/global/test.lua
 "application_ev", -- src/android/app.lua
 "application_ev", -- src/application/application.lua
@@ -118,10 +119,12 @@ return {
 "g_stat", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
+"g_stat_mgr", -- src/test/rpc_test.lua
 "g_timer_mgr", -- src/android/app.lua
 "g_timer_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/test/app.lua
 "g_unique_id", -- src/modules/module_header.lua
+"global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua
 "handshake_new", -- src/android/android_cmd.lua
 "handshake_new", -- src/network/conn.lua
@@ -130,15 +133,18 @@ return {
 "json", -- src/test/app.lua
 "lua_parson", -- engine/lua_parson.lua
 "lua_rapidxml", -- engine/lua_rapidxml.lua
-"make_func_name", -- src/global/name.lua
+"make_name", -- src/global/name.lua
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "name_to_func", -- src/global/name.lua
+"name_to_obj", -- src/global/name.lua
+"obj_to_name", -- src/global/name.lua
 "oo", -- src/global/oo.lua
 "raw_table_dump", -- src/global/table.lua
 "reg_func", -- src/global/name.lua
+"reg_obj", -- src/global/name.lua
 "require", -- src/global/require.lua
 "require_conf", -- src/global/require_conf.lua
 "require_define", -- src/global/require.lua

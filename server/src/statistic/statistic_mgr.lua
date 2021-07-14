@@ -70,6 +70,60 @@ function CommandMgr:serialize_statistic(reset)
 end
 ]]
 
+--[[
+
+-- 更新耗时统计
+function Rpc:update_statistic(method_name, ms)
+    local stat = self.stat[method_name]
+    if not stat then
+        stat = {ms = 0, ts = 0, max = 0, min = 0}
+        self.stat[method_name] = stat
+    end
+
+    stat.ms = stat.ms + ms
+    stat.ts = stat.ts + 1
+    if ms > stat.max then stat.max = ms end
+    if 0 == stat.min or ms < stat.min then stat.min = ms end
+end
+
+-- 写入耗时统计到文件
+function Rpc:serialize_statistic(reset)
+    if not self.rpc_perf then return false end
+
+    local path = string.format("%s_%s", self.rpc_perf, g_app.name)
+
+    local stat_name = {}
+    for k in pairs(self.stat) do table.insert(stat_name, k) end
+
+    -- 按名字排序，方便对比查找
+    table.sort(stat_name)
+
+    g_log_mgr:raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
+                              time.date(ev:time()))
+
+    -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
+    g_log_mgr:raw_file_printf(path, "%-32s %-16s %-16s %-16s %-16s %-16s",
+                              "method", "count", "msec", "max", "min", "avg")
+
+    for _, name in pairs(stat_name) do
+        local stat = self.stat[name]
+        g_log_mgr:raw_file_printf(path, "%-32s %-16d %-16d %-16d %-16d %-16d",
+                                  name, stat.ts, stat.ms, stat.max, stat.min,
+                                  math.ceil(stat.ms / stat.ts))
+    end
+
+    g_log_mgr:raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
+                              "\n\n")
+
+    if reset then
+        self.stat = {}
+        self.stat_tm = ev:time()
+    end
+
+    return true
+end
+]]
+
 local mgr = Statistic_mgr()
 
 return mgr

@@ -1,4 +1,6 @@
 -- rpc调用
+local Rpc = oo.singleton(...)
+
 --[[
 1. 旧版参考其他rpc库(如python xmlrpc: https://docs.python.org/3/library/xmlrpc.html)
    做过一个需要注册的rpc，调用时能直接通过函数名调用，并且自动识别目标链接
@@ -15,9 +17,11 @@
 local name_to_func = name_to_func
 local func_to_name = func_to_name
 
-local AutoId = require "modules.system.auto_id"
+local name_to_obj = name_to_obj
+local obj_to_name = obj_to_name
 
-local Rpc = oo.singleton(...)
+local stat = g_stat_mgr:get("cmd")
+local AutoId = require "modules.system.auto_id"
 
 function Rpc:__init()
     self.callback = {}
@@ -46,57 +50,6 @@ function Rpc:set_statistic(perf, reset)
     end
 
     self.rpc_perf = perf
-end
-
--- 更新耗时统计
-function Rpc:update_statistic(method_name, ms)
-    local stat = self.stat[method_name]
-    if not stat then
-        stat = {ms = 0, ts = 0, max = 0, min = 0}
-        self.stat[method_name] = stat
-    end
-
-    stat.ms = stat.ms + ms
-    stat.ts = stat.ts + 1
-    if ms > stat.max then stat.max = ms end
-    if 0 == stat.min or ms < stat.min then stat.min = ms end
-end
-
--- 写入耗时统计到文件
-function Rpc:serialize_statistic(reset)
-    if not self.rpc_perf then return false end
-
-    local path = string.format("%s_%s", self.rpc_perf, g_app.name)
-
-    local stat_name = {}
-    for k in pairs(self.stat) do table.insert(stat_name, k) end
-
-    -- 按名字排序，方便对比查找
-    table.sort(stat_name)
-
-    g_log_mgr:raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
-                              time.date(ev:time()))
-
-    -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
-    g_log_mgr:raw_file_printf(path, "%-32s %-16s %-16s %-16s %-16s %-16s",
-                              "method", "count", "msec", "max", "min", "avg")
-
-    for _, name in pairs(stat_name) do
-        local stat = self.stat[name]
-        g_log_mgr:raw_file_printf(path, "%-32s %-16d %-16d %-16d %-16d %-16d",
-                                  name, stat.ts, stat.ms, stat.max, stat.min,
-                                  math.ceil(stat.ms / stat.ts))
-    end
-
-    g_log_mgr:raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
-                              "\n\n")
-
-    if reset then
-        self.stat = {}
-        self.stat_tm = ev:time()
-    end
-
-    return true
 end
 
 -- 获取上一次rpc回调、返回的连接
@@ -192,15 +145,110 @@ function Rpc:conn_call(conn, func, ...)
     return conn:send_rpc_pkt(call_id, name, ...)
 end
 
+-- 为了实现可变参数不用table.pack，只能再wrap一层
+local function args_wrap(method_name, beg, ...)
+    -- stat:update_statistic(method_name, ev:real_ms_time() - beg)
+    return ...
+end
+
+-- 收到其他服的玩家调用
+local function on_call(method_name, ...)
+    local func = name_to_func(method_name)
+    if not func then
+        return error(string.format("rpc:[%s] was not declared", method_name))
+    end
+
+    if stat then
+        return args_wrap(method_name, ev:real_ms_time(), func(...))
+    else
+        return func(...)
+    end
+end
+
+-- 收到其他服的玩家调用
+local function on_pid_call(pid, method_name, ...)
+    local player = g_player_mgr:get_player(pid)
+    if not player then
+        PRINTF("on pid call player not found: %d %s", pid, method_name)
+        return
+    end
+
+    return on_call(method_name, player, ...)
+end
+
+-- 通过玩家pid发起world进程函数调用，回调第一个参数为player对象
+-- 当玩家不在线时，该调用将被丢弃
+-- @param pid 玩家pid
+-- @param func 需要调用的函数
+-- @param ... 参数
+function Rpc:pid_call(pid, func, ...)
+    return self:call(GSE, on_pid_call, pid, func_to_name(func), ...)
+end
+
+-- 收到其他服的实体调用
+local function on_entity_call(pid, method_name, ...)
+    local player = g_entity_mgr:get_player(pid)
+    if not player then
+        PRINTF("on entity call player not found: %d %s", pid, method_name)
+        return
+    end
+
+    return on_call(method_name, player, ...)
+end
+
+-- 通过玩家pid发起场景进程函数调用，回调第一个参数为entity_player对象
+-- 当玩家不在该进程时，该调用将被丢弃
+-- @param pid 玩家pid
+-- @param func 需要调用的函数
+-- @param ... 参数
+function Rpc:entity_call(pid, func, ...)
+    local session = network_mgr:set_player_session(pid)
+    return self:call(session, on_entity_call, pid, func_to_name(func), ...)
+end
+
+-- 收到其他服的实体调用
+local function on_object_call(obj_name, method_name, ...)
+    local obj = name_to_obj(obj_name)
+    if not obj then
+        PRINTF("on object call obj not found: %d %s", obj_name, method_name)
+        return
+    end
+
+    return on_call(method_name, obj, ...)
+end
+
+-- 通过全局对象函数调用，回调第一个参数为该对象(两边的进程都需要创建该全局对象)
+-- @param obj 全局对象
+-- @param func 需要调用的函数
+-- @param ... 参数
+function Rpc:obj_call(session, obj, func, ...)
+    local name = obj_to_name(obj)
+    if not name then
+        error("on obj call name not found")
+        return
+    end
+
+    return self:call(GSE, on_object_call, name, func_to_name(func), ...)
+end
+
 -- 通过session执行rpc调用
 -- @param session 进程的session，如GATEWAY
 -- @param func 需要调用的函数
 -- @param ... 参数
 function Rpc:call(session, func, ...)
     local conn = g_srv_mgr:get_conn_by_session(session)
+    if not conn then
+        PRINTF("rpc call no connection found: %d", session)
+        return
+    end
 
     return self:conn_call(conn, func, ...)
 end
+
+-- 几个特殊的函数，名字短一点以减少传输数据量
+reg_func("__1", on_pid_call)
+reg_func("__2", on_entity_call)
+reg_func("__3", on_object_call)
 
 -- /////////////////////////////////////////////////////////////////////////////
 -- RPC基础功能在上面处理
@@ -208,26 +256,19 @@ end
 
 local rpc = Rpc()
 
--- 为了实现可变参数不用table.pack，只能再wrap一层
-local function args_wrap(method_name, beg, ...)
-    rpc:update_statistic(method_name, ev:real_ms_time() - beg)
-    return ...
-end
-
 -- 收到rpc调用，由C++触发
 function rpc_command_new(conn_id, rpc_id, method_name, ...)
     -- 把参数平铺到栈上，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
     rpc.last_conn_id = conn_id
-    local func = name_to_func(method_name)
-    if not func then
-        return error(string.format("rpc:[%s] was not declared", method_name))
+    if "__1" == method_name then
+        return on_pid_call(...)
+    elseif "__2" == method_name then
+        return on_entity_call(...)
+    elseif "__3" == method_name then
+        return on_entity_call(...)
     end
 
-    if rpc.rpc_perf then
-        return args_wrap(method_name, ev:real_ms_time(), func(...))
-    else
-        return func(...)
-    end
+    return on_call(method_name, ...)
 end
 
 -- 收到rpc调用，由C++触发

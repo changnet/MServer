@@ -2,7 +2,10 @@
 -- 2015-09-07
 -- xzc
 -- 常用的全局函数
+
 local async_logger = g_async_log
+
+__global_storage = __global_storage or {}
 
 local function to_readable(val)
     if type(val) == "string" then return "\"" .. val .. "\"" end
@@ -84,4 +87,15 @@ function ASSERT(expr, ...)
 
     local msg = table.concat_any("    ", ...)
     return error(msg)
+end
+
+-- 创建一块数据存储空间，仅仅是为了方便第一管理，热更，本地化
+function global_storage(key, def_val)
+    local storage = __global_storage[key]
+    if not storage then
+        storage = def_val or {}
+        __global_storage[key] = storage
+    end
+
+    return storage
 end

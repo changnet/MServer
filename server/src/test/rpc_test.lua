@@ -1,4 +1,6 @@
 -- rpc调用测试
+
+g_stat_mgr = require "statistic.statistic_mgr"
 local SrvConn = require "network.srv_conn"
 local rpc = require "rpc.rpc"
 

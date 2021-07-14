@@ -30,10 +30,4 @@ end
 
 local stat = Statistic()
 
-local function rpc_stat()
-    return stat:collect()
-end
-
-reg_func("rpc_stat", rpc_stat)
-
 return stat

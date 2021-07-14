@@ -12,8 +12,8 @@ local method_names = {}
 local func_names = {}
 local names_func = {}
 
-setmetatable(method_names, {["__mode"] = 'k'})
-setmetatable(func_names, {["__mode"] = 'k'})
+local obj_names = {}
+local names_obj = {}
 
 -- 从对象元表里查找成员函数的名字
 -- @param mt 对象的元表
@@ -98,6 +98,15 @@ function reg_func(name, func)
     names_func[name] = func
 end
 
+-- 注册一个对象
+function reg_obj(name, obj)
+    assert(not obj_names[obj], name)
+    assert(not names_obj[name], name)
+
+    obj_names[obj] = name
+    names_obj[name] = obj
+end
+
 -- 取函数名，仅对手动注册过的函数有效，类似C的 __func__ 宏
 -- 要么是全局函数、二级函数或者手动注册的函数才取得到名字
 function func_to_name(func)
@@ -109,8 +118,18 @@ function name_to_func(name)
     return names_func[name]
 end
 
+-- 根据对象指针取对象名字
+function obj_to_name(obj)
+    return obj_names[obj]
+end
+
+-- 根据对象指针取对象名字
+function name_to_obj(name)
+    return names_obj[name]
+end
+
 -- 通过遍历全局表，生成函数及其对应的名字
-function make_func_name()
+function make_name()
     -- 这个函数尽量在所有模块加载完成之后，配置、数据对象创建之前调用，避免搜索过多无效的数据
     -- 这里仅处理全局函数和二级函数，其他的太多处理不过来
     local tm = os.clock()
@@ -135,21 +154,23 @@ function make_func_name()
     }
 
     local count = 0
-    local reg = reg_func
+    local reg_o = reg_obj
+    local reg_f = reg_func
     for name, value in pairs(_G) do
         local t = type(value)
         if "function" == t then
-            reg(name, value)
+            reg_f(name, value)
             count = count + 1
         elseif "table" == t and not exclude[name] then
+            reg_o(name, value)
             for sub_name, sub_value in pairs(value) do
                 if "function" == type(sub_value) then
-                    reg(sub_name, sub_value)
+                    reg_f(sub_name, sub_value)
                     count = count + 1
                 end
             end
         end
     end
-    PRINTF("make func name done, %d functions in %.2f sec",
+    PRINTF("make name done, %d functions in %.2f sec",
         count, os.clock() - tm)
 end

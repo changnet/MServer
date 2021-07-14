@@ -37,16 +37,7 @@ local function rpc_gm(where, cmd, ...)
     g_gm:raw_exec(where, nil, cmd, ...)
 end
 
--- 设置玩家所在的session
-local function set_player_session(pid, session)
-    network_mgr:set_player_session(pid, session)
-end
-
 reg_func("rpc_gm", rpc_gm)
-
-if GATEWAY == APP_TYPE then
-    reg_func("set_player_session", set_player_session)
-end
 
 -- 这里注册系统模块的协议处理
 Cmd.reg_srv(SYS.BEAT, srv_beat)

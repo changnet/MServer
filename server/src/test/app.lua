@@ -67,7 +67,7 @@ function App:final_initialize()
     require "test.protobuf_test"
     -- require "example.other_performance"
 
-    make_func_name()
+    make_name()
 
     -- vd( statistic.dump() )
     t_run()

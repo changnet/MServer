@@ -3,6 +3,10 @@ local WebStat = oo.singleton(...)
 
 local json = require "lua_parson"
 
+local function rpc_stat()
+    return stat:collect()
+end
+
 --[[
     curl 127.0.0.1:10003/web_stat
     curl -l --data 'area 2' 127.0.0.1:10003/web_stat
@@ -27,16 +31,17 @@ function WebStat:exec(conn, fields, body)
     end
 
     local session = g_app:encode_session(app_type, app[2] or 1, g_app.id)
-    local srv_conn = g_srv_mgr:get_conn_by_session(session)
-    if not srv_conn then return HTTP.INVALID, body end
 
     -- TODO:这个rpc调用有问题，不能引用conn为up value的，conn可能会被客户端断开
-    g_rpc:proxy(srv_conn, function(ecode, ctx)
+    g_rpc:proxy(function(ecode, ctx)
         return
             g_httpd:do_return(conn, 0 == ecode, HTTP.OK_NIL, json.encode(ctx))
-    end):rpc_stat()
+    end):call(session, rpc_stat)
+
     return HTTP.PENDING -- 阻塞等待数据返回
 end
+
+reg_func("rpc_stat", rpc_stat)
 
 local wst = WebStat()
 

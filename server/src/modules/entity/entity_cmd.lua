@@ -23,17 +23,6 @@ local function player_update_base(pid, base, new)
     return player:update_base_info(base)
 end
 
--- 同步gw的玩家战斗属性
-local function player_update_battle_abt(pid, abt_list)
-    local player = g_entity_mgr:get_player(pid)
-    if not player then
-        ERROR("player_update_battle_abt no player found", pid)
-        return
-    end
-
-    return player:update_battle_abt(abt_list)
-end
-
 -- 玩家退出area
 local function player_exit(pid)
     local player = g_entity_mgr:get_player(pid)
@@ -83,7 +72,6 @@ reg_func("player_exit", player_exit)
 reg_func("player_init_scene", player_init_scene)
 reg_func("player_enter_dungeon", player_enter_dungeon)
 reg_func("player_update_base", player_update_base)
-reg_func("player_update_battle_abt", player_update_battle_abt)
 
 --------------------------------------------------------------------------------
 local EntityPlayer = require "modules.entity.entity_player"
