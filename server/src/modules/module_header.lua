@@ -10,7 +10,9 @@ require "global.time"
 require "global.name"
 require "global.require_conf"
 
-require "modules.system.define"
+require_define "modules.system.define"
+
+
 require "modules.system.hot_fix"
 E = require "modules.system.error"
 
@@ -38,7 +40,6 @@ require "modules.event.system_event"
 g_lang = require "modules.lang.lang"
 g_mail_mgr = require "modules.mail.mail_mgr"
 g_ping = require "modules.system.ping"
-g_stat = require "modules.system.statistic"
 
 -- ==============================================================================
 -- 下面是一些根据app创建的全局变量，前置声明用于消除luacheck的检测问题

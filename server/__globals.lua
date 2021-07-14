@@ -1,4 +1,4 @@
--- auto export by lua-tags 176 symbols
+-- auto export by lua-tags 175 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -116,7 +116,6 @@ return {
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_srv_mgr", -- src/modules/module_header.lua
-"g_stat", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua

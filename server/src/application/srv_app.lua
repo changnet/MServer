@@ -1,4 +1,4 @@
-require "modules.system.define"
+require_define "modules.system.define"
 local AutoId = require "modules.system.auto_id"
 local Application = require "application.application"
 

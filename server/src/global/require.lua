@@ -64,20 +64,26 @@ end
 
 -- 开始一组定义，接下来的全局定义都会插入到def中
 function DEFINE_BEG(def)
-    -- 真正的逻辑，是在require中处理的
-    _G.def = def
+    -- 得用rawset，因为这个是在require_define中调用，触发了__newindex
+    -- _G.def = def
+    rawset(_G, "def", def)
 end
 
 -- 结束一组定义
 function DEFINE_END(def)
-    _G.def = nil
+    -- 假如def不存在的话，即使设置一个nil值也会触发__newindex
+    -- _G.def = nil
+    rawset(_G, "def", nil)
 end
 
 -- 从文件中加载宏定义(该文件必须未被加载过，且里面的宏定义未在其他地方定义过)
 -- @param path 需要加载的文件路径，同require的参数，一般用点号
--- @param g 是否设置到全局
+-- @param no_g 不要把变量设置到全局
 -- @return table,包含该文件中的所有全局变量定义
-function require_define(path, g)
+function require_define(path, no_g)
+    -- 加载过的不要重复加载，不然会导致把数据删掉了，但require又不生效
+    if __require_list[path] then return end
+
     local _g_defines = _G._g_defines
     if not _g_defines then
         _g_defines = {}
@@ -92,7 +98,7 @@ function require_define(path, g)
     setmetatable(_G, {
         __newindex = function(t, k, v)
             rawset(defines, k, v)
-            if g then rawset(t, k, v) end
+            if not no_g then rawset(t, k, v) end
             if _G.def then rawset(_G.def, k, v) end
         end
     })

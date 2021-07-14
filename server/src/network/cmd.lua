@@ -5,8 +5,8 @@ local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
 
 local stat = g_stat_mgr:get("cmd")
 
-local CS = require_define("proto.auto_cs", true)
-local SS = require_define("proto.auto_ss", true)
+local CS = require_define("proto.auto_cs")
+local SS = require_define("proto.auto_ss")
 
 local app_reg = {} -- 记录哪些服务器已注册过协议
 
