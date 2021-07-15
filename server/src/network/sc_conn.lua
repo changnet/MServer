@@ -26,9 +26,9 @@ local network_mgr = network_mgr
 local Conn = require "network.conn"
 
 -- 与客户端的连接
-local CltConn = oo.class(..., Conn)
+local ScConn = oo.class(..., Conn)
 
-function CltConn:__init(conn_id)
+function ScConn:__init(conn_id)
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
@@ -36,7 +36,7 @@ function CltConn:__init(conn_id)
     self.conn_id = conn_id
 end
 
-function CltConn:set_conn_param(conn_id)
+function ScConn:set_conn_param(conn_id)
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
     network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
 
@@ -50,7 +50,7 @@ function CltConn:set_conn_param(conn_id)
     network_mgr:set_recv_buffer_size(conn_id, 8, 8192) -- 8k*8 = 64k
 end
 
-function CltConn:handshake_new(sec_websocket_key, sec_websocket_accept)
+function ScConn:handshake_new(sec_websocket_key, sec_websocket_accept)
     -- 服务器收到客户端的握手请求
     if not sec_websocket_key then
         self.close()
@@ -67,7 +67,7 @@ function CltConn:handshake_new(sec_websocket_key, sec_websocket_accept)
 end
 
 -- 发送数据包
-function CltConn:send_pkt(cmd, pkt, errno)
+function ScConn:send_pkt(cmd, pkt, errno)
     -- 使用tcp二进制流
     return network_mgr:send_clt_packet(self.conn_id, cmd.i, errno or 0, pkt)
     -- 使用websocket
@@ -76,7 +76,7 @@ function CltConn:send_pkt(cmd, pkt, errno)
 end
 
 -- 客户端连接到服务器
-function CltConn:connect(ip, port)
+function ScConn:connect(ip, port)
     self.ip = ip
     self.port = port
 
@@ -89,25 +89,25 @@ function CltConn:connect(ip, port)
 end
 
 -- 认证成功
-function CltConn:authorized()
+function ScConn:authorized()
     self.auth = true
 end
 
 -- 将该链接绑定一个角色
-function CltConn:bind_role(pid)
+function ScConn:bind_role(pid)
     self.pid = pid
     network_mgr:set_conn_owner(self.conn_id, self.pid or 0)
 end
 
 -- 监听客户端连接
-function CltConn:listen(ip, port)
+function ScConn:listen(ip, port)
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
 
     self:set_conn(self.conn_id, self)
 end
 
 -- 连接断开
-function CltConn:conn_del()
+function ScConn:conn_del()
     -- 这个会自动解除
     -- self:set_conn( self.conn_id,nil )
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
@@ -116,11 +116,11 @@ function CltConn:conn_del()
 end
 
 -- 消息回调
-function CltConn:command_new(cmd, ...)
+function ScConn:command_new(cmd, ...)
     return Cmd.dispatch_clt(self, cmd, ...)
 end
 
-function CltConn:ctrl_new(flag, body)
+function ScConn:ctrl_new(flag, body)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
@@ -140,7 +140,7 @@ function CltConn:ctrl_new(flag, body)
 end
 
 -- 主动关闭连接
-function CltConn:close()
+function ScConn:close()
     self:set_conn(self.conn_id, nil)
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
@@ -148,8 +148,8 @@ function CltConn:close()
 end
 
 -- 接受新客户端连接
-function CltConn:conn_accept(new_conn_id)
-    local new_conn = CltConn(new_conn_id)
+function ScConn:conn_accept(new_conn_id)
+    local new_conn = ScConn(new_conn_id)
 
     new_conn:set_conn_param(new_conn_id)
     g_clt_mgr:clt_conn_accept(new_conn_id, new_conn)
@@ -157,4 +157,4 @@ function CltConn:conn_accept(new_conn_id)
     return new_conn
 end
 
-return CltConn
+return ScConn

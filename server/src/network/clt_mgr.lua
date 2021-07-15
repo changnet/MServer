@@ -1,11 +1,11 @@
 -- 管理与客户端的连接
 local CltMgr = oo.singleton(...)
 
-local CltConn = require "network.clt_conn"
+local ScConn = require "network.sc_conn"
 
 --  监听客户端连接
 function CltMgr:clt_listen(ip, port)
-    self.clt_listen_conn = CltConn()
+    self.clt_listen_conn = ScConn()
     self.clt_listen_conn:listen(ip, port)
 
     PRINTF("listen for client at %s:%d", ip, port)

@@ -45,9 +45,9 @@ local WS_HAS_MASK = 0x20
 local util = require "util"
 local network_mgr = network_mgr
 
-local CltConn = oo.class("CltConn")
+local ScConn = oo.class("ScConn")
 
-function CltConn:handshake_new(sec_websocket_key, sec_websocket_accept)
+function ScConn:handshake_new(sec_websocket_key, sec_websocket_accept)
     PRINT("clt handshake", sec_websocket_accept)
     if not sec_websocket_accept then return end
 
@@ -57,13 +57,13 @@ function CltConn:handshake_new(sec_websocket_key, sec_websocket_accept)
                                 WS_OP_TEXT | WS_HAS_MASK | WS_FINAL_FRAME, ctx)
 end
 
-function CltConn:connect(ip, port)
+function ScConn:connect(ip, port)
     self.conn_id = network_mgr:connect(ip, port, network_mgr.CNT_CSCN)
     conn_mgr:set_conn(self.conn_id, self)
     PRINT("clt connnect to ", ip, self.conn_id)
 end
 
-function CltConn:conn_new(ecode)
+function ScConn:conn_new(ecode)
     if 0 ~= ecode then
         PRINT("clt_conn conn error", self.conn_id, util.what_error(ecode))
         return
@@ -78,17 +78,17 @@ function CltConn:conn_new(ecode)
     network_mgr:send_raw_packet(self.conn_id, handshake_clt)
 end
 
-function CltConn:conn_del()
+function ScConn:conn_del()
     PRINT("conn_del", self.conn_id)
 end
 
-function CltConn:command_new(body)
+function ScConn:command_new(body)
     PRINT("clt command new", body)
     network_mgr:send_ctrl_packet(self.conn_id, WS_OP_PING | WS_FINAL_FRAME,
                                  "hello")
 end
 
-function CltConn:ctrl_new(flag, body)
+function ScConn:ctrl_new(flag, body)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK这些位
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
@@ -111,13 +111,13 @@ function CltConn:ctrl_new(flag, body)
     assert(false, "clt unknow ctrl flag")
 end
 
-local SrvConn = oo.class("SrvConn")
+local SsConn = oo.class("SsConn")
 
-function SrvConn:__init(conn_id)
+function SsConn:__init(conn_id)
     self.conn_id = conn_id
 end
 
-function SrvConn:handshake_new(sec_websocket_key, sec_websocket_accept)
+function SsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
     PRINT("srv handshake_new", sec_websocket_key)
     -- 服务器收到客户端的握手请求
     if not sec_websocket_key then return end
@@ -129,17 +129,17 @@ function SrvConn:handshake_new(sec_websocket_key, sec_websocket_accept)
     network_mgr:send_raw_packet(self.conn_id, handshake_srv)
 end
 
-function SrvConn:listen(ip, port)
+function SsConn:listen(ip, port)
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
     conn_mgr:set_conn(self.conn_id, self)
     PRINTF("listen at %s:%d", ip, port)
 end
 
-function SrvConn:conn_accept(new_conn_id)
+function SsConn:conn_accept(new_conn_id)
     PRINT("srv conn accept new", new_conn_id)
 
     -- 弄成全局的，不然会被释放掉
-    _G.new_conn = SrvConn(new_conn_id)
+    _G.new_conn = SsConn(new_conn_id)
     network_mgr:set_conn_io(new_conn_id, network_mgr.IOT_NONE)
     network_mgr:set_conn_codec(new_conn_id, network_mgr.CDC_NONE)
     network_mgr:set_conn_packet(new_conn_id, network_mgr.PKT_WEBSOCKET)
@@ -147,12 +147,12 @@ function SrvConn:conn_accept(new_conn_id)
     return _G.new_conn
 end
 
-function SrvConn:conn_del()
+function SsConn:conn_del()
     PRINT("srv conn del", self.conn_id)
 end
 
 -- 回调
-function SrvConn:command_new(body)
+function SsConn:command_new(body)
     PRINT("srv command_new", self.conn_id, body)
 
     local tips = "Mini-Game-Distribute-Server!"
@@ -161,7 +161,7 @@ function SrvConn:command_new(body)
     network_mgr:send_ctrl_packet(self.conn_id, WS_OP_PING, "hello")
 end
 
-function SrvConn:ctrl_new(flag, body)
+function SsConn:ctrl_new(flag, body)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK这些位
     flag = flag & 0x0F
     if flag == WS_OP_CLOSE then
@@ -188,15 +188,15 @@ end
 
 -- 这里创建的对象要放到全局引用，不然会被释放掉，就没法回调了
 
--- ws_conn = CltConn()
+-- ws_conn = ScConn()
 -- ws_conn:connect( ip1,80 )
 
 -- 开户本地服务器
 local ws_port = 10002
-ws_listen = SrvConn()
+ws_listen = SsConn()
 ws_listen:listen("127.0.0.1", ws_port)
 
 -- 测试自己的服务器是否正常
-ws_local_conn = CltConn()
+ws_local_conn = ScConn()
 ws_local_conn:connect("127.0.0.1", ws_port)
 

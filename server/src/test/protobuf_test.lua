@@ -4,13 +4,13 @@ g_authorize = require "modules.system.authorize"
 g_stat_mgr = require "statistic.statistic_mgr"
 
 require "network.cmd"
-local CltConn = require "network.clt_conn"
+local ScConn = require "network.sc_conn"
 
 local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil
 
-local ProtobufConn = oo.class("ProtobufConn", CltConn)
+local ProtobufConn = oo.class("ProtobufConn", ScConn)
 
 function ProtobufConn:conn_accept(new_conn_id)
     self:set_conn_param(new_conn_id)

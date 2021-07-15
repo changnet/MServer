@@ -1,7 +1,7 @@
 -- 管理与服务器之间的连接
 local SrvMgr = oo.singleton(...)
 
-local SrvConn = require "network.srv_conn"
+local SsConn = require "network.ss_conn"
 
 function SrvMgr:__init()
     self.srv = {} -- 已认证的服务器连接
@@ -11,7 +11,7 @@ end
 
 --  监听服务器连接
 function SrvMgr:srv_listen(ip, port)
-    self.srv_listen_conn = SrvConn()
+    self.srv_listen_conn = SsConn()
     self.srv_listen_conn:listen(ip, port)
 
     PRINTF("listen for server at %s:%d", ip, port)
@@ -22,7 +22,7 @@ end
 function SrvMgr:connect_srv(srvs)
     for _, srvName in pairs(srvs) do
         local appSetting = g_setting[srvName]
-        local conn = SrvConn()
+        local conn = SsConn()
 
         conn.auto_conn = true
         local conn_id = conn:connect(appSetting.sip, appSetting.sport)

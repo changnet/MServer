@@ -1,7 +1,7 @@
 -- rpc调用测试
 
 g_stat_mgr = require "statistic.statistic_mgr"
-local SrvConn = require "network.srv_conn"
+local SsConn = require "network.ss_conn"
 local rpc = require "rpc.rpc"
 
 local srv_conn = nil
@@ -9,7 +9,7 @@ local clt_conn = nil
 local listen_conn = nil
 
 -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的conn_accept等函数
-local RpcConn = oo.class("RpcConn", SrvConn)
+local RpcConn = oo.class("RpcConn", SsConn)
 
 function RpcConn:conn_accept(new_conn_id)
     self:set_conn_param(new_conn_id)

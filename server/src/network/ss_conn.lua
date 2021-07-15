@@ -4,9 +4,9 @@ local network_mgr = network_mgr
 local Conn = require "network.conn"
 
 -- 服务器之间的链接
-local SrvConn = oo.class(..., Conn)
+local SsConn = oo.class(..., Conn)
 
-function SrvConn:__init(conn_id)
+function SsConn:__init(conn_id)
     self.auth = false
     self.beat = 0
     self.fchk = 0 -- fail check
@@ -16,25 +16,25 @@ function SrvConn:__init(conn_id)
 end
 
 -- 发送数据包
-function SrvConn:send_pkt(cmd, pkt, ecode)
+function SsConn:send_pkt(cmd, pkt, ecode)
     return network_mgr:send_s2s_packet(self.conn_id, cmd.i, ecode or 0, pkt)
 end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
-function SrvConn:send_clt_pkt(pid, cmd, pkt, ecode)
+function SsConn:send_clt_pkt(pid, cmd, pkt, ecode)
     return network_mgr:send_ssc_packet(self.conn_id, pid,
                                        network_mgr.CDC_PROTOBUF, cmd.i,
                                        ecode or 0, pkt)
 end
 
 -- 发送数据包
-function SrvConn:send_rpc_pkt(unique_id, method_name, ...)
+function SsConn:send_rpc_pkt(unique_id, method_name, ...)
     return
         network_mgr:send_rpc_packet(self.conn_id, unique_id, method_name, ...)
 end
 
 -- timeout check
-function SrvConn:check(check_time)
+function SsConn:check(check_time)
     if self.beat < check_time then
         self.fchk = self.fchk + 1
 
@@ -46,13 +46,13 @@ function SrvConn:check(check_time)
 end
 
 -- 认证成功
-function SrvConn:authorized(pkt)
+function SsConn:authorized(pkt)
     self.auth = true
     self.session = pkt.session
 end
 
 -- 获取基本类型名字(gateway、world)，见APP服务器类型定义，通常用于打印日志
-function SrvConn:base_name(session_type)
+function SsConn:base_name(session_type)
     if not session_type then
         session_type = g_app:decode_session(self.session)
     end
@@ -63,7 +63,7 @@ function SrvConn:base_name(session_type)
 end
 
 -- 获取该连接名称，包括基础名字，索引，服务器id，通常用于打印日志
-function SrvConn:conn_name(session)
+function SsConn:conn_name(session)
     -- 该服务器连接未经过认证
     if 0 == session then return "unauthorized" end
 
@@ -73,13 +73,13 @@ function SrvConn:conn_name(session)
 end
 
 -- 监听服务器连接
-function SrvConn:listen(ip, port)
+function SsConn:listen(ip, port)
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SSCN)
 
     self:set_conn(self.conn_id, self)
 end
 
-function SrvConn:raw_connect()
+function SsConn:raw_connect()
     self.ok = false
     self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CNT_SSCN)
 
@@ -89,7 +89,7 @@ function SrvConn:raw_connect()
 end
 
 -- 连接到其他服务器
-function SrvConn:connect(ip, port)
+function SsConn:connect(ip, port)
     self.ip = ip
     self.port = port
 
@@ -97,7 +97,7 @@ function SrvConn:connect(ip, port)
 end
 
 -- 重新连接
-function SrvConn:reconnect()
+function SsConn:reconnect()
     self.auth = false
     self.session = 0
 
@@ -105,7 +105,7 @@ function SrvConn:reconnect()
 end
 
 -- 重新连接
-function SrvConn:set_conn_param(conn_id)
+function SsConn:set_conn_param(conn_id)
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
     network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
     network_mgr:set_conn_packet(conn_id, network_mgr.PKT_STREAM)
@@ -119,17 +119,17 @@ function SrvConn:set_conn_param(conn_id)
 end
 
 -- 接受新的连接
-function SrvConn:conn_accept(new_conn_id)
+function SsConn:conn_accept(new_conn_id)
     self:set_conn_param(new_conn_id)
 
-    local new_conn = SrvConn(new_conn_id)
+    local new_conn = SsConn(new_conn_id)
     g_srv_mgr:srv_conn_accept(new_conn_id, new_conn)
 
     return new_conn
 end
 
 -- 连接进行初始化
-function SrvConn:conn_new(ecode)
+function SsConn:conn_new(ecode)
     if 0 == ecode then
         self.ok = true
         self:set_conn_param(self.conn_id)
@@ -139,31 +139,31 @@ function SrvConn:conn_new(ecode)
 end
 
 -- 连接成功
-function SrvConn:conn_ok()
+function SsConn:conn_ok()
     return g_srv_mgr:on_conn_ok(self.conn_id)
 end
 
 -- 连接断开
-function SrvConn:conn_del()
+function SsConn:conn_del()
     self.ok = false
     return g_srv_mgr:srv_conn_del(self.conn_id)
 end
 
 -- 服务器之间消息回调
-function SrvConn:command_new(session, cmd, errno, pkt)
+function SsConn:command_new(session, cmd, errno, pkt)
     self.beat = ev:time()
     return Cmd.dispatch_srv(self, cmd, pkt)
 end
 
 -- 转发的客户端消息
-function SrvConn:css_command_new(pid, cmd, ...)
+function SsConn:css_command_new(pid, cmd, ...)
     return Cmd:dispatch_css(self, pid, cmd, ...)
 end
 
 -- 主动关闭连接
-function SrvConn:close()
+function SsConn:close()
     self.ok = false
     return network_mgr:close(self.conn_id)
 end
 
-return SrvConn
+return SsConn
