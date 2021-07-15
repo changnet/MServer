@@ -140,7 +140,7 @@ end
 -- 一个初始化完成
 function Application:one_initialized(name, val)
     local step = self.init_step[name]
-    if not step then return ERROR("unknow initialize step:%s", name) end
+    if not step then return ERROR("unknow initialize step:", name) end
 
     step.cnt = 1 + (step.cnt or 0)
     if step.cnt >= step.count then

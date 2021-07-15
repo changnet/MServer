@@ -140,7 +140,7 @@ end
 
 -- 连接成功
 function SrvConn:conn_ok()
-    return g_srv_mgr:srv_conn_new(self.conn_id, 0)
+    return g_srv_mgr:on_conn_ok(self.conn_id)
 end
 
 -- 连接断开
@@ -152,7 +152,7 @@ end
 -- 服务器之间消息回调
 function SrvConn:command_new(session, cmd, errno, pkt)
     self.beat = ev:time()
-    return Cmd:dispatch_srv(self, cmd, pkt)
+    return Cmd.dispatch_srv(self, cmd, pkt)
 end
 
 -- 转发的客户端消息
@@ -164,16 +164,6 @@ end
 function SrvConn:close()
     self.ok = false
     return network_mgr:close(self.conn_id)
-end
-
--- 发送认证数据
-function SrvConn:send_register()
-    local pkt = {
-        session = g_app.session,
-        timestamp = ev:time()
-    }
-    pkt.auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
-    self:send_pkt(SYS.REG, pkt)
 end
 
 return SrvConn

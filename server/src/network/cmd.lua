@@ -116,7 +116,7 @@ function Cmd.reg_srv(cmd, handler, noauth)
 end
 
 -- 向其他进程同步本进程需要注册的客户端指令
-function Cmd:sync_cmd(conn)
+function Cmd.sync_cmd(conn)
     -- 如果本身就是网关，那么不用同步任何数据
     -- 其他进程需要同步该进程所需要的客户端指令，以实现指令自动分发到对应的进程
 
@@ -125,7 +125,7 @@ function Cmd:sync_cmd(conn)
     end
 
     local cmds = {}
-    for cmd, cfg in pairs(self.cs) do
+    for cmd, cfg in pairs(cs_handler) do
         if cfg.handler then table.insert(cmds, cmd) end
     end
     conn:send_pkt(SYS.CMD_SYNC, {
@@ -136,7 +136,7 @@ end
 
 -- 注册其他服务器指令,以实现协议自动转发
 function Cmd.on_sync_cmd(srv_conn, pkt)
-    local base_name = srv_conn:base_name()
+    local base_name = string.lower(srv_conn:base_name())
 
     -- 同一类服务，他们的协议是一样的(例如多个场景服务器)，无需再注册一次
     -- 其实重复注册也不会有问题，但是起服的时候可能会触发协议重复注册的检测
@@ -157,13 +157,14 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
 
     -- 记录该服务器所处理的cs指令
     for _, cmd in pairs(pkt.clt_cmd or {}) do
-        local cfg = cs_handler[cmd]
-        ASSERT(cfg, "other_cmd_register no such clt cmd", cmd)
         -- 仅在启动的时候检查是否重复，热更则直接覆盖
         if not g_app.ok then
-            ASSERT(cfg, "other_cmd_register clt cmd register conflict", cmd)
+            ASSERT(not cs_handler[cmd], "on sync cmd conflict", cmd)
         end
 
+        cs_handler[cmd] = {
+            session = session
+        }
         -- 这个协议最终需要转发的，并不需要当前进程解析，所以不需要绑定schema文件
         network_mgr:set_cs_cmd(cmd, "", "", mask, session)
     end
@@ -173,13 +174,16 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
     return true
 end
 
-
 -- 发分服务器协议
 function Cmd.dispatch_srv(srv_conn, cmd, ...)
     local cfg = ss_handler[cmd]
+    if not cfg then
+        ERROR("dispatch_srv:cmd not found", cmd)
+        return
+    end
 
     if not srv_conn.auth and not cfg.noauth then
-        return ERROR("dispatch_srv:try to call auth cmd %d", cmd)
+        return ERROR("dispatch_srv:try to call auth cmd", cmd)
     end
 
     local handler = cfg.handler

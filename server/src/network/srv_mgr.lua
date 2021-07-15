@@ -3,6 +3,12 @@ local SrvMgr = oo.singleton(...)
 
 local SrvConn = require "network.srv_conn"
 
+function SrvMgr:__init()
+    self.srv = {} -- 已认证的服务器连接
+    self.srv_conn = {} -- 所有连接，包括未认证，正在重连中的连接
+    self.srv_waiting = {} -- 正在重连中的连接
+end
+
 --  监听服务器连接
 function SrvMgr:srv_listen(ip, port)
     self.srv_listen_conn = SrvConn()
@@ -11,7 +17,6 @@ function SrvMgr:srv_listen(ip, port)
     PRINTF("listen for server at %s:%d", ip, port)
     return true
 end
-
 
 -- 主动连接其他服务器
 function SrvMgr:connect_srv(srvs)
@@ -35,7 +40,6 @@ function SrvMgr:reconnect_srv(conn)
     self.srv_conn[conn_id] = conn
     PRINTF("reconnect to %s:%d", conn.ip, conn.port)
 end
-
 
 -- 服务器认证
 function SrvMgr:srv_register(conn, pkt)
@@ -101,32 +105,25 @@ function SrvMgr:get_all_srv_conn()
     return self.srv
 end
 
-
--- 获取网关连接(在非网关服务器进程获取)
-function SrvMgr:get_gateway_conn()
-    return self.srv[gateway_session]
-end
-
 -- 在非网关进程直接发送数据到客户端
 function SrvMgr:send_clt_pkt(pid, cmd, pkt, ecode)
-    local srv_conn = self.srv[gateway_session]
+    local srv_conn = self.srv[GSE]
     return srv_conn:send_clt_pkt(pid, cmd, pkt, ecode)
 end
 
 -- 发送服务器数据包到网关(现在同一类型只有一个进程才能这样做)
 function SrvMgr:send_gateway_pkt(cmd, pkt, ecode)
-    local srv_conn = self.srv[gateway_session]
+    local srv_conn = self.srv[GSE]
 
     return srv_conn:send_pkt(cmd, pkt, ecode)
 end
 
 -- 发送服务器数据包到世界服(现在同一类型只有一个进程才能这样做)
 function SrvMgr:send_world_pkt(cmd, pkt, ecode)
-    local srv_conn = self.srv[world_session]
+    local srv_conn = self.srv[WSE]
 
     return srv_conn:send_pkt(cmd, pkt, ecode)
 end
-
 
 -- 根据conn_id获取连接
 function SrvMgr:get_conn(conn_id)
@@ -157,7 +154,7 @@ end
 --  如果是玩家id，网关底层会自动转发。如果是自定义参数，如连接id，等级要求...
 -- 回调clt_multicast_new时会把args_list传回脚本，需要脚本定义处理方式
 function SrvMgr:clt_multicast(mask, args_list, cmd, pkt, ecode)
-    local srv_conn = self:get_gateway_conn()
+    local srv_conn = self.srv[GSE]
     return network_mgr:ssc_multicast(srv_conn.conn_id, mask, args_list,
                                      network_mgr.CDC_PROTOBUF, cmd.i,
                                      ecode or 0, pkt)
@@ -175,10 +172,20 @@ function SrvMgr:srv_conn_accept(conn_id, conn)
     self.srv_conn[conn_id] = conn
 
     PRINTF("accept server connection:%d", conn_id)
-
-    conn:send_register()
 end
 
+function SrvMgr:on_conn_ok(conn_id)
+    -- 之所以不直接传conn对象进来是为了在这里检测该conn_id已在srvmgr中记录
+    local conn = self.srv_conn[conn_id]
+
+    -- 发送认证数据
+    local pkt = {
+        session = g_app.session,
+        timestamp = ev:time()
+    }
+    pkt.auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
+    conn:send_pkt(SYS.REG, pkt)
+end
 
 -- 服务器之间连接成功
 function SrvMgr:srv_conn_new(conn_id, ecode)
@@ -193,8 +200,6 @@ function SrvMgr:srv_conn_new(conn_id, ecode)
     end
 
     PRINTF("connect(%d) to %s:%d establish", conn_id, conn.ip, conn.port)
-
-    conn:send_register()
 end
 
 -- 底层连接断开回调

@@ -1,13 +1,11 @@
-local network_mgr = network_mgr
+-- 处理一些系统消息
 
 -- 收到另一个服务器主动同步
 local function srv_reg(srv_conn, pkt)
     if not g_srv_mgr:srv_register(srv_conn, pkt) then return false end
     srv_conn:authorized(pkt)
 
-
-    local _pkt = g_command_mgr:command_pkt()
-    srv_conn:send_pkt(SYS.CMD_SYNC, _pkt)
+    Cmd.sync_cmd(srv_conn)
     srv_conn:send_pkt(SYS.SYNC_DONE, {})
 
     PRINTF("%s register succes:session %d", srv_conn:conn_name(),
@@ -16,12 +14,12 @@ end
 
 -- 同步对方指令数据
 local function srv_cmd_sync(srv_conn, pkt)
-    g_command_mgr:other_cmd_register(srv_conn, pkt)
+    Cmd.on_sync_cmd(srv_conn, pkt)
 end
 
 -- 对方服务器数据同步完成
 local function srv_sync_done(srv_conn, pkt)
-    g_app:one_initialized(srv_conn:base_name(), 1)
+    g_app:one_initialized(string.lower(srv_conn:base_name()), 1)
 end
 
 -- 服务器之间心跳包
