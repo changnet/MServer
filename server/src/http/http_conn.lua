@@ -56,7 +56,7 @@ function HttpConn:connect(host, port, on_connect, on_command)
     self.on_connect = on_connect
     self.on_command = on_command
 
-    self.conn_id = network_mgr:connect(self.ip, port, network_mgr.CNT_CSCN)
+    self.conn_id = network_mgr:connect(self.ip, port, network_mgr.CT_CSCN)
 
     self:set_conn(self.conn_id, self)
 end
@@ -86,7 +86,7 @@ end
 function HttpConn:listen(ip, port, on_accept, on_command)
     self.on_accept = on_accept
     self.on_command = on_command
-    self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
+    self.conn_id = network_mgr:listen(ip, port, network_mgr.CT_SCCN)
 
     self:set_conn(self.conn_id, self)
     return true
@@ -109,7 +109,7 @@ function HttpConn:init_conn(conn_id, ssl)
         network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
     end
     network_mgr:set_conn_codec(conn_id, network_mgr.CDC_NONE)
-    network_mgr:set_conn_packet(conn_id, network_mgr.PKT_HTTP)
+    network_mgr:set_conn_packet(conn_id, network_mgr.PT_HTTP)
 end
 
 -- 有新的连接进来

@@ -58,7 +58,7 @@ function ScConn:handshake_new(sec_websocket_key, sec_websocket_accept)
 end
 
 function ScConn:connect(ip, port)
-    self.conn_id = network_mgr:connect(ip, port, network_mgr.CNT_CSCN)
+    self.conn_id = network_mgr:connect(ip, port, network_mgr.CT_CSCN)
     conn_mgr:set_conn(self.conn_id, self)
     PRINT("clt connnect to ", ip, self.conn_id)
 end
@@ -71,7 +71,7 @@ function ScConn:conn_new(ecode)
 
     network_mgr:set_conn_io(self.conn_id, network_mgr.IOT_NONE)
     network_mgr:set_conn_codec(self.conn_id, network_mgr.CDC_NONE)
-    network_mgr:set_conn_packet(self.conn_id, network_mgr.PKT_WEBSOCKET)
+    network_mgr:set_conn_packet(self.conn_id, network_mgr.PT_WEBSOCKET)
 
     PRINT("conn_new", self.conn_id)
 
@@ -130,7 +130,7 @@ function SsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
 end
 
 function SsConn:listen(ip, port)
-    self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
+    self.conn_id = network_mgr:listen(ip, port, network_mgr.CT_SCCN)
     conn_mgr:set_conn(self.conn_id, self)
     PRINTF("listen at %s:%d", ip, port)
 end
@@ -142,7 +142,7 @@ function SsConn:conn_accept(new_conn_id)
     _G.new_conn = SsConn(new_conn_id)
     network_mgr:set_conn_io(new_conn_id, network_mgr.IOT_NONE)
     network_mgr:set_conn_codec(new_conn_id, network_mgr.CDC_NONE)
-    network_mgr:set_conn_packet(new_conn_id, network_mgr.PKT_WEBSOCKET)
+    network_mgr:set_conn_packet(new_conn_id, network_mgr.PT_WEBSOCKET)
 
     return _G.new_conn
 end

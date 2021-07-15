@@ -74,14 +74,14 @@ end
 
 -- 监听服务器连接
 function SsConn:listen(ip, port)
-    self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SSCN)
+    self.conn_id = network_mgr:listen(ip, port, network_mgr.CT_SSCN)
 
     self:set_conn(self.conn_id, self)
 end
 
 function SsConn:raw_connect()
     self.ok = false
-    self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CNT_SSCN)
+    self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CT_SSCN)
 
     self:set_conn(self.conn_id, self)
 
@@ -108,7 +108,7 @@ end
 function SsConn:set_conn_param(conn_id)
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
     network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
-    network_mgr:set_conn_packet(conn_id, network_mgr.PKT_STREAM)
+    network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
 
     -- 设置服务器之间链接缓冲区大小：
     -- 发送的话可能会累加，要设置大些.16777216 = 16MB，最大累加16*64 = 1024M

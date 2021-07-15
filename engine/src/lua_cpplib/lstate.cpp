@@ -209,19 +209,19 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::get_player_session>("get_player_session");
     lc.def<&LNetworkMgr::set_player_session>("set_player_session");
 
-    lc.set(Socket::CT_NONE, "CNT_NONE");
-    lc.set(Socket::CT_CSCN, "CNT_CSCN");
-    lc.set(Socket::CT_SCCN, "CNT_SCCN");
-    lc.set(Socket::CT_SSCN, "CNT_SSCN");
+    lc.set(Socket::CT_NONE, "CT_NONE");
+    lc.set(Socket::CT_CSCN, "CT_CSCN");
+    lc.set(Socket::CT_SCCN, "CT_SCCN");
+    lc.set(Socket::CT_SSCN, "CT_SSCN");
 
     lc.set(IO::IOT_NONE, "IOT_NONE");
     lc.set(IO::IOT_SSL, "IOT_SSL");
 
-    lc.set(Packet::PT_NONE, "PKT_NONE");
-    lc.set(Packet::PT_HTTP, "PKT_HTTP");
-    lc.set(Packet::PT_STREAM, "PKT_STREAM");
-    lc.set(Packet::PT_WEBSOCKET, "PKT_WEBSOCKET");
-    lc.set(Packet::PT_WSSTREAM, "PKT_WSSTREAM");
+    lc.set(Packet::PT_NONE, "PT_NONE");
+    lc.set(Packet::PT_HTTP, "PT_HTTP");
+    lc.set(Packet::PT_STREAM, "PT_STREAM");
+    lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
+    lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
 
     lc.set(Codec::CDC_NONE, "CDC_NONE");
     lc.set(Codec::CDC_BSON, "CDC_BSON");

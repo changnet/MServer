@@ -5,6 +5,7 @@ g_stat_mgr = require "statistic.statistic_mgr"
 
 require "network.cmd"
 local ScConn = require "network.sc_conn"
+local CsConn = require "network.cs_conn"
 
 local srv_conn = nil
 local clt_conn = nil
@@ -32,9 +33,11 @@ function ProtobufConn:conn_del()
 end
 
 function ProtobufConn:conn_ok()
-    if self == clt_conn then t_done() end
 end
 
+function CsConn:conn_ok()
+    t_done()
+end
 
 t_describe("protobuf test", function()
     local local_host = "::1"
@@ -106,16 +109,12 @@ t_describe("protobuf test", function()
         t_equal(ok, true)
 
         -- 建立一个客户端、一个服务端连接，模拟通信
-        clt_conn = ProtobufConn()
+        clt_conn = CsConn()
         listen_conn = ProtobufConn()
 
         listen_conn:listen(local_host, local_port)
         clt_conn:connect(local_host, local_port)
 
-        -- 作为客户端，需要改下接口
-        clt_conn.send_pkt = function(self, cmd, pkt)
-            return network_mgr:send_srv_packet(self.conn_id, cmd.i, pkt)
-        end
         t_wait(2000)
     end)
     t_it("protobuf base", function()

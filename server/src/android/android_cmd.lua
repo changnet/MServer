@@ -86,10 +86,10 @@ function conn_new(conn_id, ecode)
     network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
 
     -- 使用tcp二进制流
-    network_mgr:set_conn_packet(conn_id, network_mgr.PKT_STREAM)
+    network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
 
     -- 使用websocket二进制流
-    -- network_mgr:set_conn_packet( conn_id,network_mgr.PKT_WSSTREAM )
+    -- network_mgr:set_conn_packet( conn_id,network_mgr.PT_WSSTREAM )
 
     -- -- 主动发送握手
     -- local sec_websocket_key = util.base64( util.uuid() ) -- RFC6455 随机一个key

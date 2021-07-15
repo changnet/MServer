@@ -18,7 +18,7 @@ function Loginout:check_and_login(ai)
     end
 
     -- 连接服务器
-    local conn_id = network_mgr:connect(host, conf.cport, network_mgr.CNT_CSCN)
+    local conn_id = network_mgr:connect(host, conf.cport, network_mgr.CT_CSCN)
 
     ai.state = AST.LOGIN
     ai.entity:set_conn(conn_id)

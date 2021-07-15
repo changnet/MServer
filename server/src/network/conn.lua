@@ -71,4 +71,12 @@ function Conn:set_conn(conn_id, conn)
     __conn[conn_id] = conn
 end
 
+-- 连接断开
+function Conn:conn_del()
+end
+
+-- 连接建立完成(包括SSL等握手完成)
+function Conn:conn_ok()
+end
+
 return Conn

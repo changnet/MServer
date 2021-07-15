@@ -41,9 +41,9 @@ function ScConn:set_conn_param(conn_id)
     network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
 
     -- 使用tcp二进制流
-    network_mgr:set_conn_packet(conn_id, network_mgr.PKT_STREAM)
+    network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
     -- 使用websocket二进制流
-    -- network_mgr:set_conn_packet( conn_id,network_mgr.PKT_WSSTREAM )
+    -- network_mgr:set_conn_packet( conn_id,network_mgr.PT_WSSTREAM )
 
     -- set_send_buffer_size最后一个参数表示over_action，1 = 溢出后断开
     network_mgr:set_send_buffer_size(conn_id, 128, 8192, 1) -- 8k*128 = 1024k
@@ -75,19 +75,6 @@ function ScConn:send_pkt(cmd, pkt, errno)
     --     self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
--- 客户端连接到服务器
-function ScConn:connect(ip, port)
-    self.ip = ip
-    self.port = port
-
-    self.ok = false
-    self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CNT_CSCN)
-
-    self:set_conn(self.conn_id, self)
-
-    return self.conn_id
-end
-
 -- 认证成功
 function ScConn:authorized()
     self.auth = true
@@ -101,7 +88,7 @@ end
 
 -- 监听客户端连接
 function ScConn:listen(ip, port)
-    self.conn_id = network_mgr:listen(ip, port, network_mgr.CNT_SCCN)
+    self.conn_id = network_mgr:listen(ip, port, network_mgr.CT_SCCN)
 
     self:set_conn(self.conn_id, self)
 end
