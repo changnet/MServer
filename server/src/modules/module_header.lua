@@ -8,7 +8,6 @@ require "global.math"
 require "global.string"
 require "global.time"
 require "global.name"
-require "global.require_conf"
 
 require_define "modules.system.define"
 

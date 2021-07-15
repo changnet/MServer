@@ -102,11 +102,13 @@ function Cmd.reg_player(cmd, handler, noauth)
 end
 
 -- 注册服务器协议处理
+-- @param obj 回调模块，仅支持全局对象
 -- @param noauth 处理此协议时，不要求该链接可信
-function Cmd.reg_srv(cmd, handler, noauth)
+function Cmd.reg_srv(cmd, handler, obj, noauth)
     local i = cmd.i
 
     ss_handler[i] = {
+        obj = obj,
         noauth = noauth,
         handler = assert(handler)
     }
@@ -186,7 +188,17 @@ function Cmd.dispatch_srv(srv_conn, cmd, ...)
         return ERROR("dispatch_srv:try to call auth cmd", cmd)
     end
 
+    local obj = cfg.obj
     local handler = cfg.handler
+    if obj then
+        if stat then
+            --local beg = ev:real_ms_time()
+            handler(obj, srv_conn, ...)
+            -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
+        else
+            return handler(obj, srv_conn, ...)
+        end
+    end
     if stat then
         --local beg = ev:real_ms_time()
         handler(srv_conn, ...)

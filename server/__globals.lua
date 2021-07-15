@@ -1,4 +1,4 @@
--- auto export by lua-tags 175 symbols
+-- auto export by lua-tags 176 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -116,6 +116,7 @@ return {
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_srv_mgr", -- src/modules/module_header.lua
+"g_stat_mgr", -- src/android/app.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
@@ -145,9 +146,9 @@ return {
 "reg_func", -- src/global/name.lua
 "reg_obj", -- src/global/name.lua
 "require", -- src/global/require.lua
-"require_conf", -- src/global/require_conf.lua
+"require_conf", -- src/global/require.lua
 "require_define", -- src/global/require.lua
-"require_kv_conf", -- src/global/require_conf.lua
+"require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
 "rpc_command_new", -- src/rpc/rpc.lua
 "rpc_command_return", -- src/rpc/rpc.lua

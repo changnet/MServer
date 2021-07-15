@@ -5,9 +5,11 @@
 require "global.global"
 require "global.oo"
 require "global.table"
-require "global.require_conf"
 
-require "modules.system.define"
+require_define "modules.system.define"
+g_stat_mgr = require "statistic.statistic_mgr"
+
+require "network.cmd"
 g_timer_mgr = require "timer.timer_mgr"
 g_android_cmd = require "android.android_cmd"
 g_android_mgr = require "android.android_mgr"

@@ -12,11 +12,6 @@ local function srv_reg(srv_conn, pkt)
            srv_conn.session)
 end
 
--- 同步对方指令数据
-local function srv_cmd_sync(srv_conn, pkt)
-    Cmd.on_sync_cmd(srv_conn, pkt)
-end
-
 -- 对方服务器数据同步完成
 local function srv_sync_done(srv_conn, pkt)
     g_app:one_initialized(string.lower(srv_conn:base_name()), 1)
@@ -39,6 +34,6 @@ reg_func("rpc_gm", rpc_gm)
 
 -- 这里注册系统模块的协议处理
 Cmd.reg_srv(SYS.BEAT, srv_beat)
-Cmd.reg_srv(SYS.REG, srv_reg, true)
-Cmd.reg_srv(SYS.CMD_SYNC, srv_cmd_sync)
+Cmd.reg_srv(SYS.REG, srv_reg, nil, true)
+Cmd.reg_srv(SYS.CMD_SYNC, Cmd.on_sync_cmd)
 Cmd.reg_srv(SYS.SYNC_DONE, srv_sync_done)
