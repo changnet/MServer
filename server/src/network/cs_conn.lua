@@ -10,7 +10,7 @@ end
 
 function CsConn:set_conn_param(conn_id)
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
+    network_mgr:set_conn_codec(conn_id, network_mgr.CT_PROTOBUF)
 
     -- 使用tcp二进制流
     network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)

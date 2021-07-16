@@ -362,7 +362,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
     lua_pushinteger(L, header->_owner);
 
     // rpc解析方式目前固定为bson
-    Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CDC_BSON);
+    Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CT_BSON);
     int32_t cnt    = decoder->decode(L, buffer, size, nullptr);
     if (cnt < 1) // rpc调用至少要带参数名
     {
@@ -410,7 +410,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     if (size > 0)
     {
         // rpc解析方式目前固定为bson
-        Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CDC_BSON);
+        Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CT_BSON);
         cnt            = decoder->decode(L, buffer, size, nullptr);
     }
     if (LUA_OK != lua_pcall(L, 3 + cnt, 0, 1))
@@ -433,7 +433,7 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
 
     int32_t len        = 0;
     const char *buffer = nullptr;
-    Codec *encoder     = StaticGlobal::codec_mgr()->get_codec(Codec::CDC_BSON);
+    Codec *encoder     = StaticGlobal::codec_mgr()->get_codec(Codec::CT_BSON);
 
     if (LUA_OK == ecode)
     {
@@ -453,7 +453,7 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
     s2sh._cmd    = 0;
     s2sh._errno  = ecode;
     s2sh._packet = pkt;
-    s2sh._codec = Codec::CDC_NONE; // 用不着，但不初始化valgrind会警告
+    s2sh._codec = Codec::CT_NONE; // 用不着，但不初始化valgrind会警告
     s2sh._owner = unique_id;
 
     class Buffer &send = _socket->send_buffer();
@@ -638,7 +638,7 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     int32_t cmd      = luaL_checkinteger32(L, index + 2);
     uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, index + 3));
 
-    if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
+    if (codec_ty < Codec::CT_NONE || codec_ty >= Codec::CT_MAX)
     {
         return luaL_error(L, "illegal codec type");
     }
@@ -672,7 +672,7 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     s2sh._cmd   = static_cast<uint16_t>(cmd);
     s2sh._errno = ecode;
     s2sh._owner = owner;
-    s2sh._codec = Codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
+    s2sh._codec = Codec::CT_NONE; /* 避免valgrind警告内存未初始化 */
     s2sh._packet = SPT_SCPK; /*指定数据包类型为服务器发送客户端 */
 
     class Buffer &send = _socket->send_buffer();
@@ -713,7 +713,7 @@ int32_t StreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
     s2sh._errno  = ecode;
     s2sh._owner  = session;
     s2sh._packet = SPT_SSPK;
-    s2sh._codec  = Codec::CDC_NONE; // 这个这里用不着，但不初始化valgrind就会警告
+    s2sh._codec  = Codec::CT_NONE; // 这个这里用不着，但不初始化valgrind就会警告
 
     class Buffer &send = _socket->send_buffer();
     send.append(&s2sh, sizeof(s2sh));
@@ -768,7 +768,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     list[1]         = idx - 2; // 数量
     size_t list_len = sizeof(Owner) * idx;
 
-    if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
+    if (codec_ty < Codec::CT_NONE || codec_ty >= Codec::CT_MAX)
     {
         return luaL_error(L, "illegal codec type");
     }
@@ -796,7 +796,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     s2sh._cmd   = static_cast<uint16_t>(cmd);
     s2sh._errno = ecode;
     s2sh._owner = 0;
-    s2sh._codec = Codec::CDC_NONE; /* 避免valgrind警告内存未初始化 */
+    s2sh._codec = Codec::CT_NONE; /* 避免valgrind警告内存未初始化 */
     s2sh._packet = SPT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
     class Buffer &send = _socket->send_buffer();

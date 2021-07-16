@@ -8,14 +8,14 @@ CodecMgr::CodecMgr()
 {
     memset(_codecs, 0, sizeof(_codecs));
 
-    _codecs[Codec::CDC_BSON]     = new class BsonCodec();
-    _codecs[Codec::CDC_FLATBUF]  = new class FlatbuffersCodec();
-    _codecs[Codec::CDC_PROTOBUF] = new class ProtobufCodec();
+    _codecs[Codec::CT_BSON]     = new class BsonCodec();
+    _codecs[Codec::CT_FLATBUF]  = new class FlatbuffersCodec();
+    _codecs[Codec::CT_PROTOBUF] = new class ProtobufCodec();
 }
 
 CodecMgr::~CodecMgr()
 {
-    for (int32_t idx = 0; idx < Codec::CDC_MAX; idx++)
+    for (int32_t idx = 0; idx < Codec::CT_MAX; idx++)
     {
         if (_codecs[idx])
         {
@@ -42,7 +42,7 @@ int32_t CodecMgr::load_one_schema_file(Codec::CodecType type, const char *path) 
 
 class Codec *CodecMgr::get_codec(Codec::CodecType type)
 {
-    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return nullptr;
+    if (type < Codec::CT_NONE || type >= Codec::CT_MAX) return nullptr;
 
     return _codecs[type];
 }

@@ -223,11 +223,11 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
 
-    lc.set(Codec::CDC_NONE, "CDC_NONE");
-    lc.set(Codec::CDC_BSON, "CDC_BSON");
-    lc.set(Codec::CDC_STREAM, "CDC_STREAM");
-    lc.set(Codec::CDC_FLATBUF, "CDC_FLATBUF");
-    lc.set(Codec::CDC_PROTOBUF, "CDC_PROTOBUF");
+    lc.set(Codec::CT_NONE, "CT_NONE");
+    lc.set(Codec::CT_BSON, "CT_BSON");
+    lc.set(Codec::CT_STREAM, "CT_STREAM");
+    lc.set(Codec::CT_FLATBUF, "CT_FLATBUF");
+    lc.set(Codec::CT_PROTOBUF, "CT_PROTOBUF");
 
     lc.set(SSLMgr::SSLVT_NONE, "SSLVT_NONE");
     lc.set(SSLMgr::SSLVT_TLS_GEN_AT, "SSLVT_TLS_GEN_AT");

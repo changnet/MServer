@@ -61,6 +61,25 @@ end
 -- 网络连接基类
 local Conn = oo.class(...)
 
+-- 设置io读写、编码、打包方式
+function Conn:set_conn_param(conn_id)
+    -- 读写方式，是否使用SSL
+    network_mgr:set_conn_io(conn_id, self.iot or network_mgr.IOT_NONE)
+    -- 编码方式，如bson、protobuf、flatbuffers等
+    network_mgr:set_conn_codec(conn_id, self.cdc or network_mgr.CT_PROTOBUF)
+    -- 打包方式，如http、自定义的tcp打包、websocket打包
+    network_mgr:set_conn_packet(conn_id, self.pkt or network_mgr.PT_NONE)
+
+
+    local action = self.action or 1 -- over_action，1 表示缓冲区溢出后断开
+    local chunk_size = self.chunk_size or 8192 -- 单个缓冲区大小
+    local send_chunk_max = self.send_chunk_max or 128 -- 发送缓冲区数量
+    local recv_chunk_max = self.recv_chunk_max or 8 -- 接收缓冲区数
+
+    network_mgr:set_send_buffer_size(conn_id, send_chunk_max, chunk_size, action)
+    network_mgr:set_recv_buffer_size(conn_id, recv_chunk_max, chunk_size)
+end
+
 -- 根据连接id获取对象
 function Conn:get_conn(conn_id)
     return __conn[conn_id]

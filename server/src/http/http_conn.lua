@@ -108,7 +108,7 @@ function HttpConn:init_conn(conn_id, ssl)
     else
         network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
     end
-    network_mgr:set_conn_codec(conn_id, network_mgr.CDC_NONE)
+    network_mgr:set_conn_codec(conn_id, network_mgr.CT_NONE)
     network_mgr:set_conn_packet(conn_id, network_mgr.PT_HTTP)
 end
 

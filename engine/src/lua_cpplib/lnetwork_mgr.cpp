@@ -333,7 +333,7 @@ int32_t LNetworkMgr::reset_schema(lua_State *L)
 {
     int32_t type     = luaL_checkinteger32(L, 1);
 
-    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return 0;
+    if (type < Codec::CT_NONE || type >= Codec::CT_MAX) return 0;
 
     StaticGlobal::codec_mgr()->reset(
         static_cast<Codec::CodecType>(type));
@@ -346,7 +346,7 @@ int32_t LNetworkMgr::load_one_schema(lua_State *L)
     int32_t type     = luaL_checkinteger32(L, 1);
     const char *path = luaL_checkstring(L, 2);
 
-    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return 0;
+    if (type < Codec::CT_NONE || type >= Codec::CT_MAX) return 0;
 
     int32_t count = StaticGlobal::codec_mgr()->load_one_schema(
         static_cast<Codec::CodecType>(type), path);
@@ -360,7 +360,7 @@ int32_t LNetworkMgr::load_one_schema_file(lua_State *L)
     int32_t type     = luaL_checkinteger32(L, 1);
     const char *path = luaL_checkstring(L, 2);
 
-    if (type < Codec::CDC_NONE || type >= Codec::CDC_MAX) return -1;
+    if (type < Codec::CT_NONE || type >= Codec::CT_MAX) return -1;
 
     int32_t e = StaticGlobal::codec_mgr()->load_one_schema_file(
         static_cast<Codec::CodecType>(type), path);
@@ -817,7 +817,7 @@ int32_t LNetworkMgr::set_conn_codec(lua_State *L) /* 设置socket的编译方式
         return luaL_error(L, "invalid conn id");
     }
 
-    if (codec_type < Codec::CDC_NONE || codec_type >= Codec::CDC_MAX)
+    if (codec_type < Codec::CT_NONE || codec_type >= Codec::CT_MAX)
     {
         return luaL_error(L, "invalid codec type");
     }
@@ -984,7 +984,7 @@ int32_t LNetworkMgr::srv_multicast(lua_State *L)
     int32_t codec_ty = luaL_checkinteger32(L, 2);
     uint16_t cmd     = static_cast<uint16_t>(luaL_checkinteger(L, 3));
     uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, 4));
-    if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
+    if (codec_ty < Codec::CT_NONE || codec_ty >= Codec::CT_MAX)
     {
         return luaL_error(L, "illegal codec type");
     }
@@ -1071,7 +1071,7 @@ int32_t LNetworkMgr::clt_multicast(lua_State *L)
     int32_t codec_ty = luaL_checkinteger32(L, 2);
     uint16_t cmd     = static_cast<uint16_t>(luaL_checkinteger(L, 3));
     uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, 4));
-    if (codec_ty < Codec::CDC_NONE || codec_ty >= Codec::CDC_MAX)
+    if (codec_ty < Codec::CT_NONE || codec_ty >= Codec::CT_MAX)
     {
         return luaL_error(L, "illegal codec type");
     }

@@ -70,7 +70,7 @@ function ScConn:conn_new(ecode)
     end
 
     network_mgr:set_conn_io(self.conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(self.conn_id, network_mgr.CDC_NONE)
+    network_mgr:set_conn_codec(self.conn_id, network_mgr.CT_NONE)
     network_mgr:set_conn_packet(self.conn_id, network_mgr.PT_WEBSOCKET)
 
     PRINT("conn_new", self.conn_id)
@@ -141,7 +141,7 @@ function SsConn:conn_accept(new_conn_id)
     -- 弄成全局的，不然会被释放掉
     _G.new_conn = SsConn(new_conn_id)
     network_mgr:set_conn_io(new_conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(new_conn_id, network_mgr.CDC_NONE)
+    network_mgr:set_conn_codec(new_conn_id, network_mgr.CT_NONE)
     network_mgr:set_conn_packet(new_conn_id, network_mgr.PT_WEBSOCKET)
 
     return _G.new_conn

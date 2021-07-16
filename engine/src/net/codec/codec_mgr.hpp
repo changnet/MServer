@@ -14,5 +14,5 @@ public:
     int32_t load_one_schema_file(Codec::CodecType type, const char *path) const;
 
 private:
-    class Codec *_codecs[Codec::CDC_MAX];
+    class Codec *_codecs[Codec::CT_MAX];
 };

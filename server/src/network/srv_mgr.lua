@@ -143,7 +143,7 @@ end
 function SrvMgr:srv_multicast(cmd, pkt, ecode)
     local conn_list = {}
     for _, conn in pairs(self.srv) do table.insert(conn_list, conn.conn_id) end
-    return network_mgr:srv_multicast(conn_list, network_mgr.CDC_PROTOBUF, cmd.i,
+    return network_mgr:srv_multicast(conn_list, network_mgr.CT_PROTOBUF, cmd.i,
                                      ecode or 0, pkt)
 end
 
@@ -156,14 +156,14 @@ end
 function SrvMgr:clt_multicast(mask, args_list, cmd, pkt, ecode)
     local srv_conn = self.srv[GSE]
     return network_mgr:ssc_multicast(srv_conn.conn_id, mask, args_list,
-                                     network_mgr.CDC_PROTOBUF, cmd.i,
+                                     network_mgr.CT_PROTOBUF, cmd.i,
                                      ecode or 0, pkt)
 end
 
 -- 客户端广播(直接发给客户端，仅网关可用)
 -- @conn_list: 客户端conn_id列表
 function SrvMgr:raw_clt_multicast(conn_list, cmd, pkt, ecode)
-    return network_mgr:clt_multicast(conn_list, network_mgr.CDC_PROTOBUF, cmd.i,
+    return network_mgr:clt_multicast(conn_list, network_mgr.CT_PROTOBUF, cmd.i,
                                      ecode or 0, pkt)
 end
 

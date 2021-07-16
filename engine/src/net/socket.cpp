@@ -126,7 +126,7 @@ Socket::Socket(uint32_t conn_id, ConnType conn_ty)
     _pending     = 0;
     _conn_id     = conn_id;
     _conn_ty     = conn_ty;
-    _codec_ty    = Codec::CDC_NONE;
+    _codec_ty    = Codec::CT_NONE;
     _over_action = OAT_NONE;
 
     _w.set(StaticGlobal::ev());
