@@ -1,20 +1,105 @@
+local util = require "util"
 local Conn = require "network.conn"
 
 -- websocket公共层
 local WsConn = oo.class(..., Conn)
 
-function CsConn:set_conn_param(conn_id)
-    network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CT_NONE)
+local handshake_srv = 'HTTP/1.1 101 WebSocket Protocol Handshake\r\n\z
+    Connection: Upgrade\r\n\z
+    Upgrade: WebSocket\r\n\z
+    Sec-WebSocket-Accept: %s\r\n\r\n';
 
-    -- 使用标准的websocket，内容不经过处理，下发啥就是咐，一般可以是text
-    network_mgr:set_conn_packet(conn_id, network_mgr.PT_WEBSOCKET)
-    -- 使用websocket二进制流
-    -- network_mgr:set_conn_packet( conn_id,network_mgr.PT_WSSTREAM )
+local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-    -- set_send_buffer_size最后一个参数表示over_action，1 = 溢出后断开
-    network_mgr:set_send_buffer_size(conn_id, 128, 8192, 1) -- 8k*128 = 1024k
-    network_mgr:set_recv_buffer_size(conn_id, 8, 8192) -- 8k*8 = 64k
+-- websocket opcodes
+local WS_OP_CONTINUE = 0x0
+local WS_OP_TEXT     = 0x1
+local WS_OP_BINARY   = 0x2
+local WS_OP_CLOSE = 0x8
+local WS_OP_PING = 0x9
+local WS_OP_PONG = 0xA
+
+-- websocket marks
+local WS_FINAL_FRAME = 0x10
+local WS_HAS_MASK    = 0x20
+
+-- 导出一些常量
+WSConn = {
+    WS_OP_CONTINUE = WS_OP_CONTINUE,
+    WS_OP_TEXT = WS_OP_TEXT,
+    WS_OP_BINARY = WS_OP_BINARY,
+    WS_OP_CLOSE = WS_OP_CLOSE,
+    WS_OP_PING = WS_OP_PING,
+    WS_OP_PONG = WS_OP_PONG,
+    WS_FINAL_FRAME = WS_FINAL_FRAME,
+    WS_HAS_MASK = WS_HAS_MASK,
+}
+
+-- 处理websocket握手
+function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
+    -- 服务器收到客户端的握手请求
+    if not sec_websocket_key then
+        self.close()
+        PRINTF("clt handshake no sec_websocket_key")
+        return
+    end
+
+    local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
+    local base64 = util.base64(sha1)
+
+    PRINTF("clt handshake %d", self.conn_id)
+    return network_mgr:send_raw_packet(self.conn_id,
+                                       string.format(handshake_srv, base64))
+end
+
+-- 发送原生数据包
+-- @param body 要发送的文字
+function WsConn:send_pkt(body)
+    return network_mgr:send_clt_packet(
+        self.conn_id, WS_OP_TEXT | WS_FINAL_FRAME, body)
+end
+
+-- 发送控制包
+-- @param mask 控制包掩码，按位表示，如 WS_OP_PONG | WS_FINAL_FRAME
+-- @param body 控制包的数据，可以为nil
+function WsConn:send_ctrl(mask, body)
+    network_mgr:send_ctrl_packet(self.conn_id, WS_OP_PING, body)
+end
+
+function WsConn:ws_close()
+    self.op_close = true
+    self:send_ctrl(WS_OP_CLOSE)
+end
+
+-- 处理控制包
+function WsConn:ctrl_new(flag, body)
+    -- 控制帧只在前4位，先去掉WS_HAS_MASK
+    flag = flag & 0x0F
+    if flag == WS_OP_CLOSE then
+        if self.op_close then return end
+
+        network_mgr:send_ctrl_packet(self.conn_id,
+                                            WS_OP_CLOSE | WS_FINAL_FRAME)
+        -- RFC6455 5.5.1
+        -- If an endpoint receives a Close frame and did not previously send a
+        -- Close frame, the endpoint MUST send a Close frame in response
+        -- The server MUST close the underlying TCP connection immediately;
+        -- 在chrome中，调用websocket的close函数后，如果服务器不主动关闭，可能会几分钟
+        -- 后才会关闭连接
+        -- https://bugs.chromium.org/p/chromium/issues/detail?id=426798
+        self:close()
+        self:conn_del() -- 这个属于对方关闭连接，需要触发关闭事件
+        return
+    elseif flag == WS_OP_PING then
+        -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
+        return network_mgr:send_ctrl_packet(self.conn_id,
+                                            WS_OP_PONG | WS_FINAL_FRAME, body)
+    elseif flag == WS_OP_PONG then
+        -- TODO: 这里更新心跳
+        return
+    end
+
+    assert(false, "unknow websocket ctrl flag")
 end
 
 return WsConn

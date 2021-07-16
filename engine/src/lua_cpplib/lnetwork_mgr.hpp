@@ -292,6 +292,13 @@ public:
      */
     int32_t connect(lua_State *L);
 
+    /**
+     * 获取连接类型
+     * @param conn_id 网关连接id
+     * @return 连接类型，参考 ConnType 定义
+     */
+    int32_t get_connect_type(lua_State *L);
+
 public:
     void clear(); /* 清除所有网络数据，不通知上层脚本 */
 

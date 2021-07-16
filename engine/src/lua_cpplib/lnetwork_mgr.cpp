@@ -257,6 +257,20 @@ int32_t LNetworkMgr::connect(lua_State *L)
     return 1;
 }
 
+int32_t LNetworkMgr::get_connect_type(lua_State *L)
+{
+    uint32_t conn_id = luaL_checkinteger32(L, 1);
+
+    socket_map_t::iterator itr = _socket_map.find(conn_id);
+    if (itr == _socket_map.end())
+    {
+        return luaL_error(L, "no such socket found");
+    }
+
+    lua_pushinteger(L, itr->second->.conn_type());
+    return 1;
+}
+
 /* 获取客户端指令配置 */
 const CmdCfg *LNetworkMgr::get_cs_cmd(int32_t cmd) const
 {

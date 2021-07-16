@@ -1,4 +1,4 @@
--- auto export by lua-tags 176 symbols
+-- auto export by lua-tags 177 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -70,6 +70,7 @@ return {
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua
+"WSConn", -- src/network/ws_conn.lua
 "WSE", -- src/modules/system/define.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua

@@ -95,6 +95,8 @@ function ScConn:ctrl_new(flag, body)
         PRINT("clt ctrl_new close", self.conn_id, body)
         network_mgr:send_ctrl_packet(self.conn_id,
                                      WS_OP_CLOSE | WS_HAS_MASK | WS_FINAL_FRAME)
+
+
         return
     elseif flag == WS_OP_PING then
         PRINT("clt ctrl_new ping", self.conn_id, body)

@@ -1,8 +1,9 @@
 local network_mgr = network_mgr
 local Conn = require "network.conn"
+local WsConn = require "network.ws_conn"
 
--- 客户端与服务器的连接，用于机器人和单元测试
-local CsConn = oo.class(..., Conn)
+-- 客户端与服务器的连接， 采用websocket打包，用于机器人和单元测试
+local CsConn = oo.class(..., Conn, WsConn)
 
 function CsConn:__init(conn_id)
     self.conn_id = conn_id
@@ -10,7 +11,7 @@ end
 
 function CsConn:set_conn_param(conn_id)
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CDC_PROTOBUF)
+    network_mgr:set_conn_codec(conn_id, network_mgr.CT_PROTOBUF)
 
     -- 使用tcp二进制流
     network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
@@ -27,36 +28,13 @@ function CsConn:send_pkt(cmd, pkt)
     return network_mgr:send_srv_packet(self.conn_id, cmd.i, pkt)
 end
 
--- 客户端连接到服务器
-function CsConn:connect(ip, port)
-    self.ip = ip
-    self.port = port
-
-    self.ok = false
-    self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CT_CSCN)
-
-    self:set_conn(self.conn_id, self)
-
-    return self.conn_id
-end
-
-function CsConn:conn_new(ecode)
-    if 0 == ecode then
-        self:set_conn_param(self.conn_id)
-    end
-end
-
--- 消息回调
-function CsConn:command_new(cmd, ...)
-    -- 这个需要重载，这里没法定义逻辑
-    assert(false)
-end
-
 -- 主动关闭连接
 function CsConn:close()
+    self:ws_close()
+
     self:set_conn(self.conn_id, nil)
 
-    return network_mgr:close(self.conn_id)
+    return network_mgr:close(self.conn_id, true) -- 把WS_OP_CLOSE这个包发出去
 end
 
 return CsConn
