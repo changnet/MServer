@@ -23,7 +23,7 @@ end
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
 function SsConn:send_clt_pkt(pid, cmd, pkt, ecode)
     return network_mgr:send_ssc_packet(self.conn_id, pid,
-                                       network_mgr.CT_PROTOBUF, cmd.i,
+                                       network_mgr.CDT_PROTOBUF, cmd.i,
                                        ecode or 0, pkt)
 end
 
@@ -107,7 +107,7 @@ end
 -- 重新连接
 function SsConn:set_conn_param(conn_id)
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CT_PROTOBUF)
+    network_mgr:set_conn_codec(conn_id, network_mgr.CDT_PROTOBUF)
     network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
 
     -- 设置服务器之间链接缓冲区大小：

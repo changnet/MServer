@@ -87,7 +87,6 @@ return {
 "conn_del", -- src/network/conn.lua
 "conn_new", -- src/android/android_cmd.lua
 "conn_new", -- src/network/conn.lua
-"conn_ok", -- src/network/conn.lua
 "css_command_new", -- src/network/conn.lua
 "ctrl_new", -- src/network/conn.lua
 "func_thunk", -- src/global/name.lua
@@ -131,6 +130,7 @@ return {
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "hot_fix_script", -- src/modules/system/hot_fix.lua
+"io_ok", -- src/network/conn.lua
 "json", -- src/test/app.lua
 "lua_parson", -- engine/lua_parson.lua
 "lua_rapidxml", -- engine/lua_rapidxml.lua

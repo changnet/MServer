@@ -32,13 +32,13 @@ HTTP = {
         Connection: close\r\n\r\n%s',
 
     PGET = 'GET %s%s%s HTTP/1.1\r\n\z
-        Host: %s:%d\r\n\z
+        Host: %s\r\n\z
         Connection: keep-alive\r\n\z
         Upgrade-Insecure-Requests: 1\r\n\z
         Accept: text/plain,application/json\r\n\r\n',
 
     PPOST = 'POST %s HTTP/1.1\r\n\z
-        HOST: %s:%d\r\n\z
+        HOST: %s\r\n\z
         Content-Length: %d\r\n\z
         Connection: keep-alive\r\n\z
         Accept: text/plain,application/json\r\n\r\n%s'

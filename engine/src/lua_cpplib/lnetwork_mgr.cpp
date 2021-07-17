@@ -267,7 +267,7 @@ int32_t LNetworkMgr::get_connect_type(lua_State *L)
         return luaL_error(L, "no such socket found");
     }
 
-    lua_pushinteger(L, itr->second->.conn_type());
+    lua_pushinteger(L, itr->second->conn_type());
     return 1;
 }
 
@@ -750,17 +750,17 @@ bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
     return true;
 }
 
-bool LNetworkMgr::connect_ok(uint32_t conn_id)
+bool LNetworkMgr::io_ok(uint32_t conn_id)
 {
     static lua_State *L = StaticGlobal::state();
     LUA_PUSHTRACEBACK(L);
 
-    lua_getglobal(L, "conn_ok");
+    lua_getglobal(L, "io_ok");
     lua_pushinteger(L, conn_id);
 
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
-        ELOG("conn_ok:%s", lua_tostring(L, -1));
+        ELOG("io_ok:%s", lua_tostring(L, -1));
 
         lua_pop(L, 2); /* remove traceback and error object */
         return false;

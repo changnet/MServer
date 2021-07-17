@@ -1,15 +1,25 @@
 local util = require "util"
 local Conn = require "network.conn"
+local HttpConn = require "http.http_conn"
 
 -- websocket公共层
 local WsConn = oo.class(..., Conn)
 
+local handshake_clt = 'GET %s HTTP/1.1\r\n\z
+    Connection: Upgrade\r\n\z
+    Host: %s\r\n\z
+    Sec-WebSocket-Key: %s\r\n\z
+    Upgrade: websocket\r\n\z
+    Sec-WebSocket-Version: 13\r\n\r\n'
+
 local handshake_srv = 'HTTP/1.1 101 WebSocket Protocol Handshake\r\n\z
     Connection: Upgrade\r\n\z
     Upgrade: WebSocket\r\n\z
-    Sec-WebSocket-Accept: %s\r\n\r\n';
+    Sec-WebSocket-Accept: %s\r\n\r\n'
 
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+local default_url = "/"
 
 -- websocket opcodes
 local WS_OP_CONTINUE = 0x0
@@ -50,6 +60,22 @@ function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
     PRINTF("clt handshake %d", self.conn_id)
     return network_mgr:send_raw_packet(self.conn_id,
                                        string.format(handshake_srv, base64))
+end
+
+-- 客户端发送握手请求
+function WsConn:send_handshake(url)
+    -- RFC 6455 4.1.7
+    -- Sec-WebSocket-Key|. The value of this header field MUST be a
+    -- nonce consisting of a randomly selected 16-byte value that has
+    -- been base64-encoded
+    -- 随机16个字节的字符串就可以了，主要是用于服务器返回时用于验证，确保对方是一个ws而
+    -- 不是一个普通的http服务器
+    local r_val = tostring(math.random(1000000000000001, 9999999999999999))
+    self.ws_key = util.base64(r_val)
+
+    local host = HttpConn:fmt_host(self.host, self.port, self.ssl)
+    network_mgr:send_raw_packet(self.conn_id, string.format(
+        handshake_clt, url or default_url, host, self.ws_key))
 end
 
 -- 发送原生数据包

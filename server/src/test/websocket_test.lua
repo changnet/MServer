@@ -3,7 +3,10 @@
 -- xzc
 -- https://tools.ietf.org/pdf/rfc6455.pdf section1.3 page6
 -- example at: https://www.websocket.org/aboutwebsocket.html
-local conn_mgr = require "network.conn_mgr"
+
+
+local ScConn = require "network.sc_conn"
+local CsConn = require "network.cs_conn"
 
 local handshake_clt = table.concat({
     'GET ws://echo.websocket.org/?encoding=text HTTP/1.1\r\n',
@@ -29,6 +32,15 @@ local handshake_srv = table.concat({
 })
 
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+--[[
+https://stackoverflow.com/questions/4092591/websocket-live-server
+Your best bet is going to be Kaazing's websockets echo server: http://websockets.org/echo.html. It's easy to remember, they keep it up to date and running.
+
+ws://echo.websocket.org (port 80)
+wss://echo.websocket.org (port 443)
+EDIT: If you want to use wss:// (443) visit the site with https:// or else use http:// for ws:// (80).
+]]
 
 -- websocket opcodes
 -- local WS_OP_CONTINUE = 0x0

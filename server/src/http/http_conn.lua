@@ -133,6 +133,19 @@ function HttpConn:conn_new(ecode)
     end
 end
 
+-- 格式化HOST字段
+function HttpConn:fmt_host(host, port, ssl)
+    if port == 80 and not ssl then
+        return host
+    end
+
+    if port == 443 and ssl then
+        return host
+    end
+
+    return string.format("%s:%d", host, port)
+end
+
 -- 发起get请求
 -- @param url 请求的url
 -- @param req 请求的数据，不包含url，已进行url转义。如: name=1&pass=2
@@ -140,8 +153,9 @@ end
 function HttpConn:get(url, req, cb)
     if cb then self.on_command = cb end
 
+    local host = self:fmt_host(self.host, self.port, self.ssl)
     return self:send_pkt(string.format(PAGE_GET, url or "/", req and "?" or "",
-                                       req or "", self.host, self.port))
+                                       req or "", host))
 end
 
 -- 发起post请求
@@ -152,7 +166,8 @@ function HttpConn:post(url, body, cb)
     if cb then self.on_command = cb end
 
     body = body or ""
-    return self:send_pkt(string.format(PAGE_POST, url, self.host, self.port,
+    local host = self:fmt_host(self.host, self.port, self.ssl)
+    return self:send_pkt(string.format(PAGE_POST, url, host,
                                        string.len(body), body))
 end
 

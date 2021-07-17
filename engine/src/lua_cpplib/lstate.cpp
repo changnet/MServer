@@ -224,11 +224,12 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
 
-    lc.set(Codec::CT_NONE, "CT_NONE");
-    lc.set(Codec::CT_BSON, "CT_BSON");
-    lc.set(Codec::CT_STREAM, "CT_STREAM");
-    lc.set(Codec::CT_FLATBUF, "CT_FLATBUF");
-    lc.set(Codec::CT_PROTOBUF, "CT_PROTOBUF");
+    // 前缀CT和上面的重复了，这里改为CDT
+    lc.set(Codec::CT_NONE, "CDT_NONE");
+    lc.set(Codec::CT_BSON, "CDT_BSON");
+    lc.set(Codec::CT_STREAM, "CDT_STREAM");
+    lc.set(Codec::CT_FLATBUF, "CDT_FLATBUF");
+    lc.set(Codec::CT_PROTOBUF, "CDT_PROTOBUF");
 
     lc.set(SSLMgr::SSLVT_NONE, "SSLVT_NONE");
     lc.set(SSLMgr::SSLVT_TLS_GEN_AT, "SSLVT_TLS_GEN_AT");

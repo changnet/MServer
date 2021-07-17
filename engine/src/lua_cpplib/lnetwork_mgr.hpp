@@ -328,8 +328,8 @@ public:
     int32_t get_curr_session() const { return _session; }
     uint32_t new_connect_id(); /* 获取新connect_id */
 
-    /// 连接建立完成
-    bool connect_ok(uint32_t conn_id);
+    /// io建立完成
+    bool io_ok(uint32_t conn_id);
     /// 连接被销毁（断开）
     bool connect_del(uint32_t conn_id);
     /// 连接成功，需要执行始化

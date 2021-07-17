@@ -17,7 +17,7 @@ local network_mgr = network_mgr
 do
     local cs = require_define("proto.auto_cs", true)
 
-    local fs = network_mgr:load_one_schema(network_mgr.CT_PROTOBUF, "../pb")
+    local fs = network_mgr:load_one_schema(network_mgr.CDT_PROTOBUF, "../pb")
     PRINTF("android load protocol schema:%d", fs)
 
     for _, m in pairs(cs) do
@@ -83,7 +83,7 @@ function conn_new(conn_id, ecode)
     end
 
     network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CT_PROTOBUF)
+    network_mgr:set_conn_codec(conn_id, network_mgr.CDT_PROTOBUF)
 
     -- 使用tcp二进制流
     network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)

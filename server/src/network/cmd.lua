@@ -20,7 +20,7 @@ local cs_handler = {} -- 注册的客户端回调函数
 local ss_handler = {} -- 注册的服务器之间通信回调
 
 -- 加载协议描述文件，如protobuf、flatbuffers
--- @param schema_type 类型，如 CT_PROTOBUF
+-- @param schema_type 类型，如 CDT_PROTOBUF
 -- @param path 协议描述文件路径，采用linux的路径，如/home/test
 -- @param priority 优先加载的文件数组，如果没有顺序依赖可以不传
 -- @param suffix 文件名后缀
@@ -74,7 +74,7 @@ local function load_schema(schema_type, path, priority, suffix)
 end
 
 function Cmd.load_protobuf()
-    return load_schema(network_mgr.CT_PROTOBUF, "../pb", nil, "pb")
+    return load_schema(network_mgr.CDT_PROTOBUF, "../pb", nil, "pb")
 end
 
 function Cmd.load_flatbuffers()
