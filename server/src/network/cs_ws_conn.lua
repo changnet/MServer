@@ -5,22 +5,18 @@ local WsConn = require "network.ws_conn"
 -- 客户端与服务器的连接， 采用websocket打包，用于机器人和单元测试
 local CsWsConn = oo.class(..., CsConn, WsConn)
 
+CsWsConn.default_param = {
+    iot = network_mgr.IOT_NONE, -- io类型
+    cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
+    pkt = network_mgr.PT_WSSTREAM, -- 打包类型
+    action = 1, -- over_action，1 表示缓冲区溢出后断开
+    chunk_size = 8192, -- 单个缓冲区大小
+    send_chunk_max = 128, -- 发送缓冲区数量
+    recv_chunk_max = 8 -- 接收缓冲区数
+}
+
 function CsWsConn:__init(conn_id)
     self.conn_id = conn_id
-end
-
-function CsWsConn:set_conn_param(conn_id)
-    network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CDT_PROTOBUF)
-
-    -- 使用tcp二进制流
-    network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
-    -- 使用websocket二进制流
-    -- network_mgr:set_conn_packet( conn_id,network_mgr.PT_WSSTREAM )
-
-    -- set_send_buffer_size最后一个参数表示over_action，1 = 溢出后断开
-    network_mgr:set_send_buffer_size(conn_id, 128, 8192, 1) -- 8k*128 = 1024k
-    network_mgr:set_recv_buffer_size(conn_id, 8, 8192) -- 8k*8 = 64k
 end
 
 -- 发送数据包

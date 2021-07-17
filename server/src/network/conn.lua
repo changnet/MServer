@@ -30,8 +30,10 @@ end
 
 -- 连接断开
 function conn_del(conn_id)
+    local conn = __conn[conn_id]
     __conn[conn_id] = nil
-    __conn[conn_id]:conn_del()
+
+    conn:conn_del()
 end
 
 -- 消息回调,底层根据不同类，参数也不一样
@@ -62,7 +64,7 @@ end
 local Conn = oo.class(...)
 
 -- 设置io读写、编码、打包方式
-function Conn:set_conn_param(param)
+function Conn:set_conn_param()
     --[[
         param = {
             iot = network_mgr.IOT_NONE, -- io类型
@@ -74,7 +76,8 @@ function Conn:set_conn_param(param)
             recv_chunk_max = 8 -- 接收缓冲区数
         }
     ]]
-    param = param or self -- 可以直接传入 param，或者直接写在self中
+
+    local param = self.default_param
     local conn_id = self.conn_id
 
     -- 读写方式，是否使用SSL

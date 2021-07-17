@@ -4,7 +4,7 @@ local Conn = require "network.conn"
 -- 客户端与服务器的连接，用于机器人和单元测试
 local CsConn = oo.class(..., Conn)
 
-local default_param = {
+CsConn.default_param = {
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
@@ -38,7 +38,7 @@ end
 
 function CsConn:conn_new(ecode)
     if 0 == ecode then
-        self:set_conn_param(default_param)
+        self:set_conn_param()
     end
 end
 

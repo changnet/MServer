@@ -12,8 +12,9 @@ local listen_conn = nil
 local RpcConn = oo.class("RpcConn", SsConn)
 
 function RpcConn:conn_accept(new_conn_id)
-    self:set_conn_param(new_conn_id)
     srv_conn = RpcConn(new_conn_id)
+
+    srv_conn:set_conn_param()
     return srv_conn
 end
 
@@ -24,7 +25,7 @@ end
 function RpcConn:conn_new(ecode)
     t_equal(ecode, 0)
 
-    self:set_conn_param(self.conn_id)
+    self:set_conn_param()
 end
 function RpcConn:conn_del()
     self:set_conn(self.conn_id, nil)

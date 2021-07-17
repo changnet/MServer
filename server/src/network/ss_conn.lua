@@ -6,6 +6,16 @@ local Conn = require "network.conn"
 -- 服务器之间的链接
 local SsConn = oo.class(..., Conn)
 
+SsConn.default_param = {
+    iot = network_mgr.IOT_NONE, -- io类型
+    cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
+    pkt = network_mgr.PT_STREAM, -- 打包类型
+    action = 2, -- over_action，2 表示缓冲区满后进入自旋来发送数据
+    chunk_size = 8 * 1024 * 1024, -- 单个缓冲区大小
+    send_chunk_max = 64, -- 发送缓冲区数量
+    recv_chunk_max = 1 -- 接收缓冲区数
+}
+
 function SsConn:__init(conn_id)
     self.auth = false
     self.beat = 0
@@ -104,25 +114,10 @@ function SsConn:reconnect()
     return self:raw_connect()
 end
 
--- 重新连接
-function SsConn:set_conn_param(conn_id)
-    network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    network_mgr:set_conn_codec(conn_id, network_mgr.CDT_PROTOBUF)
-    network_mgr:set_conn_packet(conn_id, network_mgr.PT_STREAM)
-
-    -- 设置服务器之间链接缓冲区大小：
-    -- 发送的话可能会累加，要设置大些.16777216 = 16MB，最大累加16*64 = 1024M
-    -- 接收的话现在是收到数据立马解析完，不需要很大
-    -- set_send_buffer_size最后一个参数表示over_action，2 = 溢出后阻塞
-    network_mgr:set_send_buffer_size(conn_id, 64, 16777216, 2)
-    network_mgr:set_recv_buffer_size(conn_id, 8, 8388608) -- 8M
-end
-
 -- 接受新的连接
 function SsConn:conn_accept(new_conn_id)
-    self:set_conn_param(new_conn_id)
-
     local new_conn = SsConn(new_conn_id)
+    new_conn:set_conn_param()
     g_srv_mgr:srv_conn_accept(new_conn_id, new_conn)
 
     return new_conn
@@ -132,7 +127,7 @@ end
 function SsConn:conn_new(ecode)
     if 0 == ecode then
         self.ok = true
-        self:set_conn_param(self.conn_id)
+        self:set_conn_param()
     else
         return g_srv_mgr:srv_conn_new(self.conn_id, ecode)
     end
