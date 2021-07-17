@@ -369,10 +369,16 @@ int32_t WebsocketPacket::on_ctrl_end()
     lua_getglobal(L, "ctrl_new");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, _parser->flags);
-    // 控制帧也是可以包含数据的
-    lua_pushlstring(L, ctx, size);
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
+    int32_t args_cnt = 2;
+    if (size > 0)
+    {
+        args_cnt++;
+        // 控制帧也是可以包含数据的
+        lua_pushlstring(L, ctx, size);
+    }
+
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, args_cnt, 0, 1)))
     {
         ELOG("websocket ctrl:%s", lua_tostring(L, -1));
     }

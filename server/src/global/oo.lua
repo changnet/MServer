@@ -83,11 +83,10 @@ local function fast_class(new_method, clz, super, ...)
 
     local supers = {super, ...}
 
-    -- 多重继承或多继承时，各个基类必须按 s3,s2,s1... 顺序传进来
-    -- 而同名函数则会按 s1覆盖s0,s2覆盖s1,s3覆盖s2 的顺序
-    for idx = #supers, 1, -1 do
+    -- 多重继承或多继承时，各个基类必须按 s1, s2, s3, ... 顺序传进来
+    -- 如果存在同名函数，则后面的会覆盖前面的
+    for _, clz_base in ipairs(supers) do
         -- 复制基类函数到子类
-        local clz_base = supers[idx]
         for k, v in pairs(clz_base) do clz[k] = v end
     end
 

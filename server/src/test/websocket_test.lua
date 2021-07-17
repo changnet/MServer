@@ -4,43 +4,85 @@
 -- https://tools.ietf.org/pdf/rfc6455.pdf section1.3 page6
 -- example at: https://www.websocket.org/aboutwebsocket.html
 
+local WsConn = require "network.ws_conn"
+local CsWsConn = require "network.cs_ws_conn"
 
-local ScConn = require "network.sc_conn"
-local CsConn = require "network.cs_conn"
+CsWsConn.default_param = WsConn.default_param
 
-local handshake_clt = table.concat({
-    'GET ws://echo.websocket.org/?encoding=text HTTP/1.1\r\n',
-    'Origin: http://websocket.org\r\n',
-    'Cookie: __utma=99as\r\n',
-    'Connection: Upgrade\r\n',
-    'Host: echo.websocket.org\r\n',
-    'Sec-WebSocket-Key: uRovscZjNol/umbTt5uKmw==\r\n',
-    'Upgrade: websocket\r\n',
-    'Sec-WebSocket-Version: 13\r\n\r\n'
-})
+t_describe("websocket test", function()
+    --[[
+    https://stackoverflow.com/questions/4092591/websocket-live-server
+    Your best bet is going to be Kaazing's websockets echo server: http://websockets.org/echo.html. It's easy to remember, they keep it up to date and running.
 
-local handshake_srv = table.concat({
-    'HTTP/1.1 101 WebSocket Protocol Handshake\r\n',
-    'Date: Fri, 10 Feb 2012 17:38:18 GMT\r\n',
-    'Connection: Upgrade\r\n',
-    'Server: Kaazing Gateway\r\n',
-    'Upgrade: WebSocket\r\n',
-    'Access-Control-Allow-Origin: http://websocket.org\r\n',
-    'Access-Control-Allow-Credentials: true\r\n',
-    'Sec-WebSocket-Accept: rLHCkw/SKsO9GAH/ZSFhBATDKrU=\r\n',
-    'Access-Control-Allow-Headers: content-type\r\n\r\n'
-})
+    ws://echo.websocket.org (port 80)
+    wss://echo.websocket.org (port 443)
+    EDIT: If you want to use wss:// (443) visit the site with https:// or else use http:// for ws:// (80).
+    ]]
+    local exp_host = "echo.websocket.org"
 
-local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+    local local_host = "::1"
+    if IPV4 then local_host = "127.0.0.1" end
+
+    t_before(function()
+    end)
+
+    t_it("websocket " .. exp_host, function()
+        t_wait(5000)
+
+        local pkt_idx = 0
+        local pkt_body = {
+            "MServer send hello",
+            "MServer send hello2",
+        }
+
+        local ping_idx = 0
+        local ping_body = {
+            [2] = "ping with body"
+        }
+        CsWsConn.conn_ok = function(self)
+            WsConn.send_pkt(self, pkt_body[1])
+            self:send_ctrl(self.WS_OP_PING)
+            self:send_ctrl(self.WS_OP_PING, ping_body[2])
+        end
+        CsWsConn.command_new = function(self, cmd_body)
+            pkt_idx = pkt_idx + 1
+            t_equal(cmd_body, pkt_body[pkt_idx])
+
+            if pkt_body[pkt_idx + 1] then
+                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+            end
+
+            if not ping_body[ping_idx + 1] and not pkt_body[pkt_idx + 1] then
+                t_done()
+            end
+        end
+
+        CsWsConn.on_ctrl = function(self, flag, body)
+            if flag == self.WS_OP_PONG then
+                ping_idx = ping_idx + 1
+                t_equal(body, ping_body[ping_idx])
+                if not ping_body[ping_idx + 1] and not pkt_body[pkt_idx + 1] then
+                    t_done()
+                end
+            end
+        end
+
+        local conn = CsWsConn()
+        conn:connect(exp_host, 80)
+    end)
+
+    t_it("websocket ssl " .. exp_host, function()
+    end)
+
+    t_it("websocket local", function()
+    end)
+
+    t_it("websocket local ssl", function()
+    end)
+end)
+
 
 --[[
-https://stackoverflow.com/questions/4092591/websocket-live-server
-Your best bet is going to be Kaazing's websockets echo server: http://websockets.org/echo.html. It's easy to remember, they keep it up to date and running.
-
-ws://echo.websocket.org (port 80)
-wss://echo.websocket.org (port 443)
-EDIT: If you want to use wss:// (443) visit the site with https:// or else use http:// for ws:// (80).
-]]
 
 -- websocket opcodes
 -- local WS_OP_CONTINUE = 0x0
@@ -213,4 +255,4 @@ ws_listen:listen("127.0.0.1", ws_port)
 -- 测试自己的服务器是否正常
 ws_local_conn = ScConn()
 ws_local_conn:connect("127.0.0.1", ws_port)
-
+]]

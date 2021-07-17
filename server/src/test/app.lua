@@ -59,7 +59,7 @@ function App:final_initialize()
     require "test.mysql_test"
     require "test.log_test"
     -- require "example.stream_performance"
-    -- require "example.websocket_performance"
+    require "test.websocket_test"
     require "test.words_filter_test"
     -- require "example.scene_performance"
     require "test.rank_test"

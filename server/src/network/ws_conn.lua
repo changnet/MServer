@@ -1,9 +1,8 @@
 local util = require "util"
-local Conn = require "network.conn"
 local HttpConn = require "http.http_conn"
 
 -- websocket公共层
-local WsConn = oo.class(..., Conn)
+local WsConn = oo.class(...)
 
 local handshake_clt = 'GET %s HTTP/1.1\r\n\z
     Connection: Upgrade\r\n\z
@@ -33,33 +32,53 @@ local WS_OP_PONG = 0xA
 local WS_FINAL_FRAME = 0x10
 local WS_HAS_MASK    = 0x20
 
+local SRV_MASK = WS_FINAL_FRAME
+local CLT_MASK = WS_FINAL_FRAME | WS_HAS_MASK
+
 -- 导出一些常量
-WSConn = {
-    WS_OP_CONTINUE = WS_OP_CONTINUE,
-    WS_OP_TEXT = WS_OP_TEXT,
-    WS_OP_BINARY = WS_OP_BINARY,
-    WS_OP_CLOSE = WS_OP_CLOSE,
-    WS_OP_PING = WS_OP_PING,
-    WS_OP_PONG = WS_OP_PONG,
-    WS_FINAL_FRAME = WS_FINAL_FRAME,
-    WS_HAS_MASK = WS_HAS_MASK,
+
+WsConn.WS_OP_CONTINUE = WS_OP_CONTINUE
+WsConn.WS_OP_TEXT = WS_OP_TEXT
+WsConn.WS_OP_BINARY = WS_OP_BINARY
+WsConn.WS_OP_CLOSE = WS_OP_CLOSE
+WsConn.WS_OP_PING = WS_OP_PING
+WsConn.WS_OP_PONG = WS_OP_PONG
+WsConn.WS_FINAL_FRAME = WS_FINAL_FRAME
+WsConn.WS_HAS_MASK = WS_HAS_MASK
+
+
+WsConn.default_param = {
+    iot = network_mgr.IOT_NONE, -- io类型
+    cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
+    pkt = network_mgr.PT_WEBSOCKET, -- 打包类型
+    action = 1, -- over_action，1 表示缓冲区溢出后断开
+    chunk_size = 8192, -- 单个缓冲区大小
+    send_chunk_max = 128, -- 发送缓冲区数量
+    recv_chunk_max = 8 -- 接收缓冲区数
 }
 
 -- 处理websocket握手
 function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
-    -- 服务器收到客户端的握手请求
-    if not sec_websocket_key then
-        self.close()
-        PRINTF("clt handshake no sec_websocket_key")
-        return
+    if sec_websocket_key then
+        -- 服务器收到客户端的握手请求
+        local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
+        local base64 = util.base64(sha1)
+        network_mgr:send_raw_packet(self.conn_id,
+                                    string.format(handshake_srv, base64))
+    else
+        -- 客户端收到服务器返回的握手请求
+        local sha1 = util.sha1_raw(self.ws_key, ws_magic)
+        local base64 = util.base64(sha1)
+        if sec_websocket_accept ~= base64 then
+            PRINT("websocket handshake key not match",
+                self.conn_id, sec_websocket_accept, base64)
+            self:close()
+            return
+        end
     end
 
-    local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
-    local base64 = util.base64(sha1)
-
-    PRINTF("clt handshake %d", self.conn_id)
-    return network_mgr:send_raw_packet(self.conn_id,
-                                       string.format(handshake_srv, base64))
+    -- 握手后，连接建立成功
+    self:conn_ok()
 end
 
 -- 客户端发送握手请求
@@ -78,18 +97,24 @@ function WsConn:send_handshake(url)
         handshake_clt, url or default_url, host, self.ws_key))
 end
 
+-- io建立成功，开始websocket握手
+function WsConn:io_ok()
+    return self:send_handshake(self.url)
+end
+
 -- 发送原生数据包
 -- @param body 要发送的文字
 function WsConn:send_pkt(body)
-    return network_mgr:send_clt_packet(
-        self.conn_id, WS_OP_TEXT | WS_FINAL_FRAME, body)
+    local mask = self.ws_key and CLT_MASK or SRV_MASK
+    return network_mgr:send_clt_packet(self.conn_id, WS_OP_TEXT | mask, body)
 end
 
 -- 发送控制包
--- @param mask 控制包掩码，按位表示，如 WS_OP_PONG | WS_FINAL_FRAME
+-- @param flag 控制包掩码，按位表示，如 WS_OP_PONG | WS_FINAL_FRAME
 -- @param body 控制包的数据，可以为nil
-function WsConn:send_ctrl(mask, body)
-    network_mgr:send_ctrl_packet(self.conn_id, WS_OP_PING, body)
+function WsConn:send_ctrl(flag, body)
+    local mask = self.ws_key and CLT_MASK or SRV_MASK
+    return network_mgr:send_ctrl_packet(self.conn_id, flag | mask, body)
 end
 
 function WsConn:ws_close()
@@ -101,11 +126,15 @@ end
 function WsConn:ctrl_new(flag, body)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
+    if self.on_ctrl then self:on_ctrl(flag, body) end
+
     if flag == WS_OP_CLOSE then
+        -- 自己发起关闭的，收到对方回复，可以直接关闭了
         if self.op_close then return end
 
-        network_mgr:send_ctrl_packet(self.conn_id,
-                                            WS_OP_CLOSE | WS_FINAL_FRAME)
+        local mask = self.ws_key and CLT_MASK or SRV_MASK
+        network_mgr:send_ctrl_packet(self.conn_id, WS_OP_CLOSE | mask)
+
         -- RFC6455 5.5.1
         -- If an endpoint receives a Close frame and did not previously send a
         -- Close frame, the endpoint MUST send a Close frame in response
@@ -118,14 +147,15 @@ function WsConn:ctrl_new(flag, body)
         return
     elseif flag == WS_OP_PING then
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
-        return network_mgr:send_ctrl_packet(self.conn_id,
-                                            WS_OP_PONG | WS_FINAL_FRAME, body)
+        local mask = self.ws_key and CLT_MASK or SRV_MASK
+        return network_mgr:send_ctrl_packet(
+            self.conn_id, WS_OP_PONG | mask, body)
     elseif flag == WS_OP_PONG then
         -- TODO: 这里更新心跳
         return
     end
 
-    assert(false, "unknow websocket ctrl flag")
+    assert(false, "unknow websocket ctrl flag " .. flag)
 end
 
 return WsConn

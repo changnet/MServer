@@ -27,11 +27,12 @@ end
 -- 连接到其他服务器
 -- @param host 目标服务器地址(支持域名)
 -- @param port 目标服务器端口
-function CsWsConn:connect(host, port, on_connect, on_command)
+function CsWsConn:connect(host, port)
     local ip = util.get_addr_info(host)
     -- 这个host需要注意，实测对www.example.com请求时，如果host为一个ip，是会返回404的
     self.host = host
     self.port = port
+
     CsConn.connect(self, ip, port)
 end
 
