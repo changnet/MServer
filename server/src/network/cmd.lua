@@ -68,7 +68,7 @@ local function load_schema(schema_type, path, priority, suffix)
         end
     end
 
-    PRINTF("load %d scehma files, time %dms", count, ev:real_ms_time() - tm)
+    PRINTF("load %d scehma files, time %d ms", count, ev:real_ms_time() - tm)
 
     return count > 0
 end

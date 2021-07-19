@@ -19,15 +19,16 @@ ScWsConn.default_param = {
     recv_chunk_max = 8 -- 接收缓冲区数
 }
 
+local MASK = WsConn.WS_FINAL_FRAME | WsConn.WS_OP_BINARY
+
 function ScWsConn:__init(conn_id)
     self.conn_id = conn_id
 end
 
 -- 发送数据包
 function ScWsConn:send_pkt(cmd, pkt, errno)
-    -- 使用websocket
     return network_mgr:send_clt_packet(
-        self.conn_id,cmd,errno or 0, WS_OP_BINARY | WS_FINAL_FRAME, pkt)
+        self.conn_id, cmd.i, errno or 0, MASK, pkt)
 end
 
 -- 主动关闭连接

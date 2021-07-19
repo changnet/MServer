@@ -15,13 +15,15 @@ CsWsConn.default_param = {
     recv_chunk_max = 8 -- 接收缓冲区数
 }
 
+local MASK = WsConn.WS_FINAL_FRAME | WsConn.WS_HAS_MASK | WsConn.WS_OP_BINARY
+
 function CsWsConn:__init(conn_id)
     self.conn_id = conn_id
 end
 
 -- 发送数据包
 function CsWsConn:send_pkt(cmd, pkt)
-    return network_mgr:send_srv_packet(self.conn_id, cmd.i, pkt)
+    return network_mgr:send_srv_packet(self.conn_id, cmd.i, MASK, pkt)
 end
 
 -- 连接到其他服务器
