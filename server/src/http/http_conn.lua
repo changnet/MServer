@@ -16,6 +16,11 @@ local network_mgr = network_mgr
 -- http连接
 local HttpConn = oo.class(..., Conn)
 
+HttpConn.default_param = {
+    cdt = network_mgr.CDT_NONE, -- 编码类型
+    pkt = network_mgr.PT_HTTP, -- 打包类型
+}
+
 function HttpConn:__init(conn_id)
     self.conn_id = conn_id -- 通过accept创建时需要直接指定
 end
@@ -101,17 +106,6 @@ function HttpConn:listen_s(ip, port, ssl, on_accept, on_command)
     return self:listen(ip, port, on_accept, on_command)
 end
 
--- 初始化连接参数
-function HttpConn:init_conn(conn_id, ssl)
-    if ssl then
-        network_mgr:set_conn_io(conn_id, network_mgr.IOT_SSL, ssl)
-    else
-        network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
-    end
-    network_mgr:set_conn_codec(conn_id, network_mgr.CT_NONE)
-    network_mgr:set_conn_packet(conn_id, network_mgr.PT_HTTP)
-end
-
 -- 有新的连接进来
 function HttpConn:conn_accept(new_conn_id)
     local new_conn = HttpConn(new_conn_id)
@@ -119,7 +113,7 @@ function HttpConn:conn_accept(new_conn_id)
     -- 继承一些参数
     new_conn.ssl = self.ssl
     new_conn.on_command = self.on_command
-    new_conn:init_conn(new_conn_id, self.ssl)
+    new_conn:set_conn_param()
 
     return new_conn
 end
@@ -127,7 +121,7 @@ end
 -- 连接成功(或失败)
 function HttpConn:conn_new(ecode)
     if 0 == ecode then
-        self:init_conn(self.conn_id, self.ssl)
+        self:set_conn_param()
     else
         if self.on_connect then return self.on_connect(self, ecode) end
     end

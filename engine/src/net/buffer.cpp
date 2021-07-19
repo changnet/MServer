@@ -8,9 +8,9 @@ Buffer::Buffer()
 {
     _chunk_size = 0; // 已申请chunk数量
 
-    _chunk_max = 8; // 允许申请chunk的最大数量
+    _chunk_max = 1; // 允许申请chunk的最大数量
     // 默认单个chunk的缓冲区大小
-    _chunk_ctx_size = (MAX_PACKET_LEN / BUFFER_CHUNK + 1) * BUFFER_CHUNK;
+    _chunk_ctx_size = BUFFER_CHUNK;
 
     _front = _back = NULL;
 }
@@ -149,6 +149,13 @@ const char *Buffer::to_continuous_ctx(size_t len)
 // 把所有数据放到一块连续缓冲区中
 const char *Buffer::all_to_continuous_ctx(size_t &len)
 {
+    // 没有执行reserver就调用这个函数就会出现这种情况
+    // 在websocket那边，可以只发ctrl包，不包含数据就不会预分配内存
+    // if (EXPECT_FALSE(!_front))
+    // {
+    //     len = 0;
+    //     return nullptr;
+    // }
     if (EXPECT_TRUE(!_front->_next))
     {
         len = _front->used_size();

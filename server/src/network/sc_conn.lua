@@ -45,6 +45,13 @@ function ScConn:listen(ip, port)
     self:set_conn(self.conn_id, self)
 end
 
+-- 以https方式监听http连接
+-- @param ssl 用new_ssl_ctx创建的ssl_ctx
+function ScConn:listen_s(ip, port, ssl)
+    self.ssl = assert(ssl)
+    return self:listen(ip, port)
+end
+
 -- 连接断开
 function ScConn:conn_del()
     -- 这个会自动解除
@@ -71,6 +78,7 @@ end
 function ScConn:conn_accept(new_conn_id)
     local new_conn = ScConn(new_conn_id)
 
+    new_conn.ssl = self.ssl
     new_conn:set_conn_param()
     g_clt_mgr:clt_conn_accept(new_conn_id, new_conn)
 

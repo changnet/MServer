@@ -28,7 +28,6 @@ function CsConn:connect(ip, port)
     self.ip = ip
     self.port = port
 
-    self.ok = false
     self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CT_CSCN)
 
     self:set_conn(self.conn_id, self)

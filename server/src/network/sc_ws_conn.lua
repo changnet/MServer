@@ -9,7 +9,7 @@ local ScWsConn = oo.class(..., ScConn, WsConn)
 local WS_OP_BINARY = WsConn.WS_OP_BINARY
 local WS_FINAL_FRAME = WsConn.WS_FINAL_FRAME
 
-ScConn.default_param = {
+ScWsConn.default_param = {
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_WSSTREAM, -- 打包类型

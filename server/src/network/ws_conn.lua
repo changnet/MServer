@@ -99,6 +99,8 @@ end
 
 -- io建立成功，开始websocket握手
 function WsConn:io_ok()
+    -- 如果是客户端才发起握手，服务器是不处理的
+    if not self.host then return end
     return self:send_handshake(self.url)
 end
 
@@ -118,6 +120,9 @@ function WsConn:send_ctrl(flag, body)
 end
 
 function WsConn:ws_close()
+    -- 如果握手成功，则关闭时需要发送关闭数据包(用于监听的socket根本不会有握手)
+    if not self.ok then return end
+
     self.op_close = true
     self:send_ctrl(WS_OP_CLOSE)
 end

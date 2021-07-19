@@ -31,15 +31,23 @@ function CsWsConn:connect(host, port)
     local ip = util.get_addr_info(host)
     -- 这个host需要注意，实测对www.example.com请求时，如果host为一个ip，是会返回404的
     self.host = host
-    self.port = port
 
     CsConn.connect(self, ip, port)
+end
+
+-- 以https试连接到其他服务器
+-- @param host 目标服务器地址
+-- @param port 目标服务器端口
+-- @param ssl 用new_ssl_ctx创建的ssl_ctx
+function CsWsConn:connect_s(host, port, ssl)
+    self.ssl = assert(ssl)
+
+    return self:connect(host, port)
 end
 
 -- 主动关闭连接
 function CsWsConn:close()
     self:ws_close()
-
     self:set_conn(self.conn_id, nil)
 
     return network_mgr:close(self.conn_id, true) -- 把WS_OP_CLOSE这个包发出去

@@ -90,14 +90,12 @@ int32_t on_frame_header(struct websocket_parser *parser)
     // parser->data->opcode = parser->flags & WS_OP_MASK; // gets opcode
     // parser->data->is_final = parser->flags & WS_FIN;   // checks is final
     // frame websocket是允许不发内容的，因此length可能为0
+    // 但即使为0，也要预分配内存，因为后面的ctrl包里也会调用body的函数
     body.clear();
-    if (parser->length)
+    if (!body.reserved(parser->length))
     {
-        if (!body.reserved(parser->length))
-        {
-            ELOG("websocket cant not allocate memory");
-            return -1;
-        }
+        ELOG("websocket cant not allocate memory");
+        return -1;
     }
     return 0;
 }

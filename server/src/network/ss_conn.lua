@@ -90,7 +90,6 @@ function SsConn:listen(ip, port)
 end
 
 function SsConn:raw_connect()
-    self.ok = false
     self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CT_SSCN)
 
     self:set_conn(self.conn_id, self)
@@ -126,7 +125,6 @@ end
 -- 连接进行初始化
 function SsConn:conn_new(ecode)
     if 0 == ecode then
-        self.ok = true
         self:set_conn_param()
     else
         return g_srv_mgr:srv_conn_new(self.conn_id, ecode)
@@ -140,7 +138,6 @@ end
 
 -- 连接断开
 function SsConn:conn_del()
-    self.ok = false
     return g_srv_mgr:srv_conn_del(self.conn_id)
 end
 
@@ -157,7 +154,6 @@ end
 
 -- 主动关闭连接
 function SsConn:close()
-    self.ok = false
     return network_mgr:close(self.conn_id)
 end
 

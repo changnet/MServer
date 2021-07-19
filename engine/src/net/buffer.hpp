@@ -126,7 +126,6 @@ public:
         while (next)
         {
             mem += next->_max;
-            ;
             next = next->_next;
         };
 

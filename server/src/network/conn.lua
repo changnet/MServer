@@ -25,6 +25,9 @@ end
 
 -- io初始化成功
 function io_ok(conn_id, ...)
+    local conn = __conn[conn_id]
+
+    conn.ok = true
     return __conn[conn_id]:io_ok(...)
 end
 
@@ -33,6 +36,7 @@ function conn_del(conn_id)
     local conn = __conn[conn_id]
     __conn[conn_id] = nil
 
+    conn.ok = false
     conn:conn_del()
 end
 
@@ -67,7 +71,6 @@ local Conn = oo.class(...)
 function Conn:set_conn_param()
     --[[
         param = {
-            iot = network_mgr.IOT_NONE, -- io类型
             cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
             pkt = network_mgr.PT_NONE, -- 打包类型
             action = 1, -- over_action，1 表示缓冲区溢出后断开
@@ -81,16 +84,20 @@ function Conn:set_conn_param()
     local conn_id = self.conn_id
 
     -- 读写方式，是否使用SSL
-    network_mgr:set_conn_io(conn_id, param.iot or network_mgr.IOT_NONE)
+    if self.ssl then
+        network_mgr:set_conn_io(conn_id, network_mgr.IOT_SSL, self.ssl)
+    else
+        network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
+    end
     -- 编码方式，如bson、protobuf、flatbuffers等
-    network_mgr:set_conn_codec(conn_id, param.cdt or network_mgr.CDT_PROTOBUF)
+    network_mgr:set_conn_codec(conn_id, param.cdt or network_mgr.CDT_NONE)
     -- 打包方式，如http、自定义的tcp打包、websocket打包
     network_mgr:set_conn_packet(conn_id, param.pkt or network_mgr.PT_NONE)
 
     local action = param.action or 1 -- over_action，1 表示缓冲区溢出后断开
     local chunk_size = param.chunk_size or 8192 -- 单个缓冲区大小
-    local send_chunk_max = param.send_chunk_max or 128 -- 发送缓冲区数量
-    local recv_chunk_max = param.recv_chunk_max or 8 -- 接收缓冲区数
+    local send_chunk_max = param.send_chunk_max or 1 -- 发送缓冲区数量
+    local recv_chunk_max = param.recv_chunk_max or 1 -- 接收缓冲区数
 
     network_mgr:set_send_buffer_size(conn_id, send_chunk_max, chunk_size, action)
     network_mgr:set_recv_buffer_size(conn_id, recv_chunk_max, chunk_size)
