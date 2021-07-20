@@ -52,7 +52,8 @@ end
 
 
 -- 新增客户端连接
-function CltMgr:clt_conn_accept(conn_id, conn)
+function CltMgr:clt_conn_accept(conn)
+    local conn_id = conn.conn_id
     self.clt_conn[conn_id] = conn
 
     PRINTF("accept client connection:%d", conn_id)

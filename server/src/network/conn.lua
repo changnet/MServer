@@ -113,6 +113,40 @@ function Conn:set_conn(conn_id, conn)
     __conn[conn_id] = conn
 end
 
+-- 接受新连接
+function Conn:conn_accept(new_conn_id)
+    local mt = getmetatable(self) or self
+
+    -- 取监听socket的元表来创建同类型的对象
+    -- 并且把监听socket的ssl回调之类的复制到新socket
+    local conn = mt(new_conn_id)
+
+    conn.ssl = self.ssl
+    conn:set_conn_param()
+
+    -- 必须用rawget，避免取到元表的函数，那样会影响热更
+    -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
+    conn.on_cmd = rawget(self, "on_cmd")
+    conn.on_created = rawget(self, "on_created")
+    conn.on_connected = rawget(self, "on_connected")
+    conn.on_disconnected = rawget(self, "on_disconnected")
+
+    __conn[new_conn_id] = conn
+
+    conn:on_created(1)
+    return conn
+end
+
+-- 连接成功(或失败)
+function Conn:conn_new(e)
+    if 0 == e then
+        self:set_conn_param()
+        self:on_created(2)
+    else
+        self:on_disconnected(e)
+    end
+end
+
 -- 连接断开
 function Conn:conn_del()
 end
@@ -126,6 +160,10 @@ function Conn:io_ok()
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手
     return self:conn_ok()
+end
+
+-- 创建连接(还没握手完成)
+function Conn:on_created()
 end
 
 return Conn

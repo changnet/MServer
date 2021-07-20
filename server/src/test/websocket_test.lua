@@ -190,12 +190,8 @@ t_describe("websocket test", function()
             end
         end
 
-        SrvWsConn.conn_accept = function(self, new_conn_id)
-            srv_conn = SrvWsConn(new_conn_id)
-
-            srv_conn:set_conn_param()
-
-            return srv_conn
+        SrvWsConn.on_created = function(self)
+            srv_conn = self
         end
         SrvWsConn.command_new = function(self, cmd_body)
             WsConn.send_pkt(self, cmd_body)
@@ -258,13 +254,8 @@ t_describe("websocket test", function()
             end
         end
 
-        SrvWsConn.conn_accept = function(self, new_conn_id)
-            srv_conn = SrvWsConn(new_conn_id)
-
-            srv_conn.ssl = self.ssl
-            srv_conn:set_conn_param()
-
-            return srv_conn
+        SrvWsConn.on_created = function(self)
+            srv_conn = self
         end
         SrvWsConn.command_new = function(self, cmd_body)
             WsConn.send_pkt(self, cmd_body)

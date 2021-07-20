@@ -168,7 +168,8 @@ function SrvMgr:raw_clt_multicast(conn_list, cmd, pkt, ecode)
 end
 
 -- 底层accept回调
-function SrvMgr:srv_conn_accept(conn_id, conn)
+function SrvMgr:srv_conn_accept(conn)
+    local conn_id = conn.conn_id
     self.srv_conn[conn_id] = conn
 
     PRINTF("accept server connection:%d", conn_id)

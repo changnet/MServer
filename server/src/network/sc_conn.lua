@@ -75,14 +75,8 @@ function ScConn:close()
 end
 
 -- 接受新客户端连接
-function ScConn:conn_accept(new_conn_id)
-    local new_conn = ScConn(new_conn_id)
-
-    new_conn.ssl = self.ssl
-    new_conn:set_conn_param()
-    g_clt_mgr:clt_conn_accept(new_conn_id, new_conn)
-
-    return new_conn
+function ScConn:on_created()
+    g_clt_mgr:clt_conn_accept(self)
 end
 
 return ScConn

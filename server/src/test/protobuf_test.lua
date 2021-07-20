@@ -20,11 +20,8 @@ local listen_conn = nil
 
 local ProtobufConn = oo.class("ProtobufConn", ScConn)
 
-function ProtobufConn:conn_accept(new_conn_id)
-    srv_conn = ProtobufConn(new_conn_id)
-
-    srv_conn:set_conn_param()
-    return srv_conn
+function ProtobufConn:on_created()
+    srv_conn = self
 end
 
 function ProtobufConn:conn_new(ecode)
@@ -209,12 +206,8 @@ t_describe("protobuf test", function()
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.conn_accept = function(self, new_conn_id)
-            srv_conn_ws = SrvWsConn(new_conn_id)
-
-            srv_conn_ws:set_conn_param()
-
-            return srv_conn_ws
+        SrvWsConn.on_created = function(self)
+            srv_conn_ws = self
         end
 
         listen_conn_ws = SrvWsConn()
@@ -250,12 +243,8 @@ t_describe("protobuf test", function()
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.conn_accept = function(self, new_conn_id)
-            srv_conn_ws = SrvWsConn(new_conn_id)
-
-            srv_conn_ws:set_conn_param()
-
-            return srv_conn_ws
+        SrvWsConn.on_created = function(self)
+            srv_conn_ws = self
         end
 
         listen_conn_ws = SrvWsConn()
@@ -288,13 +277,8 @@ t_describe("protobuf test", function()
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.conn_accept = function(self, new_conn_id)
-            srv_conn_ws = SrvWsConn(new_conn_id)
-
-            srv_conn_ws.ssl = self.ssl
-            srv_conn_ws:set_conn_param()
-
-            return srv_conn_ws
+        SrvWsConn.on_created = function(self)
+            srv_conn_ws = self
         end
 
         listen_conn_ws = SrvWsConn()

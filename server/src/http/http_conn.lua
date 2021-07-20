@@ -29,8 +29,8 @@ function HttpConn:conn_del()
 end
 
 function HttpConn:conn_ok()
-    if self.on_connect then return self.on_connect(self, 0) end
-    if self.on_accept then self.on_accept(self) end
+    if self.on_connected then return self.on_connected(self, 0) end
+    if self.on_created then self.on_created(self) end
 end
 
 -- 收到消息
@@ -40,7 +40,7 @@ end
 -- @param url 请求的url，仅request有用
 -- @param body 数据
 function HttpConn:command_new(http_type, code, method, url, body)
-    return self:on_command(http_type, code, method, url, body)
+    return self:on_cmd(http_type, code, method, url, body)
 end
 
 -- 发送数据包
@@ -51,15 +51,15 @@ end
 -- 连接到其他服务器
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
--- @param on_connect 连接成功(或失败)时的回调函数
--- @param on_command 收到请求时回调函数，不需要可为nil
-function HttpConn:connect(host, port, on_connect, on_command)
+-- @param on_connected 连接成功(或失败)时的回调函数
+-- @param on_cmd 收到请求时回调函数，不需要可为nil
+function HttpConn:connect(host, port, on_connected, on_cmd)
     self.ip = util.get_addr_info(host)
     -- 这个host需要注意，实测对www.example.com请求时，如果host为一个ip，是会返回404的
     self.host = host
     self.port = port
-    self.on_connect = on_connect
-    self.on_command = on_command
+    self.on_connected = on_connected
+    self.on_cmd = on_cmd
 
     self.conn_id = network_mgr:connect(self.ip, port, network_mgr.CT_CSCN)
 
@@ -70,12 +70,12 @@ end
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
 -- @param ssl 用new_ssl_ctx创建的ssl_ctx
--- @param on_connect 连接成功(或失败)时的回调函数
--- @param on_command 收到请求时回调函数，不需要可为nil
-function HttpConn:connect_s(host, port, ssl, on_connect, on_command)
+-- @param on_connected 连接成功(或失败)时的回调函数
+-- @param on_cmd 收到请求时回调函数，不需要可为nil
+function HttpConn:connect_s(host, port, ssl, on_connected, on_cmd)
     self.ssl = assert(ssl)
 
-    return self:connect(host, port, on_connect, on_command)
+    return self:connect(host, port, on_connected, on_cmd)
 end
 
 -- 关闭链接
@@ -86,11 +86,11 @@ function HttpConn:close(flush)
 end
 
 -- 监听http连接
--- @param on_command 收到请求时的回调函数，可为nil
--- @param on_accept 接受新连接时的回调函数，可为nil
-function HttpConn:listen(ip, port, on_accept, on_command)
-    self.on_accept = on_accept
-    self.on_command = on_command
+-- @param on_cmd 收到请求时的回调函数，可为nil
+-- @param on_created 接受新连接时的回调函数，可为nil
+function HttpConn:listen(ip, port, on_created, on_cmd)
+    self.on_created = on_created
+    self.on_cmd = on_cmd
     self.conn_id = network_mgr:listen(ip, port, network_mgr.CT_SCCN)
 
     self:set_conn(self.conn_id, self)
@@ -99,23 +99,11 @@ end
 
 -- 以https方式监听http连接
 -- @param ssl 用new_ssl_ctx创建的ssl_ctx
--- @param on_command 收到请求时的回调函数，可为nil
--- @param on_accept 接受新连接时的回调函数，可为nil
-function HttpConn:listen_s(ip, port, ssl, on_accept, on_command)
+-- @param on_cmd 收到请求时的回调函数，可为nil
+-- @param on_created 接受新连接时的回调函数，可为nil
+function HttpConn:listen_s(ip, port, ssl, on_created, on_cmd)
     self.ssl = assert(ssl)
-    return self:listen(ip, port, on_accept, on_command)
-end
-
--- 有新的连接进来
-function HttpConn:conn_accept(new_conn_id)
-    local new_conn = HttpConn(new_conn_id)
-
-    -- 继承一些参数
-    new_conn.ssl = self.ssl
-    new_conn.on_command = self.on_command
-    new_conn:set_conn_param()
-
-    return new_conn
+    return self:listen(ip, port, on_created, on_cmd)
 end
 
 -- 连接成功(或失败)
@@ -123,7 +111,7 @@ function HttpConn:conn_new(ecode)
     if 0 == ecode then
         self:set_conn_param()
     else
-        if self.on_connect then return self.on_connect(self, ecode) end
+        if self.on_connected then return self.on_connected(self, ecode) end
     end
 end
 
@@ -145,7 +133,7 @@ end
 -- @param req 请求的数据，不包含url，已进行url转义。如: name=1&pass=2
 -- @param cb 回调函数，不需要或者在connnect时已指定可为nil
 function HttpConn:get(url, req, cb)
-    if cb then self.on_command = cb end
+    if cb then self.on_cmd = cb end
 
     local host = self:fmt_host(self.host, self.port, self.ssl)
     return self:send_pkt(string.format(PAGE_GET, url or "/", req and "?" or "",
@@ -157,7 +145,7 @@ end
 -- @param body 请求的数据
 -- @param cb 回调函数，不需要或者在connnect时已指定可为nil
 function HttpConn:post(url, body, cb)
-    if cb then self.on_command = cb end
+    if cb then self.on_cmd = cb end
 
     body = body or ""
     local host = self:fmt_host(self.host, self.port, self.ssl)

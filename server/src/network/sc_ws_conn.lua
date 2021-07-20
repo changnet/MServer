@@ -6,9 +6,6 @@ local WsConn = require "network.ws_conn"
 -- 与客户端的连接，采用 websocket打包
 local ScWsConn = oo.class(..., ScConn, WsConn)
 
-local WS_OP_BINARY = WsConn.WS_OP_BINARY
-local WS_FINAL_FRAME = WsConn.WS_FINAL_FRAME
-
 ScWsConn.default_param = {
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型

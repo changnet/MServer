@@ -114,12 +114,8 @@ function SsConn:reconnect()
 end
 
 -- 接受新的连接
-function SsConn:conn_accept(new_conn_id)
-    local new_conn = SsConn(new_conn_id)
-    new_conn:set_conn_param()
-    g_srv_mgr:srv_conn_accept(new_conn_id, new_conn)
-
-    return new_conn
+function SsConn:on_created()
+    g_srv_mgr:srv_conn_accept(self)
 end
 
 -- 连接进行初始化

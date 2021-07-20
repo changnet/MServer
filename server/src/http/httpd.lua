@@ -16,7 +16,7 @@ function Httpd:__init()
 end
 
 -- 收到新连接时放到列表，定时踢出不断开的连接
-function Httpd:on_accept(conn)
+function Httpd:on_created(conn)
     -- self.conn = {}
 end
 
@@ -28,7 +28,7 @@ function Httpd:start(ip, port)
 
     -- 用函数wrap一层，这样不影响热更
     self.listen_conn:listen(ip, port, function(conn)
-        return self:on_accept(conn)
+        return self:on_created(conn)
     end, function(conn, http_type, code, method, url, body)
         return self:do_command(conn, http_type, code, method, url, body)
     end)
