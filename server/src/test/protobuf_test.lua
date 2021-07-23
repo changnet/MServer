@@ -20,22 +20,17 @@ local listen_conn = nil
 
 local ProtobufConn = oo.class("ProtobufConn", ScConn)
 
-function ProtobufConn:on_created()
+function ProtobufConn:on_accepted()
     srv_conn = self
 end
 
-function ProtobufConn:conn_new(ecode)
-    t_equal(ecode, 0)
-
-    self:set_conn_param()
-end
-function ProtobufConn:conn_del()
+function ProtobufConn:on_disconnected()
 end
 
-function ProtobufConn:conn_ok()
+function ProtobufConn:on_connected()
 end
 
-function CsConn:conn_ok()
+function CsConn:on_connected()
     t_done()
 end
 
@@ -134,7 +129,7 @@ t_describe("protobuf test", function()
             t_equal(pkt, base_pkt)
             conn:send_pkt(PLAYER.PING, pkt)
         end, true)
-        clt_conn.command_new = function(self, cmd, e, pkt)
+        clt_conn.on_cmd = function(self, cmd, e, pkt)
             t_equal(cmd, PLAYER.PING.i)
             t_equal(pkt, base_pkt)
             t_done()
@@ -149,7 +144,7 @@ t_describe("protobuf test", function()
         Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
             conn:send_pkt(PLAYER.PING_LITE, pkt)
         end, true)
-        clt_conn.command_new = function(self, cmd, e, pkt)
+        clt_conn.on_cmd = function(self, cmd, e, pkt)
             t_equal(cmd, PLAYER.PING_LITE.i)
             count = count + 1
 
@@ -169,7 +164,7 @@ t_describe("protobuf test", function()
         Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
             conn:send_pkt(PLAYER.PING_LITE, pkt)
         end, true)
-        clt_conn.command_new = function(self, cmd, e, pkt)
+        clt_conn.on_cmd = function(self, cmd, e, pkt)
             t_equal(cmd, PLAYER.PING_LITE.i)
             count = count + 1
 
@@ -201,12 +196,12 @@ t_describe("protobuf test", function()
                 t_done()
             end
         end, true)
-        CltWsConn.conn_ok = function(self)
+        CltWsConn.on_connected = function(self)
             for _ = 1, PERF_TIMES do
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.on_created = function(self)
+        SrvWsConn.on_accepted = function(self)
             srv_conn_ws = self
         end
 
@@ -228,10 +223,10 @@ t_describe("protobuf test", function()
         Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
             conn:send_pkt(PLAYER.PING_LITE, pkt)
         end, true)
-        CltWsConn.conn_ok = function(self)
+        CltWsConn.on_connected = function(self)
             self:send_pkt(PLAYER.PING_LITE, lite_pkt)
         end
-        CltWsConn.command_new = function(self, cmd, e, pkt)
+        CltWsConn.on_cmd = function(self, cmd, e, pkt)
             t_equal(cmd, PLAYER.PING_LITE.i)
             count = count + 1
             if count >= PERF_TIMES then
@@ -243,7 +238,7 @@ t_describe("protobuf test", function()
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.on_created = function(self)
+        SrvWsConn.on_accepted = function(self)
             srv_conn_ws = self
         end
 
@@ -272,12 +267,12 @@ t_describe("protobuf test", function()
                 t_done()
             end
         end, true)
-        CltWsConn.conn_ok = function(self)
+        CltWsConn.on_connected = function(self)
             for _ = 1, PERF_TIMES do
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.on_created = function(self)
+        SrvWsConn.on_accepted = function(self)
             srv_conn_ws = self
         end
 

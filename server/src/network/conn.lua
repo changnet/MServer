@@ -37,12 +37,12 @@ function conn_del(conn_id)
     __conn[conn_id] = nil
 
     conn.ok = false
-    conn:conn_del()
+    conn:on_disconnected()
 end
 
 -- 消息回调,底层根据不同类，参数也不一样
 function command_new(conn_id, ...)
-    return __conn[conn_id]:command_new(...)
+    return __conn[conn_id]:on_cmd(...)
 end
 
 -- 转发的客户端消息
@@ -67,10 +67,17 @@ end
 -- 网络连接基类
 local Conn = oo.class(...)
 
+-- on_cmd 收到消息时触发
+-- on_accepted accept成功时触发
+-- on_connected 连接建立完成(包括SSL、websocket握手完成)
+-- on_disconnected 断开或者连接失败时触发，主动断开则不会触发
+
 -- 设置io读写、编码、打包方式
 function Conn:set_conn_param()
     --[[
         param = {
+            listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
+            connect_type = network_mgr.CT_CSCN, -- 连接类型
             cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
             pkt = network_mgr.PT_NONE, -- 打包类型
             action = 1, -- over_action，1 表示缓冲区溢出后断开
@@ -127,13 +134,13 @@ function Conn:conn_accept(new_conn_id)
     -- 必须用rawget，避免取到元表的函数，那样会影响热更
     -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
     conn.on_cmd = rawget(self, "on_cmd")
-    conn.on_created = rawget(self, "on_created")
+    conn.on_accepted = rawget(self, "on_accepted")
     conn.on_connected = rawget(self, "on_connected")
     conn.on_disconnected = rawget(self, "on_disconnected")
 
     __conn[new_conn_id] = conn
 
-    conn:on_created(1)
+    conn:on_accepted(1)
     return conn
 end
 
@@ -141,29 +148,81 @@ end
 function Conn:conn_new(e)
     if 0 == e then
         self:set_conn_param()
-        self:on_created(2)
     else
         self:on_disconnected(e)
     end
 end
 
 -- 连接断开
-function Conn:conn_del()
+function Conn:on_disconnected(e)
 end
 
 -- 连接建立完成(包括SSL等握手完成)
-function Conn:conn_ok()
+function Conn:on_connected()
 end
 
 -- io初始化完成
 function Conn:io_ok()
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手
-    return self:conn_ok()
+    return self:on_connected()
 end
 
--- 创建连接(还没握手完成)
-function Conn:on_created()
+-- 监听到新连接创建(还没握手完成)
+function Conn:on_accepted()
+end
+
+-- 连接到其他服务器
+-- @param host 目标服务器地址
+-- @param port 目标服务器端口
+function Conn:connect(host, port)
+    self.ip = util.get_addr_info(host)
+    -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址。这个会影响http头里的
+    -- host字段
+    -- 对www.example.com请求时，如果host为一个ip，是会返回404的
+    self.host = host
+    self.port = port
+
+    self.conn_id = network_mgr:connect(
+        self.ip, port, self.default_param.connect_type)
+
+    self:set_conn(self.conn_id, self)
+end
+
+-- 以https试连接到其他服务器
+-- @param host 目标服务器地址
+-- @param port 目标服务器端口
+-- @param ssl 用new_ssl_ctx创建的ssl_ctx
+function Conn:connect_s(host, port, ssl)
+    self.ssl = assert(ssl)
+
+    return self:connect(host, port)
+end
+
+-- 监听http连接
+-- @param ip 监听的ip
+-- @param port 监听的端口
+function Conn:listen(ip, port)
+    self.conn_id = network_mgr:listen(ip, port, self.default_param.listen_type)
+
+    self:set_conn(self.conn_id, self)
+    return true
+end
+
+-- 以https方式监听http连接
+-- @param ip 监听的ip
+-- @param port 监听的端口
+-- @param ssl 用new_ssl_ctx创建的ssl_ctx
+function Conn:listen_s(ip, port, ssl)
+    self.ssl = assert(ssl)
+    return self:listen(ip, port)
+end
+
+-- 关闭链接
+-- @param flush 关闭前是否发送缓冲区的数据
+function Conn:close(flush)
+    self:set_conn(self.conn_id, nil)
+    return network_mgr:close(self.conn_id, flush)
 end
 
 return Conn

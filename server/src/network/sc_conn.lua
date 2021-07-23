@@ -5,6 +5,8 @@ local Conn = require "network.conn"
 local ScConn = oo.class(..., Conn)
 
 ScConn.default_param = {
+    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
+    connect_type = network_mgr.CT_CSCN, -- 连接类型
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
@@ -53,29 +55,26 @@ function ScConn:listen_s(ip, port, ssl)
 end
 
 -- 连接断开
-function ScConn:conn_del()
-    -- 这个会自动解除
-    -- self:set_conn( self.conn_id,nil )
+function ScConn:on_disconnected()
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
     return g_clt_mgr:clt_conn_del(self.conn_id)
 end
 
 -- 消息回调
-function ScConn:command_new(cmd, ...)
+function ScConn:on_cmd(cmd, ...)
     return Cmd.dispatch_clt(self, cmd, ...)
 end
 
 -- 主动关闭连接
-function ScConn:close()
-    self:set_conn(self.conn_id, nil)
+function ScConn:close(flush)
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
-    return network_mgr:close(self.conn_id)
+    return Conn.close(self, flush)
 end
 
 -- 接受新客户端连接
-function ScConn:on_created()
+function ScConn:on_accepted()
     g_clt_mgr:clt_conn_accept(self)
 end
 

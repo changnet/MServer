@@ -79,7 +79,6 @@ return {
 "application_ev", -- src/android/app.lua
 "application_ev", -- src/application/application.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
-"command_new", -- src/android/android_cmd.lua
 "command_new", -- src/network/conn.lua
 "conn_accept", -- src/network/conn.lua
 "conn_del", -- src/android/android_cmd.lua
@@ -141,6 +140,7 @@ return {
 "name_to_func", -- src/global/name.lua
 "name_to_obj", -- src/global/name.lua
 "obj_to_name", -- src/global/name.lua
+"on_cmd", -- src/android/android_cmd.lua
 "oo", -- src/global/oo.lua
 "raw_table_dump", -- src/global/table.lua
 "reg_func", -- src/global/name.lua

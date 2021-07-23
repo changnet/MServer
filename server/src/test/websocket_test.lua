@@ -63,12 +63,15 @@ t_describe("websocket test", function()
             end
         end
 
-        CltWsConn.conn_ok = function(self)
+        local conn = CltWsConn()
+        conn:connect(exp_host, 80)
+
+        conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        CltWsConn.command_new = function(self, cmd_body)
+        conn.on_cmd = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             t_equal(cmd_body, pkt_body[pkt_idx])
 
@@ -79,16 +82,13 @@ t_describe("websocket test", function()
             check_done(self)
         end
 
-        CltWsConn.on_ctrl = function(self, flag, body)
+        conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
                 t_equal(body, ping_body[ping_idx])
                 check_done(self)
             end
         end
-
-        local conn = CltWsConn()
-        conn:connect(exp_host, 80)
     end)
 
     t_it("websocket ssl " .. exp_host, function()
@@ -112,12 +112,15 @@ t_describe("websocket test", function()
             end
         end
 
-        CltWsConn.conn_ok = function(self)
+        local conn = CltWsConn()
+        conn:connect_s(exp_host, 443, clt_ssl)
+
+        conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        CltWsConn.command_new = function(self, cmd_body)
+        conn.on_cmd = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             t_equal(cmd_body, pkt_body[pkt_idx])
 
@@ -128,16 +131,13 @@ t_describe("websocket test", function()
             check_done(self)
         end
 
-        CltWsConn.on_ctrl = function(self, flag, body)
+        conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
                 t_equal(body, ping_body[ping_idx])
                 check_done(self)
             end
         end
-
-        local conn = CltWsConn()
-        conn:connect_s(exp_host, 443, clt_ssl)
     end)
 
     t_it("websocket local", function()
@@ -166,12 +166,12 @@ t_describe("websocket test", function()
             end
         end
 
-        CltWsConn.conn_ok = function(self)
+        CltWsConn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        CltWsConn.command_new = function(self, cmd_body)
+        CltWsConn.on_cmd = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             t_equal(cmd_body, pkt_body[pkt_idx])
 
@@ -190,10 +190,10 @@ t_describe("websocket test", function()
             end
         end
 
-        SrvWsConn.on_created = function(self)
+        SrvWsConn.on_accepted = function(self)
             srv_conn = self
         end
-        SrvWsConn.command_new = function(self, cmd_body)
+        SrvWsConn.on_cmd = function(self, cmd_body)
             WsConn.send_pkt(self, cmd_body)
         end
 
@@ -230,12 +230,12 @@ t_describe("websocket test", function()
             end
         end
 
-        CltWsConn.conn_ok = function(self)
+        CltWsConn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        CltWsConn.command_new = function(self, cmd_body)
+        CltWsConn.on_cmd = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             t_equal(cmd_body, pkt_body[pkt_idx])
 
@@ -254,10 +254,10 @@ t_describe("websocket test", function()
             end
         end
 
-        SrvWsConn.on_created = function(self)
+        SrvWsConn.on_accepted = function(self)
             srv_conn = self
         end
-        SrvWsConn.command_new = function(self, cmd_body)
+        SrvWsConn.on_cmd = function(self, cmd_body)
             WsConn.send_pkt(self, cmd_body)
         end
 

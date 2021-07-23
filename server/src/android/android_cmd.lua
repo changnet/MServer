@@ -100,7 +100,7 @@ function conn_new(conn_id, ecode)
     if conn_new_handler then conn_new_handler(conn_id, ecode) end
 end
 
-function command_new(conn_id, cmd, errno, ...)
+function on_cmd(conn_id, cmd, errno, ...)
     local cfg = sc_cmd[cmd]
     if not cfg then
         ERROR("sc_command_new no such cmd:%d", cmd)

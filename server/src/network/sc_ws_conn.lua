@@ -7,6 +7,8 @@ local WsConn = require "network.ws_conn"
 local ScWsConn = oo.class(..., ScConn, WsConn)
 
 ScWsConn.default_param = {
+    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
+    connect_type = network_mgr.CT_CSCN, -- 连接类型
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_WSSTREAM, -- 打包类型
@@ -31,10 +33,8 @@ end
 -- 主动关闭连接
 function ScWsConn:close()
     self:ws_close()
-    self:set_conn(self.conn_id, nil)
-    network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
-    return network_mgr:close(self.conn_id, true) -- -- 把WS_OP_CLOSE这个包发出去
+    return ScConn.close(self, true)
 end
 
 return ScWsConn

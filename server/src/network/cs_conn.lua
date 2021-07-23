@@ -5,6 +5,8 @@ local Conn = require "network.conn"
 local CsConn = oo.class(..., Conn)
 
 CsConn.default_param = {
+    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
+    connect_type = network_mgr.CT_CSCN, -- 连接类型
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
@@ -21,37 +23,6 @@ end
 -- 发送数据包
 function CsConn:send_pkt(cmd, pkt)
     return network_mgr:send_srv_packet(self.conn_id, cmd.i, pkt)
-end
-
--- 客户端连接到服务器
-function CsConn:connect(ip, port)
-    self.ip = ip
-    self.port = port
-
-    self.conn_id = network_mgr:connect(self.ip, self.port, network_mgr.CT_CSCN)
-
-    self:set_conn(self.conn_id, self)
-
-    return self.conn_id
-end
-
-function CsConn:conn_new(ecode)
-    if 0 == ecode then
-        self:set_conn_param()
-    end
-end
-
--- 消息回调
-function CsConn:command_new(cmd, ...)
-    -- 这个需要重载，这里没法定义逻辑
-    assert(false)
-end
-
--- 主动关闭连接
-function CsConn:close()
-    self:set_conn(self.conn_id, nil)
-
-    return network_mgr:close(self.conn_id)
 end
 
 return CsConn

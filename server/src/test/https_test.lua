@@ -54,9 +54,8 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect(exp_host, 80, function(_conn, ecode)
-            t_equal(ecode, 0)
-
+        conn:connect(exp_host, 80)
+        conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 1)
@@ -64,7 +63,7 @@ t_describe("http(s) test", function()
                 conn:close()
                 t_done()
             end)
-        end)
+        end
     end)
 
     t_it("http post " .. exp_host, function()
@@ -72,9 +71,8 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect(exp_host, 80, function(_conn, ecode)
-            t_equal(ecode, 0)
-
+        conn:connect(exp_host, 80)
+        conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 1)
@@ -82,7 +80,7 @@ t_describe("http(s) test", function()
                 conn:close()
                 t_done()
             end)
-        end)
+        end
     end)
 
     t_it("http local server test", function()
@@ -93,8 +91,8 @@ t_describe("http(s) test", function()
         local port = 8182
 
         local srvConn = HttpConn()
-        srvConn:listen(local_host, port, nil,
-                       function(conn, http_type, code, method, url, body)
+        srvConn:listen(local_host, port)
+        srvConn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 0)
 
             -- 1 = GET, 3 = POST
@@ -110,12 +108,11 @@ t_describe("http(s) test", function()
             t_print("accept http from", addr)
             t_equal(addr, local_host)
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-        end)
+        end
 
         local cltConn = HttpConn()
-        cltConn:connect(local_host, port, function(_, ecode)
-            t_equal(ecode, 0)
-
+        cltConn:connect(local_host, port)
+        cltConn.on_connected = function(_)
             cltConn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = cltConn:get_header()
@@ -129,7 +126,7 @@ t_describe("http(s) test", function()
                     t_done()
                 end)
             end)
-        end)
+        end
     end)
 
     t_it("https get " .. exp_host, function()
@@ -137,9 +134,8 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect_s(exp_host, 443, clt_ssl, function(_conn, ecode)
-            t_equal(ecode, 0)
-
+        conn:connect_s(exp_host, 443, clt_ssl)
+        conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 1)
@@ -147,7 +143,7 @@ t_describe("http(s) test", function()
                 conn:close()
                 t_done()
             end)
-        end)
+        end
     end)
 
     t_it("https post " .. exp_host, function()
@@ -155,9 +151,8 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect_s(exp_host, 443, clt_ssl, function(_conn, ecode)
-            t_equal(ecode, 0)
-
+        conn:connect_s(exp_host, 443, clt_ssl)
+        conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 1)
@@ -165,7 +160,7 @@ t_describe("http(s) test", function()
                 conn:close()
                 t_done()
             end)
-        end)
+        end
     end)
 
     t_it("https local server test", function()
@@ -176,8 +171,8 @@ t_describe("http(s) test", function()
         local port = 8183
 
         local srvConn = HttpConn()
-        srvConn:listen_s(local_host, port, srv_ssl, nil,
-                         function(conn, http_type, code, method, url, body)
+        srvConn:listen_s(local_host, port, srv_ssl)
+        srvConn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 0)
 
             -- 1 = GET, 3 = POST
@@ -189,12 +184,11 @@ t_describe("http(s) test", function()
             end
 
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-        end)
+        end
 
         local cltConn = HttpConn()
-        cltConn:connect_s(local_host, port, clt_ssl, function(_, ecode)
-            t_equal(ecode, 0)
-
+        cltConn:connect_s(local_host, port, clt_ssl)
+        cltConn.on_connected = function(_)
             cltConn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = cltConn:get_header()
@@ -208,7 +202,7 @@ t_describe("http(s) test", function()
                     t_done()
                 end)
             end)
-        end)
+        end
     end)
 
     t_it("https valify and get " .. exp_host, vfy_ssl, function()
@@ -216,9 +210,8 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect_s(exp_host, 443, vfy_ssl, function(_conn, ecode)
-            t_equal(ecode, 0)
-
+        conn:connect_s(exp_host, 443, vfy_ssl)
+        conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 1)
@@ -226,7 +219,7 @@ t_describe("http(s) test", function()
                 conn:close()
                 t_done()
             end)
-        end)
+        end
     end)
 
     t_it("https two-way valify local server test", function()
@@ -237,8 +230,8 @@ t_describe("http(s) test", function()
         local port = 8184
 
         local srvConn = HttpConn()
-        srvConn:listen_s(local_host, port, vfy_srv_ssl, nil,
-                         function(conn, http_type, code, method, url, body)
+        srvConn:listen_s(local_host, port, vfy_srv_ssl)
+        srvConn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 0)
 
             -- 1 = GET, 3 = POST
@@ -250,12 +243,11 @@ t_describe("http(s) test", function()
             end
 
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
-        end)
+        end
 
         local cltConn = HttpConn()
-        cltConn:connect_s(local_host, port, vfy_clt_ssl, function(_, ecode)
-            t_equal(ecode, 0)
-
+        cltConn:connect_s(local_host, port, vfy_clt_ssl)
+        cltConn.on_connected = function(_)
             cltConn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = cltConn:get_header()
@@ -269,6 +261,6 @@ t_describe("http(s) test", function()
                     t_done()
                 end)
             end)
-        end)
+        end
     end)
 end)

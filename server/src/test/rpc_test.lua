@@ -11,24 +11,14 @@ local listen_conn = nil
 -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的conn_accept等函数
 local RpcConn = oo.class("RpcConn", SsConn)
 
-function RpcConn:on_created()
+function RpcConn:on_accepted()
     srv_conn = self
 end
 
-function RpcConn:conn_del()
-    self:set_conn(self.conn_id, nil)
+function RpcConn:on_disconnected()
 end
 
-function RpcConn:conn_new(ecode)
-    t_equal(ecode, 0)
-
-    self:set_conn_param()
-end
-function RpcConn:conn_del()
-    self:set_conn(self.conn_id, nil)
-end
-
-function RpcConn:conn_ok()
+function RpcConn:on_connected()
     if self == clt_conn then t_done() end
 end
 

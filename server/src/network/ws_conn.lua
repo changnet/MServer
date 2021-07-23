@@ -48,6 +48,8 @@ WsConn.WS_HAS_MASK = WS_HAS_MASK
 
 
 WsConn.default_param = {
+    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
+    connect_type = network_mgr.CT_CSCN, -- 连接类型
     iot = network_mgr.IOT_NONE, -- io类型
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_WEBSOCKET, -- 打包类型
@@ -78,7 +80,7 @@ function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
     end
 
     -- 握手后，连接建立成功
-    self:conn_ok()
+    self:on_connected()
 end
 
 -- 客户端发送握手请求
@@ -148,7 +150,7 @@ function WsConn:ctrl_new(flag, body)
         -- 后才会关闭连接
         -- https://bugs.chromium.org/p/chromium/issues/detail?id=426798
         self:close()
-        self:conn_del() -- 这个属于对方关闭连接，需要触发关闭事件
+        self:on_disconnected() -- 这个属于对方关闭连接，需要触发关闭事件
         return
     elseif flag == WS_OP_PING then
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回

@@ -28,6 +28,7 @@ function SrvMgr:connect_srv(srvs)
         local conn_id = conn:connect(appSetting.sip, appSetting.sport)
 
         self.srv_conn[conn_id] = conn
+        self.srv_waiting[srv_conn] = 1
         PRINTF("connect to %s at %s:%d",
             srvName, appSetting.sip, appSetting.sport)
     end
@@ -186,21 +187,6 @@ function SrvMgr:on_conn_ok(conn_id)
     }
     pkt.auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
     conn:send_pkt(SYS.REG, pkt)
-end
-
--- 服务器之间连接成功
-function SrvMgr:srv_conn_new(conn_id, ecode)
-    local conn = self.srv_conn[conn_id]
-    if 0 ~= ecode then
-        PRINTF("connect(%d) to %s:%d error:%s", conn_id, conn.ip, conn.port,
-               util.what_error(ecode))
-        self.srv_conn[conn_id] = nil
-
-        if conn.auto_conn then self.srv_waiting[conn] = 1 end
-        return
-    end
-
-    PRINTF("connect(%d) to %s:%d establish", conn_id, conn.ip, conn.port)
 end
 
 -- 底层连接断开回调
