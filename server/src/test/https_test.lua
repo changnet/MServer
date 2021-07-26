@@ -90,9 +90,9 @@ t_describe("http(s) test", function()
 
         local port = 8182
 
-        local srvConn = HttpConn()
-        srvConn:listen(local_host, port)
-        srvConn.on_cmd = function(conn, http_type, code, method, url, body)
+        local srv_conn = HttpConn()
+        srv_conn:listen(local_host, port)
+        srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 0)
 
             -- 1 = GET, 3 = POST
@@ -110,19 +110,19 @@ t_describe("http(s) test", function()
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
         end
 
-        local cltConn = HttpConn()
-        cltConn:connect(local_host, port)
-        cltConn.on_connected = function(_)
-            cltConn:get("/get", nil,
+        local clt_conn = HttpConn()
+        clt_conn:connect(local_host, port)
+        clt_conn.on_connected = function(_)
+            clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
-                local header = cltConn:get_header()
+                local header = clt_conn:get_header()
                 t_equal(code, 200)
                 t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
-                cltConn:post("/post", nil,
+                clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
                     t_equal(code2, 200)
-                    cltConn:close()
+                    clt_conn:close()
                     t_done()
                 end)
             end)
@@ -170,9 +170,9 @@ t_describe("http(s) test", function()
 
         local port = 8183
 
-        local srvConn = HttpConn()
-        srvConn:listen_s(local_host, port, srv_ssl)
-        srvConn.on_cmd = function(conn, http_type, code, method, url, body)
+        local srv_conn = HttpConn()
+        srv_conn:listen_s(local_host, port, srv_ssl)
+        srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 0)
 
             -- 1 = GET, 3 = POST
@@ -186,19 +186,20 @@ t_describe("http(s) test", function()
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
         end
 
-        local cltConn = HttpConn()
-        cltConn:connect_s(local_host, port, clt_ssl)
-        cltConn.on_connected = function(_)
-            cltConn:get("/get", nil,
+        local clt_conn = HttpConn()
+        clt_conn:connect_s(local_host, port, clt_ssl)
+        clt_conn.on_connected = function(_)
+            clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
-                local header = cltConn:get_header()
+                local header = clt_conn:get_header()
                 t_equal(code, 200)
                 t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
-                cltConn:post("/post", nil,
+                clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
                     t_equal(code2, 200)
-                    cltConn:close()
+                    clt_conn:close()
+                    srv_conn:close()
                     t_done()
                 end)
             end)
@@ -229,9 +230,9 @@ t_describe("http(s) test", function()
 
         local port = 8184
 
-        local srvConn = HttpConn()
-        srvConn:listen_s(local_host, port, vfy_srv_ssl)
-        srvConn.on_cmd = function(conn, http_type, code, method, url, body)
+        local srv_conn = HttpConn()
+        srv_conn:listen_s(local_host, port, vfy_srv_ssl)
+        srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 0)
 
             -- 1 = GET, 3 = POST
@@ -245,19 +246,20 @@ t_describe("http(s) test", function()
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
         end
 
-        local cltConn = HttpConn()
-        cltConn:connect_s(local_host, port, vfy_clt_ssl)
-        cltConn.on_connected = function(_)
-            cltConn:get("/get", nil,
+        local clt_conn = HttpConn()
+        clt_conn:connect_s(local_host, port, vfy_clt_ssl)
+        clt_conn.on_connected = function(_)
+            clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
-                local header = cltConn:get_header()
+                local header = clt_conn:get_header()
                 t_equal(code, 200)
                 t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
-                cltConn:post("/post", nil,
+                clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
                     t_equal(code2, 200)
-                    cltConn:close()
+                    clt_conn:close()
+                    srv_conn:close()
                     t_done()
                 end)
             end)

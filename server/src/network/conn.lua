@@ -129,14 +129,19 @@ function Conn:conn_accept(new_conn_id)
     local conn = mt(new_conn_id)
 
     conn.ssl = self.ssl
-    conn:set_conn_param()
 
+    -- 新建立的socket继承监听socket的参数
     -- 必须用rawget，避免取到元表的函数，那样会影响热更
     -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
     conn.on_cmd = rawget(self, "on_cmd")
     conn.on_accepted = rawget(self, "on_accepted")
     conn.on_connected = rawget(self, "on_connected")
     conn.on_disconnected = rawget(self, "on_disconnected")
+
+    conn.default_param = rawget(self, "default_param")
+
+    -- 必须在继承后设置参数，不然用些初始化的参数就会不对
+    conn:set_conn_param()
 
     __conn[new_conn_id] = conn
 

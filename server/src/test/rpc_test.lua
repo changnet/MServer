@@ -8,20 +8,6 @@ local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil
 
--- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的conn_accept等函数
-local RpcConn = oo.class("RpcConn", SsConn)
-
-function RpcConn:on_accepted()
-    srv_conn = self
-end
-
-function RpcConn:on_disconnected()
-end
-
-function RpcConn:on_connected()
-    if self == clt_conn then t_done() end
-end
-
 -- /////////////////////////////////////////////////////////////////////////////
 
 t_describe("rpc test", function()
@@ -54,11 +40,19 @@ t_describe("rpc test", function()
 
     -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的conn_accept等函数
     t_before(function()
-        clt_conn = RpcConn()
-        listen_conn = RpcConn()
-
+        listen_conn = SsConn()
         listen_conn:listen(local_host, local_port)
+        listen_conn.on_accepted = function(self)
+            srv_conn = self
+        end
+        listen_conn.on_connected = function(self) end
+
+        clt_conn = SsConn()
         clt_conn:connect(local_host, local_port)
+        clt_conn.on_connected = function(self)
+            t_done()
+        end
+
         t_wait(2000)
     end)
     t_it("rpc base test", function()

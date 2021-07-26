@@ -10,29 +10,9 @@ local CsConn = require "network.cs_conn"
 local CsWsConn = require "network.cs_ws_conn"
 local ScWsConn = require "network.sc_ws_conn"
 
--- 重新建立两个类，避免修改到原来的类，原来的类在其他测试中还要用的
-local CltWsConn = oo.class("CltWsConn_0", CsWsConn)
-local SrvWsConn = oo.class("SrvWsConn_0", ScWsConn)
-
 local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil
-
-local ProtobufConn = oo.class("ProtobufConn", ScConn)
-
-function ProtobufConn:on_accepted()
-    srv_conn = self
-end
-
-function ProtobufConn:on_disconnected()
-end
-
-function ProtobufConn:on_connected()
-end
-
-function CsConn:on_connected()
-    t_done()
-end
 
 t_describe("protobuf test", function()
     local local_host = "::1"
@@ -116,11 +96,20 @@ t_describe("protobuf test", function()
         t_equal(ok, true)
 
         -- 建立一个客户端、一个服务端连接，模拟通信
-        clt_conn = CsConn()
-        listen_conn = ProtobufConn()
 
+        listen_conn = ScConn()
         listen_conn:listen(local_host, local_port)
+        listen_conn.on_accepted = function(self)
+            srv_conn = self
+        end
+        listen_conn.on_connected = function()
+        end
+
+        clt_conn = CsConn()
         clt_conn:connect(local_host, local_port)
+        clt_conn.on_connected = function()
+            t_done()
+        end
 
         t_wait(2000)
     end)
@@ -196,20 +185,20 @@ t_describe("protobuf test", function()
                 t_done()
             end
         end, true)
-        CltWsConn.on_connected = function(self)
+
+        listen_conn_ws = ScWsConn()
+        listen_conn_ws:listen(local_host, local_port_ws)
+        listen_conn_ws.on_accepted = function(self)
+            srv_conn_ws = self
+        end
+
+        clt_conn_ws = CsWsConn()
+        clt_conn_ws:connect(local_host, local_port_ws)
+        clt_conn_ws.on_connected = function(self)
             for _ = 1, PERF_TIMES do
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.on_accepted = function(self)
-            srv_conn_ws = self
-        end
-
-        listen_conn_ws = SrvWsConn()
-        listen_conn_ws:listen(local_host, local_port_ws)
-
-        clt_conn_ws = CltWsConn()
-        clt_conn_ws:connect(local_host, local_port_ws)
 
         t_wait()
     end)
@@ -223,10 +212,19 @@ t_describe("protobuf test", function()
         Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
             conn:send_pkt(PLAYER.PING_LITE, pkt)
         end, true)
-        CltWsConn.on_connected = function(self)
+
+        listen_conn_ws = ScWsConn()
+        listen_conn_ws:listen(local_host, local_port_ws)
+        listen_conn_ws.on_accepted = function(self)
+            srv_conn_ws = self
+        end
+
+        clt_conn_ws = CsWsConn()
+        clt_conn_ws:connect(local_host, local_port_ws)
+        clt_conn_ws.on_connected = function(self)
             self:send_pkt(PLAYER.PING_LITE, lite_pkt)
         end
-        CltWsConn.on_cmd = function(self, cmd, e, pkt)
+        clt_conn_ws.on_cmd = function(self, cmd, e, pkt)
             t_equal(cmd, PLAYER.PING_LITE.i)
             count = count + 1
             if count >= PERF_TIMES then
@@ -238,15 +236,6 @@ t_describe("protobuf test", function()
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.on_accepted = function(self)
-            srv_conn_ws = self
-        end
-
-        listen_conn_ws = SrvWsConn()
-        listen_conn_ws:listen(local_host, local_port_ws)
-
-        clt_conn_ws = CltWsConn()
-        clt_conn_ws:connect(local_host, local_port_ws)
 
         t_wait()
     end)
@@ -267,20 +256,21 @@ t_describe("protobuf test", function()
                 t_done()
             end
         end, true)
-        CltWsConn.on_connected = function(self)
+
+        listen_conn_ws = ScWsConn()
+        listen_conn_ws:listen_s(local_host, local_port_wss, srv_ssl)
+        listen_conn_ws.on_accepted = function(self)
+            srv_conn_ws = self
+        end
+
+        clt_conn_ws = CsWsConn()
+        clt_conn_ws:connect_s(local_host, local_port_wss, clt_ssl)
+        clt_conn_ws.on_connected = function(self)
             for _ = 1, PERF_TIMES do
                 self:send_pkt(PLAYER.PING_LITE, lite_pkt)
             end
         end
-        SrvWsConn.on_accepted = function(self)
-            srv_conn_ws = self
-        end
 
-        listen_conn_ws = SrvWsConn()
-        listen_conn_ws:listen_s(local_host, local_port_wss, srv_ssl)
-
-        clt_conn_ws = CltWsConn()
-        clt_conn_ws:connect_s(local_host, local_port_wss, clt_ssl)
 
         t_wait()
     end)

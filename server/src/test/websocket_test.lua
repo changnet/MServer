@@ -8,12 +8,7 @@ local WsConn = require "network.ws_conn"
 local CsWsConn = require "network.cs_ws_conn"
 local ScWsConn = require "network.sc_ws_conn"
 
--- 重新建立两个类，避免修改到原来的类，原来的类在其他测试中还要用的
-local CltWsConn = oo.class("CltWsConn", CsWsConn)
-local SrvWsConn = oo.class("SrvWsConn", ScWsConn)
-
-CltWsConn.default_param = WsConn.default_param
-SrvWsConn.default_param = WsConn.default_param
+local ws_default_param = WsConn.default_param
 
 t_describe("websocket test", function()
     --[[
@@ -63,7 +58,8 @@ t_describe("websocket test", function()
             end
         end
 
-        local conn = CltWsConn()
+        local conn = CsWsConn()
+        conn.default_param = ws_default_param
         conn:connect(exp_host, 80)
 
         conn.on_connected = function(self)
@@ -112,7 +108,8 @@ t_describe("websocket test", function()
             end
         end
 
-        local conn = CltWsConn()
+        local conn = CsWsConn()
+        conn.default_param = ws_default_param
         conn:connect_s(exp_host, 443, clt_ssl)
 
         conn.on_connected = function(self)
@@ -166,12 +163,26 @@ t_describe("websocket test", function()
             end
         end
 
-        CltWsConn.on_connected = function(self)
+        listen_conn = ScWsConn()
+        listen_conn.default_param = ws_default_param
+        listen_conn:listen(local_host, local_port)
+        listen_conn.on_accepted = function(self)
+            srv_conn = self
+        end
+        listen_conn.on_cmd = function(self, cmd_body)
+            WsConn.send_pkt(self, cmd_body)
+        end
+
+        local conn = CsWsConn()
+        conn.default_param = ws_default_param
+        conn:connect(local_host, local_port)
+
+        conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        CltWsConn.on_cmd = function(self, cmd_body)
+        conn.on_cmd = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             t_equal(cmd_body, pkt_body[pkt_idx])
 
@@ -182,26 +193,13 @@ t_describe("websocket test", function()
             check_done(self)
         end
 
-        CltWsConn.on_ctrl = function(self, flag, body)
+        conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
                 t_equal(body, ping_body[ping_idx])
                 check_done(self)
             end
         end
-
-        SrvWsConn.on_accepted = function(self)
-            srv_conn = self
-        end
-        SrvWsConn.on_cmd = function(self, cmd_body)
-            WsConn.send_pkt(self, cmd_body)
-        end
-
-        listen_conn = SrvWsConn()
-        listen_conn:listen(local_host, local_port)
-
-        local conn = CltWsConn()
-        conn:connect(local_host, local_port)
     end)
 
     t_it("websocket local ssl", function()
@@ -230,12 +228,26 @@ t_describe("websocket test", function()
             end
         end
 
-        CltWsConn.on_connected = function(self)
+        listen_conn = ScWsConn()
+        listen_conn.default_param = ws_default_param
+        listen_conn:listen_s(local_host, local_port_s, srv_ssl)
+        listen_conn.on_accepted = function(self)
+            srv_conn = self
+        end
+        listen_conn.on_cmd = function(self, cmd_body)
+            WsConn.send_pkt(self, cmd_body)
+        end
+
+        local conn = CsWsConn()
+        conn.default_param = ws_default_param
+        conn:connect_s(local_host, local_port_s, clt_ssl)
+
+        conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
-        CltWsConn.on_cmd = function(self, cmd_body)
+        conn.on_cmd = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
             t_equal(cmd_body, pkt_body[pkt_idx])
 
@@ -246,7 +258,7 @@ t_describe("websocket test", function()
             check_done(self)
         end
 
-        CltWsConn.on_ctrl = function(self, flag, body)
+        conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
                 t_equal(body, ping_body[ping_idx])
@@ -254,17 +266,5 @@ t_describe("websocket test", function()
             end
         end
 
-        SrvWsConn.on_accepted = function(self)
-            srv_conn = self
-        end
-        SrvWsConn.on_cmd = function(self, cmd_body)
-            WsConn.send_pkt(self, cmd_body)
-        end
-
-        listen_conn = SrvWsConn()
-        listen_conn:listen_s(local_host, local_port_s, srv_ssl)
-
-        local conn = CltWsConn()
-        conn:connect_s(local_host, local_port_s, clt_ssl)
     end)
 end)
