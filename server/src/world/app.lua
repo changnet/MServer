@@ -22,7 +22,7 @@ function App:initialize()
     self:module_initialize()
 
     if not g_srv_mgr:srv_listen(g_app_setting.sip, g_app_setting.sport) then
-        ERROR("world server listen fail,exit")
+        elog("world server listen fail,exit")
         os.exit(1)
     end
 

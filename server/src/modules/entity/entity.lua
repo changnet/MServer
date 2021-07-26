@@ -51,7 +51,7 @@ end
 function Entity:exit_scene()
     local dungeon = g_dungeon_mgr:get_dungeon(self.dungeon_hdl)
     if not dungeon then
-        ERROR("Entity::exit_scene not in scene:%s", self.name)
+        elog("Entity::exit_scene not in scene:%s", self.name)
         return
     end
 

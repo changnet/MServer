@@ -171,6 +171,6 @@ function make_name()
             end
         end
     end
-    PRINTF("make name done, %d functions in %.2f sec",
+    printf("make name done, %d functions in %.2f sec",
         count, os.clock() - tm)
 end

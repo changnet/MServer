@@ -98,7 +98,7 @@ function Player:module_db_load()
     for step, module in pairs(sub_module) do
         local ok = self[module.name]:db_load(self.sync_db)
         if not ok then
-            ERROR("player db load error,pid %d,step %d", self.pid, step)
+            elog("player db load error,pid %d,step %d", self.pid, step)
             return false
         end
     end
@@ -116,7 +116,7 @@ function Player:module_db_load()
     if is_new then
         self.base.root.new = nil
         if not self.base:db_save() then
-            ERROR("player is new,db save fail:%d", self.pid)
+            elog("player is new,db save fail:%d", self.pid)
             return false
         end
     end
@@ -192,7 +192,7 @@ function Player:on_logout()
 
     -- 未初始化完成不能存库，防止数据被覆盖
     if not self.ok then
-        ERROR("player initialize not finish,runing logout:%d", self.pid)
+        elog("player initialize not finish,runing logout:%d", self.pid)
         return
     end
 
@@ -209,7 +209,7 @@ function Player:on_logout()
     g_rpc:proxy(self.pid):player_exit(self.pid)
     g_log_mgr:login_or_logout(self.pid, LOG.LOGOUT)
 
-    PRINTF("player logout,pid = %d", self.pid)
+    printf("player logout,pid = %d", self.pid)
 end
 
 -- 获取对应的模块
@@ -293,7 +293,7 @@ function Player:enter_dungeon(pkt)
 
     self:set_session(session)
 
-    PRINT("player enter dungeon", self.pid, id)
+    print("player enter dungeon", self.pid, id)
 end
 
 reg_func("set_player_session", set_player_session)

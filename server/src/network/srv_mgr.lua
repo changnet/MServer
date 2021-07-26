@@ -14,7 +14,7 @@ function SrvMgr:srv_listen(ip, port)
     self.srv_listen_conn = SsConn()
     self.srv_listen_conn:listen(ip, port)
 
-    PRINTF("listen for server at %s:%d", ip, port)
+    printf("listen for server at %s:%d", ip, port)
     return true
 end
 
@@ -29,7 +29,7 @@ function SrvMgr:connect_srv(srvs)
 
         self.srv_conn[conn_id] = conn
         self.srv_waiting[srv_conn] = 1
-        PRINTF("connect to %s at %s:%d",
+        printf("connect to %s at %s:%d",
             srvName, appSetting.sip, appSetting.sport)
     end
 end
@@ -39,26 +39,26 @@ function SrvMgr:reconnect_srv(conn)
     local conn_id = conn:reconnect()
 
     self.srv_conn[conn_id] = conn
-    PRINTF("reconnect to %s:%d", conn.ip, conn.port)
+    printf("reconnect to %s:%d", conn.ip, conn.port)
 end
 
 -- 服务器认证
 function SrvMgr:srv_register(conn, pkt)
     local auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
     if pkt.auth ~= auth then
-        ERROR("SrvMgr:srv_register fail,session %d", pkt.session)
+        elog("SrvMgr:srv_register fail,session %d", pkt.session)
         return false
     end
 
     local _, _, id = g_app:decode_session(pkt.session)
     if id ~= tonumber(g_app.id) then
-        ERROR("SrvMgr:srv_register id not match,expect %s,got %d", g_app.id,
+        elog("SrvMgr:srv_register id not match,expect %s,got %d", g_app.id,
               id)
         return
     end
 
     if self.srv[pkt.session] then
-        ERROR("SrvMgr:srv_register session conflict:%d", pkt.session)
+        elog("SrvMgr:srv_register session conflict:%d", pkt.session)
         return false
     end
 
@@ -74,7 +74,7 @@ function SrvMgr:check_one_timeout(srv_conn, check_time)
 
     local ts = srv_conn:check(check_time)
     if ts > SRV_ALIVE_TIMES then
-        PRINTF("%s server timeout", srv_conn:conn_name())
+        printf("%s server timeout", srv_conn:conn_name())
 
         self:close_srv_conn(srv_conn)
         if srv_conn.auto_conn then self.srv_waiting[srv_conn] = 1 end
@@ -173,7 +173,7 @@ function SrvMgr:srv_conn_accept(conn)
     local conn_id = conn.conn_id
     self.srv_conn[conn_id] = conn
 
-    PRINTF("accept server connection:%d", conn_id)
+    printf("accept server connection:%d", conn_id)
 end
 
 function SrvMgr:on_conn_ok(conn_id)
@@ -196,7 +196,7 @@ function SrvMgr:srv_conn_del(conn_id)
     if conn.session then self.srv[conn.session] = nil end
     self.srv_conn[conn_id] = nil
 
-    PRINTF("%s connect del", conn:conn_name())
+    printf("%s connect del", conn:conn_name())
 
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then self.srv_waiting[conn] = 1 end

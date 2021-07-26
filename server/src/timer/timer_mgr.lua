@@ -87,7 +87,7 @@ local timer_mgr = TimerMgr()
 function timer_event(timer_id)
     local timer = timer_mgr.timer[timer_id]
     if not timer then
-        ERROR("timer no cb found,abort %d", timer_id)
+        elog("timer no cb found,abort %d", timer_id)
         return timer_mgr:stop(timer_id)
     end
 

@@ -19,7 +19,7 @@ function Move:random_move(ai)
     ai.moving = true
     ai.dx = px
     ai.dy = py
-    PRINTF("move to %d,%d(%d,%d)", math.floor(px / 64), math.floor(py / 64), px,
+    printf("move to %d,%d(%d,%d)", math.floor(px / 64), math.floor(py / 64), px,
            py)
     return true
 end
@@ -27,7 +27,7 @@ end
 -- 玩家进入场景
 function Move:on_enter_scene(entity, errno, pkt)
     local dungeon_id = pkt.dungeon_id or 0 -- pbc里int为0发不过来
-    PRINTF("%s(%d) enter scene %d:%d", entity.name, entity.pid, dungeon_id,
+    printf("%s(%d) enter scene %d:%d", entity.name, entity.pid, dungeon_id,
            pkt.scene_id)
 
     -- 设置位置信息
@@ -49,19 +49,19 @@ function Move:on_move(entity, errno, pkt)
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
 
-        PRINT("move my pos to", entity.name, pkt.pix_x, pkt.pix_y)
+        print("move my pos to", entity.name, pkt.pix_x, pkt.pix_y)
     else
-        PRINT("other move pos at", pkt.pix_x, pkt.pix_y)
+        print("other move pos at", pkt.pix_x, pkt.pix_y)
     end
 end
 
 function Move:on_appear(entity, errno, pkt)
-    PRINT("entity appear:", pkt.name, pkt.pix_x, pkt.pix_y)
+    print("entity appear:", pkt.name, pkt.pix_x, pkt.pix_y)
 end
 
 -- 实体消失
 function Move:on_disappear(entity, errno, pkt)
-    PRINT("entity disappear:", pkt.handle)
+    print("entity disappear:", pkt.handle)
 end
 
 -- 服务器强制重置实体位置
@@ -71,9 +71,9 @@ function Move:on_update_pos(entity, errno, pkt)
 
         entity.pix_x = pkt.pix_x
         entity.pix_y = pkt.pix_y
-        PRINT("update my pos at", entity.name, pkt.pix_x, pkt.pix_y)
+        print("update my pos at", entity.name, pkt.pix_x, pkt.pix_y)
     else
-        PRINT("update other pos at", pkt.pix_x, pkt.pix_y, pkt.handle)
+        print("update other pos at", pkt.pix_x, pkt.pix_y, pkt.handle)
     end
 end
 
@@ -95,7 +95,7 @@ function Move:switch_dungeon(ai)
 
     ai.fb_id = id
     local entity = ai.entity
-    PRINT("switch to new dungeon", entity.name, id)
+    print("switch to new dungeon", entity.name, id)
 end
 
 -- ************************************************************************** --

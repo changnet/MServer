@@ -37,7 +37,7 @@ local function load_schema(schema_type, path, priority, suffix)
             loaded[file] = true
             count = count + 1
             if 0 ~= network_mgr:load_one_schema_file(schema_type, file) then
-                PRINTF("fail to load %s", file)
+                printf("fail to load %s", file)
                 return false
             end
         end
@@ -48,7 +48,7 @@ local function load_schema(schema_type, path, priority, suffix)
         if not loaded[file] and string.end_with(file, suffix) then
             count = count + 1
             if 0 ~= network_mgr:load_one_schema_file(schema_type, file) then
-                PRINTF("fail to load %s", file)
+                printf("fail to load %s", file)
                 return false
             end
         end
@@ -68,7 +68,7 @@ local function load_schema(schema_type, path, priority, suffix)
         end
     end
 
-    PRINTF("load %d scehma files, time %d ms", count, ev:real_ms_time() - tm)
+    printf("load %d scehma files, time %d ms", count, ev:real_ms_time() - tm)
 
     return count > 0
 end
@@ -143,7 +143,7 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
     -- 同一类服务，他们的协议是一样的(例如多个场景服务器)，无需再注册一次
     -- 其实重复注册也不会有问题，但是起服的时候可能会触发协议重复注册的检测
     if app_reg[base_name] then
-        PRINTF("cmd from %s,already register", srv_conn:conn_name())
+        printf("cmd from %s,already register", srv_conn:conn_name())
         return true
     end
 
@@ -161,7 +161,7 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
     for _, cmd in pairs(pkt.clt_cmd or {}) do
         -- 仅在启动的时候检查是否重复，热更则直接覆盖
         if not g_app.ok then
-            ASSERT(not cs_handler[cmd], "on sync cmd conflict", cmd)
+            assert(not cs_handler[cmd], "on sync cmd conflict", cmd)
         end
 
         cs_handler[cmd] = {
@@ -171,7 +171,7 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
         network_mgr:set_cs_cmd(cmd, "", "", mask, session)
     end
 
-    PRINTF("register cmd from %s", srv_conn:conn_name())
+    printf("register cmd from %s", srv_conn:conn_name())
 
     return true
 end
@@ -180,12 +180,12 @@ end
 function Cmd.dispatch_srv(srv_conn, cmd, ...)
     local cfg = ss_handler[cmd]
     if not cfg then
-        ERROR("dispatch_srv:cmd not found", cmd)
+        elog("dispatch_srv:cmd not found", cmd)
         return
     end
 
     if not srv_conn.auth and not cfg.noauth then
-        return ERROR("dispatch_srv:try to call auth cmd", cmd)
+        return elog("dispatch_srv:try to call auth cmd", cmd)
     end
 
     local obj = cfg.obj
@@ -212,11 +212,11 @@ end
 function Cmd.dispatch_clt(clt_conn, cmd, ...)
     local cfg = cs_handler[cmd]
     if not cfg then
-        return ERROR("dispatch_clt:cmd %d no handle function found", cmd)
+        return elog("dispatch_clt:cmd %d no handle function found", cmd)
     end
 
     if not clt_conn.auth and not cfg.noauth then
-        return ERROR("dispatch_clt:try to call auth cmd %d", cmd)
+        return elog("dispatch_clt:try to call auth cmd %d", cmd)
     end
 
     local handler = cfg.handler
@@ -234,18 +234,18 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
     local cfg = cs_handler[cmd]
 
     if not cfg then
-        return ERROR("dispatch_css:cmd %d no handle function found", cmd)
+        return elog("dispatch_css:cmd %d no handle function found", cmd)
     end
 
     -- 判断这个服务器连接是已认证的
     if not srv_conn.auth then
-        return ERROR("dispatch_css:srv conn not auth,cmd %d", cmd)
+        return elog("dispatch_css:srv conn not auth,cmd %d", cmd)
     end
 
     -- 判断这个玩家是已认证的
     if not cfg.noauth and not auth_pid[pid] then
         return
-            ERROR("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
+            elog("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
     end
 
     local handler = cfg.handler

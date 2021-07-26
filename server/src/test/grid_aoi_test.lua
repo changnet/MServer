@@ -60,7 +60,7 @@ local function valid_visual_list(et, list)
 
         -- 校验视野范围
         if not in_visual_range(et, other) then
-            PRINTF("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            printf("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
                    et.id, et.x, et.y, other.id, other.x, other.y)
             assert(false)
         end
@@ -81,7 +81,7 @@ local function valid_visual(et, list, mask)
     local visual_ev = get_visual_list(et, mask)
     for id, other in pairs(visual_ev) do
         if not id_map[id] then
-            PRINTF("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            printf("visual fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
                    et.id, et.x, et.y, other.id, other.x, other.y)
             assert(false)
         end
@@ -91,8 +91,8 @@ local function valid_visual(et, list, mask)
 
     -- 校验不在视野范围内或者不关注事件的实体不要在返回列表上
     if not table.empty(id_map) then
-        PRINT("THOSE ID IN LIST BUT NOT IN VISUAL RANGE")
-        for id in pairs(id_map) do PRINT(id) end
+        print("THOSE ID IN LIST BUT NOT IN VISUAL RANGE")
+        for id in pairs(id_map) do print(id) end
         assert(false)
     end
 end
@@ -117,7 +117,7 @@ local function valid_out(et, list)
 
         -- 校验视野范围
         if in_visual_range(et, other) then
-            PRINTF("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
+            printf("range fail,id = %d,pos(%d,%d) and id = %d,pos(%d,%s)",
                    et.id, et.x, et.y, other.id, other.x, other.y)
             assert(false)
         end
@@ -146,7 +146,7 @@ local function enter(aoi, id, x, y, mask)
 
     entity.mask = mask
 
-    -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
+    -- print(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:enter_entity(id, x, y, mask, tmp_list)
     if is_valid then valid_visual(entity, tmp_list, 0xF) end
 
@@ -161,7 +161,7 @@ local function update(aoi, id, x, y)
     entity.y = y
 
     aoi:update_entity(id, x, y, list_in, list_out)
-    -- PRINT("update pos", id, x, y, tmp_list.n, list_in.n, list_out.n )
+    -- print("update pos", id, x, y, tmp_list.n, list_in.n, list_out.n )
 
     if is_valid then
         valid_in(entity, list_in)
@@ -177,7 +177,7 @@ local function exit(aoi, id)
     aoi:exit_entity(id, tmp_list)
 
     entity_info[id] = nil
-    -- PRINT(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
+    -- print(id,"exit pos is",math.floor(entity.x/pix),math.floor(entity.y/pix))
     if is_valid then valid_visual(entity, tmp_list, INTEREST) end
 end
 

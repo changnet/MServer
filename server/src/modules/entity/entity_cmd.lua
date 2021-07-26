@@ -10,13 +10,13 @@ local function player_update_base(pid, base, new)
     if new then
         g_authorize:set_player(pid)
         player = g_entity_mgr:new_entity(ET.PLAYER, pid)
-        PRINT("area player update base:", pid)
+        print("area player update base:", pid)
     else
         player = g_entity_mgr:get_player(pid)
     end
 
     if not player then
-        ERROR("update_player_base no player found", pid)
+        elog("update_player_base no player found", pid)
         return
     end
 
@@ -27,7 +27,7 @@ end
 local function player_exit(pid)
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        PRINT("area player exit,entity not found", pid)
+        print("area player exit,entity not found", pid)
         return
     end
 
@@ -35,14 +35,14 @@ local function player_exit(pid)
     g_authorize:unset_player(pid)
 
     g_entity_mgr:del_entity_player(pid)
-    PRINT("area player exit:", pid)
+    print("area player exit:", pid)
 end
 
 -- 玩家进入副本
 local function player_enter_dungeon(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ERROR("player_enter_dungeon no player found", pid)
+        elog("player_enter_dungeon no player found", pid)
         return
     end
 
@@ -56,7 +56,7 @@ end
 local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ERROR("player_init_scene no player found", pid)
+        elog("player_init_scene no player found", pid)
         return
     end
 
@@ -65,7 +65,7 @@ local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
 
     g_dungeon_mgr:enter_dungeon(player, dungeon_hdl, dungeon_id, scene_id, x, y)
 
-    PRINT("player init scene", pid, scene_id, x, y)
+    print("player init scene", pid, scene_id, x, y)
 end
 
 reg_func("player_exit", player_exit)
@@ -79,7 +79,7 @@ local function entity_player_clt_cb(cmd, cb_func)
     local cb = function(conn, pid, pkt)
         local player = g_entity_mgr:get_player(pid)
         if not player then
-            return ERROR("entity_player_clt_cb call no player found:%d", pid)
+            return elog("entity_player_clt_cb call no player found:%d", pid)
         end
         return cb_func(player, conn, pkt)
     end

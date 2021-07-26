@@ -14,6 +14,10 @@ end
 local Log = require "Log"
 local util = require "util"
 
+__print = print
+-- __error = error
+__assert = assert
+
 require "global.oo" -- 这个文件不能热更
 require "global.require" -- 需要热更的文件，必须放在这后面
 
@@ -45,15 +49,15 @@ end
 
 -- 打印内核参数
 local function log_app_info(opts)
-    PRINT("#####################################################")
-    PRINTF("## starting %s", table.concat(opts, " "))
-    PRINTF("## OS: %s", __OS_NAME__)
-    PRINTF("## %s", _VERSION)
-    PRINTF("## backend: %s", __BACKEND__)
-    PRINTF("## complier: %s %s", __COMPLIER_, __VERSION__)
-    PRINTF("## build time: %s", __TIMESTAMP__)
-    PRINTF("## network: %s", IPV4 or IPV6)
-    PRINT("#####################################################")
+    print("#####################################################")
+    printf("## starting %s", table.concat(opts, " "))
+    printf("## OS: %s", __OS_NAME__)
+    printf("## %s", _VERSION)
+    printf("## backend: %s", __BACKEND__)
+    printf("## complier: %s %s", __COMPLIER_, __VERSION__)
+    printf("## build time: %s", __TIMESTAMP__)
+    printf("## network: %s", IPV4 or IPV6)
+    print("#####################################################")
 end
 
 local function main(cmd, ...)

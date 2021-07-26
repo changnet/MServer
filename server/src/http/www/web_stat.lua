@@ -26,7 +26,7 @@ function WebStat:exec(conn, fields, body)
     -- 通过rpc获取其他进程数据
     local app_type = APP[string.upper(app[1])]
     if not app_type then
-        PRINTF("invalid app name: %s", app[1])
+        printf("invalid app name: %s", app[1])
         return HTTP.INVALID, body
     end
 

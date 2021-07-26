@@ -30,7 +30,7 @@ end
 -- 发送tips
 function Lang:send_tips(player, id)
     if not tips_lang[id] then
-        ERROR("Lang:send_tips no such id:%d", id)
+        elog("Lang:send_tips no such id:%d", id)
         return
     end
 

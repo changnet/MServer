@@ -94,7 +94,7 @@ function SrvApp:final_initialize()
 
     -- Application.final_initialize(self)
     self.ok = true
-    PRINTF("App %s(index = %d, id = %d, 0x%.8X) start OK", self.name,
+    printf("App %s(index = %d, id = %d, 0x%.8X) start OK", self.name,
            self.index, self.id, self.session)
 end
 

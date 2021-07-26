@@ -8,7 +8,7 @@ local function srv_reg(srv_conn, pkt)
     Cmd.sync_cmd(srv_conn)
     srv_conn:send_pkt(SYS.SYNC_DONE, {})
 
-    PRINTF("%s register succes:session %d", srv_conn:conn_name(),
+    printf("%s register succes:session %d", srv_conn:conn_name(),
            srv_conn.session)
 end
 

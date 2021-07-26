@@ -65,7 +65,7 @@ local sig_action = {} -- 注意，这个热更要重新注册。关服的话为�
 function sig_handler(signum)
     if sig_action[signum] then return sig_action[signum]() end
 
-    PRINTF("catch signal %d,prepare to shutdown ...", signum)
+    printf("catch signal %d,prepare to shutdown ...", signum)
 
     g_app:prepare_shutdown()
 
@@ -82,7 +82,7 @@ function application_ev(ms_now)
             -- 当脚本占用的内存比较低时，gc完成的时间很快的，需要控制一下日志打印的速度
             gc_counter = gc_counter + 1
             if ms_now - gc_counter_tm > 60000 then
-                PRINTF("gc finished %d times, now use mem %f kb", gc_counter,
+                printf("gc finished %d times, now use mem %f kb", gc_counter,
                        collectgarbage("count"))
                 gc_counter = 0
                 gc_counter_tm = ms_now
@@ -119,7 +119,7 @@ function Application:check_shutdown()
         return true
     end
 
-    PRINTF("thread %s busy,%d finished job,%d unfinished job,waiting ...", who,
+    printf("thread %s busy,%d finished job,%d unfinished job,waiting ...", who,
            finished, unfinished)
 
     return false
@@ -140,12 +140,12 @@ end
 -- 一个初始化完成
 function Application:one_initialized(name, val)
     local step = self.init_step[name]
-    if not step then return ERROR("unknow initialize step:", name) end
+    if not step then return elog("unknow initialize step:", name) end
 
     step.cnt = 1 + (step.cnt or 0)
     if step.cnt >= step.count then
         self.init_step[name] = nil
-        PRINTF("initialize step(%d/%d) OK:%s(%d/%d)",
+        printf("initialize step(%d/%d) OK:%s(%d/%d)",
                self.step_cnt - table.size(self.init_step), self.step_cnt, name,
                step.cnt, step.count)
 
@@ -181,7 +181,7 @@ function Application:check_init_step()
     local now = ev:time()
     for name, step in pairs(self.init_step) do
         if step.tm and now - step.tm > 15 then
-            PRINTF("waitting for initialize step(%d/%d): %s",
+            printf("waitting for initialize step(%d/%d): %s",
                    self.step_cnt - table.size(self.init_step), self.step_cnt,
                    name)
         end
@@ -196,7 +196,7 @@ end
 -- 初始化完成
 function Application:final_initialize()
     self.ok = true
-    PRINTF("Application %s initialize OK", self.name)
+    printf("Application %s initialize OK", self.name)
 end
 
 -- 关服处理

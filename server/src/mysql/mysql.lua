@@ -29,7 +29,7 @@ function Mysql:on_data(qid, ecode, res)
         self.query[qid] = nil
         xpcall(func, __G__TRACKBACK, ecode, res)
     else
-        ERROR("mysql result no call back found: db id = %d, query id = %d",
+        elog("mysql result no call back found: db id = %d, query id = %d",
               self.id, qid)
     end
 end

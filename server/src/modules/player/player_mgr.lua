@@ -41,13 +41,13 @@ function PlayerMgr:enter_success(player)
     self.raw_player[pid] = nil
     g_authorize:set_player(pid)
 
-    PRINTF("player enter,pid = %d", pid)
+    printf("player enter,pid = %d", pid)
 end
 
 -- 玩家初始化失败
 function PlayerMgr:do_enter_fail(player)
     local pid = player:get_pid()
-    PRINT("player enter timeout,kill connection", pid)
+    print("player enter timeout,kill connection", pid)
 
     -- 通知网关关闭连接
     g_rpc:kill_player_connect(pid)
@@ -72,11 +72,11 @@ function PlayerMgr:on_enter_world(clt_conn, pid, pkt)
 
     self.raw_player[pid] = player
     if not player:db_load() then
-        ERROR("player db load fail,pid = %d", pid)
+        elog("player db load fail,pid = %d", pid)
         return
     end
 
-    PRINTF("player login,pid = %d", pid)
+    printf("player login,pid = %d", pid)
 end
 
 -- 玩家离线
@@ -86,19 +86,19 @@ function PlayerMgr:on_player_offline(srv_conn, pkt)
 
     local player = self.player[pid]
     if not player then
-        ERROR("player offline,object not found:%d", pid)
+        elog("player offline,object not found:%d", pid)
         return
     end
 
     player:on_logout()
 
     self.player[pid] = nil
-    PRINTF("player offline,pid = %d", pid)
+    printf("player offline,pid = %d", pid)
 end
 
 -- 顶号
 function PlayerMgr:on_login_otherwhere(srv_conn, pkt)
-    PRINTF("player login other where,pid = %d", pkt.pid)
+    printf("player login other where,pid = %d", pkt.pid)
 end
 
 local player_mgr = PlayerMgr()

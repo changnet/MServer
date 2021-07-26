@@ -92,7 +92,7 @@ local httpd = Httpd()
 -- http回调
 function Httpd:do_command(conn, http_type, code, method, url, body)
     -- url = /platform/pay?sid=99&money=200
-    PRINT("check url ", url)
+    print("check url ", url)
     local raw_url, fields = uri.parse(url)
 
     local path = self.exec[raw_url]
@@ -103,7 +103,7 @@ function Httpd:do_command(conn, http_type, code, method, url, body)
         local exec_file = io.open("../src/" .. path .. ".lua", "r")
 
         if not exec_file then
-            ERROR("http request page not found:%s", path)
+            elog("http request page not found:%s", path)
             conn:send_pkt(page404)
 
             return conn:close(true)

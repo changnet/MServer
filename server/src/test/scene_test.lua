@@ -10,7 +10,7 @@ local map = Map()
 local astar = Astar()
 
 if not map:set(id, width, height) then
-    PRINT("create map error")
+    print("create map error")
     return
 end
 
@@ -57,7 +57,7 @@ for _, range in pairs(grid) do
     local y = range.y
     local cost = range.cost
     for x = range.x_min, range.x_max do
-        if not map:fill(x, y, cost) then PRINT("fill map error") end
+        if not map:fill(x, y, cost) then print("fill map error") end
     end
 end
 
@@ -67,7 +67,7 @@ local path = {} -- 路径
 function test_path(_id, x, y, dx, dy, _path, dp)
     local cnt = astar:search(map, x, y, dx, dy, _path)
     if not cnt or cnt <= 0 then
-        PRINTF("can not find path from (%d,%d) to (%d,%d)", x, y, dx, dy)
+        printf("can not find path from (%d,%d) to (%d,%d)", x, y, dx, dy)
         return
     end
 

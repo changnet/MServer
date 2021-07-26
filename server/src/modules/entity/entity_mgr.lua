@@ -52,7 +52,7 @@ end
 -- 删除实体
 function EntityMgr:del_entity(eid)
     local entity = self.entity[eid]
-    if not entity then return ERROR("del entity fail,no such entity") end
+    if not entity then return elog("del entity fail,no such entity") end
 
     self.entity[eid] = nil
     if ET.PLAYER == entity.et then self.entity_player[entity.pid] = nil end
@@ -61,7 +61,7 @@ end
 -- 删除玩家实体
 function EntityMgr:del_entity_player(pid)
     local entity = self.entity_player[pid]
-    if not entity then return ERROR("del entity player fail,no such entity") end
+    if not entity then return elog("del entity player fail,no such entity") end
 
     self.entity_player[pid] = nil
     self.entity[entity.eid] = nil

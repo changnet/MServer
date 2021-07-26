@@ -8,7 +8,7 @@ end
 function TestDungeon:do_enter(pid, fb_id)
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        ERROR("TestDungeon:do_enter no player found", pid)
+        elog("TestDungeon:do_enter no player found", pid)
         return
     end
 

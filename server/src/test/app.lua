@@ -22,7 +22,7 @@ end
 function App:final_initialize()
     require "global.test"
     t_setup({
-        print = PRINT,
+        print = print,
         timer = {
             new = function(timeout, func)
                 return g_timer_mgr:timeout(timeout, func)

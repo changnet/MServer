@@ -41,7 +41,7 @@ function GM:auto_forward(where, player, cmd, args)
     local session = g_app:encode_session(app_type, 1, g_app.id)
     local srv_conn = g_srv_mgr:get_conn_by_session(session)
     if not srv_conn then
-        ERROR("gm auto forward no conn found:%s", cmd)
+        elog("gm auto forward no conn found:%s", cmd)
         return true
     end
 
@@ -52,7 +52,7 @@ end
 -- gm指令运行入口（注意Player对象可能为nil，因为有可能从http接口调用gm）
 function GM:raw_exec(where, player, cmd, ...)
     -- 防止日志函数本身报错，连热更的指令都没法刷了
-    xpcall(PRINT, __G__TRACKBACK, "exec gm:", where, cmd, ...)
+    xpcall(print, __G__TRACKBACK, "exec gm:", where, cmd, ...)
 
     -- 优先查找注册过来的gm指令
     local gm_func = gm_map[cmd]
@@ -76,14 +76,14 @@ function GM:raw_exec(where, player, cmd, ...)
         end
     end
 
-    PRINTF("try to call gm:%s,no such gm", cmd)
+    printf("try to call gm:%s,no such gm", cmd)
     return false, "no such gm:" .. cmd
 end
 
 -- 广播gm
 function GM:broadcast(cmd, ...)
     -- 仅允许网关广播
-    ASSERT(cmd and APP_TYPE == GATEWAY)
+    assert(cmd and APP_TYPE == GATEWAY)
 
     local conn_list = g_srv_mgr:get_all_srv_conn()
     for _, srv_conn in pairs(conn_list) do

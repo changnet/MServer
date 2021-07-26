@@ -15,10 +15,10 @@ end
 -- @id:ai_base配置表id
 function AiMgr:new(entity, id)
     local conf = ai_conf[id]
-    ASSERT(conf, "ai conf id not exist", id)
+    assert(conf, "ai conf id not exist", id)
 
     local ai = AI_TYPE[conf.type]
-    ASSERT(conf, "ai type not exist", id, conf.type)
+    assert(conf, "ai type not exist", id, conf.type)
 
     return ai(entity, conf)
 end

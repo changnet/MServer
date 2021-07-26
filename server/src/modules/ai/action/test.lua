@@ -22,7 +22,7 @@ local random_str = {""}
 -- end
 
 -- random_one( max_pkt )-- 保证最大临界值一定会出现
--- PRINT("random LARGE string finish !!!")
+-- print("random LARGE string finish !!!")
 
 -- 一般测试用这个随机就可以了
 table.insert(random_str, "just some test char 1234567890abcdefghijklmno")
@@ -59,15 +59,15 @@ function Test:on_ping(entity, ecode, pkt)
     local ai = entity.ai
 
     -- pbc发空字符串会变成nil
-    ASSERT((pkt.context or "") == ai.ping_ctx, string.len(ai.ping_ctx))
+    assert((pkt.context or "") == ai.ping_ctx, string.len(ai.ping_ctx))
 
     ai.ping_ctx = nil
-    PRINT("ping:", pkt.index)
+    print("ping:", pkt.index)
     -- vd(pkt)
 end
 
 function Test:on_chat(entity, ecode, pkt)
-    PRINTF("chat: %d say %s", pkt.pid, pkt.context)
+    printf("chat: %d say %s", pkt.pid, pkt.context)
 end
 
 -- ************************************************************************** --

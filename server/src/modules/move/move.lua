@@ -18,7 +18,7 @@ function Move:move_to(way, pix_x, pix_y)
     -- 目标位置是否可行走
     local scene = self.entity:get_scene()
     if not scene or not scene:can_pass(pix_x, pix_y, true) then
-        ERROR("move_to dest (%d,%d) can NOT pass", pix_x, pix_y)
+        elog("move_to dest (%d,%d) can NOT pass", pix_x, pix_y)
         return
     end
 
@@ -29,7 +29,7 @@ function Move:move_to(way, pix_x, pix_y)
     elseif MT.TELEPORT == way then
         assert(false) -- 待实现
     else
-        ERROR("move_to unknow way:%d", way)
+        elog("move_to unknow way:%d", way)
     end
 end
 
@@ -101,7 +101,7 @@ function Move:moving(ms_now, no_time_chk)
     local entity = self.entity
     local speed = entity:get_attribute(ABT.MOVE)
     if speed <= 0 then
-        ERROR("moving speed zero")
+        elog("moving speed zero")
         return true
     end
 
@@ -141,7 +141,7 @@ function Move:moving(ms_now, no_time_chk)
     -- 新位置是否可行走
     if not scene:can_pass(new_x, new_y, true) then
         self:raw_stop()
-        ERROR("moving (%f,%f) can NOT pass", new_x, new_y)
+        elog("moving (%f,%f) can NOT pass", new_x, new_y)
         return false
     end
 

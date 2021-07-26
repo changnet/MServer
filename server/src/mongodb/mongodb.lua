@@ -26,7 +26,7 @@ function Mongodb:on_data(qid, e, res)
         xpcall(self.cb[qid], __G__TRACKBACK, e, res)
         self.cb[qid] = nil
     else
-        ERROR("mongo event no call back found")
+        elog("mongo event no call back found")
     end
 end
 

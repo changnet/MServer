@@ -92,7 +92,7 @@ function Bag:raw_add(item)
 
     local conf = item_conf[id]
     if not conf then
-        ERROR("item conf not found:player = %d,id = %d", self.pid, id)
+        elog("item conf not found:player = %d,id = %d", self.pid, id)
         return count
     end
 
@@ -129,7 +129,7 @@ function Bag:add_to_new_grid(item)
     for idx = 1, max_grid do
         if not self.grid[idx] then
             local raw_count = math.min(count, conf.pile)
-            ASSERT(raw_count > 0, "item pile conf error")
+            assert(raw_count > 0, "item pile conf error")
 
             local new_item = item
             -- 一个格子装不完，需要复制一份
@@ -149,7 +149,7 @@ function Bag:add_to_new_grid(item)
     if count <= 0 then return 0 end
 
     -- 没有新格子可以插入
-    ERROR("bag full:player = %d,id = %d,count = %d", self.pid, item.id, count)
+    elog("bag full:player = %d,id = %d,count = %d", self.pid, item.id, count)
     return count
 end
 
@@ -181,7 +181,7 @@ function Bag:dec(id, count)
     end
 
     if not index then
-        ERROR("can NOT dec item,player = %d,id = %d,count = %d", self.pid, id,
+        elog("can NOT dec item,player = %d,id = %d,count = %d", self.pid, id,
               count)
         return count
     end

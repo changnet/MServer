@@ -70,7 +70,7 @@ function Dungeon:enter(entity, scene_id, pix_x, pix_y)
 
     local scene = self.scene[scene_id]
 
-    ASSERT(scene, "no such scene", scene_id)
+    assert(scene, "no such scene", scene_id)
     return scene:entity_enter(entity, pix_x, pix_y)
 end
 

@@ -72,7 +72,7 @@ local function valid_visual_list(et, list)
 
         -- 校验视野范围
         if not in_visual_range(et, other) then
-            PRINTF("valid_visual_list fail,id = %d,\z
+            printf("valid_visual_list fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%d,%d)", et.id, et.x, et.y,
                    et.z, other.id, other.x, other.y, other.z)
             assert(false)
@@ -97,19 +97,19 @@ local function valid_other_visual_list(et, list)
         -- 返回的实体有效并且关注事件
         local other = entity_info[id]
         if not other then
-            PRINT("entity not found", et.id, id)
+            print("entity not found", et.id, id)
             assert(false)
         end
 
         -- 校验视野范围
         if not in_visual_range(other, et) then
-            PRINTF("range fail,id = %d,pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)",
+            printf("range fail,id = %d,pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)",
                    et.id, et.x, et.y, et.z, other.id, other.x, other.y, other.z)
             assert(false)
         end
 
         if (id_map[id]) then
-            PRINTF("id duplicate in %d", et.id)
+            printf("id duplicate in %d", et.id)
             vd(list)
         end
 
@@ -129,7 +129,7 @@ local function valid_visual(et, list_me, list_other, mask)
     local visual_et = get_visual_list(et, mask)
     for id, other in pairs(visual_et) do
         if not id_map[id] then
-            PRINTF("valid_visual fail,id = %d,\z
+            printf("valid_visual fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)", et.id, et.x, et.y,
                    et.z, other.id, other.x, other.y, other.z)
             assert(false)
@@ -140,8 +140,8 @@ local function valid_visual(et, list_me, list_other, mask)
 
     -- 校验不在视野范围内或者不关注事件的实体不要在返回列表上
     if not table.empty(id_map) then
-        PRINT("THOSE ID IN LIST BUT NOT IN VISUAL RANGE")
-        for id in pairs(id_map) do PRINT(id) end
+        print("THOSE ID IN LIST BUT NOT IN VISUAL RANGE")
+        for id in pairs(id_map) do print(id) end
         assert(false)
     end
 
@@ -175,7 +175,7 @@ local function valid_out(et, list)
 
         -- 校验视野范围
         if in_visual_range(et, other) then
-            PRINTF("valid_out fail,id = %d,\z
+            printf("valid_out fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)", et.id, et.x, et.y,
                    et.z, other.id, other.x, other.y, other.z)
             assert(false)
@@ -202,7 +202,7 @@ local function valid_other_out(et, list)
 
         -- 校验视野范围
         if in_visual_range(other, et) then
-            PRINTF("valid_other_out fail,id = %d,\z
+            printf("valid_other_out fail,id = %d,\z
                 pos(%d,%d,%d) and id = %d,pos(%d,%s,%d)", et.id, et.x, et.y,
                    et.z, other.id, other.x, other.y, other.z)
             assert(false)
@@ -237,7 +237,7 @@ local function enter(aoi, id, x, y, z, visual, mask)
 
     exit_info[id] = nil
 
-    -- PRINT(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
+    -- print(id,"enter pos is",math.floor(x/pix),math.floor(y/pix))
     aoi:enter_entity(id, x, y, z, visual, mask, list_me_in, list_other_in)
     if is_valid then
         valid_visual(entity, list_me_in, list_other_in, 0xF)
@@ -314,7 +314,7 @@ end
 local function save_history()
     local json = require "lua_parson"
 
-    PRINTF("%d history action save !", #history)
+    printf("%d history action save !", #history)
     json.encode_to_file(history, "list_aoi_his.json")
 end
 
@@ -323,7 +323,7 @@ local function run_history(load)
     local json = require "lua_parson"
     if load then history = json.decode_from_file("list_aoi_his.json") end
 
-    PRINTF("%d history action load !", #history)
+    printf("%d history action load !", #history)
 
     is_valid = true
     is_use_y = true
@@ -333,7 +333,7 @@ local function run_history(load)
         if true then
             local action = his.action
             if true then
-                PRINTF("%d %s id = %d, x = %d, y = %d, z = %d, v = %d", idx,
+                printf("%d %s id = %d, x = %d, y = %d, z = %d, v = %d", idx,
                        action, his.id, his.x or -1, his.y or -1, his.z or -1,
                        his.v or -1)
             end
@@ -347,15 +347,15 @@ local function run_history(load)
                 entity.z = his.z
                 aoi:get_interest_me_entity(his.id, list_other_in)
                 for n = 1, list_other_in.n do
-                    PRINT(list_other_in[n])
+                    print(list_other_in[n])
                 end
-                PRINT("=======================")
+                print("=======================")
                 aoi:update_entity(his.id, his.x, his.y, his.z, list_me_in,
                                   list_other_in, list_me_out, list_other_out)
                 -- aoi:dump()
                 aoi:get_interest_me_entity(his.id, list_other_in)
                 for n = 1, list_other_in.n do
-                    PRINT(list_other_in[n])
+                    print(list_other_in[n])
                 end
                 valid_interest_me(aoi, entity_info[his.id])
                 return
@@ -376,7 +376,7 @@ local function run_history(load)
             end
         end
     end
-    PRINTF("run done %d - %d", table.size(entity_info), table.size(exit_info))
+    printf("run done %d - %d", table.size(entity_info), table.size(exit_info))
 end
 
 -- 随机退出、更新、进入进行批量测试

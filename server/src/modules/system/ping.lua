@@ -26,7 +26,7 @@ function Ping:start(how, conn_id, other)
     end
 
     -- 没有其他服务器连接?
-    if 0 == wait then return PRINT("ping no other app found") end
+    if 0 == wait then return print("ping no other app found") end
 
     self.pending[id] = {
         srvs = {},
@@ -41,14 +41,14 @@ end
 -- 其他服务器进程收到ping返回
 function Ping:on_ping(ecode, id)
     local info = self.pending[id]
-    if not info then return PRINT("ping no info found", id) end
+    if not info then return print("ping no info found", id) end
 
     local srv_conn = g_rpc:last_conn()
 
     local conn_id = srv_conn.conn_id
     if info.srvs[conn_id] then
         self.pending[id] = nil
-        return PRINT("ping info error", id)
+        return print("ping info error", id)
     end
     info.srvs[conn_id] = {
         name = srv_conn:conn_name(),
@@ -65,14 +65,14 @@ function Ping:done(id, info)
 
     local how = info.how
     if 1 == how then -- gm请求，直接打印
-        PRINT(table.dump(info))
+        print(table.dump(info))
         return
     end
 
     -- 连接已断开
     local conn = g_srv_mgr:get_conn(info.conn_id)
     if not conn then
-        return PRINT("ping done,no conn found", info.conn_id, info.index)
+        return print("ping done,no conn found", info.conn_id, info.index)
     end
 
     if 2 == how then -- 来自客户端的

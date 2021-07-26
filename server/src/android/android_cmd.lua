@@ -18,7 +18,7 @@ do
     local cs = require_define("proto.auto_cs", true)
 
     local fs = network_mgr:load_one_schema(network_mgr.CDT_PROTOBUF, "../pb")
-    PRINTF("android load protocol schema:%d", fs)
+    printf("android load protocol schema:%d", fs)
 
     for _, m in pairs(cs) do
         for _, mm in pairs(m) do
@@ -41,7 +41,7 @@ local AndroidCmd = oo.singleton(...)
 function AndroidCmd:cmd_register(cmd, handler)
     local cfg = sc_cmd[cmd.i]
     if not cfg then
-        PRINTF("AndroidCmd:cmd_dispatcher no such cmd:%d", cmd.i)
+        printf("AndroidCmd:cmd_dispatcher no such cmd:%d", cmd.i)
         return
     end
 
@@ -103,13 +103,13 @@ end
 function on_cmd(conn_id, cmd, errno, ...)
     local cfg = sc_cmd[cmd]
     if not cfg then
-        ERROR("sc_command_new no such cmd:%d", cmd)
+        elog("sc_command_new no such cmd:%d", cmd)
         return
     end
 
     if not cfg.handler then
         -- android_cmd:dump_pkt( ... )
-        ERROR("sc_command_new no handler found:%d", cmd)
+        elog("sc_command_new no handler found:%d", cmd)
         return
     end
 
@@ -119,7 +119,7 @@ end
 
 function conn_del(conn_id)
     local android = g_android_mgr:get_android_by_conn(conn_id)
-    PRINTF("%d connect del", android.index)
+    printf("%d connect del", android.index)
 end
 
 return android_cmd

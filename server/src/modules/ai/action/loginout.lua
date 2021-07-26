@@ -46,7 +46,7 @@ end
 
 -- 断开连接
 function Loginout:on_disconnect(entity)
-    PRINTF("android(%d) die ", entity.index)
+    printf("android(%d) die ", entity.index)
 end
 
 -- 登录返回
@@ -68,7 +68,7 @@ end
 -- 创角返回
 function Loginout:on_create_role(entity, errno, pkt)
     if 0 ~= errno then
-        PRINTF("android_%d unable to create role", entity.index)
+        printf("android_%d unable to create role", entity.index)
         return
     end
 
@@ -77,7 +77,7 @@ function Loginout:on_create_role(entity, errno, pkt)
 
     self:enter_world(entity)
 
-    PRINTF("android_%d create role success,pid = %d,name = %s", entity.index,
+    printf("android_%d create role success,pid = %d,name = %s", entity.index,
            entity.pid, entity.name)
 end
 
@@ -95,7 +95,7 @@ function Loginout:on_enter_world(entity, errno, pkt)
     -- 记录登录时间，一段时间后自动退出
     entity.ai.logout_time = ev:time() + math.random(60, param.logout_time)
 
-    PRINTF("%s enter world success", entity.name)
+    printf("%s enter world success", entity.name)
     -- PE.fire_event( PE_ENTER,entity )
 end
 
@@ -108,7 +108,7 @@ end
 
 -- 被顶号
 function Loginout:on_login_otherwhere(entity, errno, pkt)
-    PRINTF("%s login other where", entity.name)
+    printf("%s login other where", entity.name)
 end
 
 -- ************************************************************************** --
@@ -127,7 +127,7 @@ function Loginout:check_and_logout(ai)
 
     entity.handle = nil -- 要测试重登录，handle会重置
     entity:set_conn(nil)
-    PRINTF("%s logout", entity.name)
+    printf("%s logout", entity.name)
 
     return true
 end
@@ -137,7 +137,7 @@ end
 -- 连接回调
 function Loginout:on_conn_new(entity, conn_id, ecode)
     if 0 == ecode then
-        PRINTF("android(%d) connection(%d) establish", entity.index, conn_id)
+        printf("android(%d) connection(%d) establish", entity.index, conn_id)
 
         -- 如果是tcp到这里连接就建立完成了。websocket还要等握手
         self:do_login(entity)
@@ -146,13 +146,13 @@ function Loginout:on_conn_new(entity, conn_id, ecode)
 
     entity:set_conn(nil)
 
-    ERROR("android(%d) connection(%d) fail:%s", entity.index, conn_id,
+    elog("android(%d) connection(%d) fail:%s", entity.index, conn_id,
           util.what_error(ecode))
 end
 
 -- websocket握手回调
 function Loginout:on_handshake(entity, conn_id, ecode)
-    PRINTF("android(%d) handshake ", entity.index)
+    printf("android(%d) handshake ", entity.index)
 
     return self:do_login(entity)
 end

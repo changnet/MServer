@@ -8,7 +8,7 @@ function CltMgr:clt_listen(ip, port)
     self.clt_listen_conn = ScConn()
     self.clt_listen_conn:listen(ip, port)
 
-    PRINTF("listen for client at %s:%d", ip, port)
+    printf("listen for client at %s:%d", ip, port)
     return true
 end
 
@@ -24,7 +24,7 @@ end
 function CltMgr:clt_close_by_pid(pid)
     local conn = self.clt[pid]
     if not conn then
-        ERROR("clt_close_by_pid no conn found:%d", pid)
+        elog("clt_close_by_pid no conn found:%d", pid)
         return
     end
 
@@ -34,7 +34,7 @@ end
 
 -- 设置客户端连接
 function CltMgr:bind_role(pid, clt_conn)
-    ASSERT(nil == self.clt[pid], "player already have a conn")
+    assert(nil == self.clt[pid], "player already have a conn")
 
     clt_conn:bind_role(pid)
     self.clt[pid] = clt_conn
@@ -56,7 +56,7 @@ function CltMgr:clt_conn_accept(conn)
     local conn_id = conn.conn_id
     self.clt_conn[conn_id] = conn
 
-    PRINTF("accept client connection:%d", conn_id)
+    printf("accept client connection:%d", conn_id)
 end
 
 -- 客户端连接断开回调
@@ -72,7 +72,7 @@ function CltMgr:clt_conn_del(conn_id)
         g_srv_mgr:send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
     end
 
-    PRINTF("client connect del:%d", conn_id)
+    printf("client connect del:%d", conn_id)
 end
 
 -- 此函数必须返回一个value为玩家id的table
@@ -86,7 +86,7 @@ function clt_multicast_new(mask, ...)
         return pid_list
         -- elseif mask == CLTCAST.LEVEL then
     else
-        ERROR("clt_multicast_new unknow mask", mask)
+        elog("clt_multicast_new unknow mask", mask)
     end
 end
 

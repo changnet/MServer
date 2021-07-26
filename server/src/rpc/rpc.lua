@@ -169,7 +169,7 @@ end
 local function on_pid_call(pid, method_name, ...)
     local player = g_player_mgr:get_player(pid)
     if not player then
-        PRINTF("on pid call player not found: %d %s", pid, method_name)
+        printf("on pid call player not found: %d %s", pid, method_name)
         return
     end
 
@@ -189,7 +189,7 @@ end
 local function on_entity_call(pid, method_name, ...)
     local player = g_entity_mgr:get_player(pid)
     if not player then
-        PRINTF("on entity call player not found: %d %s", pid, method_name)
+        printf("on entity call player not found: %d %s", pid, method_name)
         return
     end
 
@@ -210,7 +210,7 @@ end
 local function on_object_call(obj_name, method_name, ...)
     local obj = name_to_obj(obj_name)
     if not obj then
-        PRINTF("on object call obj not found: %d %s", obj_name, method_name)
+        printf("on object call obj not found: %d %s", obj_name, method_name)
         return
     end
 
@@ -238,7 +238,7 @@ end
 function Rpc:call(session, func, ...)
     local conn = g_srv_mgr:get_conn_by_session(session)
     if not conn then
-        PRINTF("rpc call no connection found: %d", session)
+        printf("rpc call no connection found: %d", session)
         return
     end
 
@@ -277,7 +277,7 @@ function rpc_command_return(conn_id, rpc_id, e, ...)
     rpc.last_conn_id = conn_id
     local callback = rpc.callback[rpc_id]
     if not callback then
-        ERROR("rpc return no callback found:id = %d", rpc_id)
+        elog("rpc return no callback found:id = %d", rpc_id)
         return
     end
     rpc.callback[rpc_id] = nil

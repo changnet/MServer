@@ -1,4 +1,4 @@
--- auto export by lua-tags 174 symbols
+-- auto export by lua-tags 176 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,7 +7,6 @@ return {
 "APP_TYPE", -- src/modules/system/define.lua
 "AREA", -- src/modules/system/define.lua
 "ASE", -- src/modules/system/define.lua
-"ASSERT", -- src/global/global.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "Acism", -- engine/acism.lua
@@ -24,7 +23,6 @@ return {
 "E", -- src/modules/module_header.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
-"ERROR", -- src/global/global.lua
 "ET", -- src/modules/entity/entity_header.lua
 "Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
@@ -53,8 +51,6 @@ return {
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
-"PRINT", -- src/global/global.lua
-"PRINTF", -- src/global/global.lua
 "PROP", -- src/modules/property/property.lua
 "RES", -- src/modules/res/res_header.lua
 "SE", -- src/modules/event/system_event.lua
@@ -73,11 +69,14 @@ return {
 "WSE", -- src/modules/system/define.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
+"__assert", -- src/main.lua
 "__conn", -- src/network/conn.lua
 "__global_storage", -- src/global/global.lua
+"__print", -- src/main.lua
 "__test", -- src/global/test.lua
 "application_ev", -- src/android/app.lua
 "application_ev", -- src/application/application.lua
+"assert", -- src/global/global.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
 "command_new", -- src/network/conn.lua
 "conn_accept", -- src/network/conn.lua
@@ -87,6 +86,7 @@ return {
 "conn_new", -- src/network/conn.lua
 "css_command_new", -- src/network/conn.lua
 "ctrl_new", -- src/network/conn.lua
+"elog", -- src/global/global.lua
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua
 "g_account_mgr", -- src/modules/module_header.lua
@@ -142,6 +142,8 @@ return {
 "obj_to_name", -- src/global/name.lua
 "on_cmd", -- src/android/android_cmd.lua
 "oo", -- src/global/oo.lua
+"print", -- src/global/global.lua
+"printf", -- src/global/global.lua
 "raw_table_dump", -- src/global/table.lua
 "reg_func", -- src/global/name.lua
 "reg_obj", -- src/global/name.lua

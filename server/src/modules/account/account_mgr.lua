@@ -21,19 +21,19 @@ end
 function AccountMgr:player_login(clt_conn, pkt)
     local sign = util.md5(LOGIN_KEY, pkt.time, pkt.account)
     if sign ~= pkt.sign then
-        ERROR("clt sign error:%s", pkt.account)
+        elog("clt sign error:%s", pkt.account)
         return
     end
 
     if not PLATFORM[pkt.plat] then
-        ERROR("clt platform error:%s", tostring(pkt.plat))
+        elog("clt platform error:%s", tostring(pkt.plat))
         return
     end
 
     local conn_id = clt_conn.conn_id
     -- 不能重复发送(不是顶号，conn_id不应该会重复)
     if self.conn_acc[conn_id] then
-        ERROR("player login pkt dumplicate send")
+        elog("player login pkt dumplicate send")
         return
     end
 
@@ -74,20 +74,20 @@ function AccountMgr:player_login(clt_conn, pkt)
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
     clt_conn:send_pkt(PLAYER.LOGIN, role_info)
 
-    PRINTF("client authorized success:%s--%d", pkt.account, role_info.pid or 0)
+    printf("client authorized success:%s--%d", pkt.account, role_info.pid or 0)
 end
 
 -- 创角
 function AccountMgr:create_role(clt_conn, pkt)
     local role_info = self.conn_acc[clt_conn.conn_id]
     if not role_info then
-        ERROR("create role,no account info")
+        elog("create role,no account info")
         return
     end
 
     -- 当前一个帐号只能创建一个角色
     if role_info.pid then
-        ERROR("role already create")
+        elog("role already create")
         return
     end
 
@@ -120,7 +120,7 @@ end
 -- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
 function AccountMgr:on_role_create(base, role_info, ecode, res)
     if 0 ~= ecode then
-        ERROR("role create error:name = %s,account = %s,srv = %d,plat = %d",
+        elog("role create error:name = %s,account = %s,srv = %d,plat = %d",
               base.name, role_info.account, role_info.sid, role_info.plat)
         self:send_role_create(role_info, E.UNDEFINE)
         return
@@ -150,7 +150,7 @@ end
 function AccountMgr:on_acc_create(acc_info, role_info, ecode, res)
     if 0 ~= ecode then -- 失败
         self:send_role_create(role_info, E.UNDEFINE)
-        PRINTF("create role error:%s", acc_info.account)
+        printf("create role error:%s", acc_info.account)
         return
     end
 
@@ -158,7 +158,7 @@ function AccountMgr:on_acc_create(acc_info, role_info, ecode, res)
     local pid = acc_info._id
     role_info.pid = pid
     role_info.name = acc_info.name
-    PRINTF("create role success:%s--%d", role_info.account, pid)
+    printf("create role success:%s--%d", role_info.account, pid)
 
     self.role_acc[pid] = role_info
 
@@ -192,7 +192,7 @@ end
 function AccountMgr:role_offline_by_pid(pid)
     local role_info = self.role_acc[pid]
     if not role_info then
-        ERROR("role_offline_by_pid no role_info found:%d", pid)
+        elog("role_offline_by_pid no role_info found:%d", pid)
         return
     end
 
@@ -227,7 +227,7 @@ end
 -- db数据加载
 function AccountMgr:on_db_loaded(ecode, res)
     if 0 ~= ecode then
-        ERROR("account db load error")
+        elog("account db load error")
         return
     end
 

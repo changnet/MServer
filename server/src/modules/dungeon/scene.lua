@@ -102,7 +102,7 @@ end
 -- 实体进入场景
 function Scene:entity_enter(entity, pix_x, pix_y)
     if pix_x >= self.pix_width or pix_y >= self.pix_height then
-        ERROR("cene:entity_enter invalid pos(%d, %d) for scene %d", pix_x,
+        elog("cene:entity_enter invalid pos(%d, %d) for scene %d", pix_x,
               pix_y, self.id)
         return
     end
@@ -110,7 +110,7 @@ function Scene:entity_enter(entity, pix_x, pix_y)
     -- 先退出旧场景
     local old_scene = entity:get_scene()
     if old_scene then
-        -- ASSERT(old_scene ~= self,self.dungeon_id,self.id)
+        -- assert(old_scene ~= self,self.dungeon_id,self.id)
         old_scene:entity_exit(entity)
     end
 

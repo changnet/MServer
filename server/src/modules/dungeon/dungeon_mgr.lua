@@ -27,7 +27,7 @@ end
 -- 初始化静态野外副本
 function DungeonMgr:init_static_dungeon()
     -- TODO:真实项目应该从配置加载，这里只创建几个测试场景
-    PRINT("init_static_dungeon for test")
+    print("init_static_dungeon for test")
 
     -- 创建测试场景
     local test_scene = 10
