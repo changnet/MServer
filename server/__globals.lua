@@ -1,4 +1,4 @@
--- auto export by lua-tags 176 symbols
+-- auto export by lua-tags 178 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -97,6 +97,7 @@ return {
 "g_app_setting", -- src/modules/module_header.lua
 "g_authorize", -- src/modules/module_header.lua
 "g_authorize", -- src/test/protobuf_test.lua
+"g_authorize", -- src/test/flatbuffers_test.lua
 "g_clt_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
@@ -118,6 +119,7 @@ return {
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
+"g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_timer_mgr", -- src/android/app.lua
 "g_timer_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/test/app.lua

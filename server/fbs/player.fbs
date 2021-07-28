@@ -1,5 +1,90 @@
 //玩家模块 协议定义
 
+table SubMsgLite
+{
+    b1:bool;
+    i1:long;
+    s:string;
+    i2:long;
+    b2:bool;
+    d1:double;
+    i3:int;
+}
+
+// 用于简单协议效率测试
+table PingPongLite
+{
+    b1:bool;
+    i1:long;
+    s:string;
+    i2:long;
+    b2:bool;
+    d1:double;
+    i3:int;
+
+    msg:SubMsgLite;
+}
+
+table SubMsg
+{
+    d1:double;
+    d2:double;
+    f1:float;
+    f2:float;
+    i1:int;
+    i2:int;
+    i641:long;
+    i642:long;
+    b1:bool;
+    b2:bool;
+    s1:string;
+    s2:string;
+    by1:[byte];
+    by2:[byte];
+    ui1:uint;
+    ui2:uint;
+    ui641:ulong;
+    ui642:ulong;
+    f321:uint; // fixed32 flatbuffers没这种类型，仅仅是为了和protobuf的字段对齐
+    f322:uint; // fixed32 flatbuffers没这种类型，仅仅是为了和protobuf的字段对齐
+    f641:ulong;
+    f642:ulong;
+}
+
+// 用于复杂协议校验
+table PingPong
+{
+    d1:double;
+    d2:double;
+    f1:float;
+    f2:float;
+    i1:int;
+    i2:int;
+    i641:long;
+    i642:long;
+    b1:bool;
+    b2:bool;
+    s1:string;
+    s2:string;
+    by1:[byte];
+    by2:[byte];
+    ui1:uint;
+    ui2:uint;
+    ui641:ulong;
+    ui642:ulong;
+    f321:uint; // fixed32 flatbuffers没这种类型，仅仅是为了和protobuf的字段对齐
+    f322:uint; // fixed32 flatbuffers没这种类型，仅仅是为了和protobuf的字段对齐
+    f641:ulong;
+    f642:ulong;
+
+    msg1:SubMsg;
+    i_list:[int];
+    msg_list:[SubMsg];
+
+    index:int; // 索引
+    context:string; // 目前用来测试socket效率，分包等情况
+}
+
 /* 玩家断线 */
 struct SSOffline
 {
