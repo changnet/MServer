@@ -312,3 +312,10 @@ function table.contains(tbl, e, func)
 
     return false
 end
+
+-- 反转数组
+-- @param tbl 需要反转的数组
+-- @param i 开始反转的索引，默认为1
+-- @param j 结束反转的索引，默认为数组长度
+function table.reverse(tbl, i, j)
+end
