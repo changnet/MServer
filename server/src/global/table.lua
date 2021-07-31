@@ -318,4 +318,19 @@ end
 -- @param i 开始反转的索引，默认为1
 -- @param j 结束反转的索引，默认为数组长度
 function table.reverse(tbl, i, j)
+    if not i then i = 1 end
+    if not j then j = #tbl end
+
+    while i < j do
+        local tmp = tbl[i]
+        if nil == tmp then return tbl end
+
+        tbl[i] = tbl[j]
+        tbl[j] = tmp
+
+        i = i + 1
+        j = j - 1
+    end
+
+    return tbl
 end

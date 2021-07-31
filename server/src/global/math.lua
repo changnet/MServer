@@ -58,7 +58,11 @@ function math.to_base(num, base, chars)
     chars = chars or CHARS
     repeat
         table.insert(c, chars[num % base + 1])
-        num = math.floor(num / base)
+        -- 这里不能用 math.floor(num / base)，因为lua中除法都会被转换为double来执行
+        -- 当这个数非常大，超过double时，就会相差比较多，比如
+        -- 7022597144829442788 / 36 = 195,072,142,911,928,966
+        -- 但lua中得到的是 195,072,142,911,928,960
+        num = num // base
     until num == 0
 
     -- TODO 如果标准的进制转换，这里还要把数组反转，但游戏里可能不需要这个
@@ -77,7 +81,9 @@ function math.from_base(str, base, digits)
     local num = 0
     for i = 1, string.len(str) do
         local c = string.sub(str, i, i)
-        num = num + digits[c] * (base ^ (i - 1))
+        -- 当进行乘除法运算时，必须强制转成整形，否则lua默认是以double来运算的
+        -- 如果最终值超过2^53次数，double就会表示不了
+        num = num + digits[c] * math.tointeger(base ^ (i - 1))
     end
 
     return num

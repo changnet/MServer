@@ -281,3 +281,82 @@ t_describe("crypto test", function()
         t_equal(util.base64(str), "MTIzNDU2Nzg5YWJjZGVmZ2hp")
     end)
 end)
+
+t_describe("table lib test", function()
+    t_it("table.reverse", function()
+        table.reverse({})
+        table.reverse({}, 1, 100)
+        table.reverse({}, 200, 100)
+
+        t_equal(table.reverse({1}), {1})
+        t_equal(table.reverse({1, 2, 3, 4, 5}), {5, 4, 3, 2, 1})
+        t_equal(table.reverse({1, 2, 3, 4, 5}, 1, 3), {3, 2, 1, 4, 5})
+    end)
+end)
+
+t_describe("math lib test", function()
+    require("global.math")
+    t_it("math from to base", function()
+        -- 任意进制转换
+        -- 注意这里没有反转，所成2进制的2是01而不是10
+        t_equal(math.to_base(0, 2), "0")
+        t_equal(math.from_base("0", 2), 0)
+        t_equal(math.to_base(2, 2), "01")
+        t_equal(math.from_base("01", 2), 2)
+
+        t_equal(math.to_base(0, 36), "0")
+        t_equal(math.from_base("0", 36), 0)
+        t_equal(math.to_base(35, 36), "z")
+        t_equal(math.from_base("z", 36), 35)
+
+        for num = 1, 100 do
+            local str = math.to_base(num, 36)
+            t_equal(math.from_base(str, 36), num)
+        end
+
+        -- 进制转换可以使用外网工具来验证 https://tool.oschina.net/hexconvert/
+        -- oschina那这个转换如果数字大于js能表示的大小，是不准的，用
+        -- https://tool.lu/hexconvert/
+        t_equal(math.to_base(8888888888, 36), "8kq7034")
+        t_equal(math.from_base("8kq7034", 36), 8888888888)
+
+        -- 这人数字超过double有表示的值，在lua中执行除法时，需要用 //
+        local i = 7022597144829442788
+        local s = math.to_base(i, 36)
+        t_equal(s, "canca0bxarch1")
+        t_equal(math.from_base(s, 36), i)
+
+        i = math.maxinteger
+        s = math.to_base(i, 36)
+        t_equal(s, "7e8e23ji0p2y1")
+        t_equal(math.from_base(s, 36), i)
+
+        for _ = 1, 500 do
+            local num = math.random(0, math.maxinteger)
+            local str = math.to_base(num, 36)
+            t_equal(math.from_base(str, 36), num)
+        end
+
+        -- 这是很经典的应用，去掉0、o、1、l等容易写错的字符，然后生成字符串作为礼品码
+        -- 必要时，还可以把这些字符打乱，这样生成的字符串对别人来说就是没规律的
+        local chars = {
+            "2","3","4","5","6","7","8","9",
+            "a","b","c","d","e","f","g","h","i","j",
+            "k","m","n","p","q","r","s","t",
+            "u","v","w","x","y","z"
+        }
+        local digits = {}
+        for d, c in pairs(chars) do digits[c] = d - 1 end
+
+        local base = #chars
+        for num = 100000, 101000 do
+            local str = math.to_base(num, base, chars)
+            t_equal(math.from_base(str, base, digits), num)
+        end
+
+        i = math.maxinteger
+        s = math.to_base(i, base, chars)
+        t_equal(s, "zzzzzzzzzzzz9")
+        t_equal(math.from_base(s, base, digits), i)
+    end)
+end)
