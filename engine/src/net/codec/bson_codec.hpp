@@ -12,8 +12,8 @@ public:
 
     void finalize();
     void reset() {}
-    int32_t load_path(const char *path) { return 0; }
-    int32_t load_file(const char *path) { return 0; }
+    int32_t load_path(const char *path) override { return 0; }
+    int32_t load_file(const char *path) override { return 0; }
 
     /* 解码数据包
      * return: <0 error,otherwise the number of parameter push to stack

@@ -92,6 +92,7 @@ t_describe("protobuf test", function()
         }
 
         -- 加载协议文件
+        Cmd.SCHEMA_TYPE = network_mgr.CDT_PROTOBUF
         local ok = Cmd.load_protobuf()
         t_equal(ok, true)
 

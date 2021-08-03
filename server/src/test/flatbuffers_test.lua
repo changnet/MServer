@@ -7,6 +7,12 @@ require "network.cmd"
 local ScConn = require "network.sc_conn"
 local CsConn = require "network.cs_conn"
 
+local sc_param = table.copy(ScConn.default_param)
+local cs_param = table.copy(CsConn.default_param)
+
+sc_param.cdt = network_mgr.CDT_FLATBUF
+cs_param.cdt = network_mgr.CDT_FLATBUF
+
 local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil
@@ -27,19 +33,22 @@ t_describe("flatbuffers test", function()
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     t_before(function()
 
+        -- !!! flatbuffers未发送的字段都会补上默认值，这点和pbc相反
+        -- !!! 因此这里需要补齐，不然t_equal检测不会通过
+
         base_pkt = {
             d1 = -99999999999999.55555,
             d2 = 99999999999999.55555,
             -- float的精度超级差，基本在0.5，过不了t_equal
             -- 如11111111.5678就会变成11111112，在C++中也一样
-            -- f1 = -111.6789,
-            -- f2 = 111.1234,
+            f1 = 0,
+            f2 = 0,
             i1 = -2147483648;
             i2 = 2147483647;
             i641 = math.mininteger,
             i642 = math.maxinteger,
             b1 = true,
-            -- b2 = false, -- pbc不传输默认值，加了这个会导致t_equal检测失败
+            b2 = false,
             s1 = "s", -- 空字符串是默认值 ，pbc也不打包的
             s2 = string.rep("ssssssssss", rep_cnt),
             by1 = "s"; -- 空字符串是默认值 ，pbc也不打包的
@@ -55,6 +64,7 @@ t_describe("flatbuffers test", function()
             f642 = math.maxinteger, -- 0xffffffffffffffff, lua不支持uint64_t
         }
         local cpy = table.copy(base_pkt)
+        base_pkt.index = 0
         base_pkt.msg1 = cpy
         base_pkt.i_list = {1,2,3,4,5,99999,55555,111111111}
         base_pkt.msg_list = { cpy, cpy, cpy}
@@ -78,12 +88,14 @@ t_describe("flatbuffers test", function()
         }
 
         -- 加载协议文件
+        Cmd.SCHEMA_TYPE = network_mgr.CDT_FLATBUF
         local ok = Cmd.load_flatbuffers()
         t_equal(ok, true)
 
         -- 建立一个客户端、一个服务端连接，模拟通信
 
         listen_conn = ScConn()
+        listen_conn.default_param = sc_param
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
             srv_conn = self
@@ -92,6 +104,7 @@ t_describe("flatbuffers test", function()
         end
 
         clt_conn = CsConn()
+        clt_conn.default_param = cs_param
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function()
             t_done()

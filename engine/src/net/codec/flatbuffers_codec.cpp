@@ -29,7 +29,7 @@ int32_t FlatbuffersCodec::load_path(const char *path)
 
 int32_t FlatbuffersCodec::load_file(const char *path)
 {
-    return _lflatbuffers->load_bfbs_file(path);
+    return _lflatbuffers->load_bfbs_file(path) ? 0 : -1;
 }
 
 /* 解码数据包

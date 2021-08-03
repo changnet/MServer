@@ -19,6 +19,31 @@ Cmd = {}
 local cs_handler = {} -- 注册的客户端回调函数
 local ss_handler = {} -- 注册的服务器之间通信回调
 
+-- 当前使用的描述文件类型
+Cmd.SCHEMA_TYPE = network_mgr.CDT_PROTOBUF
+
+-- 拆分描述文件
+local function split_schema(name)
+    -- 描述文件分为包名package，具体的功能object
+    -- 对于protobuf，包名和功能是拼在一起的，使用点号分隔
+    -- 然后package名是不需要的，这里只是方便调试，如"player.SLogin"
+    if Cmd.SCHEMA_TYPE == network_mgr.CDT_PROTOBUF then
+        local package = string.match(name, "^(%w+)%.%w+$")
+        return package, name
+    end
+
+    -- 但对于flatbuffers，是文件名 ＋ 结构名
+    -- 如 "player.SLogin" 表示 player.bfbs 文件中的 SLogin
+    -- 如果在文件中使用了namespace(Test，则需要拆分为 player.bfbs 和 Test.SLogin
+    -- 现在暂时不支持namespace，有文件名应该足够了
+    if Cmd.SCHEMA_TYPE == network_mgr.CDT_FLATBUF then
+        local package, object = string.match(name, "^(%w+)%.(%w+)$")
+        return package .. ".bfbs", object
+    end
+
+    assert(false)
+end
+
 -- 加载协议描述文件，如protobuf、flatbuffers
 -- @param schema_type 类型，如 CDT_PROTOBUF
 -- @param path 协议描述文件路径，采用linux的路径，如/home/test
@@ -60,10 +85,8 @@ local function load_schema(schema_type, path, priority, suffix)
     for _, m in pairs(CS) do
         for _, mm in pairs(m) do
             if mm.s then
-                -- 对于protobuf，使用"player.SLogin"这种结构
-                -- 但对于flatbuffers，是文件名 ＋ 结构名，所以要拆分
-                local package = string.match(mm.s, "^(%w+)%.%w+$")
-                network_mgr:set_sc_cmd(mm.i, package, mm.s, 0, 0)
+                local package, object = split_schema(mm.s)
+                network_mgr:set_sc_cmd(mm.i, package, object, 0, 0)
             end
         end
     end
@@ -73,11 +96,14 @@ local function load_schema(schema_type, path, priority, suffix)
     return count > 0
 end
 
+-- 加载protobuf的pb描述文件
 function Cmd.load_protobuf()
     return load_schema(network_mgr.CDT_PROTOBUF, "../pb", nil, "pb")
 end
 
+-- 加载flatbuffers的描述文件
 function Cmd.load_flatbuffers()
+    return load_schema(network_mgr.CDT_FLATBUF, "../fbs", nil, "bfbs")
 end
 
 -- 注册客户端协议回调
@@ -90,8 +116,8 @@ function Cmd.reg(cmd, handler, noauth)
         handler = assert(handler)
     }
 
-    network_mgr:set_cs_cmd(i, string.match(cmd.c, "^(%w+)%.%w+$"), cmd.c, 0,
-                           SESSION)
+    local package, object = split_schema(cmd.c)
+    network_mgr:set_cs_cmd(i, package, object, 0, SESSION)
 end
 
 -- 注册客户端协议回调，回调时第一个参数为player对象，仅在world进程有效

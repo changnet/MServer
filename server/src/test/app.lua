@@ -61,11 +61,10 @@ function App:final_initialize()
     -- require "example.stream_performance"
     require "test.websocket_test"
     require "test.words_filter_test"
-    -- require "example.scene_performance"
     require "test.rank_test"
     require "test.rpc_test"
     require "test.protobuf_test"
-    -- require "example.other_performance"
+    require "test.flatbuffers_test"
 
     make_name()
 
