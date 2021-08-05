@@ -67,11 +67,13 @@ function Uri.decode(str)
     end)
 end
 
---[[
-str = /platform/pay?sid=99&money=200
-则返回 /platform/pay {sid = 99,money = 200}
-]]
+-- 简单解析url地址，如 /platform/pay?sid=99&money=200
 function Uri.parse(str)
+    --[[
+    str = /platform/pay?sid=99&money=200
+    则返回 /platform/pay {sid = 99,money = 200}
+    不会对参数进行url解码
+    ]]
     local indices = string.find(str, "?", 1, true);
 
     -- 没有问号，不带任何参数
@@ -80,9 +82,35 @@ function Uri.parse(str)
     local url_str = string.sub(str, 1, indices - 1)
     local field_str = string.sub(str, indices)
 
+    -- 这个正则不太好使，index.html?k 这种只有字段k，没有值也是合法的请求
+    -- for k, v in string.gmatch(field_str, "([%w%.%-_~%%]*)=([%w%.%-_~%%]*)") do
+    --     fields[k] = v
+    -- end
+
     local fields = {}
-    for k, v in string.gmatch(field_str, "([%w%.%-_~%%]*)=([%w%.%-_~%%]*)") do
-        fields[k] = v
+    local search_pos = 1
+
+    while true do
+        -- 找到&，进行分解
+        local pos = string.find(field_str, "&", search_pos, true)
+        if not pos then
+            local k = string.sub(str, search_pos, -1)
+            fields[k] = ""
+            break
+        end
+
+        -- 找到=，进行分解
+        local e_pos = string.find(field_str, "=", search_pos, true)
+        if not pos then
+            local k = string.sub(str, search_pos, -1)
+            fields[k] = ""
+        else
+            local k = string.sub(str, search_pos, e_pos - 1)
+            local v = string.sub(str, e_pos + 1, e_pos - 1)
+            fields[k] = v
+        end
+
+        search_pos = pos + 1
     end
 
     return url_str, fields

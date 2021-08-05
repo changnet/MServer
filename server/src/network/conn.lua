@@ -145,7 +145,7 @@ function Conn:conn_accept(new_conn_id)
 
     __conn[new_conn_id] = conn
 
-    conn:on_accepted(1)
+    conn:on_accepted()
     return conn
 end
 

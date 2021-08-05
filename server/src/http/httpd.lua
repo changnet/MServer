@@ -15,24 +15,32 @@ function Httpd:__init()
     self.listen_conn = nil
 end
 
--- 收到新连接时放到列表，定时踢出不断开的连接
+-- 收到新连接时放到列表
 function Httpd:on_accepted(conn)
-    -- self.conn = {}
+    -- 定时踢出不断开的连接
+    -- TODO 算了，这个是内部使用，暂时不做超时处理
+    print("httpd accept connection", conn.conn_id)
 end
 
 -- 启动http服务器
 function Httpd:start(ip, port)
     assert(not self.listen_conn)
 
-    self.listen_conn = HttpConn()
+    local listen_conn = HttpConn()
 
     -- 用函数wrap一层，这样不影响热更
-    self.listen_conn:listen(ip, port, function(conn)
+    listen_conn:listen(ip, port)
+    listen_conn.on_accepted = function(conn)
         return self:on_accepted(conn)
-    end, function(conn, http_type, code, method, url, body)
-        return self:do_command(conn, http_type, code, method, url, body)
-    end)
+    end
 
+    listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        return self:do_command(conn, http_type, code, method, url, body)
+    end
+
+    printf("httpd listen at %s:%d", ip, port)
+
+    self.listen_conn = listen_conn
     return true;
 end
 
@@ -42,6 +50,7 @@ function Httpd:stop()
     self.listen_conn = nil
 
     -- TODO 关闭self.conn中的所有连接
+    print("httpd stop")
 end
 
 -- 处理http请求
@@ -84,7 +93,7 @@ function Httpd:do_return(conn, success, code, ctx)
         conn:send_pkt(self:format_200(code, ctx))
     end
 
-    return conn:close(true)
+    -- return conn:close(true)
 end
 
 local httpd = Httpd()
@@ -92,9 +101,10 @@ local httpd = Httpd()
 -- http回调
 function Httpd:do_command(conn, http_type, code, method, url, body)
     -- url = /platform/pay?sid=99&money=200
-    print("check url ", url)
+    print("http", url, body)
     local raw_url, fields = uri.parse(url)
-
+print(raw_url)
+vd(fields)
     local path = self.exec[raw_url]
     if not path then
         -- 限定http请求的路径，不能随意运行其他路径文件
@@ -117,7 +127,7 @@ function Httpd:do_command(conn, http_type, code, method, url, body)
 
     local success, ecode, ctx = xpcall(Httpd.do_exec, __G__TRACKBACK, httpd,
                                        path, conn, fields, body)
-
+print("check result >>>>>>>>>>>>", success, ecode, ctx)
     return self:do_return(conn, success, ecode, ctx)
 end
 
