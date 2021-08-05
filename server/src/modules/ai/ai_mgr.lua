@@ -17,10 +17,13 @@ function AiMgr:new(entity, id)
     local conf = ai_conf[id]
     assert(conf, "ai conf id not exist", id)
 
-    local ai = AI_TYPE[conf.type]
+    local Ai = AI_TYPE[conf.type]
     assert(conf, "ai type not exist", id, conf.type)
 
-    return ai(entity, conf)
+    local ai = Ai(entity, conf)
+    entity.ai = ai
+
+    return ai
 end
 
 local ai_mgr = AiMgr()

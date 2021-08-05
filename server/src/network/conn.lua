@@ -192,6 +192,8 @@ function Conn:connect(host, port)
         self.ip, port, self.default_param.connect_type)
 
     self:set_conn(self.conn_id, self)
+
+    return self.conn_id
 end
 
 -- 以https试连接到其他服务器

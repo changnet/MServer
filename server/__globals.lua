@@ -1,4 +1,4 @@
--- auto export by lua-tags 178 symbols
+-- auto export by lua-tags 175 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -80,9 +80,7 @@ return {
 "clt_multicast_new", -- src/network/clt_mgr.lua
 "command_new", -- src/network/conn.lua
 "conn_accept", -- src/network/conn.lua
-"conn_del", -- src/android/android_cmd.lua
 "conn_del", -- src/network/conn.lua
-"conn_new", -- src/android/android_cmd.lua
 "conn_new", -- src/network/conn.lua
 "css_command_new", -- src/network/conn.lua
 "ctrl_new", -- src/network/conn.lua
@@ -91,10 +89,10 @@ return {
 "func_to_name", -- src/global/name.lua
 "g_account_mgr", -- src/modules/module_header.lua
 "g_ai_mgr", -- src/android/app.lua
-"g_android_cmd", -- src/android/app.lua
 "g_android_mgr", -- src/android/app.lua
 "g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
+"g_authorize", -- src/android/app.lua
 "g_authorize", -- src/modules/module_header.lua
 "g_authorize", -- src/test/flatbuffers_test.lua
 "g_authorize", -- src/test/protobuf_test.lua
@@ -126,7 +124,6 @@ return {
 "g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua
-"handshake_new", -- src/android/android_cmd.lua
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "hot_fix_script", -- src/modules/system/hot_fix.lua
@@ -142,7 +139,7 @@ return {
 "name_to_func", -- src/global/name.lua
 "name_to_obj", -- src/global/name.lua
 "obj_to_name", -- src/global/name.lua
-"on_cmd", -- src/android/android_cmd.lua
+"on_cmd", -- src/android/android_mgr.lua
 "oo", -- src/global/oo.lua
 "print", -- src/global/global.lua
 "printf", -- src/global/global.lua

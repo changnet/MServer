@@ -5,16 +5,17 @@
 require "global.global"
 require "global.oo"
 require "global.table"
+require "global.string"
 
 require_define "modules.system.define"
-g_stat_mgr = require "statistic.statistic_mgr"
 
-require "network.cmd"
-g_timer_mgr = require "timer.timer_mgr"
-g_android_cmd = require "android.android_cmd"
-g_android_mgr = require "android.android_mgr"
+-- 前置声明，避免luacheck警告
 
-g_ai_mgr = require "modules.ai.ai_mgr"
+g_authorize = nil
+g_stat_mgr = nil
+g_timer_mgr = nil
+g_android_mgr = nil
+g_ai_mgr = nil
 
 -- 信号处理，默认情况下退出
 function sig_handler(signum)
@@ -51,6 +52,12 @@ end
 function App:exec()
     ev:signal(2)
     ev:signal(15)
+
+    g_authorize = require "modules.system.authorize"
+    g_stat_mgr = require "statistic.statistic_mgr"
+    g_timer_mgr = require "timer.timer_mgr"
+    g_android_mgr = require "android.android_mgr"
+    g_ai_mgr = require "modules.ai.ai_mgr"
 
     g_android_mgr:start()
 

@@ -1,12 +1,12 @@
 -- 登录、退出
 local AST = require "modules.ai.ai_header"
 
-local Loginout = oo.class(...)
+local Loginout = {}
 
 g_setting = require "setting.setting" -- require_no_update
 
 -- 检查是否执行登录
-function Loginout:check_and_login(ai)
+function Loginout.check_and_login(ai)
     if (ai.login_time or 0) > ev:time() then return false end
 
     local conf = g_setting.gateway
@@ -17,16 +17,37 @@ function Loginout:check_and_login(ai)
         host = "::1"
     end
 
+    local conn = ai.entity.conn
+
     -- 连接服务器
-    local conn_id = network_mgr:connect(host, conf.cport, network_mgr.CT_CSCN)
+    conn:connect(host, conf.cport)
+    conn.on_connected = Loginout.on_connected
+    conn.on_disconnected = Loginout.on_disconnected
 
     ai.state = AST.LOGIN
-    ai.entity:set_conn(conn_id)
     return true
 end
 
+-- 连接成功
+function Loginout.on_connected(conn)
+    local entity = conn.entity
+
+    printf("android(%d) connection(%d) establish", entity.index, conn.conn_id)
+
+    Loginout.do_login(entity)
+end
+
+-- 断开连接
+function Loginout.on_disconnected(conn)
+    local entity = conn.entity
+
+    entity.ai.state = AST.OFF
+    printf("android(%d) die ", entity.index)
+end
+
+
 -- 执行登录逻辑
-function Loginout:do_login(entity)
+function Loginout.do_login(entity)
     -- sid:int;        // 服务器id
     -- time:int;       // 时间戳
     -- plat:int;       // 平台id
@@ -44,13 +65,9 @@ function Loginout:do_login(entity)
     return entity:send_pkt(PLAYER.LOGIN, pkt)
 end
 
--- 断开连接
-function Loginout:on_disconnect(entity)
-    printf("android(%d) die ", entity.index)
-end
 
 -- 登录返回
-function Loginout:on_login(entity, errno, pkt)
+function Loginout.on_login(entity, errno, pkt)
     -- no role,create one now
     if 0 == (pkt.pid or 0) then
         local _pkt = {name = string.format("android_%d", entity.index)}
@@ -62,11 +79,11 @@ function Loginout:on_login(entity, errno, pkt)
     -- 如果已经存在角色，直接请求进入游戏
     entity.pid = pkt.pid
     entity.name = pkt.name
-    self:enter_world(entity)
+    Loginout.enter_world(entity)
 end
 
 -- 创角返回
-function Loginout:on_create_role(entity, errno, pkt)
+function Loginout.on_create_role(entity, errno, pkt)
     if 0 ~= errno then
         printf("android_%d unable to create role", entity.index)
         return
@@ -75,19 +92,19 @@ function Loginout:on_create_role(entity, errno, pkt)
     entity.pid = pkt.pid
     entity.name = pkt.name
 
-    self:enter_world(entity)
+    Loginout.enter_world(entity)
 
     printf("android_%d create role success,pid = %d,name = %s", entity.index,
            entity.pid, entity.name)
 end
 
 -- 请求进入游戏
-function Loginout:enter_world(entity)
+function Loginout.enter_world(entity)
     entity:send_pkt(PLAYER.ENTER, {})
 end
 
 -- 确认进入游戏完成
-function Loginout:on_enter_world(entity, errno, pkt)
+function Loginout.on_enter_world(entity, errno, pkt)
     entity.ai.state = AST.ON
 
     local param = entity.ai.ai_conf.param
@@ -100,21 +117,21 @@ function Loginout:on_enter_world(entity, errno, pkt)
 end
 
 -- 初始化场景属性
-function Loginout:on_init_property(entity, errno, pkt)
+function Loginout.on_init_property(entity, errno, pkt)
     -- 切换进程时，这里的数据会重新下发
 
     entity.handle = pkt.handle
 end
 
 -- 被顶号
-function Loginout:on_login_otherwhere(entity, errno, pkt)
+function Loginout.on_login_otherwhere(entity, errno, pkt)
     printf("%s login other where", entity.name)
 end
 
 -- ************************************************************************** --
 
 -- 是否执行退出
-function Loginout:check_and_logout(ai)
+function Loginout.check_and_logout(ai)
     if ai.logout_time > ev:time() then return false end
 
     local param = ai.ai_conf.param
@@ -123,10 +140,10 @@ function Loginout:check_and_logout(ai)
     ai.login_time = ev:time() + math.random(60, param.login_time)
 
     local entity = ai.entity
-    network_mgr:close(entity.conn_id)
+    entity.conn:close()
 
     entity.handle = nil -- 要测试重登录，handle会重置
-    entity:set_conn(nil)
+
     printf("%s logout", entity.name)
 
     return true
@@ -134,53 +151,11 @@ end
 
 -- ************************************************************************** --
 
--- 连接回调
-function Loginout:on_conn_new(entity, conn_id, ecode)
-    if 0 == ecode then
-        printf("android(%d) connection(%d) establish", entity.index, conn_id)
 
-        -- 如果是tcp到这里连接就建立完成了。websocket还要等握手
-        self:do_login(entity)
-        return
-    end
-
-    entity:set_conn(nil)
-
-    elog("android(%d) connection(%d) fail:%s", entity.index, conn_id,
-          util.what_error(ecode))
-end
-
--- websocket握手回调
-function Loginout:on_handshake(entity, conn_id, ecode)
-    printf("android(%d) handshake ", entity.index)
-
-    return self:do_login(entity)
-end
-
--- ************************************************************************** --
-
-local function net_cb(cb)
-    return function(conn_id, ecode)
-        local android = g_android_mgr:get_android_by_conn(conn_id)
-        return cb(Loginout, android, conn_id, ecode)
-    end
-end
-
-local function cmd_cb(cmd, cb)
-    local raw_cb = function(android, errno, pkt)
-        return cb(Loginout, android, errno, pkt)
-    end
-
-    g_android_cmd:cmd_register(cmd, raw_cb)
-end
-
-g_android_cmd:conn_new_register(net_cb(Loginout.on_conn_new))
-g_android_cmd:handshake_register(net_cb(Loginout.on_handshake))
-
-cmd_cb(PLAYER.LOGIN, Loginout.on_login)
-cmd_cb(PLAYER.CREATE, Loginout.on_create_role)
-cmd_cb(PLAYER.ENTER, Loginout.on_enter_world)
-cmd_cb(PLAYER.OTHER, Loginout.on_login_otherwhere)
-cmd_cb(ENTITY.PROPERTY, Loginout.on_init_property)
+g_android_mgr:reg(PLAYER.LOGIN, Loginout.on_login)
+g_android_mgr:reg(PLAYER.CREATE, Loginout.on_create_role)
+g_android_mgr:reg(PLAYER.ENTER, Loginout.on_enter_world)
+g_android_mgr:reg(PLAYER.OTHER, Loginout.on_login_otherwhere)
+g_android_mgr:reg(ENTITY.PROPERTY, Loginout.on_init_property)
 
 return Loginout

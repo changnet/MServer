@@ -98,20 +98,10 @@ function Move:switch_dungeon(ai)
     print("switch to new dungeon", entity.name, id)
 end
 
--- ************************************************************************** --
-
-local function cmd_cb(cmd, cb)
-    local raw_cb = function(android, errno, pkt)
-        return cb(Move, android, errno, pkt)
-    end
-
-    g_android_cmd:cmd_register(cmd, raw_cb)
-end
-
-cmd_cb(ENTITY.MOVE, Move.on_move)
-cmd_cb(ENTITY.APPEAR, Move.on_appear)
-cmd_cb(ENTITY.POS, Move.on_update_pos)
-cmd_cb(ENTITY.DISAPPEAR, Move.on_disappear)
-cmd_cb(ENTITY.ENTERSCENE, Move.on_enter_scene)
+g_android_mgr:reg(ENTITY.MOVE, Move.on_move)
+g_android_mgr:reg(ENTITY.APPEAR, Move.on_appear)
+g_android_mgr:reg(ENTITY.POS, Move.on_update_pos)
+g_android_mgr:reg(ENTITY.DISAPPEAR, Move.on_disappear)
+g_android_mgr:reg(ENTITY.ENTERSCENE, Move.on_enter_scene)
 
 return Move

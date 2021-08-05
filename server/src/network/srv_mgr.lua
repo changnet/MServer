@@ -28,7 +28,7 @@ function SrvMgr:connect_srv(srvs)
         local conn_id = conn:connect(appSetting.sip, appSetting.sport)
 
         self.srv_conn[conn_id] = conn
-        self.srv_waiting[srv_conn] = 1
+        self.srv_waiting[conn] = 1
         printf("connect to %s at %s:%d",
             srvName, appSetting.sip, appSetting.sport)
     end

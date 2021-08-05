@@ -22,11 +22,7 @@ end
 
 -- 发送数据包
 function ScConn:send_pkt(cmd, pkt, errno)
-    -- 使用tcp二进制流
     return network_mgr:send_clt_packet(self.conn_id, cmd.i, errno or 0, pkt)
-    -- 使用websocket
-    -- return network_mgr:send_clt_packet(
-    --     self.conn_id,cmd,errno or 0,WS_OP_BINARY | WS_FINAL_FRAME,pkt )
 end
 
 -- 认证成功
@@ -38,20 +34,6 @@ end
 function ScConn:bind_role(pid)
     self.pid = pid
     network_mgr:set_conn_owner(self.conn_id, self.pid or 0)
-end
-
--- 监听客户端连接
-function ScConn:listen(ip, port)
-    self.conn_id = network_mgr:listen(ip, port, network_mgr.CT_SCCN)
-
-    self:set_conn(self.conn_id, self)
-end
-
--- 以https方式监听http连接
--- @param ssl 用new_ssl_ctx创建的ssl_ctx
-function ScConn:listen_s(ip, port, ssl)
-    self.ssl = assert(ssl)
-    return self:listen(ip, port)
 end
 
 -- 连接断开

@@ -72,15 +72,8 @@ end
 
 -- ************************************************************************** --
 
-local function cmd_cb(cmd, cb)
-    local raw_cb = function(android, errno, pkt)
-        return cb(Test, android, errno, pkt)
-    end
 
-    g_android_cmd:cmd_register(cmd, raw_cb)
-end
-
-cmd_cb(PLAYER.PING, Test.on_ping)
-cmd_cb(CHAT.DOCHAT, Test.on_chat)
+g_android_mgr:reg(PLAYER.PING, Test.on_ping)
+g_android_mgr:reg(CHAT.DOCHAT, Test.on_chat)
 
 return Test

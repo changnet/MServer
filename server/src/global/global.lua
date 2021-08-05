@@ -5,6 +5,7 @@
 
 local async_logger = g_async_log
 
+-- 用于存储全局临时数据
 __global_storage = __global_storage or {}
 
 local function to_readable(val)

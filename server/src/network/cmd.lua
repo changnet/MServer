@@ -1,20 +1,20 @@
--- 消息管理
+-- 指令注册及分发模块
+Cmd = {}
 
 local util = require "util"
 local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
 
 local stat = g_stat_mgr:get("cmd")
 
-local CS = require_define("proto.auto_cs")
-local SS = require_define("proto.auto_ss")
+Cmd.CS = require_define("proto.auto_cs")
+Cmd.SS = require_define("proto.auto_ss")
 
 local app_reg = {} -- 记录哪些服务器已注册过协议
 
 local SESSION = g_app.session
 local auth_pid = g_authorize:get_player_data()
 
--- 指令注册及分发模块
-Cmd = {}
+
 
 local cs_handler = {} -- 注册的客户端回调函数
 local ss_handler = {} -- 注册的服务器之间通信回调
@@ -23,7 +23,9 @@ local ss_handler = {} -- 注册的服务器之间通信回调
 Cmd.SCHEMA_TYPE = network_mgr.CDT_PROTOBUF
 
 -- 拆分描述文件
-local function split_schema(name)
+local function split_schema(name, schema_type)
+    schema_type = schema_type or Cmd.SCHEMA_TYPE
+
     -- 描述文件分为包名package，具体的功能object
     -- 对于protobuf，包名和功能是拼在一起的，使用点号分隔
     -- 然后package名是不需要的，这里只是方便调试，如"player.SLogin"
@@ -82,11 +84,18 @@ local function load_schema(schema_type, path, priority, suffix)
     -- 把服务器发包打包协议数据时所使用的schama和协议号绑定
     -- 对于CS、SS数据包，因为要实现现自动转发，在注册回调时设置,因为要记录sesseion
     -- SC数据包则需要在各个进程设置到C++，这样就能在所有进程发协议给客户端
-    for _, m in pairs(CS) do
+    for _, m in pairs(Cmd.CS) do
         for _, mm in pairs(m) do
             if mm.s then
                 local package, object = split_schema(mm.s)
                 network_mgr:set_sc_cmd(mm.i, package, object, 0, 0)
+            end
+
+            -- 注册客户端发往服务器的指令配置（机器人会用到）
+            -- 服务端用的话是在注册回调时根据服务器session自动分发
+            if mm.c and Cmd.USE_CS_CMD then
+                local package, object = split_schema(mm.c)
+                network_mgr:set_cs_cmd(mm.i, package, object, 0, 0)
             end
         end
     end
@@ -139,8 +148,9 @@ function Cmd.reg_srv(cmd, handler, obj, noauth)
         handler = assert(handler)
     }
 
-    network_mgr:set_ss_cmd(i, string.match(cmd.s, "^(%w+)%.%w+$"), cmd.s, 0,
-                           SESSION)
+    -- 目前服务器之间的连接默认使用protobuf
+    local package, object = split_schema(cmd.s, network_mgr.CDT_PROTOBUF)
+    network_mgr:set_ss_cmd(i, package, object, 0, SESSION)
 end
 
 -- 向其他进程同步本进程需要注册的客户端指令
