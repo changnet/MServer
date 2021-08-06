@@ -216,9 +216,15 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
     // lua_pushstring(L, method_str);
     lua_pushinteger(L, _parser->method); // 1 = GET, 3 = POST，仅request有用
     lua_pushstring(L, _http_info._url.c_str());
-    lua_pushstring(L, _http_info._body.c_str());
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 6, 0, 1)))
+    int32_t args = 5;
+    if (_http_info._body.length() > 0)
+    {
+        args++;
+        lua_pushstring(L, _http_info._body.c_str());
+    }
+
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, args, 0, 1)))
     {
         ELOG("command_new:%s", lua_tostring(L, -1));
     }

@@ -5,6 +5,14 @@ local Application = require "application.application"
 -- 用于服务器各进程之间的app基类
 local SrvApp = oo.class(..., Application)
 
+-- 当前进程服务器类型，起服时赋值
+APP_TYPE = APP_TYPE or 0
+
+-- 定义几个常用的连接session，起服时赋值
+GSE = GSE or 0 -- gateway session，网关连接
+WSE = WSE or 0 -- world session，世界服连接
+ASE = ASE or 0 -- area session, 第一个场景服连接
+
 function SrvApp:__init(cmd, opts)
     Application.__init(self)
 

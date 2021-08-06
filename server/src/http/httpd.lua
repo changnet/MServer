@@ -93,7 +93,7 @@ function Httpd:do_return(conn, success, code, ctx)
         conn:send_pkt(self:format_200(code, ctx))
     end
 
-    -- return conn:close(true)
+    return conn:close(true)
 end
 
 local httpd = Httpd()
@@ -103,31 +103,33 @@ function Httpd:do_command(conn, http_type, code, method, url, body)
     -- url = /platform/pay?sid=99&money=200
     print("http", url, body)
     local raw_url, fields = uri.parse(url)
-print(raw_url)
-vd(fields)
+
     local path = self.exec[raw_url]
     if not path then
         -- 限定http请求的路径，不能随意运行其他路径文件
         -- 也不要随意放其他文件到此路径
         path = "http/www" .. raw_url
-        local exec_file = io.open("../src/" .. path .. ".lua", "r")
 
+        -- 用io.open来判断文件是否存在
+        local exec_file = io.open("../src/" .. path .. ".lua", "r")
         if not exec_file then
-            elog("http request page not found:%s", path)
+            elog("http request page not found: " .. path)
             conn:send_pkt(page404)
 
             return conn:close(true)
         end
 
         io.close(exec_file)
-        path = string.gsub(path, "%/", ".") -- 把/转为.来匹配lua的require格式
+
+        -- 把/转为.来匹配lua的require格式
+        path = string.gsub(path, "%/", ".")
         -- 记录一个path而不是一个exec_obj，不影响热更，但不用每次都拼字符
         self.exec[raw_url] = path
     end
 
     local success, ecode, ctx = xpcall(Httpd.do_exec, __G__TRACKBACK, httpd,
                                        path, conn, fields, body)
-print("check result >>>>>>>>>>>>", success, ecode, ctx)
+
     return self:do_return(conn, success, ecode, ctx)
 end
 

@@ -74,13 +74,12 @@ function Uri.parse(str)
     则返回 /platform/pay {sid = 99,money = 200}
     不会对参数进行url解码
     ]]
-    local indices = string.find(str, "?", 1, true);
+    local url_pos = string.find(str, "?", 1, true);
 
     -- 没有问号，不带任何参数
-    if not indices then return str end
+    if not url_pos then return str end
 
-    local url_str = string.sub(str, 1, indices - 1)
-    local field_str = string.sub(str, indices)
+    local url = string.sub(str, 1, url_pos - 1)
 
     -- 这个正则不太好使，index.html?k 这种只有字段k，没有值也是合法的请求
     -- for k, v in string.gmatch(field_str, "([%w%.%-_~%%]*)=([%w%.%-_~%%]*)") do
@@ -88,32 +87,31 @@ function Uri.parse(str)
     -- end
 
     local fields = {}
-    local search_pos = 1
+    local search_pos = url_pos + 1
 
     while true do
         -- 找到&，进行分解
-        local pos = string.find(field_str, "&", search_pos, true)
-        if not pos then
-            local k = string.sub(str, search_pos, -1)
-            fields[k] = ""
-            break
-        end
+        local pos = string.find(str, "&", search_pos, true)
+        local v_pos = pos and pos - 1 or -1
 
         -- 找到=，进行分解
-        local e_pos = string.find(field_str, "=", search_pos, true)
-        if not pos then
-            local k = string.sub(str, search_pos, -1)
+        local e_pos = string.find(str, "=", search_pos, true)
+        if not e_pos then
+            -- 只有k，没有v
+            local k = string.sub(str, search_pos, v_pos)
             fields[k] = ""
         else
+            -- 有kv
             local k = string.sub(str, search_pos, e_pos - 1)
-            local v = string.sub(str, e_pos + 1, e_pos - 1)
+            local v = string.sub(str, e_pos + 1, v_pos)
             fields[k] = v
         end
 
+        if not pos then break end
         search_pos = pos + 1
     end
 
-    return url_str, fields
+    return url, fields
 end
 
 return Uri

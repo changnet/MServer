@@ -4,9 +4,9 @@ return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
 "APP", -- src/modules/system/define.lua
-"APP_TYPE", -- src/modules/system/define.lua
+"APP_TYPE", -- src/application/srv_app.lua
 "AREA", -- src/modules/system/define.lua
-"ASE", -- src/modules/system/define.lua
+"ASE", -- src/application/srv_app.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "Acism", -- engine/acism.lua
@@ -26,7 +26,7 @@ return {
 "ET", -- src/modules/entity/entity_header.lua
 "Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
-"GSE", -- src/modules/system/define.lua
+"GSE", -- src/application/srv_app.lua
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
@@ -66,7 +66,7 @@ return {
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua
-"WSE", -- src/modules/system/define.lua
+"WSE", -- src/application/srv_app.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/main.lua

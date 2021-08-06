@@ -1,15 +1,17 @@
 -- web_gm.lua http gm接口
 local WebGM = oo.singleton(...)
 
---[[
--- @-表示从stdin读入数据，curl本来有个--data-raw参数的，但是很多版本用不了
-echo ghf | curl -l -H "Content-type: application/json" --data '@-' 127.0.0.1:10003/web_gm
-]]
+-- 通过web方式执行gm
 function WebGM:exec(conn, fields, body)
-    if not body then return HTTP.INVALID, body end
+    -- GET 方式 http://127.0.0.1:10003/web_gm?gm=@gh
+    -- curl POST
+    -- @-表示从stdin读入数据，curl本来有个--data-raw参数的，但是很多版本用不了
+    -- echo @ghf | curl -l -H "Content-type: text/plain" --data '@-' 127.0.0.1:10003/web_gm
+    local gm = body or fields.gm
+    if not gm then return HTTP.INVALID, body end
 
-    local ok, msg = g_gm:exec("web_gm", nil, body)
-    if not ok then return HTTP.INVALID, msg or body end
+    local ok, msg = g_gm:exec("web_gm", nil, gm)
+    if not ok then return HTTP.INVALID, msg or gm end
 
     return HTTP.OK, msg
 end

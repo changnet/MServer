@@ -56,7 +56,7 @@ function __G__TRACKBACK(msg, co)
     local stack_trace = debug.traceback(co)
 
     local str = tostring(msg) .. "\n" .. stack_trace
-    Log.elog(str)
+    async_logger:elog(str)
     return msg
 end
 

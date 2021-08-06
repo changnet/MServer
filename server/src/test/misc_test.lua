@@ -360,3 +360,21 @@ t_describe("math lib test", function()
         t_equal(math.from_base(s, base, digits), i)
     end)
 end)
+
+t_describe("uri lib test", function()
+    t_it("uri base test", function()
+        local uri = require("util.uri")
+        local url, fields = uri.parse("/web_gm?gm=@ghf")
+        t_equal(url, "/web_gm")
+        t_equal(fields, {gm = "@ghf"})
+
+        -- 只有字段，没有值，也算合法的请求
+        url, fields = uri.parse("/web_gm?gm")
+        t_equal(url, "/web_gm")
+        t_equal(fields, {gm = ""})
+
+        url, fields = uri.parse("/www/web_gm?gm=1&srv=222")
+        t_equal(url, "/www/web_gm")
+        t_equal(fields, {gm = "1", srv = "222"})
+    end)
+end)
