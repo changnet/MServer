@@ -305,7 +305,7 @@ local function default_equal(a, b)
 end
 
 -- 判断table中是否包含指定元素
-function table.contains(tbl, e, func)
+function table.includes(tbl, e, func)
     func = func or default_equal
 
     for _, v in pairs(tbl) do if func(e, v) then return true end end

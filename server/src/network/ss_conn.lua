@@ -63,6 +63,11 @@ function SsConn:authorized(pkt)
     self.session = pkt.session
 end
 
+-- 获取该连接的app类型
+function SsConn:session_info()
+    return g_app:decode_session(self.session)
+end
+
 -- 获取基本类型名字(gateway、world)，见APP服务器类型定义，通常用于打印日志
 function SsConn:base_name(session_type)
     if not session_type then

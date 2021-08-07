@@ -26,6 +26,7 @@ return {
 "ET", -- src/modules/entity/entity_header.lua
 "Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
+"GM", -- src/modules/system/gm.lua
 "GSE", -- src/application/srv_app.lua
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
@@ -99,7 +100,6 @@ return {
 "g_clt_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
-"g_gm", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
 "g_lang", -- src/modules/module_header.lua
 "g_log_mgr", -- src/modules/module_header.lua

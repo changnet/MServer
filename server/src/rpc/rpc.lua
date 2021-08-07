@@ -140,7 +140,7 @@ function Rpc:conn_call(conn, func, ...)
         self.next_cb_func = nil
     end
 
-    local name = func_to_name(func)
+    local name = assert(func_to_name(func)) -- rpc调用的函数必须能取到函数名
 
     return conn:send_rpc_pkt(call_id, name, ...)
 end

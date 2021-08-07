@@ -15,9 +15,8 @@ end
 -- 全局热更
 function hot_fix()
     local ms = ev:real_ms_time()
-print("hoftix >>>>>>>>>>>>>>",GATEWAY, APP_TYPE)
+
     fix_script()
-    print("hoftix >>>>>>>>>>>>>>",GATEWAY, APP_TYPE)
     Cmd.load_protobuf() -- 热更schema文件
     if GATEWAY ~= APP_TYPE then Cmd.sync_cmd() end -- 同步协议到网关
 

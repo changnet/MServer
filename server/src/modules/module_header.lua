@@ -33,7 +33,7 @@ g_authorize = require "modules.system.authorize"
 require "network.cmd"
 g_srv_mgr = require "network.srv_mgr"
 g_res = require "modules.res.res"
-g_gm = require "modules.system.gm"
+require "modules.system.gm"
 require "modules.event.player_event"
 require "modules.event.system_event"
 g_lang = require "modules.lang.lang"
@@ -111,3 +111,8 @@ if AREA == APP_TYPE then
     require "modules.entity.entity_cmd" -- 实体相关
     require "modules.dungeon.test_dungeon" -- 测试不同场景进程中切换
 end
+
+-- =============================================================================
+-- =============================================================================
+-- 生成函数及其对应的名字
+make_name()

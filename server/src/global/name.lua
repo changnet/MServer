@@ -165,7 +165,8 @@ function make_name()
             reg_o(name, value)
             for sub_name, sub_value in pairs(value) do
                 if "function" == type(sub_value) then
-                    reg_f(sub_name, sub_value)
+                    -- TODO 不同模块可能会有同名函数，因此要拼模块名，效率略低
+                    reg_f(name .. "." .. sub_name, sub_value)
                     count = count + 1
                 end
             end

@@ -23,8 +23,8 @@ function SrvApp:__init(cmd, opts)
 
     self.start_time = ev:time()
 
-    GSE = self:encode_session(GATEWAY, self.index, self.id)
-    WSE = self:encode_session(WORLD, self.index, self.id)
+    GSE = self:encode_session(GATEWAY, 1, self.id)
+    WSE = self:encode_session(WORLD, 1, self.id)
     ASE = self:encode_session(AREA, 1, self.id)
 
     APP_TYPE = APP[string.upper(self.name)]

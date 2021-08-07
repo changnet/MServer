@@ -20,17 +20,17 @@ end
 
 -- 主动连接其他服务器
 function SrvMgr:connect_srv(srvs)
-    for _, srvName in pairs(srvs) do
-        local appSetting = g_setting[srvName]
+    for _, name in pairs(srvs) do
+        local setting = g_setting[name]
         local conn = SsConn()
 
         conn.auto_conn = true
-        local conn_id = conn:connect(appSetting.sip, appSetting.sport)
+        local conn_id = conn:connect(setting.sip, setting.sport)
 
         self.srv_conn[conn_id] = conn
         self.srv_waiting[conn] = 1
         printf("connect to %s at %s:%d",
-            srvName, appSetting.sip, appSetting.sport)
+            name, setting.sip, setting.sport)
     end
 end
 

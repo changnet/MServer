@@ -10,7 +10,7 @@ function WebGM:exec(conn, fields, body)
     local gm = body or fields.gm
     if not gm then return HTTP.INVALID, body end
 
-    local ok, msg = g_gm:exec("web_gm", nil, gm)
+    local ok, msg = GM.exec("web_gm", nil, gm)
     if not ok then return HTTP.INVALID, msg or gm end
 
     return HTTP.OK, msg

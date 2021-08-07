@@ -20,7 +20,7 @@ function Chat:do_chat(conn, pkt)
     end
 
     -- 聊天中带gm
-    if g_gm:chat_gm(self.player, pkt.context) then return end
+    if GM.chat_gm(self.player, pkt.context) then return end
 
     local chat_func = channel_func[pkt.channel]
     if not chat_func then

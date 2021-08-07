@@ -25,13 +25,6 @@ local function srv_beat(srv_conn, pkt)
     -- 在这里不用更新自己的心跳，因为在on_command里已自动更新
 end
 
--- 其他服务器通过rpc调用gm
-local function rpc_gm(where, cmd, ...)
-    g_gm:raw_exec(where, nil, cmd, ...)
-end
-
-reg_func("rpc_gm", rpc_gm)
-
 -- 这里注册系统模块的协议处理
 Cmd.reg_srv(SYS.BEAT, srv_beat)
 Cmd.reg_srv(SYS.REG, srv_reg, nil, true)
