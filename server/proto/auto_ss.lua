@@ -36,12 +36,3 @@ SYS = {
         s = "player.SSOtherWhere", i = 6
     },
 }
-
---[[
-如果使用的是flatbuffer，没有package名,那定义就是 文件名.结构名
-SYS = {
-    REG = {
-        s = "system.SSRegister", -- 协议结构定义在system.fbs中
-    },
-}
-]]

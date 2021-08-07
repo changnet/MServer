@@ -9,6 +9,7 @@ return {
 "ASE", -- src/application/srv_app.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
+"AccMgr", -- src/modules/account/account_mgr.lua
 "Acism", -- engine/acism.lua
 "Astar", -- engine/astar.lua
 "BAG", -- proto/auto_cs.lua
@@ -17,6 +18,7 @@ return {
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
+"CltMgr", -- src/network/clt_mgr.lua
 "Cmd", -- src/network/cmd.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
@@ -88,7 +90,6 @@ return {
 "elog", -- src/global/global.lua
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua
-"g_account_mgr", -- src/modules/module_header.lua
 "g_ai_mgr", -- src/android/app.lua
 "g_android_mgr", -- src/android/app.lua
 "g_app", -- src/main.lua
@@ -97,7 +98,6 @@ return {
 "g_authorize", -- src/modules/module_header.lua
 "g_authorize", -- src/test/flatbuffers_test.lua
 "g_authorize", -- src/test/protobuf_test.lua
-"g_clt_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua

@@ -43,9 +43,7 @@ g_ping = require "modules.system.ping"
 -- ==============================================================================
 -- 下面是一些根据app创建的全局变量，前置声明用于消除luacheck的检测问题
 
-g_clt_mgr = nil
 g_httpd = nil
-g_account_mgr = nil
 g_mongodb = g_mongodb
 g_player_mgr = nil
 g_map_mgr = nil
@@ -56,8 +54,8 @@ g_dungeon_mgr = nil
 -- 仅在gateway使用
 if GATEWAY == APP_TYPE then
     g_httpd = require "http.httpd"
-    g_clt_mgr = require "network.clt_mgr"
-    g_account_mgr = require "modules.account.account_mgr"
+    require "network.clt_mgr"
+    require "modules.account.account_mgr"
 
     -- db对象的创建，有点特殊。它是全局对象，但不是单例。可以根据业务创建多个db提高效率
     -- 不要多次调用new创建多个对象

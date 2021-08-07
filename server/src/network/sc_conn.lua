@@ -40,7 +40,7 @@ end
 function ScConn:on_disconnected()
     network_mgr:unset_conn_owner(self.conn_id, self.pid or 0)
 
-    return g_clt_mgr:clt_conn_del(self.conn_id)
+    return CltMgr.clt_conn_del(self.conn_id)
 end
 
 -- 消息回调
@@ -57,7 +57,7 @@ end
 
 -- 接受新客户端连接
 function ScConn:on_accepted()
-    g_clt_mgr:clt_conn_accept(self)
+    CltMgr.clt_conn_accept(self)
 end
 
 return ScConn

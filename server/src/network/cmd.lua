@@ -81,8 +81,17 @@ local function load_schema(schema_type, path, priority, suffix)
         end
     end
 
-    -- 把服务器发包打包协议数据时所使用的schama和协议号绑定
-    -- 对于CS、SS数据包，因为要实现现自动转发，在注册回调时设置,因为要记录sesseion
+    -- 把服务器之间通信打包协议数据时所使用的schama和协议号绑定
+    for _, m in pairs(Cmd.SS) do
+        for _, mm in pairs(m) do
+            -- 目前服务器之间的连接默认使用protobuf
+            local package, object = split_schema(mm.s, network_mgr.CDT_PROTOBUF)
+            network_mgr:set_ss_cmd(mm.i, package, object, 0, SESSION)
+        end
+    end
+
+    -- 把服务器发往客户打包协议数据时所使用的schama和协议号绑定
+    -- 对于CS，因为要实现现自动转发，在注册回调时设置,因为要记录sesseion
     -- SC数据包则需要在各个进程设置到C++，这样就能在所有进程发协议给客户端
     for _, m in pairs(Cmd.CS) do
         for _, mm in pairs(m) do
@@ -148,9 +157,8 @@ function Cmd.reg_srv(cmd, handler, obj, noauth)
         handler = assert(handler)
     }
 
-    -- 目前服务器之间的连接默认使用protobuf
-    local package, object = split_schema(cmd.s, network_mgr.CDT_PROTOBUF)
-    network_mgr:set_ss_cmd(i, package, object, 0, SESSION)
+    -- 目前服务器之间的协议取消自动转发功能了，不需要设置session
+    -- network_mgr:set_ss_cmd(i, package, object, 0, SESSION)
 end
 
 -- 向其他进程同步本进程需要注册的客户端指令

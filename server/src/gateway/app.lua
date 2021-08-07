@@ -39,7 +39,7 @@ end
 
 -- 重写初始化结束入口
 function App:final_initialize()
-    if not g_clt_mgr:clt_listen(g_app_setting.cip, g_app_setting.cport) then
+    if not CltMgr.clt_listen(g_app_setting.cip, g_app_setting.cport) then
         elog("gateway client listen fail,exit")
         os.exit(1)
     end
@@ -57,7 +57,7 @@ end
 
 -- 帐号数据初始化
 function App:acc_initialize()
-    g_account_mgr:db_load()
+    AccMgr.db_load()
 end
 
 return App
