@@ -99,17 +99,17 @@ end
 
 -- 接受新的连接
 function SsConn:on_accepted()
-    g_srv_mgr:srv_conn_accept(self)
+    SrvMgr.srv_conn_accept(self)
 end
 
 -- 连接成功
 function SsConn:on_connected()
-    return g_srv_mgr:on_conn_ok(self.conn_id)
+    return SrvMgr.on_conn_ok(self.conn_id)
 end
 
 -- 连接断开
 function SsConn:on_disconnected()
-    return g_srv_mgr:srv_conn_del(self.conn_id)
+    return SrvMgr.srv_conn_del(self.conn_id)
 end
 
 -- 服务器之间消息回调

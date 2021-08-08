@@ -41,7 +41,7 @@ function GM.auto_forward(where, player, cmd, args)
     if not app_type or APP_TYPE == app_type then return false end
 
     local session = g_app:encode_session(app_type, 1, g_app.id)
-    local srv_conn = g_srv_mgr:get_conn_by_session(session)
+    local srv_conn = SrvMgr.get_conn_by_session(session)
     if not srv_conn then
         elog("gm auto forward no conn found:%s", cmd)
         return true
@@ -83,7 +83,7 @@ function GM.broadcast(cmd, ...)
         [WORLD] = true,
         [AREA] = true,
     }
-    local conn_list = g_srv_mgr:get_all_srv_conn()
+    local conn_list = SrvMgr.get_all_srv_conn()
     for _, srv_conn in pairs(conn_list) do
         if srv_conn.auth then
             local app_type = srv_conn:session_info()

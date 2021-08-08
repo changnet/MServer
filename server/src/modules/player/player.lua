@@ -66,7 +66,7 @@ end
 
 -- 发送数据包到客户端
 function Player:send_pkt(cmd, pkt, ecode)
-    return g_srv_mgr:send_clt_pkt(self.pid, cmd, pkt, ecode)
+    return SrvMgr.send_clt_pkt(self.pid, cmd, pkt, ecode)
 end
 
 -- 定时器事件
@@ -124,7 +124,7 @@ function Player:module_db_load()
     self.sync_db = nil
     self.ok = true -- 标识初始化完成，未初始化完成的不要存库
 
-    g_player_mgr:enter_success(self)
+    PlayerMgr.enter_success(self)
     return true
 end
 
@@ -157,7 +157,7 @@ function Player:on_login()
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
 
-    local conn = g_srv_mgr:get_conn_by_session(ASE)
+    local conn = SrvMgr.get_conn_by_session(ASE)
     -- 同步基础属性，名字、外显等
     self.base:update(conn)
     -- 同步战斗属性到场景
@@ -275,7 +275,7 @@ function Player:enter_dungeon(pkt)
         AREA_SESSION[index] = session
     end
 
-    local conn = g_srv_mgr:get_conn_by_session(session)
+    local conn = SrvMgr.get_conn_by_session(session)
 
     -- 然后玩家从当前进程退出场景
     if session ~= network_mgr:get_player_session(self.pid) then

@@ -14,7 +14,7 @@ end
 
 -- 发送数据包
 function EntityPlayer:send_pkt(cmd, pkt, ecode)
-    return g_srv_mgr:send_clt_pkt(self.pid, cmd, pkt, ecode)
+    return SrvMgr.send_clt_pkt(self.pid, cmd, pkt, ecode)
 end
 
 -- 同步来自gw的基础属性

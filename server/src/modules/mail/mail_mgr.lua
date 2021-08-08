@@ -44,14 +44,14 @@ function MailMgr:raw_send_mail(pid, title, ctx, attachment, op)
     end
 
     -- 检测pid是否有效
-    if not g_player_mgr:is_pid_exist(pid) then
+    if not PlayerMgr.is_pid_exist(pid) then
         elog("raw_send_mail:pid not exist,%s", table.dump(mail))
         return
     end
 
     g_log_mgr:add_mail_log(pid, mail)
 
-    local player = g_player_mgr:get_player(pid)
+    local player = PlayerMgr.get_player(pid)
     if player then
         player:get_module("mail"):add_mail(mail)
         return
@@ -61,7 +61,7 @@ function MailMgr:raw_send_mail(pid, title, ctx, attachment, op)
 
     -- 正在登录中的玩家，标识一下需要重新加载邮件数据(他不一定能成功登录，可能不存库)
     -- 另一种是完全不在线,则由他登录时再加载邮件
-    local raw_player = g_player_mgr:get_raw_player(pid)
+    local raw_player = PlayerMgr.get_raw_player(pid)
     if raw_player then raw_player:get_module("mail"):set_reload() end
 end
 
@@ -163,7 +163,7 @@ end
 
 -- 把新增的全服邮件派发给在线的玩家
 function MailMgr:dispatch_sys_mail(mail)
-    local players = g_player_mgr:get_all_player()
+    local players = PlayerMgr.get_all_player()
     for _, player in pairs(players) do
         player:get_module("mail"):add_sys_mail(mail)
     end

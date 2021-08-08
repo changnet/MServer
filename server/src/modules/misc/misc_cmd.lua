@@ -15,7 +15,7 @@ end
 local function role_welcome_cmd_cb(cmd, func)
     assert(func, "role_welcome cmd no callback")
     local cb = function(srv_conn, pid, pkt)
-        local player = g_player_mgr:get_player(pid)
+        local player = PlayerMgr.get_player(pid)
         if not player then
             elog("role_welcome_cb no player:%d", cmd)
             return

@@ -24,7 +24,7 @@ end
 function App:initialize()
     self:module_initialize()
 
-    if not g_srv_mgr:srv_listen(g_app_setting.sip, g_app_setting.sport) then
+    if not SrvMgr.srv_listen(g_app_setting.sip, g_app_setting.sport) then
         elog("gateway server listen fail,exit")
         os.exit(1)
     end

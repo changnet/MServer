@@ -20,7 +20,7 @@ function Ping:start(how, conn_id, other)
     self.seed = self.seed + 1
 
     local wait = 0
-    for _, srv_conn in pairs(g_srv_mgr:get_all_srv_conn()) do
+    for _, srv_conn in pairs(SrvMgr.get_all_srv_conn()) do
         wait = wait + 1
         g_rpc:proxy(srv_conn, self.on_ping, self):rpc_ping(id)
     end
@@ -70,7 +70,7 @@ function Ping:done(id, info)
     end
 
     -- 连接已断开
-    local conn = g_srv_mgr:get_conn(info.conn_id)
+    local conn = SrvMgr.get_conn(info.conn_id)
     if not conn then
         return print("ping done,no conn found", info.conn_id, info.index)
     end

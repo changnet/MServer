@@ -24,7 +24,7 @@ function App:initialize()
     g_entity_mgr = _G.g_entity_mgr
 
     -- 主动连接到gateway和world
-    g_srv_mgr:connect_srv(g_app_setting.servers)
+    SrvMgr.connect_srv(g_app_setting.servers)
 
     SrvApp.initialize(self)
 end

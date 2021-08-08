@@ -81,7 +81,7 @@ function Scene:broadcast_entity_appear(entity, eid_list, way)
     if not table.empty(pid_list) then
         -- 1表示底层按玩家pid广播
         local my_pkt = entity:appear_pkt()
-        g_srv_mgr:clt_multicast(1, pid_list, ENTITY.APPEAR, my_pkt)
+        SrvMgr.clt_multicast(1, pid_list, ENTITY.APPEAR, my_pkt)
     end
 end
 
@@ -155,7 +155,7 @@ function Scene:broadcast_entity_disappear(entity, eid_list, way, to_me)
 
     exit_pkt.handle = entity.eid
     -- 1表示底层按玩家pid广播
-    return g_srv_mgr:clt_multicast(1, pid_list, ENTITY.DISAPPEAR, exit_pkt)
+    return SrvMgr.clt_multicast(1, pid_list, ENTITY.DISAPPEAR, exit_pkt)
 end
 
 -- 广播数据给关注我的玩家
@@ -182,7 +182,7 @@ function Scene:broadcast_to_interest_me(entity, cmd, pkt, to_me)
 
     if not table.empty(pid_list) then
         -- 1表示底层按玩家pid广播
-        g_srv_mgr:clt_multicast(1, pid_list, cmd, pkt)
+        SrvMgr.clt_multicast(1, pid_list, cmd, pkt)
     end
 end
 

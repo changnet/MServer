@@ -109,6 +109,10 @@ end
 
 -- 根据pid下线
 function AccMgr.role_offline_by_pid(pid)
+    print("AccMgr.role_offline_by_pid", pid)
+
+    CltMgr.clt_close_by_pid(pid)
+
     local role_info = this.role_acc[pid]
     if not role_info then
         elog("role_offline_by_pid no role_info found:%d", pid)

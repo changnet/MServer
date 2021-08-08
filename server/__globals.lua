@@ -55,6 +55,7 @@ return {
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
 "PROP", -- src/modules/property/property.lua
+"PlayerMgr", -- src/modules/player/player_mgr.lua
 "RES", -- src/modules/res/res_header.lua
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
@@ -64,6 +65,7 @@ return {
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
 "Sql", -- engine/sql.lua
+"SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
 "TIPS", -- src/modules/lang/lang_header.lua
 "Timer", -- engine/timer.lua
@@ -107,12 +109,10 @@ return {
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
 "g_ping", -- src/modules/module_header.lua
-"g_player_mgr", -- src/modules/module_header.lua
 "g_res", -- src/modules/module_header.lua
 "g_rpc", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
-"g_srv_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/android/app.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua

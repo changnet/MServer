@@ -21,12 +21,12 @@ end
 function App:initialize()
     self:module_initialize()
 
-    if not g_srv_mgr:srv_listen(g_app_setting.sip, g_app_setting.sport) then
+    if not SrvMgr.srv_listen(g_app_setting.sip, g_app_setting.sport) then
         elog("world server listen fail,exit")
         os.exit(1)
     end
 
-    g_srv_mgr:connect_srv(g_app_setting.servers)
+    SrvMgr.connect_srv(g_app_setting.servers)
 
     SrvApp.initialize(self)
 end

@@ -73,7 +73,7 @@ function CltMgr.clt_conn_del(conn_id)
     if conn.pid then
         this.clt[conn.pid] = nil
         local pkt = {pid = conn.pid}
-        g_srv_mgr:send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
+        SrvMgr.send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
     end
 
     printf("client connect del:%d", conn_id)

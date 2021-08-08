@@ -54,7 +54,7 @@ end
 
 -- 获取上一次rpc回调、返回的连接
 function Rpc:last_conn()
-    return g_srv_mgr:get_conn(self.last_conn_id)
+    return SrvMgr.get_conn(self.last_conn_id)
 end
 
 -- 上一次rpc返回的错误码
@@ -167,7 +167,7 @@ end
 
 -- 收到其他服的玩家调用
 local function on_pid_call(pid, method_name, ...)
-    local player = g_player_mgr:get_player(pid)
+    local player = PlayerMgr.get_player(pid)
     if not player then
         printf("on pid call player not found: %d %s", pid, method_name)
         return
@@ -236,7 +236,7 @@ end
 -- @param func 需要调用的函数
 -- @param ... 参数
 function Rpc:call(session, func, ...)
-    local conn = g_srv_mgr:get_conn_by_session(session)
+    local conn = SrvMgr.get_conn_by_session(session)
     if not conn then
         printf("rpc call no connection found: %d", session)
         return

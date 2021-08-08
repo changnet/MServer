@@ -32,7 +32,7 @@ end
 
 -- 私聊
 function Chat:private_chat(conn, pkt)
-    local player = g_player_mgr:get_player(pkt.pid)
+    local player = PlayerMgr.get_player(pkt.pid)
     if not player then
         return elog("private chat target player not found:%d", pkt.pid)
     end
@@ -54,7 +54,7 @@ function Chat:world_chat(conn, pkt)
     rpkt.context = pkt.context
     rpkt.channel = CHAT.CHL_PRIVATE
 
-    g_srv_mgr:clt_multicast(2, {}, CHAT.DOCHAT, rpkt)
+    SrvMgr.clt_multicast(2, {}, CHAT.DOCHAT, rpkt)
 end
 
 channel_func[CHAT.CHL_WORLD] = Chat.world_chat

@@ -6,7 +6,7 @@ local Chat = require "modules.chat.chat"
 
 local function chat_clt_cb(cmd, cb_func)
     local cb = function(conn, pid, pkt)
-        local player = g_player_mgr:get_player(pid)
+        local player = PlayerMgr.get_player(pid)
         if not player then
             return elog("chat call back no player found:%d", pid)
         end

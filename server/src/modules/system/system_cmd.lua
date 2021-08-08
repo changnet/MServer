@@ -2,7 +2,7 @@
 
 -- 收到另一个服务器主动同步
 local function srv_reg(srv_conn, pkt)
-    if not g_srv_mgr:srv_register(srv_conn, pkt) then return false end
+    if not SrvMgr.srv_register(srv_conn, pkt) then return false end
     srv_conn:authorized(pkt)
 
     Cmd.sync_cmd(srv_conn)

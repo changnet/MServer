@@ -31,7 +31,7 @@ g_timer_mgr = require "timer.timer_mgr"
 g_rpc = require "rpc.rpc"
 g_authorize = require "modules.system.authorize"
 require "network.cmd"
-g_srv_mgr = require "network.srv_mgr"
+require "network.srv_mgr"
 g_res = require "modules.res.res"
 require "modules.system.gm"
 require "modules.event.player_event"
@@ -45,7 +45,6 @@ g_ping = require "modules.system.ping"
 
 g_httpd = nil
 g_mongodb = g_mongodb
-g_player_mgr = nil
 g_map_mgr = nil
 g_entity_mgr = nil
 g_dungeon_mgr = nil
@@ -65,7 +64,7 @@ end
 -- ==============================================================================
 -- 仅在world使用
 if WORLD == APP_TYPE then
-    g_player_mgr = require "modules.player.player_mgr"
+    require "modules.player.player_mgr"
 
     local Mongodb = require "mongodb.mongodb"
     if not g_mongodb then g_mongodb = Mongodb() end
