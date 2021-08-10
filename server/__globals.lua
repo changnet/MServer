@@ -58,6 +58,7 @@ return {
 "PROP", -- src/modules/property/property.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
 "RES", -- src/modules/res/res_header.lua
+"Rpc", -- src/rpc/rpc.lua
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
@@ -107,7 +108,6 @@ return {
 "g_mongodb", -- src/modules/module_header.lua
 "g_ping", -- src/modules/module_header.lua
 "g_res", -- src/modules/module_header.lua
-"g_rpc", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/android/app.lua

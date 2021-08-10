@@ -2,7 +2,6 @@
 -- 2019-06-22
 -- xzc
 -- 测试各服务器之间延迟
-local g_rpc = g_rpc
 
 local Ping = oo.singleton(...)
 
@@ -22,7 +21,7 @@ function Ping:start(how, conn_id, other)
     local wait = 0
     for _, srv_conn in pairs(SrvMgr.get_all_srv_conn()) do
         wait = wait + 1
-        g_rpc:proxy(srv_conn, self.on_ping, self):rpc_ping(id)
+        Rpc.proxy(srv_conn, self.on_ping, self):rpc_ping(id)
     end
 
     -- 没有其他服务器连接?
@@ -43,7 +42,7 @@ function Ping:on_ping(ecode, id)
     local info = self.pending[id]
     if not info then return print("ping no info found", id) end
 
-    local srv_conn = g_rpc:last_conn()
+    local srv_conn = Rpc.last_conn()
 
     local conn_id = srv_conn.conn_id
     if info.srvs[conn_id] then

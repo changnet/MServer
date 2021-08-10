@@ -33,7 +33,7 @@ function WebStat:exec(conn, fields, body)
     local session = g_app:encode_session(app_type, app[2] or 1, g_app.id)
 
     -- TODO:这个rpc调用有问题，不能引用conn为up value的，conn可能会被客户端断开
-    g_rpc:proxy(function(ecode, ctx)
+    Rpc.proxy(function(ecode, ctx)
         return
             g_httpd:do_return(conn, 0 == ecode, HTTP.OK_NIL, json.encode(ctx))
     end):call(session, rpc_stat)

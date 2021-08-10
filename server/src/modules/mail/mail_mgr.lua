@@ -22,7 +22,7 @@ end
 function MailMgr:send_mail(pid, title, ctx, attachment, op)
     -- 邮件数据统一在world处理，不是该进程则转
     if WORLD == APP_TYPE then
-        return g_rpc:rpc_send_mail(pid, title, ctx, attachment, op)
+        return Rpc.rpc_send_mail(pid, title, ctx, attachment, op)
     end
 
     return self:raw_send_mail(pid, title, ctx, attachment, op)
@@ -128,7 +128,7 @@ function MailMgr:send_sys_mail(title, ctx, attachment, op, expire, level, vip)
     end
 
     if WORLD == APP_TYPE then
-        return g_rpc:rpc_send_sys_mail(title, ctx, attachment, op, expire,
+        return Rpc.rpc_send_sys_mail(title, ctx, attachment, op, expire,
                                        level, vip)
     end
 

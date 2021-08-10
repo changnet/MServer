@@ -69,7 +69,7 @@ function Base:update(conn)
     base_info.level = self.root.level
     base_info.name = self.root.name
 
-    g_rpc:proxy(conn or self.pid):player_update_base(self.pid, base_info, true)
+    Rpc.proxy(conn or self.pid):player_update_base(self.pid, base_info, true)
 end
 
 -- 玩家退出游戏

@@ -2,7 +2,7 @@
 
 g_stat_mgr = require "statistic.statistic_mgr"
 local SsConn = require "network.ss_conn"
-local rpc = require "rpc.rpc"
+local Rpc = require "rpc.rpc"
 
 local srv_conn = nil
 local clt_conn = nil
@@ -71,13 +71,13 @@ t_describe("rpc test", function()
 
         local rpc_reponse = function(p1, p2, p3, p4, p5, p6, p7, p8, p9, ...)
             counter = counter + 1
-            t_equal(rpc:last_error(), 0)
+            t_equal(Rpc.last_error(), 0)
             t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9}, params)
             t_equal({...}, params)
         end
 
         local rpc_min_reponse = function(p1, p2, p3, ...)
-            t_equal(rpc:last_error(), 0)
+            t_equal(Rpc.last_error(), 0)
             t_equal({...}, params)
             t_equal(p1, params[1])
             t_equal(p2, params[2])
@@ -86,7 +86,7 @@ t_describe("rpc test", function()
         end
 
         local rpc_empty_reponse = function(...)
-            t_equal(rpc:last_error(), 0)
+            t_equal(Rpc.last_error(), 0)
             t_equal({...}, params)
             counter = counter + 1
 
@@ -103,17 +103,17 @@ t_describe("rpc test", function()
         reg_func("rpc_empty_reponse", rpc_empty_reponse)
 
         -- 无返回，无参数
-        rpc:conn_call(clt_conn, rpc_empty_query)
+        Rpc.conn_call(clt_conn, rpc_empty_query)
         -- 无返回，有参数
-        rpc:conn_call(clt_conn, rpc_query, table.unpack(params))
+        Rpc.conn_call(clt_conn, rpc_query, table.unpack(params))
         -- 有返回，有回调参数
-        rpc:proxy(rpc_reponse, table.unpack(params)):conn_call(
+        Rpc.proxy(rpc_reponse, table.unpack(params)).conn_call(
             clt_conn, rpc_query, table.unpack(params))
         -- 有返回，有少量回调参数
-        rpc:proxy(rpc_min_reponse, params[1], params[2], params[3]):conn_call(
+        Rpc.proxy(rpc_min_reponse, params[1], params[2], params[3]).conn_call(
             clt_conn, rpc_query, table.unpack(params))
         -- 有返回，无回调参数
-        rpc:proxy(rpc_empty_reponse):conn_call(
+        Rpc.proxy(rpc_empty_reponse).conn_call(
             clt_conn, rpc_query, table.unpack(params))
     end)
     t_it(string.format("rpc performance test %d", PERF_TIMES), function()
@@ -134,7 +134,7 @@ t_describe("rpc test", function()
         reg_func("rpc_perf_response", rpc_perf_response)
 
         for _ = 1, PERF_TIMES do
-            rpc:proxy(rpc_perf_response):conn_call(
+            Rpc.proxy(rpc_perf_response).conn_call(
                 clt_conn, rpc_perf_query, table.unpack(params))
         end
     end)
@@ -154,7 +154,7 @@ t_describe("rpc test", function()
                 if count == PERF_TIMES then
                     t_done()
                 else
-                    rpc:proxy(rpc_pingpong_response):conn_call(
+                    Rpc.proxy(rpc_pingpong_response).conn_call(
                         clt_conn, rpc_pingpong_query, table.unpack(params))
                 end
             end
@@ -162,7 +162,7 @@ t_describe("rpc test", function()
             reg_func("rpc_pingpong_query", rpc_pingpong_query)
             reg_func("rpc_pingpong_response", rpc_pingpong_response)
 
-            rpc:proxy(rpc_pingpong_response):conn_call(
+            Rpc.proxy(rpc_pingpong_response).conn_call(
                 clt_conn, rpc_pingpong_query, table.unpack(params))
         end
     )

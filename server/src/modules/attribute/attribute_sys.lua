@@ -94,7 +94,7 @@ function AttributeSys:update_battle_abt(conn)
         table.insert(abt_list, v)
     end
 
-    g_rpc:entity_call(self.pid, player_update_battle_abt, abt_list)
+    Rpc.entity_call(self.pid, player_update_battle_abt, abt_list)
 end
 
 reg_func("player_update_battle_abt", player_update_battle_abt)

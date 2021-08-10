@@ -34,7 +34,9 @@ end
 -- @param url 请求的url，仅request有用
 -- @param body 数据
 function HttpConn:on_cmd(http_type, code, method, url, body)
-    return self:on_cmd(http_type, code, method, url, body)
+    -- http调用比较少，不太需要考虑效率，直接绑定回调函数即可
+    -- 这里只是给出各个回调参数的注释
+    -- return self:on_cmd(http_type, code, method, url, body)
 end
 
 -- 发送数据包

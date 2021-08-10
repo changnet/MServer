@@ -47,7 +47,7 @@ function GM.auto_forward(where, player, cmd, args)
         return true
     end
 
-    g_rpc:proxy(srv_conn):rpc_gm(g_app.name, cmd, table.unpack(args))
+    Rpc.proxy(srv_conn):rpc_gm(g_app.name, cmd, table.unpack(args))
     return true
 end
 
@@ -88,7 +88,7 @@ function GM.broadcast(cmd, ...)
         if srv_conn.auth then
             local app_type = srv_conn:session_info()
             if DST[app_type] then
-                g_rpc:conn_call(srv_conn, GM.raw_exec, g_app.name, nil, cmd, ...)
+                Rpc.conn_call(srv_conn, GM.raw_exec, g_app.name, nil, cmd, ...)
             end
         end
     end

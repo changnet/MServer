@@ -40,7 +40,7 @@ function PlayerMgr.enter_success(player)
 
     this.player[pid] = player
     this.raw_player[pid] = nil
-    
+
     Cmd.auth(pid, true)
 
     printf("player enter,pid = %d", pid)
@@ -52,7 +52,7 @@ function PlayerMgr.do_enter_fail(player)
     print("player enter timeout,kill connection", pid)
 
     -- 通知网关关闭连接
-    g_rpc:call(GSE, AccMgr.AccMgr.role_offline_by_pid, pid)
+    Rpc.call(GSE, AccMgr.AccMgr.role_offline_by_pid, pid)
 end
 
 -- 定时检测加载失败的玩家

@@ -163,7 +163,7 @@ function Player:on_login()
     -- 同步战斗属性到场景
     self.abt_sys:update_battle_abt(conn)
     -- 实体进入场景
-    g_rpc:proxy(conn):player_init_scene(self.pid, nil, 0)
+    Rpc.proxy(conn):player_init_scene(self.pid, nil, 0)
 
     g_log_mgr:login_or_logout(self.pid, LOG.LOGIN)
 
@@ -183,7 +183,7 @@ function Player:set_session(session)
     network_mgr:set_player_session(self.pid, session)
 
     -- 设置session到网关，实现自动转发协议
-    g_rpc:call(GSE, set_player_session, self.pid, session)
+    Rpc.call(GSE, set_player_session, self.pid, session)
 end
 
 -- 退出游戏
@@ -206,7 +206,7 @@ function Player:on_logout()
     for _, module in pairs(sub_module) do self[module.name]:db_save() end
 
     -- 退出场景
-    g_rpc:proxy(self.pid):player_exit(self.pid)
+    Rpc.proxy(self.pid):player_exit(self.pid)
     g_log_mgr:login_or_logout(self.pid, LOG.LOGOUT)
 
     printf("player logout,pid = %d", self.pid)
@@ -279,16 +279,16 @@ function Player:enter_dungeon(pkt)
 
     -- 然后玩家从当前进程退出场景
     if session ~= network_mgr:get_player_session(self.pid) then
-        g_rpc:proxy(self.pid):player_exit(self.pid)
+        Rpc.proxy(self.pid):player_exit(self.pid)
         -- 同步基础属性，名字、外显等
         self.base:update(conn)
         -- 同步战斗属性到场景
         self.abt_sys:update_battle_abt(conn)
         -- 在另一个进程初始化玩家场景
-        g_rpc:proxy(conn):player_init_scene(self.pid, nil, id)
+        Rpc.proxy(conn):player_init_scene(self.pid, nil, id)
     else
         -- 在同一进程，直接进入场景
-        g_rpc:proxy(conn):player_enter_dungeon(self.pid, id)
+        Rpc.proxy(conn):player_enter_dungeon(self.pid, id)
     end
 
     self:set_session(session)

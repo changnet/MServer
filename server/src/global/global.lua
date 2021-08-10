@@ -96,11 +96,15 @@ function assert(expr, ...)
 end
 
 -- 创建一块数据存储空间，仅仅是为了方便第一管理，热更，本地化
-function global_storage(key, def_val)
+-- @param def_val 存储空间初始化时默认值
+-- @param init_func 存储空间初始时执行的初始化函数
+function global_storage(key, def_val, init_func)
     local storage = __global_storage[key]
     if not storage then
         storage = def_val or {}
         __global_storage[key] = storage
+
+        if init_func then init_func(storage) end
     end
 
     return storage

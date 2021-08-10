@@ -1,5 +1,5 @@
 -- rpc调用
-local Rpc = oo.singleton(...)
+Rpc = {}
 
 --[[
 1. 旧版参考其他rpc库(如python xmlrpc: https://docs.python.org/3/library/xmlrpc.html)
@@ -20,46 +20,64 @@ local func_to_name = func_to_name
 local name_to_obj = name_to_obj
 local obj_to_name = obj_to_name
 
-local stat = g_stat_mgr:get("cmd")
+local next_cb_func = nil -- 下一次回调函数
+local proxy_cb_func = nil -- 代理的下一次回调函数
+
+local stat = g_stat_mgr:get("rpc")
 local AutoId = require "modules.system.auto_id"
 
-function Rpc:__init()
-    self.callback = {}
+local this = global_storage("Rpc", nil, function(storage)
+    storage.callback = {}
+    storage.auto_id = AutoId()
+    storage.last_e = 0 -- 上一次rpc返回的错误码
+end)
 
-    self.auto_id = AutoId()
+local Rpc = Rpc
+local WSE = WSE
 
-    self.last_e = 0 -- 上一次rpc返回的错误码
+-- /////////////////////////////////////////////////////////////////////////////
+-- rpc调用时，有时候需要回调，有时候不需要回调。有时候回调需要参数，有时候又不需要参数
+-- 这导致在设计rpc的接口时，不好确定参数，只能做冗余处理，如
+-- Rpc.call(session, cb_func, cb_args, ...)
+-- 但这对于不需要回调调用，则多了两个nil，不好处理。而且cb_args可能是多个参数，需要用
+-- table.pack打包
+-- 当然也可以设置两套函数，一套有回调，一套没有，只是函数就比较多了
+-- 因此这里采用一个proxy来处理回调的问题
 
-    self.stat = {}
-    self.stat_tm = ev:time()
+-- 使用proxy设置回调函数后，重点是如何保证调用失败后，不引起下一次调用错误，如
+-- Rpc.proxy(cb, ...).call(session, player:get_some())
+-- Rpc.call(sessoin, other) -- 这次调用没使用proxy
+-- 假如proxy函数成功，在执行player:get_some()函数时失败，则需要保证下一次不会产生错误
+-- 的回调
+-- 这里，是返回一个独立的Proxy，重新wrap一层call函数来解决
+
+local Proxy = {}
+function Proxy.call(...)
+    next_cb_func = proxy_cb_func
+    return Rpc.call(...)
 end
-
-function Rpc:do_timer()
-    self:serialize_statistic(true)
+function Proxy.conn_call(...)
+    next_cb_func = proxy_cb_func
+    return Rpc.conn_call(...)
 end
-
--- 设置统计log文件
-function Rpc:set_statistic(perf, reset)
-    -- 如果之前正在统计，先写入旧的
-    if self.rpc_perf and (not perf or reset) then self:serialize_statistic() end
-
-    -- 如果之前没在统计，或者强制重置，则需要重设stat_tm
-    if not self.rpc_perf or reset then
-        self.stat = {}
-        self.stat_tm = ev.time()
-    end
-
-    self.rpc_perf = perf
+function Proxy.pid_call(...)
+    next_cb_func = proxy_cb_func
+    return Rpc.pid_call(...)
 end
+function Proxy.entity_call(...)
+    next_cb_func = proxy_cb_func
+    return Rpc.entity_call(...)
+end
+-- /////////////////////////////////////////////////////////////////////////////
 
 -- 获取上一次rpc回调、返回的连接
-function Rpc:last_conn()
-    return SrvMgr.get_conn(self.last_conn_id)
+function Rpc.last_conn()
+    return SrvMgr.get_conn(this.last_conn_id)
 end
 
 -- 上一次rpc返回的错误码
-function Rpc:last_error()
-    return self.last_e
+function Rpc.last_error()
+    return this.last_e
 end
 
 -- 生成一个可变参回调函数
@@ -119,25 +137,25 @@ end
 -- rpc调用代理，通过代理来设置调用的进程、回调函数、回调参数
 -- @param cb 回调函数
 -- @param ... 回调参数，不需要可以不传
-function Rpc:proxy(cb, ...)
+function Rpc.proxy(cb, ...)
     assert(cb)
 
-    self.next_cb_func = func_chunk(cb, ...)
-    return self
+    proxy_cb_func = func_chunk(cb, ...)
+    return Proxy
 end
 
 -- 通过链接对象执行rpc调用
 -- @param conn 进程之间的socket连接对象
 -- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:conn_call(conn, func, ...)
+function Rpc.conn_call(conn, func, ...)
     -- 如果不需要回调，则call_id为0
     local call_id = 0
-    if self.next_cb_func then
-        call_id = self.auto_id:next_id(self.callback)
-        self.callback[call_id] = self.next_cb_func
+    if next_cb_func then
+        call_id = this.auto_id:next_id(this.callback)
+        this.callback[call_id] = next_cb_func
 
-        self.next_cb_func = nil
+        next_cb_func = nil
     end
 
     local name = assert(func_to_name(func)) -- rpc调用的函数必须能取到函数名
@@ -181,8 +199,8 @@ end
 -- @param pid 玩家pid
 -- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:pid_call(pid, func, ...)
-    return self:call(GSE, on_pid_call, pid, func_to_name(func), ...)
+function Rpc.pid_call(pid, func, ...)
+    return Rpc.call(WSE, on_pid_call, pid, func_to_name(func), ...)
 end
 
 -- 收到其他服的实体调用
@@ -201,9 +219,9 @@ end
 -- @param pid 玩家pid
 -- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:entity_call(pid, func, ...)
+function Rpc.entity_call(pid, func, ...)
     local session = network_mgr:set_player_session(pid)
-    return self:call(session, on_entity_call, pid, func_to_name(func), ...)
+    return Rpc.call(session, on_entity_call, pid, func_to_name(func), ...)
 end
 
 -- 收到其他服的实体调用
@@ -221,28 +239,28 @@ end
 -- @param obj 全局对象
 -- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:obj_call(session, obj, func, ...)
+function Rpc.obj_call(session, obj, func, ...)
     local name = obj_to_name(obj)
     if not name then
         error("on obj call name not found")
         return
     end
 
-    return self:call(GSE, on_object_call, name, func_to_name(func), ...)
+    return Rpc.call(GSE, on_object_call, name, func_to_name(func), ...)
 end
 
 -- 通过session执行rpc调用
 -- @param session 进程的session，如GATEWAY
 -- @param func 需要调用的函数
 -- @param ... 参数
-function Rpc:call(session, func, ...)
+function Rpc.call(session, func, ...)
     local conn = SrvMgr.get_conn_by_session(session)
     if not conn then
         printf("rpc call no connection found: %d", session)
         return
     end
 
-    return self:conn_call(conn, func, ...)
+    return Rpc.conn_call(conn, func, ...)
 end
 
 -- 几个特殊的函数，名字短一点以减少传输数据量
@@ -254,12 +272,10 @@ reg_func("__3", on_object_call)
 -- RPC基础功能在上面处理
 -- /////////////////////////////////////////////////////////////////////////////
 
-local rpc = Rpc()
-
 -- 收到rpc调用，由C++触发
 function rpc_command_new(conn_id, rpc_id, method_name, ...)
     -- 把参数平铺到栈上，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
-    rpc.last_conn_id = conn_id
+    this.last_conn_id = conn_id
     if "__1" == method_name then
         return on_pid_call(...)
     elseif "__2" == method_name then
@@ -273,16 +289,16 @@ end
 
 -- 收到rpc调用，由C++触发
 function rpc_command_return(conn_id, rpc_id, e, ...)
-    rpc.last_e = e
-    rpc.last_conn_id = conn_id
-    local callback = rpc.callback[rpc_id]
+    this.last_e = e
+    this.last_conn_id = conn_id
+    local callback = this.callback[rpc_id]
     if not callback then
-        elog("rpc return no callback found:id = %d", rpc_id)
+        elogf("rpc return no callback found:id = %d", rpc_id)
         return
     end
-    rpc.callback[rpc_id] = nil
+    this.callback[rpc_id] = nil
 
     return callback(...)
 end
 
-return rpc
+return Rpc
