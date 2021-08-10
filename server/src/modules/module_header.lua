@@ -45,7 +45,6 @@ g_ping = require "modules.system.ping"
 g_httpd = nil
 g_mongodb = g_mongodb
 g_map_mgr = nil
-g_entity_mgr = nil
 g_dungeon_mgr = nil
 
 -- ==============================================================================
@@ -72,7 +71,7 @@ end
 -- 仅在area使用
 if AREA == APP_TYPE then
     g_map_mgr = require "modules.dungeon.map_mgr"
-    g_entity_mgr = require "modules.entity.entity_mgr"
+    require "modules.entity.entity_mgr"
     g_dungeon_mgr = require "modules.dungeon.dungeon_mgr"
 end
 

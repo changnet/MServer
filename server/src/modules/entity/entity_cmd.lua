@@ -9,10 +9,10 @@ local function player_update_base(pid, base, new)
     -- 首次进入场景，需要创建实体
     if new then
         Cmd.auth(pid, true)
-        player = g_entity_mgr:new_entity(ET.PLAYER, pid)
+        player = EntityMgr.new_entity(ET.PLAYER, pid)
         print("area player update base:", pid)
     else
-        player = g_entity_mgr:get_player(pid)
+        player = EntityMgr.get_player(pid)
     end
 
     if not player then
@@ -25,7 +25,7 @@ end
 
 -- 玩家退出area
 local function player_exit(pid)
-    local player = g_entity_mgr:get_player(pid)
+    local player = EntityMgr.get_player(pid)
     if not player then
         print("area player exit,entity not found", pid)
         return
@@ -34,13 +34,13 @@ local function player_exit(pid)
     player:exit_scene()
     Cmd.auth(pid)
 
-    g_entity_mgr:del_entity_player(pid)
+    EntityMgr.del_entity_player(pid)
     print("area player exit:", pid)
 end
 
 -- 玩家进入副本
 local function player_enter_dungeon(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
-    local player = g_entity_mgr:get_player(pid)
+    local player = EntityMgr.get_player(pid)
     if not player then
         elog("player_enter_dungeon no player found", pid)
         return
@@ -54,7 +54,7 @@ end
 -- @param dungeon_hdl 副本句柄，用于进入特定副本
 -- @param dungeon_id 副本Id，用于进入特定的静态副本
 local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
-    local player = g_entity_mgr:get_player(pid)
+    local player = EntityMgr.get_player(pid)
     if not player then
         elog("player_init_scene no player found", pid)
         return
@@ -77,7 +77,7 @@ reg_func("player_update_base", player_update_base)
 local EntityPlayer = require "modules.entity.entity_player"
 local function entity_player_clt_cb(cmd, cb_func)
     local cb = function(conn, pid, pkt)
-        local player = g_entity_mgr:get_player(pid)
+        local player = EntityMgr.get_player(pid)
         if not player then
             return elog("entity_player_clt_cb call no player found:%d", pid)
         end

@@ -27,6 +27,7 @@ return {
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
 "ET", -- src/modules/entity/entity_header.lua
+"EntityMgr", -- src/modules/entity/entity_mgr.lua
 "Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
 "GM", -- src/modules/system/gm.lua
@@ -99,7 +100,6 @@ return {
 "g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
-"g_entity_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
 "g_lang", -- src/modules/module_header.lua
 "g_log_mgr", -- src/modules/module_header.lua

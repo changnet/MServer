@@ -205,7 +205,7 @@ end
 
 -- 收到其他服的实体调用
 local function on_entity_call(pid, method_name, ...)
-    local player = g_entity_mgr:get_player(pid)
+    local player = EntityMgr.get_player(pid)
     if not player then
         printf("on entity call player not found: %d %s", pid, method_name)
         return

@@ -14,7 +14,6 @@ local Scene = oo.class(...)
 
 -- 缓存一个table用于和底层交互，避免频繁创建table
 local tmp_list = {}
-local g_entity_mgr = g_entity_mgr
 
 -- 获取场景配置
 function Scene:get_conf(id)
@@ -63,7 +62,7 @@ function Scene:broadcast_entity_appear(entity, eid_list, way)
     local is_player = (ET.PLAYER == entity.et)
 
     for idx = 1, eid_list.n do
-        local tmp_entity = g_entity_mgr:get_entity(eid_list[idx])
+        local tmp_entity = EntityMgr.get_entity(eid_list[idx])
 
         -- 如果在我周围的是一个玩家，告诉他我出现了
         if ET.PLAYER == tmp_entity.et then
@@ -142,7 +141,7 @@ function Scene:broadcast_entity_disappear(entity, eid_list, way, to_me)
     local pid_list = {}
     for idx = 1, eid_list.n do
         local eid = eid_list[idx]
-        local tmp_entity = g_entity_mgr:get_entity(eid)
+        local tmp_entity = EntityMgr.get_entity(eid)
 
         assert(ET.PLAYER == tmp_entity.et and tmp_entity.pid)
         table.insert(pid_list, tmp_entity.pid)
@@ -172,7 +171,7 @@ function Scene:broadcast_to_interest_me(entity, cmd, pkt, to_me)
     end
 
     for idx = 1, tmp_list.n do
-        local tmp_entity = g_entity_mgr:get_entity(tmp_list[idx])
+        local tmp_entity = EntityMgr.get_entity(tmp_list[idx])
 
         -- 如果在我周围的是一个玩家，告诉他我出现了
         if ET.PLAYER == tmp_entity.et then

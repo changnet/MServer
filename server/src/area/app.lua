@@ -6,8 +6,6 @@ local SrvApp = require "application.srv_app"
 
 local App = oo.class(..., SrvApp)
 
-local g_entity_mgr = nil
-
 -- 初始化
 function App:__init(...)
     SrvApp.__init(self, ...)
@@ -20,8 +18,6 @@ end
 -- 重写初始化入口
 function App:initialize()
     self:module_initialize() -- 加载子模块
-
-    g_entity_mgr = _G.g_entity_mgr
 
     -- 主动连接到gateway和world
     SrvMgr.connect_srv(g_app_setting.servers)
@@ -43,7 +39,7 @@ end
 
 -- 主事件循环
 function App:ev(ms_now)
-    g_entity_mgr:routine(ms_now)
+    EntityMgr.routine(ms_now)
 end
 
 return App

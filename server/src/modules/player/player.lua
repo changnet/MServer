@@ -174,16 +174,11 @@ function Player:on_login()
 end
 
 -- 设置玩家所在的session
-local function set_player_session(pid, session)
-    network_mgr:set_player_session(pid, session)
-end
-
--- 设置玩家所在的session
 function Player:set_session(session)
     network_mgr:set_player_session(self.pid, session)
 
     -- 设置session到网关，实现自动转发协议
-    Rpc.call(GSE, set_player_session, self.pid, session)
+    Rpc.call(GSE, AccMgr.set_player_session, self.pid, session)
 end
 
 -- 退出游戏
@@ -295,7 +290,5 @@ function Player:enter_dungeon(pkt)
 
     print("player enter dungeon", self.pid, id)
 end
-
-reg_func("set_player_session", set_player_session)
 
 return Player

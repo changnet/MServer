@@ -249,6 +249,11 @@ local function create_role(clt_conn, pkt)
     return g_unique_id:player_id(role_info.sid, callback)
 end
 
+-- 设置玩家当前所在场景session，用于协议自动转发
+function AccMgr.set_player_session(pid, session)
+    network_mgr:set_player_session(pid, session)
+end
+
 Cmd.reg(PLAYER.LOGIN, player_login, true)
 Cmd.reg(PLAYER.CREATE, create_role, true)
 
