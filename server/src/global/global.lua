@@ -77,9 +77,14 @@ function printf(fmt, ...)
     return async_logger:plog(string.format(fmt, ...))
 end
 
--- 错误处调用 直接写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function elog(...)
+-- 错误日志，写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
+function elog(fmt, ...)
     return async_logger:elog(table.concat_any("    ", ...))
+end
+
+--  格式化日志并写入根目录下的lua_error.txt文件
+function elogf(fmt, ...)
+    return async_logger:elog(string.format(fmt, ...))
 end
 
 -- 断言，支持多个message参数

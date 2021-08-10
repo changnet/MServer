@@ -8,7 +8,7 @@ local function player_update_base(pid, base, new)
 
     -- 首次进入场景，需要创建实体
     if new then
-        g_authorize:set_player(pid)
+        Cmd.auth(pid, true)
         player = g_entity_mgr:new_entity(ET.PLAYER, pid)
         print("area player update base:", pid)
     else
@@ -32,7 +32,7 @@ local function player_exit(pid)
     end
 
     player:exit_scene()
-    g_authorize:unset_player(pid)
+    Cmd.auth(pid)
 
     g_entity_mgr:del_entity_player(pid)
     print("area player exit:", pid)

@@ -98,10 +98,10 @@ function Move:switch_dungeon(ai)
     print("switch to new dungeon", entity.name, id)
 end
 
-g_android_mgr:reg(ENTITY.MOVE, Move.on_move)
-g_android_mgr:reg(ENTITY.APPEAR, Move.on_appear)
-g_android_mgr:reg(ENTITY.POS, Move.on_update_pos)
-g_android_mgr:reg(ENTITY.DISAPPEAR, Move.on_disappear)
-g_android_mgr:reg(ENTITY.ENTERSCENE, Move.on_enter_scene)
+AndroidMgr.reg(ENTITY.MOVE, Move.on_move)
+AndroidMgr.reg(ENTITY.APPEAR, Move.on_appear)
+AndroidMgr.reg(ENTITY.POS, Move.on_update_pos)
+AndroidMgr.reg(ENTITY.DISAPPEAR, Move.on_disappear)
+AndroidMgr.reg(ENTITY.ENTERSCENE, Move.on_enter_scene)
 
 return Move

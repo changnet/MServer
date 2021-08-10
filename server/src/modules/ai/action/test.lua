@@ -73,7 +73,7 @@ end
 -- ************************************************************************** --
 
 
-g_android_mgr:reg(PLAYER.PING, Test.on_ping)
-g_android_mgr:reg(CHAT.DOCHAT, Test.on_chat)
+AndroidMgr.reg(PLAYER.PING, Test.on_ping)
+AndroidMgr.reg(CHAT.DOCHAT, Test.on_chat)
 
 return Test

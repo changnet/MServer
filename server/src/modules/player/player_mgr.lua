@@ -40,7 +40,8 @@ function PlayerMgr.enter_success(player)
 
     this.player[pid] = player
     this.raw_player[pid] = nil
-    g_authorize:set_player(pid)
+    
+    Cmd.auth(pid, true)
 
     printf("player enter,pid = %d", pid)
 end
@@ -83,7 +84,7 @@ end
 -- 玩家离线
 function PlayerMgr.on_player_offline(srv_conn, pkt)
     local pid = pkt.pid
-    g_authorize:unset_player(pid)
+    Cmd.auth(pid)
 
     local player = this.player[pid]
     if not player then

@@ -11,10 +11,8 @@ require_define "modules.system.define"
 
 -- 前置声明，避免luacheck警告
 
-g_authorize = nil
 g_stat_mgr = nil
 g_timer_mgr = nil
-g_android_mgr = nil
 g_ai_mgr = nil
 
 -- 信号处理，默认情况下退出
@@ -53,13 +51,18 @@ function App:exec()
     ev:signal(2)
     ev:signal(15)
 
-    g_authorize = require "modules.system.authorize"
     g_stat_mgr = require "statistic.statistic_mgr"
+
+    -- 加载协议文件，在其他文件require之前加载，因为require的时候就需要注册协议
+    require "network.cmd"
+    Cmd.USE_CS_CMD = true
+    Cmd.load_protobuf()
+
     g_timer_mgr = require "timer.timer_mgr"
-    g_android_mgr = require "android.android_mgr"
+    require "android.android_mgr"
     g_ai_mgr = require "modules.ai.ai_mgr"
 
-    g_android_mgr:start()
+    AndroidMgr.start()
 
     ev:set_app_ev(1000) -- 1000毫秒回调一次主循环
     ev:backend()
@@ -67,7 +70,7 @@ end
 
 -- 主事件循环，设置了ev:set_app_ev后由C++回调
 function application_ev(ms_now)
-    g_android_mgr:routine(ms_now)
+    AndroidMgr.routine(ms_now)
 end
 
 return App

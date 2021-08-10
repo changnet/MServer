@@ -120,7 +120,7 @@ end
 
 -- 转发的客户端消息
 function SsConn:css_command_new(pid, cmd, ...)
-    return Cmd:dispatch_css(self, pid, cmd, ...)
+    return Cmd.dispatch_css(self, pid, cmd, ...)
 end
 
 return SsConn

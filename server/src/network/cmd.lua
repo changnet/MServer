@@ -12,9 +12,9 @@ Cmd.SS = require_define("proto.auto_ss")
 local app_reg = {} -- 记录哪些服务器已注册过协议
 
 local SESSION = g_app.session
-local auth_pid = g_authorize:get_player_data()
 
-
+-- 以玩家id为key，是否已认证该玩家
+local auth = global_storage("Auth")
 
 local cs_handler = {} -- 注册的客户端回调函数
 local ss_handler = {} -- 注册的服务器之间通信回调
@@ -143,6 +143,13 @@ function Cmd.reg_player(cmd, handler, noauth)
     Cmd.reg(cmd, handler, noauth)
 
     cs_handler[cmd.i].p = true
+end
+
+-- 认证该玩家
+function Cmd.auth(pid, b)
+    -- 认证并不是说通过密码认证，而是进入了游戏
+    -- 主要是防止前端乱发协议，比如没有进入游戏就发移动包，就通过这个认证机制来隔离的
+    auth[pid] = b
 end
 
 -- 注册服务器协议处理
@@ -278,18 +285,18 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
     local cfg = cs_handler[cmd]
 
     if not cfg then
-        return elog("dispatch_css:cmd %d no handle function found", cmd)
+        return elogf("dispatch_css:cmd %d no handle function found", cmd)
     end
 
     -- 判断这个服务器连接是已认证的
     if not srv_conn.auth then
-        return elog("dispatch_css:srv conn not auth,cmd %d", cmd)
+        return elogf("dispatch_css:srv conn not auth,cmd %d", cmd)
     end
 
     -- 判断这个玩家是已认证的
-    if not cfg.noauth and not auth_pid[pid] then
+    if not cfg.noauth and not auth[pid] then
         return
-            elog("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
+            elogf("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
     end
 
     local handler = cfg.handler

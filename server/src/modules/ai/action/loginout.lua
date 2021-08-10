@@ -152,10 +152,10 @@ end
 -- ************************************************************************** --
 
 
-g_android_mgr:reg(PLAYER.LOGIN, Loginout.on_login)
-g_android_mgr:reg(PLAYER.CREATE, Loginout.on_create_role)
-g_android_mgr:reg(PLAYER.ENTER, Loginout.on_enter_world)
-g_android_mgr:reg(PLAYER.OTHER, Loginout.on_login_otherwhere)
-g_android_mgr:reg(ENTITY.PROPERTY, Loginout.on_init_property)
+AndroidMgr.reg(PLAYER.LOGIN, Loginout.on_login)
+AndroidMgr.reg(PLAYER.CREATE, Loginout.on_create_role)
+AndroidMgr.reg(PLAYER.ENTER, Loginout.on_enter_world)
+AndroidMgr.reg(PLAYER.OTHER, Loginout.on_login_otherwhere)
+AndroidMgr.reg(ENTITY.PROPERTY, Loginout.on_init_property)
 
 return Loginout

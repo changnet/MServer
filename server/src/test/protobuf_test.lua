@@ -1,6 +1,5 @@
 -- protobuf协议测试
 
-g_authorize = require "modules.system.authorize"
 g_stat_mgr = require "statistic.statistic_mgr"
 
 require "network.cmd"

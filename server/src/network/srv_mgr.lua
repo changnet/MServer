@@ -201,5 +201,4 @@ function SrvMgr.srv_conn_del(conn_id)
     if conn.auto_conn then this.srv_waiting[conn] = 1 end
 end
 
-local srv_mgr = SrvMgr()
-return srv_mgr
+return SrvMgr

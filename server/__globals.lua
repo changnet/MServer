@@ -1,4 +1,4 @@
--- auto export by lua-tags 175 symbols
+-- auto export by lua-tags 172 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -11,6 +11,7 @@ return {
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccMgr", -- src/modules/account/account_mgr.lua
 "Acism", -- engine/acism.lua
+"AndroidMgr", -- src/android/android_mgr.lua
 "Astar", -- engine/astar.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
@@ -90,16 +91,12 @@ return {
 "css_command_new", -- src/network/conn.lua
 "ctrl_new", -- src/network/conn.lua
 "elog", -- src/global/global.lua
+"elogf", -- src/global/global.lua
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua
 "g_ai_mgr", -- src/android/app.lua
-"g_android_mgr", -- src/android/app.lua
 "g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
-"g_authorize", -- src/android/app.lua
-"g_authorize", -- src/modules/module_header.lua
-"g_authorize", -- src/test/flatbuffers_test.lua
-"g_authorize", -- src/test/protobuf_test.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_entity_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
