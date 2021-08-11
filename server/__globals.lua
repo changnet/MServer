@@ -1,4 +1,4 @@
--- auto export by lua-tags 172 symbols
+-- auto export by lua-tags 175 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -27,6 +27,7 @@ return {
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
 "ET", -- src/modules/entity/entity_header.lua
+"EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
@@ -100,10 +101,12 @@ return {
 "g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
+"g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
 "g_lang", -- src/modules/module_header.lua
 "g_log_mgr", -- src/modules/module_header.lua
 "g_mail_mgr", -- src/modules/module_header.lua
+"g_map_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
 "g_ping", -- src/modules/module_header.lua

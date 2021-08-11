@@ -1,9 +1,12 @@
 -- entity_cmd.lua
 -- xzc
 -- 2018-12-01
+
 -- 实体指令入口
+EntityCmd = {}
+
 -- 同步gw的玩家属性到area
-local function player_update_base(pid, base, new)
+function EntityCmd.player_update_base(pid, base, new)
     local player = nil
 
     -- 首次进入场景，需要创建实体
@@ -22,6 +25,14 @@ local function player_update_base(pid, base, new)
 
     return player:update_base_info(base)
 end
+
+-- 同步gw的玩家战斗属性
+function EntityCmd.player_update_battle_abt(pid, abt_list)
+    local player = EntityMgr.get_player(pid)
+
+    return player:update_battle_abt(abt_list)
+end
+
 
 -- 玩家退出area
 local function player_exit(pid)
@@ -71,21 +82,20 @@ end
 reg_func("player_exit", player_exit)
 reg_func("player_init_scene", player_init_scene)
 reg_func("player_enter_dungeon", player_enter_dungeon)
-reg_func("player_update_base", player_update_base)
 
 --------------------------------------------------------------------------------
-local EntityPlayer = require "modules.entity.entity_player"
-local function entity_player_clt_cb(cmd, cb_func)
-    local cb = function(conn, pid, pkt)
-        local player = EntityMgr.get_player(pid)
-        if not player then
-            return elog("entity_player_clt_cb call no player found:%d", pid)
-        end
-        return cb_func(player, conn, pkt)
-    end
+-- local EntityPlayer = require "modules.entity.entity_player"
+-- local function entity_player_clt_cb(cmd, cb_func)
+--     local cb = function(conn, pid, pkt)
+--         local player = EntityMgr.get_player(pid)
+--         if not player then
+--             return elog("entity_player_clt_cb call no player found:%d", pid)
+--         end
+--         return cb_func(player, conn, pkt)
+--     end
 
-    Cmd.reg(cmd, cb)
-end
+--     Cmd.reg(cmd, cb)
+-- end
 
-entity_player_clt_cb(ENTITY.MOVE, EntityPlayer.do_move)
+-- entity_player_clt_cb(ENTITY.MOVE, EntityPlayer.do_move)
 --------------------------------------------------------------------------------

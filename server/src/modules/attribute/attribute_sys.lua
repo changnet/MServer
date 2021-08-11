@@ -79,14 +79,8 @@ function AttributeSys:calc_final_abt()
     return self.final_fv
 end
 
--- 同步gw的玩家战斗属性
-local function player_update_battle_abt(entity, abt_list)
-    return entity:update_battle_abt(abt_list)
-end
-
 -- 把属性同步到场景
--- @conn: 指定更新属性的连接，不指定的话说明玩家已经进入对应的场景，从pid取就可以了
-function AttributeSys:update_battle_abt(conn)
+function AttributeSys:sync_battle_abt(session)
     -- TODO: 这里需要优化一下，看下是不是要改成protobuf同步
     local abt_list = {}
     for k, v in pairs(self.final_abt.attribute) do
@@ -94,9 +88,7 @@ function AttributeSys:update_battle_abt(conn)
         table.insert(abt_list, v)
     end
 
-    Rpc.entity_call(self.pid, player_update_battle_abt, abt_list)
+    Rpc.call(session, EntityCmd.player_update_battle_abt, self.pid, abt_list)
 end
-
-reg_func("player_update_battle_abt", player_update_battle_abt)
 
 return AttributeSys

@@ -157,17 +157,18 @@ function Player:on_login()
     -- 所有系统处理完后，计算一次总属性
     self.abt_sys:calc_final_abt()
 
+    -- TODO 暂时默认进入第一个场景服
+    self:set_session(ASE)
+
     local conn = SrvMgr.get_conn_by_session(ASE)
     -- 同步基础属性，名字、外显等
-    self.base:update(conn)
+    self.base:update()
     -- 同步战斗属性到场景
-    self.abt_sys:update_battle_abt(conn)
+    self.abt_sys:sync_battle_abt(ASE)
     -- 实体进入场景
     Rpc.proxy(conn):player_init_scene(self.pid, nil, 0)
 
     g_log_mgr:login_or_logout(self.pid, LOG.LOGIN)
-
-    self:set_session(conn.session)
 
     self:send_pkt(PLAYER.ENTER, {}) -- 通知前端玩家所有数据初始化完成已进入场景
     return true
@@ -175,10 +176,15 @@ end
 
 -- 设置玩家所在的session
 function Player:set_session(session)
-    network_mgr:set_player_session(self.pid, session)
+    self.session = session
 
     -- 设置session到网关，实现自动转发协议
-    Rpc.call(GSE, AccMgr.set_player_session, self.pid, session)
+    Rpc.call(GSE, CltMgr.set_player_session, self.pid, session)
+end
+
+-- 获取玩家所在session
+function Player:get_session()
+    return self.session
 end
 
 -- 退出游戏
@@ -273,20 +279,21 @@ function Player:enter_dungeon(pkt)
     local conn = SrvMgr.get_conn_by_session(session)
 
     -- 然后玩家从当前进程退出场景
-    if session ~= network_mgr:get_player_session(self.pid) then
+    if session ~= self.session then
         Rpc.proxy(self.pid):player_exit(self.pid)
+
+        self:set_session(session)
+
         -- 同步基础属性，名字、外显等
-        self.base:update(conn)
+        self.base:update()
         -- 同步战斗属性到场景
-        self.abt_sys:update_battle_abt(conn)
+        self.abt_sys:sync_battle_abt(session)
         -- 在另一个进程初始化玩家场景
         Rpc.proxy(conn):player_init_scene(self.pid, nil, id)
     else
         -- 在同一进程，直接进入场景
         Rpc.proxy(conn):player_enter_dungeon(self.pid, id)
     end
-
-    self:set_session(session)
 
     print("player enter dungeon", self.pid, id)
 end

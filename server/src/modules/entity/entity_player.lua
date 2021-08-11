@@ -1,10 +1,11 @@
 -- entity_player.lua
 -- xzc
 -- 2018-11-20
--- 玩家实体，用于在场景显示
 
 local Entity = require "modules.entity.entity"
 local EntityAnimal = require "modules.entity.entity_animal"
+
+-- 玩家实体，用于在场景显示
 local EntityPlayer = oo.class(..., EntityAnimal)
 
 function EntityPlayer:__init(eid, pid)

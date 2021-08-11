@@ -63,13 +63,14 @@ function Base:on_login()
     return true
 end
 
-function Base:update(conn)
+function Base:update()
     -- 更新基础数据到场景服
     base_info.sex = self.root.sex
     base_info.level = self.root.level
     base_info.name = self.root.name
 
-    Rpc.proxy(conn or self.pid):player_update_base(self.pid, base_info, true)
+    Rpc.call(self.player.session,
+        EntityCmd.player_update_base, self.pid, base_info, true)
 end
 
 -- 玩家退出游戏

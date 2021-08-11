@@ -79,6 +79,12 @@ function CltMgr.clt_conn_del(conn_id)
     printf("client connect del:%d", conn_id)
 end
 
+-- 设置玩家当前所在场景session，用于协议自动转发
+function CltMgr.set_player_session(pid, session)
+    network_mgr:set_player_session(pid, session)
+end
+
+
 -- 此函数必须返回一个value为玩家id的table
 -- CLTCAST定义在define.lua
 function clt_multicast_new(mask, ...)
