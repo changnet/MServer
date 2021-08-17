@@ -4,8 +4,8 @@ if WORLD == APP_TYPE then
 --     player_clt_cb(PLAYER.ENTERDUNGEON, Player.enter_dungeon)
     Cmd.reg(PLAYER.ENTER, PlayerMgr.on_enter_world, true)
 
---     player_mgr_srv_cb(SYS.PLAYER_OFFLINE, g_player_mgr.on_player_offline)
---     player_mgr_srv_cb(SYS.PLAYER_OTHERWHERE, g_player_mgr.on_login_otherwhere)
+    Cmd.reg_srv(SYS.PLAYER_OFFLINE, PlayerMgr.on_player_offline)
+    Cmd.reg_srv(SYS.PLAYER_OTHERWHERE, PlayerMgr.on_login_otherwhere)
 
 --     PE.reg(PE_ENTER, player_base_cb(Base.send_info))
 --     g_res:reg_player_res(RES.GOLD, Player.get_gold, Player.add_gold,

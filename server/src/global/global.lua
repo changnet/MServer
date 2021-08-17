@@ -68,8 +68,8 @@ function __G_C_TRACKBACK(msg, co)
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效
-function print(...)
-    return async_logger:plog(...)
+function print(fmt, ...)
+    return async_logger:plog(fmt,...)
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
@@ -78,7 +78,7 @@ function printf(fmt, ...)
 end
 
 -- 错误日志，写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function elog(fmt, ...)
+function elog(...)
     return async_logger:elog(table.concat_any("    ", ...))
 end
 

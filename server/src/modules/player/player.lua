@@ -160,13 +160,12 @@ function Player:on_login()
     -- TODO 暂时默认进入第一个场景服
     self:set_session(ASE)
 
-    local conn = SrvMgr.get_conn_by_session(ASE)
     -- 同步基础属性，名字、外显等
     self.base:update()
     -- 同步战斗属性到场景
     self.abt_sys:sync_battle_abt(ASE)
     -- 实体进入场景
-    Rpc.proxy(conn):player_init_scene(self.pid, nil, 0)
+    Rpc.call(ASE, EntityCmd.player_init_scene, self.pid, nil, 0)
 
     g_log_mgr:login_or_logout(self.pid, LOG.LOGIN)
 
@@ -206,8 +205,10 @@ function Player:on_logout()
     -- 存库
     for _, module in pairs(sub_module) do self[module.name]:db_save() end
 
+    local session = self:get_session()
+
     -- 退出场景
-    Rpc.proxy(self.pid):player_exit(self.pid)
+    Rpc.call(session, EntityCmd.player_exit, self.pid)
     g_log_mgr:login_or_logout(self.pid, LOG.LOGOUT)
 
     printf("player logout,pid = %d", self.pid)
@@ -289,10 +290,10 @@ function Player:enter_dungeon(pkt)
         -- 同步战斗属性到场景
         self.abt_sys:sync_battle_abt(session)
         -- 在另一个进程初始化玩家场景
-        Rpc.proxy(conn):player_init_scene(self.pid, nil, id)
+        Rpc.call(session, EntityCmd.player_init_scene, self.pid, nil, id)
     else
         -- 在同一进程，直接进入场景
-        Rpc.proxy(conn):player_enter_dungeon(self.pid, id)
+        Rpc.call(session, EntityCmd.player_enter_dungeon, self.pid, id)
     end
 
     print("player enter dungeon", self.pid, id)

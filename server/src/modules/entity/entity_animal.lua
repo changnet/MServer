@@ -21,7 +21,7 @@ function EntityAnimal:get_attribute(abt)
 end
 
 -- 处理客户端请求移动
-function EntityAnimal:do_move(conn, pkt)
+function EntityAnimal:do_move(pkt)
     -- 后端不处理寻路，前端发给后端的路线都是直线的，如果遇到转弯这些则必须分开发送
     -- 后端不严格检测线路是否可行，只会定时检测，遇到不可行走则会拉玩家到对应的位置
 

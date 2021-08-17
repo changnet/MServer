@@ -19,6 +19,8 @@ end
 -- @param ... 自定义参数
 function PE.fire_event(ev, ...)
     local cbs = ev_cb[ev]
+    if not cbs then return end
+
     for _, cb in pairs(cbs) do
         -- TODO 暂时不用xpcall，影响性能，用的话容错要好一些
         cb(...)

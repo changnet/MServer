@@ -168,7 +168,7 @@ end
 
 
 -- 玩家登录
-local function player_login(clt_conn, pkt)
+local function player_login(pkt)
     local sign = util.md5(LOGIN_KEY, pkt.time, pkt.account)
     if sign ~= pkt.sign then
         elog("clt sign error:%s", pkt.account)
@@ -180,6 +180,7 @@ local function player_login(clt_conn, pkt)
         return
     end
 
+    local clt_conn = Cmd.last_conn()
     local conn_id = clt_conn.conn_id
     -- 不能重复发送(不是顶号，conn_id不应该会重复)
     if this.conn_acc[conn_id] then
@@ -228,7 +229,8 @@ local function player_login(clt_conn, pkt)
 end
 
 -- 创角
-local function create_role(clt_conn, pkt)
+local function create_role(pkt)
+    local clt_conn = Cmd.last_conn()
     local role_info = this.conn_acc[clt_conn.conn_id]
     if not role_info then
         elog("create role,no account info")
@@ -249,7 +251,9 @@ local function create_role(clt_conn, pkt)
     return g_unique_id:player_id(role_info.sid, callback)
 end
 
-Cmd.reg(PLAYER.LOGIN, player_login, true)
-Cmd.reg(PLAYER.CREATE, create_role, true)
+if APP_TYPE == GATEWAY then
+    Cmd.reg(PLAYER.LOGIN, player_login, true)
+    Cmd.reg(PLAYER.CREATE, create_role, true)
+end
 
 return AccMgr

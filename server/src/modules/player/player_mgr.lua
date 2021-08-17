@@ -69,7 +69,7 @@ function PlayerMgr.check_enter_fail()
 end
 
 -- 玩家进入游戏世界，创建对象
-function PlayerMgr.on_enter_world(clt_conn, pid, pkt)
+function PlayerMgr.on_enter_world(pid, pkt)
     local player = Player(pid)
 
     this.raw_player[pid] = player

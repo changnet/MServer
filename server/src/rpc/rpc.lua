@@ -23,6 +23,8 @@ local obj_to_name = obj_to_name
 local next_cb_func = nil -- 下一次回调函数
 local proxy_cb_func = nil -- 代理的下一次回调函数
 
+local last_conn_id = nil -- 上一次回调的连接id，用于快速回包
+
 local stat = g_stat_mgr:get("rpc")
 local AutoId = require "modules.system.auto_id"
 
@@ -72,7 +74,7 @@ end
 
 -- 获取上一次rpc回调、返回的连接
 function Rpc.last_conn()
-    return SrvMgr.get_conn(this.last_conn_id)
+    return SrvMgr.get_conn(last_conn_id)
 end
 
 -- 上一次rpc返回的错误码
@@ -275,7 +277,7 @@ reg_func("__3", on_object_call)
 -- 收到rpc调用，由C++触发
 function rpc_command_new(conn_id, rpc_id, method_name, ...)
     -- 把参数平铺到栈上，这样可以很方便地处理可变参而不需要创建一个table来处理参数，减少gc压力
-    this.last_conn_id = conn_id
+    last_conn_id = conn_id
     if "__1" == method_name then
         return on_pid_call(...)
     elseif "__2" == method_name then
@@ -290,7 +292,7 @@ end
 -- 收到rpc调用，由C++触发
 function rpc_command_return(conn_id, rpc_id, e, ...)
     this.last_e = e
-    this.last_conn_id = conn_id
+    last_conn_id = conn_id
     local callback = this.callback[rpc_id]
     if not callback then
         elogf("rpc return no callback found:id = %d", rpc_id)

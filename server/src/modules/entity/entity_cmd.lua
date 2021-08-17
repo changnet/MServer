@@ -35,7 +35,7 @@ end
 
 
 -- 玩家退出area
-local function player_exit(pid)
+function EntityCmd.player_exit(pid)
     local player = EntityMgr.get_player(pid)
     if not player then
         print("area player exit,entity not found", pid)
@@ -50,7 +50,7 @@ local function player_exit(pid)
 end
 
 -- 玩家进入副本
-local function player_enter_dungeon(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
+function EntityCmd.player_enter_dungeon(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = EntityMgr.get_player(pid)
     if not player then
         elog("player_enter_dungeon no player found", pid)
@@ -64,7 +64,7 @@ end
 -- 在进入场景之前，必须已经同步玩家必要的数据(外显、战斗属性等)
 -- @param dungeon_hdl 副本句柄，用于进入特定副本
 -- @param dungeon_id 副本Id，用于进入特定的静态副本
-local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
+function EntityCmd.player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = EntityMgr.get_player(pid)
     if not player then
         elog("player_init_scene no player found", pid)
@@ -79,23 +79,10 @@ local function player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     print("player init scene", pid, scene_id, x, y)
 end
 
-reg_func("player_exit", player_exit)
-reg_func("player_init_scene", player_init_scene)
-reg_func("player_enter_dungeon", player_enter_dungeon)
-
 --------------------------------------------------------------------------------
--- local EntityPlayer = require "modules.entity.entity_player"
--- local function entity_player_clt_cb(cmd, cb_func)
---     local cb = function(conn, pid, pkt)
---         local player = EntityMgr.get_player(pid)
---         if not player then
---             return elog("entity_player_clt_cb call no player found:%d", pid)
---         end
---         return cb_func(player, conn, pkt)
---     end
+local EntityPlayer = require "modules.entity.entity_player"
 
---     Cmd.reg(cmd, cb)
--- end
-
--- entity_player_clt_cb(ENTITY.MOVE, EntityPlayer.do_move)
+if APP_TYPE == AREA then
+    Cmd.reg_entity(ENTITY.MOVE, EntityPlayer.do_move)
+end
 --------------------------------------------------------------------------------

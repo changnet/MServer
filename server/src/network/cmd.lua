@@ -11,6 +11,8 @@ Cmd.SS = require_define("proto.auto_ss")
 
 local app_reg = {} -- 记录哪些服务器已注册过协议
 
+local last_connection = nil -- 上一次回调的连接，通常用于快速回包
+
 local SESSION = g_app.session
 
 -- 以玩家id为key，是否已认证该玩家
@@ -124,6 +126,11 @@ function Cmd.load_flatbuffers()
     return load_schema(network_mgr.CDT_FLATBUF, "../fbs", nil, "bfbs")
 end
 
+-- 获取上一次回调的网络连接id
+function Cmd.last_conn()
+    return last_connection
+end
+
 -- 注册客户端协议回调
 -- @param noauth 处理此协议时，不要求该链接可信
 function Cmd.reg(cmd, handler, noauth)
@@ -142,7 +149,14 @@ end
 function Cmd.reg_player(cmd, handler, noauth)
     Cmd.reg(cmd, handler, noauth)
 
-    cs_handler[cmd.i].p = true
+    cs_handler[cmd.i].t = 1
+end
+
+-- 注册客户端协议回调，回调时第一个参数为玩家在场景的实体对象，仅在场景进程有效
+function Cmd.reg_entity(cmd, handler, noauth)
+    Cmd.reg(cmd, handler, noauth)
+
+    cs_handler[cmd.i].t = 2
 end
 
 -- 认证该玩家
@@ -227,6 +241,16 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
     return true
 end
 
+local function do_handler(handler, ...)
+    if stat then
+        --local beg = ev:real_ms_time()
+        handler( ...)
+        -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
+    else
+        return handler(...)
+    end
+end
+
 -- 发分服务器协议
 function Cmd.dispatch_srv(srv_conn, cmd, ...)
     local cfg = ss_handler[cmd]
@@ -239,24 +263,8 @@ function Cmd.dispatch_srv(srv_conn, cmd, ...)
         return elog("dispatch_srv:try to call auth cmd", cmd)
     end
 
-    local obj = cfg.obj
-    local handler = cfg.handler
-    if obj then
-        if stat then
-            --local beg = ev:real_ms_time()
-            handler(obj, srv_conn, ...)
-            -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
-        else
-            return handler(obj, srv_conn, ...)
-        end
-    end
-    if stat then
-        --local beg = ev:real_ms_time()
-        handler(srv_conn, ...)
-        -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
-    else
-        return handler(srv_conn, ...)
-    end
+    last_connection = srv_conn
+    return do_handler(cfg.handler, srv_conn, ...)
 end
 
 -- 分发协议
@@ -270,14 +278,8 @@ function Cmd.dispatch_clt(clt_conn, cmd, ...)
         return elog("dispatch_clt:try to call auth cmd %d", cmd)
     end
 
-    local handler = cfg.handler
-    if stat then
-        --local beg = ev:real_ms_time()
-        handler(clt_conn, ...)
-        -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
-    else
-        return handler(clt_conn, ...)
-    end
+    last_connection = clt_conn
+    return do_handler(cfg.handler, ...)
 end
 
 -- 分发网关转发的客户端协议
@@ -300,13 +302,24 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
     end
 
     local handler = cfg.handler
-    if stat then
-        -- local beg = ev:real_ms_time()
-        handler(srv_conn, pid, ...)
-        -- return
-        --     self:update_statistic(self.css_stat, cmd, ev:real_ms_time() - beg)
+    local this_type = cfg.t
+    if 1 == this_type then
+        local player = PlayerMgr.get_player(pid)
+        if not player then
+            print("dispatch_css player not found", pid, cmd)
+            return
+        end
+        return do_handler(handler, player, ...)
+    elseif 2 == this_type then
+        local entity = EntityMgr.get_player(pid)
+        if not entity then
+            print("dispatch_css entity not found", pid, cmd)
+            return
+        end
+
+        return do_handler(handler, entity, ...)
     else
-        return handler(srv_conn, pid, ...)
+        return do_handler(handler, pid, ...)
     end
 end
 

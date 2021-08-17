@@ -8,7 +8,7 @@ local DG_MAX_SEC = 180
 
 -- 随机移动
 -- 这个是机器人用来模拟客户端移动的。怪物AI是直接在服务器移动，不能用这个
-function Move:random_move(ai)
+function Move.random_move(ai)
     if ai.moving then return false end
 
     -- 在dungeon_mgr中初始化的场景大小
@@ -25,7 +25,7 @@ function Move:random_move(ai)
 end
 
 -- 玩家进入场景
-function Move:on_enter_scene(entity, errno, pkt)
+function Move.on_enter_scene(entity, errno, pkt)
     local dungeon_id = pkt.dungeon_id or 0 -- pbc里int为0发不过来
     printf("%s(%d) enter scene %d:%d", entity.name, entity.pid, dungeon_id,
            pkt.scene_id)
@@ -42,7 +42,7 @@ function Move:on_enter_scene(entity, errno, pkt)
 end
 
 -- 某个实体移动
-function Move:on_move(entity, errno, pkt)
+function Move.on_move(entity, errno, pkt)
     if entity.handle == pkt.handle then
         entity.ai.moving = true
 
@@ -55,17 +55,17 @@ function Move:on_move(entity, errno, pkt)
     end
 end
 
-function Move:on_appear(entity, errno, pkt)
+function Move.on_appear(entity, errno, pkt)
     print("entity appear:", pkt.name, pkt.pix_x, pkt.pix_y)
 end
 
 -- 实体消失
-function Move:on_disappear(entity, errno, pkt)
+function Move.on_disappear(entity, errno, pkt)
     print("entity disappear:", pkt.handle)
 end
 
 -- 服务器强制重置实体位置
-function Move:on_update_pos(entity, errno, pkt)
+function Move.on_update_pos(entity, errno, pkt)
     if entity.handle == pkt.handle then
         entity.ai.moving = false
 
@@ -78,7 +78,7 @@ function Move:on_update_pos(entity, errno, pkt)
 end
 
 -- 切换副本，测试玩家在进程中切换
-function Move:switch_dungeon(ai)
+function Move.switch_dungeon(ai)
     local now = ev:time()
     if not ai.dungeon_time then
         ai.dungeon_time = now + math.random(DG_MIN_SEC, DG_MAX_SEC)
