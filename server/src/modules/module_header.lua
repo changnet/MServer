@@ -56,7 +56,8 @@ require "modules.event.player_event"
 require "modules.event.system_event"
 g_lang = require "modules.lang.lang"
 g_mail_mgr = require "modules.mail.mail_mgr"
-g_ping = require "modules.system.ping"
+
+require "modules.system.ping"
 
 local Mongodb = require "mongodb.mongodb"
 
@@ -98,7 +99,7 @@ require "modules.system.system_cmd" -- 系统模块
 require "modules.player.player_cmd" -- 玩家基础模块
 require "modules.mail.mail_cmd" -- 邮件模块
 
-require_app("modules.chat.chat_cmd", WORLD) -- 聊天
+require_app("modules.chat.chat", WORLD) -- 聊天
 require_app("modules.bag.bag_cmd", WORLD) -- 背包
 require_app("modules.misc.misc_cmd", WORLD) -- 杂七杂八的小功能
 

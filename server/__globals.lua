@@ -1,4 +1,4 @@
--- auto export by lua-tags 175 symbols
+-- auto export by lua-tags 176 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -58,6 +58,7 @@ return {
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
 "PROP", -- src/modules/property/property.lua
+"Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
 "RES", -- src/modules/res/res_header.lua
 "Rpc", -- src/rpc/rpc.lua
@@ -72,6 +73,7 @@ return {
 "SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
 "TIPS", -- src/modules/lang/lang_header.lua
+"Test", -- src/modules/ai/action/test.lua
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua
@@ -109,7 +111,6 @@ return {
 "g_map_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
-"g_ping", -- src/modules/module_header.lua
 "g_res", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua

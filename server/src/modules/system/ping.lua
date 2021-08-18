@@ -3,31 +3,31 @@
 -- xzc
 -- 测试各服务器之间延迟
 
-local Ping = oo.singleton(...)
+Ping = {}
 
-function Ping:__init()
-    self.seed = 1
-    self.pending = {}
-end
+local this = global_storage("Ping", {
+    seed = 1,
+    pending = {},
+})
 
 -- 开始一个所有进程ping
 -- @how:1gm，2客户端
 -- @conn_id:返回数据的连接，可能是gm，也可能是机器人
 -- @other:机器人发过来的数据，原样返回以校验完整性。如果是gm，则为nil
-function Ping:start(how, conn_id, other)
-    local id = self.seed
-    self.seed = self.seed + 1
+function Ping.start(how, conn_id, other)
+    local id = this.seed
+    this.seed = this.seed + 1
 
     local wait = 0
     for _, srv_conn in pairs(SrvMgr.get_all_srv_conn()) do
         wait = wait + 1
-        Rpc.proxy(srv_conn, self.on_ping, self):rpc_ping(id)
+        Rpc.proxy(Ping.on_ping).conn_call(srv_conn, Ping.do_ping, id)
     end
 
     -- 没有其他服务器连接?
     if 0 == wait then return print("ping no other app found") end
 
-    self.pending[id] = {
+    this.pending[id] = {
         srvs = {},
         how = how,
         wait = wait,
@@ -37,16 +37,21 @@ function Ping:start(how, conn_id, other)
     }
 end
 
+-- 服务器之间ping
+function Ping.do_ping(id)
+    return id
+end
+
 -- 其他服务器进程收到ping返回
-function Ping:on_ping(ecode, id)
-    local info = self.pending[id]
+function Ping.on_ping(ecode, id)
+    local info = this.pending[id]
     if not info then return print("ping no info found", id) end
 
     local srv_conn = Rpc.last_conn()
 
     local conn_id = srv_conn.conn_id
     if info.srvs[conn_id] then
-        self.pending[id] = nil
+        this.pending[id] = nil
         return print("ping info error", id)
     end
     info.srvs[conn_id] = {
@@ -55,12 +60,12 @@ function Ping:on_ping(ecode, id)
     }
 
     info.wait = info.wait - 1
-    if info.wait <= 0 then self:done(id, info) end
+    if info.wait <= 0 then Ping.done(id, info) end
 end
 
 -- 完成一个ping
-function Ping:done(id, info)
-    self.pending[id] = nil
+function Ping.done(id, info)
+    this.pending[id] = nil
 
     local how = info.how
     if 1 == how then -- gm请求，直接打印
@@ -85,22 +90,14 @@ function Ping:done(id, info)
     end
 end
 
-local ping = Ping()
-
 -- 来自机器人的ping请求，走的是客户端连接
-local function player_ping(clt_conn, pkt)
-    return ping:start(2, clt_conn.conn_id, pkt)
+local function player_ping(pkt)
+    local clt_conn = Cmd.last_conn()
+    return Ping.start(2, clt_conn.conn_id, pkt)
 end
-
--- 服务器之间ping
-local function rpc_ping(id)
-    return id
-end
-
-reg_func("rpc_ping", rpc_ping)
 
 if GATEWAY == APP_TYPE then
     Cmd.reg(PLAYER.PING, player_ping)
 end
 
-return ping
+return Ping

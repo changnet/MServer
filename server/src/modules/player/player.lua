@@ -15,7 +15,6 @@ local AutoId = require "modules.system.auto_id"
 ]]
 
 local Base = require "modules.player.base"
-local Chat = require "modules.chat.chat"
 local Misc = require "modules.misc.misc"
 local Bag = require "modules.bag.bag"
 local Mail = require "modules.mail.mail"
@@ -31,7 +30,6 @@ local AREA_SESSION = {}
 -- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
 local sub_module = {
     {name = "base", new = Base},
-    {name = "chat", new = Chat},
     {name = "misc", new = Misc},
     {name = "bag", new = Bag},
     {name = "Mail", new = Mail}

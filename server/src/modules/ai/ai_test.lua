@@ -1,8 +1,8 @@
 -- 用来测试AI
 local AST = require "modules.ai.ai_header"
 
-local test = require "modules.ai.action.test"
-local move = require "modules.ai.action.move"
+local Test = require "modules.ai.action.test"
+local Move = require "modules.ai.action.move"
 local Loginout = require "modules.ai.action.loginout"
 
 local AiTest = oo.class(...)
@@ -34,11 +34,11 @@ function AiTest:routine(ms_now)
     -- 移动、切换场景
     -- 增加、使用资源
 
-    -- test:gm(self)
-    -- test:chat(self)
-    -- test:ping(self)
-    -- move:random_move(self)
-    -- move:switch_dungeon(self)
+    -- Test.gm(self)
+    Test.chat(self)
+    Test.ping(self)
+    Move.random_move(self)
+    Move.switch_dungeon(self)
 end
 
 return AiTest

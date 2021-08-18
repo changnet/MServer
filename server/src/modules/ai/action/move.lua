@@ -1,7 +1,7 @@
 -- AI移动相关action
 local MT = require "modules.move.move_header"
 
-local Move = oo.class(...)
+local Move = {}
 
 local DG_MIN_SEC = 30
 local DG_MAX_SEC = 180

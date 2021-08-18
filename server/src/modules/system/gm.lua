@@ -111,7 +111,7 @@ end
 
 -- ping一下服务器间的延迟，看卡不卡
 function GM.ping()
-    return g_ping:start(1)
+    return Ping.start(1)
 end
 
 -- 添加元宝

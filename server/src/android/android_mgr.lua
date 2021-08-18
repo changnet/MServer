@@ -21,14 +21,10 @@ end
 
 function on_cmd(conn, cmd, errno, ...)
     local handler = sc_cmd[cmd]
-    if not handler then
-        elog("android on cmd no such cmd:%d", cmd)
-        return
-    end
 
     if not handler then
         -- android_cmd:dump_pkt( ... )
-        elog("android on cmd no handler found:%d", cmd)
+        -- elog("android on cmd no handler found:%d", cmd)
         return
     end
 

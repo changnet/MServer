@@ -92,7 +92,7 @@ function Bag:raw_add(item)
 
     local conf = item_conf[id]
     if not conf then
-        elog("item conf not found:player = %d,id = %d", self.pid, id)
+        elogf("item conf not found:player = %d,id = %d", self.pid, id)
         return count
     end
 
@@ -149,7 +149,7 @@ function Bag:add_to_new_grid(item)
     if count <= 0 then return 0 end
 
     -- 没有新格子可以插入
-    elog("bag full:player = %d,id = %d,count = %d", self.pid, item.id, count)
+    printf("bag full:player = %d,id = %d,count = %d", self.pid, item.id, count)
     return count
 end
 

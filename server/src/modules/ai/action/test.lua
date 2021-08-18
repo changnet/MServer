@@ -1,5 +1,5 @@
 -- 一些用来测试服务器的ai action
-local Test = oo.class(...)
+Test = {}
 
 -- 生成一些长短不一的字符串，用来检验服务器返回的包是否完整
 
@@ -27,7 +27,7 @@ local random_str = {""}
 -- 一般测试用这个随机就可以了
 table.insert(random_str, "just some test char 1234567890abcdefghijklmno")
 
-function Test:ping(ai)
+function Test.ping(ai)
     if ai.ping_ctx then return end -- 上一次的还没返回
 
     local entity = ai.entity
@@ -38,7 +38,7 @@ function Test:ping(ai)
     ai.ping_ctx = ctx -- 放到后面，因为发包时要测试超长报错的情况
 end
 
-function Test:gm(ai)
+function Test.gm(ai)
     -- gm测试
     local entity = ai.entity
     -- entity:send_pkt( MISC.WELCOME_GET,{} )
@@ -49,13 +49,13 @@ function Test:gm(ai)
     entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
 end
 
-function Test:chat(ai)
+function Test.chat(ai)
     ai.entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "12345678"})
 end
 
 -- ************************************************************************** --
 
-function Test:on_ping(entity, ecode, pkt)
+function Test.on_ping(entity, ecode, pkt)
     local ai = entity.ai
 
     -- pbc发空字符串会变成nil
@@ -66,7 +66,7 @@ function Test:on_ping(entity, ecode, pkt)
     -- vd(pkt)
 end
 
-function Test:on_chat(entity, ecode, pkt)
+function Test.on_chat(entity, ecode, pkt)
     printf("chat: %d say %s", pkt.pid, pkt.context)
 end
 
