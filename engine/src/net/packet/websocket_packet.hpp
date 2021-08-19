@@ -36,8 +36,8 @@ public:
     // 单个消息时，重置
     class Buffer &body_buffer() { return _body; }
 
-    // 从http升级到websocket时，会触发一次on_message_complete
-    int32_t on_message_complete(bool upgrade);
+    //< 从http升级到websocket时，会触发一次on_message_complete
+    virtual int32_t on_message_complete(bool upgrade) override;
 
     // 发送opcode
     int32_t pack_ctrl(lua_State *L, int32_t index);

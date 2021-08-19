@@ -23,6 +23,17 @@ t_describe("flatbuffers test", function()
 
     local PERF_TIMES = 1000
 
+    local TEST = {
+        -- 测试用的包
+        BASE = {
+            s = "system.TestBase", c = "system.TestBase", i = 1
+        },
+        -- 测试用的包
+        LITE = {
+            s = "system.TestLite", c = "system.TestLite", i = 2
+        },
+    }
+
     -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
     -- 使用 -9223372036854775808|0 或者 math.mininteger
@@ -86,6 +97,8 @@ t_describe("flatbuffers test", function()
             }
         }
 
+        -- 手动构建测试用的协议，参考auto_cs.lua
+        Cmd.CS = { TEST = TEST }
         -- 加载协议文件
         Cmd.SCHEMA_TYPE = network_mgr.CDT_FLATBUF
         local ok = Cmd.load_flatbuffers()
@@ -112,27 +125,27 @@ t_describe("flatbuffers test", function()
         t_wait(2000)
     end)
     t_it("flatbuffers base", function()
-        Cmd.reg(PLAYER.PING, function(conn, pkt)
+        Cmd.reg(TEST.BASE, function(pkt)
             t_equal(pkt, base_pkt)
-            conn:send_pkt(PLAYER.PING, pkt)
+            srv_conn:send_pkt(TEST.BASE, pkt)
         end, true)
         clt_conn.on_cmd = function(self, cmd, e, pkt)
-            t_equal(cmd, PLAYER.PING.i)
+            t_equal(cmd, TEST.BASE.i)
             t_equal(pkt, base_pkt)
             t_done()
         end
 
-        clt_conn:send_pkt(PLAYER.PING, base_pkt)
+        clt_conn:send_pkt(TEST.BASE, base_pkt)
 
         t_wait()
     end)
     t_it(string.format("flatbuffers perf test %d", PERF_TIMES), function()
         local count = 0
-        Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
-            conn:send_pkt(PLAYER.PING_LITE, pkt)
+        Cmd.reg(TEST.LITE, function(pkt)
+            srv_conn:send_pkt(TEST.LITE, pkt)
         end, true)
         clt_conn.on_cmd = function(self, cmd, e, pkt)
-            t_equal(cmd, PLAYER.PING_LITE.i)
+            t_equal(cmd, TEST.LITE.i)
             count = count + 1
 
             if count >= PERF_TIMES then t_done() end
@@ -141,29 +154,29 @@ t_describe("flatbuffers test", function()
         -- 一次性发送大量数据，测试缓冲区及打包效率
         -- 由于大量的包堆在缓冲区，需要用到多个缓冲区块，有很多using continuous buffer日志
         for _ = 1, PERF_TIMES do
-            clt_conn:send_pkt(PLAYER.PING_LITE, lite_pkt)
+            clt_conn:send_pkt(TEST.LITE, lite_pkt)
         end
 
         t_wait()
     end)
     t_it(string.format("flatbuffers pingpong test %d", PERF_TIMES), function()
         local count = 0
-        Cmd.reg(PLAYER.PING_LITE, function(conn, pkt)
-            conn:send_pkt(PLAYER.PING_LITE, pkt)
+        Cmd.reg(TEST.LITE, function(pkt)
+            srv_conn:send_pkt(TEST.LITE, pkt)
         end, true)
         clt_conn.on_cmd = function(self, cmd, e, pkt)
-            t_equal(cmd, PLAYER.PING_LITE.i)
+            t_equal(cmd, TEST.LITE.i)
             count = count + 1
 
             if count >= PERF_TIMES then
                 t_done()
             else
-                clt_conn:send_pkt(PLAYER.PING_LITE, lite_pkt)
+                clt_conn:send_pkt(TEST.LITE, lite_pkt)
             end
         end
 
         -- 测试来回发送数据，这个取决于打包、传输效率
-        clt_conn:send_pkt(PLAYER.PING_LITE, lite_pkt)
+        clt_conn:send_pkt(TEST.LITE, lite_pkt)
 
         t_wait()
     end)

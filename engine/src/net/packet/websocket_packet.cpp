@@ -177,7 +177,7 @@ WebsocketPacket::~WebsocketPacket()
     _is_upgrade = false;
 
     delete _parser;
-    _parser = NULL;
+    _parser = nullptr;
 }
 
 int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
@@ -189,7 +189,7 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
         static_cast<websocket_flags>(luaL_checkinteger(L, index));
 
     size_t size     = 0;
-    const char *ctx = luaL_optlstring(L, index + 1, NULL, &size);
+    const char *ctx = luaL_optlstring(L, index + 1, nullptr, &size);
     // if ( !ctx ) return 0; // 允许发送空包
 
     size_t len         = websocket_calc_frame_size(flags, size);
@@ -260,7 +260,6 @@ int32_t WebsocketPacket::unpack()
     // 普通错误，比如回调脚本出错，是不会中止解析的
     if (nparser != size)
     {
-        _socket->stop();
         return -1;
     }
 
@@ -269,13 +268,21 @@ int32_t WebsocketPacket::unpack()
     return 0;
 }
 
-/* http-parser在解析完握手数据时，会触发一次message_complete */
 int32_t WebsocketPacket::on_message_complete(bool upgrade)
 {
-    assert(upgrade && !_is_upgrade);
+    // 正在情况下，对方应该只下发一个带upgrade标记的http头来进行握手
+    // 但如果对方不是websocket，则可能按http下发404之类的其他东西
+    if (!upgrade || _is_upgrade)
+    {
+        ELOG("upgrade error, %s", _http_info._body.c_str());
+        return -1;
+    }
 
     _is_upgrade = true;
-    invoke_handshake();
+    if (0 != invoke_handshake())
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -285,8 +292,8 @@ int32_t WebsocketPacket::invoke_handshake()
     /* https://tools.ietf.org/pdf/rfc6455.pdf Section 1.3,page 6
      */
 
-    const char *key_str    = NULL;
-    const char *accept_str = NULL;
+    const char *key_str    = nullptr;
+    const char *accept_str = nullptr;
 
     /* 不知道当前是服务端还是客户端，两个key都查找，由上层处理 */
     const head_map_t &head_field       = _http_info._head_field;
@@ -305,7 +312,7 @@ int32_t WebsocketPacket::invoke_handshake()
         }
     }
 
-    if (NULL == key_str && NULL == accept_str)
+    if (nullptr == key_str && nullptr == accept_str)
     {
         ELOG("websocket handshake header field not found");
         return -1;

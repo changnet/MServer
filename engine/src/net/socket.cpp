@@ -747,7 +747,7 @@ void Socket::command_cb(int32_t revents)
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
     {
-        if ((ret = _packet->unpack()) <= 0) return;
+        if ((ret = _packet->unpack()) <= 0) break;
     } while (fd_valid(fd()));
 
     // 解析过程中错误，断开链接
