@@ -58,6 +58,8 @@ function EntityCmd.player_enter_dungeon(pid, dungeon_hdl, dungeon_id, scene_id, 
     end
 
     g_dungeon_mgr:enter_dungeon(player, dungeon_hdl, dungeon_id, scene_id, x, y)
+
+    print("area player enter dungeon", pid, dungeon_id, scene_id, x, y)
 end
 
 -- 玩家首次进入场景(跨进程切换副本也走这里)
@@ -76,7 +78,7 @@ function EntityCmd.player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, 
 
     g_dungeon_mgr:enter_dungeon(player, dungeon_hdl, dungeon_id, scene_id, x, y)
 
-    print("player init scene", pid, scene_id, x, y)
+    print("area player init scene", pid, scene_id, x, y)
 end
 
 --------------------------------------------------------------------------------

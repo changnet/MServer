@@ -1,41 +1,15 @@
 -- 一些用来测试服务器的ai action
 Test = {}
 
--- 生成一些长短不一的字符串，用来检验服务器返回的包是否完整
-
--- 测试socket拆包完整性才用65535,平时不用这么大
--- 由于protobuf编码，发65535肯定超最大包长了，注意下报错就行
-local random_str = {""}
--- local max_pkt = 55535
--- -- 测试包临界才用这个随机
--- local function random_one( max_len )
---     local chars = {}
---     for _ = 1,max_len do
---         table.insert(chars,string.char(math.random(48,126)))
---     end
-
---     table.insert(random_str,table.concat(chars))
--- end
-
--- for _ = 1,200 do
---     random_one( math.random(1,max_pkt) )
--- end
-
--- random_one( max_pkt )-- 保证最大临界值一定会出现
--- print("random LARGE string finish !!!")
-
--- 一般测试用这个随机就可以了
-table.insert(random_str, "just some test char 1234567890abcdefghijklmno")
-
 function Test.ping(ai)
-    if ai.ping_ctx then return end -- 上一次的还没返回
+    if ai.ping_time then return end -- 上一次的还没返回
 
     local entity = ai.entity
 
-    local ctx = random_str[math.random(1, #random_str)]
     ai.ping_ts = (ai.ping_ts or 0) + 1
-    entity:send_pkt(PLAYER.PING, {index = ai.ping_ts, context = ctx})
-    ai.ping_ctx = ctx -- 放到后面，因为发包时要测试超长报错的情况
+    ai.ping_time = ev:real_ms_time()
+
+    entity:send_pkt(PLAYER.PING, {})
 end
 
 function Test.gm(ai)
@@ -58,12 +32,18 @@ end
 function Test.on_ping(entity, ecode, pkt)
     local ai = entity.ai
 
-    -- pbc发空字符串会变成nil
-    assert((pkt.context or "") == ai.ping_ctx, string.len(ai.ping_ctx))
+    local beg = ai.ping_time
 
-    ai.ping_ctx = nil
-    print("ping:", pkt.index)
-    -- vd(pkt)
+    ai.ping_time = nil
+
+    -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
+    local ms = ev:real_ms_time() - beg
+    print("ping", ai.ping_ts, ms)
+    for _, delay in pairs(pkt.delay) do
+        if (delay.time or 0) + ms > 10 then
+            print("     latency too large", delay.name, (delay.time or 0) + ms)
+        end
+    end
 end
 
 function Test.on_chat(entity, ecode, pkt)

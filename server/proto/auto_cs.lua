@@ -30,14 +30,9 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
         s = "player.SLogin", c = "player.CLogin", i = 1
 
     },
-    -- 测试用的包
+    -- ping后端延迟
     PING = {
-        s = "player.PingPong", c = "player.PingPong", i = 2
-
-    },
-    -- 测试用的包
-    PING_LITE = {
-        s = "player.PingPongLite", c = "player.PingPongLite", i = 24
+        s = "player.SPing", c = "misc.Empty", i = 2
 
     },
     -- 创角
