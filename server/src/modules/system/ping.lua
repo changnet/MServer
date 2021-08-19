@@ -10,11 +10,10 @@ local this = global_storage("Ping", {
     pending = {},
 })
 
--- 开始一个所有进程ping
--- @how:1gm，2客户端
--- @conn_id:返回数据的连接，可能是gm，也可能是机器人
--- @other:机器人发过来的数据，原样返回以校验完整性。如果是gm，则为nil
-function Ping.start(how, conn_id, other)
+-- 开始ping所有进程以测试延迟
+-- @param how 来源，1 gm，2客户端
+-- @param conn_id 返回数据的连接，可能是gm，也可能是机器人
+function Ping.start(how, conn_id)
     local id = this.seed
     this.seed = this.seed + 1
 
@@ -31,7 +30,6 @@ function Ping.start(how, conn_id, other)
         srvs = {},
         how = how,
         wait = wait,
-        other = other,
         conn_id = conn_id,
         ms_time = ev:real_ms_time()
     }
@@ -43,7 +41,7 @@ function Ping.do_ping(id)
 end
 
 -- 其他服务器进程收到ping返回
-function Ping.on_ping(ecode, id)
+function Ping.on_ping(id)
     local info = this.pending[id]
     if not info then return print("ping no info found", id) end
 
@@ -69,21 +67,21 @@ function Ping.done(id, info)
 
     local how = info.how
     if 1 == how then -- gm请求，直接打印
+        print("ping done /////////////////////////")
         print(table.dump(info))
         return
-    end
+    elseif 2 == how then -- 来自客户端的
+        -- 连接已断开
+        local conn = CltMgr.get_conn(info.conn_id)
+        if not conn then
+            return print("ping done,no conn found", info.conn_id, info.index)
+        end
 
-    -- 连接已断开
-    local conn = SrvMgr.get_conn(info.conn_id)
-    if not conn then
-        return print("ping done,no conn found", info.conn_id, info.index)
-    end
-
-    if 2 == how then -- 来自客户端的
-        local pkt = info.other
-        pkt.srvtime = {}
-        for _, srvtime in pairs(info.srvs) do
-            table.insert(pkt.srvtime, srvtime)
+        local pkt = {
+            delay = {}
+        }
+        for _, delay in pairs(info.srvs) do
+            table.insert(pkt.delay, delay)
         end
 
         return conn:send_pkt(PLAYER.PING, pkt)

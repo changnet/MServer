@@ -258,7 +258,8 @@ end
 function Rpc.call(session, func, ...)
     local conn = SrvMgr.get_conn_by_session(session)
     if not conn then
-        printf("rpc call no connection found: %d", session)
+        printf("rpc call no connection found: %d, %s",
+            session, debug.traceback())
         return
     end
 

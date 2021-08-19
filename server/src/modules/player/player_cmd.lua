@@ -1,7 +1,9 @@
 -- 玩家相关协议处理
 
 if WORLD == APP_TYPE then
---     player_clt_cb(PLAYER.ENTERDUNGEON, Player.enter_dungeon)
+    local Player = require "modules.player.player"
+
+    Cmd.reg_player(PLAYER.ENTERDUNGEON, Player.enter_dungeon)
     Cmd.reg(PLAYER.ENTER, PlayerMgr.on_enter_world, true)
 
     Cmd.reg_srv(SYS.PLAYER_OFFLINE, PlayerMgr.on_player_offline)

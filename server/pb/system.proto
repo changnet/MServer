@@ -1,6 +1,98 @@
 // 系统模块 协议定义
+// 这个仅仅是后端在使用
+
 syntax = "proto3";
 package system;
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// 仅仅用于测试的message
+
+// 用于简单协议效率测试
+message TestLite
+{
+    message SubMsg
+    {
+        bool b1 = 1;
+        int64 i1 = 2;
+        string s = 3;
+        int64 i2 = 4;
+        bool b2 = 5;
+        double d1 = 6;
+        int32 i3 = 7;
+    }
+
+    bool b1 = 1;
+    int64 i1 = 2;
+    string s = 3;
+    int64 i2 = 4;
+    bool b2 = 5;
+    double d1 = 6;
+    int32 i3 = 7;
+
+    SubMsg msg = 8;
+}
+
+// 用于复杂协议校验
+message TestBase
+{
+    message SubMsg
+    {
+        double d1 = 1;
+        double d2 = 2;
+        float f1 = 3;
+        float f2 = 4;
+        int32 i1 = 5;
+        int32 i2 = 6;
+        int64 i641 = 7;
+        int64 i642 = 8;
+        bool b1 = 9;
+        bool b2 = 10;
+        string s1 = 11;
+        string s2 = 12;
+        bytes by1 = 13;
+        bytes by2 = 14;
+        uint32 ui1 = 15;
+        uint32 ui2 = 16;
+        uint64 ui641 = 17;
+        uint64 ui642 = 18;
+        fixed32 f321 = 19;
+        fixed32 f322 = 20;
+        fixed64 f641 = 21;
+        fixed64 f642 = 22;
+    }
+
+    double d1 = 1;
+    double d2 = 2;
+    float f1 = 3;
+    float f2 = 4;
+    int32 i1 = 5;
+    int32 i2 = 6;
+    int64 i641 = 7;
+    int64 i642 = 8;
+    bool b1 = 9;
+    bool b2 = 10;
+    string s1 = 11;
+    string s2 = 12;
+    bytes by1 = 13;
+    bytes by2 = 14;
+    uint32 ui1 = 15;
+    uint32 ui2 = 16;
+    uint64 ui641 = 17;
+    uint64 ui642 = 18;
+    fixed32 f321 = 19;
+    fixed32 f322 = 20;
+    fixed64 f641 = 21;
+    fixed64 f642 = 22;
+    SubMsg msg1 = 23;
+    repeated int32 i_list = 24;
+    repeated SubMsg msg_list = 25;
+
+    int32 index = 64; // 索引
+    string context = 65; // 目前用来测试socket效率，分包等情况
+}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 /* 服务器注册 */
 message SSRegister

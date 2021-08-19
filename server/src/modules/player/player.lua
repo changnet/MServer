@@ -271,15 +271,13 @@ function Player:enter_dungeon(pkt)
 
     local session = AREA_SESSION[index]
     if not session then
-        session = g_app:encode_session("area", index, tonumber(g_app.id))
+        session = g_app:encode_session(AREA, index, tonumber(g_app.id))
         AREA_SESSION[index] = session
     end
 
-    local conn = SrvMgr.get_conn_by_session(session)
-
     -- 然后玩家从当前进程退出场景
     if session ~= self.session then
-        Rpc.proxy(self.pid):player_exit(self.pid)
+        Rpc.call(self.session, EntityCmd.player_exit, self.pid)
 
         self:set_session(session)
 
