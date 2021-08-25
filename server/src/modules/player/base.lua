@@ -96,4 +96,6 @@ function Base:update_res(res_type, val)
     self.player:send_pkt(PLAYER.UPDATE_RES, res_pkt)
 end
 
+PE.reg(PE_ENTER, Base.send_info)
+
 return Base

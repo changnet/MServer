@@ -113,4 +113,5 @@ require_app("modules.dungeon.test_dungeon", AREA) -- 测试不同场景进程中
 make_name()
 
 -- 生成回调
-Cmd.make_this_cb()
+PE.make_cb()
+Cmd.make_cb()

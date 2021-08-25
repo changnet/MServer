@@ -22,6 +22,9 @@ local this_func = nil
 local Player = require "modules.player.player"
 local EntityPlayer = require "modules.entity.entity_player"
 
+local PlayerMgr = nil
+local EntityMgr = nil
+
 -- 生成特定类的函数hash表
 local function make_func()
     -- 目前支持的回调类
@@ -35,10 +38,15 @@ local function make_func()
         this_func[func] = EntityPlayer
     end
     for _, m in pairs(player_modules) do
-        for name, func in pairs(m) do
+        local name = m.name
+        for fname, func in pairs(m.new) do
             this_func[func] = name
         end
     end
+
+    -- 转换成local变量，避免生成的函数去global取
+    PlayerMgr = _G.PlayerMgr
+    EntityMgr = _G.EntityMgr
 end
 
 -- 生成回调函数
@@ -47,7 +55,7 @@ end
 -- @param msg 出错时用于打印日志的信息
 -- @param id 出错时用于打印日志区分是哪个消息出错
 -- @return 如果建立了新的回调，则返回该回调函数，否则为nil
-function ThisCall.make(cb, this_type, msg, id)
+function ThisCall.make_from_pid(cb, this_type, msg, id)
     if not this_func then make_func() end
 
     -- 1. 对于上面指定的类中的函数，不管用Cmd.reg还是Cmd.reg_player、Cmd.reg_entity
@@ -83,6 +91,31 @@ function ThisCall.make(cb, this_type, msg, id)
                 return
             end
 
+            return cb(player[m], ...)
+        end
+    end
+end
+
+
+-- 生成回调函数
+-- @param cb 原始回调函数
+-- @param this_type 强制指定的回调类型，1 玩家对象， 2玩家实体对象
+-- @param msg 出错时用于打印日志的信息
+-- @param id 出错时用于打印日志区分是哪个消息出错
+-- @return 如果建立了新的回调，则返回该回调函数，否则为nil
+function ThisCall.make_from_player(cb, this_type, msg, id)
+    if not this_func then make_func() end
+
+    -- 回调的第一个参数为player或者EntityPlayer
+    local m = this_func[cb]
+    if not m and not this_type then return end
+
+    if m == Player or 1 == this_type then
+        return nil
+    elseif m == EntityPlayer or 2 == this_type then
+        return nil
+    else
+        return function(player, ...)
             return cb(player[m], ...)
         end
     end

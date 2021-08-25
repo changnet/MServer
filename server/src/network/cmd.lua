@@ -310,11 +310,11 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
 end
 
 -- 生成模块、实体回调函数
-function Cmd.make_this_cb()
+function Cmd.make_cb()
     local ThisCall = require "modules.system.this_call"
 
     for cmd, cfg in pairs(cs_handler) do
-        local this_cb = ThisCall.make(cfg.handler, cfg.t, "cmd", cmd)
+        local this_cb = ThisCall.make_from_pid(cfg.handler, cfg.t, "cmd", cmd)
         if this_cb then cfg.handler = this_cb end
     end
 end
