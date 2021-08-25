@@ -32,6 +32,7 @@ globals = require "__globals"
 table.insert(globals, "math")
 table.insert(globals, "table")
 table.insert(globals, "string")
+table.insert(globals, "utf8")
 
 exclude_files =
 {

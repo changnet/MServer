@@ -10,9 +10,11 @@ local Chat = {
     CHL_PRIVATE = 2 -- 私聊
 }
 
+local K = "chat"
+
 -- 处理聊天
 function Chat.do_chat(player, pkt)
-    local var = player:get_misc_var("chat")
+    local var = player:storage(K)
     if var.no_chat then -- 被禁言
         return print("do chat while no_chat", player.pid)
     end

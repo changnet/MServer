@@ -1,18 +1,11 @@
 -- playe.lua
 -- 2017-04-03
 -- xzc
+
 -- 玩家对象
+local Player = oo.class(...)
 
 local AutoId = require "modules.system.auto_id"
-
---[[
-玩家子模块，以下功能会自动触发
-1. 创建对象
-2. 加载数据库:db_load
-3. 数据初始化:on_init
-4. 定时存库  :db_save
-5. 定时器    :on_timer
-]]
 
 local Base = require "modules.player.base"
 local Misc = require "modules.misc.misc"
@@ -28,14 +21,22 @@ local method_thunk = method_thunk
 local AREA_SESSION = {}
 
 -- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
-local sub_module = {
+-- 仅需要独立存库的模块需要设置为子模块，用storage、tmp_storage的使用普通模块就可以了
+--[[
+玩家子模块，以下功能会自动触发
+1. 创建对象
+2. 加载数据库:db_load
+3. 数据初始化:on_init
+4. 定时存库  :db_save
+5. 定时器    :on_timer
+]]
+
+local SUB_MODULES = {
     {name = "base", new = Base},
     {name = "misc", new = Misc},
     {name = "bag", new = Bag},
-    {name = "Mail", new = Mail}
+    {name = "mail", new = Mail}
 }
-
-local Player = oo.class(...)
 
 function Player:__init(pid)
     self.pid = pid
@@ -47,14 +48,22 @@ function Player:__init(pid)
     self.timer_5scb = {}
 
     -- 创建各个子模块，这些模块包含统一的db存库、加载、初始化规则
-    for _, module in pairs(sub_module) do
+    for _, module in pairs(SUB_MODULES) do
         self[module.name] = module.new(pid, self)
     end
+
+    -- 用于不存库的临时存储空间
+    self.temp_storage = {}
 
     -- 不需要标准流程的子模块
     self.abt_sys = AttributeSys(pid)
 
     self.timer = g_timer_mgr:interval(5000, 5000, -1, self, self.do_timer)
+end
+
+-- 获取所有模块配置
+function Player:get_sub_modules()
+    return SUB_MODULES
 end
 
 -- 获取玩家id
@@ -93,7 +102,7 @@ end
 -- 开始从db加载各模块数据
 function Player:module_db_load()
     -- 根据顺序加载数据库数据
-    for step, module in pairs(sub_module) do
+    for step, module in pairs(SUB_MODULES) do
         local ok = self[module.name]:db_load(self.sync_db)
         if not ok then
             elog("player db load error,pid %d,step %d", self.pid, step)
@@ -105,7 +114,7 @@ function Player:module_db_load()
     local is_new = self:is_new()
 
     -- db数据初始化，如果模块之间有数据依赖，请自己调整好顺序
-    for _, module in pairs(sub_module) do self[module.name]:on_init(is_new) end
+    for _, module in pairs(SUB_MODULES) do self[module.name]:on_init(is_new) end
     self.base_root = self.base.root -- 增加一个引用，快速取基础数据
 
     self:on_login()
@@ -148,7 +157,10 @@ end
 
 -- 登录游戏
 function Player:on_login()
-    for _, module in pairs(sub_module) do self[module.name]:on_login() end
+    for _, module in pairs(SUB_MODULES) do self[module.name]:on_login() end
+
+    -- 这个很常用，直接引用后面就不需要每次都向misc取
+    self.misc_storage = self.misc.storage
 
     PE.fire_event(PE_ENTER, self)
 
@@ -198,10 +210,10 @@ function Player:on_logout()
     PE.fire_event(PE_EXIT, self)
 
     -- 各个子模块退出处理
-    for _, module in pairs(sub_module) do self[module.name]:on_logout() end
+    for _, module in pairs(SUB_MODULES) do self[module.name]:on_logout() end
 
     -- 存库
-    for _, module in pairs(sub_module) do self[module.name]:db_save() end
+    for _, module in pairs(SUB_MODULES) do self[module.name]:db_save() end
 
     local session = self:get_session()
 
@@ -218,14 +230,32 @@ function Player:get_module(name)
     return self[name]
 end
 
--- 获取通用的存库数据
-function Player:get_misc_var(key)
-    return self.misc:get_var(key)
+-- 获取自动存库的数据存储空间
+-- @param key 模块定义的key，不传则为整个存储空间
+function Player:storage(key)
+    if not key then return self.misc_storage end
+
+    local storage = self.misc_storage[key]
+    if storage then
+        storage = {}
+        self.misc_storage[key] = storage
+    end
+
+    return storage
 end
 
--- 获取通用数据
-function Player:get_misc_root()
-    return self.misc:get_root()
+-- 获取临时的数据存储空间（不存库）
+-- @param key 模块定义的key，不传则为整个存储空间
+function Player:tmp_storage(key)
+    if not key then return self.temp_storage end
+
+    local storage = self.temp_storage[key]
+    if storage then
+        storage = {}
+        self.temp_storage[key] = storage
+    end
+
+    return storage
 end
 
 -- 获取元宝数量

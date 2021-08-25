@@ -11,6 +11,7 @@ Cmd.SS = require_define("proto.auto_ss")
 
 local app_reg = {} -- 记录哪些服务器已注册过协议
 
+local last_cmd = nil -- 上一次执行的cmd
 local last_connection = nil -- 上一次回调的连接，通常用于快速回包
 
 local SESSION = g_app.session
@@ -263,6 +264,7 @@ function Cmd.dispatch_srv(srv_conn, cmd, ...)
         return elog("dispatch_srv:try to call auth cmd", cmd)
     end
 
+    last_cmd = cmd
     last_connection = srv_conn
     return do_handler(cfg.handler, srv_conn, ...)
 end
@@ -278,6 +280,7 @@ function Cmd.dispatch_clt(clt_conn, cmd, ...)
         return elog("dispatch_clt:try to call auth cmd %d", cmd)
     end
 
+    last_cmd = cmd
     last_connection = clt_conn
     return do_handler(cfg.handler, ...)
 end
@@ -301,25 +304,18 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
             elogf("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
     end
 
-    local handler = cfg.handler
-    local this_type = cfg.t
-    if 1 == this_type then
-        local player = PlayerMgr.get_player(pid)
-        if not player then
-            print("dispatch_css player not found", pid, cmd)
-            return
-        end
-        return do_handler(handler, player, ...)
-    elseif 2 == this_type then
-        local entity = EntityMgr.get_player(pid)
-        if not entity then
-            print("dispatch_css entity not found", pid, cmd)
-            return
-        end
+    last_cmd = cmd
+    last_connection = srv_conn
+    return do_handler(cfg.handler, pid, ...)
+end
 
-        return do_handler(handler, entity, ...)
-    else
-        return do_handler(handler, pid, ...)
+-- 生成模块、实体回调函数
+function Cmd.make_this_cb()
+    local ThisCall = require "modules.system.this_call"
+
+    for cmd, cfg in pairs(cs_handler) do
+        local this_cb = ThisCall.make(cfg.handler, cfg.t, "cmd", cmd)
+        if this_cb then cfg.handler = this_cb end
     end
 end
 

@@ -8,7 +8,7 @@ local RoleWelcome = oo.singleton(...)
 
 -- 登录事件
 function RoleWelcome:on_enter(player)
-    local var = player:get_misc_root()
+    local var = player:storage()
     if var.welcome then return end -- 已经领取过
 
     return self:send_info(player, 0)
@@ -21,7 +21,7 @@ end
 
 -- 处理前端领取奖励
 function RoleWelcome:handle_award(player, pkt)
-    local var = player:get_misc_root()
+    local var = player:storage()
     if var.welcome then return end -- 已经领取过
 
     var.welcome = 1
