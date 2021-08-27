@@ -15,7 +15,6 @@ local Mail = require "modules.mail.mail"
 local SyncMongodb = require "mongodb.sync_mongodb"
 local AttributeSys = require "modules.attribute.attribute_sys"
 
-local RES = RES
 local method_thunk = method_thunk
 
 local AREA_SESSION = {}
@@ -96,7 +95,8 @@ end
 
 -- 是否新创建的玩家(仅在登录过程有用，登录完成后肯定不是新玩家了)
 function Player:is_new()
-    return (1 == self.base.root.new)
+    -- 该new字段由创角时在写入数据库
+    return 1 == self.base.root.new
 end
 
 -- 开始从db加载各模块数据
@@ -256,29 +256,6 @@ function Player:tmp_storage(key)
     end
 
     return storage
-end
-
--- 获取元宝数量
-function Player:get_gold()
-    return self.base_root.gold
-end
-
--- 增加元宝
-function Player:add_gold(count, op, sub_op)
-    local new_val = self.base_root.gold + count
-    g_log_mgr:gold_log(self.pid, count, new_val, op, sub_op)
-
-    self.base_root.gold = new_val
-    self.base:update_res(RES.GOLD, self.base_root.gold)
-end
-
--- 增加元宝
-function Player:dec_gold(count, op, sub_op)
-    local new_val = self.base_root.gold - count
-    g_log_mgr:gold_log(self.pid, count, new_val, op, sub_op)
-
-    self.base_root.gold = new_val
-    self.base:update_res(RES.GOLD, self.base_root.gold)
 end
 
 -- 获取等级

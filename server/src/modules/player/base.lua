@@ -9,7 +9,7 @@ local Module = require "modules.player.module"
 local Base = oo.class(..., Module)
 
 function Base:__init(pid, player)
-    self.root = {}
+    self.root = nil
     Module.__init(self, pid, player)
 end
 
@@ -27,9 +27,21 @@ function Base:db_load(sync_db)
     local ecode, res = sync_db:find("base",
                                     string.format('{"_id":%d}', self.pid))
     if 0 ~= ecode then return false end -- 出错
-    if not res then return end -- 新号，空数据
 
-    self.root = res[1] -- find函数返回的是一个数组
+    -- 新号，空数据
+    if not res then
+        self.root = {}
+    else
+        self.root = res[1] -- find函数返回的是一个数组
+    end
+
+    -- 开发中，会新增一些字段，如果这些字段需要初始化，则在这里初始化
+    local root = self.root
+    if not root.money then root.money = {} end
+
+    -- 强制以object形式保存货币，这样查看数据时比较直观
+    -- 另一个原因是，开发过程中由于不断增删资源以及预留，这id也不是连续的
+    table.set_array(root.money, false)
 
     return true
 end
@@ -40,7 +52,7 @@ function Base:on_init()
     -- 新玩家初始化
     if 1 == self.root.new then
         self.root.level = 1 -- 初始1级
-        self.root.gold = 0
+        self.root.money = {}
     end
 
     -- 计算基础属性
@@ -83,7 +95,7 @@ end
 -- 发送基础数据
 function Base:send_info()
     local pkt = {}
-    pkt.gold = self.root.gold or 0
+    pkt.money = self.root.money
 
     self.player:send_pkt(PLAYER.BASE, pkt)
 end
@@ -94,6 +106,35 @@ function Base:update_res(res_type, val)
     res_pkt.val = val
     res_pkt.res_type = res_type
     self.player:send_pkt(PLAYER.UPDATE_RES, res_pkt)
+end
+
+-- 检测货币是否足够
+function Base:check_money(id, count)
+    return count <= (self.root.money[id] or 0)
+end
+
+-- 增加货币
+function Base:add_money(id, count, op, msg)
+    local val = self.root.money[id] or 0
+    local new_val = val + count
+    g_log_mgr:money_log(self.pid, count, new_val, op, msg)
+
+    self.root.money[id] = new_val
+    self:update_res(id, new_val)
+end
+
+-- 扣除货币
+function Base:dec_money(id, count, op, msg)
+    local new_val = (self.root.money[id] or 0) - count
+    g_log_mgr:money_log(self.pid, -count, new_val, op, msg)
+
+    self.root.money[id] = new_val
+    self:update_res(id, new_val)
+
+    if new_val < 0 then
+        elogf("money < 0, pid = %d, id = %d, new_val = %d, count = %d, op = %d",
+            self.pid, id, count, new_val, op)
+    end
 end
 
 PE.reg(PE_ENTER, Base.send_info)

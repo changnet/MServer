@@ -9,7 +9,7 @@ if WORLD == APP_TYPE then
     Cmd.reg_srv(SYS.PLAYER_OFFLINE, PlayerMgr.on_player_offline)
     Cmd.reg_srv(SYS.PLAYER_OTHERWHERE, PlayerMgr.on_login_otherwhere)
 
---     g_res:reg_player_res(RES.GOLD, Player.get_gold, Player.add_gold,
+--     g_res:reg_player_res(RES_GOLD, Player.get_gold, Player.add_gold,
 --                          Player.dec_gold)
 end
 

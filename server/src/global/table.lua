@@ -208,18 +208,25 @@ function table.merge(src, dest)
     return ct
 end
 
---[[
-将一个table指定为数组
-此函数与底层bson解析有关，非通用函数
-]]
-function table.set_array(t, sparse)
-    local _t = t or {}
-    local mt = getmetatable(_t) or {}
-    rawset(mt, "__array", true)
+-- 将一个table指定为数组array或对象object
+-- 这与该table的解析有关（如转换为json、mongodb存库、转换为bson）
+-- @param t 需要设置的table
+-- @param is 是否设置为array，true为数组，false将强制为object
+-- @param sparse 稀松数组阀值
+function table.set_array(t, is, sparse)
+    local mt = getmetatable(t)
+    if not mt then
+        mt = {}
+        setmetatable(t, mt)
+    end
+
+    rawset(mt, "__array", is)
+
+    -- 如果该table为数组，且key > sparse值，则以kv方式存储
+    -- 并且在里面加上__sparse字段
     if sparse then rawset(mt, "__sparse", true) end
 
-    setmetatable(_t, mt)
-    return _t
+    return t
 end
 
 -- Knuth-Durstenfeld Shuffle 洗牌算法

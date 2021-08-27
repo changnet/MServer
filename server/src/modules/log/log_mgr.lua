@@ -46,10 +46,10 @@ end
 
 -- 元宝操作日志
 -- 日志里不应该有特殊字符，故ext不做特殊处理
-function LogMgr:gold_log(pid, op_val, new_val, op_type, ext)
+function LogMgr:money_log(pid, id, op_val, new_val, op_type, ext)
     local stmt = string.format(
-                     "INSERT INTO `gold` (pid,op_val,new_val,op_type,op_time,ext) \z
-            values (%d,%d,%d,%d,%d,\"%s\")", pid, op_val, new_val, op_type,
+        "INSERT INTO `money` (pid,id,op_val,new_val,op_type,op_time,ext) \z
+        values (%d,%d,%d,%d,%d,%d,\"%s\")", pid, id, op_val, new_val, op_type,
                      ev:time(), tostring(ext or ""))
     self.db_logger:insert(stmt)
 end

@@ -1,4 +1,4 @@
--- auto export by lua-tags 176 symbols
+-- auto export by lua-tags 178 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -60,7 +60,10 @@ return {
 "PROP", -- src/modules/property/property.lua
 "Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
-"RES", -- src/modules/res/res_header.lua
+"RES_COPPER", -- src/modules/res/res_header.lua
+"RES_GOLD", -- src/modules/res/res_header.lua
+"RES_ITEM", -- src/modules/res/res_header.lua
+"Res", -- src/modules/res/res.lua
 "Rpc", -- src/rpc/rpc.lua
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
@@ -111,7 +114,6 @@ return {
 "g_map_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
-"g_res", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/android/app.lua

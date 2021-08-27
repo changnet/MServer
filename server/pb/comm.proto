@@ -1,0 +1,17 @@
+// 通用的协议结构
+
+syntax = "proto3";
+package comm;
+
+// 空协议，任何不需要发数据的协议都可以用
+message Empty
+{
+}
+
+// 通用资源
+message Res
+{
+    int32 id = 1;     // 类型，见资源类型定义
+    int32 val = 2;    // 数值
+    int32 unbind = 3; // 1表示非绑定
+}

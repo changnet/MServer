@@ -31,7 +31,7 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- ping后端延迟
     PING = {
         s = "player.SPing",
-        c = "misc.Empty"
+        c = "comm.Empty"
     },
     -- 创角
     CREATE = {
@@ -40,13 +40,12 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 进入游戏
     ENTER = {
-        s = "player.SEnterWorld",
-        c = "player.CEnterWorld"
+        s = "comm.Empty",
+        c = "comm.Empty"
     },
     -- 顶号
     OTHER = {
-        s = "player.SLoginOtherWhere",
-        c = "player.SLoginOtherWhere",
+        s = "comm.Empty",
     },
     -- 登录时下发基础数据
     BASE = {
@@ -54,7 +53,7 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 更新通用资源
     UPDATE_RES = {
-        s = "player.SUpdateRes"
+        s = "comm.Res"
     },
     -- 进入副本
     ENTERDUNGEON = {

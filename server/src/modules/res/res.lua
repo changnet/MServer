@@ -1,25 +1,23 @@
 -- res.lua
--- 018-04-09
+-- 2018-04-09
 -- xzc
+
 -- 资源管理模块
--- 资源在整个游戏配置中应该采用统一的配置(奖励、消耗等)，如
--- 资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
--- 则基本上所有的资源操作都可以统一处理
+Res = {}
+
 local res_get_map = {} -- 获取
 local res_add_map = {} -- 增加
 local res_dec_map = {} -- 扣除
 
 require "modules.res.res_header"
 
-local Res = oo.singleton(...)
-
 -- 添加资源
--- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
--- @op:操作代码，用于记录日志
--- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:add_res(player, res_list, op, sub_op)
+-- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
+-- @param op 操作代码，用于记录日志，见log_header定义
+-- @param msg 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
+function Res.add(player, res_list, op, msg)
     for _, one in pairs(res_list) do
-        self:add_one_res(player, one, op, sub_op)
+        Res.add_one(player, one, op, msg)
     end
 end
 
@@ -27,9 +25,9 @@ end
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:dec_res(player, res_list, op, sub_op)
+function Res.dec_res(player, res_list, op, sub_op)
     for _, one in pairs(res_list) do
-        self:dec_one_res(player, one, op, sub_op)
+        Res.dec_one(player, one, op, sub_op)
     end
 end
 
@@ -37,10 +35,10 @@ end
 -- @res:资源{res = 1,id = 0,count = 100}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:add_one_res(player, res, op, sub_op)
+function Res.add_one(player, res, op, sub_op)
     local add_func = res_dec_map[res.res]
     if not add_func then
-        elog("Res:add_one_res no function found:%s,op %d", tostring(res.res),
+        elog("Res.add_one no function found:%s,op %d", tostring(res.res),
               op)
         return
     end
@@ -53,10 +51,10 @@ end
 -- @res:资源{res = 1,id = 0,count = 100}
 -- @op:操作代码，用于记录日志
 -- @sub_op:子操作代码，用于记录日志。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res:dec_one_res(player, res, op, sub_op)
+function Res.dec_one(player, res, op, sub_op)
     local dec_func = res_dec_map[res.res]
     if not dec_func then
-        elog("Res:dec_one_res no function found:%s,op %d", tostring(res.res),
+        elog("Res.dec_one no function found:%s,op %d", tostring(res.res),
               op)
         return
     end
@@ -66,10 +64,10 @@ function Res:dec_one_res(player, res, op, sub_op)
 end
 
 -- 检查某个资源是否足够
-function Res:check_one_res(player, res)
+function Res.check_one(player, res)
     local get_func = res_get_map[res.res]
     if not get_func then
-        elog("Res:check_one_res not found:%s,op %d", tostring(res.res))
+        elog("Res.check_one not found:%s,op %d", tostring(res.res))
         return false
     end
 
@@ -79,16 +77,16 @@ end
 
 -- 检测资源是否足够
 -- @res_list:资源数组{{res = 1,id = 0,count = 100},{res = 3,id = 1000,count = 1}}
-function Res:check_res(player, res_list)
+function Res.check_res(player, res_list)
     for _, one in pairs(res_list) do
-        if not self:check_one_res(player, one) then return false, one end
+        if not Res.check_one(player, one) then return false, one end
     end
 
     return true
 end
 
 -- 注册处理函数(不能放在__init里，因为要热更。热更不会重新调用__init)
-function Res:reg_player_res(res_type, get, add, dec)
+function Res.reg_player_res(res_type, get, add, dec)
     res_get_map[res_type] = function(player, ...)
         return get(player, ...)
     end
@@ -107,11 +105,10 @@ local function res_op_factory(module, func)
 end
 
 -- 注册玩家子模块资源处理函数(不能放在__init里，因为要热更。热更不会重新调用__init)
-function Res:reg_module_res(module, res_type, get, add, dec)
+function Res.reg_module_res(module, res_type, get, add, dec)
     res_get_map[res_type] = res_op_factory(module, get)
     res_add_map[res_type] = res_op_factory(module, add)
     res_dec_map[res_type] = res_op_factory(module, dec)
 end
 
-local res = Res()
-return res
+return Res

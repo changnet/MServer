@@ -11,7 +11,7 @@ Cmd.SS = require_define("proto.auto_ss")
 
 local app_reg = {} -- 记录哪些服务器已注册过协议
 
-local last_cmd = nil -- 上一次执行的cmd
+local last_command = nil -- 上一次执行的cmd
 local last_connection = nil -- 上一次回调的连接，通常用于快速回包
 
 local SESSION = g_app.session
@@ -119,7 +119,9 @@ end
 
 -- 加载protobuf的pb描述文件
 function Cmd.load_protobuf()
-    return load_schema(network_mgr.CDT_PROTOBUF, "../pb", nil, "pb")
+    return load_schema(network_mgr.CDT_PROTOBUF, "../pb", {
+        "comm.proto",
+    }, "pb")
 end
 
 -- 加载flatbuffers的描述文件
@@ -130,6 +132,11 @@ end
 -- 获取上一次回调的网络连接id
 function Cmd.last_conn()
     return last_connection
+end
+
+-- 获取上一次回调的协议id
+function Cmd.last_cmd()
+    return last_command
 end
 
 -- 注册客户端协议回调
@@ -264,7 +271,7 @@ function Cmd.dispatch_srv(srv_conn, cmd, ...)
         return elog("dispatch_srv:try to call auth cmd", cmd)
     end
 
-    last_cmd = cmd
+    last_command = cmd
     last_connection = srv_conn
     return do_handler(cfg.handler, srv_conn, ...)
 end
@@ -280,7 +287,7 @@ function Cmd.dispatch_clt(clt_conn, cmd, ...)
         return elog("dispatch_clt:try to call auth cmd %d", cmd)
     end
 
-    last_cmd = cmd
+    last_command = cmd
     last_connection = clt_conn
     return do_handler(cfg.handler, ...)
 end
@@ -304,7 +311,7 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
             elogf("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
     end
 
-    last_cmd = cmd
+    last_command = cmd
     last_connection = srv_conn
     return do_handler(cfg.handler, pid, ...)
 end

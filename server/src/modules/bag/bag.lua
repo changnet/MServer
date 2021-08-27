@@ -45,7 +45,7 @@ function Bag:db_load(sync_db)
     if res and res[1] then self.grid = res[1].item end
 
     -- 标识为数组，这样在存库时会把各个格子的道具存为数组
-    table.set_array(self.grid)
+    table.set_array(self.grid, true)
 
     return true
 end

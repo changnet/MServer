@@ -32,7 +32,7 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- ping后端延迟
     PING = {
-        s = "player.SPing", c = "misc.Empty", i = 2
+        s = "player.SPing", c = "comm.Empty", i = 2
 
     },
     -- 创角
@@ -56,7 +56,7 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 更新通用资源
     UPDATE_RES = {
-        s = "player.SUpdateRes", i = 7
+        s = "comm.Res", i = 7
     },
     -- 进入副本
     ENTERDUNGEON = {

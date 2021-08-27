@@ -25,7 +25,7 @@ local function handle_award(player, pkt)
     if var.welcome then return end -- 已经领取过
 
     var.welcome = 1
-    g_res:add_res(player, WelcomConf.resources, LOG.WELCOME)
+    Res.add(player, WelcomConf.resources, LOG.WELCOME)
 
     -- TODO: 还要发封邮件
 

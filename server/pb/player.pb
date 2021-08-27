@@ -1,6 +1,7 @@
 
-ï
-player.protoplayer"
+Í
+player.protoplayer
+comm.proto"
 	SSOffline
 pid (Rpid" 
 SSOtherWhere
@@ -21,13 +22,9 @@
 name (	Rname"
 CEnterWorld"
 SEnterWorld"
-SLoginOtherWhere"
-SBase
-gold (Rgold"9
-
-SUpdateRes
-res_type (RresType
-val (Rval"
+SLoginOtherWhere"(
+SBase
+money (2	.comm.ResRmoney"
 CEnterDungeon
 id (Rid"i
 SPing,
