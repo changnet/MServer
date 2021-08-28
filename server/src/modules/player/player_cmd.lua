@@ -9,7 +9,13 @@ if WORLD == APP_TYPE then
     Cmd.reg_srv(SYS.PLAYER_OFFLINE, PlayerMgr.on_player_offline)
     Cmd.reg_srv(SYS.PLAYER_OTHERWHERE, PlayerMgr.on_login_otherwhere)
 
---     g_res:reg_player_res(RES_GOLD, Player.get_gold, Player.add_gold,
---                          Player.dec_gold)
-end
+    -- 自动注册货币
+    local RES = Res.get_def()
+    local Base = require "modules.player.base"
 
+    for _, id in pairs(RES) do
+        if Res.is_money(id) then
+            Res.reg(id, Base.check_dec_money, nil, Base.add_money, Base.dec_money)
+        end
+    end
+end

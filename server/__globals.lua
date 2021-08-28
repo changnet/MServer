@@ -1,4 +1,4 @@
--- auto export by lua-tags 178 symbols
+-- auto export by lua-tags 179 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -36,6 +36,7 @@ return {
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
+"LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- engine/log.lua

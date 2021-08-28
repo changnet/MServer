@@ -64,7 +64,12 @@ function Bag:on_logout()
 end
 
 -- 添加道具
-function Bag:add(id, count)
+-- @param id 道具id
+-- @param count 道具数量
+-- @param res 配置的属性
+-- @param ext 扩展参数
+-- @return 添加成功的数量，小于0表示出错
+function Bag:add(id, count, res, ext)
     local item = {id = id, count = count}
 
     return self:raw_add(item)
@@ -202,18 +207,25 @@ function Bag:dec(id, count)
     return self:dec(id, count - item.count)
 end
 
--- 检查道具数量
--- @check_cnt:需要检测的数量，传这个值的话检测到背包中数量>=这个值则返回，否则返回总数量
-function Bag:check_item_count(id, check_cnt)
-    local count = 0
+-- 检查能否扣除相应数量道具
+-- @param res 奖励配置，可能包含绑定、星级等属性
+-- @param ext 扩展的额外参数，绑定等属性
+function Bag:check_dec(id, count, res, ext)
+    local total = 0
     for _, item in pairs(self.grid) do
         if item and id == item.id then
-            count = count + item.count
-            if check_cnt and count >= check_cnt then return check_cnt end
+            total = total + item.count
+            if total >= count then return true end
         end
     end
 
-    return count
+    return false, total
+end
+
+-- 检测能否加入相应的数量道具
+function Bag:check_add(id, count, res, ext)
+    -- TODO 等重构背包后再实现
+    return false
 end
 
 -- 空的背包格子数

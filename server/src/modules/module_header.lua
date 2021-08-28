@@ -115,3 +115,4 @@ make_name()
 -- 生成回调
 PE.make_cb()
 Cmd.make_cb()
+Res.make_cb()

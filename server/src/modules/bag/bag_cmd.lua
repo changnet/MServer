@@ -4,5 +4,4 @@
 -- 玩家背包 指令
 local Bag = require "modules.bag.bag"
 
-Res.reg_module_res("bag", RES_ITEM, Bag.check_item_count, Bag.add_this,
-                     Bag.dec)
+Res.reg(RES_ITEM, Bag.check_dec, Bag.check_add, Bag.add, Bag.dec)

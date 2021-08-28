@@ -49,7 +49,7 @@ local function make_func()
     EntityMgr = _G.EntityMgr
 end
 
--- 生成回调函数
+-- 生成回调函数，原始回调函数的第一个参数是pid
 -- @param cb 原始回调函数
 -- @param this_type 强制指定的回调类型，1 玩家对象， 2玩家实体对象
 -- @param msg 出错时用于打印日志的信息
@@ -97,7 +97,7 @@ function ThisCall.make_from_pid(cb, this_type, msg, id)
 end
 
 
--- 生成回调函数
+-- 生成回调函数，原始回调函数的第一个参数是player对象
 -- @param cb 原始回调函数
 -- @param this_type 强制指定的回调类型，1 玩家对象， 2玩家实体对象
 -- @param msg 出错时用于打印日志的信息

@@ -26,4 +26,4 @@
 
 RES_GOLD   = 1    -- 元宝
 RES_COPPER = 2    -- 铜钱
-RES_ITEM   = 1000 -- 道具
+RES_ITEM   = 1000 -- >=此值的均为道具

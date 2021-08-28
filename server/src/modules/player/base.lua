@@ -109,7 +109,7 @@ function Base:update_res(res_type, val)
 end
 
 -- 检测货币是否足够
-function Base:check_money(id, count)
+function Base:check_dec_money(id, count)
     return count <= (self.root.money[id] or 0)
 end
 
