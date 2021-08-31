@@ -26,12 +26,12 @@ function App:initialize()
 
     if not SrvMgr.srv_listen(g_app_setting.sip, g_app_setting.sport) then
         elog("gateway server listen fail,exit")
-        os.exit(1)
+        return false
     end
 
     if not g_httpd:start(g_app_setting.hip, g_app_setting.hport) then
         elog("gateway http listen fail,exit")
-        os.exit(1)
+        return false
     end
 
     SrvApp.initialize(self)
@@ -41,7 +41,7 @@ end
 function App:final_initialize()
     if not CltMgr.clt_listen(g_app_setting.cip, g_app_setting.cport) then
         elog("gateway client listen fail,exit")
-        os.exit(1)
+        return false
     end
 
     SrvApp.final_initialize(self)

@@ -105,6 +105,8 @@ local function __traceback(msg, co)
     local stack_trace = debug.traceback(co)
     local info_table = {tostring(msg), "\n", stack_trace}
 
+    -- 先直接在stdout打印，再打印到文件
+    __print(table.concat(info_table))
     print(table.concat(info_table))
 end
 

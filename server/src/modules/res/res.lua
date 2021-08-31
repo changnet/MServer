@@ -138,6 +138,7 @@ function Res.make_cb()
 end
 
 --//////////////////////////////////////////////////////////////////////////////
+--// 下面为玩家相关接口
 
 -- 添加资源，如果背包放不下，放不下那部分将自动发放到邮件
 -- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
@@ -306,6 +307,46 @@ function Res.add_or_mail(player, res_list, op, msg, ext)
         local ctx =  (ext and ext.mail_ctx) or LANG.mail002
         g_mail_mgr:raw_send_mail(player.pid, title, ctx, res_list, op)
     end
+end
+
+--//////////////////////////////////////////////////////////////////////////////
+--// 下面为聚合接口，把多个步骤合并成一次操作
+--// 通常用于rpc在其他进程通过pid调用，以解决异步问题
+--// 如跨进程的购买，check_and_add_dec可以一次执行完成
+
+-- 检测能否放入背包，如果可以则直接放背包，否则返回false
+function Res.check_and_add(player, res_list, op, msg, ext)
+    if not Res.check_add(player, res_list, ext) then
+        return false, 1
+    end
+
+    Res.add(player, res_list, op, msg, ext)
+    return true
+end
+
+-- 检测能否直接扣除，如果可以则直接扣除，否则返回false
+function Res.check_and_dec(player, res_list, op, msg)
+    if not Res.check_dec(player, res_list) then
+        return false, 1
+    end
+
+    Res.dec(player, res_list, op, msg)
+    return true
+end
+
+-- 检测能否添加、扣除，如果可以则一次性执行扣除、添加操作，否则返回false
+function Res.check_and_add_dec(player, add_list, dec_list, op, msg, ext)
+    if not Res.check_add(player, add_list, ext) then
+        return false, 1
+    end
+    if not Res.check_dec(player, dec_list) then
+        return false, 2
+    end
+
+    Res.dec(player, dec_list, op, msg)
+    Res.add(player, add_list, op, msg, ext)
+
+    return true
 end
 
 return Res

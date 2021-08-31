@@ -23,7 +23,7 @@ function App:initialize()
 
     if not SrvMgr.srv_listen(g_app_setting.sip, g_app_setting.sport) then
         elog("world server listen fail,exit")
-        os.exit(1)
+        return false
     end
 
     SrvMgr.connect_srv(g_app_setting.servers)

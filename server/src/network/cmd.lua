@@ -120,7 +120,7 @@ end
 -- 加载protobuf的pb描述文件
 function Cmd.load_protobuf()
     return load_schema(network_mgr.CDT_PROTOBUF, "../pb", {
-        "comm.proto",
+        "../pb/comm.pb",
     }, "pb")
 end
 

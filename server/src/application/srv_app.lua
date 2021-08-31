@@ -87,7 +87,7 @@ end
 -- 进程初始化
 function SrvApp:initialize()
     if not Cmd.load_protobuf() then
-        os.exit(1)
+        return false
     end
 
     Application.initialize(self)

@@ -34,7 +34,7 @@ end
 -- 关闭文件日志线程及数据库日志线程
 function LogMgr:close()
     -- self.async_file:stop()
-    self.db_logger:stop()
+    if self.db_logger then self.db_logger:stop() end
 end
 
 -- 记录登录、退出日志
