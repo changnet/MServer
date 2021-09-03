@@ -19,3 +19,6 @@
 [submodule "master/deps/websocket-parser"]
 	path = engine/deps/websocket-parser
 	url = https://github.com/changnet/websocket-parser
+[submodule "engine/deps/lua_parson"]
+	path = engine/deps/lua_parson
+	url = https://github.com/changnet/lua_parson.git
