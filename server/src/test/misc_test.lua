@@ -24,6 +24,12 @@ t_describe("json lib test", function()
         local cjson = require "cjson"
         local tbl_cj = cjson.decode(js)
         t_equal(tbl, tbl_cj)
+
+        -- 测试table与json自动转换，尤其是整数key的转换
+        tbl = {1, 2, unbind = 1, }
+        str = json.encode(tbl, false, 8.6)
+        tbl_ex = json.decode(str, false, 8.6)
+        t_equal(tbl, tbl_ex)
     end)
 
     t_it("perf test", function()
