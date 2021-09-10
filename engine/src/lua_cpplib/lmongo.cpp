@@ -1,7 +1,7 @@
 #include <cstdarg>
 #include <chrono>
 
-#include <lbson.h>
+#include "lbson.hpp"
 
 #include "ltools.hpp"
 #include "lmongo.hpp"
@@ -12,6 +12,7 @@
 LMongo::LMongo(lua_State *L)
     : Thread("lmongo"), _query_pool("lmongo"), _result_pool("lmongo")
 {
+    _array_opt = 8.6; // 随意一个默认值，具体参考lbson的check_type函数
     _dbid = luaL_checkinteger32(L, 2);
 }
 
@@ -212,14 +213,13 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
     int32_t nargs = 4;
     if (res->_data)
     {
-        struct error_collector error;
-        bson_type_t root_type =
-            res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
+        bson_error_t e;
+        double array_opt = res->_mqt == MQT_FIND ? 1 : 0;
 
-        if (lbs_do_decode(L, res->_data, root_type, &error) < 0)
+        if (decode(L, res->_data, &e, array_opt) < 0)
         {
             lua_pop(L, 4);
-            ELOG("mongo result decode error:%s", error.what);
+            ELOG("mongo result decode error:%s", e.message);
 
             // 即使出错，也回调到脚本
         }
@@ -265,58 +265,6 @@ bool LMongo::do_command(const MongoQuery *query, MongoResult *res)
     return true;
 }
 
-bson_t *LMongo::string_or_table_to_bson(lua_State *L, int index, int opt,
-                                        bson_t *bs, ...)
-{
-#define CLEAN_BSON(arg)                                                          \
-    do                                                                           \
-    {                                                                            \
-        va_list args;                                                            \
-        for (va_start(args, arg); arg != END_BSON; arg = va_arg(args, bson_t *)) \
-        {                                                                        \
-            if (arg) bson_destroy(arg);                                          \
-        }                                                                        \
-        va_end(args);                                                            \
-    } while (0)
-
-    bson_t *bson = nullptr;
-    if (lua_istable(L, index)) // 自动将lua table 转化为bson
-    {
-        struct error_collector error;
-        if (!(bson = lbs_do_encode(L, index, nullptr, &error)))
-        {
-            CLEAN_BSON(bs);
-            luaL_error(L, "table to bson error:%s", error.what);
-            return nullptr;
-        }
-
-        return bson;
-    }
-    else if (lua_isstring(L, index)) // json字符串
-    {
-        const char *json = lua_tostring(L, index);
-        bson_error_t error;
-        bson = bson_new_from_json(reinterpret_cast<const uint8_t *>(json), -1,
-                                  &error);
-        if (!bson)
-        {
-            CLEAN_BSON(bs);
-            luaL_error(L, "json to bson error:%s", error.message);
-            return nullptr;
-        }
-
-        return bson;
-    }
-
-    if (0 == opt) return nullptr;
-    if (1 == opt) return bson_new();
-
-    luaL_error(L, "argument #%d expect table or json string", index);
-    return nullptr;
-
-#undef CLEAN_BSON
-}
-
 int32_t LMongo::count(lua_State *L)
 {
     if (!active())
@@ -331,8 +279,8 @@ int32_t LMongo::count(lua_State *L)
         return luaL_error(L, "mongo count:collection not specify");
     }
 
-    bson_t *query  = string_or_table_to_bson(L, 3, 0);
-    bson_t *opts   = string_or_table_to_bson(L, 4, 0, query, END_BSON);
+    bson_t *query = bson_new_from_lua(L, 3, 0, _array_opt);
+    bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
 
     lock();
     MongoQuery *mongo_count =
@@ -359,8 +307,8 @@ int32_t LMongo::find(lua_State *L)
         return luaL_error(L, "mongo find:collection not specify");
     }
 
-    bson_t *query = string_or_table_to_bson(L, 3, 1);
-    bson_t *opts  = string_or_table_to_bson(L, 4, 0, query, END_BSON);
+    bson_t *query = bson_new_from_lua(L, 3, 1, _array_opt);
+    bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
 
     lock();
     MongoQuery *mongo_find =
@@ -387,11 +335,10 @@ int32_t LMongo::find_and_modify(lua_State *L)
         return luaL_error(L, "mongo find_and_modify:collection not specify");
     }
 
-    bson_t *query  = string_or_table_to_bson(L, 3, 1);
-    bson_t *sort   = string_or_table_to_bson(L, 4, 0, query, END_BSON);
-    bson_t *update = string_or_table_to_bson(L, 5, 1, query, sort, END_BSON);
-    bson_t *fields =
-        string_or_table_to_bson(L, 6, 0, query, sort, update, END_BSON);
+    bson_t *query  = bson_new_from_lua(L, 3, 1, _array_opt);
+    bson_t *sort   = bson_new_from_lua(L, 4, 0, _array_opt, query);
+    bson_t *update = bson_new_from_lua(L, 5, 1, _array_opt, query, sort);
+    bson_t *fields = bson_new_from_lua(L, 6, 0, _array_opt, query, sort, update);
 
     bool remove  = lua_toboolean(L, 7);
     bool upsert  = lua_toboolean(L, 8);
@@ -431,7 +378,7 @@ int32_t LMongo::insert(lua_State *L)
         return luaL_error(L, "mongo insert:collection not specify");
     }
 
-    bson_t *query = string_or_table_to_bson(L, 3);
+    bson_t *query = bson_new_from_lua(L, 3, -1, _array_opt);
 
     lock();
     MongoQuery *mongo_insert =
@@ -458,8 +405,8 @@ int32_t LMongo::update(lua_State *L)
         return luaL_error(L, "mongo update:collection not specify");
     }
 
-    bson_t *query  = string_or_table_to_bson(L, 3);
-    bson_t *update = string_or_table_to_bson(L, 4, -1, query, END_BSON);
+    bson_t *query  = bson_new_from_lua(L, 3, -1, _array_opt);
+    bson_t *update = bson_new_from_lua(L, 4, -1, _array_opt, query);
 
     int32_t upsert = lua_toboolean(L, 5);
     int32_t multi  = lua_toboolean(L, 6);
@@ -493,7 +440,7 @@ int32_t LMongo::remove(lua_State *L)
         return luaL_error(L, "mongo remove:collection not specify");
     }
 
-    bson_t *query = string_or_table_to_bson(L, 3);
+    bson_t *query = bson_new_from_lua(L, 3, -1, _array_opt);
 
     int32_t single = lua_toboolean(L, 4);
 
