@@ -214,9 +214,9 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
     if (res->_data)
     {
         bson_error_t e;
-        double array_opt = res->_mqt == MQT_FIND ? 1 : 0;
+        bson_type_t type = res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
 
-        if (decode(L, res->_data, &e, array_opt) < 0)
+        if (decode(L, res->_data, &e, type, _array_opt) < 0)
         {
             lua_pop(L, 4);
             ELOG("mongo result decode error:%s", e.message);

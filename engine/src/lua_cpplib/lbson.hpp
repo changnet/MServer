@@ -14,6 +14,10 @@ static int32_t encode_value(lua_State *L, int32_t index, bson_t *b,
                             const char *key, int32_t key_len, bson_error_t *e,
                             double array_opt);
 
+/// 把一个bson转换为lua value
+static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
+                        double array_opt);
+
 static void destory_bson_list() {}
 
 static void destory_bson_list(bson_t *b)
@@ -96,8 +100,8 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
 
         // max_key larger than array_opt integer part and then item count fail
         // to fill the percent of array_opt fractional part, encode as object
-        if (opt > 0. && max_key > index_opt
-            && ((double)key_count) / max_key < percent_opt)
+        if (opt > 0. && max_key > (lua_Integer)index_opt
+            && ((double)key_count) / (double)max_key < percent_opt)
         {
             *max_index = 1;
             return 0;
@@ -414,10 +418,207 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt
     return b;
 }
 
-/// @brief 解析bson对象到lua table
-static int decode(lua_State* L, bson_t* b, bson_error_t* e, double array_opt)
+/// @brief 判断是否需要转换数字key
+/// @param b bson对象
+/// @param iter bson迭代器
+/// @param type bson类型
+/// @param array_opt 是否启用转换
+/// @return 是否需要转换数字key
+static bool is_convert_key(bson_t *b, bson_iter_t *iter, bson_type_t type,
+                          double array_opt)
 {
+    if (array_opt < 0 || BSON_TYPE_DOCUMENT != type) return false;
+
+    bson_iter_t finder;
+    if (b) return bson_iter_init_find(&finder, b, ARRAY_OPT);
+    if (iter)
+    {
+        return bson_iter_recurse(iter, &finder)
+               && bson_iter_find(&finder, ARRAY_OPT);
+    }
+
+    return false;
+}
+
+/// @brief 把bson对象解析为lua table
+/// @param L Lua虚拟机
+/// @param iter bson迭代器
+/// @param e bson错误对象
+/// @param type bson类型，如 BSON_TYPE_ARRAY
+/// @param array_opt 是否启用数组自动转换,-1表示不启用
+/// @param convert 是否执行key转换
+/// @return <0表示失败
+static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
+                        bson_type_t type, double array_opt, bool convert)
+{
+    // 对于bson而言，只有object类型(即bson的document)，没有数组，数组只是key为"0"、"1"、...的object
+    // https://groups.google.com/g/bson/c/VHaO42PPMGc/m/l-ZqIMcLpfMJ
+    // 因此，解析一个顶层的bson时，只能由外部指定是解析为object还是array
+
+    if (!lua_checkstack(L, 3))
+    {
+        bson_set_error(e, 0, 0, "decode_table stack overflow");
+        return -1;
+    }
+
+    lua_newtable(L);
+    while (bson_iter_next(iter))
+    {
+        const char *key = bson_iter_key(iter);
+        if (decode_value(L, iter, e, array_opt) < 0)
+        {
+            lua_pop(L, 1);
+            return -1;
+        }
+
+        if (BSON_TYPE_ARRAY == type)
+        {
+            // lua array index start from 1
+            lua_seti(L, -2, strtol(key, nullptr, 10) + 1);
+        }
+        else if (convert)
+        {
+            char *end_ptr      = nullptr;
+            long long int ikey = strtoll(key, &end_ptr, 10);
+            // if can not convert to integer, push the string key
+            if (0 == ikey && *end_ptr != '\0')
+                lua_pushstring(L, key);
+            else
+                lua_pushinteger(L, ikey);
+        }
+        else
+        {
+            lua_setfield(L, -2, key);
+        }
+    }
+
     return 0;
+}
+
+static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
+                        double array_opt)
+{
+    switch (bson_iter_type(iter))
+    {
+    case BSON_TYPE_DOUBLE:
+    {
+        double val = bson_iter_double(iter);
+        lua_pushnumber(L, val);
+    }
+    break;
+    case BSON_TYPE_DOCUMENT:
+    {
+        bson_iter_t sub_iter;
+        if (!bson_iter_recurse(iter, &sub_iter))
+        {
+            bson_set_error(e, 0, 0, "bson document iter recurse error");
+            return -1;
+        }
+        bool convert  =
+            is_convert_key(nullptr, iter, BSON_TYPE_DOCUMENT, array_opt);
+        if (decode_table(L, &sub_iter, e, BSON_TYPE_DOCUMENT, array_opt, convert) < 0)
+        {
+            return -1;
+        }
+    }
+    break;
+    case BSON_TYPE_ARRAY:
+    {
+        bson_iter_t sub_iter;
+        if (!bson_iter_recurse(iter, &sub_iter))
+        {
+            bson_set_error(e, 0, 0, "bson array iter recurse error");
+            return -1;
+        }
+        if (decode_table(L, &sub_iter, e, BSON_TYPE_ARRAY, array_opt, false) < 0)
+        {
+            return -1;
+        }
+    }
+    break;
+    case BSON_TYPE_BINARY:
+    {
+        const char *val  = nullptr;
+        unsigned int len = 0;
+        bson_iter_binary(iter, nullptr, &len, (const uint8_t **)(&val));
+        lua_pushlstring(L, val, len);
+    }
+    break;
+    case BSON_TYPE_UTF8:
+    {
+        unsigned int len = 0;
+        const char *val  = bson_iter_utf8(iter, &len);
+        lua_pushlstring(L, val, len);
+    }
+    break;
+    case BSON_TYPE_OID:
+    {
+        const bson_oid_t *oid = bson_iter_oid(iter);
+
+        char str[25]; /* bson api make it 25 */
+        bson_oid_to_string(oid, str);
+        lua_pushstring(L, str);
+    }
+    break;
+    case BSON_TYPE_BOOL:
+    {
+        bool val = bson_iter_bool(iter);
+        lua_pushboolean(L, val);
+    }
+    break;
+    case BSON_TYPE_NULL:
+    {
+        /* nullptr == nil in lua */
+        lua_pushnil(L);
+    }
+    break;
+    case BSON_TYPE_INT32:
+    {
+        int val = bson_iter_int32(iter);
+        lua_pushinteger(L, val);
+    }
+    break;
+    case BSON_TYPE_DATE_TIME:
+    {
+        /* A 64-bit integer containing the number of milliseconds since
+         * the UNIX epoch
+         */
+        int64_t val = bson_iter_date_time(iter);
+        lua_pushinteger(L, val);
+    }
+    break;
+    case BSON_TYPE_INT64:
+    {
+        int64_t val = bson_iter_int64(iter);
+        lua_pushinteger(L, val);
+    }
+    break;
+    default:
+    {
+        bson_set_error(e, 0, 0, "unknow bson type:%d", bson_iter_type(iter));
+        return -1;
+    }
+    break;
+    }
+
+    return 0;
+}
+
+/// @brief 解析bson对象到lua table
+/// @param type 指定bson的类型，如 BSON_TYPE_ARRAY
+/// @param array_opt 是否启用数组自动转换,-1表示不启用
+static int decode(lua_State *L, bson_t *b, bson_error_t *e,
+                  bson_type_t type, double array_opt)
+{
+    bson_iter_t iter;
+    if (!bson_iter_init(&iter, b))
+    {
+        bson_set_error(e, 0, 0, "invalid bson document to decode");
+
+        return -1;
+    }
+
+    return decode_table(L, &iter, e, type, array_opt, is_convert_key(b, nullptr, type, array_opt));
 }
 
 /**
