@@ -118,6 +118,40 @@ t_describe("mongodb test", function()
             end)
 
             mongodb:remove(collection, "{}")
+            mongodb:set_array_opt(8.6)
+
+            local array_tbl = {
+                array = {"abc", "def", "ghj"},
+                -- object = {
+                --     a = "a",
+                --     b = "b",
+                --     c = "c",
+                -- },
+                -- mix_object = {
+                --     a = "a",
+                --     b = "b",
+                --     c = "c",
+                --     {1, 2, false, true, "abc"}
+                -- },
+                -- sparse_array = {
+                --     [10003] = {
+                --         [20003] = {
+                --             [40006] = true
+                --         }
+                --     }
+                -- },
+            }
+            mongodb:insert(collection, array_tbl)
+            mongodb:find(collection, "{}", nil, function(e, res)
+                t_equal(e, 0)
+                t_equal(#res, 1)
+                print("RRRRRRRRRR", e, res)
+                vd(res)
+                t_equal(array_tbl, res[1])
+            end)
+
+            -- 清空测试数据并结束测试
+            mongodb:remove(collection, "{}")
             mongodb:find(collection, "{}", nil, function(e, res)
                 t_equal(e, 0)
                 t_equal(#res, 0)

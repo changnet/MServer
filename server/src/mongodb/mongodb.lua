@@ -115,6 +115,11 @@ function Mongodb:remove(collection, query, single, callback)
     return self.mongodb:remove(id, collection, query, single)
 end
 
+-- 设置数组转换参数
+function Mongodb:set_array_opt(opt)
+    return self.mongodb:set_array_opt(opt)
+end
+
 -- 不提供索引函数，请开服使用脚本创建索引。
 -- 见https://docs.mongodb.org/manual/reference/method/db.collection.createIndex/
 --[[

@@ -363,6 +363,12 @@ int32_t LMongo::find_and_modify(lua_State *L)
     return 0;
 }
 
+int32_t LMongo::set_array_opt(lua_State* L)
+{
+    _array_opt = luaL_checknumber(L, 1);
+    return 0;
+ }
+
 /* insert( id,collections,info ) */
 int32_t LMongo::insert(lua_State *L)
 {

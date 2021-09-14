@@ -119,6 +119,7 @@ int32_t luaopen_mongo(lua_State *L)
     lc.def<&LMongo::insert>("insert");
     lc.def<&LMongo::update>("update");
     lc.def<&LMongo::remove>("remove");
+    lc.def<&LMongo::set_array_opt>("set_array_opt");
     lc.def<&LMongo::find_and_modify>("find_and_modify");
 
     lc.set(LMongo::S_READY, "S_READY");
