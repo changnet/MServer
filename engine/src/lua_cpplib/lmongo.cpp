@@ -12,7 +12,7 @@
 LMongo::LMongo(lua_State *L)
     : Thread("lmongo"), _query_pool("lmongo"), _result_pool("lmongo")
 {
-    _array_opt = 8.6; // 随意一个默认值，具体参考lbson的check_type函数
+    _array_opt = -1; // 是否启用数组判定参数，具体参考lbson的check_type函数
     _dbid = luaL_checkinteger32(L, 2);
 }
 

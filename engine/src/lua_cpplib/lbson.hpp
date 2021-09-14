@@ -112,6 +112,7 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
     return 1;
 
 NO_MAX_KEY:
+    lua_pop(L, 2);
     if (1. == opt)
     {
         // force encode as array, no max key found
@@ -135,6 +136,8 @@ static int32_t encode_array(bson_t *b, lua_State *L, int32_t index, int32_t max_
     const char *key;
     char key_buff[MAX_KEY_LENGTH];
 
+    int32_t top = lua_gettop(L);
+
     /* lua array start from 1 */
     for (int bson_index = 0; bson_index < max_index; bson_index++)
     {
@@ -142,7 +145,7 @@ static int32_t encode_array(bson_t *b, lua_State *L, int32_t index, int32_t max_
         size_t key_len = bson_uint32_to_string(bson_index, &key, key_buff, sizeof(key_buff));
 
         lua_rawgeti(L, index, bson_index + 1);
-        if (encode_value(L, index + 1, b, key, (int32_t)key_len, e, array_opt) < 0)
+        if (encode_value(L, top + 1, b, key, (int32_t)key_len, e, array_opt) < 0)
         {
             lua_pop(L, 1);
 
@@ -164,13 +167,15 @@ static int32_t encode_invalid_key_array(bson_t *b, lua_State *L, int32_t index,
     int bson_index           = 0;
     char key_buff[MAX_KEY_LENGTH];
 
+    int32_t top = lua_gettop(L);
+
     // key中包含字符串、浮点等，只能忽略所有key，遍历构建数组，顺序是无法保证的
     lua_pushnil(L);
     while (lua_next(L, index) != 0)
     {
         size_t key_len =
             bson_uint32_to_string(bson_index++, &key, key_buff, sizeof(key_buff));
-        if (encode_value(L, index + 1, b, key, (int32_t)key_len, e, array_opt) < 0)
+        if (encode_value(L, top + 2, b, key, (int32_t)key_len, e, array_opt) < 0)
         {
             lua_pop(L, 2);
 
@@ -191,11 +196,11 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
 {
     char key_buff[MAX_KEY_LENGTH] = {0};
 
+    int32_t top = lua_gettop(L);
+
     lua_pushnil(L); /* first key */
     while (lua_next(L, index) != 0)
     {
-        
-
         int32_t key_len     = -1;
         const char *key = nullptr;
         switch (lua_type(L, -2))
@@ -231,6 +236,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
                 bson_set_error(e, 0, 0, "lua table string key too long");
                 return -1;
             }
+            key_len = (int32_t)len;
         }
         break;
         default:
@@ -244,7 +250,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
         }
 
         assert(key);
-        if (encode_value(L, index + 2, b, key, key_len, e, array_opt) < 0)
+        if (encode_value(L, top + 2, b, key, key_len, e, array_opt) < 0)
         {
             lua_pop(L, 2);
             return -1;
@@ -398,7 +404,7 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt
     {
         ok = encode_object(b, L, index, e, array_opt);
         // append `__array_opt` to object if using array_opt
-        if (1 == max_index && ok)
+        if (1 == max_index && 0 == ok)
         {
             bson_append_int32(b, ARRAY_OPT, (int32_t)strlen(ARRAY_OPT), 0);
         }
@@ -409,7 +415,7 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt
                  ? encode_array(b, L, index, (int32_t)max_index, e, array_opt)
                            : encode_invalid_key_array(b, L, index, e, array_opt);
     }
-    if (!ok)
+    if (0 != ok)
     {
         bson_destroy(b);
         b = nullptr;
