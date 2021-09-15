@@ -33,7 +33,7 @@ local mgr = MongodbMgr()
 function mongodb_event(ev, id, qid, ecode, res)
     local db = mgr.db[id]
     if not db then
-        elog("mongodb event no db found: id = %d", id)
+        elogf("mongodb event no db found: id = %d", id)
         return
     end
     if ev == S_READY then

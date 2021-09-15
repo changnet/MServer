@@ -120,33 +120,33 @@ t_describe("mongodb test", function()
             mongodb:remove(collection, "{}")
             mongodb:set_array_opt(8.6)
 
+            -- 测试数组转换，保证Lua中的数字key存到数据库，读取出来后还能保持为数字key
             local array_tbl = {
+                _id = 1111,
                 array = {"abc", "def", "ghj"},
-                -- object = {
-                --     a = "a",
-                --     b = "b",
-                --     c = "c",
-                -- },
-                -- mix_object = {
-                --     a = "a",
-                --     b = "b",
-                --     c = "c",
-                --     {1, 2, false, true, "abc"}
-                -- },
-                -- sparse_array = {
-                --     [10003] = {
-                --         [20003] = {
-                --             [40006] = true
-                --         }
-                --     }
-                -- },
+                object = {
+                    a = "a",
+                    b = "b",
+                    c = "c",
+                },
+                mix_object = {
+                    a = "a",
+                    b = "b",
+                    c = "c",
+                    {1, 2, false, true, "abc"}
+                },
+                sparse_array = {
+                    [10003] = {
+                        [20003] = {
+                            [40006] = true
+                        }
+                    }
+                },
             }
             mongodb:insert(collection, array_tbl)
             mongodb:find(collection, "{}", nil, function(e, res)
                 t_equal(e, 0)
                 t_equal(#res, 1)
-                print("RRRRRRRRRR", e, res)
-                vd(res)
                 t_equal(array_tbl, res[1])
             end)
 
@@ -207,7 +207,7 @@ t_describe("mongodb test", function()
     end)
 
     t_it("mongodb coroutine sync test", function()
-        t_wait(1000)
+        t_wait(5000)
         local sync_mongodb = SyncMongodb(mongodb, function(sync_db)
             local e, res = sync_db:count(collection, '{}')
             t_equal(e, 0)

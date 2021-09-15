@@ -33,7 +33,7 @@ template <typename... Args> void destory_bson_list(bson_t *b, Args... args)
 
 /**
  * check a lua table is object or array
- * @return object = 0, max_index = 1 if using array_opt
+ * @return object = 0
  *         array = 1, max_index is max array index
  */
 static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, double opt)
@@ -55,11 +55,7 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
     }
 
     // encode as object, using array_opt
-    if (0. == opt)
-    {
-        *max_index = 1;
-        return 0;
-    }
+    if (0. == opt) return 0;
 
     if (opt > 1) percent_opt = modf(opt, &index_opt);
 
@@ -95,7 +91,7 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
 
     if (opt != 1.0)
     {
-        // empty table decode as object
+        // empty table encode as object
         if (0 == max_key) return 0;
 
         // max_key larger than array_opt integer part and then item count fail
@@ -122,7 +118,6 @@ NO_MAX_KEY:
     else
     {
         // none integer key found, encode as object
-        if (opt >= 0) *max_index = 1;
         return 0;
     }
 }
@@ -196,6 +191,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
 {
     char key_buff[MAX_KEY_LENGTH] = {0};
 
+    bool converted = false;
     int32_t top = lua_gettop(L);
 
     lua_pushnil(L); /* first key */
@@ -224,6 +220,8 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
                          lua_tonumber(L, -2));
             }
             key = key_buff;
+            // key_len不处理，保持为-1，由mongo c计算。这个snprintf的返回值在不同平台下意义不一样
+            converted = true;
         }
         break;
         case LUA_TSTRING:
@@ -258,6 +256,12 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
 
         /* removes 'value'; keep 'key' for next iteration */
         lua_pop(L, 1);
+    }
+
+    // append `__array_opt` to object if using array_opt
+    if (converted && array_opt >= 0)
+    {
+        bson_append_int32(b, ARRAY_OPT, (int32_t)strlen(ARRAY_OPT), 0);
     }
 
     return 0;
@@ -297,11 +301,7 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent, const c
         bson_append_document_begin(parent, key, key_len, &b);
 
         ok = encode_object(&b, L, index, e, array_opt);
-        // append `__array_opt` to object if using array_opt
-        if (1 == max_index && ok)
-        {
-            bson_append_int32(&b, ARRAY_OPT, (int32_t)strlen(ARRAY_OPT), 0);
-        }
+
         bson_append_document_end(parent, &b);
     }
     else
@@ -403,11 +403,6 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt
     if (0 == type)
     {
         ok = encode_object(b, L, index, e, array_opt);
-        // append `__array_opt` to object if using array_opt
-        if (1 == max_index && 0 == ok)
-        {
-            bson_append_int32(b, ARRAY_OPT, (int32_t)strlen(ARRAY_OPT), 0);
-        }
     }
     else
     {
@@ -471,6 +466,9 @@ static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
     while (bson_iter_next(iter))
     {
         const char *key = bson_iter_key(iter);
+        // 用于标记转换的特殊字段，不需要还原到lua
+        if (convert && 0 == strcmp(key, ARRAY_OPT)) continue;
+
         if (decode_value(L, iter, e, array_opt) < 0)
         {
             lua_pop(L, 1);
@@ -480,17 +478,22 @@ static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
         if (BSON_TYPE_ARRAY == type)
         {
             // lua array index start from 1
-            lua_seti(L, -2, strtol(key, nullptr, 10) + 1);
+            lua_rawseti(L, -2, strtol(key, nullptr, 10) + 1);
         }
         else if (convert)
         {
+            // 如果启用了转换，则把所有的整数key都转换为数字，保持在lua中的一致性
             char *end_ptr      = nullptr;
             long long int ikey = strtoll(key, &end_ptr, 10);
             // if can not convert to integer, push the string key
             if (0 == ikey && *end_ptr != '\0')
-                lua_pushstring(L, key);
+            {
+                lua_setfield(L, -2, key);
+            }
             else
-                lua_pushinteger(L, ikey);
+            {
+                lua_rawseti(L, -2, ikey);
+            }
         }
         else
         {

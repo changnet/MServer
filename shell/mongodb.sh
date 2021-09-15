@@ -60,14 +60,14 @@ EOF
 # 进入测试服数据库shell ./mongo.sh shell test_999
 function shell()
 {
-    $TEST_MONGO $1
+    mongo --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $1
 }
 
 # 运行mongo脚本文件
 # ./mongo.sh cmd test_999 mongo_clear
 function cmd()
 {
-    $TEST_MONGO $3 < ../project/$4.js
+    mongo --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $3 < ../project/$4.js
 }
 
 # 安装数据库并创建用于测试的用户
