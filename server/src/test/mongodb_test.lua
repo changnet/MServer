@@ -142,12 +142,21 @@ t_describe("mongodb test", function()
                         }
                     }
                 },
+                special_key = {
+                    -- 要注意，$和.是mongodb的保留符号，key里不能包含这两字符 !!!
+                    -- [1.5] = true,
+                    [math.mininteger] = {
+                        [math.maxinteger] = {
+                            [-99] = false
+                        }
+                    }
+                },
             }
             mongodb:insert(collection, array_tbl)
             mongodb:find(collection, "{}", nil, function(e, res)
                 t_equal(e, 0)
                 t_equal(#res, 1)
-                t_equal(array_tbl, res[1])
+                t_equal(res[1], array_tbl)
             end)
 
             -- 清空测试数据并结束测试

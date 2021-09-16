@@ -5,18 +5,18 @@
 #include <bson.h>
 #include "ltools.hpp" // lua_isbit32
 
-static const char *ARRAY_OPT    = "__array_opt";
+static const char *ARRAY_OPT    = "__opt";
 static const int32_t MAX_STACK_DEEP = 128;
 static const int32_t MAX_KEY_LENGTH = 128;
 
 /// 把一个lua value转换为bson的字段
 static int32_t encode_value(lua_State *L, int32_t index, bson_t *b,
                             const char *key, int32_t key_len, bson_error_t *e,
-                            double array_opt);
+                            double opt);
 
 /// 把一个bson转换为lua value
 static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
-                        double array_opt);
+                        double opt);
 
 static void destory_bson_list() {}
 
@@ -54,7 +54,7 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
         lua_pop(L, 1); /* pop metafield value */
     }
 
-    // encode as object, using array_opt
+    // encode as object, using opt
     if (0. == opt) return 0;
 
     if (opt > 1) percent_opt = modf(opt, &index_opt);
@@ -70,6 +70,10 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
             goto NO_MAX_KEY;
         }
         key = lua_tointeger(L, -2);
+        if (key < 1)
+        {
+            goto NO_MAX_KEY;
+        }
 #else
         if (lua_type(L, -2) != LUA_TNUMBER)
         {
@@ -94,8 +98,8 @@ static int32_t check_type(lua_State *L, int32_t index, lua_Integer *max_index, d
         // empty table encode as object
         if (0 == max_key) return 0;
 
-        // max_key larger than array_opt integer part and then item count fail
-        // to fill the percent of array_opt fractional part, encode as object
+        // max_key larger than opt integer part and then item count fail
+        // to fill the percent of opt fractional part, encode as object
         if (opt > 0. && max_key > (lua_Integer)index_opt
             && ((double)key_count) / (double)max_key < percent_opt)
         {
@@ -126,7 +130,7 @@ NO_MAX_KEY:
  * 把lua table构建成bson array对象
  */
 static int32_t encode_array(bson_t *b, lua_State *L, int32_t index, int32_t max_index,
-                             bson_error_t *e, double array_opt)
+                             bson_error_t *e, double opt)
 {
     const char *key;
     char key_buff[MAX_KEY_LENGTH];
@@ -140,7 +144,7 @@ static int32_t encode_array(bson_t *b, lua_State *L, int32_t index, int32_t max_
         size_t key_len = bson_uint32_to_string(bson_index, &key, key_buff, sizeof(key_buff));
 
         lua_rawgeti(L, index, bson_index + 1);
-        if (encode_value(L, top + 1, b, key, (int32_t)key_len, e, array_opt) < 0)
+        if (encode_value(L, top + 1, b, key, (int32_t)key_len, e, opt) < 0)
         {
             lua_pop(L, 1);
 
@@ -156,7 +160,7 @@ static int32_t encode_array(bson_t *b, lua_State *L, int32_t index, int32_t max_
  * 把lua table构建成bson object对象
  */
 static int32_t encode_invalid_key_array(bson_t *b, lua_State *L, int32_t index,
-                                        bson_error_t *e, double array_opt)
+                                        bson_error_t *e, double opt)
 {
     const char *key;
     int bson_index           = 0;
@@ -170,7 +174,7 @@ static int32_t encode_invalid_key_array(bson_t *b, lua_State *L, int32_t index,
     {
         size_t key_len =
             bson_uint32_to_string(bson_index++, &key, key_buff, sizeof(key_buff));
-        if (encode_value(L, top + 2, b, key, (int32_t)key_len, e, array_opt) < 0)
+        if (encode_value(L, top + 2, b, key, (int32_t)key_len, e, opt) < 0)
         {
             lua_pop(L, 2);
 
@@ -187,7 +191,7 @@ static int32_t encode_invalid_key_array(bson_t *b, lua_State *L, int32_t index,
  * 把lua table构建成bson object对象
  */
 static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
-                             bson_error_t *e, double array_opt)
+                             bson_error_t *e, double opt)
 {
     char key_buff[MAX_KEY_LENGTH] = {0};
 
@@ -216,6 +220,8 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
             }
             else
             {
+                // $和.是mongodb的保留字符，即使这里格式化了，也没法入库的
+                // 但这里不处理，等数据库那边报错，以后标准可能会改
                 snprintf(key_buff, MAX_KEY_LENGTH, LUA_NUMBER_FMT,
                          lua_tonumber(L, -2));
             }
@@ -248,7 +254,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
         }
 
         assert(key);
-        if (encode_value(L, top + 2, b, key, key_len, e, array_opt) < 0)
+        if (encode_value(L, top + 2, b, key, key_len, e, opt) < 0)
         {
             lua_pop(L, 2);
             return -1;
@@ -258,8 +264,8 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
         lua_pop(L, 1);
     }
 
-    // append `__array_opt` to object if using array_opt
-    if (converted && array_opt >= 0)
+    // append `__array_opt` to object if using opt
+    if (converted && opt >= 0)
     {
         bson_append_int32(b, ARRAY_OPT, (int32_t)strlen(ARRAY_OPT), 0);
     }
@@ -271,7 +277,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
  * 把lua table构建成bson对象
  */
 static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent, const char *key, int32_t key_len, bson_error_t *e,
-                            double array_opt)
+                            double opt)
 {
     if (lua_gettop(L) > MAX_STACK_DEEP)
     {
@@ -294,13 +300,13 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent, const c
     bson_t b;
     int32_t ok            = 0;
     lua_Integer max_index = -1;
-    int32_t type = check_type(L, index, &max_index, array_opt);
+    int32_t type = check_type(L, index, &max_index, opt);
     if (0 == type)
     {
         // child MUST be an uninitialized bson_t to avoid leaking memory
         bson_append_document_begin(parent, key, key_len, &b);
 
-        ok = encode_object(&b, L, index, e, array_opt);
+        ok = encode_object(&b, L, index, e, opt);
 
         bson_append_document_end(parent, &b);
     }
@@ -309,8 +315,8 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent, const c
 
         bson_append_array_begin(parent, key, key_len, &b);
         ok = max_index > 0
-                 ? encode_array(&b, L, index, (int32_t)max_index, e, array_opt)
-                 : encode_invalid_key_array(&b, L, index, e, array_opt);
+                 ? encode_array(&b, L, index, (int32_t)max_index, e, opt)
+                 : encode_invalid_key_array(&b, L, index, e, opt);
         bson_append_array_end(parent, &b);
     }
 
@@ -318,7 +324,7 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent, const c
 }
 
 static int32_t encode_value(lua_State *L, int32_t index, bson_t *b, const char *key,
-                     int32_t key_len, bson_error_t *e, double array_opt)
+                     int32_t key_len, bson_error_t *e, double opt)
 {
     switch (lua_type(L, index))
     {
@@ -358,7 +364,7 @@ static int32_t encode_value(lua_State *L, int32_t index, bson_t *b, const char *
     break;
     case LUA_TTABLE:
     {
-        return encode_table(L, index, b, key, key_len, e, array_opt);
+        return encode_table(L, index, b, key, key_len, e, opt);
     }
     break;
     default:
@@ -375,7 +381,7 @@ static int32_t encode_value(lua_State *L, int32_t index, bson_t *b, const char *
 }
 
 /// @brief 把lua table构建成bson对象
-static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt)
+static bson_t *encode(lua_State *L, int index, bson_error_t *e, double opt)
 {
     if (lua_gettop(L) > MAX_STACK_DEEP)
     {
@@ -399,16 +405,16 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt
 
     int32_t ok            = 0;
     lua_Integer max_index = -1;
-    int32_t type          = check_type(L, index, &max_index, array_opt);
+    int32_t type          = check_type(L, index, &max_index, opt);
     if (0 == type)
     {
-        ok = encode_object(b, L, index, e, array_opt);
+        ok = encode_object(b, L, index, e, opt);
     }
     else
     {
         ok = max_index > 0
-                 ? encode_array(b, L, index, (int32_t)max_index, e, array_opt)
-                           : encode_invalid_key_array(b, L, index, e, array_opt);
+                 ? encode_array(b, L, index, (int32_t)max_index, e, opt)
+                           : encode_invalid_key_array(b, L, index, e, opt);
     }
     if (0 != ok)
     {
@@ -423,12 +429,12 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double array_opt
 /// @param b bson对象
 /// @param iter bson迭代器
 /// @param type bson类型
-/// @param array_opt 是否启用转换
+/// @param opt 是否启用转换
 /// @return 是否需要转换数字key
 static bool is_convert_key(bson_t *b, bson_iter_t *iter, bson_type_t type,
-                          double array_opt)
+                          double opt)
 {
-    if (array_opt < 0 || BSON_TYPE_DOCUMENT != type) return false;
+    if (opt < 0 || BSON_TYPE_DOCUMENT != type) return false;
 
     bson_iter_t finder;
     if (b) return bson_iter_init_find(&finder, b, ARRAY_OPT);
@@ -446,11 +452,11 @@ static bool is_convert_key(bson_t *b, bson_iter_t *iter, bson_type_t type,
 /// @param iter bson迭代器
 /// @param e bson错误对象
 /// @param type bson类型，如 BSON_TYPE_ARRAY
-/// @param array_opt 是否启用数组自动转换,-1表示不启用
+/// @param opt 是否启用数组自动转换,-1表示不启用
 /// @param convert 是否执行key转换
 /// @return <0表示失败
 static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
-                        bson_type_t type, double array_opt, bool convert)
+                        bson_type_t type, double opt, bool convert)
 {
     // 对于bson而言，只有object类型(即bson的document)，没有数组，数组只是key为"0"、"1"、...的object
     // https://groups.google.com/g/bson/c/VHaO42PPMGc/m/l-ZqIMcLpfMJ
@@ -469,16 +475,10 @@ static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
         // 用于标记转换的特殊字段，不需要还原到lua
         if (convert && 0 == strcmp(key, ARRAY_OPT)) continue;
 
-        if (decode_value(L, iter, e, array_opt) < 0)
-        {
-            lua_pop(L, 1);
-            return -1;
-        }
-
         if (BSON_TYPE_ARRAY == type)
         {
             // lua array index start from 1
-            lua_rawseti(L, -2, strtol(key, nullptr, 10) + 1);
+            lua_pushinteger(L, strtoll(key, nullptr, 10) + 1);
         }
         else if (convert)
         {
@@ -486,26 +486,37 @@ static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
             char *end_ptr      = nullptr;
             long long int ikey = strtoll(key, &end_ptr, 10);
             // if can not convert to integer, push the string key
-            if (0 == ikey && *end_ptr != '\0')
+            if (*end_ptr != '\0')
             {
-                lua_setfield(L, -2, key);
+                double dkey = strtod(key, &end_ptr);
+                if (*end_ptr != '\0')
+                    lua_pushlstring(L, key, bson_iter_key_len(iter));
+                else
+                    lua_pushnumber(L, dkey);
             }
             else
             {
-                lua_rawseti(L, -2, ikey);
+                lua_pushinteger(L, ikey);
             }
         }
         else
         {
-            lua_setfield(L, -2, key);
+            lua_pushlstring(L, key, bson_iter_key_len(iter));
         }
+
+        if (decode_value(L, iter, e, opt) < 0)
+        {
+            lua_pop(L, 2); // pop table and key
+            return -1;
+        }
+        lua_rawset(L, -3);
     }
 
     return 0;
 }
 
 static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
-                        double array_opt)
+                        double opt)
 {
     switch (bson_iter_type(iter))
     {
@@ -524,8 +535,8 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
             return -1;
         }
         bool convert  =
-            is_convert_key(nullptr, iter, BSON_TYPE_DOCUMENT, array_opt);
-        if (decode_table(L, &sub_iter, e, BSON_TYPE_DOCUMENT, array_opt, convert) < 0)
+            is_convert_key(nullptr, iter, BSON_TYPE_DOCUMENT, opt);
+        if (decode_table(L, &sub_iter, e, BSON_TYPE_DOCUMENT, opt, convert) < 0)
         {
             return -1;
         }
@@ -539,7 +550,7 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
             bson_set_error(e, 0, 0, "bson array iter recurse error");
             return -1;
         }
-        if (decode_table(L, &sub_iter, e, BSON_TYPE_ARRAY, array_opt, false) < 0)
+        if (decode_table(L, &sub_iter, e, BSON_TYPE_ARRAY, opt, false) < 0)
         {
             return -1;
         }
@@ -615,9 +626,9 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
 
 /// @brief 解析bson对象到lua table
 /// @param type 指定bson的类型，如 BSON_TYPE_ARRAY
-/// @param array_opt 是否启用数组自动转换,-1表示不启用
+/// @param opt 是否启用数组自动转换,-1表示不启用
 static int decode(lua_State *L, bson_t *b, bson_error_t *e,
-                  bson_type_t type, double array_opt)
+                  bson_type_t type, double opt)
 {
     bson_iter_t iter;
     if (!bson_iter_init(&iter, b))
@@ -627,7 +638,7 @@ static int decode(lua_State *L, bson_t *b, bson_error_t *e,
         return -1;
     }
 
-    return decode_table(L, &iter, e, type, array_opt, is_convert_key(b, nullptr, type, array_opt));
+    return decode_table(L, &iter, e, type, opt, is_convert_key(b, nullptr, type, opt));
 }
 
 /**
@@ -639,14 +650,14 @@ static int decode(lua_State *L, bson_t *b, bson_error_t *e,
  * @return bson对象，可能为nullptr
  */
 template <typename... Args>
-bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double array_opt,
+bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double opt,
                           Args... args)
 {
     bson_t *bson = nullptr;
     if (lua_istable(L, index)) // 自动将lua table 转化为bson
     {
         bson_error_t e;
-        if (!(bson = encode(L, index, &e, array_opt)))
+        if (!(bson = encode(L, index, &e, opt)))
         {
             destory_bson_list(args...);
             luaL_error(L, "table to bson error: %s", e.message);

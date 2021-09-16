@@ -210,23 +210,25 @@ end
 
 -- 将一个table指定为数组array或对象object
 -- 这与该table的解析有关（如转换为json、mongodb存库、转换为bson）
--- @param t 需要设置的table
--- @param is 是否设置为array，true为数组，false将强制为object
+-- @param tbl 需要设置的table
+-- @param opt 设置数组、对象转换参数
 -- @param sparse 稀松数组阀值
-function table.set_array(t, is, sparse)
-    local mt = getmetatable(t)
+function table.set_array(tbl, opt, sparse)
+    -- opt 浮点型
+    -- 整数部分表示数组下标最大值，小于等于此值总是作为数组
+    -- 小数部分表示数组填充率，大于等于此值总是作为数组
+    -- 如 opt = 8.6，当table中的key为整数且小于等于8则当作数组
+    -- 当整个table中， 所有元素的数量/最大key 的值 大于等于0.6，则当作数组
+
+    local mt = getmetatable(tbl)
     if not mt then
         mt = {}
-        setmetatable(t, mt)
+        setmetatable(tbl, mt)
     end
 
-    rawset(mt, "__array", is)
+    rawset(mt, "__opt", opt)
 
-    -- 如果该table为数组，且key > sparse值，则以kv方式存储
-    -- 并且在里面加上__sparse字段
-    if sparse then rawset(mt, "__sparse", true) end
-
-    return t
+    return tbl
 end
 
 -- Knuth-Durstenfeld Shuffle 洗牌算法

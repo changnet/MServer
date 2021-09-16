@@ -144,6 +144,7 @@ void LMongo::routine(int32_t ev)
         }
         else
         {
+            ELOG("mongodb command fail, qid = %d !!!", res->_qid);
             _result_pool.destroy(res);
         }
     }
@@ -200,6 +201,13 @@ void LMongo::main_routine(int32_t ev)
 
 void LMongo::on_result(lua_State *L, const MongoResult *res)
 {
+    // 打印错误日志，有时候脚本不设置回调函数，不打印出错就没法知道了
+    // TODO 要不要把错误信息存起来，做个last_e函数提供给脚本获取错误信息
+    if (0 != res->_error.code)
+    {
+        ELOG("ERROR: qid = %d, e = %d, %s", res->_qid, res->_error.code, res->_error.message);
+    }
+
     // 为0表示不需要回调到脚本
     if (0 == res->_qid) return;
 
