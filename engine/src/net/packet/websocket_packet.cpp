@@ -94,6 +94,7 @@ int32_t on_frame_header(struct websocket_parser *parser)
     body.clear();
     if (!body.reserved(parser->length))
     {
+        ws_packet->set_error(1);
         ELOG("websocket cant not allocate memory");
         return -1;
     }
@@ -119,6 +120,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
         // 法reserved超过一个chunk大小的连续缓冲区
         if (body.get_space_size() < length)
         {
+            ws_packet->set_error(2);
             ELOG("websocket packet on frame body overflow:%d,%d",
                   body.get_used_size(), body.get_space_size());
             return -1;
@@ -165,6 +167,7 @@ static const struct websocket_parser_settings settings = {
 
 WebsocketPacket::WebsocketPacket(class Socket *sk) : HttpPacket(sk)
 {
+    _e          = 0;
     _is_upgrade = false;
 
     _parser = new struct websocket_parser();
@@ -252,18 +255,23 @@ int32_t WebsocketPacket::unpack()
     const char *ctx = recv.all_to_continuous_ctx(size);
     if (size == 0) return 0;
 
+    _e = 0; // 重置上一次解析错误
+
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
     size_t nparser = websocket_parser_execute(_parser, &settings, ctx, size);
     // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
     // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
     // 普通错误，比如回调脚本出错，是不会中止解析的
+    recv.remove(nparser);
     if (nparser != size)
     {
-        return -1;
+        // websocket_parser未提供错误机制，所有函数都是返回非0值表示中止解析
+        // 但中止解析并不表示解析出错，比如 上层脚本在一个消息回调中关闭了连接，则需要中止解析
+        // 返回-1表示解析出错，会在底层直接删除链接
+        // 中止解析则由上层脚本逻辑决定如何处理(比如关闭链接或者直接忽略)
+        return _e ? -1 : 0;
     }
-
-    recv.remove(nparser);
 
     return 0;
 }
@@ -274,6 +282,7 @@ int32_t WebsocketPacket::on_message_complete(bool upgrade)
     // 但如果对方不是websocket，则可能按http下发404之类的其他东西
     if (!upgrade || _is_upgrade)
     {
+        set_error(3);
         ELOG("upgrade error, %s", _http_info._body.c_str());
         return -1;
     }
@@ -281,6 +290,7 @@ int32_t WebsocketPacket::on_message_complete(bool upgrade)
     _is_upgrade = true;
     if (0 != invoke_handshake())
     {
+        set_error(4);
         return -1;
     }
 
@@ -314,6 +324,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     if (nullptr == key_str && nullptr == accept_str)
     {
+        set_error(5);
         ELOG("websocket handshake header field not found");
         return -1;
     }
@@ -334,7 +345,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return _socket->fd() < 0 ? -1 : 0;
+    return _socket->is_closed() ? -1 : 0;
 }
 
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
@@ -358,7 +369,7 @@ int32_t WebsocketPacket::on_frame_end()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return _socket->fd() < 0 ? -1 : 0;
+    return _socket->is_closed() ? -1 : 0;
 }
 
 // 处理ping、pong等opcode
@@ -390,7 +401,7 @@ int32_t WebsocketPacket::on_ctrl_end()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return _socket->fd() < 0 ? -1 : 0;
+    return _socket->is_closed() ? -1 : 0;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])

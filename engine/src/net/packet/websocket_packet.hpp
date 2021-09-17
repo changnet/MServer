@@ -42,12 +42,16 @@ public:
     // 发送opcode
     int32_t pack_ctrl(lua_State *L, int32_t index);
 
+    /// 设置错误码
+    void set_error(int32_t e) { _e = e; }
+
 protected:
     int32_t invoke_handshake();
     void new_masking_key(char mask[4]);
     int32_t pack_raw(lua_State *L, int32_t index);
 
 protected:
+    int32_t _e; /// 错误码 websocket_parser没有提供错误机制，这里自己实现
     bool _is_upgrade;
     class Buffer _body;
     struct websocket_parser *_parser;

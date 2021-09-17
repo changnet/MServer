@@ -77,6 +77,9 @@ public:
     int32_t validate();
     void pending_send();
 
+    /// 是否已关闭
+    bool is_closed() const { return !fd_valid(fd()); }
+
     /**
      * 获取ip地址及端口
      * @brief address
