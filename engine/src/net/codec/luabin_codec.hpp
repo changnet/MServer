@@ -2,20 +2,27 @@
 
 #include "codec.hpp"
 
-
 /**
- * @brief 以二进制方式编码、解压Lua变量，目前仅用于RPC调用，限定缓冲区大小为1M
+ * @brief 以二进制方式编码、解码Lua变量，目前仅用于RPC调用，限定缓冲区大小为1M
  */
-class LuaBinCodec final: public Codec
+class LuaBinCodec final : public Codec
 {
 public:
     LuaBinCodec();
     ~LuaBinCodec();
 
-    void finalize() override {};
+    void finalize() override{};
     void reset() override {}
-    int32_t load_path(const char *path) override { UNUSED(path); return 0; }
-    int32_t load_file(const char *path) override { UNUSED(path); return 0; }
+    int32_t load_path(const char *path) override
+    {
+        UNUSED(path);
+        return 0;
+    }
+    int32_t load_file(const char *path) override
+    {
+        UNUSED(path);
+        return 0;
+    }
 
     /**
      * 解码数据包
@@ -32,8 +39,7 @@ public:
 
 private:
     //< 把基础类型写入缓冲区，不支持指针及自定义结构
-    template<typename T>
-    LuaBinCodec &operator<< (const T &v)
+    template <typename T> LuaBinCodec &operator<<(const T &v)
     {
         *(reinterpret_cast<T *>(_encode_buff + _buff_len)) = v;
         _buff_len += sizeof(T);
@@ -52,10 +58,9 @@ private:
         return _decode_buff + pos;
     }
 
-    template<typename T>
-    LuaBinCodec &operator>>(T &v)
+    template <typename T> LuaBinCodec &operator>>(T &v)
     {
-        v = *(reinterpret_cast<T *>(_decode_buff + _buff_pos));
+        v = *(reinterpret_cast<const T *>(_decode_buff + _buff_pos));
         _buff_pos += sizeof(T);
         return *this;
     }
@@ -69,9 +74,10 @@ private:
     int32_t decode_value(lua_State *L);
     //< 从缓冲区解码table到lua中
     int32_t decode_table(lua_State *L);
+
 private:
-    size_t _buff_len; // 已使用的缓冲区长度
-    size_t _buff_pos; // 已读取的缓冲区长度，仅decode时用到
+    size_t _buff_len;   // 已使用的缓冲区长度
+    size_t _buff_pos;   // 已读取的缓冲区长度，仅decode时用到
     char *_encode_buff; // 用于序列化的缓冲区，避免内存分配
     const char *_decode_buff; // 反序列化缓冲区
 };

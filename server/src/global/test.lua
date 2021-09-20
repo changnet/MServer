@@ -158,8 +158,8 @@ local function dump(o)
 
     local s = '{ '
     for k, v in pairs(o) do
-        if type(k) ~= 'number' then k = '"' .. k .. '"' end
-        s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
+        if type(k) ~= 'number' then k = '"' .. tostring(k) .. '"' end
+        s = s .. '[' .. tostring(k) .. '] = ' .. dump(v) .. ','
     end
     return s .. '} '
 end
@@ -174,13 +174,15 @@ local function equal(got, expect)
     -- test two table equal
     for k, v in pairs(expect) do
         if not equal(got[k], v) then
-            T.print("value of key " .. k .. " not match")
+            T.print("got value of key " .. tostring(k) .. " not match",
+                got[k], v)
             return false
         end
     end
     for k, v in pairs(got) do
         if not equal(expect[k], v) then
-            T.print("value of key " .. k .. " not match")
+            T.print("expect value of key " .. tostring(k) .. " not match",
+                expect[k], v)
             return false
         end
     end

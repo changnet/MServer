@@ -34,7 +34,22 @@ t_describe("rpc test", function()
             9999999999.5555555,
             nil,
             1000,
-            {1, true, nil, "str", 9.009, false, {}}
+            {
+                1, true, nil, "str", 9.009, false,
+                {a = 1, [2] = 2, [false] = true, [9.5] = 9.5}
+            }
+        },
+        {
+            -- 使用基础类型作key
+            [math.maxinteger] = math.maxinteger,
+            [math.mininteger] = math.mininteger,
+            str = "sssssssttttttttttttrrrrrrrrrrr",
+            [1] = 1,
+            [false] = true,
+            [9.5] = 9.5,
+            -- 使用table作key，支持但不推荐，
+            -- 因为用内存地址作key用于判断是否相等是有问题的
+            -- [{a = 1, [false] = true}] = { a = 999 },
         }
     }
 
@@ -63,16 +78,16 @@ t_describe("rpc test", function()
             t_equal(p1, nil)
             counter = counter + 1
         end
-        local rpc_query = function(p1, p2, p3, p4, p5, p6, p7, p8, p9)
-            t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9}, params)
+        local rpc_query = function(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
+            t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10}, params)
             counter = counter + 1
-            return p1, p2, p3, p4, p5, p6, p7, p8, p9
+            return p1, p2, p3, p4, p5, p6, p7, p8, p9, p10
         end
 
-        local rpc_reponse = function(p1, p2, p3, p4, p5, p6, p7, p8, p9, ...)
+        local rpc_reponse = function(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, ...)
             counter = counter + 1
             t_equal(Rpc.last_error(), 0)
-            t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9}, params)
+            t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10}, params)
             t_equal({...}, params)
         end
 
@@ -106,7 +121,7 @@ t_describe("rpc test", function()
         Rpc.conn_call(clt_conn, rpc_empty_query)
         -- 无返回，有参数
         Rpc.conn_call(clt_conn, rpc_query, table.unpack(params))
-        -- 有返回，有回调参数
+        -- -- 有返回，有回调参数
         Rpc.proxy(rpc_reponse, table.unpack(params)).conn_call(
             clt_conn, rpc_query, table.unpack(params))
         -- 有返回，有少量回调参数

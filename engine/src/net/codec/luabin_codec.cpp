@@ -53,6 +53,7 @@ int32_t LuaBinCodec::decode_table(lua_State *L)
             lua_settop(L, top);
             return -1;
         }
+        lua_rawset(L, -3);
     }
 
     return 0;
@@ -72,15 +73,16 @@ int32_t LuaBinCodec::decode_value(lua_State *L)
     CHECK_DECODE_LEN(sizeof(int8_t));
     *this >> type;
 
-    if (!lua_checkstack(L, 1))
-    {
-        ELOG("lua stack overflow, %d", lua_gettop(L));
-        return -1;
-    }
+    // 由encode和encode_table检测，这里不用每次都检测
+    //    if (!lua_checkstack(L, 1))
+    //    {
+    //        ELOG("lua stack overflow, %d", lua_gettop(L));
+    //        return -1;
+    //    }
 
     switch (type)
     {
-    case LT_NIL: break;
+    case LT_NIL: lua_pushnil(L); break;
     case LT_BOOL:
     {
         int8_t b = 0;
@@ -143,8 +145,19 @@ int32_t LuaBinCodec::decode(lua_State *L, const char *buffer, size_t len,
     _buff_len    = len;
     _decode_buff = buffer;
 
-    int8_t count = 0;
+    uint8_t count = 0;
+    if (len < sizeof(count))
+    {
+        ELOG("invalid lua binary buffer");
+        return -1;
+    }
     *this >> count;
+
+    if (!lua_checkstack(L, count))
+    {
+        ELOG("lua stack overflow, %d", lua_gettop(L));
+        return -1;
+    }
 
     for (int32_t i = 0; i < count; i++)
     {
@@ -161,7 +174,7 @@ int32_t LuaBinCodec::encode_table(lua_State *L, int32_t index)
 
     size_t count = 0;
     // 写入数量，只是占位。这里不检测长度，由encode_value检测
-    *this << (int8_t)LT_TABLE << count;
+    *this << count;
 
     int32_t top = lua_gettop(L);
 
@@ -205,6 +218,7 @@ int32_t LuaBinCodec::encode_value(lua_State *L, int32_t index)
     case LUA_TBOOLEAN:
         CHECK_ENCODE_LEN(8);
         *this << (int8_t)LT_BOOL << (int8_t)(lua_toboolean(L, index) ? 1 : 0);
+        break;
     case LUA_TNUMBER:
         CHECK_ENCODE_LEN(8);
         if (lua_isinteger(L, index))
@@ -215,6 +229,7 @@ int32_t LuaBinCodec::encode_value(lua_State *L, int32_t index)
         {
             *this << (int8_t)LT_NUM << (double)lua_tonumber(L, index);
         }
+        break;
     case LUA_TSTRING:
     {
         size_t len      = 0;
@@ -226,7 +241,10 @@ int32_t LuaBinCodec::encode_value(lua_State *L, int32_t index)
         this->append(str, len);
         break;
     }
-    case LUA_TTABLE: CHECK_ENCODE_LEN(16); return encode_table(L, index);
+    case LUA_TTABLE:
+        CHECK_ENCODE_LEN(16);
+        *this << (int8_t)LT_TABLE;
+        return encode_table(L, index);
     default:
         ELOG("unsupport lua type %s", lua_typename(L, lua_type(L, index)));
         return -1;
@@ -253,7 +271,7 @@ int32_t LuaBinCodec::encode(lua_State *L, int32_t index, const char **buffer,
     _buff_len = 0;
 
     // 写入数量
-    *this << int8_t(top - index + 1);
+    *this << uint8_t(top - index + 1);
 
     for (int32_t i = index; i <= top; i++)
     {
