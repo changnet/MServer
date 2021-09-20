@@ -1,8 +1,9 @@
 #include "codec_mgr.hpp"
 
 #include "bson_codec.hpp"
-#include "flatbuffers_codec.hpp"
+#include "luabin_codec.hpp"
 #include "protobuf_codec.hpp"
+#include "flatbuffers_codec.hpp"
 
 CodecMgr::CodecMgr()
 {
@@ -11,6 +12,7 @@ CodecMgr::CodecMgr()
     _codecs[Codec::CT_BSON]     = new class BsonCodec();
     _codecs[Codec::CT_FLATBUF]  = new class FlatbuffersCodec();
     _codecs[Codec::CT_PROTOBUF] = new class ProtobufCodec();
+    _codecs[Codec::CT_LUABIN]   = new class LuaBinCodec();
 }
 
 CodecMgr::~CodecMgr()

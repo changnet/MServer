@@ -345,12 +345,11 @@ int32_t LNetworkMgr::get_session_by_conn_id(uint32_t conn_id) const
 
 int32_t LNetworkMgr::reset_schema(lua_State *L)
 {
-    int32_t type     = luaL_checkinteger32(L, 1);
+    int32_t type = luaL_checkinteger32(L, 1);
 
     if (type < Codec::CT_NONE || type >= Codec::CT_MAX) return 0;
 
-    StaticGlobal::codec_mgr()->reset(
-        static_cast<Codec::CodecType>(type));
+    StaticGlobal::codec_mgr()->reset(static_cast<Codec::CodecType>(type));
 
     return 0;
 }
@@ -576,9 +575,6 @@ int32_t LNetworkMgr::get_http_header(lua_State *L)
     return size;
 }
 
-/* 发送rpc数据包
- * network_mgr:send_rpc_packet( conn_id,unique_id,name,param1,param2,param3 )
- */
 int32_t LNetworkMgr::send_rpc_packet(lua_State *L)
 {
     class Packet *pkt = lua_check_packet(L, Socket::CT_SSCN);

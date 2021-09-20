@@ -174,12 +174,12 @@ int32_t lprotobuf::load_path(const char *path, const char *suffix)
         return -1;
     }
 
-    int count         = 0;
+    int count = 0;
     std::error_code e;
     std::filesystem::directory_iterator dir_iter(path, e);
     if (e)
     {
-        ELOG("can not open directory(%s):%s", path, e.message());
+        ELOG("can not open directory(%s):%s", path, e.message().c_str());
 
         return -1;
     }
@@ -549,9 +549,6 @@ ProtobufCodec::~ProtobufCodec()
     _lprotobuf = NULL;
 }
 
-/**
- * 打包结束后，后续清理
- */
 void ProtobufCodec::finalize()
 {
     if (_lprotobuf)
@@ -575,7 +572,7 @@ int32_t ProtobufCodec::load_path(const char *path)
     return _lprotobuf->load_path(path);
 }
 
-int32_t ProtobufCodec::load_file(const char* path)
+int32_t ProtobufCodec::load_file(const char *path)
 {
     return _lprotobuf->load_file(path);
 }

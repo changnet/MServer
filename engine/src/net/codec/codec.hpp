@@ -17,9 +17,10 @@ public:
         CT_STREAM   = 2, ///< 协议编码方式，自定义二进制流
         CT_FLATBUF  = 3, ///< 协议编码方式，google FlatBuffers
         CT_PROTOBUF = 4, ///< 协议编码方式，google protocol buffers
+        CT_LUABIN   = 5, ///< 协议编码方式，自定义lua二进制
 
         CT_MAX ///< 协议编码方式最大值
-    } ;
+    };
 
 public:
     Codec() {}
