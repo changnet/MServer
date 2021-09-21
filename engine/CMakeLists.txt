@@ -127,6 +127,7 @@ endif()
 
 target_include_directories(master PRIVATE
     ${DEPS_PATH}/pbc
+    ${DEPS_PATH}/llhttp
     ${DEPS_PATH}/lua_parson
     ${DEPS_PATH}/lua_rapidxml
     ${DEPS_PATH}/http-parser
@@ -145,6 +146,7 @@ target_link_libraries(master PRIVATE
     # 自动解决依赖关系，后者表示静态链接，但不会产生依赖关系
     pbc
     acism
+    llhttp
     lua_parson
     lua_rapidxml
     http_parser
