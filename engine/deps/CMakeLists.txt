@@ -14,8 +14,11 @@ endif()
 # llhttp
 file(GLOB SRC_LIST "llhttp/src/*.c")
 add_library(llhttp STATIC ${SRC_LIST})
+# 清空编译参数，不然的话有太多的警告。llhttp的CMakeList.txt也没有额外参数
+set_target_properties(llhttp PROPERTIES COMPILE_OPTIONS "")
 # 使用c99标准编译，参照llhttp的CMakeList.txt
 set_property(TARGET llhttp PROPERTY C_STANDARD 99)
+
 target_include_directories(llhttp PRIVATE
     llhttp/include
 )
