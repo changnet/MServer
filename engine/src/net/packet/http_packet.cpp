@@ -1,18 +1,12 @@
-#include <http_parser.h>
-
 #include "../../lua_cpplib/ltools.hpp"
 #include "../../system/static_global.hpp"
 #include "../socket.hpp"
+
 #include "http_packet.hpp"
 
-#define ASSERT_PARSER_DATA() \
-    assert(parser && (parser->data))
-
 // 开始解析报文，第一个回调的函数，在这里初始化数据
-int32_t on_message_begin(http_parser *parser)
+int32_t on_message_begin(llhttp_t *parser)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     // 这个千万不要因为多态调到websocket_packet::reset去了
     http_packet->HttpPacket::reset();
@@ -21,17 +15,15 @@ int32_t on_message_begin(http_parser *parser)
 }
 
 // 解析到url报文，可能只是一部分
-int32_t on_url(http_parser *parser, const char *at, size_t length)
+int32_t on_url(llhttp_t *parser, const char *at, size_t length)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_url(at, length);
 
     return 0;
 }
 
-int32_t on_status(http_parser *parser, const char *at, size_t length)
+int32_t on_status(llhttp_t *parser, const char *at, size_t length)
 {
     UNUSED(parser);
     UNUSED(at);
@@ -40,53 +32,44 @@ int32_t on_status(http_parser *parser, const char *at, size_t length)
     return 0;
 }
 
-int32_t on_header_field(http_parser *parser, const char *at, size_t length)
+int32_t on_header_field(llhttp_t *parser, const char *at, size_t length)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_field(at, length);
 
     return 0;
 }
 
-int32_t on_header_value(http_parser *parser, const char *at, size_t length)
+int32_t on_header_value(llhttp_t *parser, const char *at, size_t length)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_value(at, length);
 
     return 0;
 }
 
-int32_t on_headers_complete(http_parser *parser)
+int32_t on_headers_complete(llhttp_t *parser)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->on_headers_complete();
 
     return 0;
 }
 
-int32_t on_body(http_parser *parser, const char *at, size_t length)
+int32_t on_body(llhttp_t *parser, const char *at, size_t length)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_body(at, length);
 
     return 0;
 }
 
-int32_t on_message_complete(http_parser *parser)
+int32_t on_message_complete(llhttp_t *parser)
 {
-    ASSERT_PARSER_DATA();
-
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
 
-    // 这里返回error将不再继续解析
+    // on_message_complete里回调socket关闭中断解析
+    // 但不要报错，报错会直接销毁这个packet对象。socket关闭外层有检测，不在这里处理
     if (http_packet->on_message_complete(parser->upgrade))
     {
         return HPE_PAUSED;
@@ -96,82 +79,81 @@ int32_t on_message_complete(http_parser *parser)
 }
 
 /**
- * http chunk应该用不到，暂不处理
- * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
-HTTP/1.1 200 OK
-Content-Type: text/plain
-Transfer-Encoding: chunked
-
-7\r\n
-Mozilla\r\n
-9\r\n
-Developer\r\n
-7\r\n
-Network\r\n
-0\r\n
-\r\n
+ * 临时用于初始化设置  
  */
-static const struct http_parser_settings settings = {on_message_begin,
-                                                     on_url,
-                                                     on_status,
-                                                     on_header_field,
-                                                     on_header_value,
-                                                     on_headers_complete,
-                                                     on_body,
-                                                     on_message_complete,
+class HttpSettingInitializer
+{
+public:
+    HttpSettingInitializer()
+    {
+        llhttp_settings_init(&_setting);
 
-                                                     NULL,
-                                                     NULL};
+        /**
+         * http chunk应该用不到，暂不处理(on_chunk_complete)
+         * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
+         */
+
+        _setting.on_message_begin = on_message_begin;
+        _setting.on_url           = on_url;
+        _setting.on_status        = on_status;
+        _setting.on_header_field  = on_header_field;
+        _setting.on_header_value  = on_header_value;
+        _setting.on_headers_complete = on_headers_complete;
+        _setting.on_body             = on_body;
+        _setting.on_message_complete = on_message_complete;
+    }
+
+public:
+    llhttp_settings_t _setting;
+};
+
+static const HttpSettingInitializer initializer;
 
 /* ====================== HTTP FUNCTION END ================================ */
 HttpPacket::~HttpPacket()
 {
-    delete _parser;
-    _parser = NULL;
 }
 
 HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 {
     // HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
-    _parser = new struct http_parser();
-    http_parser_init(_parser, HTTP_BOTH);
-    _parser->data = this;
+    llhttp_init(&_parser, HTTP_BOTH, &initializer._setting);
+    _parser.data = this;
 }
 
 int32_t HttpPacket::unpack()
 {
     class Buffer &recv = _socket->recv_buffer();
-    size_t size      = recv.get_used_size();
+    size_t size        = recv.get_used_size();
     if (size == 0) return 0;
 
-    /* 注意：解析完成后，是由http-parser回调脚本的，这时脚本那边可能会关闭socket
-     * 因此要注意http_parser_execute后部分资源是不可再访问的
-     * http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
-     * 不用check_all_used_ctx
-     */
-    size_t nparsed =
-        http_parser_execute(_parser, &settings, recv.get_used_ctx(), size);
+    // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
+    // 不用check_all_used_ctx
+    const char *data    = recv.get_used_ctx();
 
-    /* web_socket报文,暂时不用回调到上层
-     * The user is expected to check if parser->upgrade has been set to 1 after
-     * http_parser_execute() returns. Non-HTTP data begins at the buffer
-     * supplied offset by the return value of http_parser_execute()
+    /* 注意：解析完成后，是由parser回调脚本的，这时脚本那边可能会关闭socket
+     * 因此要注意execute后部分资源是不可再访问的
+     * 一旦出错，llhttp_execute总是返回之前的错误码，不会继续执行，除非重新init或者resume
      */
-    if (_parser->upgrade)
+    enum llhttp_errno e = llhttp_execute(&_parser, data, size);
+
+    /**
+     * 连接升级为websocket，返回1，后续的数据由websocket那边继续处理
+     */
+    if (HPE_PAUSED_UPGRADE == e)
     {
-        /* 除去缓冲区中websocket握手数据
-         * 返回 >0 由子类websocket_packet继续处理数据
-         */
-        recv.remove(nparsed);
+        recv.remove(llhttp_get_error_pos(&_parser) - data);
         return 1;
     }
 
-    recv.clear();                 // http_parser不需要旧缓冲区
-    if (nparsed != size) /* error */
+    recv.clear(); // http_parser不需要旧缓冲区
+
+    // PAUSE通常是上层脚本关闭了socket，需要中止解析
+    if (HPE_OK != e && HPE_PAUSED != e)
     {
-        int32_t no = _parser->http_errno;
-        ELOG("http parse error(%d):%s", no,
-              http_errno_name(static_cast<enum http_errno>(no)));
+        ELOG("http parse error(%d):%s",
+            llhttp_get_errno(&_parser),
+            llhttp_get_error_reason(&_parser));
 
         return -1;
     }
@@ -206,15 +188,12 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, _socket->conn_id());
 
-    // enum http_parser_type 0请求request，1 返回respond
-    lua_pushinteger(L, _parser->type);
-    lua_pushinteger(L, _parser->status_code); // 仅respond有用
+    // HTTP_REQUEST = 1, HTTP_RESPONSE = 2
+    lua_pushinteger(L, _parser.type);
+    lua_pushinteger(L, _parser.status_code); // 仅respond有用
 
-    // GET or POST
-    // const char *method_str =
-    //     http_method_str(static_cast<enum http_method>(_parser->method));
-    // lua_pushstring(L, method_str);
-    lua_pushinteger(L, _parser->method); // 1 = GET, 3 = POST，仅request有用
+    // 1 = GET, 3 = POST，仅request有用
+    lua_pushinteger(L, _parser.method);
     lua_pushstring(L, _http_info._url.c_str());
 
     int32_t args = 5;

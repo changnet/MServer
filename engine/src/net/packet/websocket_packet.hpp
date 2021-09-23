@@ -39,7 +39,7 @@ public:
     //< 从http升级到websocket时，会触发一次on_message_complete
     virtual int32_t on_message_complete(bool upgrade) override;
 
-    // 发送opcode
+    //< 发送opcode等控制码
     int32_t pack_ctrl(lua_State *L, int32_t index);
 
     /// 设置错误码

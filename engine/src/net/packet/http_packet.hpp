@@ -3,12 +3,18 @@
 #include <map>
 #include <queue>
 
+#include <llhttp.h>
+
 #include "packet.hpp"
 
-struct http_parser;
+/**
+ * Http编码解码
+ */
 class HttpPacket : public Packet
 {
 public:
+    // TODO 使用std::string来解析协议效率不高，应该做一个内存池
+    // 但游戏服务器http通常只是铺助，要求不高
     typedef std::map<std::string, std::string> head_map_t;
     struct http_info
     {
@@ -21,14 +27,13 @@ public:
     virtual ~HttpPacket();
     explicit HttpPacket(class Socket *sk);
 
-    virtual PacketType type() const { return PT_HTTP; }
+    virtual PacketType type() const override { return PT_HTTP; }
 
-    virtual int32_t pack_clt(lua_State *L, int32_t index);
-    virtual int32_t pack_srv(lua_State *L, int32_t index);
-    /* 数据解包
-     * return: <0 error;0 success
-     */
-    virtual int32_t unpack();
+    virtual int32_t pack_clt(lua_State *L, int32_t index) override;
+    virtual int32_t pack_srv(lua_State *L, int32_t index) override;
+
+    virtual int32_t unpack() override;
+
     /* 解压http数据到lua堆栈 */
     int32_t unpack_header(lua_State *L) const;
 
@@ -48,7 +53,7 @@ protected:
 private:
     int32_t pack_raw(lua_State *L, int32_t index);
 
-    http_parser *_parser;
+    llhttp_t _parser;
     std::string _cur_field;
     std::string _cur_value;
 };

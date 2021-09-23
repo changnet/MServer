@@ -58,7 +58,7 @@ t_describe("http(s) test", function()
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 1)
+                t_equal(http_type, 2)
                 t_equal(code, 200)
                 conn:close()
                 t_done()
@@ -75,7 +75,7 @@ t_describe("http(s) test", function()
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 1)
+                t_equal(http_type, 2)
                 t_equal(code, 200)
                 conn:close()
                 t_done()
@@ -93,7 +93,7 @@ t_describe("http(s) test", function()
         local srv_conn = HttpConn()
         srv_conn:listen(local_host, port)
         srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
-            t_equal(http_type, 0)
+            t_equal(http_type, 1)
 
             -- 1 = GET, 3 = POST
             if "/get" == url then
@@ -138,7 +138,7 @@ t_describe("http(s) test", function()
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 1)
+                t_equal(http_type, 2)
                 t_equal(code, 200)
                 conn:close()
                 t_done()
@@ -155,7 +155,7 @@ t_describe("http(s) test", function()
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 1)
+                t_equal(http_type, 2)
                 t_equal(code, 200)
                 conn:close()
                 t_done()
@@ -173,7 +173,7 @@ t_describe("http(s) test", function()
         local srv_conn = HttpConn()
         srv_conn:listen_s(local_host, port, srv_ssl)
         srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
-            t_equal(http_type, 0)
+            t_equal(http_type, 1)
 
             -- 1 = GET, 3 = POST
             if "/get" == url then
@@ -215,7 +215,7 @@ t_describe("http(s) test", function()
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 1)
+                t_equal(http_type, 2)
                 t_equal(code, 200)
                 conn:close()
                 t_done()
@@ -233,7 +233,7 @@ t_describe("http(s) test", function()
         local srv_conn = HttpConn()
         srv_conn:listen_s(local_host, port, vfy_srv_ssl)
         srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
-            t_equal(http_type, 0)
+            t_equal(http_type, 1)
 
             -- 1 = GET, 3 = POST
             if "/get" == url then

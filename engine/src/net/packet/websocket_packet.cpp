@@ -156,7 +156,7 @@ int32_t on_frame_end(struct websocket_parser *parser)
     return ws_packet->on_frame_end();
 }
 
-/* init all field insted of using websocket_parser_settings_init */
+//< init all field insted of using websocket_parser_settings_init
 static const struct websocket_parser_settings settings = {
     on_frame_header,
     on_frame_body,
@@ -211,24 +211,16 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
     return 0;
 }
 
-/* 打包服务器发往客户端数据包
- * return: <0 error;>=0 success
- */
 int32_t WebsocketPacket::pack_clt(lua_State *L, int32_t index)
 {
     return pack_raw(L, index);
 }
 
-/* 打包客户端发往服务器数据包
- * return: <0 error;>=0 success
- */
 int32_t WebsocketPacket::pack_srv(lua_State *L, int32_t index)
 {
     return pack_raw(L, index);
 }
 
-// 发送opcode
-// 对应websocket，可以直接用pack_clt或pack_srv发送控制帧。这个函数是给ws_stream等子类使用
 int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
 {
     /* https://tools.ietf.org/html/rfc6455#section-5.5
@@ -239,9 +231,6 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
     return pack_raw(L, index);
 }
 
-/* 数据解包
- * return: <0 error;0 success
- */
 int32_t WebsocketPacket::unpack()
 {
     /* 未握手时，由http处理

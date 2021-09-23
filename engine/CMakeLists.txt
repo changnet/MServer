@@ -127,7 +127,7 @@ endif()
 
 target_include_directories(master PRIVATE
     ${DEPS_PATH}/pbc
-    ${DEPS_PATH}/llhttp
+    ${DEPS_PATH}/llhttp/include
     ${DEPS_PATH}/lua_parson
     ${DEPS_PATH}/lua_rapidxml
     ${DEPS_PATH}/http-parser
