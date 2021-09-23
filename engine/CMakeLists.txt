@@ -130,10 +130,8 @@ target_include_directories(master PRIVATE
     ${DEPS_PATH}/llhttp/include
     ${DEPS_PATH}/lua_parson
     ${DEPS_PATH}/lua_rapidxml
-    ${DEPS_PATH}/http-parser
     ${DEPS_PATH}/aho-corasick
     ${DEPS_PATH}/lua_flatbuffers
-    ${DEPS_PATH}/lua_bson
     ${DEPS_PATH}/websocket-parser
 )
 
@@ -149,9 +147,7 @@ target_link_libraries(master PRIVATE
     llhttp
     lua_parson
     lua_rapidxml
-    http_parser
     lua_flatbuffers
-    lua_bson
     websocket_parser
 )
 

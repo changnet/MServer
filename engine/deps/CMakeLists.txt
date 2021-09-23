@@ -11,9 +11,6 @@ if(WINDOWS)
     target_compile_options(pbc PRIVATE /TP /wd4146 /wd4273 /wd4244 /wd4018 /wd4267)
 endif()
 
-# http-parser
-add_library(http_parser STATIC http-parser/http_parser.c)
-
 # llhttp
 file(GLOB SRC_LIST "llhttp/src/*.c")
 add_library(llhttp STATIC ${SRC_LIST})
@@ -22,14 +19,6 @@ set_property(TARGET llhttp PROPERTY C_STANDARD 99)
 target_include_directories(llhttp PRIVATE
     llhttp/include
 )
-
-# lua_bson
-find_package(bson-1.0 CONFIG REQUIRED)
-add_library(lua_bson STATIC lua_bson/lbson.c)
-target_include_directories(lua_bson PRIVATE
-    ${LUA_INCLUDE_DIR}
-)
-target_link_libraries(lua_bson PRIVATE mongo::bson_shared)
 
 # lua_flatbuffers
 file(GLOB SRC_LIST "lua_flatbuffers/*.cpp")

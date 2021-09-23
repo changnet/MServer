@@ -227,7 +227,7 @@ int32_t luaopen_network_mgr(lua_State *L)
 
     // 前缀CT和上面的重复了，这里改为CDT
     lc.set(Codec::CT_NONE, "CDT_NONE");
-    lc.set(Codec::CT_BSON, "CDT_BSON");
+    lc.set(Codec::CT_LUABIN, "CDT_LUABIN");
     lc.set(Codec::CT_STREAM, "CDT_STREAM");
     lc.set(Codec::CT_FLATBUF, "CDT_FLATBUF");
     lc.set(Codec::CT_PROTOBUF, "CDT_PROTOBUF");

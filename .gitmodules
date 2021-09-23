@@ -7,12 +7,6 @@
 [submodule "master/deps/aho-corasick"]
 	path = engine/deps/aho-corasick
 	url = https://github.com/changnet/aho-corasick.git
-[submodule "master/deps/http-parser"]
-	path = engine/deps/http-parser
-	url = https://github.com/changnet/http-parser.git
-[submodule "master/deps/lua_bson"]
-	path = engine/deps/lua_bson
-	url = https://github.com/changnet/lua_bson.git
 [submodule "master/deps/pbc"]
 	path = engine/deps/pbc
 	url = https://github.com/changnet/pbc.git
