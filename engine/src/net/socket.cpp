@@ -205,6 +205,14 @@ int32_t Socket::recv()
     int32_t ret  = _io->recv(byte);
     if (EXPECT_FALSE(ret < 0))
     {
+        // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
+        if (0 == byte && _packet)
+        {
+            _packet->on_closed();
+            // 上层脚本已经关闭了连接，这里不需要处理了
+            if (is_closed()) return -1;
+        }
+
         Socket::stop();
         network_mgr->connect_del(_conn_id);
 

@@ -89,25 +89,34 @@ t_describe("http(s) test", function()
         local ctx = "hello"
 
         local port = 8182
+        local no_len_ctx = "no_len_test ctx 1111111122222223333aaaabbbbbbccccc"
 
         local srv_conn = HttpConn()
         srv_conn:listen(local_host, port)
         srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
+            t_equal(network_mgr:address(conn.conn_id), local_host)
 
-            -- 1 = GET, 3 = POST
+            -- method 1 = GET, 3 = POST
             if "/get" == url then
                 t_equal(method, 1)
-            else
-                t_equal(url, "/post")
+                conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+            elseif "/post" == url then
                 t_equal(method, 3)
+                conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
+            elseif "/nolength" == url then
+                t_equal(method, 1)
+                -- 测试http的一个特殊实现，当内容里不存在content-len时
+                -- 数据长度以连接关闭时为准
+                local no_len_p200 = 'HTTP/1.1 200 OK\r\n\z
+                    Content-Type: application/json; charset=UTF-8\r\n\z
+                    Server: Mini-Game-Distribute-Server/1.0\r\n\z
+                    Connection: close\r\n\r\n' .. no_len_ctx
+                conn:send_pkt(no_len_p200)
+                conn:close(true)
+            else
+                t_assert(false)
             end
-
-            local addr = network_mgr:address(conn.conn_id)
-
-            t_print("accept http from", addr)
-            t_equal(addr, local_host)
-            conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
         end
 
         local clt_conn = HttpConn()
@@ -122,8 +131,12 @@ t_describe("http(s) test", function()
                 clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
                     t_equal(code2, 200)
-                    clt_conn:close()
-                    t_done()
+                    clt_conn:get("/nolength", nil,
+                        function(_, http_type3, code3, method3, url3, body3)
+                            t_equal(code3, 200)
+                            clt_conn:close()
+                            t_done()
+                        end)
                 end)
             end)
         end

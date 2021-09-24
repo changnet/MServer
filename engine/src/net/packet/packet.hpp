@@ -48,6 +48,11 @@ public:
     virtual int32_t unpack() = 0;
 
     /**
+     * 连接断开
+     */
+    virtual void on_closed() {}
+
+    /**
      * 打包服务器发往客户端的数据包，用于转发
      */
     virtual int32_t raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,

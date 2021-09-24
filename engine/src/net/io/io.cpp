@@ -42,11 +42,16 @@ int32_t IO::recv(int32_t &byte)
         return 0;
     }
 
-    if (0 == len) return -1; // 对方主动断开
+    if (0 == len)
+    {
+        byte = 0;
+        return -1; // 对方主动断开
+    }
 
     /* error happen */
     if (Socket::is_error())
     {
+        byte = -1;
         ELOG("io recv:%s(%d)", Socket::str_error(), Socket::error_no());
         return -1;
     }

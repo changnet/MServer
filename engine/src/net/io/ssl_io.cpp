@@ -60,6 +60,7 @@ int32_t SSLIO::recv(int32_t &byte)
         return -1;
     }
 
+    byte = -1;
     SSLMgr::ssl_error("ssl io recv");
     return -1;
 }

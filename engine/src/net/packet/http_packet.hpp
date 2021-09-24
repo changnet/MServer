@@ -34,6 +34,8 @@ public:
 
     virtual int32_t unpack() override;
 
+    virtual void on_closed() override;
+
     /* 解压http数据到lua堆栈 */
     int32_t unpack_header(lua_State *L) const;
 

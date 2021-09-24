@@ -291,3 +291,16 @@ int32_t HttpPacket::pack_srv(lua_State *L, int32_t index)
 {
     return pack_raw(L, index);
 }
+
+void HttpPacket::on_closed()
+{
+    // 没有 Content-Length 时，以连接关闭时读到的数据为准
+    // 这时候需要手动调用llhttp_finish来触发on_message_complete
+    if (!llhttp_message_needs_eof(&_parser)) return;
+
+    llhttp_errno_t e = llhttp_finish(&_parser);
+    if (HPE_OK != e && HPE_PAUSED != e)
+    {
+        ELOG("llhttp_finish erro (%d): %s", e, llhttp_get_error_reason(&_parser));
+    }
+}
