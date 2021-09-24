@@ -34,6 +34,7 @@ end
 function ScWsConn:close()
     self:ws_close()
 
+    -- 把WS_OP_CLOSE这个包发出去
     return ScConn.close(self, true)
 end
 

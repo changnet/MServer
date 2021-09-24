@@ -33,21 +33,38 @@ void LNetworkMgr::clear() /* 清除所有网络数据，不通知上层脚本 */
 /* 删除无效的连接 */
 void LNetworkMgr::invoke_delete()
 {
-    for (const auto &conn_id : _deleting)
+    if (_deleting.empty()) return;
+
+    static lua_State *L = StaticGlobal::state();
+    LUA_PUSHTRACEBACK(L);
+
+    for (const auto &iter : _deleting)
     {
-        socket_map_t::iterator sk_itr = _socket_map.find(conn_id);
+        socket_map_t::iterator sk_itr = _socket_map.find(iter.first);
         if (sk_itr == _socket_map.end())
         {
-            ELOG("no socket to delete: conn_id = %d", conn_id);
+            ELOG("no socket to delete: conn_id = %d", iter.first);
             continue;
         }
 
         const class Socket *sk = sk_itr->second;
-        assert(nullptr != sk && sk->fd() <= 0);
+        assert(nullptr != sk && sk->is_closed());
 
+        lua_getglobal(L, "conn_del");
+        lua_pushinteger(L, iter.first);
+
+        if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
+        {
+            ELOG("conn_del:%s", lua_tostring(L, -1));
+
+            lua_pop(L, 1); /* remove error message */
+        }
+        
         delete sk;
         _socket_map.erase(sk_itr);
     }
+
+    lua_pop(L, 1); /* remove traceback */
 
     _deleting.clear();
 }
@@ -159,7 +176,7 @@ int32_t LNetworkMgr::close(lua_State *L)
     /* 这里不能删除内存，因为脚本并不知道是否会再次访问此socket
      * 比如底层正在一个for循环里回调脚本时，就需要再次访问
      */
-    _deleting.push_back(conn_id);
+    _deleting.emplace(conn_id, 0);
 
     return 0;
 }
@@ -708,7 +725,7 @@ bool LNetworkMgr::accept_new(uint32_t conn_id, class Socket *new_sk)
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接
          */
-        _deleting.push_back(new_conn_id);
+        _deleting.emplace(new_conn_id, 0);
         ELOG("accept new socket:%s", lua_tostring(L, -1));
 
         lua_pop(L, 2); /* remove traceback and error object */
@@ -733,7 +750,7 @@ bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
         /* 出错后，无法得知脚本能否继续处理此连接
          * 为了防止死链，这里直接删除此连接
          */
-        _deleting.push_back(conn_id);
+        _deleting.emplace(conn_id, 0);
         ELOG("connect_new:%s", lua_tostring(L, -1));
 
         lua_pop(L, 2); /* remove traceback and error object */
@@ -741,7 +758,7 @@ bool LNetworkMgr::connect_new(uint32_t conn_id, int32_t ecode)
     }
     lua_pop(L, 1); /* remove traceback */
 
-    if (0 != ecode) _deleting.push_back(conn_id);
+    if (0 != ecode) _deleting.emplace(conn_id, 0);
 
     return true;
 }
@@ -768,22 +785,11 @@ bool LNetworkMgr::io_ok(uint32_t conn_id)
 
 bool LNetworkMgr::connect_del(uint32_t conn_id)
 {
-    _deleting.push_back(conn_id);
+    _deleting.emplace(conn_id, 1);
 
-    static lua_State *L = StaticGlobal::state();
-    LUA_PUSHTRACEBACK(L);
-
-    lua_getglobal(L, "conn_del");
-    lua_pushinteger(L, conn_id);
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
-    {
-        ELOG("conn_del:%s", lua_tostring(L, -1));
-
-        lua_pop(L, 2); /* remove traceback and error object */
-        return false;
-    }
-    lua_pop(L, 1); /* remove traceback */
+    // NOTE 这里暂时不触发脚本的on_disconnected事件
+    // 等到异步真实删除时触发，有些地方删除socket时socket对象还在使用中
+    // 也为了方便多次删除socket(比如http连接断开时回调到脚本，脚本又刚好判断这个socket超时了，删除了这socket)
 
     return true;
 }

@@ -183,7 +183,7 @@ void Socket::stop(bool flush)
     {
         ::close(_w.get_fd());
         _w.stop();
-        _w.set_fd(-1); /* must after stop */
+        _w.set_fd(invalid_fd()); /* must after stop */
     }
 
     // 这里不能清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
@@ -206,12 +206,7 @@ int32_t Socket::recv()
     if (EXPECT_FALSE(ret < 0))
     {
         // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-        if (0 == byte && _packet)
-        {
-            _packet->on_closed();
-            // 上层脚本已经关闭了连接，这里不需要处理了
-            if (is_closed()) return -1;
-        }
+        if (0 == byte && _packet) _packet->on_closed();
 
         Socket::stop();
         network_mgr->connect_del(_conn_id);

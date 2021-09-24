@@ -62,6 +62,7 @@ t_describe("websocket test", function()
         conn.default_param = ws_default_param
         conn:connect(exp_host, 80)
 
+        conn.on_disconnected = function() end
         conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
@@ -112,6 +113,7 @@ t_describe("websocket test", function()
         conn.default_param = ws_default_param
         conn:connect_s(exp_host, 443, clt_ssl)
 
+        conn.on_disconnected = function() end
         conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
@@ -172,11 +174,13 @@ t_describe("websocket test", function()
         listen_conn.on_cmd = function(self, cmd_body)
             WsConn.send_pkt(self, cmd_body)
         end
+        listen_conn.on_disconnected = function() end
 
         local conn = CsWsConn()
         conn.default_param = ws_default_param
         conn:connect(local_host, local_port)
 
+        conn.on_disconnected = function() end
         conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
@@ -237,11 +241,13 @@ t_describe("websocket test", function()
         listen_conn.on_cmd = function(self, cmd_body)
             WsConn.send_pkt(self, cmd_body)
         end
+        listen_conn.on_disconnected = function() end
 
         local conn = CsWsConn()
         conn.default_param = ws_default_param
         conn:connect_s(local_host, local_port_s, clt_ssl)
 
+        conn.on_disconnected = function() end
         conn.on_connected = function(self)
             WsConn.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)

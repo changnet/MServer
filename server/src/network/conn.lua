@@ -70,7 +70,7 @@ local Conn = oo.class(...)
 -- on_cmd 收到消息时触发
 -- on_accepted accept成功时触发
 -- on_connected 连接建立完成(包括SSL、websocket握手完成)
--- on_disconnected 断开或者连接失败时触发，主动断开则不会触发
+-- on_disconnected 断开或者连接失败时触发
 
 -- 设置io读写、编码、打包方式
 function Conn:set_conn_param()
@@ -228,7 +228,8 @@ end
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
 function Conn:close(flush)
-    self:set_conn(self.conn_id, nil)
+    -- 关闭时会触发conn_del，在那边删除
+    -- self:set_conn(self.conn_id, nil)
     return network_mgr:close(self.conn_id, flush)
 end
 

@@ -118,12 +118,14 @@ t_describe("protobuf test", function()
         end
         listen_conn.on_connected = function()
         end
+        listen_conn.on_disconnected = function() end
 
         clt_conn = CsConn()
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function()
             t_done()
         end
+        clt_conn.on_disconnected = function() end
 
         t_wait(2000)
     end)
@@ -205,6 +207,7 @@ t_describe("protobuf test", function()
         listen_conn_ws.on_accepted = function(self)
             srv_conn_ws = self
         end
+        listen_conn_ws.on_disconnected = function() end
 
         clt_conn_ws = CsWsConn()
         clt_conn_ws:connect(local_host, local_port_ws)
@@ -213,6 +216,7 @@ t_describe("protobuf test", function()
                 self:send_pkt(TEST.LITE, lite_pkt)
             end
         end
+        clt_conn_ws.on_disconnected = function() end
 
         t_wait()
     end)
@@ -232,6 +236,7 @@ t_describe("protobuf test", function()
         listen_conn_ws.on_accepted = function(self)
             srv_conn_ws = self
         end
+        listen_conn_ws.on_disconnected = function() end
 
         clt_conn_ws = CsWsConn()
         clt_conn_ws:connect(local_host, local_port_ws)
@@ -250,6 +255,7 @@ t_describe("protobuf test", function()
                 self:send_pkt(TEST.LITE, lite_pkt)
             end
         end
+        clt_conn_ws.on_disconnected = function() end
 
         t_wait()
     end)
@@ -276,6 +282,7 @@ t_describe("protobuf test", function()
         listen_conn_ws.on_accepted = function(self)
             srv_conn_ws = self
         end
+        listen_conn_ws.on_disconnected = function() end
 
         clt_conn_ws = CsWsConn()
         clt_conn_ws:connect_s(local_host, local_port_wss, clt_ssl)
@@ -284,7 +291,7 @@ t_describe("protobuf test", function()
                 self:send_pkt(TEST.LITE, lite_pkt)
             end
         end
-
+        clt_conn_ws.on_disconnected = function() end
 
         t_wait()
     end)

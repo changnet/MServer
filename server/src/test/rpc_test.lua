@@ -61,12 +61,14 @@ t_describe("rpc test", function()
             srv_conn = self
         end
         listen_conn.on_connected = function(self) end
+        listen_conn.on_disconnected = function() end
 
         clt_conn = SsConn()
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function(self)
             t_done()
         end
+        clt_conn.on_disconnected = function() end
 
         t_wait(2000)
     end)

@@ -150,7 +150,6 @@ function WsConn:ctrl_new(flag, body)
         -- 后才会关闭连接
         -- https://bugs.chromium.org/p/chromium/issues/detail?id=426798
         self:close()
-        self:on_disconnected() -- 这个属于对方关闭连接，需要触发关闭事件
         return
     elseif flag == WS_OP_PING then
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回

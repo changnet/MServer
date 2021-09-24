@@ -114,6 +114,7 @@ t_describe("flatbuffers test", function()
         end
         listen_conn.on_connected = function()
         end
+        listen_conn.on_disconnected = function() end
 
         clt_conn = CsConn()
         clt_conn.default_param = cs_param
@@ -121,6 +122,7 @@ t_describe("flatbuffers test", function()
         clt_conn.on_connected = function()
             t_done()
         end
+        clt_conn.on_disconnected = function() end
 
         t_wait(2000)
     end)
