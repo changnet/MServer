@@ -134,6 +134,7 @@ t_describe("http(s) test", function()
                     clt_conn:get("/nolength", nil,
                         function(_, http_type3, code3, method3, url3, body3)
                             t_equal(code3, 200)
+                            t_equal(body3, no_len_ctx)
                             clt_conn:close()
                             t_done()
                         end)
