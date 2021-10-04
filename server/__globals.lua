@@ -1,4 +1,4 @@
--- auto export by lua-tags 178 symbols
+-- auto export by lua-tags 177 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -36,6 +36,7 @@ return {
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
+"LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- engine/log.lua
@@ -75,7 +76,6 @@ return {
 "Sql", -- engine/sql.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
-"TIPS", -- src/modules/lang/lang_header.lua
 "Test", -- src/modules/ai/action/test.lua
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
@@ -108,7 +108,6 @@ return {
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
-"g_lang", -- src/modules/module_header.lua
 "g_log_mgr", -- src/modules/module_header.lua
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua

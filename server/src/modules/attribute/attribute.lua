@@ -3,7 +3,7 @@
 -- 2018-12-01
 -- 战斗属性
 
-local attr_base_conf = require "config.attribute_base"
+local attr_base_conf = require "config.attr_base_conf"
 
 local Attribute = oo.class(...)
 
@@ -43,7 +43,12 @@ end
 -- 计算当前属性的战力
 function Attribute:calc_fight_value()
     local fv = 0
-    for k, v in pairs(self.attribute) do fv = fv + v * (attr_base_conf[k] or 0) end
+    for k, v in pairs(self.attribute) do
+        local conf = attr_base_conf[k]
+        if conf then
+            fv = fv + v * conf.factor
+        end
+    end
 
     self.fight_value = fv
 

@@ -2,7 +2,7 @@
 -- 2018-05-05
 -- xzc
 -- 玩家背包模块
-local level_conf = require_conf("player_levelup")
+local level_conf = require_conf("player.levelup_conf")
 local item_conf = require "config.item_conf"
 
 local Module = require "modules.player.module"

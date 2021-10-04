@@ -2,7 +2,7 @@
 -- 2018-03-23
 -- xzc
 -- 玩家存库基础数据模块
-local level_conf = require_conf("player_levelup")
+local level_conf = require_conf("player.levelup_conf")
 
 local Module = require "modules.player.module"
 

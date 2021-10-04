@@ -4,7 +4,7 @@
 -- 角色欢迎
 
 
-local WelcomConf = require("config.player_welcome")
+local WelcomConf = require "config.player.welcome_conf"
 
 -- 发送数据
 local function send_info(player, st)
