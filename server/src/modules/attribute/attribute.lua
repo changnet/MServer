@@ -2,11 +2,8 @@
 -- xzc
 -- 2018-12-01
 -- 战斗属性
-local raw_conf = require_conf("attribute_base")
 
--- 数组转kv
-local abt_factor = {}
-for _, conf in pairs(raw_conf) do abt_factor[conf.id] = conf.factor end
+local attr_base_conf = require "config.attribute_base"
 
 local Attribute = oo.class(...)
 
@@ -46,7 +43,7 @@ end
 -- 计算当前属性的战力
 function Attribute:calc_fight_value()
     local fv = 0
-    for k, v in pairs(self.attribute) do fv = fv + v * (abt_factor[k] or 0) end
+    for k, v in pairs(self.attribute) do fv = fv + v * (attr_base_conf[k] or 0) end
 
     self.fight_value = fv
 

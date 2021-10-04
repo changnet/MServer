@@ -1,4 +1,4 @@
--- auto export by lua-tags 179 symbols
+-- auto export by lua-tags 178 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -36,7 +36,6 @@ return {
 "GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
 "InsertionRank", -- engine/insertion_rank.lua
-"LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- engine/log.lua
@@ -117,11 +116,11 @@ return {
 "g_mongodb", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
+"g_stat_mgr", -- src/test/rpc_test.lua
 "g_stat_mgr", -- src/android/app.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
-"g_stat_mgr", -- src/test/rpc_test.lua
 "g_timer_mgr", -- src/android/app.lua
 "g_timer_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/test/app.lua
