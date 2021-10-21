@@ -18,7 +18,7 @@ g_ai_mgr = nil
 -- 信号处理，默认情况下退出
 function sig_handler(signum)
     if signum == 15 then
-        local json = require "lua_parson"
+        local json = require "engine.lua_parson"
         local stat = require "modules.system.statistic"
 
         local total_stat = stat.collect()

@@ -11,8 +11,8 @@ else
     package.cpath = "../c_module/?.so;" .. package.cpath
 end
 
-local Log = require "Log"
-local util = require "util"
+local Log = require "engine.Log"
+local util = require "engine.util"
 
 __print = print
 -- __error = error

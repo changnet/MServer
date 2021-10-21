@@ -66,7 +66,7 @@ const char *__dbg_traceback()
 
 int32_t luaopen_ev(lua_State *L)
 {
-    LBaseClass<LEV> lc(L, "Ev");
+    LBaseClass<LEV> lc(L, "engine.Ev");
     lc.def<&LEV::time>("time");
     lc.def<&LEV::exit>("exit");
     lc.def<&LEV::signal>("signal");
@@ -84,7 +84,7 @@ int32_t luaopen_ev(lua_State *L)
 
 int32_t luaopen_timer(lua_State *L)
 {
-    LClass<LTimer> lc(L, "Timer");
+    LClass<LTimer> lc(L, "engine.Timer");
     lc.def<&LTimer::set>("set");
     lc.def<&LTimer::stop>("stop");
     lc.def<&LTimer::start>("start");
@@ -96,7 +96,7 @@ int32_t luaopen_timer(lua_State *L)
 int32_t luaopen_sql(lua_State *L)
 {
 
-    LClass<LSql> lc(L, "Sql");
+    LClass<LSql> lc(L, "engine.Sql");
     lc.def<&LSql::start>("start");
     lc.def<&LSql::stop>("stop");
 
@@ -110,7 +110,7 @@ int32_t luaopen_sql(lua_State *L)
 
 int32_t luaopen_mongo(lua_State *L)
 {
-    LClass<LMongo> lc(L, "Mongo");
+    LClass<LMongo> lc(L, "engine.Mongo");
     lc.def<&LMongo::start>("start");
     lc.def<&LMongo::stop>("stop");
 
@@ -130,7 +130,7 @@ int32_t luaopen_mongo(lua_State *L)
 
 int32_t luaopen_log(lua_State *L)
 {
-    LClass<LLog> lc(L, "Log");
+    LClass<LLog> lc(L, "engine.Log");
     lc.def<&LLog::stop>("stop");
     lc.def<&LLog::start>("start");
 
@@ -153,7 +153,7 @@ int32_t luaopen_log(lua_State *L)
 
 int32_t luaopen_acism(lua_State *L)
 {
-    LClass<LAcism> lc(L, "Acism");
+    LClass<LAcism> lc(L, "engine.Acism");
 
     lc.def<&LAcism::scan>("scan");
     lc.def<&LAcism::replace>("replace");
@@ -164,7 +164,7 @@ int32_t luaopen_acism(lua_State *L)
 
 int32_t luaopen_network_mgr(lua_State *L)
 {
-    LBaseClass<LNetworkMgr> lc(L, "Network_mgr");
+    LBaseClass<LNetworkMgr> lc(L, "engine.NetworkMgr");
 
     lc.def<&LNetworkMgr::close>("close");
     lc.def<&LNetworkMgr::listen>("listen");
@@ -242,7 +242,7 @@ int32_t luaopen_network_mgr(lua_State *L)
 
 int32_t luaopen_grid_aoi(lua_State *L)
 {
-    LClass<LGridAoi> lc(L, "GridAoi");
+    LClass<LGridAoi> lc(L, "engine.GridAoi");
 
     lc.def<&LGridAoi::set_size>("set_size");
     lc.def<&LGridAoi::set_visual_range>("set_visual_range");
@@ -263,7 +263,7 @@ int32_t luaopen_grid_aoi(lua_State *L)
 
 int32_t luaopen_list_aoi(lua_State *L)
 {
-    LClass<LListAoi> lc(L, "ListAoi");
+    LClass<LListAoi> lc(L, "engine.ListAoi");
 
     lc.def<&LListAoi::valid_dump>("valid_dump");
     lc.def<&LListAoi::use_y>("use_y");
@@ -284,7 +284,7 @@ int32_t luaopen_list_aoi(lua_State *L)
 
 int32_t luaopen_map(lua_State *L)
 {
-    LClass<LMap> lc(L, "Map");
+    LClass<LMap> lc(L, "engine.Map");
 
     lc.def<&LMap::set>("set");
     lc.def<&LMap::fill>("fill");
@@ -298,7 +298,7 @@ int32_t luaopen_map(lua_State *L)
 
 int32_t luaopen_astar(lua_State *L)
 {
-    LClass<LAstar> lc(L, "Astar");
+    LClass<LAstar> lc(L, "engine.Astar");
 
     lc.def<&LAstar::search>("search");
 
@@ -370,10 +370,10 @@ void LState::open_cpp()
 {
     /* ============================库方式调用================================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-    LUA_LIB_OPEN("util", luaopen_util);
-    LUA_LIB_OPEN("statistic", luaopen_statistic);
-    LUA_LIB_OPEN("lua_parson", luaopen_lua_parson);
-    LUA_LIB_OPEN("lua_rapidxml", luaopen_lua_rapidxml);
+    LUA_LIB_OPEN("engine.util", luaopen_util);
+    LUA_LIB_OPEN("engine.statistic", luaopen_statistic);
+    LUA_LIB_OPEN("engine.lua_parson", luaopen_lua_parson);
+    LUA_LIB_OPEN("engine.lua_rapidxml", luaopen_lua_rapidxml);
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 
     /* ============================对象方式调用================================ */

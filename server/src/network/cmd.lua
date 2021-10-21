@@ -1,7 +1,7 @@
 -- 指令注册及分发模块
 Cmd = {}
 
-local util = require "util"
+local util = require "engine.util"
 local network_mgr = network_mgr -- 这个是C++底层的网络管理对象
 
 local stat = g_stat_mgr:get("cmd")

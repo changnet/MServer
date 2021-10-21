@@ -4,7 +4,7 @@
 -- mysql连接管理
 local MysqlMgr = oo.singleton(...)
 
-local Sql = require "Sql"
+local Sql = require "engine.Sql"
 
 local S_READY = Sql.S_READY
 local S_DATA = Sql.S_DATA

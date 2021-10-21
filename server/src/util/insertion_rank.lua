@@ -8,7 +8,7 @@ local InsertionRank = oo.class(...)
 -- 排行榜，人数不多，名次基本不变化，伤害高的一直在前面，但更新频繁，玩家1秒可能会打出
 -- 多次伤害
 
-local json = require "lua_parson"
+local json = require "engine.lua_parson"
 
 local function comp_desc(src, dst)
     if src.f == dst.f then return 0 end

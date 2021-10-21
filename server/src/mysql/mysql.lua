@@ -2,7 +2,7 @@
 -- 2015-11-20
 -- xzc
 -- mysql数据存储处理(TODO: 提供一个转义接口，现在只是存日志，暂用不着)
-local Sql = require "Sql"
+local Sql = require "engine.Sql"
 local mysql_mgr = require "mysql.mysql_mgr"
 local AutoId = require "modules.system.auto_id"
 

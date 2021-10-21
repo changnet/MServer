@@ -1,5 +1,5 @@
 -- aoi算法测试
-local Aoi = require "GridAoi"
+local Aoi = require "engine.GridAoi"
 
 local pix = 64 -- 一个格子边长64像素
 local width = 6400 -- 地图像素宽度(从0开始)
@@ -311,7 +311,7 @@ t_describe("test grid aoi", function()
 
     local aoi = nil
     local max_entity = 2000
-    local max_random = 50000
+    local max_random = 10000
     t_it(string.format(
              "perf test %d entity and %d times random move/exit/enter",
              max_entity, max_random), function()

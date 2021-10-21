@@ -4,7 +4,7 @@
 -- mongodb连接管理
 local MongodbMgr = oo.singleton(...)
 
-local Mongo = require "Mongo"
+local Mongo = require "engine.Mongo"
 
 local S_READY = Mongo.S_READY
 local S_DATA = Mongo.S_DATA

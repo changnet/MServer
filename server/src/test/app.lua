@@ -3,8 +3,8 @@ require "global.oo"
 require "global.table"
 require "global.string"
 require "global.name"
-require "statistic"
-json = require "lua_parson"
+require "engine.statistic"
+json = require "engine.lua_parson"
 
 g_timer_mgr = require "timer.timer_mgr"
 

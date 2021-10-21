@@ -4,7 +4,7 @@
 -- mongo db 测试用例
 local max_insert = 10000
 local collection = "perf_test"
-local json = require "lua_parson"
+local json = require "engine.lua_parson"
 
 local Mongodb = require "mongodb.mongodb"
 local SyncMongodb = require "mongodb.sync_mongodb"

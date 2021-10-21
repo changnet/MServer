@@ -4,7 +4,7 @@
 -- mongodb 数据存储
 local Mongodb = oo.class(...)
 
-local Mongo = require "Mongo"
+local Mongo = require "engine.Mongo"
 local AutoId = require "modules.system.auto_id"
 local mongodb_mgr = require "mongodb.mongodb_mgr"
 

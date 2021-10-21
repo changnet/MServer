@@ -1,7 +1,7 @@
 -- web_stat.lua http 查询服务器状态接口
 local WebStat = oo.singleton(...)
 
-local json = require "lua_parson"
+local json = require "engine.lua_parson"
 
 local function rpc_stat()
     return stat:collect()

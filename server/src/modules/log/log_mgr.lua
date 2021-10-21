@@ -2,7 +2,43 @@
 -- 2018-04-24
 -- xzc
 -- 日志管理
+
+--[[
+1. bulk insert，合并批量插入，注意语句不要超长了
+insert into log value (1,2), (1,2)
+
+SHOW VARIABLES LIKE 'max_allowed_packet';
+max_allowed_packet=1048576 or 1 MiB
+
+2. 使用事务，这种和bulk insert效率差不多，但需要3条指令。如果
+start transaction;
+insert into log value (1, 2)
+insert into log value (1, 2)
+insert into log value (1, 2)
+insert into log value (1, 2)
+commit;
+
+3. load data直接从文件加载，这个应该是最快的
+https://dev.mysql.com/doc/refman/8.0/en/load-data.html
+
+load data infile "log.txt"
+
+但是要考虑下转义的问题
+https://dev.mysql.com/doc/refman/8.0/en/problems-with-null.html
+When reading data with LOAD DATA, empty or missing columns are updated with ''. To load a NULL value into a column, use \N in the data file. The literal word NULL may also be used under some circumstances
+
+从内存load data而不是从文件
+https://mariadb.com/ja/resources/blog/customized-mysql-load-data-local-infile-handlers-with-libmysqlclient/
+
+LOAD DATA INFILE is unsafe for statement-based replication
+另外, load data是需要额外的权限的
+]]
+
 require "modules.log.log_header"
+
+-- 日志模块
+-- Log = {}
+
 local Mysql = require "mysql.mysql"
 
 local LogMgr = oo.singleton(...)

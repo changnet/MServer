@@ -11,7 +11,7 @@ local this = global_storage("AccMgr", {
     role_acc = {}, -- 玩家pid为key
 })
 
-local util = require "util"
+local util = require "engine.util"
 
 -- 根据Pid获取角色数据
 function AccMgr.get_role_info(pid)

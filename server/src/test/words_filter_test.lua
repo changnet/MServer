@@ -1,5 +1,5 @@
 -- 屏蔽字过滤测试
-local Acism = require "Acism"
+local Acism = require "engine.Acism"
 
 local words_path = "../config/banned_words.txt" -- 字库文件
 

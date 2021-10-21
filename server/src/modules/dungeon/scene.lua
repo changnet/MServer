@@ -6,7 +6,7 @@ local pix = 64 -- 一个格子边长64像素
 local visual_width = 3 -- 视野宽度格子数
 local visual_height = 4 -- 视野高度格子数
 
-local Aoi = require "GridAoi"
+local Aoi = require "engine.GridAoi"
 local ET = require "modules.entity.entity_header"
 local scene_conf = require_kv_conf("dungeon_scene", "id")
 

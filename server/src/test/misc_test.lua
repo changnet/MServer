@@ -1,9 +1,9 @@
 -- misc_test.lua
 -- xzc
 -- 2016-03-06
-local json = require "lua_parson"
-local xml = require "lua_rapidxml"
-local util = require "util"
+local json = require "engine.lua_parson"
+local xml = require "engine.lua_rapidxml"
+local util = require "engine.util"
 
 local js = [==[
 {

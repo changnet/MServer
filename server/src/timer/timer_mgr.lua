@@ -4,7 +4,7 @@
 -- 定时器管理
 local LIMIT = require "global.limits"
 
-local Timer = require "Timer"
+local Timer = require "engine.Timer"
 local TimerMgr = oo.singleton(...)
 
 local method_thunk = method_thunk

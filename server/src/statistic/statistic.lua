@@ -2,7 +2,7 @@
 -- xzc
 -- 2019-04-06
 -- 统计服务器运行情况
-local statistic = require "statistic"
+local statistic = require "engine.statistic"
 local Statistic = oo.singleton(...)
 
 function Statistic.collect()

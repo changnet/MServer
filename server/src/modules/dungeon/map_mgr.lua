@@ -2,8 +2,8 @@
 -- xzc
 -- 2018-12-30
 -- 地图数据管理
-local Map = require "Map"
-local Astar = require "Astar"
+local Map = require "engine.Map"
+local Astar = require "engine.Astar"
 
 local MapMgr = oo.singleton(...)
 

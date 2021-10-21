@@ -1,8 +1,8 @@
 -- log_performance.lua
 -- 2016-03-09
 -- xzc
-local Log = require "Log"
-local util = require "util"
+local Log = require "engine.Log"
+local util = require "engine.util"
 local time = require "global.time"
 
 t_describe("log test", function()

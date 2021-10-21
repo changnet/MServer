@@ -1,7 +1,7 @@
 -- list_aoi_test.lua 十字链表AOI测试
 -- xzc
 -- 2021-01-01
-local ListAoi = require "ListAoi"
+local ListAoi = require "engine.ListAoi"
 
 -- 默认使用左手坐标系，故2D地图只有x、z轴，没有y轴
 
@@ -312,7 +312,7 @@ end
 -- luacheck:ignore save_history
 -- 调试bug用
 local function save_history()
-    local json = require "lua_parson"
+    local json = require "engine.lua_parson"
 
     printf("%d history action save !", #history)
     json.encode_to_file(history, "list_aoi_his.json")
@@ -320,7 +320,7 @@ end
 
 -- luacheck:ignore run_history
 local function run_history(load)
-    local json = require "lua_parson"
+    local json = require "engine.lua_parson"
     if load then history = json.decode_from_file("list_aoi_his.json") end
 
     printf("%d history action load !", #history)
@@ -560,7 +560,7 @@ t_describe("list aoi test", function()
     -- end)
 
     local max_entity = 2000
-    local max_random = 50000
+    local max_random = 10000
     t_it(string.format(
              "perf test no_y(more index) %d entity and %d times random M/E/E",
              max_entity, max_random), function()

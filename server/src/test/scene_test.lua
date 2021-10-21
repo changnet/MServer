@@ -3,8 +3,8 @@ local id = 9999
 local width = 64
 local height = 64
 
-local Map = require "Map"
-local Astar = require "Astar"
+local Map = require "engine.Map"
+local Astar = require "engine.Astar"
 
 local map = Map()
 local astar = Astar()
