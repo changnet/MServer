@@ -88,7 +88,7 @@ function PlayerMgr.on_player_offline(srv_conn, pkt)
 
     local player = this.player[pid]
     if not player then
-        elog("player offline,object not found:%d", pid)
+        elogf("player offline,object not found:%d", pid)
         return
     end
 

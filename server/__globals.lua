@@ -1,4 +1,4 @@
--- auto export by lua-tags 179 symbols
+-- auto export by lua-tags 177 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -76,7 +76,6 @@ return {
 "Sql", -- engine/sql.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
-"TIPS", -- src/modules/lang/lang_header.lua
 "Test", -- src/modules/ai/action/test.lua
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
@@ -109,7 +108,6 @@ return {
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
-"g_lang", -- src/modules/module_header.lua
 "g_log_mgr", -- src/modules/module_header.lua
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
@@ -117,11 +115,11 @@ return {
 "g_mongodb", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
+"g_stat_mgr", -- src/test/rpc_test.lua
 "g_stat_mgr", -- src/android/app.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
-"g_stat_mgr", -- src/test/rpc_test.lua
 "g_timer_mgr", -- src/android/app.lua
 "g_timer_mgr", -- src/modules/module_header.lua
 "g_timer_mgr", -- src/test/app.lua

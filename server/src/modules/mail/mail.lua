@@ -185,7 +185,8 @@ function Mail:handle_mail_del(pkt)
     for _, mail in pairs(self.list) do
         if mail_map[mail.id] then
             if not self:can_del(mail) then
-                return g_lang:send_tips(self.player, TIPS.CANOT_DEL_MAIL)
+                print("mail can not be delete", self.player.id, mail.id)
+                return
             end
         end
     end

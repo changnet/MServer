@@ -2,7 +2,7 @@
 -- xzc
 -- 2018-11-21
 -- 副本
-local base_conf = require_kv_conf("dungeon_base", "id")
+local base_conf = require "config.dungeon.base_conf"
 
 local Scene = require "modules.dungeon.scene"
 

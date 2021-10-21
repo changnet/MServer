@@ -8,7 +8,7 @@ local visual_height = 4 -- 视野高度格子数
 
 local Aoi = require "engine.GridAoi"
 local ET = require "modules.entity.entity_header"
-local scene_conf = require_kv_conf("dungeon_scene", "id")
+local scene_conf = require "config.dungeon.scene_conf"
 
 local Scene = oo.class(...)
 

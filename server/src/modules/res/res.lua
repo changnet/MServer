@@ -12,7 +12,7 @@ local RES = require_define("modules.res.res_header")
 local RES_MONEY = 599
 local RES_ITEM  = RES_ITEM
 
-local ItemConf = nil
+local item_conf = nil
 
 -- 获取所有资源定义
 function Res.get_def()
@@ -84,7 +84,7 @@ function Res.valid(res_list)
             end
 
             -- 校验是否为有效道具id
-            if not ItemConf[id] then
+            if not item_conf[id] then
                 return false, "invalid item id = " .. tostring(id)
             end
 
@@ -134,7 +134,7 @@ function Res.make_cb()
         end
     end
 
-    ItemConf = require_kv_conf("item_item", "id")
+    item_conf = require "config.item_conf"
 end
 
 --//////////////////////////////////////////////////////////////////////////////

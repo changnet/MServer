@@ -54,7 +54,6 @@ require "modules.res.res"
 require "modules.system.gm"
 require "modules.event.player_event"
 require "modules.event.system_event"
-g_lang = require "modules.lang.lang"
 g_mail_mgr = require "modules.mail.mail_mgr"
 
 require "modules.system.ping"
