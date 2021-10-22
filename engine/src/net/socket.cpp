@@ -89,6 +89,16 @@ const char *Socket::str_error(int32_t e)
 #endif
 }
 
+    /// 获取无效的socket id
+int32_t Socket::invalid_fd()
+{
+#ifdef __windows__
+    return static_cast<int32_t>(INVALID_SOCKET);
+#else
+    return -1;
+#endif
+}
+
 bool Socket::fd_valid(int32_t fd)
 {
 #ifdef __windows__

@@ -148,14 +148,7 @@ public:
     /// 获取socket错误日志
     static const char *str_error(int32_t e = -1);
     /// 获取无效的socket id
-    static inline int32_t invalid_fd()
-    {
-#ifdef __windows__
-        return INVALID_SOCKET;
-#else
-        return -1;
-#endif
-    }
+    static int32_t invalid_fd();
     /// 判断创建出来的fd是否有效
     static bool fd_valid(int32_t fd);
 
