@@ -117,7 +117,8 @@ end
 function Base:add_money(id, count, op, msg)
     local val = self.root.money[id] or 0
     local new_val = val + count
-    g_log_mgr:money_log(self.pid, count, new_val, op, msg)
+
+    Log.db_res(self, id, count, new_val, op, msg)
 
     self.root.money[id] = new_val
     self:update_res(id, new_val)
@@ -126,7 +127,8 @@ end
 -- 扣除货币
 function Base:dec_money(id, count, op, msg)
     local new_val = (self.root.money[id] or 0) - count
-    g_log_mgr:money_log(self.pid, -count, new_val, op, msg)
+
+    Log.db_res(self, id, -count, new_val, op, msg)
 
     self.root.money[id] = new_val
     self:update_res(id, new_val)

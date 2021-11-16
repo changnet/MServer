@@ -49,7 +49,7 @@ function MailMgr:raw_send_mail(pid, title, ctx, attachment, op)
         return
     end
 
-    g_log_mgr:add_mail_log(pid, mail)
+    Log.db_pid_misc(pid, LOG.ADD_MAIL, table.dump(mail))
 
     local player = PlayerMgr.get_player(pid)
     if player then
@@ -108,7 +108,7 @@ table: 0x2b8cff0
 function MailMgr:on_offline_mail(pid, mail, ecode, res)
     if 0 == ecode and res.lastErrorObject.n == 1 then return end
     -- 如果插入失败，记录一下日志
-    g_log_mgr:add_mail_log(string.format("offline_mail_error_%d", pid), mail)
+    Log.db_pid_misc(pid, LOG.ADD_MAIL, table.dump(mail), "FAIL")
 end
 
 -- 发送系统邮件
@@ -154,7 +154,8 @@ function MailMgr:raw_send_sys_mail(title, ctx, attachment, op, expire, level,
     end
 
     table.insert(self.list, mail)
-    g_log_mgr:add_mail_log("sys", mail)
+
+    Log.db_pid_misc(0, LOG.ADD_MAIL, table.dump(mail))
 
     self:truncate()
     self:db_save() -- 系统邮件不多，直接存库
@@ -205,7 +206,7 @@ function MailMgr:truncate()
         local old_mail = self.list[1]
         table.remove(self.list, 1)
 
-        g_log_mgr:del_mail_log("sys", old_mail)
+        Log.db_pid_misc(0, LOG.DEL_MAIL, table.dump(old_mail), "MAX_SYS_MAIL")
     end
 end
 

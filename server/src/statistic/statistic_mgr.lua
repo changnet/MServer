@@ -31,11 +31,11 @@ function CommandMgr:raw_serialize_statistic(path, stat_name, stat_list)
     -- 按名字排序，方便对比查找
     table.sort(stat_cmd)
 
-    g_log_mgr:raw_file_printf(path, "%s", stat_name)
+    Log.raw_file_printf(path, "%s", stat_name)
 
     for _, cmd in pairs(stat_cmd) do
         local stat = stat_list[cmd]
-        g_log_mgr:raw_file_printf(path, "%-16d %-16d %-16d %-16d %-16d %-16d",
+        Log.raw_file_printf(path, "%-16d %-16d %-16d %-16d %-16d %-16d",
                                   cmd, stat.ts, stat.ms, stat.max, stat.min,
                                   math.ceil(stat.ms / stat.ts))
     end
@@ -47,17 +47,17 @@ function CommandMgr:serialize_statistic(reset)
 
     local path = string.format("%s_%s", self.cmd_perf, g_app.name)
 
-    g_log_mgr:raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
+    Log.raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
                               time.date(ev:time()))
     -- 指令 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
-    g_log_mgr:raw_file_printf(path, "%-16s %-16s %-16s %-16s %-16s %-16s",
+    Log.raw_file_printf(path, "%-16s %-16s %-16s %-16s %-16s %-16s",
                               "cmd", "count", "msec", "max", "min", "avg")
 
     self:raw_serialize_statistic(path, "cs_cmd:", self.cs_stat)
     self:raw_serialize_statistic(path, "ss_cmd:", self.ss_stat)
     self:raw_serialize_statistic(path, "css_cmd:", self.css_stat)
 
-    g_log_mgr:raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
+    Log.raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
                               "\n\n")
     if reset then
         self.cs_stat = {}
@@ -98,21 +98,21 @@ function Rpc:serialize_statistic(reset)
     -- 按名字排序，方便对比查找
     table.sort(stat_name)
 
-    g_log_mgr:raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
+    Log.raw_file_printf(path, "%s ~ %s:", time.date(self.stat_tm),
                               time.date(ev:time()))
 
     -- 方法名 调用次数 总耗时(毫秒) 最大耗时 最小耗时 平均耗时
-    g_log_mgr:raw_file_printf(path, "%-32s %-16s %-16s %-16s %-16s %-16s",
+    Log.raw_file_printf(path, "%-32s %-16s %-16s %-16s %-16s %-16s",
                               "method", "count", "msec", "max", "min", "avg")
 
     for _, name in pairs(stat_name) do
         local stat = self.stat[name]
-        g_log_mgr:raw_file_printf(path, "%-32s %-16d %-16d %-16d %-16d %-16d",
+        Log.raw_file_printf(path, "%-32s %-16d %-16d %-16d %-16d %-16d",
                                   name, stat.ts, stat.ms, stat.max, stat.min,
                                   math.ceil(stat.ms / stat.ts))
     end
 
-    g_log_mgr:raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
+    Log.raw_file_printf(path, "%s.%d end %s", g_app.name, g_app.index,
                               "\n\n")
 
     if reset then

@@ -196,7 +196,7 @@ function Mail:handle_mail_del(pkt)
         for idx, mail in pairs(self.list) do
             if mail.id == id then
                 table.remove(self.list, idx)
-                g_log_mgr:del_mail_log(self.pid, mail)
+                Log.db_misc(self.player, LOG.DEL_MAIL, table.dump(mail))
                 break
             end
         end

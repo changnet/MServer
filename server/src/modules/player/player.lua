@@ -177,7 +177,7 @@ function Player:on_login()
     -- 实体进入场景
     Rpc.call(ASE, EntityCmd.player_init_scene, self.pid, nil, 0)
 
-    g_log_mgr:login_or_logout(self.pid, LOG.LOGIN)
+    Log.db_misc(self, LOG.LOGIN)
 
     self:send_pkt(PLAYER.ENTER, {}) -- 通知前端玩家所有数据初始化完成已进入场景
     return true
@@ -219,7 +219,7 @@ function Player:on_logout()
 
     -- 退出场景
     Rpc.call(session, EntityCmd.player_exit, self.pid)
-    g_log_mgr:login_or_logout(self.pid, LOG.LOGOUT)
+    Log.db_misc(self, LOG.LOGOUT)
 
     printf("player logout,pid = %d", self.pid)
 end

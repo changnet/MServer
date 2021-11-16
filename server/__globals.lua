@@ -40,6 +40,7 @@ return {
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- engine/log.lua
+"Log", -- src/modules/log/log.lua
 "MAIL", -- proto/auto_cs.lua
 "MAIL", -- proto/cs.lua
 "MAX_MAIL", -- src/modules/system/define.lua
@@ -76,7 +77,6 @@ return {
 "Sql", -- engine/sql.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
-"TIPS", -- src/modules/lang/lang_header.lua
 "Test", -- src/modules/ai/action/test.lua
 "Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua

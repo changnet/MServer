@@ -35,79 +35,57 @@ LOAD DATA INFILE is unsafe for statement-based replication
 ]]
 
 require "modules.log.log_header"
-
--- 日志模块
--- Log = {}
-
 local Mysql = require "mysql.mysql"
 
-local LogMgr = oo.singleton(...)
+-- 日志模块
+Log = {}
 
--- 初始化
-function LogMgr:__init()
-    -- 启动文件日志线程
-    -- local async_file = Log()
-    -- async_file:start( 3,0 ); -- 暂不启用另外的线程
+local this = global_storage("Log", {
+    cache = {}
+})
 
-    self.async_file = g_async_log -- async_file
+-- 异步文件写入线程
+local async_file = g_async_log
+
+-- 写入到日志文件
+function Log.file(path, text)
+end
+
+-- 记录资源日志
+function Log.db_res(player, id, change, count, op, msg)
+end
+
+-- 记录状态status到数据库，只记录一个，如果存在则覆盖
+function Log.db_stat(pid, stat, val)
+end
+
+-- 记录一些杂项日志到数据库
+function Log.db_misc(player, op, msg)
+end
+
+-- 记录日志到数据库(无玩家对象)
+function Log.db_pid_misc(pid, id, val, op, msg)
 end
 
 -- 初始化db日志
-function LogMgr:db_logger_init()
+function Log:start()
     self.db_logger = Mysql()
     self.db_logger:start(g_setting.mysql_ip, g_setting.mysql_port,
                          g_setting.mysql_user, g_setting.mysql_pwd,
                          g_setting.mysql_db, function()
-        self:on_db_logger_init()
+            g_app:one_initialized("db_logger", 1)
     end)
 end
 
--- db日志初始化完成
-function LogMgr:on_db_logger_init()
-    g_app:one_initialized("db_logger", 1)
-end
-
 -- 关闭文件日志线程及数据库日志线程
-function LogMgr:close()
+function Log.stop()
     -- self.async_file:stop()
-    if self.db_logger then self.db_logger:stop() end
-end
-
--- 记录登录、退出日志
-local login_out_stmt =
-    "INSERT INTO `login_logout` (pid,op_type,op_time) values (%d,%d,%d)"
-function LogMgr:login_or_logout(pid, op_type)
-    self.db_logger:insert(string.format(login_out_stmt, pid, op_type, ev:time()))
-end
-
--- 元宝操作日志
--- 日志里不应该有特殊字符，故ext不做特殊处理
-function LogMgr:money_log(pid, id, op_val, new_val, op_type, ext)
-    local stmt = string.format(
-        "INSERT INTO `money` (pid,id,op_val,new_val,op_type,op_time,ext) \z
-        values (%d,%d,%d,%d,%d,%d,\"%s\")", pid, id, op_val, new_val, op_type,
-                     ev:time(), tostring(ext or ""))
-    self.db_logger:insert(stmt)
-end
-
--- 记录添加邮件操作日志
--- @who:玩家pid，如果是系统邮件，则为sys
-function LogMgr:add_mail_log(who, mail)
-    local ctx = string.format("add_mail:%s,%s", tostring(who), table.dump(mail))
-    self.async_file:append_log_file("log/mail_log", ctx)
-end
-
--- 记录删除邮件操作日志
--- @who:玩家pid，如果是系统邮件，则为sys
-function LogMgr:del_mail_log(who, mail)
-    local ctx = string.format("del_mail:%s,%s", tostring(who), table.dump(mail))
-    self.async_file:append_log_file("log/mail_log", ctx)
+    if this.db_logger then this.db_logger:stop() end
 end
 
 -- 自定义写文件
-function LogMgr:raw_file_printf(path, ...)
-    return self.async_file:append_log_file(path, string.format(...))
+function Log.raw_file_printf(path, ...)
+    return async_file:append_log_file(path, string.format(...))
 end
 
-local log_mgr = LogMgr()
-return log_mgr
+return Log
