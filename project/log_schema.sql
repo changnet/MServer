@@ -35,5 +35,5 @@ CREATE TABLE IF NOT EXISTS `stat` (
     `stat` int(11) DEFAULT '0' COMMENT '状态定义(详见后端定义)',
     `val` varchar(2048) DEFAULT NULL COMMENT '额外数据1',
     `time` DATETIME NOT NULL COMMENT '操作时间',
-    PRIMARY KEY (`pid`, `stat`),
+    PRIMARY KEY (`pid`, `stat`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='当前状态日志';
