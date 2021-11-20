@@ -138,11 +138,6 @@ function AccMgr.login_otherwhere(role_info)
     CltMgr.clt_close(old_conn)
 end
 
--- 加载帐号数据
-function AccMgr.db_load()
-    g_mongodb:find("account", nil, nil, AccMgr.on_db_loaded)
-end
-
 -- db数据加载
 function AccMgr.on_db_loaded(ecode, res)
     if 0 ~= ecode then
@@ -163,7 +158,7 @@ function AccMgr.on_db_loaded(ecode, res)
         this.account[sid][plat][account] = role_info
     end
 
-    g_app:one_initialized("acc_data", 1)
+    this.ok = true
 end
 
 
@@ -251,9 +246,21 @@ local function create_role(pkt)
     return g_unique_id:player_id(role_info.sid, callback)
 end
 
+-- 加载帐号数据
+local function on_app_start(check)
+    if check then
+        return this.ok
+    end
+
+    g_mongodb:find("account", nil, nil, AccMgr.on_db_loaded)
+    return false
+end
+
 if APP_TYPE == GATEWAY then
     Cmd.reg(PLAYER.LOGIN, player_login, true)
     Cmd.reg(PLAYER.CREATE, create_role, true)
+
+    g_app.reg_start("Account", on_app_start)
 end
 
 return AccMgr

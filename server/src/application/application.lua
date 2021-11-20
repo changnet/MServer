@@ -91,13 +91,17 @@ function application_ev(ms_now)
     end
     g_app:ev(ms_now)
 end
--- //////////////////////////////////////////////////////////////////////////////
+-- /////////////////////////////////////////////////////////////////////////////
 
 -- 初始化
 function Application:__init()
     g_app = self
-    self.step_cnt = 0
-    self.init_step = {} -- 初始化列表
+
+    self.init_step = 0 -- 已执行的启动步骤
+    self.init_func = {} -- 初始化步骤
+
+    self.stop_step = 0 -- 已执行的关闭步骤
+    self.stop_func = {} -- 初始化步骤
 
     -- 停用自动增量gc，在主循环里手动调用(TODO: 测试5.4的新gc效果)
     collectgarbage("stop")
@@ -105,6 +109,30 @@ function Application:__init()
     -- 关服信号
     ev:signal(2)
     ev:signal(15)
+end
+
+-- 注册app启动回调
+-- @param name 模块名
+-- @param func 回调函数，该返回必须返回初始化信息
+-- @param pr 优先级priority，越小优先级越高，默认20
+function Application:reg_start(name, func, pr)
+    table.insert(self.init_func, {
+        pr = pr or 20,
+        name = name,
+        func = func
+    })
+end
+
+-- 注册app关闭回调
+-- @param name 模块名
+-- @param func 回调函数，该返回必须返回关闭信息
+-- @param pr 优先级priority，越小优先级越高，默认20
+function Application:reg_stop(name, func, pr)
+    table.insert(self.stop_func, {
+        pr = pr or 20,
+        name = name,
+        func = func
+    })
 end
 
 -- 准备关服
@@ -125,77 +153,69 @@ function Application:check_shutdown()
     return false
 end
 
--- 添加进程初始化步骤
--- @param name 名字，用于打印日志
--- @param func 初始调用的函数
--- @param after 在某个步骤初始化完成后执行
--- @param count 初始化次数，例如：需要等待多个场景服务器连接
-function Application:set_initialize(name, func, after, count)
-    assert(not self.init_step[name])
-
-    self.step_cnt = self.step_cnt + 1
-    self.init_step[name] = {after = after, func = func, count = count or 1}
-end
-
--- 一个初始化完成
-function Application:one_initialized(name, val)
-    local step = self.init_step[name]
-    if not step then return elog("unknow initialize step:", name) end
-
-    step.cnt = 1 + (step.cnt or 0)
-    if step.cnt >= step.count then
-        self.init_step[name] = nil
-        printf("initialize step(%d/%d) OK:%s(%d/%d)",
-               self.step_cnt - table.size(self.init_step), self.step_cnt, name,
-               step.cnt, step.count)
-
-        for _, next_step in pairs(self.init_step) do
-            if next_step.after == name then
-                next_step.tm = ev:time() -- 重置下初始化时间
-                next_step.func(self)
-            end
-        end
+-- 执行下一个app初始化步骤
+function Application:next_init_step()
+    if self.init_step >= #self.init_func then
+        return self:final_initialize()
     end
 
-    if table.empty(self.init_step) then
-        self.step_cnt = nil
-        self:final_initialize()
+    self.init_step = self.init_step + 1
+    local step = self.init_func[self.init_step]
+
+    printf("app start step %d/%d: %s",
+        self.init_step, ##self.init_func,  step.name)
+
+    local ok = step.func()
+
+    -- 不需要异步的初始化，直接执行下一步。异步的则由定时器处理
+    if ok then
+        printf("app start step %d/%d: %s OK",
+            self.init_step, #self.init_func,  step.name)
+
+        self:next_init_step()
+    else
+        step.tm = ev:time()
     end
 end
 
 -- 进程初始化
 function Application:initialize()
-    if table.empty(self.init_step) then return self:final_initialize() end
+    if 0 == #self.init_func then return self:final_initialize() end
 
-    self.check_init_timer = g_timer_mgr:interval(15000, 15000, -1, self,
-                                                 self.check_init_step)
+    -- 通过定时器检测初始化是否完成
+    self.check_init_timer = g_timer_mgr:interval(200, 200, -1, self,
+                                                 self.check_init_func)
 
-    for _, step in pairs(self.init_step) do
-        step.tm = ev:time()
-        if not step.after and step.func then step.func(self) end
-    end
+    -- pr值越小，优先级越高
+    table.sort(self.init_func, function(a, b) return a.pr < b.pr end)
+    self:next_init_step()
 end
 
 -- 检测哪些初始化未完成
-function Application:check_init_step()
+function Application:check_init_func()
     local now = ev:time()
-    for name, step in pairs(self.init_step) do
-        if step.tm and now - step.tm > 15 then
-            printf("waitting for initialize step(%d/%d): %s",
-                   self.step_cnt - table.size(self.init_step), self.step_cnt,
-                   name)
-        end
+    local step = self.init_func[self.init_step]
+
+    if step.func(true) then
+        printf("app start step %d/%d: %s OK",
+            self.init_step, #self.init_func,  step.name)
+
+        self:next_init_step()
+        return
     end
 
-    if table.empty(self.init_step) then
-        g_timer_mgr:stop(self.check_init_timer)
-        self.check_init_timer = nil
+    if now - step.tm > 15 then
+        step.tm = ev:time()
+        printf("app start step %d/%d: %s waitting",
+            self.init_step, #self.init_func, self.name)
     end
 end
 
 -- 初始化完成
 function Application:final_initialize()
     self.ok = true
+    if self.check_init_timer then  g_timer_mgr:stop(self.check_init_timer) end
+
     printf("Application %s initialize OK", self.name)
 end
 

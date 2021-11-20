@@ -106,24 +106,4 @@ function SrvApp:final_initialize()
            self.index, self.id, self.session)
 end
 
--- 连接db
-function SrvApp:db_initialize()
-    -- 连接数据库
-    g_mongodb:start(g_setting.mongo_ip, g_setting.mongo_port,
-                    g_setting.mongo_user, g_setting.mongo_pwd,
-                    g_setting.mongo_db, function()
-        self:one_initialized("db_conn")
-    end)
-end
-
--- 加载自增id
-function SrvApp:uniqueid_initialize()
-    g_unique_id:db_load()
-end
-
--- 初始化db日志
-function SrvApp:db_logger_initialize()
-    g_log_mgr:db_logger_init()
-end
-
 return SrvApp

@@ -9,12 +9,6 @@ local App = oo.class(..., SrvApp)
 -- 初始化
 function App:__init(...)
     SrvApp.__init(self, ...)
-
-    self:set_initialize("area", nil, nil, 2) -- 等待2个area服连接OK
-    self:set_initialize("gateway") -- 等待一个gateway服连接OK
-    self:set_initialize("db_logger", self.db_logger_initialize) -- db日志
-    self:set_initialize("db_conn", self.db_initialize) -- 等待连接db
-    self:set_initialize("sys_mail", self.sys_mail_initialize, "db_conn") -- 加载全服邮件
 end
 
 -- 重写初始化入口
@@ -26,8 +20,6 @@ function App:initialize()
         return false
     end
 
-    SrvMgr.connect_srv(g_app_setting.servers)
-
     SrvApp.initialize(self)
 end
 
@@ -37,11 +29,6 @@ function App:shutdown()
     g_log_mgr:close()
 
     SrvApp.shutdown(self)
-end
-
--- 加载全服邮件
-function App:sys_mail_initialize()
-    g_mail_mgr:db_load()
 end
 
 return App

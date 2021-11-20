@@ -1,10 +1,11 @@
 -- dungeon_mgr.lua
 -- xzc
 -- 2018-11-21
--- 副本管理
+
 local Dungeon = require "modules.dungeon.dungeon"
 local TimeId = require "modules.system.time_id"
 
+-- 副本管理
 local DungeonMgr = oo.singleton(...)
 
 function DungeonMgr:__init()
@@ -46,8 +47,6 @@ function DungeonMgr:init_static_dungeon()
 
     -- 创建主城(副本id为0)及其他静态副本
     for id = 0, test_dungeon do self.static[id] = self:create_dungeon(id) end
-
-    g_app:one_initialized("dungeon", 1) -- 副本数据初始化完成
 end
 
 -- 创建副本
@@ -99,6 +98,13 @@ function DungeonMgr:enter_dungeon(entity, dungeon_hdl, dungeon_id, scene_id, x,
 end
 
 local dg_mgr = DungeonMgr()
+
+local function on_app_start()
+    dg_mgr:init_static_dungeon()
+    return true
+end
+
+g_app.reg_start("dungeon", on_app_start)
 
 return dg_mgr
 

@@ -1,15 +1,17 @@
 -- mongodb.lua
 -- 2015-12-05
 -- xzc
--- mongodb 数据存储
-local Mongodb = oo.class(...)
+
+
+-- mongodb 接口
+local MongoDBInterface = oo.class(...)
 
 local Mongo = require "engine.Mongo"
 local AutoId = require "modules.system.auto_id"
-local mongodb_mgr = require "mongodb.mongodb_mgr"
+local MongodbMgr = require "mongodb.MongodbMgr"
 
-function Mongodb:__init()
-    self.id = mongodb_mgr:next_id()
+function MongoDBInterface:__init()
+    self.id = MongodbMgr.next_id()
     self.auto_id = AutoId()
     self.mongodb = Mongo(self.id)
 
@@ -17,11 +19,11 @@ function Mongodb:__init()
 end
 
 -- 连接成功回调
-function Mongodb:on_ready()
+function MongoDBInterface:on_ready()
     if self.on_ready then self.on_ready() end
 end
 
-function Mongodb:on_data(qid, e, res)
+function MongoDBInterface:on_data(qid, e, res)
     if self.cb[qid] then
         xpcall(self.cb[qid], __G__TRACKBACK, e, res)
         self.cb[qid] = nil
@@ -31,19 +33,19 @@ function Mongodb:on_data(qid, e, res)
 end
 
 -- 开始连接数据库
-function Mongodb:start(ip, port, usr, pwd, db, on_ready)
+function MongoDBInterface:start(ip, port, usr, pwd, db, on_ready)
     self.on_ready = on_ready
 
-    mongodb_mgr:push(self)
+    MongodbMgr.push(self)
     self.mongodb:start(ip, port, usr, pwd, db)
 end
 
-function Mongodb:stop()
-    mongodb_mgr:pop(self.id)
+function MongoDBInterface:stop()
+    MongodbMgr.pop(self.id)
     return self.mongodb:stop()
 end
 
-function Mongodb:make_cb(callback)
+function MongoDBInterface:make_cb(callback)
     if not callback then return 0 end
 
     local id = self.auto_id:next_id(self.cb)
@@ -57,7 +59,7 @@ end
 -- @param filter 过滤条件，如{"_id": 1}
 -- @param opts 参数，如 {"skip":5, "limit": 10, "sort":{"_id": -1}}
 -- @param callback 回调函数
-function Mongodb:count(collection, filter, opts, callback)
+function MongoDBInterface:count(collection, filter, opts, callback)
     local id = self:make_cb(callback)
     return self.mongodb:count(id, collection, filter, opts)
 end
@@ -67,7 +69,7 @@ end
 -- @param filter 过滤条件，如{"_id": 1}
 -- @param opts 参数，如 {"skip":5, "limit": 10, "sort":{"_id": -1}}
 -- @param callback 回调函数
-function Mongodb:find(collection, filter, opts, callback)
+function MongoDBInterface:find(collection, filter, opts, callback)
     local id = self:make_cb(callback)
     return self.mongodb:find(id, collection, filter, opts)
 end
@@ -80,7 +82,7 @@ end
 -- @param remove boolean 是否删除记录
 -- @param upsert boolean 如果记录不存在则插入
 -- @param new boolean 是否返回更改后的值
-function Mongodb:find_and_modify(collection, query, sort, update, fields,
+function MongoDBInterface:find_and_modify(collection, query, sort, update, fields,
                                  remove, upsert, new, callback)
 
     local id = self:make_cb(callback)
@@ -88,7 +90,7 @@ function Mongodb:find_and_modify(collection, query, sort, update, fields,
                                         fields, remove, upsert, new)
 end
 
-function Mongodb:insert(collection, info, callback)
+function MongoDBInterface:insert(collection, info, callback)
     local id = self:make_cb(callback)
     return self.mongodb:insert(id, collection, info)
 end
@@ -99,7 +101,7 @@ end
 -- @param upsert boolean 不存在是是否插入数据
 -- @param multi boolean 是否更新多个记录
 -- @param callback 回调函数
-function Mongodb:update(collection, selector, info, upsert, multi, callback)
+function MongoDBInterface:update(collection, selector, info, upsert, multi, callback)
     -- http://mongoc.org/libmongoc/current/mongoc_collection_update.html
     -- TODO Superseded by mongoc_collection_update_one(),
     -- mongoc_collection_update_many(), and mongoc_collection_replace_one().
@@ -110,13 +112,13 @@ end
 
 -- 删除
 -- @single 是否只删除单个记录，默认全部删除
-function Mongodb:remove(collection, query, single, callback)
+function MongoDBInterface:remove(collection, query, single, callback)
     local id = self:make_cb(callback)
     return self.mongodb:remove(id, collection, query, single)
 end
 
 -- 设置数组转换参数
-function Mongodb:set_array_opt(opt)
+function MongoDBInterface:set_array_opt(opt)
     return self.mongodb:set_array_opt(opt)
 end
 
@@ -127,4 +129,4 @@ db.collection.getIndexes() 查看已有索引
 db.collection.dropIndex( name ) 删除索引
 db.collection.createIndex( {amount:1} ) 创建索引
 ]]
-return Mongodb
+return MongoDBInterface

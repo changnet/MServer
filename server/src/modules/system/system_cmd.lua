@@ -14,7 +14,6 @@ end
 
 -- 对方服务器数据同步完成
 local function srv_sync_done(srv_conn, pkt)
-    g_app:one_initialized(string.lower(srv_conn:base_name()), 1)
 end
 
 -- 服务器之间心跳包

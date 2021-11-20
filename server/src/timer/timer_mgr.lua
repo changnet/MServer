@@ -27,19 +27,19 @@ end
 
 -- 创建按间隔循环的定时器
 -- @param after 延迟N毫秒启动定时器
--- @param sec 循环间隔，单位毫秒，0表示不循环
+-- @param msec 循环间隔，单位毫秒，0表示不循环
 -- @param times 循环次数，-1表示永久
 -- @param this 回调对象，没有可以不传此参数
 -- @param method 回调函数
 -- @param ... 其他回调参数
 -- @return 定时器id
-function TimerMgr:interval(after, sec, times, this, method, ...)
-    assert(sec >= 0, "repeat interval MUST > 0")
+function TimerMgr:interval(after, msec, times, this, method, ...)
+    assert(msec >= 0, "repeat interval MUST > 0")
 
     local timer_id = self:get_next_id()
 
     local timer = Timer(timer_id)
-    timer:set(after, sec)
+    timer:set(after, msec)
 
     local cb
     if "function" == type(this) then

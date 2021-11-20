@@ -201,4 +201,22 @@ function SrvMgr.srv_conn_del(conn_id)
     if conn.auto_conn then this.srv_waiting[conn] = 1 end
 end
 
+local function on_app_start(check)
+    -- 检测连接是否完成
+    if check then
+        return table.size(this.srv) == #g_app_setting.servers
+    end
+
+    -- 主动连接到其他服务器
+    if #g_app_setting.servers > 0 then
+        SrvMgr.connect_srv(g_app_setting.servers)
+        return false
+    end
+
+    return true
+end
+
+-- 启动优先级略高于普通模块，普通模块可能需要连接来从其他服同步数据
+g_app.reg_start("SrvMgr", on_app_start, 15)
+
 return SrvMgr

@@ -176,16 +176,6 @@ function MailMgr:db_save()
     g_mongodb:update("sys_mail", query, {list = self.list}, true)
 end
 
--- 读库
-function MailMgr:db_load()
-    local callback = function(...)
-        self:on_db_loaded(...)
-    end
-
-    local query = string.format('{"_id":%d}', g_app.index)
-    g_mongodb:find("sys_mail", query, nil, callback)
-end
-
 -- db数据加载回调
 function MailMgr:on_db_loaded(ecode, res)
     if 0 ~= ecode then
@@ -196,7 +186,7 @@ function MailMgr:on_db_loaded(ecode, res)
     -- 新服没有全服邮件数据
     if res and res[1] then self.list = res[1].list end
 
-    g_app:one_initialized("sys_mail", 1)
+    self.ok = true
 end
 
 -- 删除多出的邮件
@@ -244,5 +234,22 @@ function MailMgr:check_mail_limit(mail, player)
 end
 
 local mail_mgr = MailMgr()
+
+-- 读库
+local function on_app_start(check)
+    if check then
+        return mail_mgr.ok
+    end
+
+    local callback = function(...)
+        mail_mgr:on_db_loaded(...)
+    end
+
+    local query = string.format('{"_id":%d}', g_app.index)
+    g_mongodb:find("sys_mail", query, nil, callback)
+    return false
+end
+
+g_app.rege_start("MailMgr", on_app_start)
 
 return mail_mgr

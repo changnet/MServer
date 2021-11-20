@@ -117,22 +117,6 @@ local this = global_storage("Log", {
 
 -- 异步文件写入线程
 local async_file = g_async_log
-
--- 初始化db日志
-function Log.start()
-    this.db = Mysql()
-    this.db:start(g_setting.mysql_ip, g_setting.mysql_port,
-                         g_setting.mysql_user, g_setting.mysql_pwd,
-                         g_setting.mysql_db, function()
-            g_app:one_initialized("db_logger", 1)
-    end)
-end
-
--- 关闭文件日志线程及数据库日志线程
-function Log.stop()
-    -- self.async_file:stop()
-    if this.db then this.db:stop() end
-end
 --//////////////////////////////////////////////////////////////////////////////
 
 -- 写入到日志文件
@@ -244,5 +228,27 @@ end
 function Log.db_misc(player, op, val, val1, val2, ...)
     return Log.db_pid_misc(player.pid, op, val, val1, val2, ...)
 end
+
+-- /////////////////////////////////////////////////////////////////////////////
+-- 初始化db日志
+local function on_app_start(check)
+    if check then
+        return this.ok
+    end
+    this.db = Mysql()
+    this.db:start(g_setting.mysql_ip, g_setting.mysql_port,
+                         g_setting.mysql_user, g_setting.mysql_pwd,
+                         g_setting.mysql_db, function()
+            this.ok = true
+    end)
+end
+
+-- 关闭文件日志线程及数据库日志线程
+local function on_app_stop()
+    -- self.async_file:stop()
+    if this.db then this.db:stop() end
+end
+g_app.reg_app_start("Log", on_app_start)
+g_app.reg_app_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
 
 return Log

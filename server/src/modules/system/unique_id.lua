@@ -16,15 +16,6 @@ function UniqueId:__init()
     self.unique_seed = {} -- 需要存库的seed
 end
 
--- 从数据库加载
-function UniqueId:db_load()
-    local callback = function(...)
-        self:on_db_loaded(...)
-    end
-
-    g_mongodb:find("uniqueid", nil, nil, callback)
-end
-
 function UniqueId:on_db_loaded(ecode, res)
     if 0 ~= ecode then
         elog("account db load error")
@@ -43,7 +34,7 @@ function UniqueId:on_db_loaded(ecode, res)
         self.unique_seed[seed_id] = seed_map[seed_id] or 0
     end
 
-    g_app:one_initialized("uniqueid_data", 1)
+    self.ok = true
 end
 
 -- 产生一个标识socket连接的id
@@ -112,5 +103,20 @@ function UniqueId:player_id(id, raw_cb)
 end
 
 local uid = UniqueId()
+
+-- 从数据库加载
+local function on_app_start(check)
+    if check then
+        return uid.ok
+    end
+
+    local callback = function(...)
+        uid:on_db_loaded(...)
+    end
+
+    g_mongodb:find("uniqueid", nil, nil, callback)
+    return false
+end
+g_app.reg_start("UniqueId", on_app_start, 11)
 
 return uid
