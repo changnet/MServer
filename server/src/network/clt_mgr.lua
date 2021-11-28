@@ -7,15 +7,6 @@ local this = global_storage("CltMgr", {
     clt_conn = {}, -- 与客户端的连接，conn_id为key
 })
 
---  监听客户端连接
-function CltMgr.clt_listen(ip, port)
-    this.clt_listen_conn = ScConn()
-    this.clt_listen_conn:listen(ip, port)
-
-    printf("listen for client at %s:%d", ip, port)
-    return true
-end
-
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
 function CltMgr.clt_close(clt_conn)
     this.clt_conn[clt_conn.conn_id] = nil
@@ -98,6 +89,27 @@ function clt_multicast_new(mask, ...)
     else
         elog("clt_multicast_new unknow mask", mask)
     end
+end
+
+local function on_app_start(check)
+    -- TODO 这里处理一下，需要等待其他服务器初始化完成才开启客户端监听
+    -- 不然服务器没初始化完成就有玩家进游戏了
+    if check then return false end
+
+    local ip = g_app_setting.cip
+    local port = g_app_setting.cport
+
+    -- 监听客户端连接
+    this.clt_listen_conn = ScConn()
+    this.clt_listen_conn:listen(ip, port)
+
+    printf("listen for client at %s:%d", ip, port)
+
+    return true
+end
+
+if GATEWAY == APP_TYPE then
+    g_app:reg_start("CltMgr", on_app_start, 30)
 end
 
 return CltMgr

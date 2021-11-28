@@ -9,6 +9,11 @@ local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
 local gc_counter = 0 -- 完成gc的次数
 local gc_counter_tm = 0 -- 上一次完成gc的时间
 
+local init_step = 0 -- 已执行的启动步骤
+local init_func = {} -- 初始化步骤
+local stop_step = 0 -- 已执行的关闭步骤
+local stop_func = {} -- 初始化步骤
+
 -- 信号处理，默认情况下退出
 --[[
 /usr/include/bits/signum.h
@@ -97,12 +102,6 @@ end
 function Application:__init()
     g_app = self
 
-    self.init_step = 0 -- 已执行的启动步骤
-    self.init_func = {} -- 初始化步骤
-
-    self.stop_step = 0 -- 已执行的关闭步骤
-    self.stop_func = {} -- 初始化步骤
-
     -- 停用自动增量gc，在主循环里手动调用(TODO: 测试5.4的新gc效果)
     collectgarbage("stop")
 
@@ -116,7 +115,7 @@ end
 -- @param func 回调函数，该返回必须返回初始化信息
 -- @param pr 优先级priority，越小优先级越高，默认20
 function Application:reg_start(name, func, pr)
-    table.insert(self.init_func, {
+    table.insert(init_func, {
         pr = pr or 20,
         name = name,
         func = func
@@ -128,7 +127,7 @@ end
 -- @param func 回调函数，该返回必须返回关闭信息
 -- @param pr 优先级priority，越小优先级越高，默认20
 function Application:reg_stop(name, func, pr)
-    table.insert(self.stop_func, {
+    table.insert(stop_func, {
         pr = pr or 20,
         name = name,
         func = func
@@ -155,68 +154,66 @@ end
 
 -- 执行下一个app初始化步骤
 function Application:next_init_step()
-    if self.init_step >= #self.init_func then
+    if init_step >= #init_func then
         return self:final_initialize()
     end
 
-    self.init_step = self.init_step + 1
-    local step = self.init_func[self.init_step]
+    init_step = init_step + 1
+    local step = init_func[init_step]
 
     printf("app start step %d/%d: %s",
-        self.init_step, ##self.init_func,  step.name)
+        init_step, #init_func,  step.name)
 
+    step.tm = ev:time()
     local ok = step.func()
 
     -- 不需要异步的初始化，直接执行下一步。异步的则由定时器处理
     if ok then
         printf("app start step %d/%d: %s OK",
-            self.init_step, #self.init_func,  step.name)
+            init_step, #init_func, step.name)
 
         self:next_init_step()
-    else
-        step.tm = ev:time()
     end
 end
 
 -- 进程初始化
 function Application:initialize()
-    if 0 == #self.init_func then return self:final_initialize() end
+    if 0 == #init_func then return self:final_initialize() end
 
     -- 通过定时器检测初始化是否完成
     self.check_init_timer = g_timer_mgr:interval(200, 200, -1, self,
                                                  self.check_init_func)
 
     -- pr值越小，优先级越高
-    table.sort(self.init_func, function(a, b) return a.pr < b.pr end)
+    table.sort(init_func, function(a, b) return a.pr < b.pr end)
     self:next_init_step()
 end
 
 -- 检测哪些初始化未完成
 function Application:check_init_func()
     local now = ev:time()
-    local step = self.init_func[self.init_step]
+    local step = init_func[init_step]
 
     if step.func(true) then
         printf("app start step %d/%d: %s OK",
-            self.init_step, #self.init_func,  step.name)
+            init_step, #init_func,  step.name)
 
         self:next_init_step()
         return
     end
 
-    if now - step.tm > 15 then
+    if now - step.tm > 10 then
         step.tm = ev:time()
-        printf("app start step %d/%d: %s waitting",
-            self.init_step, #self.init_func, self.name)
+        printf("app waitting step %d/%d: %s",
+            init_step, #init_func, step.name)
     end
 end
 
 -- 初始化完成
 function Application:final_initialize()
-    self.ok = true
     if self.check_init_timer then  g_timer_mgr:stop(self.check_init_timer) end
 
-    printf("Application %s initialize OK", self.name)
+    self.ok = true
 end
 
 -- 关服处理

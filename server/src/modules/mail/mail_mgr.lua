@@ -250,6 +250,8 @@ local function on_app_start(check)
     return false
 end
 
-g_app.rege_start("MailMgr", on_app_start)
+if GATEWAY == APP_TYPE or WORLD == APP_TYPE then
+    g_app:reg_start("MailMgr", on_app_start)
+end
 
 return mail_mgr

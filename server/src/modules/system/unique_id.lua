@@ -117,6 +117,6 @@ local function on_app_start(check)
     g_mongodb:find("uniqueid", nil, nil, callback)
     return false
 end
-g_app.reg_start("UniqueId", on_app_start, 11)
+g_app:reg_start("UniqueId", on_app_start, 11)
 
 return uid

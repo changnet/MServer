@@ -100,8 +100,7 @@ function SrvApp:final_initialize()
     self.timer =
         g_timer_mgr:interval(next * 1000, 5000, -1, self, self.do_timer)
 
-    -- Application.final_initialize(self)
-    self.ok = true
+    Application.final_initialize(self)
     printf("App %s(index = %d, id = %d, 0x%.8X) start OK", self.name,
            self.index, self.id, self.session)
 end

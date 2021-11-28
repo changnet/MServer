@@ -98,6 +98,7 @@ end
 -- 创建一块数据存储空间，仅仅是为了方便第一管理，热更，本地化
 -- @param def_val 存储空间初始化时默认值
 -- @param init_func 存储空间初始时执行的初始化函数
+-- 复杂的初始化使用函数而不是def_val，避免热更不断创建def_val变量
 function global_storage(key, def_val, init_func)
     local storage = __global_storage[key]
     if not storage then

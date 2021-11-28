@@ -43,9 +43,10 @@ g_setting = require "setting.setting" -- require_no_update
 g_app_setting = g_setting[g_app.name]
 assert(g_app_setting, "no server conf found")
 
+require "modules.log.log"
+
 g_stat_mgr = require "statistic.statistic_mgr"
-g_log_mgr = require "modules.log.log_mgr"
-g_unique_id = require "modules.system.unique_id"
+g_unique_id = require_app("modules.system.unique_id", GATEWAY, WORLD)
 g_timer_mgr = require "timer.timer_mgr"
 require "rpc.rpc"
 require "network.cmd"
@@ -58,10 +59,10 @@ g_mail_mgr = require "modules.mail.mail_mgr"
 
 require "modules.system.ping"
 
-local Mongodb = require "mongodb.mongodb"
+-- mongodb数据库读写
+g_mongodb = require_app("mongodb.mongodb", GATEWAY, WORLD)
 
 g_httpd = require_app("http.httpd", GATEWAY)
-g_mongodb = g_mongodb
 g_map_mgr = nil
 g_dungeon_mgr = nil
 
@@ -74,19 +75,20 @@ g_map_mgr = require_app("modules.dungeon.map_mgr", AREA)
 require_app("modules.entity.entity_mgr", AREA)
 g_dungeon_mgr = require_app("modules.dungeon.dungeon_mgr", AREA)
 
--- 仅在gateway使用
-if GATEWAY == APP_TYPE then
-    if not g_mongodb then g_mongodb = Mongodb() end
-end
--- 仅在world使用
-if WORLD == APP_TYPE then
-    if not g_mongodb then g_mongodb = Mongodb() end
-end
+-- -- 仅在gateway使用
+-- if GATEWAY == APP_TYPE then
+-- end
+-- -- 仅在world使用
+-- if WORLD == APP_TYPE then
+-- end
+-- -- 仅在area使用
+-- if AREA == APP_TYPE then
+-- end
 
 -- =============================================================================
 -- =============================================================================
 -- =============================================================================
--- ====================================指令注册入口===============================
+-- ====================================指令注册入口==============================
 -- =============================================================================
 -- =============================================================================
 

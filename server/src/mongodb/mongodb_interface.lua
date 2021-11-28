@@ -2,16 +2,20 @@
 -- 2015-12-05
 -- xzc
 
+-- interface只提供接口，不涉及具体的实例
+-- 每个db连接实例，都需要在interface的基础上实现，如：
+-- PlayerMongoDB用于玩家数据读写
+-- GlobalMongoDB用于全局数据读写
 
 -- mongodb 接口
 local MongoDBInterface = oo.class(...)
 
 local Mongo = require "engine.Mongo"
 local AutoId = require "modules.system.auto_id"
-local MongodbMgr = require "mongodb.MongodbMgr"
+local MongoDBMgr = require "mongodb.mongodb_mgr"
 
 function MongoDBInterface:__init()
-    self.id = MongodbMgr.next_id()
+    self.id = MongoDBMgr.next_id()
     self.auto_id = AutoId()
     self.mongodb = Mongo(self.id)
 
@@ -36,12 +40,12 @@ end
 function MongoDBInterface:start(ip, port, usr, pwd, db, on_ready)
     self.on_ready = on_ready
 
-    MongodbMgr.push(self)
+    MongoDBMgr.push(self)
     self.mongodb:start(ip, port, usr, pwd, db)
 end
 
 function MongoDBInterface:stop()
-    MongodbMgr.pop(self.id)
+    MongoDBMgr.pop(self.id)
     return self.mongodb:stop()
 end
 

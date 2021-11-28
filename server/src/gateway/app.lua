@@ -28,22 +28,4 @@ function App:initialize()
     SrvApp.initialize(self)
 end
 
--- 重写初始化结束入口
-function App:final_initialize()
-    if not CltMgr.clt_listen(g_app_setting.cip, g_app_setting.cport) then
-        elog("gateway client listen fail,exit")
-        return false
-    end
-
-    SrvApp.final_initialize(self)
-end
-
--- 重写关服接口
-function App:shutdown()
-    g_mongodb:stop() -- 关闭所有数据库链接
-    g_log_mgr:close()
-
-    SrvApp.shutdown(self)
-end
-
 return App

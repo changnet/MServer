@@ -76,7 +76,9 @@ function SsConn:base_name(session_type)
     for name, ty in pairs(APP) do
         if ty == session_type then return name end
     end
-    return nil
+
+    -- 没有注册的情况下，使用地址作为标识名，方便查问题
+    return string.format("%s:%d", self.host, self.port)
 end
 
 -- 获取该连接名称，包括基础名字，索引，服务器id，通常用于打印日志

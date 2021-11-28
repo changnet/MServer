@@ -248,7 +248,7 @@ local function on_app_stop()
     -- self.async_file:stop()
     if this.db then this.db:stop() end
 end
-g_app.reg_app_start("Log", on_app_start)
-g_app.reg_app_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
+g_app:reg_start("Log", on_app_start)
+g_app.reg_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
 
 return Log

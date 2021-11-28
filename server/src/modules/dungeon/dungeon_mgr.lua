@@ -104,7 +104,7 @@ local function on_app_start()
     return true
 end
 
-g_app.reg_start("dungeon", on_app_start)
+g_app:reg_start("dungeon", on_app_start)
 
 return dg_mgr
 

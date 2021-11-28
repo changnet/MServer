@@ -25,9 +25,6 @@ end
 
 -- 重写关服接口
 function App:shutdown()
-    g_mongodb:stop() -- 关闭所有数据库链接
-    g_log_mgr:close()
-
     SrvApp.shutdown(self)
 end
 
