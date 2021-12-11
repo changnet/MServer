@@ -45,6 +45,8 @@ assert(g_app_setting, "no server conf found")
 
 require "modules.log.log"
 
+require "modules.event.system_event"
+
 g_stat_mgr = require "statistic.statistic_mgr"
 g_unique_id = require_app("modules.system.unique_id", GATEWAY, WORLD)
 g_timer_mgr = require "timer.timer_mgr"
@@ -54,7 +56,7 @@ require "network.srv_mgr"
 require "modules.res.res"
 require "modules.system.gm"
 require "modules.event.player_event"
-require "modules.event.system_event"
+
 g_mail_mgr = require "modules.mail.mail_mgr"
 
 require "modules.system.ping"
@@ -117,3 +119,7 @@ make_name()
 PE.make_cb()
 Cmd.make_cb()
 Res.make_cb()
+
+-- 一些需要依赖其他脚本初始化的，请使用这个事件来初始化
+-- 这样不需要考虑脚本加载的先后顺序，这个事件触发时所有脚本都加载完成了
+SE.fire_event(SE_SCRIPT_LOADED)

@@ -61,34 +61,34 @@ end
 function SsConn:authorized(pkt)
     self.auth = true
     self.session = pkt.session
-end
 
--- 获取该连接的app类型
-function SsConn:session_info()
-    return g_app:decode_session(self.session)
+    self.app_type, self.app_index, self.app_id
+        = g_app:decode_session(self.session)
+
+    for name, ty in pairs(APP) do
+        if ty == self.app_type then
+            self.name = name
+            break
+        end
+    end
 end
 
 -- 获取基本类型名字(gateway、world)，见APP服务器类型定义，通常用于打印日志
 function SsConn:base_name(session_type)
-    if not session_type then
-        session_type = g_app:decode_session(self.session)
-    end
-    for name, ty in pairs(APP) do
-        if ty == session_type then return name end
-    end
+    -- 如果已经注册成功，则使用已注册的名字
+    if self.name then return self.name end
 
     -- 没有注册的情况下，使用地址作为标识名，方便查问题
     return string.format("%s:%d", self.host, self.port)
 end
 
 -- 获取该连接名称，包括基础名字，索引，服务器id，通常用于打印日志
-function SsConn:conn_name(session)
+function SsConn:conn_name()
     -- 该服务器连接未经过认证
-    if 0 == session then return "unauthorized" end
+    if 0 == (self.session or 0) then return "unauthorized" end
 
-    local ty, index, id = g_app:decode_session(session or self.session)
-
-    return string.format("%s(I%d.S%d)", self:base_name(ty), index, id)
+    return string.format("%s(I%d.S%d)",
+        self:base_name(), self.app_index, self.app_id)
 end
 
 -- 重新连接

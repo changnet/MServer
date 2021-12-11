@@ -86,7 +86,7 @@ function GM.broadcast(cmd, ...)
     local conn_list = SrvMgr.get_all_srv_conn()
     for _, srv_conn in pairs(conn_list) do
         if srv_conn.auth then
-            local app_type = srv_conn:session_info()
+            local app_type = srv_conn.app_type
             if DST[app_type] then
                 Rpc.conn_call(srv_conn, GM.raw_exec, g_app.name, nil, cmd, ...)
             end

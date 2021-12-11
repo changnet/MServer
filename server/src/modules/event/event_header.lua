@@ -15,4 +15,7 @@ PE_DEATH = 4 -- 玩家死亡
 
 -- 系统事件定义
 
-SE_READY = 1 -- 系统初始化完成
+SE_SRV_CONNTED          = 1 -- 其他服务器连接
+SE_SRV_DISCONNTED       = 2 -- 其他服务器断开连接
+SE_READY                = 3 -- 系统初始化完成
+SE_SCRIPT_LOADED        = 4 -- 脚本加载完成

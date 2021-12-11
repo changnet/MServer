@@ -8,6 +8,7 @@ local this = global_storage("SrvMgr", {
     srv = {}, -- 已认证的服务器连接
     srv_conn = {}, -- 所有连接，包括未认证，正在重连中的连接
     srv_waiting = {}, -- 正在重连中的连接
+    srv_ready = {}, -- 已经初始化完成的其他服务器
 })
 
 -- 重新连接到其他服务器
@@ -16,31 +17,6 @@ function SrvMgr.reconnect_srv(conn)
 
     this.srv_conn[conn_id] = conn
     printf("reconnect to %s:%d", conn.ip, conn.port)
-end
-
--- 服务器认证
-function SrvMgr.srv_register(conn, pkt)
-    local auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
-    if pkt.auth ~= auth then
-        elog("SrvMgr.srv_register fail,session %d", pkt.session)
-        return false
-    end
-
-    local _, _, id = g_app:decode_session(pkt.session)
-    if id ~= tonumber(g_app.id) then
-        elog("SrvMgr.srv_register id not match,expect %s,got %d", g_app.id,
-              id)
-        return
-    end
-
-    if this.srv[pkt.session] then
-        elog("SrvMgr.srv_register session conflict:%d", pkt.session)
-        return false
-    end
-
-    this.srv[pkt.session] = conn
-    network_mgr:set_conn_session(conn.conn_id, pkt.session)
-    return true
 end
 
 -- 检查一个连接超时
@@ -176,6 +152,30 @@ function SrvMgr.srv_conn_del(conn_id)
 
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then this.srv_waiting[conn] = 1 end
+
+    SE.fire_event(SE_SRV_DISCONNTED, conn)
+end
+
+-- 其他服务器是否初始化完成
+function SrvMgr.is_other_srv_ready(name, index)
+    if not this.srv_ready[name] then return false end
+
+    return this.srv_ready[name][index]
+end
+
+-- 其他服务器初始化完成
+function SrvMgr.on_other_srv_ready(name, index, id, session)
+    if not this.srv_ready[name] then this.srv_ready[name] = {} end
+
+    this.srv_ready[name][index] = true
+    print("other srv ready", name, index, id, session)
+end
+
+-- 当前服务器初始化完成
+local function on_srv_ready(name, index, id, session)
+    for _, conn in pairs(this.srv) do
+        Rpc.conn_call(conn, SrvMgr.on_other_srv_ready, name, index, id, session)
+    end
 end
 
 local function on_app_start(check)
@@ -230,7 +230,45 @@ local function on_app_start(check)
     return false
 end
 
+-- 服务器认证
+local function handle_srv_reg(conn, pkt)
+    local session = pkt.session
+    local auth = util.md5(SRV_KEY, pkt.timestamp, session)
+    if pkt.auth ~= auth then
+        elog("SrvMgr.srv_register fail,session %d", session)
+        return false
+    end
+
+    -- TODO 这个可能会有点问题
+    -- 如果以后有连跨服，他们是否会分配不同的id，是的话要改下
+    local _, _, id = g_app:decode_session(session)
+    if id ~= tonumber(g_app.id) then
+        elog("SrvMgr.srv_register id not match,expect %s,got %d", g_app.id,
+              id)
+        return
+    end
+
+    if this.srv[session] then
+        elog("SrvMgr.srv_register session conflict:%d", session)
+        return false
+    end
+
+    this.srv[session] = conn
+    network_mgr:set_conn_session(conn.conn_id, session)
+
+    conn:authorized(pkt)
+    printf("%s register succes:session %d", conn:conn_name(), session)
+
+    SE.fire_event(SE_SRV_CONNTED, conn)
+
+    return true
+end
+
+
 -- 启动优先级略高于普通模块，普通模块可能需要连接来从其他服同步数据
 g_app:reg_start("SrvMgr", on_app_start, 15)
+
+SE.reg(SE_READY, on_srv_ready)
+Cmd.reg_srv(SYS.REG, handle_srv_reg, nil, true)
 
 return SrvMgr

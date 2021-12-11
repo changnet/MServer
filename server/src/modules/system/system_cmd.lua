@@ -1,22 +1,5 @@
 -- 处理一些系统消息
 
--- 收到另一个服务器主动同步
-local function srv_reg(srv_conn, pkt)
-    if not SrvMgr.srv_register(srv_conn, pkt) then return false end
-    srv_conn:authorized(pkt)
-
-    Cmd.sync_cmd(srv_conn)
-    srv_conn:send_pkt(SYS.SYNC_DONE, {})
-
-    printf("%s register succes:session %d", srv_conn:conn_name(),
-           srv_conn.session)
-end
-
--- 对方服务器数据同步完成
-local function srv_sync_done(srv_conn, pkt)
-    srv_conn.sync = true
-end
-
 -- 服务器之间心跳包
 local beat_pkt = {response = false}
 local function srv_beat(srv_conn, pkt)
@@ -27,6 +10,3 @@ end
 
 -- 这里注册系统模块的协议处理
 Cmd.reg_srv(SYS.BEAT, srv_beat)
-Cmd.reg_srv(SYS.REG, srv_reg, nil, true)
-Cmd.reg_srv(SYS.CMD_SYNC, Cmd.on_sync_cmd)
-Cmd.reg_srv(SYS.SYNC_DONE, srv_sync_done)

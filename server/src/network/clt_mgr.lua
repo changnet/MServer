@@ -98,20 +98,13 @@ local function on_app_start(check)
 
     -- 需要等待其他服务器初始化完成才开启客户端监听
     -- 不然服务器没初始化完成就有玩家进游戏了
-    local wait = 0
-    for name in pairs(APP) do
-        for _, setting in pairs(g_setting[string.lower(name)] or {}) do
-            if table.includes(setting.servers or {}, g_app.name) then
-                wait = wait + 1
+    for NAME in pairs(APP) do
+        local name = string.lower(NAME)
+        for index, settings in pairs(g_setting[name] or {}) do
+            if table.includes(settings.servers or {}, g_app.name) and
+                not SrvMgr.is_other_srv_ready(name, index) then
+                return false
             end
-        end
-    end
-    if wait > 0 then
-        local srvs = SrvMgr.get_all_srv_conn()
-        if table.size(srvs) < wait then return false end
-
-        for _, srv in pairs(srvs) do
-            if not srv.sync then return false end
         end
     end
 

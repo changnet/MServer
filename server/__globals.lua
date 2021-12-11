@@ -1,4 +1,4 @@
--- auto export by lua-tags 178 symbols
+-- auto export by lua-tags 182 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -16,11 +16,13 @@ return {
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
 "BucketRank", -- engine/bucket_rank.lua
+"CENTER", -- src/modules/system/define.lua
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cmd", -- src/network/cmd.lua
+"DATA", -- src/modules/system/define.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
@@ -69,6 +71,9 @@ return {
 "Rpc", -- src/rpc/rpc.lua
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
+"SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
+"SE_SRV_CONNTED", -- src/modules/event/event_header.lua
+"SE_SRV_DISCONNTED", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
@@ -109,7 +114,6 @@ return {
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
-"g_log_mgr", -- src/modules/module_header.lua
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua

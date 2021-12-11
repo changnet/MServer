@@ -161,7 +161,7 @@ function Application:next_init_step()
     init_step = init_step + 1
     local step = init_func[init_step]
 
-    printf("app start step %d/%d: %s",
+    printf("starting %d/%d: %s",
         init_step, #init_func,  step.name)
 
     step.tm = ev:time()
@@ -169,7 +169,7 @@ function Application:next_init_step()
 
     -- 不需要异步的初始化，直接执行下一步。异步的则由定时器处理
     if ok then
-        printf("app start step %d/%d: %s OK",
+        printf("starting %d/%d: %s OK",
             init_step, #init_func, step.name)
 
         self:next_init_step()
@@ -195,7 +195,7 @@ function Application:check_init_func()
     local step = init_func[init_step]
 
     if step.func(true) then
-        printf("app start step %d/%d: %s OK",
+        printf("starting %d/%d: %s OK",
             init_step, #init_func,  step.name)
 
         self:next_init_step()
@@ -204,7 +204,7 @@ function Application:check_init_func()
 
     if now - step.tm > 10 then
         step.tm = ev:time()
-        printf("app waitting step %d/%d: %s",
+        printf("starting %d/%d: %s ...",
             init_step, #init_func, step.name)
     end
 end
@@ -214,6 +214,7 @@ function Application:final_initialize()
     if self.check_init_timer then  g_timer_mgr:stop(self.check_init_timer) end
 
     self.ok = true
+    SE.fire_event(SE_READY, self.name, self.index, self.id, self.session)
 end
 
 -- 关服处理

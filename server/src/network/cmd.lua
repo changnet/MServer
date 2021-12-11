@@ -208,47 +208,6 @@ function Cmd.sync_cmd(conn)
     })
 end
 
-
--- 注册其他服务器指令,以实现协议自动转发
-function Cmd.on_sync_cmd(srv_conn, pkt)
-    local base_name = string.lower(srv_conn:base_name())
-
-    -- 同一类服务，他们的协议是一样的(例如多个场景服务器)，无需再注册一次
-    -- 其实重复注册也不会有问题，但是起服的时候可能会触发协议重复注册的检测
-    if app_reg[base_name] then
-        printf("cmd from %s,already register", srv_conn:conn_name())
-        return true
-    end
-
-    app_reg[base_name] = true
-
-    local mask = 0
-    local app_setting = g_setting[base_name]
-    if #app_setting > 1 then
-        mask = 2 -- 标记为需要动态转发，见C++ MK_DYNAMIC定义
-    end
-
-    local session = srv_conn.session
-
-    -- 记录该服务器所处理的cs指令
-    for _, cmd in pairs(pkt.clt_cmd or {}) do
-        -- 仅在启动的时候检查是否重复，热更则直接覆盖
-        if not g_app.ok then
-            assert(not cs_handler[cmd], "on sync cmd conflict", cmd)
-        end
-
-        cs_handler[cmd] = {
-            session = session
-        }
-        -- 这个协议最终需要转发的，并不需要当前进程解析，所以不需要绑定schema文件
-        network_mgr:set_cs_cmd(cmd, "", "", mask, session)
-    end
-
-    printf("register cmd from %s", srv_conn:conn_name())
-
-    return true
-end
-
 local function do_handler(handler, ...)
     if stat then
         --local beg = ev:real_ms_time()
@@ -325,5 +284,56 @@ function Cmd.make_cb()
         if this_cb then cfg.handler = this_cb end
     end
 end
+
+
+-- 注册其他服务器指令,以实现协议自动转发
+local function handle_sync_cmd(srv_conn, pkt)
+    local base_name = string.lower(srv_conn:base_name())
+
+    -- 同一类服务，他们的协议是一样的(例如多个场景服务器)，无需再注册一次
+    -- 其实重复注册也不会有问题，但是起服的时候可能会触发协议重复注册的检测
+    if app_reg[base_name] then
+        printf("cmd from %s,already register", srv_conn:conn_name())
+        return true
+    end
+
+    app_reg[base_name] = true
+
+    local mask = 0
+    local app_setting = g_setting[base_name]
+    if #app_setting > 1 then
+        mask = 2 -- 标记为需要动态转发，见C++ MK_DYNAMIC定义
+    end
+
+    local session = srv_conn.session
+
+    -- 记录该服务器所处理的cs指令
+    for _, cmd in pairs(pkt.clt_cmd or {}) do
+        -- 仅在启动的时候检查是否重复，热更则直接覆盖
+        if not g_app.ok then
+            assert(not cs_handler[cmd], "on sync cmd conflict", cmd)
+        end
+
+        cs_handler[cmd] = {
+            session = session
+        }
+        -- 这个协议最终需要转发的，并不需要当前进程解析，所以不需要绑定schema文件
+        network_mgr:set_cs_cmd(cmd, "", "", mask, session)
+    end
+
+    printf("register cmd from %s", srv_conn:conn_name())
+
+    return true
+end
+
+-- 其他服务器连接上来时，同步协议数据
+local function on_other_srv_connected(conn)
+    Cmd.sync_cmd(conn)
+end
+
+
+SE.reg(SE_SRV_CONNTED, on_other_srv_connected)
+Cmd.reg_srv(SYS.CMD_SYNC, handle_sync_cmd)
+
 
 return Cmd
