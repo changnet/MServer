@@ -5,7 +5,7 @@
 return
 {
     mongo_ip = "127.0.0.1", -- mongodb ip
-    mongo_port = "27017", -- mongodb 端口
+    mongo_port = "27013", -- mongodb 端口
     mongo_db = "test_999", -- 需要连接的数据库
     mongo_user = "test", -- mongo 用户(以后弄个加密，以免明文保存)
     mongo_pwd  = "test", -- mongo 密码(以后弄个加密，以免明文保存)
@@ -24,25 +24,32 @@ return
 
     gateway = -- gateway 配置
     {
-        sip   = "::1", -- s2s监听ip
-        sport = 10001, -- s2s监听端口
-        cip   = "::", -- c2s监听ip，在virtualbox的端口转发模式下，127.0.0.1转发不成功
-        cport = 10002, -- s2s监听端口
-        hip   = "::", -- http监听ip
-        hport = 10003, -- http监听端口
-
+        {-- 网关1配置
+            sip   = "::1", -- s2s监听ip
+            sport = 10001, -- s2s监听端口
+            cip   = "::", -- c2s监听ip，在virtualbox的端口转发模式下，127.0.0.1转发不成功
+            cport = 10002, -- s2s监听端口
+            hip   = "::", -- http监听ip
+            hport = 10003, -- http监听端口
+        }
     },
 
     world = -- world服务器配置
     {
-        sip     = "::1", -- s2s监听ip
-        sport   = 20001, -- s2s监听端口
-        servers = {"gateway"}, -- 主动连接到这些服务器
+        {-- 世界服world 1配置
+            sip     = "::1", -- s2s监听ip
+            sport   = 20001, -- s2s监听端口
+            servers = {"gateway"}, -- 主动连接到这些服务器
+        }
     },
 
     area = -- area服务器配置
     {
-        process = 2, -- 开了2个进程
-        servers = {"gateway", "world"}, -- 主动连接到这些服务器
+        {-- 区域服area 1配置
+            servers = {"gateway", "world"}, -- 主动连接到这些服务器
+        },
+        {-- 区域服area 2配置
+            servers = {"gateway", "world"}, -- 主动连接到这些服务器
+        },
     }
 }

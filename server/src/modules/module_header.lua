@@ -40,7 +40,7 @@ E = require "modules.system.error"
 -- 加载服务器配置
 -- 部分服务器配置不支持热更，很多字段，比如端口id热更了，也不可能改变
 g_setting = require "setting.setting" -- require_no_update
-g_app_setting = g_setting[g_app.name]
+g_app_setting = g_setting[g_app.name][g_app.index]
 assert(g_app_setting, "no server conf found")
 
 require "modules.log.log"

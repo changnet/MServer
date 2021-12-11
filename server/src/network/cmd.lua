@@ -224,7 +224,7 @@ function Cmd.on_sync_cmd(srv_conn, pkt)
 
     local mask = 0
     local app_setting = g_setting[base_name]
-    if app_setting.process and app_setting.process > 1 then
+    if #app_setting > 1 then
         mask = 2 -- 标记为需要动态转发，见C++ MK_DYNAMIC定义
     end
 

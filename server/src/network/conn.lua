@@ -210,9 +210,16 @@ end
 -- 监听http连接
 -- @param ip 监听的ip
 -- @param port 监听的端口
+-- @param boolean, message 返回是否成功，失败后面带message
 function Conn:listen(ip, port)
-    self.conn_id = network_mgr:listen(ip, port, self.default_param.listen_type)
+    local conn_id, msg = network_mgr:listen(
+        ip, port, self.default_param.listen_type)
+    if conn_id < 0 then
+        return false, msg
+    end
 
+    self.ok = true -- 对于监听的socket，不会触发io_ok，这里直接设置ok状态
+    self.conn_id = conn_id
     self:set_conn(self.conn_id, self)
     return true
 end

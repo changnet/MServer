@@ -309,15 +309,15 @@ function table.sort_ex(list, comp)
     return list
 end
 
-local function default_equal(a, b)
-    return a == b
-end
-
--- 判断table中是否包含指定元素
-function table.includes(tbl, e, func)
-    func = func or default_equal
-
-    for _, v in pairs(tbl) do if func(e, v) then return true end end
+-- 判断table中是否包含指定元素e
+-- @param comp_func 用于判断元素是否相等的函数，默认使用 == 判断
+function table.includes(tbl, e, comp_func)
+    if comp_func then
+        for _, v in pairs(tbl) do if comp_func(e, v) then return true end end
+    else
+        -- 没有提供对比函数，则认为e为基础类型
+        for _, v in pairs(tbl) do if e == v then return true end end
+    end
 
     return false
 end

@@ -92,20 +92,43 @@ function clt_multicast_new(mask, ...)
 end
 
 local function on_app_start(check)
-    -- TODO 这里处理一下，需要等待其他服务器初始化完成才开启客户端监听
+    if check and this.clt_listen_conn then
+        return this.clt_listen_conn.ok
+    end
+
+    -- 需要等待其他服务器初始化完成才开启客户端监听
     -- 不然服务器没初始化完成就有玩家进游戏了
-    if check then return false end
+    local wait = 0
+    for name in pairs(APP) do
+        for _, setting in pairs(g_setting[string.lower(name)] or {}) do
+            if table.includes(setting.servers or {}, g_app.name) then
+                wait = wait + 1
+            end
+        end
+    end
+    if wait > 0 then
+        local srvs = SrvMgr.get_all_srv_conn()
+        if table.size(srvs) < wait then return false end
+
+        for _, srv in pairs(srvs) do
+            if not srv.sync then return false end
+        end
+    end
 
     local ip = g_app_setting.cip
     local port = g_app_setting.cport
 
     -- 监听客户端连接
     this.clt_listen_conn = ScConn()
-    this.clt_listen_conn:listen(ip, port)
+    local ok, msg = this.clt_listen_conn:listen(ip, port)
 
-    printf("listen for client at %s:%d", ip, port)
-
-    return true
+    if ok then
+        printf("listen for client at %s:%d", ip, port)
+        return true
+    else
+        printf("listen for client at %s:%d error: %s", ip, port, msg)
+        return false
+    end
 end
 
 if GATEWAY == APP_TYPE then

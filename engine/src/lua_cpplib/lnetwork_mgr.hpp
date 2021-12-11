@@ -281,6 +281,7 @@ public:
      * @param host 监听的主机，0.0.0.0或127.0.0.1
      * @param port 监听端口
      * @param conn_type 连接类型（cs、sc、ss），见socket.h中的定义
+     * @return fd, message，成功只返回fd；失败fd为-1，则message为错误原因
      */
     int32_t listen(lua_State *L);
 

@@ -207,22 +207,23 @@ int32_t LNetworkMgr::address(lua_State *L)
     return 2;
 }
 
-/* 监听端口
- * network_mgr:listen( host,port,conn_type )
- */
 int32_t LNetworkMgr::listen(lua_State *L)
 {
     const char *host = luaL_checkstring(L, 1);
     if (!host)
     {
-        return luaL_error(L, "host not specify");
+        lua_pushinteger(L, -1);
+        lua_pushstring(L, "host not specify");
+        return 2;
     }
 
     int32_t port      = luaL_checkinteger32(L, 2);
     int32_t conn_type = luaL_checkinteger32(L, 3);
     if (conn_type <= Socket::CT_NONE || conn_type >= Socket::CT_MAX)
     {
-        return luaL_error(L, "illegal connection type");
+        lua_pushinteger(L, -1);
+        lua_pushstring(L, "illegal connection type");
+        return 2;
     }
 
     uint32_t conn_id = new_connect_id();
@@ -233,7 +234,9 @@ int32_t LNetworkMgr::listen(lua_State *L)
     if (fd < 0)
     {
         delete _socket;
-        return luaL_error(L, Socket::str_error());
+        lua_pushinteger(L, -1);
+        lua_pushstring(L, Socket::str_error());
+        return 2;
     }
 
     _socket_map[conn_id] = _socket;

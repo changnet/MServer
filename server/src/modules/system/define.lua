@@ -10,6 +10,8 @@ DEFINE_BEG(APP)
 GATEWAY = 0x1 -- 网关
 WORLD   = 0x2 -- 世界服
 AREA    = 0x3 -- 场景区域服务器
+DATA    = 0x4 -- 数据服(负责数据落地、缓存)
+CENTER  = 0x5 -- 中心服
 TEST    = 0x9 -- 执行测试用例
 DEFINE_END(APP)
 

@@ -10,31 +10,6 @@ local this = global_storage("SrvMgr", {
     srv_waiting = {}, -- 正在重连中的连接
 })
 
---  监听服务器连接
-function SrvMgr.srv_listen(ip, port)
-    this.srv_listen_conn = SsConn()
-    this.srv_listen_conn:listen(ip, port)
-
-    printf("listen for server at %s:%d", ip, port)
-    return true
-end
-
--- 主动连接其他服务器
-function SrvMgr.connect_srv(srvs)
-    for _, name in pairs(srvs) do
-        local setting = g_setting[name]
-        local conn = SsConn()
-
-        conn.auto_conn = true
-        local conn_id = conn:connect(setting.sip, setting.sport)
-
-        this.srv_conn[conn_id] = conn
-        this.srv_waiting[conn] = 1
-        printf("connect to %s at %s:%d",
-            name, setting.sip, setting.sport)
-    end
-end
-
 -- 重新连接到其他服务器
 function SrvMgr.reconnect_srv(conn)
     local conn_id = conn:reconnect()
@@ -204,21 +179,55 @@ function SrvMgr.srv_conn_del(conn_id)
 end
 
 local function on_app_start(check)
+    -- 监听其他服务器连接
+    if not check then
+        local ip = g_app_setting.sip
+        local port = g_app_setting.sport
+        if ip then
+             this.srv_listen_conn = SsConn()
+             local ok, msg = this.srv_listen_conn:listen(ip, port)
+             if ok then
+                printf("listen for server at %s:%d", ip, port)
+             else
+                printf("listen for server at %s:%d error: %s", ip, port, msg)
+             end
+        end
+    else
+        -- 上一次没监听成功
+        if g_app_setting.sip and not this.srv_listen_conn.ok then
+            return false
+        end
+    end
+
     -- 有些app不需要主动连到其他服务器，如gateway
     local srvs = g_app_setting.servers or {}
 
     -- 检测连接是否完成
+    -- 这里只检测连接上，不检测数据同步
+    -- 如果某些模块需要数据同步完成才能起服，该模块需要自己注册一个app_start事件
     if check then
         return table.size(this.srv) == #srvs
     end
 
     -- 主动连接到其他服务器
-    if #srvs > 0 then
-        SrvMgr.connect_srv(srvs)
-        return false
+    if 0 == #srvs then return true end
+
+    for _, name in pairs(srvs) do
+        -- 对方可能有多个进程，如多个网关
+        for index, setting in pairs(g_setting[name]) do
+            local conn = SsConn()
+
+            conn.auto_conn = true
+            local conn_id = conn:connect(setting.sip, setting.sport)
+
+            this.srv_conn[conn_id] = conn
+            this.srv_waiting[conn] = 1
+            printf("connect to app = %s index = %d at %s:%d",
+                name, index, setting.sip, setting.sport)
+        end
     end
 
-    return true
+    return false
 end
 
 -- 启动优先级略高于普通模块，普通模块可能需要连接来从其他服同步数据

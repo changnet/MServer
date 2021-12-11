@@ -15,11 +15,6 @@ end
 function App:initialize()
     self:module_initialize()
 
-    if not SrvMgr.srv_listen(g_app_setting.sip, g_app_setting.sport) then
-        elog("gateway server listen fail,exit")
-        return false
-    end
-
     if not g_httpd:start(g_app_setting.hip, g_app_setting.hport) then
         elog("gateway http listen fail,exit")
         return false

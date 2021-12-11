@@ -9,7 +9,7 @@ g_setting = require "setting.setting" -- require_no_update
 function Loginout.check_and_login(ai)
     if (ai.login_time or 0) > ev:time() then return false end
 
-    local conf = g_setting.gateway
+    local conf = g_setting.gateway[1]
     local host = conf.cip
     if "0.0.0.0" == host then
         host = "127.0.0.1"

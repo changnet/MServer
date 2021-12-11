@@ -14,6 +14,7 @@ end
 
 -- 对方服务器数据同步完成
 local function srv_sync_done(srv_conn, pkt)
+    srv_conn.sync = true
 end
 
 -- 服务器之间心跳包
