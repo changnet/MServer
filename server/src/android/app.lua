@@ -7,6 +7,7 @@ require "global.oo"
 require "global.table"
 require "global.string"
 
+require "modules.event.system_event"
 require_define "modules.system.define"
 
 -- 前置声明，避免luacheck警告

@@ -1,8 +1,8 @@
 -- 登录、退出
-local AST = require "modules.ai.ai_header"
-
 local Loginout = {}
 
+local util = require "engine.util"
+local AST = require "modules.ai.ai_header"
 g_setting = require "setting.setting" -- require_no_update
 
 -- 检查是否执行登录

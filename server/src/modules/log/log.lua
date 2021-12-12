@@ -181,7 +181,7 @@ local function append_db(tbl, str)
     table.insert(schedule.values, str)
 
     -- 如果已经累计太多了，立即执行，否则等定时器定时刷入
-    if #schedule.values > 128 then
+    if #schedule.values > 2048 then
         flush_log(tbl)
     end
 end
