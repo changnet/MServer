@@ -1,4 +1,4 @@
--- auto export by lua-tags 182 symbols
+-- auto export by lua-tags 180 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -112,10 +112,8 @@ return {
 "g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
-"g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
 "g_mail_mgr", -- src/modules/module_header.lua
-"g_map_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua

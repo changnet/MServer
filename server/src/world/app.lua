@@ -18,9 +18,4 @@ function App:initialize()
     SrvApp.initialize(self)
 end
 
--- 重写关服接口
-function App:shutdown()
-    SrvApp.shutdown(self)
-end
-
 return App

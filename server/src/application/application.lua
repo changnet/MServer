@@ -9,8 +9,8 @@ local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
 local gc_counter = 0 -- 完成gc的次数
 local gc_counter_tm = 0 -- 上一次完成gc的时间
 
-local init_step = 0 -- 已执行的启动步骤
-local init_func = {} -- 初始化步骤
+local start_step = 0 -- 已执行的启动步骤
+local start_func = {} -- 初始化步骤
 local stop_step = 0 -- 已执行的关闭步骤
 local stop_func = {} -- 初始化步骤
 
@@ -70,13 +70,9 @@ local sig_action = {} -- 注意，这个热更要重新注册。关服的话为�
 function sig_handler(signum)
     if sig_action[signum] then return sig_action[signum]() end
 
-    printf("catch signal %d,prepare to shutdown ...", signum)
+    printf("catch signal %d, shutting down ...", signum)
 
-    g_app:prepare_shutdown()
-
-    if not g_app:check_shutdown() then
-        return g_timer_mgr:interval(5000, 5000, -1, g_app, g_app.check_shutdown)
-    end
+    g_app:beg_stop()
 end
 
 -- 主循环，由C++回调
@@ -115,7 +111,7 @@ end
 -- @param func 回调函数，该返回必须返回初始化信息
 -- @param pr 优先级priority，越小优先级越高，默认20
 function Application:reg_start(name, func, pr)
-    table.insert(init_func, {
+    table.insert(start_func, {
         pr = pr or 20,
         name = name,
         func = func
@@ -134,35 +130,17 @@ function Application:reg_stop(name, func, pr)
     })
 end
 
--- 准备关服
-function Application:prepare_shutdown()
-end
-
--- 检测能否关服
-function Application:check_shutdown()
-    local who, finished, unfinished = ev:who_busy(true)
-    if not who then
-        self:shutdown()
-        return true
-    end
-
-    printf("thread %s busy,%d finished job,%d unfinished job,waiting ...", who,
-           finished, unfinished)
-
-    return false
-end
-
 -- 执行下一个app初始化步骤
-function Application:next_init_step()
-    if init_step >= #init_func then
-        return self:final_initialize()
+function Application:do_start()
+    if start_step >= #start_func then
+        return self:end_start()
     end
 
-    init_step = init_step + 1
-    local step = init_func[init_step]
+    start_step = start_step + 1
+    local step = start_func[start_step]
 
     printf("starting %d/%d: %s",
-        init_step, #init_func,  step.name)
+        start_step, #start_func,  step.name)
 
     step.tm = ev:time()
     local ok = step.func()
@@ -170,55 +148,119 @@ function Application:next_init_step()
     -- 不需要异步的初始化，直接执行下一步。异步的则由定时器处理
     if ok then
         printf("starting %d/%d: %s OK",
-            init_step, #init_func, step.name)
+            start_step, #start_func, step.name)
 
-        self:next_init_step()
+        self:do_start()
     end
 end
 
 -- 进程初始化
 function Application:initialize()
-    if 0 == #init_func then return self:final_initialize() end
+    if 0 == #start_func then return self:end_start() end
 
     -- 通过定时器检测初始化是否完成
-    self.check_init_timer = g_timer_mgr:interval(200, 200, -1, self,
-                                                 self.check_init_func)
+    self.start_timer = g_timer_mgr:interval(200, 200, -1, self,
+                                                 self.check_start)
 
     -- pr值越小，优先级越高
-    table.sort(init_func, function(a, b) return a.pr < b.pr end)
-    self:next_init_step()
+    table.sort(start_func, function(a, b) return a.pr < b.pr end)
+    self:do_start()
 end
 
 -- 检测哪些初始化未完成
-function Application:check_init_func()
+function Application:check_start()
     local now = ev:time()
-    local step = init_func[init_step]
+    local step = start_func[start_step]
 
     if step.func(true) then
         printf("starting %d/%d: %s OK",
-            init_step, #init_func,  step.name)
+            start_step, #start_func,  step.name)
 
-        self:next_init_step()
+        self:do_start()
         return
     end
 
     if now - step.tm > 10 then
         step.tm = ev:time()
         printf("starting %d/%d: %s ...",
-            init_step, #init_func, step.name)
+            start_step, #start_func, step.name)
     end
 end
 
 -- 初始化完成
-function Application:final_initialize()
-    if self.check_init_timer then  g_timer_mgr:stop(self.check_init_timer) end
+function Application:end_start()
+    if self.start_timer then  g_timer_mgr:stop(self.start_timer) end
 
     self.ok = true
     SE.fire_event(SE_READY, self.name, self.index, self.id, self.session)
 end
 
+-- 检测关服是否完成
+function Application:check_stop()
+    local now = ev:time()
+    local step = stop_func[stop_step]
+
+    if step.func(true) then
+        printf("stopping %d/%d: %s OK",
+            stop_step, #stop_func, step.name)
+
+        self:do_stop()
+        return
+    end
+
+    if now - step.tm > 10 then
+        step.tm = ev:time()
+        printf("stopping %d/%d: %s ...",
+            stop_step, #stop_func, step.name)
+    end
+end
+
+-- 执行关服步骤
+function Application:do_stop()
+    if stop_step >= #stop_func then
+        return self:end_stop()
+    end
+
+    stop_step = stop_step + 1
+    local step = stop_func[stop_step]
+
+    printf("stopping %d/%d: %s",
+        stop_step, #stop_func,  step.name)
+
+    step.tm = ev:time()
+    local ok = step.func()
+
+    -- 不需要异步的初始化，直接执行下一步。异步的则由定时器处理
+    if ok then
+        printf("stopping %d/%d: %s OK",
+            stop_step, #stop_func, step.name)
+
+        self:do_stop()
+    end
+end
+
+-- 开始执行关服
+function Application:beg_stop()
+    -- 如果起服时失败，直接关服，走关服步骤毫无意义
+    if not self.ok then
+        print("app NEVER Successfully started, shutdown immediately !")
+        self:end_stop()
+        return
+    end
+
+    if 0 == #stop_func then return self:end_stop() end
+
+    -- 通过定时器检测关服是否完成
+    self.check_stop_timer = g_timer_mgr:interval(200, 200, -1, self,
+                                                 self.check_stop)
+
+    -- pr值越小，优先级越高
+    table.sort(stop_func, function(a, b) return a.pr < b.pr end)
+    self:do_stop()
+end
+
 -- 关服处理
-function Application:shutdown()
+function Application:end_stop()
     ev:exit()
 end
 

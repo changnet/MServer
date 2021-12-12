@@ -65,8 +65,6 @@ require "modules.system.ping"
 g_mongodb = require_app("mongodb.mongodb", GATEWAY, WORLD)
 
 g_httpd = require_app("http.httpd", GATEWAY)
-g_map_mgr = nil
-g_dungeon_mgr = nil
 
 require_app("network.clt_mgr", GATEWAY, WORLD)
 require_app("modules.account.account_mgr", GATEWAY)
