@@ -41,8 +41,8 @@ return {
 "LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
-"Log", -- engine/log.lua
 "Log", -- src/modules/log/log.lua
+"Log", -- engine/log.lua
 "MAIL", -- proto/auto_cs.lua
 "MAIL", -- proto/cs.lua
 "MAX_MAIL", -- src/modules/system/define.lua

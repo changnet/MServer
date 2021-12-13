@@ -97,22 +97,25 @@ local Mysql = require "mysql.mysql"
 -- 日志模块
 Log = {}
 
-local this = global_storage("Log", {
-    schedule = {
-        misc = {
-            values = {},
-            sql = "INSERT INTO misc (pid,op,val,val1,val2,vals,time) VALUES "
-        },
-        res = {
-            values = {},
-            sql = "INSERT INTO res (pid,op,id,change,val1,val2,vals,time) VALUES "
-        },
-        stat = {
-            values = {},
-            sql = "INSERT INTO stat (pid,stat,val,time) VALUES ",
-            update = "ON DUPLICATE KEY UPDATE val=VALUES(val),time=VALUES(time)"
-        }
+-- 单条sql长度，max_allowed_packet
+-- 需要预留最后一条sql语句超出的长度以及insert部分长度
+local MAX_STAT_LEN = 1048576 - 48576
+
+local SCHEDULE = {
+    misc = {
+        sql = "INSERT INTO misc (pid,op,val,val1,val2,vals,time) VALUES "
+    },
+    res = {
+        sql = "INSERT INTO res (pid,op,id,change,val1,val2,vals,time) VALUES "
+    },
+    stat = {
+        sql = "INSERT INTO stat (pid,stat,val,time) VALUES ",
+        update = "ON DUPLICATE KEY UPDATE val=VALUES(val),time=VALUES(time)"
     }
+}
+
+local this = global_storage("Log", {
+    values = {}
 })
 
 -- 异步文件写入线程
@@ -139,7 +142,7 @@ local function db_time()
 
     -- 这个时间缓存，这样同一秒插入时，就不需要频繁格式化字符串
     if t ~= t_i then
-        t_s = time.date(t)
+        t_s = "\"" .. time.date(t) .. "\""
         t_i = t
     end
 
@@ -173,16 +176,69 @@ local function to_db_vals(val, ...)
     return table.concat({val, ...}, "#")
 end
 
-local function flush_log(tbl)
+-- 执行db缓存的日志
+local function exec_db_values(tbl_name, values, i, j)
+    local schedule = SCHEDULE[tbl_name]
+    local stat = nil
+    if schedule.update then
+        stat = schedule.sql
+            .. table.concat(values, ",", i, j) .. schedule.update
+    else
+        stat = schedule.sql .. table.concat(values, ",", i, j)
+    end
+
+    -- TODO 底层的sql缓存是给小语句做优化的
+    -- 这种超大的sql是实时分配内存，没有缓存，后面看看是否需要优化
+    this.db:exec_cmd(stat)
 end
 
-local function append_db(tbl, str)
-    local schedule = this.schedule[tbl]
-    table.insert(schedule.values, str)
+-- 执行单个db日志表的日志缓存
+local function exec_one_db_table(tbl_name)
+    local values = this.values[tbl_name]
+    if not values then return end
+
+    local max_log = #values
+    if max_log <= 0 then return end
+
+    this.values[tbl_name] = nil
+    print("exec db log", tbl_name, max_log)
+
+    local i = 1
+    local max_len = 0
+    for index, str in ipairs(values) do
+        max_len = max_len + string.len(str)
+        if max_len >= MAX_STAT_LEN then
+            exec_db_values(tbl_name, values, i, index)
+            i = index + 1
+        end
+    end
+
+    if i <= max_log then
+        exec_db_values(tbl_name, values, i, max_log)
+    end
+end
+
+-- 执行所有db日志
+local function exec_db()
+    for tbl_name in pairs(this.values) do
+        exec_one_db_table(tbl_name)
+    end
+end
+
+-- 添加db日志（仅缓存）
+local function append_db(tbl_name, fmt, ...)
+    local str = string.format(fmt, ...)
+    local values = this.values[tbl_name]
+    if not values then
+        values = {}
+        this.values[tbl_name] = values
+    end
+    table.insert(values, str)
 
     -- 如果已经累计太多了，立即执行，否则等定时器定时刷入
-    if #schedule.values > 2048 then
-        flush_log(tbl)
+    if #values > 4096 then
+        print("too many db log, exec now", tbl_name)
+        exec_one_db_table(tbl_name)
     end
 end
 
@@ -246,7 +302,10 @@ end
 -- 关闭文件日志线程及数据库日志线程
 local function on_app_stop()
     -- self.async_file:stop()
-    if this.db then this.db:stop() end
+    if this.db then
+        exec_db()
+        this.db:stop()
+    end
 
     return true
 end
