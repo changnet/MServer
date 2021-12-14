@@ -3,6 +3,17 @@
 -- xzc
 -- string library extend function
 
+-- 查找最后出现的字符串索引
+-- @param str 待查找的字符串
+-- @param pattern 需要查找的字符串，如果有lua正则特殊符号，需要使用%转义
+-- @param init 开始查找的位置(正向，从1开始)
+-- @return 成功返回字符串开始的位置(从1开始)，失败返回nil
+function string.find_last(str, pattern, init)
+    -- ".*abc"表示忽略abc前的所有字符
+    local _, i = str:find(".*" .. pattern)
+    return i
+end
+
 -- 拆分字符串
 -- @param str 需要拆分的字符串
 -- @param delimeter 分隔符

@@ -2,7 +2,7 @@
 -- auto export by engine_api.lua do NOT modify!
 
 -- MongoDB 数据库操作
-Mongo = {}
+local Mongo = {}
 
 -- 启动子线程并连接数据库，注：该操作是异步的
 -- @param host 数据库地址
@@ -16,11 +16,6 @@ end
 -- 停止子线程，并待子线程退出。该操作会把线程中的任务全部完成后再退出，但不会
 -- 等待主线程取回结果
 function Mongo:stop()
-end
-
--- 校验当前与数据库连接是否成功，注：不校验因网络问题暂时断开的情况
--- @return boolean
-function Mongo:valid()
 end
 
 -- 查询
@@ -59,8 +54,8 @@ end
 -- @param id 唯一id，查询结果根据此id回调
 -- @param collection 集合名，即表名
 -- @param query 查询条件，json字符串或者lua table
--- @param multi 旧版本参数，已废弃
-function Mongo:remove(id, collection, query, multi)
+-- @param single 是否仅删除单个记录(默认全部删除)
+function Mongo:remove(id, collection, query, single)
 end
 
 -- 查询记录并修改
@@ -72,3 +67,9 @@ end
 function Mongo:find_and_modify(id, collection, query)
 end
 
+-- 设置lua table转换参数
+-- @param opt double类型，整数部分表示最大key小于该值则为数组，小数部分表示数组中的元素百分比小于该值则为object
+function Mongo:set_array_opt(opt)
+end
+
+return Mongo

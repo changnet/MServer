@@ -1,4 +1,4 @@
--- auto export by lua-tags 180 symbols
+-- auto export by lua-tags 164 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -10,12 +10,9 @@ return {
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccMgr", -- src/modules/account/account_mgr.lua
-"Acism", -- engine/acism.lua
 "AndroidMgr", -- src/android/android_mgr.lua
-"Astar", -- engine/astar.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
-"BucketRank", -- engine/bucket_rank.lua
 "CENTER", -- src/modules/system/define.lua
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
@@ -31,18 +28,14 @@ return {
 "ET", -- src/modules/entity/entity_header.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
-"Ev", -- engine/ev.lua
 "GATEWAY", -- src/modules/system/define.lua
 "GM", -- src/modules/system/gm.lua
 "GSE", -- src/application/srv_app.lua
-"GridAoi", -- engine/grid_aoi.lua
 "HTTP", -- src/http/http_header.lua
-"InsertionRank", -- engine/insertion_rank.lua
 "LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/modules/log/log.lua
-"Log", -- engine/log.lua
 "MAIL", -- proto/auto_cs.lua
 "MAIL", -- proto/cs.lua
 "MAX_MAIL", -- src/modules/system/define.lua
@@ -50,9 +43,6 @@ return {
 "MISC", -- proto/auto_cs.lua
 "MISC", -- proto/cs.lua
 "MT", -- src/modules/move/move_header.lua
-"Map", -- engine/map.lua
-"Mongo", -- engine/mongo.lua
-"Network_mgr", -- engine/network_mgr.lua
 "PE", -- src/modules/event/player_event.lua
 "PE_CONN", -- src/modules/event/event_header.lua
 "PE_DEATH", -- src/modules/event/event_header.lua
@@ -79,11 +69,9 @@ return {
 "SRV_KEY", -- src/modules/system/define.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
-"Sql", -- engine/sql.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
 "Test", -- src/modules/ai/action/test.lua
-"Timer", -- engine/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua
 "WSE", -- src/application/srv_app.lua
@@ -134,8 +122,6 @@ return {
 "hot_fix_script", -- src/modules/system/hot_fix.lua
 "io_ok", -- src/network/conn.lua
 "json", -- src/test/app.lua
-"lua_parson", -- engine/lua_parson.lua
-"lua_rapidxml", -- engine/lua_rapidxml.lua
 "make_name", -- src/global/name.lua
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua
@@ -160,7 +146,6 @@ return {
 "rpc_command_return", -- src/rpc/rpc.lua
 "sig_handler", -- src/android/app.lua
 "sig_handler", -- src/application/application.lua
-"statistic", -- engine/statistic.lua
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua
 "t_assert", -- src/global/test.lua
@@ -178,7 +163,6 @@ return {
 "time", -- src/global/time.lua
 "timer_event", -- src/timer/timer_mgr.lua
 "unrequire", -- src/global/require.lua
-"util", -- engine/util.lua
 "vd", -- proto/auto.lua
 "vd", -- src/global/global.lua
 }

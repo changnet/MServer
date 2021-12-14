@@ -2,7 +2,7 @@
 -- auto export by engine_api.lua do NOT modify!
 
 -- AOI算法，目前用格子地图实现
-GridAoi = {}
+local GridAoi = {}
 
 -- 设置地图大小
 -- @param width 地图像素宽度
@@ -58,7 +58,7 @@ end
 -- @param x 实体像素坐标x
 -- @param y 实体像素坐标y
 -- @param mask 实体掩码
--- @param tbl [optional]周围关注此实体进入事件的实体存放在此table中，数量设置在n字段
+-- @param tbl [optional]视野内新增实体存放在此table中，数量设置在n字段
 function GridAoi:enter_entity(id, x, y, mask, tbl)
 end
 
@@ -66,10 +66,9 @@ end
 -- @param id 唯一实体id
 -- @param x 实体像素坐标x
 -- @param y 实体像素坐标y
--- @param tbl [optional]周围关注此实体更新事件的实体存放在此table中，数量设置在n字段
--- @param into [optional]周围关注此实体出现事件的实体存放在此table中，数量设置在n字段
--- @param out [optional]周围关注此实体消失事件的实体存放在此table中，数量设置在n字段
-function GridAoi:update_entity(id, x, y, tbl, into, out)
+-- @param into [optional]视野内新增实体存放在此table中，数量设置在n字段
+-- @param out [optional]视野内消失实体存放在此table中，数量设置在n字段
+function GridAoi:update_entity(id, x, y, into, out)
 end
 
 -- 判断两个像素坐标是否在同一个格子中
@@ -80,3 +79,4 @@ end
 function GridAoi:is_same_pos(src_x, src_y, dst_x, dst_y)
 end
 
+return GridAoi

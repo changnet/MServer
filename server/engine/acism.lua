@@ -2,7 +2,7 @@
 -- auto export by engine_api.lua do NOT modify!
 
 -- AC自动机，用于关键字过滤
-Acism = {}
+local Acism = {}
 
 -- 搜索字符串中是否包含关键字
 -- @param text 需要扫描的字符串
@@ -17,10 +17,11 @@ end
 function Acism:replace(text, repl)
 end
 
--- 从指定文件加载关键字
+-- 从指定文件加载关键字，文件以\n换行
 -- @param path 包含关键字的文件路径，文件中每一行表示一个关键字
 -- @param ci case_sensitive，是否区分大小写
 -- @return 加载的关键字数量
 function Acism:load_from_file(path, ci)
 end
 
+return Acism

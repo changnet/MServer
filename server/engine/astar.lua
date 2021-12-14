@@ -2,7 +2,7 @@
 -- auto export by engine_api.lua do NOT modify!
 
 -- A*寻路
-Astar = {}
+local Astar = {}
 
 -- A*寻路
 -- @param x 起点格子x坐标
@@ -14,3 +14,4 @@ Astar = {}
 function Astar:search(x, y, dx, dy, tbl)
 end
 
+return Astar

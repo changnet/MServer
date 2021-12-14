@@ -19,7 +19,7 @@ if "%1" == "" (
             set last_app=%%a
         )
 
-        start "%%a --index=!last_idx!" %BIN% --app=%%a --index=!last_idx! --id=%DEF_ID%
+        start "%%a --index=!last_idx! --id=%DEF_ID%" %BIN% --app=%%a --index=!last_idx! --id=%DEF_ID%
         timeout 3 > nul
     )
 ) else (

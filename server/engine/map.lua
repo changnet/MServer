@@ -2,7 +2,7 @@
 -- auto export by engine_api.lua do NOT modify!
 
 -- 地编数据，目前用格子实现
-Map = {}
+local Map = {}
 
 -- 加载地图数据
 -- TODO: 未实现
@@ -43,3 +43,4 @@ end
 function Map:get_pass_cost(x, y, is_pix)
 end
 
+return Map

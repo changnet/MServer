@@ -2,9 +2,10 @@
 -- auto export by engine_api.lua do NOT modify!
 
 -- event loop, 事件主循环
-Ev = {}
+local Ev = {}
 
--- 关闭socket、定时器等并退出循环
+-- @brief 定时重复执行的事件
+-- TODO 发起一个timer也可以，但不太确实这些固定的事件对timer性能的影响
 function Ev:exit()
 end
 
@@ -58,9 +59,4 @@ end
 function Ev:set_app_ev(interval)
 end
 
--- 设置脚本gc统计
--- @param stat boolean,是否统计gc
--- @param reset 可选参数，boolean，是否重置之前的统计数据
-function Ev:set_gc_stat(stat, reset)
-end
-
+return Ev

@@ -25,18 +25,22 @@ local export_dir = "../server/engine/"
 -- 部分符号在其他目录，这些文件也需要查找
 local other_file =
 {
-    "../engine/src/net/socket.h",
-    "../engine/src/net/io/io.h",
-    "../engine/src/net/codec/codec.h",
+    "../engine/src/net/socket.hpp",
+    "../engine/src/net/io/io.hpp",
+    "../engine/src/net/codec/codec.hpp",
 }
 
 local set_regex = "^%s*lc%.set%(%w+::([_%w]+),%s*\"([_%w]+)\"%)"
 local define_regex = "^%s*lc%.def<&%w+::([_%w]+)>%(\"([_%w]+)\"%)"
 local lib_regex = "^%s*LUA_LIB_OPEN%(\"([_%w]+)\"%s*,%s*([_%w]+)%)"
-local class_regex = "^%s*[LBaseClass%|%LClass]+<([_%w]+)>.+%(.+,%s*\"([_%w]+)\"%)"
+local class_regex = "^%s*[LBaseClass%|%LClass]+<([_%w]+)>.+%(.+,%s*\"([._%w]+)\"%)"
 
 local libs = {}
 local classes = {}
+
+local function e_traceback()
+    return debug.traceback()
+end
 
 local function to_readable( val )
     if type(val) == "string" then
@@ -99,6 +103,11 @@ local function parse_line(line, last_class)
     -- 解析导出类
     local raw_class_name, class_name = string.match(line, class_regex)
     if raw_class_name then
+        -- engine.util只取util作为类名
+        local _, dot_index = class_name:find(".*%.")
+        if dot_index then
+            class_name = class_name:sub(dot_index + 1, class_name:len())
+        end
         last_class =
         {
             raw_class_name = raw_class_name,-- C++类型名
@@ -142,9 +151,17 @@ end
 -- 从lstate.cpp中解析要导出的api
 local function parse_lib_class()
     print("parse " .. dir .. entrance)
+
     local last_class
+    local line_num = 0
     for line in io.lines(dir .. entrance) do
-        last_class = parse_line(line, last_class)
+        line_num = line_num + 1
+        local ok, v = xpcall(parse_line, e_traceback, line, last_class)
+        if not ok then
+            print(line_num, line, v)
+            assert(false)
+        end
+        last_class = v
     end
 end
 
@@ -329,6 +346,7 @@ local function export_one_symbol(file, base, indexer, symbol)
 
         file:write(")\nend")
     elseif symbol.class_name then
+        file:write("local ")
         file:write(base)
         file:write(" = {}")
     else
@@ -343,7 +361,7 @@ local function export_one_lib(lib_name, lib)
     file:write(string.format("-- %s\n", lib_name))
     file:write("-- auto export by engine_api.lua do NOT modify!\n\n")
 
-    file:write(string.format("%s = {}\n\n", lib_name))
+    file:write(string.format("local %s = {}\n\n", lib_name))
 
     if not lib.cmts then
         print(string.format("Warning: no file found for lib %s", lib_name))
@@ -354,6 +372,9 @@ local function export_one_lib(lib_name, lib)
         assert(not symbol.class_name)
         export_one_symbol(file, lib_name, ".", symbol)
     end
+
+    file:write(string.format("return %s\n", lib_name))
+
     print("export lib " .. lib_name)
 end
 
@@ -398,6 +419,8 @@ local function export_one_class(class_name, class)
             export_one_symbol(file, class_name, ":", symbol)
         end
     end
+
+    file:write(string.format("return %s\n", class_name))
 
     print("export class " .. class_name)
 end
