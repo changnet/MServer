@@ -29,7 +29,12 @@ function Httpd:start(ip, port)
     local listen_conn = HttpConn()
 
     -- 用函数wrap一层，这样不影响热更
-    listen_conn:listen(ip, port)
+    local ok, msg = listen_conn:listen(ip, port)
+    if not ok then
+        printf("httpd listen at %s:%d fail: %s", ip, port, msg or "")
+        return false
+    end
+
     listen_conn.on_accepted = function(conn)
         return self:on_accepted(conn)
     end
@@ -41,7 +46,7 @@ function Httpd:start(ip, port)
     printf("httpd listen at %s:%d", ip, port)
 
     self.listen_conn = listen_conn
-    return true;
+    return true
 end
 
 -- 停止http服务器

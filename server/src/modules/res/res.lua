@@ -14,6 +14,8 @@ local RES_ITEM  = RES_ITEM
 
 local item_conf = nil
 
+local made = false -- 生成回调函数后，不允许再注册事件
+
 -- 获取所有资源定义
 function Res.get_def()
     return RES
@@ -109,32 +111,13 @@ end
 --              < 0表示出错，> 0表示成功，如果部分成功，则会自动发邮件
 -- @param dec 删除资源函数
 function Res.reg(id, check_add, check_dec, add, dec)
-    assert(add and dec, id)
+    assert(add and dec and not made, id)
     res_func[id] = {
         check_add = check_add,
         check_dec = check_dec,
         add = add,
         dec = dec,
     }
-end
-
--- 生成具体的资源回调函数
-function Res.make_cb()
-    local ThisCall = require "modules.system.this_call"
-
-    local make = function (func, msg, id)
-        if not func then return nil end
-        return ThisCall.make_from_player(func, nil, msg, id) or func
-    end
-
-    local f_name = {"check_add", "check_dec", "add", "dec"}
-    for id, res in pairs(res_func) do
-        for _, name in pairs(f_name) do
-            res[name] = make(res[name], name, id)
-        end
-    end
-
-    item_conf = require "config.item_conf"
 end
 
 --//////////////////////////////////////////////////////////////////////////////
@@ -348,5 +331,26 @@ function Res.check_and_add_dec(player, add_list, dec_list, op, msg, ext)
 
     return true
 end
+
+-- 生成具体的资源回调函数
+local function make_cb()
+    made = true
+    local ThisCall = require "modules.system.this_call"
+
+    local make = function (func, msg, id)
+        if not func then return nil end
+        return ThisCall.make_from_player(func, nil, msg, id) or func
+    end
+
+    local f_name = {"check_add", "check_dec", "add", "dec"}
+    for id, res in pairs(res_func) do
+        for _, name in pairs(f_name) do
+            res[name] = make(res[name], name, id)
+        end
+    end
+
+    item_conf = require "config.item_conf"
+end
+SE.reg(SE_SCRIPT_LOADED, make_cb, 10)
 
 return Res

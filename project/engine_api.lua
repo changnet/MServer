@@ -188,8 +188,10 @@ local function parse_comment_name(line, last_comment)
     end
 
     -- 这个注释不是需要导出的格式，没用的
+    -- 返回true，不设置class_name表示结束这次解析，丢弃这个注释
+    last_comment.unused = true
 
-    return false
+    return true
 end
 
 -- 从一行代码中解析注释(仅支持doxgen格式的注释，所以需要导出的，都必须用这个格式)
@@ -286,16 +288,18 @@ local function parse_file(file)
         else
             last_comment, done = parse_comment_line(line, last_comment)
             if done then
-                -- 同一个文件，可能会导出多个类，这里处理下
-                local name = last_comment.class_name
-                if name then
-                    cur_comment = {}
-                    classes[name].cmts = cur_comment;
-                    classes[name].class_cmt = last_comment
-                    print("parse library done", name)
-                else
-                    last_comment.pending = nil
-                    table.insert(cur_comment, last_comment)
+                if not last_comment.unused then
+                    -- 同一个文件，可能会导出多个类，这里处理下
+                    local name = last_comment.class_name
+                    if name then
+                        cur_comment = {}
+                        classes[name].cmts = cur_comment;
+                        classes[name].class_cmt = last_comment
+                        print("parse library done", name)
+                    else
+                        last_comment.pending = nil
+                        table.insert(cur_comment, last_comment)
+                    end
                 end
                 last_comment = nil
             end

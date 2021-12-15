@@ -113,11 +113,6 @@ require_app("modules.dungeon.test_dungeon", AREA) -- 测试不同场景进程中
 -- 生成函数及其对应的名字
 make_name()
 
--- 生成回调
-PE.make_cb()
-Cmd.make_cb()
-Res.make_cb()
-
 -- 一些需要依赖其他脚本初始化的，请使用这个事件来初始化
 -- 这样不需要考虑脚本加载的先后顺序，这个事件触发时所有脚本都加载完成了
-SE.fire_event(SE_SCRIPT_LOADED)
+__fire_sys_ev(SE_SCRIPT_LOADED)

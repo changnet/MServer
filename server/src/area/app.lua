@@ -26,9 +26,4 @@ function App:final_initialize()
     SrvApp.final_initialize(self)
 end
 
--- 主事件循环
-function App:ev(ms_now)
-    EntityMgr.routine(ms_now)
-end
-
 return App

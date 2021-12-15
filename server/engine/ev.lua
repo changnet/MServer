@@ -4,8 +4,7 @@
 -- event loop, 事件主循环
 local Ev = {}
 
--- @brief 定时重复执行的事件
--- TODO 发起一个timer也可以，但不太确实这些固定的事件对timer性能的影响
+-- 关闭socket、定时器等并退出循环
 function Ev:exit()
 end
 

@@ -92,8 +92,8 @@ function clt_multicast_new(mask, ...)
 end
 
 local function on_app_start(check)
-    if check and this.clt_listen_conn then
-        return this.clt_listen_conn.ok
+    if check and this.ok then
+        return 1 == this.ok
     end
 
     -- 需要等待其他服务器初始化完成才开启客户端监听
@@ -108,6 +108,13 @@ local function on_app_start(check)
         end
     end
 
+    -- 如果配置了http地址和端口，则开启监听
+    local hip = g_app_setting.hip
+    if hip and not g_httpd:start(hip, g_app_setting.hport) then
+        elog("http listen fail")
+        return false
+    end
+
     local ip = g_app_setting.cip
     local port = g_app_setting.cport
 
@@ -116,6 +123,7 @@ local function on_app_start(check)
     local ok, msg = this.clt_listen_conn:listen(ip, port)
 
     if ok then
+        this.ok = 1
         printf("listen for client at %s:%d", ip, port)
         return true
     else

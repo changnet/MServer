@@ -14,6 +14,8 @@ local start_func = {} -- 初始化步骤
 local stop_step = 0 -- 已执行的关闭步骤
 local stop_func = {} -- 初始化步骤
 
+local app_ev = {} -- 主循环回调
+
 -- 信号处理，默认情况下退出
 --[[
 /usr/include/bits/signum.h
@@ -77,6 +79,10 @@ end
 
 -- 主循环，由C++回调
 function application_ev(ms_now)
+    for _, func in ipairs(app_ev) do
+        func(ms_now)
+    end
+
     if ms_now > next_gc then
         next_gc = ms_now + 1000 -- 多久执行一次？
         if collectgarbage("step", 100) then
@@ -90,7 +96,6 @@ function application_ev(ms_now)
             end
         end
     end
-    g_app:ev(ms_now)
 end
 -- /////////////////////////////////////////////////////////////////////////////
 
@@ -104,6 +109,15 @@ function Application:__init()
     -- 关服信号
     ev:signal(2)
     ev:signal(15)
+end
+
+-- 注册主事件回调，一般仅仅在场景和实体中使用
+function Application:reg_ev(func)
+    for _, old_func in ipairs(app_ev) do
+        assert(func ~= old_func)
+    end
+
+    table.insert(app_ev, func)
 end
 
 -- 注册app启动回调
@@ -269,10 +283,6 @@ function Application:exec()
     self:initialize()
 
     ev:backend()
-end
-
--- 主循环
-function Application:ev(ms_now)
 end
 
 return Application

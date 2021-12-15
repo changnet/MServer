@@ -69,8 +69,10 @@ function EntityMgr.del_entity_player(pid)
 end
 
 -- 事件主循环
-function EntityMgr.routine(ms_now)
+local function routine(ms_now)
     for _, entity in pairs(this.entity) do entity:routine(ms_now) end
 end
+
+g_app:reg_ev(routine)
 
 return EntityMgr

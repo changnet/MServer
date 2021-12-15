@@ -14,6 +14,8 @@ local app_reg = {} -- 记录哪些服务器已注册过协议
 local last_command = nil -- 上一次执行的cmd
 local last_connection = nil -- 上一次回调的连接，通常用于快速回包
 
+local made = false -- 生成回调函数后，不允许再注册事件
+
 local SESSION = g_app.session
 
 -- 以玩家id为key，是否已认证该玩家
@@ -143,6 +145,8 @@ end
 -- @param noauth 处理此协议时，不要求该链接可信
 function Cmd.reg(cmd, handler, noauth)
     local i = cmd.i
+
+    assert(not made)
 
     cs_handler[i] = {
         noauth = noauth,
@@ -275,17 +279,6 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
     return do_handler(cfg.handler, pid, ...)
 end
 
--- 生成模块、实体回调函数
-function Cmd.make_cb()
-    local ThisCall = require "modules.system.this_call"
-
-    for cmd, cfg in pairs(cs_handler) do
-        local this_cb = ThisCall.make_from_pid(cfg.handler, cfg.t, "cmd", cmd)
-        if this_cb then cfg.handler = this_cb end
-    end
-end
-
-
 -- 注册其他服务器指令,以实现协议自动转发
 local function handle_sync_cmd(srv_conn, pkt)
     local base_name = string.lower(srv_conn:base_name())
@@ -331,8 +324,42 @@ local function on_other_srv_connected(conn)
     Cmd.sync_cmd(conn)
 end
 
+-- 生成模块、实体回调函数
+local function make_cb()
+    made = true
+    local ThisCall = require "modules.system.this_call"
 
+    for cmd, cfg in pairs(cs_handler) do
+        local this_cb = ThisCall.make_from_pid(cfg.handler, cfg.t, "cmd", cmd)
+        if this_cb then cfg.handler = this_cb end
+    end
+end
+
+-- 脚本加载时，自动同步协议数据(在其他模块初始化前调用，因为其他模块初始化可能会调用协议)
+local function on_script_loaded()
+    make_cb()
+    -- 起服时，要检测协议是否加载成功，不走这里
+    if not g_app.ok then return end
+
+    -- 热更的话，出错也只能打个日志，没法处理
+    if not Cmd.load_protobuf() then
+        elog("Cmd proto load ERROR")
+        return
+    end
+    if GATEWAY ~= APP_TYPE then Cmd.sync_cmd() end -- 同步协议到网关
+end
+
+-- 保证起服时，如果协议文件加载出错不会成功起服
+local function on_app_start()
+    return Cmd.load_protobuf()
+end
+
+g_app:reg_start("Cmd", on_app_start)
 SE.reg(SE_SRV_CONNTED, on_other_srv_connected)
+
+-- 优先级要高，防止其他load事件通过Cmd发协议
+SE.reg(SE_SCRIPT_LOADED, on_script_loaded, 10)
+
 Cmd.reg_srv(SYS.CMD_SYNC, handle_sync_cmd)
 
 

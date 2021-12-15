@@ -17,8 +17,6 @@ function hot_fix()
     local ms = ev:real_ms_time()
 
     fix_script()
-    Cmd.load_protobuf() -- 热更schema文件
-    if GATEWAY ~= APP_TYPE then Cmd.sync_cmd() end -- 同步协议到网关
 
     printf("hot fix finish,time elapsed %d ms", ev:real_ms_time() - ms)
 end

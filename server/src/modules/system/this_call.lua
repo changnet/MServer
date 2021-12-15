@@ -39,7 +39,7 @@ local function make_func()
     end
     for _, m in pairs(player_modules) do
         local name = m.name
-        for fname, func in pairs(m.new) do
+        for _, func in pairs(m.new) do
             this_func[func] = name
         end
     end
