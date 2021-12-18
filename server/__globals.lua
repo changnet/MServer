@@ -1,12 +1,10 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 161 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
 "APP", -- src/modules/system/define.lua
-"APP_TYPE", -- src/application/srv_app.lua
 "AREA", -- src/modules/system/define.lua
-"ASE", -- src/application/srv_app.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccMgr", -- src/modules/account/account_mgr.lua
@@ -31,7 +29,6 @@ return {
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "GATEWAY", -- src/modules/system/define.lua
 "GM", -- src/modules/system/gm.lua
-"GSE", -- src/application/srv_app.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
@@ -75,7 +72,6 @@ return {
 "Test", -- src/modules/ai/action/test.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua
-"WSE", -- src/application/srv_app.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/main.lua
@@ -85,8 +81,8 @@ return {
 "__print", -- src/main.lua
 "__test", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
-"application_ev", -- src/android/app.lua
 "application_ev", -- src/application/app.lua
+"application_ev", -- src/android/android_boot.lua
 "assert", -- src/global/global.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
 "command_new", -- src/network/conn.lua
@@ -99,7 +95,7 @@ return {
 "elogf", -- src/global/global.lua
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua
-"g_ai_mgr", -- src/android/app.lua
+"g_ai_mgr", -- src/android/android_boot.lua
 "g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
@@ -109,21 +105,21 @@ return {
 "g_mongodb", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
-"g_stat_mgr", -- src/android/app.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
-"g_timer_mgr", -- src/android/app.lua
+"g_stat_mgr", -- src/android/android_boot.lua
 "g_timer_mgr", -- src/modules/module_header.lua
-"g_timer_mgr", -- src/test/app.lua
+"g_timer_mgr", -- src/android/android_boot.lua
+"g_timer_mgr", -- src/test/test_boot.lua
 "g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "io_ok", -- src/network/conn.lua
-"json", -- src/test/app.lua
+"json", -- src/test/test_boot.lua
 "make_name", -- src/global/name.lua
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua
@@ -146,8 +142,8 @@ return {
 "require_no_update", -- src/global/require.lua
 "rpc_command_new", -- src/rpc/rpc.lua
 "rpc_command_return", -- src/rpc/rpc.lua
-"sig_handler", -- src/android/app.lua
 "sig_handler", -- src/application/app.lua
+"sig_handler", -- src/android/android_boot.lua
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua
 "t_assert", -- src/global/test.lua

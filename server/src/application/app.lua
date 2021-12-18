@@ -84,6 +84,10 @@ local function end_start()
     end
 
     g_app.ok = true
+    if g_app.ev_interval then
+        ev:set_app_ev(g_app.ev_interval) -- N毫秒回调一次主循环
+    end
+
     printf("App %s(index = %d, id = %d, 0x%.8X) start OK", g_app.name,
         g_app.index, g_app.id, g_app.session)
 

@@ -36,22 +36,16 @@ function sig_handler(signum)
     ev:exit()
 end
 
-local App = oo.class(...)
+local function exec()
+    ev:signal(2)
+    ev:signal(15)
 
--- 初始化
-function App:__init(cmd, opts)
-    self.cmd, self.name, self.index, self.id = cmd, opts.name, assert(
+    local opts = g_app.opts
+    g_app.name, g_app.index, g_app.id = opts.name, assert(
                                                    opts.index,
                                                    "miss argument --index"),
                                                assert(opts.id,
                                                       "miss argument --id")
-end
-
--- 重写关服接口
-function App:exec()
-    ev:signal(2)
-    ev:signal(15)
-
     g_stat_mgr = require "statistic.statistic_mgr"
 
     -- 加载协议文件，在其他文件require之前加载，因为require的时候就需要注册协议
@@ -74,4 +68,4 @@ function application_ev(ms_now)
     AndroidMgr.routine(ms_now)
 end
 
-return App
+exec()

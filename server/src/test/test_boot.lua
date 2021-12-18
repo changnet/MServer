@@ -4,23 +4,18 @@ require "global.table"
 require "global.string"
 require "global.name"
 require "engine.statistic"
+
+require "modules.event.system_event"
 json = require "engine.lua_parson"
 
 g_timer_mgr = require "timer.timer_mgr"
 
-local Application = require "application.application"
-
-local App = oo.class(..., Application)
-
--- 初始化
-function App:__init(cmd, opts)
-    Application.__init(self)
-    self.cmd, self.name, self.filter, self.skip = cmd, opts.app, opts.filter,
-                                                  opts.skip
-end
-
-function App:final_initialize()
+local function exec()
     require "global.test"
+
+    local opts = g_app.opts
+    g_app.name, g_app.filter, g_app.skip = opts.app, opts.filter,
+                                                  opts.skip
     t_setup({
         print = print,
         timer = {
@@ -34,10 +29,10 @@ function App:final_initialize()
         },
         -- 跳过这些测试
         -- ./start.sh test --skip='mongodb;sql'
-        skip = self.skip,
+        skip = g_app.skip,
         -- 过滤器，允许只执行一部分测试
         -- ./start.sh test --filter=https 只执行名字包含https的测试
-        filter = self.filter,
+        filter = g_app.filter,
         time_update = function()
             ev:time_update()
         end,
@@ -47,8 +42,8 @@ function App:final_initialize()
     })
 
     -- 随机一个session，部分功能用到，如测试协议派发时
-    self.session = 0x10001
-    network_mgr:set_curr_session(self.session)
+    g_app.session = 0x10001
+    network_mgr:set_curr_session(g_app.session)
 
     require "test.misc_test"
     require "test.https_test"
@@ -70,7 +65,11 @@ function App:final_initialize()
 
     -- vd( statistic.dump() )
     t_run()
+
+    ev:signal(2)
+    ev:signal(15)
+
+    ev:backend()
 end
 
-return App
-
+exec()
