@@ -119,6 +119,13 @@ local function main(cmd, ...)
                                    opts.index or 0)
     if not opts.deamon then Log.set_name(app_name) end
 
+    -- win下设置cmd为utf8编码
+    -- 并设置标题用于区分cmd界面
+    if WINDOWS and not opts.deamon then
+        os.execute("chcp 65001")
+        os.execute("title " .. table.concat(raw_opts, " "))
+    end
+
     log_app_info(raw_opts)
 
     g_app.cmd = cmd

@@ -49,7 +49,7 @@ if [ ! $1 ]; then
         fi
 
         $BIN --app=$app --index=$last_idx --id=$DEF_ID &
-        sleep 3
+        # sleep 3
     done
 else
     app=`fmt_args app test $1`
