@@ -50,7 +50,7 @@ require "global.require" -- 需要热更的文件，必须放在这后面
 require "global.global" -- 这个要放require后面，它是可以热更的
 
 -- 当前进程application对象
-g_app = nil
+g_app = {}
 
 -- 简单模拟c的getopt函数，把参数读出来，按table返回
 local function get_opt(...)
@@ -121,10 +121,9 @@ local function main(cmd, ...)
 
     log_app_info(raw_opts)
 
-    local App = require(string.format("%s.app", name))
-
-    g_app = App(cmd, opts)
-    g_app:exec()
+    g_app.cmd = cmd
+    g_app.opts = opts
+    require(string.format("application.%s_app", name))
 end
 
 -- 由于日志线程未启动，不能直接使用__G__TRACKBACK

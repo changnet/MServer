@@ -22,6 +22,8 @@ local function require_app(path, app_type, ...)
     return require_app(path, ...)
 end
 
+-- app也能热更,在这里重新require一次才会热更
+require "application.app"
 
 -- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
 require "global.global"

@@ -278,7 +278,7 @@ function Player:enter_dungeon(pkt)
 
     local session = AREA_SESSION[index]
     if not session then
-        session = g_app:encode_session(AREA, index, tonumber(g_app.id))
+        session = App.encode_session(AREA, index, tonumber(g_app.id))
         AREA_SESSION[index] = session
     end
 

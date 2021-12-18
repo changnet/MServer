@@ -241,7 +241,7 @@ local function handle_srv_reg(conn, pkt)
 
     -- TODO 这个可能会有点问题
     -- 如果以后有连跨服，他们是否会分配不同的id，是的话要改下
-    local _, _, id = g_app:decode_session(session)
+    local _, _, id = App.decode_session(session)
     if id ~= tonumber(g_app.id) then
         elog("SrvMgr.srv_register id not match,expect %s,got %d", g_app.id,
               id)
@@ -266,7 +266,7 @@ end
 
 
 -- 启动优先级略高于普通模块，普通模块可能需要连接来从其他服同步数据
-g_app:reg_start("SrvMgr", on_app_start, 15)
+App.reg_start("SrvMgr", on_app_start, 15)
 
 SE.reg(SE_READY, on_srv_ready)
 Cmd.reg_srv(SYS.REG, handle_srv_reg, nil, true)

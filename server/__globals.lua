@@ -11,6 +11,7 @@ return {
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccMgr", -- src/modules/account/account_mgr.lua
 "AndroidMgr", -- src/android/android_mgr.lua
+"App", -- src/application/app.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
 "CENTER", -- src/modules/system/define.lua
@@ -83,8 +84,9 @@ return {
 "__global_storage", -- src/global/global.lua
 "__print", -- src/main.lua
 "__test", -- src/global/test.lua
+"__unrequire", -- src/global/require.lua
 "application_ev", -- src/android/app.lua
-"application_ev", -- src/application/application.lua
+"application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
 "command_new", -- src/network/conn.lua
@@ -120,7 +122,6 @@ return {
 "graph", -- src/global/graph.lua
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
-"hot_fix_script", -- src/modules/system/hot_fix.lua
 "io_ok", -- src/network/conn.lua
 "json", -- src/test/app.lua
 "make_name", -- src/global/name.lua
@@ -146,7 +147,7 @@ return {
 "rpc_command_new", -- src/rpc/rpc.lua
 "rpc_command_return", -- src/rpc/rpc.lua
 "sig_handler", -- src/android/app.lua
-"sig_handler", -- src/application/application.lua
+"sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua
 "t_assert", -- src/global/test.lua
@@ -163,7 +164,6 @@ return {
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
 "timer_event", -- src/timer/timer_mgr.lua
-"unrequire", -- src/global/require.lua
 "vd", -- proto/auto.lua
 "vd", -- src/global/global.lua
 }

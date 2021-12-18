@@ -73,6 +73,6 @@ local function routine(ms_now)
     for _, entity in pairs(this.entity) do entity:routine(ms_now) end
 end
 
-g_app:reg_ev(routine)
+App.reg_ev(routine)
 
 return EntityMgr

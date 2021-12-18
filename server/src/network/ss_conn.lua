@@ -63,7 +63,7 @@ function SsConn:authorized(pkt)
     self.session = pkt.session
 
     self.app_type, self.app_index, self.app_id
-        = g_app:decode_session(self.session)
+        = App.decode_session(self.session)
 
     for name, ty in pairs(APP) do
         if ty == self.app_type then

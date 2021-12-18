@@ -133,7 +133,7 @@ local function on_app_start(check)
 end
 
 if GATEWAY == APP_TYPE then
-    g_app:reg_start("CltMgr", on_app_start, 30)
+    App.reg_start("CltMgr", on_app_start, 30)
 end
 
 return CltMgr

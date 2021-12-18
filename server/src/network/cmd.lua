@@ -354,13 +354,13 @@ local function on_app_start()
     return Cmd.load_protobuf()
 end
 
-g_app:reg_start("Cmd", on_app_start)
+-- 必须比srv_mgr优先级高，服务器之间连上后就要开始握手通信了
+App.reg_start("Cmd", on_app_start, 14)
 SE.reg(SE_SRV_CONNTED, on_other_srv_connected)
 
 -- 优先级要高，防止其他load事件通过Cmd发协议
 SE.reg(SE_SCRIPT_LOADED, on_script_loaded, 10)
 
 Cmd.reg_srv(SYS.CMD_SYNC, handle_sync_cmd)
-
 
 return Cmd

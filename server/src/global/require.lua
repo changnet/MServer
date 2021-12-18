@@ -51,7 +51,7 @@ function require_no_update(path)
 end
 
 -- 清除加载的脚本
-function unrequire()
+function __unrequire()
     -- 先把所有文件都销毁，因为我们不知道文件里的引用关系。避免一个重新加载的文件引用
     -- 了另一个还没重新加载的文件数据
     for path in pairs(__require_list) do

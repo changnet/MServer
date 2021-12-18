@@ -252,7 +252,7 @@ end
 
 -- 世界服负责处理玩家邮箱，其他app调用的话，将全部自动通过rpc转到世界服处理
 if WORLD == APP_TYPE then
-    g_app:reg_start("MailMgr", on_app_start)
+    App.reg_start("MailMgr", on_app_start)
 end
 
 return mail_mgr

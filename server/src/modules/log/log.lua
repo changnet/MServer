@@ -309,7 +309,7 @@ local function on_app_stop()
 
     return true
 end
-g_app:reg_start("Log", on_app_start)
-g_app:reg_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
+App.reg_start("Log", on_app_start)
+App.reg_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
 
 return Log

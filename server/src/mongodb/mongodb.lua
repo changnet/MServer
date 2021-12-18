@@ -32,9 +32,9 @@ local function on_app_stop()
 end
 
 -- 启动优先级高，其他模块依赖db来加载数据
-g_app:reg_start("MongoDB", on_app_start, 10)
+App.reg_start("MongoDB", on_app_start, 10)
 
 -- 关闭优先级低，需要等其他模块存完数据
-g_app:reg_stop("MongoDB", on_app_stop, 28)
+App.reg_stop("MongoDB", on_app_stop, 28)
 
 return this.db

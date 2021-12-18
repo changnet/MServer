@@ -260,7 +260,7 @@ if APP_TYPE == GATEWAY then
     Cmd.reg(PLAYER.LOGIN, player_login, true)
     Cmd.reg(PLAYER.CREATE, create_role, true)
 
-    g_app:reg_start("Account", on_app_start)
+    App.reg_start("Account", on_app_start)
 end
 
 return AccMgr
