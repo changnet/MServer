@@ -13,7 +13,6 @@ require_define "modules.system.define"
 -- 前置声明，避免luacheck警告
 
 g_stat_mgr = nil
-g_timer_mgr = nil
 g_ai_mgr = nil
 
 -- 信号处理，默认情况下退出
@@ -53,7 +52,7 @@ local function exec()
     Cmd.USE_CS_CMD = true
     Cmd.load_protobuf()
 
-    g_timer_mgr = require "timer.timer_mgr"
+    require "timer.timer"
     require "android.android_mgr"
     g_ai_mgr = require "modules.ai.ai_mgr"
 

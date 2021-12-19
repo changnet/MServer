@@ -8,6 +8,12 @@ App = {}
 -- 通用app逻辑，如网关、世界、场景...
 -- 不通用的app（如单元测试，机器人）不需要走这里的逻辑
 
+-- 定义一些常用的变量，方便程序调用时直接使用而不需要到处去计算
+GSE = nil -- 网关session id
+WSE = nil -- 世界服session id
+ASE = nil -- 场景1服session id
+APP_TYPE = nil -- 当前app的类型id
+
 local g_app = g_app
 local next_gc = 0 -- 下一次执行luagc的时间，不影响热更
 local gc_counter = 0 -- 完成gc的次数
@@ -79,7 +85,7 @@ end
 -- 初始化完成
 local function end_start()
     if g_app.start_timer then
-        g_timer_mgr:stop(g_app.start_timer)
+        Timer.stop(g_app.start_timer)
         g_app.start_timer = nil
     end
 
@@ -165,7 +171,7 @@ local function beg_start()
     if 0 == #start_func then return end_start() end
 
     -- 通过定时器检测初始化是否完成
-    g_app.start_timer = g_timer_mgr:interval(200, 200, -1, check_start)
+    g_app.start_timer = Timer.interval(200, 200, -1, check_start)
 
     -- pr值越小，优先级越高
     table.sort(start_func, function(a, b) return a.pr < b.pr end)
@@ -233,7 +239,7 @@ local function beg_stop()
     if 0 == #stop_func then return end_stop() end
 
     -- 通过定时器检测关服是否完成
-    g_app.stop_timer = g_timer_mgr:interval(200, 200, -1, check_stop)
+    g_app.stop_timer = Timer.interval(200, 200, -1, check_stop)
 
     -- pr值越小，优先级越高
     table.sort(stop_func, function(a, b) return a.pr < b.pr end)

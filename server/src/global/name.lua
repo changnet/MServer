@@ -74,16 +74,20 @@ end
 
 -- 把一个函数调用及其参数转换为一个函数保存起来
 function func_thunk(func, p0, p1, p2, p3, p4, p5)
-    local name = func_names[func]
-    if not name then
-        return function()
-            return func(p0, p1, p2, p3, p4, p5)
-        end
-    end
-
-    -- 能查找到名字，说明这个函数需要支持热更
+    -- 测试表明，采用这种方式比把参数用table.pack再unpack的方式要快一些
+    -- 只是没有table.pack灵活
     return function()
-        local cb = assert(names_func[name], name)
+        return func(p0, p1, p2, p3, p4, p5)
+    end
+end
+
+-- 把一个函数调用及其参数转换为一个函数保存起来
+function func_name_thunk(func, p0, p1, p2, p3, p4, p5)
+    local name = assert(func_names[func], "function name not found")
+
+    -- 只保存函数name，不保存指针，这样热更时就能更新到回调函数
+    return function()
+        local cb = names_func[name]
         return cb(p0, p1, p2, p3, p4, p5)
     end
 end

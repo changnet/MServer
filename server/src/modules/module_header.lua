@@ -51,7 +51,7 @@ require "modules.event.system_event"
 
 g_stat_mgr = require "statistic.statistic_mgr"
 g_unique_id = require_app("modules.system.unique_id", GATEWAY, WORLD)
-g_timer_mgr = require "timer.timer_mgr"
+require "timer.timer"
 require "rpc.rpc"
 require "network.cmd"
 require "network.srv_mgr"

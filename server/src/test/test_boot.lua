@@ -8,7 +8,7 @@ require "engine.statistic"
 require "modules.event.system_event"
 json = require "engine.lua_parson"
 
-g_timer_mgr = require "timer.timer_mgr"
+require "timer.timer"
 
 local function exec()
     require "global.test"
@@ -20,11 +20,11 @@ local function exec()
         print = print,
         timer = {
             new = function(timeout, func)
-                return g_timer_mgr:timeout(timeout, func)
+                return Timer.timeout(timeout, func)
             end,
 
             del = function(timer_id)
-                return g_timer_mgr:stop(timer_id)
+                return Timer.stop(timer_id)
             end
         },
         -- 跳过这些测试

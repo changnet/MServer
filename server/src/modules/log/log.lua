@@ -295,7 +295,8 @@ local function on_app_start(check)
     this.db:start(g_setting.mysql_ip, g_setting.mysql_port,
                          g_setting.mysql_user, g_setting.mysql_pwd,
                          g_setting.mysql_db, function()
-            this.ok = true
+        this.ok = true
+        Timer.reg_min_interval(exec_db)
     end)
 end
 
@@ -309,6 +310,8 @@ local function on_app_stop()
 
     return true
 end
+
+reg_func("Log.execdb", exec_db)
 App.reg_start("Log", on_app_start)
 App.reg_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
 
