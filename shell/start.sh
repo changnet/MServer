@@ -2,7 +2,8 @@
 
 DEF_ID=1
 DEF_INDEX=1
-DEF_APP=(gateway world area area)
+# DEF_APP=(gateway world area area) # sh不支持数组
+DEF_APP="gateway world area area"
 
 # 以soft模式设置core文件大小及文件句柄数量，一般在./build_env.sh set_sys_env里设置
 # 不过这里强制设置一次
@@ -39,7 +40,8 @@ function fmt_args()
 
 # ./start.sh 不带任何参数表示启动服务器
 if [ ! $1 ]; then
-    for app in ${DEF_APP[@]}
+    # for app in ${DEF_APP[@]}
+    for app in ${DEF_APP};
     do
         if [ "$app" == "$last_app" ]; then
             last_idx=$(($last_idx + 1))

@@ -363,7 +363,7 @@ void EV::invoke_pending()
     for (auto w : _pendings)
     {
         // 可能其他事件调用了clear_pending导致当前watcher无效了
-        if (EXPECT_TRUE(w->_pending))
+        if (EXPECT_TRUE(w && w->_pending))
         {
             w->_pending = 0;
             w->_cb(w->_revents);
@@ -375,9 +375,12 @@ void EV::invoke_pending()
 
 void EV::clear_pending(EVWatcher *w)
 {
-    // 如果这个watcher在pending队列中，不需要删除，只需要设置标识即可
+    // 如果这个watcher在pending队列中，从队列中删除
     if (w->_pending)
     {
+        assert(w == _pendings[w->_pending - 1]);
+        _pendings[w->_pending - 1] = nullptr;
+
         w->_revents = 0;
         w->_pending = 0;
     }

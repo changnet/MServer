@@ -2,7 +2,7 @@
 
 DEF_ID=1
 DEF_INDEX=1
-DEF_APP=(gateway world area area)
+DEF_APP="gateway world area area"
 
 cd ../server/bin
 BIN=`pwd`/master
@@ -14,7 +14,7 @@ BIN=`pwd`/master
 # ./stop.sh 不带参数表示关闭整个服务器默认进程
 # ./stop.sh android 表示关闭所有机器人进程
 if [ ! $1 ]; then
-    for app in ${DEF_APP[@]}
+    for app in ${DEF_APP};
     do
         if [ "$app" == "$last_app" ]; then
             last_idx=$(($last_idx + 1))
