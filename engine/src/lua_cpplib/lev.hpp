@@ -36,8 +36,22 @@ public:
     int32_t exit(lua_State *L);
 
     /**
+     * 启动utc定时器
+     * @param id 定时器唯一id
+     * @param after N秒后第一次执行
+     * @param repeat 重复执行间隔，秒数
+     * @param policy 定时器重新规则时的策略
+     */
+    int32_t periodic_start(lua_State *L);
+    /**
+     * 停止utc定时器 
+     * @param id 定时器唯一id
+     */
+    int32_t periodic_stop(lua_State *L);
+
+    /**
      * 获取帧时间戳，秒
-     * 如果服务器卡了，这时间和实时时间对不上
+     * 如果服务器卡了，这时间和实时时间是不一样的
      */
     int32_t time(lua_State *L);
 
@@ -106,7 +120,7 @@ private:
     void invoke_app_ev();
 
     bool next_periodic(Periodic &periodic);
-
+    virtual void timer_callback(int32_t id, int32_t revents);
 private:
     /**
      * 用一个计数器来管理vector，可以避免对vector进行pop、resize之类的操作

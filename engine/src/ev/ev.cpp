@@ -1,5 +1,4 @@
 #include "ev.hpp"
-#include "ev_watcher.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)
 #define MIN_TIMEJUMP 1000
@@ -119,10 +118,14 @@ EV::EV()
     _fd_changes.reserve(1024);
     _pendings.reserve(1024);
     _timers.reserve(1024);
+    _periodics.reserve(1024);
 
     // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
-    _timercnt = 0;
+    _timer_cnt = 0;
     _timers.resize(1024, nullptr);
+
+    _periodic_cnt = 0;
+    _periodics.resize(1024, nullptr);
 
     _rt_time = get_real_time();
 
@@ -138,6 +141,8 @@ EV::EV()
 
 EV::~EV()
 {
+    _periodic_mgr.clear();
+
     delete _backend;
     _backend = nullptr;
 }
@@ -149,8 +154,7 @@ int32_t EV::loop()
 
     /*
      * 这个循环里执行的顺序有特殊要求
-     * 1. 检测loop_done必须在invoke_pending之后，中间不能执行wait，不然设置loop_done
-     * 为false后无法停服
+     * 1. 检测_done必须在invoke_pending之后，中间不能执行wait，不然设置done后无法及时停服
      * 2. wait的前后必须执行time_update，不然计算出来的时间不准
      * 3. 计算wait的时间必须在wait之前，不能在invoke_pending的时候一般执行逻辑一边计算。
      * 因为执行逻辑可能会耗很长时间，那时候计算的时间是不准的
@@ -167,9 +171,16 @@ int32_t EV::loop()
         _busy_time = _mn_time - last_ms;
 
         int64_t backend_time = _backend_time_coarse - _mn_time;
-        if (_timercnt) /* 如果有定时器，睡眠时间不超过定时器触发时间，以免sleep过头 */
+        if (_timer_cnt)
         {
-            int64_t to = 1000 * ((_timers[HEAP0])->_at - _mn_time);
+            // wait时间不超过下一个定时器触发时间
+            int64_t to = (_timers[HEAP0])->_at - _mn_time;
+            if (backend_time > to) backend_time = to;
+        }
+        if (_periodic_cnt)
+        {
+            // utc定时器，精度是秒，触发时间误差也是1秒
+            int64_t to = 1000 * ((_periodics[HEAP0])->_at - _rt_time);
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
@@ -268,7 +279,7 @@ int64_t EV::get_real_time()
 
 int64_t EV::get_monotonic_time()
 {
-    /*
+    /**
      * 获取当前时钟
      * CLOCK_REALTIME:
      * 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。
@@ -293,7 +304,8 @@ void EV::time_update()
 {
     _mn_time = get_monotonic_time();
 
-    /* 直接计算出UTC时间而不通过get_time获取
+    /**
+     * 直接计算出UTC时间而不通过get_time获取
      * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
      * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
      */
@@ -307,7 +319,8 @@ void EV::time_update()
     _rt_time         = get_real_time();
     int64_t old_diff = _rtmn_diff;
 
-    /* 当两次diff相差比较大时，说明有人调了UTC时间。由于clock_gettime是一个syscall，可能
+    /**
+     * 当两次diff相差比较大时，说明有人调了UTC时间。由于clock_gettime是一个syscall，可能
      * 出现mn_now是调整前，ev_rt_now为调整后的情况。
      * 必须循环几次保证mn_now和ev_rt_now取到的都是调整后的时间
      *
@@ -366,7 +379,7 @@ void EV::invoke_pending()
         if (EXPECT_TRUE(w && w->_pending))
         {
             w->_pending = 0;
-            w->_cb(w->_revents);
+            w->callback(w->_revents);
             w->_revents = 0;
         }
     }
@@ -388,7 +401,7 @@ void EV::clear_pending(EVWatcher *w)
 
 void EV::timers_reify()
 {
-    while (_timercnt && (_timers[HEAP0])->_at < _mn_time)
+    while (_timer_cnt && (_timers[HEAP0])->_at <= _mn_time)
     {
         EVTimer *w = _timers[HEAP0];
 
@@ -403,7 +416,35 @@ void EV::timers_reify()
 
             assert(w->_repeat > 0);
 
-            down_heap(_timers.data(), _timercnt, HEAP0);
+            down_heap(_timers.data(), _timer_cnt, HEAP0);
+        }
+        else
+        {
+            w->stop();
+        }
+
+        feed_event(w, EV_TIMER);
+    }
+}
+
+void EV::periodic_reify() 
+{
+    while (_periodic_cnt && (_periodics[HEAP0])->_at <= _rt_time)
+    {
+        EVTimer *w = _periodics[HEAP0];
+
+        assert(w->active());
+
+        if (w->_repeat)
+        {
+            w->_at += w->_repeat;
+
+            // 如果时间出现偏差，重新调整定时器
+            if (EXPECT_FALSE(w->_at < _rt_time)) w->reschedule(_rt_time);
+
+            assert(w->_repeat > 0);
+
+            down_heap(_periodics.data(), _timer_cnt, HEAP0);
         }
         else
         {
@@ -420,8 +461,8 @@ int32_t EV::timer_start(EVTimer *w)
 
     assert(w->_repeat >= 0);
 
-    ++_timercnt;
-    int32_t active = _timercnt + HEAP0 - 1;
+    ++_timer_cnt;
+    int32_t active = _timer_cnt + HEAP0 - 1;
     if (_timers.size() < (size_t)active + 1)
     {
         _timers.resize(active + 1024, nullptr);
@@ -446,19 +487,81 @@ int32_t EV::timer_stop(EVTimer *w)
 
         assert(_timers[active] == w);
 
-        --_timercnt;
+        --_timer_cnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (EXPECT_TRUE(active < _timercnt + HEAP0))
+        if (EXPECT_TRUE(active < _timer_cnt + HEAP0))
         {
             // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
-            _timers[active] = _timers[_timercnt + HEAP0];
-            adjust_heap(_timers.data(), _timercnt, active);
+            _timers[active] = _timers[_timer_cnt + HEAP0];
+            adjust_heap(_timers.data(), _timer_cnt, active);
         }
     }
 
     w->_at -= _mn_time;
     w->_active = 0;
+
+    return 0;
+}
+
+int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat, int32_t policy)
+{
+    assert(repeat >= 0);
+
+    // 如果不支持try_emplace，使用std::forward_as_tuple实现
+    auto p = _periodic_mgr.try_emplace(id, id, this);
+    if (!p.second) return -1;
+
+    EVTimer *w = &(p.first->second);
+
+    w->_at = _rt_time + after;
+    w->_repeat = repeat;
+    w->_policy = policy;
+
+    ++_periodic_cnt;
+    int32_t active = _periodic_cnt + HEAP0 - 1;
+    if (_periodics.size() < (size_t)active + 1)
+    {
+        _periodics.resize(active + 1024, nullptr);
+    }
+
+    _periodics[active] = w;
+    up_heap(_periodics.data(), active);
+
+    assert(active >= 1 && _periodics[w->_active] == w);
+
+    return active;
+}
+
+int32_t EV::periodic_stop(int32_t id)
+{
+    auto found = _periodic_mgr.find(id);
+    if (found == _periodic_mgr.end())
+    {
+        return -1;
+    }
+
+    EVTimer *w = &(found->second);
+    clear_pending(w);
+    if (EXPECT_FALSE(!w->active())) return 0;
+
+    {
+        int32_t active = w->_active;
+
+        assert(_periodics[active] == w);
+
+        --_periodic_cnt;
+
+        // 如果这个定时器刚好在最后，就不用调整二叉堆
+        if (EXPECT_TRUE(active < _periodic_cnt + HEAP0))
+        {
+            // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
+            _periodics[active] = _periodics[_periodic_cnt + HEAP0];
+            adjust_heap(_periodics.data(), _periodic_cnt, active);
+        }
+    }
+
+    _periodic_mgr.erase(found);
 
     return 0;
 }

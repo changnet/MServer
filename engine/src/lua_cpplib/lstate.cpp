@@ -77,6 +77,8 @@ int32_t luaopen_ev(lua_State *L)
     lc.def<&LEV::set_app_ev>("set_app_ev");
     lc.def<&LEV::time_update>("time_update");
     lc.def<&LEV::real_ms_time>("real_ms_time");
+    lc.def<&LEV::periodic_stop>("periodic_stop");
+    lc.def<&LEV::periodic_start>("periodic_start");
     lc.def<&LEV::set_critical_time>("set_critical_time");
 
     return 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include "ev_watcher.hpp"
 #include "../global/global.hpp"
 
 /* eventmask, revents, events... */
@@ -42,12 +43,30 @@ public:
     int32_t timer_start(EVTimer *w);
     int32_t timer_stop(EVTimer *w);
 
+    /// @brief  启动utc定时器
+    /// @param id 定时器唯一id
+    /// @param after N秒后第一次执行
+    /// @param repeat 重复执行间隔，秒数
+    /// @param policy 定时器重新规则时的策略
+    /// @return 成功返回》=1,失败返回值<0
+    int32_t periodic_start(int32_t id, int64_t after, int64_t repeat,
+                           int32_t policy);
+    /// @brief 停止utc定时器
+    /// @param id 定时器唯一id
+    /// @return 成功返回0
+    int32_t periodic_stop(int32_t id);
+
+    /// 获取系统启动以为毫秒数
     static int64_t get_monotonic_time();
+    /// 获取实时UTC时间，精度秒
     static int64_t get_real_time();
 
+    /// 获取当前的帧时间，精度为毫秒
     inline int64_t ms_now() { return _mn_time; }
+    /// 获取当前的帧时间，精度为秒
     inline int64_t now() { return _rt_time; }
-
+    /// 定时器回调函数
+    virtual void timer_callback(int32_t id, int32_t revents) {}
 protected:
     friend class EVBackend;
     volatile bool _done; /// 主循环是否已结束
@@ -60,10 +79,14 @@ protected:
      * 当前拥有的timer数量
      * 额外使用一个计数器管理timer，可以不用对_timers进行pop之类的操作
      */
-    int32_t _timercnt;
-    std::vector<EVTimer *> _timers; /// 所有的timer watcher
+    int32_t _timer_cnt;
+    std::vector<EVTimer *> _timers; /// 按二叉树排列的定时器
 
-    EVBackend *_backend;
+    int32_t _periodic_cnt;
+    std::vector<EVTimer *> _periodics; /// 按二叉树排列的utc定时器
+    std::unordered_map<int32_t, EVTimer> _periodic_mgr;
+
+    EVBackend *_backend; ///< io后台
     int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
     int64_t _backend_time_coarse; ///< 预计下次backend等待结束的时间戳
 
@@ -97,6 +120,7 @@ protected:
     void invoke_pending();
     void clear_pending(EVWatcher *w);
     void timers_reify();
+    void periodic_reify();
     void down_heap(HeapNode *heap, int32_t N, int32_t k);
     void up_heap(HeapNode *heap, int32_t k);
     void adjust_heap(HeapNode *heap, int32_t N, int32_t k);

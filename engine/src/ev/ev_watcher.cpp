@@ -1,5 +1,7 @@
 #include "ev_watcher.hpp"
 
+#include "ev.hpp"
+
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
     _active  = 0;
@@ -49,8 +51,9 @@ void EVIO::set(int32_t fd, uint8_t events)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-EVTimer::EVTimer(EV *loop) : EVWatcher(loop)
+EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
 {
+    _id     = id;
     _policy = P_NONE;
     _at     = 0;
     _repeat = 0;
@@ -123,4 +126,9 @@ void EVTimer::set(int64_t after, int64_t repeat)
     this->_repeat = repeat;
 
     if (old_active) start();
+}
+
+void EVTimer::callback(int32_t revents)
+{
+    _loop->timer_callback(_id, revents);
 }

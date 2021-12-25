@@ -2,7 +2,7 @@
 #include "../system/static_global.hpp"
 #include "ltools.hpp"
 
-LTimer::LTimer(lua_State *L)
+LTimer::LTimer(lua_State *L) : _timer(0, nullptr)
 {
     _timer_id = (int32_t)luaL_checkinteger(L, 2);
 

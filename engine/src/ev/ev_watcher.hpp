@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "ev.hpp"
+class EV;
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
@@ -20,6 +20,14 @@ public:
 
     /// 设置主循环指针
     void set(EV *loop) { _loop = loop; }
+
+    /// 回调函数
+    virtual void callback(int32_t revents)
+    {
+        // TODO 以前都是采用绑定回调函数的方式
+        // 现在定时器那边用多态直接回调，以后看要不要都改成多态
+        _cb(revents);
+    }
 
     /**
      * 类似于std::bind，直接绑定回调函数
@@ -82,7 +90,7 @@ public:
 
 public:
     ~EVTimer();
-    explicit EVTimer(EV *_loop = nullptr);
+    explicit EVTimer(int32_t id, EV *_loop);
 
     int64_t at() const { return _at; }
     int64_t repeat() const { return _repeat; }
@@ -104,9 +112,12 @@ public:
      */
     void set(int64_t after, int64_t repeat = 0.);
 
+    /// 回调函数
+    virtual void callback(int32_t revents);
 private:
     friend class EV;
 
+    int32_t _id;
     int32_t _policy; ///< 修正定时器时间偏差策略，详见 reschedule 函数
     int64_t _at; ///< 定时器首次触发延迟的毫秒数（未激活），下次触发时间（已激活）
     int64_t _repeat; ///< 定时器重复的间隔（毫秒数）

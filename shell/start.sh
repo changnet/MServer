@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 DEF_ID=1
 DEF_INDEX=1
