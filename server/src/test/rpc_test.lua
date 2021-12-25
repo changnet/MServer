@@ -113,11 +113,11 @@ t_describe("rpc test", function()
             t_done()
         end
 
-        reg_func("rpc_query", rpc_query)
-        reg_func("rpc_reponse", rpc_reponse)
-        reg_func("rpc_empty_query", rpc_empty_query)
-        reg_func("rpc_min_reponse", rpc_min_reponse)
-        reg_func("rpc_empty_reponse", rpc_empty_reponse)
+        name_func("rpc_query", rpc_query)
+        name_func("rpc_reponse", rpc_reponse)
+        name_func("rpc_empty_query", rpc_empty_query)
+        name_func("rpc_min_reponse", rpc_min_reponse)
+        name_func("rpc_empty_reponse", rpc_empty_reponse)
 
         -- 无返回，无参数
         Rpc.conn_call(clt_conn, rpc_empty_query)
@@ -147,8 +147,8 @@ t_describe("rpc test", function()
             if count == PERF_TIMES then t_done() end
         end
 
-        reg_func("rpc_perf_query", rpc_perf_query)
-        reg_func("rpc_perf_response", rpc_perf_response)
+        name_func("rpc_perf_query", rpc_perf_query)
+        name_func("rpc_perf_response", rpc_perf_response)
 
         for _ = 1, PERF_TIMES do
             Rpc.proxy(rpc_perf_response).conn_call(
@@ -176,8 +176,8 @@ t_describe("rpc test", function()
                 end
             end
 
-            reg_func("rpc_pingpong_query", rpc_pingpong_query)
-            reg_func("rpc_pingpong_response", rpc_pingpong_response)
+            name_func("rpc_pingpong_query", rpc_pingpong_query)
+            name_func("rpc_pingpong_response", rpc_pingpong_response)
 
             Rpc.proxy(rpc_pingpong_response).conn_call(
                 clt_conn, rpc_pingpong_query, table.unpack(params))

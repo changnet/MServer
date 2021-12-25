@@ -155,12 +155,14 @@ function Conn:conn_new(e)
     if 0 == e then
         self:set_conn_param()
     else
-        self:on_disconnected(e)
+        self:on_disconnected(e, true)
     end
 end
 
 -- 连接断开
-function Conn:on_disconnected(e)
+-- @param e 连接断开错误码，对应errno或者WSGetLastError
+-- @param is_conn 是否主动连接失败（这事件会触发两次）
+function Conn:on_disconnected(e, is_conn)
 end
 
 -- 连接建立完成(包括SSL等握手完成)
@@ -195,6 +197,13 @@ function Conn:connect(host, port)
     self:set_conn(self.conn_id, self)
 
     return self.conn_id
+end
+
+-- 重新连接，之前必须调用过connect函数
+function Conn:reconnect()
+    assert(not self.ok)
+
+    return self:connect(self.ip, self.port)
 end
 
 -- 以https试连接到其他服务器

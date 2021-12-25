@@ -92,8 +92,8 @@ function func_name_thunk(func, p0, p1, p2, p3, p4, p5)
     end
 end
 
--- 注册一个函数名
-function reg_func(name, func)
+-- 给函数起个名字
+function name_func(name, func)
     -- 唯函数名和函数指针是一一对应的
     assert(not func_names[func], name)
     assert(not names_func[name], name)
@@ -102,8 +102,8 @@ function reg_func(name, func)
     names_func[name] = func
 end
 
--- 注册一个对象
-function reg_obj(name, obj)
+-- 给对象起个名字
+function name_obj(name, obj)
     assert(not obj_names[obj], name)
     assert(not names_obj[name], name)
 
@@ -158,8 +158,8 @@ function make_name()
     }
 
     local count = 0
-    local reg_o = reg_obj
-    local reg_f = reg_func
+    local reg_o = name_obj
+    local reg_f = name_func
     for name, value in pairs(_G) do
         local t = type(value)
         if "function" == t then

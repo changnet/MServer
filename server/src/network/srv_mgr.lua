@@ -9,14 +9,27 @@ local this = global_storage("SrvMgr", {
     srv_conn = {}, -- 所有连接，包括未认证，正在重连中的连接
     srv_waiting = {}, -- 正在重连中的连接
     srv_ready = {}, -- 已经初始化完成的其他服务器
+    last_reconnect = 0, -- 上一次尝试重连时间
 })
 
 -- 重新连接到其他服务器
-function SrvMgr.reconnect_srv(conn)
-    local conn_id = conn:reconnect()
+local function reconnect_srv()
+    local now = ev:time()
+    -- N秒后才尝试一次重连
+    if now - this.last_reconnect < 2 then return end
 
-    this.srv_conn[conn_id] = conn
-    printf("reconnect to %s:%d", conn.ip, conn.port)
+    this.last_reconnect = now
+    if table.empty(this.srv_waiting) then return end
+
+    local conn_list = this.srv_waiting
+
+    this.srv_waiting = {}
+    for conn in pairs(conn_list) do
+        local conn_id = conn:reconnect()
+
+        this.srv_conn[conn_id] = conn
+        printf("reconnect to %s:%d", conn.ip, conn.port)
+    end
 end
 
 -- 检查一个连接超时
@@ -37,11 +50,6 @@ end
 
 -- 定时器回调
 function SrvMgr.do_timer()
-    -- 重连
-    local waiting = this.srv_waiting
-    if not table.empty(waiting) then this.srv_waiting = {} end
-    for conn in pairs(waiting) do SrvMgr.reconnect_srv(conn) end
-
     local check_time = ev:time() - SRV_ALIVE_INTERVAL
     for _, srv_conn in pairs(this.srv_conn) do
         SrvMgr.check_one_timeout(srv_conn, check_time)
@@ -142,8 +150,14 @@ function SrvMgr.on_conn_ok(conn_id)
 end
 
 -- 底层连接断开回调
-function SrvMgr.srv_conn_del(conn_id)
+function SrvMgr.srv_conn_del(conn_id, e, is_conn)
+    -- 这个函数会触发两次，一次是连接失败，一次是socket关闭
+    -- 连接失败
     local conn = this.srv_conn[conn_id]
+    if is_conn then
+        printf("connect to %s FAIL: %s", conn:base_name(), util.what_error(e))
+        return
+    end
 
     if conn.session then this.srv[conn.session] = nil end
     this.srv_conn[conn_id] = nil
@@ -206,6 +220,8 @@ local function on_app_start(check)
     -- 这里只检测连接上，不检测数据同步
     -- 如果某些模块需要数据同步完成才能起服，该模块需要自己注册一个app_start事件
     if check then
+        -- 有些服务器起得慢来不及监听，要不断地去尝试重连
+        reconnect_srv()
         return table.size(this.srv) == #srvs
     end
 

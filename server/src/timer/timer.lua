@@ -55,12 +55,12 @@ function Timer.interval(after, msec, times, func, ...)
     local cb
     if after > 10 or (times > 5 or times < 0) then
         -- 如果回调时间很长，则需要该函数能热更
-        func_name_thunk(this, func, ...)
+        cb = func_name_thunk(func, ...)
     else
         -- 如果回调时间很短，则在这段时间内需要热更的机率很小
         -- 假如还是刚好遇到热更，则对应的业务逻辑必须自己处理好
         -- 因为即使使用能热更的方式，也没办法控制热更时和定时器回调的谁前谁后时机
-        cb = func_thunk(this, func, ...)
+        cb = func_thunk(func, ...)
     end
 
     this.timer[timer_id] = {

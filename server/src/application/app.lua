@@ -8,6 +8,8 @@ App = {}
 -- 通用app逻辑，如网关、世界、场景...
 -- 不通用的app（如单元测试，机器人）不需要走这里的逻辑
 
+require "global.name"
+
 -- 定义一些常用的变量，方便程序调用时直接使用而不需要到处去计算
 GSE = nil -- 网关session id
 WSE = nil -- 世界服session id
@@ -355,5 +357,8 @@ function application_ev(ms_now)
     end
 end
 -- /////////////////////////////////////////////////////////////////////////////
+
+name_func("App.check_stop", check_stop)
+name_func("App.check_start", check_start)
 
 return App

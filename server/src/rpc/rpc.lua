@@ -267,9 +267,9 @@ function Rpc.call(session, func, ...)
 end
 
 -- 几个特殊的函数，名字短一点以减少传输数据量
-reg_func("__1", on_pid_call)
-reg_func("__2", on_entity_call)
-reg_func("__3", on_object_call)
+name_func("__1", on_pid_call)
+name_func("__2", on_entity_call)
+name_func("__3", on_object_call)
 
 -- /////////////////////////////////////////////////////////////////////////////
 -- RPC基础功能在上面处理

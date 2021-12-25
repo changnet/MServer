@@ -20,8 +20,6 @@ SsConn.default_param = {
 
 function SsConn:__init(conn_id)
     self.auth = false
-    self.beat = 0
-    self.fchk = 0 -- fail check
     self.session = 0
     self.conn_id = conn_id -- accept才需要传该conn_id，listen、connect会自动产生一个新的
     self.auto_conn = false -- 是否自动重连
@@ -43,18 +41,6 @@ end
 function SsConn:send_rpc_pkt(unique_id, method_name, ...)
     return
         network_mgr:send_rpc_packet(self.conn_id, unique_id, method_name, ...)
-end
-
--- timeout check
-function SsConn:check(check_time)
-    if self.beat < check_time then
-        self.fchk = self.fchk + 1
-
-        return self.fchk
-    end
-
-    self.fchk = 0
-    return 0
 end
 
 -- 认证成功
@@ -84,19 +70,8 @@ end
 
 -- 获取该连接名称，包括基础名字，索引，服务器id，通常用于打印日志
 function SsConn:conn_name()
-    -- 该服务器连接未经过认证
-    if 0 == (self.session or 0) then return "unauthorized" end
-
     return string.format("%s(I%d.S%d)",
-        self:base_name(), self.app_index, self.app_id)
-end
-
--- 重新连接
-function SsConn:reconnect()
-    self.auth = false
-    self.session = 0
-
-    return self:connect(self.ip, self.port)
+        self:base_name(), self.app_index or 0, self.app_id or 0)
 end
 
 -- 接受新的连接
@@ -110,13 +85,13 @@ function SsConn:on_connected()
 end
 
 -- 连接断开
-function SsConn:on_disconnected()
-    return SrvMgr.srv_conn_del(self.conn_id)
+function SsConn:on_disconnected(e, is_conn)
+    self.auth = false
+    return SrvMgr.srv_conn_del(self.conn_id, e, is_conn)
 end
 
 -- 服务器之间消息回调
 function SsConn:on_cmd(session, cmd, errno, pkt)
-    self.beat = ev:time()
     return Cmd.dispatch_srv(self, cmd, pkt)
 end
 

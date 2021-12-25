@@ -41,7 +41,7 @@ function WebStat:exec(conn, fields, body)
     return HTTP.PENDING -- 阻塞等待数据返回
 end
 
-reg_func("rpc_stat", rpc_stat)
+name_func("rpc_stat", rpc_stat)
 
 local wst = WebStat()
 

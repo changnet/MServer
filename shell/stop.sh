@@ -7,16 +7,14 @@ DEF_APP="gateway world area area"
 cd ../server/bin
 BIN=`pwd`/master
 
-##### 关服脚本，仅作开发测试用，未考虑数据入库、异常等各种情况，运维不得使用
-
-
+##### 关服脚本
 
 # ./stop.sh 不带参数表示关闭整个服务器默认进程
 # ./stop.sh android 表示关闭所有机器人进程
 if [ ! $1 ]; then
     for app in ${DEF_APP};
     do
-        if [ "$app" == "$last_app" ]; then
+        if [ "$app" = "$last_app" ]; then
             last_idx=$(($last_idx + 1))
         else
             last_idx=$DEF_INDEX
@@ -24,12 +22,13 @@ if [ ! $1 ]; then
         fi
 
         pid=`pgrep -f "$BIN --app=$app --index=$last_idx --id=$DEF_ID"`
-        echo "$BIN --app=$app --index=$last_idx --id=$DEF_ID"
-        if [ $pid ];then
+        
+        if [ "$pid" ];then
+            echo "$BIN --app=$app --index=$last_idx --id=$DEF_ID find pid = $pid"
             kill -15 $pid
             sleep 3
         else
-            echo "no process found: $app"
+            echo "$BIN --app=$app --index=$last_idx --id=$DEF_ID no process found"
         fi
     done
 else

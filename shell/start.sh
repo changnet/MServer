@@ -15,7 +15,7 @@ cd ../server/bin
 
 BIN=`pwd`/master
 
-function fmt_args()
+fmt_args()
 {
     p=$1
     d=$2
@@ -28,7 +28,7 @@ function fmt_args()
     fi
 
     prefix=`echo $v | cut -c1-2`
-    if [ "$prefix" == "--" ]; then
+    if [ "$prefix" = "--" ]; then
         echo "$v"
         return 0
     fi
@@ -43,7 +43,7 @@ if [ ! $1 ]; then
     # for app in ${DEF_APP[@]}
     for app in ${DEF_APP};
     do
-        if [ "$app" == "$last_app" ]; then
+        if [ "$app" = "$last_app" ]; then
             last_idx=$(($last_idx + 1))
         else
             last_idx=$DEF_INDEX

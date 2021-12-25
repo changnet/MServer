@@ -38,8 +38,8 @@ local function rpc_send_sys_mail(title, ctx, attachment, op, expire, level, vip)
 end
 
 if WORLD == APP_TYPE then
-    reg_func("rpc_send_mail", rpc_send_mail)
-    reg_func("rpc_send_sys_mail", rpc_send_sys_mail)
+    name_func("rpc_send_mail", rpc_send_mail)
+    name_func("rpc_send_sys_mail", rpc_send_sys_mail)
 
     mail_mgr_cb(MAIL.DEL, Mail.handle_mail_del)
 end

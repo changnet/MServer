@@ -128,6 +128,8 @@ return {
 "method_thunk", -- src/global/name.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
+"name_func", -- src/global/name.lua
+"name_obj", -- src/global/name.lua
 "name_to_func", -- src/global/name.lua
 "name_to_obj", -- src/global/name.lua
 "obj_to_name", -- src/global/name.lua
@@ -136,8 +138,6 @@ return {
 "print", -- src/global/global.lua
 "printf", -- src/global/global.lua
 "raw_table_dump", -- src/global/table.lua
-"reg_func", -- src/global/name.lua
-"reg_obj", -- src/global/name.lua
 "require", -- src/global/require.lua
 "require_conf", -- src/global/require.lua
 "require_define", -- src/global/require.lua
