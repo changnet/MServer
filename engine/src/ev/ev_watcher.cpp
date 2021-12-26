@@ -61,12 +61,6 @@ EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
 
 EVTimer::~EVTimer()
 {
-    stop();
-}
-
-void EVTimer::set_policy(int32_t policy)
-{
-    _policy = policy;
 }
 
 void EVTimer::reschedule(int64_t now)
@@ -98,34 +92,6 @@ void EVTimer::reschedule(int64_t now)
         break;
     }
     }
-}
-
-void EVTimer::start()
-{
-    assert(_loop);
-    assert(_at >= 0);
-    assert(_repeat >= 0);
-    assert(_cb);
-    assert(!_active);
-
-    _loop->timer_start(this);
-}
-
-void EVTimer::stop()
-{
-    _loop->timer_stop(this);
-}
-
-void EVTimer::set(int64_t after, int64_t repeat)
-{
-    int32_t old_active = _active;
-
-    if (old_active) stop();
-
-    this->_at     = after;
-    this->_repeat = repeat;
-
-    if (old_active) start();
 }
 
 void EVTimer::callback(int32_t revents)

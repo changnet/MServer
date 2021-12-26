@@ -141,6 +141,7 @@ EV::EV()
 
 EV::~EV()
 {
+    _timer_mgr.clear();
     _periodic_mgr.clear();
 
     delete _backend;
@@ -197,8 +198,10 @@ int32_t EV::loop()
         // 这说明主循环比较繁忙，会被修正为BACKEND_MIN_TM，而不是精确的按预定时间执行
         _backend_time_coarse = BACKEND_MAX_TM + _mn_time;
 
-        // 处理timer变更
+        // 处理timer超时
         timers_reify();
+        // 处理periodic超时
+        periodic_reify();
 
         // 触发io和timer事件
         invoke_pending();
@@ -420,7 +423,7 @@ void EV::timers_reify()
         }
         else
         {
-            w->stop();
+            timer_stop(w); // 这里不能从管理器删除，还要回调到脚本
         }
 
         feed_event(w, EV_TIMER);
@@ -448,16 +451,26 @@ void EV::periodic_reify()
         }
         else
         {
-            w->stop();
+            periodic_stop(w); // 这里不能从管理器删除，还要回调到脚本
         }
 
         feed_event(w, EV_TIMER);
     }
 }
 
-int32_t EV::timer_start(EVTimer *w)
+int32_t EV::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t policy)
 {
-    w->_at += _mn_time;
+    assert(repeat >= 0);
+
+    // 如果不支持try_emplace，使用std::forward_as_tuple实现
+    auto p = _timer_mgr.try_emplace(id, id, this);
+    if (!p.second) return -1;
+
+    EVTimer* w = &(p.first->second);
+
+    w->_at = _mn_time + after;
+    w->_repeat = repeat;
+    w->_policy = policy;
 
     assert(w->_repeat >= 0);
 
@@ -476,7 +489,20 @@ int32_t EV::timer_start(EVTimer *w)
     return active;
 }
 
-// 暂停定时器
+int32_t EV::timer_stop(int32_t id)
+{
+    auto found = _timer_mgr.find(id);
+    if (found == _timer_mgr.end())
+    {
+        return -1;
+    }
+
+    timer_stop(&(found->second));
+
+    _timer_mgr.erase(found);
+    return 0;
+}
+
 int32_t EV::timer_stop(EVTimer *w)
 {
     clear_pending(w);
@@ -541,7 +567,15 @@ int32_t EV::periodic_stop(int32_t id)
         return -1;
     }
 
-    EVTimer *w = &(found->second);
+    periodic_stop(&(found->second));
+
+    _periodic_mgr.erase(found);
+
+    return 0;
+}
+
+int32_t EV::periodic_stop(EVTimer *w)
+{
     clear_pending(w);
     if (EXPECT_FALSE(!w->active())) return 0;
 
@@ -560,8 +594,6 @@ int32_t EV::periodic_stop(int32_t id)
             adjust_heap(_periodics.data(), _periodic_cnt, active);
         }
     }
-
-    _periodic_mgr.erase(found);
 
     return 0;
 }

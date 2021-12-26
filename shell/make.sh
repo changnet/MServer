@@ -18,6 +18,9 @@ do_make()
 		cmake $ENGINE_DIR -DCMAKE_BUILD_TYPE=Release
 	elif [ "$cmake_option" = "debug" ]; then
 		cmake $ENGINE_DIR -DCMAKE_BUILD_TYPE=Debug
+	elif [ "$cmake_option" = "cmake" ]; then
+		# 删除文件后，要重新执行cmake。或者每次都执行cmake？
+		cmake $ENGINE_DIR
 	elif [ ! -f CMakeCache.txt ]; then
 		# cmake未初始化，或者新增了cmake参数才执行cmake
 		# 如果是修改了CMakeLists.txt，只执行make也是会重新执行cmake的，这里不用处理

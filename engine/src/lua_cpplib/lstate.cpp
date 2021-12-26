@@ -14,7 +14,6 @@
 #include "lsql.hpp"
 #include "lstate.hpp"
 #include "lstatistic.hpp"
-#include "ltimer.hpp"
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 
@@ -77,20 +76,11 @@ int32_t luaopen_ev(lua_State *L)
     lc.def<&LEV::set_app_ev>("set_app_ev");
     lc.def<&LEV::time_update>("time_update");
     lc.def<&LEV::real_ms_time>("real_ms_time");
+    lc.def<&LEV::timer_stop>("timer_stop");
+    lc.def<&LEV::timer_start>("timer_start");
     lc.def<&LEV::periodic_stop>("periodic_stop");
     lc.def<&LEV::periodic_start>("periodic_start");
     lc.def<&LEV::set_critical_time>("set_critical_time");
-
-    return 0;
-}
-
-int32_t luaopen_timer(lua_State *L)
-{
-    LClass<LTimer> lc(L, "engine.Timer");
-    lc.def<&LTimer::set>("set");
-    lc.def<&LTimer::stop>("stop");
-    lc.def<&LTimer::start>("start");
-    lc.def<&LTimer::active>("active");
 
     return 0;
 }
@@ -370,28 +360,27 @@ LState::~LState()
 
 void LState::open_cpp()
 {
-    /* ============================库方式调用================================== */
-    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    /* ============================库方式调用=============================== */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     LUA_LIB_OPEN("engine.util", luaopen_util);
     LUA_LIB_OPEN("engine.statistic", luaopen_statistic);
     LUA_LIB_OPEN("engine.lua_parson", luaopen_lua_parson);
     LUA_LIB_OPEN("engine.lua_rapidxml", luaopen_lua_rapidxml);
-    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
+    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 
-    /* ============================对象方式调用================================ */
-    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    /* ============================对象方式调用============================= */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_ev(L);
     luaopen_sql(L);
     luaopen_log(L);
     luaopen_map(L);
-    luaopen_timer(L);
     luaopen_astar(L);
     luaopen_acism(L);
     luaopen_mongo(L);
     luaopen_grid_aoi(L);
     luaopen_list_aoi(L);
     luaopen_network_mgr(L);
-    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */
     assert(0 == lua_gettop(L));

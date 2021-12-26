@@ -15,8 +15,6 @@ local Mail = require "modules.mail.mail"
 local SyncMongodb = require "mongodb.sync_mongodb"
 local AttributeSys = require "modules.attribute.attribute_sys"
 
-local method_thunk = method_thunk
-
 local AREA_SESSION = {}
 
 -- 这些子模块是指需要存库的数据模块(在登录、读库、初始化、存库都用的同一套流程)
@@ -27,7 +25,6 @@ local AREA_SESSION = {}
 2. 加载数据库:db_load
 3. 数据初始化:on_init
 4. 定时存库  :db_save
-5. 定时器    :on_timer
 ]]
 
 local SUB_MODULES = {
@@ -42,10 +39,6 @@ function Player:__init(pid)
 
     self.auto_id = AutoId()
 
-    self.timer_cnt = 0
-    self.timer_1scb = {}
-    self.timer_5scb = {}
-
     -- 创建各个子模块，这些模块包含统一的db存库、加载、初始化规则
     for _, module in pairs(SUB_MODULES) do
         self[module.name] = module.new(pid, self)
@@ -56,8 +49,6 @@ function Player:__init(pid)
 
     -- 不需要标准流程的子模块
     self.abt_sys = AttributeSys(pid)
-
-    self.timer = Timer.interval(5000, 5000, -1, self, self.do_timer)
 end
 
 -- 获取所有模块配置
@@ -73,24 +64,6 @@ end
 -- 发送数据包到客户端
 function Player:send_pkt(cmd, pkt, ecode)
     return SrvMgr.send_clt_pkt(self.pid, cmd, pkt, ecode)
-end
-
--- 定时器事件
-function Player:do_timer()
-    for _, cb in pairs(self.timer_5scb) do cb() end
-end
-
--- 注册1s定时器
-function Player:reg_5s_timer(this, method)
-    local id = self.auto_id:next_id()
-
-    self.timer_5scb[id] = method_thunk(this, method)
-    return id
-end
-
--- 取消1s定时器
-function Player:remove_5s_timer(id)
-    self.timer_5scb[id] = nil
 end
 
 -- 是否新创建的玩家(仅在登录过程有用，登录完成后肯定不是新玩家了)
@@ -198,8 +171,6 @@ end
 
 -- 退出游戏
 function Player:on_logout()
-    Timer.stop(self.timer)
-
     -- 未初始化完成不能存库，防止数据被覆盖
     if not self.ok then
         elog("player initialize not finish,runing logout:%d", self.pid)

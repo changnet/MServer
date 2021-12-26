@@ -5,8 +5,19 @@
 -- 定时器
 Timer = {}
 
+--[[
+定时器分为两种定时器：
+1. 单调递增定时器(CLOCK_MONOTONIC)
+精度为毫秒级，调系统时间不影响这个定时器，对应下面的timer_start接口
+
+2. 实时定时器(REAL_TIME)
+采用UTC计时，精度为秒级。调时间会影响这个定时器。对应下面的periodic_start接口
+]]
+
+-- 定时器修正规则，这个在C++定义
+local P_ALIGN = 1
+
 local LIMIT = require "global.limits"
-local TimerBase = require "engine.Timer"
 
 local this = global_storage("Timer", {
     timer = {},
@@ -49,11 +60,8 @@ function Timer.interval(after, msec, times, func, ...)
 
     local timer_id = get_next_id()
 
-    local timer = TimerBase(timer_id)
-    timer:set(after, msec)
-
     local cb
-    if after > 10 or (times > 5 or times < 0) then
+    if after > 5000 or (times > 5 or times < 0) then
         -- 如果回调时间很长，则需要该函数能热更
         cb = func_name_thunk(func, ...)
     else
@@ -67,10 +75,14 @@ function Timer.interval(after, msec, times, func, ...)
         ts = 0, -- 已回调次数
         times = times or 1, -- 总回调次数
         cb = cb,
-        timer = timer
     }
 
-    timer:start()
+    local e = ev:timer_start(timer_id, after, msec, P_ALIGN)
+    if e <= 0 then
+        this.timer[timer_id] = nil
+        elogf("periodic start fail: id = %d, e = %d", timer_id, e)
+        return -1
+    end
     return timer_id
 end
 
@@ -86,16 +98,58 @@ end
 -- 停止定时器
 function Timer.stop(timer_id)
     local info = this.timer[timer_id]
-    if not info then return false end
-
-    info.timer:stop()
+    if not info then
+        printf("timer stop no such timer %d: %s", timer_id, debug.traceback())
+        return false
+    end
 
     this.timer[timer_id] = nil
+    if info.periodic then
+        ev:periodic_stop(timer_id)
+    else
+        ev:timer_stop(timer_id)
+    end
+
     return true
 end
 
--- 发起一个utc时间定时器（受调时间影响）
-function Timer.periodic()
+-- 发起一个utc时间定时器（精度为秒，受调时间影响）
+-- @param after N秒后第一次回调
+-- @param sec 循环间隔，单位秒，0表示不循环
+-- @param tims 循环次数，-1表示永久
+-- @param func 回调函数
+-- @param ... 其他回调参数
+-- @return 定时器id
+function Timer.periodic(after, sec, times, func, ...)
+    assert(sec >= 0, "repeat interval MUST > 0")
+
+    local timer_id = get_next_id()
+    local cb
+    if after > 5 or (times > 5 or times < 0) then
+        -- 如果回调时间很长，则需要该函数能热更
+        cb = func_name_thunk(func, ...)
+    else
+        -- 如果回调时间很短，则在这段时间内需要热更的机率很小
+        -- 假如还是刚好遇到热更，则对应的业务逻辑必须自己处理好
+        -- 因为即使使用能热更的方式，也没办法控制热更时和定时器回调的谁前谁后时机
+        cb = func_thunk(func, ...)
+    end
+
+    this.timer[timer_id] = {
+        ts = 0, -- 已回调次数
+        times = times or 1, -- 总回调次数
+        cb = cb,
+        periodic = true,
+    }
+
+    local e = ev:periodic_start(timer_id, after, sec, P_ALIGN)
+    if e <= 0 then
+        this.timer[timer_id] = nil
+        elogf("periodic start fail: id = %d, e = %d", timer_id, e)
+        return -1
+    end
+
+    return timer_id
 end
 
 --[[

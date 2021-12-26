@@ -79,7 +79,7 @@ end
 
 -- 错误日志，写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
 function elog(...)
-    return async_logger:elog(table.concat_any("    ", ...))
+    return async_logger:elog(table.concat({...}, "    "))
 end
 
 --  格式化日志并写入根目录下的lua_error.txt文件
@@ -91,7 +91,7 @@ end
 function assert(expr, ...)
     if expr then return expr end
 
-    local msg = table.concat_any("    ", ...)
+    local msg = table.concat({...}, "    ")
     return error(msg)
 end
 

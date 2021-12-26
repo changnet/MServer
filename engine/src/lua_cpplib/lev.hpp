@@ -50,6 +50,20 @@ public:
     int32_t periodic_stop(lua_State *L);
 
     /**
+     * 启动定时器
+     * @param id 定时器唯一id
+     * @param after N毫秒后第一次执行
+     * @param repeat 重复执行间隔，毫秒数
+     * @param policy 定时器重新规则时的策略
+     */
+    int32_t timer_start(lua_State* L);
+    /**
+     * 停止定时器
+     * @param id 定时器唯一id
+     */
+    int32_t timer_stop(lua_State* L);
+
+    /**
      * 获取帧时间戳，秒
      * 如果服务器卡了，这时间和实时时间是不一样的
      */

@@ -280,11 +280,36 @@ int32_t LEV::periodic_start(lua_State *L)
 
     return 1;
 }
+
 int32_t LEV::periodic_stop(lua_State* L)
 {
     int32_t id = luaL_checkinteger32(L, 1);
 
     int32_t e = EV::periodic_stop(id);
+    lua_pushinteger(L, e);
+
+    return 1;
+}
+
+
+int32_t LEV::timer_start(lua_State* L)
+{
+    int32_t id = luaL_checkinteger32(L, 1);
+    int64_t after = luaL_checkinteger(L, 2);
+    int64_t repeat = luaL_checkinteger(L, 3);
+    int32_t policy = luaL_checkinteger32(L, 4);
+
+    int32_t e = EV::timer_start(id, after, repeat, policy);
+    lua_pushinteger(L, e);
+
+    return 1;
+}
+
+int32_t LEV::timer_stop(lua_State* L)
+{
+    int32_t id = luaL_checkinteger32(L, 1);
+
+    int32_t e = EV::timer_stop(id);
     lua_pushinteger(L, e);
 
     return 1;

@@ -197,6 +197,8 @@ end
 -- 向其他进程同步本进程需要注册的客户端指令
 function Cmd.sync_cmd(conn)
     -- 如果本身就是网关，那么不用同步任何数据
+    if GATEWAY == APP_TYPE then return end
+
     -- 其他进程需要同步该进程所需要的客户端指令，以实现指令自动分发到对应的进程
 
     if not conn then
@@ -346,7 +348,7 @@ local function on_script_loaded()
         elog("Cmd proto load ERROR")
         return
     end
-    if GATEWAY ~= APP_TYPE then Cmd.sync_cmd() end -- 同步协议到网关
+    Cmd.sync_cmd() -- 同步协议到网关
 end
 
 -- 保证起服时，如果协议文件加载出错不会成功起服

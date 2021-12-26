@@ -11,6 +11,7 @@ enum
     EV_NONE  = 0x00,            /* no events */
     EV_READ  = 0x01,            /* ev_io detected read will not block */
     EV_WRITE = 0x02,            /* ev_io detected write will not block */
+    EV_DEL   = 0x03,            /* 需要删除该watcher */
     EV_TIMER = 0x00000100,      /* timer timed out */
     EV_ERROR = (int)0x80000000  /* sent when an error occurs */
 };
@@ -40,8 +41,19 @@ public:
     int32_t io_start(EVIO *w);
     int32_t io_stop(EVIO *w);
 
-    int32_t timer_start(EVTimer *w);
-    int32_t timer_stop(EVTimer *w);
+    /// @brief  启动定时器
+    /// @param id 定时器唯一id
+    /// @param after N毫秒秒后第一次执行
+    /// @param repeat 重复执行间隔，毫秒数
+    /// @param policy 定时器重新规则时的策略
+    /// @return 成功返回》=1,失败返回值<0
+    int32_t timer_start(int32_t id, int64_t after, int64_t repeat, int32_t policy);
+    /// @brief 停止定时器并从管理器中删除
+    /// @param id 定时器唯一id
+    /// @return 成功返回0
+    int32_t timer_stop(int32_t id);
+    /// 停止定时器，但不从管理器删除
+    int32_t timer_stop(EVTimer* w);
 
     /// @brief  启动utc定时器
     /// @param id 定时器唯一id
@@ -51,10 +63,12 @@ public:
     /// @return 成功返回》=1,失败返回值<0
     int32_t periodic_start(int32_t id, int64_t after, int64_t repeat,
                            int32_t policy);
-    /// @brief 停止utc定时器
+    /// @brief 停止utc定时器并从管理器删除
     /// @param id 定时器唯一id
     /// @return 成功返回0
     int32_t periodic_stop(int32_t id);
+    /// 停止utc定时器，但不从管理器删除
+    int32_t periodic_stop(EVTimer* w);
 
     /// 获取系统启动以为毫秒数
     static int64_t get_monotonic_time();
@@ -81,6 +95,7 @@ protected:
      */
     int32_t _timer_cnt;
     std::vector<EVTimer *> _timers; /// 按二叉树排列的定时器
+    std::unordered_map<int32_t, EVTimer> _timer_mgr;
 
     int32_t _periodic_cnt;
     std::vector<EVTimer *> _periodics; /// 按二叉树排列的utc定时器

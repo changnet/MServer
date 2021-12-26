@@ -11,10 +11,10 @@ App = {}
 require "global.name"
 
 -- 定义一些常用的变量，方便程序调用时直接使用而不需要到处去计算
-GSE = nil -- 网关session id
-WSE = nil -- 世界服session id
-ASE = nil -- 场景1服session id
-APP_TYPE = nil -- 当前app的类型id
+GSE = GSE -- 网关session id
+WSE = WSE -- 世界服session id
+ASE = ASE -- 场景1服session id
+APP_TYPE = APP_TYPE -- 当前app的类型id
 
 local g_app = g_app
 local next_gc = 0 -- 下一次执行luagc的时间，不影响热更

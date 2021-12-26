@@ -92,32 +92,15 @@ public:
     ~EVTimer();
     explicit EVTimer(int32_t id, EV *_loop);
 
-    int64_t at() const { return _at; }
-    int64_t repeat() const { return _repeat; }
-
-    void set_policy(int32_t policy);
-
-    void start();
-
-    void stop();
-
     /// 重新调整定时器
     void reschedule(int64_t now);
-
-    using EVWatcher::set;
-    /**
-     * 设置定时器触发时间
-     * @param after 多少毫秒后首次触发
-     * @param repeat 重复的间隔（毫秒数）
-     */
-    void set(int64_t after, int64_t repeat = 0.);
 
     /// 回调函数
     virtual void callback(int32_t revents);
 private:
     friend class EV;
 
-    int32_t _id;
+    int32_t _id; /// 定时器唯一id
     int32_t _policy; ///< 修正定时器时间偏差策略，详见 reschedule 函数
     int64_t _at; ///< 定时器首次触发延迟的毫秒数（未激活），下次触发时间（已激活）
     int64_t _repeat; ///< 定时器重复的间隔（毫秒数）
