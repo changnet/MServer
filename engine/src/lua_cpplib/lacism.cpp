@@ -56,7 +56,8 @@ int32_t LAcism::scan(lua_State *L)
 
     int32_t pos = acism_scan(
         _psp, text,
-        [](int32_t str_num, int32_t text_pos, void *fn_data) {
+        [](int32_t str_num, int32_t text_pos, void *fn_data)
+        {
             (void)str_num;
             (void)fn_data;
 
@@ -107,7 +108,8 @@ int32_t LAcism::replace(lua_State *L)
 
     (void)acism_scan(
         _psp, text,
-        [](int32_t str_num, int32_t text_pos, void *data) {
+        [](int32_t str_num, int32_t text_pos, void *data)
+        {
             // @param str_num 匹配到的字库索引
             // @param text_pos 在原字符串中匹配结束的位置
             // @param fn_data 自定义数据

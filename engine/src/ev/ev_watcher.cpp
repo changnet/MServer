@@ -59,9 +59,7 @@ EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
     _repeat = 0;
 }
 
-EVTimer::~EVTimer()
-{
-}
+EVTimer::~EVTimer() {}
 
 void EVTimer::reschedule(int64_t now)
 {
@@ -69,12 +67,12 @@ void EVTimer::reschedule(int64_t now)
      * 当前用的是CLOCK_MONOTONIC时间，所以不存在用户调时间的问题
      * 但可能存在卡主循环的情况，libev默认情况下是修正为当前时间
      */
-    switch(_policy)
+    switch (_policy)
     {
     case P_ALIGN:
     {
-        // 严格对齐到特定时间，比如一个定时器每5秒触发一次，那必须是在 0 5 10 15 触发
-        // 即使主线程卡了，也不允许在其他秒数触发
+        // 严格对齐到特定时间，比如一个定时器每5秒触发一次，那必须是在 0 5 10 15
+        // 触发 即使主线程卡了，也不允许在其他秒数触发
         assert(_repeat > 0);
         while (_at < now) _at += _repeat;
         break;

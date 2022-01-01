@@ -230,7 +230,7 @@ void LStatistic::dump_socket(lua_State *L)
         lua_newtable(L);
 
         uint32_t conn_id = itr->first;
-        time_t sec      = now - counter._time;
+        time_t sec       = now - counter._time;
         if (sec < 1) sec = 1;
 
         PUSH_INTEGER("conn_id", conn_id);

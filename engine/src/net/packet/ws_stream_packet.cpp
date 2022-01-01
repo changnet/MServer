@@ -139,7 +139,7 @@ int32_t WSStreamPacket::on_frame_end()
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 服务器收到的包，看要不要转发 */
-    size_t data_size   = 0;
+    size_t data_size     = 0;
     const char *data_ctx = _body.all_to_continuous_ctx(data_size);
     if (data_size < sizeof(struct c2s_header))
     {
@@ -153,11 +153,11 @@ int32_t WSStreamPacket::on_frame_end()
     if (data_size < header->_length)
     {
         ELOG("ws_stream_packet on_frame_end packet length error:%d",
-            (int32_t)cmd);
+             (int32_t)cmd);
         return 0;
     }
 
-    size_t size   = data_size - sizeof(*header);
+    size_t size     = data_size - sizeof(*header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
     if (0 != network_mgr->cs_dispatch(cmd, _socket, ctx, size)) return 0;
 
@@ -172,7 +172,7 @@ int32_t WSStreamPacket::sc_command()
 
     assert(0 == lua_gettop(L));
 
-    size_t data_size   = 0;
+    size_t data_size     = 0;
     const char *data_ctx = _body.all_to_continuous_ctx(data_size);
     if (data_size < sizeof(struct s2c_header))
     {
@@ -203,7 +203,7 @@ int32_t WSStreamPacket::sc_command()
     lua_pushinteger(L, cmd);
     lua_pushinteger(L, header->_errno);
 
-    size_t size   = data_size - sizeof(*header);
+    size_t size     = data_size - sizeof(*header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
     Codec *decoder =
         StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());

@@ -56,7 +56,7 @@ private:
     class Chunk
     {
     public:
-        char *_ctx;    /* 缓冲区指针 */
+        char *_ctx;  /* 缓冲区指针 */
         size_t _max; /* 缓冲区总大小 */
 
         size_t _beg; /* 有效数据开始位置 */
@@ -85,10 +85,7 @@ private:
         inline char *space_ctx() { return _ctx + _end; } // 空闲缓冲区指针
 
         inline void clear() { _beg = _end = 0; } // 重置有效数据
-        inline size_t used_size() const
-        {
-            return _end - _beg;
-        } // 有效数据大小
+        inline size_t used_size() const { return _end - _beg; } // 有效数据大小
         inline size_t space_size() const
         {
             return _max - _end;
@@ -120,7 +117,7 @@ public:
     // 获取所有chunk分配的内存大小
     inline size_t get_chunk_mem_size() const
     {
-        size_t mem      = 0;
+        size_t mem        = 0;
         const Chunk *next = _front;
 
         while (next)
@@ -141,7 +138,7 @@ public:
      */
     inline bool check_used_size(size_t len) const
     {
-        size_t used     = 0;
+        size_t used       = 0;
         const Chunk *next = _front;
 
         do
@@ -157,7 +154,7 @@ public:
     // 获取当前所有的数据长度
     inline size_t get_all_used_size() const
     {
-        size_t used     = 0;
+        size_t used       = 0;
         const Chunk *next = _front;
 
         while (next)
@@ -294,8 +291,8 @@ private:
     }
 
 private:
-    Chunk *_front;        // 数据包链表头
-    Chunk *_back;         // 数据包链表尾
+    Chunk *_front;      // 数据包链表头
+    Chunk *_back;       // 数据包链表尾
     size_t _chunk_size; // 已申请chunk数量
 
     size_t _chunk_max;      // 允许申请chunk的最大数量

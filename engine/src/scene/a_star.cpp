@@ -99,7 +99,7 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
         {1, -1}, {1, 1}, {-1, 1}, {-1, -1} // 东北-东南-西南-西北
     };
 
-    int32_t height           = map->get_height();
+    int32_t height            = map->get_height();
     struct Node *parent       = new_node(x, y);
     _node_set[x * height + y] = parent;
     while (parent)
@@ -225,8 +225,7 @@ bool AStar::backtrace_path(const struct Node *dest, int32_t dx, int32_t dy,
 }
 
 // 从内存池取一个格子对象
-struct AStar::Node *AStar::new_node(int32_t x, int32_t y, int32_t px,
-                                    int32_t py)
+struct AStar::Node *AStar::new_node(int32_t x, int32_t y, int32_t px, int32_t py)
 {
     // 如果预分配的都用完了，就不找了
     // 继续再找对于服务器而言也太低效，建议上导航坐标或者针对玩法优化

@@ -145,8 +145,8 @@ private:
     {
         if (x < 0 || y < 0 || dx >= _width || dy >= _height)
         {
-            ELOG("Invalid grid pos (%d, %d) (%d, %d), range (%d, %d)", x, y,
-                  dx, dy, _width - 1, _height - 1);
+            ELOG("Invalid grid pos (%d, %d) (%d, %d), range (%d, %d)", x, y, dx,
+                 dy, _width - 1, _height - 1);
             return false;
         }
         return true;

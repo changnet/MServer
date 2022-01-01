@@ -44,7 +44,7 @@ public:
      */
     int32_t periodic_start(lua_State *L);
     /**
-     * 停止utc定时器 
+     * 停止utc定时器
      * @param id 定时器唯一id
      */
     int32_t periodic_stop(lua_State *L);
@@ -56,12 +56,12 @@ public:
      * @param repeat 重复执行间隔，毫秒数
      * @param policy 定时器重新规则时的策略
      */
-    int32_t timer_start(lua_State* L);
+    int32_t timer_start(lua_State *L);
     /**
      * 停止定时器
      * @param id 定时器唯一id
      */
-    int32_t timer_stop(lua_State* L);
+    int32_t timer_stop(lua_State *L);
 
     /**
      * 获取帧时间戳，秒
@@ -135,6 +135,7 @@ private:
 
     bool next_periodic(Periodic &periodic);
     virtual void timer_callback(int32_t id, int32_t revents);
+
 private:
     /**
      * 用一个计数器来管理vector，可以避免对vector进行pop、resize之类的操作
@@ -144,6 +145,6 @@ private:
 
     int32_t _critical_tm; // 每次主循环的临界时间，毫秒
 
-    Periodic _app_ev; // 定时回调到脚本
+    Periodic _app_ev;         // 定时回调到脚本
     Periodic _thread_routine; // 定时处理线程数据
 };

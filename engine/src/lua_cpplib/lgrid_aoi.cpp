@@ -32,15 +32,17 @@ int32_t LGridAoi::get_all_entity(lua_State *L)
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
     using EntitySetPair = std::pair<const int64_t, EntityCtx *>;
-    table_pack(L, 2, _entity_set, [L, mask](const EntitySetPair &iter) {
-        if (mask & iter.second->_mask)
-        {
-            lua_pushinteger(L, iter.second->_id);
-            return true;
-        }
+    table_pack(L, 2, _entity_set,
+               [L, mask](const EntitySetPair &iter)
+               {
+                   if (mask & iter.second->_mask)
+                   {
+                       lua_pushinteger(L, iter.second->_id);
+                       return true;
+                   }
 
-        return false;
-    });
+                   return false;
+               });
 
     return 0;
 }
@@ -61,10 +63,12 @@ int32_t LGridAoi::get_interest_me_entity(lua_State *L)
         return 0;
     }
 
-    table_pack(L, 2, *(ctx->_interest_me), [L](const EntityCtx *ctx) {
-        lua_pushinteger(L, ctx->_id);
-        return true;
-    });
+    table_pack(L, 2, *(ctx->_interest_me),
+               [L](const EntityCtx *ctx)
+               {
+                   lua_pushinteger(L, ctx->_id);
+                   return true;
+               });
 
     return 0;
 }
@@ -82,16 +86,18 @@ int32_t LGridAoi::get_entity(lua_State *L)
     int32_t dst_x = luaL_checkinteger32(L, 5);
     int32_t dst_y = luaL_checkinteger32(L, 6);
 
-    int32_t n     = 0;
-    int32_t ecode = GridAOI::each_range_entity(
-        src_x, src_y, dst_x, dst_y, [L, mask, &n](const EntityCtx *ctx) {
-            if (mask & ctx->_mask)
-            {
-                ++n;
-                lua_pushinteger(L, ctx->_id);
-                lua_rawseti(L, 2, n);
-            }
-        });
+    int32_t n = 0;
+    int32_t ecode =
+        GridAOI::each_range_entity(src_x, src_y, dst_x, dst_y,
+                                   [L, mask, &n](const EntityCtx *ctx)
+                                   {
+                                       if (mask & ctx->_mask)
+                                       {
+                                           ++n;
+                                           lua_pushinteger(L, ctx->_id);
+                                           lua_rawseti(L, 2, n);
+                                       }
+                                   });
     if (0 != ecode)
     {
         return luaL_error(L, "aoi get entity error:%d", ecode);
@@ -121,7 +127,8 @@ int32_t LGridAoi::get_visual_entity(lua_State *L)
 
     int32_t n = 0;
     GridAOI::raw_each_range_entity(x, y, dx, dy,
-                                   [L, mask, &n](const EntityCtx *ctx) {
+                                   [L, mask, &n](const EntityCtx *ctx)
+                                   {
                                        if (mask & ctx->_mask)
                                        {
                                            ++n;
@@ -152,10 +159,12 @@ int32_t LGridAoi::exit_entity(lua_State *L)
 
     if (!list) return 0;
 
-    table_pack(L, 2, *list, [L](const EntityCtx *ctx) {
-        lua_pushinteger(L, ctx->_id);
-        return true;
-    });
+    table_pack(L, 2, *list,
+               [L](const EntityCtx *ctx)
+               {
+                   lua_pushinteger(L, ctx->_id);
+                   return true;
+               });
 
     if (list) del_entity_vector(list);
 
@@ -183,10 +192,12 @@ int32_t LGridAoi::enter_entity(lua_State *L)
 
     if (!list) return 0;
 
-    table_pack(L, 5, *list, [L](const EntityCtx *ctx) {
-        lua_pushinteger(L, ctx->_id);
-        return true;
-    });
+    table_pack(L, 5, *list,
+               [L](const EntityCtx *ctx)
+               {
+                   lua_pushinteger(L, ctx->_id);
+                   return true;
+               });
 
     del_entity_vector(list);
     return 0;
@@ -199,8 +210,8 @@ int32_t LGridAoi::update_entity(lua_State *L)
     int32_t x = (int32_t)luaL_checknumber(L, 2);
     int32_t y = (int32_t)luaL_checknumber(L, 3);
 
-    EntityVector *list_in  = lua_istable(L, 4) ? new_entity_vector(): nullptr;
-    EntityVector *list_out = lua_istable(L, 4) ? new_entity_vector(): nullptr;
+    EntityVector *list_in  = lua_istable(L, 4) ? new_entity_vector() : nullptr;
+    EntityVector *list_out = lua_istable(L, 4) ? new_entity_vector() : nullptr;
 
     int32_t ecode = GridAOI::update_entity(id, x, y, list_in, list_out);
     if (0 != ecode)
@@ -211,7 +222,8 @@ int32_t LGridAoi::update_entity(lua_State *L)
         return luaL_error(L, "aoi update entity error:%d", ecode);
     }
 
-    auto filter = [L](const EntityCtx *ctx) {
+    auto filter = [L](const EntityCtx *ctx)
+    {
         lua_pushinteger(L, ctx->_id);
         return true;
     };

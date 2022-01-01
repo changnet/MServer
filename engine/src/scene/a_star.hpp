@@ -43,8 +43,7 @@ private:
                         int32_t height);
     bool do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
                    int32_t dy);
-    struct Node *new_node(int32_t x, int32_t y, int32_t px = 0,
-                          int32_t py = 0);
+    struct Node *new_node(int32_t x, int32_t y, int32_t px = 0, int32_t py = 0);
 
     /* 启发函数的选择，下面的连接说明各个算法的适用场景及效率
      * http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html

@@ -311,7 +311,7 @@ LState::LState()
     luaL_openlibs(L);
 
     // export env variable
-#define SET_ENV_MACRO(v)    \
+#define SET_ENV_MACRO(v)  \
     lua_pushstring(L, v); \
     lua_setglobal(L, #v)
 
@@ -323,19 +323,19 @@ LState::LState()
 
 #undef SET_ENV_MACRO
 
-#define SET_ENV_STR(v)       \
+#define SET_ENV_STR(v)    \
     lua_pushstring(L, v); \
     lua_setglobal(L, v)
 
 #ifdef IP_V4
-       SET_ENV_STR("IPV4");
+    SET_ENV_STR("IPV4");
 #else
-        SET_ENV_STR("IPV6");
+    SET_ENV_STR("IPV6");
 #endif
 
 #undef SET_ENV_STR
 
-#define SET_ENV_BOOL(v)      \
+#define SET_ENV_BOOL(v)    \
     lua_pushboolean(L, 1); \
     lua_setglobal(L, v)
 

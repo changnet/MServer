@@ -17,7 +17,7 @@ LMongo::LMongo(lua_State *L)
 
     if (lua_isstring(L, 3))
     {
-        const char* name = lua_tostring(L, 3);
+        const char *name = lua_tostring(L, 3);
         set_thread_name(name);
     }
     else
@@ -215,7 +215,8 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
     // TODO 要不要把错误信息存起来，做个last_e函数提供给脚本获取错误信息
     if (0 != res->_error.code)
     {
-        ELOG("ERROR: qid = %d, e = %d, %s", res->_qid, res->_error.code, res->_error.message);
+        ELOG("ERROR: qid = %d, e = %d, %s", res->_qid, res->_error.code,
+             res->_error.message);
     }
 
     // 为0表示不需要回调到脚本
@@ -232,7 +233,8 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
     if (res->_data)
     {
         bson_error_t e;
-        bson_type_t type = res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
+        bson_type_t type =
+            res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
 
         if (decode(L, res->_data, &e, type, _array_opt) < 0)
         {
@@ -257,8 +259,8 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
 /* 在子线程触发查询命令 */
 bool LMongo::do_command(const MongoQuery *query, MongoResult *res)
 {
-    bool ok          = false;
-    auto begin       = std::chrono::steady_clock::now();
+    bool ok    = false;
+    auto begin = std::chrono::steady_clock::now();
     switch (query->_mqt)
     {
     case MQT_COUNT: ok = Mongo::count(query, res); break;
@@ -381,11 +383,11 @@ int32_t LMongo::find_and_modify(lua_State *L)
     return 0;
 }
 
-int32_t LMongo::set_array_opt(lua_State* L)
+int32_t LMongo::set_array_opt(lua_State *L)
 {
     _array_opt = luaL_checknumber(L, 1);
     return 0;
- }
+}
 
 /* insert( id,collections,info ) */
 int32_t LMongo::insert(lua_State *L)

@@ -56,7 +56,7 @@ public:
                 memcpy(tmp, anpts, sizeof(NODE) * anptmax);
                 delete[] anpts;
             }
-            anpts = tmp;
+            anpts   = tmp;
             anptmax = size;
         }
         void *ptr = anpts[n];

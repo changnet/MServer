@@ -173,9 +173,9 @@ public:
     explicit Thread(const std::string &name);
 
     /// 设置线程名字
-    void set_thread_name(const std::string& name) { _name = name; }
+    void set_thread_name(const std::string &name) { _name = name; }
     /// 获取线程名字
-    inline const std::string& get_thread_name() const { return _name; }
+    inline const std::string &get_thread_name() const { return _name; }
 
     /// 注册信号处理
     static void signal(int32_t sig, int32_t action);

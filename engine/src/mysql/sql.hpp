@@ -61,6 +61,7 @@ public:
         void clear();
         void set(const char *value, size_t size);
         const char *get() const { return _value_ex ? _value_ex : _value; }
+
     private:
         friend class LSql;
 
@@ -74,6 +75,7 @@ public:
     {
     public:
         void clear();
+
     private:
         friend class Sql;
         friend class LSql;

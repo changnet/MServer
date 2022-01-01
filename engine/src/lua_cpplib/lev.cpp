@@ -270,8 +270,8 @@ void LEV::running()
 
 int32_t LEV::periodic_start(lua_State *L)
 {
-    int32_t id = luaL_checkinteger32(L, 1);
-    int64_t after = luaL_checkinteger(L, 2);
+    int32_t id     = luaL_checkinteger32(L, 1);
+    int64_t after  = luaL_checkinteger(L, 2);
     int64_t repeat = luaL_checkinteger(L, 3);
     int32_t policy = luaL_checkinteger32(L, 4);
 
@@ -281,7 +281,7 @@ int32_t LEV::periodic_start(lua_State *L)
     return 1;
 }
 
-int32_t LEV::periodic_stop(lua_State* L)
+int32_t LEV::periodic_stop(lua_State *L)
 {
     int32_t id = luaL_checkinteger32(L, 1);
 
@@ -291,11 +291,10 @@ int32_t LEV::periodic_stop(lua_State* L)
     return 1;
 }
 
-
-int32_t LEV::timer_start(lua_State* L)
+int32_t LEV::timer_start(lua_State *L)
 {
-    int32_t id = luaL_checkinteger32(L, 1);
-    int64_t after = luaL_checkinteger(L, 2);
+    int32_t id     = luaL_checkinteger32(L, 1);
+    int64_t after  = luaL_checkinteger(L, 2);
     int64_t repeat = luaL_checkinteger(L, 3);
     int32_t policy = luaL_checkinteger32(L, 4);
 
@@ -305,7 +304,7 @@ int32_t LEV::timer_start(lua_State* L)
     return 1;
 }
 
-int32_t LEV::timer_stop(lua_State* L)
+int32_t LEV::timer_stop(lua_State *L)
 {
     int32_t id = luaL_checkinteger32(L, 1);
 
@@ -319,7 +318,7 @@ void LEV::timer_callback(int32_t id, int32_t revents)
 {
     assert(!(EV_ERROR & revents));
 
-    static lua_State* L = StaticGlobal::state();
+    static lua_State *L = StaticGlobal::state();
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "timer_event");

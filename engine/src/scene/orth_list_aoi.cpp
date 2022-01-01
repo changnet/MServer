@@ -219,7 +219,9 @@ bool OrthListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
     update_mark();
 
     insert_entity<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        _first_x, ctx, [this, ctx, list_me_in, list_other_in](Ctx *other) {
+        _first_x, ctx,
+        [this, ctx, list_me_in, list_other_in](Ctx *other)
+        {
             if (CT_ENTITY == other->type())
             {
                 // 对方进入我的视野范围
@@ -265,9 +267,9 @@ int32_t OrthListAOI::exit_entity(EntityId id, EntityVector *list)
     // 从别人的interest_me列表删除自己
     if (ctx->has_visual())
     {
-        each_range_entity(ctx, ctx->_visual, [this, ctx](EntityCtx *other) {
-            on_exit_range(ctx, other, nullptr, true);
-        });
+        each_range_entity(ctx, ctx->_visual,
+                          [this, ctx](EntityCtx *other)
+                          { on_exit_range(ctx, other, nullptr, true); });
     }
 
     // 从三轴中删除自己
@@ -436,7 +438,9 @@ int32_t OrthListAOI::update_visual(EntityId id, int32_t visual,
 int32_t OrthListAOI::insert_visual(EntityCtx *ctx, EntityVector *list_in)
 {
     insert_visual_list<&Ctx::_pos_x, &Ctx::_next_x, &Ctx::_prev_x>(
-        _first_x, ctx, [this, ctx, list_in](Ctx *other) {
+        _first_x, ctx,
+        [this, ctx, list_in](Ctx *other)
+        {
             if (CT_ENTITY == other->type())
             {
                 on_enter_range(ctx, (EntityCtx *)other, list_in, true);
@@ -456,9 +460,8 @@ int32_t OrthListAOI::remove_visual(EntityCtx *ctx, EntityVector *list_out)
 {
     // 遍历旧视野区间，从其他实体interest列表删除自己，其他实体从自己视野消失
     each_range_entity(ctx, ctx->_old_visual,
-                      [this, ctx, list_out](EntityCtx *other) {
-                          on_exit_old_range(ctx, other, list_out, true);
-                      });
+                      [this, ctx, list_out](EntityCtx *other)
+                      { on_exit_old_range(ctx, other, list_out, true); });
 
     Ctx *next_v = &(ctx->_next_v);
     Ctx *prev_v = &(ctx->_prev_v);
@@ -504,8 +507,8 @@ void OrthListAOI::insert_list(Ctx *&list, Ctx *ctx,
     }
     // 把ctx插入到prev与next之间
     prev ? prev->*_next = ctx : list = ctx;
-    ctx->*_prev                      = prev;
-    ctx->*_next                      = next;
+    ctx->*_prev = prev;
+    ctx->*_next = next;
     if (next) next->*_prev = ctx;
 }
 

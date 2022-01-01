@@ -59,7 +59,7 @@ void LNetworkMgr::invoke_delete()
 
             lua_pop(L, 1); /* remove error message */
         }
-        
+
         delete sk;
         _socket_map.erase(sk_itr);
     }

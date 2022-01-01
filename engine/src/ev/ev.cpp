@@ -44,7 +44,8 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 {
     unsigned __int64 t;
     LARGE_INTEGER pf, pc;
-    union {
+    union
+    {
         unsigned __int64 u64;
         FILETIME ft;
     } ct, et, kt, ut;
@@ -430,7 +431,7 @@ void EV::timers_reify()
     }
 }
 
-void EV::periodic_reify() 
+void EV::periodic_reify()
 {
     while (_periodic_cnt && (_periodics[HEAP0])->_at <= _rt_time)
     {
@@ -466,9 +467,9 @@ int32_t EV::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t polic
     auto p = _timer_mgr.try_emplace(id, id, this);
     if (!p.second) return -1;
 
-    EVTimer* w = &(p.first->second);
+    EVTimer *w = &(p.first->second);
 
-    w->_at = _mn_time + after;
+    w->_at     = _mn_time + after;
     w->_repeat = repeat;
     w->_policy = policy;
 
@@ -530,7 +531,8 @@ int32_t EV::timer_stop(EVTimer *w)
     return 0;
 }
 
-int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat, int32_t policy)
+int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat,
+                           int32_t policy)
 {
     assert(repeat >= 0);
 
@@ -540,7 +542,7 @@ int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat, int32_t po
 
     EVTimer *w = &(p.first->second);
 
-    w->_at = _rt_time + after;
+    w->_at     = _rt_time + after;
     w->_repeat = repeat;
     w->_policy = policy;
 

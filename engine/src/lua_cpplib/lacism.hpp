@@ -4,13 +4,12 @@
 
 extern "C"
 {
-// 使用4byte可以支持10M的字库，8字节则可以支持300M，如果启用，则编译acism时也需要加这个定义
-// #define ACISM_SIZE 8
+    // 使用4byte可以支持10M的字库，8字节则可以支持300M，如果启用，则编译acism时也需要加这个定义
+    // #define ACISM_SIZE 8
 
 #include <msutil.h>
 #include <acism.h>
 }
-
 
 #include "../global/global.hpp"
 
@@ -45,9 +44,10 @@ public:
      * @return 加载的关键字数量
      */
     int32_t load_from_file(lua_State *L);
+
 private:
-    ACISM *_psp; /// AC自动机的数据结构
-    MEMBUF _patt; /// pattern，字库内容
-    MEMREF *_pattv; /// 把_patt拆分成字库数组
+    ACISM *_psp;             /// AC自动机的数据结构
+    MEMBUF _patt;            /// pattern，字库内容
+    MEMREF *_pattv;          /// 把_patt拆分成字库数组
     int32_t _case_sensitive; /// 是否区分大小写
 };

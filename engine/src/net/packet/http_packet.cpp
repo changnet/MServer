@@ -79,7 +79,7 @@ int32_t on_message_complete(llhttp_t *parser)
 }
 
 /**
- * 临时用于初始化设置  
+ * 临时用于初始化设置
  */
 class HttpSettingInitializer
 {
@@ -93,11 +93,11 @@ public:
          * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
          */
 
-        _setting.on_message_begin = on_message_begin;
-        _setting.on_url           = on_url;
-        _setting.on_status        = on_status;
-        _setting.on_header_field  = on_header_field;
-        _setting.on_header_value  = on_header_value;
+        _setting.on_message_begin    = on_message_begin;
+        _setting.on_url              = on_url;
+        _setting.on_status           = on_status;
+        _setting.on_header_field     = on_header_field;
+        _setting.on_header_value     = on_header_value;
         _setting.on_headers_complete = on_headers_complete;
         _setting.on_body             = on_body;
         _setting.on_message_complete = on_message_complete;
@@ -110,9 +110,7 @@ public:
 static const HttpSettingInitializer initializer;
 
 /* ====================== HTTP FUNCTION END ================================ */
-HttpPacket::~HttpPacket()
-{
-}
+HttpPacket::~HttpPacket() {}
 
 HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 {
@@ -129,7 +127,7 @@ int32_t HttpPacket::unpack()
 
     // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
     // 不用check_all_used_ctx
-    const char *data    = recv.get_used_ctx();
+    const char *data = recv.get_used_ctx();
 
     /* 注意：解析完成后，是由parser回调脚本的，这时脚本那边可能会关闭socket
      * 因此要注意execute后部分资源是不可再访问的
@@ -151,9 +149,8 @@ int32_t HttpPacket::unpack()
     // PAUSE通常是上层脚本关闭了socket，需要中止解析
     if (HPE_OK != e && HPE_PAUSED != e)
     {
-        ELOG("http parse error(%d):%s",
-            llhttp_get_errno(&_parser),
-            llhttp_get_error_reason(&_parser));
+        ELOG("http parse error(%d):%s", llhttp_get_errno(&_parser),
+             llhttp_get_error_reason(&_parser));
 
         return -1;
     }

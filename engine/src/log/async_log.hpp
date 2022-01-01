@@ -66,10 +66,10 @@ public:
 
     private:
         FILE *_file; /// 写入的文件句柄，减少文件打开、关闭
-        PolicyType _type;      /// 文件切分策略
-        int64_t _data;         /// 用于切分文件的参数
-        int64_t _data2;        /// 用于切分文件的参数
-        std::string _path;     /// 当前写入的文件路径
+        PolicyType _type;  /// 文件切分策略
+        int64_t _data;     /// 用于切分文件的参数
+        int64_t _data2;    /// 用于切分文件的参数
+        std::string _path; /// 当前写入的文件路径
     };
 
     /// 日志设备(如file、stdout)
@@ -87,7 +87,8 @@ public:
 
 public:
     virtual ~AsyncLog(){};
-    explicit AsyncLog(const std::string &name) : Thread(name), _buffer_pool("AsyncLog"){};
+    explicit AsyncLog(const std::string &name)
+        : Thread(name), _buffer_pool("AsyncLog"){};
 
     size_t busy_job(size_t *finished   = nullptr,
                     size_t *unfinished = nullptr) override;

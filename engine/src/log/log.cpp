@@ -59,8 +59,8 @@ size_t write_prefix(FILE *stream, const char *prefix, int64_t time)
 {
     thread_local char prefix_str[128]  = {0};
     thread_local char prefix_cache[32] = {0};
-    thread_local int64_t time_cache = 0;
-    thread_local int32_t prefix_len = 0;
+    thread_local int64_t time_cache    = 0;
+    thread_local int32_t prefix_len    = 0;
 
     // 日志线程大约1秒输出一次日志，时间戳精度也是1秒。从日志结果看，这个缓存命中很高
     if (time != time_cache || 0 != strcmp(prefix, prefix_cache))

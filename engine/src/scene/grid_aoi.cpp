@@ -190,17 +190,20 @@ int32_t GridAOI::exit_entity(EntityId id, EntityVector *list)
 void GridAOI::entity_exit_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                                 int32_t dx, int32_t dy, EntityVector *list)
 {
-    raw_each_range_entity(x, y, dx, dy, [list, ctx](EntityCtx *other) {
-        if (ctx->_mask & INTEREST)
+    raw_each_range_entity(
+        x, y, dx, dy,
+        [list, ctx](EntityCtx *other)
         {
-            GridAOI::remove_entity_from_vector(other->_interest_me, ctx);
-        }
-        if (other->_mask & INTEREST)
-        {
-            GridAOI::remove_entity_from_vector(ctx->_interest_me, other);
-        }
-        if (list) list->push_back(other);
-    });
+            if (ctx->_mask & INTEREST)
+            {
+                GridAOI::remove_entity_from_vector(other->_interest_me, ctx);
+            }
+            if (other->_mask & INTEREST)
+            {
+                GridAOI::remove_entity_from_vector(ctx->_interest_me, other);
+            }
+            if (list) list->push_back(other);
+        });
 }
 
 // 处理实体进入场景
@@ -238,20 +241,23 @@ int32_t GridAOI::enter_entity(EntityId id, int32_t x, int32_t y, uint8_t mask,
 void GridAOI::entity_enter_range(struct EntityCtx *ctx, int32_t x, int32_t y,
                                  int32_t dx, int32_t dy, EntityVector *list)
 {
-    raw_each_range_entity(x, y, dx, dy, [list, ctx](EntityCtx *other) {
-        // 自己对其他实体感兴趣，就把自己加到对方列表，这样对方有变化时才会推送数据给自己
-        if (ctx->_mask & INTEREST) other->_interest_me->push_back(ctx);
+    raw_each_range_entity(x, y, dx, dy,
+                          [list, ctx](EntityCtx *other)
+                          {
+                              // 自己对其他实体感兴趣，就把自己加到对方列表，这样对方有变化时才会推送数据给自己
+                              if (ctx->_mask & INTEREST)
+                                  other->_interest_me->push_back(ctx);
 
-        // 别人对其他实体感兴趣，把别人加到自己的列表，这样自己有变化才会发数据给对方
-        if (other->_mask & INTEREST)
-        {
-            ctx->_interest_me->push_back(other);
-        }
+                              // 别人对其他实体感兴趣，把别人加到自己的列表，这样自己有变化才会发数据给对方
+                              if (other->_mask & INTEREST)
+                              {
+                                  ctx->_interest_me->push_back(other);
+                              }
 
-        // 无论是否interest，都返回需要触发aoi事件的实体。假如玩家进入场景时，怪物对他不
-        // interest，但需要把怪物的信息发送给玩家，这步由上层筛选
-        if (list) list->push_back(other);
-    });
+                              // 无论是否interest，都返回需要触发aoi事件的实体。假如玩家进入场景时，怪物对他不
+                              // interest，但需要把怪物的信息发送给玩家，这步由上层筛选
+                              if (list) list->push_back(other);
+                          });
 }
 
 /* 判断两个位置视野交集

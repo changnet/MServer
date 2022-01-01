@@ -11,7 +11,7 @@ LLog::LLog(lua_State *L) : AsyncLog("LLog")
 
     if (lua_isstring(L, 2))
     {
-        const char* name = lua_tostring(L, 2);
+        const char *name = lua_tostring(L, 2);
         set_thread_name(name);
     }
     else
@@ -154,7 +154,7 @@ int32_t LLog::plog(lua_State *L)
         }
         case LUA_TSTRING:
         {
-            size_t len      = 0;
+            size_t len = 0;
             // lua_tolstring不检测元表，不能把其他他类型(table等，能转number)转成str，比luaL_tolstring快一点点
             const char *str = lua_tolstring(L, i, &len);
             CPY_STR(str, len);

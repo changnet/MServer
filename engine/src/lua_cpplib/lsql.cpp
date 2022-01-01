@@ -11,7 +11,7 @@ LSql::LSql(lua_State *L)
 
     if (lua_isstring(L, 3))
     {
-        const char* name = lua_tostring(L, 3);
+        const char *name = lua_tostring(L, 3);
         set_thread_name(name);
     }
     else
@@ -276,8 +276,8 @@ int32_t LSql::mysql_to_lua(lua_State *L, const SqlResult *res)
 
     lua_createtable(L, res->_num_rows, 0); /* 创建数组，元素个数为num_rows */
 
-    const std::vector<SqlField> &fields = res->_fields;
-    const std::vector<SqlResult::SqlRow> &rows     = res->_rows;
+    const std::vector<SqlField> &fields        = res->_fields;
+    const std::vector<SqlResult::SqlRow> &rows = res->_rows;
     for (uint32_t row = 0; row < res->_num_rows; row++)
     {
         lua_pushinteger(L, row + 1); /* lua table从1开始 */

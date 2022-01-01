@@ -9,7 +9,7 @@
 
 #include "lutil.hpp"
 #include "ltools.hpp"
-#include "../net/socket.hpp"        // get_addr_info
+#include "../net/socket.hpp" // get_addr_info
 
 #ifdef __windows__
     #include <rpc.h>

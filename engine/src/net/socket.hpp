@@ -142,8 +142,8 @@ public:
      * @param spending 待发送的数据
      * @param rpending 待处理的数据
      */
-    void get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
-                  size_t &rmem, size_t &spending, size_t &rpending);
+    void get_stat(size_t &schunk, size_t &rchunk, size_t &smem, size_t &rmem,
+                  size_t &spending, size_t &rpending);
 
     /// 获取socket错误日志
     static const char *str_error(int32_t e = -1);

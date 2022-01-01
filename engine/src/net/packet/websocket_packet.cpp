@@ -122,7 +122,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
         {
             ws_packet->set_error(2);
             ELOG("websocket packet on frame body overflow:%d,%d",
-                  body.get_used_size(), body.get_space_size());
+                 body.get_used_size(), body.get_space_size());
             return -1;
         }
 
@@ -240,7 +240,7 @@ int32_t WebsocketPacket::unpack()
 
     class Buffer &recv = _socket->recv_buffer();
 
-    size_t size   = 0;
+    size_t size     = 0;
     const char *ctx = recv.all_to_continuous_ctx(size);
     if (size == 0) return 0;
 
@@ -343,7 +343,7 @@ int32_t WebsocketPacket::on_frame_end()
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    size_t size   = 0;
+    size_t size     = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
 
     LUA_PUSHTRACEBACK(L);
@@ -367,7 +367,7 @@ int32_t WebsocketPacket::on_ctrl_end()
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
-    size_t size   = 0;
+    size_t size     = 0;
     const char *ctx = _body.all_to_continuous_ctx(size);
 
     LUA_PUSHTRACEBACK(L);

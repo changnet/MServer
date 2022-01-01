@@ -25,7 +25,7 @@ void Sql::SqlCol::clear()
 {
     if (_value_ex)
     {
-        delete []_value_ex;
+        delete[] _value_ex;
         _value_ex = nullptr;
     }
 }
@@ -50,8 +50,8 @@ void Sql::SqlCol::set(const char *value, size_t size)
 
 Sql::SqlQuery::SqlQuery()
 {
-    _id = 0;
-    _size = 0;
+    _id      = 0;
+    _size    = 0;
     _stmt_ex = nullptr;
 }
 
@@ -68,7 +68,7 @@ void Sql::SqlQuery::clear()
 {
     if (_stmt_ex)
     {
-        delete []_stmt_ex;
+        delete[] _stmt_ex;
         _stmt_ex = nullptr;
     }
 }

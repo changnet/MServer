@@ -40,7 +40,8 @@ time_t AsyncLog::Policy::day_begin(time_t now)
 void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 {
     // 不是按天写入，或者还在同一天 0 == now表示这个是拼接到上一个缓冲区的日志，不需要检测
-    if (PT_DAILY != _type || 0 == now || (now >= _data && now <= _data + 86400)) return;
+    if (PT_DAILY != _type || 0 == now || (now >= _data && now <= _data + 86400))
+        return;
 
     close_stream();
 

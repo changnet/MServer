@@ -24,7 +24,7 @@ public:
     inline virtual size_t get_sizeof() const { return sizeof(Storage); }
 
     // 构造对象
-    template <typename... Args> T *construct(Args &&... args)
+    template <typename... Args> T *construct(Args &&...args)
     {
         if (EXPECT_FALSE(_objs.empty()))
         {

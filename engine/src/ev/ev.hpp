@@ -47,13 +47,14 @@ public:
     /// @param repeat 重复执行间隔，毫秒数
     /// @param policy 定时器重新规则时的策略
     /// @return 成功返回》=1,失败返回值<0
-    int32_t timer_start(int32_t id, int64_t after, int64_t repeat, int32_t policy);
+    int32_t timer_start(int32_t id, int64_t after, int64_t repeat,
+                        int32_t policy);
     /// @brief 停止定时器并从管理器中删除
     /// @param id 定时器唯一id
     /// @return 成功返回0
     int32_t timer_stop(int32_t id);
     /// 停止定时器，但不从管理器删除
-    int32_t timer_stop(EVTimer* w);
+    int32_t timer_stop(EVTimer *w);
 
     /// @brief  启动utc定时器
     /// @param id 定时器唯一id
@@ -68,7 +69,7 @@ public:
     /// @return 成功返回0
     int32_t periodic_stop(int32_t id);
     /// 停止utc定时器，但不从管理器删除
-    int32_t periodic_stop(EVTimer* w);
+    int32_t periodic_stop(EVTimer *w);
 
     /// 获取系统启动以为毫秒数
     static int64_t get_monotonic_time();
@@ -81,6 +82,7 @@ public:
     inline int64_t now() { return _rt_time; }
     /// 定时器回调函数
     virtual void timer_callback(int32_t id, int32_t revents) {}
+
 protected:
     friend class EVBackend;
     volatile bool _done; /// 主循环是否已结束
@@ -101,7 +103,7 @@ protected:
     std::vector<EVTimer *> _periodics; /// 按二叉树排列的utc定时器
     std::unordered_map<int32_t, EVTimer> _periodic_mgr;
 
-    EVBackend *_backend; ///< io后台
+    EVBackend *_backend;          ///< io后台
     int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
     int64_t _backend_time_coarse; ///< 预计下次backend等待结束的时间戳
 

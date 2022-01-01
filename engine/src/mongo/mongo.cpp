@@ -58,8 +58,9 @@ void Mongo::disconnect()
     if (_conn)
     {
         // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
-        // Each of these objects must be destroyed before the client they were created from, but their lifetimes are otherwise independent
-        for (auto iter = _collection.begin(); iter != _collection.end(); ++ iter)
+        // Each of these objects must be destroyed before the client they were
+        // created from, but their lifetimes are otherwise independent
+        for (auto iter = _collection.begin(); iter != _collection.end(); ++iter)
         {
             mongoc_collection_destroy(iter->second);
         }
@@ -214,8 +215,7 @@ bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
     assert(mq);
     assert(_conn);
 
-    mongoc_collection_t *collection =
-        get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->_clt);
 
     assert(nullptr == res->_data);
 
@@ -223,7 +223,7 @@ bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
     // http://mongoc.org/libmongoc/current/mongoc_find_and_modify_opts_t.html#functions
     // mongoc_find_and_modify_opts的功能和这一样，只不过使用了opts参数，参数显示简洁一些
     // 不过需要额外构建一个mongoc_find_and_modify_opts_t类型
-    bool ok    = mongoc_collection_find_and_modify(
+    bool ok = mongoc_collection_find_and_modify(
         collection, mq->_query, mq->_sort, mq->_update, mq->_fields,
         mq->_remove, mq->_upsert, mq->_new, res->_data, &res->_error);
 

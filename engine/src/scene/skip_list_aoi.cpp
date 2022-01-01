@@ -216,7 +216,8 @@ bool SkipListAOI::enter_entity(EntityId id, int32_t x, int32_t y, int32_t z,
 
     insert_entity(ctx);
     each_range_entity(ctx, _max_visual,
-                      [this, ctx, list_me_in, list_other_in](EntityCtx *other) {
+                      [this, ctx, list_me_in, list_other_in](EntityCtx *other)
+                      {
                           // 别人出现在自己的视野
                           on_enter_range(ctx, other, list_me_in, true);
                           // 自己出现在别人的视野
@@ -237,9 +238,9 @@ int32_t SkipListAOI::exit_entity(EntityId id, EntityVector *list)
     // 从别人的interest_me列表删除自己
     if (ctx->_visual > 0 && ctx->_mask & INTEREST)
     {
-        each_range_entity(ctx, ctx->_visual, [this, ctx](EntityCtx *other) {
-            on_exit_range(ctx, other, nullptr, true);
-        });
+        each_range_entity(ctx, ctx->_visual,
+                          [this, ctx](EntityCtx *other)
+                          { on_exit_range(ctx, other, nullptr, true); });
     }
 
     // 从链表中删除自己
@@ -335,7 +336,8 @@ int32_t SkipListAOI::update_entity_short(EntityCtx *ctx, int32_t old_x,
     each_range_entity(
         ctx, prev_visual, next_visual,
         [this, ctx, old_x, old_y, old_z, list_me_in, list_other_in, list_me_out,
-         list_other_out](EntityCtx *other) {
+         list_other_out](EntityCtx *other)
+        {
             // 只有我对目标interest，对方才会在我视野范围内变化
             if (ctx->_visual && ctx->_mask & INTEREST)
             {
@@ -371,7 +373,8 @@ int32_t SkipListAOI::update_entity_long(EntityCtx *ctx, int32_t old_x,
     each_range_entity(
         ctx, old_x - _max_visual, old_x + _max_visual,
         [this, ctx, old_x, old_y, old_z, list_me_in, list_other_in, list_me_out,
-         list_other_out](EntityCtx *other) {
+         list_other_out](EntityCtx *other)
+        {
             // 只有我对目标interest，对方才会在我视野范围内变化
             if (ctx->_visual && ctx->_mask & INTEREST)
             {
@@ -409,7 +412,8 @@ int32_t SkipListAOI::update_entity_long(EntityCtx *ctx, int32_t old_x,
     // 遍历新视野，这个范围内的实体现在肯定不在新位置的视野范围内(was_in_xxx必定为false)
     each_range_entity(ctx, _max_visual,
                       [this, ctx, list_me_in, list_other_in, list_me_out,
-                       list_other_out](EntityCtx *other) {
+                       list_other_out](EntityCtx *other)
+                      {
                           // 只有我对目标interest，对方才会在我视野范围内变化
                           if (ctx->_visual && ctx->_mask & INTEREST)
                           {
@@ -487,7 +491,8 @@ int32_t SkipListAOI::update_visual(EntityId id, int32_t visual,
     int32_t next_visual = ctx->_pos_x + max_visual;
     each_range_entity(
         ctx, prev_visual, next_visual,
-        [this, ctx, old_visual, list_me_in, list_me_out](EntityCtx *other) {
+        [this, ctx, old_visual, list_me_in, list_me_out](EntityCtx *other)
+        {
             bool is_in_me  = in_visual(ctx, other);
             bool was_in_me = in_visual(ctx, other->_pos_x, other->_pos_y,
                                        other->_pos_z, old_visual);

@@ -90,7 +90,8 @@ public:
 
     /**
      * 设置lua table转换参数
-     * @param opt double类型，整数部分表示最大key小于该值则为数组，小数部分表示数组中的元素百分比小于该值则为object
+     * @param opt
+     * double类型，整数部分表示最大key小于该值则为数组，小数部分表示数组中的元素百分比小于该值则为object
      */
     int32_t set_array_opt(lua_State *L);
 

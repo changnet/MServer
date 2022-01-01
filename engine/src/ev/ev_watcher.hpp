@@ -97,6 +97,7 @@ public:
 
     /// 回调函数
     virtual void callback(int32_t revents);
+
 private:
     friend class EV;
 

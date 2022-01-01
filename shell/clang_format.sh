@@ -29,6 +29,7 @@ cp $CF_FILE $SRC
 
 for F in ${FILES[@]}; do
     echo "$F"
+    # /d/"Program Files"/LLVM/bin/clang-format.exe -i $F
     clang-format -i $F
     # cat $F | clang-format -style=file -assume-filename=$CF_FILE > $F
 done
