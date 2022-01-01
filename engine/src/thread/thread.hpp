@@ -170,7 +170,12 @@ public:
 
 public:
     virtual ~Thread();
-    explicit Thread(const char *name);
+    explicit Thread(const std::string &name);
+
+    /// 设置线程名字
+    void set_thread_name(const std::string& name) { _name = name; }
+    /// 获取线程名字
+    inline const std::string& get_thread_name() const { return _name; }
 
     /// 注册信号处理
     static void signal(int32_t sig, int32_t action);
@@ -205,8 +210,6 @@ public:
     inline bool is_busy() const { return _status & S_BUSY; }
     /// 获取自定义线程id
     inline int32_t get_id() const { return _id; }
-    /// 获取线程名字
-    inline const char *get_name() const { return _name; }
 
     inline bool is_wait_busy() const { return _status & S_WAIT; }
     inline void set_wait_busy(bool busy)
@@ -268,7 +271,7 @@ private:
 
 protected:
     int32_t _id;                  /// 线程自定义id
-    char _name[128];            /// 线程名字，日志用而已
+    std::string _name;            /// 线程名字，日志用
     std::atomic<int32_t> _status; /// 线程状态，参考 Status 枚举
 
     std::mutex _mutex;

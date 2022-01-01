@@ -8,6 +8,16 @@ LSql::LSql(lua_State *L)
     : Thread("lsql"), _query_pool("lsql_query"), _result_pool("lsql_result")
 {
     _dbid = luaL_checkinteger32(L, 2);
+
+    if (lua_isstring(L, 3))
+    {
+        const char* name = lua_tostring(L, 3);
+        set_thread_name(name);
+    }
+    else
+    {
+        ELOG("invalid MySQL(MariaDB) thread name");
+    }
 }
 
 LSql::~LSql()

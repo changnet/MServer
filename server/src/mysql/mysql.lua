@@ -8,13 +8,13 @@ local AutoId = require "modules.system.auto_id"
 
 local Mysql = oo.class(...)
 
-function Mysql:__init()
+function Mysql:__init(name)
     local id = mysql_mgr:next_id()
 
     self.id = id
     self.auto_id = AutoId()
     self.query = {}
-    self.sql = Sql(id)
+    self.sql = Sql(id, name)
 end
 
 -- 连接成功回调

@@ -291,7 +291,7 @@ local function on_app_start(check)
     if check then
         return this.ok
     end
-    this.db = Mysql()
+    this.db = Mysql("MySQL Log")
     this.db:start(g_setting.mysql_ip, g_setting.mysql_port,
                          g_setting.mysql_user, g_setting.mysql_pwd,
                          g_setting.mysql_db, function()

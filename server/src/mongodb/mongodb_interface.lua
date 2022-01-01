@@ -14,10 +14,10 @@ local Mongo = require "engine.Mongo"
 local AutoId = require "modules.system.auto_id"
 local MongoDBMgr = require "mongodb.mongodb_mgr"
 
-function MongoDBInterface:__init()
+function MongoDBInterface:__init(name)
     self.id = MongoDBMgr.next_id()
     self.auto_id = AutoId()
-    self.mongodb = Mongo(self.id)
+    self.mongodb = Mongo(self.id, name)
 
     self.cb = {}
 end

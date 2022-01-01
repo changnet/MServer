@@ -4,9 +4,20 @@
 #include "ltools.hpp"
 #include "../system/static_global.hpp"
 
-LLog::LLog(lua_State *L)
+LLog::LLog(lua_State *L) : AsyncLog("LLog")
 {
-    UNUSED(L);
+    // 不是从lua创建线程时，不传虚拟机参数
+    if (!L) return;
+
+    if (lua_isstring(L, 2))
+    {
+        const char* name = lua_tostring(L, 2);
+        set_thread_name(name);
+    }
+    else
+    {
+        ELOG("invalid log thread name");
+    }
 }
 
 LLog::~LLog() {}

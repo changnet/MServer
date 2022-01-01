@@ -4,7 +4,7 @@
 local MongoDBInterface = require "mongodb.mongodb_interface"
 
 local this = global_storage("MongoDB", {}, function(storage)
-    storage.db = MongoDBInterface()
+    storage.db = MongoDBInterface("MongoDB")
 end)
 
 

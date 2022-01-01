@@ -87,7 +87,7 @@ public:
 
 public:
     virtual ~AsyncLog(){};
-    AsyncLog() : Thread("AsyncLog"), _buffer_pool("AsyncLog"){};
+    explicit AsyncLog(const std::string &name) : Thread(name), _buffer_pool("AsyncLog"){};
 
     size_t busy_job(size_t *finished   = nullptr,
                     size_t *unfinished = nullptr) override;

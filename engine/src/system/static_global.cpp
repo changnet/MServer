@@ -69,6 +69,7 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
 
+    _async_log->set_thread_name(STD_FMT("global_async_log"));
     _async_log->AsyncLog::start(1000000);
 
     // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙

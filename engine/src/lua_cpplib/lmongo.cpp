@@ -14,6 +14,16 @@ LMongo::LMongo(lua_State *L)
 {
     _array_opt = -1; // 是否启用数组判定参数，具体参考lbson的check_type函数
     _dbid = luaL_checkinteger32(L, 2);
+
+    if (lua_isstring(L, 3))
+    {
+        const char* name = lua_tostring(L, 3);
+        set_thread_name(name);
+    }
+    else
+    {
+        ELOG("invalid mongodb thread name");
+    }
 }
 
 LMongo::~LMongo()
