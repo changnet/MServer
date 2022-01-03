@@ -15,7 +15,10 @@
 #include <unistd.h> /* POSIX api, like close */
 #include <sys/epoll.h>
 
+#include <thread>
+
 #include "ev.hpp"
+#include "ev_backend.hpp"
 
 const char *__BACKEND__ = "epoll";
 
@@ -29,21 +32,58 @@ const char *__BACKEND__ = "epoll";
 static const int32_t EPOLL_MAXEV = 8192;
 
 /// backend using epoll implement
-class EVBackend final
+class EVEPoll final : public EVBackend
 {
 public:
-    EVBackend();
-    ~EVBackend();
+    EVEPoll();
+    ~EVEPoll();
 
-    void wait(class EV *ev_loop, int64_t timeout);
+    bool stop();
+    bool start(class EV *ev);
+    void wake();
+    void backend();
     void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
 
 private:
+    void do_modify();
+    void modify_one(int32_t fd, int32_t old_ev, int32_t new_ev);
+
+private:
+    std::thread _thread;
+
     int32_t _ep_fd;
     epoll_event _ep_ev[EPOLL_MAXEV];
+
+    /// 等待变更到epoll的io事件
+    std::vector<struct ModifyEvent> _modify_event;
 };
 
-EVBackend::EVBackend()
+EVEPoll::EVEPoll()
+{
+}
+
+EVEPoll::~EVEPoll()
+{
+}
+
+bool EVEPoll::start(class EV *ev)
+{
+    EVBackend::start(ev);
+    _thread = std::thread(&EVEPoll::backend, this);
+
+    return true;
+}
+
+bool EVEPoll::stop()
+{
+    EVBackend::stop();
+
+    _thread.join();
+
+    return true;
+}
+
+void EVEPoll::backend()
 {
 #ifdef EPOLL_CLOEXEC
     _ep_fd = epoll_create1(EPOLL_CLOEXEC);
@@ -54,61 +94,121 @@ EVBackend::EVBackend()
         _ep_fd = epoll_create(256);
         if (_ep_fd < 0 || fcntl(_ep_fd, F_SETFD, FD_CLOEXEC) < 0)
         {
-            FATAL("libev backend init fail:%s", strerror(errno));
+            FATAL("ev backend init fail:%s", strerror(errno));
             return;
         }
     }
     assert(_ep_fd >= 0);
-}
 
-EVBackend::~EVBackend()
-{
-    if (_ep_fd >= 0)
-    {
-        ::close(_ep_fd);
-        _ep_fd = -1;
-    }
-}
+    /// 第一次进入wait前，必须先设置io事件，不然的话第一次就会wait很久
+    _ev->lock();
+    do_modify();
+    _ev->unlock();
 
-void EVBackend::wait(EV *ev_loop, int64_t timeout)
-{
-    int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, (int32_t)timeout);
-    if (EXPECT_FALSE(ev_count < 0))
+    while (!_done)
     {
-        if (errno != EINTR)
+        int32_t ev_count =
+            epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, (int32_t)BACKEND_MAX_TM);
+        if (EXPECT_FALSE(ev_count < 0))
         {
-            FATAL("ev::backend_poll epoll wait errno(%d)", errno);
+            if (errno != EINTR)
+            {
+                FATAL("epoll_wait errno(%d)", errno);
+            }
+
+            break;
         }
 
-        return;
+        /// 下面的操作，速度很快，可以加锁
+        _ev->lock();
+        for (int32_t i = 0; i < ev_count; ++i)
+        {
+            struct epoll_event *ev = _ep_ev + i;
+
+            int32_t events =
+                (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
+                | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ : 0);
+
+            _ev->fd_event(ev->data.fd, events);
+        }
+        do_modify();
+        _ev->unlock();
+
+        // 唤醒主线程干活
+        // https://en.cppreference.com/w/cpp/thread/condition_variable
+        // the lock does not need to be held for notification
+        if (ev_count > 0) _ev->wake();
     }
 
-    for (int32_t i = 0; i < ev_count; ++i)
-    {
-        struct epoll_event *ev = _ep_ev + i;
-
-        int32_t events =
-            (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
-            | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ : 0);
-
-        ev_loop->fd_event(ev->data.fd, events);
-    }
+    ::close(_ep_fd);
+    _ep_fd = -1;
 }
 
-/* event loop 只是监听fd，不负责fd的打开或者关闭。
- * 但是，如果一个fd被关闭，epoll会自动解除监听，而我们并不知道它是否已解除。
- * 因此，在处理EPOLL_CTL_DEL时，返回EBADF表明是自动解除。或者在epoll_ctl之前
- * 调用fcntl(fd,F_GETFD)判断fd是否被关闭，但效率与直接调用epoll_ctl一样。
- * libev和libevent均采用类似处理方法。但它们由于考虑dup、fork、thread等特性，
- * 处理更为复杂。
- */
-void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+void EVEPoll::wake()
+{
+}
+
+void EVEPoll::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+{
+    /**
+     * man epoll_wait
+     * NOTES
+       While one thread is blocked in a call to epoll_pwait(), it is possible
+     for another thread to add a file  descriptor  to the waited-upon epoll
+     instance.  If the new file descriptor becomes ready, it will cause the
+     epoll_wait() call to unblock.
+
+       For a discussion of what may happen if a file descriptor in an epoll
+     instance being  monitored  by epoll_wait() is closed in another thread, see
+     select(2).
+
+     * man select
+     * Multithreaded applications
+       If a file descriptor being monitored by select() is closed in another
+     thread, the  result  is  un‐ specified.   On some UNIX systems, select()
+     unblocks and returns, with an indication that the file descriptor is ready
+     (a subsequent I/O operation will likely fail with an error, unless another
+     the file descriptor reopened between the time select() returned and the I/O
+     operations was performed). On Linux (and some other systems), closing the
+     file descriptor in another thread has no effect  on select().   In summary,
+     any application that relies on a particular behavior in this scenario must
+       be considered buggy.
+
+     * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
+     */
+
+    _ev->lock();
+    _modify_event.emplace_back(fd, old_ev, new_ev);
+    _ev->unlock();
+
+    /// 唤醒子线程，让它及时处理修改的事件
+    wake();
+}
+
+void EVEPoll::do_modify()
+{
+    for (auto &e : _modify_event)
+    {
+        modify_one(e._fd, e._old_ev, e._new_ev);
+    }
+    _modify_event.clear();
+}
+
+void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */
     memset(&ev, 0, sizeof(ev));
 
     ev.data.fd = fd;
+
+    /* epoll只是监听fd，不负责fd的打开或者关闭。
+     * 但是，如果一个fd被关闭，epoll会自动解除监听，并不会通知我们。
+     * 因此，在处理EPOLL_CTL_DEL时，返回EBADF表明是自动解除。或者在epoll_ctl之前
+     * 调用fcntl(fd,F_GETFD)判断fd是否被关闭，但效率与直接调用epoll_ctl一样。
+     * libev和libevent均采用类似处理方法。但它们由于考虑dup、fork、thread等特性，
+     * 处理更为复杂。
+     */
 
     /**
      * LT(Level Triggered)同时支持block和no-block，持续通知

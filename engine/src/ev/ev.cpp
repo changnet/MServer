@@ -19,6 +19,7 @@
 
 #if BACKEND == 1
     #include "ev_epoll.inl"
+    #define BACKEND_TYPE EVEPoll
 #elif BACKEND == 2
     #include "ev_poll.inl"
 #else
@@ -136,7 +137,7 @@ EV::EV()
 
     _busy_time = 0;
 
-    _backend             = new EVBackend();
+    _backend             = new BACKEND_TYPE();
     _backend_time_coarse = 0;
 }
 
@@ -164,15 +165,23 @@ int32_t EV::loop()
 
     _done           = false;
     int64_t last_ms = _mn_time;
+
+    _backend->start(this);
+
     while (EXPECT_TRUE(!_done))
     {
+        // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
+        // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
+        
+
         // 把fd变更设置到epoll中去
         fd_reify();
 
         time_update();
         _busy_time = _mn_time - last_ms;
 
-        int64_t backend_time = _backend_time_coarse - _mn_time;
+        /// 允许阻塞的最长时间(毫秒)
+        int64_t backend_time = BACKEND_MAX_TM;
         if (_timer_cnt)
         {
             // wait时间不超过下一个定时器触发时间
@@ -189,7 +198,25 @@ int32_t EV::loop()
         {
             backend_time = BACKEND_MIN_TM;
         }
-        _backend->wait(this, backend_time);
+
+        {
+            // https://en.cppreference.com/w/cpp/thread/condition_variable
+            // 1. wait_for之前必须获得锁
+            // 2. wait_for后，自动解锁
+            // 3. 当被通知、超时、spurious wakeup时，重新获得锁
+            // 退出生命域后，unique_lock销毁，自动解锁，这时程序处理无锁运行状态
+
+            // TODO 每次分配一个unique_lock，效率是不是有点低
+            std::unique_lock<std::mutex> ul(_mutex);
+
+            // check the condition, in case it was already updated and notified
+            // 在获得锁后，必须重新检测_pendings是否为空，避免主线程执行完invoke_pending
+            // 子线程再把数据塞到_pendings
+            if (0 == _pendings.size())
+            {
+                _cv.wait_for(ul, std::chrono::milliseconds(backend_time));
+            }
+        }
 
         time_update();
 
@@ -209,6 +236,8 @@ int32_t EV::loop()
 
         running(); // 执行其他逻辑
     }
+
+    _backend->stop();
 
     return 0;
 }

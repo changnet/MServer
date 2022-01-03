@@ -1,6 +1,8 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
+
 #include "ev_watcher.hpp"
 #include "../global/global.hpp"
 
@@ -83,8 +85,55 @@ public:
     /// 定时器回调函数
     virtual void timer_callback(int32_t id, int32_t revents) {}
 
+    /// 加锁
+    void lock()
+    {
+        _mutex.lock();
+    }
+    /// 解锁
+    void unlock()
+    {
+        _mutex.unlock();
+    }
+
+    /// 触发io事件
+    void fd_event(int32_t fd, int32_t revents);
+
+    /// 唤醒主线程
+    void wake()
+    {
+        _cv.notify_one();
+    }
+
 protected:
-    friend class EVBackend;
+    virtual void running() = 0;
+
+    void set_backend_time_coarse(int64_t backend_time)
+    {
+        if (_backend_time_coarse > backend_time)
+        {
+            _backend_time_coarse = backend_time;
+        }
+    }
+
+    void fd_change(int32_t fd)
+    {
+        _fd_changes.emplace_back(fd);
+    }
+
+    void fd_reify();
+    void time_update();
+    void feed_event(EVWatcher *w, int32_t revents);
+    void invoke_pending();
+    void clear_pending(EVWatcher *w);
+    void timers_reify();
+    void periodic_reify();
+    void down_heap(HeapNode *heap, int32_t N, int32_t k);
+    void up_heap(HeapNode *heap, int32_t k);
+    void adjust_heap(HeapNode *heap, int32_t N, int32_t k);
+    void reheap(HeapNode *heap, int32_t N);
+
+protected:
     volatile bool _done; /// 主循环是否已结束
 
     std::vector<EVIO *> _fds; /// 所有的的io watcher
@@ -117,29 +166,9 @@ protected:
      */
     int64_t _rtmn_diff;
 
-protected:
-    virtual void running() = 0;
+    /// 主线程的wait condition_variable
+    std::condition_variable _cv;
 
-    void set_backend_time_coarse(int64_t backend_time)
-    {
-        if (_backend_time_coarse > backend_time)
-        {
-            _backend_time_coarse = backend_time;
-        }
-    }
-
-    void fd_change(int32_t fd) { _fd_changes.emplace_back(fd); }
-
-    void fd_reify();
-    void time_update();
-    void fd_event(int32_t fd, int32_t revents);
-    void feed_event(EVWatcher *w, int32_t revents);
-    void invoke_pending();
-    void clear_pending(EVWatcher *w);
-    void timers_reify();
-    void periodic_reify();
-    void down_heap(HeapNode *heap, int32_t N, int32_t k);
-    void up_heap(HeapNode *heap, int32_t k);
-    void adjust_heap(HeapNode *heap, int32_t N, int32_t k);
-    void reheap(HeapNode *heap, int32_t N);
+    /// 主线程锁
+    std::mutex _mutex;
 };
