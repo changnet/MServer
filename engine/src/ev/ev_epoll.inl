@@ -14,8 +14,10 @@
 #include <fcntl.h>
 #include <unistd.h> /* POSIX api, like close */
 #include <sys/epoll.h>
+#include <sys/eventfd.h> // for eventfd
 
 #include <thread>
+#include <chrono> // for 1000ms
 
 #include "ev.hpp"
 #include "ev_backend.hpp"
@@ -52,6 +54,7 @@ private:
     std::thread _thread;
 
     int32_t _ep_fd;
+    int32_t _wake_fd; /// 用于唤醒子线程的fd
     epoll_event _ep_ev[EPOLL_MAXEV];
 
     /// 等待变更到epoll的io事件
@@ -68,8 +71,17 @@ EVEPoll::~EVEPoll()
 
 bool EVEPoll::start(class EV *ev)
 {
+    _wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (_wake_fd < 0)
+    {
+        ELOG("fail to create eventfd e = %d: %s", errno, strerror(errno));
+        return false;
+    }
+
     EVBackend::start(ev);
     _thread = std::thread(&EVEPoll::backend, this);
+
+    modify(_wake_fd, 0, EV_READ);
 
     return true;
 }
@@ -79,6 +91,9 @@ bool EVEPoll::stop()
     EVBackend::stop();
 
     _thread.join();
+
+    ::close(_wake_fd);
+    _wake_fd = -1;
 
     return true;
 }
@@ -125,11 +140,27 @@ void EVEPoll::backend()
         {
             struct epoll_event *ev = _ep_ev + i;
 
-            int32_t events =
-                (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
-                | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ : 0);
+            int32_t fd = ev->data.fd;
+            if (fd == _wake_fd)
+            {
+                int64_t v = 0;
+                if (::read(fd, &v, sizeof(v)) < 0)
+                {
+                    ELOG("read epoll wakeup fd error e = %d: %s", errno,
+                         strerror(errno));
+                    // 避免出错日志把硬盘刷爆
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                }
+            }
+            else
+            {
+                int32_t events =
+                    (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
+                    | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ
+                                                                    : 0);
 
-            _ev->fd_event(ev->data.fd, events);
+                _ev->fd_event(ev->data.fd, events);
+            }
         }
         do_modify();
         _ev->unlock();
@@ -146,6 +177,11 @@ void EVEPoll::backend()
 
 void EVEPoll::wake()
 {
+    static const int64_t v = 1;
+    if (::write(_wake_fd, &v, sizeof(v)) <= 0)
+    {
+        ELOG("fail to wakeup epoll e = %d: %s", errno, strerror(errno));
+    }
 }
 
 void EVEPoll::modify(int32_t fd, int32_t old_ev, int32_t new_ev)

@@ -166,7 +166,7 @@ int32_t EV::loop()
     _done           = false;
     int64_t last_ms = _mn_time;
 
-    _backend->start(this);
+    if (!_backend->start(this)) return -1;
 
     while (EXPECT_TRUE(!_done))
     {
