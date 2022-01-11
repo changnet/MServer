@@ -10,45 +10,22 @@ EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-EVIO::EVIO(EV *loop) : EVWatcher(loop)
+EVIO::EVIO(int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
 {
     _emask  = 0;
-    _fd     = -1;
-    _events = 0;
+    _fd     = fd;
+    _events = events;
 }
 
 EVIO::~EVIO()
 {
-    stop();
 }
 
-void EVIO::start()
+void EVIO::set(int32_t events)
 {
-    assert(_loop);
-    assert(_events);
-    assert(_cb);
-    assert(_fd >= 0);
-    assert(!_active);
-
-    _active = _loop->io_start(this);
+    _events = events;
+    _loop->io_change(_fd);
 }
-
-void EVIO::stop()
-{
-    _active = _loop->io_stop(this);
-}
-
-void EVIO::set(int32_t fd, uint8_t events)
-{
-    int32_t old_active = _active;
-    if (old_active) stop();
-
-    this->_fd     = fd;
-    this->_events = events;
-
-    if (old_active) start();
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)

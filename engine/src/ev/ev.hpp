@@ -26,6 +26,8 @@ class EVBackend;
 #define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
 #define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
 
+#define MAX_FAST_IO 10240 /// 小于该值的fd，可通过数组快速获取io对象
+
 using HeapNode = EVTimer *;
 
 extern const char *__BACKEND__;
@@ -40,8 +42,42 @@ public:
     int32_t loop();
     int32_t quit();
 
-    int32_t io_start(EVIO *w);
-    int32_t io_stop(EVIO *w);
+    /**
+     * @brief 启动一个io监听
+     * @param fd 通过socket函数创建的文件描述符
+     * @param event 监听事件，EV_READ|EV_WRITE
+     * @return io对象
+    */
+    EVIO *io_start(int32_t fd, int32_t event);
+    /**
+     * @brief 停止一个io监听
+     * @param  通过socket函数创建的文件描述符
+     * @return 
+    */
+    int32_t io_stop(int32_t fd);
+    /**
+     * @brief 获取设置到io线程的io对象，调用此函数注意线程安全
+     * @param fd 
+     * @return 
+    */
+    EVIO *get_fast_io(int32_t fd)
+    {
+        if (((uint32_t)fd) < _io_fast.size()) return _io_fast[fd];
+
+        auto found = _io_fast_mgr.find(fd);
+        return found == _io_fast_mgr.end() ? nullptr : found->second;
+    }
+
+    /**
+     * @brief 获取任意io对象，只能主线程调用
+     * @param fd 
+     * @return 
+    */
+    EVIO *get_io(int32_t fd)
+    {
+        auto found = _io_mgr.find(fd);
+        return found == _io_mgr.end() ? nullptr : &(found->second);
+    }
 
     /// @brief  启动定时器
     /// @param id 定时器唯一id
@@ -84,6 +120,14 @@ public:
     inline int64_t now() { return _rt_time; }
     /// 定时器回调函数
     virtual void timer_callback(int32_t id, int32_t revents) {}
+    /**
+     * @brief 标记io变化，稍后异步处理
+     * @param fd 
+    */
+    void io_change(int32_t fd)
+    {
+        _io_changes.emplace_back(fd);
+    }
 
     /// 加锁
     void lock()
@@ -97,7 +141,7 @@ public:
     }
 
     /// 触发io事件
-    void fd_event(int32_t fd, int32_t revents);
+    void io_event(EVIO *w, int32_t revents);
 
     /// 唤醒主线程
     void wake()
@@ -116,16 +160,35 @@ protected:
         }
     }
 
-    void fd_change(int32_t fd)
+    void set_fast_io(int32_t fd, EVIO *w)
     {
-        _fd_changes.emplace_back(fd);
+        // win的socket是unsigned类型，可能会很大，得强转unsigned来判断
+        uint32_t ufd = ((uint32_t)fd);
+        if (ufd < MAX_FAST_IO)
+        {
+            while (_io_fast.size() < ufd)
+            {
+                _io_fast.resize(_io_fast.size() * 2);
+            }
+            _io_fast[fd] = w;
+        }
+
+        if (w)
+        {
+            _io_fast_mgr[fd] = w;
+        }
+        else
+        {
+            _io_fast_mgr.erase(fd);
+        }
     }
 
-    void fd_reify();
+    void io_reify();
     void time_update();
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
     void clear_pending(EVWatcher *w);
+    void io_event_reify();
     void timers_reify();
     void periodic_reify();
     void down_heap(HeapNode *heap, int32_t N, int32_t k);
@@ -136,9 +199,21 @@ protected:
 protected:
     volatile bool _done; /// 主循环是否已结束
 
-    std::vector<EVIO *> _fds; /// 所有的的io watcher
-    std::vector<int32_t> _fd_changes; /// 已经改变，等待设置到内核的io watcher
-    std::vector<EVWatcher *> _pendings; /// 触发了事件，等待处理的watcher
+    /// 触发了事件，等待处理的io,由io线程设置
+    std::vector<EVWatcher *> _io_pendings;
+    /// 触发了事件，等待处理的watcher
+    std::vector<EVWatcher *> _pendings;
+
+     /// 用于快速获取io对象
+    std::vector<EVIO *> _io_fast;
+    /**
+     * 用于快速获取io对象，当fd太大(尤其是windows) 时
+     * 无法分配过大的数组，linux下应该是用不到
+     */
+    std::unordered_map<int32_t, EVIO *> _io_fast_mgr;
+
+    std::vector<int32_t> _io_changes; /// 已经改变，等待设置到内核的io watcher
+    std::unordered_map<int32_t, EVIO> _io_mgr;/// 管理所有io对象
 
     /**
      * 当前拥有的timer数量

@@ -116,8 +116,8 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 
 EV::EV()
 {
-    _fds.reserve(1024);
-    _fd_changes.reserve(1024);
+    _io_fast.reserve(1024);
+    _io_changes.reserve(1024);
     _pendings.reserve(1024);
     _timers.reserve(1024);
     _periodics.reserve(1024);
@@ -174,8 +174,8 @@ int32_t EV::loop()
         // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
         
 
-        // 把fd变更设置到epoll中去
-        fd_reify();
+        // 把fd变更设置到backend中去
+        io_reify();
 
         time_update();
         _busy_time = _mn_time - last_ms;
@@ -226,6 +226,8 @@ int32_t EV::loop()
         // 这说明主循环比较繁忙，会被修正为BACKEND_MIN_TM，而不是精确的按预定时间执行
         _backend_time_coarse = BACKEND_MAX_TM + _mn_time;
 
+        // 收集io事件
+        io_event_reify();
         // 处理timer超时
         timers_reify();
         // 处理periodic超时
@@ -249,43 +251,46 @@ int32_t EV::quit()
     return 0;
 }
 
-int32_t EV::io_start(EVIO *w)
+EVIO *EV::io_start(int32_t fd, int32_t events)
 {
-    assert(!w->active());
+    auto p = _io_mgr.try_emplace(fd, fd, events, this);
+    if (!p.second) return nullptr;
 
-    int32_t fd = w->_fd;
+    EVIO *w = &(p.first->second);
 
-    if (EXPECT_FALSE(fd >= (int32_t)_fds.size())) _fds.resize(fd + 1, nullptr);
+    // 因为效率问题，这里不能加锁，不允许修改跨线程的变量
+    // set_fast_io(fd, w);
 
-    _fds[fd]   = w;
     w->_active = 1;
-    fd_change(fd);
+    io_change(fd);
 
-    return 1;
+    return w;
 }
 
-int32_t EV::io_stop(EVIO *w)
+int32_t EV::io_stop(int32_t fd)
 {
+    // 这里不能删除watcher，因为io线程可能还在使用，只是做个标记
+    // 这里是由上层逻辑调用，也不要直接加锁去删除watcher，防止堆栈中还有引用
+    EVIO *w = get_io(fd);
+    if (!w) return -1;
+
     clear_pending(w);
 
-    if (EXPECT_FALSE(!w->active())) return 0;
-
-    int32_t fd = w->_fd;
-    assert(fd >= 0 && uint32_t(fd) < _fds.size());
-
-    _fds[fd]   = nullptr;
     w->_active = 0;
-    fd_change(fd);
+    io_change(fd);
 
     return 0;
 }
 
-void EV::fd_reify()
+void EV::io_reify()
 {
-    for (auto fd : _fd_changes)
+    if (_io_changes.empty()) return;
+
+    lock();
+    for (auto fd : _io_changes)
     {
-        EVIO *io = _fds[fd];
-        if (io)
+        EVIO *io = get_io(fd);
+        if (io && io->_active)
         {
             uint8_t events = io->_events;
             _backend->modify(fd, io->_emask, events);
@@ -294,10 +299,15 @@ void EV::fd_reify()
         else
         {
             _backend->modify(fd, 0, 0); // 移除该socket
+
+            _io_mgr.erase(fd);
+            set_fast_io(fd, nullptr);
         }
     }
+    unlock();
 
-    _fd_changes.clear();
+    _backend->wake(); /// 唤醒子线程，让它及时处理修改的事件
+    _io_changes.clear();
 }
 
 int64_t EV::get_real_time()
@@ -383,14 +393,37 @@ void EV::time_update()
     }
 }
 
-void EV::fd_event(int32_t fd, int32_t revents)
+void EV::io_event(EVIO *w, int32_t revents)
 {
-    assert(fd >= 0 && fd < (int32_t)_fds.size());
+    // io线程触发时，主线程已关闭该io
+    if (!w) return;
 
-    EVIO *io = _fds[fd];
+    w->_revents |= revents;
+    if (EXPECT_TRUE(!w->_pending))
+    {
+        _io_pendings.emplace_back(w);
+        w->_pending = (int32_t)_io_pendings.size();
+    }
+}
 
-    assert(io);
-    feed_event(io, revents);
+void EV::io_event_reify()
+{
+    // 如果被io线程占用了，那也没关系，后面再重试
+    // TODO 如果io线程太忙，会不会一直获取不到？
+    // if (!_mutex.try_lock()) return;
+    lock();
+
+    for (auto w: _io_pendings)
+    {
+        // io线程设置pendings事件时，主线程中的逻辑关闭了该io
+        if (EXPECT_TRUE(w->_active))
+        {
+            _pendings.emplace_back(w);
+            w->_pending = (int32_t)_pendings.size();
+        }
+    }
+
+    unlock();
 }
 
 void EV::feed_event(EVWatcher *w, int32_t revents)

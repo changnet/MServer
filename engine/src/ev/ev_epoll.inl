@@ -154,12 +154,19 @@ void EVEPoll::backend()
             }
             else
             {
-                int32_t events =
-                    (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
-                    | (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP) ? EV_READ
-                                                                    : 0);
-
-                _ev->fd_event(ev->data.fd, events);
+                int32_t events = 0;
+                EVIO *w        = _ev->get_fast_io(fd); // io对象可能被主线程删了
+                if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+                {
+                    events |= EV_WRITE;
+                    if (w) w->write();
+                }
+                if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+                {
+                    events |= EV_WRITE;
+                    if (w) w->read();
+                }
+                _ev->io_event(w, events);
             }
         }
         do_modify();
@@ -169,6 +176,8 @@ void EVEPoll::backend()
         // https://en.cppreference.com/w/cpp/thread/condition_variable
         // the lock does not need to be held for notification
         if (ev_count > 0) _ev->wake();
+
+        // TODO 检测缓冲区，如果主线程处理不过来，这里sleep一下
     }
 
     ::close(_ep_fd);
@@ -213,12 +222,7 @@ void EVEPoll::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
      * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
      */
 
-    _ev->lock();
     _modify_event.emplace_back(fd, old_ev, new_ev);
-    _ev->unlock();
-
-    /// 唤醒子线程，让它及时处理修改的事件
-    wake();
 }
 
 void EVEPoll::do_modify()

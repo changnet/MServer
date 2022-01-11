@@ -18,9 +18,6 @@ public:
     /// 当前watcher是否被激活
     bool active() const { return 0 != _active; }
 
-    /// 设置主循环指针
-    void set(EV *loop) { _loop = loop; }
-
     /// 回调函数
     virtual void callback(int32_t revents)
     {
@@ -53,26 +50,23 @@ class EVIO final : public EVWatcher
 {
 public:
     ~EVIO();
-    explicit EVIO(EV *_loop = nullptr);
+    explicit EVIO(int32_t fd, int32_t events, EV *loop);
+
+    /// 由io线程调用的读函数，必须线程安全
+    int32_t read();
+    /// 由io线程调用的写函数，必须线程安全
+    int32_t write();
 
     /// 获取io描述符
     int32_t get_fd() const { return _fd; }
-    /// 设置io描述符
-    void set_fd(int32_t fd) { _fd = fd; }
-    uint8_t get_mask() const { return _emask; }
-
-    void start();
-
-    void stop();
-
-    using EVWatcher::set;
-    void set(int32_t fd, uint8_t events);
+    /// 重新设置当前io监听的事件
+    void set(int32_t events);
 
 private:
     friend class EV;
 
     uint8_t _emask;  /// 已经设置到内核(epoll、poll)的事件
-    uint8_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
+    int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
     int32_t _fd;     /// io描述符
 };
 
@@ -90,7 +84,7 @@ public:
 
 public:
     ~EVTimer();
-    explicit EVTimer(int32_t id, EV *_loop);
+    explicit EVTimer(int32_t id, EV *loop);
 
     /// 重新调整定时器
     void reschedule(int64_t now);
