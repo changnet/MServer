@@ -13,7 +13,7 @@ enum
     EV_NONE  = 0x00,            /* no events */
     EV_READ  = 0x01,            /* ev_io detected read will not block */
     EV_WRITE = 0x02,            /* ev_io detected write will not block */
-    EV_DEL   = 0x03,            /* 需要删除该watcher */
+    EV_ACCEPT = 0x03,            /* 监听事件 */
     EV_TIMER = 0x00000100,      /* timer timed out */
     EV_ERROR = (int)0x80000000  /* sent when an error occurs */
 };

@@ -3,7 +3,6 @@
 #include "../ev/ev_watcher.hpp"
 #include "../global/global.hpp"
 
-#include "buffer.hpp"
 #include "codec/codec.hpp"
 #include "io/io.hpp"
 #include "packet/packet.hpp"
@@ -75,7 +74,6 @@ public:
     void start(int32_t fd = -1);
     void stop(bool flush = false);
     int32_t validate();
-    void pending_send();
 
     /// 是否已关闭
     bool is_closed() const { return !fd_valid(fd()); }
@@ -98,9 +96,7 @@ public:
     /// 添加待发送数据
     inline void append(const void *data, size_t len)
     {
-        _send.append(data, len);
-
-        pending_send();
+        _w->get_send_buffer().append(data, len);
     }
 
     int32_t set_io(IO::IOT io_type, int32_t param);
@@ -110,24 +106,19 @@ public:
     class Packet *get_packet() const { return _packet; }
     Codec::CodecType get_codec_type() const { return _codec_ty; }
 
-    inline int32_t fd() const { return _w.get_fd(); }
+    inline int32_t fd() const { return _fd; }
     inline uint32_t conn_id() const { return _conn_id; }
     inline ConnType conn_type() const { return _conn_ty; }
-    inline bool active() const { return _w.active(); }
-    inline class Buffer &recv_buffer() { return _recv; }
-    inline class Buffer &send_buffer() { return _send; }
-
-    inline int32_t get_pending() const { return _pending; }
-    inline int32_t set_pending(int32_t pending) { return _pending = pending; }
 
     inline void set_recv_size(size_t max, size_t ctx_size)
     {
-        _recv.set_buffer_size(max, ctx_size);
+        assert(_w);
+        _w->get_recv_buffer().set_buffer_size(max, ctx_size);
     }
     inline void set_send_size(size_t max, size_t ctx_size, OverActionType oa)
     {
         _over_action = oa;
-        _send.set_buffer_size(max, ctx_size);
+        _w->get_send_buffer().set_buffer_size(max, ctx_size);
     }
 
     inline int64_t get_object_id() const { return _object_id; }
@@ -162,14 +153,12 @@ private:
     int32_t io_status_check(int32_t ecode);
 
 protected:
-    Buffer _recv;
-    Buffer _send;
-    int32_t _pending;
     uint32_t _conn_id;
     ConnType _conn_ty;
 
 private:
-    EVIO _w;
+    int32_t _fd; /// 当前socket的文件描述符
+    EVIO *_w; /// io事件监视器
     int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
     class IO *_io;

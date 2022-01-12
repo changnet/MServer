@@ -133,13 +133,13 @@ Socket::Socket(uint32_t conn_id, ConnType conn_ty)
     _packet    = nullptr;
     _object_id = 0;
 
-    _pending     = 0;
+    _fd = invalid_fd();
+    _w  = nullptr;
+
     _conn_id     = conn_id;
     _conn_ty     = conn_ty;
     _codec_ty    = Codec::CT_NONE;
     _over_action = OAT_NONE;
-
-    _w.set(StaticGlobal::ev());
 
     C_OBJECT_ADD("socket");
 }
@@ -152,55 +152,22 @@ Socket::~Socket()
     _io     = nullptr;
     _packet = nullptr;
 
-    _recv.clear();
-    _send.clear();
-
     C_OBJECT_DEC("socket");
-    assert(0 == _pending && -1 == _w.get_fd());
+
+    assert(!_w);
 }
 
 void Socket::stop(bool flush)
 {
-    if (_pending)
-    {
-        StaticGlobal::lua_ev()->remove_pending(_pending);
-        _pending = 0;
-
-        // 正常情况下，服务器不会主动关闭与游戏客户端的连接
-        // 如果出错或者关服才会主动关闭，这时不会flush数据的
-        // 一些特殊的连接，比如服务器之间的连接，或者服务器与后端的连接
-        // 关闭的时候必须发送完所有数据，这种情况比较少，直接循环发送就可以了
-        if (flush)
-        {
-            int32_t code = 0;
-            int32_t byte = 0;
-
-            int32_t try_times = 0;
-            do
-            {
-                code = _io->send(byte);
-
-                try_times++;
-                if (try_times > 32)
-                {
-                    ELOG("socket flush data try too many times:%d", try_times);
-                }
-            } while (2 == code && try_times < 512);
-        }
-    }
-
-    if (fd_valid(_w.get_fd()))
-    {
-        ::close(_w.get_fd());
-        _w.stop();
-        _w.set_fd(invalid_fd()); /* must after stop */
-    }
-
-    // 这里不能清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
+    // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
-    // 例如 StreamPacket::unpack 在dispatch后会删掉已处理的缓冲区
-    // _recv.clear();
-    // _send.clear();
+    // ev那边需要做异步删除
+    if (_w) StaticGlobal::ev()->io_stop(_fd);
+
+    if (fd_valid(_fd)) ::close(_fd);
+
+    _w = nullptr;
+    _fd = invalid_fd();
 
     C_SOCKET_TRAFFIC_DEL(_conn_id);
 }
@@ -647,18 +614,11 @@ FAIL:
     return -1;
 }
 
-void Socket::pending_send()
-{
-    if (0 != _pending) return; // 已经在发送队列
-    /* 放到发送队列，一次发送 */
-    _pending = StaticGlobal::lua_ev()->pending_send(this);
-}
-
 void Socket::listen_cb(int32_t revents)
 {
     UNUSED(revents);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    while (Socket::active())
+    while (fd_valid(_fd)
     {
         int32_t new_fd = (int32_t)::accept(_w.get_fd(), nullptr, nullptr);
         if (!fd_valid(new_fd))

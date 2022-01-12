@@ -261,7 +261,7 @@ EVIO *EV::io_start(int32_t fd, int32_t events)
     // 因为效率问题，这里不能加锁，不允许修改跨线程的变量
     // set_fast_io(fd, w);
 
-    w->_active = 1;
+    w->_active = 2;
     io_change(fd);
 
     return w;
@@ -295,6 +295,13 @@ void EV::io_reify()
             uint8_t events = io->_events;
             _backend->modify(fd, io->_emask, events);
             io->_emask = events;
+
+            // 新增
+            if (2 == io->_active)
+            {
+                io->_active = 1;
+                set_fast_io(fd, io);
+            }
         }
         else
         {
@@ -395,9 +402,6 @@ void EV::time_update()
 
 void EV::io_event(EVIO *w, int32_t revents)
 {
-    // io线程触发时，主线程已关闭该io
-    if (!w) return;
-
     w->_revents |= revents;
     if (EXPECT_TRUE(!w->_pending))
     {

@@ -131,6 +131,7 @@ void EVEPoll::backend()
                 FATAL("epoll_wait errno(%d)", errno);
             }
 
+            _ev->quit();
             break;
         }
 
@@ -154,19 +155,40 @@ void EVEPoll::backend()
             }
             else
             {
-                int32_t events = 0;
-                EVIO *w        = _ev->get_fast_io(fd); // io对象可能被主线程删了
-                if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+                EVIO *w = _ev->get_fast_io(fd);
+                // io对象可能被主线程删了
+                if (w)
                 {
-                    events |= EV_WRITE;
-                    if (w) w->write();
+                    int32_t set_ev     = ev->data.u32;
+                    int32_t events = 0;
+                    if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+                    {
+                        events |= EV_WRITE;
+                        w->write();
+                    }
+                    if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+                    {
+                        if (set_ev & EV_READ)
+                        {
+                            events |= EV_READ;
+                            w->read();
+                        }
+                        else
+                        {
+                            events |= EV_ACCEPT;
+                        }
+                    }
+                    if (set_ev & events)
+                    {
+                        _ev->io_event(w, events);
+                    }
+                    else
+                    {
+                        // epoll收到事件，但没有触发io_event，一般是io线程自己添加写事件来发送数据
+                        // 如果有其他事件，应该是哪里出错了
+                        assert(events == EV_WRITE);
+                    }
                 }
-                if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
-                {
-                    events |= EV_WRITE;
-                    if (w) w->read();
-                }
-                _ev->io_event(w, events);
             }
         }
         do_modify();
@@ -241,6 +263,7 @@ void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
     memset(&ev, 0, sizeof(ev));
 
     ev.data.fd = fd;
+    ev.data.u32 = new_ev;
 
     /* epoll只是监听fd，不负责fd的打开或者关闭。
      * 但是，如果一个fd被关闭，epoll会自动解除监听，并不会通知我们。
@@ -255,7 +278,7 @@ void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
      * ET(Edge Trigger)只支持no-block，一个事件只通知一次
      * epoll默认是LT模式
      */
-    ev.events = (new_ev & EV_READ ? (int32_t)EPOLLIN : 0)
+    ev.events = (new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)EPOLLIN : 0)
                 | (new_ev & EV_WRITE ? (int32_t)EPOLLOUT : 0) /* | EPOLLET */;
 
     /**

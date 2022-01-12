@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include "buffer.hpp"
+
 class EV;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,12 +64,24 @@ public:
     /// 重新设置当前io监听的事件
     void set(int32_t events);
 
+    inline class Buffer &get_recv_buffer()
+    {
+        return _recv;
+    }
+    inline class Buffer &get_send_buffer()
+    {
+        return _send;
+    }
+
 private:
     friend class EV;
 
     uint8_t _emask;  /// 已经设置到内核(epoll、poll)的事件
     int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
     int32_t _fd;     /// io描述符
+
+    Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
+    Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
 };
 
 ////////////////////////////////////////////////////////////////////////////////
