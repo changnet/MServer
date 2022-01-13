@@ -14,6 +14,7 @@ enum
     EV_READ  = 0x01,            /* ev_io detected read will not block */
     EV_WRITE = 0x02,            /* ev_io detected write will not block */
     EV_ACCEPT = 0x03,            /* 监听事件 */
+    EV_CONNECT = 0x04,            /* 连接事件 */
     EV_TIMER = 0x00000100,      /* timer timed out */
     EV_ERROR = (int)0x80000000  /* sent when an error occurs */
 };
@@ -127,6 +128,14 @@ public:
     void io_change(int32_t fd)
     {
         _io_changes.emplace_back(fd);
+    }
+    /**
+     * @brief 把一个io操作发送给io线程执行
+     * @param fd 
+     * @param events 
+    */
+    void io_actioin(int32_t fd, int32_t events)
+    {
     }
 
     /// 加锁

@@ -163,8 +163,15 @@ void EVEPoll::backend()
                     int32_t events = 0;
                     if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
                     {
-                        events |= EV_WRITE;
-                        w->write();
+                        if (set_ev & EV_WRITE)
+                        {
+                            events |= EV_WRITE;
+                            w->write();
+                        }
+                        else
+                        {
+                            events |= EV_CONNECT;
+                        }
                     }
                     if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
                     {
@@ -279,7 +286,7 @@ void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
      * epoll默认是LT模式
      */
     ev.events = (new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)EPOLLIN : 0)
-                | (new_ev & EV_WRITE ? (int32_t)EPOLLOUT : 0) /* | EPOLLET */;
+                | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)EPOLLOUT : 0) /* | EPOLLET */;
 
     /**
      * socket被关闭时，内核自动从epoll中删除。这时执行EPOLL_CTL_DEL会触发EBADF

@@ -62,16 +62,17 @@ public:
      */
     static int32_t get_addr_info(std::vector<std::string> &addrs,
                                  const char *host);
-
-    void listen_cb(int32_t revents);
-    void command_cb(int32_t revents);
-    void connect_cb(int32_t revents);
+    /**
+     * @brief 收到io回调
+     * @param revents 回调的事件，如EV_ACCEPT等
+    */
+    void io_cb(int32_t revents);
 
     int32_t recv();
     int32_t send();
 
     /// 开始接受socket数据
-    void start(int32_t fd = -1);
+    bool start(int32_t fd = -1);
     void stop(bool flush = false);
     int32_t validate();
 
@@ -151,6 +152,10 @@ public:
 private:
     // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32_t io_status_check(int32_t ecode);
+
+    void listen_cb();
+    void command_cb();
+    void connect_cb();
 
 protected:
     uint32_t _conn_id;

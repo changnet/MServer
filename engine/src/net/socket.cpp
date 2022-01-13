@@ -193,9 +193,6 @@ int32_t Socket::recv()
 
     C_RECV_TRAFFIC_ADD(_conn_id, _conn_ty, byte);
 
-    // SSL握手成功，有数据待发送则会出现这种情况
-    if (EXPECT_FALSE(2 == ret)) pending_send();
-
     return ret;
 }
 
@@ -219,11 +216,6 @@ int32_t Socket::send()
 
     assert(_io);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
-    /* 去除发送标识，因为发送时，pending标识会变。
-     * 如果需要再次发送，则主循环需要重设此标识
-     */
-    _pending = 0;
 
     // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
     int32_t byte = 0;
@@ -422,33 +414,32 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
     return 0;
 }
 
-void Socket::start(int32_t fd)
+bool Socket::start(int32_t fd)
 {
-    assert(0 == _send.get_used_size() && 0 == _recv.get_used_size());
-
     // connect成功时，已有fd, accept成功时，需要从外部传入fd
-    if (fd_valid(fd))
-    {
-        assert(!fd_valid(_w.get_fd()));
-    }
-    else
-    {
-        fd = _w.get_fd();
-        assert(fd_valid(fd));
-    }
+    assert(_fd == fd || !fd_valid(_fd));
+
+    assert(!_w);
+
+    _fd = fd;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    _w.set(fd, EV_READ);
-    _w.bind(&Socket::command_cb, this);
-
-    if (!_w.active()) _w.start();
+    _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
+    if (!_w)
+    {
+        ELOG("ev io start fail: %d", _fd);
+        return false;
+    }
+    _w->bind(&Socket::command_cb, this);
 
     C_SOCKET_TRAFFIC_NEW(_conn_id);
+
+    return true;
 }
 
 int32_t Socket::connect(const char *host, int32_t port)
 {
-    assert(!fd_valid(_w.get_fd()));
+    assert(!fd_valid(_fd));
 
     // 创建新socket并设置为非阻塞
     int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
@@ -498,9 +489,15 @@ int32_t Socket::connect(const char *host, int32_t port)
         }
     }
 
-    _w.bind(&Socket::connect_cb, this);
-    _w.set(fd, EV_WRITE);
-    _w.start();
+    assert(!_w);
+    _w = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
+    if (!_w)
+    {
+        ELOG("ev io start fail: %d", fd);
+        return -1;
+    }
+    _fd = fd;
+    _w->bind(&Socket::connect_cb, this);
 
     return fd;
 }
@@ -509,7 +506,7 @@ int32_t Socket::validate()
 {
     int32_t err   = 0;
     socklen_t len = sizeof(err);
-    if (getsockopt(_w.get_fd(), SOL_SOCKET, SO_ERROR, (char *)&err, &len))
+    if (getsockopt(_fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len))
     {
         return error_no();
     }
@@ -519,14 +516,14 @@ int32_t Socket::validate()
 
 const char *Socket::address(char *buf, size_t len, int *port)
 {
-    if (!fd_valid(_w.get_fd())) return nullptr;
+    if (!fd_valid(_fd)) return nullptr;
 
     struct sockaddr_in_x addr;
 
     memset(&addr, 0, sizeof(addr));
     socklen_t addr_len = sizeof(addr);
 
-    if (getpeername(_w.get_fd(), (struct sockaddr *)&addr, &addr_len) < 0)
+    if (getpeername(_fd, (struct sockaddr *)&addr, &addr_len) < 0)
     {
         ELOG("socket::address getpeername error: %s\n", strerror(errno));
         return nullptr;
@@ -542,8 +539,14 @@ const char *Socket::address(char *buf, size_t len, int *port)
 
 int32_t Socket::listen(const char *host, int32_t port)
 {
-    int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (!fd_valid(fd))
+    if (_w)
+    {
+        ELOG("this socket already have fd: %d", _fd);
+        return -1;
+    }
+
+    _fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
+    if (!fd_valid(_fd))
     {
         return -1;
     }
@@ -558,20 +561,20 @@ int32_t Socket::listen(const char *host, int32_t port)
      * to restart server immediately,you need to reuse address.but note you may
      * receive the old data from last time.
      */
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
+    if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
         < 0)
     {
         goto FAIL;
     }
 
-    if (non_block(fd) < 0)
+    if (non_block(_fd) < 0)
     {
         goto FAIL;
     }
 
 #ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    if (non_ipv6only(fd))
+    if (non_ipv6only(_fd))
     {
         goto FAIL;
     }
@@ -593,34 +596,54 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    if (::bind(fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
+    if (::bind(_fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
     {
         goto FAIL;
     }
 
-    if (::listen(fd, 256) < 0)
+    if (::listen(_fd, 256) < 0)
     {
         goto FAIL;
     }
 
-    _w.bind(&Socket::listen_cb, this);
-    _w.set(fd, EV_READ);
-    _w.start();
+    _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
+    if (!_w)
+    {
+        ELOG("ev io start fail: %d", fd);
+        goto FAIL;
+    }
+    _w->bind(&Socket::io_cb, this);
 
-    return fd;
+    return _fd;
 
 FAIL:
-    ::close(fd);
+    ::close(_fd);
+    _fd = invalid_fd();
     return -1;
 }
 
-void Socket::listen_cb(int32_t revents)
+void Socket::io_cb(int32_t revents)
 {
-    UNUSED(revents);
-    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    while (fd_valid(_fd)
+    if (EV_READ & revents)
     {
-        int32_t new_fd = (int32_t)::accept(_w.get_fd(), nullptr, nullptr);
+        command_cb();
+    }
+    else if (EV_ACCEPT & revents)
+    {
+        listen_cb();
+    }
+    else if (EV_WRITE & revents)
+    {
+        connect_cb();
+    }
+}
+
+void Socket::listen_cb()
+{
+    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    while (fd_valid(_fd))
+    {
+        int32_t new_fd = (int32_t)::accept(_fd, nullptr, nullptr);
         if (!fd_valid(new_fd))
         {
             int32_t e = error_no();
@@ -658,9 +681,8 @@ void Socket::listen_cb(int32_t revents)
     }
 }
 
-void Socket::connect_cb(int32_t revents)
+void Socket::connect_cb()
 {
-    UNUSED(revents);
     /*
      * connect回调
      * man connect
@@ -678,10 +700,10 @@ void Socket::connect_cb(int32_t revents)
 
     if (0 == ecode)
     {
-        KEEP_ALIVE(Socket::fd());
-        USER_TIMEOUT(Socket::fd());
+        KEEP_ALIVE(_fd);
+        USER_TIMEOUT(_fd);
 
-        Socket::start();
+        Socket::start(_fd);
     }
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */
@@ -689,7 +711,7 @@ void Socket::connect_cb(int32_t revents)
     bool ok                        = network_mgr->connect_new(_conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
-    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_w.get_fd())))
+    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd)))
     {
         init_connect();
     }
@@ -699,9 +721,8 @@ void Socket::connect_cb(int32_t revents)
     }
 }
 
-void Socket::command_cb(int32_t revents)
+void Socket::command_cb()
 {
-    UNUSED(revents);
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
     /* 在脚本报错的情况下，可能无法设置 io和packet */
@@ -795,14 +816,14 @@ int32_t Socket::io_status_check(int32_t ecode)
 
 int32_t Socket::init_accept()
 {
-    int32_t ecode = _io->init_accept(_w.get_fd());
+    int32_t ecode = _io->init_accept(_fd);
 
     return io_status_check(ecode);
 }
 
 int32_t Socket::init_connect()
 {
-    int32_t ecode = _io->init_connect(_w.get_fd());
+    int32_t ecode = _io->init_connect(_fd);
 
     return io_status_check(ecode);
 }
