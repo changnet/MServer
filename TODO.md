@@ -1,27 +1,19 @@
-* mongodb、mysql的C++代码需要优化下
-  * mongo改名mongodb
-  * mongodb日志去掉或者放到脚本
-  * upsert、multi、single这些全改成flag，不然传太多字段了
-  * 处理停服时，不需要回调的情况
-* gdb break lua死循环需要处理下(看能不能做成打印堆栈)
-* mysql阻塞太多数据时，stop不了，加下日志。（其他线程也一样处理？）
-* 现在日志线程不是最后一个关闭的，如果其他线程还在输出日志，会触发断言
-* 日志缓存需要优化一下，并且需要做成线程安全。缓存考虑用string来append即可
+ssl的发送机制有问题，未握手完成时，一直在send队列，假如对方迟迟未发送握手数据，这时候会处理死循环地直尝试写数据
 
-* mysql增加lua table直接存mysql接口，并且测试一下和格式化字符串的效率
+fd、io对象是在主线程创建，io线程读写。主线程关闭socket时，io线程正常读写怎么办？（EV_CLOSE或者加锁？epoll_wait时，socket也不能关闭）
+创建socket后，可能由于脚本报错而无法设置io对象，需要处理
+
 * 实现场景的static区域属性(不可修改)和dynamic区域属性(可根据逻辑创建和修改)
 * 技能的配置比较复杂，看看能不能设计出多action，多result，多条件控制又比较容易明白的excel配置
 * 主循环是否使用分时器
-* async_worker（属性计算、技能延后，技能延后看看是放这里还是主循环）
+
 * profile看效率问题
 * lint优化代码
 * mongodb的result感觉要用个object_pool
-* set_initialize这个初始化流程优化一下，改成注册是不是要好一点
 * stream_packet.cc里和ws_stream_packet.cc里的sc_command和cs_command可以合并复用
 * 考虑用C++编译Lua:https://www.liangzl.com/get-article-detail-140988.html
 * lrank中的排行榜把多因子独立出去形成一个类，因为大部分都是单因子排序
 * lmongo里有很多接口参数是旧的，需要更新为最新版本
-* bucket_rank、insertion_rank需要改下类名
 * 由于使用了自动生成协议编码机制，原来的协议相关需要优化下，比如 截取字符串取package名
 
 #优化定时器（加到wiki）

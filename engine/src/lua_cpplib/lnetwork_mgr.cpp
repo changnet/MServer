@@ -797,9 +797,6 @@ bool LNetworkMgr::connect_del(uint32_t conn_id)
     return true;
 }
 
-/* 设置socket的io方式
- * network_mgr:set_conn_io( conn_id,io_type[,io_ctx] )
- */
 int32_t LNetworkMgr::set_conn_io(lua_State *L)
 {
     uint32_t conn_id = luaL_checkinteger32(L, 1);

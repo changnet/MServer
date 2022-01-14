@@ -3,8 +3,8 @@
 #include "../ev/ev_watcher.hpp"
 #include "../global/global.hpp"
 
-#include "codec/codec.hpp"
 #include "io/io.hpp"
+#include "codec/codec.hpp"
 #include "packet/packet.hpp"
 
 class LEV;
@@ -166,7 +166,6 @@ private:
     EVIO *_w; /// io事件监视器
     int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
-    class IO *_io;
     class Packet *_packet;
     Codec::CodecType _codec_ty;
     OverActionType _over_action; /// 缓冲区溢出时，采取的措施

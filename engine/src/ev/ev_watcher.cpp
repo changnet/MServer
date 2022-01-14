@@ -1,6 +1,7 @@
 #include "ev_watcher.hpp"
 
 #include "ev.hpp"
+#include "../net/io/io.hpp"
 
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
@@ -15,6 +16,8 @@ EVIO::EVIO(int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
     _emask  = 0;
     _fd     = fd;
     _events = events;
+
+    _io = nullptr;
 }
 
 EVIO::~EVIO()
@@ -26,6 +29,7 @@ void EVIO::set(int32_t events)
     _events = events;
     _loop->io_change(_fd);
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)

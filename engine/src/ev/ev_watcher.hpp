@@ -5,6 +5,7 @@
 #include "buffer.hpp"
 
 class EV;
+class IO;
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
@@ -48,6 +49,9 @@ protected:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief io事件监听器
+*/
 class EVIO final : public EVWatcher
 {
 public:
@@ -63,14 +67,30 @@ public:
     int32_t get_fd() const { return _fd; }
     /// 重新设置当前io监听的事件
     void set(int32_t events);
-
+    /**
+     * @brief 获取接收缓冲区对象
+     */
     inline class Buffer &get_recv_buffer()
     {
         return _recv;
     }
+    /**
+     * @brief 获取发送缓冲区对象
+     */
     inline class Buffer &get_send_buffer()
     {
         return _send;
+    }
+    /**
+     * @brief 设置io读写参数
+     * @param io_type 
+     * @param param 
+     * @return 
+     */
+    int32_t set_io(IO *io)
+    {
+        assert(!_io);
+        _io = io;
     }
 
 private:
@@ -82,6 +102,7 @@ private:
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
+    IO *_io; /// 负责数据读写的io对象，如ssl读写
 };
 
 ////////////////////////////////////////////////////////////////////////////////
