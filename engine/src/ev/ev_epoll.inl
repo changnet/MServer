@@ -166,7 +166,7 @@ void EVEPoll::backend()
                         if (set_ev & EV_WRITE)
                         {
                             events |= EV_WRITE;
-                            w->write();
+                            w->send();
                         }
                         else
                         {
@@ -178,7 +178,7 @@ void EVEPoll::backend()
                         if (set_ev & EV_READ)
                         {
                             events |= EV_READ;
-                            w->read();
+                            w->recv();
                         }
                         else
                         {
@@ -285,7 +285,7 @@ void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
      * ET(Edge Trigger)只支持no-block，一个事件只通知一次
      * epoll默认是LT模式
      */
-    ev.events = (new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)EPOLLIN : 0)
+    ev.events = ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)EPOLLIN : 0)
                 | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)EPOLLOUT : 0) /* | EPOLLET */;
 
     /**

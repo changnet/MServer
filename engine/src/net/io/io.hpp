@@ -8,13 +8,25 @@ class Buffer;
 class IO
 {
 public:
-    typedef enum
+    /// io类型
+    enum IOType
     {
         IOT_NONE = 0, ///< 默认IO类型，无特别处理
         IOT_SSL  = 1, ///< 使用SSL加密
 
         IOT_MAX ///< IO类型最大值
-    } IOT;
+    };
+
+    /// io状态码
+    enum IOStatus
+    {
+        IOS_OK    = 0,   /// 无错误
+        IOS_READ  = 1,   /// 需要重读
+        IOS_WRITE = 2,   /// 需要重写
+        IOS_BUSY  = 3,   /// 繁忙，比如缓冲区满之类的
+        IOS_CLOSE = 4,   /// 连接被关闭
+        IOS_ERROR = 0xFF /// 错误
+    };
 
 public:
     virtual ~IO();
@@ -22,16 +34,14 @@ public:
 
     /**
      * 接收数据
-     * @param byte 接收的数据长度
-     * @return < 0 错误，0 成功，1 需要重读，2 需要重写
+     * @return IOStatus
      */
-    virtual int32_t recv(int32_t &byte);
+    virtual IOStatus recv();
     /**
      * 发送数据
-     * @param byte 发送的数据长度
-     * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
+     * @return IOStatus
      */
-    virtual int32_t send(int32_t &byte);
+    virtual IOStatus send();
     /**
      * 初始化接受的连接
      * @return  < 0 错误，0 成功，1 需要重读，2 需要重写

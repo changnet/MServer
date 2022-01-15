@@ -292,7 +292,7 @@ void EV::io_reify()
         EVIO *io = get_io(fd);
         if (io && io->_active)
         {
-            uint8_t events = io->_events;
+            int32_t events = io->_events;
             _backend->modify(fd, io->_emask, events);
             io->_emask = events;
 

@@ -68,9 +68,6 @@ public:
     */
     void io_cb(int32_t revents);
 
-    int32_t recv();
-    int32_t send();
-
     /// 开始接受socket数据
     bool start(int32_t fd = -1);
     void stop(bool flush = false);
@@ -91,16 +88,10 @@ public:
     int32_t listen(const char *host, int32_t port);
     int32_t connect(const char *host, int32_t port);
 
-    int32_t init_accept();
-    int32_t init_connect();
-
     /// 添加待发送数据
-    inline void append(const void *data, size_t len)
-    {
-        _w->get_send_buffer().append(data, len);
-    }
+    void append(const void *data, size_t len);
 
-    int32_t set_io(IO::IOT io_type, int32_t param);
+    int32_t set_io(IO::IOType io_type, int32_t param);
     int32_t set_packet(Packet::PacketType packet_type);
     int32_t set_codec_type(Codec::CodecType codec_type);
 
@@ -150,9 +141,7 @@ public:
     static int32_t is_error();
 
 private:
-    // 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32_t io_status_check(int32_t ecode);
-
+    void close_cb();
     void listen_cb();
     void command_cb();
     void connect_cb();

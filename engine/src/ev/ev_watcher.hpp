@@ -2,10 +2,10 @@
 
 #include <functional>
 
+#include "../net/io/io.hpp"
 #include "buffer.hpp"
 
 class EV;
-class IO;
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
@@ -57,11 +57,17 @@ class EVIO final : public EVWatcher
 public:
     ~EVIO();
     explicit EVIO(int32_t fd, int32_t events, EV *loop);
-
-    /// 由io线程调用的读函数，必须线程安全
-    int32_t read();
-    /// 由io线程调用的写函数，必须线程安全
-    int32_t write();
+    
+    /**
+     * @brief 由io线程调用的读函数，必须线程安全
+     * @return < 0 错误，0 成功，1 需要重读，2 需要重写
+    */
+    IO::IOStatus recv();
+    /**
+     * @brief 由io线程调用的写函数，必须线程安全
+     * @return < 0 错误，0 成功，1 需要重读，2 需要重写
+    */
+    IO::IOStatus send();
 
     /// 获取io描述符
     int32_t get_fd() const { return _fd; }
@@ -93,10 +99,15 @@ public:
         _io = io;
     }
 
+    /// 初始化新增连接
+    void init_accept();
+    /// 初始化主动发起的连接
+    void init_connect();
+
 private:
     friend class EV;
 
-    uint8_t _emask;  /// 已经设置到内核(epoll、poll)的事件
+    int32_t _emask;  /// 已经设置到内核(epoll、poll)的事件
     int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
     int32_t _fd;     /// io描述符
 

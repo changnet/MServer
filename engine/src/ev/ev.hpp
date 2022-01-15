@@ -9,14 +9,14 @@
 /* eventmask, revents, events... */
 enum
 {
-    EV_UNDEF = (int)0xFFFFFFFF, /* guaranteed to be invalid */
-    EV_NONE  = 0x00,            /* no events */
-    EV_READ  = 0x01,            /* ev_io detected read will not block */
-    EV_WRITE = 0x02,            /* ev_io detected write will not block */
-    EV_ACCEPT = 0x03,            /* 监听事件 */
-    EV_CONNECT = 0x04,            /* 连接事件 */
-    EV_TIMER = 0x00000100,      /* timer timed out */
-    EV_ERROR = (int)0x80000000  /* sent when an error occurs */
+    EV_NONE  = 0x00,            /// 无任何事件
+    EV_READ  = 0x01,            /// socket读(接收)
+    EV_WRITE = 0x02,            /// socket写(发送)
+    EV_ACCEPT = 0x04,            /// 监听到有新连接
+    EV_CONNECT = 0x08,            /// 连接成功或者失败
+    EV_CLOSE   = 0x10,            /// socket关闭
+    EV_TIMER = 0x00000100,      /// 定时器超时
+    EV_ERROR = (int)0x80000000  /// 出错
 };
 
 class EVIO;

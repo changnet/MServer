@@ -1,7 +1,6 @@
 #include "ev_watcher.hpp"
 
 #include "ev.hpp"
-#include "../net/io/io.hpp"
 
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
@@ -28,6 +27,32 @@ void EVIO::set(int32_t events)
 {
     _events = events;
     _loop->io_change(_fd);
+}
+
+IO::IOStatus EVIO::recv()
+{
+    // lua报错，在启动socket对象后无法正常设置io参数
+    // 如果是其他情况，应该是哪里有逻辑错误了
+    if (!_io) return IO::IOS_ERROR;
+
+    return _io->recv();
+}
+
+IO::IOStatus EVIO::send()
+{
+    // lua报错，在启动socket对象后无法正常设置io参数
+    // 如果是其他情况，应该是哪里有逻辑错误了
+    if (!_io) return IO::IOS_ERROR;
+
+    return _io->send();
+}
+
+void EVIO::init_accept()
+{
+}
+
+void EVIO::init_connect()
+{
 }
 
 ////////////////////////////////////////////////////////////////////////////////

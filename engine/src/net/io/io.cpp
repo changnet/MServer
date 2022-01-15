@@ -24,47 +24,41 @@ IO::~IO()
     _send = nullptr;
 }
 
-// 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t IO::recv(int32_t &byte)
+IO::IOStatus IO::recv()
 {
     assert(Socket::fd_valid(_fd));
 
-    byte = 0;
-    if (!_recv->reserved()) return -1; /* no more memory */
+    // 用光了所有缓冲区，主线程那边来不及处理
+    if (!_recv->reserved()) return IOS_BUSY;
 
     // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
     size_t size = _recv->get_space_size();
     int32_t len = (int32_t)::recv(_fd, _recv->get_space_ctx(), (int32_t)size, 0);
     if (EXPECT_TRUE(len > 0))
     {
-        byte = len;
         _recv->add_used_offset(len);
-        return 0;
+        return IOS_OK;
     }
 
     if (0 == len)
     {
-        byte = 0;
-        return -1; // 对方主动断开
+        return IOS_CLOSE; // 对方主动断开
     }
 
     /* error happen */
     if (Socket::is_error())
     {
-        byte = -1;
         ELOG("io recv:%s(%d)", Socket::str_error(), Socket::error_no());
-        return -1;
+        return IOS_ERROR;
     }
 
-    return 1; // 重试
+    return IOS_READ; // 重试
 }
 
-// * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t IO::send(int32_t &byte)
+IO::IOStatus IO::send()
 {
     assert(Socket::fd_valid(_fd));
 
-    byte         = 0;
     size_t bytes = _send->get_used_size();
     assert(bytes > 0);
 
@@ -72,22 +66,21 @@ int32_t IO::send(int32_t &byte)
 
     if (EXPECT_TRUE(len > 0))
     {
-        byte = len;
         _send->remove(len);
-        return 0 == _send->get_used_size() ? 0 : 2;
+        return 0 == _send->get_used_size() ? IOS_OK : IOS_WRITE;
     }
 
-    if (0 == len) return -1; // 对方主动断开
+    if (0 == len) return IOS_CLOSE; // 对方主动断开
 
     /* error happen */
     if (Socket::is_error())
     {
         ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
-        return -1;
+        return IOS_ERROR;
     }
 
     /* need to try again */
-    return 2;
+    return IOS_WRITE;
 }
 
 int32_t IO::init_accept(int32_t fd)

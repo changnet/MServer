@@ -162,99 +162,53 @@ void Socket::stop(bool flush)
 
     if (fd_valid(_fd)) ::close(_fd);
 
-    _w = nullptr;
+    _w  = nullptr;
     _fd = invalid_fd();
 
     C_SOCKET_TRAFFIC_DEL(_conn_id);
 }
 
-int32_t Socket::recv()
+void Socket::append(const void *data, size_t len)
 {
-    assert(_io);
-    class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    auto &send_buff = _w->get_send_buffer();
+    send_buff.append(data, len);
 
-    // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32_t byte = 0;
-    int32_t ret  = _io->recv(byte);
-    if (EXPECT_FALSE(ret < 0))
+    /**
+     * 一般缓冲区都设置得足够大
+     * 如果都溢出了，说明接收端非常慢，比如断点调试，这时候适当处理一下
+     */
+    if (EXPECT_TRUE(!send_buff.is_overflow())) return;
+
+    // 对于客户端这种不重要的，可以断开连接
+    if (OAT_KILL == _over_action)
     {
-        // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-        if (0 == byte && _packet) _packet->on_closed();
+        ELOG("socket send buffer overflow, kill connection,"
+             "object:" FMT64d ",conn:%d,buffer size:%d",
+             _object_id, _conn_id, send_buff.get_all_used_size());
 
         Socket::stop();
+
+        class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
         network_mgr->connect_del(_conn_id);
 
-        return -1;
+        return;
     }
 
-    C_RECV_TRAFFIC_ADD(_conn_id, _conn_ty, byte);
-
-    return ret;
-}
-
-/* 发送数据
- * return: < 0 error,= 0 success,> 0 bytes still need to be send
- */
-int32_t Socket::send()
-{
-#define IO_SEND()                                     \
-    do                                                \
-    {                                                 \
-        ret = _io->send(byte);                        \
-        if (EXPECT_FALSE(ret < 0))                    \
-        {                                             \
-            Socket::stop();                           \
-            network_mgr->connect_del(_conn_id);       \
-            return -1;                                \
-        }                                             \
-        C_SEND_TRAFFIC_ADD(_conn_id, _conn_ty, byte); \
-    } while (0)
-
-    assert(_io);
-    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
-    // 返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32_t byte = 0;
-    int32_t ret  = 0;
-
-    IO_SEND();
-
-    /* 处理缓冲区溢出.收缓冲区是收到多少处理多少，一般有长度限制，不用另外处理 */
-    if (EXPECT_FALSE(_send.is_overflow()))
+    // 如果是服务器之间的连接，考虑阻塞
+    // 这会影响定时器这些，但至少数据不会丢
+    // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
+    if (OAT_PEND == _over_action)
     {
-        // 对于客户端这种不重要的，可以断开连接
-        if (OAT_KILL == _over_action)
+        // sleep，等待io线程把数据发送出去
+        do
         {
-            ELOG("socket send buffer overflow,kill connection,"
+            std::this_thread::sleep_for(std::chrono::microseconds(500));
+            ELOG("socket send buffer overflow, pending,"
                  "object:" FMT64d ",conn:%d,buffer size:%d",
-                 _object_id, _conn_id, _send.get_all_used_size());
+                 _object_id, _conn_id, send_buff.get_all_used_size());
 
-            Socket::stop();
-            network_mgr->connect_del(_conn_id);
-
-            return -1;
-        }
-
-        // 如果是服务器之间的连接，考虑阻塞
-        // 这会影响定时器这些，但至少数据不会丢
-        // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
-        if (OAT_PEND == _over_action)
-        {
-            do
-            {
-                std::this_thread::sleep_for(std::chrono::microseconds(500));
-                ELOG("socket send buffer overflow,pending,"
-                     "object:" FMT64d ",conn:%d,buffer size:%d",
-                     _object_id, _conn_id, _send.get_all_used_size());
-
-                IO_SEND();
-            } while (_send.is_overflow());
-        }
+        } while (send_buff.is_overflow());
     }
-
-    return ret;
-
-#undef IO_SEND
 }
 
 int32_t Socket::block(int32_t fd)
@@ -632,6 +586,16 @@ void Socket::io_cb(int32_t revents)
     {
         connect_cb();
     }
+    else if (EV_CLOSE & revents)
+    {
+        close_cb();
+    }
+}
+
+void Socket::close_cb()
+{
+    // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
+    if (_packet) _packet->on_closed();
 }
 
 void Socket::listen_cb()
@@ -668,7 +632,7 @@ void Socket::listen_cb()
         bool is_ok = network_mgr->accept_new(_conn_id, new_sk);
         if (EXPECT_TRUE(is_ok))
         {
-            new_sk->init_accept();
+            new_sk->_w->init_accept();
         }
         else
         {
@@ -709,7 +673,7 @@ void Socket::connect_cb()
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
     if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd)))
     {
-        init_connect();
+        _w->init_connect();
     }
     else
     {
@@ -730,9 +694,10 @@ void Socket::command_cb()
         return;
     }
 
-    // 返回：返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-    int32_t ret = Socket::recv();
-    if (EXPECT_FALSE(0 != ret)) return; /* 出错,包括对方主动断开或者需要重试 */
+    // TODO 这里统计流量。读写在io线程不好统计，暂时放这里
+    // C_RECV_TRAFFIC_ADD(_conn_id, _conn_ty, byte);
+
+    int32_t ret = 0;
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     do
@@ -750,7 +715,7 @@ void Socket::command_cb()
     }
 }
 
-int32_t Socket::set_io(IO::IOT io_type, int32_t param)
+int32_t Socket::set_io(IO::IOType io_type, int32_t param)
 {
     assert(_w);
     IO *io = nullptr;
@@ -793,59 +758,20 @@ int32_t Socket::set_codec_type(Codec::CodecType codec_type)
     return 0;
 }
 
-// 检查io返回值: < 0 错误，0 成功，1 需要重读，2 需要重写
-int32_t Socket::io_status_check(int32_t ecode)
-{
-    if (EXPECT_FALSE(0 > ecode))
-    {
-        static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
-        Socket::stop();
-        network_mgr->connect_del(_conn_id);
-        return -1;
-    }
-
-    if (2 == ecode)
-    {
-        this->pending_send();
-        return 0;
-    }
-
-    // 重写会触发Read事件，在Read事件处理
-    return 0;
-}
-
-int32_t Socket::init_accept()
-{
-    int32_t ecode = _io->init_accept(_fd);
-
-    return io_status_check(ecode);
-}
-
-int32_t Socket::init_connect()
-{
-    int32_t ecode = _io->init_connect(_fd);
-
-    return io_status_check(ecode);
-}
-
-/* 获取统计数据
- * @schunk:发送缓冲区分配的内存块
- * @rchunk:接收缓冲区分配的内存块
- * @smem:发送缓冲区分配的内存大小
- * @rmem:接收缓冲区分配的内在大小
- * @spending:待发送的数据
- * @rpending:待处理的数据
- */
 void Socket::get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
                       size_t &rmem, size_t &spending, size_t &rpending)
 {
-    schunk = _send.get_chunk_size();
-    rchunk = _recv.get_chunk_size();
+    if (!_w) return;
 
-    smem = _send.get_chunk_mem_size();
-    rmem = _recv.get_chunk_mem_size();
+    const auto &send = _w->get_send_buffer();
+    const auto &recv = _w->get_recv_buffer();
 
-    spending = _send.get_all_used_size();
-    rpending = _recv.get_all_used_size();
+    schunk = send.get_chunk_size();
+    rchunk = recv.get_chunk_size();
+
+    smem = send.get_chunk_mem_size();
+    rmem = recv.get_chunk_mem_size();
+
+    spending = send.get_all_used_size();
+    rpending = recv.get_all_used_size();
 }
