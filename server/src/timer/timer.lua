@@ -61,7 +61,7 @@ function Timer.interval(after, msec, times, func, ...)
     local timer_id = get_next_id()
 
     local cb
-    if after > 5000 or (times > 5 or times < 0) then
+    if after > 5000 or (times < 0 or msec * times > 5000) then
         -- 如果回调时间很长，则需要该函数能热更
         cb = func_name_thunk(func, ...)
     else
@@ -125,7 +125,7 @@ function Timer.periodic(after, sec, times, func, ...)
 
     local timer_id = get_next_id()
     local cb
-    if after > 5 or (times > 5 or times < 0) then
+    if after > 5 or (times < 0 or sec * times > 5) then
         -- 如果回调时间很长，则需要该函数能热更
         cb = func_name_thunk(func, ...)
     else

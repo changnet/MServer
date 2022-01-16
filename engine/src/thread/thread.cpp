@@ -37,9 +37,7 @@ void Thread::signal_block()
 
     /* TODO C++标准在csignal中提供了部分信号处理的接口，但没提供屏蔽信号的
      * linux下，使用pthread的接口应该是兼容的，但无法保证所有std::thread的实现都使用
-     * pthread。因此不屏蔽子线程信号了，直接存起来，由主线程定时处理。但是这有一个问题就是
-     * 假如主线程阻塞很久，没法唤醒。幸好当前的游戏框架会定时循环，对信号处理的实时性不高，
-     * 因此不需要处理这个问题
+     * pthread。因此不屏蔽子线程信号了，直接存起来，由主线程定时处理
      */
 
     /*
@@ -53,8 +51,10 @@ void Thread::signal_block()
 
 void Thread::sig_handler(int32_t signum)
 {
-    // 把有线程收到的信号存这里，由主线程定时处理
+    // 把有线程收到的信号存这里，由主线程处理
     _sig_mask |= (1 << signum);
+
+    StaticGlobal::ev()->wake();
 }
 
 void Thread::signal(int32_t sig, int32_t action)

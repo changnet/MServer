@@ -60,6 +60,7 @@ local function exec()
     require "test.rpc_test"
     require "test.protobuf_test"
     require "test.flatbuffers_test"
+    require "test.timer_test"
 
     make_name()
 

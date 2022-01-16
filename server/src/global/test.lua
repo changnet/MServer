@@ -404,14 +404,17 @@ function t_it(title, mask, func)
     -- run_one_it(i)
 end
 
+-- 测试定时器超时
+function t_timeout()
+    resume()
+end
+
 -- 设置当前测试异步超时时间(毫秒)
 function t_wait(timeout)
     assert(not T.now.timer, "call wait multi times")
 
     T.now.status = PEND
-    T.now.timer = T.timer.new(timeout or 2000, function()
-        resume()
-    end)
+    T.now.timer = T.timer.new(timeout or 2000, t_timeout)
 end
 
 -- 结束当前异步测试
