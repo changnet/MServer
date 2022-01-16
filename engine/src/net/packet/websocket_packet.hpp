@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../buffer.hpp"
 #include "http_packet.hpp"
 
 struct websocket_parser;
@@ -26,7 +25,7 @@ public:
     /* 数据解包
      * return: <0 error;0 success
      */
-    virtual int32_t unpack();
+    virtual int32_t unpack(Buffer &buffer);
 
     /* 控制帧完成 */
     int32_t on_ctrl_end();

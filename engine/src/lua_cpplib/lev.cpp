@@ -6,9 +6,6 @@
 
 LEV::LEV()
 {
-    _sendingcnt = 0;
-    _sendings.resize(1024, nullptr);
-
     _critical_tm               = -1;
     _app_ev._repeat_ms         = 60000;
     _app_ev._next_time         = 0;
@@ -18,7 +15,6 @@ LEV::LEV()
 
 LEV::~LEV()
 {
-    _sendingcnt = 0;
 }
 
 int32_t LEV::exit(lua_State *L)
@@ -151,71 +147,6 @@ void LEV::invoke_signal()
     lua_remove(L, top); /* remove traceback */
 }
 
-int32_t LEV::pending_send(class Socket *s)
-{
-    // 0位是空的，不使用，方便pending的计数
-    ++_sendingcnt;
-    if (EXPECT_FALSE(_sendings.size() < (size_t)_sendingcnt + 1))
-    {
-        _sendings.resize(_sendingcnt + 1024);
-    }
-
-    _sendings[_sendingcnt] = s;
-
-    return _sendingcnt;
-}
-
-void LEV::remove_pending(int32_t pending)
-{
-    assert(pending > 0 && pending <= _sendingcnt);
-
-    _sendings[pending] = nullptr;
-}
-
-/* 把数据攒到一起，一次发送
- * 好处是：把包整合，减少发送次数，提高效率
- * 坏处是：需要多一个数组管理；如果发送的数据量很大，在逻辑处理过程中就不能利用带宽
- * 然而，游戏中包多，但数据量不大
- */
-void LEV::invoke_sending()
-{
-    if (_sendingcnt <= 0) return;
-
-    int32_t pos       = 0;
-    class Socket *skt = nullptr;
-
-    /* 0位是空的，不使用 */
-    for (int32_t pending = 1; pending <= _sendingcnt; pending++)
-    {
-        if (!(skt = _sendings[pending])) /* 可能调用了remove_sending */
-        {
-            continue;
-        }
-
-        assert(pending == skt->get_pending());
-
-        /* 处理发送,
-         * return: < 0 error,= 0 success,> 0 bytes still need to be send
-         */
-        if (skt->send() <= 0) continue;
-
-        /* 还有数据，处理sendings数组移动，防止中间留空 */
-        if (pending > pos)
-        {
-            ++pos;
-            _sendings[pos] = skt;
-            skt->set_pending(pos);
-        }
-        assert(pos == skt->get_pending());
-        /* 数据未发送完，也不需要移动，则do nothing */
-    }
-
-    _sendingcnt = pos;
-    // 如果还有数据未发送，尽快下发 TODO 这个取值大概是多少合适？
-    if (_sendingcnt > 0) set_backend_time_coarse(_mn_time + BACKEND_MIN_TM);
-    assert(_sendingcnt >= 0 && _sendingcnt < (int32_t)_sendings.size());
-}
-
 bool LEV::next_periodic(Periodic &periodic)
 {
     bool timeout = false;
@@ -257,7 +188,6 @@ void LEV::running()
         PLOG("ev busy: " FMT64d "msec", _busy_time);
     }
 
-    invoke_sending();
     invoke_signal();
     if (next_periodic(_app_ev)) invoke_app_ev();
     if (next_periodic(_thread_routine))

@@ -97,12 +97,6 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
     c2sh._cmd = static_cast<uint16_t>(cmd);
 
     size_t frame_size  = size + sizeof(c2sh);
-    class Buffer &send = _socket->send_buffer();
-    if (!send.reserved(frame_size))
-    {
-        encoder->finalize();
-        return luaL_error(L, "can not reserved buffer");
-    }
 
     const char *header_ctx = reinterpret_cast<const char *>(&c2sh);
     size_t len             = websocket_calc_frame_size(flags, frame_size);
@@ -111,15 +105,15 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
     new_masking_key(mask);
 
     uint8_t mask_offset = 0;
-    char *buff          = send.get_space_ctx();
+    char *buff          = _socket->reserve_send_buffer(frame_size);
     size_t offset = websocket_build_frame_header(buff, flags, mask, frame_size);
     offset += websocket_append_frame(buff + offset, flags, mask, header_ctx,
                                      sizeof(c2sh), &mask_offset);
     websocket_append_frame(buff + offset, flags, mask, ctx, size, &mask_offset);
 
     encoder->finalize();
-    send.add_used_offset(len);
-    _socket->pending_send();
+    _socket->add_send_buffer_offset(len);
+    _socket->flush();
 
     PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh._length), STAT_TIME_END());
 
@@ -282,12 +276,6 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
     s2ch._errno = ecode;
 
     size_t frame_size  = size + sizeof(s2ch);
-    class Buffer &send = _socket->send_buffer();
-    if (!send.reserved(frame_size))
-    {
-        ELOG("ws stream raw_pack_clt can not reserve memory");
-        return -1;
-    }
 
     websocket_flags flags  = static_cast<websocket_flags>(raw_flags);
     const char *header_ctx = reinterpret_cast<const char *>(&s2ch);
@@ -295,13 +283,13 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
 
     char mask[4]        = {0};
     uint8_t mask_offset = 0;
-    char *buff          = send.get_space_ctx();
+    char *buff          = _socket->reserve_send_buffer(len);
     size_t offset = websocket_build_frame_header(buff, flags, mask, frame_size);
     offset += websocket_append_frame(buff + offset, flags, mask, header_ctx,
                                      sizeof(s2ch), &mask_offset);
     websocket_append_frame(buff + offset, flags, mask, ctx, size, &mask_offset);
-    send.add_used_offset(len);
-    _socket->pending_send();
+    _socket->add_send_buffer_offset(len);
+    _socket->flush();
 
     return 0;
 }

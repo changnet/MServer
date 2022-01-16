@@ -8,26 +8,24 @@ StreamPacket::StreamPacket(class Socket *sk) : Packet(sk) {}
 
 StreamPacket::~StreamPacket() {}
 
-int32_t StreamPacket::unpack()
+int32_t StreamPacket::unpack(Buffer &buffer)
 {
-    class Buffer &recv = _socket->recv_buffer();
-
     // 检测包头是否完整
-    if (!recv.check_used_size(sizeof(struct base_header))) return 0;
+    if (!buffer.check_used_size(sizeof(struct base_header))) return 0;
 
     const struct base_header *header =
         reinterpret_cast<const struct base_header *>(
-            recv.to_continuous_ctx(sizeof(struct base_header)));
+            buffer.to_continuous_ctx(sizeof(struct base_header)));
 
     // 检测包内容是否完整
     uint32_t length = header->_length;
-    if (!recv.check_used_size(length)) return 0;
+    if (!buffer.check_used_size(length)) return 0;
 
     header = reinterpret_cast<const struct base_header *>(
-        recv.to_continuous_ctx(length));
+        buffer.to_continuous_ctx(length));
 
     dispatch(header);    // 数据包完整，派发处理
-    recv.remove(length); // 无论成功或失败，都移除该数据包
+    buffer.remove(length); // 无论成功或失败，都移除该数据包
 
     return length;
 }
@@ -454,13 +452,12 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
     s2sh._codec = Codec::CT_NONE; // 用不着，但不初始化valgrind会警告
     s2sh._owner = unique_id;
 
-    class Buffer &send = _socket->send_buffer();
-    send.append(&s2sh, sizeof(struct s2s_header));
+    _socket->append(&s2sh, sizeof(struct s2s_header));
     if (len > 0)
     {
-        send.append(buffer, static_cast<uint32_t>(len));
+        _socket->append(buffer, static_cast<uint32_t>(len));
     }
-    _socket->pending_send();
+    _socket->flush();
 
     encoder->finalize();
 
@@ -555,12 +552,11 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
     SET_HEADER_LENGTH(c2sh, len, cmd, SET_LENGTH_FAIL_ENCODE);
     c2sh._cmd = static_cast<uint16_t>(cmd);
 
-    class Buffer &send = _socket->send_buffer();
-    send.append(&c2sh, sizeof(c2sh));
-    if (len > 0) send.append(buffer, len);
+    _socket->append(&c2sh, sizeof(c2sh));
+    if (len > 0) _socket->append(buffer, len);
 
     encoder->finalize();
-    _socket->pending_send();
+    _socket->flush();
 
     PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh._length), STAT_TIME_END());
 
@@ -673,12 +669,11 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     s2sh._codec = Codec::CT_NONE; /* 避免valgrind警告内存未初始化 */
     s2sh._packet = SPT_SCPK; /*指定数据包类型为服务器发送客户端 */
 
-    class Buffer &send = _socket->send_buffer();
-    send.append(&s2sh, sizeof(s2sh));
-    if (len > 0) send.append(buffer, len);
+    _socket->append(&s2sh, sizeof(s2sh));
+    if (len > 0) _socket->append(buffer, len);
 
     encoder->finalize();
-    _socket->pending_send();
+    _socket->flush();
 
     PKT_STAT_ADD(SPT_SSPK, cmd, int32_t(s2sh._length), STAT_TIME_END());
 
@@ -694,11 +689,10 @@ int32_t StreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
     s2ch._cmd   = static_cast<uint16_t>(cmd);
     s2ch._errno = ecode;
 
-    class Buffer &send = _socket->send_buffer();
-    send.append(&s2ch, sizeof(s2ch));
-    if (size > 0) send.append(ctx, size);
+    _socket->append(&s2ch, sizeof(s2ch));
+    if (size > 0) _socket->append(ctx, size);
 
-    _socket->pending_send();
+    _socket->flush();
     return 0;
 }
 
@@ -713,11 +707,10 @@ int32_t StreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
     s2sh._packet = SPT_SSPK;
     s2sh._codec = Codec::CT_NONE; // 这个这里用不着，但不初始化valgrind就会警告
 
-    class Buffer &send = _socket->send_buffer();
-    send.append(&s2sh, sizeof(s2sh));
-    if (size > 0) send.append(ctx, size);
+    _socket->append(&s2sh, sizeof(s2sh));
+    if (size > 0) _socket->append(ctx, size);
 
-    _socket->pending_send();
+    _socket->flush();
     return 0;
 }
 
@@ -797,13 +790,12 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     s2sh._codec = Codec::CT_NONE; /* 避免valgrind警告内存未初始化 */
     s2sh._packet = SPT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
-    class Buffer &send = _socket->send_buffer();
-    send.append(&s2sh, sizeof(s2sh));
-    send.append(list, list_len);
-    if (len > 0) send.append(buffer, len);
+    _socket->append(&s2sh, sizeof(s2sh));
+    _socket->append(list, list_len);
+    if (len > 0) _socket->append(buffer, len);
 
     encoder->finalize();
-    _socket->pending_send();
+    _socket->flush();
 
     PKT_STAT_ADD(SPT_CBCP, cmd, int32_t(s2sh._length), STAT_TIME_END());
 

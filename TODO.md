@@ -1,3 +1,4 @@
+socket::append函数会唤醒io线程，但有时候会同一逻辑中多次append，这个优化一下
 ssl的发送机制有问题，未握手完成时，一直在send队列，假如对方迟迟未发送握手数据，这时候会处理死循环地直尝试写数据
 
 fd、io对象是在主线程创建，io线程读写。主线程关闭socket时，io线程正常读写怎么办？（EV_CLOSE或者加锁？epoll_wait时，socket也不能关闭）

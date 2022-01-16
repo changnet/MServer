@@ -88,8 +88,26 @@ public:
     int32_t listen(const char *host, int32_t port);
     int32_t connect(const char *host, int32_t port);
 
-    /// 添加待发送数据
+    /**
+     * @brief 准备一段连接的发送缓冲区
+     * @param len 
+    */
+    char *reserve_send_buffer(size_t len);
+    /**
+     * @brief 追加已使用的发送缓冲区长度
+     * @param len 
+    */
+    void add_send_buffer_offset(size_t len);
+    /**
+     * @brief 追加要发送的数据，但不唤醒io线程
+     * @param data 需要发送的数据指针
+     * @param len 需要发送的数据长度
+    */
     void append(const void *data, size_t len);
+    /**
+     * @brief 唤醒io线程来发送数据
+    */
+    void flush();
 
     int32_t set_io(IO::IOType io_type, int32_t param);
     int32_t set_packet(Packet::PacketType packet_type);

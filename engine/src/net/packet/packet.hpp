@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../ev/buffer.hpp"
 #include "../../global/global.hpp"
 
 /* socket packet parser and deparser */
@@ -45,7 +46,7 @@ public:
      * 数据解包
      * @return <0 error;0 success
      */
-    virtual int32_t unpack() = 0;
+    virtual int32_t unpack(Buffer &buffer) = 0;
 
     /**
      * 连接断开

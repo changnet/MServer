@@ -134,7 +134,7 @@ public:
      * @param fd 
      * @param events 
     */
-    void io_actioin(int32_t fd, int32_t events)
+    void io_action(int32_t fd, int32_t events)
     {
     }
 

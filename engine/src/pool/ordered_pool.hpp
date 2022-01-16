@@ -38,7 +38,7 @@ public:
 
     /**
      * 分配一块大小为n个ordered_size的内存
-     * @param chunk_size 预分配的数量(因为内存大小不一，分配策划需要根据逻辑来定)
+     * @param chunk_size 预分配的数量(因为内存大小不一，分配策略需要根据需求来定)
      */
     char *ordered_malloc(size_t n, size_t chunk_size)
     {

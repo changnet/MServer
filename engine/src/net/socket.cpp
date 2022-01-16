@@ -168,6 +168,17 @@ void Socket::stop(bool flush)
     C_SOCKET_TRAFFIC_DEL(_conn_id);
 }
 
+char *Socket::reserve_send_buffer(size_t len)
+{
+    _w->get_send_buffer().reserved(len);
+    return _w->get_send_buffer().get_space_ctx();
+}
+
+void Socket::add_send_buffer_offset(size_t len)
+{
+    _w->get_send_buffer().add_used_offset(len);
+}
+
 void Socket::append(const void *data, size_t len)
 {
     auto &send_buff = _w->get_send_buffer();
@@ -209,6 +220,11 @@ void Socket::append(const void *data, size_t len)
 
         } while (send_buff.is_overflow());
     }
+}
+
+void Socket::flush()
+{
+    StaticGlobal::ev()->io_action(_fd, EV_WRITE);
 }
 
 int32_t Socket::block(int32_t fd)
@@ -380,7 +396,7 @@ bool Socket::start(int32_t fd)
         ELOG("ev io start fail: %d", _fd);
         return false;
     }
-    _w->bind(&Socket::command_cb, this);
+    _w->bind(&Socket::io_cb, this);
 
     C_SOCKET_TRAFFIC_NEW(_conn_id);
 
@@ -447,7 +463,7 @@ int32_t Socket::connect(const char *host, int32_t port)
         return -1;
     }
     _fd = fd;
-    _w->bind(&Socket::connect_cb, this);
+    _w->bind(&Socket::io_cb, this);
 
     return fd;
 }
@@ -559,7 +575,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
     if (!_w)
     {
-        ELOG("ev io start fail: %d", fd);
+        ELOG("ev io start fail: %d", _fd);
         goto FAIL;
     }
     _w->bind(&Socket::io_cb, this);
@@ -700,9 +716,10 @@ void Socket::command_cb()
     int32_t ret = 0;
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
+    auto &buffer = _w->get_recv_buffer();
     do
     {
-        if ((ret = _packet->unpack()) <= 0) break;
+        if ((ret = _packet->unpack(buffer)) <= 0) break;
     } while (fd_valid(fd()));
 
     // 解析过程中错误，断开链接

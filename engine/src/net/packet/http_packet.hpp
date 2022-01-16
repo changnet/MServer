@@ -32,7 +32,7 @@ public:
     virtual int32_t pack_clt(lua_State *L, int32_t index) override;
     virtual int32_t pack_srv(lua_State *L, int32_t index) override;
 
-    virtual int32_t unpack() override;
+    virtual int32_t unpack(Buffer &buffer) override;
 
     virtual void on_closed() override;
 

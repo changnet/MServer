@@ -110,7 +110,9 @@ public:
 static const HttpSettingInitializer initializer;
 
 /* ====================== HTTP FUNCTION END ================================ */
-HttpPacket::~HttpPacket() {}
+HttpPacket::~HttpPacket()
+{
+}
 
 HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 {
@@ -119,15 +121,14 @@ HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
     _parser.data = this;
 }
 
-int32_t HttpPacket::unpack()
+int32_t HttpPacket::unpack(Buffer &buffer)
 {
-    class Buffer &recv = _socket->recv_buffer();
-    size_t size        = recv.get_used_size();
+    size_t size = buffer.get_used_size();
     if (size == 0) return 0;
 
     // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
     // 不用check_all_used_ctx
-    const char *data = recv.get_used_ctx();
+    const char *data = buffer.get_used_ctx();
 
     /* 注意：解析完成后，是由parser回调脚本的，这时脚本那边可能会关闭socket
      * 因此要注意execute后部分资源是不可再访问的
@@ -140,11 +141,11 @@ int32_t HttpPacket::unpack()
      */
     if (HPE_PAUSED_UPGRADE == e)
     {
-        recv.remove(llhttp_get_error_pos(&_parser) - data);
+        buffer.remove(llhttp_get_error_pos(&_parser) - data);
         return 1;
     }
 
-    recv.clear(); // http_parser不需要旧缓冲区
+    buffer.clear(); // http_parser不需要旧缓冲区
 
     // PAUSE通常是上层脚本关闭了socket，需要中止解析
     if (HPE_OK != e && HPE_PAUSED != e)

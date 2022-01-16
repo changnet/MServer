@@ -196,17 +196,15 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
     // if ( !ctx ) return 0; // 允许发送空包
 
     size_t len         = websocket_calc_frame_size(flags, size);
-    class Buffer &send = _socket->send_buffer();
-    if (!send.reserved(len))
-    {
-        return luaL_error(L, "can not reserved buffer");
-    }
+
+    char *buffer = _socket->reserve_send_buffer(len);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
-    websocket_build_frame(send.get_space_ctx(), flags, mask, ctx, size);
-    send.add_used_offset(len);
-    _socket->pending_send();
+    websocket_build_frame(buffer, flags, mask, ctx, size);
+
+    _socket->add_send_buffer_offset(len);
+    _socket->flush();
 
     return 0;
 }
@@ -231,17 +229,15 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
     return pack_raw(L, index);
 }
 
-int32_t WebsocketPacket::unpack()
+int32_t WebsocketPacket::unpack(Buffer &buffer)
 {
     /* 未握手时，由http处理
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
      */
-    if (!_is_upgrade) return HttpPacket::unpack();
-
-    class Buffer &recv = _socket->recv_buffer();
+    if (!_is_upgrade) return HttpPacket::unpack(buffer);
 
     size_t size     = 0;
-    const char *ctx = recv.all_to_continuous_ctx(size);
+    const char *ctx = buffer.all_to_continuous_ctx(size);
     if (size == 0) return 0;
 
     _e = 0; // 重置上一次解析错误
@@ -252,7 +248,7 @@ int32_t WebsocketPacket::unpack()
     // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
     // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
     // 普通错误，比如回调脚本出错，是不会中止解析的
-    recv.remove(nparser);
+    buffer.remove(nparser);
     if (nparser != size)
     {
         // websocket_parser未提供错误机制，所有函数都是返回非0值表示中止解析

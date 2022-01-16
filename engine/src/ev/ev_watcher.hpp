@@ -93,7 +93,7 @@ public:
      * @param param 
      * @return 
      */
-    int32_t set_io(IO *io)
+    void set_io(IO *io)
     {
         assert(!_io);
         _io = io;

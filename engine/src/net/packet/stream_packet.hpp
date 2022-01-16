@@ -32,7 +32,7 @@ public:
                          size_t size);
     int32_t raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
                         const char *ctx, size_t size);
-    int32_t unpack();
+    int32_t unpack(Buffer &buffer);
 
 private:
     void dispatch(const struct base_header *header);

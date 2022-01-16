@@ -814,7 +814,7 @@ int32_t LNetworkMgr::set_conn_io(lua_State *L)
         return luaL_error(L, "invalid io type");
     }
 
-    if (sk->set_io(static_cast<IO::IOT>(io_type), io_param) < 0)
+    if (sk->set_io(static_cast<IO::IOType>(io_type), io_param) < 0)
     {
         return luaL_error(L, "set conn io error");
     }
@@ -961,11 +961,10 @@ int32_t LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
     s2sh._errno  = 0;
     s2sh._owner  = static_cast<Owner>(object_id);
 
-    class Buffer &send = dest_sk->send_buffer();
-    send.append(&s2sh, sizeof(struct s2s_header));
-    send.append(ctx, size);
+    dest_sk->append(&s2sh, sizeof(struct s2s_header));
+    dest_sk->append(ctx, size);
+    dest_sk->flush();
 
-    dest_sk->pending_send();
     return 1;
 }
 
