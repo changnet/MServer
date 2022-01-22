@@ -4,6 +4,7 @@
 #include <condition_variable>
 
 #include "ev_watcher.hpp"
+#include "../thread/spin_lock.hpp"
 #include "../global/global.hpp"
 
 /* eventmask, revents, events... */
@@ -134,23 +135,29 @@ public:
      * @param fd 
      * @param events 
     */
-    void io_action(int32_t fd, int32_t events)
+    void io_action(EVIO *w, int32_t events);
+    /// 获取当前未处理的io事件
+    std::vector<int32_t> &get_io_action()
     {
+        return _io_actions;
     }
-
-    /// 加锁
-    void lock()
-    {
-        _mutex.lock();
-    }
-    /// 解锁
-    void unlock()
-    {
-        _mutex.unlock();
-    }
-
-    /// 触发io事件
+    /// 触发io事件(此函数需要外部加锁)
     void io_event(EVIO *w, int32_t revents);
+
+    /// 获取加锁对象
+    std::mutex &lock()
+    {
+        // 加锁应该使用std::lock_guard而不是手动加锁_mutex.lock();
+        // 尽量减少忘记释放锁的概率
+        // 而且手动调lock()在vs下总是会有个C26110警告
+        return _mutex;
+    }
+
+    /// 获取快速锁
+    SpinLock &fast_lock()
+    {
+        return _spin_lock;
+    }
 
     /// 唤醒主线程
     void wake()
@@ -161,41 +168,13 @@ public:
 protected:
     virtual void running() = 0;
 
-    void set_backend_time_coarse(int64_t backend_time)
-    {
-        if (_backend_time_coarse > backend_time)
-        {
-            _backend_time_coarse = backend_time;
-        }
-    }
-
-    void set_fast_io(int32_t fd, EVIO *w)
-    {
-        // win的socket是unsigned类型，可能会很大，得强转unsigned来判断
-        uint32_t ufd = ((uint32_t)fd);
-        if (ufd < MAX_FAST_IO)
-        {
-            while (_io_fast.size() < ufd)
-            {
-                _io_fast.resize(_io_fast.size() * 2);
-            }
-            _io_fast[fd] = w;
-        }
-
-        if (w)
-        {
-            _io_fast_mgr[fd] = w;
-        }
-        else
-        {
-            _io_fast_mgr.erase(fd);
-        }
-    }
+    void set_fast_io(int32_t fd, EVIO *w);
 
     void io_reify();
     void time_update();
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
+    void clear_io_event(EVIO *w);
     void clear_pending(EVWatcher *w);
     void io_event_reify();
     void timers_reify();
@@ -208,10 +187,32 @@ protected:
 protected:
     volatile bool _done; /// 主循环是否已结束
 
+    /////////////////////////////////////////////
+    /////////////////////////////////////////////
+    // !!下面这两个触发比较频繁，因此使用指针而不是fd，io_stop时要小心维护
+
     /// 触发了事件，等待处理的io,由io线程设置
-    std::vector<EVWatcher *> _io_pendings;
+    std::vector<EVIO *> _io_pendings;
     /// 触发了事件，等待处理的watcher
     std::vector<EVWatcher *> _pendings;
+
+    /////////////////////////////////////////////
+    /////////////////////////////////////////////
+
+    // 这个比较特殊，它触发频繁，但不能存指针，要存fd
+    // 这个函数在主线程触发，因此不能加锁太久
+    // 但io线程处理action（发送数据之类）可能需要很久
+    // 如果用指针的话，这个指针在io获取后，还没来得及处理
+    // 对象可能就被主线程删除了，指针就失效了。如果加锁，主线程就被卡
+
+    /// 在主线程设置的actioin，待io线程处理
+    std::vector<int32_t> _io_actions;
+
+    /////////////////////////////////////////////
+    /////////////////////////////////////////////
+
+    /// 已经改变，等待设置到内核的io watcher
+    std::vector<int32_t> _io_changes;
 
      /// 用于快速获取io对象
     std::vector<EVIO *> _io_fast;
@@ -221,7 +222,6 @@ protected:
      */
     std::unordered_map<int32_t, EVIO *> _io_fast_mgr;
 
-    std::vector<int32_t> _io_changes; /// 已经改变，等待设置到内核的io watcher
     std::unordered_map<int32_t, EVIO> _io_mgr;/// 管理所有io对象
 
     /**
@@ -255,4 +255,7 @@ protected:
 
     /// 主线程锁
     std::mutex _mutex;
+
+    /// 用于数据交换的spin lock
+    SpinLock _spin_lock;
 };

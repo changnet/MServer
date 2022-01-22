@@ -47,6 +47,11 @@ public:
     void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
 
 private:
+    /// 处理epoll事件
+    int32_t do_event(int32_t ev_count);
+    /// 处理主线程发起的io事件
+    void do_action(const std::vector<int32_t> &actions);
+
     void do_modify();
     void modify_one(int32_t fd, int32_t old_ev, int32_t new_ev);
 
@@ -98,6 +103,77 @@ bool EVEPoll::stop()
     return true;
 }
 
+void EVEPoll::do_action(const std::vector<int32_t> &actions)
+{
+}
+
+int32_t EVEPoll::do_event(int32_t ev_count)
+{
+    int32_t use_ev = 0;
+    for (int32_t i = 0; i < ev_count; ++i)
+    {
+        struct epoll_event *ev = _ep_ev + i;
+
+        int32_t fd = ev->data.fd;
+        if (fd == _wake_fd)
+        {
+            int64_t v = 0;
+            if (::read(fd, &v, sizeof(v)) < 0)
+            {
+                ELOG("read epoll wakeup fd error e = %d: %s", errno,
+                     strerror(errno));
+                // 避免出错日志把硬盘刷爆
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+            continue;
+        }
+
+        EVIO *w = _ev->get_fast_io(fd);
+        // io对象可能被主线程删了或者停止
+        if (!w || !(w->active())) continue;
+
+        int32_t set_ev = ev->data.u32;
+        int32_t events = 0;
+        if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+        {
+            if (set_ev & EV_WRITE)
+            {
+                events |= EV_WRITE;
+                w->send();
+            }
+            else
+            {
+                events |= EV_CONNECT;
+            }
+        }
+        if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+        {
+            if (set_ev & EV_READ)
+            {
+                events |= EV_READ;
+                w->recv();
+            }
+            else
+            {
+                events |= EV_ACCEPT;
+            }
+        }
+        if (set_ev & events)
+        {
+            ++use_ev;
+            _ev->io_event(w, events);
+        }
+        else
+        {
+            // epoll收到事件，但没有触发io_event，一般是io线程自己添加写事件来发送数据
+            // 如果有其他事件，应该是哪里出错了
+            assert(events == EV_WRITE);
+        }
+    }
+
+    return use_ev;
+}
+
 void EVEPoll::backend()
 {
 #ifdef EPOLL_CLOEXEC
@@ -116,9 +192,13 @@ void EVEPoll::backend()
     assert(_ep_fd >= 0);
 
     /// 第一次进入wait前，必须先设置io事件，不然的话第一次就会wait很久
-    _ev->lock();
-    do_modify();
-    _ev->unlock();
+    {
+        std::lock_guard<std::mutex> lg(_ev->lock());
+        do_modify();
+    }
+
+    std::vector<int32_t> actions;
+    actions.reserve(1024);
 
     while (!_done)
     {
@@ -135,76 +215,28 @@ void EVEPoll::backend()
             break;
         }
 
-        /// 下面的操作，速度很快，可以加锁
-        _ev->lock();
-        for (int32_t i = 0; i < ev_count; ++i)
+        // 主线程和io线程会频繁交换action,因此使用一个快速、独立的锁
         {
-            struct epoll_event *ev = _ep_ev + i;
-
-            int32_t fd = ev->data.fd;
-            if (fd == _wake_fd)
-            {
-                int64_t v = 0;
-                if (::read(fd, &v, sizeof(v)) < 0)
-                {
-                    ELOG("read epoll wakeup fd error e = %d: %s", errno,
-                         strerror(errno));
-                    // 避免出错日志把硬盘刷爆
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                }
-            }
-            else
-            {
-                EVIO *w = _ev->get_fast_io(fd);
-                // io对象可能被主线程删了
-                if (w)
-                {
-                    int32_t set_ev     = ev->data.u32;
-                    int32_t events = 0;
-                    if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
-                    {
-                        if (set_ev & EV_WRITE)
-                        {
-                            events |= EV_WRITE;
-                            w->send();
-                        }
-                        else
-                        {
-                            events |= EV_CONNECT;
-                        }
-                    }
-                    if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
-                    {
-                        if (set_ev & EV_READ)
-                        {
-                            events |= EV_READ;
-                            w->recv();
-                        }
-                        else
-                        {
-                            events |= EV_ACCEPT;
-                        }
-                    }
-                    if (set_ev & events)
-                    {
-                        _ev->io_event(w, events);
-                    }
-                    else
-                    {
-                        // epoll收到事件，但没有触发io_event，一般是io线程自己添加写事件来发送数据
-                        // 如果有其他事件，应该是哪里出错了
-                        assert(events == EV_WRITE);
-                    }
-                }
-            }
+            actions.clear();
+            std::lock_guard<SpinLock> lg(_ev->fast_lock());
+            actions.swap(_ev->get_io_action());
         }
-        do_modify();
-        _ev->unlock();
+
+        // TODO 下面的操作，是每个操作，加锁、解锁一次，还是全程解锁呢？
+        // 即使全程加锁，至少是不会影响主线程执行逻辑的。主线程执行逻辑回调时，不会用到锁
+        int32_t use_ev = 0;
+        {
+            std::lock_guard<std::mutex> lg(_ev->lock());
+
+            do_action(actions);
+            use_ev = do_event(ev_count);
+            do_modify();
+        }
 
         // 唤醒主线程干活
         // https://en.cppreference.com/w/cpp/thread/condition_variable
         // the lock does not need to be held for notification
-        if (ev_count > 0) _ev->wake();
+        if (use_ev > 0) _ev->wake();
 
         // TODO 检测缓冲区，如果主线程处理不过来，这里sleep一下
     }
@@ -269,7 +301,7 @@ void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
     /* valgrind: uninitialised byte(s) */
     memset(&ev, 0, sizeof(ev));
 
-    ev.data.fd = fd;
+    ev.data.fd  = fd;
     ev.data.u32 = new_ev;
 
     /* epoll只是监听fd，不负责fd的打开或者关闭。
@@ -285,8 +317,10 @@ void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
      * ET(Edge Trigger)只支持no-block，一个事件只通知一次
      * epoll默认是LT模式
      */
-    ev.events = ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)EPOLLIN : 0)
-                | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)EPOLLOUT : 0) /* | EPOLLET */;
+    ev.events =
+        ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)EPOLLIN : 0)
+        | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)EPOLLOUT
+                                                      : 0) /* | EPOLLET */;
 
     /**
      * socket被关闭时，内核自动从epoll中删除。这时执行EPOLL_CTL_DEL会触发EBADF

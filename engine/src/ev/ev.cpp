@@ -121,6 +121,7 @@ EV::EV()
     _pendings.reserve(1024);
     _timers.reserve(1024);
     _periodics.reserve(1024);
+    _io_actions.reserve(1024);
 
     // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
     _timer_cnt = 0;
@@ -282,36 +283,63 @@ int32_t EV::io_stop(int32_t fd)
     return 0;
 }
 
+void EV::set_fast_io(int32_t fd, EVIO *w)
+{
+    // win的socket是unsigned类型，可能会很大，得强转unsigned来判断
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < MAX_FAST_IO)
+    {
+        while (_io_fast.size() < ufd)
+        {
+            _io_fast.resize(_io_fast.size() * 2);
+        }
+        _io_fast[fd] = w;
+    }
+
+    if (w)
+    {
+        _io_fast_mgr[fd] = w;
+    }
+    else
+    {
+        _io_fast_mgr.erase(fd);
+    }
+}
+
+
 void EV::io_reify()
 {
     if (_io_changes.empty()) return;
 
-    lock();
-    for (auto fd : _io_changes)
     {
-        EVIO *io = get_io(fd);
-        if (io && io->_active)
+        std::lock_guard<std::mutex> lg(lock());
+        for (auto fd : _io_changes)
         {
-            int32_t events = io->_events;
-            _backend->modify(fd, io->_emask, events);
-            io->_emask = events;
-
-            // 新增
-            if (2 == io->_active)
+            EVIO *io = get_io(fd);
+            if (io && io->_active)
             {
-                io->_active = 1;
-                set_fast_io(fd, io);
+                int32_t events = io->_events;
+                _backend->modify(fd, io->_emask, events);
+                io->_emask = events;
+
+                // 新增
+                if (2 == io->_active)
+                {
+                    io->_active = 1;
+                    set_fast_io(fd, io);
+                }
+            }
+            else
+            {
+                _backend->modify(fd, 0, 0); // 移除该socket
+
+                if (io) clear_io_event(io);
+
+                _io_mgr.erase(fd);
+                set_fast_io(fd, nullptr);
             }
         }
-        else
-        {
-            _backend->modify(fd, 0, 0); // 移除该socket
-
-            _io_mgr.erase(fd);
-            set_fast_io(fd, nullptr);
-        }
     }
-    unlock();
 
     _backend->wake(); /// 唤醒子线程，让它及时处理修改的事件
     _io_changes.clear();
@@ -403,11 +431,33 @@ void EV::time_update()
 void EV::io_event(EVIO *w, int32_t revents)
 {
     w->_revents |= revents;
-    if (EXPECT_TRUE(!w->_pending))
+    if (EXPECT_TRUE(!w->_io_index))
     {
         _io_pendings.emplace_back(w);
-        w->_pending = (int32_t)_io_pendings.size();
+        w->_io_index = (int32_t)_io_pendings.size();
     }
+}
+
+void EV::io_action(EVIO *w, int32_t events)
+{
+    bool empty = false;
+    {
+        std::lock_guard<SpinLock> lg(_spin_lock);
+
+        empty = _io_actions.empty();
+
+        w->_action_ev |= events;
+
+        // 先判断该watch是否在队列中，在的话就不要再插入
+        // 玩家登录的时候，可能有上百次数据发送，不要每次都插入
+        if (!w->_action_index)
+        {
+            _io_actions.emplace_back(w->_fd);
+            w->_action_index = (int32_t)_io_actions.size();
+        }
+    }
+    // 如果不为空，说明之前通知过了，不需要再通知
+    if (empty) _backend->wake();
 }
 
 void EV::io_event_reify()
@@ -415,19 +465,20 @@ void EV::io_event_reify()
     // 如果被io线程占用了，那也没关系，后面再重试
     // TODO 如果io线程太忙，会不会一直获取不到？
     // if (!_mutex.try_lock()) return;
-    lock();
+    std::lock_guard<std::mutex> lg(lock());
 
     for (auto w: _io_pendings)
     {
         // io线程设置pendings事件时，主线程中的逻辑关闭了该io
         if (EXPECT_TRUE(w->_active))
         {
+            w->_io_index = 0;
             _pendings.emplace_back(w);
             w->_pending = (int32_t)_pendings.size();
         }
     }
 
-    unlock();
+    _io_pendings.clear();
 }
 
 void EV::feed_event(EVWatcher *w, int32_t revents)
@@ -466,6 +517,18 @@ void EV::clear_pending(EVWatcher *w)
 
         w->_revents = 0;
         w->_pending = 0;
+    }
+}
+
+void EV::clear_io_event(EVIO *w)
+{
+    if (w->_io_index)
+    {
+        assert(w == _io_pendings[w->_io_index - 1]);
+        _io_pendings[w->_io_index - 1] = nullptr;
+
+        w->_revents = 0;
+        w->_io_index = 0;
     }
 }
 

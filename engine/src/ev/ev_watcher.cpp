@@ -16,6 +16,11 @@ EVIO::EVIO(int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
     _fd     = fd;
     _events = events;
 
+    _io_index = 0;
+
+    _action_ev = 0;
+    _action_index = 0;
+
     _io = nullptr;
 }
 

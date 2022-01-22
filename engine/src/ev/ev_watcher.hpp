@@ -37,14 +37,15 @@ public:
         _cb = std::bind(fn, t, std::placeholders::_1);
     }
 
-protected:
-    friend class EV;
+public:
 
-    EV *_loop;
     int32_t _active;  /// 定时器用作数组下标，io只是标记一下
     int32_t _pending; /// 在待处理watcher数组中的下标
     int32_t _revents; /// 等待处理的事件
 
+ protected:
+
+     EV *_loop;
     std::function<void(int32_t)> _cb; // 回调函数
 };
 
@@ -104,12 +105,16 @@ public:
     /// 初始化主动发起的连接
     void init_connect();
 
-private:
-    friend class EV;
+public:
 
+    int32_t _fd;     /// io描述符
     int32_t _emask;  /// 已经设置到内核(epoll、poll)的事件
     int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
-    int32_t _fd;     /// io描述符
+
+    int32_t _action_ev; /// 待处理的action
+    int32_t _action_index; /// action数组的下标
+
+    int32_t _io_index; /// io线程中的事件下标
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
