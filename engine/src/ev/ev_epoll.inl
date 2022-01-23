@@ -105,6 +105,47 @@ bool EVEPoll::stop()
 
 void EVEPoll::do_action(const std::vector<int32_t> &actions)
 {
+    for (auto fd : actions)
+    {
+        EVIO *w = _ev->get_fast_io(fd);
+        // io对象可能被主线程删了或者停止
+        if (!w || !(w->_active)) continue;
+
+        int32_t events = 0;
+        {
+            std::lock_guard<SpinLock> lg(_ev->fast_lock());
+            events = w->_action_ev;
+            w->_action_index = 0;
+        }
+
+        // 主线程设置事件的时候，可能刚好被io线程处理完了
+        // 极限情况下，主线程的fd是被断开又重连，根本不是同一个io对象
+        if (0 == events) continue;
+
+        if (events & EV_ACCEPT)
+        {
+            // 初始化新socket，只有ssl用到
+            w->init_accept();
+        }
+        else if (events & EV_CONNECT)
+        {
+            // 初始化新socket，只有ssl用到
+            w->init_connect();
+        }
+
+        // 处理数据发送
+        if (events & EV_WRITE)
+        {
+            auto e = w->send();
+            // 未发送完，加入write事件继续发送
+            if (e == IO::IOS_WRITE && !(w->_emask & EV_WRITE))
+            {
+                int32_t old_ev = w->_emask;
+                w->_emask |= EV_WRITE;
+                modify_one(fd, old_ev, w->_emask);
+            }
+        }
+    }
 }
 
 int32_t EVEPoll::do_event(int32_t ev_count)
@@ -130,7 +171,7 @@ int32_t EVEPoll::do_event(int32_t ev_count)
 
         EVIO *w = _ev->get_fast_io(fd);
         // io对象可能被主线程删了或者停止
-        if (!w || !(w->active())) continue;
+        if (!w || !(w->_active)) continue;
 
         int32_t set_ev = ev->data.u32;
         int32_t events = 0;

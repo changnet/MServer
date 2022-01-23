@@ -10,14 +10,14 @@
 /* eventmask, revents, events... */
 enum
 {
-    EV_NONE  = 0x00,            /// 无任何事件
-    EV_READ  = 0x01,            /// socket读(接收)
-    EV_WRITE = 0x02,            /// socket写(发送)
-    EV_ACCEPT = 0x04,            /// 监听到有新连接
-    EV_CONNECT = 0x08,            /// 连接成功或者失败
-    EV_CLOSE   = 0x10,            /// socket关闭
-    EV_TIMER = 0x00000100,      /// 定时器超时
-    EV_ERROR = (int)0x80000000  /// 出错
+    EV_NONE    = 0x00,           /// 无任何事件
+    EV_READ    = 0x01,           /// socket读(接收)
+    EV_WRITE   = 0x02,           /// socket写(发送)
+    EV_ACCEPT  = 0x04,           /// 监听到有新连接
+    EV_CONNECT = 0x08,           /// 连接成功或者失败
+    EV_CLOSE   = 0x10,           /// socket关闭
+    EV_TIMER   = 0x00000100,     /// 定时器超时
+    EV_ERROR   = (int)0x80000000 /// 出错
 };
 
 class EVIO;
@@ -49,19 +49,19 @@ public:
      * @param fd 通过socket函数创建的文件描述符
      * @param event 监听事件，EV_READ|EV_WRITE
      * @return io对象
-    */
+     */
     EVIO *io_start(int32_t fd, int32_t event);
     /**
      * @brief 停止一个io监听
      * @param  通过socket函数创建的文件描述符
-     * @return 
-    */
+     * @return
+     */
     int32_t io_stop(int32_t fd);
     /**
      * @brief 获取设置到io线程的io对象，调用此函数注意线程安全
-     * @param fd 
-     * @return 
-    */
+     * @param fd
+     * @return
+     */
     EVIO *get_fast_io(int32_t fd)
     {
         if (((uint32_t)fd) < _io_fast.size()) return _io_fast[fd];
@@ -72,9 +72,9 @@ public:
 
     /**
      * @brief 获取任意io对象，只能主线程调用
-     * @param fd 
-     * @return 
-    */
+     * @param fd
+     * @return
+     */
     EVIO *get_io(int32_t fd)
     {
         auto found = _io_mgr.find(fd);
@@ -117,24 +117,32 @@ public:
     static int64_t get_real_time();
 
     /// 获取当前的帧时间，精度为毫秒
-    inline int64_t ms_now() { return _mn_time; }
+    inline int64_t ms_now()
+    {
+        return _mn_time;
+    }
     /// 获取当前的帧时间，精度为秒
-    inline int64_t now() { return _rt_time; }
+    inline int64_t now()
+    {
+        return _rt_time;
+    }
     /// 定时器回调函数
-    virtual void timer_callback(int32_t id, int32_t revents) {}
+    virtual void timer_callback(int32_t id, int32_t revents)
+    {
+    }
     /**
      * @brief 标记io变化，稍后异步处理
-     * @param fd 
-    */
+     * @param fd
+     */
     void io_change(int32_t fd)
     {
         _io_changes.emplace_back(fd);
     }
     /**
      * @brief 把一个io操作发送给io线程执行
-     * @param fd 
-     * @param events 
-    */
+     * @param fd
+     * @param events
+     */
     void io_action(EVIO *w, int32_t events);
     /// 获取当前未处理的io事件
     std::vector<int32_t> &get_io_action()
@@ -214,7 +222,7 @@ protected:
     /// 已经改变，等待设置到内核的io watcher
     std::vector<int32_t> _io_changes;
 
-     /// 用于快速获取io对象
+    /// 用于快速获取io对象
     std::vector<EVIO *> _io_fast;
     /**
      * 用于快速获取io对象，当fd太大(尤其是windows) 时
@@ -222,7 +230,7 @@ protected:
      */
     std::unordered_map<int32_t, EVIO *> _io_fast_mgr;
 
-    std::unordered_map<int32_t, EVIO> _io_mgr;/// 管理所有io对象
+    std::unordered_map<int32_t, EVIO> _io_mgr; /// 管理所有io对象
 
     /**
      * 当前拥有的timer数量

@@ -19,7 +19,7 @@
 
 #if BACKEND == 1
     #include "ev_epoll.inl"
-    #define BACKEND_TYPE EVEPoll
+    using FinalBackend = EVEPoll;
 #elif BACKEND == 2
     #include "ev_poll.inl"
 #else
@@ -138,7 +138,7 @@ EV::EV()
 
     _busy_time = 0;
 
-    _backend             = new BACKEND_TYPE();
+    _backend             = new FinalBackend();
     _backend_time_coarse = 0;
 }
 
@@ -318,9 +318,7 @@ void EV::io_reify()
             EVIO *io = get_io(fd);
             if (io && io->_active)
             {
-                int32_t events = io->_events;
-                _backend->modify(fd, io->_emask, events);
-                io->_emask = events;
+                _backend->modify(fd, io->_emask, io->_events);
 
                 // 新增
                 if (2 == io->_active)
@@ -440,24 +438,25 @@ void EV::io_event(EVIO *w, int32_t revents)
 
 void EV::io_action(EVIO *w, int32_t events)
 {
-    bool empty = false;
+    bool wake = false;
     {
         std::lock_guard<SpinLock> lg(_spin_lock);
-
-        empty = _io_actions.empty();
 
         w->_action_ev |= events;
 
         // 先判断该watch是否在队列中，在的话就不要再插入
         // 玩家登录的时候，可能有上百次数据发送，不要每次都插入
+        // _action_index不一定是_io_actions的数组下标，因为
+        // 数组由io线程处理后，需要处理该io才会把_io_actiion置0
         if (!w->_action_index)
         {
+            wake             = true
             _io_actions.emplace_back(w->_fd);
             w->_action_index = (int32_t)_io_actions.size();
         }
     }
     // 如果不为空，说明之前通知过了，不需要再通知
-    if (empty) _backend->wake();
+    if (wake) _backend->wake();
 }
 
 void EV::io_event_reify()
