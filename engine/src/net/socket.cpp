@@ -224,7 +224,7 @@ void Socket::append(const void *data, size_t len)
 
 void Socket::flush()
 {
-    StaticGlobal::ev()->io_action(_fd, EV_WRITE);
+    StaticGlobal::ev()->io_action(_w, EV_WRITE);
 }
 
 int32_t Socket::block(int32_t fd)
@@ -642,11 +642,16 @@ void Socket::listen_cb()
 
         uint32_t conn_id     = network_mgr->new_connect_id();
         class Socket *new_sk = new class Socket(conn_id, _conn_ty);
-        new_sk->start(new_fd);
+        if (new_sk->start(new_fd))
+        {
+            new_sk->stop();
+            return;
+        }
 
         // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
-        bool is_ok = network_mgr->accept_new(_conn_id, new_sk);
-        if (EXPECT_TRUE(is_ok))
+        bool ok = network_mgr->accept_new(_conn_id, new_sk);
+        // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
+        if (EXPECT_TRUE(ok && fd_valid(_fd) && _packet && new_sk->_w->get_io()))
         {
             new_sk->_w->init_accept();
         }
@@ -687,7 +692,7 @@ void Socket::connect_cb()
     bool ok                        = network_mgr->connect_new(_conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
-    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd)))
+    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd) && _packet && _w->get_io()))
     {
         _w->init_connect();
     }

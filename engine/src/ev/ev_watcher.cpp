@@ -54,10 +54,30 @@ IO::IOStatus EVIO::send()
 
 void EVIO::init_accept()
 {
+    int32_t ev = _io->init_accept(_fd);
+    if (ev)
+    {
+        _loop->io_action(this, ev);
+    }
 }
 
 void EVIO::init_connect()
 {
+    int32_t ev = _io->init_connect(_fd);
+    if (ev)
+    {
+        _loop->io_action(this, ev);
+    }
+}
+
+IO::IOStatus EVIO::do_init_accept()
+{
+    _io->do_init_accept();
+}
+
+IO::IOStatus EVIO::do_init_connect()
+{
+    _io->do_init_connect();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

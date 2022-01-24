@@ -4,7 +4,7 @@
 
 #include "io.hpp"
 
-class SSLIO : public IO
+class SSLIO final: public IO
 {
 public:
     ~SSLIO();
@@ -15,18 +15,36 @@ public:
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 接收的数据长度
      */
-    int32_t recv(int32_t &byte);
+    IOStatus recv() override;
     /* 发送数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 发送的数据长度
      */
-    int32_t send(int32_t &byte);
-    /* 准备接受状态
+    IOStatus send() override;
+    /**
+     * 发起初始化接受的连接
+     * @return 是否需要异步执行action事件
      */
-    int32_t init_accept(int32_t fd);
-    /* 准备连接状态
+    int32_t init_accept(int32_t fd) override;
+    /**
+     * 发起初始化连接
+     * @return 是否需要异步执行action事件
      */
-    int32_t init_connect(int32_t fd);
+    int32_t init_connect(int32_t fd) override;
+    /**
+     * 执行初始化接受的连接
+     * @return IOStatus
+     */
+    virtual IOStatus do_init_accept() override;
+    /**
+     * 执行初始化连接
+     * @return IOStatus
+     */
+    virtual IOStatus do_init_connect() override;
+    /**
+     * @brief init_accept、init_connect是否执行完
+     */
+    bool is_ready() const override;
 
 private:
     int32_t do_handshake();

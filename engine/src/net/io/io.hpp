@@ -43,15 +43,32 @@ public:
      */
     virtual IOStatus send();
     /**
-     * 初始化接受的连接
-     * @return  < 0 错误，0 成功，1 需要重读，2 需要重写
+     * 发起初始化接受的连接
+     * @return 是否需要异步执行action
      */
-    virtual int32_t init_accept(int32_t fd);
+    virtual bool init_accept(int32_t fd);
     /**
-     * 初始化连接
-     * @return  < 0 错误，0 成功，1 需要重读，2 需要重写
+     * 发起初始化连接
+     * @return 是否需要异步执行action
      */
-    virtual int32_t init_connect(int32_t fd);
+    virtual bool init_connect(int32_t fd);
+    /**
+     * 执行初始化接受的连接
+     * @return IOStatus
+     */
+    virtual IOStatus do_init_accept() {};
+    /**
+     * 执行初始化连接
+     * @return IOStatus
+     */
+    virtual IOStatus do_init_connect() {};
+    /**
+     * @brief init_accept、init_connect是否执行完
+     */
+    virtual bool is_ready() const
+    {
+        return true;
+    }
 
     /**
      * 初始化完成

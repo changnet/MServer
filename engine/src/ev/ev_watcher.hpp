@@ -89,21 +89,39 @@ public:
         return _send;
     }
     /**
-     * @brief 设置io读写参数
-     * @param io_type 
-     * @param param 
-     * @return 
+     * @brief 设置io读写对象指针
+     * @param ioc对象指针
      */
     void set_io(IO *io)
     {
         assert(!_io);
         _io = io;
     }
+    /**
+     * @brief 获取io对象指针
+     * @return io对象指针
+    */
+    IO *get_io()
+    {
+        return _io;
+    }
+    /**
+     * @brief io是否初始化完成
+     * @return 是否初始化完成
+    */
+    bool is_io_ready() const
+    {
+        return _io->is_ready();
+    }
 
     /// 初始化新增连接
     void init_accept();
     /// 初始化主动发起的连接
     void init_connect();
+    /// 执行初始化新增连接
+    IO::IOStatus do_init_accept();
+    /// 执行初始化主动发起的连接
+    IO::IOStatus do_init_connect();
 
 public:
 

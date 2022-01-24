@@ -18,30 +18,30 @@ SSLIO::SSLIO(uint32_t conn_id, int32_t ssl_id, class Buffer *recv,
     _ssl_id  = ssl_id;
 }
 
-/* 接收数据
- * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
- */
-int32_t SSLIO::recv(int32_t &byte)
+bool SSLIO::is_ready() const
+{
+    return 1 == SSL_is_init_finished(_ssl_ctx);
+}
+
+IO::IOStatus SSLIO::recv()
 {
     assert(Socket::fd_valid(_fd));
 
-    byte = 0;
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
-    if (!_recv->reserved()) return -1; /* no more memory */
+    if (!_recv->reserved()) return IOS_BUSY; /* no more memory */
 
     // ERR_clear_error
     size_t size = _recv->get_space_size();
     int32_t len = SSL_read(_ssl_ctx, _recv->get_space_ctx(), (int32_t)size);
     if (EXPECT_TRUE(len > 0))
     {
-        byte = len;
         _recv->add_used_offset(len);
-        return 0;
+        return IOS_OK;
     }
 
     int32_t ecode = SSL_get_error(_ssl_ctx, len);
-    if (SSL_ERROR_WANT_READ == ecode) return 1;
+    if (SSL_ERROR_WANT_READ == ecode) return IOS_READ;
 
     /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
      * SSL连接关闭时，要先关闭SSL协议，再关闭socket。当一个连接直接关闭时，SSL并不能明确
@@ -57,22 +57,17 @@ int32_t SSLIO::recv(int32_t &byte)
     if ((SSL_ERROR_ZERO_RETURN == ecode)
         || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
     {
-        return -1;
+        return IOS_CLOSE;
     }
 
-    byte = -1;
     SSLMgr::ssl_error("ssl io recv");
-    return -1;
+    return IOS_ERROR;
 }
 
-/* 发送数据
- * * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
- */
-int32_t SSLIO::send(int32_t &byte)
+IO::IOStatus SSLIO::send()
 {
     assert(Socket::fd_valid(_fd));
 
-    byte = 0;
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
     size_t bytes = _send->get_used_size();
@@ -81,44 +76,49 @@ int32_t SSLIO::send(int32_t &byte)
     int32_t len = SSL_write(_ssl_ctx, _send->get_used_ctx(), (int32_t)bytes);
     if (EXPECT_TRUE(len > 0))
     {
-        byte = len;
         _send->remove(len);
-        return 0 == _send->get_used_size() ? 0 : 2;
+        return 0 == _send->get_used_size() ? IOS_OK : IOS_WRITE;
     }
 
     int32_t ecode = SSL_get_error(_ssl_ctx, len);
-    if (SSL_ERROR_WANT_WRITE == ecode) return 2;
+    if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
 
     // 非主动断开，打印错误日志
     if ((SSL_ERROR_ZERO_RETURN == ecode)
         || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
     {
-        return -1;
+        return IOS_CLOSE;
     }
 
     SSLMgr::ssl_error("ssl io send");
-    return -1;
+    return IOS_ERROR;
 }
 
-/* 准备接受状态
- */
 int32_t SSLIO::init_accept(int32_t fd)
 {
-    if (init_ssl_ctx(fd) < 0) return -1;
-
     _fd = fd;
+    return EV_ACCEPT;
+}
+
+int32_t SSLIO::init_connect(int32_t fd)
+{
+    _fd = fd;
+    return EV_CONNECT;
+}
+
+IO::IOStatus SSLIO::do_init_accept()
+{
+    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
+
     SSL_set_accept_state(_ssl_ctx);
 
     return do_handshake();
 }
 
-/* 准备连接状态
- */
-int32_t SSLIO::init_connect(int32_t fd)
+IO::IOStatus SSLIO::do_init_connect()
 {
-    if (init_ssl_ctx(fd) < 0) return -1;
+    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
 
-    _fd = fd;
     SSL_set_connect_state(_ssl_ctx);
 
     return do_handshake();
