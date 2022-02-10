@@ -72,12 +72,12 @@ void EVIO::init_connect()
 
 IO::IOStatus EVIO::do_init_accept()
 {
-    _io->do_init_accept();
+    return _io->do_init_accept();
 }
 
 IO::IOStatus EVIO::do_init_connect()
 {
-    _io->do_init_connect();
+    return _io->do_init_connect();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

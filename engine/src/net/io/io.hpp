@@ -44,24 +44,32 @@ public:
     virtual IOStatus send();
     /**
      * 发起初始化接受的连接
-     * @return 是否需要异步执行action
+     * @return 需要异步执行的事件
      */
-    virtual bool init_accept(int32_t fd);
+    virtual int32_t init_accept(int32_t fd);
     /**
      * 发起初始化连接
-     * @return 是否需要异步执行action
+     * @return 需要异步执行的事件
      */
-    virtual bool init_connect(int32_t fd);
+    virtual int32_t init_connect(int32_t fd);
     /**
      * 执行初始化接受的连接
      * @return IOStatus
      */
-    virtual IOStatus do_init_accept() {};
+    virtual IOStatus do_init_accept()
+    {
+        assert(false);
+        return IOS_OK;
+    };
     /**
      * 执行初始化连接
      * @return IOStatus
      */
-    virtual IOStatus do_init_connect() {};
+    virtual IOStatus do_init_connect()
+    {
+        assert(false);
+        return IOS_OK;
+    };
     /**
      * @brief init_accept、init_connect是否执行完
      */

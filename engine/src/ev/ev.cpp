@@ -450,7 +450,7 @@ void EV::io_action(EVIO *w, int32_t events)
         // 数组由io线程处理后，需要处理该io才会把_io_actiion置0
         if (!w->_action_index)
         {
-            wake             = true
+            wake = true;
             _io_actions.emplace_back(w->_fd);
             w->_action_index = (int32_t)_io_actions.size();
         }

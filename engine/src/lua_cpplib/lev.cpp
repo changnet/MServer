@@ -159,7 +159,7 @@ bool LEV::next_periodic(Periodic &periodic)
         periodic._next_time = _mn_time + periodic._repeat_ms;
     }
 
-    set_backend_time_coarse(periodic._next_time);
+    // set_backend_time_coarse(periodic._next_time);
 
     return timeout;
 }

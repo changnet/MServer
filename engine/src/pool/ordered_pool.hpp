@@ -1,6 +1,9 @@
 #pragma once
 
+#include <mutex>
+
 #include "pool.hpp"
+#include "../thread/spin_lock.hpp"
 
 /**
  * 等长内存池，参考了boost内存池(boolst/pool/pool.hpp).分配的内存只能是ordered_size
@@ -19,10 +22,19 @@ public:
         assert(ordered_size >= sizeof(void *));
     }
 
-    ~OrderedPool() { clear(); }
+    virtual ~OrderedPool()
+    {
+        clear();
+    }
 
-    virtual void purge() { clear(); }
-    virtual size_t get_sizeof() const { return ordered_size; }
+    virtual void purge()
+    {
+        clear();
+    }
+    virtual size_t get_sizeof() const
+    {
+        return ordered_size;
+    }
 
     void ordered_free(char *const ptr, size_t n)
     {
@@ -93,7 +105,10 @@ public:
     }
 
 private:
-    void clear() /* 释放所有内存，包括已分配出去未归还的。慎用！ */
+    /**
+     * @brief 释放所有内存，包括已分配出去未归还的。慎用！
+     */
+    void clear()
     {
         if (anpts)
         {
@@ -156,4 +171,44 @@ private:
     size_t anptmax;
 
     void *block_list; /* 从系统分配的内存块链表 */
+};
+
+/**
+ * @brief 等长内存池，同OrderedPool，但是加了SpinLock
+ */
+template <size_t ordered_size>
+class OrderedPoolLock final : public OrderedPool<ordered_size>
+{
+public:
+    explicit OrderedPoolLock(const char *name) : OrderedPool<ordered_size>(name)
+    {
+    }
+    virtual ~OrderedPoolLock()
+    {
+    }
+
+    virtual void purge() override
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        OrderedPool<ordered_size>::purge();
+    }
+    virtual size_t get_sizeof() const override
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        return OrderedPool<ordered_size>::get_sizeof();
+    }
+
+    void ordered_free(char *const ptr, size_t n) override
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        OrderedPool<ordered_size>::ordered_free(ptr, n);
+    }
+    char *ordered_malloc(size_t n, size_t chunk_size) override
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        return OrderedPool<ordered_size>::ordered_malloc(n, chunk_size);
+    }
+
+private:
+    SpinLock _lock;
 };

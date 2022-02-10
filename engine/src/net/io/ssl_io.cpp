@@ -108,7 +108,7 @@ int32_t SSLIO::init_connect(int32_t fd)
 
 IO::IOStatus SSLIO::do_init_accept()
 {
-    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
+    if (init_ssl_ctx() < 0) return IOS_ERROR;
 
     SSL_set_accept_state(_ssl_ctx);
 
@@ -117,14 +117,14 @@ IO::IOStatus SSLIO::do_init_accept()
 
 IO::IOStatus SSLIO::do_init_connect()
 {
-    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
+    if (init_ssl_ctx() < 0) return IOS_ERROR;
 
     SSL_set_connect_state(_ssl_ctx);
 
     return do_handshake();
 }
 
-int32_t SSLIO::init_ssl_ctx(int32_t fd)
+int32_t SSLIO::init_ssl_ctx()
 {
     static class SSLMgr *ctx_mgr = StaticGlobal::ssl_mgr();
 
@@ -142,7 +142,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
         return -1;
     }
 
-    if (!SSL_set_fd(_ssl_ctx, fd))
+    if (!SSL_set_fd(_ssl_ctx, _fd))
     {
         ELOG("ssl io init ssl SSL_set_fd fail");
         return -1;
@@ -151,7 +151,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     return 0;
 }
 
-int32_t SSLIO::do_handshake()
+IO::IOStatus SSLIO::do_handshake()
 {
     int32_t ecode = SSL_do_handshake(_ssl_ctx);
     if (1 == ecode)
@@ -160,7 +160,7 @@ int32_t SSLIO::do_handshake()
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
         init_ok();
-        return 0 == _send->get_used_size() ? 0 : 2;
+        return 0 == _send->get_used_size() ? IOS_OK : IOS_WRITE;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of
@@ -172,11 +172,11 @@ int32_t SSLIO::do_handshake()
      * handshakes.
      */
     ecode = SSL_get_error(_ssl_ctx, ecode);
-    if (SSL_ERROR_WANT_READ == ecode) return 1;
-    if (SSL_ERROR_WANT_WRITE == ecode) return 2;
+    if (SSL_ERROR_WANT_READ == ecode) return IOS_READ;
+    if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
 
     // error
     SSLMgr::ssl_error("ssl io do handshake:");
 
-    return -1;
+    return IOS_ERROR;
 }

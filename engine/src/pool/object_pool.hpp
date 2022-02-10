@@ -1,6 +1,9 @@
 #pragma once
 
+#include <mutex>
+
 #include "pool.hpp"
+#include "../thread/spin_lock.hpp"
 
 /**
  * 对象内存池
@@ -15,15 +18,32 @@ public:
     /* @msize:允许池中分配的最大对象数量
      * @nsize:每次预分配的数量
      */
-    explicit ObjectPool(const char *name) : Pool(name) { _objs.reserve(msize); }
+    explicit ObjectPool(const char *name) : Pool(name)
+    {
+        _objs.reserve(msize);
+    }
 
-    ~ObjectPool() { clear(); }
+    ~ObjectPool()
+    {
+        clear();
+    }
 
     // 清空内存，同clear。但这个是虚函数
-    inline virtual void purge() { clear(); }
-    inline virtual size_t get_sizeof() const { return sizeof(Storage); }
+    inline virtual void purge()
+    {
+        clear();
+    }
+    inline virtual size_t get_sizeof() const
+    {
+        return sizeof(Storage);
+    }
 
-    // 构造对象
+    /**
+     * @brief 构造对象，注意此函数不是virtual函数（模板不能是virtual）
+     * @tparam ...Args 用于构造对象的构造函数
+     * @param ...args 
+     * @return 
+    */
     template <typename... Args> T *construct(Args &&...args)
     {
         if (EXPECT_FALSE(_objs.empty()))
@@ -65,4 +85,53 @@ private:
     using Storage = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
 
     std::vector<Storage *> _objs;
+};
+
+/**
+ * @brief 对象内存池，同ObjectPool，但加锁(注意不能用多态)
+ * @tparam T 对象类型
+ */
+template <typename T, size_t msize = 1024, size_t nsize = 1024>
+class ObjectPoolLock final : public ObjectPool<T, msize, nsize>
+{
+public:
+    explicit ObjectPoolLock(const char *name)
+        : ObjectPool<T, msize, nsize>(name)
+    {
+    }
+    virtual ~ObjectPoolLock()
+    {
+    }
+
+    inline virtual void purge() override
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        ObjectPool<T, msize, nsize>::purge();
+    }
+    inline virtual size_t get_sizeof() const override
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        return ObjectPool<T, msize, nsize>::get_sizeof();
+    }
+
+    /**
+     * @brief 构造对象，注意此函数不是virtual函数（模板不能是virtual）
+     * @tparam ...Args 
+     * @param ...args 用于构造对象的参数
+     * @return 
+    */
+    template <typename... Args> T *construct(Args &&...args)
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        return ObjectPool<T, msize, nsize>::construct(args...);
+    }
+
+    void destroy(T *const object)
+    {
+        std::lock_guard<SpinLock> lg(_lock);
+        ObjectPool<T, msize, nsize>::destroy(object);
+    }
+
+private:
+    SpinLock _lock;
 };

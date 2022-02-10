@@ -47,8 +47,8 @@ public:
     bool is_ready() const override;
 
 private:
-    int32_t do_handshake();
-    int32_t init_ssl_ctx(int32_t fd);
+    IO::IOStatus do_handshake();
+    int32_t init_ssl_ctx();
 
 private:
     int32_t _ssl_id;
