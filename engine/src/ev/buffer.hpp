@@ -1,100 +1,138 @@
 #pragma once
 
 #include "../pool/object_pool.hpp"
-#include "../pool/ordered_pool.hpp"
+#include "../thread/spin_lock.hpp"
 
-/* 单个chunk
+/**
+ * 单个chunk
  *    +---------------------------------------------------------------+
- *    |    悬空区   |        有效数据区        |      空白区(space)       |
+ *    |    悬空区   |        有效数据区        |      空白区(space)   |
  *    +---------------------------------------------------------------+
- * _buff          _beg                    _end
+ * _ctx          _beg                        _end                   _max
  *
- *收发缓冲区，要考虑游戏场景中的几个特殊情况：
- * 1.游戏的通信包一般都很小，reserved出现的概率很小。偶尔出现，memcpy的效率也是可以接受的
- * 2.缓冲区可能出现边读取边接收，边发送边写入的情况。因此，当前面的协议未读取完，又接收到新的
- *   协议，或者前面的数据未发送完，又写入新的数据，会造成前面一段缓冲区悬空，没法利用。旧框架
- *   的办法是每读取完或发送完一轮数据包，就用memmove把后面的数据往前面移动，这在粘包频繁出现
- *   并且包不完整的情况下效率很低(进程间的socket粘包很严重)。因此，我们忽略前面的悬空缓冲区，
- *   直到我们需要调整内存时，才用memmove移动内存。
  */
 
-/* 网络收发缓冲区
+/**
+ * 网络收发缓冲区
  *
- * 1. 连续缓冲区
- *    整个缓冲区只用一块内存，不够了按2倍重新分配，把旧数据拷贝到新缓冲区。分配了就不再释放
- *    1).
- * 缓冲区是连续的，存取效率高。socket读写可以直接用缓冲区，不需要二次拷贝,
- *        不需要二次读写。websocket、bson等打包数据时，可以直接用缓冲区，无需二次拷贝.
- *    2). 发生迁移拷贝时效率不高，缓冲区在极限情况下可达1G。
- *        比如断点调试，线上服务器出现过因为数据库阻塞用了1G多内存的
- *    3). 分配了不释放，内存利用率不高。当链接很多时，内存占用很高
- * 2. 小包链表设计
- *    每个包一个小块，用链表管理
- *    1). 不用考虑合并包
- *    2). 当包长无法预估时，一样需要重新分配，发生拷贝
- *        有些项目直接全部分配最大包，超过包大小则由上层逻辑分包，但这样包利用率较低
- *    3).
- * 收包时需要额外处理包不在同连续内存块的情况，protobuf这些要求同一个数据包的buff是
- *        连续的才能解析
- *    4).
- * socket读写时需要多次读写。因为可读、可写的大小不确定，而包比较小，可能读写不完
- * 3. 中包链表设计
- *    预分配一个比较大的包(比如服务器连接为8M)，数据依次添加到这个包。
- *    正常情况下，这个数据包无需扩展。超过这个包大小，会继续分配更多的包到链表上
- *   1). 数组包基本是连续的，利用率较高
- *   2).
- * 包可以预分配比较大(超过协议最大长度)，很多情况下是可以当作连续缓冲区用的
- *   3).
- * socket读写时不需要多次读写。因为包已经很大了，一次读写不太可能超过包大小
- *       epoll为ET模式也需要多次读写，但这里现在用LT
- *   4). 需要处理超过包大小时，合并、拆分的情况
+ * 1. 游戏的数据包一般是小包，因此这里都是按小包来设计和优化的
+ *    频繁发送大包(缓冲区超过8k)会导致链表操作，有一定的效率损失
+ * 
+ * 2. 每条连接默认分配一个8k的收缓冲区和一个8k的发缓冲区。
+ *    数据量超过时，后续的包以链表形式链在一起
+ *    10240条链接，收最大64k，发64k，那最差的情况是1280M内存
+ * 
+ * 3. 有时候为了优化拷贝，会直接从缓冲区中预分配一块内存，把收发的数据直接写入
+ *    缓冲区。这时候预分配的缓冲区必须是连续的，但缓冲区可能只能以链表提供
+ *    这时候只能临时分配一块内存，再拷贝到缓冲区，效率不高
  */
 
-class Buffer
+/**
+ * @brief 网络收发缓冲区
+*/
+class Buffer final
 {
 private:
-    class Chunk
+    /**
+     * @brief 单个缓冲区块，多个块以链表形式组成一个完整的缓冲区
+    */
+    class Chunk final
     {
     public:
-        char *_ctx;  /* 缓冲区指针 */
-        size_t _max; /* 缓冲区总大小 */
-
-        size_t _beg; /* 有效数据开始位置 */
-        size_t _end; /* 有效数据结束位置 */
-
-        Chunk *_next; /* 链表下一节点 */
-
-        inline void remove(size_t len)
+        static const size_t MAX_CTX = 8192; //8k
+    public:
+        Chunk()
         {
-            _beg += len;
-            assert(_end >= _beg);
+            _next     = nullptr;
+            _used_pos = _free_pos = 0;
         }
-        inline void add_used_offset(size_t len)
+        ~Chunk()
         {
-            _end += len;
-            assert(_max >= _end);
         }
+
+        /**
+         * @brief 移除已使用缓冲区
+         * @param len 移除的长度
+         */
+        inline void del_used(size_t len)
+        {
+            _used_pos += len;
+            assert(_free_pos >= _used_pos);
+        }
+        /**
+         * @brief 添加已使用缓冲区
+         * @param len 添加的长度
+        */
+        inline void add_used(size_t len)
+        {
+            _free_pos += len;
+            assert(_ctx + MAX_CTX >= _free_pos);
+        }
+
+        /**
+         * @brief 添加缓冲区数据
+         * @param data 需要添加的数据
+         * @param len 数据的长度
+        */
         inline void append(const void *data, const size_t len)
         {
-            memcpy(_ctx + _end, data, len);
-            add_used_offset(len);
+            memcpy(_ctx + _free_pos, data, len);
+            add_used(len);
         }
 
-        // 有效数据指针
-        inline const char *used_ctx() const { return _ctx + _beg; }
-        inline char *space_ctx() { return _ctx + _end; } // 空闲缓冲区指针
+        /**
+         * @brief 获取已使用缓冲区数据指针
+         * @return 
+        */
+        inline const char *get_used_ctx() const
+        {
+            return _ctx + _used_pos;
+        }
 
-        inline void clear() { _beg = _end = 0; } // 重置有效数据
-        inline size_t used_size() const { return _end - _beg; } // 有效数据大小
-        inline size_t space_size() const
+        /**
+         * @brief 获取空闲缓冲区指针
+         * @return 
+        */
+        inline char *get_free_ctx()
+        {
+            return _ctx + _free_pos;
+        }
+
+        /**
+         * @brief 重置整个缓冲区
+        */
+        inline void clear()
+        {
+            _used_pos = _free_pos = 0;
+        }
+        /**
+         * @brief 获取已使用缓冲区大小
+         * @return 
+        */
+        inline size_t used_size() const
+        {
+            return _free_pos - _used_pos;
+        }
+
+        /**
+         * @brief 获取空闲缓冲区大小
+         * @return 
+        */
+        inline size_t get_free_size() const
         {
             return _max - _end;
-        } // 空闲缓冲区大小
+        }
+    public:
+        char _ctx[MAX_CTX]; // 缓冲区指针
+
+        size_t _used_pos; // 已使用缓冲区开始位置
+        size_t _free_pos; // 空闲缓冲区开始位置
+
+        Chunk *_next; // 链表下一节点
     };
 
-    typedef OrderedPool<BUFFER_CHUNK> ctx_pool_t;
-    typedef ObjectPool<Chunk, 1024, 64> chunk_pool_t;
-
+    /// 小块缓冲区对象池
+    using ChunkPool = ObjectPoolLock<Chunk, 1024, 64>;
 public:
     Buffer();
     ~Buffer();
@@ -218,22 +256,22 @@ public:
         assert(0 == ctx_size % BUFFER_CHUNK);
     }
 
-    // 当前缓冲区是否超了设定值
+    // 当前缓冲区是否溢出
     inline bool is_overflow() const { return _chunk_size > _chunk_max; }
 
 private:
+    ChunkPool *get_chunk_pool()
+    {
+        // 采用局部static，这样就不会影响static_global中的内存统计
+        // 不能用thread_local，这里有多线程操作
+        static ChunkPool chunk_pool("buffer_chunk");
+        return &chunk_pool;
+    }
+
     inline Chunk *new_chunk(size_t ctx_size = 0)
     {
-        chunk_pool_t *pool = get_chunk_pool();
-
-        Chunk *chunk = pool->construct();
-        memset(chunk, 0, sizeof(Chunk));
-
-        chunk->_ctx = new_ctx(ctx_size);
-        chunk->_max = ctx_size;
-
         _chunk_size++;
-        return chunk;
+        return get_chunk_pool()->construct();
     }
 
     inline void del_chunk(Chunk *chunk)
@@ -241,60 +279,15 @@ private:
         assert(_chunk_size > 0);
 
         _chunk_size--;
-        del_ctx(chunk->_ctx, chunk->_max);
-
-        chunk_pool_t *pool = get_chunk_pool();
-        pool->destroy(chunk);
+        get_chunk_pool()->destroy(chunk);
     }
-
-    // @size:要分配的缓冲区大小，会被修正为最终分配的大小
-    inline char *new_ctx(size_t &size)
-    {
-        // 如果分配太小，则修正为指定socket的大小。避免reserved分配太小的内存块
-        size_t new_size = std::max(size, _chunk_ctx_size);
-
-        // 大小只能是BUFFER_CHUNK的N倍，如果不是则修正
-        if (0 != new_size % BUFFER_CHUNK)
-        {
-            new_size = (new_size / BUFFER_CHUNK + 1) * BUFFER_CHUNK;
-        }
-
-        assert(new_size > 0);
-
-        size = new_size;
-
-        /* 分配的内存块太大每次将只分配一块，其他分配8块 */
-        ctx_pool_t *pool = get_ctx_pool();
-        return pool->ordered_malloc(new_size / BUFFER_CHUNK,
-                                    new_size >= BUFFER_LARGE ? 1 : 8);
-    }
-
-    inline void del_ctx(char *ctx, size_t size)
-    {
-        assert(size > 0 && (0 == size % BUFFER_CHUNK));
-
-        ctx_pool_t *pool = get_ctx_pool();
-        pool->ordered_free(ctx, size / BUFFER_CHUNK);
-    }
-
 private:
-    // 采用局部static，这样就不会影响static_global中的内存统计
-    chunk_pool_t *get_chunk_pool()
-    {
-        static chunk_pool_t chunk_pool("buffer_chunk");
-        return &chunk_pool;
-    }
-    ctx_pool_t *get_ctx_pool()
-    {
-        static ctx_pool_t ctx_pool("buffer_ctx");
-        return &ctx_pool;
-    }
-
-private:
+    SpinLock _lock;  /// 多线程锁
     Chunk *_front;      // 数据包链表头
     Chunk *_back;       // 数据包链表尾
-    size_t _chunk_size; // 已申请chunk数量
 
-    size_t _chunk_max;      // 允许申请chunk的最大数量
-    size_t _chunk_ctx_size; // 单个chunk的缓冲区大小
+    // 已申请chunk数量
+    int32_t _chunk_size;
+    // 该缓冲区允许申请chunk的最大数量，超过此数量视为缓冲区溢出
+    int32_t _chunk_max;
 };

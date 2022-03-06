@@ -16,13 +16,6 @@
 /* is assert work ? */
 //#define NDEBUG
 
-/* buffer chunk size for socket recv or send */
-#define BUFFER_CHUNK 8192
-/* 大型buffer缓冲区分界线，采用不同的内存分配策略 */
-#define BUFFER_LARGE 65535
-/* 小型buffer每次分配的chunk数量 */
-#define BUFFER_CHUNK_SIZE 512
-
 /* sql buffer chunk size */
 #define SQL_CHUNK 64
 

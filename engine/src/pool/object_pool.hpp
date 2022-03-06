@@ -8,8 +8,8 @@
 /**
  * 对象内存池
  * 用数组来管对象利用，解决频繁分配、释放问题。但无法解决多个小对象导致的内存碎片问题
- * @tparam msize 池中缓存最大对象数量
- * @tparam nsize 每次分配的对象数量
+ * @param msize 池中缓存保留最大空闲对象数量
+ * @param nsize 每次分配的对象数量
  */
 template <typename T, size_t msize = 1024, size_t nsize = 1024>
 class ObjectPool : public Pool
