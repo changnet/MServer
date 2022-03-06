@@ -54,7 +54,7 @@ private:
          * @brief 移除已使用缓冲区
          * @param len 移除的长度
          */
-        inline void del_used(size_t len)
+        inline void remove_used(size_t len)
         {
             _used_pos += len;
             assert(_free_pos >= _used_pos);
@@ -66,7 +66,7 @@ private:
         inline void add_used(size_t len)
         {
             _free_pos += len;
-            assert(_ctx + MAX_CTX >= _free_pos);
+            assert(MAX_CTX >= _free_pos);
         }
 
         /**
@@ -109,7 +109,7 @@ private:
          * @brief 获取已使用缓冲区大小
          * @return 
         */
-        inline size_t used_size() const
+        inline size_t get_used_size() const
         {
             return _free_pos - _used_pos;
         }
@@ -120,7 +120,7 @@ private:
         */
         inline size_t get_free_size() const
         {
-            return _max - _end;
+            return MAX_CTX - _free_pos;
         }
     public:
         char _ctx[MAX_CTX]; // 缓冲区指针
@@ -131,15 +131,54 @@ private:
         Chunk *_next; // 链表下一节点
     };
 
+    /**
+     * @brief 一大块连续的缓冲区
+    */
+    class LargeBuffer final
+    {
+    public:
+        LargeBuffer();
+        ~LargeBuffer();
+
+        /**
+         * @brief 获取指定长度的连续缓冲区
+         * @param len 缓冲区的长度
+         * @return 缓冲区指针
+        */
+        char *get(size_t len);
+
+    private:
+        char *_ctx;  // 缓冲区指针
+        size_t _len; // 缓冲区长度
+    };
+
     /// 小块缓冲区对象池
     using ChunkPool = ObjectPoolLock<Chunk, 1024, 64>;
 public:
     Buffer();
     ~Buffer();
 
+    /**
+     * @brief 重置当前缓冲区
+    */
     void clear();
+
+    /**
+     * @brief 删除缓冲区中的数据
+     * @param len 要删除的数据长度
+    */
     void remove(size_t len);
+
+    /**
+     * @brief 添加数据到缓冲区
+     * @param data 要添加的数据 
+     * @param len 要添加的数据长度
+    */
     void append(const void *data, const size_t len);
+
+    ////////////////////////////////////////////////////////////////////////////
+    // 这里的static缓冲区有问题，想办法放到static_global
+    // 放到static_global需要额外用一个锁 ChunkPool也有同样的问题
 
     const char *to_continuous_ctx(size_t len);
     const char *all_to_continuous_ctx(size_t &len);
@@ -212,38 +251,6 @@ public:
     // 增加有效数据长度，比如从socket读数据时，先拿缓冲区，然后才知道读了多少数据
     inline void add_used_offset(size_t len) { _back->add_used_offset(len); }
 
-    /* 预分配一块连续的空闲缓冲区，大小不能超过单个chunk
-     * @len:len为0表示不需要确定预分配
-     * 注意当len不为0时而当前chunk空间不足，会直接申请下一个chunk，数据包并不是连续的
-     */
-    inline bool reserved(size_t len = 0)
-    {
-        // 正常情况下不会分配这么大，但防止websocket时别人恶意传长度
-        if (EXPECT_FALSE(len > BUFFER_CHUNK * 10)) return false;
-
-        if (EXPECT_FALSE(!_front))
-        {
-            _back = _front = new_chunk(len);
-            return true;
-        }
-
-        size_t space = _back->space_size();
-        if (0 == space || len > space)
-        {
-            _back = _back->_next = new_chunk(len);
-            // 不允许前面有一个空的chunk
-            if (0 == _front->used_size())
-            {
-                assert(_back == _front->_next);
-
-                del_chunk(_front);
-                _front = _back;
-            }
-        }
-
-        return true;
-    }
-
     // 设置缓冲区参数
     // @param maxchunk最大数量
     // @param ctx_max 默认
@@ -260,15 +267,9 @@ public:
     inline bool is_overflow() const { return _chunk_size > _chunk_max; }
 
 private:
-    ChunkPool *get_chunk_pool()
-    {
-        // 采用局部static，这样就不会影响static_global中的内存统计
-        // 不能用thread_local，这里有多线程操作
-        static ChunkPool chunk_pool("buffer_chunk");
-        return &chunk_pool;
-    }
+    ChunkPool *get_chunk_pool();
 
-    inline Chunk *new_chunk(size_t ctx_size = 0)
+    inline Chunk *new_chunk()
     {
         _chunk_size++;
         return get_chunk_pool()->construct();
@@ -281,8 +282,23 @@ private:
         _chunk_size--;
         get_chunk_pool()->destroy(chunk);
     }
+
+    /**
+     * @brief 预分配缓冲区空间
+     * @param len 预分配的长度
+     * @return 是否分配成功
+    */
+    bool reserved();
+
+    /**
+     * @brief 获取连续的缓冲区
+     * @param len 缓冲区的长度
+     * @return 
+    */
+    char *get_large_buffer(size_t len);
+
 private:
-    SpinLock _lock;  /// 多线程锁
+    SpinLock _lock;  // 多线程锁
     Chunk *_front;      // 数据包链表头
     Chunk *_back;       // 数据包链表尾
 

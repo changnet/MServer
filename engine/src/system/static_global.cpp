@@ -11,6 +11,7 @@ class Statistic *StaticGlobal::_statistic     = nullptr;
 class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
 class LNetworkMgr *StaticGlobal::_network_mgr = nullptr;
+class Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::_initializer;
@@ -68,12 +69,13 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
     _codec_mgr   = new class CodecMgr();
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
+    _buffer_chunk_pool = new class Buffer::ChunkPool("buffer_chunk");
 
     _async_log->set_thread_name(STD_FMT("global_async_log"));
     _async_log->AsyncLog::start(1000000);
 
-    // 关服的时候，不需要等待这个线程。之前有人在关服定时器上打异步日志，导致这个线程一直忙
-    // 关不了服。stop的时候会处理所有日志
+    // 关服的时候，不需要等待这个线程。之前在关服定时器上打异步日志，
+    // 导致这个线程一直忙,关不了服，stop的时候会处理所有日志
     _async_log->set_wait_busy(false);
 
     // 初始化流量统计，这个和时间有关，等 ev 初始化后才调用
@@ -90,6 +92,7 @@ void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
     _thread_mgr->stop(_async_log);
     _network_mgr->clear();
 
+    delete _buffer_chunk_pool;
     delete _network_mgr;
     delete _ssl_mgr;
     delete _codec_mgr;

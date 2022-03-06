@@ -1,18 +1,43 @@
 #include "buffer.hpp"
+#include "../system/static_global.hpp"
 
 // 临时连续缓冲区
 static const size_t continuous_size         = MAX_PACKET_LEN;
 static char continuous_ctx[continuous_size] = {0};
 
+////////////////////////////////////////////////////////////////////////////////
+Buffer::LargeBuffer::LargeBuffer()
+{
+    _ctx = nullptr;
+    _len = 0;
+}
+
+Buffer::LargeBuffer::~LargeBuffer()
+{
+    if (_ctx) delete[] _ctx;
+}
+
+char Buffer::LargeBuffer::get(size_t len)
+{
+    if (_len >= len) return _ctx;
+
+    if (_ctx) delete[] _ctx;
+
+    // 以1M为基数，每次翻倍，只增不减
+    if (0 == _len) _len = 1024 * 1024;
+    while (_len < len) _len *= 2;
+
+    _ctx = new char[_len];
+
+    return _ctx;
+}
+////////////////////////////////////////////////////////////////////////////////
+
 Buffer::Buffer()
 {
-    _chunk_size = 0; // 已申请chunk数量
-
-    _chunk_max = 1; // 允许申请chunk的最大数量
-    // 默认单个chunk的缓冲区大小
-    _chunk_ctx_size = BUFFER_CHUNK;
-
-    _front = _back = NULL;
+    _chunk_size = 0;
+    _chunk_max = 1;
+    _front = _back = nullptr;
 }
 
 Buffer::~Buffer()
@@ -25,13 +50,46 @@ Buffer::~Buffer()
         del_chunk(tmp);
     }
 
-    _front = _back = NULL;
+    _front = _back = nullptr;
 }
 
-// 清空所有内容
-// 删除多余的chunk只保留一个
+bool Buffer::reserved()
+{
+    if (EXPECT_FALSE(!_back || 0 == _back->get_free_size()))
+    {
+        Chunk *tmp = new_chunk();
+        if (_back)
+        {
+            _back = _back->_next = new_chunk();
+        }
+        else
+        {
+            _back = _front = tmp;
+        }
+    }
+
+    return true;
+}
+
+char **Buffer::get_large_buffer(size_t len)
+{
+    // 原本想在LargeBuffer里加个锁，所有线程共用缓冲区
+    // 但缓冲区通常要持有一段时间，这导致这个锁非常难管理，需要手动加锁解锁
+    // 那干脆用thread_local，多耗点内存，但不用考虑锁的问题
+    thread_local LargeBuffer buffer;
+
+    return buffer.get(len);
+}
+
+ChunkPool *Buffer::get_chunk_pool()
+{
+    return StaticGlobal::buffer_chunk_pool();
+}
+
 void Buffer::clear()
 {
+    std::lock_guard lg(_lock);
+
     if (!_front) return;
 
     while (_front->_next)
@@ -42,15 +100,17 @@ void Buffer::clear()
         del_chunk(tmp);
     }
 
+    // 默认保留一个缓冲区 TODO: 是否有必要保留??
     _front->clear();
     assert(_back == _front);
 }
 
-// 添加数据
-void Buffer::append(const void *raw_data, const size_t len)
+void Buffer::append(const void *data, const size_t len)
 {
-    const char *data = reinterpret_cast<const char *>(raw_data);
+    const char *data = reinterpret_cast<const char *>(data);
     size_t append_sz = 0;
+
+    std::lock_guard lg(_lock);
     do
     {
         if (!reserved())
@@ -59,9 +119,9 @@ void Buffer::append(const void *raw_data, const size_t len)
             return;
         }
 
-        size_t space = _back->space_size();
+        size_t free_sz = _back->get_free_size();
 
-        size_t size = std::min(space, len - append_sz);
+        size_t size = std::min(free_sz, len - append_sz);
         _back->append(data + append_sz, size);
 
         append_sz += size;
@@ -71,23 +131,22 @@ void Buffer::append(const void *raw_data, const size_t len)
     } while (EXPECT_FALSE(append_sz < len));
 }
 
-// 删除数据
 void Buffer::remove(size_t len)
 {
+    std::lock_guard lg(_lock);
     do
     {
-        size_t used = _front->used_size();
+        size_t used = _front->get_used_size();
 
-        // 这个chunk还有其他数据
         if (used > len)
         {
+            // 这个chunk还有其他数据
             _front->remove(len);
             break;
         }
-
-        // 这个chunk只剩下这个数据包
-        if (used == len)
+        else if (used == len)
         {
+            // 这个chunk只剩下这个数据包
             Chunk *next = _front->_next;
             if (next)
             {
@@ -101,16 +160,22 @@ void Buffer::remove(size_t len)
             }
             break;
         }
+        else
+        {
+            // 这个数据包分布在多个chunk，一个个删
+            Chunk *tmp = _front;
 
-        // 这个数据包分布在多个chunk，一个个删
-        Chunk *tmp = _front;
+            _front = _front->_next;
+            assert(_front && len > used);
 
-        _front = _front->_next;
-        assert(_front && len > used);
-
-        len -= used;
-        del_chunk(tmp);
+            len -= used;
+            del_chunk(tmp);
+        }
     } while (len > 0);
+
+    // 冗余校验：只有一个缓冲区，或者有多个缓冲区但第一个已用完
+    // 否则就是链表管理出错了
+    assert(_front == _back || 0 == _front->get_free_size());
 }
 
 /* 检测指定长度的有效数据是否在连续内存，不在的话要合并成连续内存
