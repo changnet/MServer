@@ -20,7 +20,6 @@
 #include <chrono> // for 1000ms
 
 #include "ev.hpp"
-#include "ev_backend.hpp"
 
 const char *__BACKEND__ = "epoll";
 
@@ -34,11 +33,11 @@ const char *__BACKEND__ = "epoll";
 static const int32_t EPOLL_MAXEV = 8192;
 
 /// backend using epoll implement
-class EVEPoll final : public EVBackend
+class FinalBackend final : public EVBackend
 {
 public:
-    EVEPoll();
-    ~EVEPoll();
+    FinalBackend();
+    ~FinalBackend();
 
     bool stop();
     bool start(class EV *ev);
@@ -66,15 +65,15 @@ private:
     std::vector<struct ModifyEvent> _modify_event;
 };
 
-EVEPoll::EVEPoll()
+FinalBackend::FinalBackend()
 {
 }
 
-EVEPoll::~EVEPoll()
+FinalBackend::~FinalBackend()
 {
 }
 
-bool EVEPoll::start(class EV *ev)
+bool FinalBackend::start(class EV *ev)
 {
     _wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (_wake_fd < 0)
@@ -84,14 +83,14 @@ bool EVEPoll::start(class EV *ev)
     }
 
     EVBackend::start(ev);
-    _thread = std::thread(&EVEPoll::backend, this);
+    _thread = std::thread(&FinalBackend::backend, this);
 
     modify(_wake_fd, 0, EV_READ);
 
     return true;
 }
 
-bool EVEPoll::stop()
+bool FinalBackend::stop()
 {
     EVBackend::stop();
 
@@ -103,7 +102,7 @@ bool EVEPoll::stop()
     return true;
 }
 
-void EVEPoll::do_action(const std::vector<int32_t> &actions)
+void FinalBackend::do_action(const std::vector<int32_t> &actions)
 {
     for (auto fd : actions)
     {
@@ -148,7 +147,7 @@ void EVEPoll::do_action(const std::vector<int32_t> &actions)
     }
 }
 
-int32_t EVEPoll::do_event(int32_t ev_count)
+int32_t FinalBackend::do_event(int32_t ev_count)
 {
     int32_t use_ev = 0;
     for (int32_t i = 0; i < ev_count; ++i)
@@ -215,7 +214,7 @@ int32_t EVEPoll::do_event(int32_t ev_count)
     return use_ev;
 }
 
-void EVEPoll::backend()
+void FinalBackend::backend()
 {
 #ifdef EPOLL_CLOEXEC
     _ep_fd = epoll_create1(EPOLL_CLOEXEC);
@@ -286,7 +285,7 @@ void EVEPoll::backend()
     _ep_fd = -1;
 }
 
-void EVEPoll::wake()
+void FinalBackend::wake()
 {
     static const int64_t v = 1;
     if (::write(_wake_fd, &v, sizeof(v)) <= 0)
@@ -295,7 +294,7 @@ void EVEPoll::wake()
     }
 }
 
-void EVEPoll::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+void FinalBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
 {
     /**
      * man epoll_wait
@@ -327,7 +326,7 @@ void EVEPoll::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
     _modify_event.emplace_back(fd, old_ev, new_ev);
 }
 
-void EVEPoll::do_modify()
+void FinalBackend::do_modify()
 {
     for (auto &e : _modify_event)
     {
@@ -336,7 +335,7 @@ void EVEPoll::do_modify()
     _modify_event.clear();
 }
 
-void EVEPoll::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
+void FinalBackend::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */

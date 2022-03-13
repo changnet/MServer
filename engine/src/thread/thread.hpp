@@ -285,8 +285,7 @@ protected:
     std::atomic<int32_t> _main_ev;
 
     /// 各线程收到的信号统一存这里，由主线程处理
-    /// 一般的做法是子线程屏蔽信号，由主线程接收，但c++标准里不提供屏蔽的接口
-    static std::atomic<uint32_t> _sig_mask;
+    static std::atomic<int32_t> _sig_mask;
 
     // 用于产生自定义线程id
     // std::thread::id不能保证为数字(linux下一般为pthread_t)，不方便传参

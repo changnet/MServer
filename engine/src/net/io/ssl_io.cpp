@@ -70,28 +70,42 @@ IO::IOStatus SSLIO::send()
 
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
-    size_t bytes = _send->get_used_size();
-    assert(bytes > 0);
-
-    int32_t len = SSL_write(_ssl_ctx, _send->get_used_ctx(), (int32_t)bytes);
-    if (EXPECT_TRUE(len > 0))
+    int32_t len  = 0;
+    size_t bytes = 0;
+    bool next    = false;
+    while (true)
     {
-        _send->remove(len);
-        return 0 == _send->get_used_size() ? IOS_OK : IOS_WRITE;
+        const char *data = _send->get_front_used(bytes, next);
+        if (0 == bytes) return IOS_OK;
+
+        len = SSL_write(_ssl_ctx, data, (int32_t)bytes);
+        if (len > 0)
+        {
+            _send->remove(len);
+
+            // 缓冲区已满
+            if (len < bytes) return IOS_WRITE;
+
+            // >= 要发送值，尝试再发一次看看有没有数据要发送
+            if (!next) return IOS_OK;
+        }
+        else
+        {
+
+            int32_t ecode = SSL_get_error(_ssl_ctx, len);
+            if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
+
+            // 非主动断开，打印错误日志
+            if ((SSL_ERROR_ZERO_RETURN == ecode)
+                || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
+            {
+                return IOS_CLOSE;
+            }
+
+            SSLMgr::ssl_error("ssl io send");
+            return IOS_ERROR;
+        }
     }
-
-    int32_t ecode = SSL_get_error(_ssl_ctx, len);
-    if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
-
-    // 非主动断开，打印错误日志
-    if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
-    {
-        return IOS_CLOSE;
-    }
-
-    SSLMgr::ssl_error("ssl io send");
-    return IOS_ERROR;
 }
 
 int32_t SSLIO::init_accept(int32_t fd)

@@ -186,28 +186,45 @@ public:
     // 只获取第一个chunk的有效数据大小，用于socket发送
     inline size_t get_used_size() const
     {
-        return _front ? _front->used_size() : 0;
+        return _front ? _front->get_used_size() : 0;
     }
 
-    // 获取chunk的数量
+    /**
+     * @brief 获取第一个chunk的数据指针及数据大小
+     * @param size 第一个chunk的数据大小
+     * @param next 是否还有下一个数据块
+     * @return 第一个chunk的数据指针
+    */
+    const char *get_front_used(size_t &size, bool &next) const
+    {
+        if (!_front)
+        {
+            size = 0;
+            next = false;
+            return nullptr;
+        }
+
+        next = _chunk_size > 1 ? true : false;
+        size = _front->get_used_size();
+        return _front->get_used_ctx();
+    }
+
+    /**
+     * @brief 获取chunk的数量
+     * @return 
+    */
     inline size_t get_chunk_size() const { return _chunk_size; }
-    // 获取所有chunk分配的内存大小
+    /**
+     * @brief 获取所有已分配chunk的大小，用于统计
+     * @return 
+    */
     inline size_t get_chunk_mem_size() const
     {
-        size_t mem        = 0;
-        const Chunk *next = _front;
-
-        while (next)
-        {
-            mem += next->_max;
-            next = next->_next;
-        };
-
-        return mem;
+        return _chunk_size * sizeof(Chunk);
     }
 
     // 只获取第一个chunk的有效数据指针，用于socket发送
-    inline const char *get_used_ctx() const { return _front->used_ctx(); };
+    inline const char *get_used_ctx() const { return _front->get_used_ctx(); };
 
     /* 检测当前有效数据的大小是否 >= 指定值
      * 这个函数必须在确定已有数据的情况下调用，不检测next是否为空

@@ -59,28 +59,40 @@ IO::IOStatus IO::send()
 {
     assert(Socket::fd_valid(_fd));
 
-    size_t bytes = _send->get_used_size();
-    assert(bytes > 0);
-
-    int32_t len = (int32_t)::send(_fd, _send->get_used_ctx(), (int32_t)bytes, 0);
-
-    if (EXPECT_TRUE(len > 0))
+    int32_t len  = 0;
+    size_t bytes = 0;
+    bool next    = false;
+    while (true)
     {
-        _send->remove(len);
-        return 0 == _send->get_used_size() ? IOS_OK : IOS_WRITE;
+        const char *data = _send->get_front_used(bytes, next);
+        if (0 == bytes) return IOS_OK;
+
+        len = (int32_t)::send(_fd, data, (int32_t)bytes, 0);
+        if (len > 0)
+        {
+            _send->remove(len);
+
+            // 缓冲区已满
+            if (len < bytes) return IOS_WRITE;
+
+            // >= 要发送值，尝试再发一次看看有没有数据要发送
+            if (!next) return IOS_OK;
+        }
+        else
+        {
+            if (0 == len) return IOS_CLOSE; // 对方主动断开
+
+            /* error happen */
+            if (Socket::is_error())
+            {
+                ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
+                return IOS_ERROR;
+            }
+
+            /* need to try again */
+            return IOS_WRITE;
+        }
     }
-
-    if (0 == len) return IOS_CLOSE; // 对方主动断开
-
-    /* error happen */
-    if (Socket::is_error())
-    {
-        ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
-        return IOS_ERROR;
-    }
-
-    /* need to try again */
-    return IOS_WRITE;
 }
 
 int32_t IO::init_accept(int32_t fd)

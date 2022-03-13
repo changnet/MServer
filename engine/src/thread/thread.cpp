@@ -2,7 +2,7 @@
 #include "thread.hpp"
 #include "../system/static_global.hpp"
 
-std::atomic<uint32_t> Thread::_sig_mask(0);
+std::atomic<int32_t> Thread::_sig_mask(0);
 std::atomic<int32_t> Thread::_id_seed(0);
 
 Thread::Thread(const std::string &name)
@@ -52,8 +52,28 @@ void Thread::signal_block()
 void Thread::sig_handler(int32_t signum)
 {
     // 把有线程收到的信号存这里，由主线程处理
+
+    // 这个函数必须是 async-signal-safe function
+    // https://man7.org/linux/man-pages/man7/signal-safety.7.html
+
+    // 这意味这这函数里不能使用mutex之类的锁，不然第一个信号加锁后，第二个信号把
+    // 第一个信号挂起加锁，就会形成死锁
+
+    // std::atomic在lock_free的情况下是async-signal-safe，x86架构一般都是lock_free
+
+    // signal.h #define _NSIG            64
+    // 但一般只处理前31个
+    if (signum > 31) return;
+   
     _sig_mask |= (1 << signum);
 
+    // C++的condition_variable不是async-signal-safe的，因此这里可能有点问题
+    // 方案1是不使用signal_handler，而是所有线程都屏蔽信号
+    //      使用一个独立的线程调用sigwait，这样该线程就是一个普通的线程，可以
+    //      安全使用condition_variable唤醒主线程，但这个比较复杂且win下不好实现
+    //      参考：https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
+    // 
+    // 方案2是把主线程的超时时间设置为1秒左右，不通知主线程而是等超时
     StaticGlobal::ev()->wake();
 }
 
