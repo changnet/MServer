@@ -8,9 +8,9 @@ local max = math.max
 local min = math.min
 
 -- 平面点的旋转 graph.rotate(1, 0, 45) = (0.7, 0.7)
--- @x: x轴坐标
--- @y: y轴坐标
--- @alpha: 角度
+-- @param x x轴坐标
+-- @param y y轴坐标
+-- @param alpha 角度
 function graph.rotate(x, y, alpha)
     -- https://www.cnblogs.com/orange1438/p/4583825.html
 
@@ -23,11 +23,11 @@ function graph.rotate(x, y, alpha)
 end
 
 -- 点是否在圆内
--- @x: x轴坐标
--- @y: y轴坐标
--- @center_x: 圆心x轴坐标
--- @center_x: 圆心y轴坐标
--- @radius: 半径
+-- @param x x轴坐标
+-- @param y y轴坐标
+-- @param center_x 圆心x轴坐标
+-- @param center_x 圆心y轴坐标
+-- @param radius 半径
 function graph.within_circle(x, y, center_x, center_y, radius)
     return (x - center_x) ^ 2 + (y - center_y) ^ 2 <= radius ^ 2
 end
@@ -42,16 +42,16 @@ function graph.is_clockwise(x, y, dst_x, dst_y)
     return -x * dst_y + y * dst_x > 0
 end
 
--- 知道扇形的开始、结束边界，判断点是否在扇形
--- @x: x轴坐标
--- @y: y轴坐标
--- @beg_x: 扇形开始边界x轴坐标
--- @beg_x: 扇形开始边界y轴坐标
--- @end_x: 扇形结束边界x轴坐标
--- @end_x: 扇形结束边界y轴坐标
--- @center_x: 圆心x轴坐标
--- @center_x: 圆心y轴坐标
--- @radius: 半径
+-- 知道扇形的开始、结束边界坐标，判断点是否在扇形
+-- @param x x轴坐标
+-- @param y y轴坐标
+-- @param beg_x 扇形开始边界x轴坐标
+-- @param beg_x 扇形开始边界y轴坐标
+-- @param end_x 扇形结束边界x轴坐标
+-- @param end_x 扇形结束边界y轴坐标
+-- @param center_x 圆心x轴坐标
+-- @param center_x 圆心y轴坐标
+-- @param radius 半径
 function graph.within_circle_sector(x, y, beg_x, beg_y, end_x, end_y, center_x,
                                     center_y, radius)
     -- https://stackoverflow.com/questions/13652518/efficiently-find-points-inside-a-circle-sector
@@ -72,26 +72,41 @@ function graph.within_circle_sector(x, y, beg_x, beg_y, end_x, end_y, center_x,
     return graph.within_circle(zero_x, zero_y, 0, 0, radius)
 end
 
--- 以(x,y)为原点，计算两点之间的角度(-180, 180]
--- @positive: 是否转换为正数角[0，360)
-function graph.angel(x, y, dst_x, dst_y, positive)
-    -- 计算两点之间的角度公式是：
-    -- double angleOfLine = Math.Atan2((Y2 - Y1), (X2 - X2)) * 180 / Math.PI
-    -- 假设点一是坐标原点（0,0）点二是（1,0）则这两点之间的连线角度是：0
-    -- 假设点一是坐标原点（0,0）点二是（0,-1）则这两点之间的连线角度是：-90
+-- 以(x,y)为屏幕坐标系原点，计算点(dst_x, dst_y)与x轴形成的角度(-180, 180]
+-- @param positive 是否转换为正数角[0，360)
+function graph.angle(x, y, dst_x, dst_y, positive)
+    -- atan2(y, x)返回左上角屏幕坐标系中，(0,0)与(x,y)形成的线段与x轴逆时针形成的弧度
+    -- 即x轴与y轴与线段形成的三角形中，y对应的角的弧度
 
-    -- 象限1[0,90] 象限2(90,180] 象限(-180,-90] 象限4(-90,0)
+    -- atan2(x, y)返回左上角屏幕坐标系中，(0,0)与(x,y)形成的线段与y轴逆时针形成的弧度
+
+    --[[
+        坐标系为左上角屏幕坐标系
+
+                 |
+                 |
+      (-90,180)  |   (0,-90)
+                 |
+      ------------------------>  X
+                 |
+       (90,180)  |  (0,90)
+                 |
+                 |
+                 |
+                 v
+                 Y
+    ]]
 
     -- 180 / PI是弧度转换为角度，相当于math.deg
-    local angle = deg(math.atan2(dst_y - y, dst_x - x))
+    local angle = deg(math.atan(dst_y - y, dst_x - x))
     if not positive or angle >= 0 then return angle end
 
     return angle + 360
 end
 
 -- 判断一个角度是否在指定范围内
--- @beg_angle: 逆时针方向，起始角度
--- @beg_angle: 逆时针方向，结束角度
+-- @param beg_angle 逆时针方向，起始角度
+-- @param end_angle 逆时针方向，结束角度
 function graph.within_angle_range(angle, beg_angle, end_angle)
     -- 负角度全部转换为[0,360)
     if angle < 0 then angle = angle + 360 end
@@ -121,14 +136,14 @@ function graph.mid_to_range(mid, range)
     return mid - mid_range, mid + mid_range
 end
 
--- 根据角度判断点是否在扇形内
--- @x: x轴坐标
--- @y: y轴坐标
--- @center_x: 圆心x轴坐标
--- @center_x: 圆心y轴坐标
--- @radius: 半径
--- @beg_angle: 开始的角度
--- @end_angle: 结束的角度
+-- 已知扇形角度，判断点是否在扇形内
+-- @param x x轴坐标
+-- @param y y轴坐标
+-- @param center_x 圆心x轴坐标
+-- @param center_x 圆心y轴坐标
+-- @param radius 半径
+-- @param beg_angle 开始的角度
+-- @param end_angle 结束的角度
 function graph.within_circle_range(x, y, center_x, center_y, radius, beg_angle,
                                    end_angle)
     -- 假如激光炮可移动角度是90度，求开炮时命中的目标
@@ -148,8 +163,8 @@ function graph.within_circle_range(x, y, center_x, center_y, radius, beg_angle,
 end
 
 -- 计算水平(没有旋转角度)两个矩形的重叠区域
--- @src: 源矩形，xl、yl(是左上角坐标，left)，xr、yr是右下角下标，right
--- @dst: 目标矩形左上角和右下角坐标
+-- @param src 源矩形，xl、yl(是左上角坐标，left)，xr、yr是右下角下标，right
+-- @param dst 目标矩形左上角和右下角坐标
 -- @return 是否重叠，左上角坐标，右下角坐标
 function graph.rectangle_intersection(src_xl, src_yl, src_xr, src_yr, dst_xl,
                                       dst_yl, dst_xr, dst_yr)
