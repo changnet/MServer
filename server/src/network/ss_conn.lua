@@ -13,9 +13,8 @@ SsConn.default_param = {
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
     action = 2, -- over_action，2 表示缓冲区满后进入自旋来发送数据
-    chunk_size = 8 * 1024 * 1024, -- 单个缓冲区大小
-    send_chunk_max = 64, -- 发送缓冲区数量
-    recv_chunk_max = 1 -- 接收缓冲区数
+    send_chunk_max = 1024, -- 发送缓冲区chunk数量，单个chunk8k，见C++ buffer.h定义
+    recv_chunk_max = 1024 -- 接收缓冲区chunk数量
 }
 
 function SsConn:__init(conn_id)

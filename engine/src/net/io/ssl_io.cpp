@@ -29,14 +29,15 @@ IO::IOStatus SSLIO::recv()
 
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
-    if (!_recv->reserved()) return IOS_BUSY; /* no more memory */
+    size_t size = 0;
+    char *buf   = _recv->any_seserve(size);
+    if (!size) return IOS_BUSY; /* no more memory */
 
     // ERR_clear_error
-    size_t size = _recv->get_space_size();
-    int32_t len = SSL_read(_ssl_ctx, _recv->get_space_ctx(), (int32_t)size);
+    int32_t len = SSL_read(_ssl_ctx, buf, (int32_t)size);
+    _recv->commit(buf, len);
     if (EXPECT_TRUE(len > 0))
     {
-        _recv->add_used_offset(len);
         return IOS_OK;
     }
 
@@ -174,7 +175,7 @@ IO::IOStatus SSLIO::do_handshake()
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
         init_ok();
-        return 0 == _send->get_used_size() ? IOS_OK : IOS_WRITE;
+        return 0 == _send->get_front_used_size() ? IOS_OK : IOS_WRITE;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of

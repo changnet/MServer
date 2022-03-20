@@ -636,12 +636,11 @@ int32_t LNetworkMgr::send_raw_packet(lua_State *L)
     return 0;
 }
 
-/* 设置发送缓冲区大小 */
-int32_t LNetworkMgr::set_send_buffer_size(lua_State *L)
+int32_t LNetworkMgr::set_buffer_params(lua_State *L)
 {
     uint32_t conn_id    = luaL_checkinteger32(L, 1);
-    uint32_t max        = luaL_checkinteger32(L, 2);
-    uint32_t ctx_size   = luaL_checkinteger32(L, 3);
+    int32_t send_max    = luaL_checkinteger32(L, 2);
+    int32_t recv_max    = luaL_checkinteger32(L, 3);
     int32_t over_action = luaL_optinteger32(L, 4, Socket::OAT_NONE);
 
     socket_map_t::iterator itr = _socket_map.find(conn_id);
@@ -656,27 +655,8 @@ int32_t LNetworkMgr::set_send_buffer_size(lua_State *L)
     }
 
     class Socket *_socket = itr->second;
-    _socket->set_send_size(max, ctx_size,
+    _socket->set_buffer_params(send_max, recv_max,
                            static_cast<Socket::OverActionType>(over_action));
-
-    return 0;
-}
-
-/* 设置接收缓冲区大小 */
-int32_t LNetworkMgr::set_recv_buffer_size(lua_State *L)
-{
-    uint32_t conn_id  = luaL_checkinteger32(L, 1);
-    uint32_t max      = luaL_checkinteger32(L, 2);
-    uint32_t ctx_size = luaL_checkinteger32(L, 3);
-
-    socket_map_t::iterator itr = _socket_map.find(conn_id);
-    if (itr == _socket_map.end())
-    {
-        return luaL_error(L, "no such socket found");
-    }
-
-    class Socket *_socket = itr->second;
-    _socket->set_recv_size(max, ctx_size);
 
     return 0;
 }

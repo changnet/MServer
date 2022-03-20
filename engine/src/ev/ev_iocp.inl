@@ -1,3 +1,5 @@
+const char *__BACKEND__ = "IOCP";
+
 /// backend using iocp implement
 class FinalBackend final : public EVBackend
 {

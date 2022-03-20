@@ -85,19 +85,19 @@ int32_t on_frame_header(struct websocket_parser *parser)
 
     class WebsocketPacket *ws_packet =
         static_cast<class WebsocketPacket *>(parser->data);
-    class Buffer &body = ws_packet->body_buffer();
-
-    // parser->data->opcode = parser->flags & WS_OP_MASK; // gets opcode
-    // parser->data->is_final = parser->flags & WS_FIN;   // checks is final
-    // frame websocket是允许不发内容的，因此length可能为0
-    // 但即使为0，也要预分配内存，因为后面的ctrl包里也会调用body的函数
-    body.clear();
-    if (!body.reserved(parser->length))
+    // 防止被攻击，游戏中不应该需要这么大的数据包，暂时不考虑其他应用
+    if (parser->length > 10 * 1024 * 1024)
     {
-        ws_packet->set_error(1);
-        ELOG("websocket cant not allocate memory");
+        ws_packet->set_error(2);
+        ELOG("websocket to large packet :" FMT64u, (uint64_t)parser->length);
         return -1;
     }
+
+    class Buffer &body = ws_packet->body_buffer();
+
+    // 清空数据
+    body.clear();
+
     return 0;
 }
 
@@ -114,20 +114,10 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
     if (parser->flags & WS_HAS_MASK)
     {
-        // if ( !body.reserved( length ) ) return -1;
-        // 不再reserved，在frame_header里应该已reserved的。而且，正常情况下，websocket
-        // 应该只用到单个接收缓冲区。如果单个放不下最大协议，考虑修改缓冲区大小。目前缓冲区没
-        // 法reserved超过一个chunk大小的连续缓冲区
-        if (body.get_space_size() < length)
-        {
-            ws_packet->set_error(2);
-            ELOG("websocket packet on frame body overflow:%d,%d",
-                 body.get_used_size(), body.get_space_size());
-            return -1;
-        }
+        char *buf  = body.flat_reserve(length);
 
-        websocket_parser_decode(body.get_space_ctx(), at, length, parser);
-        body.add_used_offset(length);
+        websocket_parser_decode(buf, at, length, parser);
+        body.commit(buf, (int32_t)length);
     }
     else
     {
@@ -197,13 +187,14 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
 
     size_t len         = websocket_calc_frame_size(flags, size);
 
-    char *buffer = _socket->reserve_send_buffer(len);
+    Buffer &buffer = _socket->get_send_buffer();
+    char *buf      = buffer.flat_reserve(len);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
-    websocket_build_frame(buffer, flags, mask, ctx, size);
+    websocket_build_frame(buf, flags, mask, ctx, size);
 
-    _socket->add_send_buffer_offset(len);
+    buffer.commit(buf, (int32_t)len);
     _socket->flush();
 
     return 0;
@@ -237,7 +228,7 @@ int32_t WebsocketPacket::unpack(Buffer &buffer)
     if (!_is_upgrade) return HttpPacket::unpack(buffer);
 
     size_t size     = 0;
-    const char *ctx = buffer.all_to_continuous_ctx(size);
+    const char *ctx = buffer.all_to_flat_ctx(size);
     if (size == 0) return 0;
 
     _e = 0; // 重置上一次解析错误
@@ -340,7 +331,7 @@ int32_t WebsocketPacket::on_frame_end()
     assert(0 == lua_gettop(L));
 
     size_t size     = 0;
-    const char *ctx = _body.all_to_continuous_ctx(size);
+    const char *ctx = _body.all_to_flat_ctx(size);
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
@@ -364,7 +355,7 @@ int32_t WebsocketPacket::on_ctrl_end()
     assert(0 == lua_gettop(L));
 
     size_t size     = 0;
-    const char *ctx = _body.all_to_continuous_ctx(size);
+    const char *ctx = _body.all_to_flat_ctx(size);
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "ctrl_new");

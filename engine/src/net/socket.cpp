@@ -168,17 +168,6 @@ void Socket::stop(bool flush)
     C_SOCKET_TRAFFIC_DEL(_conn_id);
 }
 
-char *Socket::reserve_send_buffer(size_t len)
-{
-    _w->get_send_buffer().reserved(len);
-    return _w->get_send_buffer().get_space_ctx();
-}
-
-void Socket::add_send_buffer_offset(size_t len)
-{
-    _w->get_send_buffer().add_used_offset(len);
-}
-
 void Socket::append(const void *data, size_t len)
 {
     auto &send_buff = _w->get_send_buffer();

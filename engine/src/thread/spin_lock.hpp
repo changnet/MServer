@@ -4,11 +4,11 @@
 
 /**
  * https://www.cnblogs.com/coding-my-life/p/15779082.html
- * C++ stdÖĞÔİÊ±Ã»ÓĞspinlock£¬ĞèÒª×Ô¼ºÊµÏÖ
- * pthread_spinlock_tĞÔÄÜ¸ü¸ßÒ»Ğ©£¬µ«²¢²»Í¨ÓÃ
+ * C++ stdä¸­æš‚æ—¶æ²¡æœ‰spinlockï¼Œéœ€è¦è‡ªå·±å®ç°
+ * pthread_spinlock_tæ€§èƒ½æ›´é«˜ä¸€äº›ï¼Œä½†å¹¶ä¸é€šç”¨
  */
 
-/// ÓÃstd::atomic_flagÊµÏÖµÄspin lock
+/// ç”¨std::atomic_flagå®ç°çš„spin lock
 class SpinLock final
 {
 public:

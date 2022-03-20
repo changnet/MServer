@@ -4,27 +4,31 @@
 #include "../../system/static_global.hpp"
 #include "../socket.hpp"
 
-StreamPacket::StreamPacket(class Socket *sk) : Packet(sk) {}
+StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
+{
+}
 
-StreamPacket::~StreamPacket() {}
+StreamPacket::~StreamPacket()
+{
+}
 
 int32_t StreamPacket::unpack(Buffer &buffer)
 {
     // 检测包头是否完整
-    if (!buffer.check_used_size(sizeof(struct base_header))) return 0;
+    const char *buf = buffer.to_flat_ctx(sizeof(struct base_header));
+    if (!buf) return 0;
 
     const struct base_header *header =
-        reinterpret_cast<const struct base_header *>(
-            buffer.to_continuous_ctx(sizeof(struct base_header)));
+        reinterpret_cast<const struct base_header *>(buf);
 
     // 检测包内容是否完整
     uint32_t length = header->_length;
     if (!buffer.check_used_size(length)) return 0;
 
-    header = reinterpret_cast<const struct base_header *>(
-        buffer.to_continuous_ctx(length));
+    header =
+        reinterpret_cast<const struct base_header *>(buffer.to_flat_ctx(length));
 
-    dispatch(header);    // 数据包完整，派发处理
+    dispatch(header);      // 数据包完整，派发处理
     buffer.remove(length); // 无论成功或失败，都移除该数据包
 
     return length;

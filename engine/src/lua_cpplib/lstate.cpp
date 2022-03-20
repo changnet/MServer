@@ -193,8 +193,7 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::clt_multicast>("clt_multicast");
     lc.def<&LNetworkMgr::ssc_multicast>("ssc_multicast");
 
-    lc.def<&LNetworkMgr::set_send_buffer_size>("set_send_buffer_size");
-    lc.def<&LNetworkMgr::set_recv_buffer_size>("set_recv_buffer_size");
+    lc.def<&LNetworkMgr::set_buffer_params>("set_buffer_params");
 
     lc.def<&LNetworkMgr::new_ssl_ctx>("new_ssl_ctx");
 

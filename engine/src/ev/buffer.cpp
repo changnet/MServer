@@ -1,9 +1,6 @@
 #include "buffer.hpp"
 #include "../system/static_global.hpp"
 
-// 临时连续缓冲区
-static const size_t continuous_size         = MAX_PACKET_LEN;
-static char continuous_ctx[continuous_size] = {0};
 
 ////////////////////////////////////////////////////////////////////////////////
 Buffer::LargeBuffer::LargeBuffer()
@@ -17,7 +14,7 @@ Buffer::LargeBuffer::~LargeBuffer()
     if (_ctx) delete[] _ctx;
 }
 
-char Buffer::LargeBuffer::get(size_t len)
+char *Buffer::LargeBuffer::get(size_t len)
 {
     if (_len >= len) return _ctx;
 
@@ -35,6 +32,7 @@ char Buffer::LargeBuffer::get(size_t len)
 
 Buffer::Buffer()
 {
+    _reserve    = false;
     _chunk_size = 0;
     _chunk_max = 1;
     _front = _back = nullptr;
@@ -53,9 +51,10 @@ Buffer::~Buffer()
     _front = _back = nullptr;
 }
 
-bool Buffer::reserved()
+size_t Buffer::reserve()
 {
-    if (EXPECT_FALSE(!_back || 0 == _back->get_free_size()))
+    size_t len = 0;
+    if (EXPECT_FALSE(!_back || 0 == (len = _back->get_free_size())))
     {
         Chunk *tmp = new_chunk();
         if (_back)
@@ -66,12 +65,13 @@ bool Buffer::reserved()
         {
             _back = _front = tmp;
         }
+        len = tmp->get_free_size();
     }
 
-    return true;
+    return len;
 }
 
-char **Buffer::get_large_buffer(size_t len)
+char *Buffer::get_large_buffer(size_t len)
 {
     // 原本想在LargeBuffer里加个锁，所有线程共用缓冲区
     // 但缓冲区通常要持有一段时间，这导致这个锁非常难管理，需要手动加锁解锁
@@ -81,7 +81,7 @@ char **Buffer::get_large_buffer(size_t len)
     return buffer.get(len);
 }
 
-ChunkPool *Buffer::get_chunk_pool()
+Buffer::ChunkPool *Buffer::get_chunk_pool()
 {
     return StaticGlobal::buffer_chunk_pool();
 }
@@ -105,30 +105,31 @@ void Buffer::clear()
     assert(_back == _front);
 }
 
-void Buffer::append(const void *data, const size_t len)
+void Buffer::__append(const void *data, const size_t len)
 {
-    const char *data = reinterpret_cast<const char *>(data);
+    // 已经追加的数据大小
     size_t append_sz = 0;
+    const char *append_data = reinterpret_cast<const char *>(data);
 
-    std::lock_guard lg(_lock);
     do
     {
-        if (!reserved())
-        {
-            FATAL("buffer append reserved fail");
-            return;
-        }
-
-        size_t free_sz = _back->get_free_size();
+        size_t free_sz = reserve();
 
         size_t size = std::min(free_sz, len - append_sz);
-        _back->append(data + append_sz, size);
+        // void *类型不能和数字运算，要转成char *
+        _back->append(append_data + append_sz, size);
 
         append_sz += size;
 
         // 大多数情况下，一次应该可以添加完数据
         // 如果不能，考虑调整单个chunk的大小，否则影响效率
     } while (EXPECT_FALSE(append_sz < len));
+}
+
+void Buffer::append(const void *data, const size_t len)
+{
+    std::lock_guard lg(_lock);
+    __append(data, len);
 }
 
 void Buffer::remove(size_t len)
@@ -141,7 +142,7 @@ void Buffer::remove(size_t len)
         if (used > len)
         {
             // 这个chunk还有其他数据
-            _front->remove(len);
+            _front->remove_used(len);
             break;
         }
         else if (used == len)
@@ -178,74 +179,186 @@ void Buffer::remove(size_t len)
     assert(_front == _back || 0 == _front->get_free_size());
 }
 
-/* 检测指定长度的有效数据是否在连续内存，不在的话要合并成连续内存
- * protobuf这些都要求内存在连续缓冲区才能解析
- * TODO:这是采用这种设计缺点之二
- */
-const char *Buffer::to_continuous_ctx(size_t len)
+char *Buffer::any_seserve(size_t &len)
 {
-    // 大多数情况下，是在同一个chunk的，如果不是，调整下chunk的大小，否则影响效率
-    if (EXPECT_TRUE(_front->used_size() >= len))
-    {
-        return _front->used_ctx();
-    }
+    std::lock_guard lg(_lock);
 
-    // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
-    PLOG("using continuous buffer:%d", len);
-
-    size_t used       = 0;
-    const Chunk *next = _front;
-
-    do
-    {
-        size_t next_used = std::min(len - used, next->used_size());
-        assert(used + next_used <= continuous_size);
-
-        memcpy(continuous_ctx + used, next->used_ctx(), next_used);
-
-        used += next_used;
-        next = next->_next;
-    } while (next && used < len);
-
-    assert(used == len);
-    return continuous_ctx;
+    _reserve = true;
+    len = reserve();
+    return _back->get_free_ctx();
 }
 
-// 把所有数据放到一块连续缓冲区中
-const char *Buffer::all_to_continuous_ctx(size_t &len)
+char *Buffer::flat_reserve(size_t len)
 {
-    // 没有执行reserver就调用这个函数就会出现这种情况
-    // 在websocket那边，可以只发ctrl包，不包含数据就不会预分配内存
-    // if (EXPECT_FALSE(!_front))
-    // {
-    //     len = 0;
-    //     return nullptr;
-    // }
-    if (EXPECT_TRUE(!_front->_next))
+    /**
+     * 打包数据时(例如protobuf、websocket)需要预先分配一块连续的缓冲区
+     * 但是buffer连续的缓冲区可能不够大。方案一是由打包那边自己分配再
+     * append到buffer，这样的拷贝消耗比较大。方案二是当连续缓冲区不够
+     * 大时，buffer额外申请一块临时内存，再append到，这样大部分情况下
+     * 都不需要拷贝
+     */
     {
-        len = _front->used_size();
-        return _front->used_ctx();
+        std::lock_guard lg(_lock);
+
+        size_t free_size = reserve();
+        if (free_size >= len)
+        {
+            _reserve = true;
+            return _back->get_free_ctx();
+        }
     }
 
-    size_t used       = 0;
-    const Chunk *next = _front;
+    return get_large_buffer(len);
+}
 
+const char *Buffer::to_flat_ctx(size_t len)
+{
+    std::lock_guard lg(_lock);
+
+    // 解析数据时，要求在同一个chunk才能解析。大多数情况下，是在同一个chunk的。
+    // 如果不是，建议调整下chunk定义的缓冲区大小，否则影响效率
+    if (EXPECT_TRUE(_front->get_used_size() >= len))
+    {
+        return _front->get_used_ctx();
+    }
+
+    // 用来检测二次拷贝出现的频率，确认没问题这个可以去掉
+    PLOG("using continuous buffer:%d", len);
+
+    /**
+     * 这个函数可能会调用很频繁。例如，判断包是否完整时需要一个16位长度
+     * 假如前8位在一个chunk，后8位在另一个chunk，那每次判断包是否完整都
+     * 会产生一次memcpy，好在这种情况拷贝的数据比较少，效率还可以接受
+     */
+
+    size_t copy_len   = 0; // 已拷贝长度
+    const Chunk *next = _front;
+    char *buf         = get_large_buffer(len);
     do
     {
-        size_t next_used = next->used_size();
-        assert(used + next_used <= continuous_size);
+        // 本次要拷贝的长度
+        size_t size = std::min(len - copy_len, next->get_used_size());
 
-        memcpy(continuous_ctx + used, next->used_ctx(), next_used);
+        memcpy(buf + copy_len, next->get_used_ctx(), size);
 
-        used += next_used;
+        copy_len += size;
+        next = next->_next;
+    } while (next && copy_len < len);
+
+    assert(copy_len <= len);
+    // 返回nullptr表示当前的数据小于该长度
+    return copy_len == len ? buf : nullptr;
+}
+
+const char *Buffer::all_to_flat_ctx(size_t &len)
+{
+    std::lock_guard lg(_lock);
+
+    if (EXPECT_TRUE(!_front->_next))
+    {
+        len = _front->get_used_size();
+        return _front->get_used_ctx();
+    }
+
+    size_t copy_len       = 0;
+    const Chunk *next = _front;
+
+    // 用get_all_used_size效率有点底，这里粗略估计下大小即可
+    size_t max_ctx = _chunk_size * Chunk::MAX_CTX;
+    char *buf = get_large_buffer(max_ctx);
+    do
+    {
+        size_t used_size = next->get_used_size();
+
+        assert(copy_len + used_size <= max_ctx);
+        memcpy(buf + copy_len, next->get_used_ctx(), used_size);
+
+        copy_len += used_size;
         next = next->_next;
     } while (next);
 
-    len = used;
-    assert(used > 0);
+    len = copy_len;
+    assert(copy_len > 0);
 
-    // 前期用来检测二次拷贝出现的情况，确认没问题这个可以去掉
+    // 用来检测二次拷贝出现的频率，确认没问题这个可以去掉
     PLOG("using all continuous buffer:%d", len);
 
-    return continuous_ctx;
+    return buf;
+}
+
+void Buffer::commit(const void *buf, int32_t len)
+{
+    // len来自read等函数，可能为0，可能为负
+
+    std::lock_guard lg(_lock);
+    if (_reserve)
+    {
+        assert(buf == _back->get_free_ctx());
+
+        _reserve = false;
+
+        if (len <= 0) return;
+        _back->add_used(len);
+    }
+    else
+    {
+        assert(buf == get_large_buffer(0));
+
+        if (len <= 0) return;
+        __append(buf, len);
+    }
+}
+
+bool Buffer::check_used_size(size_t len) const
+{
+    std::lock_guard lg(_lock);
+
+    size_t used       = 0;
+    const Chunk *next = _front;
+
+    while (next && used < len)
+    {
+        used += next->get_used_size();
+
+        next = next->_next;
+    };
+
+    return used >= len;
+}
+
+const char *Buffer::get_front_used(size_t &size, bool &next) const
+{
+    std::lock_guard lg(_lock);
+    if (!_front)
+    {
+        size = 0;
+        next = false;
+        return nullptr;
+    }
+
+    next = _chunk_size > 1 ? true : false;
+    size = _front->get_used_size();
+    return _front->get_used_ctx();
+}
+
+size_t Buffer::get_all_used_size() const
+{
+    std::lock_guard lg(_lock);
+    size_t used       = 0;
+    const Chunk *next = _front;
+
+    while (next)
+    {
+        used += next->get_used_size();
+
+        next = next->_next;
+    }
+
+    return used;
+}
+
+void Buffer::set_chunk_size(int32_t max)
+{
+    std::lock_guard lg(_lock);
+    _chunk_max = max;
 }

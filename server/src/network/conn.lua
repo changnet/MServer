@@ -103,12 +103,11 @@ function Conn:set_conn_param()
     network_mgr:set_conn_packet(conn_id, param.pkt or network_mgr.PT_NONE)
 
     local action = param.action or 1 -- over_action，1 表示缓冲区溢出后断开
-    local chunk_size = param.chunk_size or 8192 -- 单个缓冲区大小
     local send_chunk_max = param.send_chunk_max or 1 -- 发送缓冲区数量
     local recv_chunk_max = param.recv_chunk_max or 1 -- 接收缓冲区数
 
-    network_mgr:set_send_buffer_size(conn_id, send_chunk_max, chunk_size, action)
-    network_mgr:set_recv_buffer_size(conn_id, recv_chunk_max, chunk_size)
+    network_mgr:set_buffer_params(
+        conn_id, send_chunk_max, recv_chunk_max, action)
 end
 
 -- 根据连接id获取对象

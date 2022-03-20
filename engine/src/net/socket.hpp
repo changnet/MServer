@@ -89,15 +89,23 @@ public:
     int32_t connect(const char *host, int32_t port);
 
     /**
-     * @brief 准备一段连接的发送缓冲区
-     * @param len 
+     * @brief 获取发送缓冲区
+     * @return 缓冲区对象引用
     */
-    char *reserve_send_buffer(size_t len);
+    Buffer &get_send_buffer()
+    {
+        return _w->get_send_buffer();
+    }
+
     /**
-     * @brief 追加已使用的发送缓冲区长度
-     * @param len 
+     * @brief 获取接收缓冲区
+     * @return 缓冲区对象引用
     */
-    void add_send_buffer_offset(size_t len);
+    Buffer &get_recv_buffer()
+    {
+        return _w->get_recv_buffer();
+    }
+
     /**
      * @brief 追加要发送的数据，但不唤醒io线程
      * @param data 需要发送的数据指针
@@ -120,15 +128,21 @@ public:
     inline uint32_t conn_id() const { return _conn_id; }
     inline ConnType conn_type() const { return _conn_ty; }
 
-    inline void set_recv_size(size_t max, size_t ctx_size)
+    /**
+     * @brief 设置缓冲区的参数
+     * @param send_max 发送缓冲区chunk数量
+     * @param recv_max 接收缓冲区chunk数量
+     * @param oa 缓冲区溢出时处理方式
+    */
+    inline void set_buffer_params(int32_t send_max, int32_t recv_max,
+                                  OverActionType oa)
     {
         assert(_w);
-        _w->get_recv_buffer().set_buffer_size(max, ctx_size);
-    }
-    inline void set_send_size(size_t max, size_t ctx_size, OverActionType oa)
-    {
+
         _over_action = oa;
-        _w->get_send_buffer().set_buffer_size(max, ctx_size);
+        _w->get_send_buffer().set_chunk_size(send_max);
+        _w->get_recv_buffer().set_chunk_size(recv_max);
+        
     }
 
     inline int64_t get_object_id() const { return _object_id; }

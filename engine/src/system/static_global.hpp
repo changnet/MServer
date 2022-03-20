@@ -62,7 +62,7 @@ public:
     {
         return _network_mgr;
     }
-    static class Buffer::ChunkPool buffer_chunk_pool()
+    static class Buffer::ChunkPool *buffer_chunk_pool()
     {
         return _buffer_chunk_pool;
     }

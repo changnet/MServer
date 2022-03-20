@@ -28,15 +28,15 @@ IO::IOStatus IO::recv()
 {
     assert(Socket::fd_valid(_fd));
 
-    // 用光了所有缓冲区，主线程那边来不及处理
-    if (!_recv->reserved()) return IOS_BUSY;
+    size_t size = 0;
+    char *buf   = _recv->any_seserve(size);
+    if (0 == size) return IOS_BUSY;
 
-    // epoll当前为LT模式，不用循环读。一般来说缓冲区都分配得比较大，都能读完
-    size_t size = _recv->get_space_size();
-    int32_t len = (int32_t)::recv(_fd, _recv->get_space_ctx(), (int32_t)size, 0);
+    int32_t len = (int32_t)::recv(_fd, buf, (int32_t)size, 0);
+
+    _recv->commit(buf, len);
     if (EXPECT_TRUE(len > 0))
     {
-        _recv->add_used_offset(len);
         return IOS_OK;
     }
 

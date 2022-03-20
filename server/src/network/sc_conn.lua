@@ -11,7 +11,6 @@ ScConn.default_param = {
     cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
     action = 1, -- over_action，1 表示缓冲区溢出后断开
-    chunk_size = 8192, -- 单个缓冲区大小
     send_chunk_max = 128, -- 发送缓冲区数量
     recv_chunk_max = 8 -- 接收缓冲区数
 }

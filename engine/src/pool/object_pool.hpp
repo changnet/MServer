@@ -133,5 +133,5 @@ public:
     }
 
 private:
-    SpinLock _lock;
+    mutable SpinLock _lock;
 };

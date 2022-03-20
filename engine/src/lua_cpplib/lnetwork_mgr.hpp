@@ -13,8 +13,8 @@ struct lua_State;
 class LNetworkMgr
 {
 private:
-    typedef std::unordered_map<int32_t, CmdCfg> cmd_map_t;
-    typedef std::unordered_map<uint32_t, class Socket *> socket_map_t;
+    using cmd_map_t = std::unordered_map<int32_t, CmdCfg>;
+    using socket_map_t = std::unordered_map<uint32_t, class Socket *>;
 
 public:
     ~LNetworkMgr();
@@ -224,21 +224,13 @@ public:
     int32_t ssc_multicast(lua_State *L); /* 非网关数据广播数据到客户端 */
 
     /**
-     * 设置发送缓冲区大小
+     * 设置收发缓冲区参数
      * @param conn_id 网关连接id
-     * @param chunk_max 缓冲区数量
-     * @param chunk_size 单个缓冲区大小
+     * @param send_chunk_max 发送缓冲区chunk数量
+     * @param recv_chunk_max 接收缓冲区chunk数量
      * @param action 缓冲区溢出处理方式，见socket.h中OverActionType定义(1断开，2阻塞)
      */
-    int32_t set_send_buffer_size(lua_State *L);
-
-    /**
-     * 设置接收缓冲区大小
-     * @param conn_id 网关连接id
-     * @param chunk_max 缓冲区数量
-     * @param chunk_size 单个缓冲区大小
-     */
-    int32_t set_recv_buffer_size(lua_State *L);
+    int32_t set_buffer_params(lua_State *L);
 
     /**
      * 创建一个ssl上下文
@@ -301,24 +293,25 @@ public:
     int32_t get_connect_type(lua_State *L);
 
 public:
-    void clear(); /* 清除所有网络数据，不通知上层脚本 */
+    /// 清除所有网络数据，不通知上层脚本
+    void clear();
 
-    /* 删除无效的连接 */
+    /// 删除无效的连接
     void invoke_delete();
 
-    /* 通过所有者查找连接id */
+    /// 通过所有者查找连接id
     uint32_t get_conn_id_by_owner(Owner owner) const;
 
-    /* 通过session获取socket连接 */
+    /// 通过session获取socket连接
     class Socket *get_conn_by_session(int32_t session) const;
 
-    /* 通过onwer获取socket连接 */
+    /// 通过onwer获取socket连接
     class Socket *get_conn_by_owner(Owner owner) const;
 
-    /* 通过conn_id获取socket连接 */
+    /// 通过conn_id获取socket连接
     class Socket *get_conn_by_conn_id(uint32_t conn_id) const;
 
-    /* 通过conn_id获取session */
+    /// 通过conn_id获取session
     int32_t get_session_by_conn_id(uint32_t conn_id) const;
 
     /// 获取指令配置

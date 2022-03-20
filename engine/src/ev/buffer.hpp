@@ -32,7 +32,7 @@
 */
 class Buffer final
 {
-private:
+public:
     /**
      * @brief 单个缓冲区块，多个块以链表形式组成一个完整的缓冲区
     */
@@ -176,112 +176,106 @@ public:
     */
     void append(const void *data, const size_t len);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // 这里的static缓冲区有问题，想办法放到static_global
-    // 放到static_global需要额外用一个锁 ChunkPool也有同样的问题
-
-    const char *to_continuous_ctx(size_t len);
-    const char *all_to_continuous_ctx(size_t &len);
-
-    // 只获取第一个chunk的有效数据大小，用于socket发送
-    inline size_t get_used_size() const
-    {
-        return _front ? _front->get_used_size() : 0;
-    }
+    /**
+     * @brief 预分配任意空间
+     * 即使不提交数据，调用这个函数必须同时调用commit
+     * @param len 可能缓冲区长度
+     * @return 缓冲区指针
+    */
+    char *any_seserve(size_t &len);
 
     /**
-     * @brief 获取第一个chunk的数据指针及数据大小
-     * @param size 第一个chunk的数据大小
-     * @param next 是否还有下一个数据块
-     * @return 第一个chunk的数据指针
+     * @brief 预分配一块连续(不包含多个chunk)的缓冲区
+     * 即使不提交数据，调用这个函数必须同时调用commit
+     * @param len 预分配的长度
+     * @return 缓冲区指针
     */
-    const char *get_front_used(size_t &size, bool &next) const
-    {
-        if (!_front)
-        {
-            size = 0;
-            next = false;
-            return nullptr;
-        }
-
-        next = _chunk_size > 1 ? true : false;
-        size = _front->get_used_size();
-        return _front->get_used_ctx();
-    }
+    char *flat_reserve(size_t len);
 
     /**
-     * @brief 获取chunk的数量
-     * @return 
+     * @brief 把指定长度的缓存放到连续的缓冲区
+     * @param len 缓存的长度
+     * @return 缓冲区的指针，如果长度不足则返回nullptr
     */
-    inline size_t get_chunk_size() const { return _chunk_size; }
+    const char *to_flat_ctx(size_t len);
+
     /**
-     * @brief 获取所有已分配chunk的大小，用于统计
-     * @return 
+     * @brief 检测当前有效数据的大小是否 >= 指定值
+     * @param len 检测的长度
+     * @return bool 当前有效数据的大小是否 >= 指定值
     */
-    inline size_t get_chunk_mem_size() const
-    {
-        return _chunk_size * sizeof(Chunk);
-    }
+    bool check_used_size(size_t len) const;
 
-    // 只获取第一个chunk的有效数据指针，用于socket发送
-    inline const char *get_used_ctx() const { return _front->get_used_ctx(); };
-
-    /* 检测当前有效数据的大小是否 >= 指定值
-     * 这个函数必须在确定已有数据的情况下调用，不检测next是否为空
-     * TODO:用于数据包分在不同chunk的情况，这是采用这种设计缺点之一
+     /**
+      * @brief 把缓冲区中所有的buff都存放到一块连续的缓冲区
+      * @param len 缓冲区的数据长度
+      * @return 连续缓冲区的指针
      */
-    inline bool check_used_size(size_t len) const
-    {
-        size_t used       = 0;
-        const Chunk *next = _front;
+     const char *all_to_flat_ctx(size_t &len);
 
-        do
-        {
-            used += next->used_size();
+     /**
+      * @brief 提交flat_reserve预分配的数据
+      * @param buf 提交的数据
+      * @param len 提交的数据长度
+     */
+     void commit(const void *buf, int32_t len);
 
-            next = next->_next;
-        } while (EXPECT_FALSE(next && used < len));
+    /**
+      * @brief 获取第一个chunk的数据指针及数据大小
+      * @param size 第一个chunk的数据大小
+      * @param next 是否还有下一个数据块
+      * @return 第一个chunk的数据指针
+      */
+     const char *get_front_used(size_t &size, bool &next) const;
 
-        return used >= len;
-    }
+    /**
+      * @brief 只获取第一个chunk的有效数据大小
+      * @return
+      */
+     inline size_t get_front_used_size() const
+     {
+         std::lock_guard lg(_lock);
+         return _front ? _front->get_used_size() : 0;
+     }
 
-    // 获取当前所有的数据长度
-    inline size_t get_all_used_size() const
-    {
-        size_t used       = 0;
-        const Chunk *next = _front;
+    /**
+      * @brief 获取chunk的数量
+      * @return
+      */
+     inline size_t get_chunk_size() const
+     {
+         std::lock_guard lg(_lock);
+         return _chunk_size;
+     }
 
-        while (next)
-        {
-            used += next->used_size();
+     /**
+      * @brief 获取所有已分配chunk的大小，用于统计
+      * @return
+      */
+     inline size_t get_chunk_mem_size() const
+     {
+         std::lock_guard lg(_lock);
+         return _chunk_size * sizeof(Chunk);
+     }
 
-            next = next->_next;
-        }
+    /**
+      * @brief 获取当前所有的chunk数据长度
+      * @return
+      */
+     size_t get_all_used_size() const;
 
-        return used;
-    }
-
-    // 获取空闲缓冲区大小，只获取一个chunk的，用于socket接收
-    inline size_t get_space_size() { return _back ? _back->space_size() : 0; }
-    // 获取空闲缓冲区指针，只获取一个chunk的，用于socket接收
-    inline char *get_space_ctx() { return _back->space_ctx(); };
-    // 增加有效数据长度，比如从socket读数据时，先拿缓冲区，然后才知道读了多少数据
-    inline void add_used_offset(size_t len) { _back->add_used_offset(len); }
-
-    // 设置缓冲区参数
-    // @param maxchunk最大数量
-    // @param ctx_max 默认
-    void set_buffer_size(size_t max, size_t ctx_size)
-    {
-        _chunk_max      = max;
-        _chunk_ctx_size = ctx_size;
-
-        // 设置的chunk大小必须是等长内存池的N倍
-        assert(0 == ctx_size % BUFFER_CHUNK);
-    }
+    /**
+      * @brief 设置chunk的最大数量，超过此数量视为溢出
+      * @param max 允许的chunk最大数量
+      */
+     void set_chunk_size(int32_t max);
 
     // 当前缓冲区是否溢出
-    inline bool is_overflow() const { return _chunk_size > _chunk_max; }
+     inline bool is_overflow() const
+     {
+         std::lock_guard lg(_lock);
+         return _chunk_size > _chunk_max;
+     }
 
 private:
     ChunkPool *get_chunk_pool();
@@ -301,11 +295,10 @@ private:
     }
 
     /**
-     * @brief 预分配缓冲区空间
-     * @param len 预分配的长度
-     * @return 是否分配成功
+     * @brief 预分配缓冲区空间，如果当前空间为空则分配一个新的chunk
+     * @return 返回当前可用缓冲区大小
     */
-    bool reserved();
+    size_t reserve();
 
     /**
      * @brief 获取连续的缓冲区
@@ -314,8 +307,16 @@ private:
     */
     char *get_large_buffer(size_t len);
 
+    /**
+     * @brief 同append，但不加锁，仅内部使用
+     * @param data 要添加的数据
+     * @param len 要添加的数据长度
+    */
+    void __append(const void *data, const size_t len);
+
 private:
-    SpinLock _lock;  // 多线程锁
+    bool _reserve; // 当前是否有预分配数据
+    mutable SpinLock _lock;  // 多线程锁
     Chunk *_front;      // 数据包链表头
     Chunk *_back;       // 数据包链表尾
 

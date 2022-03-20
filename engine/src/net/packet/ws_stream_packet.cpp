@@ -105,14 +105,16 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
     new_masking_key(mask);
 
     uint8_t mask_offset = 0;
-    char *buff          = _socket->reserve_send_buffer(frame_size);
-    size_t offset = websocket_build_frame_header(buff, flags, mask, frame_size);
-    offset += websocket_append_frame(buff + offset, flags, mask, header_ctx,
+    Buffer &buffer      = _socket->get_send_buffer();
+    char *buf           = buffer.flat_reserve(len);
+    size_t offset = websocket_build_frame_header(buf, flags, mask, frame_size);
+    offset += websocket_append_frame(buf + offset, flags, mask, header_ctx,
                                      sizeof(c2sh), &mask_offset);
-    websocket_append_frame(buff + offset, flags, mask, ctx, size, &mask_offset);
+    websocket_append_frame(buf + offset, flags, mask, ctx, size, &mask_offset);
 
     encoder->finalize();
-    _socket->add_send_buffer_offset(len);
+
+    buffer.commit(buf, (int32_t)len);
     _socket->flush();
 
     PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh._length), STAT_TIME_END());
@@ -134,7 +136,7 @@ int32_t WSStreamPacket::on_frame_end()
 
     /* 服务器收到的包，看要不要转发 */
     size_t data_size     = 0;
-    const char *data_ctx = _body.all_to_continuous_ctx(data_size);
+    const char *data_ctx = _body.all_to_flat_ctx(data_size);
     if (data_size < sizeof(struct c2s_header))
     {
         ELOG("ws_stream_packet on_frame_end packet incomplete");
@@ -167,7 +169,7 @@ int32_t WSStreamPacket::sc_command()
     assert(0 == lua_gettop(L));
 
     size_t data_size     = 0;
-    const char *data_ctx = _body.all_to_continuous_ctx(data_size);
+    const char *data_ctx = _body.all_to_flat_ctx(data_size);
     if (data_size < sizeof(struct s2c_header))
     {
         ELOG("ws_stream_packet sc_command packet incomplete");
@@ -283,12 +285,14 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
 
     char mask[4]        = {0};
     uint8_t mask_offset = 0;
-    char *buff          = _socket->reserve_send_buffer(len);
-    size_t offset = websocket_build_frame_header(buff, flags, mask, frame_size);
-    offset += websocket_append_frame(buff + offset, flags, mask, header_ctx,
+    Buffer &buffer      = _socket->get_send_buffer();
+    char *buf           = buffer.flat_reserve(len);
+    size_t offset = websocket_build_frame_header(buf, flags, mask, frame_size);
+    offset += websocket_append_frame(buf + offset, flags, mask, header_ctx,
                                      sizeof(s2ch), &mask_offset);
-    websocket_append_frame(buff + offset, flags, mask, ctx, size, &mask_offset);
-    _socket->add_send_buffer_offset(len);
+    websocket_append_frame(buf + offset, flags, mask, ctx, size, &mask_offset);
+
+    buffer.commit(buf, (int32_t)len);
     _socket->flush();
 
     return 0;

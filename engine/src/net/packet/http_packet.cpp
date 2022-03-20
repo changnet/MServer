@@ -123,12 +123,11 @@ HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 
 int32_t HttpPacket::unpack(Buffer &buffer)
 {
-    size_t size = buffer.get_used_size();
+    // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况
+    size_t size = 0;
+    bool next        = false;
+    const char *data = buffer.get_front_used(size, next);
     if (size == 0) return 0;
-
-    // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况，用get_used_ctx即可，
-    // 不用check_all_used_ctx
-    const char *data = buffer.get_used_ctx();
 
     /* 注意：解析完成后，是由parser回调脚本的，这时脚本那边可能会关闭socket
      * 因此要注意execute后部分资源是不可再访问的
