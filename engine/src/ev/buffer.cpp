@@ -100,6 +100,8 @@ void Buffer::clear()
         del_chunk(tmp);
     }
 
+    _reserve = false;
+
     // 默认保留一个缓冲区 TODO: 是否有必要保留??
     _front->clear();
     assert(_back == _front);

@@ -153,6 +153,47 @@ public:
         size_t _len; // 缓冲区长度
     };
 
+    /**
+     * @brief 对buff执行多步操作的事件结构，可自动解锁。is movable, but not copyable 
+     */
+    class Transaction final
+    {
+    public:
+        explicit Transaction(char *ctx, std::unique_lock<SpinLock> &&ul)
+        {
+            _len = 0;
+            _ctx = 0;
+            _ul  = std::move(ul);
+        }
+        Transaction(Transaction &&t) : _ul(std::move(t._ul))
+        {
+            _len = 0;
+            _ctx = 0;
+        }
+        Transaction &operator=(Transaction && t)
+        {
+            _len = t._len;
+            _ctx = t._ctx;
+            _ul  = std::move(t._ul);
+
+            t._len = 0;
+            t._ctx = 0;
+            // t._ul不用处理，_ul  = std::move(ul);里已经做了处理
+            return *this;
+        }
+
+        ~Transaction() = default;
+
+        Transaction() = delete;
+        Transaction(const Transaction &) = delete;
+        Transaction &operator=(const Transaction &) = delete;
+
+    private:
+        char *_ctx;
+        int32_t _len;
+        std::unique_lock<SpinLock> _ul;
+    };
+
     /// 小块缓冲区对象池
     using ChunkPool = ObjectPoolLock<Chunk, 1024, 64>;
 public:

@@ -168,7 +168,7 @@ public:
         return _spin_lock;
     }
 
-    /// 唤醒主线程
+    /// 唤醒主线程(不会设置_has_job标识)
     void wake()
     {
         _cv.notify_one();
@@ -185,10 +185,9 @@ public:
 
         {
             // 这里其实需要加锁，否则主线程可能错过notify，但至少不会死锁
-            // std::lock_guard<std::mutex> lg(_mutex);
             _has_job = true;
         }
-        
+
         _cv.notify_one();
     }
 
@@ -214,7 +213,13 @@ protected:
 protected:
     volatile bool _done; /// 主循环是否已结束
 
-    std::atomic_flag _has_job; // 是否有任务需要处理
+    /**
+     * @brief 是否有任务需要处理
+     * std::atomic_flag guaranteed to be lock-free而std::atomic<bool>不一定
+     * 但atomic_flag需要C++20才有test函数，这就离谱
+     * std::atomic<bool>在x86下是lock-free，将就着用吧，过几年再改用flag
+    */
+    std::atomic<bool> _has_job;
 
     /////////////////////////////////////////////
     /////////////////////////////////////////////
