@@ -257,11 +257,6 @@ protected:
     virtual bool initialize() { return true; }   /* 子线程初始化 */
     virtual bool uninitialize() { return true; } /* 子线程清理 */
 
-    /// 加锁
-    inline void lock() { _mutex.lock(); }
-    /// 解锁
-    inline void unlock() { _mutex.unlock(); }
-
     /// 子线程逻辑
     virtual void routine(int32_t ev) = 0;
 

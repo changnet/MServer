@@ -247,7 +247,7 @@ FILE *AsyncLog::Policy::open_stream(const char *path)
 ////////////////////////////////////////////////////////////////////////////////
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
-    lock();
+    std::lock_guard<std::mutex> lg(_mutex);
     size_t unfinished_sz = 0;
     for (auto iter = _device.begin(); iter != _device.end(); iter++)
     {
@@ -255,7 +255,6 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
     }
 
     if (is_busy()) unfinished_sz += 1;
-    unlock();
 
     if (finished) *finished = 0;
     if (unfinished) *unfinished = unfinished_sz;
@@ -265,10 +264,10 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 
 void AsyncLog::set_policy(const char *path, int32_t type, int64_t opt_val)
 {
-    lock();
-    Device &device = _device[path];
-    unlock();
+    std::lock_guard<std::mutex> lg(_mutex);
 
+    // 这里面可能会触发磁盘io操作，会比较慢
+    Device &device = _device[path];
     device._policy.init_policy(path, type, opt_val);
 }
 
@@ -279,7 +278,7 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     thread_local std::string str_path;
     str_path.assign(path);
 
-    lock();
+    std::lock_guard<std::mutex> lg(_mutex);
     Device &device = _device[str_path];
     Buffer *buff   = device_reserve(device, time, type);
 
@@ -302,8 +301,6 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
             buff->_used += cpy_len;
         } while (cur_len < len);
     }
-
-    unlock();
 }
 
 size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
@@ -413,7 +410,8 @@ void AsyncLog::routine(int32_t ev)
     bool busy = true;
     auto now  = StaticGlobal::ev()->now();
 
-    lock();
+    std::unique_lock<std::mutex> ul(_mutex);
+
     while (busy)
     {
         busy = false;
@@ -426,9 +424,9 @@ void AsyncLog::routine(int32_t ev)
                 device._time = now;
                 _writing_buffers.swap(device._buff);
 
-                unlock();
+                ul.unlock();
                 write_device(&policy, _writing_buffers, iter->first.c_str());
-                lock();
+                ul.lock();
 
                 // 回收缓冲区
                 for (auto buffer : _writing_buffers)
@@ -453,9 +451,9 @@ void AsyncLog::routine(int32_t ev)
                     device._time = now;
                     if (policy.is_daily_rollover(now))
                     {
-                        unlock();
+                        ul.unlock();
                         policy.trigger_daily_rollover(now);
-                        lock();
+                        ul.lock();
                     }
                 }
                 else if (Policy::PT_NORMAL == type && sec > 300)
@@ -465,7 +463,6 @@ void AsyncLog::routine(int32_t ev)
             }
         }
     }
-    unlock();
 }
 
 bool AsyncLog::uninitialize()

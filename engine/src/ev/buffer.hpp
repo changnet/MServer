@@ -43,6 +43,7 @@ public:
     public:
         Chunk()
         {
+            _ctx[0]   = 0; // C26495
             _next     = nullptr;
             _used_pos = _free_pos = 0;
         }

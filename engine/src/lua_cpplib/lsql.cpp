@@ -46,12 +46,12 @@ LSql::~LSql()
 
 size_t LSql::busy_job(size_t *finished, size_t *unfinished)
 {
-    lock();
+    std::lock_guard<std::mutex> lg(_mutex);
+
     size_t finished_sz   = _result.size();
     size_t unfinished_sz = _query.size();
 
     if (is_busy()) unfinished_sz += 1;
-    unlock();
 
     if (finished) *finished = finished_sz;
     if (unfinished) *unfinished = unfinished_sz;
@@ -87,20 +87,20 @@ void LSql::main_routine(int32_t ev)
 
     LUA_PUSHTRACEBACK(L);
 
-    lock();
+    std::unique_lock<std::mutex> ul(_mutex);
+
     while (!_result.empty())
     {
         SqlResult *res = _result.front();
         _result.pop();
 
-        unlock();
+        ul.unlock();
 
         on_result(L, res);
 
-        lock();
+        ul.lock();
         _result_pool.destroy(res);
     }
-    unlock();
 
     lua_pop(L, 1); /* remove traceback */
 }
@@ -113,7 +113,8 @@ void LSql::routine(int32_t ev)
      */
     if (0 != ping()) return;
 
-    lock();
+    std::unique_lock<std::mutex> ul(_mutex);
+
     while (!_query.empty())
     {
         SqlQuery *query = _query.front();
@@ -123,10 +124,10 @@ void LSql::routine(int32_t ev)
         int32_t id     = query->_id;
         if (id > 0) res = _result_pool.construct();
 
-        unlock();
+        ul.unlock();
         exec_sql(query, res);
         query->clear();
-        lock();
+        ul.lock();
 
         _query_pool.destroy(query);
 
@@ -138,7 +139,6 @@ void LSql::routine(int32_t ev)
             wakeup_main(S_DATA);
         }
     }
-    unlock();
 }
 
 void LSql::exec_sql(const SqlQuery *query, SqlResult *res)
@@ -185,15 +185,15 @@ int32_t LSql::do_sql(lua_State *L)
         return luaL_error(L, "sql select,empty sql statement");
     }
 
-    lock();
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    SqlQuery *query = _query_pool.construct();
-    query->clear();
-    query->set(id, size, stmt);
-    _query.push(query);
-    wakeup(S_DATA);
-
-    unlock();
+        SqlQuery *query = _query_pool.construct();
+        query->clear();
+        query->set(id, size, stmt);
+        _query.push(query);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }

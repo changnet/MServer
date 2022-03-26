@@ -18,6 +18,7 @@ public:
             _time = time;
             _type = type;
             _used = 0;
+            _buff[0] = 0;
         }
 
     private:

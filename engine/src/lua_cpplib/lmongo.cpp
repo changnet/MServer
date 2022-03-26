@@ -113,12 +113,12 @@ bool LMongo::initialize()
 
 size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
 {
-    lock();
+    std::lock_guard<std::mutex> lg(_mutex);
+
     size_t finished_sz   = _result.size();
     size_t unfinished_sz = _query.size();
 
     if (is_busy()) unfinished_sz += 1;
-    unlock();
 
     if (finished) *finished = finished_sz;
     if (unfinished) *unfinished = unfinished_sz;
@@ -134,7 +134,8 @@ void LMongo::routine(int32_t ev)
      */
     if (ping()) return;
 
-    lock();
+    std::unique_lock<std::mutex> ul(_mutex);
+
     while (!_query.empty())
     {
         MongoQuery *query = _query.front();
@@ -142,9 +143,9 @@ void LMongo::routine(int32_t ev)
 
         MongoResult *res = _result_pool.construct(query->_qid, query->_mqt);
 
-        unlock();
+        ul.unlock();
         bool ok = do_command(query, res);
-        lock();
+        ul.lock();
 
         _query_pool.destroy(query);
         if (ok)
@@ -158,7 +159,6 @@ void LMongo::routine(int32_t ev)
             _result_pool.destroy(res);
         }
     }
-    unlock();
 }
 
 bool LMongo::uninitialize()
@@ -192,19 +192,19 @@ void LMongo::main_routine(int32_t ev)
 
     LUA_PUSHTRACEBACK(L);
 
-    lock();
+    std::unique_lock<std::mutex> ul(_mutex);
+
     while (!_result.empty())
     {
         MongoResult *res = _result.front();
         _result.pop();
 
-        unlock();
+        ul.unlock();
         on_result(L, res);
-        lock();
+        ul.lock();
 
         _result_pool.destroy(res);
     }
-    unlock();
 
     lua_pop(L, 1); /* remove stacktrace */
 }
@@ -302,13 +302,15 @@ int32_t LMongo::count(lua_State *L)
     bson_t *query = bson_new_from_lua(L, 3, 0, _array_opt);
     bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
 
-    lock();
-    MongoQuery *mongo_count =
-        _query_pool.construct(id, MQT_COUNT, collection, query, opts);
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    _query.push(mongo_count);
-    wakeup(S_DATA);
-    unlock();
+        MongoQuery *mongo_count =
+            _query_pool.construct(id, MQT_COUNT, collection, query, opts);
+
+        _query.push(mongo_count);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }
@@ -330,13 +332,15 @@ int32_t LMongo::find(lua_State *L)
     bson_t *query = bson_new_from_lua(L, 3, 1, _array_opt);
     bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
 
-    lock();
-    MongoQuery *mongo_find =
-        _query_pool.construct(id, MQT_FIND, collection, query, opts);
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    _query.push(mongo_find);
-    wakeup(S_DATA);
-    unlock();
+        MongoQuery *mongo_find =
+            _query_pool.construct(id, MQT_FIND, collection, query, opts);
+
+        _query.push(mongo_find);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }
@@ -364,21 +368,23 @@ int32_t LMongo::find_and_modify(lua_State *L)
     bool upsert  = lua_toboolean(L, 8);
     bool ret_new = lua_toboolean(L, 9);
 
-    lock();
-    MongoQuery *mongo_fmod =
-        _query_pool.construct(id, MQT_FMOD, collection, query);
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    mongo_fmod->_sort   = sort;
-    mongo_fmod->_update = update;
-    mongo_fmod->_fields = fields;
+        MongoQuery *mongo_fmod =
+            _query_pool.construct(id, MQT_FMOD, collection, query);
 
-    mongo_fmod->_remove = remove;
-    mongo_fmod->_upsert = upsert;
-    mongo_fmod->_new    = ret_new;
+        mongo_fmod->_sort   = sort;
+        mongo_fmod->_update = update;
+        mongo_fmod->_fields = fields;
 
-    _query.push(mongo_fmod);
-    wakeup(S_DATA);
-    unlock();
+        mongo_fmod->_remove = remove;
+        mongo_fmod->_upsert = upsert;
+        mongo_fmod->_new    = ret_new;
+
+        _query.push(mongo_fmod);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }
@@ -406,13 +412,15 @@ int32_t LMongo::insert(lua_State *L)
 
     bson_t *query = bson_new_from_lua(L, 3, -1, _array_opt);
 
-    lock();
-    MongoQuery *mongo_insert =
-        _query_pool.construct(id, MQT_INSERT, collection, query);
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    _query.push(mongo_insert);
-    wakeup(S_DATA);
-    unlock();
+        MongoQuery *mongo_insert =
+            _query_pool.construct(id, MQT_INSERT, collection, query);
+
+        _query.push(mongo_insert);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }
@@ -437,17 +445,19 @@ int32_t LMongo::update(lua_State *L)
     int32_t upsert = lua_toboolean(L, 5);
     int32_t multi  = lua_toboolean(L, 6);
 
-    lock();
-    MongoQuery *mongo_update =
-        _query_pool.construct(id, MQT_UPDATE, collection, query);
-    mongo_update->_update = update;
-    mongo_update->_flags =
-        (upsert ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE)
-        | (multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE);
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    _query.push(mongo_update);
-    wakeup(S_DATA);
-    unlock();
+        MongoQuery *mongo_update =
+            _query_pool.construct(id, MQT_UPDATE, collection, query);
+        mongo_update->_update = update;
+        mongo_update->_flags =
+            (upsert ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE)
+            | (multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE);
+
+        _query.push(mongo_update);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }
@@ -470,15 +480,17 @@ int32_t LMongo::remove(lua_State *L)
 
     int32_t single = lua_toboolean(L, 4);
 
-    lock();
-    MongoQuery *mongo_remove =
-        _query_pool.construct(id, MQT_REMOVE, collection, query);
-    mongo_remove->_flags =
-        single ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
+    {
+        std::lock_guard<std::mutex> lg(_mutex);
 
-    _query.push(mongo_remove);
-    wakeup(S_DATA);
-    unlock();
+        MongoQuery *mongo_remove =
+            _query_pool.construct(id, MQT_REMOVE, collection, query);
+        mongo_remove->_flags =
+            single ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
+
+        _query.push(mongo_remove);
+        wakeup(S_DATA);
+    }
 
     return 0;
 }
