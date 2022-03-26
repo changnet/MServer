@@ -123,6 +123,8 @@ EV::EV()
     _periodics.reserve(1024);
     _io_actions.reserve(1024);
 
+    _has_job = false;
+
     // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
     _timer_cnt = 0;
     _timers.resize(1024, nullptr);
@@ -211,11 +213,13 @@ int32_t EV::loop()
             std::unique_lock<std::mutex> ul(_mutex);
 
             // check the condition, in case it was already updated and notified
-            // 在获得锁后，必须重新检测_pendings是否为空，避免主线程执行完invoke_pending
-            // 子线程再把数据塞到_pendings
-            if (0 == _pendings.size())
+            // 在获得锁后，必须重新检测_has_job，避免主线程执行完任务后
+            // 子线程再把任务丢给主线程，所以子线程设置任务时也要加锁
+            if (!_has_job)
             {
                 _cv.wait_for(ul, std::chrono::milliseconds(backend_time));
+
+                _has_job = false;
             }
         }
 
@@ -428,6 +432,8 @@ void EV::time_update()
 
 void EV::io_event(EVIO *w, int32_t revents)
 {
+    _has_job = true;
+
     w->_revents |= revents;
     if (EXPECT_TRUE(!w->_io_index))
     {

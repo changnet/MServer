@@ -139,17 +139,18 @@ public:
         _io_changes.emplace_back(fd);
     }
     /**
-     * @brief 把一个io操作发送给io线程执行
+     * @brief 主线程把一个io操作发送给io线程执行
      * @param fd
      * @param events
      */
     void io_action(EVIO *w, int32_t events);
+
     /// 获取当前未处理的io事件
     std::vector<int32_t> &get_io_action()
     {
         return _io_actions;
     }
-    /// 触发io事件(此函数需要外部加锁)
+    /// 其他线程发送io事件给主线程处理(此函数需要外部加锁)
     void io_event(EVIO *w, int32_t revents);
 
     /// 获取加锁对象
@@ -170,6 +171,24 @@ public:
     /// 唤醒主线程
     void wake()
     {
+        _cv.notify_one();
+    }
+
+    /// 唤醒主线程(async-signal-safe)，一般是只信号在用
+    void wake_safe()
+    {
+        // C++的condition_variable不是async - signal - safe的
+        // 如 https://github.com/llvm-mirror/libcxx/blob/master/include/condition_variable
+        // notify_one里会有锁，信号重入会造成死锁
+        // 但std::atomic_flag是，因此这里包一层，防止信号重入_cv.notify_one()
+        if (_has_job) return;
+
+        {
+            // 这里其实需要加锁，否则主线程可能错过notify，但至少不会死锁
+            // std::lock_guard<std::mutex> lg(_mutex);
+            _has_job = true;
+        }
+        
         _cv.notify_one();
     }
 
@@ -194,6 +213,8 @@ protected:
 
 protected:
     volatile bool _done; /// 主循环是否已结束
+
+    std::atomic_flag _has_job; // 是否有任务需要处理
 
     /////////////////////////////////////////////
     /////////////////////////////////////////////

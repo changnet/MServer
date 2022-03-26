@@ -74,7 +74,7 @@ void Thread::sig_handler(int32_t signum)
     //      参考：https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
     // 
     // 方案2是把主线程的超时时间设置为1秒左右，不通知主线程而是等超时
-    StaticGlobal::ev()->wake();
+    StaticGlobal::ev()->wake_safe();
 }
 
 void Thread::signal(int32_t sig, int32_t action)
