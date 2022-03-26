@@ -159,16 +159,19 @@ public:
     class Transaction final
     {
     public:
-        explicit Transaction(char *ctx, std::unique_lock<SpinLock> &&ul)
+        explicit Transaction(SpinLock &lock) : _ul(lock)
         {
             _len = 0;
             _ctx = 0;
-            _ul  = std::move(ul);
+            _internal = false;
         }
         Transaction(Transaction &&t) : _ul(std::move(t._ul))
         {
-            _len = 0;
-            _ctx = 0;
+            _len = t._len;
+            _ctx = t._ctx;
+
+            t._len = 0;
+            t._ctx = 0;
         }
         Transaction &operator=(Transaction && t)
         {
@@ -188,9 +191,12 @@ public:
         Transaction(const Transaction &) = delete;
         Transaction &operator=(const Transaction &) = delete;
 
+    public:
+        bool _internal; // 是否使用内部buff
+        char *_ctx;     // 预留的缓冲区指针
+        int32_t _len;   // 缓冲区的长度
+
     private:
-        char *_ctx;
-        int32_t _len;
         std::unique_lock<SpinLock> _ul;
     };
 
@@ -220,19 +226,16 @@ public:
 
     /**
      * @brief 预分配任意空间
-     * 即使不提交数据，调用这个函数必须同时调用commit
-     * @param len 可能缓冲区长度
-     * @return 缓冲区指针
+     * @return 一个包括锁和缓冲区指针等数据的事务对象
     */
-    char *any_seserve(size_t &len);
+    Transaction any_seserve();
 
     /**
      * @brief 预分配一块连续(不包含多个chunk)的缓冲区
-     * 即使不提交数据，调用这个函数必须同时调用commit
      * @param len 预分配的长度
-     * @return 缓冲区指针
+     * @return 一个包括锁和缓冲区指针等数据的事务对象
     */
-    char *flat_reserve(size_t len);
+    Transaction flat_reserve(size_t len);
 
     /**
      * @brief 把指定长度的缓存放到连续的缓冲区
@@ -257,10 +260,10 @@ public:
 
      /**
       * @brief 提交flat_reserve预分配的数据
-      * @param buf 提交的数据
-      * @param len 提交的数据长度
+      * @param len 最终提交数据长度
+      * @param ts 提交的缓存事务对象
      */
-     void commit(const void *buf, int32_t len);
+     void commit(const Transaction &ts, int32_t len);
 
     /**
       * @brief 获取第一个chunk的数据指针及数据大小

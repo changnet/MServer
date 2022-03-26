@@ -114,10 +114,10 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
     if (parser->flags & WS_HAS_MASK)
     {
-        char *buf  = body.flat_reserve(length);
+        Buffer::Transaction &&ts = body.flat_reserve(length);
 
-        websocket_parser_decode(buf, at, length, parser);
-        body.commit(buf, (int32_t)length);
+        websocket_parser_decode(ts._ctx, at, length, parser);
+        body.commit(ts, (int32_t)length);
     }
     else
     {
@@ -188,13 +188,13 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
     size_t len         = websocket_calc_frame_size(flags, size);
 
     Buffer &buffer = _socket->get_send_buffer();
-    char *buf      = buffer.flat_reserve(len);
+    Buffer::Transaction &&ts = buffer.flat_reserve(len);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
-    websocket_build_frame(buf, flags, mask, ctx, size);
+    websocket_build_frame(ts._ctx, flags, mask, ctx, size);
 
-    buffer.commit(buf, (int32_t)len);
+    buffer.commit(ts, (int32_t)len);
     _socket->flush();
 
     return 0;

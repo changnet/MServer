@@ -29,13 +29,12 @@ IO::IOStatus SSLIO::recv()
 
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
-    size_t size = 0;
-    char *buf   = _recv->any_seserve(size);
-    if (!size) return IOS_BUSY; /* no more memory */
+    Buffer::Transaction &&ts = _recv->any_seserve();
+    if (ts._len <= 0) return IOS_BUSY; /* no more memory */
 
     // ERR_clear_error
-    int32_t len = SSL_read(_ssl_ctx, buf, (int32_t)size);
-    _recv->commit(buf, len);
+    int32_t len = SSL_read(_ssl_ctx, ts._ctx, ts._len);
+    _recv->commit(ts, len);
     if (EXPECT_TRUE(len > 0))
     {
         return IOS_OK;

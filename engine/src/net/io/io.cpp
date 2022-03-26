@@ -28,16 +28,21 @@ IO::IOStatus IO::recv()
 {
     assert(Socket::fd_valid(_fd));
 
-    size_t size = 0;
-    char *buf   = _recv->any_seserve(size);
-    if (0 == size) return IOS_BUSY;
+    Buffer::Transaction &&ts = _recv->any_seserve();
+    if (0 == ts._len) return IOS_BUSY;
 
-    int32_t len = (int32_t)::recv(_fd, buf, (int32_t)size, 0);
+    int32_t len = (int32_t)::recv(_fd, ts._ctx, ts._len, 0);
 
-    _recv->commit(buf, len);
+    _recv->commit(ts, len);
     if (EXPECT_TRUE(len > 0))
     {
         return IOS_OK;
+
+        // 这里要限制一下重读的次数，因为io线程是无法知道协议大小的上限的
+        // 如果一直读会把内存爆掉
+
+        // 因为用的是LT模式，所以只读一次，如果还有数据，下次再读
+        // any_seserve的空间一般不会太小，应对游戏协议还是可以的
     }
 
     if (0 == len)

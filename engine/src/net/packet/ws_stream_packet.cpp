@@ -106,15 +106,16 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
 
     uint8_t mask_offset = 0;
     Buffer &buffer      = _socket->get_send_buffer();
-    char *buf           = buffer.flat_reserve(len);
-    size_t offset = websocket_build_frame_header(buf, flags, mask, frame_size);
-    offset += websocket_append_frame(buf + offset, flags, mask, header_ctx,
+    Buffer::Transaction &&ts = buffer.flat_reserve(len);
+    size_t offset = websocket_build_frame_header(ts._ctx, flags, mask, frame_size);
+    offset += websocket_append_frame(ts._ctx + offset, flags, mask, header_ctx,
                                      sizeof(c2sh), &mask_offset);
-    websocket_append_frame(buf + offset, flags, mask, ctx, size, &mask_offset);
+    websocket_append_frame(ts._ctx + offset, flags, mask, ctx, size,
+                           &mask_offset);
 
     encoder->finalize();
 
-    buffer.commit(buf, (int32_t)len);
+    buffer.commit(ts, (int32_t)len);
     _socket->flush();
 
     PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh._length), STAT_TIME_END());
@@ -286,13 +287,14 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
     char mask[4]        = {0};
     uint8_t mask_offset = 0;
     Buffer &buffer      = _socket->get_send_buffer();
-    char *buf           = buffer.flat_reserve(len);
-    size_t offset = websocket_build_frame_header(buf, flags, mask, frame_size);
-    offset += websocket_append_frame(buf + offset, flags, mask, header_ctx,
+    Buffer::Transaction &&ts = buffer.flat_reserve(len);
+    size_t offset = websocket_build_frame_header(ts._ctx, flags, mask, frame_size);
+    offset += websocket_append_frame(ts._ctx + offset, flags, mask, header_ctx,
                                      sizeof(s2ch), &mask_offset);
-    websocket_append_frame(buf + offset, flags, mask, ctx, size, &mask_offset);
+    websocket_append_frame(ts._ctx + offset, flags, mask, ctx, size,
+                           &mask_offset);
 
-    buffer.commit(buf, (int32_t)len);
+    buffer.commit(ts, (int32_t)len);
     _socket->flush();
 
     return 0;

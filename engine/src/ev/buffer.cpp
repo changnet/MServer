@@ -181,16 +181,18 @@ void Buffer::remove(size_t len)
     assert(_front == _back || 0 == _front->get_free_size());
 }
 
-char *Buffer::any_seserve(size_t &len)
+Buffer::Transaction Buffer::any_seserve()
 {
-    std::lock_guard lg(_lock);
+    Transaction ts(_lock);
 
-    _reserve = true;
-    len = reserve();
-    return _back->get_free_ctx();
+    ts._internal = true;
+    ts._len = (int)reserve();
+    ts._ctx = _back->get_free_ctx();
+
+    return ts;
 }
 
-char *Buffer::flat_reserve(size_t len)
+Buffer::Transaction Buffer::flat_reserve(size_t len)
 {
     /**
      * 打包数据时(例如protobuf、websocket)需要预先分配一块连续的缓冲区
@@ -199,18 +201,26 @@ char *Buffer::flat_reserve(size_t len)
      * 大时，buffer额外申请一块临时内存，再append到，这样大部分情况下
      * 都不需要拷贝
      */
-    {
-        std::lock_guard lg(_lock);
 
-        size_t free_size = reserve();
-        if (free_size >= len)
-        {
-            _reserve = true;
-            return _back->get_free_ctx();
-        }
+    Transaction ts(_lock);
+
+    size_t free_size = reserve();
+    if (free_size >= len)
+    {
+        ts._internal = true;
+        ts._len      = (int)reserve();
+        ts._ctx      = _back->get_free_ctx();
+    }
+    else
+    {
+        // 这里用了外部缓存，是可以解锁的。不过提升不了多少
+        // 如果这里解锁commit那里要改一下，保证只锁一次
+        // ts._ul.unlock()
+        ts._len = static_cast<int32_t>(len);
+        ts._ctx = get_large_buffer(len);
     }
 
-    return get_large_buffer(len);
+    return ts;
 }
 
 const char *Buffer::to_flat_ctx(size_t len)
@@ -288,26 +298,24 @@ const char *Buffer::all_to_flat_ctx(size_t &len)
     return buf;
 }
 
-void Buffer::commit(const void *buf, int32_t len)
+void Buffer::commit(const Transaction &ts, int32_t len)
 {
+    // 事务自带锁，这里不用处理锁
+
     // len来自read等函数，可能为0，可能为负
+    if (len <= 0) return;
 
-    std::lock_guard lg(_lock);
-    if (_reserve)
+    if (ts._internal)
     {
-        assert(buf == _back->get_free_ctx());
+        assert(ts._ctx == _back->get_free_ctx());
 
-        _reserve = false;
-
-        if (len <= 0) return;
         _back->add_used(len);
     }
     else
     {
-        assert(buf == get_large_buffer(0));
+        assert(ts._ctx == get_large_buffer(0));
 
-        if (len <= 0) return;
-        __append(buf, len);
+        __append(ts._ctx, len);
     }
 }
 
