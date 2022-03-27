@@ -6,11 +6,18 @@ local max_insert = 10000
 local collection = "perf_test"
 local json = require "engine.lua_parson"
 
-local Mongodb = require "mongodb.mongodb"
-local SyncMongodb = require "mongodb.sync_mongodb"
-
 t_describe("mongodb test", function()
     local mongodb
+    local Mongodb
+    local SyncMongodb
+
+    -- require mongodb就会往app那边注册app_start和app_stop事件
+    -- 但有时候并不需要执行mongodb test
+    t_before(function()
+        Mongodb = require "mongodb.mongodb"
+        SyncMongodb = require "mongodb.sync_mongodb"
+    end)
+
     t_it("mongodb base test", function()
         t_wait(10000)
 

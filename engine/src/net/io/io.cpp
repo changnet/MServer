@@ -78,7 +78,7 @@ IO::IOStatus IO::send()
             _send->remove(len);
 
             // 缓冲区已满
-            if (len < bytes) return IOS_WRITE;
+            if (len < (int32_t)bytes) return IOS_WRITE;
 
             // >= 要发送值，尝试再发一次看看有没有数据要发送
             if (!next) return IOS_OK;

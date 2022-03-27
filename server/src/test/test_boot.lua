@@ -45,6 +45,8 @@ local function exec()
     g_app.session = 0x10001
     network_mgr:set_curr_session(g_app.session)
 
+    -- test这个进程的逻辑不走app.lua中的初始化流程，这个函数结束，那整个进程就结束了
+
     require "test.misc_test"
     require "test.https_test"
     require "test.grid_aoi_test"
@@ -63,6 +65,8 @@ local function exec()
     require "test.timer_test"
 
     make_name()
+
+    g_app.ok = true
 
     -- vd( statistic.dump() )
     t_run()

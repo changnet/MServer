@@ -62,7 +62,7 @@ public:
     {
         return _network_mgr;
     }
-    static class Buffer::ChunkPool *buffer_chunk_pool()
+    static Buffer::ChunkPool *buffer_chunk_pool()
     {
         return _buffer_chunk_pool;
     }
@@ -84,7 +84,7 @@ private:
     static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;
     static class LNetworkMgr *_network_mgr;
-    static class Buffer::ChunkPool *_buffer_chunk_pool;
+    static Buffer::ChunkPool *_buffer_chunk_pool;
 
     static class initializer _initializer;
 };

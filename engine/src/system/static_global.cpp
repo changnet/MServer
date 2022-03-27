@@ -11,7 +11,7 @@ class Statistic *StaticGlobal::_statistic     = nullptr;
 class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
 class LNetworkMgr *StaticGlobal::_network_mgr = nullptr;
-class Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
+Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::_initializer;
@@ -69,7 +69,7 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
     _codec_mgr   = new class CodecMgr();
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
-    _buffer_chunk_pool = new class Buffer::ChunkPool("buffer_chunk");
+    _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 
     _async_log->set_thread_name(STD_FMT("global_async_log"));
     _async_log->AsyncLog::start(1000000);

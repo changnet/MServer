@@ -218,9 +218,8 @@ int32_t EV::loop()
             if (!_has_job)
             {
                 _cv.wait_for(ul, std::chrono::milliseconds(backend_time));
-
-                _has_job = false;
             }
+            _has_job = false;
         }
 
         time_update();
@@ -295,7 +294,8 @@ void EV::set_fast_io(int32_t fd, EVIO *w)
     {
         while (_io_fast.size() < ufd)
         {
-            _io_fast.resize(_io_fast.size() * 2);
+            size_t size = _io_fast.size();
+            _io_fast.resize(size ? size * 2 : 1024);
         }
         _io_fast[fd] = w;
     }
