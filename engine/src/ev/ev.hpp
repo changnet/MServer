@@ -7,17 +7,19 @@
 #include "../thread/spin_lock.hpp"
 #include "../global/global.hpp"
 
-/* eventmask, revents, events... */
+/**
+ * @brief 主循环事件定义，这些事件可能会同时触发，按位定义
+ */
 enum
 {
-    EV_NONE    = 0x00,           /// 无任何事件
-    EV_READ    = 0x01,           /// socket读(接收)
-    EV_WRITE   = 0x02,           /// socket写(发送)
-    EV_ACCEPT  = 0x04,           /// 监听到有新连接
-    EV_CONNECT = 0x08,           /// 连接成功或者失败
-    EV_CLOSE   = 0x10,           /// socket关闭
-    EV_TIMER   = 0x00000100,     /// 定时器超时
-    EV_ERROR   = (int)0x80000000 /// 出错
+    EV_NONE    = 0x000, /// 0  无任何事件
+    EV_READ    = 0x001, /// 1  socket读(接收)
+    EV_WRITE   = 0x002, /// 2  socket写(发送)
+    EV_ACCEPT  = 0x004, /// 4  监听到有新连接
+    EV_CONNECT = 0x008, /// 8  连接成功或者失败
+    EV_CLOSE   = 0x010, /// 16 socket关闭
+    EV_TIMER   = 0x080, /// 128 定时器超时
+    EV_ERROR   = 0x100  /// 256 出错
 };
 
 class EVIO;
@@ -191,6 +193,12 @@ public:
         _cv.notify_one();
     }
 
+    /// 设置是否有任务需要处理
+    void set_job(bool job)
+    {
+        _has_job = job;
+    }
+
 protected:
     virtual void running() = 0;
 
@@ -218,7 +226,7 @@ protected:
      * std::atomic_flag guaranteed to be lock-free而std::atomic<bool>不一定
      * 但atomic_flag需要C++20才有test函数，这就离谱
      * std::atomic<bool>在x86下是lock-free，将就着用吧，过几年再改用flag
-    */
+     */
     std::atomic<bool> _has_job;
 
     /////////////////////////////////////////////

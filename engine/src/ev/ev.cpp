@@ -322,7 +322,7 @@ void EV::io_reify()
             EVIO *io = get_io(fd);
             if (io && io->_active)
             {
-                _backend->modify(fd, io->_emask, io->_events);
+                _backend->modify(fd, io);
 
                 // 新增
                 if (2 == io->_active)
@@ -333,9 +333,12 @@ void EV::io_reify()
             }
             else
             {
-                _backend->modify(fd, 0, 0); // 移除该socket
-
-                if (io) clear_io_event(io);
+                if (io)
+                {
+                    io->_events = 0;
+                    clear_io_event(io);
+                }
+                _backend->modify(fd, io); // 移除该socket
 
                 _io_mgr.erase(fd);
                 set_fast_io(fd, nullptr);
@@ -432,8 +435,6 @@ void EV::time_update()
 
 void EV::io_event(EVIO *w, int32_t revents)
 {
-    _has_job = true;
-
     w->_revents |= revents;
     if (EXPECT_TRUE(!w->_io_index))
     {

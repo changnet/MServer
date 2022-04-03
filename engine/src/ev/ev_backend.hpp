@@ -25,25 +25,9 @@
 class EVBackend
 {
 public:
-    /// 待处理的io事件
-    class ModifyEvent final
-    {
-    public:
-        ModifyEvent(int32_t fd, int32_t old_ev, int32_t new_ev)
-        {
-            _fd = fd;
-            _old_ev = old_ev;
-            _new_ev = new_ev;
-        }
-    public:
-        int32_t _fd;
-        int32_t _old_ev;
-        int32_t _new_ev;
-    };
-
-public:
     EVBackend()
     {
+        _busy = false;
         _done = false;
         _ev   = nullptr;
     }
@@ -69,9 +53,10 @@ public:
     }
 
     /// 修改io事件(包括删除)
-    virtual void modify(int32_t fd, int32_t old_ev, int32_t new_ev) = 0;
+    virtual void modify(int32_t fd, EVIO *w) = 0;
 
 protected:
     bool _done;    /// 是否终止进程
+    bool _busy;    /// io读写返回busy，意味主线程处理不完这些数据
     class EV *_ev; /// 主循环
 };

@@ -72,6 +72,7 @@ public:
 
     /// 获取io描述符
     int32_t get_fd() const { return _fd; }
+
     /// 重新设置当前io监听的事件
     void set(int32_t events);
     /**
@@ -114,20 +115,22 @@ public:
         return _io->is_ready();
     }
 
-    /// 初始化新增连接
+    /// 主线程初始化新增连接
     void init_accept();
-    /// 初始化主动发起的连接
+    /// 主线程初始化主动发起的连接
     void init_connect();
-    /// 执行初始化新增连接
+    /// io线程执行初始化新增连接
     IO::IOStatus do_init_accept();
-    /// 执行初始化主动发起的连接
+    /// io线程执行初始化主动发起的连接
     IO::IOStatus do_init_connect();
 
 public:
 
-    int32_t _fd;     /// io描述符
-    int32_t _emask;  /// 已经设置到内核(epoll、poll)的事件
-    int32_t _events; /// 设置需要关注的事件(稍后异步设置到_emask)
+    int32_t _fd;     /// 文件描述符
+    int32_t _emask;  /// io线程中的事件
+    int32_t _events; /// 主线程设置需要关注的事件(稍后异步同步到_emask)
+    int32_t _extend_ev; /// 内核额外添加的事件，如EV_WRITE
+    int32_t _kernel_ev; /// 已经设置到内核(epoll、poll)的事件
 
     int32_t _action_ev; /// 待处理的action
     int32_t _action_index; /// action数组的下标

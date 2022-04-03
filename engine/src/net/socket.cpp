@@ -371,7 +371,6 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
 
 bool Socket::start(int32_t fd)
 {
-    // connect成功时，已有fd, accept成功时，需要从外部传入fd
     assert(_fd == fd || !fd_valid(_fd));
 
     assert(!_w);
@@ -579,6 +578,14 @@ FAIL:
 
 void Socket::io_cb(int32_t revents)
 {
+    // io线程那边会同时抛多个事件，优先检测close事件
+    // 如果关闭了，那其他的都不用处理了
+    if (EV_CLOSE & revents)
+    {
+        close_cb();
+        return;
+    }
+
     if (EV_READ & revents)
     {
         command_cb();
@@ -590,10 +597,6 @@ void Socket::io_cb(int32_t revents)
     else if (EV_WRITE & revents)
     {
         connect_cb();
-    }
-    else if (EV_CLOSE & revents)
-    {
-        close_cb();
     }
 }
 
@@ -673,7 +676,7 @@ void Socket::connect_cb()
         KEEP_ALIVE(_fd);
         USER_TIMEOUT(_fd);
 
-        Socket::start(_fd);
+        _w->set(EV_READ);
     }
 
     /* 连接失败或回调脚本失败,都会被connect_new删除 */

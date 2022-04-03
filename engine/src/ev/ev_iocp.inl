@@ -11,7 +11,7 @@ public:
     bool start(class EV *ev);
     void wake();
     void backend();
-    void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
+    void modify(int32_t fd, EVIO *w);
 };
 
  FinalBackend::FinalBackend()
@@ -40,6 +40,6 @@ void FinalBackend::backend()
 {
 }
 
-void FinalBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+void FinalBackend::modify(int32_t fd, EVIO *w)
 {
 }

@@ -43,7 +43,7 @@ public:
     bool start(class EV *ev);
     void wake();
     void backend();
-    void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
+    void modify(int32_t fd, EVIO *w);
 
 private:
     /// 处理epoll事件
@@ -51,8 +51,19 @@ private:
     /// 处理主线程发起的io事件
     void do_action(const std::vector<int32_t> &actions);
 
+    /**
+     * @brief 处理读写后的io状态
+     * @param w 待处理的watcher
+     * @param ev 当前执行的事件
+     * @param status 待处理的状态
+     * @return 是否继续执行
+    */
+    bool do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status);
+
     void do_modify();
-    void modify_one(int32_t fd, int32_t old_ev, int32_t new_ev);
+
+    /// 把一个io设置到epoll内核中，该函数外部需要加锁
+    int32_t modify_one(int32_t fd, EVIO *w, int32_t new_ev = 0);
 
 private:
     std::thread _thread;
@@ -61,8 +72,8 @@ private:
     int32_t _wake_fd; /// 用于唤醒子线程的fd
     epoll_event _ep_ev[EPOLL_MAXEV];
 
-    /// 等待变更到epoll的io事件
-    std::vector<struct ModifyEvent> _modify_event;
+    /// 等待变更到epoll的fd
+    std::vector<int32_t> _modify_fd;
 };
 
 FinalBackend::FinalBackend()
@@ -75,6 +86,7 @@ FinalBackend::~FinalBackend()
 
 bool FinalBackend::start(class EV *ev)
 {
+    // 创建一个fd用于实现self pipe，唤醒io线程
     _wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (_wake_fd < 0)
     {
@@ -84,8 +96,6 @@ bool FinalBackend::start(class EV *ev)
 
     EVBackend::start(ev);
     _thread = std::thread(&FinalBackend::backend, this);
-
-    modify(_wake_fd, 0, EV_READ);
 
     return true;
 }
@@ -102,13 +112,54 @@ bool FinalBackend::stop()
     return true;
 }
 
+bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
+{
+    switch (status)
+    {
+    case IO::IOS_OK:
+        // 发送完则需要删除写事件，不然会一直触发
+        if (EV_WRITE == ev && (w->_extend_ev & EV_WRITE))
+        {
+            w->_extend_ev &= ~EV_WRITE;
+            modify_one(w->_fd, w);
+        }
+        return true;
+    case IO::IOS_READ:
+        // socket一般都会监听读事件，不需要做特殊处理
+        return true;
+    case IO::IOS_WRITE:
+        // 未发送完，加入write事件继续发送
+        if (!(w->_extend_ev & EV_WRITE))
+        {
+            w->_extend_ev |= EV_WRITE;
+            modify_one(w->_fd, w);
+        }
+        return true;
+    case IO::IOS_BUSY:
+        // 主线程忙不过来了，子线程需要sleep一下等待主线程
+        _busy = true;
+        return true;
+    case IO::IOS_CLOSE:
+    case IO::IOS_ERROR: 
+        // TODO 错误时是否要传一个错误码给主线程
+        _ev->io_event(w, EV_CLOSE);
+        modify_one(w->_fd, nullptr);
+        return false;
+    default:
+        ELOG("unknow io status: %d", status);
+        return false;
+    }
+
+    return false;
+}
+
 void FinalBackend::do_action(const std::vector<int32_t> &actions)
 {
     for (auto fd : actions)
     {
         EVIO *w = _ev->get_fast_io(fd);
-        // io对象可能被主线程删了或者停止
-        if (!w || !(w->_active)) continue;
+        // 主线程发出io请求后，后续逻辑可能删掉了这个对象，但没清掉action
+        if (!w) continue;
 
         int32_t events = 0;
         {
@@ -124,25 +175,19 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
         if (events & EV_ACCEPT)
         {
             // 初始化新socket，只有ssl用到
-            w->init_accept();
+            w->do_init_accept();
         }
         else if (events & EV_CONNECT)
         {
             // 初始化新socket，只有ssl用到
-            w->init_connect();
+            w->do_init_connect();
         }
 
         // 处理数据发送
         if (events & EV_WRITE)
         {
-            auto e = w->send();
-            // 未发送完，加入write事件继续发送
-            if (e == IO::IOS_WRITE && !(w->_emask & EV_WRITE))
-            {
-                int32_t old_ev = w->_emask;
-                w->_emask |= EV_WRITE;
-                modify_one(fd, old_ev, w->_emask);
-            }
+            auto status = w->send();
+            do_io_status(w, EV_WRITE, status);
         }
     }
 }
@@ -170,7 +215,7 @@ int32_t FinalBackend::do_event(int32_t ev_count)
 
         EVIO *w = _ev->get_fast_io(fd);
         // io对象可能被主线程删了或者停止
-        if (!w || !(w->_active)) continue;
+        if (!w) continue;
 
         int32_t set_ev = ev->data.u32;
         int32_t events = 0;
@@ -179,7 +224,8 @@ int32_t FinalBackend::do_event(int32_t ev_count)
             if (set_ev & EV_WRITE)
             {
                 events |= EV_WRITE;
-                w->send();
+                auto status = w->send();
+                do_io_status(w, EV_WRITE, status);
             }
             else
             {
@@ -191,7 +237,9 @@ int32_t FinalBackend::do_event(int32_t ev_count)
             if (set_ev & EV_READ)
             {
                 events |= EV_READ;
-                w->recv();
+
+                auto status = w->recv();
+                do_io_status(w, EV_READ, status);
             }
             else
             {
@@ -225,11 +273,17 @@ void FinalBackend::backend()
         _ep_fd = epoll_create(256);
         if (_ep_fd < 0 || fcntl(_ep_fd, F_SETFD, FD_CLOEXEC) < 0)
         {
-            FATAL("ev backend init fail:%s", strerror(errno));
+            FATAL("epoll_create init fail:%s", strerror(errno));
             return;
         }
     }
     assert(_ep_fd >= 0);
+
+    if ( 0 != modify_one(_wake_fd, nullptr, EV_READ))
+    {
+        FATAL("backend init wake_fd fail:%s", strerror(errno));
+        return;
+    }
 
     /// 第一次进入wait前，必须先设置io事件，不然的话第一次就会wait很久
     {
@@ -271,6 +325,8 @@ void FinalBackend::backend()
             do_action(actions);
             use_ev = do_event(ev_count);
             do_modify();
+
+            if (use_ev > 0) _ev->set_job(true);
         }
 
         // 唤醒主线程干活
@@ -294,9 +350,10 @@ void FinalBackend::wake()
     }
 }
 
-void FinalBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+void FinalBackend::modify(int32_t fd, EVIO *w)
 {
     /**
+     * 这个函数由主线程调用，io线程可能处于wpoll_wait阻塞当中
      * man epoll_wait
      * NOTES
        While one thread is blocked in a call to epoll_pwait(), it is possible
@@ -323,26 +380,37 @@ void FinalBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
      * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
      */
 
-    _modify_event.emplace_back(fd, old_ev, new_ev);
+    if (w) w->_emask = w->_events;
+
+    _modify_fd.push_back(fd);
 }
 
 void FinalBackend::do_modify()
 {
-    for (auto &e : _modify_event)
+    for (auto &fd : _modify_fd)
     {
-        modify_one(e._fd, e._old_ev, e._new_ev);
+        EVIO *w = _ev->get_fast_io(fd);
+        modify_one(fd, w);
     }
-    _modify_event.clear();
+    _modify_fd.clear();
 }
 
-void FinalBackend::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
+int32_t FinalBackend::modify_one(int32_t fd, EVIO *w, int32_t new_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */
     memset(&ev, 0, sizeof(ev));
 
     ev.data.fd  = fd;
-    ev.data.u32 = new_ev;
+
+    int32_t old_ev = 0;
+    if (w)
+    {
+        old_ev = w->_kernel_ev;
+        new_ev = w->_emask | w->_extend_ev;
+
+        w->_kernel_ev = new_ev;
+    }
 
     /* epoll只是监听fd，不负责fd的打开或者关闭。
      * 但是，如果一个fd被关闭，epoll会自动解除监听，并不会通知我们。
@@ -375,29 +443,30 @@ void FinalBackend::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
     }
     else
     {
-        // 同一帧内，把一个fd添加到epoll，但在fd_reify执行之前又从epoll删掉
-        if (!old_ev) return;
+        // 同一次主循环内，想把一个fd添加到epoll，但在真正执行之前又从epoll删掉
+        if (!old_ev) return 0;
     }
 
-    if (EXPECT_TRUE(!epoll_ctl(_ep_fd, op, fd, &ev))) return;
+    if (EXPECT_TRUE(!epoll_ctl(_ep_fd, op, fd, &ev))) return 0;
 
     switch (errno)
     {
     case EBADF:
         /* libev是不处理EPOLL_CTL_DEL的，因为fd被关闭时会自动从epoll中删除
-         * 这里我们允许不关闭fd而从epoll中删除，但是会遇到已被epoll自动删除，这时特殊处理
+         * 这里我们允许不关闭fd而从epoll中删除，但是执行删除时会遇到该fd已
+         * 被epoll自动删除，这里特殊处理
          */
-        if (EPOLL_CTL_DEL == op) return;
+        if (EPOLL_CTL_DEL == op) return 0;
         assert(false);
         break;
     case EEXIST:
         /*
          * 上一个fd关闭了，系统又分配了同一个fd
          */
-        if (old_ev == new_ev) return;
+        if (old_ev == new_ev) return 0;
         if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)))
         {
-            return;
+            return 0;
         }
         assert(false);
         break;
@@ -408,10 +477,10 @@ void FinalBackend::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
          * 如果这时在同一轮主循环中产生新连接，系统会分配同一个fd
          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
          */
-        if (EPOLL_CTL_DEL == op) return;
+        if (EPOLL_CTL_DEL == op) return 0;
         if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_ADD, fd, &ev)))
         {
-            return;
+            return 0;
         }
         assert(false);
         break;
@@ -419,9 +488,11 @@ void FinalBackend::modify_one(int32_t fd, int32_t old_ev, int32_t new_ev)
     case ENOSPC: assert(false); break;
     case EPERM:
         // 一个fd被epoll自动删除后，可能会被分配到其他用处，比如打开了个文件，不是有效socket
-        if (EPOLL_CTL_DEL == op) return;
+        if (EPOLL_CTL_DEL == op) return 0;
         assert(false);
         break;
-    default: ELOG("unknow ev error"); break;
+    default: ELOG("unknow epoll error"); break;
     }
+
+    return errno;
 }
