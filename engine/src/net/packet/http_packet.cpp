@@ -274,7 +274,7 @@ int32_t HttpPacket::pack_raw(lua_State *L, int32_t index)
     const char *ctx = luaL_checklstring(L, index, &size);
     if (!ctx) return 0;
 
-    _socket->append(ctx, size);
+    _socket->send(ctx, size);
 
     return 0;
 }

@@ -112,10 +112,22 @@ public:
      * @param len 需要发送的数据长度
     */
     void append(const void *data, size_t len);
+
     /**
      * @brief 唤醒io线程来发送数据
     */
     void flush();
+
+        /**
+     * @brief 追加要发送的数据，并且唤醒io线程
+     * @param data 需要发送的数据指针
+     * @param len 需要发送的数据长度
+     */
+    void send(const void *data, size_t len)
+    {
+        append(data, len);
+        flush();
+    }
 
     int32_t set_io(IO::IOType io_type, int32_t param);
     int32_t set_packet(Packet::PacketType packet_type);

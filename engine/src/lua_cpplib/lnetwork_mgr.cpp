@@ -631,7 +631,7 @@ int32_t LNetworkMgr::send_raw_packet(lua_State *L)
     const char *ctx = luaL_checklstring(L, 2, &size);
     if (!ctx) return 0;
 
-    sk->append(ctx, size);
+    sk->send(ctx, size);
 
     return 0;
 }

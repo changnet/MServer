@@ -71,11 +71,11 @@ private:
     /**
      * @brief 把一个fd设置到epoll内核中，该函数外部需要加锁
      * @param fd 需要设置的文件描述符
-     * @param new_ev 新事件
-     * @param old_ev 旧事件
+     * @param op epoll的操作，如EPOLL_CTL_ADD
+     * @param new_ev 旧事件
      * @return errno
      */
-    int32_t modify_fd(int32_t fd, int32_t new_ev, int32_t old_ev);
+    int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev);
 
 private:
     std::thread _thread;
@@ -160,7 +160,7 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         // TODO 错误时是否要传一个错误码给主线程
         _has_ev = true;
         _ev->io_event(w, EV_CLOSE);
-        modify_fd(w->_fd, 0, w->_kernel_ev);
+        modify_fd(w->_fd, EPOLL_CTL_DEL, 0);
         return false;
     default: ELOG("unknow io status: %d", status); return false;
     }
@@ -232,8 +232,9 @@ void FinalBackend::do_event(int32_t ev_count)
         if (!w) continue;
 
         int32_t events          = 0;             // 最终需要触发的事件
+        int32_t expect_ev       = w->_emask;     // 期望触发回调的事件
         const int32_t kernel_ev = w->_kernel_ev; // 内核事件
-        if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+        if (ev->events & EPOLLOUT)
         {
             if (kernel_ev & EV_WRITE)
             {
@@ -242,9 +243,17 @@ void FinalBackend::do_event(int32_t ev_count)
                 do_io_status(w, EV_WRITE, status);
             }
 
+            // 这些事件是一次性的，如果触发了就删除。否则主线程来不及处理会
+            // 导致io线程一直触发这个事件
+            if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
+            {
+                w->_emask &= ~EV_CONNECT;
+                modify_watcher(w);
+            }
+
             events |= (EV_WRITE | EV_CONNECT);
         }
-        if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+        if (ev->events & EPOLLIN)
         {
             if (kernel_ev & EV_READ)
             {
@@ -254,12 +263,26 @@ void FinalBackend::do_event(int32_t ev_count)
                 do_io_status(w, EV_READ, status);
             }
 
+            // 这些事件是一次性的，如果触发了就删除。否则主线程来不及处理会
+            // 导致io线程一直触发这个事件
+            if (EXPECT_FALSE(kernel_ev & EV_ACCEPT))
+            {
+                w->_emask &= ~EV_ACCEPT;
+                modify_watcher(w);
+            }
+
             events |= (EV_READ | EV_ACCEPT);
+        }
+        // EPOLLERR | EPOLLHUP和EPOLLOUT | EPOLLIN是同时存在的
+        // 但有时候watcher并没有设置EV_WRITE或者EV_READ，因此需要独立检测
+        if (ev->events & (EPOLLERR | EPOLLHUP))
+        {
+            events |= EV_CLOSE;
         }
 
         // 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT
         // 用户只设置EV_CONNECT那就不要触发EV_WRITE
-        int32_t expect_ev = events & w->_emask;
+        expect_ev &= events;
         if (expect_ev)
         {
             _has_ev = true;
@@ -291,7 +314,7 @@ void FinalBackend::backend()
     }
     assert(_ep_fd >= 0);
 
-    if (0 != modify_fd(_wake_fd, EV_READ, 0))
+    if (0 != modify_fd(_wake_fd, EPOLL_CTL_ADD, EV_READ))
     {
         FATAL("backend init wake_fd fail:%s", strerror(errno));
         return;
@@ -392,7 +415,11 @@ void FinalBackend::modify(int32_t fd, EVIO *w)
      * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
      */
 
-    if (w) w->_emask = w->_events;
+    /**
+     * 任意时候，都会回调error和close事件
+     * 如同epoll总是会触发EPOLLERR和EPOLLHUP，不管有没有设置
+     */
+    if (w) w->_emask = w->_events | EV_ERROR | EV_CLOSE;
 
     _modify_fd.push_back(fd);
 }
@@ -406,6 +433,10 @@ void FinalBackend::do_modify()
         {
             modify_watcher(w);
         }
+        else
+        {
+            modify_fd(fd, EPOLL_CTL_DEL, 0); // 删掉该fd
+        }
     }
     _modify_fd.clear();
 }
@@ -415,12 +446,16 @@ int32_t FinalBackend::modify_watcher(EVIO *w)
     int32_t old_ev = w->_kernel_ev;
     int32_t new_ev = w->_emask | w->_extend_ev;
 
+    // epoll_ctl_del不在这里处理
+    // 旧watcher的old_ev一定不会为0，至少会有EV_ERROR | EV_CLOSE
+    int32_t op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+
     w->_kernel_ev = new_ev;
 
-    return modify_fd(w->_fd, new_ev, old_ev);
+    return modify_fd(w->_fd, op, new_ev);
 }
 
-int32_t FinalBackend::modify_fd(int32_t fd, int32_t new_ev, int32_t old_ev)
+int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */
@@ -447,39 +482,29 @@ int32_t FinalBackend::modify_fd(int32_t fd, int32_t new_ev, int32_t old_ev)
                                                       : 0) /* | EPOLLET */;
 
     /**
-     * socket被关闭时，内核自动从epoll中删除。这时执行EPOLL_CTL_DEL会触发EBADF
-     * 假如同一个fd被分配了，但没放到这个epoll里，则会触发ENOENT
-     * 假如同一帧内，同一个fd刚好被分配，也即将放到这个epoll里
-     * old_ev && old_ev != new_ev判断出来的op可能不正确，因此需要额外处理 EEXIST
+     * ev.events可能为0。例如一个socket连接时只监听EV_CONNECT，第一次触发后会
+     * 删除掉EV_CONNECT，则ev.events为0
+     *
+     * 即使ev.events为0，epoll还是会监听EPOLLERR和EPOLLHUP，可以处理socket的关闭
      */
-    int32_t op = EPOLL_CTL_DEL;
-    if (new_ev)
-    {
-        op = (old_ev && old_ev != new_ev) ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
-    }
-    else
-    {
-        // 同一次主循环内，想把一个fd添加到epoll，但在真正执行之前又从epoll删掉
-        if (!old_ev) return 0;
-    }
 
     if (EXPECT_TRUE(!epoll_ctl(_ep_fd, op, fd, &ev))) return 0;
 
     switch (errno)
     {
     case EBADF:
-        /* libev是不处理EPOLL_CTL_DEL的，因为fd被关闭时会自动从epoll中删除
-         * 这里我们允许不关闭fd而从epoll中删除，但是执行删除时会遇到该fd已
-         * 被epoll自动删除，这里特殊处理
+        /* fd被关闭时会自动从epoll中删除
+         * 当主动关闭fd时，会恰好遇到该fd已被epoll自动删除，这里特殊处理
          */
         if (EPOLL_CTL_DEL == op) return 0;
         assert(false);
         break;
     case EEXIST:
         /*
-         * 上一个fd关闭了，系统又分配了同一个fd
+         * op的值是根据ev中保存的数据结构计算出来的。但假如ev中的数据已经重置了
+         * 但epoll线程还来不及关闭fd。这时ev中再次添加了该watcher的事件，就会被
+         * 标记为EPOLL_CTL_ADD操作，这里重新修正为mod操作
          */
-        if (old_ev == new_ev) return 0;
         if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)))
         {
             return 0;
