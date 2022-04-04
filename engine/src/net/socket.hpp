@@ -185,6 +185,7 @@ protected:
 private:
     int32_t _fd; /// 当前socket的文件描述符
     EVIO *_w; /// io事件监视器
+    IO *_io; /// io读写对象
     int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
     class Packet *_packet;

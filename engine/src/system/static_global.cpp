@@ -106,13 +106,13 @@ void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
     delete _ev;
 }
 
-/* https://isocpp.org/files/papers/N3690.pdf
- * 3.6.3 Termination
- * static 变量的销毁与
- * static变更创建和std::atexit的调用顺序相关，这里可能并没统计到
- */
 void on_exit()
 {
+    /* https://isocpp.org/files/papers/N3690.pdf 3.6.3 Termination
+     * static变量创建和std::atexit的调用顺序相关，这里可能并没统计到
+     * 所以全局变量和static变量统一放到static_global管理
+     */
+
     int64_t counter  = 0;
     int64_t counters = 0;
     global_mem_counter(counter, counters);

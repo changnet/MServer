@@ -245,6 +245,27 @@ int32_t EV::loop()
 
     _backend->stop();
 
+
+    // 这些对象可能会引用其他资源（如buffer之类的），程序正常关闭时应该严谨地
+    // 在脚本关闭，而不是等底层强制删除
+    if (!_io_mgr.empty())
+    {
+        PLOG("io not delete, maybe unsafe, count = %zu", _io_mgr.size());
+        _io_mgr.clear();
+    }
+
+    if (!_timer_mgr.empty())
+    {
+        PLOG("timer not delete, maybe unsafe, count = %zu", _timer_mgr.size());
+        _timer_mgr.clear();
+    }
+
+    if (!_periodic_mgr.empty())
+    {
+        PLOG("periodic not delete, maybe unsafe, count = %zu", _periodic_mgr.size());
+        _periodic_mgr.clear();
+    }
+
     return 0;
 }
 
@@ -505,9 +526,15 @@ void EV::invoke_pending()
         // 可能其他事件调用了clear_pending导致当前watcher无效了
         if (EXPECT_TRUE(w && w->_pending))
         {
+            int32_t events = w->_revents;
+
             w->_pending = 0;
-            w->callback(w->_revents);
             w->_revents = 0;
+
+            // callback之后，不要对w进行任何操作
+            // 因为callback到脚本后，脚本可能直接删除该w
+            w->callback(events);
+            
         }
     }
     _pendings.clear();

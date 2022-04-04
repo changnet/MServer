@@ -47,7 +47,7 @@ public:
 
 private:
     /// 处理epoll事件
-    int32_t do_event(int32_t ev_count);
+    void do_event(int32_t ev_count);
     /// 处理主线程发起的io事件
     void do_action(const std::vector<int32_t> &actions);
 
@@ -57,18 +57,31 @@ private:
      * @param ev 当前执行的事件
      * @param status 待处理的状态
      * @return 是否继续执行
-    */
+     */
     bool do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status);
 
     void do_modify();
 
-    /// 把一个io设置到epoll内核中，该函数外部需要加锁
-    int32_t modify_one(int32_t fd, EVIO *w, int32_t new_ev = 0);
+    /**
+     * @brief 把一个watcher设置到epoll，该函数外部需要加锁
+     * @param w watcher的指针
+     * @return errno
+     */
+    int32_t modify_watcher(EVIO *w);
+    /**
+     * @brief 把一个fd设置到epoll内核中，该函数外部需要加锁
+     * @param fd 需要设置的文件描述符
+     * @param new_ev 新事件
+     * @param old_ev 旧事件
+     * @return errno
+     */
+    int32_t modify_fd(int32_t fd, int32_t new_ev, int32_t old_ev);
 
 private:
     std::thread _thread;
 
-    int32_t _ep_fd;
+    bool _has_ev;     /// 是否有待主线程处理的事件
+    int32_t _ep_fd;   /// epoll句柄
     int32_t _wake_fd; /// 用于唤醒子线程的fd
     epoll_event _ep_ev[EPOLL_MAXEV];
 
@@ -78,6 +91,9 @@ private:
 
 FinalBackend::FinalBackend()
 {
+    _has_ev  = false;
+    _ep_fd   = -1;
+    _wake_fd = -1;
 }
 
 FinalBackend::~FinalBackend()
@@ -121,7 +137,7 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         if (EV_WRITE == ev && (w->_extend_ev & EV_WRITE))
         {
             w->_extend_ev &= ~EV_WRITE;
-            modify_one(w->_fd, w);
+            modify_watcher(w);
         }
         return true;
     case IO::IOS_READ:
@@ -132,7 +148,7 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         if (!(w->_extend_ev & EV_WRITE))
         {
             w->_extend_ev |= EV_WRITE;
-            modify_one(w->_fd, w);
+            modify_watcher(w);
         }
         return true;
     case IO::IOS_BUSY:
@@ -140,14 +156,13 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         _busy = true;
         return true;
     case IO::IOS_CLOSE:
-    case IO::IOS_ERROR: 
+    case IO::IOS_ERROR:
         // TODO 错误时是否要传一个错误码给主线程
+        _has_ev = true;
         _ev->io_event(w, EV_CLOSE);
-        modify_one(w->_fd, nullptr);
+        modify_fd(w->_fd, 0, w->_kernel_ev);
         return false;
-    default:
-        ELOG("unknow io status: %d", status);
-        return false;
+    default: ELOG("unknow io status: %d", status); return false;
     }
 
     return false;
@@ -164,7 +179,7 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
         int32_t events = 0;
         {
             std::lock_guard<SpinLock> lg(_ev->fast_lock());
-            events = w->_action_ev;
+            events           = w->_action_ev;
             w->_action_index = 0;
         }
 
@@ -192,9 +207,8 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
     }
 }
 
-int32_t FinalBackend::do_event(int32_t ev_count)
+void FinalBackend::do_event(int32_t ev_count)
 {
-    int32_t use_ev = 0;
     for (int32_t i = 0; i < ev_count; ++i)
     {
         struct epoll_event *ev = _ep_ev + i;
@@ -217,49 +231,47 @@ int32_t FinalBackend::do_event(int32_t ev_count)
         // io对象可能被主线程删了或者停止
         if (!w) continue;
 
-        int32_t set_ev = ev->data.u32;
-        int32_t events = 0;
+        int32_t events          = 0;             // 最终需要触发的事件
+        const int32_t kernel_ev = w->_kernel_ev; // 内核事件
         if (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
         {
-            if (set_ev & EV_WRITE)
+            if (kernel_ev & EV_WRITE)
             {
                 events |= EV_WRITE;
                 auto status = w->send();
                 do_io_status(w, EV_WRITE, status);
             }
-            else
-            {
-                events |= EV_CONNECT;
-            }
+
+            events |= (EV_WRITE | EV_CONNECT);
         }
         if (ev->events & (EPOLLIN | EPOLLERR | EPOLLHUP))
         {
-            if (set_ev & EV_READ)
+            if (kernel_ev & EV_READ)
             {
                 events |= EV_READ;
 
                 auto status = w->recv();
                 do_io_status(w, EV_READ, status);
             }
-            else
-            {
-                events |= EV_ACCEPT;
-            }
+
+            events |= (EV_READ | EV_ACCEPT);
         }
-        if (set_ev & events)
+
+        // 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT
+        // 用户只设置EV_CONNECT那就不要触发EV_WRITE
+        int32_t expect_ev = events & w->_emask;
+        if (expect_ev)
         {
-            ++use_ev;
-            _ev->io_event(w, events);
+            _has_ev = true;
+            _ev->io_event(w, expect_ev);
         }
         else
         {
             // epoll收到事件，但没有触发io_event，一般是io线程自己添加写事件来发送数据
             // 如果有其他事件，应该是哪里出错了
-            assert(events == EV_WRITE);
+            assert(events == (EV_WRITE | EV_CONNECT));
         }
     }
-
-    return use_ev;
 }
 
 void FinalBackend::backend()
@@ -279,7 +291,7 @@ void FinalBackend::backend()
     }
     assert(_ep_fd >= 0);
 
-    if ( 0 != modify_one(_wake_fd, nullptr, EV_READ))
+    if (0 != modify_fd(_wake_fd, EV_READ, 0))
     {
         FATAL("backend init wake_fd fail:%s", strerror(errno));
         return;
@@ -309,6 +321,8 @@ void FinalBackend::backend()
             break;
         }
 
+        _has_ev = false;
+
         // 主线程和io线程会频繁交换action,因此使用一个快速、独立的锁
         {
             actions.clear();
@@ -318,21 +332,19 @@ void FinalBackend::backend()
 
         // TODO 下面的操作，是每个操作，加锁、解锁一次，还是全程解锁呢？
         // 即使全程加锁，至少是不会影响主线程执行逻辑的。主线程执行逻辑回调时，不会用到锁
-        int32_t use_ev = 0;
         {
             std::lock_guard<std::mutex> lg(_ev->lock());
 
             do_action(actions);
-            use_ev = do_event(ev_count);
+            do_event(ev_count);
             do_modify();
 
-            if (use_ev > 0) _ev->set_job(true);
+            if (_has_ev)
+            {
+                _ev->set_job(true);
+                _ev->wake();
+            }
         }
-
-        // 唤醒主线程干活
-        // https://en.cppreference.com/w/cpp/thread/condition_variable
-        // the lock does not need to be held for notification
-        if (use_ev > 0) _ev->wake();
 
         // TODO 检测缓冲区，如果主线程处理不过来，这里sleep一下
     }
@@ -390,27 +402,31 @@ void FinalBackend::do_modify()
     for (auto &fd : _modify_fd)
     {
         EVIO *w = _ev->get_fast_io(fd);
-        modify_one(fd, w);
+        if (w)
+        {
+            modify_watcher(w);
+        }
     }
     _modify_fd.clear();
 }
 
-int32_t FinalBackend::modify_one(int32_t fd, EVIO *w, int32_t new_ev)
+int32_t FinalBackend::modify_watcher(EVIO *w)
+{
+    int32_t old_ev = w->_kernel_ev;
+    int32_t new_ev = w->_emask | w->_extend_ev;
+
+    w->_kernel_ev = new_ev;
+
+    return modify_fd(w->_fd, new_ev, old_ev);
+}
+
+int32_t FinalBackend::modify_fd(int32_t fd, int32_t new_ev, int32_t old_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */
     memset(&ev, 0, sizeof(ev));
 
-    ev.data.fd  = fd;
-
-    int32_t old_ev = 0;
-    if (w)
-    {
-        old_ev = w->_kernel_ev;
-        new_ev = w->_emask | w->_extend_ev;
-
-        w->_kernel_ev = new_ev;
-    }
+    ev.data.fd = fd;
 
     /* epoll只是监听fd，不负责fd的打开或者关闭。
      * 但是，如果一个fd被关闭，epoll会自动解除监听，并不会通知我们。

@@ -129,6 +129,7 @@ int32_t Socket::is_error()
 
 Socket::Socket(uint32_t conn_id, ConnType conn_ty)
 {
+    _io        = nullptr;
     _packet    = nullptr;
     _object_id = 0;
 
@@ -147,6 +148,9 @@ Socket::~Socket()
 {
     delete _packet;
     _packet = nullptr;
+
+    delete _io;
+    _io = nullptr;
 
     C_OBJECT_DEC("socket");
 
@@ -594,7 +598,7 @@ void Socket::io_cb(int32_t revents)
     {
         listen_cb();
     }
-    else if (EV_WRITE & revents)
+    else if (EV_CONNECT & revents)
     {
         connect_cb();
     }
@@ -732,19 +736,18 @@ void Socket::command_cb()
 int32_t Socket::set_io(IO::IOType io_type, int32_t param)
 {
     assert(_w);
-    IO *io = nullptr;
 
     auto &recv = _w->get_recv_buffer();
     auto &send = _w->get_send_buffer();
 
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(_conn_id, &recv, &send); break;
-    case IO::IOT_SSL: io = new SSLIO(_conn_id, param, &recv, &send); break;
+    case IO::IOT_NONE: _io = new IO(_conn_id, &recv, &send); break;
+    case IO::IOT_SSL: _io = new SSLIO(_conn_id, param, &recv, &send); break;
     default: return -1;
     }
 
-    _w->set_io(io);
+    _w->set_io(_io);
 
     return 0;
 }
