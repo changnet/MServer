@@ -61,7 +61,7 @@ public:
      * @return 0成功
      */
     static int32_t get_addr_info(std::vector<std::string> &addrs,
-                                 const char *host);
+                                 const char *host, bool v4);
     /**
      * @brief 收到io回调
      * @param revents 回调的事件，如EV_ACCEPT等

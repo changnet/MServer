@@ -20,6 +20,7 @@
 /**
  * 以阻塞方式获取域名对应的ip
  * @param name 域名，如：www.openssl.com
+ * @param v4 只获取ipv4 ip
  * @return ip1 ip2 ...
  */
 static int32_t get_addr_info(lua_State *L)
@@ -27,8 +28,10 @@ static int32_t get_addr_info(lua_State *L)
     const char *name = luaL_checkstring(L, 1);
     if (!name) return luaL_error(L, "gethost illegal argument");
 
+    bool v4 = lua_toboolean(L, 2);
+
     std::vector<std::string> addrs;
-    if (0 != Socket::get_addr_info(addrs, name))
+    if (0 != Socket::get_addr_info(addrs, name, v4))
     {
         return luaL_error(L, "get_addr_info fail");
     }

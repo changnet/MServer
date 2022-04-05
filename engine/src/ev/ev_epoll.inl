@@ -190,12 +190,12 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
         if (events & EV_ACCEPT)
         {
             // 初始化新socket，只有ssl用到
-            w->do_init_accept();
+            w->_io->do_init_accept();
         }
         else if (events & EV_CONNECT)
         {
             // 初始化新socket，只有ssl用到
-            w->do_init_connect();
+            w->_io->do_init_connect();
         }
 
         // 处理数据发送

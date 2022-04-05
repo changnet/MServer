@@ -73,16 +73,6 @@ void EVIO::init_connect()
     }
 }
 
-IO::IOStatus EVIO::do_init_accept()
-{
-    return _io->do_init_accept();
-}
-
-IO::IOStatus EVIO::do_init_connect()
-{
-    return _io->do_init_connect();
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)

@@ -164,7 +164,10 @@ void Socket::stop(bool flush)
     // ev那边需要做异步删除
     if (_w) StaticGlobal::ev()->io_stop(_fd);
 
-    if (fd_valid(_fd)) ::close(_fd);
+    // 这里不能直接关闭fd，io线程那边可能还在读写
+    // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
+    // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
+    // if (fd_valid(_fd)) ::close(_fd);
 
     _w  = nullptr;
     _fd = invalid_fd();
@@ -330,17 +333,22 @@ int32_t Socket::non_ipv6only(int32_t fd)
                       sizeof(optval));
 }
 
-int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
+int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
+                              bool v4)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family   = AF_INET_X; /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_STREAM;
-#ifdef IP_V4
-    hints.ai_flags = 0;
-#else
+    if (v4)
+    {
+        hints.ai_flags  = 0;
+        hints.ai_family = AF_INET; /* Allow IPv4 or IPv6 */
+    }
+    else
+    {
+        hints.ai_family = AF_INET6; /* Allow IPv4 or IPv6 */
     hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
-#endif
+    }
+    hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol  = 0; /* Any protocol */
     hints.ai_canonname = nullptr;
     hints.ai_addr      = nullptr;
@@ -353,19 +361,40 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host)
         return -1;
     }
 
-    char buf[INET6_ADDRSTRLEN];
-    for (struct addrinfo *rp = result; rp != nullptr; rp = rp->ai_next)
+    if (v4)
     {
-        if (inet_ntop(rp->ai_family,
-                      &((struct sockaddr_in_x *)rp->ai_addr)->sin_addr_x, buf,
-                      sizeof(buf)))
+        char buf[INET_ADDRSTRLEN];
+        for (struct addrinfo *rp = result; rp != nullptr; rp = rp->ai_next)
         {
-            addrs.emplace_back(buf);
+            if (inet_ntop(rp->ai_family,
+                          &((struct sockaddr_in *)rp->ai_addr)->sin_addr,
+                          buf, sizeof(buf)))
+            {
+                addrs.emplace_back(buf);
+            }
+            else
+            {
+                ELOG("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
+                return -1;
+            }
         }
-        else
+    }
+    else
+    {
+        char buf[INET6_ADDRSTRLEN];
+        for (struct addrinfo *rp = result; rp != nullptr; rp = rp->ai_next)
         {
-            ELOG("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
-            return -1;
+            if (inet_ntop(rp->ai_family,
+                          &((struct sockaddr_in6 *)rp->ai_addr)->sin6_addr, buf,
+                          sizeof(buf)))
+            {
+                addrs.emplace_back(buf);
+            }
+            else
+            {
+                ELOG("inet_ntop error in %s: %s", __FUNCTION__, strerror(errno));
+                return -1;
+            }
         }
     }
     freeaddrinfo(result);
@@ -403,12 +432,14 @@ int32_t Socket::connect(const char *host, int32_t port)
     int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
     if (!fd_valid(fd) || non_block(fd) < 0)
     {
+        ELOG("Socket create %s:%d %s(%d)", host, port, str_error(), error_no());
         return -1;
     }
 
 #ifndef IP_V4
     if (non_ipv6only(fd))
     {
+        ELOG("Socket ipv6 %s:%d %s(%d)", host, port, str_error(), error_no());
         return -1;
     }
 #endif
@@ -440,7 +471,8 @@ int32_t Socket::connect(const char *host, int32_t port)
     {
         if (is_error())
         {
-            ELOG("%s:%d %s(%d)", host, port, str_error(), error_no());
+            ELOG("Socket connect %s:%d %s(%d)",
+                host, port, str_error(), error_no());
             ::close(fd);
 
             return -1;
@@ -647,7 +679,7 @@ void Socket::listen_cb()
         // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
         bool ok = network_mgr->accept_new(_conn_id, new_sk);
         // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
-        if (EXPECT_TRUE(ok && fd_valid(_fd) && _packet && new_sk->_w->get_io()))
+        if (EXPECT_TRUE(ok && fd_valid(_fd) && _packet && new_sk->_w->_io))
         {
             new_sk->_w->init_accept();
         }
@@ -688,7 +720,7 @@ void Socket::connect_cb()
     bool ok                        = network_mgr->connect_new(_conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
-    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd) && _packet && _w->get_io()))
+    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd) && _packet && _w->_io))
     {
         _w->init_connect();
     }

@@ -67,9 +67,9 @@ void SSLMgr::library_init()
 
 // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
 // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
-void SSLMgr::ssl_error(const char *what)
+void SSLMgr::ssl_error(const char *what, int32_t e)
 {
-    ELOG("%s errno(%d:%s)", what, Socket::error_no(), Socket::str_error());
+    ELOG("%s e(%d) errno(%d:%s)", what, e, Socket::error_no(), Socket::str_error());
 
     unsigned long eno = 0;
     while (0 != (eno = ERR_get_error()))
@@ -99,22 +99,21 @@ void SSLMgr::dump_x509(const SSL *ctx)
 
 SSLMgr::SSLMgr()
 {
-    _seed = 0;
 }
 
 SSLMgr::~SSLMgr()
 {
-    for (auto &iter : _ctx)
+    for (auto &ctx : _ctx)
     {
-        SSL_CTX_free(static_cast<SSL_CTX *>(iter.second._ctx));
+        SSL_CTX_free(static_cast<SSL_CTX *>(ctx._ctx));
     }
     _ctx.clear();
 }
 
 SSL_CTX *SSLMgr::get_ssl_ctx(int32_t ssl_id)
 {
-    auto iter = _ctx.find(ssl_id);
-    return iter == _ctx.end() ? nullptr : iter->second._ctx;
+    return (ssl_id < 0 || (size_t)ssl_id > _ctx.size()) ? nullptr
+                                                        : _ctx[ssl_id]._ctx;
 }
 
 /* 这个函数会造成较多的内存检测问题
@@ -164,8 +163,8 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     }
 
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
-    ++_seed;
-    auto iter = _ctx.emplace(_seed, XSSLCtx{ctx, passwd});
+    int32_t ssl_id = static_cast<int32_t>(_ctx.size());
+    _ctx.emplace_back(XSSLCtx{ctx, passwd});
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
      * 因此单向认证的客户端使用的SSL_CTX不需要证书
@@ -175,7 +174,7 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
      * 一般情况下，如果客户端的域名不是固定的话，这个认证没什么意义的。
      * ssh那种是通过公钥、私钥来认证客户端的，不是证书。
      */
-    if (!cert_file || !key_file) return _seed;
+    if (!cert_file || !key_file) return ssl_id;
 
     int32_t ok = 0;
     // 加载pem格式的ca证书文件，暂不支持ASN1（SSL_FILETYPE_ASN1）格式
@@ -193,7 +192,7 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
     if (passwd)
     {
         // SSL_CTX_set_default_passwd_cb(ctx, ctx_passwd_cb);
-        SSL_CTX_set_default_passwd_cb_userdata(ctx, iter.first->second._passwd);
+        SSL_CTX_set_default_passwd_cb_userdata(ctx, _ctx[ssl_id]._passwd);
     }
 
     // 密钥文件有多种
@@ -215,10 +214,10 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
         goto FAIL;
     }
 
-    return _seed;
+    return ssl_id;
 
 FAIL:
     SSL_CTX_free(ctx);
-    _ctx.erase(iter.first);
+    _ctx.pop_back();
     return -1;
 }

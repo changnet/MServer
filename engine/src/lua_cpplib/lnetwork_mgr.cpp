@@ -165,10 +165,6 @@ int32_t LNetworkMgr::close(lua_State *L)
     }
 
     class Socket *_socket = itr->second;
-    if (_socket->fd() < 0)
-    {
-        return luaL_error(L, "try to close a invalid socket");
-    }
 
     /* stop尝试把缓冲区的数据直接发送 */
     _socket->stop(flush);
@@ -862,7 +858,7 @@ int32_t LNetworkMgr::new_ssl_ctx(lua_State *L) /* 创建一个ssl上下文 */
     int32_t ssl_id = StaticGlobal::ssl_mgr()->new_ssl_ctx(
         static_cast<SSLMgr::SSLVT>(sslv), cert_file, key_file, passwd, ca);
 
-    if (ssl_id <= 0)
+    if (ssl_id < 0)
     {
         return luaL_error(L, "new ssl ctx error");
     }

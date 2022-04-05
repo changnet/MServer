@@ -52,7 +52,12 @@ public:
     static void library_end();
     static void library_init();
 
-    static void ssl_error(const char *what);
+    /**
+     * @brief 打印ssl错误信息
+     * @param what 来源信息
+     * @param e ssl错误码
+    */
+    static void ssl_error(const char *what, int32_t e = 0);
     static void dump_x509(const SSL *ctx);
 
     /* 根据证书路径获取一个SSL_CTX
@@ -68,6 +73,6 @@ public:
                         const char *passwd, const char *ca);
 
 private:
-    int32_t _seed; // 用于产生ssl唯一id
-    std::unordered_map<int32_t, XSSLCtx> _ctx;
+    // 存储ssl相关数据，只加不删除，一旦生成便是只读，多程序读取
+    std::vector<XSSLCtx> _ctx;
 };

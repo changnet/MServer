@@ -98,14 +98,7 @@ public:
         assert(!_io);
         _io = io;
     }
-    /**
-     * @brief 获取io对象指针
-     * @return io对象指针
-    */
-    IO *get_io()
-    {
-        return _io;
-    }
+
     /**
      * @brief io是否初始化完成
      * @return 是否初始化完成
@@ -119,10 +112,6 @@ public:
     void init_accept();
     /// 主线程初始化主动发起的连接
     void init_connect();
-    /// io线程执行初始化新增连接
-    IO::IOStatus do_init_accept();
-    /// io线程执行初始化主动发起的连接
-    IO::IOStatus do_init_connect();
 
 public:
 

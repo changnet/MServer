@@ -188,7 +188,7 @@ IO::IOStatus SSLIO::do_handshake()
     if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
 
     // error
-    SSLMgr::ssl_error("ssl io do handshake:");
+    SSLMgr::ssl_error(__FUNCTION__, ecode);
 
     return IOS_ERROR;
 }
