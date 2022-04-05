@@ -180,7 +180,7 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
         {
             std::lock_guard<SpinLock> lg(_ev->fast_lock());
             events           = w->_action_ev;
-            w->_action_index = 0;
+            w->_action_ev    = 0;
         }
 
         // 主线程设置事件的时候，可能刚好被io线程处理完了

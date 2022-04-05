@@ -122,7 +122,6 @@ public:
     int32_t _kernel_ev; /// 已经设置到内核(epoll、poll)的事件
 
     int32_t _action_ev; /// 待处理的action
-    int32_t _action_index; /// action数组的下标
 
     int32_t _io_index; /// io线程中的事件下标
 

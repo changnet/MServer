@@ -470,17 +470,17 @@ void EV::io_action(EVIO *w, int32_t events)
     {
         std::lock_guard<SpinLock> lg(_spin_lock);
 
+        int32_t old_ev = w->_action_ev;
         w->_action_ev |= events;
 
         // 先判断该watch是否在队列中，在的话就不要再插入
         // 玩家登录的时候，可能有上百次数据发送，不要每次都插入
         // _action_index不一定是_io_actions的数组下标，因为
         // 数组由io线程处理后，需要处理该io才会把_io_actiion置0
-        if (!w->_action_index)
+        if (!old_ev)
         {
-            wake = true;
+            wake = _io_actions.empty();
             _io_actions.emplace_back(w->_fd);
-            w->_action_index = (int32_t)_io_actions.size();
         }
     }
     // 如果不为空，说明之前通知过了，不需要再通知
