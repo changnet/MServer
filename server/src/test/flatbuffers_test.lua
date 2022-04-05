@@ -2,7 +2,6 @@
 
 g_stat_mgr = require "statistic.statistic_mgr"
 
-require "network.cmd"
 local ScConn = require "network.sc_conn"
 local CsConn = require "network.cs_conn"
 
@@ -42,6 +41,7 @@ t_describe("flatbuffers test", function()
     local lite_pkt = nil -- 简单的测试包，更接近于日常通信用的包
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     t_before(function()
+        require "network.cmd"
 
         -- !!! flatbuffers未发送的字段都会补上默认值，这点和pbc相反
         -- !!! 因此这里需要补齐，不然t_equal检测不会通过

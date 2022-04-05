@@ -329,6 +329,8 @@ end
 -- 生成模块、实体回调函数
 local function make_cb()
     made = true
+    if table.empty(cs_handler) then return end
+
     local ThisCall = require "modules.system.this_call"
 
     for cmd, cfg in pairs(cs_handler) do

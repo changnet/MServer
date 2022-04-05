@@ -3,3 +3,5 @@
 require "application.app"
 
 require "android.android_boot"
+
+assert(false) -- 要改一下，请统一走app的exec流程

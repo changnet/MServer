@@ -2,7 +2,6 @@
 
 g_stat_mgr = require "statistic.statistic_mgr"
 
-require "network.cmd"
 local ScConn = require "network.sc_conn"
 local CsConn = require "network.cs_conn"
 
@@ -45,6 +44,8 @@ t_describe("protobuf test", function()
     local lite_pkt = nil -- 简单的测试包，更接近于日常通信用的包
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     t_before(function()
+        require "network.cmd"
+
         clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
         srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
                                         "../certs/server.cer",

@@ -29,15 +29,17 @@ IO::IOStatus SSLIO::recv()
 
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
-    Buffer::Transaction &&ts = _recv->any_seserve();
-    if (ts._len <= 0) return IOS_BUSY; /* no more memory */
-
-    // ERR_clear_error
-    int32_t len = SSL_read(_ssl_ctx, ts._ctx, ts._len);
-    _recv->commit(ts, len);
-    if (EXPECT_TRUE(len > 0))
+    int32_t len = 0;
+    while (true)
     {
-        return IOS_OK;
+        Buffer::Transaction &&ts = _recv->any_seserve();
+        if (ts._len <= 0) return IOS_BUSY;
+
+        len = SSL_read(_ssl_ctx, ts._ctx, ts._len);
+        _recv->commit(ts, len);
+        if (EXPECT_FALSE(len <= 0)) break;
+
+        if (len < ts._len) return IOS_OK;
     }
 
     int32_t ecode = SSL_get_error(_ssl_ctx, len);
@@ -79,33 +81,29 @@ IO::IOStatus SSLIO::send()
         if (0 == bytes) return IOS_OK;
 
         len = SSL_write(_ssl_ctx, data, (int32_t)bytes);
-        if (len > 0)
-        {
-            _send->remove(len);
+        if (len <= 0) break;
 
-            // 缓冲区已满
-            if (len < (int32_t)bytes) return IOS_WRITE;
+        _send->remove(len); // 删除已发送数据
 
-            // >= 要发送值，尝试再发一次看看有没有数据要发送
-            if (!next) return IOS_OK;
-        }
-        else
-        {
+        // socket发送缓冲区已满，等下次发送了
+        if (len < (int32_t)bytes) return IOS_WRITE;
 
-            int32_t ecode = SSL_get_error(_ssl_ctx, len);
-            if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
-
-            // 非主动断开，打印错误日志
-            if ((SSL_ERROR_ZERO_RETURN == ecode)
-                || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
-            {
-                return IOS_CLOSE;
-            }
-
-            SSLMgr::ssl_error("ssl io send");
-            return IOS_ERROR;
-        }
+        // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
+        if (!next) return IOS_OK;
     }
+
+    int32_t ecode = SSL_get_error(_ssl_ctx, len);
+    if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
+
+    // 非主动断开，打印错误日志
+    if ((SSL_ERROR_ZERO_RETURN == ecode)
+        || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
+    {
+        return IOS_CLOSE;
+    }
+
+    SSLMgr::ssl_error("ssl io send");
+    return IOS_ERROR;
 }
 
 int32_t SSLIO::init_accept(int32_t fd)

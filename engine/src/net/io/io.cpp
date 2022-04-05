@@ -28,21 +28,19 @@ IO::IOStatus IO::recv()
 {
     assert(Socket::fd_valid(_fd));
 
-    Buffer::Transaction &&ts = _recv->any_seserve();
-    if (0 == ts._len) return IOS_BUSY;
-
-    int32_t len = (int32_t)::recv(_fd, ts._ctx, ts._len, 0);
-
-    _recv->commit(ts, len);
-    if (EXPECT_TRUE(len > 0))
+    int32_t len = 0;
+    while (true)
     {
-        return IOS_OK;
+        Buffer::Transaction &&ts = _recv->any_seserve();
+        if (0 == ts._len) return IOS_BUSY;
 
-        // 这里要限制一下重读的次数，因为io线程是无法知道协议大小的上限的
-        // 如果一直读会把内存爆掉
+        len = (int32_t)::recv(_fd, ts._ctx, ts._len, 0);
 
-        // 因为用的是LT模式，所以只读一次，如果还有数据，下次再读
-        // any_seserve的空间一般不会太小，应对游戏协议还是可以的
+        _recv->commit(ts, len);
+        if (EXPECT_FALSE(len <= 0)) break;
+
+        // 如果没读满缓冲区，则所有数据已读出来
+        if (len < ts._len) return IOS_OK;
     }
 
     if (0 == len)
@@ -73,31 +71,28 @@ IO::IOStatus IO::send()
         if (0 == bytes) return IOS_OK;
 
         len = (int32_t)::send(_fd, data, (int32_t)bytes, 0);
-        if (len > 0)
-        {
-            _send->remove(len);
+        if (len <= 0) break;
 
-            // 缓冲区已满
-            if (len < (int32_t)bytes) return IOS_WRITE;
+        _send->remove(len); // 删除已发送数据
 
-            // >= 要发送值，尝试再发一次看看有没有数据要发送
-            if (!next) return IOS_OK;
-        }
-        else
-        {
-            if (0 == len) return IOS_CLOSE; // 对方主动断开
+        // socket发送缓冲区已满，等下次发送了
+        if (len < (int32_t)bytes) return IOS_WRITE;
 
-            /* error happen */
-            if (Socket::is_error())
-            {
-                ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
-                return IOS_ERROR;
-            }
-
-            /* need to try again */
-            return IOS_WRITE;
-        }
+        // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
+        if (!next) return IOS_OK;
     }
+
+    if (0 == len) return IOS_CLOSE; // 对方主动断开
+
+    /* error happen */
+    if (Socket::is_error())
+    {
+        ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
+        return IOS_ERROR;
+    }
+
+    /* need to try again */
+    return IOS_WRITE;
 }
 
 int32_t IO::init_accept(int32_t fd)

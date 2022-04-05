@@ -131,8 +131,8 @@ local function initialize()
     local opts = g_app.opts
 
     g_app.name = opts.app
-    g_app.index = assert(tonumber(opts.index), "miss argument --index")
-    g_app.id = assert(tonumber(opts.id), "miss argument --id")
+    g_app.index = tonumber(opts.index) or 1
+    g_app.id = tonumber(opts.id) or 1
 
     g_app.start_time = ev:time()
 
@@ -248,6 +248,18 @@ local function beg_stop()
     do_stop()
 end
 
+-- 加载各个功能模块
+function App.load_module()
+    require(g_app.module_boot_file)
+
+    -- 生成函数及其对应的名字
+    make_name()
+
+    -- 一些需要依赖其他脚本初始化的，请使用这个事件来初始化
+    -- 这样不需要考虑脚本加载的先后顺序，这个事件触发时所有脚本都加载完成了
+    __fire_sys_ev(SE_SCRIPT_LOADED)
+end
+
 -- 运行进程
 function App.exec()
     -- 停用自动增量gc，在主循环里手动调用(TODO: 测试5.4的新gc效果)
@@ -262,8 +274,7 @@ function App.exec()
     -- 执行初始化
     initialize()
 
-    -- 加载各个功能模块
-    require(g_app.module_boot_file)
+    App.load_module()
 
     -- 执行各个模块的启动步骤
     beg_start()

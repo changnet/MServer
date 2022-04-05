@@ -130,7 +130,11 @@ local function main(cmd, ...)
 
     g_app.cmd = cmd
     g_app.opts = opts
+
     require(string.format("application.%s_app", name))
+
+    require "application.app"
+    App.exec()
 end
 
 -- 由于日志线程未启动，不能直接使用__G__TRACKBACK

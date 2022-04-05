@@ -9,10 +9,25 @@ require "modules.event.system_event"
 json = require "engine.lua_parson"
 
 require "timer.timer"
+require "global.test"
 
-local function exec()
-    require "global.test"
+require "test.misc_test"
+require "test.https_test"
+require "test.grid_aoi_test"
+require "test.list_aoi_test"
+require "test.mt_test"
+require "test.mongodb_test"
+require "test.mysql_test"
+require "test.log_test"
+require "test.websocket_test"
+require "test.words_filter_test"
+require "test.rank_test"
+require "test.rpc_test"
+require "test.protobuf_test"
+require "test.flatbuffers_test"
+require "test.timer_test"
 
+local function exec_test()
     local opts = g_app.opts
     g_app.name, g_app.filter, g_app.skip = opts.app, opts.filter,
                                                   opts.skip
@@ -45,36 +60,8 @@ local function exec()
     g_app.session = 0x10001
     network_mgr:set_curr_session(g_app.session)
 
-    -- test这个进程的逻辑不走app.lua中的初始化流程，这个函数结束，那整个进程就结束了
-
-    require "test.misc_test"
-    require "test.https_test"
-    require "test.grid_aoi_test"
-    require "test.list_aoi_test"
-    require "test.mt_test"
-    require "test.mongodb_test"
-    require "test.mysql_test"
-    require "test.log_test"
-    -- require "example.stream_performance"
-    require "test.websocket_test"
-    require "test.words_filter_test"
-    require "test.rank_test"
-    require "test.rpc_test"
-    require "test.protobuf_test"
-    require "test.flatbuffers_test"
-    require "test.timer_test"
-
-    make_name()
-
-    g_app.ok = true
-
     -- vd( statistic.dump() )
     t_run()
-
-    ev:signal(2)
-    ev:signal(15)
-
-    ev:backend()
 end
 
-exec()
+SE.reg(SE_READY, exec_test)

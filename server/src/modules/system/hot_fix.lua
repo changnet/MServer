@@ -9,8 +9,9 @@ function hot_fix()
 
     -- 清除脚本
     __unrequire()
+
     -- 重新加载入口文件
-    require(g_app.module_boot_file)
+    App.load_module()
 
     printf("hot fix finish,time elapsed %d ms", ev:real_ms_time() - ms)
 end
