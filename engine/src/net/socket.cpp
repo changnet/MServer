@@ -169,7 +169,7 @@ void Socket::stop(bool flush)
     // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
     // if (fd_valid(_fd)) ::close(_fd);
 
-    _w  = nullptr;
+    // 标记fd无效，这样就不会继续解析数据包
     _fd = invalid_fd();
 
     C_SOCKET_TRAFFIC_DEL(_conn_id);
@@ -194,9 +194,6 @@ void Socket::append(const void *data, size_t len)
              _object_id, _conn_id, send_buff.get_all_used_size());
 
         Socket::stop();
-
-        class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-        network_mgr->connect_del(_conn_id);
 
         return;
     }
@@ -639,7 +636,12 @@ void Socket::io_cb(int32_t revents)
 void Socket::close_cb()
 {
     // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-    if (_packet) _packet->on_closed();
+    if (_packet && fd_valid(_fd)) _packet->on_closed();
+
+    ::close(_fd);
+    StaticGlobal::ev()->io_delete(_fd);
+
+    StaticGlobal::network_mgr()->connect_del(_conn_id);
 }
 
 void Socket::listen_cb()
@@ -732,13 +734,10 @@ void Socket::connect_cb()
 
 void Socket::command_cb()
 {
-    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
     /* 在脚本报错的情况下，可能无法设置 io和packet */
     if (!_packet)
     {
         Socket::stop();
-        network_mgr->connect_del(_conn_id);
         ELOG("no io or packet set,socket disconnect: %d", _conn_id);
         return;
     }
@@ -759,7 +758,6 @@ void Socket::command_cb()
     if (EXPECT_FALSE(ret < 0))
     {
         Socket::stop();
-        network_mgr->connect_del(_conn_id);
         ELOG("socket command unpack data fail");
         return;
     }

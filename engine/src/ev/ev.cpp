@@ -286,7 +286,7 @@ EVIO *EV::io_start(int32_t fd, int32_t events)
     // 因为效率问题，这里不能加锁，不允许修改跨线程的变量
     // set_fast_io(fd, w);
 
-    w->_active = 2;
+    w->_active = EVIO::AS_NEW;
     io_change(fd);
 
     return w;
@@ -301,10 +301,22 @@ int32_t EV::io_stop(int32_t fd)
 
     clear_pending(w);
 
-    w->_active = 0;
+    w->_active = EVIO::AS_STOP;
     io_change(fd);
 
     return 0;
+}
+
+int32_t EV::io_delete(int32_t fd)
+{
+    EVIO *w = get_io(fd);
+    if (!w) return -1;
+
+    io->_events = 0;
+    clear_io_event(io);
+
+    _io_mgr.erase(fd);
+    set_fast_io(fd, nullptr);
 }
 
 void EV::set_fast_io(int32_t fd, EVIO *w)
@@ -341,28 +353,27 @@ void EV::io_reify()
         for (auto fd : _io_changes)
         {
             EVIO *io = get_io(fd);
-            if (io && io->_active)
-            {
-                _backend->modify(fd, io);
 
-                // 新增
-                if (2 == io->_active)
-                {
-                    io->_active = 1;
-                    set_fast_io(fd, io);
-                }
-            }
-            else
+            assert(io);
+            witch(io->_active)
             {
-                if (io)
-                {
-                    io->_events = 0;
-                    clear_io_event(io);
-                }
+            case EVIO::AS_STOP:
                 _backend->modify(fd, io); // 移除该socket
+                break;
+            case EVIO::AS_START:
+                _backend->modify(fd, io);
+                break;
+            case EVIO::AS_NEW:
+                io->_active = 1;
+                set_fast_io(fd, io);
+                _backend->modify(fd, io);
+            case EVIO::AS_DEL:
+                io->_events = 0;
+                clear_io_event(io);
 
                 _io_mgr.erase(fd);
                 set_fast_io(fd, nullptr);
+                break;
             }
         }
     }

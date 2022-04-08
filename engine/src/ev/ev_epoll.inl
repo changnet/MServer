@@ -419,7 +419,8 @@ void FinalBackend::modify(int32_t fd, EVIO *w)
      * 任意时候，都会回调error和close事件
      * 如同epoll总是会触发EPOLLERR和EPOLLHUP，不管有没有设置
      */
-    if (w) w->_emask = w->_events | EV_ERROR | EV_CLOSE;
+    w->_emask = (EVIO::AS_START == w->_active) ?
+        (w->_events | EV_ERROR | EV_CLOSE) : 0;
 
     _modify_fd.push_back(fd);
 }
@@ -428,29 +429,32 @@ void FinalBackend::do_modify()
 {
     for (auto &fd : _modify_fd)
     {
-        EVIO *w = _ev->get_fast_io(fd);
-        if (w)
-        {
-            modify_watcher(w);
-        }
-        else
-        {
-            modify_fd(fd, EPOLL_CTL_DEL, 0); // 删掉该fd
-        }
+        modify_watcher(_ev->get_fast_io(fd));
     }
     _modify_fd.clear();
 }
 
 int32_t FinalBackend::modify_watcher(EVIO *w)
 {
-    int32_t old_ev = w->_kernel_ev;
-    int32_t new_ev = w->_emask | w->_extend_ev;
 
-    // epoll_ctl_del不在这里处理
-    // 旧watcher的old_ev一定不会为0，至少会有EV_ERROR | EV_CLOSE
-    int32_t op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+    int32_t new_ev = 0;
+    int32_t op = EPOLL_CTL_DEL;
 
-    w->_kernel_ev = new_ev;
+    // 如果该watcher处于活动状态，_emask一定不会为0，至少会有EV_ERROR | EV_CLOSE
+    if (w->_emask)
+    {
+        int32_t old_ev = w->_kernel_ev;
+        new_ev = w->_emask | w->_extend_ev;
+
+        op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+
+        w->_kernel_ev = new_ev;
+    }
+    else
+    {
+        _has_ev = true;
+        _ev->io_event(w->_fd, EV_CLOSE);
+    }
 
     return modify_fd(w->_fd, op, new_ev);
 }

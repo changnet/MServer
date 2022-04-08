@@ -60,6 +60,12 @@ public:
      */
     int32_t io_stop(int32_t fd);
     /**
+     * @brief 删除一个io监听器
+     * @param fd 通过socket函数创建的文件描述符
+     * @return 
+    */
+    int32_t io_delete(int32_t fd);
+    /**
      * @brief 获取设置到io线程的io对象，调用此函数注意线程安全
      * @param fd
      * @return

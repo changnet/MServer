@@ -256,7 +256,7 @@ public:
     int32_t get_player_session(lua_State *L);
 
     /**
-     * 仅关闭socket，但不销毁内存
+     * 关闭socket
      * @param conn_id 网关连接id
      * @param flush 是否发送还在缓冲区的数据
      */

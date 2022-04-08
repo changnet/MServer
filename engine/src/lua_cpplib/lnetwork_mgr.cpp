@@ -150,9 +150,6 @@ int32_t LNetworkMgr::set_sc_cmd(lua_State *L)
     return 0;
 }
 
-/* 仅关闭socket，但不销毁内存
- * network_mgr:close( conn_id,false )
- */
 int32_t LNetworkMgr::close(lua_State *L)
 {
     uint32_t conn_id = luaL_checkinteger32(L, 1);
@@ -171,8 +168,8 @@ int32_t LNetworkMgr::close(lua_State *L)
 
     /* 这里不能删除内存，因为脚本并不知道是否会再次访问此socket
      * 比如底层正在一个for循环里回调脚本时，就需要再次访问
+     * 同时需要等待io线程关闭对应的socket后再删除
      */
-    _deleting.emplace(conn_id, 0);
 
     return 0;
 }

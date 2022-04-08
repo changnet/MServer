@@ -56,6 +56,16 @@ public:
 class EVIO final : public EVWatcher
 {
 public:
+    // io监听器的激活状态
+    enum ActiveStatus
+    {
+        AS_STOP  = 0,  // 停止状态
+        AS_START = 1,  // 激活
+        AS_NEW   = 2,  // 新增
+        AS_DEL   = 3   // 删除中
+    };
+
+public:
     ~EVIO();
     explicit EVIO(int32_t fd, int32_t events, EV *loop);
     
