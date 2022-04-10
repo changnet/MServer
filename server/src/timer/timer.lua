@@ -80,7 +80,7 @@ function Timer.interval(after, msec, times, func, ...)
     local e = ev:timer_start(timer_id, after, msec, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
-        elogf("periodic start fail: id = %d, e = %d", timer_id, e)
+        eprintf("periodic start fail: id = %d, e = %d", timer_id, e)
         return -1
     end
     return timer_id
@@ -145,7 +145,7 @@ function Timer.periodic(after, sec, times, func, ...)
     local e = ev:periodic_start(timer_id, after, sec, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
-        elogf("periodic start fail: id = %d, e = %d", timer_id, e)
+        eprintf("periodic start fail: id = %d, e = %d", timer_id, e)
         return -1
     end
 
@@ -158,7 +158,7 @@ end
 function timer_event(timer_id)
     local timer = this.timer[timer_id]
     if not timer then
-        elogf("timer no cb found,abort %d", timer_id)
+        eprintf("timer no cb found,abort %d", timer_id)
         return Timer.stop(timer_id)
     end
 

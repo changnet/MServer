@@ -96,8 +96,8 @@ return {
 "conn_new", -- src/network/conn.lua
 "css_command_new", -- src/network/conn.lua
 "ctrl_new", -- src/network/conn.lua
-"elog", -- src/global/global.lua
-"elogf", -- src/global/global.lua
+"eprint", -- src/global/global.lua
+"eprintf", -- src/global/global.lua
 "func_name_thunk", -- src/global/name.lua
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua

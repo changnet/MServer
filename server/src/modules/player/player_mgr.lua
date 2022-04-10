@@ -74,7 +74,7 @@ function PlayerMgr.on_enter_world(pid, pkt)
 
     this.raw_player[pid] = player
     if not player:db_load() then
-        elog("player db load fail,pid = %d", pid)
+        eprint("player db load fail,pid = %d", pid)
         return
     end
 
@@ -88,7 +88,7 @@ function PlayerMgr.on_player_offline(srv_conn, pkt)
 
     local player = this.player[pid]
     if not player then
-        elogf("player offline,object not found:%d", pid)
+        eprintf("player offline,object not found:%d", pid)
         return
     end
 

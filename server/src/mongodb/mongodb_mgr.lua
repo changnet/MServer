@@ -31,7 +31,7 @@ end
 function mongodb_event(ev, id, qid, ecode, res)
     local db = this.db[id]
     if not db then
-        elogf("mongodb event no db found: id = %d", id)
+        eprintf("mongodb event no db found: id = %d", id)
         return
     end
     if ev == S_READY then

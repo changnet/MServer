@@ -127,7 +127,7 @@ int32_t luaopen_log(lua_State *L)
     lc.def<&LLog::start>("start");
 
     lc.def<&LLog::plog>("plog");
-    lc.def<&LLog::elog>("elog");
+    lc.def<&LLog::eprint>("eprint");
 
     lc.def<&LLog::append_file>("append_file");
     lc.def<&LLog::append_log_file>("append_log_file");

@@ -179,7 +179,7 @@ function Res.add_one(player, id, count, res, op, msg, ext)
         if Res.is_item(id) then
             res_m = res_func[RES_ITEM]
         else
-            elogf("Res.add_one no function found:%s,op %d", tostring(id), op)
+            eprintf("Res.add_one no function found:%s,op %d", tostring(id), op)
             return
         end
     end
@@ -187,7 +187,7 @@ function Res.add_one(player, id, count, res, op, msg, ext)
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
     local add_cnt = res_m.add(player, id, count, op, msg, res, ext)
     if add_cnt < 0 then
-        elogf("Res add error, pid = %d, id = %d, count = %d",
+        eprintf("Res add error, pid = %d, id = %d, count = %d",
             player.pid, id, count)
     end
     return add_cnt
@@ -205,7 +205,7 @@ function Res.dec_one(player, id, count, res, op, msg)
         if Res.is_item(id) then
             res_m = res_func[RES_ITEM]
         else
-            elogf("Res.dec_one no function found:%s,op %d", tostring(id), op)
+            eprintf("Res.dec_one no function found:%s,op %d", tostring(id), op)
             return
         end
     end
@@ -224,7 +224,7 @@ function Res.check_dec_one(player, id, count, res)
         if Res.is_item(id) then
             res_m = res_func[RES_ITEM]
         else
-            elogf("Res.check_dec_one no function found:%s, %s",
+            eprintf("Res.check_dec_one no function found:%s, %s",
                     tostring(id), debug.traceback())
             return false
         end
@@ -253,7 +253,7 @@ function Res.check_add_one(player, id, count, res, ext)
         if Res.is_item(id) then
             res_m = res_func[RES_ITEM]
         else
-            elogf("Res.check_add_one no function found:%s, %s",
+            eprintf("Res.check_add_one no function found:%s, %s",
                     tostring(id), debug.traceback())
             return false
         end

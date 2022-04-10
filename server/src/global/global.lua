@@ -56,7 +56,7 @@ function __G__TRACKBACK(msg, co)
     local stack_trace = debug.traceback(co)
 
     local str = tostring(msg) .. "\n" .. stack_trace
-    async_logger:elog(str)
+    async_logger:eprint(str)
     return msg
 end
 
@@ -78,13 +78,13 @@ function printf(fmt, ...)
 end
 
 -- 错误日志，写入根目录下的lua_error.txt文件 (参数不能带有nil参数)
-function elog(...)
-    return async_logger:elog(table.concat({...}, "    "))
+function eprint(...)
+    return async_logger:eprint(table.concat({...}, "    "))
 end
 
 --  格式化日志并写入根目录下的lua_error.txt文件
-function elogf(fmt, ...)
-    return async_logger:elog(string.format(fmt, ...))
+function eprintf(fmt, ...)
+    return async_logger:eprint(string.format(fmt, ...))
 end
 
 -- 断言，支持多个message参数

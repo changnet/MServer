@@ -43,7 +43,7 @@ function GM.auto_forward(where, player, cmd, args)
     local session = g_app:encode_session(app_type, 1, g_app.id)
     local srv_conn = SrvMgr.get_conn_by_session(session)
     if not srv_conn then
-        elog("gm auto forward no conn found:%s", cmd)
+        eprint("gm auto forward no conn found:%s", cmd)
         return true
     end
 

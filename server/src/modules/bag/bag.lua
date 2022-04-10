@@ -97,7 +97,7 @@ function Bag:raw_add(item)
 
     local conf = item_conf[id]
     if not conf then
-        elogf("item conf not found:player = %d,id = %d", self.pid, id)
+        eprintf("item conf not found:player = %d,id = %d", self.pid, id)
         return count
     end
 
@@ -186,7 +186,7 @@ function Bag:dec(id, count)
     end
 
     if not index then
-        elog("can NOT dec item,player = %d,id = %d,count = %d", self.pid, id,
+        eprint("can NOT dec item,player = %d,id = %d,count = %d", self.pid, id,
               count)
         return count
     end

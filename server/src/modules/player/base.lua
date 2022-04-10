@@ -134,7 +134,7 @@ function Base:dec_money(id, count, op, msg)
     self:update_res(id, new_val)
 
     if new_val < 0 then
-        elogf("money < 0, pid = %d, id = %d, new_val = %d, count = %d, op = %d",
+        eprintf("money < 0, pid = %d, id = %d, new_val = %d, count = %d, op = %d",
             self.pid, id, count, new_val, op)
     end
 end

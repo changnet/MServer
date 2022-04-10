@@ -19,7 +19,7 @@ function EntityCmd.player_update_base(pid, base, new)
     end
 
     if not player then
-        elog("update_player_base no player found", pid)
+        eprint("update_player_base no player found", pid)
         return
     end
 
@@ -53,7 +53,7 @@ end
 function EntityCmd.player_enter_dungeon(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = EntityMgr.get_player(pid)
     if not player then
-        elog("player_enter_dungeon no player found", pid)
+        eprint("player_enter_dungeon no player found", pid)
         return
     end
 
@@ -69,7 +69,7 @@ end
 function EntityCmd.player_init_scene(pid, dungeon_hdl, dungeon_id, scene_id, x, y)
     local player = EntityMgr.get_player(pid)
     if not player then
-        elog("player_init_scene no player found", pid)
+        eprint("player_init_scene no player found", pid)
         return
     end
 

@@ -48,7 +48,7 @@ t_describe("log test", function()
 
         -- plog和elog会在屏幕打印数据，就不测试了。平常看runtime就可以了
         -- logger:plog("plog test ----------")
-        -- logger:elog("elog test ----------")
+        -- logger:eprint("eprint test ----------")
 
         -- 测试size及其滚动、测试logfile
         os.remove("log/test_log_size")

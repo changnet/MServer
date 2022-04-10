@@ -34,7 +34,7 @@ function Mail:db_save()
 
     -- 说明db里的数据比当前新，不能覆盖
     if self.reload then
-        elog("db_save find reload flag,data can NOT be overwrote")
+        eprint("db_save find reload flag,data can NOT be overwrote")
         return false
     end
 
@@ -91,7 +91,7 @@ function Mail:check_reload()
 
     -- 不能直接改数据库又改了内存中的数据
     if self.modify then
-        elog("mail reload data modify found")
+        eprint("mail reload data modify found")
         return false
     end
 
@@ -130,7 +130,7 @@ end
 function Mail:add_sys_mail(mail)
     -- id是根据时间来算的，调时间有可能出现问题
     if self.sys_id >= mail.id then
-        elog("add_sys_mail sys id error:pid = %d,old = %d,now = %d", self.pid,
+        eprint("add_sys_mail sys id error:pid = %d,old = %d,now = %d", self.pid,
               self.sys_id, mail.id)
         return
     end
@@ -175,7 +175,7 @@ end
 -- 处理邮件删除
 function Mail:handle_mail_del(pkt)
     if not pkt.id or #pkt.id == 0 then
-        return elog("handle_mail_del no mail id specify:%d", self.pid)
+        return eprint("handle_mail_del no mail id specify:%d", self.pid)
     end
 
     local mail_map = {}

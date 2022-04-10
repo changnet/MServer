@@ -101,7 +101,7 @@ end
 -- 实体进入场景
 function Scene:entity_enter(entity, pix_x, pix_y)
     if pix_x >= self.pix_width or pix_y >= self.pix_height then
-        elog("cene:entity_enter invalid pos(%d, %d) for scene %d", pix_x,
+        eprint("cene:entity_enter invalid pos(%d, %d) for scene %d", pix_x,
               pix_y, self.id)
         return
     end

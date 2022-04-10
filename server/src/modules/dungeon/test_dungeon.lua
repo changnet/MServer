@@ -8,7 +8,7 @@ end
 function TestDungeon:do_enter(pid, fb_id)
     local player = EntityMgr.get_player(pid)
     if not player then
-        elog("TestDungeon:do_enter no player found", pid)
+        eprint("TestDungeon:do_enter no player found", pid)
         return
     end
 

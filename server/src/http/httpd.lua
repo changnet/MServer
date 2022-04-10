@@ -118,7 +118,7 @@ function Httpd:do_command(conn, http_type, code, method, url, body)
         -- 用io.open来判断文件是否存在
         local exec_file = io.open("../src/" .. path .. ".lua", "r")
         if not exec_file then
-            elog("http request page not found: " .. path)
+            eprint("http request page not found: " .. path)
             conn:send_pkt(page404)
 
             return conn:close(true)

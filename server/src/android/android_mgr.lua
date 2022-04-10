@@ -24,7 +24,7 @@ function on_cmd(conn, cmd, errno, ...)
 
     if not handler then
         -- android_cmd:dump_pkt( ... )
-        -- elog("android on cmd no handler found:%d", cmd)
+        -- eprint("android on cmd no handler found:%d", cmd)
         return
     end
 

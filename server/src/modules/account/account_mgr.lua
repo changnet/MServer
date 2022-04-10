@@ -39,7 +39,7 @@ end
 -- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
 function AccMgr.on_role_create(base, role_info, ecode, res)
     if 0 ~= ecode then
-        elog("role create error:name = %s,account = %s,srv = %d,plat = %d",
+        eprint("role create error:name = %s,account = %s,srv = %d,plat = %d",
               base.name, role_info.account, role_info.sid, role_info.plat)
         AccMgr.send_role_create(role_info, E.UNDEFINE)
         return
@@ -115,7 +115,7 @@ function AccMgr.role_offline_by_pid(pid)
 
     local role_info = this.role_acc[pid]
     if not role_info then
-        elog("role_offline_by_pid no role_info found:%d", pid)
+        eprint("role_offline_by_pid no role_info found:%d", pid)
         return
     end
 
@@ -141,7 +141,7 @@ end
 -- db数据加载
 function AccMgr.on_db_loaded(ecode, res)
     if 0 ~= ecode then
-        elog("account db load error")
+        eprint("account db load error")
         return
     end
 
@@ -166,12 +166,12 @@ end
 local function player_login(pkt)
     local sign = util.md5(LOGIN_KEY, pkt.time, pkt.account)
     if sign ~= pkt.sign then
-        elog("clt sign error:%s", pkt.account)
+        eprint("clt sign error:%s", pkt.account)
         return
     end
 
     if not PLATFORM[pkt.plat] then
-        elog("clt platform error:%s", tostring(pkt.plat))
+        eprint("clt platform error:%s", tostring(pkt.plat))
         return
     end
 
@@ -179,7 +179,7 @@ local function player_login(pkt)
     local conn_id = clt_conn.conn_id
     -- 不能重复发送(不是顶号，conn_id不应该会重复)
     if this.conn_acc[conn_id] then
-        elog("player login pkt dumplicate send")
+        eprint("player login pkt dumplicate send")
         return
     end
 
@@ -228,13 +228,13 @@ local function create_role(pkt)
     local clt_conn = Cmd.last_conn()
     local role_info = this.conn_acc[clt_conn.conn_id]
     if not role_info then
-        elog("create role,no account info")
+        eprint("create role,no account info")
         return
     end
 
     -- 当前一个帐号只能创建一个角色
     if role_info.pid then
-        elog("role already create")
+        eprint("role already create")
         return
     end
 

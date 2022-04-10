@@ -296,7 +296,7 @@ function rpc_command_return(conn_id, rpc_id, e, ...)
     last_conn_id = conn_id
     local callback = this.callback[rpc_id]
     if not callback then
-        elogf("rpc return no callback found:id = %d", rpc_id)
+        eprintf("rpc return no callback found:id = %d", rpc_id)
         return
     end
     this.callback[rpc_id] = nil

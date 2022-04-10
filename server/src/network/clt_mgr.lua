@@ -19,7 +19,7 @@ end
 function CltMgr.clt_close_by_pid(pid)
     local conn = this.clt[pid]
     if not conn then
-        elog("clt_close_by_pid no conn found:%d", pid)
+        eprint("clt_close_by_pid no conn found:%d", pid)
         return
     end
 
@@ -87,7 +87,7 @@ function clt_multicast_new(mask, ...)
         return pid_list
         -- elseif mask == CLTCAST.LEVEL then
     else
-        elog("clt_multicast_new unknow mask", mask)
+        eprint("clt_multicast_new unknow mask", mask)
     end
 end
 
@@ -111,7 +111,7 @@ local function on_app_start(check)
     -- 如果配置了http地址和端口，则开启监听
     local hip = g_app_setting.hip
     if hip and not g_httpd:start(hip, g_app_setting.hport) then
-        elog("http listen fail")
+        eprint("http listen fail")
         return false
     end
 

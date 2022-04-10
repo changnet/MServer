@@ -33,7 +33,7 @@ end
 
 -- stdout、文件双向输出错误日志函数
 -- @param ctx 日志内容
-function Log:elog(ctx)
+function Log:eprint(ctx)
 end
 
 -- 设置某个日志参数

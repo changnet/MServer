@@ -228,12 +228,12 @@ end
 function Cmd.dispatch_srv(srv_conn, cmd, ...)
     local cfg = ss_handler[cmd]
     if not cfg then
-        elog("dispatch_srv:cmd not found", cmd)
+        eprint("dispatch_srv:cmd not found", cmd)
         return
     end
 
     if not srv_conn.auth and not cfg.noauth then
-        return elog("dispatch_srv:try to call auth cmd", cmd)
+        return eprint("dispatch_srv:try to call auth cmd", cmd)
     end
 
     last_command = cmd
@@ -245,11 +245,11 @@ end
 function Cmd.dispatch_clt(clt_conn, cmd, ...)
     local cfg = cs_handler[cmd]
     if not cfg then
-        return elog("dispatch_clt:cmd %d no handle function found", cmd)
+        return eprint("dispatch_clt:cmd %d no handle function found", cmd)
     end
 
     if not clt_conn.auth and not cfg.noauth then
-        return elog("dispatch_clt:try to call auth cmd %d", cmd)
+        return eprint("dispatch_clt:try to call auth cmd %d", cmd)
     end
 
     last_command = cmd
@@ -262,18 +262,18 @@ function Cmd.dispatch_css(srv_conn, pid, cmd, ...)
     local cfg = cs_handler[cmd]
 
     if not cfg then
-        return elogf("dispatch_css:cmd %d no handle function found", cmd)
+        return eprintf("dispatch_css:cmd %d no handle function found", cmd)
     end
 
     -- 判断这个服务器连接是已认证的
     if not srv_conn.auth then
-        return elogf("dispatch_css:srv conn not auth,cmd %d", cmd)
+        return eprintf("dispatch_css:srv conn not auth,cmd %d", cmd)
     end
 
     -- 判断这个玩家是已认证的
     if not cfg.noauth and not auth[pid] then
         return
-            elogf("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
+            eprintf("dispatch_css:player not auth,pid [%d],cmd %d", pid, cmd)
     end
 
     last_command = cmd
@@ -347,7 +347,7 @@ local function on_script_loaded()
 
     -- 热更的话，出错也只能打个日志，没法处理
     if not Cmd.load_protobuf() then
-        elog("Cmd proto load ERROR")
+        eprint("Cmd proto load ERROR")
         return
     end
     Cmd.sync_cmd() -- 同步协议到网关

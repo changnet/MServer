@@ -251,7 +251,7 @@ local function handle_srv_reg(conn, pkt)
     local session = pkt.session
     local auth = util.md5(SRV_KEY, pkt.timestamp, session)
     if pkt.auth ~= auth then
-        elog("SrvMgr.srv_register fail,session %d", session)
+        eprint("SrvMgr.srv_register fail,session %d", session)
         return false
     end
 
@@ -259,13 +259,13 @@ local function handle_srv_reg(conn, pkt)
     -- 如果以后有连跨服，他们是否会分配不同的id，是的话要改下
     local _, _, id = App.decode_session(session)
     if id ~= tonumber(g_app.id) then
-        elog("SrvMgr.srv_register id not match,expect %s,got %d", g_app.id,
+        eprint("SrvMgr.srv_register id not match,expect %s,got %d", g_app.id,
               id)
         return
     end
 
     if this.srv[session] then
-        elog("SrvMgr.srv_register session conflict:%d", session)
+        eprint("SrvMgr.srv_register session conflict:%d", session)
         return false
     end
 
