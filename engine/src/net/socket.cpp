@@ -127,7 +127,7 @@ int32_t Socket::is_error()
 #endif
 }
 
-Socket::Socket(uint32_t conn_id, ConnType conn_ty)
+Socket::Socket(int32_t conn_id, ConnType conn_ty)
 {
     _io        = nullptr;
     _packet    = nullptr;
@@ -157,20 +157,20 @@ Socket::~Socket()
     assert(!_w);
 }
 
-void Socket::stop(bool flush)
+void Socket::stop(bool flush, bool force)
 {
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
     // ev那边需要做异步删除
-    if (_w) StaticGlobal::ev()->io_stop(_fd);
+    if (_w) StaticGlobal::ev()->io_stop(_conn_id);
 
-    // 这里不能直接关闭fd，io线程那边可能还在读写
+    // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
     // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
     // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
-    // if (fd_valid(_fd)) ::close(_fd);
-
-    // 标记fd无效，这样就不会继续解析数据包
-    _fd = invalid_fd();
+    if (force)
+    {
+        close_cb();
+    }
 
     C_SOCKET_TRAFFIC_DEL(_conn_id);
 }
@@ -343,9 +343,9 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
     else
     {
         hints.ai_family = AF_INET6; /* Allow IPv4 or IPv6 */
-    hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
+        hints.ai_flags = AI_V4MAPPED; // 目标无ipv6地址时，返回v4-map-v6地址
     }
-    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_socktype  = SOCK_STREAM;
     hints.ai_protocol  = 0; /* Any protocol */
     hints.ai_canonname = nullptr;
     hints.ai_addr      = nullptr;
@@ -364,8 +364,8 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
         for (struct addrinfo *rp = result; rp != nullptr; rp = rp->ai_next)
         {
             if (inet_ntop(rp->ai_family,
-                          &((struct sockaddr_in *)rp->ai_addr)->sin_addr,
-                          buf, sizeof(buf)))
+                          &((struct sockaddr_in *)rp->ai_addr)->sin_addr, buf,
+                          sizeof(buf)))
             {
                 addrs.emplace_back(buf);
             }
@@ -408,7 +408,7 @@ bool Socket::start(int32_t fd)
     _fd = fd;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
+    _w = StaticGlobal::ev()->io_start(_conn_id, _fd, EV_READ);
     if (!_w)
     {
         ELOG("ev io start fail: %d", _fd);
@@ -468,8 +468,8 @@ int32_t Socket::connect(const char *host, int32_t port)
     {
         if (is_error())
         {
-            ELOG("Socket connect %s:%d %s(%d)",
-                host, port, str_error(), error_no());
+            ELOG("Socket connect %s:%d %s(%d)", host, port, str_error(),
+                 error_no());
             ::close(fd);
 
             return -1;
@@ -477,7 +477,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
     assert(!_w);
-    _w = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
+    _w = StaticGlobal::ev()->io_start(_conn_id, fd, EV_CONNECT);
     if (!_w)
     {
         ELOG("ev io start fail: %d", fd);
@@ -593,7 +593,7 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
+    _w = StaticGlobal::ev()->io_start(_conn_id, _fd, EV_ACCEPT);
     if (!_w)
     {
         ELOG("ev io start fail: %d", _fd);
@@ -639,7 +639,10 @@ void Socket::close_cb()
     if (_packet && fd_valid(_fd)) _packet->on_closed();
 
     ::close(_fd);
-    StaticGlobal::ev()->io_delete(_fd);
+    _fd = invalid_fd();
+
+    _w = nullptr;
+    StaticGlobal::ev()->io_delete(_conn_id);
 
     StaticGlobal::network_mgr()->connect_del(_conn_id);
 }
@@ -672,7 +675,7 @@ void Socket::listen_cb()
 
         uint32_t conn_id     = network_mgr->new_connect_id();
         class Socket *new_sk = new class Socket(conn_id, _conn_ty);
-        if (new_sk->start(new_fd))
+        if (!new_sk->start(new_fd))
         {
             new_sk->stop();
             return;
@@ -681,7 +684,8 @@ void Socket::listen_cb()
         // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
         bool ok = network_mgr->accept_new(_conn_id, new_sk);
         // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
-        if (EXPECT_TRUE(ok && fd_valid(_fd) && _packet && new_sk->_w->_io))
+        if (EXPECT_TRUE(ok && fd_valid(new_sk->_fd) && new_sk->_packet
+                        && new_sk->_io))
         {
             new_sk->_w->init_accept();
         }
@@ -717,9 +721,7 @@ void Socket::connect_cb()
         _w->set(EV_READ);
     }
 
-    /* 连接失败或回调脚本失败,都会被connect_new删除 */
-    class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    bool ok                        = network_mgr->connect_new(_conn_id, ecode);
+    bool ok = StaticGlobal::network_mgr()->connect_new(_conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
     if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd) && _packet && _w->_io))

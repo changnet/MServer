@@ -54,7 +54,7 @@ void Statistic::reset_trafic()
     }
 }
 
-void Statistic::remove_socket_traffic(uint32_t conn_id)
+void Statistic::remove_socket_traffic(int32_t conn_id)
 {
     // 一个listen的sokcet，由于没有调用socket::start，不在_socket_traffic
     // 一个connect失败的socket，也是没调用socket::start
@@ -65,14 +65,14 @@ void Statistic::remove_socket_traffic(uint32_t conn_id)
     _socket_traffic.erase(conn_id);
 }
 
-void Statistic::insert_socket_traffic(uint32_t conn_id)
+void Statistic::insert_socket_traffic(int32_t conn_id)
 {
     assert(_socket_traffic.end() == _socket_traffic.find(conn_id));
 
     _socket_traffic[conn_id]._time = StaticGlobal::ev()->now();
 }
 
-void Statistic::add_send_traffic(uint32_t conn_id, Socket::ConnType type,
+void Statistic::add_send_traffic(int32_t conn_id, Socket::ConnType type,
                                  uint32_t val)
 {
     assert(type > Socket::CT_NONE && type < Socket::CT_MAX);
@@ -81,7 +81,7 @@ void Statistic::add_send_traffic(uint32_t conn_id, Socket::ConnType type,
     _socket_traffic[conn_id]._send += val;
 }
 
-void Statistic::add_recv_traffic(uint32_t conn_id, Socket::ConnType type,
+void Statistic::add_recv_traffic(int32_t conn_id, Socket::ConnType type,
                                  uint32_t val)
 {
     assert(type > Socket::CT_NONE && type < Socket::CT_MAX);

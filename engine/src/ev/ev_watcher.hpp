@@ -38,7 +38,7 @@ public:
     }
 
 public:
-
+    int32_t _id;      /// 唯一id
     int32_t _active;  /// 定时器用作数组下标，io只是标记一下
     int32_t _pending; /// 在待处理watcher数组中的下标
     int32_t _revents; /// 等待处理的事件
@@ -67,7 +67,7 @@ public:
 
 public:
     ~EVIO();
-    explicit EVIO(int32_t fd, int32_t events, EV *loop);
+    explicit EVIO(int32_t id, int32_t fd, int32_t events, EV *loop);
     
     /**
      * @brief 由io线程调用的读函数，必须线程安全
@@ -165,7 +165,6 @@ public:
 private:
     friend class EV;
 
-    int32_t _id; /// 定时器唯一id
     int32_t _policy; ///< 修正定时器时间偏差策略，详见 reschedule 函数
     int64_t _at; ///< 定时器首次触发延迟的毫秒数（未激活），下次触发时间（已激活）
     int64_t _repeat; ///< 定时器重复的间隔（毫秒数）

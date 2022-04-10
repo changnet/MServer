@@ -276,9 +276,9 @@ int32_t EV::quit()
     return 0;
 }
 
-EVIO *EV::io_start(int32_t fd, int32_t events)
+EVIO *EV::io_start(int32_t id, int32_t fd, int32_t events)
 {
-    auto p = _io_mgr.try_emplace(fd, fd, events, this);
+    auto p = _io_mgr.try_emplace(id, id, fd, events, this);
     if (!p.second) return nullptr;
 
     EVIO *w = &(p.first->second);
@@ -287,36 +287,35 @@ EVIO *EV::io_start(int32_t fd, int32_t events)
     // set_fast_io(fd, w);
 
     w->_active = EVIO::AS_NEW;
-    io_change(fd);
+    io_change(id);
 
     return w;
 }
 
-int32_t EV::io_stop(int32_t fd)
+int32_t EV::io_stop(int32_t id)
 {
     // 这里不能删除watcher，因为io线程可能还在使用，只是做个标记
     // 这里是由上层逻辑调用，也不要直接加锁去删除watcher，防止堆栈中还有引用
-    EVIO *w = get_io(fd);
+    EVIO *w = get_io(id);
     if (!w) return -1;
 
     clear_pending(w);
 
     w->_active = EVIO::AS_STOP;
-    io_change(fd);
+    io_change(id);
 
     return 0;
 }
 
-int32_t EV::io_delete(int32_t fd)
+int32_t EV::io_delete(int32_t id)
 {
-    EVIO *w = get_io(fd);
+    EVIO *w = get_io(id);
     if (!w) return -1;
 
-    io->_events = 0;
-    clear_io_event(io);
+    w->_active = EVIO::AS_DEL;
+    io_change(id);
 
-    _io_mgr.erase(fd);
-    set_fast_io(fd, nullptr);
+    return 0;
 }
 
 void EV::set_fast_io(int32_t fd, EVIO *w)
@@ -350,12 +349,14 @@ void EV::io_reify()
 
     {
         std::lock_guard<std::mutex> lg(lock());
-        for (auto fd : _io_changes)
+        for (auto id : _io_changes)
         {
-            EVIO *io = get_io(fd);
+            EVIO *io = get_io(id);
 
             assert(io);
-            witch(io->_active)
+
+            int32_t fd = io->_fd;
+            switch(io->_active)
             {
             case EVIO::AS_STOP:
                 _backend->modify(fd, io); // 移除该socket
@@ -367,6 +368,7 @@ void EV::io_reify()
                 io->_active = 1;
                 set_fast_io(fd, io);
                 _backend->modify(fd, io);
+                break;
             case EVIO::AS_DEL:
                 io->_events = 0;
                 clear_io_event(io);

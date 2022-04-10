@@ -120,6 +120,11 @@ t_describe("http(s) test", function()
                 t_assert(false)
             end
         end
+        srv_conn.on_disconnected = function(conn, e)
+            if 0 ~= e then
+                print("error >>>>>>>>>>>>>>>>>>>", e)
+            end
+        end
 
         local clt_conn = HttpConn()
         clt_conn:connect(local_host, port)
@@ -142,6 +147,11 @@ t_describe("http(s) test", function()
                         end)
                 end)
             end)
+        end
+        clt_conn.on_disconnected = function(conn, e)
+            if 0 ~= e then
+                print("error >>>>>>>>>>>>>>>>>>>", e)
+            end
         end
     end)
 

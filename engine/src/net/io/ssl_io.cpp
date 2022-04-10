@@ -10,7 +10,7 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(uint32_t conn_id, int32_t ssl_id, class Buffer *recv,
+SSLIO::SSLIO(int32_t conn_id, int32_t ssl_id, class Buffer *recv,
              class Buffer *send)
     : IO(conn_id, recv, send)
 {

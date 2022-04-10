@@ -38,7 +38,7 @@ public:
 
 public:
     ~Socket();
-    explicit Socket(uint32_t conn_id, ConnType conn_ty);
+    explicit Socket(int32_t conn_id, ConnType conn_ty);
 
     static void library_end();
     static void library_init();
@@ -70,7 +70,7 @@ public:
 
     /// 开始接受socket数据
     bool start(int32_t fd = -1);
-    void stop(bool flush = false);
+    void stop(bool flush = false, bool force = false);
     int32_t validate();
 
     /// 是否已关闭
@@ -137,7 +137,7 @@ public:
     Codec::CodecType get_codec_type() const { return _codec_ty; }
 
     inline int32_t fd() const { return _fd; }
-    inline uint32_t conn_id() const { return _conn_id; }
+    inline int32_t conn_id() const { return _conn_id; }
     inline ConnType conn_type() const { return _conn_ty; }
 
     /**
@@ -191,7 +191,7 @@ private:
     void connect_cb();
 
 protected:
-    uint32_t _conn_id;
+    int32_t _conn_id;
     ConnType _conn_ty;
 
 private:

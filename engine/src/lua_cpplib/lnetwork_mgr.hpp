@@ -13,8 +13,8 @@ struct lua_State;
 class LNetworkMgr
 {
 private:
-    using cmd_map_t = std::unordered_map<int32_t, CmdCfg>;
-    using socket_map_t = std::unordered_map<uint32_t, class Socket *>;
+    using cmd_map_t    = std::unordered_map<int32_t, CmdCfg>;
+    using socket_map_t = std::unordered_map<int32_t, class Socket *>;
 
 public:
     ~LNetworkMgr();
@@ -300,7 +300,7 @@ public:
     void invoke_delete();
 
     /// 通过所有者查找连接id
-    uint32_t get_conn_id_by_owner(Owner owner) const;
+    int32_t get_conn_id_by_owner(Owner owner) const;
 
     /// 通过session获取socket连接
     class Socket *get_conn_by_session(int32_t session) const;
@@ -309,27 +309,30 @@ public:
     class Socket *get_conn_by_owner(Owner owner) const;
 
     /// 通过conn_id获取socket连接
-    class Socket *get_conn_by_conn_id(uint32_t conn_id) const;
+    class Socket *get_conn_by_conn_id(int32_t conn_id) const;
 
     /// 通过conn_id获取session
-    int32_t get_session_by_conn_id(uint32_t conn_id) const;
+    int32_t get_session_by_conn_id(int32_t conn_id) const;
 
     /// 获取指令配置
     const CmdCfg *get_cs_cmd(int32_t cmd) const;
     const CmdCfg *get_ss_cmd(int32_t cmd) const;
     const CmdCfg *get_sc_cmd(int32_t cmd) const;
     /// 获取当前服务器session
-    int32_t get_curr_session() const { return _session; }
-    uint32_t new_connect_id(); /* 获取新connect_id */
+    int32_t get_curr_session() const
+    {
+        return _session;
+    }
+    int32_t new_connect_id(); /* 获取新connect_id */
 
     /// io建立完成
-    bool io_ok(uint32_t conn_id);
+    bool io_ok(int32_t conn_id);
     /// 连接被销毁（断开）
-    bool connect_del(uint32_t conn_id);
+    bool connect_del(int32_t conn_id);
     /// 连接成功，需要执行始化
-    bool connect_new(uint32_t conn_id, int32_t ecode);
+    bool connect_new(int32_t conn_id, int32_t ecode);
     /// 接受连接成功，需要执行始化
-    bool accept_new(uint32_t conn_id, class Socket *new_sk);
+    bool accept_new(int32_t conn_id, class Socket *new_sk);
 
     /**
      * 把客户端数据包转发给另一服务器
@@ -339,15 +342,15 @@ public:
                         const char *ctx, size_t size) const;
 
 private:
-    void delete_socket(uint32_t conn_id);
+    void delete_socket(int32_t conn_id);
     int32_t get_cmd_session(int64_t object_id, int32_t cmd) const;
     class Packet *lua_check_packet(lua_State *L, Socket::ConnType conn_ty);
-    class Packet *raw_check_packet(lua_State *L, uint32_t conn_id,
+    class Packet *raw_check_packet(lua_State *L, int32_t conn_id,
                                    Socket::ConnType conn_ty);
 
 private:
-    int32_t _session;    /* 当前进程的session */
-    uint32_t _conn_seed; /* connect_id种子 */
+    int32_t _session;   /* 当前进程的session */
+    int32_t _conn_seed; /* connect_id种子 */
 
     cmd_map_t _cs_cmd_map;
     cmd_map_t _ss_cmd_map;
@@ -355,14 +358,14 @@ private:
     socket_map_t _socket_map;
 
     /// 异步删除的socket
-    std::unordered_map<uint32_t, int32_t> _deleting;
+    std::unordered_map<int32_t, int32_t> _deleting;
 
     /// owner-conn_id 映射,ssc数据包转发时需要
-    std::unordered_map<Owner, uint32_t> _owner_map;
+    std::unordered_map<Owner, int32_t> _owner_map;
 
     /// owner-session映射
     std::unordered_map<Owner, int32_t> _owner_session;
 
-    std::unordered_map<int32_t, uint32_t> _session_map; /* session-conn_id 映射 */
-    std::unordered_map<uint32_t, Owner> _conn_session_map; /* conn_id-session 映射 */
+    std::unordered_map<int32_t, int32_t> _session_map; /* session-conn_id 映射 */
+    std::unordered_map<int32_t, Owner> _conn_session_map; /* conn_id-session 映射 */
 };

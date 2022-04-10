@@ -52,6 +52,13 @@ private:
     void do_action(const std::vector<int32_t> &actions);
 
     /**
+     * @brief 冗余检测该fd是否在epoll中
+     * @param fd 要检测的fd
+     * @return boolean，是否在epoll中
+    */
+    bool try_del_epoll_fd(int32_t fd);
+
+    /**
      * @brief 处理读写后的io状态
      * @param w 待处理的watcher
      * @param ev 当前执行的事件
@@ -174,7 +181,16 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
     {
         EVIO *w = _ev->get_fast_io(fd);
         // 主线程发出io请求后，后续逻辑可能删掉了这个对象，但没清掉action
-        if (!w) continue;
+        if (!w)
+        {
+            // 假如一个socket调用io_start，接着调用io_stop，那么它的io_watcher就
+            // 不会设置。这里做一下冗余检测
+            if (try_del_epoll_fd(fd))
+            {
+                ELOG("%s:epoll fd no io watcher found", __FUNCTION__);
+            }
+            continue;
+        }
 
         int32_t events = 0;
         {
@@ -229,7 +245,16 @@ void FinalBackend::do_event(int32_t ev_count)
 
         EVIO *w = _ev->get_fast_io(fd);
         // io对象可能被主线程删了或者停止
-        if (!w) continue;
+        if (!w)
+        {
+            // 假如一个socket调用io_start，接着调用io_stop，那么它的io_watcher就
+            // 不会设置。这里做一下冗余检测
+            if (try_del_epoll_fd(fd))
+            {
+                ELOG("%s:epoll fd no io watcher found", __FUNCTION__);
+            }
+            continue;
+        }
 
         int32_t events          = 0;             // 最终需要触发的事件
         int32_t expect_ev       = w->_emask;     // 期望触发回调的事件
@@ -282,17 +307,13 @@ void FinalBackend::do_event(int32_t ev_count)
 
         // 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT
         // 用户只设置EV_CONNECT那就不要触发EV_WRITE
+        // 假如socket关闭时，用户已不希望回调任何事件，但这时对方可能会发送数据
+        // 触发EV_READ事件
         expect_ev &= events;
         if (expect_ev)
         {
             _has_ev = true;
             _ev->io_event(w, expect_ev);
-        }
-        else
-        {
-            // epoll收到事件，但没有触发io_event，一般是io线程自己添加写事件来发送数据
-            // 如果有其他事件，应该是哪里出错了
-            assert(events == (EV_WRITE | EV_CONNECT));
         }
     }
 }
@@ -429,14 +450,26 @@ void FinalBackend::do_modify()
 {
     for (auto &fd : _modify_fd)
     {
-        modify_watcher(_ev->get_fast_io(fd));
+        EVIO *w = _ev->get_fast_io(fd);
+        if (w)
+        {
+            modify_watcher(w);
+        }
+        else
+        {
+            // 假如一个socket调用io_start，接着调用io_stop，那么它的io_watcher就
+            // 不会设置。这里做一下冗余检测
+            if (try_del_epoll_fd(fd))
+            {
+                ELOG("%s:epoll fd no io watcher found", __FUNCTION__);
+            }
+        }
     }
     _modify_fd.clear();
 }
 
 int32_t FinalBackend::modify_watcher(EVIO *w)
 {
-
     int32_t new_ev = 0;
     int32_t op = EPOLL_CTL_DEL;
 
@@ -447,16 +480,35 @@ int32_t FinalBackend::modify_watcher(EVIO *w)
         new_ev = w->_emask | w->_extend_ev;
 
         op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
-
-        w->_kernel_ev = new_ev;
     }
     else
     {
+        // 关闭连接，并通知主线程那边做后续清理工作
         _has_ev = true;
-        _ev->io_event(w->_fd, EV_CLOSE);
+        _ev->io_event(w, EV_CLOSE);
     }
 
+    // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
+    w->_kernel_ev = new_ev;
+
     return modify_fd(w->_fd, op, new_ev);
+}
+
+bool FinalBackend::try_del_epoll_fd(int32_t fd)
+{
+    struct epoll_event ev;
+    /* valgrind: uninitialised byte(s) */
+    memset(&ev, 0, sizeof(ev));
+
+    ev.data.fd = fd;
+    ev.events  = 0;
+
+    if (epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)) return true;
+
+    if (ENOENT == errno) return false;
+
+    ELOG("%s error: %d", __FUNCTION__, errno);
+    return false;
 }
 
 int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)

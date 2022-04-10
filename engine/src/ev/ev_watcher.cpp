@@ -4,14 +4,17 @@
 
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
+    _id      = 0;
     _active  = 0;
     _pending = 0;
     _revents = 0;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-EVIO::EVIO(int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
+EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
 {
+    _id     = id;
+
     _emask  = 0;
     _fd     = fd;
     _events = events;
@@ -33,7 +36,7 @@ EVIO::~EVIO()
 void EVIO::set(int32_t events)
 {
     _events = events;
-    _loop->io_change(_fd);
+    _loop->io_change(_id);
 }
 
 IO::IOStatus EVIO::recv()

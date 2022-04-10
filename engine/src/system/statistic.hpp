@@ -149,7 +149,7 @@ public:
     typedef std::unordered_map<int32_t, PktCounter> PktCounterType;
     typedef std::unordered_map<std::string, PktCounter> RPCCounterType;
 
-    typedef std::unordered_map<uint32_t, TrafficCounter> SocketTrafficType;
+    typedef std::unordered_map<int32_t, TrafficCounter> SocketTrafficType;
     typedef std::unordered_map<std::string, BaseCounter> BaseCounterType;
 
 public:
@@ -168,11 +168,11 @@ public:
         if (-1 == _lua_gc._min || _lua_gc._min > msec) _lua_gc._min = msec;
     }
 
-    void remove_socket_traffic(uint32_t conn_id);
-    void insert_socket_traffic(uint32_t conn_id);
+    void remove_socket_traffic(int32_t conn_id);
+    void insert_socket_traffic(int32_t conn_id);
 
-    void add_send_traffic(uint32_t conn_id, Socket::ConnType type, uint32_t val);
-    void add_recv_traffic(uint32_t conn_id, Socket::ConnType type, uint32_t val);
+    void add_send_traffic(int32_t conn_id, Socket::ConnType type, uint32_t val);
+    void add_recv_traffic(int32_t conn_id, Socket::ConnType type, uint32_t val);
 
     void add_rpc_count(const char *cmd, int32_t size, int64_t msec);
     void add_pkt_count(int32_t type, int32_t cmd, int32_t size, int64_t msec);

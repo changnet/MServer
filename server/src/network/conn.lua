@@ -38,7 +38,7 @@ function conn_del(conn_id)
     __conn[conn_id] = nil
 
     conn.ok = false
-    conn:on_disconnected()
+    conn:on_disconnected(0)
 end
 
 -- 消息回调,底层根据不同类，参数也不一样

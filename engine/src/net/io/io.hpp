@@ -30,7 +30,7 @@ public:
 
 public:
     virtual ~IO();
-    explicit IO(uint32_t conn_id, class Buffer *recv, class Buffer *send);
+    explicit IO(int32_t conn_id, class Buffer *recv, class Buffer *send);
 
     /**
      * 接收数据
@@ -85,7 +85,7 @@ public:
 
 protected:
     int32_t _fd;         /// 用于读写的文件描述符
-    uint32_t _conn_id;   /// 所属socket的id
+    int32_t _conn_id;   /// 所属socket的id
     class Buffer *_recv; /// 接受缓冲区
     class Buffer *_send; /// 发送缓冲区
 };

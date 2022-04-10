@@ -48,23 +48,24 @@ public:
 
     /**
      * @brief 启动一个io监听
+     * @param id 唯一的id
      * @param fd 通过socket函数创建的文件描述符
      * @param event 监听事件，EV_READ|EV_WRITE
      * @return io对象
      */
-    EVIO *io_start(int32_t fd, int32_t event);
+    EVIO *io_start(int32_t id, int32_t fd, int32_t event);
     /**
-     * @brief 停止一个io监听
-     * @param  通过socket函数创建的文件描述符
+     * @brief 通知io线程停止一个io监听
+     * @param id 唯一的id
      * @return
      */
-    int32_t io_stop(int32_t fd);
+    int32_t io_stop(int32_t id);
     /**
      * @brief 删除一个io监听器
-     * @param fd 通过socket函数创建的文件描述符
+     * @param id 唯一的id
      * @return 
     */
-    int32_t io_delete(int32_t fd);
+    int32_t io_delete(int32_t id);
     /**
      * @brief 获取设置到io线程的io对象，调用此函数注意线程安全
      * @param fd
@@ -262,10 +263,10 @@ protected:
     /// 已经改变，等待设置到内核的io watcher
     std::vector<int32_t> _io_changes;
 
-    /// 用于快速获取io对象
+    /// 用于通过fd快速获取io对象
     std::vector<EVIO *> _io_fast;
     /**
-     * 用于快速获取io对象，当fd太大(尤其是windows) 时
+     * 用于通过fd快速获取io对象，当fd太大(尤其是windows) 时
      * 无法分配过大的数组，linux下应该是用不到
      */
     std::unordered_map<int32_t, EVIO *> _io_fast_mgr;

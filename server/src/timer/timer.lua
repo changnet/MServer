@@ -158,7 +158,7 @@ end
 function timer_event(timer_id)
     local timer = this.timer[timer_id]
     if not timer then
-        elog("timer no cb found,abort %d", timer_id)
+        elogf("timer no cb found,abort %d", timer_id)
         return Timer.stop(timer_id)
     end
 

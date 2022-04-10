@@ -8,7 +8,7 @@
     #include <sys/socket.h>
 #endif
 
-IO::IO(uint32_t conn_id, class Buffer *recv, class Buffer *send)
+IO::IO(int32_t conn_id, class Buffer *recv, class Buffer *send)
 {
     _fd = -1; // 创建一个io的时候，fd可能还未创建，后面再设置
     _conn_id = conn_id;
