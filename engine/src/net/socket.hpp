@@ -16,7 +16,7 @@ class LEV;
 class Socket final
 {
 public:
-    typedef enum
+    enum ConnType
     {
         CT_NONE = 0, ///< 连接方式，无效值
         CT_CSCN = 1, ///< c2s 客户端与服务器之间连接
@@ -24,17 +24,26 @@ public:
         CT_SSCN = 3, ///< s2s 服务器与服务器之间连接
 
         CT_MAX ///< 连接方式最大值
-    } ConnType;
+    };
 
     // socket缓冲区溢出后处理方式
-    typedef enum
+    enum OverActionType
     {
         OAT_NONE = 0, // 不做任何处理
         OAT_KILL = 1, // 断开连接，通常用于与客户端连接
         OAT_PEND = 2, // 阻塞，通用用于服务器之间连接
 
         OAT_MAX
-    } OverActionType;
+    };
+
+    // socket的状态
+    enum ConnStatus
+    {
+        CS_NONE    = 0, // 未指定
+        CS_OPENED  = 1, // 连接已开启
+        CS_CLOSING = 1, // 关闭中
+        CS_CLOSED  = 2 // 已关闭
+    };
 
 public:
     ~Socket();
@@ -70,11 +79,18 @@ public:
 
     /// 开始接受socket数据
     bool start(int32_t fd = -1);
-    void stop(bool flush = false, bool force = false);
+    /**
+     * 停止socket
+     * @param flush 发送缓冲区中的数据再停止
+     * @param term 立即终止该socket，部分清理工作将被忽略
+     */
+    void stop(bool flush = false, bool term = false);
     int32_t validate();
 
-    /// 是否已关闭
-    bool is_closed() const { return !fd_valid(fd()); }
+    /**
+     * 是否已关闭
+     */
+    bool is_closed() const { return 0 != _status; }
 
     /**
      * 获取ip地址及端口
@@ -185,7 +201,11 @@ public:
     static int32_t is_error();
 
 private:
-    void close_cb();
+    /**
+     * 处理socket关闭后续工作
+     * @param term 是否强制终止，部分清理工作将被忽略
+     */
+    void close_cb(bool term);
     void listen_cb();
     void command_cb();
     void connect_cb();
@@ -195,12 +215,14 @@ protected:
     ConnType _conn_ty;
 
 private:
+    int8_t _status; // 当前socket的状态
     int32_t _fd; /// 当前socket的文件描述符
-    EVIO *_w; /// io事件监视器
-    IO *_io; /// io读写对象
     int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
+    EVIO *_w; /// io事件监视器
+    IO *_io; /// io读写对象
     class Packet *_packet;
+
     Codec::CodecType _codec_ty;
     OverActionType _over_action; /// 缓冲区溢出时，采取的措施
 };

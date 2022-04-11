@@ -299,7 +299,8 @@ int32_t EV::io_stop(int32_t id)
     EVIO *w = get_io(id);
     if (!w) return -1;
 
-    clear_pending(w);
+    // 不能删event，因为有些event还是需要，比如EV_CLOSE
+    // clear_pending(w);
 
     w->_active = EVIO::AS_STOP;
     io_change(id);

@@ -133,6 +133,8 @@ Socket::Socket(int32_t conn_id, ConnType conn_ty)
     _packet    = nullptr;
     _object_id = 0;
 
+    _status = CS_NONE;
+
     _fd = invalid_fd();
     _w  = nullptr;
 
@@ -157,8 +159,10 @@ Socket::~Socket()
     assert(!_w);
 }
 
-void Socket::stop(bool flush, bool force)
+void Socket::stop(bool flush, bool term)
 {
+    _status = CS_CLOSING;
+
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
     // ev那边需要做异步删除
@@ -167,9 +171,9 @@ void Socket::stop(bool flush, bool force)
     // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
     // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
     // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
-    if (force)
+    if (term)
     {
-        close_cb();
+        close_cb(true);
     }
 
     C_SOCKET_TRAFFIC_DEL(_conn_id);
@@ -483,8 +487,10 @@ int32_t Socket::connect(const char *host, int32_t port)
         ELOG("ev io start fail: %d", fd);
         return -1;
     }
-    _fd = fd;
     _w->bind(&Socket::io_cb, this);
+
+    _fd = fd;
+    _status = CS_OPENED;
 
     return fd;
 }
@@ -601,6 +607,8 @@ int32_t Socket::listen(const char *host, int32_t port)
     }
     _w->bind(&Socket::io_cb, this);
 
+    _status = CS_OPENED;
+
     return _fd;
 
 FAIL:
@@ -615,7 +623,7 @@ void Socket::io_cb(int32_t revents)
     // 如果关闭了，那其他的都不用处理了
     if (EV_CLOSE & revents)
     {
-        close_cb();
+        close_cb(false);
         return;
     }
 
@@ -633,10 +641,12 @@ void Socket::io_cb(int32_t revents)
     }
 }
 
-void Socket::close_cb()
+void Socket::close_cb(bool term)
 {
     // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-    if (_packet && fd_valid(_fd)) _packet->on_closed();
+    if (CS_OPENED == _status && !term && _packet) _packet->on_closed();
+
+    _status = CS_CLOSED;
 
     ::close(_fd);
     _fd = invalid_fd();
@@ -754,7 +764,7 @@ void Socket::command_cb()
     do
     {
         if ((ret = _packet->unpack(buffer)) <= 0) break;
-    } while (fd_valid(fd()));
+    } while (CS_OPENED != _status);
 
     // 解析过程中错误，断开链接
     if (EXPECT_FALSE(ret < 0))
