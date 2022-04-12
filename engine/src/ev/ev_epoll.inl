@@ -141,9 +141,9 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     {
     case IO::IOS_OK:
         // 发送完则需要删除写事件，不然会一直触发
-        if (EV_WRITE == ev && (w->_extend_ev & EV_WRITE))
+        if (EV_WRITE == ev && (w->_b_eevents & EV_WRITE))
         {
-            w->_extend_ev &= ~EV_WRITE;
+            w->_b_eevents &= ~EV_WRITE;
             modify_watcher(w);
         }
         return true;
@@ -152,9 +152,9 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         return true;
     case IO::IOS_WRITE:
         // 未发送完，加入write事件继续发送
-        if (!(w->_extend_ev & EV_WRITE))
+        if (!(w->_b_eevents & EV_WRITE))
         {
-            w->_extend_ev |= EV_WRITE;
+            w->_b_eevents |= EV_WRITE;
             modify_watcher(w);
         }
         return true;
@@ -195,8 +195,8 @@ void FinalBackend::do_action(const std::vector<int32_t> &actions)
         int32_t events = 0;
         {
             std::lock_guard<SpinLock> lg(_ev->fast_lock());
-            events           = w->_action_ev;
-            w->_action_ev    = 0;
+            events           = w->_b_fevents;
+            w->_b_fevents    = 0;
         }
 
         // 主线程设置事件的时候，可能刚好被io线程处理完了
@@ -257,8 +257,8 @@ void FinalBackend::do_event(int32_t ev_count)
         }
 
         int32_t events          = 0;             // 最终需要触发的事件
-        int32_t expect_ev       = w->_emask;     // 期望触发回调的事件
-        const int32_t kernel_ev = w->_kernel_ev; // 内核事件
+        int32_t expect_ev       = w->_b_uevents;     // 期望触发回调的事件
+        const int32_t kernel_ev = w->_b_kevents; // 内核事件
         if (ev->events & EPOLLOUT)
         {
             if (kernel_ev & EV_WRITE)
@@ -272,7 +272,7 @@ void FinalBackend::do_event(int32_t ev_count)
             // 导致io线程一直触发这个事件
             if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
             {
-                w->_emask &= ~EV_CONNECT;
+                w->_b_uevents &= ~EV_CONNECT;
                 modify_watcher(w);
             }
 
@@ -292,7 +292,7 @@ void FinalBackend::do_event(int32_t ev_count)
             // 导致io线程一直触发这个事件
             if (EXPECT_FALSE(kernel_ev & EV_ACCEPT))
             {
-                w->_emask &= ~EV_ACCEPT;
+                w->_b_uevents &= ~EV_ACCEPT;
                 modify_watcher(w);
             }
 
@@ -440,8 +440,8 @@ void FinalBackend::modify(int32_t fd, EVIO *w)
      * 任意时候，都会回调error和close事件
      * 如同epoll总是会触发EPOLLERR和EPOLLHUP，不管有没有设置
      */
-    w->_emask = (EVIO::AS_START == w->_active) ?
-        (w->_events | EV_ERROR | EV_CLOSE) : 0;
+    w->_b_uevents = (EVIO::S_START == w->_status) ?
+        (w->_uevents | EV_ERROR | EV_CLOSE) : 0;
 
     _modify_fd.push_back(fd);
 }
@@ -474,10 +474,10 @@ int32_t FinalBackend::modify_watcher(EVIO *w)
     int32_t op = EPOLL_CTL_DEL;
 
     // 如果该watcher处于活动状态，_emask一定不会为0，至少会有EV_ERROR | EV_CLOSE
-    if (w->_emask)
+    if (w->_b_uevents)
     {
-        int32_t old_ev = w->_kernel_ev;
-        new_ev = w->_emask | w->_extend_ev;
+        int32_t old_ev = w->_b_kevents;
+        new_ev = w->_b_uevents | w->_b_eevents;
 
         op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
     }
@@ -489,7 +489,7 @@ int32_t FinalBackend::modify_watcher(EVIO *w)
     }
 
     // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
-    w->_kernel_ev = new_ev;
+    w->_b_kevents = new_ev;
 
     return modify_fd(w->_fd, op, new_ev);
 }

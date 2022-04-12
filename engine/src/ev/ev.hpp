@@ -183,23 +183,6 @@ public:
         _cv.notify_one();
     }
 
-    /// 唤醒主线程(async-signal-safe)，一般是只信号在用
-    void wake_safe()
-    {
-        // C++的condition_variable不是async - signal - safe的
-        // 如 https://github.com/llvm-mirror/libcxx/blob/master/include/condition_variable
-        // notify_one里会有锁，信号重入会造成死锁
-        // 但std::atomic_flag是，因此这里包一层，防止信号重入_cv.notify_one()
-        if (_has_job) return;
-
-        {
-            // 这里其实需要加锁，否则主线程可能错过notify，但至少不会死锁
-            _has_job = true;
-        }
-
-        _cv.notify_one();
-    }
-
     /// 设置是否有任务需要处理
     void set_job(bool job)
     {
@@ -215,7 +198,6 @@ protected:
     void time_update();
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
-    void clear_io_event(EVIO *w);
     void clear_pending(EVWatcher *w);
     void io_event_reify();
     void timers_reify();

@@ -286,7 +286,7 @@ EVIO *EV::io_start(int32_t id, int32_t fd, int32_t events)
     // 因为效率问题，这里不能加锁，不允许修改跨线程的变量
     // set_fast_io(fd, w);
 
-    w->_active = EVIO::AS_NEW;
+    w->_status = EVIO::S_NEW;
     io_change(id);
 
     return w;
@@ -302,7 +302,7 @@ int32_t EV::io_stop(int32_t id)
     // 不能删event，因为有些event还是需要，比如EV_CLOSE
     // clear_pending(w);
 
-    w->_active = EVIO::AS_STOP;
+    w->_status = EVIO::S_STOP;
     io_change(id);
 
     return 0;
@@ -313,7 +313,7 @@ int32_t EV::io_delete(int32_t id)
     EVIO *w = get_io(id);
     if (!w) return -1;
 
-    w->_active = EVIO::AS_DEL;
+    w->_status = EVIO::S_DEL;
     io_change(id);
 
     return 0;
@@ -325,10 +325,9 @@ void EV::set_fast_io(int32_t fd, EVIO *w)
     uint32_t ufd = ((uint32_t)fd);
     if (ufd < MAX_FAST_IO)
     {
-        while (_io_fast.size() < ufd)
+        if (EXPECT_FALSE(_io_fast.size() < ufd))
         {
-            size_t size = _io_fast.size();
-            _io_fast.resize(size ? size * 2 : 1024);
+            _io_fast.resize(ufd + 1024);
         }
         _io_fast[fd] = w;
     }
@@ -357,22 +356,22 @@ void EV::io_reify()
             assert(io);
 
             int32_t fd = io->_fd;
-            switch(io->_active)
+            switch(io->_status)
             {
-            case EVIO::AS_STOP:
+            case EVIO::S_STOP:
                 _backend->modify(fd, io); // 移除该socket
                 break;
-            case EVIO::AS_START:
+            case EVIO::S_START:
                 _backend->modify(fd, io);
                 break;
-            case EVIO::AS_NEW:
-                io->_active = 1;
+            case EVIO::S_NEW:
+                io->_status = EVIO::S_START;
                 set_fast_io(fd, io);
                 _backend->modify(fd, io);
                 break;
-            case EVIO::AS_DEL:
-                io->_events = 0;
-                clear_io_event(io);
+            case EVIO::S_DEL:
+                // 删除的时候，如果这个值不为空，那它的指针会在队列里
+                assert(0 == io->_b_revents);
 
                 _io_mgr.erase(fd);
                 set_fast_io(fd, nullptr);
@@ -470,12 +469,11 @@ void EV::time_update()
 
 void EV::io_event(EVIO *w, int32_t revents)
 {
-    w->_revents |= revents;
-    if (EXPECT_TRUE(!w->_io_index))
+    if (EXPECT_TRUE(!w->_b_revents))
     {
         _io_pendings.emplace_back(w);
-        w->_io_index = (int32_t)_io_pendings.size();
     }
+    w->_b_revents |= revents;
 }
 
 void EV::io_action(EVIO *w, int32_t events)
@@ -484,20 +482,16 @@ void EV::io_action(EVIO *w, int32_t events)
     {
         std::lock_guard<SpinLock> lg(_spin_lock);
 
-        int32_t old_ev = w->_action_ev;
-        w->_action_ev |= events;
-
-        // 先判断该watch是否在队列中，在的话就不要再插入
-        // 玩家登录的时候，可能有上百次数据发送，不要每次都插入
-        // _action_index不一定是_io_actions的数组下标，因为
-        // 数组由io线程处理后，需要处理该io才会把_io_actiion置0
-        if (!old_ev)
+        // 旧事件不为0，说明之前已经插入队伍并且唤醒过backend线程了
+        // 玩家登录的时候，可能有上百次数据发送，不要每次都插入队列
+        if (!w->_b_fevents)
         {
             wake = _io_actions.empty();
             _io_actions.emplace_back(w->_fd);
         }
+        w->_b_fevents |= events;
     }
-    // 如果不为空，说明之前通知过了，不需要再通知
+
     if (wake) _backend->wake();
 }
 
@@ -510,13 +504,8 @@ void EV::io_event_reify()
 
     for (auto w: _io_pendings)
     {
-        // io线程设置pendings事件时，主线程中的逻辑关闭了该io
-        if (EXPECT_TRUE(w->_active))
-        {
-            w->_io_index = 0;
-            _pendings.emplace_back(w);
-            w->_pending = (int32_t)_pendings.size();
-        }
+        feed_event(w, w->_b_revents);
+        w->_b_revents = 0;
     }
 
     _io_pendings.clear();
@@ -567,25 +556,13 @@ void EV::clear_pending(EVWatcher *w)
     }
 }
 
-void EV::clear_io_event(EVIO *w)
-{
-    if (w->_io_index)
-    {
-        assert(w == _io_pendings[w->_io_index - 1]);
-        _io_pendings[w->_io_index - 1] = nullptr;
-
-        w->_revents = 0;
-        w->_io_index = 0;
-    }
-}
-
 void EV::timers_reify()
 {
     while (_timer_cnt && (_timers[HEAP0])->_at <= _mn_time)
     {
         EVTimer *w = _timers[HEAP0];
 
-        assert(w->active());
+        assert(w->_index);
 
         if (w->_repeat)
         {
@@ -613,7 +590,7 @@ void EV::periodic_reify()
     {
         EVTimer *w = _periodics[HEAP0];
 
-        assert(w->active());
+        assert(w->_index);
 
         if (w->_repeat)
         {
@@ -652,18 +629,18 @@ int32_t EV::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t polic
     assert(w->_repeat >= 0);
 
     ++_timer_cnt;
-    int32_t active = _timer_cnt + HEAP0 - 1;
-    if (_timers.size() < (size_t)active + 1)
+    int32_t index = _timer_cnt + HEAP0 - 1;
+    if (_timers.size() < (size_t)index + 1)
     {
-        _timers.resize(active + 1024, nullptr);
+        _timers.resize(index + 1024, nullptr);
     }
 
-    _timers[active] = w;
-    up_heap(_timers.data(), active);
+    _timers[index] = w;
+    up_heap(_timers.data(), index);
 
-    assert(active >= 1 && _timers[w->_active] == w);
+    assert(index >= 1 && _timers[w->_index] == w);
 
-    return active;
+    return index;
 }
 
 int32_t EV::timer_stop(int32_t id)
@@ -683,26 +660,26 @@ int32_t EV::timer_stop(int32_t id)
 int32_t EV::timer_stop(EVTimer *w)
 {
     clear_pending(w);
-    if (EXPECT_FALSE(!w->active())) return 0;
+    if (EXPECT_FALSE(!w->_index)) return 0;
 
     {
-        int32_t active = w->_active;
+        int32_t index = w->_index;
 
-        assert(_timers[active] == w);
+        assert(_timers[index] == w);
 
         --_timer_cnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (EXPECT_TRUE(active < _timer_cnt + HEAP0))
+        if (EXPECT_TRUE(index < _timer_cnt + HEAP0))
         {
             // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
-            _timers[active] = _timers[_timer_cnt + HEAP0];
-            adjust_heap(_timers.data(), _timer_cnt, active);
+            _timers[index] = _timers[_timer_cnt + HEAP0];
+            adjust_heap(_timers.data(), _timer_cnt, index);
         }
     }
 
     w->_at -= _mn_time;
-    w->_active = 0;
+    w->_index = 0;
 
     return 0;
 }
@@ -723,18 +700,18 @@ int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat,
     w->_policy = policy;
 
     ++_periodic_cnt;
-    int32_t active = _periodic_cnt + HEAP0 - 1;
-    if (_periodics.size() < (size_t)active + 1)
+    int32_t index = _periodic_cnt + HEAP0 - 1;
+    if (_periodics.size() < (size_t)index + 1)
     {
-        _periodics.resize(active + 1024, nullptr);
+        _periodics.resize(index + 1024, nullptr);
     }
 
-    _periodics[active] = w;
-    up_heap(_periodics.data(), active);
+    _periodics[index] = w;
+    up_heap(_periodics.data(), index);
 
-    assert(active >= 1 && _periodics[w->_active] == w);
+    assert(index >= 1 && _periodics[w->_index] == w);
 
-    return active;
+    return index;
 }
 
 int32_t EV::periodic_stop(int32_t id)
@@ -755,21 +732,21 @@ int32_t EV::periodic_stop(int32_t id)
 int32_t EV::periodic_stop(EVTimer *w)
 {
     clear_pending(w);
-    if (EXPECT_FALSE(!w->active())) return 0;
+    if (EXPECT_FALSE(!w->_index)) return 0;
 
     {
-        int32_t active = w->_active;
+        int32_t index = w->_index;
 
-        assert(_periodics[active] == w);
+        assert(_periodics[index] == w);
 
         --_periodic_cnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (EXPECT_TRUE(active < _periodic_cnt + HEAP0))
+        if (EXPECT_TRUE(index < _periodic_cnt + HEAP0))
         {
             // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
-            _periodics[active] = _periodics[_periodic_cnt + HEAP0];
-            adjust_heap(_periodics.data(), _periodic_cnt, active);
+            _periodics[index] = _periodics[_periodic_cnt + HEAP0];
+            adjust_heap(_periodics.data(), _periodic_cnt, index);
         }
     }
 
@@ -793,12 +770,12 @@ void EV::down_heap(HeapNode *heap, int32_t N, int32_t k)
         if (he->_at <= (heap[c])->_at) break;
 
         heap[k]            = heap[c];
-        (heap[k])->_active = k;
+        (heap[k])->_index = k;
         k                  = c;
     }
 
     heap[k]     = he;
-    he->_active = k;
+    he->_index = k;
 }
 
 void EV::up_heap(HeapNode *heap, int32_t k)
@@ -812,12 +789,12 @@ void EV::up_heap(HeapNode *heap, int32_t k)
         if (UPHEAP_DONE(p, k) || (heap[p])->_at <= he->_at) break;
 
         heap[k]            = heap[p];
-        (heap[k])->_active = k;
+        (heap[k])->_index = k;
         k                  = p;
     }
 
     heap[k]     = he;
-    he->_active = k;
+    he->_index = k;
 }
 
 void EV::adjust_heap(HeapNode *heap, int32_t N, int32_t k)

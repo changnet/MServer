@@ -5,7 +5,6 @@
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
     _id      = 0;
-    _active  = 0;
     _pending = 0;
     _revents = 0;
 }
@@ -14,17 +13,15 @@ EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
 {
     _id     = id;
-
-    _emask  = 0;
     _fd     = fd;
-    _events = events;
+    _status = S_STOP;
 
-    _io_index = 0;
-
-    _action_ev = 0;
-
-    _extend_ev = 0;
-    _kernel_ev = 0;
+    _uevents = static_cast<uint8_t>(events);
+    _b_uevents = 0;
+    _b_revents = 0;
+    _b_kevents = 0;
+    _b_eevents = 0;
+    _b_fevents = 0;
 
     _io = nullptr;
 }
@@ -35,7 +32,7 @@ EVIO::~EVIO()
 
 void EVIO::set(int32_t events)
 {
-    _events = events;
+    _uevents = static_cast<uint8_t>(events);
     _loop->io_change(_id);
 }
 
@@ -80,6 +77,7 @@ void EVIO::init_connect()
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
 {
     _id     = id;
+    _index = 0;
     _policy = P_NONE;
     _at     = 0;
     _repeat = 0;

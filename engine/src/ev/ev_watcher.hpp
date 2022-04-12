@@ -18,9 +18,6 @@ public:
 
     virtual ~EVWatcher() {}
 
-    /// 当前watcher是否被激活
-    bool active() const { return 0 != _active; }
-
     /// 回调函数
     virtual void callback(int32_t revents)
     {
@@ -39,9 +36,8 @@ public:
 
 public:
     int32_t _id;      /// 唯一id
-    int32_t _active;  /// 定时器用作数组下标，io只是标记一下
     int32_t _pending; /// 在待处理watcher数组中的下标
-    int32_t _revents; /// 等待处理的事件
+    uint8_t _revents; /// receive events，收到并等待处理的事件
 
  protected:
 
@@ -57,12 +53,12 @@ class EVIO final : public EVWatcher
 {
 public:
     // io监听器的激活状态
-    enum ActiveStatus
+    enum Status
     {
-        AS_STOP  = 0,  // 停止状态
-        AS_START = 1,  // 激活
-        AS_NEW   = 2,  // 新增
-        AS_DEL   = 3   // 删除中
+        S_STOP  = 0,  // 停止状态
+        S_START = 1,  // 激活
+        S_NEW   = 2,  // 新增
+        S_DEL   = 3   // 删除中
     };
 
 public:
@@ -125,15 +121,19 @@ public:
 
 public:
 
+    int8_t _status; // 当前的状态
+    uint8_t _uevents; // user event，用户设置需要回调的事件，如EV_READ
+
+    // 带_b前缀的变量，都是和backend线程相关
+    // 这些变量要么只能在backend中操作，要么操作时必须加锁
+
+    uint8_t _b_uevents; // backend线程中的user events
+    uint8_t _b_revents; // backend线程中的receive events
+    uint8_t _b_kevents; // kernel(如epoll)中使用的events
+    uint8_t _b_eevents; // extra events，backend线程额外添加的事件，如EV_WRITE
+    uint8_t _b_fevents; // fast event，在主线程设置并立马唤配backend线程执行的事件
+
     int32_t _fd;     /// 文件描述符
-    int32_t _emask;  /// io线程中的事件
-    int32_t _events; /// 主线程设置需要关注的事件(稍后异步同步到_emask)
-    int32_t _extend_ev; /// 内核额外添加的事件，如EV_WRITE
-    int32_t _kernel_ev; /// 已经设置到内核(epoll、poll)的事件
-
-    int32_t _action_ev; /// 待处理的action
-
-    int32_t _io_index; /// io线程中的事件下标
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
@@ -162,9 +162,9 @@ public:
     /// 回调函数
     virtual void callback(int32_t revents);
 
-private:
-    friend class EV;
+public:
 
+    int32_t _index; // 当前定时器在二叉树数组中的下标
     int32_t _policy; ///< 修正定时器时间偏差策略，详见 reschedule 函数
     int64_t _at; ///< 定时器首次触发延迟的毫秒数（未激活），下次触发时间（已激活）
     int64_t _repeat; ///< 定时器重复的间隔（毫秒数）

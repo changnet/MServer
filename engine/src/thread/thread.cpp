@@ -65,6 +65,7 @@ void Thread::sig_handler(int32_t signum)
     // 但一般只处理前31个
     if (signum > 31) return;
    
+   int32_t old = _sig_mask;
     _sig_mask |= (1 << signum);
 
     // C++的condition_variable不是async-signal-safe的，因此这里可能有点问题
@@ -73,7 +74,12 @@ void Thread::sig_handler(int32_t signum)
     //      安全使用condition_variable唤醒主线程，但这个比较复杂且win下不好实现
     //      参考：https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
     // 
-    // 方案2是把主线程的超时时间设置为1秒左右，不通知主线程而是等超时
+    // 这里暂时用_sig_mask判断一下，如果不为0说明已经唤醒过了，不需要再次唤醒
+    // 当然这个不是很准，可能设置完_sig_mask的值另一线程重新进入睡眠了
+    // 由于这里信号使用很少，未生效可以多次发
+    if (old) return;
+
+    StaticGlobal::ev()->set_job(true);
     StaticGlobal::ev()->wake_safe();
 }
 
