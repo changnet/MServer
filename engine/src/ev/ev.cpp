@@ -122,7 +122,7 @@ EV::EV()
     _timers.reserve(1024);
     _periodics.reserve(1024);
     _io_fevents.reserve(1024);
-    io_revent.reserve(1024);
+    _io_revents.reserve(1024);
 
     _has_job = false;
 
@@ -288,7 +288,7 @@ EVIO *EV::io_start(int32_t id, int32_t fd, int32_t events)
     // set_fast_io(fd, w);
 
     w->_status = EVIO::S_NEW;
-    io_change(id);
+    io_change(w);
 
     return w;
 }
@@ -304,7 +304,7 @@ int32_t EV::io_stop(int32_t id)
     // clear_pending(w);
 
     w->_status = EVIO::S_STOP;
-    io_change(id);
+    io_change(w);
 
     return 0;
 }
@@ -315,9 +315,29 @@ int32_t EV::io_delete(int32_t id)
     if (!w) return -1;
 
     w->_status = EVIO::S_DEL;
-    io_change(id);
+    io_change(w);
 
     return 0;
+}
+
+void EV::clear_io_fast_event(EVIO *w)
+{
+    if (w->_b_fevent_index)
+    {
+        assert(w->_b_fevent_index <= (int32_t)_io_fevents.size());
+        _io_fevents[w->_b_fevent_index - 1] = nullptr;
+        w->_b_fevent_index = 0;
+    }
+}
+
+void EV::clear_io_receive_event(EVIO *w)
+{
+    if (w->_b_revent_index)
+    {
+        assert(w->_b_revent_index <= (int32_t)_io_revents.size());
+        _io_revents[w->_b_revent_index - 1] = nullptr;
+        w->_b_revent_index = 0;
+    }
 }
 
 void EV::set_fast_io(int32_t fd, EVIO *w)
@@ -350,31 +370,30 @@ void EV::io_reify()
 
     {
         std::lock_guard<std::mutex> lg(lock());
-        for (auto id : _io_changes)
+        for (auto w : _io_changes)
         {
-            EVIO *io = get_io(id);
+            w->_change_index = 0;
 
-            assert(io);
-
-            int32_t fd = io->_fd;
-            switch(io->_status)
+            int32_t fd = w->_fd;
+            switch(w->_status)
             {
             case EVIO::S_STOP:
-                _backend->modify(fd, io); // 移除该socket
+                _backend->modify(fd, w); // 移除该socket
                 break;
             case EVIO::S_START:
-                _backend->modify(fd, io);
+                _backend->modify(fd, w);
                 break;
             case EVIO::S_NEW:
-                io->_status = EVIO::S_START;
-                set_fast_io(fd, io);
-                _backend->modify(fd, io);
+                w->_status = EVIO::S_START;
+                set_fast_io(fd, w);
+                _backend->modify(fd, w);
                 break;
             case EVIO::S_DEL:
-                // 删除的时候，如果这个值不为空，那它的指针会在队列里
-                assert(0 == io->_b_revents);
+                // backend线程执行删除时，可能之前有一些fevents或者revents已触发
+                clear_io_fast_event(w);
+                clear_io_receive_event(w);
 
-                _io_mgr.erase(fd);
+                _io_mgr.erase(w->_id);
                 set_fast_io(fd, nullptr);
                 break;
             }
@@ -468,14 +487,24 @@ void EV::time_update()
     }
 }
 
+void EV::io_change(EVIO *w)
+{
+    // 通过_change_index判断是否重复添加
+    if (!w->_change_index)
+    {
+        _io_changes.emplace_back(w);
+        w->_change_index = static_cast<int32_t>(_io_changes.size());
+    }
+}
+
 void EV::io_receive_event(EVIO *w, int32_t revents)
 {
+    w->_b_revents |= static_cast<uint8_t>(revents);
     if (EXPECT_TRUE(!w->_b_revent_index))
     {
-        io_revent.emplace_back(w);
-        w->_b_revent_index = static_cast<int32_t>(io_revent.size());
+        _io_revents.emplace_back(w);
+        w->_b_revent_index = static_cast<int32_t>(_io_revents.size());
     }
-    w->_b_revents |= static_cast<uint8_t>(revents);
 }
 
 void EV::io_fast_event(EVIO *w, int32_t events)
@@ -505,14 +534,17 @@ void EV::io_receive_event_reify()
     // if (!_mutex.try_lock()) return;
     std::lock_guard<std::mutex> lg(lock());
 
-    for (auto w: io_revent)
+    for (auto w: _io_revents)
     {
+        // watcher被删掉时会置为nullptr
+        if (!w) continue;
+
         feed_event(w, w->_b_revents);
         w->_b_revents = 0;
         w->_b_revent_index = 0;
     }
 
-    io_revent.clear();
+    _io_revents.clear();
 }
 
 void EV::feed_event(EVWatcher *w, int32_t revents)

@@ -93,9 +93,9 @@ t_describe("http(s) test", function()
         local port = 8182
         local no_len_ctx = "no_len_test ctx 1111111122222223333aaaabbbbbbccccc"
 
-        local srv_conn = HttpConn()
-        srv_conn:listen(local_host, port)
-        srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        local listen_conn = HttpConn()
+        listen_conn:listen(local_host, port)
+        listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
             t_equal(network_mgr:address(conn.conn_id), local_host)
 
@@ -120,7 +120,7 @@ t_describe("http(s) test", function()
                 t_assert(false)
             end
         end
-        srv_conn.on_disconnected = function(conn, e)
+        listen_conn.on_disconnected = function(conn, e)
             if 0 ~= e then
                 print("error >>>>>>>>>>>>>>>>>>>", e)
             end
@@ -143,6 +143,7 @@ t_describe("http(s) test", function()
                             t_equal(code3, 200)
                             t_equal(body3, no_len_ctx)
                             clt_conn:close()
+                            listen_conn:close()
                             t_done()
                         end)
                 end)
@@ -196,10 +197,12 @@ t_describe("http(s) test", function()
 
         local port = 8183
 
-        local srv_conn = HttpConn()
-        srv_conn:listen_s(local_host, port, srv_ssl)
-        srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        local srv_conn = nil
+        local listen_conn = HttpConn()
+        listen_conn:listen_s(local_host, port, srv_ssl)
+        listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
+            srv_conn = conn
 
             -- 1 = GET, 3 = POST
             if "/get" == url then
@@ -226,6 +229,7 @@ t_describe("http(s) test", function()
                     t_equal(code2, 200)
                     clt_conn:close()
                     srv_conn:close()
+                    listen_conn:close()
                     t_done()
                 end)
             end)
@@ -256,10 +260,12 @@ t_describe("http(s) test", function()
 
         local port = 8184
 
-        local srv_conn = HttpConn()
-        srv_conn:listen_s(local_host, port, vfy_srv_ssl)
-        srv_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        local srv_conn = nil
+        local listen_conn = HttpConn()
+        listen_conn:listen_s(local_host, port, vfy_srv_ssl)
+        listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
+            srv_conn = conn
 
             -- 1 = GET, 3 = POST
             if "/get" == url then
@@ -286,6 +292,7 @@ t_describe("http(s) test", function()
                     t_equal(code2, 200)
                     clt_conn:close()
                     srv_conn:close()
+                    listen_conn:close()
                     t_done()
                 end)
             end)

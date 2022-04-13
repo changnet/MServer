@@ -37,7 +37,7 @@ EVIO::~EVIO()
 void EVIO::set(int32_t events)
 {
     _uevents = static_cast<uint8_t>(events);
-    _loop->io_change(_id);
+    _loop->io_change(this);
 }
 
 IO::IOStatus EVIO::recv()

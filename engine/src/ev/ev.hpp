@@ -143,10 +143,8 @@ public:
      * @brief 标记io变化，稍后异步处理
      * @param fd
      */
-    void io_change(int32_t fd)
-    {
-        _io_changes.emplace_back(fd);
-    }
+    void io_change(EVIO *w);
+
     /**
      * @brief 主线程把一个io操作事件发送给backend线程并马上唤醒它来执行
      * @param fd
@@ -201,6 +199,16 @@ protected:
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
     void clear_pending(EVWatcher *w);
+    /**
+     * 清除等待backend线程处理的事件
+     * @param w io监听器
+     */
+    void clear_io_fast_event(EVIO *w);
+    /**
+     * 清除该监听器收到的io事件
+     * @param w io监听器
+     */
+    void clear_io_receive_event(EVIO *w);
     void io_receive_event_reify();
     void timers_reify();
     void periodic_reify();
@@ -225,7 +233,7 @@ protected:
     // !!下面这两个触发比较频繁，因此使用指针而不是fd，io_stop时要小心维护
 
     /// 收到的io待处理事件
-    std::vector<EVIO *> io_revent;
+    std::vector<EVIO *> _io_revents;
     /// 触发了事件，等待处理的watcher
     std::vector<EVWatcher *> _pendings;
 
@@ -245,7 +253,7 @@ protected:
     /////////////////////////////////////////////
 
     /// 已经改变，等待设置到内核的io watcher
-    std::vector<int32_t> _io_changes;
+    std::vector<EVIO *> _io_changes;
 
     /// 用于通过fd快速获取io对象
     std::vector<EVIO *> _io_fast;
