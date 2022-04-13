@@ -121,7 +121,8 @@ EV::EV()
     _pendings.reserve(1024);
     _timers.reserve(1024);
     _periodics.reserve(1024);
-    _io_actions.reserve(1024);
+    _io_fevents.reserve(1024);
+    io_revent.reserve(1024);
 
     _has_job = false;
 
@@ -231,7 +232,7 @@ int32_t EV::loop()
         _backend_time_coarse = BACKEND_MAX_TM + _mn_time;
 
         // 收集io事件
-        io_event_reify();
+        io_receive_event_reify();
         // 处理timer超时
         timers_reify();
         // 处理periodic超时
@@ -467,54 +468,57 @@ void EV::time_update()
     }
 }
 
-void EV::io_event(EVIO *w, int32_t revents)
+void EV::io_receive_event(EVIO *w, int32_t revents)
 {
-    if (EXPECT_TRUE(!w->_b_revents))
+    if (EXPECT_TRUE(!w->_b_revent_index))
     {
-        _io_pendings.emplace_back(w);
+        io_revent.emplace_back(w);
+        w->_b_revent_index = static_cast<int32_t>(io_revent.size());
     }
-    w->_b_revents |= revents;
+    w->_b_revents |= static_cast<uint8_t>(revents);
 }
 
-void EV::io_action(EVIO *w, int32_t events)
+void EV::io_fast_event(EVIO *w, int32_t events)
 {
     bool wake = false;
     {
         std::lock_guard<SpinLock> lg(_spin_lock);
 
-        // 旧事件不为0，说明之前已经插入队伍并且唤醒过backend线程了
+        w->_b_fevents |= static_cast<uint8_t>(events);
+
         // 玩家登录的时候，可能有上百次数据发送，不要每次都插入队列
-        if (!w->_b_fevents)
+        if (!w->_b_fevent_index)
         {
-            wake = _io_actions.empty();
-            _io_actions.emplace_back(w->_fd);
+            wake = _io_fevents.empty();
+            _io_fevents.emplace_back(w);
+            w->_b_fevent_index = static_cast<int32_t>(_io_fevents.size());
         }
-        w->_b_fevents |= events;
     }
 
     if (wake) _backend->wake();
 }
 
-void EV::io_event_reify()
+void EV::io_receive_event_reify()
 {
     // 如果被io线程占用了，那也没关系，后面再重试
     // TODO 如果io线程太忙，会不会一直获取不到？
     // if (!_mutex.try_lock()) return;
     std::lock_guard<std::mutex> lg(lock());
 
-    for (auto w: _io_pendings)
+    for (auto w: io_revent)
     {
         feed_event(w, w->_b_revents);
         w->_b_revents = 0;
+        w->_b_revent_index = 0;
     }
 
-    _io_pendings.clear();
+    io_revent.clear();
 }
 
 void EV::feed_event(EVWatcher *w, int32_t revents)
 {
     // 已经在待处理队列里了，则设置事件即可
-    w->_revents |= revents;
+    w->_revents |= static_cast<uint8_t>(revents);
     if (EXPECT_TRUE(!w->_pending))
     {
         _pendings.emplace_back(w);

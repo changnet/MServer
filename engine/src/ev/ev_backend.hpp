@@ -5,11 +5,11 @@
  * 主线程：
  *  io_change（增、删、改），必须不能加锁
  *  io_reify 加锁
- *  io_event_reify 加锁
+ *  io_receive_event_reify 加锁
  * 
  * io线程(除了wait以外，全部加锁)：
  *  get_io 加锁，保证io_mgr对象操作安全
- *  io_event 加锁，保证和主线程交换event时不出错
+ *  io_receive_event 加锁，保证和主线程交换event时不出错
  *  io读写时加锁，保证读写时，主线程的io对象不被删除
  * 
  * io的读写必须支持多线程无锁，因为这时主线程处理逻辑数据，io线程在读写

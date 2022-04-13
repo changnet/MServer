@@ -148,19 +148,21 @@ public:
         _io_changes.emplace_back(fd);
     }
     /**
-     * @brief 主线程把一个io操作发送给io线程执行
+     * @brief 主线程把一个io操作事件发送给backend线程并马上唤醒它来执行
      * @param fd
      * @param events
      */
-    void io_action(EVIO *w, int32_t events);
+    void io_fast_event(EVIO *w, int32_t events);
 
-    /// 获取当前未处理的io事件
-    std::vector<int32_t> &get_io_action()
+    /**
+     * 获取backend线程待处理的事件
+     */
+    std::vector<EVIO *> &get_fast_event()
     {
-        return _io_actions;
+        return _io_fevents;
     }
     /// 其他线程发送io事件给主线程处理(此函数需要外部加锁)
-    void io_event(EVIO *w, int32_t revents);
+    void io_receive_event(EVIO *w, int32_t revents);
 
     /// 获取加锁对象
     std::mutex &lock()
@@ -199,7 +201,7 @@ protected:
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
     void clear_pending(EVWatcher *w);
-    void io_event_reify();
+    void io_receive_event_reify();
     void timers_reify();
     void periodic_reify();
     void down_heap(HeapNode *heap, int32_t N, int32_t k);
@@ -222,8 +224,8 @@ protected:
     /////////////////////////////////////////////
     // !!下面这两个触发比较频繁，因此使用指针而不是fd，io_stop时要小心维护
 
-    /// 触发了事件，等待处理的io,由io线程设置
-    std::vector<EVIO *> _io_pendings;
+    /// 收到的io待处理事件
+    std::vector<EVIO *> io_revent;
     /// 触发了事件，等待处理的watcher
     std::vector<EVWatcher *> _pendings;
 
@@ -236,8 +238,8 @@ protected:
     // 如果用指针的话，这个指针在io获取后，还没来得及处理
     // 对象可能就被主线程删除了，指针就失效了。如果加锁，主线程就被卡
 
-    /// 在主线程设置的actioin，待io线程处理
-    std::vector<int32_t> _io_actions;
+    /// 在主线程设置，待backend线程处理的事件
+    std::vector<EVIO *> _io_fevents;
 
     /////////////////////////////////////////////
     /////////////////////////////////////////////

@@ -23,6 +23,10 @@ EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
     _b_eevents = 0;
     _b_fevents = 0;
 
+    _change_index = 0;
+    _b_fevent_index = 0;
+    _b_revent_index = 0;
+
     _io = nullptr;
 }
 
@@ -59,7 +63,7 @@ void EVIO::init_accept()
     int32_t ev = _io->init_accept(_fd);
     if (ev)
     {
-        _loop->io_action(this, ev);
+        _loop->io_fast_event(this, ev);
     }
 }
 
@@ -68,7 +72,7 @@ void EVIO::init_connect()
     int32_t ev = _io->init_connect(_fd);
     if (ev)
     {
-        _loop->io_action(this, ev);
+        _loop->io_fast_event(this, ev);
     }
 }
 

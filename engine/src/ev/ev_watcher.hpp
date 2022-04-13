@@ -135,6 +135,10 @@ public:
 
     int32_t _fd;     /// 文件描述符
 
+    int32_t _change_index; // 在io_changes数组中的下标
+    int32_t _b_fevent_index; // 在io_fevents数组中的下标
+    int32_t _b_revent_index; // 在io_revents数组中的下标
+
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
     IO *_io; /// 负责数据读写的io对象，如ssl读写

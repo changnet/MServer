@@ -80,7 +80,7 @@ void Thread::sig_handler(int32_t signum)
     if (old) return;
 
     StaticGlobal::ev()->set_job(true);
-    StaticGlobal::ev()->wake_safe();
+    StaticGlobal::ev()->wake();
 }
 
 void Thread::signal(int32_t sig, int32_t action)

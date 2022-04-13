@@ -221,7 +221,7 @@ void Socket::append(const void *data, size_t len)
 
 void Socket::flush()
 {
-    StaticGlobal::ev()->io_action(_w, EV_WRITE);
+    StaticGlobal::ev()->io_fast_event(_w, EV_WRITE);
 }
 
 int32_t Socket::block(int32_t fd)

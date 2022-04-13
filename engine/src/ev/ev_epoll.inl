@@ -49,7 +49,7 @@ private:
     /// 处理epoll事件
     void do_event(int32_t ev_count);
     /// 处理主线程发起的io事件
-    void do_action(const std::vector<int32_t> &actions);
+    void do_fast_event(std::vector<EVIO *> &fast_events);
 
     /**
      * @brief 冗余检测该fd是否在epoll中
@@ -143,7 +143,7 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         // 发送完则需要删除写事件，不然会一直触发
         if (EV_WRITE == ev && (w->_b_eevents & EV_WRITE))
         {
-            w->_b_eevents &= ~EV_WRITE;
+            w->_b_eevents &= static_cast<uint8_t>(~EV_WRITE);
             modify_watcher(w);
         }
         return true;
@@ -166,7 +166,7 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     case IO::IOS_ERROR:
         // TODO 错误时是否要传一个错误码给主线程
         _has_ev = true;
-        _ev->io_event(w, EV_CLOSE);
+        _ev->io_receive_event(w, EV_CLOSE);
         modify_fd(w->_fd, EPOLL_CTL_DEL, 0);
         return false;
     default: ELOG("unknow io status: %d", status); return false;
@@ -175,33 +175,22 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     return false;
 }
 
-void FinalBackend::do_action(const std::vector<int32_t> &actions)
+void FinalBackend::do_fast_event(std::vector<EVIO *> &fast_events)
 {
-    for (auto fd : actions)
+    for (auto w : fast_events)
     {
-        EVIO *w = _ev->get_fast_io(fd);
-        // 主线程发出io请求后，后续逻辑可能删掉了这个对象，但没清掉action
-        if (!w)
-        {
-            // 假如一个socket调用io_start，接着调用io_stop，那么它的io_watcher就
-            // 不会设置。这里做一下冗余检测
-            if (try_del_epoll_fd(fd))
-            {
-                ELOG("%s:epoll fd no io watcher found", __FUNCTION__);
-            }
-            continue;
-        }
+        // 主线程发出io请求后，后续逻辑可能删掉了这个对象
+        if (!w) continue;
 
         int32_t events = 0;
         {
             std::lock_guard<SpinLock> lg(_ev->fast_lock());
             events           = w->_b_fevents;
             w->_b_fevents    = 0;
+            w->_b_fevent_index = 0;
         }
 
-        // 主线程设置事件的时候，可能刚好被io线程处理完了
-        // 极限情况下，主线程的fd是被断开又重连，根本不是同一个io对象
-        if (0 == events) continue;
+        assert(events);
 
         if (events & EV_ACCEPT)
         {
@@ -272,7 +261,7 @@ void FinalBackend::do_event(int32_t ev_count)
             // 导致io线程一直触发这个事件
             if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
             {
-                w->_b_uevents &= ~EV_CONNECT;
+                w->_b_uevents &= static_cast<uint8_t>(~EV_CONNECT);
                 modify_watcher(w);
             }
 
@@ -292,7 +281,7 @@ void FinalBackend::do_event(int32_t ev_count)
             // 导致io线程一直触发这个事件
             if (EXPECT_FALSE(kernel_ev & EV_ACCEPT))
             {
-                w->_b_uevents &= ~EV_ACCEPT;
+                w->_b_uevents &= static_cast<uint8_t>(~EV_ACCEPT);
                 modify_watcher(w);
             }
 
@@ -313,7 +302,7 @@ void FinalBackend::do_event(int32_t ev_count)
         if (expect_ev)
         {
             _has_ev = true;
-            _ev->io_event(w, expect_ev);
+            _ev->io_receive_event(w, expect_ev);
         }
     }
 }
@@ -347,8 +336,8 @@ void FinalBackend::backend()
         do_modify();
     }
 
-    std::vector<int32_t> actions;
-    actions.reserve(1024);
+    std::vector<EVIO *> fast_events;
+    fast_events.reserve(1024);
 
     while (!_done)
     {
@@ -369,9 +358,9 @@ void FinalBackend::backend()
 
         // 主线程和io线程会频繁交换action,因此使用一个快速、独立的锁
         {
-            actions.clear();
+            fast_events.clear();
             std::lock_guard<SpinLock> lg(_ev->fast_lock());
-            actions.swap(_ev->get_io_action());
+            fast_events.swap(_ev->get_fast_event());
         }
 
         // TODO 下面的操作，是每个操作，加锁、解锁一次，还是全程解锁呢？
@@ -379,7 +368,7 @@ void FinalBackend::backend()
         {
             std::lock_guard<std::mutex> lg(_ev->lock());
 
-            do_action(actions);
+            do_fast_event(fast_events);
             do_event(ev_count);
             do_modify();
 
@@ -441,7 +430,7 @@ void FinalBackend::modify(int32_t fd, EVIO *w)
      * 如同epoll总是会触发EPOLLERR和EPOLLHUP，不管有没有设置
      */
     w->_b_uevents = (EVIO::S_START == w->_status) ?
-        (w->_uevents | EV_ERROR | EV_CLOSE) : 0;
+        static_cast<uint8_t>(w->_uevents | EV_ERROR | EV_CLOSE) : 0;
 
     _modify_fd.push_back(fd);
 }
@@ -485,11 +474,11 @@ int32_t FinalBackend::modify_watcher(EVIO *w)
     {
         // 关闭连接，并通知主线程那边做后续清理工作
         _has_ev = true;
-        _ev->io_event(w, EV_CLOSE);
+        _ev->io_receive_event(w, EV_CLOSE);
     }
 
     // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
-    w->_b_kevents = new_ev;
+    w->_b_kevents = static_cast<uint8_t>(new_ev);
 
     return modify_fd(w->_fd, op, new_ev);
 }
