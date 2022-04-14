@@ -45,6 +45,15 @@ public:
     void backend();
     void modify(int32_t fd, EVIO *w);
 
+    /**
+     * 派发watcher回调事件
+     */
+    void feed_receive_event(EVIO *w, int32_t ev)
+    {
+        _has_ev = true;
+        _ev->io_receive_event(w, ev);
+    }
+
 private:
     /// 处理epoll事件
     void do_event(int32_t ev_count);
@@ -84,6 +93,28 @@ private:
      */
     int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev);
 
+    /**
+     * 获取从backend对象创建以来的毫秒数
+     */
+    int64_t get_time_interval()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - _beg_time).count();
+    }
+
+    /**
+     * 删除主动关闭，等待删除的watcher
+     */
+    void add_pending_watcher(int32_t fd);
+    /**
+     * 检测主动关闭，等待删除的watcher是否超时
+     */
+    void check_pending_watcher(int64_t now);
+    /**
+     * 删除主动关闭，等待删除的watcher
+     */
+    void del_pending_watcher(int32_t fd, EVIO *w);
+
 private:
     std::thread _thread;
 
@@ -92,8 +123,14 @@ private:
     int32_t _wake_fd; /// 用于唤醒子线程的fd
     epoll_event _ep_ev[EPOLL_MAXEV];
 
+    // 线程开始时间
+    std::chrono::time_point<std::chrono::steady_clock> _beg_time;
+
     /// 等待变更到epoll的fd
     std::vector<int32_t> _modify_fd;
+
+    // 待发送完数据后删除的watcher
+    std::unordered_map<int32_t, int64_t> _pending_watcher;
 };
 
 FinalBackend::FinalBackend()
@@ -101,6 +138,8 @@ FinalBackend::FinalBackend()
     _has_ev  = false;
     _ep_fd   = -1;
     _wake_fd = -1;
+
+    _beg_time = std::chrono::steady_clock::now();
 }
 
 FinalBackend::~FinalBackend()
@@ -141,10 +180,18 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     {
     case IO::IOS_OK:
         // 发送完则需要删除写事件，不然会一直触发
-        if (EV_WRITE == ev && (w->_b_eevents & EV_WRITE))
+        if (EV_WRITE == ev)
         {
-            w->_b_eevents &= static_cast<uint8_t>(~EV_WRITE);
-            modify_watcher(w);
+            // 发送完后主动关闭主动关闭
+            if (w->_b_uevents & EV_CLOSE)
+            {
+                del_pending_watcher(-1, w);
+            }
+            else if (w->_b_eevents & EV_WRITE)
+            {
+                w->_b_eevents &= static_cast<uint8_t>(~EV_WRITE);
+                modify_watcher(w);
+            }
         }
         return true;
     case IO::IOS_READ:
@@ -165,9 +212,7 @@ bool FinalBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     case IO::IOS_CLOSE:
     case IO::IOS_ERROR:
         // TODO 错误时是否要传一个错误码给主线程
-        _has_ev = true;
-        _ev->io_receive_event(w, EV_CLOSE);
-        modify_fd(w->_fd, EPOLL_CTL_DEL, 0);
+        del_pending_watcher(-1, w);
         return false;
     default: ELOG("unknow io status: %d", status); return false;
     }
@@ -246,7 +291,8 @@ void FinalBackend::do_event(int32_t ev_count)
         }
 
         int32_t events          = 0;             // 最终需要触发的事件
-        int32_t expect_ev       = w->_b_uevents;     // 期望触发回调的事件
+        // 期望触发回调的事件，关闭和错误事件不管用户是否设置，都会触发
+        int32_t expect_ev       = w->_b_uevents | EV_ERROR | EV_CLOSE;
         const int32_t kernel_ev = w->_b_kevents; // 内核事件
         if (ev->events & EPOLLOUT)
         {
@@ -299,11 +345,7 @@ void FinalBackend::do_event(int32_t ev_count)
         // 假如socket关闭时，用户已不希望回调任何事件，但这时对方可能会发送数据
         // 触发EV_READ事件
         expect_ev &= events;
-        if (expect_ev)
-        {
-            _has_ev = true;
-            _ev->io_receive_event(w, expect_ev);
-        }
+        if (expect_ev) feed_receive_event(w, expect_ev);
     }
 }
 
@@ -339,10 +381,14 @@ void FinalBackend::backend()
     std::vector<EVIO *> fast_events;
     fast_events.reserve(1024);
 
+    int64_t last = get_time_interval();
+
+    // 不能wait太久，要定时检测超时删除的连接
+    static const int32_t wait_tm = 2000;
+
     while (!_done)
     {
-        int32_t ev_count =
-            epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, (int32_t)BACKEND_MAX_TM);
+        int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, wait_tm);
         if (EXPECT_FALSE(ev_count < 0))
         {
             if (errno != EINTR)
@@ -371,6 +417,14 @@ void FinalBackend::backend()
             do_fast_event(fast_events);
             do_event(ev_count);
             do_modify();
+
+            // 检测待删除的连接是否超时
+            int64_t now = get_time_interval();
+            if (now - last > 2000)
+            {
+                last = now;
+                check_pending_watcher(now);
+            }
 
             if (_has_ev)
             {
@@ -425,12 +479,8 @@ void FinalBackend::modify(int32_t fd, EVIO *w)
      * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
      */
 
-    /**
-     * 任意时候，都会回调error和close事件
-     * 如同epoll总是会触发EPOLLERR和EPOLLHUP，不管有没有设置
-     */
-    w->_b_uevents = (EVIO::S_START == w->_status) ?
-        static_cast<uint8_t>(w->_uevents | EV_ERROR | EV_CLOSE) : 0;
+
+    w->_b_uevents = w->_uevents;
 
     _modify_fd.push_back(fd);
 }
@@ -440,41 +490,52 @@ void FinalBackend::do_modify()
     for (auto &fd : _modify_fd)
     {
         EVIO *w = _ev->get_fast_io(fd);
-        if (w)
-        {
-            modify_watcher(w);
-        }
-        else
-        {
-            // 假如一个socket调用io_start，接着调用io_stop，那么它的io_watcher就
-            // 不会设置。这里做一下冗余检测
-            if (try_del_epoll_fd(fd))
-            {
-                ELOG("%s:epoll fd no io watcher found", __FUNCTION__);
-            }
-        }
+
+        assert(w);
+        modify_watcher(w);
     }
     _modify_fd.clear();
 }
 
 int32_t FinalBackend::modify_watcher(EVIO *w)
 {
+    // 对方已经关闭了连接
+    if (w->_b_eevents & EV_CLOSE) return 0;
+
     int32_t new_ev = 0;
     int32_t op = EPOLL_CTL_DEL;
 
-    // 如果该watcher处于活动状态，_emask一定不会为0，至少会有EV_ERROR | EV_CLOSE
-    if (w->_b_uevents)
+    auto b_uevents = w->_b_uevents;
+    if (b_uevents & EV_FLUSH)
     {
-        int32_t old_ev = w->_b_kevents;
-        new_ev = w->_b_uevents | w->_b_eevents;
+        // 尝试发送一下，大部分情况下都是没数据可以发送的
+        // 如果有，那也应该会在fast_event那边处理
+        if (IO::IOS_WRITE == w->send())
+        {
+            int32_t old_ev = w->_b_kevents;
+            new_ev = w->_b_eevents;
 
-        op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+            op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+
+            add_pending_watcher(w->_fd);
+        }
+        else
+        {
+            // 没有数据要发送或者发送出错直接关闭连接，并通知主线程那边做后续清理工作
+            feed_receive_event(w, EV_CLOSE);
+        }
+    }
+    else if (b_uevents & EV_CLOSE)
+    {
+        // 直接关闭连接，并通知主线程那边做后续清理工作
+        feed_receive_event(w, EV_CLOSE);
     }
     else
     {
-        // 关闭连接，并通知主线程那边做后续清理工作
-        _has_ev = true;
-        _ev->io_receive_event(w, EV_CLOSE);
+        int32_t old_ev = w->_b_kevents;
+        new_ev = b_uevents | w->_b_eevents;
+
+        op = old_ev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
     }
 
     // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
@@ -581,4 +642,49 @@ int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
     }
 
     return errno;
+}
+
+void FinalBackend::add_pending_watcher(int32_t fd)
+{
+    int64_t now = get_time_interval();
+    auto ret = _pending_watcher.emplace(fd, now);
+    if (false == ret.second)
+    {
+        ELOG("pending watcher already exist: %d", fd);
+    }
+}
+
+void FinalBackend::check_pending_watcher(int64_t now)
+{
+    // C++14以后，允许在循环中删除
+    static_assert(__cplusplus > 201402L);
+
+    for (auto iter = _pending_watcher.begin(); iter != _pending_watcher.end(); iter++)
+    {
+        if (now - iter->second > 10000)
+        {
+            del_pending_watcher(iter->first, nullptr);
+            iter = _pending_watcher.erase(iter);
+        }
+    }
+}
+
+void FinalBackend::del_pending_watcher(int32_t fd, EVIO *w)
+{
+    // 未传w则是定时检测时调用，在for循环中已经删除了，这里不需要再次删除
+    if (!w)
+    {
+        w = _ev->get_fast_io(fd);
+        assert(w && fd == w->_fd);
+    }
+    else
+    {
+        _pending_watcher.erase(fd);
+    }
+
+    // 标记为已关闭
+    w->_b_eevents |= EV_CLOSE;
+
+    feed_receive_event(w, EV_CLOSE);
+    modify_fd(w->_fd, EPOLL_CTL_DEL, 0);
 }

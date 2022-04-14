@@ -221,6 +221,9 @@ int32_t EV::loop()
                 _cv.wait_for(ul, std::chrono::milliseconds(backend_time));
             }
             _has_job = false;
+
+            // 收集io事件 放这里不再额外加锁
+            io_receive_event_reify();
         }
 
         time_update();
@@ -231,8 +234,6 @@ int32_t EV::loop()
         // 这说明主循环比较繁忙，会被修正为BACKEND_MIN_TM，而不是精确的按预定时间执行
         _backend_time_coarse = BACKEND_MAX_TM + _mn_time;
 
-        // 收集io事件
-        io_receive_event_reify();
         // 处理timer超时
         timers_reify();
         // 处理periodic超时
@@ -293,7 +294,7 @@ EVIO *EV::io_start(int32_t id, int32_t fd, int32_t events)
     return w;
 }
 
-int32_t EV::io_stop(int32_t id)
+int32_t EV::io_stop(int32_t id, bool flush)
 {
     // 这里不能删除watcher，因为io线程可能还在使用，只是做个标记
     // 这里是由上层逻辑调用，也不要直接加锁去删除watcher，防止堆栈中还有引用
@@ -302,6 +303,8 @@ int32_t EV::io_stop(int32_t id)
 
     // 不能删event，因为有些event还是需要，比如EV_CLOSE
     // clear_pending(w);
+
+    w->_uevents = static_cast<uint8_t>(flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
 
     w->_status = EVIO::S_STOP;
     io_change(w);
@@ -390,6 +393,7 @@ void EV::io_reify()
                 break;
             case EVIO::S_DEL:
                 // backend线程执行删除时，可能之前有一些fevents或者revents已触发
+                clear_pending(w);
                 clear_io_fast_event(w);
                 clear_io_receive_event(w);
 
@@ -529,10 +533,8 @@ void EV::io_fast_event(EVIO *w, int32_t events)
 
 void EV::io_receive_event_reify()
 {
-    // 如果被io线程占用了，那也没关系，后面再重试
-    // TODO 如果io线程太忙，会不会一直获取不到？
-    // if (!_mutex.try_lock()) return;
-    std::lock_guard<std::mutex> lg(lock());
+    // 外部加锁
+    // std::lock_guard<std::mutex> lg(lock());
 
     for (auto w: _io_revents)
     {

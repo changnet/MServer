@@ -166,7 +166,7 @@ void Socket::stop(bool flush, bool term)
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
     // ev那边需要做异步删除
-    if (_w) StaticGlobal::ev()->io_stop(_conn_id);
+    if (_w) StaticGlobal::ev()->io_stop(_conn_id, flush);
 
     // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
     // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd

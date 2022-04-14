@@ -18,6 +18,7 @@ enum
     EV_ACCEPT  = 0x004, /// 4  监听到有新连接
     EV_CONNECT = 0x008, /// 8  连接成功或者失败
     EV_CLOSE   = 0x010, /// 16 socket关闭
+    EV_FLUSH   = 0x020, /// 32 发送数据，随后关闭
     EV_TIMER   = 0x080, /// 128 定时器超时
     EV_ERROR   = 0x100  /// 256 出错
 };
@@ -57,9 +58,10 @@ public:
     /**
      * @brief 通知io线程停止一个io监听
      * @param id 唯一的id
+     * @param flush 是否发送完数据再关闭
      * @return
      */
-    int32_t io_stop(int32_t id);
+    int32_t io_stop(int32_t id, bool flush);
     /**
      * @brief 删除一个io监听器
      * @param id 唯一的id
