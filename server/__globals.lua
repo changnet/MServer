@@ -1,4 +1,4 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -150,6 +150,7 @@ return {
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua
 "t_assert", -- src/global/test.lua
+"t_async", -- src/global/test.lua
 "t_before", -- src/global/test.lua
 "t_describe", -- src/global/test.lua
 "t_done", -- src/global/test.lua

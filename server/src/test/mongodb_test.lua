@@ -19,7 +19,7 @@ t_describe("mongodb test", function()
     end)
 
     t_it("mongodb base test", function()
-        t_wait(10000)
+        t_async(10000)
 
         mongodb = Mongodb()
 
@@ -181,7 +181,7 @@ t_describe("mongodb test", function()
     ]]
     t_it(string.format("mongodb json insert %d perf test", max_insert),
          function()
-        t_wait(20000)
+        t_async(20000)
         for i = 1, max_insert do
             local data = {}
             data._id = i
@@ -203,7 +203,7 @@ t_describe("mongodb test", function()
 
     t_it(string.format("mongodb table insert %d perf test", max_insert),
          function()
-        t_wait(20000)
+        t_async(20000)
         for i = 1, max_insert do
             local data = {}
             data._id = i
@@ -223,7 +223,7 @@ t_describe("mongodb test", function()
     end)
 
     t_it("mongodb coroutine sync test", function()
-        t_wait(5000)
+        t_async(5000)
         local sync_mongodb = SyncMongodb(mongodb, function(sync_db)
             local e, res = sync_db:count(collection, '{}')
             t_equal(e, 0)

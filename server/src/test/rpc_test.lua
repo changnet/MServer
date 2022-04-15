@@ -70,10 +70,10 @@ t_describe("rpc test", function()
         end
         clt_conn.on_disconnected = function() end
 
-        t_wait(2000)
+        t_async(2000)
     end)
     t_it("rpc base test", function()
-        t_wait(2000)
+        t_async(2000)
 
         local counter = 0
         local rpc_empty_query = function(p1)
@@ -134,7 +134,7 @@ t_describe("rpc test", function()
             clt_conn, rpc_query, table.unpack(params))
     end)
     t_it(string.format("rpc performance test %d", PERF_TIMES), function()
-        t_wait(5000)
+        t_async(5000)
 
         -- 不等待返回，直接发送，这种其实是取决于缓冲区
 
@@ -158,7 +158,7 @@ t_describe("rpc test", function()
 
     t_it(string.format("rpc pingpong performance test %d", PERF_TIMES),
         function()
-            t_wait(5000)
+            t_async(5000)
             -- 一来一回进行测试
             local count = 0
             local rpc_pingpong_query = function(...)

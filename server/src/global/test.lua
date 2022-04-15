@@ -14,7 +14,7 @@ t_describe("测试套件名", function()
     end)
 
     it("测试逻辑2-异步", function()
-        t_wait(2000)
+        t_async(2000)
 
         http.get("www.example.com", function())
             t_done()
@@ -409,12 +409,17 @@ function t_timeout()
     resume()
 end
 
--- 设置当前测试异步超时时间(毫秒)
-function t_wait(timeout)
+-- 标记当前测试为异步，并设置异步超时时间(毫秒)
+function t_async(timeout)
     assert(not T.now.timer, "call wait multi times")
 
     T.now.status = PEND
     T.now.timer = T.timer.new(timeout or 2000, t_timeout)
+end
+
+-- 当前进程等待n毫秒
+function t_wait(timeout)
+    assert(false, "not implement yet")
 end
 
 -- 结束当前异步测试

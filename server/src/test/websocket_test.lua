@@ -38,7 +38,7 @@ t_describe("websocket test", function()
     end)
 
     t_it("websocket " .. exp_host, function()
-        t_wait(5000)
+        t_async(5000)
 
         local pkt_idx = 0
         local pkt_body = {
@@ -89,7 +89,7 @@ t_describe("websocket test", function()
     end)
 
     t_it("websocket ssl " .. exp_host, function()
-        t_wait(5000)
+        t_async(5000)
 
         local pkt_idx = 0
         local pkt_body = {
@@ -140,7 +140,7 @@ t_describe("websocket test", function()
     end)
 
     t_it("websocket local", function()
-        t_wait(5000)
+        t_async(5000)
 
         local pkt_idx = 0
         local pkt_body = {
@@ -207,7 +207,7 @@ t_describe("websocket test", function()
     end)
 
     t_it("websocket local ssl", function()
-        t_wait(5000)
+        t_async(5000)
 
         local pkt_idx = 0
         local pkt_body = {

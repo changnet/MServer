@@ -420,7 +420,7 @@ void FinalBackend::backend()
 
             // 检测待删除的连接是否超时
             int64_t now = get_time_interval();
-            if (now - last > 2000)
+            if (now - last > wait_tm)
             {
                 last = now;
                 check_pending_watcher(now);

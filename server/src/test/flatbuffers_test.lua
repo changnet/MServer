@@ -124,7 +124,7 @@ t_describe("flatbuffers test", function()
         end
         clt_conn.on_disconnected = function() end
 
-        t_wait(2000)
+        t_async(2000)
     end)
     t_it("flatbuffers base", function()
         Cmd.reg(TEST.BASE, function(pkt)
@@ -139,7 +139,7 @@ t_describe("flatbuffers test", function()
 
         clt_conn:send_pkt(TEST.BASE, base_pkt)
 
-        t_wait()
+        t_async()
     end)
     t_it(string.format("flatbuffers perf test %d", PERF_TIMES), function()
         local count = 0
@@ -159,7 +159,7 @@ t_describe("flatbuffers test", function()
             clt_conn:send_pkt(TEST.LITE, lite_pkt)
         end
 
-        t_wait()
+        t_async()
     end)
     t_it(string.format("flatbuffers pingpong test %d", PERF_TIMES), function()
         local count = 0
@@ -180,7 +180,7 @@ t_describe("flatbuffers test", function()
         -- 测试来回发送数据，这个取决于打包、传输效率
         clt_conn:send_pkt(TEST.LITE, lite_pkt)
 
-        t_wait()
+        t_async()
     end)
 
     t_after(function()

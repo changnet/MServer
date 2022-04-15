@@ -52,7 +52,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http get " .. exp_host, function()
-        t_wait(10000)
+        t_async(10000)
 
         local conn = HttpConn()
 
@@ -69,7 +69,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http post " .. exp_host, function()
-        t_wait(10000)
+        t_async(10000)
 
         local conn = HttpConn()
 
@@ -86,7 +86,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http local server test", function()
-        t_wait(10000)
+        t_async(10000)
 
         local ctx = "hello"
 
@@ -157,7 +157,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https get " .. exp_host, function()
-        t_wait(10000)
+        t_async(10000)
 
         local conn = HttpConn()
 
@@ -174,7 +174,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https post " .. exp_host, function()
-        t_wait(10000)
+        t_async(10000)
 
         local conn = HttpConn()
 
@@ -191,7 +191,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https local server test", function()
-        t_wait(10000)
+        t_async(10000)
 
         local ctx = "hello"
 
@@ -237,7 +237,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https valify and get " .. exp_host, vfy_ssl, function()
-        t_wait(10000)
+        t_async(10000)
 
         local conn = HttpConn()
 
@@ -254,7 +254,7 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https two-way valify local server test", function()
-        t_wait(10000)
+        t_async(10000)
 
         local ctx = "hello"
 

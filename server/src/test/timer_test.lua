@@ -14,7 +14,7 @@ t_describe("timer test", function()
         local next_ms = now_ms + after
 
         -- interval的精度应该是1毫秒
-        t_wait(10000)
+        t_async(10000)
         local timer_interval_test = function()
             -- printf("timer interval expect %d, got %d", next_ms, ev:ms_time())
             local val = math.abs(ev:ms_time() - next_ms)
@@ -41,7 +41,7 @@ t_describe("timer test", function()
         local now = ev:time()
         local next_s = now + after
 
-        t_wait(10000)
+        t_async(10000)
         local timer_periodic_test = function()
             -- printf("timer periodic expect %d, got %d", next_s, ev:time())
             local val = math.abs(ev:time() - next_s)

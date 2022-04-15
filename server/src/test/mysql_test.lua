@@ -20,7 +20,7 @@ COLLATE = utf8_general_ci;"
 t_describe("sql test", function()
     local mysql
     t_it("sql base test", function()
-        t_wait(10000)
+        t_async(10000)
 
         mysql = Mysql()
         local g_setting = require "setting.setting"
@@ -72,7 +72,7 @@ t_describe("sql test", function()
 
     t_it(string.format("sql perf %d insert transaction mode", max_insert),
          function()
-        t_wait(20000)
+        t_async(20000)
         mysql:exec_cmd("START TRANSACTION")
 
         -- desc是mysql关键字，因此需要加``
@@ -94,7 +94,7 @@ t_describe("sql test", function()
 
     -- 用来保证下一个测试时表是空的
     t_it("sql delete", function()
-        t_wait(20000)
+        t_async(20000)
         mysql:exec_cmd("delete from perf_test")
         mysql:select("select * from perf_test", function(ecode, res)
             t_equal(ecode, 0)
@@ -110,7 +110,7 @@ t_describe("sql test", function()
     ]]
     local n_insert = max_insert / 20 -- 太多了完成不了测试的
     t_it(string.format("sql perf %d insert", n_insert), function()
-        t_wait(20000)
+        t_async(20000)
 
         -- desc是mysql关键字，因此需要加``
         for i = 1, n_insert do
