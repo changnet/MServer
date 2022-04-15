@@ -44,7 +44,8 @@ IO::IOStatus EVIO::recv()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
     // 如果是其他情况，应该是哪里有逻辑错误了
-    if (!_io) return IO::IOS_ERROR;
+    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
+    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
 
     return _io->recv();
 }
@@ -53,7 +54,8 @@ IO::IOStatus EVIO::send()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
     // 如果是其他情况，应该是哪里有逻辑错误了
-    if (!_io) return IO::IOS_ERROR;
+    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
+    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
 
     return _io->send();
 }
@@ -74,6 +76,22 @@ void EVIO::init_connect()
     {
         _loop->io_fast_event(this, ev);
     }
+}
+
+IO::IOStatus EVIO::do_init_accept()
+{
+    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
+    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
+
+    return _io->do_init_accept();
+}
+
+IO::IOStatus EVIO::do_init_connect()
+{
+    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
+    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
+
+    return _io->do_init_connect();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

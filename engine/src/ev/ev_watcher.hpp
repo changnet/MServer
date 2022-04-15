@@ -119,6 +119,15 @@ public:
     /// 主线程初始化主动发起的连接
     void init_connect();
 
+    /**
+     * backend线程执行accept初始化
+     */
+    IO::IOStatus do_init_accept();
+    /**
+     * backend线程执行connect初始化
+     */
+    IO::IOStatus do_init_connect();
+
 public:
 
     int8_t _status; // 当前的状态

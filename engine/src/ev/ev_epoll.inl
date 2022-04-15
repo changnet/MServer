@@ -240,12 +240,14 @@ void FinalBackend::do_fast_event(std::vector<EVIO *> &fast_events)
         if (events & EV_ACCEPT)
         {
             // 初始化新socket，只有ssl用到
-            w->_io->do_init_accept();
+            auto status = w->do_init_accept();
+            do_io_status(w, EV_WRITE, status);
         }
         else if (events & EV_CONNECT)
         {
             // 初始化新socket，只有ssl用到
-            w->_io->do_init_connect();
+            auto status = w->do_init_connect();
+            do_io_status(w, EV_WRITE, status);
         }
 
         // 处理数据发送
@@ -278,17 +280,7 @@ void FinalBackend::do_event(int32_t ev_count)
         }
 
         EVIO *w = _ev->get_fast_io(fd);
-        // io对象可能被主线程删了或者停止
-        if (!w)
-        {
-            // 假如一个socket调用io_start，接着调用io_stop，那么它的io_watcher就
-            // 不会设置。这里做一下冗余检测
-            if (try_del_epoll_fd(fd))
-            {
-                ELOG("%s:epoll fd no io watcher found", __FUNCTION__);
-            }
-            continue;
-        }
+        assert(w);
 
         int32_t events          = 0;             // 最终需要触发的事件
         // 期望触发回调的事件，关闭和错误事件不管用户是否设置，都会触发
@@ -675,7 +667,13 @@ void FinalBackend::del_pending_watcher(int32_t fd, EVIO *w)
     if (!w)
     {
         w = _ev->get_fast_io(fd);
-        assert(w && fd == w->_fd);
+
+        // 多次调用close可能会删掉watcher
+        if (!w)
+        {
+            ELOG("no watcher found: %d", fd);
+            return;
+        }
     }
     else
     {
