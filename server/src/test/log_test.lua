@@ -18,7 +18,7 @@ t_describe("log test", function()
         util.mkdir_p("log")
 
         -- 创建独立的线程
-        local logger = Log()
+        local logger = Log("test_logger")
         logger:start(3000000) -- 3000000微秒写入一次
 
         -- 测试daily

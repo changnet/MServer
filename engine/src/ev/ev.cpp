@@ -126,6 +126,8 @@ EV::EV()
 
     _has_job = false;
 
+    _io_delete_index = 0;
+
     // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
     _timer_cnt = 0;
     _timers.resize(1024, nullptr);
@@ -318,7 +320,24 @@ int32_t EV::io_delete(int32_t id)
     if (!w) return -1;
 
     w->_status = EVIO::S_DEL;
-    io_change(w);
+    
+    // 保证del操作在前面，或者del操作用一个独立的数组来实现？
+    if (_io_changes.size() > (size_t)_io_delete_index)
+    {
+        EVIO *old_w = _io_changes[_io_delete_index];
+        if (old_w == w) return 0;
+
+        old_w->_change_index = 0;
+        io_change(old_w);
+
+        _io_changes[_io_delete_index] = w;
+        w->_change_index              = _io_delete_index + 1;
+    }
+    else
+    {
+        io_change(w);
+    }
+    _io_delete_index++;
 
     return 0;
 }
@@ -372,6 +391,7 @@ void EV::io_reify()
     if (_io_changes.empty()) return;
 
     {
+        bool non_del = false; // 是否进行过非del操作，仅用于逻辑校验
         std::lock_guard<std::mutex> lg(lock());
         for (auto w : _io_changes)
         {
@@ -381,17 +401,24 @@ void EV::io_reify()
             switch(w->_status)
             {
             case EVIO::S_STOP:
+                non_del = true;
                 _backend->modify(fd, w); // 移除该socket
                 break;
             case EVIO::S_START:
+                non_del = true;
                 _backend->modify(fd, w);
                 break;
             case EVIO::S_NEW:
+                non_del    = true;
                 w->_status = EVIO::S_START;
                 set_fast_io(fd, w);
                 _backend->modify(fd, w);
                 break;
             case EVIO::S_DEL:
+                // watcher的操作是异步的，同样fd的watcher可能被删掉又被系统复用
+                // 一定要保证先删除再进行其他操作
+                assert(!non_del);
+
                 // backend线程执行删除时，可能之前有一些fevents或者revents已触发
                 clear_pending(w);
                 clear_io_fast_event(w);
@@ -406,6 +433,7 @@ void EV::io_reify()
 
     _backend->wake(); /// 唤醒子线程，让它及时处理修改的事件
     _io_changes.clear();
+    _io_delete_index = 0;
 }
 
 int64_t EV::get_real_time()

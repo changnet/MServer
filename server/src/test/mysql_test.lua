@@ -22,7 +22,7 @@ t_describe("sql test", function()
     t_it("sql base test", function()
         t_async(10000)
 
-        mysql = Mysql()
+        mysql = Mysql("test_mysql")
         local g_setting = require "setting.setting"
         mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
                     g_setting.mysql_user, g_setting.mysql_pwd,
