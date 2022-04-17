@@ -639,7 +639,7 @@ void EV::periodic_reify()
 
             assert(w->_repeat > 0);
 
-            down_heap(_periodics.data(), _timer_cnt, HEAP0);
+            down_heap(_periodics.data(), _periodic_cnt, HEAP0);
         }
         else
         {

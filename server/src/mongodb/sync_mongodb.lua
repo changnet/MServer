@@ -1,6 +1,7 @@
 -- sync_mongodb.lua
 -- 2018-02-28
 -- xzc
+
 -- 为了能判断coroutine是否出错，又要能够返回可变参数，这里
 -- 要wrap一层，把返回值变成...参数
 local function after_coroutine_resume(co, ok, args, ...)

@@ -35,7 +35,7 @@ local mysql_mgr = MysqlMgr()
 function mysql_event(ev, id, qid, ecode, res)
     local sql = mysql_mgr.sql[id]
     if not sql then
-        eprint("mysql event no sql found: id = %d", id)
+        eprint("mysql event no sql found: id =", id)
         return
     end
     if ev == S_READY then

@@ -8,20 +8,17 @@ local json = require "engine.lua_parson"
 
 t_describe("mongodb test", function()
     local mongodb
-    local Mongodb
     local SyncMongodb
 
     -- require mongodb就会往app那边注册app_start和app_stop事件
     -- 但有时候并不需要执行mongodb test
     t_before(function()
-        Mongodb = require "mongodb.mongodb"
+        mongodb = require "mongodb.mongodb"
         SyncMongodb = require "mongodb.sync_mongodb"
     end)
 
     t_it("mongodb base test", function()
         t_async(10000)
-
-        mongodb = Mongodb()
 
         local g_setting = require "setting.setting"
         mongodb:start(g_setting.mongo_ip, g_setting.mongo_port,

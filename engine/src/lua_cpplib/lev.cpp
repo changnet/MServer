@@ -9,8 +9,6 @@ LEV::LEV()
     _critical_tm               = -1;
     _app_ev._repeat_ms         = 60000;
     _app_ev._next_time         = 0;
-    _thread_routine._repeat_ms = 5;
-    _thread_routine._next_time = 0;
 }
 
 LEV::~LEV()
@@ -190,10 +188,8 @@ void LEV::running()
 
     invoke_signal();
     if (next_periodic(_app_ev)) invoke_app_ev();
-    if (next_periodic(_thread_routine))
-    {
-        StaticGlobal::thread_mgr()->main_routine();
-    }
+
+    StaticGlobal::thread_mgr()->main_routine();
 
     StaticGlobal::network_mgr()->invoke_delete();
 }

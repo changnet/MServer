@@ -180,8 +180,13 @@ public:
     }
 
     /// 唤醒主线程(不会设置_has_job标识)
-    void wake()
+    void wake(bool job)
     {
+        if (job)
+        {
+            std::lock_guard<std::mutex> lg(_mutex);
+            _has_job = true;
+        }
         _cv.notify_one();
     }
 

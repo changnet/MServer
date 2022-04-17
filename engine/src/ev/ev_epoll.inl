@@ -421,7 +421,7 @@ void FinalBackend::backend()
             if (_has_ev)
             {
                 _ev->set_job(true);
-                _ev->wake();
+                _ev->wake(false);
             }
         }
 

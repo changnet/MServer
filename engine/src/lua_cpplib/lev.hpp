@@ -136,5 +136,4 @@ private:
     int32_t _critical_tm; // 每次主循环的临界时间，毫秒
 
     Periodic _app_ev;         // 定时回调到脚本
-    Periodic _thread_routine; // 定时处理线程数据
 };

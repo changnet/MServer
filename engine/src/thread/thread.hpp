@@ -247,12 +247,11 @@ protected:
         // pessimization
         _cv.notify_one();
     }
-    /// 唤醒主线程
-    void wakeup_main(int32_t status)
-    {
-        // 采用busy wait的方式后，只需要设置一个标识就可以了
-        _main_ev |= status;
-    }
+    /**
+     * @brief 唤醒主线程
+     * @param status 要求主线程执行的任务标识
+    */
+    void wakeup_main(int32_t status);
 
     virtual bool initialize() { return true; }   /* 子线程初始化 */
     virtual bool uninitialize() { return true; } /* 子线程清理 */
