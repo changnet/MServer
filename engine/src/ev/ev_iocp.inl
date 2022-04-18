@@ -1,3 +1,15 @@
+/**
+ * @brief 尝试过用IOCP实现，但难度比较大
+ * 这框架原本是按Linux的api来实现的，用的connect、accept、send、recv等函数
+ * 
+ * 但如果用IOCP的话，就要用WSASend、WSARecv、acceptEx等函数，要做兼容的话修改太
+ * 大
+ * 
+ * 另外，OpenSSL那边现在也是根据fd来操作的，用IOCP的话，需要重新用BIO的方式来
+ * 实现，把fd读写和缓冲区操作分开
+ * 
+*/
+
 const char *__BACKEND__ = "IOCP";
 
 #include <thread>
@@ -17,7 +29,7 @@ public:
 
 private:
     /**
-     * @brief iocp���߳�������
+     * @brief iocp子线程主函数
     */
     void iocp_routine();
 
@@ -39,7 +51,7 @@ bool FinalBackend::stop()
 {
     if (!_h_iocp) return true;
 
-    // ֪ͨ����iocp���߳��˳�
+    // 通知所有iocp子线程退出
     for (size_t i = 0; i < _threads.size();i ++)
     {
         if (0 ==PostQueuedCompletionStatus(_h_iocp, 0, 0, nullptr))
@@ -48,13 +60,13 @@ bool FinalBackend::stop()
         }
     }
 
-    // �ȴ����߳��˳�
+    // 等待子线程退出
     for (auto &thd : _threads)
     {
         thd.join();
     }
 
-    // �ر�iocp���
+    // 关闭iocp句柄
     CloseHandle(_h_iocp);
 
     return true;
@@ -63,16 +75,16 @@ bool FinalBackend::stop()
 bool FinalBackend::start(class EV *ev)
 {
     /**
-     * ��Ϸ������ioѹ�����󣬲���Ҫʹ��̫����߳�
+     * 游戏服务器io压力不大，不需要使用太多的线程
      * 
      * https://stackoverflow.com/questions/38133870/how-the-parameter-numberofconcurrentthreads-is-used-in-createiocompletionport
      * https://msdn.microsoft.com/en-us/library/windows/desktop/aa365198.aspx
      * 
      * @param thread_num
      * If this parameter is zero, the system allows as many concurrently running threads as there are processors in the system
-     * �������ָ����������Ҫ����ʱ��iocp������߳����������Ǵ������߳���
-     * ���������ֵΪ1�����洴����2���̵߳���GetQueuedCompletionStatus��Ҳֻ��
-     * ����1�̹߳���
+     * 这个数量指当有数据需要处理时，iocp分配的线程数，而不是创建的线程数
+     * 假如这个数值为1，后面创建了2条线程调用GetQueuedCompletionStatus，也只会
+     * 分配1线程工作
      */
 
     /*
@@ -113,13 +125,13 @@ void FinalBackend::iocp_routine()
          * 1. If a call to GetQueuedCompletionStatus fails because the completion port handle associated with it is closed while the call is outstanding, the function returns FALSE, *lpOverlapped will be NULL, and GetLastError will return ERROR_ABANDONED_WAIT_0
          */
 
-        // 1. _h_iocp�ر�
-        // 2. ��д�¼�
-        // ���ӡ��Ƴ�д�¼�
-        // socket�رջ��߳���
+        // 1. _h_iocp关闭
+        // 2. 读写事件
+        // 添加、移除写事件
+        // socket关闭或者出错
 
-        // �ر�ʱ��stop������PostQueuedCompletionStatus��keyֵ0
-        // ����_h_iocpǿ�ƹرգ�If a call to GetQueuedCompletionStatus fails because the completion port handle associated with it is closed while the call is outstanding, the function returns FALSE, *lpOverlapped will be NULL, and GetLastError will return ERROR_ABANDONED_WAIT_0
+        // 关闭时，stop函数里PostQueuedCompletionStatus传key值0
+        // 或者_h_iocp强制关闭：If a call to GetQueuedCompletionStatus fails because the completion port handle associated with it is closed while the call is outstanding, the function returns FALSE, *lpOverlapped will be NULL, and GetLastError will return ERROR_ABANDONED_WAIT_0
         if (0 == key || !overlapped) break;
 
 

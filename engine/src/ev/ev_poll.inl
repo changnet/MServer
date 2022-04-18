@@ -3,9 +3,10 @@
 
 const char *__BACKEND__ = "poll";
 
-// 我加这个是以为mingw支持poll，做完之后发现是不支持的
-// gnulib有poll模拟，可以直接使用，不过是GPL协议。
-// git有使用这个库：https://github.com/git/git/blob/master/compat/poll/poll.h
+// 是否要使用wepoll替换
+// https://github.com/piscisaureus/wepoll
+// wepoll使用的机制 NtDeviceIoControlFile 是一个未公开的机制
+// 它使用IOCTL_AFD_POLL标记来实现类似epoll_ctl的功能
 
 /// backend using poll implement
 class EVBackend final
@@ -31,6 +32,13 @@ EVBackend::~EVBackend() {}
 
 void EVBackend::wait(class EV *ev_loop, int64_t timeout)
 {
+    /**
+     * WSAPoll有个bug，connect失败不会触发事件，直到win10 2004才修复
+     * https://stackoverflow.com/questions/21653003/is-this-wsapoll-bug-for-non-blocking-sockets-fixed
+	 * https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll
+	 * As of Windows 10 version 2004, when a TCP socket fails to connect, (POLLHUP \| POLLERR \| POLLWRNORM) is indicated
+    */
+
     int32_t ev_count = poll(_poll_fd.data(), _poll_fd.size(), timeout * 1000);
     if (EXPECT_FALSE(ev_count < 0))
     {
