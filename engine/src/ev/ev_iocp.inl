@@ -28,6 +28,7 @@ private:
 
  FinalBackend::FinalBackend()
 {
+    _h_iocp = 0;
 }
 
 FinalBackend::~FinalBackend()
@@ -36,13 +37,44 @@ FinalBackend::~FinalBackend()
 
 bool FinalBackend::stop()
 {
+    if (!_h_iocp) return true;
+
+    // 通知所有iocp子线程退出
+    for (size_t i = 0; i < _threads.size();i ++)
+    {
+        if (0 ==PostQueuedCompletionStatus(_h_iocp, 0, 0, nullptr))
+        {
+            ELOG("stop iocp thread fail: " FMT64u, GetLastError());
+        }
+    }
+
+    // 等待子线程退出
+    for (auto &thd : _threads)
+    {
+        thd.join();
+    }
+
+    // 关闭iocp句柄
+    CloseHandle(_h_iocp);
+
     return true;
 }
 
 bool FinalBackend::start(class EV *ev)
 {
-    // 游戏服务器io压力不大，不需要使用太多的线程
-    // If this parameter is zero, the system allows as many concurrently running threads as there are processors in the system
+    /**
+     * 游戏服务器io压力不大，不需要使用太多的线程
+     * 
+     * https://stackoverflow.com/questions/38133870/how-the-parameter-numberofconcurrentthreads-is-used-in-createiocompletionport
+     * https://msdn.microsoft.com/en-us/library/windows/desktop/aa365198.aspx
+     * 
+     * @param thread_num
+     * If this parameter is zero, the system allows as many concurrently running threads as there are processors in the system
+     * 这个数量指当有数据需要处理时，iocp分配的线程数，而不是创建的线程数
+     * 假如这个数值为1，后面创建了2条线程调用GetQueuedCompletionStatus，也只会
+     * 分配1线程工作
+     */
+
     /*
     SYSTEM_INFO sys_info;
     GetSystemInfo(&sys_info);
@@ -66,6 +98,32 @@ bool FinalBackend::start(class EV *ev)
 
 void FinalBackend::iocp_routine()
 {
+    const DWORD ms = 2000; // ms = INFINITE;
+
+    while (true)
+    {
+        OVERLAPPED *overlapped = nullptr;
+        ULONG_PTR key          = 0;
+        DWORD bytes            = 0;
+        int ok = GetQueuedCompletionStatus(_h_iocp, &bytes, &key, &overlapped, ms);
+
+        /**
+         * https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-getqueuedcompletionstatus
+         * 
+         * 1. If a call to GetQueuedCompletionStatus fails because the completion port handle associated with it is closed while the call is outstanding, the function returns FALSE, *lpOverlapped will be NULL, and GetLastError will return ERROR_ABANDONED_WAIT_0
+         */
+
+        // 1. _h_iocp关闭
+        // 2. 读写事件
+        // 添加、移除写事件
+        // socket关闭或者出错
+
+        // 关闭时，stop函数里PostQueuedCompletionStatus传key值0
+        // 或者_h_iocp强制关闭：If a call to GetQueuedCompletionStatus fails because the completion port handle associated with it is closed while the call is outstanding, the function returns FALSE, *lpOverlapped will be NULL, and GetLastError will return ERROR_ABANDONED_WAIT_0
+        if (0 == key || !overlapped) break;
+
+
+    }
 }
 
 void FinalBackend::wake()
