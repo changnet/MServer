@@ -1,4 +1,7 @@
 #pragma once
+
+#include <thread>
+
 /**
  * 1. 主线程和io线程共用同一个读写缓冲区
  * 
@@ -25,41 +28,40 @@
 class EVBackend
 {
 public:
-    EVBackend()
+    /**
+     * fd操作类型定义，与epoll一致 EPOLL_CTL_ADD
+     */
+    enum FD_OP
     {
-        _busy = false;
-        _done = false;
-        _ev   = nullptr;
-    }
-    virtual ~EVBackend(){};
+        FD_OP_ADD = 1, // 添加
+        FD_OP_DEL = 2, // 删除
+        FD_OP_MOD = 3  // 修改
+    };
+public:
+    EVBackend();
+    virtual ~EVBackend();
 
     /// 唤醒子进程
     virtual void wake() = 0;
 
     /// 启动backend线程
-    virtual bool start(class EV *ev)
-    {
-        _ev = ev;
-        return true;
-    }
+    virtual bool before_start() = 0;
 
     /// 中止backend线程
-    virtual bool stop()
-    {
-        _done = true;
-
-        wake();
-        return true;
-    }
-
-    /// 修改io事件(包括删除)
-    virtual void modify(int32_t fd, EVIO *w) = 0;
+    virtual void after_stop() = 0;
 
     /**
-     * 执行单次循环
+     * 启动backend线程
      */
-    virtual void backend() = 0;
-
+    bool start(class EV *ev);
+    /**
+     * 停止backend线程
+     */
+    void stop();
+    /**
+     * 修改io事件(包括删除)
+     */
+    void modify(int32_t fd, EVIO *w);
     /**
      * 创建一个backend实例
      */
@@ -68,8 +70,96 @@ public:
      * 销毁一个backend实例
      */
     static void uninstance(EVBackend *backend);
+
 protected:
-    bool _done;    /// 是否终止进程
-    bool _busy;    /// io读写返回busy，意味主线程处理不完这些数据
-    class EV *_ev; /// 主循环
+    /**
+     * 派发watcher回调事件
+     */
+    void feed_receive_event(EVIO *w, int32_t ev);
+
+    /**
+     * 处理主线程发起的事件
+     */
+    void do_watcher_fast_event(EVIO *w);
+    /**
+     * 处理从网络收到的事件
+     */
+    void do_watcher_wait_event(EVIO *w, int32_t revents);
+    /**
+     * @brief 把一个fd设置到epoll内核中，该函数外部需要加锁
+     * @param fd 需要设置的文件描述符
+     * @param op epoll的操作，如EPOLL_CTL_ADD
+     * @param new_ev 旧事件
+     * @return errno
+     */
+    virtual int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev) = 0;
+
+private:
+    /**
+     * 后台线程执行函数
+     */
+    void backend();
+    /**
+     * 执行单次后台逻辑
+     */
+    void backend_once(int32_t ev_count);
+    /**
+     * 等待网络数据
+     * @param timeout 等待的时间，毫秒
+     * @return 收到的网络事件数量
+     */
+    virtual int32_t wait(int32_t timeout) = 0;
+    /**
+     * 处理从网络收到的事件
+     */
+    virtual void do_wait_event(int32_t ev_count) = 0;
+    /**
+     * 处理主线程发起的io事件
+     */
+    void do_fast_event();
+    /**
+     * @brief 处理读写后的io状态
+     * @param w 待处理的watcher
+     * @param ev 当前执行的事件
+     * @param status 待处理的状态
+     * @return 是否继续执行
+     */
+    bool do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status);
+    /**
+     * 删除主动关闭，等待删除的watcher
+     */
+    void add_pending_watcher(int32_t fd);
+    /**
+     * 检测主动关闭，等待删除的watcher是否超时
+     */
+    void check_pending_watcher(int64_t now);
+    /**
+     * 删除主动关闭，等待删除的watcher
+     */
+    void del_pending_watcher(int32_t fd, EVIO *w);
+    /**
+     * 处理待修改的io
+     */
+    void do_modify();
+    /**
+     * @brief 把一个watcher设置到epoll，该函数外部需要加锁
+     * @param w watcher的指针
+     * @return errno
+     */
+    int32_t modify_watcher(EVIO *w);
+
+protected:
+    bool _has_ev;   /// 是否有待主线程处理的事件
+    bool _done;     /// 是否终止进程
+    bool _busy;     /// io读写返回busy，意味主线程处理不完这些数据
+    int64_t _last_pending_tm; // 上次检测待删除watcher时间
+    class EV *_ev;  /// 主循环
+    std::thread _thread;
+    std::vector<EVIO *> _fast_events; // 等待backend线程快速处理的事件
+
+    /// 等待变更到backend的fd
+    std::vector<int32_t> _modify_fd;
+
+    // 待发送完数据后删除的watcher
+    std::unordered_map<int32_t, int64_t> _pending_watcher;
 };

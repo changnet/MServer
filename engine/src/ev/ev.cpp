@@ -1,3 +1,5 @@
+#include <chrono> // for 1000ms
+
 #include "ev.hpp"
 #include "ev_backend.hpp"
 
@@ -455,6 +457,18 @@ int64_t EV::get_monotonic_time()
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+int64_t EV::steady_clock()
+{
+    // steady_clock在linux下应该也是用clock_gettime实现
+    // 但是在debug模式下，steady_clock的效率仅为clock_gettime的一半
+    // 执行一百万次，steady_clock花127毫秒，clock_gettime花54毫秒
+    static const std::chrono::steady_clock::time_point beg
+        = std::chrono::steady_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - beg).count();
 }
 
 void EV::time_update()

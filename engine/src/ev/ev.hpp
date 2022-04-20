@@ -127,6 +127,11 @@ public:
     /// 获取实时UTC时间，精度秒
     static int64_t get_real_time();
 
+    /**
+     * 获取自进程启动以来的毫秒数
+     */
+    static int64_t steady_clock();
+
     /// 获取当前的帧时间，精度为毫秒
     inline int64_t ms_now()
     {

@@ -22,8 +22,10 @@ public:
     FinalBackend();
     ~FinalBackend();
 
-    void wait(class EV *ev_loop, int64_t timeout);
-    void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
+    bool stop();
+    bool start(class EV *ev);
+    void wake();
+    void modify(int32_t fd, EVIO *w);
 
 private:
     std::vector<int32_t> _fd_index;
@@ -35,7 +37,9 @@ FinalBackend::FinalBackend() : _fd_index(1024, -1)
     _poll_fd.reserve(1024);
 }
 
-FinalBackend::~FinalBackend() {}
+FinalBackend::~FinalBackend()
+{
+}
 
 void FinalBackend::wait(class EV *ev_loop, int64_t timeout)
 {
