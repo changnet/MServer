@@ -1,7 +1,14 @@
-#include <poll.h>
-#include "ev.hpp"
+#ifdef __windows__
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <winsock2.h>
 
-const char *__BACKEND__ = "poll";
+    const char *__BACKEND__ = "WSAPoll";
+#else
+    #include <poll.h>
+    const char *__BACKEND__ = "poll";
+#endif
 
 // 是否要使用wepoll替换
 // https://github.com/piscisaureus/wepoll
@@ -9,11 +16,11 @@ const char *__BACKEND__ = "poll";
 // 它使用IOCTL_AFD_POLL标记来实现类似epoll_ctl的功能
 
 /// backend using poll implement
-class EVBackend final
+class FinalBackend final : public FinalBackend
 {
 public:
-    EVBackend();
-    ~EVBackend();
+    FinalBackend();
+    ~FinalBackend();
 
     void wait(class EV *ev_loop, int64_t timeout);
     void modify(int32_t fd, int32_t old_ev, int32_t new_ev);
@@ -23,14 +30,14 @@ private:
     std::vector<struct pollfd> _poll_fd;
 };
 
-EVBackend::EVBackend() : _fd_index(1024, -1)
+FinalBackend::FinalBackend() : _fd_index(1024, -1)
 {
     _poll_fd.reserve(1024);
 }
 
-EVBackend::~EVBackend() {}
+FinalBackend::~FinalBackend() {}
 
-void EVBackend::wait(class EV *ev_loop, int64_t timeout)
+void FinalBackend::wait(class EV *ev_loop, int64_t timeout)
 {
     /**
      * WSAPoll有个bug，connect失败不会触发事件，直到win10 2004才修复
@@ -74,7 +81,7 @@ void EVBackend::wait(class EV *ev_loop, int64_t timeout)
     }
 }
 
-void EVBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
+void FinalBackend::modify(int32_t fd, int32_t old_ev, int32_t new_ev)
 {
     if (old_ev == new_ev) return;
 

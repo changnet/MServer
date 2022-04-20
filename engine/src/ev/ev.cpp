@@ -1,4 +1,5 @@
 #include "ev.hpp"
+#include "ev_backend.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)
 #define MIN_TIMEJUMP 1000
@@ -12,19 +13,6 @@
 #define HEAP0             1 // 二叉堆的位置0不用，数据从1开始存放
 #define HPARENT(k)        ((k) >> 1)
 #define UPHEAP_DONE(p, k) (!(p))
-
-#ifndef BACKEND
-    #define BACKEND -1
-#endif
-
-#include "ev_backend.hpp"
-#if BACKEND == 1
-    #include "ev_epoll.inl"
-#elif BACKEND == 2
-    #include "ev_poll.inl"
-#else
-    #include "ev_iocp.inl"
-#endif
 
 #if defined(__windows__) && !defined(__MINGW__)
 // https://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
@@ -143,7 +131,7 @@ EV::EV()
 
     _busy_time = 0;
 
-    _backend             = new FinalBackend();
+    _backend             = EVBackend::instance();
     _backend_time_coarse = 0;
 }
 
@@ -152,7 +140,7 @@ EV::~EV()
     _timer_mgr.clear();
     _periodic_mgr.clear();
 
-    delete _backend;
+    EVBackend::uninstance(_backend);
     _backend = nullptr;
 }
 

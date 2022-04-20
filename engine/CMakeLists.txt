@@ -33,7 +33,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 # win和linux下编译选项详见：https://github.com/Samsung/netcoredbg/blob/master/compileoptions.cmake
 if(WINDOWS)
-    set(BACKEND 3) # select
     # 优先查找.lib类型的静态库
     # set(CMAKE_FIND_LIBRARY_SUFFIXES .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
@@ -57,7 +56,6 @@ if(WINDOWS)
     add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/O2>)
     add_compile_options($<$<OR:$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>,$<CONFIG:Checked>>:/O1>)
 elseif(LINUX)
-    SET(BACKEND 1) # epoll
     # 优先查找.a类型的静态库
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
     add_compile_options(-pipe -Wall -pedantic)

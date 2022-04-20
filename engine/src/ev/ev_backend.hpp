@@ -55,6 +55,19 @@ public:
     /// 修改io事件(包括删除)
     virtual void modify(int32_t fd, EVIO *w) = 0;
 
+    /**
+     * 执行单次循环
+     */
+    virtual void backend() = 0;
+
+    /**
+     * 创建一个backend实例
+     */
+    static EVBackend *instance();
+    /**
+     * 销毁一个backend实例
+     */
+    static void uninstance(EVBackend *backend);
 protected:
     bool _done;    /// 是否终止进程
     bool _busy;    /// io读写返回busy，意味主线程处理不完这些数据

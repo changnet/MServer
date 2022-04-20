@@ -19,8 +19,6 @@
 #include <thread>
 #include <chrono> // for 1000ms
 
-#include "ev.hpp"
-
 const char *__BACKEND__ = "epoll";
 
 /// epoll max events one poll
@@ -42,7 +40,6 @@ public:
     bool stop();
     bool start(class EV *ev);
     void wake();
-    void backend();
     void modify(int32_t fd, EVIO *w);
 
     /**
@@ -55,6 +52,8 @@ public:
     }
 
 private:
+    void backend();
+
     /// 处理epoll事件
     void do_event(int32_t ev_count);
     /// 处理主线程发起的io事件

@@ -165,6 +165,6 @@ return {
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
 "timer_event", -- src/timer/timer.lua
-"vd", -- src/global/global.lua
 "vd", -- proto/auto.lua
+"vd", -- src/global/global.lua
 }
