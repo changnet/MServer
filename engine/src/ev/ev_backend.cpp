@@ -48,7 +48,7 @@ bool EVBackend::start(class EV *ev)
 
 void EVBackend::stop()
 {
-    _done = false;
+    _done = true;
     wake();
     _thread.join();
 
