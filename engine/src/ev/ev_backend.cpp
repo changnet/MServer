@@ -2,7 +2,8 @@
 #include "ev_backend.hpp"
 
 #if defined(__linux__)
-    #include "ev_epoll.inl"
+    // #include "ev_epoll.inl"
+    #include "ev_poll.inl"
 #elif defined(__windows__)
     #include "ev_poll.inl"
 #endif
