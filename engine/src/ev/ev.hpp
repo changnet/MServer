@@ -122,25 +122,24 @@ public:
     /// 停止utc定时器，但不从管理器删除
     int32_t periodic_stop(EVTimer *w);
 
-    /// 获取系统启动以为毫秒数
-    static int64_t get_monotonic_time();
-    /// 获取实时UTC时间，精度秒
-    static int64_t get_real_time();
-
     /**
      * 获取自进程启动以来的毫秒数
      */
     static int64_t steady_clock();
+    /**
+     * 获取UTC时间，精度毫秒
+     */
+    static int64_t system_clock();
 
     /// 获取当前的帧时间，精度为毫秒
     inline int64_t ms_now()
     {
-        return _mn_time;
+        return _steady_clock;
     }
     /// 获取当前的帧时间，精度为秒
     inline int64_t now()
     {
-        return _rt_time;
+        return _system_now;
     }
     /// 定时器回调函数
     virtual void timer_callback(int32_t id, int32_t revents)
@@ -286,15 +285,15 @@ protected:
     int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
     int64_t _backend_time_coarse; ///< 预计下次backend等待结束的时间戳
 
-    int64_t _mn_time;              ///< 起服到现在的毫秒
-    std::atomic<int64_t> _rt_time; ///< UTC时间戳(CLOCK_REALTIME,秒)
-    int64_t _last_rt_update;       ///< 上一次更新UTC的MONOTONIC时间
-
+    int64_t _steady_clock;              ///< 起服到现在的毫秒
+    int64_t _system_clock; // UTC时间戳（单位：毫秒）
+    std::atomic<int64_t> _system_now; ///< UTC时间戳(CLOCK_REALTIME,秒)
+    int64_t _last_system_clock_update;       ///< 上一次更新UTC的MONOTONIC时间
     /**
      * UTC时间与MONOTONIC时间的差值，用于通过mn_now直接计算出rt_now而
      * 不需要通过clock_gettime来得到rt_now，以提高效率
      */
-    int64_t _rtmn_diff;
+    int64_t _clock_diff;
 
     /// 主线程的wait condition_variable
     std::condition_variable _cv;

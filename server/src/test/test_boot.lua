@@ -52,7 +52,7 @@ local function exec_test()
             ev:time_update()
         end,
         clock = function()
-            return ev:real_ms_time()
+            return ev:steady_clock()
         end
     })
 

@@ -38,7 +38,7 @@ function Ev:real_time()
 end
 
 -- 获取实时时间戳，毫秒
-function Ev:real_ms_time()
+function Ev:steady_clock()
 end
 
 -- 设置主循环单次循环临界时间，当单次循环超过此时间时，将会打印繁忙日志

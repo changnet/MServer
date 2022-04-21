@@ -167,7 +167,7 @@ end
 
 -- 为了实现可变参数不用table.pack，只能再wrap一层
 local function args_wrap(method_name, beg, ...)
-    -- stat:update_statistic(method_name, ev:real_ms_time() - beg)
+    -- stat:update_statistic(method_name, ev:steady_clock() - beg)
     return ...
 end
 
@@ -179,7 +179,7 @@ local function on_call(method_name, ...)
     end
 
     if stat then
-        return args_wrap(method_name, ev:real_ms_time(), func(...))
+        return args_wrap(method_name, ev:steady_clock(), func(...))
     else
         return func(...)
     end

@@ -94,14 +94,14 @@ public:
     int32_t who_busy(lua_State *L);
 
     /**
-     * 获取实时时间戳，秒
+     * 获取实时UTC时间戳，毫秒
      */
-    int32_t real_time(lua_State *L);
+    int32_t system_clock(lua_State *L);
 
     /**
-     * 获取实时时间戳，毫秒
+     * 获取实时进程启动以来时间，毫秒
      */
-    int32_t real_ms_time(lua_State *L);
+    int32_t steady_clock(lua_State *L);
 
     /**
      * 设置主循环单次循环临界时间，当单次循环超过此时间时，将会打印繁忙日志

@@ -41,13 +41,13 @@ int32_t LEV::time_update(lua_State *L)
 // 帧时间
 int32_t LEV::time(lua_State *L)
 {
-    lua_pushinteger(L, _rt_time);
+    lua_pushinteger(L, _system_now);
     return 1;
 }
 
 int32_t LEV::ms_time(lua_State *L) // 帧时间，ms
 {
-    lua_pushinteger(L, _mn_time);
+    lua_pushinteger(L, _steady_clock);
     return 1;
 }
 
@@ -69,17 +69,15 @@ int32_t LEV::who_busy(lua_State *L) // 看下哪条线程繁忙
     return 3;
 }
 
-// 实时时间
-int32_t LEV::real_time(lua_State *L)
+int32_t LEV::system_clock(lua_State *L)
 {
-    lua_pushinteger(L, get_real_time());
+    lua_pushinteger(L, EV::system_clock());
     return 1;
 }
 
-// 实时时间
-int32_t LEV::real_ms_time(lua_State *L)
+int32_t LEV::steady_clock(lua_State *L)
 {
-    lua_pushinteger(L, get_monotonic_time());
+    lua_pushinteger(L, EV::steady_clock());
     return 1;
 }
 
@@ -107,7 +105,7 @@ int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
     }
 
     _app_ev._repeat_ms = interval;
-    _app_ev._next_time = _mn_time;
+    _app_ev._next_time = _steady_clock;
     return 0;
 }
 
@@ -148,13 +146,13 @@ void LEV::invoke_signal()
 bool LEV::next_periodic(Periodic &periodic)
 {
     bool timeout = false;
-    int64_t tm   = periodic._next_time - _mn_time;
+    int64_t tm   = periodic._next_time - _steady_clock;
     if (tm <= 0)
     {
         timeout = true;
         // TODO 当主循环卡了，这两个表现是不一样的，后续有需要再改
         // periodic._next_time += periodic._repeat_ms;
-        periodic._next_time = _mn_time + periodic._repeat_ms;
+        periodic._next_time = _steady_clock + periodic._repeat_ms;
     }
 
     // set_backend_time_coarse(periodic._next_time);
@@ -168,7 +166,7 @@ void LEV::invoke_app_ev()
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
-    lua_pushinteger(L, _mn_time);
+    lua_pushinteger(L, _steady_clock);
     if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
         ELOG("invoke_app_ev fail:%s", lua_tostring(L, -1));

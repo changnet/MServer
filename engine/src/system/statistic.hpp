@@ -6,9 +6,9 @@
 #define G_STAT StaticGlobal::statistic()
 
 #define STAT_TIME_BEG() \
-    int64_t stat_time_beg = StaticGlobal::ev()->get_monotonic_time()
+    int64_t stat_time_beg = StaticGlobal::ev()->steady_clock()
 #define STAT_TIME_END() \
-    (StaticGlobal::ev()->get_monotonic_time() - stat_time_beg)
+    (StaticGlobal::ev()->steady_clock() - stat_time_beg)
 
 #define C_OBJECT_ADD(what)          \
     do                              \

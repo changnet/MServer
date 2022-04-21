@@ -57,7 +57,7 @@ end
 -- @param priority 优先加载的文件数组，如果没有顺序依赖可以不传
 -- @param suffix 文件名后缀
 local function load_schema(schema_type, path, priority, suffix)
-    local tm = ev:real_ms_time()
+    local tm = ev:steady_clock()
     if g_app.ok then network_mgr:reset_schema(schema_type) end
 
     local count = 0
@@ -114,7 +114,7 @@ local function load_schema(schema_type, path, priority, suffix)
         end
     end
 
-    printf("load %d scehma files, time %d ms", count, ev:real_ms_time() - tm)
+    printf("load %d scehma files, time %d ms", count, ev:steady_clock() - tm)
 
     return count > 0
 end
@@ -216,9 +216,9 @@ end
 
 local function do_handler(handler, ...)
     if stat then
-        --local beg = ev:real_ms_time()
+        --local beg = ev:steady_clock()
         handler( ...)
-        -- return stat:update_statistic(self.cs_stat, cmd, ev:real_ms_time() - beg)
+        -- return stat:update_statistic(self.cs_stat, cmd, ev:steady_clock() - beg)
     else
         return handler(...)
     end

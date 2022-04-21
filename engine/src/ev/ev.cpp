@@ -16,94 +16,6 @@
 #define HPARENT(k)        ((k) >> 1)
 #define UPHEAP_DONE(p, k) (!(p))
 
-#if defined(__windows__) && !defined(__MINGW__)
-// https://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
-// https://github.com/msys2-contrib/mingw-w64/blob/master/mingw-w64-libraries/winpthreads/src/clock.c
-
-    #define CLOCK_REALTIME           0
-    #define CLOCK_MONOTONIC          1
-    #define CLOCK_PROCESS_CPUTIME_ID 2
-    #define CLOCK_THREAD_CPUTIME_ID  3
-
-    #define POW10_7              10000000
-    #define POW10_9              1000000000
-    #define DELTA_EPOCH_IN_100NS INT64_C(116444736000000000)
-
-typedef int clockid_t;
-
-int clock_gettime(clockid_t clock_id, struct timespec *tp)
-{
-    unsigned __int64 t;
-    LARGE_INTEGER pf, pc;
-    union
-    {
-        unsigned __int64 u64;
-        FILETIME ft;
-    } ct, et, kt, ut;
-
-    switch (clock_id)
-    {
-    case CLOCK_REALTIME:
-    {
-        GetSystemTimeAsFileTime(&ct.ft);
-        t           = ct.u64 - DELTA_EPOCH_IN_100NS;
-        tp->tv_sec  = t / POW10_7;
-        tp->tv_nsec = ((int)(t % POW10_7)) * 100;
-
-        return 0;
-    }
-
-    case CLOCK_MONOTONIC:
-    {
-        if (QueryPerformanceFrequency(&pf) == 0) return -1;
-
-        if (QueryPerformanceCounter(&pc) == 0) return -1;
-
-        tp->tv_sec = pc.QuadPart / pf.QuadPart;
-        tp->tv_nsec =
-            (int)(((pc.QuadPart % pf.QuadPart) * POW10_9 + (pf.QuadPart >> 1))
-                  / pf.QuadPart);
-        if (tp->tv_nsec >= POW10_9)
-        {
-            tp->tv_sec++;
-            tp->tv_nsec -= POW10_9;
-        }
-
-        return 0;
-    }
-
-    case CLOCK_PROCESS_CPUTIME_ID:
-    {
-        if (0
-            == GetProcessTimes(GetCurrentProcess(), &ct.ft, &et.ft, &kt.ft,
-                               &ut.ft))
-            return -1;
-        t           = kt.u64 + ut.u64;
-        tp->tv_sec  = t / POW10_7;
-        tp->tv_nsec = ((int)(t % POW10_7)) * 100;
-
-        return 0;
-    }
-
-    case CLOCK_THREAD_CPUTIME_ID:
-    {
-        if (0 == GetThreadTimes(GetCurrentThread(), &ct.ft, &et.ft, &kt.ft, &ut.ft))
-            return -1;
-        t           = kt.u64 + ut.u64;
-        tp->tv_sec  = t / POW10_7;
-        tp->tv_nsec = ((int)(t % POW10_7)) * 100;
-
-        return 0;
-    }
-
-    default: break;
-    }
-
-    return -1;
-}
-
-#endif
-
 EV::EV()
 {
     _io_fast.reserve(1024);
@@ -125,11 +37,10 @@ EV::EV()
     _periodic_cnt = 0;
     _periodics.resize(1024, nullptr);
 
-    _rt_time = get_real_time();
-
-    _mn_time        = get_monotonic_time();
-    _last_rt_update = _mn_time;
-    _rtmn_diff      = _rt_time * 1000 - _mn_time;
+    // 初始化时间
+    _clock_diff = 0;
+    _last_system_clock_update = INT_MIN;
+    time_update();
 
     _busy_time = 0;
 
@@ -160,7 +71,7 @@ int32_t EV::loop()
      */
 
     _done           = false;
-    int64_t last_ms = _mn_time;
+    int64_t last_ms = _steady_clock;
 
     if (!_backend->start(this)) return -1;
 
@@ -174,20 +85,20 @@ int32_t EV::loop()
         io_reify();
 
         time_update();
-        _busy_time = _mn_time - last_ms;
+        _busy_time = _steady_clock - last_ms;
 
         /// 允许阻塞的最长时间(毫秒)
         int64_t backend_time = BACKEND_MAX_TM;
         if (_timer_cnt)
         {
             // wait时间不超过下一个定时器触发时间
-            int64_t to = (_timers[HEAP0])->_at - _mn_time;
+            int64_t to = (_timers[HEAP0])->_at - _steady_clock;
             if (backend_time > to) backend_time = to;
         }
         if (_periodic_cnt)
         {
-            // utc定时器，精度是秒，触发时间误差也是1秒
-            int64_t to = 1000 * ((_periodics[HEAP0])->_at - _rt_time);
+            // utc定时器
+            int64_t to = (_periodics[HEAP0])->_at - _system_clock;
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
@@ -220,11 +131,11 @@ int32_t EV::loop()
 
         time_update();
 
-        last_ms = _mn_time;
+        last_ms = _steady_clock;
 
         // 不同的逻辑会预先设置主循环下次阻塞的时间。在执行其他逻辑时，可能该时间已经过去了
         // 这说明主循环比较繁忙，会被修正为BACKEND_MIN_TM，而不是精确的按预定时间执行
-        _backend_time_coarse = BACKEND_MAX_TM + _mn_time;
+        _backend_time_coarse = BACKEND_MAX_TM + _steady_clock;
 
         // 处理timer超时
         timers_reify();
@@ -426,37 +337,13 @@ void EV::io_reify()
     _io_delete_index = 0;
 }
 
-int64_t EV::get_real_time()
+int64_t EV::system_clock()
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    const auto now = std::chrono::system_clock::now();
 
-    // UTC时间，只需要精确到秒数就可以了。需要精度高的一般用monotonic_time
-    // return ts.tv_sec + ts.tv_nsec * 1e-9;
-    return ts.tv_sec;
-}
-
-int64_t EV::get_monotonic_time()
-{
-    /**
-     * 获取当前时钟
-     * CLOCK_REALTIME:
-     * 系统实时时间，从Epoch计时，可以被用户更改以及adjtime和NTP影响。
-     * CLOCK_REALTIME_COARSE:
-     * 系统实时时间，比起CLOCK_REALTIME有更快的获取速度，更低一些的精确度。
-     * CLOCK_MONOTONIC:
-     * 从系统启动这一刻开始计时，即使系统时间被用户改变，也不受影响。系统休眠时不会计时。受adjtime和NTP影响。
-     * CLOCK_MONOTONIC_COARSE:
-     * 如同CLOCK_MONOTONIC，但有更快的获取速度和更低一些的精确度。受NTP影响。
-     * CLOCK_MONOTONIC_RAW:
-     * 与CLOCK_MONOTONIC一样，系统开启时计时，但不受NTP影响，受adjtime影响。
-     * CLOCK_BOOTTIME:
-     * 从系统启动这一刻开始计时，包括休眠时间，受到settimeofday的影响。
-     */
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+    ).count();
 }
 
 int64_t EV::steady_clock()
@@ -464,8 +351,7 @@ int64_t EV::steady_clock()
     // steady_clock在linux下应该也是用clock_gettime实现
     // 但是在debug模式下，steady_clock的效率仅为clock_gettime的一半
     // 执行一百万次，steady_clock花127毫秒，clock_gettime花54毫秒
-    static const std::chrono::steady_clock::time_point beg
-        = std::chrono::steady_clock::now();
+    static const auto beg = std::chrono::steady_clock::now();
 
     return std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - beg).count();
@@ -473,27 +359,29 @@ int64_t EV::steady_clock()
 
 void EV::time_update()
 {
-    _mn_time = get_monotonic_time();
+    _steady_clock = steady_clock();
 
     /**
      * 直接计算出UTC时间而不通过get_time获取
      * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
      * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
      */
-    if (_mn_time - _last_rt_update < MIN_TIMEJUMP / 2)
+    if (_steady_clock - _last_system_clock_update < MIN_TIMEJUMP / 2)
     {
-        _rt_time = (_rtmn_diff + _mn_time) / 1000;
+        _system_clock = _clock_diff + _steady_clock;
+        _system_now = _system_clock / 1000; // 转换为秒
         return;
     }
 
-    _last_rt_update  = _mn_time;
-    _rt_time         = get_real_time();
-    int64_t old_diff = _rtmn_diff;
+    _last_system_clock_update  = _steady_clock;
+    _system_clock         = system_clock();
+    _system_now = _system_clock / 1000; // 转换为秒
 
     /**
-     * 当两次diff相差比较大时，说明有人调了UTC时间。由于clock_gettime是一个syscall，可能
-     * 出现mn_now是调整前，ev_rt_now为调整后的情况。
-     * 必须循环几次保证mn_now和ev_rt_now取到的都是调整后的时间
+     * 当两次diff相差比较大时，说明有人调了UTC时间
+     * 由于获取时间(clock_gettime等函数）是一个syscall，有优化级调用，可能出现前一个
+     * clock获取到的时间为调整前，后一个clock为调整后的情况
+     * 必须循环几次保证取到的都是调整后的时间
      *
      * 参考libev
      * loop a few times, before making important decisions.
@@ -504,20 +392,22 @@ void EV::time_update()
      * doesn't hurt either as we only do this on time-jumps or
      * in the unlikely event of having been preempted here.
      */
+    int64_t old_diff = _clock_diff;
     for (int32_t i = 4; --i;)
     {
-        _rtmn_diff = _rt_time * 1000 - _mn_time;
+        _clock_diff = _system_clock - _steady_clock;
 
-        int64_t diff = old_diff - _rtmn_diff;
+        int64_t diff = old_diff - _clock_diff;
         if (EXPECT_TRUE((diff < 0 ? -diff : diff) < MIN_TIMEJUMP))
         {
             return;
         }
 
-        _rt_time = get_real_time();
+        _system_clock = system_clock();
+        _system_now = _system_clock / 1000; // 转换为秒
 
-        _mn_time        = get_monotonic_time();
-        _last_rt_update = _mn_time;
+        _steady_clock        = steady_clock();
+        _last_system_clock_update = _steady_clock;
     }
 }
 
@@ -626,7 +516,7 @@ void EV::clear_pending(EVWatcher *w)
 
 void EV::timers_reify()
 {
-    while (_timer_cnt && (_timers[HEAP0])->_at <= _mn_time)
+    while (_timer_cnt && (_timers[HEAP0])->_at <= _steady_clock)
     {
         EVTimer *w = _timers[HEAP0];
 
@@ -637,7 +527,7 @@ void EV::timers_reify()
             w->_at += w->_repeat;
 
             // 如果时间出现偏差，重新调整定时器
-            if (EXPECT_FALSE(w->_at < _mn_time)) w->reschedule(_mn_time);
+            if (EXPECT_FALSE(w->_at < _steady_clock)) w->reschedule(_steady_clock);
 
             assert(w->_repeat > 0);
 
@@ -654,20 +544,25 @@ void EV::timers_reify()
 
 void EV::periodic_reify()
 {
-    while (_periodic_cnt && (_periodics[HEAP0])->_at <= _rt_time)
+    while (_periodic_cnt && (_periodics[HEAP0])->_at <= _system_clock)
     {
         EVTimer *w = _periodics[HEAP0];
 
         assert(w->_index);
+        // 如果_system_clock超时，则秒度精度的_system_now也应该超时
+        // 因为脚本逻辑都是用_system_now作为时间基准
+        assert(w->_at <= _system_now * 1000);
 
+        feed_event(w, EV_TIMER);
         if (w->_repeat)
         {
             w->_at += w->_repeat;
 
             // 如果时间出现偏差，重新调整定时器
-            if (EXPECT_FALSE(w->_at < _rt_time)) w->reschedule(_rt_time);
-
-            assert(w->_repeat > 0);
+            if (EXPECT_FALSE(w->_at < _system_clock))
+            {
+                w->reschedule(_system_clock);
+            }
 
             down_heap(_periodics.data(), _periodic_cnt, HEAP0);
         }
@@ -675,8 +570,6 @@ void EV::periodic_reify()
         {
             periodic_stop(w); // 这里不能从管理器删除，还要回调到脚本
         }
-
-        feed_event(w, EV_TIMER);
     }
 }
 
@@ -690,7 +583,7 @@ int32_t EV::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t polic
 
     EVTimer *w = &(p.first->second);
 
-    w->_at     = _mn_time + after;
+    w->_at     = _steady_clock + after;
     w->_repeat = repeat;
     w->_policy = policy;
 
@@ -746,7 +639,7 @@ int32_t EV::timer_stop(EVTimer *w)
         }
     }
 
-    w->_at -= _mn_time;
+    w->_at -= _steady_clock;
     w->_index = 0;
 
     return 0;
@@ -763,8 +656,15 @@ int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat,
 
     EVTimer *w = &(p.first->second);
 
-    w->_at     = _rt_time + after;
-    w->_repeat = repeat;
+    /**
+     * 传进来的单位是秒，要转换为毫秒。实际上精度是毫秒
+     * 这些起始时间用_system_now而不是_system_clock
+     *
+     * 比如1秒定时器当前utc时间戳_system_now为100，
+     * 实际utc时间_system_clock为100.5，那定时器应该在_system_now为101时触发
+     */
+    w->_at     = (_system_now + after) * 1000;
+    w->_repeat = repeat * 1000;
     w->_policy = policy;
 
     ++_periodic_cnt;

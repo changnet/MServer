@@ -31,7 +31,7 @@ function Ping.start(how, conn_id)
         how = how,
         wait = wait,
         conn_id = conn_id,
-        ms_time = ev:real_ms_time()
+        ms_time = ev:steady_clock()
     }
 end
 
@@ -54,7 +54,7 @@ function Ping.on_ping(id)
     end
     info.srvs[conn_id] = {
         name = srv_conn:conn_name(),
-        time = ev:real_ms_time() - info.ms_time
+        time = ev:steady_clock() - info.ms_time
     }
 
     info.wait = info.wait - 1

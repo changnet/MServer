@@ -39,9 +39,11 @@ time_t AsyncLog::Policy::day_begin(time_t now)
 
 void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 {
-    // 不是按天写入，或者还在同一天 0 == now表示这个是拼接到上一个缓冲区的日志，不需要检测
-    if (PT_DAILY != _type || 0 == now || (now >= _data && now <= _data + 86400))
+    // 不是按天写入，或者还在同一天now < 0表示这个是拼接到上一个缓冲区的日志，不需要检测
+    if (PT_DAILY != _type || now < 0 || (now >= _data && now <= _data + 86400))
+    {
         return;
+    }
 
     close_stream();
 
@@ -275,6 +277,10 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
                       const char *ctx, size_t len)
 {
     assert(path);
+
+    // 在thread_local上用gdb断点，会触发SIGSEGV，直到gcc 9.1才修复
+    // 不在这个位置断点程序可正常运行
+    // https://stackoverflow.com/questions/33429912/program-compiled-with-fpic-crashes-while-stepping-over-thread-local-variable-in
     thread_local std::string str_path;
     str_path.assign(path);
 
@@ -286,13 +292,13 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     memcpy(buff->_buff, ctx, cpy_len);
     buff->_used += cpy_len;
 
-    // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为0
+    // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为-1
     if (EXPECT_FALSE(cpy_len < len))
     {
         size_t cur_len = cpy_len;
         do
         {
-            buff = device_reserve(device, 0, type);
+            buff = device_reserve(device, -1, type);
 
             cpy_len = std::min(sizeof(buff->_buff), len - cur_len);
             memcpy(buff->_buff, ctx + cur_len, cpy_len);
@@ -307,7 +313,7 @@ size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
                               const Buffer *buffer, bool beg, bool end)
 {
     size_t bytes = 0;
-    if (buffer->_time)
+    if (buffer->_time >= 0)
     {
         if (!beg)
         {

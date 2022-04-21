@@ -5,7 +5,7 @@
 
 -- 全局热更
 function hot_fix()
-    local ms = ev:real_ms_time()
+    local ms = ev:steady_clock()
 
     -- 清除脚本
     __unrequire()
@@ -13,5 +13,5 @@ function hot_fix()
     -- 重新加载入口文件
     App.load_module()
 
-    printf("hot fix finish,time elapsed %d ms", ev:real_ms_time() - ms)
+    printf("hot fix finish,time elapsed %d ms", ev:steady_clock() - ms)
 end
