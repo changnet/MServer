@@ -29,6 +29,7 @@ EVBackend::EVBackend()
     _done = false;
     _ev   = nullptr;
     _last_pending_tm = 0;
+    _modify_protected = false;
     _fast_events.reserve(1024);
 }
 
@@ -71,7 +72,14 @@ void EVBackend::backend_once(int32_t ev_count)
         std::lock_guard<std::mutex> lg(_ev->lock());
 
         do_fast_event();
+
+        // poll等结构在处理事件时需要for循环遍历所有fd列表
+        // 中间禁止调用modify_fd来删除这个列表
+        // epoll则是可以删除的
+        _modify_protected = true;
         do_wait_event(ev_count);
+        _modify_protected = false;
+
         do_modify();
 
         // 检测待删除的连接是否超时
@@ -110,7 +118,17 @@ void EVBackend::backend()
     }
 }
 
-void EVBackend::modify(int32_t fd, EVIO *w)
+void EVBackend::modify_later(EVIO *w, int32_t events)
+{
+    w->_b_uevents = events;
+    if (!w->_b_uevent_index)
+    {
+        _user_events.push_back(w);
+        w->_b_uevent_index = (int32_t)_user_events.size();
+    }
+}
+
+void EVBackend::modify(EVIO *w)
 {
     /**
      * 这个函数由主线程调用，io线程可能处于wpoll_wait阻塞当中
@@ -140,22 +158,20 @@ void EVBackend::modify(int32_t fd, EVIO *w)
      * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
      */
 
-
-    w->_b_uevents = w->_uevents;
-
-    _modify_fd.push_back(fd);
+    modify_later(w, w->_uevents);
 }
 
 void EVBackend::do_modify()
 {
-    for (auto &fd : _modify_fd)
+    for (auto w : _user_events)
     {
-        EVIO *w = _ev->get_fast_io(fd);
+        // 冗余校验是否被主线程删除
+        assert(_ev->get_fast_io(w->_fd));
 
-        assert(w);
+        w->_b_uevent_index = 0;
         modify_watcher(w);
     }
-    _modify_fd.clear();
+    _user_events.clear();
 }
 
 int32_t EVBackend::modify_watcher(EVIO *w)
@@ -183,7 +199,8 @@ int32_t EVBackend::modify_watcher(EVIO *w)
         else
         {
             // 没有数据要发送或者发送出错直接关闭连接，并通知主线程那边做后续清理工作
-            feed_receive_event(w, EV_CLOSE);
+            // 这个modify可能是backend本身发起的，仍要检测是否要从pending中删除
+            del_pending_watcher(w->_fd, w);
         }
     }
     else if (b_uevents & EV_CLOSE)
@@ -223,12 +240,12 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
             // 发送完后主动关闭主动关闭
             if (w->_b_uevents & EV_CLOSE)
             {
-                del_pending_watcher(-1, w);
+                modify_later(w, EV_CLOSE);
             }
             else if (w->_b_eevents & EV_WRITE)
             {
                 w->_b_eevents &= static_cast<uint8_t>(~EV_WRITE);
-                modify_watcher(w);
+                modify_later(w, w->_b_uevents);
             }
         }
         return true;
@@ -240,7 +257,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         if (!(w->_b_eevents & EV_WRITE))
         {
             w->_b_eevents |= EV_WRITE;
-            modify_watcher(w);
+            modify_later(w, w->_b_uevents);
         }
         return true;
     case IO::IOS_BUSY:
@@ -250,7 +267,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     case IO::IOS_CLOSE:
     case IO::IOS_ERROR:
         // TODO 错误时是否要传一个错误码给主线程
-        del_pending_watcher(-1, w);
+        modify_later(w, EV_CLOSE);
         return false;
     default: ELOG("unknow io status: %d", status); return false;
     }
@@ -311,7 +328,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
         if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
         {
             w->_b_uevents &= static_cast<uint8_t>(~EV_CONNECT);
-            modify_watcher(w);
+            modify_later(w, w->_b_uevents);
         }
 
         events |= (EV_WRITE | EV_CONNECT);
@@ -331,7 +348,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
         if (EXPECT_FALSE(kernel_ev & EV_ACCEPT))
         {
             w->_b_uevents &= static_cast<uint8_t>(~EV_ACCEPT);
-            modify_watcher(w);
+            modify_later(w, w->_b_uevents);
         }
 
         events |= (EV_READ | EV_ACCEPT);
@@ -340,6 +357,9 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
     if (revents & (EV_ERROR | EV_CLOSE))
     {
         events |= EV_CLOSE;
+        // 如果对方关闭，这里直接从backend移除监听，避免再从主线程通知删除
+        // 注意需要清除EV_FLUSH标记，那个优先级更高
+        modify_later(w, EV_CLOSE);
     }
 
     // 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT

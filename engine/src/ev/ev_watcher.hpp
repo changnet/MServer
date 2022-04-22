@@ -145,6 +145,7 @@ public:
     int32_t _fd;     /// 文件描述符
 
     int32_t _change_index; // 在io_changes数组中的下标
+    int32_t _b_uevent_index; // 在backend中待修改数组中的下标
     int32_t _b_fevent_index; // 在io_fevents数组中的下标
     int32_t _b_revent_index; // 在io_revents数组中的下标
 

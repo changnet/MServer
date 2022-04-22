@@ -16,14 +16,15 @@ EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
     _fd     = fd;
     _status = S_STOP;
 
-    _uevents = static_cast<uint8_t>(events);
+    _uevents   = static_cast<uint8_t>(events);
     _b_uevents = 0;
     _b_revents = 0;
     _b_kevents = 0;
     _b_eevents = 0;
     _b_fevents = 0;
 
-    _change_index = 0;
+    _change_index   = 0;
+    _b_uevent_index = 0;
     _b_fevent_index = 0;
     _b_revent_index = 0;
 
@@ -99,13 +100,15 @@ IO::IOStatus EVIO::do_init_connect()
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
 {
     _id     = id;
-    _index = 0;
+    _index  = 0;
     _policy = P_NONE;
     _at     = 0;
     _repeat = 0;
 }
 
-EVTimer::~EVTimer() {}
+EVTimer::~EVTimer()
+{
+}
 
 void EVTimer::reschedule(int64_t now)
 {

@@ -7,6 +7,13 @@
     #define __windows__
     #define __OS_NAME__ "WINDOWS"
 
+    // 排除windows.h一些不常用的头文件，一些头文件甚至会引起冲突
+    // 例如windows.h默认引用Winsock.h而不是Winsock2.h
+    // 如果有功能被排除掉，显式include对应的头文件即可
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+
     #include <windows.h>
     #define PATH_MAX                MAX_PATH
     #define localtime_r(timer, buf) localtime_s(buf, timer)

@@ -1,3 +1,3 @@
 @echo off
 
-call win_start.bat test
+call win_start.bat test "--filter=http"

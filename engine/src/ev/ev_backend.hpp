@@ -61,7 +61,7 @@ public:
     /**
      * 修改io事件(包括删除)
      */
-    void modify(int32_t fd, EVIO *w);
+    void modify(EVIO *w);
     /**
      * 创建一个backend实例
      */
@@ -147,18 +147,25 @@ private:
      * @return errno
      */
     int32_t modify_watcher(EVIO *w);
+    /**
+     * @brief 把一个watcher添加到待修改队列
+     * @param w 待修改的watcher
+     * @param events 设置到_b_uevents的事件
+    */
+    void modify_later(EVIO *w, int32_t events);
 
 protected:
     bool _has_ev;   /// 是否有待主线程处理的事件
     bool _done;     /// 是否终止进程
     bool _busy;     /// io读写返回busy，意味主线程处理不完这些数据
+    bool _modify_protected; // 当前禁止修改poll等数组结构
     int64_t _last_pending_tm; // 上次检测待删除watcher时间
     class EV *_ev;  /// 主循环
     std::thread _thread;
     std::vector<EVIO *> _fast_events; // 等待backend线程快速处理的事件
 
-    /// 等待变更到backend的fd
-    std::vector<int32_t> _modify_fd;
+    /// 等待变更到backend的事件
+    std::vector<EVIO *> _user_events;
 
     // 待发送完数据后删除的watcher
     std::unordered_map<int32_t, int64_t> _pending_watcher;

@@ -303,17 +303,17 @@ void EV::io_reify()
             {
             case EVIO::S_STOP:
                 non_del = true;
-                _backend->modify(fd, w); // 移除该socket
+                _backend->modify(w); // 移除该socket
                 break;
             case EVIO::S_START:
                 non_del = true;
-                _backend->modify(fd, w);
+                _backend->modify(w);
                 break;
             case EVIO::S_NEW:
                 non_del    = true;
                 w->_status = EVIO::S_START;
                 set_fast_io(fd, w);
-                _backend->modify(fd, w);
+                _backend->modify(w);
                 break;
             case EVIO::S_DEL:
                 // watcher的操作是异步的，同样fd的watcher可能被删掉又被系统复用

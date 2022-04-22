@@ -1,7 +1,7 @@
 #include "socketpair.hpp"
 
 #ifdef WIN32
-# include <winsock2.h>
+#include <winsock2.h>
 
 int socketpair(int domain, int type, int protocol, int sv[2])
 {
@@ -19,7 +19,7 @@ int socketpair(int domain, int type, int protocol, int sv[2])
     SOCKET socket_listen = socket(domain, type, protocol);
     if (INVALID_SOCKET == socket_listen) return -1;
 
-    int32_t optval = 1;
+    int optval = 1;
     /*
      * enable address reuse.it will help when the socket is in TIME_WAIT status.
      * for example:
@@ -57,7 +57,8 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 
     // 获取bind时由Windows Sockets DLL 选择的端口
     int len = sizeof(connect_addr);
-    if (getsockname(socket_listen, &connect_addr, &len) == SOCKET_ERROR)
+    if (getsockname(socket_listen, (struct sockaddr *)&connect_addr, &len)
+        == SOCKET_ERROR)
     {
         goto ERROR_EXIT;
     }
@@ -79,8 +80,8 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 
     closesocket(socket_listen);
 
-    sv[0] = socket_connnect;
-    sv[1] = socket_accept;
+    sv[0] = (int)socket_connnect;
+    sv[1] = (int)socket_accept;
 
     return 0;
 
