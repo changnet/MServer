@@ -11,6 +11,7 @@ t_describe("http(s) test", function()
     -- example.com不稳定，经常连不上，用postman来测试
     -- local exp_host = "www.example.com"
     local exp_host = "postman-echo.com"
+    local exp_ip
 
     local local_host = "::1"
     if IPV4 then local_host = "127.0.0.1" end
@@ -47,8 +48,8 @@ t_describe("http(s) test", function()
                                               "mini_distributed_game_server",
                                               "../certs/ca.cer")
 
-        local ip = util.get_addr_info(exp_host)
-        t_print("target host address is", ip)
+        exp_ip = util.get_addr_info(exp_host)
+        t_print("target host address is", exp_ip)
     end)
 
     t_it("http get " .. exp_host, function()
@@ -56,7 +57,7 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect(exp_host, 80)
+        conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
@@ -73,7 +74,7 @@ t_describe("http(s) test", function()
 
         local conn = HttpConn()
 
-        conn:connect(exp_host, 80)
+        conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)

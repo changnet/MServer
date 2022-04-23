@@ -182,10 +182,11 @@ end
 -- 连接到其他服务器
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
-function Conn:connect(host, port)
-    self.ip = util.get_addr_info(host)
-    -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址。这个会影响http头里的
-    -- host字段
+-- @param ip 目标服务器的ip，如果不传从则host解析
+function Conn:connect(host, port, ip)
+    self.ip = ip or util.get_addr_info(host)
+    -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址
+    -- 这个会影响http头里的host字段
     -- 对www.example.com请求时，如果host为一个ip，是会返回404的
     self.host = host
     self.port = port
@@ -209,10 +210,11 @@ end
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
 -- @param ssl 用new_ssl_ctx创建的ssl_ctx
-function Conn:connect_s(host, port, ssl)
+-- @param ip 目标服务器的ip，如果不传从则host解析
+function Conn:connect_s(host, port, ssl, ip)
     self.ssl = assert(ssl)
 
-    return self:connect(host, port)
+    return self:connect(host, port, ip)
 end
 
 -- 监听http连接
