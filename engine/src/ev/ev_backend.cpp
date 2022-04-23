@@ -2,8 +2,7 @@
 #include "ev_backend.hpp"
 
 #if defined(__linux__)
-    // #include "ev_epoll.inl"
-    #include "ev_poll.inl"
+    #include "ev_epoll.inl"
 #elif defined(__windows__)
     #include "ev_poll.inl"
 #endif
@@ -120,7 +119,7 @@ void EVBackend::backend()
 
 void EVBackend::modify_later(EVIO *w, int32_t events)
 {
-    w->_b_uevents = events;
+    w->_b_uevents = static_cast<uint8_t>(events);
     if (!w->_b_uevent_index)
     {
         _user_events.push_back(w);

@@ -1,10 +1,5 @@
 #pragma once
 
-/**
- * 尝试让linux和windows的socket接口兼容，如果能统一，则统一到linux接口
- * 希望C++23能用上STL的socket
- */
-
 #include "../global/platform.hpp"
 
 #ifdef __windows__
@@ -14,11 +9,16 @@
     #include <cstring> // strerror
 #endif
 
+/**
+ * 尝试让linux和windows的网络接口兼容，如果能统一，则统一到linux接口
+ * 希望C++23能用上STL的socket
+ */
 namespace netcompat
 {
 #ifdef __windows__
     using type = SOCKET;
-    static const SOCKET INVALID = INVALID_SOCKET;
+    // fd是以linux下格式为准，这里强转成linux格式
+    static const int INVALID = static_cast<int>(INVALID_SOCKET);
 
     /**
      * @brief 关闭socket连接

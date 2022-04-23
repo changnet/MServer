@@ -1,4 +1,5 @@
 #include "socket.hpp"
+#include "net_compat.hpp"
 #include "io/ssl_io.hpp"
 #include "packet/http_packet.hpp"
 #include "packet/stream_packet.hpp"
@@ -9,11 +10,6 @@
 #ifdef __windows__
     #include <winsock2.h>
     #include <ws2tcpip.h>
-
-inline void close(SOCKET fd)
-{
-    closesocket(fd);
-}
 #else
     #include <fcntl.h>
     #include <sys/types.h>
@@ -22,8 +18,6 @@ inline void close(SOCKET fd)
     #include <unistd.h>      /* POSIX api, like close */
     #include <netinet/tcp.h> /* for keep-alive */
     #include <sys/socket.h>
-
-using SOCKET = int32_t; // 兼容windows代码
 #endif
 
 #ifdef TCP_KEEP_ALIVE
@@ -65,65 +59,10 @@ void Socket::library_init()
     // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-wsastartup
     WSADATA wsaData;
     WORD wVersionRequested = MAKEWORD(2, 2);
-    ;
 
     int32_t err = WSAStartup(wVersionRequested, &wsaData);
     assert(0 == err && 2 == LOBYTE(wsaData.wVersion)
            && 2 == HIBYTE(wsaData.wVersion));
-#endif
-}
-
-const char *Socket::str_error(int32_t e)
-{
-    if (-1 == e) e = Socket::error_no();
-#ifdef __windows__
-    // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
-    thread_local char buff[512] = {0};
-    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
-                      | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-                  nullptr, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buff,
-                  sizeof(buff), nullptr);
-    return buff;
-#else
-    return strerror(e);
-#endif
-}
-
-/// 获取无效的socket id
-int32_t Socket::invalid_fd()
-{
-#ifdef __windows__
-    return static_cast<int32_t>(INVALID_SOCKET);
-#else
-    return -1;
-#endif
-}
-
-bool Socket::fd_valid(int32_t fd)
-{
-#ifdef __windows__
-    return fd != INVALID_SOCKET;
-#else
-    return fd >= 0;
-#endif
-}
-
-int32_t Socket::error_no()
-{
-#ifdef __windows__
-    return WSAGetLastError();
-#else
-    return errno;
-#endif
-}
-
-int32_t Socket::is_error()
-{
-    int32_t e = error_no();
-#ifdef __windows__
-    return e && e != WSAEINPROGRESS && e != WSAEWOULDBLOCK;
-#else
-    return e && e != EAGAIN && e != EWOULDBLOCK && e != EINPROGRESS;
 #endif
 }
 
@@ -135,7 +74,7 @@ Socket::Socket(int32_t conn_id, ConnType conn_ty)
 
     _status = CS_NONE;
 
-    _fd = invalid_fd();
+    _fd = netcompat::INVALID;
     _w  = nullptr;
 
     _conn_id     = conn_id;
@@ -405,7 +344,7 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
 
 bool Socket::start(int32_t fd)
 {
-    assert(_fd == fd || !fd_valid(_fd));
+    assert(_fd == netcompat::INVALID);
 
     assert(!_w);
 
@@ -427,20 +366,22 @@ bool Socket::start(int32_t fd)
 
 int32_t Socket::connect(const char *host, int32_t port)
 {
-    assert(!fd_valid(_fd));
+    assert(_fd == netcompat::INVALID);
 
     // 创建新socket并设置为非阻塞
     int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (!fd_valid(fd) || non_block(fd) < 0)
+    if (fd == netcompat::INVALID || non_block(fd) < 0)
     {
-        ELOG("Socket create %s:%d %s(%d)", host, port, str_error(), error_no());
+        int32_t e = netcompat::noerror();
+        ELOG("Socket create %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
 
 #ifndef IP_V4
     if (non_ipv6only(fd))
     {
-        ELOG("Socket ipv6 %s:%d %s(%d)", host, port, str_error(), error_no());
+        int32_t e = netcompat::noerror();
+        ELOG("Socket ipv6 %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
 #endif
@@ -458,23 +399,24 @@ int32_t Socket::connect(const char *host, int32_t port)
     if (0 == ok)
     {
         ELOG("invalid host format: %s", host);
-        ::close(fd);
+        netcompat::close(fd);
         return -1;
     }
     else if (ok < 0)
     {
-        ::close(fd);
+        netcompat::close(fd);
         return -1;
     }
 
     /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
     if (::connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        if (is_error())
+        int32_t e = netcompat::noerror();
+        if (netcompat::iserror(e))
         {
-            ELOG("Socket connect %s:%d %s(%d)", host, port, str_error(),
-                 error_no());
-            ::close(fd);
+            netcompat::close(fd);
+            ELOG("Socket connect %s:%d %s(%d)", host, port,
+                 netcompat::strerror(e));
 
             return -1;
         }
@@ -489,7 +431,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
     _w->bind(&Socket::io_cb, this);
 
-    _fd = fd;
+    _fd     = fd;
     _status = CS_OPENED;
 
     return fd;
@@ -501,7 +443,7 @@ int32_t Socket::validate()
     socklen_t len = sizeof(err);
     if (getsockopt(_fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len))
     {
-        return error_no();
+        return netcompat::noerror();
     }
 
     return err;
@@ -509,7 +451,7 @@ int32_t Socket::validate()
 
 const char *Socket::address(char *buf, size_t len, int *port)
 {
-    if (!fd_valid(_fd)) return nullptr;
+    if (_fd == netcompat::INVALID) return nullptr;
 
     struct sockaddr_in_x addr;
 
@@ -518,7 +460,8 @@ const char *Socket::address(char *buf, size_t len, int *port)
 
     if (getpeername(_fd, (struct sockaddr *)&addr, &addr_len) < 0)
     {
-        ELOG("socket::address getpeername error: %s\n", strerror(errno));
+        int32_t e = netcompat::noerror();
+        ELOG("socket::address getpeername error: %s\n", netcompat::strerror(e));
         return nullptr;
     }
 
@@ -539,7 +482,7 @@ int32_t Socket::listen(const char *host, int32_t port)
     }
 
     _fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (!fd_valid(_fd))
+    if (_fd == netcompat::INVALID)
     {
         return -1;
     }
@@ -612,8 +555,8 @@ int32_t Socket::listen(const char *host, int32_t port)
     return _fd;
 
 FAIL:
-    ::close(_fd);
-    _fd = invalid_fd();
+    netcompat::close(_fd);
+    _fd = netcompat::INVALID;
     return -1;
 }
 
@@ -648,8 +591,8 @@ void Socket::close_cb(bool term)
 
     _status = CS_CLOSED;
 
-    ::close(_fd);
-    _fd = invalid_fd();
+    netcompat::close(_fd);
+    _fd = netcompat::INVALID;
 
     _w = nullptr;
     StaticGlobal::ev()->io_delete(_conn_id);
@@ -660,19 +603,15 @@ void Socket::close_cb(bool term)
 void Socket::listen_cb()
 {
     static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    while (fd_valid(_fd))
+    while (CS_OPENED == _status)
     {
         int32_t new_fd = (int32_t)::accept(_fd, nullptr, nullptr);
-        if (!fd_valid(new_fd))
+        if (new_fd == netcompat::INVALID)
         {
-            int32_t e = error_no();
-#ifdef __windows__
-            if (WSAEWOULDBLOCK != e)
-#else
-            if (EAGAIN != e && EWOULDBLOCK != e)
-#endif
+            int32_t e = netcompat::noerror();
+            if (netcompat::iserror(e))
             {
-                ELOG("socket::accept:%s\n", str_error());
+                ELOG("socket::accept:%s", netcompat::strerror(e));
                 return;
             }
 
@@ -694,8 +633,8 @@ void Socket::listen_cb()
         // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
         bool ok = network_mgr->accept_new(_conn_id, new_sk);
         // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
-        if (EXPECT_TRUE(ok && fd_valid(new_sk->_fd) && new_sk->_packet
-                        && new_sk->_io))
+        if (EXPECT_TRUE(ok && new_sk->_fd != netcompat::INVALID
+                        && new_sk->_packet && new_sk->_io))
         {
             new_sk->_w->init_accept();
         }
@@ -734,7 +673,8 @@ void Socket::connect_cb()
     bool ok = StaticGlobal::network_mgr()->connect_new(_conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
-    if (EXPECT_TRUE(ok && 0 == ecode && fd_valid(_fd) && _packet && _w->_io))
+    if (EXPECT_TRUE(ok && 0 == ecode && _fd != netcompat::INVALID && _packet
+                    && _w->_io))
     {
         _w->init_connect();
     }

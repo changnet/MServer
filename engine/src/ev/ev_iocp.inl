@@ -10,6 +10,11 @@
  * 
 */
 
+// 是否要使用wepoll替换
+// https://github.com/piscisaureus/wepoll
+// wepoll使用的机制 NtDeviceIoControlFile 是一个未公开的机制
+// 它使用IOCTL_AFD_POLL标记来实现类似epoll_ctl的功能
+
 const char *__BACKEND__ = "IOCP";
 
 #include <thread>

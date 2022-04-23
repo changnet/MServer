@@ -10,6 +10,7 @@
 #include "lutil.hpp"
 #include "ltools.hpp"
 #include "../net/socket.hpp" // get_addr_info
+#include "../net/net_compat.hpp"
 
 #ifdef __windows__
     #include <rpc.h>
@@ -288,7 +289,7 @@ static int32_t uuid_short_parse(lua_State *L)
 }
 
 /**
- * 取linux下errno对应的错误描述字符串
+ * 取linux下errno或者win下WSAGetLastError对应的错误描述字符串
  * @param error 错误码
  * @return 错误描述字符串
  */
@@ -296,7 +297,7 @@ static int32_t what_error(lua_State *L)
 {
     int32_t e = luaL_checkinteger32(L, 1);
 
-    lua_pushstring(L, Socket::str_error(e));
+    lua_pushstring(L, netcompat::strerror(e));
 
     return 1;
 }

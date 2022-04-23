@@ -10,11 +10,6 @@
     const char *__BACKEND__ = "poll";
 #endif
 
-// 是否要使用wepoll替换
-// https://github.com/piscisaureus/wepoll
-// wepoll使用的机制 NtDeviceIoControlFile 是一个未公开的机制
-// 它使用IOCTL_AFD_POLL标记来实现类似epoll_ctl的功能
-
 /// backend using poll implement
 class FinalBackend final : public EVBackend
 {
@@ -71,11 +66,11 @@ bool FinalBackend::before_start()
     // https://docs.microsoft.com/zh-cn/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlisntddiversionavailable
     // NTDDI_WIN10_VB	Windows 10 2004
 
-#if !(NTDDI_WIN10_VB && NTDDI_VERSION >= NTDDI_WIN10_VB)
+#if __windows__ && !(NTDDI_WIN10_VB && NTDDI_VERSION >= NTDDI_WIN10_VB)
     #pragma message("windows version < WIN 10 2004, WSAPoll has fatal bug")
 
-    // 不太清楚VS版本和运行版本之间的关系
-    // 在WIN10 19H1上编译的程序在WIN10 21H1上运行，GetVersion()函数还是返回19H1
+    // 不太清楚VS版本和运行版本之间的关系，全部按编译时打印警告
+    // 在WIN10 19H1上编译的程序即使在WIN10 21H1上运行，GetVersion()函数还是返回19H1
     PLOG("windows version < WIN 10 2004, WSAPoll has fatal bug");
 #endif
 

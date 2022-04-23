@@ -1,5 +1,6 @@
 #include "../../system/static_global.hpp"
 #include "ssl_io.hpp"
+#include "../net_compat.hpp"
 
 SSLIO::~SSLIO()
 {
@@ -25,7 +26,7 @@ bool SSLIO::is_ready() const
 
 IO::IOStatus SSLIO::recv()
 {
-    assert(Socket::fd_valid(_fd));
+    assert(_fd != netcompat::INVALID);
 
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
@@ -57,7 +58,8 @@ IO::IOStatus SSLIO::recv()
     // 非主动断开，打印错误日志
     // 在实际测试中，chrome会直接断开链接，而firefox则会关闭SSL */
     if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
+        || (SSL_ERROR_SYSCALL == ecode
+            && !netcompat::iserror(netcompat::noerror())))
     {
         return IOS_CLOSE;
     }
@@ -68,7 +70,7 @@ IO::IOStatus SSLIO::recv()
 
 IO::IOStatus SSLIO::send()
 {
-    assert(Socket::fd_valid(_fd));
+    assert(_fd != netcompat::INVALID);
 
     if (!SSL_is_init_finished(_ssl_ctx)) return do_handshake();
 
@@ -97,7 +99,8 @@ IO::IOStatus SSLIO::send()
 
     // 非主动断开，打印错误日志
     if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode && !Socket::is_error()))
+        || (SSL_ERROR_SYSCALL == ecode
+            && !netcompat::iserror(netcompat::noerror())))
     {
         return IOS_CLOSE;
     }

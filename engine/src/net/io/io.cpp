@@ -1,5 +1,5 @@
 #include "io.hpp"
-#include "../socket.hpp"
+#include "../net_compat.hpp"
 #include "../../system/static_global.hpp"
 
 #ifdef __windows__
@@ -26,7 +26,7 @@ IO::~IO()
 
 IO::IOStatus IO::recv()
 {
-    assert(Socket::fd_valid(_fd));
+    assert(_fd != netcompat::INVALID);
 
     int32_t len = 0;
     while (true)
@@ -49,9 +49,10 @@ IO::IOStatus IO::recv()
     }
 
     /* error happen */
-    if (Socket::is_error())
+    int32_t e = netcompat::noerror();
+    if (netcompat::iserror(e))
     {
-        ELOG("io recv:%s(%d)", Socket::str_error(), Socket::error_no());
+        ELOG("io recv:%s(%d)", netcompat::strerror(e), e);
         return IOS_ERROR;
     }
 
@@ -60,7 +61,7 @@ IO::IOStatus IO::recv()
 
 IO::IOStatus IO::send()
 {
-    assert(Socket::fd_valid(_fd));
+    assert(_fd != netcompat::INVALID);
 
     int32_t len  = 0;
     size_t bytes = 0;
@@ -85,9 +86,10 @@ IO::IOStatus IO::send()
     if (0 == len) return IOS_CLOSE; // 对方主动断开
 
     /* error happen */
-    if (Socket::is_error())
+    int32_t e = netcompat::noerror();
+    if (netcompat::iserror(e))
     {
-        ELOG("io send:%s(%d)", Socket::str_error(), Socket::error_no());
+        ELOG("io send:%s(%d)", netcompat::strerror(e), e);
         return IOS_ERROR;
     }
 

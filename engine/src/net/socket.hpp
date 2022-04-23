@@ -134,7 +134,7 @@ public:
     */
     void flush();
 
-        /**
+    /**
      * @brief 追加要发送的数据，并且唤醒io线程
      * @param data 需要发送的数据指针
      * @param len 需要发送的数据长度
@@ -187,18 +187,6 @@ public:
      */
     void get_stat(size_t &schunk, size_t &rchunk, size_t &smem, size_t &rmem,
                   size_t &spending, size_t &rpending);
-
-    /// 获取socket错误日志
-    static const char *str_error(int32_t e = -1);
-    /// 获取无效的socket id
-    static int32_t invalid_fd();
-    /// 判断创建出来的fd是否有效
-    static bool fd_valid(int32_t fd);
-
-    /// 获取socket的错误码
-    static int32_t error_no();
-    /// 是否真正出现了错误
-    static int32_t is_error();
 
 private:
     /**

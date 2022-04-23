@@ -2,6 +2,7 @@
 
 #include "../system/static_global.hpp"
 #include "ltools.hpp"
+#include "../net/net_compat.hpp"
 
 #include "../net/packet/http_packet.hpp"
 #include "../net/packet/stream_packet.hpp"
@@ -194,7 +195,7 @@ int32_t LNetworkMgr::address(lua_State *L)
     char buf[128]; // INET6_ADDRSTRLEN
     if (!itr->second->address(buf, sizeof(buf), &port))
     {
-        return luaL_error(L, Socket::str_error());
+        return luaL_error(L, netcompat::strerror(netcompat::noerror()));
     }
 
     lua_pushstring(L, buf);
@@ -230,7 +231,7 @@ int32_t LNetworkMgr::listen(lua_State *L)
     {
         delete _socket;
         lua_pushinteger(L, -1);
-        lua_pushstring(L, Socket::str_error());
+        lua_pushstring(L, netcompat::strerror(netcompat::noerror()));
         return 2;
     }
 
@@ -260,10 +261,10 @@ int32_t LNetworkMgr::connect(lua_State *L)
         new class Socket(conn_id, static_cast<Socket::ConnType>(conn_type));
 
     int32_t fd = _socket->connect(host, port);
-    if (!Socket::fd_valid(fd))
+    if (fd == netcompat::INVALID)
     {
         delete _socket;
-        luaL_error(L, Socket::str_error());
+        luaL_error(L, netcompat::strerror(netcompat::noerror()));
         return 0;
     }
 
