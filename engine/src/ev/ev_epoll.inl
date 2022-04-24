@@ -134,7 +134,7 @@ void FinalBackend::do_wait_event(int32_t ev_count)
         // 但有时候watcher并没有设置EV_WRITE或者EV_READ，因此需要独立检测
         if (revents & (EPOLLERR | EPOLLHUP)) events |= EV_CLOSE;
 
-        EVIO *w = _ev->get_fast_io(fd);
+        EVIO *w = get_fd_watcher(fd);
         assert(w);
         do_watcher_wait_event(w, events);
     }

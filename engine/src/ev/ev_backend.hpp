@@ -63,6 +63,14 @@ public:
      */
     void modify(EVIO *w);
     /**
+     * 设置fd对应的watcher
+     */
+    void set_fd_watcher(int32_t fd, EVIO *w);
+    /**
+     * 通过fd获取watcher
+     */
+    EVIO *get_fd_watcher(int32_t fd);
+    /**
      * 创建一个backend实例
      */
     static EVBackend *instance();
@@ -140,7 +148,7 @@ private:
     /**
      * 处理待修改的io
      */
-    void do_modify();
+    void do_user_event();
     /**
      * @brief 把一个watcher设置到epoll，该函数外部需要加锁
      * @param w watcher的指针
@@ -169,4 +177,17 @@ protected:
 
     // 待发送完数据后删除的watcher
     std::unordered_map<int32_t, int64_t> _pending_watcher;
+
+    /// 小于该值的fd，可通过数组快速获取io对象
+    static const int32_t HUGE_FD = 10240;
+    /**
+     * 在ev那边，使用自定义的唯一id进行管理，避免fd复用造成的一些问题
+     * 但对于epoll等函数，只认fd，因此这里把fd和watcher映射，用于快速查找
+     */
+    std::vector<EVIO *> _fd_watcher;
+    /**
+     * 用于通过fd快速获取io对象，当fd太大(尤其是windows) 时
+     * 无法分配过大的数组，linux下应该是用不到
+     */
+    std::unordered_map<int32_t, EVIO *> _fd_watcher_huge;
 };

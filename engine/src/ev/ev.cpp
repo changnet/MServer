@@ -18,7 +18,6 @@
 
 EV::EV()
 {
-    _io_fast.reserve(1024);
     _io_changes.reserve(1024);
     _pendings.reserve(1024);
     _timers.reserve(1024);
@@ -263,30 +262,6 @@ void EV::clear_io_receive_event(EVIO *w)
     }
 }
 
-void EV::set_fast_io(int32_t fd, EVIO *w)
-{
-    // win的socket是unsigned类型，可能会很大，得强转unsigned来判断
-    uint32_t ufd = ((uint32_t)fd);
-    if (ufd < MAX_FAST_IO)
-    {
-        if (EXPECT_FALSE(_io_fast.size() < ufd))
-        {
-            _io_fast.resize(ufd + 1024);
-        }
-        _io_fast[fd] = w;
-    }
-
-    if (w)
-    {
-        _io_fast_mgr[fd] = w;
-    }
-    else
-    {
-        _io_fast_mgr.erase(fd);
-    }
-}
-
-
 void EV::io_reify()
 {
     if (_io_changes.empty()) return;
@@ -312,7 +287,7 @@ void EV::io_reify()
             case EVIO::S_NEW:
                 non_del    = true;
                 w->_status = EVIO::S_START;
-                set_fast_io(fd, w);
+                _backend->set_fd_watcher(fd, w);
                 _backend->modify(w);
                 break;
             case EVIO::S_DEL:
@@ -326,7 +301,7 @@ void EV::io_reify()
                 clear_io_receive_event(w);
 
                 _io_mgr.erase(w->_id);
-                set_fast_io(fd, nullptr);
+                _backend->set_fd_watcher(fd, nullptr);
                 break;
             }
         }

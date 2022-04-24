@@ -31,8 +31,6 @@ class EVBackend;
 #define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
 #define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
 
-#define MAX_FAST_IO 10240 /// 小于该值的fd，可通过数组快速获取io对象
-
 using HeapNode = EVTimer *;
 
 extern const char *__BACKEND__;
@@ -68,19 +66,6 @@ public:
      * @return 
     */
     int32_t io_delete(int32_t id);
-    /**
-     * @brief 获取设置到io线程的io对象，调用此函数注意线程安全
-     * @param fd
-     * @return
-     */
-    EVIO *get_fast_io(int32_t fd)
-    {
-        if (((uint32_t)fd) < _io_fast.size()) return _io_fast[fd];
-
-        auto found = _io_fast_mgr.find(fd);
-        return found == _io_fast_mgr.end() ? nullptr : found->second;
-    }
-
     /**
      * @brief 获取任意io对象，只能主线程调用
      * @param fd
@@ -206,8 +191,6 @@ public:
 protected:
     virtual void running() = 0;
 
-    void set_fast_io(int32_t fd, EVIO *w);
-
     void io_reify();
     void time_update();
     void feed_event(EVWatcher *w, int32_t revents);
@@ -258,14 +241,6 @@ protected:
      * @brief _io_changes中用于删除的索引
     */
     int32_t _io_delete_index;
-
-    /// 用于通过fd快速获取io对象
-    std::vector<EVIO *> _io_fast;
-    /**
-     * 用于通过fd快速获取io对象，当fd太大(尤其是windows) 时
-     * 无法分配过大的数组，linux下应该是用不到
-     */
-    std::unordered_map<int32_t, EVIO *> _io_fast_mgr;
 
     std::unordered_map<int32_t, EVIO> _io_mgr; /// 管理所有io对象
 

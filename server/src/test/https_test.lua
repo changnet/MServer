@@ -53,12 +53,13 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http get " .. exp_host, function()
-        t_async(10000)
+        t_async(15000)
 
         local conn = HttpConn()
 
         conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
+            t_print("connected !")
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 2)
@@ -70,12 +71,13 @@ t_describe("http(s) test", function()
     end)
 
     t_it("http post " .. exp_host, function()
-        t_async(10000)
+        t_async(15000)
 
         local conn = HttpConn()
 
         conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
+            t_print("connected !")
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 2)
@@ -158,12 +160,13 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https get " .. exp_host, function()
-        t_async(10000)
+        t_async(15000)
 
         local conn = HttpConn()
 
         conn:connect_s(exp_host, 443, clt_ssl)
         conn.on_connected = function(_conn)
+            t_print("connected !")
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 2)
@@ -175,12 +178,13 @@ t_describe("http(s) test", function()
     end)
 
     t_it("https post " .. exp_host, function()
-        t_async(10000)
+        t_async(15000)
 
         local conn = HttpConn()
 
         conn:connect_s(exp_host, 443, clt_ssl)
         conn.on_connected = function(_conn)
+            t_print("connected !")
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
                 t_equal(http_type, 2)

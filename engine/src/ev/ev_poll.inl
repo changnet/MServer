@@ -128,7 +128,7 @@ void FinalBackend::do_wait_event(int32_t ev_count)
             if (revents & POLLIN) events |= EV_READ;
             if (revents & (POLLERR | POLLHUP)) events |= EV_CLOSE;
 
-            EVIO *w = _ev->get_fast_io(static_cast<int32_t>(fd));
+            EVIO *w = get_fd_watcher(static_cast<int32_t>(fd));
             assert(w);
             do_watcher_wait_event(w, events);
         }

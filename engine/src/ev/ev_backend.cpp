@@ -79,7 +79,7 @@ void EVBackend::backend_once(int32_t ev_count)
         do_wait_event(ev_count);
         _modify_protected = false;
 
-        do_modify();
+        do_user_event();
 
         // 检测待删除的连接是否超时
         static const int32_t MIN_PENDING_CHECK = 2000;
@@ -160,12 +160,12 @@ void EVBackend::modify(EVIO *w)
     modify_later(w, w->_uevents);
 }
 
-void EVBackend::do_modify()
+void EVBackend::do_user_event()
 {
     for (auto w : _user_events)
     {
         // 冗余校验是否被主线程删除
-        assert(_ev->get_fast_io(w->_fd));
+        assert(get_fd_watcher(w->_fd));
 
         w->_b_uevent_index = 0;
         modify_watcher(w);
@@ -279,10 +279,21 @@ void EVBackend::do_watcher_fast_event(EVIO *w)
     int32_t events = 0;
     {
         std::lock_guard<SpinLock> lg(_ev->fast_lock());
+
+        // 执行fast_event时，需要保证watcher已就位
+        // 因为fast_event可能会修改该watcher在epoll中的信息从而产生event
+        // 这时候没有watcher就无法正确处理
+        assert(get_fd_watcher(w->_fd));
+
         events           = w->_b_fevents;
         w->_b_fevents    = 0;
         w->_b_fevent_index = 0;
     }
+
+    // TODO 执行fast_event时，可能还未执行该watcher的user_event
+    // 即当前fd仍不归epoll管理从目前来看这个暂时没有影响
+    // 例如accept成功时直接发送数据，fast_event直接唤醒线程发送数据，但do_user_event
+    // 要在发送完后才执行
 
     assert(events);
 
@@ -411,7 +422,7 @@ void EVBackend::del_pending_watcher(int32_t fd, EVIO *w)
     // 未传w则是定时检测时调用，在for循环中已经删除了，这里不需要再次删除
     if (!w)
     {
-        w = _ev->get_fast_io(fd);
+        w = get_fd_watcher(fd);
 
         // 多次调用close可能会删掉watcher
         if (!w)
@@ -430,4 +441,38 @@ void EVBackend::del_pending_watcher(int32_t fd, EVIO *w)
 
     feed_receive_event(w, EV_CLOSE);
     modify_fd(w->_fd, FD_OP_DEL, 0);
+}
+
+void EVBackend::set_fd_watcher(int32_t fd, EVIO *w)
+{
+    // win的socket是unsigned类型，可能会很大，得强转unsigned来判断
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < HUGE_FD)
+    {
+        if (EXPECT_FALSE(_fd_watcher.size() < ufd))
+        {
+            _fd_watcher.resize(ufd + 1024);
+        }
+        _fd_watcher[fd] = w;
+    }
+    else
+    {
+        if (w)
+        {
+            _fd_watcher_huge[fd] = w;
+        }
+        else
+        {
+            _fd_watcher_huge.erase(fd);
+        }
+    }
+}
+
+EVIO *EVBackend::get_fd_watcher(int32_t fd)
+{
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < HUGE_FD) return _fd_watcher[ufd];
+
+    auto found = _fd_watcher_huge.find(fd);
+    return found == _fd_watcher_huge.end() ? nullptr : found->second;
 }
