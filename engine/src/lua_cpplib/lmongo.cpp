@@ -113,7 +113,7 @@ bool LMongo::initialize()
 
 size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
 {
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<std::mutex> guard(_mutex);
 
     size_t finished_sz   = _result.size();
     size_t unfinished_sz = _query.size();
@@ -303,7 +303,7 @@ int32_t LMongo::count(lua_State *L)
     bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         MongoQuery *mongo_count =
             _query_pool.construct(id, MQT_COUNT, collection, query, opts);
@@ -333,7 +333,7 @@ int32_t LMongo::find(lua_State *L)
     bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         MongoQuery *mongo_find =
             _query_pool.construct(id, MQT_FIND, collection, query, opts);
@@ -369,7 +369,7 @@ int32_t LMongo::find_and_modify(lua_State *L)
     bool ret_new = lua_toboolean(L, 9);
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         MongoQuery *mongo_fmod =
             _query_pool.construct(id, MQT_FMOD, collection, query);
@@ -413,7 +413,7 @@ int32_t LMongo::insert(lua_State *L)
     bson_t *query = bson_new_from_lua(L, 3, -1, _array_opt);
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         MongoQuery *mongo_insert =
             _query_pool.construct(id, MQT_INSERT, collection, query);
@@ -446,7 +446,7 @@ int32_t LMongo::update(lua_State *L)
     int32_t multi  = lua_toboolean(L, 6);
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         MongoQuery *mongo_update =
             _query_pool.construct(id, MQT_UPDATE, collection, query);
@@ -481,7 +481,7 @@ int32_t LMongo::remove(lua_State *L)
     int32_t single = lua_toboolean(L, 4);
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         MongoQuery *mongo_remove =
             _query_pool.construct(id, MQT_REMOVE, collection, query);

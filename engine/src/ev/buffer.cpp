@@ -88,7 +88,7 @@ Buffer::ChunkPool *Buffer::get_chunk_pool()
 
 void Buffer::clear()
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
 
     if (!_front) return;
 
@@ -130,13 +130,13 @@ void Buffer::__append(const void *data, const size_t len)
 
 void Buffer::append(const void *data, const size_t len)
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
     __append(data, len);
 }
 
 void Buffer::remove(size_t len)
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
     do
     {
         size_t used = _front->get_used_size();
@@ -225,7 +225,7 @@ Buffer::Transaction Buffer::flat_reserve(size_t len)
 
 const char *Buffer::to_flat_ctx(size_t len)
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
 
     // 解析数据时，要求在同一个chunk才能解析。大多数情况下，是在同一个chunk的。
     // 如果不是，建议调整下chunk定义的缓冲区大小，否则影响效率
@@ -264,7 +264,7 @@ const char *Buffer::to_flat_ctx(size_t len)
 
 const char *Buffer::all_to_flat_ctx(size_t &len)
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
 
     if (EXPECT_TRUE(!_front->_next))
     {
@@ -321,7 +321,7 @@ void Buffer::commit(const Transaction &ts, int32_t len)
 
 bool Buffer::check_used_size(size_t len) const
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
 
     size_t used       = 0;
     const Chunk *next = _front;
@@ -338,7 +338,7 @@ bool Buffer::check_used_size(size_t len) const
 
 const char *Buffer::get_front_used(size_t &size, bool &next) const
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
     if (!_front)
     {
         size = 0;
@@ -353,7 +353,7 @@ const char *Buffer::get_front_used(size_t &size, bool &next) const
 
 size_t Buffer::get_all_used_size() const
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
     size_t used       = 0;
     const Chunk *next = _front;
 
@@ -369,6 +369,6 @@ size_t Buffer::get_all_used_size() const
 
 void Buffer::set_chunk_size(int32_t max)
 {
-    std::lock_guard lg(_lock);
+    std::lock_guard guard(_lock);
     _chunk_max = max;
 }

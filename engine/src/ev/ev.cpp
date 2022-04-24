@@ -268,7 +268,7 @@ void EV::io_reify()
 
     {
         bool non_del = false; // 是否进行过非del操作，仅用于逻辑校验
-        std::lock_guard<std::mutex> lg(lock());
+        std::lock_guard<std::mutex> guard(lock());
         for (auto w : _io_changes)
         {
             w->_change_index = 0;
@@ -410,7 +410,7 @@ void EV::io_fast_event(EVIO *w, int32_t events)
 {
     bool wake = false;
     {
-        std::lock_guard<SpinLock> lg(_spin_lock);
+        std::lock_guard<SpinLock> guard(_spin_lock);
 
         w->_b_fevents |= static_cast<uint8_t>(events);
 
@@ -429,7 +429,7 @@ void EV::io_fast_event(EVIO *w, int32_t events)
 void EV::io_receive_event_reify()
 {
     // 外部加锁
-    // std::lock_guard<std::mutex> lg(lock());
+    // std::lock_guard<std::mutex> guard(lock());
 
     for (auto w: _io_revents)
     {

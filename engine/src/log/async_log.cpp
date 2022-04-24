@@ -249,7 +249,7 @@ FILE *AsyncLog::Policy::open_stream(const char *path)
 ////////////////////////////////////////////////////////////////////////////////
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<std::mutex> guard(_mutex);
     size_t unfinished_sz = 0;
     for (auto iter = _device.begin(); iter != _device.end(); iter++)
     {
@@ -266,7 +266,7 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 
 void AsyncLog::set_policy(const char *path, int32_t type, int64_t opt_val)
 {
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<std::mutex> guard(_mutex);
 
     // 这里面可能会触发磁盘io操作，会比较慢
     Device &device = _device[path];
@@ -284,7 +284,7 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     thread_local std::string str_path;
     str_path.assign(path);
 
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<std::mutex> guard(_mutex);
     Device &device = _device[str_path];
     Buffer *buff   = device_reserve(device, time, type);
 

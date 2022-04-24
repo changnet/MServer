@@ -279,7 +279,7 @@ public:
       */
      inline size_t get_front_used_size() const
      {
-         std::lock_guard lg(_lock);
+         std::lock_guard guard(_lock);
          return _front ? _front->get_used_size() : 0;
      }
 
@@ -289,7 +289,7 @@ public:
       */
      inline size_t get_chunk_size() const
      {
-         std::lock_guard lg(_lock);
+         std::lock_guard guard(_lock);
          return _chunk_size;
      }
 
@@ -299,7 +299,7 @@ public:
       */
      inline size_t get_chunk_mem_size() const
      {
-         std::lock_guard lg(_lock);
+         std::lock_guard guard(_lock);
          return _chunk_size * sizeof(Chunk);
      }
 
@@ -318,7 +318,7 @@ public:
     // 当前缓冲区是否溢出
      inline bool is_overflow() const
      {
-         std::lock_guard lg(_lock);
+         std::lock_guard guard(_lock);
          return _chunk_size > _chunk_max;
      }
 

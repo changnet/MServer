@@ -105,12 +105,12 @@ public:
 
     inline virtual void purge() override
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         ObjectPool<T, msize, nsize>::purge();
     }
     inline virtual size_t get_sizeof() const override
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         return ObjectPool<T, msize, nsize>::get_sizeof();
     }
 
@@ -122,13 +122,13 @@ public:
     */
     template <typename... Args> T *construct(Args &&...args)
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         return ObjectPool<T, msize, nsize>::construct(args...);
     }
 
     void destroy(T *const object)
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         ObjectPool<T, msize, nsize>::destroy(object);
     }
 

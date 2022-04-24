@@ -61,14 +61,14 @@ void EVBackend::backend_once(int32_t ev_count)
     // 主线程和io线程会频繁交换action,因此使用一个快速、独立的锁
     {
         _fast_events.clear();
-        std::lock_guard<SpinLock> lg(_ev->fast_lock());
+        std::lock_guard<SpinLock> guard(_ev->fast_lock());
         _fast_events.swap(_ev->get_fast_event());
     }
 
     // TODO 下面的操作，是每个操作，加锁、解锁一次，还是全程解锁呢？
     // 即使全程加锁，至少是不会影响主线程执行逻辑的。主线程执行逻辑回调时，不会用到锁
     {
-        std::lock_guard<std::mutex> lg(_ev->lock());
+        std::lock_guard<std::mutex> guard(_ev->lock());
 
         do_fast_event();
 
@@ -278,7 +278,7 @@ void EVBackend::do_watcher_fast_event(EVIO *w)
 {
     int32_t events = 0;
     {
-        std::lock_guard<SpinLock> lg(_ev->fast_lock());
+        std::lock_guard<SpinLock> guard(_ev->fast_lock());
 
         // 执行fast_event时，需要保证watcher已就位
         // 因为fast_event可能会修改该watcher在epoll中的信息从而产生event

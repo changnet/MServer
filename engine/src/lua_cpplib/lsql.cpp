@@ -46,7 +46,7 @@ LSql::~LSql()
 
 size_t LSql::busy_job(size_t *finished, size_t *unfinished)
 {
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<std::mutex> guard(_mutex);
 
     size_t finished_sz   = _result.size();
     size_t unfinished_sz = _query.size();
@@ -186,7 +186,7 @@ int32_t LSql::do_sql(lua_State *L)
     }
 
     {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<std::mutex> guard(_mutex);
 
         SqlQuery *query = _query_pool.construct();
         query->clear();

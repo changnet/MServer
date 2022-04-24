@@ -176,7 +176,7 @@ public:
     {
         if (job)
         {
-            std::lock_guard<std::mutex> lg(_mutex);
+            std::lock_guard<std::mutex> guard(_mutex);
             _has_job = true;
         }
         _cv.notify_one();

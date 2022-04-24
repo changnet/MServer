@@ -189,23 +189,23 @@ public:
 
     virtual void purge() override
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         OrderedPool<ordered_size>::purge();
     }
     virtual size_t get_sizeof() const override
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         return OrderedPool<ordered_size>::get_sizeof();
     }
 
     void ordered_free(char *const ptr, size_t n) override
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         OrderedPool<ordered_size>::ordered_free(ptr, n);
     }
     char *ordered_malloc(size_t n, size_t chunk_size) override
     {
-        std::lock_guard<SpinLock> lg(_lock);
+        std::lock_guard<SpinLock> guard(_lock);
         return OrderedPool<ordered_size>::ordered_malloc(n, chunk_size);
     }
 
