@@ -58,19 +58,12 @@ void EVBackend::stop()
 
 void EVBackend::backend_once(int32_t ev_count, int64_t now)
 {
-    // 主线程和io线程会频繁交换action,因此使用一个快速、独立的锁
-    {
-        _fast_events.clear();
-        std::lock_guard<SpinLock> guard(_ev->fast_lock());
-        _fast_events.swap(_ev->get_fast_event());
-    }
+    _fast_events.clear();
 
     // TODO 下面的操作，是每个操作，加锁、解锁一次，还是全程解锁呢？
     // 即使全程加锁，至少是不会影响主线程执行逻辑的。主线程执行逻辑回调时，不会用到锁
     {
         std::lock_guard<std::mutex> guard(_ev->lock());
-
-        do_fast_event();
 
         // poll等结构在处理事件时需要for循环遍历所有fd列表
         // 中间禁止调用modify_fd来删除这个列表
@@ -79,6 +72,15 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
         do_wait_event(ev_count);
         _modify_protected = false;
 
+        // 主线程和backend线程会频繁交换fast_event,因此使用一个快速、独立的锁
+        // 注意这里必须在do_wait_event之后交换数据，因为唤醒backend的eventfd在wait_event
+        // 必须先清空eventfd再交换数据，否则可能会漏掉一些事件
+        {
+            std::lock_guard<SpinLock> guard(_ev->fast_lock());
+            _fast_events.swap(_ev->get_fast_event());
+        }
+
+        do_fast_event();
         do_user_event();
 
         // 检测待删除的连接是否超时

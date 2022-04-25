@@ -181,9 +181,6 @@ EVIO *EV::io_start(int32_t id, int32_t fd, int32_t events)
 
     EVIO *w = &(p.first->second);
 
-    // 因为效率问题，这里不能加锁，不允许修改跨线程的变量
-    // set_fast_io(fd, w);
-
     w->_status = EVIO::S_NEW;
     io_change(w);
 
@@ -281,7 +278,7 @@ void EV::io_reify()
             case EVIO::S_NEW:
                 non_del    = true;
                 w->_status = EVIO::S_START;
-                _backend->set_fd_watcher(fd, w);
+                // _backend->set_fd_watcher(fd, w);
                 _backend->modify(w);
                 break;
             case EVIO::S_DEL:
@@ -441,6 +438,7 @@ void EV::io_receive_event_reify()
 void EV::feed_event(EVWatcher *w, int32_t revents)
 {
     // 已经在待处理队列里了，则设置事件即可
+    // 注意：如果通过feed_later_event设置，则_pening可能不是_pendings的下标
     w->_revents |= static_cast<uint8_t>(revents);
     if (EXPECT_TRUE(!w->_pending))
     {
@@ -449,9 +447,25 @@ void EV::feed_event(EVWatcher *w, int32_t revents)
     }
 }
 
+void EV::feed_later_event(EVWatcher *w, int32_t revents)
+{
+    // 该函数由ev以外的模块调用，因此当前可能处于invoke_pending数组循环中
+    // 当前w可能已经被遍历，则由下一次循环执行
+    // 若未被遍历，则在稍后的遍历中处理
+    _has_job = true;
+    feed_event(w, revents);
+}
+
 void EV::invoke_pending()
 {
-    for (auto w : _pendings)
+    if (_pendings.empty()) return;
+
+    thread_local std::vector<EVWatcher *> pendings;
+
+    // 把_pendings空出来，这样在回调时可以调用feed_later_event来修改_pendings
+    pendings.swap(_pendings);
+
+    for (auto w : pendings)
     {
         // 可能其他事件调用了clear_pending导致当前watcher无效了
         if (EXPECT_TRUE(w && w->_pending))
@@ -467,7 +481,7 @@ void EV::invoke_pending()
             
         }
     }
-    _pendings.clear();
+    pendings.clear();
 }
 
 void EV::clear_pending(EVWatcher *w)

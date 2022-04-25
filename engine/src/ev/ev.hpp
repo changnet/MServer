@@ -184,12 +184,19 @@ public:
     {
         _has_job = job;
     }
+   /**
+     * 设置watcher的回调事件，与feed_event的区别是它可以由外部调用并且由下一次循环执行
+     */
+    void feed_later_event(EVWatcher *w, int32_t revents);
 
 protected:
     virtual void running() = 0;
 
     void io_reify();
     void time_update();
+    /**
+     * 设置watcher的回调事件
+     */
     void feed_event(EVWatcher *w, int32_t revents);
     void invoke_pending();
     void clear_pending(EVWatcher *w);

@@ -438,7 +438,9 @@ int32_t Socket::connect(const char *host, int32_t port)
     // 连接已经成功，epoll不会再次通知，所以要立马处理
     if (!ok)
     {
-        connect_cb();
+        // 异步处理，在connect返回后再触发on_connected回调
+        // connect_cb();
+        StaticGlobal::ev()->feed_later_event(_w, EV_CONNECT);
     }
 
     return fd;
