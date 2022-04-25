@@ -140,7 +140,10 @@ public:
     uint8_t _b_revents; // backend线程中的receive events
     uint8_t _b_kevents; // kernel(如epoll)中使用的events
     uint8_t _b_eevents; // extra events，backend线程额外添加的事件，如EV_WRITE
-    uint8_t _b_fevents; // fast event，在主线程设置并立马唤配backend线程执行的事件
+
+    // fast event，在主线程设置并立马唤醒backend线程执行的事件
+    // 它与_b_uevents的区别是_b_uevents用于判断一个事件是否需要回调
+    uint8_t _b_fevents;
 
     int32_t _fd;     /// 文件描述符
 

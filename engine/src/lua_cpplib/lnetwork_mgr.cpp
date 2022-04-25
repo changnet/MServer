@@ -757,6 +757,9 @@ bool LNetworkMgr::connect_del(int32_t conn_id)
     // 等到异步真实删除时触发，有些地方删除socket时socket对象还在使用中
     // 也为了方便多次删除socket(比如http连接断开时回调到脚本，脚本又刚好判断这个socket超时了，删除了这socket)
 
+    // 需要在下一次循环中删除，不允许线程进入sleep
+    StaticGlobal::ev()->set_job(true);
+
     return true;
 }
 

@@ -43,8 +43,7 @@ EV::EV()
 
     _busy_time = 0;
 
-    _backend             = EVBackend::instance();
-    _backend_time_coarse = 0;
+    _backend = EVBackend::instance();
 }
 
 EV::~EV()
@@ -74,11 +73,13 @@ int32_t EV::loop()
 
     if (!_backend->start(this)) return -1;
 
+    static const int64_t min_wait = 1; // 最小等待时间，毫秒
+    static const int64_t max_wait = 60000; // 最大等待时间，毫秒
+
     while (EXPECT_TRUE(!_done))
     {
         // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
         // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
-        
 
         // 把fd变更设置到backend中去
         io_reify();
@@ -87,7 +88,7 @@ int32_t EV::loop()
         _busy_time = _steady_clock - last_ms;
 
         /// 允许阻塞的最长时间(毫秒)
-        int64_t backend_time = BACKEND_MAX_TM;
+        int64_t backend_time = max_wait;
         if (_timer_cnt)
         {
             // wait时间不超过下一个定时器触发时间
@@ -100,10 +101,7 @@ int32_t EV::loop()
             int64_t to = (_periodics[HEAP0])->_at - _system_clock;
             if (backend_time > to) backend_time = to;
         }
-        if (EXPECT_FALSE(backend_time < BACKEND_MIN_TM))
-        {
-            backend_time = BACKEND_MIN_TM;
-        }
+        if (EXPECT_FALSE(backend_time < min_wait)) backend_time = min_wait;
 
         {
             // https://en.cppreference.com/w/cpp/thread/condition_variable
@@ -131,10 +129,6 @@ int32_t EV::loop()
         time_update();
 
         last_ms = _steady_clock;
-
-        // 不同的逻辑会预先设置主循环下次阻塞的时间。在执行其他逻辑时，可能该时间已经过去了
-        // 这说明主循环比较繁忙，会被修正为BACKEND_MIN_TM，而不是精确的按预定时间执行
-        _backend_time_coarse = BACKEND_MAX_TM + _steady_clock;
 
         // 处理timer超时
         timers_reify();

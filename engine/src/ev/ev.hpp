@@ -28,9 +28,6 @@ class EVTimer;
 class EVWatcher;
 class EVBackend;
 
-#define BACKEND_MIN_TM 1     ///< 主循环最小循环时间 毫秒
-#define BACKEND_MAX_TM 59743 ///< 主循环最大阻塞时间 毫秒
-
 using HeapNode = EVTimer *;
 
 extern const char *__BACKEND__;
@@ -258,7 +255,6 @@ protected:
 
     EVBackend *_backend;          ///< io后台
     int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
-    int64_t _backend_time_coarse; ///< 预计下次backend等待结束的时间戳
 
     int64_t _steady_clock;              ///< 起服到现在的毫秒
     int64_t _system_clock; // UTC时间戳（单位：毫秒）

@@ -110,7 +110,7 @@ private:
     /**
      * 执行单次后台逻辑
      */
-    void backend_once(int32_t ev_count);
+    void backend_once(int32_t ev_count, int64_t now);
     /**
      * 等待网络数据
      * @param timeout 等待的时间，毫秒

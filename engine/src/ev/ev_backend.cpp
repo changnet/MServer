@@ -56,7 +56,7 @@ void EVBackend::stop()
     after_stop();
 }
 
-void EVBackend::backend_once(int32_t ev_count)
+void EVBackend::backend_once(int32_t ev_count, int64_t now)
 {
     // 主线程和io线程会频繁交换action,因此使用一个快速、独立的锁
     {
@@ -83,7 +83,6 @@ void EVBackend::backend_once(int32_t ev_count)
 
         // 检测待删除的连接是否超时
         static const int32_t MIN_PENDING_CHECK = 2000;
-        int64_t now = EV::steady_clock();
         if (now - _last_pending_tm > MIN_PENDING_CHECK)
         {
             _last_pending_tm = now;
@@ -100,20 +99,35 @@ void EVBackend::backend_once(int32_t ev_count)
 
 void EVBackend::backend()
 {
+    int64_t last = EV::steady_clock();
+
     // 第一次进入wait前，可能主线程那边已经有新的io需要处理
-    backend_once(0);
+    backend_once(0, last);
 
     // 不能wait太久，要定时检测超时删除的连接
-    static const int32_t wait_tm = 2000;
+    static const int32_t max_wait = 2000;
 
     while (!_done)
     {
         _has_ev = false;
 
-        int32_t ev_count = wait(wait_tm);
+        int32_t ev_count = wait(max_wait);
         if (ev_count < 0) break;
 
-        backend_once(ev_count);
+        int64_t now = EV::steady_clock();
+
+        // 对于实时性要求不高的，适当降低backend运行的帧数可以让io读写效率更高
+        #define min_wait 0
+#if min_wait
+        int64_t diff = min_wait - (now - last);
+        if (diff > 1)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(diff));
+        }
+#endif
+
+        last = now; // 判断是否sleep必须包含backend执行逻辑的时间
+        backend_once(ev_count, now);
     }
 }
 
