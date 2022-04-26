@@ -408,9 +408,11 @@ int32_t Socket::connect(const char *host, int32_t port)
         return -1;
     }
 
-    /* 异步连接，如果端口、ip合法，连接回调到connect_cb */
-    ok = ::connect(fd, (struct sockaddr *)&addr, sizeof(addr));
-    if (ok)
+    // 异步连接，连接成功回调到connect_cb
+    // 连接可能返回0表示已经成功，不过这里不处理这种情况
+    // EV_CONNECT会转化为EV_WRITE，写事件epoll会多次通知
+    // 异步允许上层逻辑在connect返回再才触发on_connected
+    if (0 != ::connect(fd, (struct sockaddr *)&addr, sizeof(addr)))
     {
         int32_t e = netcompat::noerror();
         if (netcompat::iserror(e))
@@ -424,7 +426,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
     assert(!_w);
-    _w = StaticGlobal::ev()->io_start(_conn_id, fd, ok ? EV_CONNECT : EV_READ);
+    _w = StaticGlobal::ev()->io_start(_conn_id, fd, EV_CONNECT);
     if (!_w)
     {
         ELOG("ev io start fail: %d", fd);
@@ -434,14 +436,6 @@ int32_t Socket::connect(const char *host, int32_t port)
 
     _fd     = fd;
     _status = CS_OPENED;
-
-    // 连接已经成功，epoll不会再次通知，所以要立马处理
-    if (!ok)
-    {
-        // 异步处理，在connect返回后再触发on_connected回调
-        // connect_cb();
-        StaticGlobal::ev()->feed_later_event(_w, EV_CONNECT);
-    }
 
     return fd;
 }

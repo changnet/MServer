@@ -149,7 +149,7 @@ public:
 
     int32_t _change_index; // 在io_changes数组中的下标
     int32_t _b_uevent_index; // 在backend中待修改数组中的下标
-    int32_t _b_fevent_index; // 在io_fevents数组中的下标
+    int32_t _b_fevent_index; // 在io_fevents数组中的下标-1表示未初始化不能使用fast_event
     int32_t _b_revent_index; // 在io_revents数组中的下标
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据

@@ -25,7 +25,7 @@ EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
 
     _change_index   = 0;
     _b_uevent_index = 0;
-    _b_fevent_index = 0;
+    _b_fevent_index = -1;
     _b_revent_index = 0;
 
     _io = nullptr;

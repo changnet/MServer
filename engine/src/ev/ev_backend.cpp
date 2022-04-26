@@ -119,6 +119,7 @@ void EVBackend::backend()
         int64_t now = EV::steady_clock();
 
         // 对于实时性要求不高的，适当降低backend运行的帧数可以让io读写效率更高
+        // 使用#define，当数值为0时直接不编译这部分代码
         #define min_wait 0
 #if min_wait
         int64_t diff = min_wait - (now - last);
@@ -349,8 +350,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
             do_io_status(w, EV_WRITE, status);
         }
 
-        // 这些事件是一次性的，如果触发了就删除。否则主线程来不及处理会
-        // 导致io线程一直触发这个事件
+        // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
         if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
         {
             w->_b_uevents &= static_cast<uint8_t>(~EV_CONNECT);
@@ -369,8 +369,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
             do_io_status(w, EV_READ, status);
         }
 
-        // 这些事件是一次性的，如果触发了就删除。否则主线程来不及处理会
-        // 导致io线程一直触发这个事件
+        // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
         if (EXPECT_FALSE(kernel_ev & EV_ACCEPT))
         {
             w->_b_uevents &= static_cast<uint8_t>(~EV_ACCEPT);
