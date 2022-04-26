@@ -26,16 +26,6 @@ public:
         CT_MAX ///< 连接方式最大值
     };
 
-    // socket缓冲区溢出后处理方式
-    enum OverActionType
-    {
-        OAT_NONE = 0, // 不做任何处理
-        OAT_KILL = 1, // 断开连接，通常用于与客户端连接
-        OAT_PEND = 2, // 阻塞，通用用于服务器之间连接
-
-        OAT_MAX
-    };
-
     // socket的状态
     enum ConnStatus
     {
@@ -160,18 +150,9 @@ public:
      * @brief 设置缓冲区的参数
      * @param send_max 发送缓冲区chunk数量
      * @param recv_max 接收缓冲区chunk数量
-     * @param oa 缓冲区溢出时处理方式
+     * @param mask 缓冲区溢出时处理方式
     */
-    inline void set_buffer_params(int32_t send_max, int32_t recv_max,
-                                  OverActionType oa)
-    {
-        assert(_w);
-
-        _over_action = oa;
-        _w->get_send_buffer().set_chunk_size(send_max);
-        _w->get_recv_buffer().set_chunk_size(recv_max);
-        
-    }
+    void set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask);
 
     inline int64_t get_object_id() const { return _object_id; }
     inline void set_object_id(int64_t oid) { _object_id = oid; }
@@ -212,5 +193,4 @@ private:
     class Packet *_packet;
 
     Codec::CodecType _codec_ty;
-    OverActionType _over_action; /// 缓冲区溢出时，采取的措施
 };

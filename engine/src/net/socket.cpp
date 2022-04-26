@@ -80,7 +80,6 @@ Socket::Socket(int32_t conn_id, ConnType conn_ty)
     _conn_id     = conn_id;
     _conn_ty     = conn_ty;
     _codec_ty    = Codec::CT_NONE;
-    _over_action = OAT_NONE;
 
     C_OBJECT_ADD("socket");
 }
@@ -121,17 +120,17 @@ void Socket::stop(bool flush, bool term)
 void Socket::append(const void *data, size_t len)
 {
     auto &send_buff = _w->get_send_buffer();
-    send_buff.append(data, len);
+    int32_t e = send_buff.append(data, len);
 
     /**
      * 一般缓冲区都设置得足够大
      * 如果都溢出了，说明接收端非常慢，比如断点调试，这时候适当处理一下
      */
-    if (EXPECT_TRUE(!send_buff.is_overflow())) return;
+    if (EXPECT_TRUE(0 == e)) return;
 
-    // 对于客户端这种不重要的，可以断开连接
-    if (OAT_KILL == _over_action)
+    if (_w->_mask & EVIO::M_OVERFLOW_KILL)
     {
+        // 对于客户端这种不重要的，可以断开连接
         ELOG("socket send buffer overflow, kill connection,"
              "object:" FMT64d ",conn:%d,buffer size:%d",
              _object_id, _conn_id, send_buff.get_all_used_size());
@@ -140,21 +139,23 @@ void Socket::append(const void *data, size_t len)
 
         return;
     }
-
-    // 如果是服务器之间的连接，考虑阻塞
-    // 这会影响定时器这些，但至少数据不会丢
-    // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
-    if (OAT_PEND == _over_action)
+    else if (_w->_mask & EVIO::M_OVERFLOW_PEND)
     {
-        // sleep，等待io线程把数据发送出去
-        do
+        // 如果是服务器之间的连接，考虑阻塞
+        // 这会影响定时器这些，但至少数据不会丢
+        // 在项目中，比如断点调试，可能会导致数据大量堆积。如果是线上项目，应该不会出现
+        flush();
+
+        // sleep一会儿，等待backend线程把数据发送出去
+        for (int32_t i = 0; i < 4; i ++)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("socket send buffer overflow, pending,"
                  "object:" FMT64d ",conn:%d,buffer size:%d",
                  _object_id, _conn_id, send_buff.get_all_used_size());
 
-        } while (send_buff.is_overflow());
+            if (!send_buff.is_overflow()) break;
+        };
     }
 }
 
@@ -777,4 +778,13 @@ void Socket::get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
 
     spending = send.get_all_used_size();
     rpending = recv.get_all_used_size();
+}
+
+void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)
+{
+    assert(_w);
+
+    _w->_mask |= static_cast<uint8_t>(mask);
+    _w->get_send_buffer().set_chunk_size(send_max);
+    _w->get_recv_buffer().set_chunk_size(recv_max);
 }

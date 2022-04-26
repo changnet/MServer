@@ -61,6 +61,13 @@ public:
         S_DEL   = 3   // 删除中
     };
 
+    enum Mask
+    {
+        M_NONE = 0, // 不做任何处理
+        M_OVERFLOW_KILL = 1, // 缓冲区溢出时断开连接，通常用于与客户端连接
+        M_OVERFLOW_PEND = 2, // 缓冲区溢出时阻塞，通用用于服务器之间连接
+    };
+
 public:
     ~EVIO();
     explicit EVIO(int32_t id, int32_t fd, int32_t events, EV *loop);
@@ -130,8 +137,8 @@ public:
 
 public:
 
-    int8_t _mask; // 用于设置种参数
     int8_t _status; // 当前的状态
+    uint8_t _mask; // 用于设置种参数
     uint8_t _uevents; // user event，用户设置需要回调的事件，如EV_READ
 
     // 带_b前缀的变量，都是和backend线程相关

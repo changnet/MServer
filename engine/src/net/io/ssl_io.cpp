@@ -33,7 +33,7 @@ IO::IOStatus SSLIO::recv(EVIO *w)
     int32_t len = 0;
     while (true)
     {
-        Buffer::Transaction &&ts = _recv->any_seserve();
+        Buffer::Transaction &&ts = _recv->any_seserve(true);
         if (ts._len <= 0) return IOS_BUSY;
 
         len = SSL_read(_ssl_ctx, ts._ctx, ts._len);

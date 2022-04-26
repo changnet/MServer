@@ -221,14 +221,16 @@ public:
      * @brief 添加数据到缓冲区
      * @param data 要添加的数据 
      * @param len 要添加的数据长度
+     * @return 0成功， 1溢出
     */
-    void append(const void *data, const size_t len);
+    int32_t append(const void *data, const size_t len);
 
     /**
      * @brief 预分配任意空间
+     * @param no_overflow 为true表示如果当前分配空间超出则不再分配
      * @return 一个包括锁和缓冲区指针等数据的事务对象
     */
-    Transaction any_seserve();
+    Transaction any_seserve(bool no_overflow);
 
     /**
      * @brief 预分配一块连续(不包含多个chunk)的缓冲区
@@ -360,7 +362,6 @@ private:
     void __append(const void *data, const size_t len);
 
 private:
-    bool _reserve; // 当前是否有预分配数据
     mutable SpinLock _lock;  // 多线程锁
     Chunk *_front;      // 数据包链表头
     Chunk *_back;       // 数据包链表尾

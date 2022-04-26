@@ -31,7 +31,7 @@ IO::IOStatus IO::recv(EVIO *w)
     int32_t len = 0;
     while (true)
     {
-        Buffer::Transaction &&ts = _recv->any_seserve();
+        Buffer::Transaction &&ts = _recv->any_seserve(true);
         if (0 == ts._len) return IOS_BUSY;
 
         len = (int32_t)::recv(_fd, ts._ctx, ts._len, 0);

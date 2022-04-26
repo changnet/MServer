@@ -32,7 +32,6 @@ char *Buffer::LargeBuffer::get(size_t len)
 
 Buffer::Buffer()
 {
-    _reserve    = false;
     _chunk_size = 0;
     _chunk_max = 1;
     _front = _back = nullptr;
@@ -100,8 +99,6 @@ void Buffer::clear()
         del_chunk(tmp);
     }
 
-    _reserve = false;
-
     // 默认保留一个缓冲区 TODO: 是否有必要保留??
     _front->clear();
     assert(_back == _front);
@@ -128,10 +125,12 @@ void Buffer::__append(const void *data, const size_t len)
     } while (EXPECT_FALSE(append_sz < len));
 }
 
-void Buffer::append(const void *data, const size_t len)
+int32_t Buffer::append(const void *data, const size_t len)
 {
     std::lock_guard guard(_lock);
     __append(data, len);
+
+    return _chunk_size > _chunk_max ? 1 : 0;
 }
 
 void Buffer::remove(size_t len)
@@ -181,13 +180,16 @@ void Buffer::remove(size_t len)
     assert(_front == _back || 0 == _front->get_free_size());
 }
 
-Buffer::Transaction Buffer::any_seserve()
+Buffer::Transaction Buffer::any_seserve(bool no_overflow)
 {
     Transaction ts(_lock);
 
-    ts._internal = true;
-    ts._len = (int)reserve();
-    ts._ctx = _back->get_free_ctx();
+    if (EXPECT_TRUE(!no_overflow || _chunk_size <= _chunk_max))
+    {
+        ts._internal = true;
+        ts._len = (int)reserve();
+        ts._ctx = _back->get_free_ctx();
+    }
 
     return ts;
 }

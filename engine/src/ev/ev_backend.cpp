@@ -277,12 +277,21 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         }
         return true;
     case IO::IOS_BUSY:
-        // 主线程忙不过来了，子线程需要sleep一下等待主线程
-        _busy = true;
+        // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
+        if (w->_mask & EVIO::M_OVERFLOW_KILL)
+        {
+            modify_later(w, EV_CLOSE);
+            return false;
+        }
+        else
+        {
+            // 读溢出的话，稍微sleep一下不至于占用太多cpu即可，其他没什么影响
+            std::this_thread::sleep_for(std::chrono::microseconds(500));
+            ELOG("backend thread overflow sleep");
+        }
         return true;
     case IO::IOS_CLOSE:
     case IO::IOS_ERROR:
-        // TODO 错误时是否要传一个错误码给主线程
         modify_later(w, EV_CLOSE);
         return false;
     default: ELOG("unknow io status: %d", status); return false;

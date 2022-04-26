@@ -632,10 +632,10 @@ int32_t LNetworkMgr::send_raw_packet(lua_State *L)
 
 int32_t LNetworkMgr::set_buffer_params(lua_State *L)
 {
-    int32_t conn_id     = luaL_checkinteger32(L, 1);
-    int32_t send_max    = luaL_checkinteger32(L, 2);
-    int32_t recv_max    = luaL_checkinteger32(L, 3);
-    int32_t over_action = luaL_optinteger32(L, 4, Socket::OAT_NONE);
+    int32_t conn_id  = luaL_checkinteger32(L, 1);
+    int32_t send_max = luaL_checkinteger32(L, 2);
+    int32_t recv_max = luaL_checkinteger32(L, 3);
+    int32_t mask     = luaL_optinteger32(L, 4, 0);
 
     socket_map_t::iterator itr = _socket_map.find(conn_id);
     if (itr == _socket_map.end())
@@ -643,14 +643,8 @@ int32_t LNetworkMgr::set_buffer_params(lua_State *L)
         return luaL_error(L, "no such socket found");
     }
 
-    if (over_action < Socket::OAT_NONE || over_action >= Socket::OAT_MAX)
-    {
-        return luaL_error(L, "overflow action value illegal");
-    }
-
     class Socket *_socket = itr->second;
-    _socket->set_buffer_params(send_max, recv_max,
-                               static_cast<Socket::OverActionType>(over_action));
+    _socket->set_buffer_params(send_max, recv_max, mask);
 
     return 0;
 }
