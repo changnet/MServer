@@ -130,6 +130,7 @@ public:
 
 public:
 
+    int8_t _mask; // 用于设置种参数
     int8_t _status; // 当前的状态
     uint8_t _uevents; // user event，用户设置需要回调的事件，如EV_READ
 
@@ -145,6 +146,7 @@ public:
     // 它与_b_uevents的区别是_b_uevents用于判断一个事件是否需要回调
     uint8_t _b_fevents;
 
+    int32_t _errno; /// 错误码
     int32_t _fd;     /// 文件描述符
 
     int32_t _change_index; // 在io_changes数组中的下标

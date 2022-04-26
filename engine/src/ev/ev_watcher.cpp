@@ -16,6 +16,9 @@ EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
     _fd     = fd;
     _status = S_STOP;
 
+    _mask = 0;
+    _errno = 0;
+
     _uevents   = static_cast<uint8_t>(events);
     _b_uevents = 0;
     _b_revents = 0;
@@ -48,7 +51,7 @@ IO::IOStatus EVIO::recv()
     // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
     if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
 
-    return _io->recv();
+    return _io->recv(this);
 }
 
 IO::IOStatus EVIO::send()
@@ -58,7 +61,7 @@ IO::IOStatus EVIO::send()
     // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
     if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
 
-    return _io->send();
+    return _io->send(this);
 }
 
 void EVIO::init_accept()

@@ -15,12 +15,12 @@ public:
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 接收的数据长度
      */
-    IOStatus recv() override;
+    IOStatus recv(EVIO *w) override;
     /* 发送数据
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 发送的数据长度
      */
-    IOStatus send() override;
+    IOStatus send(EVIO *w) override;
     /**
      * 发起初始化接受的连接
      * @return 是否需要异步执行action事件

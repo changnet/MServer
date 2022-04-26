@@ -55,8 +55,9 @@ void LNetworkMgr::invoke_delete()
 
         lua_getglobal(L, "conn_del");
         lua_pushinteger(L, iter.first);
+        lua_pushinteger(L, iter.second);
 
-        if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
+        if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2, 0, 1)))
         {
             ELOG("conn_del:%s", lua_tostring(L, -1));
 
@@ -749,9 +750,9 @@ bool LNetworkMgr::io_ok(int32_t conn_id)
     return true;
 }
 
-bool LNetworkMgr::connect_del(int32_t conn_id)
+bool LNetworkMgr::connect_del(int32_t conn_id, int32_t e)
 {
-    _deleting.emplace(conn_id, 1);
+    _deleting.emplace(conn_id, e);
 
     // NOTE 这里暂时不触发脚本的on_disconnected事件
     // 等到异步真实删除时触发，有些地方删除socket时socket对象还在使用中

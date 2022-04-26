@@ -328,7 +328,7 @@ public:
     /// io建立完成
     bool io_ok(int32_t conn_id);
     /// 连接被销毁（断开）
-    bool connect_del(int32_t conn_id);
+    bool connect_del(int32_t conn_id, int32_t e);
     /// 连接成功，需要执行始化
     bool connect_new(int32_t conn_id, int32_t ecode);
     /// 接受连接成功，需要执行始化

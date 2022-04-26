@@ -593,6 +593,7 @@ void Socket::close_cb(bool term)
     if (CS_OPENED == _status && !term && _packet) _packet->on_closed();
 
     _status = CS_CLOSED;
+    int32_t e = _w ? _w->_errno : 0;
 
     netcompat::close(_fd);
     _fd = netcompat::INVALID;
@@ -600,7 +601,7 @@ void Socket::close_cb(bool term)
     _w = nullptr;
     StaticGlobal::ev()->io_delete(_conn_id);
 
-    StaticGlobal::network_mgr()->connect_del(_conn_id);
+    StaticGlobal::network_mgr()->connect_del(_conn_id, e);
 }
 
 void Socket::listen_cb()

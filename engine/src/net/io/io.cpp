@@ -24,7 +24,7 @@ IO::~IO()
     _send = nullptr;
 }
 
-IO::IOStatus IO::recv()
+IO::IOStatus IO::recv(EVIO *w)
 {
     assert(_fd != netcompat::INVALID);
 
@@ -52,6 +52,7 @@ IO::IOStatus IO::recv()
     int32_t e = netcompat::noerror();
     if (netcompat::iserror(e))
     {
+        w->_errno = e;
         ELOG("io recv:%s(%d)", netcompat::strerror(e), e);
         return IOS_ERROR;
     }
@@ -59,7 +60,7 @@ IO::IOStatus IO::recv()
     return IOS_READ; // 重试
 }
 
-IO::IOStatus IO::send()
+IO::IOStatus IO::send(EVIO *w)
 {
     assert(_fd != netcompat::INVALID);
 
@@ -89,6 +90,7 @@ IO::IOStatus IO::send()
     int32_t e = netcompat::noerror();
     if (netcompat::iserror(e))
     {
+        w->_errno = e;
         ELOG("io send:%s(%d)", netcompat::strerror(e), e);
         return IOS_ERROR;
     }

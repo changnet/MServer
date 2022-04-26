@@ -2,6 +2,7 @@
 
 #include "../../global/global.hpp"
 
+class EVIO;
 class Buffer;
 
 /* socket input output control */
@@ -36,12 +37,12 @@ public:
      * 接收数据
      * @return IOStatus
      */
-    virtual IOStatus recv();
+    virtual IOStatus recv(EVIO *w);
     /**
      * 发送数据
      * @return IOStatus
      */
-    virtual IOStatus send();
+    virtual IOStatus send(EVIO *w);
     /**
      * 发起初始化接受的连接
      * @return 需要异步执行的事件

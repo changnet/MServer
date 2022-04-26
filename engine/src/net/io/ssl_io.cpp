@@ -24,7 +24,7 @@ bool SSLIO::is_ready() const
     return 1 == SSL_is_init_finished(_ssl_ctx);
 }
 
-IO::IOStatus SSLIO::recv()
+IO::IOStatus SSLIO::recv(EVIO *w)
 {
     assert(_fd != netcompat::INVALID);
 
@@ -64,11 +64,12 @@ IO::IOStatus SSLIO::recv()
         return IOS_CLOSE;
     }
 
+    w->_errno = netcompat::noerror();
     SSLMgr::ssl_error("ssl io recv");
     return IOS_ERROR;
 }
 
-IO::IOStatus SSLIO::send()
+IO::IOStatus SSLIO::send(EVIO *w)
 {
     assert(_fd != netcompat::INVALID);
 
@@ -105,6 +106,7 @@ IO::IOStatus SSLIO::send()
         return IOS_CLOSE;
     }
 
+    w->_errno = netcompat::noerror();
     SSLMgr::ssl_error("ssl io send");
     return IOS_ERROR;
 }
