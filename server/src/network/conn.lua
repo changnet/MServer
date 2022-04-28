@@ -228,6 +228,9 @@ function Conn:listen(ip, port)
         return false, msg
     end
 
+    self.listen_ip = ip
+    self.listen_port = port
+
     self.ok = true -- 对于监听的socket，不会触发io_ok，这里直接设置ok状态
     self.conn_id = conn_id
     self:set_conn(self.conn_id, self)

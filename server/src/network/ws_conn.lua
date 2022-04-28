@@ -122,7 +122,8 @@ end
 
 function WsConn:ws_close()
     -- 如果握手成功，则关闭时需要发送关闭数据包(用于监听的socket根本不会有握手)
-    if not self.ok then return end
+    -- 用于listen的socket不需要执行这个close操作
+    if not self.ok or self.listen_ip then return end
 
     self.op_close = true
     self:send_ctrl(WS_OP_CLOSE)

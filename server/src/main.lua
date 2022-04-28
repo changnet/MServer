@@ -62,7 +62,7 @@ local function get_opt(...)
         if 45 ~= b1 and 45 ~= b2 then error("invalid argument: " .. opt) end
 
         -- 按"="号拆分参数(--app=gateway)，也可能没有等号(--daemon)
-        local k, v = string.match(opt, "^%-%-(%w+)=?([%w ;]*)")
+        local k, v = string.match(opt, "^%-%-(%w+)=?([%w ;._]*)")
         if not k or not v or v == "" then
             error("invalid argument: " .. opt)
         end
