@@ -408,8 +408,8 @@ function t_it(title, mask, func)
     -- run_one_it(i)
 end
 
--- 测试定时器超时
-local function on_timeout()
+-- 测试定时器超时，定时器需要全局回调函数
+function __test_timeout()
     resume()
 end
 
@@ -418,7 +418,7 @@ function t_async(timeout)
     assert(not T.now.timer, "call wait multi times")
 
     T.now.status = PEND
-    T.now.timer = T.timer.new(timeout or 2000, on_timeout)
+    T.now.timer = T.timer.new(timeout or 2000, __test_timeout)
 end
 
 -- 当前进程等待n毫秒

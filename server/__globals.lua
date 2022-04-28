@@ -1,4 +1,4 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -85,6 +85,7 @@ return {
 "__global_storage", -- src/global/global.lua
 "__print", -- src/main.lua
 "__test", -- src/global/test.lua
+"__test_timeout", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
 "application_ev", -- src/android/android_boot.lua
 "application_ev", -- src/application/app.lua
