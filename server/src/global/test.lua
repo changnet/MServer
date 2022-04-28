@@ -322,14 +322,12 @@ function t_print(...)
     T.print(...)
 end
 
--- test if two variable equal
-function t_equal(got, expect)
-    assert(T.co, "test already finished or not begin yet")
-    if equal(got, expect) then return end
-
-    -- show msg late and abort current test
-    local msg = debug.traceback(string.format("got: %s, expect: %s", dump(got),
-                                              dump(expect)), 2)
+local function on_fail(msg)
+    -- 如果当前测试有定时器，出错时销毁定时器
+    if T.now.timer then
+        T.timer.del(T.now.timer)
+        T.now.timer = nil
+    end
 
     append_msg(msg)
 
@@ -341,20 +339,26 @@ function t_equal(got, expect)
     end
 end
 
+-- test if two variable equal
+function t_equal(got, expect)
+    assert(T.co, "test already finished or not begin yet")
+    if equal(got, expect) then return end
+
+    -- show msg late and abort current test
+    local msg = debug.traceback(string.format("got: %s, expect: %s", dump(got),
+                                              dump(expect)), 2)
+
+    on_fail(msg)
+end
+
 -- test if expr is true
 function t_assert(expr)
     assert(T.co, "test already finished or not begin yet")
     if expr then return end
 
-    local msg = debug.traceback("assertion failed!")
+    local msg = debug.traceback("assertion failed!", 2)
 
-    append_msg(msg)
-    if "running" == coroutine.status(T.co) then
-        assert(false, TEST_FAIL)
-    else
-        T.now.status = FAIL
-        resume()
-    end
+    on_fail(msg)
 end
 
 function t_describe(title, func)
@@ -405,7 +409,7 @@ function t_it(title, mask, func)
 end
 
 -- 测试定时器超时
-function t_timeout()
+local function on_timeout()
     resume()
 end
 
@@ -414,7 +418,7 @@ function t_async(timeout)
     assert(not T.now.timer, "call wait multi times")
 
     T.now.status = PEND
-    T.now.timer = T.timer.new(timeout or 2000, t_timeout)
+    T.now.timer = T.timer.new(timeout or 2000, on_timeout)
 end
 
 -- 当前进程等待n毫秒

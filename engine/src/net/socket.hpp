@@ -80,7 +80,7 @@ public:
     /**
      * 是否已关闭
      */
-    bool is_closed() const { return 0 != _status; }
+    bool is_closed() const { return CS_OPENED != _status; }
 
     /**
      * 获取ip地址及端口

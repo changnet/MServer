@@ -1,4 +1,4 @@
--- auto export by lua-tags 166 symbols
+-- auto export by lua-tags 165 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -160,7 +160,6 @@ return {
 "t_reset", -- src/global/test.lua
 "t_run", -- src/global/test.lua
 "t_setup", -- src/global/test.lua
-"t_timeout", -- src/global/test.lua
 "t_wait", -- src/global/test.lua
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua

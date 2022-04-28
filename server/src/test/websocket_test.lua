@@ -144,8 +144,8 @@ t_describe("websocket test", function()
 
         local pkt_idx = 0
         local pkt_body = {
-            "MServer send hello",
-            "MServer send hello2",
+            "MServer say hello",
+            "MServer say hello2",
         }
 
         local ping_idx = 0
@@ -206,7 +206,7 @@ t_describe("websocket test", function()
         end
     end)
 
-    t_it("websocket local ssl", function()
+    t_it("websocket ssl local", function()
         t_async(5000)
 
         local pkt_idx = 0

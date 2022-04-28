@@ -123,6 +123,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
     {
         body.append(at, length);
     }
+
     return 0;
 }
 
@@ -236,9 +237,7 @@ int32_t WebsocketPacket::unpack(Buffer &buffer)
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
     size_t nparser = websocket_parser_execute(_parser, &settings, ctx, size);
-    // 如果未解析完，则是严重错误，比如分配不到内存。而websocket_parser只回调一次结果，
-    // 因为不能返回0。返回0造成循环解析，但内存不一定有分配
-    // 普通错误，比如回调脚本出错，是不会中止解析的
+
     buffer.remove(nparser);
     if (nparser != size)
     {

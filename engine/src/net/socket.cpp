@@ -109,7 +109,8 @@ void Socket::stop(bool flush, bool term)
     // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
     // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
     // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
-    if (term)
+    // 如果有watcher，则需要等watcher数据处理完才回调close_cb，没有则强制关闭
+    if (term || !_w)
     {
         close_cb(true);
     }
@@ -350,6 +351,7 @@ bool Socket::start(int32_t fd)
     assert(!_w);
 
     _fd = fd;
+    _status = CS_OPENED;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
     _w = StaticGlobal::ev()->io_start(_conn_id, _fd, EV_READ);
@@ -574,11 +576,8 @@ void Socket::io_cb(int32_t revents)
         return;
     }
 
-    if (EV_READ & revents)
-    {
-        command_cb();
-    }
-    else if (EV_ACCEPT & revents)
+    // ACCEPT、CONNECT事件可能和READ、WRITE同时触发
+    if (EV_ACCEPT & revents)
     {
         listen_cb();
     }
@@ -586,6 +585,12 @@ void Socket::io_cb(int32_t revents)
     {
         connect_cb();
     }
+
+    if (EV_READ & revents)
+    {
+        command_cb();
+    }
+
 }
 
 void Socket::close_cb(bool term)
