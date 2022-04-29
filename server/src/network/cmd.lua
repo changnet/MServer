@@ -14,8 +14,6 @@ local app_reg = {} -- 记录哪些服务器已注册过协议
 local last_command = nil -- 上一次执行的cmd
 local last_connection = nil -- 上一次回调的连接，通常用于快速回包
 
-local made = false -- 生成回调函数后，不允许再注册事件
-
 local SESSION = g_app.session
 
 -- 以玩家id为key，是否已认证该玩家
@@ -146,7 +144,7 @@ end
 function Cmd.reg(cmd, handler, noauth)
     local i = cmd.i
 
-    assert(not made)
+    assert(not g_app.ready) -- 生成回调函数后，不允许再注册事件
 
     cs_handler[i] = {
         noauth = noauth,
@@ -328,7 +326,6 @@ end
 
 -- 生成模块、实体回调函数
 local function make_cb()
-    made = true
     if table.empty(cs_handler) then return end
 
     local ThisCall = require "modules.system.this_call"

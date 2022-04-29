@@ -5,8 +5,6 @@ local ev_cb = {}
 
 require "modules.event.event_header"
 
-local made = false -- 生成回调函数后，不允许再注册事件
-
 -- 注册系统事件回调
 -- @param ev 事件id，PE_XXX，详见玩家事件定义
 -- @param cb 回调函数，回调参数取决于各个事件，可自动回调到player的子模块
@@ -18,7 +16,7 @@ function PE.reg(ev, cb, pr)
         ev_cb[ev] = cbs
     end
 
-    assert(cb and not made)
+    assert(cb and not g_app.ready)
 
     -- 默认优先级20
     -- 为啥是20，因为linux下top列出的就是20，照抄
@@ -40,7 +38,6 @@ end
 
 -- 生成回调函数
 local function make_cb()
-    made = true
     local ThisCall = require "modules.system.this_call"
 
     for ev, cbs in pairs(ev_cb) do

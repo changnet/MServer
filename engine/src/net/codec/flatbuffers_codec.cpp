@@ -19,7 +19,7 @@ void FlatbuffersCodec::finalize() {}
 void FlatbuffersCodec::reset()
 {
     delete _lflatbuffers;
-    _lflatbuffers = nullptr;
+    _lflatbuffers = new class lflatbuffers();
 }
 
 int32_t FlatbuffersCodec::load_path(const char *path)

@@ -6,7 +6,6 @@ require "global.name"
 require "engine.statistic"
 
 require "modules.event.system_event"
-json = require "engine.lua_parson"
 
 require "timer.timer"
 require "global.test"
@@ -61,6 +60,10 @@ local function exec_test()
     network_mgr:set_curr_session(g_app.session)
 
     -- vd( statistic.dump() )
+
+    -- 一些模块初始化时有顺序要求，需要检测ready状态
+    -- 测试时是按需加载，因此设为false
+    g_app.ready = false
     t_run()
 end
 

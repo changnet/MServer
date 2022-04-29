@@ -1,4 +1,4 @@
--- auto export by lua-tags 166 symbols
+-- auto export by lua-tags 165 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -123,7 +123,6 @@ return {
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "io_ok", -- src/network/conn.lua
-"json", -- src/test/test_boot.lua
 "make_name", -- src/global/name.lua
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua

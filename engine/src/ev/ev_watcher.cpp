@@ -14,7 +14,7 @@ EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
 {
     _id     = id;
     _fd     = fd;
-    _status = S_STOP;
+    _status = S_NONE;
 
     _mask = 0;
     _errno = 0;

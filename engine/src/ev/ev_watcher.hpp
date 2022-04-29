@@ -55,10 +55,12 @@ public:
     // io监听器的激活状态
     enum Status
     {
-        S_STOP  = 0,  // 停止状态
-        S_START = 1,  // 激活
-        S_NEW   = 2,  // 新增
-        S_DEL   = 3   // 删除中
+        S_NONE  = 0, // 不需要进行任何操作
+        S_STOP  = 1, // 停止状态
+        S_START = 2, // 激活
+        S_NEW   = 3, // 新增
+        S_DEL   = 4  // 删除中
+        
     };
 
     enum Mask

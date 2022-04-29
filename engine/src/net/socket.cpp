@@ -714,7 +714,7 @@ void Socket::command_cb()
     do
     {
         if ((ret = _packet->unpack(buffer)) <= 0) break;
-    } while (CS_OPENED != _status);
+    } while (CS_OPENED == _status);
 
     // 解析过程中错误，断开链接
     if (EXPECT_FALSE(ret < 0))

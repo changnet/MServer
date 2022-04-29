@@ -250,6 +250,7 @@ end
 
 -- 加载各个功能模块
 function App.load_module()
+    g_app.ready = false
     require(g_app.module_boot_file)
 
     -- 生成函数及其对应的名字
@@ -258,6 +259,7 @@ function App.load_module()
     -- 一些需要依赖其他脚本初始化的，请使用这个事件来初始化
     -- 这样不需要考虑脚本加载的先后顺序，这个事件触发时所有脚本都加载完成了
     __fire_sys_ev(SE_SCRIPT_LOADED)
+    g_app.ready = true
 end
 
 -- 运行进程

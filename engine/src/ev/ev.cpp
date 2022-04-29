@@ -203,7 +203,9 @@ int32_t EV::io_stop(int32_t id, bool flush)
 
     w->_uevents = static_cast<uint8_t>(flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
 
-    w->_status = EVIO::S_STOP;
+    // S_NEW状态表示还没调用set_fd_watcher，这时不需要再设置
+    w->_status = EVIO::S_NEW == w->_status ? EVIO::S_NONE : EVIO::S_STOP;
+
     io_change(w);
 
     return 0;
@@ -271,6 +273,9 @@ void EV::io_reify()
             int32_t fd = w->_fd;
             switch(w->_status)
             {
+            case EVIO::S_NONE:
+                non_del = true;
+                break;
             case EVIO::S_STOP:
                 non_del = true;
                 _backend->modify(w); // 移除该socket
