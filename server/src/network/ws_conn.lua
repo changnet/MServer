@@ -83,6 +83,7 @@ function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
 end
 
 -- 客户端发送握手请求
+-- @param url 握手时，可以像普通http get那样加参数，或者像post在body加参数
 function WsConn:send_handshake(url)
     -- RFC 6455 4.1.7
     -- Sec-WebSocket-Key|. The value of this header field MUST be a

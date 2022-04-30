@@ -186,9 +186,9 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
     const char *ctx = luaL_optlstring(L, index + 1, nullptr, &size);
     // if ( !ctx ) return 0; // 允许发送空包
 
-    size_t len         = websocket_calc_frame_size(flags, size);
+    size_t len = websocket_calc_frame_size(flags, size);
 
-    Buffer &buffer = _socket->get_send_buffer();
+    Buffer &buffer           = _socket->get_send_buffer();
     Buffer::Transaction &&ts = buffer.flat_reserve(len);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
@@ -228,25 +228,32 @@ int32_t WebsocketPacket::unpack(Buffer &buffer)
      */
     if (!_is_upgrade) return HttpPacket::unpack(buffer);
 
-    size_t size     = 0;
-    const char *ctx = buffer.all_to_flat_ctx(size);
-    if (size == 0) return 0;
+    _e        = 0; // 重置上一次解析错误
+    bool next = false;
 
-    _e = 0; // 重置上一次解析错误
-
-    // websocket_parser_execute把数据全当二进制处理，没有错误返回
-    // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
-    size_t nparser = websocket_parser_execute(_parser, &settings, ctx, size);
-
-    buffer.remove(nparser);
-    if (nparser != size)
+    // 不要用 buffer.all_to_flat_ctx(size); 这个会把收到的数据都拷贝到缓冲区
+    // 效率很低。
+    do
     {
-        // websocket_parser未提供错误机制，所有函数都是返回非0值表示中止解析
-        // 但中止解析并不表示解析出错，比如 上层脚本在一个消息回调中关闭了连接，则需要中止解析
-        // 返回-1表示解析出错，会在底层直接删除链接
-        // 中止解析则由上层脚本逻辑决定如何处理(比如关闭链接或者直接忽略)
-        return _e ? -1 : 0;
-    }
+        size_t size     = 0;
+        const char *ctx = buffer.get_front_used(size, next);
+        if (size == 0) return 0;
+
+        // websocket_parser_execute把数据全当二进制处理，没有错误返回
+        // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
+        size_t nparser = websocket_parser_execute(_parser, &settings, ctx, size);
+
+        buffer.remove(nparser);
+        if (nparser != size)
+        {
+            // websocket_parser未提供错误机制，所有函数都是返回非0值表示中止解析
+            // 但中止解析并不表示解析出错，比如
+            // 上层脚本在一个消息回调中关闭了连接，则需要中止解析
+            // 返回-1表示解析出错，会在底层直接删除链接
+            // 中止解析则由上层脚本逻辑决定如何处理(比如关闭链接或者直接忽略)
+            return _e ? -1 : 0;
+        }
+    } while (next);
 
     return 0;
 }

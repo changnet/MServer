@@ -12,19 +12,19 @@ local sc_param = table.copy(ScConn.default_param)
 local cs_param = table.copy(CsConn.default_param)
 
 -- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
-sc_param.send_chunk_max = 128
-sc_param.recv_chunk_max = 128
-cs_param.send_chunk_max = 128
-cs_param.recv_chunk_max = 128
+sc_param.send_chunk_max = 256
+sc_param.recv_chunk_max = 256
+cs_param.send_chunk_max = 256
+cs_param.recv_chunk_max = 256
 
 local sc_ws_param = table.copy(ScWsConn.default_param)
 local cs_ws_param = table.copy(CsWsConn.default_param)
 
 -- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
-sc_ws_param.send_chunk_max = 128
-sc_ws_param.recv_chunk_max = 128
-cs_ws_param.send_chunk_max = 128
-cs_ws_param.recv_chunk_max = 128
+sc_ws_param.send_chunk_max = 256
+sc_ws_param.recv_chunk_max = 256
+cs_ws_param.send_chunk_max = 256
+cs_ws_param.recv_chunk_max = 256
 
 local srv_conn = nil
 local clt_conn = nil
@@ -39,7 +39,7 @@ t_describe("protobuf test", function()
     local local_port_ws = 8085
     local local_port_wss = 8086
 
-    local PERF_TIMES = 5
+    local PERF_TIMES = 10000
 
     local clt_ssl
     local srv_ssl

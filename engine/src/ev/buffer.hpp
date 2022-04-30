@@ -169,18 +169,22 @@ public:
         {
             _len = t._len;
             _ctx = t._ctx;
+            _internal = t._internal;
 
             t._len = 0;
             t._ctx = 0;
+            t._internal = false;
         }
         Transaction &operator=(Transaction && t)
         {
             _len = t._len;
             _ctx = t._ctx;
+            _internal = t._internal;
             _ul  = std::move(t._ul);
 
             t._len = 0;
             t._ctx = 0;
+            t._internal = false;
             // t._ul不用处理，_ul  = std::move(ul);里已经做了处理
             return *this;
         }

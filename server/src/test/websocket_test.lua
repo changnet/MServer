@@ -12,14 +12,13 @@ local ws_default_param = WsConn.default_param
 
 t_describe("websocket test", function()
     --[[
-    https://stackoverflow.com/questions/4092591/websocket-live-server
-    Your best bet is going to be Kaazing's websockets echo server: http://websockets.org/echo.html. It's easy to remember, they keep it up to date and running.
+    http://websockets.org/echo.html 这个已经不维护了
 
-    ws://echo.websocket.org (port 80)
-    wss://echo.websocket.org (port 443)
-    EDIT: If you want to use wss:// (443) visit the site with https:// or else use http:// for ws:// (80).
+    https://www.piesocket.com/websocket-tester 可以免费用，但是它的api_key需要每星期手动更换一次
     ]]
-    local exp_host = "echo.websocket.org"
+    local exp_host = "demo.piesocket.com"
+    local exp_url =
+        "/v3/channel_1?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self"
 
     local local_port = 8083
     local local_port_s = 8084
@@ -60,6 +59,7 @@ t_describe("websocket test", function()
 
         local conn = CsWsConn()
         conn.default_param = ws_default_param
+        conn.url = exp_url
         conn:connect(exp_host, 80)
 
         conn.on_disconnected = function() end
@@ -111,6 +111,7 @@ t_describe("websocket test", function()
 
         local conn = CsWsConn()
         conn.default_param = ws_default_param
+        conn.url = exp_url
         conn:connect_s(exp_host, 443, clt_ssl)
 
         conn.on_disconnected = function() end
