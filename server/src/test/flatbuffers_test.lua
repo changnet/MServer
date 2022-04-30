@@ -11,6 +11,12 @@ local cs_param = table.copy(CsConn.default_param)
 sc_param.cdt = network_mgr.CDT_FLATBUF
 cs_param.cdt = network_mgr.CDT_FLATBUF
 
+-- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
+sc_param.send_chunk_max = 128
+sc_param.recv_chunk_max = 128
+cs_param.send_chunk_max = 128
+cs_param.recv_chunk_max = 128
+
 local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil

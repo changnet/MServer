@@ -329,7 +329,7 @@ void EVBackend::do_watcher_fast_event(EVIO *w)
     {
         // 初始化新socket，只有ssl用到
         auto status = w->do_init_accept();
-        do_io_status(w, EV_WRITE, status);
+        do_io_status(w, EV_READ, status);
     }
     else if (events & EV_CONNECT)
     {
@@ -378,13 +378,6 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 
             auto status = w->recv();
             do_io_status(w, EV_READ, status);
-        }
-
-        // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
-        if (EXPECT_FALSE(kernel_ev & EV_ACCEPT))
-        {
-            w->_b_uevents &= static_cast<uint8_t>(~EV_ACCEPT);
-            modify_later(w, w->_b_uevents);
         }
 
         events |= (EV_READ | EV_ACCEPT);

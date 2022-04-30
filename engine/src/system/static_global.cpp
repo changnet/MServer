@@ -95,7 +95,6 @@ void StaticGlobal::uninitialize()
     _thread_mgr->stop(_async_log);
     _network_mgr->clear();
 
-    ELOG_R("delete buffer pool >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
     delete _buffer_chunk_pool;
     delete _network_mgr;
     delete _ssl_mgr;

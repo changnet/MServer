@@ -102,8 +102,9 @@ public:
     }
     virtual ~ObjectPoolLock()
     {
-        std::lock_guard<SpinLock> guard(_lock);
-        ObjectPool<T, msize, nsize>::purge();
+        // 基类会释放，不需要加锁。如果释放的时候有其他线程访问，加锁也救不了
+        // std::lock_guard<SpinLock> guard(_lock);
+        // ObjectPool<T, msize, nsize>::purge();
     }
 
     inline virtual void purge() override

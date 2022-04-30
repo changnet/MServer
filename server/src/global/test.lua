@@ -352,13 +352,16 @@ function t_equal(got, expect)
 end
 
 -- test if expr is true
-function t_assert(expr)
+function t_assert(expr, msg)
     assert(T.co, "test already finished or not begin yet")
     if expr then return end
 
-    local msg = debug.traceback("assertion failed!", 2)
+    local fail_msg = "assertion failed"
+    if msg then fail_msg = fail_msg .. ": " .. msg end
 
-    on_fail(msg)
+    local dbg_msg = debug.traceback(fail_msg, 2)
+
+    on_fail(dbg_msg)
 end
 
 function t_describe(title, func)

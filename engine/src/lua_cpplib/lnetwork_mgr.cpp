@@ -479,6 +479,11 @@ class Packet *LNetworkMgr::raw_check_packet(lua_State *L, int32_t conn_id,
         luaL_error(L, "invalid socket");
         return nullptr;
     }
+    if (sk->is_closed())
+    {
+        luaL_error(L, "socket already closed");
+        return nullptr;
+    }
 
     // CNT_NONE表示不需要检测连接类型
     if (Socket::CT_NONE != conn_ty && conn_ty != sk->conn_type())
@@ -497,9 +502,6 @@ class Packet *LNetworkMgr::raw_check_packet(lua_State *L, int32_t conn_id,
     return pkt;
 }
 
-/* 发送c2s数据包
- * network_mgr:send_srv_packet( conn_id,cmd,pkt )
- */
 int32_t LNetworkMgr::send_srv_packet(lua_State *L)
 {
     class Packet *pkt = lua_check_packet(L, Socket::CT_NONE);
@@ -508,9 +510,6 @@ int32_t LNetworkMgr::send_srv_packet(lua_State *L)
     return 0;
 }
 
-/* 发送s2c数据包
- * network_mgr:send_clt_packet( conn_id,cmd,errno,pkt )
- */
 int32_t LNetworkMgr::send_clt_packet(lua_State *L)
 {
     class Packet *pkt = lua_check_packet(L, Socket::CT_NONE);
@@ -519,9 +518,6 @@ int32_t LNetworkMgr::send_clt_packet(lua_State *L)
     return 0;
 }
 
-/* 发送s2s数据包
- * network_mgr:send_s2s_packet( conn_id,cmd,errno,pkt )
- */
 int32_t LNetworkMgr::send_s2s_packet(lua_State *L)
 {
     class Packet *pkt = lua_check_packet(L, Socket::CT_SSCN);
@@ -543,10 +539,6 @@ int32_t LNetworkMgr::send_s2s_packet(lua_State *L)
     return 0;
 }
 
-/* 在非网关发送客户端数据包
- * conn_id必须为网关连接
- * network_mgr:send_ssc_packet( conn_id,pid,cmd,errno,pkt )
- */
 int32_t LNetworkMgr::send_ssc_packet(lua_State *L)
 {
     class Packet *pkt = lua_check_packet(L, Socket::CT_SSCN);
@@ -562,7 +554,6 @@ int32_t LNetworkMgr::send_ssc_packet(lua_State *L)
     return 0;
 }
 
-/* 获取http报文头数据 */
 int32_t LNetworkMgr::get_http_header(lua_State *L)
 {
     int32_t conn_id = static_cast<int32_t>(luaL_checkinteger(L, 1));
@@ -608,14 +599,11 @@ int32_t LNetworkMgr::send_rpc_packet(lua_State *L)
     return 0;
 }
 
-/* 发送原始数据包
- * network_mgr:send_raw_packet( conn_id,content )
- */
 int32_t LNetworkMgr::send_raw_packet(lua_State *L)
 {
     int32_t conn_id  = static_cast<int32_t>(luaL_checkinteger(L, 1));
     class Socket *sk = get_conn_by_conn_id(conn_id);
-    if (!sk || sk->fd() <= 0)
+    if (!sk || sk->is_closed())
     {
         luaL_error(L, "invalid socket");
         return 0;

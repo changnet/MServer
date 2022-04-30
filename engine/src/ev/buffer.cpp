@@ -48,7 +48,6 @@ Buffer::~Buffer()
     }
 
     _front = _back = nullptr;
-    ELOG_R("delete buffer >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 }
 
 size_t Buffer::reserve()
@@ -59,7 +58,8 @@ size_t Buffer::reserve()
         Chunk *tmp = new_chunk();
         if (_back)
         {
-            _back = _back->_next = new_chunk();
+            _back->_next = tmp;
+            _back        = tmp;
         }
         else
         {
@@ -238,7 +238,7 @@ const char *Buffer::to_flat_ctx(size_t len)
     }
 
     // 用来检测二次拷贝出现的频率，确认没问题这个可以去掉
-    PLOG("using continuous buffer:%d", len);
+    // PLOG("using continuous buffer:%d", len);
 
     /**
      * 这个函数可能会调用很频繁。例如，判断包是否完整时需要一个16位长度
@@ -267,7 +267,12 @@ const char *Buffer::to_flat_ctx(size_t len)
 
 const char *Buffer::all_to_flat_ctx(size_t &len)
 {
+    len = 0;
     std::lock_guard guard(_lock);
+
+    // 从未写入过数据，就不会分配_front
+    // websocket的控制帧不需要写入数据就会尝试获取有没有收到数据
+    if (EXPECT_FALSE(!_front)) return nullptr;
 
     if (EXPECT_TRUE(!_front->_next))
     {

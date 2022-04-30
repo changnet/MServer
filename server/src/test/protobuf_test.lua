@@ -8,9 +8,28 @@ local CsConn = require "network.cs_conn"
 local CsWsConn = require "network.cs_ws_conn"
 local ScWsConn = require "network.sc_ws_conn"
 
+local sc_param = table.copy(ScConn.default_param)
+local cs_param = table.copy(CsConn.default_param)
+
+-- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
+sc_param.send_chunk_max = 128
+sc_param.recv_chunk_max = 128
+cs_param.send_chunk_max = 128
+cs_param.recv_chunk_max = 128
+
+local sc_ws_param = table.copy(ScWsConn.default_param)
+local cs_ws_param = table.copy(CsWsConn.default_param)
+
+-- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
+sc_ws_param.send_chunk_max = 128
+sc_ws_param.recv_chunk_max = 128
+cs_ws_param.send_chunk_max = 128
+cs_ws_param.recv_chunk_max = 128
+
 local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil
+local listen_conn_ws = nil
 
 t_describe("protobuf test", function()
     local local_host = "::1"
@@ -20,7 +39,7 @@ t_describe("protobuf test", function()
     local local_port_ws = 8085
     local local_port_wss = 8086
 
-    local PERF_TIMES = 1000
+    local PERF_TIMES = 5
 
     local clt_ssl
     local srv_ssl
@@ -113,6 +132,7 @@ t_describe("protobuf test", function()
         -- 建立一个客户端、一个服务端连接，模拟通信
 
         listen_conn = ScConn()
+        listen_conn.default_param = sc_param
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
             srv_conn = self
@@ -122,6 +142,7 @@ t_describe("protobuf test", function()
         listen_conn.on_disconnected = function() end
 
         clt_conn = CsConn()
+        clt_conn.default_param = cs_param
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function()
             t_done()
@@ -190,20 +211,18 @@ t_describe("protobuf test", function()
         local count = 0
         local srv_conn_ws
         local clt_conn_ws
-        local listen_conn_ws
 
         Cmd.reg(TEST.LITE, function(pkt)
             count = count + 1
-
             if count >= PERF_TIMES then
                 srv_conn_ws:close()
                 clt_conn_ws:close()
-                listen_conn_ws:close()
                 t_done()
             end
         end, true)
 
         listen_conn_ws = ScWsConn()
+        listen_conn_ws.default_param = sc_ws_param
         listen_conn_ws:listen(local_host, local_port_ws)
         listen_conn_ws.on_accepted = function(self)
             srv_conn_ws = self
@@ -211,6 +230,7 @@ t_describe("protobuf test", function()
         listen_conn_ws.on_disconnected = function() end
 
         clt_conn_ws = CsWsConn()
+        clt_conn_ws.default_param = cs_ws_param
         clt_conn_ws:connect(local_host, local_port_ws)
         clt_conn_ws.on_connected = function(self)
             for _ = 1, PERF_TIMES do
@@ -226,20 +246,27 @@ t_describe("protobuf test", function()
         local count = 0
         local srv_conn_ws
         local clt_conn_ws
-        local listen_conn_ws
 
         Cmd.reg(TEST.LITE, function(pkt)
-            srv_conn:send_pkt(TEST.LITE, pkt)
+            srv_conn_ws:send_pkt(TEST.LITE, pkt)
         end, true)
 
-        listen_conn_ws = ScWsConn()
-        listen_conn_ws:listen(local_host, local_port_ws)
+        -- socket操作是异步的，没法close后再马上发起一个同样端口的监听
+        -- 所以上一个测试如果已经在监听，这里就不再发起监听
+        if not listen_conn_ws then
+            listen_conn_ws = ScWsConn()
+            listen_conn_ws.default_param = sc_ws_param
+            local ok, msg = listen_conn_ws:listen(local_host, local_port_ws)
+            t_assert(ok, msg)
+        end
+
         listen_conn_ws.on_accepted = function(self)
             srv_conn_ws = self
         end
         listen_conn_ws.on_disconnected = function() end
 
         clt_conn_ws = CsWsConn()
+        clt_conn_ws.default_param = cs_ws_param
         clt_conn_ws:connect(local_host, local_port_ws)
         clt_conn_ws.on_connected = function(self)
             self:send_pkt(TEST.LITE, lite_pkt)
@@ -250,7 +277,6 @@ t_describe("protobuf test", function()
             if count >= PERF_TIMES then
                 srv_conn_ws:close()
                 clt_conn_ws:close()
-                listen_conn_ws:close()
                 t_done()
             else
                 self:send_pkt(TEST.LITE, lite_pkt)
@@ -265,7 +291,7 @@ t_describe("protobuf test", function()
         local count = 0
         local srv_conn_ws
         local clt_conn_ws
-        local listen_conn_ws
+        local listen_conn_wss
 
         Cmd.reg(TEST.LITE, function(pkt)
             count = count + 1
@@ -273,19 +299,21 @@ t_describe("protobuf test", function()
             if count >= PERF_TIMES then
                 srv_conn_ws:close()
                 clt_conn_ws:close()
-                listen_conn_ws:close()
+                listen_conn_wss:close()
                 t_done()
             end
         end, true)
 
-        listen_conn_ws = ScWsConn()
-        listen_conn_ws:listen_s(local_host, local_port_wss, srv_ssl)
-        listen_conn_ws.on_accepted = function(self)
+        listen_conn_wss = ScWsConn()
+        listen_conn_wss.default_param = sc_ws_param
+        listen_conn_wss:listen_s(local_host, local_port_wss, srv_ssl)
+        listen_conn_wss.on_accepted = function(self)
             srv_conn_ws = self
         end
-        listen_conn_ws.on_disconnected = function() end
+        listen_conn_wss.on_disconnected = function() end
 
         clt_conn_ws = CsWsConn()
+        clt_conn_ws.default_param = cs_ws_param
         clt_conn_ws:connect_s(local_host, local_port_wss, clt_ssl)
         clt_conn_ws.on_connected = function(self)
             for _ = 1, PERF_TIMES do
@@ -298,8 +326,9 @@ t_describe("protobuf test", function()
     end)
 
     t_after(function()
-        clt_conn:close()
-        srv_conn:close()
-        listen_conn:close()
+        if clt_conn then clt_conn:close() end
+        if srv_conn then srv_conn:close() end
+        if listen_conn then listen_conn:close() end
+        if listen_conn_ws then listen_conn_ws:close() end
     end)
 end)

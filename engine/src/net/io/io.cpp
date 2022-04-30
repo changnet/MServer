@@ -53,7 +53,8 @@ IO::IOStatus IO::recv(EVIO *w)
     if (netcompat::iserror(e))
     {
         w->_errno = e;
-        ELOG("io recv:%s(%d)", netcompat::strerror(e), e);
+        ELOG("io recv id = %d, fd = %d:%s(%d)", w->_id, _fd,
+             netcompat::strerror(e), e);
         return IOS_ERROR;
     }
 
@@ -91,7 +92,8 @@ IO::IOStatus IO::send(EVIO *w)
     if (netcompat::iserror(e))
     {
         w->_errno = e;
-        ELOG("io send:%s(%d)", netcompat::strerror(e), e);
+        ELOG("io send id = %d, fd = %d:%s(%d)", w->_id, _fd,
+             netcompat::strerror(e), e);
         return IOS_ERROR;
     }
 
