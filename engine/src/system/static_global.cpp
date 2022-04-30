@@ -48,10 +48,11 @@ StaticGlobal::initializer::~initializer()
     Socket::library_end();
 }
 
-// 业务都放这里逻辑初始化
-void StaticGlobal::initialize() /* 程序运行时初始化 */
+void StaticGlobal::initialize()
 {
-    /* 原本用static对象，但实在是无法控制各个销毁的顺序。因为其他文件中还有局部static对象
+    /**
+     * 业务都放这里逻辑初始化
+     * 原本用static对象，但实在是无法控制各个销毁的顺序。因为其他文件中还有局部static对象
      * 会依赖这些对象。
      * 比如class lev销毁时会释放引起一些对象gc，调用局部内存池，但早就销毁了
      * 各个变量之间有依赖，要注意顺序
@@ -82,16 +83,19 @@ void StaticGlobal::initialize() /* 程序运行时初始化 */
     _statistic->reset_trafic();
 }
 
-/* 业务逻辑都放这里销毁，不能放initializer的析构函数或者等到对应static对象析构
- * 因为业务逻辑可能包含static对象，等到调用析构的时候已经晚了
- * 比如socket的buffer对象中使用局部static内存池。如果在_network_mgr的析构里才关闭socket
- * 局部static内存池早就销毁了，内存早已出错。日志线程也是同样的设计。
- */
-void StaticGlobal::uninitialize() /* 程序结束时反初始化 */
+void StaticGlobal::uninitialize()
 {
+    /* 业务逻辑都放这里销毁，不能放initializer的析构函数或者等到对应static对象析构
+     * 因为业务逻辑非常复杂，他们之间相互引用。比如EV里包含io watcher，里面涉及
+     * socket读写的buffer，buffer又涉及到内存池
+     * 
+     * 所以这里手动保证他们销毁的顺序。一些相互引用的，只能先调用他们的stop或者
+     * clear函数来解除引用，再delete掉，不然valgrind会报Invalid read内存错误
+     */
     _thread_mgr->stop(_async_log);
     _network_mgr->clear();
 
+    ELOG_R("delete buffer pool >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
     delete _buffer_chunk_pool;
     delete _network_mgr;
     delete _ssl_mgr;

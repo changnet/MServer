@@ -280,6 +280,8 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
         if (w->_mask & EVIO::M_OVERFLOW_KILL)
         {
+            PLOG("backend thread fd overflow kill id = %d, fd = %d", w->_id,
+                 w->_fd);
             modify_later(w, EV_CLOSE);
             return false;
         }
@@ -287,7 +289,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         {
             // 读溢出的话，稍微sleep一下不至于占用太多cpu即可，其他没什么影响
             std::this_thread::sleep_for(std::chrono::microseconds(500));
-            ELOG("backend thread overflow sleep");
+            ELOG("backend thread fd overflow sleep");
         }
         return true;
     case IO::IOS_CLOSE:

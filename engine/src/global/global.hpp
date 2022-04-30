@@ -32,6 +32,7 @@
 /**
  * 格式化std::string，需要C++20才有std::format，这个暂时用一下
  */
+static_assert(__cplusplus < 202002L);
 extern std::string std_format(const char *fmt, ...);
 #define STD_FMT(...) std_format(__VA_ARGS__)
 
@@ -50,7 +51,8 @@ extern std::string std_format(const char *fmt, ...);
 /* Qt style unused paramter handler */
 #define UNUSED(x) (void)x
 
-/* 分支预测，汇编优化。逻辑上不会改变cond的值 */
+/* 分支预测，汇编优化。逻辑上不会改变cond的值,C++ 20之后，请使用stl中的likely、unlikely */
+static_assert(__cplusplus < 202002L);
 #ifdef __windows__
     #define EXPECT_FALSE(cond) cond
     #define EXPECT_TRUE(cond)  cond
@@ -62,11 +64,11 @@ extern std::string std_format(const char *fmt, ...);
 /* terminated without destroying any object and without calling any of the
  * functions passed to atexit or at_quick_exit
  */
-#define FATAL(...)         \
-    do                     \
-    {                      \
-        ELOG(__VA_ARGS__); \
-        ::abort();         \
+#define FATAL(...)           \
+    do                       \
+    {                        \
+        ELOG_R(__VA_ARGS__); \
+        ::abort();           \
     } while (0)
 
 /// 求C数组的数量

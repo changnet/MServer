@@ -23,7 +23,7 @@ public:
         _objs.reserve(msize);
     }
 
-    ~ObjectPool()
+    virtual ~ObjectPool()
     {
         clear();
     }
@@ -77,6 +77,7 @@ private:
     inline void clear()
     {
         for (auto obj : _objs) delete obj;
+        _objs.clear();
     }
 
 private:
@@ -101,6 +102,8 @@ public:
     }
     virtual ~ObjectPoolLock()
     {
+        std::lock_guard<SpinLock> guard(_lock);
+        ObjectPool<T, msize, nsize>::purge();
     }
 
     inline virtual void purge() override

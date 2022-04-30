@@ -204,6 +204,7 @@ bool AsyncLog::Policy::init_daily_policy()
         // https://developercommunity.visualstudio.com/t/stdfilesystemfile-time-type-does-not-allow-easy-co/251213
         // windows的文件时间戳从1601年开始，在C++20之前，无法用clock_cast把ftime转换为time_t
         // Between Jan 1, 1601 and Jan 1, 1970 there are 11644473600 seconds
+        static_assert(__cplusplus < 202002L);
         using namespace std::chrono_literals;
         _data = std::chrono::duration_cast<std::chrono::seconds>(
                     ftime.time_since_epoch() - 11644473600s)

@@ -595,8 +595,16 @@ void Socket::io_cb(int32_t revents)
 
 void Socket::close_cb(bool term)
 {
+    // 进程强制关闭，一些数据都不在了.io_delete这些已经没用
+    // 大概清理一下数据，保证析构时不出错即可
+    if (term)
+    {
+        netcompat::close(_fd);
+        _w = nullptr;
+        return;
+    }
     // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-    if (CS_OPENED == _status && !term && _packet) _packet->on_closed();
+    if (CS_OPENED == _status && _packet) _packet->on_closed();
 
     _status = CS_CLOSED;
     int32_t e = _w ? _w->_errno : 0;

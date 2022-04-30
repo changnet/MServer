@@ -48,6 +48,7 @@ Buffer::~Buffer()
     }
 
     _front = _back = nullptr;
+    ELOG_R("delete buffer >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 }
 
 size_t Buffer::reserve()
