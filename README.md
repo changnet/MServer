@@ -12,11 +12,11 @@ adapt to MMO-type games, and can also be deployed as a single process for small
 games.
 
 ## Dependencies
-* Linux
-* GCC (c++11 or above,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
+* Linux/Windows 10(>=Version 2004)
+* GCC (c++17 or above,check it [here](https://gcc.gnu.org/projects/cxx-status.html))
 * MariaDB
 * MongoDB
-* Lua (5.3 or above)
+* Lua (>=5.3)
 * protobuf
 
 ## Build & Usage
@@ -27,7 +27,7 @@ See it at [Wiki](https://github.com/changnet/MServer/wiki/Build)
 
  * Hotfix
  * Async log
- * RPC(bson RPC)
+ * RPC
  * Lua OOP development
  * Scene(map、navigation、aoi)
  * AC algorithm words filter
@@ -38,31 +38,30 @@ See it at [Wiki](https://github.com/changnet/MServer/wiki/Build)
  * Async and coroutine sync DB operation for MariaDB、MongoDB
 
 
-## Process Architecture
+## Architecture
+draw by http://asciiflow.com/
 
 ```txt
-+--------------------------------------------------+
-|                                                  |
-|              Lua Game Application                |
-|                                                  |
-+--------------------------------------------------+
-|                                                  |
-|              Lua C++ Driver                      |
-|                                                  |
-+--------------------------------------------------+
-|              C++ Component                       |
-| +--------------+---------------+---------------+ |  thread   +---------+      +----------------+
-| |  SSL         |    Socket     |   Protobuf    | <----------->   Log   +------>   Disk Files   |
-| +--------------+---------------+---------------+ |           +---------+      +----------------+
-| |  Navigation  |   AOI         |  Timer        | |
-| +--------------+---------------+---------------+ |  thread   +---------+      +----------------+
-| | Crypto       |  JSON/XML     |  RPC          | <-----------> MariaDB +------> MariaDB Server |
-| +--------------+---------------+---------------+ |           +---------+      +----------------+
-| |              |               |               | |
-| +--------------+---------------+---------------+ |  thread   +---------+      +----------------+
-| | WordFilter   | FlatBuffers   |               | <-----------> MongoDB +------> MongoDB Server |
-| +--------------+---------------+---------------+ |           +---------+      +----------------+
-+--------------------------------------------------+
+                                ┌───────────────────────────┐
+                                │    Lua Game Application   │
+                                ├───────────────────────────┤
+                                │        Lua C++ Driver     │
+                                ├───────────────────────────┤
+                                │        C++ Component      │
+                                ├─────────────┬─────────────┤
+                                │ Timer       │ RPC         │
+                                ├─────────────┼─────────────┤  thread    ┌────────────────┐
+                                │ Protobuf    │ Flatbuffers │◄──────────►│ Log Disk Files │
+                                ├─────────────┼─────────────┤            └────────────────┘
+                                │ Navigation  │ AOI         │
+                                ├─────────────┼─────────────┤  thread    ┌────────────────┐
+                                │ Crypto      │ JSON/XML    │◄──────────►│ MariaDB Server │
+                                ├─────────────┼─────────────┤            └────────────────┘
+                                │ WorldFilter │             │
+  ┌────────────────┐  thread    ├─────────────┼─────────────┤  thread    ┌────────────────┐
+  │ Client/Console │◄──────────►│ Socet       │ SSL         │◄──────────►│ MongoDB Server │
+  └────────────────┘            └─────────────┴─────────────┘            └────────────────┘
+
 ```
 
 ## Note
@@ -70,7 +69,3 @@ See it at [Wiki](https://github.com/changnet/MServer/wiki/Build)
 * In latest version, FlatBuffers isn't being tested, may not work properly
 * Protobuf library using https://github.com/cloudwu/pbc, some features are NOT the same with Google Protobuf
 * using excel to manage config file.https://github.com/changnet/py_exceltools
-
-## Thanks
-
-- http://asciiflow.com/

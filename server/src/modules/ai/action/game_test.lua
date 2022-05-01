@@ -29,7 +29,7 @@ end
 -- 随机一个聊天字符串
 local function randomChat()
     -- 如果已经创建足够多的缓存，就在旧的里随机
-    local MAX_CACHE = 2
+    local MAX_CACHE = 10240
 
     if #chatCache >= MAX_CACHE then
         local index = math.random(#chatCache)
