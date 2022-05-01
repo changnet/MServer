@@ -33,6 +33,7 @@ return {
 "GATEWAY", -- src/modules/system/define.lua
 "GM", -- src/modules/system/gm.lua
 "GSE", -- src/application/app.lua
+"GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
 "LOG", -- src/modules/log/log_header.lua
@@ -73,7 +74,6 @@ return {
 "SYS", -- proto/ss.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "TEST", -- src/modules/system/define.lua
-"Test", -- src/modules/ai/action/test.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "WORLD", -- src/modules/system/define.lua

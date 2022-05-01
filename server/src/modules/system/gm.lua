@@ -8,11 +8,18 @@ GM = {}
 local gm_map = {}
 local forward_map = {}
 
--- 检测聊天中是否带gm
+-- 检测聊天信息是否为gm，如果是就执行
 function GM.chat_gm(player, context)
     if not g_setting.gm then return false end
 
-    GM.exec("chat", player, context)
+    -- string.byte("@") == 64
+    if string.byte(context, 1) ~= 64 then return false end
+
+    local ok, msg = GM.exec("chat", player, context)
+    if not ok then
+        print("GM exec error", msg)
+        -- 仍然返回true表示已执行gm
+    end
 
     return true
 end

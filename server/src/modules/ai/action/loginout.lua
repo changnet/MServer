@@ -41,6 +41,7 @@ end
 function Loginout.on_disconnected(conn)
     local entity = conn.entity
 
+    conn.conn_id = nil
     entity.ai.state = AST.OFF
     printf("android(%d) die ", entity.index)
 end
