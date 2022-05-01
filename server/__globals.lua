@@ -1,8 +1,9 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 163 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
+"ANDROID", -- src/modules/system/define.lua
 "APP", -- src/modules/system/define.lua
 "APP_TYPE", -- src/application/app.lua
 "AREA", -- src/modules/system/define.lua
@@ -87,7 +88,6 @@ return {
 "__test", -- src/global/test.lua
 "__test_timeout", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
-"application_ev", -- src/android/android_boot.lua
 "application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
@@ -112,10 +112,10 @@ return {
 "g_mongodb", -- src/modules/module_header.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
+"g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
-"g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
 "g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua
@@ -133,7 +133,6 @@ return {
 "name_to_func", -- src/global/name.lua
 "name_to_obj", -- src/global/name.lua
 "obj_to_name", -- src/global/name.lua
-"on_cmd", -- src/android/android_mgr.lua
 "oo", -- src/global/oo.lua
 "print", -- src/global/global.lua
 "printf", -- src/global/global.lua
@@ -145,7 +144,6 @@ return {
 "require_no_update", -- src/global/require.lua
 "rpc_command_new", -- src/rpc/rpc.lua
 "rpc_command_return", -- src/rpc/rpc.lua
-"sig_handler", -- src/android/android_boot.lua
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua

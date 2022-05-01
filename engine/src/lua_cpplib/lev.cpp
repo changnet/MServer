@@ -6,9 +6,9 @@
 
 LEV::LEV()
 {
-    _critical_tm               = -1;
-    _app_ev._repeat_ms         = 60000;
-    _app_ev._next_time         = 0;
+    _critical_tm       = -1;
+    _app_repeat        = 60000;
+    _app_next_tm       = 0;
 }
 
 LEV::~LEV()
@@ -99,13 +99,13 @@ int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
 {
     // 主循环不要设置太长的循环时间，如果太长用定时器就好了
     int32_t interval = luaL_checkinteger32(L, 1);
-    if (interval < 0 || interval > 1000)
+    if (interval < 0 || interval > 60000)
     {
         return luaL_error(L, "illegal argument");
     }
 
-    _app_ev._repeat_ms = interval;
-    _app_ev._next_time = _steady_clock;
+    _app_repeat  = interval;
+    _app_next_tm = _steady_clock;
     return 0;
 }
 
@@ -143,26 +143,16 @@ void LEV::invoke_signal()
     lua_remove(L, top); /* remove traceback */
 }
 
-bool LEV::next_periodic(Periodic &periodic)
-{
-    bool timeout = false;
-    int64_t tm   = periodic._next_time - _steady_clock;
-    if (tm <= 0)
-    {
-        timeout = true;
-        // TODO 当主循环卡了，这两个表现是不一样的，后续有需要再改
-        // periodic._next_time += periodic._repeat_ms;
-        periodic._next_time = _steady_clock + periodic._repeat_ms;
-    }
-
-    // set_backend_time_coarse(periodic._next_time);
-
-    return timeout;
-}
-
 void LEV::invoke_app_ev()
 {
-    static lua_State *L = StaticGlobal::state();
+    if (_steady_clock < _app_next_tm)
+    {
+        _next_backend_time = _app_next_tm;
+        return;
+    }
+    _app_next_tm = _steady_clock + _app_repeat;
+
+    lua_State *L = StaticGlobal::state();
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
@@ -185,7 +175,7 @@ void LEV::running()
     }
 
     invoke_signal();
-    if (next_periodic(_app_ev)) invoke_app_ev();
+    invoke_app_ev();
 
     StaticGlobal::thread_mgr()->main_routine();
 

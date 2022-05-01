@@ -42,6 +42,7 @@ EV::EV()
     time_update();
 
     _busy_time = 0;
+    _next_backend_time = 0;
 
     _backend = EVBackend::instance();
 }
@@ -88,7 +89,7 @@ int32_t EV::loop()
         _busy_time = _steady_clock - last_ms;
 
         /// 允许阻塞的最长时间(毫秒)
-        int64_t backend_time = max_wait;
+        int64_t backend_time = _next_backend_time - _steady_clock;
         if (_timer_cnt)
         {
             // wait时间不超过下一个定时器触发时间
@@ -129,6 +130,7 @@ int32_t EV::loop()
         time_update();
 
         last_ms = _steady_clock;
+        _next_backend_time = _steady_clock + max_wait;
 
         // 处理timer超时
         timers_reify();

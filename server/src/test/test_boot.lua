@@ -28,8 +28,8 @@ require "test.timer_test"
 
 local function exec_test()
     local opts = g_app.opts
-    g_app.name, g_app.filter, g_app.skip = opts.app, opts.filter,
-                                                  opts.skip
+    g_app.name, g_app.filter, g_app.skip = opts.app, opts.filter, opts.skip
+
     t_setup({
         print = print,
         timer = {

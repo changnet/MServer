@@ -33,7 +33,7 @@ local app_ev = {} -- 主循环回调
 -- @param index 服务器索引，如多个gateway，分别为1,2...
 -- @param id 服务器id，与运维相关。开了第N个服
 function App.encode_session(app_type, index, id)
-    assert(app_type, "server name type not define")
+    assert(app_type, "server name type not define", app_type)
     assert(index < (1 << 24), "server index out of boundry")
     assert(id < (1 << 16), "server id out of boundry")
 
@@ -182,7 +182,18 @@ end
 
 -- 最终关服需要执行的逻辑处理
 local function end_stop()
-    ev:exit()
+    if g_app.stop_timer then Timer.stop(g_app.stop_timer) end
+
+    -- 执行完退出后后，一些数据还没处理完(比如socket是异步的，还未完全关闭)
+    -- 这里尝试等待一小段时间再退出
+    if g_app.exit_timer then
+        ev:exit()
+        return
+    end
+
+    g_app.exit_timer = Timer.timeout(100, function()
+        ev:exit()
+    end)
 end
 
 -- 执行关服步骤

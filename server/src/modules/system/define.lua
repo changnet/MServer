@@ -12,6 +12,7 @@ WORLD   = 0x2 -- 世界服
 AREA    = 0x3 -- 场景区域服务器
 DATA    = 0x4 -- 数据服(负责数据落地、缓存)
 CENTER  = 0x5 -- 中心服
+ANDROID = 0x6 -- 机器人，用于模拟玩家
 TEST    = 0x9 -- 执行测试用例
 DEFINE_END(APP)
 
@@ -37,7 +38,7 @@ UNIQUEID = {
 
 -- 自定义客户端广播方式
 CLTCAST = {
-    PIDS = 1, -- 这个在底层直接处理
+    PIDS = 1, -- 按pid广播，这个在C++底层直接处理
     WORLD = 2, -- 全服广播，但仅限于已Enter World的玩家
     LEVEL = 3 -- 按等级筛选玩家
 }

@@ -269,6 +269,8 @@ protected:
      */
     int64_t _clock_diff;
 
+    int64_t _next_backend_time; // 下次执行backend的时间
+
     /// 主线程的wait condition_variable
     std::condition_variable _cv;
 

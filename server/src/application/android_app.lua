@@ -1,7 +1,4 @@
 -- 服务器机器人android测试程序
 
-require "application.app"
-
-require "android.android_boot"
-
-assert(false) -- 要改一下，请统一走app的exec流程
+g_app.ev_interval = 1000
+g_app.module_boot_file = "android.android_boot"

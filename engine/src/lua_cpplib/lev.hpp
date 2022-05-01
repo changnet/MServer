@@ -16,17 +16,6 @@ class Socket;
 class LEV final : public EV
 {
 public:
-    /**
-     * @brief 定时重复执行的事件
-     * TODO 发起一个timer也可以，但不太确实这些固定的事件对timer性能的影响
-     */
-    struct Periodic
-    {
-        int32_t _repeat_ms; // 多少毫秒重复一次
-        int64_t _next_time; // 下次执行时间
-    };
-
-public:
     ~LEV();
     explicit LEV();
 
@@ -129,11 +118,11 @@ private:
     void invoke_signal();
     void invoke_app_ev();
 
-    bool next_periodic(Periodic &periodic);
     virtual void timer_callback(int32_t id, int32_t revents);
 
 private:
     int32_t _critical_tm; // 每次主循环的临界时间，毫秒
 
-    Periodic _app_ev;         // 定时回调到脚本
+    int32_t _app_repeat; // 脚本主循环回调隔间，毫秒
+    int64_t _app_next_tm; // 下次回调脚本主循环的时间，毫秒
 };
