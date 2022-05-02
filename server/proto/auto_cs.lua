@@ -32,7 +32,7 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- ping后端延迟
     PING = {
-        s = "player.SPing", c = "comm.Empty", i = 2
+        s = "player.SPing", c = "player.CPing", i = 2
 
     },
     -- 创角
@@ -42,13 +42,12 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 进入游戏
     ENTER = {
-        s = "player.SEnterWorld", c = "player.CEnterWorld", i = 4
+        s = "comm.Empty", c = "comm.Empty", i = 4
 
     },
     -- 顶号
     OTHER = {
-        s = "player.SLoginOtherWhere", c = "player.SLoginOtherWhere", i = 5
-
+        s = "comm.Empty", i = 5
     },
     -- 登录时下发基础数据
     BASE = {

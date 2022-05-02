@@ -13,7 +13,7 @@ local this = global_storage("Ping", {
 -- 开始ping所有进程以测试延迟
 -- @param how 来源，1 gm，2客户端
 -- @param conn_id 返回数据的连接，可能是gm，也可能是机器人
-function Ping.start(how, conn_id)
+function Ping.start(how, conn_id, pkt)
     local id = this.seed
     this.seed = this.seed + 1
 
@@ -29,6 +29,7 @@ function Ping.start(how, conn_id)
     this.pending[id] = {
         srvs = {},
         how = how,
+        pkt = pkt,
         wait = wait,
         conn_id = conn_id,
         ms_time = ev:steady_clock()
@@ -66,6 +67,7 @@ function Ping.done(id, info)
     this.pending[id] = nil
 
     local how = info.how
+    local old_pkt = info.pkt or {}
     if 1 == how then -- gm请求，直接打印
         print("ping done /////////////////////////")
         print(table.dump(info))
@@ -78,7 +80,8 @@ function Ping.done(id, info)
         end
 
         local pkt = {
-            delay = {}
+            delay = {},
+            verify = old_pkt.verify
         }
         for _, delay in pairs(info.srvs) do
             table.insert(pkt.delay, delay)

@@ -818,6 +818,10 @@ void StreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
         ELOG("ssc_one_multicast no clt connect found");
         return;
     }
+
+    // 这个客户端已经断开连接
+    if (sk->is_closed()) return;
+
     if (Socket::CT_SCCN != sk->conn_type())
     {
         ELOG("ssc_one_multicast destination conn is not a clt");

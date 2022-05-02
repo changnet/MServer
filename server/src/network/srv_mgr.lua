@@ -162,7 +162,7 @@ function SrvMgr.srv_conn_del(conn_id, e, is_conn)
     if conn.session then this.srv[conn.session] = nil end
     this.srv_conn[conn_id] = nil
 
-    printf("%s connect del", conn:conn_name())
+    printf("%s connect del: %s", conn:conn_name(), util.what_error(e))
 
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then this.srv_waiting[conn] = 1 end

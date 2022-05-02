@@ -1,7 +1,30 @@
 -- 一些零碎的测试服务器中游戏相关逻辑测试
 GameTest = {}
 
-local chatCache = {}
+local chat_cache = {}
+local ping_cache = {}
+
+-- 随机一个字符串
+local function randomStr(cache, max_cache, max_len)
+    -- 如果已经创建足够多的缓存，就在旧的里随机
+    if #cache >= max_cache then
+        local index = math.random(#cache)
+        return cache[index]
+    end
+
+    -- 包长最大64kb，这里随机60kb
+    local len = math.random(1, max_len)
+
+    local tbl = {}
+    for _ = 1, len do
+        table.insert(tbl, string.char(math.random(65, 90)))
+    end
+
+    local context = table.concat(tbl)
+    table.insert(cache, context)
+
+    return context
+end
 
 -- 测试服务器延迟
 function GameTest.ping(ai)
@@ -9,10 +32,13 @@ function GameTest.ping(ai)
 
     local entity = ai.entity
 
+    local str = randomStr(ping_cache, 1024, 60 * 1024)
+
     ai.ping_ts = (ai.ping_ts or 0) + 1
     ai.ping_time = ev:steady_clock()
+    ai.ping_verify = str
 
-    entity:send_pkt(PLAYER.PING, {})
+    entity:send_pkt(PLAYER.PING, {verify = str})
 end
 
 function GameTest.gm(ai)
@@ -26,31 +52,8 @@ function GameTest.gm(ai)
     entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
 end
 
--- 随机一个聊天字符串
-local function randomChat()
-    -- 如果已经创建足够多的缓存，就在旧的里随机
-    local MAX_CACHE = 10240
-
-    if #chatCache >= MAX_CACHE then
-        local index = math.random(#chatCache)
-        return chatCache[index]
-    end
-
-    -- 包长最大64kb，这里随机60kb
-    local max_len = math.random(1, 60 * 1024)
-
-    local tbl = {}
-    for _ = 1, max_len do
-        table.insert(tbl, string.char(math.random(65, 90)))
-    end
-
-    local context = table.concat(tbl)
-    table.insert(chatCache, context)
-
-    return context
-end
-
 -- 聊天测试，通常用于测试包的完整性
+-- 放到ping那里测试了，聊天是广播，人一多就会造成缓冲区溢出
 function GameTest.chat(ai)
     if ai.last_chat then
         ai.fail_chat = 1 + (ai.fail_chat or 0)
@@ -59,7 +62,9 @@ function GameTest.chat(ai)
         end
     end
 
-    local pkt = {channel = 1, context = randomChat()}
+    local str = randomStr(chat_cache, 96, 24)
+
+    local pkt = {channel = 1, context = str}
     ai.last_chat = pkt
     ai.entity:send_pkt(CHAT.DOCHAT, pkt)
 end
@@ -72,6 +77,9 @@ function GameTest.on_ping(entity, ecode, pkt)
     local beg = ai.ping_time
 
     ai.ping_time = nil
+    if ai.ping_verify ~= pkt.verify then
+        print(" ping verify error", entity.name, ai.ping_verify, pkt.verify)
+    end
 
     -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
     local ms = ev:steady_clock() - beg

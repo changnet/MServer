@@ -31,7 +31,7 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- ping后端延迟
     PING = {
         s = "player.SPing",
-        c = "comm.Empty"
+        c = "player.CPing"
     },
     -- 创角
     CREATE = {

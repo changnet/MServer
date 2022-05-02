@@ -607,7 +607,10 @@ void Socket::close_cb(bool term)
     if (CS_OPENED == _status && _packet) _packet->on_closed();
 
     _status = CS_CLOSED;
+
+    // epoll、poll发现fd出错时，并不会返回错误码，需要手动用getsockopt获取
     int32_t e = _w ? _w->_errno : 0;
+    if (0 == e && _fd != netcompat::INVALID) e = validate();
 
     netcompat::close(_fd);
     _fd = netcompat::INVALID;
