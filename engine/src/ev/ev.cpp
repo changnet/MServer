@@ -37,11 +37,11 @@ EV::EV()
     _periodics.resize(1024, nullptr);
 
     // 初始化时间
-    _clock_diff = 0;
+    _clock_diff               = 0;
     _last_system_clock_update = INT_MIN;
     time_update();
 
-    _busy_time = 0;
+    _busy_time         = 0;
     _next_backend_time = 0;
 
     _backend = EVBackend::instance();
@@ -74,7 +74,7 @@ int32_t EV::loop()
 
     if (!_backend->start(this)) return -1;
 
-    static const int64_t min_wait = 1; // 最小等待时间，毫秒
+    static const int64_t min_wait = 1;     // 最小等待时间，毫秒
     static const int64_t max_wait = 60000; // 最大等待时间，毫秒
 
     while (EXPECT_TRUE(!_done))
@@ -129,7 +129,7 @@ int32_t EV::loop()
 
         time_update();
 
-        last_ms = _steady_clock;
+        last_ms            = _steady_clock;
         _next_backend_time = _steady_clock + max_wait;
 
         // 处理timer超时
@@ -144,7 +144,6 @@ int32_t EV::loop()
     }
 
     _backend->stop();
-
 
     // 这些对象可能会引用其他资源（如buffer之类的），程序正常关闭时应该严谨地
     // 在脚本关闭，而不是等底层强制删除
@@ -162,7 +161,8 @@ int32_t EV::loop()
 
     if (!_periodic_mgr.empty())
     {
-        PLOG("periodic not delete, maybe unsafe, count = %zu", _periodic_mgr.size());
+        PLOG("periodic not delete, maybe unsafe, count = %zu",
+             _periodic_mgr.size());
         _periodic_mgr.clear();
     }
 
@@ -219,7 +219,7 @@ int32_t EV::io_delete(int32_t id)
     if (!w) return -1;
 
     w->_status = EVIO::S_DEL;
-    
+
     // 保证del操作在前面，或者del操作用一个独立的数组来实现？
     if (_io_changes.size() > (size_t)_io_delete_index)
     {
@@ -247,7 +247,7 @@ void EV::clear_io_fast_event(EVIO *w)
     {
         assert(w->_b_fevent_index <= (int32_t)_io_fevents.size());
         _io_fevents[w->_b_fevent_index - 1] = nullptr;
-        w->_b_fevent_index = 0;
+        w->_b_fevent_index                  = 0;
     }
 }
 
@@ -257,7 +257,7 @@ void EV::clear_io_receive_event(EVIO *w)
     {
         assert(w->_b_revent_index <= (int32_t)_io_revents.size());
         _io_revents[w->_b_revent_index - 1] = nullptr;
-        w->_b_revent_index = 0;
+        w->_b_revent_index                  = 0;
     }
 }
 
@@ -273,11 +273,9 @@ void EV::io_reify()
             w->_change_index = 0;
 
             int32_t fd = w->_fd;
-            switch(w->_status)
+            switch (w->_status)
             {
-            case EVIO::S_NONE:
-                non_del = true;
-                break;
+            case EVIO::S_NONE: non_del = true; break;
             case EVIO::S_STOP:
                 non_del = true;
                 _backend->modify(w); // 移除该socket
@@ -325,8 +323,8 @@ int64_t EV::system_clock()
     const auto now = std::chrono::system_clock::now();
 
     return std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()
-    ).count();
+               now.time_since_epoch())
+        .count();
 }
 
 int64_t EV::steady_clock()
@@ -334,10 +332,19 @@ int64_t EV::steady_clock()
     // steady_clock在linux下应该也是用clock_gettime实现
     // 但是在debug模式下，steady_clock的效率仅为clock_gettime的一半
     // 执行一百万次，steady_clock花127毫秒，clock_gettime花54毫秒
+    // https://www.cnblogs.com/coding-my-life/p/16182717.html
+    /*
+    struct timespec ts = {0, 0};
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    */
+
     static const auto beg = std::chrono::steady_clock::now();
 
     return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - beg).count();
+               std::chrono::steady_clock::now() - beg)
+        .count();
 }
 
 void EV::time_update()
@@ -352,13 +359,13 @@ void EV::time_update()
     if (_steady_clock - _last_system_clock_update < MIN_TIMEJUMP / 2)
     {
         _system_clock = _clock_diff + _steady_clock;
-        _system_now = _system_clock / 1000; // 转换为秒
+        _system_now   = _system_clock / 1000; // 转换为秒
         return;
     }
 
-    _last_system_clock_update  = _steady_clock;
-    _system_clock         = system_clock();
-    _system_now = _system_clock / 1000; // 转换为秒
+    _last_system_clock_update = _steady_clock;
+    _system_clock             = system_clock();
+    _system_now               = _system_clock / 1000; // 转换为秒
 
     /**
      * 当两次diff相差比较大时，说明有人调了UTC时间
@@ -387,9 +394,9 @@ void EV::time_update()
         }
 
         _system_clock = system_clock();
-        _system_now = _system_clock / 1000; // 转换为秒
+        _system_now   = _system_clock / 1000; // 转换为秒
 
-        _steady_clock        = steady_clock();
+        _steady_clock             = steady_clock();
         _last_system_clock_update = _steady_clock;
     }
 }
@@ -440,13 +447,13 @@ void EV::io_receive_event_reify()
     // 外部加锁
     // std::lock_guard<std::mutex> guard(lock());
 
-    for (auto w: _io_revents)
+    for (auto w : _io_revents)
     {
         // watcher被删掉时会置为nullptr
         if (!w) continue;
 
         feed_event(w, w->_b_revents);
-        w->_b_revents = 0;
+        w->_b_revents      = 0;
         w->_b_revent_index = 0;
     }
 
@@ -479,7 +486,6 @@ void EV::invoke_pending()
             // callback之后，不要对w进行任何操作
             // 因为callback到脚本后，脚本可能直接删除该w
             w->callback(events);
-            
         }
     }
     _pendings.clear();
@@ -511,7 +517,8 @@ void EV::timers_reify()
             w->_at += w->_repeat;
 
             // 如果时间出现偏差，重新调整定时器
-            if (EXPECT_FALSE(w->_at < _steady_clock)) w->reschedule(_steady_clock);
+            if (EXPECT_FALSE(w->_at < _steady_clock))
+                w->reschedule(_steady_clock);
 
             assert(w->_repeat > 0);
 
@@ -721,12 +728,12 @@ void EV::down_heap(HeapNode *heap, int32_t N, int32_t k)
 
         if (he->_at <= (heap[c])->_at) break;
 
-        heap[k]            = heap[c];
+        heap[k]           = heap[c];
         (heap[k])->_index = k;
-        k                  = c;
+        k                 = c;
     }
 
-    heap[k]     = he;
+    heap[k]    = he;
     he->_index = k;
 }
 
@@ -740,12 +747,12 @@ void EV::up_heap(HeapNode *heap, int32_t k)
 
         if (UPHEAP_DONE(p, k) || (heap[p])->_at <= he->_at) break;
 
-        heap[k]            = heap[p];
+        heap[k]           = heap[p];
         (heap[k])->_index = k;
-        k                  = p;
+        k                 = p;
     }
 
-    heap[k]     = he;
+    heap[k]    = he;
     he->_index = k;
 }
 

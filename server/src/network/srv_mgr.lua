@@ -151,8 +151,7 @@ end
 
 -- 底层连接断开回调
 function SrvMgr.srv_conn_del(conn_id, e, is_conn)
-    -- 这个函数会触发两次，一次是连接失败，一次是socket关闭
-    -- 连接失败
+    -- 这个函数会触发两次，一次是连接失败，一次是socket关闭(现在epoll异步connect不会这样了)
     local conn = this.srv_conn[conn_id]
     if is_conn then
         printf("connect to %s FAIL: %s", conn:base_name(), util.what_error(e))

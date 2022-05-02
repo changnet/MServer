@@ -13,6 +13,12 @@ __conn = __conn or {}
 
 local __conn = __conn
 
+-- 在脚本执行重连后，conn对象在脚本被重用。但C++那边回调还需要旧对象来处理
+local reconnect_conn =
+{
+    on_disconnected = function() end
+}
+
 -- 接受新的连接
 function conn_accept(conn_id, new_conn_id)
     local new_conn = __conn[conn_id]:conn_accept(new_conn_id)
@@ -202,6 +208,9 @@ end
 -- 重新连接，之前必须调用过connect函数
 function Conn:reconnect()
     assert(not self.ok)
+
+    -- 旧的conn切换到一个没用的conn对象，C++回调时不影响当前对象，当前对象继续使用
+    __conn[self.conn_id] = reconnect_conn
 
     return self:connect(self.ip, self.port)
 end

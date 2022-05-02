@@ -38,12 +38,12 @@ function Loginout.on_connected(conn)
 end
 
 -- 断开连接
-function Loginout.on_disconnected(conn)
+function Loginout.on_disconnected(conn, e)
     local entity = conn.entity
 
     conn.conn_id = nil
     entity.ai.state = AST.OFF
-    printf("android(%d) die ", entity.index)
+    printf("android(%d) die: %s", entity.index, util.what_error(e))
 end
 
 

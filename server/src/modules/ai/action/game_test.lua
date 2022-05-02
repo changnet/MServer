@@ -37,6 +37,8 @@ function GameTest.ping(ai)
     ai.ping_ts = (ai.ping_ts or 0) + 1
     ai.ping_time = ev:steady_clock()
     ai.ping_verify = str
+    ai.ping_clock = os.clock()
+    ai.ping_sclock = ev:ms_time()
 
     entity:send_pkt(PLAYER.PING, {verify = str})
 end
@@ -83,7 +85,7 @@ function GameTest.on_ping(entity, ecode, pkt)
 
     -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
     local ms = ev:steady_clock() - beg
-    print("ping", ai.ping_ts, ms)
+    print("ping", ai.ping_ts, ms, os.clock() - ai.ping_clock, ev:ms_time() - ai.ping_sclock)
     for _, delay in pairs(pkt.delay) do
         if (delay.time or 0) + ms > 10 then
             print("     latency too large", delay.name, (delay.time or 0) + ms)
