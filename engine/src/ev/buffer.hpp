@@ -286,7 +286,7 @@ public:
       */
      inline size_t get_front_used_size() const
      {
-         std::lock_guard guard(_lock);
+         std::lock_guard<SpinLock> guard(_lock);
          return _front ? _front->get_used_size() : 0;
      }
 
@@ -296,7 +296,7 @@ public:
       */
      inline size_t get_chunk_size() const
      {
-         std::lock_guard guard(_lock);
+         std::lock_guard<SpinLock> guard(_lock);
          return _chunk_size;
      }
 
@@ -306,7 +306,7 @@ public:
       */
      inline size_t get_chunk_mem_size() const
      {
-         std::lock_guard guard(_lock);
+         std::lock_guard<SpinLock> guard(_lock);
          return _chunk_size * sizeof(Chunk);
      }
 
@@ -325,7 +325,7 @@ public:
     // 当前缓冲区是否溢出
      inline bool is_overflow() const
      {
-         std::lock_guard guard(_lock);
+         std::lock_guard<SpinLock> guard(_lock);
          return _chunk_size > _chunk_max;
      }
 
@@ -335,7 +335,6 @@ private:
     inline Chunk *new_chunk()
     {
         _chunk_size++;
-        PLOG("new trunk %d >>>>>", _chunk_size);
         return get_chunk_pool()->construct();
     }
 
@@ -344,7 +343,6 @@ private:
         assert(_chunk_size > 0);
 
         _chunk_size--;
-        PLOG("del trunk %d >>>>>", _chunk_size);
         get_chunk_pool()->destroy(chunk);
     }
 
