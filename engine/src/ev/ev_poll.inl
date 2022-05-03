@@ -66,12 +66,12 @@ bool FinalBackend::before_start()
     // https://docs.microsoft.com/zh-cn/windows-hardware/drivers/ddi/wdm/nf-wdm-rtlisntddiversionavailable
     // NTDDI_WIN10_VB	Windows 10 2004
 
-#if __windows__ && !(NTDDI_WIN10_VB && NTDDI_VERSION >= NTDDI_WIN10_VB)
-    #pragma message("windows version < WIN 10 2004, WSAPoll has fatal bug")
+#if define __windows__ && !(NTDDI_WIN10_VB && NTDDI_VERSION >= NTDDI_WIN10_VB)
+     #pragma message("windows version < WIN 10 2004, WSAPoll has fatal bug")
 
-    // 不太清楚VS版本和运行版本之间的关系，全部按编译时打印警告
-    // 在WIN10 19H1上编译的程序即使在WIN10 21H1上运行，GetVersion()函数还是返回19H1
-    PLOG("windows version < WIN 10 2004, WSAPoll has fatal bug");
+     // 不太清楚VS版本和运行版本之间的关系，全部按编译时打印警告
+     // 在WIN10 19H1上编译的程序即使在WIN10 21H1上运行，GetVersion()函数还是返回19H1
+     PLOG("windows version < WIN 10 2004, WSAPoll has fatal bug");
 #endif
 
     if (socketpair(AF_LOCAL, SOCK_STREAM, 0, _wake_fd) < 0)

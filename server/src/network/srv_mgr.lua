@@ -140,6 +140,8 @@ function SrvMgr.on_conn_ok(conn_id)
     -- 之所以不直接传conn对象进来是为了在这里检测该conn_id已在srvmgr中记录
     local conn = this.srv_conn[conn_id]
 
+    this.srv_waiting[conn] = nil
+
     -- 发送认证数据
     local pkt = {
         session = g_app.session,
@@ -170,6 +172,8 @@ function SrvMgr.srv_conn_del(conn_id, e, is_conn)
 end
 
 -- 其他服务器是否初始化完成
+-- @param name 服务器名字字符串(小写)，如gateway
+-- @param index 服务器app索引，即起服时的--index参数
 function SrvMgr.is_other_srv_ready(name, index)
     if not this.srv_ready[name] then return false end
 
@@ -189,6 +193,25 @@ local function on_srv_ready(name, index, id, session)
     for _, conn in pairs(this.srv) do
         Rpc.conn_call(conn, SrvMgr.on_other_srv_ready, name, index, id, session)
     end
+end
+
+-- 所有需要主动连接的服务器是否连接成功
+local function is_all_other_srv_ready(srv_conf)
+    for _, name in pairs(srv_conf) do
+        local srv_setting = g_setting[name]
+        for index = 1, #srv_setting do
+            if not SrvMgr.is_other_srv_ready(name, index) then
+                -- 不需要等待网关，因为网关肯定是其他服务器准备好后才开启客户端监听
+                -- 只需要判断连接成功即可
+                if "gateway" ~= name then return false end
+
+                local gateway_conn = this.srv[GSE]
+                if not gateway_conn or not gateway_conn.ok then return false end
+            end
+        end
+    end
+
+    return true
 end
 
 local function on_app_start(check)
@@ -221,8 +244,12 @@ local function on_app_start(check)
     if check then
         -- 有些服务器起得慢来不及监听，要不断地去尝试重连
         reconnect_srv()
-        return table.size(this.srv) == #srvs
+
+        -- 所有需要主动连接的服务器是否连接成功
+        return is_all_other_srv_ready(srvs)
     end
+
+    this.last_reconnect = ev:time()
 
     -- 主动连接到其他服务器
     if 0 == #srvs then return true end

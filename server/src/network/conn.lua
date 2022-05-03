@@ -209,8 +209,13 @@ end
 function Conn:reconnect()
     assert(not self.ok)
 
-    -- 旧的conn切换到一个没用的conn对象，C++回调时不影响当前对象，当前对象继续使用
-    __conn[self.conn_id] = reconnect_conn
+    -- 如果当前socket未关闭，则关闭
+    if __conn[self.conn_id] then
+        network_mgr:close(self.conn_id)
+
+        -- 旧的conn切换到一个没用的conn对象，C++回调时不影响当前对象，当前对象继续使用
+        __conn[self.conn_id] = reconnect_conn
+    end
 
     return self:connect(self.ip, self.port)
 end

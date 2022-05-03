@@ -59,9 +59,12 @@ function SsConn:authorized(pkt)
 end
 
 -- 获取基本类型名字(gateway、world)，见APP服务器类型定义，通常用于打印日志
-function SsConn:base_name(session_type)
+function SsConn:base_name()
     -- 如果已经注册成功，则使用已注册的名字
     if self.name then return self.name end
+
+    -- 连接过来的socket，会执行名字注册，但如果报错可能注册不成功
+    if not self.host then return "unknow" end
 
     -- 没有注册的情况下，使用地址作为标识名，方便查问题
     return string.format("%s:%d", self.host, self.port)
