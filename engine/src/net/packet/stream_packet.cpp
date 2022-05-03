@@ -29,9 +29,9 @@ int32_t StreamPacket::unpack(Buffer &buffer)
         reinterpret_cast<const struct base_header *>(buffer.to_flat_ctx(length));
 
     dispatch(header);      // 数据包完整，派发处理
-    buffer.remove(length); // 无论成功或失败，都移除该数据包
+    bool next = buffer.remove(length); // 无论成功或失败，都移除该数据包
 
-    return length;
+    return next ? 1 : 0;
 }
 
 void StreamPacket::dispatch(const struct base_header *header)

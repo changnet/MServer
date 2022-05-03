@@ -724,6 +724,7 @@ void Socket::command_cb()
     auto &buffer = _w->get_recv_buffer();
     do
     {
+        // @return -1错误 0成功，没有后续数据需要处理 1成功，有数据需要继续处理
         if ((ret = _packet->unpack(buffer)) <= 0) break;
     } while (CS_OPENED == _status);
 

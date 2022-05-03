@@ -43,7 +43,7 @@ public:
     public:
         Chunk()
         {
-            _ctx[0]   = 0; // C26495
+            _ctx[0]   = 0; // avoid C26495 warning
             _next     = nullptr;
             _used_pos = _free_pos = 0;
         }
@@ -218,8 +218,9 @@ public:
     /**
      * @brief 删除缓冲区中的数据
      * @param len 要删除的数据长度
+     * @return 是否还有数据需要处理
     */
-    void remove(size_t len);
+    bool remove(size_t len);
 
     /**
      * @brief 添加数据到缓冲区
@@ -334,6 +335,7 @@ private:
     inline Chunk *new_chunk()
     {
         _chunk_size++;
+        PLOG("new trunk %d >>>>>", _chunk_size);
         return get_chunk_pool()->construct();
     }
 
@@ -342,6 +344,7 @@ private:
         assert(_chunk_size > 0);
 
         _chunk_size--;
+        PLOG("del trunk %d >>>>>", _chunk_size);
         get_chunk_pool()->destroy(chunk);
     }
 

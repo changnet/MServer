@@ -44,7 +44,7 @@ public:
 
     /**
      * 数据解包
-     * @return <0 error;0 success
+     * @return <0 error; 0 success; 1成功，并且有后续数据需要继续处理
      */
     virtual int32_t unpack(Buffer &buffer) = 0;
 

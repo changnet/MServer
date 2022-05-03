@@ -26,6 +26,17 @@ local function randomStr(cache, max_cache, max_len)
     return context
 end
 
+function GameTest.gm(ai)
+    -- gm测试
+    local entity = ai.entity
+    -- entity:send_pkt( MISC.WELCOME_GET,{} )
+    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@ghf"})
+    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_gold 9"})
+    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10000 1"})
+    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10001 1"})
+    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
+end
+
 -- 测试服务器延迟
 function GameTest.ping(ai)
     if ai.ping_time then return end -- 上一次的还没返回
@@ -38,20 +49,28 @@ function GameTest.ping(ai)
     ai.ping_time = ev:steady_clock()
     ai.ping_verify = str
     ai.ping_clock = os.clock()
-    ai.ping_sclock = ev:ms_time()
 
     entity:send_pkt(PLAYER.PING, {verify = str})
 end
 
-function GameTest.gm(ai)
-    -- gm测试
-    local entity = ai.entity
-    -- entity:send_pkt( MISC.WELCOME_GET,{} )
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@ghf"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_gold 9"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10000 1"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 10001 1"})
-    entity:send_pkt(CHAT.DOCHAT, {channel = 1, context = "@add_item 20001 1"})
+function GameTest.on_ping(entity, ecode, pkt)
+    local ai = entity.ai
+
+    local beg = ai.ping_time
+
+    ai.ping_time = nil
+    if ai.ping_verify ~= pkt.verify then
+        print("ping verify error", entity.name, ai.ping_verify, pkt.verify)
+    end
+
+    -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
+    local ms = ev:steady_clock() - beg
+    print("ping", ai.ping_ts, ms, #pkt.verify, os.clock() - ai.ping_clock)
+    for _, delay in pairs(pkt.delay) do
+        if (delay.time or 0) + ms > 10 then
+            print("     latency too large", delay.name, (delay.time or 0) + ms)
+        end
+    end
 end
 
 -- 聊天测试，通常用于测试包的完整性
@@ -69,28 +88,6 @@ function GameTest.chat(ai)
     local pkt = {channel = 1, context = str}
     ai.last_chat = pkt
     ai.entity:send_pkt(CHAT.DOCHAT, pkt)
-end
-
--- ************************************************************************** --
-
-function GameTest.on_ping(entity, ecode, pkt)
-    local ai = entity.ai
-
-    local beg = ai.ping_time
-
-    ai.ping_time = nil
-    if ai.ping_verify ~= pkt.verify then
-        print(" ping verify error", entity.name, ai.ping_verify, pkt.verify)
-    end
-
-    -- 服务器不忙的情况下，延迟是1~5毫秒左右.60帧则是16ms以下
-    local ms = ev:steady_clock() - beg
-    print("ping", ai.ping_ts, ms, os.clock() - ai.ping_clock, ev:ms_time() - ai.ping_sclock)
-    for _, delay in pairs(pkt.delay) do
-        if (delay.time or 0) + ms > 10 then
-            print("     latency too large", delay.name, (delay.time or 0) + ms)
-        end
-    end
 end
 
 function GameTest.on_chat(entity, ecode, pkt)
@@ -111,7 +108,6 @@ function GameTest.on_chat(entity, ecode, pkt)
 end
 
 -- ************************************************************************** --
-
 
 AndroidMgr.reg(PLAYER.PING, GameTest.on_ping)
 AndroidMgr.reg(CHAT.DOCHAT, GameTest.on_chat)

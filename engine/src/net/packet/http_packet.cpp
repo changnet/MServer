@@ -140,8 +140,8 @@ int32_t HttpPacket::unpack(Buffer &buffer)
      */
     if (HPE_PAUSED_UPGRADE == e)
     {
-        buffer.remove(llhttp_get_error_pos(&_parser) - data);
-        return 1;
+        bool next = buffer.remove(llhttp_get_error_pos(&_parser) - data);
+        return next ? 1 : 0;
     }
 
     buffer.clear(); // http_parser不需要旧缓冲区

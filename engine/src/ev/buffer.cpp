@@ -134,8 +134,9 @@ int32_t Buffer::append(const void *data, const size_t len)
     return _chunk_size > _chunk_max ? 1 : 0;
 }
 
-void Buffer::remove(size_t len)
+bool Buffer::remove(size_t len)
 {
+    bool next_used = false;
     std::lock_guard guard(_lock);
     do
     {
@@ -144,6 +145,7 @@ void Buffer::remove(size_t len)
         if (used > len)
         {
             // 这个chunk还有其他数据
+            next_used = true;
             _front->remove_used(len);
             break;
         }
@@ -154,6 +156,7 @@ void Buffer::remove(size_t len)
             if (next)
             {
                 // 还有下一个chunk，则指向下一个chunk
+                next_used = true;
                 del_chunk(_front);
                 _front = next;
             }
@@ -179,6 +182,8 @@ void Buffer::remove(size_t len)
     // 冗余校验：只有一个缓冲区，或者有多个缓冲区但第一个已用完
     // 否则就是链表管理出错了
     assert(_front == _back || 0 == _front->get_free_size());
+
+    return next_used;
 }
 
 Buffer::Transaction Buffer::any_seserve(bool no_overflow)
@@ -232,13 +237,13 @@ const char *Buffer::to_flat_ctx(size_t len)
 
     // 解析数据时，要求在同一个chunk才能解析。大多数情况下，是在同一个chunk的。
     // 如果不是，建议调整下chunk定义的缓冲区大小，否则影响效率
-    if (EXPECT_TRUE(_front->get_used_size() >= len))
+    size_t used = _front->get_used_size();
+    if (0 == used) return nullptr;
+
+    if (EXPECT_TRUE(used >= len))
     {
         return _front->get_used_ctx();
     }
-
-    // 用来检测二次拷贝出现的频率，确认没问题这个可以去掉
-    // PLOG("using continuous buffer:%d", len);
 
     /**
      * 这个函数可能会调用很频繁。例如，判断包是否完整时需要一个16位长度
@@ -261,6 +266,10 @@ const char *Buffer::to_flat_ctx(size_t len)
     } while (next && copy_len < len);
 
     assert(copy_len <= len);
+
+    // 用来检测二次拷贝出现的频率，确认没问题这个可以去掉
+    PLOG("using continuous buffer:%d ok = %d", len, copy_len);
+
     // 返回nullptr表示当前的数据小于该长度
     return copy_len == len ? buf : nullptr;
 }
