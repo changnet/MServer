@@ -242,6 +242,12 @@ end
 
 -- 开始执行关服
 local function beg_stop()
+    -- 如果起服失败，先取消起服定时器
+    if g_app.start_timer then
+        Timer.stop(g_app.start_timer)
+        g_app.start_timer = nil
+    end
+
     -- 如果起服时失败，直接关服，走关服步骤毫无意义
     if not g_app.ok then
         print("app NEVER Successfully started, shutdown immediately !")

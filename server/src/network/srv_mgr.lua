@@ -149,6 +149,12 @@ function SrvMgr.on_conn_ok(conn_id)
     }
     pkt.auth = util.md5(SRV_KEY, pkt.timestamp, pkt.session)
     conn:send_pkt(SYS.REG, pkt)
+
+    -- 当前进程已经启动成功
+    if g_app.ok then
+        Rpc.conn_call(conn, SrvMgr.on_other_srv_ready,
+            g_app.name, g_app.index, g_app.id, g_app.session)
+    end
 end
 
 -- 底层连接断开回调
