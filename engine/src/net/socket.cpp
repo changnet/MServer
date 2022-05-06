@@ -20,18 +20,6 @@
     #include <sys/socket.h>
 #endif
 
-#ifdef TCP_KEEP_ALIVE
-    #define KEEP_ALIVE(x) Socket::keep_alive(x)
-#else
-    #define KEEP_ALIVE(x)
-#endif
-
-#ifdef _TCP_USER_TIMEOUT
-    #define USER_TIMEOUT(x) Socket::user_timeout(x)
-#else
-    #define USER_TIMEOUT(x)
-#endif
-
 #ifdef IP_V4
     #define AF_INET_X     AF_INET
     #define sin_addr_x    sin_addr
@@ -165,37 +153,31 @@ void Socket::flush()
     StaticGlobal::ev()->io_fast_event(_w, EV_WRITE);
 }
 
-int32_t Socket::block(int32_t fd)
+int32_t Socket::set_block(int32_t fd, int32_t flag)
 {
 #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket
-    u_long flag = 0;
+    u_long flag = (u_long)flag;
     return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
 #else
     int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
     if (flags == -1) return -1;
 
-    flags &= ~O_NONBLOCK;
+    if (flag)
+    {
+        flags &= ~O_NONBLOCK;
+    }
+    else
+    {
+        flags |= O_NONBLOCK;
+    }
 
     return fcntl(fd, F_SETFL, flags);
 #endif
 }
 
-int32_t Socket::non_block(int32_t fd)
+int32_t Socket::set_keep_alive(int32_t fd)
 {
-#ifdef __windows__
-    u_long flag = 1;
-    return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
-#else
-    int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
-    if (flags == -1) return -1;
-
-    flags |= O_NONBLOCK;
-
-    return fcntl(fd, F_SETFL, flags);
-#endif
-}
-
 /* keepalive并不是TCP规范的一部分。在Host Requirements
  * RFC罗列有不使用它的三个理由：
  * 1.在短暂的故障期间，它们可能引起一个良好连接（good
@@ -213,9 +195,9 @@ int32_t Socket::non_block(int32_t fd)
  * 而此时，我们也并不知道该连接已经出错而中断。
  * 在较长时间的重传失败之后，我们才会知道。即我们在重传超时后才知道连接失败.
  */
-int32_t Socket::keep_alive(int32_t fd)
-{
+
     int32_t ret = 0;
+#ifdef CONF_TCP_KEEP_ALIVE
 #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/winsock/so-keepalive
     // windows下，keep alive的interval之类的是通过注册表来控制的
@@ -230,9 +212,9 @@ int32_t Socket::keep_alive(int32_t fd)
     ret = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
     if (0 > ret) return ret;
 
-    int32_t tcp_keepalive_time     = KEEP_ALIVE_TIME;
-    int32_t tcp_keepalive_interval = KEEP_ALIVE_INTERVAL;
-    int32_t tcp_keepalive_probes   = KEEP_ALIVE_PROBES;
+    int32_t tcp_keepalive_time     = 60; //无通信后60s开始发送
+    int32_t tcp_keepalive_interval = 10; //间隔10s发送
+    int32_t tcp_keepalive_probes   = 5;  //总共发送5次
 
     optlen = sizeof(tcp_keepalive_time);
     ret    = setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &tcp_keepalive_time, optlen);
@@ -245,9 +227,27 @@ int32_t Socket::keep_alive(int32_t fd)
     optlen = sizeof(tcp_keepalive_probes);
     ret = setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &tcp_keepalive_probes, optlen);
 #endif
+#endif // CONF_TCP_KEEP_ALIVE
     return ret;
 }
 
+int32_t Socket::set_nodelay(int32_t fd)
+{
+    /**
+     * 默认是不开启NODELAY选项的，在Nagle's algorithm算法下，tcp可能会缓存数据包大约
+     * 40ms，如果双方都未启用NODELAY，那么数据一来一回可能会有80ms的延迟
+     */
+#ifdef CONF_TCP_NODELAY
+    int optval = 1;
+    return setsockopt(
+        fd, IPPROTO_TCP, TCP_NODELAY, (void*)&optval, sizeof(optval));
+#else
+    return 0;
+#endif
+}
+
+int32_t Socket::set_user_timeout(int32_t fd)
+{
 /* http://www.man7.org/linux/man-pages/man7/tcp.7.html
  * since linux 2.6.37
  * 网络中存在unack数据包时开始计时，超时仍未收到ack，关闭网络
@@ -255,10 +255,9 @@ int32_t Socket::keep_alive(int32_t fd)
  * 如果keep-alive的数据包也无ack，则开始计时.这时keep-alive同时有效，
  * 谁先超时则谁先生效
  */
-int32_t Socket::user_timeout(int32_t fd)
-{
-#ifdef TCP_USER_TIMEOUT /* 内核支持才开启，centos 6(2.6.32)就不支持 */
-    uint32_t timeout = _TCP_USER_TIMEOUT;
+#if defined(TCP_USER_TIMEOUT) && defined(CONF_TCP_USER_TIMEOUT)
+    // 内核支持才开启，centos 6(2.6.32)就不支持
+    uint32_t timeout = CONF_TCP_USER_TIMEOUT;
 
     return setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout,
                       sizeof(timeout));
@@ -268,7 +267,7 @@ int32_t Socket::user_timeout(int32_t fd)
 #endif
 }
 
-int32_t Socket::non_ipv6only(int32_t fd)
+int32_t Socket::set_non_ipv6only(int32_t fd)
 {
     int32_t optval = 0;
     return setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
@@ -373,7 +372,7 @@ int32_t Socket::connect(const char *host, int32_t port)
 
     // 创建新socket并设置为非阻塞
     int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (fd == netcompat::INVALID || non_block(fd) < 0)
+    if (fd == netcompat::INVALID || set_block(fd, 0) < 0)
     {
         int32_t e = netcompat::noerror();
         ELOG("Socket create %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
@@ -381,7 +380,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
 #ifndef IP_V4
-    if (non_ipv6only(fd))
+    if (set_non_ipv6only(fd))
     {
         int32_t e = netcompat::noerror();
         ELOG("Socket ipv6 %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
@@ -509,14 +508,14 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    if (non_block(_fd) < 0)
+    if (set_block(_fd, 0) < 0)
     {
         goto FAIL;
     }
 
 #ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    if (non_ipv6only(_fd))
+    if (set_non_ipv6only(_fd))
     {
         goto FAIL;
     }
@@ -639,9 +638,38 @@ void Socket::listen_cb()
             break; /* 所有等待的连接已处理完 */
         }
 
-        Socket::non_block(new_fd);
-        KEEP_ALIVE(new_fd);
-        USER_TIMEOUT(new_fd);
+        if (set_block(new_fd, 0))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_block fail, fd = %d, e = %d: %s",
+                new_fd, e, netcompat::strerror(e));
+            netcompat::close(new_fd);
+            continue;
+        }
+        if (set_keep_alive(new_fd))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s",
+                new_fd, e, netcompat::strerror(e));
+            netcompat::close(new_fd);
+            continue;
+        }
+        if (set_user_timeout(new_fd))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s",
+                new_fd, e, netcompat::strerror(e));
+            netcompat::close(new_fd);
+            continue;
+        }
+        if (set_nodelay(new_fd))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s",
+                new_fd, e, netcompat::strerror(e));
+            netcompat::close(new_fd);
+            continue;
+        }
 
         uint32_t conn_id     = network_mgr->new_connect_id();
         class Socket *new_sk = new class Socket(conn_id, _conn_ty);
@@ -685,8 +713,33 @@ void Socket::connect_cb()
 
     if (0 == ecode)
     {
-        KEEP_ALIVE(_fd);
-        USER_TIMEOUT(_fd);
+        if (set_keep_alive(_fd))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s",
+                _fd, e, netcompat::strerror(e));
+            
+            Socket::stop();
+            return;
+        }
+        if (set_user_timeout(_fd))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s",
+                _fd, e, netcompat::strerror(e));
+            
+            Socket::stop();
+            return;
+        }
+        if (set_nodelay(_fd))
+        {
+            int32_t e = netcompat::noerror();
+            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s",
+                _fd, e, netcompat::strerror(e));
+            
+            Socket::stop();
+            return;
+        }
 
         _w->set(EV_READ);
     }

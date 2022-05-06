@@ -42,16 +42,21 @@ public:
     static void library_end();
     static void library_init();
 
-    /// 把一个文件描述符设置为阻塞
-    static int32_t block(int32_t fd);
-    /// 把一个文件描述符设置为非阻塞
-    static int32_t non_block(int32_t fd);
+    /**
+     * 把一个文件描述符设置为非阻塞(或者阻塞)
+     * @param flag 0表示非阻塞，1表示阻塞
+     */
+    static int32_t set_block(int32_t fd, int32_t flag);
+    /**
+     * 启用TCP_NODELAY选项
+     */
+    static int32_t set_nodelay(int32_t fd);
     /// 启用TCP的keep alive
-    static int32_t keep_alive(int32_t fd);
+    static int32_t set_keep_alive(int32_t fd);
     /// 启用TCP的 user timeout
-    static int32_t user_timeout(int32_t fd);
+    static int32_t set_user_timeout(int32_t fd);
     /// 启用IPV6双栈
-    static int32_t non_ipv6only(int32_t fd);
+    static int32_t set_non_ipv6only(int32_t fd);
 
     /**
      * @brief 根据域名获取ip地址，此函数会阻塞
