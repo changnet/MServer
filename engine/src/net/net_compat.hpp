@@ -36,12 +36,25 @@ namespace netcompat
     inline const char *strerror(int32_t e)
     {
         // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
+        // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) 用这个语言设定的话，中文系统无法在utf8终端上显示
         thread_local char buff[512] = {0};
         FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
                           | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-                      nullptr, e, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                      nullptr, e, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
                       buff, sizeof(buff), nullptr);
         return buff;
+        
+        // #include<system_error>是参考了linux下的，比如无法连接是提示connection refused
+        // 而win下是：No connection could be made because the target machine actively refused it
+        // 而且system_error是根据平台而定。比如同样是win，VS和mingw编译出来的是不一样的
+        /*
+        thread_local std::string message;
+
+        std::error_condition econd = std::system_category().default_error_condition(e);
+        message = econd.message();
+
+        return message.c_str();
+        */
     }
     /**
      * @brief 获取错误码

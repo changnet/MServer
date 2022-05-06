@@ -4,7 +4,7 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 
 set DEF_ID=1
 set DEF_INDEX=1
-set DEF_APP=(gateway  world area area)
+set DEF_APP=(gateway world area area)
 
 cd ../server/bin
 

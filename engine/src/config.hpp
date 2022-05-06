@@ -4,12 +4,6 @@
 // #define NMEM_DEBUG
 #define NDBG_MEM_TRACE
 
-/* print info to stdout with macro PLOG */
-#define _PLOG_
-
-/* write error log */
-#define _ELOG_
-
 /* lua enterance file */
 #define LUA_ENTERANCE "../src/main.lua"
 

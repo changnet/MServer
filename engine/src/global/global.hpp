@@ -61,15 +61,5 @@ static_assert(__cplusplus < 202002L);
     #define EXPECT_TRUE(cond)  __builtin_expect(!!(cond), 1)
 #endif
 
-/* terminated without destroying any object and without calling any of the
- * functions passed to atexit or at_quick_exit
- */
-#define FATAL(...)           \
-    do                       \
-    {                        \
-        ELOG_R(__VA_ARGS__); \
-        ::abort();           \
-    } while (0)
-
 /// 求C数组的数量
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))

@@ -65,9 +65,9 @@ Socket::Socket(int32_t conn_id, ConnType conn_ty)
     _fd = netcompat::INVALID;
     _w  = nullptr;
 
-    _conn_id     = conn_id;
-    _conn_ty     = conn_ty;
-    _codec_ty    = Codec::CT_NONE;
+    _conn_id  = conn_id;
+    _conn_ty  = conn_ty;
+    _codec_ty = Codec::CT_NONE;
 
     C_OBJECT_ADD("socket");
 }
@@ -109,7 +109,7 @@ void Socket::stop(bool flush, bool term)
 void Socket::append(const void *data, size_t len)
 {
     auto &send_buff = _w->get_send_buffer();
-    int32_t e = send_buff.append(data, len);
+    int32_t e       = send_buff.append(data, len);
 
     /**
      * 一般缓冲区都设置得足够大
@@ -136,7 +136,7 @@ void Socket::append(const void *data, size_t len)
         flush();
 
         // sleep一会儿，等待backend线程把数据发送出去
-        for (int32_t i = 0; i < 4; i ++)
+        for (int32_t i = 0; i < 4; i++)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("socket send buffer overflow, pending,"
@@ -157,8 +157,9 @@ int32_t Socket::set_block(int32_t fd, int32_t flag)
 {
 #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket
-    u_long flag = (u_long)flag;
-    return NO_ERROR == ioctlsocket(fd, FIONBIO, &flag) ? 0 : -1;
+    // win下是相反的，0表示不启用异步
+    u_long uflag = u_long(flag ? 0 : 1);
+    return NO_ERROR == ioctlsocket(fd, FIONBIO, &uflag) ? 0 : -1;
 #else
     int32_t flags = fcntl(fd, F_GETFL, 0); // get old status
     if (flags == -1) return -1;
@@ -178,33 +179,33 @@ int32_t Socket::set_block(int32_t fd, int32_t flag)
 
 int32_t Socket::set_keep_alive(int32_t fd)
 {
-/* keepalive并不是TCP规范的一部分。在Host Requirements
- * RFC罗列有不使用它的三个理由：
- * 1.在短暂的故障期间，它们可能引起一个良好连接（good
- * connection）被释放（dropped）， 2.它们消费了不必要的宽带，
- * 3.在以数据包计费的互联网上它们（额外）花费金钱。
- *
- * 在程序中表现为,当tcp检测到对端socket不再可用时(不能发出探测包,或探测包没有收到ACK的
- * 响应包),select会返回socket可读,并且在recv时返回-1,同时置上errno为ETIMEDOUT.
- *
- * 但是，tcp自己的keepalive有这样的一个bug：
- *    正常情况下，连接的另一端主动调用colse关闭连接，tcp会通知，我们知道了该连接已经关
- * 闭。但是如果tcp连接的另一端突然掉线，或者重启断电，这个时候我们并不知道网络已经关闭。
- * 而此时，如果有发送数据失败，tcp会自动进行重传。重传包的优先级高于keepalive，那就意
- * 味着，我们的keepalive总是不能发送出去。
- * 而此时，我们也并不知道该连接已经出错而中断。
- * 在较长时间的重传失败之后，我们才会知道。即我们在重传超时后才知道连接失败.
- */
+    /* keepalive并不是TCP规范的一部分。在Host Requirements
+     * RFC罗列有不使用它的三个理由：
+     * 1.在短暂的故障期间，它们可能引起一个良好连接（good
+     * connection）被释放（dropped）， 2.它们消费了不必要的宽带，
+     * 3.在以数据包计费的互联网上它们（额外）花费金钱。
+     *
+     * 在程序中表现为,当tcp检测到对端socket不再可用时(不能发出探测包,或探测包没有收到ACK的
+     * 响应包),select会返回socket可读,并且在recv时返回-1,同时置上errno为ETIMEDOUT.
+     *
+     * 但是，tcp自己的keepalive有这样的一个bug：
+     *    正常情况下，连接的另一端主动调用colse关闭连接，tcp会通知，我们知道了该连接已经关
+     * 闭。但是如果tcp连接的另一端突然掉线，或者重启断电，这个时候我们并不知道网络已经关闭。
+     * 而此时，如果有发送数据失败，tcp会自动进行重传。重传包的优先级高于keepalive，那就意
+     * 味着，我们的keepalive总是不能发送出去。
+     * 而此时，我们也并不知道该连接已经出错而中断。
+     * 在较长时间的重传失败之后，我们才会知道。即我们在重传超时后才知道连接失败.
+     */
 
     int32_t ret = 0;
 #ifdef CONF_TCP_KEEP_ALIVE
-#ifdef __windows__
+    #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/winsock/so-keepalive
     // windows下，keep alive的interval之类的是通过注册表来控制的
-    DWORD optval;
-    int32_t optlen = sizeof(optval);
-    ret = getsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&optval, &optlen);
-#else
+    DWORD optval = 1;
+    ret = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&optval,
+                     sizeof(optval));
+    #else
     int32_t optval = 1;
     int32_t optlen = sizeof(optval);
 
@@ -226,7 +227,7 @@ int32_t Socket::set_keep_alive(int32_t fd)
 
     optlen = sizeof(tcp_keepalive_probes);
     ret = setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &tcp_keepalive_probes, optlen);
-#endif
+    #endif
 #endif // CONF_TCP_KEEP_ALIVE
     return ret;
 }
@@ -238,9 +239,15 @@ int32_t Socket::set_nodelay(int32_t fd)
      * 40ms，如果双方都未启用NODELAY，那么数据一来一回可能会有80ms的延迟
      */
 #ifdef CONF_TCP_NODELAY
+    #ifdef __windows__
+    DWORD optval = 1;
+    return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&optval,
+                      sizeof(optval));
+    #else
     int optval = 1;
-    return setsockopt(
-        fd, IPPROTO_TCP, TCP_NODELAY, (void*)&optval, sizeof(optval));
+    return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&optval,
+                      sizeof(optval));
+    #endif
 #else
     return 0;
 #endif
@@ -349,7 +356,7 @@ bool Socket::start(int32_t fd)
 
     assert(!_w);
 
-    _fd = fd;
+    _fd     = fd;
     _status = CS_OPENED;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
@@ -589,7 +596,6 @@ void Socket::io_cb(int32_t revents)
     {
         command_cb();
     }
-
 }
 
 void Socket::close_cb(bool term)
@@ -641,32 +647,32 @@ void Socket::listen_cb()
         if (set_block(new_fd, 0))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_block fail, fd = %d, e = %d: %s",
-                new_fd, e, netcompat::strerror(e));
+            ELOG("fd set_block fail, fd = %d, e = %d: %s", new_fd, e,
+                 netcompat::strerror(e));
             netcompat::close(new_fd);
             continue;
         }
         if (set_keep_alive(new_fd))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s",
-                new_fd, e, netcompat::strerror(e));
+            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", new_fd, e,
+                 netcompat::strerror(e));
             netcompat::close(new_fd);
             continue;
         }
         if (set_user_timeout(new_fd))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s",
-                new_fd, e, netcompat::strerror(e));
+            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", new_fd, e,
+                 netcompat::strerror(e));
             netcompat::close(new_fd);
             continue;
         }
         if (set_nodelay(new_fd))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s",
-                new_fd, e, netcompat::strerror(e));
+            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", new_fd, e,
+                 netcompat::strerror(e));
             netcompat::close(new_fd);
             continue;
         }
@@ -716,27 +722,27 @@ void Socket::connect_cb()
         if (set_keep_alive(_fd))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s",
-                _fd, e, netcompat::strerror(e));
-            
+            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", _fd, e,
+                 netcompat::strerror(e));
+
             Socket::stop();
             return;
         }
         if (set_user_timeout(_fd))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s",
-                _fd, e, netcompat::strerror(e));
-            
+            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", _fd, e,
+                 netcompat::strerror(e));
+
             Socket::stop();
             return;
         }
         if (set_nodelay(_fd))
         {
             int32_t e = netcompat::noerror();
-            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s",
-                _fd, e, netcompat::strerror(e));
-            
+            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", _fd, e,
+                 netcompat::strerror(e));
+
             Socket::stop();
             return;
         }

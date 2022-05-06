@@ -35,10 +35,10 @@ function AiTest:routine(ms_now)
     -- 增加、使用资源
 
     -- GameTest.gm(self)
-    -- GameTest.chat(self)
+    GameTest.chat(self)
     GameTest.ping(self)
-    -- Move.random_move(self)
-    -- Move.switch_dungeon(self)
+    Move.random_move(self)
+    Move.switch_dungeon(self)
 end
 
 return AiTest
