@@ -85,7 +85,7 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 if(WINDOWS)
     find_package(Lua REQUIRED)
 elseif(LINUX)
-    # debian 10的cmake 3.13版本还不支持findLua 5.4
+    # debian 10的cmake 3.13版本还不支持findLua 5.4，后续升级后这里优化一下
     # find_package(Lua CONFIG REQUIRED)
     set(LUA_LIBRARIES /usr/local/lib)
     set(LUA_INCLUDE_DIR /usr/local/include)
@@ -112,16 +112,6 @@ link_directories(
 )
 file(GLOB_RECURSE SRC_LIST "${SRC_ROOT_PATH}/src/*.cpp")
 add_executable(master ${SRC_LIST})
-
-target_compile_definitions(master PRIVATE BACKEND=${BACKEND})
-if(WINDOWS)
-    target_compile_definitions(master PRIVATE
-        NOMINMAX # windows.h会覆盖std中的std::max和std::min
-        WIN32_LEAN_AND_MEAN
-        _CRT_SECURE_NO_WARNINGS # 去掉不使用_s函数的警告
-        FD_SETSIZE=128 # select支持的socket数量
-    )
-endif()
 
 target_include_directories(master PRIVATE
     ${DEPS_PATH}/pbc

@@ -14,6 +14,14 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
 
+    // windows.h会覆盖std中的std::max和std::min
+    #ifndef
+        #define NOMINMAX
+    #endif
+
+    // 去掉不使用_s函数的警告
+    #define _CRT_SECURE_NO_WARNINGS
+
     #include <windows.h>
     #define PATH_MAX                MAX_PATH
     #define localtime_r(timer, buf) localtime_s(buf, timer)
