@@ -90,6 +90,7 @@ local function log_app_info(opts)
     printf("## NET: %s", IPV4 or IPV6)
     print("#####################################################")
     print(buddha)
+    buddha = nil -- 出错时打印堆栈信息避免打印出这个超长的信息
 end
 
 local function main(cmd, ...)
