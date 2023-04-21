@@ -1,3 +1,4 @@
+#include "../global/platform.hpp"
 #include "../pool/object_pool.hpp"
 #include "../system/static_global.hpp"
 #include "log.hpp"

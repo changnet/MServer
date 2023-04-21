@@ -14,8 +14,8 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
 
-    // windows.h会覆盖std中的std::max和std::min
-    #ifndef
+    // windows.h默认会覆盖std中的std::max和std::min，定义这个宏可禁用它
+    #ifndef NOMINMAX
         #define NOMINMAX
     #endif
 
