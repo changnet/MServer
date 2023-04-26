@@ -142,10 +142,8 @@ public:
 
     int32_t set_io(IO::IOType io_type, int32_t param);
     int32_t set_packet(Packet::PacketType packet_type);
-    int32_t set_codec_type(Codec::CodecType codec_type);
 
     class Packet *get_packet() const { return _packet; }
-    Codec::CodecType get_codec_type() const { return _codec_ty; }
 
     inline int32_t fd() const { return _fd; }
     inline int32_t conn_id() const { return _conn_id; }
@@ -196,6 +194,4 @@ private:
     EVIO *_w; /// io事件监视器
     IO *_io; /// io读写对象
     class Packet *_packet;
-
-    Codec::CodecType _codec_ty;
 };

@@ -191,26 +191,6 @@ public:
     int32_t send_ctrl_packet(lua_State *L);
 
     /**
-     * 广播到多个服务器
-     * @param conn_list 连接id数组
-     * @param codec_type 编码方式(protobuf、flatbuffers)
-     * @param cmd 协议号
-     * @param errno 错误码
-     * @param pkt 数据包(lua table)
-     */
-    int32_t srv_multicast(lua_State *L);
-
-    /**
-     * 网关进程广播数据到客户端
-     * @param conn_list 连接id数组
-     * @param codec_type 编码方式(protobuf、flatbuffers)
-     * @param cmd 协议号
-     * @param errno 错误码
-     * @param pkt 数据包(lua table)
-     */
-    int32_t clt_multicast(lua_State *L);
-
-    /**
      * 非网关数据广播数据到客户端
      * @param conn_id 网关连接id
      * @param mask 掩码，见net_header.h clt_multicast_t定义

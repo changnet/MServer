@@ -36,13 +36,14 @@ public:
 
 private:
     void dispatch(const struct base_header *header);
+    /* 服务器发往客户端数据包回调脚本 */
     void sc_command(const struct s2c_header *header);
     void cs_dispatch(const struct c2s_header *header);
     void cs_command(int32_t cmd, const char *ctx, size_t size);
     void process_ss_command(const s2s_header *header);
-    void ss_dispatch(const s2s_header *header);
-    void ss_command(const s2s_header *header, const CmdCfg *cmd_cfg);
+    void ss_command(const s2s_header *header);
     void css_command(const s2s_header *header);
+    /* 解析其他服务器转发到网关的客户端数据包 */
     void ssc_command(const s2s_header *header);
     void rpc_command(const s2s_header *header);
     void rpc_return(const s2s_header *header);

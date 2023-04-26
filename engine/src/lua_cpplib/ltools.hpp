@@ -34,6 +34,22 @@
         }                                                         \
     } while (0)
 
+/**
+ * @brief 检查参数arg是否为lightuserdata，如果是则返回其指针
+ * @param L 
+ * @param arg 
+*/
+void *luaL_checkludata(Lua_State *L, int32_t arg)
+{
+    if (!lua_islightuserdata(L, arg))
+    {
+        return luaL_error(L, "expect lightuserdata,got %s",
+                          lua_typename(L, lua_type(L, arg)));
+    }
+
+    return lua_touserdata(L, arg);
+}
+
 /* lua 5.3支持int64，在转换为bson时需要区分int32、int64 */
 inline int32_t lua_isbit32(int64_t v)
 {

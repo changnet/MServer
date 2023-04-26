@@ -20,38 +20,23 @@ int32_t WSStreamPacket::pack_clt(lua_State *L, int32_t index)
     // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
 
     int32_t cmd    = luaL_checkinteger32(L, index);
-    uint16_t ecode = (uint16_t)luaL_checkinteger(L, index + 1);
 
     websocket_flags flags =
-        static_cast<websocket_flags>(luaL_checkinteger(L, index + 2));
+        static_cast<websocket_flags>(luaL_checkinteger(L, index + 1));
 
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    const CmdCfg *cfg                           = network_mgr->get_sc_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    Codec *encoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-
-    const char *ctx = NULL;
-    int32_t size    = encoder->encode(L, index + 3, &ctx, cfg);
+    const char *ctx = luaL_checkludata(L, index + 2);
+    int32_t size    = luaL_checkinteger(L, index + 3);
     if (size < 0) return -1;
 
     if (size > MAX_PACKET_LEN)
     {
-        encoder->finalize();
         return luaL_error(L, "buffer size over MAX_PACKET_LEN");
     }
 
     if (do_pack_clt(flags, cmd, ecode, ctx, size) < 0)
     {
-        encoder->finalize();
         return luaL_error(L, "can not do_pack_clt");
     }
-
-    encoder->finalize();
 
     PKT_STAT_ADD(SPT_SCPK, cmd, int32_t(size + sizeof(struct s2c_header)),
                  STAT_TIME_END());
@@ -72,23 +57,12 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
     websocket_flags flags =
         static_cast<websocket_flags>(luaL_checkinteger(L, index + 1));
 
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    const CmdCfg *cfg                           = network_mgr->get_cs_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    Codec *encoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-
-    const char *ctx = NULL;
-    int32_t size    = encoder->encode(L, index + 2, &ctx, cfg);
+    const char *ctx = luaL_checkludata(L, index + 2);
+    int32_t size    = luaL_checkinteger(L, index + 3);
     if (size < 0) return -1;
 
     if (size > MAX_PACKET_LEN)
     {
-        encoder->finalize();
         return luaL_error(L, "buffer size over MAX_PACKET_LEN:%d", cmd);
     }
 
@@ -112,8 +86,6 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
                                      sizeof(c2sh), &mask_offset);
     websocket_append_frame(ts._ctx + offset, flags, mask, ctx, size,
                            &mask_offset);
-
-    encoder->finalize();
 
     buffer.commit(ts, (int32_t)len);
     _socket->flush();
@@ -164,8 +136,7 @@ int32_t WSStreamPacket::on_frame_end()
 /* 回调server to client的数据包 */
 int32_t WSStreamPacket::sc_command()
 {
-    static lua_State *L                         = StaticGlobal::state();
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    static lua_State *L = StaticGlobal::state();
 
     assert(0 == lua_gettop(L));
 
@@ -187,33 +158,19 @@ int32_t WSStreamPacket::sc_command()
         return 0;
     }
 
-    const CmdCfg *cmd_cfg = network_mgr->get_sc_cmd(cmd);
-    if (!cmd_cfg)
-    {
-        ELOG("sc_command cmd(%d) no cmd cfg found", cmd);
-        return 0;
-    }
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
-    lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, cmd);
-    lua_pushinteger(L, header->_errno);
-
     size_t size     = data_size - sizeof(*header);
     const char *ctx = reinterpret_cast<const char *>(header + 1);
-    Codec *decoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    int32_t cnt = decoder->decode(L, ctx, size, cmd_cfg);
-    if (cnt < 0)
-    {
-        lua_settop(L, 0);
-        return 0;
-    }
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3 + cnt, 0, 1)))
+    LUA_PUSHTRACEBACK(L);
+    lua_getglobal(L, "on_sc_pkt");
+    lua_pushinteger(L, _socket->conn_id());
+    lua_pushinteger(L, cmd);
+    lua_pushlightuserdata(L, const_cast<char *>(ctx));
+    lua_pushinteger(L, size);
+
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
     {
-        ELOG("websocket stream sc_command:%s", lua_tostring(L, -1));
+        ELOG("websocket stream on_sc_pkt:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */
@@ -221,37 +178,22 @@ int32_t WSStreamPacket::sc_command()
     return _socket->fd() < 0 ? -1 : 0;
 }
 
-/* 回调 client to server 的数据包 */
 int32_t WSStreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
 {
-    static lua_State *L                         = StaticGlobal::state();
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    static lua_State *L = StaticGlobal::state();
 
     assert(0 == lua_gettop(L));
-    const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd(cmd);
-    if (!cmd_cfg)
-    {
-        ELOG("cs_command cmd(%d) no cmd cfg found", cmd);
-        return 0;
-    }
 
     LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
+    lua_getglobal(L, "on_cs_pkt");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, cmd);
+    lua_pushlightuserdata(L, const_cast<char *>(ctx));
+    lua_pushinteger(L, size);
 
-    Codec *decoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    int32_t cnt = decoder->decode(L, ctx, (int32_t)size, cmd_cfg);
-    if (cnt < 0)
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
     {
-        lua_settop(L, 0);
-        return 0;
-    }
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2 + cnt, 0, 1)))
-    {
-        ELOG("websocket stream cs_command:%s", lua_tostring(L, -1));
+        ELOG("websocket stream on_cs_pkt:%s", lua_tostring(L, -1));
     }
 
     lua_settop(L, 0); /* remove traceback */

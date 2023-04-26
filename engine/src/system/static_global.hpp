@@ -4,7 +4,6 @@
 #include "../lua_cpplib/lev.hpp"
 #include "../lua_cpplib/lnetwork_mgr.hpp"
 #include "../lua_cpplib/lstate.hpp"
-#include "../net/codec/codec_mgr.hpp"
 #include "../net/io/ssl_mgr.hpp"
 #include "../thread/thread_mgr.hpp"
 #include "statistic.hpp"
@@ -46,6 +45,10 @@ public:
     {
         return _codec_mgr;
     }
+    static class LuaBinCodec *lua_bin_codec()
+    {
+        return _lua_bin_codec;
+    }
     static class Statistic *statistic()
     {
         return _statistic;
@@ -80,6 +83,7 @@ private:
     static class LState *_state;
     static class SSLMgr *_ssl_mgr;
     static class CodecMgr *_codec_mgr;
+    static class LuaBinCodec *_lua_bin_codec;
     static class Statistic *_statistic;
     static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;

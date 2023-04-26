@@ -2,21 +2,21 @@
 
 #include "luabin_codec.hpp"
 
-//< 缓冲区的大小
+// 缓冲区的大小
 static const int32_t MAX_BUFF = 1024 * 1024;
 
-//< 编码的变量最大数量
+// 编码的变量最大数量
 static const int32_t MAX_VARIABLE = 255;
 
-//< 支持编码的数据类型，不能直接用lua本身的类型T_NIL之类的，因为没有区分整形
+// 支持编码的数据类型，不能直接用lua本身的类型T_NIL之类的，因为没有区分整形
 enum LuaType
 {
-    LT_NIL   = 0, //< nil值
-    LT_BOOL  = 1, //< boolean类型
-    LT_NUM   = 2, //< 浮点型
-    LT_STR   = 3, //< 字符串
-    LT_TABLE = 4, //< table
-    LT_INT   = 5, //< 整形
+    LT_NIL   = 0, // nil值
+    LT_BOOL  = 1, // boolean类型
+    LT_NUM   = 2, // 浮点型
+    LT_STR   = 3, // 字符串
+    LT_TABLE = 4, // table
+    LT_INT   = 5, // 整形
 };
 
 LuaBinCodec::LuaBinCodec()

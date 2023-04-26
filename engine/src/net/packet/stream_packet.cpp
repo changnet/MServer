@@ -3,6 +3,7 @@
 #include "../../lua_cpplib/ltools.hpp"
 #include "../../system/static_global.hpp"
 #include "../socket.hpp"
+#include "../codec/luabin_codec.hpp"
 
 StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
 {
@@ -55,50 +56,28 @@ void StreamPacket::dispatch(const struct base_header *header)
     }
 }
 
-/* 服务器发往客户端数据包回调脚本 */
 void StreamPacket::sc_command(const struct s2c_header *header)
 {
-    static lua_State *L                         = StaticGlobal::state();
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    static lua_State *L = StaticGlobal::state();
 
     assert(0 == lua_gettop(L));
-    const CmdCfg *cmd_cfg = network_mgr->get_sc_cmd(header->_cmd);
-    if (!cmd_cfg)
-    {
-        ELOG("sc_command cmd(%d) cfg not found", header->_cmd);
-        return;
-    }
 
     size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
-    const char *buffer = reinterpret_cast<const char *>(header + 1);
+    const void *buffer = reinterpret_cast<const void *>(header + 1);
 
     uint32_t conn_id = _socket->conn_id();
 
     LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
+    lua_getglobal(L, "on_sc_pkt");
     lua_pushinteger(L, conn_id);
     lua_pushinteger(L, header->_cmd);
-    lua_pushinteger(L, header->_errno);
+    lua_pushlightuserdata(L, const_cast<void *>(buffer));
+    lua_pushinteger(L, size);
 
-    class Codec *decoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    if (!decoder)
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
     {
-        ELOG("command_new no codec conf found: %d", header->_cmd);
-        lua_settop(L, 0);
-        return;
-    }
-    int32_t cnt = decoder->decode(L, buffer, size, cmd_cfg);
-    if (cnt < 0)
-    {
-        lua_settop(L, 0);
-        return;
-    }
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3 + cnt, 0, 1)))
-    {
-        ELOG("sc_command:%s", lua_tostring(L, -1));
+        ELOG("on_sc_pkt:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -124,8 +103,7 @@ void StreamPacket::cs_dispatch(const struct c2s_header *header)
 /* 客户端发往服务器数据包回调脚本 */
 void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
 {
-    static lua_State *L                         = StaticGlobal::state();
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    static lua_State *L = StaticGlobal::state();
 
     assert(0 == lua_gettop(L));
 
@@ -137,28 +115,15 @@ void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
     }
 
     int32_t conn_id           = _socket->conn_id();
-    Codec::CodecType codec_ty = _socket->get_codec_type();
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, conn_id);
     lua_pushinteger(L, cmd);
+    lua_pushlightuserdata(L, const_cast<char *>(ctx));
+    lua_pushinteger(L, size);
 
-    Codec *decoder = StaticGlobal::codec_mgr()->get_codec(codec_ty);
-    if (!decoder)
-    {
-        ELOG("command_new no codec found:%d", cmd);
-        lua_settop(L, 0);
-        return;
-    }
-    int32_t cnt = decoder->decode(L, ctx, size, cmd_cfg);
-    if (cnt < 0)
-    {
-        lua_settop(L, 0);
-        return;
-    }
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2 + cnt, 0, 1)))
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
     {
         ELOG("cs_command:%s", lua_tostring(L, -1));
 
@@ -174,7 +139,7 @@ void StreamPacket::process_ss_command(const s2s_header *header)
     /* 先判断数据包类型 */
     switch (header->_packet)
     {
-    case SPT_SSPK: ss_dispatch(header); return;
+    case SPT_SSPK: ss_command(header); return;
     case SPT_CSPK: css_command(header); return;
     case SPT_SCPK: ssc_command(header); return;
     case SPT_RPCS: rpc_command(header); return;
@@ -190,81 +155,26 @@ void StreamPacket::process_ss_command(const s2s_header *header)
     }
 }
 
-/* 派发服务器之间的数据包 */
-void StreamPacket::ss_dispatch(const s2s_header *header)
-{
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
-    const CmdCfg *cmd_cfg = network_mgr->get_ss_cmd(header->_cmd);
-    if (!cmd_cfg)
-    {
-        ELOG("ss_dispatch cmd(%d) no cmd cfg found", header->_cmd);
-        return;
-    }
-
-    /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    // 暂时停用服务器数据包自动转发 !!! 2019-01-01
-    // 在实际使用中，这个功能较为少用。但是会引起一些麻烦。
-    // 比如错误地广播一个数据包，会导致其他进程把数据包转发给一个进程。
-    // if ( cmd_cfg->_session != network_mgr->get_curr_session() )
-    // {
-    //     class socket *dest_sk  =
-    //         network_mgr->get_conn_by_session( cmd_cfg->_session );
-    //     if ( !dest_sk )
-    //     {
-    //         ELOG( "server packet forwarding "
-    //             "no destination found.cmd:%d",header->_cmd );
-    //         return;
-    //     }
-
-    //     bool is_ok = dest_sk->append( header,PACKET_LENGTH( header ) );
-    //     if ( !is_ok )
-    //     {
-    //         ELOG( "server packet forwrding "
-    //             "can not reserved memory:" FMT64d,int64(PACKET_LENGTH( header
-    //             )) );
-    //     }
-    //     return;
-    // }
-
-    ss_command(header, cmd_cfg);
-}
-
 /* 服务器发往服务器数据包回调脚本 */
-void StreamPacket::ss_command(const s2s_header *header, const CmdCfg *cmd_cfg)
+void StreamPacket::ss_command(const s2s_header *header)
 {
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
     size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
-    const char *buffer = reinterpret_cast<const char *>(header + 1);
+    const void *buffer = reinterpret_cast<const void *>(header + 1);
 
     LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
+    lua_getglobal(L, "on_ss_pkt");
     lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, header->_owner);
     lua_pushinteger(L, header->_cmd);
-    lua_pushinteger(L, header->_errno);
+    lua_pushlightuserdata(L, const_cast<void *>(buffer));
+    lua_pushinteger(L, size);
 
-    Codec *decoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    if (!decoder)
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
     {
-        ELOG("ss command_new no codec found:%d", header->_cmd);
-        lua_settop(L, 0);
-        return;
-    }
-    int32_t cnt = decoder->decode(L, buffer, size, cmd_cfg);
-    if (cnt < 0)
-    {
-        lua_settop(L, 0);
-        return;
-    }
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4 + cnt, 0, 1)))
-    {
-        ELOG("ss_command:%s", lua_tostring(L, -1));
+        ELOG("on_ss_pkt:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -275,46 +185,25 @@ void StreamPacket::ss_command(const s2s_header *header, const CmdCfg *cmd_cfg)
 /* 客户端发往服务器，由网关转发的数据包回调脚本 */
 void StreamPacket::css_command(const s2s_header *header)
 {
-    static lua_State *L                         = StaticGlobal::state();
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
+    static lua_State *L = StaticGlobal::state();
 
     assert(0 == lua_gettop(L));
 
-    const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd(header->_cmd);
-    if (!cmd_cfg)
-    {
-        ELOG("css_command cmd(%d) no cmd cfg found", header->_cmd);
-        return;
-    }
-
     size_t size = PACKET_BUFFER_LEN(header);
     /* 去掉header内容 */
-    const char *buffer = reinterpret_cast<const char *>(header + 1);
+    const void *buffer = reinterpret_cast<const void *>(header + 1);
 
     LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "css_command_new");
+    lua_getglobal(L, "on_css_pkt");
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, header->_owner);
     lua_pushinteger(L, header->_cmd);
+    lua_pushlightuserdata(L, const_cast<void *>(buffer));
+    lua_pushinteger(L, size);
 
-    Codec *decoder = StaticGlobal::codec_mgr()->get_codec(
-        static_cast<Codec::CodecType>(header->_codec));
-    if (!decoder)
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 5, 0, 1)))
     {
-        ELOG("css_command_new no codec found:%d", header->_cmd);
-        lua_settop(L, 0);
-        return;
-    }
-    int32_t cnt = decoder->decode(L, buffer, size, cmd_cfg);
-    if (cnt < 0)
-    {
-        lua_settop(L, 0);
-        return;
-    }
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3 + cnt, 0, 1)))
-    {
-        ELOG("css_command:%s", lua_tostring(L, -1));
+        ELOG("on_css_pkt:%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -322,7 +211,6 @@ void StreamPacket::css_command(const s2s_header *header)
     lua_settop(L, 0); /* remove traceback */
 }
 
-/* 解析其他服务器转发到网关的客户端数据包 */
 void StreamPacket::ssc_command(const s2s_header *header)
 {
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
@@ -349,6 +237,10 @@ void StreamPacket::ssc_command(const s2s_header *header)
 /* 处理rpc调用 */
 void StreamPacket::rpc_command(const s2s_header *header)
 {
+    /**
+     * TODO protobuf的codec是在lua做的，一是方便更换编码方案，二是外部的protobuf库接口是lua的
+     * rpc要处理返回值，如果在lua做需要使用table.pack和unpack处理返回值，效率比较低
+    */
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
 
@@ -363,9 +255,9 @@ void StreamPacket::rpc_command(const s2s_header *header)
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, header->_owner);
 
-    Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CT_LUABIN);
+    LuaBinCodec *decoder = StaticGlobal::lua_bin_codec();
     int32_t cnt    = decoder->decode(L, buffer, size, nullptr);
-    if (cnt < 1) // rpc调用至少要带参数名
+    if (cnt < 1) // rpc调用至少要带函数名
     {
         lua_settop(L, 0);
         ELOG("rpc command miss function name");
@@ -410,8 +302,7 @@ void StreamPacket::rpc_return(const s2s_header *header)
     int32_t cnt = 0;
     if (size > 0)
     {
-        Codec *decoder = StaticGlobal::codec_mgr()->get_codec(Codec::CT_LUABIN);
-        cnt            = decoder->decode(L, buffer, size, nullptr);
+        cnt = StaticGlobal::lua_bin_codec()->decode(L, buffer, size, nullptr);
     }
     if (LUA_OK != lua_pcall(L, 3 + cnt, 0, 1))
     {
@@ -433,7 +324,7 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
 
     int32_t len        = 0;
     const char *buffer = nullptr;
-    Codec *encoder     = StaticGlobal::codec_mgr()->get_codec(Codec::CT_LUABIN);
+    LuaBinCodec *encoder = StaticGlobal::lua_bin_codec();
 
     if (LUA_OK == ecode)
     {
@@ -450,10 +341,8 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
 
     struct s2s_header s2sh;
     SET_HEADER_LENGTH(s2sh, len, 0, SET_LENGTH_FAIL_RETURN);
-    s2sh._cmd    = 0;
-    s2sh._errno  = ecode;
+    s2sh._cmd    = ecode;
     s2sh._packet = pkt;
-    s2sh._codec = Codec::CT_NONE; // 用不着，但不初始化valgrind会警告
     s2sh._owner = unique_id;
 
     _socket->append(&s2sh, sizeof(struct s2s_header));
@@ -481,39 +370,23 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
     STAT_TIME_BEG();
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd    = luaL_checkinteger32(L, index);
-    uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 1));
+    int32_t cmd = luaL_checkinteger32(L, index);
 
-    const CmdCfg *cfg = network_mgr->get_sc_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
 
-    Codec *encoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    if (!encoder)
-    {
-        return luaL_error(L, "no codec conf found: %d", cmd);
-    }
 
-    const char *buffer = nullptr;
-    int32_t len        = encoder->encode(L, index + 2, &buffer, cfg);
+    const char *buffer = luaL_checkludata(L, index + 1);
+    int32_t len        = luaL_checkinteger(L, index + 2);
     if (len < 0) return -1;
 
     if (len > MAX_PACKET_LEN)
     {
-        encoder->finalize();
         return luaL_error(L, "buffer size over MAX_PACKET_LEN");
     }
 
     if (raw_pack_clt(cmd, ecode, buffer, len) < 0)
     {
-        encoder->finalize();
         return luaL_error(L, "can not raw pack clt");
     }
-
-    encoder->finalize();
 
     PKT_STAT_ADD(SPT_SCPK, cmd, int32_t(len + sizeof(struct s2c_header)),
                  STAT_TIME_END());
@@ -525,31 +398,10 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
 
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
     int32_t cmd = luaL_checkinteger32(L, index);
 
-    if (!lua_istable(L, index + 1))
-    {
-        return luaL_error(L, "expect table,got %s",
-                          lua_typename(L, lua_type(L, index + 1)));
-    }
-
-    const CmdCfg *cfg = network_mgr->get_cs_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    Codec *encoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    if (!encoder)
-    {
-        return luaL_error(L, "no codec conf found: %d", cmd);
-    }
-
-    const char *buffer = nullptr;
-    int32_t len        = encoder->encode(L, index + 1, &buffer, cfg);
+    const char *buffer = luaL_checkludate(L, index + 1);
+    int32_t len        = luaL_checkinteger(L, index + 2);
     if (len < 0) return -1;
 
     struct c2s_header c2sh;
@@ -559,7 +411,6 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
     _socket->append(&c2sh, sizeof(c2sh));
     if (len > 0) _socket->append(buffer, len);
 
-    encoder->finalize();
     _socket->flush();
 
     PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh._length), STAT_TIME_END());
@@ -570,32 +421,11 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
 int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
 
-    int32_t cmd    = luaL_checkinteger32(L, index);
-    uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 1));
+    int32_t cmd = luaL_checkinteger32(L, index);
 
-    if (!lua_istable(L, index + 2))
-    {
-        return luaL_error(L, "expect table,got %s",
-                          lua_typename(L, lua_type(L, index + 2)));
-    }
-
-    const CmdCfg *cfg = network_mgr->get_ss_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    Codec *encoder =
-        StaticGlobal::codec_mgr()->get_codec(_socket->get_codec_type());
-    if (!encoder)
-    {
-        return luaL_error(L, "no codec found: %d", cmd);
-    }
-
-    const char *buffer = nullptr;
-    int32_t len        = encoder->encode(L, index + 2, &buffer, cfg);
+    const char *buffer = luaL_checkludata(L, index + 1);
+    int32_t len        = luaL_checkinteger(L, index + 2);
     if (len < 0) return -1;
 
     if (len > MAX_PACKET_LEN)
@@ -607,11 +437,8 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
     int32_t session = network_mgr->get_curr_session();
     if (raw_pack_ss(cmd, ecode, session, buffer, len) < 0)
     {
-        encoder->finalize();
         return luaL_error(L, "can not raw_pack_ss");
     }
-
-    encoder->finalize();
 
     PKT_STAT_ADD(SPT_SSPK, cmd, int32_t(len + sizeof(struct s2s_header)),
                  STAT_TIME_END());
@@ -629,39 +456,11 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
 
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
     Owner owner      = static_cast<Owner>(luaL_checkinteger(L, index));
-    int32_t codec_ty = luaL_checkinteger32(L, index + 1);
-    int32_t cmd      = luaL_checkinteger32(L, index + 2);
-    uint16_t ecode   = static_cast<uint16_t>(luaL_checkinteger(L, index + 3));
+    int32_t cmd      = luaL_checkinteger32(L, index + 1);
 
-    if (codec_ty < Codec::CT_NONE || codec_ty >= Codec::CT_MAX)
-    {
-        return luaL_error(L, "illegal codec type");
-    }
-
-    if (!lua_istable(L, index + 4))
-    {
-        return luaL_error(L, "expect table,got %s",
-                          lua_typename(L, lua_type(L, index + 4)));
-    }
-
-    const CmdCfg *cfg = network_mgr->get_sc_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    Codec *encoder = StaticGlobal::codec_mgr()->get_codec(
-        static_cast<Codec::CodecType>(codec_ty));
-    if (!encoder)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    const char *buffer = nullptr;
-    int32_t len        = encoder->encode(L, index + 4, &buffer, cfg);
+    const char *buffer = luaL_checkludata(L, index + 2);
+    int32_t len        = luaL_checkinteger(L, index + 3);
     if (len < 0) return -1;
 
     /* 把客户端数据包放到服务器数据包 */
@@ -676,7 +475,6 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     _socket->append(&s2sh, sizeof(s2sh));
     if (len > 0) _socket->append(buffer, len);
 
-    encoder->finalize();
     _socket->flush();
 
     PKT_STAT_ADD(SPT_SSPK, cmd, int32_t(s2sh._length), STAT_TIME_END());
@@ -706,10 +504,8 @@ int32_t StreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
     struct s2s_header s2sh;
     SET_HEADER_LENGTH(s2sh, size, cmd, SET_LENGTH_FAIL_RETURN);
     s2sh._cmd    = static_cast<uint16_t>(cmd);
-    s2sh._errno  = ecode;
     s2sh._owner  = session;
     s2sh._packet = SPT_SSPK;
-    s2sh._codec = Codec::CT_NONE; // 这个这里用不着，但不初始化valgrind就会警告
 
     _socket->append(&s2sh, sizeof(s2sh));
     if (size > 0) _socket->append(ctx, size);
@@ -728,9 +524,10 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
 
     Owner list[MAX_CLT_CAST] = {0};
     int32_t mask             = luaL_checkinteger32(L, index);
-    int32_t codec_ty         = luaL_checkinteger32(L, index + 2);
-    int32_t cmd              = luaL_checkinteger32(L, index + 3);
-    uint16_t ecode = static_cast<uint16_t>(luaL_checkinteger(L, index + 4));
+    int32_t cmd              = luaL_checkinteger32(L, index + 2);
+    const char *buffer = luaL_checkludata(L, index + 3);
+    int32_t len        = luaL_checkinteger(L, index + 4);
+    if (len < 0) return -1;
 
     lUAL_CHECKTABLE(L, index + 1);
     lUAL_CHECKTABLE(L, index + 5);
@@ -763,35 +560,11 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     list[1]         = idx - 2; // 数量
     size_t list_len = sizeof(Owner) * idx;
 
-    if (codec_ty < Codec::CT_NONE || codec_ty >= Codec::CT_MAX)
-    {
-        return luaL_error(L, "illegal codec type");
-    }
-
-    const CmdCfg *cfg = network_mgr->get_sc_cmd(cmd);
-    if (!cfg)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    Codec *encoder = StaticGlobal::codec_mgr()->get_codec(
-        static_cast<Codec::CodecType>(codec_ty));
-    if (!encoder)
-    {
-        return luaL_error(L, "no command conf found: %d", cmd);
-    }
-
-    const char *buffer = nullptr;
-    int32_t len        = encoder->encode(L, index + 5, &buffer, cfg);
-    if (len < 0) return -1;
-
     /* 把客户端数据包放到服务器数据包 */
     struct s2s_header s2sh;
     SET_HEADER_LENGTH(s2sh, list_len + len, cmd, SET_LENGTH_FAIL_ENCODE);
     s2sh._cmd   = static_cast<uint16_t>(cmd);
-    s2sh._errno = ecode;
     s2sh._owner = 0;
-    s2sh._codec = Codec::CT_NONE; /* 避免valgrind警告内存未初始化 */
     s2sh._packet = SPT_CBCP; /*指定数据包类型为服务器发送客户端 */
 
     _socket->append(&s2sh, sizeof(s2sh));

@@ -189,7 +189,6 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::send_raw_packet>("send_raw_packet");
     lc.def<&LNetworkMgr::send_ctrl_packet>("send_ctrl_packet");
 
-    lc.def<&LNetworkMgr::srv_multicast>("srv_multicast");
     lc.def<&LNetworkMgr::clt_multicast>("clt_multicast");
     lc.def<&LNetworkMgr::ssc_multicast>("ssc_multicast");
 

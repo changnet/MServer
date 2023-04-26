@@ -52,7 +52,7 @@ void StaticGlobal::initialize()
 {
     /**
      * 业务都放这里逻辑初始化
-     * 原本用static对象，但实在是无法控制各个销毁的顺序。因为其他文件中还有局部static对象
+     * 原本用static对象，但实在是无法控制各个对象销毁的顺序。因为其他文件中还有局部static对象
      * 会依赖这些对象。
      * 比如class lev销毁时会释放引起一些对象gc，调用局部内存池，但早就销毁了
      * 各个变量之间有依赖，要注意顺序
@@ -68,6 +68,7 @@ void StaticGlobal::initialize()
     _statistic   = new class Statistic();
     _state       = new class LState();
     _codec_mgr   = new class CodecMgr();
+    _lua_bin_codec     = new class LuaBinCodec();
     _ssl_mgr     = new class SSLMgr();
     _network_mgr = new class LNetworkMgr();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
@@ -98,6 +99,7 @@ void StaticGlobal::uninitialize()
     delete _buffer_chunk_pool;
     delete _network_mgr;
     delete _ssl_mgr;
+    delete _lua_bin_codec;
     delete _codec_mgr;
     delete _state;
     delete _statistic;

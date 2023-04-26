@@ -92,7 +92,7 @@ typedef uint16_t string_size_t; // 字符串长度类型，自定义二进制用
 struct base_header
 {
     packet_size_t _length; /* 包长度，包含本身 */
-    uint16_t _cmd;         /* 8bit模块号,8bit功能号 */
+    uint16_t _cmd;         /* 协议号 */
 };
 
 /* 客户端发往服务器 */
@@ -103,15 +103,12 @@ struct c2s_header : public base_header
 /* 服务器发往客户端 */
 struct s2c_header : public base_header
 {
-    uint16_t _errno; /* 错误码 */
 };
 
 /* 服务器发往服务器 */
 struct s2s_header : public base_header
 {
-    uint16_t _errno;  /* 错误码 */
     uint16_t _packet; /* 数据包类型，见packet_t */
-    uint16_t _codec;  /* 解码类型，见codec::codec_t */
     Owner _owner;     /* 当前数据包所属id，通常为玩家id */
 };
 
