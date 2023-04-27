@@ -13,42 +13,11 @@ struct lua_State;
 class LNetworkMgr
 {
 private:
-    using cmd_map_t    = std::unordered_map<int32_t, CmdCfg>;
     using socket_map_t = std::unordered_map<int32_t, class Socket *>;
 
 public:
     ~LNetworkMgr();
     explicit LNetworkMgr();
-
-    /**
-     * 设置客户端发往服务端协议参数
-     * @param cmd 协议号
-     * @param schema 模块名(比如protobuf的pb文件名)
-     * @param object 协议结构(比如protobuf的message)
-     * @param mask 掩码(参考net_header.h中的定义)
-     * @param session 会话id，用于自动转发到对应的app进程，0表示当前进程处理
-     */
-    int32_t set_cs_cmd(lua_State *L);
-
-    /**
-     * 设置服务端发往服务端协议参数
-     * @param cmd 协议号
-     * @param schema 模块名(比如protobuf的pb文件名)
-     * @param object 协议结构(比如protobuf的message)
-     * @param mask 掩码(参考net_header.h中的定义)
-     * @param session 会话id，用于自动转发到对应的app进程，0表示当前进程处理
-     */
-    int32_t set_ss_cmd(lua_State *L);
-
-    /**
-     * 设置服务端发往客户端协议参数
-     * @param cmd 协议号
-     * @param schema 模块名(比如protobuf的pb文件名)
-     * @param object 协议结构(比如protobuf的message)
-     * @param mask 掩码(参考net_header.h中的定义)
-     * @param session 会话id，用于自动转发到对应的app进程，0表示当前进程处理
-     */
-    int32_t set_sc_cmd(lua_State *L);
 
     /**
      * 设置连接的io方式
@@ -57,13 +26,6 @@ public:
      * @param io_ctx io内容，根据不同io类型意义不一样，ssl则表示ssl_mgr中的索引
      */
     int32_t set_conn_io(lua_State *L);
-
-    /**
-     * 设置socket的编译方式
-     * @param conn_id 连接id
-     * @param codec_type 编码类型，见codec.h中的定义(bson、protobuf、flatbuffers...)
-     */
-    int32_t set_conn_codec(lua_State *L);
 
     /**
      * 设置socket的打包方式
@@ -99,26 +61,6 @@ public:
      * @param session 当前服务器会话id
      */
     int32_t set_curr_session(lua_State *L);
-
-    /**
-     * 重置协议描述文件
-     * @param codec_type 编码方式(protobuf、flatbuffers)
-     */
-    int32_t reset_schema(lua_State *L);
-
-    /**
-     * 加载某个目录下的所有schema文件(比如protobuf的pb文件)
-     * @param codec_type 编码方式(protobuf、flatbuffers)
-     * @param path 目录路径
-     */
-    int32_t load_one_schema(lua_State *L);
-
-    /**
-     * 加载某个schema文件(比如protobuf的pb文件)
-     * @param codec_type 编码方式(protobuf、flatbuffers)
-     * @param path 文件路径
-     */
-    int32_t load_one_schema_file(lua_State *L);
 
     /**
      * 获取http报文头数据
@@ -303,7 +245,12 @@ public:
     {
         return _session;
     }
-    int32_t new_connect_id(); /* 获取新connect_id */
+
+    /* 产生一个唯一的连接id
+     * 之所以不用系统的文件描述符fd，是因为fd对于上层逻辑不可控。比如一个fd被释放，可能在多个进程
+     * 之间还未处理完，此fd就被重用了。当前的连接id不太可能会在短时间内重用。
+     */
+    int32_t new_connect_id();
 
     /// io建立完成
     bool io_ok(int32_t conn_id);
@@ -323,7 +270,6 @@ public:
 
 private:
     void delete_socket(int32_t conn_id);
-    int32_t get_cmd_session(int64_t object_id, int32_t cmd) const;
     class Packet *lua_check_packet(lua_State *L, Socket::ConnType conn_ty);
     class Packet *raw_check_packet(lua_State *L, int32_t conn_id,
                                    Socket::ConnType conn_ty);

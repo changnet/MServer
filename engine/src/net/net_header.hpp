@@ -7,21 +7,6 @@
 
 #define MAX_SCHEMA_NAME 64
 
-struct CmdCfg
-{
-    // 设定掩码，按位表示不同功能，值为 1 2 4 8 16
-    enum
-    {
-        MK_UNPACK  = 1, //解码方式:0 普通解码，1 unpack解码
-        MK_DYNAMIC = 2, // 是否动态转发
-        MK_MAX
-    };
-    int32_t _cmd;
-    int32_t _mask;
-    int32_t _session;
-    char _schema[MAX_SCHEMA_NAME];
-    char _object[MAX_SCHEMA_NAME];
-};
 typedef int32_t Owner;
 
 #define SET_LENGTH_FAIL_BOOL \
