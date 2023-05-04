@@ -675,41 +675,6 @@ int32_t LNetworkMgr::new_ssl_ctx(lua_State *L) /* 创建一个ssl上下文 */
     return 1;
 }
 
-int32_t LNetworkMgr::cs_dispatch(uint16_t cmd, const class Socket *src_sk,
-                                 const char *ctx, size_t size) const
-{
-    int64_t object_id = src_sk->get_object_id();
-    int32_t session   = get_cmd_session(object_id, cmd);
-    if (session < 0)
-    {
-        ELOG("cmd session error, packet abort:%d - %d", session, cmd);
-        return -1;
-    }
-
-    // 在当前进程处理，不需要转发
-    if (session == _session) return 0;
-
-    /* 这个指令不是在当前进程处理，自动转发到对应进程 */
-    class Socket *dest_sk = get_conn_by_session(session);
-    if (!dest_sk)
-    {
-        ELOG("client packet forwarding no destination found.cmd:%d", cmd);
-        return 1; /* 如果转发失败，也相当于转发了 */
-    }
-
-    struct s2s_header s2sh;
-    SET_HEADER_LENGTH(s2sh, size, cmd, SET_LENGTH_FAIL_BOOL);
-    s2sh._cmd    = cmd;
-    s2sh._packet = SPT_CSPK;
-    s2sh._owner  = static_cast<Owner>(object_id);
-
-    dest_sk->append(&s2sh, sizeof(struct s2s_header));
-    dest_sk->append(ctx, size);
-    dest_sk->flush();
-
-    return 1;
-}
-
 /* 发送ping-pong等数据包 */
 int32_t LNetworkMgr::send_ctrl_packet(lua_State *L)
 {

@@ -23,15 +23,6 @@ target_include_directories(llhttp PRIVATE
     llhttp/include
 )
 
-# lua_flatbuffers
-file(GLOB SRC_LIST "lua_flatbuffers/*.cpp")
-list(REMOVE_ITEM SRC_LIST "${CMAKE_CURRENT_LIST_DIR}/lua_flatbuffers/cpp_test.cpp")
-add_library(lua_flatbuffers STATIC ${SRC_LIST})
-target_include_directories(lua_flatbuffers PRIVATE
-    lua_parson/parson
-    ${LUA_INCLUDE_DIR}
-)
-
 # https://cmake.org/cmake/help/latest/command/target_link_libraries.html#libraries-for-both-a-target-and-its-dependents
 # Library dependencies are transitive by default with this signature. 
 # When this target is linked into another target then the libraries linked to

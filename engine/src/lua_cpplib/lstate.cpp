@@ -161,19 +161,12 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::close>("close");
     lc.def<&LNetworkMgr::listen>("listen");
     lc.def<&LNetworkMgr::connect>("connect");
-    lc.def<&LNetworkMgr::reset_schema>("reset_schema");
-    lc.def<&LNetworkMgr::load_one_schema>("load_one_schema");
-    lc.def<&LNetworkMgr::load_one_schema_file>("load_one_schema_file");
     lc.def<&LNetworkMgr::set_curr_session>("set_curr_session");
     lc.def<&LNetworkMgr::get_connect_type>("get_connect_type");
 
     lc.def<&LNetworkMgr::set_conn_session>("set_conn_session");
     lc.def<&LNetworkMgr::set_conn_owner>("set_conn_owner");
     lc.def<&LNetworkMgr::unset_conn_owner>("unset_conn_owner");
-
-    lc.def<&LNetworkMgr::set_cs_cmd>("set_cs_cmd");
-    lc.def<&LNetworkMgr::set_ss_cmd>("set_ss_cmd");
-    lc.def<&LNetworkMgr::set_sc_cmd>("set_sc_cmd");
 
     lc.def<&LNetworkMgr::set_conn_io>("set_conn_io");
     lc.def<&LNetworkMgr::set_conn_codec>("set_conn_codec");
@@ -189,7 +182,6 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::send_raw_packet>("send_raw_packet");
     lc.def<&LNetworkMgr::send_ctrl_packet>("send_ctrl_packet");
 
-    lc.def<&LNetworkMgr::clt_multicast>("clt_multicast");
     lc.def<&LNetworkMgr::ssc_multicast>("ssc_multicast");
 
     lc.def<&LNetworkMgr::set_buffer_params>("set_buffer_params");
@@ -214,13 +206,6 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.set(Packet::PT_STREAM, "PT_STREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
-
-    // 前缀CT和上面的重复了，这里改为CDT
-    lc.set(Codec::CT_NONE, "CDT_NONE");
-    lc.set(Codec::CT_LUABIN, "CDT_LUABIN");
-    lc.set(Codec::CT_STREAM, "CDT_STREAM");
-    lc.set(Codec::CT_FLATBUF, "CDT_FLATBUF");
-    lc.set(Codec::CT_PROTOBUF, "CDT_PROTOBUF");
 
     lc.set(SSLMgr::SSLVT_NONE, "SSLVT_NONE");
     lc.set(SSLMgr::SSLVT_TLS_GEN_AT, "SSLVT_TLS_GEN_AT");

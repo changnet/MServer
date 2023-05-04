@@ -261,13 +261,6 @@ public:
     /// 接受连接成功，需要执行始化
     bool accept_new(int32_t conn_id, class Socket *new_sk);
 
-    /**
-     * 把客户端数据包转发给另一服务器
-     * @return <0 出错，0 未处理 1 已转发到其他服务器
-     */
-    int32_t cs_dispatch(uint16_t cmd, const class Socket *src_sk,
-                        const char *ctx, size_t size) const;
-
 private:
     void delete_socket(int32_t conn_id);
     class Packet *lua_check_packet(lua_State *L, Socket::ConnType conn_ty);
@@ -278,9 +271,6 @@ private:
     int32_t _session;   /* 当前进程的session */
     int32_t _conn_seed; /* connect_id种子 */
 
-    cmd_map_t _cs_cmd_map;
-    cmd_map_t _ss_cmd_map;
-    cmd_map_t _sc_cmd_map;
     socket_map_t _socket_map;
 
     /// 异步删除的socket

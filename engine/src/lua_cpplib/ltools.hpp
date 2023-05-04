@@ -39,12 +39,13 @@
  * @param L 
  * @param arg 
 */
-void *luaL_checkludata(Lua_State *L, int32_t arg)
+void *luaL_checkludata(lua_State *L, int32_t arg)
 {
     if (!lua_islightuserdata(L, arg))
     {
-        return luaL_error(L, "expect lightuserdata,got %s",
+        luaL_error(L, "expect lightuserdata,got %s",
                           lua_typename(L, lua_type(L, arg)));
+        return nullptr;
     }
 
     return lua_touserdata(L, arg);
