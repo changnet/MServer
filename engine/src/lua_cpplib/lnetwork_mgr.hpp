@@ -236,10 +236,6 @@ public:
     /// 通过conn_id获取session
     int32_t get_session_by_conn_id(int32_t conn_id) const;
 
-    /// 获取指令配置
-    const CmdCfg *get_cs_cmd(int32_t cmd) const;
-    const CmdCfg *get_ss_cmd(int32_t cmd) const;
-    const CmdCfg *get_sc_cmd(int32_t cmd) const;
     /// 获取当前服务器session
     int32_t get_curr_session() const
     {

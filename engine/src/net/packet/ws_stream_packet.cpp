@@ -24,8 +24,8 @@ int32_t WSStreamPacket::pack_clt(lua_State *L, int32_t index)
     websocket_flags flags =
         static_cast<websocket_flags>(luaL_checkinteger(L, index + 1));
 
-    const char *ctx = luaL_checkludata(L, index + 2);
-    int32_t size    = luaL_checkinteger(L, index + 3);
+    const char *ctx = static_cast <const char *>(luaL_checkludata(L, index + 2));
+    int32_t size    = luaL_checkinteger32(L, index + 3);
     if (size < 0) return -1;
 
     if (size > MAX_PACKET_LEN)

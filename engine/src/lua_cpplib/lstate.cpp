@@ -169,7 +169,6 @@ int32_t luaopen_network_mgr(lua_State *L)
     lc.def<&LNetworkMgr::unset_conn_owner>("unset_conn_owner");
 
     lc.def<&LNetworkMgr::set_conn_io>("set_conn_io");
-    lc.def<&LNetworkMgr::set_conn_codec>("set_conn_codec");
     lc.def<&LNetworkMgr::set_conn_packet>("set_conn_packet");
 
     lc.def<&LNetworkMgr::get_http_header>("get_http_header");

@@ -1,31 +1,9 @@
 #include <vector>
-
-#include "../net_header.hpp"
 #include <lua.hpp>
 #include <pbc.h>
 
-#include <fstream>
-#include <filesystem>
-
 #include "protobuf_codec.hpp"
 
-/* check if suffix match */
-static int is_suffix_file(const char *path, const char *suffix)
-{
-    /* simply check,not consider file like ./subdir/.bfbs */
-    size_t sz = strlen(suffix);
-    size_t ps = strlen(path);
-
-    /* file like .pb will be ignore */
-    if (ps <= sz + 2) return 0;
-
-    if ('.' == path[ps - sz - 1] && 0 == strcmp(path + ps - sz, suffix))
-    {
-        return true;
-    }
-
-    return false;
-}
 
 /**
  * 对pbc再进行一层包装用于C++
@@ -56,8 +34,7 @@ public:
     const char *last_error();
     void get_buffer(struct pbc_slice &slice);
 
-    int32_t load_file(const char *paeth);
-    int32_t load_path(const char *path, const char *suffix = "pb");
+    int32_t load(const char *buffer, size_t len);
 
     static void decode_cb(void *ud, int32_t type, const char *object,
                           union pbc_value *v, int id, const char *key);
@@ -117,87 +94,20 @@ void lprotobuf::reset()
     _trace_back.clear();
 }
 
-int32_t lprotobuf::load_file(const char *path)
+int32_t lprotobuf::load(const char *buffer, size_t len)
 {
-    std::ifstream ifs(path, std::ifstream::binary | std::ifstream::in);
-    if (!ifs.good())
-    {
-        ELOG("can NOT open file(%s):%s", path, strerror(errno));
-        return -1;
-    }
-
-    // get length of file:
-    ifs.seekg(0, ifs.end);
-    int32_t len = static_cast<int32_t>(ifs.tellg());
-    ifs.seekg(0, ifs.beg);
-
-    if (!ifs.good() || len <= 0)
-    {
-        ifs.close();
-        ELOG("get file length error:%s", path);
-        return -1;
-    }
-
     struct pbc_slice slice;
-    slice.len    = len;
-    slice.buffer = new char[slice.len];
-    ifs.read((char *)slice.buffer, slice.len);
-
-    if (!ifs.good() || ifs.gcount() != slice.len)
-    {
-        ifs.close();
-        delete (char *)slice.buffer;
-        ELOG("read file content error:%s", path);
-        return -1;
-    }
-    ifs.close();
+    slice.len    = (int)len;
+    slice.buffer = const_cast<char *>(buffer);
 
     if (0 != pbc_register(_env, &slice))
     {
         delete (char *)slice.buffer;
-        ELOG("pbc register error(%s):%s", path, pbc_error(_env));
+        ELOG("pbc register error:%s", pbc_error(_env));
         return -1;
     }
 
-    delete[](char *) slice.buffer;
     return 0;
-}
-
-int32_t lprotobuf::load_path(const char *path, const char *suffix)
-{
-    char file_path[PATH_MAX];
-    int sz = snprintf(file_path, PATH_MAX, "%s/", path);
-    if (sz <= 0)
-    {
-        ELOG("path too long:%s", path);
-
-        return -1;
-    }
-
-    int count = 0;
-    std::error_code e;
-    std::filesystem::directory_iterator dir_iter(path, e);
-    if (e)
-    {
-        ELOG("can not open directory(%s):%s", path, e.message().c_str());
-
-        return -1;
-    }
-    for (auto &p : dir_iter)
-    {
-        if (!p.is_regular_file()) continue;
-
-        const std::string s_path = p.path().string();
-        if (!is_suffix_file(s_path.c_str(), suffix)) continue;
-
-        if (load_file(s_path.c_str()) < 0)
-        {
-            return -1;
-        }
-        ++count;
-    }
-
-    return count;
 }
 
 const char *lprotobuf::last_error()
@@ -539,8 +449,7 @@ int32_t lprotobuf::raw_encode(lua_State *L, struct pbc_wmessage *wmsg,
 ////////////////////////////////////////////////////////////////////////////////
 ProtobufCodec::ProtobufCodec()
 {
-    _is_proto_loaded = false;
-    _lprotobuf       = new class lprotobuf();
+    _lprotobuf = new class lprotobuf();
 }
 
 ProtobufCodec::~ProtobufCodec()
@@ -563,28 +472,15 @@ void ProtobufCodec::reset()
     _lprotobuf = new class lprotobuf();
 }
 
-int32_t ProtobufCodec::load_path(const char *path)
+int32_t ProtobufCodec::load(const char *buffer, size_t len)
 {
-    // pbc并没有什么unregister之类的函数，只能把整个对象销毁重建了
-    if (_is_proto_loaded) reset();
-
-    _is_proto_loaded = true;
-    return _lprotobuf->load_path(path);
+    return _lprotobuf->load(buffer, len);
 }
 
-int32_t ProtobufCodec::load_file(const char *path)
+int32_t ProtobufCodec::decode(lua_State *L, const char *schema,
+                              const char *buffer, size_t len)
 {
-    return _lprotobuf->load_file(path);
-}
-
-/**
- * 解码数据包
- * @return: <0 error,otherwise the number of parameter push to stack
- */
-int32_t ProtobufCodec::decode(lua_State *L, const char *buffer, size_t len,
-                              const CmdCfg *cfg)
-{
-    if (_lprotobuf->decode(L, cfg->_object, buffer, len) < 0)
+    if (_lprotobuf->decode(L, schema, buffer, len) < 0)
     {
         ELOG("protobuf decode:%s", _lprotobuf->last_error());
         return -1;
@@ -594,14 +490,10 @@ int32_t ProtobufCodec::decode(lua_State *L, const char *buffer, size_t len,
     return 1;
 }
 
-/**
- * 编码数据包
- * @return: <0 error,otherwise the length of buffer
- */
-int32_t ProtobufCodec::encode(lua_State *L, int32_t index, const char **buffer,
-                              const CmdCfg *cfg)
+int32_t ProtobufCodec::encode(lua_State *L, const char *schema, int32_t index,
+                              const char **buffer)
 {
-    if (_lprotobuf->encode(L, cfg->_object, index) < 0)
+    if (_lprotobuf->encode(L, schema, index) < 0)
     {
         ELOG("protobuf encode:%s", _lprotobuf->last_error());
         return -1;

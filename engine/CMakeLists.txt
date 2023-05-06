@@ -114,12 +114,12 @@ file(GLOB_RECURSE SRC_LIST "${SRC_ROOT_PATH}/src/*.cpp")
 add_executable(master ${SRC_LIST})
 
 target_include_directories(master PRIVATE
+    ${SRC_ROOT_PATH}/src # 本身的源码目录添加为include，这样不同目录的文件相互引用时，不需要使用../global这种路径
     ${DEPS_PATH}/pbc
     ${DEPS_PATH}/llhttp/include
     ${DEPS_PATH}/lua_parson
     ${DEPS_PATH}/lua_rapidxml
     ${DEPS_PATH}/aho-corasick
-    ${DEPS_PATH}/lua_flatbuffers
     ${DEPS_PATH}/websocket-parser
 )
 

@@ -1,41 +1,26 @@
 #pragma once
 
-#include "codec.hpp"
+#include "global/global.hpp"
 
 /**
- * @brief 以二进制方式编码、解码Lua变量，目前仅用于RPC调用，限定缓冲区大小为1M
+ * @brief 以二进制方式编码、解码Lua变量，目前仅用于RPC调用
  */
-class LuaBinCodec final : public Codec
+class LuaBinCodec final
 {
 public:
     LuaBinCodec();
     ~LuaBinCodec();
 
-    void finalize() override{};
-    void reset() override {}
-    int32_t load_path(const char *path) override
-    {
-        UNUSED(path);
-        return 0;
-    }
-    int32_t load_file(const char *path) override
-    {
-        UNUSED(path);
-        return 0;
-    }
-
     /**
      * 解码数据包
      * @return <0 error,otherwise the number of parameter push to stack
      */
-    int32_t decode(lua_State *L, const char *buffer, size_t len,
-                   const CmdCfg *cfg) override;
+    int32_t decode(lua_State *L, const char *buffer, size_t len);
     /**
      * 编码数据包
      * @return <0 error,otherwise the length of buffer
      */
-    int32_t encode(lua_State *L, int32_t index, const char **buffer,
-                   const CmdCfg *cfg) override;
+    int32_t encode(lua_State *L, int32_t index, const char **buffer);
 
 private:
     //< 把基础类型写入缓冲区，不支持指针及自定义结构

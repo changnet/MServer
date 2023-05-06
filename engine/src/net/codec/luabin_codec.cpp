@@ -3,7 +3,7 @@
 #include "luabin_codec.hpp"
 
 // 缓冲区的大小
-static const int32_t MAX_BUFF = 1024 * 1024;
+static const int32_t MAX_BUFF = 8 * 1024 * 1024;
 
 // 编码的变量最大数量
 static const int32_t MAX_VARIABLE = 255;
@@ -136,11 +136,8 @@ int32_t LuaBinCodec::decode_value(lua_State *L)
 #undef CHECK_DECODE_LEN
 }
 
-int32_t LuaBinCodec::decode(lua_State *L, const char *buffer, size_t len,
-                            const CmdCfg *cfg)
+int32_t LuaBinCodec::decode(lua_State *L, const char *buffer, size_t len)
 {
-    UNUSED(cfg);
-
     _buff_pos    = 0;
     _buff_len    = len;
     _decode_buff = buffer;
@@ -255,11 +252,8 @@ int32_t LuaBinCodec::encode_value(lua_State *L, int32_t index)
 #undef CHECK_ENCODE_LEN
 }
 
-int32_t LuaBinCodec::encode(lua_State *L, int32_t index, const char **buffer,
-                            const CmdCfg *cfg)
+int32_t LuaBinCodec::encode(lua_State *L, int32_t index, const char **buffer)
 {
-    UNUSED(cfg);
-
     int top = lua_gettop(L);
     if (index > top || top - index > MAX_VARIABLE)
     {
