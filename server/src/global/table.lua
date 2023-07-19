@@ -343,3 +343,22 @@ function table.reverse(tbl, i, j)
 
     return tbl
 end
+
+-- 判断两个table的值是否一样（不判断meta table）
+function table.same(t1, t2)
+    if t1 == t2 then return true end
+
+    local type1 = type(t1)
+    if type1 ~= type(t2) or type1 ~= "table" then return false end
+    
+    for k1, v1 in pairs(t1) do
+        local v2 = t2[k1]
+        if nil == v2 or not table.same(v1, v2) then return false end
+    end
+    
+    for k2 in pairs(t2) do
+        if nil == t1[k2] then return false end
+    end
+    
+    return true
+end
