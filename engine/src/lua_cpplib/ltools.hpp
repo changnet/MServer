@@ -39,7 +39,7 @@
  * @param L 
  * @param arg 
 */
-void *luaL_checkludata(lua_State *L, int32_t arg)
+inline void *luaL_checkludata(lua_State *L, int32_t arg)
 {
     if (!lua_islightuserdata(L, arg))
     {

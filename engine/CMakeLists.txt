@@ -82,6 +82,9 @@ set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/libs")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SRC_PATH_SIZE)
+add_definitions("-DSRC_PATH_SIZE=${SRC_PATH_SIZE}")
+
 if(WINDOWS)
     find_package(Lua REQUIRED)
 elseif(LINUX)

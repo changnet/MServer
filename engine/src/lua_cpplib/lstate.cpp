@@ -10,7 +10,6 @@
 #include "llog.hpp"
 #include "lmap.hpp"
 #include "lmongo.hpp"
-#include "lnetwork_mgr.hpp"
 #include "lsql.hpp"
 #include "lstate.hpp"
 #include "lstatistic.hpp"
@@ -150,66 +149,6 @@ int32_t luaopen_acism(lua_State *L)
     lc.def<&LAcism::scan>("scan");
     lc.def<&LAcism::replace>("replace");
     lc.def<&LAcism::load_from_file>("load_from_file");
-
-    return 0;
-}
-
-int32_t luaopen_network_mgr(lua_State *L)
-{
-    LBaseClass<LNetworkMgr> lc(L, "engine.NetworkMgr");
-
-    lc.def<&LNetworkMgr::close>("close");
-    lc.def<&LNetworkMgr::listen>("listen");
-    lc.def<&LNetworkMgr::connect>("connect");
-    lc.def<&LNetworkMgr::set_curr_session>("set_curr_session");
-    lc.def<&LNetworkMgr::get_connect_type>("get_connect_type");
-
-    lc.def<&LNetworkMgr::set_conn_session>("set_conn_session");
-    lc.def<&LNetworkMgr::set_conn_owner>("set_conn_owner");
-    lc.def<&LNetworkMgr::unset_conn_owner>("unset_conn_owner");
-
-    lc.def<&LNetworkMgr::set_conn_io>("set_conn_io");
-    lc.def<&LNetworkMgr::set_conn_packet>("set_conn_packet");
-
-    lc.def<&LNetworkMgr::get_http_header>("get_http_header");
-
-    lc.def<&LNetworkMgr::send_srv_packet>("send_srv_packet");
-    lc.def<&LNetworkMgr::send_clt_packet>("send_clt_packet");
-    lc.def<&LNetworkMgr::send_s2s_packet>("send_s2s_packet");
-    lc.def<&LNetworkMgr::send_ssc_packet>("send_ssc_packet");
-    lc.def<&LNetworkMgr::send_rpc_packet>("send_rpc_packet");
-    lc.def<&LNetworkMgr::send_raw_packet>("send_raw_packet");
-    lc.def<&LNetworkMgr::send_ctrl_packet>("send_ctrl_packet");
-
-    lc.def<&LNetworkMgr::ssc_multicast>("ssc_multicast");
-
-    lc.def<&LNetworkMgr::set_buffer_params>("set_buffer_params");
-
-    lc.def<&LNetworkMgr::new_ssl_ctx>("new_ssl_ctx");
-
-    lc.def<&LNetworkMgr::address>("address");
-
-    lc.def<&LNetworkMgr::get_player_session>("get_player_session");
-    lc.def<&LNetworkMgr::set_player_session>("set_player_session");
-
-    lc.set(Socket::CT_NONE, "CT_NONE");
-    lc.set(Socket::CT_CSCN, "CT_CSCN");
-    lc.set(Socket::CT_SCCN, "CT_SCCN");
-    lc.set(Socket::CT_SSCN, "CT_SSCN");
-
-    lc.set(IO::IOT_NONE, "IOT_NONE");
-    lc.set(IO::IOT_SSL, "IOT_SSL");
-
-    lc.set(Packet::PT_NONE, "PT_NONE");
-    lc.set(Packet::PT_HTTP, "PT_HTTP");
-    lc.set(Packet::PT_STREAM, "PT_STREAM");
-    lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
-    lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
-
-    lc.set(SSLMgr::SSLVT_NONE, "SSLVT_NONE");
-    lc.set(SSLMgr::SSLVT_TLS_GEN_AT, "SSLVT_TLS_GEN_AT");
-    lc.set(SSLMgr::SSLVT_TLS_SRV_AT, "SSLVT_TLS_SRV_AT");
-    lc.set(SSLMgr::SSLVT_TLS_CLT_AT, "SSLVT_TLS_CLT_AT");
 
     return 0;
 }
@@ -361,7 +300,6 @@ void LState::open_cpp()
     luaopen_mongo(L);
     luaopen_grid_aoi(L);
     luaopen_list_aoi(L);
-    luaopen_network_mgr(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */

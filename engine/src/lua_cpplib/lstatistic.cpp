@@ -217,8 +217,6 @@ void LStatistic::dump_socket(lua_State *L)
 
     const time_t now = StaticGlobal::ev()->now();
 
-    class LNetworkMgr *nm = StaticGlobal::network_mgr();
-
     int32_t index = 1;
     lua_newtable(L);
 
@@ -239,7 +237,7 @@ void LStatistic::dump_socket(lua_State *L)
         PUSH_INTEGER("send_avg", counter._send / sec);
         PUSH_INTEGER("recv_avg", counter._recv / sec);
 
-        class Socket *sk = nm->get_conn_by_conn_id(itr->first);
+        class Socket *sk = nullptr; // nm->get_conn_by_conn_id(itr->first);
         if (!sk)
         {
             ELOG("dump_socket no such socket found:", conn_id);

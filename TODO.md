@@ -1,3 +1,11 @@
+## codec放到Lua
+1. 读写事件从ev回调到Socket.cpp，在Socket调用对应packet的unpack
+2. unpack成功，现在根据Socket类型派发到不同函数。直接激发到lua，由Lua处理
+3. 不同的Socket，header的定义也不同，在Lua怎么处理(只有Lua才知道当前这个Socket的header类型，因此需要回调到Lua后，Lua再调用额外的函数从header解析出额外的数据)
+	http、websocket等直接是原始数据，不需要解析
+	c2s需要解析出来一个协议号，再用protobuf解码
+	s2s则要区分数据转发，rpc调用、s2sHeader等，需要从header解析出额外的数据
+
 socket::append函数会唤醒io线程，但有时候会同一逻辑中多次append，这个优化一下
 ssl的发送机制有问题，未握手完成时，一直在send队列，假如对方迟迟未发送握手数据，这时候会处理死循环地直尝试写数据
 

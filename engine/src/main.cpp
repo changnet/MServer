@@ -24,9 +24,6 @@ int32_t main(int32_t argc, char **argv)
     LClass<LLog>::push(L, StaticGlobal::async_logger(), false);
     lua_setglobal(L, "g_async_log");
 
-    LClass<LNetworkMgr>::push(L, StaticGlobal::network_mgr(), false);
-    lua_setglobal(L, "network_mgr");
-
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf(script_path, sizeof(script_path), "%s", LUA_ENTERANCE);

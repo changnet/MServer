@@ -178,8 +178,6 @@ void LEV::running()
     invoke_app_ev();
 
     StaticGlobal::thread_mgr()->main_routine();
-
-    StaticGlobal::network_mgr()->invoke_delete();
 }
 
 int32_t LEV::periodic_start(lua_State *L)

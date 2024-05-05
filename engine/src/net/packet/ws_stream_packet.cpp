@@ -9,6 +9,8 @@ WSStreamPacket::~WSStreamPacket() {}
 
 WSStreamPacket::WSStreamPacket(class Socket *sk) : WebsocketPacket(sk) {}
 
+#ifdef OLDNET
+
 /* 打包服务器发往客户端数据包
  * pack_clt( cmd,errno,flags,ctx )
  * return: <0 error;>=0 success
@@ -132,74 +134,6 @@ int32_t WSStreamPacket::on_frame_end()
     return cs_command(cmd, ctx, size);
 }
 
-/* 回调server to client的数据包 */
-int32_t WSStreamPacket::sc_command()
-{
-    static lua_State *L = StaticGlobal::state();
-
-    assert(0 == lua_gettop(L));
-
-    size_t data_size     = 0;
-    const char *data_ctx = _body.all_to_flat_ctx(data_size);
-    if (data_size < sizeof(struct s2c_header))
-    {
-        ELOG("ws_stream_packet sc_command packet incomplete");
-        return 0;
-    }
-
-    const struct s2c_header *header =
-        reinterpret_cast<const struct s2c_header *>(data_ctx);
-
-    int cmd = header->_cmd;
-    if (data_size < header->_length)
-    {
-        ELOG("ws_stream_packet sc_command packet length error:%d", cmd);
-        return 0;
-    }
-
-    size_t size     = data_size - sizeof(*header);
-    const char *ctx = reinterpret_cast<const char *>(header + 1);
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "on_sc_pkt");
-    lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, cmd);
-    lua_pushlightuserdata(L, const_cast<char *>(ctx));
-    lua_pushinteger(L, size);
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
-    {
-        ELOG("websocket stream on_sc_pkt:%s", lua_tostring(L, -1));
-    }
-
-    lua_settop(L, 0); /* remove traceback */
-
-    return _socket->fd() < 0 ? -1 : 0;
-}
-
-int32_t WSStreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
-{
-    static lua_State *L = StaticGlobal::state();
-
-    assert(0 == lua_gettop(L));
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "on_cs_pkt");
-    lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, cmd);
-    lua_pushlightuserdata(L, const_cast<char *>(ctx));
-    lua_pushinteger(L, size);
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
-    {
-        ELOG("websocket stream on_cs_pkt:%s", lua_tostring(L, -1));
-    }
-
-    lua_settop(L, 0); /* remove traceback */
-
-    return _socket->fd() < 0 ? -1 : 0;
-}
-
 int32_t WSStreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode,
                                      const char *ctx, size_t size)
 {
@@ -240,3 +174,4 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
 
     return 0;
 }
+#endif

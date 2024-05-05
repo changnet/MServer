@@ -24,6 +24,13 @@ enum LogType
 
 void set_app_name(const char *name);
 
+// __FILE__显示的是文件被编译时的路径，在cmake下是全路径
+// 这时可以通过cmake计算出根目录，丢掉根目录的路径即变成相对路径(relative file)
+#ifndef SRC_PATH_SIZE
+    #define SRC_PATH_SIZE 0
+#endif
+#define __RL_FILE__ (__FILE__ + SRC_PATH_SIZE)
+
 /**
  * 设置日志参数
  * @deamon: deamon，是否守护进程。为守护进程不会输出日志到stdcerr

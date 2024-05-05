@@ -6,11 +6,9 @@
 class LEV *StaticGlobal::_ev                  = nullptr;
 class LState *StaticGlobal::_state            = nullptr;
 class SSLMgr *StaticGlobal::_ssl_mgr          = nullptr;
-class CodecMgr *StaticGlobal::_codec_mgr      = nullptr;
 class Statistic *StaticGlobal::_statistic     = nullptr;
 class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
-class LNetworkMgr *StaticGlobal::_network_mgr = nullptr;
 Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
@@ -67,10 +65,7 @@ void StaticGlobal::initialize()
 
     _statistic   = new class Statistic();
     _state       = new class LState();
-    _codec_mgr   = new class CodecMgr();
-    _lua_bin_codec     = new class LuaBinCodec();
     _ssl_mgr     = new class SSLMgr();
-    _network_mgr = new class LNetworkMgr();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 
     _async_log->set_thread_name(STD_FMT("global_async_log"));
@@ -94,13 +89,9 @@ void StaticGlobal::uninitialize()
      * clear函数来解除引用，再delete掉，不然valgrind会报Invalid read内存错误
      */
     _thread_mgr->stop(_async_log);
-    _network_mgr->clear();
 
     delete _buffer_chunk_pool;
-    delete _network_mgr;
     delete _ssl_mgr;
-    delete _lua_bin_codec;
-    delete _codec_mgr;
     delete _state;
     delete _statistic;
 

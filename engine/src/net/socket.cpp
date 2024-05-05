@@ -622,12 +622,11 @@ void Socket::close_cb(bool term)
     _w = nullptr;
     StaticGlobal::ev()->io_delete(_conn_id);
 
-    StaticGlobal::network_mgr()->connect_del(_conn_id, e);
+    // StaticGlobal::network_mgr()->connect_del(_conn_id, e);
 }
 
 void Socket::listen_cb()
 {
-    static class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
     while (CS_OPENED == _status)
     {
         int32_t new_fd = (int32_t)::accept(_fd, nullptr, nullptr);
@@ -676,7 +675,7 @@ void Socket::listen_cb()
             continue;
         }
 
-        uint32_t conn_id     = network_mgr->new_connect_id();
+        uint32_t conn_id     = -1; // network_mgr->new_connect_id();
         class Socket *new_sk = new class Socket(conn_id, _conn_ty);
         if (!new_sk->start(new_fd))
         {
@@ -685,7 +684,8 @@ void Socket::listen_cb()
         }
 
         // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
-        bool ok = network_mgr->accept_new(_conn_id, new_sk);
+        bool ok = false;
+        // network_mgr->accept_new(_conn_id, new_sk);
         // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
         if (EXPECT_TRUE(ok && new_sk->_fd != netcompat::INVALID
                         && new_sk->_packet && new_sk->_io))
@@ -749,7 +749,8 @@ void Socket::connect_cb()
         _w->set(EV_READ);
     }
 
-    bool ok = StaticGlobal::network_mgr()->connect_new(_conn_id, ecode);
+    bool ok = false;
+    // StaticGlobal::network_mgr()->connect_new(_conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
     if (EXPECT_TRUE(ok && 0 == ecode && _fd != netcompat::INVALID && _packet
@@ -822,10 +823,10 @@ int32_t Socket::set_packet(Packet::PacketType packet_type)
 
     switch (packet_type)
     {
-    case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
-    case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
-    case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
-    case Packet::PT_WSSTREAM: _packet = new WSStreamPacket(this); break;
+    //case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
+    //case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
+    //case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
+    //case Packet::PT_WSSTREAM: _packet = new WSStreamPacket(this); break;
     default: return -1;
     }
     return 0;

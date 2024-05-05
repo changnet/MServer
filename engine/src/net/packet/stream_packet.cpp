@@ -37,92 +37,20 @@ int32_t StreamPacket::unpack(Buffer &buffer)
 
 void StreamPacket::dispatch(const struct base_header *header)
 {
-    switch (_socket->conn_type())
-    {
-    case Socket::CT_CSCN: /* 解析服务器发往客户端的包 */
-        sc_command(reinterpret_cast<const struct s2c_header *>(header));
-        break;
-    case Socket::CT_SCCN: /* 解析客户端发往服务器的包 */
-        cs_dispatch(reinterpret_cast<const struct c2s_header *>(header));
-        break;
-    case Socket::CT_SSCN: /* 解析服务器发往服务器的包 */
-        process_ss_command(reinterpret_cast<const struct s2s_header *>(header));
-        break;
-    default:
-        ELOG("stream_packet dispatch "
-             "unknow connect type:%d",
-             _socket->conn_type());
-        return;
-    }
-}
-
-void StreamPacket::sc_command(const struct s2c_header *header)
-{
     static lua_State *L = StaticGlobal::state();
 
     assert(0 == lua_gettop(L));
 
-    size_t size = PACKET_BUFFER_LEN(header);
-    /* 去掉header内容 */
-    const void *buffer = reinterpret_cast<const void *>(header + 1);
-
-    uint32_t conn_id = _socket->conn_id();
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "on_sc_pkt");
-    lua_pushinteger(L, conn_id);
-    lua_pushinteger(L, header->_cmd);
-    lua_pushlightuserdata(L, const_cast<void *>(buffer));
-    lua_pushinteger(L, size);
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
-    {
-        ELOG("on_sc_pkt:%s", lua_tostring(L, -1));
-
-        lua_settop(L, 0); /* remove traceback and error object */
-        return;
-    }
-    lua_settop(L, 0); /* remove traceback */
-}
-
-/* 派发客户端发给服务器数据包 */
-void StreamPacket::cs_dispatch(const struct c2s_header *header)
-{
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
-    uint16_t cmd    = header->_cmd;
-    size_t size     = PACKET_BUFFER_LEN(header);
-    const char *ctx = reinterpret_cast<const char *>(header + 1);
-
-    cs_command(cmd, ctx, size);
-}
-
-/* 客户端发往服务器数据包回调脚本 */
-void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
-{
-    static lua_State *L = StaticGlobal::state();
-
-    assert(0 == lua_gettop(L));
-
-    const CmdCfg *cmd_cfg = network_mgr->get_cs_cmd(cmd);
-    if (!cmd_cfg)
-    {
-        ELOG("cs_command cmd(%d) no cmd cfg found", cmd);
-        return;
-    }
-
-    int32_t conn_id           = _socket->conn_id();
+    int32_t conn_id = _socket->conn_id();
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
     lua_pushinteger(L, conn_id);
-    lua_pushinteger(L, cmd);
-    lua_pushlightuserdata(L, const_cast<char *>(ctx));
-    lua_pushinteger(L, size);
+    lua_pushlightuserdata(L, const_cast<struct base_header *>(header));
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
+    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2, 0, 1)))
     {
-        ELOG("cs_command:%s", lua_tostring(L, -1));
+        ELOG("%s", lua_tostring(L, -1));
 
         lua_settop(L, 0); /* remove traceback and error object */
         return;
@@ -130,108 +58,7 @@ void StreamPacket::cs_command(int32_t cmd, const char *ctx, size_t size)
     lua_settop(L, 0); /* remove traceback */
 }
 
-/* 处理服务器之间数据包 */
-void StreamPacket::process_ss_command(const s2s_header *header)
-{
-    /* 先判断数据包类型 */
-    switch (header->_packet)
-    {
-    case SPT_SSPK: ss_command(header); return;
-    case SPT_CSPK: css_command(header); return;
-    case SPT_SCPK: ssc_command(header); return;
-    case SPT_RPCS: rpc_command(header); return;
-    case SPT_RPCR: rpc_return(header); return;
-    case SPT_CBCP: ssc_multicast(header); return;
-    default:
-    {
-        ELOG("unknow server "
-             "packet:cmd %d,packet type %d",
-             header->_cmd, header->_packet);
-        return;
-    }
-    }
-}
-
-/* 服务器发往服务器数据包回调脚本 */
-void StreamPacket::ss_command(const s2s_header *header)
-{
-    static lua_State *L = StaticGlobal::state();
-    assert(0 == lua_gettop(L));
-
-    size_t size = PACKET_BUFFER_LEN(header);
-    /* 去掉header内容 */
-    const void *buffer = reinterpret_cast<const void *>(header + 1);
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "on_ss_pkt");
-    lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, header->_cmd);
-    lua_pushlightuserdata(L, const_cast<void *>(buffer));
-    lua_pushinteger(L, size);
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 4, 0, 1)))
-    {
-        ELOG("on_ss_pkt:%s", lua_tostring(L, -1));
-
-        lua_settop(L, 0); /* remove traceback and error object */
-        return;
-    }
-    lua_settop(L, 0); /* remove traceback */
-}
-
-/* 客户端发往服务器，由网关转发的数据包回调脚本 */
-void StreamPacket::css_command(const s2s_header *header)
-{
-    static lua_State *L = StaticGlobal::state();
-
-    assert(0 == lua_gettop(L));
-
-    size_t size = PACKET_BUFFER_LEN(header);
-    /* 去掉header内容 */
-    const void *buffer = reinterpret_cast<const void *>(header + 1);
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "on_css_pkt");
-    lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, header->_owner);
-    lua_pushinteger(L, header->_cmd);
-    lua_pushlightuserdata(L, const_cast<void *>(buffer));
-    lua_pushinteger(L, size);
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 5, 0, 1)))
-    {
-        ELOG("on_css_pkt:%s", lua_tostring(L, -1));
-
-        lua_settop(L, 0); /* remove traceback and error object */
-        return;
-    }
-    lua_settop(L, 0); /* remove traceback */
-}
-
-void StreamPacket::ssc_command(const s2s_header *header)
-{
-    static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-
-    class Socket *sk = network_mgr->get_conn_by_owner(header->_owner);
-    if (!sk)
-    {
-        ELOG("ssc packet no clt connect found");
-        return;
-    }
-
-    if (Socket::CT_SCCN != sk->conn_type())
-    {
-        ELOG("ssc packet destination conn is not a clt");
-        return;
-    }
-
-    size_t size             = PACKET_BUFFER_LEN(header);
-    const char *ctx         = reinterpret_cast<const char *>(header + 1);
-    class Packet *sk_packet = sk->get_packet();
-    sk_packet->raw_pack_clt(header->_cmd, header->_errno, ctx, size);
-}
-
-/* 处理rpc调用 */
+#ifdef OLDNET
 void StreamPacket::rpc_command(const s2s_header *header)
 {
     /**
@@ -280,7 +107,6 @@ void StreamPacket::rpc_command(const s2s_header *header)
     lua_settop(L, 0); /* remove trace back */
 }
 
-/* 处理rpc返回 */
 void StreamPacket::rpc_return(const s2s_header *header)
 {
     static lua_State *L = StaticGlobal::state();
@@ -390,6 +216,7 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
     return 0;
 }
 
+
 /* 打包客户端发往服务器数据包 */
 int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
 {
@@ -397,8 +224,8 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
 
     int32_t cmd = luaL_checkinteger32(L, index);
 
-    const char *buffer = luaL_checkludate(L, index + 1);
-    int32_t len        = luaL_checkinteger(L, index + 2);
+    const char *buffer = luaL_checkludata(L, index + 1);
+    int32_t len        = luaL_checkinteger32(L, index + 2);
     if (len < 0) return -1;
 
     struct c2s_header c2sh;
@@ -690,3 +517,4 @@ void StreamPacket::ssc_multicast(const s2s_header *header)
     }
     lua_settop(L, 0); /* remove traceback */
 }
+#endif

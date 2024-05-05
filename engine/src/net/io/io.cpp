@@ -119,6 +119,4 @@ int32_t IO::init_connect(int32_t fd)
 
 void IO::init_ok() const
 {
-    class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
-    network_mgr->io_ok(_conn_id);
 }

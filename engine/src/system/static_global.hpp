@@ -2,7 +2,6 @@
 
 #include "../lua_cpplib/llog.hpp"
 #include "../lua_cpplib/lev.hpp"
-#include "../lua_cpplib/lnetwork_mgr.hpp"
 #include "../lua_cpplib/lstate.hpp"
 #include "../net/io/ssl_mgr.hpp"
 #include "../thread/thread_mgr.hpp"
@@ -41,14 +40,6 @@ public:
     {
         return _ssl_mgr;
     }
-    static class CodecMgr *codec_mgr()
-    {
-        return _codec_mgr;
-    }
-    static class LuaBinCodec *lua_bin_codec()
-    {
-        return _lua_bin_codec;
-    }
     static class Statistic *statistic()
     {
         return _statistic;
@@ -60,10 +51,6 @@ public:
     static class ThreadMgr *thread_mgr()
     {
         return _thread_mgr;
-    }
-    static class LNetworkMgr *network_mgr()
-    {
-        return _network_mgr;
     }
     static Buffer::ChunkPool *buffer_chunk_pool()
     {
@@ -82,12 +69,9 @@ private:
     static class LEV *_ev;
     static class LState *_state;
     static class SSLMgr *_ssl_mgr;
-    static class CodecMgr *_codec_mgr;
-    static class LuaBinCodec *_lua_bin_codec;
     static class Statistic *_statistic;
     static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;
-    static class LNetworkMgr *_network_mgr;
     static Buffer::ChunkPool *_buffer_chunk_pool;
 
     static class initializer _initializer;
