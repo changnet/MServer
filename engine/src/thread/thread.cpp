@@ -1,6 +1,6 @@
 #include <csignal>
 #include "thread.hpp"
-#include "../system/static_global.hpp"
+#include "system/static_global.hpp"
 
 std::atomic<int32_t> Thread::_sig_mask(0);
 std::atomic<int32_t> Thread::_id_seed(0);

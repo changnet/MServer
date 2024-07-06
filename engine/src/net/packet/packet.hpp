@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../ev/buffer.hpp"
-#include "../../global/global.hpp"
+#include "ev/buffer.hpp"
+#include "global/global.hpp"
 
 /* socket packet parser and deparser */
 

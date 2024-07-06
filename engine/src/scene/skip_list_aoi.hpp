@@ -2,7 +2,7 @@
 
 #include <list>
 #include <functional>
-#include "../pool/cache_pool.hpp"
+#include "pool/cache_pool.hpp"
 
 /**
  * 使用跳表实现的单链表AOI

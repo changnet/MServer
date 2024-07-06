@@ -1,6 +1,6 @@
-#include "../../lua_cpplib/ltools.hpp"
-#include "../../system/static_global.hpp"
-#include "../socket.hpp"
+#include "lua_cpplib/ltools.hpp"
+#include "system/static_global.hpp"
+#include "net/socket.hpp"
 
 #include "http_packet.hpp"
 

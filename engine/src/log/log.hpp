@@ -5,8 +5,8 @@
 
 #include <cstdio>
 
-#include "../config.hpp"
-#include "../global/types.hpp"
+#include "config.hpp"
+#include "global/types.hpp"
 
 // 日志输出类型
 enum LogType

@@ -16,7 +16,8 @@
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 
-#include "../net/socket.hpp"
+#include "net/socket.hpp"
+#include "system/static_global.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -64,7 +65,7 @@ const char *__dbg_traceback()
 
 int32_t luaopen_ev(lua_State *L)
 {
-    LBaseClass<LEV> lc(L, "engine.Ev");
+    LClass<LEV> lc(L, "engine.Ev");
     lc.def<&LEV::time>("time");
     lc.def<&LEV::exit>("exit");
     lc.def<&LEV::signal>("signal");

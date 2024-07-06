@@ -3,7 +3,7 @@
 /* 网络通信消息包头格式定义
  */
 
-#include "../global/global.hpp"
+#include "global/global.hpp"
 
 #define MAX_SCHEMA_NAME 64
 

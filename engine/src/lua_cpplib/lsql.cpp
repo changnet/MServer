@@ -2,7 +2,7 @@
 
 #include "lsql.hpp"
 #include "ltools.hpp"
-#include "../system/static_global.hpp"
+#include "system/static_global.hpp"
 
 LSql::LSql(lua_State *L)
     : Thread("lsql"), _query_pool("lsql_query"), _result_pool("lsql_result")

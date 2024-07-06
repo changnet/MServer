@@ -1,6 +1,6 @@
 #include "lmap.hpp"
 #include "ltools.hpp"
-#include "../scene/scene_include.hpp"
+#include "scene/scene_include.hpp"
 
 LMap::~LMap() {}
 

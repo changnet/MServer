@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include "../config.hpp" /* config paramter */
+#include "config.hpp" /* config paramter */
 
 #include "types.hpp" /* base data type */
 
@@ -27,7 +27,7 @@
 #include "dbg_mem.hpp"
 
 // 底层C日志相关函数，脚本最终也在调用C来打印日志
-#include "../log/log.hpp"
+#include "log/log.hpp"
 
 /**
  * 格式化std::string，需要C++20才有std::format，这个暂时用一下

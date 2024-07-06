@@ -5,7 +5,7 @@
 #include "packet/stream_packet.hpp"
 #include "packet/websocket_packet.hpp"
 #include "packet/ws_stream_packet.hpp"
-#include "../system/static_global.hpp"
+#include "system/static_global.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>

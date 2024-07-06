@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../scene/a_star.hpp"
+#include "scene/a_star.hpp"
 #include <lua.hpp>
 
 /**

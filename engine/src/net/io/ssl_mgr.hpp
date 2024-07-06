@@ -1,7 +1,7 @@
 #pragma once
 
 #include <openssl/ssl.h>
-#include "../../global/global.hpp"
+#include "global/global.hpp"
 
 class SSLMgr
 {

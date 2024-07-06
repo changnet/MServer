@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../global/platform.hpp"
+#include "global/platform.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>

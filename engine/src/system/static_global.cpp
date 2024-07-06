@@ -1,7 +1,7 @@
 #include "static_global.hpp"
 
-#include "../mongo/mongo.hpp"
-#include "../mysql/sql.hpp"
+#include "mongo/mongo.hpp"
+#include "mysql/sql.hpp"
 
 class LEV *StaticGlobal::_ev                  = nullptr;
 class LState *StaticGlobal::_state            = nullptr;

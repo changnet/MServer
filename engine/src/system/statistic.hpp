@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../net/net_header.hpp"
-#include "../net/socket.hpp"
+#include "net/net_header.hpp"
+#include "net/socket.hpp"
 
 #define G_STAT StaticGlobal::statistic()
 

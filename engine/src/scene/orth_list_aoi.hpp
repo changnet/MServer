@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include "../pool/cache_pool.hpp"
+#include "pool/cache_pool.hpp"
 
 /**
  * @brief 基于十字链表(Orthogonal List)实现的三坐标AOI算法，支持单个实体可变视野

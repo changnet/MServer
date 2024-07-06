@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../net_header.hpp"
+#include "net/net_header.hpp"
 #include "packet.hpp"
 
 struct base_header;

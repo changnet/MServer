@@ -1,6 +1,6 @@
-#include "../global/platform.hpp"
-#include "../pool/object_pool.hpp"
-#include "../system/static_global.hpp"
+#include "global/platform.hpp"
+#include "pool/object_pool.hpp"
+#include "system/static_global.hpp"
 #include "log.hpp"
 
 /* 是否后台运行。后台运行则不输出日志到stdout */

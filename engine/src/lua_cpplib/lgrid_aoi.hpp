@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../scene/grid_aoi.hpp"
+#include "scene/grid_aoi.hpp"
 #include <lua.hpp>
 
 /**

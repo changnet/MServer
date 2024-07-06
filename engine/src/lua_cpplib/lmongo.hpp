@@ -2,9 +2,9 @@
 
 #include <queue>
 
-#include "../mongo/mongo.hpp"
-#include "../thread/thread.hpp"
-#include "../pool/object_pool.hpp"
+#include "mongo/mongo.hpp"
+#include "thread/thread.hpp"
+#include "pool/object_pool.hpp"
 
 struct lua_State;
 

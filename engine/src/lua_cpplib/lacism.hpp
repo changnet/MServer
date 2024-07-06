@@ -11,7 +11,7 @@ extern "C"
 #include <acism.h>
 }
 
-#include "../global/global.hpp"
+#include "global/global.hpp"
 
 /**
  * AC自动机，用于关键字过滤

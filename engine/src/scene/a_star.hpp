@@ -6,7 +6,7 @@
  * https://www.geeksforgeeks.org/a-search-algorithm/
  */
 
-#include "../pool/object_pool.hpp"
+#include "pool/object_pool.hpp"
 #include <vector>
 
 class GridMap;

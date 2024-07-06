@@ -2,7 +2,7 @@
 
 #include "llog.hpp"
 #include "ltools.hpp"
-#include "../system/static_global.hpp"
+#include "system/static_global.hpp"
 
 LLog::LLog(lua_State *L) : AsyncLog("LLog")
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mysql.h>
-#include "../global/global.hpp"
+#include "global/global.hpp"
 
 /// MySQL/MariaDB 数据库基础操作
 class Sql

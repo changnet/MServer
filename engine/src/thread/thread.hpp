@@ -147,8 +147,8 @@ C++标准的内容，改用busy wait的方式，即主线程每5ms查询一次�
 #include <thread>
 #include <condition_variable>
 
-#include "../ev/ev_watcher.hpp"
-#include "../global/global.hpp"
+#include "ev/ev_watcher.hpp"
+#include "global/global.hpp"
 
 /// 线程
 class Thread

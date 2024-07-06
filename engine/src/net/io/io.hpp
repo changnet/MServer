@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../global/global.hpp"
+#include "global/global.hpp"
 
 class EVIO;
 class Buffer;

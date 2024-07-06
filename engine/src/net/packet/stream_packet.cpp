@@ -1,9 +1,9 @@
 #include "stream_packet.hpp"
 
-#include "../../lua_cpplib/ltools.hpp"
-#include "../../system/static_global.hpp"
-#include "../socket.hpp"
-#include "../codec/luabin_codec.hpp"
+#include "lua_cpplib/ltools.hpp"
+#include "system/static_global.hpp"
+#include "net/socket.hpp"
+#include "net/codec/luabin_codec.hpp"
 
 StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
 {

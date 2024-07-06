@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../pool/cache_pool.hpp"
+#include "pool/cache_pool.hpp"
 #include <functional> /* std::function */
 
 /**

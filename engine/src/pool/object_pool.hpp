@@ -3,7 +3,7 @@
 #include <mutex>
 
 #include "pool.hpp"
-#include "../thread/spin_lock.hpp"
+#include "thread/spin_lock.hpp"
 
 /**
  * 对象内存池

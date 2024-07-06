@@ -5,7 +5,7 @@
 
 #include "ltools.hpp"
 #include "lmongo.hpp"
-#include "../system/static_global.hpp"
+#include "system/static_global.hpp"
 
 #define MONGODB_EVENT "mongodb_event"
 

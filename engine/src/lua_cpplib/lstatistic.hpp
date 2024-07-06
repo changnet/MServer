@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../system/statistic.hpp"
+#include "system/statistic.hpp"
 #include <lua.hpp>
 
 class LStatistic

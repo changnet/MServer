@@ -1,5 +1,5 @@
-#include "../net/socketpair.hpp"
-#include "../net/net_compat.hpp"
+#include "net/socketpair.hpp"
+#include "net/net_compat.hpp"
 
 #ifdef __windows__
     #include <SdkDdkVer.h>

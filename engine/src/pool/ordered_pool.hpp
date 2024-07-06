@@ -3,7 +3,7 @@
 #include <mutex>
 
 #include "pool.hpp"
-#include "../thread/spin_lock.hpp"
+#include "thread/spin_lock.hpp"
 
 /**
  * 等长内存池，参考了boost内存池(boolst/pool/pool.hpp).分配的内存只能是ordered_size

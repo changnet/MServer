@@ -2,9 +2,9 @@
 
 #include <queue>
 
-#include "../mysql/sql.hpp"
-#include "../thread/thread.hpp"
-#include "../pool/cache_pool.hpp"
+#include "mysql/sql.hpp"
+#include "thread/thread.hpp"
+#include "pool/cache_pool.hpp"
 
 struct lua_State;
 

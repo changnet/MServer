@@ -1,7 +1,7 @@
 #include <filesystem>
 
 #include "async_log.hpp"
-#include "../system/static_global.hpp"
+#include "system/static_global.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 AsyncLog::Policy::Policy()

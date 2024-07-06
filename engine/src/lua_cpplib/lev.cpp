@@ -1,8 +1,8 @@
 #include "lev.hpp"
 #include "ltools.hpp"
 
-#include "../net/socket.hpp"
-#include "../system/static_global.hpp"
+#include "net/socket.hpp"
+#include "system/static_global.hpp"
 
 LEV::LEV()
 {

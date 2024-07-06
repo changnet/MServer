@@ -4,8 +4,8 @@
 #include <condition_variable>
 
 #include "ev_watcher.hpp"
-#include "../thread/spin_lock.hpp"
-#include "../global/global.hpp"
+#include "thread/spin_lock.hpp"
+#include "global/global.hpp"
 
 /**
  * @brief 主循环事件定义，这些事件可能会同时触发，按位定义

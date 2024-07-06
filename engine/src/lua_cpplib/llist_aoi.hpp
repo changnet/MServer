@@ -1,10 +1,10 @@
 #pragma once
 
 #ifdef USE_ORTH_LIST_AOI
-    #include "../scene/orth_list_aoi.hpp"
+    #include "scene/orth_list_aoi.hpp"
 using ListAOI = OrthListAOI;
 #else
-    #include "../scene/skip_list_aoi.hpp"
+    #include "scene/skip_list_aoi.hpp"
 using ListAOI = SkipListAOI;
 #endif
 #include <lua.hpp>

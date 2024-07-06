@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../scene/grid_map.hpp"
+#include "scene/grid_map.hpp"
 #include <lua.hpp>
 
 /**

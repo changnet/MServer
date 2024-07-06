@@ -3,7 +3,7 @@
 #include <bson/bson.h>
 #include <mongoc/mongoc.h>
 
-#include "../global/global.hpp"
+#include "global/global.hpp"
 
 #define MONGO_VAR_LEN 64
 

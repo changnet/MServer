@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../global/global.hpp"
+#include "global/global.hpp"
 
 /// 内存池、对象池基类
 class Pool

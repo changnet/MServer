@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../thread/thread.hpp"
-#include "../pool/object_pool.hpp"
+#include "thread/thread.hpp"
+#include "pool/object_pool.hpp"
 #include "log.hpp"
 
 /// 多线程异步日志

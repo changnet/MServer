@@ -5,7 +5,7 @@
  * 2017-07-18 by xzc
  */
 
-#include "../global/global.hpp"
+#include "global/global.hpp"
 
 class GridMap
 {

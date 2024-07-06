@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../pool/object_pool.hpp"
-#include "../thread/spin_lock.hpp"
+#include "pool/object_pool.hpp"
+#include "thread/spin_lock.hpp"
 
 /**
  * 单个chunk

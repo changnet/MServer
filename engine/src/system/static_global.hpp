@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../lua_cpplib/llog.hpp"
-#include "../lua_cpplib/lev.hpp"
-#include "../lua_cpplib/lstate.hpp"
-#include "../net/io/ssl_mgr.hpp"
-#include "../thread/thread_mgr.hpp"
+#include "lua_cpplib/llog.hpp"
+#include "lua_cpplib/lev.hpp"
+#include "lua_cpplib/lstate.hpp"
+#include "net/io/ssl_mgr.hpp"
+#include "thread/thread_mgr.hpp"
 #include "statistic.hpp"
 
 /**

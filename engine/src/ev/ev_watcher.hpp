@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "../net/io/io.hpp"
+#include "net/io/io.hpp"
 #include "buffer.hpp"
 
 class EV;

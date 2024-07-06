@@ -1,6 +1,6 @@
 #include "io.hpp"
-#include "../net_compat.hpp"
-#include "../../system/static_global.hpp"
+#include "net/net_compat.hpp"
+#include "system/static_global.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>

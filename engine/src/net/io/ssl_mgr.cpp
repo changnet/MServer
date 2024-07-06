@@ -1,7 +1,7 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
-#include "../net_compat.hpp"
+#include "net/net_compat.hpp"
 #include "ssl_mgr.hpp"
 
 void SSLMgr::library_end()

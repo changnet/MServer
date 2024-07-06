@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../log/async_log.hpp"
+#include "log/async_log.hpp"
 
 struct lua_State;
 

@@ -1,6 +1,7 @@
-#include "../../system/static_global.hpp"
 #include "ssl_io.hpp"
-#include "../net_compat.hpp"
+
+#include "system/static_global.hpp"
+#include "net/net_compat.hpp"
 
 SSLIO::~SSLIO()
 {

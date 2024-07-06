@@ -9,8 +9,8 @@
 
 #include "lutil.hpp"
 #include "ltools.hpp"
-#include "../net/socket.hpp" // get_addr_info
-#include "../net/net_compat.hpp"
+#include "net/socket.hpp" // get_addr_info
+#include "net/net_compat.hpp"
 
 #ifdef __windows__
     #include <rpc.h>
