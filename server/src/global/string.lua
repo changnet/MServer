@@ -3,6 +3,13 @@
 -- xzc
 -- string library extend function
 
+local string_fill_tbl = {}
+local string_fill_v = {
+    "0", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "11", "12", "13", "14", "15", "16", "17", "18",
+}
+local string_gsub = string.gsub
+
 -- 查找最后出现的字符串索引
 -- @param str 待查找的字符串
 -- @param pattern 需要查找的字符串，如果有lua正则特殊符号，需要使用%转义
@@ -142,4 +149,19 @@ end
 -- 把字符串中的正则字符进行转义
 function string.gescape(str)
     return str:gsub('[%^%$%(%)%%%.%[%]%*%+%-%?]', '%%%1')
+end
+
+-- 类似python和C#的字符串格式化，把{0}这种placeholder填充成对应的变量
+function stirng.fill(fmt, ...)
+    local n = select("#", ...)
+    if 0 == n then return fmt end
+
+    for i = 1, n do
+        local v = select(i, ...)
+        if nil == v then v = "nil" end
+
+        string_fill_tbl[ string_fill_v[i] ] = tostring(v)
+    end
+
+    return string_gsub(fmt, "{(%d)}", string_fill_tbl)
 end

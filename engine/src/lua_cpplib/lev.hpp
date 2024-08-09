@@ -20,11 +20,6 @@ public:
     explicit LEV();
 
     /**
-     * 关闭socket、定时器等并退出循环
-     */
-    int32_t exit(lua_State *L);
-
-    /**
      * 启动utc定时器
      * @param id 定时器唯一id
      * @param after N秒后第一次执行
@@ -56,7 +51,7 @@ public:
      * 获取帧时间戳，秒
      * 如果服务器卡了，这时间和实时时间是不一样的
      */
-    int32_t time(lua_State *L);
+    int64_t time();
 
     /**
      * 获取帧时间戳，毫秒

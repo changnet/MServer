@@ -66,8 +66,8 @@ const char *__dbg_traceback()
 int32_t luaopen_ev(lua_State *L)
 {
     LClass<LEV> lc(L, "engine.Ev");
-    lc.def<&LEV::time>("time");
-    lc.def<&LEV::exit>("exit");
+    lc.def<&LEV::now>("time");
+    lc.def<&LEV::quit>("exit");
     lc.def<&LEV::signal>("signal");
     lc.def<&LEV::ms_time>("ms_time");
     lc.def<&LEV::backend>("backend");

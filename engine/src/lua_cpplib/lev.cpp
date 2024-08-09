@@ -15,13 +15,6 @@ LEV::~LEV()
 {
 }
 
-int32_t LEV::exit(lua_State *L)
-{
-    UNUSED(L);
-    EV::quit();
-    return 0;
-}
-
 int32_t LEV::backend(lua_State *L)
 {
     UNUSED(L);
@@ -38,11 +31,9 @@ int32_t LEV::time_update(lua_State *L)
     return 0;
 }
 
-// 帧时间
-int32_t LEV::time(lua_State *L)
+int64_t LEV::time()
 {
-    lua_pushinteger(L, _system_now);
-    return 1;
+    return _system_now;
 }
 
 int32_t LEV::ms_time(lua_State *L) // 帧时间，ms
