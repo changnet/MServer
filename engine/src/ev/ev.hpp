@@ -185,11 +185,12 @@ public:
         _has_job = job;
     }
 
+    void time_update();
+
 protected:
     virtual void running() = 0;
 
     void io_reify();
-    void time_update();
     /**
      * 设置watcher的回调事件
      */

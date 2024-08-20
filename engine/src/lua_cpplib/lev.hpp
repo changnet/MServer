@@ -45,7 +45,7 @@ public:
      * 停止定时器
      * @param id 定时器唯一id
      */
-    int32_t timer_stop(lua_State *L);
+    int32_t timer_stop(int32_t id);
 
     /**
      * 获取帧时间戳，秒
@@ -54,21 +54,9 @@ public:
     int64_t time();
 
     /**
-     * 获取帧时间戳，毫秒
-     */
-    int32_t ms_time(lua_State *L);
-
-    /**
      * 进入后台循环
      */
     int32_t backend(lua_State *L);
-
-    /**
-     * 手动更新主循环时间，慎用。
-     * 一般主循环每个帧都会更新时间，但如果做特殊处理时（例如执行行时间测试），所有逻辑都在一帧内
-     * 执行，这时就需要手动更新主循环时间。手动更新时间可能导致一些逻辑错误，如after_run。
-     */
-    int32_t time_update(lua_State *L);
 
     /**
      * 查看繁忙的线程
@@ -76,16 +64,6 @@ public:
      * @return 线程名字 已处理完等待交付主线程的任务 等待处理的任务
      */
     int32_t who_busy(lua_State *L);
-
-    /**
-     * 获取实时UTC时间戳，毫秒
-     */
-    int32_t system_clock(lua_State *L);
-
-    /**
-     * 获取实时进程启动以来时间，毫秒
-     */
-    int32_t steady_clock(lua_State *L);
 
     /**
      * 设置主循环单次循环临界时间，当单次循环超过此时间时，将会打印繁忙日志
@@ -99,13 +77,13 @@ public:
      * @param action 处理方式
      * 0删除之前的注册，1忽略此信号，其他则回调到脚本sig_handler处理
      */
-    int32_t signal(lua_State *L);
+    int32_t signal(int32_t sig, int32_t action);
 
     /**
      * 设置app回调时间，不断回调到脚本全局application_ev函数
      * @param interval 回调间隔，毫秒
      */
-    int32_t set_app_ev(lua_State *L);
+    void set_app_ev(int32_t interval);
 
 private:
     void running() override;

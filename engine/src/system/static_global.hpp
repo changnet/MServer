@@ -18,6 +18,8 @@
  * 业务逻辑的销毁放uninitialize函数。业务逻辑必须在这里销毁，不能等到static对象析构
  * !!! 因为其他局部变量在main函数之后销毁了
  */
+
+// 统一管理全局变量、静态变量
 class StaticGlobal
 {
 public:
@@ -56,6 +58,9 @@ public:
     {
         return _buffer_chunk_pool;
     }
+
+public:
+    inline static lua_State *L = nullptr;
 
 private:
     class initializer // 提供一个等级极高的初始化

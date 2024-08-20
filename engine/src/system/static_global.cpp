@@ -65,6 +65,7 @@ void StaticGlobal::initialize()
 
     _statistic   = new class Statistic();
     _state       = new class LState();
+    L                  = _state->state();
     _ssl_mgr     = new class SSLMgr();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 
@@ -93,6 +94,7 @@ void StaticGlobal::uninitialize()
     delete _buffer_chunk_pool;
     delete _ssl_mgr;
     delete _state;
+    L = nullptr;
     delete _statistic;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效

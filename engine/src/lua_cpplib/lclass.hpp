@@ -273,13 +273,11 @@ namespace
     // 前置声明
     template <typename T> struct class_remove;
     // 特化为static函数或全局函数
-    /*
     template<typename Ret, typename... Args>
     struct class_remove<Ret(*)(Args...)>
     {
         using type = Ret(*)(Args...);
     };
-    */
     // 特化为成员函数
     template <typename T, typename Ret, typename... Args>
     struct class_remove<Ret (T::*)(Args...)>
@@ -318,8 +316,37 @@ template <class T>
 class LClass
 {
 private:
-    template <typename C> class ClassRegister;
+    template <class C> class StaticRegister;
+    template <typename Ret, typename... Args>
+    class StaticRegister<Ret (*)(Args...)>
+    {
+    private:
+        static constexpr auto indices =
+            std::make_index_sequence<sizeof...(Args)>{};
 
+        template <auto fp, size_t... I>
+        static int caller(lua_State *L, const std::index_sequence<I...> &)
+        {
+            if constexpr (std::is_void_v<Ret>)
+            {
+                fp(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...);
+                return 0;
+            }
+            else
+            {
+                cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
+                return 1;
+            }
+        }
+
+    public:
+        template <auto fp> static int reg(lua_State *L)
+        {
+            return caller<fp>(L, indices);
+        }
+    };
+
+    template <typename C> class ClassRegister;
     template<typename C, typename Ret, typename... Args>
     class ClassRegister<Ret(C::*)(Args...)>
     {
@@ -522,6 +549,10 @@ public:
         if constexpr (std::is_same_v<decltype(fp), lua_CFunction>)
         {
             cfp = fp;
+        }
+        else if constexpr (!std::is_member_function_pointer_v<decltype(fp)>)
+        {
+            cfp = StaticRegister<decltype(fp)>::template reg<fp>;
         }
         else if constexpr (is_lua_func<decltype(fp)>)
         {

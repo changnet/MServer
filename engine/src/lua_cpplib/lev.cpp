@@ -24,27 +24,14 @@ int32_t LEV::backend(lua_State *L)
     return 0;
 }
 
-int32_t LEV::time_update(lua_State *L)
-{
-    UNUSED(L);
-    EV::time_update();
-    return 0;
-}
-
 int64_t LEV::time()
 {
     return _system_now;
 }
 
-int32_t LEV::ms_time(lua_State *L) // 帧时间，ms
-{
-    lua_pushinteger(L, _steady_clock);
-    return 1;
-}
-
 int32_t LEV::who_busy(lua_State *L) // 看下哪条线程繁忙
 {
-    bool skip = lua_toboolean(L, 1);
+    bool skip = lua_toboolean(L, 2);
 
     size_t finished   = 0;
     size_t unfinished = 0;
@@ -60,25 +47,11 @@ int32_t LEV::who_busy(lua_State *L) // 看下哪条线程繁忙
     return 3;
 }
 
-int32_t LEV::system_clock(lua_State *L)
+int32_t LEV::signal(int32_t sig, int32_t action)
 {
-    lua_pushinteger(L, EV::system_clock());
-    return 1;
-}
-
-int32_t LEV::steady_clock(lua_State *L)
-{
-    lua_pushinteger(L, EV::steady_clock());
-    return 1;
-}
-
-int32_t LEV::signal(lua_State *L)
-{
-    int32_t sig    = luaL_checkinteger32(L, 1);
-    int32_t action = luaL_optinteger32(L, 2, -1);
     if (sig < 1 || sig > 31)
     {
-        return luaL_error(L, "illegal signal id:%d", sig);
+        return luaL_error(StaticGlobal::L, "illegal signal id:%d", sig);
     }
 
     Thread::signal(sig, action);
@@ -86,23 +59,23 @@ int32_t LEV::signal(lua_State *L)
     return 0;
 }
 
-int32_t LEV::set_app_ev(lua_State *L) // 设置脚本主循环回调
+void LEV::set_app_ev(int32_t interval)
 {
     // 主循环不要设置太长的循环时间，如果太长用定时器就好了
-    int32_t interval = luaL_checkinteger32(L, 1);
     if (interval < 0 || interval > 60000)
     {
-        return luaL_error(L, "illegal argument");
+        luaL_error(StaticGlobal::L, "illegal argument");
+        return;
     }
 
     _app_repeat  = interval;
     _app_next_tm = _steady_clock;
-    return 0;
+    return;
 }
 
 int32_t LEV::set_critical_time(lua_State *L) // 设置主循环临界时间
 {
-    _critical_tm = luaL_checkinteger32(L, 1);
+    _critical_tm = luaL_checkinteger32(L, 2);
 
     return 0;
 }
@@ -173,10 +146,10 @@ void LEV::running()
 
 int32_t LEV::periodic_start(lua_State *L)
 {
-    int32_t id     = luaL_checkinteger32(L, 1);
-    int64_t after  = luaL_checkinteger(L, 2);
-    int64_t repeat = luaL_checkinteger(L, 3);
-    int32_t policy = luaL_checkinteger32(L, 4);
+    int32_t id     = luaL_checkinteger32(L, 2);
+    int64_t after  = luaL_checkinteger(L, 3);
+    int64_t repeat = luaL_checkinteger(L, 4);
+    int32_t policy = luaL_checkinteger32(L, 5);
 
     int32_t e = EV::periodic_start(id, after, repeat, policy);
     lua_pushinteger(L, e);
@@ -186,7 +159,7 @@ int32_t LEV::periodic_start(lua_State *L)
 
 int32_t LEV::periodic_stop(lua_State *L)
 {
-    int32_t id = luaL_checkinteger32(L, 1);
+    int32_t id = luaL_checkinteger32(L, 2);
 
     int32_t e = EV::periodic_stop(id);
     lua_pushinteger(L, e);
@@ -196,10 +169,10 @@ int32_t LEV::periodic_stop(lua_State *L)
 
 int32_t LEV::timer_start(lua_State *L)
 {
-    int32_t id     = luaL_checkinteger32(L, 1);
-    int64_t after  = luaL_checkinteger(L, 2);
-    int64_t repeat = luaL_checkinteger(L, 3);
-    int32_t policy = luaL_checkinteger32(L, 4);
+    int32_t id     = luaL_checkinteger32(L, 2);
+    int64_t after  = luaL_checkinteger(L, 3);
+    int64_t repeat = luaL_checkinteger(L, 4);
+    int32_t policy = luaL_checkinteger32(L, 5);
 
     int32_t e = EV::timer_start(id, after, repeat, policy);
     lua_pushinteger(L, e);
@@ -207,14 +180,9 @@ int32_t LEV::timer_start(lua_State *L)
     return 1;
 }
 
-int32_t LEV::timer_stop(lua_State *L)
+int32_t LEV::timer_stop(int32_t id)
 {
-    int32_t id = luaL_checkinteger32(L, 1);
-
-    int32_t e = EV::timer_stop(id);
-    lua_pushinteger(L, e);
-
-    return 1;
+    return EV::timer_stop(id);
 }
 
 void LEV::timer_callback(int32_t id, int32_t revents)
