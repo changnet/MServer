@@ -152,7 +152,7 @@ function string.gescape(str)
 end
 
 -- 类似python和C#的字符串格式化，把{0}这种placeholder填充成对应的变量
-function stirng.fill(fmt, ...)
+function string.fill(fmt, ...)
     local n = select("#", ...)
     if 0 == n then return fmt end
 

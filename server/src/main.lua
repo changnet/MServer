@@ -114,7 +114,7 @@ local function main(cmd, ...)
                                 tonumber(opts.index or 0))
     local ppath = string.format("log/%s%02d_runtime", name,
                                 tonumber(opts.index or 0))
-    Log.set_std_option(opts.deamon, ppath, epath) -- 设置C++用的日志参数
+    Log:set_std_option(opts.deamon, ppath, epath) -- 设置C++用的日志参数
     g_async_log:set_option(ppath, Log.PT_DAILY)
     g_async_log:set_option(epath, Log.PT_SIZE, 1024 * 1024 * 10)
 
@@ -123,7 +123,7 @@ local function main(cmd, ...)
     -- local app_name = string.format("%s.%d",name,index)
     local app_name = string.format("%s%d", string.char(string.byte(name) - 32),
                                    opts.index or 0)
-    if not opts.deamon then Log.set_name(app_name) end
+    if not opts.deamon then Log:set_name(app_name) end
 
     -- win下设置cmd为utf8编码
     -- 并设置标题用于区分cmd界面

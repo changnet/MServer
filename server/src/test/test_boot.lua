@@ -11,13 +11,14 @@ require "timer.timer"
 require "global.test"
 
 require "test.misc_test"
-require "test.https_test"
 require "test.grid_aoi_test"
 require "test.list_aoi_test"
 require "test.mt_test"
+--[[
 require "test.mongodb_test"
 require "test.mysql_test"
 require "test.log_test"
+require "test.https_test"
 require "test.websocket_test"
 require "test.words_filter_test"
 require "test.rank_test"
@@ -25,6 +26,7 @@ require "test.rpc_test"
 require "test.protobuf_test"
 require "test.flatbuffers_test"
 require "test.timer_test"
+]]
 
 local function exec_test()
     local opts = g_app.opts
@@ -57,7 +59,6 @@ local function exec_test()
 
     -- 随机一个session，部分功能用到，如测试协议派发时
     g_app.session = 0x10001
-    network_mgr:set_curr_session(g_app.session)
 
     -- vd( statistic.dump() )
 

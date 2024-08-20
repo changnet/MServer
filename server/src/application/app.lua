@@ -143,9 +143,6 @@ local function initialize()
 
     APP_TYPE = APP[string.upper(g_app.name)]
     g_app.session = App.encode_session(APP_TYPE, g_app.index, g_app.id)
-
-    -- 设置当前session到C++
-    network_mgr:set_curr_session(g_app.session)
 end
 
 -- 检测哪些初始化未完成

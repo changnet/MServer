@@ -11,12 +11,12 @@ class LLog final : public AsyncLog
 {
 public:
     ~LLog();
-    explicit LLog(lua_State *L);
+    explicit LLog(const char *name);
 
     /**
      * 停止日志线程，并把未写入文件的日志全部写入
      */
-    int32_t stop(lua_State *L);
+    void stop();
 
     /**
      * 启动日志线程

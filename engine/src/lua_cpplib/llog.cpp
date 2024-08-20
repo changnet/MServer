@@ -4,36 +4,22 @@
 #include "ltools.hpp"
 #include "system/static_global.hpp"
 
-LLog::LLog(lua_State *L) : AsyncLog("LLog")
+LLog::LLog(const char *name) : AsyncLog(name)
 {
-    // 不是从lua创建线程时，不传虚拟机参数
-    if (!L) return;
-
-    if (lua_isstring(L, 2))
-    {
-        const char *name = lua_tostring(L, 2);
-        set_thread_name(name);
-    }
-    else
-    {
-        ELOG("invalid log thread name");
-    }
+    set_thread_name(name);
 }
 
 LLog::~LLog() {}
 
-int32_t LLog::stop(lua_State *L)
+void LLog::stop()
 {
-    UNUSED(L);
     if (!active())
     {
         ELOG("try to stop a inactive log thread");
-        return 0;
+        return;
     }
 
     AsyncLog::stop();
-
-    return 0;
 }
 
 int32_t LLog::start(lua_State *L)
@@ -60,9 +46,9 @@ int32_t LLog::append_log_file(lua_State *L)
     }
 
     size_t len       = 0;
-    const char *path = luaL_checkstring(L, 1);
-    const char *ctx  = luaL_checklstring(L, 2, &len);
-    int64_t time     = luaL_optinteger(L, 3, 0);
+    const char *path = luaL_checkstring(L, 2);
+    const char *ctx  = luaL_checklstring(L, 3, &len);
+    int64_t time     = luaL_optinteger(L, 4, 0);
     if (!time) time = StaticGlobal::ev()->now();
 
     append(path, LT_LOGFILE, time, ctx, len);
@@ -78,8 +64,8 @@ int32_t LLog::append_file(lua_State *L)
     }
 
     size_t len       = 0;
-    const char *path = luaL_checkstring(L, 1);
-    const char *ctx  = luaL_checklstring(L, 2, &len);
+    const char *path = luaL_checkstring(L, 2);
+    const char *ctx  = luaL_checklstring(L, 3, &len);
 
     append(path, LT_FILE, 0, ctx, len);
 
@@ -110,7 +96,7 @@ int32_t LLog::plog(lua_State *L)
     // 一些基础类型，尽量不用tostring，那样会创建一个str再gc掉
     size_t used = 0;
     int32_t n   = lua_gettop(L);
-    for (int32_t i = 1; i <= n; i++)
+    for (int32_t i = 2; i <= n; i++)
     {
         if (i > 1) *(buff + used++) = '\t';
         switch (lua_type(L, i))
@@ -189,7 +175,7 @@ int32_t LLog::plog(lua_State *L)
 int32_t LLog::eprint(lua_State *L)
 {
     size_t len      = 0;
-    const char *ctx = luaL_checklstring(L, 1, &len);
+    const char *ctx = luaL_checklstring(L, 2, &len);
 
     StaticGlobal::async_logger()->append(get_error_path(), LT_LERROR,
                                          StaticGlobal::ev()->now(), ctx, len);
@@ -199,9 +185,9 @@ int32_t LLog::eprint(lua_State *L)
 
 int32_t LLog::set_option(lua_State *L)
 {
-    const char *path = luaL_checkstring(L, 1);
-    int32_t type     = luaL_checkinteger32(L, 2);
-    int64_t opt_val  = luaL_optinteger(L, 3, 0);
+    const char *path = luaL_checkstring(L, 2);
+    int32_t type     = luaL_checkinteger32(L, 3);
+    int64_t opt_val  = luaL_optinteger(L, 4, 0);
 
     set_policy(path, type, opt_val);
     return 0;
@@ -210,9 +196,9 @@ int32_t LLog::set_option(lua_State *L)
 // 设置日志参数
 int32_t LLog::set_std_option(lua_State *L)
 {
-    bool dm           = lua_toboolean(L, 1);
-    const char *ppath = luaL_checkstring(L, 2);
-    const char *epath = luaL_checkstring(L, 3);
+    bool dm           = lua_toboolean(L, 2);
+    const char *ppath = luaL_checkstring(L, 3);
+    const char *epath = luaL_checkstring(L, 4);
 
     set_log_args(dm, ppath, epath);
     return 0;
@@ -221,7 +207,7 @@ int32_t LLog::set_std_option(lua_State *L)
 // 设置日志参数
 int32_t LLog::set_name(lua_State *L)
 {
-    const char *name = luaL_checkstring(L, 1);
+    const char *name = luaL_checkstring(L, 2);
 
     set_app_name(name);
     return 0;

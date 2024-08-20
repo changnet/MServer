@@ -60,7 +60,7 @@ void StaticGlobal::initialize()
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
     _thread_mgr = new class ThreadMgr();
-    _async_log  = new class LLog(nullptr);
+    _async_log  = new class LLog("Engine.AsyncLog");
     _ev         = new class LEV();
 
     _statistic   = new class Statistic();
