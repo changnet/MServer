@@ -85,6 +85,16 @@ int32_t luaopen_ev(lua_State *L)
     return 0;
 }
 
+int32_t luaopen_socket(lua_State* L)
+{
+    LClass<Socket> lc(L, "engine.Socket");
+    lc.def<&Socket::start>("start");
+    lc.def<&Socket::stop>("stop");
+    lc.def<&Socket::listen>("listen");
+
+    return 0;
+}
+
 int32_t luaopen_sql(lua_State *L)
 {
 
@@ -293,6 +303,7 @@ void LState::open_cpp()
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_ev(L);
+    luaopen_socket(L);
     luaopen_sql(L);
     luaopen_log(L);
     luaopen_map(L);

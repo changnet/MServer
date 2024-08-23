@@ -4,9 +4,8 @@
 #include "ltools.hpp"
 #include "system/static_global.hpp"
 
-LLog::LLog(const char *name) : AsyncLog(name)
+LLog::LLog(const char *name) : AsyncLog(name ? name : "unknow")
 {
-    set_thread_name(name);
 }
 
 LLog::~LLog() {}
