@@ -8,6 +8,12 @@ call function native	1091772	microsecond
 call function as table value	1287172	microsecond
 call function with 3 level metatable	2014431	microsecond
 call function with 10 level metatable	3707181	microsecond
+[T0LP09-02 15:10:56]    [  OK] call function native 10000000 times (449ms)
+[T0LP09-02 15:10:56]    [  OK] call function as table value 10000000 times (555ms)
+[T0LP09-02 15:10:58]    [  OK] call function 1 level metatable 10000000 times (1110ms)
+[T0LP09-02 15:11:00]    [  OK] call function 3 level metatable 10000000 times (2033ms)
+[T0LP09-02 15:11:05]    [  OK] call function 10 level metatable 10000000 times (5015ms)
+
 ]]
 
 t_describe("metatable test", function()
@@ -49,9 +55,7 @@ t_describe("metatable test", function()
 
     t_it(string.format("call function as table value %d times", ts), function()
         local cnt = 0
-        local tb = {}
-        tb.test = test
-        for _ = 1, ts do cnt = tb.test(cnt, 1) end
+        for _ = 1, ts do cnt = mt.test(cnt, 1) end
     end)
 
     t_it(string.format("call function 1 level metatable %d times", ts),

@@ -2,6 +2,7 @@
 
 #include "system/static_global.hpp"
 #include "net/net_compat.hpp"
+#include "net/io/tls_ctx.hpp"
 
 SSLIO::~SSLIO()
 {
@@ -66,7 +67,7 @@ IO::IOStatus SSLIO::recv(EVIO *w)
     }
 
     w->_errno = netcompat::noerror();
-    SSLMgr::ssl_error("ssl io recv");
+    TLSCTX::dump_error("ssl io recv");
     return IOS_ERROR;
 }
 
@@ -108,7 +109,7 @@ IO::IOStatus SSLIO::send(EVIO *w)
     }
 
     w->_errno = netcompat::noerror();
-    SSLMgr::ssl_error("ssl io send");
+    TLSCTX::dump_error("ssl io send");
     return IOS_ERROR;
 }
 
@@ -144,15 +145,8 @@ IO::IOStatus SSLIO::do_init_connect()
 
 int32_t SSLIO::init_ssl_ctx()
 {
-    static class SSLMgr *ctx_mgr = StaticGlobal::ssl_mgr();
 
-    SSL_CTX *base_ctx = ctx_mgr->get_ssl_ctx(_ssl_id);
-    if (!base_ctx)
-    {
-        ELOG("ssl io init ssl ctx no base ctx found: %d", _ssl_id);
-        return -1;
-    }
-
+    SSL_CTX *base_ctx = nullptr;
     _ssl_ctx = SSL_new(base_ctx);
     if (!_ssl_ctx)
     {
@@ -194,7 +188,7 @@ IO::IOStatus SSLIO::do_handshake()
     if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
 
     // error
-    SSLMgr::ssl_error(__FUNCTION__, ecode);
+    TLSCTX::dump_error(__FUNCTION__, ecode);
 
     return IOS_ERROR;
 }

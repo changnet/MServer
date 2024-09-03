@@ -2,10 +2,10 @@
 
 #include "mongo/mongo.hpp"
 #include "mysql/sql.hpp"
+#include "net/io/tls_ctx.hpp"
 
 class LEV *StaticGlobal::_ev                  = nullptr;
 class LState *StaticGlobal::_state            = nullptr;
-class SSLMgr *StaticGlobal::_ssl_mgr          = nullptr;
 class Statistic *StaticGlobal::_statistic     = nullptr;
 class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
@@ -32,7 +32,7 @@ StaticGlobal::initializer::initializer()
 
     std::set_new_handler(on_new_fail);
 
-    SSLMgr::library_init();
+    TLSCTX::library_init();
     Sql::library_init();
     Mongo::init();
     Socket::library_init();
@@ -42,7 +42,7 @@ StaticGlobal::initializer::~initializer()
 {
     Sql::library_end();
     Mongo::cleanup();
-    SSLMgr::library_end();
+    TLSCTX::library_end();
     Socket::library_end();
 }
 
@@ -66,7 +66,6 @@ void StaticGlobal::initialize()
     _statistic   = new class Statistic();
     _state       = new class LState();
     L                  = _state->state();
-    _ssl_mgr     = new class SSLMgr();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 
     _async_log->set_thread_name(STD_FMT("global_async_log"));
@@ -92,7 +91,6 @@ void StaticGlobal::uninitialize()
     _thread_mgr->stop(_async_log);
 
     delete _buffer_chunk_pool;
-    delete _ssl_mgr;
     delete _state;
     L = nullptr;
     delete _statistic;

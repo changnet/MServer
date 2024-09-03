@@ -2,9 +2,10 @@
 #include <openssl/ssl.h>
 
 #include "net/net_compat.hpp"
-#include "ssl_mgr.hpp"
+#include "tls_ctx.hpp"
 
-void SSLMgr::library_end()
+
+void TLSCTX::library_end()
 {
     /* The OPENSSL_cleanup() function deinitialises OpenSSL (both libcrypto and
      * libssl). All resources allocated by OpenSSL are freed. Typically there
@@ -45,7 +46,7 @@ void SSLMgr::library_end()
     OPENSSL_cleanup();
 #endif
 }
-void SSLMgr::library_init()
+void TLSCTX::library_init()
 {
 /* sha1、base64等库需要用到的
  * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
@@ -65,12 +66,13 @@ void SSLMgr::library_init()
     OpenSSL_add_all_algorithms();
 }
 
-// SSL的错误码是按队列存放的，一次错误可以产生多个错误码
-// 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
-void SSLMgr::ssl_error(const char *what, int32_t e)
+void TLSCTX::dump_error(const char *what, int32_t e)
 {
+    // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
+    // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
+
     int32_t net_e = netcompat::noerror();
-    ELOG("%s e(%d) errno(%d:%s)", what, e, net_e,netcompat::strerror(net_e));
+    ELOG("%s e(%d) errno(%d:%s)", what, e, net_e, netcompat::strerror(net_e));
 
     unsigned long eno = 0;
     while (0 != (eno = ERR_get_error()))
@@ -79,7 +81,7 @@ void SSLMgr::ssl_error(const char *what, int32_t e)
     }
 }
 
-void SSLMgr::dump_x509(const SSL *ctx)
+void TLSCTX::dump_x509(const SSL *ctx)
 {
     X509 *cert = SSL_get_peer_certificate(static_cast<const SSL *>(ctx));
     if (cert != NULL)
@@ -98,57 +100,44 @@ void SSLMgr::dump_x509(const SSL *ctx)
     }
 }
 
-SSLMgr::SSLMgr()
+TLSCTX::TLSCTX()
 {
+    _ctx = nullptr;
 }
 
-SSLMgr::~SSLMgr()
+TLSCTX::~TLSCTX()
 {
-    for (auto &ctx : _ctx)
+    if (_ctx)
     {
-        SSL_CTX_free(static_cast<SSL_CTX *>(ctx._ctx));
+        // SSL_CTX_free() decrements the reference count of ctx, and removes
+        // the SSL_CTX object pointed to by ctx and frees up the allocated
+        // memory if the the reference count has reached 0.
+        SSL_CTX_free(_ctx);
+        _ctx = nullptr;
     }
-    _ctx.clear();
 }
 
-SSL_CTX *SSLMgr::get_ssl_ctx(int32_t ssl_id)
+int32_t TLSCTX::init(const char *cert_file, const char *key_file,
+    const char* passwd, const char* ca)
 {
-    return (ssl_id < 0 || (size_t)ssl_id > _ctx.size()) ? nullptr
-                                                        : _ctx[ssl_id]._ctx;
-}
+    // 这里需要处理比较多的异常，不允许放到构造函数里处理
 
-/* 这个函数会造成较多的内存检测问题
- * Use of uninitialised value of size 8
- * Conditional jump or move depends on uninitialised value(s)
- * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
- */
-int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
-                            const char *key_file, const char *passwd,
-                            const char *ca)
-{
-    const SSL_METHOD *method = NULL;
-    switch (sslv)
-    {
-// OPENSSL_VERSION_NUMBER定义在/usr/include/openssl/opensslv.h
-#if OPENSSL_VERSION_NUMBER > 0x1000105fL
-    case SSLVT_TLS_GEN_AT: method = TLS_method(); break;
-    case SSLVT_TLS_SRV_AT: method = TLS_server_method(); break;
-    case SSLVT_TLS_CLT_AT: method = TLS_client_method(); break;
-#endif
-    // 新版本中无需指定版本号，用上面的自动协商·
-    // warning: ‘const SSL_METHOD* TLSv1_2_method()’ is deprecated
-    // case SSLV_TLS_GEN_12 : method = TLSv1_2_method(); break;
-    default: ELOG("new_ssl_ctx:unknow ssl version"); return -1;
-    }
+    /* 这个函数会造成较多的内存检测问题
+     * Use of uninitialised value of size 8
+     * Conditional jump or move depends on uninitialised value(s)
+     * https://www.mail-archive.com/openssl-users@openssl.org/msg45215.html
+     */
 
-    // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
-    SSL_CTX *ctx = SSL_CTX_new(method);
+    // 老版本中，需要指定ssl版本，比如SSLv23_method
+    // 新版本中，可以直接用TLS_method()来自动协商
+    SSL_CTX *ctx = SSL_CTX_new(TLS_method());
     if (!ctx)
     {
-        ssl_error("new_ssl_ctx:can NOT create ssl content");
+        dump_error("new_ssl_ctx:can NOT create ssl content");
         return -1;
     }
 
+    // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
     // 指定了根ca证书路径，说明需要校验对方证书的正确性
     if (ca)
     {
@@ -157,15 +146,12 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
         /*加载CA FILE*/
         if (SSL_CTX_load_verify_locations(ctx, ca, nullptr) != 1)
         {
-            SSL_CTX_free(ctx);
-            ssl_error("load verify fail");
-            return -1;
+            dump_error("load verify fail");
+            goto FAIL;
         }
     }
 
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
-    int32_t ssl_id = static_cast<int32_t>(_ctx.size());
-    _ctx.emplace_back(XSSLCtx{ctx, passwd});
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
      * 因此单向认证的客户端使用的SSL_CTX不需要证书
@@ -175,50 +161,51 @@ int32_t SSLMgr::new_ssl_ctx(SSLVT sslv, const char *cert_file,
      * 一般情况下，如果客户端的域名不是固定的话，这个认证没什么意义的。
      * ssh那种是通过公钥、私钥来认证客户端的，不是证书。
      */
-    if (!cert_file || !key_file) return ssl_id;
+    if (!cert_file || !key_file) return 0;
 
     int32_t ok = 0;
     // 加载pem格式的ca证书文件，暂不支持ASN1（SSL_FILETYPE_ASN1）格式
     // ASN1只支持一个文件一个证书，pem可以将多个证书放到同一个文件
     if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)
     {
-        ssl_error(cert_file);
+        dump_error(cert_file);
         goto FAIL;
     }
 
     // 加载pem格式私钥
     // 如果key加了密码，则需要处理：SSL_CTX_set_default_passwd_cb
     // PS:ca证书是公开的，但其实也是可以加密码的，这时也要处理才能加载
-    // 密码还是需要拷贝一份存起来，SSL_CTX_check_private_key用到，但不太确定其他地方是否有用
+    // SSL_CTX_check_private_key用到密码，之后一般不用到。但SSL_dump等函数也有用到，所以最好还是存一份
+    // 如果不想存，用完后把SSL_CTX_set_default_passwd_cb_userdata设置为空指针，否则会埋坑
     if (passwd)
     {
         // SSL_CTX_set_default_passwd_cb(ctx, ctx_passwd_cb);
-        SSL_CTX_set_default_passwd_cb_userdata(ctx, _ctx[ssl_id]._passwd);
+        snprintf(_passwd, sizeof(_passwd), "%s", passwd ? passwd : "");
+        SSL_CTX_set_default_passwd_cb_userdata(ctx, _passwd);
     }
 
     // 密钥文件有多种
     // 通用类型，里面以 BEGIN PRIVATE KEY 开头
     // RSA，里面以 BEGIN RSA PRIVATE KEY 开头
     // 现在一般都用的RSA
-    // SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
-    ok = SSL_CTX_use_RSAPrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
+    ok = SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
+    // ok = SSL_CTX_use_RSAPrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM);
     if (ok <= 0)
     {
-        ssl_error("new_ssl_ctx key file");
+        dump_error("new_ssl_ctx key file");
         goto FAIL;
     }
 
     // 验证私钥是否和证书匹配
     if (SSL_CTX_check_private_key(ctx) <= 0)
     {
-        ssl_error("new_ssl_ctx:certificate and private key not match");
+        dump_error("new_ssl_ctx:certificate and private key not match");
         goto FAIL;
     }
 
-    return ssl_id;
+    return 0;
 
 FAIL:
     SSL_CTX_free(ctx);
-    _ctx.pop_back();
     return -1;
 }

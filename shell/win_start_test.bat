@@ -1,4 +1,4 @@
 @echo off
 
-call win_start.bat test "--filter=string"
+call win_start.bat test "--filter=metatable"
 REM call win_start.bat android 1 1

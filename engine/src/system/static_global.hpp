@@ -3,7 +3,6 @@
 #include "lua_cpplib/llog.hpp"
 #include "lua_cpplib/lev.hpp"
 #include "lua_cpplib/lstate.hpp"
-#include "net/io/ssl_mgr.hpp"
 #include "thread/thread_mgr.hpp"
 #include "statistic.hpp"
 
@@ -38,10 +37,7 @@ public:
     {
         return _state->state();
     }
-    static class SSLMgr *ssl_mgr()
-    {
-        return _ssl_mgr;
-    }
+
     static class Statistic *statistic()
     {
         return _statistic;
@@ -73,7 +69,6 @@ private:
 private:
     static class LEV *_ev;
     static class LState *_state;
-    static class SSLMgr *_ssl_mgr;
     static class Statistic *_statistic;
     static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;
