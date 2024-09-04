@@ -4,316 +4,293 @@
 #include <string>
 #include <cassert>
 
-namespace
+namespace lua
 {
-    template<typename T>
-    T lua_to_cpp(lua_State* L, int i)
+template <typename T> T lua_to_cpp(lua_State *L, int i)
+{
+    static_assert(std::is_pointer<T>::value, "type unknow");
+
+    // 不是userdata这里会返回nullptr
+    void *p = lua_touserdata(L, i);
+
+    using T1 = typename std::remove_pointer_t<T>;
+    if constexpr (std::is_void_v<T1>)
     {
-        static_assert(std::is_pointer<T>::value, "type unknow");
+        return p;
+    }
+    else
+    {
+        if (!p || lua_islightuserdata(L, i)) return (T)p;
 
-        // 不是userdata这里会返回nullptr
-        void* p = lua_touserdata(L, i);
+        // 这里只能是full userdata了，如果定义过则是通过lclass push的指针
+        const char *name = Class<T1>::template _class_name;
+        if (luaL_testudata(L, i, name)) return *((T1 **)p);
 
-        using T1 = typename std::remove_pointer_t<T>;
-        if constexpr (std::is_void_v<T1>)
+        return nullptr;
+    }
+}
+
+template <> inline bool lua_to_cpp<bool>(lua_State *L, int i)
+{
+    return lua_toboolean(L, i) != 0;
+}
+
+template <> inline char lua_to_cpp<char>(lua_State *L, int i)
+{
+    return (char)lua_tointeger(L, i);
+}
+
+template <> inline unsigned char lua_to_cpp<unsigned char>(lua_State *L, int i)
+{
+    return (unsigned char)lua_tointeger(L, i);
+}
+
+template <> inline short lua_to_cpp<short>(lua_State *L, int i)
+{
+    return (short)lua_tointeger(L, i);
+}
+
+template <>
+inline unsigned short lua_to_cpp<unsigned short>(lua_State *L, int i)
+{
+    return (unsigned short)lua_tointeger(L, i);
+}
+
+template <> inline int lua_to_cpp<int>(lua_State *L, int i)
+{
+    return (int)lua_tointeger(L, i);
+}
+
+template <> inline unsigned int lua_to_cpp<unsigned int>(lua_State *L, int i)
+{
+    return (unsigned int)lua_tointeger(L, i);
+}
+
+template <> inline long lua_to_cpp<long>(lua_State *L, int i)
+{
+    return (long)lua_tointeger(L, i);
+}
+
+template <> inline unsigned long lua_to_cpp<unsigned long>(lua_State *L, int i)
+{
+    return (unsigned long)lua_tointeger(L, i);
+}
+
+template <> inline long long lua_to_cpp<long long>(lua_State *L, int i)
+{
+    return lua_tointeger(L, i);
+}
+
+template <>
+inline unsigned long long lua_to_cpp<unsigned long long>(lua_State *L, int i)
+{
+    return (unsigned long long)lua_tointeger(L, i);
+}
+
+template <> inline float lua_to_cpp<float>(lua_State *L, int i)
+{
+    return (float)lua_tonumber(L, i);
+}
+
+template <> inline double lua_to_cpp<double>(lua_State *L, int i)
+{
+    return lua_tonumber(L, i);
+}
+
+template <> inline const char *lua_to_cpp<const char *>(lua_State *L, int i)
+{
+    // 这里要注意，无法转换为const char*会返回NULL
+    // 这个类型对c++并不安全，比如 std::cout << NULL就会直接当掉，用时需要检测指针
+    return lua_tostring(L, i);
+}
+
+template <> inline char *lua_to_cpp<char *>(lua_State *L, int i)
+{
+    // 这里要注意，无法转换为const char*会返回NULL
+    // 这个类型对c++并不安全，比如 std::cout << NULL就会直接当掉，用时需要检测指针
+    return const_cast<char *>(lua_tostring(L, i));
+}
+
+template <> inline std::string lua_to_cpp<std::string>(lua_State *L, int i)
+{
+    const char *str = lua_tostring(L, i);
+    return str == nullptr ? "" : str;
+}
+
+template <typename T> void cpp_to_lua(lua_State *L, T v)
+{
+    static_assert(std::is_pointer<T>::value, "type unknow");
+
+    // 如果声明过这个类，则以push方式推送到lua
+    using T1 = typename std::remove_pointer_t<T>;
+    if constexpr (std::is_void_v<T1>)
+    {
+        lua_pushlightuserdata(L, v);
+    }
+    else
+    {
+        const char *name = Class<T1>::template _class_name;
+        if (name)
         {
-            return p;
+            Class<T1>::push(L, v);
         }
         else
-        {
-            if (!p || lua_islightuserdata(L, i)) return (T)p;
-
-            // 这里只能是full userdata了，如果定义过则是通过lclass push的指针
-            const char* name = LClass<T1>::template _class_name;
-            if (luaL_testudata(L, i, name)) return *((T1**)p);
-
-            return nullptr;
-        }
-    }
-
-    template<>
-    bool lua_to_cpp<bool>(lua_State* L, int i)
-    {
-        return lua_toboolean(L, i) != 0;
-    }
-
-    template<>
-    char lua_to_cpp<char>(lua_State* L, int i)
-    {
-        return (char)lua_tointeger(L, i);
-    }
-
-    template<>
-    unsigned char lua_to_cpp<unsigned char>(lua_State* L, int i)
-    {
-        return (unsigned char)lua_tointeger(L, i);
-    }
-
-    template<>
-    short lua_to_cpp<short>(lua_State* L, int i)
-    {
-        return (short)lua_tointeger(L, i);
-    }
-
-    template<>
-    unsigned short lua_to_cpp<unsigned short>(lua_State* L, int i)
-    {
-        return (unsigned short)lua_tointeger(L, i);
-    }
-
-    template<>
-    int lua_to_cpp<int>(lua_State* L, int i)
-    {
-        return (int)lua_tointeger(L, i);
-    }
-
-    template<>
-    unsigned int lua_to_cpp<unsigned int>(lua_State* L, int i)
-    {
-        return (unsigned int)lua_tointeger(L, i);
-    }
-
-    template<>
-    long lua_to_cpp<long>(lua_State* L, int i)
-    {
-        return (long)lua_tointeger(L, i);
-    }
-
-    template<>
-    unsigned long lua_to_cpp<unsigned long>(lua_State* L, int i)
-    {
-        return (unsigned long)lua_tointeger(L, i);
-    }
-
-    template<>
-    long long lua_to_cpp<long long>(lua_State* L, int i)
-    {
-        return lua_tointeger(L, i);
-    }
-
-    template<>
-    unsigned long long
-        lua_to_cpp<unsigned long long>(lua_State* L, int i)
-    {
-        return (unsigned long long) lua_tointeger(L, i);
-    }
-
-    template<>
-    float lua_to_cpp<float>(lua_State* L, int i)
-    {
-        return (float)lua_tonumber(L, i);
-    }
-
-    template<>
-    double lua_to_cpp<double>(lua_State* L, int i)
-    {
-        return lua_tonumber(L, i);
-    }
-
-    template<>
-    const char* lua_to_cpp<const char*>(lua_State* L, int i)
-    {
-        // 这里要注意，无法转换为const char*会返回NULL
-        // 这个类型对c++并不安全，比如 std::cout << NULL就会直接当掉，用时需要检测指针
-        return lua_tostring(L, i);
-    }
-
-    template<>
-    char* lua_to_cpp<char*>(lua_State* L, int i)
-    {
-        // 这里要注意，无法转换为const char*会返回NULL
-        // 这个类型对c++并不安全，比如 std::cout << NULL就会直接当掉，用时需要检测指针
-        return const_cast<char *>(lua_tostring(L, i));
-    }
-
-    template<>
-    std::string lua_to_cpp<std::string>(lua_State* L, int i)
-    {
-        const char* str = lua_tostring(L, i);
-        return str == nullptr ? "" : str;
-    }
-
-    template<typename T>
-    void cpp_to_lua(lua_State* L, T v)
-    {
-        static_assert(std::is_pointer<T>::value, "type unknow");
-
-        // 如果声明过这个类，则以push方式推送到lua
-        using T1 = typename std::remove_pointer_t<T>;
-        if constexpr (std::is_void_v<T1>)
         {
             lua_pushlightuserdata(L, v);
         }
-        else
-        {
-            const char* name = LClass<T1>::template _class_name;
-            if (name)
-            {
-                LClass<T1>::push(L, v);
-            }
-            else
-            {
-                lua_pushlightuserdata(L, v);
-            }
-        }
     }
-
-    void cpp_to_lua(lua_State* L, bool v)
-    {
-        lua_pushboolean(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, char v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, unsigned char v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, short v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, unsigned short v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, int v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, unsigned int v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, long v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, unsigned long v)
-    {
-        lua_pushinteger(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, long long v)
-    {
-        lua_pushinteger(L, (lua_Integer)v);
-    }
-
-    void cpp_to_lua(lua_State* L, unsigned long long v)
-    {
-        lua_pushinteger(L, (lua_Integer)v);
-    }
-
-    void cpp_to_lua(lua_State* L, float v)
-    {
-        lua_pushnumber(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, double v)
-    {
-        lua_pushnumber(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, const char* v)
-    {
-        lua_pushstring(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, char* v)
-    {
-        lua_pushstring(L, v);
-    }
-
-    void cpp_to_lua(lua_State* L, const std::string& v)
-    {
-        lua_pushstring(L, v.c_str());
-    }
-
-    // C++ 20 std::remove_cvref
-    // TODO std::remove_volatile 需要吗？
-    template <typename T>
-    using remove_cvref = std::remove_cv<std::remove_reference_t<T>>::template type;
-
-    template <class T> class Register;
-    template<typename Ret, typename... Args>
-    class Register<Ret(*)(Args...)>
-    {
-    private:
-        static constexpr auto indices = std::make_index_sequence<sizeof...(Args)>{};
-
-        template <size_t... I, typename = std::enable_if_t<!std::is_void<Ret>::value>>
-        static int caller(lua_State* L, Ret(*fp)(Args...), const std::index_sequence<I...>&)
-        {
-            cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...));
-            return 1;
-        }
-        template <size_t... I>
-        static int caller(lua_State* L, void(*fp)(Args...), const std::index_sequence<I...>&)
-        {
-            fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...);
-            return 0;
-        }
-    public:
-        template<auto fp>
-        static int reg(lua_State* L)
-        {
-            return caller(L, fp, indices);
-        }
-    };
-
-    // 前置声明
-    template <typename T> struct class_remove;
-    // 特化为static函数或全局函数
-    template<typename Ret, typename... Args>
-    struct class_remove<Ret(*)(Args...)>
-    {
-        using type = Ret(*)(Args...);
-    };
-    // 特化为成员函数
-    template <typename T, typename Ret, typename... Args>
-    struct class_remove<Ret (T::*)(Args...)>
-    {
-        using type = Ret (*)(Args...);
-    };
-    // 特化为const成员函数
-    template <typename T, typename Ret, typename... Args>
-    struct class_remove<Ret (T::*)(Args...) const>
-        : public class_remove<Ret (T::*)(Args...)>
-    {
-    };
-
-    template <typename T>
-    inline constexpr bool is_lua_func =
-        std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
-
 }
 
-namespace lclass
+inline void cpp_to_lua(lua_State *L, bool v)
 {
-    template<auto fp, typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>
-    void reg_global_func(lua_State* L, const char* name)
-    {
-        lua_register(L, name, Register<decltype(fp)>::template reg<fp>);
-    }
-
-    template<lua_CFunction fp>
-    void reg_global_func(lua_State* L, const char* name)
-    {
-        lua_register(L, name, fp);
-    }
+    lua_pushboolean(L, v);
 }
 
-template <class T>
-class LClass
+inline void cpp_to_lua(lua_State *L, char v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, unsigned char v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, short v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, unsigned short v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, int v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, unsigned int v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, long v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, unsigned long v)
+{
+    lua_pushinteger(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, long long v)
+{
+    lua_pushinteger(L, (lua_Integer)v);
+}
+
+inline void cpp_to_lua(lua_State *L, unsigned long long v)
+{
+    lua_pushinteger(L, (lua_Integer)v);
+}
+
+inline void cpp_to_lua(lua_State *L, float v)
+{
+    lua_pushnumber(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, double v)
+{
+    lua_pushnumber(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, const char *v)
+{
+    lua_pushstring(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, char *v)
+{
+    lua_pushstring(L, v);
+}
+
+inline void cpp_to_lua(lua_State *L, const std::string &v)
+{
+    lua_pushstring(L, v.c_str());
+}
+
+// C++ 20 std::remove_cvref
+// TODO std::remove_volatile 需要吗？
+template <typename T>
+using remove_cvref = std::remove_cv<std::remove_reference_t<T>>::template type;
+
+template <class T> class Register;
+template <typename Ret, typename... Args> class Register<Ret (*)(Args...)>
+{
+private:
+    static constexpr auto indices = std::make_index_sequence<sizeof...(Args)>{};
+
+    template <size_t... I, typename = std::enable_if_t<!std::is_void<Ret>::value>>
+    static int caller(lua_State *L, Ret (*fp)(Args...),
+                      const std::index_sequence<I...> &)
+    {
+        cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...));
+        return 1;
+    }
+    template <size_t... I>
+    static int caller(lua_State *L, void (*fp)(Args...),
+                      const std::index_sequence<I...> &)
+    {
+        fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...);
+        return 0;
+    }
+
+public:
+    template <auto fp> static int reg(lua_State *L)
+    {
+        return caller(L, fp, indices);
+    }
+};
+
+// 前置声明
+template <typename T> struct class_remove;
+// 特化为static函数或全局函数
+template <typename Ret, typename... Args> struct class_remove<Ret (*)(Args...)>
+{
+    using type = Ret (*)(Args...);
+};
+// 特化为成员函数
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...)>
+{
+    using type = Ret (*)(Args...);
+};
+// 特化为const成员函数
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) const>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+
+template <typename T>
+inline constexpr bool is_lua_func =
+    std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
+
+template <auto fp,
+          typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>
+void reg_global_func(lua_State *L, const char *name)
+{
+    lua_register(L, name, Register<decltype(fp)>::template reg<fp>);
+}
+
+template <lua_CFunction fp> void reg_global_func(lua_State *L, const char *name)
+{
+    lua_register(L, name, fp);
+}
+
+template <class T> class Class
 {
 private:
     template <class C> class StaticRegister;
@@ -347,19 +324,21 @@ private:
     };
 
     template <typename C> class ClassRegister;
-    template<typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret(C::*)(Args...)>
+    template <typename C, typename Ret, typename... Args>
+    class ClassRegister<Ret (C::*)(Args...)>
     {
     private:
-        static constexpr auto indices = std::make_index_sequence<sizeof...(Args)>{};
+        static constexpr auto indices =
+            std::make_index_sequence<sizeof...(Args)>{};
 
         template <auto fp, size_t... I>
-        static int caller(lua_State* L, const std::index_sequence<I...>&)
+        static int caller(lua_State *L, const std::index_sequence<I...> &)
         {
-            T** ptr = (T**)luaL_checkudata(L, 1, _class_name);
+            T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
             if (ptr == nullptr || *ptr == nullptr)
             {
-                return luaL_error(L, "%s calling method with null pointer", _class_name);
+                return luaL_error(L, "%s calling method with null pointer",
+                                  _class_name);
             }
 
             // 使用if constexpr替换多个模板好维护一些
@@ -372,27 +351,32 @@ private:
             }
             else
             {
-                cpp_to_lua(L, ((*ptr)->*fp)(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
+                cpp_to_lua(L, ((*ptr)->*fp)(
+                                  lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
                 return 1;
             }
         }
+
     public:
-        template<auto fp>
-        static int reg(lua_State* L)
+        template <auto fp> static int reg(lua_State *L)
         {
             return caller<fp>(L, indices);
         }
     };
 
-    template<typename C, typename Ret, typename... Args>
-    class ClassRegister<Ret(C::*)(Args...) const> : public ClassRegister<Ret(C::*)(Args...)>
-    {};
+    template <typename C, typename Ret, typename... Args>
+    class ClassRegister<Ret (C::*)(Args...) const>
+        : public ClassRegister<Ret (C::*)(Args...)>
+    {
+    };
 
 public:
-    virtual ~LClass() {}
+    virtual ~Class()
+    {
+    }
 
     // 创建一个类的对象，但不向lua注册。仅用于注册后使用同样的对象并且虚拟机L应该和注册时一致
-    explicit LClass(lua_State* L) : L(L)
+    explicit Class(lua_State *L) : L(L)
     {
         // 注册过后，必定存在类名
         // assert（_class_name);
@@ -400,8 +384,7 @@ public:
 
     // 注册一个类
     // @param L lua虚拟机指针
-    explicit LClass(lua_State* L, const char* classname)
-        : L(L)
+    explicit Class(lua_State *L, const char *classname) : L(L)
     {
         _class_name = classname;
 
@@ -461,7 +444,8 @@ public:
         }
 
         /*
-        __index还需要创建一个table来保存函数，但为了节省内存，让 metatable.__index = metatable，
+        __index还需要创建一个table来保存函数，但为了节省内存，让
+        metatable.__index = metatable，
         这样func1和func2和__gc等函数放在一起，不需要额外创建一个table。
 
         但请注意，如果不是为了覆盖__gc、__tostring等内置函数，请不要用这种名字。这是一个feature也是一个坑
@@ -476,8 +460,7 @@ public:
     }
 
     // 指定构造函数的参数
-    template<typename... Args>
-    void constructor()
+    template <typename... Args> void constructor()
     {
         luaL_getmetatable(L, _class_name);
         assert(lua_istable(L, -1));
@@ -499,15 +482,15 @@ public:
      * 因此，当调用类似lclass<lsocket>::push( L,_backend,false );的代码时，
      * 请保证你之前已注册对应的类，否则metatable将为nil
      */
-    static int push(lua_State* L, const T* obj, bool gc = false)
+    static int push(lua_State *L, const T *obj, bool gc = false)
     {
         assert(obj);
         assert(_class_name);
 
         /* 这里只是创建一个指针给lua管理
-        */
-        const T** ptr = (const T**)lua_newuserdata(L, sizeof(T*));
-        *ptr = obj;
+         */
+        const T **ptr = (const T **)lua_newuserdata(L, sizeof(T *));
+        *ptr          = obj;
 
         // 只有用lcalss定义了对应类的对象能push到lua，因此这里的metatable必须存在
         luaL_getmetatable(L, _class_name);
@@ -535,7 +518,8 @@ public:
     }
 
     // 把一个对象指针push到全局变量
-    static int push_global(lua_State* L, const T* obj, const char* name, bool gc = false)
+    static int push_global(lua_State *L, const T *obj, const char *name,
+                           bool gc = false)
     {
         if (0 != push(L, obj, gc)) return -1;
 
@@ -572,7 +556,7 @@ public:
     }
 
     /* 注册变量,通常用于设置宏定义、枚举 */
-    void set(int32_t val, const char* val_name)
+    void set(int32_t val, const char *val_name)
     {
         luaL_getmetatable(L, _class_name);
 
@@ -584,23 +568,23 @@ public:
 
 private:
     template <typename... Args, size_t... I>
-    static T * class_constructor_caller(lua_State* L, const std::index_sequence<I...>&)
+    static T *class_constructor_caller(lua_State *L,
+                                       const std::index_sequence<I...> &)
     {
         return new T(lua_to_cpp<Args>(L, 2 + I)...);
     }
 
-    template<typename... Args>
-    static int class_constructor(lua_State* L)
+    template <typename... Args> static int class_constructor(lua_State *L)
     {
-        T* obj = class_constructor_caller<Args...>(
+        T *obj = class_constructor_caller<Args...>(
             L, std::make_index_sequence<sizeof...(Args)>{});
 
         // lua调用__call,第一个参数是元表
         // 清除所有构造函数参数,只保留元表(TODO: 是否要清除)
         lua_settop(L, 1); /*  */
 
-        T** ptr = (T**)lua_newuserdata(L, sizeof(T*));
-        *ptr = obj;
+        T **ptr = (T **)lua_newuserdata(L, sizeof(T *));
+        *ptr    = obj;
 
         /* 把新创建的userdata和元表交换堆栈位置 */
         lua_insert(L, 1);
@@ -612,18 +596,18 @@ private:
     }
 
     // 把一个对象转换为一个light userdata
-    static int toludata(lua_State* L)
+    static int toludata(lua_State *L)
     {
-        T** ptr = (T**)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
 
         lua_pushlightuserdata(L, *ptr);
         return 1;
     }
 
     /* 元方法,__tostring */
-    static int tostring(lua_State* L)
+    static int tostring(lua_State *L)
     {
-        T** ptr = (T**)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
         if (ptr != nullptr)
         {
             lua_pushfstring(L, "%s: %p", _class_name, *ptr);
@@ -633,7 +617,7 @@ private:
     }
 
     /* gc函数 */
-    static int gc(lua_State* L)
+    static int gc(lua_State *L)
     {
         if (luaL_getmetafield(L, 1, "_notgc"))
         {
@@ -644,15 +628,15 @@ private:
             if (lua_toboolean(L, -1)) return 0;
         }
 
-        T** ptr = (T**)luaL_checkudata(L, 1, _class_name);
-        if (*ptr != nullptr) delete* ptr;
+        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
+        if (*ptr != nullptr) delete *ptr;
         *ptr = nullptr;
 
         return 0;
     }
 
-    //创建弱表
-    static void weaktable(lua_State* L, const char* mode)
+    // 创建弱表
+    static void weaktable(lua_State *L, const char *mode)
     {
         lua_newtable(L);
         lua_pushvalue(L, -1); // table is its own metatable
@@ -662,9 +646,9 @@ private:
         lua_settable(L, -3); // metatable.__mode = mode
     }
 
-    //创建子弱表
-    static void subtable(lua_State* L, int index, const char* name,
-        const char* mode)
+    // 创建子弱表
+    static void subtable(lua_State *L, int index, const char *name,
+                         const char *mode)
     {
         lua_pushstring(L, name);
         lua_rawget(L, index); /* 判断是否已存在t[name] */
@@ -679,22 +663,24 @@ private:
         }
     }
 
-    template <auto pf>
-    static int fun_thunk(lua_State* L)
+    template <auto pf> static int fun_thunk(lua_State *L)
     {
-        T** ptr = (T**)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
         if (ptr == nullptr || *ptr == nullptr)
         {
             return luaL_error(L, "%s calling method with null pointer",
-                _class_name);
+                              _class_name);
         }
 
         return ((*ptr)->*pf)(L);
     }
 
 public:
-    static const char* _class_name;
+    static const char *_class_name;
+
 private:
-    lua_State* L;
+    lua_State *L;
 };
-template <class T> const char* LClass<T>::_class_name = nullptr;
+
+} // namespace lua
+template <class T> const char *lua::Class<T>::_class_name = nullptr;

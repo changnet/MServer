@@ -5,7 +5,7 @@
 #include "tls_ctx.hpp"
 
 
-void TLSCTX::library_end()
+void TlsCtx::library_end()
 {
     /* The OPENSSL_cleanup() function deinitialises OpenSSL (both libcrypto and
      * libssl). All resources allocated by OpenSSL are freed. Typically there
@@ -46,7 +46,7 @@ void TLSCTX::library_end()
     OPENSSL_cleanup();
 #endif
 }
-void TLSCTX::library_init()
+void TlsCtx::library_init()
 {
 /* sha1、base64等库需要用到的
  * mongo c driver、mysql c connector等第三方库可能已初始化了ssl
@@ -66,7 +66,7 @@ void TLSCTX::library_init()
     OpenSSL_add_all_algorithms();
 }
 
-void TLSCTX::dump_error(const char *what, int32_t e)
+void TlsCtx::dump_error(const char *what, int32_t e)
 {
     // SSL的错误码是按队列存放的，一次错误可以产生多个错误码
     // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
@@ -81,7 +81,7 @@ void TLSCTX::dump_error(const char *what, int32_t e)
     }
 }
 
-void TLSCTX::dump_x509(const SSL *ctx)
+void TlsCtx::dump_x509(const SSL *ctx)
 {
     X509 *cert = SSL_get_peer_certificate(static_cast<const SSL *>(ctx));
     if (cert != NULL)
@@ -100,12 +100,12 @@ void TLSCTX::dump_x509(const SSL *ctx)
     }
 }
 
-TLSCTX::TLSCTX()
+TlsCtx::TlsCtx()
 {
     _ctx = nullptr;
 }
 
-TLSCTX::~TLSCTX()
+TlsCtx::~TlsCtx()
 {
     if (_ctx)
     {
@@ -117,7 +117,7 @@ TLSCTX::~TLSCTX()
     }
 }
 
-int32_t TLSCTX::init(const char *cert_file, const char *key_file,
+int32_t TlsCtx::init(const char *cert_file, const char *key_file,
     const char* passwd, const char* ca)
 {
     // 这里需要处理比较多的异常，不允许放到构造函数里处理

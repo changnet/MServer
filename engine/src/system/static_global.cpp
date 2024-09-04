@@ -32,7 +32,7 @@ StaticGlobal::initializer::initializer()
 
     std::set_new_handler(on_new_fail);
 
-    TLSCTX::library_init();
+    TlsCtx::library_init();
     Sql::library_init();
     Mongo::init();
     Socket::library_init();
@@ -42,7 +42,7 @@ StaticGlobal::initializer::~initializer()
 {
     Sql::library_end();
     Mongo::cleanup();
-    TLSCTX::library_end();
+    TlsCtx::library_end();
     Socket::library_end();
 }
 

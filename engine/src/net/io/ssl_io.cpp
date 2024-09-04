@@ -67,7 +67,7 @@ IO::IOStatus SSLIO::recv(EVIO *w)
     }
 
     w->_errno = netcompat::noerror();
-    TLSCTX::dump_error("ssl io recv");
+    TlsCtx::dump_error("ssl io recv");
     return IOS_ERROR;
 }
 
@@ -109,7 +109,7 @@ IO::IOStatus SSLIO::send(EVIO *w)
     }
 
     w->_errno = netcompat::noerror();
-    TLSCTX::dump_error("ssl io send");
+    TlsCtx::dump_error("ssl io send");
     return IOS_ERROR;
 }
 
@@ -188,7 +188,7 @@ IO::IOStatus SSLIO::do_handshake()
     if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
 
     // error
-    TLSCTX::dump_error(__FUNCTION__, ecode);
+    TlsCtx::dump_error(__FUNCTION__, ecode);
 
     return IOS_ERROR;
 }

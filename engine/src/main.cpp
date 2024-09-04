@@ -18,10 +18,10 @@ int32_t main(int32_t argc, char **argv)
 
     lua_State *L = StaticGlobal::state();
 
-    LClass<LEV>::push(L, StaticGlobal::lua_ev(), false);
+    lua::Class<LEV>::push(L, StaticGlobal::lua_ev(), false);
     lua_setglobal(L, "ev");
 
-    LClass<LLog>::push(L, StaticGlobal::async_logger(), false);
+    lua::Class<LLog>::push(L, StaticGlobal::async_logger(), false);
     lua_setglobal(L, "g_async_log");
 
     /* 加载程序入口脚本 */

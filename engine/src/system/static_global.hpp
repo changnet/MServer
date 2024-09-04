@@ -56,7 +56,10 @@ public:
     }
 
 public:
+    // 这里负责保存一些全局变量，方便StaticGlobal::X这样调用
+
     inline static lua_State *L = nullptr;
+    inline static LState *S    = nullptr;
 
 private:
     class initializer // 提供一个等级极高的初始化

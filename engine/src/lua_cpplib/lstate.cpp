@@ -1,11 +1,11 @@
 #include <lparson.h>
 #include <lrapidxml.hpp>
-#include <lua.hpp>
+
+#include "lclass.hpp"
 
 #include "lacism.hpp"
 #include "lgrid_aoi.hpp"
 #include "lastar.hpp"
-#include "lclass.hpp"
 #include "lev.hpp"
 #include "llog.hpp"
 #include "lmap.hpp"
@@ -17,6 +17,7 @@
 #include "llist_aoi.hpp"
 
 #include "net/socket.hpp"
+#include "net/io/tls_ctx.hpp"
 #include "system/static_global.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
@@ -65,7 +66,7 @@ const char *__dbg_traceback()
 
 int32_t luaopen_ev(lua_State *L)
 {
-    LClass<LEV> lc(L, "engine.Ev");
+    lua::Class<LEV> lc(L, "engine.Ev");
     lc.def<&LEV::now>("time");
     lc.def<&LEV::quit>("exit");
     lc.def<&LEV::signal>("signal");
@@ -85,9 +86,17 @@ int32_t luaopen_ev(lua_State *L)
     return 0;
 }
 
+int32_t luaopen_tls(lua_State *L)
+{
+    lua::Class<TlsCtx> lc(L, "engine.TlsCtx");
+    lc.def<&TlsCtx::init>("init");
+
+    return 0;
+}
+
 int32_t luaopen_socket(lua_State* L)
 {
-    LClass<Socket> lc(L, "engine.Socket");
+    lua::Class<Socket> lc(L, "engine.Socket");
     lc.def<&Socket::start>("start");
     lc.def<&Socket::stop>("stop");
     lc.def<&Socket::listen>("listen");
@@ -98,7 +107,7 @@ int32_t luaopen_socket(lua_State* L)
 int32_t luaopen_sql(lua_State *L)
 {
 
-    LClass<LSql> lc(L, "engine.Sql");
+    lua::Class<LSql> lc(L, "engine.Sql");
     lc.def<&LSql::start>("start");
     lc.def<&LSql::stop>("stop");
 
@@ -112,7 +121,7 @@ int32_t luaopen_sql(lua_State *L)
 
 int32_t luaopen_mongo(lua_State *L)
 {
-    LClass<LMongo> lc(L, "engine.Mongo");
+    lua::Class<LMongo> lc(L, "engine.Mongo");
     lc.def<&LMongo::start>("start");
     lc.def<&LMongo::stop>("stop");
 
@@ -132,7 +141,7 @@ int32_t luaopen_mongo(lua_State *L)
 
 int32_t luaopen_log(lua_State *L)
 {
-    LClass<LLog> lc(L, "engine.Log");
+    lua::Class<LLog> lc(L, "engine.Log");
     lc.def<&LLog::stop>("stop");
     lc.def<&LLog::start>("start");
 
@@ -155,7 +164,7 @@ int32_t luaopen_log(lua_State *L)
 
 int32_t luaopen_acism(lua_State *L)
 {
-    LClass<LAcism> lc(L, "engine.Acism");
+    lua::Class<LAcism> lc(L, "engine.Acism");
 
     lc.def<&LAcism::scan>("scan");
     lc.def<&LAcism::replace>("replace");
@@ -166,7 +175,7 @@ int32_t luaopen_acism(lua_State *L)
 
 int32_t luaopen_grid_aoi(lua_State *L)
 {
-    LClass<LGridAoi> lc(L, "engine.GridAoi");
+    lua::Class<LGridAoi> lc(L, "engine.GridAoi");
 
     lc.def<&LGridAoi::set_size>("set_size");
     lc.def<&LGridAoi::set_visual_range>("set_visual_range");
@@ -187,7 +196,7 @@ int32_t luaopen_grid_aoi(lua_State *L)
 
 int32_t luaopen_list_aoi(lua_State *L)
 {
-    LClass<LListAoi> lc(L, "engine.ListAoi");
+    lua::Class<LListAoi> lc(L, "engine.ListAoi");
 
     lc.def<&LListAoi::valid_dump>("valid_dump");
     lc.def<&LListAoi::use_y>("use_y");
@@ -208,7 +217,7 @@ int32_t luaopen_list_aoi(lua_State *L)
 
 int32_t luaopen_map(lua_State *L)
 {
-    LClass<LMap> lc(L, "engine.Map");
+    lua::Class<LMap> lc(L, "engine.Map");
 
     lc.def<&LMap::set>("set");
     lc.def<&LMap::fill>("fill");
@@ -222,7 +231,7 @@ int32_t luaopen_map(lua_State *L)
 
 int32_t luaopen_astar(lua_State *L)
 {
-    LClass<LAstar> lc(L, "engine.Astar");
+    lua::Class<LAstar> lc(L, "engine.Astar");
 
     lc.def<&LAstar::search>("search");
 
@@ -303,6 +312,7 @@ void LState::open_cpp()
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_ev(L);
+    luaopen_tls(L);
     luaopen_socket(L);
     luaopen_sql(L);
     luaopen_log(L);

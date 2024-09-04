@@ -4,11 +4,11 @@
 #include "global/global.hpp"
 
 // Transport Layer Security (TLS)数据，用于https和wss
-class TLSCTX
+class TlsCtx
 {
 public:
-    TLSCTX();
-    ~TLSCTX();
+    TlsCtx();
+    ~TlsCtx();
 
     static void library_end();
     static void library_init();
