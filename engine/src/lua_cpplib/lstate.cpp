@@ -1,8 +1,6 @@
 #include <lparson.h>
 #include <lrapidxml.hpp>
 
-#include "lclass.hpp"
-
 #include "lacism.hpp"
 #include "lgrid_aoi.hpp"
 #include "lastar.hpp"

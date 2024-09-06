@@ -749,8 +749,7 @@ void Socket::connect_cb()
         _w->set(EV_READ);
     }
 
-    bool ok = false;
-    // StaticGlobal::network_mgr()->connect_new(_conn_id, ecode);
+    bool ok = StaticGlobal::S->call<bool>("connect_new", _conn_id, ecode);
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
     if (EXPECT_TRUE(ok && 0 == ecode && _fd != netcompat::INVALID && _packet
