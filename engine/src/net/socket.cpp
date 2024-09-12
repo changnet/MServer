@@ -54,11 +54,9 @@ void Socket::library_init()
 #endif
 }
 
-Socket::Socket(int32_t conn_id, ConnType conn_ty)
+Socket::Socket(int32_t conn_id)
 {
-    _io        = nullptr;
     _packet    = nullptr;
-    _object_id = 0;
 
     _status = CS_NONE;
 
@@ -66,20 +64,27 @@ Socket::Socket(int32_t conn_id, ConnType conn_ty)
     _w  = nullptr;
 
     _conn_id  = conn_id;
-    _conn_ty  = conn_ty;
-
-    C_OBJECT_ADD("socket");
 }
 
 Socket::~Socket()
 {
+    /**
+     * 正常情况下，脚本调用stop函数通知io线程，后续收到回调到再析构对象
+     * 但socket对象在Lua管理，有可能出现脚本报错导致部分数据未正确设置的情况
+     * 同时脚本gc的时间也是不确定的，因此这里析构对象时，一定不要影响io线程
+     * 1. watcher不能直接delete
+     * 2. io对象不能直接删除
+     * 3. fd不能直接关闭（但后续要能正确关闭）
+     * 4. watcher的回调（command_cb等，已绑定this）不能出错
+     * 
+     * 解决的方法
+     * 1. 在析构时检测到没调用stop，把所有回调都指向一个全局Socket对象来进行关闭
+     * 2. 不做任何处理，要求在被lua销毁之前，必定先调用stop函数。所以lua最好使用xpcall来初始化
+     * */
+
+
     delete _packet;
     _packet = nullptr;
-
-    delete _io;
-    _io = nullptr;
-
-    C_OBJECT_DEC("socket");
 
     assert(!_w);
 }
@@ -101,8 +106,6 @@ void Socket::stop(bool flush, bool term)
     {
         close_cb(true);
     }
-
-    C_SOCKET_TRAFFIC_DEL(_conn_id);
 }
 
 void Socket::append(const void *data, size_t len)
@@ -119,9 +122,8 @@ void Socket::append(const void *data, size_t len)
     if (_w->_mask & EVIO::M_OVERFLOW_KILL)
     {
         // 对于客户端这种不重要的，可以断开连接
-        ELOG("socket send buffer overflow, kill connection,"
-             "object:" FMT64d ",conn:%d,buffer size:%d",
-             _object_id, _conn_id, send_buff.get_all_used_size());
+        ELOG("socket send buffer overflow, kill connection,conn:%d,buffer size:%d",
+             _conn_id, send_buff.get_all_used_size());
 
         Socket::stop();
 
@@ -138,9 +140,8 @@ void Socket::append(const void *data, size_t len)
         for (int32_t i = 0; i < 4; i++)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
-            ELOG("socket send buffer overflow, pending,"
-                 "object:" FMT64d ",conn:%d,buffer size:%d",
-                 _object_id, _conn_id, send_buff.get_all_used_size());
+            ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
+                 _conn_id, send_buff.get_all_used_size());
 
             if (!send_buff.is_overflow()) break;
         };
@@ -367,8 +368,6 @@ bool Socket::start(int32_t fd)
     }
     _w->bind(&Socket::io_cb, this);
 
-    C_SOCKET_TRAFFIC_NEW(_conn_id);
-
     return true;
 }
 
@@ -380,7 +379,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
     if (fd == netcompat::INVALID || set_block(fd, 0) < 0)
     {
-        int32_t e = netcompat::noerror();
+        int32_t e = netcompat::errorno();
         ELOG("Socket create %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
@@ -388,7 +387,7 @@ int32_t Socket::connect(const char *host, int32_t port)
 #ifndef IP_V4
     if (set_non_ipv6only(fd))
     {
-        int32_t e = netcompat::noerror();
+        int32_t e = netcompat::errorno();
         ELOG("Socket ipv6 %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
@@ -422,7 +421,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     // 异步允许上层逻辑在connect返回再才触发on_connected
     if (0 != ::connect(fd, (struct sockaddr *)&addr, sizeof(addr)))
     {
-        int32_t e = netcompat::noerror();
+        int32_t e = netcompat::errorno();
         if (netcompat::iserror(e))
         {
             netcompat::close(fd);
@@ -454,7 +453,7 @@ int32_t Socket::validate()
     socklen_t len = sizeof(err);
     if (getsockopt(_fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len))
     {
-        return netcompat::noerror();
+        return netcompat::errorno();
     }
 
     return err;
@@ -471,7 +470,7 @@ const char *Socket::address(char *buf, size_t len, int *port)
 
     if (getpeername(_fd, (struct sockaddr *)&addr, &addr_len) < 0)
     {
-        int32_t e = netcompat::noerror();
+        int32_t e = netcompat::errorno();
         ELOG("socket::address getpeername error: %s\n", netcompat::strerror(e));
         return nullptr;
     }
@@ -622,7 +621,77 @@ void Socket::close_cb(bool term)
     _w = nullptr;
     StaticGlobal::ev()->io_delete(_conn_id);
 
-    // StaticGlobal::network_mgr()->connect_del(_conn_id, e);
+    try
+    {
+        StaticGlobal::S->call("connect_del", _conn_id, e);
+    }
+    catch (const std::exception& e)
+    {
+        ELOG("%s", e.what());
+    }
+}
+
+void Socket::accept_new(int32_t fd)
+{
+    if (set_block(fd, 0))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_block fail, fd = %d, e = %d: %s", fd, e,
+             netcompat::strerror(e));
+        netcompat::close(fd);
+        return;
+    }
+    if (set_keep_alive(fd))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", fd, e,
+             netcompat::strerror(e));
+        netcompat::close(fd);
+        return;
+    }
+    if (set_user_timeout(fd))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", fd, e,
+             netcompat::strerror(e));
+        netcompat::close(fd);
+        return;
+    }
+    if (set_nodelay(fd))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", fd, e,
+             netcompat::strerror(e));
+        netcompat::close(fd);
+        return;
+    }
+
+    Socket *s;
+    try
+    {
+        s = StaticGlobal::S->call<Socket *>("accept_new", _conn_id);
+    }
+    catch (const std::exception& e)
+    {
+        ELOG("%s", e.what());
+        netcompat::close(fd);
+        return;
+    }
+    if (!s->start(fd))
+    {
+        s->stop();
+        return;
+    }
+
+    // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
+    if (EXPECT_TRUE(s && s->_fd != netcompat::INVALID && s->_packet))
+    {
+        s->_w->init_accept();
+    }
+    else
+    {
+        s->stop();
+    }
 }
 
 void Socket::listen_cb()
@@ -632,7 +701,7 @@ void Socket::listen_cb()
         int32_t new_fd = (int32_t)::accept(_fd, nullptr, nullptr);
         if (new_fd == netcompat::INVALID)
         {
-            int32_t e = netcompat::noerror();
+            int32_t e = netcompat::errorno();
             if (netcompat::iserror(e))
             {
                 ELOG("socket::accept:%s", netcompat::strerror(e));
@@ -642,60 +711,7 @@ void Socket::listen_cb()
             break; /* 所有等待的连接已处理完 */
         }
 
-        if (set_block(new_fd, 0))
-        {
-            int32_t e = netcompat::noerror();
-            ELOG("fd set_block fail, fd = %d, e = %d: %s", new_fd, e,
-                 netcompat::strerror(e));
-            netcompat::close(new_fd);
-            continue;
-        }
-        if (set_keep_alive(new_fd))
-        {
-            int32_t e = netcompat::noerror();
-            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", new_fd, e,
-                 netcompat::strerror(e));
-            netcompat::close(new_fd);
-            continue;
-        }
-        if (set_user_timeout(new_fd))
-        {
-            int32_t e = netcompat::noerror();
-            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", new_fd, e,
-                 netcompat::strerror(e));
-            netcompat::close(new_fd);
-            continue;
-        }
-        if (set_nodelay(new_fd))
-        {
-            int32_t e = netcompat::noerror();
-            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", new_fd, e,
-                 netcompat::strerror(e));
-            netcompat::close(new_fd);
-            continue;
-        }
-
-        uint32_t conn_id     = -1; // network_mgr->new_connect_id();
-        class Socket *new_sk = new class Socket(conn_id, _conn_ty);
-        if (!new_sk->start(new_fd))
-        {
-            new_sk->stop();
-            return;
-        }
-
-        // 初始完socket后才触发脚本，因为脚本那边可能要使用socket，比如发送数据
-        bool ok = false;
-        // network_mgr->accept_new(_conn_id, new_sk);
-        // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
-        if (EXPECT_TRUE(ok && new_sk->_fd != netcompat::INVALID
-                        && new_sk->_packet && new_sk->_io))
-        {
-            new_sk->_w->init_accept();
-        }
-        else
-        {
-            new_sk->stop();
-        }
+        accept_new(new_fd);
     }
 }
 
@@ -720,7 +736,7 @@ void Socket::connect_cb()
     {
         if (set_keep_alive(_fd))
         {
-            int32_t e = netcompat::noerror();
+            int32_t e = netcompat::errorno();
             ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", _fd, e,
                  netcompat::strerror(e));
 
@@ -729,7 +745,7 @@ void Socket::connect_cb()
         }
         if (set_user_timeout(_fd))
         {
-            int32_t e = netcompat::noerror();
+            int32_t e = netcompat::errorno();
             ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", _fd, e,
                  netcompat::strerror(e));
 
@@ -738,7 +754,7 @@ void Socket::connect_cb()
         }
         if (set_nodelay(_fd))
         {
-            int32_t e = netcompat::noerror();
+            int32_t e = netcompat::errorno();
             ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", _fd, e,
                  netcompat::strerror(e));
 
@@ -749,7 +765,17 @@ void Socket::connect_cb()
         _w->set(EV_READ);
     }
 
-    bool ok = StaticGlobal::S->call<bool>("connect_new", _conn_id, ecode);
+    bool ok;
+    try
+    {
+        ok = StaticGlobal::S->call<Socket *>("connect_new", _conn_id, ecode);
+    }
+    catch (const std::exception &e)
+    {
+        ELOG("%s", e.what());
+        Socket::stop();
+        return;
+    }
 
     // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
     if (EXPECT_TRUE(ok && 0 == ecode && _fd != netcompat::INVALID && _packet
@@ -802,14 +828,15 @@ int32_t Socket::set_io(IO::IOType io_type, int32_t param)
     auto &recv = _w->get_recv_buffer();
     auto &send = _w->get_send_buffer();
 
+    IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: _io = new IO(_conn_id, &recv, &send); break;
-    case IO::IOT_SSL: _io = new SSLIO(_conn_id, param, &recv, &send); break;
+    case IO::IOT_NONE: io = new IO(_conn_id, &recv, &send); break;
+    case IO::IOT_SSL: io = new SSLIO(_conn_id, param, &recv, &send); break;
     default: return -1;
     }
 
-    _w->set_io(_io);
+    _w->set_io(io);
 
     return 0;
 }
@@ -829,24 +856,6 @@ int32_t Socket::set_packet(Packet::PacketType packet_type)
     default: return -1;
     }
     return 0;
-}
-
-void Socket::get_stat(size_t &schunk, size_t &rchunk, size_t &smem,
-                      size_t &rmem, size_t &spending, size_t &rpending)
-{
-    if (!_w) return;
-
-    const auto &send = _w->get_send_buffer();
-    const auto &recv = _w->get_recv_buffer();
-
-    schunk = send.get_chunk_size();
-    rchunk = recv.get_chunk_size();
-
-    smem = send.get_chunk_mem_size();
-    rmem = recv.get_chunk_mem_size();
-
-    spending = send.get_all_used_size();
-    rpending = recv.get_all_used_size();
 }
 
 void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)

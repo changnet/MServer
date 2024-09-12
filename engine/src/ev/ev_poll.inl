@@ -78,7 +78,7 @@ bool FinalBackend::before_start()
 
     if (socketpair(AF_LOCAL, SOCK_STREAM, 0, _wake_fd) < 0)
     {
-        int32_t e = netcompat::noerror();
+        int32_t e = netcompat::errorno();
         ELOG("poll init socketpair fail(%d): %s", e, netcompat::strerror(e));
 
         return false;
@@ -158,7 +158,7 @@ int32_t FinalBackend::wait(int32_t timeout)
             return -1;
         default:
         {
-            int32_t e = netcompat::noerror();
+            int32_t e = netcompat::errorno();
             ELOG("poll fatal(%d): %s", e, netcompat::strerror(e));
             assert(false);
             return -1;

@@ -12,8 +12,6 @@ GridAOI::GridAOI()
     _visual_height = 0; // 视野高度格子数
 
     _entity_grid = nullptr;
-
-    C_OBJECT_ADD("grid_aoi");
 }
 
 GridAOI::~GridAOI()
@@ -27,8 +25,6 @@ GridAOI::~GridAOI()
         delete _entity_grid[i];
     }
     delete[] _entity_grid;
-
-    C_OBJECT_DEC("grid_aoi");
 }
 
 /**

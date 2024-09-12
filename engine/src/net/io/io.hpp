@@ -34,22 +34,22 @@ public:
     explicit IO(int32_t conn_id, class Buffer *recv, class Buffer *send);
 
     /**
-     * 接收数据
+     * 接收数据（此函数在io线程执行）
      * @return IOStatus
      */
     virtual IOStatus recv(EVIO *w);
     /**
-     * 发送数据
+     * 发送数据（此函数在io线程执行）
      * @return IOStatus
      */
     virtual IOStatus send(EVIO *w);
     /**
-     * 发起初始化接受的连接
+     * 发起初始化接受的连接（此函数在io线程执行）
      * @return 需要异步执行的事件
      */
     virtual int32_t init_accept(int32_t fd);
     /**
-     * 发起初始化连接
+     * 发起初始化连接（此函数在io线程执行）
      * @return 需要异步执行的事件
      */
     virtual int32_t init_connect(int32_t fd);

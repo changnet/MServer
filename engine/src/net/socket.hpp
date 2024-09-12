@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ev/ev_watcher.hpp"
 #include "global/global.hpp"
+#include "ev/ev_watcher.hpp"
 
 #include "io/io.hpp"
 #include "packet/packet.hpp"
@@ -15,16 +15,6 @@ class LEV;
 class Socket final
 {
 public:
-    enum ConnType
-    {
-        CT_NONE = 0, ///< 连接方式，无效值
-        CT_CSCN = 1, ///< c2s 客户端与服务器之间连接
-        CT_SCCN = 2, ///< s2c 服务器与客户端之间连接
-        CT_SSCN = 3, ///< s2s 服务器与服务器之间连接
-
-        CT_MAX ///< 连接方式最大值
-    };
-
     // socket的状态
     enum ConnStatus
     {
@@ -36,7 +26,7 @@ public:
 
 public:
     ~Socket();
-    explicit Socket(int32_t conn_id, ConnType conn_ty);
+    explicit Socket(int32_t conn_id);
 
     static void library_end();
     static void library_init();
@@ -146,7 +136,6 @@ public:
 
     inline int32_t fd() const { return _fd; }
     inline int32_t conn_id() const { return _conn_id; }
-    inline ConnType conn_type() const { return _conn_ty; }
 
     /**
      * @brief 设置缓冲区的参数
@@ -155,21 +144,6 @@ public:
      * @param mask 缓冲区溢出时处理方式
     */
     void set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask);
-
-    inline int64_t get_object_id() const { return _object_id; }
-    inline void set_object_id(int64_t oid) { _object_id = oid; }
-
-    /**
-     * 获取统计数据
-     * @param schunk 发送缓冲区分配的内存块
-     * @param rchunk 接收缓冲区分配的内存块
-     * @param smem 发送缓冲区分配的内存大小
-     * @param rmem 接收缓冲区分配的内在大小
-     * @param spending 待发送的数据
-     * @param rpending 待处理的数据
-     */
-    void get_stat(size_t &schunk, size_t &rchunk, size_t &smem, size_t &rmem,
-                  size_t &spending, size_t &rpending);
 
 private:
     /**
@@ -180,17 +154,15 @@ private:
     void listen_cb();
     void command_cb();
     void connect_cb();
+    void accept_new(int32_t fd);
 
 protected:
-    int32_t _conn_id;
-    ConnType _conn_ty;
+    int32_t _conn_id; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
 
 private:
     int8_t _status; // 当前socket的状态
     int32_t _fd; /// 当前socket的文件描述符
-    int64_t _object_id; /* 标识这个socket对应上层逻辑的object，一般是玩家id */
 
     EVIO *_w; /// io事件监视器
-    IO *_io; /// io读写对象
-    class Packet *_packet;
+    Packet *_packet;
 };

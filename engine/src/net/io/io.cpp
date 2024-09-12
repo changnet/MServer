@@ -49,7 +49,7 @@ IO::IOStatus IO::recv(EVIO *w)
     }
 
     /* error happen */
-    int32_t e = netcompat::noerror();
+    int32_t e = netcompat::errorno();
     if (netcompat::iserror(e))
     {
         w->_errno = e;
@@ -88,7 +88,7 @@ IO::IOStatus IO::send(EVIO *w)
     if (0 == len) return IOS_CLOSE; // 对方主动断开
 
     /* error happen */
-    int32_t e = netcompat::noerror();
+    int32_t e = netcompat::errorno();
     if (netcompat::iserror(e))
     {
         w->_errno = e;

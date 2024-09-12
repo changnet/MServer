@@ -4,7 +4,6 @@
 #include "lua_cpplib/lev.hpp"
 #include "lua_cpplib/lstate.hpp"
 #include "thread/thread_mgr.hpp"
-#include "statistic.hpp"
 
 /**
  * 控制static或者global变量，的创建、销毁顺序，避免相互依赖，影响内存泄漏计数
@@ -38,10 +37,6 @@ public:
         return _state->state();
     }
 
-    static class Statistic *statistic()
-    {
-        return _statistic;
-    }
     static class LLog *async_logger()
     {
         return _async_log;
@@ -72,7 +67,6 @@ private:
 private:
     static class LEV *_ev;
     static class LState *_state;
-    static class Statistic *_statistic;
     static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;
     static Buffer::ChunkPool *_buffer_chunk_pool;

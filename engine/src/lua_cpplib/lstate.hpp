@@ -18,6 +18,11 @@ public:
     ~LState();
     explicit LState();
 
+    /**
+     * 调用lua全局函数，需要指定返回类型，如call<int>("func", 1, 2, 3)。错误会抛异常
+     * @param name 函数名
+     * @param Args 参数
+     */
     template <typename Ret, typename... Args>
     Ret call(const char *name, Args... args);
     template <typename... Args> void call(const char *name, Args... args);
@@ -62,7 +67,7 @@ Ret LState::call(const char *name, Args... args)
     (lua::cpp_to_lua(L, args), ...);
 
     const size_t nargs = sizeof...(Args);
-    if (LUA_OK != lua_pcall(L, nargs, 0, nargs - 2))
+    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, (int32_t)nargs - 2))
     {
         std::string message("call ");
         message = message + name + " :" + lua_tostring(L, -1);

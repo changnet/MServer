@@ -60,7 +60,7 @@ namespace netcompat
      * @brief 获取错误码
      * @return 错误码，同errno
      */
-    inline int noerror()
+    inline int errorno()
     {
         return WSAGetLastError();
     }
@@ -84,7 +84,7 @@ namespace netcompat
      * @brief 获取错误码
      * @return 错误码，同errno
     */
-    inline int noerror()
+    inline int errorno()
     {
         return errno;
     }

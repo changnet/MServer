@@ -61,12 +61,12 @@ IO::IOStatus SSLIO::recv(EVIO *w)
     // 在实际测试中，chrome会直接断开链接，而firefox则会关闭SSL */
     if ((SSL_ERROR_ZERO_RETURN == ecode)
         || (SSL_ERROR_SYSCALL == ecode
-            && !netcompat::iserror(netcompat::noerror())))
+            && !netcompat::iserror(netcompat::errorno())))
     {
         return IOS_CLOSE;
     }
 
-    w->_errno = netcompat::noerror();
+    w->_errno = netcompat::errorno();
     TlsCtx::dump_error("ssl io recv");
     return IOS_ERROR;
 }
@@ -103,12 +103,12 @@ IO::IOStatus SSLIO::send(EVIO *w)
     // 非主动断开，打印错误日志
     if ((SSL_ERROR_ZERO_RETURN == ecode)
         || (SSL_ERROR_SYSCALL == ecode
-            && !netcompat::iserror(netcompat::noerror())))
+            && !netcompat::iserror(netcompat::errorno())))
     {
         return IOS_CLOSE;
     }
 
-    w->_errno = netcompat::noerror();
+    w->_errno = netcompat::errorno();
     TlsCtx::dump_error("ssl io send");
     return IOS_ERROR;
 }

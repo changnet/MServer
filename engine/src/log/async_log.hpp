@@ -77,6 +77,10 @@ public:
     class Device
     {
     public:
+        Device()
+        {
+            _time = 0;
+        }
         friend class AsyncLog;
 
     private:

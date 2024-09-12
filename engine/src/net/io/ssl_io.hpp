@@ -11,23 +11,23 @@ public:
     explicit SSLIO(int32_t conn_id, int32_t ssl_id, class Buffer *recv,
                    class Buffer *send);
 
-    /* 接收数据
+    /* 接收数据（此函数在io线程执行）
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 接收的数据长度
      */
     IOStatus recv(EVIO *w) override;
-    /* 发送数据
+    /* 发送数据（此函数在io线程执行）
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写
      * @byte: 发送的数据长度
      */
     IOStatus send(EVIO *w) override;
     /**
-     * 发起初始化接受的连接
+     * 发起初始化接受的连接（此函数在io线程执行）
      * @return 是否需要异步执行action事件
      */
     int32_t init_accept(int32_t fd) override;
     /**
-     * 发起初始化连接
+     * 发起初始化连接（此函数在io线程执行）
      * @return 是否需要异步执行action事件
      */
     int32_t init_connect(int32_t fd) override;

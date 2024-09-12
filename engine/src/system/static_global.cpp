@@ -3,10 +3,10 @@
 #include "mongo/mongo.hpp"
 #include "mysql/sql.hpp"
 #include "net/io/tls_ctx.hpp"
+#include "net/socket.hpp"
 
 class LEV *StaticGlobal::_ev                  = nullptr;
 class LState *StaticGlobal::_state            = nullptr;
-class Statistic *StaticGlobal::_statistic     = nullptr;
 class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
 Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
@@ -63,7 +63,6 @@ void StaticGlobal::initialize()
     _async_log  = new class LLog("Engine.AsyncLog");
     _ev         = new class LEV();
 
-    _statistic   = new class Statistic();
     _state       = new class LState();
     L                  = _state->state();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
@@ -74,9 +73,6 @@ void StaticGlobal::initialize()
     // 关服的时候，不需要等待这个线程。之前在关服定时器上打异步日志，
     // 导致这个线程一直忙,关不了服，stop的时候会处理所有日志
     _async_log->set_wait_busy(false);
-
-    // 初始化流量统计，这个和时间有关，等 ev 初始化后才调用
-    _statistic->reset_trafic();
 }
 
 void StaticGlobal::uninitialize()
@@ -93,7 +89,6 @@ void StaticGlobal::uninitialize()
     delete _buffer_chunk_pool;
     delete _state;
     L = nullptr;
-    delete _statistic;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效
     _async_log->AsyncLog::stop();

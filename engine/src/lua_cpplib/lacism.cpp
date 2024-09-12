@@ -1,3 +1,4 @@
+#include "global/global.hpp"
 #include "lacism.hpp"
 
 static inline int isspace_ex(int c)

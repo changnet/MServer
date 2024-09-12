@@ -165,7 +165,7 @@ public:
             _ctx = 0;
             _internal = false;
         }
-        Transaction(Transaction &&t) : _ul(std::move(t._ul))
+        Transaction(Transaction &&t) noexcept : _ul(std::move(t._ul))
         {
             _len = t._len;
             _ctx = t._ctx;
@@ -175,7 +175,7 @@ public:
             t._ctx = 0;
             t._internal = false;
         }
-        Transaction &operator=(Transaction && t)
+        Transaction &operator=(Transaction &&t) noexcept
         {
             _len = t._len;
             _ctx = t._ctx;

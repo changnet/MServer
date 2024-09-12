@@ -10,7 +10,6 @@
 #include "lmongo.hpp"
 #include "lsql.hpp"
 #include "lstate.hpp"
-#include "lstatistic.hpp"
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 
@@ -302,7 +301,6 @@ void LState::open_cpp()
     /* ============================库方式调用=============================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     LUA_LIB_OPEN("engine.util", luaopen_util);
-    LUA_LIB_OPEN("engine.statistic", luaopen_statistic);
     LUA_LIB_OPEN("engine.lua_parson", luaopen_lua_parson);
     LUA_LIB_OPEN("engine.lua_rapidxml", luaopen_lua_rapidxml);
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
