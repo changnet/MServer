@@ -97,6 +97,13 @@ int32_t luaopen_socket(lua_State* L)
     lc.def<&Socket::start>("start");
     lc.def<&Socket::stop>("stop");
     lc.def<&Socket::listen>("listen");
+    lc.def<&Socket::set_io>("set_io");
+    lc.def<&Socket::set_packet>("set_packet");
+
+    lc.set(Packet::PT_HTTP, "PT_HTTP");
+    lc.set(Packet::PT_STREAM, "PT_STREAM");
+    lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
+    lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
 
     return 0;
 }

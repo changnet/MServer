@@ -31,6 +31,11 @@ public:
     int32_t init(const char *cert_file, const char *key_file,
                         const char *passwd, const char *ca);
 
+    SSL_CTX *get() const
+    {
+        return _ctx;
+    }
+
 private:
     SSL_CTX *_ctx;
     char _passwd[256];

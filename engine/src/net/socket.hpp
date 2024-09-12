@@ -7,6 +7,7 @@
 #include "packet/packet.hpp"
 
 class LEV;
+class TlsCtx;
 
 /* 网络socket连接类
  * 这里封装了基本的网络操作
@@ -129,8 +130,8 @@ public:
         flush();
     }
 
-    int32_t set_io(IO::IOType io_type, int32_t param);
-    int32_t set_packet(Packet::PacketType packet_type);
+    int32_t set_io(int32_t io_type, TlsCtx *tls_ctx);
+    int32_t set_packet(int32_t packet_type);
 
     class Packet *get_packet() const { return _packet; }
 

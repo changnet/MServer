@@ -4,11 +4,13 @@
 
 #include "io.hpp"
 
+class TlsCtx;
+
 class SSLIO final: public IO
 {
 public:
     ~SSLIO();
-    explicit SSLIO(int32_t conn_id, int32_t ssl_id, class Buffer *recv,
+    explicit SSLIO(int32_t conn_id, TlsCtx *tls_ctx, class Buffer *recv,
                    class Buffer *send);
 
     /* 接收数据（此函数在io线程执行）
@@ -51,6 +53,6 @@ private:
     int32_t init_ssl_ctx();
 
 private:
-    int32_t _ssl_id;
-    SSL *_ssl_ctx;
+    SSL *_ssl;
+    TlsCtx *_tls_ctx;
 };

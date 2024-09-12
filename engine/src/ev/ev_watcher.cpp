@@ -36,6 +36,7 @@ EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
 
 EVIO::~EVIO()
 {
+    if (_io) delete _io;
 }
 
 void EVIO::set(int32_t events)

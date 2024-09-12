@@ -821,7 +821,7 @@ void Socket::command_cb()
     }
 }
 
-int32_t Socket::set_io(IO::IOType io_type, int32_t param)
+int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 {
     assert(_w);
 
@@ -832,7 +832,7 @@ int32_t Socket::set_io(IO::IOType io_type, int32_t param)
     switch (io_type)
     {
     case IO::IOT_NONE: io = new IO(_conn_id, &recv, &send); break;
-    case IO::IOT_SSL: io = new SSLIO(_conn_id, param, &recv, &send); break;
+    case IO::IOT_SSL: io = new SSLIO(_conn_id, tls_ctx, &recv, &send); break;
     default: return -1;
     }
 
@@ -841,7 +841,7 @@ int32_t Socket::set_io(IO::IOType io_type, int32_t param)
     return 0;
 }
 
-int32_t Socket::set_packet(Packet::PacketType packet_type)
+int32_t Socket::set_packet(int32_t packet_type)
 {
     /* 如果有旧的，需要先删除 */
     delete _packet;
@@ -849,7 +849,7 @@ int32_t Socket::set_packet(Packet::PacketType packet_type)
 
     switch (packet_type)
     {
-    //case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
+    case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
     //case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
     //case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
     //case Packet::PT_WSSTREAM: _packet = new WSStreamPacket(this); break;
