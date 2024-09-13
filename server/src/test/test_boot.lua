@@ -3,7 +3,6 @@ require "global.oo"
 require "global.table"
 require "global.string"
 require "global.name"
-require "engine.statistic"
 
 require "modules.event.system_event"
 

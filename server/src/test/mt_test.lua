@@ -3,11 +3,6 @@
 -- xzc
 --[[
 测试结果表明，使用元表速度更慢。因此这套框架的继承一般不要超过3层。
-local ts = 10000000
-call function native	1091772	microsecond
-call function as table value	1287172	microsecond
-call function with 3 level metatable	2014431	microsecond
-call function with 10 level metatable	3707181	microsecond
 [T0LP09-02 15:10:56]    [  OK] call function native 10000000 times (449ms)
 [T0LP09-02 15:10:56]    [  OK] call function as table value 10000000 times (555ms)
 [T0LP09-02 15:10:58]    [  OK] call function 1 level metatable 10000000 times (1110ms)
