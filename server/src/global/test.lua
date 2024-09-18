@@ -524,6 +524,7 @@ local function run()
                           time))
 
     T.co = nil
+    App.stop()
 end
 
 -- run current test session

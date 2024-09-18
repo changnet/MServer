@@ -462,11 +462,12 @@ public:
     // 指定构造函数的参数
     template <typename... Args> void constructor()
     {
+
         luaL_getmetatable(L, _class_name);
         assert(lua_istable(L, -1));
 
-        lua_getmetatable(L, -1);
-        if (!lua_istable(L, -1))
+        // lua_getmetatable获取不到metatable的话，并不会往堆栈push一个nil
+        if (!lua_getmetatable(L, -1))
         {
             lua_newtable(L);
         }

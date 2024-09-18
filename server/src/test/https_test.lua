@@ -1,10 +1,11 @@
 -- http(s)_test.lua
 -- 2017-12-11
 -- xzc
-local network_mgr = network_mgr
-local HttpConn = require "http.http_conn"
 
 local util = require "engine.util"
+local TlsCtx = require "engine.TlsCtx"
+local HttpConn = require "http.http_conn"
+
 
 t_describe("http(s) test", function()
     -- 产生一个缓存，避免下面连接时查询dns导致测试超时
@@ -13,40 +14,33 @@ t_describe("http(s) test", function()
     local exp_host = "postman-echo.com"
     local exp_ip
 
-    local local_host = "::1"
-    if IPV4 then local_host = "127.0.0.1" end
+    local local_host = IPV4 and "127.0.0.1" or "::1"
 
-    local clt_ssl
-    local srv_ssl
-    local vfy_ssl
-    local vfy_srv_ssl
-    local vfy_clt_ssl
+    local clt_ssl = TlsCtx()
+    local srv_ssl = TlsCtx()
+    local vfy_ssl = TlsCtx()
+    local vfy_srv_ssl = TlsCtx()
+    local vfy_clt_ssl = TlsCtx()
 
     t_before(function()
-        clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
+        clt_ssl:init() -- 客户端的ssl不需要证书
 
         if LINUX then
-            vfy_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT, nil,
-                                              nil, nil,
-                                              "/etc/ssl/certs/ca-certificates.crt")
+            vfy_ssl:init(nil, nil, nil, "/etc/ssl/certs/ca-certificates.crt")
         end
 
-        srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
-                                          "../certs/server.cer",
-                                          "../certs/srv_key.pem",
-                                          "mini_distributed_game_server")
+        srv_ssl:init("../certs/server.cer",
+            "../certs/srv_key.pem", "mini_distributed_game_server")
 
-        vfy_srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
-                                              "../certs/server.cer",
-                                              "../certs/srv_key.pem",
-                                              "mini_distributed_game_server",
-                                              "../certs/ca.cer")
+        vfy_srv_ssl:init("../certs/server.cer",
+            "../certs/srv_key.pem",
+            "mini_distributed_game_server",
+            "../certs/ca.cer")
 
-        vfy_clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT,
-                                              "../certs/client.cer",
-                                              "../certs/clt_key.pem",
-                                              "mini_distributed_game_server",
-                                              "../certs/ca.cer")
+        vfy_clt_ssl:init("../certs/client.cer",
+            "../certs/clt_key.pem",
+            "mini_distributed_game_server",
+            "../certs/ca.cer")
 
         exp_ip = util.get_addr_info(exp_host)
         t_print("target host address is", exp_ip)

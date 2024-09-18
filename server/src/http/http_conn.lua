@@ -3,7 +3,7 @@
 -- xzc
 
 
-
+local Socket = require "engine.Socket"
 local HTTP = require "http.http_header"
 
 local Conn = require "network.conn"
@@ -11,17 +11,15 @@ local Conn = require "network.conn"
 local PAGE_GET = HTTP.PGET
 local PAGE_POST = HTTP.PPOST
 
-local network_mgr = network_mgr
-
 -- http连接
 local HttpConn = oo.class(..., Conn)
 
 HttpConn.default_param = {
-    pkt = network_mgr.PT_HTTP, -- 打包解包类型
+    pkt = Socket.PT_HTTP, -- 打包解包类型
 }
 
 function HttpConn:__init()
-    Conn:__int(self)
+    Conn.__init(self)
 end
 
 -- 收到消息
