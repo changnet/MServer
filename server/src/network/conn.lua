@@ -3,15 +3,33 @@
 -- xzc
 
 local util = require "engine.util"
+local Socket = require "engine.Socket"
 
 ---------------------------- 下面这些接口由底层回调 ------------------------------
 ----------------------- 直接回调到对应的连接对象以实现多态 ------------------------
 __conn = __conn or {}
+__conn_id_seed = __conn_id_seed or 0
 
 -- 因为gc的延迟问题，用以弱表可能会导致取所有连接时不准确
 -- setmetatable(self.conn, {["__mode"]='v'})
 
 local __conn = __conn
+local __conn_id_seed = __conn_id_seed
+
+local function next_id()
+    local id = __conn_id_seed + 1
+    if __conn[id] then
+        for _ = 1, 1000000 do
+            id = id + 1
+            if not __conn[id] then break end
+        end
+    end
+
+    __conn_id_seed = id
+    if __conn_id_seed > 0xFFFFFFFF then __conn_id_seed = 1 end
+
+    return id
+end
 
 -- 在脚本执行重连后，conn对象在脚本被重用。但C++那边回调还需要旧对象来处理
 local reconnect_conn =
@@ -20,9 +38,8 @@ local reconnect_conn =
 }
 
 -- 接受新的连接
-function conn_accept(conn_id, new_conn_id)
-    local new_conn = __conn[conn_id]:conn_accept(new_conn_id)
-    __conn[new_conn_id] = new_conn
+function conn_accept(conn_id, fd)
+    __conn[conn_id]:conn_accept(fd)
 end
 
 -- 连接进行初始化
@@ -74,6 +91,14 @@ end
 -- 网络连接基类
 local Conn = oo.class(...)
 
+function Conn:__init()
+    local conn_id = next_id()
+
+    self.s = Socket(conn_id)
+    self.conn_id = conn_id
+    __conn[conn_id] = self
+end
+
 -- on_cmd 收到消息时触发
 -- on_accepted accept成功时触发
 -- on_connected 连接建立完成(包括SSL、websocket握手完成)
@@ -94,26 +119,24 @@ function Conn:set_conn_param()
         }
     ]]
 
+    local s = self.s
     local param = self.default_param
-    local conn_id = self.conn_id
 
     -- 读写方式，是否使用SSL
     if self.ssl then
-        network_mgr:set_conn_io(conn_id, network_mgr.IOT_SSL, self.ssl)
+        s:set_io(1, self.ssl)
     else
-        network_mgr:set_conn_io(conn_id, network_mgr.IOT_NONE)
+        s:set_io(0)
     end
-    -- 编码方式，如bson、protobuf、flatbuffers等
-    network_mgr:set_conn_codec(conn_id, param.cdt or network_mgr.CDT_NONE)
+
     -- 打包方式，如http、自定义的tcp打包、websocket打包
-    network_mgr:set_conn_packet(conn_id, param.pkt or network_mgr.PT_NONE)
+    s:set_packet(param.pkt)
 
     local action = param.action or 1 -- over_action，1 表示缓冲区溢出后断开
     local send_chunk_max = param.send_chunk_max or 1 -- 发送缓冲区数量
     local recv_chunk_max = param.recv_chunk_max or 1 -- 接收缓冲区数
 
-    network_mgr:set_buffer_params(
-        conn_id, send_chunk_max, recv_chunk_max, action)
+    s:set_buffer_params(send_chunk_max, recv_chunk_max, action)
 end
 
 -- 根据连接id获取对象
@@ -121,18 +144,13 @@ function Conn:get_conn(conn_id)
     return __conn[conn_id]
 end
 
--- 把连接id和对象绑定
-function Conn:set_conn(conn_id, conn)
-    __conn[conn_id] = conn
-end
-
 -- 接受新连接
-function Conn:conn_accept(new_conn_id)
+function Conn:conn_accept(fd)
     local mt = getmetatable(self) or self
 
     -- 取监听socket的元表来创建同类型的对象
     -- 并且把监听socket的ssl回调之类的复制到新socket
-    local conn = mt(new_conn_id)
+    local conn = mt()
 
     conn.ssl = self.ssl
 
@@ -146,13 +164,17 @@ function Conn:conn_accept(new_conn_id)
 
     conn.default_param = rawget(self, "default_param")
 
+    if not conn.s:start(fd) then
+        print("conn accept start fail", self.conn_id, fd)
+        return
+    end
+
+    __conn[conn.conn_id] = conn
+
     -- 必须在继承后设置参数，不然用些初始化的参数就会不对
     conn:set_conn_param()
 
-    __conn[new_conn_id] = conn
-
     conn:on_accepted()
-    return conn
 end
 
 -- 连接成功(或失败)
@@ -197,12 +219,9 @@ function Conn:connect(host, port, ip)
     self.host = host
     self.port = port
 
-    self.conn_id = network_mgr:connect(
-        self.ip, port, self.default_param.connect_type)
+    local e = self.s:connect(host, port)
 
-    self:set_conn(self.conn_id, self)
-
-    return self.conn_id
+    return e >= 0
 end
 
 -- 重新连接，之前必须调用过connect函数
@@ -236,19 +255,14 @@ end
 -- @param port 监听的端口
 -- @param boolean, message 返回是否成功，失败后面带message
 function Conn:listen(ip, port)
-    local conn_id, msg = network_mgr:listen(
-        ip, port, self.default_param.listen_type)
-    if conn_id < 0 then
-        return false, msg
-    end
-
     self.listen_ip = ip
     self.listen_port = port
 
-    self.ok = true -- 对于监听的socket，不会触发io_ok，这里直接设置ok状态
-    self.conn_id = conn_id
-    self:set_conn(self.conn_id, self)
-    return true
+    local e = self.s:listen(ip, port)
+    local ok = e >= 0
+
+    self.ok = ok -- 对于监听的socket，不会触发io_ok，这里直接设置ok状态
+    return ok
 end
 
 -- 以https方式监听http连接
@@ -265,7 +279,7 @@ end
 function Conn:close(flush)
     -- 关闭时会触发conn_del，在那边删除
     -- self:set_conn(self.conn_id, nil)
-    return network_mgr:close(self.conn_id, flush)
+    return self.s:stop(self.conn_id, flush)
 end
 
 return Conn

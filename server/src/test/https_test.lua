@@ -237,7 +237,7 @@ t_describe("http(s) test", function()
         end
     end)
 
-    t_it("https valify and get " .. exp_host, vfy_ssl, function()
+    t_it("https ssl verify and get " .. exp_host, vfy_ssl, function()
         t_async(10000)
 
         local conn = HttpConn()
@@ -254,7 +254,7 @@ t_describe("http(s) test", function()
         end
     end)
 
-    t_it("https two-way valify local server test", function()
+    t_it("https two-way ssl verify local server test", function()
         t_async(10000)
 
         local ctx = "hello"

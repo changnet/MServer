@@ -91,6 +91,8 @@ Socket::~Socket()
 
 void Socket::stop(bool flush, bool term)
 {
+    if (_status != CS_OPENED) return;
+
     _status = CS_CLOSING;
 
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
@@ -669,7 +671,7 @@ void Socket::accept_new(int32_t fd)
     Socket *s;
     try
     {
-        s = StaticGlobal::S->call<Socket *>("accept_new", _conn_id);
+        s = StaticGlobal::S->call<Socket *>("conn_accept", _conn_id, fd);
     }
     catch (const std::exception& e)
     {

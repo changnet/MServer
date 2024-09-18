@@ -14,6 +14,12 @@ int32_t main(int32_t argc, char **argv)
     SetUnhandledExceptionFilter(__unhandled_exception_filte);
 #endif
 
+    if (argc > 64)
+    {
+        ELOG_R("load lua enterance file error:%d", argc);
+        return 1;
+    }
+
     StaticGlobal::initialize();
 
     lua_State *L = StaticGlobal::state();
@@ -35,15 +41,15 @@ int32_t main(int32_t argc, char **argv)
         return 1;
     }
 
+    lua_checkstack(L, argc);
+
     /* push argv to lua */
-    int cnt = 0;
-    for (int i = 0; i < argc && cnt < 8; i++)
+    for (int i = 0; i < argc; i++)
     {
         lua_pushstring(L, argv[i]);
-        ++cnt;
     }
 
-    if (LUA_OK != lua_pcall(L, cnt, 0, 0))
+    if (LUA_OK != lua_pcall(L, argc, 0, 0))
     {
         const char *err_msg = lua_tostring(L, -1);
         ELOG("call lua enterance file error:%s", err_msg);

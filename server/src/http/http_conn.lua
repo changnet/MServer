@@ -17,14 +17,11 @@ local network_mgr = network_mgr
 local HttpConn = oo.class(..., Conn)
 
 HttpConn.default_param = {
-    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
-    connect_type = network_mgr.CT_CSCN, -- 连接类型
-    cdt = network_mgr.CDT_NONE, -- 编码类型
-    pkt = network_mgr.PT_HTTP, -- 打包类型
+    pkt = network_mgr.PT_HTTP, -- 打包解包类型
 }
 
-function HttpConn:__init(conn_id)
-    self.conn_id = conn_id -- 通过accept创建时需要直接指定
+function HttpConn:__init()
+    Conn:__int(self)
 end
 
 -- 收到消息

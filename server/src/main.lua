@@ -58,10 +58,9 @@ require "global.global" -- 这个要放require后面，它是可以热更的
 g_app = {}
 
 -- 简单模拟c的getopt函数，把参数读出来，按table返回
-local function get_opt(...)
+local function get_opt(args)
     local opts = {}
-    local raw = {...}
-    for _, opt in pairs(raw) do
+    for _, opt in pairs(args) do
         -- 目前仅支持'--'开头的长选项，不支持'-'开头的短选项
         local b1, b2 = string.byte(opt, 1, 2)
         if 45 ~= b1 and 45 ~= b2 then error("invalid argument: " .. opt) end
@@ -75,13 +74,13 @@ local function get_opt(...)
         opts[k] = v -- 如果没有等号，v为一个空字符串
     end
 
-    return opts, raw
+    return opts
 end
 
 -- 打印内核参数
-local function log_app_info(opts)
+local function log_app_info(args)
     print("#####################################################")
-    printf("## starting %s", table.concat(opts, " "))
+    printf("## starting %s", table.concat(args, " "))
     printf("## OS: %s", __OS_NAME__)
     printf("## %s", _VERSION)
     printf("## backend: %s", __BACKEND__)
@@ -94,7 +93,9 @@ local function log_app_info(opts)
 end
 
 local function main(cmd, ...)
-    local opts, raw_opts = get_opt(...)
+    local args = {...}
+
+    local opts = get_opt(args)
     math.randomseed(ev:time())
 
     util.mkdir_p("log") -- 创建日志目录
@@ -129,10 +130,10 @@ local function main(cmd, ...)
     -- 并设置标题用于区分cmd界面
     if WINDOWS and not opts.deamon then
         os.execute("chcp 65001")
-        os.execute("title " .. table.concat(raw_opts, " "))
+        os.execute("title " .. table.concat(args, " "))
     end
 
-    log_app_info(raw_opts)
+    log_app_info(args)
 
     g_app.cmd = cmd
     g_app.opts = opts

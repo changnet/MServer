@@ -1,4 +1,4 @@
--- auto export by lua-tags 163 symbols
+-- auto export by lua-tags 164 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -82,6 +82,7 @@ return {
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/main.lua
 "__conn", -- src/network/conn.lua
+"__conn_id_seed", -- src/network/conn.lua
 "__fire_sys_ev", -- src/modules/event/system_event.lua
 "__global_storage", -- src/global/global.lua
 "__print", -- src/main.lua
