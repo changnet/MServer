@@ -20,7 +20,10 @@ int32_t LEV::backend(lua_State *L)
     UNUSED(L);
     _done = false;
 
-    loop(); /* this won't return until backend stop */
+    // 这个函数不再返回，当前堆栈上有一个无用的ev对象，要清掉
+    // 否则其他函数就要特殊处理这个堆栈
+    lua_settop(L, 0);
+    loop();
     return 0;
 }
 

@@ -873,7 +873,6 @@ int32_t Socket::io_init_connect()
 
 int32_t Socket::pack_clt(lua_State *L)
 {
-    stack_dump(L);
     if (!_packet)
     {
         return luaL_error(L, "no packet found");

@@ -689,16 +689,14 @@ public:
     StackChecker(lua_State* L)
     {
         _L   = L;
-        _top = lua_gettop(L);
-        assert(0 == _top);
+        assert(0 == lua_gettop(L));
     }
     ~StackChecker()
     {
-        assert(_top == lua_gettop(_L));
+        assert(0 == lua_gettop(_L));
     }
 
 private:
-    int _top;
     lua_State *_L;
 };
 
