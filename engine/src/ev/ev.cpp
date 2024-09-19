@@ -2,6 +2,7 @@
 
 #include "ev.hpp"
 #include "ev_backend.hpp"
+#include "system/static_global.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)
 #define MIN_TIMEJUMP 1000
@@ -172,6 +173,7 @@ int32_t EV::loop()
 int32_t EV::quit()
 {
     _done = true;
+    StaticGlobal::T = true;
 
     return 0;
 }

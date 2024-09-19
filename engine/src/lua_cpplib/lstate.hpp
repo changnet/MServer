@@ -40,6 +40,10 @@ private:
 
 template <typename... Args> void LState::call(const char *name, Args... args)
 {
+#if !defined(NDEBUG)
+    lua::StackChecker sc(L);
+#endif
+
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, name);
 
@@ -61,6 +65,10 @@ template <typename... Args> void LState::call(const char *name, Args... args)
 template <typename Ret, typename... Args>
 Ret LState::call(const char *name, Args... args)
 {
+#if !defined(NDEBUG)
+    lua::StackChecker sc(L);
+#endif
+
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, name);
 

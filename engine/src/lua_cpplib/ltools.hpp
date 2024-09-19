@@ -163,7 +163,9 @@ inline void stack_dump(lua_State *L)
 
         case LUA_TNUMBER: /* numbers */ printf("%g", lua_tonumber(L, i)); break;
 
-        default: /* other values */ printf("%s", lua_typename(L, t)); break;
+        default: /* other values */
+            printf("%s(%s)", lua_typename(L, t), lua_tostring(L, t));
+            break;
         }
         printf("  "); /* put a separator */
     }

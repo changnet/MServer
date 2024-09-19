@@ -86,10 +86,13 @@ Socket::~Socket()
     delete _packet;
     _packet = nullptr;
 
-    assert(!_w);
+    if (_w && !StaticGlobal::T)
+    {
+        assert(false);
+    }
 }
 
-void Socket::stop(bool flush, bool term)
+void Socket::stop(bool flush)
 {
     if (_status != CS_OPENED) return;
 
@@ -98,14 +101,16 @@ void Socket::stop(bool flush, bool term)
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
     // ev那边需要做异步删除
-    if (_w) StaticGlobal::ev()->io_stop(_conn_id, flush);
-
-    // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
-    // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
-    // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
-    // 如果有watcher，则需要等watcher数据处理完才回调close_cb，没有则强制关闭
-    if (term || !_w)
+    if (_w)
     {
+        StaticGlobal::ev()->io_stop(_conn_id, flush);
+    }
+    else
+    {
+        // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
+        // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
+        // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
+        // 如果有watcher，则需要等watcher数据处理完才回调close_cb，没有则强制关闭
         close_cb(true);
     }
 }
@@ -124,7 +129,7 @@ void Socket::append(const void *data, size_t len)
     if (_w->_mask & EVIO::M_OVERFLOW_KILL)
     {
         // 对于客户端这种不重要的，可以断开连接
-        ELOG("socket send buffer overflow, kill connection,conn:%d,buffer size:%d",
+        ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
              _conn_id, send_buff.get_all_used_size());
 
         Socket::stop();
@@ -376,6 +381,11 @@ bool Socket::start(int32_t fd)
 int32_t Socket::connect(const char *host, int32_t port)
 {
     assert(_fd == netcompat::INVALID);
+    if (!host)
+    {
+        ELOG("socket connect host is null");
+        return -1;
+    }
 
     // 创建新socket并设置为非阻塞
     int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
@@ -413,6 +423,8 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
     else if (ok < 0)
     {
+        int32_t e = netcompat::errorno();
+        ELOG("host error %s: %s", host, netcompat::strerror(e));
         netcompat::close(fd);
         return -1;
     }
@@ -625,7 +637,7 @@ void Socket::close_cb(bool term)
 
     try
     {
-        StaticGlobal::S->call("connect_del", _conn_id, e);
+        StaticGlobal::S->call("conn_del", _conn_id, e);
     }
     catch (const std::exception& e)
     {
@@ -668,31 +680,15 @@ void Socket::accept_new(int32_t fd)
         return;
     }
 
-    Socket *s;
     try
     {
-        s = StaticGlobal::S->call<Socket *>("conn_accept", _conn_id, fd);
+        StaticGlobal::S->call("conn_accept", _conn_id, fd);
     }
     catch (const std::exception& e)
     {
         ELOG("%s", e.what());
         netcompat::close(fd);
         return;
-    }
-    if (!s->start(fd))
-    {
-        s->stop();
-        return;
-    }
-
-    // 上层脚本执行了close或者未设置有效的packet和io，都直接关闭掉
-    if (EXPECT_TRUE(s && s->_fd != netcompat::INVALID && s->_packet))
-    {
-        s->_w->init_accept();
-    }
-    else
-    {
-        s->stop();
     }
 }
 
@@ -767,27 +763,15 @@ void Socket::connect_cb()
         _w->set(EV_READ);
     }
 
-    bool ok;
     try
     {
-        ok = StaticGlobal::S->call<Socket *>("connect_new", _conn_id, ecode);
+        StaticGlobal::S->call("conn_new", _conn_id, ecode);
     }
     catch (const std::exception &e)
     {
         ELOG("%s", e.what());
         Socket::stop();
         return;
-    }
-
-    // 脚本在connect_new中检测到错误会关闭连接，因此需要检测fd
-    if (EXPECT_TRUE(ok && 0 == ecode && _fd != netcompat::INVALID && _packet
-                    && _w->_io))
-    {
-        _w->init_connect();
-    }
-    else
-    {
-        Socket::stop();
     }
 }
 
@@ -868,3 +852,48 @@ void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)
     _w->get_send_buffer().set_chunk_size(send_max);
     _w->get_recv_buffer().set_chunk_size(recv_max);
 }
+
+int32_t Socket::io_init_accept()
+{
+    if (!_w) return -1;
+
+    _w->init_accept();
+
+    return 0;
+}
+
+int32_t Socket::io_init_connect()
+{
+    if (!_w) return -1;
+
+    _w->init_connect();
+
+    return 0;
+}
+
+int32_t Socket::pack_clt(lua_State *L)
+{
+    stack_dump(L);
+    if (!_packet)
+    {
+        return luaL_error(L, "no packet found");
+    }
+
+    // 1是socket本身，数据从2开始
+    _packet->pack_clt(L, 2);
+
+    return 0;
+}
+
+int32_t Socket::pack_srv(lua_State *L)
+{
+    if (!_packet)
+    {
+        return luaL_error(L, "no packet found");
+    }
+
+    // 1是socket本身，数据从2开始
+    _packet->pack_srv(L, 2);
+    return 0;
+}
+

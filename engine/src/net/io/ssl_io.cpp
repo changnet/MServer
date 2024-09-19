@@ -27,8 +27,6 @@ bool SSLIO::is_ready() const
 
 IO::IOStatus SSLIO::recv(EVIO *w)
 {
-    assert(_fd != netcompat::INVALID);
-
     if (!SSL_is_init_finished(_ssl)) return do_handshake();
 
     int32_t len = 0;
@@ -72,8 +70,6 @@ IO::IOStatus SSLIO::recv(EVIO *w)
 
 IO::IOStatus SSLIO::send(EVIO *w)
 {
-    assert(_fd != netcompat::INVALID);
-
     if (!SSL_is_init_finished(_ssl)) return do_handshake();
 
     int32_t len  = 0;
@@ -114,35 +110,33 @@ IO::IOStatus SSLIO::send(EVIO *w)
 
 int32_t SSLIO::init_accept(int32_t fd)
 {
-    _fd = fd;
     return EV_ACCEPT;
 }
 
 int32_t SSLIO::init_connect(int32_t fd)
 {
-    _fd = fd;
     return EV_CONNECT;
 }
 
-IO::IOStatus SSLIO::do_init_accept()
+IO::IOStatus SSLIO::do_init_accept(int32_t fd)
 {
-    if (init_ssl_ctx() < 0) return IOS_ERROR;
+    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
 
     SSL_set_accept_state(_ssl);
 
     return do_handshake();
 }
 
-IO::IOStatus SSLIO::do_init_connect()
+IO::IOStatus SSLIO::do_init_connect(int32_t fd)
 {
-    if (init_ssl_ctx() < 0) return IOS_ERROR;
+    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
 
     SSL_set_connect_state(_ssl);
 
     return do_handshake();
 }
 
-int32_t SSLIO::init_ssl_ctx()
+int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
 
     SSL_CTX *base_ctx = nullptr;
@@ -153,7 +147,7 @@ int32_t SSLIO::init_ssl_ctx()
         return -1;
     }
 
-    if (!SSL_set_fd(_ssl, _fd))
+    if (!SSL_set_fd(_ssl, fd))
     {
         ELOG("ssl io init ssl SSL_set_fd fail");
         return -1;

@@ -88,7 +88,7 @@ IO::IOStatus EVIO::do_init_accept()
     // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
     if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
 
-    return _io->do_init_accept();
+    return _io->do_init_accept(_fd);
 }
 
 IO::IOStatus EVIO::do_init_connect()
@@ -96,7 +96,7 @@ IO::IOStatus EVIO::do_init_connect()
     // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
     if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
 
-    return _io->do_init_connect();
+    return _io->do_init_connect(_fd);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

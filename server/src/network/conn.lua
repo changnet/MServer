@@ -174,13 +174,26 @@ function Conn:conn_accept(fd)
     -- 必须在继承后设置参数，不然用些初始化的参数就会不对
     conn:set_conn_param()
 
+    -- 注意这个事件socket并未连接完成，不可发放数据，on_connected事件才完成
     conn:on_accepted()
+
+    -- ssl 需要握手
+    if conn.ssl then
+        conn.s:io_init_accept()
+    else
+        conn:io_ok()
+    end
 end
 
 -- 连接成功(或失败)
 function Conn:conn_new(e)
     if 0 == e then
         self:set_conn_param()
+        if self.ssl then
+            self.s:io_init_connect()
+        else
+            self:io_ok()
+        end
     else
         self:on_disconnected(e, true)
     end
@@ -212,14 +225,15 @@ end
 -- @param port 目标服务器端口
 -- @param ip 目标服务器的ip，如果不传从则host解析
 function Conn:connect(host, port, ip)
-    self.ip = ip or util.get_addr_info(host)
+    if not ip then ip = util.get_addr_info(host) end
     -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址
     -- 这个会影响http头里的host字段
     -- 对www.example.com请求时，如果host为一个ip，是会返回404的
+    self.ip = ip
     self.host = host
     self.port = port
 
-    local e = self.s:connect(host, port)
+    local e = self.s:connect(ip, port)
 
     return e >= 0
 end

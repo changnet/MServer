@@ -53,8 +53,9 @@ public:
 public:
     // 这里负责保存一些全局变量，方便StaticGlobal::X这样调用
 
-    inline static lua_State *L = nullptr;
-    inline static LState *S    = nullptr;
+    inline static lua_State *L = nullptr; // Lua的虚拟机指针
+    inline static LState *S    = nullptr; // LState对象指针
+    inline static bool T       = false; // 当前是否处于关服状态(term)
 
 private:
     class initializer // 提供一个等级极高的初始化

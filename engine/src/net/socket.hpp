@@ -62,14 +62,13 @@ public:
     */
     void io_cb(int32_t revents);
 
-    /// 开始接受socket数据
+    // 启动socket事件监听
     bool start(int32_t fd = -1);
     /**
-     * 停止socket
+     * 停止socket事件监听
      * @param flush 发送缓冲区中的数据再停止
-     * @param term 立即终止该socket，部分清理工作将被忽略
      */
-    void stop(bool flush = false, bool term = false);
+    void stop(bool flush = false);
     int32_t validate();
 
     /**
@@ -145,6 +144,15 @@ public:
      * @param mask 缓冲区溢出时处理方式
     */
     void set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask);
+
+    // 初始化io
+    int32_t io_init_accept();
+    // 初始化io
+    int32_t io_init_connect();
+    // 打包前端发往后端的数据
+    int32_t pack_clt(lua_State *L);
+    // 打包后端发往前端的数据
+    int32_t pack_srv(lua_State *L);
 
 private:
     /**

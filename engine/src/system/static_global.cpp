@@ -64,6 +64,7 @@ void StaticGlobal::initialize()
     _ev         = new class LEV();
 
     _state       = new class LState();
+    S                  = _state;
     L                  = _state->state();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 

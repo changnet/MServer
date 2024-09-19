@@ -37,12 +37,12 @@ public:
      * 执行初始化接受的连接
      * @return IOStatus
      */
-    virtual IOStatus do_init_accept() override;
+    virtual IOStatus do_init_accept(int32_t fd) override;
     /**
      * 执行初始化连接
      * @return IOStatus
      */
-    virtual IOStatus do_init_connect() override;
+    virtual IOStatus do_init_connect(int32_t fd) override;
     /**
      * @brief init_accept、init_connect是否执行完
      */
@@ -50,7 +50,7 @@ public:
 
 private:
     IO::IOStatus do_handshake();
-    int32_t init_ssl_ctx();
+    int32_t init_ssl_ctx(int32_t fd);
 
 private:
     SSL *_ssl;

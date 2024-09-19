@@ -80,7 +80,7 @@ t_describe("http(s) test", function()
         end
     end)
 
-    t_it("http local server test", function()
+    t_it("http_local server test", function()
         t_async(10000)
 
         local ctx = "hello"
@@ -89,7 +89,7 @@ t_describe("http(s) test", function()
         local no_len_ctx = "no_len_test ctx 1111111122222223333aaaabbbbbbccccc"
 
         local listen_conn = HttpConn()
-        listen_conn:listen(local_host, port)
+        t_assert(listen_conn:listen(local_host, port))
         listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
             t_equal(network_mgr:address(conn.conn_id), local_host)
@@ -122,7 +122,7 @@ t_describe("http(s) test", function()
         end
 
         local clt_conn = HttpConn()
-        clt_conn:connect(local_host, port)
+        t_assert(clt_conn:connect(local_host, port))
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)

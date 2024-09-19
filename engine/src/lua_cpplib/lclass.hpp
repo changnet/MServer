@@ -683,5 +683,24 @@ private:
     lua_State *L;
 };
 
+class StackChecker
+{
+public:
+    StackChecker(lua_State* L)
+    {
+        _L   = L;
+        _top = lua_gettop(L);
+        assert(0 == _top);
+    }
+    ~StackChecker()
+    {
+        assert(_top == lua_gettop(_L));
+    }
+
+private:
+    int _top;
+    lua_State *_L;
+};
+
 } // namespace lua
 template <class T> const char *lua::Class<T>::_class_name = nullptr;

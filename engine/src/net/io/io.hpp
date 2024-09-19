@@ -57,7 +57,7 @@ public:
      * 执行初始化接受的连接
      * @return IOStatus
      */
-    virtual IOStatus do_init_accept()
+    virtual IOStatus do_init_accept(int32_t fd)
     {
         assert(false);
         return IOS_OK;
@@ -66,7 +66,7 @@ public:
      * 执行初始化连接
      * @return IOStatus
      */
-    virtual IOStatus do_init_connect()
+    virtual IOStatus do_init_connect(int32_t fd)
     {
         assert(false);
         return IOS_OK;
@@ -85,7 +85,6 @@ public:
     void init_ok() const;
 
 protected:
-    int32_t _fd;         /// 用于读写的文件描述符
     int32_t _conn_id;   /// 所属socket的id
     class Buffer *_recv; /// 接受缓冲区
     class Buffer *_send; /// 发送缓冲区
