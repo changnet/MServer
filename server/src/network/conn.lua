@@ -296,4 +296,10 @@ function Conn:close(flush)
     return self.s:stop(self.conn_id, flush)
 end
 
+-- 获取当前连接的ip地址和端口
+-- @return ip, port
+function Conn:address()
+    return self.s:address()
+end
+
 return Conn

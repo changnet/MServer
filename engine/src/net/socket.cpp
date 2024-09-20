@@ -473,9 +473,9 @@ int32_t Socket::validate()
     return err;
 }
 
-const char *Socket::address(char *buf, size_t len, int *port)
+int32_t Socket::address(lua_State *L) const
 {
-    if (_fd == netcompat::INVALID) return nullptr;
+    if (_fd == netcompat::INVALID) return 0;
 
     struct sockaddr_in_x addr;
 
@@ -486,15 +486,27 @@ const char *Socket::address(char *buf, size_t len, int *port)
     {
         int32_t e = netcompat::errorno();
         ELOG("socket::address getpeername error: %s\n", netcompat::strerror(e));
-        return nullptr;
+        return 0;
     }
 
-    if (port)
+
+     int32_t port = ntohs(addr.sin_port_x);
+
+     char buf[INET6_ADDRSTRLEN]; // must be at least INET6_ADDRSTRLEN bytes long
+     const char *ret = inet_ntop(
+        AF_INET_X, &addr.sin_addr_x, buf, (socklen_t)sizeof(buf));
+
+    if (!ret)
     {
-        *port = ntohs(addr.sin_port_x);
+        int32_t e = netcompat::errorno();
+        ELOG("socket::address inet_ntop error: %s\n", netcompat::strerror(e));
+        return 0;
     }
 
-    return inet_ntop(AF_INET_X, &addr.sin_addr_x, buf, (socklen_t)len);
+    lua_pushstring(L, buf);
+    lua_pushinteger(L, port);
+
+    return 2;
 }
 
 int32_t Socket::listen(const char *host, int32_t port)
@@ -896,3 +908,11 @@ int32_t Socket::pack_srv(lua_State *L)
     return 0;
 }
 
+int32_t Socket::get_http_header(lua_State *L)
+{
+    if (!_packet || Packet::PT_HTTP != _packet->type())
+    {
+        return luaL_error(L, "no packet found");
+    }
+    return static_cast<HttpPacket *>(_packet)->unpack_header(L);
+}

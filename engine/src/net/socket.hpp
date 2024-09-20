@@ -77,16 +77,16 @@ public:
     bool is_closed() const { return CS_OPENED != _status; }
 
     /**
-     * 获取ip地址及端口
-     * @brief address
-     * @param buf
-     * @param len must be at least INET6_ADDRSTRLEN bytes long
-     * @param port
-     * @return
+     * @brief 获取ip地址及端口
+     * @return ip地址, 端口
      */
-    const char *address(char *buf, size_t len, int *port);
+    int32_t address(lua_State *L) const;
     int32_t listen(const char *host, int32_t port);
     int32_t connect(const char *host, int32_t port);
+    /**
+     * 获取http头数据，仅当前socket的packet为http有效
+     */
+    int32_t get_http_header(lua_State *L);
 
     /**
      * @brief 获取发送缓冲区

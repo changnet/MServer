@@ -92,7 +92,7 @@ t_describe("http(s) test", function()
         t_assert(listen_conn:listen(local_host, port))
         listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
-            t_equal(network_mgr:address(conn.conn_id), local_host)
+            t_equal(conn:address(), local_host)
 
             -- method 1 = GET, 3 = POST
             if "/get" == url then

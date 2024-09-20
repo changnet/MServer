@@ -78,9 +78,9 @@ function HttpConn:post(url, body, cb)
 end
 
 -- 获取http头信息(code仅在返回时有用，method仅在请求时有用)
--- return upgrade, code, method, fields
+-- @return upgrade, code, method, fields
 function HttpConn:get_header()
-    return network_mgr:get_http_header(self.conn_id)
+    return self.s:get_http_header()
 end
 
 return HttpConn
