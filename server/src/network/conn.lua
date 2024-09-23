@@ -48,11 +48,11 @@ function conn_new(conn_id, ...)
 end
 
 -- io初始化成功
-function io_ok(conn_id, ...)
+function conn_io_ready(conn_id, ...)
     local conn = __conn[conn_id]
 
     conn.ok = true
-    return __conn[conn_id]:io_ok(...)
+    return __conn[conn_id]:io_ready(...)
 end
 
 -- 连接断开
@@ -181,7 +181,7 @@ function Conn:conn_accept(fd)
     if conn.ssl then
         conn.s:io_init_accept()
     else
-        conn:io_ok()
+        conn:io_ready()
     end
 end
 
@@ -192,7 +192,7 @@ function Conn:conn_new(e)
         if self.ssl then
             self.s:io_init_connect()
         else
-            self:io_ok()
+            self:io_ready()
         end
     else
         self:on_disconnected(e, true)
@@ -210,7 +210,7 @@ function Conn:on_connected()
 end
 
 -- io初始化完成
-function Conn:io_ok()
+function Conn:io_ready()
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手
     return self:on_connected()

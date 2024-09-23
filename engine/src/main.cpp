@@ -3,7 +3,7 @@
 extern LONG __unhandled_exception_filte(_EXCEPTION_POINTERS *exception);
 #endif
 
-#include "lua_cpplib/lclass.hpp"
+#include "lua_cpplib/lcpp.hpp"
 #include "system/static_global.hpp"
 
 int32_t main(int32_t argc, char **argv)
@@ -24,10 +24,10 @@ int32_t main(int32_t argc, char **argv)
 
     lua_State *L = StaticGlobal::state();
 
-    lua::Class<LEV>::push(L, StaticGlobal::lua_ev(), false);
+    lcpp::Class<LEV>::push(L, StaticGlobal::lua_ev(), false);
     lua_setglobal(L, "ev");
 
-    lua::Class<LLog>::push(L, StaticGlobal::async_logger(), false);
+    lcpp::Class<LLog>::push(L, StaticGlobal::async_logger(), false);
     lua_setglobal(L, "g_async_log");
 
     /* 加载程序入口脚本 */

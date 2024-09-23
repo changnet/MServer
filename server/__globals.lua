@@ -95,6 +95,7 @@ return {
 "command_new", -- src/network/conn.lua
 "conn_accept", -- src/network/conn.lua
 "conn_del", -- src/network/conn.lua
+"conn_io_ready", -- src/network/conn.lua
 "conn_new", -- src/network/conn.lua
 "css_command_new", -- src/network/conn.lua
 "ctrl_new", -- src/network/conn.lua
@@ -123,7 +124,6 @@ return {
 "graph", -- src/global/graph.lua
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
-"io_ok", -- src/network/conn.lua
 "make_name", -- src/global/name.lua
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua

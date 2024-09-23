@@ -138,9 +138,7 @@ IO::IOStatus SSLIO::do_init_connect(int32_t fd)
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
-
-    SSL_CTX *base_ctx = nullptr;
-    _ssl = SSL_new(base_ctx);
+    _ssl = SSL_new(_tls_ctx->get());
     if (!_ssl)
     {
         ELOG("ssl io init ssl SSL_new fail");
