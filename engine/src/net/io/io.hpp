@@ -21,7 +21,7 @@ public:
     /// io状态码
     enum IOStatus
     {
-        IOS_OK    = 0,   /// 无错误
+        IOS_READY = 0,   /// 无错误
         IOS_READ  = 1,   /// 需要重读
         IOS_WRITE = 2,   /// 需要重写
         IOS_BUSY  = 3,   /// 繁忙，比如缓冲区满之类的
@@ -60,7 +60,7 @@ public:
     virtual IOStatus do_init_accept(int32_t fd)
     {
         assert(false);
-        return IOS_OK;
+        return IOS_READY;
     };
     /**
      * 执行初始化连接
@@ -69,7 +69,7 @@ public:
     virtual IOStatus do_init_connect(int32_t fd)
     {
         assert(false);
-        return IOS_OK;
+        return IOS_READY;
     };
     /**
      * @brief init_accept、init_connect是否执行完
@@ -82,7 +82,7 @@ public:
     /**
      * 初始化完成
      */
-    void init_ok() const;
+    void init_ready() const;
 
 protected:
     int32_t _conn_id;   /// 所属socket的id

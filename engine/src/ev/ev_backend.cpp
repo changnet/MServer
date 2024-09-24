@@ -249,7 +249,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
 {
     switch (status)
     {
-    case IO::IOS_OK:
+    case IO::IOS_READY:
         // 发送完则需要删除写事件，不然会一直触发
         if (EV_WRITE == ev)
         {
@@ -294,6 +294,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         return true;
     case IO::IOS_CLOSE:
     case IO::IOS_ERROR:
+        ELOG_R("socket error %d", w->_fd);
         modify_later(w, EV_CLOSE);
         return false;
     default: ELOG("unknow io status: %d", status); return false;

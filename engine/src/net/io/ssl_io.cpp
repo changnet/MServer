@@ -39,7 +39,7 @@ IO::IOStatus SSLIO::recv(EVIO *w)
         _recv->commit(ts, len);
         if (EXPECT_FALSE(len <= 0)) break;
 
-        if (len < ts._len) return IOS_OK;
+        if (len < ts._len) return IOS_READY;
     }
 
     int32_t ecode = SSL_get_error(_ssl, len);
@@ -78,7 +78,7 @@ IO::IOStatus SSLIO::send(EVIO *w)
     while (true)
     {
         const char *data = _send->get_front_used(bytes, next);
-        if (0 == bytes) return IOS_OK;
+        if (0 == bytes) return IOS_READY;
 
         len = SSL_write(_ssl, data, (int32_t)bytes);
         if (len <= 0) break;
@@ -89,7 +89,7 @@ IO::IOStatus SSLIO::send(EVIO *w)
         if (len < (int32_t)bytes) return IOS_WRITE;
 
         // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
-        if (!next) return IOS_OK;
+        if (!next) return IOS_READY;
     }
 
     int32_t ecode = SSL_get_error(_ssl, len);
@@ -162,8 +162,8 @@ IO::IOStatus SSLIO::do_handshake()
         // SSLMgr::dump_x509(_ssl);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
-        init_ok();
-        return 0 == _send->get_front_used_size() ? IOS_OK : IOS_WRITE;
+        init_ready();
+        return 0 == _send->get_front_used_size() ? IOS_READY : IOS_WRITE;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of

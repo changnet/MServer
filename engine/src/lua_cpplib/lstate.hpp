@@ -51,7 +51,7 @@ template <typename... Args> void LState::call(const char *name, Args... args)
     (lcpp::cpp_to_lua(L, args), ...);
 
     const size_t nargs = sizeof...(Args);
-    if (LUA_OK != lua_pcall(L, nargs, 0, nargs - 2))
+    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, (int32_t)nargs - 2))
     {
         std::string message("call ");
         message = message + name + " :" + lua_tostring(L, -1);

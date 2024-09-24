@@ -39,7 +39,7 @@ IO::IOStatus IO::recv(EVIO *w)
         if (EXPECT_FALSE(len <= 0)) break;
 
         // 如果没读满缓冲区，则所有数据已读出来
-        if (len < ts._len) return IOS_OK;
+        if (len < ts._len) return IOS_READY;
     }
 
     if (0 == len)
@@ -71,7 +71,7 @@ IO::IOStatus IO::send(EVIO *w)
     while (true)
     {
         const char *data = _send->get_front_used(bytes, next);
-        if (0 == bytes) return IOS_OK;
+        if (0 == bytes) return IOS_READY;
 
         len = (int32_t)::send(fd, data, (int32_t)bytes, 0);
         if (len <= 0) break;
@@ -82,7 +82,7 @@ IO::IOStatus IO::send(EVIO *w)
         if (len < (int32_t)bytes) return IOS_WRITE;
 
         // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
-        if (!next) return IOS_OK;
+        if (!next) return IOS_READY;
     }
 
     if (0 == len) return IOS_CLOSE; // 对方主动断开
@@ -103,8 +103,8 @@ IO::IOStatus IO::send(EVIO *w)
 
 int32_t IO::init_accept(int32_t fd)
 {
-    // 普通io不需要握手，在脚本处理
-    // init_ok();
+    // 普通io不需要握手，不用调用init_ready
+    // init_ready();
     return 0;
 }
 
@@ -113,6 +113,14 @@ int32_t IO::init_connect(int32_t fd)
     return 0;
 }
 
-void IO::init_ok() const
+void IO::init_ready() const
 {
+    try
+    {
+        StaticGlobal::S->call("conn_io_rady", _conn_id);
+    }
+    catch (const std::runtime_error& e)
+    {
+        ELOG("%s", e.what());
+    }
 }

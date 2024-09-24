@@ -118,7 +118,7 @@ TlsCtx::~TlsCtx()
 }
 
 int32_t TlsCtx::init(const char *cert_file, const char *key_file,
-    const char* passwd, const char* ca)
+    const char* passwd, const char* ca_path)
 {
     // 这里需要处理比较多的异常，不允许放到构造函数里处理
 
@@ -139,12 +139,12 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
 
     // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
     // 指定了根ca证书路径，说明需要校验对方证书的正确性
-    if (ca)
+    if (ca_path)
     {
         SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
 
         /*加载CA FILE*/
-        if (SSL_CTX_load_verify_locations(ctx, ca, nullptr) != 1)
+        if (SSL_CTX_load_verify_locations(ctx, ca_path, nullptr) != 1)
         {
             dump_error("load verify fail");
             goto FAIL;
