@@ -11,6 +11,8 @@
  *   这时需要调整事件大小，重新编译。
  */
 
+#if defined(__linux__)
+
 #include <fcntl.h>
 #include <unistd.h> /* POSIX api, like close */
 #include <sys/epoll.h>
@@ -245,3 +247,4 @@ int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 
     return errno;
 }
+#endif

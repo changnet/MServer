@@ -9,6 +9,7 @@ int socketpair(int domain, int type, int protocol, int sv[2])
     // socketpair(AF_LOCAL, SOCK_STREAM, 0, socks)
 
     // win不支持AF_LOCAL，win10之后支持AF_UNIX但要创建一个文件
+    // https://devblogs.microsoft.com/commandline/windowswsl-interop-with-af_unix/
     domain = AF_INET;
 
     // https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket

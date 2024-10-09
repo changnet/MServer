@@ -22,6 +22,7 @@
  *      上面大部分逻辑的锁都可以去掉
  */
 
+
 /**
  * @brief 用于执行io操作的后台类
  */
@@ -63,14 +64,6 @@ public:
      */
     void modify(EVIO *w);
     /**
-     * 设置fd对应的watcher
-     */
-    void set_fd_watcher(int32_t fd, EVIO *w);
-    /**
-     * 通过fd获取watcher
-     */
-    EVIO *get_fd_watcher(int32_t fd);
-    /**
      * 创建一个backend实例
      */
     static EVBackend *instance();
@@ -88,9 +81,9 @@ protected:
     /**
      * 处理主线程发起的事件
      */
-    void do_watcher_fast_event(EVIO *w);
+    void do_watcher_main_event(EVIO *w, int32_t events);
     /**
-     * 处理从网络收到的事件
+     * 处理从epoll、poll收到的事件
      */
     void do_watcher_wait_event(EVIO *w, int32_t revents);
     /**
@@ -122,9 +115,9 @@ private:
      */
     virtual void do_wait_event(int32_t ev_count) = 0;
     /**
-     * 处理主线程发起的io事件
+     * 处理主线程发来的事件
      */
-    void do_fast_event();
+    void do_main_events();
     /**
      * @brief 处理读写后的io状态
      * @param w 待处理的watcher
@@ -158,9 +151,11 @@ private:
     /**
      * @brief 把一个watcher添加到待修改队列
      * @param w 待修改的watcher
-     * @param events 设置到_b_uevents的事件
+     * @param events 要添加的事件
     */
     void modify_later(EVIO *w, int32_t events);
+    // 发送事件给主线程
+    void append_event(EVIO *w, int32_t ev);
 
 protected:
     bool _has_ev;   /// 是否有待主线程处理的事件
@@ -170,24 +165,12 @@ protected:
     int64_t _last_pending_tm; // 上次检测待删除watcher时间
     class EV *_ev;  /// 主循环
     std::thread _thread;
-    std::vector<EVIO *> _fast_events; // 等待backend线程快速处理的事件
 
-    /// 等待变更到backend的事件
-    std::vector<EVIO *> _user_events;
+    std::vector<EVIO *> _pending_events; // 待处理的事件
 
     // 待发送完数据后删除的watcher
     std::unordered_map<int32_t, int64_t> _pending_watcher;
 
-    /// 小于该值的fd，可通过数组快速获取io对象
-    static const int32_t HUGE_FD = 10240;
-    /**
-     * 在ev那边，使用自定义的唯一id进行管理，避免fd复用造成的一些问题
-     * 但对于epoll等函数，只认fd，因此这里把fd和watcher映射，用于快速查找
-     */
-    std::vector<EVIO *> _fd_watcher;
-    /**
-     * 用于通过fd快速获取io对象，当fd太大(尤其是windows) 时
-     * 无法分配过大的数组，linux下应该是用不到
-     */
-    std::unordered_map<int32_t, EVIO *> _fd_watcher_huge;
+    EventSwapList _events;        // 发送给主线程的事件
+    WatcherMgr _fd_mgr;   // 管理epoll中的所有fd
 };

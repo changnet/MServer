@@ -19,16 +19,10 @@
 
 EV::EV()
 {
-    _io_changes.reserve(1024);
-    _pendings.reserve(1024);
     _timers.reserve(1024);
     _periodics.reserve(1024);
-    _io_fevents.reserve(1024);
-    _io_revents.reserve(1024);
 
     _has_job = false;
-
-    _io_delete_index = 0;
 
     // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
     _timer_cnt = 0;
@@ -148,10 +142,9 @@ int32_t EV::loop()
 
     // 这些对象可能会引用其他资源（如buffer之类的），程序正常关闭时应该严谨地
     // 在脚本关闭，而不是等底层强制删除
-    if (!_io_mgr.empty())
+    if (_fd_mgr.size())
     {
-        PLOG("io not delete, maybe unsafe, count = %zu", _io_mgr.size());
-        _io_mgr.clear();
+        PLOG("io not delete, maybe unsafe, count = %zu", _fd_mgr.size());
     }
 
     if (!_timer_mgr.empty())
@@ -178,146 +171,42 @@ int32_t EV::quit()
     return 0;
 }
 
-EVIO *EV::io_start(int32_t id, int32_t fd, int32_t events)
+EVIO *EV::io_start(int32_t fd, int32_t events)
 {
-    auto p = _io_mgr.try_emplace(id, id, fd, events, this);
-    if (!p.second) return nullptr;
+    // 这里需要留意fd复用的问题
+    // 当一个watcher没有被delete时，请不要关闭其fd。不然内核会复用这个fd
+    // 导致有多个同样fd的watcher
+    assert(!_fd_mgr.get(fd));
 
-    EVIO *w = &(p.first->second);
+    EVIO *w = new EVIO(fd, this);
+    _fd_mgr.set(fd, w);
 
-    w->_status = EVIO::S_NEW;
-    io_change(w);
-
-    // 不能直接设置fd_watcher，因为从backend回来的事件顺序是无法保证的
-    // 当fd被复用时，新fd先执行io_start，然后旧fd再执行io_delete就会删掉刚设置的fd
-    // _backend->set_fd_watcher(fd, w);
+    if (events) append_event(w, events);
 
     return w;
 }
 
-int32_t EV::io_stop(int32_t id, bool flush)
+int32_t EV::io_stop(int32_t fd, bool flush)
 {
-    // 这里不能删除watcher，因为io线程可能还在使用，只是做个标记
+    // 这里不能直接删除watcher，因为io线程可能还在使用，只是做个标记
     // 这里是由上层逻辑调用，也不要直接加锁去删除watcher，防止堆栈中还有引用
-    EVIO *w = get_io(id);
+    EVIO *w = _fd_mgr.get(fd);
     if (!w) return -1;
 
-    // 不能删event，因为有些event还是需要，比如EV_CLOSE
-    // clear_pending(w);
-
-    w->_uevents = static_cast<uint8_t>(flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
-
-    // S_NEW状态表示还没调用set_fd_watcher，这时不需要再设置
-    w->_status = EVIO::S_NEW == w->_status ? EVIO::S_NONE : EVIO::S_STOP;
-
-    io_change(w);
+    append_event(w, flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
 
     return 0;
 }
 
-int32_t EV::io_delete(int32_t id)
+int32_t EV::io_delete(int32_t fd)
 {
-    EVIO *w = get_io(id);
+    EVIO *w = _fd_mgr.get(fd);
     if (!w) return -1;
 
-    w->_status = EVIO::S_DEL;
-
-    // 保证del操作在前面，或者del操作用一个独立的数组来实现？
-    if (_io_changes.size() > (size_t)_io_delete_index)
-    {
-        EVIO *old_w = _io_changes[_io_delete_index];
-        if (old_w == w) return 0;
-
-        old_w->_change_index = 0;
-        io_change(old_w);
-
-        _io_changes[_io_delete_index] = w;
-        w->_change_index              = _io_delete_index + 1;
-    }
-    else
-    {
-        io_change(w);
-    }
-    _io_delete_index++;
+    _fd_mgr.set(fd, nullptr);
+    delete w;
 
     return 0;
-}
-
-void EV::clear_io_fast_event(EVIO *w)
-{
-    if (w->_b_fevent_index)
-    {
-        assert(w->_b_fevent_index <= (int32_t)_io_fevents.size());
-        _io_fevents[w->_b_fevent_index - 1] = nullptr;
-        w->_b_fevent_index                  = 0;
-    }
-}
-
-void EV::clear_io_receive_event(EVIO *w)
-{
-    if (w->_b_revent_index)
-    {
-        assert(w->_b_revent_index <= (int32_t)_io_revents.size());
-        _io_revents[w->_b_revent_index - 1] = nullptr;
-        w->_b_revent_index                  = 0;
-    }
-}
-
-void EV::io_reify()
-{
-    if (_io_changes.empty()) return;
-
-    {
-        bool non_del = false; // 是否进行过非del操作，仅用于逻辑校验
-        std::lock_guard<std::mutex> guard(lock());
-        for (auto w : _io_changes)
-        {
-            w->_change_index = 0;
-
-            int32_t fd = w->_fd;
-            switch (w->_status)
-            {
-            case EVIO::S_NONE: non_del = true; break;
-            case EVIO::S_STOP:
-                non_del = true;
-                _backend->modify(w); // 移除该socket
-                break;
-            case EVIO::S_START:
-                non_del = true;
-                _backend->modify(w);
-                break;
-            case EVIO::S_NEW:
-                non_del    = true;
-                w->_status = EVIO::S_START;
-                _backend->set_fd_watcher(fd, w);
-                _backend->modify(w);
-
-                // fast_event可能触发一读写操作而调用get_fd_watcher
-                // 因此在第一次set_fd_watcher之前是不允许fast_event执行的
-                assert(-1 == w->_b_fevent_index);
-                w->_b_fevent_index = 0;
-                if (w->_b_fevents) io_fast_event(w, w->_b_fevents);
-                break;
-            case EVIO::S_DEL:
-                // watcher的操作是异步的，同样fd的watcher可能被删掉又被系统复用
-                // 一定要保证先删除再进行其他操作
-                assert(!non_del);
-
-                // backend线程执行删除时，可能之前有一些fevents或者revents已触发
-                clear_pending(w);
-                clear_io_fast_event(w);
-                clear_io_receive_event(w);
-
-                _io_mgr.erase(w->_id);
-                _backend->set_fd_watcher(fd, nullptr);
-                break;
-            }
-        }
-    }
-
-    _backend->wake(); /// 唤醒子线程，让它及时处理修改的事件
-    _io_changes.clear();
-    _io_delete_index = 0;
 }
 
 int64_t EV::system_clock()
@@ -403,107 +292,8 @@ void EV::time_update()
     }
 }
 
-void EV::io_change(EVIO *w)
-{
-    // 通过_change_index判断是否重复添加
-    if (!w->_change_index)
-    {
-        _io_changes.emplace_back(w);
-        w->_change_index = static_cast<int32_t>(_io_changes.size());
-    }
-}
-
-void EV::io_receive_event(EVIO *w, int32_t revents)
-{
-    w->_b_revents |= static_cast<uint8_t>(revents);
-    if (EXPECT_TRUE(!w->_b_revent_index))
-    {
-        _io_revents.emplace_back(w);
-        w->_b_revent_index = static_cast<int32_t>(_io_revents.size());
-    }
-}
-
-void EV::io_fast_event(EVIO *w, int32_t events)
-{
-    bool wake = false;
-    {
-        std::lock_guard<SpinLock> guard(_spin_lock);
-
-        w->_b_fevents |= static_cast<uint8_t>(events);
-
-        // 玩家登录的时候，可能有上百次数据发送，不要每次都插入队列
-        // _b_fevent_index为-1时，表示该watcher尚未执行第一次io_reify，也不放入队列
-        if (0 == w->_b_fevent_index)
-        {
-            wake = _io_fevents.empty();
-            _io_fevents.emplace_back(w);
-            w->_b_fevent_index = static_cast<int32_t>(_io_fevents.size());
-        }
-    }
-
-    if (wake) _backend->wake();
-}
-
-void EV::io_receive_event_reify()
-{
-    // 外部加锁
-    // std::lock_guard<std::mutex> guard(lock());
-
-    for (auto w : _io_revents)
-    {
-        // watcher被删掉时会置为nullptr
-        if (!w) continue;
-
-        feed_event(w, w->_b_revents);
-        w->_b_revents      = 0;
-        w->_b_revent_index = 0;
-    }
-
-    _io_revents.clear();
-}
-
-void EV::feed_event(EVWatcher *w, int32_t revents)
-{
-    // 已经在待处理队列里了，则设置事件即可
-    w->_revents |= static_cast<uint8_t>(revents);
-    if (EXPECT_TRUE(!w->_pending))
-    {
-        _pendings.emplace_back(w);
-        w->_pending = (int32_t)_pendings.size();
-    }
-}
-
 void EV::invoke_pending()
 {
-    for (auto w : _pendings)
-    {
-        // 可能其他事件调用了clear_pending导致当前watcher无效了
-        if (EXPECT_TRUE(w && w->_pending))
-        {
-            int32_t events = w->_revents;
-
-            w->_pending = 0;
-            w->_revents = 0;
-
-            // callback之后，不要对w进行任何操作
-            // 因为callback到脚本后，脚本可能直接删除该w
-            w->callback(events);
-        }
-    }
-    _pendings.clear();
-}
-
-void EV::clear_pending(EVWatcher *w)
-{
-    // 如果这个watcher在pending队列中，从队列中删除
-    if (w->_pending)
-    {
-        assert(w == _pendings[w->_pending - 1]);
-        _pendings[w->_pending - 1] = nullptr;
-
-        w->_revents = 0;
-        w->_pending = 0;
-    }
 }
 
 void EV::timers_reify()
@@ -779,5 +569,21 @@ void EV::reheap(HeapNode *heap, int32_t N)
     for (int32_t i = 0; i < N; ++i)
     {
         up_heap(heap, i + HEAP0);
+    }
+}
+
+void EV::append_event(EVIO *w, int32_t ev)
+{
+    int32_t flag = _events.append_event(w, ev);
+    if (0 == flag) return;
+
+    _backend->wake();
+    if (2 == flag)
+    {
+        _fd_mgr.for_each(
+            [w](EVIO *watcher)
+            {
+                if (w != watcher) watcher->_ev_counter = 0;
+            });
     }
 }

@@ -367,7 +367,7 @@ bool Socket::start(int32_t fd)
     _status = CS_OPENED;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    _w = StaticGlobal::ev()->io_start(_conn_id, _fd, EV_READ);
+    _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
     if (!_w)
     {
         ELOG("ev io start fail: %d", _fd);
@@ -447,7 +447,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
     assert(!_w);
-    _w = StaticGlobal::ev()->io_start(_conn_id, fd, EV_CONNECT);
+    _w = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
     if (!_w)
     {
         ELOG("ev io start fail: %d", fd);
@@ -578,7 +578,7 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    _w = StaticGlobal::ev()->io_start(_conn_id, _fd, EV_ACCEPT);
+    _w = StaticGlobal::ev()->io_start(_fd, EV_ACCEPT);
     if (!_w)
     {
         ELOG("ev io start fail: %d", _fd);

@@ -10,47 +10,49 @@ EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-EVIO::EVIO(int32_t id, int32_t fd, int32_t events, EV *loop) : EVWatcher(loop)
+EVIO::EVIO(int32_t fd, EV *loop) : EVWatcher(loop)
 {
-    _id     = id;
     _fd     = fd;
-    _status = S_NONE;
 
     _mask = 0;
     _errno = 0;
 
-    _uevents   = static_cast<uint8_t>(events);
-    _b_uevents = 0;
-    _b_revents = 0;
     _b_kevents = 0;
-    _b_eevents = 0;
-    _b_fevents = 0;
+    _b_pevents = 0;
 
-    _change_index   = 0;
-    _b_uevent_index = 0;
-    _b_fevent_index = -1;
-    _b_revent_index = 0;
+    _ev_counter = -1;
+    _ev_index   = 0;
 
     _io = nullptr;
+#ifndef NDEBUG
+    _ref = 0;
+#endif
 }
 
 EVIO::~EVIO()
 {
+#ifndef NDEBUG
+    assert(0 == _ref);
+#endif
     if (_io) delete _io;
+}
+
+void EVIO::add_ref(int32_t v)
+{
+#ifndef NDEBUG
+    _ref += v;
+#endif
 }
 
 void EVIO::set(int32_t events)
 {
-    _uevents = static_cast<uint8_t>(events);
-    _loop->io_change(this);
+    _loop->append_event(this, events);
 }
 
 IO::IOStatus EVIO::recv()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    // 如果是其他情况，应该是哪里有逻辑错误了
-    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
-    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
+    if (!_io) return IO::IOS_ERROR;
 
     return _io->recv(this);
 }
@@ -58,9 +60,7 @@ IO::IOStatus EVIO::recv()
 IO::IOStatus EVIO::send()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    // 如果是其他情况，应该是哪里有逻辑错误了
-    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
-    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
+    if (!_io) return IO::IOS_ERROR;
 
     return _io->send(this);
 }
@@ -70,7 +70,7 @@ void EVIO::init_accept()
     int32_t ev = _io->init_accept(_fd);
     if (ev)
     {
-        _loop->io_fast_event(this, ev);
+        _loop->append_event(this, ev);
     }
 }
 
@@ -79,22 +79,22 @@ void EVIO::init_connect()
     int32_t ev = _io->init_connect(_fd);
     if (ev)
     {
-        _loop->io_fast_event(this, ev);
+        _loop->append_event(this, ev);
     }
 }
 
 IO::IOStatus EVIO::do_init_accept()
 {
-    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
-    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
+    // lua报错，在启动socket对象后无法正常设置io参数
+    if (!_io) return IO::IOS_ERROR;
 
     return _io->do_init_accept(_fd);
 }
 
 IO::IOStatus EVIO::do_init_connect()
 {
-    // EV_CLOSE表示对方关闭连接或者其他操作出错导致连接关闭
-    if (!_io || (_b_eevents & EV_CLOSE)) return IO::IOS_ERROR;
+    // lua报错，在启动socket对象后无法正常设置io参数
+    if (!_io) return IO::IOS_ERROR;
 
     return _io->do_init_connect(_fd);
 }

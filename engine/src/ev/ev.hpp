@@ -12,20 +12,19 @@
  */
 enum
 {
-    EV_NONE    = 0x000, /// 0  无任何事件
-    EV_READ    = 0x001, /// 1  socket读(接收)
-    EV_WRITE   = 0x002, /// 2  socket写(发送)
-    EV_ACCEPT  = 0x004, /// 4  监听到有新连接
-    EV_CONNECT = 0x008, /// 8  连接成功或者失败
-    EV_CLOSE   = 0x010, /// 16 socket关闭
-    EV_FLUSH   = 0x020, /// 32 发送数据，随后关闭
-    EV_TIMER   = 0x080, /// 128 定时器超时
-    EV_ERROR   = 0x100  /// 256 出错
+    EV_NONE      = 0x000, // 0  无任何事件
+    EV_READ      = 0x001, // 1  socket读(接收)
+    EV_WRITE     = 0x002, // 2  socket写(发送)
+    EV_ACCEPT    = 0x004, // 4  监听到有新连接
+    EV_CONNECT   = 0x008, // 8  连接成功或者失败
+    EV_CLOSE     = 0x010, // 16 socket关闭
+    EV_FLUSH     = 0x020, // 32 发送数据，随后关闭
+    EV_TIMER     = 0x080, // 128 定时器超时
+    EV_ERROR     = 0x100, // 256 出错
+    EV_INIT_CONN = 0x200, // 512 初始化connect
+    EV_INIT_ACPT = 0x400, // 1024 初始化accept
 };
 
-class EVIO;
-class EVTimer;
-class EVWatcher;
 class EVBackend;
 
 using HeapNode = EVTimer *;
@@ -44,35 +43,24 @@ public:
 
     /**
      * @brief 启动一个io监听
-     * @param id 唯一的id
      * @param fd 通过socket函数创建的文件描述符
      * @param event 监听事件，EV_READ|EV_WRITE
      * @return io对象
      */
-    EVIO *io_start(int32_t id, int32_t fd, int32_t event);
+    EVIO *io_start(int32_t fd, int32_t event);
     /**
      * @brief 通知io线程停止一个io监听
-     * @param id 唯一的id
+     * @param fd 通过socket函数创建的文件描述符
      * @param flush 是否发送完数据再关闭
      * @return
      */
-    int32_t io_stop(int32_t id, bool flush);
+    int32_t io_stop(int32_t fd, bool flush);
     /**
      * @brief 删除一个io监听器
-     * @param id 唯一的id
+     * @param fd 通过socket函数创建的文件描述符
      * @return 
     */
-    int32_t io_delete(int32_t id);
-    /**
-     * @brief 获取任意io对象，只能主线程调用
-     * @param fd
-     * @return
-     */
-    EVIO *get_io(int32_t fd)
-    {
-        auto found = _io_mgr.find(fd);
-        return found == _io_mgr.end() ? nullptr : &(found->second);
-    }
+    int32_t io_delete(int32_t fd);
 
     /// @brief  启动定时器
     /// @param id 定时器唯一id
@@ -127,28 +115,6 @@ public:
     virtual void timer_callback(int32_t id, int32_t revents)
     {
     }
-    /**
-     * @brief 标记io变化，稍后异步处理
-     * @param fd
-     */
-    void io_change(EVIO *w);
-
-    /**
-     * @brief 主线程把一个io操作事件发送给backend线程并马上唤醒它来执行
-     * @param fd
-     * @param events
-     */
-    void io_fast_event(EVIO *w, int32_t events);
-
-    /**
-     * 获取backend线程待处理的事件
-     */
-    std::vector<EVIO *> &get_fast_event()
-    {
-        return _io_fevents;
-    }
-    /// 其他线程发送io事件给主线程处理(此函数需要外部加锁)
-    void io_receive_event(EVIO *w, int32_t revents);
 
     /// 获取加锁对象
     std::mutex &lock()
@@ -186,6 +152,9 @@ public:
     }
 
     void time_update();
+
+    // 发送事件给backend线程
+    void append_event(EVIO *w, int32_t ev);
 
 protected:
     virtual void running() = 0;
@@ -226,25 +195,6 @@ protected:
      */
     std::atomic<bool> _has_job;
 
-    /// 收到的io待处理事件
-    std::vector<EVIO *> _io_revents;
-    /// 触发了事件，等待处理的watcher
-    std::vector<EVWatcher *> _pendings;
-
-    /// 在主线程设置，待backend线程处理的事件
-    std::vector<EVIO *> _io_fevents;
-
-    /**
-     * @brief 已经改变，等待设置到内核的io watcher
-    */
-    std::vector<EVIO *> _io_changes;
-    /**
-     * @brief _io_changes中用于删除的索引
-    */
-    int32_t _io_delete_index;
-
-    std::unordered_map<int32_t, EVIO> _io_mgr; /// 管理所有io对象
-
     /**
      * 当前拥有的timer数量
      * 额外使用一个计数器管理timer，可以不用对_timers进行pop之类的操作
@@ -257,13 +207,13 @@ protected:
     std::vector<EVTimer *> _periodics; /// 按二叉树排列的utc定时器
     std::unordered_map<int32_t, EVTimer> _periodic_mgr;
 
-    EVBackend *_backend;          ///< io后台
-    int64_t _busy_time;           ///< 上一次执行消耗的时间，毫秒
+    EVBackend *_backend; // io后台
+    int64_t _busy_time; // 上一次执行消耗的时间，毫秒
 
-    int64_t _steady_clock;              ///< 起服到现在的毫秒
+    int64_t _steady_clock; // 起服到现在的毫秒
     int64_t _system_clock; // UTC时间戳（单位：毫秒）
-    std::atomic<int64_t> _system_now; ///< UTC时间戳(CLOCK_REALTIME,秒)
-    int64_t _last_system_clock_update;       ///< 上一次更新UTC的MONOTONIC时间
+    std::atomic<int64_t> _system_now; // UTC时间戳(CLOCK_REALTIME,秒)
+    int64_t _last_system_clock_update;       // 上一次更新UTC的MONOTONIC时间
     /**
      * UTC时间与MONOTONIC时间的差值，用于通过mn_now直接计算出rt_now而
      * 不需要通过clock_gettime来得到rt_now，以提高效率
@@ -280,4 +230,7 @@ protected:
 
     /// 用于数据交换的spin lock
     SpinLock _spin_lock;
+
+    WatcherMgr _fd_mgr; // io管理
+    EventSwapList _events; // 发送给backend线程的事件
 };

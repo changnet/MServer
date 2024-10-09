@@ -37,7 +37,7 @@ public:
 public:
     int32_t _id;      /// 唯一id
     int32_t _pending; /// 在待处理watcher数组中的下标
-    uint8_t _revents; /// receive events，收到并等待处理的事件
+    uint32_t _revents; /// receive events，收到并等待处理的事件
 
  protected:
 
@@ -47,22 +47,14 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
- * @brief io事件监听器
-*/
+ * @brief io事件监听器，这个结构要两个线程共享，所以有以下设定
+ * 部分数据不加锁共享，需要设置后即不再改变，如：
+ *     _fd、_io等
+ * 部分数据仅在其中一个线程使用，如_b开头的仅在backend线程使用
+ */
 class EVIO final : public EVWatcher
 {
 public:
-    // io监听器的激活状态
-    enum Status
-    {
-        S_NONE  = 0, // 不需要进行任何操作
-        S_STOP  = 1, // 停止状态
-        S_START = 2, // 激活
-        S_NEW   = 3, // 新增
-        S_DEL   = 4  // 删除中
-        
-    };
-
     enum Mask
     {
         M_NONE = 0, // 不做任何处理
@@ -72,7 +64,7 @@ public:
 
 public:
     ~EVIO();
-    explicit EVIO(int32_t id, int32_t fd, int32_t events, EV *loop);
+    explicit EVIO(int32_t fd, EV *loop);
     
     /**
      * @brief 由io线程调用的读函数，必须线程安全
@@ -137,35 +129,30 @@ public:
      */
     IO::IOStatus do_init_connect();
 
-public:
+    // 修改引用计数
+    void add_ref(int32_t v);
 
-    int8_t _status; // 当前的状态
+public:
     uint8_t _mask; // 用于设置种参数
-    uint8_t _uevents; // user event，用户设置需要回调的事件，如EV_READ
 
     // 带_b前缀的变量，都是和backend线程相关
     // 这些变量要么只能在backend中操作，要么操作时必须加锁
 
-    uint8_t _b_uevents; // backend线程中的user events
-    uint8_t _b_revents; // backend线程中的receive events
-    uint8_t _b_kevents; // kernel(如epoll)中使用的events
-    uint8_t _b_eevents; // extra events，backend线程额外添加的事件，如EV_WRITE
-
-    // fast event，在主线程设置并立马唤醒backend线程执行的事件
-    // 它与_b_uevents的区别是_b_uevents用于判断一个事件是否需要回调
-    uint8_t _b_fevents;
+    uint32_t _b_kevents; // kernel(如epoll)中使用的events
+    uint32_t _b_pevents; // pending，backend线程等待处理的事件
 
     int32_t _errno; /// 错误码
     int32_t _fd;     /// 文件描述符
 
-    int32_t _change_index; // 在io_changes数组中的下标
-    int32_t _b_uevent_index; // 在backend中待修改数组中的下标
-    int32_t _b_fevent_index; // 在io_fevents数组中的下标-1表示未初始化不能使用fast_event
-    int32_t _b_revent_index; // 在io_revents数组中的下标
+    int32_t _ev_counter; // ev数组中的计数器
+    int32_t _ev_index; // 在ev数组中的下标
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
     IO *_io; /// 负责数据读写的io对象，如ssl读写
+#ifndef NDEBUG
+    std::atomic<int> _ref; // 引用数，用于检测
+#endif
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -196,4 +183,175 @@ public:
     int32_t _policy; ///< 修正定时器时间偏差策略，详见 reschedule 函数
     int64_t _at; ///< 定时器首次触发延迟的毫秒数（未激活），下次触发时间（已激活）
     int64_t _repeat; ///< 定时器重复的间隔（毫秒数）
+};
+
+// socket事件
+struct WatcherEvent
+{
+    int32_t _ev; // 事件
+    EVIO *_w;
+
+    WatcherEvent(EVIO *w, int32_t ev)
+    {
+        _w = w;
+        _ev = ev;
+    }
+};
+
+// 两线程之间交换事件的列表
+struct EventSwapList
+{
+    int32_t _counter;
+    SpinLock _lock;
+    std::vector<WatcherEvent> _append; // 事件往该数组中插入
+    std::vector<WatcherEvent> _pending; // 另一个线程交换后，待处理的数据
+
+    EventSwapList()
+    {
+        _counter = 0;
+    }
+
+    /**
+     * 添加事件(此函数不会失败)
+     * @param w 对应的watcher
+     * @param ev 要添加的事件
+     * @return 0和旧事件合并 1新增事件 2重置所有事件计数器
+     */
+    int32_t append_event(EVIO *w, int32_t ev)
+    {
+        std::lock_guard<SpinLock> guard(_lock);
+
+        // 如果当前socket已经在队列中，则不需要额外附加一个event
+        // 否则发协议时会导致事件数组很长
+        if (_counter == w->_ev_counter)
+        {
+            assert(_append.size() > w->_ev_index);
+
+            WatcherEvent &fe = _append[w->_ev_index];
+
+            assert(fe._w == w);
+            fe._ev |= ev;
+
+            return 0;
+        }
+        else
+        {
+            int32_t flag = 1;
+            size_t size  = _append.size();
+
+            // 使用counter来判断socket是否已经在数组中，引出的额外问题是counter重置时
+            // 需要遍历所有socket来重置对应的counter
+            if (0x7FFFFFFF == _counter)
+            {
+                _counter = 1;
+                flag     = 2;
+            }
+            else
+            {
+                flag = size > 0 ? 1 : 0;
+            }
+            w->_ev_counter = _counter;
+            w->_ev_index = int32_t(size + 1);
+            _append.emplace_back(w, ev);
+
+            return flag;
+        }
+    }
+    // 获取待处理的事件
+    std::vector<WatcherEvent> &fetch_event()
+    {
+        assert(0 == _pending.size());
+        {
+            std::lock_guard<SpinLock> guard(_lock);
+            if (0 != _append.size())
+            {
+                _counter += 1;
+                _pending.swap(_append);
+            }
+        }
+        return _pending;
+    }
+};
+
+// 通过fd提供一个快速根据fd获取watcher的机制
+class WatcherMgr
+{
+public:
+    // 设置fd对应的watcher
+    void set(int32_t fd, EVIO *w)
+    {
+        // win的socket是unsigned类型，可能会很大变成负数，得强转unsigned来判断
+        uint32_t ufd = ((uint32_t)fd);
+        if (ufd < HUGE_FD)
+        {
+            if (EXPECT_FALSE(_fd_watcher.size() < ufd))
+            {
+                _fd_watcher.resize(ufd + 1024);
+            }
+            _fd_watcher[fd] = w;
+        }
+        else
+        {
+            if (w)
+            {
+                _fd_watcher_huge[fd] = w;
+            }
+            else
+            {
+                _fd_watcher_huge.erase(fd);
+            }
+        }
+    }
+
+    // 获取fd对应的watcher
+    EVIO *get(int32_t fd)
+    {
+        uint32_t ufd = ((uint32_t)fd);
+        if (ufd < HUGE_FD) return _fd_watcher[ufd];
+
+        auto found = _fd_watcher_huge.find(fd);
+        return found == _fd_watcher_huge.end() ? nullptr : found->second;
+    }
+
+    // 遍历所有watcher
+    template <typename F>
+    void for_each(F&& func)
+    {
+        for (auto& x : _fd_watcher)
+        {
+            if (x) func(x);
+        }
+        for (auto& x : _fd_watcher_huge)
+        {
+            func(x.second);
+        }
+    }
+
+    // 当前fd的数量
+    size_t size() const
+    {
+        size_t s = _fd_watcher_huge.size();
+
+        for (auto& x : _fd_watcher)
+        {
+            if (x) s++;
+        }
+
+        return s;
+    }
+
+private:
+    /// 小于该值的fd，可通过数组快速获取watcher
+    static const int32_t HUGE_FD = 10240;
+    /**
+     * 直接以数组下标获取watcher
+     */
+    std::vector<EVIO *> _fd_watcher;
+    /**
+     * https://linux.die.net/man/3/open
+     * return a non-negative integer representing the lowest numbered unused file descriptor
+     * linux下，fd都比较小，可以直接把fd作为数组下标
+     * 但win下，fd可能会返回
+     */
+    std::unordered_map<int32_t, EVIO *> _fd_watcher_huge;
 };

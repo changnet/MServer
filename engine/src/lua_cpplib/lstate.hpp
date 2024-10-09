@@ -40,7 +40,7 @@ private:
 
 template <typename... Args> void LState::call(const char *name, Args... args)
 {
-#if !defined(NDEBUG)
+#ifndef NDEBUG
     lcpp::StackChecker sc(L);
 #endif
 
@@ -65,7 +65,7 @@ template <typename... Args> void LState::call(const char *name, Args... args)
 template <typename Ret, typename... Args>
 Ret LState::call(const char *name, Args... args)
 {
-#if !defined(NDEBUG)
+#ifndef NDEBUG
     lcpp::StackChecker sc(L);
 #endif
 

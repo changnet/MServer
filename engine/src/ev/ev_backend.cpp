@@ -29,7 +29,6 @@ EVBackend::EVBackend()
     _ev   = nullptr;
     _last_pending_tm = 0;
     _modify_protected = false;
-    _fast_events.reserve(1024);
 }
 
 EVBackend::~EVBackend()
@@ -58,44 +57,28 @@ void EVBackend::stop()
 
 void EVBackend::backend_once(int32_t ev_count, int64_t now)
 {
-    _fast_events.clear();
+    // poll等结构在处理事件时需要for循环遍历所有fd列表
+    // 中间禁止调用modify_fd来删除这个列表
+    // epoll则是可以删除的
+    _modify_protected = true;
+    do_wait_event(ev_count);
+    _modify_protected = false;
 
-    // TODO 下面的操作，是每个操作，加锁、解锁一次，还是全程解锁呢？
-    // 即使全程加锁，至少是不会影响主线程执行逻辑的。主线程执行逻辑回调时，不会用到锁
+    do_main_events();
+    do_user_event();
+
+    // 检测待删除的连接是否超时
+    static const int32_t MIN_PENDING_CHECK = 2000;
+    if (now - _last_pending_tm > MIN_PENDING_CHECK)
     {
-        std::lock_guard<std::mutex> guard(_ev->lock());
+        _last_pending_tm = now;
+        check_pending_watcher(now);
+    }
 
-        // poll等结构在处理事件时需要for循环遍历所有fd列表
-        // 中间禁止调用modify_fd来删除这个列表
-        // epoll则是可以删除的
-        _modify_protected = true;
-        do_wait_event(ev_count);
-        _modify_protected = false;
-
-        // 主线程和backend线程会频繁交换fast_event,因此使用一个快速、独立的锁
-        // 注意这里必须在do_wait_event之后交换数据，因为唤醒backend的eventfd在wait_event
-        // 必须先清空eventfd再交换数据，否则可能会漏掉一些事件
-        {
-            std::lock_guard<SpinLock> guard(_ev->fast_lock());
-            _fast_events.swap(_ev->get_fast_event());
-        }
-
-        do_fast_event();
-        do_user_event();
-
-        // 检测待删除的连接是否超时
-        static const int32_t MIN_PENDING_CHECK = 2000;
-        if (now - _last_pending_tm > MIN_PENDING_CHECK)
-        {
-            _last_pending_tm = now;
-            check_pending_watcher(now);
-        }
-
-        if (_has_ev)
-        {
-            _ev->set_job(true);
-            _ev->wake(false);
-        }
+    if (_has_ev)
+    {
+        _ev->set_job(true);
+        _ev->wake(false);
     }
 }
 
@@ -136,12 +119,12 @@ void EVBackend::backend()
 
 void EVBackend::modify_later(EVIO *w, int32_t events)
 {
-    w->_b_uevents = static_cast<uint8_t>(events);
-    if (!w->_b_uevent_index)
-    {
-        _user_events.push_back(w);
-        w->_b_uevent_index = (int32_t)_user_events.size();
-    }
+    // poll收到读写事件时（比如连接断开），是不能修改poll数组的
+    // 因此只能先把事件暂存起来，稍后统一处理
+
+    if (!w->_b_pevents) _pending_events.push_back(w);
+
+    w->_b_pevents |= events;
 }
 
 void EVBackend::modify(EVIO *w)
@@ -233,7 +216,7 @@ int32_t EVBackend::modify_watcher(EVIO *w)
     }
 
     // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
-    w->_b_kevents = static_cast<uint8_t>(new_ev);
+    w->_b_kevents = new_ev;
 
     return modify_fd(w->_fd, op, new_ev);
 }
@@ -260,7 +243,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
             }
             else if (w->_b_eevents & EV_WRITE)
             {
-                w->_b_eevents &= static_cast<uint8_t>(~EV_WRITE);
+                w->_b_eevents &= (~EV_WRITE);
                 modify_later(w, w->_b_uevents);
             }
         }
@@ -303,40 +286,21 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
     return false;
 }
 
-void EVBackend::do_watcher_fast_event(EVIO *w)
+void EVBackend::do_watcher_main_event(EVIO *w, int32_t events)
 {
-    int32_t events = 0;
-    {
-        std::lock_guard<SpinLock> guard(_ev->fast_lock());
-
-        // 执行fast_event时，需要保证watcher已就位
-        // 因为fast_event可能会修改该watcher在epoll中的信息从而产生event
-        // 这时候没有watcher就无法正确处理
-        assert(get_fd_watcher(w->_fd));
-
-        events           = w->_b_fevents;
-        w->_b_fevents    = 0;
-        w->_b_fevent_index = 0;
-    }
-
-    // TODO 执行fast_event时，可能还未执行该watcher的user_event
-    // 即当前fd仍不归epoll管理从目前来看这个暂时没有影响
-    // 例如accept成功时直接发送数据，fast_event直接唤醒线程发送数据，但do_user_event
-    // 要在发送完后才执行
-
     assert(events);
 
-    if (events & EV_ACCEPT)
+    if (events & EV_INIT_ACPT)
     {
         // 初始化新socket，只有ssl用到
         auto status = w->do_init_accept();
-        do_io_status(w, EV_READ, status);
+        do_io_status(w, EV_INIT_ACPT, status);
     }
-    else if (events & EV_CONNECT)
+    else if (events & EV_INIT_CONN)
     {
         // 初始化新socket，只有ssl用到
         auto status = w->do_init_connect();
-        do_io_status(w, EV_WRITE, status);
+        do_io_status(w, EV_INIT_CONN, status);
     }
 
     // 处理数据发送
@@ -345,13 +309,20 @@ void EVBackend::do_watcher_fast_event(EVIO *w)
         auto status = w->send();
         do_io_status(w, EV_WRITE, status);
     }
+
+    // 其他事件，和从poll、epoll的事件汇总后，再一起处理
+    static const int32_t EV = EV_READ | EV_ACCEPT | EV_CONNECT | EV_CLOSE | EV_FLUSH;
+
+    events &= EV;
+    if (events)
+    {
+        modify_later(w, events);
+    }
 }
 
 void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 {
     int32_t events          = 0;             // 最终需要触发的事件
-    // 期望触发回调的事件，关闭和错误事件不管用户是否设置，都会触发
-    int32_t expect_ev       = w->_b_uevents | EV_ERROR | EV_CLOSE;
     const int32_t kernel_ev = w->_b_kevents; // 内核事件
     if (revents & EV_WRITE)
     {
@@ -365,8 +336,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
         // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
         if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
         {
-            w->_b_uevents &= static_cast<uint8_t>(~EV_CONNECT);
-            modify_later(w, w->_b_uevents);
+            modify_later(w, kernel_ev & (~EV_CONNECT));
         }
 
         events |= (EV_WRITE | EV_CONNECT);
@@ -394,21 +364,21 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 
     // 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT
     // 用户只设置EV_CONNECT那就不要触发EV_WRITE
-    // 假如socket关闭时，用户已不希望回调任何事件，但这时对方可能会发送数据
-    // 触发EV_READ事件
+    // 假如socket关闭时，用户已不希望回调任何事件，但这时对方可能会发送数据,触发EV_READ事件
+    // 关闭和错误事件不管用户是否设置，都会触发
+    int32_t expect_ev = kernel_ev | EV_ERROR | EV_CLOSE;
     expect_ev &= events;
-    if (expect_ev) feed_receive_event(w, expect_ev);
+    if (expect_ev) append_event(w, expect_ev);
 }
 
-void EVBackend::do_fast_event()
+void EVBackend::do_main_events()
 {
-    for (auto w : _fast_events)
+    std::vector<WatcherEvent> &events = _events.fetch_event();
+    for (auto& we : events)
     {
-        // 主线程发出io请求后，后续逻辑可能删掉了这个对象
-        if (!w) continue;
-
-        do_watcher_fast_event(w);
+        do_watcher_main_event(we._w, we._ev);
     }
+    events.clear();
 }
 
 void EVBackend::add_pending_watcher(int32_t fd)
@@ -463,36 +433,19 @@ void EVBackend::del_pending_watcher(int32_t fd, EVIO *w)
     modify_fd(w->_fd, FD_OP_DEL, 0);
 }
 
-void EVBackend::set_fd_watcher(int32_t fd, EVIO *w)
+void EVBackend::append_event(EVIO *w, int32_t ev)
 {
-    // win的socket是unsigned类型，可能会很大，得强转unsigned来判断
-    uint32_t ufd = ((uint32_t)fd);
-    if (ufd < HUGE_FD)
-    {
-        if (EXPECT_FALSE(_fd_watcher.size() < ufd))
-        {
-            _fd_watcher.resize(ufd + 1024);
-        }
-        _fd_watcher[fd] = w;
-    }
-    else
-    {
-        if (w)
-        {
-            _fd_watcher_huge[fd] = w;
-        }
-        else
-        {
-            _fd_watcher_huge.erase(fd);
-        }
-    }
-}
+    int32_t flag = _events.append_event(w, ev);
 
-EVIO *EVBackend::get_fd_watcher(int32_t fd)
-{
-    uint32_t ufd = ((uint32_t)fd);
-    if (ufd < HUGE_FD) return _fd_watcher[ufd];
-
-    auto found = _fd_watcher_huge.find(fd);
-    return found == _fd_watcher_huge.end() ? nullptr : found->second;
+    // 主线程执行的逻辑可能耗时较久，才需要及时唤醒backend把数据发送出去
+    // backend线程可以收集完所有数据后再唤醒主线程处理，节省一点资源
+    // _ev->wake(true);
+    if (2 == flag)
+    {
+        _fd_mgr.for_each(
+            [w](EVIO *watcher)
+            {
+                if (w != watcher) watcher->_ev_counter = 0;
+            });
+    }
 }
