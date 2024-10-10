@@ -60,10 +60,6 @@ public:
      */
     void stop();
     /**
-     * 修改io事件(包括删除)
-     */
-    void modify(EVIO *w);
-    /**
      * 创建一个backend实例
      */
     static EVBackend *instance();
@@ -73,11 +69,6 @@ public:
     static void uninstance(EVBackend *backend);
 
 protected:
-    /**
-     * 派发watcher回调事件
-     */
-    void feed_receive_event(EVIO *w, int32_t ev);
-
     /**
      * 处理主线程发起的事件
      */
@@ -115,7 +106,7 @@ private:
      */
     virtual void do_wait_event(int32_t ev_count) = 0;
     /**
-     * 处理主线程发来的事件
+     * @brief 处理主线程发来的事件
      */
     void do_main_events();
     /**
@@ -127,27 +118,15 @@ private:
      */
     bool do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status);
     /**
-     * 删除主动关闭，等待删除的watcher
+     * 处理待生效的事件
      */
-    void add_pending_watcher(int32_t fd);
+    void do_pending_events();
     /**
-     * 检测主动关闭，等待删除的watcher是否超时
-     */
-    void check_pending_watcher(int64_t now);
-    /**
-     * 删除主动关闭，等待删除的watcher
-     */
-    void del_pending_watcher(int32_t fd, EVIO *w);
-    /**
-     * 处理待修改的io
-     */
-    void do_user_event();
-    /**
-     * @brief 把一个watcher设置到epoll，该函数外部需要加锁
+     * @brief 把一个watcher设置到epoll
      * @param w watcher的指针
      * @return errno
      */
-    int32_t modify_watcher(EVIO *w);
+    int32_t modify_watcher(EVIO *w, int32_t events);
     /**
      * @brief 把一个watcher添加到待修改队列
      * @param w 待修改的watcher
@@ -158,18 +137,12 @@ private:
     void append_event(EVIO *w, int32_t ev);
 
 protected:
-    bool _has_ev;   /// 是否有待主线程处理的事件
     bool _done;     /// 是否终止进程
-    bool _busy;     /// io读写返回busy，意味主线程处理不完这些数据
     bool _modify_protected; // 当前禁止修改poll等数组结构
-    int64_t _last_pending_tm; // 上次检测待删除watcher时间
     class EV *_ev;  /// 主循环
     std::thread _thread;
 
     std::vector<EVIO *> _pending_events; // 待处理的事件
-
-    // 待发送完数据后删除的watcher
-    std::unordered_map<int32_t, int64_t> _pending_watcher;
 
     EventSwapList _events;        // 发送给主线程的事件
     WatcherMgr _fd_mgr;   // 管理epoll中的所有fd

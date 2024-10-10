@@ -18,7 +18,7 @@ enum
     EV_ACCEPT    = 0x004, // 4  监听到有新连接
     EV_CONNECT   = 0x008, // 8  连接成功或者失败
     EV_CLOSE     = 0x010, // 16 socket关闭
-    EV_FLUSH     = 0x020, // 32 发送数据，随后关闭
+    EV_FLUSH     = 0x020, // 32 发送数据，完成后关闭连接
     EV_TIMER     = 0x080, // 128 定时器超时
     EV_ERROR     = 0x100, // 256 出错
     EV_INIT_CONN = 0x200, // 512 初始化connect
@@ -26,12 +26,10 @@ enum
 };
 
 class EVBackend;
-
 using HeapNode = EVTimer *;
-
 extern const char *__BACKEND__;
 
-// event loop
+// event loop，socket、定时器事件循环
 class EV
 {
 public:
@@ -125,12 +123,6 @@ public:
         return _mutex;
     }
 
-    /// 获取快速锁
-    SpinLock &fast_lock()
-    {
-        return _spin_lock;
-    }
-
     /**
      * @brief 唤醒主线程
      * @param job 如果为true，则加锁并设置_has_job标记
@@ -159,24 +151,14 @@ public:
 protected:
     virtual void running() = 0;
 
-    void io_reify();
     /**
-     * 设置watcher的回调事件
+     * @brief 设置watcher的回调事件并暂存，稍后处理
+     * 主要是为了解决在回调事件中修改watcher的问题
      */
-    void feed_event(EVWatcher *w, int32_t revents);
+    void add_pending(EVWatcher *w, int32_t revents);
     void invoke_pending();
-    void clear_pending(EVWatcher *w);
-    /**
-     * 清除等待backend线程处理的事件
-     * @param w io监听器
-     */
-    void clear_io_fast_event(EVIO *w);
-    /**
-     * 清除该监听器收到的io事件
-     * @param w io监听器
-     */
-    void clear_io_receive_event(EVIO *w);
-    void io_receive_event_reify();
+    void del_pending(EVWatcher *w);
+
     void timers_reify();
     void periodic_reify();
     void down_heap(HeapNode *heap, int32_t N, int32_t k);
@@ -228,8 +210,7 @@ protected:
     /// 主线程锁
     std::mutex _mutex;
 
-    /// 用于数据交换的spin lock
-    SpinLock _spin_lock;
+    std::vector<EVWatcher *> _pendings; // 暂存待处理的watcher
 
     WatcherMgr _fd_mgr; // io管理
     EventSwapList _events; // 发送给backend线程的事件

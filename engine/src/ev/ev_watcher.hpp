@@ -208,7 +208,14 @@ struct EventSwapList
 
     EventSwapList()
     {
-        _counter = 0;
+        _counter = 1;
+    }
+
+    // 是否向数组中插入了事件
+    bool empty()
+    {
+        std::lock_guard<SpinLock> guard(_lock);
+        return _append.empty();
     }
 
     /**

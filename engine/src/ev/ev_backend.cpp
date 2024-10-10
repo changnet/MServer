@@ -23,11 +23,8 @@ void EVBackend::uninstance(EVBackend *backend)
 
 EVBackend::EVBackend()
 {
-    _has_ev = false;
-    _busy = false;
     _done = false;
     _ev   = nullptr;
-    _last_pending_tm = 0;
     _modify_protected = false;
 }
 
@@ -65,21 +62,9 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
     _modify_protected = false;
 
     do_main_events();
-    do_user_event();
+    do_pending_events();
 
-    // 检测待删除的连接是否超时
-    static const int32_t MIN_PENDING_CHECK = 2000;
-    if (now - _last_pending_tm > MIN_PENDING_CHECK)
-    {
-        _last_pending_tm = now;
-        check_pending_watcher(now);
-    }
-
-    if (_has_ev)
-    {
-        _ev->set_job(true);
-        _ev->wake(false);
-    }
+    if (!_events.empty()) _ev->wake(true);
 }
 
 void EVBackend::backend()
@@ -94,8 +79,6 @@ void EVBackend::backend()
 
     while (!_done)
     {
-        _has_ev = false;
-
         int32_t ev_count = wait(max_wait);
         if (ev_count < 0) break;
 
@@ -127,106 +110,56 @@ void EVBackend::modify_later(EVIO *w, int32_t events)
     w->_b_pevents |= events;
 }
 
-void EVBackend::modify(EVIO *w)
+void EVBackend::do_pending_events()
 {
-    /**
-     * 这个函数由主线程调用，io线程可能处于wpoll_wait阻塞当中
-     * man epoll_wait
-     * NOTES
-       While one thread is blocked in a call to epoll_pwait(), it is possible
-     for another thread to add a file  descriptor  to the waited-upon epoll
-     instance.  If the new file descriptor becomes ready, it will cause the
-     epoll_wait() call to unblock.
-
-       For a discussion of what may happen if a file descriptor in an epoll
-     instance being  monitored  by epoll_wait() is closed in another thread, see
-     select(2).
-
-     * man select
-     * Multithreaded applications
-       If a file descriptor being monitored by select() is closed in another
-     thread, the  result  is  un‐ specified.   On some UNIX systems, select()
-     unblocks and returns, with an indication that the file descriptor is ready
-     (a subsequent I/O operation will likely fail with an error, unless another
-     the file descriptor reopened between the time select() returned and the I/O
-     operations was performed). On Linux (and some other systems), closing the
-     file descriptor in another thread has no effect  on select().   In summary,
-     any application that relies on a particular behavior in this scenario must
-       be considered buggy.
-
-     * 所以epoll_ctl其实不是线程安全的，调用的时候，backend线程不能处于epoll_wait状态
-     */
-
-    modify_later(w, w->_uevents);
-}
-
-void EVBackend::do_user_event()
-{
-    for (auto w : _user_events)
+    for (const auto& w : _pending_events)
     {
-        // 冗余校验是否被主线程删除
-        assert(get_fd_watcher(w->_fd));
-
-        w->_b_uevent_index = 0;
-        modify_watcher(w);
+        int32_t events = w->_b_pevents;
+        w->_b_pevents = 0;
+        modify_watcher(w, events);
     }
-    _user_events.clear();
+    _pending_events.clear();
 }
 
-int32_t EVBackend::modify_watcher(EVIO *w)
+int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
 {
-    // 对方已经关闭了连接，无需再次删除或者修改
-    if (w->_b_eevents & EV_CLOSE) return 0;
-
-    int32_t new_ev = 0;
     int32_t op = FD_OP_DEL;
 
-    auto b_uevents = w->_b_uevents;
-    if (b_uevents & EV_FLUSH)
+    if (events & EV_FLUSH)
     {
-        // 尝试发送一下，大部分情况下都是没数据可以发送的
-        // 如果有，那也应该会在fast_event那边处理
+        // 尝试发送一下，大部分情况下都是没数据可以发送的，或者一次就可以发送完成
         if (IO::IOS_WRITE == w->send())
         {
-            int32_t old_ev = w->_b_kevents;
-            new_ev = w->_b_eevents;
-
-            op = old_ev ? FD_OP_MOD : FD_OP_ADD;
-
-            add_pending_watcher(w->_fd);
+            events |= EV_WRITE; // 继续发送
+            op = w->_b_kevents ? FD_OP_MOD : FD_OP_ADD;
         }
         else
         {
-            // 没有数据要发送或者发送出错直接关闭连接，并通知主线程那边做后续清理工作
-            // 这个modify可能是backend本身发起的，仍要检测是否要从pending中删除
-            del_pending_watcher(w->_fd, w);
+            append_event(w, EV_CLOSE);
+            _fd_mgr.set(w ->_fd, nullptr);
         }
     }
-    else if (b_uevents & EV_CLOSE)
+    else if (events & EV_CLOSE)
     {
-        // 直接关闭连接，并通知主线程那边做后续清理工作
-        feed_receive_event(w, EV_CLOSE);
+        // 直接关闭
+        append_event(w, EV_CLOSE);
+        _fd_mgr.set(w->_fd, nullptr);
     }
     else
     {
-        int32_t old_ev = w->_b_kevents;
-        new_ev = b_uevents | w->_b_eevents;
-
-        op = old_ev ? FD_OP_MOD : FD_OP_ADD;
+        op = w->_b_kevents ? FD_OP_MOD : FD_OP_ADD;
     }
 
     // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
-    w->_b_kevents = new_ev;
+    w->_b_kevents = events;
+    if (op == FD_OP_ADD)
+    {
+        assert(!_fd_mgr.get(w->_fd));
+        _fd_mgr.set(w->_fd, w);
+    }
 
-    return modify_fd(w->_fd, op, new_ev);
+    return modify_fd(w->_fd, op, events);
 }
-
-void EVBackend::feed_receive_event(EVIO *w, int32_t ev)
-{
-    _has_ev = true;
-    _ev->io_receive_event(w, ev);
-}
-
 
 bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
 {
@@ -237,14 +170,14 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         if (EV_WRITE == ev)
         {
             // 发送完后主动关闭主动关闭
-            if (w->_b_uevents & EV_CLOSE)
+            if (w->_b_kevents & EV_FLUSH)
             {
                 modify_later(w, EV_CLOSE);
             }
-            else if (w->_b_eevents & EV_WRITE)
+            else if (w->_b_kevents & EV_WRITE)
             {
-                w->_b_eevents &= (~EV_WRITE);
-                modify_later(w, w->_b_uevents);
+                // 发送完成，从epoll中取消EV_WRITE事件
+                modify_later(w, w->_b_kevents & (~EV_WRITE));
             }
         }
         return true;
@@ -253,18 +186,16 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
         return true;
     case IO::IOS_WRITE:
         // 未发送完，加入write事件继续发送
-        if (!(w->_b_eevents & EV_WRITE))
+        if (!(w->_b_kevents & EV_WRITE))
         {
-            w->_b_eevents |= EV_WRITE;
-            modify_later(w, w->_b_uevents);
+            modify_later(w, w->_b_kevents | EV_WRITE);
         }
         return true;
     case IO::IOS_BUSY:
         // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
         if (w->_mask & EVIO::M_OVERFLOW_KILL)
         {
-            PLOG("backend thread fd overflow kill id = %d, fd = %d", w->_id,
-                 w->_fd);
+            PLOG("backend thread overflow kill fd = %d", w->_fd);
             modify_later(w, EV_CLOSE);
             return false;
         }
@@ -379,58 +310,6 @@ void EVBackend::do_main_events()
         do_watcher_main_event(we._w, we._ev);
     }
     events.clear();
-}
-
-void EVBackend::add_pending_watcher(int32_t fd)
-{
-    int64_t now = EV::steady_clock();
-    auto ret = _pending_watcher.emplace(fd, now);
-    if (false == ret.second)
-    {
-        ELOG("pending watcher already exist: %d", fd);
-    }
-}
-
-void EVBackend::check_pending_watcher(int64_t now)
-{
-    // C++14以后，允许在循环中删除
-    static_assert(__cplusplus > 201402L);
-
-    for (auto iter = _pending_watcher.begin(); iter != _pending_watcher.end(); iter++)
-    {
-        // 超时N毫秒后删除
-        if (now - iter->second > 10000)
-        {
-            del_pending_watcher(iter->first, nullptr);
-            iter = _pending_watcher.erase(iter);
-        }
-    }
-}
-
-void EVBackend::del_pending_watcher(int32_t fd, EVIO *w)
-{
-    // 未传w则是定时检测时调用，在for循环中已经删除了，这里不需要再次删除
-    if (!w)
-    {
-        w = get_fd_watcher(fd);
-
-        // 多次调用close可能会删掉watcher
-        if (!w)
-        {
-            ELOG("no watcher found: %d", fd);
-            return;
-        }
-    }
-    else
-    {
-        _pending_watcher.erase(fd);
-    }
-
-    // 标记为已关闭
-    w->_b_eevents |= EV_CLOSE;
-
-    feed_receive_event(w, EV_CLOSE);
-    modify_fd(w->_fd, FD_OP_DEL, 0);
 }
 
 void EVBackend::append_event(EVIO *w, int32_t ev)

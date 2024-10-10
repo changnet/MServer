@@ -77,9 +77,6 @@ int32_t EV::loop()
         // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
         // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
 
-        // 把fd变更设置到backend中去
-        io_reify();
-
         time_update();
         _busy_time = _steady_clock - last_ms;
 
@@ -117,9 +114,6 @@ int32_t EV::loop()
                 _cv.wait_for(ul, std::chrono::milliseconds(backend_time));
             }
             _has_job = false;
-
-            // 收集io事件 放这里不再额外加锁
-            io_receive_event_reify();
         }
 
         time_update();
@@ -292,9 +286,50 @@ void EV::time_update()
     }
 }
 
-void EV::invoke_pending()
+void EV::add_pending(EVWatcher *w, int32_t revents)
 {
+    //.定时器触发时，可能会在回调事件删改定时器
+    // 因此在触发不直接回调到脚本，而是暂存起来再触发回调
+
+    // 已经在待处理队列里了，则设置事件即可
+    w->_revents |= static_cast<uint8_t>(revents);
+    if (EXPECT_TRUE(!w->_pending))
+    {
+        _pendings.emplace_back(w);
+        w->_pending = (int32_t)_pendings.size();
+    }
 }
+
+ void EV::invoke_pending()
+{
+    for (auto w : _pendings)
+    {
+        // 可能其他事件调用了clear_pending导致当前watcher无效了
+        if (EXPECT_TRUE(w && w->_pending))
+        {
+            int32_t events = w->_revents;
+            w->_pending  = 0;
+            w->_revents    = 0;
+            // callback之后，不要对w进行任何操作
+            // 因为callback到脚本后，脚本可能直接删除该w
+            w->callback(events);
+        }
+    }
+    _pendings.clear();
+}
+
+void EV::del_pending(EVWatcher *w)
+{
+    // 如果这个watcher在pending队列中，从队列中删除
+    if (w->_pending)
+    {
+        assert(w == _pendings[w->_pending - 1]);
+        _pendings[w->_pending - 1] = nullptr;
+        w->_revents                = 0;
+        w->_pending                = 0;
+    }
+}
+
 
 void EV::timers_reify()
 {
@@ -321,7 +356,7 @@ void EV::timers_reify()
             timer_stop(w); // 这里不能从管理器删除，还要回调到脚本
         }
 
-        feed_event(w, EV_TIMER);
+        add_pending(w, EV_TIMER);
     }
 }
 
@@ -336,7 +371,7 @@ void EV::periodic_reify()
         // 因为脚本逻辑都是用_system_now作为时间基准
         assert(w->_at <= _system_now * 1000);
 
-        feed_event(w, EV_TIMER);
+        add_pending(w, EV_TIMER);
         if (w->_repeat)
         {
             w->_at += w->_repeat;
@@ -403,7 +438,7 @@ int32_t EV::timer_stop(int32_t id)
 
 int32_t EV::timer_stop(EVTimer *w)
 {
-    clear_pending(w);
+    del_pending(w);
     if (EXPECT_FALSE(!w->_index)) return 0;
 
     {
@@ -482,7 +517,7 @@ int32_t EV::periodic_stop(int32_t id)
 
 int32_t EV::periodic_stop(EVTimer *w)
 {
-    clear_pending(w);
+    del_pending(w);
     if (EXPECT_FALSE(!w->_index)) return 0;
 
     {
