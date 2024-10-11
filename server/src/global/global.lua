@@ -95,9 +95,7 @@ function __G_C_TRACKBACK(msg, co)
 
     table.insert(msg_list, msg)
     table.insert(msg_list, stack_trace)
-    local str = table.concat(msg_list, "\n")
-    async_logger:eprint(str)
-    return str
+    return table.concat(msg_list, "\n")
 end
 
 -- 用于lua错误信息处理

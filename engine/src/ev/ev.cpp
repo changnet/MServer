@@ -175,7 +175,7 @@ EVIO *EV::io_start(int32_t fd, int32_t events)
     assert(!_fd_mgr.get(fd));
 
     EVIO *w = new EVIO(fd, this);
-    _fd_mgr.set(fd, w);
+    _fd_mgr.set(w);
 
     if (events) append_event(w, events);
 
@@ -199,7 +199,7 @@ int32_t EV::io_delete(int32_t fd)
     EVIO *w = _fd_mgr.get(fd);
     if (!w) return -1;
 
-    _fd_mgr.set(fd, nullptr);
+    _fd_mgr.unset(w);
     delete w;
 
     return 0;

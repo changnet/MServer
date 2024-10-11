@@ -96,6 +96,7 @@ int32_t luaopen_socket(lua_State* L)
     lcpp::Class<Socket> lc(L, "engine.Socket");
 
     lc.constructor<int32_t>();
+    lc.def<&Socket::fd>("fd");
     lc.def<&Socket::start>("start");
     lc.def<&Socket::stop>("stop");
     lc.def<&Socket::listen>("listen");

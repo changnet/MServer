@@ -5,8 +5,8 @@
 #include <lua.hpp>
 
 /**
- * lua_pushcfunction(L, traceback);也可以，但lua_pushcfunction其实是创建一个
- * 闭包，会占用一部分内存，然后再gc掉。因此在lua定义一个global函数可能更好
+ * @brief lua_pushcfunction(L, traceback);也可以，但lua_pushcfunction其实是创建一个
+ * 闭包，会占用一部分内存，然后再gc掉。因此直接get一个global函数更节省内存
  */
 #define LUA_PUSHTRACEBACK(L) lua_getglobal(L, "__G_C_TRACKBACK")
 

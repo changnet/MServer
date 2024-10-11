@@ -598,8 +598,16 @@ FAIL:
 
 void Socket::io_cb(int32_t revents)
 {
-    // io线程那边会同时抛多个事件，优先检测close事件
-    // 如果关闭了，那其他的都不用处理了
+    /*
+     * 一个socket发送数据后立即关闭，则对端会同时收到EV_READ和EV_CLOSE
+     * 这时的数据依然是有效的，所以EV_READ要优先EV_CLOSE来处理
+     * 
+     * 但EV_CLOSE的话，其他事件应该没有处理的必要了
+     */
+    if (EV_READ & revents)
+    {
+        command_cb();
+    }
     if (EV_CLOSE & revents)
     {
         close_cb(false);
@@ -615,11 +623,6 @@ void Socket::io_cb(int32_t revents)
     {
         connect_cb();
     }
-
-    if (EV_READ & revents)
-    {
-        command_cb();
-    }
 }
 
 void Socket::close_cb(bool term)
@@ -632,15 +635,16 @@ void Socket::close_cb(bool term)
         _w = nullptr;
         return;
     }
+
     // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
     if (CS_OPENED == _status && _packet) _packet->on_closed();
 
     _status = CS_CLOSED;
 
-    // epoll、poll发现fd出错时，并不会返回错误码，需要手动用getsockopt获取
-    int32_t e = _w ? _w->_errno : 0;
-    if (0 == e && _fd != netcompat::INVALID) e = validate();
+    // epoll、poll发现fd出错时，需要及时获取错误码并保存
+    int32_t e = _w->_errno;
 
+    assert(_fd > 0); // 如果_fd为-1，就是执行了两次close_cb
     netcompat::close(_fd);
     _fd = netcompat::INVALID;
 

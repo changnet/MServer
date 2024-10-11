@@ -123,43 +123,46 @@ void EVBackend::do_pending_events()
 
 int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
 {
-    int32_t op = FD_OP_DEL;
+    int32_t op = 0;
 
-    if (events & EV_FLUSH)
+    // EV_FLUSH来自主线程，
+    if (events & EV_FLUSH && !(events & EV_CLOSE))
     {
         // 尝试发送一下，大部分情况下都是没数据可以发送的，或者一次就可以发送完成
         if (IO::IOS_WRITE == w->send())
         {
             events |= EV_WRITE; // 继续发送
-            op = (w->_b_kevents & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
         }
         else
         {
-            append_event(w, EV_CLOSE);
-            _fd_mgr.set(w ->_fd, nullptr);
+            events |= EV_CLOSE; // 发送完成，直接关闭
         }
     }
-    else if (events & EV_CLOSE)
+    if (events & EV_CLOSE)
     {
-        // 直接关闭
+        op = FD_OP_DEL;
         append_event(w, EV_CLOSE);
-        _fd_mgr.set(w->_fd, nullptr);
+        _fd_mgr.unset(w);
     }
     else
     {
         op = (w->_b_kevents & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
+        if (w->_b_kevents & EV_KERNEL)
+        {
+            op = FD_OP_MOD;
+            assert(0 != events);
+        }
+        else
+        {
+            op = FD_OP_ADD;
+            assert(!_fd_mgr.get(w->_fd));
+            assert(0 == w->_b_kevents && 0 != events);
+
+            events |= EV_KERNEL;
+            _fd_mgr.set(w);
+        }
     }
 
-    if (op == FD_OP_ADD)
-    {
-        assert(!_fd_mgr.get(w->_fd));
-        assert(0 == w->_b_kevents && 0 != events);
-
-        events |= EV_KERNEL;
-        _fd_mgr.set(w->_fd, w);
-    }
-
-    assert(0 != events);
     w->_b_kevents = events;
     return modify_fd(w->_fd, op, events);
 }
@@ -176,6 +179,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
             if (w->_b_kevents & EV_FLUSH)
             {
                 modify_later(w, EV_CLOSE);
+                ELOG_R("flush write close %d", w->_fd);
             }
             else if (w->_b_kevents & EV_WRITE)
             {
@@ -209,9 +213,9 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
             ELOG("backend thread fd overflow sleep");
         }
         return true;
-    case IO::IOS_CLOSE:
+    case IO::IOS_CLOSE: modify_later(w, EV_CLOSE); return false;
     case IO::IOS_ERROR:
-        ELOG_R("socket error %d", w->_fd);
+        w->_errno = netcompat::errorno();
         modify_later(w, EV_CLOSE);
         return false;
     default: ELOG("unknow io status: %d", status); return false;
@@ -223,6 +227,10 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
 void EVBackend::do_watcher_main_event(EVIO *w, int32_t events)
 {
     assert(events);
+
+    // epoll检测到连接已断开，会直接从backend中删除
+    // 此时再收到主线程的任何数据都直接丢弃
+    if (w->_b_kevents & EV_CLOSE || w->_b_pevents & EV_CLOSE) return;
 
     if (events & EV_INIT_ACPT)
     {

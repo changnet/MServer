@@ -103,7 +103,6 @@ t_describe("http(s) test", function()
                 conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
             elseif "/nolength" == url then
                 t_equal(method, 1)
-                print("receive no length ================")
                 -- 测试http的一个特殊实现，当内容里不存在content-len时
                 -- 数据长度以连接关闭时为准
                 local no_len_p200 = 'HTTP/1.1 200 OK\r\n\z
@@ -129,17 +128,14 @@ t_describe("http(s) test", function()
                         function(_, http_type, code, method, url, body)
                 local header = clt_conn:get_header()
                 t_equal(code, 200)
-                print("=============================== get ok")
                 t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
                 clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
                     t_equal(code2, 200)
-                    print("=============================== post ok")
                     clt_conn:get("/nolength", nil,
                         function(_, http_type3, code3, method3, url3, body3)
                             t_equal(code3, 200)
-                            print("=============================== nolength ok")
                             t_equal(body3, no_len_ctx)
                             clt_conn:close()
                             listen_conn:close()
