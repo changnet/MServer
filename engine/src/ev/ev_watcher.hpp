@@ -134,18 +134,21 @@ public:
 
 public:
     uint8_t _mask; // 用于设置种参数
+    int32_t _fd;   /// 文件描述符
+
+    int32_t _errno; /// 错误码
+
+    int32_t _ev_counter; // ev数组中的计数器
+    int32_t _ev_index;   // 在ev数组中的下标
 
     // 带_b前缀的变量，都是和backend线程相关
     // 这些变量要么只能在backend中操作，要么操作时必须加锁
 
-    uint32_t _b_kevents; // kernel(如epoll)中使用的events
-    uint32_t _b_pevents; // pending，backend线程等待处理的事件
-
-    int32_t _errno; /// 错误码
-    int32_t _fd;     /// 文件描述符
-
-    int32_t _ev_counter; // ev数组中的计数器
-    int32_t _ev_index; // 在ev数组中的下标
+    int32_t _b_kevents; // kernel(如epoll)中使用的events
+    int32_t _b_pevents; // pending，backend线程等待处理的事件
+    int32_t _b_ev_counter; // ev数组中的计数器
+    int32_t _b_ev_index;   // 在ev数组中的下标
+    int32_t _b_kindex; // 在poll数组中的下标
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
@@ -199,13 +202,9 @@ struct WatcherEvent
 };
 
 // 两线程之间交换事件的列表
-struct EventSwapList
+class EventSwapList
 {
-    int32_t _counter;
-    SpinLock _lock;
-    std::vector<WatcherEvent> _append; // 事件往该数组中插入
-    std::vector<WatcherEvent> _pending; // 另一个线程交换后，待处理的数据
-
+ public:
     EventSwapList()
     {
         _counter = 1;
@@ -224,46 +223,15 @@ struct EventSwapList
      * @param ev 要添加的事件
      * @return 0和旧事件合并 1新增事件 2重置所有事件计数器
      */
-    int32_t append_event(EVIO *w, int32_t ev)
+    int32_t append_backend_event(EVIO* w, int32_t ev)
     {
-        std::lock_guard<SpinLock> guard(_lock);
-
-        // 如果当前socket已经在队列中，则不需要额外附加一个event
-        // 否则发协议时会导致事件数组很长
-        if (_counter == w->_ev_counter)
-        {
-            assert(_append.size() > w->_ev_index);
-
-            WatcherEvent &fe = _append[w->_ev_index];
-
-            assert(fe._w == w);
-            fe._ev |= ev;
-
-            return 0;
-        }
-        else
-        {
-            int32_t flag = 1;
-            size_t size  = _append.size();
-
-            // 使用counter来判断socket是否已经在数组中，引出的额外问题是counter重置时
-            // 需要遍历所有socket来重置对应的counter
-            if (0x7FFFFFFF == _counter)
-            {
-                _counter = 1;
-                flag     = 2;
-            }
-            else
-            {
-                flag = size > 0 ? 1 : 0;
-            }
-            w->_ev_counter = _counter;
-            w->_ev_index = int32_t(size + 1);
-            _append.emplace_back(w, ev);
-
-            return flag;
-        }
+        return append_event(w, ev, w->_ev_counter, w->_ev_index);
     }
+    int32_t append_main_event(EVIO* w, int32_t ev)
+    {
+        return append_event(w, ev, w->_b_ev_counter, w->_b_ev_index);
+    }
+ 
     // 获取待处理的事件
     std::vector<WatcherEvent> &fetch_event()
     {
@@ -278,6 +246,15 @@ struct EventSwapList
         }
         return _pending;
     }
+
+private:
+    int32_t append_event(EVIO *w, int32_t ev, int32_t &counter, int32_t &index);
+
+private:
+    int32_t _counter;
+    SpinLock _lock;
+    std::vector<WatcherEvent> _append; // 事件往该数组中插入
+    std::vector<WatcherEvent> _pending; // 另一个线程交换后，待处理的数据
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制
@@ -314,7 +291,10 @@ public:
     EVIO *get(int32_t fd)
     {
         uint32_t ufd = ((uint32_t)fd);
-        if (ufd < HUGE_FD) return _fd_watcher[ufd];
+        if (ufd < HUGE_FD)
+        {
+            return fd >= _fd_watcher.size() ? nullptr : _fd_watcher[ufd];
+        }
 
         auto found = _fd_watcher_huge.find(fd);
         return found == _fd_watcher_huge.end() ? nullptr : found->second;

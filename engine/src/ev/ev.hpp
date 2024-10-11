@@ -23,6 +23,7 @@ enum
     EV_ERROR     = 0x100, // 256 出错
     EV_INIT_CONN = 0x200, // 512 初始化connect
     EV_INIT_ACPT = 0x400, // 1024 初始化accept
+    EV_KERNEL    = 0x800, // 2048 已经在epoll、poll中激活
 };
 
 class EVBackend;
@@ -125,11 +126,9 @@ public:
 
     /**
      * @brief 唤醒主线程
-     * @param job 如果为true，则加锁并设置_has_job标记
     */
-    void wake(bool job)
+    void wake()
     {
-        if (job)
         {
             std::lock_guard<std::mutex> guard(_mutex);
             _has_job = true;
@@ -137,16 +136,15 @@ public:
         _cv.notify_one();
     }
 
-    /// 设置是否有任务需要处理
-    void set_job(bool job)
-    {
-        _has_job = job;
-    }
-
     void time_update();
 
     // 发送事件给backend线程
     void append_event(EVIO *w, int32_t ev);
+    // 获取等待backend线程处理的事件
+    std::vector<WatcherEvent>& fetch_event()
+    {
+        return _events.fetch_event();
+    }
 
 protected:
     virtual void running() = 0;
@@ -158,7 +156,8 @@ protected:
     void add_pending(EVWatcher *w, int32_t revents);
     void invoke_pending();
     void del_pending(EVWatcher *w);
-
+    // 处理backend线程发过来的事件
+    void invoke_backend_events();
     void timers_reify();
     void periodic_reify();
     void down_heap(HeapNode *heap, int32_t N, int32_t k);

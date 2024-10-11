@@ -55,7 +55,7 @@ template <typename... Args> void LState::call(const char *name, Args... args)
     {
         std::string message("call ");
         message = message + name + " :" + lua_tostring(L, -1);
-        lua_pop(L, 1); // pop error message
+        lua_pop(L, 2); // pop error message and traceback
 
         throw std::runtime_error(message);
     }
@@ -79,7 +79,7 @@ Ret LState::call(const char *name, Args... args)
     {
         std::string message("call ");
         message = message + name + " :" + lua_tostring(L, -1);
-        lua_pop(L, 1); // pop error message
+        lua_pop(L, 2); // pop error message and traceback
 
         throw std::runtime_error(message);
     }

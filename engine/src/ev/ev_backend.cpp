@@ -64,7 +64,7 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
     do_main_events();
     do_pending_events();
 
-    if (!_events.empty()) _ev->wake(true);
+    if (!_events.empty()) _ev->wake();
 }
 
 void EVBackend::backend()
@@ -131,7 +131,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         if (IO::IOS_WRITE == w->send())
         {
             events |= EV_WRITE; // 继续发送
-            op = w->_b_kevents ? FD_OP_MOD : FD_OP_ADD;
+            op = (w->_b_kevents & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
         }
         else
         {
@@ -147,17 +147,20 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     }
     else
     {
-        op = w->_b_kevents ? FD_OP_MOD : FD_OP_ADD;
+        op = (w->_b_kevents & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
     }
 
-    // 关闭连接时，这里必须置0，这样do_event才不会继续执行读写逻辑
-    w->_b_kevents = events;
     if (op == FD_OP_ADD)
     {
         assert(!_fd_mgr.get(w->_fd));
+        assert(0 == w->_b_kevents && 0 != events);
+
+        events |= EV_KERNEL;
         _fd_mgr.set(w->_fd, w);
     }
 
+    assert(0 != events);
+    w->_b_kevents = events;
     return modify_fd(w->_fd, op, events);
 }
 
@@ -304,7 +307,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 
 void EVBackend::do_main_events()
 {
-    std::vector<WatcherEvent> &events = _events.fetch_event();
+    std::vector<WatcherEvent> &events = _ev->fetch_event();
     for (auto& we : events)
     {
         do_watcher_main_event(we._w, we._ev);
@@ -314,7 +317,7 @@ void EVBackend::do_main_events()
 
 void EVBackend::append_event(EVIO *w, int32_t ev)
 {
-    int32_t flag = _events.append_event(w, ev);
+    int32_t flag = _events.append_main_event(w, ev);
 
     // 主线程执行的逻辑可能耗时较久，才需要及时唤醒backend把数据发送出去
     // backend线程可以收集完所有数据后再唤醒主线程处理，节省一点资源
@@ -324,7 +327,7 @@ void EVBackend::append_event(EVIO *w, int32_t ev)
         _fd_mgr.for_each(
             [w](EVIO *watcher)
             {
-                if (w != watcher) watcher->_ev_counter = 0;
+                if (w != watcher) watcher->_b_ev_counter = 0;
             });
     }
 }

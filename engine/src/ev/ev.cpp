@@ -72,6 +72,9 @@ int32_t EV::loop()
     static const int64_t min_wait = 1;     // 最小等待时间，毫秒
     static const int64_t max_wait = 60000; // 最大等待时间，毫秒
 
+    std::unique_lock<std::mutex> ul(_mutex);
+    ul.unlock();
+
     while (EXPECT_TRUE(!_done))
     {
         // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
@@ -95,7 +98,6 @@ int32_t EV::loop()
             if (backend_time > to) backend_time = to;
         }
         if (EXPECT_FALSE(backend_time < min_wait)) backend_time = min_wait;
-
         {
             // https://en.cppreference.com/w/cpp/thread/condition_variable
             // 1. wait_for之前必须获得锁
@@ -103,17 +105,16 @@ int32_t EV::loop()
             // 3. 当被通知、超时、spurious wakeup时，重新获得锁
             // 退出生命域后，unique_lock销毁，自动解锁，这时程序处理无锁运行状态
 
-            // TODO 每次分配一个unique_lock，效率是不是有点低
-            std::unique_lock<std::mutex> ul(_mutex);
-
             // check the condition, in case it was already updated and notified
             // 在获得锁后，必须重新检测_has_job，避免主线程执行完任务后
             // 子线程再把任务丢给主线程，所以子线程设置任务时也要加锁
+            ul.lock();
             if (!_has_job)
             {
                 _cv.wait_for(ul, std::chrono::milliseconds(backend_time));
             }
             _has_job = false;
+            ul.unlock();
         }
 
         time_update();
@@ -128,6 +129,7 @@ int32_t EV::loop()
 
         // 触发io和timer事件
         invoke_pending();
+        invoke_backend_events();
 
         running(); // 执行其他逻辑
     }
@@ -187,7 +189,7 @@ int32_t EV::io_stop(int32_t fd, bool flush)
     EVIO *w = _fd_mgr.get(fd);
     if (!w) return -1;
 
-    append_event(w, flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
+    append_event(w, flush ? EV_FLUSH : EV_CLOSE);
 
     return 0;
 }
@@ -330,6 +332,16 @@ void EV::del_pending(EVWatcher *w)
     }
 }
 
+void EV::invoke_backend_events()
+{
+    std::vector<WatcherEvent> &events = _backend->fetch_event();
+    for (const auto& x : events)
+    {
+        assert(x._ev);
+        x._w->callback(x._ev);
+    }
+    events.clear();
+}
 
 void EV::timers_reify()
 {
@@ -609,7 +621,7 @@ void EV::reheap(HeapNode *heap, int32_t N)
 
 void EV::append_event(EVIO *w, int32_t ev)
 {
-    int32_t flag = _events.append_event(w, ev);
+    int32_t flag = _events.append_backend_event(w, ev);
     if (0 == flag) return;
 
     _backend->wake();

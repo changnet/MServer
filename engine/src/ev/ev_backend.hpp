@@ -68,6 +68,12 @@ public:
      */
     static void uninstance(EVBackend *backend);
 
+    // 获取等待主线程处理的事件
+    std::vector<WatcherEvent> &fetch_event()
+    {
+        return _events.fetch_event();
+    }
+
 protected:
     /**
      * 处理主线程发起的事件

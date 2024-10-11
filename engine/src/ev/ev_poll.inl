@@ -201,11 +201,10 @@ int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
     {
         _fd_index[fd] = -1;
         // 不如果不是数组的最后一个，则用数组最后一个位置替换当前位置，然后删除最后一个
-        int32_t fd_count = (int)_poll_fd.size();
-        if (EXPECT_TRUE(index < --fd_count))
+        int32_t fd_count = (int32_t)_poll_fd.size() - 1;
+        if (EXPECT_TRUE(index < fd_count))
         {
-            _poll_fd[index]               = _poll_fd[fd_count];
-            _fd_index[_poll_fd[index].fd] = index;
+            _poll_fd[index] = _poll_fd[fd_count];
         }
         _poll_fd.pop_back();
     }

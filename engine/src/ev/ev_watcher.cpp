@@ -20,8 +20,12 @@ EVIO::EVIO(int32_t fd, EV *loop) : EVWatcher(loop)
     _b_kevents = 0;
     _b_pevents = 0;
 
-    _ev_counter = -1;
+    _ev_counter = 0;
     _ev_index   = 0;
+
+    _b_ev_counter = 0;
+    _b_ev_index   = 0;
+    _b_kindex     = -1;
 
     _io = nullptr;
 #ifndef NDEBUG
@@ -148,4 +152,45 @@ void EVTimer::reschedule(int64_t now)
 void EVTimer::callback(int32_t revents)
 {
     _loop->timer_callback(_id, revents);
+}
+
+int32_t EventSwapList::append_event(EVIO *w, int32_t ev,int32_t &counter, int32_t &index)
+{
+    std::lock_guard<SpinLock> guard(_lock);
+
+    // 如果当前socket已经在队列中，则不需要额外附加一个event
+    // 否则发协议时会导致事件数组很长
+    if (_counter == counter)
+    {
+        assert(_append.size() > index);
+
+        WatcherEvent &fe = _append[index];
+
+        assert(fe._w == w);
+        fe._ev |= ev;
+
+        return 0;
+    }
+    else
+    {
+        int32_t flag = 1;
+        size_t size  = _append.size();
+
+        // 使用counter来判断socket是否已经在数组中，引出的额外问题是counter重置时
+        // 需要遍历所有socket来重置对应的counter
+        if (0x7FFFFFFF == _counter)
+        {
+            _counter = 1;
+            flag     = 2;
+        }
+        else
+        {
+            flag = size > 0 ? 0 : 1;
+        }
+        counter = _counter;
+        index   = int32_t(size); // 从0开始，不是size + 1
+        _append.emplace_back(w, ev);
+
+        return flag;
+    }
 }

@@ -103,7 +103,7 @@ void Socket::stop(bool flush)
     // ev那边需要做异步删除
     if (_w)
     {
-        StaticGlobal::ev()->io_stop(_conn_id, flush);
+        StaticGlobal::ev()->io_stop(_fd, flush);
     }
     else
     {

@@ -80,7 +80,7 @@ void Thread::sig_handler(int32_t signum)
     // 由于这里信号使用很少，未生效可以多次发
     if (old) return;
 
-    StaticGlobal::ev()->wake(true);
+    StaticGlobal::ev()->wake();
 }
 
 void Thread::signal(int32_t sig, int32_t action)
@@ -206,5 +206,5 @@ void Thread::wakeup_main(int32_t status)
 {
     _main_ev |= status;
 
-    StaticGlobal::ev()->wake(true);
+    StaticGlobal::ev()->wake();
 }
