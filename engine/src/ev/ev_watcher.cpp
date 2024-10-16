@@ -69,24 +69,6 @@ int32_t EVIO::send()
     return _io->send(this);
 }
 
-void EVIO::init_accept()
-{
-    int32_t ev = _io->init_accept(_fd);
-    if (ev)
-    {
-        _loop->append_event(this, ev);
-    }
-}
-
-void EVIO::init_connect()
-{
-    int32_t ev = _io->init_connect(_fd);
-    if (ev)
-    {
-        _loop->append_event(this, ev);
-    }
-}
-
 int32_t EVIO::do_init_accept()
 {
     // lua报错，在启动socket对象后无法正常设置io参数

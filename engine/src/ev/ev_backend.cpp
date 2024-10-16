@@ -158,9 +158,11 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
             assert(!_fd_mgr.get(w->_fd));
             assert(0 == w->_b_kevents && 0 != events);
 
-            events |= EV_KERNEL;
             _fd_mgr.set(w);
         }
+
+        // 即使是FD_OP_MOD，也要重新设置EV_KERNEL，因为events里不包含EV_KERNEL
+        events |= EV_KERNEL;
     }
 
     w->_b_kevents = events;
@@ -213,7 +215,17 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
             ELOG("backend thread fd overflow sleep");
         }
         return true;
-    case EV_CLOSE: modify_later(w, EV_CLOSE); return false;
+    case EV_CLOSE:
+        modify_later(w, EV_CLOSE);
+        return false;
+    case EV_INIT_ACPT:
+    case EV_INIT_CONN:
+        append_event(w, ev);
+
+        // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？ Renegotiation is removed from TLS 1.3
+        //int32_t new_status = w->send();
+        //do_io_status(w, EV_WRITE, new_status);
+        return true;
     case EV_ERROR:
         w->_errno = netcompat::errorno();
         modify_later(w, EV_CLOSE);

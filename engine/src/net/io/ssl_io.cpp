@@ -20,11 +20,6 @@ SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx, Buffer *recv, Buffer *send)
     _tls_ctx = tls_ctx;
 }
 
-bool SSLIO::is_ready() const
-{
-    return 1 == SSL_is_init_finished(_ssl);
-}
-
 int32_t SSLIO::recv(EVIO *w)
 {
     if (!SSL_is_init_finished(_ssl)) return do_handshake();
@@ -108,16 +103,6 @@ int32_t SSLIO::send(EVIO *w)
     return EV_ERROR;
 }
 
-int32_t SSLIO::init_accept(int32_t fd)
-{
-    return EV_ACCEPT;
-}
-
-int32_t SSLIO::init_connect(int32_t fd)
-{
-    return EV_CONNECT;
-}
-
 int32_t SSLIO::do_init_accept(int32_t fd)
 {
     if (init_ssl_ctx(fd) < 0) return EV_ERROR;
@@ -162,8 +147,7 @@ int32_t SSLIO::do_handshake()
         // SSLMgr::dump_x509(_ssl);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
-        init_ready();
-        return 0 == _send->get_front_used_size() ? EV_NONE : EV_WRITE;
+        return SSL_is_server(_ssl) ? EV_INIT_ACPT : EV_INIT_CONN;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of
@@ -175,6 +159,8 @@ int32_t SSLIO::do_handshake()
      * handshakes.
      */
     ecode = SSL_get_error(_ssl, ecode);
+
+    // 握手无法一次完成，必须返回事件让socket执行继续do_handshake
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
     if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 

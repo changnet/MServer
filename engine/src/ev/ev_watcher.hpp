@@ -107,20 +107,6 @@ public:
     }
 
     /**
-     * @brief io是否初始化完成
-     * @return 是否初始化完成
-    */
-    bool is_io_ready() const
-    {
-        return _io->is_ready();
-    }
-
-    /// 主线程初始化新增连接
-    void init_accept();
-    /// 主线程初始化主动发起的连接
-    void init_connect();
-
-    /**
      * backend线程执行accept初始化
      */
     int32_t do_init_accept();
@@ -290,7 +276,7 @@ public:
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
         {
-            if (fd < _fd_watcher.size()) _fd_watcher[fd] = w;
+            if (fd < _fd_watcher.size()) _fd_watcher[fd] = nullptr;
         }
         else
         {

@@ -103,6 +103,7 @@ void TlsCtx::dump_x509(const SSL *ctx)
 TlsCtx::TlsCtx()
 {
     _ctx = nullptr;
+    _passwd[0] = 0;
 }
 
 TlsCtx::~TlsCtx()
@@ -150,7 +151,7 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
             goto FAIL;
         }
     }
-
+    _ctx = ctx;
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的

@@ -101,18 +101,6 @@ int32_t IO::send(EVIO *w)
     return EV_WRITE;
 }
 
-int32_t IO::init_accept(int32_t fd)
-{
-    // 普通io不需要握手，不用调用init_ready
-    // init_ready();
-    return 0;
-}
-
-int32_t IO::init_connect(int32_t fd)
-{
-    return 0;
-}
-
 void IO::init_ready() const
 {
     try

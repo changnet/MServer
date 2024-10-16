@@ -25,10 +25,15 @@ private:
     int32_t wait(int32_t timeout) override;
     void do_wait_event(int32_t ev_count) override;
     int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev) override;
+    int32_t del_fd_index(int32_t fd);
+    int32_t get_fd_index(int32_t fd);
+    int32_t add_fd_index(int32_t fd);
 
 private:
+    static const int32_t HUGE_FD = 10240;
     int32_t _wake_fd[2]; /// 用于唤醒子线程的fd
     std::vector<int32_t> _fd_index;
+    std::unordered_map<int32_t, int32_t> _fd_index_huge;
 
 #ifdef __windows__
     std::vector<WSAPOLLFD> _poll_fd;
@@ -37,7 +42,7 @@ private:
 #endif
 };
 
-FinalBackend::FinalBackend() : _fd_index(1024, -1)
+FinalBackend::FinalBackend() : _fd_index(HUGE_FD + 1, -1)
 {
     _wake_fd[0] = _wake_fd[1] = -1;
     _poll_fd.reserve(1024);
@@ -169,37 +174,69 @@ int32_t FinalBackend::wait(int32_t timeout)
     return ev_count;
 }
 
+int32_t FinalBackend::del_fd_index(int32_t fd)
+{
+    int32_t index = -1;
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < HUGE_FD)
+    {
+        if (fd < _fd_index.size())
+        {
+            index          = _fd_index[ufd];
+            _fd_index[ufd] = -1;
+        }
+    }
+    else
+    {
+        auto found = _fd_index_huge.find(fd);
+        if (found != _fd_index_huge.end()) index = found->second;
+
+        _fd_index_huge.erase(fd);
+    }
+
+    assert(index >= 0);
+    return index;
+}
+
+int32_t FinalBackend::get_fd_index(int32_t fd)
+{
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < HUGE_FD)
+    {
+        return fd >= _fd_index.size() ? -1 : _fd_index[ufd];
+    }
+
+    auto found = _fd_index_huge.find(fd);
+    return found == _fd_index_huge.end() ? -1 : found->second;
+}
+
+int32_t FinalBackend::add_fd_index(int32_t fd)
+{
+    int32_t index = (int32_t)_poll_fd.size();
+
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < HUGE_FD)
+    {
+        assert(-1 == _fd_index[ufd]);
+        _fd_index[ufd] = index;
+    }
+    else
+    {
+        _fd_index_huge[fd] = index;
+    }
+
+    return index;
+}
+
 int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 {
     // 当前禁止修改_poll_fd数组
     assert(!_modify_protected);
-    // 限制fd大小，避免_fd_index分配过大内存
-    assert(fd >= 0 && fd < 102400);
-    if (EXPECT_FALSE(_fd_index.size() < size_t(fd + 1)))
-    {
-        _fd_index.resize(fd + 1024, -1);
-    }
 
-    int32_t index = _fd_index[fd];
-    if (index < 0)
+    int32_t index;
+    if (op == FD_OP_DEL)
     {
-        _fd_index[fd] = index = (int32_t)_poll_fd.size();
-        _poll_fd.resize(index + 1);
-        _poll_fd[index].fd = fd;
-    }
-    assert(_poll_fd[index].fd == fd);
-
-    if (op != FD_OP_DEL)
-    {
-        int32_t events =
-            ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)POLLIN : 0)
-            | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)POLLOUT : 0);
-
-        _poll_fd[index].events = (int16_t) events;
-    }
-    else
-    {
-        _fd_index[fd] = -1;
+        index = del_fd_index(fd);
         // 不如果不是数组的最后一个，则用数组最后一个位置替换当前位置，然后删除最后一个
         int32_t fd_count = (int32_t)_poll_fd.size() - 1;
         if (EXPECT_TRUE(index < fd_count))
@@ -207,7 +244,26 @@ int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
             _poll_fd[index] = _poll_fd[fd_count];
         }
         _poll_fd.pop_back();
+        return 0;
     }
+
+    if (op == FD_OP_ADD)
+    {
+        index = add_fd_index(fd);
+        _poll_fd.resize(index + 1);
+        _poll_fd[index].fd = fd;
+    }
+    else
+    {
+        index = get_fd_index(fd);
+    }
+    assert(_poll_fd[index].fd == fd);
+
+    int32_t events =
+        ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)POLLIN : 0)
+        | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)POLLOUT : 0);
+
+    _poll_fd[index].events = (int16_t)events;
 
     return 0;
 }

@@ -6,7 +6,7 @@
  */
 enum
 {
-    EV_NONE      = 0x0000, // 0  无任何事件
+    EV_NONE      = 0x0000, // 0  无任何事件，无错误
     EV_READ      = 0x0001, // 1  socket读(接收)
     EV_WRITE     = 0x0002, // 2  socket写(发送)
     EV_ACCEPT    = 0x0004, // 4  监听到有新连接

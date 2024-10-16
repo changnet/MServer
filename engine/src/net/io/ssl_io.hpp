@@ -24,16 +24,6 @@ public:
      */
     int32_t send(EVIO *w) override;
     /**
-     * 发起初始化接受的连接（此函数在io线程执行）
-     * @return 是否需要异步执行action事件
-     */
-    int32_t init_accept(int32_t fd) override;
-    /**
-     * 发起初始化连接（此函数在io线程执行）
-     * @return 是否需要异步执行action事件
-     */
-    int32_t init_connect(int32_t fd) override;
-    /**
      * 执行初始化接受的连接
      * @return int32_t
      */
@@ -43,10 +33,6 @@ public:
      * @return int32_t
      */
     virtual int32_t do_init_connect(int32_t fd) override;
-    /**
-     * @brief init_accept、init_connect是否执行完
-     */
-    bool is_ready() const override;
 
 private:
     int32_t do_handshake();

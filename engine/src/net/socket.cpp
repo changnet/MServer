@@ -604,6 +604,11 @@ void Socket::io_cb(int32_t revents)
      * 
      * 但EV_CLOSE的话，其他事件应该没有处理的必要了
      */
+    if (EV_INIT_CONN & revents || EV_INIT_ACPT & revents)
+    {
+        // 握手成功可能会直接收到消息，所以必须先返回握手成功
+        _w->_io->init_ready();
+    }
     if (EV_READ & revents)
     {
         command_cb();
@@ -645,11 +650,12 @@ void Socket::close_cb(bool term)
     int32_t e = _w->_errno;
 
     assert(_fd > 0); // 如果_fd为-1，就是执行了两次close_cb
+    StaticGlobal::ev()->io_delete(_fd);
+
     netcompat::close(_fd);
     _fd = netcompat::INVALID;
 
     _w = nullptr;
-    StaticGlobal::ev()->io_delete(_conn_id);
 
     try
     {
@@ -873,7 +879,8 @@ int32_t Socket::io_init_accept()
 {
     if (!_w) return -1;
 
-    _w->init_accept();
+    // set会清除旧事件，这里得保留EV_READ
+    _w->set(EV_INIT_ACPT | EV_READ);
 
     return 0;
 }
@@ -882,7 +889,7 @@ int32_t Socket::io_init_connect()
 {
     if (!_w) return -1;
 
-    _w->init_connect();
+    _w->set(EV_INIT_CONN | EV_READ);
 
     return 0;
 }
