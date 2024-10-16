@@ -129,7 +129,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     if (events & EV_FLUSH && !(events & EV_CLOSE))
     {
         // 尝试发送一下，大部分情况下都是没数据可以发送的，或者一次就可以发送完成
-        if (IO::IOS_WRITE == w->send())
+        if (EV_WRITE == w->send())
         {
             events |= EV_WRITE; // 继续发送
         }
@@ -167,11 +167,11 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     return modify_fd(w->_fd, op, events);
 }
 
-bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
+bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
 {
     switch (status)
     {
-    case IO::IOS_READY:
+    case EV_NONE:
         // 发送完则需要删除写事件，不然会一直触发
         if (EV_WRITE == ev)
         {
@@ -188,17 +188,17 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
             }
         }
         return true;
-    case IO::IOS_READ:
+    case EV_READ:
         // socket一般都会监听读事件，不需要做特殊处理
         return true;
-    case IO::IOS_WRITE:
+    case EV_WRITE:
         // 未发送完，加入write事件继续发送
         if (!(w->_b_kevents & EV_WRITE))
         {
             modify_later(w, w->_b_kevents | EV_WRITE);
         }
         return true;
-    case IO::IOS_BUSY:
+    case EV_BUSY:
         // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
         if (w->_mask & EVIO::M_OVERFLOW_KILL)
         {
@@ -213,8 +213,8 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status)
             ELOG("backend thread fd overflow sleep");
         }
         return true;
-    case IO::IOS_CLOSE: modify_later(w, EV_CLOSE); return false;
-    case IO::IOS_ERROR:
+    case EV_CLOSE: modify_later(w, EV_CLOSE); return false;
+    case EV_ERROR:
         w->_errno = netcompat::errorno();
         modify_later(w, EV_CLOSE);
         return false;

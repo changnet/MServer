@@ -53,18 +53,18 @@ void EVIO::set(int32_t events)
     _loop->append_event(this, events);
 }
 
-IO::IOStatus EVIO::recv()
+int32_t EVIO::recv()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return IO::IOS_ERROR;
+    if (!_io) return EV_ERROR;
 
     return _io->recv(this);
 }
 
-IO::IOStatus EVIO::send()
+int32_t EVIO::send()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return IO::IOS_ERROR;
+    if (!_io) return EV_ERROR;
 
     return _io->send(this);
 }
@@ -87,18 +87,18 @@ void EVIO::init_connect()
     }
 }
 
-IO::IOStatus EVIO::do_init_accept()
+int32_t EVIO::do_init_accept()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return IO::IOS_ERROR;
+    if (!_io) return EV_ERROR;
 
     return _io->do_init_accept(_fd);
 }
 
-IO::IOStatus EVIO::do_init_connect()
+int32_t EVIO::do_init_connect()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return IO::IOS_ERROR;
+    if (!_io) return EV_ERROR;
 
     return _io->do_init_connect(_fd);
 }

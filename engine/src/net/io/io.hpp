@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ev/ev_def.hpp"
 #include "global/global.hpp"
 
 class EVIO;
@@ -12,21 +13,10 @@ public:
     /// io类型
     enum IOType
     {
-        IOT_NONE = 0, ///< 默认IO类型，无特别处理
-        IOT_SSL  = 1, ///< 使用SSL加密
+        IOT_NONE = 0, // 默认IO类型，无特别处理
+        IOT_SSL  = 1, // 使用SSL加密
 
-        IOT_MAX ///< IO类型最大值
-    };
-
-    /// io状态码
-    enum IOStatus
-    {
-        IOS_READY = 0,   /// 无错误
-        IOS_READ  = 1,   /// 需要重读
-        IOS_WRITE = 2,   /// 需要重写
-        IOS_BUSY  = 3,   /// 繁忙，比如缓冲区满之类的
-        IOS_CLOSE = 4,   /// 连接被关闭
-        IOS_ERROR = 0xFF /// 错误
+        IOT_MAX // IO类型最大值
     };
 
 public:
@@ -35,14 +25,14 @@ public:
 
     /**
      * 接收数据（此函数在io线程执行）
-     * @return IOStatus
+     * @return int32_t
      */
-    virtual IOStatus recv(EVIO *w);
+    virtual int32_t recv(EVIO *w);
     /**
      * 发送数据（此函数在io线程执行）
-     * @return IOStatus
+     * @return int32_t
      */
-    virtual IOStatus send(EVIO *w);
+    virtual int32_t send(EVIO *w);
     /**
      * 发起初始化接受的连接（此函数在io线程执行）
      * @return 需要异步执行的事件
@@ -55,21 +45,21 @@ public:
     virtual int32_t init_connect(int32_t fd);
     /**
      * 执行初始化接受的连接
-     * @return IOStatus
+     * @return int32_t
      */
-    virtual IOStatus do_init_accept(int32_t fd)
+    virtual int32_t do_init_accept(int32_t fd)
     {
         assert(false);
-        return IOS_READY;
+        return EV_NONE;
     };
     /**
      * 执行初始化连接
-     * @return IOStatus
+     * @return int32_t
      */
-    virtual IOStatus do_init_connect(int32_t fd)
+    virtual int32_t do_init_connect(int32_t fd)
     {
         assert(false);
-        return IOS_READY;
+        return EV_NONE;
     };
     /**
      * @brief init_accept、init_connect是否执行完

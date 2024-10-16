@@ -122,7 +122,7 @@ private:
      * @param status 待处理的状态
      * @return 是否继续执行
      */
-    bool do_io_status(EVIO *w, int32_t ev, const IO::IOStatus &status);
+    bool do_io_status(EVIO *w, int32_t ev, const int32_t &status);
     /**
      * 处理待生效的事件
      */

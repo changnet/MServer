@@ -70,12 +70,12 @@ public:
      * @brief 由io线程调用的读函数，必须线程安全
      * @return < 0 错误，0 成功，1 需要重读，2 需要重写
     */
-    IO::IOStatus recv();
+    int32_t recv();
     /**
      * @brief 由io线程调用的写函数，必须线程安全
      * @return < 0 错误，0 成功，1 需要重读，2 需要重写
     */
-    IO::IOStatus send();
+    int32_t send();
 
     /// 获取io描述符
     int32_t get_fd() const { return _fd; }
@@ -123,11 +123,11 @@ public:
     /**
      * backend线程执行accept初始化
      */
-    IO::IOStatus do_init_accept();
+    int32_t do_init_accept();
     /**
      * backend线程执行connect初始化
      */
-    IO::IOStatus do_init_connect();
+    int32_t do_init_connect();
 
     // 修改引用计数
     void add_ref(int32_t v);

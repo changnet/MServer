@@ -25,7 +25,7 @@ bool SSLIO::is_ready() const
     return 1 == SSL_is_init_finished(_ssl);
 }
 
-IO::IOStatus SSLIO::recv(EVIO *w)
+int32_t SSLIO::recv(EVIO *w)
 {
     if (!SSL_is_init_finished(_ssl)) return do_handshake();
 
@@ -33,17 +33,17 @@ IO::IOStatus SSLIO::recv(EVIO *w)
     while (true)
     {
         Buffer::Transaction &&ts = _recv->any_seserve(true);
-        if (ts._len <= 0) return IOS_BUSY;
+        if (ts._len <= 0) return EV_BUSY;
 
         len = SSL_read(_ssl, ts._ctx, ts._len);
         _recv->commit(ts, len);
         if (EXPECT_FALSE(len <= 0)) break;
 
-        if (len < ts._len) return IOS_READY;
+        if (len < ts._len) return EV_NONE;
     }
 
     int32_t ecode = SSL_get_error(_ssl, len);
-    if (SSL_ERROR_WANT_READ == ecode) return IOS_READ;
+    if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
 
     /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
      * SSL连接关闭时，要先关闭SSL协议，再关闭socket。当一个连接直接关闭时，SSL并不能明确
@@ -60,15 +60,15 @@ IO::IOStatus SSLIO::recv(EVIO *w)
         || (SSL_ERROR_SYSCALL == ecode
             && !netcompat::iserror(netcompat::errorno())))
     {
-        return IOS_CLOSE;
+        return EV_CLOSE;
     }
 
     w->_errno = netcompat::errorno();
     TlsCtx::dump_error("ssl io recv");
-    return IOS_ERROR;
+    return EV_ERROR;
 }
 
-IO::IOStatus SSLIO::send(EVIO *w)
+int32_t SSLIO::send(EVIO *w)
 {
     if (!SSL_is_init_finished(_ssl)) return do_handshake();
 
@@ -78,7 +78,7 @@ IO::IOStatus SSLIO::send(EVIO *w)
     while (true)
     {
         const char *data = _send->get_front_used(bytes, next);
-        if (0 == bytes) return IOS_READY;
+        if (0 == bytes) return EV_NONE;
 
         len = SSL_write(_ssl, data, (int32_t)bytes);
         if (len <= 0) break;
@@ -86,26 +86,26 @@ IO::IOStatus SSLIO::send(EVIO *w)
         _send->remove(len); // 删除已发送数据
 
         // socket发送缓冲区已满，等下次发送了
-        if (len < (int32_t)bytes) return IOS_WRITE;
+        if (len < (int32_t)bytes) return EV_WRITE;
 
         // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
-        if (!next) return IOS_READY;
+        if (!next) return EV_NONE;
     }
 
     int32_t ecode = SSL_get_error(_ssl, len);
-    if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
+    if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 
     // 非主动断开，打印错误日志
     if ((SSL_ERROR_ZERO_RETURN == ecode)
         || (SSL_ERROR_SYSCALL == ecode
             && !netcompat::iserror(netcompat::errorno())))
     {
-        return IOS_CLOSE;
+        return EV_CLOSE;
     }
 
     w->_errno = netcompat::errorno();
     TlsCtx::dump_error("ssl io send");
-    return IOS_ERROR;
+    return EV_ERROR;
 }
 
 int32_t SSLIO::init_accept(int32_t fd)
@@ -118,18 +118,18 @@ int32_t SSLIO::init_connect(int32_t fd)
     return EV_CONNECT;
 }
 
-IO::IOStatus SSLIO::do_init_accept(int32_t fd)
+int32_t SSLIO::do_init_accept(int32_t fd)
 {
-    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
+    if (init_ssl_ctx(fd) < 0) return EV_ERROR;
 
     SSL_set_accept_state(_ssl);
 
     return do_handshake();
 }
 
-IO::IOStatus SSLIO::do_init_connect(int32_t fd)
+int32_t SSLIO::do_init_connect(int32_t fd)
 {
-    if (init_ssl_ctx(fd) < 0) return IOS_ERROR;
+    if (init_ssl_ctx(fd) < 0) return EV_ERROR;
 
     SSL_set_connect_state(_ssl);
 
@@ -154,7 +154,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     return 0;
 }
 
-IO::IOStatus SSLIO::do_handshake()
+int32_t SSLIO::do_handshake()
 {
     int32_t ecode = SSL_do_handshake(_ssl);
     if (1 == ecode)
@@ -163,7 +163,7 @@ IO::IOStatus SSLIO::do_handshake()
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
         init_ready();
-        return 0 == _send->get_front_used_size() ? IOS_READY : IOS_WRITE;
+        return 0 == _send->get_front_used_size() ? EV_NONE : EV_WRITE;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of
@@ -175,11 +175,11 @@ IO::IOStatus SSLIO::do_handshake()
      * handshakes.
      */
     ecode = SSL_get_error(_ssl, ecode);
-    if (SSL_ERROR_WANT_READ == ecode) return IOS_READ;
-    if (SSL_ERROR_WANT_WRITE == ecode) return IOS_WRITE;
+    if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
+    if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 
     // error
     TlsCtx::dump_error(__FUNCTION__, ecode);
 
-    return IOS_ERROR;
+    return EV_ERROR;
 }
