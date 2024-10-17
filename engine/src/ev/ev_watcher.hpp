@@ -34,11 +34,6 @@ public:
         _cb = std::bind(fn, t, std::placeholders::_1);
     }
 
-public:
-    int32_t _id;      /// 唯一id
-    int32_t _pending; /// 在待处理watcher数组中的下标
-    uint32_t _revents; /// receive events，收到并等待处理的事件
-
  protected:
 
      EV *_loop;
@@ -134,7 +129,6 @@ public:
     int32_t _b_pevents; // pending，backend线程等待处理的事件
     int32_t _b_ev_counter; // ev数组中的计数器
     int32_t _b_ev_index;   // 在ev数组中的下标
-    int32_t _b_kindex; // 在poll数组中的下标
 
     Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
@@ -167,6 +161,10 @@ public:
     virtual void callback(int32_t revents);
 
 public:
+public:
+    int32_t _id;       /// 唯一id
+    int32_t _pending;  /// 在待处理watcher数组中的下标
+    int32_t _revents; /// receive events，收到并等待处理的事件
 
     int32_t _index; // 当前定时器在二叉树数组中的下标
     int32_t _policy; ///< 修正定时器时间偏差策略，详见 reschedule 函数

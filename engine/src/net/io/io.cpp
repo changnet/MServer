@@ -52,8 +52,7 @@ int32_t IO::recv(EVIO *w)
     if (netcompat::iserror(e))
     {
         w->_errno = e;
-        ELOG("io recv id = %d, fd = %d:%s(%d)", w->_id, fd,
-             netcompat::strerror(e), e);
+        ELOG("io recv fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
         return EV_ERROR;
     }
 
@@ -92,8 +91,7 @@ int32_t IO::send(EVIO *w)
     if (netcompat::iserror(e))
     {
         w->_errno = e;
-        ELOG("io send id = %d, fd = %d:%s(%d)", w->_id, fd,
-             netcompat::strerror(e), e);
+        ELOG("io send fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
         return EV_ERROR;
     }
 

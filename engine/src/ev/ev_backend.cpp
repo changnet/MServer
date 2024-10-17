@@ -226,7 +226,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
         //do_io_status(w, EV_WRITE, new_status);
         return true;
     case EV_ERROR:
-        w->_errno = netcompat::errorno();
+        // w->_errno = netcompat::errorno(); // 这个已经在send、recv里设置
         modify_later(w, EV_CLOSE);
         return false;
     default: ELOG("unknow io status: %d", status); return false;

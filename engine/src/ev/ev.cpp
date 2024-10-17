@@ -288,7 +288,7 @@ void EV::time_update()
     }
 }
 
-void EV::add_pending(EVWatcher *w, int32_t revents)
+void EV::add_pending(EVTimer *w, int32_t revents)
 {
     //.定时器触发时，可能会在回调事件删改定时器
     // 因此在触发不直接回调到脚本，而是暂存起来再触发回调
@@ -320,7 +320,7 @@ void EV::add_pending(EVWatcher *w, int32_t revents)
     _pendings.clear();
 }
 
-void EV::del_pending(EVWatcher *w)
+void EV::del_pending(EVTimer *w)
 {
     // 如果这个watcher在pending队列中，从队列中删除
     if (w->_pending)

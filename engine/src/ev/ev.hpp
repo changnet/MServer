@@ -135,9 +135,9 @@ protected:
      * @brief 设置watcher的回调事件并暂存，稍后处理
      * 主要是为了解决在回调事件中修改watcher的问题
      */
-    void add_pending(EVWatcher *w, int32_t revents);
+    void add_pending(EVTimer *w, int32_t revents);
     void invoke_pending();
-    void del_pending(EVWatcher *w);
+    void del_pending(EVTimer *w);
     // 处理backend线程发过来的事件
     void invoke_backend_events();
     void timers_reify();
@@ -191,7 +191,7 @@ protected:
     /// 主线程锁
     std::mutex _mutex;
 
-    std::vector<EVWatcher *> _pendings; // 暂存待处理的watcher
+    std::vector<EVTimer *> _pendings; // 暂存待处理的watcher
 
     WatcherMgr _fd_mgr; // io管理
     EventSwapList _events; // 发送给backend线程的事件

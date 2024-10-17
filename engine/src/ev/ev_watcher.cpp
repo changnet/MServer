@@ -4,9 +4,6 @@
 
 EVWatcher::EVWatcher(EV *loop) : _loop(loop)
 {
-    _id      = 0;
-    _pending = 0;
-    _revents = 0;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -25,7 +22,6 @@ EVIO::EVIO(int32_t fd, EV *loop) : EVWatcher(loop)
 
     _b_ev_counter = 0;
     _b_ev_index   = 0;
-    _b_kindex     = -1;
 
     _io = nullptr;
 #ifndef NDEBUG
@@ -89,6 +85,8 @@ int32_t EVIO::do_init_connect()
 
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
 {
+    _pending = 0;
+    _revents = 0;
     _id     = id;
     _index  = 0;
     _policy = P_NONE;
