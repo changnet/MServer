@@ -10,6 +10,15 @@ local string_fill_v = {
 }
 local string_gsub = string.gsub
 
+-- 全词匹配查找
+-- @param str 待查找的字符串
+-- @param pattern 需要查找的字符串
+function string.find_whole(str, pattern)
+    -- 使用frontier pattern来模拟其他语言正则\b
+    -- https://stackoverflow.com/questions/32852605/how-to-check-if-a-word-appears-as-a-whole-word-in-a-string-in-lua
+    return string.find(str, "%f[%w_]" .. pattern .. "%f[^%w_]")
+end
+
 -- 查找最后出现的字符串索引
 -- @param str 待查找的字符串
 -- @param pattern 需要查找的字符串，如果有lua正则特殊符号，需要使用%转义

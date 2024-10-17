@@ -47,7 +47,7 @@ function conn_new(conn_id, ...)
     return __conn[conn_id]:conn_new(...)
 end
 
--- io初始化成功
+-- io握手成功(SSL才有握手)
 function conn_io_ready(conn_id, ...)
     local conn = __conn[conn_id]
 

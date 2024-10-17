@@ -219,7 +219,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
         return false;
     case EV_INIT_ACPT:
     case EV_INIT_CONN:
-        append_event(w, ev);
+        append_event(w, status);
 
         // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？ Renegotiation is removed from TLS 1.3
         //int32_t new_status = w->send();
@@ -246,13 +246,13 @@ void EVBackend::do_watcher_main_event(EVIO *w, int32_t events)
     if (events & EV_INIT_ACPT)
     {
         // 初始化新socket，只有ssl用到
-        auto status = w->do_init_accept();
+        int32_t status = w->do_init_accept();
         do_io_status(w, EV_INIT_ACPT, status);
     }
     else if (events & EV_INIT_CONN)
     {
         // 初始化新socket，只有ssl用到
-        auto status = w->do_init_connect();
+        int32_t status = w->do_init_connect();
         do_io_status(w, EV_INIT_CONN, status);
     }
 

@@ -105,7 +105,7 @@ void IO::init_ready() const
 {
     try
     {
-        StaticGlobal::S->call("conn_io_rady", _conn_id);
+        StaticGlobal::S->call("conn_io_ready", _conn_id);
     }
     catch (const std::runtime_error& e)
     {

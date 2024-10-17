@@ -99,7 +99,7 @@ end
 function Timer.stop(timer_id)
     local info = this.timer[timer_id]
     if not info then
-        printf("timer stop no such timer %d: %s", timer_id, debug.traceback())
+        printf("timer stop not found %d: %s", timer_id or 0, debug.traceback())
         return false
     end
 

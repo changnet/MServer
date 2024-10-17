@@ -296,7 +296,7 @@ end
 
 local function run_one_describe(d)
     local should_run = true
-    if T.filter then should_run = string.find(d.title, T.filter) end
+    if T.filter then should_run = string.find_whole(d.title, T.filter) end
     if T.skip then
         for _, pattern in pairs(T.skip) do
             if string.find(d.title, pattern) then

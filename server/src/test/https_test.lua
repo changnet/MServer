@@ -7,7 +7,7 @@ local TlsCtx = require "engine.TlsCtx"
 local HttpConn = require "http.http_conn"
 
 
-t_describe("http(s) test", function()
+t_describe("http test", function()
     -- 产生一个缓存，避免下面连接时查询dns导致测试超时
     -- example.com不稳定，经常连不上，用postman来测试
     -- local exp_host = "www.example.com"
@@ -25,6 +25,8 @@ t_describe("http(s) test", function()
     t_before(function()
         clt_ssl:init() -- 客户端的ssl不需要证书
 
+        -- win下不能简单地指定capath
+        -- https://security.stackexchange.com/questions/123160/how-to-specifiy-capath-using-openssl-in-windows-to-perform-tls-handshake
         if LINUX then
             vfy_ssl:init(nil, nil, nil, "/etc/ssl/certs/ca-certificates.crt")
         end
@@ -43,7 +45,7 @@ t_describe("http(s) test", function()
             "../certs/ca.cer")
 
         exp_ip = util.get_addr_info(exp_host)
-        t_print("target host address is", exp_ip)
+        t_print(exp_host .. " address is", exp_ip)
     end)
 
     t_it("http get " .. exp_host, function()
@@ -151,7 +153,7 @@ t_describe("http(s) test", function()
         end
     end)
 
-    t_it("https_get " .. exp_host, function()
+    t_it("https get " .. exp_host, function()
         t_async(15000)
 
         local conn = HttpConn()
@@ -231,20 +233,24 @@ t_describe("http(s) test", function()
         end
     end)
 
+    -- 作为客户端连接到目标服务器，并利用本机的证书验证服务器证书是否有效
     t_it("https ssl verify and get " .. exp_host, vfy_ssl, function()
-        t_async(10000)
+        if LINUX then
+            t_async(10000)
+            local conn = HttpConn()
 
-        local conn = HttpConn()
-
-        conn:connect_s(exp_host, 443, vfy_ssl)
-        conn.on_connected = function(_conn)
-            conn:get("/get", nil,
-                     function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 2)
-                t_equal(code, 200)
-                conn:close()
-                t_done()
-            end)
+            conn:connect_s(exp_host, 443, vfy_ssl)
+            conn.on_connected = function(_conn)
+                conn:get("/get", nil,
+                         function(__conn, http_type, code, method, url, body)
+                    t_equal(http_type, 2)
+                    t_equal(code, 200)
+                    conn:close()
+                    t_done()
+                end)
+            end
+        else
+            t_print("windows no capath support")
         end
     end)
 
