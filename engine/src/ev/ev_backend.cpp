@@ -1,16 +1,15 @@
-#include "ev.hpp"
 #include "ev_backend.hpp"
 
-#if defined(__linux__)
-    #include "ev_epoll.inl"
-#elif defined(__windows__)
-    #include "ev_poll.inl"
-#endif
-
+#include "poll_backend.hpp"
+#include "epoll_backend.hpp"
 
 EVBackend *EVBackend::instance()
 {
-    return new FinalBackend();
+#ifdef __windows__
+    return new PollBackend;
+#else
+    return new EpollBackend();
+#endif
 }
 
 void EVBackend::uninstance(EVBackend *backend)

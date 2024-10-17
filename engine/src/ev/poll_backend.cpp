@@ -1,64 +1,30 @@
 #include "net/socketpair.hpp"
-#include "net/net_compat.hpp"
+
+#include "poll_backend.hpp"
 
 #ifdef __windows__
-    #include <SdkDdkVer.h>
-
     const char *__BACKEND__ = "WSAPoll";
 #else
-    #include <poll.h>
     const char *__BACKEND__ = "poll";
 #endif
 
-/// backend using poll implement
-class FinalBackend final : public EVBackend
-{
-public:
-    FinalBackend();
-    ~FinalBackend();
-
-    void after_stop() override;
-    bool before_start() override;
-    void wake() override;
-
-private:
-    int32_t wait(int32_t timeout) override;
-    void do_wait_event(int32_t ev_count) override;
-    int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev) override;
-    int32_t del_fd_index(int32_t fd);
-    int32_t get_fd_index(int32_t fd);
-    int32_t add_fd_index(int32_t fd);
-
-private:
-    static const int32_t HUGE_FD = 10240;
-    int32_t _wake_fd[2]; /// 用于唤醒子线程的fd
-    std::vector<int32_t> _fd_index;
-    std::unordered_map<int32_t, int32_t> _fd_index_huge;
-
-#ifdef __windows__
-    std::vector<WSAPOLLFD> _poll_fd;
-#else
-    std::vector<struct pollfd> _poll_fd;
-#endif
-};
-
-FinalBackend::FinalBackend() : _fd_index(HUGE_FD + 1, -1)
+PollBackend::PollBackend() : _fd_index(HUGE_FD + 1, -1)
 {
     _wake_fd[0] = _wake_fd[1] = -1;
     _poll_fd.reserve(1024);
 }
 
-FinalBackend::~FinalBackend()
+PollBackend::~PollBackend()
 {
 }
 
-void FinalBackend::after_stop()
+void PollBackend::after_stop()
 {
     if (_wake_fd[0] != netcompat::INVALID) netcompat::close(_wake_fd[0]);
     if (_wake_fd[1] != netcompat::INVALID) netcompat::close(_wake_fd[1]);
 }
 
-bool FinalBackend::before_start()
+bool PollBackend::before_start()
 {
     /**
      * WSAPoll有个bug，connect失败不会触发事件，直到win10 2004才修复
@@ -97,13 +63,13 @@ bool FinalBackend::before_start()
     return true;
 }
 
-void FinalBackend::wake()
+void PollBackend::wake()
 {
     static const int8_t v = 1;
     ::send(_wake_fd[0], (const char *)&v, sizeof(v), 0);
 }
 
-void FinalBackend::do_wait_event(int32_t ev_count)
+void PollBackend::do_wait_event(int32_t ev_count)
 {
     if (ev_count <= 0) return;
 
@@ -146,7 +112,7 @@ void FinalBackend::do_wait_event(int32_t ev_count)
     }
 }
 
-int32_t FinalBackend::wait(int32_t timeout)
+int32_t PollBackend::wait(int32_t timeout)
 {
 #ifdef __windows__
     int32_t ev_count = WSAPoll(_poll_fd.data(), (ULONG)_poll_fd.size(), timeout);
@@ -174,7 +140,7 @@ int32_t FinalBackend::wait(int32_t timeout)
     return ev_count;
 }
 
-int32_t FinalBackend::del_fd_index(int32_t fd)
+int32_t PollBackend::del_fd_index(int32_t fd)
 {
     int32_t index = -1;
     uint32_t ufd = ((uint32_t)fd);
@@ -198,7 +164,7 @@ int32_t FinalBackend::del_fd_index(int32_t fd)
     return index;
 }
 
-int32_t FinalBackend::get_fd_index(int32_t fd)
+int32_t PollBackend::get_fd_index(int32_t fd)
 {
     uint32_t ufd = ((uint32_t)fd);
     if (ufd < HUGE_FD)
@@ -210,7 +176,7 @@ int32_t FinalBackend::get_fd_index(int32_t fd)
     return found == _fd_index_huge.end() ? -1 : found->second;
 }
 
-int32_t FinalBackend::add_fd_index(int32_t fd)
+int32_t PollBackend::add_fd_index(int32_t fd)
 {
     int32_t index = (int32_t)_poll_fd.size();
 
@@ -228,7 +194,7 @@ int32_t FinalBackend::add_fd_index(int32_t fd)
     return index;
 }
 
-int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
+int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 {
     // 当前禁止修改_poll_fd数组
     assert(!_modify_protected);

@@ -20,49 +20,17 @@
 
 const char *__BACKEND__ = "epoll";
 
-/// epoll max events one poll
-/* https://man7.org/linux/man-pages/man2/epoll_wait.2.html
- * If more than maxevents file descriptors are ready when
- * epoll_wait() is called, then successive epoll_wait() calls will
- * round robin through the set of ready file descriptors.  This
- * behavior helps avoid starvation scenarios
- */
-static const int32_t EPOLL_MAXEV = 8192;
-
-/// backend using epoll implement
-class FinalBackend final : public EVBackend
-{
-public:
-    FinalBackend();
-    ~FinalBackend();
-
-    void after_stop() override;
-    bool before_start() override;
-    void wake() override;
-
-private:
-    int32_t wait(int32_t timeout) override;
-    void do_wait_event(int32_t ev_count) override;
-    int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev) override;
-
-private:
-
-    int32_t _ep_fd;   /// epoll句柄
-    int32_t _wake_fd; /// 用于唤醒子线程的fd
-    epoll_event _ep_ev[EPOLL_MAXEV];
-};
-
-FinalBackend::FinalBackend()
+EpollBackend::EpollBackend()
 {
     _ep_fd   = -1;
     _wake_fd = -1;
 }
 
-FinalBackend::~FinalBackend()
+EpollBackend::~EpollBackend()
 {
 }
 
-bool FinalBackend::before_start()
+bool EpollBackend::before_start()
 {
     // 创建epoll
 #ifdef EPOLL_CLOEXEC
@@ -97,7 +65,7 @@ bool FinalBackend::before_start()
     return true;
 }
 
-void FinalBackend::after_stop()
+void EpollBackend::after_stop()
 {
     ::close(_wake_fd);
     _wake_fd = -1;
@@ -106,7 +74,7 @@ void FinalBackend::after_stop()
     _ep_fd = -1;
 }
 
-void FinalBackend::do_wait_event(int32_t ev_count)
+void EpollBackend::do_wait_event(int32_t ev_count)
 {
     for (int32_t i = 0; i < ev_count; ++i)
     {
@@ -142,7 +110,7 @@ void FinalBackend::do_wait_event(int32_t ev_count)
     }
 }
 
-void FinalBackend::wake()
+void EpollBackend::wake()
 {
     static const int64_t v = 1;
     if (::write(_wake_fd, &v, sizeof(v)) <= 0)
@@ -151,7 +119,7 @@ void FinalBackend::wake()
     }
 }
 
-int32_t FinalBackend::wait(int32_t timeout)
+int32_t EpollBackend::wait(int32_t timeout)
 {
     int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, timeout);
     if (EXPECT_FALSE(ev_count < 0))
@@ -165,7 +133,7 @@ int32_t FinalBackend::wait(int32_t timeout)
     return ev_count;
 }
 
-int32_t FinalBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
+int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 {
     struct epoll_event ev;
     /* valgrind: uninitialised byte(s) */

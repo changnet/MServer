@@ -1,30 +1,10 @@
 #pragma once
 
+#include "ev.hpp"
 #include <thread>
 
 /**
- * 1. 主线程和io线程共用同一个读写缓冲区
- * 
- * 主线程：
- *  io_change（增、删、改），必须不能加锁
- *  io_reify 加锁
- *  io_receive_event_reify 加锁
- * 
- * io线程(除了wait以外，全部加锁)：
- *  get_io 加锁，保证io_mgr对象操作安全
- *  io_receive_event 加锁，保证和主线程交换event时不出错
- *  io读写时加锁，保证读写时，主线程的io对象不被删除
- * 
- * io的读写必须支持多线程无锁，因为这时主线程处理逻辑数据，io线程在读写
- * 
- * 2. io线程使用独立的缓冲区
- *      io线程读写的数据需要使用memcpy复制一闪
- *      上面大部分逻辑的锁都可以去掉
- */
-
-
-/**
- * @brief 用于执行io操作的后台类
+ * @brief 用于执行io操作的后台基类，统一epoll、poll等不同内核接口。该io操作在一个独立的线程
  */
 class EVBackend
 {
