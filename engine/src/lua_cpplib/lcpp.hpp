@@ -3,12 +3,42 @@
 #include <lua.hpp>
 #include <string>
 #include <cassert>
+#include <stdexcept>
+
+#define ARGS_CHECK
 
 namespace lcpp
 {
+
+// 参数的检测，不能直接用lua_check*，因为会触发long jump，这里用throw
+#ifdef ARGS_CHECK
+
+static inline void throw_error(lua_State *L, const char *name, int i)
+{
+    char buff[256];
+    snprintf(buff, sizeof(buff), "bad argument #%d, %s expected, got %s", i,
+             name, lua_typename(L, lua_type(L, i)));
+    throw std::runtime_error(buff);
+}
+    #define luaL_checkis(t)        \
+        if (!lua_is##t(L, i))      \
+            throw_error(L, #t, i); \
+        else                       \
+            (void)0
+#else
+    #define luaL_checkis(t) (void)0
+#endif
+
 template <typename T> T lua_to_cpp(lua_State *L, int i)
 {
     static_assert(std::is_pointer<T>::value, "type unknow");
+
+#ifdef ARGS_CHECK
+    if (!lua_isuserdata(L, i) && !lua_isnoneornil(L, i))
+    {
+        throw_error(L, "userdata", i);
+    }
+ #endif
 
     // 不是userdata这里会返回nullptr
     void *p = lua_touserdata(L, i);
@@ -32,68 +62,88 @@ template <typename T> T lua_to_cpp(lua_State *L, int i)
 
 template <> inline bool lua_to_cpp<bool>(lua_State *L, int i)
 {
+#ifdef ARGS_CHECK
+    if (!lua_isboolean(L, i) && !lua_isnoneornil(L, i))
+    {
+        throw_error(L, "boolean", i);
+    }
+#endif
     return lua_toboolean(L, i) != 0;
 }
 
 template <> inline char lua_to_cpp<char>(lua_State *L, int i)
 {
-    return (char)lua_tointeger(L, i);
+    luaL_checkis(string);
+    const char *str = lua_tostring(L, i);
+    return *str;
 }
 
 template <> inline unsigned char lua_to_cpp<unsigned char>(lua_State *L, int i)
 {
-    return (unsigned char)lua_tointeger(L, i);
+    luaL_checkis(string);
+    const char *str = lua_tostring(L, i);
+    return (unsigned char)*str;
 }
 
 template <> inline short lua_to_cpp<short>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (short)lua_tointeger(L, i);
 }
 
 template <>
 inline unsigned short lua_to_cpp<unsigned short>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (unsigned short)lua_tointeger(L, i);
 }
 
 template <> inline int lua_to_cpp<int>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (int)lua_tointeger(L, i);
 }
 
 template <> inline unsigned int lua_to_cpp<unsigned int>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (unsigned int)lua_tointeger(L, i);
 }
 
 template <> inline long lua_to_cpp<long>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (long)lua_tointeger(L, i);
 }
 
 template <> inline unsigned long lua_to_cpp<unsigned long>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (unsigned long)lua_tointeger(L, i);
 }
 
 template <> inline long long lua_to_cpp<long long>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return lua_tointeger(L, i);
 }
 
 template <>
 inline unsigned long long lua_to_cpp<unsigned long long>(lua_State *L, int i)
 {
+    luaL_checkis(number); // lua经常会出现1.0被判断为number的情况，所以只要是数字就允许
     return (unsigned long long)lua_tointeger(L, i);
 }
 
 template <> inline float lua_to_cpp<float>(lua_State *L, int i)
 {
+    luaL_checkis(number);
     return (float)lua_tonumber(L, i);
 }
 
 template <> inline double lua_to_cpp<double>(lua_State *L, int i)
 {
+    luaL_checkis(number);
     return lua_tonumber(L, i);
 }
 
@@ -108,11 +158,13 @@ template <> inline char *lua_to_cpp<char *>(lua_State *L, int i)
 {
     // 这里要注意，无法转换为const char*会返回NULL
     // 这个类型对c++并不安全，比如 std::cout << NULL就会直接当掉，用时需要检测指针
+    luaL_checkis(string);
     return const_cast<char *>(lua_tostring(L, i));
 }
 
 template <> inline std::string lua_to_cpp<std::string>(lua_State *L, int i)
 {
+    luaL_checkis(string);
     const char *str = lua_tostring(L, i);
     return str == nullptr ? "" : str;
 }
@@ -226,6 +278,9 @@ inline void cpp_to_lua(lua_State *L, const std::string &v)
 template <typename T>
 using remove_cvref = std::remove_cv<std::remove_reference_t<T>>::template type;
 
+/**
+ * @brief 用于全局函数、static函数注册
+ */
 template <class T> class Register;
 template <typename Ret, typename... Args> class Register<Ret (*)(Args...)>
 {
@@ -250,49 +305,25 @@ private:
 public:
     template <auto fp> static int reg(lua_State *L)
     {
-        return caller(L, fp, indices);
+        try
+        {
+            return caller(L, fp, indices);
+        }
+        catch (const std::runtime_error &e)
+        {
+            // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+            return luaL_error(L, e.what());
+        }
     }
 };
 
-// 前置声明
-template <typename T> struct class_remove;
-// 特化为static函数或全局函数
-template <typename Ret, typename... Args> struct class_remove<Ret (*)(Args...)>
-{
-    using type = Ret (*)(Args...);
-};
-// 特化为成员函数
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...)>
-{
-    using type = Ret (*)(Args...);
-};
-// 特化为const成员函数
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) const>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
-
-template <typename T>
-inline constexpr bool is_lua_func =
-    std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
-
-template <auto fp,
-          typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>
-void reg_global_func(lua_State *L, const char *name)
-{
-    lua_register(L, name, Register<decltype(fp)>::template reg<fp>);
-}
-
-template <lua_CFunction fp> void reg_global_func(lua_State *L, const char *name)
-{
-    lua_register(L, name, fp);
-}
-
+/**
+ * @brief 用于C++类注册
+ */
 template <class T> class Class
 {
 private:
+    // 用于C++类中的static函数注册
     template <class C> class StaticRegister;
     template <typename Ret, typename... Args>
     class StaticRegister<Ret (*)(Args...)>
@@ -319,10 +350,19 @@ private:
     public:
         template <auto fp> static int reg(lua_State *L)
         {
-            return caller<fp>(L, indices);
+            try
+            {
+                return caller<fp>(L, indices);
+            }
+            catch (const std::runtime_error &e)
+            {
+                // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+                return luaL_error(L, e.what());
+            }
         }
     };
 
+    // 普通C++类注册
     template <typename C> class ClassRegister;
     template <typename C, typename Ret, typename... Args>
     class ClassRegister<Ret (C::*)(Args...)>
@@ -360,7 +400,15 @@ private:
     public:
         template <auto fp> static int reg(lua_State *L)
         {
-            return caller<fp>(L, indices);
+            try
+            {
+                return caller<fp>(L, indices);
+            }
+            catch (const std::runtime_error &e)
+            {
+                // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+                return luaL_error(L, e.what());
+            }
         }
     };
 
@@ -683,12 +731,13 @@ private:
     lua_State *L;
 };
 
+// 用于保证函数调用前后，Lua堆栈是干净的
 class StackChecker
 {
 public:
-    StackChecker(lua_State* L)
+    StackChecker(lua_State *L)
     {
-        _L   = L;
+        _L = L;
         assert(0 == lua_gettop(L));
     }
     ~StackChecker()
@@ -700,5 +749,42 @@ private:
     lua_State *_L;
 };
 
+// 前置声明
+template <typename T> struct class_remove;
+// 特化为static函数或全局函数
+template <typename Ret, typename... Args> struct class_remove<Ret (*)(Args...)>
+{
+    using type = Ret (*)(Args...);
+};
+// 特化为成员函数
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...)>
+{
+    using type = Ret (*)(Args...);
+};
+// 特化为const成员函数
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) const>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+
+template <typename T>
+inline constexpr bool is_lua_func =
+    std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
+
+template <auto fp,
+          typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>
+void reg_global_func(lua_State *L, const char *name)
+{
+    lua_register(L, name, Register<decltype(fp)>::template reg<fp>);
+}
+
+template <lua_CFunction fp> void reg_global_func(lua_State *L, const char *name)
+{
+    lua_register(L, name, fp);
+}
+
+#undef luaL_checkis
 } // namespace lcpp
 template <class T> const char *lcpp::Class<T>::_class_name = nullptr;

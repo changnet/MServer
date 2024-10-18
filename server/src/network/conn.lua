@@ -293,7 +293,7 @@ end
 function Conn:close(flush)
     -- 关闭时会触发conn_del，在那边删除
     -- self:set_conn(self.conn_id, nil)
-    return self.s:stop(self.conn_id, flush)
+    return self.s:stop(flush)
 end
 
 -- 获取当前连接的ip地址和端口

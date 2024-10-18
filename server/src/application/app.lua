@@ -282,8 +282,8 @@ function App.exec()
     collectgarbage("stop")
 
     -- 注册关服信号
-    ev:signal(2)
-    ev:signal(15)
+    ev:signal(2, 2)
+    ev:signal(15, 2)
 
     require_define "modules.system.define"
 
