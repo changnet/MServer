@@ -1,4 +1,4 @@
--- auto export by lua-tags 164 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -145,12 +145,14 @@ return {
 "require_no_update", -- src/global/require.lua
 "rpc_command_new", -- src/rpc/rpc.lua
 "rpc_command_return", -- src/rpc/rpc.lua
+"set_modify_metatable", -- src/global/modi_table.lua
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
 "t_after", -- src/global/test.lua
 "t_assert", -- src/global/test.lua
 "t_async", -- src/global/test.lua
 "t_before", -- src/global/test.lua
+"t_clock", -- src/global/test.lua
 "t_describe", -- src/global/test.lua
 "t_done", -- src/global/test.lua
 "t_equal", -- src/global/test.lua

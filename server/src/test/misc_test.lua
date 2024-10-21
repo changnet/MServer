@@ -384,3 +384,275 @@ t_describe("uri lib test", function()
         t_equal(fields, {gm = "1", srv = "222"})
     end)
 end)
+
+-- 测试在lua中使用rawget和rawset效率到底有多慢（一般慢10倍）
+t_describe("rawset rawget test", function()
+    t_it("rawget rawset test", function()
+        local TS = 1000000
+
+        local tbl = {
+            abc = 998
+        }
+
+        local b1 = t_clock()
+        for _ = 1, TS do
+            local _ = tbl.abc
+        end
+        local e1 = t_clock()
+
+        local b2 = t_clock()
+        for _ = 1, TS do
+            local _ = rawget(tbl, "abc")
+        end
+        local e2 = t_clock()
+
+        local b3 = t_clock()
+        for _ = 1, TS do
+            tbl.abc = 996
+        end
+        local e3 = t_clock()
+
+        local b4 = t_clock()
+        for _ = 1, TS do
+            local _ = rawset(tbl, "abc", 996)
+        end
+        local e4 = t_clock()
+
+        t_print(string.format(
+            "table operator[] %d, rawget %d, operator= %d, rawset %d",
+            e1 - b1, e2 - b2, e3 - b3, e4 - b4
+        ))
+    end)
+end)
+
+-- 测试在lua中使用rawget和rawset效率到底有多慢（一般慢10倍）
+t_describe("rawset rawget test", function()
+    t_it("rawget rawset test", function()
+        local TS = 1000000
+
+        local tbl = {
+            abc = 998
+        }
+
+        local b1 = t_clock()
+        for _ = 1, TS do
+            local _ = tbl.abc
+        end
+        local e1 = t_clock()
+
+        local b2 = t_clock()
+        for _ = 1, TS do
+            local _ = rawget(tbl, "abc")
+        end
+        local e2 = t_clock()
+
+        local b3 = t_clock()
+        for _ = 1, TS do
+            tbl.abc = 996
+        end
+        local e3 = t_clock()
+
+        local b4 = t_clock()
+        for _ = 1, TS do
+            local _ = rawset(tbl, "abc", 996)
+        end
+        local e4 = t_clock()
+
+        t_print(string.format(
+            "table operator[] %d, rawget %d, operator= %d, rawset %d",
+            e1 - b1, e2 - b2, e3 - b3, e4 - b4
+        ))
+    end)
+end)
+
+-- 测试modi table和原生table相比效率有多慢（一般慢10倍）
+t_describe("modi table test", function()
+    require "global.modi_table"
+    t_it("modi table base test", function()
+        local expect = {
+            i = 123456789,
+            s = "abcdefghijk",
+            t = {
+                t = {
+                    i = 123456789,
+                    s = "123456789"
+                },
+                i = "34567",
+                s = "789"
+            }
+        }
+        local tbl = table.new_modi()
+        t_equal(tbl.modify, false)
+
+        -- 赋值后是否正确
+        for k, v in pairs(expect) do
+            tbl[k] = v
+        end
+        t_equal(tbl.data, expect)
+        t_equal(tbl.modify, true)
+
+        -- 手动赋值后是否正确
+        local tbl1 = table.new_modi()
+        tbl1.i = expect.i
+        tbl1.s = expect.s
+        t_equal(tbl1.modify, true)
+
+        -- 单个table并且包含子table情况下是否正确
+        tbl1.modify = false
+        tbl1.t = expect.t
+        t_equal(tbl1.modify, true)
+
+        -- 子table赋值取值是否正确
+        tbl1.modify = false
+        tbl1.t.t.i = 99878
+        t_equal(tbl1.modify, true)
+        t_equal(tbl1.t.t.i, 99878)
+
+        -- 多次修改后，data是否完整
+        tbl1.modify = false
+        tbl1.t.t.i = expect.t.t.i
+        t_equal(tbl1.modify, true)
+        t_equal(tbl1.data, expect)
+
+        -- 子table一层一层赋值，是否正确
+        local tbl2 = table.new_modi()
+        tbl2.t = {}
+        t_equal(tbl2.modify, true)
+
+        tbl2.modify = false
+        tbl2.t.t = {}
+        t_equal(tbl2.modify, true)
+
+        tbl2.modify = false
+        tbl2.t.t.i = 123456
+        t_equal(tbl2.modify, true)
+        t_equal(tbl2.t.t.i, 123456)
+
+        tbl2.modify = false
+        tbl2.t.t.i = 345
+        t_equal(tbl2.modify, true)
+        t_equal(tbl2.t.t.i, 345)
+        t_equal(tbl2.data.t.t.i, 345)
+
+        -- 直接使用一个table来初始化
+        local tbl3 = table.new_modi(expect)
+        t_equal(tbl3.modify, false)
+        t_equal(tbl3.t.t.i, expect.t.t.i)
+
+        -- 这个应该会修改到原来的expect
+        tbl3.t.t.i = 123
+        t_equal(tbl3.modify, true)
+        t_equal(tbl3.t.t.i, expect.t.t.i)
+    end)
+    t_it("modi table level 1 test", function()
+        local raw = {i = 1234567}
+        local modi = table.new_modi()
+        modi.i = 1234567
+
+        local TS = 1000000
+
+        local b1 = t_clock()
+        for _ = 1, TS do
+            local _ = raw.i
+        end
+        local e1 = t_clock()
+
+        local b2 = t_clock()
+        for _ = 1, TS do
+            local _ = modi.i
+        end
+        local e2 = t_clock()
+
+        local b3 = t_clock()
+        for _ = 1, TS do
+            raw.i = 123
+        end
+        local e3 = t_clock()
+
+        local b4 = t_clock()
+        for _ = 1, TS do
+            modi.i = 123
+        end
+        local e4 = t_clock()
+
+        t_print(string.format(
+            "modi raw get %d, modi get %d, raw set %d, modi set = %d",
+            e1 - b1, e2 - b2, e3 - b3, e4 - b4
+        ))
+    end)
+    t_it("modi table level 2 test", function()
+        local raw = {t = {i = 1234567}}
+        local modi = table.new_modi()
+        modi.t = {}
+        modi.t.i = 1234567
+
+        local TS = 1000000
+
+        local b1 = t_clock()
+        for _ = 1, TS do
+            local _ = raw.t.i
+        end
+        local e1 = t_clock()
+
+        local b2 = t_clock()
+        for _ = 1, TS do
+            local _ = modi.t.i
+        end
+        local e2 = t_clock()
+
+        local b3 = t_clock()
+        for _ = 1, TS do
+            raw.t.i = 123
+        end
+        local e3 = t_clock()
+
+        local b4 = t_clock()
+        for _ = 1, TS do
+            modi.t.i = 123
+        end
+        local e4 = t_clock()
+
+        t_print(string.format(
+            "modi raw get %d, modi get %d, raw set %d, modi set = %d",
+            e1 - b1, e2 - b2, e3 - b3, e4 - b4
+        ))
+    end)
+    t_it("modi table level 3 test", function()
+        local raw = {t = {t = {i = 1234567}}}
+        local modi = table.new_modi()
+        modi.t = {}
+        modi.t.t = {}
+        modi.t.t.i = 1234567
+
+        local TS = 1000000
+
+        local b1 = t_clock()
+        for _ = 1, TS do
+            local _ = raw.t.t.i
+        end
+        local e1 = t_clock()
+
+        local b2 = t_clock()
+        for _ = 1, TS do
+            local _ = modi.t.t.i
+        end
+        local e2 = t_clock()
+
+        local b3 = t_clock()
+        for _ = 1, TS do
+            raw.t.t.i = 123
+        end
+        local e3 = t_clock()
+
+        local b4 = t_clock()
+        for _ = 1, TS do
+            modi.t.t.i = 123
+        end
+        local e4 = t_clock()
+
+        t_print(string.format(
+            "modi raw get %d, modi get %d, raw set %d, modi set = %d",
+            e1 - b1, e2 - b2, e3 - b3, e4 - b4
+        ))
+    end)
+end)

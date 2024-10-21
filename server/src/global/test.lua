@@ -339,6 +339,11 @@ local function on_fail(msg)
     end
 end
 
+-- 获取测试时间
+function t_clock()
+    return T.clock()
+end
+
 -- test if two variable equal
 function t_equal(got, expect)
     assert(T.co, "test already finished or not begin yet")

@@ -4,6 +4,18 @@ local HttpConn = require "http.http_conn"
 -- websocket公共层
 local WsConn = oo.class(...)
 
+-- 具体的标准要看RFC6455:https://datatracker.ietf.org/doc/html/rfc6455
+-- 不同的实现握手http头略有不同，比如链接到skynet的websocket，就必须要有
+-- Sec-WebSocket-Protocol: chat, superchat，但其实在标准里这个字段是可选的
+-- 并且这个chat和superchat没有什么意义
+-- https://stackoverflow.com/questions/51497698/what-is-the-difference-of-chat-and-superchat-subprotocol-in-websocket
+--[[
+The request MAY include a header field with the name
+        |Sec-WebSocket-Protocol|.  If present, this value indicates one
+        or more comma-separated subprotocol the client wishes to speak,
+        ordered by preference
+]]
+
 local handshake_clt = 'GET %s HTTP/1.1\r\n\z
     Connection: Upgrade\r\n\z
     Host: %s\r\n\z
