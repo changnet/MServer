@@ -1,8 +1,10 @@
 local util = require "engine.util"
+local Socket = require "engine.Socket"
+local Conn = require "network.conn"
 local HttpConn = require "http.http_conn"
 
--- websocket公共层
-local WsConn = oo.class(...)
+-- websocket连接
+local WsConn = oo.class(..., Conn)
 
 -- 具体的标准要看RFC6455:https://datatracker.ietf.org/doc/html/rfc6455
 -- 不同的实现握手http头略有不同，比如链接到skynet的websocket，就必须要有
@@ -21,11 +23,13 @@ local handshake_clt = 'GET %s HTTP/1.1\r\n\z
     Host: %s\r\n\z
     Sec-WebSocket-Key: %s\r\n\z
     Upgrade: websocket\r\n\z
+    Sec-WebSocket-Protocol: chat, superchat\r\n\z
     Sec-WebSocket-Version: 13\r\n\r\n'
 
 local handshake_srv = 'HTTP/1.1 101 WebSocket Protocol Handshake\r\n\z
     Connection: Upgrade\r\n\z
     Upgrade: WebSocket\r\n\z
+    Sec-WebSocket-Protocol: chat\r\n\z
     Sec-WebSocket-Accept: %s\r\n\r\n'
 
 local ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -60,11 +64,7 @@ WsConn.WS_HAS_MASK = WS_HAS_MASK
 
 
 WsConn.default_param = {
-    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
-    connect_type = network_mgr.CT_CSCN, -- 连接类型
-    iot = network_mgr.IOT_NONE, -- io类型
-    cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
-    pkt = network_mgr.PT_WEBSOCKET, -- 打包类型
+    pkt = Socket.PT_WEBSOCKET, -- 打包类型
     action = 1, -- over_action，1 表示缓冲区溢出后断开
     send_chunk_max = 128, -- 发送缓冲区数量
     recv_chunk_max = 8 -- 接收缓冲区数
@@ -76,8 +76,7 @@ function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
         -- 服务器收到客户端的握手请求
         local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
         local base64 = util.base64(sha1)
-        network_mgr:send_raw_packet(self.conn_id,
-                                    string.format(handshake_srv, base64))
+        self.s:send_pkt(string.format(handshake_srv, base64))
     else
         -- 客户端收到服务器返回的握手请求
         local sha1 = util.sha1_raw(self.ws_key, ws_magic)
@@ -107,12 +106,12 @@ function WsConn:send_handshake(url)
     self.ws_key = util.base64(r_val)
 
     local host = HttpConn:fmt_host(self.host, self.port, self.ssl)
-    network_mgr:send_raw_packet(self.conn_id, string.format(
+    return self.s:send_pkt(string.format(
         handshake_clt, url or default_url, host, self.ws_key))
 end
 
 -- io建立成功，开始websocket握手
-function WsConn:io_ok()
+function WsConn:io_ready()
     -- 如果是客户端才发起握手，服务器是不处理的
     if not self.host then return end
     return self:send_handshake(self.url)
@@ -121,8 +120,11 @@ end
 -- 发送原生数据包
 -- @param body 要发送的文字
 function WsConn:send_pkt(body)
-    local mask = self.ws_key and CLT_MASK or SRV_MASK
-    return network_mgr:send_clt_packet(self.conn_id, WS_OP_TEXT | mask, body)
+    if self.ws_key then
+        return self.s:send_clt(WS_OP_TEXT | CLT_MASK, body)
+    else
+        return self.s:send_srv(WS_OP_TEXT | SRV_MASK, body)
+    end
 end
 
 -- 发送控制包
@@ -130,7 +132,7 @@ end
 -- @param body 控制包的数据，可以为nil
 function WsConn:send_ctrl(flag, body)
     local mask = self.ws_key and CLT_MASK or SRV_MASK
-    return network_mgr:send_ctrl_packet(self.conn_id, flag | mask, body)
+    return self.s:send_ctrl(flag | mask, body)
 end
 
 function WsConn:ws_close()
@@ -153,7 +155,7 @@ function WsConn:ctrl_new(flag, body)
         if self.op_close then return end
 
         local mask = self.ws_key and CLT_MASK or SRV_MASK
-        network_mgr:send_ctrl_packet(self.conn_id, WS_OP_CLOSE | mask)
+        self.s:send_ctrl(WS_OP_CLOSE | mask)
 
         -- RFC6455 5.5.1
         -- If an endpoint receives a Close frame and did not previously send a
@@ -167,8 +169,7 @@ function WsConn:ctrl_new(flag, body)
     elseif flag == WS_OP_PING then
         -- 返回pong时，如果对方ping时发了body，一定要原封不动返回
         local mask = self.ws_key and CLT_MASK or SRV_MASK
-        return network_mgr:send_ctrl_packet(
-            self.conn_id, WS_OP_PONG | mask, body)
+        return self.s:send_ctrl(WS_OP_PONG | mask, body)
     elseif flag == WS_OP_PONG then
         -- TODO: 这里更新心跳
         return

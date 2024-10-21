@@ -5,8 +5,7 @@
 -- example at: https://www.websocket.org/aboutwebsocket.html
 
 local WsConn = require "network.ws_conn"
-local CsWsConn = require "network.cs_ws_conn"
-local ScWsConn = require "network.sc_ws_conn"
+local TlsCtx = require "engine.TlsCtx"
 
 local ws_default_param = WsConn.default_param
 
@@ -29,11 +28,12 @@ t_describe("websocket test", function()
     local srv_ssl
 
     t_before(function()
-        clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
-        srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
-                                        "../certs/server.cer",
-                                        "../certs/srv_key.pem",
-                                        "mini_distributed_game_server")
+        clt_ssl = TlsCtx()
+        srv_ssl = TlsCtx()
+
+        clt_ssl:init()
+        srv_ssl:init("../certs/server.cer",
+            "../certs/srv_key.pem", "mini_distributed_game_server")
     end)
 
     t_it("websocket " .. exp_host, function()
@@ -57,7 +57,7 @@ t_describe("websocket test", function()
             end
         end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn.url = exp_url
         conn:connect(exp_host, 80)
@@ -73,7 +73,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)
@@ -109,7 +109,7 @@ t_describe("websocket test", function()
             end
         end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn.url = exp_url
         conn:connect_s(exp_host, 443, clt_ssl)
@@ -125,7 +125,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)
@@ -140,7 +140,7 @@ t_describe("websocket test", function()
         end
     end)
 
-    t_it("websocket local", function()
+    t_it("websocket_local", function()
         t_async(5000)
 
         local pkt_idx = 0
@@ -166,7 +166,7 @@ t_describe("websocket test", function()
             end
         end
 
-        listen_conn = ScWsConn()
+        listen_conn = WsConn()
         listen_conn.default_param = ws_default_param
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
@@ -177,7 +177,7 @@ t_describe("websocket test", function()
         end
         listen_conn.on_disconnected = function() end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn:connect(local_host, local_port)
 
@@ -192,7 +192,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)
@@ -233,7 +233,7 @@ t_describe("websocket test", function()
             end
         end
 
-        listen_conn = ScWsConn()
+        listen_conn = WsConn()
         listen_conn.default_param = ws_default_param
         listen_conn:listen_s(local_host, local_port_s, srv_ssl)
         listen_conn.on_accepted = function(self)
@@ -244,7 +244,7 @@ t_describe("websocket test", function()
         end
         listen_conn.on_disconnected = function() end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn:connect_s(local_host, local_port_s, clt_ssl)
 
@@ -259,7 +259,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)

@@ -130,7 +130,8 @@ function Conn:set_conn_param()
     end
 
     -- 打包方式，如http、自定义的tcp打包、websocket打包
-    s:set_packet(param.pkt)
+    local e = s:set_packet(param.pkt)
+    assert(0 == e)
 
     local action = param.action or 1 -- over_action，1 表示缓冲区溢出后断开
     local send_chunk_max = param.send_chunk_max or 1 -- 发送缓冲区数量
@@ -275,7 +276,7 @@ function Conn:listen(ip, port)
     local e = self.s:listen(ip, port)
     local ok = e >= 0
 
-    self.ok = ok -- 对于监听的socket，不会触发io_ok，这里直接设置ok状态
+    self.ok = ok -- 对于监听的socket，不会触io_ready，这里直接设置ok状态
     return ok
 end
 

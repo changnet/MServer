@@ -36,7 +36,7 @@ end
 
 -- 发送数据包
 function HttpConn:send_pkt(pkt)
-    return self.s:pack_clt(pkt)
+    return self.s:send_pkt(pkt)
 end
 
 -- 格式化HOST字段

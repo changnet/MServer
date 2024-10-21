@@ -115,6 +115,16 @@ void Socket::stop(bool flush)
     }
 }
 
+int32_t Socket::send_pkt(lua_State *L)
+{
+    size_t size      = 0;
+    const char *data = lua_tolstring(L, 2, &size);
+    if (0 == size) return 0;
+
+    send(data, size);
+    return 0;
+}
+
 void Socket::append(const void *data, size_t len)
 {
     auto &send_buff = _w->get_send_buffer();
@@ -859,7 +869,7 @@ int32_t Socket::set_packet(int32_t packet_type)
     {
     case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
     //case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
-    //case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
+    case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
     //case Packet::PT_WSSTREAM: _packet = new WSStreamPacket(this); break;
     default: return -1;
     }
@@ -894,7 +904,7 @@ int32_t Socket::io_init_connect()
     return 0;
 }
 
-int32_t Socket::pack_clt(lua_State *L)
+int32_t Socket::send_clt(lua_State *L)
 {
     if (!_packet)
     {
@@ -907,7 +917,7 @@ int32_t Socket::pack_clt(lua_State *L)
     return 0;
 }
 
-int32_t Socket::pack_srv(lua_State *L)
+int32_t Socket::send_srv(lua_State *L)
 {
     if (!_packet)
     {
@@ -916,6 +926,18 @@ int32_t Socket::pack_srv(lua_State *L)
 
     // 1是socket本身，数据从2开始
     _packet->pack_srv(L, 2);
+    return 0;
+}
+
+int32_t Socket::send_ctrl(lua_State *L)
+{
+    if (!_packet)
+    {
+        return luaL_error(L, "no packet found");
+    }
+
+    // 1是socket本身，数据从2开始
+    _packet->pack_ctrl(L, 2);
     return 0;
 }
 

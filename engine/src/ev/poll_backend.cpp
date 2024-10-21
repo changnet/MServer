@@ -194,6 +194,19 @@ int32_t PollBackend::add_fd_index(int32_t fd)
     return index;
 }
 
+void PollBackend::update_fd_index(int32_t fd, int32_t index)
+{
+    uint32_t ufd = ((uint32_t)fd);
+    if (ufd < HUGE_FD)
+    {
+        _fd_index[ufd] = index;
+    }
+    else
+    {
+        _fd_index_huge[fd] = index;
+    }
+}
+
 int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 {
     // 当前禁止修改_poll_fd数组
@@ -207,7 +220,9 @@ int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
         int32_t fd_count = (int32_t)_poll_fd.size() - 1;
         if (EXPECT_TRUE(index < fd_count))
         {
-            _poll_fd[index] = _poll_fd[fd_count];
+            auto &poll_fd   = _poll_fd[fd_count];
+            _poll_fd[index] = poll_fd;
+            update_fd_index((int32_t)poll_fd.fd, index);
         }
         _poll_fd.pop_back();
         return 0;
