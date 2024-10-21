@@ -87,9 +87,11 @@ void StaticGlobal::uninitialize()
      */
     _thread_mgr->stop(_async_log);
 
-    delete _buffer_chunk_pool;
     delete _state;
     L = nullptr;
+
+    // lua中销毁时，会gc socket，然后gc socket的buff，必须先在_buffer_chunk_pool前
+    delete _buffer_chunk_pool;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效
     _async_log->AsyncLog::stop();

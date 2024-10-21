@@ -132,8 +132,6 @@ public:
     int32_t set_io(int32_t io_type, TlsCtx *tls_ctx);
     int32_t set_packet(int32_t packet_type);
 
-    class Packet *get_packet() const { return _packet; }
-
     inline int32_t fd() const { return _fd; }
     inline int32_t conn_id() const { return _conn_id; }
 
@@ -149,10 +147,15 @@ public:
     int32_t io_init_accept();
     // 初始化io
     int32_t io_init_connect();
+
+    // 发送原始数据
+    int32_t send_pkt(lua_State *L);
     // 打包前端发往后端的数据
-    int32_t pack_clt(lua_State *L);
+    int32_t send_clt(lua_State *L);
     // 打包后端发往前端的数据
-    int32_t pack_srv(lua_State *L);
+    int32_t send_srv(lua_State *L);
+    // 发送控制帧
+    int32_t send_ctrl(lua_State *L);
 
 private:
     /**

@@ -71,6 +71,12 @@ public:
         assert(false);
         return -1;
     }
+    // 打包控制帧（websocket特有的功用）
+    virtual int32_t pack_ctrl(lua_State *L, int32_t index)
+    {
+        assert(false);
+        return -1;
+    }
 
 protected:
     class Socket *_socket;

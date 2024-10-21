@@ -5,20 +5,18 @@
 -- example at: https://www.websocket.org/aboutwebsocket.html
 
 local WsConn = require "network.ws_conn"
-local CsWsConn = require "network.cs_ws_conn"
-local ScWsConn = require "network.sc_ws_conn"
+local TlsCtx = require "engine.TlsCtx"
 
 local ws_default_param = WsConn.default_param
 
 t_describe("websocket test", function()
     --[[
     http://websockets.org/echo.html 这个已经不维护了
-
-    https://www.piesocket.com/websocket-tester 可以免费用，但是它的api_key需要每星期手动更换一次
+    https://echo.websocket.org/.ws（https://websocket.org/tools/websocket-echo-server） 这个服务器还在，但本地ping经常不通
+    https://www.piesocket.com/websocket-tester 以前可以免费用，但现在api_key不免费了
     ]]
-    local exp_host = "demo.piesocket.com"
-    local exp_url =
-        "/v3/channel_1?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self"
+    local exp_host = "ws.postman-echo.com"
+    local exp_url = "/raw"
 
     local local_port = 8083
     local local_port_s = 8084
@@ -29,63 +27,12 @@ t_describe("websocket test", function()
     local srv_ssl
 
     t_before(function()
-        clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
-        srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
-                                        "../certs/server.cer",
-                                        "../certs/srv_key.pem",
-                                        "mini_distributed_game_server")
-    end)
+        clt_ssl = TlsCtx()
+        srv_ssl = TlsCtx()
 
-    t_it("websocket " .. exp_host, function()
-        t_async(5000)
-
-        local pkt_idx = 0
-        local pkt_body = {
-            "MServer send hello",
-            "MServer send hello2",
-        }
-
-        local ping_idx = 0
-        local ping_body = {
-            [2] = "ping with body"
-        }
-
-        local function check_done(conn)
-            if not ping_body[ping_idx + 1] and not pkt_body[pkt_idx + 1] then
-                t_done()
-                conn:close()
-            end
-        end
-
-        local conn = CsWsConn()
-        conn.default_param = ws_default_param
-        conn.url = exp_url
-        conn:connect(exp_host, 80)
-
-        conn.on_disconnected = function() end
-        conn.on_connected = function(self)
-            WsConn.send_pkt(self, pkt_body[1])
-            self:send_ctrl(self.WS_OP_PING)
-            self:send_ctrl(self.WS_OP_PING, ping_body[2])
-        end
-        conn.on_cmd = function(self, cmd_body)
-            pkt_idx = pkt_idx + 1
-            t_equal(cmd_body, pkt_body[pkt_idx])
-
-            if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
-            end
-
-            check_done(self)
-        end
-
-        conn.on_ctrl = function(self, flag, body)
-            if flag == self.WS_OP_PONG then
-                ping_idx = ping_idx + 1
-                t_equal(body, ping_body[ping_idx])
-                check_done(self)
-            end
-        end
+        clt_ssl:init()
+        srv_ssl:init("../certs/server.cer",
+            "../certs/srv_key.pem", "mini_distributed_game_server")
     end)
 
     t_it("websocket ssl " .. exp_host, function()
@@ -109,7 +56,7 @@ t_describe("websocket test", function()
             end
         end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn.url = exp_url
         conn:connect_s(exp_host, 443, clt_ssl)
@@ -125,7 +72,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)
@@ -166,7 +113,7 @@ t_describe("websocket test", function()
             end
         end
 
-        listen_conn = ScWsConn()
+        listen_conn = WsConn()
         listen_conn.default_param = ws_default_param
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
@@ -177,7 +124,7 @@ t_describe("websocket test", function()
         end
         listen_conn.on_disconnected = function() end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn:connect(local_host, local_port)
 
@@ -192,7 +139,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)
@@ -233,7 +180,7 @@ t_describe("websocket test", function()
             end
         end
 
-        listen_conn = ScWsConn()
+        listen_conn = WsConn()
         listen_conn.default_param = ws_default_param
         listen_conn:listen_s(local_host, local_port_s, srv_ssl)
         listen_conn.on_accepted = function(self)
@@ -244,7 +191,7 @@ t_describe("websocket test", function()
         end
         listen_conn.on_disconnected = function() end
 
-        local conn = CsWsConn()
+        local conn = WsConn()
         conn.default_param = ws_default_param
         conn:connect_s(local_host, local_port_s, clt_ssl)
 
@@ -259,7 +206,7 @@ t_describe("websocket test", function()
             t_equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
-                WsConn.send_pkt(self, pkt_body[pkt_idx + 1])
+                self:send_pkt(pkt_body[pkt_idx + 1])
             end
 
             check_done(self)

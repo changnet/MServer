@@ -16,11 +16,11 @@ public:
     /* 打包服务器发往客户端数据包
      * return: <0 error;>=0 success
      */
-    virtual int32_t pack_clt(lua_State *L, int32_t index);
+    virtual int32_t pack_clt(lua_State *L, int32_t index) override;
     /* 打包客户端发往服务器数据包
      * return: <0 error;>=0 success
      */
-    virtual int32_t pack_srv(lua_State *L, int32_t index);
+    virtual int32_t pack_srv(lua_State *L, int32_t index) override;
 
     /* 数据解包
      * return: <0 error;0 success
@@ -39,7 +39,7 @@ public:
     virtual int32_t on_message_complete(bool upgrade) override;
 
     //< 发送opcode等控制码
-    int32_t pack_ctrl(lua_State *L, int32_t index);
+    int32_t pack_ctrl(lua_State *L, int32_t index) override;
 
     /// 设置错误码
     void set_error(int32_t e) { _e = e; }

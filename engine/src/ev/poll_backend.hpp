@@ -27,6 +27,7 @@ private:
     int32_t del_fd_index(int32_t fd);
     int32_t get_fd_index(int32_t fd);
     int32_t add_fd_index(int32_t fd);
+    void update_fd_index(int32_t fd, int32_t index);
 
 private:
     static const int32_t HUGE_FD = 10240;

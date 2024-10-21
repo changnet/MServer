@@ -29,7 +29,7 @@ public:
         // https://en.cppreference.com/w/cpp/atomic/atomic_flag_test_and_set
         // Example A spinlock mutex can be implemented in userspace using an atomic_flag
 
-        //
+        //test_and_set返回的是上一次的状态。如果返回true，则表示被其他线程占用
         while (_flag.test_and_set(std::memory_order_acquire))
             ;
     }

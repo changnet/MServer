@@ -106,8 +106,10 @@ int32_t luaopen_socket(lua_State* L)
     lc.def<&Socket::set_buffer_params>("set_buffer_params");
     lc.def<&Socket::io_init_accept>("io_init_accept");
     lc.def<&Socket::io_init_connect>("io_init_connect");
-    lc.def<&Socket::pack_clt>("pack_clt");
-    lc.def<&Socket::pack_srv>("pack_srv");
+    lc.def<&Socket::send_pkt>("send_pkt");
+    lc.def<&Socket::send_clt>("send_clt");
+    lc.def<&Socket::send_srv>("send_srv");
+    lc.def<&Socket::send_ctrl>("send_ctrl");
     lc.def<&Socket::address>("address");
     lc.def<&Socket::get_http_header>("get_http_header");
 
