@@ -75,7 +75,7 @@ int32_t LSql::start(lua_State *L)
 
     set(host, port, usr, pwd, dbname);
 
-    Thread::start(5000000); /* N秒 ping一下mysql */
+    Thread::start(5000); /* N秒 ping一下mysql */
     return 0;
 }
 

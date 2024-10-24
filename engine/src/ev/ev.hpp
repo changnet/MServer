@@ -5,7 +5,7 @@
 
 #include "ev_def.hpp"
 #include "ev_watcher.hpp"
-#include "thread/spin_lock.hpp"
+#include "thread/thread_cv.hpp"
 #include "global/global.hpp"
 
 class EVBackend;
@@ -97,25 +97,12 @@ public:
     {
     }
 
-    /// 获取加锁对象
-    std::mutex &lock()
-    {
-        // 加锁应该使用std::lock_guard而不是手动加锁_mutex.lock();
-        // 尽量减少忘记释放锁的概率
-        // 而且手动调lock()在vs下总是会有个C26110警告
-        return _mutex;
-    }
-
     /**
      * @brief 唤醒主线程
     */
     void wake()
     {
-        {
-            std::lock_guard<std::mutex> guard(_mutex);
-            _has_job = true;
-        }
-        _cv.notify_one();
+        _tcv.notify_one(1);
     }
 
     void time_update();
@@ -151,14 +138,6 @@ protected:
     volatile bool _done; /// 主循环是否已结束
 
     /**
-     * @brief 是否有任务需要处理
-     * std::atomic_flag guaranteed to be lock-free而std::atomic<bool>不一定
-     * 但atomic_flag需要C++20才有test函数，这就离谱
-     * std::atomic<bool>在x86下是lock-free，将就着用吧，过几年再改用flag
-     */
-    std::atomic<bool> _has_job;
-
-    /**
      * 当前拥有的timer数量
      * 额外使用一个计数器管理timer，可以不用对_timers进行pop之类的操作
      */
@@ -185,14 +164,8 @@ protected:
 
     int64_t _next_backend_time; // 下次执行backend的时间
 
-    /// 主线程的wait condition_variable
-    std::condition_variable _cv;
-
-    /// 主线程锁
-    std::mutex _mutex;
-
     std::vector<EVTimer *> _pendings; // 暂存待处理的watcher
-
+    ThreadCv _tcv; // 用于等待其他线程数据的condtion_variable
     WatcherMgr _fd_mgr; // io管理
     EventSwapList _events; // 发送给backend线程的事件
 };

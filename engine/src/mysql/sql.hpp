@@ -47,6 +47,7 @@ public:
         SqlCol()
         {
             _size     = 0;
+            _value[0] = 0;
             _value_ex = nullptr;
         }
 

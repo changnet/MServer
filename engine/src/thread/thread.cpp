@@ -3,15 +3,17 @@
 #include "system/static_global.hpp"
 
 std::atomic<int32_t> Thread::_sig_mask(0);
-std::atomic<int32_t> Thread::_id_seed(0);
 
 Thread::Thread(const std::string &name)
 {
+    // 用于产生自定义线程id
+    // std::thread::id不能保证为数字(linux下一般为pthread_t)，不方便传参
+    static int32_t _id_seed = 0;
+
     _name   = name;
     _id     = ++_id_seed;
     _status = S_NONE;
 
-    _ev      = 0;
     _main_ev = 0;
 
     set_wait_busy(true); // 默认关服时都是需要待所有任务处理才能结束
@@ -125,8 +127,7 @@ void Thread::signal(int32_t sig, int32_t action)
     }
 }
 
-/* 开始线程 */
-bool Thread::start(int32_t us)
+bool Thread::start(int32_t ms)
 {
     PLOG("%s thread start", _name.c_str());
 
@@ -134,7 +135,7 @@ bool Thread::start(int32_t us)
     assert(std::this_thread::get_id() != _thread.get_id());
 
     mark(S_RUN);
-    _thread = std::thread(&Thread::spawn, this, us);
+    _thread = std::thread(&Thread::spawn, this, ms);
 
     StaticGlobal::thread_mgr()->push(this);
 
@@ -161,8 +162,7 @@ void Thread::stop()
     StaticGlobal::thread_mgr()->pop(_id);
 }
 
-/* 线程入口函数 */
-void Thread::spawn(int32_t us)
+void Thread::spawn(int32_t ms)
 {
     signal_block(); /* 子线程不处理外部信号 */
 
@@ -172,27 +172,12 @@ void Thread::spawn(int32_t us)
         return;
     }
 
-    std::chrono::microseconds timeout(us);
+    while (_status & S_RUN)
     {
-        // unique_lock在构建时会加锁，然后由wait_for解锁并进入等待
-        // 当条件满足时，wait_for返回并加锁，最后unique_lock析构时解锁
-        std::unique_lock<std::mutex> ul(_mutex);
-        while (_status & S_RUN)
-        {
-            int32_t ev = _ev.exchange(0);
-            if (!ev)
-            {
-                // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
-                // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
-                _cv.wait_for(ul, timeout);
-            }
-
-            ul.unlock();
-            mark(S_BUSY);
-            this->routine(ev);
-            unmark(S_BUSY);
-            ul.lock();
-        }
+        int32_t ev = _cv.wait_for(ms);
+        mark(S_BUSY);
+        this->routine(ev);
+        unmark(S_BUSY);
     }
 
     if (!uninitialize()) /* 清理 */

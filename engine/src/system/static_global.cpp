@@ -69,7 +69,7 @@ void StaticGlobal::initialize()
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 
     _async_log->set_thread_name(STD_FMT("global_async_log"));
-    _async_log->AsyncLog::start(1000000);
+    _async_log->AsyncLog::start(1000);
 
     // 关服的时候，不需要等待这个线程。之前在关服定时器上打异步日志，
     // 导致这个线程一直忙,关不了服，stop的时候会处理所有日志
