@@ -13,8 +13,8 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx, Buffer *recv, Buffer *send)
-    : IO(conn_id, recv, send)
+SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx)
+    : IO(conn_id)
 {
     _ssl = nullptr;
     _tls_ctx = tls_ctx;
@@ -27,11 +27,11 @@ int32_t SSLIO::recv(EVIO *w)
     int32_t len = 0;
     while (true)
     {
-        Buffer::Transaction &&ts = _recv->any_seserve(true);
+        Buffer::Transaction &&ts = _recv.any_seserve(true);
         if (ts._len <= 0) return EV_BUSY;
 
         len = SSL_read(_ssl, ts._ctx, ts._len);
-        _recv->commit(ts, len);
+        _recv.commit(ts, len);
         if (EXPECT_FALSE(len <= 0)) break;
 
         if (len < ts._len) return EV_NONE;
@@ -72,13 +72,13 @@ int32_t SSLIO::send(EVIO *w)
     bool next    = false;
     while (true)
     {
-        const char *data = _send->get_front_used(bytes, next);
+        const char *data = _send.get_front_used(bytes, next);
         if (0 == bytes) return EV_NONE;
 
         len = SSL_write(_ssl, data, (int32_t)bytes);
         if (len <= 0) break;
 
-        _send->remove(len); // 删除已发送数据
+        _send.remove(len); // 删除已发送数据
 
         // socket发送缓冲区已满，等下次发送了
         if (len < (int32_t)bytes) return EV_WRITE;

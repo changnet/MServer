@@ -8,34 +8,29 @@
     #include <sys/socket.h>
 #endif
 
-IO::IO(int32_t conn_id, class Buffer *recv, class Buffer *send)
+IO::IO(int32_t conn_id)
 {
     _conn_id = conn_id;
-
-    _recv = recv;
-    _send = send;
 }
 
 IO::~IO()
 {
-    _recv = nullptr;
-    _send = nullptr;
 }
 
 int32_t IO::recv(EVIO *w)
 {
-    int32_t fd = w->get_fd();
+    int32_t fd = w->_fd;
     assert(fd != netcompat::INVALID);
 
     int32_t len = 0;
     while (true)
     {
-        Buffer::Transaction &&ts = _recv->any_seserve(true);
+        Buffer::Transaction &&ts = _recv.any_seserve(true);
         if (0 == ts._len) return EV_BUSY;
 
         len = (int32_t)::recv(fd, ts._ctx, ts._len, 0);
 
-        _recv->commit(ts, len);
+        _recv.commit(ts, len);
         if (EXPECT_FALSE(len <= 0)) break;
 
         // 如果没读满缓冲区，则所有数据已读出来
@@ -61,7 +56,7 @@ int32_t IO::recv(EVIO *w)
 
 int32_t IO::send(EVIO *w)
 {
-    int32_t fd = w->get_fd();
+    int32_t fd = w->_fd;
     assert(fd != netcompat::INVALID);
 
     int32_t len  = 0;
@@ -69,13 +64,13 @@ int32_t IO::send(EVIO *w)
     bool next    = false;
     while (true)
     {
-        const char *data = _send->get_front_used(bytes, next);
+        const char *data = _send.get_front_used(bytes, next);
         if (0 == bytes) return EV_NONE;
 
         len = (int32_t)::send(fd, data, (int32_t)bytes, 0);
         if (len <= 0) break;
 
-        _send->remove(len); // 删除已发送数据
+        _send.remove(len); // 删除已发送数据
 
         // socket发送缓冲区已满，等下次发送了
         if (len < (int32_t)bytes) return EV_WRITE;

@@ -10,8 +10,7 @@ class SSLIO final: public IO
 {
 public:
     ~SSLIO();
-    explicit SSLIO(int32_t conn_id, TlsCtx *tls_ctx, class Buffer *recv,
-                   class Buffer *send);
+    explicit SSLIO(int32_t conn_id, TlsCtx *tls_ctx);
 
     /* 接收数据（此函数在io线程执行）
      * 返回: < 0 错误，0 成功，1 需要重读，2 需要重写

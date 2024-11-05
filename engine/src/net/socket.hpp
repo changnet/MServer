@@ -94,7 +94,7 @@ public:
     */
     Buffer &get_send_buffer()
     {
-        return _w->get_send_buffer();
+        return _w->_io->get_send_buffer();
     }
 
     /**
@@ -103,7 +103,7 @@ public:
     */
     Buffer &get_recv_buffer()
     {
-        return _w->get_recv_buffer();
+        return _w->_io->get_recv_buffer();
     }
 
     /**

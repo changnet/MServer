@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ev/ev_def.hpp"
+#include "net/buffer.hpp"
 #include "global/global.hpp"
 
 class EVIO;
@@ -21,7 +22,7 @@ public:
 
 public:
     virtual ~IO();
-    explicit IO(int32_t conn_id, class Buffer *recv, class Buffer *send);
+    explicit IO(int32_t conn_id);
 
     /**
      * 接收数据（此函数在io线程执行）
@@ -55,9 +56,23 @@ public:
      * 初始化完成
      */
     void init_ready() const;
+    /**
+     * @brief 获取接收缓冲区对象
+     */
+    inline class Buffer &get_recv_buffer()
+    {
+        return _recv;
+    }
+    /**
+     * @brief 获取发送缓冲区对象
+     */
+    inline class Buffer &get_send_buffer()
+    {
+        return _send;
+    }
 
 protected:
     int32_t _conn_id;   /// 所属socket的id
-    class Buffer *_recv; /// 接受缓冲区
-    class Buffer *_send; /// 发送缓冲区
+    Buffer _recv; /// 接收缓冲区，由io线程写，主线程读取并处理数据
+    Buffer _send; /// 发送缓冲区，由主线程写，io线程发送
 };

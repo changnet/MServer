@@ -127,7 +127,7 @@ int32_t Socket::send_pkt(lua_State *L)
 
 void Socket::append(const void *data, size_t len)
 {
-    auto &send_buff = _w->get_send_buffer();
+    auto &send_buff = _w->_io->get_send_buffer();
     int32_t e       = send_buff.append(data, len);
 
     /**
@@ -823,7 +823,7 @@ void Socket::command_cb()
     int32_t ret = 0;
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
-    auto &buffer = _w->get_recv_buffer();
+    auto &buffer = _w->_io->get_recv_buffer();
     do
     {
         // @return -1错误 0成功，没有后续数据需要处理 1成功，有数据需要继续处理
@@ -843,14 +843,11 @@ int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 {
     assert(_w);
 
-    auto &recv = _w->get_recv_buffer();
-    auto &send = _w->get_send_buffer();
-
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(_conn_id, &recv, &send); break;
-    case IO::IOT_SSL: io = new SSLIO(_conn_id, tls_ctx, &recv, &send); break;
+    case IO::IOT_NONE: io = new IO(_conn_id); break;
+    case IO::IOT_SSL: io = new SSLIO(_conn_id, tls_ctx); break;
     default: return -1;
     }
 
@@ -878,11 +875,12 @@ int32_t Socket::set_packet(int32_t packet_type)
 
 void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)
 {
-    assert(_w);
+    assert(_w && _w->_io);
+    IO *io = _w->_io;
 
     _w->_mask |= static_cast<uint8_t>(mask);
-    _w->get_send_buffer().set_chunk_size(send_max);
-    _w->get_recv_buffer().set_chunk_size(recv_max);
+    io->get_send_buffer().set_chunk_size(send_max);
+    io->get_recv_buffer().set_chunk_size(recv_max);
 }
 
 int32_t Socket::io_init_accept()

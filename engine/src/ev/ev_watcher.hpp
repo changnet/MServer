@@ -3,7 +3,6 @@
 #include <functional>
 
 #include "net/io/io.hpp"
-#include "buffer.hpp"
 
 class EV;
 
@@ -72,25 +71,8 @@ public:
     */
     int32_t send();
 
-    /// 获取io描述符
-    int32_t get_fd() const { return _fd; }
-
     /// 重新设置当前io监听的事件
     void set(int32_t events);
-    /**
-     * @brief 获取接收缓冲区对象
-     */
-    inline class Buffer &get_recv_buffer()
-    {
-        return _recv;
-    }
-    /**
-     * @brief 获取发送缓冲区对象
-     */
-    inline class Buffer &get_send_buffer()
-    {
-        return _send;
-    }
     /**
      * @brief 设置io读写对象指针
      * @param ioc对象指针
@@ -130,8 +112,6 @@ public:
     int32_t _b_ev_counter; // ev数组中的计数器
     int32_t _b_ev_index;   // 在ev数组中的下标
 
-    Buffer _recv;  /// 接收缓冲区，由io线程写，主线程读取并处理数据
-    Buffer _send;  /// 发送缓冲区，由主线程写，io线程发送
     IO *_io; /// 负责数据读写的io对象，如ssl读写
 #ifndef NDEBUG
     std::atomic<int> _ref; // 引用数，用于检测
