@@ -1,6 +1,9 @@
 #include <csignal>
 #include "thread.hpp"
 #include "system/static_global.hpp"
+#ifdef __linux__
+#include <sys/prctl.h> // for prctl
+#endif
 
 std::atomic<int32_t> Thread::_sig_mask(0);
 
@@ -127,6 +130,61 @@ void Thread::signal(int32_t sig, int32_t action)
     }
 }
 
+void Thread::apply_thread_name(const char *name)
+{
+    // 设置线程名字，只用用于调试。VS在中断时，可以方便地根据线程名知道属于哪个线程。
+    // 在linux下，top -c -H -p xxxx可以查看各个线程占用的cpu
+#ifdef __windows__
+    // https://learn.microsoft.com/en-us/visualstudio/debugger/tips-for-debugging-threads?view=vs-2022&tabs=csharp
+    // There are two ways to set a thread name. The first is via the SetThreadDescription function. 
+    // The second is by throwing a particular exception while the Visual Studio debugger is attached 
+    // to the process. Each approach has benefits and caveats. The use of SetThreadDescription is 
+    // supported starting in Windows 10 version 1607 or Windows Server 2016.
+    #if !(NTDDI_WIN10_VB && NTDDI_VERSION >= NTDDI_WIN10_VB)
+    const DWORD MS_VC_EXCEPTION = 0x406D1388;
+    #pragma pack(push, 8)
+    typedef struct tagTHREADNAME_INFO
+    {
+        DWORD dwType;     // Must be 0x1000.
+        LPCSTR szName;    // Pointer to name (in user addr space).
+        DWORD dwThreadID; // Thread ID (-1=caller thread).
+        DWORD dwFlags;    // Reserved for future use, must be zero.
+    } THREADNAME_INFO;
+    #pragma pack(pop)
+
+    THREADNAME_INFO info;
+    info.dwType     = 0x1000;
+    info.szName     = threadName;
+    info.dwThreadID = GetCurrentThreadId();
+    info.dwFlags    = 0;
+    #pragma warning(push)
+    #pragma warning(disable : 6320 6322)
+    __try
+    {
+        RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
+                       (ULONG_PTR *)&info);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+    }
+    #pragma warning(pop)
+    #else
+    const static int32_t SIZE = 256;
+    WCHAR wname[SIZE];
+    int32_t e = MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, SIZE);
+    assert(0 != e);
+    HRESULT hr = SetThreadDescription(GetCurrentThread(), wname);
+    if (FAILED(hr))
+    {
+        ELOG("SetThreadDescription fail:%s", name); // Call failed.
+    }
+    #endif
+#else
+    // linux下,prctl应该是直接调用pthread_setname_np
+    prctl(PR_SET_NAME, name, 0, 0, 0);
+#endif
+}
+
 bool Thread::start(int32_t ms)
 {
     PLOG("%s thread start", _name.c_str());
@@ -165,6 +223,8 @@ void Thread::stop()
 void Thread::spawn(int32_t ms)
 {
     signal_block(); /* 子线程不处理外部信号 */
+
+    apply_thread_name(_name.c_str());
 
     if (!initialize()) /* 初始化 */
     {

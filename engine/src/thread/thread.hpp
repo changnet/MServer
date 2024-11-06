@@ -30,6 +30,8 @@ public:
     void set_thread_name(const std::string &name) { _name = name; }
     /// 获取线程名字
     inline const std::string &get_thread_name() const { return _name; }
+    // 应该线程名字到底层
+    static void apply_thread_name(const char *name);
 
     /// 注册信号处理
     static void signal(int32_t sig, int32_t action);
