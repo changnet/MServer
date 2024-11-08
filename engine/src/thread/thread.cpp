@@ -133,7 +133,8 @@ void Thread::signal(int32_t sig, int32_t action)
 void Thread::apply_thread_name(const char *name)
 {
     // 设置线程名字，只用用于调试。VS在中断时，可以方便地根据线程名知道属于哪个线程。
-    // 在linux下，top -c -H -p xxxx可以查看各个线程占用的cpu
+    // 在linux下，top -H -p xxxx（不要加-c参数）可以查看各个线程占用的cpu
+    // 测试中发现，假如线程A的名字为foo，线程A再去启动其他线程时
 #ifdef __windows__
     // https://learn.microsoft.com/en-us/visualstudio/debugger/tips-for-debugging-threads?view=vs-2022&tabs=csharp
     // There are two ways to set a thread name. The first is via the SetThreadDescription function. 
