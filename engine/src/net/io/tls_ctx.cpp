@@ -138,6 +138,8 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
         return -1;
     }
 
+    int32_t ok = 0; // 在goto之前声明
+
     // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
     // 指定了根ca证书路径，说明需要校验对方证书的正确性
     if (ca_path)
@@ -164,7 +166,6 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
      */
     if (!cert_file || !key_file) return 0;
 
-    int32_t ok = 0;
     // 加载pem格式的ca证书文件，暂不支持ASN1（SSL_FILETYPE_ASN1）格式
     // ASN1只支持一个文件一个证书，pem可以将多个证书放到同一个文件
     if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0)

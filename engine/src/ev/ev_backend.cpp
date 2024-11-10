@@ -5,7 +5,7 @@
 
 EVBackend *EVBackend::instance()
 {
-#ifdef __windows__
+#ifdef __poll__
     return new PollBackend;
 #else
     return new EpollBackend();

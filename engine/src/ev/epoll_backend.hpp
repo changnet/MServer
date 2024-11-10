@@ -1,9 +1,12 @@
 #pragma once
 
-#if defined(__linux__)
+#include "global/platform.hpp"
+#if defined(__epoll__)
 
 #include "net/net_compat.hpp"
 #include "ev_backend.hpp"
+
+#include <sys/epoll.h>
 
 /// backend using epoll implement
 class EpollBackend final : public EVBackend

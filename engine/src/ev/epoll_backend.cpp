@@ -11,11 +11,11 @@
  *   这时需要调整事件大小，重新编译。
  */
 
-#if defined(__linux__)
+#include "epoll_backend.hpp"
+#if defined(__epoll__)
 
 #include <fcntl.h>
 #include <unistd.h> /* POSIX api, like close */
-#include <sys/epoll.h>
 #include <sys/eventfd.h> // for eventfd
 
 const char *__BACKEND__ = "epoll";
@@ -104,7 +104,7 @@ void EpollBackend::do_wait_event(int32_t ev_count)
         // 但有时候watcher并没有设置EV_WRITE或者EV_READ，因此需要独立检测
         if (revents & (EPOLLERR | EPOLLHUP)) events |= EV_CLOSE;
 
-        EVIO *w = get_fd_watcher(fd);
+        EVIO *w = _fd_mgr.get(static_cast<int32_t>(fd));
         assert(w);
         do_watcher_wait_event(w, events);
     }
@@ -115,6 +115,7 @@ void EpollBackend::wake()
     static const int64_t v = 1;
     if (::write(_wake_fd, &v, sizeof(v)) <= 0)
     {
+        assert(_wake_fd > 0);
         ELOG("fail to wakeup epoll e = %d: %s", errno, strerror(errno));
     }
 }

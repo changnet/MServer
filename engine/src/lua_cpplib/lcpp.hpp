@@ -4,11 +4,14 @@
 #include <string>
 #include <cassert>
 #include <stdexcept>
+#include  <utility> // std::make_index_sequence
 
 #define ARGS_CHECK
 
 namespace lcpp
 {
+
+template <class T> class Class; // 前置声明，lua_to_cpp要用
 
 // 参数的检测，不能直接用lua_check*，因为会触发long jump，这里用throw
 #ifdef ARGS_CHECK
@@ -53,7 +56,7 @@ template <typename T> T lua_to_cpp(lua_State *L, int i)
         if (!p || lua_islightuserdata(L, i)) return (T)p;
 
         // 这里只能是full userdata了，如果定义过则是通过lclass push的指针
-        const char *name = Class<T1>::template _class_name;
+        const char *name = Class<T1>::_class_name;
         if (luaL_testudata(L, i, name)) return *((T1 **)p);
 
         return nullptr;
@@ -276,7 +279,31 @@ inline void cpp_to_lua(lua_State *L, const std::string &v)
 // C++ 20 std::remove_cvref
 // TODO std::remove_volatile 需要吗？
 template <typename T>
-using remove_cvref = std::remove_cv<std::remove_reference_t<T>>::template type;
+using remove_cvref = typename std::remove_cv_t<typename std::remove_reference_t<T>>;
+
+// 前置声明
+template <typename T> struct class_remove;
+// 特化为static函数或全局函数
+template <typename Ret, typename... Args> struct class_remove<Ret (*)(Args...)>
+{
+    using type = Ret (*)(Args...);
+};
+// 特化为成员函数
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...)>
+{
+    using type = Ret (*)(Args...);
+};
+// 特化为const成员函数
+template <typename T, typename Ret, typename... Args>
+struct class_remove<Ret (T::*)(Args...) const>
+    : public class_remove<Ret (T::*)(Args...)>
+{
+};
+
+template <typename T>
+inline constexpr bool is_lua_func =
+    std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
 
 /**
  * @brief 用于全局函数、static函数注册
@@ -424,7 +451,7 @@ public:
     }
 
     // 创建一个类的对象，但不向lua注册。仅用于注册后使用同样的对象并且虚拟机L应该和注册时一致
-    explicit Class(lua_State *L) : L(L)
+    explicit Class(lua_State *L) : _L(L)
     {
         // 注册过后，必定存在类名
         // assert（_class_name);
@@ -432,7 +459,7 @@ public:
 
     // 注册一个类
     // @param L lua虚拟机指针
-    explicit Class(lua_State *L, const char *classname) : L(L)
+    explicit Class(lua_State *L, const char *classname) : _L(L)
     {
         _class_name = classname;
 
@@ -511,19 +538,19 @@ public:
     template <typename... Args> void constructor()
     {
 
-        luaL_getmetatable(L, _class_name);
-        assert(lua_istable(L, -1));
+        luaL_getmetatable(_L, _class_name);
+        assert(lua_istable(_L, -1));
 
         // lua_getmetatable获取不到metatable的话，并不会往堆栈push一个nil
-        if (!lua_getmetatable(L, -1))
+        if (!lua_getmetatable(_L, -1))
         {
-            lua_newtable(L);
+            lua_newtable(_L);
         }
-        lua_pushcfunction(L, class_constructor<Args...>);
-        lua_setfield(L, -2, "__call");
-        lua_setmetatable(L, -2);
+        lua_pushcfunction(_L, class_constructor<Args...>);
+        lua_setfield(_L, -2, "__call");
+        lua_setmetatable(_L, -2);
 
-        lua_pop(L, 1); /* drop class metatable */
+        lua_pop(_L, 1); /* drop class metatable */
     }
 
     /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete
@@ -596,23 +623,23 @@ public:
             cfp = ClassRegister<decltype(fp)>::template reg<fp>;
         }
 
-        luaL_getmetatable(L, _class_name);
+        luaL_getmetatable(_L, _class_name);
 
-        lua_pushcfunction(L, cfp);
-        lua_setfield(L, -2, name);
+        lua_pushcfunction(_L, cfp);
+        lua_setfield(_L, -2, name);
 
-        lua_pop(L, 1); /* drop class metatable */
+        lua_pop(_L, 1); /* drop class metatable */
     }
 
     /* 注册变量,通常用于设置宏定义、枚举 */
     void set(int32_t val, const char *val_name)
     {
-        luaL_getmetatable(L, _class_name);
+        luaL_getmetatable(_L, _class_name);
 
-        lua_pushinteger(L, val);
-        lua_setfield(L, -2, val_name);
+        lua_pushinteger(_L, val);
+        lua_setfield(_L, -2, val_name);
 
-        lua_pop(L, 1); /* drop class metatable */
+        lua_pop(_L, 1); /* drop class metatable */
     }
 
 private:
@@ -621,6 +648,7 @@ private:
                                        const std::index_sequence<I...> &)
     {
         return new T(lua_to_cpp<Args>(L, 2 + I)...);
+        (void)L; // warning: parameter ‘L’ set but not used [-Wunused-but-set-parameter]
     }
 
     template <typename... Args> static int class_constructor(lua_State *L)
@@ -728,7 +756,7 @@ public:
     static const char *_class_name;
 
 private:
-    lua_State *L;
+    lua_State *_L;
 };
 
 // 用于保证函数调用前后，Lua堆栈是干净的
@@ -748,30 +776,6 @@ public:
 private:
     lua_State *_L;
 };
-
-// 前置声明
-template <typename T> struct class_remove;
-// 特化为static函数或全局函数
-template <typename Ret, typename... Args> struct class_remove<Ret (*)(Args...)>
-{
-    using type = Ret (*)(Args...);
-};
-// 特化为成员函数
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...)>
-{
-    using type = Ret (*)(Args...);
-};
-// 特化为const成员函数
-template <typename T, typename Ret, typename... Args>
-struct class_remove<Ret (T::*)(Args...) const>
-    : public class_remove<Ret (T::*)(Args...)>
-{
-};
-
-template <typename T>
-inline constexpr bool is_lua_func =
-    std::is_same<typename class_remove<T>::type, lua_CFunction>::value;
 
 template <auto fp,
           typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>

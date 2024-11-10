@@ -7,6 +7,7 @@
 #else
     #include <unistd.h> // close
     #include <cstring> // strerror
+    #include <cerrno> // errno
 #endif
 
 /**

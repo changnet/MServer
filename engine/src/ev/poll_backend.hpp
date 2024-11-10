@@ -1,5 +1,8 @@
 #pragma once
 
+#include "global/platform.hpp"
+#if defined(__poll__)
+
 #include "ev_backend.hpp"
 
 #include "net/net_compat.hpp"
@@ -41,3 +44,5 @@ private:
     std::vector<struct pollfd> _poll_fd;
 #endif
 };
+
+#endif

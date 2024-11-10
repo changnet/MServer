@@ -142,7 +142,7 @@ int32_t EventSwapList::append_event(EVIO *w, int32_t ev,int32_t &counter, int32_
     // 否则发协议时会导致事件数组很长
     if (_counter == counter)
     {
-        assert(_append.size() > index);
+        assert(_append.size() > (size_t)index);
 
         WatcherEvent &fe = _append[index];
 

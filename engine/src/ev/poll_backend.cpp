@@ -1,6 +1,7 @@
-#include "net/socketpair.hpp"
-
 #include "poll_backend.hpp"
+#if defined(__poll__)
+
+#include "net/socketpair.hpp"
 
 #ifdef __windows__
     const char *__BACKEND__ = "WSAPoll";
@@ -146,7 +147,7 @@ int32_t PollBackend::del_fd_index(int32_t fd)
     uint32_t ufd = ((uint32_t)fd);
     if (ufd < HUGE_FD)
     {
-        if (fd < _fd_index.size())
+        if (ufd < _fd_index.size())
         {
             index          = _fd_index[ufd];
             _fd_index[ufd] = -1;
@@ -169,7 +170,7 @@ int32_t PollBackend::get_fd_index(int32_t fd)
     uint32_t ufd = ((uint32_t)fd);
     if (ufd < HUGE_FD)
     {
-        return fd >= _fd_index.size() ? -1 : _fd_index[ufd];
+        return ufd >= _fd_index.size() ? -1 : _fd_index[ufd];
     }
 
     auto found = _fd_index_huge.find(fd);
@@ -248,3 +249,5 @@ int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
 
     return 0;
 }
+
+#endif

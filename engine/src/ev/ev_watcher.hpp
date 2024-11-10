@@ -254,7 +254,7 @@ public:
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
         {
-            if (fd < _fd_watcher.size()) _fd_watcher[fd] = nullptr;
+            if (ufd < _fd_watcher.size()) _fd_watcher[ufd] = nullptr;
         }
         else
         {
@@ -268,7 +268,7 @@ public:
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
         {
-            return fd >= _fd_watcher.size() ? nullptr : _fd_watcher[ufd];
+            return ufd >= _fd_watcher.size() ? nullptr : _fd_watcher[ufd];
         }
 
         auto found = _fd_watcher_huge.find(fd);
