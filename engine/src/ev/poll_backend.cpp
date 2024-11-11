@@ -2,6 +2,7 @@
 #if defined(__poll__)
 
 #include "net/socketpair.hpp"
+#include "net/net_compat.hpp"
 
 #ifdef __windows__
     const char *__BACKEND__ = "WSAPoll";
@@ -67,7 +68,12 @@ bool PollBackend::before_start()
 void PollBackend::wake()
 {
     static const int8_t v = 1;
-    ::send(_wake_fd[0], (const char *)&v, sizeof(v), 0);
+    int32_t bytes = ::send(_wake_fd[0], (const char *)&v, sizeof(v), 0);
+    if (bytes <= 0)
+    {
+        int32_t e = netcompat::errorno();
+        ELOG_R("poll wake error %d: %s", e, netcompat::strerror(e));
+    }
 }
 
 void PollBackend::do_wait_event(int32_t ev_count)

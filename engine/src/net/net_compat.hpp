@@ -39,10 +39,14 @@ namespace netcompat
         // https://docs.microsoft.com/zh-cn/windows/win32/api/winbase/nf-winbase-formatmessage?redirectedfrom=MSDN
         // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) 用这个语言设定的话，中文系统无法在utf8终端上显示
         thread_local char buff[512] = {0};
-        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
+        DWORD r = FormatMessage(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
                           | FORMAT_MESSAGE_MAX_WIDTH_MASK,
                       nullptr, e, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
                       buff, sizeof(buff), nullptr);
+
+        if (0 == r) return "unknow error";
+
         return buff;
         
         // #include<system_error>是参考了linux下的，比如无法连接是提示connection refused

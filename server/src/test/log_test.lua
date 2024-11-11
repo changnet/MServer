@@ -19,7 +19,7 @@ t_describe("log test", function()
 
         -- 创建独立的线程
         local logger = Log("test_logger")
-        logger:start(3000000) -- 3000000微秒写入一次
+        logger:start(3000) -- 3000毫秒写入一次
 
         -- 测试daily
         -- 按天滚动日志不太好测试，不过由于runtime是基于这个的，应该也不需要怎么测试

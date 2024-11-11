@@ -13,8 +13,18 @@ local min = math.min
 -- @param alpha 角度
 function graph.rotate(x, y, alpha)
     -- https://www.cnblogs.com/orange1438/p/4583825.html
+    --[[
+        旋转矩阵公式
+        # 原坐标(x, y)旋转后的新坐标(x', y')计算公式
+        # θ = 45度 = π/4
+        x' = x * cos(θ) + y * sin(θ)
+        y' = -x * sin(θ) + y * cos(θ)
+        # 由于是45度，cos(45°) = sin(45°) = 1/√2 ≈ 0.707
+        x' = x * 0.707 + y * 0.707
+        y' = -x * 0.707 + y * 0.707
+    ]]
 
-    -- 角度转换为弧度
+    -- 角度转换为弧度cos单位为弧度，上面的cos(θ) = cos(π/4) = 0.707
     local radian = rad(alpha)
     local cos, sin = math.cos(radian), math.sin(radian)
 

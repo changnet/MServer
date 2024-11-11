@@ -49,6 +49,17 @@ EV::~EV()
     _backend = nullptr;
 }
 
+int32_t EV::loop_init()
+{
+    time_update();
+
+    // 在进入loop之前，要初始化一些必要的数据
+    // 因为loop是在lua脚本调用的，在调用loop之前，可能会调用定时器、socket相关接口
+    if (!_backend->start(this)) return -1;
+
+    return 0;
+}
+
 int32_t EV::loop()
 {
     // 脚本可能加载了很久才进入loop，需要及时更新时间
@@ -64,8 +75,6 @@ int32_t EV::loop()
 
     _done           = false;
     int64_t last_ms = _steady_clock;
-
-    if (!_backend->start(this)) return -1;
 
     static const int64_t min_wait = 1;     // 最小等待时间，毫秒
     static const int64_t max_wait = 60000; // 最大等待时间，毫秒

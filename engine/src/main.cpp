@@ -30,6 +30,8 @@ int32_t main(int32_t argc, char **argv)
     lcpp::Class<LLog>::push(L, StaticGlobal::async_logger(), false);
     lua_setglobal(L, "g_async_log");
 
+    StaticGlobal::ev()->loop_init();
+
     /* 加载程序入口脚本 */
     char script_path[PATH_MAX];
     snprintf(script_path, sizeof(script_path), "%s", LUA_ENTERANCE);

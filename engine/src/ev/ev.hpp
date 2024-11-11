@@ -21,6 +21,7 @@ public:
 
     int32_t loop();
     int32_t quit();
+    int32_t loop_init();
 
     /**
      * @brief 启动一个io监听
