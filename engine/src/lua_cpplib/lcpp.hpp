@@ -789,6 +789,67 @@ template <lua_CFunction fp> void reg_global_func(lua_State *L, const char *name)
     lua_register(L, name, fp);
 }
 
+/**
+ * 调用lua全局函数，无返回。错误会抛异常
+ * @param name 函数名
+ * @param Args 参数
+ */
+template <typename... Args> void call(lua_State *L, const char *name, Args... args)
+{
+#ifndef NDEBUG
+    StackChecker sc(L);
+#endif
+
+    lua_getglobal(L, "__G_C_TRACKBACK"); // 需要自己在Lua实现trace函数
+    lua_getglobal(L, name);
+
+    // https://stackoverflow.com/questions/69021792/expand-parameter-pack-with-index-using-a-fold-expression
+    (cpp_to_lua(L, args), ...);
+
+    const size_t nargs = sizeof...(Args);
+    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, 1))
+    {
+        std::string message("call ");
+        message = message + name + " :" + lua_tostring(L, -1);
+        lua_pop(L, 2); // pop error message and traceback
+
+        throw std::runtime_error(message);
+    }
+    lua_pop(L, 1); // pop traceback function
+}
+
+/**
+ * 调用lua全局函数，需要指定返回类型，如call<int>("func", 1, 2, 3)。错误会抛异常
+ * @param name 函数名
+ * @param Args 参数
+ */
+template <typename Ret, typename... Args>
+Ret call(lua_State *L, const char *name, Args... args)
+{
+#ifndef NDEBUG
+    StackChecker sc(L);
+#endif
+
+    lua_getglobal(L, "__G_C_TRACKBACK"); // 需要自己在Lua实现trace函数
+    lua_getglobal(L, name);
+
+    (lcpp::cpp_to_lua(L, args), ...);
+
+    const size_t nargs = sizeof...(Args);
+    if (LUA_OK != lua_pcall(L, (int32_t)nargs, 0, 1))
+    {
+        std::string message("call ");
+        message = message + name + " :" + lua_tostring(L, -1);
+        lua_pop(L, 2); // pop error message and traceback
+
+        throw std::runtime_error(message);
+    }
+    Ret v = lua_to_cpp<Ret>(L, -1);
+    lua_pop(L, 2); // pop retturn v and traceback function
+
+    return v;
+}
+
 #undef luaL_checkis
 } // namespace lcpp
 template <class T> const char *lcpp::Class<T>::_class_name = nullptr;

@@ -98,7 +98,7 @@ void IO::init_ready() const
 {
     try
     {
-        StaticGlobal::S->call("conn_io_ready", _conn_id);
+        lcpp::call(StaticGlobal::L, "conn_io_ready", _conn_id);
     }
     catch (const std::runtime_error& e)
     {

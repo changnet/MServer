@@ -669,7 +669,7 @@ void Socket::close_cb(bool term)
 
     try
     {
-        StaticGlobal::S->call("conn_del", _conn_id, e);
+        lcpp::call(StaticGlobal::L, "conn_del", _conn_id, e);
     }
     catch (const std::exception& e)
     {
@@ -714,7 +714,7 @@ void Socket::accept_new(int32_t fd)
 
     try
     {
-        StaticGlobal::S->call("conn_accept", _conn_id, fd);
+        lcpp::call(StaticGlobal::L, "conn_accept", _conn_id, fd);
     }
     catch (const std::exception& e)
     {
@@ -797,7 +797,7 @@ void Socket::connect_cb()
 
     try
     {
-        StaticGlobal::S->call("conn_new", _conn_id, ecode);
+        lcpp::call(StaticGlobal::L, "conn_new", _conn_id, ecode);
     }
     catch (const std::exception &e)
     {
