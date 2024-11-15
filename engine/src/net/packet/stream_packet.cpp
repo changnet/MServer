@@ -1,8 +1,11 @@
 #include "stream_packet.hpp"
 
+#include "net/socket.hpp"
+#include "net/net_header.hpp"
+
 #include "lua_cpplib/ltools.hpp"
 #include "system/static_global.hpp"
-#include "net/socket.hpp"
+
 #include "net/codec/luabin_codec.hpp"
 
 StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
@@ -15,51 +18,49 @@ StreamPacket::~StreamPacket()
 
 int32_t StreamPacket::unpack(Buffer &buffer)
 {
+    constexpr decltype(NetHeader::_size) header_size = sizeof(struct NetHeader);
     // 检测包头是否完整
-    const char *buf = buffer.to_flat_ctx(sizeof(struct base_header));
+    const char *buf = buffer.to_flat_ctx(header_size);
     if (!buf) return 0;
 
-    const struct base_header *header =
-        reinterpret_cast<const struct base_header *>(buf);
+    // 这里不能用reinterpret_cast把buf直接转换成对应的数据类型，比如reinterpret_cast<const struct base_header *>(buf)
+    // 只能用memcpy，C++ 20以后可以用std::bit_cast
+    decltype(NetHeader::_size) size = 0;
+    memcpy(&size, buf, sizeof(size));
 
-    // 检测包内容是否完整
-    uint32_t length = header->_length;
-    if (!buffer.check_used_size(length)) return 0;
+    if (!buffer.check_used_size(size)) return 0;
 
-    header =
-        reinterpret_cast<const struct base_header *>(buffer.to_flat_ctx(length));
+    decltype(NetHeader::_cmd) cmd = 0;
+    memcpy(&cmd, buf + sizeof(size), sizeof(cmd));
 
-    dispatch(header);      // 数据包完整，派发处理
-    bool next = buffer.remove(length); // 无论成功或失败，都移除该数据包
+    try
+    {
+        int32_t conn_id = _socket->conn_id();
+        lcpp::call(StaticGlobal::L, "command_new", conn_id, cmd,
+                   (void *)(buf + header_size), size - header_size);
+    }
+    catch (const std::runtime_error &e)
+    {
+        ELOG("%s", e.what());
+    }
+
+    bool next = buffer.remove(size); // 无论成功或失败，都移除该数据包
 
     return next ? 1 : 0;
 }
 
-void StreamPacket::dispatch(const struct base_header *header)
+int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
 {
-    static lua_State *L = StaticGlobal::state();
+    return 0;
+}
 
-    assert(0 == lua_gettop(L));
-
-    int32_t conn_id = _socket->conn_id();
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
-    lua_pushinteger(L, conn_id);
-    lua_pushlightuserdata(L, const_cast<struct base_header *>(header));
-
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2, 0, 1)))
-    {
-        ELOG("%s", lua_tostring(L, -1));
-
-        lua_settop(L, 0); /* remove traceback and error object */
-        return;
-    }
-    lua_settop(L, 0); /* remove traceback */
+int32_t StreamPacket::pack_srv(lua_State* L, int32_t index)
+{
+    return 0;
 }
 
 #ifdef OLDNET
-void StreamPacket::rpc_command(const s2s_header *header)
+void StreamPacket::rpc_command(const SSHeader *header)
 {
     /**
      * TODO protobuf的codec是在lua做的，一是方便更换编码方案，二是外部的protobuf库接口是lua的
@@ -107,7 +108,7 @@ void StreamPacket::rpc_command(const s2s_header *header)
     lua_settop(L, 0); /* remove trace back */
 }
 
-void StreamPacket::rpc_return(const s2s_header *header)
+void StreamPacket::rpc_return(const SSHeader *header)
 {
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
@@ -162,13 +163,13 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
         }
     }
 
-    struct s2s_header s2sh;
+    struct SSHeader s2sh;
     SET_HEADER_LENGTH(s2sh, len, 0, SET_LENGTH_FAIL_RETURN);
     s2sh._cmd    = ecode;
     s2sh._packet = pkt;
     s2sh._owner = unique_id;
 
-    _socket->append(&s2sh, sizeof(struct s2s_header));
+    _socket->append(&s2sh, sizeof(struct SSHeader));
     if (len > 0)
     {
         _socket->append(buffer, static_cast<uint32_t>(len));
@@ -211,7 +212,7 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
         return luaL_error(L, "can not raw pack clt");
     }
 
-    PKT_STAT_ADD(SPT_SCPK, cmd, int32_t(len + sizeof(struct s2c_header)),
+    PKT_STAT_ADD(SPT_SCPK, cmd, int32_t(len + sizeof(struct SCHeader)),
                  STAT_TIME_END());
     return 0;
 }
@@ -228,7 +229,7 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
     int32_t len        = luaL_checkinteger32(L, index + 2);
     if (len < 0) return -1;
 
-    struct c2s_header c2sh;
+    struct CSHeader c2sh;
     SET_HEADER_LENGTH(c2sh, len, cmd, SET_LENGTH_FAIL_ENCODE);
     c2sh._cmd = static_cast<uint16_t>(cmd);
 
@@ -264,7 +265,7 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
         return luaL_error(L, "can not raw_pack_ss");
     }
 
-    PKT_STAT_ADD(SPT_SSPK, cmd, int32_t(len + sizeof(struct s2s_header)),
+    PKT_STAT_ADD(SPT_SSPK, cmd, int32_t(len + sizeof(struct SSHeader)),
                  STAT_TIME_END());
     return 0;
 }
@@ -288,7 +289,7 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     if (len < 0) return -1;
 
     /* 把客户端数据包放到服务器数据包 */
-    struct s2s_header s2sh;
+    struct SSHeader s2sh;
     SET_HEADER_LENGTH(s2sh, len, cmd, SET_LENGTH_FAIL_ENCODE);
     s2sh._cmd   = static_cast<uint16_t>(cmd);
     s2sh._errno = ecode;
@@ -310,7 +311,7 @@ int32_t StreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
                                    size_t size)
 {
     /* 先构造客户端收到的数据包 */
-    struct s2c_header s2ch;
+    struct SCHeader s2ch;
     SET_HEADER_LENGTH(s2ch, size, cmd, SET_LENGTH_FAIL_RETURN);
     s2ch._cmd   = static_cast<uint16_t>(cmd);
     s2ch._errno = ecode;
@@ -325,7 +326,7 @@ int32_t StreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
 int32_t StreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
                                   const char *ctx, size_t size)
 {
-    struct s2s_header s2sh;
+    struct SSHeader s2sh;
     SET_HEADER_LENGTH(s2sh, size, cmd, SET_LENGTH_FAIL_RETURN);
     s2sh._cmd    = static_cast<uint16_t>(cmd);
     s2sh._owner  = session;
@@ -385,7 +386,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
     size_t list_len = sizeof(Owner) * idx;
 
     /* 把客户端数据包放到服务器数据包 */
-    struct s2s_header s2sh;
+    struct SSHeader s2sh;
     SET_HEADER_LENGTH(s2sh, list_len + len, cmd, SET_LENGTH_FAIL_ENCODE);
     s2sh._cmd   = static_cast<uint16_t>(cmd);
     s2sh._owner = 0;
@@ -434,7 +435,7 @@ void StreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
 }
 
 // 处理其他进程发过来的客户端广播
-void StreamPacket::ssc_multicast(const s2s_header *header)
+void StreamPacket::ssc_multicast(const SSHeader *header)
 {
     const Owner *raw_list = reinterpret_cast<const Owner *>(header + 1);
     int32_t mask          = static_cast<int32_t>(*raw_list);

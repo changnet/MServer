@@ -801,6 +801,7 @@ template <typename... Args> void call(lua_State *L, const char *name, Args... ar
 #endif
 
     lua_getglobal(L, "__G_C_TRACKBACK"); // 需要自己在Lua实现trace函数
+    assert(lua_isfunction(L, 1));
     lua_getglobal(L, name);
 
     // https://stackoverflow.com/questions/69021792/expand-parameter-pack-with-index-using-a-fold-expression
@@ -831,6 +832,7 @@ Ret call(lua_State *L, const char *name, Args... args)
 #endif
 
     lua_getglobal(L, "__G_C_TRACKBACK"); // 需要自己在Lua实现trace函数
+    assert(lua_isfunction(L, 1));
     lua_getglobal(L, name);
 
     (lcpp::cpp_to_lua(L, args), ...);

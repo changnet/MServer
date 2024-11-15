@@ -40,7 +40,7 @@ int32_t WSStreamPacket::pack_clt(lua_State *L, int32_t index)
         return luaL_error(L, "can not do_pack_clt");
     }
 
-    PKT_STAT_ADD(SPT_SCPK, cmd, int32_t(size + sizeof(struct s2c_header)),
+    PKT_STAT_ADD(SPT_SCPK, cmd, int32_t(size + sizeof(struct SCHeader)),
                  STAT_TIME_END());
     return 0;
 }
@@ -68,7 +68,7 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
         return luaL_error(L, "buffer size over MAX_PACKET_LEN:%d", cmd);
     }
 
-    struct c2s_header c2sh;
+    struct CSHeader c2sh;
     SET_HEADER_LENGTH(c2sh, size, cmd, SET_LENGTH_FAIL_ENCODE);
     c2sh._cmd = static_cast<uint16_t>(cmd);
 
@@ -112,13 +112,13 @@ int32_t WSStreamPacket::on_frame_end()
     /* 服务器收到的包，看要不要转发 */
     size_t data_size     = 0;
     const char *data_ctx = _body.all_to_flat_ctx(data_size);
-    if (data_size < sizeof(struct c2s_header))
+    if (data_size < sizeof(struct CSHeader))
     {
         ELOG("ws_stream_packet on_frame_end packet incomplete");
         return 0;
     }
-    const struct c2s_header *header =
-        reinterpret_cast<const struct c2s_header *>(data_ctx);
+    const struct CSHeader *header =
+        reinterpret_cast<const struct CSHeader *>(data_ctx);
 
     uint16_t cmd = header->_cmd;
     if (data_size < header->_length)
@@ -148,7 +148,7 @@ int32_t WSStreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode,
 int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
                                     uint16_t ecode, const char *ctx, size_t size)
 {
-    struct s2c_header s2ch;
+    struct SCHeader s2ch;
     SET_HEADER_LENGTH(s2ch, size, cmd, SET_LENGTH_FAIL_RETURN);
     s2ch._cmd   = static_cast<uint16_t>(cmd);
     s2ch._errno = ecode;

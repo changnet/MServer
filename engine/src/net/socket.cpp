@@ -865,7 +865,7 @@ int32_t Socket::set_packet(int32_t packet_type)
     switch (packet_type)
     {
     case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
-    //case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
+    case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
     case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
     //case Packet::PT_WSSTREAM: _packet = new WSStreamPacket(this); break;
     default: return -1;

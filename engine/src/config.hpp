@@ -1,6 +1,5 @@
 #pragma once
 
-/* 是否打开内存调试，在makefile中定义 */
 // #define NMEM_DEBUG
 #define NDBG_MEM_TRACE
 
@@ -9,10 +8,6 @@
 
 /* is assert work ? */
 //#define NDEBUG
-
-
-/* 单个包最大长度，与包头数据类型定义有关 */
-#define MAX_PACKET_LEN 65535
 
 //////////////////////////////TCP KEEP ALIVE////////////////////////////////////
 /* 是否开启tcp keepalive，一旦开启，所有accept、connect的socket都会启用 */

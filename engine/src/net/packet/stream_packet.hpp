@@ -1,12 +1,6 @@
 #pragma once
 
-#include "net/net_header.hpp"
 #include "packet.hpp"
-
-struct base_header;
-struct c2s_header;
-struct s2s_header;
-struct CmdCfg;
 
 class StreamPacket : public Packet
 {
@@ -14,11 +8,13 @@ public:
     virtual ~StreamPacket();
     StreamPacket(class Socket *sk);
 
-    PacketType type() const { return PT_STREAM; }
+    PacketType type() const override { return PT_STREAM; }
 
-    int32_t unpack(Buffer &buffer);
+    virtual int32_t pack_clt(lua_State *L, int32_t index) override;
+    virtual int32_t pack_srv(lua_State *L, int32_t index) override;
+
+    int32_t unpack(Buffer &buffer) override;
 
 private:
-    void dispatch(const struct base_header *header);
 
 };

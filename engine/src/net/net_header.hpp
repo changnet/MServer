@@ -1,14 +1,12 @@
 #pragma once
 
-/* 网络通信消息包头格式定义
+/**
+ * @berife 网络通信消息包头格式定义
  */
 
 #include "global/global.hpp"
 
-#define MAX_SCHEMA_NAME 64
-
-typedef int32_t Owner;
-
+/*
 #define SET_LENGTH_FAIL_BOOL \
     do                       \
     {                        \
@@ -40,7 +38,7 @@ typedef int32_t Owner;
         h._length = static_cast<packet_size_t>(hl);                   \
     } while (0)
 
-/* 根据一个header指针获取header后buffer的长度 */
+// 根据一个header指针获取header后buffer的长度
 #define PACKET_BUFFER_LEN(h) ((h)->_length - sizeof(*h))
 
 typedef enum
@@ -56,45 +54,41 @@ typedef enum
 
     SPT_MAXT // max packet type
 } StreamPacketType;
-
-typedef enum
-{
-    CLT_MC_NONE  = 0,
-    CLT_MC_OWNER = 1, // 根据玩家id广播
-    // 未定义的值，会回调到脚本处理
-
-    CLT_MC_MAX
-} clt_multicast_t;
+*/
 
 #pragma pack(push, 1)
 
-typedef uint16_t array_size_t; // 数组长度类型，自定义二进制用。数组最大不超过65535
-typedef uint16_t packet_size_t; // 包长类型，包最大不超过65535
-typedef uint16_t string_size_t; // 字符串长度类型，自定义二进制用。最大不超过65535
+typedef uint32_t header_size_t; // 包长类型，包最大不超过65535
+
+typedef int32_t h_pid_t;     // 玩家id类型
+typedef uint16_t h_list_t;   // 数组长度类型，自定义二进制用。数组最大不超过65535
+typedef uint16_t h_string_t; // 字符串长度类型，自定义二进制用。最大不超过65535
+
+inline constexpr int MAX_HEADER_LEN = (1 << sizeof(header_size_t)) - 1;
 
 /* !!!!!!!!! 这里的数据结构必须符合POD结构 !!!!!!!!! */
 
-struct base_header
+struct NetHeader
 {
-    packet_size_t _length; /* 包长度，包含本身 */
+    header_size_t _size; /* 包长度，包含本身 */
     uint16_t _cmd;         /* 协议号 */
 };
 
 /* 客户端发往服务器 */
-struct c2s_header : public base_header
+struct CSHeader : public NetHeader
 {
 };
 
 /* 服务器发往客户端 */
-struct s2c_header : public base_header
+struct SCHeader : public NetHeader
 {
 };
 
 /* 服务器发往服务器 */
-struct s2s_header : public base_header
+struct SSHeader : public NetHeader
 {
-    uint16_t _packet; /* 数据包类型，见packet_t */
-    Owner _owner;     /* 当前数据包所属id，通常为玩家id */
+    uint32_t _type;   /* 数据包类型 */
+    h_pid_t _pid;   /* 当前数据包所属玩家id，用于转发数据包 */
 };
 
 #pragma pack(pop)
