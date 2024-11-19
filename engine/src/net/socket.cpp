@@ -134,7 +134,7 @@ void Socket::append(const void *data, size_t len)
      * 一般缓冲区都设置得足够大
      * 如果都溢出了，说明接收端非常慢，比如断点调试，这时候适当处理一下
      */
-    if (EXPECT_TRUE(0 == e)) return;
+    if (likely(0 == e)) return;
 
     if (_w->_mask & EVIO::M_OVERFLOW_KILL)
     {
@@ -831,7 +831,7 @@ void Socket::command_cb()
     } while (CS_OPENED == _status);
 
     // 解析过程中错误，断开链接
-    if (EXPECT_FALSE(ret < 0))
+    if (unlikely(ret < 0))
     {
         Socket::stop();
         ELOG("socket command unpack data fail");

@@ -97,7 +97,7 @@ void LEV::invoke_signal()
         {
             lua_getglobal(L, "sig_handler");
             lua_pushinteger(L, signum);
-            if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, top)))
+            if (unlikely(LUA_OK != lua_pcall(L, 1, 0, top)))
             {
                 ELOG("signal call lua fail:%s", lua_tostring(L, -1));
                 lua_pop(L, 1); /* pop error message */
@@ -124,7 +124,7 @@ void LEV::invoke_app_ev()
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
     lua_pushinteger(L, _steady_clock);
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
         ELOG("invoke_app_ev fail:%s", lua_tostring(L, -1));
         lua_pop(L, 1); /* pop error message */
@@ -198,7 +198,7 @@ void LEV::timer_callback(int32_t id, int32_t revents)
     lua_getglobal(L, "timer_event");
     lua_pushinteger(L, id);
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 1, 0, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
         ELOG("timer call back fail:%s\n", lua_tostring(L, -1));
         lua_pop(L, 2); /* remove error message and traceback function */

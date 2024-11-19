@@ -220,7 +220,7 @@ int32_t Sql::query(const char *stmt, size_t size)
     /* Client error message numbers are listed in the MySQL errmsg.h header
      * file. Server error message numbers are listed in mysqld_error.h
      */
-    if (EXPECT_FALSE(mysql_real_query(_conn, stmt, (unsigned long)size)))
+    if (unlikely(mysql_real_query(_conn, stmt, (unsigned long)size)))
     {
         int32_t e = mysql_errno(_conn);
         if (CR_SERVER_LOST != e && CR_SERVER_GONE_ERROR != e)

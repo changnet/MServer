@@ -55,7 +55,7 @@ public:
     char *ordered_malloc(size_t n, size_t chunk_size)
     {
         assert(n > 0 && chunk_size > 0);
-        if (EXPECT_FALSE(anptmax < n + 1))
+        if (unlikely(anptmax < n + 1))
         {
             size_t size = 16;
             while (size < n + 1) size *= 2;

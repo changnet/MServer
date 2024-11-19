@@ -83,7 +83,7 @@ void LSql::main_routine(int32_t ev)
 {
     static lua_State *L = StaticGlobal::state();
 
-    if (EXPECT_FALSE(ev & S_READY)) on_ready(L);
+    if (unlikely(ev & S_READY)) on_ready(L);
 
     LUA_PUSHTRACEBACK(L);
 
@@ -146,7 +146,7 @@ void LSql::exec_sql(const SqlQuery *query, SqlResult *res)
     const char *stmt = query->get();
     assert(stmt && query->_size > 0);
 
-    if (EXPECT_FALSE(this->query(stmt, query->_size)))
+    if (unlikely(this->query(stmt, query->_size)))
     {
         if (res) res->_ecode = -1;
         ELOG("sql query error:%s", error());

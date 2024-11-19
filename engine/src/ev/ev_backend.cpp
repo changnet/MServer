@@ -288,7 +288,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
         }
 
         // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
-        if (EXPECT_FALSE(kernel_ev & EV_CONNECT))
+        if (unlikely(kernel_ev & EV_CONNECT))
         {
             modify_later(w, kernel_ev & (~EV_CONNECT));
         }

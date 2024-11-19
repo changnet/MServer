@@ -155,7 +155,7 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
             else
             {
                 child = new_node(cx, cy, px, py);
-                if (EXPECT_FALSE(!child)) return false;
+                if (unlikely(!child)) return false;
 
                 child->g       = g;
                 child->h       = h;

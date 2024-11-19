@@ -51,8 +51,8 @@ bool GridMap::fill(int32_t x, int32_t y, int8_t cost)
 // 获取经过这个格子的消耗, < 0 表示不可行
 int8_t GridMap::get_pass_cost(int32_t x, int32_t y) const
 {
-    if (EXPECT_FALSE(x < 0 || x >= _width)) return -1;
-    if (EXPECT_FALSE(y < 0 || y >= _height)) return -1;
+    if (unlikely(x < 0 || x >= _width)) return -1;
+    if (unlikely(y < 0 || y >= _height)) return -1;
 
     return _grid_set[x * _height + y];
 }

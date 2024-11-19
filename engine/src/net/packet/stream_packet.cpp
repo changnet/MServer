@@ -2,11 +2,8 @@
 
 #include "net/socket.hpp"
 #include "net/net_header.hpp"
-
-#include "lua_cpplib/ltools.hpp"
 #include "system/static_global.hpp"
 
-#include "net/codec/luabin_codec.hpp"
 
 StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
 {
@@ -80,7 +77,7 @@ void StreamPacket::rpc_command(const SSHeader *header)
     lua_pushinteger(L, _socket->conn_id());
     lua_pushinteger(L, header->_owner);
 
-    LuaBinCodec *decoder = StaticGlobal::lua_bin_codec();
+    LuaCodec *decoder = StaticGlobal::lua_bin_codec();
     int32_t cnt    = decoder->decode(L, buffer, size, nullptr);
     if (cnt < 1) // rpc调用至少要带函数名
     {
@@ -148,7 +145,7 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
 
     int32_t len        = 0;
     const char *buffer = nullptr;
-    LuaBinCodec *encoder = StaticGlobal::lua_bin_codec();
+    LuaCodec *encoder = StaticGlobal::lua_bin_codec();
 
     if (LUA_OK == ecode)
     {
@@ -489,7 +486,7 @@ void StreamPacket::ssc_multicast(const SSHeader *header)
     {
         lua_pushinteger(L, *(raw_list + idx));
     }
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, count + 1, 1, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, count + 1, 1, 1)))
     {
         ELOG("clt_multicast_new:%s", lua_tostring(L, -1));
 

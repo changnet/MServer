@@ -27,7 +27,7 @@ public:
     // 构造对象
     T *construct()
     {
-        if (EXPECT_FALSE(_objs.empty()))
+        if (unlikely(_objs.empty()))
         {
             for (size_t i = 0; i < nsize; i++) _objs.push_back(new T());
         }

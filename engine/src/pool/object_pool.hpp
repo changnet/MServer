@@ -46,7 +46,7 @@ public:
     */
     template <typename... Args> T *construct(Args &&...args)
     {
-        if (EXPECT_FALSE(_objs.empty()))
+        if (unlikely(_objs.empty()))
         {
             for (size_t i = 0; i < nsize; i++) _objs.push_back(new Storage);
         }

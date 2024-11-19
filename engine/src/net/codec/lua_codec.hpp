@@ -5,11 +5,11 @@
 /**
  * @brief 以二进制方式编码、解码Lua变量，目前仅用于RPC调用
  */
-class LuaBinCodec final
+class LuaCodec final
 {
 public:
-    LuaBinCodec();
-    ~LuaBinCodec();
+    LuaCodec();
+    ~LuaCodec();
 
     /**
      * 解码数据包
@@ -23,8 +23,8 @@ public:
     int32_t encode(lua_State *L, int32_t index, const char **buffer);
 
 private:
-    //< 把基础类型写入缓冲区，不支持指针及自定义结构
-    template <typename T> LuaBinCodec &operator<<(const T &v)
+    // 把基础类型写入缓冲区，不支持指针及自定义结构
+    template <typename T> LuaCodec &operator<<(const T &v)
     {
         *(reinterpret_cast<T *>(_encode_buff + _buff_len)) = v;
         _buff_len += sizeof(T);
@@ -43,7 +43,7 @@ private:
         return _decode_buff + pos;
     }
 
-    template <typename T> LuaBinCodec &operator>>(T &v)
+    template <typename T> LuaCodec &operator>>(T &v)
     {
         v = *(reinterpret_cast<const T *>(_decode_buff + _buff_pos));
         _buff_pos += sizeof(T);

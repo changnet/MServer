@@ -140,7 +140,7 @@ int32_t on_frame_end(struct websocket_parser *parser)
      * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are
      * identified by opcodes where the most significant bit of the opcode is 1)
      */
-    if (EXPECT_FALSE(parser->flags & 0x08))
+    if (unlikely(parser->flags & 0x08))
     {
         return ws_packet->on_ctrl_end();
     }
@@ -320,7 +320,7 @@ int32_t WebsocketPacket::invoke_handshake()
     lua_pushstring(L, key_str);
     lua_pushstring(L, accept_str);
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 3, 0, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, 3, 0, 1)))
     {
         ELOG("websocket handshake:%s", lua_tostring(L, -1));
     }
@@ -344,7 +344,7 @@ int32_t WebsocketPacket::on_frame_end()
     lua_pushinteger(L, _socket->conn_id());
     lua_pushlstring(L, ctx, size);
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, 2, 0, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, 2, 0, 1)))
     {
         ELOG("websocket command:%s", lua_tostring(L, -1));
     }
@@ -376,7 +376,7 @@ int32_t WebsocketPacket::on_ctrl_end()
         lua_pushlstring(L, ctx, size);
     }
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, args_cnt, 0, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, args_cnt, 0, 1)))
     {
         ELOG("websocket ctrl:%s", lua_tostring(L, -1));
     }

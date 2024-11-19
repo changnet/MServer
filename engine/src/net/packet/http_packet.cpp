@@ -200,7 +200,7 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
         lua_pushstring(L, _http_info._body.c_str());
     }
 
-    if (EXPECT_FALSE(LUA_OK != lua_pcall(L, args, 0, 1)))
+    if (unlikely(LUA_OK != lua_pcall(L, args, 0, 1)))
     {
         ELOG("command_new:%s", lua_tostring(L, -1));
     }

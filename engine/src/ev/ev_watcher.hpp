@@ -234,7 +234,7 @@ public:
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
         {
-            if (EXPECT_FALSE(_fd_watcher.size() < ufd))
+            if (unlikely(_fd_watcher.size() < ufd))
             {
                 _fd_watcher.resize(ufd + 1024);
             }

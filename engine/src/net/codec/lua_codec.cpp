@@ -1,6 +1,6 @@
 #include <lua.hpp>
 
-#include "luabin_codec.hpp"
+#include "lua_codec.hpp"
 
 // 缓冲区的大小
 static const int32_t MAX_BUFF = 8 * 1024 * 1024;
@@ -19,7 +19,7 @@ enum LuaType
     LT_INT   = 5, // 整形
 };
 
-LuaBinCodec::LuaBinCodec()
+LuaCodec::LuaCodec()
 {
     _buff_len    = 0;
     _buff_pos    = 0;
@@ -27,12 +27,12 @@ LuaBinCodec::LuaBinCodec()
     _encode_buff = new char[MAX_BUFF];
 }
 
-LuaBinCodec::~LuaBinCodec()
+LuaCodec::~LuaCodec()
 {
     delete[] _encode_buff;
 }
 
-int32_t LuaBinCodec::decode_table(lua_State *L)
+int32_t LuaCodec::decode_table(lua_State *L)
 {
     size_t count = 0;
     // 这里不检测缓冲区，由decode_value检测
@@ -59,7 +59,7 @@ int32_t LuaBinCodec::decode_table(lua_State *L)
     return 0;
 }
 
-int32_t LuaBinCodec::decode_value(lua_State *L)
+int32_t LuaCodec::decode_value(lua_State *L)
 {
 #define CHECK_DECODE_LEN(len)                       \
     if (_buff_pos + len > _buff_len)                \
@@ -136,7 +136,7 @@ int32_t LuaBinCodec::decode_value(lua_State *L)
 #undef CHECK_DECODE_LEN
 }
 
-int32_t LuaBinCodec::decode(lua_State *L, const char *buffer, size_t len)
+int32_t LuaCodec::decode(lua_State *L, const char *buffer, size_t len)
 {
     _buff_pos    = 0;
     _buff_len    = len;
@@ -164,7 +164,7 @@ int32_t LuaBinCodec::decode(lua_State *L, const char *buffer, size_t len)
     return count;
 }
 
-int32_t LuaBinCodec::encode_table(lua_State *L, int32_t index)
+int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
 {
     // table的key数量
     size_t *p_count = reinterpret_cast<size_t *>(_encode_buff + _buff_len);
@@ -197,7 +197,7 @@ int32_t LuaBinCodec::encode_table(lua_State *L, int32_t index)
     return 0;
 }
 
-int32_t LuaBinCodec::encode_value(lua_State *L, int32_t index)
+int32_t LuaCodec::encode_value(lua_State *L, int32_t index)
 {
 #define CHECK_ENCODE_LEN(len)                                       \
     if (sizeof(int8_t) + len + _buff_len >= MAX_BUFF)               \
@@ -252,7 +252,7 @@ int32_t LuaBinCodec::encode_value(lua_State *L, int32_t index)
 #undef CHECK_ENCODE_LEN
 }
 
-int32_t LuaBinCodec::encode(lua_State *L, int32_t index, const char **buffer)
+int32_t LuaCodec::encode(lua_State *L, int32_t index, const char **buffer)
 {
     int top = lua_gettop(L);
     if (index > top || top - index > MAX_VARIABLE)

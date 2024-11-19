@@ -31,7 +31,7 @@ int32_t IO::recv(EVIO *w)
         len = (int32_t)::recv(fd, ts._ctx, ts._len, 0);
 
         _recv.commit(ts, len);
-        if (EXPECT_FALSE(len <= 0)) break;
+        if (unlikely(len <= 0)) break;
 
         // 如果没读满缓冲区，则所有数据已读出来
         if (len < ts._len) return EV_NONE;

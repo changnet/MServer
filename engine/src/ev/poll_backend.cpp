@@ -86,7 +86,7 @@ void PollBackend::do_wait_event(int32_t ev_count)
         if (!revents) continue;
 
         auto fd = pf.fd;
-        if (EXPECT_FALSE(revents & POLLNVAL))
+        if (unlikely(revents & POLLNVAL))
         {
             ELOG("poll invalid fd: " FMT64d, (int64_t)fd);
             assert(false);
@@ -126,7 +126,7 @@ int32_t PollBackend::wait(int32_t timeout)
 #else
     int32_t ev_count = poll(_poll_fd.data(), _poll_fd.size(), timeout);
 #endif
-    if (EXPECT_FALSE(ev_count < 0))
+    if (unlikely(ev_count < 0))
     {
         switch (errno)
         {
@@ -225,7 +225,7 @@ int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
         index = del_fd_index(fd);
         // 不如果不是数组的最后一个，则用数组最后一个位置替换当前位置，然后删除最后一个
         int32_t fd_count = (int32_t)_poll_fd.size() - 1;
-        if (EXPECT_TRUE(index < fd_count))
+        if (likely(index < fd_count))
         {
             auto &poll_fd   = _poll_fd[fd_count];
             _poll_fd[index] = poll_fd;

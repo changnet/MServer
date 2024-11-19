@@ -32,7 +32,7 @@ int32_t SSLIO::recv(EVIO *w)
 
         len = SSL_read(_ssl, ts._ctx, ts._len);
         _recv.commit(ts, len);
-        if (EXPECT_FALSE(len <= 0)) break;
+        if (unlikely(len <= 0)) break;
 
         if (len < ts._len) return EV_NONE;
     }

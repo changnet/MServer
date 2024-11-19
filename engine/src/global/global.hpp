@@ -54,11 +54,11 @@ extern std::string std_format(const char *fmt, ...);
 /* 分支预测，汇编优化。逻辑上不会改变cond的值,C++ 20之后，请使用stl中的likely、unlikely */
 static_assert(__cplusplus < 202002L);
 #ifdef __windows__
-    #define EXPECT_FALSE(cond) cond
-    #define EXPECT_TRUE(cond)  cond
+    #define unlikely(cond) cond
+    #define likely(cond)  cond
 #else
-    #define EXPECT_FALSE(cond) __builtin_expect(!!(cond), 0)
-    #define EXPECT_TRUE(cond)  __builtin_expect(!!(cond), 1)
+    #define unlikely(cond) __builtin_expect(!!(cond), 0)
+    #define likely(cond)  __builtin_expect(!!(cond), 1)
 #endif
 
 /// 求C数组的数量

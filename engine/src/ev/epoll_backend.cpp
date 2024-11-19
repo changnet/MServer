@@ -123,7 +123,7 @@ void EpollBackend::wake()
 int32_t EpollBackend::wait(int32_t timeout)
 {
     int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, timeout);
-    if (EXPECT_FALSE(ev_count < 0))
+    if (unlikely(ev_count < 0))
     {
         if (errno == EINTR) return 0;
 
@@ -167,7 +167,7 @@ int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
      * 即使ev.events为0，epoll还是会监听EPOLLERR和EPOLLHUP，可以处理socket的关闭
      */
 
-    if (EXPECT_TRUE(!epoll_ctl(_ep_fd, op, fd, &ev))) return 0;
+    if (likely(!epoll_ctl(_ep_fd, op, fd, &ev))) return 0;
 
     switch (errno)
     {
@@ -184,7 +184,7 @@ int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
          * 但epoll线程还来不及关闭fd。这时ev中再次添加了该watcher的事件，就会被
          * 标记为EPOLL_CTL_ADD操作，这里重新修正为mod操作
          */
-        if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)))
+        if (likely(!epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)))
         {
             return 0;
         }
@@ -198,7 +198,7 @@ int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
          */
         if (EPOLL_CTL_DEL == op) return 0;
-        if (EXPECT_TRUE(!epoll_ctl(_ep_fd, EPOLL_CTL_ADD, fd, &ev)))
+        if (likely(!epoll_ctl(_ep_fd, EPOLL_CTL_ADD, fd, &ev)))
         {
             return 0;
         }

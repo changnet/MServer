@@ -53,7 +53,7 @@ Buffer::~Buffer()
 size_t Buffer::reserve()
 {
     size_t len = 0;
-    if (EXPECT_FALSE(!_back || 0 == (len = _back->get_free_size())))
+    if (unlikely(!_back || 0 == (len = _back->get_free_size())))
     {
         Chunk *tmp = new_chunk();
         if (_back)
@@ -123,7 +123,7 @@ void Buffer::__append(const void *data, const size_t len)
 
         // 大多数情况下，一次应该可以添加完数据
         // 如果不能，考虑调整单个chunk的大小，否则影响效率
-    } while (EXPECT_FALSE(append_sz < len));
+    } while (unlikely(append_sz < len));
 }
 
 int32_t Buffer::append(const void *data, const size_t len)
@@ -190,7 +190,7 @@ Buffer::Transaction Buffer::any_seserve(bool no_overflow)
 {
     Transaction ts(_lock);
 
-    if (EXPECT_TRUE(!no_overflow || _chunk_size <= _chunk_max))
+    if (likely(!no_overflow || _chunk_size <= _chunk_max))
     {
         ts._internal = true;
         ts._len = (int)reserve();
@@ -240,7 +240,7 @@ const char *Buffer::to_flat_ctx(size_t len)
     size_t used = _front->get_used_size();
     if (0 == used) return nullptr;
 
-    if (EXPECT_TRUE(used >= len))
+    if (likely(used >= len))
     {
         return _front->get_used_ctx();
     }
@@ -281,9 +281,9 @@ const char *Buffer::all_to_flat_ctx(size_t &len)
 
     // 从未写入过数据，就不会分配_front
     // websocket的控制帧不需要写入数据就会尝试获取有没有收到数据
-    if (EXPECT_FALSE(!_front)) return nullptr;
+    if (unlikely(!_front)) return nullptr;
 
-    if (EXPECT_TRUE(!_front->_next))
+    if (likely(!_front->_next))
     {
         len = _front->get_used_size();
         return _front->get_used_ctx();

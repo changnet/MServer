@@ -79,7 +79,7 @@ int32_t EV::loop()
     static const int64_t min_wait = 1;     // 最小等待时间，毫秒
     static const int64_t max_wait = 60000; // 最大等待时间，毫秒
 
-    while (EXPECT_TRUE(!_done))
+    while (likely(!_done))
     {
         // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
         // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
@@ -101,7 +101,7 @@ int32_t EV::loop()
             int64_t to = (_periodics[HEAP0])->_at - _system_clock;
             if (backend_time > to) backend_time = to;
         }
-        if (EXPECT_FALSE(backend_time < min_wait)) backend_time = min_wait;
+        if (unlikely(backend_time < min_wait)) backend_time = min_wait;
         
         // 等待其他线程的数据
         _tcv.wait_for(backend_time);
@@ -264,7 +264,7 @@ void EV::time_update()
         _clock_diff = _system_clock - _steady_clock;
 
         int64_t diff = old_diff - _clock_diff;
-        if (EXPECT_TRUE((diff < 0 ? -diff : diff) < MIN_TIMEJUMP))
+        if (likely((diff < 0 ? -diff : diff) < MIN_TIMEJUMP))
         {
             return;
         }
@@ -284,7 +284,7 @@ void EV::add_pending(EVTimer *w, int32_t revents)
 
     // 已经在待处理队列里了，则设置事件即可
     w->_revents |= static_cast<uint8_t>(revents);
-    if (EXPECT_TRUE(!w->_pending))
+    if (likely(!w->_pending))
     {
         _pendings.emplace_back(w);
         w->_pending = (int32_t)_pendings.size();
@@ -296,7 +296,7 @@ void EV::add_pending(EVTimer *w, int32_t revents)
     for (auto w : _pendings)
     {
         // 可能其他事件调用了clear_pending导致当前watcher无效了
-        if (EXPECT_TRUE(w && w->_pending))
+        if (likely(w && w->_pending))
         {
             int32_t events = w->_revents;
             w->_pending  = 0;
@@ -345,7 +345,7 @@ void EV::timers_reify()
             w->_at += w->_repeat;
 
             // 如果时间出现偏差，重新调整定时器
-            if (EXPECT_FALSE(w->_at < _steady_clock))
+            if (unlikely(w->_at < _steady_clock))
                 w->reschedule(_steady_clock);
 
             assert(w->_repeat > 0);
@@ -378,7 +378,7 @@ void EV::periodic_reify()
             w->_at += w->_repeat;
 
             // 如果时间出现偏差，重新调整定时器
-            if (EXPECT_FALSE(w->_at < _system_clock))
+            if (unlikely(w->_at < _system_clock))
             {
                 w->reschedule(_system_clock);
             }
@@ -440,7 +440,7 @@ int32_t EV::timer_stop(int32_t id)
 int32_t EV::timer_stop(EVTimer *w)
 {
     del_pending(w);
-    if (EXPECT_FALSE(!w->_index)) return 0;
+    if (unlikely(!w->_index)) return 0;
 
     {
         int32_t index = w->_index;
@@ -450,7 +450,7 @@ int32_t EV::timer_stop(EVTimer *w)
         --_timer_cnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (EXPECT_TRUE(index < _timer_cnt + HEAP0))
+        if (likely(index < _timer_cnt + HEAP0))
         {
             // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
             _timers[index] = _timers[_timer_cnt + HEAP0];
@@ -519,7 +519,7 @@ int32_t EV::periodic_stop(int32_t id)
 int32_t EV::periodic_stop(EVTimer *w)
 {
     del_pending(w);
-    if (EXPECT_FALSE(!w->_index)) return 0;
+    if (unlikely(!w->_index)) return 0;
 
     {
         int32_t index = w->_index;
@@ -529,7 +529,7 @@ int32_t EV::periodic_stop(EVTimer *w)
         --_periodic_cnt;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (EXPECT_TRUE(index < _periodic_cnt + HEAP0))
+        if (likely(index < _periodic_cnt + HEAP0))
         {
             // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
             _periodics[index] = _periodics[_periodic_cnt + HEAP0];

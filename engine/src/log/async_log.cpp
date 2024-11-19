@@ -295,7 +295,7 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     buff->_used += cpy_len;
 
     // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为-1
-    if (EXPECT_FALSE(cpy_len < len))
+    if (unlikely(cpy_len < len))
     {
         size_t cur_len = cpy_len;
         do
