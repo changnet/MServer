@@ -3,11 +3,13 @@
 #include "global/global.hpp"
 
 class lprotobuf;
-class ProtobufCodec final
+
+// 基于pbc实现的protobuf codec
+class PbcCodec final
 {
 public:
-    ProtobufCodec();
-    ~ProtobufCodec();
+    PbcCodec();
+    ~PbcCodec();
 
     void finalize();
     void reset();
