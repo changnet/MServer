@@ -102,7 +102,7 @@ add_subdirectory(deps)
 
 # 自己写的代码，额外加一些检测。第三方库不需要这么严格的检测
 if(LINUX)
-	add_compile_options(-Wextra -Wconversion -Wformat=1 -Wno-unused-parameter)
+	add_compile_options(-Wextra -Wconversion -Wformat=1 -Wno-unused-parameter -Wstrict-aliasing)
 	# 把库的符号包含到生成的exe中，lua直接require so库时才可以找到符号
 	# 新版本用 target_link_options
 	# -E等同于 --export-dynamic 或者 -rdynamic

@@ -15,6 +15,7 @@
 
 #include "net/socket.hpp"
 #include "net/io/tls_ctx.hpp"
+#include "net/codec/lua_codec.hpp"
 #include "system/static_global.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
@@ -117,6 +118,16 @@ int32_t luaopen_socket(lua_State* L)
     lc.set(Packet::PT_STREAM, "PT_STREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
+
+    return 0;
+}
+
+int32_t luaopen_lua_codec(lua_State *L)
+{
+    lcpp::Class<LuaCodec> lc(L, "engine.LuaCodec");
+
+    lc.def<&LuaCodec::encode>("encode");
+    lc.def<&LuaCodec::decode>("decode");
 
     return 0;
 }
@@ -330,6 +341,7 @@ void LState::open_cpp()
     luaopen_ev(L);
     luaopen_tls(L);
     luaopen_socket(L);
+    luaopen_lua_codec(L);
     luaopen_sql(L);
     luaopen_log(L);
     luaopen_map(L);

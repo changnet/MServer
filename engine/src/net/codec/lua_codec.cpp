@@ -1,8 +1,10 @@
 #include <lua.hpp>
+#include <stdexcept>
 
 #include "lua_codec.hpp"
 
 // 缓冲区的大小
+static const int32_t MIN_BUFF = 64 * 1024;
 static const int32_t MAX_BUFF = 8 * 1024 * 1024;
 
 // 编码的变量最大数量
@@ -24,7 +26,9 @@ LuaCodec::LuaCodec()
     _buff_len    = 0;
     _buff_pos    = 0;
     _decode_buff = nullptr;
-    _encode_buff = new char[MAX_BUFF];
+
+    _encode_buff_len = MIN_BUFF;
+    _encode_buff     = MIN_BUFF > 0 ? new char[MIN_BUFF] : nullptr;
 }
 
 LuaCodec::~LuaCodec()
@@ -59,18 +63,21 @@ int32_t LuaCodec::decode_table(lua_State *L)
     return 0;
 }
 
+void LuaCodec::check_decode_buff(size_t size)
+{
+    if (unlikely(_buff_pos + size > _buff_len))
+    {
+        std::string str = "lua codec decode buff reach end, expect len";
+        str += std::to_string(size);
+        throw std::overflow_error(str);
+    }
+}
+
 int32_t LuaCodec::decode_value(lua_State *L)
 {
-#define CHECK_DECODE_LEN(len)                       \
-    if (_buff_pos + len > _buff_len)                \
-    {                                               \
-        ELOG("buff reach end, expect len %u", len); \
-        return -1;                                  \
-    }
-
     int8_t type = 0;
 
-    CHECK_DECODE_LEN(sizeof(int8_t));
+    check_decode_buff(sizeof(int8_t));
     *this >> type;
 
     // 由encode和encode_table检测，这里不用每次都检测
@@ -87,7 +94,7 @@ int32_t LuaCodec::decode_value(lua_State *L)
     {
         int8_t b = 0;
 
-        CHECK_DECODE_LEN(sizeof(int8_t));
+        check_decode_buff(sizeof(int8_t));
         *this >> b;
         lua_pushboolean(L, b);
         break;
@@ -96,7 +103,7 @@ int32_t LuaCodec::decode_value(lua_State *L)
     {
         double d = 0.;
 
-        CHECK_DECODE_LEN(sizeof(double));
+        check_decode_buff(sizeof(double));
         *this >> d;
         lua_pushnumber(L, d);
         break;
@@ -106,7 +113,7 @@ int32_t LuaCodec::decode_value(lua_State *L)
         size_t len = 0;
         *this >> len;
 
-        CHECK_DECODE_LEN(len);
+        check_decode_buff(len);
         lua_pushlstring(L, subtract(len), len);
 
         break;
@@ -114,7 +121,7 @@ int32_t LuaCodec::decode_value(lua_State *L)
     case LT_INT:
     {
         int64_t i = 0;
-        CHECK_DECODE_LEN(sizeof(int64_t));
+        check_decode_buff(sizeof(int64_t));
 
         *this >> i;
         lua_pushinteger(L, i);
@@ -123,7 +130,7 @@ int32_t LuaCodec::decode_value(lua_State *L)
     }
     case LT_TABLE:
     {
-        CHECK_DECODE_LEN(sizeof(size_t));
+        check_decode_buff(sizeof(size_t));
 
         return decode_table(L);
         break;
@@ -132,34 +139,39 @@ int32_t LuaCodec::decode_value(lua_State *L)
     }
 
     return 0;
-
-#undef CHECK_DECODE_LEN
 }
 
-int32_t LuaCodec::decode(lua_State *L, const char *buffer, size_t len)
+int32_t LuaCodec::decode(lua_State *L)
 {
     _buff_pos    = 0;
-    _buff_len    = len;
-    _decode_buff = buffer;
+    _decode_buff = luaL_checklstring(L, 2, &_buff_len);
 
     uint8_t count = 0;
-    if (len < sizeof(count))
+    if (_buff_len < sizeof(count))
     {
-        ELOG("invalid lua binary buffer");
-        return -1;
+        return luaL_error(L, "invalid lua binary buffer");
     }
     *this >> count;
 
     if (!lua_checkstack(L, count))
     {
-        ELOG("lua stack overflow, %d", lua_gettop(L));
-        return -1;
+        return luaL_error(L, "lua stack overflow,");
     }
 
-    for (int32_t i = 0; i < count; i++)
+    bool ok = true;
+    try
     {
-        if (decode_value(L) < 0) return -1;
+        for (int32_t i = 0; i < count; i++)
+        {
+            if (decode_value(L) < 0) return -1;
+        }
     }
+    catch (const std::overflow_error &e)
+    {
+        ELOG("%s", e.what());
+        ok = false;
+    }
+    if (unlikely(!ok)) return luaL_error(L, "unknow error");
 
     return count;
 }
@@ -167,7 +179,7 @@ int32_t LuaCodec::decode(lua_State *L, const char *buffer, size_t len)
 int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
 {
     // table的key数量
-    size_t *p_count = reinterpret_cast<size_t *>(_encode_buff + _buff_len);
+    char *p_count = _encode_buff + _buff_len;
 
     size_t count = 0;
     // 写入数量，只是占位。这里不检测长度，由encode_value检测
@@ -193,31 +205,47 @@ int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
         lua_pop(L, 1);
     }
 
-    *p_count = count;
+    memcpy(p_count, &count, sizeof(count));
     return 0;
+}
+
+void LuaCodec::check_encode_buff(size_t size)
+{
+    if (likely(sizeof(int8_t) + size + _buff_len < _encode_buff_len)) return;
+
+    if (sizeof(int8_t) + size + _buff_len >= MAX_BUFF)
+    {
+        throw std::overflow_error("lua codec encode buffer overflow");
+    }
+
+    // 正常来讲，rpc调用的参数都是比较小的，不会触发内存分配才对。
+    // 即使是一些比较大的变量（如string），也应该仅分配一次
+    do
+    {
+        _encode_buff_len = _encode_buff_len * 2;
+    } while (sizeof(int8_t) + size + _buff_len >= _encode_buff_len);
+
+    char *old = _encode_buff;
+    _encode_buff = new char[_encode_buff_len];
+    memcpy(_encode_buff, old, _buff_len);
+
+    delete[] old;
 }
 
 int32_t LuaCodec::encode_value(lua_State *L, int32_t index)
 {
-#define CHECK_ENCODE_LEN(len)                                       \
-    if (sizeof(int8_t) + len + _buff_len >= MAX_BUFF)               \
-    {                                                               \
-        ELOG("buff overflow %s", sizeof(int8_t) + len + _buff_len); \
-        return -1;                                                  \
-    }
-
     switch (lua_type(L, index))
     {
     case LUA_TNIL:
-        CHECK_ENCODE_LEN(8);
+        check_encode_buff(8);
         *this << (int8_t)LT_NIL;
         break;
     case LUA_TBOOLEAN:
-        CHECK_ENCODE_LEN(8);
+        check_encode_buff(8);
         *this << (int8_t)LT_BOOL << (int8_t)(lua_toboolean(L, index) ? 1 : 0);
         break;
     case LUA_TNUMBER:
-        CHECK_ENCODE_LEN(8);
+        check_encode_buff(8);
         if (lua_isinteger(L, index))
         {
             *this << (int8_t)LT_INT << (int64_t)lua_tointeger(L, index);
@@ -232,14 +260,14 @@ int32_t LuaCodec::encode_value(lua_State *L, int32_t index)
         size_t len      = 0;
         const char *str = lua_tolstring(L, index, &len);
 
-        CHECK_ENCODE_LEN(len);
+        check_encode_buff(len);
         // TODO 字符串长度用int32是否会好一点？好像也节省不了多少
         *this << (int8_t)LT_STR << (size_t)len;
         this->append(str, len);
         break;
     }
     case LUA_TTABLE:
-        CHECK_ENCODE_LEN(16);
+        check_encode_buff(16);
         *this << (int8_t)LT_TABLE;
         return encode_table(L, index);
     default:
@@ -248,30 +276,38 @@ int32_t LuaCodec::encode_value(lua_State *L, int32_t index)
     }
 
     return 0;
-
-#undef CHECK_ENCODE_LEN
 }
 
-int32_t LuaCodec::encode(lua_State *L, int32_t index, const char **buffer)
+int32_t LuaCodec::encode(lua_State *L)
 {
+    int32_t index = 1;
     int top = lua_gettop(L);
     if (index > top || top - index > MAX_VARIABLE)
     {
-        ELOG("invalid stack index or too many variable %d - %d", index, top);
-
-        return -1;
+        return luaL_error(L, 
+            "invalid stack index or too many variable %I - %I", index, top);
     }
 
     _buff_len = 0;
 
     // 写入数量
-    *this << uint8_t(top - index + 1);
+    *this << uint8_t(top - index);
 
-    for (int32_t i = index; i <= top; i++)
+    bool ok = true;
+    try
     {
-        if (encode_value(L, i) < 0) return -1;
+        for (int32_t i = index + 1; i <= top; i++)
+        {
+            if (encode_value(L, i) < 0) return -1;
+        }
     }
+    catch (const std::overflow_error& e)
+    {
+        ELOG("%s", e.what());
+        ok = false;
+    }
+    if (unlikely(!ok)) return luaL_error(L, "unknow error");
 
-    *buffer = _encode_buff;
-    return (int32_t)_buff_len;
+    lua_pushlstring(L, _encode_buff, _buff_len);
+    return 1;
 }
