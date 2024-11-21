@@ -9,8 +9,8 @@ t_describe("pbccodec test", function()
 
     codec:reset()
     for _, fpath in pairs({"../pb/system.pb"}) do
-        local f = io.open(fpath, "r")
-        local buffer = f:read("*a")
+        local f = io.open(fpath, "rb") -- 必须以binary模式打开
+        local buffer = f:read("a")
         f:close()
 
         local ok = codec:load(buffer)
@@ -18,8 +18,6 @@ t_describe("pbccodec test", function()
     end
     codec:update()
 
-
-    -- 这里的结构，尽量保持一lua_codec_test中的一致，用于对比
     local PERF_TIMES = 10000
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     local base_pkt = {
@@ -54,6 +52,7 @@ t_describe("pbccodec test", function()
     base_pkt.i_list = {1,2,3,4,5,99999,55555,111111111}
     base_pkt.msg_list = { cpy, cpy, cpy}
 
+    -- 这里的结构，尽量保持和lua_codec_test中的一致，用于对比效率
     local lite_pkt = {
         b1 = true,
         i1 = math.maxinteger,

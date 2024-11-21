@@ -45,6 +45,25 @@ t_describe("luacodec test", function()
         }
     }
 
+    -- 这里的结构，尽量保持和pbc_codec_test中的一致，用于对比效率
+    local lite_pkt = {
+        b1 = true,
+        i1 = math.maxinteger,
+        s = "sssssssssssssssssssssssssssssssssssssssssssssssssss",
+        i2 = math.mininteger,
+        d1 = 99999999999999.55555,
+        i3 = 2147483647,
+
+        msg = {
+            b1 = true,
+            i1 = math.maxinteger,
+            s = "sssssssssssssssssssssssssssssssssssssssssssssssssss",
+            i2 = math.mininteger,
+            d1 = 99999999999999.55555,
+            i3 = 2147483647,
+        }
+    }
+
     t_it("luacodec base test", function()
         -- 参数为空
         local buffer = codec:encode()
@@ -56,6 +75,10 @@ t_describe("luacodec test", function()
         local decode_params = {codec:decode(buffer)}
         t_equal(decode_params, params)
 
+        buffer = codec:encode(lite_pkt)
+        v1 = codec:decode(buffer)
+        t_equal(v1, lite_pkt)
+
         -- 超大内存，测试缓冲区重新分配
         local str = string.rep("0123456789", 6554)
         buffer = codec:encode(str)
@@ -63,19 +86,13 @@ t_describe("luacodec test", function()
         t_equal(v1, str)
     end)
     t_it(string.format("luacodec performance test %d", PERF_TIMES), function()
-        local encode_unpack = function(...)
-            local b1 = t_clock()
-            for _ = 1, PERF_TIMES do
-                codec:encode(...)
-            end
-            local e1 = t_clock()
-
-            return b1, e1
+        local b1 = t_clock()
+        for _ = 1, PERF_TIMES do
+            codec:encode(lite_pkt)
         end
-        -- 避免每次都unpack
-        local b1, e1 = encode_unpack(table.unpack(params))
+        local e1 = t_clock()
 
-        local buffer = codec:encode(table.unpack(params))
+        local buffer = codec:encode(lite_pkt)
 
         local b2 = t_clock()
         for _ = 1, PERF_TIMES do
