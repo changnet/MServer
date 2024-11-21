@@ -41,32 +41,33 @@ public:
      */
     int32_t encode(lua_State *L);
 
+    // 解码回调
+    void decode_cb(DecodeCtx *ctx, int32_t type, const char *object,
+                   union pbc_value *v, int id, const char *key);
+
 private:
-    struct Deleter
-    {
-        void operator()(struct pbc_env* env) const
-        {
-            // 最后一个线程删除时，env最终失效。全局也必须重置，免得被新线程赋值
-            // 虽然一般情况下最后一个线程失效时就只能是关服
-            if (env == _g_env) _g_env = nullptr;
-
-            pbc_delete(env);
-        }
-    };
-
+    // 清除上一次的报错信息等
+    void clear_last();
     // 获取出错信息
     const char *last_error();
     // 解码一个protobuf的message
     int32_t decode_message(lua_State *L, const char *schema,
                            struct pbc_slice *slice);
 
-    // 解码回调
-    void decode_cb(DecodeCtx *ctx, int32_t type, const char *object,
-                   union pbc_value *v, int id, const char *key);
-
     // 解析出来的变量设置到lua
-    int32_t push_value(lua_State *L, int type, const char *object,
+    int32_t decode_field(lua_State *L, int type, const char *object,
                        union pbc_value *v);
+
+    int32_t encode_message(lua_State *L, struct pbc_wmessage *wmsg,
+                       const char *schema, int32_t index);
+
+    int32_t encode_field_list(lua_State *L, struct pbc_wmessage *wmsg,
+                                   int32_t type, int32_t index, const char *key,
+                                   const char *schema);
+
+    int32_t encode_field(lua_State *L, struct pbc_wmessage *wmsg,
+                                       int32_t type, int32_t index,
+                                       const char *key, const char *schema);
 
 private:
     struct pbc_wmessage *_write_msg;
@@ -74,5 +75,5 @@ private:
     std::vector<std::string> _trace_back; // 出错时，用于跟踪哪个字段有问题
     std::shared_ptr<struct pbc_env> _env; // 当前线程使用的env
 
-    static inline struct pbc_env *_g_env = nullptr;
+    static inline std::shared_ptr<struct pbc_env> _g_env = nullptr;
 };
