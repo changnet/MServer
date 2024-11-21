@@ -16,6 +16,7 @@
 #include "net/socket.hpp"
 #include "net/io/tls_ctx.hpp"
 #include "net/codec/lua_codec.hpp"
+#include "net/codec/pbc_codec.hpp"
 #include "system/static_global.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
@@ -62,7 +63,7 @@ const char *__dbg_traceback()
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int32_t luaopen_ev(lua_State *L)
+static void luaopen_ev(lua_State *L)
 {
     lcpp::Class<LEV> lc(L, "engine.Ev");
     lc.def<&LEV::now>("time");
@@ -80,19 +81,15 @@ int32_t luaopen_ev(lua_State *L)
     lc.def<&LEV::periodic_stop>("periodic_stop");
     lc.def<&LEV::periodic_start>("periodic_start");
     lc.def<&LEV::set_critical_time>("set_critical_time");
-
-    return 0;
 }
 
-int32_t luaopen_tls(lua_State *L)
+static void luaopen_tls(lua_State *L)
 {
     lcpp::Class<TlsCtx> lc(L, "engine.TlsCtx");
     lc.def<&TlsCtx::init>("init");
-
-    return 0;
 }
 
-int32_t luaopen_socket(lua_State* L)
+static void luaopen_socket(lua_State *L)
 {
     lcpp::Class<Socket> lc(L, "engine.Socket");
 
@@ -118,21 +115,29 @@ int32_t luaopen_socket(lua_State* L)
     lc.set(Packet::PT_STREAM, "PT_STREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
-
-    return 0;
 }
 
-int32_t luaopen_lua_codec(lua_State *L)
+static void luaopen_lua_codec(lua_State *L)
 {
     lcpp::Class<LuaCodec> lc(L, "engine.LuaCodec");
 
     lc.def<&LuaCodec::encode>("encode");
     lc.def<&LuaCodec::decode>("decode");
-
-    return 0;
 }
 
-int32_t luaopen_sql(lua_State *L)
+static void luaopen_pbc_codec(lua_State *L)
+{
+    lcpp::Class<PbcCodec> lc(L, "engine.PbcCodec");
+
+    lc.def<&PbcCodec::reset>("reset");
+    lc.def<&PbcCodec::load>("load");
+    lc.def<&PbcCodec::update>("update");
+    lc.def<&PbcCodec::encode>("encode");
+    lc.def<&PbcCodec::decode>("decode");
+}
+
+
+static void luaopen_sql(lua_State *L)
 {
 
     lcpp::Class<LSql> lc(L, "engine.Sql");
@@ -143,11 +148,9 @@ int32_t luaopen_sql(lua_State *L)
 
     lc.set(LSql::S_READY, "S_READY");
     lc.set(LSql::S_DATA, "S_DATA");
-
-    return 0;
 }
 
-int32_t luaopen_mongo(lua_State *L)
+static void luaopen_mongo(lua_State *L)
 {
     lcpp::Class<LMongo> lc(L, "engine.Mongo");
     lc.def<&LMongo::start>("start");
@@ -163,11 +166,9 @@ int32_t luaopen_mongo(lua_State *L)
 
     lc.set(LMongo::S_READY, "S_READY");
     lc.set(LMongo::S_DATA, "S_DATA");
-
-    return 0;
 }
 
-int32_t luaopen_log(lua_State *L)
+static void luaopen_log(lua_State *L)
 {
     lcpp::Class<LLog> lc(L, "engine.Log");
     lc.def<&LLog::stop>("stop");
@@ -186,22 +187,18 @@ int32_t luaopen_log(lua_State *L)
     lc.set(AsyncLog::Policy::PT_NORMAL, "PT_NORMAL");
     lc.set(AsyncLog::Policy::PT_DAILY, "PT_DAILY");
     lc.set(AsyncLog::Policy::PT_SIZE, "PT_SIZE");
-
-    return 0;
 }
 
-int32_t luaopen_acism(lua_State *L)
+static void luaopen_acism(lua_State *L)
 {
     lcpp::Class<LAcism> lc(L, "engine.Acism");
 
     lc.def<&LAcism::scan>("scan");
     lc.def<&LAcism::replace>("replace");
     lc.def<&LAcism::load_from_file>("load_from_file");
-
-    return 0;
 }
 
-int32_t luaopen_grid_aoi(lua_State *L)
+static void luaopen_grid_aoi(lua_State *L)
 {
     lcpp::Class<LGridAoi> lc(L, "engine.GridAoi");
 
@@ -218,11 +215,9 @@ int32_t luaopen_grid_aoi(lua_State *L)
     lc.def<&LGridAoi::update_entity>("update_entity");
 
     lc.def<&LGridAoi::is_same_pos>("is_same_pos");
-
-    return 0;
 }
 
-int32_t luaopen_list_aoi(lua_State *L)
+static void luaopen_list_aoi(lua_State *L)
 {
     lcpp::Class<LListAoi> lc(L, "engine.ListAoi");
 
@@ -239,11 +234,9 @@ int32_t luaopen_list_aoi(lua_State *L)
     lc.def<&LListAoi::exit_entity>("exit_entity");
     lc.def<&LListAoi::enter_entity>("enter_entity");
     lc.def<&LListAoi::update_entity>("update_entity");
-
-    return 0;
 }
 
-int32_t luaopen_map(lua_State *L)
+static void luaopen_map(lua_State *L)
 {
     lcpp::Class<LMap> lc(L, "engine.Map");
 
@@ -253,17 +246,13 @@ int32_t luaopen_map(lua_State *L)
     lc.def<&LMap::fork>("fork");
     lc.def<&LMap::get_size>("get_size");
     lc.def<&LMap::get_pass_cost>("get_pass_cost");
-
-    return 0;
 }
 
-int32_t luaopen_astar(lua_State *L)
+static void luaopen_astar(lua_State *L)
 {
     lcpp::Class<LAstar> lc(L, "engine.Astar");
 
     lc.def<&LAstar::search>("search");
-
-    return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -342,6 +331,7 @@ void LState::open_cpp()
     luaopen_tls(L);
     luaopen_socket(L);
     luaopen_lua_codec(L);
+    luaopen_pbc_codec(L);
     luaopen_sql(L);
     luaopen_log(L);
     luaopen_map(L);

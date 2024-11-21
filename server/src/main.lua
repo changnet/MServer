@@ -87,6 +87,7 @@ local function log_app_info(args)
     printf("## complier: %s %s", __COMPLIER_, __VERSION__)
     printf("## build time: %s", __TIMESTAMP__)
     printf("## NET: %s", IPV4 or IPV6)
+    printf("## cwd: %s", g_app.cwd)
     print("#####################################################")
     print(buddha)
     buddha = nil -- 出错时打印堆栈信息避免打印出这个超长的信息
@@ -133,10 +134,11 @@ local function main(cmd, ...)
         os.execute("title " .. table.concat(args, " "))
     end
 
-    log_app_info(args)
-
+    g_app.cwd = util.getcwd() -- current working directory
     g_app.cmd = cmd
     g_app.opts = opts
+
+    log_app_info(args)
 
     require(string.format("application.%s_app", name))
 

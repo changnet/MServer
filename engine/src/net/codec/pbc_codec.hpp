@@ -24,7 +24,7 @@ public:
     // 重置全局pbc env
     void reset();
     // 加载单个pb文件
-    int32_t load(const char *buffer, size_t len);
+    int32_t load(lua_State *L);
     // 更新全局pbc env到当前线程
     void update();
 

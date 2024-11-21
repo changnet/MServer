@@ -469,11 +469,21 @@ static int32_t ls(lua_State *L)
     return 1;
 }
 
+static int32_t getcwd(lua_State *L)
+{
+    // C++ 17
+    // cwd返回的是系统编码，比如utf8或者gbk
+    std::filesystem::path cwd = std::filesystem::current_path();
+    lua_pushstring(L, cwd.string().c_str());
+    return 1;
+}
+
 static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"md5", md5},
                                    {"uuid", uuid},
                                    {"sha1", sha1},
                                    {"base64", base64},
+                                   {"getcwd", getcwd},
                                    {"mkdir_p", mkdir_p},
                                    {"sha1_raw", sha1_raw},
                                    {"what_error", what_error},

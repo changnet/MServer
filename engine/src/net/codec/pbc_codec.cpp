@@ -45,7 +45,7 @@ PbcCodec::~PbcCodec()
 void PbcCodec::reset()
 {
     _g_env = std::shared_ptr<struct pbc_env>(pbc_new(), pbc_deleter);
-    _env   = _g_env;
+    // _env   = _g_env;手动调用update
 }
 
 void PbcCodec::update()
@@ -74,20 +74,22 @@ const char *PbcCodec::last_error()
     return _error_msg.c_str();
 }
 
-int32_t PbcCodec::load(const char *buffer, size_t len)
+int32_t PbcCodec::load(lua_State *L)
 {
+    size_t size = 0;
     struct pbc_slice slice;
-    slice.len    = (int)len;
-    slice.buffer = const_cast<char *>(buffer);
 
-    if (0 != pbc_register(_env.get(), &slice))
+    slice.buffer = (void *)luaL_checklstring(L, 2, &size);
+    slice.len    = (int32_t)size;
+
+    if (0 != pbc_register(_g_env.get(), &slice))
     {
-        delete (char *)slice.buffer;
-        ELOG("pbc register error:%s", pbc_error(_env.get()));
-        return -1;
+        ELOG("pbc register error:%s", pbc_error(_g_env.get()));
+        return 0;
     }
 
-    return 0;
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 void PbcCodec::clear_last()

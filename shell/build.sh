@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# sh make.sh VERBOSE=1 可以显示详细的编译过程
-# sh make.sh llhttp 只编译llhttp组件
-# sh make.sh release 编译release版
-# sh make.sh debug 编译debug版
-# sh make.sh 什么参数都不加，执行增量编译
+# sh build.sh VERBOSE=1 可以显示详细的编译过程
+# sh build.sh llhttp 只编译llhttp组件
+# sh build.sh release 编译release版
+# sh build.sh debug 编译debug版
+# sh build.sh 什么参数都不加，执行增量编译
 
 # TODO 可以用realpath取绝对路径，但是那样的话cmake的日志也是绝对路径，太难看了
 BUILD_DIR=../server/bin/linux-x64
