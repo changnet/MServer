@@ -4,6 +4,7 @@
 #include "mysql/sql.hpp"
 #include "net/io/tls_ctx.hpp"
 #include "net/socket.hpp"
+#include "net/codec/pbc_codec.hpp"
 
 class LEV *StaticGlobal::_ev                  = nullptr;
 class LState *StaticGlobal::_state            = nullptr;
@@ -98,6 +99,8 @@ void StaticGlobal::uninitialize()
     delete _thread_mgr;
     delete _async_log;
     delete _ev;
+
+    PbcCodec::uninitialize();
 }
 
 void on_exit()

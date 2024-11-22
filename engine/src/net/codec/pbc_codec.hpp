@@ -20,6 +20,7 @@ class PbcCodec final
 public:
     PbcCodec();
     ~PbcCodec();
+    static void uninitialize();
 
     // 重置全局pbc env
     void reset();

@@ -30,6 +30,13 @@ static void pbc_decode_cb(void *ud, int32_t type, const char *schema,
     return ctx->pc->decode_cb(ctx, type, schema, v, id, key);
 }
 
+void PbcCodec::uninitialize()
+{
+    // 其实这里不释放没问题。_g_env在析构时会自动释放
+    // 但由于它是static变量又没有放到static_global中，析构顺序无法保证会影响内存debug
+    if (_g_env) _g_env.reset();
+}
+
 PbcCodec::PbcCodec()
 {
     _write_msg = nullptr;
@@ -37,9 +44,11 @@ PbcCodec::PbcCodec()
 
 PbcCodec::~PbcCodec()
 {
-    _env.reset();
-    // 最后一个线程释放时，直接释放全局内存，因此非关服情况下应该长久持有
-    if (_g_env && 1 == _g_env.use_count()) _g_env.reset();
+    if (_write_msg)
+    {
+        pbc_wmessage_delete(_write_msg);
+        _write_msg = nullptr;
+    }
 }
 
 void PbcCodec::reset()

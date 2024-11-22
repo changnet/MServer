@@ -9,7 +9,8 @@
  * 控制static或者global变量，的创建、销毁顺序，避免相互依赖，影响内存泄漏计数
  * static initialization order fiasco(https://isocpp.org/wiki/faq/ctors)
  *
- * 不放这里的静态变量只能是局部静态变量
+ * 不放这里的静态变量只能是局部静态变量。如果是全局变量得在uninitialize函数手动
+ * 释放内存
  *
  * initializer只放业务无关的初始化，比如全局锁、ssl初始化...
  * 业务逻辑的初始化放initialize函数

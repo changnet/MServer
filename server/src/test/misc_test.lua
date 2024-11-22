@@ -49,6 +49,7 @@ t_describe("json lib test", function()
     end)
 end)
 
+-- luacheck: push ignore
 local xml_str = [==[
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
@@ -61,6 +62,7 @@ local xml_str = [==[
     </base>
 </root>
 ]==]
+-- luacheck: pop
 
 t_describe("xml lib test", function()
     t_it("encode decode", function()
