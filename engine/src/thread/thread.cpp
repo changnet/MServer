@@ -188,7 +188,8 @@ void Thread::apply_thread_name(const char *name)
 
 bool Thread::start(int32_t ms)
 {
-    PLOG("%s thread start", _name.c_str());
+    // 刚启动时，会启动一些底层线程，这时候日志设置还没好（日志路径未设置好）
+    // PLOG("%s thread start", _name.c_str());
 
     // 只能在主线程调用，threadmgr没加锁
     assert(std::this_thread::get_id() != _thread.get_id());

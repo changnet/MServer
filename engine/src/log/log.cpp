@@ -5,8 +5,10 @@
 
 /* 是否后台运行。后台运行则不输出日志到stdout */
 static bool deamon_mode           = false;
-static char printf_path[PATH_MAX] = "printf";
+
+// 设置一个默认日志文件名
 // 防止上层应用来不及设置日志参数就发生错误，默认输出到工作目录error文件
+static char printf_path[PATH_MAX] = "error";
 static char error_path[PATH_MAX] = "error";
 
 // app进程名

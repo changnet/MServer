@@ -7,10 +7,7 @@ local Conn = require "network.conn"
 local SsConn = oo.class(..., Conn)
 
 SsConn.default_param = {
-    listen_type = network_mgr.CT_SSCN, -- 监听的连接类型
-    connect_type = network_mgr.CT_SSCN, -- 连接类型
     iot = network_mgr.IOT_NONE, -- io类型
-    cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
     action = 2, -- over_action，2 表示缓冲区满后进入自旋来发送数据
     send_chunk_max = 1024, -- 发送缓冲区chunk数量，单个chunk8k，见C++ buffer.h定义

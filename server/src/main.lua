@@ -135,6 +135,7 @@ local function main(cmd, ...)
     end
 
     g_app.cwd = util.getcwd() -- current working directory
+    g_app.srv_dir = string.match(g_app.cwd, "(.*)[/\\]") -- server directory
     g_app.cmd = cmd
     g_app.opts = opts
 

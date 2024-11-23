@@ -1,4 +1,4 @@
--- auto export by lua-tags 166 symbols
+-- auto export by lua-tags 167 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -148,6 +148,7 @@ return {
 "set_modify_metatable", -- src/global/modi_table.lua
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
+"sys", -- src/global/sys.lua
 "t_after", -- src/global/test.lua
 "t_assert", -- src/global/test.lua
 "t_async", -- src/global/test.lua

@@ -108,9 +108,6 @@ end
 function Conn:set_conn_param()
     --[[
         param = {
-            listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
-            connect_type = network_mgr.CT_CSCN, -- 连接类型
-            cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
             pkt = network_mgr.PT_NONE, -- 打包类型
             action = 1, -- over_action，1 表示缓冲区溢出后断开
             chunk_size = 8192, -- 单个缓冲区大小

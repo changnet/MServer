@@ -5,10 +5,7 @@ local Conn = require "network.conn"
 local CsConn = oo.class(..., Conn)
 
 CsConn.default_param = {
-    listen_type = network_mgr.CT_SCCN, -- 监听的连接类型
-    connect_type = network_mgr.CT_CSCN, -- 连接类型
     iot = network_mgr.IOT_NONE, -- io类型
-    cdt = network_mgr.CDT_PROTOBUF, -- 编码类型
     pkt = network_mgr.PT_STREAM, -- 打包类型
     action = 1, -- over_action，1 表示缓冲区溢出后断开
     send_chunk_max = 128, -- 发送缓冲区数量
