@@ -6,6 +6,7 @@
 #include "packet/websocket_packet.hpp"
 #include "packet/ws_stream_packet.hpp"
 #include "system/static_global.hpp"
+#include "lua_cpplib/lcpp.hpp"
 
 #ifdef __windows__
     #include <winsock2.h>

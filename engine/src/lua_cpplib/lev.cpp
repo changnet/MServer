@@ -85,7 +85,7 @@ int32_t LEV::set_critical_time(lua_State *L) // 设置主循环临界时间
 
 void LEV::invoke_signal()
 {
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
     LUA_PUSHTRACEBACK(L);
 
     int signum       = 0;
@@ -119,7 +119,7 @@ void LEV::invoke_app_ev()
     }
     _app_next_tm = _steady_clock + _app_repeat;
 
-    lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
@@ -192,7 +192,7 @@ void LEV::timer_callback(int32_t id, int32_t revents)
 {
     assert(!(EV_ERROR & revents));
 
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "timer_event");

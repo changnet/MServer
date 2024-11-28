@@ -2,7 +2,6 @@
 
 #include "lua_cpplib/llog.hpp"
 #include "lua_cpplib/lev.hpp"
-#include "lua_cpplib/lstate.hpp"
 #include "thread/thread_mgr.hpp"
 
 /**
@@ -33,11 +32,6 @@ public:
     {
         return _ev;
     }
-    static lua_State *state()
-    {
-        return _state->state();
-    }
-
     static class LLog *async_logger()
     {
         return _async_log;
@@ -55,7 +49,6 @@ public:
     // 这里负责保存一些全局变量，方便StaticGlobal::X这样调用
 
     inline static lua_State *L = nullptr; // Lua的虚拟机指针
-    inline static LState *S    = nullptr; // LState对象指针
     inline static bool T       = false; // 当前是否处于关服状态(term)
 
 private:
@@ -68,7 +61,6 @@ private:
 
 private:
     static class LEV *_ev;
-    static class LState *_state;
     static class LLog *_async_log;
     static class ThreadMgr *_thread_mgr;
     static Buffer::ChunkPool *_buffer_chunk_pool;

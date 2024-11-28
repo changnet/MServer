@@ -186,7 +186,7 @@ void LMongo::on_ready(lua_State *L)
 
 void LMongo::main_routine(int32_t ev)
 {
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
 
     if (unlikely(ev & S_READY)) on_ready(L);
 

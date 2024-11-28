@@ -1,6 +1,8 @@
 #include <lparson.h>
 #include <lrapidxml.hpp>
 
+#include "llib.hpp"
+
 #include "lacism.hpp"
 #include "lgrid_aoi.hpp"
 #include "lastar.hpp"
@@ -9,7 +11,6 @@
 #include "lmap.hpp"
 #include "lmongo.hpp"
 #include "lsql.hpp"
-#include "lstate.hpp"
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 
@@ -41,7 +42,7 @@ void __dbg_break()
     // 注意：由于无法取得coroutine的L指针，无法中断coroutine中的逻辑（考虑把正在执行的
     // coroutine设置到一个global值，然后用getglobal取值）
     // 注意：对正在执行程序的影响未知
-    lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
 
     lua_sethook(L, __dbg_break_hook,
                 LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
@@ -54,7 +55,9 @@ const char *__dbg_traceback()
     // 然后继续执行，应该能打印出lua当前的堆栈
     // 注意：由于无法取得coroutine的L指针，无法打印coroutine中的堆栈
     // 注意：对正在执行程序的影响未知
-    lua_State *L = StaticGlobal::state();
+
+    // worker线程的L不一样，这里得改一下
+    lua_State *L = StaticGlobal::L;
 
     luaL_traceback(L, L, nullptr, 0);
 
@@ -257,17 +260,10 @@ static void luaopen_astar(lua_State *L)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-LState::LState()
+namespace llib
 {
-    /* 初始化lua */
-    L = luaL_newstate();
-    if (!L)
-    {
-        ELOG("lua new state fail\n");
-        exit(1);
-    }
-    luaL_openlibs(L);
-
+void open_env(lua_State *L)
+{
     // export env variable
 #define SET_ENV_MACRO(v)  \
     lua_pushstring(L, v); \
@@ -300,23 +296,9 @@ LState::LState()
     // 在脚本中，设置LINUX、WINDOWS等系统名为true
     SET_ENV_BOOL(__OS_NAME__);
 #undef SET_ENV_BOOL
-
-    open_cpp();
 }
 
-LState::~LState()
-{
-    assert(0 == lua_gettop(L));
-
-    /* Destroys all objects in the given Lua state (calling the corresponding
-     * garbage-collection metamethods, if any) and frees all dynamic memory used
-     * by this state
-     */
-    lua_close(L);
-    L = nullptr;
-}
-
-void LState::open_cpp()
+void open_cpp(lua_State *L)
 {
     /* ============================库方式调用=============================== */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
@@ -345,3 +327,33 @@ void LState::open_cpp()
     /* when debug,make sure lua stack clean after init */
     assert(0 == lua_gettop(L));
 }
+
+void open_libs(lua_State *L)
+{
+    luaL_openlibs(L);
+    open_env(L);
+    open_cpp(L);
+}
+
+lua_State *new_state()
+{
+    lua_State *L = luaL_newstate();
+
+    open_libs(L);
+
+    return L;
+}
+
+lua_State* delete_state(lua_State* L)
+{
+    assert(0 == lua_gettop(L));
+
+    /* Destroys all objects in the given Lua state (calling the corresponding
+     * garbage-collection metamethods, if any) and frees all dynamic memory used
+     * by this state
+     */
+    lua_close(L);
+
+    return nullptr;
+}
+} // namespace llib

@@ -81,7 +81,7 @@ int32_t LSql::start(lua_State *L)
 
 void LSql::main_routine(int32_t ev)
 {
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
 
     if (unlikely(ev & S_READY)) on_ready(L);
 

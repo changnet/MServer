@@ -1,5 +1,6 @@
 #include "static_global.hpp"
 
+#include "lua_cpplib/llib.hpp"
 #include "mongo/mongo.hpp"
 #include "mysql/sql.hpp"
 #include "net/io/tls_ctx.hpp"
@@ -7,7 +8,6 @@
 #include "net/codec/pbc_codec.hpp"
 
 class LEV *StaticGlobal::_ev                  = nullptr;
-class LState *StaticGlobal::_state            = nullptr;
 class LLog *StaticGlobal::_async_log          = nullptr;
 class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
 Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
@@ -64,9 +64,7 @@ void StaticGlobal::initialize()
     _async_log  = new class LLog("Engine.AsyncLog");
     _ev         = new class LEV();
 
-    _state       = new class LState();
-    S                  = _state;
-    L                  = _state->state();
+    L                  = llib::new_state();
     _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
 
     _async_log->set_thread_name(STD_FMT("global_async_log"));
@@ -88,8 +86,7 @@ void StaticGlobal::uninitialize()
      */
     _thread_mgr->stop(_async_log);
 
-    delete _state;
-    L = nullptr;
+    L = llib::delete_state(L);
 
     // lua中销毁时，会gc socket，然后gc socket的buff，必须先在_buffer_chunk_pool前
     delete _buffer_chunk_pool;

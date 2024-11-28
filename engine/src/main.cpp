@@ -22,7 +22,7 @@ int32_t main(int32_t argc, char **argv)
 
     StaticGlobal::initialize();
 
-    lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
 
     lcpp::Class<LEV>::push(L, StaticGlobal::lua_ev(), false);
     lua_setglobal(L, "ev");

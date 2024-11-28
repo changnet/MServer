@@ -311,7 +311,7 @@ int32_t WebsocketPacket::invoke_handshake()
         return -1;
     }
 
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
     assert(0 == lua_gettop(L));
 
     LUA_PUSHTRACEBACK(L);
@@ -333,7 +333,7 @@ int32_t WebsocketPacket::invoke_handshake()
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
 int32_t WebsocketPacket::on_frame_end()
 {
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
     assert(0 == lua_gettop(L));
 
     size_t size     = 0;
@@ -357,7 +357,7 @@ int32_t WebsocketPacket::on_frame_end()
 // 处理ping、pong等opcode
 int32_t WebsocketPacket::on_ctrl_end()
 {
-    static lua_State *L = StaticGlobal::state();
+    lua_State *L = StaticGlobal::L;
     assert(0 == lua_gettop(L));
 
     size_t size     = 0;
