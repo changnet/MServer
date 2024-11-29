@@ -22,9 +22,9 @@ void EVBackend::uninstance(EVBackend *backend)
 
 EVBackend::EVBackend()
 {
-    _done = false;
-    _ev   = nullptr;
-    _modify_protected = false;
+    done_ = false;
+    ev_   = nullptr;
+    modify_protected_ = false;
 }
 
 EVBackend::~EVBackend()
@@ -33,20 +33,20 @@ EVBackend::~EVBackend()
 
 bool EVBackend::start(class EV *ev)
 {
-    _ev = ev;
+    ev_ = ev;
 
     if (!before_start()) return false;
 
-    _thread = std::thread(&EVBackend::backend, this);
+    thread_ = std::thread(&EVBackend::backend, this);
 
     return true;
 }
 
 void EVBackend::stop()
 {
-    _done = true;
+    done_ = true;
     wake();
-    _thread.join();
+    thread_.join();
 
     after_stop();
 }
@@ -56,14 +56,14 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
     // poll等结构在处理事件时需要for循环遍历所有fd列表
     // 中间禁止调用modify_fd来删除这个列表
     // epoll则是可以删除的
-    _modify_protected = true;
+    modify_protected_ = true;
     do_wait_event(ev_count);
-    _modify_protected = false;
+    modify_protected_ = false;
 
     do_main_events();
     do_pending_events();
 
-    if (!_events.empty()) _ev->wake();
+    if (!events_.empty()) ev_->wake();
 }
 
 void EVBackend::backend()
@@ -77,7 +77,7 @@ void EVBackend::backend()
     // 不能wait太久，要定时检测超时删除的连接
     static const int32_t max_wait = 2000;
 
-    while (!_done)
+    while (!done_)
     {
         int32_t ev_count = wait(max_wait);
         if (ev_count < 0) break;
@@ -105,20 +105,20 @@ void EVBackend::modify_later(EVIO *w, int32_t events)
     // poll收到读写事件时（比如连接断开），是不能修改poll数组的
     // 因此只能先把事件暂存起来，稍后统一处理
 
-    if (!w->_b_pevents) _pending_events.push_back(w);
+    if (!w->b_pevents_) pending_events_.push_back(w);
 
-    w->_b_pevents |= events;
+    w->b_pevents_ |= events;
 }
 
 void EVBackend::do_pending_events()
 {
-    for (const auto& w : _pending_events)
+    for (const auto& w : pending_events_)
     {
-        int32_t events = w->_b_pevents;
-        w->_b_pevents = 0;
+        int32_t events = w->b_pevents_;
+        w->b_pevents_ = 0;
         modify_watcher(w, events);
     }
-    _pending_events.clear();
+    pending_events_.clear();
 }
 
 int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
@@ -142,12 +142,12 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     {
         op = FD_OP_DEL;
         append_event(w, EV_CLOSE);
-        _fd_mgr.unset(w);
+        fd_mgr_.unset(w);
     }
     else
     {
-        op = (w->_b_kevents & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
-        if (w->_b_kevents & EV_KERNEL)
+        op = (w->b_kevents_ & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
+        if (w->b_kevents_ & EV_KERNEL)
         {
             op = FD_OP_MOD;
             assert(0 != events);
@@ -155,18 +155,18 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         else
         {
             op = FD_OP_ADD;
-            assert(!_fd_mgr.get(w->_fd));
-            assert(0 == w->_b_kevents && 0 != events);
+            assert(!fd_mgr_.get(w->fd_));
+            assert(0 == w->b_kevents_ && 0 != events);
 
-            _fd_mgr.set(w);
+            fd_mgr_.set(w);
         }
 
         // 即使是FD_OP_MOD，也要重新设置EV_KERNEL，因为events里不包含EV_KERNEL
         events |= EV_KERNEL;
     }
 
-    w->_b_kevents = events;
-    return modify_fd(w->_fd, op, events);
+    w->b_kevents_ = events;
+    return modify_fd(w->fd_, op, events);
 }
 
 bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
@@ -178,15 +178,15 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
         if (EV_WRITE == ev)
         {
             // 发送完后主动关闭主动关闭
-            if (w->_b_kevents & EV_FLUSH)
+            if (w->b_kevents_ & EV_FLUSH)
             {
                 modify_later(w, EV_CLOSE);
-                ELOG_R("flush write close %d", w->_fd);
+                ELOG_R("flush write close %d", w->fd_);
             }
-            else if (w->_b_kevents & EV_WRITE)
+            else if (w->b_kevents_ & EV_WRITE)
             {
                 // 发送完成，从epoll中取消EV_WRITE事件
-                modify_later(w, w->_b_kevents & (~EV_WRITE));
+                modify_later(w, w->b_kevents_ & (~EV_WRITE));
             }
         }
         return true;
@@ -195,16 +195,16 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
         return true;
     case EV_WRITE:
         // 未发送完，加入write事件继续发送
-        if (!(w->_b_kevents & EV_WRITE))
+        if (!(w->b_kevents_ & EV_WRITE))
         {
-            modify_later(w, w->_b_kevents | EV_WRITE);
+            modify_later(w, w->b_kevents_ | EV_WRITE);
         }
         return true;
     case EV_BUSY:
         // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
-        if (w->_mask & EVIO::M_OVERFLOW_KILL)
+        if (w->mask_ & EVIO::M_OVERFLOW_KILL)
         {
-            PLOG("backend thread overflow kill fd = %d", w->_fd);
+            PLOG("backend thread overflow kill fd = %d", w->fd_);
             modify_later(w, EV_CLOSE);
             return false;
         }
@@ -227,7 +227,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
         //do_io_status(w, EV_WRITE, new_status);
         return true;
     case EV_ERROR:
-        // w->_errno = netcompat::errorno(); // 这个已经在send、recv里设置
+        // w->errno_ = netcompat::errorno(); // 这个已经在send、recv里设置
         modify_later(w, EV_CLOSE);
         return false;
     default: ELOG("unknow io status: %d", status); return false;
@@ -242,7 +242,7 @@ void EVBackend::do_watcher_main_event(EVIO *w, int32_t events)
 
     // epoll检测到连接已断开，会直接从backend中删除
     // 此时再收到主线程的任何数据都直接丢弃
-    if (w->_b_kevents & EV_CLOSE || w->_b_pevents & EV_CLOSE) return;
+    if (w->b_kevents_ & EV_CLOSE || w->b_pevents_ & EV_CLOSE) return;
 
     if (events & EV_INIT_ACPT)
     {
@@ -277,7 +277,7 @@ void EVBackend::do_watcher_main_event(EVIO *w, int32_t events)
 void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 {
     int32_t events          = 0;             // 最终需要触发的事件
-    const int32_t kernel_ev = w->_b_kevents; // 内核事件
+    const int32_t kernel_ev = w->b_kevents_; // 内核事件
     if (revents & EV_WRITE)
     {
         if (kernel_ev & EV_WRITE)
@@ -327,27 +327,27 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 
 void EVBackend::do_main_events()
 {
-    std::vector<WatcherEvent> &events = _ev->fetch_event();
+    std::vector<WatcherEvent> &events = ev_->fetch_event();
     for (auto& we : events)
     {
-        do_watcher_main_event(we._w, we._ev);
+        do_watcher_main_event(we.w_, we.ev_);
     }
     events.clear();
 }
 
 void EVBackend::append_event(EVIO *w, int32_t ev)
 {
-    int32_t flag = _events.append_main_event(w, ev);
+    int32_t flag = events_.append_main_event(w, ev);
 
     // 主线程执行的逻辑可能耗时较久，才需要及时唤醒backend把数据发送出去
     // backend线程可以收集完所有数据后再唤醒主线程处理，节省一点资源
-    // _ev->wake(true);
+    // ev_->wake(true);
     if (2 == flag)
     {
-        _fd_mgr.for_each(
+        fd_mgr_.for_each(
             [w](EVIO *watcher)
             {
-                if (w != watcher) watcher->_b_ev_counter = 0;
+                if (w != watcher) watcher->b_ev_counter_ = 0;
             });
     }
 }

@@ -109,7 +109,7 @@ class ThreadCv
 public:
     ThreadCv()
     {
-        _data = 0;
+        data_ = 0;
     }
     ~ThreadCv(){}
 
@@ -120,15 +120,15 @@ public:
     void notify_one(int32_t data)
     {
         {
-            std::unique_lock<std::mutex> ul(_mutex);
-            if (_data)
+            std::unique_lock<std::mutex> ul(mutex_);
+            if (data_)
             {
-                _data |= data;
+                data_ |= data;
                 return;
             }
-            _data |= data;
+            data_ |= data;
         }
-        _cv.notify_one();
+        cv_.notify_one();
     }
     /**
      * @brief 唤醒所有等待的线程
@@ -137,10 +137,10 @@ public:
     void notify_all(int32_t data)
     {
         {
-            std::unique_lock<std::mutex> ul(_mutex);
-            _data |= data;
+            std::unique_lock<std::mutex> ul(mutex_);
+            data_ |= data;
         }
-        _cv.notify_all();
+        cv_.notify_all();
     }
     /**
      * @brief 等待N毫秒
@@ -149,11 +149,11 @@ public:
      */
     int32_t wait_for(int64_t ms)
     {
-        std::unique_lock<std::mutex> ul(_mutex);
-        if (!_data) _cv.wait_for(ul, std::chrono::milliseconds(ms));
+        std::unique_lock<std::mutex> ul(mutex_);
+        if (!data_) cv_.wait_for(ul, std::chrono::milliseconds(ms));
 
-        int32_t data = _data;
-        _data        = 0;
+        int32_t data = data_;
+        data_        = 0;
 
         // std::cv_status::no_timeout 表示不了这么数据，所以才返回int32_t表示
         return data;
@@ -161,8 +161,8 @@ public:
 
 private:
     // 所属线程需要处理的数据
-    int32_t _data;
-    std::mutex _mutex;
+    int32_t data_;
+    std::mutex mutex_;
     // TODO C＋＋20可以wait一个atomic变量，到时优化一下
-    std::condition_variable _cv;
+    std::condition_variable cv_;
 };

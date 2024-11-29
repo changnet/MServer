@@ -20,7 +20,7 @@ public:
      */
     explicit ObjectPool(const char *name) : Pool(name)
     {
-        _objs.reserve(msize);
+        objs_.reserve(msize);
     }
 
     virtual ~ObjectPool()
@@ -46,14 +46,14 @@ public:
     */
     template <typename... Args> T *construct(Args &&...args)
     {
-        if (unlikely(_objs.empty()))
+        if (unlikely(objs_.empty()))
         {
-            for (size_t i = 0; i < nsize; i++) _objs.push_back(new Storage);
+            for (size_t i = 0; i < nsize; i++) objs_.push_back(new Storage);
         }
 
-        Storage *storage = _objs.back();
+        Storage *storage = objs_.back();
 
-        _objs.pop_back();
+        objs_.pop_back();
         return new (storage) T(std::forward<Args>(args)...);
     }
 
@@ -62,13 +62,13 @@ public:
     {
         object->~T();
 
-        if (_objs.size() > msize)
+        if (objs_.size() > msize)
         {
             delete (Storage *)object;
         }
         else
         {
-            _objs.push_back(reinterpret_cast<Storage *>(object));
+            objs_.push_back(reinterpret_cast<Storage *>(object));
         }
     }
 
@@ -76,8 +76,8 @@ private:
     /* 清空内存池 */
     inline void clear()
     {
-        for (auto obj : _objs) delete obj;
-        _objs.clear();
+        for (auto obj : objs_) delete obj;
+        objs_.clear();
     }
 
 private:
@@ -85,7 +85,7 @@ private:
     // 不能在char[]上用placement new来创建对象，因为没有对齐
     using Storage = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
 
-    std::vector<Storage *> _objs;
+    std::vector<Storage *> objs_;
 };
 
 /**
@@ -103,18 +103,18 @@ public:
     virtual ~ObjectPoolLock()
     {
         // 基类会释放，不需要加锁。如果释放的时候有其他线程访问，加锁也救不了
-        // std::lock_guard<SpinLock> guard(_lock);
+        // std::lock_guard<SpinLock> guard(lock_);
         // ObjectPool<T, msize, nsize>::purge();
     }
 
     inline virtual void purge() override
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         ObjectPool<T, msize, nsize>::purge();
     }
     inline virtual size_t get_sizeof() const override
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         return ObjectPool<T, msize, nsize>::get_sizeof();
     }
 
@@ -126,16 +126,16 @@ public:
     */
     template <typename... Args> T *construct(Args &&...args)
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         return ObjectPool<T, msize, nsize>::construct(args...);
     }
 
     void destroy(T *const object)
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         ObjectPool<T, msize, nsize>::destroy(object);
     }
 
 private:
-    mutable SpinLock _lock;
+    mutable SpinLock lock_;
 };

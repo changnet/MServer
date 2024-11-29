@@ -56,7 +56,7 @@ template <typename T> T lua_to_cpp(lua_State *L, int i)
         if (!p || lua_islightuserdata(L, i)) return (T)p;
 
         // 这里只能是full userdata了，如果定义过则是通过lclass push的指针
-        const char *name = Class<T1>::_class_name;
+        const char *name = Class<T1>::class_name_;
         if (luaL_testudata(L, i, name)) return *((T1 **)p);
 
         return nullptr;
@@ -184,7 +184,7 @@ template <typename T> void cpp_to_lua(lua_State *L, T v)
     }
     else
     {
-        const char *name = Class<T1>::template _class_name;
+        const char *name = Class<T1>::template class_name_;
         if (name)
         {
             Class<T1>::push(L, v);
@@ -401,11 +401,11 @@ private:
         template <auto fp, size_t... I>
         static int caller(lua_State *L, const std::index_sequence<I...> &)
         {
-            T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
+            T **ptr = (T **)luaL_checkudata(L, 1, class_name_);
             if (ptr == nullptr || *ptr == nullptr)
             {
                 return luaL_error(L, "%s calling method with null pointer",
-                                  _class_name);
+                                  class_name_);
             }
 
             // 使用if constexpr替换多个模板好维护一些
@@ -451,23 +451,23 @@ public:
     }
 
     // 创建一个类的对象，但不向lua注册。仅用于注册后使用同样的对象并且虚拟机L应该和注册时一致
-    explicit Class(lua_State *L) : _L(L)
+    explicit Class(lua_State *L) : L_(L)
     {
         // 注册过后，必定存在类名
-        // assert（_class_name);
+        // assert（class_name_);
     }
 
     // 注册一个类
     // @param L lua虚拟机指针
-    explicit Class(lua_State *L, const char *classname) : _L(L)
+    explicit Class(lua_State *L, const char *classname) : L_(L)
     {
-        _class_name = classname;
+        class_name_ = classname;
 
-        lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+        lua_getfield(L, LUA_REGISTRYINDEX, "LOADED_");
         assert(lua_istable(L, -1));
 
         // 该类名已经注册过
-        if (0 == luaL_newmetatable(L, _class_name))
+        if (0 == luaL_newmetatable(L, class_name_))
         {
             assert(false);
             return;
@@ -529,39 +529,39 @@ public:
         lua_setfield(L, -2, "__index");
 
         // 设置loaded，这样在Lua中可以像普通模块那样require "xxx"
-        lua_setfield(L, -2, _class_name);
+        lua_setfield(L, -2, class_name_);
 
-        lua_pop(L, 1); // drop _loaded table
+        lua_pop(L, 1); // drop loaded_ table
     }
 
     // 指定构造函数的参数
     template <typename... Args> void constructor()
     {
 
-        luaL_getmetatable(_L, _class_name);
-        assert(lua_istable(_L, -1));
+        luaL_getmetatable(L_, class_name_);
+        assert(lua_istable(L_, -1));
 
         // lua_getmetatable获取不到metatable的话，并不会往堆栈push一个nil
-        if (!lua_getmetatable(_L, -1))
+        if (!lua_getmetatable(L_, -1))
         {
-            lua_newtable(_L);
+            lua_newtable(L_);
         }
-        lua_pushcfunction(_L, class_constructor<Args...>);
-        lua_setfield(_L, -2, "__call");
-        lua_setmetatable(_L, -2);
+        lua_pushcfunction(L_, class_constructor<Args...>);
+        lua_setfield(L_, -2, "__call");
+        lua_setmetatable(L_, -2);
 
-        lua_pop(_L, 1); /* drop class metatable */
+        lua_pop(L_, 1); /* drop class metatable */
     }
 
     /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete
      * 由于此函数为static，但却依赖classname，而classname在构造函数中传入。
-     * 因此，当调用类似lclass<lsocket>::push( L,_backend,false );的代码时，
+     * 因此，当调用类似lclass<lsocket>::push( L,backend_,false );的代码时，
      * 请保证你之前已注册对应的类，否则metatable将为nil
      */
     static int push(lua_State *L, const T *obj, bool gc = false)
     {
         assert(obj);
-        assert(_class_name);
+        assert(class_name_);
 
         /* 这里只是创建一个指针给lua管理
          */
@@ -569,24 +569,24 @@ public:
         *ptr          = obj;
 
         // 只有用lcalss定义了对应类的对象能push到lua，因此这里的metatable必须存在
-        luaL_getmetatable(L, _class_name);
+        luaL_getmetatable(L, class_name_);
         if (!lua_istable(L, -1))
         {
             return -1;
         }
 
-        /* 如果不自动gc，则需要在metatable中设置一张名为_notgc的表。以userdata
+        /* 如果不自动gc，则需要在metatable中设置一张名为notgc_的表。以userdata
          * 为key的weaktable。当lua层调用gc时,userdata本身还存在，故这时判断是准确的
          */
         if (!gc)
         {
-            subtable(L, 2, "_notgc", "k");
+            subtable(L, 2, "notgc_", "k");
 
             lua_pushvalue(L, 1); /* 复制userdata到栈顶 */
             lua_pushboolean(L, 1);
-            lua_settable(L, -3); /* _notgc[userdata] = true */
+            lua_settable(L, -3); /* notgc_[userdata] = true */
 
-            lua_pop(L, 1); /* drop _notgc out of stack */
+            lua_pop(L, 1); /* drop notgc_ out of stack */
         }
 
         lua_setmetatable(L, -2);
@@ -623,23 +623,23 @@ public:
             cfp = ClassRegister<decltype(fp)>::template reg<fp>;
         }
 
-        luaL_getmetatable(_L, _class_name);
+        luaL_getmetatable(L_, class_name_);
 
-        lua_pushcfunction(_L, cfp);
-        lua_setfield(_L, -2, name);
+        lua_pushcfunction(L_, cfp);
+        lua_setfield(L_, -2, name);
 
-        lua_pop(_L, 1); /* drop class metatable */
+        lua_pop(L_, 1); /* drop class metatable */
     }
 
     /* 注册变量,通常用于设置宏定义、枚举 */
     void set(int32_t val, const char *val_name)
     {
-        luaL_getmetatable(_L, _class_name);
+        luaL_getmetatable(L_, class_name_);
 
-        lua_pushinteger(_L, val);
-        lua_setfield(_L, -2, val_name);
+        lua_pushinteger(L_, val);
+        lua_setfield(L_, -2, val_name);
 
-        lua_pop(_L, 1); /* drop class metatable */
+        lua_pop(L_, 1); /* drop class metatable */
     }
 
 private:
@@ -675,7 +675,7 @@ private:
     // 把一个对象转换为一个light userdata
     static int toludata(lua_State *L)
     {
-        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, class_name_);
 
         lua_pushlightuserdata(L, *ptr);
         return 1;
@@ -684,10 +684,10 @@ private:
     /* 元方法,__tostring */
     static int tostring(lua_State *L)
     {
-        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, class_name_);
         if (ptr != nullptr)
         {
-            lua_pushfstring(L, "%s: %p", _class_name, *ptr);
+            lua_pushfstring(L, "%s: %p", class_name_, *ptr);
             return 1;
         }
         return 0;
@@ -696,16 +696,16 @@ private:
     /* gc函数 */
     static int gc(lua_State *L)
     {
-        if (luaL_getmetafield(L, 1, "_notgc"))
+        if (luaL_getmetafield(L, 1, "notgc_"))
         {
-            /* 以userdata为key取值。如果未设置该userdata的_notgc值，则将会取得nil */
+            /* 以userdata为key取值。如果未设置该userdata的notgc_值，则将会取得nil */
             lua_pushvalue(L, 1);
             lua_gettable(L, -2);
             /* gc = true表示执行gc函数 */
             if (lua_toboolean(L, -1)) return 0;
         }
 
-        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, class_name_);
         if (*ptr != nullptr) delete *ptr;
         *ptr = nullptr;
 
@@ -742,21 +742,21 @@ private:
 
     template <auto pf> static int fun_thunk(lua_State *L)
     {
-        T **ptr = (T **)luaL_checkudata(L, 1, _class_name);
+        T **ptr = (T **)luaL_checkudata(L, 1, class_name_);
         if (ptr == nullptr || *ptr == nullptr)
         {
             return luaL_error(L, "%s calling method with null pointer",
-                              _class_name);
+                              class_name_);
         }
 
         return ((*ptr)->*pf)(L);
     }
 
 public:
-    static const char *_class_name;
+    static const char *class_name_;
 
 private:
-    lua_State *_L;
+    lua_State *L_;
 };
 
 // 用于保证函数调用前后，Lua堆栈是干净的
@@ -765,16 +765,16 @@ class StackChecker
 public:
     StackChecker(lua_State *L)
     {
-        _L = L;
+        L_ = L;
         assert(0 == lua_gettop(L));
     }
     ~StackChecker()
     {
-        assert(0 == lua_gettop(_L));
+        assert(0 == lua_gettop(L_));
     }
 
 private:
-    lua_State *_L;
+    lua_State *L_;
 };
 
 template <auto fp,
@@ -854,4 +854,4 @@ Ret call(lua_State *L, const char *name, Args... args)
 
 #undef luaL_checkis
 } // namespace lcpp
-template <class T> const char *lcpp::Class<T>::_class_name = nullptr;
+template <class T> const char *lcpp::Class<T>::class_name_ = nullptr;

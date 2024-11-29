@@ -34,14 +34,14 @@ private:
 
 private:
     static const int32_t HUGE_FD = 10240;
-    int32_t _wake_fd[2]; /// 用于唤醒子线程的fd
-    std::vector<int32_t> _fd_index;
-    std::unordered_map<int32_t, int32_t> _fd_index_huge;
+    int32_t wake_fd_[2]; /// 用于唤醒子线程的fd
+    std::vector<int32_t> fd_index_;
+    std::unordered_map<int32_t, int32_t> fd_index_huge_;
 
 #ifdef __windows__
-    std::vector<WSAPOLLFD> _poll_fd;
+    std::vector<WSAPOLLFD> poll_fd_;
 #else
-    std::vector<struct pollfd> _poll_fd;
+    std::vector<struct pollfd> poll_fd_;
 #endif
 };
 

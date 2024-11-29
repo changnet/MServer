@@ -22,11 +22,11 @@ public:
     }
     explicit Pool(const char *name)
     {
-        _max_new = 0;
-        _max_del = 0;
-        _max_now = 0;
+        max_new_ = 0;
+        max_del_ = 0;
+        max_now_ = 0;
 
-        _name = name;
+        name_ = name;
 
         class Pool **pool_stat = get_pool_stat();
         for (int32_t idx = 0; idx < MAX_POOL; idx++)
@@ -42,10 +42,10 @@ public:
         assert(false);
     }
 
-    int64_t get_max_new() const { return _max_new; }
-    int64_t get_max_del() const { return _max_del; }
-    int64_t get_max_now() const { return _max_now; }
-    const char *get_name() const { return _name; }
+    int64_t get_max_new() const { return max_new_; }
+    int64_t get_max_del() const { return max_del_; }
+    int64_t get_max_now() const { return max_now_; }
+    const char *get_name() const { return name_; }
 
     virtual void purge()              = 0;
     virtual size_t get_sizeof() const = 0;
@@ -59,8 +59,8 @@ public:
     }
 
 protected:
-    const char *_name;
-    int64_t _max_new; // 总分配数量
-    int64_t _max_del; // 总删除数量
-    int64_t _max_now; // 当前缓存数量
+    const char *name_;
+    int64_t max_new_; // 总分配数量
+    int64_t max_del_; // 总删除数量
+    int64_t max_now_; // 当前缓存数量
 };

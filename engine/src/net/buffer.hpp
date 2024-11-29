@@ -8,7 +8,7 @@
  *    +---------------------------------------------------------------+
  *    |    悬空区   |        有效数据区        |      空白区(space)   |
  *    +---------------------------------------------------------------+
- * _ctx          _beg                        _end                   _max
+ * ctx_          beg_                        end_                   max_
  *
  */
 
@@ -43,9 +43,9 @@ public:
     public:
         Chunk()
         {
-            _ctx[0]   = 0; // avoid C26495 warning
-            _next     = nullptr;
-            _used_pos = _free_pos = 0;
+            ctx_[0]   = 0; // avoid C26495 warning
+            next_     = nullptr;
+            used_pos_ = free_pos_ = 0;
         }
         ~Chunk()
         {
@@ -57,8 +57,8 @@ public:
          */
         inline void remove_used(size_t len)
         {
-            _used_pos += len;
-            assert(_free_pos >= _used_pos);
+            used_pos_ += len;
+            assert(free_pos_ >= used_pos_);
         }
         /**
          * @brief 添加已使用缓冲区
@@ -66,8 +66,8 @@ public:
         */
         inline void add_used(size_t len)
         {
-            _free_pos += len;
-            assert(MAX_CTX >= _free_pos);
+            free_pos_ += len;
+            assert(MAX_CTX >= free_pos_);
         }
 
         /**
@@ -77,7 +77,7 @@ public:
         */
         inline void append(const void *data, const size_t len)
         {
-            memcpy(_ctx + _free_pos, data, len);
+            memcpy(ctx_ + free_pos_, data, len);
             add_used(len);
         }
 
@@ -87,7 +87,7 @@ public:
         */
         inline const char *get_used_ctx() const
         {
-            return _ctx + _used_pos;
+            return ctx_ + used_pos_;
         }
 
         /**
@@ -96,7 +96,7 @@ public:
         */
         inline char *get_free_ctx()
         {
-            return _ctx + _free_pos;
+            return ctx_ + free_pos_;
         }
 
         /**
@@ -104,7 +104,7 @@ public:
         */
         inline void clear()
         {
-            _used_pos = _free_pos = 0;
+            used_pos_ = free_pos_ = 0;
         }
         /**
          * @brief 获取已使用缓冲区大小
@@ -112,7 +112,7 @@ public:
         */
         inline size_t get_used_size() const
         {
-            return _free_pos - _used_pos;
+            return free_pos_ - used_pos_;
         }
 
         /**
@@ -121,15 +121,15 @@ public:
         */
         inline size_t get_free_size() const
         {
-            return MAX_CTX - _free_pos;
+            return MAX_CTX - free_pos_;
         }
     public:
-        char _ctx[MAX_CTX]; // 缓冲区指针
+        char ctx_[MAX_CTX]; // 缓冲区指针
 
-        size_t _used_pos; // 已使用缓冲区开始位置
-        size_t _free_pos; // 空闲缓冲区开始位置
+        size_t used_pos_; // 已使用缓冲区开始位置
+        size_t free_pos_; // 空闲缓冲区开始位置
 
-        Chunk *_next; // 链表下一节点
+        Chunk *next_; // 链表下一节点
     };
 
     /**
@@ -149,8 +149,8 @@ public:
         char *get(size_t len);
 
     private:
-        char *_ctx;  // 缓冲区指针
-        size_t _len; // 缓冲区长度
+        char *ctx_;  // 缓冲区指针
+        size_t len_; // 缓冲区长度
     };
 
     /**
@@ -159,33 +159,33 @@ public:
     class Transaction final
     {
     public:
-        explicit Transaction(SpinLock &lock) : _ul(lock)
+        explicit Transaction(SpinLock &lock) : ul_(lock)
         {
-            _len = 0;
-            _ctx = 0;
-            _internal = false;
+            len_ = 0;
+            ctx_ = 0;
+            internal_ = false;
         }
-        Transaction(Transaction &&t) noexcept : _ul(std::move(t._ul))
+        Transaction(Transaction &&t) noexcept : ul_(std::move(t.ul_))
         {
-            _len = t._len;
-            _ctx = t._ctx;
-            _internal = t._internal;
+            len_ = t.len_;
+            ctx_ = t.ctx_;
+            internal_ = t.internal_;
 
-            t._len = 0;
-            t._ctx = 0;
-            t._internal = false;
+            t.len_ = 0;
+            t.ctx_ = 0;
+            t.internal_ = false;
         }
         Transaction &operator=(Transaction &&t) noexcept
         {
-            _len = t._len;
-            _ctx = t._ctx;
-            _internal = t._internal;
-            _ul  = std::move(t._ul);
+            len_ = t.len_;
+            ctx_ = t.ctx_;
+            internal_ = t.internal_;
+            ul_  = std::move(t.ul_);
 
-            t._len = 0;
-            t._ctx = 0;
-            t._internal = false;
-            // t._ul不用处理，_ul  = std::move(ul);里已经做了处理
+            t.len_ = 0;
+            t.ctx_ = 0;
+            t.internal_ = false;
+            // t.ul_不用处理，ul_  = std::move(ul);里已经做了处理
             return *this;
         }
 
@@ -196,12 +196,12 @@ public:
         Transaction &operator=(const Transaction &) = delete;
 
     public:
-        bool _internal; // 是否使用内部buff
-        char *_ctx;     // 预留的缓冲区指针
-        int32_t _len;   // 缓冲区的长度
+        bool internal_; // 是否使用内部buff
+        char *ctx_;     // 预留的缓冲区指针
+        int32_t len_;   // 缓冲区的长度
 
     private:
-        std::unique_lock<SpinLock> _ul;
+        std::unique_lock<SpinLock> ul_;
     };
 
     /// 小块缓冲区对象池
@@ -286,8 +286,8 @@ public:
       */
      inline size_t get_front_used_size() const
      {
-         std::lock_guard<SpinLock> guard(_lock);
-         return _front ? _front->get_used_size() : 0;
+         std::lock_guard<SpinLock> guard(lock_);
+         return front_ ? front_->get_used_size() : 0;
      }
 
     /**
@@ -296,8 +296,8 @@ public:
       */
      inline size_t get_chunk_size() const
      {
-         std::lock_guard<SpinLock> guard(_lock);
-         return _chunk_size;
+         std::lock_guard<SpinLock> guard(lock_);
+         return chunk_size_;
      }
 
      /**
@@ -306,8 +306,8 @@ public:
       */
      inline size_t get_chunk_mem_size() const
      {
-         std::lock_guard<SpinLock> guard(_lock);
-         return _chunk_size * sizeof(Chunk);
+         std::lock_guard<SpinLock> guard(lock_);
+         return chunk_size_ * sizeof(Chunk);
      }
 
     /**
@@ -325,8 +325,8 @@ public:
     // 当前缓冲区是否溢出
      inline bool is_overflow() const
      {
-         std::lock_guard<SpinLock> guard(_lock);
-         return _chunk_size > _chunk_max;
+         std::lock_guard<SpinLock> guard(lock_);
+         return chunk_size_ > chunk_max_;
      }
 
 private:
@@ -334,15 +334,15 @@ private:
 
     inline Chunk *new_chunk()
     {
-        _chunk_size++;
+        chunk_size_++;
         return get_chunk_pool()->construct();
     }
 
     inline void del_chunk(Chunk *chunk)
     {
-        assert(_chunk_size > 0);
+        assert(chunk_size_ > 0);
 
-        _chunk_size--;
+        chunk_size_--;
         get_chunk_pool()->destroy(chunk);
     }
 
@@ -367,12 +367,12 @@ private:
     void __append(const void *data, const size_t len);
 
 private:
-    mutable SpinLock _lock;  // 多线程锁
-    Chunk *_front;      // 数据包链表头
-    Chunk *_back;       // 数据包链表尾
+    mutable SpinLock lock_;  // 多线程锁
+    Chunk *front_;      // 数据包链表头
+    Chunk *back_;       // 数据包链表尾
 
     // 已申请chunk数量
-    int32_t _chunk_size;
+    int32_t chunk_size_;
     // 该缓冲区允许申请chunk的最大数量，超过此数量视为缓冲区溢出
-    int32_t _chunk_max;
+    int32_t chunk_max_;
 };

@@ -25,46 +25,46 @@ public:
         void reset();
         bool operator<(const EntityCtx &other) const
         {
-            // 需要保证索引节点(0 == _id)小于实体，这样坐标一样时索引必须在实体左边
-            return _pos_x == other._pos_x ? (0 == _id && 0 != other._id)
-                                          : _pos_x < other._pos_x;
+            // 需要保证索引节点(0 == id_)小于实体，这样坐标一样时索引必须在实体左边
+            return pos_x_ == other.pos_x_ ? (0 == id_ && 0 != other.id_)
+                                          : pos_x_ < other.pos_x_;
         }
         bool operator>(const EntityCtx &other) const
         {
-            // 需要保证索引节点(0 == _id)小于实体，这样坐标一样时索引必须在实体左边
-            return _pos_x == other._pos_x ? (0 == other._id && 0 != _id)
-                                          : _pos_x > other._pos_x;
+            // 需要保证索引节点(0 == id_)小于实体，这样坐标一样时索引必须在实体左边
+            return pos_x_ == other.pos_x_ ? (0 == other.id_ && 0 != id_)
+                                          : pos_x_ > other.pos_x_;
         }
 
     public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
-        uint8_t _mask;
-        int32_t _pos_x;  // 像素坐标x
-        int32_t _pos_y;  // 像素坐标y
-        int32_t _pos_z;  // 像素坐标z
-        int32_t _visual; /// 视野大小(像素)
-        EntityId _id;    /// 实体的唯一id，如玩家id(0表示索引)
+        uint8_t mask_;
+        int32_t pos_x_;  // 像素坐标x
+        int32_t pos_y_;  // 像素坐标y
+        int32_t pos_z_;  // 像素坐标z
+        int32_t visual_; /// 视野大小(像素)
+        EntityId id_;    /// 实体的唯一id，如玩家id(0表示索引)
 
         /**
          * 对我感兴趣的实体列表。比如我周围的玩家，需要看到我移动、放技能，都需要频繁广播给他们，
          * 可以直接从这个列表取。如果游戏并不是arpg，可能并不需要这个列表。
-         * 当两个实体的mask存在交集时，将同时放入双方的_interest_me，但这只是做初步的筛选，例
-         * 如不要把怪物放到玩家的_interest_me，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
+         * 当两个实体的mask存在交集时，将同时放入双方的interest_me_，但这只是做初步的筛选，例
+         * 如不要把怪物放到玩家的interest_me_，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
          * 根据业务处理
          */
-        EntityVector *_interest_me;
+        EntityVector *interest_me_;
 
         // No iterators or references are invalidated
         // https://en.cppreference.com/w/cpp/container/list/insert
         /// 链表的迭代器可以存储，用于在链表中移动
-        std::list<EntityCtx *>::iterator _iter;
+        std::list<EntityCtx *>::iterator iter_;
     };
 
     /// 视野管理
     struct Visual
     {
-        int32_t _visual;
-        int32_t _counter;
+        int32_t visual_;
+        int32_t counter_;
     };
 
 public:
@@ -171,7 +171,7 @@ protected:
 
     void del_entity_ctx(EntityCtx *ctx)
     {
-        del_entity_vector(ctx->_interest_me);
+        del_entity_vector(ctx->interest_me_);
 
         get_ctx_pool()->destroy(ctx);
     }
@@ -181,8 +181,8 @@ protected:
         EntityCtx *ctx = get_ctx_pool()->construct();
 
         ctx->reset();
-        ctx->_iter        = _list.end();
-        ctx->_interest_me = new_entity_vector();
+        ctx->iter_        = list_.end();
+        ctx->interest_me_ = new_entity_vector();
 
         return ctx;
     }
@@ -202,14 +202,14 @@ protected:
                    int32_t visual) const
     {
         // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
-        return visual > 0 && visual >= std::abs(ctx->_pos_x - x)
-               && visual >= std::abs(ctx->_pos_z - z)
-               && visual >= std::abs(ctx->_pos_y - y);
+        return visual > 0 && visual >= std::abs(ctx->pos_x_ - x)
+               && visual >= std::abs(ctx->pos_z_ - z)
+               && visual >= std::abs(ctx->pos_y_ - y);
     }
     bool in_visual(const EntityCtx *ctx, const EntityCtx *other) const
     {
-        return in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z,
-                         ctx->_visual);
+        return in_visual(ctx, other->pos_x_, other->pos_y_, other->pos_z_,
+                         ctx->visual_);
     }
 
     /// 把实体插入链表
@@ -247,12 +247,12 @@ protected:
                                EntityVector *list_other_out);
 
 protected:
-    int32_t _max_visual;
-    std::vector<Visual> _visual;
+    int32_t max_visual_;
+    std::vector<Visual> visual_;
 
-    EntitySet _entity_set; /// 记录所有实体的数据
+    EntitySet entity_set_; /// 记录所有实体的数据
 
-    int32_t _index;                    /// 索引系数
-    std::list<EntityCtx *> _list;      /// x轴链表
-    std::vector<EntityCtx *> _indexer; /// 索引，用于在链表中快速跳转
+    int32_t index_;                    /// 索引系数
+    std::list<EntityCtx *> list_;      /// x轴链表
+    std::vector<EntityCtx *> indexer_; /// 索引，用于在链表中快速跳转
 };

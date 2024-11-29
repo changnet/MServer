@@ -46,8 +46,8 @@ public:
     int32_t load_from_file(lua_State *L);
 
 private:
-    ACISM *_psp;             /// AC自动机的数据结构
-    MEMBUF _patt;            /// pattern，字库内容
-    MEMREF *_pattv;          /// 把_patt拆分成字库数组
-    int32_t _case_sensitive; /// 是否区分大小写
+    ACISM *psp_;             /// AC自动机的数据结构
+    MEMBUF patt_;            /// pattern，字库内容
+    MEMREF *pattv_;          /// 把patt_拆分成字库数组
+    int32_t case_sensitive_; /// 是否区分大小写
 };

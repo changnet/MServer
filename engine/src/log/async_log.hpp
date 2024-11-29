@@ -15,17 +15,17 @@ public:
         friend class AsyncLog;
         explicit Buffer(int64_t time, LogType type)
         {
-            _time = time;
-            _type = type;
-            _used = 0;
-            _buff[0] = 0;
+            time_ = time;
+            type_ = type;
+            used_ = 0;
+            buff_[0] = 0;
         }
 
     private:
-        int64_t _time;   /// 日志UTC时间戳
-        size_t _used;    /// 缓冲区已使用大小
-        LogType _type;   /// 日志类型
-        char _buff[512]; /// 日志缓冲区
+        int64_t time_;   /// 日志UTC时间戳
+        size_t used_;    /// 缓冲区已使用大小
+        LogType type_;   /// 日志类型
+        char buff_[512]; /// 日志缓冲区
     };
     using BufferList = std::vector<Buffer *>;
 
@@ -48,7 +48,7 @@ public:
         Policy();
         ~Policy();
 
-        PolicyType get_type() const { return _type; }
+        PolicyType get_type() const { return type_; }
         void close_stream();                 /// 关闭文件
         FILE *open_stream(const char *path); /// 获取文件流
 
@@ -57,7 +57,7 @@ public:
         void trigger_daily_rollover(int64_t now);
         bool is_daily_rollover(int64_t now)
         {
-            return now < _data || now > _data + 86400;
+            return now < data_ || now > data_ + 86400;
         }
 
     private:
@@ -66,11 +66,11 @@ public:
         static time_t day_begin(time_t now);
 
     private:
-        FILE *_file; /// 写入的文件句柄，减少文件打开、关闭
-        PolicyType _type;  /// 文件切分策略
-        int64_t _data;     /// 用于切分文件的参数
-        int64_t _data2;    /// 用于切分文件的参数
-        std::string _path; /// 当前写入的文件路径
+        FILE *file_; /// 写入的文件句柄，减少文件打开、关闭
+        PolicyType type_;  /// 文件切分策略
+        int64_t data_;     /// 用于切分文件的参数
+        int64_t data2_;    /// 用于切分文件的参数
+        std::string path_; /// 当前写入的文件路径
     };
 
     /// 日志设备(如file、stdout)
@@ -79,21 +79,21 @@ public:
     public:
         Device()
         {
-            _time = 0;
+            time_ = 0;
         }
         friend class AsyncLog;
 
     private:
-        Policy _policy; /// 文件切分策略
+        Policy policy_; /// 文件切分策略
 
-        BufferList _buff; /// 待写入的日志
-        time_t _time;     /// 上次修改时间
+        BufferList buff_; /// 待写入的日志
+        time_t time_;     /// 上次修改时间
     };
 
 public:
     virtual ~AsyncLog(){};
     explicit AsyncLog(const std::string &name)
-        : Thread(name), _buffer_pool("AsyncLog"){};
+        : Thread(name), buffer_pool_("AsyncLog"){};
 
     size_t busy_job(size_t *finished   = nullptr,
                     size_t *unfinished = nullptr) override;
@@ -116,15 +116,15 @@ private:
 
     Buffer *device_reserve(Device &device, int64_t time, LogType type)
     {
-        Buffer *buff = _buffer_pool.construct(time, type);
+        Buffer *buff = buffer_pool_.construct(time, type);
 
-        device._buff.push_back(buff);
+        device.buff_.push_back(buff);
 
         return buff;
     }
 
 private:
-    BufferPool _buffer_pool;
-    BufferList _writing_buffers;
-    std::unordered_map<std::string, Device> _device;
+    BufferPool buffer_pool_;
+    BufferList writing_buffers_;
+    std::unordered_map<std::string, Device> device_;
 };

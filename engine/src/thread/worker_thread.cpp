@@ -10,3 +10,8 @@ WorkerThread::~WorkerThread()
 {
     L = llib::delete_state(L);
 }
+
+void WorkerThread::routine(int32_t ev)
+{
+
+}

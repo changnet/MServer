@@ -5,9 +5,9 @@
 #include "system/static_global.hpp"
 
 LSql::LSql(lua_State *L)
-    : Thread("lsql"), _query_pool("lsql_query"), _result_pool("lsql_result")
+    : Thread("lsql"), query_pool_("lsql_query"), result_pool_("lsql_result")
 {
-    _dbid = luaL_checkinteger32(L, 2);
+    dbid_ = luaL_checkinteger32(L, 2);
 
     if (lua_isstring(L, 3))
     {
@@ -23,33 +23,33 @@ LSql::LSql(lua_State *L)
 LSql::~LSql()
 {
     // 线程对象销毁时，子线程已停止，操作不需要再加锁
-    if (!_query.empty())
+    if (!query_.empty())
     {
         ELOG("SQL query not finish, data may lost");
-        while (!_query.empty())
+        while (!query_.empty())
         {
-            delete _query.front();
-            _query.pop();
+            delete query_.front();
+            query_.pop();
         }
     }
 
-    if (!_result.empty())
+    if (!result_.empty())
     {
         ELOG("SQL result not finish, ignore");
-        while (!_result.empty())
+        while (!result_.empty())
         {
-            _result_pool.destroy(_result.front());
-            _result.pop();
+            result_pool_.destroy(result_.front());
+            result_.pop();
         }
     }
 }
 
 size_t LSql::busy_job(size_t *finished, size_t *unfinished)
 {
-    std::lock_guard<std::mutex> guard(_mutex);
+    std::lock_guard<std::mutex> guard(mutex_);
 
-    size_t finished_sz   = _result.size();
-    size_t unfinished_sz = _query.size();
+    size_t finished_sz   = result_.size();
+    size_t unfinished_sz = query_.size();
 
     if (is_busy()) unfinished_sz += 1;
 
@@ -87,19 +87,19 @@ void LSql::main_routine(int32_t ev)
 
     LUA_PUSHTRACEBACK(L);
 
-    std::unique_lock<std::mutex> ul(_mutex);
+    std::unique_lock<std::mutex> ul(mutex_);
 
-    while (!_result.empty())
+    while (!result_.empty())
     {
-        SqlResult *res = _result.front();
-        _result.pop();
+        SqlResult *res = result_.front();
+        result_.pop();
 
         ul.unlock();
 
         on_result(L, res);
 
         ul.lock();
-        _result_pool.destroy(res);
+        result_pool_.destroy(res);
     }
 
     lua_pop(L, 1); /* remove traceback */
@@ -113,29 +113,29 @@ void LSql::routine(int32_t ev)
      */
     if (0 != ping()) return;
 
-    std::unique_lock<std::mutex> ul(_mutex);
+    std::unique_lock<std::mutex> ul(mutex_);
 
-    while (!_query.empty())
+    while (!query_.empty())
     {
-        SqlQuery *query = _query.front();
-        _query.pop();
+        SqlQuery *query = query_.front();
+        query_.pop();
 
         SqlResult *res = nullptr;
-        int32_t id     = query->_id;
-        if (id > 0) res = _result_pool.construct();
+        int32_t id     = query->id_;
+        if (id > 0) res = result_pool_.construct();
 
         ul.unlock();
         exec_sql(query, res);
         query->clear();
         ul.lock();
 
-        _query_pool.destroy(query);
+        query_pool_.destroy(query);
 
         // 当查询结果为空时，res为nullptr，但仍然需要回调到脚本
         if (id > 0)
         {
-            res->_id = id;
-            _result.emplace(res);
+            res->id_ = id;
+            result_.emplace(res);
             wakeup_main(S_DATA);
         }
     }
@@ -144,11 +144,11 @@ void LSql::routine(int32_t ev)
 void LSql::exec_sql(const SqlQuery *query, SqlResult *res)
 {
     const char *stmt = query->get();
-    assert(stmt && query->_size > 0);
+    assert(stmt && query->size_ > 0);
 
-    if (unlikely(this->query(stmt, query->_size)))
+    if (unlikely(this->query(stmt, query->size_)))
     {
-        if (res) res->_ecode = -1;
+        if (res) res->ecode_ = -1;
         ELOG("sql query error:%s", error());
         ELOG("sql will not exec:%s", stmt);
         return;
@@ -186,12 +186,12 @@ int32_t LSql::do_sql(lua_State *L)
     }
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
-        SqlQuery *query = _query_pool.construct();
+        SqlQuery *query = query_pool_.construct();
         query->clear();
         query->set(id, size, stmt);
-        _query.push(query);
+        query_.push(query);
         wakeup(S_DATA);
     }
 
@@ -203,7 +203,7 @@ void LSql::on_ready(lua_State *L)
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "mysql_event");
     lua_pushinteger(L, S_READY);
-    lua_pushinteger(L, _dbid);
+    lua_pushinteger(L, dbid_);
 
     if (LUA_OK != lua_pcall(L, 2, 0, 1))
     {
@@ -218,9 +218,9 @@ void LSql::on_result(lua_State *L, SqlResult *res)
 {
     lua_getglobal(L, "mysql_event");
     lua_pushinteger(L, S_DATA);
-    lua_pushinteger(L, _dbid);
-    lua_pushinteger(L, res->_id);
-    lua_pushinteger(L, res->_ecode);
+    lua_pushinteger(L, dbid_);
+    lua_pushinteger(L, res->id_);
+    lua_pushinteger(L, res->ecode_);
 
     int32_t args = 4 + mysql_to_lua(L, res);
 
@@ -234,8 +234,8 @@ void LSql::on_result(lua_State *L, SqlResult *res)
 int32_t LSql::field_to_lua(lua_State *L, const SqlField &field,
                            const char *value, size_t size)
 {
-    lua_pushstring(L, field._name);
-    switch (field._type)
+    lua_pushstring(L, field.name_);
+    switch (field.type_)
     {
     case MYSQL_TYPE_TINY:
     case MYSQL_TYPE_SHORT:
@@ -259,7 +259,7 @@ int32_t LSql::field_to_lua(lua_State *L, const SqlField &field,
     case MYSQL_TYPE_STRING: lua_pushlstring(L, value, size); break;
     default:
         lua_pushnil(L);
-        ELOG("unknow mysql type:%d\n", field._type);
+        ELOG("unknow mysql type:%d\n", field.type_);
         break;
     }
 
@@ -269,28 +269,28 @@ int32_t LSql::field_to_lua(lua_State *L, const SqlField &field,
 /* 将mysql结果集转换为lua table */
 int32_t LSql::mysql_to_lua(lua_State *L, const SqlResult *res)
 {
-    if (!res || 0 != res->_ecode || 0 == res->_num_rows) return 0;
+    if (!res || 0 != res->ecode_ || 0 == res->num_rows_) return 0;
 
-    assert(res->_num_cols == res->_fields.size()
-           && res->_num_rows == res->_rows.size());
+    assert(res->num_cols_ == res->fields_.size()
+           && res->num_rows_ == res->rows_.size());
 
-    lua_createtable(L, res->_num_rows, 0); /* 创建数组，元素个数为num_rows */
+    lua_createtable(L, res->num_rows_, 0); /* 创建数组，元素个数为num_rows */
 
-    const std::vector<SqlField> &fields        = res->_fields;
-    const std::vector<SqlResult::SqlRow> &rows = res->_rows;
-    for (uint32_t row = 0; row < res->_num_rows; row++)
+    const std::vector<SqlField> &fields        = res->fields_;
+    const std::vector<SqlResult::SqlRow> &rows = res->rows_;
+    for (uint32_t row = 0; row < res->num_rows_; row++)
     {
         lua_pushinteger(L, row + 1); /* lua table从1开始 */
         /* 创建hash表，元素个数为num_cols */
-        lua_createtable(L, 0, res->_num_cols);
+        lua_createtable(L, 0, res->num_cols_);
 
         const std::vector<SqlCol> &cols = rows[row];
-        assert(res->_num_cols == cols.size());
-        for (uint32_t col = 0; col < res->_num_cols; col++)
+        assert(res->num_cols_ == cols.size());
+        for (uint32_t col = 0; col < res->num_cols_; col++)
         {
-            if (0 == cols[col]._size) continue; /* 值为NULL */
+            if (0 == cols[col].size_) continue; /* 值为NULL */
 
-            field_to_lua(L, fields[col], cols[col].get(), cols[col]._size);
+            field_to_lua(L, fields[col], cols[col].get(), cols[col].size_);
             lua_rawset(L, -3);
         }
 

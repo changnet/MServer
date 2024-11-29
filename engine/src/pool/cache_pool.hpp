@@ -16,7 +16,7 @@ public:
     /* @msize:允许池中分配的最大对象数量
      * @nsize:每次预分配的数量
      */
-    explicit CachePool(const char *name) : Pool(name) { _objs.reserve(msize); }
+    explicit CachePool(const char *name) : Pool(name) { objs_.reserve(msize); }
 
     ~CachePool() { clear(); }
 
@@ -27,27 +27,27 @@ public:
     // 构造对象
     T *construct()
     {
-        if (unlikely(_objs.empty()))
+        if (unlikely(objs_.empty()))
         {
-            for (size_t i = 0; i < nsize; i++) _objs.push_back(new T());
+            for (size_t i = 0; i < nsize; i++) objs_.push_back(new T());
         }
 
-        T *obj = _objs.back();
+        T *obj = objs_.back();
 
-        _objs.pop_back();
+        objs_.pop_back();
         return obj;
     }
 
     /// 回收对象(当内存池已满时，对象会被直接销毁)
     void destroy(T *const object, bool del = false)
     {
-        if (del || _objs.size() > msize)
+        if (del || objs_.size() > msize)
         {
             delete object;
         }
         else
         {
-            _objs.push_back(object);
+            objs_.push_back(object);
         }
     }
 
@@ -55,9 +55,9 @@ private:
     /* 清空内存池 */
     inline void clear()
     {
-        for (auto obj : _objs) delete obj;
+        for (auto obj : objs_) delete obj;
     }
 
 private:
-    std::vector<T *> _objs;
+    std::vector<T *> objs_;
 };

@@ -61,18 +61,18 @@ public:
      */
     inline class Buffer &get_recv_buffer()
     {
-        return _recv;
+        return recv_;
     }
     /**
      * @brief 获取发送缓冲区对象
      */
     inline class Buffer &get_send_buffer()
     {
-        return _send;
+        return send_;
     }
 
 protected:
-    int32_t _conn_id;   /// 所属socket的id
-    Buffer _recv; /// 接收缓冲区，由io线程写，主线程读取并处理数据
-    Buffer _send; /// 发送缓冲区，由主线程写，io线程发送
+    int32_t conn_id_;   /// 所属socket的id
+    Buffer recv_; /// 接收缓冲区，由io线程写，主线程读取并处理数据
+    Buffer send_; /// 发送缓冲区，由主线程写，io线程发送
 };

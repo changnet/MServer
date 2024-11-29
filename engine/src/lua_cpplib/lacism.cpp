@@ -11,12 +11,12 @@ static inline int isspace_ex(int c)
 
 LAcism::LAcism(lua_State *L)
 {
-    _psp            = nullptr;
-    _pattv          = nullptr;
-    _case_sensitive = 1;
+    psp_            = nullptr;
+    pattv_          = nullptr;
+    case_sensitive_ = 1;
 
-    _patt.ptr = nullptr;
-    _patt.len = 0;
+    patt_.ptr = nullptr;
+    patt_.len = 0;
 
     UNUSED(L);
 }
@@ -24,30 +24,30 @@ LAcism::LAcism(lua_State *L)
 LAcism::~LAcism()
 {
     // 调用msutil里分配的内存，要用那边的分配方式释放
-    if (_patt.ptr)
+    if (patt_.ptr)
     {
-        buffree(_patt);
-        _patt.ptr = nullptr;
-        _patt.len = 0;
+        buffree(patt_);
+        patt_.ptr = nullptr;
+        patt_.len = 0;
     }
 
-    if (_pattv)
+    if (pattv_)
     {
-        free(_pattv);
-        _pattv = nullptr;
+        free(pattv_);
+        pattv_ = nullptr;
     }
 
-    if (_psp)
+    if (psp_)
     {
-        acism_destroy(_psp);
-        _psp = nullptr;
+        acism_destroy(psp_);
+        psp_ = nullptr;
     }
 }
 
 /* 扫描关键字,扫描到其中一个即中止 */
 int32_t LAcism::scan(lua_State *L)
 {
-    if (!_psp)
+    if (!psp_)
     {
         return luaL_error(L, "no pattern load yet");
     }
@@ -56,7 +56,7 @@ int32_t LAcism::scan(lua_State *L)
     text.ptr = luaL_checklstring(L, 1, &(text.len));
 
     int32_t pos = acism_scan(
-        _psp, text,
+        psp_, text,
         [](int32_t str_num, int32_t text_pos, void *fn_data)
         {
             (void)str_num;
@@ -64,7 +64,7 @@ int32_t LAcism::scan(lua_State *L)
 
             return text_pos; // 返回非0表示不再匹配
         },
-        nullptr, _case_sensitive);
+        nullptr, case_sensitive_);
 
     lua_pushinteger(L, pos);
     return 1;
@@ -79,7 +79,7 @@ int32_t LAcism::replace(lua_State *L)
     const char *ch = luaL_checkstring(L, 2);
 
     /* no worlds loaded */
-    if (!_psp)
+    if (!psp_)
     {
         lua_pushvalue(L, 1);
         return 1;
@@ -104,11 +104,11 @@ int32_t LAcism::replace(lua_State *L)
 
     fn_data.ch    = *ch;
     fn_data.pos   = 0;
-    fn_data.pattv = _pattv;
+    fn_data.pattv = pattv_;
     fn_data.raw   = text.ptr;
 
     (void)acism_scan(
-        _psp, text,
+        psp_, text,
         [](int32_t str_num, int32_t text_pos, void *data)
         {
             // @param str_num 匹配到的字库索引
@@ -128,7 +128,7 @@ int32_t LAcism::replace(lua_State *L)
 
             return 0; // 返回0表示继续匹配
         },
-        nullptr, _case_sensitive);
+        nullptr, case_sensitive_);
 
     // 没有发生替换，无需拷贝字符串
     if (!fn_data.pos)
@@ -155,11 +155,11 @@ int32_t LAcism::load_from_file(lua_State *L)
     const char *path = luaL_checkstring(L, 1);
     if (lua_isboolean(L, 2))
     {
-        _case_sensitive = lua_toboolean(L, 2);
+        case_sensitive_ = lua_toboolean(L, 2);
     }
 
-    _patt = slurp(path);
-    if (!_patt.ptr)
+    patt_ = slurp(path);
+    if (!patt_.ptr)
     {
         return luaL_error(L, "can't read file[%s]:", path, strerror(errno));
     }
@@ -167,23 +167,23 @@ int32_t LAcism::load_from_file(lua_State *L)
     // 去掉文件尾的空格
     // msutil.c里有chomp函数，但这个函数调用了isspace，在win下不能处理中文
     // https://stackoverflow.com/questions/3108282/unicode-supported-isdigit-and-isspace-function
-    while (_patt.len > 0 && isspace_ex(_patt.ptr[_patt.len - 1]))
+    while (patt_.len > 0 && isspace_ex(patt_.ptr[patt_.len - 1]))
     {
-        _patt.ptr[--_patt.len] = 0;
+        patt_.ptr[--patt_.len] = 0;
     }
 
     // 区分大小写，全部转成小写
-    if (!_case_sensitive)
+    if (!case_sensitive_)
     {
-        for (size_t i = 0; i < _patt.len; i++)
+        for (size_t i = 0; i < patt_.len; i++)
         {
-            *(_patt.ptr + i) = (char)::tolower(*(_patt.ptr + i));
+            *(patt_.ptr + i) = (char)::tolower(*(patt_.ptr + i));
         }
     }
 
     int32_t npatts = 0;
-    _pattv         = refsplit(_patt.ptr, '\n', &npatts);
-    _psp           = acism_create(_pattv, npatts);
+    pattv_         = refsplit(patt_.ptr, '\n', &npatts);
+    psp_           = acism_create(pattv_, npatts);
 
     lua_pushinteger(L, npatts);
     return 1;

@@ -12,35 +12,35 @@ void Mongo::cleanup()
 
 Mongo::Mongo()
 {
-    _conn = nullptr;
+    conn_ = nullptr;
 }
 
 Mongo::~Mongo()
 {
-    assert(nullptr == _conn);
+    assert(nullptr == conn_);
 }
 
 void Mongo::set(const char *ip, const int32_t port, const char *usr,
                 const char *pwd, const char *db)
 {
     /* 将数据复制一份，允许上层释放对应的内存 */
-    _port = port;
-    snprintf(_ip, MONGO_VAR_LEN, "%s", ip);
-    snprintf(_usr, MONGO_VAR_LEN, "%s", usr);
-    snprintf(_pwd, MONGO_VAR_LEN, "%s", pwd);
-    snprintf(_db, MONGO_VAR_LEN, "%s", db);
+    port_ = port;
+    snprintf(ip_, MONGO_VAR_LEN, "%s", ip);
+    snprintf(usr_, MONGO_VAR_LEN, "%s", usr);
+    snprintf(pwd_, MONGO_VAR_LEN, "%s", pwd);
+    snprintf(db_, MONGO_VAR_LEN, "%s", db);
 }
 
 int32_t Mongo::connect()
 {
-    assert(!_conn);
+    assert(!conn_);
 
     char uri[PATH_MAX];
     /* "mongodb://user:password@localhost/?authSource=mydb" */
-    snprintf(uri, PATH_MAX, "mongodb://%s:%s@%s:%d/?authSource=%s", _usr, _pwd,
-             _ip, _port, _db);
-    _conn = mongoc_client_new(uri);
-    if (!_conn)
+    snprintf(uri, PATH_MAX, "mongodb://%s:%s@%s:%d/?authSource=%s", usr_, pwd_,
+             ip_, port_, db_);
+    conn_ = mongoc_client_new(uri);
+    if (!conn_)
     {
         ELOG("parse mongo uri fail\n");
         return 1;
@@ -55,29 +55,29 @@ int32_t Mongo::connect()
 
 void Mongo::disconnect()
 {
-    if (_conn)
+    if (conn_)
     {
         // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
         // Each of these objects must be destroyed before the client they were
         // created from, but their lifetimes are otherwise independent
-        for (auto iter = _collection.begin(); iter != _collection.end(); ++iter)
+        for (auto iter = collection_.begin(); iter != collection_.end(); ++iter)
         {
             mongoc_collection_destroy(iter->second);
         }
-        _collection.clear();
-        mongoc_client_destroy(_conn);
+        collection_.clear();
+        mongoc_client_destroy(conn_);
     }
-    _conn = nullptr;
+    conn_ = nullptr;
 }
 
 int32_t Mongo::ping()
 {
-    assert(_conn);
+    assert(conn_);
 
     bson_t ping;
     bson_init(&ping);
     bson_append_int32(&ping, "ping", -1, 1);
-    mongoc_database_t *database = mongoc_client_get_database(_conn, _db);
+    mongoc_database_t *database = mongoc_client_get_database(conn_, db_);
 
     /* cursor总是需要释放 */
     mongoc_cursor_t *cursor = mongoc_database_command(
@@ -118,12 +118,12 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     thread_local std::string name;
     name.assign(collection);
 
-    auto iter = _collection.find(name);
-    if (iter == _collection.end())
+    auto iter = collection_.find(name);
+    if (iter == collection_.end())
     {
         mongoc_collection_t *clt =
-            mongoc_client_get_collection(_conn, _db, collection);
-        _collection.emplace(name, clt);
+            mongoc_client_get_collection(conn_, db_, collection);
+        collection_.emplace(name, clt);
 
         return clt;
     }
@@ -134,17 +134,17 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
 bool Mongo::count(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(_conn);
+    assert(conn_);
 
-    mongoc_collection_t *collection = get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->clt_);
 
     // opts = {"skip":1,"limit":5}
     int64_t count = mongoc_collection_count_documents(
-        collection, mq->_query, mq->_opts, nullptr, nullptr, &res->_error);
+        collection, mq->query_, mq->opts_, nullptr, nullptr, &res->error_);
 
     if (count < 0) /* 如果失败，返回-1 */
     {
-        res->_data = nullptr;
+        res->data_ = nullptr;
 
         return false;
     }
@@ -152,7 +152,7 @@ bool Mongo::count(const MongoQuery *mq, MongoResult *res)
     bson_t *doc = bson_new();
     BSON_APPEND_INT64(doc, "count", count);
 
-    res->_data = doc;
+    res->data_ = doc;
 
     return true;
 }
@@ -160,13 +160,13 @@ bool Mongo::count(const MongoQuery *mq, MongoResult *res)
 bool Mongo::find(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(_conn);
+    assert(conn_);
 
-    mongoc_collection_t *collection = get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->clt_);
 
     // http://mongoc.org/libmongoc/current/mongoc_collection_find_with_opts.html
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-        collection, mq->_query, mq->_opts, nullptr);
+        collection, mq->query_, mq->opts_, nullptr);
 
     int32_t index = 0;
     bson_t *doc   = bson_new();
@@ -194,16 +194,16 @@ bool Mongo::find(const MongoQuery *mq, MongoResult *res)
         UNUSED(r);
     }
 
-    if (mongoc_cursor_error(cursor, &res->_error))
+    if (mongoc_cursor_error(cursor, &res->error_))
     {
         ELOG_R("mongoc_cursor_error");
         bson_destroy(doc);
-        res->_data = nullptr;
+        res->data_ = nullptr;
 
         return false;
     }
 
-    res->_data = doc;
+    res->data_ = doc;
 
     mongoc_cursor_destroy(cursor);
 
@@ -213,24 +213,24 @@ bool Mongo::find(const MongoQuery *mq, MongoResult *res)
 bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(_conn);
+    assert(conn_);
 
-    mongoc_collection_t *collection = get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->clt_);
 
-    assert(nullptr == res->_data);
+    assert(nullptr == res->data_);
 
-    res->_data = bson_new();
+    res->data_ = bson_new();
     // http://mongoc.org/libmongoc/current/mongoc_find_and_modify_opts_t.html#functions
     // mongoc_find_and_modify_opts的功能和这一样，只不过使用了opts参数，参数显示简洁一些
     // 不过需要额外构建一个mongoc_find_and_modify_opts_t类型
     bool ok = mongoc_collection_find_and_modify(
-        collection, mq->_query, mq->_sort, mq->_update, mq->_fields,
-        mq->_remove, mq->_upsert, mq->_new, res->_data, &res->_error);
+        collection, mq->query_, mq->sort_, mq->update_, mq->fields_,
+        mq->remove_, mq->upsert_, mq->new_, res->data_, &res->error_);
 
     if (!ok)
     {
-        bson_destroy(res->_data);
-        res->_data = nullptr;
+        bson_destroy(res->data_);
+        res->data_ = nullptr;
 
         return false;
     }
@@ -241,12 +241,12 @@ bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
 bool Mongo::insert(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(_conn);
+    assert(conn_);
 
-    mongoc_collection_t *collection = get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->clt_);
 
     bool ok = mongoc_collection_insert(collection, MONGOC_INSERT_NONE,
-                                       mq->_query, nullptr, &res->_error);
+                                       mq->query_, nullptr, &res->error_);
 
     return ok;
 }
@@ -254,14 +254,14 @@ bool Mongo::insert(const MongoQuery *mq, MongoResult *res)
 bool Mongo::update(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(_conn);
+    assert(conn_);
 
-    mongoc_collection_t *collection = get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->clt_);
 
-    mongoc_update_flags_t flags = (mongoc_update_flags_t)mq->_flags;
+    mongoc_update_flags_t flags = (mongoc_update_flags_t)mq->flags_;
 
-    bool ok = mongoc_collection_update(collection, flags, mq->_query,
-                                       mq->_update, nullptr, &res->_error);
+    bool ok = mongoc_collection_update(collection, flags, mq->query_,
+                                       mq->update_, nullptr, &res->error_);
 
     return ok;
 }
@@ -269,13 +269,13 @@ bool Mongo::update(const MongoQuery *mq, MongoResult *res)
 bool Mongo::remove(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(_conn);
+    assert(conn_);
 
-    mongoc_collection_t *collection = get_collection(mq->_clt);
+    mongoc_collection_t *collection = get_collection(mq->clt_);
 
     bool ok =
-        mongoc_collection_remove(collection, (mongoc_remove_flags_t)mq->_flags,
-                                 mq->_query, nullptr, &res->_error);
+        mongoc_collection_remove(collection, (mongoc_remove_flags_t)mq->flags_,
+                                 mq->query_, nullptr, &res->error_);
 
     return ok;
 }

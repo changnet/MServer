@@ -25,8 +25,8 @@ extern void global_mem_counter(int64_t &counter, int64_t &counters);
 class DbgMemTracer
 {
 public:
-    const char *_file;
-    const int _line;
+    const char *file_;
+    const int line_;
 
     void process(void *ptr)
     {
@@ -37,7 +37,7 @@ public:
     }
 
 public:
-    explicit DbgMemTracer(const char *file, int line) : _file(file), _line(line)
+    explicit DbgMemTracer(const char *file, int line) : file_(file), line_(line)
     {
     }
     /**

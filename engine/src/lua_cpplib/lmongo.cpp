@@ -10,10 +10,10 @@
 #define MONGODB_EVENT "mongodb_event"
 
 LMongo::LMongo(lua_State *L)
-    : Thread("lmongo"), _query_pool("lmongo"), _result_pool("lmongo")
+    : Thread("lmongo"), query_pool_("lmongo"), result_pool_("lmongo")
 {
-    _array_opt = -1; // 是否启用数组判定参数，具体参考lbson的check_type函数
-    _dbid = luaL_checkinteger32(L, 2);
+    array_opt_ = -1; // 是否启用数组判定参数，具体参考lbson的check_type函数
+    dbid_ = luaL_checkinteger32(L, 2);
 
     if (lua_isstring(L, 3))
     {
@@ -28,23 +28,23 @@ LMongo::LMongo(lua_State *L)
 
 LMongo::~LMongo()
 {
-    if (!_query.empty())
+    if (!query_.empty())
     {
         ELOG("mongo query not clean, abort");
-        while (!_query.empty())
+        while (!query_.empty())
         {
-            _query_pool.destroy(_query.front());
-            _query.pop();
+            query_pool_.destroy(query_.front());
+            query_.pop();
         }
     }
 
-    if (!_result.empty())
+    if (!result_.empty())
     {
         ELOG("mongo result not clean, abort");
-        while (!_result.empty())
+        while (!result_.empty())
         {
-            _result_pool.destroy(_result.front());
-            _result.pop();
+            result_pool_.destroy(result_.front());
+            result_.pop();
         }
     }
 }
@@ -113,10 +113,10 @@ bool LMongo::initialize()
 
 size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
 {
-    std::lock_guard<std::mutex> guard(_mutex);
+    std::lock_guard<std::mutex> guard(mutex_);
 
-    size_t finished_sz   = _result.size();
-    size_t unfinished_sz = _query.size();
+    size_t finished_sz   = result_.size();
+    size_t unfinished_sz = query_.size();
 
     if (is_busy()) unfinished_sz += 1;
 
@@ -134,29 +134,29 @@ void LMongo::routine(int32_t ev)
      */
     if (ping()) return;
 
-    std::unique_lock<std::mutex> ul(_mutex);
+    std::unique_lock<std::mutex> ul(mutex_);
 
-    while (!_query.empty())
+    while (!query_.empty())
     {
-        MongoQuery *query = _query.front();
-        _query.pop();
+        MongoQuery *query = query_.front();
+        query_.pop();
 
-        MongoResult *res = _result_pool.construct(query->_qid, query->_mqt);
+        MongoResult *res = result_pool_.construct(query->qid_, query->mqt_);
 
         ul.unlock();
         bool ok = do_command(query, res);
         ul.lock();
 
-        _query_pool.destroy(query);
+        query_pool_.destroy(query);
         if (ok)
         {
-            _result.push(res);
+            result_.push(res);
             wakeup_main(S_DATA);
         }
         else
         {
-            ELOG("mongodb command fail, qid = %d !!!", res->_qid);
-            _result_pool.destroy(res);
+            ELOG("mongodb command fail, qid = %d !!!", res->qid_);
+            result_pool_.destroy(res);
         }
     }
 }
@@ -173,7 +173,7 @@ void LMongo::on_ready(lua_State *L)
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, MONGODB_EVENT);
     lua_pushinteger(L, S_READY);
-    lua_pushinteger(L, _dbid);
+    lua_pushinteger(L, dbid_);
 
     if (LUA_OK != lua_pcall(L, 2, 0, 1))
     {
@@ -192,18 +192,18 @@ void LMongo::main_routine(int32_t ev)
 
     LUA_PUSHTRACEBACK(L);
 
-    std::unique_lock<std::mutex> ul(_mutex);
+    std::unique_lock<std::mutex> ul(mutex_);
 
-    while (!_result.empty())
+    while (!result_.empty())
     {
-        MongoResult *res = _result.front();
-        _result.pop();
+        MongoResult *res = result_.front();
+        result_.pop();
 
         ul.unlock();
         on_result(L, res);
         ul.lock();
 
-        _result_pool.destroy(res);
+        result_pool_.destroy(res);
     }
 
     lua_pop(L, 1); /* remove stacktrace */
@@ -213,30 +213,30 @@ void LMongo::on_result(lua_State *L, const MongoResult *res)
 {
     // 打印错误日志，有时候脚本不设置回调函数，不打印出错就没法知道了
     // TODO 要不要把错误信息存起来，做个last_e函数提供给脚本获取错误信息
-    if (0 != res->_error.code)
+    if (0 != res->error_.code)
     {
-        ELOG("ERROR: qid = %d, e = %d, %s", res->_qid, res->_error.code,
-             res->_error.message);
+        ELOG("ERROR: qid = %d, e = %d, %s", res->qid_, res->error_.code,
+             res->error_.message);
     }
 
     // 为0表示不需要回调到脚本
-    if (0 == res->_qid) return;
+    if (0 == res->qid_) return;
 
     lua_getglobal(L, MONGODB_EVENT);
 
     lua_pushinteger(L, S_DATA);
-    lua_pushinteger(L, _dbid);
-    lua_pushinteger(L, res->_qid);
-    lua_pushinteger(L, res->_error.code);
+    lua_pushinteger(L, dbid_);
+    lua_pushinteger(L, res->qid_);
+    lua_pushinteger(L, res->error_.code);
 
     int32_t nargs = 4;
-    if (res->_data)
+    if (res->data_)
     {
         bson_error_t e;
         bson_type_t type =
-            res->_mqt == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
+            res->mqt_ == MQT_FIND ? BSON_TYPE_ARRAY : BSON_TYPE_DOCUMENT;
 
-        if (decode(L, res->_data, &e, type, _array_opt) < 0)
+        if (decode(L, res->data_, &e, type, array_opt_) < 0)
         {
             lua_pop(L, 4);
             ELOG("mongo result decode error:%s", e.message);
@@ -261,7 +261,7 @@ bool LMongo::do_command(const MongoQuery *query, MongoResult *res)
 {
     bool ok    = false;
     auto begin = std::chrono::steady_clock::now();
-    switch (query->_mqt)
+    switch (query->mqt_)
     {
     case MQT_COUNT: ok = Mongo::count(query, res); break;
     case MQT_FIND: ok = Mongo::find(query, res); break;
@@ -271,15 +271,15 @@ bool LMongo::do_command(const MongoQuery *query, MongoResult *res)
     case MQT_REMOVE: ok = Mongo::remove(query, res); break;
     default:
     {
-        ELOG("unknow handle mongo command type:%d\n", query->_mqt);
+        ELOG("unknow handle mongo command type:%d\n", query->mqt_);
         return false;
     }
     }
 
-    assert((ok && 0 == res->_error.code) || (!ok && 0 != res->_error.code));
+    assert((ok && 0 == res->error_.code) || (!ok && 0 != res->error_.code));
 
     auto end = std::chrono::steady_clock::now();
-    res->_elaspe =
+    res->elaspe_ =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 
     return true;
@@ -299,16 +299,16 @@ int32_t LMongo::count(lua_State *L)
         return luaL_error(L, "mongo count:collection not specify");
     }
 
-    bson_t *query = bson_new_from_lua(L, 3, 0, _array_opt);
-    bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
+    bson_t *query = bson_new_from_lua(L, 3, 0, array_opt_);
+    bson_t *opts  = bson_new_from_lua(L, 4, 0, array_opt_, query);
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
         MongoQuery *mongo_count =
-            _query_pool.construct(id, MQT_COUNT, collection, query, opts);
+            query_pool_.construct(id, MQT_COUNT, collection, query, opts);
 
-        _query.push(mongo_count);
+        query_.push(mongo_count);
         wakeup(S_DATA);
     }
 
@@ -329,16 +329,16 @@ int32_t LMongo::find(lua_State *L)
         return luaL_error(L, "mongo find:collection not specify");
     }
 
-    bson_t *query = bson_new_from_lua(L, 3, 1, _array_opt);
-    bson_t *opts  = bson_new_from_lua(L, 4, 0, _array_opt, query);
+    bson_t *query = bson_new_from_lua(L, 3, 1, array_opt_);
+    bson_t *opts  = bson_new_from_lua(L, 4, 0, array_opt_, query);
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
         MongoQuery *mongo_find =
-            _query_pool.construct(id, MQT_FIND, collection, query, opts);
+            query_pool_.construct(id, MQT_FIND, collection, query, opts);
 
-        _query.push(mongo_find);
+        query_.push(mongo_find);
         wakeup(S_DATA);
     }
 
@@ -359,30 +359,30 @@ int32_t LMongo::find_and_modify(lua_State *L)
         return luaL_error(L, "mongo find_and_modify:collection not specify");
     }
 
-    bson_t *query  = bson_new_from_lua(L, 3, 1, _array_opt);
-    bson_t *sort   = bson_new_from_lua(L, 4, 0, _array_opt, query);
-    bson_t *update = bson_new_from_lua(L, 5, 1, _array_opt, query, sort);
-    bson_t *fields = bson_new_from_lua(L, 6, 0, _array_opt, query, sort, update);
+    bson_t *query  = bson_new_from_lua(L, 3, 1, array_opt_);
+    bson_t *sort   = bson_new_from_lua(L, 4, 0, array_opt_, query);
+    bson_t *update = bson_new_from_lua(L, 5, 1, array_opt_, query, sort);
+    bson_t *fields = bson_new_from_lua(L, 6, 0, array_opt_, query, sort, update);
 
     bool remove  = lua_toboolean(L, 7);
     bool upsert  = lua_toboolean(L, 8);
     bool ret_new = lua_toboolean(L, 9);
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
         MongoQuery *mongo_fmod =
-            _query_pool.construct(id, MQT_FMOD, collection, query);
+            query_pool_.construct(id, MQT_FMOD, collection, query);
 
-        mongo_fmod->_sort   = sort;
-        mongo_fmod->_update = update;
-        mongo_fmod->_fields = fields;
+        mongo_fmod->sort_   = sort;
+        mongo_fmod->update_ = update;
+        mongo_fmod->fields_ = fields;
 
-        mongo_fmod->_remove = remove;
-        mongo_fmod->_upsert = upsert;
-        mongo_fmod->_new    = ret_new;
+        mongo_fmod->remove_ = remove;
+        mongo_fmod->upsert_ = upsert;
+        mongo_fmod->new_    = ret_new;
 
-        _query.push(mongo_fmod);
+        query_.push(mongo_fmod);
         wakeup(S_DATA);
     }
 
@@ -391,7 +391,7 @@ int32_t LMongo::find_and_modify(lua_State *L)
 
 int32_t LMongo::set_array_opt(lua_State *L)
 {
-    _array_opt = luaL_checknumber(L, 1);
+    array_opt_ = luaL_checknumber(L, 1);
     return 0;
 }
 
@@ -410,15 +410,15 @@ int32_t LMongo::insert(lua_State *L)
         return luaL_error(L, "mongo insert:collection not specify");
     }
 
-    bson_t *query = bson_new_from_lua(L, 3, -1, _array_opt);
+    bson_t *query = bson_new_from_lua(L, 3, -1, array_opt_);
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
         MongoQuery *mongo_insert =
-            _query_pool.construct(id, MQT_INSERT, collection, query);
+            query_pool_.construct(id, MQT_INSERT, collection, query);
 
-        _query.push(mongo_insert);
+        query_.push(mongo_insert);
         wakeup(S_DATA);
     }
 
@@ -439,23 +439,23 @@ int32_t LMongo::update(lua_State *L)
         return luaL_error(L, "mongo update:collection not specify");
     }
 
-    bson_t *query  = bson_new_from_lua(L, 3, -1, _array_opt);
-    bson_t *update = bson_new_from_lua(L, 4, -1, _array_opt, query);
+    bson_t *query  = bson_new_from_lua(L, 3, -1, array_opt_);
+    bson_t *update = bson_new_from_lua(L, 4, -1, array_opt_, query);
 
     int32_t upsert = lua_toboolean(L, 5);
     int32_t multi  = lua_toboolean(L, 6);
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
         MongoQuery *mongo_update =
-            _query_pool.construct(id, MQT_UPDATE, collection, query);
-        mongo_update->_update = update;
-        mongo_update->_flags =
+            query_pool_.construct(id, MQT_UPDATE, collection, query);
+        mongo_update->update_ = update;
+        mongo_update->flags_ =
             (upsert ? MONGOC_UPDATE_UPSERT : MONGOC_UPDATE_NONE)
             | (multi ? MONGOC_UPDATE_MULTI_UPDATE : MONGOC_UPDATE_NONE);
 
-        _query.push(mongo_update);
+        query_.push(mongo_update);
         wakeup(S_DATA);
     }
 
@@ -476,19 +476,19 @@ int32_t LMongo::remove(lua_State *L)
         return luaL_error(L, "mongo remove:collection not specify");
     }
 
-    bson_t *query = bson_new_from_lua(L, 3, -1, _array_opt);
+    bson_t *query = bson_new_from_lua(L, 3, -1, array_opt_);
 
     int32_t single = lua_toboolean(L, 4);
 
     {
-        std::lock_guard<std::mutex> guard(_mutex);
+        std::lock_guard<std::mutex> guard(mutex_);
 
         MongoQuery *mongo_remove =
-            _query_pool.construct(id, MQT_REMOVE, collection, query);
-        mongo_remove->_flags =
+            query_pool_.construct(id, MQT_REMOVE, collection, query);
+        mongo_remove->flags_ =
             single ? MONGOC_REMOVE_SINGLE_REMOVE : MONGOC_REMOVE_NONE;
 
-        _query.push(mongo_remove);
+        query_.push(mongo_remove);
         wakeup(S_DATA);
     }
 

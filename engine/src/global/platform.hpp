@@ -21,7 +21,7 @@
         #define NOMINMAX
     #endif
 
-    // 去掉不使用_s函数的警告
+    // 去掉不使用s_函数的警告
     #define _CRT_SECURE_NO_WARNINGS
 
     #include <windows.h>
@@ -39,5 +39,5 @@
 
 #elif _MSC_VER
     #define __COMPLIER_ "MSVC"
-    #define __VERSION__ XSTR(_MSC_FULL_VER)
+    #define __VERSION__ XSTR(MSC_FULL_VER_)
 #endif

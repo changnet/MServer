@@ -19,34 +19,34 @@
 
 EV::EV()
 {
-    _timers.reserve(1024);
-    _periodics.reserve(1024);
+    timers_.reserve(1024);
+    periodics_.reserve(1024);
 
-    // 定时时使用_timercnt管理数量，因此提前分配内存以提高效率
-    _timer_cnt = 0;
-    _timers.resize(1024, nullptr);
+    // 定时时使用timercnt_管理数量，因此提前分配内存以提高效率
+    timer_cnt_ = 0;
+    timers_.resize(1024, nullptr);
 
-    _periodic_cnt = 0;
-    _periodics.resize(1024, nullptr);
+    periodic_cnt_ = 0;
+    periodics_.resize(1024, nullptr);
 
     // 初始化时间
-    _clock_diff               = 0;
-    _last_system_clock_update = INT_MIN;
+    clock_diff_               = 0;
+    last_system_clock_update_ = INT_MIN;
     time_update();
 
-    _busy_time         = 0;
-    _next_backend_time = 0;
+    busy_time_         = 0;
+    next_backend_time_ = 0;
 
-    _backend = EVBackend::instance();
+    backend_ = EVBackend::instance();
 }
 
 EV::~EV()
 {
-    _timer_mgr.clear();
-    _periodic_mgr.clear();
+    timer_mgr_.clear();
+    periodic_mgr_.clear();
 
-    EVBackend::uninstance(_backend);
-    _backend = nullptr;
+    EVBackend::uninstance(backend_);
+    backend_ = nullptr;
 }
 
 int32_t EV::loop_init()
@@ -55,7 +55,7 @@ int32_t EV::loop_init()
 
     // 在进入loop之前，要初始化一些必要的数据
     // 因为loop是在lua脚本调用的，在调用loop之前，可能会调用定时器、socket相关接口
-    if (!_backend->start(this)) return -1;
+    if (!backend_->start(this)) return -1;
 
     return 0;
 }
@@ -67,49 +67,49 @@ int32_t EV::loop()
 
     /*
      * 这个循环里执行的顺序有特殊要求
-     * 1. 检测_done必须在invoke_pending之后，中间不能执行wait，不然设置done后无法及时停服
+     * 1. 检测done_必须在invoke_pending之后，中间不能执行wait，不然设置done后无法及时停服
      * 2. wait的前后必须执行time_update，不然计算出来的时间不准
      * 3. 计算wait的时间必须在wait之前，不能在invoke_pending的时候一般执行逻辑一边计算。
      * 因为执行逻辑可能会耗很长时间，那时候计算的时间是不准的
      */
 
-    _done           = false;
-    int64_t last_ms = _steady_clock;
+    done_           = false;
+    int64_t last_ms = steady_clock_;
 
     static const int64_t min_wait = 1;     // 最小等待时间，毫秒
     static const int64_t max_wait = 60000; // 最大等待时间，毫秒
 
-    while (likely(!_done))
+    while (likely(!done_))
     {
         // 这里可能会出现spurious wakeup(例如收到一个信号)，但不需要额外处理
         // 目前所有的子线程唤醒多次都没有问题，以后有需求再改
 
         time_update();
-        _busy_time = _steady_clock - last_ms;
+        busy_time_ = steady_clock_ - last_ms;
 
         /// 允许阻塞的最长时间(毫秒)
-        int64_t backend_time = _next_backend_time - _steady_clock;
-        if (_timer_cnt)
+        int64_t backend_time = next_backend_time_ - steady_clock_;
+        if (timer_cnt_)
         {
             // wait时间不超过下一个定时器触发时间
-            int64_t to = (_timers[HEAP0])->_at - _steady_clock;
+            int64_t to = (timers_[HEAP0])->at_ - steady_clock_;
             if (backend_time > to) backend_time = to;
         }
-        if (_periodic_cnt)
+        if (periodic_cnt_)
         {
             // utc定时器
-            int64_t to = (_periodics[HEAP0])->_at - _system_clock;
+            int64_t to = (periodics_[HEAP0])->at_ - system_clock_;
             if (backend_time > to) backend_time = to;
         }
         if (unlikely(backend_time < min_wait)) backend_time = min_wait;
         
         // 等待其他线程的数据
-        _tcv.wait_for(backend_time);
+        tcv_.wait_for(backend_time);
 
         time_update();
 
-        last_ms            = _steady_clock;
-        _next_backend_time = _steady_clock + max_wait;
+        last_ms            = steady_clock_;
+        next_backend_time_ = steady_clock_ + max_wait;
 
         // 处理timer超时
         timers_reify();
@@ -123,26 +123,26 @@ int32_t EV::loop()
         running(); // 执行其他逻辑
     }
 
-    _backend->stop();
+    backend_->stop();
 
     // 这些对象可能会引用其他资源（如buffer之类的），程序正常关闭时应该严谨地
     // 在脚本关闭，而不是等底层强制删除
-    if (_fd_mgr.size())
+    if (fd_mgr_.size())
     {
-        PLOG("io not delete, maybe unsafe, count = %zu", _fd_mgr.size());
+        PLOG("io not delete, maybe unsafe, count = %zu", fd_mgr_.size());
     }
 
-    if (!_timer_mgr.empty())
+    if (!timer_mgr_.empty())
     {
-        PLOG("timer not delete, maybe unsafe, count = %zu", _timer_mgr.size());
-        _timer_mgr.clear();
+        PLOG("timer not delete, maybe unsafe, count = %zu", timer_mgr_.size());
+        timer_mgr_.clear();
     }
 
-    if (!_periodic_mgr.empty())
+    if (!periodic_mgr_.empty())
     {
         PLOG("periodic not delete, maybe unsafe, count = %zu",
-             _periodic_mgr.size());
-        _periodic_mgr.clear();
+             periodic_mgr_.size());
+        periodic_mgr_.clear();
     }
 
     return 0;
@@ -150,7 +150,7 @@ int32_t EV::loop()
 
 int32_t EV::quit()
 {
-    _done = true;
+    done_ = true;
     StaticGlobal::T = true;
 
     return 0;
@@ -161,10 +161,10 @@ EVIO *EV::io_start(int32_t fd, int32_t events)
     // 这里需要留意fd复用的问题
     // 当一个watcher没有被delete时，请不要关闭其fd。不然内核会复用这个fd
     // 导致有多个同样fd的watcher
-    assert(!_fd_mgr.get(fd));
+    assert(!fd_mgr_.get(fd));
 
     EVIO *w = new EVIO(fd, this);
-    _fd_mgr.set(w);
+    fd_mgr_.set(w);
 
     if (events) append_event(w, events);
 
@@ -175,7 +175,7 @@ int32_t EV::io_stop(int32_t fd, bool flush)
 {
     // 这里不能直接删除watcher，因为io线程可能还在使用，只是做个标记
     // 这里是由上层逻辑调用，也不要直接加锁去删除watcher，防止堆栈中还有引用
-    EVIO *w = _fd_mgr.get(fd);
+    EVIO *w = fd_mgr_.get(fd);
     if (!w) return -1;
 
     append_event(w, flush ? EV_FLUSH : EV_CLOSE);
@@ -185,10 +185,10 @@ int32_t EV::io_stop(int32_t fd, bool flush)
 
 int32_t EV::io_delete(int32_t fd)
 {
-    EVIO *w = _fd_mgr.get(fd);
+    EVIO *w = fd_mgr_.get(fd);
     if (!w) return -1;
 
-    _fd_mgr.unset(w);
+    fd_mgr_.unset(w);
     delete w;
 
     return 0;
@@ -225,23 +225,23 @@ int64_t EV::steady_clock()
 
 void EV::time_update()
 {
-    _steady_clock = steady_clock();
+    steady_clock_ = steady_clock();
 
     /**
      * 直接计算出UTC时间而不通过get_time获取
      * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
      * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
      */
-    if (_steady_clock - _last_system_clock_update < MIN_TIMEJUMP / 2)
+    if (steady_clock_ - last_system_clock_update_ < MIN_TIMEJUMP / 2)
     {
-        _system_clock = _clock_diff + _steady_clock;
-        _system_now   = _system_clock / 1000; // 转换为秒
+        system_clock_ = clock_diff_ + steady_clock_;
+        system_now_   = system_clock_ / 1000; // 转换为秒
         return;
     }
 
-    _last_system_clock_update = _steady_clock;
-    _system_clock             = system_clock();
-    _system_now               = _system_clock / 1000; // 转换为秒
+    last_system_clock_update_ = steady_clock_;
+    system_clock_             = system_clock();
+    system_now_               = system_clock_ / 1000; // 转换为秒
 
     /**
      * 当两次diff相差比较大时，说明有人调了UTC时间
@@ -258,22 +258,22 @@ void EV::time_update()
      * doesn't hurt either as we only do this on time-jumps or
      * in the unlikely event of having been preempted here.
      */
-    int64_t old_diff = _clock_diff;
+    int64_t old_diff = clock_diff_;
     for (int32_t i = 4; --i;)
     {
-        _clock_diff = _system_clock - _steady_clock;
+        clock_diff_ = system_clock_ - steady_clock_;
 
-        int64_t diff = old_diff - _clock_diff;
+        int64_t diff = old_diff - clock_diff_;
         if (likely((diff < 0 ? -diff : diff) < MIN_TIMEJUMP))
         {
             return;
         }
 
-        _system_clock = system_clock();
-        _system_now   = _system_clock / 1000; // 转换为秒
+        system_clock_ = system_clock();
+        system_now_   = system_clock_ / 1000; // 转换为秒
 
-        _steady_clock             = steady_clock();
-        _last_system_clock_update = _steady_clock;
+        steady_clock_             = steady_clock();
+        last_system_clock_update_ = steady_clock_;
     }
 }
 
@@ -283,74 +283,74 @@ void EV::add_pending(EVTimer *w, int32_t revents)
     // 因此在触发不直接回调到脚本，而是暂存起来再触发回调
 
     // 已经在待处理队列里了，则设置事件即可
-    w->_revents |= static_cast<uint8_t>(revents);
-    if (likely(!w->_pending))
+    w->revents_ |= static_cast<uint8_t>(revents);
+    if (likely(!w->pending_))
     {
-        _pendings.emplace_back(w);
-        w->_pending = (int32_t)_pendings.size();
+        pendings_.emplace_back(w);
+        w->pending_ = (int32_t)pendings_.size();
     }
 }
 
  void EV::invoke_pending()
 {
-    for (auto w : _pendings)
+    for (auto w : pendings_)
     {
         // 可能其他事件调用了clear_pending导致当前watcher无效了
-        if (likely(w && w->_pending))
+        if (likely(w && w->pending_))
         {
-            int32_t events = w->_revents;
-            w->_pending  = 0;
-            w->_revents    = 0;
+            int32_t events = w->revents_;
+            w->pending_  = 0;
+            w->revents_    = 0;
             // callback之后，不要对w进行任何操作
             // 因为callback到脚本后，脚本可能直接删除该w
             w->callback(events);
         }
     }
-    _pendings.clear();
+    pendings_.clear();
 }
 
 void EV::del_pending(EVTimer *w)
 {
     // 如果这个watcher在pending队列中，从队列中删除
-    if (w->_pending)
+    if (w->pending_)
     {
-        assert(w == _pendings[w->_pending - 1]);
-        _pendings[w->_pending - 1] = nullptr;
-        w->_revents                = 0;
-        w->_pending                = 0;
+        assert(w == pendings_[w->pending_ - 1]);
+        pendings_[w->pending_ - 1] = nullptr;
+        w->revents_                = 0;
+        w->pending_                = 0;
     }
 }
 
 void EV::invoke_backend_events()
 {
-    std::vector<WatcherEvent> &events = _backend->fetch_event();
+    std::vector<WatcherEvent> &events = backend_->fetch_event();
     for (const auto& x : events)
     {
-        assert(x._ev);
-        x._w->callback(x._ev);
+        assert(x.ev_);
+        x.w_->callback(x.ev_);
     }
     events.clear();
 }
 
 void EV::timers_reify()
 {
-    while (_timer_cnt && (_timers[HEAP0])->_at <= _steady_clock)
+    while (timer_cnt_ && (timers_[HEAP0])->at_ <= steady_clock_)
     {
-        EVTimer *w = _timers[HEAP0];
+        EVTimer *w = timers_[HEAP0];
 
-        assert(w->_index);
+        assert(w->index_);
 
-        if (w->_repeat)
+        if (w->repeat_)
         {
-            w->_at += w->_repeat;
+            w->at_ += w->repeat_;
 
             // 如果时间出现偏差，重新调整定时器
-            if (unlikely(w->_at < _steady_clock))
-                w->reschedule(_steady_clock);
+            if (unlikely(w->at_ < steady_clock_))
+                w->reschedule(steady_clock_);
 
-            assert(w->_repeat > 0);
+            assert(w->repeat_ > 0);
 
-            down_heap(_timers.data(), _timer_cnt, HEAP0);
+            down_heap(timers_.data(), timer_cnt_, HEAP0);
         }
         else
         {
@@ -363,27 +363,27 @@ void EV::timers_reify()
 
 void EV::periodic_reify()
 {
-    while (_periodic_cnt && (_periodics[HEAP0])->_at <= _system_clock)
+    while (periodic_cnt_ && (periodics_[HEAP0])->at_ <= system_clock_)
     {
-        EVTimer *w = _periodics[HEAP0];
+        EVTimer *w = periodics_[HEAP0];
 
-        assert(w->_index);
-        // 如果_system_clock超时，则秒度精度的_system_now也应该超时
-        // 因为脚本逻辑都是用_system_now作为时间基准
-        assert(w->_at <= _system_now * 1000);
+        assert(w->index_);
+        // 如果system_clock_超时，则秒度精度的system_now_也应该超时
+        // 因为脚本逻辑都是用system_now_作为时间基准
+        assert(w->at_ <= system_now_ * 1000);
 
         add_pending(w, EV_TIMER);
-        if (w->_repeat)
+        if (w->repeat_)
         {
-            w->_at += w->_repeat;
+            w->at_ += w->repeat_;
 
             // 如果时间出现偏差，重新调整定时器
-            if (unlikely(w->_at < _system_clock))
+            if (unlikely(w->at_ < system_clock_))
             {
-                w->reschedule(_system_clock);
+                w->reschedule(system_clock_);
             }
 
-            down_heap(_periodics.data(), _periodic_cnt, HEAP0);
+            down_heap(periodics_.data(), periodic_cnt_, HEAP0);
         }
         else
         {
@@ -397,69 +397,69 @@ int32_t EV::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t polic
     assert(repeat >= 0);
 
     // 如果不支持try_emplace，使用std::forward_as_tuple实现
-    auto p = _timer_mgr.try_emplace(id, id, this);
+    auto p = timer_mgr_.try_emplace(id, id, this);
     if (!p.second) return -1;
 
     EVTimer *w = &(p.first->second);
 
-    w->_at     = _steady_clock + after;
-    w->_repeat = repeat;
-    w->_policy = policy;
+    w->at_     = steady_clock_ + after;
+    w->repeat_ = repeat;
+    w->policy_ = policy;
 
-    assert(w->_repeat >= 0);
+    assert(w->repeat_ >= 0);
 
-    ++_timer_cnt;
-    int32_t index = _timer_cnt + HEAP0 - 1;
-    if (_timers.size() < (size_t)index + 1)
+    ++timer_cnt_;
+    int32_t index = timer_cnt_ + HEAP0 - 1;
+    if (timers_.size() < (size_t)index + 1)
     {
-        _timers.resize(index + 1024, nullptr);
+        timers_.resize(index + 1024, nullptr);
     }
 
-    _timers[index] = w;
-    up_heap(_timers.data(), index);
+    timers_[index] = w;
+    up_heap(timers_.data(), index);
 
-    assert(index >= 1 && _timers[w->_index] == w);
+    assert(index >= 1 && timers_[w->index_] == w);
 
     return index;
 }
 
 int32_t EV::timer_stop(int32_t id)
 {
-    auto found = _timer_mgr.find(id);
-    if (found == _timer_mgr.end())
+    auto found = timer_mgr_.find(id);
+    if (found == timer_mgr_.end())
     {
         return -1;
     }
 
     timer_stop(&(found->second));
 
-    _timer_mgr.erase(found);
+    timer_mgr_.erase(found);
     return 0;
 }
 
 int32_t EV::timer_stop(EVTimer *w)
 {
     del_pending(w);
-    if (unlikely(!w->_index)) return 0;
+    if (unlikely(!w->index_)) return 0;
 
     {
-        int32_t index = w->_index;
+        int32_t index = w->index_;
 
-        assert(_timers[index] == w);
+        assert(timers_[index] == w);
 
-        --_timer_cnt;
+        --timer_cnt_;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (likely(index < _timer_cnt + HEAP0))
+        if (likely(index < timer_cnt_ + HEAP0))
         {
-            // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
-            _timers[index] = _timers[_timer_cnt + HEAP0];
-            adjust_heap(_timers.data(), _timer_cnt, index);
+            // 把当前最后一个timer(timercnt_ + HEAP0)覆盖当前timer的位置，再重新调整
+            timers_[index] = timers_[timer_cnt_ + HEAP0];
+            adjust_heap(timers_.data(), timer_cnt_, index);
         }
     }
 
-    w->_at -= _steady_clock;
-    w->_index = 0;
+    w->at_ -= steady_clock_;
+    w->index_ = 0;
 
     return 0;
 }
@@ -470,48 +470,48 @@ int32_t EV::periodic_start(int32_t id, int64_t after, int64_t repeat,
     assert(repeat >= 0);
 
     // 如果不支持try_emplace，使用std::forward_as_tuple实现
-    auto p = _periodic_mgr.try_emplace(id, id, this);
+    auto p = periodic_mgr_.try_emplace(id, id, this);
     if (!p.second) return -1;
 
     EVTimer *w = &(p.first->second);
 
     /**
      * 传进来的单位是秒，要转换为毫秒。实际上精度是毫秒
-     * 这些起始时间用_system_now而不是_system_clock
+     * 这些起始时间用system_now_而不是system_clock_
      *
-     * 比如1秒定时器当前utc时间戳_system_now为100，
-     * 实际utc时间_system_clock为100.5，那定时器应该在_system_now为101时触发
+     * 比如1秒定时器当前utc时间戳system_now_为100，
+     * 实际utc时间system_clock_为100.5，那定时器应该在system_now_为101时触发
      */
-    w->_at     = (_system_now + after) * 1000;
-    w->_repeat = repeat * 1000;
-    w->_policy = policy;
+    w->at_     = (system_now_ + after) * 1000;
+    w->repeat_ = repeat * 1000;
+    w->policy_ = policy;
 
-    ++_periodic_cnt;
-    int32_t index = _periodic_cnt + HEAP0 - 1;
-    if (_periodics.size() < (size_t)index + 1)
+    ++periodic_cnt_;
+    int32_t index = periodic_cnt_ + HEAP0 - 1;
+    if (periodics_.size() < (size_t)index + 1)
     {
-        _periodics.resize(index + 1024, nullptr);
+        periodics_.resize(index + 1024, nullptr);
     }
 
-    _periodics[index] = w;
-    up_heap(_periodics.data(), index);
+    periodics_[index] = w;
+    up_heap(periodics_.data(), index);
 
-    assert(index >= 1 && _periodics[w->_index] == w);
+    assert(index >= 1 && periodics_[w->index_] == w);
 
     return index;
 }
 
 int32_t EV::periodic_stop(int32_t id)
 {
-    auto found = _periodic_mgr.find(id);
-    if (found == _periodic_mgr.end())
+    auto found = periodic_mgr_.find(id);
+    if (found == periodic_mgr_.end())
     {
         return -1;
     }
 
     periodic_stop(&(found->second));
 
-    _periodic_mgr.erase(found);
+    periodic_mgr_.erase(found);
 
     return 0;
 }
@@ -519,21 +519,21 @@ int32_t EV::periodic_stop(int32_t id)
 int32_t EV::periodic_stop(EVTimer *w)
 {
     del_pending(w);
-    if (unlikely(!w->_index)) return 0;
+    if (unlikely(!w->index_)) return 0;
 
     {
-        int32_t index = w->_index;
+        int32_t index = w->index_;
 
-        assert(_periodics[index] == w);
+        assert(periodics_[index] == w);
 
-        --_periodic_cnt;
+        --periodic_cnt_;
 
         // 如果这个定时器刚好在最后，就不用调整二叉堆
-        if (likely(index < _periodic_cnt + HEAP0))
+        if (likely(index < periodic_cnt_ + HEAP0))
         {
-            // 把当前最后一个timer(_timercnt + HEAP0)覆盖当前timer的位置，再重新调整
-            _periodics[index] = _periodics[_periodic_cnt + HEAP0];
-            adjust_heap(_periodics.data(), _periodic_cnt, index);
+            // 把当前最后一个timer(timercnt_ + HEAP0)覆盖当前timer的位置，再重新调整
+            periodics_[index] = periodics_[periodic_cnt_ + HEAP0];
+            adjust_heap(periodics_.data(), periodic_cnt_, index);
         }
     }
 
@@ -552,17 +552,17 @@ void EV::down_heap(HeapNode *heap, int32_t N, int32_t k)
         if (c >= N + HEAP0) break;
 
         // 取左节点(N*2)还是取右节点(N*2+1)
-        c += c + 1 < N + HEAP0 && (heap[c])->_at > (heap[c + 1])->_at ? 1 : 0;
+        c += c + 1 < N + HEAP0 && (heap[c])->at_ > (heap[c + 1])->at_ ? 1 : 0;
 
-        if (he->_at <= (heap[c])->_at) break;
+        if (he->at_ <= (heap[c])->at_) break;
 
         heap[k]           = heap[c];
-        (heap[k])->_index = k;
+        (heap[k])->index_ = k;
         k                 = c;
     }
 
     heap[k]    = he;
-    he->_index = k;
+    he->index_ = k;
 }
 
 void EV::up_heap(HeapNode *heap, int32_t k)
@@ -573,20 +573,20 @@ void EV::up_heap(HeapNode *heap, int32_t k)
     {
         int p = HPARENT(k);
 
-        if (UPHEAP_DONE(p, k) || (heap[p])->_at <= he->_at) break;
+        if (UPHEAP_DONE(p, k) || (heap[p])->at_ <= he->at_) break;
 
         heap[k]           = heap[p];
-        (heap[k])->_index = k;
+        (heap[k])->index_ = k;
         k                 = p;
     }
 
     heap[k]    = he;
-    he->_index = k;
+    he->index_ = k;
 }
 
 void EV::adjust_heap(HeapNode *heap, int32_t N, int32_t k)
 {
-    if (k > HEAP0 && (heap[k])->_at <= (heap[HPARENT(k)])->_at)
+    if (k > HEAP0 && (heap[k])->at_ <= (heap[HPARENT(k)])->at_)
     {
         up_heap(heap, k);
     }
@@ -610,16 +610,16 @@ void EV::reheap(HeapNode *heap, int32_t N)
 
 void EV::append_event(EVIO *w, int32_t ev)
 {
-    int32_t flag = _events.append_backend_event(w, ev);
+    int32_t flag = events_.append_backend_event(w, ev);
     if (0 == flag) return;
 
-    _backend->wake();
+    backend_->wake();
     if (2 == flag)
     {
-        _fd_mgr.for_each(
+        fd_mgr_.for_each(
             [w](EVIO *watcher)
             {
-                if (w != watcher) watcher->_ev_counter = 0;
+                if (w != watcher) watcher->ev_counter_ = 0;
             });
     }
 }

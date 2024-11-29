@@ -86,12 +86,12 @@ public:
     /// 获取当前的帧时间，精度为毫秒
     inline int64_t ms_now()
     {
-        return _steady_clock;
+        return steady_clock_;
     }
     /// 获取当前的帧时间，精度为秒
     inline int64_t now()
     {
-        return _system_now;
+        return system_now_;
     }
     /// 定时器回调函数
     virtual void timer_callback(int32_t id, int32_t revents)
@@ -103,7 +103,7 @@ public:
     */
     void wake()
     {
-        _tcv.notify_one(1);
+        tcv_.notify_one(1);
     }
 
     void time_update();
@@ -113,7 +113,7 @@ public:
     // 获取等待backend线程处理的事件
     std::vector<WatcherEvent>& fetch_event()
     {
-        return _events.fetch_event();
+        return events_.fetch_event();
     }
 
 protected:
@@ -136,37 +136,37 @@ protected:
     void reheap(HeapNode *heap, int32_t N);
 
 protected:
-    volatile bool _done; /// 主循环是否已结束
+    volatile bool done_; /// 主循环是否已结束
 
     /**
      * 当前拥有的timer数量
-     * 额外使用一个计数器管理timer，可以不用对_timers进行pop之类的操作
+     * 额外使用一个计数器管理timer，可以不用对timers_进行pop之类的操作
      */
-    int32_t _timer_cnt;
-    std::vector<EVTimer *> _timers; /// 按二叉树排列的定时器
-    std::unordered_map<int32_t, EVTimer> _timer_mgr;
+    int32_t timer_cnt_;
+    std::vector<EVTimer *> timers_; /// 按二叉树排列的定时器
+    std::unordered_map<int32_t, EVTimer> timer_mgr_;
 
-    int32_t _periodic_cnt;
-    std::vector<EVTimer *> _periodics; /// 按二叉树排列的utc定时器
-    std::unordered_map<int32_t, EVTimer> _periodic_mgr;
+    int32_t periodic_cnt_;
+    std::vector<EVTimer *> periodics_; /// 按二叉树排列的utc定时器
+    std::unordered_map<int32_t, EVTimer> periodic_mgr_;
 
-    EVBackend *_backend; // io后台
-    int64_t _busy_time; // 上一次执行消耗的时间，毫秒
+    EVBackend *backend_; // io后台
+    int64_t busy_time_; // 上一次执行消耗的时间，毫秒
 
-    int64_t _steady_clock; // 起服到现在的毫秒
-    int64_t _system_clock; // UTC时间戳（单位：毫秒）
-    std::atomic<int64_t> _system_now; // UTC时间戳(CLOCK_REALTIME,秒)
-    int64_t _last_system_clock_update;       // 上一次更新UTC的MONOTONIC时间
+    int64_t steady_clock_; // 起服到现在的毫秒
+    int64_t system_clock_; // UTC时间戳（单位：毫秒）
+    std::atomic<int64_t> system_now_; // UTC时间戳(CLOCK_REALTIME,秒)
+    int64_t last_system_clock_update_;       // 上一次更新UTC的MONOTONIC时间
     /**
      * UTC时间与MONOTONIC时间的差值，用于通过mn_now直接计算出rt_now而
      * 不需要通过clock_gettime来得到rt_now，以提高效率
      */
-    int64_t _clock_diff;
+    int64_t clock_diff_;
 
-    int64_t _next_backend_time; // 下次执行backend的时间
+    int64_t next_backend_time_; // 下次执行backend的时间
 
-    std::vector<EVTimer *> _pendings; // 暂存待处理的watcher
-    ThreadCv _tcv; // 用于等待其他线程数据的condtion_variable
-    WatcherMgr _fd_mgr; // io管理
-    EventSwapList _events; // 发送给backend线程的事件
+    std::vector<EVTimer *> pendings_; // 暂存待处理的watcher
+    ThreadCv tcv_; // 用于等待其他线程数据的condtion_variable
+    WatcherMgr fd_mgr_; // io管理
+    EventSwapList events_; // 发送给backend线程的事件
 };

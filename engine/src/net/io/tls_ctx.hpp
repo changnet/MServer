@@ -36,10 +36,10 @@ public:
 
     SSL_CTX *get() const
     {
-        return _ctx;
+        return ctx_;
     }
 
 private:
-    SSL_CTX *_ctx;
-    char _passwd[256];
+    SSL_CTX *ctx_;
+    char passwd_[256];
 };

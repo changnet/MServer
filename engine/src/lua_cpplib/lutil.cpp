@@ -302,7 +302,7 @@ static int32_t what_error(lua_State *L)
     return 1;
 }
 
-int32_t _raw_sha1(lua_State *L, int32_t index,
+int32_t raw_sha1_(lua_State *L, int32_t index,
                   unsigned char sha1[SHA_DIGEST_LENGTH])
 {
     SHA_CTX ctx;
@@ -348,7 +348,7 @@ static int32_t sha1(lua_State *L)
         if (lua_toboolean(L, 1)) fmt = "%02X";
     }
 
-    _raw_sha1(L, index, sha1);
+    raw_sha1_(L, index, sha1);
 
     char buf[SHA_DIGEST_LENGTH * 2 + 1];
     for (int32_t i = 0; i < SHA_DIGEST_LENGTH; ++i)
@@ -369,7 +369,7 @@ static int32_t sha1(lua_State *L)
 static int32_t sha1_raw(lua_State *L)
 {
     unsigned char sha1[SHA_DIGEST_LENGTH];
-    _raw_sha1(L, 1, sha1);
+    raw_sha1_(L, 1, sha1);
 
     lua_pushlstring(L, (const char *)sha1, SHA_DIGEST_LENGTH);
 

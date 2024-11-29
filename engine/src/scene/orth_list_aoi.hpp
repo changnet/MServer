@@ -41,13 +41,13 @@ public:
          * 对比两个节点的位置大小
          * @return int32_t 左边<0，等于0，右边>0
          */
-        template <int32_t Ctx::*_pos> int32_t comp(const Ctx *other) const
+        template <int32_t Ctx::*pos_> int32_t comp(const Ctx *other) const
         {
-            if (this->*_pos > other->*_pos)
+            if (this->*pos_ > other->*pos_)
             {
                 return 1;
             }
-            else if (this->*_pos == other->*_pos)
+            else if (this->*pos_ == other->*pos_)
             {
                 // 当坐标一致时，不同类型的节点在链表中有特定的位置，必须按
                 // 左边界>>>实体>>>右边界 这个顺序排列，不然移动视野边界的时候就可能会漏掉一些实体
@@ -57,48 +57,48 @@ public:
         }
 
     public:
-        int32_t _pos_x; // 像素坐标x
-        int32_t _pos_y; // 像素坐标y
-        int32_t _pos_z; // 像素坐标z
-        int32_t _old_x; // 旧像素坐标x
-        int32_t _old_y; // 旧像素坐标y
-        int32_t _old_z; // 旧像素坐标z
+        int32_t pos_x_; // 像素坐标x
+        int32_t pos_y_; // 像素坐标y
+        int32_t pos_z_; // 像素坐标z
+        int32_t old_x_; // 旧像素坐标x
+        int32_t old_y_; // 旧像素坐标y
+        int32_t old_z_; // 旧像素坐标z
 
         // 每个轴需要一个双链表
-        Ctx *_next_x;
-        Ctx *_prev_x;
-        Ctx *_next_y;
-        Ctx *_prev_y;
-        Ctx *_next_z;
-        Ctx *_prev_z;
+        Ctx *next_x_;
+        Ctx *prev_x_;
+        Ctx *next_y_;
+        Ctx *prev_y_;
+        Ctx *next_z_;
+        Ctx *prev_z_;
     };
 
     /// 实体的视野左右边界
-    template <CtxType _type> class VisualCtx final : public Ctx
+    template <CtxType type_> class VisualCtx final : public Ctx
     {
     public:
         explicit VisualCtx(EntityCtx *ctx)
         {
             Ctx::reset();
-            _entity = ctx;
+            entity_ = ctx;
         }
-        int32_t type() const override { return _type; }
-        EntityCtx *entity() override { return _entity; }
+        int32_t type() const override { return type_; }
+        EntityCtx *entity() override { return entity_; }
 
     private:
-        EntityCtx *_entity; /// 该视野边界所属的实体
+        EntityCtx *entity_; /// 该视野边界所属的实体
     };
 
     /// 场景中单个实体的类型、坐标等数据
     class EntityCtx final : public Ctx
     {
     public:
-        explicit EntityCtx() : _next_v(this), _prev_v(this) {}
+        explicit EntityCtx() : next_v_(this), prev_v_(this) {}
         int32_t type() const override { return CT_ENTITY; }
 
         /// 这个实体是否拥有视野(一些怪物之类的不需要视野，可提高aoi的效率，需要附近的实体
         /// 列表可通过get_visual_entity实时获取)
-        bool has_visual() const { return _visual > 0 && (_mask & INTEREST); }
+        bool has_visual() const { return visual_ > 0 && (mask_ & INTEREST); }
 
         void reset() override;
         /// 更新视野坐标
@@ -106,23 +106,23 @@ public:
 
     public:
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
-        uint8_t _mask;
-        uint32_t _mark;      /// 计数器，用于标记是否重复
-        int32_t _visual;     /// 视野大小(像素)
-        int32_t _old_visual; /// 旧的视野大小
-        EntityId _id;        /// 实体的唯一id，如玩家id
+        uint8_t mask_;
+        uint32_t mark_;      /// 计数器，用于标记是否重复
+        int32_t visual_;     /// 视野大小(像素)
+        int32_t old_visual_; /// 旧的视野大小
+        EntityId id_;        /// 实体的唯一id，如玩家id
 
         /**
          * 对我感兴趣的实体列表。比如我周围的玩家，需要看到我移动、放技能，都需要频繁广播给他们，
          * 可以直接从这个列表取。如果游戏并不是arpg，可能并不需要这个列表。
-         * 当两个实体的mask存在交集时，将同时放入双方的_interest_me，但这只是做初步的筛选，例
-         * 如不要把怪物放到玩家的_interest_me，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
+         * 当两个实体的mask存在交集时，将同时放入双方的interest_me_，但这只是做初步的筛选，例
+         * 如不要把怪物放到玩家的interest_me_，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
          * 根据业务处理
          */
-        EntityVector *_interest_me;
+        EntityVector *interest_me_;
 
-        VisualCtx<CT_VISUAL_NEXT> _next_v; /// 视野的左边界节点
-        VisualCtx<CT_VISUAL_PREV> _prev_v; /// 视野的右边界节点
+        VisualCtx<CT_VISUAL_NEXT> next_v_; /// 视野的左边界节点
+        VisualCtx<CT_VISUAL_PREV> prev_v_; /// 视野的右边界节点
     };
 
 public:
@@ -247,7 +247,7 @@ protected:
 
     void del_entity_ctx(EntityCtx *ctx)
     {
-        del_entity_vector(ctx->_interest_me);
+        del_entity_vector(ctx->interest_me_);
 
         get_ctx_pool()->destroy(ctx);
     }
@@ -257,7 +257,7 @@ protected:
         EntityCtx *ctx = get_ctx_pool()->construct();
 
         ctx->reset();
-        ctx->_interest_me = new_entity_vector();
+        ctx->interest_me_ = new_entity_vector();
 
         return ctx;
     }
@@ -265,10 +265,10 @@ protected:
     /// 是否已经被标记
     bool had_mark(const EntityCtx *ctx) const
     {
-        // > _mark表示在当前这次操作中被标记过
-        // == _now_mark表示是在同一个轴标记(例如移动x轴上的左边界、实体、右边界会遇到同一个
+        // > mark_表示在当前这次操作中被标记过
+        // == now_mark_表示是在同一个轴标记(例如移动x轴上的左边界、实体、右边界会遇到同一个
         // 实体，但处理逻辑是不一样的，不会被认为是重复)
-        return (ctx->_mark >= _mark) && (ctx->_mark != _now_mark);
+        return (ctx->mark_ >= mark_) && (ctx->mark_ != now_mark_);
     }
 
     /// 判断点(x,y,z)是否在ctx视野范围内
@@ -276,36 +276,36 @@ protected:
                    int32_t visual = -1) const
     {
         // 假设视野是一个正方体，直接判断各坐标的距离而不是直接距离，这样运算比平方要快
-        if (-1 == visual) visual = ctx->_visual;
-        return visual > 0 && visual >= std::abs(ctx->_pos_x - x)
-               && visual >= std::abs(ctx->_pos_z - z)
-               && (!_use_y || visual >= std::abs(ctx->_pos_y - y));
+        if (-1 == visual) visual = ctx->visual_;
+        return visual > 0 && visual >= std::abs(ctx->pos_x_ - x)
+               && visual >= std::abs(ctx->pos_z_ - z)
+               && (!use_y_ || visual >= std::abs(ctx->pos_y_ - y));
     }
 
     /// 把ctx插入到链表合适的地方
-    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void insert_list(Ctx *&list, Ctx *ctx, std::function<void(Ctx *ctx)> &&func);
 
     /// 把ctx插入到链表合适的地方
-    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void insert_entity(Ctx *&list, EntityCtx *ctx,
                        std::function<void(Ctx *ctx)> &&func);
 
     /// 把ctx的视野边界插入到链表合适的地方
-    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void insert_visual_list(Ctx *&list, EntityCtx *ctx,
                             std::function<void(Ctx *ctx)> &&func);
 
     /// 把ctx从链表中删除
-    template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void remove_list(Ctx *&list, Ctx *ctx);
 
     /// 把ctx从链表中删除
-    template <Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void remove_entity(Ctx *&list, EntityCtx *ctx);
 
     /// 把ctx移动到链表合适的地方
-    template <int32_t Ctx::*_new, int32_t Ctx::*_old, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*new_, int32_t Ctx::*old_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void shift_entity(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
                       EntityVector *list_other_in, EntityVector *list_me_out,
                       EntityVector *list_other_out);
@@ -315,17 +315,17 @@ protected:
      * @param list_me_in 该列表中实体出现在我的视野范围
      * @param list_me_out 该列表中实体从我的视野范围消失
      */
-    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void shift_visual(Ctx *&list, EntityCtx *ctx, EntityVector *list_me_in,
                       EntityVector *list_me_out, int32_t shift_type);
 
     /// 向右移动到链表合适的地方
-    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void shift_list_next(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
                          EntityVector *list_other_in, EntityVector *list_me_out,
                          EntityVector *list_other_out);
     /// 向左移动到链表合适的地方
-    template <int32_t Ctx::*_pos, Ctx *Ctx::*_next, Ctx *Ctx::*_prev>
+    template <int32_t Ctx::*pos_, Ctx *Ctx::*next_, Ctx *Ctx::*prev_>
     void shift_list_prev(Ctx *&list, Ctx *ctx, EntityVector *list_me_in,
                          EntityVector *list_other_in, EntityVector *list_me_out,
                          EntityVector *list_other_out);
@@ -349,15 +349,15 @@ protected:
      * 是否启用y轴
      * 如果不启用y轴，避免对y轴链表进行插入、删除操作
      */
-    bool _use_y;
+    bool use_y_;
 
-    uint32_t _mark; /// 标记，用于标记同一个实体是否被处理过
-    uint32_t _now_mark; /// 当前使用的标记，用于区分在哪条轴使用
+    uint32_t mark_; /// 标记，用于标记同一个实体是否被处理过
+    uint32_t now_mark_; /// 当前使用的标记，用于区分在哪条轴使用
 
     // 每个轴需要一个双向链表
-    Ctx *_first_x;
-    Ctx *_first_y;
-    Ctx *_first_z;
+    Ctx *first_x_;
+    Ctx *first_y_;
+    Ctx *first_z_;
 
-    EntitySet _entity_set; /// 记录所有实体的数据
+    EntitySet entity_set_; /// 记录所有实体的数据
 };

@@ -29,52 +29,52 @@ public:
         explicit MongoQuery(int32_t qid, MongoQueryType mqt, const char *clt,
                             bson_t *query, bson_t *opts = nullptr)
         {
-            _mqt   = mqt;
-            _qid   = qid;
-            _opts  = opts;
-            _query = query;
-            snprintf(_clt, sizeof(_clt), "%s", clt);
+            mqt_   = mqt;
+            qid_   = qid;
+            opts_  = opts;
+            query_ = query;
+            snprintf(clt_, sizeof(clt_), "%s", clt);
 
-            _remove = false;
-            _upsert = false;
-            _new    = false;
-            _fields = nullptr;
-            _sort   = nullptr;
-            _update = nullptr;
-            _flags  = 0;
+            remove_ = false;
+            upsert_ = false;
+            new_    = false;
+            fields_ = nullptr;
+            sort_   = nullptr;
+            update_ = nullptr;
+            flags_  = 0;
         }
 
         ~MongoQuery()
         {
-            if (_query) bson_destroy(_query);
-            if (_fields) bson_destroy(_fields);
-            if (_sort) bson_destroy(_sort);
-            if (_update) bson_destroy(_update);
-            if (_opts) bson_destroy(_opts);
+            if (query_) bson_destroy(query_);
+            if (fields_) bson_destroy(fields_);
+            if (sort_) bson_destroy(sort_);
+            if (update_) bson_destroy(update_);
+            if (opts_) bson_destroy(opts_);
 
-            _query  = nullptr;
-            _fields = nullptr;
-            _sort   = nullptr;
-            _update = nullptr;
-            _opts   = nullptr;
+            query_  = nullptr;
+            fields_ = nullptr;
+            sort_   = nullptr;
+            update_ = nullptr;
+            opts_   = nullptr;
         }
 
     private:
         friend class Mongo;
         friend class LMongo;
 
-        int32_t _qid; // query id
-        MongoQueryType _mqt;
-        char _clt[MONGO_VAR_LEN]; // collection
-        bool _remove;
-        bool _upsert;
-        bool _new;
-        bson_t *_opts;
-        bson_t *_sort;
-        bson_t *_query;
-        bson_t *_fields;
-        bson_t *_update;
-        int32_t _flags;
+        int32_t qid_; // query id
+        MongoQueryType mqt_;
+        char clt_[MONGO_VAR_LEN]; // collection
+        bool remove_;
+        bool upsert_;
+        bool new_;
+        bson_t *opts_;
+        bson_t *sort_;
+        bson_t *query_;
+        bson_t *fields_;
+        bson_t *update_;
+        int32_t flags_;
     };
 
     class MongoResult
@@ -82,34 +82,34 @@ public:
     public:
         explicit MongoResult(int32_t qid, MongoQueryType mqt)
         {
-            _qid    = qid;
-            _elaspe = 0;
-            _data   = nullptr;
-            _mqt    = mqt;
+            qid_    = qid;
+            elaspe_ = 0;
+            data_   = nullptr;
+            mqt_    = mqt;
 
             // mongodb的api，在没有错误时，传入的bson_error_t是没有设置为0的
-            _error.code = 0;
-            // memset(&_error, 0, sizeof(bson_error_t));
+            error_.code = 0;
+            // memset(&error_, 0, sizeof(bson_error_t));
         }
 
         ~MongoResult()
         {
-            if (_data) bson_destroy(_data);
+            if (data_) bson_destroy(data_);
 
-            _qid  = 0;
-            _mqt  = MQT_NONE;
-            _data = nullptr;
+            qid_  = 0;
+            mqt_  = MQT_NONE;
+            data_ = nullptr;
         }
 
     private:
         friend class Mongo;
         friend class LMongo;
 
-        int32_t _qid;
-        MongoQueryType _mqt;
-        bson_t *_data;
-        int64_t _elaspe; // 消耗的时间，毫秒
-        bson_error_t _error;
+        int32_t qid_;
+        MongoQueryType mqt_;
+        bson_t *data_;
+        int64_t elaspe_; // 消耗的时间，毫秒
+        bson_error_t error_;
     };
 
 public:
@@ -137,12 +137,12 @@ private:
     mongoc_collection_t *get_collection(const char *collection);
 
 private:
-    int32_t _port;
-    char _ip[MONGO_VAR_LEN];
-    char _usr[MONGO_VAR_LEN];
-    char _pwd[MONGO_VAR_LEN];
-    char _db[MONGO_VAR_LEN];
+    int32_t port_;
+    char ip_[MONGO_VAR_LEN];
+    char usr_[MONGO_VAR_LEN];
+    char pwd_[MONGO_VAR_LEN];
+    char db_[MONGO_VAR_LEN];
 
-    mongoc_client_t *_conn;
-    std::unordered_map<std::string, mongoc_collection_t *> _collection;
+    mongoc_client_t *conn_;
+    std::unordered_map<std::string, mongoc_collection_t *> collection_;
 };

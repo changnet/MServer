@@ -94,8 +94,8 @@ private:
     virtual void timer_callback(int32_t id, int32_t revents);
 
 private:
-    int32_t _critical_tm; // 每次主循环的临界时间，毫秒
+    int32_t critical_tm_; // 每次主循环的临界时间，毫秒
 
-    int32_t _app_repeat; // 脚本主循环回调隔间，毫秒
-    int64_t _app_next_tm; // 下次回调脚本主循环的时间，毫秒
+    int32_t app_repeat_; // 脚本主循环回调隔间，毫秒
+    int64_t app_next_tm_; // 下次回调脚本主循环的时间，毫秒
 };

@@ -74,7 +74,7 @@ public:
     /**
      * 是否已关闭
      */
-    bool is_closed() const { return CS_OPENED != _status; }
+    bool is_closed() const { return CS_OPENED != status_; }
 
     /**
      * @brief 获取ip地址及端口
@@ -94,7 +94,7 @@ public:
     */
     Buffer &get_send_buffer()
     {
-        return _w->_io->get_send_buffer();
+        return w_->io_->get_send_buffer();
     }
 
     /**
@@ -103,7 +103,7 @@ public:
     */
     Buffer &get_recv_buffer()
     {
-        return _w->_io->get_recv_buffer();
+        return w_->io_->get_recv_buffer();
     }
 
     /**
@@ -132,8 +132,8 @@ public:
     int32_t set_io(int32_t io_type, TlsCtx *tls_ctx);
     int32_t set_packet(int32_t packet_type);
 
-    inline int32_t fd() const { return _fd; }
-    inline int32_t conn_id() const { return _conn_id; }
+    inline int32_t fd() const { return fd_; }
+    inline int32_t conn_id() const { return conn_id_; }
 
     /**
      * @brief 设置缓冲区的参数
@@ -169,12 +169,12 @@ private:
     void accept_new(int32_t fd);
 
 protected:
-    int32_t _conn_id; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
+    int32_t conn_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
 
 private:
-    int8_t _status; // 当前socket的状态
-    int32_t _fd; /// 当前socket的文件描述符
+    int8_t status_; // 当前socket的状态
+    int32_t fd_; /// 当前socket的文件描述符
 
-    EVIO *_w; /// io事件监视器
-    Packet *_packet;
+    EVIO *w_; /// io事件监视器
+    Packet *packet_;
 };

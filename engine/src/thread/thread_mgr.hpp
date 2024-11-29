@@ -22,8 +22,8 @@ public:
     const char *who_is_busy(size_t &finished, size_t &unfinished,
                             bool skip = false);
 
-    const std::vector<Thread *> &get_threads() const { return _threads; }
+    const std::vector<Thread *> &get_threads() const { return threads_; }
 
 private:
-    std::vector<Thread *> _threads;
+    std::vector<Thread *> threads_;
 };

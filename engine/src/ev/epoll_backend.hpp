@@ -25,8 +25,8 @@ private:
     int32_t modify_fd(int32_t fd, int32_t op, int32_t new_ev) override;
 
 private:
-    int32_t _ep_fd;   /// epoll句柄
-    int32_t _wake_fd; /// 用于唤醒子线程的fd
+    int32_t ep_fd_;   /// epoll句柄
+    int32_t wake_fd_; /// 用于唤醒子线程的fd
 
     /// epoll max events one poll
     /* https://man7.org/linux/man-pages/man2/epoll_wait.2.html
@@ -37,7 +37,7 @@ private:
      */
     static const int32_t EPOLL_MAXEV = 8192;
 
-    epoll_event _ep_ev[EPOLL_MAXEV];
+    epoll_event ep_ev_[EPOLL_MAXEV];
 };
 
 #endif

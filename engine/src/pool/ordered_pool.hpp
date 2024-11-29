@@ -45,7 +45,7 @@ public:
         nextof(ptr) = anpts[n];
         anpts[n]    = ptr;
 
-        _max_now += n;
+        max_now_ += n;
     }
 
     /**
@@ -74,7 +74,7 @@ public:
         void *ptr = anpts[n];
         if (ptr)
         {
-            _max_now -= n;
+            max_now_ -= n;
             anpts[n] = nextof(ptr);
             return static_cast<char *>(ptr);
         }
@@ -95,8 +95,8 @@ public:
         block_list    = block;
 
         // 统计的是最小单元的数量
-        _max_new += n * chunk_size;
-        _max_now += n * (chunk_size - 1);
+        max_new_ += n * chunk_size;
+        max_now_ += n * (chunk_size - 1);
 
         /* 第一块直接分配出去，其他的分成小块存到anpts对应的链接中 */
         segregate(block + sizeof(void *) + partition_sz, partition_sz,
@@ -120,10 +120,10 @@ private:
 
         while (block_list)
         {
-            char *_ptr = static_cast<char *>(block_list);
+            char *ptr_ = static_cast<char *>(block_list);
             block_list = nextof(block_list);
 
-            delete[] _ptr;
+            delete[] ptr_;
         }
 
         block_list = nullptr;
@@ -189,26 +189,26 @@ public:
 
     virtual void purge() override
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         OrderedPool<ordered_size>::purge();
     }
     virtual size_t get_sizeof() const override
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         return OrderedPool<ordered_size>::get_sizeof();
     }
 
     void ordered_free(char *const ptr, size_t n) override
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         OrderedPool<ordered_size>::ordered_free(ptr, n);
     }
     char *ordered_malloc(size_t n, size_t chunk_size) override
     {
-        std::lock_guard<SpinLock> guard(_lock);
+        std::lock_guard<SpinLock> guard(lock_);
         return OrderedPool<ordered_size>::ordered_malloc(n, chunk_size);
     }
 
 private:
-    SpinLock _lock;
+    SpinLock lock_;
 };

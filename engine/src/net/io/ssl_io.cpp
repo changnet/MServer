@@ -6,38 +6,38 @@
 
 SSLIO::~SSLIO()
 {
-    if (_ssl)
+    if (ssl_)
     {
-        SSL_free(_ssl);
-        _ssl = nullptr;
+        SSL_free(ssl_);
+        ssl_ = nullptr;
     }
 }
 
 SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx)
     : IO(conn_id)
 {
-    _ssl = nullptr;
-    _tls_ctx = tls_ctx;
+    ssl_ = nullptr;
+    tls_ctx_ = tls_ctx;
 }
 
 int32_t SSLIO::recv(EVIO *w)
 {
-    if (!SSL_is_init_finished(_ssl)) return do_handshake();
+    if (!SSL_is_init_finished(ssl_)) return do_handshake();
 
     int32_t len = 0;
     while (true)
     {
-        Buffer::Transaction &&ts = _recv.any_seserve(true);
-        if (ts._len <= 0) return EV_BUSY;
+        Buffer::Transaction &&ts = recv_.any_seserve(true);
+        if (ts.len_ <= 0) return EV_BUSY;
 
-        len = SSL_read(_ssl, ts._ctx, ts._len);
-        _recv.commit(ts, len);
+        len = SSL_read(ssl_, ts.ctx_, ts.len_);
+        recv_.commit(ts, len);
         if (unlikely(len <= 0)) break;
 
-        if (len < ts._len) return EV_NONE;
+        if (len < ts.len_) return EV_NONE;
     }
 
-    int32_t ecode = SSL_get_error(_ssl, len);
+    int32_t ecode = SSL_get_error(ssl_, len);
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
 
     /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
@@ -58,27 +58,27 @@ int32_t SSLIO::recv(EVIO *w)
         return EV_CLOSE;
     }
 
-    w->_errno = netcompat::errorno();
+    w->errno_ = netcompat::errorno();
     TlsCtx::dump_error("ssl io recv");
     return EV_ERROR;
 }
 
 int32_t SSLIO::send(EVIO *w)
 {
-    if (!SSL_is_init_finished(_ssl)) return do_handshake();
+    if (!SSL_is_init_finished(ssl_)) return do_handshake();
 
     int32_t len  = 0;
     size_t bytes = 0;
     bool next    = false;
     while (true)
     {
-        const char *data = _send.get_front_used(bytes, next);
+        const char *data = send_.get_front_used(bytes, next);
         if (0 == bytes) return EV_NONE;
 
-        len = SSL_write(_ssl, data, (int32_t)bytes);
+        len = SSL_write(ssl_, data, (int32_t)bytes);
         if (len <= 0) break;
 
-        _send.remove(len); // 删除已发送数据
+        send_.remove(len); // 删除已发送数据
 
         // socket发送缓冲区已满，等下次发送了
         if (len < (int32_t)bytes) return EV_WRITE;
@@ -87,7 +87,7 @@ int32_t SSLIO::send(EVIO *w)
         if (!next) return EV_NONE;
     }
 
-    int32_t ecode = SSL_get_error(_ssl, len);
+    int32_t ecode = SSL_get_error(ssl_, len);
     if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 
     // 非主动断开，打印错误日志
@@ -98,7 +98,7 @@ int32_t SSLIO::send(EVIO *w)
         return EV_CLOSE;
     }
 
-    w->_errno = netcompat::errorno();
+    w->errno_ = netcompat::errorno();
     TlsCtx::dump_error("ssl io send");
     return EV_ERROR;
 }
@@ -107,7 +107,7 @@ int32_t SSLIO::do_init_accept(int32_t fd)
 {
     if (init_ssl_ctx(fd) < 0) return EV_ERROR;
 
-    SSL_set_accept_state(_ssl);
+    SSL_set_accept_state(ssl_);
 
     return do_handshake();
 }
@@ -116,21 +116,21 @@ int32_t SSLIO::do_init_connect(int32_t fd)
 {
     if (init_ssl_ctx(fd) < 0) return EV_ERROR;
 
-    SSL_set_connect_state(_ssl);
+    SSL_set_connect_state(ssl_);
 
     return do_handshake();
 }
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
-    _ssl = SSL_new(_tls_ctx->get());
-    if (!_ssl)
+    ssl_ = SSL_new(tls_ctx_->get());
+    if (!ssl_)
     {
         ELOG("ssl io init ssl SSL_new fail");
         return -1;
     }
 
-    if (!SSL_set_fd(_ssl, fd))
+    if (!SSL_set_fd(ssl_, fd))
     {
         ELOG("ssl io init ssl SSL_set_fd fail");
         return -1;
@@ -141,13 +141,13 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
 
 int32_t SSLIO::do_handshake()
 {
-    int32_t ecode = SSL_do_handshake(_ssl);
+    int32_t ecode = SSL_do_handshake(ssl_);
     if (1 == ecode)
     {
-        // SSLMgr::dump_x509(_ssl);
+        // SSLMgr::dump_x509(ssl_);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
-        return SSL_is_server(_ssl) ? EV_INIT_ACPT : EV_INIT_CONN;
+        return SSL_is_server(ssl_) ? EV_INIT_ACPT : EV_INIT_CONN;
     }
 
     /* Caveat: Any TLS/SSL I/O function can lead to either of
@@ -158,7 +158,7 @@ int32_t SSLIO::do_handshake()
      * SSL_read(), SSL_peek(), and SSL_write() will handle any pending
      * handshakes.
      */
-    ecode = SSL_get_error(_ssl, ecode);
+    ecode = SSL_get_error(ssl_, ecode);
 
     // 握手无法一次完成，必须返回事件让socket执行继续do_handshake
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;

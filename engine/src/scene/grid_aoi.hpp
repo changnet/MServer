@@ -8,7 +8,7 @@
  * 2018-07-18 by xzc
  *
  * 1. 暂定所有实体视野一样
- * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要_interest_me列表
+ * 2. 按mmoarpg设计，需要频繁广播技能、扣血等，因此需要interest_me_列表
  * 3. 只提供获取矩形范围内实体。技能寻敌时如果不是矩形，上层再从这些实体筛选
  * 4. 通过mask来控制实体之间的交互
  * 5. 假设1m为一个格子，则1平方千米的地图存实体指针的内存为 1024 * 1024 * 8 = 8M
@@ -32,20 +32,20 @@ public:
     struct EntityCtx
     {
         /// 掩码，按位表示，第一位表示是否加入其他实体interest列表，其他由上层定义
-        uint8_t _mask;
+        uint8_t mask_;
 
-        int32_t _pos_x; // 格子坐标，x
-        int32_t _pos_y; // 格子坐标，y
-        EntityId _id;
+        int32_t pos_x_; // 格子坐标，x
+        int32_t pos_y_; // 格子坐标，y
+        EntityId id_;
 
         /**
          * 对我感兴趣的实体列表。比如我周围的玩家，需要看到我移动、放技能，都需要频繁广播给他们，
          * 可以直接从这个列表取。如果游戏并不是arpg，可能并不需要这个列表。
-         * 当两个实体的mask存在交集时，将同时放入双方的_interest_me，但这只是做初步的筛选，例
-         * 如不要把怪物放到玩家的_interest_me，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
+         * 当两个实体的mask存在交集时，将同时放入双方的interest_me_，但这只是做初步的筛选，例
+         * 如不要把怪物放到玩家的interest_me_，但并不能处理玩家隐身等各种复杂的逻辑，还需要上层
          * 根据业务处理
          */
-        EntityVector *_interest_me;
+        EntityVector *interest_me_;
     };
 
 public:
@@ -60,8 +60,8 @@ public:
     /** 根据像素坐标判断是否在同一个格子内 */
     bool is_same_pos(int32_t x, int32_t y, int32_t dx, int32_t dy)
     {
-        return (x / _pix_grid == dx / _pix_grid)
-               && (y / _pix_grid == dy / _pix_grid);
+        return (x / pix_grid_ == dx / pix_grid_)
+               && (y / pix_grid_ == dy / pix_grid_);
     }
 
     bool set_visual_range(int32_t width, int32_t height);
@@ -100,7 +100,7 @@ protected:
 
     void del_entity_ctx(struct EntityCtx *ctx)
     {
-        del_entity_vector(ctx->_interest_me);
+        del_entity_vector(ctx->interest_me_);
 
         get_ctx_pool()->destroy(ctx);
     }
@@ -109,7 +109,7 @@ protected:
     {
         struct EntityCtx *ctx = get_ctx_pool()->construct();
 
-        ctx->_interest_me = new_entity_vector();
+        ctx->interest_me_ = new_entity_vector();
 
         return ctx;
     }
@@ -143,10 +143,10 @@ private:
     /** 校验格子坐标是否合法 */
     bool valid_pos(int32_t x, int32_t y, int32_t dx, int32_t dy) const
     {
-        if (x < 0 || y < 0 || dx >= _width || dy >= _height)
+        if (x < 0 || y < 0 || dx >= width_ || dy >= height_)
         {
             ELOG("Invalid grid pos (%d, %d) (%d, %d), range (%d, %d)", x, y, dx,
-                 dy, _width - 1, _height - 1);
+                 dy, width_ - 1, height_ - 1);
             return false;
         }
         return true;
@@ -171,23 +171,23 @@ private:
     }
 
 protected:
-    int32_t _width;    // 场景最大宽度(格子坐标)
-    int32_t _height;   // 场景最大高度(格子坐标)
-    int32_t _pix_grid; // 每个格子表示的像素大小
+    int32_t width_;    // 场景最大宽度(格子坐标)
+    int32_t height_;   // 场景最大高度(格子坐标)
+    int32_t pix_grid_; // 每个格子表示的像素大小
 
     // 格子数指以实体为中心，不包含当前格子，上下或者左右的格子数
-    int32_t _visual_width;  // 视野宽度格子数
-    int32_t _visual_height; // 视野高度格子数
+    int32_t visual_width_;  // 视野宽度格子数
+    int32_t visual_height_; // 视野高度格子数
 
     /**
      * 记录每个格子中的实体id列表
-     * 有X[m][n]、X[_width * m + n]这两种存储方式，测试后发现第二种效率更高
+     * 有X[m][n]、X[width_ * m + n]这两种存储方式，测试后发现第二种效率更高
      * https://stackoverflow.com/questions/936687/how-do-i-declare-a-2d-array-in-c-using-new
      *
      * 一个地图中，绝大部分格子是不可行走的，因此对应的格子需要用到才会创建数组，节省内存
      */
-    EntityVector **_entity_grid;
+    EntityVector **entity_grid_;
 
     /* 记录所有实体的数据 */
-    EntitySet _entity_set;
+    EntitySet entity_set_;
 };

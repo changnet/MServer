@@ -5,19 +5,19 @@
 #include <sys/prctl.h> // for prctl
 #endif
 
-std::atomic<int32_t> Thread::_sig_mask(0);
+std::atomic<int32_t> Thread::sig_mask_(0);
 
 Thread::Thread(const std::string &name)
 {
     // 用于产生自定义线程id
     // std::thread::id不能保证为数字(linux下一般为pthread_t)，不方便传参
-    static int32_t _id_seed = 0;
+    static int32_t id_seed_ = 0;
 
-    _name   = name;
-    _id     = ++_id_seed;
-    _status = S_NONE;
+    name_   = name;
+    id_     = ++id_seed_;
+    status_ = S_NONE;
 
-    _main_ev = 0;
+    main_ev_ = 0;
 
     set_wait_busy(true); // 默认关服时都是需要待所有任务处理才能结束
 }
@@ -25,7 +25,7 @@ Thread::Thread(const std::string &name)
 Thread::~Thread()
 {
     assert(!active());
-    assert(!_thread.joinable());
+    assert(!thread_.joinable());
 }
 
 void Thread::signal_block()
@@ -70,8 +70,8 @@ void Thread::sig_handler(int32_t signum)
     // 但一般只处理前31个
     if (signum > 31) return;
    
-   int32_t old = _sig_mask;
-    _sig_mask |= (1 << signum);
+   int32_t old = sig_mask_;
+    sig_mask_ |= (1 << signum);
 
     // C++的condition_variable不是async-signal-safe的，因此这里可能有点问题
     // 解决方案是不使用signal_handler，而是所有线程都屏蔽信号
@@ -80,8 +80,8 @@ void Thread::sig_handler(int32_t signum)
     //      参考：https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
     // 
     // 这方案太复杂
-    // 这里暂时用_sig_mask判断一下，如果不为0说明已经唤醒过了，不需要再次唤醒
-    // 当然这个不是很准，可能设置完_sig_mask的值另一线程重新进入睡眠了
+    // 这里暂时用sig_mask_判断一下，如果不为0说明已经唤醒过了，不需要再次唤醒
+    // 当然这个不是很准，可能设置完sig_mask_的值另一线程重新进入睡眠了
     // 由于这里信号使用很少，未生效可以多次发
     if (old) return;
 
@@ -189,13 +189,13 @@ void Thread::apply_thread_name(const char *name)
 bool Thread::start(int32_t ms)
 {
     // 刚启动时，会启动一些底层线程，这时候日志设置还没好（日志路径未设置好）
-    // PLOG("%s thread start", _name.c_str());
+    // PLOG("%s thread start", name_.c_str());
 
     // 只能在主线程调用，threadmgr没加锁
-    assert(std::this_thread::get_id() != _thread.get_id());
+    assert(std::this_thread::get_id() != thread_.get_id());
 
     mark(S_RUN);
-    _thread = std::thread(&Thread::spawn, this, ms);
+    thread_ = std::thread(&Thread::spawn, this, ms);
 
     StaticGlobal::thread_mgr()->push(this);
 
@@ -205,10 +205,10 @@ bool Thread::start(int32_t ms)
 /* 终止线程 */
 void Thread::stop()
 {
-    PLOG("%s thread stop", _name.c_str());
+    PLOG("%s thread stop", name_.c_str());
 
     // 只能在主线程调用，thread_mgr没加锁
-    assert(std::this_thread::get_id() != _thread.get_id());
+    assert(std::this_thread::get_id() != thread_.get_id());
     if (!active())
     {
         ELOG("thread::stop:thread not running");
@@ -217,26 +217,26 @@ void Thread::stop()
 
     unmark(S_RUN);
     wakeup(S_RUN);
-    _thread.join();
+    thread_.join();
 
-    StaticGlobal::thread_mgr()->pop(_id);
+    StaticGlobal::thread_mgr()->pop(id_);
 }
 
 void Thread::spawn(int32_t ms)
 {
     signal_block(); /* 子线程不处理外部信号 */
 
-    apply_thread_name(_name.c_str());
+    apply_thread_name(name_.c_str());
 
     if (!initialize()) /* 初始化 */
     {
-        ELOG("%s thread initialize fail", _name.c_str());
+        ELOG("%s thread initialize fail", name_.c_str());
         return;
     }
 
-    while (_status & S_RUN)
+    while (status_ & S_RUN)
     {
-        int32_t ev = _cv.wait_for(ms);
+        int32_t ev = cv_.wait_for(ms);
         mark(S_BUSY);
         this->routine(ev);
         unmark(S_BUSY);
@@ -244,14 +244,14 @@ void Thread::spawn(int32_t ms)
 
     if (!uninitialize()) /* 清理 */
     {
-        ELOG("%s thread uninitialize fail", _name.c_str());
+        ELOG("%s thread uninitialize fail", name_.c_str());
         return;
     }
 }
 
 void Thread::wakeup_main(int32_t status)
 {
-    _main_ev |= status;
+    main_ev_ |= status;
 
     StaticGlobal::ev()->wake();
 }

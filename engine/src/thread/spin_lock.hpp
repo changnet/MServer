@@ -27,11 +27,11 @@ class SpinLock final
 public:
     SpinLock()
     {
-        _flag.clear();
+        flag_.clear();
 
         // C++20 This macro is no longer needed and deprecated,
         // since default constructor of std::atomic_flag initializes it to clear
-        // state. _flag = ATOMIC_FLAG_INIT;
+        // state. flag_ = ATOMIC_FLAG_INIT;
     }
     ~SpinLock()                 = default;
     SpinLock(const SpinLock &)  = delete;
@@ -43,20 +43,20 @@ public:
         // Example A spinlock mutex can be implemented in userspace using an atomic_flag
 
         //test_and_set返回的是上一次的状态。如果返回true，则表示被其他线程占用
-        while (_flag.test_and_set(std::memory_order_acquire))
+        while (flag_.test_and_set(std::memory_order_acquire))
             ;
     }
 
     bool try_lock() noexcept
     {
-        return !_flag.test_and_set(std::memory_order_acquire);
+        return !flag_.test_and_set(std::memory_order_acquire);
     }
 
     void unlock() noexcept
     {
-        _flag.clear(std::memory_order_release);
+        flag_.clear(std::memory_order_release);
     }
 
 private:
-    std::atomic_flag _flag;
+    std::atomic_flag flag_;
 };

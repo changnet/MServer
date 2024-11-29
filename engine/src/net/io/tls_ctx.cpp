@@ -102,19 +102,19 @@ void TlsCtx::dump_x509(const SSL *ctx)
 
 TlsCtx::TlsCtx()
 {
-    _ctx = nullptr;
-    _passwd[0] = 0;
+    ctx_ = nullptr;
+    passwd_[0] = 0;
 }
 
 TlsCtx::~TlsCtx()
 {
-    if (_ctx)
+    if (ctx_)
     {
         // SSL_CTX_free() decrements the reference count of ctx, and removes
         // the SSL_CTX object pointed to by ctx and frees up the allocated
         // memory if the the reference count has reached 0.
-        SSL_CTX_free(_ctx);
-        _ctx = nullptr;
+        SSL_CTX_free(ctx_);
+        ctx_ = nullptr;
     }
 }
 
@@ -153,7 +153,7 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
             goto FAIL;
         }
     }
-    _ctx = ctx;
+    ctx_ = ctx;
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有
 
     /* 建立ssl时，客户端的证书是在握手阶段由服务器发给客户端的
@@ -182,8 +182,8 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
     if (passwd)
     {
         // SSL_CTX_set_default_passwd_cb(ctx, ctx_passwd_cb);
-        snprintf(_passwd, sizeof(_passwd), "%s", passwd ? passwd : "");
-        SSL_CTX_set_default_passwd_cb_userdata(ctx, _passwd);
+        snprintf(passwd_, sizeof(passwd_), "%s", passwd ? passwd : "");
+        SSL_CTX_set_default_passwd_cb_userdata(ctx, passwd_);
     }
 
     // 密钥文件有多种

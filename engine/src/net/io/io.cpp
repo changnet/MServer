@@ -11,7 +11,7 @@
 
 IO::IO(int32_t conn_id)
 {
-    _conn_id = conn_id;
+    conn_id_ = conn_id;
 }
 
 IO::~IO()
@@ -20,22 +20,22 @@ IO::~IO()
 
 int32_t IO::recv(EVIO *w)
 {
-    int32_t fd = w->_fd;
+    int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
     int32_t len = 0;
     while (true)
     {
-        Buffer::Transaction &&ts = _recv.any_seserve(true);
-        if (0 == ts._len) return EV_BUSY;
+        Buffer::Transaction &&ts = recv_.any_seserve(true);
+        if (0 == ts.len_) return EV_BUSY;
 
-        len = (int32_t)::recv(fd, ts._ctx, ts._len, 0);
+        len = (int32_t)::recv(fd, ts.ctx_, ts.len_, 0);
 
-        _recv.commit(ts, len);
+        recv_.commit(ts, len);
         if (unlikely(len <= 0)) break;
 
         // 如果没读满缓冲区，则所有数据已读出来
-        if (len < ts._len) return EV_NONE;
+        if (len < ts.len_) return EV_NONE;
     }
 
     if (0 == len)
@@ -47,7 +47,7 @@ int32_t IO::recv(EVIO *w)
     int32_t e = netcompat::errorno();
     if (netcompat::iserror(e))
     {
-        w->_errno = e;
+        w->errno_ = e;
         ELOG("io recv fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
         return EV_ERROR;
     }
@@ -57,7 +57,7 @@ int32_t IO::recv(EVIO *w)
 
 int32_t IO::send(EVIO *w)
 {
-    int32_t fd = w->_fd;
+    int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
     int32_t len  = 0;
@@ -65,13 +65,13 @@ int32_t IO::send(EVIO *w)
     bool next    = false;
     while (true)
     {
-        const char *data = _send.get_front_used(bytes, next);
+        const char *data = send_.get_front_used(bytes, next);
         if (0 == bytes) return EV_NONE;
 
         len = (int32_t)::send(fd, data, (int32_t)bytes, 0);
         if (len <= 0) break;
 
-        _send.remove(len); // 删除已发送数据
+        send_.remove(len); // 删除已发送数据
 
         // socket发送缓冲区已满，等下次发送了
         if (len < (int32_t)bytes) return EV_WRITE;
@@ -86,7 +86,7 @@ int32_t IO::send(EVIO *w)
     int32_t e = netcompat::errorno();
     if (netcompat::iserror(e))
     {
-        w->_errno = e;
+        w->errno_ = e;
         ELOG("io send fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
         return EV_ERROR;
     }
@@ -99,7 +99,7 @@ void IO::init_ready() const
 {
     try
     {
-        lcpp::call(StaticGlobal::L, "conn_io_ready", _conn_id);
+        lcpp::call(StaticGlobal::L, "conn_io_ready", conn_id_);
     }
     catch (const std::runtime_error& e)
     {

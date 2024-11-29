@@ -10,7 +10,7 @@ public:
     /// 字段名字
     struct SqlField
     {
-        char _name[64]; /// 字段名，如果超过最大限制将被截断
+        char name_[64]; /// 字段名，如果超过最大限制将被截断
         /*
         define in mysql_com.h
         enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
@@ -37,7 +37,7 @@ public:
                     MYSQL_TYPE_GEOMETRY=255
         };
         */
-        enum_field_types _type;
+        enum_field_types type_;
     };
 
     /// 内容
@@ -46,29 +46,29 @@ public:
     public:
         SqlCol()
         {
-            _size     = 0;
-            _value[0] = 0;
-            _value_ex = nullptr;
+            size_     = 0;
+            value_[0] = 0;
+            value_ex_ = nullptr;
         }
 
         ~SqlCol()
         {
-            if (_value_ex) delete[] _value_ex;
+            if (value_ex_) delete[] value_ex_;
 
-            _size     = 0;
-            _value_ex = nullptr;
+            size_     = 0;
+            value_ex_ = nullptr;
         }
 
         void clear();
         void set(const char *value, size_t size);
-        const char *get() const { return _value_ex ? _value_ex : _value; }
+        const char *get() const { return value_ex_ ? value_ex_ : value_; }
 
     private:
         friend class LSql;
 
-        size_t _size;
-        char _value[64];
-        char *_value_ex;
+        size_t size_;
+        char value_[64];
+        char *value_ex_;
     };
 
     /* 查询结果 */
@@ -82,12 +82,12 @@ public:
         friend class LSql;
         using SqlRow = std::vector<SqlCol>;
 
-        int32_t _id; /* 标记查询的id，用于回调 */
-        int32_t _ecode;
-        uint32_t _num_rows;            // 行数
-        uint32_t _num_cols;            // 列数
-        std::vector<SqlField> _fields; // 字段名
-        std::vector<SqlRow> _rows;     // 行数据
+        int32_t id_; /* 标记查询的id，用于回调 */
+        int32_t ecode_;
+        uint32_t num_rows_;            // 行数
+        uint32_t num_cols_;            // 列数
+        std::vector<SqlField> fields_; // 字段名
+        std::vector<SqlRow> rows_;     // 行数据
     };
 
     /// 查询请求
@@ -99,14 +99,14 @@ public:
 
         void clear();
         void set(int32_t id, size_t size, const char *stmt);
-        const char *get() const { return _stmt_ex ? _stmt_ex : _stmt; }
+        const char *get() const { return stmt_ex_ ? stmt_ex_ : stmt_; }
 
     private:
         friend class LSql;
-        int32_t _id;
-        size_t _size;
-        char _stmt[256];
-        char *_stmt_ex;
+        int32_t id_;
+        size_t size_;
+        char stmt_[256];
+        char *stmt_ex_;
     };
 
 public:
@@ -132,12 +132,12 @@ private:
     void fetch_result(MYSQL_RES *result, SqlResult *res);
 
 protected:
-    bool _is_cn;
-    MYSQL *_conn;
+    bool is_cn_;
+    MYSQL *conn_;
 
-    int32_t _port;        ///< 数据库端口
-    std::string _host;    ///< 数据库ip地址
-    std::string _usr;     ///< 数据库用户名
-    std::string _pwd;     ///< 数据库密码
-    std::string _db_name; ///< 数据库名
+    int32_t port_;        ///< 数据库端口
+    std::string host_;    ///< 数据库ip地址
+    std::string usr_;     ///< 数据库用户名
+    std::string pwd_;     ///< 数据库密码
+    std::string db_name_; ///< 数据库名
 };

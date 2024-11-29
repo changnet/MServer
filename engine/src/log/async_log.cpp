@@ -7,10 +7,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 AsyncLog::Policy::Policy()
 {
-    _data  = 0;
-    _data2 = 0;
-    _file  = nullptr;
-    _type  = PT_NONE;
+    data_  = 0;
+    data2_ = 0;
+    file_  = nullptr;
+    type_  = PT_NONE;
 }
 AsyncLog::Policy::~Policy()
 {
@@ -19,11 +19,11 @@ AsyncLog::Policy::~Policy()
 
 void AsyncLog::Policy::close_stream()
 {
-    if (_file)
+    if (file_)
     {
-        ::fflush(_file);
-        ::fclose(_file);
-        _file = nullptr;
+        ::fflush(file_);
+        ::fclose(file_);
+        file_ = nullptr;
     }
 }
 
@@ -41,7 +41,7 @@ time_t AsyncLog::Policy::day_begin(time_t now)
 void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 {
     // 不是按天写入，或者还在同一天now < 0表示这个是拼接到上一个缓冲区的日志，不需要检测
-    if (PT_DAILY != _type || now < 0 || (now >= _data && now <= _data + 86400))
+    if (PT_DAILY != type_ || now < 0 || (now >= data_ && now <= data_ + 86400))
     {
         return;
     }
@@ -49,29 +49,29 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
     close_stream();
 
     struct tm ntm;
-    ::localtime_r(&_data, &ntm);
+    ::localtime_r(&data_, &ntm);
 
     // 修正文件名 runtime 转换为 runtime20210228
     char new_path[256];
-    snprintf(new_path, sizeof(new_path), "%s%04d%02d%02d", _path.c_str(),
+    snprintf(new_path, sizeof(new_path), "%s%04d%02d%02d", path_.c_str(),
              ntm.tm_year + 1900, ntm.tm_mon + 1, ntm.tm_mday);
 
-    _data = day_begin(now);
+    data_ = day_begin(now);
 
     std::error_code e;
-    bool ok = std::filesystem::exists(_path, e);
+    bool ok = std::filesystem::exists(path_, e);
     if (e)
     {
-        ELOG_R("rename daily check file exist file error %s %s", _path.c_str(),
+        ELOG_R("rename daily check file exist file error %s %s", path_.c_str(),
                e.message().c_str());
         return;
     }
     if (ok)
     {
-        std::filesystem::rename(_path, new_path, e);
+        std::filesystem::rename(path_, new_path, e);
         if (e)
         {
-            ELOG_R("rename daily log file error %s %s", _path.c_str(),
+            ELOG_R("rename daily log file error %s %s", path_.c_str(),
                    e.message().c_str());
         }
     }
@@ -79,12 +79,12 @@ void AsyncLog::Policy::trigger_daily_rollover(int64_t now)
 
 void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 {
-    if (PT_SIZE != _type) return;
+    if (PT_SIZE != type_) return;
 
-    _data2 += size;
-    if (_data2 < _data) return;
+    data2_ += size;
+    if (data2_ < data_) return;
 
-    _data2 = 0;
+    data2_ = 0;
     close_stream();
 
     std::string old_path;
@@ -98,14 +98,14 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     int32_t max_index = 0;
     for (int32_t i = max_index + 1; i < 1024; i++)
     {
-        snprintf(old_buff, sizeof(old_buff), "%s.%03d", _path.c_str(), i);
+        snprintf(old_buff, sizeof(old_buff), "%s.%03d", path_.c_str(), i);
 
         old_path.assign(old_buff);
         bool ok = std::filesystem::exists(old_path, e);
         if (e)
         {
             ELOG_R("rename size check file exist file error %s %s",
-                   _path.c_str(), e.message().c_str());
+                   path_.c_str(), e.message().c_str());
             return;
         }
 
@@ -116,8 +116,8 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
     for (int32_t i = max_index + 1; i > 1; i--)
     {
-        snprintf(new_buff, sizeof(new_buff), "%s.%03d", _path.c_str(), i);
-        snprintf(old_buff, sizeof(old_buff), "%s.%03d", _path.c_str(), i - 1);
+        snprintf(new_buff, sizeof(new_buff), "%s.%03d", path_.c_str(), i);
+        snprintf(old_buff, sizeof(old_buff), "%s.%03d", path_.c_str(), i - 1);
 
         new_path.assign(new_buff);
         old_path.assign(old_buff);
@@ -131,22 +131,22 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
     }
 
     // 把runtime命名为runtime.1
-    bool ok = std::filesystem::exists(_path, e);
+    bool ok = std::filesystem::exists(path_, e);
     if (e)
     {
         ELOG_R("rename size check current file exist file error %s %s",
-               _path.c_str(), e.message().c_str());
+               path_.c_str(), e.message().c_str());
         return;
     }
 
     if (ok)
     {
-        snprintf(new_buff, sizeof(new_buff), "%s.%03d", _path.c_str(), 1);
+        snprintf(new_buff, sizeof(new_buff), "%s.%03d", path_.c_str(), 1);
         new_path.assign(new_buff);
-        std::filesystem::rename(_path, new_path, e);
+        std::filesystem::rename(path_, new_path, e);
         if (e)
         {
-            ELOG_R("rename size current file error %s %s", _path.c_str(),
+            ELOG_R("rename size current file error %s %s", path_.c_str(),
                    e.message().c_str());
             return;
         }
@@ -155,29 +155,29 @@ void AsyncLog::Policy::trigger_size_rollover(int64_t size)
 
 bool AsyncLog::Policy::init_size_policy(int64_t size)
 {
-    _data = size;
-    if (_data <= 0)
+    data_ = size;
+    if (data_ <= 0)
     {
-        _data = 1024 * 1024 * 10;
+        data_ = 1024 * 1024 * 10;
         ELOG_R("size illegal, reset to default 1024 * 1024 * 10");
     }
 
     // 读取文件大小
     std::error_code e;
-    bool ok = std::filesystem::exists(_path, e);
+    bool ok = std::filesystem::exists(path_, e);
     if (e)
     {
         ELOG_R("init size policy check file exist file error %s %s",
-               _path.c_str(), e.message().c_str());
+               path_.c_str(), e.message().c_str());
         return true;
     }
     if (ok)
     {
-        _data2 = std::filesystem::file_size(_path, e);
+        data2_ = std::filesystem::file_size(path_, e);
         if (e)
         {
             ELOG_R("init size policy file size exist file error %s %s",
-                   _path.c_str(), e.message().c_str());
+                   path_.c_str(), e.message().c_str());
             return true;
         }
     }
@@ -187,42 +187,42 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
 
 bool AsyncLog::Policy::init_daily_policy()
 {
-    _data = StaticGlobal::ev()->now();
+    data_ = StaticGlobal::ev()->now();
 
     // 读取已有日志文件的日期
     std::error_code e;
-    bool ok = std::filesystem::exists(_path, e);
+    bool ok = std::filesystem::exists(path_, e);
     if (e)
     {
-        ELOG_R("rename daily initfile exist file error %s %s", _path.c_str(),
+        ELOG_R("rename daily initfile exist file error %s %s", path_.c_str(),
                e.message().c_str());
         ok = false; // 即使获取不了上次文件的时间，也按天切分文件
     }
     if (ok)
     {
-        auto ftime = std::filesystem::last_write_time(_path);
+        auto ftime = std::filesystem::last_write_time(path_);
 #ifdef __windows__
         // https://developercommunity.visualstudio.com/t/stdfilesystemfile-time-type-does-not-allow-easy-co/251213
         // windows的文件时间戳从1601年开始，在C++20之前，无法用clock_cast把ftime转换为time_t
         // Between Jan 1, 1601 and Jan 1, 1970 there are 11644473600 seconds
         static_assert(__cplusplus < 202002L);
         using namespace std::chrono_literals;
-        _data = std::chrono::duration_cast<std::chrono::seconds>(
+        data_ = std::chrono::duration_cast<std::chrono::seconds>(
                     ftime.time_since_epoch() - 11644473600s)
                     .count();
 #else
-        _data = decltype(ftime)::clock::to_time_t(ftime);
+        data_ = decltype(ftime)::clock::to_time_t(ftime);
 #endif
     }
 
-    _data = day_begin(_data);
+    data_ = day_begin(data_);
     return true;
 }
 
 void AsyncLog::Policy::init_policy(const char *path, int32_t type, int64_t opt_val)
 {
-    _path.assign(path);
-    _type = static_cast<Policy::PolicyType>(type);
+    path_.assign(path);
+    type_ = static_cast<Policy::PolicyType>(type);
     switch (type)
     {
     case PT_DAILY: init_daily_policy(); break;
@@ -233,29 +233,29 @@ void AsyncLog::Policy::init_policy(const char *path, int32_t type, int64_t opt_v
 
 FILE *AsyncLog::Policy::open_stream(const char *path)
 {
-    if (PT_NONE == _type) _path.assign(path);
+    if (PT_NONE == type_) path_.assign(path);
 
-    if (!_file)
+    if (!file_)
     {
-        _file = ::fopen(_path.c_str(), "ab+");
-        if (!_file)
+        file_ = ::fopen(path_.c_str(), "ab+");
+        if (!file_)
         {
-            ELOG_R("can't open log file(%s):%s\n", _path.c_str(),
+            ELOG_R("can't open log file(%s):%s\n", path_.c_str(),
                    strerror(errno));
             return nullptr;
         }
     }
 
-    return _file;
+    return file_;
 }
 ////////////////////////////////////////////////////////////////////////////////
 size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 {
-    std::lock_guard<std::mutex> guard(_mutex);
+    std::lock_guard<std::mutex> guard(mutex_);
     size_t unfinished_sz = 0;
-    for (auto iter = _device.begin(); iter != _device.end(); iter++)
+    for (auto iter = device_.begin(); iter != device_.end(); iter++)
     {
-        unfinished_sz += iter->second._buff.size();
+        unfinished_sz += iter->second.buff_.size();
     }
 
     if (is_busy()) unfinished_sz += 1;
@@ -268,11 +268,11 @@ size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
 
 void AsyncLog::set_policy(const char *path, int32_t type, int64_t opt_val)
 {
-    std::lock_guard<std::mutex> guard(_mutex);
+    std::lock_guard<std::mutex> guard(mutex_);
 
     // 这里面可能会触发磁盘io操作，会比较慢
-    Device &device = _device[path];
-    device._policy.init_policy(path, type, opt_val);
+    Device &device = device_[path];
+    device.policy_.init_policy(path, type, opt_val);
 }
 
 void AsyncLog::append(const char *path, LogType type, int64_t time,
@@ -286,13 +286,13 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     thread_local std::string str_path;
     str_path.assign(path);
 
-    std::lock_guard<std::mutex> guard(_mutex);
-    Device &device = _device[str_path];
+    std::lock_guard<std::mutex> guard(mutex_);
+    Device &device = device_[str_path];
     Buffer *buff   = device_reserve(device, time, type);
 
-    size_t cpy_len = std::min(sizeof(buff->_buff), len);
-    memcpy(buff->_buff, ctx, cpy_len);
-    buff->_used += cpy_len;
+    size_t cpy_len = std::min(sizeof(buff->buff_), len);
+    memcpy(buff->buff_, ctx, cpy_len);
+    buff->used_ += cpy_len;
 
     // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为-1
     if (unlikely(cpy_len < len))
@@ -302,11 +302,11 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
         {
             buff = device_reserve(device, -1, type);
 
-            cpy_len = std::min(sizeof(buff->_buff), len - cur_len);
-            memcpy(buff->_buff, ctx + cur_len, cpy_len);
+            cpy_len = std::min(sizeof(buff->buff_), len - cur_len);
+            memcpy(buff->buff_, ctx + cur_len, cpy_len);
 
             cur_len += cpy_len;
-            buff->_used += cpy_len;
+            buff->used_ += cpy_len;
         } while (cur_len < len);
     }
 }
@@ -315,17 +315,17 @@ size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
                               const Buffer *buffer, bool beg, bool end)
 {
     size_t bytes = 0;
-    if (buffer->_time >= 0)
+    if (buffer->time_ >= 0)
     {
         if (!beg)
         {
             bytes++;
             fputc('\n', stream);
         }
-        bytes += write_prefix(stream, prefix, buffer->_time);
+        bytes += write_prefix(stream, prefix, buffer->time_);
     }
 
-    bytes += fwrite(buffer->_buff, 1, buffer->_used, stream);
+    bytes += fwrite(buffer->buff_, 1, buffer->used_, stream);
 
     if (end)
     {
@@ -352,14 +352,14 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers,
         bool end             = i == size - 1;
         const Buffer *buffer = buffers[i];
 
-        policy->trigger_daily_rollover(buffer->_time);
+        policy->trigger_daily_rollover(buffer->time_);
         FILE *stream = policy->open_stream(path);
         if (!stream)
         {
             ELOG_R("unable to open log stream: %s", path);
             continue;
         }
-        switch (buffer->_type)
+        switch (buffer->type_)
         {
         case LT_LOGFILE:
         {
@@ -392,7 +392,7 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers,
         }
         case LT_FILE:
         {
-            bytes = fwrite(buffer->_buff, 1, buffer->_used, stream);
+            bytes = fwrite(buffer->buff_, 1, buffer->used_, stream);
             break;
         }
         default: assert(false); break;
@@ -418,37 +418,37 @@ void AsyncLog::routine(int32_t ev)
     bool busy = true;
     auto now  = StaticGlobal::ev()->now();
 
-    std::unique_lock<std::mutex> ul(_mutex);
+    std::unique_lock<std::mutex> ul(mutex_);
 
     while (busy)
     {
         busy = false;
-        for (auto iter = _device.begin(); iter != _device.end(); iter++)
+        for (auto iter = device_.begin(); iter != device_.end(); iter++)
         {
             Device &device = iter->second;
-            Policy &policy = device._policy;
-            if (!device._buff.empty())
+            Policy &policy = device.policy_;
+            if (!device.buff_.empty())
             {
-                device._time = now;
-                _writing_buffers.swap(device._buff);
+                device.time_ = now;
+                writing_buffers_.swap(device.buff_);
 
                 ul.unlock();
-                write_device(&policy, _writing_buffers, iter->first.c_str());
+                write_device(&policy, writing_buffers_, iter->first.c_str());
                 ul.lock();
 
                 // 回收缓冲区
-                for (auto buffer : _writing_buffers)
+                for (auto buffer : writing_buffers_)
                 {
-                    _buffer_pool.destroy(buffer);
+                    buffer_pool_.destroy(buffer);
                 }
-                _writing_buffers.clear();
+                writing_buffers_.clear();
 
                 busy = true;
             }
             else
             {
                 // 关闭长时间不使用的设备
-                int64_t sec = now - device._time;
+                int64_t sec = now - device.time_;
                 // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush ??)
                 if (sec > 10) policy.close_stream();
 
@@ -456,7 +456,7 @@ void AsyncLog::routine(int32_t ev)
                 if (Policy::PT_DAILY == type && sec > 10)
                 {
                     // 当没有日志写入时，10秒检测一次日期切换
-                    device._time = now;
+                    device.time_ = now;
                     if (policy.is_daily_rollover(now))
                     {
                         ul.unlock();
@@ -466,7 +466,7 @@ void AsyncLog::routine(int32_t ev)
                 }
                 else if (Policy::PT_NORMAL == type && sec > 300)
                 {
-                    iter = _device.erase(iter);
+                    iter = device_.erase(iter);
                 }
             }
         }
@@ -477,7 +477,7 @@ bool AsyncLog::uninitialize()
 {
     routine(0);
 
-    _device.clear(); // 保证文件句柄被销毁并写入文件
+    device_.clear(); // 保证文件句柄被销毁并写入文件
 
     return true;
 }

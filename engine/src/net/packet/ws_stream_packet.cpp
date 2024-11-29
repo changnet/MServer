@@ -19,7 +19,7 @@ int32_t WSStreamPacket::pack_clt(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
     // 允许握手未完成就发数据，自己保证顺序
-    // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
+    // if ( !is_upgrade_ ) return http_packet::pack_clt( L,index );
 
     int32_t cmd    = luaL_checkinteger32(L, index);
 
@@ -53,7 +53,7 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
     // 允许握手未完成就发数据，自己保证顺序
-    // if ( !_is_upgrade ) return luaL_error( L,"websocket not upgrade" );
+    // if ( !is_upgrade_ ) return luaL_error( L,"websocket not upgrade" );
 
     int32_t cmd = luaL_checkinteger32(L, index);
     websocket_flags flags =
@@ -70,7 +70,7 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
 
     struct CSHeader c2sh;
     SET_HEADER_LENGTH(c2sh, size, cmd, SET_LENGTH_FAIL_ENCODE);
-    c2sh._cmd = static_cast<uint16_t>(cmd);
+    c2sh.cmd_ = static_cast<uint16_t>(cmd);
 
     size_t frame_size  = size + sizeof(c2sh);
 
@@ -81,18 +81,18 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
     new_masking_key(mask);
 
     uint8_t mask_offset = 0;
-    Buffer &buffer      = _socket->get_send_buffer();
+    Buffer &buffer      = socket_->get_send_buffer();
     Buffer::Transaction &&ts = buffer.flat_reserve(len);
-    size_t offset = websocket_build_frame_header(ts._ctx, flags, mask, frame_size);
-    offset += websocket_append_frame(ts._ctx + offset, flags, mask, header_ctx,
+    size_t offset = websocket_build_frame_header(ts.ctx_, flags, mask, frame_size);
+    offset += websocket_append_frame(ts.ctx_ + offset, flags, mask, header_ctx,
                                      sizeof(c2sh), &mask_offset);
-    websocket_append_frame(ts._ctx + offset, flags, mask, ctx, size,
+    websocket_append_frame(ts.ctx_ + offset, flags, mask, ctx, size,
                            &mask_offset);
 
     buffer.commit(ts, (int32_t)len);
-    _socket->flush();
+    socket_->flush();
 
-    PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh._length), STAT_TIME_END());
+    PKT_STAT_ADD(SPT_CSPK, cmd, int32_t(c2sh.length_), STAT_TIME_END());
 
     return 0;
 }
@@ -100,7 +100,7 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
 /* 数据帧完成 */
 int32_t WSStreamPacket::on_frame_end()
 {
-    Socket::ConnType conn_ty = _socket->conn_type();
+    Socket::ConnType conn_ty = socket_->conn_type();
     /* 客户端到服务器的连接(CSCN)收到的是服务器发往客户端的数据包(sc_command) */
     if (Socket::CT_CSCN == conn_ty)
     {
@@ -111,7 +111,7 @@ int32_t WSStreamPacket::on_frame_end()
 
     /* 服务器收到的包，看要不要转发 */
     size_t data_size     = 0;
-    const char *data_ctx = _body.all_to_flat_ctx(data_size);
+    const char *data_ctx = body_.all_to_flat_ctx(data_size);
     if (data_size < sizeof(struct CSHeader))
     {
         ELOG("ws_stream_packet on_frame_end packet incomplete");
@@ -120,8 +120,8 @@ int32_t WSStreamPacket::on_frame_end()
     const struct CSHeader *header =
         reinterpret_cast<const struct CSHeader *>(data_ctx);
 
-    uint16_t cmd = header->_cmd;
-    if (data_size < header->_length)
+    uint16_t cmd = header->cmd_;
+    if (data_size < header->length_)
     {
         ELOG("ws_stream_packet on_frame_end packet length error:%d",
              (int32_t)cmd);
@@ -150,8 +150,8 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
 {
     struct SCHeader s2ch;
     SET_HEADER_LENGTH(s2ch, size, cmd, SET_LENGTH_FAIL_RETURN);
-    s2ch._cmd   = static_cast<uint16_t>(cmd);
-    s2ch._errno = ecode;
+    s2ch.cmd_   = static_cast<uint16_t>(cmd);
+    s2ch.errno_ = ecode;
 
     size_t frame_size  = size + sizeof(s2ch);
 
@@ -161,16 +161,16 @@ int32_t WSStreamPacket::do_pack_clt(int32_t raw_flags, int32_t cmd,
 
     char mask[4]        = {0};
     uint8_t mask_offset = 0;
-    Buffer &buffer      = _socket->get_send_buffer();
+    Buffer &buffer      = socket_->get_send_buffer();
     Buffer::Transaction &&ts = buffer.flat_reserve(len);
-    size_t offset = websocket_build_frame_header(ts._ctx, flags, mask, frame_size);
-    offset += websocket_append_frame(ts._ctx + offset, flags, mask, header_ctx,
+    size_t offset = websocket_build_frame_header(ts.ctx_, flags, mask, frame_size);
+    offset += websocket_append_frame(ts.ctx_ + offset, flags, mask, header_ctx,
                                      sizeof(s2ch), &mask_offset);
-    websocket_append_frame(ts._ctx + offset, flags, mask, ctx, size,
+    websocket_append_frame(ts.ctx_ + offset, flags, mask, ctx, size,
                            &mask_offset);
 
     buffer.commit(ts, (int32_t)len);
-    _socket->flush();
+    socket_->flush();
 
     return 0;
 }

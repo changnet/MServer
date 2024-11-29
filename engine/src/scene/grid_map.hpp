@@ -23,17 +23,17 @@ public:
     bool fill(int32_t x, int32_t y, int8_t cost);
 
     // 获取地图宽高
-    int32_t get_width() const { return _width; }
-    int32_t get_height() const { return _height; }
+    int32_t get_width() const { return width_; }
+    int32_t get_height() const { return height_; }
 
 private:
-    int32_t _id;
+    int32_t id_;
     /* 现在的游戏都是精确到像素级别的
      * 但是地形用grid的话没法精确到像素级别，也没必要。因此后端只记录格子坐标
      * 一个格子可以表示64*64像素大小，或者32*32，具体看策划要求
      * 65535*32 = 2097120像素，一般情况下，uint16_t足够大了
      */
-    int32_t _width;    // 地图的宽，格子坐标
-    int32_t _height;   // 地图的长度，格子坐标
-    int8_t *_grid_set; // 格子数据集合
+    int32_t width_;    // 地图的宽，格子坐标
+    int32_t height_;   // 地图的长度，格子坐标
+    int8_t *grid_set_; // 格子数据集合
 };

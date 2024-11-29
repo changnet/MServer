@@ -2,96 +2,96 @@
 
 #include "ev.hpp"
 
-EVWatcher::EVWatcher(EV *loop) : _loop(loop)
+EVWatcher::EVWatcher(EV *loop) : loop_(loop)
 {
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 EVIO::EVIO(int32_t fd, EV *loop) : EVWatcher(loop)
 {
-    _fd     = fd;
+    fd_     = fd;
 
-    _mask = 0;
-    _errno = 0;
+    mask_ = 0;
+    errno_ = 0;
 
-    _b_kevents = 0;
-    _b_pevents = 0;
+    b_kevents_ = 0;
+    b_pevents_ = 0;
 
-    _ev_counter = 0;
-    _ev_index   = 0;
+    ev_counter_ = 0;
+    ev_index_   = 0;
 
-    _b_ev_counter = 0;
-    _b_ev_index   = 0;
+    b_ev_counter_ = 0;
+    b_ev_index_   = 0;
 
-    _io = nullptr;
+    io_ = nullptr;
 #ifndef NDEBUG
-    _ref = 0;
+    ref_ = 0;
 #endif
 }
 
 EVIO::~EVIO()
 {
 #ifndef NDEBUG
-    assert(0 == _ref);
+    assert(0 == ref_);
 #endif
-    if (_io) delete _io;
+    if (io_) delete io_;
 }
 
 void EVIO::add_ref(int32_t v)
 {
 #ifndef NDEBUG
-    _ref += v;
+    ref_ += v;
 #endif
 }
 
 void EVIO::set(int32_t events)
 {
-    _loop->append_event(this, events);
+    loop_->append_event(this, events);
 }
 
 int32_t EVIO::recv()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return EV_ERROR;
+    if (!io_) return EV_ERROR;
 
-    return _io->recv(this);
+    return io_->recv(this);
 }
 
 int32_t EVIO::send()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return EV_ERROR;
+    if (!io_) return EV_ERROR;
 
-    return _io->send(this);
+    return io_->send(this);
 }
 
 int32_t EVIO::do_init_accept()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return EV_ERROR;
+    if (!io_) return EV_ERROR;
 
-    return _io->do_init_accept(_fd);
+    return io_->do_init_accept(fd_);
 }
 
 int32_t EVIO::do_init_connect()
 {
     // lua报错，在启动socket对象后无法正常设置io参数
-    if (!_io) return EV_ERROR;
+    if (!io_) return EV_ERROR;
 
-    return _io->do_init_connect(_fd);
+    return io_->do_init_connect(fd_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
 {
-    _pending = 0;
-    _revents = 0;
-    _id     = id;
-    _index  = 0;
-    _policy = P_NONE;
-    _at     = 0;
-    _repeat = 0;
+    pending_ = 0;
+    revents_ = 0;
+    id_     = id;
+    index_  = 0;
+    policy_ = P_NONE;
+    at_     = 0;
+    repeat_ = 0;
 }
 
 EVTimer::~EVTimer()
@@ -104,14 +104,14 @@ void EVTimer::reschedule(int64_t now)
      * 当前用的是CLOCK_MONOTONIC时间，所以不存在用户调时间的问题
      * 但可能存在卡主循环的情况，libev默认情况下是修正为当前时间
      */
-    switch (_policy)
+    switch (policy_)
     {
     case P_ALIGN:
     {
         // 严格对齐到特定时间，比如一个定时器每5秒触发一次，那必须是在 0 5 10 15
         // 触发 即使主线程卡了，也不允许在其他秒数触发
-        assert(_repeat > 0);
-        while (_at < now) _at += _repeat;
+        assert(repeat_ > 0);
+        while (at_ < now) at_ += repeat_;
         break;
     }
     case P_SPIN:
@@ -123,7 +123,7 @@ void EVTimer::reschedule(int64_t now)
     default:
     {
         // 按当前时间重新计时，这是最常用的定时器，libev、libevent都是这种处理方式
-        _at = now;
+        at_ = now;
         break;
     }
     }
@@ -131,45 +131,45 @@ void EVTimer::reschedule(int64_t now)
 
 void EVTimer::callback(int32_t revents)
 {
-    _loop->timer_callback(_id, revents);
+    loop_->timer_callback(id_, revents);
 }
 
 int32_t EventSwapList::append_event(EVIO *w, int32_t ev,int32_t &counter, int32_t &index)
 {
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
 
     // 如果当前socket已经在队列中，则不需要额外附加一个event
     // 否则发协议时会导致事件数组很长
-    if (_counter == counter)
+    if (counter_ == counter)
     {
-        assert(_append.size() > (size_t)index);
+        assert(append_.size() > (size_t)index);
 
-        WatcherEvent &fe = _append[index];
+        WatcherEvent &fe = append_[index];
 
-        assert(fe._w == w);
-        fe._ev |= ev;
+        assert(fe.w_ == w);
+        fe.ev_ |= ev;
 
         return 0;
     }
     else
     {
         int32_t flag = 1;
-        size_t size  = _append.size();
+        size_t size  = append_.size();
 
         // 使用counter来判断socket是否已经在数组中，引出的额外问题是counter重置时
         // 需要遍历所有socket来重置对应的counter
-        if (0x7FFFFFFF == _counter)
+        if (0x7FFFFFFF == counter_)
         {
-            _counter = 1;
+            counter_ = 1;
             flag     = 2;
         }
         else
         {
             flag = size > 0 ? 0 : 1;
         }
-        counter = _counter;
+        counter = counter_;
         index   = int32_t(size); // 从0开始，不是size + 1
-        _append.emplace_back(w, ev);
+        append_.emplace_back(w, ev);
 
         return flag;
     }

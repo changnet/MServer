@@ -116,7 +116,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
     {
         Buffer::Transaction &&ts = body.flat_reserve(length);
 
-        websocket_parser_decode(ts._ctx, at, length, parser);
+        websocket_parser_decode(ts.ctx_, at, length, parser);
         body.commit(ts, (int32_t)length);
     }
     else
@@ -158,26 +158,26 @@ static const struct websocket_parser_settings settings = {
 
 WebsocketPacket::WebsocketPacket(class Socket *sk) : HttpPacket(sk)
 {
-    _e          = 0;
-    _is_upgrade = false;
+    e_          = 0;
+    is_upgrade_ = false;
 
-    _parser = new struct websocket_parser();
-    websocket_parser_init(_parser);
-    _parser->data = this;
+    parser_ = new struct websocket_parser();
+    websocket_parser_init(parser_);
+    parser_->data = this;
 }
 
 WebsocketPacket::~WebsocketPacket()
 {
-    _is_upgrade = false;
+    is_upgrade_ = false;
 
-    delete _parser;
-    _parser = nullptr;
+    delete parser_;
+    parser_ = nullptr;
 }
 
 int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
 {
     // 允许握手未完成就发数据，自己保证顺序
-    // if ( !_is_upgrade ) return http_packet::pack_clt( L,index );
+    // if ( !is_upgrade_ ) return http_packet::pack_clt( L,index );
 
     websocket_flags flags =
         static_cast<websocket_flags>(luaL_checkinteger(L, index));
@@ -188,15 +188,15 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
 
     size_t len = websocket_calc_frame_size(flags, size);
 
-    Buffer &buffer           = _socket->get_send_buffer();
+    Buffer &buffer           = socket_->get_send_buffer();
     Buffer::Transaction &&ts = buffer.flat_reserve(len);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
-    websocket_build_frame(ts._ctx, flags, mask, ctx, size);
+    websocket_build_frame(ts.ctx_, flags, mask, ctx, size);
 
     buffer.commit(ts, (int32_t)len);
-    _socket->flush();
+    socket_->flush();
 
     return 0;
 }
@@ -226,9 +226,9 @@ int32_t WebsocketPacket::unpack(Buffer &buffer)
     /* 未握手时，由http处理
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
      */
-    if (!_is_upgrade) return HttpPacket::unpack(buffer);
+    if (!is_upgrade_) return HttpPacket::unpack(buffer);
 
-    _e        = 0; // 重置上一次解析错误
+    e_        = 0; // 重置上一次解析错误
     bool next = false;
 
     // 不要用 buffer.all_to_flat_ctx(size); 这个会把收到的数据都拷贝到缓冲区
@@ -241,7 +241,7 @@ int32_t WebsocketPacket::unpack(Buffer &buffer)
 
         // websocket_parser_execute把数据全当二进制处理，没有错误返回
         // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
-        size_t nparser = websocket_parser_execute(_parser, &settings, ctx, size);
+        size_t nparser = websocket_parser_execute(parser_, &settings, ctx, size);
 
         buffer.remove(nparser);
         if (nparser != size)
@@ -251,7 +251,7 @@ int32_t WebsocketPacket::unpack(Buffer &buffer)
             // 上层脚本在一个消息回调中关闭了连接，则需要中止解析
             // 返回-1表示解析出错，会在底层直接删除链接
             // 中止解析则由上层脚本逻辑决定如何处理(比如关闭链接或者直接忽略)
-            return _e ? -1 : 0;
+            return e_ ? -1 : 0;
         }
     } while (next);
 
@@ -262,14 +262,14 @@ int32_t WebsocketPacket::on_message_complete(bool upgrade)
 {
     // 正在情况下，对方应该只下发一个带upgrade标记的http头来进行握手
     // 但如果对方不是websocket，则可能按http下发404之类的其他东西
-    if (!upgrade || _is_upgrade)
+    if (!upgrade || is_upgrade_)
     {
         set_error(3);
-        ELOG("upgrade error, %s", _http_info._body.c_str());
+        ELOG("upgrade error, %s", http_info_.body_.c_str());
         return -1;
     }
 
-    _is_upgrade = true;
+    is_upgrade_ = true;
     if (0 != invoke_handshake())
     {
         set_error(4);
@@ -288,7 +288,7 @@ int32_t WebsocketPacket::invoke_handshake()
     const char *accept_str = nullptr;
 
     /* 不知道当前是服务端还是客户端，两个key都查找，由上层处理 */
-    const head_map_t &head_field       = _http_info._head_field;
+    const head_map_t &head_field       = http_info_.head_field_;
     head_map_t::const_iterator key_itr = head_field.find("Sec-WebSocket-Key");
     if (key_itr != head_field.end())
     {
@@ -316,7 +316,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "handshake_new");
-    lua_pushinteger(L, _socket->conn_id());
+    lua_pushinteger(L, socket_->conn_id());
     lua_pushstring(L, key_str);
     lua_pushstring(L, accept_str);
 
@@ -327,7 +327,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return _socket->is_closed() ? -1 : 0;
+    return socket_->is_closed() ? -1 : 0;
 }
 
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
@@ -337,11 +337,11 @@ int32_t WebsocketPacket::on_frame_end()
     assert(0 == lua_gettop(L));
 
     size_t size     = 0;
-    const char *ctx = _body.all_to_flat_ctx(size);
+    const char *ctx = body_.all_to_flat_ctx(size);
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
-    lua_pushinteger(L, _socket->conn_id());
+    lua_pushinteger(L, socket_->conn_id());
     lua_pushlstring(L, ctx, size);
 
     if (unlikely(LUA_OK != lua_pcall(L, 2, 0, 1)))
@@ -351,7 +351,7 @@ int32_t WebsocketPacket::on_frame_end()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return _socket->is_closed() ? -1 : 0;
+    return socket_->is_closed() ? -1 : 0;
 }
 
 // 处理ping、pong等opcode
@@ -361,12 +361,12 @@ int32_t WebsocketPacket::on_ctrl_end()
     assert(0 == lua_gettop(L));
 
     size_t size     = 0;
-    const char *ctx = _body.all_to_flat_ctx(size);
+    const char *ctx = body_.all_to_flat_ctx(size);
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "ctrl_new");
-    lua_pushinteger(L, _socket->conn_id());
-    lua_pushinteger(L, _parser->flags);
+    lua_pushinteger(L, socket_->conn_id());
+    lua_pushinteger(L, parser_->flags);
 
     int32_t args_cnt = 2;
     if (size > 0)
@@ -383,7 +383,7 @@ int32_t WebsocketPacket::on_ctrl_end()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return _socket->is_closed() ? -1 : 0;
+    return socket_->is_closed() ? -1 : 0;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])

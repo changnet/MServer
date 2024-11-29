@@ -110,11 +110,11 @@ private:
     void on_result(lua_State *L, const MongoResult *res);
 
 private:
-    int32_t _dbid;
-    double _array_opt;
+    int32_t dbid_;
+    double array_opt_;
 
-    std::queue<MongoQuery *> _query;
-    std::queue<MongoResult *> _result;
-    ObjectPool<MongoQuery, 512, 256> _query_pool;
-    ObjectPool<MongoResult, 512, 256> _result_pool;
+    std::queue<MongoQuery *> query_;
+    std::queue<MongoResult *> result_;
+    ObjectPool<MongoQuery, 512, 256> query_pool_;
+    ObjectPool<MongoResult, 512, 256> result_pool_;
 };

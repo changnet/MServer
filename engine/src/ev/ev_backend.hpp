@@ -51,7 +51,7 @@ public:
     // 获取等待主线程处理的事件
     std::vector<WatcherEvent> &fetch_event()
     {
-        return _events.fetch_event();
+        return events_.fetch_event();
     }
 
 protected:
@@ -123,13 +123,13 @@ private:
     void append_event(EVIO *w, int32_t ev);
 
 protected:
-    bool _done;     /// 是否终止进程
-    bool _modify_protected; // 当前禁止修改poll等数组结构
-    class EV *_ev;  /// 主循环
-    std::thread _thread;
+    bool done_;     /// 是否终止进程
+    bool modify_protected_; // 当前禁止修改poll等数组结构
+    class EV *ev_;  /// 主循环
+    std::thread thread_;
 
-    std::vector<EVIO *> _pending_events; // 待处理的事件
+    std::vector<EVIO *> pending_events_; // 待处理的事件
 
-    EventSwapList _events;        // 发送给主线程的事件
-    WatcherMgr _fd_mgr;   // 管理epoll中的所有fd
+    EventSwapList events_;        // 发送给主线程的事件
+    WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
 };

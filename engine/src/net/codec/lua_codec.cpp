@@ -23,17 +23,17 @@ enum LuaType
 
 LuaCodec::LuaCodec()
 {
-    _buff_len    = 0;
-    _buff_pos    = 0;
-    _decode_buff = nullptr;
+    buff_len_    = 0;
+    buff_pos_    = 0;
+    decode_buff_ = nullptr;
 
-    _encode_buff_len = MIN_BUFF;
-    _encode_buff     = MIN_BUFF > 0 ? new char[MIN_BUFF] : nullptr;
+    encode_buff_len_ = MIN_BUFF;
+    encode_buff_     = MIN_BUFF > 0 ? new char[MIN_BUFF] : nullptr;
 }
 
 LuaCodec::~LuaCodec()
 {
-    delete[] _encode_buff;
+    delete[] encode_buff_;
 }
 
 int32_t LuaCodec::decode_table(lua_State *L)
@@ -65,7 +65,7 @@ int32_t LuaCodec::decode_table(lua_State *L)
 
 void LuaCodec::check_decode_buff(size_t size)
 {
-    if (unlikely(_buff_pos + size > _buff_len))
+    if (unlikely(buff_pos_ + size > buff_len_))
     {
         std::string str = "lua codec decode buff reach end, expect len";
         str += std::to_string(size);
@@ -143,11 +143,11 @@ int32_t LuaCodec::decode_value(lua_State *L)
 
 int32_t LuaCodec::decode(lua_State *L)
 {
-    _buff_pos    = 0;
-    _decode_buff = luaL_checklstring(L, 2, &_buff_len);
+    buff_pos_    = 0;
+    decode_buff_ = luaL_checklstring(L, 2, &buff_len_);
 
     uint8_t count = 0;
-    if (_buff_len < sizeof(count))
+    if (buff_len_ < sizeof(count))
     {
         return luaL_error(L, "invalid lua binary buffer");
     }
@@ -179,7 +179,7 @@ int32_t LuaCodec::decode(lua_State *L)
 int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
 {
     // table的key数量
-    char *p_count = _encode_buff + _buff_len;
+    char *p_count = encode_buff_ + buff_len_;
 
     size_t count = 0;
     // 写入数量，只是占位。这里不检测长度，由encode_value检测
@@ -211,9 +211,9 @@ int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
 
 void LuaCodec::check_encode_buff(size_t size)
 {
-    if (likely(sizeof(int8_t) + size + _buff_len < _encode_buff_len)) return;
+    if (likely(sizeof(int8_t) + size + buff_len_ < encode_buff_len_)) return;
 
-    if (sizeof(int8_t) + size + _buff_len >= MAX_BUFF)
+    if (sizeof(int8_t) + size + buff_len_ >= MAX_BUFF)
     {
         throw std::overflow_error("lua codec encode buffer overflow");
     }
@@ -222,12 +222,12 @@ void LuaCodec::check_encode_buff(size_t size)
     // 即使是一些比较大的变量（如string），也应该仅分配一次
     do
     {
-        _encode_buff_len = _encode_buff_len * 2;
-    } while (sizeof(int8_t) + size + _buff_len >= _encode_buff_len);
+        encode_buff_len_ = encode_buff_len_ * 2;
+    } while (sizeof(int8_t) + size + buff_len_ >= encode_buff_len_);
 
-    char *old = _encode_buff;
-    _encode_buff = new char[_encode_buff_len];
-    memcpy(_encode_buff, old, _buff_len);
+    char *old = encode_buff_;
+    encode_buff_ = new char[encode_buff_len_];
+    memcpy(encode_buff_, old, buff_len_);
 
     delete[] old;
 }
@@ -288,7 +288,7 @@ int32_t LuaCodec::encode(lua_State *L)
             "invalid stack index or too many variable %I - %I", index, top);
     }
 
-    _buff_len = 0;
+    buff_len_ = 0;
 
     // 写入数量
     *this << uint8_t(top - index);
@@ -308,6 +308,6 @@ int32_t LuaCodec::encode(lua_State *L)
     }
     if (unlikely(!ok)) return luaL_error(L, "unknow error");
 
-    lua_pushlstring(L, _encode_buff, _buff_len);
+    lua_pushlstring(L, encode_buff_, buff_len_);
     return 1;
 }

@@ -6,9 +6,9 @@
 
 LEV::LEV()
 {
-    _critical_tm       = -1;
-    _app_repeat        = 60000;
-    _app_next_tm       = 0;
+    critical_tm_       = -1;
+    app_repeat_        = 60000;
+    app_next_tm_       = 0;
 }
 
 LEV::~LEV()
@@ -18,7 +18,7 @@ LEV::~LEV()
 int32_t LEV::backend(lua_State *L)
 {
     UNUSED(L);
-    _done = false;
+    done_ = false;
 
     // 这个函数不再返回，当前堆栈上有一个无用的ev对象，要清掉
     // 否则其他函数就要特殊处理这个堆栈
@@ -29,7 +29,7 @@ int32_t LEV::backend(lua_State *L)
 
 int64_t LEV::time()
 {
-    return _system_now;
+    return system_now_;
 }
 
 int32_t LEV::who_busy(lua_State *L) // 看下哪条线程繁忙
@@ -71,14 +71,14 @@ void LEV::set_app_ev(int32_t interval)
         return;
     }
 
-    _app_repeat  = interval;
-    _app_next_tm = _steady_clock;
+    app_repeat_  = interval;
+    app_next_tm_ = steady_clock_;
     return;
 }
 
 int32_t LEV::set_critical_time(lua_State *L) // 设置主循环临界时间
 {
-    _critical_tm = luaL_checkinteger32(L, 2);
+    critical_tm_ = luaL_checkinteger32(L, 2);
 
     return 0;
 }
@@ -112,18 +112,18 @@ void LEV::invoke_signal()
 
 void LEV::invoke_app_ev()
 {
-    if (_steady_clock < _app_next_tm)
+    if (steady_clock_ < app_next_tm_)
     {
-        _next_backend_time = _app_next_tm;
+        next_backend_time_ = app_next_tm_;
         return;
     }
-    _app_next_tm = _steady_clock + _app_repeat;
+    app_next_tm_ = steady_clock_ + app_repeat_;
 
     lua_State *L = StaticGlobal::L;
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "application_ev");
-    lua_pushinteger(L, _steady_clock);
+    lua_pushinteger(L, steady_clock_);
     if (unlikely(LUA_OK != lua_pcall(L, 1, 0, 1)))
     {
         ELOG("invoke_app_ev fail:%s", lua_tostring(L, -1));
@@ -136,9 +136,9 @@ void LEV::invoke_app_ev()
 void LEV::running()
 {
     // 如果主循环被阻塞太久，打印日志
-    if (_busy_time > _critical_tm)
+    if (busy_time_ > critical_tm_)
     {
-        PLOG("ev busy: " FMT64d "msec", _busy_time);
+        PLOG("ev busy: " FMT64d "msec", busy_time_);
     }
 
     invoke_signal();

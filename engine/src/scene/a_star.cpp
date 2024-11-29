@@ -18,25 +18,25 @@
 
 AStar::AStar()
 {
-    _node_set  = nullptr; // 记录当前寻路格子数据
-    _node_pool = nullptr; // 格子对象内存池
+    node_set_  = nullptr; // 记录当前寻路格子数据
+    node_pool_ = nullptr; // 格子对象内存池
 
-    _set_max  = 0;
-    _pool_max = 0; // 内存池格子数量
-    _pool_idx = 0; // 内存池当前已用数量
+    set_max_  = 0;
+    pool_max_ = 0; // 内存池格子数量
+    pool_idx_ = 0; // 内存池当前已用数量
 }
 
 AStar::~AStar()
 {
-    delete[] _node_set;
-    delete[] _node_pool;
+    delete[] node_set_;
+    delete[] node_pool_;
 
-    _node_set  = nullptr;
-    _node_pool = nullptr;
+    node_set_  = nullptr;
+    node_pool_ = nullptr;
 
-    _set_max  = 0;
-    _pool_max = 0; // 内存池格子数量
-    _pool_idx = 0; // 内存池当前已用数量
+    set_max_  = 0;
+    pool_max_ = 0; // 内存池格子数量
+    pool_idx_ = 0; // 内存池当前已用数量
 }
 
 /* 搜索路径
@@ -56,14 +56,14 @@ bool AStar::search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
     int32_t width  = map->get_width();
     int32_t height = map->get_height();
     // 分配格子集合，每次寻路时只根据当前地图只增不减
-    if (_set_max < width * height)
+    if (set_max_ < width * height)
     {
-        delete[] _node_set;
+        delete[] node_set_;
 
-        _set_max = width * height;
-        _set_max = _set_max > DEFAULT_SET ? _set_max : DEFAULT_SET;
+        set_max_ = width * height;
+        set_max_ = set_max_ > DEFAULT_SET ? set_max_ : DEFAULT_SET;
 
-        _node_set = new Node *[DEFAULT_SET];
+        node_set_ = new Node *[DEFAULT_SET];
     }
 
     /* 格子内存池
@@ -72,19 +72,19 @@ bool AStar::search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
      * 查找。
      * 注意内存池的对象是引用到node_set里的，必须要重新调用search函数
      */
-    if (_pool_max < DEFAULT_POOL)
+    if (pool_max_ < DEFAULT_POOL)
     {
-        delete[] _node_pool;
+        delete[] node_pool_;
 
-        _pool_max  = DEFAULT_POOL;
-        _node_pool = new struct Node[DEFAULT_POOL];
+        pool_max_  = DEFAULT_POOL;
+        node_pool_ = new struct Node[DEFAULT_POOL];
     }
 
     // 清空寻路缓存
-    _pool_idx = 0;
-    _path.clear();
-    _open_set.clear();
-    memset(_node_set, 0, sizeof(struct Node *) * width * height);
+    pool_idx_ = 0;
+    path_.clear();
+    open_set_.clear();
+    memset(node_set_, 0, sizeof(struct Node *) * width * height);
 
     return do_search(map, x, y, dx, dy);
 }
@@ -101,7 +101,7 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
 
     int32_t height            = map->get_height();
     struct Node *parent       = new_node(x, y);
-    _node_set[x * height + y] = parent;
+    node_set_[x * height + y] = parent;
     while (parent)
     {
         int32_t px = parent->x;
@@ -128,7 +128,7 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
             if (map->get_pass_cost(cx, cy) < 0) continue;
 
             int32_t idx        = cx * height + cy;
-            struct Node *child = _node_set[idx];
+            struct Node *child = node_set_[idx];
 
             // 已经close的格子，忽略
             if (child && child->mask) continue;
@@ -159,8 +159,8 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
 
                 child->g       = g;
                 child->h       = h;
-                _node_set[idx] = child;
-                _open_set.push_back(child); // 加入到open set
+                node_set_[idx] = child;
+                open_set_.push_back(child); // 加入到open set
             }
         }
 
@@ -176,7 +176,7 @@ bool AStar::do_search(const GridMap *map, int32_t x, int32_t y, int32_t dx,
  */
 struct AStar::Node *AStar::pop_open_set()
 {
-    size_t open_sz = _open_set.size();
+    size_t open_sz = open_set_.size();
     if (0 == open_sz) return nullptr;
 
     int32_t parent_f    = -1;
@@ -184,7 +184,7 @@ struct AStar::Node *AStar::pop_open_set()
     struct Node *parent = nullptr;
     for (size_t idx = 0; idx < open_sz; idx++)
     {
-        struct Node *nd = _open_set[idx];
+        struct Node *nd = open_set_[idx];
         if (!parent || parent_f > nd->g + nd->h)
         {
             parent     = nd;
@@ -194,8 +194,8 @@ struct AStar::Node *AStar::pop_open_set()
     }
 
     // 不用移动整个数组，直接把最后一个元素移动到当前元素即可
-    _open_set[parent_idx] = _open_set.back();
-    _open_set.pop_back();
+    open_set_[parent_idx] = open_set_.back();
+    open_set_.pop_back();
 
     return parent;
 }
@@ -204,21 +204,21 @@ struct AStar::Node *AStar::pop_open_set()
 bool AStar::backtrace_path(const struct Node *dest, int32_t dx, int32_t dy,
                            int32_t height)
 {
-    assert(0 == _path.size());
+    assert(0 == path_.size());
 
     // 102400防止逻辑出错
-    while (dest && _path.size() < 1024000)
+    while (dest && path_.size() < 1024000)
     {
         int32_t x = dest->x;
         int32_t y = dest->y;
-        _path.push_back(x);
-        _path.push_back(y);
+        path_.push_back(x);
+        path_.push_back(y);
 
         // 到达了起点
         // 注意由于坐标用的是uint16类型，起点父坐标为(0,0)有可能与真实坐标冲突
         if (x == dx && y == dy) return true;
 
-        dest = _node_set[dest->px * height + dest->py];
+        dest = node_set_[dest->px * height + dest->py];
     }
 
     return false;
@@ -229,10 +229,10 @@ struct AStar::Node *AStar::new_node(int32_t x, int32_t y, int32_t px, int32_t py
 {
     // 如果预分配的都用完了，就不找了
     // 继续再找对于服务器而言也太低效，建议上导航坐标或者针对玩法优化
-    if (_pool_idx >= _pool_max) return nullptr;
-    struct Node *nd = _node_pool + _pool_idx;
+    if (pool_idx_ >= pool_max_) return nullptr;
+    struct Node *nd = node_pool_ + pool_idx_;
 
-    _pool_idx++;
+    pool_idx_++;
 
     nd->x  = x;
     nd->y  = y;

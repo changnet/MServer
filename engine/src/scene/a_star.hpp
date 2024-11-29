@@ -35,7 +35,7 @@ public:
      */
     bool search(const GridMap *map, int32_t x, int32_t y, int32_t dx, int32_t dy);
     // 获取路径
-    const std::vector<int32_t> &get_path() const { return _path; }
+    const std::vector<int32_t> &get_path() const { return path_; }
 
 private:
     struct Node *pop_open_set();
@@ -74,12 +74,12 @@ private:
     int32_t euclidean(int32_t x, int32_t y, int32_t gx, int32_t gy);
 
 private:
-    struct Node **_node_set; // 记录当前寻路格子集合
-    struct Node *_node_pool; // 格子对象内存池
-    std::vector<int32_t> _path; // 生成的路径，反向并且每两个元素表示一个格子
-    std::vector<struct Node *> _open_set; // 记录算法运行过程中待处理的格子
+    struct Node **node_set_; // 记录当前寻路格子集合
+    struct Node *node_pool_; // 格子对象内存池
+    std::vector<int32_t> path_; // 生成的路径，反向并且每两个元素表示一个格子
+    std::vector<struct Node *> open_set_; // 记录算法运行过程中待处理的格子
 
-    int32_t _set_max;  // 当前集合大小
-    int32_t _pool_max; // 内存池格子数量
-    int32_t _pool_idx; // 内存池当前已用数量
+    int32_t set_max_;  // 当前集合大小
+    int32_t pool_max_; // 内存池格子数量
+    int32_t pool_idx_; // 内存池当前已用数量
 };

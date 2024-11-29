@@ -18,9 +18,9 @@ public:
     typedef std::map<std::string, std::string> head_map_t;
     struct http_info
     {
-        std::string _url;
-        std::string _body;
-        head_map_t _head_field;
+        std::string url_;
+        std::string body_;
+        head_map_t head_field_;
     };
 
 public:
@@ -50,12 +50,12 @@ public:
     void append_cur_value(const char *at, size_t len);
 
 protected:
-    struct http_info _http_info;
+    struct http_info http_info_;
 
 private:
     int32_t pack_raw(lua_State *L, int32_t index);
 
-    llhttp_t _parser;
-    std::string _cur_field;
-    std::string _cur_value;
+    llhttp_t parser_;
+    std::string cur_field_;
+    std::string cur_value_;
 };

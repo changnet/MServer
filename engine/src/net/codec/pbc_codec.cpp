@@ -32,55 +32,55 @@ static void pbc_decode_cb(void *ud, int32_t type, const char *schema,
 
 void PbcCodec::uninitialize()
 {
-    // 其实这里不释放没问题。_g_env在析构时会自动释放
+    // 其实这里不释放没问题。g_env_在析构时会自动释放
     // 但由于它是static变量又没有放到static_global中，析构顺序无法保证会影响内存debug
-    if (_g_env) _g_env.reset();
+    if (g_env_) g_env_.reset();
 }
 
 PbcCodec::PbcCodec()
 {
-    _write_msg = nullptr;
+    write_msg_ = nullptr;
 }
 
 PbcCodec::~PbcCodec()
 {
-    if (_write_msg)
+    if (write_msg_)
     {
-        pbc_wmessage_delete(_write_msg);
-        _write_msg = nullptr;
+        pbc_wmessage_delete(write_msg_);
+        write_msg_ = nullptr;
     }
 }
 
 void PbcCodec::reset()
 {
-    _g_env = std::shared_ptr<struct pbc_env>(pbc_new(), pbc_deleter);
-    // _env   = _g_env;手动调用update
+    g_env_ = std::shared_ptr<struct pbc_env>(pbc_new(), pbc_deleter);
+    // env_   = g_env_;手动调用update
 }
 
 void PbcCodec::update()
 {
-    _env = _g_env;
+    env_ = g_env_;
 }
 
 const char *PbcCodec::last_error()
 {
-    const char *env_e = pbc_error(_env.get());
+    const char *env_e = pbc_error(env_.get());
     if (env_e && strlen(env_e) > 0)
     {
-        _error_msg.append("\n").append(env_e);
+        error_msg_.append("\n").append(env_e);
     }
-    _error_msg.append(" @ ");
+    error_msg_.append(" @ ");
 
-    std::vector<std::string>::reverse_iterator rit = _trace_back.rbegin();
-    while (rit != _trace_back.rend())
+    std::vector<std::string>::reverse_iterator rit = trace_back_.rbegin();
+    while (rit != trace_back_.rend())
     {
 
-        _error_msg.append("[").append(*rit).append("]");
+        error_msg_.append("[").append(*rit).append("]");
 
         rit++;
     }
 
-    return _error_msg.c_str();
+    return error_msg_.c_str();
 }
 
 int32_t PbcCodec::load(lua_State *L)
@@ -91,9 +91,9 @@ int32_t PbcCodec::load(lua_State *L)
     slice.buffer = (void *)luaL_checklstring(L, 2, &size);
     slice.len    = (int32_t)size;
 
-    if (0 != pbc_register(_g_env.get(), &slice))
+    if (0 != pbc_register(g_env_.get(), &slice))
     {
-        ELOG("pbc register error:%s", pbc_error(_g_env.get()));
+        ELOG("pbc register error:%s", pbc_error(g_env_.get()));
         return 0;
     }
 
@@ -103,14 +103,14 @@ int32_t PbcCodec::load(lua_State *L)
 
 void PbcCodec::clear_last()
 {
-    if (_write_msg)
+    if (write_msg_)
     {
-        pbc_wmessage_delete(_write_msg);
-        _write_msg = nullptr;
+        pbc_wmessage_delete(write_msg_);
+        write_msg_ = nullptr;
     }
 
-    _error_msg.clear();
-    _trace_back.clear();
+    error_msg_.clear();
+    trace_back_.clear();
 }
 
 int32_t PbcCodec::decode_field(lua_State *L, int type, const char *schema,
@@ -201,8 +201,8 @@ int32_t PbcCodec::decode_message(lua_State *L, const char *schema,
 {
     if (!lua_checkstack(L, 3))
     {
-        _error_msg = "protobuf decode stack overflow:";
-        _error_msg += schema;
+        error_msg_ = "protobuf decode stack overflow:";
+        error_msg_ += schema;
         return -1;
     }
 
@@ -214,7 +214,7 @@ int32_t PbcCodec::decode_message(lua_State *L, const char *schema,
 
     lua_newtable(L);
 
-    int32_t ok = pbc_decode(_env.get(), schema, slice, pbc_decode_cb, &ctx);
+    int32_t ok = pbc_decode(env_.get(), schema, slice, pbc_decode_cb, &ctx);
     // 结束上一个数组
     if (ok && ctx.id)
     {
@@ -232,7 +232,7 @@ int32_t PbcCodec::encode_field_list(lua_State *L, struct pbc_wmessage *wmsg,
     {
         if (!lua_istable(L, index))
         {
-            _error_msg = STD_FMT("field(%s) expect a table", key);
+            error_msg_ = STD_FMT("field(%s) expect a table", key);
             return -1;
         }
 
@@ -261,8 +261,8 @@ int32_t PbcCodec::encode_field(lua_State *L, struct pbc_wmessage *wmsg,
 #define LUAL_CHECK(TYPE)                                               \
     if (!lua_is##TYPE(L, index))                                       \
     {                                                                  \
-        _trace_back.push_back(key);                                    \
-        _error_msg = STD_FMT("field(%s) expect " #TYPE ",got %s", key, \
+        trace_back_.push_back(key);                                    \
+        error_msg_ = STD_FMT("field(%s) expect " #TYPE ",got %s", key, \
                              lua_typename(L, lua_type(L, index)));     \
         return -1;                                                     \
     }
@@ -309,7 +309,7 @@ int32_t PbcCodec::encode_field(lua_State *L, struct pbc_wmessage *wmsg,
         const char *val = lua_tolstring(L, index, &len);
         if (pbc_wmessage_string(wmsg, key, val, (int32_t)len))
         {
-            _error_msg = STD_FMT("field(%s) write string error", key);
+            error_msg_ = STD_FMT("field(%s) write string error", key);
             return -1;
         }
     }
@@ -321,7 +321,7 @@ int32_t PbcCodec::encode_field(lua_State *L, struct pbc_wmessage *wmsg,
         return encode_message(L, submsg, schema, index);
     }
     break;
-    default: _error_msg = STD_FMT("protobuf unknow type: %d", type); return -1;
+    default: error_msg_ = STD_FMT("protobuf unknow type: %d", type); return -1;
     }
     return 0;
 
@@ -333,18 +333,18 @@ int32_t PbcCodec::encode_message(lua_State *L, struct pbc_wmessage *wmsg,
 {
     if (!lua_istable(L, index))
     {
-        _error_msg = STD_FMT("protobuf encode expect a table at %d", index);
+        error_msg_ = STD_FMT("protobuf encode expect a table at %d", index);
         return -1;
     }
 
     if (!lua_checkstack(L, 2))
     {
-        _error_msg = STD_FMT("protobuf encode stack overflow: %d", lua_gettop(L));
+        error_msg_ = STD_FMT("protobuf encode stack overflow: %d", lua_gettop(L));
         return -1;
     }
 
     int32_t top = lua_gettop(L);
-    pbc_env *env = _env.get();
+    pbc_env *env = env_.get();
 
     /* pbc并未提供遍历sdl的方法，只能反过来遍历tabale.
      * 如果table中包含较多的无效字段，hash消耗将会比较大
@@ -371,7 +371,7 @@ int32_t PbcCodec::encode_message(lua_State *L, struct pbc_wmessage *wmsg,
 
         if (encode_field_list(L, wmsg, val_type, top + 2, key, sub_object) < 0)
         {
-            _trace_back.push_back(schema);
+            trace_back_.push_back(schema);
             return -1;
         }
         lua_pop(L, 1);
@@ -381,7 +381,7 @@ int32_t PbcCodec::encode_message(lua_State *L, struct pbc_wmessage *wmsg,
 
 int32_t PbcCodec::decode(lua_State *L)
 {
-    assert(_env);
+    assert(env_);
     const char *schema = luaL_checkstring(L, 2);
     
     size_t size = 0;
@@ -394,7 +394,7 @@ int32_t PbcCodec::decode(lua_State *L)
     slice.buffer = const_cast<char *>(buffer);
 
     /**
-     * 以前用struct pbc_rmessage *msg = pbc_rmessage_new(_env, schema, &slice);
+     * 以前用struct pbc_rmessage *msg = pbc_rmessage_new(env_, schema, &slice);
      * 来解析，然后用pbc_rmessage_next来遍历解析出的字段再赋值给lua
      * 这种方式相当于把所有字段先解析放到一个hash表，再一个个取出来赋值给lua
      * 而pbc_decode的方式则是在解析过程中直接放到lua表，稍微快一些
@@ -411,25 +411,25 @@ int32_t PbcCodec::decode(lua_State *L)
 
 int32_t PbcCodec::encode(lua_State *L)
 {
-    assert(_env);
+    assert(env_);
     clear_last();
 
     const char *schema = luaL_checkstring(L, 2);
 
-     _write_msg = pbc_wmessage_new(_env.get(), schema);
-    if (!_write_msg)
+     write_msg_ = pbc_wmessage_new(env_.get(), schema);
+    if (!write_msg_)
     {
-        _error_msg = STD_FMT("no such protobuf message found: %s", schema);
+        error_msg_ = STD_FMT("no such protobuf message found: %s", schema);
         return 0;
     }
 
-    if (encode_message(L, _write_msg, schema, 3) < 0)
+    if (encode_message(L, write_msg_, schema, 3) < 0)
     {
         return luaL_error(L, "%s", last_error());
     }
 
     struct pbc_slice slice;
-    pbc_wmessage_buffer(_write_msg, &slice);
+    pbc_wmessage_buffer(write_msg_, &slice);
 
     lua_pushlstring(L, (const char *)slice.buffer, slice.len);
     return 1;

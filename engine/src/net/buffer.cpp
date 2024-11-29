@@ -5,65 +5,65 @@
 ////////////////////////////////////////////////////////////////////////////////
 Buffer::LargeBuffer::LargeBuffer()
 {
-    _ctx = nullptr;
-    _len = 0;
+    ctx_ = nullptr;
+    len_ = 0;
 }
 
 Buffer::LargeBuffer::~LargeBuffer()
 {
-    if (_ctx) delete[] _ctx;
+    if (ctx_) delete[] ctx_;
 }
 
 char *Buffer::LargeBuffer::get(size_t len)
 {
-    if (_len >= len) return _ctx;
+    if (len_ >= len) return ctx_;
 
-    if (_ctx) delete[] _ctx;
+    if (ctx_) delete[] ctx_;
 
     // 以1M为基数，每次翻倍，只增不减
-    if (0 == _len) _len = 1024 * 1024;
-    while (_len < len) _len *= 2;
+    if (0 == len_) len_ = 1024 * 1024;
+    while (len_ < len) len_ *= 2;
 
-    _ctx = new char[_len];
+    ctx_ = new char[len_];
 
-    return _ctx;
+    return ctx_;
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 Buffer::Buffer()
 {
-    _chunk_size = 0;
-    _chunk_max = 1;
-    _front = _back = nullptr;
+    chunk_size_ = 0;
+    chunk_max_ = 1;
+    front_ = back_ = nullptr;
 }
 
 Buffer::~Buffer()
 {
-    while (_front)
+    while (front_)
     {
-        Chunk *tmp = _front;
-        _front     = _front->_next;
+        Chunk *tmp = front_;
+        front_     = front_->next_;
 
         del_chunk(tmp);
     }
 
-    _front = _back = nullptr;
+    front_ = back_ = nullptr;
 }
 
 size_t Buffer::reserve()
 {
     size_t len = 0;
-    if (unlikely(!_back || 0 == (len = _back->get_free_size())))
+    if (unlikely(!back_ || 0 == (len = back_->get_free_size())))
     {
         Chunk *tmp = new_chunk();
-        if (_back)
+        if (back_)
         {
-            _back->_next = tmp;
-            _back        = tmp;
+            back_->next_ = tmp;
+            back_        = tmp;
         }
         else
         {
-            _back = _front = tmp;
+            back_ = front_ = tmp;
         }
         len = tmp->get_free_size();
     }
@@ -88,21 +88,21 @@ Buffer::ChunkPool *Buffer::get_chunk_pool()
 
 void Buffer::clear()
 {
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
 
-    if (!_front) return;
+    if (!front_) return;
 
-    while (_front->_next)
+    while (front_->next_)
     {
-        Chunk *tmp = _front;
-        _front     = _front->_next;
+        Chunk *tmp = front_;
+        front_     = front_->next_;
 
         del_chunk(tmp);
     }
 
     // 默认保留一个缓冲区 TODO: 是否有必要保留??
-    _front->clear();
-    assert(_back == _front);
+    front_->clear();
+    assert(back_ == front_);
 }
 
 void Buffer::__append(const void *data, const size_t len)
@@ -117,7 +117,7 @@ void Buffer::__append(const void *data, const size_t len)
 
         size_t size = std::min(free_sz, len - append_sz);
         // void *类型不能和数字运算，要转成char *
-        _back->append(append_data + append_sz, size);
+        back_->append(append_data + append_sz, size);
 
         append_sz += size;
 
@@ -128,51 +128,51 @@ void Buffer::__append(const void *data, const size_t len)
 
 int32_t Buffer::append(const void *data, const size_t len)
 {
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
     __append(data, len);
 
-    return _chunk_size > _chunk_max ? 1 : 0;
+    return chunk_size_ > chunk_max_ ? 1 : 0;
 }
 
 bool Buffer::remove(size_t len)
 {
     bool next_used = false;
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
     do
     {
-        size_t used = _front->get_used_size();
+        size_t used = front_->get_used_size();
 
         if (used > len)
         {
             // 这个chunk还有其他数据
             next_used = true;
-            _front->remove_used(len);
+            front_->remove_used(len);
             break;
         }
         else if (used == len)
         {
             // 这个chunk只剩下这个数据包
-            Chunk *next = _front->_next;
+            Chunk *next = front_->next_;
             if (next)
             {
                 // 还有下一个chunk，则指向下一个chunk
                 next_used = true;
-                del_chunk(_front);
-                _front = next;
+                del_chunk(front_);
+                front_ = next;
             }
             else
             {
-                _front->clear(); // 在无数据的时候重重置缓冲区
+                front_->clear(); // 在无数据的时候重重置缓冲区
             }
             break;
         }
         else
         {
             // 这个数据包分布在多个chunk，一个个删
-            Chunk *tmp = _front;
+            Chunk *tmp = front_;
 
-            _front = _front->_next;
-            assert(_front && len > used);
+            front_ = front_->next_;
+            assert(front_ && len > used);
 
             len -= used;
             del_chunk(tmp);
@@ -181,20 +181,20 @@ bool Buffer::remove(size_t len)
 
     // 冗余校验：只有一个缓冲区，或者有多个缓冲区但第一个已用完
     // 否则就是链表管理出错了
-    assert(_front == _back || 0 == _front->get_free_size());
+    assert(front_ == back_ || 0 == front_->get_free_size());
 
     return next_used;
 }
 
 Buffer::Transaction Buffer::any_seserve(bool no_overflow)
 {
-    Transaction ts(_lock);
+    Transaction ts(lock_);
 
-    if (likely(!no_overflow || _chunk_size <= _chunk_max))
+    if (likely(!no_overflow || chunk_size_ <= chunk_max_))
     {
-        ts._internal = true;
-        ts._len = (int)reserve();
-        ts._ctx = _back->get_free_ctx();
+        ts.internal_ = true;
+        ts.len_ = (int)reserve();
+        ts.ctx_ = back_->get_free_ctx();
     }
 
     return ts;
@@ -210,22 +210,22 @@ Buffer::Transaction Buffer::flat_reserve(size_t len)
      * 都不需要拷贝
      */
 
-    Transaction ts(_lock);
+    Transaction ts(lock_);
 
     size_t free_size = reserve();
     if (free_size >= len)
     {
-        ts._internal = true;
-        ts._len      = (int)reserve();
-        ts._ctx      = _back->get_free_ctx();
+        ts.internal_ = true;
+        ts.len_      = (int)reserve();
+        ts.ctx_      = back_->get_free_ctx();
     }
     else
     {
         // 这里用了外部缓存，是可以解锁的。不过提升不了多少
         // 如果这里解锁commit那里要改一下，保证只锁一次
-        // ts._ul.unlock()
-        ts._len = static_cast<int32_t>(len);
-        ts._ctx = get_large_buffer(len);
+        // ts.ul_.unlock()
+        ts.len_ = static_cast<int32_t>(len);
+        ts.ctx_ = get_large_buffer(len);
     }
 
     return ts;
@@ -233,16 +233,16 @@ Buffer::Transaction Buffer::flat_reserve(size_t len)
 
 const char *Buffer::to_flat_ctx(size_t len)
 {
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
 
     // 解析数据时，要求在同一个chunk才能解析。大多数情况下，是在同一个chunk的。
     // 如果不是，建议调整下chunk定义的缓冲区大小，否则影响效率
-    size_t used = _front->get_used_size();
+    size_t used = front_->get_used_size();
     if (0 == used) return nullptr;
 
     if (likely(used >= len))
     {
-        return _front->get_used_ctx();
+        return front_->get_used_ctx();
     }
 
     /**
@@ -252,7 +252,7 @@ const char *Buffer::to_flat_ctx(size_t len)
      */
 
     size_t copy_len   = 0; // 已拷贝长度
-    const Chunk *next = _front;
+    const Chunk *next = front_;
     char *buf         = get_large_buffer(len);
     do
     {
@@ -262,7 +262,7 @@ const char *Buffer::to_flat_ctx(size_t len)
         memcpy(buf + copy_len, next->get_used_ctx(), size);
 
         copy_len += size;
-        next = next->_next;
+        next = next->next_;
     } while (next && copy_len < len);
 
     assert(copy_len <= len);
@@ -277,23 +277,23 @@ const char *Buffer::to_flat_ctx(size_t len)
 const char *Buffer::all_to_flat_ctx(size_t &len)
 {
     len = 0;
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
 
-    // 从未写入过数据，就不会分配_front
+    // 从未写入过数据，就不会分配front_
     // websocket的控制帧不需要写入数据就会尝试获取有没有收到数据
-    if (unlikely(!_front)) return nullptr;
+    if (unlikely(!front_)) return nullptr;
 
-    if (likely(!_front->_next))
+    if (likely(!front_->next_))
     {
-        len = _front->get_used_size();
-        return _front->get_used_ctx();
+        len = front_->get_used_size();
+        return front_->get_used_ctx();
     }
 
     size_t copy_len       = 0;
-    const Chunk *next = _front;
+    const Chunk *next = front_;
 
     // 用get_all_used_size效率有点底，这里粗略估计下大小即可
-    size_t max_ctx = _chunk_size * Chunk::MAX_CTX;
+    size_t max_ctx = chunk_size_ * Chunk::MAX_CTX;
     char *buf = get_large_buffer(max_ctx);
     do
     {
@@ -303,7 +303,7 @@ const char *Buffer::all_to_flat_ctx(size_t &len)
         memcpy(buf + copy_len, next->get_used_ctx(), used_size);
 
         copy_len += used_size;
-        next = next->_next;
+        next = next->next_;
     } while (next);
 
     len = copy_len;
@@ -322,32 +322,32 @@ void Buffer::commit(const Transaction &ts, int32_t len)
     // len来自read等函数，可能为0，可能为负
     if (len <= 0) return;
 
-    if (ts._internal)
+    if (ts.internal_)
     {
-        assert(ts._ctx == _back->get_free_ctx());
+        assert(ts.ctx_ == back_->get_free_ctx());
 
-        _back->add_used(len);
+        back_->add_used(len);
     }
     else
     {
-        assert(ts._ctx == get_large_buffer(0));
+        assert(ts.ctx_ == get_large_buffer(0));
 
-        __append(ts._ctx, len);
+        __append(ts.ctx_, len);
     }
 }
 
 bool Buffer::check_used_size(size_t len) const
 {
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
 
     size_t used       = 0;
-    const Chunk *next = _front;
+    const Chunk *next = front_;
 
     while (next && used < len)
     {
         used += next->get_used_size();
 
-        next = next->_next;
+        next = next->next_;
     };
 
     return used >= len;
@@ -355,30 +355,30 @@ bool Buffer::check_used_size(size_t len) const
 
 const char *Buffer::get_front_used(size_t &size, bool &next) const
 {
-    std::lock_guard<SpinLock> guard(_lock);
-    if (!_front)
+    std::lock_guard<SpinLock> guard(lock_);
+    if (!front_)
     {
         size = 0;
         next = false;
         return nullptr;
     }
 
-    next = _chunk_size > 1 ? true : false;
-    size = _front->get_used_size();
-    return _front->get_used_ctx();
+    next = chunk_size_ > 1 ? true : false;
+    size = front_->get_used_size();
+    return front_->get_used_ctx();
 }
 
 size_t Buffer::get_all_used_size() const
 {
-    std::lock_guard<SpinLock> guard(_lock);
+    std::lock_guard<SpinLock> guard(lock_);
     size_t used       = 0;
-    const Chunk *next = _front;
+    const Chunk *next = front_;
 
     while (next)
     {
         used += next->get_used_size();
 
-        next = next->_next;
+        next = next->next_;
     }
 
     return used;
@@ -386,6 +386,6 @@ size_t Buffer::get_all_used_size() const
 
 void Buffer::set_chunk_size(int32_t max)
 {
-    std::lock_guard<SpinLock> guard(_lock);
-    _chunk_max = max;
+    std::lock_guard<SpinLock> guard(lock_);
+    chunk_max_ = max;
 }

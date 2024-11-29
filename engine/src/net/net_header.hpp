@@ -35,11 +35,11 @@
             SET_FAIL;                                                 \
             return -1;                                                \
         }                                                             \
-        h._length = static_cast<packet_size_t>(hl);                   \
+        h.length_ = static_cast<packet_size_t>(hl);                   \
     } while (0)
 
 // 根据一个header指针获取header后buffer的长度
-#define PACKET_BUFFER_LEN(h) ((h)->_length - sizeof(*h))
+#define PACKET_BUFFER_LEN(h) ((h)->length_ - sizeof(*h))
 
 typedef enum
 {
@@ -70,8 +70,8 @@ inline constexpr int MAX_HEADER_LEN = (1 << sizeof(header_size_t)) - 1;
 
 struct NetHeader
 {
-    header_size_t _size; /* 包长度，包含本身 */
-    uint16_t _cmd;         /* 协议号 */
+    header_size_t size_; /* 包长度，包含本身 */
+    uint16_t cmd_;         /* 协议号 */
 };
 
 /* 客户端发往服务器 */
@@ -87,8 +87,8 @@ struct SCHeader : public NetHeader
 /* 服务器发往服务器 */
 struct SSHeader : public NetHeader
 {
-    uint32_t _type;   /* 数据包类型 */
-    h_pid_t _pid;   /* 当前数据包所属玩家id，用于转发数据包 */
+    uint32_t type_;   /* 数据包类型 */
+    h_pid_t pid_;   /* 当前数据包所属玩家id，用于转发数据包 */
 };
 
 #pragma pack(pop)

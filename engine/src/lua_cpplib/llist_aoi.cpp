@@ -18,7 +18,7 @@
 int32_t LListAoi::use_y(lua_State *L)
 {
 #ifdef USE_ORTH_LIST_AOI
-    _use_y = lua_toboolean(L, 1);
+    use_y_ = lua_toboolean(L, 1);
 #else
     UNUSED(L);
 #endif
@@ -43,12 +43,12 @@ int32_t LListAoi::get_all_entity(lua_State *L)
     lUAL_CHECKTABLE(L, 2); // 用来保存返回的实体id的table
 
     using EntitySetPair = std::pair<const int64_t, EntityCtx *>;
-    table_pack(L, 2, _entity_set,
+    table_pack(L, 2, entity_set_,
                [L, mask](const EntitySetPair &iter)
                {
-                   if (mask & iter.second->_mask)
+                   if (mask & iter.second->mask_)
                    {
-                       lua_pushinteger(L, iter.second->_id);
+                       lua_pushinteger(L, iter.second->id_);
                        return true;
                    }
 
@@ -72,10 +72,10 @@ int32_t LListAoi::get_interest_me_entity(lua_State *L)
         return 0;
     }
 
-    table_pack(L, 2, *(ctx->_interest_me),
+    table_pack(L, 2, *(ctx->interest_me_),
                [L](const EntityCtx *ctx)
                {
-                   lua_pushinteger(L, ctx->_id);
+                   lua_pushinteger(L, ctx->id_);
                    return true;
                });
 
@@ -102,23 +102,23 @@ int32_t LListAoi::get_entity(lua_State *L)
         [this, L, mask, &n, src_x, src_y, src_z, dst_x, dst_y,
          dst_z](const EntityCtx *ctx)
         {
-            if (ctx->_pos_x < src_x) return true;
-            if (ctx->_pos_x > dst_x) return false;
+            if (ctx->pos_x_ < src_x) return true;
+            if (ctx->pos_x_ > dst_x) return false;
 
 #ifdef USE_ORTH_LIST_AOI
-            if (_use_y)
+            if (use_y_)
 #else
             UNUSED(this);
 #endif
             {
-                if (ctx->_pos_y < src_y || ctx->_pos_y > dst_y) return true;
+                if (ctx->pos_y_ < src_y || ctx->pos_y_ > dst_y) return true;
             }
-            if (ctx->_pos_z < src_z || ctx->_pos_z > dst_z) return true;
+            if (ctx->pos_z_ < src_z || ctx->pos_z_ > dst_z) return true;
 
-            if (mask & ctx->_mask)
+            if (mask & ctx->mask_)
             {
                 ++n;
-                lua_pushinteger(L, ctx->_id);
+                lua_pushinteger(L, ctx->id_);
                 lua_rawseti(L, 2, n);
             }
             return true;
@@ -148,16 +148,16 @@ int32_t LListAoi::get_visual_entity(lua_State *L)
     }
 
     int32_t n = 0;
-    if (visual < 0) visual = ctx->_visual;
+    if (visual < 0) visual = ctx->visual_;
     ListAOI::each_range_entity(
         ctx, visual,
         [this, ctx, L, mask, visual, &n](const EntityCtx *other)
         {
-            if ((mask & other->_mask)
-                && in_visual(ctx, other->_pos_x, other->_pos_y, other->_pos_z,
+            if ((mask & other->mask_)
+                && in_visual(ctx, other->pos_x_, other->pos_y_, other->pos_z_,
                              visual))
             {
-                lua_pushinteger(L, other->_id);
+                lua_pushinteger(L, other->id_);
                 lua_rawseti(L, 3, ++n);
             }
         });
@@ -179,7 +179,7 @@ int32_t LListAoi::update_visual(lua_State *L)
 
     auto filter = [L](const EntityCtx *ctx)
     {
-        lua_pushinteger(L, ctx->_id);
+        lua_pushinteger(L, ctx->id_);
         return true;
     };
     PACK_LIST(list_me_in, 3, filter);
@@ -204,7 +204,7 @@ int32_t LListAoi::exit_entity(lua_State *L)
 
     auto filter = [L](const EntityCtx *ctx)
     {
-        lua_pushinteger(L, ctx->_id);
+        lua_pushinteger(L, ctx->id_);
         return true;
     };
     PACK_LIST(list, 2, filter);
@@ -238,7 +238,7 @@ int32_t LListAoi::enter_entity(lua_State *L)
 
     auto filter = [L](const EntityCtx *ctx)
     {
-        lua_pushinteger(L, ctx->_id);
+        lua_pushinteger(L, ctx->id_);
         return true;
     };
     PACK_LIST(list_me_in, 7, filter);
@@ -275,7 +275,7 @@ int32_t LListAoi::update_entity(lua_State *L)
 
     auto filter = [L](const EntityCtx *ctx)
     {
-        lua_pushinteger(L, ctx->_id);
+        lua_pushinteger(L, ctx->id_);
         return true;
     };
 

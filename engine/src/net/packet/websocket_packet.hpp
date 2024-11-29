@@ -33,7 +33,7 @@ public:
     virtual int32_t on_frame_end();
 
     // 单个消息时，重置
-    class Buffer &body_buffer() { return _body; }
+    class Buffer &body_buffer() { return body_; }
 
     //< 从http升级到websocket时，会触发一次on_message_complete
     virtual int32_t on_message_complete(bool upgrade) override;
@@ -42,7 +42,7 @@ public:
     int32_t pack_ctrl(lua_State *L, int32_t index) override;
 
     /// 设置错误码
-    void set_error(int32_t e) { _e = e; }
+    void set_error(int32_t e) { e_ = e; }
 
 protected:
     int32_t invoke_handshake();
@@ -50,8 +50,8 @@ protected:
     int32_t pack_raw(lua_State *L, int32_t index);
 
 protected:
-    int32_t _e; /// 错误码 websocket_parser没有提供错误机制，这里自己实现
-    bool _is_upgrade;
-    class Buffer _body;
-    struct websocket_parser *_parser;
+    int32_t e_; /// 错误码 websocket_parser没有提供错误机制，这里自己实现
+    bool is_upgrade_;
+    class Buffer body_;
+    struct websocket_parser *parser_;
 };

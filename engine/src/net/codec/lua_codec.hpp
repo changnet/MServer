@@ -29,29 +29,29 @@ private:
     // 把基础类型写入缓冲区，不支持指针及自定义结构
     template <typename T> LuaCodec &operator<<(const T &v)
     {
-        // *(reinterpret_cast<T *>(_encode_buff + _buff_len)) = v; 对齐问题
-        memcpy(_encode_buff + _buff_len, &v, sizeof(T));
-        _buff_len += sizeof(T);
+        // *(reinterpret_cast<T *>(encode_buff_ + buff_len_)) = v; 对齐问题
+        memcpy(encode_buff_ + buff_len_, &v, sizeof(T));
+        buff_len_ += sizeof(T);
         return *this;
     }
     void append(const void *buff, const size_t len)
     {
-        memcpy(_encode_buff + _buff_len, buff, len);
-        _buff_len += len;
+        memcpy(encode_buff_ + buff_len_, buff, len);
+        buff_len_ += len;
     }
     const char *subtract(const size_t len)
     {
-        size_t pos = _buff_pos;
-        _buff_pos += len;
+        size_t pos = buff_pos_;
+        buff_pos_ += len;
 
-        return _decode_buff + pos;
+        return decode_buff_ + pos;
     }
 
     template <typename T> LuaCodec &operator>>(T &v)
     {
-        v = *(reinterpret_cast<const T *>(_decode_buff + _buff_pos));
-        memcpy(&v, _decode_buff + _buff_pos, sizeof(T));
-        _buff_pos += sizeof(T);
+        v = *(reinterpret_cast<const T *>(decode_buff_ + buff_pos_));
+        memcpy(&v, decode_buff_ + buff_pos_, sizeof(T));
+        buff_pos_ += sizeof(T);
         return *this;
     }
 
@@ -70,9 +70,9 @@ private:
     int32_t decode_table(lua_State *L);
 
 private:
-    size_t _buff_len;   // 已使用的缓冲区长度
-    size_t _buff_pos;   // 已读取的缓冲区长度，仅decode时用到
-    char *_encode_buff; // 用于序列化的缓冲区，避免内存分配
-    size_t _encode_buff_len; // _encode_buff缓冲区的大小
-    const char *_decode_buff; // 反序列化缓冲区
+    size_t buff_len_;   // 已使用的缓冲区长度
+    size_t buff_pos_;   // 已读取的缓冲区长度，仅decode时用到
+    char *encode_buff_; // 用于序列化的缓冲区，避免内存分配
+    size_t encode_buff_len_; // encode_buff_缓冲区的大小
+    const char *decode_buff_; // 反序列化缓冲区
 };

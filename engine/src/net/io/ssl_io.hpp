@@ -38,6 +38,6 @@ private:
     int32_t init_ssl_ctx(int32_t fd);
 
 private:
-    SSL *_ssl;
-    TlsCtx *_tls_ctx;
+    SSL *ssl_;
+    TlsCtx *tls_ctx_;
 };

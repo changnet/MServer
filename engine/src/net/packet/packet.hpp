@@ -24,7 +24,7 @@ public:
 
 public:
     virtual ~Packet() {}
-    Packet(class Socket *sk) : _socket(sk) {}
+    Packet(class Socket *sk) : socket_(sk) {}
 
     /**
      * 获取当前packet类型
@@ -79,5 +79,5 @@ public:
     }
 
 protected:
-    class Socket *_socket;
+    class Socket *socket_;
 };

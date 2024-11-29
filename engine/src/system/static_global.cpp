@@ -7,13 +7,13 @@
 #include "net/socket.hpp"
 #include "net/codec/pbc_codec.hpp"
 
-class LEV *StaticGlobal::_ev                  = nullptr;
-class LLog *StaticGlobal::_async_log          = nullptr;
-class ThreadMgr *StaticGlobal::_thread_mgr    = nullptr;
-Buffer::ChunkPool *StaticGlobal::_buffer_chunk_pool = nullptr;
+class LEV *StaticGlobal::ev_                  = nullptr;
+class LLog *StaticGlobal::async_log_          = nullptr;
+class ThreadMgr *StaticGlobal::thread_mgr_    = nullptr;
+Buffer::ChunkPool *StaticGlobal::buffer_chunk_pool_ = nullptr;
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
-class StaticGlobal::initializer StaticGlobal::_initializer;
+class StaticGlobal::initializer StaticGlobal::initializer_;
 
 /* will be called while process exit */
 void on_exit();
@@ -60,19 +60,19 @@ void StaticGlobal::initialize()
      */
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
-    _thread_mgr = new class ThreadMgr();
-    _async_log  = new class LLog("Engine.AsyncLog");
-    _ev         = new class LEV();
+    thread_mgr_ = new class ThreadMgr();
+    async_log_  = new class LLog("Engine.AsyncLog");
+    ev_         = new class LEV();
 
     L                  = llib::new_state();
-    _buffer_chunk_pool = new Buffer::ChunkPool("buffer_chunk");
+    buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 
-    _async_log->set_thread_name(STD_FMT("global_async_log"));
-    _async_log->AsyncLog::start(1000);
+    async_log_->set_thread_name(STD_FMT("global_async_log"));
+    async_log_->AsyncLog::start(1000);
 
     // 关服的时候，不需要等待这个线程。之前在关服定时器上打异步日志，
     // 导致这个线程一直忙,关不了服，stop的时候会处理所有日志
-    _async_log->set_wait_busy(false);
+    async_log_->set_wait_busy(false);
 }
 
 void StaticGlobal::uninitialize()
@@ -84,18 +84,18 @@ void StaticGlobal::uninitialize()
      * 所以这里手动保证他们销毁的顺序。一些相互引用的，只能先调用他们的stop或者
      * clear函数来解除引用，再delete掉，不然valgrind会报Invalid read内存错误
      */
-    _thread_mgr->stop(_async_log);
+    thread_mgr_->stop(async_log_);
 
     L = llib::delete_state(L);
 
-    // lua中销毁时，会gc socket，然后gc socket的buff，必须先在_buffer_chunk_pool前
-    delete _buffer_chunk_pool;
+    // lua中销毁时，会gc socket，然后gc socket的buff，必须先在buffer_chunk_pool_前
+    delete buffer_chunk_pool_;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效
-    _async_log->AsyncLog::stop();
-    delete _thread_mgr;
-    delete _async_log;
-    delete _ev;
+    async_log_->AsyncLog::stop();
+    delete thread_mgr_;
+    delete async_log_;
+    delete ev_;
 
     PbcCodec::uninitialize();
 }

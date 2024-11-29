@@ -86,25 +86,25 @@ class HttpSettingInitializer
 public:
     HttpSettingInitializer()
     {
-        llhttp_settings_init(&_setting);
+        llhttp_settings_init(&setting_);
 
         /**
          * http chunk应该用不到，暂不处理(on_chunk_complete)
          * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
          */
 
-        _setting.on_message_begin    = on_message_begin;
-        _setting.on_url              = on_url;
-        _setting.on_status           = on_status;
-        _setting.on_header_field     = on_header_field;
-        _setting.on_header_value     = on_header_value;
-        _setting.on_headers_complete = on_headers_complete;
-        _setting.on_body             = on_body;
-        _setting.on_message_complete = on_message_complete;
+        setting_.on_message_begin    = on_message_begin;
+        setting_.on_url              = on_url;
+        setting_.on_status           = on_status;
+        setting_.on_header_field     = on_header_field;
+        setting_.on_header_value     = on_header_value;
+        setting_.on_headers_complete = on_headers_complete;
+        setting_.on_body             = on_body;
+        setting_.on_message_complete = on_message_complete;
     }
 
 public:
-    llhttp_settings_t _setting;
+    llhttp_settings_t setting_;
 };
 
 static const HttpSettingInitializer initializer;
@@ -117,8 +117,8 @@ HttpPacket::~HttpPacket()
 HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 {
     // HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
-    llhttp_init(&_parser, HTTP_BOTH, &initializer._setting);
-    _parser.data = this;
+    llhttp_init(&parser_, HTTP_BOTH, &initializer.setting_);
+    parser_.data = this;
 }
 
 int32_t HttpPacket::unpack(Buffer &buffer)
@@ -133,14 +133,14 @@ int32_t HttpPacket::unpack(Buffer &buffer)
      * 因此要注意execute后部分资源是不可再访问的
      * 一旦出错，llhttp_execute总是返回之前的错误码，不会继续执行，除非重新init或者resume
      */
-    enum llhttp_errno e = llhttp_execute(&_parser, data, size);
+    enum llhttp_errno e = llhttp_execute(&parser_, data, size);
 
     /**
      * 连接升级为websocket，返回1，后续的数据由websocket那边继续处理
      */
     if (HPE_PAUSED_UPGRADE == e)
     {
-        bool next = buffer.remove(llhttp_get_error_pos(&_parser) - data);
+        bool next = buffer.remove(llhttp_get_error_pos(&parser_) - data);
         return next ? 1 : 0;
     }
 
@@ -149,8 +149,8 @@ int32_t HttpPacket::unpack(Buffer &buffer)
     // PAUSE通常是上层脚本关闭了socket，需要中止解析
     if (HPE_OK != e && HPE_PAUSED != e)
     {
-        ELOG("http parse error(%d):%s", llhttp_get_errno(&_parser),
-             llhttp_get_error_reason(&_parser));
+        ELOG("http parse error(%d):%s", llhttp_get_errno(&parser_),
+             llhttp_get_error_reason(&parser_));
 
         return -1;
     }
@@ -160,19 +160,19 @@ int32_t HttpPacket::unpack(Buffer &buffer)
 
 void HttpPacket::reset()
 {
-    _cur_field.clear();
-    _cur_value.clear();
+    cur_field_.clear();
+    cur_value_.clear();
 
-    _http_info._url.clear();
-    _http_info._body.clear();
-    _http_info._head_field.clear();
+    http_info_.url_.clear();
+    http_info_.body_.clear();
+    http_info_.head_field_.clear();
 }
 
 void HttpPacket::on_headers_complete()
 {
-    if (_cur_field.empty()) return;
+    if (cur_field_.empty()) return;
 
-    _http_info._head_field[_cur_field] = _cur_value;
+    http_info_.head_field_[cur_field_] = cur_value_;
 }
 
 int32_t HttpPacket::on_message_complete(bool upgrade)
@@ -183,21 +183,21 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
 
     LUA_PUSHTRACEBACK(L);
     lua_getglobal(L, "command_new");
-    lua_pushinteger(L, _socket->conn_id());
+    lua_pushinteger(L, socket_->conn_id());
 
     // HTTP_REQUEST = 1, HTTP_RESPONSE = 2
-    lua_pushinteger(L, _parser.type);
-    lua_pushinteger(L, _parser.status_code); // 仅respond有用
+    lua_pushinteger(L, parser_.type);
+    lua_pushinteger(L, parser_.status_code); // 仅respond有用
 
     // 1 = GET, 3 = POST，仅request有用
-    lua_pushinteger(L, _parser.method);
-    lua_pushstring(L, _http_info._url.c_str());
+    lua_pushinteger(L, parser_.method);
+    lua_pushstring(L, http_info_.url_.c_str());
 
     int32_t args = 5;
-    if (_http_info._body.length() > 0)
+    if (http_info_.body_.length() > 0)
     {
         args++;
-        lua_pushstring(L, _http_info._body.c_str());
+        lua_pushstring(L, http_info_.body_.c_str());
     }
 
     if (unlikely(LUA_OK != lua_pcall(L, args, 0, 1)))
@@ -210,17 +210,17 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
     /* 注意：如果一次收到多个http消息，需要在这里检测socket是否由上层脚本关闭
      * 然后终止http-parser的解析
      */
-    return _socket->fd() < 0 ? -1 : 0;
+    return socket_->fd() < 0 ? -1 : 0;
 }
 
 void HttpPacket::append_url(const char *at, size_t len)
 {
-    _http_info._url.append(at, len);
+    http_info_.url_.append(at, len);
 }
 
 void HttpPacket::append_body(const char *at, size_t len)
 {
-    _http_info._body.append(at, len);
+    http_info_.body_.append(at, len);
 }
 
 void HttpPacket::append_cur_field(const char *at, size_t len)
@@ -228,25 +228,25 @@ void HttpPacket::append_cur_field(const char *at, size_t len)
     /* 报文中的field和value是成对的，但是http-parser解析完一对字段后并没有回调任何函数
      * 如果检测到value不为空，则说明当前收到的是新字段
      */
-    if (!_cur_value.empty())
+    if (!cur_value_.empty())
     {
-        _http_info._head_field[_cur_field] = _cur_value;
+        http_info_.head_field_[cur_field_] = cur_value_;
 
-        _cur_field.clear();
-        _cur_value.clear();
+        cur_field_.clear();
+        cur_value_.clear();
     }
 
-    _cur_field.append(at, len);
+    cur_field_.append(at, len);
 }
 
 void HttpPacket::append_cur_value(const char *at, size_t len)
 {
-    _cur_value.append(at, len);
+    cur_value_.append(at, len);
 }
 
 int32_t HttpPacket::unpack_header(lua_State *L) const
 {
-    const head_map_t &head_field = _http_info._head_field;
+    const head_map_t &head_field = http_info_.head_field_;
 
     // table赋值时，需要一个额外的栈
     if (!lua_checkstack(L, 2))
@@ -274,7 +274,7 @@ int32_t HttpPacket::pack_raw(lua_State *L, int32_t index)
     const char *ctx = luaL_checklstring(L, index, &size);
     if (!ctx) return 0;
 
-    _socket->send(ctx, size);
+    socket_->send(ctx, size);
 
     return 0;
 }
@@ -293,11 +293,11 @@ void HttpPacket::on_closed()
 {
     // 没有 Content-Length 时，以连接关闭时读到的数据为准
     // 这时候需要手动调用llhttp_finish来触发on_message_complete
-    if (!llhttp_message_needs_eof(&_parser)) return;
+    if (!llhttp_message_needs_eof(&parser_)) return;
 
-    llhttp_errno_t e = llhttp_finish(&_parser);
+    llhttp_errno_t e = llhttp_finish(&parser_);
     if (HPE_OK != e && HPE_PAUSED != e)
     {
-        ELOG("llhttp_finish erro (%d): %s", e, llhttp_get_error_reason(&_parser));
+        ELOG("llhttp_finish erro (%d): %s", e, llhttp_get_error_reason(&parser_));
     }
 }

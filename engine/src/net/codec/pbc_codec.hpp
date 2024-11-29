@@ -71,10 +71,10 @@ private:
                                        const char *key, const char *schema);
 
 private:
-    struct pbc_wmessage *_write_msg;
-    std::string _error_msg;               // 错误信息
-    std::vector<std::string> _trace_back; // 出错时，用于跟踪哪个字段有问题
-    std::shared_ptr<struct pbc_env> _env; // 当前线程使用的env
+    struct pbc_wmessage *write_msg_;
+    std::string error_msg_;               // 错误信息
+    std::vector<std::string> trace_back_; // 出错时，用于跟踪哪个字段有问题
+    std::shared_ptr<struct pbc_env> env_; // 当前线程使用的env
 
-    static inline std::shared_ptr<struct pbc_env> _g_env = nullptr;
+    static inline std::shared_ptr<struct pbc_env> g_env_ = nullptr;
 };

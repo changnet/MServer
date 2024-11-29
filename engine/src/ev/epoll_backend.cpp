@@ -22,8 +22,8 @@ const char *__BACKEND__ = "epoll";
 
 EpollBackend::EpollBackend()
 {
-    _ep_fd   = -1;
-    _wake_fd = -1;
+    ep_fd_   = -1;
+    wake_fd_ = -1;
 }
 
 EpollBackend::~EpollBackend()
@@ -34,13 +34,13 @@ bool EpollBackend::before_start()
 {
     // 创建epoll
 #ifdef EPOLL_CLOEXEC
-    _ep_fd = epoll_create1(EPOLL_CLOEXEC);
+    ep_fd_ = epoll_create1(EPOLL_CLOEXEC);
 
-    if (_ep_fd < 0 && (errno == EINVAL || errno == ENOSYS))
+    if (ep_fd_ < 0 && (errno == EINVAL || errno == ENOSYS))
 #endif
     {
-        _ep_fd = epoll_create(256);
-        if (_ep_fd < 0 || fcntl(_ep_fd, F_SETFD, FD_CLOEXEC) < 0)
+        ep_fd_ = epoll_create(256);
+        if (ep_fd_ < 0 || fcntl(ep_fd_, F_SETFD, FD_CLOEXEC) < 0)
         {
             FATAL("epoll_create init fail:%s", strerror(errno));
             return false;
@@ -48,15 +48,15 @@ bool EpollBackend::before_start()
     }
 
     // 创建一个fd用于实现self pipe，唤醒io线程
-    _wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-    if (_wake_fd < 0)
+    wake_fd_ = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (wake_fd_ < 0)
     {
         ELOG("fail to create eventfd e = %d: %s", errno, strerror(errno));
         return false;
     }
 
     // 把self pipe fd放到epoll
-    if (0 != modify_fd(_wake_fd, EPOLL_CTL_ADD, EV_READ))
+    if (0 != modify_fd(wake_fd_, EPOLL_CTL_ADD, EV_READ))
     {
         FATAL("epoll init wake_fd fail:%s", strerror(errno));
         return false;
@@ -67,21 +67,21 @@ bool EpollBackend::before_start()
 
 void EpollBackend::after_stop()
 {
-    ::close(_wake_fd);
-    _wake_fd = -1;
+    ::close(wake_fd_);
+    wake_fd_ = -1;
 
-    ::close(_ep_fd);
-    _ep_fd = -1;
+    ::close(ep_fd_);
+    ep_fd_ = -1;
 }
 
 void EpollBackend::do_wait_event(int32_t ev_count)
 {
     for (int32_t i = 0; i < ev_count; ++i)
     {
-        struct epoll_event *ev = _ep_ev + i;
+        struct epoll_event *ev = ep_ev_ + i;
 
         int32_t fd = ev->data.fd;
-        if (fd == _wake_fd)
+        if (fd == wake_fd_)
         {
             int64_t v = 0;
             if (::read(fd, &v, sizeof(v)) < 0)
@@ -104,7 +104,7 @@ void EpollBackend::do_wait_event(int32_t ev_count)
         // 但有时候watcher并没有设置EV_WRITE或者EV_READ，因此需要独立检测
         if (revents & (EPOLLERR | EPOLLHUP)) events |= EV_CLOSE;
 
-        EVIO *w = _fd_mgr.get(static_cast<int32_t>(fd));
+        EVIO *w = fd_mgr_.get(static_cast<int32_t>(fd));
         assert(w);
         do_watcher_wait_event(w, events);
     }
@@ -113,22 +113,22 @@ void EpollBackend::do_wait_event(int32_t ev_count)
 void EpollBackend::wake()
 {
     static const int64_t v = 1;
-    if (::write(_wake_fd, &v, sizeof(v)) <= 0)
+    if (::write(wake_fd_, &v, sizeof(v)) <= 0)
     {
-        assert(_wake_fd > 0);
+        assert(wake_fd_ > 0);
         ELOG("fail to wakeup epoll e = %d: %s", errno, strerror(errno));
     }
 }
 
 int32_t EpollBackend::wait(int32_t timeout)
 {
-    int32_t ev_count = epoll_wait(_ep_fd, _ep_ev, EPOLL_MAXEV, timeout);
+    int32_t ev_count = epoll_wait(ep_fd_, ep_ev_, EPOLL_MAXEV, timeout);
     if (unlikely(ev_count < 0))
     {
         if (errno == EINTR) return 0;
 
         FATAL("epoll_wait errno(%d)", errno);
-        _ev->quit();
+        ev_->quit();
     }
 
     return ev_count;
@@ -167,7 +167,7 @@ int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
      * 即使ev.events为0，epoll还是会监听EPOLLERR和EPOLLHUP，可以处理socket的关闭
      */
 
-    if (likely(!epoll_ctl(_ep_fd, op, fd, &ev))) return 0;
+    if (likely(!epoll_ctl(ep_fd_, op, fd, &ev))) return 0;
 
     switch (errno)
     {
@@ -184,7 +184,7 @@ int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
          * 但epoll线程还来不及关闭fd。这时ev中再次添加了该watcher的事件，就会被
          * 标记为EPOLL_CTL_ADD操作，这里重新修正为mod操作
          */
-        if (likely(!epoll_ctl(_ep_fd, EPOLL_CTL_MOD, fd, &ev)))
+        if (likely(!epoll_ctl(ep_fd_, EPOLL_CTL_MOD, fd, &ev)))
         {
             return 0;
         }
@@ -198,7 +198,7 @@ int32_t EpollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
          * 由于ev中仍有旧数据，会被认为是EPOLL_CTL_MOD,这里修正为ADD
          */
         if (EPOLL_CTL_DEL == op) return 0;
-        if (likely(!epoll_ctl(_ep_fd, EPOLL_CTL_ADD, fd, &ev)))
+        if (likely(!epoll_ctl(ep_fd_, EPOLL_CTL_ADD, fd, &ev)))
         {
             return 0;
         }

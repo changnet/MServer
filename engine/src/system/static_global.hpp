@@ -26,23 +26,23 @@ public:
 
     static class EV *ev()
     {
-        return _ev;
+        return ev_;
     }
     static class LEV *lua_ev()
     {
-        return _ev;
+        return ev_;
     }
     static class LLog *async_logger()
     {
-        return _async_log;
+        return async_log_;
     }
     static class ThreadMgr *thread_mgr()
     {
-        return _thread_mgr;
+        return thread_mgr_;
     }
     static Buffer::ChunkPool *buffer_chunk_pool()
     {
-        return _buffer_chunk_pool;
+        return buffer_chunk_pool_;
     }
 
 public:
@@ -60,10 +60,10 @@ private:
     };
 
 private:
-    static class LEV *_ev;
-    static class LLog *_async_log;
-    static class ThreadMgr *_thread_mgr;
-    static Buffer::ChunkPool *_buffer_chunk_pool;
+    static class LEV *ev_;
+    static class LLog *async_log_;
+    static class ThreadMgr *thread_mgr_;
+    static Buffer::ChunkPool *buffer_chunk_pool_;
 
-    static class initializer _initializer;
+    static class initializer initializer_;
 };

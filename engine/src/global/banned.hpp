@@ -7,7 +7,7 @@
  * errors.
  */
 
-#define BANNED(func) sorry_##func##_is_a_banned_function
+#define BANNED(func) sorry_##func##is_a_banned_function_
 
 #undef strcpy
 #define strcpy(x, y) BANNED(strcpy)

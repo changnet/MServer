@@ -28,9 +28,9 @@ public:
     explicit Thread(const std::string &name);
 
     /// 设置线程名字
-    void set_thread_name(const std::string &name) { _name = name; }
+    void set_thread_name(const std::string &name) { name_ = name; }
     /// 获取线程名字
-    inline const std::string &get_thread_name() const { return _name; }
+    inline const std::string &get_thread_name() const { return name_; }
     // 应该线程名字到底层
     static void apply_thread_name(const char *name);
 
@@ -39,9 +39,9 @@ public:
     /// 获取信号掩码并重置原有信号掩码
     static int32_t signal_mask_once()
     {
-        int32_t sig_mask = _sig_mask;
+        int32_t sig_mask = sig_mask_;
 
-        _sig_mask = 0;
+        sig_mask_ = 0;
         return sig_mask;
     }
 
@@ -62,20 +62,20 @@ public:
                             size_t *unfinished = nullptr) = 0;
 
     /// 线程当前是否正在执行
-    inline bool active() const { return _status & S_RUN; }
+    inline bool active() const { return status_ & S_RUN; }
     /// 子线程是否正在处理数据，不在处理数据也不代表缓冲区没数据等待处理
-    inline bool is_busy() const { return _status & S_BUSY; }
+    inline bool is_busy() const { return status_ & S_BUSY; }
     /// 获取自定义线程id
-    inline int32_t get_id() const { return _id; }
+    inline int32_t get_id() const { return id_; }
 
-    inline bool is_wait_busy() const { return _status & S_WAIT; }
+    inline bool is_wait_busy() const { return status_ & S_WAIT; }
     inline void set_wait_busy(bool busy)
     {
-        _status = busy ? _status | S_WAIT : _status & (~S_WAIT);
+        status_ = busy ? status_ | S_WAIT : status_ & (~S_WAIT);
     }
 
     /// 主线程需要处理的事件
-    inline int32_t main_event_once() { return _main_ev.exchange(0); }
+    inline int32_t main_event_once() { return main_ev_.exchange(0); }
 
     // 主线程逻辑
     virtual void main_routine(int32_t ev) {}
@@ -84,13 +84,13 @@ public:
 
 protected:
     /// 标记状态
-    void mark(int32_t status) { _status |= status; }
+    void mark(int32_t status) { status_ |= status; }
     /// 取消状态
-    void unmark(int32_t status) { _status &= ~status; }
+    void unmark(int32_t status) { status_ &= ~status; }
     /// 唤醒子线程
     void wakeup(int32_t status)
     {
-        _cv.notify_one(status);
+        cv_.notify_one(status);
     }
     /**
      * @brief 唤醒主线程
@@ -109,16 +109,16 @@ private:
     static void sig_handler(int32_t signum);
 
 protected:
-    int32_t _id;                  /// 线程自定义id
-    std::string _name;            /// 线程名字，日志用
-    std::atomic<int32_t> _status; /// 线程状态，参考 Status 枚举
+    int32_t id_;                  /// 线程自定义id
+    std::string name_;            /// 线程名字，日志用
+    std::atomic<int32_t> status_; /// 线程状态，参考 Status 枚举
 
-    std::thread _thread;
-    ThreadCv _cv;
-    std::mutex _mutex; // 线程和主线程数据交互用的锁
+    std::thread thread_;
+    ThreadCv cv_;
+    std::mutex mutex_; // 线程和主线程数据交互用的锁
     /// 用一个flag来表示线程是否有数据需要处理，比加锁再去判断队列是否为空高效得多
-    std::atomic<int32_t> _main_ev;
+    std::atomic<int32_t> main_ev_;
 
     /// 各线程收到的信号统一存这里，由主线程处理
-    static std::atomic<int32_t> _sig_mask;
+    static std::atomic<int32_t> sig_mask_;
 };

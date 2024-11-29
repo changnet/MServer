@@ -60,11 +60,11 @@ private:
                          size_t size);
 
 private:
-    int32_t _dbid;
+    int32_t dbid_;
 
-    std::queue<SqlQuery *> _query;
-    std::queue<SqlResult *> _result;
+    std::queue<SqlQuery *> query_;
+    std::queue<SqlResult *> result_;
 
-    CachePool<SqlQuery, 512, 256> _query_pool;
-    CachePool<SqlResult, 512, 256> _result_pool;
+    CachePool<SqlQuery, 512, 256> query_pool_;
+    CachePool<SqlResult, 512, 256> result_pool_;
 };

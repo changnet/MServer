@@ -57,14 +57,14 @@ void Socket::library_init()
 
 Socket::Socket(int32_t conn_id)
 {
-    _packet    = nullptr;
+    packet_    = nullptr;
 
-    _status = CS_NONE;
+    status_ = CS_NONE;
 
-    _fd = netcompat::INVALID;
-    _w  = nullptr;
+    fd_ = netcompat::INVALID;
+    w_  = nullptr;
 
-    _conn_id  = conn_id;
+    conn_id_  = conn_id;
 }
 
 Socket::~Socket()
@@ -84,10 +84,10 @@ Socket::~Socket()
      * */
 
 
-    delete _packet;
-    _packet = nullptr;
+    delete packet_;
+    packet_ = nullptr;
 
-    if (_w && !StaticGlobal::T)
+    if (w_ && !StaticGlobal::T)
     {
         assert(false);
     }
@@ -95,16 +95,16 @@ Socket::~Socket()
 
 void Socket::stop(bool flush)
 {
-    if (_status != CS_OPENED) return;
+    if (status_ != CS_OPENED) return;
 
-    _status = CS_CLOSING;
+    status_ = CS_CLOSING;
 
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
     // ev那边需要做异步删除
-    if (_w)
+    if (w_)
     {
-        StaticGlobal::ev()->io_stop(_fd, flush);
+        StaticGlobal::ev()->io_stop(fd_, flush);
     }
     else
     {
@@ -128,7 +128,7 @@ int32_t Socket::send_pkt(lua_State *L)
 
 void Socket::append(const void *data, size_t len)
 {
-    auto &send_buff = _w->_io->get_send_buffer();
+    auto &send_buff = w_->io_->get_send_buffer();
     int32_t e       = send_buff.append(data, len);
 
     /**
@@ -137,17 +137,17 @@ void Socket::append(const void *data, size_t len)
      */
     if (likely(0 == e)) return;
 
-    if (_w->_mask & EVIO::M_OVERFLOW_KILL)
+    if (w_->mask_ & EVIO::M_OVERFLOW_KILL)
     {
         // 对于客户端这种不重要的，可以断开连接
         ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
-             _conn_id, send_buff.get_all_used_size());
+             conn_id_, send_buff.get_all_used_size());
 
         Socket::stop();
 
         return;
     }
-    else if (_w->_mask & EVIO::M_OVERFLOW_PEND)
+    else if (w_->mask_ & EVIO::M_OVERFLOW_PEND)
     {
         // 如果是服务器之间的连接，考虑阻塞
         // 这会影响定时器这些，但至少数据不会丢
@@ -159,7 +159,7 @@ void Socket::append(const void *data, size_t len)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
-                 _conn_id, send_buff.get_all_used_size());
+                 conn_id_, send_buff.get_all_used_size());
 
             if (!send_buff.is_overflow()) break;
         };
@@ -168,7 +168,7 @@ void Socket::append(const void *data, size_t len)
 
 void Socket::flush()
 {
-    _w->set(EV_WRITE);
+    w_->set(EV_WRITE);
 }
 
 int32_t Socket::set_block(int32_t fd, int32_t flag)
@@ -370,28 +370,28 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
 
 bool Socket::start(int32_t fd)
 {
-    assert(_fd == netcompat::INVALID);
+    assert(fd_ == netcompat::INVALID);
 
-    assert(!_w);
+    assert(!w_);
 
-    _fd     = fd;
-    _status = CS_OPENED;
+    fd_     = fd;
+    status_ = CS_OPENED;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    _w = StaticGlobal::ev()->io_start(_fd, EV_READ);
-    if (!_w)
+    w_ = StaticGlobal::ev()->io_start(fd_, EV_READ);
+    if (!w_)
     {
-        ELOG("ev io start fail: %d", _fd);
+        ELOG("ev io start fail: %d", fd_);
         return false;
     }
-    _w->bind(&Socket::io_cb, this);
+    w_->bind(&Socket::io_cb, this);
 
     return true;
 }
 
 int32_t Socket::connect(const char *host, int32_t port)
 {
-    assert(_fd == netcompat::INVALID);
+    assert(fd_ == netcompat::INVALID);
     if (!host)
     {
         ELOG("socket connect host is null");
@@ -457,17 +457,17 @@ int32_t Socket::connect(const char *host, int32_t port)
         }
     }
 
-    assert(!_w);
-    _w = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
-    if (!_w)
+    assert(!w_);
+    w_ = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
+    if (!w_)
     {
         ELOG("ev io start fail: %d", fd);
         return -1;
     }
-    _w->bind(&Socket::io_cb, this);
+    w_->bind(&Socket::io_cb, this);
 
-    _fd     = fd;
-    _status = CS_OPENED;
+    fd_     = fd;
+    status_ = CS_OPENED;
 
     return fd;
 }
@@ -476,7 +476,7 @@ int32_t Socket::validate()
 {
     int32_t err   = 0;
     socklen_t len = sizeof(err);
-    if (getsockopt(_fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len))
+    if (getsockopt(fd_, SOL_SOCKET, SO_ERROR, (char *)&err, &len))
     {
         return netcompat::errorno();
     }
@@ -486,14 +486,14 @@ int32_t Socket::validate()
 
 int32_t Socket::address(lua_State *L) const
 {
-    if (_fd == netcompat::INVALID) return 0;
+    if (fd_ == netcompat::INVALID) return 0;
 
     struct sockaddr_in_x addr;
 
     memset(&addr, 0, sizeof(addr));
     socklen_t addr_len = sizeof(addr);
 
-    if (getpeername(_fd, (struct sockaddr *)&addr, &addr_len) < 0)
+    if (getpeername(fd_, (struct sockaddr *)&addr, &addr_len) < 0)
     {
         int32_t e = netcompat::errorno();
         ELOG("socket::address getpeername error: %s\n", netcompat::strerror(e));
@@ -522,14 +522,14 @@ int32_t Socket::address(lua_State *L) const
 
 int32_t Socket::listen(const char *host, int32_t port)
 {
-    if (_w)
+    if (w_)
     {
-        ELOG("this socket already have fd: %d", _fd);
+        ELOG("this socket already have fd: %d", fd_);
         return -1;
     }
 
-    _fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (_fd == netcompat::INVALID)
+    fd_ = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
+    if (fd_ == netcompat::INVALID)
     {
         return -1;
     }
@@ -544,20 +544,20 @@ int32_t Socket::listen(const char *host, int32_t port)
      * to restart server immediately,you need to reuse address.but note you may
      * receive the old data from last time.
      */
-    if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
+    if (setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
         < 0)
     {
         goto FAIL;
     }
 
-    if (set_block(_fd, 0) < 0)
+    if (set_block(fd_, 0) < 0)
     {
         goto FAIL;
     }
 
 #ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    if (set_non_ipv6only(_fd))
+    if (set_non_ipv6only(fd_))
     {
         goto FAIL;
     }
@@ -579,31 +579,31 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    if (::bind(_fd, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
+    if (::bind(fd_, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
     {
         goto FAIL;
     }
 
-    if (::listen(_fd, 256) < 0)
+    if (::listen(fd_, 256) < 0)
     {
         goto FAIL;
     }
 
-    _w = StaticGlobal::ev()->io_start(_fd, EV_ACCEPT);
-    if (!_w)
+    w_ = StaticGlobal::ev()->io_start(fd_, EV_ACCEPT);
+    if (!w_)
     {
-        ELOG("ev io start fail: %d", _fd);
+        ELOG("ev io start fail: %d", fd_);
         goto FAIL;
     }
-    _w->bind(&Socket::io_cb, this);
+    w_->bind(&Socket::io_cb, this);
 
-    _status = CS_OPENED;
+    status_ = CS_OPENED;
 
-    return _fd;
+    return fd_;
 
 FAIL:
-    netcompat::close(_fd);
-    _fd = netcompat::INVALID;
+    netcompat::close(fd_);
+    fd_ = netcompat::INVALID;
     return -1;
 }
 
@@ -618,7 +618,7 @@ void Socket::io_cb(int32_t revents)
     if (EV_INIT_CONN & revents || EV_INIT_ACPT & revents)
     {
         // 握手成功可能会直接收到消息，所以必须先返回握手成功
-        _w->_io->init_ready();
+        w_->io_->init_ready();
     }
     if (EV_READ & revents)
     {
@@ -647,30 +647,30 @@ void Socket::close_cb(bool term)
     // 大概清理一下数据，保证析构时不出错即可
     if (term)
     {
-        netcompat::close(_fd);
-        _w = nullptr;
+        netcompat::close(fd_);
+        w_ = nullptr;
         return;
     }
 
     // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-    if (CS_OPENED == _status && _packet) _packet->on_closed();
+    if (CS_OPENED == status_ && packet_) packet_->on_closed();
 
-    _status = CS_CLOSED;
+    status_ = CS_CLOSED;
 
     // epoll、poll发现fd出错时，需要及时获取错误码并保存
-    int32_t e = _w->_errno;
+    int32_t e = w_->errno_;
 
-    assert(_fd > 0); // 如果_fd为-1，就是执行了两次close_cb
-    StaticGlobal::ev()->io_delete(_fd);
+    assert(fd_ > 0); // 如果fd_为-1，就是执行了两次close_cb
+    StaticGlobal::ev()->io_delete(fd_);
 
-    netcompat::close(_fd);
-    _fd = netcompat::INVALID;
+    netcompat::close(fd_);
+    fd_ = netcompat::INVALID;
 
-    _w = nullptr;
+    w_ = nullptr;
 
     try
     {
-        lcpp::call(StaticGlobal::L, "conn_del", _conn_id, e);
+        lcpp::call(StaticGlobal::L, "conn_del", conn_id_, e);
     }
     catch (const std::exception& e)
     {
@@ -715,7 +715,7 @@ void Socket::accept_new(int32_t fd)
 
     try
     {
-        lcpp::call(StaticGlobal::L, "conn_accept", _conn_id, fd);
+        lcpp::call(StaticGlobal::L, "conn_accept", conn_id_, fd);
     }
     catch (const std::exception& e)
     {
@@ -727,9 +727,9 @@ void Socket::accept_new(int32_t fd)
 
 void Socket::listen_cb()
 {
-    while (CS_OPENED == _status)
+    while (CS_OPENED == status_)
     {
-        int32_t new_fd = (int32_t)::accept(_fd, nullptr, nullptr);
+        int32_t new_fd = (int32_t)::accept(fd_, nullptr, nullptr);
         if (new_fd == netcompat::INVALID)
         {
             int32_t e = netcompat::errorno();
@@ -765,40 +765,40 @@ void Socket::connect_cb()
 
     if (0 == ecode)
     {
-        if (set_keep_alive(_fd))
+        if (set_keep_alive(fd_))
         {
             int32_t e = netcompat::errorno();
-            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", _fd, e,
+            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", fd_, e,
                  netcompat::strerror(e));
 
             Socket::stop();
             return;
         }
-        if (set_user_timeout(_fd))
+        if (set_user_timeout(fd_))
         {
             int32_t e = netcompat::errorno();
-            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", _fd, e,
+            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", fd_, e,
                  netcompat::strerror(e));
 
             Socket::stop();
             return;
         }
-        if (set_nodelay(_fd))
+        if (set_nodelay(fd_))
         {
             int32_t e = netcompat::errorno();
-            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", _fd, e,
+            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", fd_, e,
                  netcompat::strerror(e));
 
             Socket::stop();
             return;
         }
 
-        _w->set(EV_READ);
+        w_->set(EV_READ);
     }
 
     try
     {
-        lcpp::call(StaticGlobal::L, "conn_new", _conn_id, ecode);
+        lcpp::call(StaticGlobal::L, "conn_new", conn_id_, ecode);
     }
     catch (const std::exception &e)
     {
@@ -811,25 +811,25 @@ void Socket::connect_cb()
 void Socket::command_cb()
 {
     /* 在脚本报错的情况下，可能无法设置 io和packet */
-    if (!_packet)
+    if (!packet_)
     {
         Socket::stop();
-        ELOG("no io or packet set,socket disconnect: %d", _conn_id);
+        ELOG("no io or packet set,socket disconnect: %d", conn_id_);
         return;
     }
 
     // TODO 这里统计流量。读写在io线程不好统计，暂时放这里
-    // C_RECV_TRAFFIC_ADD(_conn_id, _conn_ty, byte);
+    // C_RECV_TRAFFIC_ADD(conn_id_, conn_ty_, byte);
 
     int32_t ret = 0;
 
     /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
-    auto &buffer = _w->_io->get_recv_buffer();
+    auto &buffer = w_->io_->get_recv_buffer();
     do
     {
         // @return -1错误 0成功，没有后续数据需要处理 1成功，有数据需要继续处理
-        if ((ret = _packet->unpack(buffer)) <= 0) break;
-    } while (CS_OPENED == _status);
+        if ((ret = packet_->unpack(buffer)) <= 0) break;
+    } while (CS_OPENED == status_);
 
     // 解析过程中错误，断开链接
     if (unlikely(ret < 0))
@@ -842,17 +842,17 @@ void Socket::command_cb()
 
 int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 {
-    assert(_w);
+    assert(w_);
 
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(_conn_id); break;
-    case IO::IOT_SSL: io = new SSLIO(_conn_id, tls_ctx); break;
+    case IO::IOT_NONE: io = new IO(conn_id_); break;
+    case IO::IOT_SSL: io = new SSLIO(conn_id_, tls_ctx); break;
     default: return -1;
     }
 
-    _w->set_io(io);
+    w_->set_io(io);
 
     return 0;
 }
@@ -860,15 +860,15 @@ int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 int32_t Socket::set_packet(int32_t packet_type)
 {
     /* 如果有旧的，需要先删除 */
-    delete _packet;
-    _packet = nullptr;
+    delete packet_;
+    packet_ = nullptr;
 
     switch (packet_type)
     {
-    case Packet::PT_HTTP: _packet = new HttpPacket(this); break;
-    case Packet::PT_STREAM: _packet = new StreamPacket(this); break;
-    case Packet::PT_WEBSOCKET: _packet = new WebsocketPacket(this); break;
-    //case Packet::PT_WSSTREAM: _packet = new WSStreamPacket(this); break;
+    case Packet::PT_HTTP: packet_ = new HttpPacket(this); break;
+    case Packet::PT_STREAM: packet_ = new StreamPacket(this); break;
+    case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
+    //case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
     default: return -1;
     }
     return 0;
@@ -876,75 +876,75 @@ int32_t Socket::set_packet(int32_t packet_type)
 
 void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)
 {
-    assert(_w && _w->_io);
-    IO *io = _w->_io;
+    assert(w_ && w_->io_);
+    IO *io = w_->io_;
 
-    _w->_mask |= static_cast<uint8_t>(mask);
+    w_->mask_ |= static_cast<uint8_t>(mask);
     io->get_send_buffer().set_chunk_size(send_max);
     io->get_recv_buffer().set_chunk_size(recv_max);
 }
 
 int32_t Socket::io_init_accept()
 {
-    if (!_w) return -1;
+    if (!w_) return -1;
 
     // set会清除旧事件，这里得保留EV_READ
-    _w->set(EV_INIT_ACPT | EV_READ);
+    w_->set(EV_INIT_ACPT | EV_READ);
 
     return 0;
 }
 
 int32_t Socket::io_init_connect()
 {
-    if (!_w) return -1;
+    if (!w_) return -1;
 
-    _w->set(EV_INIT_CONN | EV_READ);
+    w_->set(EV_INIT_CONN | EV_READ);
 
     return 0;
 }
 
 int32_t Socket::send_clt(lua_State *L)
 {
-    if (!_packet)
+    if (!packet_)
     {
         return luaL_error(L, "no packet found");
     }
 
     // 1是socket本身，数据从2开始
-    _packet->pack_clt(L, 2);
+    packet_->pack_clt(L, 2);
 
     return 0;
 }
 
 int32_t Socket::send_srv(lua_State *L)
 {
-    if (!_packet)
+    if (!packet_)
     {
         return luaL_error(L, "no packet found");
     }
 
     // 1是socket本身，数据从2开始
-    _packet->pack_srv(L, 2);
+    packet_->pack_srv(L, 2);
     return 0;
 }
 
 int32_t Socket::send_ctrl(lua_State *L)
 {
-    if (!_packet)
+    if (!packet_)
     {
         return luaL_error(L, "no packet found");
     }
 
     // 1是socket本身，数据从2开始
-    _packet->pack_ctrl(L, 2);
+    packet_->pack_ctrl(L, 2);
     return 0;
 }
 
 int32_t Socket::get_http_header(lua_State *L)
 {
-    if (!_packet || Packet::PT_HTTP != _packet->type())
+    if (!packet_ || Packet::PT_HTTP != packet_->type())
     {
         return luaL_error(L, "no packet found");
     }
-    return static_cast<HttpPacket *>(_packet)->unpack_header(L);
+    return static_cast<HttpPacket *>(packet_)->unpack_header(L);
 }
