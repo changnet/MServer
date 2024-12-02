@@ -15,7 +15,22 @@ struct ThreadMessage
 class ThreadMessageQueue
 {
 public:
+    ThreadMessage* pop()
+    {
+        std::lock_guard<std::mutex> lg(mutex_);
+
+        ThreadMessage *message = queue_.front();
+        queue_.pop_front();
+
+        return message;
+    }
+    void push(ThreadMessage* message)
+    {
+        std::lock_guard<std::mutex> lg(mutex_);
+        queue_.emplace_back(message);
+    }
+
 private:
     std::mutex mutex_;
-    std::deque<ThreadMessage> queue_;
+    std::deque<ThreadMessage *> queue_;
 };

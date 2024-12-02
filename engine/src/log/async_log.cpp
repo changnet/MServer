@@ -403,7 +403,7 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers,
 }
 
 // 线程主循环
-void AsyncLog::routine(int32_t ev)
+void AsyncLog::routine_once(int32_t ev)
 {
     UNUSED(ev);
 
@@ -475,7 +475,7 @@ void AsyncLog::routine(int32_t ev)
 
 bool AsyncLog::uninitialize()
 {
-    routine(0);
+    routine_once(0);
 
     device_.clear(); // 保证文件句柄被销毁并写入文件
 

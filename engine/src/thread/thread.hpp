@@ -31,7 +31,7 @@ public:
     void set_thread_name(const std::string &name) { name_ = name; }
     /// 获取线程名字
     inline const std::string &get_thread_name() const { return name_; }
-    // 应该线程名字到底层
+    // 应用线程名字到底层
     static void apply_thread_name(const char *name);
 
     /// 注册信号处理
@@ -98,11 +98,13 @@ protected:
     */
     void wakeup_main(int32_t status);
 
-    virtual bool initialize() { return true; }   /* 子线程初始化 */
-    virtual bool uninitialize() { return true; } /* 子线程清理 */
+    /* 线程初始化 */
+    virtual bool initialize() { return true; }
+    /* 线程清理 */
+    virtual bool uninitialize() { return true; }
 
     /// 子线程逻辑
-    virtual void routine(int32_t ev) = 0;
+    virtual void routine_once(int32_t ev) = 0;
 
 private:
     void spawn(int32_t us);

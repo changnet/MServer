@@ -106,7 +106,7 @@ private:
     using BufferPool = ObjectPool<Buffer, 256, 256>;
 
     // 线程相关，重写基类相关函数
-    void routine(int32_t ev) override;
+    void routine_once(int32_t ev) override;
     bool uninitialize() override;
 
     size_t write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,

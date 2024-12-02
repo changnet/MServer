@@ -99,7 +99,7 @@ public:
                     size_t *unfinished = nullptr) override;
 
 private:
-    void routine(int32_t ev) override;
+    void routine_once(int32_t ev) override;
     void main_routine(int32_t ev) override;
     bool uninitialize() override;
     bool initialize() override;

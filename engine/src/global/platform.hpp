@@ -39,5 +39,5 @@
 
 #elif _MSC_VER
     #define __COMPLIER_ "MSVC"
-    #define __VERSION__ XSTR(MSC_FULL_VER_)
+    #include "msvcr_version.hpp"
 #endif

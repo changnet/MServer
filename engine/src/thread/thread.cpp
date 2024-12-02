@@ -238,7 +238,7 @@ void Thread::spawn(int32_t ms)
     {
         int32_t ev = cv_.wait_for(ms);
         mark(S_BUSY);
-        this->routine(ev);
+        this->routine_once(ev);
         unmark(S_BUSY);
     }
 

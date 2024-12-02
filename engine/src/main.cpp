@@ -33,9 +33,7 @@ int32_t main(int32_t argc, char **argv)
     StaticGlobal::ev()->loop_init();
 
     /* 加载程序入口脚本 */
-    char script_path[PATH_MAX];
-    snprintf(script_path, sizeof(script_path), "%s", LUA_ENTERANCE);
-    if (LUA_OK != luaL_loadfile(L, script_path))
+    if (LUA_OK != luaL_loadfile(L, LUA_ENTERANCE))
     {
         const char *err_msg = lua_tostring(L, -1);
         ELOG_R("load lua enterance file error:%s", err_msg);

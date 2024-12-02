@@ -463,7 +463,7 @@ public:
     {
         class_name_ = classname;
 
-        lua_getfield(L, LUA_REGISTRYINDEX, "LOADED_");
+        lua_getfield(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
         assert(lua_istable(L, -1));
 
         // 该类名已经注册过

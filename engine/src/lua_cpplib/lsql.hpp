@@ -53,7 +53,7 @@ private:
     void exec_sql(const SqlQuery *query, SqlResult *res);
 
     void main_routine(int32_t ev) override;
-    void routine(int32_t ev) override;
+    void routine_once(int32_t ev) override;
 
     int32_t mysql_to_lua(lua_State *L, const SqlResult *res);
     int32_t field_to_lua(lua_State *L, const SqlField &field, const char *value,

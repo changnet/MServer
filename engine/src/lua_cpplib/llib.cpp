@@ -346,6 +346,8 @@ lua_State *new_state()
 
 lua_State* delete_state(lua_State* L)
 {
+    if (!L) return nullptr;
+
     assert(0 == lua_gettop(L));
 
     /* Destroys all objects in the given Lua state (calling the corresponding

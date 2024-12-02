@@ -126,7 +126,7 @@ size_t LMongo::busy_job(size_t *finished, size_t *unfinished)
     return finished_sz + unfinished_sz;
 }
 
-void LMongo::routine(int32_t ev)
+void LMongo::routine_once(int32_t ev)
 {
     UNUSED(ev);
     /* 如果某段时间连不上，只能由下次超时后触发

@@ -105,7 +105,7 @@ void LSql::main_routine(int32_t ev)
     lua_pop(L, 1); /* remove traceback */
 }
 
-void LSql::routine(int32_t ev)
+void LSql::routine_once(int32_t ev)
 {
     UNUSED(ev);
     /* 如果某段时间连不上，只能由下次超时后触发
