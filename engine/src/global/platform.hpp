@@ -32,12 +32,11 @@
 // __VERSION__在gcc和mingw中已定义，不用额外定义
 #ifdef __MINGW64__
     #define __MINGW__
-    #define __COMPLIER_ "mingw64"
+    #define __COMPLIER_ "mingw64 " __VERSION__
 #elif __GNUC__
     // https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
-    #define __COMPLIER_ "gcc"
+    #define __COMPLIER_ "gcc " __VERSION__
 
 #elif _MSC_VER
-    #define __COMPLIER_ "MSVC"
     #include "msvcr_version.hpp"
 #endif

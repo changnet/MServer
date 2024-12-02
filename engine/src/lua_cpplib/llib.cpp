@@ -271,7 +271,6 @@ void open_env(lua_State *L)
 
     SET_ENV_MACRO(__OS_NAME__);
     SET_ENV_MACRO(__COMPLIER_);
-    SET_ENV_MACRO(__VERSION__);
     SET_ENV_MACRO(__BACKEND__);
     SET_ENV_MACRO(__TIMESTAMP__);
 
