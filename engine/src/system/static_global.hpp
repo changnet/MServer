@@ -3,6 +3,7 @@
 #include "lua_cpplib/llog.hpp"
 #include "lua_cpplib/lev.hpp"
 #include "thread/thread_mgr.hpp"
+#include "thread/main_thread.hpp"
 
 /**
  * 控制static或者global变量，的创建、销毁顺序，避免相互依赖，影响内存泄漏计数
@@ -48,8 +49,9 @@ public:
 public:
     // 这里负责保存一些全局变量，方便StaticGlobal::X这样调用
 
-    inline static lua_State *L = nullptr; // Lua的虚拟机指针
-    inline static bool T       = false; // 当前是否处于关服状态(term)
+    inline static lua_State *L  = nullptr; // Lua的虚拟机指针
+    inline static MainThread *M = nullptr; // 主线程
+    inline static bool T        = false; // 当前是否处于关服状态(term)
 
 private:
     class initializer // 提供一个等级极高的初始化

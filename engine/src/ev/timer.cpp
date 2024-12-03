@@ -5,6 +5,26 @@
 #define HPARENT(k)        ((k) >> 1)
 #define UPHEAP_DONE(p, k) (!(p))
 
+TimerMgr::HeapTimer::HeapTimer()
+{
+    size_ = 0;
+    capacity_ = 512;
+    list_     = new HeapNode[capacity_]();
+}
+
+TimerMgr::HeapTimer::~HeapTimer()
+{
+    delete[] list_;
+}
+
+TimerMgr::TimerMgr()
+{
+}
+
+TimerMgr::~TimerMgr()
+{
+}
+
 void TimerMgr::down_heap(HeapNode *heap, int32_t N, int32_t k)
 {
     HeapNode he = heap[k];
@@ -49,28 +69,118 @@ void TimerMgr::up_heap(HeapNode *heap, int32_t k)
     he->index_ = k;
 }
 
-int32_t TimerMgr::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t policy)
+
+void TimerMgr::adjust_heap(HeapNode *heap, int32_t N, int32_t k)
+{
+    if (k > HEAP0 && (heap[k])->at_ <= (heap[HPARENT(k)])->at_)
+    {
+        up_heap(heap, k);
+    }
+    else
+    {
+        down_heap(heap, N, k);
+    }
+}
+
+void TimerMgr::reheap(HeapNode *heap, int32_t N)
+{
+    /* we don't use floyds algorithm, upheap is simpler and is more
+     * cache-efficient also, this is easy to implement and correct
+     * for both 2-heaps and 4-heaps
+     */
+    for (int32_t i = 0; i < N; ++i)
+    {
+        up_heap(heap, i + HEAP0);
+    }
+}
+
+int32_t TimerMgr::delete_heap(HeapTimer &ht, int32_t id)
+{
+    auto& hash  = ht.hash_;
+    auto found = hash.find(id);
+    if (found == hash.end())
+    {
+        return -1;
+    }
+
+    Timer *timer = &(found->second);
+
+    if (likely(timer->index_))
+    {
+        int32_t index = timer->index_;
+        auto list     = ht.list_;
+        assert(list[index] == timer);
+
+        int32_t size = ht.size_ - 1;
+
+        // 如果这个定时器刚好在最后，就不用调整二叉堆
+        if (likely(index < size + HEAP0))
+        {
+            // 把当前最后一个timer(timercnt_ + HEAP0)覆盖当前timer的位置，再重新调整
+            list[index] = list[size + HEAP0];
+            adjust_heap(list, size, index);
+        }
+        ht.size_ = size;
+    }
+
+    hash.erase(found);
+    return 0;
+}
+
+int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
+                           int64_t after, int64_t repeat, int32_t policy)
 {
     assert(repeat >= 0);
 
     // 如果不支持try_emplace，使用std::forward_as_tuple实现
-    auto p = timer_mgr_.try_emplace(id, id, this);
+    auto p = ht.hash_.try_emplace(id, id, this);
     if (!p.second) return -1;
 
     Timer *timer = &(p.first->second);
 
-    timer->at_     = steady_clock_ + after;
+    timer->at_     = now + after;
     timer->repeat_ = repeat;
     timer->policy_ = policy;
 
     assert(timer->repeat_ >= 0);
 
-    timers_.emplace_back(timer);
-    int32_t index = (int32_t)timers_.size() + HEAP0 - 1;
+    ++ht.size_;
+    int32_t index = ht.size_ + HEAP0 - 1;
+    if (unlikely(ht.capacity_ < (size_t)index + 1))
+    {
+        ht.capacity_ += 512;
+        HeapNode *new_timers = new HeapNode[ht.capacity_]();
+        // 上面index + 1，最末总有一个空闲，所以这里memcpy时不用size - 1
+        memcpy(new_timers, ht.list_, sizeof(HeapNode) * ht.size_);
+        ht.list_ = new_timers;
+    }
 
-    up_heap(timers_.data(), index);
+    ht.list_[index] = timer;
+    up_heap(ht.list_, index);
 
-    assert(index >= 1 && timers_[timer->index_] == timer);
+    assert(index >= 1 && ht.list_[timer->index_] == timer);
 
     return index;
+}
+
+int32_t TimerMgr::timer_start(int64_t now, int32_t id, int64_t after, int64_t repeat, int32_t policy)
+{
+    return new_heap(timer_, now, id, after, repeat, policy);
+}
+
+
+int32_t TimerMgr::timer_stop(int32_t id)
+{
+    return delete_heap(timer_, id);
+}
+
+int32_t TimerMgr::periodic_start(int64_t now, int32_t id, int64_t after,
+                                 int64_t repeat, int32_t policy)
+{
+    return new_heap(periodic_, now, id, after, repeat, policy);
+}
+
+int32_t TimerMgr::periodic_stop(int32_t id)
+{
+    return delete_heap(periodic_, id);
 }

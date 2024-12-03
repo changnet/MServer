@@ -50,6 +50,7 @@ bool WorkerThread::uninitialize()
 
 void WorkerThread::routine_once(int32_t ev)
 {
+    int32_t count = 0;
     while (ThreadMessage *m = message_.pop())
     {
         try
@@ -59,6 +60,14 @@ void WorkerThread::routine_once(int32_t ev)
         catch (const std::runtime_error& e)
         {
             ELOG("%s", e.what());
+        }
+
+        count++;
+        if (256 == count)
+        {
+            count = 0;
+            // 主线程会不断地派发任务，worker线程可能会无休止地运行
+            // 因此执行一定数据的逻辑后，需要更新时间及定时器
         }
     }
 }
