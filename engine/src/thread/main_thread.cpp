@@ -1,5 +1,6 @@
 #include "main_thread.hpp"
 #include "lua_cpplib/llib.hpp"
+#include "system/static_global.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)
 #define MIN_TIMEJUMP 1000
@@ -20,7 +21,26 @@ MainThread::~MainThread()
 
 void MainThread::routinue()
 {
+    static const int64_t min_wait = 1;     // 最小等待时间，毫秒
+    static const int64_t max_wait = 60000; // 最大等待时间，毫秒
 
+    while (likely(!StaticGlobal::T))
+    {
+        time_update();
+
+        int64_t wait_time = timer_mgr_.next_interval(steady_clock_, utc_ms_);
+        if (-1 == wait_time) wait_time = max_wait;
+        if (unlikely(wait_time < min_wait)) wait_time = min_wait;
+
+        // 等待其他线程的数据
+        tcv_.wait_for(wait_time);
+
+        time_update();
+
+        timer_mgr_.update_timeout(steady_clock_, utc_ms_);
+
+        dispatch_message();
+    }
 }
 
 
@@ -75,5 +95,17 @@ void MainThread::time_update()
 
         steady_clock_             = steady_clock();
         last_utc_update_ = steady_clock_;
+    }
+}
+
+void MainThread::dispatch_message()
+{
+    try
+    {
+        ThreadMessage m = message_.pop();
+    }
+    catch (const std::out_of_range& e)
+    {
+        return;
     }
 }

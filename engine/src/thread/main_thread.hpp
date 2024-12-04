@@ -54,6 +54,7 @@ public:
 
 private:
     void time_update();
+    void dispatch_message();
 
 private:
     int64_t steady_clock_;             // 起服到现在的毫秒
@@ -65,10 +66,10 @@ private:
      * 不需要通过clock_gettime来得到rt_now，以提高效率
      */
     int64_t clock_diff_;
-
     int64_t next_backend_time_; // 下次执行backend的时间
 
     lua_State *L_;
     TimerMgr timer_mgr_;
     ThreadMessageQueue message_;
+    ThreadCv tcv_; // 用于等待其他线程数据的condtion_variable
 };

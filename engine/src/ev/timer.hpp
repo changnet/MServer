@@ -50,6 +50,12 @@ public:
      */
     int32_t periodic_stop(int32_t id);
 
+    // 获取下一个定时器超时间隔（毫秒）
+    int64_t next_interval(int64_t now, int64_t utc);
+
+    // 更新定时器状态，检测哪些定时器超时
+    void update_timeout(int64_t now, int64_t utc);
+
 private:
     struct Timer
     {
@@ -81,10 +87,15 @@ private:
     void adjust_heap(HeapNode *heap, int32_t N, int32_t k);
 
     int32_t delete_heap(HeapTimer &ht, int32_t id);
+    void delete_heap(HeapTimer &ht, Timer *time);
     int32_t new_heap(HeapTimer &ht, int64_t now, int32_t id, int64_t after,
                      int64_t repeat, int32_t policy);
+    void heap_timeout(HeapTimer &ht, int64_t now);
+    int64_t next_heap_interval(HeapTimer &ht, int64_t now);
+    // 重新规划定时器触发时间
+    void timer_reschedule(Timer *timer, int64_t now);
 
 private:
-    HeapTimer timer_;
-    HeapTimer periodic_;
+    HeapTimer timer_; // stead_clock定时器，调时间不影响
+    HeapTimer periodic_; // utc时间戳定时器，调时间会影响
 };

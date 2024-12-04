@@ -94,17 +94,8 @@ void TimerMgr::reheap(HeapNode *heap, int32_t N)
     }
 }
 
-int32_t TimerMgr::delete_heap(HeapTimer &ht, int32_t id)
+void TimerMgr::delete_heap(HeapTimer &ht, Timer *timer)
 {
-    auto& hash  = ht.hash_;
-    auto found = hash.find(id);
-    if (found == hash.end())
-    {
-        return -1;
-    }
-
-    Timer *timer = &(found->second);
-
     if (likely(timer->index_))
     {
         int32_t index = timer->index_;
@@ -122,9 +113,32 @@ int32_t TimerMgr::delete_heap(HeapTimer &ht, int32_t id)
         }
         ht.size_ = size;
     }
+}
+
+int32_t TimerMgr::delete_heap(HeapTimer &ht, int32_t id)
+{
+    auto& hash  = ht.hash_;
+    auto found = hash.find(id);
+    if (found == hash.end())
+    {
+        return -1;
+    }
+
+    delete_heap(ht, &(found->second));
 
     hash.erase(found);
     return 0;
+}
+
+int64_t TimerMgr::next_heap_interval(HeapTimer &ht, int64_t now)
+{
+    if (ht.size_)
+    {
+        // wait时间不超过下一个定时器触发时间
+        return (ht.list_[HEAP0])->at_ - now;
+    }
+
+    return -1;
 }
 
 int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
@@ -163,6 +177,68 @@ int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
     return index;
 }
 
+void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now)
+{
+    auto list = ht.list_;
+    while (ht.size_ && (list[HEAP0])->at_ <= now)
+    {
+        Timer *timer = list[HEAP0];
+
+        assert(timer->index_);
+
+        if (timer->repeat_)
+        {
+            timer->at_ += timer->repeat_;
+
+            // 如果时间出现偏差，重新调整定时器
+            if (unlikely(timer->at_ < now)) timer_reschedule(timer, now);
+
+            assert(timer->repeat_ > 0);
+
+            down_heap(list, ht.size_, HEAP0);
+        }
+        else
+        {
+            // 不重复的定义器，删除
+            delete_heap(ht, timer);
+            ht.hash_.erase(timer->id_);
+        }
+
+        // add_pending(w, EV_TIMER);
+    }
+}
+
+void TimerMgr::timer_reschedule(Timer *timer, int64_t now)
+{
+    /**
+     * 当前用的是CLOCK_MONOTONIC时间，所以不存在用户调时间的问题
+     * 但可能存在卡主循环的情况，libev默认情况下是修正为当前时间
+     */
+    switch (timer->policy_)
+    {
+    case P_ALIGN:
+    {
+        // 严格对齐到特定时间，比如一个定时器每5秒触发一次，那必须是在 0 5 10 15
+        // 触发 即使主线程卡了，也不允许在其他秒数触发
+        assert(timer->repeat_ > 0);
+        while (timer->at_ < now) timer->at_ += timer->repeat_;
+        break;
+    }
+    case P_SPIN:
+    {
+        // 自旋到时间恢复正常
+        // 假如定时器1秒触发1次，现在过了5秒，则会在很短时间内触发5次回调
+        break;
+    }
+    default:
+    {
+        // 按当前时间重新计时，这是最常用的定时器，libev、libevent都是这种处理方式
+        timer->at_ = now;
+        break;
+    }
+    }
+}
+
 int32_t TimerMgr::timer_start(int64_t now, int32_t id, int64_t after, int64_t repeat, int32_t policy)
 {
     return new_heap(timer_, now, id, after, repeat, policy);
@@ -183,4 +259,18 @@ int32_t TimerMgr::periodic_start(int64_t now, int32_t id, int64_t after,
 int32_t TimerMgr::periodic_stop(int32_t id)
 {
     return delete_heap(periodic_, id);
+}
+
+void TimerMgr::update_timeout(int64_t now, int64_t utc)
+{
+    heap_timeout(timer_, now);
+    heap_timeout(periodic_, utc);
+}
+
+int64_t TimerMgr::next_interval(int64_t now, int64_t utc)
+{
+    int64_t ni1 = next_heap_interval(timer_, now);
+    int64_t ni2 = next_heap_interval(periodic_, utc);
+
+    return ni1 < ni2 ? ni1 : ni2;
 }
