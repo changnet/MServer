@@ -8,7 +8,6 @@
 #include "net/codec/pbc_codec.hpp"
 
 class LEV *StaticGlobal::ev_                  = nullptr;
-class LLog *StaticGlobal::async_log_          = nullptr;
 class ThreadMgr *StaticGlobal::thread_mgr_    = nullptr;
 Buffer::ChunkPool *StaticGlobal::buffer_chunk_pool_ = nullptr;
 
@@ -61,18 +60,19 @@ void StaticGlobal::initialize()
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
     thread_mgr_ = new class ThreadMgr();
-    async_log_  = new class LLog("Engine.AsyncLog");
+    LOG  = new class LLog("Engine.AsyncLog");
+    M           = new class MainThread();
     ev_         = new class LEV();
 
     L                  = llib::new_state();
     buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 
-    async_log_->set_thread_name(STD_FMT("global_async_log"));
-    async_log_->AsyncLog::start(1000);
+    LOG->set_thread_name("g_log");
+    LOG->AsyncLog::start(1000);
 
     // 关服的时候，不需要等待这个线程。之前在关服定时器上打异步日志，
     // 导致这个线程一直忙,关不了服，stop的时候会处理所有日志
-    async_log_->set_wait_busy(false);
+    LOG->set_wait_busy(false);
 }
 
 void StaticGlobal::uninitialize()
@@ -84,7 +84,7 @@ void StaticGlobal::uninitialize()
      * 所以这里手动保证他们销毁的顺序。一些相互引用的，只能先调用他们的stop或者
      * clear函数来解除引用，再delete掉，不然valgrind会报Invalid read内存错误
      */
-    thread_mgr_->stop(async_log_);
+    thread_mgr_->stop(LOG);
 
     L = llib::delete_state(L);
 
@@ -92,10 +92,11 @@ void StaticGlobal::uninitialize()
     delete buffer_chunk_pool_;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效
-    async_log_->AsyncLog::stop();
+    LOG->AsyncLog::stop();
     delete thread_mgr_;
-    delete async_log_;
+    delete LOG;
     delete ev_;
+    delete M;
 
     PbcCodec::uninitialize();
 }

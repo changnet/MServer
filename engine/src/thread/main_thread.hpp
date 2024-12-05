@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ev/timer.hpp"
+#include "thread_cv.hpp"
 #include "thread_message.hpp"
 
 struct lua_State;
@@ -12,8 +13,8 @@ public:
     MainThread();
     ~MainThread();
 
-    // 进入主循环，除非停服否则不返回
-    void routinue();
+    // 初始化主线程并进入主循环
+    void start(int32_t argc, char **argv);
 
     /**
      * 获取实时uitc时间
@@ -53,8 +54,11 @@ public:
     }
 
 private:
+    // 进入主循环，除非停服否则不返回
+    void routinue();
     void time_update();
     void dispatch_message();
+    bool init_entry(int32_t argc, char **argv);
 
 private:
     int64_t steady_clock_;             // 起服到现在的毫秒

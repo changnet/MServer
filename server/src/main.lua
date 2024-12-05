@@ -1,7 +1,8 @@
 -- main.lua
 -- 2018-04-04
 -- xzc
--- 进程入口文件(引文件不可热更)
+-- 进程入口文件(此文件不可热更)
+
 -- 设置lua文件搜索路径
 package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
 -- 设置c库搜索路径，用于直接加载so或者dll的lua模块

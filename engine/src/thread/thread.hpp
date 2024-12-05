@@ -28,7 +28,7 @@ public:
     explicit Thread(const std::string &name);
 
     /// 设置线程名字
-    void set_thread_name(const std::string &name) { name_ = name; }
+    void set_thread_name(const std::string &&name) { name_ = name; }
     /// 获取线程名字
     inline const std::string &get_thread_name() const { return name_; }
     // 应用线程名字到底层

@@ -33,10 +33,6 @@ public:
     {
         return ev_;
     }
-    static class LLog *async_logger()
-    {
-        return async_log_;
-    }
     static class ThreadMgr *thread_mgr()
     {
         return thread_mgr_;
@@ -51,6 +47,7 @@ public:
 
     inline static lua_State *L  = nullptr; // Lua的虚拟机指针
     inline static MainThread *M = nullptr; // 主线程
+    inline static LLog *LOG     = nullptr; // 日志
     inline static bool T        = false; // 当前是否处于关服状态(term)
 
 private:
@@ -63,7 +60,6 @@ private:
 
 private:
     static class LEV *ev_;
-    static class LLog *async_log_;
     static class ThreadMgr *thread_mgr_;
     static Buffer::ChunkPool *buffer_chunk_pool_;
 

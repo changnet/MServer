@@ -51,11 +51,12 @@ bool WorkerThread::uninitialize()
 void WorkerThread::routine_once(int32_t ev)
 {
     int32_t count = 0;
-    while (ThreadMessage *m = message_.pop())
+    while (true)
     {
         try
         {
-            lcpp::call(L_, "on_worker_message", m->addr_, m->udata_);
+            ThreadMessage m = message_.pop();
+            lcpp::call(L_, "on_worker_message", m.addr_, (void *)&m);
         }
         catch (const std::runtime_error& e)
         {

@@ -147,7 +147,7 @@ int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
     assert(repeat >= 0);
 
     // 如果不支持try_emplace，使用std::forward_as_tuple实现
-    auto p = ht.hash_.try_emplace(id, id, this);
+    auto p = ht.hash_.try_emplace(id);
     if (!p.second) return -1;
 
     Timer *timer = &(p.first->second);

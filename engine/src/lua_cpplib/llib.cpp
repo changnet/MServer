@@ -66,9 +66,12 @@ const char *__dbg_traceback()
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static void luaopen_ev(lua_State *L)
+static void luaopen_main_thread(lua_State *L)
 {
-    lcpp::Class<LEV> lc(L, "engine.Ev");
+    lcpp::Class<MainThread> lc(L, "engine.MainThread");
+    lc.def<&MainThread::steady_clock>("steady_clock");
+    lc.def<&MainThread::system_clock>("system_clock");
+    /*
     lc.def<&LEV::now>("time");
     lc.def<&LEV::quit>("exit");
     lc.def<&LEV::signal>("signal");
@@ -84,6 +87,7 @@ static void luaopen_ev(lua_State *L)
     lc.def<&LEV::periodic_stop>("periodic_stop");
     lc.def<&LEV::periodic_start>("periodic_start");
     lc.def<&LEV::set_critical_time>("set_critical_time");
+    */
 }
 
 static void luaopen_tls(lua_State *L)
@@ -295,6 +299,9 @@ void open_env(lua_State *L)
     // 在脚本中，设置LINUX、WINDOWS等系统名为true
     SET_ENV_BOOL(__OS_NAME__);
 #undef SET_ENV_BOOL
+
+    lcpp::Class<LLog>::push(L, StaticGlobal::LOG, false);
+    lua_setglobal(L, "g_async_log");
 }
 
 void open_cpp(lua_State *L)
@@ -308,7 +315,7 @@ void open_cpp(lua_State *L)
 
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-    luaopen_ev(L);
+    luaopen_main_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);
     luaopen_lua_codec(L);

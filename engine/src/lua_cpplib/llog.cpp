@@ -165,7 +165,7 @@ int32_t LLog::plog(lua_State *L)
     if (used <= 0) return 0;
 
     // TODO 这里能不能优化下，直接使用logger那边的buff，省去一次memcpy
-    StaticGlobal::async_logger()->append(get_printf_path(), LT_LPRINTF,
+    StaticGlobal::LOG->append(get_printf_path(), LT_LPRINTF,
                                          StaticGlobal::ev()->now(), buff, used);
 
     return 0;
@@ -176,7 +176,7 @@ int32_t LLog::eprint(lua_State *L)
     size_t len      = 0;
     const char *ctx = luaL_checklstring(L, 2, &len);
 
-    StaticGlobal::async_logger()->append(get_error_path(), LT_LERROR,
+    StaticGlobal::LOG->append(get_error_path(), LT_LERROR,
                                          StaticGlobal::ev()->now(), ctx, len);
 
     return 0;

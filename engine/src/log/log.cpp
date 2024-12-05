@@ -117,6 +117,6 @@ void __sync_log(const char *path, FILE *stream, const char *prefix,
 void __async_log(const char *path, LogType type, const char *fmt, ...)
 {
     FORMAT();
-    StaticGlobal::async_logger()->append(path, type, StaticGlobal::ev()->now(),
+    StaticGlobal::LOG->append(path, type, StaticGlobal::ev()->now(),
                                          buffer, buffer_len);
 }

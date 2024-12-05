@@ -1,5 +1,6 @@
 #include "main_thread.hpp"
 #include "lua_cpplib/llib.hpp"
+#include "lua_cpplib/lcpp.hpp"
 #include "system/static_global.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)
@@ -7,11 +8,12 @@
 
 MainThread::MainThread()
 {
-    L_ = nullptr;
-
+    L_               = nullptr;
     clock_diff_      = 0;
     last_utc_update_ = INT_MIN;
-    time_update();
+    steady_clock_    = 0;
+    utc_ms_          = 0;
+    utc_sec_         = 0;
 }
 
 MainThread::~MainThread()
@@ -21,8 +23,8 @@ MainThread::~MainThread()
 
 void MainThread::routinue()
 {
-    static const int64_t min_wait = 1;     // ×îĞ¡µÈ´ıÊ±¼ä£¬ºÁÃë
-    static const int64_t max_wait = 60000; // ×î´óµÈ´ıÊ±¼ä£¬ºÁÃë
+    static const int64_t min_wait = 1;     // æœ€å°ç­‰å¾…æ—¶é—´ï¼Œæ¯«ç§’
+    static const int64_t max_wait = 60000; // æœ€å¤§ç­‰å¾…æ—¶é—´ï¼Œæ¯«ç§’
 
     while (likely(!StaticGlobal::T))
     {
@@ -32,7 +34,7 @@ void MainThread::routinue()
         if (-1 == wait_time) wait_time = max_wait;
         if (unlikely(wait_time < min_wait)) wait_time = min_wait;
 
-        // µÈ´ıÆäËûÏß³ÌµÄÊı¾İ
+        // ç­‰å¾…å…¶ä»–çº¿ç¨‹çš„æ•°æ®
         tcv_.wait_for(wait_time);
 
         time_update();
@@ -49,28 +51,28 @@ void MainThread::time_update()
     steady_clock_ = steady_clock();
 
     /**
-     * Ö±½Ó¼ÆËã³öUTCÊ±¼ä¶ø²»Í¨¹ıget_time»ñÈ¡
-     * ÀıÈçÖ÷Ñ­»·Îª5msÊ±£¬0.5sÍ¬²½Ò»´ÎÊ¡ÏÂÁË100´ÎÏµÍ³µ÷ÓÃ(get_timeÊÇÒ»¸ösyscall£¬±È½ÏÂı)
-     * libeventÊÇ5ÃëÍ¬²½Ò»´ÎCLOCK_SYNC_INTERVAL£¬libevÊÇ0.5Ãë
+     * ç›´æ¥è®¡ç®—å‡ºUTCæ—¶é—´è€Œä¸é€šè¿‡get_timeè·å–
+     * ä¾‹å¦‚ä¸»å¾ªç¯ä¸º5msæ—¶ï¼Œ0.5såŒæ­¥ä¸€æ¬¡çœä¸‹äº†100æ¬¡ç³»ç»Ÿè°ƒç”¨(get_timeæ˜¯ä¸€ä¸ªsyscallï¼Œæ¯”è¾ƒæ…¢)
+     * libeventæ˜¯5ç§’åŒæ­¥ä¸€æ¬¡CLOCK_SYNC_INTERVALï¼Œlibevæ˜¯0.5ç§’
      */
     if (steady_clock_ - last_utc_update_ < MIN_TIMEJUMP / 2)
     {
         utc_ms_ = clock_diff_ + steady_clock_;
-        utc_sec_ = utc_ms_ / 1000; // ×ª»»ÎªÃë
+        utc_sec_ = utc_ms_ / 1000; // è½¬æ¢ä¸ºç§’
         return;
     }
 
     last_utc_update_ = steady_clock_;
     utc_ms_                   = system_clock();
-    utc_sec_                  = utc_ms_ / 1000; // ×ª»»ÎªÃë
+    utc_sec_                  = utc_ms_ / 1000; // è½¬æ¢ä¸ºç§’
 
     /**
-     * µ±Á½´ÎdiffÏà²î±È½Ï´óÊ±£¬ËµÃ÷ÓĞÈËµ÷ÁËUTCÊ±¼ä
-     * ÓÉÓÚ»ñÈ¡Ê±¼ä(clock_gettimeµÈº¯Êı£©ÊÇÒ»¸ösyscall£¬ÓĞÓÅ»¯¼¶µ÷ÓÃ£¬¿ÉÄÜ³öÏÖÇ°Ò»¸ö
-     * clock»ñÈ¡µ½µÄÊ±¼äÎªµ÷ÕûÇ°£¬ºóÒ»¸öclockÎªµ÷ÕûºóµÄÇé¿ö
-     * ±ØĞëÑ­»·¼¸´Î±£Ö¤È¡µ½µÄ¶¼ÊÇµ÷ÕûºóµÄÊ±¼ä
+     * å½“ä¸¤æ¬¡diffç›¸å·®æ¯”è¾ƒå¤§æ—¶ï¼Œè¯´æ˜æœ‰äººè°ƒäº†UTCæ—¶é—´
+     * ç”±äºè·å–æ—¶é—´(clock_gettimeç­‰å‡½æ•°ï¼‰æ˜¯ä¸€ä¸ªsyscallï¼Œæœ‰ä¼˜åŒ–çº§è°ƒç”¨ï¼Œå¯èƒ½å‡ºç°å‰ä¸€ä¸ª
+     * clockè·å–åˆ°çš„æ—¶é—´ä¸ºè°ƒæ•´å‰ï¼Œåä¸€ä¸ªclockä¸ºè°ƒæ•´åçš„æƒ…å†µ
+     * å¿…é¡»å¾ªç¯å‡ æ¬¡ä¿è¯å–åˆ°çš„éƒ½æ˜¯è°ƒæ•´åçš„æ—¶é—´
      *
-     * ²Î¿¼libev
+     * å‚è€ƒlibev
      * loop a few times, before making important decisions.
      * on the choice of "4": one iteration isn't enough,
      * in case we get preempted during the calls to
@@ -91,7 +93,7 @@ void MainThread::time_update()
         }
 
         utc_ms_     = system_clock();
-        utc_sec_ = utc_ms_ / 1000; // ×ª»»ÎªÃë
+        utc_sec_ = utc_ms_ / 1000; // è½¬æ¢ä¸ºç§’
 
         steady_clock_             = steady_clock();
         last_utc_update_ = steady_clock_;
@@ -106,6 +108,49 @@ void MainThread::dispatch_message()
     }
     catch (const std::out_of_range& e)
     {
+        UNUSED(e);
         return;
     }
+}
+
+bool MainThread::init_entry(int32_t argc, char **argv)
+{
+    /* åŠ è½½ç¨‹åºå…¥å£è„šæœ¬ */
+    if (LUA_OK != luaL_loadfile(L_, LUA_ENTERANCE))
+    {
+        const char *err_msg = lua_tostring(L_, -1);
+        ELOG_R("load lua enterance file error:%s", err_msg);
+
+        return false;
+    }
+
+    lua_checkstack(L_, argc);
+
+    /* push argv to lua */
+    for (int i = 0; i < argc; i++)
+    {
+        lua_pushstring(L_, argv[i]);
+    }
+
+    if (LUA_OK != lua_pcall(L_, argc, 0, 0))
+    {
+        const char *err_msg = lua_tostring(L_, -1);
+        ELOG("call lua enterance file error:%s", err_msg);
+
+        return false;
+    }
+
+    return true;
+}
+
+void MainThread::start(int32_t argc, char **argv)
+{
+    L_ = llib::new_state();
+
+    time_update();
+    init_entry(argc, argv);
+
+    routinue();
+
+    L_ = llib::delete_state(L_);
 }
