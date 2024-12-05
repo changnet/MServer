@@ -59,6 +59,7 @@ void StaticGlobal::initialize()
      */
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
+    E           = new class Env();
     thread_mgr_ = new class ThreadMgr();
     LOG  = new class LLog("Engine.AsyncLog");
     M           = new class MainThread();
@@ -97,6 +98,7 @@ void StaticGlobal::uninitialize()
     delete LOG;
     delete ev_;
     delete M;
+    delete E;
 
     PbcCodec::uninitialize();
 }

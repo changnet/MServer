@@ -66,6 +66,13 @@ const char *__dbg_traceback()
 
 ////////////////////////////////////////////////////////////////////////////////
 
+static void luaopen_env(lua_State* L)
+{
+    lcpp::Class<Env> lc(L, "engine.Env");
+    lc.def<&Env::get>("get");
+    lc.def<&Env::set>("set");
+}
+
 static void luaopen_main_thread(lua_State *L)
 {
     lcpp::Class<MainThread> lc(L, "engine.MainThread");
@@ -268,30 +275,6 @@ namespace llib
 {
 void open_env(lua_State *L)
 {
-    // export env variable
-#define SET_ENV_MACRO(v)  \
-    lua_pushstring(L, v); \
-    lua_setglobal(L, #v)
-
-    SET_ENV_MACRO(__OS_NAME__);
-    SET_ENV_MACRO(__COMPLIER_);
-    SET_ENV_MACRO(__BACKEND__);
-    SET_ENV_MACRO(__TIMESTAMP__);
-
-#undef SET_ENV_MACRO
-
-#define SET_ENV_STR(v)    \
-    lua_pushstring(L, v); \
-    lua_setglobal(L, v)
-
-#ifdef IP_V4
-    SET_ENV_STR("IPV4");
-#else
-    SET_ENV_STR("IPV6");
-#endif
-
-#undef SET_ENV_STR
-
 #define SET_ENV_BOOL(v)    \
     lua_pushboolean(L, 1); \
     lua_setglobal(L, v)
@@ -302,6 +285,12 @@ void open_env(lua_State *L)
 
     lcpp::Class<LLog>::push(L, StaticGlobal::LOG, false);
     lua_setglobal(L, "g_async_log");
+
+    lcpp::Class<MainThread>::push(L, StaticGlobal::M, false);
+    lua_setglobal(L, "g_engine");
+
+    lcpp::Class<Env>::push(L, StaticGlobal::E, false);
+    lua_setglobal(L, "g_env");
 }
 
 void open_cpp(lua_State *L)
@@ -315,6 +304,7 @@ void open_cpp(lua_State *L)
 
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+    luaopen_env(L);
     luaopen_main_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);
@@ -337,8 +327,8 @@ void open_cpp(lua_State *L)
 void open_libs(lua_State *L)
 {
     luaL_openlibs(L);
-    open_env(L);
     open_cpp(L);
+    open_env(L); // env的变量需要C++的类型，因此需要先open_cpp
 }
 
 lua_State *new_state()

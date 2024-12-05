@@ -4,10 +4,12 @@
 #if defined(__linux__)
     #define __OS_NAME__ "LINUX"
     #define __epoll__
+    #define __BACKEND__ "epoll"
 #elif defined(_WIN32) || defined(_WIN64)
     #define __windows__
     #define __OS_NAME__ "WINDOWS"
     #define __poll__
+    #define __BACKEND__ "WSAPoll"
 
     // 排除windows.h一些不常用的头文件，一些头文件甚至会引起冲突
     // 例如windows.h默认引用Winsock.h而不是Winsock2.h

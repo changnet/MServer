@@ -82,12 +82,12 @@ end
 local function log_app_info(args)
     print("#####################################################")
     printf("## starting %s", table.concat(args, " "))
-    printf("## OS: %s", __OS_NAME__)
+    printf("## OS: %s", g_env:get("__OS_NAME__"))
     printf("## %s", _VERSION)
-    printf("## backend: %s", __BACKEND__)
-    printf("## complier: %s", __COMPLIER_)
-    printf("## build time: %s", __TIMESTAMP__)
-    printf("## NET: %s", IPV4 or IPV6)
+    printf("## backend: %s", g_env:get("__BACKEND__"))
+    printf("## complier: %s", g_env:get("__COMPLIER_"))
+    printf("## build time: %s", g_env:get("__TIMESTAMP__"))
+    printf("## NET: %s", g_env:get("IPV4") or g_env:get("IPV6"))
     printf("## cwd: %s", g_app.cwd)
     print("#####################################################")
     print(buddha)
@@ -98,17 +98,13 @@ local function main(cmd, ...)
     local args = {...}
 
     local opts = get_opt(args)
-    math.randomseed(ev:time())
+    math.randomseed(os.time())
 
     util.mkdir_p("log") -- 创建日志目录
     util.mkdir_p("runtime") -- 创建运行时数据存储目录
     util.mkdir_p("runtime/rank") -- 创建运行时排行榜数据存储目录
 
     local name = assert(opts.app, "missing argument --app")
-
-    ev:set_app_ev(250)
-    -- 设置主循环临界时间，目前只用来输出日志,检测卡主循环
-    ev:set_critical_time(1000)
 
     -- 设置错误日志、打印日志
     -- 如果你的服务器是分布式的，包含多个进程，则注意名字要区分开来
@@ -142,10 +138,7 @@ local function main(cmd, ...)
 
     log_app_info(args)
 
-    require(string.format("application.%s_app", name))
-
-    require "application.app"
-    App.exec()
+    require(string.format("process.p_%s", name))
 end
 
 -- 由于日志线程未启动，不能直接使用__G__TRACKBACK

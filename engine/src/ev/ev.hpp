@@ -10,7 +10,6 @@
 
 class EVBackend;
 using HeapNode = EVTimer *;
-extern const char *__BACKEND__;
 
 // event loop，socket、定时器事件循环
 class EV

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "env.hpp"
 #include "lua_cpplib/llog.hpp"
 #include "lua_cpplib/lev.hpp"
 #include "thread/thread_mgr.hpp"
@@ -48,6 +49,7 @@ public:
     inline static lua_State *L  = nullptr; // Lua的虚拟机指针
     inline static MainThread *M = nullptr; // 主线程
     inline static LLog *LOG     = nullptr; // 日志
+    inline static Env *E        = nullptr; // 环境变量
     inline static bool T        = false; // 当前是否处于关服状态(term)
 
 private:

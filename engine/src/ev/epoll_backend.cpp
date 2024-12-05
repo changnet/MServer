@@ -18,8 +18,6 @@
 #include <unistd.h> /* POSIX api, like close */
 #include <sys/eventfd.h> // for eventfd
 
-const char *__BACKEND__ = "epoll";
-
 EpollBackend::EpollBackend()
 {
     ep_fd_   = -1;

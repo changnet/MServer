@@ -4,12 +4,6 @@
 #include "net/socketpair.hpp"
 #include "net/net_compat.hpp"
 
-#ifdef __windows__
-    const char *__BACKEND__ = "WSAPoll";
-#else
-    const char *__BACKEND__ = "poll";
-#endif
-
 PollBackend::PollBackend() : fd_index_(HUGE_FD + 1, -1)
 {
     wake_fd_[0] = wake_fd_[1] = -1;
