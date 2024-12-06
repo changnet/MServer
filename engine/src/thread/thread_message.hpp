@@ -9,7 +9,8 @@ struct ThreadMessage
 {
     enum
     {
-        TIMER = 1, // 定时器
+        TIMER  = 1, // 定时器
+        SIGNAL = 2, // 信号
     };
 
     union UserData

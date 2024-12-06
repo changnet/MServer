@@ -8,8 +8,8 @@
  * 设置自定义环境变量
  * 
  * cstdlib里，有setenv、getenv等一套环境变量的接口：https://man7.org/linux/man-pages/man3/setenv.3.html
- * 对应的lua接口是os.getenv
- * 但这个不是线程安全的，并且不同系统的环境变量总大小是有限制的（虽然应该也不可能用完）
+ * 对应的lua接口是os.getenv，但没有os.setenv，而且不是线程安全的
+ * 不同系统的环境变量总大小是有限制的（虽然应该也不可能用完）
  * 
  * 不过既然线程不安全，干脆自己用一个map来实现了
  */

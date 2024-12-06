@@ -34,17 +34,6 @@ public:
     // 应用线程名字到底层
     static void apply_thread_name(const char *name);
 
-    /// 注册信号处理
-    static void signal(int32_t sig, int32_t action);
-    /// 获取信号掩码并重置原有信号掩码
-    static int32_t signal_mask_once()
-    {
-        int32_t sig_mask = sig_mask_;
-
-        sig_mask_ = 0;
-        return sig_mask;
-    }
-
     /// 停止线程
     void stop();
     /**
@@ -80,8 +69,6 @@ public:
     // 主线程逻辑
     virtual void main_routine(int32_t ev) {}
 
-    static void signal_block();
-
 protected:
     /// 标记状态
     void mark(int32_t status) { status_ |= status; }
@@ -108,7 +95,6 @@ protected:
 
 private:
     void spawn(int32_t us);
-    static void sig_handler(int32_t signum);
 
 protected:
     int32_t id_;                  /// 线程自定义id
@@ -120,7 +106,4 @@ protected:
     std::mutex mutex_; // 线程和主线程数据交互用的锁
     /// 用一个flag来表示线程是否有数据需要处理，比加锁再去判断队列是否为空高效得多
     std::atomic<int32_t> main_ev_;
-
-    /// 各线程收到的信号统一存这里，由主线程处理
-    static std::atomic<int32_t> sig_mask_;
 };
