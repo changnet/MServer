@@ -137,6 +137,7 @@ bool MainThread::init_entry(int32_t argc, char **argv)
         const char *err_msg = lua_tostring(L_, -1);
         ELOG("call lua enterance file error:%s", err_msg);
 
+        lua_pop(L_, 1); // pop error message
         return false;
     }
 
@@ -148,7 +149,11 @@ void MainThread::start(int32_t argc, char **argv)
     L_ = llib::new_state();
 
     time_update();
-    init_entry(argc, argv);
+    if (!init_entry(argc, argv))
+    {
+        L_ = llib::delete_state(L_);
+        return;
+    }
 
     routinue();
 

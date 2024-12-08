@@ -47,6 +47,7 @@ local buddha = [[
 __print = print
 -- __error = error
 __assert = assert
+__require = require
 
 --//////////////////////////////////////////////////////////////////////////////
 
@@ -91,7 +92,6 @@ local function log_app_info(args)
     printf("## cwd: %s", g_app.cwd)
     print("#####################################################")
     print(buddha)
-    buddha = nil -- 出错时打印堆栈信息避免打印出这个超长的信息
 end
 
 local function main(cmd, ...)
@@ -138,17 +138,11 @@ local function main(cmd, ...)
 
     log_app_info(args)
 
-    require(string.format("process.p_%s", name))
+    __require(string.format("process.p_%s", name))
 end
 
 -- 由于日志线程未启动，不能直接使用__G__TRACKBACK
-local function __traceback(msg, co)
-    local stack_trace = debug.traceback(co)
-    local info_table = {tostring(msg), "\n", stack_trace}
-
-    -- 先直接在stdout打印，再打印到文件
-    __print(table.concat(info_table))
-    print(table.concat(info_table))
+local ok, msg = xpcall(main, __G_C_TRACKBACK, ...)
+if not ok then
+    error(msg)
 end
-
-xpcall(main, __traceback, ...)

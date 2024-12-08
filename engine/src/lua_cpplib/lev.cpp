@@ -57,7 +57,7 @@ int32_t LEV::signal(int32_t sig, int32_t action)
         return luaL_error(StaticGlobal::L, "illegal signal id:%d", sig);
     }
 
-    Thread::signal(sig, action);
+    //Thread::signal(sig, action);
 
     return 0;
 }
@@ -90,7 +90,7 @@ void LEV::invoke_signal()
 
     int signum       = 0;
     int32_t top      = lua_gettop(L);
-    int32_t sig_mask = Thread::signal_mask_once();
+    int32_t sig_mask = 0; // Thread::signal_mask_once();
     while (sig_mask != 0)
     {
         if (sig_mask & 1)

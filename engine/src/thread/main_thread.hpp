@@ -53,6 +53,15 @@ public:
             .count();
     }
 
+    /**
+     * @brief 往主线程消息队列push一个消息并唤醒主线程
+     */
+    void push_message(int32_t type, int32_t addr, int32_t v1, int32_t v2)
+    {
+        message_.emplace(type, addr, v1, v2);
+        tcv_.notify_one(1);
+    }
+
 private:
     // 进入主循环，除非停服否则不返回
     void routinue();

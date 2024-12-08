@@ -19,6 +19,7 @@
 #include "net/codec/lua_codec.hpp"
 #include "net/codec/pbc_codec.hpp"
 #include "system/static_global.hpp"
+#include "system/signal.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -65,6 +66,13 @@ const char *__dbg_traceback()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+// 全局函数放这里
+static void luaopen_global(lua_State *L)
+{
+    lcpp::reg_global_func<&signal_mask>(L, "signal_mask");
+    lcpp::reg_global_func<&signal_mask_once>(L, "signal_mask_once");
+}
 
 static void luaopen_env(lua_State* L)
 {
@@ -305,6 +313,7 @@ void open_cpp(lua_State *L)
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_env(L);
+    luaopen_global(L);
     luaopen_main_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);

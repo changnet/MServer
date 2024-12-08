@@ -138,7 +138,6 @@ target_link_libraries(master PRIVATE
     llhttp
     lua_parson
     lua_rapidxml
-    lua_flatbuffers
     websocket_parser
 )
 

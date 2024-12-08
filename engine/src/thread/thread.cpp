@@ -5,8 +5,6 @@
 #include <sys/prctl.h> // for prctl
 #endif
 
-std::atomic<int32_t> Thread::sig_mask_(0);
-
 Thread::Thread(const std::string &name)
 {
     // 用于产生自定义线程id

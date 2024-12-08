@@ -5,13 +5,11 @@
 #include "global/platform.hpp"
 
 /// 各线程收到的信号统一存这里，由主线程处理
-static std::atomic<int32_t> sig_mask;
+static std::atomic<int32_t> sig_mask(0);
 
 int32_t signal_mask_once()
 {
-    int32_t mask = sig_mask.exchange(0);
-
-    return mask;
+    return sig_mask.exchange(0);
 }
 
 static void sig_handler(int32_t signum)
@@ -24,31 +22,33 @@ static void sig_handler(int32_t signum)
     // 这意味这这函数里不能使用mutex之类的锁，不然第一个信号加锁后，第二个信号把
     // 第一个信号挂起加锁，就会形成死锁
 
-    // std::atomic在lock_free的情况下是async-signal-safe，x86架构一般都是lock_free
+    // std::atomic<int>在lock_free的情况下是async-signal-safe，x86架构一般都是lock_free
+    // std::sig_atomic_t是能保证信号安全，但它不是线程安全
 
-    // signal.h #define _NSIG            64
-    // 但一般只处理前31个
-    if (signum > 31) return;
 
-    int32_t old = sig_mask;
-    sig_mask |= (1 << signum);
-
-    // C++的condition_variable不是async-signal-safe的，因此这里可能有点问题
-    // 解决方案是不使用signal_handler，而是所有线程都屏蔽信号
-    //      使用一个独立的线程调用sigwait，这样该线程就是一个普通的线程，可以
-    //      安全使用condition_variable唤醒主线程，但这个比较复杂且win下不好实现
+    // C++的condition_variable以及mutex都不是async-signal-safe的，因此这里调用加锁的函数唤醒另一个线程是可能会导致死锁的
+    // https://www.man7.org/linux/man-pages/man7/signal-safety.7.html
+    // 
+    // 一个解决方案是线程使用pipe、socket、eventfd等async-signal-safe的机制来阻塞，这样wirte一个数据去唤醒线程是安全的。但这个不好跨平台
+    // 
+    // 另一个解决方案所有线程都屏蔽信号，然后创建一个独立的线程调用sigwait，这样该线程就是一个普通的线程，
+    // 可以安全使用condition_variable唤醒主线程，但这个比较复杂且win下不好实现
     //      参考：https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
     //
-    // 这方案太复杂
-    // 这里暂时用sig_mask判断一下，如果不为0说明已经唤醒过了，不需要再次唤醒
-    // 当然这个不是很准，可能设置完sig_mask的值另一线程重新进入睡眠了
-    // 由于这里信号使用很少，未生效可以多次发
-    if (old) return;
+    // 但这些方案都太复杂
+    // 
+    // 用sig_mask判断一下，如果不为0说明已经唤醒过了，不需要再次唤醒，就不需要加锁，避免死锁
+    // 当然这个不是很准，可能设置完sig_mask的值另一线程刚好处理完旧信号重新进入睡眠了，导致信号丢失
+    // 考虑到信号是一个使用频率很低的功能，并且基本不影响业务逻辑，这里只要不死锁即可
 
-    StaticGlobal::ev()->wake();
+    // signal.h #define _NSIG            64 但一般只处理前31个
+    if (signum > 31) return;
+    if (sig_mask.fetch_or(signum)) return;
+
+    StaticGlobal::M->push_message(ThreadMessage::SIGNAL, 0, 0, 0);
 }
 
-void signal(int32_t sig, int32_t action)
+void signal_mask(int32_t sig, int32_t mask)
 {
     /**
      * https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/signal?view=msvc-160
@@ -76,11 +76,11 @@ void signal(int32_t sig, int32_t action)
      * node.js(libuv)的处理方式：https://github.com/libuv/libuv/blob/master/src/win/signal.c
      */
     /* check /usr/include/bits/signum.h for more */
-    if (0 == action)
+    if (0 == mask)
     {
         ::signal(sig, SIG_DFL);
     }
-    else if (1 == action)
+    else if (1 == mask)
     {
         ::signal(sig, SIG_IGN);
     }

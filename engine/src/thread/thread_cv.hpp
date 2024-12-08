@@ -58,7 +58,7 @@ int main(){
 ```
 上面的用法有几个要点
 1. ready的设置和读取必须要加锁，即使ready本身为atomic也需要加锁。这是因为要保证
-ready和wait这个操作为线程安全的。如果不加锁，rady和wait会被分为两部分
+ready和wait这个操作为线程安全的。如果不加锁，即使ready为atomic，判断ready是否为true和wait这操作会被分为两部分
 ```cpp
 if (!ready) // 假如ready是atomic，这里读取没问题
 {
