@@ -54,10 +54,10 @@ __require = require
 require "global.oo" -- 这个文件不能热更
 require "global.require" -- 需要热更的文件，必须放在这后面
 
-require "global.global" -- 这个要放require后面，它是可以热更的
-
--- 当前进程application对象
-g_app = {}
+-- 放require后面，是可以热更的
+require "global.global"
+require "engine.engine"
+require "modules.system.define"
 
 -- 简单模拟c的getopt函数，把参数读出来，按table返回
 local function get_opt(args)
@@ -89,7 +89,7 @@ local function log_app_info(args)
     printf("## complier: %s", g_env:get("__COMPLIER_"))
     printf("## build time: %s", g_env:get("__TIMESTAMP__"))
     printf("## NET: %s", g_env:get("IPV4") or g_env:get("IPV6"))
-    printf("## cwd: %s", g_app.cwd)
+    printf("## cwd: %s", g_env:get("cwd"))
     print("#####################################################")
     print(buddha)
 end
@@ -131,10 +131,12 @@ local function main(cmd, ...)
         os.execute("title " .. table.concat(args, " "))
     end
 
-    g_app.cwd = util.getcwd() -- current working directory
-    g_app.srv_dir = string.match(g_app.cwd, "(.*)[/\\]") -- server directory
-    g_app.cmd = cmd
-    g_app.opts = opts
+    local cwd = util.getcwd()
+    g_env:set("cwd", cwd) -- current working directory
+    g_env:set("srv_dir", string.match(cwd, "(.*)[/\\]")) -- server directory
+    for k, v in pairs(opts) do
+        g_env:set(k, v)
+    end
 
     log_app_info(args)
 

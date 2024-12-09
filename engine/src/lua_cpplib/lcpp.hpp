@@ -852,6 +852,54 @@ Ret call(lua_State *L, const char *name, Args... args)
     return v;
 }
 
+// 创建一个模块（本质是一个全局table），与module_end配套使用
+inline void module_begin(lua_State* L, const char* name)
+{
+    int t = lua_getglobal(L, name);
+    if (LUA_TTABLE == t) return;
+
+    // 其他的，无论是啥，直接覆盖
+    lua_pop(L, 1);
+
+    lua_newtable(L);
+
+    // set loaded, for require "xxx"
+    lua_getfield(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
+    lua_pushvalue(L, -2);
+    lua_setfield(L, -2, name);
+    lua_pop(L, 1); // pop loaded table
+
+    // put module global
+    lua_pushvalue(L, -1);
+    lua_setglobal(L, name);
+}
+
+// 给当前模块定义一个函数，与module_begin配套使用
+template <auto fp,
+          typename = std::enable_if_t<!std::is_same_v<decltype(fp), lua_CFunction>>>
+void module_function(lua_State *L, const char *name)
+{
+    assert(lua_istable(L, -1));
+
+    lua_pushcfunction(L, Register<decltype(fp)>::template reg<fp>);
+    lua_setfield(L, -2, name);
+}
+
+template <lua_CFunction fp> void module_function(lua_State *L, const char *name)
+{
+    assert(lua_istable(L, -1));
+
+    lua_pushcfunction(L, fp>);
+    lua_setfield(L, -2, name);
+}
+
+// 结束一个模块，必须与module_begin配套使用
+inline void module_end(lua_State* L)
+{
+    assert(lua_istable(L, -1));
+    lua_pop(L, 1);
+}
+
 #undef luaL_checkis
 } // namespace lcpp
 template <class T> const char *lcpp::Class<T>::class_name_ = nullptr;

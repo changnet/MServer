@@ -2,19 +2,15 @@
 -- 2017-03-28
 -- xzc
 
--- 这个文件采用特殊的加载方式，热更时会重新赋值，只能在这里定义常量
+-- 进程id定义
+PROCESS_TEST    = 1 -- 单元测试
+PROCESS_GATEWAY = 2 -- 网关
+PROCESS_GAME    = 3 -- 游戏逻辑
+PROCESS_DATA    = 4 -- 数据读写
+PROCESS_CROSS   = 5 -- 跨服
+PROCESS_CENTER  = 6 -- 中心服
 
--- 服务器类型定义
-APP = {}
-DEFINE_BEG(APP)
-GATEWAY = 0x1 -- 网关
-WORLD   = 0x2 -- 世界服
-AREA    = 0x3 -- 场景区域服务器
-DATA    = 0x4 -- 数据服(负责数据落地、缓存)
-CENTER  = 0x5 -- 中心服
-ANDROID = 0x6 -- 机器人，用于模拟玩家
-TEST    = 0x9 -- 执行测试用例
-DEFINE_END(APP)
+WORKER_TEST = 1 -- 单元测试
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"

@@ -1,12 +1,9 @@
--- auto export by lua-tags 167 symbols
+-- auto export by lua-tags 171 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
-"ANDROID", -- src/modules/system/define.lua
-"APP", -- src/modules/system/define.lua
 "APP_TYPE", -- src/application/app.lua
-"AREA", -- src/modules/system/define.lua
 "ASE", -- src/application/app.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
@@ -15,13 +12,11 @@ return {
 "App", -- src/application/app.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
-"CENTER", -- src/modules/system/define.lua
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cmd", -- src/network/cmd.lua
-"DATA", -- src/modules/system/define.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
@@ -30,12 +25,12 @@ return {
 "ET", -- src/modules/entity/entity_header.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
-"GATEWAY", -- src/modules/system/define.lua
 "GM", -- src/modules/system/gm.lua
 "GSE", -- src/application/app.lua
 "GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
+"LOCAL_ADDR", -- src/process/p_test.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/modules/log/log.lua
@@ -54,6 +49,13 @@ return {
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
+"PROCESS_CENTER", -- src/modules/system/define.lua
+"PROCESS_CROSS", -- src/modules/system/define.lua
+"PROCESS_DATA", -- src/modules/system/define.lua
+"PROCESS_GAME", -- src/modules/system/define.lua
+"PROCESS_GATEWAY", -- src/modules/system/define.lua
+"PROCESS_ID", -- src/process/p_test.lua
+"PROCESS_TEST", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
@@ -72,11 +74,12 @@ return {
 "SRV_KEY", -- src/modules/system/define.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
+"Signal", -- src/engine/signal.lua
 "SrvMgr", -- src/network/srv_mgr.lua
-"TEST", -- src/modules/system/define.lua
+"ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
-"WORLD", -- src/modules/system/define.lua
+"WORKER_TEST", -- src/modules/system/define.lua
 "WSE", -- src/application/app.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
@@ -86,6 +89,7 @@ return {
 "__fire_sys_ev", -- src/modules/event/system_event.lua
 "__global_storage", -- src/global/global.lua
 "__print", -- src/main.lua
+"__require", -- src/main.lua
 "__test", -- src/global/test.lua
 "__test_timeout", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
@@ -105,7 +109,6 @@ return {
 "func_thunk", -- src/global/name.lua
 "func_to_name", -- src/global/name.lua
 "g_ai_mgr", -- src/android/android_boot.lua
-"g_app", -- src/main.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
@@ -124,6 +127,7 @@ return {
 "graph", -- src/global/graph.lua
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
+"main_message_dispatch", -- src/message/thread_message.lua
 "make_name", -- src/global/name.lua
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua

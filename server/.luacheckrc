@@ -11,10 +11,10 @@ max_comment_line_length = 256 -- 注释行长
 -- 只读全局变量,一般是C++导出到Lua的对象
 read_globals =
 {
-    "ev",
-    "network_mgr",
+    "engine",
+    "g_engine",
     "g_async_log",
-    "__OS_NAME__",
+    "g_env",
     "__BACKEND__",
     "__COMPLIER_",
     "__VERSION__",
