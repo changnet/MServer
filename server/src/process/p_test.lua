@@ -3,9 +3,10 @@
 local WorkerThread = require "engine.WorkerThread"
 
 PROCESS_ID  = PROCESS_TEST
-g_env:set("process_id", PROCESS_ID)
-
 LOCAL_ADDR = Engine.make_address(PROCESS_ID, 0, 1)
+
+print("test process start, address", LOCAL_ADDR)
+g_env:set("process_id", PROCESS_ID)
 
 Signal.mask(2, Engine.exit)
 Signal.mask(15, Engine.exit)

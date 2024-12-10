@@ -8,7 +8,7 @@
 
 MainThread::MainThread()
 {
-    stop_            = false;
+    stop_            = true;
     L_               = nullptr;
     clock_diff_      = 0;
     last_utc_update_ = INT_MIN;
@@ -28,7 +28,7 @@ void MainThread::routinue()
     static const int64_t min_wait = 1;     // 最小等待时间，毫秒
     static const int64_t max_wait = 60000; // 最大等待时间，毫秒
 
-    while (likely(!StaticGlobal::T))
+    while (likely(!stop_))
     {
         time_update();
 
@@ -104,14 +104,19 @@ void MainThread::time_update()
 
 void MainThread::dispatch_message()
 {
-    try
+    while (true)
     {
-        ThreadMessage m = message_.pop();
-    }
-    catch (const std::out_of_range& e)
-    {
-        UNUSED(e);
-        return;
+        try
+        {
+            ThreadMessage m = message_.pop();
+            if (-1 == m.addr_) return;
+
+            lcpp::call(L_, "main_message_dispatch", m.addr_, m.type_, (void *)&m);
+        }
+        catch (const std::runtime_error &e)
+        {
+            ELOG("%s", e.what());
+        }
     }
 }
 
@@ -157,7 +162,14 @@ void MainThread::start(int32_t argc, char **argv)
         return;
     }
 
+    stop_ = false;
     routinue();
 
+    stop_ = true;
     L_ = llib::delete_state(L_);
+}
+
+void MainThread::stop()
+{
+    stop_ = true;
 }

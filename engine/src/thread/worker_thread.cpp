@@ -56,7 +56,7 @@ void WorkerThread::routine_once(int32_t ev)
         try
         {
             ThreadMessage m = message_.pop();
-            if (-1 == m.addr_) break;
+            if (-1 == m.addr_) return;
 
             lcpp::call(L_, "on_worker_message", m.addr_, (void *)&m);
         }

@@ -45,8 +45,20 @@ static void sig_handler(int32_t signum)
     if (signum > 31) return;
     if (sig_mask.fetch_or(1 << signum)) return;
 
-    StaticGlobal::M->push_message(ThreadMessage::SIGNAL, 0, 0, 0);
+    StaticGlobal::M->push_message(0, ThreadMessage::SIGNAL, 0, 0);
 }
+
+#ifdef __windows__
+BOOL WINAPI win_console_handler(DWORD event)
+{
+    // https://learn.microsoft.com/zh-cn/windows/console/setconsolectrlhandler
+    // https://learn.microsoft.com/zh-cn/windows/console/handlerroutine
+    // event 的值为CTRL_BREAK_EVENT CTRL_CLOSE_EVENT等，但这里没必要区分
+    sig_handler(SIGTERM);
+
+    return true;
+}
+#endif
 
 void signal_mask(int32_t sig, int32_t mask)
 {
@@ -86,22 +98,15 @@ void signal_mask(int32_t sig, int32_t mask)
     }
     else
     {
+#ifdef __windows__
+        if (sig == SIGTERM)
+        {
+            SetConsoleCtrlHandler((PHANDLER_ROUTINE)win_console_handler, TRUE);
+        }
+#endif
         ::signal(sig, sig_handler);
     }
 }
-
-#ifdef __windows__
-BOOL WINAPI win_console_handler(DWORD event)
-{
-    // https://learn.microsoft.com/zh-cn/windows/console/setconsolectrlhandler
-    // https://learn.microsoft.com/zh-cn/windows/console/handlerroutine
-    // event 的值为CTRL_BREAK_EVENT CTRL_CLOSE_EVENT等，但这里没必要区分
-    sig_handler(SIGTERM);
-
-    return true;
-}
-#endif
-
 
 void mask_comm_signal()
 {

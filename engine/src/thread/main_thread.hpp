@@ -16,10 +16,7 @@ public:
     // 初始化主线程并进入主循环
     void start(int32_t argc, char **argv);
     // 退出主循环
-    void stop()
-    {
-        stop_ = true;
-    }
+    void stop();
 
     /**
      * 获取实时uitc时间
@@ -61,9 +58,9 @@ public:
     /**
      * @brief 往主线程消息队列push一个消息并唤醒主线程
      */
-    void push_message(int32_t type, int32_t addr, int32_t v1, int32_t v2)
+    void push_message(int32_t addr, int32_t type, int32_t v1, int32_t v2)
     {
-        message_.emplace(type, addr, v1, v2);
+        message_.emplace(addr, type, v1, v2);
         tcv_.notify_one(1);
     }
 
