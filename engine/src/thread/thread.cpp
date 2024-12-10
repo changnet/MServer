@@ -7,22 +7,13 @@
 
 Thread::Thread(const std::string &name)
 {
-    // 用于产生自定义线程id
-    // std::thread::id不能保证为数字(linux下一般为pthread_t)，不方便传参
-    static int32_t id_seed_ = 0;
-
     name_   = name;
-    id_     = ++id_seed_;
-    status_ = S_NONE;
-
-    main_ev_ = 0;
-
-    set_wait_busy(true); // 默认关服时都是需要待所有任务处理才能结束
+    stop_   = true;
 }
 
 Thread::~Thread()
 {
-    assert(!active());
+    assert(stop_);
     assert(!thread_.joinable());
 }
 
@@ -90,32 +81,35 @@ bool Thread::start(int32_t ms)
     // 只能在主线程调用，threadmgr没加锁
     assert(std::this_thread::get_id() != thread_.get_id());
 
-    mark(S_RUN);
+    stop_   = false;
     thread_ = std::thread(&Thread::spawn, this, ms);
-
-    StaticGlobal::thread_mgr()->push(this);
 
     return true;
 }
 
-/* 终止线程 */
 void Thread::stop()
 {
-    PLOG("%s thread stop", name_.c_str());
-
     // 只能在主线程调用，thread_mgr没加锁
     assert(std::this_thread::get_id() != thread_.get_id());
-    if (!active())
+    if (stop_)
     {
         ELOG("thread::stop:thread not running");
         return;
     }
 
-    unmark(S_RUN);
-    wakeup(S_RUN);
-    thread_.join();
+    stop_ = true;
+    cv_.notify_one(1);
 
-    StaticGlobal::thread_mgr()->pop(id_);
+    thread_.join();
+}
+
+void Thread::routine(int32_t ms)
+{
+    while (likely(!stop_))
+    {
+        int32_t ev = cv_.wait_for(ms);
+        routine_once(ev);
+    }
 }
 
 void Thread::spawn(int32_t ms)
@@ -130,24 +124,11 @@ void Thread::spawn(int32_t ms)
         return;
     }
 
-    while (status_ & S_RUN)
-    {
-        int32_t ev = cv_.wait_for(ms);
-        mark(S_BUSY);
-        this->routine_once(ev);
-        unmark(S_BUSY);
-    }
+    routine(ms);
 
     if (!uninitialize()) /* 清理 */
     {
         ELOG("%s thread uninitialize fail", name_.c_str());
         return;
     }
-}
-
-void Thread::wakeup_main(int32_t status)
-{
-    main_ev_ |= status;
-
-    StaticGlobal::ev()->wake();
 }

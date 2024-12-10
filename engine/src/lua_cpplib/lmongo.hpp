@@ -1,5 +1,5 @@
 #pragma once
-
+#if 0
 #include <queue>
 
 #include "mongo/mongo.hpp"
@@ -115,3 +115,4 @@ private:
     ObjectPool<MongoQuery, 512, 256> query_pool_;
     ObjectPool<MongoResult, 512, 256> result_pool_;
 };
+#endif

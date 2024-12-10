@@ -3,7 +3,6 @@
 #include "env.hpp"
 #include "lua_cpplib/llog.hpp"
 #include "lua_cpplib/lev.hpp"
-#include "thread/thread_mgr.hpp"
 #include "thread/main_thread.hpp"
 
 /**
@@ -34,10 +33,6 @@ public:
     {
         return ev_;
     }
-    static class ThreadMgr *thread_mgr()
-    {
-        return thread_mgr_;
-    }
     static Buffer::ChunkPool *buffer_chunk_pool()
     {
         return buffer_chunk_pool_;
@@ -62,7 +57,6 @@ private:
 
 private:
     static class LEV *ev_;
-    static class ThreadMgr *thread_mgr_;
     static Buffer::ChunkPool *buffer_chunk_pool_;
 
     static class initializer initializer_;

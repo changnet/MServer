@@ -174,32 +174,15 @@ static void luaopen_pbc_codec(lua_State *L)
 static void luaopen_sql(lua_State *L)
 {
 
-    lcpp::Class<LSql> lc(L, "engine.Sql");
-    lc.def<&LSql::start>("start");
-    lc.def<&LSql::stop>("stop");
-
-    lc.def<&LSql::do_sql>("do_sql");
-
-    lc.set(LSql::S_READY, "S_READY");
-    lc.set(LSql::S_DATA, "S_DATA");
+    //lcpp::Class<LSql> lc(L, "engine.Sql");
+    //lc.def<&LSql::start>("start");
 }
 
 static void luaopen_mongo(lua_State *L)
 {
-    lcpp::Class<LMongo> lc(L, "engine.Mongo");
-    lc.def<&LMongo::start>("start");
-    lc.def<&LMongo::stop>("stop");
-
-    lc.def<&LMongo::count>("count");
-    lc.def<&LMongo::find>("find");
-    lc.def<&LMongo::insert>("insert");
-    lc.def<&LMongo::update>("update");
-    lc.def<&LMongo::remove>("remove");
-    lc.def<&LMongo::set_array_opt>("set_array_opt");
-    lc.def<&LMongo::find_and_modify>("find_and_modify");
-
-    lc.set(LMongo::S_READY, "S_READY");
-    lc.set(LMongo::S_DATA, "S_DATA");
+    //lcpp::Class<LMongo> lc(L, "engine.Mongo");
+    //lc.def<&LMongo::start>("start");
+    //lc.def<&LMongo::stop>("stop");
 }
 
 static void luaopen_log(lua_State *L)

@@ -7,6 +7,9 @@ g_env:set("process_id", PROCESS_ID)
 
 LOCAL_ADDR = Engine.make_address(PROCESS_ID, 0, 1)
 
+Signal.mask(2, Engine.exit)
+Signal.mask(15, Engine.exit)
+
 -- 当前进程需要启动的worker {线程名, 入口文件名}
 -- 线程名不能超过16个字段
 local worker_setting = {

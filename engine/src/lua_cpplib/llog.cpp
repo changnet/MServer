@@ -12,9 +12,9 @@ LLog::~LLog() {}
 
 void LLog::stop()
 {
-    if (!active())
+    if (stop_)
     {
-        ELOG("try to stop a inactive log thread");
+        ELOG("log thread already stop");
         return;
     }
 
@@ -23,9 +23,9 @@ void LLog::stop()
 
 int32_t LLog::start(lua_State *L)
 {
-    if (active())
+    if (!stop_)
     {
-        luaL_error(L, "log thread already active");
+        luaL_error(L, "log thread already start");
         return 0;
     }
 
@@ -39,9 +39,9 @@ int32_t LLog::start(lua_State *L)
 
 int32_t LLog::append_log_file(lua_State *L)
 {
-    if (!active())
+    if (stop_)
     {
-        return luaL_error(L, "log thread inactive");
+        return luaL_error(L, "log thread not start");
     }
 
     size_t len       = 0;
@@ -57,9 +57,9 @@ int32_t LLog::append_log_file(lua_State *L)
 
 int32_t LLog::append_file(lua_State *L)
 {
-    if (!active())
+    if (stop_)
     {
-        return luaL_error(L, "log thread inactive");
+        return luaL_error(L, "log thread not start");
     }
 
     size_t len       = 0;

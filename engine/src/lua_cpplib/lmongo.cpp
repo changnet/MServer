@@ -1,6 +1,6 @@
 #include <cstdarg>
 #include <chrono>
-
+#if 0
 #include "lbson.hpp"
 
 #include "ltools.hpp"
@@ -479,3 +479,4 @@ int32_t LMongo::remove(lua_State *L)
 
     return 0;
 }
+#endif

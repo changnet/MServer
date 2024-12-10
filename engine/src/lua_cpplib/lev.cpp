@@ -38,8 +38,7 @@ int32_t LEV::who_busy(lua_State *L) // 看下哪条线程繁忙
 
     size_t finished   = 0;
     size_t unfinished = 0;
-    const char *who =
-        StaticGlobal::thread_mgr()->who_is_busy(finished, unfinished, skip);
+    const char *who = nullptr;
 
     if (!who) return 0;
 
@@ -143,8 +142,6 @@ void LEV::running()
 
     invoke_signal();
     invoke_app_ev();
-
-    StaticGlobal::thread_mgr()->main_routine();
 }
 
 int32_t LEV::periodic_start(lua_State *L)

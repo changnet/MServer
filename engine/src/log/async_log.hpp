@@ -121,6 +121,7 @@ private:
     }
 
 private:
+    std::mutex mutex_;
     BufferPool buffer_pool_;
     BufferList writing_buffers_;
     std::unordered_map<std::string, Device> device_;

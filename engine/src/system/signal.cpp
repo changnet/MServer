@@ -90,6 +90,18 @@ void signal_mask(int32_t sig, int32_t mask)
     }
 }
 
+#ifdef __windows__
+BOOL WINAPI win_console_handler(DWORD event)
+{
+    // https://learn.microsoft.com/zh-cn/windows/console/setconsolectrlhandler
+    // https://learn.microsoft.com/zh-cn/windows/console/handlerroutine
+    // event 的值为CTRL_BREAK_EVENT CTRL_CLOSE_EVENT等，但这里没必要区分
+    sig_handler(SIGTERM);
+
+    return true;
+}
+#endif
+
 
 void mask_comm_signal()
 {
@@ -116,6 +128,9 @@ void mask_comm_signal()
     ::signal(SIGHUG, sig_handler);
     ::signal(SIGUSR1, sig_handler);
     ::signal(SIGUSR2, sig_handler);
+#endif
+#ifdef __windows__
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE)win_console_handler, TRUE);
 #endif
     ::signal(SIGINT, sig_handler);
     ::signal(SIGTERM, sig_handler);

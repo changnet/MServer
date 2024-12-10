@@ -1,5 +1,5 @@
 #pragma once
-
+#if 0
 #include <queue>
 
 #include "mysql/sql.hpp"
@@ -65,3 +65,4 @@ private:
     CachePool<SqlQuery, 512, 256> query_pool_;
     CachePool<SqlResult, 512, 256> result_pool_;
 };
+#endif

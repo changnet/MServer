@@ -1,5 +1,5 @@
 #include <lua.hpp>
-
+#if 0
 #include "lsql.hpp"
 #include "ltools.hpp"
 #include "system/static_global.hpp"
@@ -327,3 +327,4 @@ FAIL:
     mysql_thread_end();
     return false;
 }
+#endif
