@@ -15,6 +15,11 @@ public:
 
     // 初始化主线程并进入主循环
     void start(int32_t argc, char **argv);
+    // 退出主循环
+    void stop()
+    {
+        stop_ = true;
+    }
 
     /**
      * 获取实时uitc时间
@@ -70,6 +75,7 @@ private:
     bool init_entry(int32_t argc, char **argv);
 
 private:
+    bool stop_; // 退出主循环
     int64_t steady_clock_;             // 起服到现在的毫秒
     int64_t utc_ms_;                   // UTC时间戳（单位：毫秒）
     std::atomic<int64_t> utc_sec_;     // UTC时间戳(CLOCK_REALTIME,秒)

@@ -249,23 +249,6 @@ FILE *AsyncLog::Policy::open_stream(const char *path)
     return file_;
 }
 ////////////////////////////////////////////////////////////////////////////////
-size_t AsyncLog::busy_job(size_t *finished, size_t *unfinished)
-{
-    std::lock_guard<std::mutex> guard(mutex_);
-    size_t unfinished_sz = 0;
-    for (auto iter = device_.begin(); iter != device_.end(); iter++)
-    {
-        unfinished_sz += iter->second.buff_.size();
-    }
-
-    if (is_busy()) unfinished_sz += 1;
-
-    if (finished) *finished = 0;
-    if (unfinished) *unfinished = unfinished_sz;
-
-    return unfinished_sz;
-}
-
 void AsyncLog::set_policy(const char *path, int32_t type, int64_t opt_val)
 {
     std::lock_guard<std::mutex> guard(mutex_);

@@ -95,9 +95,6 @@ public:
     explicit AsyncLog(const std::string &name)
         : Thread(name), buffer_pool_("AsyncLog"){};
 
-    size_t busy_job(size_t *finished   = nullptr,
-                    size_t *unfinished = nullptr) override;
-
     void set_policy(const char *path, int32_t type, int64_t opt_val);
     void append(const char *path, LogType type, int64_t time, const char *ctx,
                 size_t len);

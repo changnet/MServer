@@ -43,7 +43,7 @@ static void sig_handler(int32_t signum)
 
     // signal.h #define _NSIG            64 但一般只处理前31个
     if (signum > 31) return;
-    if (sig_mask.fetch_or(signum)) return;
+    if (sig_mask.fetch_or(1 << signum)) return;
 
     StaticGlobal::M->push_message(ThreadMessage::SIGNAL, 0, 0, 0);
 }

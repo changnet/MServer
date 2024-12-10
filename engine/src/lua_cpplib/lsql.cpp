@@ -44,21 +44,6 @@ LSql::~LSql()
     }
 }
 
-size_t LSql::busy_job(size_t *finished, size_t *unfinished)
-{
-    std::lock_guard<std::mutex> guard(mutex_);
-
-    size_t finished_sz   = result_.size();
-    size_t unfinished_sz = query_.size();
-
-    if (is_busy()) unfinished_sz += 1;
-
-    if (finished) *finished = finished_sz;
-    if (unfinished) *unfinished = unfinished_sz;
-
-    return finished_sz + unfinished_sz;
-}
-
 /* 连接mysql并启动线程 */
 int32_t LSql::start(lua_State *L)
 {

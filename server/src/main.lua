@@ -57,7 +57,6 @@ require "global.require" -- 需要热更的文件，必须放在这后面
 -- 放require后面，是可以热更的
 require "global.global"
 require "engine.engine"
-require "modules.system.define"
 
 -- 简单模拟c的getopt函数，把参数读出来，按table返回
 local function get_opt(args)
@@ -140,6 +139,9 @@ local function main(cmd, ...)
 
     log_app_info(args)
 
+    require "modules.system.define"
+    require "message.thread_message"
+    require "engine.signal"
     __require(string.format("process.p_%s", name))
 end
 

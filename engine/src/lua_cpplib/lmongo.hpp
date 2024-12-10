@@ -95,9 +95,6 @@ public:
      */
     int32_t set_array_opt(lua_State *L);
 
-    size_t busy_job(size_t *finished   = nullptr,
-                    size_t *unfinished = nullptr) override;
-
 private:
     void routine_once(int32_t ev) override;
     void main_routine(int32_t ev) override;

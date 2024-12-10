@@ -15,7 +15,7 @@ read_globals =
     "g_engine",
     "g_async_log",
     "g_env",
-    "__BACKEND__",
+    "Engine",
     "__COMPLIER_",
     "__VERSION__",
     "__TIMESTAMP__",

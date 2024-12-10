@@ -40,9 +40,6 @@ public:
      */
     int32_t do_sql(lua_State *L);
 
-    size_t busy_job(size_t *finished   = nullptr,
-                    size_t *unfinished = nullptr) override;
-
 private:
     bool uninitialize() override;
     bool initialize() override;

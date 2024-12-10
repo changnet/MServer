@@ -41,6 +41,8 @@ struct ThreadMessage
     int32_t addr_; //  worker地址
     int32_t type_; // 消息类型
     UserData ud_; // 自定义数据，可能是buff也可能是其他指针
+
+    static ThreadMessage Null;
 };
 
 // 用于数据交换的队列
@@ -54,7 +56,9 @@ public:
 
         if (queue_.empty())
         {
-            throw std::out_of_range("empty queue");
+            // too slow
+            // throw std::out_of_range("empty queue");
+            return ThreadMessage::Null;
         }
 
         // ThreadMessage只有基础类型，std::mvoe现在没啥意义

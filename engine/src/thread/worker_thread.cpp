@@ -24,7 +24,7 @@ bool WorkerThread::initialize()
     // TODO push一些共用的全局对象到lua，比如全局日志对象
 
     /* 加载程序入口脚本 */
-    if (LUA_OK != luaL_loadfile(L_, LUA_ENTERANCE))
+    if (LUA_OK != luaL_loadfile(L_, entry_.c_str()))
     {
         const char *err_msg = lua_tostring(L_, -1);
         ELOG_R("worker %s load entry error:%s", name_.c_str(), err_msg);
@@ -56,6 +56,8 @@ void WorkerThread::routine_once(int32_t ev)
         try
         {
             ThreadMessage m = message_.pop();
+            if (-1 == m.addr_) break;
+
             lcpp::call(L_, "on_worker_message", m.addr_, (void *)&m);
         }
         catch (const std::runtime_error& e)

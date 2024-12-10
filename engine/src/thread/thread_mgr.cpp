@@ -56,10 +56,12 @@ const char *ThreadMgr::who_is_busy(size_t &finished, size_t &unfinished, bool sk
             continue;
         }
 
+        /*
         if (thread->busy_job(&finished, &unfinished) > 0)
         {
             return thread->get_thread_name().c_str();
         }
+        */
     }
 
     finished   = 0;

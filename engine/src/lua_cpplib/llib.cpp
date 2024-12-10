@@ -20,6 +20,7 @@
 #include "net/codec/pbc_codec.hpp"
 #include "system/static_global.hpp"
 #include "system/signal.hpp"
+#include "thread/worker_thread.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -86,6 +87,7 @@ static void luaopen_env(lua_State* L)
 static void luaopen_main_thread(lua_State *L)
 {
     lcpp::Class<MainThread> lc(L, "engine.MainThread");
+    lc.def<&MainThread::stop>("stop");
     lc.def<&MainThread::steady_clock>("steady_clock");
     lc.def<&MainThread::system_clock>("system_clock");
     /*
@@ -105,6 +107,14 @@ static void luaopen_main_thread(lua_State *L)
     lc.def<&LEV::periodic_start>("periodic_start");
     lc.def<&LEV::set_critical_time>("set_critical_time");
     */
+}
+
+static void luaopen_worker_thread(lua_State *L)
+{
+    lcpp::Class<WorkerThread> lc(L, "engine.WorkerThread");
+    lc.constructor<std::string>();
+    lc.def<&WorkerThread::start>("start");
+    lc.def<&WorkerThread::stop>("stop");
 }
 
 static void luaopen_tls(lua_State *L)
@@ -317,6 +327,7 @@ void open_cpp(lua_State *L)
     luaopen_env(L);
     luaopen_engine(L);
     luaopen_main_thread(L);
+    luaopen_worker_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);
     luaopen_lua_codec(L);

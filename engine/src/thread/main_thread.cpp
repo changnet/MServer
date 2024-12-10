@@ -8,12 +8,14 @@
 
 MainThread::MainThread()
 {
+    stop_            = false;
     L_               = nullptr;
     clock_diff_      = 0;
     last_utc_update_ = INT_MIN;
     steady_clock_    = 0;
     utc_ms_          = 0;
     utc_sec_         = 0;
+    next_backend_time_ = 0;
 }
 
 MainThread::~MainThread()

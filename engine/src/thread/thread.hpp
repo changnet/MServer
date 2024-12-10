@@ -41,14 +41,6 @@ public:
      * @param ms 毫秒
      */
     bool start(int32_t ms = 5000);
-    /**
-     * 还在处理的数据
-     * @param finish 是子线程已处理完，等待主线程处理的数量
-     * @param unfinished 是等待子线程处理的数量
-     * 返回总数
-     */
-    virtual size_t busy_job(size_t *finished   = nullptr,
-                            size_t *unfinished = nullptr) = 0;
 
     /// 线程当前是否正在执行
     inline bool active() const { return status_ & S_RUN; }
