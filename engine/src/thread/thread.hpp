@@ -19,8 +19,11 @@ public:
     // 应用线程名字到底层
     static void apply_thread_name(const char *name);
 
-    /// 停止线程
-    void stop();
+    /**
+     * @brief 停止线程
+     * @param join 如果从主线程停止，可join此子线程。子线程主动停止不可join
+     */
+    void stop(bool join);
     /**
      * 启动线程，可设置多长时间超时一次
      * @param ms 毫秒

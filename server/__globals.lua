@@ -1,4 +1,4 @@
--- auto export by lua-tags 171 symbols
+-- auto export by lua-tags 175 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -12,6 +12,7 @@ return {
 "App", -- src/application/app.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
+"Bootstrap", -- src/engine/bootstrap.lua
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
@@ -74,6 +75,7 @@ return {
 "SRV_KEY", -- src/modules/system/define.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
+"Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "ThreadMessage", -- src/message/thread_message.lua
@@ -81,6 +83,8 @@ return {
 "UNIQUEID", -- src/modules/system/define.lua
 "WORKER_TEST", -- src/modules/system/define.lua
 "WSE", -- src/application/app.lua
+"WorkerHash", -- src/main.lua
+"WorkerSetting", -- src/main.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/main.lua

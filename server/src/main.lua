@@ -58,6 +58,9 @@ require "global.require" -- 需要热更的文件，必须放在这后面
 require "global.global"
 require "engine.engine"
 
+WorkerHash = {} -- 以worker的addr为key，worker对象为value
+WorkerSetting = {} -- 以worker的addr为ke，worker的配置为value
+
 -- 简单模拟c的getopt函数，把参数读出来，按table返回
 local function get_opt(args)
     local opts = {}
@@ -142,6 +145,8 @@ local function main(cmd, ...)
     require "modules.system.define"
     require "message.thread_message"
     require "engine.signal"
+    require "engine.shutdown"
+    require "engine.bootstrap"
     __require(string.format("process.p_%s", name))
 end
 

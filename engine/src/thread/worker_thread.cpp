@@ -21,7 +21,9 @@ bool WorkerThread::initialize()
 {
     L_ = llib::new_state();
 
-    // TODO push一些共用的全局对象到lua，比如全局日志对象
+    // push一些共用的全局对象到lua，比如全局日志对象
+    lcpp::Class<WorkerThread>::push(L_, this, false);
+    lua_setglobal(L_, "g_worker");
 
     /* 加载程序入口脚本 */
     if (LUA_OK != luaL_loadfile(L_, entry_.c_str()))

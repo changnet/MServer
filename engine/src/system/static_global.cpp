@@ -86,7 +86,7 @@ void StaticGlobal::uninitialize()
     delete buffer_chunk_pool_;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效
-    LOG->AsyncLog::stop();
+    LOG->AsyncLog::stop(true);
     delete LOG;
     delete ev_;
     delete M;

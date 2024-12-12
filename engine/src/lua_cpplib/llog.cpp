@@ -18,7 +18,7 @@ void LLog::stop()
         return;
     }
 
-    AsyncLog::stop();
+    AsyncLog::stop(true);
 }
 
 int32_t LLog::start(lua_State *L)

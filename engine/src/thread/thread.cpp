@@ -87,20 +87,18 @@ bool Thread::start(int32_t ms)
     return true;
 }
 
-void Thread::stop()
+void Thread::stop(bool join)
 {
-    // 只能在主线程调用，thread_mgr没加锁
-    assert(std::this_thread::get_id() != thread_.get_id());
-    if (stop_)
-    {
-        ELOG("thread::stop:thread not running");
-        return;
-    }
-
     stop_ = true;
-    cv_.notify_one(1);
 
-    thread_.join();
+    if (join && thread_.joinable())
+    {
+        // 只能在主线程调用
+        assert(std::this_thread::get_id() != thread_.get_id());
+        cv_.notify_one(1);
+
+        thread_.join();
+    }
 }
 
 void Thread::routine(int32_t ms)

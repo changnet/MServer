@@ -45,7 +45,7 @@ static void sig_handler(int32_t signum)
     if (signum > 31) return;
     if (sig_mask.fetch_or(1 << signum)) return;
 
-    StaticGlobal::M->push_message(0, ThreadMessage::SIGNAL, 0, 0);
+    StaticGlobal::M->emplace_message_int(0, ThreadMessage::SIGNAL, 0, 0);
 }
 
 #ifdef __windows__

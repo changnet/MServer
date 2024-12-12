@@ -57,10 +57,27 @@ public:
 
     /**
      * @brief 往主线程消息队列push一个消息并唤醒主线程
+     * @param msg 消息指针
      */
-    void push_message(int32_t addr, int32_t type, int32_t v1, int32_t v2)
+    void push_message(ThreadMessage* msg)
+    {
+        message_.push(*msg);
+        tcv_.notify_one(1);
+    }
+    /**
+     * @brief 用int参数构造一个message并push到主线程消息队列，同时唤醒主线程
+     */
+    void emplace_message_int(int32_t addr, int32_t type, int32_t v1, int32_t v2)
     {
         message_.emplace(addr, type, v1, v2);
+        tcv_.notify_one(1);
+    }
+    /**
+     * @brief 用指针参数构造一个message并push到主线程消息队列，同时唤醒主线程
+     */
+    void emplace_message_ptr(int32_t addr, int32_t type, void *ptr)
+    {
+        message_.emplace(addr, type, ptr);
         tcv_.notify_one(1);
     }
 
