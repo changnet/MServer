@@ -73,7 +73,7 @@ local function sig_dispatch()
         signum = signum + 1
         sig = sig >> 1
         if 0 ~= (sig & 1) then
-            print("sig catch", signum)
+            print("signal catch", signum)
             local func = sig_handler[signum]
             if func then
                 func()

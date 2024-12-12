@@ -116,6 +116,7 @@ return {
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
 "g_httpd", -- src/modules/module_header.lua
+"g_lcodec", -- src/rpc/rpc.lua
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
@@ -136,6 +137,7 @@ return {
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
+"mt", -- src/rpc/rpc.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "name_func", -- src/global/name.lua
 "name_obj", -- src/global/name.lua
@@ -151,8 +153,6 @@ return {
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
-"rpc_command_new", -- src/rpc/rpc.lua
-"rpc_command_return", -- src/rpc/rpc.lua
 "set_modify_metatable", -- src/global/modi_table.lua
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
