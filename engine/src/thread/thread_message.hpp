@@ -13,34 +13,30 @@ struct ThreadMessage
         SIGNAL = 2, // 信号
     };
 
-    union UserData
-    {
-        struct
-        {
-            int32_t u1_;
-            int32_t u2_;
-        };
-        struct
-        {
-            void *ptr_;
-        };
-    };
-
     // 构造函数
-    ThreadMessage(int32_t addr, int32_t type, int32_t u1, int32_t u2)
-        : addr_(addr), type_(type), ud_{{u1, u2}}
+    ThreadMessage(int32_t src, int32_t dst, int32_t type, void *udata,
+                  int32_t usize)
+        : src_(src), dst_(dst), type_(type), usize_(usize), udata_(udata)
     {
     }
-
-    ThreadMessage(int32_t addr, int32_t type, void *ptr)
-        : addr_(addr), type_(type)
+    ~ThreadMessage()
     {
-        ud_.ptr_ = ptr;
+        // TODO 这个udata它可能来源于某个内存池，有可能来源于new分配
+        // 所以不要在析构里处理它，需要手动调用dispose
+        // 尤其是消息队列使用对象时，pop一个对象给Lua就会调用析构函数，但实际
+        // 该数据还不需要释放
+        // 或者：根据type_类型或者做一个标识来处理
+    }
+    void dispose()
+    {
+        if (udata_) delete[] udata_;
     }
 
-    int32_t addr_; //  worker地址
+    int32_t src_; // 来源地址
+    int32_t dst_;  // 目标地址
     int32_t type_; // 消息类型
-    UserData ud_; // 自定义数据，可能是buff也可能是其他指针
+    int32_t usize_; // 自定义数据长度
+    void *udata_; // 自定义数据，可能是buff也可能是其他指针
 
     static ThreadMessage Null;
 };

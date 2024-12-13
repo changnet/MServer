@@ -62,23 +62,16 @@ public:
     void push_message(ThreadMessage* msg)
     {
         message_.push(*msg);
-        tcv_.notify_one(1);
+        cv_.notify_one(1);
     }
     /**
-     * @brief 用int参数构造一个message并push到主线程消息队列，同时唤醒主线程
+     * @brief 构造一个message并push到主线程消息队列，同时唤醒主线程
      */
-    void emplace_message_int(int32_t addr, int32_t type, int32_t v1, int32_t v2)
+    void emplace_message(int32_t src, int32_t dst, int32_t type, void *udata,
+                         int32_t usize)
     {
-        message_.emplace(addr, type, v1, v2);
-        tcv_.notify_one(1);
-    }
-    /**
-     * @brief 用指针参数构造一个message并push到主线程消息队列，同时唤醒主线程
-     */
-    void emplace_message_ptr(int32_t addr, int32_t type, void *ptr)
-    {
-        message_.emplace(addr, type, ptr);
-        tcv_.notify_one(1);
+        message_.emplace(src, dst, type, udata, usize);
+        cv_.notify_one(1);
     }
 
 private:
@@ -104,5 +97,5 @@ private:
     lua_State *L_;
     TimerMgr timer_mgr_;
     ThreadMessageQueue message_;
-    ThreadCv tcv_; // 用于等待其他线程数据的condtion_variable
+    ThreadCv cv_; // 用于等待其他线程数据的condtion_variable
 };

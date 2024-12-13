@@ -1,5 +1,8 @@
--- rpc调用
-Rpc = {}
+-- rpc调用，使用协程返回
+Call = {}
+
+-- rpc调用，无返回
+Send = {}
 
 --[[
 1. 版本1参考其他rpc库(如python xmlrpc: https://docs.python.org/3/library/xmlrpc.html)
@@ -24,36 +27,71 @@ local LuaCodec = require "engine.LuaCodec"
 g_lcodec = g_lcodec or LuaCodec()
 
 local g_lcodec = g_lcodec
+local g_engine = g_engine
 local WorkerHash = WorkerHash
 local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
 
 local name_to_func = name_to_func
-local func_to_name = func_to_name
+-- local func_to_name = func_to_name
 
 local function send_func_factory(name)
     return function(addr, ...)
-        local w = WorkerHash[addr]
-        if not w then
-            printf("rpc send no worker(%d) found: %s", addr, debug.traceback())
-            return
-        end
-        local ptr = g_lcodec:encode_to_message(0, name, ...)
-        return w:emplace_message_ptr(addr, RPC_REQ, ptr)
+        local w = WorkerHash[addr] or g_engine
+
+        print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
+        local ptr, size = g_lcodec:encode_to_buffer(0, name, ...)
+        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, size, ptr)
     end
 end
 
-local mt
-mt =
+local function call_func_factory(name)
+    return function(addr, ...)
+        local w = WorkerHash[addr] or g_engine
+
+        print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
+        -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
+        local ptr, size = g_lcodec:encode_to_buffer(session, name, ...)
+        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, size, ptr)
+
+        return coroutine.yield()
+    end
+end
+
+local call_mt
+local send_mt
+call_mt =
 {
     __index = function(tbl, k)
-		local name = rawget(tbl, "__name")
-		if name then
-			name = name .. "." .. k
-		else
-			name = k
-		end
-        local mod = setmetatable({__name = name}, mt)
+        local name = rawget(tbl, "__name")
+        if name then
+            name = name .. "." .. k
+        else
+            name = k
+        end
+        local mod = setmetatable({__name = name}, call_mt)
+
+        tbl[k] = mod
+        return mod
+    end,
+    __call = function(tbl, ...)
+        local name = assert(rawget(tbl, "__name"))
+        local func = call_func_factory(name)
+
+        tbl[name] = func
+        return func(...)
+    end
+}
+send_mt =
+{
+    __index = function(tbl, k)
+        local name = rawget(tbl, "__name")
+        if name then
+            name = name .. "." .. k
+        else
+            name = k
+        end
+        local mod = setmetatable({__name = name}, send_mt)
 
         tbl[k] = mod
         return mod
@@ -67,10 +105,10 @@ mt =
     end
 }
 
--- 设置Rpc表的元表
-setmetatable(Rpc, mt)
+setmetatable(Call, call_mt)
+setmetatable(Send, send_mt)
 
-local function do_request(session, name, ...)
+local function do_request(src, session, name, ...)
     local func = name_to_func[name]
     if not func then
         print("rpc no func found", name)
@@ -81,19 +119,30 @@ local function do_request(session, name, ...)
     if 0 == session then
         return func(...)
     else
-        local ptr = g_lcodec:encode_to_message(func(...))
-        return g_engine:emplace_message_ptr(addr, RPC_RES, ptr)
+        local ptr, size = g_lcodec:encode_to_buffer(func(...))
+
+        local w = WorkerHash[src] or g_engine
+        return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
     end
 end
 
-local function request_dispatch(msg)
-    return do_request(g_lcodec:decode_from_message(msg))
+local function request_dispatch(src, udata, usize)
+    return do_request(src, g_lcodec:decode_from_buffer(udata, usize))
 end
 
-local function response_dispatch()
+local function do_response(session, ...)
+    -- TODO 根据session查找对应的协程，唤醒该协程
+    return coroutine.resume(co, ...)
+end
+
+local function response_dispatch(src, udata, usize)
+    return do_response(g_lcodec:decode_from_buffer(udata, usize))
 end
 
 ThreadMessage.reg(RPC_REQ, request_dispatch)
 ThreadMessage.reg(RPC_RES, response_dispatch)
 
-return Rpc
+return {
+    Call = Call,
+    Send = Send,
+}

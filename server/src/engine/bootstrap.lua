@@ -15,7 +15,7 @@ function Bootstrap.worker_create(setting)
     WorkerHash[addr] = w
     WorkerSetting[addr] = setting
 
-    w:start(base_path .. setting.file)
+    w:start(base_path .. setting.file, addr)
     printf("worker %s start, addr = %d", setting.name, addr)
 end
 

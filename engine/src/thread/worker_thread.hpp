@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include "thread.hpp"
 #include "thread_message.hpp"
 
@@ -15,8 +16,10 @@ public:
     /**
      * 启动worker线程
      * @param path 入口文件lua脚本
+     * @param addr 当前worker的地址
+     * @param ... 其他参数
      */
-    void start(const char *path);
+    int32_t start(lua_State *L);
 
     
     /**
@@ -29,19 +32,12 @@ public:
         cv_.notify_one(1);
     }
     /**
-     * @brief 用int参数构造一个message并push到主线程消息队列，同时唤醒主线程
+     * @brief 构造一个message并push到主线程消息队列，同时唤醒主线程
      */
-    void emplace_message_int(int32_t addr, int32_t type, int32_t v1, int32_t v2)
+    void emplace_message(int32_t src, int32_t dst, int32_t type, void *udata,
+                         int32_t usize)
     {
-        message_.emplace(addr, type, v1, v2);
-        cv_.notify_one(1);
-    }
-    /**
-     * @brief 用指针参数构造一个message并push到主线程消息队列，同时唤醒主线程
-     */
-    void emplace_message_ptr(int32_t addr, int32_t type, void *ptr)
-    {
-        message_.emplace(addr, type, ptr);
+        message_.emplace(src, dst, type, udata, usize);
         cv_.notify_one(1);
     }
 
@@ -52,6 +48,6 @@ protected:
 
 private:
     lua_State *L_;
-    std::string entry_; // lua脚本入口文件
+    std::array<std::string, 6> params_; // worker启动参数（第一个必定是入口文件路径）
     ThreadMessageQueue message_;
 };

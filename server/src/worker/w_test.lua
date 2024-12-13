@@ -1,5 +1,7 @@
 -- 用于测试的worker入口文件
 
-print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
+local addr = ...
+
+print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww", addr)
 
 g_worker:stop(false)

@@ -91,8 +91,8 @@ static void luaopen_main_thread(lua_State *L)
     lc.def<&MainThread::steady_clock>("steady_clock");
     lc.def<&MainThread::system_clock>("system_clock");
     lc.def<&MainThread::push_message>("push_message");
-    lc.def<&MainThread::emplace_message_int>("emplace_message_int");
-    lc.def<&MainThread::emplace_message_ptr>("emplace_message_ptr");
+    lc.def<&MainThread::emplace_message>("emplace_message");
+
     /*
     lc.def<&LEV::now>("time");
     lc.def<&LEV::quit>("exit");
@@ -119,8 +119,7 @@ static void luaopen_worker_thread(lua_State *L)
     lc.def<&WorkerThread::start>("start");
     lc.def<&WorkerThread::stop>("stop");
     lc.def<&WorkerThread::push_message>("push_message");
-    lc.def<&WorkerThread::emplace_message_int>("emplace_message_int");
-    lc.def<&WorkerThread::emplace_message_ptr>("emplace_message_ptr");
+    lc.def<&WorkerThread::emplace_message>("emplace_message");
 }
 
 static void luaopen_tls(lua_State *L)

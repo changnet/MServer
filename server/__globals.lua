@@ -1,4 +1,4 @@
--- auto export by lua-tags 175 symbols
+-- auto export by lua-tags 177 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -16,6 +16,7 @@ return {
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
 "CLTCAST", -- src/modules/system/define.lua
+"Call", -- src/rpc/rpc.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cmd", -- src/network/cmd.lua
 "DEFINE_BEG", -- src/global/require.lua
@@ -64,7 +65,6 @@ return {
 "RES_GOLD", -- src/modules/res/res_header.lua
 "RES_ITEM", -- src/modules/res/res_header.lua
 "Res", -- src/modules/res/res.lua
-"Rpc", -- src/rpc/rpc.lua
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
 "SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
@@ -75,6 +75,7 @@ return {
 "SRV_KEY", -- src/modules/system/define.lua
 "SYS", -- proto/auto_ss.lua
 "SYS", -- proto/ss.lua
+"Send", -- src/rpc/rpc.lua
 "Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
 "SrvMgr", -- src/network/srv_mgr.lua
@@ -99,6 +100,7 @@ return {
 "__unrequire", -- src/global/require.lua
 "application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
+"call_mt", -- src/rpc/rpc.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
 "command_new", -- src/network/conn.lua
 "conn_accept", -- src/network/conn.lua
@@ -137,7 +139,6 @@ return {
 "method_name", -- src/global/name.lua
 "method_thunk", -- src/global/name.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
-"mt", -- src/rpc/rpc.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "name_func", -- src/global/name.lua
 "name_obj", -- src/global/name.lua
@@ -153,6 +154,7 @@ return {
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
+"send_mt", -- src/rpc/rpc.lua
 "set_modify_metatable", -- src/global/modi_table.lua
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
