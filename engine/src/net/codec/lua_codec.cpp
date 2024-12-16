@@ -141,11 +141,8 @@ int32_t LuaCodec::decode_value(lua_State *L)
     return 0;
 }
 
-int32_t LuaCodec::decode(lua_State *L)
+int32_t LuaCodec::raw_decode(lua_State *L)
 {
-    buff_pos_    = 0;
-    decode_buff_ = luaL_checklstring(L, 2, &buff_len_);
-
     uint8_t count = 0;
     if (buff_len_ < sizeof(count))
     {
@@ -174,6 +171,14 @@ int32_t LuaCodec::decode(lua_State *L)
     if (unlikely(!ok)) return luaL_error(L, "unknow error");
 
     return count;
+}
+
+int32_t LuaCodec::decode(lua_State *L)
+{
+    buff_pos_    = 0;
+    decode_buff_ = luaL_checklstring(L, 2, &buff_len_);
+
+    return raw_decode(L);
 }
 
 int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
@@ -278,14 +283,14 @@ int32_t LuaCodec::encode_value(lua_State *L, int32_t index)
     return 0;
 }
 
-int32_t LuaCodec::encode(lua_State *L)
+int32_t LuaCodec::raw_encode(lua_State *L)
 {
     int32_t index = 1;
-    int top = lua_gettop(L);
+    int top       = lua_gettop(L);
     if (index > top || top - index > MAX_VARIABLE)
     {
-        return luaL_error(L, 
-            "invalid stack index or too many variable %I - %I", index, top);
+        return luaL_error(L, "invalid stack index or too many variable %I - %I",
+                          index, top);
     }
 
     buff_len_ = 0;
@@ -301,13 +306,43 @@ int32_t LuaCodec::encode(lua_State *L)
             if (encode_value(L, i) < 0) return -1;
         }
     }
-    catch (const std::overflow_error& e)
+    catch (const std::overflow_error &e)
     {
         ELOG("%s", e.what());
         ok = false;
     }
     if (unlikely(!ok)) return luaL_error(L, "unknow error");
 
+    return 0;
+}
+
+int32_t LuaCodec::encode(lua_State *L)
+{
+    raw_encode(L);
+
     lua_pushlstring(L, encode_buff_, buff_len_);
     return 1;
+}
+
+int32_t LuaCodec::decode_from_buffer(lua_State *L)
+{
+    decode_buff_ = (const char *)lua_touserdata(L, 2);
+    buff_len_    = luaL_checkinteger(L, 3);
+    if (!decode_buff_ || buff_len_ <= 0)
+    {
+        return luaL_error(L, "invalid lua buffer");
+    }
+
+    buff_pos_ = 0;
+    return raw_decode(L);
+}
+
+int32_t LuaCodec::encode_to_buffer(lua_State *L)
+{
+    raw_encode(L);
+
+    lua_pushlightuserdata(L, encode_buff_);
+    lua_pushinteger(L, buff_len_);
+
+    return 2;
 }

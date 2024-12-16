@@ -162,6 +162,8 @@ static void luaopen_lua_codec(lua_State *L)
 
     lc.def<&LuaCodec::encode>("encode");
     lc.def<&LuaCodec::decode>("decode");
+    lc.def<&LuaCodec::decode_from_buffer>("decode_from_buffer");
+    lc.def<&LuaCodec::encode_to_buffer>("encode_to_buffer");
 }
 
 static void luaopen_pbc_codec(lua_State *L)

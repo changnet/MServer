@@ -21,9 +21,22 @@ public:
     /**
      * 编码数据包
      * @param ... 待编码的参数
-     * @return buffer大小，buffer指针（该指针在下一次调用encode时有效）。出错时，buffer大小返回-1
+     * @return 编码后的数据，lua string
      */
     int32_t encode(lua_State *L);
+    /**
+     * 从二进制buffer指针解码数据包
+     * @param buffer 待解码的char*
+     * @param size 待解码的buff大小
+     * @return <0 error,otherwise the number of parameter push to stack
+     */
+    int32_t decode_from_buffer(lua_State *L);
+    /**
+     * 编码数据包
+     * @param ... 待编码的参数
+     * @return buffer大小，buffer指针（该指针在下一次调用encode时有效）。出错时，buffer大小返回-1
+     */
+    int32_t encode_to_buffer(lua_State *L);
 
 private:
     // 把基础类型写入缓冲区，不支持指针及自定义结构
@@ -68,6 +81,9 @@ private:
     int32_t decode_value(lua_State *L);
     // 从缓冲区解码table到lua中
     int32_t decode_table(lua_State *L);
+
+    int32_t raw_decode(lua_State *L);
+    int32_t raw_encode(lua_State *L);
 
 private:
     size_t buff_len_;   // 已使用的缓冲区长度

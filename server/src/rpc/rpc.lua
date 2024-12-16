@@ -41,7 +41,7 @@ local function send_func_factory(name)
 
         print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
         local ptr, size = g_lcodec:encode_to_buffer(0, name, ...)
-        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, size, ptr)
+        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
     end
 end
 
@@ -51,8 +51,9 @@ local function call_func_factory(name)
 
         print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
         -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
+        local session = CoPool.current_session()
         local ptr, size = g_lcodec:encode_to_buffer(session, name, ...)
-        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, size, ptr)
+        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 
         return coroutine.yield()
     end
@@ -109,9 +110,9 @@ setmetatable(Call, call_mt)
 setmetatable(Send, send_mt)
 
 local function do_request(src, session, name, ...)
-    local func = name_to_func[name]
+    local func = name_to_func(name)
     if not func then
-        print("rpc no func found", name)
+        print("rpc no func found", name, LOCAL_ADDR)
         return
     end
 
@@ -131,8 +132,7 @@ local function request_dispatch(src, udata, usize)
 end
 
 local function do_response(session, ...)
-    -- TODO 根据session查找对应的协程，唤醒该协程
-    return coroutine.resume(co, ...)
+    return CoPool.resume(session, ...)
 end
 
 local function response_dispatch(src, udata, usize)
@@ -141,8 +141,3 @@ end
 
 ThreadMessage.reg(RPC_REQ, request_dispatch)
 ThreadMessage.reg(RPC_RES, response_dispatch)
-
-return {
-    Call = Call,
-    Send = Send,
-}

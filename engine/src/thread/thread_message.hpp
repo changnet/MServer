@@ -16,8 +16,17 @@ struct ThreadMessage
     // 构造函数
     ThreadMessage(int32_t src, int32_t dst, int32_t type, void *udata,
                   int32_t usize)
-        : src_(src), dst_(dst), type_(type), usize_(usize), udata_(udata)
     {
+        src_ = src;
+        dst_ = dst;
+        type_ = type;
+        usize_ = usize;
+
+        if (udata)
+        {
+            udata_ = new char[usize];
+            memcpy(udata_, udata, usize);
+        }
     }
     ~ThreadMessage()
     {

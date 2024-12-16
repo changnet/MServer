@@ -1,7 +1,7 @@
--- name.lua
+-- rtti.lua
 -- xzc
 -- 2019-05-26
--- 根据变量取名字
+-- RTTI(Run-Time Type Information) for lua
 -- lua目前本身没有提供根据变量取名字的函数，即使debug库也没有
 -- 但在一些功能，例如定时器回调中，考虑到函数会热更，使用函数名较为合适
 -- 这里提供一个机制取对象(oo.lua)中的成员函数，做了缓存之后，也不会有效率问题
@@ -169,12 +169,7 @@ function make_name()
             reg_o(name, value)
             for sub_name, sub_value in pairs(value) do
                 if "function" == type(sub_value) then
-                    -- 不同模块可能会有同名函数，重名时尝试拼模块名，效率略低
-                    if names_func[sub_name] then
-                        reg_f(name .. "." .. sub_name, sub_value)
-                    else
-                        reg_f(sub_name, sub_value)
-                    end
+                    reg_f(name .. "." .. sub_name, sub_value)
                     count = count + 1
                 end
             end

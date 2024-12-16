@@ -1,4 +1,4 @@
--- auto export by lua-tags 177 symbols
+-- auto export by lua-tags 180 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -19,6 +19,7 @@ return {
 "Call", -- src/rpc/rpc.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cmd", -- src/network/cmd.lua
+"CoPool", -- src/engine/co_pool.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
@@ -33,6 +34,7 @@ return {
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
 "LOCAL_ADDR", -- src/process/p_test.lua
+"LOCAL_ADDR", -- src/worker/w_test.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/modules/log/log.lua
@@ -111,9 +113,9 @@ return {
 "ctrl_new", -- src/network/conn.lua
 "eprint", -- src/global/global.lua
 "eprintf", -- src/global/global.lua
-"func_name_thunk", -- src/global/name.lua
-"func_thunk", -- src/global/name.lua
-"func_to_name", -- src/global/name.lua
+"func_name_thunk", -- src/global/rtti.lua
+"func_thunk", -- src/global/rtti.lua
+"func_to_name", -- src/global/rtti.lua
 "g_ai_mgr", -- src/android/android_boot.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
@@ -135,16 +137,17 @@ return {
 "handshake_new", -- src/network/conn.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "main_message_dispatch", -- src/message/thread_message.lua
-"make_name", -- src/global/name.lua
-"method_name", -- src/global/name.lua
-"method_thunk", -- src/global/name.lua
+"make_name", -- src/global/rtti.lua
+"method_name", -- src/global/rtti.lua
+"method_thunk", -- src/global/rtti.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
-"name_func", -- src/global/name.lua
-"name_obj", -- src/global/name.lua
-"name_to_func", -- src/global/name.lua
-"name_to_obj", -- src/global/name.lua
-"obj_to_name", -- src/global/name.lua
+"name_func", -- src/global/rtti.lua
+"name_obj", -- src/global/rtti.lua
+"name_to_func", -- src/global/rtti.lua
+"name_to_obj", -- src/global/rtti.lua
+"obj_to_name", -- src/global/rtti.lua
+"on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
 "print", -- src/global/global.lua
 "printf", -- src/global/global.lua

@@ -147,6 +147,8 @@ local function main(cmd, ...)
     require "engine.signal"
     require "engine.shutdown"
     require "engine.bootstrap"
+    require "global.name"
+    require "rpc.rpc"
     __require(string.format("process.p_%s", name))
 end
 
