@@ -85,4 +85,4 @@ local function sig_dispatch()
     end
 end
 
-ThreadMessage.reg(ThreadMessage.SIGNAL, sig_dispatch)
+ThreadMessage.reg_co(ThreadMessage.SIGNAL, sig_dispatch)

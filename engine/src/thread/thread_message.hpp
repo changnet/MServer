@@ -27,6 +27,10 @@ struct ThreadMessage
             udata_ = new char[usize];
             memcpy(udata_, udata, usize);
         }
+        else
+        {
+            udata_ = nullptr;
+        }
     }
     ~ThreadMessage()
     {

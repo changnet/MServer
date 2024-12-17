@@ -37,8 +37,6 @@ local name_to_func = Rtti.name_to_func
 
 -- 为了获取rpc返回的第一个参数，并实现在co内报错，需要wrap一层函数
 local function call_return(ok, ...)
-    print("return =========================", ok, ...)
-    print(debug.traceback())
     if not ok then
         error("rpc remote error")
     end
@@ -59,13 +57,11 @@ local function call_func_factory(name)
     return function(addr, ...)
         local w = WorkerHash[addr] or g_engine
 
-        print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
         -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
         local session = CoPool.current_session()
         local ptr, size = g_lcodec:encode_to_buffer(session, name, ...)
         w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 
-        print("session yield ==============", session)
         return call_return(coroutine.yield())
     end
 end
@@ -129,9 +125,10 @@ local function do_request(src, session, name, ...)
 
     -- session表示不需要返回
     if 0 == session then
-        return func(...)
+        return CoPool.invoke(func, ...)
     else
-        local ptr, size = g_lcodec:encode_to_buffer(session, func(...))
+        local ptr, size = g_lcodec:encode_to_buffer(
+            session, CoPool.invoke(func, ...))
 
         local w = WorkerHash[src] or g_engine
         return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
@@ -143,7 +140,6 @@ local function request_dispatch(src, udata, usize)
 end
 
 local function do_response(session, ...)
-    print("dddddddddddddddddo response", session, ...)
     return CoPool.resume(session, ...)
 end
 
