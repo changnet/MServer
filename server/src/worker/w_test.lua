@@ -3,6 +3,7 @@
 local addr = ...
 
 LOCAL_ADDR = tonumber(addr)
+WorkerHash = {}
 
 -- 设置lua文件搜索路径
 package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
@@ -13,6 +14,10 @@ else
     package.cpath = "../c_module/?.so;" .. package.cpath
 end
 
+
+local Log = require "engine.Log"
+Log:set_name("T1")
+
 require "global.oo" -- 这个文件不能热更
 require "global.require" -- 需要热更的文件，必须放在这后面
 
@@ -21,12 +26,13 @@ require "global.global"
 require "engine.engine"
 
 require "modules.system.define"
+require "engine.co_pool"
 require "message.thread_message"
 require "engine.signal"
 require "engine.shutdown"
 require "engine.bootstrap"
-require "global.name"
+require "global.rtti"
 require "rpc.rpc"
 
 print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww", addr)
-make_name()
+Rtti.collect()

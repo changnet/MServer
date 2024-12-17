@@ -258,7 +258,7 @@ void AsyncLog::set_policy(const char *path, int32_t type, int64_t opt_val)
     device.policy_.init_policy(path, type, opt_val);
 }
 
-void AsyncLog::append(const char *path, LogType type, int64_t time,
+void AsyncLog::append(const char *path, log_util::LogType type, int64_t time,
                       const char *ctx, size_t len)
 {
     assert(path);
@@ -294,7 +294,7 @@ void AsyncLog::append(const char *path, LogType type, int64_t time,
     }
 }
 
-size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
+size_t AsyncLog::write_buffer(FILE *stream, const char *type,
                               const Buffer *buffer, bool beg, bool end)
 {
     size_t bytes = 0;
@@ -305,7 +305,8 @@ size_t AsyncLog::write_buffer(FILE *stream, const char *prefix,
             bytes++;
             fputc('\n', stream);
         }
-        bytes += write_prefix(stream, prefix, buffer->time_);
+        bytes +=
+            log_util::write_prefix(stream, buffer->prefix_, type, buffer->time_);
     }
 
     bytes += fwrite(buffer->buff_, 1, buffer->used_, stream);
@@ -344,36 +345,40 @@ void AsyncLog::write_device(Policy *policy, const BufferList &buffers,
         }
         switch (buffer->type_)
         {
-        case LT_LOGFILE:
+        case log_util::LT_LOGFILE:
         {
             bytes = write_buffer(stream, "", buffer, beg, end);
             break;
         }
-        case LT_LPRINTF:
+        case log_util::LT_LPRINTF:
         {
             bytes = write_buffer(stream, "LP", buffer, beg, end);
-            if (!is_deamon()) write_buffer(stdout, "LP", buffer, beg, end);
+            if (!log_util::is_deamon())
+                write_buffer(stdout, "LP", buffer, beg, end);
             break;
         }
-        case LT_LERROR:
+        case log_util::LT_LERROR:
         {
             bytes = write_buffer(stream, "LE", buffer, beg, end);
-            if (!is_deamon()) write_buffer(stderr, "LE", buffer, beg, end);
+            if (!log_util::is_deamon())
+                write_buffer(stderr, "LE", buffer, beg, end);
             break;
         }
-        case LT_CPRINTF:
+        case log_util::LT_CPRINTF:
         {
             bytes = write_buffer(stream, "CP", buffer, beg, end);
-            if (!is_deamon()) write_buffer(stdout, "CP", buffer, beg, end);
+            if (!log_util::is_deamon())
+                write_buffer(stdout, "CP", buffer, beg, end);
             break;
         }
-        case LT_CERROR:
+        case log_util::LT_CERROR:
         {
             bytes = write_buffer(stream, "CE", buffer, beg, end);
-            if (!is_deamon()) write_buffer(stderr, "CE", buffer, beg, end);
+            if (!log_util::is_deamon())
+                write_buffer(stderr, "CE", buffer, beg, end);
             break;
         }
-        case LT_FILE:
+        case log_util::LT_FILE:
         {
             bytes = fwrite(buffer->buff_, 1, buffer->used_, stream);
             break;

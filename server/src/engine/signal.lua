@@ -79,7 +79,7 @@ local function sig_dispatch()
                 func()
             else
                 -- 默认退出
-                Engine.exit()
+                Shutdown.begin()
             end
         end
     end

@@ -1,4 +1,4 @@
--- coroutine poll
+-- coroutine pool
 CoPool = {}
 
 local current_co = nil -- 当前正在执行的协程
@@ -45,6 +45,25 @@ local function co_invoke(co, f, ...)
     return f(...)
 end
 
+local function co_return(co, ok, v1, ...)
+    busy_co[co] = nil
+
+    if not ok then
+        -- 协程出错后就变为dead状态了，只能丢弃掉
+        local ss = co_to_session[co]
+
+        session_to_co[ss] = nil
+        co_to_session[co] = nil
+        __G__TRACKBACK(v1, co)
+        return false
+    else
+        print("insert into idle", co_to_session[co])
+        tableinsert(idle_co, co)
+    end
+
+    return true, v1, ...
+end
+
 local function co_body()
     local co = co_running()
     local session = next_session()
@@ -55,9 +74,8 @@ local function co_body()
     while true do
         co_invoke(co, co_yield())
 
-        -- mark as idle
-        busy_co[co] = nil
-        tableinsert(idle_co, co)
+        -- 不能在这里处理co，因为co报错时，这里就不会再执行了
+        -- busy_co[co] = nil
     end
 end
 
@@ -70,7 +88,8 @@ function CoPool.invoke(f, ...)
         co_resume(co)
     end
 
-    return co_resume(co, f, ...)
+    print("invoke resume =========", co_to_session[co], ...)
+    return co_return(co, co_resume(co, f, ...))
 end
 
 -- 根据session恢复协程的执行
@@ -79,7 +98,8 @@ function CoPool.resume(session, ...)
     assert(co and busy_co[co])
 
     current_co = co
-    return co_resume(...)
+    print("co pool resume", ...)
+    return co_return(co, co_resume(co, ...))
 end
 
 -- 获取当前执行的协程session

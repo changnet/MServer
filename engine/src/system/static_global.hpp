@@ -47,6 +47,8 @@ public:
     inline static Env *E        = nullptr; // 环境变量
     inline static bool T        = false; // 当前是否处于关服状态(term)
 
+    inline static log_util::Prefix *P = nullptr; // 日志前缀
+
 private:
     class initializer // 提供一个等级极高的初始化
     {

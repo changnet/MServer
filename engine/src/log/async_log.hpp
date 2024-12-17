@@ -13,10 +13,11 @@ public:
     {
     public:
         friend class AsyncLog;
-        explicit Buffer(int64_t time, LogType type)
+        explicit Buffer(int64_t time, log_util::LogType type, const char *prefix)
         {
             time_ = time;
             type_ = type;
+            prefix_  = prefix;
             used_ = 0;
             buff_[0] = 0;
         }
@@ -24,7 +25,8 @@ public:
     private:
         int64_t time_;   /// 日志UTC时间戳
         size_t used_;    /// 缓冲区已使用大小
-        LogType type_;   /// 日志类型
+        log_util::LogType type_;   /// 日志类型
+        const char *prefix_; // 前置名称
         char buff_[512]; /// 日志缓冲区
     };
     using BufferList = std::vector<Buffer *>;
@@ -96,7 +98,7 @@ public:
         : Thread(name), buffer_pool_("AsyncLog"){};
 
     void set_policy(const char *path, int32_t type, int64_t opt_val);
-    void append(const char *path, LogType type, int64_t time, const char *ctx,
+    void append(const char *path, log_util::LogType type, int64_t time, const char *ctx,
                 size_t len);
 
 private:
@@ -106,14 +108,14 @@ private:
     void routine_once(int32_t ev) override;
     bool uninitialize() override;
 
-    size_t write_buffer(FILE *stream, const char *prefix, const Buffer *buffer,
-                        bool beg, bool end);
+    size_t write_buffer(FILE *stream, const char *type,
+                        const Buffer *buffer, bool beg, bool end);
     void write_device(Policy *policy, const BufferList &buffers,
                       const char *path);
 
-    Buffer *device_reserve(Device &device, int64_t time, LogType type)
+    Buffer *device_reserve(Device &device, int64_t time, log_util::LogType type)
     {
-        Buffer *buff = buffer_pool_.construct(time, type);
+        Buffer *buff = buffer_pool_.construct(time, type, log_util::get_prefix_name());
 
         device.buff_.push_back(buff);
 

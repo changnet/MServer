@@ -62,6 +62,7 @@ void StaticGlobal::initialize()
     LOG  = new class LLog("Engine.AsyncLog");
     M           = new class MainThread();
     ev_         = new class LEV();
+    P           = new log_util::Prefix();
 
     L                  = llib::new_state();
     buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
@@ -91,6 +92,7 @@ void StaticGlobal::uninitialize()
     delete ev_;
     delete M;
     delete E;
+    delete P;
 
     PbcCodec::uninitialize();
 }
@@ -106,9 +108,8 @@ void on_exit()
     int64_t counters = 0;
     global_mem_counter(counter, counters);
 
-    // 直接用PRINTF会导致重新创建ev取时间
-    // PLOG( "new counter:%d    ----   new[] counter:%d",counter,counters );
-
+    // 这里很多变量都释放了，直接用PRINTF会打印不出来
+    log_util::set_prefix_name(nullptr);
     PLOG_R("new = " FMT64d " ----  new[] = " FMT64d, counter, counters);
     // back_trace();
 }

@@ -4,10 +4,48 @@
 // 方面不太好用。nohub方式不停服无法截断日志文件，查看日志也不太方便
 
 #include <cstdio>
+#include <mutex>
 
 #include "config.hpp"
 #include "global/types.hpp"
 
+namespace log_util
+{
+    /**
+     * @brief 日志前缀，必须保证即使通过std::vector管理发生复制时，
+     * 指向的string内存也必须不变，所以std::vector只能存指针
+     * 
+     * std::string不被修改的话，其返回的c_str()是一直有效的
+     */
+    class Prefix
+    {
+    public:
+        Prefix()
+        {
+        }
+        ~Prefix()
+        {
+            for (auto& v : v_)
+            {
+                delete v;
+            }
+        }
+        const char* address(const char* name)
+        {
+            std::scoped_lock<std::mutex> sl(mutex_);
+            std::string n(name);
+            for (auto &s : v_)
+            {
+                if (n == *s) return s->c_str();
+            }
+
+            v_.push_back(new std::string(name));
+            return v_.back()->c_str();
+        }
+    private:
+        std::mutex mutex_;
+        std::vector<std::string *> v_;
+    };
 // 日志输出类型
 enum LogType
 {
@@ -22,7 +60,8 @@ enum LogType
     LO_MAX
 };
 
-void set_app_name(const char *name);
+void set_prefix_name(const char *name);
+const char *get_prefix_name();
 
 // __FILE__显示的是文件被编译时的路径，在cmake下是全路径
 // 这时可以通过cmake计算出根目录，丢掉根目录的路径即变成相对路径(relative file)
@@ -39,7 +78,7 @@ void set_app_name(const char *name);
  */
 void set_log_args(bool deamon, const char *ppath, const char *epath);
 
-size_t write_prefix(FILE *stream, const char *prefix, int64_t time);
+size_t write_prefix(FILE *stream, const char *prefix, const char *type, int64_t time);
 
 /// 当前是否以后台模式运行
 bool is_deamon();
@@ -56,17 +95,20 @@ void __sync_log(const char *path, FILE *stream, const char *prefix,
                 const char *fmt, ...);
 void __async_log(const char *path, LogType type, const char *fmt, ...);
 // /////////////////////////////////////////////////////////////////////////////
+} // namespace log_util
 
 /**
  * print log，线程不安全，需要日志线程初始化后才能调用
  * 非主线程调用此函数，日志时间戳可能不会被更新
  */
-#define PLOG(...) __async_log(get_printf_path(), LT_CPRINTF, __VA_ARGS__)
+#define PLOG(...) \
+    log_util::__async_log(log_util::get_printf_path(), log_util::LT_CPRINTF, __VA_ARGS__)
 
 /**
  * 线程安全日志，不依赖日志线程，不依赖主线程的时间
  */
-#define PLOG_R(...) __sync_log(get_printf_path(), stdout, "CP", __VA_ARGS__)
+#define PLOG_R(...) \
+    log_util::__sync_log(log_util::get_printf_path(), stdout, "CP", __VA_ARGS__)
 
 // TODO ## __VA_ARGS__ 中的##在ELOG("test")
 // 这种只有一个参数的情况下去掉前面的逗号，但这不是标准的用法。
@@ -77,14 +119,14 @@ void __async_log(const char *path, LogType type, const char *fmt, ...);
  * 非主线程调用此函数，日志时间戳可能不会被更新
  */
 #define ELOG(fmt, ...)                       \
-    __async_log(get_error_path(), LT_CERROR, \
+    log_util::__async_log(log_util::get_error_path(), log_util::LT_CERROR, \
                     __FILE__ ":" XSTR(__LINE__) " " fmt, ##__VA_ARGS__)
 
 /**
  * 线程安全日志，不依赖日志线程，不依赖主线程的时间
  */
 #define ELOG_R(fmt, ...)                       \
-    __sync_log(get_error_path(), stderr, "CE", \
+    log_util::__sync_log(log_util::get_error_path(), stderr, "CE", \
                 __FILE__ ":" XSTR(__LINE__) " " fmt, ##__VA_ARGS__)
 
 /**

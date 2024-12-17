@@ -122,9 +122,8 @@ local function main(cmd, ...)
     -- 非后台模式，打印进程名到屏幕，否则多个进程在同一终端开户时不好区分日志
     -- 取首字母大写即可，不用全名，如果以后有重名再改
     -- local app_name = string.format("%s.%d",name,index)
-    local app_name = string.format("%s%d", string.char(string.byte(name) - 32),
-                                   opts.index or 0)
-    if not opts.deamon then Log:set_name(app_name) end
+    local app_name = string.format("%s0", string.char(string.byte(name) - 32))
+    Log:set_name(app_name)
 
     -- win下设置cmd为utf8编码
     -- 并设置标题用于区分cmd界面
@@ -143,11 +142,12 @@ local function main(cmd, ...)
     log_app_info(args)
 
     require "modules.system.define"
+    require "engine.co_pool"
     require "message.thread_message"
     require "engine.signal"
     require "engine.shutdown"
     require "engine.bootstrap"
-    require "global.name"
+    require "global.rtti"
     require "rpc.rpc"
     __require(string.format("process.p_%s", name))
 end

@@ -16,7 +16,7 @@ read_globals =
     "g_async_log",
     "g_env",
     "Engine",
-    "__COMPLIER_",
+    "g_worker",
     "__VERSION__",
     "__TIMESTAMP__",
     "LINUX",

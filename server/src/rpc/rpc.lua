@@ -32,8 +32,18 @@ local WorkerHash = WorkerHash
 local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
 
-local name_to_func = name_to_func
+local name_to_func = Rtti.name_to_func
 -- local func_to_name = func_to_name
+
+-- 为了获取rpc返回的第一个参数，并实现在co内报错，需要wrap一层函数
+local function call_return(ok, ...)
+    print("return =========================", ok, ...)
+    print(debug.traceback())
+    if not ok then
+        error("rpc remote error")
+    end
+    return ...
+end
 
 local function send_func_factory(name)
     return function(addr, ...)
@@ -55,7 +65,8 @@ local function call_func_factory(name)
         local ptr, size = g_lcodec:encode_to_buffer(session, name, ...)
         w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 
-        return coroutine.yield()
+        print("session yield ==============", session)
+        return call_return(coroutine.yield())
     end
 end
 
@@ -120,7 +131,7 @@ local function do_request(src, session, name, ...)
     if 0 == session then
         return func(...)
     else
-        local ptr, size = g_lcodec:encode_to_buffer(func(...))
+        local ptr, size = g_lcodec:encode_to_buffer(session, func(...))
 
         local w = WorkerHash[src] or g_engine
         return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
@@ -132,6 +143,7 @@ local function request_dispatch(src, udata, usize)
 end
 
 local function do_response(session, ...)
+    print("dddddddddddddddddo response", session, ...)
     return CoPool.resume(session, ...)
 end
 
