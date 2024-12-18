@@ -20,8 +20,11 @@ public:
      * @param ... 其他参数
      */
     int32_t start(lua_State *L);
-
-    
+    // 是否运行中
+    bool is_start() const
+    {
+        return !stop_;
+    }
     /**
      * @brief 往主线程消息队列push一个消息并唤醒主线程
      * @param msg 消息指针

@@ -118,6 +118,7 @@ static void luaopen_worker_thread(lua_State *L)
     lc.constructor<std::string>();
     lc.def<&WorkerThread::start>("start");
     lc.def<&WorkerThread::stop>("stop");
+    lc.def<&WorkerThread::is_start>("is_start");
     lc.def<&WorkerThread::push_message>("push_message");
     lc.def<&WorkerThread::emplace_message>("emplace_message");
 }

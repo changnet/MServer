@@ -129,7 +129,7 @@ end
 function assert(expr, ...)
     if expr then return expr end
 
-    local msg = table.concat({...}, "    ")
+    local msg = table.concat({"assertion failed!", ...}, "    ")
     return error(msg)
 end
 

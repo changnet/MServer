@@ -120,7 +120,10 @@ local function do_request(src, session, name, ...)
     local func = name_to_func(name)
     if not func then
         print("rpc no func found", name, LOCAL_ADDR)
-        return
+
+        local ptr, size = g_lcodec:encode_to_buffer(session, false)
+        local w = WorkerHash[src] or g_engine
+        return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
     end
 
     -- session表示不需要返回

@@ -1,4 +1,4 @@
--- auto export by lua-tags 171 symbols
+-- auto export by lua-tags 174 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -23,6 +23,7 @@ return {
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
+"E", -- src/modules/module_load.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
 "ET", -- src/modules/entity/entity_header.lua
@@ -33,8 +34,8 @@ return {
 "GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
-"LOCAL_ADDR", -- src/process/p_test.lua
-"LOCAL_ADDR", -- src/worker/w_test.lua
+"LOCAL_ADDR", -- src/engine/bootstrap.lua
+"LOCAL_TYPE", -- src/engine/bootstrap.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/modules/log/log.lua
@@ -58,7 +59,7 @@ return {
 "PROCESS_DATA", -- src/modules/system/define.lua
 "PROCESS_GAME", -- src/modules/system/define.lua
 "PROCESS_GATEWAY", -- src/modules/system/define.lua
-"PROCESS_ID", -- src/process/p_test.lua
+"PROCESS_ID", -- src/engine/bootstrap.lua
 "PROCESS_TEST", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Ping", -- src/modules/system/ping.lua
@@ -87,18 +88,20 @@ return {
 "UNIQUEID", -- src/modules/system/define.lua
 "WORKER_TEST", -- src/modules/system/define.lua
 "WSE", -- src/application/app.lua
-"WorkerHash", -- src/main.lua
-"WorkerHash", -- src/worker/w_test.lua
-"WorkerSetting", -- src/main.lua
+"WorkerHash", -- src/engine/bootstrap.lua
+"WorkerSetting", -- src/engine/bootstrap.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
-"__assert", -- src/main.lua
+"__assert", -- src/engine/bootstrap.lua
 "__conn", -- src/network/conn.lua
 "__conn_id_seed", -- src/network/conn.lua
+"__error", -- src/engine/bootstrap.lua
 "__fire_sys_ev", -- src/modules/event/system_event.lua
 "__global_storage", -- src/global/global.lua
-"__print", -- src/main.lua
-"__require", -- src/main.lua
+"__package_cpath", -- src/engine/bootstrap.lua
+"__package_path", -- src/engine/bootstrap.lua
+"__print", -- src/engine/bootstrap.lua
+"__require", -- src/engine/bootstrap.lua
 "__test", -- src/global/test.lua
 "__test_timeout", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua

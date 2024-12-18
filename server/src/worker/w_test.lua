@@ -2,37 +2,11 @@
 
 local addr = ...
 
-LOCAL_ADDR = tonumber(addr)
-WorkerHash = {}
+local srv_dir = g_env:get("srv_dir")
+dofile(srv_dir .. "/src/engine/bootstrap.lua")
 
--- 设置lua文件搜索路径
-package.path = "../?.lua;" .. "../src/?.lua;" .. package.path
--- 设置c库搜索路径，用于直接加载so或者dll的lua模块
-if WINDOWS then
-    package.cpath = "../c_module/?.dll;" .. package.cpath
-else
-    package.cpath = "../c_module/?.so;" .. package.cpath
-end
+Bootstrap.worker_preload(tonumber(addr), "T1")
 
-
-local Log = require "engine.Log"
-Log:set_name("T1")
-
-require "global.oo" -- 这个文件不能热更
-require "global.require" -- 需要热更的文件，必须放在这后面
-
--- 放require后面，是可以热更的
-require "global.global"
-require "engine.engine"
-
-require "modules.system.define"
-require "engine.co_pool"
-require "message.thread_message"
-require "engine.signal"
-require "engine.shutdown"
-require "engine.bootstrap"
-require "global.rtti"
-require "rpc.rpc"
-
-print("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww", addr)
 Rtti.collect()
+
+print("worker test ready", addr)

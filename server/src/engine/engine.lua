@@ -14,7 +14,7 @@ function Engine.make_address(process_id, wType, index)
     -- 同一个进程多开构建集群时，需要分配不同的进程id
     -- 假如开100个网关，进程id为101、102、103...，可以配置也可以自动生成，不重复即可
     -- 集群最大有255个进程，每个进程可构建255个该类型的worker，因此最大可以用255*255个线程
-    return process_id << 16 + wType << 8 + index
+    return (process_id << 16) + (wType << 8) + index
 end
 
 -- 解码一个地址

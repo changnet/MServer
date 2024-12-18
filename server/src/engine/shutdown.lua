@@ -12,9 +12,12 @@ function Shutdown.begin()
     -- 关闭时不要修改WorkerHash和WorkerSetting，rpc调用还在使用
     -- 同时避免关服中报错时，无法恢复
     for _, wt in pairs(Sequence) do
-        for addr in pairs(WorkerHash) do
+        for addr, w in pairs(WorkerHash) do
             local s = WorkerSetting[addr]
-            if wt == s.type then
+            if not w:is_start() then
+                -- 已经被关闭或者未开启成功
+                printf("worker %s not start, addr = %d", s.name, addr)
+            elseif wt == s.type then
                 printf("worker %s shutting down, addr = %d", s.name, addr)
 
                 is_shut[addr] = true
@@ -24,7 +27,7 @@ function Shutdown.begin()
     end
 
     for addr, w in pairs(WorkerHash) do
-        if not is_shut[addr] then
+        if not is_shut[addr] and w:is_start() then
             -- 如果还有其他worker就是漏处理了
             print("worker no shutdown sequence found, shutting down", addr)
         end

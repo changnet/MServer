@@ -33,12 +33,15 @@ bool WorkerThread::initialize()
     lcpp::Class<WorkerThread>::push(L_, this, false);
     lua_setglobal(L_, "g_worker");
 
+    lua_pushcfunction(L_, traceback);
     /* 加载程序入口脚本 */
     if (LUA_OK != luaL_loadfile(L_, params_[0].c_str()))
     {
         const char *err_msg = lua_tostring(L_, -1);
         ELOG_R("worker %s load entry error:%s", name_.c_str(), err_msg);
 
+        lua_pop(L_, 2); // pop error message and traceback
+        L_ = llib::delete_state(L_);
         return false;
     }
 
@@ -51,13 +54,16 @@ bool WorkerThread::initialize()
         lua_pushstring(L_, params_[i].c_str());
     }
 
-    if (LUA_OK != lua_pcall(L_, n, 0, 0))
+    if (LUA_OK != lua_pcall(L_, n, 0, 1))
     {
         const char *err_msg = lua_tostring(L_, -1);
         ELOG_R("worker %s call entry error:%s", name_.c_str(), err_msg);
 
-        return 1;
+        lua_pop(L_, 2); // pop error message and trace back
+        L_ = llib::delete_state(L_);
+        return false;
     }
+    lua_pop(L_, 1); // traceback
 
     return true;
 }

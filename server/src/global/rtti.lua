@@ -160,8 +160,16 @@ function Rtti.collect()
     }
 
     local count = 0
-    local reg_o = Rtti.name_obj
-    local reg_f = Rtti.name_func
+    -- 这里不调用Rtti.name_func和name_obj，因为自动生成的不检测重复
+    -- __require = require会造成重名
+    local reg_f = function(name, func)
+        func_names[func] = name
+        names_func[name] = func
+    end
+    local reg_o = function(name, obj)
+        obj_names[obj] = name
+        names_obj[name] = obj
+    end
     for name, value in pairs(_G) do
         local t = type(value)
         if "function" == t then

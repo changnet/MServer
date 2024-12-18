@@ -123,12 +123,14 @@ void MainThread::dispatch_message()
 
 bool MainThread::init_entry(int32_t argc, char **argv)
 {
+    lua_pushcfunction(L_, traceback);
     /* 加载程序入口脚本 */
     if (LUA_OK != luaL_loadfile(L_, LUA_ENTERANCE))
     {
         const char *err_msg = lua_tostring(L_, -1);
         ELOG_R("load lua enterance file error:%s", err_msg);
 
+        lua_pop(L_, 2); // pop error message and traceback
         return false;
     }
 
@@ -140,14 +142,15 @@ bool MainThread::init_entry(int32_t argc, char **argv)
         lua_pushstring(L_, argv[i]);
     }
 
-    if (LUA_OK != lua_pcall(L_, argc, 0, 0))
+    if (LUA_OK != lua_pcall(L_, argc, 0, 1))
     {
         const char *err_msg = lua_tostring(L_, -1);
         ELOG("call lua enterance file error:%s", err_msg);
 
-        lua_pop(L_, 1); // pop error message
+        lua_pop(L_, 2); // pop error message and traceback
         return false;
     }
+    lua_pop(L_, 1); // traceback
 
     return true;
 }

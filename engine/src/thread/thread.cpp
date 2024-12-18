@@ -78,10 +78,15 @@ bool Thread::start(int32_t ms)
     // 刚启动时，会启动一些底层线程，这时候日志设置还没好（日志路径未设置好）
     // PLOG("%s thread start", name_.c_str());
 
-    // 只能在主线程调用，threadmgr没加锁
+    // 只能在主线程调用
     assert(std::this_thread::get_id() != thread_.get_id());
 
-    stop_   = false;
+    // 这个线程已经在运行中
+    if (thread_.joinable())
+    {
+        ELOG("thread %s already active", name_.c_str());
+        return false;
+    }
     thread_ = std::thread(&Thread::spawn, this, ms);
 
     return true;
@@ -122,7 +127,9 @@ void Thread::spawn(int32_t ms)
         return;
     }
 
+    stop_ = false;
     routine(ms);
+    stop_ = true;
 
     if (!uninitialize()) /* 清理 */
     {
