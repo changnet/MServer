@@ -3,7 +3,7 @@
 #include "net/socket.hpp"
 #include "net/net_header.hpp"
 #include "system/static_global.hpp"
-#include "lua_cpplib/lcpp.hpp"
+#include "lpp/lcpp.hpp"
 
 StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
 {

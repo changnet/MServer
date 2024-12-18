@@ -1,5 +1,5 @@
 #include "worker_thread.hpp"
-#include "lua_cpplib/llib.hpp"
+#include "lpp/llib.hpp"
 
 WorkerThread::WorkerThread(const std::string &name) : Thread(name)
 {

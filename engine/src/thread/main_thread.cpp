@@ -1,6 +1,6 @@
 #include "main_thread.hpp"
-#include "lua_cpplib/llib.hpp"
-#include "lua_cpplib/lcpp.hpp"
+#include "lpp/llib.hpp"
+#include "lpp/lcpp.hpp"
 #include "system/static_global.hpp"
 
 // minimum timejump that gets detected (if monotonic clock available)

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "env.hpp"
-#include "lua_cpplib/llog.hpp"
-#include "lua_cpplib/lev.hpp"
+#include "lpp/llog.hpp"
+#include "lpp/lev.hpp"
 #include "thread/main_thread.hpp"
 
 /**

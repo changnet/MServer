@@ -1,6 +1,6 @@
 #include "static_global.hpp"
 
-#include "lua_cpplib/llib.hpp"
+#include "lpp/llib.hpp"
 #include "mongo/mongo.hpp"
 #include "mysql/sql.hpp"
 #include "net/io/tls_ctx.hpp"

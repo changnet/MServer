@@ -1,5 +1,5 @@
 #include "io.hpp"
-#include "lua_cpplib/lcpp.hpp"
+#include "lpp/lcpp.hpp"
 #include "net/net_compat.hpp"
 #include "system/static_global.hpp"
 
