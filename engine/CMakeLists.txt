@@ -55,10 +55,18 @@ if(WINDOWS)
     # https://docs.microsoft.com/en-us/cpp/build/reference/o1-o2-minimize-size-maximize-speed?view=msvc-160
     add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/O2>)
     add_compile_options($<$<OR:$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>,$<CONFIG:Checked>>:/O1>)
+
+    # VS 2019以后支持并且需要在bat脚本设置环境变量：set ASAN_OPTIONS=detect_leaks=1
+    # 如果从VS以debug模式拉起，则无问题。如果从cmd直接运行exe，则会缺少dll并且没有任何提示
+    # 需要从目录C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\bin\Hostx64\x64
+    # 拷贝clang_rt.asan_dbg_dynamic-x86_64.dll and clang_rt.asan_dynamic-x86_64.dll到bin目录
+    # add_compile_options($<$<CONFIG:Debug>:/fsanitize=address>)
 elseif(LINUX)
     # 优先查找.a类型的静态库
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
     add_compile_options(-pipe -Wall -pedantic)
+    # -fsanitize=address -static-libasan -g
+    add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address)
 endif()
 
 message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")

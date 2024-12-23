@@ -4,6 +4,7 @@ set /p filter="please input filter, eg: metatable;http  "
 
 cd ../server/bin
 
+set ASAN_OPTIONS=detect_leaks=1
 set BIN=%cd%/master.exe
 
 if "%filter%" == "" (

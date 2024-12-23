@@ -1,9 +1,12 @@
 #include "worker_thread.hpp"
 #include "lpp/llib.hpp"
+#include "thread.hpp"
 
-WorkerThread::WorkerThread(const std::string &name) : Thread(name)
+WorkerThread::WorkerThread(const std::string &name)
 {
+    stop_ = true;
     L_ = nullptr;
+    name_ = name;
 }
 
 WorkerThread::~WorkerThread()
@@ -20,9 +23,24 @@ int32_t WorkerThread::start(lua_State *L)
         if (!p) break;
         params_[i - index].assign(p);
     }
-    Thread::start(2000);
+
+    thread_ = std::thread(&WorkerThread::routine, this);
 
     return 0;
+}
+
+void WorkerThread::stop(bool join)
+{
+    stop_ = true;
+
+    if (join && thread_.joinable())
+    {
+        // 只能在主线程调用
+        assert(std::this_thread::get_id() != thread_.get_id());
+        notify_one();
+
+        thread_.join();
+    }
 }
 
 bool WorkerThread::initialize()
@@ -73,14 +91,14 @@ bool WorkerThread::uninitialize()
     return true;
 }
 
-void WorkerThread::routine_once(int32_t ev)
+void WorkerThread::routine_once()
 {
     int32_t count = 0;
     while (true)
     {
         try
         {
-            ThreadMessage m = message_.pop();
+            ThreadMessage m = pop_message();
             if (-1 == m.src_) return;
 
             lcpp::call(L_, "on_worker_message", m.src_, m.type_,
@@ -99,5 +117,30 @@ void WorkerThread::routine_once(int32_t ev)
             // 主线程会不断地派发任务，worker线程可能会无休止地运行
             // 因此执行一定数据的逻辑后，需要更新时间及定时器
         }
+    }
+}
+
+void WorkerThread::routine()
+{
+    Thread::apply_thread_name(name_.c_str());
+
+    if (!initialize()) /* 初始化 */
+    {
+        ELOG("%s thread initialize fail", name_.c_str());
+        return;
+    }
+
+    stop_ = false;
+    while (likely(!stop_))
+    {
+        wait_for(2000);
+        routine_once();
+    }
+    stop_ = true;
+
+    if (!uninitialize()) /* 清理 */
+    {
+        ELOG("%s thread uninitialize fail", name_.c_str());
+        return;
     }
 }

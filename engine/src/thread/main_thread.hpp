@@ -1,13 +1,12 @@
 #pragma once
 
 #include "ev/timer.hpp"
-#include "thread_cv.hpp"
 #include "thread_message.hpp"
 
 struct lua_State;
 
 // 主线程
-class MainThread final
+class MainThread final : public ThreadContext
 {
 public:
     MainThread();
@@ -55,25 +54,6 @@ public:
             .count();
     }
 
-    /**
-     * @brief 往主线程消息队列push一个消息并唤醒主线程
-     * @param msg 消息指针
-     */
-    void push_message(ThreadMessage* msg)
-    {
-        message_.push(*msg);
-        cv_.notify_one(1);
-    }
-    /**
-     * @brief 构造一个message并push到主线程消息队列，同时唤醒主线程
-     */
-    void emplace_message(int32_t src, int32_t dst, int32_t type, void *udata,
-                         int32_t usize)
-    {
-        message_.emplace(src, dst, type, udata, usize);
-        cv_.notify_one(1);
-    }
-
 private:
     // 进入主循环，除非停服否则不返回
     void routinue();
@@ -96,6 +76,4 @@ private:
 
     lua_State *L_;
     TimerMgr timer_mgr_;
-    ThreadMessageQueue message_;
-    ThreadCv cv_; // 用于等待其他线程数据的condtion_variable
 };

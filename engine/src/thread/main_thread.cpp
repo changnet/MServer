@@ -37,7 +37,7 @@ void MainThread::routinue()
         if (unlikely(wait_time < min_wait)) wait_time = min_wait;
 
         // 等待其他线程的数据
-        cv_.wait_for(wait_time);
+        wait_for(wait_time);
 
         time_update();
 
@@ -108,11 +108,12 @@ void MainThread::dispatch_message()
     {
         try
         {
-            ThreadMessage m = message_.pop();
+            ThreadMessage m = pop_message();
             if (-1 == m.src_) return;
 
             lcpp::call(L_, "main_message_dispatch", m.src_, m.dst_, m.type_,
                        m.udata_, m.usize_);
+            m.dispose();
         }
         catch (const std::runtime_error &e)
         {

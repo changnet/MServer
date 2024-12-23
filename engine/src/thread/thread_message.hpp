@@ -107,8 +107,15 @@ private:
 class ThreadContext
 {
 public:
+    ThreadContext()
+    {
+    }
+    virtual ~ThreadContext()
+    {
+        assert(queue_.empty());
+    }
     // 从消息队列中弹出第一个消息。如果队列为空，则抛出一个out_of_range
-    ThreadMessage pop()
+    ThreadMessage pop_message()
     {
         std::lock_guard<std::mutex> lg(mutex_);
 
@@ -127,19 +134,26 @@ public:
     }
 
     // 构造一个消息并唤醒线程
-    template <typename... Args> void emplace(Args &&...args)
+    /**
+     * @brief 构造一个message并push到主线程消息队列，同时唤醒主线程
+     */
+    void emplace_message(int32_t src, int32_t dst, int32_t type, void *udata,
+                         int32_t usize)
     {
+        // 这个写法没法导出到lua
+        // template <typename... Args> void emplace_message(Args &&...args)
+        // queue_.emplace_back(std::forward<Args>(args)...);
         {
             std::lock_guard<std::mutex> lg(mutex_);
-            queue_.emplace_back(std::forward<Args>(args)...);
+            queue_.emplace_back(src, dst, type, udata, usize);
         }
         cv_.notify_one();
     }
-    void push(ThreadMessage &message)
+    void push_message(ThreadMessage *message)
     {
         {
             std::lock_guard<std::mutex> lg(mutex_);
-            queue_.emplace_back(message);
+            queue_.emplace_back(*message);
         }
         cv_.notify_one();
     }
@@ -147,7 +161,7 @@ public:
     /**
      * @brief 唤醒等待的一条线程
      */
-    void notify_one()
+    inline void notify_one()
     {
         cv_.notify_one();
     }
@@ -156,13 +170,13 @@ public:
      * @brief 等待N毫秒
      * @param ms 等待的毫秒数
      */
-    void wait_for(int64_t ms)
+    inline void wait_for(int64_t ms)
     {
         std::unique_lock<std::mutex> ul(mutex_);
         if (queue_.empty()) cv_.wait_for(ul, std::chrono::milliseconds(ms));
     }
 
-private:
+protected:
 
     std::mutex mutex_;
     // TODO C＋＋20可以wait一个atomic变量，到时优化一下
