@@ -187,7 +187,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
 
 bool AsyncLog::Policy::init_daily_policy()
 {
-    data_ = StaticGlobal::ev()->now();
+    data_ = StaticGlobal::E->time();
 
     // 读取已有日志文件的日期
     std::error_code e;
@@ -404,7 +404,7 @@ void AsyncLog::routine_once(int32_t ev)
     static_assert(__cplusplus > 201402L);
 
     bool busy = true;
-    auto now  = StaticGlobal::ev()->now();
+    auto now  = StaticGlobal::E->time();
 
     std::unique_lock<std::mutex> ul(mutex_);
 

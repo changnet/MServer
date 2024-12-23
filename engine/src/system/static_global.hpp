@@ -1,9 +1,8 @@
 #pragma once
 
 #include "env.hpp"
+#include "ev/ev.hpp"
 #include "lpp/llog.hpp"
-#include "lpp/lev.hpp"
-#include "thread/main_thread.hpp"
 
 /**
  * 控制static或者global变量，的创建、销毁顺序，避免相互依赖，影响内存泄漏计数
@@ -25,26 +24,13 @@ public:
     static void initialize();   /* 程序运行时初始化 */
     static void uninitialize(); /* 程序结束时反初始化 */
 
-    static class EV *ev()
-    {
-        return ev_;
-    }
-    static class LEV *lua_ev()
-    {
-        return ev_;
-    }
-    static Buffer::ChunkPool *buffer_chunk_pool()
-    {
-        return buffer_chunk_pool_;
-    }
-
 public:
     // 这里负责保存一些全局变量，方便StaticGlobal::X这样调用
 
     inline static lua_State *L  = nullptr; // Lua的虚拟机指针
-    inline static MainThread *M = nullptr; // 主线程
     inline static LLog *LOG     = nullptr; // 日志
-    inline static Env *E        = nullptr; // 环境变量
+    inline static Env *V        = nullptr; // 环境变量
+    inline static EV *E         = nullptr; // 主线程事件循环
     inline static bool T        = false; // 当前是否处于关服状态(term)
 
     inline static log_util::Prefix *P = nullptr; // 日志前缀
@@ -58,8 +44,7 @@ private:
     };
 
 private:
-    static class LEV *ev_;
-    static Buffer::ChunkPool *buffer_chunk_pool_;
+    // static Buffer::ChunkPool *buffer_chunk_pool_;
 
     static class initializer initializer_;
 };

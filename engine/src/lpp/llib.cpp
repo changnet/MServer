@@ -6,7 +6,6 @@
 #include "lacism.hpp"
 #include "lgrid_aoi.hpp"
 #include "lastar.hpp"
-#include "lev.hpp"
 #include "llog.hpp"
 #include "lmap.hpp"
 #include "lmongo.hpp"
@@ -84,14 +83,14 @@ static void luaopen_env(lua_State* L)
     lc.def<&Env::set>("set");
 }
 
-static void luaopen_main_thread(lua_State *L)
+static void luaopen_ev(lua_State *L)
 {
-    lcpp::Class<MainThread> lc(L, "engine.MainThread");
-    lc.def<&MainThread::stop>("stop");
-    lc.def<&MainThread::steady_clock>("steady_clock");
-    lc.def<&MainThread::system_clock>("system_clock");
-    lc.def<&MainThread::push_message>("push_message");
-    lc.def<&MainThread::emplace_message>("emplace_message");
+    lcpp::Class<EV> lc(L, "engine.EV");
+    lc.def<&EV::stop>("stop");
+    lc.def<&EV::steady_clock>("steady_clock");
+    lc.def<&EV::system_clock>("system_clock");
+    lc.def<&EV::push_message>("push_message");
+    lc.def<&EV::emplace_message>("emplace_message");
 
     /*
     lc.def<&LEV::now>("time");
@@ -297,10 +296,10 @@ void open_env(lua_State *L)
     lcpp::Class<LLog>::push(L, StaticGlobal::LOG, false);
     lua_setglobal(L, "g_async_log");
 
-    lcpp::Class<MainThread>::push(L, StaticGlobal::M, false);
+    lcpp::Class<EV>::push(L, StaticGlobal::E, false);
     lua_setglobal(L, "g_engine");
 
-    lcpp::Class<Env>::push(L, StaticGlobal::E, false);
+    lcpp::Class<Env>::push(L, StaticGlobal::V, false);
     lua_setglobal(L, "g_env");
 }
 
@@ -317,7 +316,7 @@ void open_cpp(lua_State *L)
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_env(L);
     luaopen_engine(L);
-    luaopen_main_thread(L);
+    luaopen_ev(L);
     luaopen_worker_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);

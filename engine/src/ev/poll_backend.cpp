@@ -1,5 +1,5 @@
 #include "poll_backend.hpp"
-#if defined(__poll__)
+#if defined(__poll__NO)
 
 #include "net/socketpair.hpp"
 #include "net/net_compat.hpp"

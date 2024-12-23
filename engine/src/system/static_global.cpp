@@ -7,9 +7,6 @@
 #include "net/socket.hpp"
 #include "net/codec/pbc_codec.hpp"
 
-class LEV *StaticGlobal::ev_                  = nullptr;
-Buffer::ChunkPool *StaticGlobal::buffer_chunk_pool_ = nullptr;
-
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::initializer_;
 
@@ -58,14 +55,13 @@ void StaticGlobal::initialize()
      */
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
-    E           = new class Env();
+    V           = new class Env();
     LOG  = new class LLog("Engine.AsyncLog");
-    M           = new class MainThread();
-    ev_         = new class LEV();
+    E           = new class EV();
     P           = new log_util::Prefix();
 
     L                  = llib::new_state();
-    buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
+    // buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 
     LOG->set_thread_name("g_log");
     LOG->AsyncLog::start(1000);
@@ -84,14 +80,13 @@ void StaticGlobal::uninitialize()
     L = llib::delete_state(L);
 
     // lua中销毁时，会gc socket，然后gc socket的buff，必须先在buffer_chunk_pool_前
-    delete buffer_chunk_pool_;
+    // delete buffer_chunk_pool_;
 
     // 在最后面停止日志线程，保证其他模块写的日志还有效
     LOG->AsyncLog::stop(true);
     delete LOG;
-    delete ev_;
-    delete M;
     delete E;
+    delete V;
     delete P;
 
     PbcCodec::uninitialize();

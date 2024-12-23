@@ -1,3 +1,4 @@
+#if 0
 #include "ev_backend.hpp"
 #include "thread/thread.hpp"
 #include "poll_backend.hpp"
@@ -351,3 +352,4 @@ void EVBackend::append_event(EVIO *w, int32_t ev)
             });
     }
 }
+#endif

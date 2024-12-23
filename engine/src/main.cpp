@@ -21,8 +21,7 @@ int32_t main(int32_t argc, char **argv)
 
     StaticGlobal::initialize();
 
-    StaticGlobal::E->init();
-    StaticGlobal::M->start(argc, argv);
+    StaticGlobal::E->start(argc, argv);
 
     StaticGlobal::uninitialize();
 

@@ -48,7 +48,7 @@ int32_t LLog::append_log_file(lua_State *L)
     const char *path = luaL_checkstring(L, 2);
     const char *ctx  = luaL_checklstring(L, 3, &len);
     int64_t time     = luaL_optinteger(L, 4, 0);
-    if (!time) time = StaticGlobal::ev()->now();
+    if (!time) time = StaticGlobal::E->time();
 
     append(path, log_util::LT_LOGFILE, time, ctx, len);
 
@@ -166,7 +166,7 @@ int32_t LLog::plog(lua_State *L)
 
     // TODO 这里能不能优化下，直接使用logger那边的buff，省去一次memcpy
     StaticGlobal::LOG->append(log_util::get_printf_path(), log_util::LT_LPRINTF,
-                                         StaticGlobal::ev()->now(), buff, used);
+                                         StaticGlobal::E->time(), buff, used);
 
     return 0;
 }
@@ -177,7 +177,7 @@ int32_t LLog::eprint(lua_State *L)
     const char *ctx = luaL_checklstring(L, 2, &len);
 
     StaticGlobal::LOG->append(log_util::get_error_path(), log_util::LT_LERROR,
-                                         StaticGlobal::ev()->now(), ctx, len);
+                              StaticGlobal::E->time(), ctx, len);
 
     return 0;
 }

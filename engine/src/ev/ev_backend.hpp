@@ -1,5 +1,5 @@
 #pragma once
-
+#if 0
 #include "ev.hpp"
 #include <thread>
 
@@ -133,3 +133,4 @@ protected:
     EventSwapList events_;        // 发送给主线程的事件
     WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
 };
+#endif

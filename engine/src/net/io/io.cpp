@@ -1,4 +1,5 @@
 #include "io.hpp"
+#include "ev/ev_watcher.hpp"
 #include "lpp/lcpp.hpp"
 #include "net/net_compat.hpp"
 #include "system/static_global.hpp"

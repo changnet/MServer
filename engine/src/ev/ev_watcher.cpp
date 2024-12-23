@@ -46,7 +46,7 @@ void EVIO::add_ref(int32_t v)
 
 void EVIO::set(int32_t events)
 {
-    loop_->append_event(this, events);
+    // loop_->append_event(this, events);
 }
 
 int32_t EVIO::recv()
@@ -131,7 +131,7 @@ void EVTimer::reschedule(int64_t now)
 
 void EVTimer::callback(int32_t revents)
 {
-    loop_->timer_callback(id_, revents);
+    // loop_->timer_callback(id_, revents);
 }
 
 int32_t EventSwapList::append_event(EVIO *w, int32_t ev,int32_t &counter, int32_t &index)

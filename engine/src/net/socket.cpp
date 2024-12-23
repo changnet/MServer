@@ -1,3 +1,4 @@
+
 #include "socket.hpp"
 #include "net_compat.hpp"
 #include "io/ssl_io.hpp"
@@ -104,7 +105,8 @@ void Socket::stop(bool flush)
     // ev那边需要做异步删除
     if (w_)
     {
-        StaticGlobal::ev()->io_stop(fd_, flush);
+        assert(false); // TODO
+        // StaticGlobal::ev()->io_stop(fd_, flush);
     }
     else
     {
@@ -378,7 +380,7 @@ bool Socket::start(int32_t fd)
     status_ = CS_OPENED;
 
     // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    w_ = StaticGlobal::ev()->io_start(fd_, EV_READ);
+    // w_ = StaticGlobal::ev()->io_start(fd_, EV_READ);
     if (!w_)
     {
         ELOG("ev io start fail: %d", fd_);
@@ -458,7 +460,8 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 
     assert(!w_);
-    w_ = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
+    assert(false); // TODO
+    // w_ = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
     if (!w_)
     {
         ELOG("ev io start fail: %d", fd);
@@ -589,7 +592,8 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    w_ = StaticGlobal::ev()->io_start(fd_, EV_ACCEPT);
+    assert(false); // TODO
+    // w_ = StaticGlobal::ev()->io_start(fd_, EV_ACCEPT);
     if (!w_)
     {
         ELOG("ev io start fail: %d", fd_);
@@ -661,7 +665,8 @@ void Socket::close_cb(bool term)
     int32_t e = w_->errno_;
 
     assert(fd_ > 0); // 如果fd_为-1，就是执行了两次close_cb
-    StaticGlobal::ev()->io_delete(fd_);
+    assert(false);   // TODO
+    // StaticGlobal::ev()->io_delete(fd_);
 
     netcompat::close(fd_);
     fd_ = netcompat::INVALID;

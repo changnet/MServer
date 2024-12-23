@@ -1,7 +1,7 @@
 #pragma once
 
 #include "global/platform.hpp"
-#if defined(__poll__)
+#if defined(__poll__NO)
 
 #include "ev_backend.hpp"
 
