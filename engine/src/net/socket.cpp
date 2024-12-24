@@ -386,7 +386,7 @@ bool Socket::start(int32_t fd)
         ELOG("ev io start fail: %d", fd_);
         return false;
     }
-    w_->bind(&Socket::io_cb, this);
+    // w_->bind(&Socket::io_cb, this);
 
     return true;
 }
@@ -467,7 +467,7 @@ int32_t Socket::connect(const char *host, int32_t port)
         ELOG("ev io start fail: %d", fd);
         return -1;
     }
-    w_->bind(&Socket::io_cb, this);
+    // w_->bind(&Socket::io_cb, this);
 
     fd_     = fd;
     status_ = CS_OPENED;
@@ -599,7 +599,7 @@ int32_t Socket::listen(const char *host, int32_t port)
         ELOG("ev io start fail: %d", fd_);
         goto FAIL;
     }
-    w_->bind(&Socket::io_cb, this);
+    // w_->bind(&Socket::io_cb, this);
 
     status_ = CS_OPENED;
 

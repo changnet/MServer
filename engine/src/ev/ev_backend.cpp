@@ -1,8 +1,8 @@
-#if 0
 #include "ev_backend.hpp"
 #include "thread/thread.hpp"
 #include "poll_backend.hpp"
 #include "epoll_backend.hpp"
+#include "system/static_global.hpp"
 
 EVBackend *EVBackend::instance()
 {
@@ -24,7 +24,6 @@ void EVBackend::uninstance(EVBackend *backend)
 EVBackend::EVBackend()
 {
     done_ = false;
-    ev_   = nullptr;
     modify_protected_ = false;
 }
 
@@ -32,10 +31,8 @@ EVBackend::~EVBackend()
 {
 }
 
-bool EVBackend::start(class EV *ev)
+bool EVBackend::start()
 {
-    ev_ = ev;
-
     if (!before_start()) return false;
 
     thread_ = std::thread(&EVBackend::backend, this);
@@ -70,7 +67,7 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
 void EVBackend::backend()
 {
     Thread::apply_thread_name("ev_backend");
-    int64_t last = EV::steady_clock();
+    int64_t last = StaticGlobal::E->steady_clock();
 
     // 第一次进入wait前，可能主线程那边已经有新的io需要处理
     backend_once(0, last);
@@ -83,7 +80,7 @@ void EVBackend::backend()
         int32_t ev_count = wait(max_wait);
         if (ev_count < 0) break;
 
-        int64_t now = EV::steady_clock();
+        int64_t now = StaticGlobal::E->steady_clock();
 
         // 对于实时性要求不高的，适当降低backend运行的帧数可以让io读写效率更高
         // 使用#define，当数值为0时直接不编译这部分代码
@@ -352,4 +349,4 @@ void EVBackend::append_event(EVIO *w, int32_t ev)
             });
     }
 }
-#endif
+

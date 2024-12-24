@@ -1,52 +1,14 @@
 #pragma once
 
-#include <functional>
-
 #include "net/io/io.hpp"
 
-class EV;
-
-////////////////////////////////////////////////////////////////////////////////
-/**
- * watcher公共基类以实现多态
- */
-class EVWatcher
-{
-public:
-    explicit EVWatcher(EV *loop);
-
-    virtual ~EVWatcher() {}
-
-    /// 回调函数
-    virtual void callback(int32_t revents)
-    {
-        // TODO 以前都是采用绑定回调函数的方式
-        // 现在定时器那边用多态直接回调，以后看要不要都改成多态
-        cb_(revents);
-    }
-
-    /**
-     * 类似于std::bind，直接绑定回调函数
-     */
-    template <typename Fn, typename T> void bind(Fn &&fn, T *t)
-    {
-        cb_ = std::bind(fn, t, std::placeholders::_1);
-    }
-
- protected:
-
-     EV *loop_;
-    std::function<void(int32_t)> cb_; // 回调函数
-};
-
-////////////////////////////////////////////////////////////////////////////////
 /**
  * @brief io事件监听器，这个结构要两个线程共享，所以有以下设定
  * 部分数据不加锁共享，需要设置后即不再改变，如：
  *     fd_、io_等
  * 部分数据仅在其中一个线程使用，如b_开头的仅在backend线程使用
  */
-class EVIO final : public EVWatcher
+class EVIO final
 {
 public:
     enum Mask
@@ -58,7 +20,7 @@ public:
 
 public:
     ~EVIO();
-    explicit EVIO(int32_t fd, EV *loop);
+    explicit EVIO(int32_t id, int32_t addr, int32_t fd);
     
     /**
      * @brief 由io线程调用的读函数，必须线程安全
@@ -97,9 +59,11 @@ public:
 
 public:
     uint8_t mask_; // 用于设置种参数
-    int32_t fd_;   /// 文件描述符
+    int32_t fd_;   // 文件描述符
+    int32_t id_;   // 在业务上层分配的唯一id
+    int32_t addr_; // 所属worker地址
 
-    int32_t errno_; /// 错误码
+    int32_t errno_; // 错误码
 
     int32_t ev_counter_; // ev数组中的计数器
     int32_t ev_index_;   // 在ev数组中的下标
@@ -116,40 +80,6 @@ public:
 #ifndef NDEBUG
     std::atomic<int> ref_; // 引用数，用于检测
 #endif
-};
-
-////////////////////////////////////////////////////////////////////////////////
-class EVTimer final : public EVWatcher
-{
-public:
-    /// 当时间出现偏差时，定时器的调整策略
-    enum Policy
-    {
-        P_NONE  = 0, /// 默认方式，调整为当前时间
-        P_ALIGN = 1, /// 对齐到特定时间
-        P_SPIN  = 2, /// 自旋
-    };
-
-public:
-    ~EVTimer();
-    explicit EVTimer(int32_t id, EV *loop);
-
-    /// 重新调整定时器
-    void reschedule(int64_t now);
-
-    /// 回调函数
-    virtual void callback(int32_t revents);
-
-public:
-public:
-    int32_t id_;       /// 唯一id
-    int32_t pending_;  /// 在待处理watcher数组中的下标
-    int32_t revents_; /// receive events，收到并等待处理的事件
-
-    int32_t index_; // 当前定时器在二叉树数组中的下标
-    int32_t policy_; ///< 修正定时器时间偏差策略，详见 reschedule 函数
-    int64_t at_; ///< 定时器首次触发延迟的毫秒数（未激活），下次触发时间（已激活）
-    int64_t repeat_; ///< 定时器重复的间隔（毫秒数）
 };
 
 // socket事件
@@ -313,7 +243,7 @@ private:
      * https://linux.die.net/man/3/open
      * return a non-negative integer representing the lowest numbered unused file descriptor
      * linux下，fd都比较小，可以直接把fd作为数组下标
-     * 但win下，fd可能会返回
+     * 但win下，fd可能会返回一个很大的值，使用hash来管理
      */
     std::unordered_map<int32_t, EVIO *> fd_watcher_huge_;
 };

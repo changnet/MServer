@@ -1,17 +1,12 @@
 #include "ev_watcher.hpp"
 
-#include "ev.hpp"
-
-EVWatcher::EVWatcher(EV *loop) : loop_(loop)
+EVIO::EVIO(int32_t id, int32_t addr, int32_t fd)
 {
-}
-////////////////////////////////////////////////////////////////////////////////
+    fd_   = fd;
+    id_   = id;
+    addr_ = addr;
 
-EVIO::EVIO(int32_t fd, EV *loop) : EVWatcher(loop)
-{
-    fd_     = fd;
-
-    mask_ = 0;
+    mask_  = 0;
     errno_ = 0;
 
     b_kevents_ = 0;
@@ -81,60 +76,8 @@ int32_t EVIO::do_init_connect()
     return io_->do_init_connect(fd_);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-EVTimer::EVTimer(int32_t id, EV *loop) : EVWatcher(loop)
-{
-    pending_ = 0;
-    revents_ = 0;
-    id_     = id;
-    index_  = 0;
-    policy_ = P_NONE;
-    at_     = 0;
-    repeat_ = 0;
-}
-
-EVTimer::~EVTimer()
-{
-}
-
-void EVTimer::reschedule(int64_t now)
-{
-    /**
-     * 当前用的是CLOCK_MONOTONIC时间，所以不存在用户调时间的问题
-     * 但可能存在卡主循环的情况，libev默认情况下是修正为当前时间
-     */
-    switch (policy_)
-    {
-    case P_ALIGN:
-    {
-        // 严格对齐到特定时间，比如一个定时器每5秒触发一次，那必须是在 0 5 10 15
-        // 触发 即使主线程卡了，也不允许在其他秒数触发
-        assert(repeat_ > 0);
-        while (at_ < now) at_ += repeat_;
-        break;
-    }
-    case P_SPIN:
-    {
-        // 自旋到时间恢复正常
-        // 假如定时器1秒触发1次，现在过了5秒，则会在很短时间内触发5次回调
-        break;
-    }
-    default:
-    {
-        // 按当前时间重新计时，这是最常用的定时器，libev、libevent都是这种处理方式
-        at_ = now;
-        break;
-    }
-    }
-}
-
-void EVTimer::callback(int32_t revents)
-{
-    // loop_->timer_callback(id_, revents);
-}
-
-int32_t EventSwapList::append_event(EVIO *w, int32_t ev,int32_t &counter, int32_t &index)
+int32_t EventSwapList::append_event(EVIO *w, int32_t ev, int32_t &counter,
+                                    int32_t &index)
 {
     std::lock_guard<SpinLock> guard(lock_);
 

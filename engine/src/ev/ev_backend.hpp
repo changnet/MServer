@@ -1,7 +1,7 @@
 #pragma once
-#if 0
-#include "ev.hpp"
+
 #include <thread>
+#include "ev_watcher.hpp"
 
 /**
  * @brief 用于执行io操作的后台基类，统一epoll、poll等不同内核接口。该io操作在一个独立的线程
@@ -10,7 +10,7 @@ class EVBackend
 {
 public:
     /**
-     * fd操作类型定义，与epoll一致 EPOLL_CTL_ADD
+     * fd操作类型定义，与epoll一致 EPOLL_CTL_ADD，不支持epoll时用于兼容poll
      */
     enum FD_OP
     {
@@ -34,7 +34,7 @@ public:
     /**
      * 启动backend线程
      */
-    bool start(class EV *ev);
+    bool start();
     /**
      * 停止backend线程
      */
@@ -125,7 +125,6 @@ private:
 protected:
     bool done_;     /// 是否终止进程
     bool modify_protected_; // 当前禁止修改poll等数组结构
-    class EV *ev_;  /// 主循环
     std::thread thread_;
 
     std::vector<EVIO *> pending_events_; // 待处理的事件
@@ -133,4 +132,4 @@ protected:
     EventSwapList events_;        // 发送给主线程的事件
     WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
 };
-#endif
+
