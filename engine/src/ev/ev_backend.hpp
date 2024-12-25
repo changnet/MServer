@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <thread>
 #include "ev_watcher.hpp"
 
@@ -43,22 +44,12 @@ public:
      * 创建一个backend实例
      */
     static EVBackend *instance();
-    /**
-     * 销毁一个backend实例
-     */
-    static void uninstance(EVBackend *backend);
-
-    // 获取等待主线程处理的事件
-    std::vector<WatcherEvent> &fetch_event()
-    {
-        return events_.fetch_event();
-    }
 
 protected:
     /**
-     * 处理主线程发起的事件
+     * 处理收到的线程事件
      */
-    void do_watcher_main_event(EVIO *w, int32_t events);
+    void do_watcher_recv_event(EVIO *w, int32_t events);
     /**
      * 处理从epoll、poll收到的事件
      */
@@ -92,9 +83,9 @@ private:
      */
     virtual void do_wait_event(int32_t ev_count) = 0;
     /**
-     * @brief 处理主线程发来的事件
+     * @brief 处理收到的事件
      */
-    void do_main_events();
+    void do_recv_events();
     /**
      * @brief 处理读写后的io状态
      * @param w 待处理的watcher
@@ -125,11 +116,13 @@ private:
 protected:
     bool done_;     /// 是否终止进程
     bool modify_protected_; // 当前禁止修改poll等数组结构
+    bool busy_; // 是否繁忙(还有未处理完的事)
     std::thread thread_;
 
-    std::vector<EVIO *> pending_events_; // 待处理的事件
+    std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
 
-    EventSwapList events_;        // 发送给主线程的事件
+    std::mutex mutex_;
+    std::deque<EVIO *> recv_events_; // 收到其他线程的事件
     WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
 };
 

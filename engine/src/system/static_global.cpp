@@ -58,6 +58,7 @@ void StaticGlobal::initialize()
     V           = new class Env();
     LOG  = new class LLog("Engine.AsyncLog");
     E           = new class EV();
+    B           = EVBackend::instance();
     P           = new log_util::Prefix();
 
     L                  = llib::new_state();
@@ -85,6 +86,7 @@ void StaticGlobal::uninitialize()
     // 在最后面停止日志线程，保证其他模块写的日志还有效
     LOG->AsyncLog::stop(true);
     delete LOG;
+    delete B;
     delete E;
     delete V;
     delete P;

@@ -13,17 +13,13 @@ EVBackend *EVBackend::instance()
 #endif
 }
 
-void EVBackend::uninstance(EVBackend *backend)
-{
-    delete backend;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 EVBackend::EVBackend()
 {
     done_ = false;
+    busy_             = false;
     modify_protected_ = false;
 }
 
@@ -58,10 +54,8 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
     do_wait_event(ev_count);
     modify_protected_ = false;
 
-    do_main_events();
+    do_recv_events();
     do_pending_events();
-
-    if (!events_.empty()) ev_->wake();
 }
 
 void EVBackend::backend()
@@ -72,12 +66,12 @@ void EVBackend::backend()
     // 第一次进入wait前，可能主线程那边已经有新的io需要处理
     backend_once(0, last);
 
-    // 不能wait太久，要定时检测超时删除的连接
+    static const int32_t min_wait = 1; // 不为0
     static const int32_t max_wait = 2000;
 
     while (!done_)
     {
-        int32_t ev_count = wait(max_wait);
+        int32_t ev_count = wait(busy_ ? min_wait : max_wait);
         if (ev_count < 0) break;
 
         int64_t now = StaticGlobal::E->steady_clock();
@@ -91,6 +85,7 @@ void EVBackend::backend()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(diff));
         }
+        now = StaticGlobal::E->steady_clock();
 #endif
 
         last = now; // 判断是否sleep必须包含backend执行逻辑的时间
@@ -234,7 +229,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
     return false;
 }
 
-void EVBackend::do_watcher_main_event(EVIO *w, int32_t events)
+void EVBackend::do_watcher_recv_event(EVIO *w, int32_t events)
 {
     assert(events);
 
@@ -323,30 +318,34 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
     if (expect_ev) append_event(w, expect_ev);
 }
 
-void EVBackend::do_main_events()
+void EVBackend::do_recv_events()
 {
-    std::vector<WatcherEvent> &events = ev_->fetch_event();
-    for (auto& we : events)
+    // 只循环一定次数，避免其他线程不断地发送事件，导致线程一直在处理这些事件而
+    // 不再接收来自网络的事件
+    EVIO *w;
+    for (int32_t i = 1; i < 1024; i++)
     {
-        do_watcher_main_event(we.w_, we.ev_);
+        {
+            std::scoped_lock<std::mutex> sl(mutex_);
+            if (recv_events_.empty())
+            {
+                busy_ = true;
+                return;
+            }
+
+            w = recv_events_.front();
+            recv_events_.pop_front();
+        }
+
+        int32_t ev = w->b_ev_.exchange(0);
+        do_watcher_recv_event(w, ev);
     }
-    events.clear();
+
+    busy_ = false;
 }
 
 void EVBackend::append_event(EVIO *w, int32_t ev)
 {
-    int32_t flag = events_.append_main_event(w, ev);
 
-    // 主线程执行的逻辑可能耗时较久，才需要及时唤醒backend把数据发送出去
-    // backend线程可以收集完所有数据后再唤醒主线程处理，节省一点资源
-    // ev_->wake(true);
-    if (2 == flag)
-    {
-        fd_mgr_.for_each(
-            [w](EVIO *watcher)
-            {
-                if (w != watcher) watcher->b_ev_counter_ = 0;
-            });
-    }
 }
 

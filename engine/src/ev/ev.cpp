@@ -168,8 +168,8 @@ void EV::start(int32_t argc, char **argv)
 
     stop_ = false;
     routinue();
-
     stop_ = true;
+
     L_    = llib::delete_state(L_);
 }
 

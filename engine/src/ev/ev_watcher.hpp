@@ -65,90 +65,19 @@ public:
 
     int32_t errno_; // 错误码
 
-    int32_t ev_counter_; // ev数组中的计数器
-    int32_t ev_index_;   // 在ev数组中的下标
+    std::atomic<int32_t> ev_; // backend发出，等待worker线程处理的事件
 
     // 带b_前缀的变量，都是和backend线程相关
     // 这些变量要么只能在backend中操作，要么操作时必须加锁
 
     int32_t b_kevents_; // kernel(如epoll)中使用的events
     int32_t b_pevents_; // pending，backend线程等待处理的事件
-    int32_t b_ev_counter_; // ev数组中的计数器
-    int32_t b_ev_index_;   // 在ev数组中的下标
+    std::atomic<int32_t> b_ev_; // worker发出，等待backend线程处理的事件
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
 #ifndef NDEBUG
     std::atomic<int> ref_; // 引用数，用于检测
 #endif
-};
-
-// socket事件
-struct WatcherEvent
-{
-    int32_t ev_; // 事件
-    EVIO *w_;
-
-    WatcherEvent(EVIO *w, int32_t ev)
-    {
-        w_ = w;
-        ev_ = ev;
-    }
-};
-
-// 两线程之间交换事件的列表
-class EventSwapList
-{
- public:
-    EventSwapList()
-    {
-        counter_ = 1;
-    }
-
-    // 是否向数组中插入了事件
-    bool empty()
-    {
-        std::lock_guard<SpinLock> guard(lock_);
-        return append_.empty();
-    }
-
-    /**
-     * 添加事件(此函数不会失败)
-     * @param w 对应的watcher
-     * @param ev 要添加的事件
-     * @return 0和旧事件合并 1新增事件 2重置所有事件计数器
-     */
-    int32_t append_backend_event(EVIO* w, int32_t ev)
-    {
-        return append_event(w, ev, w->ev_counter_, w->ev_index_);
-    }
-    int32_t append_main_event(EVIO* w, int32_t ev)
-    {
-        return append_event(w, ev, w->b_ev_counter_, w->b_ev_index_);
-    }
- 
-    // 获取待处理的事件
-    std::vector<WatcherEvent> &fetch_event()
-    {
-        assert(0 == pending_.size());
-        {
-            std::lock_guard<SpinLock> guard(lock_);
-            if (0 != append_.size())
-            {
-                counter_ += 1;
-                pending_.swap(append_);
-            }
-        }
-        return pending_;
-    }
-
-private:
-    int32_t append_event(EVIO *w, int32_t ev, int32_t &counter, int32_t &index);
-
-private:
-    int32_t counter_;
-    SpinLock lock_;
-    std::vector<WatcherEvent> append_; // 事件往该数组中插入
-    std::vector<WatcherEvent> pending_; // 另一个线程交换后，待处理的数据
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制
