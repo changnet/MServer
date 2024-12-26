@@ -43,10 +43,10 @@ void __dbg_break()
     // 注意：由于无法取得coroutine的L指针，无法中断coroutine中的逻辑（考虑把正在执行的
     // coroutine设置到一个global值，然后用getglobal取值）
     // 注意：对正在执行程序的影响未知
-    lua_State *L = StaticGlobal::L;
+    //lua_State *L = StaticGlobal::L;
 
-    lua_sethook(L, __dbg_break_hook,
-                LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
+    //lua_sethook(L, __dbg_break_hook,
+    //            LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE | LUA_MASKCOUNT, 1);
 }
 
 const char *__dbg_traceback()
@@ -58,7 +58,7 @@ const char *__dbg_traceback()
     // 注意：对正在执行程序的影响未知
 
     // worker线程的L不一样，这里得改一下
-    lua_State *L = StaticGlobal::L;
+    lua_State *L = nullptr; // StaticGlobal::L;
 
     luaL_traceback(L, L, nullptr, 0);
 

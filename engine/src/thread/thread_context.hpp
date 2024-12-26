@@ -12,6 +12,7 @@ struct ThreadMessage
     {
         TIMER  = 1, // 定时器
         SIGNAL = 2, // 信号
+        SOCKET = 3, // 网络消息
     };
 
     // 构造函数

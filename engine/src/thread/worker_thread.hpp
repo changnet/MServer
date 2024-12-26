@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include "thread_message.hpp"
+#include "thread_context.hpp"
 
 struct lua_State;
 

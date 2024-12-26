@@ -178,7 +178,7 @@ void HttpPacket::on_headers_complete()
 int32_t HttpPacket::on_message_complete(bool upgrade)
 {
     UNUSED(upgrade);
-    lua_State *L = StaticGlobal::L;
+    lua_State *L = nullptr; // StaticGlobal::L;
     assert(0 == lua_gettop(L));
 
     LUA_PUSHTRACEBACK(L);

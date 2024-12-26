@@ -134,7 +134,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     if (events & EV_CLOSE)
     {
         op = FD_OP_DEL;
-        append_event(w, EV_CLOSE);
+        dispatch_event(w, EV_CLOSE);
         fd_mgr_.unset(w);
     }
     else
@@ -213,7 +213,7 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
         return false;
     case EV_INIT_ACPT:
     case EV_INIT_CONN:
-        append_event(w, status);
+        dispatch_event(w, status);
 
         // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？ Renegotiation is removed from TLS 1.3
         //int32_t new_status = w->send();
@@ -315,7 +315,7 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
     // 关闭和错误事件不管用户是否设置，都会触发
     int32_t expect_ev = kernel_ev | EV_ERROR | EV_CLOSE;
     expect_ev &= events;
-    if (expect_ev) append_event(w, expect_ev);
+    if (expect_ev) dispatch_event(w, expect_ev);
 }
 
 void EVBackend::do_recv_events()
@@ -344,8 +344,23 @@ void EVBackend::do_recv_events()
     busy_ = false;
 }
 
-void EVBackend::append_event(EVIO *w, int32_t ev)
+void EVBackend::dispatch_event(EVIO *w, int32_t ev)
 {
+    int32_t old = w->ev_.fetch_or(ev);
+    if (0 != old) return;
 
+    StaticGlobal::M->forward_message(
+        0, w->addr_, ThreadMessage::SOCKET, nullptr, w->id_);
 }
 
+void EVBackend::append_event(EVIO *w, int32_t ev)
+{
+    int32_t old = w->b_ev_.fetch_or(ev);
+    if (0 != old) return;
+
+    {
+        std::scoped_lock<std::mutex> sl(mutex_);
+        recv_events_.push_back(w);
+    }
+    wake();
+}

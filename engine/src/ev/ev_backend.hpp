@@ -41,6 +41,10 @@ public:
      */
     void stop();
     /**
+     * 往backend发送一个事件
+     */
+    void append_event(EVIO *w, int32_t ev);
+    /**
      * 创建一个backend实例
      */
     static EVBackend *instance();
@@ -110,8 +114,8 @@ private:
      * @param events 要添加的事件
     */
     void modify_later(EVIO *w, int32_t events);
-    // 发送事件给主线程
-    void append_event(EVIO *w, int32_t ev);
+    // 派发事件给watcher对应的线程
+    void dispatch_event(EVIO *w, int32_t ev);
 
 protected:
     bool done_;     /// 是否终止进程

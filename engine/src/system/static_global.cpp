@@ -55,13 +55,13 @@ void StaticGlobal::initialize()
      */
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
-    V           = new class Env();
+    V           = new Env();
     LOG  = new class LLog("Engine.AsyncLog");
+    M           = new ThreadContextMgr();
     E           = new class EV();
     B           = EVBackend::instance();
     P           = new log_util::Prefix();
 
-    L                  = llib::new_state();
     // buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 
     LOG->set_thread_name("g_log");
@@ -78,8 +78,6 @@ void StaticGlobal::uninitialize()
      * clear函数来解除引用，再delete掉，不然valgrind会报Invalid read内存错误
      */
 
-    L = llib::delete_state(L);
-
     // lua中销毁时，会gc socket，然后gc socket的buff，必须先在buffer_chunk_pool_前
     // delete buffer_chunk_pool_;
 
@@ -88,6 +86,7 @@ void StaticGlobal::uninitialize()
     delete LOG;
     delete B;
     delete E;
+    delete M;
     delete V;
     delete P;
 

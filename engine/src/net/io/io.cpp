@@ -100,7 +100,7 @@ void IO::init_ready() const
 {
     try
     {
-        lcpp::call(StaticGlobal::L, "conn_io_ready", conn_id_);
+        //lcpp::call(StaticGlobal::L, "conn_io_ready", conn_id_);
     }
     catch (const std::runtime_error& e)
     {

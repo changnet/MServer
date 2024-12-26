@@ -33,8 +33,8 @@ int32_t StreamPacket::unpack(Buffer &buffer)
     try
     {
         int32_t conn_id = socket_->conn_id();
-        lcpp::call(StaticGlobal::L, "command_new", conn_id, cmd,
-                   (void *)(buf + header_size), size - header_size);
+        //lcpp::call(StaticGlobal::L, "command_new", conn_id, cmd,
+        //           (void *)(buf + header_size), size - header_size);
     }
     catch (const std::runtime_error &e)
     {

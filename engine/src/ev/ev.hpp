@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ev/timer.hpp"
-#include "thread/thread_message.hpp"
+#include "thread/thread_context.hpp"
 
 struct lua_State;
 
