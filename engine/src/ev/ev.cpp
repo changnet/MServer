@@ -41,7 +41,7 @@ void EV::routinue()
 
         time_update();
 
-        timer_mgr_.update_timeout(steady_clock_, utc_ms_);
+        timer_mgr_.update_timeout(steady_clock_, utc_ms_, this);
 
         dispatch_message();
     }

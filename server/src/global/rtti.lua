@@ -7,6 +7,38 @@
 -- 如果是local函数，那没有通用的方法可以取，只能通过手动注册。
 -- 这个仅限于定时器、rpc等特殊调用，一般情况下，还是用对象来做吧
 
+--[[
+当需要生成一个带参数的函数回调时，可以使用闭包
+
+但是这个闭包lua不支持这样写(cannot use '...' outside a vararg function near '...')
+function make_cb(func, ...)
+    return function()
+        return func(...)
+    end
+end
+
+哪现在有两种方式，一种是用table保存参数，一种是用upvalue
+function make_cb(func, ...)
+    local params = {...}
+    return function()
+        return func(table.unpack(params))
+    end
+end
+
+function make_cb(func, ...)
+    local p1, p2, p3 = ...
+    return function()
+        return func(p1, p2, p3)
+    end
+end
+
+table的方式是需要创建一个table，调用时需要unpack，upvalue是需要创建upvalue，代价都很大
+经过测试可以发现，当参数<=5个时，两者效率相当。参数数量再多，创建upvalue的代价就会超过创建
+table。
+
+调用的话，使用upvalue的方式较快，大概是unpack的两倍。
+]]
+
 -- RTTI(Run-Time Type Information) for lua
 Rtti = {}
 
@@ -16,6 +48,9 @@ local names_func = {}
 
 local obj_names = {}
 local names_obj = {}
+
+local select = select
+local tableunpack = table.unpack
 
 -- 从对象元表里查找成员函数的名字
 -- @param mt 对象的元表
@@ -57,7 +92,7 @@ end
 -- @param this 对象
 -- @param method 成员函数名
 -- @param p0 ... 其他回调参数，不需要可以不选择
-function Rtti.method_thunk(this, method, p0, p1, p2, p3, p4, p5)
+function Rtti.make_method_cb(this, method, ...)
     -- p0, p1 ... 可变参数，因为不能用...，
     -- cannot use '...' outside a vararg function near '...'
     -- 但也没必要用table.pack
@@ -69,28 +104,108 @@ function Rtti.method_thunk(this, method, p0, p1, p2, p3, p4, p5)
     -- ps:高版本的lua(5.3)会自动判断这些upvalue是否被引用。而低版本则不会
     -- 传入不同的参数到闭包，如果这个参数没用到，lua 5.3返回的函数指针是一样的，5.1的不一样
     method = nil
-    return function()
-        return this[name](this, p0, p1, p2, p3, p4, p5)
+    local n = select("#", ...)
+    if 0 == n then
+        return function() return this[name](this) end
+    elseif 1 == n then
+        local p1 = ...
+        return function() return this[name](this, p1) end
+    elseif 2 == n then
+        local p1, p2 = ...
+        return function() return this[name](this, p1, p2) end
+    elseif 3 == n then
+        local p1, p2, p3 = ...
+        return function() return this[name](this, p1, p2, p3) end
+    elseif 4 == n then
+        local p1, p2, p3, p4 = ...
+        return function() return this[name](this, p1, p2, p3, p4) end
+    elseif 5 == n then
+        local p1, p2, p3, p4, p5 = ...
+        return function() return this[name](this, p1, p2, p3, p4, p5) end
+    else
+        local params = {...}
+        return function()
+            return this[name](this, tableunpack(params))
+        end
     end
 end
 
 -- 把一个函数调用及其参数转换为一个函数保存起来
-function Rtti.func_thunk(func, p0, p1, p2, p3, p4, p5)
-    -- 测试表明，采用这种方式比把参数用table.pack再unpack的方式要快一些
-    -- 只是没有table.pack灵活
-    return function()
-        return func(p0, p1, p2, p3, p4, p5)
+function Rtti.make_func_cb(func, ...)
+    local n = select("#", ...)
+    if 0 == n then
+        return function() return func() end
+    elseif 1 == n then
+        local p1 = ...
+        return function() return func(p1) end
+    elseif 2 == n then
+        local p1, p2 = ...
+        return function() return func(p1, p2) end
+    elseif 3 == n then
+        local p1, p2, p3 = ...
+        return function() return func(p1, p2, p3) end
+    elseif 4 == n then
+        local p1, p2, p3, p4 = ...
+        return function() return func(p1, p2, p3, p4) end
+    elseif 5 == n then
+        local p1, p2, p3, p4, p5 = ...
+        return function() return func(p1, p2, p3, p4, p5) end
+    else
+        local params = {...}
+        return function()
+            return func(tableunpack(params))
+        end
     end
 end
 
--- 把一个函数调用及其参数转换为一个函数保存起来
-function Rtti.func_name_thunk(func, p0, p1, p2, p3, p4, p5)
+-- 把一个函数调用及其参数转换为一个函数名保存起来，支持热更
+function Rtti.make_func_name_cb(func, ...)
     local name = assert(func_names[func], "function name not found")
 
     -- 只保存函数name，不保存指针，这样热更时就能更新到回调函数
-    return function()
-        local cb = names_func[name]
-        return cb(p0, p1, p2, p3, p4, p5)
+    func = nil
+    local n = select("#", ...)
+    if 0 == n then
+        return function()
+            local cb = names_func[name]
+            return cb()
+        end
+    elseif 1 == n then
+        local p1 = ...
+        return function()
+            local cb = names_func[name]
+            return cb(p1)
+        end
+    elseif 2 == n then
+        local p1, p2 = ...
+        return function()
+            local cb = names_func[name]
+            return cb(p1, p2)
+        end
+    elseif 3 == n then
+        local p1, p2, p3 = ...
+        return function()
+            local cb = names_func[name]
+            return cb(p1, p2, p3)
+        end
+    elseif 4 == n then
+        local p1, p2, p3, p4 = ...
+        return function()
+            local cb = names_func[name]
+            return cb(p1, p2, p3, p4)
+        end
+    elseif 5 == n then
+        local p1, p2, p3, p4, p5 = ...
+        return function()
+            local cb = names_func[name]
+            return cb(p1, p2, p3, p4, p5)
+        end
+    else
+        local params = {...}
+        return function()
+            local cb = names_func[name]
+            return cb(tableunpack(params))
+        end
     end
 end
 

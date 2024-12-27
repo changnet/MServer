@@ -16,11 +16,20 @@ public:
     void start(int32_t argc, char **argv);
     // 退出主循环
     void stop();
-
+    // 获取steady_clock
+    int64_t clock() const
+    {
+        return steady_clock_;
+    }
     // 获取utc时间戳(单位秒)
     int64_t time() const
     {
         return utc_sec_;
+    }
+    // 获取utc时间戳(单位毫秒)
+    int64_t time_ms() const
+    {
+        return utc_ms_;
     }
 
     /**
@@ -59,6 +68,27 @@ public:
                    std::chrono::steady_clock::now() - beg)
             .count();
     }
+    /**
+     * @brief 启动定时器
+     * @param id 定时器唯一id
+     * @param after N毫秒秒后第一次执行
+     * @param repeat 重复执行间隔，毫秒数
+     * @param policy 定时器重新规则时的策略
+     * @return 成功返回>=1,失败返回值<0
+     */
+    int32_t timer_start(int32_t id, int64_t after, int64_t repeat, int32_t policy)
+    {
+        return timer_mgr_.timer_start(steady_clock_, id, after, repeat, policy);
+    }
+    /**
+     * @brief 停止定时器并从管理器中删除
+     * @param id 定时器唯一id
+     * @return 成功返回0
+     */
+    int32_t timer_stop(int32_t id)
+    {
+        return timer_mgr_.timer_stop(id);
+    }
 
 private:
     // 进入主循环，除非停服否则不返回
@@ -69,8 +99,8 @@ private:
 
 private:
     bool stop_;                    // 退出主循环
-    int64_t steady_clock_;         // 起服到现在的毫秒
-    int64_t utc_ms_;               // UTC时间戳（单位：毫秒）
+    std::atomic<int64_t> steady_clock_; // 起服到现在的毫秒
+    std::atomic<int64_t> utc_ms_;       // UTC时间戳（单位：毫秒）
     std::atomic<int64_t> utc_sec_; // UTC时间戳(CLOCK_REALTIME,秒)
     int64_t last_utc_update_;      // 上一次更新UTC的MONOTONIC时间
     /**

@@ -1,5 +1,5 @@
 #include "timer.hpp"
-
+#include "thread/thread_context.hpp"
 
 #define HEAP0             1 // 二叉堆的位置0不用，数据从1开始存放
 #define HPARENT(k)        ((k) >> 1)
@@ -177,7 +177,7 @@ int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
     return index;
 }
 
-void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now)
+void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now, ThreadContext *ctx)
 {
     auto list = ht.list_;
     while (ht.size_ && (list[HEAP0])->at_ <= now)
@@ -204,7 +204,7 @@ void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now)
             ht.hash_.erase(timer->id_);
         }
 
-        // add_pending(w, EV_TIMER);
+        ctx->emplace_message(0, 0, ThreadMessage::TIMER, nullptr, timer->id_);
     }
 }
 
@@ -261,10 +261,10 @@ int32_t TimerMgr::periodic_stop(int32_t id)
     return delete_heap(periodic_, id);
 }
 
-void TimerMgr::update_timeout(int64_t now, int64_t utc)
+void TimerMgr::update_timeout(int64_t now, int64_t utc, ThreadContext *ctx)
 {
-    heap_timeout(timer_, now);
-    heap_timeout(periodic_, utc);
+    heap_timeout(timer_, now, ctx);
+    heap_timeout(periodic_, utc, ctx);
 }
 
 int64_t TimerMgr::next_interval(int64_t now, int64_t utc)

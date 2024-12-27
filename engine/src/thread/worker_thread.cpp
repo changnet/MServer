@@ -1,6 +1,8 @@
 #include "worker_thread.hpp"
+
 #include "lpp/llib.hpp"
 #include "thread.hpp"
+#include "system/static_global.hpp"
 
 WorkerThread::WorkerThread(const std::string &name)
 {
@@ -41,6 +43,12 @@ void WorkerThread::stop(bool join)
 
         thread_.join();
     }
+}
+
+void WorkerThread::time_update(bool tolua)
+{
+    steady_clock_ = StaticGlobal::E->clock();
+    utc_ms_       = StaticGlobal::E->time_ms();
 }
 
 bool WorkerThread::initialize()
@@ -91,35 +99,6 @@ bool WorkerThread::uninitialize()
     return true;
 }
 
-void WorkerThread::routine_once()
-{
-    int32_t count = 0;
-    while (true)
-    {
-        try
-        {
-            ThreadMessage m = pop_message();
-            if (-1 == m.src_) return;
-
-            lcpp::call(L_, "on_worker_message", m.src_, m.type_,
-                       m.udata_, m.usize_);
-            m.dispose();
-        }
-        catch (const std::runtime_error &e)
-        {
-            ELOG("%s", e.what());
-        }
-
-        count++;
-        if (256 == count)
-        {
-            count = 0;
-            // 主线程会不断地派发任务，worker线程可能会无休止地运行
-            // 因此执行一定数据的逻辑后，需要更新时间及定时器
-        }
-    }
-}
-
 void WorkerThread::routine()
 {
     Thread::apply_thread_name(name_.c_str());
@@ -131,10 +110,35 @@ void WorkerThread::routine()
     }
 
     stop_ = false;
+    auto E = StaticGlobal::E;
     while (likely(!stop_))
     {
-        wait_for(2000);
-        routine_once();
+        time_update(false);
+        int64_t wait_time = timer_mgr_.next_interval(steady_clock_, utc_ms_);
+
+        wait_for(wait_time);
+
+        time_update(true);
+        timer_mgr_.update_timeout(steady_clock_, utc_ms_, this);
+
+        // 其他线程会不断地派发任务，worker线程可能会无休止地运行
+        // 因此执行一定数量的逻辑后，需要更新时间及定时器
+        for (int i = 1; i < 256; i++)
+        {
+            try
+            {
+                ThreadMessage m = pop_message();
+                if (-1 == m.src_) break;
+
+                lcpp::call(L_, "on_worker_message", m.src_, m.type_, m.udata_,
+                           m.usize_);
+                m.dispose();
+            }
+            catch (const std::runtime_error &e)
+            {
+                ELOG("%s", e.what());
+            }
+        }
     }
     stop_ = true;
 

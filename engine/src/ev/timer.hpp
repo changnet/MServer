@@ -2,6 +2,8 @@
 
 #include "global/global.hpp"
 
+class ThreadContext;
+
 class TimerMgr final
 {
 public:
@@ -54,7 +56,7 @@ public:
     int64_t next_interval(int64_t now, int64_t utc);
 
     // 更新定时器状态，检测哪些定时器超时
-    void update_timeout(int64_t now, int64_t utc);
+    void update_timeout(int64_t now, int64_t utc, ThreadContext *ctx);
 
 private:
     struct Timer
@@ -90,7 +92,7 @@ private:
     void delete_heap(HeapTimer &ht, Timer *time);
     int32_t new_heap(HeapTimer &ht, int64_t now, int32_t id, int64_t after,
                      int64_t repeat, int32_t policy);
-    void heap_timeout(HeapTimer &ht, int64_t now);
+    void heap_timeout(HeapTimer &ht, int64_t now, ThreadContext *ctx);
     int64_t next_heap_interval(HeapTimer &ht, int64_t now);
     // 重新规划定时器触发时间
     void timer_reschedule(Timer *timer, int64_t now);

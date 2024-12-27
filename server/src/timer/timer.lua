@@ -26,8 +26,8 @@ local this = global_storage("Timer", {
 
 local min_timer = {} -- 分钟级定时器回调
 
-local func_thunk = func_thunk
-local func_name_thunk = func_name_thunk
+local make_func_cb = Rtti.make_func_cb
+local make_func_name_cb = Rtti.make_func_name_cb
 
 -- 分配一个唯一的timer id
 local function get_next_id()
@@ -48,6 +48,24 @@ function Timer.reg_min_interval(func, ...)
     table.insert(min_timer, func)
 end
 
+-- 挂起当前协程，等待N毫秒后继续
+-- @param after 毫秒，0则在下一帧执行
+function Timer.wait(after)
+    local session = CoPool.current_session()
+
+    local timer_id = get_next_id()
+    this.timer[timer_id] = {session = session}
+
+    if 0 == after then
+        -- 0比较特殊，纯粹是为了异步执行，避免数据回溯或者调用嵌套。不需要发起定时器
+        g_worker:emplace_message(0, 0, ThreadMessage.TIMER, nil, session)
+    else
+        g_worker:timer_start(timer_id, after, 0, P_ALIGN)
+    end
+
+    return coroutine.yield()
+end
+
 -- 创建按间隔循环的定时器
 -- @param after 延迟N毫秒执行第一次回调
 -- @param msec 循环间隔，单位毫秒，0表示不循环
@@ -63,12 +81,12 @@ function Timer.interval(after, msec, times, func, ...)
     local cb
     if after > 5000 or (times < 0 or msec * times > 5000) then
         -- 如果回调时间很长，则需要该函数能热更
-        cb = func_name_thunk(func, ...)
+        cb = make_func_name_cb(func, ...)
     else
         -- 如果回调时间很短，则在这段时间内需要热更的机率很小
         -- 假如还是刚好遇到热更，则对应的业务逻辑必须自己处理好
         -- 因为即使使用能热更的方式，也没办法控制热更时和定时器回调的谁前谁后时机
-        cb = func_thunk(func, ...)
+        cb = make_func_cb(func, ...)
     end
 
     this.timer[timer_id] = {
@@ -77,10 +95,13 @@ function Timer.interval(after, msec, times, func, ...)
         cb = cb,
     }
 
-    local e = ev:timer_start(timer_id, after, msec, P_ALIGN)
+    if 0 == after and 1 == times then
+        return g_worker:emplace_message(0, 0, ThreadMessage.TIMER, nil, timer_id)
+    end
+    local e = g_worker:timer_start(timer_id, after, msec, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
-        eprintf("periodic start fail: id = %d, e = %d", timer_id, e)
+        eprintf("interval start fail: id = %d, e = %d", timer_id, e)
         return -1
     end
     return timer_id
@@ -105,9 +126,9 @@ function Timer.stop(timer_id)
 
     this.timer[timer_id] = nil
     if info.periodic then
-        ev:periodic_stop(timer_id)
+        g_worker:periodic_stop(timer_id)
     else
-        ev:timer_stop(timer_id)
+        g_worker:timer_stop(timer_id)
     end
 
     return true
@@ -127,12 +148,12 @@ function Timer.periodic(after, sec, times, func, ...)
     local cb
     if after > 5 or (times < 0 or sec * times > 5) then
         -- 如果回调时间很长，则需要该函数能热更
-        cb = func_name_thunk(func, ...)
+        cb = make_func_name_cb(func, ...)
     else
         -- 如果回调时间很短，则在这段时间内需要热更的机率很小
         -- 假如还是刚好遇到热更，则对应的业务逻辑必须自己处理好
         -- 因为即使使用能热更的方式，也没办法控制热更时和定时器回调的谁前谁后时机
-        cb = func_thunk(func, ...)
+        cb = make_func_cb(func, ...)
     end
 
     this.timer[timer_id] = {
@@ -142,7 +163,7 @@ function Timer.periodic(after, sec, times, func, ...)
         periodic = true,
     }
 
-    local e = ev:periodic_start(timer_id, after, sec, P_ALIGN)
+    local e = g_worker:periodic_start(timer_id, after, sec, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
         eprintf("periodic start fail: id = %d, e = %d", timer_id, e)
@@ -152,14 +173,22 @@ function Timer.periodic(after, sec, times, func, ...)
     return timer_id
 end
 
---[[
-    C++ 统一回调这个函数，根据timer_id区分
-]]
-function timer_event(timer_id)
+local function timer_dispatch(src, udata, timer_id)
     local timer = this.timer[timer_id]
     if not timer then
         eprintf("timer no cb found,abort %d", timer_id)
-        return Timer.stop(timer_id)
+
+        -- 应该不会出现。数据没了无法知道是何种类型的定时器，只能都尝试
+        g_worker:periodic_stop(timer_id)
+        g_worker:timer_stop(timer_id)
+        return
+    end
+
+    -- wait只需要继续原来的协程
+    local session = timer.session
+    if session then
+        this.timer[timer_id] = nil
+        return CoPool.resume(session)
     end
 
     local times = timer.times
@@ -170,5 +199,7 @@ function timer_event(timer_id)
 
     return timer.cb()
 end
+
+ThreadMessage.reg(ThreadMessage.TIMER, timer_dispatch)
 
 return Timer

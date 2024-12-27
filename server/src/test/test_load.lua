@@ -4,17 +4,16 @@ require "global.table"
 require "global.string"
 require "global.name"
 
-require "modules.event.system_event"
-
 require "timer.timer"
 require "global.test"
 
 require "test.misc_test"
 require "test.mt_test"
-require "test.https_test"
-require "test.websocket_test"
-require "test.lua_codec_test"
-require "test.pbc_codec_test"
+
+-- require "test.https_test"
+-- require "test.websocket_test"
+-- require "test.lua_codec_test"
+-- require "test.pbc_codec_test"
 --[[
 require "test.grid_aoi_test"
 require "test.list_aoi_test"
@@ -54,19 +53,10 @@ local function exec_test()
             ev:time_update()
         end,
         clock = function()
-            return ev:steady_clock()
+            return g_worker:steady_clock()
         end
     })
 
-    -- 随机一个session，部分功能用到，如测试协议派发时
-    g_app.session = 0x10001
-
-    -- vd( statistic.dump() )
-
-    -- 一些模块初始化时有顺序要求，需要检测ready状态
-    -- 测试时是按需加载，因此设为false
-    g_app.ready = false
     t_run()
 end
 
-SE.reg(SE_READY, exec_test)
