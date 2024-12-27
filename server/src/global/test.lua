@@ -529,14 +529,19 @@ local function run()
                           time))
 
     T.co = nil
-    App.stop()
 end
 
 -- run current test session
 function t_run()
-    T.co = coroutine.create(run)
+    local co, is_main  = coroutine.running()
+    if is_main then
+        T.co = coroutine.create(run)
 
-    return resume()
+        return resume()
+    else
+        T.co = co
+        run()
+    end
 end
 
 -- /////////////////////////////////////////////////////////////////////////////

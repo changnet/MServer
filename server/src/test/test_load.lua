@@ -1,10 +1,7 @@
-require "global.global"
-require "global.oo"
+
 require "global.table"
 require "global.string"
-require "global.name"
 
-require "timer.timer"
 require "global.test"
 
 require "test.misc_test"
@@ -28,35 +25,29 @@ require "test.flatbuffers_test"
 require "test.timer_test"
 ]]
 
-local function exec_test()
-    local opts = g_app.opts
-    g_app.name, g_app.filter, g_app.skip = opts.app, opts.filter, opts.skip
-
-    t_setup({
-        print = print,
-        timer = {
-            new = function(timeout, func)
-                return Timer.timeout(timeout, func)
-            end,
-
-            del = function(timer_id)
-                return Timer.stop(timer_id)
-            end
-        },
-        -- 跳过这些测试
-        -- ./start.sh test --skip='mongodb;sql'
-        skip = g_app.skip,
-        -- 过滤器，允许只执行一部分测试
-        -- ./start.sh test --filter=https 只执行名字包含https的测试
-        filter = g_app.filter,
-        time_update = function()
-            ev:time_update()
+t_setup({
+    print = print,
+    timer = {
+        new = function(timeout, func)
+            return Timer.timeout(timeout, func)
         end,
-        clock = function()
-            return g_worker:steady_clock()
+
+        del = function(timer_id)
+            return Timer.stop(timer_id)
         end
-    })
+    },
+    -- 跳过这些测试
+    -- ./start.sh test --skip='mongodb;sql'
+    skip = g_env:get("skip"),
+    -- 过滤器，允许只执行一部分测试
+    -- ./start.sh test --filter=https 只执行名字包含https的测试
+    filter = g_env:get("filter"),
+    time_update = function()
+        -- ev:time_update()
+    end,
+    clock = function()
+        return g_engine:steady_clock()
+    end
+})
 
-    t_run()
-end
-
+t_run()
