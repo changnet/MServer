@@ -85,9 +85,15 @@ class WatcherMgr
 {
 public:
     // 设置fd对应的watcher
-    void set(EVIO *w)
+    bool set(EVIO *w)
     {
-        w->add_ref(1);
+        // 该watcher对应的socket已经在另一个线程销毁
+        if (w->ref_ < 2)
+        {
+            delete w;
+            return false;
+        }
+
         int32_t fd = w->fd_;
         // win的socket是unsigned类型，可能会很大变成负数，得强转unsigned来判断
         uint32_t ufd = ((uint32_t)fd);
@@ -103,12 +109,11 @@ public:
         {
             fd_watcher_huge_[fd] = w;
         }
+        return true;
     }
     // 清除fd对应的watcher
-    void unset(EVIO* w)
+    bool unset(EVIO* w)
     {
-        w->add_ref(-1);
-
         int32_t fd   = w->fd_;
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
@@ -119,6 +124,14 @@ public:
         {
             fd_watcher_huge_.erase(fd);
         }
+        // 该watcher对应的socket已经在另一个线程销毁
+        int32_t ref = w->ref_.fetch_sub(1);
+        if (ref < 1)
+        {
+            delete w;
+            return false;
+        }
+        return true;
     }
 
     // 获取fd对应的watcher

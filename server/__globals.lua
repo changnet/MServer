@@ -1,4 +1,4 @@
--- auto export by lua-tags 173 symbols
+-- auto export by lua-tags 176 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -82,6 +82,7 @@ return {
 "Send", -- src/rpc/rpc.lua
 "Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
+"SocketMgr", -- src/network/socket_mgr.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
@@ -102,6 +103,8 @@ return {
 "__package_path", -- src/engine/bootstrap.lua
 "__print", -- src/engine/bootstrap.lua
 "__require", -- src/engine/bootstrap.lua
+"__socket_hash", -- src/network/socket_mgr.lua
+"__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua
 "__test_timeout", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua

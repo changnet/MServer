@@ -41,11 +41,11 @@ public:
      * 启用TCP_NODELAY选项
      */
     static int32_t set_nodelay(int32_t fd);
-    /// 启用TCP的keep alive
+    // 启用TCP的keep alive
     static int32_t set_keep_alive(int32_t fd);
-    /// 启用TCP的 user timeout
+    // 启用TCP的 user timeout
     static int32_t set_user_timeout(int32_t fd);
-    /// 启用IPV6双栈
+    // 启用IPV6双栈
     static int32_t set_non_ipv6only(int32_t fd);
 
     /**
@@ -62,14 +62,22 @@ public:
     */
     void io_cb(int32_t revents);
 
-    // 启动socket事件监听
-    bool start(int32_t fd = -1);
+    /**
+     * 启动socket事件监听
+     * @param addr 当前worker地址
+     * @param fd 文件描述符
+     * @param ev 需要监听的事件 EV_READ等
+     */
+    bool start(int32_t addr, int32_t fd, int32_t ev);
     /**
      * 停止socket事件监听
      * @param flush 发送缓冲区中的数据再停止
      */
     void stop(bool flush = false);
+    // 校验当前socket是否有效
     int32_t validate();
+    // 获取当前socket的事件
+    int32_t get_event();
 
     /**
      * 是否已关闭
@@ -81,8 +89,13 @@ public:
      * @return ip地址, 端口
      */
     int32_t address(lua_State *L) const;
-    int32_t listen(const char *host, int32_t port);
-    int32_t connect(const char *host, int32_t port);
+    int32_t listen(int32_t addr, const char *host, int32_t port);
+    int32_t connect(int32_t addr, const char *host, int32_t port);
+    /**
+     * 尝试接受一个fd
+     * @return 成功返回fd，失败返回-1
+     */
+    int32_t accept();
     /**
      * 获取http头数据，仅当前socket的packet为http有效
      */
@@ -166,7 +179,6 @@ private:
     void listen_cb();
     void command_cb();
     void connect_cb();
-    void accept_new(int32_t fd);
 
 protected:
     int32_t conn_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题

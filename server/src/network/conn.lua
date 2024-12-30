@@ -4,6 +4,9 @@
 
 local util = require "engine.util"
 local Socket = require "engine.Socket"
+local LOCAL_ADDR = assert(LOCAL_ADDR)
+
+local LOW_BIT = LOCAL_ADDR & 0xFFFF
 
 ---------------------------- 下面这些接口由底层回调 ------------------------------
 ----------------------- 直接回调到对应的连接对象以实现多态 ------------------------
@@ -17,18 +20,24 @@ local __conn = __conn
 local __conn_id_seed = __conn_id_seed
 
 local function next_id()
-    local id = __conn_id_seed + 1
-    if __conn[id] then
-        for _ = 1, 1000000 do
-            id = id + 1
-            if not __conn[id] then break end
+    -- 需要唯多个worker生成的id不会冲突
+    -- 参考engine.lua中生成address的规则，低16位用作worker type和index
+    -- 高16位用作自增，目前一个worker最多只能发起2^16=65535个连接
+    local seed = __conn_id_seed
+
+    local id
+    for _ = 1, 0xFFFF do
+        seed = seed + 1
+        if seed > 0xFFFF then seed = 1 end
+
+        id = (seed << 16) & LOW_BIT
+        if not __conn[id] then
+            __conn_id_seed = seed
+            return id
         end
     end
 
-    __conn_id_seed = id
-    if __conn_id_seed > 0xFFFFFFFF then __conn_id_seed = 1 end
-
-    return id
+    assert(false, "no conn id")
 end
 
 -- 在脚本执行重连后，conn对象在脚本被重用。但C++那边回调还需要旧对象来处理

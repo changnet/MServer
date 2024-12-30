@@ -241,6 +241,7 @@ int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
     }
     assert(poll_fd_[index].fd == fd);
 
+    // WSAPoll或者linux poll不需要显示传入POLLHUP、POLLERR
     int32_t events =
         ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)POLLIN : 0)
         | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)POLLOUT : 0);

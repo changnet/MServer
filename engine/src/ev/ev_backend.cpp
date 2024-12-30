@@ -131,11 +131,15 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
             events |= EV_CLOSE; // 发送完成，直接关闭
         }
     }
+
+    int32_t fd = w->fd_;
     if (events & EV_CLOSE)
     {
         op = FD_OP_DEL;
-        dispatch_event(w, EV_CLOSE);
-        fd_mgr_.unset(w);
+        if (fd_mgr_.unset(w))
+        {
+            dispatch_event(w, EV_CLOSE);
+        } 
     }
     else
     {
@@ -151,15 +155,16 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
             assert(!fd_mgr_.get(w->fd_));
             assert(0 == w->b_kevents_ && 0 != events);
 
-            fd_mgr_.set(w);
+            if (!fd_mgr_.set(w)) return 0;
         }
 
         // 即使是FD_OP_MOD，也要重新设置EV_KERNEL，因为events里不包含EV_KERNEL
         events |= EV_KERNEL;
+        w->b_kevents_ = events;
     }
 
-    w->b_kevents_ = events;
-    return modify_fd(w->fd_, op, events);
+    // 注意：到这里，w可能已经被delete
+    return modify_fd(fd, op, events);
 }
 
 bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)

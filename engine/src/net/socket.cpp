@@ -73,24 +73,30 @@ Socket::~Socket()
     /**
      * 正常情况下，脚本调用stop函数通知io线程，后续收到回调到再析构对象
      * 但socket对象在Lua管理，有可能出现脚本报错导致部分数据未正确设置的情况
-     * 同时脚本gc的时间也是不确定的，因此这里析构对象时，一定不要影响io线程
-     * 1. watcher不能直接delete
-     * 2. io对象不能直接删除
-     * 3. fd不能直接关闭（但后续要能正确关闭）
-     * 4. watcher的回调（command_cb等，已绑定this）不能出错
+     * 因此这里析构对象时，不要影响另一个线程
      * 
-     * 解决的方法
-     * 1. 在析构时检测到没调用stop，把所有回调都指向一个全局Socket对象来进行关闭
-     * 2. 不做任何处理，要求在被lua销毁之前，必定先调用stop函数。所以lua最好使用xpcall来初始化
-     * */
+     */
 
 
     delete packet_;
     packet_ = nullptr;
 
-    if (w_ && !StaticGlobal::T)
+    if (w_)
     {
-        assert(false);
+        int32_t ref = w_->ref_.fetch_sub(1);
+        // ref > 1表示另一个线程还在使用，只能等待那个线程关闭
+        // 正常情况下，应该已通知那个线程，只是还未来得及处理。因此这里不再通知
+        if (ref < 1)
+        {
+            delete w_;
+            w_ = nullptr;
+        }
+    }
+    // 如果未正常关闭。强制关闭会触发另一个线程的读写返回错误
+    if (fd_ != netcompat::INVALID)
+    {
+        netcompat::close(fd_);
+        fd_ = netcompat::INVALID;
     }
 }
 
@@ -370,30 +376,29 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
     return 0;
 }
 
-bool Socket::start(int32_t fd)
+bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
 {
-    assert(fd_ == netcompat::INVALID);
-
     assert(!w_);
+    assert(fd_ == netcompat::INVALID);
 
     fd_     = fd;
     status_ = CS_OPENED;
 
-    // 只处理read事件，因为LT模式下write事件大部分时间都会触发，没什么意义
-    // w_ = StaticGlobal::ev()->io_start(fd_, EV_READ);
-    if (!w_)
-    {
-        ELOG("ev io start fail: %d", fd_);
-        return false;
-    }
-    // w_->bind(&Socket::io_cb, this);
+    w_ = new EVIO(conn_id_, addr, fd);
+    w_->ref_ = 2; // 当前worker线程一个，backend线程一个
+
+    StaticGlobal::B->append_event(w_, ev);
 
     return true;
 }
 
-int32_t Socket::connect(const char *host, int32_t port)
+int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
 {
-    assert(fd_ == netcompat::INVALID);
+    if (fd_ != netcompat::INVALID)
+    {
+        ELOG("socket listen already have fd: %d", fd_);
+        return -1;
+    }
     if (!host)
     {
         ELOG("socket connect host is null");
@@ -418,16 +423,16 @@ int32_t Socket::connect(const char *host, int32_t port)
     }
 #endif
 
-    struct sockaddr_in_x addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family_x = AF_INET_X;
-    addr.sin_port_x   = htons((uint16_t)port);
+    struct sockaddr_in_x host_addr;
+    memset(&host_addr, 0, sizeof(host_addr));
+    host_addr.sin_family_x = AF_INET_X;
+    host_addr.sin_port_x   = htons((uint16_t)port);
 
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
     // IPv6 address must be supplied in src instead
     // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip，只支持::ffff:127.0.0.1这种
-    int32_t ok = inet_pton(AF_INET_X, host, &addr.sin_addr_x);
+    int32_t ok = inet_pton(AF_INET_X, host, &host_addr.sin_addr_x);
     if (0 == ok)
     {
         ELOG("invalid host format: %s", host);
@@ -446,7 +451,7 @@ int32_t Socket::connect(const char *host, int32_t port)
     // 连接可能返回0表示已经成功，不过这里不处理这种情况
     // EV_CONNECT会转化为EV_WRITE，写事件epoll会多次通知
     // 异步允许上层逻辑在connect返回再才触发on_connected
-    if (0 != ::connect(fd, (struct sockaddr *)&addr, sizeof(addr)))
+    if (0 != ::connect(fd, (struct sockaddr *)&host_addr, sizeof(host_addr)))
     {
         int32_t e = netcompat::errorno();
         if (netcompat::iserror(e))
@@ -459,18 +464,7 @@ int32_t Socket::connect(const char *host, int32_t port)
         }
     }
 
-    assert(!w_);
-    assert(false); // TODO
-    // w_ = StaticGlobal::ev()->io_start(fd, EV_CONNECT);
-    if (!w_)
-    {
-        ELOG("ev io start fail: %d", fd);
-        return -1;
-    }
-    // w_->bind(&Socket::io_cb, this);
-
-    fd_     = fd;
-    status_ = CS_OPENED;
+    start(addr, fd, EV_CONNECT);
 
     return fd;
 }
@@ -523,23 +517,23 @@ int32_t Socket::address(lua_State *L) const
     return 2;
 }
 
-int32_t Socket::listen(const char *host, int32_t port)
+int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
 {
-    if (w_)
+    if (fd_ != netcompat::INVALID)
     {
-        ELOG("this socket already have fd: %d", fd_);
+        ELOG("socket listen already have fd: %d", fd_);
         return -1;
     }
 
-    fd_ = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (fd_ == netcompat::INVALID)
+    int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
+    if (fd == netcompat::INVALID)
     {
         return -1;
     }
 
     int32_t ok     = 0;
     int32_t optval = 1;
-    struct sockaddr_in_x sk_socket;
+    struct sockaddr_in_x host_addr;
     /*
      * enable address reuse.it will help when the socket is in TIME_WAIT status.
      * for example:
@@ -547,30 +541,30 @@ int32_t Socket::listen(const char *host, int32_t port)
      * to restart server immediately,you need to reuse address.but note you may
      * receive the old data from last time.
      */
-    if (setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
         < 0)
     {
         goto FAIL;
     }
 
-    if (set_block(fd_, 0) < 0)
+    if (set_block(fd, 0) < 0)
     {
         goto FAIL;
     }
 
 #ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    if (set_non_ipv6only(fd_))
+    if (set_non_ipv6only(fd))
     {
         goto FAIL;
     }
 #endif
 
-    memset(&sk_socket, 0, sizeof(sk_socket));
-    sk_socket.sin_family_x = AF_INET_X;
-    sk_socket.sin_port_x   = htons((uint16_t)port);
+    memset(&host_addr, 0, sizeof(host_addr));
+    host_addr.sin_family_x = AF_INET_X;
+    host_addr.sin_port_x   = htons((uint16_t)port);
 
-    ok = inet_pton(AF_INET_X, host, &sk_socket.sin_addr_x);
+    ok = inet_pton(AF_INET_X, host, &host_addr.sin_addr_x);
     if (0 == ok)
     {
         errno = EADDRNOTAVAIL; // Address not available
@@ -582,32 +576,23 @@ int32_t Socket::listen(const char *host, int32_t port)
         goto FAIL;
     }
 
-    if (::bind(fd_, (struct sockaddr *)&sk_socket, sizeof(sk_socket)) < 0)
+    if (::bind(fd, (struct sockaddr *)&host_addr, sizeof(host_addr)) < 0)
     {
         goto FAIL;
     }
 
-    if (::listen(fd_, 256) < 0)
+    if (::listen(fd, 256) < 0)
     {
         goto FAIL;
     }
 
-    assert(false); // TODO
-    // w_ = StaticGlobal::ev()->io_start(fd_, EV_ACCEPT);
-    if (!w_)
-    {
-        ELOG("ev io start fail: %d", fd_);
-        goto FAIL;
-    }
-    // w_->bind(&Socket::io_cb, this);
+    start(addr, fd, EV_ACCEPT);
 
-    status_ = CS_OPENED;
-
-    return fd_;
+    return fd;
 
 FAIL:
-    netcompat::close(fd_);
-    fd_ = netcompat::INVALID;
+    netcompat::close(fd);
+    fd = netcompat::INVALID;
     return -1;
 }
 
@@ -683,15 +668,28 @@ void Socket::close_cb(bool term)
     }
 }
 
-void Socket::accept_new(int32_t fd)
+int32_t Socket::accept()
 {
+    int32_t fd = (int32_t)::accept(fd_, nullptr, nullptr);
+    if (fd == netcompat::INVALID)
+    {
+        int32_t e = netcompat::errorno();
+        if (netcompat::iserror(e))
+        {
+            ELOG("socket::accept:%s", netcompat::strerror(e));
+            return -2; // 出错，当前socket需要在上层关闭
+        }
+
+        return -1; /* 所有等待的连接已处理完 */
+    }
+
     if (set_block(fd, 0))
     {
         int32_t e = netcompat::errorno();
         ELOG("fd set_block fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return;
+        return -1;
     }
     if (set_keep_alive(fd))
     {
@@ -699,7 +697,7 @@ void Socket::accept_new(int32_t fd)
         ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return;
+        return -1;
     }
     if (set_user_timeout(fd))
     {
@@ -707,7 +705,7 @@ void Socket::accept_new(int32_t fd)
         ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return;
+        return -1;
     }
     if (set_nodelay(fd))
     {
@@ -715,40 +713,14 @@ void Socket::accept_new(int32_t fd)
         ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return;
+        return -1;
     }
 
-    try
-    {
-        // lcpp::call(StaticGlobal::L, "conn_accept", conn_id_, fd);
-    }
-    catch (const std::exception& e)
-    {
-        ELOG("%s", e.what());
-        netcompat::close(fd);
-        return;
-    }
+    return fd;
 }
 
 void Socket::listen_cb()
 {
-    while (CS_OPENED == status_)
-    {
-        int32_t new_fd = (int32_t)::accept(fd_, nullptr, nullptr);
-        if (new_fd == netcompat::INVALID)
-        {
-            int32_t e = netcompat::errorno();
-            if (netcompat::iserror(e))
-            {
-                ELOG("socket::accept:%s", netcompat::strerror(e));
-                return;
-            }
-
-            break; /* 所有等待的连接已处理完 */
-        }
-
-        accept_new(new_fd);
-    }
 }
 
 void Socket::connect_cb()
@@ -952,4 +924,11 @@ int32_t Socket::get_http_header(lua_State *L)
         return luaL_error(L, "no packet found");
     }
     return static_cast<HttpPacket *>(packet_)->unpack_header(L);
+}
+
+int32_t Socket::get_event()
+{
+    if (!w_) return 0;
+
+    return w_->ev_.exchange(0);
 }
