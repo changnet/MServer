@@ -4,47 +4,8 @@
 
 local util = require "engine.util"
 local Socket = require "engine.Socket"
-local LOCAL_ADDR = assert(LOCAL_ADDR)
 
-local LOW_BIT = LOCAL_ADDR & 0xFFFF
-
----------------------------- 下面这些接口由底层回调 ------------------------------
------------------------ 直接回调到对应的连接对象以实现多态 ------------------------
-__conn = __conn or {}
-__conn_id_seed = __conn_id_seed or 0
-
--- 因为gc的延迟问题，用以弱表可能会导致取所有连接时不准确
--- setmetatable(self.conn, {["__mode"]='v'})
-
-local __conn = __conn
-local __conn_id_seed = __conn_id_seed
-
-local function next_id()
-    -- 需要唯多个worker生成的id不会冲突
-    -- 参考engine.lua中生成address的规则，低16位用作worker type和index
-    -- 高16位用作自增，目前一个worker最多只能发起2^16=65535个连接
-    local seed = __conn_id_seed
-
-    local id
-    for _ = 1, 0xFFFF do
-        seed = seed + 1
-        if seed > 0xFFFF then seed = 1 end
-
-        id = (seed << 16) & LOW_BIT
-        if not __conn[id] then
-            __conn_id_seed = seed
-            return id
-        end
-    end
-
-    assert(false, "no conn id")
-end
-
--- 在脚本执行重连后，conn对象在脚本被重用。但C++那边回调还需要旧对象来处理
-local reconnect_conn =
-{
-    on_disconnected = function() end
-}
+local EV_READ = SocketMgr.EV_READ
 
 -- 接受新的连接
 function conn_accept(conn_id, fd)
@@ -171,7 +132,7 @@ function Conn:conn_accept(fd)
 
     conn.default_param = rawget(self, "default_param")
 
-    if not conn.s:start(fd) then
+    if not conn.s:start(LOCAL_ADDR, fd, EV_READ) then
         print("conn accept start fail", self.conn_id, fd)
         return
     end

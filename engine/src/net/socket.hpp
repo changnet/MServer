@@ -56,11 +56,6 @@ public:
      */
     static int32_t get_addr_info(std::vector<std::string> &addrs,
                                  const char *host, bool v4);
-    /**
-     * @brief 收到io回调
-     * @param revents 回调的事件，如EV_ACCEPT等
-    */
-    void io_cb(int32_t revents);
 
     /**
      * 启动socket事件监听
@@ -70,10 +65,16 @@ public:
      */
     bool start(int32_t addr, int32_t fd, int32_t ev);
     /**
-     * 停止socket事件监听
+     * 停止socket事件监听(等待另一个线程处理完)并自动close
      * @param flush 发送缓冲区中的数据再停止
      */
     void stop(bool flush = false);
+    /**
+     * 收到另一个线程关闭事件时，关闭socket
+     * 不要在业务逻辑中调用此函数
+     * @return 错误码
+     */
+    int32_t close();
     // 校验当前socket是否有效
     int32_t validate();
     // 获取当前socket的事件
@@ -169,6 +170,11 @@ public:
     int32_t send_srv(lua_State *L);
     // 发送控制帧
     int32_t send_ctrl(lua_State *L);
+    /**
+     * 验证connect是否成功
+     * @return 成功0 失败返回非0错误码
+     */
+    int32_t connect_validate();
 
 private:
     /**
@@ -176,9 +182,9 @@ private:
      * @param term 是否强制终止，部分清理工作将被忽略
      */
     void close_cb(bool term);
-    void listen_cb();
+
     void command_cb();
-    void connect_cb();
+    
 
 protected:
     int32_t conn_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题

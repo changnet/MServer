@@ -1,13 +1,20 @@
 -- Socket管理
-SocketMgr = {}
+SocketMgr = {
+    -- 在C++定义，必须一致
+    EV_READ      = 0x0001, -- 1  socket读(接收)
+    EV_ACCEPT    = 0x0004, -- 4  监听到有新连接
+    EV_CONNECT   = 0x0008, -- 8  连接成功或者失败
+    EV_CLOSE     = 0x0010, -- 16 socket关闭
+    EV_INIT_CONN = 0x0200, -- 512 初始化connect
+    EV_INIT_ACPT = 0x0400, -- 1024 初始化accept
+}
 
--- 在C++定义，必须一致
-local EV_READ      = 0x0001 -- 1  socket读(接收)
-local EV_ACCEPT    = 0x0004 -- 4  监听到有新连接
-local EV_CONNECT   = 0x0008 -- 8  连接成功或者失败
-local EV_CLOSE     = 0x0010 -- 16 socket关闭
-local EV_INIT_CONN = 0x0200 -- 512 初始化connect
-local EV_INIT_ACPT = 0x0400 -- 1024 初始化accept
+local EV_READ      = SocketMgr.EV_READ
+local EV_ACCEPT    = SocketMgr.EV_ACCEPT
+local EV_CONNECT   = SocketMgr.EV_CONNECT
+local EV_CLOSE     = SocketMgr.EV_CLOSE
+local EV_INIT_CONN = SocketMgr.EV_INIT_CONN
+local EV_INIT_ACPT = SocketMgr.EV_INIT_ACPT
 
 
 local LOCAL_ADDR = assert(LOCAL_ADDR)
@@ -35,7 +42,7 @@ function SocketMgr.next_id()
         if seed > 0xFFFF then seed = 1 end
 
         id = (seed << 16) & LOW_BIT
-        if not __conn[id] then
+        if not __socket_hash[id] then
             __socket_seed = seed
             return id
         end
@@ -63,12 +70,32 @@ local function do_read(socket)
 end
 
 local function do_close(socket)
+    socket.conn_ok = false
+    local e = socket.s:close()
+    __socket_hash[socket.conn_id] = nil
+
+    socket:on_disconnected(e)
 end
 
 local function do_listen(socket)
+    local s = socket.s
+    while true do
+        local fd = s:accept()
+        if -1 == fd then return end
+        if -2 == fd then error("listen socket error") end
+
+        socket:conn_accept(fd)
+    end
 end
 
 local function do_connect(socket)
+    local e = socket.s:connect_validate()
+    if 0 ~= e then
+        socket.conn_ok = false
+        socket.s:stop() -- not s:close()
+        __socket_hash[socket.conn_id] = nil
+    end
+    socket:conn_new(e)
 end
 
 local function socket_dispatch(src, udata, id)

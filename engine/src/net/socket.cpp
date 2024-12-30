@@ -106,21 +106,18 @@ void Socket::stop(bool flush)
 
     status_ = CS_CLOSING;
 
+    
     // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
     // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
     // ev那边需要做异步删除
-    if (w_)
+    if (likely(w_))
     {
-        assert(false); // TODO
-        // StaticGlobal::ev()->io_stop(fd_, flush);
+        StaticGlobal::B->append_event(w_,
+                                      flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
     }
     else
     {
-        // 非强制情况下这里不能直接关闭fd，io线程那边可能还在读写
-        // 即使读写是是线程安全的，这里关闭后会导致系统重新分配同样的fd
-        // 而ev那边的数据是异步删除的，会导致旧的fd数据和新分配的冲突
-        // 如果有watcher，则需要等watcher数据处理完才回调close_cb，没有则强制关闭
-        close_cb(true);
+        ELOG("socket stop no watcher: %d", fd_);
     }
 }
 
@@ -176,7 +173,7 @@ void Socket::append(const void *data, size_t len)
 
 void Socket::flush()
 {
-    w_->set(EV_WRITE);
+    StaticGlobal::B->append_event(w_, EV_WRITE);
 }
 
 int32_t Socket::set_block(int32_t fd, int32_t flag)
@@ -596,51 +593,8 @@ FAIL:
     return -1;
 }
 
-void Socket::io_cb(int32_t revents)
+int32_t Socket::close()
 {
-    /*
-     * 一个socket发送数据后立即关闭，则对端会同时收到EV_READ和EV_CLOSE
-     * 这时的数据依然是有效的，所以EV_READ要优先EV_CLOSE来处理
-     * 
-     * 但EV_CLOSE的话，其他事件应该没有处理的必要了
-     */
-    if (EV_INIT_CONN & revents || EV_INIT_ACPT & revents)
-    {
-        // 握手成功可能会直接收到消息，所以必须先返回握手成功
-        w_->io_->init_ready();
-    }
-    if (EV_READ & revents)
-    {
-        command_cb();
-    }
-    if (EV_CLOSE & revents)
-    {
-        close_cb(false);
-        return;
-    }
-
-    // ACCEPT、CONNECT事件可能和READ、WRITE同时触发
-    if (EV_ACCEPT & revents)
-    {
-        listen_cb();
-    }
-    else if (EV_CONNECT & revents)
-    {
-        connect_cb();
-    }
-}
-
-void Socket::close_cb(bool term)
-{
-    // 进程强制关闭，一些数据都不在了.io_delete这些已经没用
-    // 大概清理一下数据，保证析构时不出错即可
-    if (term)
-    {
-        netcompat::close(fd_);
-        w_ = nullptr;
-        return;
-    }
-
     // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
     if (CS_OPENED == status_ && packet_) packet_->on_closed();
 
@@ -650,22 +604,18 @@ void Socket::close_cb(bool term)
     int32_t e = w_->errno_;
 
     assert(fd_ > 0); // 如果fd_为-1，就是执行了两次close_cb
-    assert(false);   // TODO
-    // StaticGlobal::ev()->io_delete(fd_);
+
+    int32_t ref = w_->ref_.fetch_sub(1);
+    if (ref < 1)
+    {
+        delete w_;
+        w_ = nullptr;
+    }
 
     netcompat::close(fd_);
     fd_ = netcompat::INVALID;
 
-    w_ = nullptr;
-
-    try
-    {
-        //lcpp::call(StaticGlobal::L, "conn_del", conn_id_, e);
-    }
-    catch (const std::exception& e)
-    {
-        ELOG("%s", e.what());
-    }
+    return e;
 }
 
 int32_t Socket::accept()
@@ -719,11 +669,7 @@ int32_t Socket::accept()
     return fd;
 }
 
-void Socket::listen_cb()
-{
-}
-
-void Socket::connect_cb()
+int32_t Socket::connect_validate()
 {
     /*
      * connect回调
@@ -740,49 +686,35 @@ void Socket::connect_cb()
      */
     int32_t ecode = Socket::validate();
 
-    if (0 == ecode)
+    if (0 != ecode) return ecode;
+
+    if (set_keep_alive(fd_))
     {
-        if (set_keep_alive(fd_))
-        {
-            int32_t e = netcompat::errorno();
-            ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", fd_, e,
-                 netcompat::strerror(e));
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", fd_, e,
+             netcompat::strerror(e));
 
-            Socket::stop();
-            return;
-        }
-        if (set_user_timeout(fd_))
-        {
-            int32_t e = netcompat::errorno();
-            ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", fd_, e,
-                 netcompat::strerror(e));
+        return -1;
+    }
+    if (set_user_timeout(fd_))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", fd_, e,
+             netcompat::strerror(e));
 
-            Socket::stop();
-            return;
-        }
-        if (set_nodelay(fd_))
-        {
-            int32_t e = netcompat::errorno();
-            ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", fd_, e,
-                 netcompat::strerror(e));
+        return -1;
+    }
+    if (set_nodelay(fd_))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", fd_, e,
+             netcompat::strerror(e));
 
-            Socket::stop();
-            return;
-        }
-
-        w_->set(EV_READ);
+        return -1;
     }
 
-    try
-    {
-        //lcpp::call(StaticGlobal::L, "conn_new", conn_id_, ecode);
-    }
-    catch (const std::exception &e)
-    {
-        ELOG("%s", e.what());
-        Socket::stop();
-        return;
-    }
+    StaticGlobal::B->append_event(w_, EV_READ);
+    return 0;
 }
 
 void Socket::command_cb()
@@ -866,7 +798,7 @@ int32_t Socket::io_init_accept()
     if (!w_) return -1;
 
     // set会清除旧事件，这里得保留EV_READ
-    w_->set(EV_INIT_ACPT | EV_READ);
+    StaticGlobal::B->append_event(w_, EV_INIT_ACPT | EV_READ);
 
     return 0;
 }
@@ -875,7 +807,7 @@ int32_t Socket::io_init_connect()
 {
     if (!w_) return -1;
 
-    w_->set(EV_INIT_CONN | EV_READ);
+    StaticGlobal::B->append_event(w_, EV_INIT_CONN | EV_READ);
 
     return 0;
 }

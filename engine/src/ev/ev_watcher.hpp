@@ -33,8 +33,6 @@ public:
     */
     int32_t send();
 
-    /// 重新设置当前io监听的事件
-    void set(int32_t events);
     /**
      * @brief 设置io读写对象指针
      * @param ioc对象指针
@@ -54,9 +52,6 @@ public:
      */
     int32_t do_init_connect();
 
-    // 修改引用计数
-    void add_ref(int32_t v);
-
 public:
     uint8_t mask_; // 用于设置种参数
     int32_t fd_;   // 文件描述符
@@ -75,9 +70,8 @@ public:
     std::atomic<int32_t> b_ev_; // worker发出，等待backend线程处理的事件
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
-#ifndef NDEBUG
+
     std::atomic<int> ref_; // 引用数，用于检测
-#endif
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制

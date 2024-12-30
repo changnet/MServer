@@ -17,29 +17,17 @@ EVIO::EVIO(int32_t id, int32_t addr, int32_t fd)
     b_ev_ = 0;
 
     io_ = nullptr;
-#ifndef NDEBUG
+
     ref_ = 0;
-#endif
+
 }
 
 EVIO::~EVIO()
 {
-#ifndef NDEBUG
+
     assert(0 == ref_);
-#endif
+
     if (io_) delete io_;
-}
-
-void EVIO::add_ref(int32_t v)
-{
-#ifndef NDEBUG
-    ref_ += v;
-#endif
-}
-
-void EVIO::set(int32_t events)
-{
-    // loop_->append_event(this, events);
 }
 
 int32_t EVIO::recv()
