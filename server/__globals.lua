@@ -1,4 +1,4 @@
--- auto export by lua-tags 174 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -110,13 +110,6 @@ return {
 "assert", -- src/global/global.lua
 "call_mt", -- src/rpc/rpc.lua
 "clt_multicast_new", -- src/network/clt_mgr.lua
-"command_new", -- src/network/socket.lua
-"conn_accept", -- src/network/socket.lua
-"conn_del", -- src/network/socket.lua
-"conn_io_ready", -- src/network/socket.lua
-"conn_new", -- src/network/socket.lua
-"css_command_new", -- src/network/socket.lua
-"ctrl_new", -- src/network/socket.lua
 "eprint", -- src/global/global.lua
 "eprintf", -- src/global/global.lua
 "g_ai_mgr", -- src/android/android_boot.lua
@@ -137,7 +130,6 @@ return {
 "g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua
-"handshake_new", -- src/network/socket.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "main_message_dispatch", -- src/message/thread_message.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua

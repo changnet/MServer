@@ -3,23 +3,23 @@
 -- xzc
 
 
-local Socket = require "engine.Socket"
+local EngineSocket = require "engine.EngineSocket"
 local HTTP = require "http.http_header"
 
-local Conn = require "network.conn"
+local Socket = require "network.socket"
 
 local PAGE_GET = HTTP.PGET
 local PAGE_POST = HTTP.PPOST
 
 -- http连接
-local HttpConn = oo.class(..., Conn)
+local HttpSocket = oo.class(..., Socket)
 
-HttpConn.default_param = {
-    pkt = Socket.PT_HTTP, -- 打包解包类型
+HttpSocket.default_param = {
+    pkt = EngineSocket.PT_HTTP, -- 打包解包类型
 }
 
-function HttpConn:__init()
-    Conn.__init(self)
+function HttpSocket:__init()
+    return Socket.__init(self)
 end
 
 -- 收到消息
@@ -28,19 +28,19 @@ end
 -- @param method 1 = GET, 3 = POST，仅request有用，其他值参考C++的定义
 -- @param url 请求的url，仅request有用
 -- @param body 数据
-function HttpConn:on_cmd(http_type, code, method, url, body)
+function HttpSocket:on_message(http_type, code, method, url, body)
     -- http调用比较少，不太需要考虑效率，直接绑定回调函数即可
     -- 这里只是给出各个回调参数的注释
-    -- return self:on_cmd(http_type, code, method, url, body)
+    -- return self:on_message(http_type, code, method, url, body)
 end
 
 -- 发送数据包
-function HttpConn:send_pkt(pkt)
+function HttpSocket:send_pkt(pkt)
     return self.s:send_pkt(pkt)
 end
 
 -- 格式化HOST字段
-function HttpConn:fmt_host(host, port, ssl)
+function HttpSocket:fmt_host(host, port, ssl)
     if port == 80 and not ssl then
         return host
     end
@@ -56,8 +56,8 @@ end
 -- @param url 请求的url
 -- @param req 请求的数据，不包含url，已进行url转义。如: name=1&pass=2
 -- @param cb 回调函数，不需要或者在connnect时已指定可为nil
-function HttpConn:get(url, req, cb)
-    if cb then self.on_cmd = cb end
+function HttpSocket:get(url, req, cb)
+    if cb then self.on_message = cb end
 
     local host = self:fmt_host(self.host, self.port, self.ssl)
     return self:send_pkt(string.format(PAGE_GET, url or "/", req and "?" or "",
@@ -68,8 +68,8 @@ end
 -- @param url 请求的url
 -- @param body 请求的数据
 -- @param cb 回调函数，不需要或者在connnect时已指定可为nil
-function HttpConn:post(url, body, cb)
-    if cb then self.on_cmd = cb end
+function HttpSocket:post(url, body, cb)
+    if cb then self.on_message = cb end
 
     body = body or ""
     local host = self:fmt_host(self.host, self.port, self.ssl)
@@ -79,8 +79,8 @@ end
 
 -- 获取http头信息(code仅在返回时有用，method仅在请求时有用)
 -- @return upgrade, code, method, fields
-function HttpConn:get_header()
+function HttpSocket:get_header()
     return self.s:get_http_header()
 end
 
-return HttpConn
+return HttpSocket

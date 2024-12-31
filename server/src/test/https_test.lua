@@ -92,7 +92,7 @@ t_describe("http test", function()
 
         local listen_conn = HttpConn()
         t_assert(listen_conn:listen(local_host, port))
-        listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        listen_conn.on_message = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
             t_equal(conn:address(), local_host)
 
@@ -197,7 +197,7 @@ t_describe("http test", function()
         local srv_conn = nil
         local listen_conn = HttpConn()
         listen_conn:listen_s(local_host, port, srv_ssl)
-        listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        listen_conn.on_message = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
             srv_conn = conn
 
@@ -264,7 +264,7 @@ t_describe("http test", function()
         local srv_conn = nil
         local listen_conn = HttpConn()
         listen_conn:listen_s(local_host, port, vfy_srv_ssl)
-        listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
+        listen_conn.on_message = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
             srv_conn = conn
 

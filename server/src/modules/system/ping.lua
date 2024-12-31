@@ -12,8 +12,8 @@ local this = global_storage("Ping", {
 
 -- 开始ping所有进程以测试延迟
 -- @param how 来源，1 gm，2客户端
--- @param conn_id 返回数据的连接，可能是gm，也可能是机器人
-function Ping.start(how, conn_id, pkt)
+-- @param socket_id 返回数据的连接，可能是gm，也可能是机器人
+function Ping.start(how, socket_id, pkt)
     local id = this.seed
     this.seed = this.seed + 1
 
@@ -31,7 +31,7 @@ function Ping.start(how, conn_id, pkt)
         how = how,
         pkt = pkt,
         wait = wait,
-        conn_id = conn_id,
+        socket_id = socket_id,
         ms_time = ev:steady_clock()
     }
 end
@@ -48,12 +48,12 @@ function Ping.on_ping(id)
 
     local srv_conn = Rpc.last_conn()
 
-    local conn_id = srv_conn.conn_id
-    if info.srvs[conn_id] then
+    local socket_id = srv_conn.socket_id
+    if info.srvs[socket_id] then
         this.pending[id] = nil
         return print("ping info error", id)
     end
-    info.srvs[conn_id] = {
+    info.srvs[socket_id] = {
         name = srv_conn:conn_name(),
         time = ev:steady_clock() - info.ms_time
     }
@@ -74,9 +74,9 @@ function Ping.done(id, info)
         return
     elseif 2 == how then -- 来自客户端的
         -- 连接已断开
-        local conn = CltMgr.get_conn(info.conn_id)
+        local conn = CltMgr.get_conn(info.socket_id)
         if not conn then
-            return print("ping done,no conn found", info.conn_id, info.index)
+            return print("ping done,no conn found", info.socket_id, info.index)
         end
 
         local pkt = {
@@ -94,7 +94,7 @@ end
 -- 来自机器人的ping请求，走的是客户端连接
 local function player_ping(pkt)
     local clt_conn = Cmd.last_conn()
-    return Ping.start(2, clt_conn.conn_id, pkt)
+    return Ping.start(2, clt_conn.socket_id, pkt)
 end
 
 if GATEWAY == APP_TYPE then

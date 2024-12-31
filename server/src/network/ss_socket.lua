@@ -14,21 +14,21 @@ SsConn.default_param = {
     recv_chunk_max = 1024 -- 接收缓冲区chunk数量
 }
 
-function SsConn:__init(conn_id)
+function SsConn:__init(socket_id)
     self.auth = false
     self.session = 0
-    self.conn_id = conn_id -- accept才需要传该conn_id，listen、connect会自动产生一个新的
+    self.socket_id = socket_id -- accept才需要传该conn_id，listen、connect会自动产生一个新的
     self.auto_conn = false -- 是否自动重连
 end
 
 -- 发送数据包
 function SsConn:send_pkt(cmd, pkt, ecode)
-    return network_mgr:send_s2s_packet(self.conn_id, cmd.i, ecode or 0, pkt)
+    return network_mgr:send_s2s_packet(self.socket_id, cmd.i, ecode or 0, pkt)
 end
 
 -- 给客户端发送数据包 !!!当前连接必须是网关链接!!!
 function SsConn:send_clt_pkt(pid, cmd, pkt, ecode)
-    return network_mgr:send_ssc_packet(self.conn_id, pid,
+    return network_mgr:send_ssc_packet(self.socket_id, pid,
                                        network_mgr.CDT_PROTOBUF, cmd.i,
                                        ecode or 0, pkt)
 end
@@ -36,7 +36,7 @@ end
 -- 发送数据包
 function SsConn:send_rpc_pkt(unique_id, method_name, ...)
     return
-        network_mgr:send_rpc_packet(self.conn_id, unique_id, method_name, ...)
+        network_mgr:send_rpc_packet(self.socket_id, unique_id, method_name, ...)
 end
 
 -- 认证成功
@@ -75,22 +75,22 @@ end
 
 -- 接受新的连接
 function SsConn:on_accepted()
-    SrvMgr.srv_conn_accept(self)
+    SrvMgr.srv_accept(self)
 end
 
 -- 连接成功
 function SsConn:on_connected()
-    return SrvMgr.on_conn_ok(self.conn_id)
+    return SrvMgr.on_conn_ok(self.socket_id)
 end
 
 -- 连接断开
 function SsConn:on_disconnected(e, is_conn)
     self.auth = false
-    return SrvMgr.srv_conn_del(self.conn_id, e, is_conn)
+    return SrvMgr.srv_conn_del(self.socket_id, e, is_conn)
 end
 
 -- 服务器之间消息回调
-function SsConn:on_cmd(session, cmd, errno, pkt)
+function SsConn:on_message(session, cmd, errno, pkt)
     return Cmd.dispatch_srv(self, cmd, pkt)
 end
 

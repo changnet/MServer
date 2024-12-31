@@ -12,13 +12,13 @@ CsConn.default_param = {
     recv_chunk_max = 8 -- 接收缓冲区数
 }
 
-function CsConn:__init(conn_id)
-    self.conn_id = conn_id
+function CsConn:__init(socket_id)
+    self.socket_id = socket_id
 end
 
 -- 发送数据包
 function CsConn:send_pkt(cmd, pkt)
-    return network_mgr:send_srv_packet(self.conn_id, cmd.i, pkt)
+    return network_mgr:send_srv_packet(self.socket_id, cmd.i, pkt)
 end
 
 return CsConn

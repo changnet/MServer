@@ -32,7 +32,7 @@ end
 function Loginout.on_connected(conn)
     local entity = conn.entity
 
-    printf("android(%d) connection(%d) establish", entity.index, conn.conn_id)
+    printf("android(%d) connection(%d) establish", entity.index, conn.socket_id)
 
     Loginout.do_login(entity)
 end
@@ -41,7 +41,7 @@ end
 function Loginout.on_disconnected(conn, e)
     local entity = conn.entity
 
-    conn.conn_id = nil
+    conn.socket_id = nil
     entity.ai.state = AST.OFF
     printf("android(%d) die: %s", entity.index, util.what_error(e))
 end

@@ -82,7 +82,7 @@ function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
         local base64 = util.base64(sha1)
         if sec_websocket_accept ~= base64 then
             print("websocket handshake key not match",
-                self.conn_id, sec_websocket_accept, base64)
+                self.socket_id, sec_websocket_accept, base64)
             self:close()
             return
         end

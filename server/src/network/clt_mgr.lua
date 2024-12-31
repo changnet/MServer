@@ -9,7 +9,7 @@ local this = global_storage("CltMgr", {
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
 function CltMgr.clt_close(clt_conn)
-    this.clt_conn[clt_conn.conn_id] = nil
+    this.clt_conn[clt_conn.socket_id] = nil
     if clt_conn.pid then this.clt[clt_conn.pid] = nil end
 
     clt_conn:close()
@@ -41,25 +41,25 @@ function CltMgr.get_clt_conn(pid)
 end
 
 -- 根据conn_id获取连接
-function CltMgr.get_conn(conn_id)
-    return this.clt_conn[conn_id]
+function CltMgr.get_conn(socket_id)
+    return this.clt_conn[socket_id]
 end
 
 
 -- 新增客户端连接
-function CltMgr.clt_conn_accept(conn)
-    local conn_id = conn.conn_id
-    this.clt_conn[conn_id] = conn
+function CltMgr.clt_accept(conn)
+    local socket_id = conn.socket_id
+    this.clt_conn[socket_id] = conn
 
-    printf("accept client connection:%d", conn_id)
+    printf("accept client connection:%d", socket_id)
 end
 
 -- 客户端连接断开回调
-function CltMgr.clt_conn_del(conn_id)
-    local conn = this.clt_conn[conn_id]
-    AccMgr.role_offline(conn_id)
+function CltMgr.clt_conn_del(socket_id)
+    local conn = this.clt_conn[socket_id]
+    AccMgr.role_offline(socket_id)
 
-    this.clt_conn[conn_id] = nil
+    this.clt_conn[socket_id] = nil
     -- 如果已经登录，通知其他服玩家下线
     if conn.pid then
         this.clt[conn.pid] = nil
@@ -67,7 +67,7 @@ function CltMgr.clt_conn_del(conn_id)
         SrvMgr.send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
     end
 
-    printf("client connect del:%d", conn_id)
+    printf("client connect del:%d", socket_id)
 end
 
 -- 设置玩家当前所在场景session，用于协议自动转发

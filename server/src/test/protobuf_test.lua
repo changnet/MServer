@@ -156,7 +156,7 @@ t_describe("protobuf test", function()
             t_equal(pkt, base_pkt)
             srv_conn:send_pkt(TEST.BASE, pkt)
         end, true)
-        clt_conn.on_cmd = function(self, cmd, e, pkt)
+        clt_conn.on_message = function(self, cmd, e, pkt)
             t_equal(cmd, TEST.BASE.i)
             t_equal(pkt, base_pkt)
             t_done()
@@ -171,7 +171,7 @@ t_describe("protobuf test", function()
         Cmd.reg(TEST.LITE, function(pkt)
             srv_conn:send_pkt(TEST.LITE, pkt)
         end, true)
-        clt_conn.on_cmd = function(self, cmd, e, pkt)
+        clt_conn.on_message = function(self, cmd, e, pkt)
             t_equal(cmd, TEST.LITE.i)
             count = count + 1
 
@@ -191,7 +191,7 @@ t_describe("protobuf test", function()
         Cmd.reg(TEST.LITE, function(pkt)
             srv_conn:send_pkt(TEST.LITE, pkt)
         end, true)
-        clt_conn.on_cmd = function(self, cmd, e, pkt)
+        clt_conn.on_message = function(self, cmd, e, pkt)
             t_equal(cmd, TEST.LITE.i)
             count = count + 1
 
@@ -271,7 +271,7 @@ t_describe("protobuf test", function()
         clt_conn_ws.on_connected = function(self)
             self:send_pkt(TEST.LITE, lite_pkt)
         end
-        clt_conn_ws.on_cmd = function(self, cmd, e, pkt)
+        clt_conn_ws.on_message = function(self, cmd, e, pkt)
             t_equal(cmd, TEST.LITE.i)
             count = count + 1
             if count >= PERF_TIMES then

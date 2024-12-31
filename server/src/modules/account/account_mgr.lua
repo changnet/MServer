@@ -82,7 +82,7 @@ function AccMgr.on_acc_create(acc_info, role_info, ecode, res)
     this.role_acc[pid] = role_info
 
     -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = CltMgr.get_conn(role_info.conn_id)
+    local clt_conn = CltMgr.get_conn(role_info.socket_id)
     if clt_conn then
         CltMgr.bind_role(pid, clt_conn)
         AccMgr.send_role_create(role_info)
@@ -92,19 +92,19 @@ end
 -- 发送角色创建结果
 function AccMgr.send_role_create(role_info, ecode)
     -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = CltMgr.get_conn(role_info.conn_id)
+    local clt_conn = CltMgr.get_conn(role_info.socket_id)
     if not clt_conn then return end
 
     clt_conn:send_pkt(PLAYER.CREATE, role_info, ecode)
 end
 
 -- 玩家下线
-function AccMgr.role_offline(conn_id)
-    local role_info = this.conn_acc[conn_id]
+function AccMgr.role_offline(socket_id)
+    local role_info = this.conn_acc[socket_id]
     if not role_info then return end -- 连接上来未登录就断线
 
-    role_info.conn_id = nil
-    this.conn_acc[conn_id] = nil
+    role_info.socket_id = nil
+    this.conn_acc[socket_id] = nil
 end
 
 -- 根据pid下线
@@ -119,13 +119,13 @@ function AccMgr.role_offline_by_pid(pid)
         return
     end
 
-    AccMgr.role_offline(role_info.conn_id)
+    AccMgr.role_offline(role_info.socket_id)
 end
 
 -- 帐号在其他地方登录
 function AccMgr.login_otherwhere(role_info)
     -- 告诉原连接被顶号
-    local old_conn = CltMgr.get_conn(role_info.conn_id)
+    local old_conn = CltMgr.get_conn(role_info.socket_id)
     old_conn:send_pkt(PLAYER.OTHER, {})
 
     -- 通知其他服务器玩家下线
@@ -176,9 +176,9 @@ local function player_login(pkt)
     end
 
     local clt_conn = Cmd.last_conn()
-    local conn_id = clt_conn.conn_id
+    local socket_id = clt_conn.socket_id
     -- 不能重复发送(不是顶号，conn_id不应该会重复)
-    if this.conn_acc[conn_id] then
+    if this.conn_acc[socket_id] then
         eprint("player login pkt dumplicate send")
         return
     end
@@ -202,7 +202,7 @@ local function player_login(pkt)
     end
 
     -- 当前一个帐号只能登录一个角色,处理顶号
-    if role_info.conn_id then
+    if role_info.socket_id then
         AccMgr.login_otherwhere(role_info)
 
         -- 下面开始替换连接
@@ -211,8 +211,8 @@ local function player_login(pkt)
     end
 
     -- 连接认证成功，将帐号和连接绑定。现在可以发送其他协议了
-    role_info.conn_id = conn_id
-    this.conn_acc[conn_id] = role_info
+    role_info.socket_id = socket_id
+    this.conn_acc[socket_id] = role_info
 
     clt_conn:authorized()
     if role_info.pid then CltMgr.bind_role(role_info.pid, clt_conn) end
@@ -226,7 +226,7 @@ end
 -- 创角
 local function create_role(pkt)
     local clt_conn = Cmd.last_conn()
-    local role_info = this.conn_acc[clt_conn.conn_id]
+    local role_info = this.conn_acc[clt_conn.socket_id]
     if not role_info then
         eprint("create role,no account info")
         return

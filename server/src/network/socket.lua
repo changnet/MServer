@@ -1,81 +1,31 @@
--- conn.lua
+-- socket.lua
 -- 2017-12-14
 -- xzc
 
 local util = require "engine.util"
-local Socket = require "engine.Socket"
+local EngineSocket = require "engine.Socket"
 
 local EV_READ = SocketMgr.EV_READ
 
--- 接受新的连接
-function conn_accept(conn_id, fd)
-    __conn[conn_id]:conn_accept(fd)
-end
-
--- 连接成功
-function conn_new(conn_id, ...)
-    return __conn[conn_id]:conn_new(...)
-end
-
--- io握手成功(SSL才有握手)
-function conn_io_ready(conn_id, ...)
-    local conn = __conn[conn_id]
-
-    conn.ok = true
-    return __conn[conn_id]:io_ready(...)
-end
-
--- 连接断开
-function conn_del(conn_id, e)
-    local conn = __conn[conn_id]
-    __conn[conn_id] = nil
-
-    conn.ok = false
-    conn:on_disconnected(e)
-end
-
--- 消息回调,底层根据不同类，参数也不一样
-function command_new(conn_id, ...)
-    return __conn[conn_id]:on_cmd(...)
-end
-
--- 转发的客户端消息
-function css_command_new(conn_id, ...)
-    return __conn[conn_id]:css_command_new(...)
-end
-
--- 握手(websocket用到这个)
-function handshake_new(conn_id, ...)
-    return __conn[conn_id]:handshake_new(...)
-end
-
--- 控制帧，比如websocket的ping、pong
-function ctrl_new(conn_id, ...)
-    return __conn[conn_id]:ctrl_new(...)
-end
-
---------------------------------------------------------------------------------
---------------------------------------------------------------------------------
---------------------------------------------------------------------------------
-
 -- 网络连接基类
-local Conn = oo.class(...)
+local Socket = oo.class(...)
 
-function Conn:__init()
-    local conn_id = next_id()
+function Socket:__init()
+    local socket_id = SocketMgr.next_id()
 
-    self.s = Socket(conn_id)
-    self.conn_id = conn_id
-    __conn[conn_id] = self
+    self.s = EngineSocket(socket_id)
+    self.socket_id = socket_id
+
+    SocketMgr.add(self)
 end
 
--- on_cmd 收到消息时触发
+-- on_message 收到消息时触发
 -- on_accepted accept成功时触发
 -- on_connected 连接建立完成(包括SSL、websocket握手完成)
 -- on_disconnected 断开或者连接失败时触发
 
 -- 设置io读写、编码、打包方式
-function Conn:set_conn_param()
+function Socket:set_param()
     --[[
         param = {
             pkt = network_mgr.PT_NONE, -- 打包类型
@@ -107,56 +57,51 @@ function Conn:set_conn_param()
     s:set_buffer_params(send_chunk_max, recv_chunk_max, action)
 end
 
--- 根据连接id获取对象
-function Conn:get_conn(conn_id)
-    return __conn[conn_id]
-end
-
 -- 接受新连接
-function Conn:conn_accept(fd)
+function Socket:on_accepting(fd)
     local mt = getmetatable(self) or self
 
     -- 取监听socket的元表来创建同类型的对象
     -- 并且把监听socket的ssl回调之类的复制到新socket
-    local conn = mt()
+    local socket = mt()
 
-    conn.ssl = self.ssl
+    socket.ssl = self.ssl
 
     -- 新建立的socket继承监听socket的参数
     -- 必须用rawget，避免取到元表的函数，那样会影响热更
     -- 如果需要逻辑里要覆盖这几个回调，那应该在table中覆盖而不是元表
-    conn.on_cmd = rawget(self, "on_cmd")
-    conn.on_accepted = rawget(self, "on_accepted")
-    conn.on_connected = rawget(self, "on_connected")
-    conn.on_disconnected = rawget(self, "on_disconnected")
+    socket.on_message = rawget(self, "on_message")
+    socket.on_accepted = rawget(self, "on_accepted")
+    socket.on_connected = rawget(self, "on_connected")
+    socket.on_disconnected = rawget(self, "on_disconnected")
 
-    conn.default_param = rawget(self, "default_param")
+    socket.default_param = rawget(self, "default_param")
 
-    if not conn.s:start(LOCAL_ADDR, fd, EV_READ) then
-        print("conn accept start fail", self.conn_id, fd)
+    if not socket.s:start(LOCAL_ADDR, fd, EV_READ) then
+        print("socket accept start fail", self.socket_id, fd)
         return
     end
 
-    __conn[conn.conn_id] = conn
+    SocketMgr.add(socket)
 
     -- 必须在继承后设置参数，不然用些初始化的参数就会不对
-    conn:set_conn_param()
+    socket:set_param()
 
     -- 注意这个事件socket并未连接完成，不可发放数据，on_connected事件才完成
-    conn:on_accepted()
+    socket:on_accepted()
 
     -- ssl 需要握手
-    if conn.ssl then
-        conn.s:io_init_accept()
+    if socket.ssl then
+        socket.s:io_init_accept()
     else
-        conn:io_ready()
+        socket:io_ready()
     end
 end
 
--- 连接成功(或失败)
-function Conn:conn_new(e)
+-- 处理连接回调事件(连接可能失败，on_connected是连接成功)
+function Socket:on_connecting(e)
     if 0 == e then
-        self:set_conn_param()
+        self:set_param()
         if self.ssl then
             self.s:io_init_connect()
         else
@@ -167,32 +112,31 @@ function Conn:conn_new(e)
     end
 end
 
--- 连接断开
+-- 连接断开(主动断开、对方断开都会触发此事件)
 -- @param e 连接断开错误码，对应errno或者WSGetLastError
--- @param is_conn 是否主动连接失败（这事件会触发两次）
-function Conn:on_disconnected(e, is_conn)
+function Socket:on_disconnected(e)
 end
 
 -- 连接建立完成(包括SSL等握手完成)
-function Conn:on_connected()
+function Socket:on_connected()
 end
 
 -- io初始化完成
-function Conn:io_ready()
+function Socket:io_ready()
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手
     return self:on_connected()
 end
 
 -- 监听到新连接创建(还没握手完成)
-function Conn:on_accepted()
+function Socket:on_accepted()
 end
 
 -- 连接到其他服务器
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
 -- @param ip 目标服务器的ip，如果不传从则host解析
-function Conn:connect(host, port, ip)
+function Socket:connect(host, port, ip)
     if not ip then ip = util.get_addr_info(host) end
     -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址
     -- 这个会影响http头里的host字段
@@ -207,18 +151,8 @@ function Conn:connect(host, port, ip)
 end
 
 -- 重新连接，之前必须调用过connect函数
-function Conn:reconnect()
-    assert(not self.ok)
-
-    -- 如果当前socket未关闭，则关闭
-    if __conn[self.conn_id] then
-        network_mgr:close(self.conn_id)
-
-        -- 旧的conn切换到一个没用的conn对象，C++回调时不影响当前对象，当前对象继续使用
-        __conn[self.conn_id] = reconnect_conn
-    end
-
-    return self:connect(self.ip, self.port)
+function Socket:reconnect()
+    assert(false, "to be implement!!!")
 end
 
 -- 以https试连接到其他服务器
@@ -226,7 +160,7 @@ end
 -- @param port 目标服务器端口
 -- @param ssl 用new_ssl_ctx创建的ssl_ctx
 -- @param ip 目标服务器的ip，如果不传从则host解析
-function Conn:connect_s(host, port, ssl, ip)
+function Socket:connect_s(host, port, ssl, ip)
     self.ssl = assert(ssl)
 
     return self:connect(host, port, ip)
@@ -236,7 +170,7 @@ end
 -- @param ip 监听的ip
 -- @param port 监听的端口
 -- @param boolean, message 返回是否成功，失败后面带message
-function Conn:listen(ip, port)
+function Socket:listen(ip, port)
     self.listen_ip = ip
     self.listen_port = port
 
@@ -251,23 +185,23 @@ end
 -- @param ip 监听的ip
 -- @param port 监听的端口
 -- @param ssl 用new_ssl_ctx创建的ssl_ctx
-function Conn:listen_s(ip, port, ssl)
+function Socket:listen_s(ip, port, ssl)
     self.ssl = assert(ssl)
     return self:listen(ip, port)
 end
 
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
-function Conn:close(flush)
+function Socket:close(flush)
     -- 关闭时会触发conn_del，在那边删除
-    -- self:set_conn(self.conn_id, nil)
+    -- self:set_conn(self.socket_id, nil)
     return self.s:stop(flush)
 end
 
 -- 获取当前连接的ip地址和端口
 -- @return ip, port
-function Conn:address()
+function Socket:address()
     return self.s:address()
 end
 
-return Conn
+return Socket

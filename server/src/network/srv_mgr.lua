@@ -25,9 +25,9 @@ local function reconnect_srv()
 
     this.srv_waiting = {}
     for conn in pairs(conn_list) do
-        local conn_id = conn:reconnect()
+        local socket_id = conn:reconnect()
 
-        this.srv_conn[conn_id] = conn
+        this.srv_conn[socket_id] = conn
         printf("reconnect to %s:%d", conn.ip, conn.port)
     end
 end
@@ -87,23 +87,23 @@ function SrvMgr.send_world_pkt(cmd, pkt, ecode)
 end
 
 -- 根据conn_id获取连接
-function SrvMgr.get_conn(conn_id)
-    return this.srv_conn[conn_id]
+function SrvMgr.get_conn(socket_id)
+    return this.srv_conn[socket_id]
 end
 
 -- 主动关闭服务器链接
 function SrvMgr.close_srv_conn(conn)
     conn:close()
-    SrvMgr.set_conn(conn.conn_id, nil)
+    SrvMgr.set_conn(conn.socket_id, nil)
 
     if conn.session then this.srv[conn.session] = nil end
-    this.srv_conn[conn.conn_id] = nil
+    this.srv_conn[conn.socket_id] = nil
 end
 
 -- 服务器广播
 function SrvMgr.srv_multicast(cmd, pkt, ecode)
     local conn_list = {}
-    for _, conn in pairs(this.srv) do table.insert(conn_list, conn.conn_id) end
+    for _, conn in pairs(this.srv) do table.insert(conn_list, conn.socket_id) end
     return network_mgr:srv_multicast(conn_list, network_mgr.CDT_PROTOBUF, cmd.i,
                                      ecode or 0, pkt)
 end
@@ -116,7 +116,7 @@ end
 -- 回调clt_multicast_new时会把args_list传回脚本，需要脚本定义处理方式
 function SrvMgr.clt_multicast(mask, args_list, cmd, pkt, ecode)
     local srv_conn = this.srv[GSE]
-    return network_mgr:ssc_multicast(srv_conn.conn_id, mask, args_list,
+    return network_mgr:ssc_multicast(srv_conn.socket_id, mask, args_list,
                                      network_mgr.CDT_PROTOBUF, cmd.i,
                                      ecode or 0, pkt)
 end
@@ -129,16 +129,16 @@ function SrvMgr.raw_clt_multicast(conn_list, cmd, pkt, ecode)
 end
 
 -- 底层accept回调
-function SrvMgr.srv_conn_accept(conn)
-    local conn_id = conn.conn_id
-    this.srv_conn[conn_id] = conn
+function SrvMgr.srv_accept(conn)
+    local socket_id = conn.socket_id
+    this.srv_conn[socket_id] = conn
 
-    printf("accept server connection:%d", conn_id)
+    printf("accept server connection:%d", socket_id)
 end
 
-function SrvMgr.on_conn_ok(conn_id)
+function SrvMgr.on_conn_ok(socket_id)
     -- 之所以不直接传conn对象进来是为了在这里检测该conn_id已在srvmgr中记录
-    local conn = this.srv_conn[conn_id]
+    local conn = this.srv_conn[socket_id]
 
     this.srv_waiting[conn] = nil
 
@@ -158,16 +158,16 @@ function SrvMgr.on_conn_ok(conn_id)
 end
 
 -- 底层连接断开回调
-function SrvMgr.srv_conn_del(conn_id, e, is_conn)
+function SrvMgr.srv_conn_del(socket_id, e, is_conn)
     -- 这个函数会触发两次，一次是连接失败，一次是socket关闭(现在epoll异步connect不会这样了)
-    local conn = this.srv_conn[conn_id]
+    local conn = this.srv_conn[socket_id]
     if is_conn then
         printf("connect to %s FAIL: %s", conn:base_name(), util.what_error(e))
         return
     end
 
     if conn.session then this.srv[conn.session] = nil end
-    this.srv_conn[conn_id] = nil
+    this.srv_conn[socket_id] = nil
 
     printf("%s connect del: %s", conn:conn_name(), util.what_error(e))
 
@@ -266,9 +266,9 @@ local function on_app_start(check)
             local conn = SsConn()
 
             conn.auto_conn = true
-            local conn_id = conn:connect(setting.sip, setting.sport)
+            local socket_id = conn:connect(setting.sip, setting.sport)
 
-            this.srv_conn[conn_id] = conn
+            this.srv_conn[socket_id] = conn
             this.srv_waiting[conn] = 1
             printf("connect to app = %s index = %d at %s:%d",
                 name, index, setting.sip, setting.sport)
@@ -302,7 +302,7 @@ local function handle_srv_reg(conn, pkt)
     end
 
     this.srv[session] = conn
-    network_mgr:set_conn_session(conn.conn_id, session)
+    network_mgr:set_conn_session(conn.socket_id, session)
 
     conn:authorized(pkt)
     printf("%s register succes:session %d", conn:conn_name(), session)

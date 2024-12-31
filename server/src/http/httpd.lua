@@ -19,7 +19,7 @@ end
 function Httpd:on_accepted(conn)
     -- 定时踢出不断开的连接
     -- TODO 算了，这个是内部使用，暂时不做超时处理
-    print("httpd accept connection", conn.conn_id)
+    print("httpd accept connection", conn.socket_id)
 end
 
 -- 启动http服务器
@@ -39,7 +39,7 @@ function Httpd:start(ip, port)
         return self:on_accepted(conn)
     end
 
-    listen_conn.on_cmd = function(conn, http_type, code, method, url, body)
+    listen_conn.on_message = function(conn, http_type, code, method, url, body)
         return self:do_command(conn, http_type, code, method, url, body)
     end
 

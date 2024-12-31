@@ -51,12 +51,19 @@ function SocketMgr.next_id()
     assert(false, "no more id")
 end
 
+-- 根据连接id获取对象
+function SocketMgr:get(socket_id)
+    return __socket_hash[socket_id]
+end
+
 -- 新增socket
-function SocketMgr.add()
+function SocketMgr.add(socket)
+    __socket_hash[socket.socket_id] = socket
 end
 
 -- 删除socket
-function SocketMgr.del()
+function SocketMgr.del(socket)
+    __socket_hash[socket.socket_id] = nil
 end
 
 local function do_read(socket)
@@ -66,15 +73,37 @@ local function do_read(socket)
     -- 如果还剩下数据需要post一个事件然后后续再处理
     while true do
         s:unpack()
+        --[[
+
+-- 消息回调,底层根据不同类，参数也不一样
+function command_new(socket_id, ...)
+    return __conn[socket_id]:on_message(...)
+end
+
+-- 转发的客户端消息
+function css_command_new(socket_id, ...)
+    return __conn[socket_id]:css_command_new(...)
+end
+
+-- 握手(websocket用到这个)
+function handshake_new(socket_id, ...)
+    return __conn[socket_id]:handshake_new(...)
+end
+
+-- 控制帧，比如websocket的ping、pong
+function ctrl_new(socket_id, ...)
+    return __conn[socket_id]:ctrl_new(...)
+end
+        ]]
     end
 end
 
 local function do_close(socket)
     socket.conn_ok = false
     local e = socket.s:close()
-    __socket_hash[socket.conn_id] = nil
+    __socket_hash[socket.socket_id] = nil
 
-    socket:on_disconnected(e)
+    CoPool.invoke(socket.on_disconnected, socket, e)
 end
 
 local function do_listen(socket)
@@ -84,7 +113,7 @@ local function do_listen(socket)
         if -1 == fd then return end
         if -2 == fd then error("listen socket error") end
 
-        socket:conn_accept(fd)
+        CoPool.invoke(socket.on_accepting, socket, fd)
     end
 end
 
@@ -93,9 +122,10 @@ local function do_connect(socket)
     if 0 ~= e then
         socket.conn_ok = false
         socket.s:stop() -- not s:close()
-        __socket_hash[socket.conn_id] = nil
+        __socket_hash[socket.socket_id] = nil
     end
-    socket:conn_new(e)
+
+    CoPool.invoke(socket.on_connecting, socket, e)
 end
 
 local function socket_dispatch(src, udata, id)

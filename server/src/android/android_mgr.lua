@@ -19,7 +19,7 @@ function AndroidMgr.reg(cmd, handler)
     sc_cmd[cmd.i] = handler
 end
 
-local function on_cmd(conn, cmd, errno, ...)
+local function on_message(conn, cmd, errno, ...)
     local handler = sc_cmd[cmd]
 
     if not handler then
@@ -40,7 +40,7 @@ function AndroidMgr.start()
         local android = Android(idx)
         this.android[idx] = android
 
-        android.conn.on_cmd = on_cmd
+        android.conn.on_message = on_message
     end
 
     -- 剩下的由routine定时执行
@@ -48,7 +48,7 @@ end
 
 function AndroidMgr.stop()
     for _, android in pairs(this.android) do
-        if android.conn.conn_id then
+        if android.conn.socket_id then
             android.conn:close()
         end
     end

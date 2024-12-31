@@ -53,7 +53,7 @@ t_describe("rpc test", function()
         }
     }
 
-    -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的conn_accept等函数
+    -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的accept等函数
     t_before(function()
         listen_conn = SsConn()
         listen_conn:listen(local_host, local_port)
