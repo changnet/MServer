@@ -5,7 +5,7 @@
 #include "http_packet.hpp"
 
 // 开始解析报文，第一个回调的函数，在这里初始化数据
-int32_t on_message_begin(llhttp_t *parser)
+static int32_t on_message_begin(llhttp_t *parser)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     // 这个千万不要因为多态调到websocket_packet::reset去了
@@ -15,7 +15,7 @@ int32_t on_message_begin(llhttp_t *parser)
 }
 
 // 解析到url报文，可能只是一部分
-int32_t on_url(llhttp_t *parser, const char *at, size_t length)
+static int32_t on_url(llhttp_t *parser, const char *at, size_t length)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_url(at, length);
@@ -23,7 +23,7 @@ int32_t on_url(llhttp_t *parser, const char *at, size_t length)
     return 0;
 }
 
-int32_t on_status(llhttp_t *parser, const char *at, size_t length)
+static int32_t on_status(llhttp_t *parser, const char *at, size_t length)
 {
     UNUSED(parser);
     UNUSED(at);
@@ -32,7 +32,7 @@ int32_t on_status(llhttp_t *parser, const char *at, size_t length)
     return 0;
 }
 
-int32_t on_header_field(llhttp_t *parser, const char *at, size_t length)
+static int32_t on_header_field(llhttp_t *parser, const char *at, size_t length)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_field(at, length);
@@ -40,7 +40,7 @@ int32_t on_header_field(llhttp_t *parser, const char *at, size_t length)
     return 0;
 }
 
-int32_t on_header_value(llhttp_t *parser, const char *at, size_t length)
+static int32_t on_header_value(llhttp_t *parser, const char *at, size_t length)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_cur_value(at, length);
@@ -48,7 +48,7 @@ int32_t on_header_value(llhttp_t *parser, const char *at, size_t length)
     return 0;
 }
 
-int32_t on_headers_complete(llhttp_t *parser)
+static int32_t on_headers_complete(llhttp_t *parser)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->on_headers_complete();
@@ -56,7 +56,7 @@ int32_t on_headers_complete(llhttp_t *parser)
     return 0;
 }
 
-int32_t on_body(llhttp_t *parser, const char *at, size_t length)
+static int32_t on_body(llhttp_t *parser, const char *at, size_t length)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
     http_packet->append_body(at, length);
@@ -64,18 +64,11 @@ int32_t on_body(llhttp_t *parser, const char *at, size_t length)
     return 0;
 }
 
-int32_t on_message_complete(llhttp_t *parser)
+static int32_t on_message_complete(llhttp_t *parser)
 {
     class HttpPacket *http_packet = static_cast<class HttpPacket *>(parser->data);
 
-    // on_message_complete里回调socket关闭中断解析
-    // 但不要报错，报错会直接销毁这个packet对象。socket关闭外层有检测，不在这里处理
-    if (http_packet->on_message_complete(parser->upgrade))
-    {
-        return HPE_PAUSED;
-    }
-
-    return HPE_OK;
+    return http_packet->on_message_complete(parser->upgrade);
 }
 
 /**
@@ -116,23 +109,32 @@ HttpPacket::~HttpPacket()
 
 HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 {
+    L_ = nullptr;
     // HTTP_REQUEST, HTTP_RESPONSE, HTTP_BOTH
     llhttp_init(&parser_, HTTP_BOTH, &initializer.setting_);
     parser_.data = this;
 }
 
-int32_t HttpPacket::unpack(Buffer &buffer)
+int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
 {
     // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况
-    size_t size = 0;
+    size_t size      = 0;
     bool next        = false;
     const char *data = buffer.get_front_used(size, next);
-    if (size == 0) return 0;
+    if (size == 0) return unpack_return(L, PC_MORE);
 
-    /* 注意：解析完成后，是由parser回调脚本的，这时脚本那边可能会关闭socket
-     * 因此要注意execute后部分资源是不可再访问的
-     * 一旦出错，llhttp_execute总是返回之前的错误码，不会继续执行，除非重新init或者resume
+    L_              = L;
+    int32_t old_top = lua_gettop(L);
+
+    /**
+     * 只要e(即on_message_complete等回调)不为HPE_OK，再次调用llhttp_execute总是返回之前的错误码
+     * 如果返回的是HPE_PAUSE，则需要保留data缓冲区不变，下次用llhttp_resume继续解析
+     * 在多线程中必须注意缓冲区data指针不能被其他线程改变
+     *
+     * 如果是其他错误码，则需要调用llhttp_init()重新初始化。但缓冲区中的数据就被丢弃了
+     * 因此一般情况下，一旦解析出错，直接断开重连更合理些。
      */
+
     enum llhttp_errno e = llhttp_execute(&parser_, data, size);
 
     /**
@@ -141,21 +143,32 @@ int32_t HttpPacket::unpack(Buffer &buffer)
     if (HPE_PAUSED_UPGRADE == e)
     {
         bool next = buffer.remove(llhttp_get_error_pos(&parser_) - data);
-        return next ? 1 : 0;
+
+        lua_pushinteger(L, PC_UPGRADE);
+        lua_pushboolean(L, next);
+        return 2;
     }
 
-    buffer.clear(); // http_parser不需要旧缓冲区
-
-    // PAUSE通常是上层脚本关闭了socket，需要中止解析
-    if (HPE_OK != e && HPE_PAUSED != e)
+    // 只解析到一部分数据，还不是完整的message
+    if (HPE_OK == e)
     {
-        ELOG("http parse error(%d):%s", llhttp_get_errno(&parser_),
-             llhttp_get_error_reason(&parser_));
-
-        return -1;
+        buffer.clear(); // 数据已解析完不需要旧缓冲区了
+        return unpack_return(L, PC_MORE);
     }
 
-    return 0;
+    // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈
+    if (HPE_PAUSED == e)
+    {
+        // TODO 这里删除缓冲效率有点低。如果这里不删除，下次使用resume是否更快？
+        buffer.remove(llhttp_get_error_pos(&parser_) - data);
+        int32_t new_top = lua_gettop(L);
+        return new_top - old_top;
+    }
+
+    ELOG("http parse error(%d):%s", llhttp_get_errno(&parser_),
+         llhttp_get_error_reason(&parser_));
+
+    return unpack_error(L, "parse error");
 }
 
 void HttpPacket::reset()
@@ -178,39 +191,25 @@ void HttpPacket::on_headers_complete()
 int32_t HttpPacket::on_message_complete(bool upgrade)
 {
     UNUSED(upgrade);
-    lua_State *L = nullptr; // StaticGlobal::L;
-    assert(0 == lua_gettop(L));
 
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
-    lua_pushinteger(L, socket_->conn_id());
+    assert(0 == lua_gettop(L_));
+
+    lua_pushinteger(L_, PC_DATA);
 
     // HTTP_REQUEST = 1, HTTP_RESPONSE = 2
-    lua_pushinteger(L, parser_.type);
-    lua_pushinteger(L, parser_.status_code); // 仅respond有用
+    lua_pushinteger(L_, parser_.type);
+    lua_pushinteger(L_, parser_.status_code); // 仅respond有用
 
     // 1 = GET, 3 = POST，仅request有用
-    lua_pushinteger(L, parser_.method);
-    lua_pushstring(L, http_info_.url_.c_str());
+    lua_pushinteger(L_, parser_.method);
+    lua_pushstring(L_, http_info_.url_.c_str());
 
-    int32_t args = 5;
     if (http_info_.body_.length() > 0)
     {
-        args++;
-        lua_pushstring(L, http_info_.body_.c_str());
+        lua_pushstring(L_, http_info_.body_.c_str());
     }
 
-    if (unlikely(LUA_OK != lua_pcall(L, args, 0, 1)))
-    {
-        ELOG("command_new:%s", lua_tostring(L, -1));
-    }
-
-    lua_settop(L, 0); /* remove traceback */
-
-    /* 注意：如果一次收到多个http消息，需要在这里检测socket是否由上层脚本关闭
-     * 然后终止http-parser的解析
-     */
-    return socket_->fd() < 0 ? -1 : 0;
+    return HPE_PAUSED;
 }
 
 void HttpPacket::append_url(const char *at, size_t len)

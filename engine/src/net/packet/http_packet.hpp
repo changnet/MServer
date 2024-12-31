@@ -32,7 +32,7 @@ public:
     virtual int32_t pack_clt(lua_State *L, int32_t index) override;
     virtual int32_t pack_srv(lua_State *L, int32_t index) override;
 
-    virtual int32_t unpack(Buffer &buffer) override;
+    virtual int32_t unpack(lua_State *L, Buffer &buffer) override;
 
     virtual void on_closed() override;
 
@@ -55,6 +55,7 @@ protected:
 private:
     int32_t pack_raw(lua_State *L, int32_t index);
 
+    lua_State *L_; // 解析时回调临时存一下，其他情况不要用这个
     llhttp_t parser_;
     std::string cur_field_;
     std::string cur_value_;

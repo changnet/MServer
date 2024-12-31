@@ -13,7 +13,7 @@ StreamPacket::~StreamPacket()
 {
 }
 
-int32_t StreamPacket::unpack(Buffer &buffer)
+int32_t StreamPacket::unpack(lua_State *L, Buffer &buffer)
 {
     constexpr decltype(NetHeader::size_) header_size = sizeof(struct NetHeader);
     // 检测包头是否完整

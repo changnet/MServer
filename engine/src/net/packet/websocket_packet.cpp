@@ -221,12 +221,12 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
     return pack_raw(L, index);
 }
 
-int32_t WebsocketPacket::unpack(Buffer &buffer)
+int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
 {
     /* 未握手时，由http处理
      * 握手成功后，http中止处理，未处理的数据仍在buffer中，由websocket继续处理
      */
-    if (!is_upgrade_) return HttpPacket::unpack(buffer);
+    if (!is_upgrade_) return HttpPacket::unpack(L, buffer);
 
     e_        = 0; // 重置上一次解析错误
     bool next = false;

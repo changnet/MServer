@@ -175,16 +175,11 @@ public:
      * @return 成功0 失败返回非0错误码
      */
     int32_t connect_validate();
-
-private:
     /**
-     * 处理socket关闭后续工作
-     * @param term 是否强制终止，部分清理工作将被忽略
+     * 解析收到的数据，根据不同的packet类型返回不同数据
+     * @return 类型编码，数据1，数据2，数据3，...
      */
-    void close_cb(bool term);
-
-    void command_cb();
-    
+    int32_t unpack(lua_State *L);
 
 protected:
     int32_t conn_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题

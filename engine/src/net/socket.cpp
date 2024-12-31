@@ -717,36 +717,20 @@ int32_t Socket::connect_validate()
     return 0;
 }
 
-void Socket::command_cb()
+int32_t Socket::unpack(lua_State *L)
 {
     /* 在脚本报错的情况下，可能无法设置 io和packet */
-    if (!packet_)
+    if (unlikely(!packet_)) return Packet::unpack_error(L, "socket no packet");
+
+    if (unlikely(CS_OPENED != status_))
     {
-        Socket::stop();
-        ELOG("no io or packet set,socket disconnect: %d", conn_id_);
-        return;
+        return Packet::unpack_error(L, "socket already close");
     }
 
-    // TODO 这里统计流量。读写在io线程不好统计，暂时放这里
-    // C_RECV_TRAFFIC_ADD(conn_id_, conn_ty_, byte);
-
-    int32_t ret = 0;
-
-    /* 在回调脚本时，可能被脚本关闭当前socket(fd < 0)，这时就不要再处理数据了 */
     auto &buffer = w_->io_->get_recv_buffer();
-    do
-    {
-        // @return -1错误 0成功，没有后续数据需要处理 1成功，有数据需要继续处理
-        if ((ret = packet_->unpack(buffer)) <= 0) break;
-    } while (CS_OPENED == status_);
+    int32_t ret = packet_->unpack(L, buffer);
 
-    // 解析过程中错误，断开链接
-    if (unlikely(ret < 0))
-    {
-        Socket::stop();
-        ELOG("socket command unpack data fail");
-        return;
-    }
+    return ret;
 }
 
 int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)

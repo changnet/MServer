@@ -25,7 +25,7 @@ public:
     /* 数据解包
      * return: <0 error;0 success
      */
-    virtual int32_t unpack(Buffer &buffer);
+    virtual int32_t unpack(lua_State *L, Buffer &buffer) override;
 
     /* 控制帧完成 */
     int32_t on_ctrl_end();
