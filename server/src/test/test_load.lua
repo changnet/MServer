@@ -6,8 +6,8 @@ require "global.test"
 
 require "test.misc_test"
 require "test.mt_test"
+require "test.https_test"
 
--- require "test.https_test"
 -- require "test.websocket_test"
 -- require "test.lua_codec_test"
 -- require "test.pbc_codec_test"
@@ -50,4 +50,5 @@ t_setup({
     end
 })
 
+Rtti.collect()
 t_run()

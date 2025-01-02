@@ -115,6 +115,7 @@ void WorkerThread::routine()
     {
         time_update(false);
         int64_t wait_time = timer_mgr_.next_interval(steady_clock_, utc_ms_);
+        if (wait_time < 0) wait_time = 5000;
 
         wait_for(wait_time);
 

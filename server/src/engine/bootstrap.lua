@@ -95,6 +95,7 @@ function Bootstrap.process_preload(process_id)
     require "global.rtti"
     require "rpc.rpc"
     require "timer.timer"
+    require "network.socket_mgr"
 
     PROCESS_ID = process_id
     LOCAL_ADDR = Engine.make_address(PROCESS_ID, 0, 1)
@@ -127,6 +128,7 @@ function Bootstrap.worker_preload(addr, log_name)
     require "global.rtti"
     require "rpc.rpc"
     require "timer.timer"
+    require "network.socket_mgr"
 
     local proc_id, wtype = Engine.unmake_address(addr)
     assert(proc_id == tonumber(g_env:get("process_id")))

@@ -89,6 +89,7 @@ function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
         end
     end
 
+    self.status = OPENED
     -- 握手后，连接建立成功
     self:on_connected()
 end

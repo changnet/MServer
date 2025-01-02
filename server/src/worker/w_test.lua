@@ -7,9 +7,6 @@ dofile(srv_dir .. "/src/engine/bootstrap.lua")
 
 Bootstrap.worker_preload(tonumber(addr), "T1")
 
-Rtti.collect()
-
-print("worker test ready", addr)
 Timer.timeout(0, function()
     require("test.test_load")
 end)

@@ -4,7 +4,7 @@
 
 local util = require "engine.util"
 local TlsCtx = require "engine.TlsCtx"
-local HttpConn = require "http.http_conn"
+local HttpSocket = require "http.http_socket"
 
 
 t_describe("http test", function()
@@ -51,7 +51,7 @@ t_describe("http test", function()
     t_it("http get " .. exp_host, function()
         t_async(15000)
 
-        local conn = HttpConn()
+        local conn = HttpSocket()
 
         conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
@@ -68,7 +68,7 @@ t_describe("http test", function()
     t_it("http post " .. exp_host, function()
         t_async(15000)
 
-        local conn = HttpConn()
+        local conn = HttpSocket()
 
         conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
@@ -90,7 +90,7 @@ t_describe("http test", function()
         local port = 8182
         local no_len_ctx = "no_len_test ctx 1111111122222223333aaaabbbbbbccccc"
 
-        local listen_conn = HttpConn()
+        local listen_conn = HttpSocket()
         t_assert(listen_conn:listen(local_host, port))
         listen_conn.on_message = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
@@ -117,13 +117,14 @@ t_describe("http test", function()
                 t_assert(false)
             end
         end
-        listen_conn.on_disconnected = function(conn, e)
+        listen_conn.on_disconnected = function(conn)
+            local e = conn.s:get_errno()
             if 0 ~= e then
                 print("error >>>>>>>>>>>>>>>>>>>", e)
             end
         end
 
-        local clt_conn = HttpConn()
+        local clt_conn = HttpSocket()
         t_assert(clt_conn:connect(local_host, port))
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,
@@ -146,7 +147,8 @@ t_describe("http test", function()
                 end)
             end)
         end
-        clt_conn.on_disconnected = function(conn, e)
+        clt_conn.on_disconnected = function(conn)
+            local e = conn.s:get_errno()
             if 0 ~= e then
                 print("error >>>>>>>>>>>>>>>>>>>", e)
             end
@@ -156,7 +158,7 @@ t_describe("http test", function()
     t_it("https get " .. exp_host, function()
         t_async(15000)
 
-        local conn = HttpConn()
+        local conn = HttpSocket()
 
         conn:connect_s(exp_host, 443, clt_ssl)
         conn.on_connected = function(_conn)
@@ -173,7 +175,7 @@ t_describe("http test", function()
     t_it("https post " .. exp_host, function()
         t_async(15000)
 
-        local conn = HttpConn()
+        local conn = HttpSocket()
 
         conn:connect_s(exp_host, 443, clt_ssl)
         conn.on_connected = function(_conn)
@@ -195,7 +197,7 @@ t_describe("http test", function()
         local port = 8183
 
         local srv_conn = nil
-        local listen_conn = HttpConn()
+        local listen_conn = HttpSocket()
         listen_conn:listen_s(local_host, port, srv_ssl)
         listen_conn.on_message = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
@@ -212,7 +214,7 @@ t_describe("http test", function()
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
         end
 
-        local clt_conn = HttpConn()
+        local clt_conn = HttpSocket()
         clt_conn:connect_s(local_host, port, clt_ssl)
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,
@@ -237,7 +239,7 @@ t_describe("http test", function()
     t_it("https ssl verify and get " .. exp_host, vfy_ssl, function()
         if LINUX then
             t_async(10000)
-            local conn = HttpConn()
+            local conn = HttpSocket()
 
             conn:connect_s(exp_host, 443, vfy_ssl)
             conn.on_connected = function(_conn)
@@ -262,7 +264,7 @@ t_describe("http test", function()
         local port = 8184
 
         local srv_conn = nil
-        local listen_conn = HttpConn()
+        local listen_conn = HttpSocket()
         listen_conn:listen_s(local_host, port, vfy_srv_ssl)
         listen_conn.on_message = function(conn, http_type, code, method, url, body)
             t_equal(http_type, 1)
@@ -279,7 +281,7 @@ t_describe("http test", function()
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
         end
 
-        local clt_conn = HttpConn()
+        local clt_conn = HttpSocket()
         clt_conn:connect_s(local_host, port, vfy_clt_ssl)
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,

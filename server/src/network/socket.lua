@@ -10,8 +10,22 @@ local OPENED = SocketMgr.OPENED
 local OPENING = SocketMgr.OPENING
 local CLOSING = SocketMgr.CLOSING
 
+local ADDR = LOCAL_ADDR
+
 -- 网络连接基类
 local Socket = oo.class(...)
+
+--[[
+on_message
+on_accepted
+on_connected
+on_disconnected
+
+这几个接口作为业务接口，是可以在业务逻辑中重写的。因此，一些底层的逻辑不要放在里面
+例如：self.status = xxx
+
+而其他的，像on_connecting这种不是业务逻辑，可以放底层逻辑
+]]
 
 function Socket:__init()
     local socket_id = SocketMgr.next_id()
@@ -21,11 +35,6 @@ function Socket:__init()
 
     SocketMgr.add(self)
 end
-
--- on_message 收到消息时触发
--- on_accepted accept成功时触发
--- on_connected 连接建立完成(包括SSL、websocket握手完成)
--- on_disconnected 断开或者连接失败时触发
 
 -- 设置io读写、编码、打包方式
 function Socket:set_param()
@@ -119,11 +128,12 @@ end
 
 -- 连接建立完成(包括SSL等握手完成)
 function Socket:on_connected()
-    self.status = OPENED
+
 end
 
 -- io初始化完成
 function Socket:io_ready()
+    self.status = OPENED
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手
     return self:on_connected()
@@ -146,10 +156,10 @@ function Socket:connect(host, port, ip)
     self.host = host
     self.port = port
 
-    local e = self.s:connect(ip, port)
+    local fd = self.s:connect(ADDR, ip, port)
 
     self.status = OPENING
-    return e >= 0
+    return fd > 0
 end
 
 -- 重新连接，之前必须调用过connect函数
@@ -176,8 +186,8 @@ function Socket:listen(ip, port)
     self.listen_ip = ip
     self.listen_port = port
 
-    local e = self.s:listen(ip, port)
-    if 0 == e then
+    local fd = self.s:listen(ADDR, ip, port)
+    if fd > 0 then
         self.status = OPENED -- 对于监听的socket，不会触io_ready，这里直接设置状态
         return true
     end

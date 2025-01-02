@@ -44,7 +44,6 @@ __socket_seed = __socket_seed or 0
 -- setmetatable(self.conn, {["__mode"]='v'})
 
 local __socket_hash = __socket_hash
-local __socket_seed = __socket_seed
 
 -- 分配当前进程唯一的socket id
 function SocketMgr.next_id()
@@ -53,12 +52,11 @@ function SocketMgr.next_id()
     -- 高16位用作自增，目前一个worker最多只能发起2^16=65535个连接
     local seed = __socket_seed
 
-    local id
     for _ = 1, 0xFFFF do
         seed = seed + 1
         if seed > 0xFFFF then seed = 1 end
 
-        id = (seed << 16) & LOW_BIT
+        local id = (seed << 16) | LOW_BIT
         if not __socket_hash[id] then
             __socket_seed = seed
             return id

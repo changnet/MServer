@@ -833,3 +833,7 @@ void Socket::set_event(int32_t ev)
 {
     w_->ev_.fetch_or(ev);
 }
+int32_t Socket::get_errno() const
+{
+    return w_->errno_;
+}

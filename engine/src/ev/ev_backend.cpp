@@ -334,7 +334,7 @@ void EVBackend::do_recv_events()
             std::scoped_lock<std::mutex> sl(mutex_);
             if (recv_events_.empty())
             {
-                busy_ = true;
+                busy_ = false;
                 return;
             }
 
@@ -346,7 +346,7 @@ void EVBackend::do_recv_events()
         do_watcher_recv_event(w, ev);
     }
 
-    busy_ = false;
+    busy_ = true;
 }
 
 void EVBackend::dispatch_event(EVIO *w, int32_t ev)

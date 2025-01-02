@@ -82,6 +82,8 @@ public:
     int32_t get_event();
     // 设置当前socket的事件
     void set_event(int32_t ev);
+    // 获取当前的错误码
+    int32_t get_errno() const;
 
     /**
      * @brief 获取ip地址及端口
