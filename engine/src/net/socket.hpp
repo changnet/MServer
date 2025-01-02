@@ -67,6 +67,7 @@ public:
     /**
      * 停止socket事件监听(等待另一个线程处理完)并自动close
      * @param flush 发送缓冲区中的数据再停止
+     * @return 是否成功（如果当前socket未曾调用start，则会停止失败）
      */
     void stop(bool flush = false);
     /**
@@ -79,11 +80,8 @@ public:
     int32_t validate();
     // 获取当前socket的事件
     int32_t get_event();
-
-    /**
-     * 是否已关闭
-     */
-    bool is_closed() const { return CS_OPENED != status_; }
+    // 设置当前socket的事件
+    void set_event(int32_t ev);
 
     /**
      * @brief 获取ip地址及端口
@@ -147,7 +145,7 @@ public:
     int32_t set_packet(int32_t packet_type);
 
     inline int32_t fd() const { return fd_; }
-    inline int32_t conn_id() const { return conn_id_; }
+    inline int32_t conn_id() const { return socket_id_; }
 
     /**
      * @brief 设置缓冲区的参数
@@ -180,12 +178,13 @@ public:
      * @return 类型编码，数据1，数据2，数据3，...
      */
     int32_t unpack(lua_State *L);
+    // 在socket关闭时解析剩下的数据，仅http适用
+    int32_t unpack_on_closed(lua_State *L);
 
 protected:
-    int32_t conn_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
+    int32_t socket_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
 
 private:
-    int8_t status_; // 当前socket的状态
     int32_t fd_; /// 当前socket的文件描述符
 
     EVIO *w_; /// io事件监视器

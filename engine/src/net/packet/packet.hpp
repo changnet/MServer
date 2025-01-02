@@ -55,9 +55,12 @@ public:
     virtual int32_t unpack(lua_State *L, Buffer &buffer) = 0;
 
     /**
-     * 连接断开
+     * 连接断开时，部分packet需要解析数据
      */
-    virtual void on_closed() {}
+    virtual int32_t unpack_on_closed(lua_State *L)
+    {
+        return PC_MORE;
+    }
 
     /**
      * 打包服务器发往客户端的数据包，用于转发

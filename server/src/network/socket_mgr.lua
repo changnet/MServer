@@ -7,6 +7,17 @@ SocketMgr = {
     EV_CLOSE     = 0x0010, -- 16 socket关闭
     EV_INIT_CONN = 0x0200, -- 512 初始化connect
     EV_INIT_ACPT = 0x0400, -- 1024 初始化accept
+
+    PC_ERROR   = 1, -- 出错
+    PC_MORE    = 2, -- 数据不足
+    PC_DATA    = 3, -- 数据
+    PC_UPGRADE = 4, -- websocket的upgrade
+
+    -- socket.status
+    OPENING = 1, -- 已发起连接，但尚未连接完成
+    OPENED  = 2, -- 连接完成（包括握手等），可以发送消息
+    CLOSING = 3, -- 已发起关闭，但未关闭完成
+    CLOSED  = 4, -- 已关闭
 }
 
 local EV_READ      = SocketMgr.EV_READ
@@ -16,6 +27,12 @@ local EV_CLOSE     = SocketMgr.EV_CLOSE
 local EV_INIT_CONN = SocketMgr.EV_INIT_CONN
 local EV_INIT_ACPT = SocketMgr.EV_INIT_ACPT
 
+local PC_ERROR = SocketMgr.PC_ERROR
+local PC_MORE = SocketMgr.PC_MORE
+local PC_DATA = SocketMgr.PC_DATA
+local PC_UPGRADE = SocketMgr.PC_UPGRADE
+
+local CLOSED = SocketMgr.CLOSED
 
 local LOCAL_ADDR = assert(LOCAL_ADDR)
 local LOW_BIT = LOCAL_ADDR & 0xFFFF
@@ -66,44 +83,56 @@ function SocketMgr.del(socket)
     __socket_hash[socket.socket_id] = nil
 end
 
-local function do_read(socket)
-    local s = socket.s
-    -- TODO 这里有点问题，假如这个socket比较忙，这里会一直获取到数据
-    -- 其他socket的数据就没法处理了。所以每个socket只处理N个数据
-    -- 如果还剩下数据需要post一个事件然后后续再处理
-    while true do
-        s:unpack()
-        --[[
-
--- 消息回调,底层根据不同类，参数也不一样
-function command_new(socket_id, ...)
-    return __conn[socket_id]:on_message(...)
-end
-
--- 转发的客户端消息
-function css_command_new(socket_id, ...)
-    return __conn[socket_id]:css_command_new(...)
-end
-
--- 握手(websocket用到这个)
-function handshake_new(socket_id, ...)
-    return __conn[socket_id]:handshake_new(...)
-end
-
--- 控制帧，比如websocket的ping、pong
-function ctrl_new(socket_id, ...)
-    return __conn[socket_id]:ctrl_new(...)
-end
-        ]]
+-- 处理消息回调
+-- @return 是否继续读取消息
+local function do_message(socket, code, ...)
+    if PC_DATA == code then
+        -- TODO 读写事件并不代码收到的消息完整，因此要确认消息完整后才使用协程回调
+        -- 但这样的话，也导致了每个消息一个协程，效率是不是有点低
+        CoPool.invoke(socket.on_message, socket, ...)
+        return true
+    elseif PC_MORE == code then
+        return false
+    elseif PC_ERROR == code then
+        print("socket message error", socket.socket_id, ...)
+        socket:stop()
+        return false
+    elseif PC_UPGRADE == code then
+        return true
+    else
+        print("socket unknow message code", code)
+        return false
     end
 end
 
+local function do_read(socket)
+    local s = socket.s
+    -- 假如这个socket比较忙，这里会一直获取到数据
+    -- 其他socket的数据就没法处理了。所以每个socket只处理N个数据
+    -- 如果还剩下数据需要post一个事件然后后续再处理
+    for _ = 1, 256 do
+        if not do_message(socket, s:unpack()) then
+            return
+        end
+    end
+
+    -- 还有消息，延后处理
+    s:set_event(EV_READ)
+    g_worker:emplace_message(0, 0, ThreadMessage.SOCKET, socket.socket_id)
+end
+
 local function do_close(socket)
-    socket.conn_ok = false
+    -- 这时候fd并没有关闭，部分逻辑还需要用到fd，因此在close之前调用on_disconnected
+    -- 如果socket.status不为closing，则为对方关闭链接
+    CoPool.invoke(socket.on_disconnected, socket)
+
+    socket.status = CLOSED
     local e = socket.s:close()
     __socket_hash[socket.socket_id] = nil
 
-    CoPool.invoke(socket.on_disconnected, socket, e)
+    if 0 ~= e then
+        print("socket close, error code", socket.socket_id, e)
+    end
 end
 
 local function do_listen(socket)
@@ -120,9 +149,7 @@ end
 local function do_connect(socket)
     local e = socket.s:connect_validate()
     if 0 ~= e then
-        socket.conn_ok = false
-        socket.s:stop() -- not s:close()
-        __socket_hash[socket.socket_id] = nil
+        socket:close() -- not s:close()
     end
 
     CoPool.invoke(socket.on_connecting, socket, e)
@@ -135,7 +162,10 @@ local function socket_dispatch(src, udata, id)
         return
     end
 
+    -- 因为socket的设计是读写线程共用一个事件字段，多次事件直接叠加在同一个字段而不是发多个message
+    -- 所以事件是存在socket上而不放在message上
     local revents = socket.s:get_event()
+
     --[[
     一个socket发送数据后立即关闭，则对端会同时收到EV_READ和EV_CLOSE
     这时的数据依然是有效的，所以EV_READ要优先EV_CLOSE来处理

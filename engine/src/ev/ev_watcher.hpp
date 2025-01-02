@@ -18,6 +18,12 @@ public:
         M_OVERFLOW_PEND = 2, // 缓冲区溢出时阻塞，通用用于服务器之间连接
     };
 
+    enum RefBit
+    {
+        REF_WORKER  = 0x01, // 第0位为1表示worker线程引用此watcher
+        REF_BACKEND = 0x02, // 第1位为1表示backend线程引用此watcher
+    };
+
 public:
     ~EVIO();
     explicit EVIO(int32_t id, int32_t addr, int32_t fd);
@@ -52,6 +58,13 @@ public:
      */
     int32_t do_init_connect();
 
+
+    bool del_ref(int32_t b)
+    {
+        int32_t v = ref_.fetch_and(~b);
+        return 0 == (v & (~b));
+    }
+
 public:
     uint8_t mask_; // 用于设置种参数
     int32_t fd_;   // 文件描述符
@@ -71,7 +84,7 @@ public:
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
 
-    std::atomic<int> ref_; // 引用数，用于检测
+    std::atomic<int> ref_; // 按位引用，0位是worker线程，1位是backend线程
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制
@@ -82,11 +95,13 @@ public:
     bool set(EVIO *w)
     {
         // 该watcher对应的socket已经在另一个线程销毁
-        if (w->ref_ < 2)
+        if (0 == (w->ref_ & EVIO::REF_WORKER))
         {
+            w->del_ref(EVIO::REF_BACKEND);
             delete w;
             return false;
         }
+        assert(0 != (w->ref_ & EVIO::REF_BACKEND));
 
         int32_t fd = w->fd_;
         // win的socket是unsigned类型，可能会很大变成负数，得强转unsigned来判断
@@ -119,8 +134,7 @@ public:
             fd_watcher_huge_.erase(fd);
         }
         // 该watcher对应的socket已经在另一个线程销毁
-        int32_t ref = w->ref_.fetch_sub(1);
-        if (ref < 1)
+        if (w->del_ref(EVIO::REF_BACKEND))
         {
             delete w;
             return false;

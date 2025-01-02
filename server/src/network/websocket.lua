@@ -61,6 +61,7 @@ WsConn.WS_OP_PONG = WS_OP_PONG
 WsConn.WS_FINAL_FRAME = WS_FINAL_FRAME
 WsConn.WS_HAS_MASK = WS_HAS_MASK
 
+local OPENED = SocketMgr.OPENED
 
 WsConn.default_param = {
     pkt = Socket.PT_WEBSOCKET, -- 打包类型
@@ -137,7 +138,7 @@ end
 function WsConn:ws_close()
     -- 如果握手成功，则关闭时需要发送关闭数据包(用于监听的socket根本不会有握手)
     -- 用于listen的socket不需要执行这个close操作
-    if not self.ok or self.listen_ip then return end
+    if OPENED ~= self.status or self.listen_ip then return end
 
     self.op_close = true
     self:send_ctrl(WS_OP_CLOSE)

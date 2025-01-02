@@ -327,7 +327,7 @@ int32_t WebsocketPacket::invoke_handshake()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return socket_->is_closed() ? -1 : 0;
+    return -1; // socket_->is_closed() ? -1 : 0;
 }
 
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
@@ -351,7 +351,7 @@ int32_t WebsocketPacket::on_frame_end()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return socket_->is_closed() ? -1 : 0;
+    return -1; // socket_->is_closed() ? -1 : 0;
 }
 
 // 处理ping、pong等opcode
@@ -383,7 +383,7 @@ int32_t WebsocketPacket::on_ctrl_end()
 
     lua_settop(L, 0); /* remove traceback */
 
-    return socket_->is_closed() ? -1 : 0;
+    return -1; // socket_->is_closed() ? -1 : 0;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])

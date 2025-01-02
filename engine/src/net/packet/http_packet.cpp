@@ -168,7 +168,7 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
     ELOG("http parse error(%d):%s", llhttp_get_errno(&parser_),
          llhttp_get_error_reason(&parser_));
 
-    return unpack_error(L, "parse error");
+    return unpack_error(L, "http parse error");
 }
 
 void HttpPacket::reset()
@@ -288,15 +288,24 @@ int32_t HttpPacket::pack_srv(lua_State *L, int32_t index)
     return pack_raw(L, index);
 }
 
-void HttpPacket::on_closed()
+int32_t HttpPacket::unpack_on_closed(lua_State *L)
 {
     // 没有 Content-Length 时，以连接关闭时读到的数据为准
     // 这时候需要手动调用llhttp_finish来触发on_message_complete
-    if (!llhttp_message_needs_eof(&parser_)) return;
+    if (!llhttp_message_needs_eof(&parser_)) return unpack_return(L, PC_MORE);
 
+    int32_t old_top  = lua_gettop(L);
     llhttp_errno_t e = llhttp_finish(&parser_);
-    if (HPE_OK != e && HPE_PAUSED != e)
+
+    // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈
+    if (HPE_PAUSED == e)
     {
-        ELOG("llhttp_finish erro (%d): %s", e, llhttp_get_error_reason(&parser_));
+        int32_t new_top = lua_gettop(L);
+        return new_top - old_top;
     }
+
+    ELOG("llhttp_finish error(%d):%s", llhttp_get_errno(&parser_),
+         llhttp_get_error_reason(&parser_));
+
+    return unpack_error(L, "http parse error");
 }

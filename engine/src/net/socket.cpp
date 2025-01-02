@@ -60,12 +60,11 @@ Socket::Socket(int32_t conn_id)
 {
     packet_    = nullptr;
 
-    status_ = CS_NONE;
-
     fd_ = netcompat::INVALID;
-    w_  = nullptr;
+    w_  = new EVIO(socket_id_, 0, -1);
+    w_->ref_ = EVIO::REF_WORKER;
 
-    conn_id_  = conn_id;
+    socket_id_  = conn_id;
 }
 
 Socket::~Socket()
@@ -74,24 +73,23 @@ Socket::~Socket()
      * 正常情况下，脚本调用stop函数通知io线程，后续收到回调到再析构对象
      * 但socket对象在Lua管理，有可能出现脚本报错导致部分数据未正确设置的情况
      * 因此这里析构对象时，不要影响另一个线程
-     * 
+     *
      */
-
 
     delete packet_;
     packet_ = nullptr;
 
-    if (w_)
+    // 正常情况下应该走关闭流程。如果析构时backend线程还引用watcher，则是有问题的
+    if (w_->del_ref(EVIO::REF_WORKER))
     {
-        int32_t ref = w_->ref_.fetch_sub(1);
-        // ref > 1表示另一个线程还在使用，只能等待那个线程关闭
-        // 正常情况下，应该已通知那个线程，只是还未来得及处理。因此这里不再通知
-        if (ref < 1)
-        {
-            delete w_;
-            w_ = nullptr;
-        }
+        delete w_;
+        w_ = nullptr;
     }
+    else
+    {
+        ELOG("socket destructor watcher not delete %d", socket_id_);
+    }
+
     // 如果未正常关闭。强制关闭会触发另一个线程的读写返回错误
     if (fd_ != netcompat::INVALID)
     {
@@ -102,23 +100,11 @@ Socket::~Socket()
 
 void Socket::stop(bool flush)
 {
-    if (status_ != CS_OPENED) return;
+    // 通知backend线程关闭socket
+    // 注意没有执行start时，backend那边并不会引用这个socket
+    // 不过那边有处理，这里统一发送
 
-    status_ = CS_CLOSING;
-
-    
-    // 这里不能直接清掉缓冲区，因为任意消息回调到脚本时，都有可能在脚本关闭socket
-    // 脚本回调完成后会导致继续执行C++的逻辑，还会用到缓冲区
-    // ev那边需要做异步删除
-    if (likely(w_))
-    {
-        StaticGlobal::B->append_event(w_,
-                                      flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
-    }
-    else
-    {
-        ELOG("socket stop no watcher: %d", fd_);
-    }
+    StaticGlobal::B->append_event(w_, flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
 }
 
 int32_t Socket::send_pkt(lua_State *L)
@@ -146,7 +132,7 @@ void Socket::append(const void *data, size_t len)
     {
         // 对于客户端这种不重要的，可以断开连接
         ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
-             conn_id_, send_buff.get_all_used_size());
+             socket_id_, send_buff.get_all_used_size());
 
         Socket::stop();
 
@@ -164,7 +150,7 @@ void Socket::append(const void *data, size_t len)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
-                 conn_id_, send_buff.get_all_used_size());
+                 socket_id_, send_buff.get_all_used_size());
 
             if (!send_buff.is_overflow()) break;
         };
@@ -375,14 +361,13 @@ int32_t Socket::get_addr_info(std::vector<std::string> &addrs, const char *host,
 
 bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
 {
-    assert(!w_);
     assert(fd_ == netcompat::INVALID);
 
     fd_     = fd;
-    status_ = CS_OPENED;
 
-    w_ = new EVIO(conn_id_, addr, fd);
-    w_->ref_ = 2; // 当前worker线程一个，backend线程一个
+    w_->fd_   = fd;
+    w_->addr_ = addr;
+    w_->ref_.fetch_or(EVIO::REF_BACKEND); // 当前worker线程一个，backend线程一个
 
     StaticGlobal::B->append_event(w_, ev);
 
@@ -595,25 +580,22 @@ FAIL:
 
 int32_t Socket::close()
 {
-    // 对方主动断开，部分packet需要特殊处理(例如http无content length时以对方关闭连接表示数据读取完毕)
-    if (CS_OPENED == status_ && packet_) packet_->on_closed();
-
-    status_ = CS_CLOSED;
+#ifndef NDEBUG
+    if (0 != (w_->ref_ > EVIO::REF_BACKEND))
+    {
+        ELOG("socket close has backend ref: %d", socket_id_);
+    }
+#endif
 
     // epoll、poll发现fd出错时，需要及时获取错误码并保存
     int32_t e = w_->errno_;
 
-    assert(fd_ > 0); // 如果fd_为-1，就是执行了两次close_cb
-
-    int32_t ref = w_->ref_.fetch_sub(1);
-    if (ref < 1)
+    if (fd_ != netcompat::INVALID)
     {
-        delete w_;
-        w_ = nullptr;
+        netcompat::close(fd_);
+        fd_ = netcompat::INVALID;
+        w_->fd_ = netcompat::INVALID;
     }
-
-    netcompat::close(fd_);
-    fd_ = netcompat::INVALID;
 
     return e;
 }
@@ -722,15 +704,15 @@ int32_t Socket::unpack(lua_State *L)
     /* 在脚本报错的情况下，可能无法设置 io和packet */
     if (unlikely(!packet_)) return Packet::unpack_error(L, "socket no packet");
 
-    if (unlikely(CS_OPENED != status_))
-    {
-        return Packet::unpack_error(L, "socket already close");
-    }
-
     auto &buffer = w_->io_->get_recv_buffer();
     int32_t ret = packet_->unpack(L, buffer);
 
     return ret;
+}
+int32_t Socket::unpack_on_closed(lua_State *L)
+{
+    if (unlikely(!packet_)) return Packet::unpack_error(L, "socket no packet");
+    return packet_->unpack_on_closed(L);
 }
 
 int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
@@ -740,8 +722,8 @@ int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(conn_id_); break;
-    case IO::IOT_SSL: io = new SSLIO(conn_id_, tls_ctx); break;
+    case IO::IOT_NONE: io = new IO(socket_id_); break;
+    case IO::IOT_SSL: io = new SSLIO(socket_id_, tls_ctx); break;
     default: return -1;
     }
 
@@ -844,7 +826,10 @@ int32_t Socket::get_http_header(lua_State *L)
 
 int32_t Socket::get_event()
 {
-    if (!w_) return 0;
-
     return w_->ev_.exchange(0);
+}
+
+void Socket::set_event(int32_t ev)
+{
+    w_->ev_.fetch_or(ev);
 }

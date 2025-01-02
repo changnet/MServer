@@ -6,6 +6,9 @@ local util = require "engine.util"
 local EngineSocket = require "engine.Socket"
 
 local EV_READ = SocketMgr.EV_READ
+local OPENED = SocketMgr.OPENED
+local OPENING = SocketMgr.OPENING
+local CLOSING = SocketMgr.CLOSING
 
 -- 网络连接基类
 local Socket = oo.class(...)
@@ -107,18 +110,16 @@ function Socket:on_connecting(e)
         else
             self:io_ready()
         end
-    else
-        self:on_disconnected(e, true)
     end
 end
 
 -- 连接断开(主动断开、对方断开都会触发此事件)
--- @param e 连接断开错误码，对应errno或者WSGetLastError
-function Socket:on_disconnected(e)
+function Socket:on_disconnected()
 end
 
 -- 连接建立完成(包括SSL等握手完成)
 function Socket:on_connected()
+    self.status = OPENED
 end
 
 -- io初始化完成
@@ -147,6 +148,7 @@ function Socket:connect(host, port, ip)
 
     local e = self.s:connect(ip, port)
 
+    self.status = OPENING
     return e >= 0
 end
 
@@ -175,10 +177,12 @@ function Socket:listen(ip, port)
     self.listen_port = port
 
     local e = self.s:listen(ip, port)
-    local ok = e >= 0
+    if 0 == e then
+        self.status = OPENED -- 对于监听的socket，不会触io_ready，这里直接设置状态
+        return true
+    end
 
-    self.ok = ok -- 对于监听的socket，不会触io_ready，这里直接设置ok状态
-    return ok
+    return false
 end
 
 -- 以https方式监听http连接
@@ -193,8 +197,7 @@ end
 -- 关闭链接
 -- @param flush 关闭前是否发送缓冲区的数据
 function Socket:close(flush)
-    -- 关闭时会触发conn_del，在那边删除
-    -- self:set_conn(self.socket_id, nil)
+    self.status = CLOSING
     return self.s:stop(flush)
 end
 

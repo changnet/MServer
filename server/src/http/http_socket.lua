@@ -10,6 +10,7 @@ local Socket = require "network.socket"
 
 local PAGE_GET = HTTP.PGET
 local PAGE_POST = HTTP.PPOST
+local OPENED = SocketMgr.OPENED
 
 -- http连接
 local HttpSocket = oo.class(..., Socket)
@@ -32,6 +33,16 @@ function HttpSocket:on_message(http_type, code, method, url, body)
     -- http调用比较少，不太需要考虑效率，直接绑定回调函数即可
     -- 这里只是给出各个回调参数的注释
     -- return self:on_message(http_type, code, method, url, body)
+end
+
+function HttpSocket:on_disconnected()
+    -- http的特殊操作: 无Content-len时以对方关闭连接收到的数据为准
+    if OPENED == self.status then
+        local rcode, http_type, code, method, url, body = self.s:unpack_on_close()
+        if SocketMgr.PC_DATA == rcode then
+            self:on_message(http_type, code, method, url, body)
+        end
+    end
 end
 
 -- 发送数据包

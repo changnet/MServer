@@ -12,7 +12,7 @@
 
 IO::IO(int32_t conn_id)
 {
-    conn_id_ = conn_id;
+    socket_id_ = conn_id;
 }
 
 IO::~IO()
@@ -100,7 +100,7 @@ void IO::init_ready() const
 {
     try
     {
-        //lcpp::call(StaticGlobal::L, "conn_io_ready", conn_id_);
+        //lcpp::call(StaticGlobal::L, "conn_io_ready", socket_id_);
     }
     catch (const std::runtime_error& e)
     {
