@@ -25,6 +25,9 @@
 
     // 去掉不使用s_函数的警告
     #define _CRT_SECURE_NO_WARNINGS
+    // warning C4996: 'close': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _close. See online help for details.
+    // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-3-c4996?view=msvc-170
+    #define _CRT_NONSTDC_NO_WARNINGS
 
     #include <windows.h>
     #define PATH_MAX                MAX_PATH

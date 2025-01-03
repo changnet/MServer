@@ -1,11 +1,21 @@
 #pragma once
 
+#include "global/global.hpp"
+
+#include <mutex>
+#include <deque>
 #include "ev/ev_def.hpp"
 #include "net/buffer.hpp"
-#include "global/global.hpp"
 
 class EVIO;
 class Buffer;
+
+struct AcceptBuffer
+{
+    int32_t reserve_fd_; // 预留的文件描述符
+    std::mutex mutex_;
+    std::deque<int64_t> fd_queue_;
+};
 
 /* socket input output control */
 class IO
@@ -35,6 +45,14 @@ public:
      */
     virtual int32_t send(EVIO *w);
     /**
+     * 接受新连接
+     */
+    virtual int32_t accept(EVIO *w);
+    // 初始化accept所需要数据
+    void init_accept_buffer();
+    // 从accept buffer获取一个新的fd
+    int64_t pop_accept_fd();
+    /**
      * 执行初始化接受的连接
      * @return int32_t
      */
@@ -53,10 +71,6 @@ public:
         return EV_NONE;
     };
     /**
-     * 初始化完成
-     */
-    void init_ready() const;
-    /**
      * @brief 获取接收缓冲区对象
      */
     inline class Buffer &get_recv_buffer()
@@ -72,7 +86,8 @@ public:
     }
 
 protected:
-    int32_t socket_id_;   /// 所属socket的id
-    Buffer recv_; /// 接收缓冲区，由io线程写，主线程读取并处理数据
-    Buffer send_; /// 发送缓冲区，由主线程写，io线程发送
+    int32_t socket_id_;   // 所属socket的id
+    Buffer recv_; // 接收缓冲区，由io线程写，主线程读取并处理数据
+    Buffer send_; // 发送缓冲区，由主线程写，io线程发送
+    AcceptBuffer *accept_; // accept缓冲区（多数socket用不到，因此用指针，用到才分配）
 };

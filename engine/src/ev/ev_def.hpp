@@ -13,7 +13,7 @@ enum
     EV_CONNECT   = 0x0008, // 8  连接成功或者失败
     EV_CLOSE     = 0x0010, // 16 socket关闭
     EV_FLUSH     = 0x0020, // 32 发送数据，完成后关闭连接
-    EV_TIMER     = 0x0080, // 128 定时器超时
+    //EV_TIMER     = 0x0080, // 128 定时器超时
     EV_ERROR     = 0x0100, // 256 出错
     EV_INIT_CONN = 0x0200, // 512 初始化connect
     EV_INIT_ACPT = 0x0400, // 1024 初始化accept

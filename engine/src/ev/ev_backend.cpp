@@ -274,6 +274,15 @@ void EVBackend::do_watcher_recv_event(EVIO *w, int32_t events)
 
 void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 {
+    /**
+     * 以前单线程的时候，事件可以先记录而不处理，等待回调处理
+     * 但是事件放到独立的线程后，如果只把事件发给另一个线程而不处理，那当前线程
+     * 进入epoll的wait时，由于另一个线程来不及处理，会直接再次触发事件回调，导致
+     * epoll线程消耗大量的cpu
+     * 
+     * 对于读写，数据可以在epoll线程读出来放缓冲区。对于accept，需要先把fd取出来
+     * 存到某个地方，等待另一个线程处理
+     */
     int32_t events          = 0;             // 最终需要触发的事件
     const int32_t kernel_ev = w->b_kevents_; // 内核事件
     if (revents & EV_WRITE)
@@ -354,8 +363,9 @@ void EVBackend::dispatch_event(EVIO *w, int32_t ev)
     int32_t old = w->ev_.fetch_or(ev);
     if (0 != old) return;
 
-    StaticGlobal::M->forward_message(
+    bool ok = StaticGlobal::M->forward_message(
         0, w->addr_, ThreadMessage::SOCKET, nullptr, w->id_);
+    if (!ok) ELOG("backend forward_message fail: %d", w->addr_);
 }
 
 void EVBackend::append_event(EVIO *w, int32_t ev)

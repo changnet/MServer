@@ -568,6 +568,11 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
+    if (!w_->io_)
+    {
+        w_->io_ = new IO(socket_id_);
+        w_->io_->init_accept_buffer();
+    }
     start(addr, fd, EV_ACCEPT);
 
     return fd;
@@ -600,20 +605,38 @@ int32_t Socket::close()
     return e;
 }
 
-int32_t Socket::accept()
+static int32_t push_accept_error(lua_State* L, int32_t e, const char *msg = nullptr)
 {
-    int32_t fd = (int32_t)::accept(fd_, nullptr, nullptr);
+    lua_pushinteger(L, netcompat::INVALID);
+    lua_pushinteger(L, e);
+
+    if (msg) ELOG("%s", msg);
+    return 2;
+}
+
+int32_t Socket::accept(lua_State *L)
+{
+    if (!w_->io_) return push_accept_error(L, -1, "no io set");
+
+    int64_t mask = w_->io_->pop_accept_fd();
+
+    int32_t fd = (int32_t)(mask & 0xFFFFFFFF);
+    int32_t no = (int32_t)(mask >> 32);
     if (fd == netcompat::INVALID)
     {
-        int32_t e = netcompat::errorno();
-        if (netcompat::iserror(e))
+        // 所有等待的连接已处理完，并不是错误
+        if (0 == no)
         {
-            ELOG("socket::accept:%s", netcompat::strerror(e));
-            return -2; // 出错，当前socket需要在上层关闭
+            lua_pushinteger(L, netcompat::INVALID);
+            return 1;
         }
-
-        return -1; /* 所有等待的连接已处理完 */
+        else
+        {
+            return push_accept_error(L, no, netcompat::strerror(no));
+        }
     }
+    no = Socket::validate();
+    if (0 != no) return push_accept_error(L, no, netcompat::strerror(no));
 
     if (set_block(fd, 0))
     {
@@ -621,7 +644,7 @@ int32_t Socket::accept()
         ELOG("fd set_block fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return -1;
+        return push_accept_error(L, e);
     }
     if (set_keep_alive(fd))
     {
@@ -629,7 +652,7 @@ int32_t Socket::accept()
         ELOG("fd set_keep_alive fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return -1;
+        return push_accept_error(L, e);
     }
     if (set_user_timeout(fd))
     {
@@ -637,7 +660,7 @@ int32_t Socket::accept()
         ELOG("fd set_user_timeout fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return -1;
+        return push_accept_error(L, e);
     }
     if (set_nodelay(fd))
     {
@@ -645,10 +668,11 @@ int32_t Socket::accept()
         ELOG("fd set_nodelay fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
-        return -1;
+        return push_accept_error(L, e);
     }
 
-    return fd;
+    lua_pushinteger(L, fd);
+    return 1;
 }
 
 int32_t Socket::connect_validate()

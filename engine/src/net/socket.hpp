@@ -96,7 +96,7 @@ public:
      * 尝试接受一个fd
      * @return 成功返回fd，失败返回-1
      */
-    int32_t accept();
+    int32_t accept(lua_State *L);
     /**
      * 获取http头数据，仅当前socket的packet为http有效
      */

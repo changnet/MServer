@@ -136,9 +136,16 @@ end
 local function do_listen(socket)
     local s = socket.s
     while true do
-        local fd = s:accept()
-        if -1 == fd then return end
-        if -2 == fd then error("listen socket error") end
+        local fd, e = s:accept()
+        print("aaaaaaaaaaaaaaaaccept", fd, e)
+        if -1 == fd then
+            if not e then return end
+
+            -- 这个报错是accept报错，可能是新的fd报错，并不一定是listen这个socket的报错
+            -- 比如ENFILE(Too many open files)，因此暂时不关闭，触发错误日志等待手动处理
+            eprint("socket do_listen error", e)
+            return
+        end
 
         CoPool.invoke(socket.on_accepting, socket, fd)
     end

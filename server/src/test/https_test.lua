@@ -82,7 +82,7 @@ t_describe("http test", function()
         end
     end)
 
-    t_it("http local server test", function()
+    t_it("http_local server test", function()
         t_async(10000)
 
         local ctx = "hello"
