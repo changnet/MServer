@@ -125,6 +125,9 @@ int32_t IO::accept(EVIO* w)
 
     int32_t fd = w->fd_;
 
+    // TODO 这里暂不用考虑accept的数量太多导致fd_queue_内存爆炸而返回EV_BUSY
+    // 一般会先达到文件描述符的上限，EV_BUSY也没啥好办法处理
+
     // 一次不要accept太多，等下次循环
     for (int32_t i = 1; i < 128; i++)
     {
@@ -172,7 +175,7 @@ int32_t IO::accept(EVIO* w)
             {
                 w->errno_ = e;
                 ELOG("accept:%s", netcompat::strerror(e));
-                return EV_ERROR; // 出错，当前socket需要在上层关闭
+                return EV_ERROR;
             }
 
             return EV_NONE; /* 所有等待的连接已处理完 */
@@ -188,10 +191,14 @@ int32_t IO::accept(EVIO* w)
 
 int64_t IO::pop_accept_fd()
 {
-    if (!accept_) return netcompat::INVALID;
+    if (!accept_)
+    {
+        int64_t mask = EINVAL;
+        return ((mask << 32) | (uint32_t)netcompat::INVALID);
+    }
 
     std::scoped_lock<std::mutex> sl(accept_->mutex_);
-    if (accept_->fd_queue_.empty()) return netcompat::INVALID;
+    if (accept_->fd_queue_.empty()) return (uint32_t)netcompat::INVALID;
 
     int64_t fd = accept_->fd_queue_.front();
     accept_->fd_queue_.pop_front();

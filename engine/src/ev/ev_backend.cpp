@@ -289,7 +289,6 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
     {
         if (kernel_ev & EV_WRITE)
         {
-            events |= EV_WRITE;
             auto status = w->send();
             do_io_status(w, EV_WRITE, status);
         }
@@ -306,10 +305,13 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
     {
         if (kernel_ev & EV_READ)
         {
-            events |= EV_READ;
-
             auto status = w->recv();
             do_io_status(w, EV_READ, status);
+        }
+        if (kernel_ev & EV_ACCEPT)
+        {
+            auto status = w->io_->accept(w);
+            do_io_status(w, EV_ACCEPT, status);
         }
 
         events |= (EV_READ | EV_ACCEPT);

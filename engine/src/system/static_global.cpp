@@ -56,6 +56,7 @@ void StaticGlobal::initialize()
 
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
     V           = new Env();
+    C           = new Buffer::ChunkPool("socket");
     LOG  = new class LLog("Engine.AsyncLog");
     M           = new ThreadContextMgr();
     E           = new class EV();
@@ -88,6 +89,7 @@ void StaticGlobal::uninitialize()
     delete E;
     delete M;
     delete V;
+    delete C;
     delete P;
 
     PbcCodec::uninitialize();

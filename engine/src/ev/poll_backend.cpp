@@ -80,11 +80,6 @@ void PollBackend::do_wait_event(int32_t ev_count)
         if (!revents) continue;
 
         auto fd = pf.fd;
-        if (unlikely(revents & POLLNVAL))
-        {
-            ELOG("poll invalid fd: " FMT64d, (int64_t)fd);
-            assert(false);
-        }
 
         if (fd == wake_fd_[1])
         {
@@ -97,13 +92,24 @@ void PollBackend::do_wait_event(int32_t ev_count)
         }
         else
         {
-            int32_t events = 0;
-            if (revents & POLLOUT) events |= EV_WRITE;
-            if (revents & POLLIN) events |= EV_READ;
-            if (revents & (POLLERR | POLLHUP)) events |= EV_CLOSE;
-
             EVIO *w = fd_mgr_.get(static_cast<int32_t>(fd));
             assert(w);
+
+            int32_t events = 0;
+
+            if (unlikely(revents & POLLNVAL))
+            {
+                w->errno_ = EBADF;
+                events = EV_ERROR;
+                ELOG("poll invalid fd: " FMT64d, (int64_t)fd);
+            }
+            else
+            {
+                if (revents & POLLOUT) events |= EV_WRITE;
+                if (revents & POLLIN) events |= EV_READ;
+                if (revents & (POLLERR | POLLHUP)) events |= EV_CLOSE;
+            }
+
             do_watcher_wait_event(w, events);
         }
 

@@ -56,15 +56,15 @@ void Socket::library_init()
 #endif
 }
 
-Socket::Socket(int32_t conn_id)
+Socket::Socket(int32_t socket_id)
 {
     packet_    = nullptr;
 
     fd_ = netcompat::INVALID;
-    w_  = new EVIO(socket_id_, 0, -1);
+    w_       = new EVIO(socket_id, 0, -1);
     w_->ref_ = EVIO::REF_WORKER;
 
-    socket_id_  = conn_id;
+    socket_id_  = socket_id;
 }
 
 Socket::~Socket()
@@ -119,6 +119,7 @@ int32_t Socket::send_pkt(lua_State *L)
 
 void Socket::append(const void *data, size_t len)
 {
+    assert(w_->io_);
     auto &send_buff = w_->io_->get_send_buffer();
     int32_t e       = send_buff.append(data, len);
 

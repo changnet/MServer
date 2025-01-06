@@ -83,8 +83,7 @@ char *Buffer::get_large_buffer(size_t len)
 
 Buffer::ChunkPool *Buffer::get_chunk_pool()
 {
-    return nullptr;
-    //StaticGlobal::buffer_chunk_pool();
+    return StaticGlobal::C;
 }
 
 void Buffer::clear()

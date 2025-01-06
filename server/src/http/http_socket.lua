@@ -37,8 +37,9 @@ end
 
 function HttpSocket:on_disconnected()
     -- http的特殊操作: 无Content-len时以对方关闭连接收到的数据为准
+    print("http on dis", self.socket_id, self.status)
     if OPENED == self.status then
-        local rcode, http_type, code, method, url, body = self.s:unpack_on_close()
+        local rcode, http_type, code, method, url, body = self.s:unpack_on_closed()
         if SocketMgr.PC_DATA == rcode then
             self:on_message(http_type, code, method, url, body)
         end

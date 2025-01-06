@@ -69,7 +69,10 @@ public:
     }
     virtual ~ThreadContext()
     {
-        assert(queue_.empty());
+        if (!queue_.empty())
+        {
+            ELOG("thread context message queue not clean");
+        }
     }
     // 从消息队列中弹出第一个消息。如果队列为空，则抛出一个out_of_range
     ThreadMessage pop_message()
@@ -167,9 +170,22 @@ public:
         return true;
     }
 
+    /**
+     * 把线程添加到管理器，用于消息转发
+     * @param addr 线程地址
+     * @param ctx 线程指针
+     */
+    static void add_thread_ctx(int32_t addr, ThreadContext *ctx);
+    /**
+     * 把线程从管理器删除
+     * @param addr 线程地址
+     */
+    static void del_thread_ctx(int32_t addr);
+
     // 添加一个线程
     void add(int32_t addr, ThreadContext* ctx)
     {
+        assert(ctx);
         std::unique_lock ul(mutex_);
         hash_[addr] = ctx;
     }

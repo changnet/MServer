@@ -73,6 +73,8 @@ static void luaopen_engine(lua_State *L)
     lcpp::module_begin(L, "Engine");
     lcpp::module_function<&signal_mask>(L, "signal_mask");
     lcpp::module_function<&signal_mask_once>(L, "signal_mask_once");
+    lcpp::module_function<&ThreadContextMgr::add_thread_ctx>(L, "add_thread_ctx");
+    lcpp::module_function<&ThreadContextMgr::del_thread_ctx>(L, "del_thread_ctx");
     lcpp::module_end(L);
 }
 
@@ -158,6 +160,8 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::get_http_header>("get_http_header");
     lc.def<&Socket::unpack_on_closed>("unpack_on_closed");
     lc.def<&Socket::get_errno>("get_errno");
+    lc.def<&Socket::unpack>("unpack");
+    lc.def<&Socket::close>("close");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
     lc.set(Packet::PT_STREAM, "PT_STREAM");

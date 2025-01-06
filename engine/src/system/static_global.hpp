@@ -34,7 +34,7 @@ public:
     inline static EV *E         = nullptr; // 主线程事件循环
     inline static EVBackend *B  = nullptr; // 网络后台线程
     inline static ThreadContextMgr *M = nullptr; // worker线程管理
-    inline static bool T        = false; // 当前是否处于关服状态(term)
+    inline static Buffer::ChunkPool *C = nullptr; // socket缓存池
 
     inline static log_util::Prefix *P = nullptr; // 日志前缀
 

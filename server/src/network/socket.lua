@@ -134,6 +134,7 @@ end
 -- io初始化完成
 function Socket:io_ready()
     self.status = OPENED
+
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手
     return self:on_connected()

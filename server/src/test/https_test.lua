@@ -113,11 +113,13 @@ t_describe("http test", function()
                     Connection: close\r\n\r\n' .. no_len_ctx
                 conn:send_pkt(no_len_p200)
                 conn:close(true)
+                print("no length send ===========")
             else
                 t_assert(false)
             end
         end
         listen_conn.on_disconnected = function(conn)
+            HttpSocket.on_disconnected(conn)
             local e = conn.s:get_errno()
             if 0 ~= e then
                 print("error >>>>>>>>>>>>>>>>>>>", e)
@@ -148,6 +150,7 @@ t_describe("http test", function()
             end)
         end
         clt_conn.on_disconnected = function(conn)
+            HttpSocket.on_disconnected(conn)
             local e = conn.s:get_errno()
             if 0 ~= e then
                 print("error >>>>>>>>>>>>>>>>>>>", e)

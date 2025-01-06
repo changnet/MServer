@@ -27,7 +27,7 @@ public:
 
 public:
     ~Socket();
-    explicit Socket(int32_t conn_id);
+    explicit Socket(int32_t socket_id);
 
     static void library_end();
     static void library_init();

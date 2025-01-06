@@ -128,8 +128,7 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
 
     /**
      * 只要e(即on_message_complete等回调)不为HPE_OK，再次调用llhttp_execute总是返回之前的错误码
-     * 如果返回的是HPE_PAUSE，则需要保留data缓冲区不变，下次用llhttp_resume继续解析
-     * 在多线程中必须注意缓冲区data指针不能被其他线程改变
+     * 如果返回的是HPE_PAUSE，则需要保留data缓冲区不变，下次用llhttp_resume重置错误码
      *
      * 如果是其他错误码，则需要调用llhttp_init()重新初始化。但缓冲区中的数据就被丢弃了
      * 因此一般情况下，一旦解析出错，直接断开重连更合理些。
@@ -137,32 +136,29 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
 
     enum llhttp_errno e = llhttp_execute(&parser_, data, size);
 
-    /**
-     * 连接升级为websocket，返回1，后续的数据由websocket那边继续处理
-     */
-    if (HPE_PAUSED_UPGRADE == e)
+    if (HPE_OK == e)
     {
+        // 只解析到一部分数据，还不是完整的message
+        buffer.clear(); // 数据已解析完不需要旧缓冲区了
+        return unpack_return(L, PC_MORE);
+    }
+    else if (HPE_PAUSED == e)
+    {
+        llhttp_resume(&parser_);
+        // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈
+        buffer.remove(llhttp_get_error_pos(&parser_) - data);
+        int32_t new_top = lua_gettop(L);
+        return new_top - old_top;
+    }
+    else if (HPE_PAUSED_UPGRADE == e)
+    {
+        llhttp_resume_after_upgrade(&parser_);
+        // 连接升级为websocket，后续的数据由websocket那边继续处理
         bool next = buffer.remove(llhttp_get_error_pos(&parser_) - data);
 
         lua_pushinteger(L, PC_UPGRADE);
         lua_pushboolean(L, next);
         return 2;
-    }
-
-    // 只解析到一部分数据，还不是完整的message
-    if (HPE_OK == e)
-    {
-        buffer.clear(); // 数据已解析完不需要旧缓冲区了
-        return unpack_return(L, PC_MORE);
-    }
-
-    // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈
-    if (HPE_PAUSED == e)
-    {
-        // TODO 这里删除缓冲效率有点低。如果这里不删除，下次使用resume是否更快？
-        buffer.remove(llhttp_get_error_pos(&parser_) - data);
-        int32_t new_top = lua_gettop(L);
-        return new_top - old_top;
     }
 
     ELOG("http parse error(%d):%s", llhttp_get_errno(&parser_),
@@ -192,7 +188,7 @@ int32_t HttpPacket::on_message_complete(bool upgrade)
 {
     UNUSED(upgrade);
 
-    assert(0 == lua_gettop(L_));
+    lua_checkstack(L_, 6);
 
     lua_pushinteger(L_, PC_DATA);
 
@@ -295,6 +291,7 @@ int32_t HttpPacket::unpack_on_closed(lua_State *L)
     if (!llhttp_message_needs_eof(&parser_)) return unpack_return(L, PC_MORE);
 
     int32_t old_top  = lua_gettop(L);
+    L_               = L;
     llhttp_errno_t e = llhttp_finish(&parser_);
 
     // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈

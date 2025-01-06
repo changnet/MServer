@@ -26,6 +26,7 @@ local EV_CONNECT   = SocketMgr.EV_CONNECT
 local EV_CLOSE     = SocketMgr.EV_CLOSE
 local EV_INIT_CONN = SocketMgr.EV_INIT_CONN
 local EV_INIT_ACPT = SocketMgr.EV_INIT_ACPT
+local ACCEPT_CONNECT = EV_INIT_CONN | EV_INIT_ACPT
 
 local PC_ERROR = SocketMgr.PC_ERROR
 local PC_MORE = SocketMgr.PC_MORE
@@ -137,7 +138,6 @@ local function do_listen(socket)
     local s = socket.s
     while true do
         local fd, e = s:accept()
-        print("aaaaaaaaaaaaaaaaccept", fd, e)
         if -1 == fd then
             if not e then return end
 
@@ -157,7 +157,7 @@ local function do_connect(socket)
         socket:close() -- not s:close()
     end
 
-    CoPool.invoke(socket.on_connecting, socket, e)
+    return CoPool.invoke(socket.on_connecting, socket, e)
 end
 
 local function socket_dispatch(src, udata, id)
@@ -177,23 +177,22 @@ local function socket_dispatch(src, udata, id)
 
     但EV_CLOSE的话，其他事件应该没有处理的必要了
     ]]
-    if (EV_INIT_CONN & revents or EV_INIT_ACPT & revents) then
+    if 0 ~= (ACCEPT_CONNECT & revents) then
         -- 握手成功可能会直接收到消息，所以必须先回调握手成功
         socket.ok = true
-        socket:io_ready()
+        socket:io_ready() -- 这里不要return，可能同时还有read事件
     end
-    if EV_READ & revents then
-        do_read(socket)
+    if 0 ~= (EV_READ & revents) then
+        do_read(socket) -- 这里不要return，可能同时还有close事件
     end
-    if EV_CLOSE & revents then
-        do_close(socket)
-        return;
+    if 0 ~= (EV_CLOSE & revents) then
+        return do_close(socket)
     end
 
     -- ACCEPT、CONNECT事件可能和READ、WRITE同时触发
-    if EV_ACCEPT & revents then
+    if 0 ~= (EV_ACCEPT & revents) then
         return do_listen(socket)
-    elseif EV_CONNECT & revents then
+    elseif 0 ~= (EV_CONNECT & revents) then
         return do_connect(socket)
     end
 end

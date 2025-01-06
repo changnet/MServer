@@ -55,10 +55,15 @@ template <typename T> T lua_to_cpp(lua_State *L, int i)
     {
         if (!p || lua_islightuserdata(L, i)) return (T)p;
 
-        // 这里只能是full userdata了，如果定义过则是通过lclass push的指针
+        /**
+         * 这里只能是full userdata了，如果存在name过则是push到lua或者在lua创建的对象
+         * 如果C++的函数需要的是基类指针，但lua传的是子类指针
+         * 这里实际上是识别不了的，用dynamic_cast也识别不了，直接assert算了
+         */ 
         const char *name = Class<T1>::class_name_;
-        if (luaL_testudata(L, i, name)) return *((T1 **)p);
+        if (name && luaL_testudata(L, i, name)) return *((T1 **)p);
 
+        assert(false);
         return nullptr;
     }
 }

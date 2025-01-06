@@ -88,6 +88,11 @@ function Bootstrap.process_preload(process_id)
     log_env_info()
 
     require "engine.engine"
+
+    PROCESS_ID = process_id
+    LOCAL_ADDR = Engine.make_address(process_id, 0, 1)
+    Engine.add_thread_ctx(LOCAL_ADDR, g_engine:toludata())
+
     require "engine.co_pool"
     require "message.thread_message"
     require "engine.signal"
@@ -96,9 +101,6 @@ function Bootstrap.process_preload(process_id)
     require "rpc.rpc"
     require "timer.timer"
     require "network.socket_mgr"
-
-    PROCESS_ID = process_id
-    LOCAL_ADDR = Engine.make_address(PROCESS_ID, 0, 1)
 
     print("process start, address", LOCAL_ADDR)
     g_env:set("process_id", PROCESS_ID)
@@ -118,9 +120,18 @@ function Bootstrap.worker_preload(addr, log_name)
 
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
-    require("global.global") -- 加载log函数
+    require "global.global" -- 加载log函数
 
     require "engine.engine"
+
+    local proc_id, wtype = Engine.unmake_address(addr)
+    assert(proc_id == tonumber(g_env:get("process_id")))
+
+    PROCESS_ID = proc_id
+    LOCAL_ADDR = addr
+    LOCAL_TYPE = wtype
+    Engine.add_thread_ctx(addr, g_worker:toludata())
+
     require "engine.co_pool"
     require "message.thread_message"
     require "engine.signal"
@@ -129,13 +140,6 @@ function Bootstrap.worker_preload(addr, log_name)
     require "rpc.rpc"
     require "timer.timer"
     require "network.socket_mgr"
-
-    local proc_id, wtype = Engine.unmake_address(addr)
-    assert(proc_id == tonumber(g_env:get("process_id")))
-
-    PROCESS_ID = proc_id
-    LOCAL_ADDR = addr
-    LOCAL_TYPE = wtype
 
     math.randomseed(os.time())
 end
