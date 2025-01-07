@@ -82,7 +82,7 @@ t_describe("http test", function()
         end
     end)
 
-    t_it("http_local server test", function()
+    t_it("http local server test", function()
         t_async(10000)
 
         local ctx = "hello"
@@ -113,7 +113,6 @@ t_describe("http test", function()
                     Connection: close\r\n\r\n' .. no_len_ctx
                 conn:send_pkt(no_len_p200)
                 conn:close(true)
-                print("no length send ===========")
             else
                 t_assert(false)
             end

@@ -104,7 +104,8 @@ void Socket::stop(bool flush)
     // 注意没有执行start时，backend那边并不会引用这个socket
     // 不过那边有处理，这里统一发送
 
-    StaticGlobal::B->append_event(w_, flush ? (EV_CLOSE | EV_FLUSH) : EV_CLOSE);
+    // EV_FLUSH不要和EV_CLOSE同时发送，不然EV_FLUSH会失效，这在另一个线程有特殊处理
+    StaticGlobal::B->append_event(w_, flush ? EV_FLUSH : EV_CLOSE);
 }
 
 int32_t Socket::send_pkt(lua_State *L)

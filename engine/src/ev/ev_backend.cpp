@@ -118,7 +118,8 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
 {
     int32_t op = 0;
 
-    // EV_FLUSH来自主线程，
+    // EV_CLOSE来自当前线程表示socket已经关闭，即使有EV_FLUSH标识也没法
+    // EV_FLUSH来逻辑线程，逻辑线程不会同时发 EV_FLUSH|EV_CLOSE
     if (events & EV_FLUSH && !(events & EV_CLOSE))
     {
         // 尝试发送一下，大部分情况下都是没数据可以发送的，或者一次就可以发送完成
@@ -135,15 +136,25 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     int32_t fd = w->fd_;
     if (events & EV_CLOSE)
     {
+        /**
+         * 当对方关闭链接时，backend线程会从fd_mgr移除并向逻辑线程发送关闭消息
+         * 逻辑线程在收到消息前也恰好关闭连接，也会向backend线程发送关闭消息
+         * 
+         * 所以backend线程收到关闭消息时发现已经关闭，则无需处理
+         * 
+         * 注意：backend线程从不关闭fd，所以不存在fd复用的问题
+         */
+        if (!fd_mgr_.get(w->fd_)) return 0;
+
         op = FD_OP_DEL;
         if (fd_mgr_.unset(w))
         {
             dispatch_event(w, EV_CLOSE);
-        } 
+        }
+        w->b_kevents_ &= (~EV_WRITE);
     }
     else
     {
-        op = (w->b_kevents_ & EV_KERNEL) ? FD_OP_MOD : FD_OP_ADD;
         if (w->b_kevents_ & EV_KERNEL)
         {
             op = FD_OP_MOD;
@@ -151,16 +162,15 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         }
         else
         {
-            op = FD_OP_ADD;
             assert(!fd_mgr_.get(w->fd_));
             assert(0 == w->b_kevents_ && 0 != events);
 
+            op = FD_OP_ADD;
             if (!fd_mgr_.set(w)) return 0;
         }
 
         // 即使是FD_OP_MOD，也要重新设置EV_KERNEL，因为events里不包含EV_KERNEL
-        events |= EV_KERNEL;
-        w->b_kevents_ = events;
+        w->b_kevents_ = events | EV_KERNEL;
     }
 
     // 注意：到这里，w可能已经被delete

@@ -94,9 +94,10 @@ public:
     // 设置fd对应的watcher
     bool set(EVIO *w)
     {
-        // 该watcher对应的socket已经在另一个线程销毁
+        // 该watcher对应的socket已经在另一个线程销毁(正常不应该出现)
         if (0 == (w->ref_ & EVIO::REF_WORKER))
         {
+            PLOG("ref delete watcher, maybe error: %d - %d", w->id_, w->fd_);
             w->del_ref(EVIO::REF_BACKEND);
             delete w;
             return false;
@@ -133,9 +134,10 @@ public:
         {
             fd_watcher_huge_.erase(fd);
         }
-        // 该watcher对应的socket已经在另一个线程销毁
+        // 该watcher对应的socket已经在另一个线程销毁(正常不应该出现)
         if (w->del_ref(EVIO::REF_BACKEND))
         {
+            PLOG("unref delete watcher, maybe error: %d - %d", w->id_, w->fd_);
             delete w;
             return false;
         }
