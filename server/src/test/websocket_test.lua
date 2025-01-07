@@ -4,10 +4,10 @@
 -- https://tools.ietf.org/pdf/rfc6455.pdf section1.3 page6
 -- example at: https://www.websocket.org/aboutwebsocket.html
 
-local WsConn = require "network.ws_conn"
+local WebSocket = require "network.websocket"
 local TlsCtx = require "engine.TlsCtx"
 
-local ws_default_param = WsConn.default_param
+local ws_default_param = WebSocket.default_param
 
 t_describe("websocket test", function()
     --[[
@@ -56,14 +56,14 @@ t_describe("websocket test", function()
             end
         end
 
-        local conn = WsConn()
+        local conn = WebSocket()
         conn.default_param = ws_default_param
         conn.url = exp_url
         conn:connect_s(exp_host, 443, clt_ssl)
 
         conn.on_disconnected = function() end
         conn.on_connected = function(self)
-            WsConn.send_pkt(self, pkt_body[1])
+            WebSocket.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
@@ -87,7 +87,7 @@ t_describe("websocket test", function()
         end
     end)
 
-    t_it("websocket local", function()
+    t_it("websocket_local", function()
         t_async(5000)
 
         local pkt_idx = 0
@@ -113,24 +113,24 @@ t_describe("websocket test", function()
             end
         end
 
-        listen_conn = WsConn()
+        listen_conn = WebSocket()
         listen_conn.default_param = ws_default_param
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
             srv_conn = self
         end
         listen_conn.on_message = function(self, cmd_body)
-            WsConn.send_pkt(self, cmd_body)
+            WebSocket.send_pkt(self, cmd_body)
         end
         listen_conn.on_disconnected = function() end
 
-        local conn = WsConn()
+        local conn = WebSocket()
         conn.default_param = ws_default_param
         conn:connect(local_host, local_port)
 
         conn.on_disconnected = function() end
         conn.on_connected = function(self)
-            WsConn.send_pkt(self, pkt_body[1])
+            WebSocket.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end
@@ -180,24 +180,24 @@ t_describe("websocket test", function()
             end
         end
 
-        listen_conn = WsConn()
+        listen_conn = WebSocket()
         listen_conn.default_param = ws_default_param
         listen_conn:listen_s(local_host, local_port_s, srv_ssl)
         listen_conn.on_accepted = function(self)
             srv_conn = self
         end
         listen_conn.on_message = function(self, cmd_body)
-            WsConn.send_pkt(self, cmd_body)
+            WebSocket.send_pkt(self, cmd_body)
         end
         listen_conn.on_disconnected = function() end
 
-        local conn = WsConn()
+        local conn = WebSocket()
         conn.default_param = ws_default_param
         conn:connect_s(local_host, local_port_s, clt_ssl)
 
         conn.on_disconnected = function() end
         conn.on_connected = function(self)
-            WsConn.send_pkt(self, pkt_body[1])
+            WebSocket.send_pkt(self, pkt_body[1])
             self:send_ctrl(self.WS_OP_PING)
             self:send_ctrl(self.WS_OP_PING, ping_body[2])
         end

@@ -6,7 +6,11 @@ LONG __unhandled_exception_filte(_EXCEPTION_POINTERS *exception)
 {
     // http://www.debuginfo.com/articles/effminidumps.html#introduction
     // http://www.debuginfo.com/examples/effmdmpexamples.html
-    HANDLE hFile = CreateFile("master.dmp", GENERIC_READ | GENERIC_WRITE, 0,
+
+    char name[128];
+    DWORD thread_id = GetCurrentThreadId();
+    snprintf(name, sizeof(name), "master_%llu.dmp", (uint64_t)thread_id);
+    HANDLE hFile = CreateFile(name, GENERIC_READ | GENERIC_WRITE, 0,
                               NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if ((hFile != nullptr) && (hFile != INVALID_HANDLE_VALUE))
@@ -14,7 +18,7 @@ LONG __unhandled_exception_filte(_EXCEPTION_POINTERS *exception)
         // Create the minidump
         MINIDUMP_EXCEPTION_INFORMATION mdei;
 
-        mdei.ThreadId          = GetCurrentThreadId();
+        mdei.ThreadId          = thread_id;
         mdei.ExceptionPointers = exception;
         mdei.ClientPointers    = FALSE;
 

@@ -91,7 +91,7 @@ local function do_message(socket, code, ...)
         CoPool.invoke(socket.on_message, socket, ...)
         return true
     elseif PC_MORE == code then
-        return false
+        return false -- 数据不足，需要更多数据才能解析
     elseif PC_ERROR == code then
         print("socket message error", socket.socket_id, ...)
         socket:stop()

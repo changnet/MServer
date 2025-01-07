@@ -1,10 +1,10 @@
 local util = require "engine.util"
-local Socket = require "engine.Socket"
-local Conn = require "network.conn"
-local HttpConn = require "http.http_conn"
+local EngineSocket = require "engine.Socket"
+local Socket = require "network.socket"
+local HttpSocket = require "http.http_socket"
 
 -- websocket连接
-local WsConn = oo.class(..., Conn)
+local WebSocket = oo.class(..., Socket)
 
 -- 具体的标准要看RFC6455:https://datatracker.ietf.org/doc/html/rfc6455
 -- 不同的实现握手http头略有不同，比如链接到skynet的websocket，就必须要有
@@ -52,26 +52,26 @@ local CLT_MASK = WS_FINAL_FRAME | WS_HAS_MASK
 
 -- 导出一些常量
 
-WsConn.WS_OP_CONTINUE = WS_OP_CONTINUE
-WsConn.WS_OP_TEXT = WS_OP_TEXT
-WsConn.WS_OP_BINARY = WS_OP_BINARY
-WsConn.WS_OP_CLOSE = WS_OP_CLOSE
-WsConn.WS_OP_PING = WS_OP_PING
-WsConn.WS_OP_PONG = WS_OP_PONG
-WsConn.WS_FINAL_FRAME = WS_FINAL_FRAME
-WsConn.WS_HAS_MASK = WS_HAS_MASK
+WebSocket.WS_OP_CONTINUE = WS_OP_CONTINUE
+WebSocket.WS_OP_TEXT = WS_OP_TEXT
+WebSocket.WS_OP_BINARY = WS_OP_BINARY
+WebSocket.WS_OP_CLOSE = WS_OP_CLOSE
+WebSocket.WS_OP_PING = WS_OP_PING
+WebSocket.WS_OP_PONG = WS_OP_PONG
+WebSocket.WS_FINAL_FRAME = WS_FINAL_FRAME
+WebSocket.WS_HAS_MASK = WS_HAS_MASK
 
 local OPENED = SocketMgr.OPENED
 
-WsConn.default_param = {
-    pkt = Socket.PT_WEBSOCKET, -- 打包类型
+WebSocket.default_param = {
+    pkt = EngineSocket.PT_WEBSOCKET, -- 打包类型
     action = 1, -- over_action，1 表示缓冲区溢出后断开
     send_chunk_max = 128, -- 发送缓冲区数量
     recv_chunk_max = 8 -- 接收缓冲区数
 }
 
 -- 处理websocket握手
-function WsConn:handshake_new(sec_websocket_key, sec_websocket_accept)
+function WebSocket:handshake_new(sec_websocket_key, sec_websocket_accept)
     if sec_websocket_key then
         -- 服务器收到客户端的握手请求
         local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
@@ -96,7 +96,7 @@ end
 
 -- 客户端发送握手请求
 -- @param url 握手时，可以像普通http get那样加参数，或者像post在body加参数
-function WsConn:send_handshake(url)
+function WebSocket:send_handshake(url)
     -- RFC 6455 4.1.7
     -- Sec-WebSocket-Key|. The value of this header field MUST be a
     -- nonce consisting of a randomly selected 16-byte value that has
@@ -106,13 +106,13 @@ function WsConn:send_handshake(url)
     local r_val = tostring(math.random(1000000000000001, 9999999999999999))
     self.ws_key = util.base64(r_val)
 
-    local host = HttpConn:fmt_host(self.host, self.port, self.ssl)
+    local host = HttpSocket:fmt_host(self.host, self.port, self.ssl)
     return self.s:send_pkt(string.format(
         handshake_clt, url or default_url, host, self.ws_key))
 end
 
 -- io建立成功，开始websocket握手
-function WsConn:io_ready()
+function WebSocket:io_ready()
     -- 如果是客户端才发起握手，服务器是不处理的
     if not self.host then return end
     return self:send_handshake(self.url)
@@ -120,7 +120,7 @@ end
 
 -- 发送原生数据包
 -- @param body 要发送的文字
-function WsConn:send_pkt(body)
+function WebSocket:send_pkt(body)
     if self.ws_key then
         return self.s:send_clt(WS_OP_TEXT | CLT_MASK, body)
     else
@@ -131,12 +131,12 @@ end
 -- 发送控制包
 -- @param flag 控制包掩码，按位表示，如 WS_OP_PONG | WS_FINAL_FRAME
 -- @param body 控制包的数据，可以为nil
-function WsConn:send_ctrl(flag, body)
+function WebSocket:send_ctrl(flag, body)
     local mask = self.ws_key and CLT_MASK or SRV_MASK
     return self.s:send_ctrl(flag | mask, body)
 end
 
-function WsConn:ws_close()
+function WebSocket:ws_close()
     -- 如果握手成功，则关闭时需要发送关闭数据包(用于监听的socket根本不会有握手)
     -- 用于listen的socket不需要执行这个close操作
     if OPENED ~= self.status or self.listen_ip then return end
@@ -146,7 +146,7 @@ function WsConn:ws_close()
 end
 
 -- 处理控制包
-function WsConn:ctrl_new(flag, body)
+function WebSocket:ctrl_new(flag, body)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
     if self.on_ctrl then self:on_ctrl(flag, body) end
@@ -179,4 +179,4 @@ function WsConn:ctrl_new(flag, body)
     assert(false, "unknow websocket ctrl flag " .. flag)
 end
 
-return WsConn
+return WebSocket

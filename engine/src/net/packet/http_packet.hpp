@@ -50,12 +50,12 @@ public:
     void append_cur_value(const char *at, size_t len);
 
 protected:
+    lua_State *L_; // 解析时回调临时存一下，其他情况不要用这个
     struct http_info http_info_;
 
 private:
     int32_t pack_raw(lua_State *L, int32_t index);
 
-    lua_State *L_; // 解析时回调临时存一下，其他情况不要用这个
     llhttp_t parser_;
     std::string cur_field_;
     std::string cur_value_;
