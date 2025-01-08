@@ -132,6 +132,9 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
      *
      * 如果是其他错误码，则需要调用llhttp_init()重新初始化。但缓冲区中的数据就被丢弃了
      * 因此一般情况下，一旦解析出错，直接断开重连更合理些。
+     *
+     * 现在解析到的数据，是存在http_info_中，相当于拷贝了一份，效率相当低
+     * 不过游戏中http用得不多，暂不处理
      */
 
     enum llhttp_errno e = llhttp_execute(&parser_, data, size);
@@ -139,8 +142,11 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
     if (HPE_OK == e)
     {
         // 只解析到一部分数据，还不是完整的message
-        buffer.clear(); // 数据已解析完不需要旧缓冲区了
-        return unpack_return(L, PC_MORE);
+        buffer.remove(size); // 数据已解析完不需要旧缓冲区了
+        if (!next) return unpack_return(L, PC_MORE);
+
+        // 一个message的数据包含在多个缓冲区，继续解析
+        return unpack(L, buffer);
     }
     else if (HPE_PAUSED == e)
     {
@@ -150,21 +156,16 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
         int32_t new_top = lua_gettop(L);
         return new_top - old_top;
     }
-    else if (HPE_PAUSED_UPGRADE == e)
-    {
-        llhttp_resume_after_upgrade(&parser_);
-        // 连接升级为websocket，后续的数据由websocket那边继续处理
-        bool next = buffer.remove(llhttp_get_error_pos(&parser_) - data);
-
-        lua_pushinteger(L, PC_UPGRADE);
-        lua_pushboolean(L, next);
-        return 2;
-    }
 
     ELOG("http parse error(%d):%s", llhttp_get_errno(&parser_),
          llhttp_get_error_reason(&parser_));
 
     return unpack_error(L, "http parse error");
+}
+int32_t HttpPacket::on_upgrade(lua_State *L)
+{
+    lua_pushinteger(L, PC_UPGRADE);
+    return 1;
 }
 
 void HttpPacket::reset()
@@ -186,7 +187,12 @@ void HttpPacket::on_headers_complete()
 
 int32_t HttpPacket::on_message_complete(bool upgrade)
 {
-    UNUSED(upgrade);
+    // 这里不支持返回HPE_PAUSED_UPGRADE
+    if (unlikely(upgrade))
+    {
+        on_upgrade(L_);
+        return HPE_PAUSED;
+    }
 
     lua_checkstack(L_, 6);
 

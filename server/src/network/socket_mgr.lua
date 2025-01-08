@@ -12,6 +12,7 @@ SocketMgr = {
     PC_MORE    = 2, -- 数据不足
     PC_DATA    = 3, -- 数据
     PC_UPGRADE = 4, -- websocket的upgrade
+    PC_CTRL    = 5, -- websocket的控制包
 
     -- socket.status
     OPENING = 1, -- 已发起连接，但尚未连接完成
@@ -92,12 +93,13 @@ local function do_message(socket, code, ...)
         return true
     elseif PC_MORE == code then
         return false -- 数据不足，需要更多数据才能解析
+    elseif PC_UPGRADE == code then
+        CoPool.invoke(socket.on_handshake, socket, ...)
+        return true
     elseif PC_ERROR == code then
         print("socket message error", socket.socket_id, ...)
-        socket:stop()
+        socket:close()
         return false
-    elseif PC_UPGRADE == code then
-        return true
     else
         print("socket unknow message code", code)
         return false

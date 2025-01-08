@@ -26,6 +26,7 @@ public:
         PC_MORE    = 2, // 数据不足
         PC_DATA    = 3, // 数据
         PC_UPGRADE = 4, // websocket的upgrade
+        PC_CTRL    = 5, // websocket的ctrl包
     };
 
 public:

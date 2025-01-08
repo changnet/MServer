@@ -71,7 +71,7 @@ WebSocket.default_param = {
 }
 
 -- 处理websocket握手
-function WebSocket:handshake_new(sec_websocket_key, sec_websocket_accept)
+function WebSocket:on_handshake(sec_websocket_key, sec_websocket_accept)
     if sec_websocket_key then
         -- 服务器收到客户端的握手请求
         local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)

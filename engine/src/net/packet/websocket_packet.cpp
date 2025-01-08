@@ -79,19 +79,12 @@ page33
 */
 
 // 解析完websocket的header
-int32_t on_frame_header(struct websocket_parser *parser)
+static int32_t on_frame_header(struct websocket_parser *parser)
 {
     assert(parser && parser->data);
 
     class WebsocketPacket *ws_packet =
         static_cast<class WebsocketPacket *>(parser->data);
-    // 防止被攻击，游戏中不应该需要这么大的数据包，暂时不考虑其他应用
-    if (parser->length > 10 * 1024 * 1024)
-    {
-        ws_packet->set_error(2);
-        ELOG("websocket to large packet :" FMT64u, (uint64_t)parser->length);
-        return -1;
-    }
 
     class Buffer &body = ws_packet->body_buffer();
 
@@ -102,7 +95,7 @@ int32_t on_frame_header(struct websocket_parser *parser)
 }
 
 // 收到帧数据
-int32_t on_frame_body(struct websocket_parser *parser, const char *at,
+static int32_t on_frame_body(struct websocket_parser *parser, const char *at,
                       size_t length)
 {
     assert(parser && parser->data);
@@ -128,7 +121,7 @@ int32_t on_frame_body(struct websocket_parser *parser, const char *at,
 }
 
 // 数据帧完成
-int32_t on_frame_end(struct websocket_parser *parser)
+static int32_t on_frame_end(struct websocket_parser *parser)
 {
     assert(parser && parser->data);
 
@@ -139,6 +132,7 @@ int32_t on_frame_end(struct websocket_parser *parser)
      * opcode并不是按位来判断的，而是按顺序1、2、3、4...
      * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are
      * identified by opcodes where the most significant bit of the opcode is 1)
+     * 
      */
     if (unlikely(parser->flags & 0x08))
     {
@@ -228,160 +222,114 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
      */
     if (!is_upgrade_) return HttpPacket::unpack(L, buffer);
 
-    e_        = 0; // 重置上一次解析错误
-    bool next = false;
+    e_ = 0; // 重置上一次解析错误
+    L_ = L;
 
-    // 不要用 buffer.all_to_flat_ctx(size); 这个会把收到的数据都拷贝到缓冲区
-    // 效率很低。
-
+    bool next       = false;
     size_t size     = 0;
+    int32_t old_top = lua_gettop(L);
+
+    // 不要用 buffer.all_to_flat_ctx(size); 这个会把收到的数据都拷贝到缓冲区效率很低
     const char *ctx = buffer.get_front_used(size, next);
-    if (size == 0) return 0;
+    if (size == 0) return unpack_return(L, PC_MORE);
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
+
+    // TODO 现在解析到的数据，是存在http_info_中，相当于拷贝了一份，效率相当低，后续优化
+    // 在未解析完一个message时，记录已解析的size
+    // 但是服务端总是需要mask解码的，得复制一份。除非在原来的buffer上进行解码
     size_t nparser = websocket_parser_execute(parser_, &settings, ctx, size);
 
+    assert(0 != nparser);
     buffer.remove(nparser);
-    if (nparser != size)
+    if (HPE_OK == e_)
     {
-        // websocket_parser未提供错误机制，所有函数都是返回非0值表示中止解析
-        // 但中止解析并不表示解析出错，比如
-        // 上层脚本在一个消息回调中关闭了连接，则需要中止解析
-        // 返回-1表示解析出错，会在底层直接删除链接
-        // 中止解析则由上层脚本逻辑决定如何处理(比如关闭链接或者直接忽略)
-        return e_ ? -1 : 0;
+        // 只解析到一部分数据，还不是完整的message
+        if (!next) return unpack_return(L, PC_MORE);
+
+        // 一个message的数据包含在多个缓冲区，继续解析
+        return unpack(L, buffer);
+    }
+    else if (HPE_PAUSED == e_)
+    {
+        // 成功解析出数据，数据已经在on_frame_end中设置到lua的堆栈
+
+        // 与llhttp不一样，websocket_parser不能用pause停下来，否则state状态不对
+        // 类似llhttp_resume，这里重置state让它能pause并继续解析
+        parser_->state  = 0;
+        int32_t new_top = lua_gettop(L);
+        return new_top - old_top;
     }
 
-    return 0;
+    return unpack_error(L, "websocket parse error");
 }
 
-int32_t WebsocketPacket::on_message_complete(bool upgrade)
+int32_t WebsocketPacket::on_upgrade(lua_State *L)
 {
+    // 这个是由http_packet回调
     // 正在情况下，对方应该只下发一个带upgrade标记的http头来进行握手
     // 但如果对方不是websocket，则可能按http下发404之类的其他东西
-    if (!upgrade || is_upgrade_)
+    if (unlikely(is_upgrade_))
     {
-        set_error(3);
-        ELOG("upgrade error, %s", http_info_.body_.c_str());
-        return -1;
+        return unpack_error(L, "already upgrade");
     }
 
     is_upgrade_ = true;
-    if (0 != invoke_handshake())
-    {
-        set_error(4);
-        return -1;
-    }
-
-    return 0;
-}
-
-int32_t WebsocketPacket::invoke_handshake()
-{
-    /* https://tools.ietf.org/pdf/rfc6455.pdf Section 1.3,page 6
-     */
+    // https://tools.ietf.org/pdf/rfc6455.pdf Section 1.3,page 6
 
     const char *key_str    = nullptr;
     const char *accept_str = nullptr;
 
     /* 不知道当前是服务端还是客户端，两个key都查找，由上层处理 */
-    const head_map_t &head_field       = http_info_.head_field_;
-    head_map_t::const_iterator key_itr = head_field.find("Sec-WebSocket-Key");
+    const head_map_t &head_field = http_info_.head_field_;
+    auto key_itr                 = head_field.find("Sec-WebSocket-Key");
     if (key_itr != head_field.end())
     {
         key_str = key_itr->second.c_str();
     }
     else
     {
-        head_map_t::const_iterator accept_itr =
-            head_field.find("Sec-WebSocket-Accept");
+        auto accept_itr = head_field.find("Sec-WebSocket-Accept");
         if (accept_itr != head_field.end())
         {
             accept_str = accept_itr->second.c_str();
         }
     }
 
-    if (nullptr == key_str && nullptr == accept_str)
-    {
-        set_error(5);
-        ELOG("websocket handshake header field not found");
-        return -1;
-    }
-
-    lua_State *L = nullptr;//StaticGlobal::L;
-    assert(0 == lua_gettop(L));
-
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "handshake_new");
-    lua_pushinteger(L, socket_->conn_id());
+    lua_pushinteger(L, PC_UPGRADE);
     lua_pushstring(L, key_str);
     lua_pushstring(L, accept_str);
 
-    if (unlikely(LUA_OK != lua_pcall(L, 3, 0, 1)))
-    {
-        ELOG("websocket handshake:%s", lua_tostring(L, -1));
-    }
-
-    lua_settop(L, 0); /* remove traceback */
-
-    return -1; // socket_->is_closed() ? -1 : 0;
+    return 3;
 }
 
 // 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
 int32_t WebsocketPacket::on_frame_end()
 {
-    lua_State *L = nullptr; // StaticGlobal::L;
-    assert(0 == lua_gettop(L));
-
     size_t size     = 0;
+
+    // TODO 如果用luaL_Buffer来做会不会好点
     const char *ctx = body_.all_to_flat_ctx(size);
 
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "command_new");
-    lua_pushinteger(L, socket_->conn_id());
-    lua_pushlstring(L, ctx, size);
+    lua_pushinteger(L_, PC_DATA);
+    lua_pushlstring(L_, ctx, size);
 
-    if (unlikely(LUA_OK != lua_pcall(L, 2, 0, 1)))
-    {
-        ELOG("websocket command:%s", lua_tostring(L, -1));
-    }
-
-    lua_settop(L, 0); /* remove traceback */
-
-    return -1; // socket_->is_closed() ? -1 : 0;
+    return e_ = HPE_PAUSED;
 }
 
-// 处理ping、pong等opcode
 int32_t WebsocketPacket::on_ctrl_end()
 {
-    lua_State *L = nullptr; // StaticGlobal::L;
-    assert(0 == lua_gettop(L));
-
     size_t size     = 0;
     const char *ctx = body_.all_to_flat_ctx(size);
 
-    LUA_PUSHTRACEBACK(L);
-    lua_getglobal(L, "ctrl_new");
-    lua_pushinteger(L, socket_->conn_id());
-    lua_pushinteger(L, parser_->flags);
+    lua_pushinteger(L_, PC_CTRL);
+    lua_pushinteger(L_, parser_->flags);
 
-    int32_t args_cnt = 2;
-    if (size > 0)
-    {
-        args_cnt++;
-        // 控制帧也是可以包含数据的
-        lua_pushlstring(L, ctx, size);
-    }
+    // 控制帧也是可以包含数据的
+    if (size > 0) lua_pushlstring(L_, ctx, size);
 
-    if (unlikely(LUA_OK != lua_pcall(L, args_cnt, 0, 1)))
-    {
-        ELOG("websocket ctrl:%s", lua_tostring(L, -1));
-    }
-
-    lua_settop(L, 0); /* remove traceback */
-
-    return -1; // socket_->is_closed() ? -1 : 0;
+    return HPE_PAUSED;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])

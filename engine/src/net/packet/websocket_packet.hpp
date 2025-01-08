@@ -27,26 +27,22 @@ public:
      */
     virtual int32_t unpack(lua_State *L, Buffer &buffer) override;
 
-    /* 控制帧完成 */
+    // 控制帧(ping、pong等opcode)完成
     int32_t on_ctrl_end();
-    /* 数据帧完成 */
+    // 数据帧完成
     virtual int32_t on_frame_end();
 
     // 单个消息时，重置
     class Buffer &body_buffer() { return body_; }
 
-    //< 从http升级到websocket时，会触发一次on_message_complete
-    virtual int32_t on_message_complete(bool upgrade) override;
+
 
     //< 发送opcode等控制码
     int32_t pack_ctrl(lua_State *L, int32_t index) override;
 
-    /// 设置错误码
-    void set_error(int32_t e) { e_ = e; }
-
 protected:
-    int32_t invoke_handshake();
     void new_masking_key(char mask[4]);
+    virtual int32_t on_upgrade(lua_State *L) override;
     int32_t pack_raw(lua_State *L, int32_t index);
 
 protected:

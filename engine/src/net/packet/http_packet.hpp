@@ -43,7 +43,7 @@ public:
     /* http_parse 回调函数 */
     void reset();
     void on_headers_complete();
-    virtual int32_t on_message_complete(bool upgrade);
+    int32_t on_message_complete(bool upgrade);
     void append_url(const char *at, size_t len);
     void append_body(const char *at, size_t len);
     void append_cur_field(const char *at, size_t len);
@@ -54,6 +54,7 @@ protected:
     struct http_info http_info_;
 
 private:
+    virtual int32_t on_upgrade(lua_State *L);
     int32_t pack_raw(lua_State *L, int32_t index);
 
     llhttp_t parser_;
