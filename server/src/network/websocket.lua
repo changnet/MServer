@@ -146,7 +146,7 @@ function WebSocket:ws_close()
 end
 
 -- 处理控制包
-function WebSocket:ctrl_new(flag, body)
+function WebSocket:on_ctrl_message(flag, body)
     -- 控制帧只在前4位，先去掉WS_HAS_MASK
     flag = flag & 0x0F
     if self.on_ctrl then self:on_ctrl(flag, body) end

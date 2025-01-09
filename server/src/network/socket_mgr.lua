@@ -33,6 +33,7 @@ local PC_ERROR = SocketMgr.PC_ERROR
 local PC_MORE = SocketMgr.PC_MORE
 local PC_DATA = SocketMgr.PC_DATA
 local PC_UPGRADE = SocketMgr.PC_UPGRADE
+local PC_CTRL = SocketMgr.PC_CTRL
 
 local CLOSED = SocketMgr.CLOSED
 
@@ -100,6 +101,9 @@ local function do_message(socket, code, ...)
         print("socket message error", socket.socket_id, ...)
         socket:close()
         return false
+    elseif PC_CTRL == code then
+        CoPool.invoke(socket.on_ctrl_message, socket, ...)
+        return true
     else
         print("socket unknow message code", code)
         return false

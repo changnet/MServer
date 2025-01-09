@@ -243,7 +243,9 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
 
     assert(0 != nparser);
     buffer.remove(nparser);
-    if (HPE_OK == e_)
+
+    int32_t e = parser_->error;
+    if (WPE_OK == e)
     {
         // 只解析到一部分数据，还不是完整的message
         if (!next) return unpack_return(L, PC_MORE);
@@ -251,7 +253,7 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
         // 一个message的数据包含在多个缓冲区，继续解析
         return unpack(L, buffer);
     }
-    else if (HPE_PAUSED == e_)
+    else if (WPE_PAUSE == e)
     {
         // 成功解析出数据，数据已经在on_frame_end中设置到lua的堆栈
 
@@ -315,7 +317,7 @@ int32_t WebsocketPacket::on_frame_end()
     lua_pushinteger(L_, PC_DATA);
     lua_pushlstring(L_, ctx, size);
 
-    return e_ = HPE_PAUSED;
+    return WPE_PAUSE;
 }
 
 int32_t WebsocketPacket::on_ctrl_end()
@@ -329,7 +331,7 @@ int32_t WebsocketPacket::on_ctrl_end()
     // 控制帧也是可以包含数据的
     if (size > 0) lua_pushlstring(L_, ctx, size);
 
-    return HPE_PAUSED;
+    return WPE_PAUSE;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])
