@@ -25,16 +25,23 @@ EV::~EV()
 
 void EV::routinue()
 {
-    static const int64_t min_wait = 1;     // 最小等待时间，毫秒
-    static const int64_t max_wait = 60000; // 最大等待时间，毫秒
+    // worker线程的时间是取主线程的，因此主线程即使没任务只能wait一小段时间便更新时间
+    static const int64_t min_wait = 1;  // 最小等待时间，毫秒
+    static const int64_t max_wait = 50; // 最大等待时间，毫秒
 
     while (likely(!stop_))
     {
         time_update();
 
         int64_t wait_time = timer_mgr_.next_interval(steady_clock_, utc_ms_);
-        if (-1 == wait_time) wait_time = max_wait;
-        if (unlikely(wait_time < min_wait)) wait_time = min_wait;
+        if (wait_time > max_wait)
+        {
+            wait_time = max_wait;
+        }
+        else if (unlikely(wait_time < min_wait))
+        {
+            wait_time = min_wait;
+        }
 
         // 等待其他线程的数据
         wait_for(wait_time);

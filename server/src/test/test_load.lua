@@ -6,6 +6,7 @@ require "global.test"
 
 require "test.misc_test"
 require "test.mt_test"
+require "test.timer_test"
 require "test.https_test"
 require "test.websocket_test"
 
@@ -22,7 +23,6 @@ require "test.rank_test"
 require "test.rpc_test"
 require "test.protobuf_test"
 require "test.flatbuffers_test"
-require "test.timer_test"
 ]]
 
 Test.setup({

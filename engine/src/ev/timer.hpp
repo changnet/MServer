@@ -62,7 +62,6 @@ private:
     struct Timer
     {
         int32_t id_;      // 唯一id
-        int32_t pending_; // 在待处理watcher数组中的下标
 
         int32_t index_; // 当前定时器在二叉树数组中的下标
         int32_t policy_; // 修正定时器时间偏差策略，详见 reschedule 函数

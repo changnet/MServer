@@ -138,7 +138,7 @@ int64_t TimerMgr::next_heap_interval(HeapTimer &ht, int64_t now)
         return (ht.list_[HEAP0])->at_ - now;
     }
 
-    return -1;
+    return 0xFFFFFFFF;
 }
 
 int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
@@ -152,6 +152,7 @@ int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
 
     Timer *timer = &(p.first->second);
 
+    timer->id_     = id;
     timer->at_     = now + after;
     timer->repeat_ = repeat;
     timer->policy_ = policy;

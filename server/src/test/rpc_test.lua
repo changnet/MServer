@@ -144,7 +144,7 @@ Test.describe("rpc test", function()
         end
         local rpc_perf_response = function(...)
             count = count + 1
-            if count == PERF_TIMES then t_done() end
+            if count == PERF_TIMES then Test.done() end
         end
 
         name_func("rpc_perf_query", rpc_perf_query)

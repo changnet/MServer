@@ -175,7 +175,7 @@ Test.describe("protobuf test", function()
             Test.equal(cmd, TEST.LITE.i)
             count = count + 1
 
-            if count >= PERF_TIMES then t_done() end
+            if count >= PERF_TIMES then Test.done() end
         end
 
         -- 一次性发送大量数据，测试缓冲区及打包效率
