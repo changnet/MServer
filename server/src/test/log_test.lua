@@ -5,8 +5,8 @@ local Log = require "engine.Log"
 local util = require "engine.util"
 local time = require "global.time"
 
-t_describe("log test", function()
-    t_it("log base test", function()
+Test.describe("log test", function()
+    Test.it("log base test", function()
         local max_insert = 1024
         local log_fmt =
             "lllllllllllllllllllllllllllllllllllllllllllllllllllllllll" ..
@@ -71,35 +71,35 @@ t_describe("log test", function()
 
         -- 校验刚刚写入的文件
         local fyd = io.open(y_file, "rb")
-        t_assert(fyd)
+        Test.assert(fyd)
         local ctx_fyd = fyd:read("a")
-        t_assert(string.find(ctx_fyd, string.format(log_fmt, 1)))
-        t_assert(string.find(ctx_fyd, string.format(log_fmt, half)))
+        Test.assert(string.find(ctx_fyd, string.format(log_fmt, 1)))
+        Test.assert(string.find(ctx_fyd, string.format(log_fmt, half)))
         fyd:close()
         local fd = io.open("log/test_log_daily", "rb")
-        t_assert(fd)
+        Test.assert(fd)
         local ctx_fd = fd:read("a")
-        t_assert(string.find(ctx_fd, string.format(log_fmt, half + 1)))
-        t_assert(string.find(ctx_fd, string.format(log_fmt, max_insert)))
+        Test.assert(string.find(ctx_fd, string.format(log_fmt, half + 1)))
+        Test.assert(string.find(ctx_fd, string.format(log_fmt, max_insert)))
         fd:close()
 
         local f0 = io.open("log/test_log_size", "rb")
-        t_assert(f0)
+        Test.assert(f0)
         local ctx0 = f0:read("a")
-        t_assert(string.find(ctx0, string.format(log_fmt, max_insert)))
+        Test.assert(string.find(ctx0, string.format(log_fmt, max_insert)))
         f0:close()
 
         local f10 = io.open("log/test_log_size.010", "rb")
-        t_assert(f10)
+        Test.assert(f10)
         local ctx10 = f10:read("a")
-        t_assert(string.find(ctx10, string.format(log_fmt, 1)))
+        Test.assert(string.find(ctx10, string.format(log_fmt, 1)))
         f10:close()
 
         local ff = io.open("log/test_file", "rb")
-        t_assert(ff)
+        Test.assert(ff)
         local ctx_ff = ff:read("a")
-        t_assert(string.find(ctx_ff, string.format(log_fmt, 1)))
-        t_assert(string.find(ctx_ff, string.format(log_fmt, max_insert)))
+        Test.assert(string.find(ctx_ff, string.format(log_fmt, 1)))
+        Test.assert(string.find(ctx_ff, string.format(log_fmt, max_insert)))
         ff:close()
     end)
 end)

@@ -429,8 +429,8 @@ local function random_test(aoi, max_x, max_y, max_z, max_entity, max_random)
     if is_valid then assert(aoi:valid_dump(false)) end
 end
 
-t_describe("list aoi test", function()
-    t_it("list_aoi_bug", function()
+Test.describe("list aoi test", function()
+    Test.it("list_aoi_bug", function()
         is_valid = true
         is_use_y = true
         local aoi = ListAoi()
@@ -443,7 +443,7 @@ t_describe("list aoi test", function()
         update(aoi, 667, 2260, 1581, 9303)
         valid_interest_me(aoi, et99981)
     end)
-    t_it("base list aoi test", function()
+    Test.it("base list aoi test", function()
         entity_info = {}
         exit_info = {}
         is_valid = true
@@ -460,15 +460,15 @@ t_describe("list aoi test", function()
         enter(aoi, 99995, MAX_X - 1, MAX_Y - 1, MAX_Z - 1, V_PLAYER, ET_PLAYER)
 
         aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, tmp_list)
-        t_equal(tmp_list.n, table.size(entity_info))
+        Test.equal(tmp_list.n, table.size(entity_info))
         aoi:get_all_entity(ET_PLAYER, tmp_list)
-        t_equal(tmp_list.n, 3)
+        Test.equal(tmp_list.n, 3)
 
         aoi:get_entity(ET_PLAYER, tmp_list, 0, 0, 0, 0, 0, 0)
-        t_equal(tmp_list.n, 1)
+        Test.equal(tmp_list.n, 1)
         aoi:get_entity(ET_NPC, tmp_list, 0, MAX_X / 2, 0, MAX_Y - 1, 0,
                        MAX_Z - 1)
-        t_equal(tmp_list.n, 0)
+        Test.equal(tmp_list.n, 0)
 
         update(aoi, 99991, MAX_X - 1 - V_PLAYER, MAX_Y - 1 - V_PLAYER,
                MAX_Z - 1 - V_PLAYER)
@@ -483,7 +483,7 @@ t_describe("list aoi test", function()
 
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER, tmp_list, 0, MAX_X - 1,
                        0, MAX_Y - 1, 0, MAX_Z - 1)
-        t_equal(tmp_list.n, 5)
+        Test.equal(tmp_list.n, 5)
 
         -- 当左右视野坐标和实体坐标一致时，保证视野包含实体
         -- 这个只能通过aoi:dump()来自己看了
@@ -493,33 +493,33 @@ t_describe("list aoi test", function()
         local et6 = enter(aoi, 99996, MAX_X - 1 - v, MAX_Y - 1 - v,
                           MAX_Z - 1 - v, v, ET_PLAYER)
         aoi:get_visual_entity(99996, 0xF, tmp_list)
-        t_equal(tmp_list.n, 5)
+        Test.equal(tmp_list.n, 5)
         aoi:get_visual_entity(99995, 0xF, tmp_list)
-        t_equal(tmp_list.n, 4)
+        Test.equal(tmp_list.n, 4)
 
         -- 视野增大(现在能看到99996了)
         aoi:update_visual(99995, v, tmp_list)
-        t_equal(tmp_list.n, 1)
-        t_equal(tmp_list[1], 99996)
+        Test.equal(tmp_list.n, 1)
+        Test.equal(tmp_list[1], 99996)
         aoi:get_visual_entity(99995, 0xF, tmp_list)
-        t_equal(tmp_list.n, 5)
+        Test.equal(tmp_list.n, 5)
 
         -- 视野缩小(现在看不到99996了)
         aoi:update_visual(99995, V_PLAYER, nil, tmp_list)
-        t_equal(tmp_list.n, 1)
-        t_equal(tmp_list[1], 99996)
+        Test.equal(tmp_list.n, 1)
+        Test.equal(tmp_list[1], 99996)
         aoi:get_visual_entity(99995, 0xF, tmp_list)
-        t_equal(tmp_list.n, 4)
+        Test.equal(tmp_list.n, 4)
         -- 视野为0
         aoi:update_visual(99996, 0, nil, tmp_list)
-        t_equal(tmp_list.n, 5)
+        Test.equal(tmp_list.n, 5)
         aoi:get_visual_entity(99996, 0xF, tmp_list)
-        t_equal(tmp_list.n, 0)
+        Test.equal(tmp_list.n, 0)
         -- 视野从0到不为0
         aoi:update_visual(99996, V_PLAYER * 2, tmp_list)
-        t_equal(tmp_list.n, 5)
+        Test.equal(tmp_list.n, 5)
         aoi:get_visual_entity(99996, 0xF, tmp_list)
-        t_equal(tmp_list.n, 5)
+        Test.equal(tmp_list.n, 5)
 
         -- 更新位置时，当一个实体的实体指针、右视野指针依次在链表上移过另一个实体的
         -- 视野左边界，另一个实体本身时，mark标记需要特殊处理
@@ -541,7 +541,7 @@ t_describe("list aoi test", function()
         exit(aoi, 99998)
         aoi:get_entity(ET_PLAYER + ET_NPC + ET_MONSTER, tmp_list, 0, MAX_X - 1,
                        0, MAX_Y - 1, 0, MAX_Z - 1)
-        t_equal(tmp_list.n, 0)
+        Test.equal(tmp_list.n, 0)
 
         -- 随机测试
         local max_entity = 2000
@@ -561,7 +561,7 @@ t_describe("list aoi test", function()
 
     local max_entity = 2000
     local max_random = 10000
-    t_it(string.format(
+    Test.it(string.format(
              "perf test no_y(more index) %d entity and %d times random M/E/E",
              max_entity, max_random), function()
         entity_info = {}
@@ -579,7 +579,7 @@ t_describe("list aoi test", function()
                     max_random)
     end)
 
-    t_it(string.format(
+    Test.it(string.format(
              "perf test 1 index %d entity and %d times random move/exit/enter",
              max_entity, max_random), function()
         entity_info = {}
@@ -599,7 +599,7 @@ t_describe("list aoi test", function()
 
     -- 下面这几个aoi共用一个aoi和entity_info之类的
     local share_aoi
-    t_it(string.format(
+    Test.it(string.format(
              "perf test %d entity and %d times random move/exit/enter",
              max_entity, max_random), function()
         is_valid = false
@@ -616,18 +616,18 @@ t_describe("list aoi test", function()
     end)
 
     local max_query = 1000
-    t_it(string.format("query visual test %d entity and %d times visual range",
+    Test.it(string.format("query visual test %d entity and %d times visual range",
                        max_entity, max_query), function()
         for _ = 1, max_query do
             for id in pairs(entity_info) do
                 share_aoi:get_visual_entity(id, 0xF, tmp_list)
             end
         end
-        t_print("actually run " .. table.size(entity_info))
+        Test.print("actually run " .. table.size(entity_info))
     end)
 
     local max_change_visual = 1000
-    t_it(
+    Test.it(
         string.format("change visual test %d entity and %d times visual range",
                       max_entity, max_change_visual), function()
 
@@ -642,6 +642,6 @@ t_describe("list aoi test", function()
                     end
                 end
             end
-            t_print("actually run " .. cnt)
+            Test.print("actually run " .. cnt)
         end)
 end)

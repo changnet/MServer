@@ -4,7 +4,7 @@ local LuaCodec = require "engine.LuaCodec"
 
 -- /////////////////////////////////////////////////////////////////////////////
 
-t_describe("luacodec test", function()
+Test.describe("luacodec test", function()
     local codec = LuaCodec()
 
     local PERF_TIMES = 10000
@@ -64,42 +64,42 @@ t_describe("luacodec test", function()
         }
     }
 
-    t_it("luacodec base test", function()
+    Test.it("luacodec base test", function()
         -- 参数为空
         local buffer = codec:encode()
         local v1 = codec:decode(buffer)
-        t_equal(v1, nil)
+        Test.equal(v1, nil)
 
         -- 各种参数及table嵌套
         buffer = codec:encode(table.unpack(params))
         local decode_params = {codec:decode(buffer)}
-        t_equal(decode_params, params)
+        Test.equal(decode_params, params)
 
         buffer = codec:encode(lite_pkt)
         v1 = codec:decode(buffer)
-        t_equal(v1, lite_pkt)
+        Test.equal(v1, lite_pkt)
 
         -- 超大内存，测试缓冲区重新分配
         local str = string.rep("0123456789", 6554)
         buffer = codec:encode(str)
         v1 = codec:decode(buffer)
-        t_equal(v1, str)
+        Test.equal(v1, str)
     end)
-    t_it(string.format("luacodec performance test %d", PERF_TIMES), function()
-        local b1 = t_clock()
+    Test.it(string.format("luacodec performance test %d", PERF_TIMES), function()
+        local b1 = Test.clock()
         for _ = 1, PERF_TIMES do
             codec:encode(lite_pkt)
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
         local buffer = codec:encode(lite_pkt)
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, PERF_TIMES do
             codec:decode(buffer)
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        t_print(string.format("encode %d, decode = %d", e1 - b1, e2 - b2))
+        Test.print(string.format("encode %d, decode = %d", e1 - b1, e2 - b2))
     end)
 end)

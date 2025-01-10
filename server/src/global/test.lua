@@ -1,23 +1,25 @@
 -- simple test facility
+Test = {}
+
 --[[
-1. 所用测试的api都以t_xx形式命名，表示这是一个测试用的接口，请勿用于业务逻辑
-2. 一些参数可通过t_setup设置，具体查看t_steup接口
-3. 进行异步测试时，必须通过t_setup接口设置定时器函数
+1. 所用测试的api都以Test.xxx形式命名，表示这是一个测试用的接口，请勿用于业务逻辑
+2. 一些参数可通过Test.setup设置，具体查看Test.steup接口
+3. 进行异步测试时，必须通过Test.setup接口设置定时器函数
 4. 测试是同步进行的，当遇到异步测试时，会阻塞到测试完成或超时
-5. t_describe中的测试会先收集，再执行，故如果需要执行测试前后的动作，则需要t_before、t_after
+5. Test.describe中的测试会先收集，再执行，故如果需要执行测试前后的动作，则需要Test.before、Test.after
 
 用例：
 ```lua
-t_describe("测试套件名", function()
+Test.describe("测试套件名", function()
     it("测试逻辑", function()
         T.print("hello")
     end)
 
     it("测试逻辑2-异步", function()
-        t_async(2000)
+        Test.async(2000)
 
         http.get("www.example.com", function())
-            t_done()
+            Test.done()
         end
     end)
 end)
@@ -127,7 +129,7 @@ setmetatable(It, {
 local OK = "[  OK] "
 local FAIL = "[FAIL] "
 local PEND = "[PEND] "
-local TEST_FAIL = "__test_fail__"
+local TEST_FAIL = "__tesTest.fail__"
 
 local function append_msg(msg)
     if not T.now.msg then T.now.msg = {} end
@@ -136,7 +138,7 @@ local function append_msg(msg)
 end
 
 -- 打印obj的消息
--- @param obj 正在执行的t_before、t_it等对象
+-- @param obj 正在执行的Test.before、Test.it等对象
 local function print_msg(obj)
     if not obj.msg then return end
 
@@ -318,7 +320,7 @@ end
 
 -- ///////////////// test interface ////////////////////////////////////////////
 -- 打印测试信息
-function t_print(...)
+function Test.print(...)
     T.print(...)
 end
 
@@ -340,12 +342,12 @@ local function on_fail(msg)
 end
 
 -- 获取测试时间
-function t_clock()
+function Test.clock()
     return T.clock()
 end
 
 -- test if two variable equal
-function t_equal(got, expect)
+function Test.equal(got, expect)
     assert(T.co, "test already finished or not begin yet")
     if equal(got, expect) then return end
 
@@ -357,7 +359,7 @@ function t_equal(got, expect)
 end
 
 -- test if expr is true
-function t_assert(expr, msg)
+function Test.assert(expr, msg)
     assert(T.co, "test already finished or not begin yet")
     if expr then return end
 
@@ -369,18 +371,18 @@ function t_assert(expr, msg)
     on_fail(dbg_msg)
 end
 
-function t_describe(title, func)
+function Test.describe(title, func)
     local d = Describe(title, func)
     table.insert(T.d, d)
 
-    -- valid_test_ins(self, "Describe")
+    -- valid_tesTest.ins(self, "Describe")
 end
 
 -- 创建一个具体的测试
 -- @param title 测试名字
 -- @param mask 可选参数，是否执行此测试
 -- @param func 测试函数
-function t_it(title, mask, func)
+function Test.it(title, mask, func)
     -- 根据条件判断是否执行此测试
     if not mask then return end
 
@@ -407,35 +409,35 @@ function t_it(title, mask, func)
     local i = It(title, func)
 
     -- 策略1：得到所有it block后再统一执行
-    -- 那么运行describe中的代码将不按顺序顺序，需要使用t_before、t_after来执行
+    -- 那么运行describe中的代码将不按顺序顺序，需要使用Test.before、Test.after来执行
     table.insert(T.d_now.i, i)
 
     -- 策略2：直接执行所有it block
     -- 那么describe中的代码按顺序执行
-    -- 但是，如果整个测试中有异步测试时，仍需要使用t_before、t_after来执行
+    -- 但是，如果整个测试中有异步测试时，仍需要使用Test.before、Test.after来执行
     -- run_one_it(i)
 end
 
 -- 测试定时器超时，定时器需要全局回调函数
-function __test_timeout()
+function Test.timeout()
     resume()
 end
 
 -- 标记当前测试为异步，并设置异步超时时间(毫秒)
-function t_async(timeout)
+function Test.async(timeout)
     assert(not T.now.timer, "call wait multi times")
 
     T.now.status = PEND
-    T.now.timer = T.timer.new(timeout or 2000, __test_timeout)
+    T.now.timer = T.timer.new(timeout or 2000, Test.timeout)
 end
 
 -- 当前进程等待n毫秒
-function t_wait(timeout)
+function Test.wait(timeout)
     assert(false, "not implement yet")
 end
 
 -- 结束当前异步测试
-function t_done()
+function Test.done()
     T.timer.del(T.now.timer)
 
     T.now.timer = nil
@@ -444,7 +446,7 @@ function t_done()
 end
 
 -- 测试前运行的函数
-function t_before(func)
+function Test.before(func)
     assert(T.d_now, "MUST called inside describe block")
 
     if not T.d_now.before then T.d_now.before = {} end
@@ -453,7 +455,7 @@ function t_before(func)
 end
 
 -- 测试后运行的函数
-function t_after(func)
+function Test.after(func)
     assert(T.d_now, "MUST called inside describe block")
 
     if not T.d_now.after then T.d_now.after = {} end
@@ -462,7 +464,7 @@ function t_after(func)
 end
 
 -- setup test parameters
-function t_setup(params)
+function Test.setup(params)
     T.timer = params.timer
 
     local print_func = params.print or print
@@ -495,10 +497,10 @@ function t_setup(params)
 end
 
 -- reset the test session
-function t_reset()
+function Test.reset()
     T.d = {}
     T.d_now = nil
-    T.now = nil -- 正在执行的t_before、t_it等函数
+    T.now = nil -- 正在执行的Test.before、Test.it等函数
     T.pass = 0
     T.fail = 0
     T.time = 0
@@ -532,7 +534,7 @@ local function run()
 end
 
 -- run current test session
-function t_run()
+function Test.run()
     local co, is_main  = coroutine.running()
     if is_main then
         T.co = coroutine.create(run)
@@ -545,4 +547,4 @@ function t_run()
 end
 
 -- /////////////////////////////////////////////////////////////////////////////
-t_reset() -- first reset
+Test.reset() -- first reset

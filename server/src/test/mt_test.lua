@@ -11,7 +11,7 @@
 
 ]]
 
-t_describe("metatable test", function()
+Test.describe("metatable test", function()
     local test = function(a, b)
         return a + b
     end
@@ -43,31 +43,31 @@ t_describe("metatable test", function()
 
     local ts = 10000000
 
-    t_it(string.format("call function native %d times", ts), function()
+    Test.it(string.format("call function native %d times", ts), function()
         local cnt = 0
         for _ = 1, ts do cnt = test(cnt, 1) end
     end)
 
-    t_it(string.format("call function as table value %d times", ts), function()
+    Test.it(string.format("call function as table value %d times", ts), function()
         local cnt = 0
         for _ = 1, ts do cnt = mt.test(cnt, 1) end
     end)
 
-    t_it(string.format("call function 1 level metatable %d times", ts),
+    Test.it(string.format("call function 1 level metatable %d times", ts),
         function()
             local cnt = 0
             for _ = 1, ts do cnt = empty_mt8.test(cnt, 1) end
         end
     )
 
-    t_it(string.format("call function 3 level metatable %d times", ts),
+    Test.it(string.format("call function 3 level metatable %d times", ts),
         function()
             local cnt = 0
             for _ = 1, ts do cnt = empty_mt6.test(cnt, 1) end
         end
     )
 
-    t_it(string.format("call function 10 level metatable %d times", ts),
+    Test.it(string.format("call function 10 level metatable %d times", ts),
         function()
             local cnt = 0
             for _ = 1, ts do cnt = mt_tb.test(cnt, 1) end

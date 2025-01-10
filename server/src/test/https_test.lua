@@ -7,7 +7,7 @@ local TlsCtx = require "engine.TlsCtx"
 local HttpSocket = require "http.http_socket"
 
 
-t_describe("http test", function()
+Test.describe("http test", function()
     -- 产生一个缓存，避免下面连接时查询dns导致测试超时
     -- example.com不稳定，经常连不上，用postman来测试
     -- local exp_host = "www.example.com"
@@ -22,7 +22,7 @@ t_describe("http test", function()
     local vfy_srv_ssl = TlsCtx()
     local vfy_clt_ssl = TlsCtx()
 
-    t_before(function()
+    Test.before(function()
         clt_ssl:init() -- 客户端的ssl不需要证书
 
         -- win下不能简单地指定capath
@@ -45,11 +45,11 @@ t_describe("http test", function()
             "../certs/ca.cer")
 
         exp_ip = util.get_addr_info(exp_host)
-        t_print(exp_host .. " address is", exp_ip)
+        Test.print(exp_host .. " address is", exp_ip)
     end)
 
-    t_it("http get " .. exp_host, function()
-        t_async(15000)
+    Test.it("http get " .. exp_host, function()
+        Test.async(15000)
 
         local conn = HttpSocket()
 
@@ -57,16 +57,16 @@ t_describe("http test", function()
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 2)
-                t_equal(code, 200)
+                Test.equal(http_type, 2)
+                Test.equal(code, 200)
                 conn:close()
-                t_done()
+                Test.done()
             end)
         end
     end)
 
-    t_it("http post " .. exp_host, function()
-        t_async(15000)
+    Test.it("http post " .. exp_host, function()
+        Test.async(15000)
 
         local conn = HttpSocket()
 
@@ -74,16 +74,16 @@ t_describe("http test", function()
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 2)
-                t_equal(code, 200)
+                Test.equal(http_type, 2)
+                Test.equal(code, 200)
                 conn:close()
-                t_done()
+                Test.done()
             end)
         end
     end)
 
-    t_it("http local server test", function()
-        t_async(10000)
+    Test.it("http local server test", function()
+        Test.async(10000)
 
         local ctx = "hello"
 
@@ -91,20 +91,20 @@ t_describe("http test", function()
         local no_len_ctx = "no_len_test ctx 1111111122222223333aaaabbbbbbccccc"
 
         local listen_conn = HttpSocket()
-        t_assert(listen_conn:listen(local_host, port))
+        Test.assert(listen_conn:listen(local_host, port))
         listen_conn.on_message = function(conn, http_type, code, method, url, body)
-            t_equal(http_type, 1)
-            t_equal(conn:address(), local_host)
+            Test.equal(http_type, 1)
+            Test.equal(conn:address(), local_host)
 
             -- method 1 = GET, 3 = POST
             if "/get" == url then
-                t_equal(method, 1)
+                Test.equal(method, 1)
                 conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
             elseif "/post" == url then
-                t_equal(method, 3)
+                Test.equal(method, 3)
                 conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
             elseif "/nolength" == url then
-                t_equal(method, 1)
+                Test.equal(method, 1)
                 -- 测试http的一个特殊实现，当内容里不存在content-len时
                 -- 数据长度以连接关闭时为准
                 local no_len_p200 = 'HTTP/1.1 200 OK\r\n\z
@@ -114,7 +114,7 @@ t_describe("http test", function()
                 conn:send_pkt(no_len_p200)
                 conn:close(true)
             else
-                t_assert(false)
+                Test.assert(false)
             end
         end
         listen_conn.on_disconnected = function(conn)
@@ -126,24 +126,24 @@ t_describe("http test", function()
         end
 
         local clt_conn = HttpSocket()
-        t_assert(clt_conn:connect(local_host, port))
+        Test.assert(clt_conn:connect(local_host, port))
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = clt_conn:get_header()
-                t_equal(code, 200)
-                t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+                Test.equal(code, 200)
+                Test.equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
                 clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
-                    t_equal(code2, 200)
+                    Test.equal(code2, 200)
                     clt_conn:get("/nolength", nil,
                         function(_, http_type3, code3, method3, url3, body3)
-                            t_equal(code3, 200)
-                            t_equal(body3, no_len_ctx)
+                            Test.equal(code3, 200)
+                            Test.equal(body3, no_len_ctx)
                             clt_conn:close()
                             listen_conn:close()
-                            t_done()
+                            Test.done()
                         end)
                 end)
             end)
@@ -157,8 +157,8 @@ t_describe("http test", function()
         end
     end)
 
-    t_it("https get " .. exp_host, function()
-        t_async(15000)
+    Test.it("https get " .. exp_host, function()
+        Test.async(15000)
 
         local conn = HttpSocket()
 
@@ -166,16 +166,16 @@ t_describe("http test", function()
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 2)
-                t_equal(code, 200)
+                Test.equal(http_type, 2)
+                Test.equal(code, 200)
                 conn:close()
-                t_done()
+                Test.done()
             end)
         end
     end)
 
-    t_it("https post " .. exp_host, function()
-        t_async(15000)
+    Test.it("https post " .. exp_host, function()
+        Test.async(15000)
 
         local conn = HttpSocket()
 
@@ -183,16 +183,16 @@ t_describe("http test", function()
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
-                t_equal(http_type, 2)
-                t_equal(code, 200)
+                Test.equal(http_type, 2)
+                Test.equal(code, 200)
                 conn:close()
-                t_done()
+                Test.done()
             end)
         end
     end)
 
-    t_it("https local server test", function()
-        t_async(10000)
+    Test.it("https local server test", function()
+        Test.async(10000)
 
         local ctx = "hello"
 
@@ -202,15 +202,15 @@ t_describe("http test", function()
         local listen_conn = HttpSocket()
         listen_conn:listen_s(local_host, port, srv_ssl)
         listen_conn.on_message = function(conn, http_type, code, method, url, body)
-            t_equal(http_type, 1)
+            Test.equal(http_type, 1)
             srv_conn = conn
 
             -- 1 = GET, 3 = POST
             if "/get" == url then
-                t_equal(method, 1)
+                Test.equal(method, 1)
             else
-                t_equal(url, "/post")
-                t_equal(method, 3)
+                Test.equal(url, "/post")
+                Test.equal(method, 3)
             end
 
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
@@ -222,44 +222,44 @@ t_describe("http test", function()
             clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = clt_conn:get_header()
-                t_equal(code, 200)
-                t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+                Test.equal(code, 200)
+                Test.equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
                 clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
-                    t_equal(code2, 200)
+                    Test.equal(code2, 200)
                     clt_conn:close()
                     srv_conn:close()
                     listen_conn:close()
-                    t_done()
+                    Test.done()
                 end)
             end)
         end
     end)
 
     -- 作为客户端连接到目标服务器，并利用本机的证书验证服务器证书是否有效
-    t_it("https ssl verify and get " .. exp_host, vfy_ssl, function()
+    Test.it("https ssl verify and get " .. exp_host, vfy_ssl, function()
         if LINUX then
-            t_async(10000)
+            Test.async(10000)
             local conn = HttpSocket()
 
             conn:connect_s(exp_host, 443, vfy_ssl)
             conn.on_connected = function(_conn)
                 conn:get("/get", nil,
                          function(__conn, http_type, code, method, url, body)
-                    t_equal(http_type, 2)
-                    t_equal(code, 200)
+                    Test.equal(http_type, 2)
+                    Test.equal(code, 200)
                     conn:close()
-                    t_done()
+                    Test.done()
                 end)
             end
         else
-            t_print("windows no capath support")
+            Test.print("windows no capath support")
         end
     end)
 
-    t_it("https two-way ssl verify local server test", function()
-        t_async(10000)
+    Test.it("https two-way ssl verify local server test", function()
+        Test.async(10000)
 
         local ctx = "hello"
 
@@ -269,15 +269,15 @@ t_describe("http test", function()
         local listen_conn = HttpSocket()
         listen_conn:listen_s(local_host, port, vfy_srv_ssl)
         listen_conn.on_message = function(conn, http_type, code, method, url, body)
-            t_equal(http_type, 1)
+            Test.equal(http_type, 1)
             srv_conn = conn
 
             -- 1 = GET, 3 = POST
             if "/get" == url then
-                t_equal(method, 1)
+                Test.equal(method, 1)
             else
-                t_equal(url, "/post")
-                t_equal(method, 3)
+                Test.equal(url, "/post")
+                Test.equal(method, 3)
             end
 
             conn:send_pkt(string.format(HTTP.P200, ctx:len(), ctx))
@@ -289,16 +289,16 @@ t_describe("http test", function()
             clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = clt_conn:get_header()
-                t_equal(code, 200)
-                t_equal(header.Server, "Mini-Game-Distribute-Server/1.0")
+                Test.equal(code, 200)
+                Test.equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
                 clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
-                    t_equal(code2, 200)
+                    Test.equal(code2, 200)
                     clt_conn:close()
                     srv_conn:close()
                     listen_conn:close()
-                    t_done()
+                    Test.done()
                 end)
             end)
         end

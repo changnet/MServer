@@ -6,25 +6,25 @@ local max_insert = 10000
 local collection = "perf_test"
 local json = require "engine.lua_parson"
 
-t_describe("mongodb test", function()
+Test.describe("mongodb test", function()
     local mongodb
     local SyncMongodb
 
     -- require mongodb就会往app那边注册app_start和app_stop事件
     -- 但有时候并不需要执行mongodb test
-    t_before(function()
+    Test.before(function()
         mongodb = require "mongodb.mongodb"
         SyncMongodb = require "mongodb.sync_mongodb"
     end)
 
-    t_it("mongodb base test", function()
-        t_async(10000)
+    Test.it("mongodb base test", function()
+        Test.async(10000)
 
         local g_setting = require "setting.setting"
         mongodb:start(g_setting.mongo_ip, g_setting.mongo_port,
                       g_setting.mongo_user, g_setting.mongo_pwd,
                       g_setting.mongo_db, function()
-            t_print(string.format("mongodb(%s:%d) ready ...",
+            Test.print(string.format("mongodb(%s:%d) ready ...",
                                   g_setting.mongo_ip, g_setting.mongo_port))
 
             mongodb:remove(collection, "{}") -- 清空已有数据
@@ -44,8 +44,8 @@ t_describe("mongodb test", function()
 
             -- 查询全部
             mongodb:find(collection, "{}", nil, function(e, res)
-                t_equal(e, 0)
-                t_equal(#res, max_count)
+                Test.equal(e, 0)
+                Test.equal(#res, max_count)
             end)
 
             -- 通过json查询
@@ -54,10 +54,10 @@ t_describe("mongodb test", function()
             mongodb:find(collection, '{"_id":{"$gt":5}}',
                          '{"projection":{"desc":0,"array":0,"object":0,"sparse":0},\z
                     "skip":1,"limit":3,"sort":{"amount":-1}}', function(e, res)
-                t_equal(e, 0)
-                t_equal(#res, 3)
-                t_equal(res[1]._id, 9)
-                t_equal(res[1].desc, nil)
+                Test.equal(e, 0)
+                Test.equal(#res, 3)
+                Test.equal(res[1]._id, 9)
+                Test.equal(res[1].desc, nil)
             end)
             -- 通过table查询（和上面的查询一样，只是换用table来描述）
             mongodb:find(collection, {_id = {["$gt"] = 5}}, {
@@ -66,59 +66,59 @@ t_describe("mongodb test", function()
                 limit = 3,
                 sort = {amount = -1}
             }, function(e, res)
-                t_equal(e, 0)
-                t_equal(#res, 3)
-                t_equal(res[1]._id, 9)
-                t_equal(res[1].desc, nil)
+                Test.equal(e, 0)
+                Test.equal(#res, 3)
+                Test.equal(res[1]._id, 9)
+                Test.equal(res[1].desc, nil)
             end)
 
             -- 查询并修改
             mongodb:find_and_modify(collection, '{"_id": 1}', nil,
                                     '{"$set":{"amount":101}}', nil, nil, nil,
                                     true, function(e, res)
-                t_equal(e, 0)
-                t_equal(res.lastErrorObject.n, 1)
-                t_equal(res.lastErrorObject.updatedExisting, true)
-                t_equal(res.value._id, 1)
-                t_equal(res.value.amount, 101)
+                Test.equal(e, 0)
+                Test.equal(res.lastErrorObject.n, 1)
+                Test.equal(res.lastErrorObject.updatedExisting, true)
+                Test.equal(res.value._id, 1)
+                Test.equal(res.value.amount, 101)
             end)
 
             -- 查询数量
             mongodb:count(collection, "{}", nil, function(e, res)
-                t_equal(e, 0)
-                t_equal(res.count, 10)
+                Test.equal(e, 0)
+                Test.equal(res.count, 10)
             end)
             mongodb:count(collection, '{"_id":{"$gt":5}}',
                           '{"skip":1,"limit":3}', function(e, res)
-                t_equal(e, 0)
-                t_equal(res.count, 3)
+                Test.equal(e, 0)
+                Test.equal(res.count, 3)
             end)
 
             -- 默认更新单个
             mongodb:update(collection, {_id = 10},
                            {["$set"] = {amount = 9999999}}, false, false,
                            function(e, res)
-                t_equal(e, 0)
-                t_equal(res, nil)
+                Test.equal(e, 0)
+                Test.equal(res, nil)
             end)
             -- upsert
             mongodb:update(collection, {_id = max_count + 1},
                            {["$set"] = {amount = 9999999}}, true, false,
                            function(e, res)
-                t_equal(e, 0)
-                t_equal(res, nil)
+                Test.equal(e, 0)
+                Test.equal(res, nil)
             end)
             -- 更新多个（更新_id小于5的）
             mongodb:update(collection, '{"_id":{"$lt":5}}',
                            '{"$set":{"amount":999999999}}', false, true,
                            function(e, res)
-                t_equal(e, 0)
-                t_equal(res, nil)
+                Test.equal(e, 0)
+                Test.equal(res, nil)
             end)
             mongodb:count(collection, '{"amount":{"$gt":10000}}', nil,
                           function(e, res)
-                t_equal(e, 0)
-                t_equal(res.count, 6)
+                Test.equal(e, 0)
+                Test.equal(res.count, 6)
             end)
 
             mongodb:remove(collection, "{}")
@@ -158,17 +158,17 @@ t_describe("mongodb test", function()
             }
             mongodb:insert(collection, array_tbl)
             mongodb:find(collection, "{}", nil, function(e, res)
-                t_equal(e, 0)
-                t_equal(#res, 1)
-                t_equal(res[1], array_tbl)
+                Test.equal(e, 0)
+                Test.equal(#res, 1)
+                Test.equal(res[1], array_tbl)
             end)
 
             -- 清空测试数据并结束测试
             mongodb:remove(collection, "{}")
             mongodb:find(collection, "{}", nil, function(e, res)
-                t_equal(e, 0)
-                t_equal(#res, 0)
-                t_done()
+                Test.equal(e, 0)
+                Test.equal(#res, 0)
+                Test.done()
             end)
         end)
     end)
@@ -176,9 +176,9 @@ t_describe("mongodb test", function()
     --[[
         默认配置下插入大概为5000 ~ 10000条/s，没有加索引，远超mysql
     ]]
-    t_it(string.format("mongodb json insert %d perf test", max_insert),
+    Test.it(string.format("mongodb json insert %d perf test", max_insert),
          function()
-        t_async(20000)
+        Test.async(20000)
         for i = 1, max_insert do
             local data = {}
             data._id = i
@@ -193,14 +193,14 @@ t_describe("mongodb test", function()
         end
 
         mongodb:remove(collection, '{}', false, function(e)
-            t_equal(e, 0)
-            t_done()
+            Test.equal(e, 0)
+            Test.done()
         end)
     end)
 
-    t_it(string.format("mongodb table insert %d perf test", max_insert),
+    Test.it(string.format("mongodb table insert %d perf test", max_insert),
          function()
-        t_async(20000)
+        Test.async(20000)
         for i = 1, max_insert do
             local data = {}
             data._id = i
@@ -214,23 +214,23 @@ t_describe("mongodb test", function()
         end
 
         mongodb:remove(collection, "{}", false, function(e)
-            t_equal(e, 0)
-            t_done()
+            Test.equal(e, 0)
+            Test.done()
         end)
     end)
 
-    t_it("mongodb coroutine sync test", function()
-        t_async(5000)
+    Test.it("mongodb coroutine sync test", function()
+        Test.async(5000)
         local sync_mongodb = SyncMongodb(mongodb, function(sync_db)
             local e, res = sync_db:count(collection, '{}')
-            t_equal(e, 0)
-            t_equal(res.count, 0)
-            t_done()
+            Test.equal(e, 0)
+            Test.equal(res.count, 0)
+            Test.done()
         end)
         sync_mongodb:start(sync_mongodb)
     end)
 
-    t_after(function()
+    Test.after(function()
         mongodb:stop()
     end)
 end)

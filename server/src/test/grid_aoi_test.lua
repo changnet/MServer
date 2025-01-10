@@ -238,8 +238,8 @@ local function random_test(aoi, max_width, max_height, max_entity, max_random)
     end
 end
 
-t_describe("test grid aoi", function()
-    t_it("base test", function()
+Test.describe("test grid aoi", function()
+    Test.it("base test", function()
         local aoi = Aoi()
         aoi:set_size(width, height, pix)
         aoi:set_visual_range(visual_width, visual_height)
@@ -255,21 +255,21 @@ t_describe("test grid aoi", function()
         enter(aoi, 99999, max_width, max_height, ET_PLAYER)
 
         aoi:get_all_entity(ET_PLAYER + ET_NPC + ET_MONSTER, tmp_list)
-        t_equal(tmp_list.n, table.size(entity_info))
+        Test.equal(tmp_list.n, table.size(entity_info))
         aoi:get_all_entity(ET_PLAYER, tmp_list)
-        t_equal(tmp_list.n, 2)
+        Test.equal(tmp_list.n, 2)
 
         aoi:get_entity(ET_PLAYER, tmp_list, 0, 0, 10, 10)
-        t_equal(tmp_list.n, 1)
+        Test.equal(tmp_list.n, 1)
         aoi:get_entity(ET_NPC, tmp_list, 0, 0, 10, 10)
-        t_equal(tmp_list.n, 0)
+        Test.equal(tmp_list.n, 0)
 
         -- 测试进入视野(地图边界)
         update(aoi, 99996, max_width, max_height)
         update(aoi, 99998, max_width, max_height)
         update(aoi, 99997, max_width, max_height)
         aoi:get_entity(0xF, tmp_list, 0, 0, 10, 10)
-        t_equal(tmp_list.n, 0)
+        Test.equal(tmp_list.n, 0)
 
         -- 在同一个格子内移动
         -- 这个移动比较特殊，同一个格子表示aoi没有变化，因此list_in和list_out为空
@@ -277,13 +277,13 @@ t_describe("test grid aoi", function()
         update(aoi, 99999, max_width - pix / 2, max_height - pix / 2)
         -- 校验只有另一个玩家对自己感兴趣
         aoi:get_interest_me_entity(99999, tmp_list)
-        t_equal(tmp_list.n, 1)
+        Test.equal(tmp_list.n, 1)
         -- 对于怪物或者npc而言，应该有两个玩家对自己感兴趣
         aoi:get_interest_me_entity(99997, tmp_list)
-        t_equal(tmp_list.n, 2)
+        Test.equal(tmp_list.n, 2)
         aoi:update_entity(99999, max_width, max_height, list_in, list_out)
-        t_equal(list_in.n, 0)
-        t_equal(list_out.n, 0)
+        Test.equal(list_in.n, 0)
+        Test.equal(list_out.n, 0)
 
         -- 测试离开视野(临界值)
         update(aoi, 99996, max_width, max_height - visual_height - pix)
@@ -293,7 +293,7 @@ t_describe("test grid aoi", function()
         update(aoi, 99998, max_width - visual_width, max_height)
         -- 现在99998应该刚好在能在左右看到99997和99999
         aoi:get_visual_entity(99998, 0xF, tmp_list)
-        t_equal(tmp_list.n, 3)
+        Test.equal(tmp_list.n, 3)
 
         -- 退出场景
         exit(aoi, 99996)
@@ -302,7 +302,7 @@ t_describe("test grid aoi", function()
         exit(aoi, 99999)
 
         aoi:get_entity(0xF, tmp_list, 0, 0, max_width, max_height)
-        t_equal(tmp_list.n, 0)
+        Test.equal(tmp_list.n, 0)
 
         local max_entity = 2000
         local max_random = 50000
@@ -312,7 +312,7 @@ t_describe("test grid aoi", function()
     local aoi = nil
     local max_entity = 2000
     local max_random = 10000
-    t_it(string.format(
+    Test.it(string.format(
              "perf test %d entity and %d times random move/exit/enter",
              max_entity, max_random), function()
         is_valid = false
@@ -330,7 +330,7 @@ t_describe("test grid aoi", function()
     end)
 
     local max_query = 1000
-    t_it(string.format("query visual test %d entity and %d times visual range",
+    Test.it(string.format("query visual test %d entity and %d times visual range",
                        max_entity, max_query), function()
         if not aoi then aoi = Aoi() end
         for _ = 1, max_query do
@@ -338,6 +338,6 @@ t_describe("test grid aoi", function()
                 aoi:get_visual_entity(id, 0xF, tmp_list)
             end
         end
-        t_print("actually run " .. table.size(entity_info))
+        Test.print("actually run " .. table.size(entity_info))
     end)
 end)

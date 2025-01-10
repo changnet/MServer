@@ -9,7 +9,7 @@ local TlsCtx = require "engine.TlsCtx"
 
 local ws_default_param = WebSocket.default_param
 
-t_describe("websocket test", function()
+Test.describe("websocket test", function()
     --[[
     http://websockets.org/echo.html 这个已经不维护了
     https://echo.websocket.org/.ws（https://websocket.org/tools/websocket-echo-server） 这个服务器还在，但本地ping经常不通
@@ -26,7 +26,7 @@ t_describe("websocket test", function()
     local clt_ssl
     local srv_ssl
 
-    t_before(function()
+    Test.before(function()
         clt_ssl = TlsCtx()
         srv_ssl = TlsCtx()
 
@@ -35,8 +35,8 @@ t_describe("websocket test", function()
             "../certs/srv_key.pem", "mini_distributed_game_server")
     end)
 
-    t_it("websocket ssl " .. exp_host, function()
-        t_async(5000)
+    Test.it("websocket ssl " .. exp_host, function()
+        Test.async(5000)
 
         local pkt_idx = 0
         local pkt_body = {
@@ -51,7 +51,7 @@ t_describe("websocket test", function()
 
         local function check_done(conn)
             if not ping_body[ping_idx + 1] and not pkt_body[pkt_idx + 1] then
-                t_done()
+                Test.done()
                 conn:close()
             end
         end
@@ -69,7 +69,7 @@ t_describe("websocket test", function()
         end
         conn.on_message = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
-            t_equal(cmd_body, pkt_body[pkt_idx])
+            Test.equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
                 self:send_pkt(pkt_body[pkt_idx + 1])
@@ -81,14 +81,14 @@ t_describe("websocket test", function()
         conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
-                t_equal(body, ping_body[ping_idx])
+                Test.equal(body, ping_body[ping_idx])
                 check_done(self)
             end
         end
     end)
 
-    t_it("websocket_local", function()
-        t_async(5000)
+    Test.it("websocket local", function()
+        Test.async(5000)
 
         local pkt_idx = 0
         local pkt_body = {
@@ -106,7 +106,7 @@ t_describe("websocket test", function()
 
         local function check_done(conn)
             if not ping_body[ping_idx + 1] and not pkt_body[pkt_idx + 1] then
-                t_done()
+                Test.done()
                 conn:close()
                 srv_conn:close()
                 listen_conn:close()
@@ -136,7 +136,7 @@ t_describe("websocket test", function()
         end
         conn.on_message = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
-            t_equal(cmd_body, pkt_body[pkt_idx])
+            Test.equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
                 self:send_pkt(pkt_body[pkt_idx + 1])
@@ -148,14 +148,14 @@ t_describe("websocket test", function()
         conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
-                t_equal(body, ping_body[ping_idx])
+                Test.equal(body, ping_body[ping_idx])
                 check_done(self)
             end
         end
     end)
 
-    t_it("websocket ssl local", function()
-        t_async(5000)
+    Test.it("websocket ssl local", function()
+        Test.async(5000)
 
         local pkt_idx = 0
         local pkt_body = {
@@ -173,7 +173,7 @@ t_describe("websocket test", function()
 
         local function check_done(conn)
             if not ping_body[ping_idx + 1] and not pkt_body[pkt_idx + 1] then
-                t_done()
+                Test.done()
                 conn:close()
                 srv_conn:close()
                 listen_conn:close()
@@ -203,7 +203,7 @@ t_describe("websocket test", function()
         end
         conn.on_message = function(self, cmd_body)
             pkt_idx = pkt_idx + 1
-            t_equal(cmd_body, pkt_body[pkt_idx])
+            Test.equal(cmd_body, pkt_body[pkt_idx])
 
             if pkt_body[pkt_idx + 1] then
                 self:send_pkt(pkt_body[pkt_idx + 1])
@@ -215,7 +215,7 @@ t_describe("websocket test", function()
         conn.on_ctrl = function(self, flag, body)
             if flag == self.WS_OP_PONG then
                 ping_idx = ping_idx + 1
-                t_equal(body, ping_body[ping_idx])
+                Test.equal(body, ping_body[ping_idx])
                 check_done(self)
             end
         end

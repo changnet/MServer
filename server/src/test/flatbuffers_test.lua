@@ -21,7 +21,7 @@ local srv_conn = nil
 local clt_conn = nil
 local listen_conn = nil
 
-t_describe("flatbuffers test", function()
+Test.describe("flatbuffers test", function()
     local local_host = "::1"
     local local_port = 2100
     if IPV4 then local_host = "127.0.0.1" end
@@ -46,7 +46,7 @@ t_describe("flatbuffers test", function()
     local base_pkt = nil -- 基准测试用的包，主要用于各种临界条件测试
     local lite_pkt = nil -- 简单的测试包，更接近于日常通信用的包
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
-    t_before(function()
+    Test.before(function()
         require "network.cmd"
 
         -- !!! flatbuffers未发送的字段都会补上默认值，这点和pbc相反
@@ -108,7 +108,7 @@ t_describe("flatbuffers test", function()
         -- 加载协议文件
         Cmd.SCHEMA_TYPE = network_mgr.CDT_FLATBUF
         local ok = Cmd.load_flatbuffers()
-        t_equal(ok, true)
+        Test.equal(ok, true)
 
         -- 建立一个客户端、一个服务端连接，模拟通信
 
@@ -126,34 +126,34 @@ t_describe("flatbuffers test", function()
         clt_conn.default_param = cs_param
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function()
-            t_done()
+            Test.done()
         end
         clt_conn.on_disconnected = function() end
 
-        t_async(2000)
+        Test.async(2000)
     end)
-    t_it("flatbuffers base", function()
+    Test.it("flatbuffers base", function()
         Cmd.reg(TEST.BASE, function(pkt)
-            t_equal(pkt, base_pkt)
+            Test.equal(pkt, base_pkt)
             srv_conn:send_pkt(TEST.BASE, pkt)
         end, true)
         clt_conn.on_message = function(self, cmd, e, pkt)
-            t_equal(cmd, TEST.BASE.i)
-            t_equal(pkt, base_pkt)
-            t_done()
+            Test.equal(cmd, TEST.BASE.i)
+            Test.equal(pkt, base_pkt)
+            Test.done()
         end
 
         clt_conn:send_pkt(TEST.BASE, base_pkt)
 
-        t_async()
+        Test.async()
     end)
-    t_it(string.format("flatbuffers perf test %d", PERF_TIMES), function()
+    Test.it(string.format("flatbuffers perf test %d", PERF_TIMES), function()
         local count = 0
         Cmd.reg(TEST.LITE, function(pkt)
             srv_conn:send_pkt(TEST.LITE, pkt)
         end, true)
         clt_conn.on_message = function(self, cmd, e, pkt)
-            t_equal(cmd, TEST.LITE.i)
+            Test.equal(cmd, TEST.LITE.i)
             count = count + 1
 
             if count >= PERF_TIMES then t_done() end
@@ -165,19 +165,19 @@ t_describe("flatbuffers test", function()
             clt_conn:send_pkt(TEST.LITE, lite_pkt)
         end
 
-        t_async()
+        Test.async()
     end)
-    t_it(string.format("flatbuffers pingpong test %d", PERF_TIMES), function()
+    Test.it(string.format("flatbuffers pingpong test %d", PERF_TIMES), function()
         local count = 0
         Cmd.reg(TEST.LITE, function(pkt)
             srv_conn:send_pkt(TEST.LITE, pkt)
         end, true)
         clt_conn.on_message = function(self, cmd, e, pkt)
-            t_equal(cmd, TEST.LITE.i)
+            Test.equal(cmd, TEST.LITE.i)
             count = count + 1
 
             if count >= PERF_TIMES then
-                t_done()
+                Test.done()
             else
                 clt_conn:send_pkt(TEST.LITE, lite_pkt)
             end
@@ -186,10 +186,10 @@ t_describe("flatbuffers test", function()
         -- 测试来回发送数据，这个取决于打包、传输效率
         clt_conn:send_pkt(TEST.LITE, lite_pkt)
 
-        t_async()
+        Test.async()
     end)
 
-    t_after(function()
+    Test.after(function()
         clt_conn:close()
         srv_conn:close()
         listen_conn:close()

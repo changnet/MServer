@@ -25,7 +25,7 @@ require "test.flatbuffers_test"
 require "test.timer_test"
 ]]
 
-t_setup({
+Test.setup({
     print = print,
     timer = {
         new = function(timeout, func)
@@ -51,4 +51,4 @@ t_setup({
 })
 
 Rtti.collect()
-t_run()
+Test.run()

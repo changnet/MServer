@@ -13,33 +13,33 @@ local js = [==[
 }
 ]==]
 
-t_describe("json lib test", function()
+Test.describe("json lib test", function()
     local times = 10000
-    t_it("encode decode", function()
+    Test.it("encode decode", function()
         local tbl = json.decode(js)
         local str = json.encode(tbl)
         local tbl_ex = json.decode(str)
-        t_equal(tbl, tbl_ex)
+        Test.equal(tbl, tbl_ex)
 
         local cjson = require "cjson"
         local tbl_cj = cjson.decode(js)
-        t_equal(tbl, tbl_cj)
+        Test.equal(tbl, tbl_cj)
 
         -- 测试table与json自动转换，尤其是整数key的转换
         tbl = {1, 2, unbind = 1, }
         str = json.encode(tbl, false, 8.6)
         tbl_ex = json.decode(str, false, 8.6)
-        t_equal(tbl, tbl_ex)
+        Test.equal(tbl, tbl_ex)
     end)
 
-    t_it("perf test", function()
+    Test.it("perf test", function()
         for _ = 1, times do
             local tbl = json.decode(js)
             json.encode(tbl)
         end
     end)
 
-    t_it("lua cjson dynamically loaded perf", function()
+    Test.it("lua cjson dynamically loaded perf", function()
         local cjson = require "cjson"
 
         for _ = 1, times do
@@ -57,61 +57,61 @@ local xml_str = [==[
       <string>hello world</string>
       <number>44.95</number>
       <date>2000-10-01</date>
-      <linebreak>An in-depth look at creating applications 
+      <linebreak>An in-depth look at creating applications
       with XML.</linebreak>
     </base>
 </root>
 ]==]
 -- luacheck: pop
 
-t_describe("xml lib test", function()
-    t_it("encode decode", function()
+Test.describe("xml lib test", function()
+    Test.it("encode decode", function()
         local tbl = xml.decode(xml_str)
         local str = xml.encode(tbl)
         local tbl_ex = xml.decode(str)
-        t_equal(tbl, tbl_ex)
+        Test.equal(tbl, tbl_ex)
     end)
 end)
 
-t_describe("string extend library test", function()
-    t_it("string.split", function()
+Test.describe("string extend library test", function()
+    Test.it("string.split", function()
         local list = string.split("a,b,c", ",")
-        t_equal(list, {"a", "b", "c"})
+        Test.equal(list, {"a", "b", "c"})
     end)
 
-    t_it("string.trim", function()
+    Test.it("string.trim", function()
         local str = string.trim("   \tabc\t   ")
-        t_equal(str, "abc")
+        Test.equal(str, "abc")
     end)
 
-    t_it("string.replace", function()
+    Test.it("string.replace", function()
         local str = string.replace("abcabc", "abc", "11111")
-        t_equal(str, "11111abc")
+        Test.equal(str, "11111abc")
     end)
 
-    t_it("string.replace_all", function()
+    Test.it("string.replace_all", function()
         local str = string.replace_all("abcabc", "abc", "1111")
-        t_equal(str, "11111111")
+        Test.equal(str, "11111111")
     end)
 
-    t_it("string.replace_at greater", function()
+    Test.it("string.replace_at greater", function()
         local str = string.replace_at("abcabc", "1111", 4)
-        t_equal(str, "abc1111")
+        Test.equal(str, "abc1111")
     end)
 
-    t_it("string.replace_at less", function()
+    Test.it("string.replace_at less", function()
         local str = string.replace_at("abcabc", "1", 4)
-        t_equal(str, "abc1bc")
+        Test.equal(str, "abc1bc")
     end)
 
-    t_it("string.replace_at insert", function()
+    Test.it("string.replace_at insert", function()
         local str = string.replace_at("abcabc", "111", 4, 4)
-        t_equal(str, "abc111abc")
+        Test.equal(str, "abc111abc")
     end)
 
-    t_it("string.gescape", function()
+    Test.it("string.gescape", function()
         local str = string.gescape("[.+*]%abcd")
-        t_equal(str, "%[%.%+%*%]%%abcd")
+        Test.equal(str, "%[%.%+%*%]%%abcd")
     end)
 end)
 
@@ -156,77 +156,77 @@ function str_split3(str, delimiter, plain)
     return sub_str_tab
 end
 
-t_describe("string split performance test", function()
+Test.describe("string split performance test", function()
     local times = 100000
     local str1 = "aaaaaaaaaaaaa\tbbbbbbbbbbbbbbbbbbbbbbbb\tcccccccccccccc\t"
     local str2 = "aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbcccccccccc"
 
-    t_before(function()
+    Test.before(function()
         collectgarbage("stop")
     end)
 
-    t_it("using string.find", function()
+    Test.it("using string.find", function()
         local old_mem = collectgarbage("count")
         for _ = 1, times do
             str_split3(str1, '\t')
             str_split3(str2, '\t')
         end
 
-        t_print(string.format("using memory %.03f kb",
+        Test.print(string.format("using memory %.03f kb",
                               collectgarbage("count") - old_mem))
     end)
 
-    t_it("using string.gmatch", function()
+    Test.it("using string.gmatch", function()
         local old_mem = collectgarbage("count")
         for _ = 1, times do
             str_split(str1, '\t')
             str_split(str2, '\t')
         end
 
-        t_print(string.format("using memory %.03f kb",
+        Test.print(string.format("using memory %.03f kb",
                               collectgarbage("count") - old_mem))
     end)
 
-    t_it("using string.gsub", function()
+    Test.it("using string.gsub", function()
         local old_mem = collectgarbage("count")
         for _ = 1, times do
             str_split2(str1, '\t')
             str_split2(str2, '\t')
         end
 
-        t_print(string.format("using memory %.03f kb",
+        Test.print(string.format("using memory %.03f kb",
                               collectgarbage("count") - old_mem))
     end)
 
-    t_after(function()
+    Test.after(function()
         collectgarbage("restart")
     end)
 end)
 
-t_describe("table extend library test", function()
-    t_it("table.sort_ex default compare func", function()
+Test.describe("table extend library test", function()
+    Test.it("table.sort_ex default compare func", function()
         local tbl = {5, 3, 6, 9, 9, 4, 3, 5, 3}
         table.sort_ex(tbl)
 
-        t_equal(tbl, {3, 3, 3, 4, 5, 5, 6, 9, 9})
+        Test.equal(tbl, {3, 3, 3, 4, 5, 5, 6, 9, 9})
     end)
 
-    t_it("table.sort_ex custom compare func", function()
+    Test.it("table.sort_ex custom compare func", function()
         local tbl = {5, 3, 6, 9, 9, 4, 3, 5, 3}
         table.sort_ex(tbl, function(a, b)
             return a < b
         end)
 
-        t_equal(tbl, {9, 9, 6, 5, 5, 4, 3, 3, 3})
+        Test.equal(tbl, {9, 9, 6, 5, 5, 4, 3, 3, 3})
     end)
 end)
 
-t_describe("util.head test", function()
+Test.describe("util.head test", function()
     local MaxHeap = require "util.max_heap"
 
     local tbl = {9, 6, 7, 4, 8, 3, 2, 1, 5}
 
-    t_it("max heap test", function()
+    Test.it("max heap test", function()
         local expect = {}
         local mh = MaxHeap()
         for idx, val in pairs(tbl) do
@@ -246,8 +246,8 @@ t_describe("util.head test", function()
             local obj = mh:top()
             local exp = expect[index]
 
-            t_equal(obj.key, exp[1])
-            t_equal(obj.value, exp[2])
+            Test.equal(obj.key, exp[1])
+            Test.equal(obj.value, exp[2])
 
             mh:pop()
             index = index + 1
@@ -256,93 +256,93 @@ t_describe("util.head test", function()
 
     -- TODO 重新实现heap，参考C++的priority_queue，根据传入的对比函数实现
     -- 大小堆
-    t_it("min heap test", function()
-        t_print("UNIMPLEMENTED !!")
+    Test.it("min heap test", function()
+        Test.print("UNIMPLEMENTED !!")
     end)
 
     -- 参考boost，加一个id，对比id的大小实现稳定heap https://www.boost.org/doc/libs/develop/doc/html/heap.html
-    t_it("heap stable", function()
-        t_print("UNIMPLEMENTED !!")
+    Test.it("heap stable", function()
+        Test.print("UNIMPLEMENTED !!")
     end)
 end)
 
-t_describe("crypto test", function()
+Test.describe("crypto test", function()
     local str0 = "123456789"
     local str1 = "abcdefghi"
     local str = str0 .. str1
 
-    t_it("md5", function()
-        t_equal(util.md5(str), "60ff7843f0d81d2666e2f00b242dd467")
-        t_equal(util.md5(true, str), "60FF7843F0D81D2666E2F00B242DD467")
-        t_equal(util.md5(str), util.md5(str0, str1))
-        t_equal(util.md5(true, str), util.md5(true, str0, str1))
+    Test.it("md5", function()
+        Test.equal(util.md5(str), "60ff7843f0d81d2666e2f00b242dd467")
+        Test.equal(util.md5(true, str), "60FF7843F0D81D2666E2F00B242DD467")
+        Test.equal(util.md5(str), util.md5(str0, str1))
+        Test.equal(util.md5(true, str), util.md5(true, str0, str1))
     end)
 
-    t_it("sha1", function()
-        t_equal(util.sha1(str), "e34f10117b9d903e5c4c7e751c57db0426c33661")
-        t_equal(util.sha1(true, str), "E34F10117B9D903E5C4C7E751C57DB0426C33661")
-        t_equal(util.sha1(str), util.sha1(str0, str1))
-        t_equal(util.sha1(true, str), util.sha1(true, str0, str1))
+    Test.it("sha1", function()
+        Test.equal(util.sha1(str), "e34f10117b9d903e5c4c7e751c57db0426c33661")
+        Test.equal(util.sha1(true, str), "E34F10117B9D903E5C4C7E751C57DB0426C33661")
+        Test.equal(util.sha1(str), util.sha1(str0, str1))
+        Test.equal(util.sha1(true, str), util.sha1(true, str0, str1))
     end)
 
-    t_it("base64", function()
-        t_equal(util.base64(str), "MTIzNDU2Nzg5YWJjZGVmZ2hp")
+    Test.it("base64", function()
+        Test.equal(util.base64(str), "MTIzNDU2Nzg5YWJjZGVmZ2hp")
     end)
 end)
 
-t_describe("table lib test", function()
-    t_it("table.reverse", function()
+Test.describe("table lib test", function()
+    Test.it("table.reverse", function()
         table.reverse({})
         table.reverse({}, 1, 100)
         table.reverse({}, 200, 100)
 
-        t_equal(table.reverse({1}), {1})
-        t_equal(table.reverse({1, 2, 3, 4, 5}), {5, 4, 3, 2, 1})
-        t_equal(table.reverse({1, 2, 3, 4, 5}, 1, 3), {3, 2, 1, 4, 5})
+        Test.equal(table.reverse({1}), {1})
+        Test.equal(table.reverse({1, 2, 3, 4, 5}), {5, 4, 3, 2, 1})
+        Test.equal(table.reverse({1, 2, 3, 4, 5}, 1, 3), {3, 2, 1, 4, 5})
     end)
 end)
 
-t_describe("math lib test", function()
+Test.describe("math lib test", function()
     require("global.math")
-    t_it("math from to base", function()
+    Test.it("math from to base", function()
         -- 任意进制转换
         -- 注意这里没有反转，所成2进制的2是01而不是10
-        t_equal(math.to_base(0, 2), "0")
-        t_equal(math.from_base("0", 2), 0)
-        t_equal(math.to_base(2, 2), "01")
-        t_equal(math.from_base("01", 2), 2)
+        Test.equal(math.to_base(0, 2), "0")
+        Test.equal(math.from_base("0", 2), 0)
+        Test.equal(math.to_base(2, 2), "01")
+        Test.equal(math.from_base("01", 2), 2)
 
-        t_equal(math.to_base(0, 36), "0")
-        t_equal(math.from_base("0", 36), 0)
-        t_equal(math.to_base(35, 36), "z")
-        t_equal(math.from_base("z", 36), 35)
+        Test.equal(math.to_base(0, 36), "0")
+        Test.equal(math.from_base("0", 36), 0)
+        Test.equal(math.to_base(35, 36), "z")
+        Test.equal(math.from_base("z", 36), 35)
 
         for num = 1, 100 do
             local str = math.to_base(num, 36)
-            t_equal(math.from_base(str, 36), num)
+            Test.equal(math.from_base(str, 36), num)
         end
 
         -- 进制转换可以使用外网工具来验证 https://tool.oschina.net/hexconvert/
         -- oschina那这个转换如果数字大于js能表示的大小，是不准的，用
         -- https://tool.lu/hexconvert/
-        t_equal(math.to_base(8888888888, 36), "8kq7034")
-        t_equal(math.from_base("8kq7034", 36), 8888888888)
+        Test.equal(math.to_base(8888888888, 36), "8kq7034")
+        Test.equal(math.from_base("8kq7034", 36), 8888888888)
 
         -- 这人数字超过double有表示的值，在lua中执行除法时，需要用 //
         local i = 7022597144829442788
         local s = math.to_base(i, 36)
-        t_equal(s, "canca0bxarch1")
-        t_equal(math.from_base(s, 36), i)
+        Test.equal(s, "canca0bxarch1")
+        Test.equal(math.from_base(s, 36), i)
 
         i = math.maxinteger
         s = math.to_base(i, 36)
-        t_equal(s, "7e8e23ji0p2y1")
-        t_equal(math.from_base(s, 36), i)
+        Test.equal(s, "7e8e23ji0p2y1")
+        Test.equal(math.from_base(s, 36), i)
 
         for _ = 1, 500 do
             local num = math.random(0, math.maxinteger)
             local str = math.to_base(num, 36)
-            t_equal(math.from_base(str, 36), num)
+            Test.equal(math.from_base(str, 36), num)
         end
 
         -- 这是很经典的应用，去掉0、o、1、l等容易写错的字符，然后生成字符串作为礼品码
@@ -359,68 +359,68 @@ t_describe("math lib test", function()
         local base = #chars
         for num = 100000, 101000 do
             local str = math.to_base(num, base, chars)
-            t_equal(math.from_base(str, base, digits), num)
+            Test.equal(math.from_base(str, base, digits), num)
         end
 
         i = math.maxinteger
         s = math.to_base(i, base, chars)
-        t_equal(s, "zzzzzzzzzzzz9")
-        t_equal(math.from_base(s, base, digits), i)
+        Test.equal(s, "zzzzzzzzzzzz9")
+        Test.equal(math.from_base(s, base, digits), i)
     end)
 end)
 
-t_describe("uri lib test", function()
-    t_it("uri base test", function()
+Test.describe("uri lib test", function()
+    Test.it("uri base test", function()
         local uri = require("util.uri")
         local url, fields = uri.parse("/web_gm?gm=@ghf")
-        t_equal(url, "/web_gm")
-        t_equal(fields, {gm = "@ghf"})
+        Test.equal(url, "/web_gm")
+        Test.equal(fields, {gm = "@ghf"})
 
         -- 只有字段，没有值，也算合法的请求
         url, fields = uri.parse("/web_gm?gm")
-        t_equal(url, "/web_gm")
-        t_equal(fields, {gm = ""})
+        Test.equal(url, "/web_gm")
+        Test.equal(fields, {gm = ""})
 
         url, fields = uri.parse("/www/web_gm?gm=1&srv=222")
-        t_equal(url, "/www/web_gm")
-        t_equal(fields, {gm = "1", srv = "222"})
+        Test.equal(url, "/www/web_gm")
+        Test.equal(fields, {gm = "1", srv = "222"})
     end)
 end)
 
 -- 测试在lua中使用rawget和rawset效率到底有多慢（一般慢10倍）
-t_describe("rawset rawget test", function()
-    t_it("rawget rawset test", function()
+Test.describe("rawset rawget test", function()
+    Test.it("rawget rawset test", function()
         local TS = 1000000
 
         local tbl = {
             abc = 998
         }
 
-        local b1 = t_clock()
+        local b1 = Test.clock()
         for _ = 1, TS do
             local _ = tbl.abc
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, TS do
             local _ = rawget(tbl, "abc")
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        local b3 = t_clock()
+        local b3 = Test.clock()
         for _ = 1, TS do
             tbl.abc = 996
         end
-        local e3 = t_clock()
+        local e3 = Test.clock()
 
-        local b4 = t_clock()
+        local b4 = Test.clock()
         for _ = 1, TS do
             local _ = rawset(tbl, "abc", 996)
         end
-        local e4 = t_clock()
+        local e4 = Test.clock()
 
-        t_print(string.format(
+        Test.print(string.format(
             "table operator[] %d, rawget %d, operator= %d, rawset %d",
             e1 - b1, e2 - b2, e3 - b3, e4 - b4
         ))
@@ -428,39 +428,39 @@ t_describe("rawset rawget test", function()
 end)
 
 -- 测试在lua中使用rawget和rawset效率到底有多慢（一般慢10倍）
-t_describe("rawset rawget test", function()
-    t_it("rawget rawset test", function()
+Test.describe("rawset rawget test", function()
+    Test.it("rawget rawset test", function()
         local TS = 1000000
 
         local tbl = {
             abc = 998
         }
 
-        local b1 = t_clock()
+        local b1 = Test.clock()
         for _ = 1, TS do
             local _ = tbl.abc
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, TS do
             local _ = rawget(tbl, "abc")
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        local b3 = t_clock()
+        local b3 = Test.clock()
         for _ = 1, TS do
             tbl.abc = 996
         end
-        local e3 = t_clock()
+        local e3 = Test.clock()
 
-        local b4 = t_clock()
+        local b4 = Test.clock()
         for _ = 1, TS do
             local _ = rawset(tbl, "abc", 996)
         end
-        local e4 = t_clock()
+        local e4 = Test.clock()
 
-        t_print(string.format(
+        Test.print(string.format(
             "table operator[] %d, rawget %d, operator= %d, rawset %d",
             e1 - b1, e2 - b2, e3 - b3, e4 - b4
         ))
@@ -468,9 +468,9 @@ t_describe("rawset rawget test", function()
 end)
 
 -- 测试modi table和原生table相比效率有多慢（一般慢10倍）
-t_describe("modi table test", function()
+Test.describe("modi table test", function()
     require "global.modi_table"
-    t_it("modi table base test", function()
+    Test.it("modi table base test", function()
         local expect = {
             i = 123456789,
             s = "abcdefghijk",
@@ -484,105 +484,105 @@ t_describe("modi table test", function()
             }
         }
         local tbl = table.new_modi()
-        t_equal(tbl.modify, false)
+        Test.equal(tbl.modify, false)
 
         -- 赋值后是否正确
         for k, v in pairs(expect) do
             tbl[k] = v
         end
-        t_equal(tbl.data, expect)
-        t_equal(tbl.modify, true)
+        Test.equal(tbl.data, expect)
+        Test.equal(tbl.modify, true)
 
         -- 手动赋值后是否正确
         local tbl1 = table.new_modi()
         tbl1.i = expect.i
         tbl1.s = expect.s
-        t_equal(tbl1.modify, true)
+        Test.equal(tbl1.modify, true)
 
         -- 单个table并且包含子table情况下是否正确
         tbl1.modify = false
         tbl1.t = expect.t
-        t_equal(tbl1.modify, true)
+        Test.equal(tbl1.modify, true)
 
         -- 子table赋值取值是否正确
         tbl1.modify = false
         tbl1.t.t.i = 99878
-        t_equal(tbl1.modify, true)
-        t_equal(tbl1.t.t.i, 99878)
+        Test.equal(tbl1.modify, true)
+        Test.equal(tbl1.t.t.i, 99878)
 
         -- 多次修改后，data是否完整
         tbl1.modify = false
         tbl1.t.t.i = expect.t.t.i
-        t_equal(tbl1.modify, true)
-        t_equal(tbl1.data, expect)
+        Test.equal(tbl1.modify, true)
+        Test.equal(tbl1.data, expect)
 
         -- 子table一层一层赋值，是否正确
         local tbl2 = table.new_modi()
         tbl2.t = {}
-        t_equal(tbl2.modify, true)
+        Test.equal(tbl2.modify, true)
 
         tbl2.modify = false
         tbl2.t.t = {}
-        t_equal(tbl2.modify, true)
+        Test.equal(tbl2.modify, true)
 
         tbl2.modify = false
         tbl2.t.t.i = 123456
-        t_equal(tbl2.modify, true)
-        t_equal(tbl2.t.t.i, 123456)
+        Test.equal(tbl2.modify, true)
+        Test.equal(tbl2.t.t.i, 123456)
 
         tbl2.modify = false
         tbl2.t.t.i = 345
-        t_equal(tbl2.modify, true)
-        t_equal(tbl2.t.t.i, 345)
-        t_equal(tbl2.data.t.t.i, 345)
+        Test.equal(tbl2.modify, true)
+        Test.equal(tbl2.t.t.i, 345)
+        Test.equal(tbl2.data.t.t.i, 345)
 
         -- 直接使用一个table来初始化
         local tbl3 = table.new_modi(expect)
-        t_equal(tbl3.modify, false)
-        t_equal(tbl3.t.t.i, expect.t.t.i)
+        Test.equal(tbl3.modify, false)
+        Test.equal(tbl3.t.t.i, expect.t.t.i)
 
         -- 这个应该会修改到原来的expect
         tbl3.t.t.i = 123
-        t_equal(tbl3.modify, true)
-        t_equal(tbl3.t.t.i, expect.t.t.i)
+        Test.equal(tbl3.modify, true)
+        Test.equal(tbl3.t.t.i, expect.t.t.i)
     end)
-    t_it("modi table level 1 test", function()
+    Test.it("modi table level 1 test", function()
         local raw = {i = 1234567}
         local modi = table.new_modi()
         modi.i = 1234567
 
         local TS = 1000000
 
-        local b1 = t_clock()
+        local b1 = Test.clock()
         for _ = 1, TS do
             local _ = raw.i
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, TS do
             local _ = modi.i
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        local b3 = t_clock()
+        local b3 = Test.clock()
         for _ = 1, TS do
             raw.i = 123
         end
-        local e3 = t_clock()
+        local e3 = Test.clock()
 
-        local b4 = t_clock()
+        local b4 = Test.clock()
         for _ = 1, TS do
             modi.i = 123
         end
-        local e4 = t_clock()
+        local e4 = Test.clock()
 
-        t_print(string.format(
+        Test.print(string.format(
             "modi raw get %d, modi get %d, raw set %d, modi set = %d",
             e1 - b1, e2 - b2, e3 - b3, e4 - b4
         ))
     end)
-    t_it("modi table level 2 test", function()
+    Test.it("modi table level 2 test", function()
         local raw = {t = {i = 1234567}}
         local modi = table.new_modi()
         modi.t = {}
@@ -590,36 +590,36 @@ t_describe("modi table test", function()
 
         local TS = 1000000
 
-        local b1 = t_clock()
+        local b1 = Test.clock()
         for _ = 1, TS do
             local _ = raw.t.i
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, TS do
             local _ = modi.t.i
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        local b3 = t_clock()
+        local b3 = Test.clock()
         for _ = 1, TS do
             raw.t.i = 123
         end
-        local e3 = t_clock()
+        local e3 = Test.clock()
 
-        local b4 = t_clock()
+        local b4 = Test.clock()
         for _ = 1, TS do
             modi.t.i = 123
         end
-        local e4 = t_clock()
+        local e4 = Test.clock()
 
-        t_print(string.format(
+        Test.print(string.format(
             "modi raw get %d, modi get %d, raw set %d, modi set = %d",
             e1 - b1, e2 - b2, e3 - b3, e4 - b4
         ))
     end)
-    t_it("modi table level 3 test", function()
+    Test.it("modi table level 3 test", function()
         local raw = {t = {t = {i = 1234567}}}
         local modi = table.new_modi()
         modi.t = {}
@@ -628,31 +628,31 @@ t_describe("modi table test", function()
 
         local TS = 1000000
 
-        local b1 = t_clock()
+        local b1 = Test.clock()
         for _ = 1, TS do
             local _ = raw.t.t.i
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, TS do
             local _ = modi.t.t.i
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        local b3 = t_clock()
+        local b3 = Test.clock()
         for _ = 1, TS do
             raw.t.t.i = 123
         end
-        local e3 = t_clock()
+        local e3 = Test.clock()
 
-        local b4 = t_clock()
+        local b4 = Test.clock()
         for _ = 1, TS do
             modi.t.t.i = 123
         end
-        local e4 = t_clock()
+        local e4 = Test.clock()
 
-        t_print(string.format(
+        Test.print(string.format(
             "modi raw get %d, modi get %d, raw set %d, modi set = %d",
             e1 - b1, e2 - b2, e3 - b3, e4 - b4
         ))

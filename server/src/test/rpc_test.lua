@@ -10,7 +10,7 @@ local listen_conn = nil
 
 -- /////////////////////////////////////////////////////////////////////////////
 
-t_describe("rpc test", function()
+Test.describe("rpc test", function()
     local local_host = "::1"
     local local_port = 1099
     if IPV4 then local_host = "127.0.0.1" end
@@ -54,7 +54,7 @@ t_describe("rpc test", function()
     }
 
     -- 执行单元测试时，不需要链接执行握手，所以需要重载SrvConn中的accept等函数
-    t_before(function()
+    Test.before(function()
         listen_conn = SsConn()
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
@@ -66,51 +66,51 @@ t_describe("rpc test", function()
         clt_conn = SsConn()
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function(self)
-            t_done()
+            Test.done()
         end
         clt_conn.on_disconnected = function() end
 
-        t_async(2000)
+        Test.async(2000)
     end)
-    t_it("rpc base test", function()
-        t_async(2000)
+    Test.it("rpc base test", function()
+        Test.async(2000)
 
         local counter = 0
         local rpc_empty_query = function(p1)
-            t_equal(p1, nil)
+            Test.equal(p1, nil)
             counter = counter + 1
         end
         local rpc_query = function(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
-            t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10}, params)
+            Test.equal({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10}, params)
             counter = counter + 1
             return p1, p2, p3, p4, p5, p6, p7, p8, p9, p10
         end
 
         local rpc_reponse = function(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, ...)
             counter = counter + 1
-            t_equal(Rpc.last_error(), 0)
-            t_equal({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10}, params)
-            t_equal({...}, params)
+            Test.equal(Rpc.last_error(), 0)
+            Test.equal({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10}, params)
+            Test.equal({...}, params)
         end
 
         local rpc_min_reponse = function(p1, p2, p3, ...)
-            t_equal(Rpc.last_error(), 0)
-            t_equal({...}, params)
-            t_equal(p1, params[1])
-            t_equal(p2, params[2])
-            t_equal(p3, params[3])
+            Test.equal(Rpc.last_error(), 0)
+            Test.equal({...}, params)
+            Test.equal(p1, params[1])
+            Test.equal(p2, params[2])
+            Test.equal(p3, params[3])
             counter = counter + 1
         end
 
         local rpc_empty_reponse = function(...)
-            t_equal(Rpc.last_error(), 0)
-            t_equal({...}, params)
+            Test.equal(Rpc.last_error(), 0)
+            Test.equal({...}, params)
             counter = counter + 1
 
             -- 最后一个函数执行完，校验结果并结束测试
             -- 8 = 两次单向(2) + 3次双向(3 * 2)
-            t_equal(counter, 8)
-            t_done()
+            Test.equal(counter, 8)
+            Test.done()
         end
 
         name_func("rpc_query", rpc_query)
@@ -133,8 +133,8 @@ t_describe("rpc test", function()
         Rpc.proxy(rpc_empty_reponse).conn_call(
             clt_conn, rpc_query, table.unpack(params))
     end)
-    t_it(string.format("rpc performance test %d", PERF_TIMES), function()
-        t_async(5000)
+    Test.it(string.format("rpc performance test %d", PERF_TIMES), function()
+        Test.async(5000)
 
         -- 不等待返回，直接发送，这种其实是取决于缓冲区
 
@@ -156,9 +156,9 @@ t_describe("rpc test", function()
         end
     end)
 
-    t_it(string.format("rpc pingpong performance test %d", PERF_TIMES),
+    Test.it(string.format("rpc pingpong performance test %d", PERF_TIMES),
         function()
-            t_async(5000)
+            Test.async(5000)
             -- 一来一回进行测试
             local count = 0
             local rpc_pingpong_query = function(...)
@@ -169,7 +169,7 @@ t_describe("rpc test", function()
             rpc_pingpong_response = function(...)
                 count = count + 1
                 if count == PERF_TIMES then
-                    t_done()
+                    Test.done()
                 else
                     Rpc.proxy(rpc_pingpong_response).conn_call(
                         clt_conn, rpc_pingpong_query, table.unpack(params))
@@ -184,7 +184,7 @@ t_describe("rpc test", function()
         end
     )
 
-    t_after(function()
+    Test.after(function()
         srv_conn:close()
         clt_conn:close()
         listen_conn:close()

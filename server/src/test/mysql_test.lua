@@ -17,17 +17,17 @@ ENGINE = InnoDB\
 DEFAULT CHARACTER SET = utf8\
 COLLATE = utf8_general_ci;"
 
-t_describe("sql test", function()
+Test.describe("sql test", function()
     local mysql
-    t_it("sql base test", function()
-        t_async(10000)
+    Test.it("sql base test", function()
+        Test.async(10000)
 
         mysql = Mysql("test_mysql")
         local g_setting = require "setting.setting"
         mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
                     g_setting.mysql_user, g_setting.mysql_pwd,
                     g_setting.mysql_db, function()
-            t_print(string.format("mysql(%s:%d) ready ...", g_setting.mysql_ip,
+            Test.print(string.format("mysql(%s:%d) ready ...", g_setting.mysql_ip,
                                   g_setting.mysql_port))
 
             -- TODO TRUNCATE和DROP TABLE会卡3秒左右，不太清楚为什么
@@ -52,27 +52,27 @@ t_describe("sql test", function()
             mysql:exec_cmd("delete from perf_test where id = 2")
             -- 查询
             mysql:select("select * from perf_test", function(ecode, res)
-                t_equal(ecode, 0)
-                t_equal(#res, 1)
-                t_equal(res[1].id, 1)
-                t_equal(res[1].amount, 99999)
-                t_equal(res[1].desc, desc)
+                Test.equal(ecode, 0)
+                Test.equal(#res, 1)
+                Test.equal(res[1].id, 1)
+                Test.equal(res[1].amount, 99999)
+                Test.equal(res[1].desc, desc)
             end)
             mysql:insert("insert into perf_test (id,`desc`,amount) values \z
                 (3,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
 
             mysql:exec_cmd("delete from perf_test")
             mysql:select("select * from perf_test", function(ecode, res)
-                t_equal(ecode, 0)
-                t_equal(res, nil) -- 当查询结果为空时，res为nil
-                t_done()
+                Test.equal(ecode, 0)
+                Test.equal(res, nil) -- 当查询结果为空时，res为nil
+                Test.done()
             end)
         end)
     end)
 
-    t_it(string.format("sql perf %d insert transaction mode", max_insert),
+    Test.it(string.format("sql perf %d insert transaction mode", max_insert),
          function()
-        t_async(20000)
+        Test.async(20000)
         mysql:exec_cmd("START TRANSACTION")
 
         -- desc是mysql关键字，因此需要加``
@@ -86,20 +86,20 @@ t_describe("sql test", function()
 
         mysql:exec_cmd("COMMIT")
         mysql:select("select * from perf_test", function(ecode, res)
-            t_equal(ecode, 0)
-            t_equal(#res, max_insert)
-            t_done()
+            Test.equal(ecode, 0)
+            Test.equal(#res, max_insert)
+            Test.done()
         end)
     end)
 
     -- 用来保证下一个测试时表是空的
-    t_it("sql delete", function()
-        t_async(20000)
+    Test.it("sql delete", function()
+        Test.async(20000)
         mysql:exec_cmd("delete from perf_test")
         mysql:select("select * from perf_test", function(ecode, res)
-            t_equal(ecode, 0)
-            t_equal(res, nil)
-            t_done()
+            Test.equal(ecode, 0)
+            Test.equal(res, nil)
+            Test.done()
         end)
     end)
 
@@ -109,8 +109,8 @@ t_describe("sql test", function()
     启用innodb_flush_log_at_trx_commit = 0,不用事务，100000总共7s
     ]]
     local n_insert = max_insert / 20 -- 太多了完成不了测试的
-    t_it(string.format("sql perf %d insert", n_insert), function()
-        t_async(20000)
+    Test.it(string.format("sql perf %d insert", n_insert), function()
+        Test.async(20000)
 
         -- desc是mysql关键字，因此需要加``
         for i = 1, n_insert do
@@ -122,13 +122,13 @@ t_describe("sql test", function()
         end
 
         mysql:select("select * from perf_test", function(ecode, res)
-            t_equal(ecode, 0)
-            t_equal(#res, n_insert)
-            t_done()
+            Test.equal(ecode, 0)
+            Test.equal(#res, n_insert)
+            Test.done()
         end)
     end)
 
-    t_after(function()
+    Test.after(function()
         mysql:stop()
     end)
 end)

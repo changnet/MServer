@@ -4,7 +4,7 @@ local PbcCodec = require "engine.PbcCodec"
 
 -- /////////////////////////////////////////////////////////////////////////////
 
-t_describe("pbccodec test", function()
+Test.describe("pbccodec test", function()
     local codec = PbcCodec()
 
     codec:reset()
@@ -71,30 +71,30 @@ t_describe("pbccodec test", function()
         }
     }
 
-    t_it("pbccodec base test", function()
+    Test.it("pbccodec base test", function()
         local buffer = codec:encode("system.TestBase", base_pkt)
         local v1 = codec:decode("system.TestBase", buffer)
-        t_equal(v1, base_pkt)
+        Test.equal(v1, base_pkt)
 
         buffer = codec:encode("system.TestLite", lite_pkt)
         v1 = codec:decode("system.TestLite", buffer)
-        t_equal(v1, lite_pkt)
+        Test.equal(v1, lite_pkt)
     end)
-    t_it(string.format("pbccodec performance test %d", PERF_TIMES), function()
-        local b1 = t_clock()
+    Test.it(string.format("pbccodec performance test %d", PERF_TIMES), function()
+        local b1 = Test.clock()
         for _ = 1, PERF_TIMES do
             codec:encode("system.TestLite", lite_pkt)
         end
-        local e1 = t_clock()
+        local e1 = Test.clock()
 
         local buffer = codec:encode("system.TestLite", lite_pkt)
 
-        local b2 = t_clock()
+        local b2 = Test.clock()
         for _ = 1, PERF_TIMES do
             codec:decode("system.TestLite", buffer)
         end
-        local e2 = t_clock()
+        local e2 = Test.clock()
 
-        t_print(string.format("encode %d, decode = %d", e1 - b1, e2 - b2))
+        Test.print(string.format("encode %d, decode = %d", e1 - b1, e2 - b2))
     end)
 end)

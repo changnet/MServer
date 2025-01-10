@@ -1,4 +1,4 @@
--- auto export by lua-tags 166 symbols
+-- auto export by lua-tags 152 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -84,6 +84,7 @@ return {
 "Signal", -- src/engine/signal.lua
 "SocketMgr", -- src/network/socket_mgr.lua
 "SrvMgr", -- src/network/srv_mgr.lua
+"Test", -- src/global/test.lua
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
@@ -104,7 +105,6 @@ return {
 "__socket_hash", -- src/network/socket_mgr.lua
 "__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua
-"__test_timeout", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
 "application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
@@ -149,20 +149,6 @@ return {
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
 "sys", -- src/global/sys.lua
-"t_after", -- src/global/test.lua
-"t_assert", -- src/global/test.lua
-"t_async", -- src/global/test.lua
-"t_before", -- src/global/test.lua
-"t_clock", -- src/global/test.lua
-"t_describe", -- src/global/test.lua
-"t_done", -- src/global/test.lua
-"t_equal", -- src/global/test.lua
-"t_it", -- src/global/test.lua
-"t_print", -- src/global/test.lua
-"t_reset", -- src/global/test.lua
-"t_run", -- src/global/test.lua
-"t_setup", -- src/global/test.lua
-"t_wait", -- src/global/test.lua
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
 "vd", -- proto/auto.lua

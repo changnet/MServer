@@ -26,38 +26,38 @@ local function make_perf_words()
     end
 end
 
-t_describe("acism words filter test", function()
+Test.describe("acism words filter test", function()
     local acism = Acism()
     make_perf_words()
 
-    t_it("acism base test", function()
+    Test.it("acism base test", function()
         local i = acism:load_from_file(words_path, false)
-        t_print(i, "band wods loaded!")
+        Test.print(i, "band wods loaded!")
 
         -- scan返回匹配字符串尾位置，一般一个中文字符占3
         -- AB匹配到B时，返回的是B的字符串尾，即2
         -- “出售枪支”匹配到“枪支”时返回枪支的末尾位置
-        t_equal(acism:scan("好好学习，天天向上"), 0)
-        t_equal(acism:scan("!!!!!!!!AAAAAA"), 9)
-        t_equal(acism:scan("出售枪支是非法的"), 12)
+        Test.equal(acism:scan("好好学习，天天向上"), 0)
+        Test.equal(acism:scan("!!!!!!!!AAAAAA"), 9)
+        Test.equal(acism:scan("出售枪支是非法的"), 12)
 
         -- 替换
         local ch = "*"
-        t_equal(acism:replace("A", ch), "*")
-        t_equal(acism:replace("枪支", ch), "******")
-        t_equal(acism:replace("出售枪支是非法的", ch),
+        Test.equal(acism:replace("A", ch), "*")
+        Test.equal(acism:replace("枪支", ch), "******")
+        Test.equal(acism:replace("出售枪支是非法的", ch),
                 "出售******是非法的")
-        t_equal(acism:replace("匹配不到我", ch), "匹配不到我")
-        t_equal(acism:replace("这枪支是A货", ch), "这******是*货")
-        t_equal(acism:replace("AAAAAAAA", ch), "********")
+        Test.equal(acism:replace("匹配不到我", ch), "匹配不到我")
+        Test.equal(acism:replace("这枪支是A货", ch), "这******是*货")
+        Test.equal(acism:replace("AAAAAAAA", ch), "********")
     end)
 
-    t_it(string.format("acism scan perf test: %d words", #PERF_WORDS),
+    Test.it(string.format("acism scan perf test: %d words", #PERF_WORDS),
          function()
         for _, words in pairs(PERF_WORDS) do acism:scan(words) end
     end)
 
-    t_it(string.format("acism replace perf test: %d words", #PERF_WORDS),
+    Test.it(string.format("acism replace perf test: %d words", #PERF_WORDS),
          function()
         for _, words in pairs(PERF_WORDS) do acism:replace(words, "*") end
     end)
