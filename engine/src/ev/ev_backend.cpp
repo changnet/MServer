@@ -3,6 +3,7 @@
 #include "poll_backend.hpp"
 #include "epoll_backend.hpp"
 #include "system/static_global.hpp"
+#include "time.hpp"
 
 EVBackend *EVBackend::instance()
 {
@@ -61,7 +62,7 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
 void EVBackend::backend()
 {
     Thread::apply_thread_name("ev_backend");
-    int64_t last = StaticGlobal::E->steady_clock();
+    int64_t last = timing::steady_clock();
 
     // 第一次进入wait前，可能主线程那边已经有新的io需要处理
     backend_once(0, last);
@@ -74,7 +75,7 @@ void EVBackend::backend()
         int32_t ev_count = wait(busy_ ? min_wait : max_wait);
         if (ev_count < 0) break;
 
-        int64_t now = StaticGlobal::E->steady_clock();
+        int64_t now = timing::steady_clock();
 
         // 对于实时性要求不高的，适当降低backend运行的帧数可以让io读写效率更高
         // 使用#define，当数值为0时直接不编译这部分代码
@@ -85,7 +86,7 @@ void EVBackend::backend()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(diff));
         }
-        now = StaticGlobal::E->steady_clock();
+        now = timing::steady_clock();
 #endif
 
         last = now; // 判断是否sleep必须包含backend执行逻辑的时间

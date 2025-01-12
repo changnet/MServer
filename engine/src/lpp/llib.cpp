@@ -20,6 +20,7 @@
 #include "system/static_global.hpp"
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
+#include "ev/time.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -75,6 +76,12 @@ static void luaopen_engine(lua_State *L)
     lcpp::module_function<&signal_mask_once>(L, "signal_mask_once");
     lcpp::module_function<&ThreadContextMgr::add_thread_ctx>(L, "add_thread_ctx");
     lcpp::module_function<&ThreadContextMgr::del_thread_ctx>(L, "del_thread_ctx");
+    lcpp::module_function<&timing::steady_clock>(L, "steady_clock");
+    lcpp::module_function<&timing::system_clock>(L, "system_clock");
+    lcpp::module_function<&timing::time>(L, "time");
+    lcpp::module_function<&timing::clock>(L, "clock");
+    lcpp::module_function<&timing::time_ms>(L, "time_ms");
+    lcpp::module_function<&timing::update>(L, "update");
     lcpp::module_end(L);
 }
 
@@ -89,30 +96,10 @@ static void luaopen_ev(lua_State *L)
 {
     lcpp::Class<EV> lc(L, "engine.EV");
     lc.def<&EV::stop>("stop");
-    lc.def<&EV::steady_clock>("steady_clock");
-    lc.def<&EV::system_clock>("system_clock");
     lc.def<&EV::push_message>("push_message");
     lc.def<&EV::emplace_message>("emplace_message");
     lc.def<&EV::timer_start>("timer_start");
     lc.def<&EV::timer_stop>("timer_stop");
-
-    /*
-    lc.def<&LEV::now>("time");
-    lc.def<&LEV::quit>("exit");
-    lc.def<&LEV::signal>("signal");
-    lc.def<&LEV::ms_now>("ms_time");
-    lc.def<&LEV::backend>("backend");
-    lc.def<&LEV::who_busy>("who_busy");
-    lc.def<&LEV::set_app_ev>("set_app_ev");
-    lc.def<&LEV::time_update>("time_update");
-    lc.def<&LEV::steady_clock>("steady_clock");
-    lc.def<&LEV::system_clock>("system_clock");
-    lc.def<&LEV::timer_stop>("timer_stop");
-    lc.def<&LEV::timer_start>("timer_start");
-    lc.def<&LEV::periodic_stop>("periodic_stop");
-    lc.def<&LEV::periodic_start>("periodic_start");
-    lc.def<&LEV::set_critical_time>("set_critical_time");
-    */
 }
 
 static void luaopen_worker_thread(lua_State *L)

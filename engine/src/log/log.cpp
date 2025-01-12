@@ -2,6 +2,7 @@
 #include "pool/object_pool.hpp"
 #include "system/static_global.hpp"
 #include "log.hpp"
+#include "ev/time.hpp"
 
 /* 是否后台运行。后台运行则不输出日志到stdout */
 static bool deamon_mode           = false;
@@ -137,7 +138,7 @@ void __sync_log(const char *path, FILE *stream, const char *prefix,
 void __async_log(const char *path, LogType type, const char *fmt, ...)
 {
     FORMAT();
-    StaticGlobal::LOG->append(path, type, StaticGlobal::E->time(),
+    StaticGlobal::LOG->append(path, type, timing::try_frame_time(),
                                          buffer, buffer_len);
 }
 } // namespace log_util

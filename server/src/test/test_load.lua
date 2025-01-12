@@ -43,10 +43,10 @@ Test.setup({
     -- ./start.sh test --filter=https 只执行名字包含https的测试
     filter = g_env:get("filter"),
     time_update = function()
-        -- ev:time_update()
+        Engine.update()
     end,
     clock = function()
-        return g_engine:steady_clock()
+        return Engine.steady_clock()
     end
 })
 

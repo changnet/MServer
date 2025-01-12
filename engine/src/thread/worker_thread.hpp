@@ -41,7 +41,7 @@ public:
     int32_t timer_start(int32_t id, int64_t after, int64_t repeat,
         int32_t policy)
     {
-        return timer_mgr_.timer_start(steady_clock_, id, after, repeat, policy);
+        return timer_mgr_.timer_start(id, after, repeat, policy);
     }
     /**
      * @brief 停止定时器并从管理器中删除
@@ -54,7 +54,6 @@ public:
     }
  
 protected:
-    void time_update(bool tolua);
 
     void routine();
     bool initialize();
@@ -62,8 +61,6 @@ protected:
 
 private:
     bool stop_;
-    int64_t steady_clock_; // 起服到现在的毫秒
-    int64_t utc_ms_;       // UTC时间戳（单位：毫秒）
     lua_State *L_;
     std::string name_;
     std::thread thread_;

@@ -3,6 +3,7 @@
 #include "lpp/llib.hpp"
 #include "thread.hpp"
 #include "system/static_global.hpp"
+#include "ev/time.hpp"
 
 WorkerThread::WorkerThread(const std::string &name)
 {
@@ -45,15 +46,10 @@ void WorkerThread::stop(bool join)
     }
 }
 
-void WorkerThread::time_update(bool tolua)
-{
-    steady_clock_ = StaticGlobal::E->clock();
-    utc_ms_       = StaticGlobal::E->time_ms();
-}
-
 bool WorkerThread::initialize()
 {
     L_ = llib::new_state();
+    timing::update();
 
     // push一些共用的全局对象到lua，比如全局日志对象
     lcpp::Class<WorkerThread>::push(L_, this, false);
@@ -113,14 +109,14 @@ void WorkerThread::routine()
     auto E = StaticGlobal::E;
     while (likely(!stop_))
     {
-        time_update(false);
-        int64_t wait_time = timer_mgr_.next_interval(steady_clock_, utc_ms_);
+        timing::update();
+        int64_t wait_time = timer_mgr_.next_interval();
         if (wait_time < 0) wait_time = 5000;
 
         wait_for(wait_time);
 
-        time_update(true);
-        timer_mgr_.update_timeout(steady_clock_, utc_ms_, this);
+        timing::update();
+        timer_mgr_.update_timeout(this);
 
         // 其他线程会不断地派发任务，worker线程可能会无休止地运行
         // 因此执行一定数量的逻辑后，需要更新时间及定时器

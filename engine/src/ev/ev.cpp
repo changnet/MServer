@@ -2,20 +2,12 @@
 #include "lpp/llib.hpp"
 #include "lpp/lcpp.hpp"
 #include "system/static_global.hpp"
-
-// minimum timejump that gets detected (if monotonic clock available)
-#define MIN_TIMEJUMP 1000
+#include "time.hpp"
 
 EV::EV()
 {
     stop_              = true;
     L_                 = nullptr;
-    clock_diff_        = 0;
-    last_utc_update_   = INT_MIN;
-    steady_clock_      = 0;
-    utc_ms_            = 0;
-    utc_sec_           = 0;
-    next_backend_time_ = 0;
 }
 
 EV::~EV()
@@ -25,86 +17,23 @@ EV::~EV()
 
 void EV::routinue()
 {
-    // worker线程的时间是取主线程的，因此主线程即使没任务只能wait一小段时间便更新时间
     static const int64_t min_wait = 1;  // 最小等待时间，毫秒
-    static const int64_t max_wait = 50; // 最大等待时间，毫秒
 
     while (likely(!stop_))
     {
-        time_update();
+        timing::update();
 
-        int64_t wait_time = timer_mgr_.next_interval(steady_clock_, utc_ms_);
-        if (wait_time > max_wait)
-        {
-            wait_time = max_wait;
-        }
-        else if (unlikely(wait_time < min_wait))
-        {
-            wait_time = min_wait;
-        }
+        int64_t wait_time = timer_mgr_.next_interval();
+        if (unlikely(wait_time < min_wait)) wait_time = min_wait;
 
         // 等待其他线程的数据
         wait_for(wait_time);
 
-        time_update();
+        timing::update();
 
-        timer_mgr_.update_timeout(steady_clock_, utc_ms_, this);
+        timer_mgr_.update_timeout(this);
 
         dispatch_message();
-    }
-}
-
-void EV::time_update()
-{
-    steady_clock_ = steady_clock();
-
-    /**
-     * 直接计算出UTC时间而不通过get_time获取
-     * 例如主循环为5ms时，0.5s同步一次省下了100次系统调用(get_time是一个syscall，比较慢)
-     * libevent是5秒同步一次CLOCK_SYNC_INTERVAL，libev是0.5秒
-     */
-    if (steady_clock_ - last_utc_update_ < MIN_TIMEJUMP / 2)
-    {
-        utc_ms_  = clock_diff_ + steady_clock_;
-        utc_sec_ = utc_ms_ / 1000; // 转换为秒
-        return;
-    }
-
-    last_utc_update_ = steady_clock_;
-    utc_ms_          = system_clock();
-    utc_sec_         = utc_ms_ / 1000; // 转换为秒
-
-    /**
-     * 当两次diff相差比较大时，说明有人调了UTC时间
-     * 由于获取时间(clock_gettime等函数）是一个syscall，有优化级调用，可能出现前一个
-     * clock获取到的时间为调整前，后一个clock为调整后的情况
-     * 必须循环几次保证取到的都是调整后的时间
-     *
-     * 参考libev
-     * loop a few times, before making important decisions.
-     * on the choice of "4": one iteration isn't enough,
-     * in case we get preempted during the calls to
-     * get_time and get_clock. a second call is almost guaranteed
-     * to succeed in that case, though. and looping a few more times
-     * doesn't hurt either as we only do this on time-jumps or
-     * in the unlikely event of having been preempted here.
-     */
-    int64_t old_diff = clock_diff_;
-    for (int32_t i = 4; --i;)
-    {
-        clock_diff_ = utc_ms_ - steady_clock_;
-
-        int64_t diff = old_diff - clock_diff_;
-        if (likely((diff < 0 ? -diff : diff) < MIN_TIMEJUMP))
-        {
-            return;
-        }
-
-        utc_ms_  = system_clock();
-        utc_sec_ = utc_ms_ / 1000; // 转换为秒
-
-        steady_clock_    = steady_clock();
-        last_utc_update_ = steady_clock_;
     }
 }
 
@@ -166,7 +95,7 @@ void EV::start(int32_t argc, char **argv)
 {
     L_ = llib::new_state();
 
-    time_update();
+    timing::update();
     if (!init_entry(argc, argv))
     {
         L_ = llib::delete_state(L_);

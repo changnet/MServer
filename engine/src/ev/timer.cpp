@@ -1,4 +1,5 @@
 #include "timer.hpp"
+#include "time.hpp"
 #include "thread/thread_context.hpp"
 
 #define HEAP0             1 // 二叉堆的位置0不用，数据从1开始存放
@@ -240,8 +241,9 @@ void TimerMgr::timer_reschedule(Timer *timer, int64_t now)
     }
 }
 
-int32_t TimerMgr::timer_start(int64_t now, int32_t id, int64_t after, int64_t repeat, int32_t policy)
+int32_t TimerMgr::timer_start(int32_t id, int64_t after, int64_t repeat, int32_t policy)
 {
+    int64_t now = timing::clock();
     return new_heap(timer_, now, id, after, repeat, policy);
 }
 
@@ -251,9 +253,10 @@ int32_t TimerMgr::timer_stop(int32_t id)
     return delete_heap(timer_, id);
 }
 
-int32_t TimerMgr::periodic_start(int64_t now, int32_t id, int64_t after,
+int32_t TimerMgr::periodic_start(int32_t id, int64_t after,
                                  int64_t repeat, int32_t policy)
 {
+    int64_t now = timing::time_ms();
     return new_heap(periodic_, now, id, after, repeat, policy);
 }
 
@@ -262,14 +265,18 @@ int32_t TimerMgr::periodic_stop(int32_t id)
     return delete_heap(periodic_, id);
 }
 
-void TimerMgr::update_timeout(int64_t now, int64_t utc, ThreadContext *ctx)
+void TimerMgr::update_timeout(ThreadContext *ctx)
 {
+    int64_t now = timing::clock();
+    int64_t utc = timing::time_ms();
     heap_timeout(timer_, now, ctx);
     heap_timeout(periodic_, utc, ctx);
 }
 
-int64_t TimerMgr::next_interval(int64_t now, int64_t utc)
+int64_t TimerMgr::next_interval()
 {
+    int64_t now = timing::clock();
+    int64_t utc = timing::time_ms();
     int64_t ni1 = next_heap_interval(timer_, now);
     int64_t ni2 = next_heap_interval(periodic_, utc);
 

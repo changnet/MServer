@@ -10,14 +10,14 @@ Test.describe("timer test", function()
         local msec = 17
         local times = 6
 
-        local now_ms = g_engine:steady_clock()
+        local now_ms = Engine.steady_clock()
         local next_ms = now_ms + after
 
         -- interval的精度应该是1毫秒
         Test.async(10000)
         local timer_interval_test = function()
             -- printf("timer interval expect %d, got %d", next_ms, ev:ms_time())
-            local val = math.abs(g_engine:steady_clock() - next_ms)
+            local val = math.abs(Engine.steady_clock() - next_ms)
             if val > 1 then
                 Test.print("timer interval precision  lost", val)
                 Test.assert(false)
@@ -37,13 +37,13 @@ Test.describe("timer test", function()
         local sec = 2
         local times = 3
 
-        local now = g_engine:system_clock()
+        local now = Engine.system_clock()
         local next_s = now + after
 
         Test.async(10000)
         local timer_periodic_test = function()
             -- printf("timer periodic expect %d, got %d", next_s, ev:time())
-            local val = math.abs(g_engine:system_clock() - next_s)
+            local val = math.abs(Engine.system_clock() - next_s)
             if val > 1 then
                 Test.print("timer periodic precision = " .. val)
                 Test.assert(false)

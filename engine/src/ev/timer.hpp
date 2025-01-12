@@ -26,7 +26,7 @@ public:
      * @param policy 定时器重新规则时的策略
      * @return 成功返回》=1,失败返回值<0
      */
-    int32_t timer_start(int64_t now, int32_t id, int64_t after, int64_t repeat,
+    int32_t timer_start(int32_t id, int64_t after, int64_t repeat,
                         int32_t policy);
     /**
      * @brief 停止定时器并从管理器中删除
@@ -43,7 +43,7 @@ public:
      * @param policy 定时器重新规则时的策略
      * @return 成功返回》=1,失败返回值<0
      */
-    int32_t periodic_start(int64_t now, int32_t id, int64_t after,
+    int32_t periodic_start(int32_t id, int64_t after,
                            int64_t repeat, int32_t policy);
     /**
      * @brief 停止utc定时器并从管理器删除
@@ -53,10 +53,10 @@ public:
     int32_t periodic_stop(int32_t id);
 
     // 获取下一个定时器超时间隔（毫秒）
-    int64_t next_interval(int64_t now, int64_t utc);
+    int64_t next_interval();
 
     // 更新定时器状态，检测哪些定时器超时
-    void update_timeout(int64_t now, int64_t utc, ThreadContext *ctx);
+    void update_timeout(ThreadContext *ctx);
 
 private:
     struct Timer

@@ -1,6 +1,6 @@
 #include "global/global.hpp"
 #include "async_log.hpp"
-#include "system/static_global.hpp"
+#include "ev/time.hpp"
 
 #include <filesystem>
 
@@ -187,7 +187,7 @@ bool AsyncLog::Policy::init_size_policy(int64_t size)
 
 bool AsyncLog::Policy::init_daily_policy()
 {
-    data_ = StaticGlobal::E->time();
+    data_ = timing::try_frame_time();
 
     // 读取已有日志文件的日期
     std::error_code e;
@@ -404,7 +404,7 @@ void AsyncLog::routine_once(int32_t ev)
     static_assert(__cplusplus > 201402L);
 
     bool busy = true;
-    auto now  = StaticGlobal::E->time();
+    auto now  = timing::try_frame_time();
 
     std::unique_lock<std::mutex> ul(mutex_);
 
