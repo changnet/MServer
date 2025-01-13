@@ -49,8 +49,6 @@ Test.describe("http test", function()
     end)
 
     Test.it("http get " .. exp_host, function()
-        Test.async(15000)
-
         local conn = HttpSocket()
 
         conn:connect(exp_host, 80, exp_ip)
@@ -63,11 +61,10 @@ Test.describe("http test", function()
                 Test.done()
             end)
         end
+        Test.wait(15000)
     end)
 
     Test.it("http post " .. exp_host, function()
-        Test.async(15000)
-
         local conn = HttpSocket()
 
         conn:connect(exp_host, 80, exp_ip)
@@ -80,11 +77,10 @@ Test.describe("http test", function()
                 Test.done()
             end)
         end
+        Test.wait(15000)
     end)
 
     Test.it("http local server test", function()
-        Test.async(10000)
-
         local ctx = "hello"
 
         local port = 8182
@@ -155,11 +151,10 @@ Test.describe("http test", function()
                 print("error >>>>>>>>>>>>>>>>>>>", e)
             end
         end
+        Test.wait(10000)
     end)
 
     Test.it("https get " .. exp_host, function()
-        Test.async(15000)
-
         local conn = HttpSocket()
 
         conn:connect_s(exp_host, 443, clt_ssl)
@@ -172,11 +167,10 @@ Test.describe("http test", function()
                 Test.done()
             end)
         end
+        Test.wait(15000)
     end)
 
     Test.it("https post " .. exp_host, function()
-        Test.async(15000)
-
         local conn = HttpSocket()
 
         conn:connect_s(exp_host, 443, clt_ssl)
@@ -189,11 +183,10 @@ Test.describe("http test", function()
                 Test.done()
             end)
         end
+        Test.wait(15000)
     end)
 
     Test.it("https local server test", function()
-        Test.async(10000)
-
         local ctx = "hello"
 
         local port = 8183
@@ -235,12 +228,13 @@ Test.describe("http test", function()
                 end)
             end)
         end
+        Test.wait(10000)
     end)
 
     -- 作为客户端连接到目标服务器，并利用本机的证书验证服务器证书是否有效
     Test.it("https ssl verify and get " .. exp_host, vfy_ssl, function()
         if LINUX then
-            Test.async(10000)
+            Test.wait(10000)
             local conn = HttpSocket()
 
             conn:connect_s(exp_host, 443, vfy_ssl)
@@ -253,14 +247,13 @@ Test.describe("http test", function()
                     Test.done()
                 end)
             end
+            Test.wait(10000)
         else
             Test.print("windows no capath support")
         end
     end)
 
     Test.it("https two-way ssl verify local server test", function()
-        Test.async(10000)
-
         local ctx = "hello"
 
         local port = 8184
@@ -302,5 +295,6 @@ Test.describe("http test", function()
                 end)
             end)
         end
+        Test.wait(10000)
     end)
 end)

@@ -100,6 +100,8 @@ static void luaopen_ev(lua_State *L)
     lc.def<&EV::emplace_message>("emplace_message");
     lc.def<&EV::timer_start>("timer_start");
     lc.def<&EV::timer_stop>("timer_stop");
+    lc.def<&EV::periodic_start>("periodic_start");
+    lc.def<&EV::periodic_stop>("periodic_stop");
 }
 
 static void luaopen_worker_thread(lua_State *L)
@@ -113,6 +115,8 @@ static void luaopen_worker_thread(lua_State *L)
     lc.def<&WorkerThread::emplace_message>("emplace_message");
     lc.def<&WorkerThread::timer_start>("timer_start");
     lc.def<&WorkerThread::timer_stop>("timer_stop");
+    lc.def<&WorkerThread::periodic_start>("periodic_start");
+    lc.def<&WorkerThread::periodic_stop>("periodic_stop");
 }
 
 static void luaopen_tls(lua_State *L)

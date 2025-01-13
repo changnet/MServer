@@ -36,8 +36,6 @@ Test.describe("websocket test", function()
     end)
 
     Test.it("websocket ssl " .. exp_host, function()
-        Test.async(5000)
-
         local pkt_idx = 0
         local pkt_body = {
             "MServer ssl send hello",
@@ -85,11 +83,10 @@ Test.describe("websocket test", function()
                 check_done(self)
             end
         end
+        Test.wait(5000)
     end)
 
     Test.it("websocket local", function()
-        Test.async(5000)
-
         local pkt_idx = 0
         local pkt_body = {
             "MServer say hello",
@@ -152,11 +149,11 @@ Test.describe("websocket test", function()
                 check_done(self)
             end
         end
+
+        Test.wait(5000)
     end)
 
     Test.it("websocket ssl local", function()
-        Test.async(5000)
-
         local pkt_idx = 0
         local pkt_body = {
             "MServer send hello",
@@ -219,6 +216,6 @@ Test.describe("websocket test", function()
                 check_done(self)
             end
         end
-
+        Test.wait(5000)
     end)
 end)

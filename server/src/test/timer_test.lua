@@ -14,9 +14,8 @@ Test.describe("timer test", function()
         local next_ms = now_ms + after
 
         -- interval的精度应该是1毫秒
-        Test.async(10000)
         local timer_interval_test = function()
-            -- printf("timer interval expect %d, got %d", next_ms, ev:ms_time())
+            -- printf("timer interval expect %d, got %d", next_ms, Engine.clock())
             local val = math.abs(Engine.steady_clock() - next_ms)
             if val > 1 then
                 Test.print("timer interval precision  lost", val)
@@ -29,7 +28,12 @@ Test.describe("timer test", function()
         end
 
         Rtti.name_func("timer_interval_test", timer_interval_test)
+
+        -- 保证帧时间和实时时间一致，不然定时器就会有误差
+        Test.assert(now_ms, Engine.clock())
         Timer.interval(after, msec, times, timer_interval_test)
+
+        Test.wait(10000)
     end)
 
     Test.it("timer periodic test", function()
@@ -40,12 +44,11 @@ Test.describe("timer test", function()
         local now = Engine.system_clock()
         local next_s = now + after
 
-        Test.async(10000)
         local timer_periodic_test = function()
             -- printf("timer periodic expect %d, got %d", next_s, ev:time())
             local val = math.abs(Engine.system_clock() - next_s)
             if val > 1 then
-                Test.print("timer periodic precision = " .. val)
+                Test.print("timer periodic precision lost", val)
                 Test.assert(false)
             end
 
@@ -55,6 +58,11 @@ Test.describe("timer test", function()
         end
 
         Rtti.name_func("timer_periodic_test", timer_periodic_test)
+
+        -- 保证帧时间和实时时间一致
+        Test.assert(now, Engine.time_ms())
         Timer.periodic(after, sec, times, timer_periodic_test)
+
+        Test.wait(10000)
     end)
 end)

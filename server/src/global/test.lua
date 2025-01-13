@@ -2,6 +2,8 @@
 Test = {}
 
 --[[
+0. 此模块是参照jest来设计的，分为describe和it，describe相当于模块，it相当于具体功能
+   每一个describe和it都有自己的名字，测试时可通过filter选择执行对应的测试
 1. 所用测试的api都以Test.xxx形式命名，表示这是一个测试用的接口，请勿用于业务逻辑
 2. 一些参数可通过Test.setup设置，具体查看Test.steup接口
 3. 进行异步测试时，必须通过Test.setup接口设置定时器函数
@@ -126,10 +128,12 @@ setmetatable(It, {
 
 -- /////////////////// internal test function //////////////////////////////////
 
-local OK = "[  OK] "
+local OK   = "[  OK] "
 local FAIL = "[FAIL] "
-local PEND = "[PEND] "
-local TEST_FAIL = "__tesTest.fail__"
+
+-- Test.assert、Test.equal等函数失败时，需要中止测试，此时只能用error
+-- 但并不希望把这个堆栈打印出来。这了和执行错误区分开了，需要一个特殊的标识
+local TEST_FAIL = "__Test.fail"
 
 local function append_msg(msg)
     if not T.now.msg then T.now.msg = {} end
@@ -201,24 +205,6 @@ local function test_one_before(b)
         return false
     end
 
-    -- 进入异步等待
-    if b.status == PEND then coroutine.yield() end
-
-    -- 异步超时
-    if b.status == PEND then
-        T.fail = T.fail + #(T.d_now.i)
-        T.print(R("%s%s before (timeout)", FAIL, T.d_now.title))
-        return false
-    end
-
-    -- 异步失败
-    if b.status == FAIL then
-        T.fail = T.fail + #(T.d_now.i)
-        T.print(R(FAIL .. T.d_now.title))
-        print_msg(b)
-        return false
-    end
-
     return true
 end
 
@@ -228,24 +214,6 @@ local function test_one_it(i)
     if not ok then
         T.fail = T.fail + 1
         if not msg:find(TEST_FAIL) then append_msg(msg) end
-        T.print(R(FAIL .. i.title))
-        print_msg(i)
-        return
-    end
-
-    -- 进入异步等待
-    if i.status == PEND then coroutine.yield() end
-
-    -- 异步超时
-    if i.status == PEND then
-        T.fail = T.fail + 1
-        T.print(R("%s%s (timeout)", FAIL, i.title))
-        return
-    end
-
-    -- 异步失败
-    if i.status == FAIL then
-        T.fail = T.fail + 1
         T.print(R(FAIL .. i.title))
         print_msg(i)
         return
@@ -268,7 +236,7 @@ local function test_one_describe(d)
     if not d.should_run and 0 == #d.i then return end
 
     T.print(B(d.title))
-    T.d_now = d
+    T.d_now = d -- 正在测试中的describe
 
     -- 执行before函数
     for _, b in pairs(d.before or {}) do
@@ -334,7 +302,8 @@ local function on_fail(msg)
     append_msg(msg)
 
     if "running" == coroutine.status(T.co) then
-        assert(false, TEST_FAIL)
+        -- 打断当前测试，回到xpcall(即describe或者it开始的地方)，继续执行下一个测试
+        error(TEST_FAIL)
     else
         T.now.status = FAIL
         resume()
@@ -418,22 +387,31 @@ function Test.it(title, mask, func)
     -- run_one_it(i)
 end
 
--- 测试定时器超时，定时器需要全局回调函数
+-- 异步测试定时器超时，一般由定时器回调
 function Test.timeout()
+    -- Timer模块要求此函数需要为全局函数或者二级函数
+
+    T.now.status = FAIL
     resume()
 end
 
--- 标记当前测试为异步，并设置异步超时时间(毫秒)
-function Test.async(timeout)
+-- 等待当前异步测试完成，并设置超时时间(毫秒)
+function Test.wait(timeout)
     assert(not T.now.timer, "call wait multi times")
 
-    T.now.status = PEND
     T.now.timer = T.timer.new(timeout or 2000, Test.timeout)
-end
+    coroutine.yield()
 
--- 当前进程等待n毫秒
-function Test.wait(timeout)
-    assert(false, "not implement yet")
+    -- 异步失败
+    if T.now.status == FAIL then
+        T.fail = T.fail + #(T.d_now.i)
+        T.print(R(FAIL .. T.d_now.title))
+        print_msg(T.now)
+    end
+
+    if T.now.timer then T.timer.del(T.now.timer) end
+    T.now.status = nil
+    T.now.timer = nil
 end
 
 -- 结束当前异步测试
