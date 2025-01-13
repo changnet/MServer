@@ -65,4 +65,76 @@ Test.describe("timer test", function()
 
         Test.wait(10000)
     end)
+
+    Test.it("timer wait test", function()
+        -- wait只能在CoPool中使用
+        CoPool.invoke(function()
+            for _, ms in pairs({1, 300, 5, 20, 88, 0}) do
+                local next_ms = Engine.clock() + ms
+                Timer.wait(ms)
+
+                local clock = Engine.clock()
+                local diff = math.abs(clock - next_ms)
+                if diff > 1 then
+                    Test.assert(next_ms, clock)
+                end
+            end
+            Test.done()
+        end)
+
+        Test.wait(10000)
+    end)
+
+    Test.it("timer fuzzy test", function()
+        -- 不断地添加、删除定时器，主要是为了测试底层定时器结构维护的正确性
+        -- wait只能在CoPool中使用
+        CoPool.invoke(function()
+            local list = {}
+            local beg_clock = Engine.clock()
+            for i = 1, 10000 do
+                local r = math.random(10000) % 2
+                if 0 == r then
+                    local after = math.random(1, 2000)
+                    local next_ms = beg_clock + after
+                    local id = Timer.timeout(after, function()
+                        local clock = Engine.clock()
+                        local diff = math.abs(clock - next_ms)
+                        if diff > 1 then
+                            Test.assert(next_ms, clock)
+                        end
+                        local found = false
+                        for idx, t in pairs(list) do
+                            if t.i == i then
+                                found = true
+                                table.remove(list, idx)
+                                break
+                            end
+                        end
+                        Test.assert(found, "timer not found")
+                    end)
+                    table.insert(list, {i = i, id = id, after = after})
+                elseif 1 == r then
+                    if #list > 0 then
+                        local idx = math.random(#list)
+                        local t = list[idx]
+                        Timer.stop(t.id)
+                        table.remove(list, idx)
+                    end
+                end
+
+                -- 等待一部分定时器超时
+                if 0 == i % 250  then Timer.wait(500) end
+            end
+            local after = 0
+            for _, t in pairs(list) do
+                if t.after > after then after = t.after end
+            end
+            Test.print("wait all timer finish", after)
+            Timer.wait(after) -- 等待所有定时器超时
+            Test.equal(#list, 0)
+            Test.done()
+        end)
+
+        Test.wait(10000)
+    end)
 end)

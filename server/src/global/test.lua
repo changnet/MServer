@@ -130,7 +130,7 @@ setmetatable(It, {
 
 local OK   = "[  OK] "
 local FAIL = "[FAIL] "
-
+local PEND = "[PEND] "
 -- Test.assert、Test.equal等函数失败时，需要中止测试，此时只能用error
 -- 但并不希望把这个堆栈打印出来。这了和执行错误区分开了，需要一个特殊的标识
 local TEST_FAIL = "__Test.fail"
@@ -200,8 +200,24 @@ end
 local function test_one_before(b)
     local ok, msg = xpcall(b.func, error_msgh)
     if not ok then
+        -- before函数失败，则整个describe就不用再执行了，全部失败
         T.fail = T.fail + #(T.d_now.i)
         T.print(R("%s%s before %s", FAIL, T.d_now.title, msg))
+        return false
+    end
+
+    -- 异步超时
+    if b.status == PEND then
+        T.fail = T.fail + #(T.d_now.i)
+        T.print(R("%s%s before (timeout)", FAIL, T.d_now.title))
+        return false
+    end
+
+    -- 异步失败
+    if b.status == FAIL then
+        T.fail = T.fail + #(T.d_now.i)
+        T.print(R(FAIL .. T.d_now.title))
+        print_msg(b)
         return false
     end
 
@@ -214,6 +230,22 @@ local function test_one_it(i)
     if not ok then
         T.fail = T.fail + 1
         if not msg:find(TEST_FAIL) then append_msg(msg) end
+        T.print(R(FAIL .. i.title))
+        print_msg(i)
+        return
+    end
+
+    -- 异步超时
+    if i.status == PEND then
+        T.fail = T.fail + 1
+        T.print(R("%s%s (timeout)", FAIL, i.title))
+        return
+    end
+
+    -- 异步测试失败，唤醒协程会标记status为TAIL
+    -- 执行wait的，只能是it，不可能为describe
+    if i.status == FAIL then
+        T.fail = T.fail + 1
         T.print(R(FAIL .. i.title))
         print_msg(i)
         return
@@ -391,7 +423,11 @@ end
 function Test.timeout()
     -- Timer模块要求此函数需要为全局函数或者二级函数
 
-    T.now.status = FAIL
+    -- Timer.timeout超时会自动删除，并不需要手动删除
+    -- if T.now.timer then T.timer.del(T.now.timer) end
+
+    T.now.timer = nil
+    T.now.status = PEND
     resume()
 end
 
@@ -402,21 +438,14 @@ function Test.wait(timeout)
     T.now.timer = T.timer.new(timeout or 2000, Test.timeout)
     coroutine.yield()
 
-    -- 异步失败
-    if T.now.status == FAIL then
-        T.fail = T.fail + #(T.d_now.i)
-        T.print(R(FAIL .. T.d_now.title))
-        print_msg(T.now)
-    end
-
     if T.now.timer then T.timer.del(T.now.timer) end
-    T.now.status = nil
     T.now.timer = nil
+    -- T.now.status = nil -- 这里保留异步完成后的状态，需要根据状态统计成功、失败
 end
 
 -- 结束当前异步测试
 function Test.done()
-    T.timer.del(T.now.timer)
+    if T.now.timer then T.timer.del(T.now.timer) end
 
     T.now.timer = nil
     T.now.status = nil

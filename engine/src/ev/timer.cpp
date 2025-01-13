@@ -188,6 +188,7 @@ void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now, ThreadContext *ctx)
 
         assert(timer->index_);
 
+        int32_t id = timer->id_;
         if (timer->repeat_)
         {
             timer->at_ += timer->repeat_;
@@ -203,10 +204,10 @@ void TimerMgr::heap_timeout(HeapTimer &ht, int64_t now, ThreadContext *ctx)
         {
             // 不重复的定义器，删除
             delete_heap(ht, timer);
-            ht.hash_.erase(timer->id_);
+            ht.hash_.erase(id);
         }
 
-        ctx->emplace_message(0, 0, ThreadMessage::TIMER, nullptr, timer->id_);
+        ctx->emplace_message(0, 0, ThreadMessage::TIMER, nullptr, id);
     }
 }
 

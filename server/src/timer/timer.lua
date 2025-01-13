@@ -58,7 +58,7 @@ function Timer.wait(after)
 
     if 0 == after then
         -- 0比较特殊，纯粹是为了异步执行，避免数据回溯或者调用嵌套。不需要发起定时器
-        g_worker:emplace_message(0, 0, ThreadMessage.TIMER, nil, session)
+        g_worker:emplace_message(0, 0, ThreadMessage.TIMER, nil, timer_id)
     else
         g_worker:timer_start(timer_id, after, 0, P_ALIGN)
     end
@@ -120,7 +120,9 @@ end
 function Timer.stop(timer_id)
     local info = this.timer[timer_id]
     if not info then
-        printf("timer stop not id found %d: %s", timer_id or 0, debug.traceback())
+        -- timer回调是把事件放到队列，假如这时还来不及处理
+        -- 其他逻辑则删除了这个定时器，就会出现找不到的情况，不一定是错误
+        printf("timer stop no id found %d: %s", timer_id or 0, debug.traceback())
         return false
     end
 
@@ -176,7 +178,7 @@ end
 local function timer_dispatch(src, udata, timer_id)
     local timer = this.timer[timer_id]
     if not timer then
-        eprintf("timer no cb found,abort %d", timer_id)
+        eprintf("timer no callback found,abort %d", timer_id)
 
         -- 应该不会出现。数据没了无法知道是何种类型的定时器，只能都尝试
         g_worker:periodic_stop(timer_id)
@@ -194,7 +196,14 @@ local function timer_dispatch(src, udata, timer_id)
     local times = timer.times
     if times > 0 then -- -1表示无限次数循环
         timer.ts = timer.ts + 1
-        if timer.ts >= times then Timer.stop(timer_id) end
+        if timer.ts >= times then
+            this.timer[timer_id] = nil
+            if timer.periodic then
+                g_worker:periodic_stop(timer_id)
+            else
+                g_worker:timer_stop(timer_id)
+            end
+        end
     end
 
     return timer.cb()
