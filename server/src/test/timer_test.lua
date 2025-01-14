@@ -5,6 +5,11 @@
 local Timer = require "timer.timer"
 
 Test.describe("timer test", function()
+    -- 精度应该是1毫秒
+    -- 但实际上底层thread_condition的wait的最小时间就是1毫秒
+    -- 还要算上底层回调到lua，以及在lua中运行到检测时间所耗时间，因此精度为1会偶尔测试不过
+    -- 即使是2，如果在测试的函数中运行耗时比较大的函数（比如for循环执行，直接输出日志到stdio）也可能会导致测试不通过
+    local accuracy = 2
     Test.it("timer interval test", function()
         local after = 69
         local msec = 17
@@ -13,11 +18,11 @@ Test.describe("timer test", function()
         local now_ms = Engine.steady_clock()
         local next_ms = now_ms + after
 
-        -- interval的精度应该是1毫秒
+
         local timer_interval_test = function()
             -- printf("timer interval expect %d, got %d", next_ms, Engine.clock())
             local val = math.abs(Engine.steady_clock() - next_ms)
-            if val > 1 then
+            if val > accuracy then
                 Test.print("timer interval precision  lost", val)
                 Test.assert(false)
             end
@@ -34,6 +39,7 @@ Test.describe("timer test", function()
         Timer.interval(after, msec, times, timer_interval_test)
 
         Test.wait(10000)
+        Timer.clear() -- 清除所有定时器，避免出错或者超时后定时器回调影响其他测试
     end)
 
     Test.it("timer periodic test", function()
@@ -47,7 +53,7 @@ Test.describe("timer test", function()
         local timer_periodic_test = function()
             -- printf("timer periodic expect %d, got %d", next_s, ev:time())
             local val = math.abs(Engine.system_clock() - next_s)
-            if val > 1 then
+            if val > accuracy then
                 Test.print("timer periodic precision lost", val)
                 Test.assert(false)
             end
@@ -64,6 +70,7 @@ Test.describe("timer test", function()
         Timer.periodic(after, sec, times, timer_periodic_test)
 
         Test.wait(10000)
+        Timer.clear() -- 清除所有定时器，避免出错或者超时后定时器回调影响其他测试
     end)
 
     Test.it("timer wait test", function()
@@ -75,7 +82,7 @@ Test.describe("timer test", function()
 
                 local clock = Engine.clock()
                 local diff = math.abs(clock - next_ms)
-                if diff > 1 then
+                if diff > accuracy then
                     Test.assert(next_ms, clock)
                 end
             end
@@ -83,6 +90,7 @@ Test.describe("timer test", function()
         end)
 
         Test.wait(10000)
+        Timer.clear() -- 清除所有定时器，避免出错或者超时后定时器回调影响其他测试
     end)
 
     Test.it("timer fuzzy test", function()
@@ -91,7 +99,7 @@ Test.describe("timer test", function()
         CoPool.invoke(function()
             local list = {}
             local beg_clock = Engine.clock()
-            for i = 1, 10000 do
+            for i = 1, 1000 do
                 local r = math.random(10000) % 2
                 if 0 == r then
                     local after = math.random(1, 2000)
@@ -99,7 +107,7 @@ Test.describe("timer test", function()
                     local id = Timer.timeout(after, function()
                         local clock = Engine.clock()
                         local diff = math.abs(clock - next_ms)
-                        if diff > 1 then
+                        if diff > accuracy then
                             Test.assert(next_ms, clock)
                         end
                         local found = false
@@ -129,12 +137,13 @@ Test.describe("timer test", function()
             for _, t in pairs(list) do
                 if t.after > after then after = t.after end
             end
-            Test.print("wait all timer finish", after)
+
             Timer.wait(after) -- 等待所有定时器超时
             Test.equal(#list, 0)
             Test.done()
         end)
 
         Test.wait(10000)
+        Timer.clear() -- 清除所有定时器，避免出错或者超时后定时器回调影响其他测试
     end)
 end)

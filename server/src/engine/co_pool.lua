@@ -100,7 +100,7 @@ function CoPool.invoke(f, ...)
     local co = tableremove(idle_co)
     if not co then
         co = co_create(co_body)
-        local ok = co_resume(co)
+        local ok = co_resume(co) -- 执行co_body，把自己放到协程池
         if not ok then co_return(co, false) end
     end
 

@@ -175,6 +175,21 @@ function Timer.periodic(after, sec, times, func, ...)
     return timer_id
 end
 
+-- 停止并删除所有定时器
+function Timer.clear()
+    local timers = this.timer
+    this.timer = {}
+
+    for timer_id, info in pairs(timers) do
+        if info.periodic then
+            g_worker:periodic_stop(timer_id)
+        else
+            g_worker:timer_stop(timer_id)
+        end
+    end
+
+end
+
 local function timer_dispatch(src, udata, timer_id)
     local timer = this.timer[timer_id]
     if not timer then
@@ -206,7 +221,7 @@ local function timer_dispatch(src, udata, timer_id)
         end
     end
 
-    return timer.cb()
+    return CoPool.invoke(timer.cb)
 end
 
 ThreadMessage.reg(ThreadMessage.TIMER, timer_dispatch)

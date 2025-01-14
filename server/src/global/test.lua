@@ -542,15 +542,9 @@ end
 
 -- run current test session
 function Test.run()
-    local co, is_main  = coroutine.running()
-    if is_main then
-        T.co = coroutine.create(run)
+    T.co = coroutine.create(run)
 
-        return resume()
-    else
-        T.co = co
-        run()
-    end
+    return resume()
 end
 
 -- /////////////////////////////////////////////////////////////////////////////
