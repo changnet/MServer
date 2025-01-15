@@ -36,12 +36,12 @@ function Shutdown.begin()
         w:stop(true)
     end
 
-    g_engine:stop()
+    g_mthread:stop()
 end
 
 function Shutdown.worker_stop()
     print("worker stop now", LOCAL_ADDR)
-    g_worker:stop()
+    g_thread:stop()
 end
 
 -- 终止程序(不走数据只在、清理流程)
@@ -49,5 +49,5 @@ function Shutdown.terminate()
     for _, w in pairs(WorkerHash) do
         w:stop(true)
     end
-    g_engine:stop()
+    g_mthread:stop()
 end

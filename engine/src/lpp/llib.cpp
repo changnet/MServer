@@ -302,7 +302,7 @@ void open_env(lua_State *L)
     lua_setglobal(L, "g_async_log");
 
     lcpp::Class<EV>::push(L, StaticGlobal::E, false);
-    lua_setglobal(L, "g_engine");
+    lua_setglobal(L, "g_mthread");
 
     lcpp::Class<Env>::push(L, StaticGlobal::V, false);
     lua_setglobal(L, "g_env");

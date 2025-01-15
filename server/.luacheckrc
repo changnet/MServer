@@ -12,11 +12,10 @@ max_comment_line_length = 256 -- 注释行长
 read_globals =
 {
     "engine",
-    "g_engine",
+    "g_mthread",
     "g_async_log",
     "g_env",
     "Engine",
-    "g_worker",
     "__VERSION__",
     "__TIMESTAMP__",
     "LINUX",
@@ -25,14 +24,19 @@ read_globals =
     "IPV6"
 }
 
+local rw_globals = {
+    -- 一些做了扩展的内部库需要设置为global
+    "table",
+    "string",
+    "utf8",
+    "math",
+    "g_thread",
+}
+
 -- 可读可写全局变量
 globals = require "__globals"
 
--- 一些做了扩展的内部库需要设置为global
-table.insert(globals, "math")
-table.insert(globals, "table")
-table.insert(globals, "string")
-table.insert(globals, "utf8")
+for _, v in pairs(rw_globals) do table.insert(globals, v) end
 
 exclude_files =
 {

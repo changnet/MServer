@@ -79,6 +79,7 @@ end
 
 -- 进程预加载必要的组件
 function Bootstrap.process_preload(process_id)
+    g_thread = g_mthread
     set_path()
 
     require "global.oo" -- 这个文件不能热更
@@ -91,7 +92,7 @@ function Bootstrap.process_preload(process_id)
 
     PROCESS_ID = process_id
     LOCAL_ADDR = Engine.make_address(process_id, 0, 1)
-    Engine.add_thread_ctx(LOCAL_ADDR, g_engine:toludata())
+    Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "engine.co_pool"
     require "message.thread_message"
@@ -130,7 +131,7 @@ function Bootstrap.worker_preload(addr, log_name)
     PROCESS_ID = proc_id
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
-    Engine.add_thread_ctx(addr, g_worker:toludata())
+    Engine.add_thread_ctx(addr, g_thread:toludata())
 
     require "engine.co_pool"
     require "message.thread_message"

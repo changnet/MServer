@@ -53,7 +53,7 @@ bool WorkerThread::initialize()
 
     // push一些共用的全局对象到lua，比如全局日志对象
     lcpp::Class<WorkerThread>::push(L_, this, false);
-    lua_setglobal(L_, "g_worker");
+    lua_setglobal(L_, "g_thread");
 
     lua_pushcfunction(L_, traceback);
     /* 加载程序入口脚本 */

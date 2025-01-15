@@ -58,9 +58,9 @@ function Timer.wait(after)
 
     if 0 == after then
         -- 0比较特殊，纯粹是为了异步执行，避免数据回溯或者调用嵌套。不需要发起定时器
-        g_worker:emplace_message(0, 0, ThreadMessage.TIMER, nil, timer_id)
+        g_thread:emplace_message(0, 0, ThreadMessage.TIMER, nil, timer_id)
     else
-        g_worker:timer_start(timer_id, after, 0, P_ALIGN)
+        g_thread:timer_start(timer_id, after, 0, P_ALIGN)
     end
 
     return coroutine.yield()
@@ -96,9 +96,9 @@ function Timer.interval(after, msec, times, func, ...)
     }
 
     if 0 == after and 1 == times then
-        return g_worker:emplace_message(0, 0, ThreadMessage.TIMER, nil, timer_id)
+        return g_thread:emplace_message(0, 0, ThreadMessage.TIMER, nil, timer_id)
     end
-    local e = g_worker:timer_start(timer_id, after, msec, P_ALIGN)
+    local e = g_thread:timer_start(timer_id, after, msec, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
         eprintf("interval start fail: id = %d, e = %d", timer_id, e)
@@ -128,9 +128,9 @@ function Timer.stop(timer_id)
 
     this.timer[timer_id] = nil
     if info.periodic then
-        g_worker:periodic_stop(timer_id)
+        g_thread:periodic_stop(timer_id)
     else
-        g_worker:timer_stop(timer_id)
+        g_thread:timer_stop(timer_id)
     end
 
     return true
@@ -165,7 +165,7 @@ function Timer.periodic(after, sec, times, func, ...)
         periodic = true,
     }
 
-    local e = g_worker:periodic_start(timer_id, after, sec, P_ALIGN)
+    local e = g_thread:periodic_start(timer_id, after, sec, P_ALIGN)
     if e <= 0 then
         this.timer[timer_id] = nil
         eprintf("periodic start fail: id = %d, e = %d", timer_id, e)
@@ -182,9 +182,9 @@ function Timer.clear()
 
     for timer_id, info in pairs(timers) do
         if info.periodic then
-            g_worker:periodic_stop(timer_id)
+            g_thread:periodic_stop(timer_id)
         else
-            g_worker:timer_stop(timer_id)
+            g_thread:timer_stop(timer_id)
         end
     end
 
@@ -196,8 +196,8 @@ local function timer_dispatch(src, udata, timer_id)
         eprintf("timer no callback found,abort %d", timer_id)
 
         -- 应该不会出现。数据没了无法知道是何种类型的定时器，只能都尝试
-        g_worker:periodic_stop(timer_id)
-        g_worker:timer_stop(timer_id)
+        g_thread:periodic_stop(timer_id)
+        g_thread:timer_stop(timer_id)
         return
     end
 
@@ -214,9 +214,9 @@ local function timer_dispatch(src, udata, timer_id)
         if timer.ts >= times then
             this.timer[timer_id] = nil
             if timer.periodic then
-                g_worker:periodic_stop(timer_id)
+                g_thread:periodic_stop(timer_id)
             else
-                g_worker:timer_stop(timer_id)
+                g_thread:timer_stop(timer_id)
             end
         end
     end

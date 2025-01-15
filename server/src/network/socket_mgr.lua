@@ -123,7 +123,7 @@ local function do_read(socket)
 
     -- 还有消息，延后处理
     s:set_event(EV_READ)
-    g_worker:emplace_message(0, 0, ThreadMessage.SOCKET, socket.socket_id)
+    g_thread:emplace_message(0, 0, ThreadMessage.SOCKET, socket.socket_id)
 end
 
 local function do_close(socket)

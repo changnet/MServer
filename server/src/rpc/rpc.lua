@@ -27,7 +27,7 @@ local LuaCodec = require "engine.LuaCodec"
 g_lcodec = g_lcodec or LuaCodec()
 
 local g_lcodec = g_lcodec
-local g_engine = g_engine
+local g_mthread = g_mthread
 local WorkerHash = WorkerHash
 local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
@@ -45,7 +45,7 @@ end
 
 local function send_func_factory(name)
     return function(addr, ...)
-        local w = WorkerHash[addr] or g_engine
+        local w = WorkerHash[addr] or g_mthread
 
         print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
         local ptr, size = g_lcodec:encode_to_buffer(0, name, ...)
@@ -55,7 +55,7 @@ end
 
 local function call_func_factory(name)
     return function(addr, ...)
-        local w = WorkerHash[addr] or g_engine
+        local w = WorkerHash[addr] or g_mthread
 
         -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
         local session = CoPool.current_session()
@@ -122,7 +122,7 @@ local function do_request(src, session, name, ...)
         print("rpc no func found", name, LOCAL_ADDR)
 
         local ptr, size = g_lcodec:encode_to_buffer(session, false)
-        local w = WorkerHash[src] or g_engine
+        local w = WorkerHash[src] or g_mthread
         return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
     end
 
@@ -133,7 +133,7 @@ local function do_request(src, session, name, ...)
         local ptr, size = g_lcodec:encode_to_buffer(
             session, CoPool.invoke(func, ...))
 
-        local w = WorkerHash[src] or g_engine
+        local w = WorkerHash[src] or g_mthread
         return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
     end
 end
