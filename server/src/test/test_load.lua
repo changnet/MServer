@@ -9,9 +9,10 @@ require "test.mt_test"
 require "test.timer_test"
 require "test.https_test"
 require "test.websocket_test"
+require "test.lua_codec_test"
+require "test.pbc_codec_test"
+require "test.co_test"
 
--- require "test.lua_codec_test"
--- require "test.pbc_codec_test"
 --[[
 require "test.grid_aoi_test"
 require "test.list_aoi_test"

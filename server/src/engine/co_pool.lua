@@ -47,7 +47,34 @@ local function co_invoke(co, f, ...)
     current_co = co
     busy_co[co] = 1
 
-    return f(...)
+    -- return f(...) -- 非递归方案
+    return co_invoke(co, co_yield(CO_IDLE, f(...))) -- 递归方案
+end
+
+local function co_body()
+    local co = co_running()
+    local session = next_session()
+
+    co_to_session[co] = session
+    session_to_co[session] = co
+
+    --[[
+    协程池执行的函数f和参数是通过yield传过来的，而协程挂起时，返回的值需要作为yield的参数
+    这属于一个嵌套依赖，鸡生蛋还是蛋生鸡的问题
+
+    使用循环就没法正确返回值
+    在co_invoke使用递归可以，但会堆栈溢出。幸好Lua的尾调用可以解决堆栈溢出
+
+    一般情况下使用协程并不需要返回值，所以用循环的方案更好？
+    ]]
+
+    -- 非递归方案
+    -- while true do
+    --     co_invoke(co, co_yield(CO_IDLE))
+    -- end
+
+    -- 递归方案
+    co_invoke(co, co_yield(CO_IDLE))
 end
 
 -- 处理协程resume的返回值
@@ -74,27 +101,15 @@ local function co_return(co, ok, v1, ...)
     elseif v1 == CO_IDLE then
         busy_co[co] = nil
         tableinsert(idle_co, co)
+
+        return true, ...
     end
 
     return true, v1, ...
 end
 
-local function co_body()
-    local co = co_running()
-    local session = next_session()
-
-    co_to_session[co] = session
-    session_to_co[session] = co
-
-    while true do
-        co_invoke(co, co_yield(CO_IDLE))
-
-        -- 不能在这里处理co，因为co报错时，这里就不会再执行了
-        -- busy_co[co] = nil
-    end
-end
-
 -- 从协程库里获取一个空闲协程并执行函数f
+-- @return 返回是否成功(true or false), 函数f返回的其他参数（如果函数f yield，则返回yield的参数）
 function CoPool.invoke(f, ...)
     -- a call table.remove（l) removes the last element of list l
     local co = tableremove(idle_co)
@@ -119,4 +134,14 @@ end
 -- 获取当前执行的协程session
 function CoPool.current_session()
     return co_to_session[current_co]
+end
+
+-- 获取空闲的协程数量
+function CoPool.idle_count()
+    return #idle_co
+end
+
+-- 获取使用中的协程数量
+function CoPool.busy_count()
+    table.size(busy_co)
 end
