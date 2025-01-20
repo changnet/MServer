@@ -40,9 +40,60 @@ Test.describe("coroutine test", function()
     end)
 
     Test.it("coroutine perf test", function()
+        local func = function()
+            coroutine.yield(CoPool.current_session())
+        end
+        local func2 = function() end
+
+        --[[
+        [T1LP01-20 20:23:29]    1000 coroutine memory usage 1220.19 kb
+        [T1LP01-20 20:23:29]    1000 rtti callback memory usage 78.12 kb
+        [T1LP01-20 20:23:29]    1000 coroutine resume time 3
+        [T1LP01-20 20:23:29]    1000 rtti callback time 0
+        ]]
+
+        local count = 1000
+
         -- 创建1000个协程消耗多少内存
+        local mem = collectgarbage("count")
+        for _ = 1, count do
+            CoPool.invoke(func)
+        end
+        print(string.format("%d coroutine memory usage %.2f kb",
+             count, collectgarbage("count") - mem))
+
         -- 创建1000个普通回调消耗多少内存
+        mem = collectgarbage("count")
+        for _ = 1, count do
+            Rtti.make_func_cb(func)
+        end
+        print(string.format("%0.f rtti callback memory usage %.2f kb",
+             count, collectgarbage("count") - mem))
+
         -- 唤醒1000协程需要多少时间
+        local ss_list = {}
+        for _ = 1, count do
+            local ok, ss = CoPool.invoke(func)
+            Test.assert(ok)
+            table.insert(ss_list, ss)
+        end
+        local b1 = Test.clock()
+        for _, session in pairs(ss_list) do
+            CoPool.resume(session)
+        end
+        local e1 = Test.clock()
+        print(string.format("%0.f coroutine resume time %d ", count, e1 - b1))
+
+        local cb_list = {}
+        for _ = 1, count do
+            table.insert(cb_list, Rtti.make_func_cb(func2))
+        end
+        local b2 = Test.clock()
+        for _, cb in pairs(cb_list) do
+            cb()
+        end
+        local e2 = Test.clock()
+        print(string.format("%0.f rtti callback time %d ", count, e2 - b2))
     end)
 
 end)
