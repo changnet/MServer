@@ -2,12 +2,11 @@
 -- 2017-12-11
 -- xzc
 
-local util = require "engine.util"
-local TlsCtx = require "engine.TlsCtx"
-local HttpSocket = require "http.http_socket"
-
-
 Test.describe("http test", function()
+    local util = require "engine.util"
+    local TlsCtx = require "engine.TlsCtx"
+    local HttpSocket = require "http.http_socket"
+
     -- 产生一个缓存，避免下面连接时查询dns导致测试超时
     -- example.com不稳定，经常连不上，用postman来测试
     -- local exp_host = "www.example.com"

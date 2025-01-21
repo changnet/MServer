@@ -2,7 +2,7 @@ local network_mgr = network_mgr
 local Conn = require "network.conn"
 
 -- 与客户端的连接
-local ScConn = oo.class(..., Conn)
+local ScConn = oo.class(Conn)
 
 ScConn.default_param = {
     iot = network_mgr.IOT_NONE, -- io类型

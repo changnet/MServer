@@ -4,7 +4,7 @@ local Socket = require "network.socket"
 local HttpSocket = require "http.http_socket"
 
 -- websocket连接
-local WebSocket = oo.class(..., Socket)
+local WebSocket = oo.class(Socket)
 
 -- 具体的标准要看RFC6455:https://datatracker.ietf.org/doc/html/rfc6455
 -- 不同的实现握手http头略有不同，比如链接到skynet的websocket，就必须要有

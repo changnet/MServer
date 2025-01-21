@@ -5,7 +5,7 @@
 
 local attr_base_conf = require "config.attr_base_conf"
 
-local Attribute = oo.class(...)
+local Attribute = oo.class()
 
 function Attribute:__init()
     self.attribute = {}

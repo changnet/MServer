@@ -7,7 +7,7 @@ local item_conf = require "config.item_conf"
 
 local Module = require "modules.player.module"
 
-local Bag = oo.class(..., Module)
+local Bag = oo.class(Module)
 
 -- 初始化
 function Bag:__init(pid, player)

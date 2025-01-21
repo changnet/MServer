@@ -3,7 +3,7 @@
 -- xzc
 -- 机器人对象
 
-local Android = oo.class(...)
+local Android = oo.class()
 
 local CsConn = require "network.cs_conn"
 

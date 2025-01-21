@@ -6,7 +6,7 @@
 -- 节点的左子节点是 2*index，
 -- 节点的右子节点是 2*index+1，
 -- 每一个节点大于（或等于）这个节点的子节点，但左右子节点的大小则不固定
-local MinHeap = oo.class(...)
+local MinHeap = oo.class()
 
 function MinHeap:__init()
     self.heap = {}

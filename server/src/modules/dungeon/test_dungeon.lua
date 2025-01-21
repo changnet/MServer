@@ -1,5 +1,5 @@
 -- 测试副本用的
-local TestDungeon = oo.singleton(...)
+local TestDungeon = oo.singleton()
 
 function TestDungeon:__init()
     self.handle = {}

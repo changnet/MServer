@@ -2,7 +2,7 @@ local network_mgr = network_mgr
 local Conn = require "network.conn"
 
 -- 客户端与服务器的连接，用于机器人和单元测试
-local CsConn = oo.class(..., Conn)
+local CsConn = oo.class(Conn)
 
 CsConn.default_param = {
     iot = network_mgr.IOT_NONE, -- io类型

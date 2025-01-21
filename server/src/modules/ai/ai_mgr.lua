@@ -1,7 +1,7 @@
 -- ai管理
 local ai_conf = require "config.ai_base_conf"
 
-local AiMgr = oo.singleton(...)
+local AiMgr = oo.singleton()
 
 -- 定义AI类型对应的ai逻辑文件
 local AI_TYPE = {

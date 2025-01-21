@@ -25,7 +25,7 @@ end
 -- 2. wrap原有Mongodb的find、count这些函数需要重写一次，不太优雅
 
 -- 用coroutine来封装一套接近同步操作的数据库接口
-local SyncMongodb = oo.class(...)
+local SyncMongodb = oo.class()
 
 function SyncMongodb:__init(mongodb, routine)
     local co = coroutine.create(routine)

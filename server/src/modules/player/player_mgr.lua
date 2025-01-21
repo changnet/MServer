@@ -3,7 +3,7 @@
 -- xzc
 
 -- 玩家对象管理
-PlayerMgr = oo.singleton(...)
+PlayerMgr = oo.singleton()
 
 local Player = require "modules.player.player"
 local this = global_storage("PlayerMgr", {

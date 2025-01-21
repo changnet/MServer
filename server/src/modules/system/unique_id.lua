@@ -2,7 +2,7 @@
 -- 2017-03-28
 -- xzc
 local UNIQUEID = UNIQUEID
-local UniqueId = oo.singleton(...)
+local UniqueId = oo.singleton()
 
 local player_query = string.format('{"_id":%d}', UNIQUEID.PLAYER)
 

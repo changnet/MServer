@@ -78,7 +78,7 @@ end
 -- 要求热更时，能热更所有文件(基类有更新，则子类也需要更新)
 -- 使用这个继承，设计框架时要注意引用先后关系
 -- 先热更子类，再热更基类就出现子类用了旧的基类函数
-local function fast_class(new_method, clz, super, ...)
+local function fast_class(new_method, name, clz, super, ...)
     super = super or class_base
 
     local supers = {super, ...}
@@ -92,6 +92,8 @@ local function fast_class(new_method, clz, super, ...)
 
     -- 设置metatable的__index,创建实例(调用__call)时让自己成为一个metatable
     rawset(clz, "__index", clz)
+    rawset(clz, "__name", name)
+
     -- 设置自己的metatable为父类，这样才能调用父类函数
     setmetatable(clz, {__call = new_method})
 
@@ -99,50 +101,48 @@ local function fast_class(new_method, clz, super, ...)
 end
 
 --[[
-    声明lua类，有3种写法
-    oo.class( ... ) -- 无继承
-    oo.class( ...,s3,s2,s1,s0 ) -- 多继承
-    oo.class( ClassName,s0 ) -- 手动声明类名
-
-    对于lua5.1，require函数传入模块路径，刚好用作类名，避免冲突，即上面的 ...
-    但lua5.3 require传入两个参数，因此super的类型需要判断一下
-    oo.class( ...,s3,s2,s1,s0 )这种写法，会让 ... 只取第一个值
+    声明lua类
+    oo.class() -- 无继承
+    oo.class( s3,s2,s1,s0 ) -- 多继承
 ]]
-local function raw_class(new_method, name, super, ...)
-    local clz = {}
-    if type(name) == "string" then
-        -- 如果已经存在，则是热更，先把旧函数都清空
-        if name_class[name] ~= nil then
-            clz = name_class[name]
-            for k in pairs(clz) do clz[k] = nil end
-        else
-            name_class[name] = clz
-        end
+local function create_class(new_method, ...)
+    local info = debug.getinfo(2)
 
-        if stat_flag then -- 状态统计
-            class_name[clz] = name
-        end
+    -- name保证不同路径同名文件中的类不会重复
+    -- short_name是用来打印日志，名字太长就不好看了
+    -- 同一个文件中可声明多个类，因此需要行号
+    local name = string.format("%s_%d", info.short_src, info.currentline)
+
+    local file_name = string.match(info.short_src, "([^/\\]+)%.lua")
+    local short_name = string.format("%s_%d", file_name, info.currentline)
+
+    local clz = name_class[name]
+    -- 如果已经存在，则是热更，先把旧函数都清空
+    if clz then
+        clz = name_class[name]
+        for k in pairs(clz) do clz[k] = nil end
     else
-        error("oo class no name specify")
-        return
+        clz = {}
+        name_class[name] = clz
+    end
+    if stat_flag then -- 状态统计
+        class_name[clz] = name
     end
 
-    if "table" == type(super) then
-        -- lazy_class(new_method,clz,super,...)
-        return fast_class(new_method, clz, super, ...)
-    else
-        return fast_class(new_method, clz, ...)
-    end
+    -- lazy_class(new_method,clz,super,...)
+    return fast_class(new_method, short_name, clz, ...)
 end
 
 -- 声明普通类
-function oo.class(name, ...)
-    return raw_class(new, name, ...)
+-- @param ... 基础，可继承多个基类
+function oo.class(...)
+    return create_class(new, ...)
 end
 
 -- 声明lua单例类
-function oo.singleton(name, ...)
-    return raw_class(new_singleton, name, ...)
+-- @param ... 基础，可继承多个基类
+function oo.singleton(...)
+    return create_class(new_singleton, ...)
 end
 
 -- ******************************************************************************

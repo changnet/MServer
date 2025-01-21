@@ -297,6 +297,8 @@ local function test_one_describe(d)
 end
 
 local function run_one_describe(d)
+    -- 如果一个describe包含在filter中，则无论it是否包含，都执行
+    -- 如果一个describe不包含在filter中，则要检测it是否包含
     local should_run = true
     if T.filter then should_run = string.find_whole(d.title, T.filter) end
     if T.skip then

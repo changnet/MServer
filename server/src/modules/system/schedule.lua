@@ -2,7 +2,7 @@
 -- 2018-02-11
 -- xzc
 -- 系统级定时器，处理一些定时开启、天循环、周循环开启的事件
-local Schedule = oo.singleton(...)
+local Schedule = oo.singleton()
 
 function Schedule:__init()
 end

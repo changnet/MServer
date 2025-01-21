@@ -13,7 +13,7 @@ local PAGE_POST = HTTP.PPOST
 local OPENED = SocketMgr.OPENED
 
 -- http连接
-local HttpSocket = oo.class(..., Socket)
+local HttpSocket = oo.class(Socket)
 
 HttpSocket.default_param = {
     pkt = EngineSocket.PT_HTTP, -- 打包解包类型

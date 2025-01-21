@@ -5,7 +5,7 @@
 local Map = require "engine.Map"
 local Astar = require "engine.Astar"
 
-local MapMgr = oo.singleton(...)
+local MapMgr = oo.singleton()
 
 function MapMgr:__init()
     self.map = {} -- map id为key

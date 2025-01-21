@@ -2,7 +2,7 @@
 -- 2017-05-26
 -- xzc
 -- mysql连接管理
-local MysqlMgr = oo.singleton(...)
+local MysqlMgr = oo.singleton()
 
 local Sql = require "engine.Sql"
 

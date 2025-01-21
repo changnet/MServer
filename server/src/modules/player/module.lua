@@ -2,7 +2,7 @@
 -- 2018-02-06
 -- xzc
 -- 玩家子模块基类
-local Module = oo.class(...)
+local Module = oo.class()
 
 function Module:__init(pid, player)
     self.pid = pid

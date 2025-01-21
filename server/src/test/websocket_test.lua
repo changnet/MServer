@@ -4,12 +4,11 @@
 -- https://tools.ietf.org/pdf/rfc6455.pdf section1.3 page6
 -- example at: https://www.websocket.org/aboutwebsocket.html
 
-local WebSocket = require "network.websocket"
-local TlsCtx = require "engine.TlsCtx"
-
-local ws_default_param = WebSocket.default_param
-
 Test.describe("websocket test", function()
+    local WebSocket = require "network.websocket"
+    local TlsCtx = require "engine.TlsCtx"
+
+    local ws_default_param = WebSocket.default_param
     --[[
     http://websockets.org/echo.html 这个已经不维护了
     https://echo.websocket.org/.ws（https://websocket.org/tools/websocket-echo-server） 这个服务器还在，但本地ping经常不通

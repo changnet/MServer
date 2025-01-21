@@ -2,7 +2,7 @@
 -- xzc
 -- 2018-11-11
 -- 插入法排序
-local InsertionRank = oo.class(...)
+local InsertionRank = oo.class()
 
 -- 适用于频繁更新，快速根据排名获取id，或者根据id获取排名的情况。比如游戏里常见的伤害
 -- 排行榜，人数不多，名次基本不变化，伤害高的一直在前面，但更新频繁，玩家1秒可能会打出

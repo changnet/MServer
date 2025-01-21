@@ -6,7 +6,7 @@ require "modules.attribute.attribute_header"
 local Attribute = require "modules.attribute.attribute"
 
 local ABTSYS = ABTSYS
-local AttributeSys = oo.class(...)
+local AttributeSys = oo.class()
 
 function AttributeSys:__init(pid)
     self.pid = pid

@@ -222,11 +222,10 @@ Test.describe("table extend library test", function()
 end)
 
 Test.describe("util.head test", function()
-    local MaxHeap = require "util.max_heap"
-
-    local tbl = {9, 6, 7, 4, 8, 3, 2, 1, 5}
-
     Test.it("max heap test", function()
+        local MaxHeap = require "util.max_heap"
+
+        local tbl = {9, 6, 7, 4, 8, 3, 2, 1, 5}
         local expect = {}
         local mh = MaxHeap()
         for idx, val in pairs(tbl) do
@@ -656,5 +655,27 @@ Test.describe("modi table test", function()
             "modi raw get %d, modi get %d, raw set %d, modi set = %d",
             e1 - b1, e2 - b2, e3 - b3, e4 - b4
         ))
+    end)
+end)
+
+Test.describe("lua oo test", function()
+    Test.it("lua oo test", function()
+        local C1 = oo.class()
+        function C1:test1()
+            return 444
+        end
+
+        local C2 = oo.class(C1)
+        function C2:test2()
+            return 888
+        end
+
+        local c1 = C1()
+        local c2 = C2()
+
+        c2:test2()
+        Test.assert(not c1.test2)
+        Test.equal(c1:test1(), c2:test1())
+        print(c1, c2)
     end)
 end)

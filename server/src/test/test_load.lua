@@ -52,4 +52,9 @@ Test.setup({
 })
 
 Rtti.collect()
+
+collectgarbage("stop") -- 测试中有不少性能测试，避免gc影响测试结果
+
 Test.run()
+
+collectgarbage("restart")

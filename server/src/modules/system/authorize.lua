@@ -6,7 +6,7 @@
 -- 玩家未进行授权时(比如说登录失败，或者服务端踢掉玩家)，其他进程与网关的交互会有延时，服务端
 -- 可能还会收到客户端的协议，但这时候玩家的数据是不正确的或者无数据，这时候对应的逻辑可能会产
 -- 生大量错误。这里就是要防止这种情况
-local Authorize = oo.singleton(...)
+local Authorize = oo.singleton()
 
 function Authorize:__init()
     self.pid = {}

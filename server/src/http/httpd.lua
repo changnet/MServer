@@ -1,5 +1,5 @@
 -- http deamon，一个简单的http服务器，专门处理www目录下的内容，通常用于gm以及后台通信
-local Httpd = oo.singleton(...)
+local Httpd = oo.singleton()
 
 local uri = require "util.uri"
 local HTTP = require "http.http_header"

@@ -4,7 +4,7 @@
 -- 全服邮件 管理
 local TimeId = require "modules.system.time_id"
 
-local MailMgr = oo.singleton(...)
+local MailMgr = oo.singleton()
 
 function MailMgr:__init()
     self.list = {}

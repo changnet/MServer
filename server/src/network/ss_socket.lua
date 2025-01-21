@@ -4,7 +4,7 @@ local network_mgr = network_mgr
 local Conn = require "network.conn"
 
 -- 服务器之间的链接
-local SsConn = oo.class(..., Conn)
+local SsConn = oo.class(Conn)
 
 SsConn.default_param = {
     iot = network_mgr.IOT_NONE, -- io类型

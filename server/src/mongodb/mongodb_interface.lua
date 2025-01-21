@@ -8,7 +8,7 @@
 -- GlobalMongoDB用于全局数据读写
 
 -- mongodb 接口
-local MongoDBInterface = oo.class(...)
+local MongoDBInterface = oo.class()
 
 local Mongo = require "engine.Mongo"
 local AutoId = require "modules.system.auto_id"

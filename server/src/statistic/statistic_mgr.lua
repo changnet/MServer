@@ -1,5 +1,5 @@
 -- 负责所有状态统计管理
-local Statistic_mgr = oo.singleton(...)
+local Statistic_mgr = oo.singleton()
 
 -- 根据名字获取统计对象
 -- @param name 唯一统计名字，如rpc、cmd

@@ -6,7 +6,7 @@ local level_conf = require_conf("player.levelup_conf")
 
 local Module = require "modules.player.module"
 
-local Base = oo.class(..., Module)
+local Base = oo.class(Module)
 
 function Base:__init(pid, player)
     self.root = nil

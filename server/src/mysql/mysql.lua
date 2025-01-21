@@ -6,7 +6,7 @@ local Sql = require "engine.Sql"
 local mysql_mgr = require "mysql.mysql_mgr"
 local AutoId = require "modules.system.auto_id"
 
-local Mysql = oo.class(...)
+local Mysql = oo.class()
 
 function Mysql:__init(name)
     local id = mysql_mgr:next_id()

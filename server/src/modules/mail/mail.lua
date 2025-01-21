@@ -16,7 +16,7 @@
 }
 ]] local Module = require "modules.player.module"
 
-local Mail = oo.class(..., Module)
+local Mail = oo.class(Module)
 
 function Mail:__init(pid, player)
     self.list = {}

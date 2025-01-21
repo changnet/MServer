@@ -1,5 +1,5 @@
 -- web_stat.lua http 查询服务器状态接口
-local WebStat = oo.singleton(...)
+local WebStat = oo.singleton()
 
 local json = require "engine.lua_parson"
 

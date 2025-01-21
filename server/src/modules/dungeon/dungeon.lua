@@ -19,7 +19,7 @@ end
 
 init()
 
-local Dungeon = oo.class(...)
+local Dungeon = oo.class()
 
 function Dungeon:__init(id, handle)
     assert(0 ~= handle)

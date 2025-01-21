@@ -1,5 +1,5 @@
 -- web_gm.lua http gm接口
-local WebGM = oo.singleton(...)
+local WebGM = oo.singleton()
 
 -- 通过web方式执行gm
 function WebGM:exec(conn, fields, body)

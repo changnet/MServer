@@ -6,7 +6,7 @@ local Entity = require "modules.entity.entity"
 local EntityAnimal = require "modules.entity.entity_animal"
 
 -- 玩家实体，用于在场景显示
-local EntityPlayer = oo.class(..., EntityAnimal)
+local EntityPlayer = oo.class(EntityAnimal)
 
 function EntityPlayer:__init(eid, pid)
     EntityAnimal.__init(self, eid, ET.PLAYER)
