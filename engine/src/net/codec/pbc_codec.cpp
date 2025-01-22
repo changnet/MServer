@@ -10,7 +10,7 @@ struct DecodeCtx
     class PbcCodec *pc;
 };
 
-void pbc_deleter(struct pbc_env *env)
+static void pbc_deleter(struct pbc_env *env)
 {
     // 最后一个线程删除时，env最终失效。全局也必须重置，免得被新线程赋值
     // 虽然一般情况下最后一个线程失效时就只能是关服
@@ -114,7 +114,7 @@ void PbcCodec::clear_last()
 }
 
 int32_t PbcCodec::decode_field(lua_State *L, int type, const char *schema,
-                              union pbc_value *v)
+                               union pbc_value *v)
 {
     switch (type)
     {
@@ -197,7 +197,7 @@ void PbcCodec::decode_cb(DecodeCtx *ctx, int32_t type, const char *schema,
 }
 
 int32_t PbcCodec::decode_message(lua_State *L, const char *schema,
-                                  struct pbc_slice *slice)
+                                 struct pbc_slice *slice)
 {
     if (!lua_checkstack(L, 3))
     {
@@ -208,8 +208,8 @@ int32_t PbcCodec::decode_message(lua_State *L, const char *schema,
 
     // 每解析一个子message，都需要一个ctx，所以这里只能是用栈变量，不能放成员变量
     DecodeCtx ctx;
-    ctx.L   = L;
-    ctx.id  = 0;
+    ctx.L  = L;
+    ctx.id = 0;
     ctx.pc = this;
 
     lua_newtable(L);
@@ -225,8 +225,8 @@ int32_t PbcCodec::decode_message(lua_State *L, const char *schema,
 }
 
 int32_t PbcCodec::encode_field_list(lua_State *L, struct pbc_wmessage *wmsg,
-                                int32_t type, int32_t index, const char *key,
-                                const char *schema)
+                                    int32_t type, int32_t index,
+                                    const char *key, const char *schema)
 {
     if (type & PBC_REPEATED)
     {
@@ -255,8 +255,8 @@ int32_t PbcCodec::encode_field_list(lua_State *L, struct pbc_wmessage *wmsg,
 }
 
 int32_t PbcCodec::encode_field(lua_State *L, struct pbc_wmessage *wmsg,
-                                    int32_t type, int32_t index,
-                                    const char *key, const char *schema)
+                               int32_t type, int32_t index, const char *key,
+                               const char *schema)
 {
 #define LUAL_CHECK(TYPE)                                               \
     if (!lua_is##TYPE(L, index))                                       \
@@ -329,7 +329,7 @@ int32_t PbcCodec::encode_field(lua_State *L, struct pbc_wmessage *wmsg,
 }
 
 int32_t PbcCodec::encode_message(lua_State *L, struct pbc_wmessage *wmsg,
-                              const char *schema, int32_t index)
+                                 const char *schema, int32_t index)
 {
     if (!lua_istable(L, index))
     {
@@ -343,7 +343,7 @@ int32_t PbcCodec::encode_message(lua_State *L, struct pbc_wmessage *wmsg,
         return -1;
     }
 
-    int32_t top = lua_gettop(L);
+    int32_t top  = lua_gettop(L);
     pbc_env *env = env_.get();
 
     /* pbc并未提供遍历sdl的方法，只能反过来遍历tabale.
@@ -379,14 +379,10 @@ int32_t PbcCodec::encode_message(lua_State *L, struct pbc_wmessage *wmsg,
     return 0;
 }
 
-int32_t PbcCodec::decode(lua_State *L)
+int32_t PbcCodec::raw_decode(lua_State *L, const char *schema,
+                             const char *buffer, size_t size)
 {
     assert(env_);
-    const char *schema = luaL_checkstring(L, 2);
-    
-    size_t size = 0;
-    const char *buffer = luaL_checklstring(L, 3, &size);
-
     clear_last();
 
     struct pbc_slice slice;
@@ -409,21 +405,41 @@ int32_t PbcCodec::decode(lua_State *L)
     return 1;
 }
 
-int32_t PbcCodec::encode(lua_State *L)
+int32_t PbcCodec::decode(lua_State *L)
+{
+    const char *schema = luaL_checkstring(L, 2);
+
+    size_t size        = 0;
+    const char *buffer = luaL_checklstring(L, 3, &size);
+
+    return raw_decode(L, schema, buffer, size);
+}
+
+int32_t PbcCodec::raw_encode(lua_State *L, const char *schema, int32_t index)
 {
     assert(env_);
     clear_last();
 
-    const char *schema = luaL_checkstring(L, 2);
-
-     write_msg_ = pbc_wmessage_new(env_.get(), schema);
+    write_msg_ = pbc_wmessage_new(env_.get(), schema);
     if (!write_msg_)
     {
         error_msg_ = STD_FMT("no such protobuf message found: %s", schema);
-        return 0;
+        return -1;
     }
 
-    if (encode_message(L, write_msg_, schema, 3) < 0)
+    if (encode_message(L, write_msg_, schema, index) < 0)
+    {
+        return luaL_error(L, "%s", last_error());
+    }
+
+    return 1;
+}
+
+int32_t PbcCodec::encode(lua_State *L)
+{
+    const char *schema = luaL_checkstring(L, 2);
+
+    if (raw_encode(L, schema, 3) < 0)
     {
         return luaL_error(L, "%s", last_error());
     }
@@ -433,4 +449,32 @@ int32_t PbcCodec::encode(lua_State *L)
 
     lua_pushlstring(L, (const char *)slice.buffer, slice.len);
     return 1;
+}
+
+int32_t PbcCodec::decode_from_buffer(lua_State *L)
+{
+    const char *schema = luaL_checkstring(L, 2);
+    const char *buffer = (const char *)lua_touserdata(L, 3);
+    size_t size        = luaL_checkinteger(L, 4);
+
+    return raw_decode(L, schema, buffer, size);
+}
+
+int32_t PbcCodec::encode_to_buffer(lua_State *L)
+{
+    const char *schema = luaL_checkstring(L, 2);
+
+    if (raw_encode(L, schema, 3) < 0)
+    {
+        return luaL_error(L, "%s", last_error());
+    }
+
+    struct pbc_slice slice;
+    pbc_wmessage_buffer(write_msg_, &slice);
+
+    // slice只是引用指针，数据是存write_msg_上的，因此可以安全push到lua
+    lua_pushlightuserdata(L, slice.buffer);
+    lua_pushinteger(L, slice.len);
+
+    return 2;
 }

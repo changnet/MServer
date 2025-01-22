@@ -41,12 +41,29 @@ public:
      * @return 二进制string
      */
     int32_t encode(lua_State *L);
+    /**
+     * 从二进制buffer指针解码数据包
+     * @param buffer 待解码的char*
+     * @param size 待解码的buff大小
+     * @return <0 error,otherwise the number of parameter push to stack
+     */
+    int32_t decode_from_buffer(lua_State *L);
+    /**
+     * 编码数据包
+     * @param ... 待编码的参数
+     * @return buffer大小，buffer指针（该指针在下一次调用encode时有效）。出错时，buffer大小返回-1
+     */
+    int32_t encode_to_buffer(lua_State *L);
 
     // 解码回调
     void decode_cb(DecodeCtx *ctx, int32_t type, const char *object,
                    union pbc_value *v, int id, const char *key);
 
 private:
+    int32_t raw_decode(lua_State *L, const char *schema, const char *buffer,
+                       size_t size);
+    int32_t raw_encode(lua_State *L, const char *schema, int32_t index);
+
     // 清除上一次的报错信息等
     void clear_last();
     // 获取出错信息

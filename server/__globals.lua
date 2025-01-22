@@ -1,4 +1,4 @@
--- auto export by lua-tags 151 symbols
+-- auto export by lua-tags 150 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -124,7 +124,6 @@ return {
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
-"g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
 "g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua

@@ -1,15 +1,10 @@
--- protobuf协议测试
+-- 客户端服务器，服务器之间链接测试
 
-g_stat_mgr = require "statistic.statistic_mgr"
+local ScSocket = require "network.sc_socket"
+local CsSocket = require "network.cs_socket"
 
-local ScConn = require "network.sc_conn"
-local CsConn = require "network.cs_conn"
-
-local CsWsConn = require "network.cs_ws_conn"
-local ScWsConn = require "network.sc_ws_conn"
-
-local sc_param = table.copy(ScConn.default_param)
-local cs_param = table.copy(CsConn.default_param)
+local sc_param = table.copy(ScSocket.default_param)
+local cs_param = table.copy(CsSocket.default_param)
 
 -- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
 sc_param.send_chunk_max = 256
@@ -17,21 +12,14 @@ sc_param.recv_chunk_max = 256
 cs_param.send_chunk_max = 256
 cs_param.recv_chunk_max = 256
 
-local sc_ws_param = table.copy(ScWsConn.default_param)
-local cs_ws_param = table.copy(CsWsConn.default_param)
 
--- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
-sc_ws_param.send_chunk_max = 256
-sc_ws_param.recv_chunk_max = 256
-cs_ws_param.send_chunk_max = 256
-cs_ws_param.recv_chunk_max = 256
-
-local srv_conn = nil
-local clt_conn = nil
-local listen_conn = nil
-local listen_conn_ws = nil
 
 Test.describe("protobuf test", function()
+    local srv_conn = nil
+    local clt_conn = nil
+    local listen_conn = nil
+    local listen_conn_ws = nil
+
     local local_host = "::1"
     local local_port = 2099
     if IPV4 then local_host = "127.0.0.1" end
@@ -40,9 +28,6 @@ Test.describe("protobuf test", function()
     local local_port_wss = 8086
 
     local PERF_TIMES = 10000
-
-    local clt_ssl
-    local srv_ssl
 
     local TEST = {
         -- 测试用的包
@@ -59,18 +44,11 @@ Test.describe("protobuf test", function()
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
     -- 使用 -9223372036854775808|0 或者 math.mininteger
 
+    local codec = nil
     local base_pkt = nil -- 基准测试用的包，主要用于各种临界条件测试
     local lite_pkt = nil -- 简单的测试包，更接近于日常通信用的包
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     Test.before(function()
-        require "network.cmd"
-
-        clt_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_CLT_AT)
-        srv_ssl = network_mgr:new_ssl_ctx(network_mgr.SSLVT_TLS_SRV_AT,
-                                        "../certs/server.cer",
-                                        "../certs/srv_key.pem",
-                                        "mini_distributed_game_server")
-
         base_pkt = {
             d1 = -99999999999999.55555,
             d2 = 99999999999999.55555,
@@ -121,17 +99,23 @@ Test.describe("protobuf test", function()
             }
         }
 
-        -- 手动构建测试用的协议，参考auto_cs.lua
-        Cmd.CS = { TEST = TEST }
+        local PbcCodec = require "engine.PbcCodec"
+        codec = PbcCodec()
 
-        -- 加载协议文件
-        Cmd.SCHEMA_TYPE = network_mgr.CDT_PROTOBUF
-        local ok = Cmd.load_protobuf()
-        Test.equal(ok, true)
+        codec:reset()
+        for _, fpath in pairs({"../pb/system.pb"}) do
+            local f = io.open(fpath, "rb") -- 必须以binary模式打开
+            local buffer = f:read("a")
+            f:close()
+
+            local ok = codec:load(buffer)
+            assert(ok)
+        end
+        codec:update()
 
         -- 建立一个客户端、一个服务端连接，模拟通信
 
-        listen_conn = ScConn()
+        listen_conn = ScSocket()
         listen_conn.default_param = sc_param
         listen_conn:listen(local_host, local_port)
         listen_conn.on_accepted = function(self)
@@ -141,7 +125,7 @@ Test.describe("protobuf test", function()
         end
         listen_conn.on_disconnected = function() end
 
-        clt_conn = CsConn()
+        clt_conn = CsSocket()
         clt_conn.default_param = cs_param
         clt_conn:connect(local_host, local_port)
         clt_conn.on_connected = function()
@@ -149,9 +133,9 @@ Test.describe("protobuf test", function()
         end
         clt_conn.on_disconnected = function() end
 
-        Test.async(2000)
+        Test.wait(2000)
     end)
-    Test.it("protobuf base", function()
+    Test.it("client socket test", function()
         Cmd.reg(TEST.BASE, function(pkt)
             Test.equal(pkt, base_pkt)
             srv_conn:send_pkt(TEST.BASE, pkt)
@@ -164,7 +148,7 @@ Test.describe("protobuf test", function()
 
         clt_conn:send_pkt(TEST.BASE, base_pkt)
 
-        Test.async()
+        Test.wait()
     end)
     Test.it(string.format("protobuf performance test %d", PERF_TIMES), function()
         local count = 0
@@ -184,7 +168,7 @@ Test.describe("protobuf test", function()
             clt_conn:send_pkt(TEST.LITE, lite_pkt)
         end
 
-        Test.async()
+        Test.wait()
     end)
     Test.it(string.format("protobuf pingpong test %d", PERF_TIMES), function()
         local count = 0
@@ -205,124 +189,7 @@ Test.describe("protobuf test", function()
         -- 测试来回发送数据，这个取决于打包、传输效率
         clt_conn:send_pkt(TEST.LITE, lite_pkt)
 
-        Test.async()
-    end)
-    Test.it(string.format("protobuf ws perf test %d", PERF_TIMES), function()
-        local count = 0
-        local srv_conn_ws
-        local clt_conn_ws
-
-        Cmd.reg(TEST.LITE, function(pkt)
-            count = count + 1
-            if count >= PERF_TIMES then
-                srv_conn_ws:close()
-                clt_conn_ws:close()
-                Test.done()
-            end
-        end, true)
-
-        listen_conn_ws = ScWsConn()
-        listen_conn_ws.default_param = sc_ws_param
-        listen_conn_ws:listen(local_host, local_port_ws)
-        listen_conn_ws.on_accepted = function(self)
-            srv_conn_ws = self
-        end
-        listen_conn_ws.on_disconnected = function() end
-
-        clt_conn_ws = CsWsConn()
-        clt_conn_ws.default_param = cs_ws_param
-        clt_conn_ws:connect(local_host, local_port_ws)
-        clt_conn_ws.on_connected = function(self)
-            for _ = 1, PERF_TIMES do
-                self:send_pkt(TEST.LITE, lite_pkt)
-            end
-        end
-        clt_conn_ws.on_disconnected = function() end
-
-        Test.async()
-    end)
-
-    Test.it(string.format("protobuf ws pingpong perf test %d", PERF_TIMES), function()
-        local count = 0
-        local srv_conn_ws
-        local clt_conn_ws
-
-        Cmd.reg(TEST.LITE, function(pkt)
-            srv_conn_ws:send_pkt(TEST.LITE, pkt)
-        end, true)
-
-        -- socket操作是异步的，没法close后再马上发起一个同样端口的监听
-        -- 所以上一个测试如果已经在监听，这里就不再发起监听
-        if not listen_conn_ws then
-            listen_conn_ws = ScWsConn()
-            listen_conn_ws.default_param = sc_ws_param
-            local ok, msg = listen_conn_ws:listen(local_host, local_port_ws)
-            Test.assert(ok, msg)
-        end
-
-        listen_conn_ws.on_accepted = function(self)
-            srv_conn_ws = self
-        end
-        listen_conn_ws.on_disconnected = function() end
-
-        clt_conn_ws = CsWsConn()
-        clt_conn_ws.default_param = cs_ws_param
-        clt_conn_ws:connect(local_host, local_port_ws)
-        clt_conn_ws.on_connected = function(self)
-            self:send_pkt(TEST.LITE, lite_pkt)
-        end
-        clt_conn_ws.on_message = function(self, cmd, e, pkt)
-            Test.equal(cmd, TEST.LITE.i)
-            count = count + 1
-            if count >= PERF_TIMES then
-                srv_conn_ws:close()
-                clt_conn_ws:close()
-                Test.done()
-            else
-                self:send_pkt(TEST.LITE, lite_pkt)
-            end
-        end
-        clt_conn_ws.on_disconnected = function() end
-
-        Test.async()
-    end)
-
-    Test.it(string.format("protobuf wss perf test %d", PERF_TIMES), function()
-        local count = 0
-        local srv_conn_ws
-        local clt_conn_ws
-        local listen_conn_wss
-
-        Cmd.reg(TEST.LITE, function(pkt)
-            count = count + 1
-
-            if count >= PERF_TIMES then
-                srv_conn_ws:close()
-                clt_conn_ws:close()
-                listen_conn_wss:close()
-                Test.done()
-            end
-        end, true)
-
-        listen_conn_wss = ScWsConn()
-        listen_conn_wss.default_param = sc_ws_param
-        listen_conn_wss:listen_s(local_host, local_port_wss, srv_ssl)
-        listen_conn_wss.on_accepted = function(self)
-            srv_conn_ws = self
-        end
-        listen_conn_wss.on_disconnected = function() end
-
-        clt_conn_ws = CsWsConn()
-        clt_conn_ws.default_param = cs_ws_param
-        clt_conn_ws:connect_s(local_host, local_port_wss, clt_ssl)
-        clt_conn_ws.on_connected = function(self)
-            for _ = 1, PERF_TIMES do
-                self:send_pkt(TEST.LITE, lite_pkt)
-            end
-        end
-        clt_conn_ws.on_disconnected = function() end
-
-        Test.async()
+        Test.wait()
     end)
 
     Test.after(function()

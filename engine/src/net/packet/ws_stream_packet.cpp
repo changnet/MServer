@@ -100,7 +100,17 @@ int32_t WSStreamPacket::on_frame_end()
     size_t size = 0;
     const char *ctx = body_.all_to_flat_ctx(size);
 
+    if (size < sizeof(WSHeader))
+    {
+        unpack_error(L_, "incomplete stream data");
+        return WPE_PAUSE; // unpack_error返回错误在lua处理，不需要返回WPE_ERROR;
+    }
+
+    decltype(WSHeader::cmd_) cmd = 0;
+    memcpy(&cmd, ctx, sizeof(cmd));
+
     lua_pushinteger(L_, PC_DATA);
+    lua_pushinteger(L_, cmd);
     lua_pushlightuserdata(L_, (void *)ctx);
     lua_pushinteger(L_, size);
 

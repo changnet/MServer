@@ -21,6 +21,7 @@
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
 #include "ev/time.hpp"
+#include "lbuffer.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -180,6 +181,8 @@ static void luaopen_pbc_codec(lua_State *L)
     lc.def<&PbcCodec::update>("update");
     lc.def<&PbcCodec::encode>("encode");
     lc.def<&PbcCodec::decode>("decode");
+    lc.def<&PbcCodec::decode_from_buffer>("decode_from_buffer");
+    lc.def<&PbcCodec::encode_to_buffer>("encode_to_buffer");
 }
 
 
@@ -284,6 +287,12 @@ static void luaopen_astar(lua_State *L)
     lc.def<&LAstar::search>("search");
 }
 
+static void luaopen_buffer(lua_State *L)
+{
+    lcpp::Class<LuaBuffer> lc(L, "engine.Buffer");
+    lc.def<&LuaBuffer::read_int>("read_int");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace llib
@@ -335,6 +344,7 @@ void open_cpp(lua_State *L)
     luaopen_mongo(L);
     luaopen_grid_aoi(L);
     luaopen_list_aoi(L);
+    luaopen_buffer(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */
