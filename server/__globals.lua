@@ -124,8 +124,8 @@ return {
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
-"g_stat_mgr", -- src/test/protobuf_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
+"g_stat_mgr", -- src/test/socket_test.lua
 "g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua

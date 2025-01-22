@@ -769,7 +769,7 @@ int32_t Socket::set_packet(int32_t packet_type)
     case Packet::PT_HTTP: packet_ = new HttpPacket(this); break;
     case Packet::PT_STREAM: packet_ = new StreamPacket(this); break;
     case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
-    //case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
+    case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
     default: return -1;
     }
     return 0;
