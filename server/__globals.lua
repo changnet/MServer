@@ -1,4 +1,4 @@
--- auto export by lua-tags 152 symbols
+-- auto export by lua-tags 151 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -109,7 +109,6 @@ return {
 "application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
 "call_mt", -- src/rpc/rpc.lua
-"clt_multicast_new", -- src/network/clt_mgr.lua
 "eprint", -- src/global/global.lua
 "eprintf", -- src/global/global.lua
 "g_ai_mgr", -- src/android/android_boot.lua

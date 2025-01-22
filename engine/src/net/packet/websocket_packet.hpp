@@ -11,19 +11,25 @@ public:
 
     /* 获取当前packet类型
      */
-    virtual PacketType type() const { return PT_WEBSOCKET; }
+    virtual PacketType type() const override
+    {
+        return PT_WEBSOCKET;
+    }
 
-    /* 打包服务器发往客户端数据包
-     * return: <0 error;>=0 success
+    /**
+     * 打包服务器发往客户端数据包
+     * @return <0 error;>=0 success
      */
     virtual int32_t pack_clt(lua_State *L, int32_t index) override;
-    /* 打包客户端发往服务器数据包
-     * return: <0 error;>=0 success
+    /**
+     * 打包客户端发往服务器数据包
+     * @return <0 error;>=0 success
      */
     virtual int32_t pack_srv(lua_State *L, int32_t index) override;
 
-    /* 数据解包
-     * return: <0 error;0 success
+    /**
+     * 数据解包，把结果放到Lua堆栈
+     * @return 堆栈新增的变量数量
      */
     virtual int32_t unpack(lua_State *L, Buffer &buffer) override;
 
@@ -35,9 +41,7 @@ public:
     // 单个消息时，重置
     class Buffer &body_buffer() { return body_; }
 
-
-
-    //< 发送opcode等控制码
+    // 发送opcode等控制码
     int32_t pack_ctrl(lua_State *L, int32_t index) override;
 
 protected:

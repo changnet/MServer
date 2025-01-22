@@ -111,7 +111,7 @@ end
 function AccMgr.role_offline_by_pid(pid)
     print("AccMgr.role_offline_by_pid", pid)
 
-    CltMgr.clt_close_by_pid(pid)
+    CltMgr.close_by_pid(pid)
 
     local role_info = this.role_acc[pid]
     if not role_info then
@@ -135,7 +135,7 @@ function AccMgr.login_otherwhere(role_info)
     end
 
     -- 关闭旧客户端连接
-    CltMgr.clt_close(old_conn)
+    CltMgr.close(old_conn)
 end
 
 -- db数据加载

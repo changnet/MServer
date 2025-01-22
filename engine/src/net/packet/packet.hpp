@@ -50,8 +50,8 @@ public:
     virtual int32_t pack_srv(lua_State *L, int32_t index) = 0;
 
     /**
-     * 数据解包，解析成功数据以平铺在堆栈的形式返回
-     * @return PacketCode，数据1，数据2，数据3，...
+     * 数据解包，解析成功数据以平铺在堆栈的形式返回，PacketCode，数据1，数据2，数据3，...
+     * @return 堆栈新增的变量数量
      */
     virtual int32_t unpack(lua_State *L, Buffer &buffer) = 0;
 
@@ -63,24 +63,6 @@ public:
         return PC_MORE;
     }
 
-    /**
-     * 打包服务器发往客户端的数据包，用于转发
-     */
-    virtual int32_t raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
-                                 size_t size)
-    {
-        assert(false);
-        return -1;
-    }
-    /**
-     * 打包服务器发往服务器的数据包，用于广播
-     */
-    virtual int32_t raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
-                                const char *ctx, size_t size)
-    {
-        assert(false);
-        return -1;
-    }
     // 打包控制帧（websocket特有的功用）
     virtual int32_t pack_ctrl(lua_State *L, int32_t index)
     {

@@ -40,6 +40,9 @@ local function new(clz, ...)
     local obj = {}
 
     setmetatable(obj, clz)
+    -- 这里只调用第一层构造函数
+    -- 理论上讲，能自动调用各个基类的构造函数。但参数是没法像C++那样自动识别
+    -- 因此如果要调用基类，只能手动去调
     obj:__init(...)
 
     if stat_flag then -- check
@@ -134,13 +137,13 @@ local function create_class(new_method, ...)
 end
 
 -- 声明普通类
--- @param ... 基础，可继承多个基类
+-- @param ... 基类，可继承多个基类
 function oo.class(...)
     return create_class(new, ...)
 end
 
 -- 声明lua单例类
--- @param ... 基础，可继承多个基类
+-- @param ... 基类，可继承多个基类
 function oo.singleton(...)
     return create_class(new_singleton, ...)
 end

@@ -306,7 +306,6 @@ int32_t WebsocketPacket::on_upgrade(lua_State *L)
     return 3;
 }
 
-// 普通websokcet数据帧完成，ctx直接就是字符串，不用decode
 int32_t WebsocketPacket::on_frame_end()
 {
     size_t size     = 0;
