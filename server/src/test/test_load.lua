@@ -12,6 +12,7 @@ require "test.websocket_test"
 require "test.lua_codec_test"
 require "test.pbc_codec_test"
 require "test.co_test"
+require "test.socket_test"
 
 --[[
 require "test.grid_aoi_test"
@@ -22,7 +23,6 @@ require "test.log_test"
 require "test.words_filter_test"
 require "test.rank_test"
 require "test.rpc_test"
-require "test.protobuf_test"
 require "test.flatbuffers_test"
 ]]
 

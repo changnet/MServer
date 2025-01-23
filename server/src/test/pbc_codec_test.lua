@@ -76,6 +76,19 @@ Test.describe("pbccodec test", function()
         local v1 = codec:decode("system.TestBase", buffer)
         Test.equal(v1, base_pkt)
 
+        local size
+        buffer, size = codec:encode_to_buffer("system.TestBase", base_pkt)
+
+        -- encode_to_buffer是一个依赖codec的指针，decode时会释放
+        -- 所以临时存到Buffer中
+        local Buffer = require "engine.Buffer"
+        local b = Buffer()
+        b:set(buffer, size)
+        local new_buffer, new_size = b:get()
+
+        v1 = codec:decode_from_buffer("system.TestBase", new_buffer, new_size)
+        Test.equal(v1, base_pkt)
+
         buffer = codec:encode("system.TestLite", lite_pkt)
         v1 = codec:decode("system.TestLite", buffer)
         Test.equal(v1, lite_pkt)

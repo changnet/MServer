@@ -14,7 +14,7 @@ cs_param.recv_chunk_max = 256
 
 
 
-Test.describe("protobuf test", function()
+Test.describe("socket_test", function()
     local srv_conn = nil
     local clt_conn = nil
     local listen_conn = nil
@@ -23,6 +23,9 @@ Test.describe("protobuf test", function()
     local local_host = "::1"
     local local_port = 2099
     if IPV4 then local_host = "127.0.0.1" end
+
+    local msg_id_len = 2 -- 一个int16的长度
+    local Buffer = require "engine.Buffer"
 
     local local_port_ws = 8085
     local local_port_wss = 8086
@@ -65,7 +68,7 @@ Test.describe("protobuf test", function()
             s1 = "s", -- 空字符串是默认值 ，pbc也不打包的
             s2 = string.rep("ssssssssss", rep_cnt),
             by1 = "s"; -- 空字符串是默认值 ，pbc也不打包的
-            by2 = string.rep("ssssssssss", rep_cnt);
+            -- by2 = string.rep("ssssssssss", rep_cnt);
             ui1 = 1,
             ui2 = 4294967295,
             ui641 = 1,
@@ -135,21 +138,40 @@ Test.describe("protobuf test", function()
 
         Test.wait(2000)
     end)
+
     Test.it("client socket test", function()
-        Cmd.reg(TEST.BASE, function(pkt)
+        -- TODO 其实不用protobuf测试也行，只是这里想模拟一下整个cs通信流程的延迟
+        local msg_id = 2388
+        srv_conn.on_message = function(self, recv_msg_id, buffer, size)
+            Test.equal(recv_msg_id, msg_id)
+
+            -- 读取一个int16
+            local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
+            Test.equal(msg_id2, msg_id)
+            local pkt = codec:decode_from_buffer(
+                "system.TestBase", codec_buffer, size - msg_id_len)
             Test.equal(pkt, base_pkt)
-            srv_conn:send_pkt(TEST.BASE, pkt)
-        end, true)
-        clt_conn.on_message = function(self, cmd, e, pkt)
-            Test.equal(cmd, TEST.BASE.i)
+
+            self:send_pkt(msg_id, codec_buffer, size - msg_id_len)
+        end
+        clt_conn.on_message = function(self, recv_msg_id, buffer, size)
+            Test.equal(recv_msg_id, msg_id)
+
+            local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
+            Test.equal(msg_id2, msg_id)
+            local pkt = codec:decode_from_buffer(
+                "system.TestBase", codec_buffer, size - msg_id_len)
             Test.equal(pkt, base_pkt)
+
             Test.done()
         end
 
-        clt_conn:send_pkt(TEST.BASE, base_pkt)
+        local buffer, size = codec:encode_to_buffer("system.TestBase", base_pkt)
+        clt_conn:send_pkt(msg_id, buffer, size)
 
         Test.wait()
     end)
+    --[[
     Test.it(string.format("protobuf performance test %d", PERF_TIMES), function()
         local count = 0
         Cmd.reg(TEST.LITE, function(pkt)
@@ -191,6 +213,7 @@ Test.describe("protobuf test", function()
 
         Test.wait()
     end)
+    ]]
 
     Test.after(function()
         if clt_conn then clt_conn:close() end

@@ -290,6 +290,8 @@ static void luaopen_astar(lua_State *L)
 static void luaopen_buffer(lua_State *L)
 {
     lcpp::Class<LuaBuffer> lc(L, "engine.Buffer");
+    lc.def<&LuaBuffer::get>("get");
+    lc.def<&LuaBuffer::set>("set");
     lc.def<&LuaBuffer::read_int>("read_int");
 }
 

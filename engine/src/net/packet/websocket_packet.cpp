@@ -261,6 +261,7 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
         // 类似llhttp_resume，这里重置state让它能pause并继续解析
         parser_->state  = 0;
         int32_t new_top = lua_gettop(L);
+        assert(new_top - old_top > 0);
         return new_top - old_top;
     }
 

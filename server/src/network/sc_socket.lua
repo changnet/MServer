@@ -11,12 +11,15 @@ ScSocket.default_param = {
     recv_chunk_max = 8 -- 接收缓冲区数
 }
 
+local MASK = ScSocket.WS_OP_BINARY | ScSocket.WS_FINAL_FRAME
+
 function ScSocket:__init(socket_id)
     WebSocket.__init(self)
 end
 
 -- 发送数据包
-function ScSocket:send_pkt(cmd, pkt, errno)
+function ScSocket:send_pkt(msg_id, buffer, size)
+    return self.s:send_srv(MASK, msg_id, buffer, size)
 end
 
 -- 认证成功
