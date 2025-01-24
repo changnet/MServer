@@ -269,7 +269,7 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
 
 /* http的GET、POST都由上层处理好再传入底层
  */
-int32_t HttpPacket::pack_raw(lua_State *L, int32_t index)
+int32_t HttpPacket::pack_any(lua_State *L, int32_t index)
 {
     size_t size     = 0;
     const char *ctx = luaL_checklstring(L, index, &size);
@@ -282,12 +282,12 @@ int32_t HttpPacket::pack_raw(lua_State *L, int32_t index)
 
 int32_t HttpPacket::pack_clt(lua_State *L, int32_t index)
 {
-    return pack_raw(L, index);
+    return pack_any(L, index);
 }
 
 int32_t HttpPacket::pack_srv(lua_State *L, int32_t index)
 {
-    return pack_raw(L, index);
+    return pack_any(L, index);
 }
 
 int32_t HttpPacket::unpack_on_closed(lua_State *L)

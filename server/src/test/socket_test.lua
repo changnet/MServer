@@ -124,8 +124,7 @@ Test.describe("socket_test", function()
         listen_conn.on_accepted = function(self)
             srv_conn = self
         end
-        listen_conn.on_connected = function()
-        end
+        listen_conn.on_connected = function() end
         listen_conn.on_disconnected = function() end
 
         clt_conn = CsSocket()
@@ -159,6 +158,7 @@ Test.describe("socket_test", function()
 
             local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
             Test.equal(msg_id2, msg_id)
+
             local pkt = codec:decode_from_buffer(
                 "system.TestBase", codec_buffer, size - msg_id_len)
             Test.equal(pkt, base_pkt)

@@ -17,6 +17,8 @@ local HttpSocket = oo.class(Socket)
 
 HttpSocket.default_param = {
     pkt = EngineSocket.PT_HTTP, -- 打包解包类型
+    send_chunk_max = 8,
+    recv_chunk_max = 8,
 }
 
 function HttpSocket:__init()

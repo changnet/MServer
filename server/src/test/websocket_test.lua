@@ -88,12 +88,13 @@ Test.describe("websocket test", function()
     Test.it("websocket local", function()
         local pkt_idx = 0
         local pkt_body = {
-            "MServer say hello",
+            string.rep("1234567890", 3096), -- 弄很大，测试socket缓冲区拆分与合并的正确性
             "MServer say hello2",
         }
 
         local ping_idx = 0
         local ping_body = {
+            -- [1] = nil -- 测试ping没有body的情况
             [2] = "ping with body"
         }
 

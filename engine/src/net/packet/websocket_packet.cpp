@@ -168,7 +168,7 @@ WebsocketPacket::~WebsocketPacket()
     parser_ = nullptr;
 }
 
-int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
+int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
 {
     // 允许握手未完成就发数据，自己保证顺序
     // if ( !is_upgrade_ ) return http_packet::pack_clt( L,index );
@@ -183,6 +183,7 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
     size_t len = websocket_calc_frame_size(flags, size);
 
     Buffer &buffer           = socket_->get_send_buffer();
+    // TODO 这里是不是可以用websocket_append_frame而不需要reserve
     Buffer::Transaction &&ts = buffer.flat_reserve(len);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
@@ -197,12 +198,12 @@ int32_t WebsocketPacket::pack_raw(lua_State *L, int32_t index)
 
 int32_t WebsocketPacket::pack_clt(lua_State *L, int32_t index)
 {
-    return pack_raw(L, index);
+    return pack_any(L, index);
 }
 
 int32_t WebsocketPacket::pack_srv(lua_State *L, int32_t index)
 {
-    return pack_raw(L, index);
+    return pack_any(L, index);
 }
 
 int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
@@ -212,7 +213,7 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
      * 标识的应用数据。这个数据是用来说明当前控制帧的。比如close帧后面包含status
      * code，及 关闭原因，pong数据包则必须原封不动返回ping数据包中的数据
      */
-    return pack_raw(L, index);
+    return pack_any(L, index);
 }
 
 int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)

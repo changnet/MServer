@@ -80,7 +80,8 @@ Test.describe("http test", function()
     end)
 
     Test.it("http local server test", function()
-        local ctx = "hello"
+        -- 这个内容要弄很大，测试socket缓冲区拆分与合并的正确性
+        local ctx = string.rep("1234567890", 3096)
 
         local port = 8182
         local no_len_ctx = "no_len_test ctx 1111111122222223333aaaabbbbbbccccc"
@@ -127,11 +128,13 @@ Test.describe("http test", function()
                         function(_, http_type, code, method, url, body)
                 local header = clt_conn:get_header()
                 Test.equal(code, 200)
+                Test.equal(body, ctx)
                 Test.equal(header.Server, "Mini-Game-Distribute-Server/1.0")
 
                 clt_conn:post("/post", nil,
                              function(_, http_type2, code2, method2, url2, body2)
                     Test.equal(code2, 200)
+                    Test.equal(body2, ctx)
                     clt_conn:get("/nolength", nil,
                         function(_, http_type3, code3, method3, url3, body3)
                             Test.equal(code3, 200)

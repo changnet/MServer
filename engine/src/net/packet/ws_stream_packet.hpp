@@ -29,4 +29,7 @@ public:
 
     // 数据帧完成
     virtual int32_t on_frame_end() override;
+
+private:
+    int32_t pack_any(lua_State *L, int32_t index);
 };

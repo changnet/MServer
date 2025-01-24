@@ -55,7 +55,7 @@ protected:
 
 private:
     virtual int32_t on_upgrade(lua_State *L);
-    int32_t pack_raw(lua_State *L, int32_t index);
+    int32_t pack_any(lua_State *L, int32_t index);
 
     llhttp_t parser_;
     std::string cur_field_;

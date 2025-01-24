@@ -77,6 +77,23 @@ public:
         return 2;
     }
 
+    /**
+     * 把C++中void *类型指针的buffer转换为Lua的string
+     * @param buffer C++中void *类型指针的buffer
+     * @param size buffer的大小
+     * @return string
+     */
+    static int32_t lightud_tostring(lua_State* L)
+    {
+        const char *buffer = (const char *)lua_touserdata(L, 1);
+        if (!buffer) return luaL_error(L, "invalid buffer");
+
+        size_t size = luaL_checkinteger(L, 2);
+
+        lua_pushlstring(L, buffer, size);
+        return 1;
+    }
+
 private:
     size_t size_;
     char *buffer_;

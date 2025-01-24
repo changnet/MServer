@@ -46,8 +46,10 @@ public:
 
 protected:
     void new_masking_key(char mask[4]);
+
+private:
+    int32_t pack_any(lua_State *L, int32_t index);
     virtual int32_t on_upgrade(lua_State *L) override;
-    int32_t pack_raw(lua_State *L, int32_t index);
 
 protected:
     int32_t e_; /// 错误码 websocket_parser没有提供错误机制，这里自己实现
