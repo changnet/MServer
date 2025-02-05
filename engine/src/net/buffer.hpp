@@ -240,16 +240,18 @@ public:
     /**
      * @brief 预分配一块连续(不包含多个chunk)的缓冲区
      * @param len 预分配的长度
+     * @param flag 标识：1读 2写
      * @return 一个包括锁和缓冲区指针等数据的事务对象
     */
-    Transaction flat_reserve(size_t len);
+    Transaction flat_reserve(size_t len, int32_t flag);
 
     /**
      * @brief 把指定长度的缓存放到连续的缓冲区
      * @param len 缓存的长度
+     * @param flag 标识：1读 2写
      * @return 缓冲区的指针，如果长度不足则返回nullptr
     */
-    const char *to_flat_ctx(size_t len);
+    const char *to_flat_ctx(size_t len, int32_t flag);
 
     /**
      * @brief 检测当前有效数据的大小是否 >= 指定值
@@ -261,16 +263,17 @@ public:
      /**
       * @brief 把缓冲区中所有的buff都存放到一块连续的缓冲区
       * @param len 缓冲区的数据长度
+      * @param flag 标识：1读 2写
       * @return 连续缓冲区的指针
      */
-     const char *all_to_flat_ctx(size_t &len);
+    const char *all_to_flat_ctx(size_t &len, int32_t flag);
 
      /**
       * @brief 提交flat_reserve预分配的数据
       * @param len 最终提交数据长度
       * @param ts 提交的缓存事务对象
      */
-     void commit(const Transaction &ts, int32_t len);
+    void commit(const Transaction &ts, int32_t len);
 
     /**
       * @brief 获取第一个chunk的数据指针及数据大小
@@ -330,21 +333,8 @@ public:
      }
 
 private:
-    ChunkPool *get_chunk_pool();
-
-    inline Chunk *new_chunk()
-    {
-        chunk_size_++;
-        return get_chunk_pool()->construct();
-    }
-
-    inline void del_chunk(Chunk *chunk)
-    {
-        assert(chunk_size_ > 0);
-
-        chunk_size_--;
-        get_chunk_pool()->destroy(chunk);
-    }
+     Chunk *new_chunk();
+    void del_chunk(Chunk *chunk);
 
     /**
      * @brief 预分配缓冲区空间，如果当前空间为空则分配一个新的chunk
@@ -355,9 +345,10 @@ private:
     /**
      * @brief 获取连续的缓冲区
      * @param len 缓冲区的长度
+     * @param flag 标识：1读 2写
      * @return 
     */
-    char *get_large_buffer(size_t len);
+    char *get_large_buffer(size_t len, int32_t flag);
 
     /**
      * @brief 同append，但不加锁，仅内部使用

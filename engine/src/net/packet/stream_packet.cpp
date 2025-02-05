@@ -17,7 +17,7 @@ int32_t StreamPacket::unpack(lua_State *L, Buffer &buffer)
 {
     constexpr decltype(NetHeader::size_) header_size = sizeof(struct NetHeader);
     // 检测包头是否完整
-    const char *buf = buffer.to_flat_ctx(header_size);
+    const char *buf = buffer.to_flat_ctx(header_size, 1);
     if (!buf) return 0;
 
     // 这里不能用reinterpret_cast把buf直接转换成对应的数据类型，比如reinterpret_cast<const struct base_header *>(buf)

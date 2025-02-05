@@ -71,19 +71,35 @@ size_t Buffer::reserve()
     return len;
 }
 
-char *Buffer::get_large_buffer(size_t len)
+char *Buffer::get_large_buffer(size_t len, int32_t flag)
 {
     // 原本想在LargeBuffer里加个锁，所有线程共用缓冲区
     // 但缓冲区通常要持有一段时间，这导致这个锁非常难管理，需要手动加锁解锁
     // 那干脆用thread_local，多耗点内存，但不用考虑锁的问题
-    thread_local LargeBuffer buffer;
 
+    // 读写要分开，因为会出现读写同时占用buffer的情况
+    if (1 == flag)
+    {
+        thread_local LargeBuffer buffer;
+        return buffer.get(len);
+    }
+
+    thread_local LargeBuffer buffer;
     return buffer.get(len);
 }
 
-Buffer::ChunkPool *Buffer::get_chunk_pool()
+Buffer::Chunk *Buffer::new_chunk()
 {
-    return StaticGlobal::C;
+    chunk_size_++;
+    return StaticGlobal::C->construct();
+}
+
+void Buffer::del_chunk(Chunk *chunk)
+{
+    assert(chunk_size_ > 0);
+
+    chunk_size_--;
+    StaticGlobal::C->destroy(chunk);
 }
 
 void Buffer::clear()
@@ -200,7 +216,7 @@ Buffer::Transaction Buffer::any_seserve(bool no_overflow)
     return ts;
 }
 
-Buffer::Transaction Buffer::flat_reserve(size_t len)
+Buffer::Transaction Buffer::flat_reserve(size_t len, int32_t flag)
 {
     /**
      * 打包数据时(例如protobuf、websocket)需要预先分配一块连续的缓冲区
@@ -225,13 +241,13 @@ Buffer::Transaction Buffer::flat_reserve(size_t len)
         // 如果这里解锁commit那里要改一下，保证只锁一次
         // ts.ul_.unlock()
         ts.len_ = static_cast<int32_t>(len);
-        ts.ctx_ = get_large_buffer(len);
+        ts.ctx_ = get_large_buffer(len, flag);
     }
 
     return ts;
 }
 
-const char *Buffer::to_flat_ctx(size_t len)
+const char *Buffer::to_flat_ctx(size_t len, int32_t flag)
 {
     std::lock_guard<SpinLock> guard(lock_);
 
@@ -253,7 +269,7 @@ const char *Buffer::to_flat_ctx(size_t len)
 
     size_t copy_len   = 0; // 已拷贝长度
     const Chunk *next = front_;
-    char *buf         = get_large_buffer(len);
+    char *buf         = get_large_buffer(len, flag);
     do
     {
         // 本次要拷贝的长度
@@ -274,7 +290,7 @@ const char *Buffer::to_flat_ctx(size_t len)
     return copy_len == len ? buf : nullptr;
 }
 
-const char *Buffer::all_to_flat_ctx(size_t &len)
+const char *Buffer::all_to_flat_ctx(size_t &len, int32_t flag)
 {
     len = 0;
     std::lock_guard<SpinLock> guard(lock_);
@@ -292,9 +308,9 @@ const char *Buffer::all_to_flat_ctx(size_t &len)
     size_t copy_len       = 0;
     const Chunk *next = front_;
 
-    // 用get_all_used_size效率有点底，这里粗略估计下大小即可
+    // 用get_all_used_size获取大小效率有点低，这里粗略估计下大小即可
     size_t max_ctx = chunk_size_ * Chunk::MAX_CTX;
-    char *buf = get_large_buffer(max_ctx);
+    char *buf = get_large_buffer(max_ctx, flag);
     do
     {
         size_t used_size = next->get_used_size();
@@ -330,8 +346,6 @@ void Buffer::commit(const Transaction &ts, int32_t len)
     }
     else
     {
-        assert(ts.ctx_ == get_large_buffer(0));
-
         __append(ts.ctx_, len);
     }
 }

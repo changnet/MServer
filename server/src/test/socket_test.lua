@@ -140,7 +140,7 @@ Test.describe("socket_test", function()
 
     Test.it("client socket test", function()
         -- TODO 其实不用protobuf测试也行，只是这里想模拟一下整个cs通信流程的延迟
-        local msg_id = 2388
+        local msg_id = math.random(1, 65535)
         srv_conn.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 

@@ -43,7 +43,7 @@ int32_t WSStreamPacket::pack_any(lua_State *L, int32_t index)
     uint8_t mask_offset      = 0;
     Buffer &buffer           = socket_->get_send_buffer();
     // TODO 这里是不是可以用websocket_append_frame而不需要reserve
-    Buffer::Transaction &&ts = buffer.flat_reserve(len);
+    Buffer::Transaction &&ts = buffer.flat_reserve(len, 2);
 
     if (flags & WS_HAS_MASK) new_masking_key(mask);
 
@@ -73,7 +73,7 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
 int32_t WSStreamPacket::on_frame_end()
 {
     size_t size     = 0;
-    const char *ctx = body_.all_to_flat_ctx(size);
+    const char *ctx = body_.all_to_flat_ctx(size, 1);
 
     if (size < sizeof(WSHeader))
     {

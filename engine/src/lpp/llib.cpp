@@ -294,6 +294,8 @@ static void luaopen_buffer(lua_State *L)
     lc.def<&LuaBuffer::set>("set");
     lc.def<&LuaBuffer::read_int>("read_int");
     lc.def<&LuaBuffer::lightud_tostring>("lightud_tostring");
+    lc.def<&LuaBuffer::fromstring>("fromstring");
+    lc.def<&LuaBuffer::tostring>("tostring");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -107,7 +107,7 @@ static int32_t on_frame_body(struct websocket_parser *parser, const char *at,
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
     if (parser->flags & WS_HAS_MASK)
     {
-        Buffer::Transaction &&ts = body.flat_reserve(length);
+        Buffer::Transaction &&ts = body.flat_reserve(length, 1);
 
         websocket_parser_decode(ts.ctx_, at, length, parser);
         body.commit(ts, (int32_t)length);
@@ -184,7 +184,7 @@ int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
 
     Buffer &buffer           = socket_->get_send_buffer();
     // TODO 这里是不是可以用websocket_append_frame而不需要reserve
-    Buffer::Transaction &&ts = buffer.flat_reserve(len);
+    Buffer::Transaction &&ts = buffer.flat_reserve(len, 2);
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
@@ -313,7 +313,7 @@ int32_t WebsocketPacket::on_frame_end()
     size_t size     = 0;
 
     // TODO 如果用luaL_Buffer来做会不会好点
-    const char *ctx = body_.all_to_flat_ctx(size);
+    const char *ctx = body_.all_to_flat_ctx(size, 1);
 
     lua_pushinteger(L_, PC_DATA);
     lua_pushlstring(L_, ctx, size);
@@ -324,7 +324,7 @@ int32_t WebsocketPacket::on_frame_end()
 int32_t WebsocketPacket::on_ctrl_end()
 {
     size_t size     = 0;
-    const char *ctx = body_.all_to_flat_ctx(size);
+    const char *ctx = body_.all_to_flat_ctx(size, 1);
 
     lua_pushinteger(L_, PC_CTRL);
     lua_pushinteger(L_, parser_->flags);

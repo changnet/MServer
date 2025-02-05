@@ -19,9 +19,40 @@ public:
         if (buffer_) delete[] buffer_;
     }
 
-    void *set(void *buffer, size_t size)
+    /**
+     * 把lua string保存到当前buffer中
+     * @return buffer指针
+     */
+    int32_t fromstring(lua_State* L)
     {
-        if (!buffer || 0 == size) return nullptr;
+        size_t size = 0;
+        const char *buffer = luaL_checklstring(L, 2, &size);
+
+        set(buffer, size);
+
+        lua_pushlightuserdata(L, buffer_);
+        return 1;
+    }
+    /**
+     * 把当前buffer中的数据转换为lua string
+     * @return buffer指针，buffer大小
+     */
+    int32_t tostring(lua_State *L) const
+    {
+        lua_pushlstring(L, buffer_, size_);
+        return 1;
+    }
+
+    void *set(const void *buffer, size_t size)
+    {
+        if (!buffer || 0 == size)
+        {
+            if (buffer_) delete[] buffer_;
+
+            size_ = 0;
+            buffer_ = nullptr;
+            return nullptr;
+        }
 
         if (0 == size_)
         {
@@ -39,6 +70,10 @@ public:
         return buffer_;
     }
 
+    /**
+     * 获取当前buffer保存数据的lightuserdata指针及大小
+     * @return buffer指针，buffer大小
+     */
     int32_t get(lua_State *L)
     {
         if (!buffer_) return 0;
