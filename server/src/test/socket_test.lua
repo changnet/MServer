@@ -14,7 +14,7 @@ cs_param.recv_chunk_max = 256
 
 
 
-Test.describe("socket_test", function()
+Test.describe("socket test", function()
     local srv_conn = nil
     local clt_conn = nil
     local listen_conn = nil
@@ -27,21 +27,7 @@ Test.describe("socket_test", function()
     local msg_id_len = 2 -- 一个int16的长度
     local Buffer = require "engine.Buffer"
 
-    local local_port_ws = 8085
-    local local_port_wss = 8086
-
     local PERF_TIMES = 10000
-
-    local TEST = {
-        -- 测试用的包
-        BASE = {
-            s = "system.TestBase", c = "system.TestBase", i = 1
-        },
-        -- 测试用的包
-        LITE = {
-            s = "system.TestLite", c = "system.TestLite", i = 2
-        },
-    }
 
     -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
@@ -49,7 +35,6 @@ Test.describe("socket_test", function()
 
     local codec = nil
     local base_pkt = nil -- 基准测试用的包，主要用于各种临界条件测试
-    local lite_pkt = nil -- 简单的测试包，更接近于日常通信用的包
     local rep_cnt = 512 -- 512的时候，整个包达到50000多字节了
     Test.before(function()
         base_pkt = {
@@ -83,24 +68,6 @@ Test.describe("socket_test", function()
         base_pkt.msg1 = cpy
         base_pkt.i_list = {1,2,3,4,5,99999,55555,111111111}
         base_pkt.msg_list = { cpy, cpy, cpy}
-
-        lite_pkt = {
-            b1 = true,
-            i1 = math.maxinteger,
-            s = "sssssssssssssssssssssssssssssssssssssssssssssssssss",
-            i2 = math.mininteger,
-            d1 = 99999999999999.55555,
-            i3 = 2147483647,
-
-            msg = {
-                b1 = true,
-                i1 = math.maxinteger,
-                s = "sssssssssssssssssssssssssssssssssssssssssssssssssss",
-                i2 = math.mininteger,
-                d1 = 99999999999999.55555,
-                i3 = 2147483647,
-            }
-        }
 
         local PbcCodec = require "engine.PbcCodec"
         codec = PbcCodec()
@@ -171,49 +138,44 @@ Test.describe("socket_test", function()
 
         Test.wait()
     end)
-    --[[
-    Test.it(string.format("protobuf performance test %d", PERF_TIMES), function()
+
+    Test.it(string.format("socket pingpong test %d", PERF_TIMES), function()
         local count = 0
-        Cmd.reg(TEST.LITE, function(pkt)
-            srv_conn:send_pkt(TEST.LITE, pkt)
-        end, true)
-        clt_conn.on_message = function(self, cmd, e, pkt)
-            Test.equal(cmd, TEST.LITE.i)
-            count = count + 1
+        local msg_id = math.random(1, 65535)
 
-            if count >= PERF_TIMES then Test.done() end
+        local str = string.rep("1234567890", 512)
+        local size1 = string.len(str)
+
+        local b = Buffer()
+        local buffer1 = b:fromstring(str)
+        print("pingpong buffer size is", size1)
+
+        srv_conn.on_message = function(self, recv_msg_id, buffer, size)
+            Test.equal(recv_msg_id, msg_id)
+
+            -- 读取一个int16
+            local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
+            Test.equal(msg_id2, msg_id)
+
+            self:send_pkt(msg_id, codec_buffer, size - msg_id_len)
         end
-
-        -- 一次性发送大量数据，测试缓冲区及打包效率
-        -- 由于大量的包堆在缓冲区，需要用到多个缓冲区块，有很多using continuous buffer日志
-        for _ = 1, PERF_TIMES do
-            clt_conn:send_pkt(TEST.LITE, lite_pkt)
-        end
-
-        Test.wait()
-    end)
-    Test.it(string.format("protobuf pingpong test %d", PERF_TIMES), function()
-        local count = 0
-        Cmd.reg(TEST.LITE, function(pkt)
-            srv_conn:send_pkt(TEST.LITE, pkt)
-        end, true)
-        clt_conn.on_message = function(self, cmd, e, pkt)
-            Test.equal(cmd, TEST.LITE.i)
+        clt_conn.on_message = function(self, recv_msg_id, buffer, size)
+            Test.equal(recv_msg_id, msg_id)
             count = count + 1
 
             if count >= PERF_TIMES then
                 Test.done()
             else
-                clt_conn:send_pkt(TEST.LITE, lite_pkt)
+                clt_conn:send_pkt(msg_id, buffer1, size1)
             end
         end
 
-        -- 测试来回发送数据，这个取决于打包、传输效率
-        clt_conn:send_pkt(TEST.LITE, lite_pkt)
+        -- 这里本来想做类似于nginx做0kb 1kb 10kb 100kb下性能测试，但由于这里收发只能跑
+        -- 在一个线程，没啥意义，所以只测试准确性
+        clt_conn:send_pkt(msg_id, buffer1, size1)
 
         Test.wait()
     end)
-    ]]
 
     Test.after(function()
         if clt_conn then clt_conn:close() end
