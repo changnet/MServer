@@ -124,6 +124,8 @@ end
 
 -- 连接断开(主动断开、对方断开都会触发此事件)
 function Socket:on_disconnected()
+    -- 如果socket.status不为closing，则为对方关闭链接
+    -- 可通过self.s:get_errno()获取错误码判断是否出现错误
 end
 
 -- 连接建立完成(包括SSL等握手完成)

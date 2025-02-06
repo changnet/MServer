@@ -147,7 +147,6 @@ public:
     int32_t set_packet(int32_t packet_type);
 
     inline int32_t fd() const { return fd_; }
-    inline int32_t conn_id() const { return socket_id_; }
 
     /**
      * @brief 设置缓冲区的参数

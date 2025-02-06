@@ -6,7 +6,7 @@ local EngineSocket = require "engine.Socket"
 local SsSocket = oo.class(Socket)
 
 SsSocket.default_param = {
-    pkt = EngineSocket.PT_STREAM, -- 打包类型
+    pkt = EngineSocket.PT_SSSTREAM, -- 打包类型
     action = 2, -- over_action，2 表示缓冲区满后进入自旋来发送数据
     send_chunk_max = 1024, -- 发送缓冲区chunk数量，单个chunk8k，见C++ buffer.h定义
     recv_chunk_max = 1024 -- 接收缓冲区chunk数量
@@ -61,14 +61,14 @@ function SsSocket:on_connected()
 end
 
 -- 连接断开
-function SsSocket:on_disconnected(e, is_conn)
+function SsSocket:on_disconnected()
     self.auth = false
-    return SrvMgr.srv_conn_del(self.socket_id, e, is_conn)
+    -- return SrvMgr.srv_conn_del(self.socket_id, e, is_conn)
 end
 
 -- 服务器之间消息回调
-function SsSocket:on_message(session, cmd, errno, pkt)
-    return Cmd.dispatch_srv(self, cmd, pkt)
+function SsSocket:on_message(src, dst, mtype, usize, udata)
+    -- return Cmd.dispatch_srv(self, cmd, pkt)
 end
 
 return SsSocket

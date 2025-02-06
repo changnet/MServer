@@ -1,12 +1,11 @@
 #include <websocket_parser.h>
 
 #include "lpp/ltools.hpp"
-#include "system/static_global.hpp"
 #include "net/socket.hpp"
 #include "ws_stream_packet.hpp"
 
 #pragma pack(push, 1)
-struct WSHeader
+struct WssHeader
 {
     uint16_t cmd_; /* 协议号 */
 };
@@ -32,7 +31,7 @@ int32_t WSStreamPacket::pack_any(lua_State *L, int32_t index)
     int32_t size    = luaL_checkinteger32(L, index + 3);
     if (size < 0) return -1;
 
-    struct WSHeader header;
+    struct WssHeader header;
     header.cmd_ = static_cast<uint16_t>(cmd);
 
     size_t frame_size      = size + sizeof(header);
@@ -75,13 +74,13 @@ int32_t WSStreamPacket::on_frame_end()
     size_t size     = 0;
     const char *ctx = body_.all_to_flat_ctx(size, 1);
 
-    if (size < sizeof(WSHeader))
+    if (size < sizeof(WssHeader))
     {
         unpack_error(L_, "incomplete stream data");
         return WPE_PAUSE; // unpack_error返回错误在lua处理，不需要返回WPE_ERROR;
     }
 
-    decltype(WSHeader::cmd_) cmd = 0;
+    decltype(WssHeader::cmd_) cmd = 0;
     memcpy(&cmd, ctx, sizeof(cmd));
 
     lua_pushinteger(L_, PC_DATA);
