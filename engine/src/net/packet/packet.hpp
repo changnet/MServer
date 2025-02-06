@@ -11,11 +11,12 @@ class Packet
 public:
     typedef enum
     {
-        PT_NONE      = 0, ///< 协议打包类型，无效值
-        PT_HTTP      = 1, ///< 协议打包类型，HTTP方式
-        PT_STREAM    = 2, ///< 协议打包类型，二进制流
-        PT_WEBSOCKET = 3, ///< 协议打包类型，标准websocket方式
-        PT_WSSTREAM  = 4, ///< 协议打包类型，websocket + 二进制流
+        PT_NONE      = 0, // 协议打包类型，无效值
+        PT_HTTP      = 1, // 协议打包类型，HTTP方式
+        PT_SSSTREAM  = 2, // 协议打包类型，服务器之间二进制流通信
+        PT_WEBSOCKET = 3, // 协议打包类型，标准websocket方式
+        PT_WSSTREAM  = 4, // 协议打包类型，websocket + 二进制流
+        PT_SCSTREAM  = 5, // 协议打包类型，服务器与客户端二进制流通信
 
         PKT_MAX ///< 协议打包类型最大值
     } PacketType;

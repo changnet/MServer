@@ -1,19 +1,19 @@
-#include "stream_packet.hpp"
+#include "ss_stream_packet.hpp"
 
 #include "net/socket.hpp"
 #include "net/net_header.hpp"
 #include "system/static_global.hpp"
 #include "lpp/lcpp.hpp"
 
-StreamPacket::StreamPacket(class Socket *sk) : Packet(sk)
+SsStreamPacket::SsStreamPacket(class Socket *sk) : Packet(sk)
 {
 }
 
-StreamPacket::~StreamPacket()
+SsStreamPacket::~SsStreamPacket()
 {
 }
 
-int32_t StreamPacket::unpack(lua_State *L, Buffer &buffer)
+int32_t SsStreamPacket::unpack(lua_State *L, Buffer &buffer)
 {
     constexpr decltype(NetHeader::size_) header_size = sizeof(struct NetHeader);
     // 检测包头是否完整
@@ -46,18 +46,18 @@ int32_t StreamPacket::unpack(lua_State *L, Buffer &buffer)
     return next ? 1 : 0;
 }
 
-int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_clt(lua_State *L, int32_t index)
 {
     return 0;
 }
 
-int32_t StreamPacket::pack_srv(lua_State* L, int32_t index)
+int32_t SsStreamPacket::pack_srv(lua_State* L, int32_t index)
 {
     return 0;
 }
 
 #ifdef OLDNET
-void StreamPacket::rpc_command(const SSHeader *header)
+void SsStreamPacket::rpc_command(const SSHeader *header)
 {
     /**
      * TODO protobuf的codec是在lua做的，一是方便更换编码方案，二是外部的protobuf库接口是lua的
@@ -105,7 +105,7 @@ void StreamPacket::rpc_command(const SSHeader *header)
     lua_settop(L, 0); /* remove trace back */
 }
 
-void StreamPacket::rpc_return(const SSHeader *header)
+void SsStreamPacket::rpc_return(const SSHeader *header)
 {
     static lua_State *L = StaticGlobal::state();
     assert(0 == lua_gettop(L));
@@ -138,7 +138,7 @@ void StreamPacket::rpc_return(const SSHeader *header)
 }
 
 /* 打包rpc数据包 */
-int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
+int32_t SsStreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
                                   uint16_t ecode, uint16_t pkt, int32_t index)
 {
     STAT_TIME_BEG();
@@ -186,7 +186,7 @@ int32_t StreamPacket::do_pack_rpc(lua_State *L, int32_t unique_id,
 }
 
 /* 打包服务器发往客户端数据包 */
-int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_clt(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
@@ -216,7 +216,7 @@ int32_t StreamPacket::pack_clt(lua_State *L, int32_t index)
 
 
 /* 打包客户端发往服务器数据包 */
-int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_srv(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
 
@@ -240,7 +240,7 @@ int32_t StreamPacket::pack_srv(lua_State *L, int32_t index)
     return 0;
 }
 
-int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_ss(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
 
@@ -267,14 +267,14 @@ int32_t StreamPacket::pack_ss(lua_State *L, int32_t index)
     return 0;
 }
 
-int32_t StreamPacket::pack_rpc(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_rpc(lua_State *L, int32_t index)
 {
     int32_t unique_id = luaL_checkinteger32(L, index);
     // ecode默认0
     return do_pack_rpc(L, unique_id, 0, SPT_RPCS, index + 1);
 }
 
-int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_ssc(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
 
@@ -304,7 +304,7 @@ int32_t StreamPacket::pack_ssc(lua_State *L, int32_t index)
     return 0;
 }
 
-int32_t StreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
+int32_t SsStreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
                                    size_t size)
 {
     /* 先构造客户端收到的数据包 */
@@ -320,7 +320,7 @@ int32_t StreamPacket::raw_pack_clt(int32_t cmd, uint16_t ecode, const char *ctx,
     return 0;
 }
 
-int32_t StreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
+int32_t SsStreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
                                   const char *ctx, size_t size)
 {
     struct SSHeader s2sh;
@@ -338,7 +338,7 @@ int32_t StreamPacket::raw_pack_ss(int32_t cmd, uint16_t ecode, int32_t session,
 
 // 打包客户端广播数据
 // ssc_multicast( conn_id,mask,args_list,codec_type,cmd,errno,pkt )
-int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
+int32_t SsStreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
 {
     STAT_TIME_BEG();
 
@@ -402,7 +402,7 @@ int32_t StreamPacket::pack_ssc_multicast(lua_State *L, int32_t index)
 }
 
 // 转发到一个客户端
-void StreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
+void SsStreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
                                      const char *ctx, size_t size)
 {
     static const class LNetworkMgr *network_mgr = StaticGlobal::network_mgr();
@@ -432,7 +432,7 @@ void StreamPacket::ssc_one_multicast(Owner owner, int32_t cmd, uint16_t ecode,
 }
 
 // 处理其他进程发过来的客户端广播
-void StreamPacket::ssc_multicast(const SSHeader *header)
+void SsStreamPacket::ssc_multicast(const SSHeader *header)
 {
     const Owner *raw_list = reinterpret_cast<const Owner *>(header + 1);
     int32_t mask          = static_cast<int32_t>(*raw_list);

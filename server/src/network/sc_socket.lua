@@ -12,6 +12,7 @@ ScSocket.default_param = {
 }
 
 local MASK = ScSocket.WS_OP_BINARY | ScSocket.WS_FINAL_FRAME
+local send_srv = EngineSocket.send_srv
 
 function ScSocket:__init(socket_id)
     WebSocket.__init(self)
@@ -19,7 +20,8 @@ end
 
 -- 发送数据包
 function ScSocket:send_pkt(msg_id, buffer, size)
-    return self.s:send_srv(MASK, msg_id, buffer, size)
+    -- self.s:send_srv(MASK, msg_id, buffer, size) -- 这个要访问元表慢一些
+    return send_srv(self.s, MASK, msg_id, buffer, size)
 end
 
 -- 认证成功

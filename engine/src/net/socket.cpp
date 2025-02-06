@@ -3,7 +3,7 @@
 #include "net_compat.hpp"
 #include "io/ssl_io.hpp"
 #include "packet/http_packet.hpp"
-#include "packet/stream_packet.hpp"
+#include "packet/ss_stream_packet.hpp"
 #include "packet/websocket_packet.hpp"
 #include "packet/ws_stream_packet.hpp"
 #include "system/static_global.hpp"
@@ -767,7 +767,7 @@ int32_t Socket::set_packet(int32_t packet_type)
     switch (packet_type)
     {
     case Packet::PT_HTTP: packet_ = new HttpPacket(this); break;
-    case Packet::PT_STREAM: packet_ = new StreamPacket(this); break;
+    case Packet::PT_SSSTREAM: packet_ = new SsStreamPacket(this); break;
     case Packet::PT_WEBSOCKET: packet_ = new WebsocketPacket(this); break;
     case Packet::PT_WSSTREAM: packet_ = new WSStreamPacket(this); break;
     default: return -1;
@@ -806,11 +806,6 @@ int32_t Socket::io_init_connect()
 
 int32_t Socket::send_clt(lua_State *L)
 {
-    if (!packet_)
-    {
-        return luaL_error(L, "no packet found");
-    }
-
     // 1是socket本身，数据从2开始
     packet_->pack_clt(L, 2);
 
@@ -819,11 +814,6 @@ int32_t Socket::send_clt(lua_State *L)
 
 int32_t Socket::send_srv(lua_State *L)
 {
-    if (!packet_)
-    {
-        return luaL_error(L, "no packet found");
-    }
-
     // 1是socket本身，数据从2开始
     packet_->pack_srv(L, 2);
     return 0;
@@ -831,11 +821,6 @@ int32_t Socket::send_srv(lua_State *L)
 
 int32_t Socket::send_ctrl(lua_State *L)
 {
-    if (!packet_)
-    {
-        return luaL_error(L, "no packet found");
-    }
-
     // 1是socket本身，数据从2开始
     packet_->pack_ctrl(L, 2);
     return 0;

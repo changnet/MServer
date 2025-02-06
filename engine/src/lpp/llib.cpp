@@ -157,7 +157,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::close>("close");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
-    lc.set(Packet::PT_STREAM, "PT_STREAM");
+    lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
 }
