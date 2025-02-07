@@ -75,7 +75,7 @@ int32_t SsStreamPacket::pack_srv(lua_State* L, int32_t index)
     // 这个和ThreadMessage的机制一致
     if (!lua_islightuserdata(L, index + 4))
     {
-        socket_->append(&header, sizeof(SssHeader));
+        socket_->send(&header, sizeof(SssHeader));
         return 0;
     }
 
@@ -84,6 +84,7 @@ int32_t SsStreamPacket::pack_srv(lua_State* L, int32_t index)
     header.size_ += header.usize_;
     socket_->append(&header, sizeof(SssHeader));
     socket_->append(buffer, header.usize_);
+    socket_->flush();
 
     return 0;
 }

@@ -2,6 +2,7 @@
 
 local ScSocket = require "network.sc_socket"
 local CsSocket = require "network.cs_socket"
+local SsSocket = require "network.ss_socket"
 
 local sc_param = table.copy(ScSocket.default_param)
 local cs_param = table.copy(CsSocket.default_param)
@@ -12,17 +13,17 @@ sc_param.recv_chunk_max = 256
 cs_param.send_chunk_max = 256
 cs_param.recv_chunk_max = 256
 
-
-
 Test.describe("socket test", function()
-    local srv_conn = nil
-    local clt_conn = nil
-    local listen_conn = nil
-    local listen_conn_ws = nil
+    local sc_srv = nil
+    local sc_clt = nil
+    local sc_listen = nil
+    local ss_srv = nil
+    local ss_clt = nil
+    local ss_listen = nil
 
-    local local_host = "::1"
-    local local_port = 2099
-    if IPV4 then local_host = "127.0.0.1" end
+    local ss_port = 2098
+    local sc_port = 2099
+    local local_host = IPV4 and "127.0.0.1" or "::1"
 
     local msg_id_len = 2 -- 一个int16的长度
     local Buffer = require "engine.Buffer"
@@ -84,23 +85,41 @@ Test.describe("socket test", function()
         codec:update()
 
         -- 建立一个客户端、一个服务端连接，模拟通信
+        local done = 0
 
-        listen_conn = ScSocket()
-        listen_conn.default_param = sc_param
-        listen_conn:listen(local_host, local_port)
-        listen_conn.on_accepted = function(self)
-            srv_conn = self
+        sc_listen = ScSocket()
+        sc_listen.default_param = sc_param
+        sc_listen:listen(local_host, ss_port)
+        sc_listen.on_accepted = function(self)
+            sc_srv = self
         end
-        listen_conn.on_connected = function() end
-        listen_conn.on_disconnected = function() end
+        sc_listen.on_connected = function() end
+        sc_listen.on_disconnected = function() end
 
-        clt_conn = CsSocket()
-        clt_conn.default_param = cs_param
-        clt_conn:connect(local_host, local_port)
-        clt_conn.on_connected = function()
-            Test.done()
+        sc_clt = CsSocket()
+        sc_clt.default_param = cs_param
+        sc_clt:connect(local_host, ss_port)
+        sc_clt.on_connected = function()
+            done = done + 1
+            if 2 == done then Test.done() end
         end
-        clt_conn.on_disconnected = function() end
+        sc_clt.on_disconnected = function() end
+
+        ss_listen = SsSocket()
+        ss_listen:listen(local_host, sc_port)
+        ss_listen.on_accepted = function(self)
+            ss_srv = self
+        end
+        ss_listen.on_connected = function() end
+        ss_listen.on_disconnected = function() end
+
+        ss_clt = SsSocket()
+        ss_clt:connect(local_host, sc_port)
+        ss_clt.on_connected = function()
+            done = done + 1
+            if 2 == done then Test.done() end
+        end
+        ss_clt.on_disconnected = function() end
 
         Test.wait(2000)
     end)
@@ -108,7 +127,7 @@ Test.describe("socket test", function()
     Test.it("client socket test", function()
         -- TODO 其实不用protobuf测试也行，只是这里想模拟一下整个cs通信流程的延迟
         local msg_id = math.random(1, 65535)
-        srv_conn.on_message = function(self, recv_msg_id, buffer, size)
+        sc_srv.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
             -- 读取一个int16
@@ -120,7 +139,7 @@ Test.describe("socket test", function()
 
             self:send_pkt(msg_id, codec_buffer, size - msg_id_len)
         end
-        clt_conn.on_message = function(self, recv_msg_id, buffer, size)
+        sc_clt.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
             local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
@@ -134,7 +153,7 @@ Test.describe("socket test", function()
         end
 
         local buffer, size = codec:encode_to_buffer("system.TestBase", base_pkt)
-        clt_conn:send_pkt(msg_id, buffer, size)
+        sc_clt:send_pkt(msg_id, buffer, size)
 
         Test.wait()
     end)
@@ -150,7 +169,7 @@ Test.describe("socket test", function()
         local buffer1 = b:fromstring(str)
         print("pingpong buffer size is", size1)
 
-        srv_conn.on_message = function(self, recv_msg_id, buffer, size)
+        sc_srv.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
             -- 读取一个int16
@@ -159,28 +178,81 @@ Test.describe("socket test", function()
 
             self:send_pkt(msg_id, codec_buffer, size - msg_id_len)
         end
-        clt_conn.on_message = function(self, recv_msg_id, buffer, size)
+        sc_clt.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
             count = count + 1
 
             if count >= PERF_TIMES then
                 Test.done()
             else
-                clt_conn:send_pkt(msg_id, buffer1, size1)
+                sc_clt:send_pkt(msg_id, buffer1, size1)
             end
         end
 
         -- 这里本来想做类似于nginx做0kb 1kb 10kb 100kb下性能测试，但由于这里收发只能跑
         -- 在一个线程，没啥意义，所以只测试准确性
-        clt_conn:send_pkt(msg_id, buffer1, size1)
+        sc_clt:send_pkt(msg_id, buffer1, size1)
+
+        Test.wait()
+    end)
+
+    Test.it("server_socket test", function()
+        local src = math.random(1, 65535)
+        local dst = math.random(1, 65535)
+        local mtype = math.random(1, 65535)
+        local usize = math.random(1, 65535)
+
+        local str = "1234567890abc"
+        local buffer = Buffer()
+        local b = buffer:fromstring(str)
+
+        local case_list = {
+            {usize}, -- 无udata
+            {string.len(str), b}, -- 有udata
+        }
+
+        local srv_idx = 0
+        local clt_idx = 0
+        ss_srv.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+            Test.equal(rsrc, src)
+            Test.equal(rdst, dst)
+            Test.equal(rmtype, rmtype)
+
+            srv_idx = srv_idx + 1
+            local case = case_list[srv_idx]
+
+            Test.equal(rusize, case[1])
+            Test.equal(rudata, case[2])
+
+            self:send_pkt(rsrc, rdst, rmtype, rusize, rudata)
+        end
+        ss_clt.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+            Test.equal(rsrc, src)
+            Test.equal(rdst, dst)
+            Test.equal(rmtype, rmtype)
+
+            clt_idx = clt_idx + 1
+            local case = case_list[srv_idx]
+
+            Test.equal(rusize, case[1])
+            Test.equal(rudata, case[2])
+
+            if clt_idx == #case_list then Test.done() end
+        end
+
+        for _, case in pairs(case_list) do
+            ss_clt:send_pkt(src, dst, mtype, case[1], case[2])
+        end
 
         Test.wait()
     end)
 
     Test.after(function()
-        if clt_conn then clt_conn:close() end
-        if srv_conn then srv_conn:close() end
-        if listen_conn then listen_conn:close() end
-        if listen_conn_ws then listen_conn_ws:close() end
+        if sc_clt then sc_clt:close() end
+        if sc_srv then sc_srv:close() end
+        if sc_listen then sc_listen:close() end
+        if ss_clt then sc_clt:close() end
+        if ss_srv then sc_srv:close() end
+        if ss_listen then sc_listen:close() end
     end)
 end)
