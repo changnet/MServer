@@ -30,6 +30,13 @@ Test.describe("socket test", function()
 
     local PERF_TIMES = 10000
 
+    local pingpong_str = string.rep("1234567890", 512)
+    local pingpong_size = string.len(pingpong_str)
+
+    local pingpong_b = Buffer()
+    local pingpong_ud = pingpong_b:fromstring(pingpong_str)
+    print("pingpong buffer size is", pingpong_size)
+
     -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
     -- 使用 -9223372036854775808|0 或者 math.mininteger
@@ -158,25 +165,14 @@ Test.describe("socket test", function()
         Test.wait()
     end)
 
-    Test.it(string.format("socket pingpong test %d", PERF_TIMES), function()
+    Test.it(string.format("client socket pingpong test %d", PERF_TIMES), function()
         local count = 0
         local msg_id = math.random(1, 65535)
-
-        local str = string.rep("1234567890", 512)
-        local size1 = string.len(str)
-
-        local b = Buffer()
-        local buffer1 = b:fromstring(str)
-        print("pingpong buffer size is", size1)
 
         sc_srv.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
-            -- 读取一个int16
-            local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
-            Test.equal(msg_id2, msg_id)
-
-            self:send_pkt(msg_id, codec_buffer, size - msg_id_len)
+            self:send_pkt(msg_id, pingpong_ud, pingpong_size)
         end
         sc_clt.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
@@ -185,18 +181,18 @@ Test.describe("socket test", function()
             if count >= PERF_TIMES then
                 Test.done()
             else
-                sc_clt:send_pkt(msg_id, buffer1, size1)
+                sc_clt:send_pkt(msg_id, pingpong_ud, pingpong_size)
             end
         end
 
         -- 这里本来想做类似于nginx做0kb 1kb 10kb 100kb下性能测试，但由于这里收发只能跑
         -- 在一个线程，没啥意义，所以只测试准确性
-        sc_clt:send_pkt(msg_id, buffer1, size1)
+        sc_clt:send_pkt(msg_id, pingpong_ud, pingpong_size)
 
         Test.wait()
     end)
 
-    Test.it("server_socket test", function()
+    Test.it("server socket test", function()
         local src = math.random(1, 65535)
         local dst = math.random(1, 65535)
         local mtype = math.random(1, 65535)
@@ -216,26 +212,34 @@ Test.describe("socket test", function()
         ss_srv.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
             Test.equal(rsrc, src)
             Test.equal(rdst, dst)
-            Test.equal(rmtype, rmtype)
+            Test.equal(rmtype, mtype)
 
             srv_idx = srv_idx + 1
             local case = case_list[srv_idx]
 
             Test.equal(rusize, case[1])
-            Test.equal(rudata, case[2])
+            if not case[2] then
+                Test.equal(rudata, nil)
+            else
+                Test.equal(Buffer.lightud_tostring(rudata, rusize), str)
+            end
 
             self:send_pkt(rsrc, rdst, rmtype, rusize, rudata)
         end
         ss_clt.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
             Test.equal(rsrc, src)
             Test.equal(rdst, dst)
-            Test.equal(rmtype, rmtype)
+            Test.equal(rmtype, mtype)
 
             clt_idx = clt_idx + 1
-            local case = case_list[srv_idx]
+            local case = case_list[clt_idx]
 
             Test.equal(rusize, case[1])
-            Test.equal(rudata, case[2])
+            if not case[2] then
+                Test.equal(rudata, nil)
+            else
+                Test.equal(Buffer.lightud_tostring(rudata, rusize), str)
+            end
 
             if clt_idx == #case_list then Test.done() end
         end
@@ -247,12 +251,38 @@ Test.describe("socket test", function()
         Test.wait()
     end)
 
+    Test.it(string.format("server socket pingpong test %d", PERF_TIMES), function()
+        local count = 0
+        local src = math.random(1, 65535)
+        local dst = math.random(1, 65535)
+        local mtype = math.random(1, 65535)
+
+        ss_srv.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+            Test.equal(rmtype, mtype)
+
+            self:send_pkt(rsrc, rdst, rmtype, rusize, rudata)
+        end
+        ss_clt.on_message = function(self, rsrc, rdst, rmtype, rusize, rudata)
+            Test.equal(rmtype, rmtype)
+
+            count = count + 1
+            if count == PERF_TIMES then
+                Test.done()
+            else
+                ss_clt:send_pkt(src, dst, mtype, pingpong_size, pingpong_ud)
+            end
+        end
+        ss_clt:send_pkt(src, dst, mtype, pingpong_size, pingpong_ud)
+
+        Test.wait()
+    end)
+
     Test.after(function()
         if sc_clt then sc_clt:close() end
         if sc_srv then sc_srv:close() end
         if sc_listen then sc_listen:close() end
-        if ss_clt then sc_clt:close() end
-        if ss_srv then sc_srv:close() end
-        if ss_listen then sc_listen:close() end
+        if ss_clt then ss_clt:close() end
+        if ss_srv then ss_srv:close() end
+        if ss_listen then ss_listen:close() end
     end)
 end)
