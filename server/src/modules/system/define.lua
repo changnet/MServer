@@ -2,15 +2,8 @@
 -- 2017-03-28
 -- xzc
 
--- 进程id定义
-PROCESS_TEST    = 1 -- 单元测试
-PROCESS_GATEWAY = 2 -- 网关
-PROCESS_GAME    = 3 -- 游戏逻辑
-PROCESS_DATA    = 4 -- 数据读写
-PROCESS_CROSS   = 5 -- 跨服
-PROCESS_CENTER  = 6 -- 中心服
-
-WORKER_TEST = 1 -- 单元测试
+-- worker类型定义{类型, 名字}，名字用于打印日志
+WORKER_TEST = {1, "test"} -- 单元测试
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"

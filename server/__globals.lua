@@ -1,4 +1,4 @@
--- auto export by lua-tags 150 symbols
+-- auto export by lua-tags 144 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -54,13 +54,7 @@ return {
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
-"PROCESS_CENTER", -- src/modules/system/define.lua
-"PROCESS_CROSS", -- src/modules/system/define.lua
-"PROCESS_DATA", -- src/modules/system/define.lua
-"PROCESS_GAME", -- src/modules/system/define.lua
-"PROCESS_GATEWAY", -- src/modules/system/define.lua
 "PROCESS_ID", -- src/engine/bootstrap.lua
-"PROCESS_TEST", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua

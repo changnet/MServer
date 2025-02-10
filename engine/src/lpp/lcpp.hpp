@@ -652,14 +652,30 @@ private:
     static T *class_constructor_caller(lua_State *L,
                                        const std::index_sequence<I...> &)
     {
-        return new T(lua_to_cpp<Args>(L, 2 + I)...);
-        (void)L; // warning: parameter ‘L’ set but not used [-Wunused-but-set-parameter]
+        try
+        {
+            return new T(lua_to_cpp<Args>(L, 2 + I)...);
+        }
+        catch (const std::runtime_error &e)
+        {
+            luaL_error(L, e.what()); // long jump, never return
+            return nullptr;
+        }
     }
 
     template <typename... Args> static int class_constructor(lua_State *L)
     {
-        T *obj = class_constructor_caller<Args...>(
-            L, std::make_index_sequence<sizeof...(Args)>{});
+        T *obj;
+        try
+        {
+            obj = class_constructor_caller<Args...>(
+                L, std::make_index_sequence<sizeof...(Args)>{});
+        }
+        catch (const std::runtime_error &e)
+        {
+            // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+            return luaL_error(L, e.what());
+        }
 
         // lua调用__call,第一个参数是元表
         // 清除所有构造函数参数,只保留元表(TODO: 是否要清除)

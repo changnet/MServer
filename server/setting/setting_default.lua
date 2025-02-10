@@ -18,38 +18,29 @@ return
 
     gm = true, -- 是否启用gm
     lang = "zh", -- 简体中文
-    gc_stat = true, -- 是否记录gc时间，不配置则不记录
-    rpc_perf = "log/rpc_perf", -- rpc指令耗时记录，不配置则不记录
-    cmd_perf = "log/cmd_perf", -- cmd指令耗时记录，不配置则不记录
+    server = 1, -- 当前服务器id
+    process = "gateway", -- 当前进程启动worker名字
 
-    gateway = -- gateway 配置
+    -- 网关配置（监听客户端连接的ip和端口）
+    gateway =
     {
-        {-- 网关1配置
-            sip   = "::1", -- s2s监听ip
-            sport = 10001, -- s2s监听端口
-            cip   = "::", -- c2s监听ip，在virtualbox的端口转发模式下，127.0.0.1转发不成功
-            cport = 10002, -- s2s监听端口
-            hip   = "::", -- http监听ip
-            hport = 10003, -- http监听端口
-        }
+        -- 在virtualbox的端口转发模式下，127.0.0.1转发不成功
+        gateway1 = {host = "::", port = 10001}
+        -- 一个服有多个网关的话依次列出
+        -- gateway2 = {host = "::", port = 10002}
     },
 
-    world = -- world服务器配置
+    -- 集群
+    cluster =
     {
-        {-- 世界服world 1配置
-            sip     = "::1", -- s2s监听ip
-            sport   = 20001, -- s2s监听端口
-            servers = {"gateway"}, -- 主动连接到这些服务器
-        }
+        -- 同一个类型的节点，只能有一个master(可以没有master)
+        -- 一个节点的port = 0表示该节点只接收master中转的数据，不开启监听
+        gateway1 = {host = "::1", port = 20001, master = 1},
+        gateway2 = {host = "::1", port = 20002},
+        db1 = {host = "::1", port = 20003},
+        db2 = {host = "::1", port = 20004},
     },
-
-    area = -- area服务器配置
-    {
-        {-- 区域服area 1配置
-            servers = {"gateway", "world"}, -- 主动连接到这些服务器
-        },
-        {-- 区域服area 2配置
-            servers = {"gateway", "world"}, -- 主动连接到这些服务器
-        },
-    }
+    -- 当前进程启动集群节点范围
+    -- 假如当前为gateway，则{1, 10}表示表示 gateway1~gateway10
+    cluster_range = {1, 10},
 }

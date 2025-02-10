@@ -16,9 +16,9 @@ function Shutdown.begin()
             local s = WorkerSetting[addr]
             if not w:is_start() then
                 -- 已经被关闭或者未开启成功
-                printf("worker %s not start, addr = %d", s.name, addr)
-            elseif wt == s.type then
-                printf("worker %s shutting down, addr = %d", s.name, addr)
+                printf("worker %s not start, addr = %d", wt[2], addr)
+            elseif wt[1] == s.type[1] then
+                printf("worker %s shutting down, addr = %d", wt[2], addr)
 
                 is_shut[addr] = true
                 Call.Shutdown.worker_stop(addr)

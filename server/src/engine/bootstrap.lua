@@ -39,8 +39,8 @@ __package_cpath = package.cpath
 WorkerHash = {} -- 以worker的addr为key，worker对象为value
 WorkerSetting = {} -- 以worker的addr为ke，worker的配置为value
 
-PROCESS_ID = 0 -- 当前进程id
-LOCAL_ADDR = 0 -- 当前进程地址
+PROCESS_ID = 1 -- 当前进程id
+LOCAL_ADDR = 0 -- 当前worker地址
 LOCAL_TYPE = 0 -- 当前worker类型
 
 local WorkerThread = require "engine.WorkerThread"
@@ -78,7 +78,7 @@ local function set_path()
 end
 
 -- 进程预加载必要的组件
-function Bootstrap.process_preload(process_id)
+function Bootstrap.process_preload()
     g_thread = g_mthread
     set_path()
 
@@ -90,8 +90,7 @@ function Bootstrap.process_preload(process_id)
 
     require "engine.engine"
 
-    PROCESS_ID = process_id
-    LOCAL_ADDR = Engine.make_address(process_id, 0, 1)
+    LOCAL_ADDR = PROCESS_ID
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "engine.co_pool"
@@ -102,9 +101,6 @@ function Bootstrap.process_preload(process_id)
     require "rpc.rpc"
     require "timer.timer"
     require "network.socket_mgr"
-
-    print("process start, address", LOCAL_ADDR)
-    g_env:set("process_id", PROCESS_ID)
 
     Signal.mask(2, Shutdown.begin)
     Signal.mask(15, Shutdown.begin)
@@ -125,10 +121,8 @@ function Bootstrap.worker_preload(addr, log_name)
 
     require "engine.engine"
 
-    local proc_id, wtype = Engine.unmake_address(addr)
-    assert(proc_id == tonumber(g_env:get("process_id")))
+    local wtype = Engine.unmake_address(addr)
 
-    PROCESS_ID = proc_id
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
     Engine.add_thread_ctx(addr, g_thread:toludata())
@@ -148,14 +142,15 @@ end
 -- 从配置文件创建一个worker
 -- worker可以动态创建，但一般创建后就不删除（删除要考虑addr复用的问题）
 function Bootstrap.worker_create(setting)
-    local w = WorkerThread(setting.name)
-    local addr = Engine.make_address(PROCESS_ID, setting.type, setting.index)
+    local name = setting.type[2]
+    local w = WorkerThread(name)
+    local addr = Engine.make_address(setting.type[1], setting.index)
 
     WorkerHash[addr] = w
     WorkerSetting[addr] = setting
 
     w:start(srv_dir .. "/src/worker/" .. setting.file, addr)
-    printf("worker %s start, addr = %d", setting.name, addr)
+    printf("worker %s start, addr = %d", name, addr)
 end
 
 function Bootstrap.process_start(worker_setting)
