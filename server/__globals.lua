@@ -1,4 +1,4 @@
--- auto export by lua-tags 144 symbols
+-- auto export by lua-tags 149 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -82,6 +82,11 @@ return {
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
+"WORKER_DATA", -- src/modules/system/define.lua
+"WORKER_GAME", -- src/modules/system/define.lua
+"WORKER_GATEWAY", -- src/modules/system/define.lua
+"WORKER_PLAYER", -- src/modules/system/define.lua
+"WORKER_SCENE", -- src/modules/system/define.lua
 "WORKER_TEST", -- src/modules/system/define.lua
 "WSE", -- src/application/app.lua
 "WorkerHash", -- src/engine/bootstrap.lua

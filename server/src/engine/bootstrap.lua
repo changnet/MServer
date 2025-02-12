@@ -68,7 +68,7 @@ local function set_path()
     -- 所有的lua文件、so插件必须仅在源码目录搜索，避免版本冲突问题
 
     -- 设置lua文件搜索路径
-    package.path = srv_dir .. "/src/?.lua;"
+    package.path = srv_dir .. "/src/?.lua;" .. srv_dir .. "/src/modules/?.lua;"
     -- 设置c库搜索路径，用于直接加载so或者dll的lua模块
     if WINDOWS then
         package.cpath = "../c_module/?.dll;"
@@ -84,7 +84,8 @@ function Bootstrap.process_preload()
 
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
-    require("global.global") -- 加载log函数
+    require "global.global" -- 加载log函数
+    require "system.define" -- 基础定义
 
     log_env_info()
 
@@ -118,6 +119,7 @@ function Bootstrap.worker_preload(addr, log_name)
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
     require "global.global" -- 加载log函数
+    require "system.define" -- 基础定义
 
     require "engine.engine"
 
@@ -142,6 +144,10 @@ end
 -- 从配置文件创建一个worker
 -- worker可以动态创建，但一般创建后就不删除（删除要考虑addr复用的问题）
 function Bootstrap.worker_create(setting)
+    -- worker只能由主线程创建，否则主线程无法正确管理所有worker
+    -- worker要启动另一个worker需要使用rpc调用
+    assert(LOCAL_ADDR == PROCESS_ID)
+
     local name = setting.type[2]
     local w = WorkerThread(name)
     local addr = Engine.make_address(setting.type[1], setting.index)
