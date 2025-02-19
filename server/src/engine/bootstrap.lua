@@ -36,12 +36,8 @@ __require = require
 __package_path = package.path -- 保留原path
 __package_cpath = package.cpath
 
-WorkerHash = {} -- 以worker的addr为key，worker对象为value
-WorkerSetting = {} -- 以worker的addr为ke，worker的配置为value
-
-PROCESS_ID = 1 -- 当前进程id
-LOCAL_ADDR = 0 -- 当前worker地址
-LOCAL_TYPE = 0 -- 当前worker类型
+-- 底层通用工具
+Util = require "engine.util"
 
 local WorkerThread = require "engine.WorkerThread"
 
@@ -90,6 +86,7 @@ function Bootstrap.process_preload()
     log_env_info()
 
     require "engine.engine"
+    require "worker.worker"
 
     LOCAL_ADDR = PROCESS_ID
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
@@ -122,6 +119,7 @@ function Bootstrap.worker_preload(addr, log_name)
     require "system.define" -- 基础定义
 
     require "engine.engine"
+    require "worker.worker"
 
     local wtype = Engine.unmake_address(addr)
 

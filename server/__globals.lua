@@ -1,4 +1,4 @@
--- auto export by lua-tags 149 symbols
+-- auto export by lua-tags 147 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -18,6 +18,7 @@ return {
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
 "CltMgr", -- src/network/clt_mgr.lua
+"Cluster", -- src/cluster/cluster.lua
 "Cmd", -- src/network/cmd.lua
 "CoPool", -- src/engine/co_pool.lua
 "DEFINE_BEG", -- src/global/require.lua
@@ -34,8 +35,8 @@ return {
 "GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
-"LOCAL_ADDR", -- src/engine/bootstrap.lua
-"LOCAL_TYPE", -- src/engine/bootstrap.lua
+"LOCAL_ADDR", -- src/worker/worker.lua
+"LOCAL_TYPE", -- src/worker/worker.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/modules/log/log.lua
@@ -54,7 +55,7 @@ return {
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
-"PROCESS_ID", -- src/engine/bootstrap.lua
+"PROCESS_ID", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
@@ -82,15 +83,12 @@ return {
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
-"WORKER_DATA", -- src/modules/system/define.lua
-"WORKER_GAME", -- src/modules/system/define.lua
-"WORKER_GATEWAY", -- src/modules/system/define.lua
-"WORKER_PLAYER", -- src/modules/system/define.lua
-"WORKER_SCENE", -- src/modules/system/define.lua
-"WORKER_TEST", -- src/modules/system/define.lua
+"Util", -- src/engine/bootstrap.lua
+"WORKER", -- src/modules/system/define.lua
 "WSE", -- src/application/app.lua
-"WorkerHash", -- src/engine/bootstrap.lua
-"WorkerSetting", -- src/engine/bootstrap.lua
+"Worker", -- src/worker/worker.lua
+"WorkerHash", -- src/worker/worker.lua
+"WorkerSetting", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/engine/bootstrap.lua

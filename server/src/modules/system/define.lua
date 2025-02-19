@@ -2,13 +2,17 @@
 -- 2017-03-28
 -- xzc
 
+PROCESS_ID = 1 -- 当前进程对应的work id
+
 -- worker类型定义{类型, 名字}，名字用于打印日志
-WORKER_TEST    = {1, "test"} -- 单元测试
-WORKER_GATEWAY = {2, "gateway"} -- 网关
-WORKER_GAME    = {3, "game"} -- 游戏公用逻辑
-WORKER_DATA    = {4, "data"} -- 缓存及db操作
-WORKER_PLAYER  = {5, "player"} -- 玩家个人逻辑
-WORKER_SCENE   = {6, "scene"} -- 场景
+WORKER = {
+    TEST    = {1, "test"}, -- 单元测试
+    GATEWAY = {2, "gateway"}, -- 网关
+    GAME    = {3, "game"}, -- 游戏公用逻辑
+    DATA    = {4, "data"}, -- 缓存及db操作
+    PLAYER  = {5, "player"}, -- 玩家个人逻辑
+    SCENE   = {6, "scene"}, -- 场景
+}
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"

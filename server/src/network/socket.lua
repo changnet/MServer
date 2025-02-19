@@ -220,4 +220,10 @@ function Socket:address()
     return self.s:address()
 end
 
+-- 当前socket是否为server模式(监听端为server，connect的为client)
+function Socket:is_server()
+    -- 如果主动connect，那肯定有host
+    return not self.host
+end
+
 return Socket

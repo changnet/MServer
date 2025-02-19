@@ -114,7 +114,7 @@ end
 -- io建立成功，开始websocket握手
 function WebSocket:io_ready()
     -- 如果是客户端才发起握手，服务器是不处理的
-    if not self.host then return end
+    if self:is_server() then return end
     return self:send_handshake(self.url)
 end
 

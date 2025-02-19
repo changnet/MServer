@@ -23,3 +23,10 @@ function Engine.unmake_address(addr)
 
     return wType, index
 end
+
+-- 生成服务器之间的签名
+-- @param time 签名用的时间戳
+-- @param ... 其他用于签名的数据，字符串或者数字
+function Engine.make_srv_signature(time, ...)
+    return Util.md5(SRV_KEY, time, ...)
+end

@@ -35,6 +35,8 @@ local RPC_RES = ThreadMessage.RPC_RES
 local name_to_func = Rtti.name_to_func
 -- local func_to_name = func_to_name
 
+local last_src -- 最后一次调用rpc的来源
+
 -- 为了获取rpc返回的第一个参数，并实现在co内报错，需要wrap一层函数
 local function call_return(ok, ...)
     if not ok then
@@ -113,9 +115,6 @@ send_mt =
     end
 }
 
-setmetatable(Call, call_mt)
-setmetatable(Send, send_mt)
-
 local function do_request(src, session, name, ...)
     local func = name_to_func(name)
     if not func then
@@ -125,6 +124,8 @@ local function do_request(src, session, name, ...)
         local w = WorkerHash[src] or g_mthread
         return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
     end
+
+    last_src = src
 
     -- session表示不需要返回
     if 0 == session then
@@ -147,8 +148,22 @@ local function do_response(session, ...)
 end
 
 local function response_dispatch(src, udata, usize)
+    last_src = src
     return do_response(g_lcodec:decode_from_buffer(udata, usize))
 end
+
+-- 获取上一次调用的来源
+function Call.last_source()
+    return last_src
+end
+
+-- 获取上一次调用的来源
+function Send.last_source()
+    return last_src
+end
+
+setmetatable(Call, call_mt)
+setmetatable(Send, send_mt)
 
 ThreadMessage.reg(RPC_REQ, request_dispatch)
 ThreadMessage.reg(RPC_RES, response_dispatch)

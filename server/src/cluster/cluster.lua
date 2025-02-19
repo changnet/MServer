@@ -1,5 +1,5 @@
 -- 集群
-local Cluster = {}
+Cluster = {}
 
 --[[
 1. 在配置实现cluster配置
@@ -59,6 +59,11 @@ master通常用于调度（负载均衡）。比如场景节点开了10个，一
 个worker负责把数据转发给远程节点。
 ]]
 
+local this = global_storage("Cluster", {
+    node = {}, -- 各节点已认证连接，以addr为key
+    unnode = {}, -- unauthenticated 未认证结点
+})
+
 -- 启动当前进程的集群节点
 local function start_node(conf)
 end
@@ -97,6 +102,80 @@ function Cluster.connect(name, from, to)
     -- 同一个进程中，一个worker(包括ClusterWorker)的地址是对所有worker可见的
     -- 都可以往该worker发送消息
     -- 所以即使一个进程有多个节点，只发起一个连接到master节点即可。
+end
+
+-- 收到另一个节点认证请求
+function Cluster.authenticate(addr, tm, sign)
+    local node = this.node[addr]
+    if node then
+        Send.Cluster.on_authenticate(addr, false)
+        print("cluster auth node already auth", addr)
+        return
+    end
+
+    node = this.unnode[addr]
+    if not node then
+        Send.Cluster.on_authenticate(addr, false)
+        print("cluster auth no such node", addr)
+        return
+    end
+
+    local local_sign = Engine.make_srv_signature(tm)
+    if local_sign ~= sign then
+        Send.Cluster.on_authenticate(addr, false)
+        print("cluster auth signature fail", addr, tm, sign)
+        return
+    end
+
+    node.ready = true
+    this.node[addr] = node
+    this.unnode[addr] = nil
+
+    Send.Cluster.on_authenticate(addr, true)
+
+    print("cluster node establish", addr, Worker.name(addr))
+end
+
+-- 认证返回
+function Cluster.on_authenticate(addr, ok)
+    local node = this.unnode[addr]
+    if not node then
+        print("cluster on auth no such node", addr)
+        return
+    end
+
+    this.unnode[addr] = nil
+    if not ok then
+        node.wait_close = true
+        node:close()
+
+        print("cluster on auth fail", addr)
+        return
+    end
+    node.ready = true
+    print("cluster node establish", addr, Worker.name(addr))
+end
+
+function Cluster.unauthenticate(addr)
+    local node = this.node[addr] or this.unnode[addr]
+
+    this.node[addr] = nil
+
+    -- 如果是主动关闭或者server端，则直接删除
+    -- client端则需要尝试重连
+    if node.wait_close or node:is_server() then
+        this.unnode[addr] = nil
+    else
+        this.unnode[addr] = node
+        node:reconnect()
+    end
+
+    print("cluster node disconnect", addr, Worker.name(addr))
+end
+
+-- 所有节点是否连接完成
+function Cluster.ready()
+    return table.empty(this.unnode)
 end
 
 return Cluster

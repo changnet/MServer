@@ -38,7 +38,7 @@ function SsSocket:base_name()
     if self.name then return self.name end
 
     -- 连接过来的socket，会执行名字注册，但如果报错可能注册不成功
-    if not self.host then return "unknow" end
+    if self:is_server() then return "unknow" end
 
     -- 没有注册的情况下，使用地址作为标识名，方便查问题
     return string.format("%s:%d", self.host, self.port)

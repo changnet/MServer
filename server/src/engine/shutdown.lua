@@ -2,7 +2,7 @@
 Shutdown = {}
 
 -- 按指定worker类型关机顺序关半
-local Sequence = {WORKER_TEST}
+local Sequence = {WORKER.TEST}
 
 -- 开始走关服流程
 function Shutdown.begin()
