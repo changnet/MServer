@@ -209,6 +209,6 @@ int32_t LLog::set_name(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 2);
 
-    log_util::set_prefix_name(name);
+    log_util::set_log_name(name);
     return 0;
 }

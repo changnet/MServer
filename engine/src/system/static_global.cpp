@@ -107,7 +107,7 @@ void on_exit()
     global_mem_counter(counter, counters);
 
     // 这里很多变量都释放了，直接用PRINTF会打印不出来
-    log_util::set_prefix_name(nullptr);
+    log_util::set_log_name(nullptr);
     PLOG_R("new = " FMT64d " ----  new[] = " FMT64d, counter, counters);
     // back_trace();
 }

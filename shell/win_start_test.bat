@@ -8,9 +8,9 @@ set ASAN_OPTIONS=detect_leaks=1
 set BIN=%cd%/master.exe
 
 if "%filter%" == "" (
-	%BIN% --app=test --index=1 --id=1
+	%BIN% --node=test
 ) else (
 REM call win_start.bat "--filter=%filter%" 没法传包含空格的参数
-	%BIN% --app=test --index=1 --id=1 "--filter=%filter%"
+	%BIN% --node=test "--filter=%filter%"
 )
 REM call win_start.bat android 1 1

@@ -115,7 +115,7 @@ private:
 
     Buffer *device_reserve(Device &device, int64_t time, log_util::LogType type)
     {
-        Buffer *buff = buffer_pool_.construct(time, type, log_util::get_prefix_name());
+        Buffer *buff = buffer_pool_.construct(time, type, log_util::get_log_name());
 
         device.buff_.push_back(buff);
 

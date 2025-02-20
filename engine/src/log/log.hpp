@@ -60,8 +60,8 @@ enum LogType
     LO_MAX
 };
 
-void set_prefix_name(const char *name);
-const char *get_prefix_name();
+void set_log_name(const char *name);
+const char *get_log_name();
 
 // __FILE__显示的是文件被编译时的路径，在cmake下是全路径
 // 这时可以通过cmake计算出根目录，丢掉根目录的路径即变成相对路径(relative file)
@@ -78,7 +78,7 @@ const char *get_prefix_name();
  */
 void set_log_args(bool deamon, const char *ppath, const char *epath);
 
-size_t write_prefix(FILE *stream, const char *prefix, const char *type, int64_t time);
+size_t write_prefix(FILE *stream, const char *node_name, const char *type, int64_t time);
 
 /// 当前是否以后台模式运行
 bool is_deamon();

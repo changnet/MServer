@@ -39,9 +39,8 @@ __package_cpath = package.cpath
 -- 底层通用工具
 Util = require "engine.util"
 
-local WorkerThread = require "engine.WorkerThread"
-
-local srv_dir = g_env:get("srv_dir")
+-- 宽度8刚好可以支持gateway1，如果节点数量再多就要扩展，否则日志就不对齐了
+local LOG_WIDTH = 8
 
 -- 打印运行的环境参数
 local function log_env_info()
@@ -63,6 +62,8 @@ local function set_path()
     -- 这里只保留源码目录，不保留系统目录
     -- 所有的lua文件、so插件必须仅在源码目录搜索，避免版本冲突问题
 
+    local srv_dir = g_env:get("srv_dir")
+
     -- 设置lua文件搜索路径
     package.path = srv_dir .. "/src/?.lua;" .. srv_dir .. "/src/modules/?.lua;"
     -- 设置c库搜索路径，用于直接加载so或者dll的lua模块
@@ -73,8 +74,38 @@ local function set_path()
     end
 end
 
+-- 设置进程的日志参数
+local function set_process_log()
+    -- 设置错误日志、打印日志
+    -- 名字需要能区分不同进程名，不同节点
+    -- win下文件名不支持特殊字符的，比如":"
+
+    local node = g_env:get("node")
+    local epath
+    local ppath
+    local node_name, node_id = string.match(node, "(%a+)(%d*)")
+    if node_id ~= "" then
+        -- 以集群节点启动，比如gateway10
+        epath = string.format("log/%s%03d_error", node_name, tonumber(node_id))
+        ppath = string.format("log/%s%02d_runtime", node_name, tonumber(node_id))
+    else
+        epath = string.format("log/%s_error", node_name)
+        ppath = string.format("log/%s_runtime", node_name)
+    end
+
+    local Log = require "engine.Log"
+    Log:set_std_option(g_env:get("deamon"), ppath, epath) -- 设置C++用的日志参数
+    g_async_log:set_option(ppath, Log.PT_DAILY)
+    g_async_log:set_option(epath, Log.PT_SIZE, 1024 * 1024 * 10)
+
+    -- 日志中需要打印进程名，否则多个进程在同一终端开户时不好区分日志
+    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH), node))
+end
+
 -- 进程预加载必要的组件
 function Bootstrap.process_preload()
+    set_process_log()
+
     g_thread = g_mthread
     set_path()
 
@@ -107,11 +138,8 @@ function Bootstrap.process_preload()
 end
 
 -- worker预加载必要的组件
-function Bootstrap.worker_preload(addr, log_name)
+function Bootstrap.worker_preload(addr)
     set_path()
-
-    local Log = require "engine.Log"
-    Log:set_name(log_name)
 
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
@@ -121,7 +149,11 @@ function Bootstrap.worker_preload(addr, log_name)
     require "engine.engine"
     require "worker.worker"
 
-    local wtype = Engine.unmake_address(addr)
+    local wtype, index = Engine.unmake_address(addr)
+
+    local Log = require "engine.Log"
+    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH),
+        string.format("%s%d", Worker.type_name(wtype), index)))
 
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
@@ -139,26 +171,8 @@ function Bootstrap.worker_preload(addr, log_name)
     math.randomseed(os.time())
 end
 
--- 从配置文件创建一个worker
--- worker可以动态创建，但一般创建后就不删除（删除要考虑addr复用的问题）
-function Bootstrap.worker_create(setting)
-    -- worker只能由主线程创建，否则主线程无法正确管理所有worker
-    -- worker要启动另一个worker需要使用rpc调用
-    assert(LOCAL_ADDR == PROCESS_ID)
-
-    local name = setting.type[2]
-    local w = WorkerThread(name)
-    local addr = Engine.make_address(setting.type[1], setting.index)
-
-    WorkerHash[addr] = w
-    WorkerSetting[addr] = setting
-
-    w:start(srv_dir .. "/src/worker/" .. setting.file, addr)
-    printf("worker %s start, addr = %d", name, addr)
-end
-
 function Bootstrap.process_start(worker_setting)
     for _, s in ipairs(worker_setting) do
-        Bootstrap.worker_create(s)
+        Worker.create(s)
     end
 end

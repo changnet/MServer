@@ -12,9 +12,10 @@ static bool deamon_mode           = false;
 static char printf_path[PATH_MAX] = "error";
 static char error_path[PATH_MAX] = "error";
 
-// 多线程中，可能某个线程写了日志就退出了，数据存用thread_local会被立马释放掉，只能存指针
-// thread_local char prefix_name[LEN_PREFIX_NAME] = {0};
-thread_local const char *prefix_name = nullptr;
+// 多线程中，可能某个线程写了日志就退出了，数据存用thread_local会被立马释放掉
+// 日志线程执行写入时，就取不到数据了，只能存指针
+// thread_local char log_name[128] = {0};
+thread_local const char *log_name = nullptr;
 
 thread_local int32_t buffer_len;
 thread_local char buffer[20480];
@@ -56,7 +57,7 @@ const char *get_printf_path()
     return printf_path;
 }
 
-void set_prefix_name(const char *name)
+void set_log_name(const char *name)
 {
     // 某个线程写异步日志，退出后释放了thread_local
     // 因此把数据存全局，保证日志线程写日志时还能获取到名字
@@ -64,23 +65,22 @@ void set_prefix_name(const char *name)
     // null表示清空
     if (!name)
     {
-        prefix_name = nullptr;
+        log_name = nullptr;
         return;
     }
-    prefix_name = StaticGlobal::P->address(name);
+    log_name = StaticGlobal::P->address(name);
 }
 
-const char* get_prefix_name()
+const char* get_log_name()
 {
-    return prefix_name;
+    return log_name;
 }
 
-size_t write_prefix(FILE *stream, const char *prefix, const char *type,
+size_t write_prefix(FILE *stream, const char *node_name, const char *type,
                     int64_t time)
 {
-    // [T0LP12-17 16:15:53] T0即prefix表示worker，LP即type表示lua print
+    // [LP12-17 16:15:53  gateway1] T0即node为gateway1，LP即type表示lua print
     fwrite("[", 1, 1, stream);
-    if (prefix) fwrite(prefix, 1, strlen(prefix), stream);
     fwrite(type, 1, strlen(type), stream);
 
     thread_local char time_str[128] = {0};
@@ -100,6 +100,7 @@ size_t write_prefix(FILE *stream, const char *prefix, const char *type,
     }
 
     fwrite(time_str, 1, time_len, stream);
+    if (node_name) fwrite(node_name, 1, strlen(node_name), stream);
     return fwrite("]", 1, 1, stream);
 }
 
@@ -108,7 +109,7 @@ static void tup_stream(const char *path, FILE *std_stream, time_t tm,
 {
     if (!deamon_mode)
     {
-        write_prefix(std_stream, prefix_name, type, tm);
+        write_prefix(std_stream, log_name, type, tm);
         fputs(content, std_stream);
         fputc('\n', std_stream);
     }
@@ -122,7 +123,7 @@ static void tup_stream(const char *path, FILE *std_stream, time_t tm,
         fputc('\n', stderr);
         return;
     }
-    write_prefix(stream, prefix_name, type, tm);
+    write_prefix(stream, log_name, type, tm);
     fputs(content, stream);
     fputc('\n', stream);
     ::fclose(stream);
@@ -140,5 +141,12 @@ void __async_log(const char *path, LogType type, const char *fmt, ...)
     FORMAT();
     StaticGlobal::LOG->append(path, type, timing::try_frame_time(),
                                          buffer, buffer_len);
+}
+
+void __append_async_log(const char* path, LogType type, char* buffer,
+    int32_t buffer_len)
+{
+    StaticGlobal::LOG->append(path, type, timing::try_frame_time(), buffer,
+                              buffer_len);
 }
 } // namespace log_util
