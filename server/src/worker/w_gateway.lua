@@ -1,4 +1,4 @@
--- 用于测试的worker入口文件
+-- 网关worker入口文件
 
 local addr = ...
 
@@ -8,5 +8,5 @@ dofile(srv_dir .. "/src/engine/bootstrap.lua")
 Bootstrap.worker_preload(tonumber(addr), "T1")
 
 Timer.timeout(0, function()
-    require("test.test_loader")
+    require("modules.module_loader")
 end)

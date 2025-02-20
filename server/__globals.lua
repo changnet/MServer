@@ -24,7 +24,7 @@ return {
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
-"E", -- src/modules/module_load.lua
+"E", -- src/modules/module_loader.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
 "ET", -- src/modules/entity/entity_header.lua

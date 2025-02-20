@@ -21,9 +21,11 @@ Test.describe("timer test", function()
 
         local timer_interval_test = function()
             -- printf("timer interval expect %d, got %d", next_ms, Engine.clock())
-            local val = math.abs(Engine.steady_clock() - next_ms)
+            local sclock = Engine.steady_clock()
+            local val = math.abs(sclock - next_ms)
             if val > accuracy then
-                Test.print("timer interval precision  lost", val)
+                Test.print("timer interval precision  lost",
+                    val, sclock, Engine.clock())
                 Test.assert(false)
             end
 
@@ -52,9 +54,11 @@ Test.describe("timer test", function()
 
         local timer_periodic_test = function()
             -- printf("timer periodic expect %d, got %d", next_s, ev:time())
-            local val = math.abs(Engine.system_clock() - next_s)
+            local sclock = Engine.system_clock()
+            local val = math.abs(sclock - next_s)
             if val > accuracy then
-                Test.print("timer periodic precision lost", val)
+                Test.print("timer periodic precision lost",
+                    val, sclock, Engine.time())
                 Test.assert(false)
             end
 
