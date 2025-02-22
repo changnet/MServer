@@ -14,7 +14,7 @@ LOCAL_TYPE = 0 -- 当前worker类型
 function Worker.create(setting)
     -- worker只能由主线程创建，否则主线程无法正确管理所有worker
     -- worker要启动另一个worker需要使用rpc调用
-    assert(LOCAL_ADDR == PROCESS_ID)
+    assert(LOCAL_ADDR == PROCESS_ADDR)
 
     local name = setting.type[2]
     local w = WorkerThread(name)
@@ -26,6 +26,16 @@ function Worker.create(setting)
     local srv_dir = g_env:get("srv_dir")
     w:start(srv_dir .. "/src/worker/" .. setting.file, addr)
     printf("worker %s start, addr = %d", name, addr)
+end
+
+-- 获取本地local的所有地址列表
+function Worker.local_addr_list()
+    local list = {}
+    for addr, w in pairs(WorkerHash) do
+        if not w.cluster_worker then
+            table.insert(list, addr)
+        end
+    end
 end
 
 -- 获取worker的名字，如gateway1

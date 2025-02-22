@@ -48,15 +48,16 @@ master通常用于调度（负载均衡）。比如场景节点开了10个，一
 集群通过tcp通信,消息默认都是不安全的，网络断开可能会导致消息丢失。玩家的消息一般是可丢弃的（比如场景中的移动请求）
 但服务器之间的通信可能很重要，因此重要的数据需要手动使用Durable消息机制发送。
 
-9. 一个worker的地址是对当前进程所有worker都可见。当某一个节点连接另一个节点B时，当前进
-程的所有worker都没有必要再次发起一次连接了。因为当前框架只有一个读写线程发起多条连接也提
-高不了效率。一般游戏逻辑都是低io高cpu应用，并且内网通信网络质量也很好，一条链接不应该会
-成为瓶颈。如果是高io建议启动多个进程而不是在同一个进程开很多个worker，这样就可以通过多条
-连接分散压力。
+9. 当前的框架上，一个进程可以启动多个worker线程，进程负责调度和转发。进程和集群节点都可以主
+连接到远程集群节点。当由进程发起时，则连接是公用的，两个进程间的任意worker都可以相互通信。数据
+在线程收到后，再转发给对应的worker。这种模式通常用于多个进程构建单服。
 
-10. 如果当前进程的多个集群节点都需要与远程的节点通信，一般由进程发起连接。其他worker把数据
-发给进程，再由进程通过socket发给远程节点。但如果有需要，也可以在一个worker里发起连接，由这
-个worker负责把数据转发给远程节点，在这个worker直接发数据会比进程中转稍微快一点点。
+10. 当在一个worker里去连接到远程节点时，这个连接仅仅当前worker可用。远程的数据是直接在当前worker
+线程收到而不需要经过转发，效率稍微快点。
+
+11. 当前框架只有一个读写线程发起多条连接也提高不了效率。一般游戏逻辑都是低io高cpu应用，
+并且内网通信网络质量也很好，一条链接不应该会成为瓶颈。如果是高io建议启动多个进程而不是在
+同一个进程开很多个worker，这样就可以通过多条连接分散压力。
 ]]
 
 local this = global_storage("Cluster", {
@@ -104,40 +105,8 @@ function Cluster.connect(name, from, to)
     -- 所以即使一个进程有多个节点，只发起一个连接到master节点即可。
 end
 
--- 收到另一个节点认证请求
-function Cluster.authenticate(addr, tm, sign)
-    local node = this.node[addr]
-    if node then
-        Send.Cluster.on_authenticate(addr, false)
-        print("cluster auth node already auth", addr)
-        return
-    end
-
-    node = this.unnode[addr]
-    if not node then
-        Send.Cluster.on_authenticate(addr, false)
-        print("cluster auth no such node", addr)
-        return
-    end
-
-    local local_sign = Engine.make_srv_signature(tm)
-    if local_sign ~= sign then
-        Send.Cluster.on_authenticate(addr, false)
-        print("cluster auth signature fail", addr, tm, sign)
-        return
-    end
-
-    node.ready = true
-    this.node[addr] = node
-    this.unnode[addr] = nil
-
-    Send.Cluster.on_authenticate(addr, true)
-
-    print("cluster node establish", addr, Worker.name(addr))
-end
-
--- 认证返回
-function Cluster.on_authenticate(addr, ok)
+-- 节点认证结果
+function Cluster.on_authenticate(addr, ok, addr_list)
     local node = this.unnode[addr]
     if not node then
         print("cluster on auth no such node", addr)
@@ -145,29 +114,32 @@ function Cluster.on_authenticate(addr, ok)
     end
 
     this.unnode[addr] = nil
-    if not ok then
-        node.wait_close = true
-        node:close()
-
-        print("cluster on auth fail", addr)
-        return
+    if ok then
+        this.node[addr] = node
+        print("cluster node establish", addr, Worker.name(addr))
     end
-    node.ready = true
-    print("cluster node establish", addr, Worker.name(addr))
+
+    node:close()
+
+    print("cluster on auth fail", addr)
 end
 
+-- 连接断开时，取消认证
 function Cluster.unauthenticate(addr)
     local node = this.node[addr] or this.unnode[addr]
 
     this.node[addr] = nil
 
-    -- 如果是主动关闭或者server端，则直接删除
+    -- 如果是server端，则直接删除
     -- client端则需要尝试重连
-    if node.wait_close or node:is_server() then
+    if node:is_server() then
         this.unnode[addr] = nil
     else
         this.unnode[addr] = node
-        node:reconnect()
+        -- 不要直接重连，等定时器定时重连即可
+        -- 否则如果是签名等问题连接失败，会不断地循环直连
+        -- TODO 主动断开的，不要重连
+        -- node:reconnect()
     end
 
     print("cluster node disconnect", addr, Worker.name(addr))

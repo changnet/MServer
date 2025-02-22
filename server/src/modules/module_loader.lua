@@ -27,7 +27,6 @@ require "global.table"
 require "global.math"
 require "global.string"
 require "global.time"
-require "global.name"
 
 require_define "modules.system.define"
 

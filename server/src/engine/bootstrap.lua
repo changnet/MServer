@@ -119,7 +119,7 @@ function Bootstrap.process_preload()
     require "engine.engine"
     require "worker.worker"
 
-    LOCAL_ADDR = PROCESS_ID
+    LOCAL_ADDR = PROCESS_ADDR
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "engine.co_pool"

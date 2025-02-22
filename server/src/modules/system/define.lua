@@ -2,7 +2,7 @@
 -- 2017-03-28
 -- xzc
 
-PROCESS_ID = 1 -- 当前进程对应的work id
+PROCESS_ADDR = 1 -- 当前进程对应的work id
 
 -- worker类型定义{类型, 名字}，名字用于打印日志
 WORKER = {

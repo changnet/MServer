@@ -55,7 +55,7 @@ return {
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
-"PROCESS_ID", -- src/modules/system/define.lua
+"PROCESS_ADDR", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua

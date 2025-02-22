@@ -4,12 +4,15 @@ local Engine = require "Engine" -- C++ engine api
 -- @param wType worker type，worker类型，如WORKER_ACCOUNT
 function Engine.make_address(wType, index)
     -- 返回的地址最大为int32，高8位暂时不用
-    -- process_id最大为8位，最多支持255个进程
     -- wType最大为8位，一个进程里，最多只能有255个类型的worker
     -- index最大为16位，一个进程里，同一个类型的worker最多只能有65535个
     -- 0和1是两个特殊的地址 0表示当前worker，1表示当前进程的地址
 
-    -- TODO worker的类型应该不会很多，感觉用2^6=64都够了，剩下给其他？？
+    -- TODO 进程当前作为一个管理和调试的特殊线程存在，使用同样的地址PROCESS_ADDR
+    -- 它不与远程集群节点交互，只有同一进程的worker可以与它通信，所以地址相同是没问题的
+    -- 如果有远程通信要求，需要在wType划分一位来表示是否为进程
+    -- 当以节点启动时，gateway1的地址就是wType=gateway, index=1,bit0=1
+    -- 如果是以单服模式gateway启动，则index=0即可，这样同样节点的不同进程地址就不会冲突
     return (index << 8) + wType
 end
 

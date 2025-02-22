@@ -2,7 +2,10 @@
 Shutdown = {}
 
 -- 按指定worker类型关机顺序关半
-local Sequence = {WORKER.TEST}
+local Sequence = {
+    WORKER.TEST, WORKER.GATEWAY, WORKER.SCENE, WORKER.GAME, WORKER.PLAYER,
+    WORKER.DATA,
+}
 
 -- 开始走关服流程
 function Shutdown.begin()

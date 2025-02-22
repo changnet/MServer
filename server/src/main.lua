@@ -27,6 +27,7 @@ end
 
 local function main(cmd, ...)
     local args = {...}
+    print(cmd, ...)
     local cmd_args = table.concat(args, " ") -- command line
 
     local opts = get_opt(args)
