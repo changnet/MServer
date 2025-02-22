@@ -17,14 +17,15 @@ function Shutdown.begin()
     for _, wt in pairs(Sequence) do
         for addr, w in pairs(WorkerHash) do
             local s = WorkerSetting[addr]
-            if not w:is_start() then
-                -- 已经被关闭或者未开启成功
-                printf("worker %s not start, addr = %d", wt[2], addr)
-            elseif wt[1] == s.type[1] then
-                printf("worker %s shutting down, addr = %d", wt[2], addr)
-
+            if wt[1] == s.type[1] then
                 is_shut[addr] = true
-                Call.Shutdown.worker_stop(addr)
+                if not w:is_start() then
+                    -- 已经被关闭或者未开启成功
+                    printf("worker %s not start, addr = %d", wt[2], addr)
+                else
+                    printf("worker %s shutting down, addr = %d", wt[2], addr)
+                    Call.Shutdown.worker_stop(addr)
+                end
             end
         end
     end
