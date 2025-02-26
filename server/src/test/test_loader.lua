@@ -39,10 +39,10 @@ Test.setup({
     },
     -- 跳过这些测试
     -- ./start.sh test --skip='mongodb;sql'
-    skip = g_env:get("skip"),
+    skip = g_env:get("--skip"),
     -- 过滤器，允许只执行一部分测试
     -- ./start.sh test --filter=https 只执行名字包含https的测试
-    filter = g_env:get("filter"),
+    filter = g_env:get("--filter"),
     time_update = function()
         Engine.update()
     end,
