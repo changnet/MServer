@@ -166,6 +166,8 @@ Test.describe("socket test", function()
     end)
 
     Test.it(string.format("client socket pingpong test %d", PERF_TIMES), function()
+        -- client用的websocket，比下面的server socket耗时多一倍左右
+        -- websocket 700ms，普通tcp则是400ms
         local count = 0
         local msg_id = math.random(1, 65535)
 

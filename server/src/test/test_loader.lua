@@ -5,6 +5,7 @@ require "global.string"
 require "global.test"
 
 require "test.misc_test"
+require "test.heap_test"
 require "test.mt_test"
 require "test.timer_test"
 require "test.https_test"

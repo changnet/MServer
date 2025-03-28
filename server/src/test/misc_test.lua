@@ -204,64 +204,20 @@ Test.describe("string split performance test", function()
 end)
 
 Test.describe("table extend library test", function()
-    Test.it("table.sort_ex default compare func", function()
+    Test.it("table.sort_stable default compare func", function()
         local tbl = {5, 3, 6, 9, 9, 4, 3, 5, 3}
-        table.sort_ex(tbl)
-
-        Test.equal(tbl, {3, 3, 3, 4, 5, 5, 6, 9, 9})
-    end)
-
-    Test.it("table.sort_ex custom compare func", function()
-        local tbl = {5, 3, 6, 9, 9, 4, 3, 5, 3}
-        table.sort_ex(tbl, function(a, b)
-            return a < b
-        end)
+        table.sort_stable(tbl)
 
         Test.equal(tbl, {9, 9, 6, 5, 5, 4, 3, 3, 3})
     end)
-end)
 
-Test.describe("util.head test", function()
-    Test.it("max heap test", function()
-        local MaxHeap = require "util.max_heap"
-
-        local tbl = {9, 6, 7, 4, 8, 3, 2, 1, 5}
-        local expect = {}
-        local mh = MaxHeap()
-        for idx, val in pairs(tbl) do
-            mh:push(val, idx)
-            table.insert(expect, {val, idx})
-        end
-
-        -- stable sort
-        table.sort_ex(expect, function(a, b)
-            if a[1] ~= b[1] then return a[1] < b[1] end
-
-            return a[2] > b[2]
+    Test.it("table.sort_stable custom compare func", function()
+        local tbl = {5, 3, 6, 9, 9, 4, 3, 5, 3}
+        table.sort_stable(tbl, function(a, b)
+            return a < b
         end)
 
-        local index = 1
-        while not mh:empty() do
-            local obj = mh:top()
-            local exp = expect[index]
-
-            Test.equal(obj.key, exp[1])
-            Test.equal(obj.value, exp[2])
-
-            mh:pop()
-            index = index + 1
-        end
-    end)
-
-    -- TODO 重新实现heap，参考C++的priority_queue，根据传入的对比函数实现
-    -- 大小堆
-    Test.it("min heap test", function()
-        Test.print("UNIMPLEMENTED !!")
-    end)
-
-    -- 参考boost，加一个id，对比id的大小实现稳定heap https://www.boost.org/doc/libs/develop/doc/html/heap.html
-    Test.it("heap stable", function()
-        Test.print("UNIMPLEMENTED !!")
+        Test.equal(tbl, {3, 3, 3, 4, 5, 5, 6, 9, 9})
     end)
 end)
 
