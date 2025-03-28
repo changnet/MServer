@@ -57,6 +57,18 @@ local function log_env_info()
     print(buddha)
 end
 
+-- 加载游戏设置文件
+local function load_setting()
+    local path = g_env:get("--file")
+    if not path then
+        -- 未从命令行传设置文件路径，则读取默认路径
+        local srv_dir = g_env:get("srv_dir")
+        path = srv_dir .. "/setting/setting.lua"
+    end
+
+    g_setting = dofile(path)
+end
+
 local function set_path()
     -- lua加载文件可以自动识别/和\，所以这里统一用linux的就行
     -- 这里只保留源码目录，不保留系统目录
@@ -115,6 +127,7 @@ function Bootstrap.process_preload()
     require "system.define" -- 基础定义
 
     log_env_info()
+    load_setting()
 
     require "engine.engine"
     require "worker.worker"
@@ -158,6 +171,8 @@ function Bootstrap.worker_preload(addr)
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
     Engine.add_thread_ctx(addr, g_thread:toludata())
+
+    load_setting()
 
     require "engine.co_pool"
     require "message.thread_message"
