@@ -77,15 +77,15 @@ Test.describe("heap test", function()
 
         local expect = {}
         local mh = Heap()
-        for _ = 1, 50000 do
+        for _ = 1, 20000 do
             local v = math.random(1, 10000000)
-            if 0 == v % 5 then
-                -- local rindex = math.random(1, #expect)
-                -- local element = expect[rindex]
+            if 0 == v % 5 and #expect > 0 then
+                local rindex = math.random(1, #expect)
+                local element = expect[rindex]
 
-                -- local rvalue = mh:erase(element[1])
-                -- Test.equal(rvalue, element[2])
-                -- table.remove(expect, rindex)
+                local rvalue = mh:erase(element[1])
+                Test.equal(rvalue, element[2])
+                table.remove(expect, rindex)
             else
                 local id = mh:push(v)
                 table.insert(expect, {id, v})

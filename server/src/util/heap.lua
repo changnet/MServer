@@ -144,20 +144,23 @@ function Heap:erase(id)
     local index = e.index
     local heap = self.heap
     local count = #heap
+
     assert(index > 0 and index <= count)
 
     -- 与最后一个节点交换，根据情况判断是往上移还是往下
     -- 交换操作在shift_up或者down里实现
-    local p = index // 2
     local last = heap[count]
-    local comp = self.comp
 
     self.map[id] = nil
     self.heap[count] = nil
-    if index > 1 and comp(last.value, heap[p].value) then
-        shift_up(comp, heap, index, last)
-    else
-        shift_down(comp, heap, index, last)
+    if index < count then
+        local p = index // 2
+        local comp = self.comp
+        if index > 1 and comp(last.value, heap[p].value) then
+            shift_up(comp, heap, index, last)
+        else
+            shift_down(comp, heap, index, last)
+        end
     end
 
     e.index = 0
