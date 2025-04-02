@@ -42,6 +42,9 @@ Util = require "engine.util"
 -- 当前宽度刚好可以支持gateway1，如果名字再长就要扩展，否则日志就不对齐了
 local LOG_WIDTH = 9
 
+-- 需要按优先级启动的模块
+local boot_modules = nil
+
 -- 打印运行的环境参数
 local function log_env_info()
     print("#####################################################")
@@ -115,7 +118,7 @@ local function set_process_log()
 end
 
 -- 进程预加载必要的组件
-function Bootstrap.process_preload()
+function Bootstrap.process_init()
     set_process_log()
 
     g_thread = g_mthread
@@ -151,7 +154,7 @@ function Bootstrap.process_preload()
 end
 
 -- worker预加载必要的组件
-function Bootstrap.worker_preload(addr)
+function Bootstrap.worker_init(addr)
     set_path()
 
     require "global.oo" -- 这个文件不能热更
@@ -186,8 +189,81 @@ function Bootstrap.worker_preload(addr)
     math.randomseed(os.time())
 end
 
-function Bootstrap.process_start(worker_setting)
-    for _, s in ipairs(worker_setting) do
-        Worker.create(s)
+-- 注册按优先级启动的模块
+-- @param mod 需要启动的模块，包括boot_start、boot_ready函数
+-- @param priority 启动优先级，越小优先级越高，默认20
+function Bootstrap.reg(mod, priority)
+    if not boot_modules then
+        local PriorityManager = require "util.priority_manager"
+        boot_modules = PriorityManager()
     end
+
+    boot_modules:push(mod, priority)
+end
+
+local function boot_ready()
+    print("bootstrap done")
+
+    if boot_modules and boot_modules.timer then
+        Timer.stop(boot_modules.timer)
+    end
+    boot_modules = nil
+
+    if SE then SE.fire_event(SE_READY) end
+end
+
+local function boot_next_modules()
+    local list = boot_modules:next()
+    if not list then
+        boot_ready()
+        return true
+    end
+
+    if not boot_modules.wait then boot_modules.wait = {} end
+
+    local all_ready = true
+    for _, mod in ipairs(list) do
+        local name = mod.name or "unknow"
+        if not mod.boot_start() then
+            all_ready = false
+            boot_modules.wait[mod] = true
+            printf("booting %s ...", name)
+        else
+            printf("booting %s ready", name)
+        end
+    end
+
+    if all_ready then
+        return boot_next_modules()
+    end
+    return all_ready
+end
+
+local function checkModuleReady()
+    local wait = boot_modules.wait
+
+    for mod in pairs(wait) do
+        local name = mod.name or "unknow"
+        if not mod.boot_ready() then
+            printf("booting %s ...", name)
+            return
+        else
+            wait[mod] = nil
+            printf("booting %s ready", name)
+        end
+    end
+
+    if not next(wait) then boot_next_modules() end
+end
+
+-- 按优先级启动各个模块，启动完成后触发SE_READY事件
+function Bootstrap.start()
+    if not boot_modules then
+        return boot_ready()
+    end
+
+    if boot_next_modules() then return end
+
+    boot_modules.timer = Timer.interval(
+        1000, 1000, -1, Rtti.temp_func(checkModuleReady))
 end

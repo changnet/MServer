@@ -5,7 +5,7 @@ local addr = ...
 local srv_dir = g_env:get("srv_dir")
 dofile(srv_dir .. "/src/engine/bootstrap.lua")
 
-Bootstrap.worker_preload(tonumber(addr))
+Bootstrap.worker_init(tonumber(addr))
 
 Timer.timeout(0, function()
     require("modules.module_loader")

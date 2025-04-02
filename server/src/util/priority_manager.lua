@@ -50,9 +50,12 @@ end
 
 -- 切换到下一个优先级
 function PriorityManager:next()
-    self.idx = self.idx + 1
+    local idx = self.idx + 1
 
-    local pr = self.list[ self.idx ]
+    local pr = self.list[idx]
+    if not pr then return nil end
+
+    self.idx = idx
     return self.map[pr]
 end
 

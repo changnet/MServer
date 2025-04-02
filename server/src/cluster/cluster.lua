@@ -116,7 +116,7 @@ function Cluster.on_authenticate(addr, ok, addr_list)
     this.unnode[addr] = nil
     if ok then
         this.node[addr] = node
-        print("cluster node establish", addr, Worker.name(addr))
+        print("cluster node establish", addr, Worker.addr_name(addr))
     end
 
     node:close()
@@ -142,7 +142,7 @@ function Cluster.unauthenticate(addr)
         -- node:reconnect()
     end
 
-    print("cluster node disconnect", addr, Worker.name(addr))
+    print("cluster node disconnect", addr, Worker.addr_name(addr))
 end
 
 -- 所有节点是否连接完成

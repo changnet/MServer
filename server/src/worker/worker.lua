@@ -1,5 +1,5 @@
 -- worker通用逻辑
-Worker = {}
+Worker = {name = "worker"}
 
 local WorkerThread = require "engine.WorkerThread"
 
@@ -28,6 +28,21 @@ function Worker.create(setting)
     printf("worker %s start, addr = %d", name, addr)
 end
 
+function Worker.boot_start()
+    for _, s in pairs(_G.boot_worker_settings) do
+        Worker.create(s)
+    end
+    _G.boot_worker_settings = nil
+
+    return true
+end
+
+-- 设置需要启动的worker，稍后启动
+function Worker.set(settings)
+    _G.boot_worker_settings = settings
+    Bootstrap.reg(Worker, 18)
+end
+
 -- 获取本地local的所有地址列表
 function Worker.local_addr_list()
     local list = {}
@@ -38,8 +53,8 @@ function Worker.local_addr_list()
     end
 end
 
--- 获取worker的名字，如gateway1
-function Worker.name(addr)
+-- 根据地址获取worker的名字，如gateway1
+function Worker.addr_name(addr)
 end
 
 -- 根据地址获取名字

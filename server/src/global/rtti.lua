@@ -209,6 +209,20 @@ function Rtti.make_func_name_cb(func, ...)
     end
 end
 
+-- 临时给函数生成一个临时名字，热更后失效，用于不需要热更场景下发起定时器等
+function Rtti.temp_func(func)
+    if func_names[func] then return end
+
+    for _ = 1, 10000 do
+        local name = tostring(math.random(1, 0xFFFFFFFF))
+        if not names_func[name] then
+            Rtti.name_func(name, func)
+            return func
+        end
+    end
+    assert(false)
+end
+
 -- 给函数起个名字
 function Rtti.name_func(name, func)
     -- 唯函数名和函数指针是一一对应的
