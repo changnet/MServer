@@ -13,3 +13,6 @@ local worker_setting = {
 }
 
 Worker.set(worker_setting)
+Cluster.connect("gateway", 1, 1)
+Cluster.connect("data", 1, 1)
+Bootstrap.start()

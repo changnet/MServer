@@ -39,6 +39,9 @@ __package_cpath = package.cpath
 -- 底层通用工具
 Util = require "engine.util"
 
+-- 服务器设置文件
+g_setting = nil
+
 -- 当前宽度刚好可以支持gateway1，如果名字再长就要扩展，否则日志就不对齐了
 local LOG_WIDTH = 9
 

@@ -28,19 +28,11 @@ function Worker.create(setting)
     printf("worker %s start, addr = %d", name, addr)
 end
 
-function Worker.boot_start()
-    for _, s in pairs(_G.boot_worker_settings) do
+-- 启动worker
+function Worker.start(settings)
+    for _, s in pairs(settings) do
         Worker.create(s)
     end
-    _G.boot_worker_settings = nil
-
-    return true
-end
-
--- 设置需要启动的worker，稍后启动
-function Worker.set(settings)
-    _G.boot_worker_settings = settings
-    Bootstrap.reg(Worker, 18)
 end
 
 -- 获取本地local的所有地址列表
@@ -57,9 +49,16 @@ end
 function Worker.addr_name(addr)
 end
 
--- 根据地址获取名字
+-- 根据类型获取名字
 function Worker.type_name(wtype)
     for _, w in pairs(WORKER) do
         if wtype == w[1] then return w[2] end
+    end
+end
+
+-- 根据名字获取类型
+function Worker.name_type(name)
+    for _, w in pairs(WORKER) do
+        if name == w[2] then return w[1] end
     end
 end

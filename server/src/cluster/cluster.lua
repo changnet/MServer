@@ -1,5 +1,5 @@
 -- 集群
-Cluster = {}
+Cluster = {name = "cluster"}
 
 --[[
 1. 在配置实现cluster配置
@@ -60,21 +60,18 @@ master通常用于调度（负载均衡）。比如场景节点开了10个，一
 同一个进程开很多个worker，这样就可以通过多条连接分散压力。
 ]]
 
+local ClusterWorker = require "cluster.cluster_worker"
+
 local this = global_storage("Cluster", {
     node = {}, -- 各节点已认证连接，以addr为key
     unnode = {}, -- unauthenticated 未认证结点
+    listen = {}, -- 监听的连接
 })
 
--- 启动当前进程的集群节点
-local function start_node(conf)
-end
-
--- （如果存在集群配置）启动集群
+-- （如果存在集群配置）启动监听，等待其他节点连接
 -- @param conf 集群配置
 -- @param node 当前节点信息，如"gateway1"
-function Cluster.start(node_conf, node)
-    if not node_conf then return end
-
+function Cluster.listen(node_conf, node)
     -- 把gateway1拆分成gateway和1
     local name, index = string.match(node, "(%a+)(%d*)")
     local key = name
@@ -83,11 +80,18 @@ function Cluster.start(node_conf, node)
         key = string.format("%s1", name)
     end
 
+    local wtype = Worker.name_type(name)
+    local addr = Engine.make_address(wtype, index)
+    assert(LOCAL_ADDR == addr)
+
+    local worker = ClusterWorker(addr)
     local conf = node_conf[key]
-    -- 当前进程可能不需要启动集群节点
-    if conf then
-        start_node(conf, index)
+    if not worker:listen(conf.ip, conf.port) then
+        print("cluster listen error", node, conf.ip, conf.port)
+        return
     end
+
+    this.listen[addr] = worker
 end
 
 -- 连接集群节点

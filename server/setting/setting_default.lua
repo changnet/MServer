@@ -40,7 +40,4 @@ return
         db1 = {host = "::1", port = 20003},
         db2 = {host = "::1", port = 20004},
     },
-    -- 当前进程启动集群节点范围
-    -- 假如当前为gateway，则{1, 10}表示表示 gateway1~gateway10
-    cluster_range = {1, 10},
 }

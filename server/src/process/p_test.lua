@@ -9,6 +9,4 @@ local worker_setting = {
     -- {file = "w_test.lua", type = WORKER.TEST, index = 2},
 }
 
-Worker.set(worker_setting)
-
-Bootstrap.start()
+Worker.start(worker_setting)

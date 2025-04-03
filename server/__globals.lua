@@ -1,4 +1,4 @@
--- auto export by lua-tags 147 symbols
+-- auto export by lua-tags 148 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -116,6 +116,7 @@ return {
 "g_mail_mgr", -- src/modules/module_header.lua
 "g_map_mgr", -- src/modules/module_header.lua
 "g_mongodb", -- src/modules/module_header.lua
+"g_setting", -- src/engine/bootstrap.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/android/android_boot.lua
