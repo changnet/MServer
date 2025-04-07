@@ -1,5 +1,6 @@
 -- 线程消息派发
 ThreadMessage = {
+    NONE    = 0, -- 无作用，只是唤醒线程
     TIMER   = 1, -- 定时器
     SIGNAL  = 2, -- 信号
     SOCKET  = 3, -- 网络
@@ -56,5 +57,10 @@ function on_worker_message(src, mtype, udata, usize)
 
     return func(src, udata, usize)
 end
+
+local function func_none()
+end
+
+ThreadMessage.reg(ThreadMessage.NONE, func_none)
 
 return ThreadMessage

@@ -14,6 +14,9 @@ WorkerThread::WorkerThread(const std::string &name)
 
 WorkerThread::~WorkerThread()
 {
+    // 即使线程函数已经stop，在析构前必须保证线程对象join，否则销毁时会抛异常
+    stop(true);
+
     assert(!L_);
 }
 
@@ -27,6 +30,7 @@ int32_t WorkerThread::start(lua_State *L)
         params_[i - index].assign(p);
     }
 
+    stop_   = false;
     thread_ = std::thread(&WorkerThread::routine, this);
 
     return 0;
@@ -40,7 +44,9 @@ void WorkerThread::stop(bool join)
     {
         // 只能在主线程调用
         assert(std::this_thread::get_id() != thread_.get_id());
-        notify_one();
+
+        // 唤醒子线程
+        emplace_message(0, 0, ThreadMessage::NONE, nullptr, 0);
 
         thread_.join();
     }
@@ -95,6 +101,28 @@ bool WorkerThread::uninitialize()
     return true;
 }
 
+void WorkerThread::dispatch_message()
+{
+    // 其他线程会不断地派发任务，worker线程可能会无休止地运行
+    // 因此执行一定数量的逻辑后，需要更新时间及定时器
+    for (int i = 1; i < 256; i++)
+    {
+        try
+        {
+            ThreadMessage m = pop_message();
+            if (-1 == m.src_) break;
+
+            lcpp::call(L_, "on_worker_message", m.src_, m.type_, m.udata_,
+                       m.usize_);
+            m.dispose();
+        }
+        catch (const std::runtime_error &e)
+        {
+            ELOG("%s", e.what());
+        }
+    }
+}
+
 void WorkerThread::routine()
 {
     Thread::apply_thread_name(name_.c_str());
@@ -105,7 +133,6 @@ void WorkerThread::routine()
         return;
     }
 
-    stop_ = false;
     auto E = StaticGlobal::E;
     while (likely(!stop_))
     {
@@ -118,26 +145,12 @@ void WorkerThread::routine()
         timing::update();
         timer_mgr_.update_timeout(this);
 
-        // 其他线程会不断地派发任务，worker线程可能会无休止地运行
-        // 因此执行一定数量的逻辑后，需要更新时间及定时器
-        for (int i = 1; i < 256; i++)
-        {
-            try
-            {
-                ThreadMessage m = pop_message();
-                if (-1 == m.src_) break;
-
-                lcpp::call(L_, "on_worker_message", m.src_, m.type_, m.udata_,
-                           m.usize_);
-                m.dispose();
-            }
-            catch (const std::runtime_error &e)
-            {
-                ELOG("%s", e.what());
-            }
-        }
+        dispatch_message();
     }
-    stop_ = true;
+    // 收到停止消息时，再处理一次消息
+    // 注意业务层是有关服顺序的，要等业务层关服完成后，底层才会发出停止消息
+    // 这时候不应该会存在很多消息的
+    dispatch_message();
 
     if (!uninitialize()) /* 清理 */
     {

@@ -68,45 +68,54 @@ local this = global_storage("Cluster", {
     listen = {}, -- 监听的连接
 })
 
+-- 把gateway1拆分成gateway和1
+local function name_index(node_name)
+    -- 注意，node可能是不带数字，不带数字默认为1
+    local name, index = string.match(node_name, "(%a+)(%d*)")
+    return name, index or 1
+end
+
 -- （如果存在集群配置）启动监听，等待其他节点连接
--- @param conf 集群配置
--- @param node 当前节点信息，如"gateway1"
-function Cluster.listen(node_conf, node)
+-- @param cluster_conf 集群配置
+-- @param node_name 当前节点信息，如"gateway1"
+function Cluster.listen(cluster_conf, node_name)
     -- 把gateway1拆分成gateway和1
-    local name, index = string.match(node, "(%a+)(%d*)")
-    local key = name
-    if not index then
-        index = 1 -- 未指定时，默认为1
-        key = string.format("%s1", name)
-    end
+    local name, index = name_index(node_name)
+    local key = string.format("%s%d", name, index)
 
     local wtype = Worker.name_type(name)
     local addr = Engine.make_address(wtype, index)
     assert(LOCAL_ADDR == addr)
 
     local worker = ClusterWorker(addr)
-    local conf = node_conf[key]
+    local conf = cluster_conf[key]
     if not worker:listen(conf.ip, conf.port) then
-        print("cluster listen error", node, conf.ip, conf.port)
+        print("cluster listen error", node_name, conf.ip, conf.port)
         return
     end
 
     this.listen[addr] = worker
 end
 
--- 连接集群节点
--- @param name 集群名字，如gateway
--- @param from 节点开始的索引
--- @param to 节点结束的索引
-function Cluster.connect(name, from, to)
-    -- 如果是本地worker，不要发起链接
-    -- 尚未启动的节点连接不到如何处理
-    -- 动态增减的节点如何处理
-    -- ClusterWorker是否添加到C++底层，允许C++发送消息给远程节点（好像没必要）
+-- 连接到其他集群节点
+-- @param cluster_conf 集群配置
+-- @param node_name 当前节点信息，如"gateway1"
+function Cluster.connect(cluster_conf, node_name)
+    local name, index = name_index(node_name)
+    local key = string.format("%s%d", name, index)
 
-    -- 同一个进程中，一个worker(包括ClusterWorker)的地址是对所有worker可见的
-    -- 都可以往该worker发送消息
-    -- 所以即使一个进程有多个节点，只发起一个连接到master节点即可。
+    local wtype = Worker.name_type(name)
+    local addr = Engine.make_address(wtype, index)
+    assert(not WorkerSetting[addr]) -- 本地的worker不需要连接
+
+    local worker = ClusterWorker(addr)
+    local conf = cluster_conf[key]
+    if not worker:listen(conf.ip, conf.port) then
+        print("cluster connect error", node_name, conf.ip, conf.port)
+        return
+    end
+
+    this.unnode[addr] = worker
 end
 
 -- 节点认证结果

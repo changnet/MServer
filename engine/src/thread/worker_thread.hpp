@@ -80,6 +80,7 @@ protected:
     void routine();
     bool initialize();
     bool uninitialize();
+    void dispatch_message();
 
 private:
     bool stop_;

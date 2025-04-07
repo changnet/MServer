@@ -10,6 +10,7 @@ struct ThreadMessage
 {
     enum
     {
+        NONE   = 0, // 无作用，通常只是唤醒线程
         TIMER  = 1, // 定时器
         SIGNAL = 2, // 信号
         SOCKET = 3, // 网络消息
@@ -74,7 +75,7 @@ public:
             ELOG("thread context message queue not clean");
         }
     }
-    // 从消息队列中弹出第一个消息。如果队列为空，则抛出一个out_of_range
+    // 从消息队列中弹出第一个消息。如果队列为空，则返回Null
     ThreadMessage pop_message()
     {
         std::lock_guard<std::mutex> lg(mutex_);
@@ -93,9 +94,8 @@ public:
         return message; // copy elision
     }
 
-    // 构造一个消息并唤醒线程
     /**
-     * @brief 构造一个message并push到主线程消息队列，同时唤醒主线程
+     * @brief 构造一个message并push到线程消息队列，同时唤醒线程
      */
     void emplace_message(int32_t src, int32_t dst, int32_t type, void *udata,
                          int32_t usize)

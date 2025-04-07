@@ -302,7 +302,7 @@ static int32_t what_error(lua_State *L)
     return 1;
 }
 
-int32_t raw_sha1_(lua_State *L, int32_t index,
+static int32_t raw_sha1_(lua_State *L, int32_t index,
                   unsigned char sha1[SHA_DIGEST_LENGTH])
 {
     SHA_CTX ctx;
@@ -350,7 +350,7 @@ static int32_t sha1(lua_State *L)
 
     raw_sha1_(L, index, sha1);
 
-    char buf[SHA_DIGEST_LENGTH * 2 + 1];
+    char buf[SHA_DIGEST_LENGTH * 2 + 1] = {0};
     for (int32_t i = 0; i < SHA_DIGEST_LENGTH; ++i)
     {
         //--%02x即16进制输出，占2个字节
@@ -358,6 +358,56 @@ static int32_t sha1(lua_State *L)
     }
     lua_pushlstring(L, buf, SHA_DIGEST_LENGTH * 2);
 
+    return 1;
+}
+
+/**
+ * 计算字符串sha3-256编码
+ * @param upper 可选参数，结果是否转换为大写
+ * @param ... 需要计算的字符串，可以多个，sha3-256(true, str1, str2, ...)
+ * @return sha3字符串
+ */
+static int32_t sha3_256(lua_State* L)
+{
+    unsigned char sha256[SHA256_DIGEST_LENGTH];
+
+    int32_t index   = 1;
+    const char *fmt = "%02x"; // default format to lower
+    if (!lua_isstring(L, 1))
+    {
+        index = 2;
+        if (lua_toboolean(L, 1)) fmt = "%02X";
+    }
+
+    SHA256_CTX ctx;
+    if (!SHA256_Init(&ctx))
+    {
+        return luaL_error(L, "sha256 init error");
+    }
+
+    for (int32_t i = index; i <= lua_gettop(L); ++i)
+    {
+        size_t len;
+        const char *ptr = lua_tolstring(L, i, &len);
+        if (!ptr)
+        {
+            // not a string and can not convert to string
+            return luaL_error(L, "argument #%d expect string,got %s", i,
+                              lua_typename(L, lua_type(L, i)));
+        }
+
+        SHA256_Update(&ctx, ptr, len);
+    }
+
+    SHA256_Final(sha256, &ctx);
+
+    char buf[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
+    for (int32_t i = 0; i < SHA_DIGEST_LENGTH; ++i)
+    {
+        //--%02x即16进制输出，占2个字节
+        snprintf(buf + i * 2, 3, fmt, sha256[i]);
+    }
+    lua_pushlstring(L, buf, SHA_DIGEST_LENGTH * 2);
     return 1;
 }
 
@@ -483,6 +533,7 @@ static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"uuid", uuid},
                                    {"sha1", sha1},
                                    {"base64", base64},
+                                   {"sha3_256", sha3_256},
                                    {"getcwd", getcwd},
                                    {"mkdir_p", mkdir_p},
                                    {"sha1_raw", sha1_raw},
