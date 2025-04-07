@@ -30,6 +30,7 @@ local rw_globals = {
     "string",
     "utf8",
     "math",
+    "debug",
     "g_thread",
 }
 

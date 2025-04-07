@@ -70,11 +70,20 @@ public:
     }
     virtual ~ThreadContext()
     {
-        if (!queue_.empty())
+        // 析构应该只在主线程执行，没加锁的必要了
+        for (auto& x : queue_)
         {
-            ELOG("thread context message queue not clean");
+            x.dispose();
         }
     }
+
+    size_t message_size() const
+    {
+        std::lock_guard<std::mutex> lg(mutex_);
+
+        return queue_.size();
+    }
+
     // 从消息队列中弹出第一个消息。如果队列为空，则返回Null
     ThreadMessage pop_message()
     {
@@ -138,7 +147,7 @@ public:
 
 protected:
 
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
     // TODO C＋＋20可以wait一个atomic变量，到时优化一下
     std::condition_variable cv_;
 

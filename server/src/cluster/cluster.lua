@@ -72,7 +72,7 @@ local this = global_storage("Cluster", {
 local function name_index(node_name)
     -- 注意，node可能是不带数字，不带数字默认为1
     local name, index = string.match(node_name, "(%a+)(%d*)")
-    return name, index or 1
+    return name, tonumber(index) or 1
 end
 
 -- （如果存在集群配置）启动监听，等待其他节点连接
@@ -85,7 +85,7 @@ function Cluster.listen(cluster_conf, node_name)
 
     local wtype = Worker.name_type(name)
     local addr = Engine.make_address(wtype, index)
-    assert(LOCAL_ADDR == addr)
+    assert(WorkerSetting[addr]) -- 必须是本地worker才能发起监听
 
     local worker = ClusterWorker(addr)
     local conf = cluster_conf[key]
@@ -93,6 +93,7 @@ function Cluster.listen(cluster_conf, node_name)
         print("cluster listen error", node_name, conf.ip, conf.port)
         return
     end
+    printf("cluster %s listen at %s:%d", node_name, conf.ip, conf.port)
 
     this.listen[addr] = worker
 end

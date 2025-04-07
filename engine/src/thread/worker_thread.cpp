@@ -45,7 +45,7 @@ void WorkerThread::stop(bool join)
         // 只能在主线程调用
         assert(std::this_thread::get_id() != thread_.get_id());
 
-        // 唤醒子线程
+        // 唤醒子线程，上面已经设置stop_ = true，这里发消息时，worker线程可能已退出
         emplace_message(0, 0, ThreadMessage::NONE, nullptr, 0);
 
         thread_.join();
@@ -151,6 +151,13 @@ void WorkerThread::routine()
     // 注意业务层是有关服顺序的，要等业务层关服完成后，底层才会发出停止消息
     // 这时候不应该会存在很多消息的
     dispatch_message();
+    // 这只是个警告，不是错误。因为主线程让worker线程退出时，会发一个消息唤醒worker线程
+    // 但这时候worker线程可能刚好已经退出了
+    size_t ms = message_size();
+    if (0 != ms)
+    {
+        PLOG("worker thread message queue not clean: %zu", ms);
+    }
 
     if (!uninitialize()) /* 清理 */
     {

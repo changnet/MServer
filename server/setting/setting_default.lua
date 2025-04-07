@@ -35,9 +35,9 @@ return
     {
         -- 同一个类型的节点，只能有一个master(可以没有master)
         -- 一个节点的port = 0表示该节点只接收master中转的数据，不开启监听
-        gateway1 = {host = "::1", port = 20001, master = 1},
-        gateway2 = {host = "::1", port = 20002},
-        db1 = {host = "::1", port = 20003},
-        db2 = {host = "::1", port = 20004},
+        gateway1 = {ip = "::1", port = 20001, master = 1},
+        gateway2 = {ip = "::1", port = 20002},
+        db1 = {ip = "::1", port = 20003},
+        db2 = {ip = "::1", port = 20004},
     },
 }

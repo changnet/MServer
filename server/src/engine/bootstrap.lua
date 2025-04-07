@@ -149,6 +149,8 @@ function Bootstrap.process_init()
     require "rpc.rpc"
     require "timer.timer"
     require "network.socket_mgr"
+    require "cluster.cluster"
+    require "global.debug"
 
     Signal.mask(2, Shutdown.begin)
     Signal.mask(15, Shutdown.begin)
@@ -188,6 +190,8 @@ function Bootstrap.worker_init(addr)
     require "rpc.rpc"
     require "timer.timer"
     require "network.socket_mgr"
+    require "cluster.cluster"
+    require "global.debug"
 
     math.randomseed(os.time())
 end

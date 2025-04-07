@@ -54,42 +54,7 @@ end
 -- 用于底层C错误信息处理
 function __G_C_TRACKBACK(msg, co)
     local msg_list = {}
-    for level = 2, 16 do
-        -- 检测该层堆栈是否存在，否则getlocal会报错
-        if not debug.getinfo(level, "f") then break end
-
-        local sub_msg = {}
-        for index = 1, 32 do
-            local k, v = debug.getlocal(level, index)
-            if not k then break end
-
-            if k ~= "(C temporary)" then
-                table.insert(sub_msg,
-                    string.format("%s:%s", tostring(k), tostring(v)))
-            end
-        end
-        if #sub_msg > 0 then
-            table.insert(msg_list, string.format(
-                "local%02d: %s", level, table.concat(sub_msg, ",")))
-        end
-    end
-
-    local info = debug.getinfo(2, "f")
-    if info and info.func then
-        local sub_msg = {}
-        for index = 1, 32 do
-            local k, v = debug.getupvalue(info.func, index)
-            if not k then break end
-
-            table.insert(sub_msg,
-                string.format("%s:%s", tostring(k), tostring(v)))
-        end
-
-        if #sub_msg > 0 then
-            table.insert(msg_list, string.format(
-                "upvalue: %s", table.concat(sub_msg, ",")))
-        end
-    end
+    debug.tracestack(msg_list)
 
     local stack_trace = debug.traceback(co)
 
@@ -130,6 +95,9 @@ function assert(expr, ...)
     if expr then return expr end
 
     local msg = table.concat({"assertion failed!", ...}, "    ")
+    local msg_list = {msg}
+    debug.tracestack(msg_list)
+    msg = table.concat(msg_list, "\n")
     return error(msg)
 end
 
