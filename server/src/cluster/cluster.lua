@@ -64,7 +64,7 @@ local ClusterWorker = require "cluster.cluster_worker"
 
 local this = global_storage("Cluster", {
     node = {}, -- 各节点已认证连接，以addr为key
-    unnode = {}, -- unauthenticated 未认证结点
+    unnode = {}, -- unauthenticated 未认证结点，以worker对象为key
     listen = {}, -- 监听的连接
 })
 
@@ -93,7 +93,7 @@ function Cluster.listen(cluster_conf, node_name)
         print("cluster listen error", node_name, conf.ip, conf.port)
         return
     end
-    printf("cluster %s listen at %s:%d", node_name, conf.ip, conf.port)
+    printf("cluster listen %s %s:%d", node_name, conf.ip, conf.port)
 
     this.listen[addr] = worker
 end
@@ -111,45 +111,52 @@ function Cluster.connect(cluster_conf, node_name)
 
     local worker = ClusterWorker(addr)
     local conf = cluster_conf[key]
-    if not worker:listen(conf.ip, conf.port) then
+    if not worker:connect(conf.ip, conf.port) then
         print("cluster connect error", node_name, conf.ip, conf.port)
         return
     end
+    printf("cluster connect %s %s:%d", node_name, conf.ip, conf.port)
 
-    this.unnode[addr] = worker
+    this.unnode[worker] = worker
 end
 
--- 节点认证结果
-function Cluster.on_authenticate(addr, ok, addr_list)
-    local node = this.unnode[addr]
-    if not node then
-        print("cluster on auth no such node", addr)
-        return
-    end
+-- 其他节点连连上
+function Cluster.accept(worker)
+    this.unnode[worker] = worker
 
-    this.unnode[addr] = nil
+    local ip, port = worker:address()
+    printf("cluster accept %s:%d", ip, port)
+end
+
+-- 处理节点认证结果
+function Cluster.authenticate(node, ok, addr_list)
+    assert(node == this.unnode[node])
+
+    local addr = node.addr
+
+    this.unnode[node] = nil
     if ok then
         this.node[addr] = node
         print("cluster node establish", addr, Worker.addr_name(addr))
+    else
+        node:close()
+        print("cluster node auth fail", addr, Worker.addr_name(addr))
     end
-
-    node:close()
-
-    print("cluster on auth fail", addr)
 end
 
 -- 连接断开时，取消认证
-function Cluster.unauthenticate(addr)
-    local node = this.node[addr] or this.unnode[addr]
-
-    this.node[addr] = nil
+function Cluster.unauthenticate(worker)
+    local addr = worker.addr
+    if addr then
+        this.node[addr] = nil
+    end
 
     -- 如果是server端，则直接删除
     -- client端则需要尝试重连
-    if node:is_server() then
-        this.unnode[addr] = nil
+    if worker:is_server() then
+        this.unnode[worker] = nil
     else
-        this.unnode[addr] = node
+        this.unnode[worker] = worker
         -- 不要直接重连，等定时器定时重连即可
         -- 否则如果是签名等问题连接失败，会不断地循环直连
         -- TODO 主动断开的，不要重连

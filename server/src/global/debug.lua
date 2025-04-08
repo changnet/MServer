@@ -4,7 +4,10 @@
 -- @param 变量全部存放到var_list中
 -- @param level 从哪一级stack开始获取
 function debug.tracestack(var_list, level)
-    for lv = level or 2, 16 do
+    if not level then level = 2 end
+
+    -- 各层调用堆栈上的local变量
+    for lv = level, 16 do
         -- 检测该层堆栈是否存在，否则getlocal会报错
         if not debug.getinfo(lv, "f") then break end
 
@@ -20,11 +23,12 @@ function debug.tracestack(var_list, level)
         end
         if #sub_msg > 0 then
             table.insert(var_list, string.format(
-                "local%02d: %s", lv, table.concat(sub_msg, ",")))
+                "local%02d: %s", lv - level, table.concat(sub_msg, ",")))
         end
     end
 
-    local info = debug.getinfo(2, "f")
+    -- 只打印最后一个函数调用的upvalue，不然就太多了
+    local info = debug.getinfo(level, "f")
     if info and info.func then
         local sub_msg = {}
         for index = 1, 32 do

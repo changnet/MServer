@@ -54,7 +54,7 @@ end
 -- 用于底层C错误信息处理
 function __G_C_TRACKBACK(msg, co)
     local msg_list = {}
-    debug.tracestack(msg_list)
+    debug.tracestack(msg_list, 3)
 
     local stack_trace = debug.traceback(co)
 
@@ -65,7 +65,14 @@ end
 
 -- 用于lua错误信息处理
 function __G__TRACKBACK(msg, co)
-    local str = __G_C_TRACKBACK(msg, co)
+    local msg_list = {}
+    debug.tracestack(msg_list, 4)
+
+    local stack_trace = debug.traceback(co)
+
+    table.insert(msg_list, msg)
+    table.insert(msg_list, stack_trace)
+    local str = table.concat(msg_list, "\n")
     async_logger:eprint(str)
     return str
 end
@@ -96,7 +103,7 @@ function assert(expr, ...)
 
     local msg = table.concat({"assertion failed!", ...}, "    ")
     local msg_list = {msg}
-    debug.tracestack(msg_list)
+    debug.tracestack(msg_list, 4)
     msg = table.concat(msg_list, "\n")
     return error(msg)
 end

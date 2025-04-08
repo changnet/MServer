@@ -524,6 +524,9 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
      *     server crash down and the socket is still in TIME_WAIT status.if try
      * to restart server immediately,you need to reuse address.but note you may
      * receive the old data from last time.
+     * 
+     * 注意，win下是允许多个进程绑定到同个端口，没有返回错误
+     * linux下只能绑定到time wait状态的端口
      */
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval))
         < 0)

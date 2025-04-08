@@ -10,18 +10,19 @@ function ClusterWorker:__init(addr)
 end
 
 -- 是否准备就绪（连接上并且握手完成）
-function ClusterWorker:ready()
+function ClusterWorker:is_ready()
     return self.ready
 end
 
 -- 接受新的连接
 function ClusterWorker:on_accepted()
+    Cluster.accept(self)
 end
 
 -- 发送节点之间的签名数字
 -- @param mask 客户端为“0”，服务器为“1”
-function ClusterWorker:send_signature(tm, mask)
-    tm = tm or Engine.time()
+function ClusterWorker:send_signature(mask)
+    local tm = Engine.time()
 
     -- mask保证发送和返回的签名是不一样的
     -- 避免另一端直接返回收到的签名也能校验通过
@@ -29,15 +30,15 @@ function ClusterWorker:send_signature(tm, mask)
 
     local ptr, size
     if LOCAL_ADDR ~= PROCESS_ADDR then
-        ptr, size = g_lcodec:encode_to_buffer(tm, sign)
+        ptr, size = g_lcodec:encode_to_buffer(LOCAL_ADDR, tm, sign)
     else
         -- 在主线程发起的连接是公用的，相互通知各自所有worker地址
         local addr_list = Worker.local_addr_list()
-        ptr, size = g_lcodec:encode_to_buffer(tm, sign, addr_list)
+        ptr, size = g_lcodec:encode_to_buffer(LOCAL_ADDR, tm, sign, addr_list)
     end
 
     -- 这时候还没认证，不能走rpc调用的
-    self:send_pkt(LOCAL_ADDR, 0, 0, size, ptr)
+    self:send_pkt(LOCAL_ADDR, 0, -1, size, ptr)
 end
 
 -- 连接成功
@@ -51,22 +52,26 @@ end
 -- 连接断开
 function ClusterWorker:on_disconnected()
     self.ready = nil
-    Cluster.unauthenticate(self.addr)
+    Cluster.unauthenticate(self)
 end
 
-function ClusterWorker:do_authenticate(src, tm, sign, addr_list)
+function ClusterWorker:do_authenticate(src, addr, tm, sign, addr_list)
     local ok = true
     if self:is_server() then
+        assert(not self.addr or self.addr == addr)
+
+        self.addr = addr
         local expect_sign = Engine.make_srv_signature(tm, "0")
         if expect_sign ~= sign then
             print("cluster auth signature fail", self.addr, tm, sign, expect_sign)
 
             ok = false
-            self:send_signature("1")
+            self:send_signature("2") -- 验证失败，故意发个错的过去
         else
             self:send_signature("1")
         end
     else
+        assert(self.addr == addr)
         if 0 == (tm or 0) then
             ok = false
             print("remote auth fail", self.addr)
@@ -77,7 +82,7 @@ function ClusterWorker:do_authenticate(src, tm, sign, addr_list)
         end
     end
 
-    Cluster.on_authenticate(self.addr, ok, addr_list)
+    Cluster.authenticate(self, ok, addr_list)
     if ok then self.ready = true end
 end
 
@@ -85,7 +90,7 @@ end
 function ClusterWorker:on_message(src, dst, mtype, usize, udata)
     -- 未经过认证的连接，禁止直接将消息派发到其他模块
     if not self.ready then
-        assert(0 == mtype)
+        assert(-1 == mtype)
         return self:do_authenticate(
             src, g_lcodec:decode_from_buffer(udata, usize))
     end
