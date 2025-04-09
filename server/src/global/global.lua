@@ -78,8 +78,8 @@ function __G__TRACKBACK(msg, co)
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效
-function print(fmt, ...)
-    return async_logger:plog(fmt,...)
+function print(...)
+    return async_logger:plog(...)
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效

@@ -98,15 +98,18 @@ local function set_process_log()
     -- 名字需要能区分不同进程名，不同节点
     -- win下文件名不支持特殊字符的，比如":"
 
-    local node = g_env:get("node")
+    local node = g_env:get("--node")
     local epath
     local ppath
+    local local_name
     local node_name, node_id = string.match(node, "(%a+)(%d*)")
     if node_id ~= "" then
-        -- 以集群节点启动，比如gateway10
+        -- 以集群节点启动，比如gateway10，这时候主线程的日志名和worker就会重复，转为大写
+        local_name = string.upper(node_name)
         epath = string.format("log/%s%03d_error", node_name, tonumber(node_id))
-        ppath = string.format("log/%s%02d_runtime", node_name, tonumber(node_id))
+        ppath = string.format("log/%s%03d_runtime", node_name, tonumber(node_id))
     else
+        local_name = node_name
         epath = string.format("log/%s_error", node_name)
         ppath = string.format("log/%s_runtime", node_name)
     end
@@ -116,13 +119,14 @@ local function set_process_log()
     g_async_log:set_option(ppath, Log.PT_DAILY)
     g_async_log:set_option(epath, Log.PT_SIZE, 1024 * 1024 * 10)
 
-    -- 日志中需要打印进程名，否则多个进程在同一终端开户时不好区分日志
-    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH), node))
+    -- 日志中需要打印线程名，否则多个进程在同一终端开户时不好区分日志
+    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH), local_name))
+    return local_name
 end
 
 -- 进程预加载必要的组件
 function Bootstrap.process_init()
-    set_process_log()
+    local local_name = set_process_log()
 
     g_thread = g_mthread
     set_path()
@@ -139,6 +143,7 @@ function Bootstrap.process_init()
     require "worker.worker"
 
     LOCAL_ADDR = PROCESS_ADDR
+    LOCAL_NAME = local_name
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "engine.co_pool"
@@ -171,13 +176,14 @@ function Bootstrap.worker_init(addr)
     require "worker.worker"
 
     local wtype, index = Engine.unmake_address(addr)
-
-    local Log = require "engine.Log"
-    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH),
-        string.format("%s%d", Worker.type_name(wtype), index)))
-
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
+    LOCAL_NAME = string.format("%s%d", Worker.type_name(wtype), index)
+
+    local Log = require "engine.Log"
+    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH), LOCAL_NAME))
+
+
     Engine.add_thread_ctx(addr, g_thread:toludata())
 
     load_setting()

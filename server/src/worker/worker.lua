@@ -8,6 +8,7 @@ WorkerSetting = {} -- 以worker的addr为key，worker的配置为value
 
 LOCAL_ADDR = 0 -- 当前worker地址
 LOCAL_TYPE = 0 -- 当前worker类型
+LOCAL_NAME = "" -- 当前worker的名字
 
 -- 从配置文件创建一个worker
 -- worker可以动态创建，但一般创建后就不删除（删除要考虑addr复用的问题）

@@ -10,5 +10,5 @@ local worker_setting = {
 Worker.start(worker_setting)
 
 -- 监听game进程的连接
-Cluster.listen(g_setting.cluster, g_env:get("node"), true)
+Cluster.listen(g_setting.cluster, g_env:get("--node"), true)
 -- Cluster.connect("data", 1, 1)

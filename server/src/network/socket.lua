@@ -124,7 +124,8 @@ end
 
 -- 连接断开(主动断开、对方断开都会触发此事件)
 function Socket:on_disconnected()
-    -- 如果socket.status不为closing，则为对方关闭链接
+    -- self.status不为closing，则为对方关闭链接
+    -- self.status = OPENING则为连接失败
     -- 可通过self.s:get_errno()获取错误码判断是否出现错误
 end
 
@@ -224,6 +225,13 @@ end
 function Socket:is_server()
     -- 如果主动connect，那肯定有host
     return not self.host
+end
+
+-- 获取错误码及错误原因
+function Socket:get_error()
+    local e = self.s:get_errno()
+    local str = util.what_error(e)
+    return e, str
 end
 
 return Socket

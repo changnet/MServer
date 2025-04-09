@@ -1,4 +1,4 @@
--- auto export by lua-tags 148 symbols
+-- auto export by lua-tags 149 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -36,6 +36,7 @@ return {
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
+"LOCAL_NAME", -- src/worker/worker.lua
 "LOCAL_TYPE", -- src/worker/worker.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua

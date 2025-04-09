@@ -68,7 +68,6 @@ local function main(cmd, ...)
 
     local cwd = util.getcwd()
     local srv_dir =  string.match(cwd, "(.*)[/\\]") -- 不带最后一个/
-    g_env:set("node", node)
     g_env:set("cwd", cwd) -- current working directory
     g_env:set("cmd_args", cmd_args) -- command line args
     g_env:set("srv_dir", srv_dir) -- server source code directory

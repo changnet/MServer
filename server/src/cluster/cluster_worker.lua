@@ -3,9 +3,9 @@ local SsSocket = require "network.ss_socket"
 -- 把远程集群节点伪装成本地worker，统一调用接口
 local ClusterWorker = oo.class(SsSocket)
 
-function ClusterWorker:__init(addr)
+function ClusterWorker:__init(name)
     SsSocket.__init(self)
-    self.addr = addr -- 对端的地址
+    self.name = name -- 对端的名字
     self.cluster_worker = true
 end
 
@@ -28,14 +28,9 @@ function ClusterWorker:send_signature(mask)
     -- 避免另一端直接返回收到的签名也能校验通过
     local sign = Engine.make_srv_signature(tm, mask)
 
-    local ptr, size
-    if LOCAL_ADDR ~= PROCESS_ADDR then
-        ptr, size = g_lcodec:encode_to_buffer(LOCAL_ADDR, tm, sign)
-    else
-        -- 在主线程发起的连接是公用的，相互通知各自所有worker地址
-        local addr_list = Worker.local_addr_list()
-        ptr, size = g_lcodec:encode_to_buffer(LOCAL_ADDR, tm, sign, addr_list)
-    end
+    -- 在主线程发起的连接是公用的，相互通知各自所有worker地址
+    local addr_list = Worker.local_addr_list()
+    local ptr, size = g_lcodec:encode_to_buffer(LOCAL_NAME, tm, sign, addr_list)
 
     -- 这时候还没认证，不能走rpc调用的
     self:send_pkt(LOCAL_ADDR, 0, -1, size, ptr)
@@ -55,15 +50,12 @@ function ClusterWorker:on_disconnected()
     Cluster.unauthenticate(self)
 end
 
-function ClusterWorker:do_authenticate(src, addr, tm, sign, addr_list)
+function ClusterWorker:do_authenticate(src, name, tm, sign, addr_list)
     local ok = true
     if self:is_server() then
-        assert(not self.addr or self.addr == addr)
-
-        self.addr = addr
         local expect_sign = Engine.make_srv_signature(tm, "0")
         if expect_sign ~= sign then
-            print("cluster auth signature fail", self.addr, tm, sign, expect_sign)
+            print("cluster auth signature fail", name, tm, sign, expect_sign)
 
             ok = false
             self:send_signature("2") -- 验证失败，故意发个错的过去
@@ -71,19 +63,18 @@ function ClusterWorker:do_authenticate(src, addr, tm, sign, addr_list)
             self:send_signature("1")
         end
     else
-        assert(self.addr == addr)
-        if 0 == (tm or 0) then
-            ok = false
-            print("remote auth fail", self.addr)
-        end
         local expect_sign = Engine.make_srv_signature(tm, "1")
         if expect_sign ~= sign then
-            print("cluster remote signature fail", self.addr, tm, sign, expect_sign)
+            ok = false
+            print("cluster remote signature fail", name, tm, sign, expect_sign)
         end
     end
 
-    Cluster.authenticate(self, ok, addr_list)
-    if ok then self.ready = true end
+    self.ready = ok
+    self.name = name
+    self.addr_list = addr_list
+
+    Cluster.authenticate(self, ok)
 end
 
 -- 服务器之间消息回调
