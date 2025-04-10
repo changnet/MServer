@@ -107,6 +107,10 @@ void PollBackend::do_wait_event(int32_t ev_count)
             {
                 if (revents & POLLOUT) events |= EV_WRITE;
                 if (revents & POLLIN) events |= EV_READ;
+
+                // https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll
+                // As of Windows 10 version 2004, when a TCP socket fails to connect, (POLLHUP | POLLERR | POLLWRNORM) is indicated
+                // Linux下则只会返回POLLOUT
                 if (revents & (POLLERR | POLLHUP)) events |= EV_CLOSE;
             }
 
@@ -136,8 +140,10 @@ int32_t PollBackend::wait(int32_t timeout)
             return -1;
         default:
         {
+            // 正常情况下socket关闭必须要先从backend移除。否则强制关闭的socket句柄会被复用，poll非socket可能会报错。
+            // 10038: An operation was attempted on something that is not a socket.
             int32_t e = netcompat::errorno();
-            ELOG("poll fatal(%d): %s", e, netcompat::strerror(e));
+            ELOG("poll fatal, errno = %d, (%d): %s", errno, e, netcompat::strerror(e));
             assert(false);
             return -1;
         }

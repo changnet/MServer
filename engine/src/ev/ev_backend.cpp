@@ -5,6 +5,14 @@
 #include "system/static_global.hpp"
 #include "time.hpp"
 
+#ifdef __windows__
+    #include <ws2tcpip.h>
+#else
+    #include <fcntl.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+#endif
+
 EVBackend *EVBackend::instance()
 {
 #ifdef __poll__
@@ -331,6 +339,14 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
     if (revents & (EV_ERROR | EV_CLOSE))
     {
         events |= EV_CLOSE;
+        // 如果发生错误，并且上面的READ WRITE没有设置错误码，则这里设置
+        if (!w->errno_)
+        {
+            int32_t err   = 0;
+            socklen_t len = sizeof(err);
+            getsockopt(w->fd_, SOL_SOCKET, SO_ERROR, (char *)&err, &len);
+            w->errno_ = err;
+        }
         // 如果对方关闭，这里直接从backend移除监听，避免再从主线程通知删除
         // 注意需要清除EV_FLUSH标记，那个优先级更高
         modify_later(w, EV_CLOSE);

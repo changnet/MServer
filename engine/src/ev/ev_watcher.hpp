@@ -137,7 +137,7 @@ public:
         // 该watcher对应的socket已经在另一个线程销毁(正常不应该出现)
         if (w->del_ref(EVIO::REF_BACKEND))
         {
-            PLOG("unref delete watcher, maybe error: %d - %d", w->id_, w->fd_);
+            ELOG("backend delete watcher: %d - %d", w->id_, w->fd_);
             delete w;
             return false;
         }

@@ -90,12 +90,14 @@ Socket::~Socket()
         ELOG("socket destructor watcher not delete %d", socket_id_);
     }
 
-    // 如果未正常关闭。强制关闭会触发另一个线程的读写返回错误
-    if (fd_ != netcompat::INVALID)
-    {
-        netcompat::close(fd_);
-        fd_ = netcompat::INVALID;
-    }
+    // 如果未正常关闭。这里不能强制关闭
+    // 强制关闭可能会导致fd被复用，这时epoll或者poll在一个非socket上执行会报错
+    // 但后续又无法确认哪个fd有问题，也没有机制去移除
+    // if (fd_ != netcompat::INVALID)
+    // {
+    //     netcompat::close(fd_);
+    //     fd_ = netcompat::INVALID;
+    // }
 }
 
 void Socket::stop(bool flush)
@@ -697,7 +699,11 @@ int32_t Socket::connect_validate()
      */
     int32_t ecode = Socket::validate();
 
-    if (0 != ecode) return ecode;
+    if (0 != ecode)
+    {
+        w_->errno_ = ecode;
+        return ecode;
+    }
 
     if (set_keep_alive(fd_))
     {
