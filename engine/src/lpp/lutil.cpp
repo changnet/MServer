@@ -362,12 +362,12 @@ static int32_t sha1(lua_State *L)
 }
 
 /**
- * 计算字符串sha3-256编码
+ * 计算字符串sha256，即sha2-256
  * @param upper 可选参数，结果是否转换为大写
- * @param ... 需要计算的字符串，可以多个，sha3-256(true, str1, str2, ...)
- * @return sha3字符串
+ * @param ... 需要计算的字符串，可以多个，sha256(true, str1, str2, ...)
+ * @return sha2字符串
  */
-static int32_t sha3_256(lua_State* L)
+static int32_t sha256(lua_State* L)
 {
     unsigned char sha256[SHA256_DIGEST_LENGTH];
 
@@ -402,12 +402,62 @@ static int32_t sha3_256(lua_State* L)
     SHA256_Final(sha256, &ctx);
 
     char buf[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    for (int32_t i = 0; i < SHA_DIGEST_LENGTH; ++i)
+    for (int32_t i = 0; i < SHA256_DIGEST_LENGTH; ++i)
     {
         //--%02x即16进制输出，占2个字节
         snprintf(buf + i * 2, 3, fmt, sha256[i]);
     }
-    lua_pushlstring(L, buf, SHA_DIGEST_LENGTH * 2);
+    lua_pushlstring(L, buf, SHA256_DIGEST_LENGTH * 2);
+    return 1;
+}
+
+/**
+ * 计算字符串sha3-256
+ * @param upper 可选参数，结果是否转换为大写
+ * @param ... 需要计算的字符串，可以多个，sha3-256(true, str1, str2, ...)
+ * @return sha3字符串
+ */
+static int32_t sha3_256(lua_State* L)
+{
+    int32_t index   = 1;
+    const char *fmt = "%02x"; // default format to lower
+    if (!lua_isstring(L, 1))
+    {
+        index = 2;
+        if (lua_toboolean(L, 1)) fmt = "%02X";
+    }
+
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    if (!ctx || 1 != EVP_DigestInit_ex(ctx, EVP_sha3_256(), nullptr))
+    {
+        return luaL_error(L, "sha256 init error");
+    }
+
+    for (int32_t i = index; i <= lua_gettop(L); ++i)
+    {
+        size_t len;
+        const char *ptr = lua_tolstring(L, i, &len);
+        if (!ptr)
+        {
+            // not a string and can not convert to string
+            return luaL_error(L, "argument #%d expect string,got %s", i,
+                              lua_typename(L, lua_type(L, i)));
+        }
+
+        EVP_DigestUpdate(ctx, ptr, len);
+    }
+
+    unsigned int sha3_256_len = 0;
+    unsigned char sha256[EVP_MAX_MD_SIZE];
+    EVP_DigestFinal_ex(ctx, sha256, &sha3_256_len);
+
+    char buf[EVP_MAX_MD_SIZE * 2 + 1] = {0};
+    for (unsigned int i = 0; i < sha3_256_len; ++i)
+    {
+        //--%02x即16进制输出，占2个字节
+        snprintf(buf + i * 2, 3, fmt, sha256[i]);
+    }
+    lua_pushlstring(L, buf, sha3_256_len * 2);
     return 1;
 }
 
@@ -533,6 +583,7 @@ static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"uuid", uuid},
                                    {"sha1", sha1},
                                    {"base64", base64},
+                                   {"sha256", sha256},
                                    {"sha3_256", sha3_256},
                                    {"getcwd", getcwd},
                                    {"mkdir_p", mkdir_p},

@@ -43,8 +43,8 @@ public:
         {
             PT_NONE   = 0, /// 未定义
             PT_NORMAL = 1, /// 单个文件
-            PT_DAILY  = 2, /// 每天一个文件，文件名包含%DAILY%
-            PT_SIZE   = 3, /// 按大小分文件，文件名包含%SIZE1024%
+            PT_DAILY  = 2, /// 每天一个文件
+            PT_SIZE   = 3, /// 按大小分文件
         };
 
         Policy();
@@ -57,7 +57,7 @@ public:
         void init_policy(const char *path, int32_t type, int64_t opt_val);
         void trigger_size_rollover(int64_t size);
         void trigger_daily_rollover(int64_t now);
-        bool is_daily_rollover(int64_t now)
+        bool is_daily_rollover(int64_t now) const
         {
             return now < data_ || now > data_ + 86400;
         }

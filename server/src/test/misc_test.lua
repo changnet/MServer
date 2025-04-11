@@ -243,6 +243,24 @@ Test.describe("crypto test", function()
     Test.it("base64", function()
         Test.equal(util.base64(str), "MTIzNDU2Nzg5YWJjZGVmZ2hp")
     end)
+
+    Test.it("sha256", function()
+        Test.equal(util.sha256(str),
+            "de280d7a1bbee96f0aeb8b048ee3f1cdfcf7f56b5e36026d4292ebde40ae93d1")
+        Test.equal(util.sha256(true, str),
+            "DE280D7A1BBEE96F0AEB8B048EE3F1CDFCF7F56B5E36026D4292EBDE40AE93D1")
+        Test.equal(util.sha256(str), util.sha256(str0, str1))
+        Test.equal(util.sha256(true, str), util.sha256(true, str0, str1))
+    end)
+
+    Test.it("sha3-256", function()
+        Test.equal(util.sha3_256(str),
+            "9d4e9042c61ac52b36b4bb8b206252977b79197e4aa8a773095355bf9dcc2252")
+        Test.equal(util.sha3_256(true, str),
+            "9D4E9042C61AC52B36B4BB8B206252977B79197E4AA8A773095355BF9DCC2252")
+        Test.equal(util.sha3_256(str), util.sha3_256(str0, str1))
+        Test.equal(util.sha3_256(true, str), util.sha3_256(true, str0, str1))
+    end)
 end)
 
 Test.describe("table lib test", function()
