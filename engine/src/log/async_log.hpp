@@ -12,9 +12,8 @@ public:
     enum
     {
         POLICY_NONE   = 0, /// 未定义
-        POLICY_NORMAL = 1, /// 单个文件
-        POLICY_DAILY  = 2, /// 每天一个文件
-        POLICY_SIZE   = 3, /// 按大小分文件
+        POLICY_DAILY  = 1, /// 每天一个文件
+        POLICY_SIZE   = 2, /// 按大小分文件
     };
 
     // 日志掩码
@@ -24,8 +23,11 @@ public:
         MASK_C_G  = 2, // 颜色 green
         MASK_C_B  = 4, // 颜色 blue
         MASK_C_Y  = 8, // 颜色 yellow
+        MASK_CL  = MASK_C_R | MASK_C_G | MASK_C_B | MASK_C_Y,
         MASK_S_L  = 128, // 来源 source lua
         MASK_S_C  = 256, // 来源 source c
+        MASK_BEG  = 512, // 单次日志开始
+        MASK_END  = 1024, // 单次日志结束
     };
 
     /// 日志缓冲区
@@ -82,7 +84,7 @@ public:
      * @param policy 日志文件策略类型
      * @param policy_u2 日志文件策略参数（比如按大小截断时，文件的大小）
      */
-    void set_device(const char *name, const char *path, int32_t alive,
+    Device *set_device(const char *name, const char *path, int32_t alive,
                     int32_t policy, int64_t policy_u1);
     /**
      * @brief 追加日志到设备
@@ -95,9 +97,13 @@ public:
     void append(const char *name, int32_t mask, int64_t time, const char *str,
                 size_t len);
 
+    // 初始化基础的全局日志参数
+    void setup_global();
+
 private:
     using BufferPool = ObjectPool<Buffer, 256, 256>;
 
+    void remove_device(Device &device);
     void trigger_size_rollover(Device &device, int64_t size);
     void trigger_daily_rollover(Device &device, int64_t now);
     static bool is_daily_rollover(const Device &device, int64_t now)
@@ -113,8 +119,10 @@ private:
     void routine_once(int32_t ev) override;
     bool uninitialize() override;
 
-    size_t write_to_one_device(Device *device, const Buffer *buffer, bool beg,
-                               bool end);
+    // 写入控制台颜色
+    void write_color(FILE *stream, int32_t mask);
+    size_t write_prefix(FILE *stream, int32_t mask, const char *name, int64_t time);
+    size_t write_to_one_device(Device *device, const Buffer *buffer);
     void write_to_device(Device &device, const BufferList &buffers);
 
     Buffer *device_reserve(Device &device, int64_t time, int32_t mask)

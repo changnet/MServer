@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 AsyncLog::Device::Device()
 {
+    alive_time_ = 0;
     policy_     = 0;
     policy_ud1_ = 0;
     policy_ud2_ = 0;
@@ -25,7 +26,7 @@ void AsyncLog::Device::close_stream()
     if (file_)
     {
         ::fflush(file_);
-        ::fclose(file_);
+        if (stdout != file_ && stderr != file_) ::fclose(file_);
         file_ = nullptr;
     }
 }
@@ -34,6 +35,11 @@ FILE *AsyncLog::Device::open_stream()
 {
     if (!file_)
     {
+        if (path_.empty())
+        {
+            ELOG_R("can't open log file, path is null");
+            return nullptr;
+        }
         file_ = ::fopen(path_.c_str(), "ab+");
         if (!file_)
         {
@@ -127,7 +133,20 @@ bool AsyncLog::init_daily_policy(Device &device)
     return true;
 }
 
-void AsyncLog::set_device(const char *name, const char *path, int32_t alive,
+void AsyncLog::remove_device(Device &device)
+{
+    // 如果有其他device引用当前的，则移除
+
+    Device *p = &device;
+    for (auto iter = device_.begin(); iter != device_.end(); iter++)
+    {
+        if (iter->second.multi_device_ == p)
+            iter->second.multi_device_ = nullptr;
+    }
+}
+
+AsyncLog::Device *AsyncLog::set_device(const char *name, const char *path,
+                                     int32_t alive,
                                int32_t policy, int64_t policy_u1)
 {
     std::lock_guard<std::mutex> guard(mutex_);
@@ -149,6 +168,7 @@ void AsyncLog::set_device(const char *name, const char *path, int32_t alive,
     case POLICY_SIZE: init_size_policy(device); break;
     default: break;
     }
+    return &device;
 }
 
 void AsyncLog::append(const char *name, int32_t mask, int64_t time,
@@ -175,6 +195,7 @@ void AsyncLog::append(const char *name, int32_t mask, int64_t time,
     size_t cpy_len = std::min(sizeof(buff->buff_), len);
     memcpy(buff->buff_, str, cpy_len);
     buff->used_ += cpy_len;
+    buff->mask_ |= MASK_BEG;
 
     // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为-1
     if (unlikely(cpy_len < len))
@@ -191,13 +212,14 @@ void AsyncLog::append(const char *name, int32_t mask, int64_t time,
             buff->used_ += cpy_len;
         } while (cur_len < len);
     }
+    buff->mask_ |= MASK_END;
 }
 
 void AsyncLog::trigger_daily_rollover(Device &device, int64_t now)
 {
     // 不是按天写入，或者还在同一天now < 0表示这个是拼接到上一个缓冲区的日志，不需要检测
     if (POLICY_DAILY != device.policy_ || now < 0
-        || (now >= device.policy_ud1_ && now <= now >= device.policy_ud1_ + 86400))
+        || (now >= device.policy_ud1_ && now <= device.policy_ud1_ + 86400))
     {
         return;
     }
@@ -311,31 +333,110 @@ void AsyncLog::trigger_size_rollover(Device &device, int64_t size)
     }
 }
 
-size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer,
-                                     bool beg, bool end)
+void AsyncLog::write_color(FILE *stream, int32_t mask)
 {
-    trigger_daily_rollover(*device, buffer->time_);
+    const char *str = nullptr;
+    if (0 == mask)
+    {
+        str = "\033[0m"; // 重置
+    }
+    else if (mask & MASK_C_R)
+    {
+        str = "\033[31m";
+    }
+    else if (mask & MASK_C_G)
+    {
+        str = "\033[32m";
+    }
+    else if (mask & MASK_C_B)
+    {
+        str = "\033[34m";
+    }
+    else if (mask & MASK_C_Y)
+    {
+        str = "\033[33m";
+    }
+    if (str) fwrite(str, 1, strlen(str), stream);
+}
+
+size_t AsyncLog::write_prefix(FILE *stream, int32_t mask, const char *name,
+                    int64_t time)
+{
+    // 如果无mask并且time <= 0，则不添加任何前缀，通常用于写入文件
+    if (0 == mask && time <= 0) return 0;
+
+    // [L12-17 16:15:53  gateway1] 线程名为gateway1，L表示来源为lua
+
+    size_t bytes = 2; // []
+    fwrite("[", 1, 1, stream);
+    if (mask & MASK_S_L)
+    {
+        bytes++;
+        fwrite("L", 1, 1, stream);
+    }
+    else if (mask & MASK_S_C)
+    {
+        bytes++;
+        fwrite("C", 1, 1, stream);
+    }
+
+    thread_local char time_str[128] = {0};
+    thread_local int64_t time_cache = 0;
+    thread_local int32_t time_len   = 0;
+
+    // 时间戳精度是1秒，同一秒写入的日志，直接取缓存。从日志结果看，这个缓存命中很高
+    if (time != time_cache)
+    {
+        struct tm ntm;
+        ::localtime_r(&time, &ntm);
+        time_len = snprintf(time_str, sizeof(time_str),
+                            "%02d-%02d %02d:%02d:%02d", ntm.tm_mon + 1,
+                            ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec);
+
+        time_cache = time;
+    }
+
+    bytes += fwrite(time_str, 1, time_len, stream);
+    if (name) bytes += fwrite(name, 1, strlen(name), stream);
+    fwrite("]", 1, 1, stream);
+
+    return bytes;
+}
+
+size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer)
+{
     FILE *stream = device->open_stream();
     if (!stream) return 0;
 
     size_t bytes = 0;
-    if (buffer->time_ >= 0)
+    int32_t mask = buffer->mask_;
+    if (mask & MASK_BEG)
     {
-        if (!beg)
+        // 只在开始和结束的时候触发日志拆分，避免同一行日志被拆分到不同文件
+        trigger_daily_rollover(*device, buffer->time_);
+        stream = device->open_stream(); // 可能会触发日志文件关闭，重新获取
+        if (!stream) return 0;
+
+        // 写入颜色
+        if (mask & MASK_CL && (stream == stdout || stream == stderr))
         {
-            bytes++;
-            fputc('\n', stream);
+            write_color(stream, mask);
         }
-        bytes +=
-            log_util::write_prefix(stream, buffer->prefix_, type, buffer->time_);
+        bytes += write_prefix(stream, mask, buffer->prefix_, buffer->time_);
     }
 
     bytes += fwrite(buffer->buff_, 1, buffer->used_, stream);
 
-    if (end)
+    if (mask & MASK_END)
     {
+        if (mask & MASK_CL && (stream == stdout || stream == stderr))
+        {
+            write_color(stream, 0);
+        }
         bytes++;
         fputc('\n', stream);
+
+        trigger_size_rollover(*device, bytes);
 #ifdef __windows__
         // 在win的MYSY2(包括git bash)会缓存输出，直到程序关闭或者缓存区满，因此需要手动刷新
         if (stdout == stream || stderr == stream) fflush(stream);
@@ -347,62 +448,11 @@ size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer,
 
 void AsyncLog::write_to_device(Device &device, const BufferList &buffers)
 {
-    size_t size = buffers.size();
     Device *multi_device = device.multi_device_;
-    for (size_t i = 0; i < size; i++)
+    for (const auto buffer : buffers)
     {
-        size_t bytes         = 0;
-        bool beg             = 0 == i;
-        bool end             = i == size - 1;
-        const Buffer *buffer = buffers[i];
-
-        write_to_one_device(&device, buffer, beg, end);
-        if (multi_device) write_to_one_device(multi_device, buffer, beg, end);
-
-        switch (buffer->type_)
-        {
-        case log_util::LT_LOGFILE:
-        {
-            bytes = write_buffer(stream, "", buffer, beg, end);
-            break;
-        }
-        case log_util::LT_LPRINTF:
-        {
-            bytes = write_buffer(stream, "LP", buffer, beg, end);
-            if (!log_util::is_deamon())
-                write_buffer(stdout, "LP", buffer, beg, end);
-            break;
-        }
-        case log_util::LT_LERROR:
-        {
-            bytes = write_buffer(stream, "LE", buffer, beg, end);
-            if (!log_util::is_deamon())
-                write_buffer(stderr, "LE", buffer, beg, end);
-            break;
-        }
-        case log_util::LT_CPRINTF:
-        {
-            bytes = write_buffer(stream, "CP", buffer, beg, end);
-            if (!log_util::is_deamon())
-                write_buffer(stdout, "CP", buffer, beg, end);
-            break;
-        }
-        case log_util::LT_CERROR:
-        {
-            bytes = write_buffer(stream, "CE", buffer, beg, end);
-            if (!log_util::is_deamon())
-                write_buffer(stderr, "CE", buffer, beg, end);
-            break;
-        }
-        case log_util::LT_FILE:
-        {
-            bytes = fwrite(buffer->buff_, 1, buffer->used_, stream);
-            break;
-        }
-        default: assert(false); break;
-        }
-
-        policy->trigger_size_rollover(bytes);
+        write_to_one_device(&device, buffer);
+        if (multi_device) write_to_one_device(multi_device, buffer);
     }
 }
 
@@ -424,54 +474,54 @@ void AsyncLog::routine_once(int32_t ev)
 
     std::unique_lock<std::mutex> ul(mutex_);
 
-    while (busy)
+    for (auto iter = device_.begin(); iter != device_.end(); iter++)
     {
-        busy = false;
-        for (auto iter = device_.begin(); iter != device_.end(); iter++)
+        Device &device = iter->second;
+        if (device.buff_.empty())
         {
-            Device &device = iter->second;
-            if (!device.buff_.empty())
+            int32_t alive_time = device.alive_time_;
+
+            // 写入完成即关闭的设备
+            if (0 == alive_time)
+            {
+                device.close_stream();
+                remove_device(device);
+                iter = device_.erase(iter);
+                continue;
+            }
+            // 关闭长时间不使用的设备
+            int64_t sec = now - device.time_;
+            // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush ??)
+            // stdout和stderr等不关闭的会设置alive_time为-1
+            if (alive_time > 0 && sec > alive_time) device.close_stream();
+
+            // 当没有日志写入时，10秒检测一次日期切换
+            if (POLICY_DAILY == device.policy_ && sec > 10)
             {
                 device.time_ = now;
-                writing_buffers_.swap(device.buff_);
-
-                ul.unlock();
-                write_to_device(&policy, writing_buffers_, iter->first.c_str());
-                ul.lock();
-
-                // 回收缓冲区
-                for (auto buffer : writing_buffers_)
+                if (now < device.policy_ud1_ || now > device.policy_ud1_ + 86400)
                 {
-                    buffer_pool_.destroy(buffer);
+                    ul.unlock();
+                    trigger_daily_rollover(device, now);
+                    ul.lock();
                 }
-                writing_buffers_.clear();
-
-                busy = true;
             }
-            else
+        }
+        else
+        {
+            device.time_ = now;
+            writing_buffers_.swap(device.buff_);
+
+            ul.unlock();
+            write_to_device(device, writing_buffers_);
+            ul.lock();
+
+            // 回收缓冲区
+            for (auto buffer : writing_buffers_)
             {
-                // 关闭长时间不使用的设备
-                int64_t sec = now - device.time_;
-                // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush ??)
-                if (sec > 10) policy.close_stream();
-
-                auto type = policy.get_type();
-                if (Policy::PT_DAILY == type && sec > 10)
-                {
-                    // 当没有日志写入时，10秒检测一次日期切换
-                    device.time_ = now;
-                    if (policy.is_daily_rollover(now))
-                    {
-                        ul.unlock();
-                        policy.trigger_daily_rollover(now);
-                        ul.lock();
-                    }
-                }
-                else if (Policy::PT_NORMAL == type && sec > 300)
-                {
-                    iter = device_.erase(iter);
-                }
+                buffer_pool_.destroy(buffer);
             }
+            writing_buffers_.clear();
         }
     }
 }
@@ -483,4 +533,24 @@ bool AsyncLog::uninitialize()
     device_.clear(); // 保证文件句柄被销毁并写入文件
 
     return true;
+}
+
+void AsyncLog::setup_global()
+{
+    // 创建默认的日志参数，供全局使用。保证在系统启动前，日志也能正常打印
+    // 在启动完成后，这些数据可能会被覆盖
+
+    Device *console = set_device("stdout", "", -1, 0, 0); // 控制台
+    console->file_  = stdout;
+
+    Device *e_device =
+        set_device("error", "error", 1, POLICY_SIZE, 1024 * 1024 * 10);
+    Device *i_device = set_device("info", "info", 1, POLICY_DAILY, 0);
+
+    // 错误和普通信息，都在控制台打印
+    e_device->multi_device_ = console;
+    i_device->multi_device_ = console;
+
+    set_thread_name("g_log");
+    start(1000);
 }

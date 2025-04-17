@@ -64,9 +64,6 @@ void StaticGlobal::initialize()
     P           = new log_util::Prefix();
 
     // buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
-
-    LOG->set_thread_name("g_log");
-    LOG->AsyncLog::start(1000);
 }
 
 void StaticGlobal::uninitialize()

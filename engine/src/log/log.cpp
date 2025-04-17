@@ -17,20 +17,6 @@ static char error_path[PATH_MAX] = "error";
 // thread_local char log_name[128] = {0};
 thread_local const char *log_name = nullptr;
 
-thread_local int32_t buffer_len;
-thread_local char buffer[20480];
-#define FORMAT()                                                   \
-    do                                                             \
-    {                                                              \
-        va_list args;                                              \
-        va_start(args, fmt);                                       \
-        buffer_len = vsnprintf(buffer, sizeof(buffer), fmt, args); \
-        va_end(args);                                              \
-        assert(buffer_len >= 0);                                   \
-        if (buffer_len > (int32_t)sizeof(buffer))                  \
-            buffer_len = (int32_t)sizeof(buffer) - 1;              \
-    } while (0)
-
 namespace log_util
 {
 
@@ -45,16 +31,6 @@ void set_log_args(bool deamon, const char *ppath, const char *epath)
 bool is_deamon()
 {
     return deamon_mode;
-}
-
-const char *get_error_path()
-{
-    return error_path;
-}
-
-const char *get_printf_path()
-{
-    return printf_path;
 }
 
 void set_log_name(const char *name)
@@ -76,42 +52,25 @@ const char* get_log_name()
     return log_name;
 }
 
-size_t write_prefix(FILE *stream, const char *node_name, const char *type,
-                    int64_t time)
+static void write_stream(const char *path, FILE *std_stream, const char *str,
+                         int32_t len)
 {
-    // [LP12-17 16:15:53  gateway1] T0即node为gateway1，LP即type表示lua print
-    fwrite("[", 1, 1, stream);
-    fwrite(type, 1, strlen(type), stream);
+    // sync log是在日志线程未启动或者已关闭情况下紧急使用的，所以不考虑颜色之类花里胡哨的东西
+    // 在日志线程未关闭的情况下，直接往文件或者控制台写会引起多线程导致显示不正确
+    time_t t = time(nullptr);
+    struct tm ntm;
+    ::localtime_r(&t, &ntm);
 
-    thread_local char time_str[128] = {0};
-    thread_local int64_t time_cache = 0;
-    thread_local int32_t time_len   = 0;
-
-    // 时间戳精度是1秒，同一秒写入的日志，直接取缓存。从日志结果看，这个缓存命中很高
-    if (time != time_cache)
-    {
-        struct tm ntm;
-        ::localtime_r(&time, &ntm);
-        time_len = snprintf(time_str, sizeof(time_str),
-                            "%02d-%02d %02d:%02d:%02d", ntm.tm_mon + 1,
-                            ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec);
-
-        time_cache = time;
-    }
-
-    fwrite(time_str, 1, time_len, stream);
-    if (node_name) fwrite(node_name, 1, strlen(node_name), stream);
-    return fwrite("]", 1, 1, stream);
-}
-
-static void tup_stream(const char *path, FILE *std_stream, time_t tm,
-                       const char *type, const char *content)
-{
+    char time_str[128];
+    int32_t time_len = snprintf(time_str, sizeof(time_str),
+                                "[%02d-%02d %02d:%02d:%02d]", ntm.tm_mon + 1,
+                                ntm.tm_mday, ntm.tm_hour, ntm.tm_min, ntm.tm_sec);
     if (!deamon_mode)
     {
-        write_prefix(std_stream, log_name, type, tm);
-        fputs(content, std_stream);
-        fputc('\n', std_stream);
+        fwrite(time_str, 1, time_len, std_stream);
+        fwrite(str, 1, len, std_stream);
+        fwrite("\n", 1, 1, std_stream);
+        fflush(std_stream);
     }
 
     FILE *stream = ::fopen(path, "ab+");
@@ -123,30 +82,37 @@ static void tup_stream(const char *path, FILE *std_stream, time_t tm,
         fputc('\n', stderr);
         return;
     }
-    write_prefix(stream, log_name, type, tm);
-    fputs(content, stream);
-    fputc('\n', stream);
+    fwrite(time_str, 1, time_len, stream);
+    fwrite(str, 1, len, stream);
+    fwrite("\n", 1, 1, stream);
     ::fclose(stream);
 }
 
-void __sync_log(const char *path, FILE *stream, const char *prefix,
-                const char *fmt, ...)
+void __sync_log(int32_t type, const char *str, int32_t len)
 {
-    FORMAT();
-    tup_stream(path, stream, time(nullptr), prefix, buffer);
+    if (1 == type)
+    {
+        write_stream(printf_path, stdout, str, len);
+    }
+    else
+    {
+        write_stream(printf_path, stdout, str, len);
+    }
 }
 
-void __async_log(const char *path, LogType type, const char *fmt, ...)
+void __async_log(int32_t type, const char *str, int32_t len)
 {
-    FORMAT();
-    StaticGlobal::LOG->append(path, type, timing::try_frame_time(),
-                                         buffer, buffer_len);
+    if (1 == type)
+    {
+        StaticGlobal::LOG->AsyncLog::append("info", AsyncLog::MASK_S_C,
+                                            timing::try_frame_time(), str, len);
+    }
+    else
+    {
+        StaticGlobal::LOG->AsyncLog::append(
+            "error", AsyncLog::MASK_S_C | AsyncLog::MASK_C_R,
+            timing::try_frame_time(), str, len);
+    }
 }
 
-void __append_async_log(const char* path, LogType type, char* buffer,
-    int32_t buffer_len)
-{
-    StaticGlobal::LOG->append(path, type, timing::try_frame_time(), buffer,
-                              buffer_len);
-}
 } // namespace log_util

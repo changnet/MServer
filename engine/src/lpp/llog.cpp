@@ -38,7 +38,7 @@ int32_t LLog::start(lua_State *L)
     return 0;
 }
 
-int32_t LLog::append_log_file(lua_State *L)
+int32_t LLog::append(lua_State *L)
 {
     if (stop_)
     {
@@ -46,34 +46,19 @@ int32_t LLog::append_log_file(lua_State *L)
     }
 
     size_t len       = 0;
-    const char *path = luaL_checkstring(L, 2);
-    const char *ctx  = luaL_checklstring(L, 3, &len);
-    int64_t time     = luaL_optinteger(L, 4, 0);
-    if (!time) time = timing::try_frame_time();
+    const char *name = luaL_checkstring(L, 2);
+    int32_t mask     = luaL_checkinteger32(L, 3);
+    const char *str  = luaL_checklstring(L, 4, &len);
+    int64_t time     = luaL_optinteger(L, 5, -1);
+    if (time < 0) time = timing::try_frame_time();
 
-    append(path, log_util::LT_LOGFILE, time, ctx, len);
-
-    return 0;
-}
-
-int32_t LLog::append_file(lua_State *L)
-{
-    if (stop_)
-    {
-        return luaL_error(L, "log thread not start");
-    }
-
-    size_t len       = 0;
-    const char *path = luaL_checkstring(L, 2);
-    const char *ctx  = luaL_checklstring(L, 3, &len);
-
-    append(path, log_util::LT_FILE, 0, ctx, len);
+    AsyncLog::append(name, mask, time, str, len);
 
     return 0;
 }
 
 // 用于实现stdout、文件双向输出日志打印函数
-int32_t LLog::plog(lua_State *L)
+int32_t LLog::print(lua_State *L)
 {
 #define CPY_STR(str, len)                      \
     do                                         \
@@ -93,10 +78,23 @@ int32_t LLog::plog(lua_State *L)
     thread_local char buff[10240];
 
     // 把栈里所有的参数都按lua的print函数打印出来
-    // 一些基础类型，尽量不用tostring，那样会创建一个str再gc掉
+    // 不要在lua用table.concat把多个参数拼起来，效率很低
+    // 一些基础类型，尽量不用tostring，那样会在lua创建一个str再gc掉
+
     size_t used = 0;
     int32_t n   = lua_gettop(L);
-    for (int32_t i = 2; i <= n; i++)
+    int32_t mask = luaL_checkinteger32(L, 2);
+
+    // 针对print("xxx")只打印一个str的情况优化
+    if (n == 3 && LUA_TSTRING == lua_type(L, 3))
+    {
+        size_t len = 0;
+        const char *str = lua_tolstring(L, 3, &len);
+        AsyncLog::append("info", mask, timing::try_frame_time(), str, len);
+        return 0;
+    }
+
+    for (int32_t i = 3; i <= n; i++)
     {
         if (i > 1) *(buff + used++) = '\t';
         switch (lua_type(L, i))
@@ -132,7 +130,7 @@ int32_t LLog::plog(lua_State *L)
                                          lua_tonumber(L, i));
             if (num <= 0)
             {
-                ELOG("plog ERROR %u", used);
+                ELOG("print ERROR %u", used);
                 return 0;
             }
             used += num;
@@ -158,7 +156,7 @@ int32_t LLog::plog(lua_State *L)
         // 8是预留给nil、true、false等基础类型，他们不检测缓冲区是否已满
         if (used > sizeof(buff) - 8)
         {
-            ELOG("plog buffer overflow");
+            ELOG("print buffer overflow");
             break;
         }
     }
@@ -166,41 +164,32 @@ int32_t LLog::plog(lua_State *L)
     if (used <= 0) return 0;
 
     // TODO 这里能不能优化下，直接使用logger那边的buff，省去一次memcpy
-    StaticGlobal::LOG->append(log_util::get_printf_path(), log_util::LT_LPRINTF,
-                              timing::try_frame_time(), buff, used);
+    AsyncLog::append("info", mask, timing::try_frame_time(), buff, used);
 
     return 0;
 }
 
-int32_t LLog::eprint(lua_State *L)
+int32_t LLog::error(lua_State *L)
 {
     size_t len      = 0;
-    const char *ctx = luaL_checklstring(L, 2, &len);
+    int32_t mask    = luaL_checkinteger32(L, 2);
+    const char *str = luaL_checklstring(L, 3, &len);
 
-    StaticGlobal::LOG->append(log_util::get_error_path(), log_util::LT_LERROR,
-                              timing::try_frame_time(), ctx, len);
+    // 错误日志不多，不用考虑像print那样优化
+    AsyncLog::append("error", mask, timing::try_frame_time(), str, len);
 
     return 0;
 }
 
-int32_t LLog::set_option(lua_State *L)
+int32_t LLog::set_device(lua_State *L)
 {
-    const char *path = luaL_checkstring(L, 2);
-    int32_t type     = luaL_checkinteger32(L, 3);
-    int64_t opt_val  = luaL_optinteger(L, 4, 0);
+    const char *name  = luaL_checkstring(L, 2);
+    const char *path  = luaL_checkstring(L, 3);
+    int32_t alive     = luaL_checkinteger32(L, 4);
+    int32_t policy    = luaL_checkinteger32(L, 5);
+    int64_t policy_u1 = luaL_optinteger(L, 6, 0);
 
-    set_policy(path, type, opt_val);
-    return 0;
-}
-
-// 设置日志参数
-int32_t LLog::set_std_option(lua_State *L)
-{
-    bool dm           = lua_toboolean(L, 2);
-    const char *ppath = luaL_checkstring(L, 3);
-    const char *epath = luaL_checkstring(L, 4);
-
-    log_util::set_log_args(dm, ppath, epath);
+    AsyncLog::set_device(name, path, alive, policy, policy_u1);
     return 0;
 }
 
