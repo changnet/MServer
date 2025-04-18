@@ -4,6 +4,11 @@
 
 #include <filesystem>
 
+// 多线程中，可能某个线程写了日志就退出了，数据存用thread_local会被立马释放掉
+// 日志线程执行写入时，就取不到数据了，只能存指针
+// thread_local char log_name[128] = {0};
+thread_local const char *thread_name = nullptr;
+
 ////////////////////////////////////////////////////////////////////////////////
 AsyncLog::Device::Device()
 {
@@ -40,20 +45,44 @@ FILE *AsyncLog::Device::open_stream()
             ELOG_R("can't open log file, path is null");
             return nullptr;
         }
-        file_ = ::fopen(path_.c_str(), "ab+");
-        if (!file_)
+        if (path_ == "stdout")
         {
-            ELOG_R("can't open log file(%s):%s\n", path_.c_str(),
-                   strerror(errno));
-            return nullptr;
+            file_ = stdout;
+        }
+        else if (path_ == "stderr")
+        {
+            file_ = stderr;
+        }
+        else
+        {
+            file_ = ::fopen(path_.c_str(), "ab+");
+            if (!file_)
+            {
+                ELOG_R("can't open log file(%s):%s\n", path_.c_str(),
+                       strerror(errno));
+                return nullptr;
+            }
         }
     }
 
     return file_;
 }
 ////////////////////////////////////////////////////////////////////////////////
-time_t AsyncLog::day_begin(time_t now)
+AsyncLog::AsyncLog(const std::string &name)
+    : Thread(name), buffer_pool_("AsyncLog")
 {
+}
+
+AsyncLog::~AsyncLog()
+{
+    for (auto &v : name_)
+    {
+        delete v;
+    }
+}
+
+time_t AsyncLog::day_begin(time_t now)
+    {
     struct tm ntm;
     ::localtime_r(&now, &ntm);
     ntm.tm_hour = 0;
@@ -145,30 +174,66 @@ void AsyncLog::remove_device(Device &device)
     }
 }
 
-AsyncLog::Device *AsyncLog::set_device(const char *name, const char *path,
-                                     int32_t alive,
-                               int32_t policy, int64_t policy_u1)
+void AsyncLog::add_device(const char *name, const char *path,
+                                       int32_t alive, int32_t policy,
+                                       int64_t policy_u1, const char *multi)
 {
+    // TODO 目前只能增，不能安全删改。因为日志线程可能正在写入，这时修改device会出问题
+    // 如果后续有删改需求，可能要新增一套机制
     std::lock_guard<std::mutex> guard(mutex_);
 
-    // 这里面可能会触发磁盘io操作，会比较慢
-    // 曾经想过由log线程改动日志时才初始化日志，但那样的话跨天的日志会出现不写日志就不改文件名的情况
-    Device &device = device_[name];
+    Device *multi_device = nullptr;
+    if (multi)
+    {
+        auto found = device_.find(multi);
+        if (found == device_.end())
+        {
+            ELOG_R("no multi device found: %s", multi);
+            return;
+        }
+        multi_device = &found->second;
+    }
 
+    auto result = device_.emplace(name, Device{});
+    if (!result.second)
+    {
+        ELOG_R("log device %s already exist", name);
+        return;
+    }
+
+    Device &device = result.first->second;
     // 路径可能有变化，先关闭文件(另一个线程可能正在写入，不能关闭)
     // device.close_stream();
     device.alive_time_ = alive;
     device.policy_     = policy;
     device.policy_ud1_ = policy_u1;
     device.path_       = path;
+    device.multi_device_ = multi_device;
 
+    // 这里面可能会触发磁盘io操作，会比较慢
+    // 曾经想过由log线程改动日志时才初始化日志，但那样的话跨天的日志会出现不写日志就不改文件名的情况
     switch (device.policy_)
     {
     case POLICY_DAILY: init_daily_policy(device); break;
     case POLICY_SIZE: init_size_policy(device); break;
     default: break;
     }
-    return &device;
+}
+
+void AsyncLog::del_device(const char *name)
+{
+    std::lock_guard<std::mutex> guard(mutex_);
+
+    auto found = device_.find(name);
+    if (found == device_.end())
+    {
+        ELOG_R("no multi device found: %s", name);
+        return;
+    }
+
+    // 这里不能删除，因为日志线程写入文件时没加锁
+    // 修改这个alive_time_也不安全，但应该不会出大问题
+    found->second.alive_time_ = 0;
 }
 
 void AsyncLog::append(const char *name, int32_t mask, int64_t time,
@@ -535,22 +600,35 @@ bool AsyncLog::uninitialize()
     return true;
 }
 
-void AsyncLog::setup_global()
+
+void AsyncLog::set_thread_name(const char *name)
 {
-    // 创建默认的日志参数，供全局使用。保证在系统启动前，日志也能正常打印
-    // 在启动完成后，这些数据可能会被覆盖
+    // 某个线程写异步日志，退出后释放了thread_local
+    // 因此把数据存全局，保证日志线程写日志时还能获取到名字
 
-    Device *console = set_device("stdout", "", -1, 0, 0); // 控制台
-    console->file_  = stdout;
+    // null表示清空
+    if (!name)
+    {
+        thread_name = nullptr;
+        return;
+    }
 
-    Device *e_device =
-        set_device("error", "error", 1, POLICY_SIZE, 1024 * 1024 * 10);
-    Device *i_device = set_device("info", "info", 1, POLICY_DAILY, 0);
+    std::scoped_lock<std::mutex> sl(mutex_);
+    std::string n(name);
+    for (auto &s : name_)
+    {
+        if (n == *s)
+        {
+            thread_name = s->c_str();
+            return;
+        }
+    }
 
-    // 错误和普通信息，都在控制台打印
-    e_device->multi_device_ = console;
-    i_device->multi_device_ = console;
+    name_.push_back(new std::string(name));
+    thread_name = name_.back()->c_str();
+}
 
-    set_thread_name("g_log");
-    start(1000);
+const char *AsyncLog::get_thread_name()
+{
+    return thread_name;
 }

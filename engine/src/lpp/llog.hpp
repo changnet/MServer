@@ -54,12 +54,13 @@ public:
      * @param alive flush时间（秒数），0表示写入完即关闭
      * @paarm policy 日志策略，按大小、按日期拆分
      * @param policy_u1 日志策略参数，按大小拆分时，传单个文件大小
+     * @param multi 关联的日志设备
      */
-    int32_t set_device(lua_State *L);
+    int32_t add_device(lua_State *L);
 
     /**
      * 设置日志线程名字
      * @param name 线程名字
      */
-    static int32_t set_name(lua_State *L);
+    int32_t set_name(lua_State *L);
 };

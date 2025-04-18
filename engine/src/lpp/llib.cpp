@@ -206,19 +206,14 @@ static void luaopen_log(lua_State *L)
     lc.def<&LLog::stop>("stop");
     lc.def<&LLog::start>("start");
 
-    lc.def<&LLog::plog>("plog");
-    lc.def<&LLog::eprint>("eprint");
+    lc.def<&LLog::print>("print");
+    lc.def<&LLog::error>("error");
 
-    lc.def<&LLog::append_file>("append_file");
-    lc.def<&LLog::append_log_file>("append_log_file");
+    lc.def<&LLog::append>("append");
 
     lc.def<&LLog::set_name>("set_name");
-    lc.def<&LLog::set_option>("set_option");
-    lc.def<&LLog::set_std_option>("set_std_option");
-
-    lc.set(AsyncLog::Policy::PT_NORMAL, "PT_NORMAL");
-    lc.set(AsyncLog::Policy::PT_DAILY, "PT_DAILY");
-    lc.set(AsyncLog::Policy::PT_SIZE, "PT_SIZE");
+    lc.def<&LLog::add_device>("add_device");
+    lc.def<&LLog::del_device>("del_device");
 }
 
 static void luaopen_acism(lua_State *L)

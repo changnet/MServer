@@ -107,20 +107,26 @@ local function set_process_log()
         -- 以集群节点启动，比如gateway10，这时候主线程的日志名和worker就会重复，转为大写
         local_name = string.upper(node_name)
         epath = string.format("log/%s%03d_error", node_name, tonumber(node_id))
-        ppath = string.format("log/%s%03d_runtime", node_name, tonumber(node_id))
+        ppath = string.format("log/%s%03d_info", node_name, tonumber(node_id))
     else
         local_name = node_name
         epath = string.format("log/%s_error", node_name)
-        ppath = string.format("log/%s_runtime", node_name)
+        ppath = string.format("log/%s_info", node_name)
     end
 
-    local Log = require "engine.Log"
-    Log:set_std_option(g_env:get("deamon"), ppath, epath) -- 设置C++用的日志参数
-    g_async_log:set_option(ppath, Log.PT_DAILY)
-    g_async_log:set_option(epath, Log.PT_SIZE, 1024 * 1024 * 10)
+    if g_env:get("deamon") then
+        -- 后台模式运行，不需要输出日志到stdout，效率高一点点
+        g_async_log:add_device("info", ppath, 1, 1)
+        g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10)
+    else
+        g_async_log:add_device("stdout", "stdout", 1, 1)
+        g_async_log:add_device("info", ppath, 1, 1, 0, "stdout")
+        g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10, "stdout")
+    end
 
     -- 日志中需要打印线程名，否则多个进程在同一终端开户时不好区分日志
-    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH), local_name))
+    g_async_log:set_name(string.format(
+        string.format("%%%ds", LOG_WIDTH), local_name))
     return local_name
 end
 
@@ -180,9 +186,8 @@ function Bootstrap.worker_init(addr)
     LOCAL_TYPE = wtype
     LOCAL_NAME = string.format("%s%d", Worker.type_name(wtype), index)
 
-    local Log = require "engine.Log"
-    Log:set_name(string.format(string.format("%%%ds", LOG_WIDTH), LOCAL_NAME))
-
+    g_async_log:set_name(string.format(
+        string.format("%%%ds", LOG_WIDTH), LOCAL_NAME))
 
     Engine.add_thread_ctx(addr, g_thread:toludata())
 

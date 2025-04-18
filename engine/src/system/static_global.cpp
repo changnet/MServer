@@ -57,11 +57,10 @@ void StaticGlobal::initialize()
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
     V           = new Env();
     C           = new Buffer::ChunkPool("socket");
-    LOG  = new class LLog("Engine.AsyncLog");
+    LOG  = new class LLog("g_log");
     M           = new ThreadContextMgr();
     E           = new class EV();
     B           = EVBackend::instance();
-    P           = new log_util::Prefix();
 
     // buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 }
@@ -87,7 +86,6 @@ void StaticGlobal::uninitialize()
     delete M;
     delete V;
     delete C;
-    delete P;
 
     PbcCodec::uninitialize();
 }
@@ -103,9 +101,13 @@ void on_exit()
     int64_t counters = 0;
     global_mem_counter(counter, counters);
 
-    // 这里很多变量都释放了，直接用PRINTF会打印不出来
-    log_util::set_log_name(nullptr);
-    PLOG_R("new = " FMT64d " ----  new[] = " FMT64d, counter, counters);
+    // 这里很多变量都释放了，日志线程也关闭了
+    if (0 != counter || 0 != counters)
+    {
+        ELOG_R("memory counter new = " FMT64d " ----  new[] = " FMT64d, counter,
+               counters);
+        assert(false);
+    }
     // back_trace();
 }
 

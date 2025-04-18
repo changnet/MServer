@@ -72,20 +72,21 @@ public:
     };
 
 public:
-    virtual ~AsyncLog(){};
-    explicit AsyncLog(const std::string &name)
-        : Thread(name), buffer_pool_("AsyncLog"){};
+    virtual ~AsyncLog();
+    explicit AsyncLog(const std::string &name);
 
     /**
-     * @brief 设置日志设备的参数
+     * @brief 添加日志设备
      * @param name 日志名字
      * @param path 日志文件路径
      * @param alive 日志文件保持打开的时间
      * @param policy 日志文件策略类型
-     * @param policy_u2 日志文件策略参数（比如按大小截断时，文件的大小）
+     * @param policy_u1 日志文件策略参数（比如按大小截断时，文件的大小）
+     * @param multi 同时输出的多个设备名字（目前仅支持一个）
      */
-    Device *set_device(const char *name, const char *path, int32_t alive,
-                    int32_t policy, int64_t policy_u1);
+    void add_device(const char *name, const char *path, int32_t alive,
+                    int32_t policy, int64_t policy_u1, const char *multi);
+    void del_device(const char *name);
     /**
      * @brief 追加日志到设备
      * @param name 日志名字
@@ -96,9 +97,8 @@ public:
      */
     void append(const char *name, int32_t mask, int64_t time, const char *str,
                 size_t len);
-
-    // 初始化基础的全局日志参数
-    void setup_global();
+    void set_thread_name(const char *name);
+    const char *get_thread_name();
 
 private:
     using BufferPool = ObjectPool<Buffer, 256, 256>;
@@ -127,7 +127,7 @@ private:
 
     Buffer *device_reserve(Device &device, int64_t time, int32_t mask)
     {
-        Buffer *buff = buffer_pool_.construct(time, mask, log_util::get_log_name());
+        Buffer *buff = buffer_pool_.construct(time, mask, get_thread_name());
 
         device.buff_.push_back(buff);
 
@@ -138,5 +138,6 @@ private:
     std::mutex mutex_;
     BufferPool buffer_pool_;
     BufferList writing_buffers_;
+    std::vector<std::string *> name_; // 各个线程的日志名
     std::unordered_map<std::string, Device> device_;
 };

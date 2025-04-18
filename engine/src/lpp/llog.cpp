@@ -181,15 +181,16 @@ int32_t LLog::error(lua_State *L)
     return 0;
 }
 
-int32_t LLog::set_device(lua_State *L)
+int32_t LLog::add_device(lua_State *L)
 {
     const char *name  = luaL_checkstring(L, 2);
     const char *path  = luaL_checkstring(L, 3);
     int32_t alive     = luaL_checkinteger32(L, 4);
     int32_t policy    = luaL_checkinteger32(L, 5);
     int64_t policy_u1 = luaL_optinteger(L, 6, 0);
+    const char *multi = luaL_optstring(L, 7, nullptr);
 
-    AsyncLog::set_device(name, path, alive, policy, policy_u1);
+    AsyncLog::add_device(name, path, alive, policy, policy_u1, multi);
     return 0;
 }
 
@@ -198,6 +199,6 @@ int32_t LLog::set_name(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 2);
 
-    log_util::set_log_name(name);
+    set_thread_name(name);
     return 0;
 }
