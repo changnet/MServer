@@ -39,39 +39,8 @@ it("async test", function(wait, done)
     end
 end)
 ```
-]] -- https://stackoverflow.com/questions/1718403/enable-bash-output-color-with-lua-script
--- Note the \27. Whenever Lua sees a \ followed by a decimal number, it converts
--- this decimal number into its ASCII equivalent. I used \27 to obtain the bash
--- \033 ESC character
--- https://en.wikipedia.org/wiki/ANSI_escape_code
--- 1;32;41m 表示1加粗，32前景色为绿，41背景色为红。这些颜色可以组合使用，用;隔开
--- 0 - Normal Style
--- 1 - Bold
--- 2 - Dim
--- 3 - Italic
--- 4 - Underlined
--- 5 - Blinking
--- 7 - Reverse
--- 8 - Invisible
--- NONE RED BLUE GREEN YELLOW WHITE
--- local function N(fmt, ...)
---     return string.format(fmt, ...)
--- end
-local function R(fmt, ...)
-    return "\27[31m" .. string.format(fmt, ...) .. "\27[0m"
-end
-local function B(fmt, ...)
-    return "\27[34m" .. string.format(fmt, ...) .. "\27[0m"
-end
-local function G(fmt, ...)
-    return "\27[32m" .. string.format(fmt, ...) .. "\27[0m"
-end
-local function Y(fmt, ...)
-    return "\27[33m" .. string.format(fmt, ...) .. "\27[0m"
-end
--- local function W(fmt, ...)
---     return "\27[37m" .. string.format(fmt, ...) .. "\27[0m"
--- end
+]]
+
 -- /////////////////////////////////////////////////////////////////////////////
 -- data storage for test
 _G.__test = {print = print}
@@ -149,7 +118,7 @@ local function print_msg(obj)
     for _, msg in pairs(obj.msg) do
         for s in msg:gmatch("[^\r\n]+") do
             -- T.print(R(INDENT .. s))
-            T.print(R(s))
+            T.R(s)
         end
     end
 end
@@ -202,21 +171,21 @@ local function test_one_before(b)
     if not ok then
         -- before函数失败，则整个describe就不用再执行了，全部失败
         T.fail = T.fail + #(T.d_now.i)
-        T.print(R("%s%s before %s", FAIL, T.d_now.title, msg))
+        T.R("%s%s before %s", FAIL, T.d_now.title, msg)
         return false
     end
 
     -- 异步超时
     if b.status == PEND then
         T.fail = T.fail + #(T.d_now.i)
-        T.print(R("%s%s before (timeout)", FAIL, T.d_now.title))
+        T.R("%s%s before (timeout)", FAIL, T.d_now.title)
         return false
     end
 
     -- 异步失败
     if b.status == FAIL then
         T.fail = T.fail + #(T.d_now.i)
-        T.print(R(FAIL .. T.d_now.title))
+        T.R(FAIL .. T.d_now.title)
         print_msg(b)
         return false
     end
@@ -230,7 +199,7 @@ local function test_one_it(i)
     if not ok then
         T.fail = T.fail + 1
         if not msg:find(TEST_FAIL) then append_msg(msg) end
-        T.print(R(FAIL .. i.title))
+        T.R(FAIL .. i.title)
         print_msg(i)
         return
     end
@@ -238,7 +207,7 @@ local function test_one_it(i)
     -- 异步超时
     if i.status == PEND then
         T.fail = T.fail + 1
-        T.print(R("%s%s (timeout)", FAIL, i.title))
+        T.R("%s%s (timeout)", FAIL, i.title)
         return
     end
 
@@ -246,7 +215,7 @@ local function test_one_it(i)
     -- 执行wait的，只能是it，不可能为describe
     if i.status == FAIL then
         T.fail = T.fail + 1
-        T.print(R(FAIL .. i.title))
+        T.R(FAIL .. i.title)
         print_msg(i)
         return
     end
@@ -255,9 +224,9 @@ local function test_one_it(i)
 
     T.pass = T.pass + 1
     if tm > 1 then
-        T.print(G("%s%s (%dms)", OK, i.title, tm))
+        T.G("%s%s (%dms)", OK, i.title, tm)
     else
-        T.print(G(OK .. i.title))
+        T.G(OK .. i.title)
     end
 end
 
@@ -267,7 +236,7 @@ local function test_one_describe(d)
     -- 被过滤掉，这个测试不需要执行
     if not d.should_run and 0 == #d.i then return end
 
-    T.print(B(d.title))
+    T.B(d.title)
     T.d_now = d -- 正在测试中的describe
 
     -- 执行before函数
@@ -290,7 +259,7 @@ local function test_one_describe(d)
     -- 执行after函数
     for _, func in pairs(d.after or {}) do
         local ok, msg = xpcall(func, error_msgh)
-        if not ok then T.print(R("%s", msg)) end
+        if not ok then T.R("%s", msg) end
     end
 
     T.d_now = nil
@@ -312,7 +281,7 @@ local function run_one_describe(d)
 
     d.should_run = should_run
     local ok, msg = xpcall(d.func, error_msgh)
-    if not ok then T.print(R(msg)) end
+    if not ok then T.R(msg) end
 end
 
 local function resume()
@@ -476,16 +445,15 @@ end
 function Test.setup(params)
     T.timer = params.timer
 
-    local print_func = params.print or print
-    local time_update = params.time_update or function()
+    T.print = params.print or print
+    -- red green blue yellow颜色打印日志
+    local printf = function(fmt, ...)
+        return T.print(string.format(fmt, ...))
     end
-    -- log outpout function if not using std print
-    T.print = function(...)
-        -- 测试时，需要在一帧里跑很多逻辑，耗时太长，这时需要手动更新主循环时间，不然
-        -- 打印的时间都不会变
-        time_update()
-        print_func(...)
-    end
+    T.R = params.R or printf
+    T.G = params.G or printf
+    T.B = params.B or printf
+    T.Y = params.Y or printf
 
     -- os.clock在linux下是不包含sleep时间的，并且可能会溢出
     T.clock = params.clock or function()
@@ -527,17 +495,19 @@ local function run()
     end
 
     -- 执行测试
-    if T.filter then T.print(Y("filter: %s", T.filter)) end
-    if T.skip then T.print(Y("skip: %s", table.concat(T.skip, ';'))) end
+    if T.filter then T.Y("filter: %s", T.filter) end
+    if T.skip then T.Y("skip: %s", table.concat(T.skip, ';')) end
 
     for _, d in pairs(T.d) do test_one_describe(d) end
 
     local pass = T.pass
     local fail = T.fail
     local time = T.clock() - T.time
-    T.print(string.format("%s, %s (%dms)", G("%d passing", pass),
-                          fail > 0 and R("%d failing", fail) or G("0 failing"),
-                          time))
+    if fail > 0 then
+        T.R(string.format("%d passing, %d failing (%dms)", pass, fail, time))
+    else
+        T.G(string.format("%d passing, 0 failing (%dms)", pass, time))
+    end
 
     T.co = nil
 end

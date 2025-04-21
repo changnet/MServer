@@ -26,7 +26,7 @@ void __async_log(int32_t type, const char *str, int32_t len);
 // /////////////////////////////////////////////////////////////////////////////
 
 template<typename... Args>
-const char *fmt_log_buffer(int32_t len, Args&&... args)
+const char *fmt_log_buffer(int32_t &len, Args&&... args)
 {
     thread_local char buffer[20480];
     len = snprintf(buffer, sizeof(buffer), std::forward<Args>(args)...);

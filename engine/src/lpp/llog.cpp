@@ -57,7 +57,6 @@ int32_t LLog::append(lua_State *L)
     return 0;
 }
 
-// 用于实现stdout、文件双向输出日志打印函数
 int32_t LLog::print(lua_State *L)
 {
 #define CPY_STR(str, len)                      \

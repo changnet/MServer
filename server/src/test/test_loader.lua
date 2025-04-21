@@ -29,6 +29,10 @@ require "test.flatbuffers_test"
 
 Test.setup({
     print = print,
+    R = Log.redf,
+    G = Log.greenf,
+    B = Log.bluef,
+    Y = Log.yellowf,
     timer = {
         new = function(timeout, func)
             return Timer.timeout(timeout, func)

@@ -35,7 +35,6 @@ Test.describe("socket test", function()
 
     local pingpong_b = Buffer()
     local pingpong_ud = pingpong_b:fromstring(pingpong_str)
-    print("pingpong buffer size is", pingpong_size)
 
     -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
@@ -76,6 +75,8 @@ Test.describe("socket test", function()
         base_pkt.msg1 = cpy
         base_pkt.i_list = {1,2,3,4,5,99999,55555,111111111}
         base_pkt.msg_list = { cpy, cpy, cpy}
+
+        print("pingpong buffer size is", pingpong_size)
 
         local PbcCodec = require "engine.PbcCodec"
         codec = PbcCodec()

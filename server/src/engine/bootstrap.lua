@@ -139,7 +139,8 @@ function Bootstrap.process_init()
 
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
-    require "global.global" -- 加载log函数
+    require "global.global" -- 加载错误处理函数
+    require "global.log" -- 加载log函数
     require "system.define" -- 基础定义
 
     log_env_info()
@@ -175,7 +176,8 @@ function Bootstrap.worker_init(addr)
 
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
-    require "global.global" -- 加载log函数
+    require "global.global" -- 加载错误处理函数
+    require "global.log" -- 加载log函数
     require "system.define" -- 基础定义
 
     require "engine.engine"

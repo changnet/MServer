@@ -1,4 +1,4 @@
--- auto export by lua-tags 149 symbols
+-- auto export by lua-tags 152 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -40,7 +40,8 @@ return {
 "LOCAL_TYPE", -- src/worker/worker.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
-"Log", -- src/modules/log/log.lua
+"Log", -- src/global/log.lua
+"LogDB", -- src/modules/log/log_db.lua
 "MAIL", -- proto/auto_cs.lua
 "MAIL", -- proto/cs.lua
 "MAX_MAIL", -- src/modules/system/define.lua
@@ -107,8 +108,8 @@ return {
 "application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
 "call_mt", -- src/rpc/rpc.lua
-"eprint", -- src/global/global.lua
-"eprintf", -- src/global/global.lua
+"eprint", -- src/global/log.lua
+"eprintf", -- src/global/log.lua
 "g_ai_mgr", -- src/android/android_boot.lua
 "g_app_setting", -- src/modules/module_header.lua
 "g_dungeon_mgr", -- src/modules/module_header.lua
@@ -133,8 +134,8 @@ return {
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
-"print", -- src/global/global.lua
-"printf", -- src/global/global.lua
+"print", -- src/global/log.lua
+"printf", -- src/global/log.lua
 "raw_table_dump", -- src/global/table.lua
 "require", -- src/global/require.lua
 "require_conf", -- src/global/require.lua
@@ -149,5 +150,7 @@ return {
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
 "vd", -- proto/auto.lua
-"vd", -- src/global/global.lua
+"vd", -- src/global/log.lua
+"warn", -- src/global/log.lua
+"warnf", -- src/global/log.lua
 }

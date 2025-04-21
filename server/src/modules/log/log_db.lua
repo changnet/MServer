@@ -95,7 +95,7 @@ require "modules.log.log_header"
 local Mysql = require "mysql.mysql"
 
 -- 日志模块
-Log = {}
+LogDB = {}
 
 -- 单条sql长度，max_allowed_packet
 -- 需要预留最后一条sql语句超出的长度以及insert部分长度
@@ -123,11 +123,11 @@ local async_file = g_async_log
 --//////////////////////////////////////////////////////////////////////////////
 
 -- 写入到日志文件
-function Log.file(path, text)
+function LogDB.file(path, text)
 end
 
 -- 自定义写文件
-function Log.raw_file_printf(path, ...)
+function LogDB.raw_file_printf(path, ...)
     return async_file:append_log_file(path, string.format(...))
 end
 
@@ -243,7 +243,7 @@ local function append_db(tbl_name, fmt, ...)
 end
 
 -- 记录资源日志
-function Log.db_res(player, id, change, count, op, val)
+function LogDB.db_res(player, id, change, count, op, val)
     -- `pid` bigint(64) NOT NULL DEFAULT '0' COMMENT '玩家pid，0表示系统日志',
     -- `op` int(11) DEFAULT '0' COMMENT '操作日志id(详见后端日志定义)',
     -- `id` int(11) DEFAULT '0' COMMENT '资源id',
@@ -257,7 +257,7 @@ function Log.db_res(player, id, change, count, op, val)
 end
 
 -- 记录状态status到数据库，只记录一个，如果存在则覆盖
-function Log.db_stat(pid, stat, val)
+function LogDB.db_stat(pid, stat, val)
     -- `pid` bigint(64) NOT NULL DEFAULT '0' COMMENT '玩家pid，0表示系统日志',
     -- `stat` int(11) DEFAULT '0' COMMENT '状态定义(详见后端定义)',
     -- `val` varchar(2048) DEFAULT NULL COMMENT '额外数据1',
@@ -267,7 +267,7 @@ function Log.db_stat(pid, stat, val)
 end
 
 -- 记录日志到数据库(无玩家对象)
-function Log.db_pid_misc(pid, op, val, val1, val2, ...)
+function LogDB.db_pid_misc(pid, op, val, val1, val2, ...)
     -- `pid` bigint(64) NOT NULL DEFAULT '0' COMMENT '玩家pid，0表示系统日志',
     -- `op` int(11) DEFAULT '0' COMMENT '操作日志id(详见后端日志定义)',
     -- `val` varchar(512) DEFAULT NULL COMMENT '操作的变量',
@@ -281,8 +281,8 @@ function Log.db_pid_misc(pid, op, val, val1, val2, ...)
 end
 
 -- 记录一些杂项日志到数据库
-function Log.db_misc(player, op, val, val1, val2, ...)
-    return Log.db_pid_misc(player.pid, op, val, val1, val2, ...)
+function LogDB.db_misc(player, op, val, val1, val2, ...)
+    return LogDB.db_pid_misc(player.pid, op, val, val1, val2, ...)
 end
 
 -- /////////////////////////////////////////////////////////////////////////////
@@ -311,7 +311,7 @@ local function on_app_stop()
     return true
 end
 
-name_func("Log.execdb", exec_db)
+name_func("LogDB.execdb", exec_db)
 App.reg_start("Log", on_app_start)
 App.reg_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
 
