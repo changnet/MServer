@@ -15,17 +15,17 @@ Test.describe("timer test", function()
         local msec = 17
         local times = 6
 
-        local now_ms = Engine.steady_clock()
-        local next_ms = now_ms + after
-
+        local next_ms = 0
 
         local timer_interval_test = function()
             -- printf("timer interval expect %d, got %d", next_ms, Engine.clock())
             local sclock = Engine.steady_clock()
             local val = math.abs(sclock - next_ms)
             if val > accuracy then
-                Test.print("timer interval precision  lost",
-                    val, sclock, Engine.clock())
+                Test.print(string.format(
+                    "timer interval precision %d, steady clock %d, \z
+                    clock = %d, expect %d, times %d",
+                    val, sclock, Engine.clock(), next_ms, times))
                 Test.assert(false)
             end
 
@@ -36,8 +36,12 @@ Test.describe("timer test", function()
 
         Rtti.name_func("timer_interval_test", timer_interval_test)
 
-        -- 保证帧时间和实时时间一致，不然定时器就会有误差
-        Test.assert(now_ms, Engine.clock())
+        -- 定时器是以帧时间计算，保证帧时间和实时时间一致，不然定时器就会有误差
+        Engine.update()
+        local now_ms = Engine.steady_clock()
+
+        next_ms = now_ms + after
+        Test.equal(now_ms, Engine.clock())
         Timer.interval(after, msec, times, timer_interval_test)
 
         Test.wait(10000)
@@ -49,8 +53,7 @@ Test.describe("timer test", function()
         local sec = 2
         local times = 3
 
-        local now = Engine.system_clock()
-        local next_s = now + after
+        local next_s = 0
 
         local timer_periodic_test = function()
             -- printf("timer periodic expect %d, got %d", next_s, ev:time())
@@ -70,7 +73,11 @@ Test.describe("timer test", function()
         Rtti.name_func("timer_periodic_test", timer_periodic_test)
 
         -- 保证帧时间和实时时间一致
-        Test.assert(now, Engine.time_ms())
+        Engine.update()
+        local now = Engine.system_clock()
+        next_s = now + after
+        -- TODO system_clock的时间有概率比time_ms小1秒，可能是因为time_ms是计算而来而不是从系统时间获取
+        Test.assert(math.abs(now - Engine.time_ms()) < 2)
         Timer.periodic(after, sec, times, timer_periodic_test)
 
         Test.wait(10000)

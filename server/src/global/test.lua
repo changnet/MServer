@@ -280,6 +280,7 @@ local function run_one_describe(d)
     end
 
     d.should_run = should_run
+    T.time_update() -- 执行测试前，更新帧时间
     local ok, msg = xpcall(d.func, error_msgh)
     if not ok then T.R(msg) end
 end
@@ -459,6 +460,7 @@ function Test.setup(params)
     T.clock = params.clock or function()
         return math.ceil(os.clock() * 1000)
     end
+    T.time_update = params.time_update or function() end
 
     -- 过滤器，允许只执行一部分测试
     -- ./start.sh test --filter=https 只执行名字包含https的测试

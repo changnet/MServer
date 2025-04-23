@@ -52,8 +52,7 @@ void async_log(int32_t type, Args &&...args)
 } // namespace log_util
 
 /**
- * @brief print log，线程不安全，需要日志线程初始化后才能调用
- * 非主线程调用此函数，日志时间戳可能不会被更新
+ * @brief print log，需要日志线程初始化后才能调用
  */
 #define PLOG(...) log_util::async_log(1, __VA_ARGS__)
 
@@ -62,8 +61,7 @@ void async_log(int32_t type, Args &&...args)
 // C++ 20之后 ## __VA_ARGS__ 改成 __VA_OPT__(,) __VA_ARGS__
 
 /**
- * @brief error log，线程不安全，需要日志线程初始化后才能调用
- * 非主线程调用此函数，日志时间戳可能不会被更新
+ * @brief error log，需要日志线程初始化后才能调用
  */
 #define ELOG(fmt, ...)                                 \
     log_util::async_log(2, __FILE__ ":" XSTR(__LINE__) " " fmt, ##__VA_ARGS__)
