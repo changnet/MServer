@@ -13,8 +13,11 @@ Thread::Thread(const std::string &name)
 
 Thread::~Thread()
 {
-    assert(stop_);
-    assert(!thread_.joinable());
+    if (!stop_)
+    {
+        ELOG_R("thread %s not stop", name_.c_str());
+        stop(true);
+    }
 }
 
 void Thread::apply_thread_name(const char *name)
@@ -87,6 +90,8 @@ bool Thread::start(int32_t ms)
         ELOG("thread %s already active", name_.c_str());
         return false;
     }
+
+    stop_ = false;
     thread_ = std::thread(&Thread::spawn, this, ms);
 
     return true;
@@ -127,9 +132,12 @@ void Thread::spawn(int32_t ms)
         return;
     }
 
-    stop_ = false;
+    // stop_标识只在主线程修改，在子线程只读
+    // 主线程启动子线程后，在子线程设置stop_=false的话会出现子线程尚未启动，主线程检测stop_值不正确的情况
+    // 另一个问题是主线程启动子线程又马上关闭，子线程设置stop_=false会导致线程关闭不了
+    // stop_ = false;
     routine(ms);
-    stop_ = true;
+    // stop_ = true;
 
     if (!uninitialize()) /* 清理 */
     {

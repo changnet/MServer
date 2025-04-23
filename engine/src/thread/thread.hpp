@@ -41,8 +41,8 @@ private:
     void spawn(int32_t us);
 
 protected:
-    bool stop_; // 是否停止线程
-    std::string name_;            /// 线程名字，日志用1
+    bool stop_; // 是否停止线程(主线程读写，子线程只读)
+    std::string name_; // 线程名字
 
     std::thread thread_;
     ThreadCv cv_;

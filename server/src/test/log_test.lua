@@ -25,25 +25,24 @@ Test.describe("log test", function()
         -- 按天滚动日志不太好测试，不过由于runtime是基于这个的，应该也不需要怎么测试
         -- 1. 测试时调时间， 弄一个接口修改文件日期为昨天
         -- touch ../server/bin/log/test_runtime -t 202103101030 修改文件时间
-        local yesterday = ev:time() - 86400
+        local yesterday = Engine.time() - 86400
         local tm = time.ctime(yesterday)
         local y_file = string.format("log/test_log_daily%04d%02d%02d", tm.year,
                                      tm.month, tm.day)
         os.remove(y_file)
         os.remove("log/test_log_daily")
-        logger:set_option("log/test_log_daily", Log.PT_DAILY)
+
+        logger:add_device("test_daily", "log/test_log_daily", 1, 1)
 
         local half = max_insert / 2
 
         -- 先写入昨天的日志
         for i = 1, half do
-            logger:append_log_file("log/test_log_daily",
-                                   string.format(log_fmt, i), yesterday)
+            logger:append("test_daily", 0, string.format(log_fmt, i), yesterday)
         end
         -- 写入今天的日志，昨天的将被移到另一个文件
         for i = half, max_insert do
-            logger:append_log_file("log/test_log_daily",
-                                   string.format(log_fmt, i))
+            logger:append("test_daily", 0, string.format(log_fmt, i))
         end
 
         -- plog和elog会在屏幕打印数据，就不测试了。平常看runtime就可以了
@@ -55,17 +54,19 @@ Test.describe("log test", function()
         for i = 1, 10 do
             os.remove(string.format("log/test_log_size.%03d", i))
         end
-        logger:set_option("log/test_log_size", Log.PT_SIZE, 20480)
+
+        logger:add_device("test_size", "log/test_log_size", 1, 2, 20480)
         for i = 1, max_insert do
-            logger:append_log_file("log/test_log_size",
-                                   string.format(log_fmt, i))
+            logger:append("test_size", 0, string.format(log_fmt, i))
         end
 
-        -- 测试file，这个可以不调用set_option
+        -- 测试纯写文件不带日志前缀（时间戳等）
         os.remove("log/test_file")
+        logger:add_device("test_file", "log/test_file", 1, 0)
         for i = 1, max_insert do
-            logger:append_file("log/test_file", string.format(log_fmt, i))
+            logger:append("test_file", 0, string.format(log_fmt, i), 0)
         end
+        logger:del_device("test_file")
 
         logger:stop() -- 这里会阻塞到文件写入完成
 

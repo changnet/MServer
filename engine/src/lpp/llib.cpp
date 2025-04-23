@@ -203,6 +203,7 @@ static void luaopen_mongo(lua_State *L)
 static void luaopen_log(lua_State *L)
 {
     lcpp::Class<LLog> lc(L, "engine.Log");
+    lc.constructor<const char *>();
     lc.def<&LLog::stop>("stop");
     lc.def<&LLog::start>("start");
 

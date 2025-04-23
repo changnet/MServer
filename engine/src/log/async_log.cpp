@@ -200,6 +200,7 @@ void AsyncLog::add_device(const char *name, const char *path,
         ELOG_R("log device %s already exist", name);
         return;
     }
+    if (0 == alive) alive = 1; // alive为0用于表示删除设备
 
     Device &device = result.first->second;
     // 路径可能有变化，先关闭文件(另一个线程可能正在写入，不能关闭)
@@ -539,7 +540,8 @@ void AsyncLog::routine_once(int32_t ev)
 
     std::unique_lock<std::mutex> ul(mutex_);
 
-    for (auto iter = device_.begin(); iter != device_.end(); iter++)
+    auto iter = device_.begin();
+    while (iter != device_.end())
     {
         Device &device = iter->second;
         if (device.buff_.empty())
@@ -588,6 +590,7 @@ void AsyncLog::routine_once(int32_t ev)
             }
             writing_buffers_.clear();
         }
+        iter++;
     }
 }
 
