@@ -1,4 +1,6 @@
 #include "sql.hpp"
+
+#include "lpp/ltools.hpp"
 #include <errmsg.h>
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
@@ -98,40 +100,38 @@ void Sql::SqlResult::clear()
 ////////////////////////////////////////////////////////////////////////////////
 Sql::Sql()
 {
-    is_cn_ = false;
     conn_  = nullptr;
-
-    port_ = 0;
 }
 
 Sql::~Sql()
 {
-    assert(!conn_);
+    disconnect();
 }
 
-void Sql::set(const char *host, const int32_t port, const char *usr,
-              const char *pwd, const char *dbname)
+bool Sql::thread_init()
 {
-    /* 将数据复制一份，允许上层释放对应的内存 */
-    port_    = port;
-    host_    = host;
-    usr_     = usr;
-    pwd_     = pwd;
-    db_name_ = dbname;
+    return mysql_thread_init();
 }
 
-int32_t Sql::option()
+void Sql::thread_end()
 {
-    assert(nullptr == conn_);
+    mysql_thread_end();
+}
+
+int32_t Sql::connect(lua_State *L)
+{
+    if (conn_) return luaL_error(L, "already connected");
+
+    const char *host = luaL_checkstring(L, 2);
+    int32_t port     = luaL_checkinteger32(L, 3);
+    const char *usr = luaL_checkstring(L, 4);
+    const char *pwd = luaL_checkstring(L, 5);
+    const char *db = luaL_checkstring(L, 6);
 
     conn_ = mysql_init(nullptr);
-    if (!conn_)
-    {
-        ELOG("mysql init fail:%s\n", mysql_error(conn_));
-        return 1;
-    }
+    if (!conn_) luaL_error(L, "mysql_init fail"); 
 
-    // mysql_options的时间精度都为秒级
+        // mysql_options的时间精度都为秒级
     uint32_t connect_timeout = 60;
     uint32_t read_timeout    = 30;
     uint32_t write_timeout   = 30;
@@ -140,55 +140,30 @@ int32_t Sql::option()
         || mysql_options(conn_, MYSQL_OPT_READ_TIMEOUT, &read_timeout)
         || mysql_options(conn_, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout)
         || mysql_options(conn_, MYSQL_OPT_RECONNECT, &reconnect)
-        || mysql_options(conn_, MYSQL_SET_CHARSET_NAME, "utf8")
+        || mysql_options(conn_, MYSQL_SET_CHARSET_NAME, "utf8mb4")
         /*|| mysql_options( conn, MYSQL_INIT_COMMAND,"SET autocommit=0" ) */
     )
     {
-        ELOG("mysql option fail:%s\n", mysql_error(conn_));
-
-        mysql_close(conn_);
-        conn_ = nullptr;
-
-        return 1;
+        return mysql_errno(conn_);
     }
 
-    return 0;
-}
-
-int32_t Sql::connect()
-{
     /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
      * fails, you must repeat the mysql_options() calls before trying to connect
      * again. With this option, the mysql_options() calls need not be repeated
      */
-    if (mysql_real_connect(conn_, host_.c_str(), usr_.c_str(), pwd_.c_str(),
-                           db_name_.c_str(), port_, nullptr,
+    if (mysql_real_connect(conn_, host, usr, pwd, db, port, nullptr,
                            CLIENT_REMEMBER_OPTIONS))
     {
-        is_cn_ = true;
         return 0;
     }
 
     // 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
-    uint32_t ok = mysql_errno(conn_);
-    if (CR_SERVER_LOST == ok || CR_CONN_HOST_ERROR == ok)
-    {
-        ELOG("mysql will try again:%s\n", mysql_error(conn_));
-        return -1;
-    }
-
-    ELOG("mysql real connect fail:%s\n", mysql_error(conn_));
-
-    // 暂不关闭，下次重试
-    // mysql_close(conn_);
-    // conn_ = nullptr;
-
-    return 1;
+    return mysql_errno(conn_);
 }
 
 void Sql::disconnect()
 {
-    assert(conn_);
+    if (!conn_) return;
 
     mysql_close(conn_);
     conn_ = nullptr;
@@ -196,26 +171,20 @@ void Sql::disconnect()
 
 int32_t Sql::ping()
 {
-    assert(conn_);
-
-    int32_t e = mysql_ping(conn_);
-    if (e)
-    {
-        ELOG("mysql ping error:%s\n", mysql_error(conn_));
-    }
-
-    return e;
+    return conn_ ? mysql_ping(conn_) : -1;
 }
 
-const char *Sql::error()
+int32_t Sql::error(lua_State *L)
 {
-    assert(conn_);
-    return mysql_error(conn_);
+    if (!conn_) return 0;
+
+    lua_pushinteger(L, mysql_errno(conn_));
+    lua_pushstring(L, mysql_error(conn_));
+    return 2;
 }
 
-int32_t Sql::query(const char *stmt, size_t size)
+int32_t Sql::real_query(const char *stmt, size_t size)
 {
-    assert(conn_);
 
     /* Client error message numbers are listed in the MySQL errmsg.h header
      * file. Server error message numbers are listed in mysqld_error.h
@@ -235,8 +204,41 @@ int32_t Sql::query(const char *stmt, size_t size)
             return mysql_errno(conn_);
         }
     }
+    return 0;
+}
 
-    return 0; /* same as mysql_real_query,return 0 if success */
+int32_t Sql::exec(lua_State *L)
+{
+    if (!conn_) return luaL_error(L, "not connect");
+
+    size_t size = 0;
+    const char *stmt = luaL_checklstring(L, 2, &size);
+
+    /* same as mysql_real_query,return 0 if success */
+    int32_t e = real_query(stmt, size);
+
+    MYSQL_RES *res = mysql_store_result(conn_);
+    if (res) mysql_free_result(res);
+
+    lua_pushinteger(L, e);
+    return 1;
+}
+
+int32_t Sql::query(lua_State *L)
+{
+    if (!conn_) return luaL_error(L, "not connect");
+
+    size_t size      = 0;
+    const char *stmt = luaL_checklstring(L, 2, &size);
+
+    /* same as mysql_real_query,return 0 if success */
+    int32_t e = real_query(stmt, size);
+
+    lua_pushinteger(L, e);
+    if (0 != e) return 1;
+
+    int32_t row_count = result_to_lua(L);
+    return row_count > 0 ? 2 : 1;
 }
 
 void Sql::fetch_result(MYSQL_RES *result, SqlResult *res)
@@ -323,4 +325,8 @@ uint32_t Sql::get_errno()
 {
     assert(conn_);
     return mysql_errno(conn_);
+}
+int32_t Sql::result_to_lua(lua_State *L)
+{
+    return 0;
 }

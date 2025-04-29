@@ -3,6 +3,8 @@
 #include <mysql.h>
 #include "global/global.hpp"
 
+struct lua_State;
+
 /// MySQL/MariaDB 数据库基础操作
 class Sql
 {
@@ -113,10 +115,75 @@ public:
     Sql();
     virtual ~Sql();
 
-    void set(const char *host, const int32_t port, const char *usr,
-             const char *pwd, const char *dbname);
+    /*
+     * @brief 初始化线程
+     * return 错误码
+     */
+    bool thread_init();
+    /*
+     * @brief 释放线程内存
+     * return 错误码
+     */
+    void thread_end();
+    /*
+     * @brief 连接mysql数据库
+     * @param host mysql地址
+     * @param port mysql端口
+     * @param usr 用户名
+     * @param pwd 密码
+     * @param dbname 数据库名
+     * @return 错误码
+     */
+    int32_t connect(lua_State *L);
 
+    /*
+     * @brief 连接mysql数据库
+     * return 错误码及错误信息
+     */
+    int32_t error(lua_State *L);
+    /*
+     * @brief 测试连接是否完好，连接断开将自动重连
+     * return 错误码
+     */
     int32_t ping();
+    /*
+     * @brief 执行sql语句，不返回结果
+     * @param stmt sql语句
+     * @return 错误码
+     */
+    int32_t exec(lua_State *L);
+    /*
+     * @brief 执行sql语句，返回结果
+     * @param stmt sql语句
+     * @return 错误码， 结果
+     */
+    int32_t query(lua_State *L);
+
+    /*
+     * @brief 执行查询操作，只支持简单的等于条件查询，复杂操作请用exec
+     * @param table 表名
+     * @param fields 查询的字段
+     * @param where 条件
+     * @return 错误码 结果
+     */
+    int32_t select(lua_State *L);
+    /*
+     * @brief 执行更新操作，只支持简单的等于条件查询，复杂操作请用exec
+     * @param table 表名
+     * @param rows 要更新的数据集
+     * @param where 条件
+     * @return 错误码
+     */
+    int32_t update(lua_State *L);
+    /*
+     * @brief 执行插入操作，只支持简单的等于条件查询，复杂操作请用exec
+     * @param table 表名
+     * @param rows 要插入的数据集
+     * @param upsert on duplicate key update的字段
+     * @return 错误码
+     */
+    int32_t insert(lua_State *L);
+
     int32_t option(); /// 设置连接参数，如编码、是否自动重连
     int32_t connect();
     void disconnect();
@@ -129,15 +196,16 @@ public:
     static void library_end(); /// 释放sql库，仅在程序不再使用sql时调用
 
 private:
+    int32_t real_query(const char *stmt, size_t size);
+    int32_t result_to_lua(lua_State *L);
     void fetch_result(MYSQL_RES *result, SqlResult *res);
 
 protected:
-    bool is_cn_;
     MYSQL *conn_;
 
-    int32_t port_;        ///< 数据库端口
-    std::string host_;    ///< 数据库ip地址
-    std::string usr_;     ///< 数据库用户名
-    std::string pwd_;     ///< 数据库密码
-    std::string db_name_; ///< 数据库名
+    int32_t port_;        // 数据库端口
+    std::string host_;    // 数据库ip地址
+    std::string usr_;     // 数据库用户名
+    std::string pwd_;     // 数据库密码
+    std::string db_name_; // 数据库名
 };
