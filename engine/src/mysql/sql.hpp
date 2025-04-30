@@ -183,6 +183,12 @@ public:
      * @return 错误码
      */
     int32_t insert(lua_State *L);
+    /*
+     * @brief 对字符串进行MYSQL转义
+     * @param str 要转义的字符串
+     * @return 新字符串
+     */
+    int32_t escape(lua_State *L);
 
     int32_t option(); /// 设置连接参数，如编码、是否自动重连
     int32_t connect();

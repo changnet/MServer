@@ -241,6 +241,37 @@ int32_t Sql::query(lua_State *L)
     return row_count > 0 ? 2 : 1;
 }
 
+int32_t Sql::escape(lua_State *L)
+{
+    if (!conn_) return luaL_error(L, "not connect");
+    // mysql_real_escape_string_quote();
+
+    size_t size     = 0;
+    const char *str = luaL_checklstring(L, 2, &size);
+
+    // must allocate the to buffer to be at least length * 2 + 1 bytes long
+    unsigned long need_size = 2 * size + 1;
+
+    if (need_size < 8 * 1024)
+    {
+        // 一般情况下在栈上分配的足够转义
+        char buffer[8 * 1024];
+        unsigned long buffer_size =
+            mysql_real_escape_string(conn_, buffer, str, size);
+        lua_pushlstring(L, buffer, buffer_size);
+    }
+    else
+    {
+        char *buffer = new char[need_size];
+        unsigned long buffer_size =
+            mysql_real_escape_string(conn_, buffer, str, size);
+        lua_pushlstring(L, buffer, buffer_size);
+
+        delete[] buffer;
+    }
+    return 1;
+}
+
 void Sql::fetch_result(MYSQL_RES *result, SqlResult *res)
 {
     if (!res) return; // 部分操作不需要返回结果，如update
