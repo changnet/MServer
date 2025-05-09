@@ -9,7 +9,6 @@
 #include "llog.hpp"
 #include "lmap.hpp"
 #include "lmongo.hpp"
-#include "lsql.hpp"
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 
@@ -20,6 +19,7 @@
 #include "system/static_global.hpp"
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
+#include "mysql/sql.hpp"
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
 

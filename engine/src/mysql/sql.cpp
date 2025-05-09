@@ -27,15 +27,15 @@ Sql::Sql()
 {
     const int32_t SIZE = 512 * 1024; // 大于256kb使用mmap分配
     sql_               = nullptr;
-    builder_           = new char[SIZE];
-    builder_idx_       = 0;
-    builder_len_       = SIZE;
+    stmt_           = new char[SIZE];
+    stmt_idx_       = 0;
+    stmt_len_       = SIZE;
 }
 
 Sql::~Sql()
 {
     disconnect();
-    if (builder_) delete[] builder_;
+    if (stmt_) delete[] stmt_;
 }
 
 bool Sql::thread_init()
@@ -147,8 +147,7 @@ int32_t Sql::exec(lua_State *L)
     /* same as mysql_real_query,return 0 if success */
     int32_t e = real_query(stmt, size);
 
-    MYSQL_RES *res = mysql_store_result(sql_);
-    if (res) mysql_free_result(res);
+    clear_result();
 
     lua_pushinteger(L, e);
     return 1;
@@ -171,17 +170,9 @@ int32_t Sql::query(lua_State *L)
     return row_count > 0 ? 2 : 1;
 }
 
-int32_t Sql::select(lua_State *L)
-{
-    if (!sql_) return luaL_error(L, "not connect");
-
-    // select * from table where a = 1 and b = 2
-}
-
 int32_t Sql::escape(lua_State *L)
 {
     if (!sql_) return luaL_error(L, "not connect");
-    // mysql_real_escape_string_quote();
 
     size_t size     = 0;
     const char *str = luaL_checklstring(L, 2, &size);
@@ -280,15 +271,121 @@ int32_t Sql::result_to_lua(lua_State *L)
     return 0;
 }
 
-void Sql::builder_resize(int32_t size)
+void Sql::stmt_resize(int32_t size)
 {
-    int32_t new_size = builder_idx_ + size;
-    if (new_size < builder_len_ * 2) new_size = builder_len_ * 2;
+    int32_t new_size = stmt_idx_ + size;
+    if (new_size < stmt_len_ * 2) new_size = stmt_len_ * 2;
 
     char *builder = new char[new_size];
-    memcpy(builder, builder_, builder_idx_);
+    memcpy(builder, stmt_, stmt_idx_);
 
-    delete[] builder_;
-    builder_     = builder;
-    builder_len_ = new_size;
+    delete[] stmt_;
+    stmt_     = builder;
+    stmt_len_ = new_size;
+}
+
+void Sql::stmt_append(const char *data, size_t size)
+{
+    if (stmt_len_ - stmt_idx_ < size) stmt_resize(size);
+
+    memcpy(stmt_ + stmt_idx_, data, size);
+    stmt_idx_ += size;
+}
+
+int32_t Sql::stmt_str(lua_State *L)
+{
+    int32_t top = lua_gettop(L);
+    for (int32_t i = 2; i <= top; i++)
+    {
+        luaL_checktype(L, i, LUA_TSTRING);
+
+        size_t size = 0;
+        const char *str = lua_tolstring(L, i, &size);
+        stmt_append(str, size);
+    }
+    return 0;
+}
+
+int32_t Sql::stmt_value(lua_State *L)
+{
+    const int32_t index = 3;
+    int32_t type = luaL_checkinteger32(L, 2);
+    switch (type)
+    {
+    case MYSQL_TYPE_TINY:
+    case MYSQL_TYPE_SHORT:
+    case MYSQL_TYPE_LONG:
+    case MYSQL_TYPE_TIMESTAMP:
+    case MYSQL_TYPE_INT24:
+    case MYSQL_TYPE_LONGLONG:
+    {
+        int64_t value = luaL_checkinteger(L, index);
+        stmt_fmt("%lld", value);
+    }break;
+    case MYSQL_TYPE_FLOAT:
+    case MYSQL_TYPE_DOUBLE:
+    case MYSQL_TYPE_DECIMAL:
+    {
+        double value = luaL_checknumber(L, index);
+        stmt_fmt("%f", value);
+    }
+    break;
+    case MYSQL_TYPE_VARCHAR:
+    case MYSQL_TYPE_TINY_BLOB:
+    case MYSQL_TYPE_MEDIUM_BLOB:
+    case MYSQL_TYPE_LONG_BLOB:
+    case MYSQL_TYPE_BLOB:
+    case MYSQL_TYPE_VAR_STRING:
+    case MYSQL_TYPE_STRING:
+    {
+        size_t size = 0;
+        const char *str = luaL_checklstring(L, index, &size);
+
+        size_t need_size = 2 * size + 1;
+        if (stmt_len_ - stmt_idx_ < need_size) stmt_resize(need_size);
+
+        // You must allocate the to buffer to be at least length*2+1 bytes long. 
+        // (In the worst case, each character may need to be encoded as using 
+        // two bytes, and there must be room for the terminating null byte
+        // The length of the encoded string that is placed into the to argument, 
+        // not including the terminating null byte, or -1 if an error occurs
+        unsigned long length = mysql_real_escape_string(sql_, stmt_, str, size);
+        if (length == (unsigned long)-1)
+        {
+            return luaL_error(L, "mysql_real_escape_string %s",
+                              mysql_error(sql_));
+        }
+        stmt_idx_ += (int32_t)length;
+    }break;
+    default:
+        luaL_error(L, "unknow mysql type:%d", type);
+        break;
+    }
+    return 0;
+}
+
+int32_t Sql::stmt_exec(lua_State* L)
+{
+    if (0 == stmt_idx_) return luaL_error(L, "no stmt");
+
+    int32_t e = real_query(stmt_, stmt_idx_);
+    lua_pushinteger(L, e);
+    if (0 != e) return 1;
+
+    if (lua_toboolean(L, 2))
+    {
+        int32_t row_count = result_to_lua(L);
+        return row_count > 0 ? 2 : 1;
+    }
+    else
+    {
+        clear_result();
+        return 1;
+    }
+}
+
+void Sql::clear_result()
+{
+    MYSQL_RES *res = mysql_store_result(sql_);
+    if (res) mysql_free_result(res);
 }
