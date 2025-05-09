@@ -2,7 +2,7 @@
 
 #include "lpp/llib.hpp"
 #include "mongo/mongo.hpp"
-#include "mysql/sql.hpp"
+#include "mysql/mysql.hpp"
 #include "net/io/tls_ctx.hpp"
 #include "net/socket.hpp"
 #include "net/codec/pbc_codec.hpp"
@@ -29,14 +29,14 @@ StaticGlobal::initializer::initializer()
     std::set_new_handler(on_new_fail);
 
     TlsCtx::library_init();
-    Sql::library_init();
+    MySql::library_init();
     Mongo::init();
     Socket::library_init();
 }
 
 StaticGlobal::initializer::~initializer()
 {
-    Sql::library_end();
+    MySql::library_end();
     Mongo::cleanup();
     TlsCtx::library_end();
     Socket::library_end();

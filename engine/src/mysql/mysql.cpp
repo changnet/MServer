@@ -1,13 +1,13 @@
-#include "sql.hpp"
+#include "mysql.hpp"
 
 #include "lpp/ltools.hpp"
-#include <errmsg.h>
+#include <errmsg.h> // CR_SERVER_LOST 等错误码
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
  * thread-safe, so call it before threads are created, or protect the call with
  * a mutex
  */
-void Sql::library_init()
+void MySql::library_init()
 {
     int32_t ecode = mysql_library_init(0, nullptr, nullptr);
     assert(0 == ecode);
@@ -17,40 +17,40 @@ void Sql::library_init()
 /* 释放mysql库，仅在程序结束时调用。如果不介意内存，可以不调用.
  * mysql++就未调用
  */
-void Sql::library_end()
+void MySql::library_end()
 {
     mysql_library_end();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-Sql::Sql()
+MySql::MySql()
 {
     const int32_t SIZE = 512 * 1024; // 大于256kb使用mmap分配
-    sql_               = nullptr;
+    mysql_               = nullptr;
     stmt_           = new char[SIZE];
     stmt_idx_       = 0;
     stmt_len_       = SIZE;
 }
 
-Sql::~Sql()
+MySql::~MySql()
 {
     disconnect();
     if (stmt_) delete[] stmt_;
 }
 
-bool Sql::thread_init()
+bool MySql::thread_init()
 {
     return mysql_thread_init();
 }
 
-void Sql::thread_end()
+void MySql::thread_end()
 {
     mysql_thread_end();
 }
 
-int32_t Sql::connect(lua_State *L)
+int32_t MySql::connect(lua_State *L)
 {
-    if (sql_) return luaL_error(L, "already connected");
+    if (mysql_) return luaL_error(L, "already connected");
 
     const char *host = luaL_checkstring(L, 2);
     int32_t port     = luaL_checkinteger32(L, 3);
@@ -58,88 +58,88 @@ int32_t Sql::connect(lua_State *L)
     const char *pwd = luaL_checkstring(L, 5);
     const char *db = luaL_checkstring(L, 6);
 
-    sql_ = mysql_init(nullptr);
-    if (!sql_) luaL_error(L, "mysql_init fail"); 
+    mysql_ = mysql_init(nullptr);
+    if (!mysql_) luaL_error(L, "mysql_init fail"); 
 
         // mysql_options的时间精度都为秒级
     uint32_t connect_timeout = 60;
     uint32_t read_timeout    = 30;
     uint32_t write_timeout   = 30;
     bool reconnect           = true;
-    if (mysql_options(sql_, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout)
-        || mysql_options(sql_, MYSQL_OPT_READ_TIMEOUT, &read_timeout)
-        || mysql_options(sql_, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout)
-        || mysql_options(sql_, MYSQL_OPT_RECONNECT, &reconnect)
-        || mysql_options(sql_, MYSQL_SET_CHARSET_NAME, "utf8mb4")
+    if (mysql_options(mysql_, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout)
+        || mysql_options(mysql_, MYSQL_OPT_READ_TIMEOUT, &read_timeout)
+        || mysql_options(mysql_, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout)
+        || mysql_options(mysql_, MYSQL_OPT_RECONNECT, &reconnect)
+        || mysql_options(mysql_, MYSQL_SET_CHARSET_NAME, "utf8mb4")
         /*|| mysql_options( conn, MYSQL_INIT_COMMAND,"SET autocommit=0" ) */
     )
     {
-        return mysql_errno(sql_);
+        return mysql_errno(mysql_);
     }
 
     /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
      * fails, you must repeat the mysql_options() calls before trying to connect
      * again. With this option, the mysql_options() calls need not be repeated
      */
-    if (mysql_real_connect(sql_, host, usr, pwd, db, port, nullptr,
+    if (mysql_real_connect(mysql_, host, usr, pwd, db, port, nullptr,
                            CLIENT_REMEMBER_OPTIONS))
     {
         return 0;
     }
 
     // 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
-    return mysql_errno(sql_);
+    return mysql_errno(mysql_);
 }
 
-void Sql::disconnect()
+void MySql::disconnect()
 {
-    if (!sql_) return;
+    if (!mysql_) return;
 
-    mysql_close(sql_);
-    sql_ = nullptr;
+    mysql_close(mysql_);
+    mysql_ = nullptr;
 }
 
-int32_t Sql::ping()
+int32_t MySql::ping()
 {
-    return sql_ ? mysql_ping(sql_) : -1;
+    return mysql_ ? mysql_ping(mysql_) : -1;
 }
 
-int32_t Sql::error(lua_State *L)
+int32_t MySql::error(lua_State *L)
 {
-    if (!sql_) return 0;
+    if (!mysql_) return 0;
 
-    lua_pushinteger(L, mysql_errno(sql_));
-    lua_pushstring(L, mysql_error(sql_));
+    lua_pushinteger(L, mysql_errno(mysql_));
+    lua_pushstring(L, mysql_error(mysql_));
     return 2;
 }
 
-int32_t Sql::real_query(const char *stmt, size_t size)
+int32_t MySql::real_query(const char *stmt, size_t size)
 {
 
     /* Client error message numbers are listed in the MySQL errmsg.h header
      * file. Server error message numbers are listed in mysqld_error.h
      */
-    if (unlikely(mysql_real_query(sql_, stmt, (unsigned long)size)))
+    if (unlikely(mysql_real_query(mysql_, stmt, (unsigned long)size)))
     {
-        int32_t e = mysql_errno(sql_);
+        int32_t e = mysql_errno(mysql_);
         if (CR_SERVER_LOST != e && CR_SERVER_GONE_ERROR != e)
         {
             return e;
         }
 
         // reconnect and try again
-        if (mysql_ping(sql_)
-            || mysql_real_query(sql_, stmt, (unsigned long)size))
+        if (mysql_ping(mysql_)
+            || mysql_real_query(mysql_, stmt, (unsigned long)size))
         {
-            return mysql_errno(sql_);
+            return mysql_errno(mysql_);
         }
     }
     return 0;
 }
 
-int32_t Sql::exec(lua_State *L)
+int32_t MySql::exec(lua_State *L)
 {
-    if (!sql_) return luaL_error(L, "not connect");
+    if (!mysql_) return luaL_error(L, "not connect");
 
     size_t size = 0;
     const char *stmt = luaL_checklstring(L, 2, &size);
@@ -153,9 +153,9 @@ int32_t Sql::exec(lua_State *L)
     return 1;
 }
 
-int32_t Sql::query(lua_State *L)
+int32_t MySql::query(lua_State *L)
 {
-    if (!sql_) return luaL_error(L, "not connect");
+    if (!mysql_) return luaL_error(L, "not connect");
 
     size_t size      = 0;
     const char *stmt = luaL_checklstring(L, 2, &size);
@@ -170,9 +170,9 @@ int32_t Sql::query(lua_State *L)
     return row_count > 0 ? 2 : 1;
 }
 
-int32_t Sql::escape(lua_State *L)
+int32_t MySql::escape(lua_State *L)
 {
-    if (!sql_) return luaL_error(L, "not connect");
+    if (!mysql_) return luaL_error(L, "not connect");
 
     size_t size     = 0;
     const char *str = luaL_checklstring(L, 2, &size);
@@ -185,14 +185,14 @@ int32_t Sql::escape(lua_State *L)
         // 一般情况下在栈上分配的足够转义
         char buffer[8 * 1024];
         unsigned long buffer_size =
-            mysql_real_escape_string(sql_, buffer, str, size);
+            mysql_real_escape_string(mysql_, buffer, str, size);
         lua_pushlstring(L, buffer, buffer_size);
     }
     else
     {
         char *buffer = new char[need_size];
         unsigned long buffer_size =
-            mysql_real_escape_string(sql_, buffer, str, size);
+            mysql_real_escape_string(mysql_, buffer, str, size);
         lua_pushlstring(L, buffer, buffer_size);
 
         delete[] buffer;
@@ -200,7 +200,7 @@ int32_t Sql::escape(lua_State *L)
     return 1;
 }
 
-int32_t Sql::field_to_lua(lua_State *L, int32_t type, const char *value, size_t size)
+int32_t MySql::field_to_lua(lua_State *L, int32_t type, const char *value, size_t size)
 {
     switch (type)
     {
@@ -233,11 +233,11 @@ int32_t Sql::field_to_lua(lua_State *L, int32_t type, const char *value, size_t 
     return 0;
 }
 
-int32_t Sql::result_to_lua(lua_State *L)
+int32_t MySql::result_to_lua(lua_State *L)
 {
     // mysql_store_result() returns NULL if the statement did not return a result set (for example, if it was an INSERT statement), or an error occurred and reading of the result set failed.
     // An empty result set is returned if there are no rows returned.(An empty result set differs from a null pointer as a return value.)
-    MYSQL_RES *res = mysql_store_result(sql_);
+    MYSQL_RES *res = mysql_store_result(mysql_);
     if (!res) return 0;
 
     MYSQL_FIELD *fields = mysql_fetch_fields(res);
@@ -271,7 +271,7 @@ int32_t Sql::result_to_lua(lua_State *L)
     return 0;
 }
 
-void Sql::stmt_resize(int32_t size)
+void MySql::stmt_resize(int32_t size)
 {
     int32_t new_size = stmt_idx_ + size;
     if (new_size < stmt_len_ * 2) new_size = stmt_len_ * 2;
@@ -284,7 +284,7 @@ void Sql::stmt_resize(int32_t size)
     stmt_len_ = new_size;
 }
 
-void Sql::stmt_append(const char *data, size_t size)
+void MySql::stmt_append(const char *data, size_t size)
 {
     if (stmt_len_ - stmt_idx_ < size) stmt_resize(size);
 
@@ -292,7 +292,7 @@ void Sql::stmt_append(const char *data, size_t size)
     stmt_idx_ += size;
 }
 
-int32_t Sql::stmt_str(lua_State *L)
+int32_t MySql::stmt_str(lua_State *L)
 {
     int32_t top = lua_gettop(L);
     for (int32_t i = 2; i <= top; i++)
@@ -306,7 +306,7 @@ int32_t Sql::stmt_str(lua_State *L)
     return 0;
 }
 
-int32_t Sql::stmt_value(lua_State *L)
+int32_t MySql::stmt_value(lua_State *L)
 {
     const int32_t index = 3;
     int32_t type = luaL_checkinteger32(L, 2);
@@ -349,11 +349,11 @@ int32_t Sql::stmt_value(lua_State *L)
         // two bytes, and there must be room for the terminating null byte
         // The length of the encoded string that is placed into the to argument, 
         // not including the terminating null byte, or -1 if an error occurs
-        unsigned long length = mysql_real_escape_string(sql_, stmt_, str, size);
+        unsigned long length = mysql_real_escape_string(mysql_, stmt_, str, size);
         if (length == (unsigned long)-1)
         {
             return luaL_error(L, "mysql_real_escape_string %s",
-                              mysql_error(sql_));
+                              mysql_error(mysql_));
         }
         stmt_idx_ += (int32_t)length;
     }break;
@@ -364,7 +364,7 @@ int32_t Sql::stmt_value(lua_State *L)
     return 0;
 }
 
-int32_t Sql::stmt_exec(lua_State* L)
+int32_t MySql::stmt_exec(lua_State* L)
 {
     if (0 == stmt_idx_) return luaL_error(L, "no stmt");
 
@@ -384,8 +384,8 @@ int32_t Sql::stmt_exec(lua_State* L)
     }
 }
 
-void Sql::clear_result()
+void MySql::clear_result()
 {
-    MYSQL_RES *res = mysql_store_result(sql_);
+    MYSQL_RES *res = mysql_store_result(mysql_);
     if (res) mysql_free_result(res);
 }

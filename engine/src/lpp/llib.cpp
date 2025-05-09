@@ -19,7 +19,7 @@
 #include "system/static_global.hpp"
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
-#include "mysql/sql.hpp"
+#include "mysql/mysql.hpp"
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
 
@@ -186,11 +186,25 @@ static void luaopen_pbc_codec(lua_State *L)
 }
 
 
-static void luaopen_sql(lua_State *L)
+static void luaopen_mysql(lua_State *L)
 {
+    lcpp::Class<MySql> lc(L, "engine.MySql");
 
-    //lcpp::Class<LSql> lc(L, "engine.Sql");
-    //lc.def<&LSql::start>("start");
+    lc.def<&MySql::ping>("ping");
+    lc.def<&MySql::exec>("exec");
+    lc.def<&MySql::query>("query");
+    lc.def<&MySql::error>("error");
+    lc.def<&MySql::escape>("escape");
+    lc.def<&MySql::connect>("connect");
+    lc.def<&MySql::disconnect>("disconnect");
+
+    lc.def<&MySql::thread_init>("thread_init");
+    lc.def<&MySql::thread_end>("thread_end");
+
+    lc.def<&MySql::stmt_str>("stmt_str");
+    lc.def<&MySql::stmt_exec>("stmt_exec");
+    lc.def<&MySql::stmt_value>("stmt_value");
+    lc.def<&MySql::stmt_clear>("stmt_clear");
 }
 
 static void luaopen_mongo(lua_State *L)
@@ -337,7 +351,7 @@ void open_cpp(lua_State *L)
     luaopen_socket(L);
     luaopen_lua_codec(L);
     luaopen_pbc_codec(L);
-    luaopen_sql(L);
+    luaopen_mysql(L);
     luaopen_log(L);
     luaopen_map(L);
     luaopen_astar(L);

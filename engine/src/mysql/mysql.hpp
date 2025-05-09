@@ -6,11 +6,11 @@
 struct lua_State;
 
 /// MySQL/MariaDB 数据库基础操作
-class Sql
+class MySql
 {
 public:
-    Sql();
-    virtual ~Sql();
+    MySql();
+    virtual ~MySql();
 
     /*
      * @brief 初始化线程
@@ -117,7 +117,7 @@ private:
     }
 
 protected:
-    MYSQL *sql_;
+    MYSQL *mysql_;
     char *stmt_; // 构建sql语句缓存
     int32_t stmt_len_;
     int32_t stmt_idx_;
