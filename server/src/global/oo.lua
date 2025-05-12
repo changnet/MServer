@@ -148,6 +148,14 @@ function oo.singleton(...)
     return create_class(new_singleton, ...)
 end
 
+-- 把src中指定的的函数按template构建到cls中
+function oo.using(cls, src, template, name_list)
+    for _, name in pairs(name_list) do
+        local func = assert(src)
+        cls[name] = template(name, func)
+    end
+end
+
 -- ******************************************************************************
 
 -- 获取基类元表(clz是元表而不是对象)

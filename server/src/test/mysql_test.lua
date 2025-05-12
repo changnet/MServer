@@ -2,7 +2,7 @@
 -- 2016-03-08
 -- xzc
 -- mysql测试用例
-local Mysql = require "mysql.mysql"
+local MySQL = require "mysql.mysql"
 
 local max_insert = 10000
 
@@ -17,60 +17,59 @@ ENGINE = InnoDB\
 DEFAULT CHARACTER SET = utf8\
 COLLATE = utf8_general_ci;"
 
-Test.describe("sql test", function()
+Test.describe("mysql test", function()
     local mysql
-    Test.it("sql base test", function()
-        Test.async(10000)
-
-        mysql = Mysql("test_mysql")
+    Test.it("mysql base test", function()
+        mysql = MySQL()
         local g_setting = require "setting.setting"
-        mysql:start(g_setting.mysql_ip, g_setting.mysql_port,
+        local e = mysql:connect(g_setting.mysql_ip, g_setting.mysql_port,
                     g_setting.mysql_user, g_setting.mysql_pwd,
-                    g_setting.mysql_db, function()
-            Test.print(string.format("mysql(%s:%d) ready ...", g_setting.mysql_ip,
-                                  g_setting.mysql_port))
+                    g_setting.mysql_db)
+        if 0 ~= e then
+            print("mysql connect error", mysql:error())
+            Test.assert(false)
+        end
 
-            -- TODO TRUNCATE和DROP TABLE会卡3秒左右，不太清楚为什么
-            -- mysql:exec_cmd("TRUNCATE perf_test")
-            mysql:exec_cmd("DROP TABLE IF EXISTS perf_test")
-            mysql:exec_cmd(create_table_str)
-            mysql:exec_cmd("delete from perf_test")
+        -- TODO TRUNCATE和DROP TABLE会卡3秒左右，不太清楚为什么
+        -- mysql:exec_cmd("TRUNCATE perf_test")
+        mysql:exec_cmd("DROP TABLE IF EXISTS perf_test")
+        mysql:exec_cmd(create_table_str)
+        mysql:exec_cmd("delete from perf_test")
 
-            -- 插入
-            mysql:insert("insert into perf_test (id,`desc`,amount) values \z
-                    (1,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
-            mysql:insert("insert into perf_test (id,`desc`,amount) values \z
-                    (2,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
-            -- 更新
-            mysql:update("update perf_test set amount = 99999 where id = 1")
-            -- 更新超长字符串，底层有特殊处理
-            local desc = string.rep("longgggggggggggg", 512)
-            mysql:update(string.format(
-                             'update perf_test set `desc` = "%s" where id = 1',
-                             desc))
-            -- 删除
-            mysql:exec_cmd("delete from perf_test where id = 2")
-            -- 查询
-            mysql:select("select * from perf_test", function(ecode, res)
-                Test.equal(ecode, 0)
-                Test.equal(#res, 1)
-                Test.equal(res[1].id, 1)
-                Test.equal(res[1].amount, 99999)
-                Test.equal(res[1].desc, desc)
-            end)
-            mysql:insert("insert into perf_test (id,`desc`,amount) values \z
-                (3,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
+        -- 插入
+        mysql:insert("insert into perf_test (id,`desc`,amount) values \z
+                (1,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
+        mysql:insert("insert into perf_test (id,`desc`,amount) values \z
+                (2,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
+        -- 更新
+        mysql:update("update perf_test set amount = 99999 where id = 1")
+        -- 更新超长字符串，底层有特殊处理
+        local desc = string.rep("longgggggggggggg", 512)
+        mysql:update(string.format(
+                         'update perf_test set `desc` = "%s" where id = 1',
+                         desc))
+        -- 删除
+        mysql:exec_cmd("delete from perf_test where id = 2")
+        -- 查询
+        mysql:select("select * from perf_test", function(ecode, res)
+            Test.equal(ecode, 0)
+            Test.equal(#res, 1)
+            Test.equal(res[1].id, 1)
+            Test.equal(res[1].amount, 99999)
+            Test.equal(res[1].desc, desc)
+        end)
+        mysql:insert("insert into perf_test (id,`desc`,amount) values \z
+            (3,'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',1)")
 
-            mysql:exec_cmd("delete from perf_test")
-            mysql:select("select * from perf_test", function(ecode, res)
-                Test.equal(ecode, 0)
-                Test.equal(res, nil) -- 当查询结果为空时，res为nil
-                Test.done()
-            end)
+        mysql:exec_cmd("delete from perf_test")
+        mysql:select("select * from perf_test", function(ecode, res)
+            Test.equal(ecode, 0)
+            Test.equal(res, nil) -- 当查询结果为空时，res为nil
+            Test.done()
         end)
     end)
 
-    Test.it(string.format("sql perf %d insert transaction mode", max_insert),
+    Test.it(string.format("mysql perf %d insert transaction mode", max_insert),
          function()
         Test.async(20000)
         mysql:exec_cmd("START TRANSACTION")

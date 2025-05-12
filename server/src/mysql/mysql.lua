@@ -6,8 +6,32 @@
 
 local MySql = require "engine.MySql"
 
-
 local MySQL = oo.class()
+
+local DEBUG = true -- 是否启用调试模式
+
+--//////////////////////////////////////////////////////////////////////////////
+local C_FUNC =
+{
+    "thread_init",
+    "thread_end",
+    "connect",
+    "error",
+    "ping",
+    "exec",
+    "query",
+    "escape",
+    "disconnect",
+    "stmt_clear",
+    "stmt_str",
+    "stmt_value",
+    "stmt_exec"
+}
+
+oo.using(MySQL, MySql, function(name, func)
+    return function(self, ...) return func(self.mysql, ...) end
+end, C_FUNC)
+--//////////////////////////////////////////////////////////////////////////////
 
 function MySQL:__init()
     -- [tbl_name] = {a = 1, b = 2}，以表名为key，记录各个字段的数据类型
@@ -27,7 +51,23 @@ function MySQL:query(stmt)
     return self.mysql:query(stmt)
 end
 
-local function fetch_fields(values)
+local function fetch_fields(rows)
+    -- INSERT INTO table (a,b,c) VALUES (1,2,3),(4,5,6)
+    -- 批量插入，必须保证每组数据的字段数量是一样的，顺序也是一样
+
+    local fields = {}
+    for k in pairs(rows[1]) do table.insert(fields, k) end
+
+    if DEBUG and #rows > 1 then
+        local fields_hash = {}
+        for _, name in ipairs(fields) do fields_hash[name] = true end
+
+        for i = 2, #rows do
+            for k in pairs(rows[i]) do assert(fields_hash[k]) end
+        end
+    end
+
+    return fields
 end
 
 local function stmt_wheres(mysql, types, wheres)
