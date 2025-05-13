@@ -653,3 +653,17 @@ Test.describe("lua oo test", function()
         print(c1, c2)
     end)
 end)
+
+Test.describe("graph lib test", function()
+    require "global.graph"
+    Test.it("graph base", function()
+        -- 测试用例1：线段与矩形相交
+        Test.equal(graph.is_line_intersect_rect(0, 0, 4, 4, 2, 2, 6, 6), true)
+        -- 测试用例2：线段在矩形外部
+        Test.equal(graph.is_line_intersect_rect(0, 0, 1, 1, 3, 3, 5, 5), false)
+        -- 测试用例3：线段一个端点在矩形内
+        Test.equal(graph.is_line_intersect_rect(3, 3, 6, 6, 2, 2, 4, 4), true)
+        -- 测试用例4：线段与矩形边界相交
+        Test.equal(graph.is_line_intersect_rect(0, 3, 4, 3, 2, 2, 4, 4), true)
+    end)
+end)

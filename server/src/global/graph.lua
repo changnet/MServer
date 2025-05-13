@@ -231,3 +231,54 @@ function graph.within_polygon(vert_x, vert_y, x, y)
 
     return within
 end
+
+-- 判断点是否在矩形内
+-- @param lx ly 矩形左上角坐标
+-- @param rx ry 矩形右下角坐标
+local function is_point_in_rect(px, py, lx, ly, rx, ry)
+    return px >= lx and px <= rx and py >= ly and py <= ry
+end
+
+-- 判断两个线段是否相交
+local function is_line_intersect(x1, y1, x2, y2, x3, y3, x4, y4)
+    -- 快速排斥实验(包围盒测试）：如果两条线段相交，那么它们在x轴和y轴上的投影一定会有重叠部分
+    -- 但是投影重叠，并不一定会相交
+    if max(x1, x2) < min(x3, x4) or
+       max(x3, x4) < min(x1, x2) or
+       max(y1, y2) < min(y3, y4) or
+       max(y3, y4) < min(y1, y2) then
+        return false
+    end
+
+    -- 叉积函数（ccw, Counter ClockWise），用于判断三个点之间的方向关系
+    -- 判断(x3,y3),(x4,y4)是否在直线(x1,y1)(x2,y2)的两侧
+    local a = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1)
+    local b = (x2 - x1) * (y4 - y1) - (y2 - y1) * (x4 - x1)
+    -- 判断(x1,y1),(x2,y2)是否在直线(x3,y3)(x4,y4)的两侧
+    local c = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)
+    local d = (x4 - x3) * (y2 - y3) - (y4 - y3) * (x2 - x3)
+
+    return (a * b <= 0) and (c * d <= 0)
+end
+
+-- 判断线段是否与矩形相交（必须为轴对齐矩形，并且x轴向右，y轴向上，即unity坐标系）
+-- @param sx,sy 线段起点坐标
+-- @param dx,dy 线段终点坐标
+-- @param lx,ly 矩形左上角坐标
+-- @param rx,ry 矩形右下角坐标
+function graph.is_line_intersect_rect(sx, sy, dx, dy, lx, ly, rx, ry)
+    -- 如果线段的任一端点在矩形内，则相交
+    if is_point_in_rect(sx, sy, lx, ly, rx, ry) or
+       is_point_in_rect(dx, dy, lx, ly, rx, ry) then
+        return true
+    end
+
+    -- 判断线段是否与矩形的四条边相交
+    -- 矩形的四条边：上、右、下、左
+    return is_line_intersect(sx, sy, dx, dy, lx, ly, rx, ly) or  -- 上边
+           is_line_intersect(sx, sy, dx, dy, rx, ly, rx, ry) or  -- 右边
+           is_line_intersect(sx, sy, dx, dy, rx, ry, lx, ry) or  -- 下边
+           is_line_intersect(sx, sy, dx, dy, lx, ry, lx, ly)     -- 左边
+end
+
+return graph

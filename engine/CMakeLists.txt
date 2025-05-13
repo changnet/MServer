@@ -152,7 +152,6 @@ target_link_libraries(master PRIVATE
 if(WINDOWS)
     find_package(OpenSSL REQUIRED)
     find_package(unofficial-libmariadb CONFIG REQUIRED)
-    find_package(Flatbuffers CONFIG REQUIRED)
 
     target_include_directories(master PRIVATE
         ${LUA_INCLUDE_DIR}
@@ -163,7 +162,6 @@ if(WINDOWS)
         ${LUA_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
         libmariadb mariadbclient
-        flatbuffers::flatbuffers
         mongo::mongoc_shared
     )
 elseif(UNIX)
@@ -174,7 +172,6 @@ elseif(UNIX)
     target_link_libraries(master PRIVATE
         lua.a
         uuid.a
-        flatbuffers.a
         mariadbclient.a
         mongo::mongoc_static
 
