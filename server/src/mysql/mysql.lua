@@ -79,9 +79,9 @@ local function stmt_wheres(mysql, types, wheres)
     for k, v in pairs(wheres) do
         if first then
             first = false
-            mysql:stmt_str(k, "=")
+            mysql:stmt_str("`", k, "`=")
         else
-            mysql:stmt_str(",", k, "=")
+            mysql:stmt_str(",`", k, "`=")
         end
         mysql:stmt_value(types[k], v)
     end
@@ -96,8 +96,16 @@ function MySQL:select(tbl, fields, wheres)
 
     mysql:stmt_clear()
     if fields then
-        mysql:stmt_str("SELECT")
-        mysql:stmt_str(" FROM ", tbl)
+        mysql:stmt_str("SELECT (")
+        for index, field in ipairs(fields) do
+            if 1 == index then
+
+                mysql:stmt_str("`", field, "`")
+            else
+                mysql:stmt_str(",`", field, "`")
+            end
+        end
+        mysql:stmt_str(") FROM ", tbl)
     else
         mysql:stmt_str("SELECT * FROM ", tbl)
     end
@@ -122,9 +130,9 @@ function MySQL:insert(tbl, rows, updates)
     mysql:stmt_str("INSERT INTO ", tbl, "(")
     for index, field in ipairs(fields) do
         if 1 == index then
-            mysql:stmt_str(field)
+            mysql:stmt_str("`", field, "`")
         else
-            mysql:stmt_str(",", field)
+            mysql:stmt_str(",`", field, "`")
         end
     end
     mysql:stmt_str("VALUES ")
@@ -147,9 +155,9 @@ function MySQL:insert(tbl, rows, updates)
         for k, v in pairs(updates) do
             if first then
                 first = false
-                mysql:stmt_str(k, "=", v)
+                mysql:stmt_str("`", k, "`=", v)
             else
-                mysql:stmt_str(",", k, "=", v)
+                mysql:stmt_str(",`", k, "`=", v)
             end
         end
     end
@@ -172,9 +180,9 @@ function MySQL:update(tbl, updates, wheres)
     for k, v in pairs(updates) do
         if first then
             first = false
-            mysql:stmt_str(k, "=")
+            mysql:stmt_str("`", k, "`=")
         else
-            mysql:stmt_str(",", k, "=")
+            mysql:stmt_str(",`", k, "`=")
         end
         mysql:stmt_value(types[k], v)
     end

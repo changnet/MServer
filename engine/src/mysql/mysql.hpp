@@ -99,7 +99,7 @@ private:
                          size_t size);
 
     void stmt_resize(int32_t size);
-    void stmt_append(const char *data, size_t size);
+    void stmt_append(const char *data, int32_t size);
     template <typename... Args> void stmt_fmt(Args &&...args)
     {
         /*

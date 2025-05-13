@@ -178,21 +178,21 @@ int32_t MySql::escape(lua_State *L)
     const char *str = luaL_checklstring(L, 2, &size);
 
     // must allocate the to buffer to be at least length * 2 + 1 bytes long
-    unsigned long need_size = 2 * size + 1;
+    unsigned long need_size = unsigned long(2 * size + 1);
 
     if (need_size < 8 * 1024)
     {
         // 一般情况下在栈上分配的足够转义
         char buffer[8 * 1024];
         unsigned long buffer_size =
-            mysql_real_escape_string(mysql_, buffer, str, size);
+            mysql_real_escape_string(mysql_, buffer, str, (unsigned long)size);
         lua_pushlstring(L, buffer, buffer_size);
     }
     else
     {
         char *buffer = new char[need_size];
         unsigned long buffer_size =
-            mysql_real_escape_string(mysql_, buffer, str, size);
+            mysql_real_escape_string(mysql_, buffer, str, (unsigned long)size);
         lua_pushlstring(L, buffer, buffer_size);
 
         delete[] buffer;
@@ -284,7 +284,7 @@ void MySql::stmt_resize(int32_t size)
     stmt_len_ = new_size;
 }
 
-void MySql::stmt_append(const char *data, size_t size)
+void MySql::stmt_append(const char *data, int32_t size)
 {
     if (stmt_len_ - stmt_idx_ < size) stmt_resize(size);
 
@@ -301,7 +301,7 @@ int32_t MySql::stmt_str(lua_State *L)
 
         size_t size = 0;
         const char *str = lua_tolstring(L, i, &size);
-        stmt_append(str, size);
+        stmt_append(str, (int32_t)size);
     }
     return 0;
 }
@@ -341,21 +341,24 @@ int32_t MySql::stmt_value(lua_State *L)
         size_t size = 0;
         const char *str = luaL_checklstring(L, index, &size);
 
-        size_t need_size = 2 * size + 1;
+        int32_t need_size = int32_t(2 * size + 1 + 2); // 预留两个字符给单引号
         if (stmt_len_ - stmt_idx_ < need_size) stmt_resize(need_size);
 
+        stmt_append("'", 1);
         // You must allocate the to buffer to be at least length*2+1 bytes long. 
         // (In the worst case, each character may need to be encoded as using 
         // two bytes, and there must be room for the terminating null byte
         // The length of the encoded string that is placed into the to argument, 
         // not including the terminating null byte, or -1 if an error occurs
-        unsigned long length = mysql_real_escape_string(mysql_, stmt_, str, size);
+        unsigned long length =
+            mysql_real_escape_string(mysql_, stmt_, str, (unsigned long)size);
         if (length == (unsigned long)-1)
         {
             return luaL_error(L, "mysql_real_escape_string %s",
                               mysql_error(mysql_));
         }
         stmt_idx_ += (int32_t)length;
+        stmt_append("'", 1);
     }break;
     default:
         luaL_error(L, "unknow mysql type:%d", type);
