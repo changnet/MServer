@@ -16,7 +16,7 @@ endif()
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH})
     message(STATUS "using vcpkg root ${VCPKG_PATH}")
     set(CMAKE_TOOLCHAIN_FILE
-        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/scripts/buildsystems/vcpkg.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/${VCPKG_PATH}/vcpkg-export-20250514-100442/scripts/buildsystems/vcpkg.cmake
         CACHE STRING "Vcpkg toolchain file")
     set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
 endif()
@@ -161,7 +161,7 @@ if(WINDOWS)
         Dbghelp # MiniDumpWriteDump
         ${LUA_LIBRARIES}
         OpenSSL::SSL OpenSSL::Crypto
-        libmariadb mariadbclient
+        unofficial::libmariadb
         mongo::mongoc_shared
     )
 elseif(UNIX)

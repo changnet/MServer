@@ -4,15 +4,11 @@
     "description": "Mini Distributed Game Server, a lightweight game engine",
     "homepage": "https://github.com/changnet/MServer",
     "supports": "x64",
-    "builtin-baseline": "ae91542c8e71634cb937d467f05920653084cc0b",
+	"builtin-baseline": "a974a0a2065457eff982554127637cade92c358e",
     "dependencies": [
-        {
-            "name": "lua",
-            "version>=": "5.4.3#3"
-        },
-        "mongo-c-driver",
-        "openssl",
-        "libmariadb",
-        "flatbuffers"
+        {"name": "lua","version>=": "5.4.7"},
+        {"name": "openssl","version>=": "3.5.0"},
+        {"name": "mongo-c-driver","version>=": "1.30.3"},
+        {"name": "libmariadb","version>=": "3.4.5"}
     ]
 }

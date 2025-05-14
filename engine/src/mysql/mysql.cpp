@@ -1,7 +1,7 @@
 #include "mysql.hpp"
 
 #include "lpp/ltools.hpp"
-#include <errmsg.h> // CR_SERVER_LOST 等错误码
+#include <mysql/errmsg.h> // CR_SERVER_LOST 等错误码
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
  * thread-safe, so call it before threads are created, or protect the call with
