@@ -1,3 +1,4 @@
+#include <thread>
 #include "worker_thread.hpp"
 
 #include "lpp/llib.hpp"
@@ -74,7 +75,7 @@ bool WorkerThread::initialize()
     }
 
     int32_t n = 0;
-    for (int32_t i = 1; i < params_.size(); i++)
+    for (size_t i = 1; i < params_.size(); i++)
     {
         if (params_[i].empty()) break;
 
@@ -133,7 +134,6 @@ void WorkerThread::routine()
         return;
     }
 
-    auto E = StaticGlobal::E;
     while (likely(!stop_))
     {
         timing::update();

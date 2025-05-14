@@ -126,7 +126,6 @@ int32_t EpollBackend::wait(int32_t timeout)
         if (errno == EINTR) return 0;
 
         FATAL("epoll_wait errno(%d)", errno);
-        ev_->quit();
     }
 
     return ev_count;

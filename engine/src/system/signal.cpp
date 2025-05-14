@@ -130,7 +130,7 @@ void mask_comm_signal()
     // 一些常用自定义的信号，等脚本处理
 #ifdef __linux__
     // windows没有这些信号
-    ::signal(SIGHUG, sig_handler);
+    ::signal(SIGHUP, sig_handler);
     ::signal(SIGUSR1, sig_handler);
     ::signal(SIGUSR2, sig_handler);
 #endif

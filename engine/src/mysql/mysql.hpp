@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mysql/mysql.h>
+#include <mariadb/mysql.h>
 #include "global/global.hpp"
 
 struct lua_State;

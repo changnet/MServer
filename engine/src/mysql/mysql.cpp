@@ -1,7 +1,7 @@
 #include "mysql.hpp"
 
 #include "lpp/ltools.hpp"
-#include <mysql/errmsg.h> // CR_SERVER_LOST 等错误码
+#include <mariadb/errmsg.h> // CR_SERVER_LOST 等错误码
 
 /* Call mysql_library_init() before any other MySQL functions. It is not
  * thread-safe, so call it before threads are created, or protect the call with
@@ -178,7 +178,7 @@ int32_t MySql::escape(lua_State *L)
     const char *str = luaL_checklstring(L, 2, &size);
 
     // must allocate the to buffer to be at least length * 2 + 1 bytes long
-    unsigned long need_size = unsigned long(2 * size + 1);
+    unsigned long need_size = (unsigned long)(2 * size + 1);
 
     if (need_size < 8 * 1024)
     {

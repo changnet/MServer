@@ -319,27 +319,41 @@ template <typename Ret, typename... Args> class Register<Ret (*)(Args...)>
 private:
     static constexpr auto indices = std::make_index_sequence<sizeof...(Args)>{};
 
-    template <size_t... I, typename = std::enable_if_t<!std::is_void<Ret>::value>>
+    // 辅助标签
+    struct void_tag
+    {
+    };
+    struct non_void_tag
+    {
+    };
+
+    // 根据返回类型选择 tag
+    using tag = std::conditional_t<std::is_void_v<Ret>, void_tag, non_void_tag>;
+
+    template <size_t... I>
     static int caller(lua_State *L, Ret (*fp)(Args...),
-                      const std::index_sequence<I...> &)
+                           const std::index_sequence<I...> &, non_void_tag)
     {
         cpp_to_lua(L, fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...));
         return 1;
     }
+
     template <size_t... I>
-    static int caller(lua_State *L, void (*fp)(Args...),
-                      const std::index_sequence<I...> &)
+    static int caller(lua_State *L, Ret (*fp)(Args...),
+                           const std::index_sequence<I...> &, void_tag)
     {
         fp(lua_to_cpp<remove_cvref<Args>>(L, 1 + I)...);
+        (void)L; // warning: parameter ‘L’ set but not used
         return 0;
     }
+
 
 public:
     template <auto fp> static int reg(lua_State *L)
     {
         try
         {
-            return caller(L, fp, indices);
+            return caller(L, fp, indices, tag{});
         }
         catch (const std::runtime_error &e)
         {
@@ -910,7 +924,7 @@ template <lua_CFunction fp> void module_function(lua_State *L, const char *name)
 {
     assert(lua_istable(L, -1));
 
-    lua_pushcfunction(L, fp>);
+    lua_pushcfunction(L, fp);
     lua_setfield(L, -2, name);
 }
 

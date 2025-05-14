@@ -66,7 +66,8 @@ elseif(LINUX)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
     add_compile_options(-pipe -Wall -pedantic)
     # -fsanitize=address -static-libasan -g
-    add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address)
+    add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
+    add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
 endif()
 
 message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
@@ -94,14 +95,14 @@ string(LENGTH "${CMAKE_SOURCE_DIR}/" SRC_PATH_SIZE)
 add_definitions("-DSRC_PATH_SIZE=${SRC_PATH_SIZE}")
 
 if(WINDOWS)
-    find_package(Lua REQUIRED)
+    find_package(unofficial-libmariadb CONFIG REQUIRED)
 elseif(LINUX)
-    # debian 10的cmake 3.13版本还不支持findLua 5.4，后续升级后这里优化一下
-    # find_package(Lua CONFIG REQUIRED)
-    set(LUA_LIBRARIES /usr/local/lib)
-    set(LUA_INCLUDE_DIR /usr/local/include)
+    # 通过apt安装暂时没有通过find_package查找mariadb的方式
+    # find_package(libmariadb REQUIRED)
 endif()
 
+find_package(OpenSSL REQUIRED)
+find_package(Lua 5.4 REQUIRED)
 find_package(mongoc-1.0 CONFIG REQUIRED)
 
 add_subdirectory(deps)
@@ -150,9 +151,6 @@ target_link_libraries(master PRIVATE
 )
 
 if(WINDOWS)
-    find_package(OpenSSL REQUIRED)
-    find_package(unofficial-libmariadb CONFIG REQUIRED)
-
     target_include_directories(master PRIVATE
         ${LUA_INCLUDE_DIR}
     )
@@ -177,7 +175,6 @@ elseif(UNIX)
 
         # sasl2.a # mongodb使用LDAP认证才需要sasl2，暂时不使用
 
-        # mariadb使用了gnutls
-        ssl gnutls crypto dl rt pthread resolv z stdc++fs
+        ssl crypto dl rt pthread resolv z stdc++fs
     )
 endif()

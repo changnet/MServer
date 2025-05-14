@@ -3,7 +3,7 @@
 # build development enviroment
 # install 3th party software or library,like lua、mongodb
 
-# UPDATE to Debian 9.9 at 2019-07-22
+# UPDATE to Debian 12 at 2019-05
 
 BUILD_ENV_LOG=./build_env_log.txt
 RAWPKTDIR=../engine/package
@@ -21,15 +21,11 @@ function auto_apt_install()
     apt -y install $1
 }
 
-function append_to_file()
-{
-    echo "$2" >>$1
-}
-
 # install compile enviroment
 function build_tool_chain()
 {
     echo "build tool chain ..."
+
     auto_apt_install gcc
     auto_apt_install g++
     auto_apt_install gdb
@@ -58,7 +54,7 @@ function build_lua()
 {
     cd $PKGDIR
 
-    LUAVER=5.4.2
+    LUAVER=5.4.7
     tar -zxvf lua-$LUAVER.tar.gz
     cd lua-$LUAVER
     make PLAT=linux
@@ -107,12 +103,12 @@ function build_mongoc()
     # mongo-c-driver-1.2.1\src\libbson\configure
     cd $PKGDIR
 
-    MONGOCVER=1.17.3
+    MONGOCVER=1.30.4
     tar -zxvf mongo-c-driver-$MONGOCVER.tar.gz
     cd mongo-c-driver-$MONGOCVER
     mkdir -p cmake-build
     cd cmake-build
-    
+
     # OpenSSL is required for authentication or for SSL connections to MongoDB. Kerberos or LDAP support requires Cyrus SASL.
     # 暂时不用SASL库
     if [ "$env" == "LINUX" ]; then
@@ -135,20 +131,6 @@ function build_mongoc()
     # ./configure --disable-automatic-init-and-cleanup --enable-static --with-libbson=bundled
     make
     make install
-}
-
-function build_flatbuffers()
-{
-    cd $PKGDIR
-
-    FBB_VER=1.11.0
-    tar -zxvf flatbuffers-$FBB_VER.tar.gz
-    cmake -DFLATBUFFERS_BUILD_FLATHASH=OFF \
-    	-DFLATBUFFERS_BUILD_GRPCTEST=OFF \
-    	-DFLATBUFFERS_BUILD_TESTS=OFF \
-    	flatbuffers-$FBB_VER -Bflatbuffers-$FBB_VER
-    make -C flatbuffers-$FBB_VER all
-    make -C flatbuffers-$FBB_VER install
 }
 
 # 编译protobuf库并安装
@@ -194,6 +176,8 @@ function build_env_once()
 	if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
 		env=LINUX
 		echo "env = LINUX"
+
+        apt update
 		build_tool_chain
 		build_library
 	elif [ "$(expr substr $(uname -s) 1 9)" == "CYGWIN_NT" ]; then
@@ -204,8 +188,9 @@ function build_env_once()
     build_lua
     # build_sasl
     build_mongoc
-    build_flatbuffers
     install_protoc
+
+    # mariadb mongodb安装比较复杂，需要独立执行mariadb.sh和mongodb.sh中的install来安装
 
     cd $old_pwd
     rm -R $PKGDIR
@@ -226,7 +211,7 @@ function set_sys_env()
 		# debian9如果是root用户，*是匹配不到的，不会生效。其他用户可以
 		echo "root               soft    nofile             65535" >> /etc/security/limits.conf
 		echo "root               hard    nofile             65535" >> /etc/security/limits.conf
-		
+
 		echo "set max number of open file descriptors"
 		sh -c "$cmd"
 	fi
@@ -239,11 +224,11 @@ function set_sys_env()
 	else
 		echo "root               soft    core             unlimited" >> /etc/security/limits.conf
 		echo "root               hard    core             unlimited" >> /etc/security/limits.conf
-		
+
 		echo "set limits the core file size"
 		sh -c "$cmd"
 	fi
-	
+
 	# 使用以下方式测试core dump是否正常
 	# $ sleep 10
 	# ^\Quit (core dumped)                #使用 Ctrl+\ 退出程序, 会产生 core dump
@@ -262,7 +247,7 @@ function set_sys_env()
 		fi
 		sh -c "$cmd"
 	fi
-	
+
 	echo "set DONE, sys may NEED to reboot"
 }
 

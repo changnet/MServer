@@ -3,6 +3,7 @@
 #include <deque>
 #include <mutex>
 #include <shared_mutex>
+#include <condition_variable>
 #include "global/global.hpp"
 
 // 线程数据交互结构
@@ -56,7 +57,7 @@ struct ThreadMessage
     int32_t dst_;  // 目标地址
     int32_t type_; // 消息类型
     int32_t usize_; // 自定义数据长度
-    void *udata_; // 自定义数据，可能是buff也可能是其他指针
+    char *udata_; // 自定义数据，可能是buff也可能是其他指针
 
     static ThreadMessage Null;
 };

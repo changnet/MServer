@@ -150,7 +150,14 @@ bool AsyncLog::init_daily_policy(Device &device)
                     ftime.time_since_epoch() - 11644473600s)
                     .count();
 #else
-        old_time = decltype(ftime)::clock::to_time_t(ftime);
+        // 转换为 system_clock 时间点
+        auto sctp =
+            std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                ftime - std::filesystem::file_time_type::clock::now()
+                + std::chrono::system_clock::now());
+
+        // 转换为 time_t
+        old_time = std::chrono::system_clock::to_time_t(sctp);
 #endif
     }
     else
@@ -249,7 +256,7 @@ void AsyncLog::append(const char *name, int32_t mask, int64_t time,
     str_name.assign(name);
 
     std::lock_guard<std::mutex> guard(mutex_);
-    auto &it = device_.find(str_name);
+    auto it = device_.find(str_name);
     if (it == device_.end())
     {
         ELOG_R("no log device found: %s", name);
@@ -535,7 +542,6 @@ void AsyncLog::routine_once(int32_t ev)
     // C++14以后，允许在循环中删除
     static_assert(__cplusplus > 201402L);
 
-    bool busy = true;
     auto now  = timing::try_frame_time();
 
     std::unique_lock<std::mutex> ul(mutex_);
