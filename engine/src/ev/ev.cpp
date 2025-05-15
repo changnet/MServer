@@ -47,7 +47,7 @@ void EV::dispatch_message()
             if (-1 == m.src_) return;
 
             lcpp::call(L_, "main_message_dispatch", m.src_, m.dst_, m.type_,
-                       m.udata_, m.usize_);
+                       (void *)m.udata_, m.usize_);
             m.dispose();
         }
         catch (const std::runtime_error &e)

@@ -52,19 +52,7 @@ public:
         return iter == env_.end() ? nullptr : iter->second.c_str();
     }
 
-    void init()
-    {
-        set("__OS_NAME__", __OS_NAME__);
-        set("__COMPLIER_", __COMPLIER_);
-        set("__BACKEND__", __BACKEND__);
-        set("__TIMESTAMP__", __TIMESTAMP__); // 这个时间不准，只有被编译到才会更新
-
-#ifdef IP_V4
-        set("IPV4", "IPV4");
-#else
-        set("IPV6", "IPV6");
-#endif
-    }
+    void init();
 
 private:
     mutable std::mutex mutex_;

@@ -29,12 +29,6 @@ do_make()
 		make_option=$1
 	fi
 
-	# 这个文件里包含一个编译时间，每次编译都改一下时间，不然__TIMESTAMP__不会更新
-	name=`find $ENGINE_DIR -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
-	if [ $(basename $name) != "lev.cpp" ]; then
-		touch $ENGINE_DIR/src/lua_cpplib/lstate.cpp
-	fi
-
 	make $make_option
 }
 

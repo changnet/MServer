@@ -330,7 +330,8 @@ int32_t LuaCodec::decode_from_buffer(lua_State *L)
     buff_len_    = luaL_checkinteger(L, 3);
     if (!decode_buff_ || buff_len_ <= 0)
     {
-        return luaL_error(L, "invalid lua buffer");
+        return luaL_error(L, "invalid lua buffer, type: %s",
+                          lua_typename(L, lua_type(L, 2)));
     }
 
     buff_pos_ = 0;

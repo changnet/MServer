@@ -113,7 +113,7 @@ void WorkerThread::dispatch_message()
             ThreadMessage m = pop_message();
             if (-1 == m.src_) break;
 
-            lcpp::call(L_, "on_worker_message", m.src_, m.type_, m.udata_,
+            lcpp::call(L_, "on_worker_message", m.src_, m.type_, (void *)m.udata_,
                        m.usize_);
             m.dispose();
         }
