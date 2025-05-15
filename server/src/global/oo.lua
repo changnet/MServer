@@ -151,7 +151,7 @@ end
 -- 把src中指定的的函数按template构建到cls中
 function oo.using(cls, src, template, name_list)
     for _, name in pairs(name_list) do
-        local func = assert(src)
+        local func = assert(src[name])
         cls[name] = template(name, func)
     end
 end

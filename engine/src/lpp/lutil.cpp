@@ -578,6 +578,23 @@ static int32_t getcwd(lua_State *L)
     return 1;
 }
 
+static int32_t setenv(lua_State *L)
+{
+    const char *name  = luaL_checkstring(L, 1);
+    const char *value = luaL_checkstring(L, 2);
+    int overwrite     = lua_toboolean(L, 3);
+
+    int32_t e = 0;
+#ifdef __windows__
+    e = _putenv_s(name, value);
+#else
+    e = setenv(name, value, overwrite);
+#endif
+
+    lua_pushinteger(L, e);
+    return 1;
+}
+
 static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"md5", md5},
                                    {"uuid", uuid},
@@ -586,6 +603,7 @@ static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"sha256", sha256},
                                    {"sha3_256", sha3_256},
                                    {"getcwd", getcwd},
+                                   {"setenv", setenv},
                                    {"mkdir_p", mkdir_p},
                                    {"sha1_raw", sha1_raw},
                                    {"what_error", what_error},

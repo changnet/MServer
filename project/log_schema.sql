@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `misc` (
     `val2` varchar(512) DEFAULT NULL COMMENT '额外数据2',
     `vals` varchar(512) DEFAULT NULL COMMENT '额外数据,剩下的额外数据都自动拼接到这里',
     `time` DATETIME NOT NULL COMMENT '操作时间',
-    INDEX `index_id` (`op`),
+    INDEX `index_op` (`op`),
     INDEX `index_pid` (`pid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='杂项操作日志'
 PARTITION BY HASH(MONTH(time)) PARTITIONS 12;
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `res` (
     `val2` varchar(512) DEFAULT NULL COMMENT '额外数据2',
     `vals` varchar(512) DEFAULT NULL COMMENT '额外数据,剩下的额外数据都自动拼接到这里',
     `time` DATETIME NOT NULL COMMENT '操作时间',
-    INDEX `index_id` (`op`),
+    INDEX `index_op` (`op`),
     INDEX `index_id` (`id`),
     INDEX `index_pid` (`pid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资源变化日志'

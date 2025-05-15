@@ -26,10 +26,10 @@ void MySql::library_end()
 MySql::MySql()
 {
     const int32_t SIZE = 512 * 1024; // 大于256kb使用mmap分配
-    mysql_               = nullptr;
-    stmt_           = new char[SIZE];
-    stmt_idx_       = 0;
-    stmt_len_       = SIZE;
+    mysql_             = nullptr;
+    stmt_              = new char[SIZE];
+    stmt_idx_          = 0;
+    stmt_len_          = SIZE;
 }
 
 MySql::~MySql()
@@ -61,11 +61,15 @@ int32_t MySql::connect(lua_State *L)
     mysql_ = mysql_init(nullptr);
     if (!mysql_) luaL_error(L, "mysql_init fail"); 
 
-        // mysql_options的时间精度都为秒级
+    unsigned int e = 0;
+
+    // mysql_options的时间精度都为秒级
     uint32_t connect_timeout = 60;
     uint32_t read_timeout    = 30;
     uint32_t write_timeout   = 30;
     bool reconnect           = true;
+
+    // mysql_optionsv(mysql_, MYSQL_OPT_SSL_ENFORCE, (void *)&enforce_tls);
     if (mysql_options(mysql_, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout)
         || mysql_options(mysql_, MYSQL_OPT_READ_TIMEOUT, &read_timeout)
         || mysql_options(mysql_, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout)
@@ -74,7 +78,8 @@ int32_t MySql::connect(lua_State *L)
         /*|| mysql_options( conn, MYSQL_INIT_COMMAND,"SET autocommit=0" ) */
     )
     {
-        return mysql_errno(mysql_);
+        e = mysql_errno(mysql_);
+        goto END_CONNECT;
     }
 
     /* CLIENT_REMEMBER_OPTIONS:Without this option, if mysql_real_connect()
@@ -84,11 +89,14 @@ int32_t MySql::connect(lua_State *L)
     if (mysql_real_connect(mysql_, host, usr, pwd, db, port, nullptr,
                            CLIENT_REMEMBER_OPTIONS))
     {
-        return 0;
+        goto END_CONNECT;
     }
 
     // 在实际应用中，允许mysql先不开启或者网络原因连接不上，不断重试
-    return mysql_errno(mysql_);
+    e = mysql_errno(mysql_);
+END_CONNECT:
+    lua_pushinteger(L, e);
+    return 1;
 }
 
 void MySql::disconnect()

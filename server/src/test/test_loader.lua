@@ -15,7 +15,7 @@ require "test.pbc_codec_test"
 require "test.co_test"
 require "test.socket_test"
 require "test.log_test"
--- require "test.mysql_test"
+require "test.mysql_test"
 
 --[[
 require "test.grid_aoi_test"

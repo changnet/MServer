@@ -39,6 +39,15 @@ function MySQL:__init()
     self.mysql = MySql()
 end
 
+function MySQL:set_ssl(flag)
+    -- 新版本mariadb默认启用ssl，但并没有任何c函数可以关闭
+    -- 关闭的方式有两种：一种是设置客户端的环境变量，另一种是服务端配置my.cnf里设置
+    -- 命令行可用--skip-ssl跳过
+    -- https://mariadb.com/kb/en/mariadb-connector-c-3-4-3-release-notes/
+    -- If the environment variable MARIADB_TLS_DISABLE_PEER_VERIFICATION was set, the peer certificate verification will be skipped
+    Util.setenv("MARIADB_TLS_DISABLE_PEER_VERIFICATION", flag and "0" or "1", true)
+end
+
 -- 执行sql，无返回
 -- @return 错误码
 function MySQL:exec(stmt)

@@ -7,8 +7,12 @@ CLI=mariadb #mysql
 # 查看使用哪个配置文件 mariadb --verbose --help | grep my.cnf，一般是/etc/mysql/my.cnf
 
 # mariadb的配置在 cat /etc/mysql/mariadb.conf.d/50-server.cnf
-# debian系统下，/etc/mysql/debian.cnf配置root用户不用密码进入，所以即使设置了root密码
-# root用户仍然能不用密码进入，用了密码反而不行
+# 旧debian系统下，/etc/mysql/debian.cnf配置root用户不用密码进入，所以即使设置了root密码
+# root用户仍然能不用密码进入，用了密码反而不行，但debian 12不会
+# debian 12下，默认使用uninx_socket进行连接，所以即使设置了root密码，默认也能以root用户不需要密码进入
+# 但如果通过tcp（mariadb --protocol=tcp -uroot -p，则是需要密码的）
+
+# debian12 apt安装的mariadb默认在/etc/mysql/mariadb.conf.d/50-server.cnf下bind-address= 127.0.0.1，需要修改为0.0.0.0
 
 # 去掉 skip-grant-tables
 # 设置root密码: SET PASSWORD FOR 'root'@'localhost' = PASSWORD('1');
@@ -55,6 +59,7 @@ function dump_struct()
 # 安装数据库，初始初始化一个用于测试的用户名、密码以及一个测试用的日志数据库
 function install()
 {
+	# 使用debconf-set-selections自动填充apt install中需要的用户名和密码
 	export DEBIAN_FRONTEND="noninteractive"
 	debconf-set-selections <<< "mariadb-server mysql-server/root_password password $DEF_PWD"
 	debconf-set-selections <<< "mariadb-server mysql-server/root_password_again password $DEF_PWD"
