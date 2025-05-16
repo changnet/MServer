@@ -34,30 +34,30 @@ Test.describe("mysql test", function()
         end
 
         -- TODO TRUNCATE和DROP TABLE会卡3秒左右，不太清楚为什么
-        -- mysql:exec_cmd("TRUNCATE perf_test")
-        -- Test.equal(mysql:exec("DROP TABLE IF EXISTS perf_test"), 0)
-        -- Test.equal(mysql:exec(create_table_str), 0)
+        mysql:exec("TRUNCATE perf_test")
+        Test.equal(mysql:exec("DROP TABLE IF EXISTS perf_test"), 0)
+        Test.equal(mysql:exec(create_table_str), 0)
     end)
---[[
+
     Test.it("mysql base test", function()
         Test.equal(mysql:exec("delete from perf_test"), 0)
 
         -- 插入
-        Test.equal(mysql:insert("perf_test", {
+        Test.equal(mysql:insert("perf_test", {{
             id = 1,
             desc = 'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',
             amount = 1
-        }), 0)
-        Test.equal(mysql:insert("perf_test", {
+        }}), 0)
+        Test.equal(mysql:insert("perf_test", {{
             id = 2,
             desc = 'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',
             amount = 9
-        }), 0)
-        Test.equal(mysql:insert("perf_test", {
+        }}), 0)
+        Test.equal(mysql:insert("perf_test", {{
             id = 2,
             desc = 'base test item >>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<',
             amount = 2
-        }, {amount = "values(amount)"}), 0)
+        }}, {amount = "values(amount)"}), 0)
 
         -- 更新超长字符串，测试底层缓冲区分配
         local desc = string.rep("longgggggggggggg", 512)
@@ -80,7 +80,7 @@ Test.describe("mysql test", function()
         Test.equal(rows[1].amount, 99999)
         Test.equal(rows[1].desc, desc)
     end)
-
+--[[
     local n_insert = 500 -- 太多了完成不了测试的
     Test.it(string.format("sql perf %d insert", n_insert), function()
         -- 默认配置下：30~100条/s
@@ -146,9 +146,9 @@ Test.describe("mysql test", function()
         Test.equal(e, 0)
         Test.equal(#rows, max_insert)
     end)
-
+]]
     Test.after(function()
         mysql:exec("DROP TABLE IF EXISTS perf_test")
         mysql:disconnect()
-    end)]]
+    end)
 end)

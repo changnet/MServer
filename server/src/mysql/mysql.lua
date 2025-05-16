@@ -10,12 +10,47 @@ local MySQL = oo.class()
 
 local DEBUG = true -- 是否启用调试模式
 
+-- 类型字符串转为mysql类型，必须和mysql源码类型对应
+local TYPE_STR = {
+    DECIMAL = 1,-- MYSQL_TYPE_DECIMAL,
+    TINY = 1,-- MYSQL_TYPE_TINY,
+    SHORT = 1,-- MYSQL_TYPE_SHORT,
+    LONG = 1,-- MYSQL_TYPE_LONG,
+    FLOAT = 1,-- MYSQL_TYPE_FLOAT,
+    DOUBLE = 1,-- MYSQL_TYPE_DOUBLE,
+    NULL = 1,-- MYSQL_TYPE_NULL,
+    TIMESTAMP = 1,-- MYSQL_TYPE_TIMESTAMP,
+    LONGLONG = 1,-- MYSQL_TYPE_LONGLONG,
+    INT24 = 1,-- MYSQL_TYPE_INT24,
+    DATE = 1,-- MYSQL_TYPE_DATE,
+    TIME = 1,-- MYSQL_TYPE_TIME,
+    DATETIME = 1,-- MYSQL_TYPE_DATETIME,
+    YEAR = 1,-- MYSQL_TYPE_YEAR,
+    NEWDATE = 1,-- MYSQL_TYPE_NEWDATE,
+    VARCHAR = 1,-- MYSQL_TYPE_VARCHAR,
+    BIT = 1,-- MYSQL_TYPE_BIT,
+    TIMESTAMP2 = 1,-- MYSQL_TYPE_TIMESTAMP2,
+    DATETIME2 = 1,-- MYSQL_TYPE_DATETIME2,
+    TIME2 = 1,-- MYSQL_TYPE_TIME2,
+
+    JSON=245, --MYSQL_TYPE_JSON=245,
+    NEWDECIMAL=246, --MYSQL_TYPE_NEWDECIMAL=246,
+    ENUM=247, --MYSQL_TYPE_ENUM=247,
+    SET=248, --MYSQL_TYPE_SET=248,
+    TINY_BLOB=249, --MYSQL_TYPE_TINY_BLOB=249,
+    MEDIUM_BLOB=250, --MYSQL_TYPE_MEDIUM_BLOB=250,
+    LONG_BLOB=251, --MYSQL_TYPE_LONG_BLOB=251,
+    BLOB=252, --MYSQL_TYPE_BLOB=252,
+    VAR_STRING=253, --MYSQL_TYPE_VAR_STRING=253,
+    STRING=254, --MYSQL_TYPE_STRING=254,
+    GEOMETRY=255, --MYSQL_TYPE_GEOMETRY=255,
+}
+
 --//////////////////////////////////////////////////////////////////////////////
 local C_FUNC =
 {
     "thread_init",
     "thread_end",
-    "connect",
     "error",
     "ping",
     "exec",
@@ -39,6 +74,19 @@ function MySQL:__init()
     self.mysql = MySql()
 end
 
+-- 连接数据库
+-- @param host 主机名
+-- @param port 端口
+-- @param user 用户名
+-- @param password 密码
+-- @param database 数据库名
+function MySQL:connect(host, port, user, password, database)
+    self.database = database
+    return self.mysql:connect(host, port, user, password, database)
+end
+
+-- 是否启用ssl
+-- @param flag true表示启用，false表示禁用
 function MySQL:set_ssl(flag)
     -- 新版本mariadb默认启用ssl，但并没有任何c函数可以关闭
     -- 关闭的方式有两种：一种是设置客户端的环境变量，另一种是服务端配置my.cnf里设置
@@ -46,6 +94,44 @@ function MySQL:set_ssl(flag)
     -- https://mariadb.com/kb/en/mariadb-connector-c-3-4-3-release-notes/
     -- If the environment variable MARIADB_TLS_DISABLE_PEER_VERIFICATION was set, the peer certificate verification will be skipped
     Util.setenv("MARIADB_TLS_DISABLE_PEER_VERIFICATION", flag and "0" or "1", true)
+end
+
+-- 读取表结构，并保存到self.types
+-- @param table_name 表名
+function MySQL:read_table_struct(table_name)
+    local e, rows = self.mysql:query(
+        string.format("SHOW FULL COLUMNS FROM %s", table_name))
+    if e ~= 0 then return false end
+
+    local types = self.types[table_name]
+    if not types then
+        types = {}
+        self.types[table_name] = types
+    end
+
+    for _, row in ipairs(rows) do
+        -- varchar(128)变为varchar
+        local type_str = string.match(row.Type, "^%a+")
+
+        types[row.Field] = assert(TYPE_STR[type_str])
+    end
+
+    return true
+end
+
+-- 读取整个数据库的表结构
+function MySQL:read_table_struct()
+    local e, rows = self.mysql:query("SHOW TABLES")
+    if e ~= 0 then return false end
+
+    for _, row in ipairs(rows) do
+        local _, table_name = next(row)
+        if not self:read_table_struct(table_name) then
+            return false
+        end
+    end
+
+    return true
 end
 
 -- 执行sql，无返回
