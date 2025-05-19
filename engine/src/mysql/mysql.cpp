@@ -263,7 +263,7 @@ int32_t MySql::result_to_lua(lua_State *L)
 
         /* 创建hash表，元素个数为num_cols */
         lua_createtable(L, 0, num_fields);
-        for (uint32_t idx = 1; idx <= num_fields; idx++)
+        for (uint32_t idx = 0; idx < num_fields; idx++)
         {
             const MYSQL_FIELD &field = fields[idx];
             lua_pushlstring(L, field.name, field.name_length);
@@ -276,7 +276,7 @@ int32_t MySql::result_to_lua(lua_State *L)
     }
 
     mysql_free_result(res);
-    return 0;
+    return num_rows;
 }
 
 void MySql::stmt_resize(int32_t size)
@@ -359,7 +359,7 @@ int32_t MySql::stmt_value(lua_State *L)
         // The length of the encoded string that is placed into the to argument, 
         // not including the terminating null byte, or -1 if an error occurs
         unsigned long length =
-            mysql_real_escape_string(mysql_, stmt_, str, (unsigned long)size);
+            mysql_real_escape_string(mysql_, stmt_ + stmt_idx_, str, (unsigned long)size);
         if (length == (unsigned long)-1)
         {
             return luaL_error(L, "mysql_real_escape_string %s",
@@ -379,6 +379,7 @@ int32_t MySql::stmt_exec(lua_State* L)
 {
     if (0 == stmt_idx_) return luaL_error(L, "no stmt");
 
+    stmt_[stmt_idx_ + 1] = '\0';
     int32_t e = real_query(stmt_, stmt_idx_);
     lua_pushinteger(L, e);
     if (0 != e) return 1;

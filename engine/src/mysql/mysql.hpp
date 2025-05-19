@@ -108,11 +108,15 @@ private:
          * 终止缓冲区的末尾并返回所需的字符数，_snprintf 则不会以 null 终止缓冲区，并会返回 -1
          */
         int32_t size = stmt_len_ - stmt_idx_;
-        int32_t len = snprintf(stmt_, size, std::forward<Args>(args)...);
+        int32_t len = snprintf(stmt_ + stmt_idx_, size, std::forward<Args>(args)...);
         if (len >= size)
         {
             stmt_resize(len + 1);
             stmt_fmt(std::forward<Args>(args)...);
+        }
+        else
+        {
+            stmt_idx_ += len;
         }
     }
 

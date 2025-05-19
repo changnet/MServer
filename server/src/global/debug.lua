@@ -9,7 +9,9 @@ function debug.tracestack(var_list, level)
     -- 各层调用堆栈上的local变量
     for lv = level, 16 do
         -- 检测该层堆栈是否存在，否则getlocal会报错
-        if not debug.getinfo(lv, "f") then break end
+        -- n=name，函数名 S=source源文件 l=line行号
+        local dbg_info = debug.getinfo(lv, "nSl")
+        if not dbg_info then break end
 
         local sub_msg = {}
         for index = 1, 32 do
@@ -18,12 +20,17 @@ function debug.tracestack(var_list, level)
 
             if k ~= "(C temporary)" then
                 table.insert(sub_msg,
-                    string.format("%s:%s", tostring(k), tostring(v)))
+                    string.format("    %s:%s", tostring(k), tostring(v)))
             end
         end
         if #sub_msg > 0 then
+            local func_name = dbg_info.name
+            if not func_name then
+                func_name = string.format("%s:%d",
+                    dbg_info.short_src, dbg_info.currentline)
+            end
             table.insert(var_list, string.format(
-                "local%02d: %s", lv - level, table.concat(sub_msg, ",")))
+                "%s:\n%s", func_name, table.concat(sub_msg, "\n")))
         end
     end
 

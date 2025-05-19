@@ -34,9 +34,10 @@ Test.describe("mysql test", function()
         end
 
         -- TODO TRUNCATE和DROP TABLE会卡3秒左右，不太清楚为什么
-        mysql:exec("TRUNCATE perf_test")
+        -- mysql:exec("TRUNCATE perf_test")
         Test.equal(mysql:exec("DROP TABLE IF EXISTS perf_test"), 0)
         Test.equal(mysql:exec(create_table_str), 0)
+        Test.assert(mysql:read_database_struct())
     end)
 
     Test.it("mysql base test", function()
@@ -80,7 +81,7 @@ Test.describe("mysql test", function()
         Test.equal(rows[1].amount, 99999)
         Test.equal(rows[1].desc, desc)
     end)
---[[
+
     local n_insert = 500 -- 太多了完成不了测试的
     Test.it(string.format("sql perf %d insert", n_insert), function()
         -- 默认配置下：30~100条/s
@@ -91,17 +92,16 @@ Test.describe("mysql test", function()
 
         local row = {desc = "just test itemmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"}
         local rows = {row}
-        for i = 1, max_insert do
+        for i = 1, n_insert do
             row.id = i
             row.amount = i * 10
             mysql:insert("perf_test", rows)
         end
 
-        mysql:select("select * from perf_test", function(ecode, res)
-            Test.equal(ecode, 0)
-            Test.equal(#res, n_insert)
-            Test.done()
-        end)
+        local e
+        e, rows = mysql:select("perf_test")
+        Test.equal(e, 0)
+        Test.equal(#rows, n_insert)
     end)
 
     Test.it(string.format("mysql perf %d insert transaction mode", max_insert),
@@ -146,7 +146,7 @@ Test.describe("mysql test", function()
         Test.equal(e, 0)
         Test.equal(#rows, max_insert)
     end)
-]]
+
     Test.after(function()
         mysql:exec("DROP TABLE IF EXISTS perf_test")
         mysql:disconnect()

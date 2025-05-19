@@ -21,7 +21,7 @@ end
 -- 用于lua错误信息处理
 function __G__TRACKBACK(msg, co)
     local msg_list = {}
-    debug.tracestack(msg_list, 4)
+    debug.tracestack(msg_list, 3)
 
     local stack_trace = debug.traceback(co)
 
@@ -38,7 +38,7 @@ function assert(expr, ...)
 
     local msg = table.concat({"assertion failed!", ...}, "    ")
     local msg_list = {msg}
-    debug.tracestack(msg_list, 4)
+    debug.tracestack(msg_list, 3)
     msg = table.concat(msg_list, "\n")
     return error(msg)
 end

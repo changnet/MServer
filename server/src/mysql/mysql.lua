@@ -12,35 +12,42 @@ local DEBUG = true -- 是否启用调试模式
 
 -- 类型字符串转为mysql类型，必须和mysql源码类型对应
 local TYPE_STR = {
-    DECIMAL = 1,-- MYSQL_TYPE_DECIMAL,
-    TINY = 1,-- MYSQL_TYPE_TINY,
-    SHORT = 1,-- MYSQL_TYPE_SHORT,
-    LONG = 1,-- MYSQL_TYPE_LONG,
-    FLOAT = 1,-- MYSQL_TYPE_FLOAT,
-    DOUBLE = 1,-- MYSQL_TYPE_DOUBLE,
-    NULL = 1,-- MYSQL_TYPE_NULL,
-    TIMESTAMP = 1,-- MYSQL_TYPE_TIMESTAMP,
-    LONGLONG = 1,-- MYSQL_TYPE_LONGLONG,
-    INT24 = 1,-- MYSQL_TYPE_INT24,
-    DATE = 1,-- MYSQL_TYPE_DATE,
-    TIME = 1,-- MYSQL_TYPE_TIME,
-    DATETIME = 1,-- MYSQL_TYPE_DATETIME,
-    YEAR = 1,-- MYSQL_TYPE_YEAR,
-    NEWDATE = 1,-- MYSQL_TYPE_NEWDATE,
-    VARCHAR = 1,-- MYSQL_TYPE_VARCHAR,
-    BIT = 1,-- MYSQL_TYPE_BIT,
-    TIMESTAMP2 = 1,-- MYSQL_TYPE_TIMESTAMP2,
-    DATETIME2 = 1,-- MYSQL_TYPE_DATETIME2,
-    TIME2 = 1,-- MYSQL_TYPE_TIME2,
+    -- TODO 这里是代码定义，有些定义可能是废弃的，有些我也不知道对应sql语句中的什么类型
+    -- 所以这里只转换了部分常用的
 
-    JSON=245, --MYSQL_TYPE_JSON=245,
+    decimal = 1,-- MYSQL_TYPE_DECIMAL,
+    tinyint = 2,-- MYSQL_TYPE_TINY,
+    smallint = 3,-- MYSQL_TYPE_SHORT,
+    int = 4,-- MYSQL_TYPE_LONG,
+    float = 5,-- MYSQL_TYPE_FLOAT,
+    double = 6,-- MYSQL_TYPE_DOUBLE,
+    NULL = 7,-- MYSQL_TYPE_NULL,
+    timestamp = 8,-- MYSQL_TYPE_TIMESTAMP,
+    bigint = 9,-- MYSQL_TYPE_LONGLONG,
+    mediumint = 10,-- MYSQL_TYPE_INT24,
+    date = 11,-- MYSQL_TYPE_DATE,
+    time = 12,-- MYSQL_TYPE_TIME,
+    datetime = 13,-- MYSQL_TYPE_DATETIME,
+    YEAR = 14,-- MYSQL_TYPE_YEAR,
+    NEWDATE = 15,-- MYSQL_TYPE_NEWDATE,
+    varchar = 16,-- MYSQL_TYPE_VARCHAR,
+    bit = 17,-- MYSQL_TYPE_BIT,
+    TIMESTAMP2 = 18,-- MYSQL_TYPE_TIMESTAMP2,
+    DATETIME2 = 19,-- MYSQL_TYPE_DATETIME2,
+    TIME2 = 20,-- MYSQL_TYPE_TIME2,
+
+    json=245, --MYSQL_TYPE_JSON=245,
     NEWDECIMAL=246, --MYSQL_TYPE_NEWDECIMAL=246,
     ENUM=247, --MYSQL_TYPE_ENUM=247,
     SET=248, --MYSQL_TYPE_SET=248,
-    TINY_BLOB=249, --MYSQL_TYPE_TINY_BLOB=249,
-    MEDIUM_BLOB=250, --MYSQL_TYPE_MEDIUM_BLOB=250,
-    LONG_BLOB=251, --MYSQL_TYPE_LONG_BLOB=251,
-    BLOB=252, --MYSQL_TYPE_BLOB=252,
+    tinyblob=249, --MYSQL_TYPE_TINY_BLOB=249,
+    tinytext=249,
+    meidumblob=250, --MYSQL_TYPE_MEDIUM_BLOB=250,
+    mediumtext=250,
+    longblob=251, --MYSQL_TYPE_LONG_BLOB=251,
+    longtext=251,
+    blog=252, --MYSQL_TYPE_BLOB=252,
+    text=252,
     VAR_STRING=253, --MYSQL_TYPE_VAR_STRING=253,
     STRING=254, --MYSQL_TYPE_STRING=254,
     GEOMETRY=255, --MYSQL_TYPE_GEOMETRY=255,
@@ -101,6 +108,7 @@ end
 function MySQL:read_table_struct(table_name)
     local e, rows = self.mysql:query(
         string.format("SHOW FULL COLUMNS FROM %s", table_name))
+
     if e ~= 0 then return false end
 
     local types = self.types[table_name]
@@ -120,7 +128,7 @@ function MySQL:read_table_struct(table_name)
 end
 
 -- 读取整个数据库的表结构
-function MySQL:read_table_struct()
+function MySQL:read_database_struct()
     local e, rows = self.mysql:query("SHOW TABLES")
     if e ~= 0 then return false end
 
@@ -204,7 +212,7 @@ function MySQL:select(tbl, fields, wheres)
     else
         mysql:stmt_str("SELECT * FROM ", tbl)
     end
-    stmt_wheres(mysql, self.types, wheres)
+    stmt_wheres(mysql, self.types[tbl], wheres)
 
     return mysql:stmt_exec(true)
 end
@@ -222,7 +230,7 @@ function MySQL:insert(tbl, rows, updates)
     local fields = fetch_fields(rows)
 
     mysql:stmt_clear()
-    mysql:stmt_str("INSERT INTO ", tbl, "(")
+    mysql:stmt_str("INSERT INTO ", tbl, " (")
     for index, field in ipairs(fields) do
         if 1 == index then
             mysql:stmt_str("`", field, "`")
@@ -230,13 +238,13 @@ function MySQL:insert(tbl, rows, updates)
             mysql:stmt_str(",`", field, "`")
         end
     end
-    mysql:stmt_str("VALUES ")
+    mysql:stmt_str(") VALUES ")
 
-    local types = self.types
+    local types = self.types[tbl]
     for row_idx, row in pairs(rows) do
         mysql:stmt_str(1 == row_idx and "(" or ",(")
         for index, field in ipairs(fields) do
-            if 1 == index then mysql:stmt_str(",") end
+            if 1 ~= index then mysql:stmt_str(",") end
             mysql:stmt_value(types[field], row[field])
         end
         mysql:stmt_str(")")
@@ -266,10 +274,10 @@ end
 -- @param wheres 条件{a=1, b=2}，只支持等于条件。其他复杂条件使用query接口
 function MySQL:update(tbl, updates, wheres)
     local mysql = self.mysql
-    local types = self.types
+    local types = self.types[tbl]
 
     mysql:stmt_clear()
-    mysql:stmt_str("UPDATE ", tbl, "SET ")
+    mysql:stmt_str("UPDATE ", tbl, " SET ")
 
     local first = true
     for k, v in pairs(updates) do
@@ -281,7 +289,7 @@ function MySQL:update(tbl, updates, wheres)
         end
         mysql:stmt_value(types[k], v)
     end
-    stmt_wheres(mysql, self.types, wheres)
+    stmt_wheres(mysql, self.types[tbl], wheres)
 
     return mysql:stmt_exec(true)
 end
