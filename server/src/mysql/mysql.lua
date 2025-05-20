@@ -2,7 +2,14 @@
 -- 2015-11-20
 -- xzc
 
--- mysql数据存储处理
+--[[
+mysql数据存储处理
+
+1. decimal在lua中是用double来表示，精度可能会不够
+2. MySQL中支持boolean类型，但实际是以tinyint类型保存，无法区分原始类型。因此lua中不支持boolean类型，只支持数字
+3. binary(10)这种定长的数据，在mysql中返回长度永远是固定的，无法得知存入数据的长度。因此即使只存入abc，返回的也是abc0000000
+    由于包含二进制数据，也是不能用strlen之类的函数判断
+]]
 
 local MySql = require "engine.MySql"
 
@@ -12,44 +19,48 @@ local DEBUG = true -- 是否启用调试模式
 
 -- 类型字符串转为mysql类型，必须和mysql源码类型对应
 local TYPE_STR = {
-    -- TODO 这里是代码定义，有些定义可能是废弃的，有些我也不知道对应sql语句中的什么类型
-    -- 所以这里只转换了部分常用的
+    -- 在mysql_test里用data_type_test创建一个table，插入一条数据，再select出来
+    -- 在C++那边就可以打印出各个类型对应枚举
 
-    decimal = 1,-- MYSQL_TYPE_DECIMAL,
-    tinyint = 2,-- MYSQL_TYPE_TINY,
-    smallint = 3,-- MYSQL_TYPE_SHORT,
-    int = 4,-- MYSQL_TYPE_LONG,
-    float = 5,-- MYSQL_TYPE_FLOAT,
-    double = 6,-- MYSQL_TYPE_DOUBLE,
-    NULL = 7,-- MYSQL_TYPE_NULL,
-    timestamp = 8,-- MYSQL_TYPE_TIMESTAMP,
-    bigint = 9,-- MYSQL_TYPE_LONGLONG,
-    mediumint = 10,-- MYSQL_TYPE_INT24,
-    date = 11,-- MYSQL_TYPE_DATE,
-    time = 12,-- MYSQL_TYPE_TIME,
-    datetime = 13,-- MYSQL_TYPE_DATETIME,
-    YEAR = 14,-- MYSQL_TYPE_YEAR,
-    NEWDATE = 15,-- MYSQL_TYPE_NEWDATE,
-    varchar = 16,-- MYSQL_TYPE_VARCHAR,
-    bit = 17,-- MYSQL_TYPE_BIT,
-    TIMESTAMP2 = 18,-- MYSQL_TYPE_TIMESTAMP2,
-    DATETIME2 = 19,-- MYSQL_TYPE_DATETIME2,
-    TIME2 = 20,-- MYSQL_TYPE_TIME2,
+    -- TODO 这里只转换了部分常用的
+
+    DECIMAL = 0,-- MYSQL_TYPE_DECIMAL,
+    tinyint = 1,-- MYSQL_TYPE_TINY,
+    smallint = 2,-- MYSQL_TYPE_SHORT,
+    int = 3,-- MYSQL_TYPE_LONG,
+    float = 4,-- MYSQL_TYPE_FLOAT,
+    double = 5,-- MYSQL_TYPE_DOUBLE,
+    NULL = 6,-- MYSQL_TYPE_NULL,
+    timestamp = 7,-- MYSQL_TYPE_TIMESTAMP,
+    bigint = 8,-- MYSQL_TYPE_LONGLONG,
+    mediumint = 9,-- MYSQL_TYPE_INT24,
+    date = 10,-- MYSQL_TYPE_DATE,
+    time = 11,-- MYSQL_TYPE_TIME,
+    datetime = 12,-- MYSQL_TYPE_DATETIME,
+    year = 13,-- MYSQL_TYPE_YEAR,
+    NEWDATE = 14,-- MYSQL_TYPE_NEWDATE,
+    VARCHAR = 15,-- MYSQL_TYPE_VARCHAR,
+    bit = 16,-- MYSQL_TYPE_BIT,
+    TIMESTAMP2 = 17,-- MYSQL_TYPE_TIMESTAMP2,
+    DATETIME2 = 18,-- MYSQL_TYPE_DATETIME2,
+    TIME2 = 19,-- MYSQL_TYPE_TIME2,
 
     json=245, --MYSQL_TYPE_JSON=245,
-    NEWDECIMAL=246, --MYSQL_TYPE_NEWDECIMAL=246,
-    ENUM=247, --MYSQL_TYPE_ENUM=247,
-    SET=248, --MYSQL_TYPE_SET=248,
+    decimal=246, --MYSQL_TYPE_NEWDECIMAL=246,
+    enum=247, --MYSQL_TYPE_ENUM=247,
+    set=248, --MYSQL_TYPE_SET=248,
     tinyblob=249, --MYSQL_TYPE_TINY_BLOB=249,
     tinytext=249,
-    meidumblob=250, --MYSQL_TYPE_MEDIUM_BLOB=250,
+    mediumblob=250, --MYSQL_TYPE_MEDIUM_BLOB=250,
     mediumtext=250,
     longblob=251, --MYSQL_TYPE_LONG_BLOB=251,
     longtext=251,
-    blog=252, --MYSQL_TYPE_BLOB=252,
+    blob=252, --MYSQL_TYPE_BLOB=252,
     text=252,
-    VAR_STRING=253, --MYSQL_TYPE_VAR_STRING=253,
-    STRING=254, --MYSQL_TYPE_STRING=254,
+    varchar=253, --MYSQL_TYPE_VAR_STRING=253,
+    varbinary=253,
+    char=254, --MYSQL_TYPE_STRING=254,
+    binary=254,
     GEOMETRY=255, --MYSQL_TYPE_GEOMETRY=255,
 }
 
@@ -120,6 +131,7 @@ function MySQL:read_table_struct(table_name)
     for _, row in ipairs(rows) do
         -- varchar(128)变为varchar
         local type_str = string.match(row.Type, "^%a+")
+
 
         types[row.Field] = assert(TYPE_STR[type_str])
     end

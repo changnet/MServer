@@ -215,14 +215,14 @@ int32_t MySql::field_to_lua(lua_State *L, int32_t type, const char *value, size_
     case MYSQL_TYPE_TINY:
     case MYSQL_TYPE_SHORT:
     case MYSQL_TYPE_LONG:
-    case MYSQL_TYPE_TIMESTAMP:
     case MYSQL_TYPE_INT24:
+    case MYSQL_TYPE_YEAR:
         lua_pushinteger(L, static_cast<LUA_INTEGER>(atoi(value)));
         break;
     case MYSQL_TYPE_LONGLONG: lua_pushinteger(L, atoll(value)); break;
     case MYSQL_TYPE_FLOAT:
     case MYSQL_TYPE_DOUBLE:
-    case MYSQL_TYPE_DECIMAL:
+    case MYSQL_TYPE_NEWDECIMAL:
         lua_pushnumber(L, static_cast<LUA_NUMBER>(atof(value)));
         break;
     case MYSQL_TYPE_VARCHAR:
@@ -231,6 +231,10 @@ int32_t MySql::field_to_lua(lua_State *L, int32_t type, const char *value, size_
     case MYSQL_TYPE_LONG_BLOB:
     case MYSQL_TYPE_BLOB:
     case MYSQL_TYPE_VAR_STRING:
+    case MYSQL_TYPE_TIMESTAMP:
+    case MYSQL_TYPE_DATETIME:
+    case MYSQL_TYPE_TIME:
+    case MYSQL_TYPE_DATE:
     case MYSQL_TYPE_STRING: lua_pushlstring(L, value, size); break;
     default:
         lua_pushnil(L);
@@ -268,6 +272,7 @@ int32_t MySql::result_to_lua(lua_State *L)
             const MYSQL_FIELD &field = fields[idx];
             lua_pushlstring(L, field.name, field.name_length);
 
+            // PLOG("result name = %s, type = %d", field.name, field.type);
             field_to_lua(L, field.type, row[idx], lengths[idx]);
             lua_rawset(L, -3);
         }
@@ -323,19 +328,31 @@ int32_t MySql::stmt_value(lua_State *L)
     case MYSQL_TYPE_TINY:
     case MYSQL_TYPE_SHORT:
     case MYSQL_TYPE_LONG:
-    case MYSQL_TYPE_TIMESTAMP:
     case MYSQL_TYPE_INT24:
     case MYSQL_TYPE_LONGLONG:
+    case MYSQL_TYPE_YEAR:
     {
         int64_t value = luaL_checkinteger(L, index);
         stmt_fmt("%lld", value);
     }break;
     case MYSQL_TYPE_FLOAT:
     case MYSQL_TYPE_DOUBLE:
-    case MYSQL_TYPE_DECIMAL:
+    case MYSQL_TYPE_NEWDECIMAL:
     {
         double value = luaL_checknumber(L, index);
         stmt_fmt("%f", value);
+    } break;
+    case MYSQL_TYPE_DATETIME:
+    case MYSQL_TYPE_TIME:
+    case MYSQL_TYPE_DATE:
+    case MYSQL_TYPE_TIMESTAMP: // YYYY-MM-DD HH:MM:SS
+    {
+        size_t size     = 0;
+        const char *str = luaL_checklstring(L, index, &size);
+
+        stmt_append("'", 1);
+        stmt_append(str, (int32_t)size);
+        stmt_append("'", 1);
     }
     break;
     case MYSQL_TYPE_VARCHAR:
@@ -345,6 +362,8 @@ int32_t MySql::stmt_value(lua_State *L)
     case MYSQL_TYPE_BLOB:
     case MYSQL_TYPE_VAR_STRING:
     case MYSQL_TYPE_STRING:
+    case MYSQL_TYPE_ENUM:
+    case MYSQL_TYPE_SET:
     {
         size_t size = 0;
         const char *str = luaL_checklstring(L, index, &size);

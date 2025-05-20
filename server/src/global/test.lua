@@ -144,20 +144,25 @@ local function equal(got, expect)
     if got == expect then return true end
 
     local t = type(got)
-    if t ~= type(expect) or "table" ~= t then return false end
+    if t ~= type(expect) then return false end
+
+    if t == "number" then
+        -- double有精度问题，相差小于指定值即可认为是相等
+        return math.abs(got - expect) < 1e-5
+    else
+        if "table" ~= t then return false end
+    end
 
     -- test two table equal
     for k, v in pairs(expect) do
         if not equal(got[k], v) then
-            T.print("got value of key " .. tostring(k) .. " not match",
-                got[k], v)
+            T.print(string.format("%s expect %s, got %s", k, v, got[k]))
             return false
         end
     end
     for k, v in pairs(got) do
-        if not equal(expect[k], v) then
-            T.print("expect value of key " .. tostring(k) .. " not match",
-                expect[k], v)
+        if nil == expect[k] then
+            T.print(string.format("%s expect nil, got %s", k, v))
             return false
         end
     end
