@@ -272,7 +272,7 @@ int32_t MySql::result_to_lua(lua_State *L)
             const MYSQL_FIELD &field = fields[idx];
             lua_pushlstring(L, field.name, field.name_length);
 
-            // PLOG("result name = %s, type = %d", field.name, field.type);
+            // PLOG("field name = %s, type = %d", field.name, field.type);
             field_to_lua(L, field.type, row[idx], lengths[idx]);
             lua_rawset(L, -3);
         }

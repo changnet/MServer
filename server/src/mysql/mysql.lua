@@ -16,11 +16,14 @@ local MySql = require "engine.MySql"
 local MySQL = oo.class()
 
 local DEBUG = true -- 是否启用调试模式
+local stmt_str = MySql.stmt_str
+local stmt_value = MySql.stmt_value
 
 -- 类型字符串转为mysql类型，必须和mysql源码类型对应
 local TYPE_STR = {
     -- 在mysql_test里用data_type_test创建一个table，插入一条数据，再select出来
     -- 在C++那边就可以打印出各个类型对应枚举
+    -- 这里的类型和推导出来的不太一样：比如longtext是MYSQL_TYPE_BLOB=252而不是MYSQL_TYPE_LONG_BLOB=251
 
     -- TODO 这里只转换了部分常用的
 
@@ -132,7 +135,6 @@ function MySQL:read_table_struct(table_name)
         -- varchar(128)变为varchar
         local type_str = string.match(row.Type, "^%a+")
 
-
         types[row.Field] = assert(TYPE_STR[type_str])
     end
 
@@ -188,17 +190,17 @@ end
 local function stmt_wheres(mysql, types, wheres)
     if not wheres then return end
 
-    mysql:stmt_str(" WHERE ")
+    stmt_str(mysql, " WHERE ")
 
     local first = true
     for k, v in pairs(wheres) do
         if first then
             first = false
-            mysql:stmt_str("`", k, "`=")
+            stmt_str(mysql, "`", k, "`=")
         else
-            mysql:stmt_str(",`", k, "`=")
+            stmt_str(mysql, ",`", k, "`=")
         end
-        mysql:stmt_value(types[k], v)
+        stmt_value(mysql, types[k], v)
     end
 end
 
@@ -211,18 +213,18 @@ function MySQL:select(tbl, fields, wheres)
 
     mysql:stmt_clear()
     if fields then
-        mysql:stmt_str("SELECT (")
+        stmt_str(mysql, "SELECT (")
         for index, field in ipairs(fields) do
             if 1 == index then
 
-                mysql:stmt_str("`", field, "`")
+                stmt_str(mysql, "`", field, "`")
             else
-                mysql:stmt_str(",`", field, "`")
+                stmt_str(mysql, ",`", field, "`")
             end
         end
-        mysql:stmt_str(") FROM ", tbl)
+        stmt_str(mysql, ") FROM ", tbl)
     else
-        mysql:stmt_str("SELECT * FROM ", tbl)
+        stmt_str(mysql, "SELECT * FROM ", tbl)
     end
     stmt_wheres(mysql, self.types[tbl], wheres)
 
@@ -242,37 +244,37 @@ function MySQL:insert(tbl, rows, updates)
     local fields = fetch_fields(rows)
 
     mysql:stmt_clear()
-    mysql:stmt_str("INSERT INTO ", tbl, " (")
+    stmt_str(mysql, "INSERT INTO ", tbl, " (")
     for index, field in ipairs(fields) do
         if 1 == index then
-            mysql:stmt_str("`", field, "`")
+            stmt_str(mysql, "`", field, "`")
         else
-            mysql:stmt_str(",`", field, "`")
+            stmt_str(mysql, ",`", field, "`")
         end
     end
-    mysql:stmt_str(") VALUES ")
+    stmt_str(mysql, ") VALUES ")
 
     local types = self.types[tbl]
     for row_idx, row in pairs(rows) do
-        mysql:stmt_str(1 == row_idx and "(" or ",(")
+        stmt_str(mysql, 1 == row_idx and "(" or ",(")
         for index, field in ipairs(fields) do
-            if 1 ~= index then mysql:stmt_str(",") end
-            mysql:stmt_value(types[field], row[field])
+            if 1 ~= index then stmt_str(mysql, ",") end
+            stmt_value(mysql, types[field], row[field])
         end
-        mysql:stmt_str(")")
+        stmt_str(mysql, ")")
     end
 
     if updates then
-        mysql:stmt_str("ON DUPLICATE KEY UPDATE ")
+        stmt_str(mysql, "ON DUPLICATE KEY UPDATE ")
         -- 原生的sql，ON DUPLICATE KEY UPDATE 后面的a = xxx里，xxx支持数值、字符串，二进制
         -- 但这里无法区分是直接赋值还是a = values(a)这种sql语句，因此只支持sql语句
         local first = true
         for k, v in pairs(updates) do
             if first then
                 first = false
-                mysql:stmt_str("`", k, "`=", v)
+                stmt_str(mysql, "`", k, "`=", v)
             else
-                mysql:stmt_str(",`", k, "`=", v)
+                stmt_str(mysql, ",`", k, "`=", v)
             end
         end
     end
@@ -289,17 +291,17 @@ function MySQL:update(tbl, updates, wheres)
     local types = self.types[tbl]
 
     mysql:stmt_clear()
-    mysql:stmt_str("UPDATE ", tbl, " SET ")
+    stmt_str(mysql, "UPDATE ", tbl, " SET ")
 
     local first = true
     for k, v in pairs(updates) do
         if first then
             first = false
-            mysql:stmt_str("`", k, "`=")
+            stmt_str(mysql, "`", k, "`=")
         else
-            mysql:stmt_str(",`", k, "`=")
+            stmt_str(mysql, ",`", k, "`=")
         end
-        mysql:stmt_value(types[k], v)
+        stmt_value(mysql, types[k], v)
     end
     stmt_wheres(mysql, self.types[tbl], wheres)
 
