@@ -76,8 +76,6 @@ Test.describe("mysql test", function()
         Test.equal(mysql:exec(perf_test_stmt), 0)
         Test.equal(mysql:exec(data_type_test_stmt), 0)
         Test.assert(mysql:read_database_struct())
-        mysql:select("data_type_test2")
-        assert(false)
     end)
 
     Test.it("mysql base test", function()

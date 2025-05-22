@@ -7,6 +7,14 @@
 
 #define MONGO_VAR_LEN 64
 
+/**
+ * @brief MongoDB操作
+ * 各个驱动版本的支持的MongoDB Server及C语言标准支持：
+ * https://www.mongodb.com/docs/languages/c/c-driver/current/compatibility/#std-label-c-compatibility
+ * 
+ * MongoDB Server硬件、系统支持：
+ * https://www.mongodb.com/docs/manual/administration/production-notes/#std-label-prod-notes-supported-platforms
+ */
 class Mongo
 {
 public:
@@ -119,11 +127,19 @@ public:
     Mongo();
     ~Mongo();
 
-    void set(const char *ip, int32_t port, const char *usr, const char *pwd,
-             const char *db);
-
+    /**
+     * ping服务器是否连通
+     * @return 错误码
+     */
     int32_t ping();
-    int32_t connect();
+    /**
+     * 连接到数据库
+     * @param db_name 数据库名
+     * @param uri mongodb的连接字符串
+     * @return 错误码
+     */
+    int32_t connect(const char *db_name, const char *uri);
+    // 断开连接
     void disconnect();
 
     bool insert(const MongoQuery *mq, MongoResult *res);
@@ -137,12 +153,10 @@ private:
     mongoc_collection_t *get_collection(const char *collection);
 
 private:
-    int32_t port_;
-    char ip_[MONGO_VAR_LEN];
-    char usr_[MONGO_VAR_LEN];
-    char pwd_[MONGO_VAR_LEN];
-    char db_[MONGO_VAR_LEN];
-
-    mongoc_client_t *conn_;
+    bson_t ping_;
+    bson_error_t error_;
+    std::string db_name_;
+    mongoc_client_t *client_;
+    mongoc_database_t *database_;
     std::unordered_map<std::string, mongoc_collection_t *> collection_;
 };

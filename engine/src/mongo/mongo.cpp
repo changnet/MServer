@@ -12,100 +12,77 @@ void Mongo::cleanup()
 
 Mongo::Mongo()
 {
+    bson_init(&ping_);
+    bson_append_int32(&ping_, "ping", -1, 1);
+
     conn_ = nullptr;
+    database_ = nullptr;
 }
 
 Mongo::~Mongo()
 {
-    assert(nullptr == conn_);
+    disconnect();
 }
 
-void Mongo::set(const char *ip, const int32_t port, const char *usr,
-                const char *pwd, const char *db)
+int32_t Mongo::connect(const char *db_name, const char *uri)
 {
-    /* 将数据复制一份，允许上层释放对应的内存 */
-    port_ = port;
-    snprintf(ip_, MONGO_VAR_LEN, "%s", ip);
-    snprintf(usr_, MONGO_VAR_LEN, "%s", usr);
-    snprintf(pwd_, MONGO_VAR_LEN, "%s", pwd);
-    snprintf(db_, MONGO_VAR_LEN, "%s", db);
-}
+    if (conn_) -1;
 
-int32_t Mongo::connect()
-{
-    assert(!conn_);
+    mongoc_uri_t *m_uri = mongoc_uri_new_with_error(uri, &error_);
+    if (!uri) return error_.code;
 
-    char uri[PATH_MAX];
-    /* "mongodb://user:password@localhost/?authSource=mydb" */
-    snprintf(uri, PATH_MAX, "mongodb://%s:%s@%s:%d/?authSource=%s", usr_, pwd_,
-             ip_, port_, db_);
-    conn_ = mongoc_client_new(uri);
-    if (!conn_)
-    {
-        ELOG("parse mongo uri fail\n");
-        return 1;
-    }
+    conn_ = mongoc_client_new_from_uri_with_error(m_uri, &error_);
+    if (!conn_) return error_.code;
 
-    /* mongoc_client_new只是创建一个对象，并没有connect,ping保证连接通畅
-     * 默认10s超时.超服时阻塞,应该可以接受.尝试ping一下，失败也不一定说明有问题
-     * 需要关注日志。
-     */
-    return 0;
+    // 这个只是分配内存，并不会连接服务器
+    database_ = mongoc_client_get_database(conn_, db_name_.c_str());
+
+    return ping();
 }
 
 void Mongo::disconnect()
 {
-    if (conn_)
+    if (!conn_) return;
+
+    // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
+    // Each of these objects must be destroyed before the client they were
+    // created from, but their lifetimes are otherwise independent
+    for (auto iter = collection_.begin(); iter != collection_.end(); ++iter)
     {
-        // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
-        // Each of these objects must be destroyed before the client they were
-        // created from, but their lifetimes are otherwise independent
-        for (auto iter = collection_.begin(); iter != collection_.end(); ++iter)
-        {
-            mongoc_collection_destroy(iter->second);
-        }
-        collection_.clear();
-        mongoc_client_destroy(conn_);
+        mongoc_collection_destroy(iter->second);
     }
+    collection_.clear();
+
+    if (database_)
+    {
+        mongoc_database_destroy(database_);
+        database_ = nullptr;
+    }
+
+    mongoc_client_destroy(conn_);
     conn_ = nullptr;
 }
 
 int32_t Mongo::ping()
 {
-    assert(conn_);
+    if(!conn_) return -1;
 
-    bson_t ping;
-    bson_init(&ping);
-    bson_append_int32(&ping, "ping", -1, 1);
-    mongoc_database_t *database = mongoc_client_get_database(conn_, db_);
-
-    /* cursor总是需要释放 */
     mongoc_cursor_t *cursor = mongoc_database_command(
-        database, (mongoc_query_flags_t)0, 0, 1, 0, &ping, nullptr, nullptr);
+        database_, (mongoc_query_flags_t)0, 0, 1, 0, &ping_, nullptr, nullptr);
 
     const bson_t *reply;
-    if (mongoc_cursor_next(cursor, &reply))
+    if (!mongoc_cursor_next(cursor, &reply))
     {
-        mongoc_cursor_destroy(cursor);
-        bson_destroy(&ping);
-
-        mongoc_database_destroy(database);
-        return 0;
+        mongoc_cursor_error(cursor, &error_);
+    }
+    else
+    {
+        error_.code = 0;
     }
 
-    /* get the error */
-    bson_error_t error;
-    int32_t ecode = mongoc_cursor_error(cursor, &error);
-    if (ecode)
-    {
-        ELOG_R("mongo ping error(%d):%s", error.code, error.message);
-    }
+    mongoc_cursor_destroy(cursor); // cursor总是需要释放
 
-    mongoc_cursor_destroy(cursor);
-    bson_destroy(&ping);
-    mongoc_database_destroy(database);
-
-    return ecode;
+    return error_.code;
 }
 
 mongoc_collection_t *Mongo::get_collection(const char *collection)
@@ -122,7 +99,7 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     if (iter == collection_.end())
     {
         mongoc_collection_t *clt =
-            mongoc_client_get_collection(conn_, db_, collection);
+            mongoc_client_get_collection(conn_, db_name_.c_str(), collection);
         collection_.emplace(name, clt);
 
         return clt;
