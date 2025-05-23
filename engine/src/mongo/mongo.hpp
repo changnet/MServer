@@ -7,6 +7,8 @@
 
 #define MONGO_VAR_LEN 64
 
+struct lua_State;
+
 /**
  * @brief MongoDB操作
  * 各个驱动版本的支持的MongoDB Server及C语言标准支持：
@@ -133,6 +135,11 @@ public:
      */
     int32_t ping();
     /**
+     * 返回上一次错误（注意：不是每次操作都会清掉错误码）。上一次无错误则返回上上次的
+     * @return 错误码，错误消息
+     */
+    int32_t error(lua_State *L) const;
+    /**
      * 连接到数据库
      * @param db_name 数据库名
      * @param uri mongodb的连接字符串
@@ -146,13 +153,26 @@ public:
     bool update(const MongoQuery *mq, MongoResult *res);
     bool remove(const MongoQuery *mq, MongoResult *res);
     bool count(const MongoQuery *mq, MongoResult *res);
-    bool find(const MongoQuery *mq, MongoResult *res);
-    bool find_and_modify(const MongoQuery *mq, MongoResult *res);
+    /**
+     * 查询
+     * @param collection 集合名，即表名
+     * @param query 查询条件，json字符串或者lua table
+     * @param fields 需要查询的字段，json字符串或者lua table
+     */
+    int32_t find(lua_State *L);
+    /**
+     * 查询记录并修改
+     * @param collection 集合名，即表名
+     * @param query 查询条件，json字符串或者lua table
+     */
+    int32_t find_and_modify(lua_State *L);
 
 private:
+    void clear_error();
     mongoc_collection_t *get_collection(const char *collection);
 
 private:
+    double array_opt_; // 稀疏比例达到一定值，就会当作数组，具体参考lbson的check_type函数
     bson_t ping_;
     bson_error_t error_;
     std::string db_name_;

@@ -5,6 +5,9 @@
 #include <bson.h>
 #include "ltools.hpp" // lua_isbit32
 
+namespace lbson
+{
+
 static const char *ARRAY_OPT        = "__opt";
 static const int32_t MAX_STACK_DEEP = 128;
 static const int32_t MAX_KEY_LENGTH = 128;
@@ -18,7 +21,9 @@ static int32_t encode_value(lua_State *L, int32_t index, bson_t *b,
 static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
                         double opt);
 
-static void destory_bson_list() {}
+static void destory_bson_list()
+{
+}
 
 static void destory_bson_list(bson_t *b)
 {
@@ -239,7 +244,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
             if (len > MAX_KEY_LENGTH - 1)
             {
                 lua_pop(L, 2);
-                bson_set_error(e, 0, 0, "lua table string key too long");
+                bson_set_error(e, 0, -1, "lua table string key too long");
                 return -1;
             }
             key_len = (int32_t)len;
@@ -248,7 +253,7 @@ static int32_t encode_object(bson_t *b, lua_State *L, int32_t index,
         default:
         {
             lua_pop(L, 2);
-            bson_set_error(e, 0, 0, "can not convert %s to bson key",
+            bson_set_error(e, 0, -1, "can not convert %s to bson key",
                            lua_typename(L, lua_type(L, -2)));
             return -1;
         }
@@ -284,19 +289,19 @@ static int32_t encode_table(lua_State *L, int32_t index, bson_t *parent,
 {
     if (lua_gettop(L) > MAX_STACK_DEEP)
     {
-        bson_set_error(e, 0, 0, "over MAX_STACK_DEEP");
+        bson_set_error(e, 0, -1, "over MAX_STACK_DEEP");
         return -1;
     }
 
     if (!lua_checkstack(L, 2))
     {
-        bson_set_error(e, 0, 0, "stack overflow");
+        bson_set_error(e, 0, -1, "stack overflow");
         return -1;
     }
 
     if (!lua_istable(L, index))
     {
-        bson_set_error(e, 0, 0, "table expect, got %s",
+        bson_set_error(e, 0, -1, "table expect, got %s",
                        lua_typename(L, lua_type(L, index)));
         return -1;
     }
@@ -374,7 +379,7 @@ static int32_t encode_value(lua_State *L, int32_t index, bson_t *b,
     break;
     default:
     {
-        bson_set_error(e, 0, 0, "can not convert type %s to bson value",
+        bson_set_error(e, 0, -1, "can not convert type %s to bson value",
                        lua_typename(L, lua_type(L, index)));
         return -1;
     }
@@ -389,19 +394,19 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double opt)
 {
     if (lua_gettop(L) > MAX_STACK_DEEP)
     {
-        bson_set_error(e, 0, 0, "over MAX_STACK_DEEP");
+        bson_set_error(e, 0, -1, "over MAX_STACK_DEEP");
         return nullptr;
     }
 
     if (!lua_checkstack(L, 2))
     {
-        bson_set_error(e, 0, 0, "stack overflow");
+        bson_set_error(e, 0, -1, "stack overflow");
         return nullptr;
     }
 
     if (!lua_istable(L, index))
     {
-        bson_set_error(e, 0, 0, "table expect, got %s",
+        bson_set_error(e, 0, -1, "table expect, got %s",
                        lua_typename(L, lua_type(L, index)));
         return nullptr;
     }
@@ -469,7 +474,7 @@ static int decode_table(lua_State *L, bson_iter_t *iter, bson_error_t *e,
 
     if (!lua_checkstack(L, 3))
     {
-        bson_set_error(e, 0, 0, "decode_table stack overflow");
+        bson_set_error(e, 0, -1, "decode_table stack overflow");
         return -1;
     }
 
@@ -536,7 +541,7 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
         bson_iter_t sub_iter;
         if (!bson_iter_recurse(iter, &sub_iter))
         {
-            bson_set_error(e, 0, 0, "bson document iter recurse error");
+            bson_set_error(e, 0, -1, "bson document iter recurse error");
             return -1;
         }
         bool convert = is_convert_key(nullptr, iter, BSON_TYPE_DOCUMENT, opt);
@@ -551,7 +556,7 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
         bson_iter_t sub_iter;
         if (!bson_iter_recurse(iter, &sub_iter))
         {
-            bson_set_error(e, 0, 0, "bson array iter recurse error");
+            bson_set_error(e, 0, -1, "bson array iter recurse error");
             return -1;
         }
         if (decode_table(L, &sub_iter, e, BSON_TYPE_ARRAY, opt, false) < 0)
@@ -619,7 +624,7 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
     break;
     default:
     {
-        bson_set_error(e, 0, 0, "unknow bson type:%d", bson_iter_type(iter));
+        bson_set_error(e, 0, -1, "unknow bson type:%d", bson_iter_type(iter));
         return -1;
     }
     break;
@@ -637,7 +642,7 @@ static int decode(lua_State *L, bson_t *b, bson_error_t *e, bson_type_t type,
     bson_iter_t iter;
     if (!bson_iter_init(&iter, b))
     {
-        bson_set_error(e, 0, 0, "invalid bson document to decode");
+        bson_set_error(e, 0, -1, "invalid bson document to decode");
 
         return -1;
     }
@@ -693,3 +698,4 @@ bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double opt,
     luaL_error(L, "argument #%d expect table or json string", index);
     return nullptr;
 }
+} // namespace lbson

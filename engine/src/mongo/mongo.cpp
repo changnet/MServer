@@ -1,5 +1,7 @@
 #include "mongo.hpp"
 
+#include "lpp/lbson.hpp"
+
 void Mongo::init()
 {
     mongoc_init();
@@ -12,10 +14,13 @@ void Mongo::cleanup()
 
 Mongo::Mongo()
 {
+    array_opt_ = -1;
+    clear_error();
+
     bson_init(&ping_);
     bson_append_int32(&ping_, "ping", -1, 1);
 
-    conn_ = nullptr;
+    client_ = nullptr;
     database_ = nullptr;
 }
 
@@ -24,25 +29,30 @@ Mongo::~Mongo()
     disconnect();
 }
 
+void Mongo::clear_error()
+{
+    bson_set_error(&error_, 0, 0, "");
+}
+
 int32_t Mongo::connect(const char *db_name, const char *uri)
 {
-    if (conn_) -1;
+    if (client_) -1;
 
     mongoc_uri_t *m_uri = mongoc_uri_new_with_error(uri, &error_);
     if (!uri) return error_.code;
 
-    conn_ = mongoc_client_new_from_uri_with_error(m_uri, &error_);
-    if (!conn_) return error_.code;
+    client_ = mongoc_client_new_from_uri_with_error(m_uri, &error_);
+    if (!client_) return error_.code;
 
     // 这个只是分配内存，并不会连接服务器
-    database_ = mongoc_client_get_database(conn_, db_name_.c_str());
+    database_ = mongoc_client_get_database(client_, db_name_.c_str());
 
     return ping();
 }
 
 void Mongo::disconnect()
 {
-    if (!conn_) return;
+    if (!client_) return;
 
     // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
     // Each of these objects must be destroyed before the client they were
@@ -59,13 +69,13 @@ void Mongo::disconnect()
         database_ = nullptr;
     }
 
-    mongoc_client_destroy(conn_);
-    conn_ = nullptr;
+    mongoc_client_destroy(client_);
+    client_ = nullptr;
 }
 
 int32_t Mongo::ping()
 {
-    if(!conn_) return -1;
+    if(!client_) return -1;
 
     mongoc_cursor_t *cursor = mongoc_database_command(
         database_, (mongoc_query_flags_t)0, 0, 1, 0, &ping_, nullptr, nullptr);
@@ -85,6 +95,13 @@ int32_t Mongo::ping()
     return error_.code;
 }
 
+int32_t Mongo::error(lua_State* L) const
+{
+    lua_pushinteger(L, error_.code);
+    lua_pushstring(L, error_.message);
+    return 2;
+}
+
 mongoc_collection_t *Mongo::get_collection(const char *collection)
 {
     // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
@@ -98,11 +115,11 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     auto iter = collection_.find(name);
     if (iter == collection_.end())
     {
-        mongoc_collection_t *clt =
-            mongoc_client_get_collection(conn_, db_name_.c_str(), collection);
-        collection_.emplace(name, clt);
+        mongoc_collection_t *cl =
+            mongoc_client_get_collection(client_, db_name_.c_str(), collection);
+        collection_.emplace(name, cl);
 
-        return clt;
+        return cl;
     }
 
     return iter->second;
@@ -111,7 +128,7 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
 bool Mongo::count(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(conn_);
+    assert(client_);
 
     mongoc_collection_t *collection = get_collection(mq->clt_);
 
@@ -134,16 +151,19 @@ bool Mongo::count(const MongoQuery *mq, MongoResult *res)
     return true;
 }
 
-bool Mongo::find(const MongoQuery *mq, MongoResult *res)
+int32_t Mongo::find(lua_State *L)
 {
-    assert(mq);
-    assert(conn_);
+    if (!client_) return luaL_error(L, "database not connect");
 
-    mongoc_collection_t *collection = get_collection(mq->clt_);
+    const char *cl_name = luaL_checkstring(L, 2);
+    bson_t *query       = lbson::bson_new_from_lua(L, 3, 1, array_opt_);
+    bson_t *opts        = lbson::bson_new_from_lua(L, 4, 0, array_opt_, query);
+
+    mongoc_collection_t *collection = get_collection(cl_name);
 
     // http://mongoc.org/libmongoc/current/mongoc_collection_find_with_opts.html
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-        collection, mq->query_, mq->opts_, nullptr);
+        collection, query, opts, nullptr);
 
     int32_t index = 0;
     bson_t *doc   = bson_new();
@@ -151,63 +171,77 @@ bool Mongo::find(const MongoQuery *mq, MongoResult *res)
     const bson_t *sub_doc = nullptr;
     while (mongoc_cursor_next(cursor, &sub_doc))
     {
-        /* The bson objects set in this function are ephemeral and good until
-         * the next call. This means that you must copy the returned bson if you
-         * wish to retain it beyond the lifetime of a single call to
-         * mongoc_cursor_next()
+        /**
          * bson_append_document内部使用memcpy做了内存拷贝,无需使用bson_copy
-         * 对bson，array、document是一样的，只是前者的key必须为0 1 2 ...,使用
+         * array、document是一样的，只是前者的key必须为0 1 2 ...,使用
          * bson_append_document还是bson_append_array仅在bson_iter_type中有区别
          */
 
-        const int32_t buff_len = 128;
-        char index_buff[buff_len];
-        snprintf(index_buff, buff_len, "%d", index);
+        // TODO 这里每次调用snprintf效率是不是有点低，要不要做缓存
+        // TODO 直接在lua栈上创建一个table是否可行？不用append_document
+        char key[128];
+        int32_t key_len = (int32_t)snprintf(key, sizeof(key), "%d", index);
+        assert(key_len < sizeof(key));
 
-        bool r = BSON_APPEND_DOCUMENT(doc, index_buff, sub_doc);
+        bool r = bson_append_document(doc, key, key_len, sub_doc);
         index++;
 
         assert(r);
         UNUSED(r);
     }
 
-    if (mongoc_cursor_error(cursor, &res->error_))
+    int32_t e = 0;
+    if (mongoc_cursor_error(cursor, &error_))
     {
-        ELOG_R("mongoc_cursor_error");
         bson_destroy(doc);
-        res->data_ = nullptr;
-
-        return false;
+        e = error_.code;
     }
-
-    res->data_ = doc;
 
     mongoc_cursor_destroy(cursor);
 
-    return true;
+    lua_pushinteger(L, e);
+    if (e) return 1;
+
+    e = lbson::decode(L, doc, &error_, BSON_TYPE_ARRAY, array_opt_);
+    bson_destroy(doc);
+    if (e)
+    {
+        lua_pop(L, 1); // pop old error
+        lua_pushinteger(L, error_.code);
+        return 1;
+    }
+
+    return 2;
 }
 
-bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
+int32_t Mongo::find_and_modify(lua_State *L)
 {
-    assert(mq);
-    assert(conn_);
+    if (!client_) return luaL_error(L, "database not connect");
 
-    mongoc_collection_t *collection = get_collection(mq->clt_);
+    const char *cl_name = luaL_checkstring(L, 2);
 
-    assert(nullptr == res->data_);
+    bson_t *query  = lbson::bson_new_from_lua(L, 3, 1, array_opt_);
+    bson_t *sort   = lbson::bson_new_from_lua(L, 4, 0, array_opt_, query);
+    bson_t *update = lbson::bson_new_from_lua(L, 5, 1, array_opt_, query, sort);
+    bson_t *fields =
+        lbson::bson_new_from_lua(L, 6, 0, array_opt_, query, sort, update);
+    bool remove  = lua_toboolean(L, 7);
+    bool upsert  = lua_toboolean(L, 8);
+    bool ret_new = lua_toboolean(L, 9);
 
-    res->data_ = bson_new();
+    mongoc_collection_t *collection = get_collection(cl_name);
+
+    bson_t *reply = bson_new();
     // http://mongoc.org/libmongoc/current/mongoc_find_and_modify_opts_t.html#functions
     // mongoc_find_and_modify_opts的功能和这一样，只不过使用了opts参数，参数显示简洁一些
     // 不过需要额外构建一个mongoc_find_and_modify_opts_t类型
     bool ok = mongoc_collection_find_and_modify(
-        collection, mq->query_, mq->sort_, mq->update_, mq->fields_,
-        mq->remove_, mq->upsert_, mq->new_, res->data_, &res->error_);
+        collection, query, sort, update, fields, remove, upsert, ret_new,
+                                                reply, &error_);
 
     if (!ok)
     {
-        bson_destroy(res->data_);
-        res->data_ = nullptr;
+        bson_destroy(reply);
 
         return false;
     }
@@ -218,7 +252,7 @@ bool Mongo::find_and_modify(const MongoQuery *mq, MongoResult *res)
 bool Mongo::insert(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(conn_);
+    assert(client_);
 
     mongoc_collection_t *collection = get_collection(mq->clt_);
 
@@ -231,7 +265,7 @@ bool Mongo::insert(const MongoQuery *mq, MongoResult *res)
 bool Mongo::update(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(conn_);
+    assert(client_);
 
     mongoc_collection_t *collection = get_collection(mq->clt_);
 
@@ -246,7 +280,7 @@ bool Mongo::update(const MongoQuery *mq, MongoResult *res)
 bool Mongo::remove(const MongoQuery *mq, MongoResult *res)
 {
     assert(mq);
-    assert(conn_);
+    assert(client_);
 
     mongoc_collection_t *collection = get_collection(mq->clt_);
 
