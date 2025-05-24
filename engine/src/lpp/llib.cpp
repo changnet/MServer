@@ -8,7 +8,6 @@
 #include "lastar.hpp"
 #include "llog.hpp"
 #include "lmap.hpp"
-#include "lmongo.hpp"
 #include "lutil.hpp"
 #include "llist_aoi.hpp"
 
@@ -20,6 +19,7 @@
 #include "system/signal.hpp"
 #include "thread/worker_thread.hpp"
 #include "mysql/mysql.hpp"
+#include "mongo/mongo.hpp"
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
 
@@ -209,9 +209,17 @@ static void luaopen_mysql(lua_State *L)
 
 static void luaopen_mongo(lua_State *L)
 {
-    //lcpp::Class<LMongo> lc(L, "engine.Mongo");
-    //lc.def<&LMongo::start>("start");
-    //lc.def<&LMongo::stop>("stop");
+    lcpp::Class<Mongo> lc(L, "engine.Mongo");
+    lc.def<&Mongo::connect>("connect");
+    lc.def<&Mongo::disconnect>("disconnect");
+
+    lc.def<&Mongo::ping>("ping");
+    lc.def<&Mongo::error>("error");
+    lc.def<&Mongo::insert>("insert");
+    lc.def<&Mongo::update>("update");
+    lc.def<&Mongo::count>("count");
+    lc.def<&Mongo::find>("find");
+    lc.def<&Mongo::find_and_modify>("find_and_modify");
 }
 
 static void luaopen_log(lua_State *L)

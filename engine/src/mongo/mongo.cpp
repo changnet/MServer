@@ -125,30 +125,22 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     return iter->second;
 }
 
-bool Mongo::count(const MongoQuery *mq, MongoResult *res)
+int32_t Mongo::count(lua_State *L)
 {
-    assert(mq);
-    assert(client_);
+    if (!client_) return luaL_error(L, "database not connect");
 
-    mongoc_collection_t *collection = get_collection(mq->clt_);
+    const char *cl_name = luaL_checkstring(L, 2);
+    bson_t *query       = lbson::bson_new_from_lua(L, 3, 0, array_opt_);
+    bson_t *opts        = lbson::bson_new_from_lua(L, 4, 0, array_opt_, query);
 
-    // opts = {"skip":1,"limit":5}
-    int64_t count = mongoc_collection_count_documents(
-        collection, mq->query_, mq->opts_, nullptr, nullptr, &res->error_);
+    mongoc_collection_t *collection = get_collection(cl_name);
 
-    if (count < 0) /* 如果失败，返回-1 */
-    {
-        res->data_ = nullptr;
+    // 如果失败，返回-1
+    int64_t count = mongoc_collection_count_documents(collection, query, opts,
+                                                      nullptr, nullptr, &error_);
 
-        return false;
-    }
-
-    bson_t *doc = bson_new();
-    BSON_APPEND_INT64(doc, "count", count);
-
-    res->data_ = doc;
-
-    return true;
+    lua_pushinteger(L, count);
+    return 1;
 }
 
 int32_t Mongo::find(lua_State *L)
@@ -238,55 +230,69 @@ int32_t Mongo::find_and_modify(lua_State *L)
     bool ok = mongoc_collection_find_and_modify(
         collection, query, sort, update, fields, remove, upsert, ret_new,
                                                 reply, &error_);
-
-    if (!ok)
+    int32_t e = 0;
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    if (ok)
     {
-        bson_destroy(reply);
-
-        return false;
+        e = lbson::decode(L, reply, &error_, BSON_TYPE_ARRAY, array_opt_);
+        if (e)
+        {
+            lua_pop(L, 1); // pop old error
+            lua_pushinteger(L, error_.code);
+        }
     }
+    bson_destroy(reply);
 
-    return true;
+    return e ? 1 : 2;
 }
 
-bool Mongo::insert(const MongoQuery *mq, MongoResult *res)
+int32_t Mongo::insert(lua_State *L)
 {
-    assert(mq);
-    assert(client_);
+    if (!client_) return luaL_error(L, "database not connect");
 
-    mongoc_collection_t *collection = get_collection(mq->clt_);
+    const char *cl_name = luaL_checkstring(L, 2);
+    bson_t *query       = lbson::bson_new_from_lua(L, 3, -1, array_opt_);
 
-    bool ok = mongoc_collection_insert(collection, MONGOC_INSERT_NONE,
-                                       mq->query_, nullptr, &res->error_);
+    mongoc_collection_t *collection = get_collection(cl_name);
 
-    return ok;
+    bool ok = mongoc_collection_insert(collection, MONGOC_INSERT_NONE, query,
+                                       nullptr, &error_);
+
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    return 1;
 }
 
-bool Mongo::update(const MongoQuery *mq, MongoResult *res)
+int32_t Mongo::update(lua_State *L)
 {
-    assert(mq);
-    assert(client_);
+    if (!client_) return luaL_error(L, "database not connect");
 
-    mongoc_collection_t *collection = get_collection(mq->clt_);
+    const char *cl_name = luaL_checkstring(L, 2);
+    int32_t flags       = luaL_checkinteger32(L, 3);
+    bson_t *query       = lbson::bson_new_from_lua(L, 3, -1, array_opt_);
+    bson_t *update      = lbson::bson_new_from_lua(L, 4, -1, array_opt_, query);
 
-    mongoc_update_flags_t flags = (mongoc_update_flags_t)mq->flags_;
 
-    bool ok = mongoc_collection_update(collection, flags, mq->query_,
-                                       mq->update_, nullptr, &res->error_);
+    mongoc_collection_t *collection = get_collection(cl_name);
+    bool ok = mongoc_collection_update(collection, (mongoc_update_flags_t)flags,
+                                       query, update, nullptr, &error_);
 
-    return ok;
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    return 1;
 }
 
-bool Mongo::remove(const MongoQuery *mq, MongoResult *res)
+int32_t Mongo::remove(lua_State *L)
 {
-    assert(mq);
-    assert(client_);
+    if (!client_) return luaL_error(L, "database not connect");
 
-    mongoc_collection_t *collection = get_collection(mq->clt_);
+    const char *cl_name = luaL_checkstring(L, 2);
+        int32_t flags = luaL_checkinteger32(L, 3);
+    bson_t *query = lbson::bson_new_from_lua(L, 3, -1, array_opt_);
+    mongoc_collection_t *collection = get_collection(cl_name);
 
     bool ok =
-        mongoc_collection_remove(collection, (mongoc_remove_flags_t)mq->flags_,
-                                 mq->query_, nullptr, &res->error_);
+        mongoc_collection_remove(collection, (mongoc_remove_flags_t)flags,
+                                 query, nullptr, &error_);
 
-    return ok;
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    return 1;
 }
