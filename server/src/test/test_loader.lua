@@ -16,11 +16,11 @@ require "test.co_test"
 require "test.socket_test"
 require "test.log_test"
 require "test.mysql_test"
+require "test.mongodb_test"
 
 --[[
 require "test.grid_aoi_test"
 require "test.list_aoi_test"
-require "test.mongodb_test"
 require "test.words_filter_test"
 require "test.rank_test"
 require "test.rpc_test"

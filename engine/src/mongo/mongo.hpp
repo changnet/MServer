@@ -35,12 +35,11 @@ public:
      */
     int32_t error(lua_State *L) const;
     /**
-     * 连接到数据库
-     * @param db_name 数据库名
+     * 使用uri字符串连接到数据库
      * @param uri mongodb的连接字符串
      * @return 错误码
      */
-    int32_t connect(const char *db_name, const char *uri);
+    int32_t uriconnect(lua_State *L);
     // 断开连接
     void disconnect();
 
@@ -108,7 +107,6 @@ private:
     double array_opt_; // 稀疏比例达到一定值，就会当作数组，具体参考lbson的check_type函数
     bson_t ping_;
     bson_error_t error_;
-    std::string db_name_;
     mongoc_client_t *client_;
     mongoc_database_t *database_;
     std::unordered_map<std::string, mongoc_collection_t *> collection_;

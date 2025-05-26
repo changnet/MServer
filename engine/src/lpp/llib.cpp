@@ -210,7 +210,7 @@ static void luaopen_mysql(lua_State *L)
 static void luaopen_mongo(lua_State *L)
 {
     lcpp::Class<Mongo> lc(L, "engine.Mongo");
-    lc.def<&Mongo::connect>("connect");
+    lc.def<&Mongo::uriconnect>("uriconnect");
     lc.def<&Mongo::disconnect>("disconnect");
 
     lc.def<&Mongo::ping>("ping");

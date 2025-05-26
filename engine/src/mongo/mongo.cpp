@@ -34,20 +34,34 @@ void Mongo::clear_error()
     bson_set_error(&error_, 0, 0, "");
 }
 
-int32_t Mongo::connect(const char *db_name, const char *uri)
+int32_t Mongo::uriconnect(lua_State *L)
 {
-    if (client_) -1;
+    if (client_) return luaL_error(L, "already connect");
+
+    const char *uri = luaL_checkstring(L, 2);
 
     mongoc_uri_t *m_uri = mongoc_uri_new_with_error(uri, &error_);
-    if (!uri) return error_.code;
+    if (!uri)
+    {
+        lua_pushinteger(L, error_.code);
+        return 1;
+    }
 
     client_ = mongoc_client_new_from_uri_with_error(m_uri, &error_);
-    if (!client_) return error_.code;
+    if (!client_)
+    {
+        lua_pushinteger(L, error_.code);
+        return 1;
+    }
 
     // 这个只是分配内存，并不会连接服务器
-    database_ = mongoc_client_get_database(client_, db_name_.c_str());
+    database_ = mongoc_client_get_default_database(client_);
+    // 目前的用法，连接时必须指定一个database;
+    if (!database_) return luaL_error(L, "no database in uri");
 
-    return ping();
+    int32_t e = ping();
+    lua_pushinteger(L, e);
+    return 1;
 }
 
 void Mongo::disconnect()
@@ -116,7 +130,7 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     if (iter == collection_.end())
     {
         mongoc_collection_t *cl =
-            mongoc_client_get_collection(client_, db_name_.c_str(), collection);
+            mongoc_database_get_collection(database_, collection);
         collection_.emplace(name, cl);
 
         return cl;

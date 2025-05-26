@@ -1,40 +1,36 @@
--- 封装一个常用的MongoDB连接实例
--- 如果数据量大，需要多个db连接，可参照当前实例额外创建另一个
+-- MongoDB读写
+local MongoDB = oo.class()
 
-local MongoDBInterface = require "mongodb.mongodb_interface"
+local Mongo = require "engine.Mongo"
 
-local this = global_storage("MongoDB", {}, function(storage)
-    storage.db = MongoDBInterface("MongoDB")
-end)
+--//////////////////////////////////////////////////////////////////////////////
+local C_FUNC =
+{
+    "uriconnect",
+    "disconnect",
+    "ping",
+    "error",
+    "insert",
+    "update",
+    "count",
+    "find",
+    "find_and_modify",
+}
 
+oo.using(MongoDB, Mongo, function(name, func)
+    return function(self, ...) return func(self.mongo, ...) end
+end, C_FUNC)
+--//////////////////////////////////////////////////////////////////////////////
 
--- 初始化db日志
-local function on_app_start(check)
-    if check then
-        return this.ok
-    end
-
-    -- 连接数据库
-    this.db:start(g_setting.mongo_ip, g_setting.mongo_port,
-        g_setting.mongo_user, g_setting.mongo_pwd,
-        g_setting.mongo_db, function()
-            this.ok = true
-    end)
-
-    return false
+function MongoDB:__init()
+    self.mongo = Mongo()
 end
 
--- 关闭MongoDB线程
-local function on_app_stop()
-    this.db:stop()
-
-    return true
+function MongoDB:connect(host, port, user, passwd, database)
+    -- mongodb://test_usr:test_pwd@127.0.0.1:27017/test_db
+    return self.mongo:uriconnect(string.format(
+        "mongodb://%s:%s@%s:%d/%s",
+        user, passwd, host, port or 27017, database))
 end
 
--- 启动优先级高，其他模块依赖db来加载数据
-App.reg_start("MongoDB", on_app_start, 10)
-
--- 关闭优先级低，需要等其他模块存完数据
-App.reg_stop("MongoDB", on_app_stop, 28)
-
-return this.db
+return MongoDB

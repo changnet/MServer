@@ -3,11 +3,10 @@
 # mongo control shell
 # 一些常用的mongo操作放这里。线上部署不要用这里的用户名和密码
 
-# mongo 127.0.0.1:27013
-# mongo 127.0.0.1:27013/mudrv -u test -p test
+# mongo 127.0.0.1:27013/test_999 -u test -p test
 # use admin
 # db.createUser( {user:"xzc",pwd:"1",roles:["userAdminAnyDatabase","dbAdminAnyDatabase"]} )
-# use mudrv
+# use test_999
 # db.createUser( {user:"test",pwd:"test",roles:["dbOwner","userAdmin","readWrite"]} )
 # show users;
 # show dbs;
@@ -16,12 +15,12 @@
 # db.item.drop();
 
 # mongo可以运行js文件，但是这个js文件是不能用"use admin"这种mongo shell命令
-# mongo 127.0.0.1:27013/mudrv -u test -p test command.js
+# mongo 127.0.0.1:27013/test_999 -u test -p test command.js
 
 # 还可以把mongo shell命令写在文件中，直接导入mongo，这个和使用js文件是不一样的
 # 相当于把文件中的内容一行行输入mongo shell。
 # 因此在文件中需要注意换行。比如for循环的大括号就不能换行
-# mongo 127.0.0.1:27013/mudrv -u test -p test < command.js
+# mongosh 127.0.0.1:27013/test_999 -u test -p test < command.js
 
 # 用于开发、测试的帐号和用户名
 DEF_USR=test
@@ -50,64 +49,66 @@ function admin()
 # userAdminAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的userAdmin权限
 # dbAdminAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的dbAdmin权限。
 # root：只在admin数据库中可用。超级账号，超级权限
-    mongo --host 127.0.0.1 --port 27017 << EOF
+    mongosh --host 127.0.0.1 --port 27017 << EOF
 use admin
 db.createUser( {user:"$DEF_ADM",pwd:"$DEF_PWD",roles:["userAdminAnyDatabase","dbAdminAnyDatabase"]} )
 EOF
 }
 
-# ./mongo.sh shell 数据库
-# 进入测试服数据库shell ./mongo.sh shell test_999
+# ./mongodb.sh shell 数据库
+# 进入测试服数据库shell ./mongodb.sh shell test_999
 function shell()
 {
-    mongo --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $1
+    mongosh --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $1
 }
 
 # 运行mongo脚本文件
-# ./mongo.sh cmd test_999 mongo_clear
+# ./mongodb.sh cmd test_999 mongo_clear
 function cmd()
 {
-    mongo --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $3 < ../project/$4.js
+    mongosh --host 127.0.0.1 --port 27017 -u $DEF_USR -p $DEF_PWD $3 < ../project/$4.js
 }
 
-# 安装数据库并创建用于测试的用户
+# ./mongodb.sh install
+# 安装数据库并创建用于测试的用户，此命令必须用管理员执行
 function install()
 {
 	# https://docs.mongodb.com/manual/tutorial/install-mongodb-on-debian/
-	MONGODB_V=4.4
+	# Debian 12 "Bookworm" + MongoDB 8.0 Community Edition 2025-05
 	# 获取debian的名字，如debian 10叫buster
-	CODENAME=`cat /etc/os-release | grep CODENAME | awk -F = '{ print $2 }'`
-	apt install -y gnupg
-	wget -qO - https://www.mongodb.org/static/pgp/server-$MONGODB_V.asc | apt-key add -
-	echo "deb http://repo.mongodb.org/apt/debian $CODENAME/mongodb-org/$MONGODB_V main" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+	apt install -y gnupg curl
+	curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
+   		gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+	echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
 	apt update
 	apt install -y mongodb-org
-	
+
 	# mongodb默认在OS启动时没有启动数据库，需要手动开启
 	systemctl enable mongod
+	systemctl daemon-reload
 
 	# mongodb默认没有启动数据库
 	systemctl start mongod
 	echo "wait for mongodb start ..."
 	sleep 15
-	
+
 	# 创建管理员
 	echo "create administrator: $DEF_ADM"
 	admin
-	
+
 	# 加上安全选项
 	echo "stop mongodb and set security option"
 	systemctl stop mongod
 	sed -i -e 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/g' /etc/mongod.conf
 	sed -i -e 's/#security:/security:\n  authorization: enabled/g' /etc/mongod.conf
-	
+
 	# 创建测试用帐号
 	echo "start mongodb ..."
 	systemctl start mongod
 	echo "wait for mongodb start ..."
 	sleep 15
 	echo "create test database: $DEF_DBN"
-	mongo --host 127.0.0.1 --port 27017 -u$DEF_ADM -p$DEF_PWD admin << EOF
+	mongosh --host 127.0.0.1 --port 27017 -u $DEF_ADM -p $DEF_PWD admin << EOF
 use $DEF_DBN
 db.createUser( {user:"$DEF_USR",pwd:"$DEF_PWD",roles:["dbAdmin","readWrite"]} )
 EOF
