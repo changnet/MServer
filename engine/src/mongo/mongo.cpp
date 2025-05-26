@@ -20,7 +20,7 @@ Mongo::Mongo()
     bson_init(&ping_);
     bson_append_int32(&ping_, "ping", -1, 1);
 
-    client_ = nullptr;
+    client_   = nullptr;
     database_ = nullptr;
 }
 
@@ -75,7 +75,7 @@ void Mongo::disconnect()
 
 int32_t Mongo::ping()
 {
-    if(!client_) return -1;
+    if (!client_) return -1;
 
     mongoc_cursor_t *cursor = mongoc_database_command(
         database_, (mongoc_query_flags_t)0, 0, 1, 0, &ping_, nullptr, nullptr);
@@ -95,7 +95,7 @@ int32_t Mongo::ping()
     return error_.code;
 }
 
-int32_t Mongo::error(lua_State* L) const
+int32_t Mongo::error(lua_State *L) const
 {
     lua_pushinteger(L, error_.code);
     lua_pushstring(L, error_.message);
@@ -130,15 +130,16 @@ int32_t Mongo::count(lua_State *L)
     if (!client_) return luaL_error(L, "database not connect");
 
     const char *cl_name = luaL_checkstring(L, 2);
-    bson_t *query       = lbson::bson_new_from_lua(L, 3, 0, array_opt_);
-    bson_t *opts        = lbson::bson_new_from_lua(L, 4, 0, array_opt_, query);
+    bson_t *filter      = lbson::optbson(L, 3, array_opt_);
+    bson_t *opts        = lbson::tobson(L, 4, array_opt_, filter);
 
     mongoc_collection_t *collection = get_collection(cl_name);
 
     // 如果失败，返回-1
-    int64_t count = mongoc_collection_count_documents(collection, query, opts,
+    int64_t count = mongoc_collection_count_documents(collection, filter, opts,
                                                       nullptr, nullptr, &error_);
 
+    lbson::bson_destory_list(filter, opts);
     lua_pushinteger(L, count);
     return 1;
 }
@@ -148,14 +149,14 @@ int32_t Mongo::find(lua_State *L)
     if (!client_) return luaL_error(L, "database not connect");
 
     const char *cl_name = luaL_checkstring(L, 2);
-    bson_t *query       = lbson::bson_new_from_lua(L, 3, 1, array_opt_);
-    bson_t *opts        = lbson::bson_new_from_lua(L, 4, 0, array_opt_, query);
+    bson_t *filter      = lbson::optbson(L, 3, array_opt_);
+    bson_t *opts        = lbson::tobson(L, 4, array_opt_, filter);
 
     mongoc_collection_t *collection = get_collection(cl_name);
 
     // http://mongoc.org/libmongoc/current/mongoc_collection_find_with_opts.html
-    mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-        collection, query, opts, nullptr);
+    mongoc_cursor_t *cursor =
+        mongoc_collection_find_with_opts(collection, filter, opts, nullptr);
 
     int32_t index = 0;
     bson_t *doc   = bson_new();
@@ -190,6 +191,7 @@ int32_t Mongo::find(lua_State *L)
     }
 
     mongoc_cursor_destroy(cursor);
+    lbson::bson_destory_list(filter, opts);
 
     lua_pushinteger(L, e);
     if (e) return 1;
@@ -212,14 +214,13 @@ int32_t Mongo::find_and_modify(lua_State *L)
 
     const char *cl_name = luaL_checkstring(L, 2);
 
-    bson_t *query  = lbson::bson_new_from_lua(L, 3, 1, array_opt_);
-    bson_t *sort   = lbson::bson_new_from_lua(L, 4, 0, array_opt_, query);
-    bson_t *update = lbson::bson_new_from_lua(L, 5, 1, array_opt_, query, sort);
-    bson_t *fields =
-        lbson::bson_new_from_lua(L, 6, 0, array_opt_, query, sort, update);
-    bool remove  = lua_toboolean(L, 7);
-    bool upsert  = lua_toboolean(L, 8);
-    bool ret_new = lua_toboolean(L, 9);
+    bson_t *query  = lbson::optbson(L, 3, array_opt_);
+    bson_t *sort   = lbson::optbson(L, 4, array_opt_, query);
+    bson_t *update = lbson::optbson(L, 5, array_opt_, query, sort);
+    bson_t *fields = lbson::optbson(L, 6, array_opt_, query, sort, update);
+    bool remove    = lua_toboolean(L, 7);
+    bool upsert    = lua_toboolean(L, 8);
+    bool ret_new   = lua_toboolean(L, 9);
 
     mongoc_collection_t *collection = get_collection(cl_name);
 
@@ -227,8 +228,8 @@ int32_t Mongo::find_and_modify(lua_State *L)
     // http://mongoc.org/libmongoc/current/mongoc_find_and_modify_opts_t.html#functions
     // mongoc_find_and_modify_opts的功能和这一样，只不过使用了opts参数，参数显示简洁一些
     // 不过需要额外构建一个mongoc_find_and_modify_opts_t类型
-    bool ok = mongoc_collection_find_and_modify(
-        collection, query, sort, update, fields, remove, upsert, ret_new,
+    bool ok = mongoc_collection_find_and_modify(collection, query, sort, update,
+                                                fields, remove, upsert, ret_new,
                                                 reply, &error_);
     int32_t e = 0;
     lua_pushinteger(L, ok ? 0 : error_.code);
@@ -241,7 +242,7 @@ int32_t Mongo::find_and_modify(lua_State *L)
             lua_pushinteger(L, error_.code);
         }
     }
-    bson_destroy(reply);
+    lbson::bson_destory_list(query, sort, update, fields, reply);
 
     return e ? 1 : 2;
 }
@@ -251,13 +252,13 @@ int32_t Mongo::insert(lua_State *L)
     if (!client_) return luaL_error(L, "database not connect");
 
     const char *cl_name = luaL_checkstring(L, 2);
-    bson_t *query       = lbson::bson_new_from_lua(L, 3, -1, array_opt_);
+    bson_t *document    = lbson::checkbson(L, 3, array_opt_);
 
     mongoc_collection_t *collection = get_collection(cl_name);
-
-    bool ok = mongoc_collection_insert(collection, MONGOC_INSERT_NONE, query,
+    bool ok = mongoc_collection_insert(collection, MONGOC_INSERT_NONE, document,
                                        nullptr, &error_);
 
+    bson_destroy(document);
     lua_pushinteger(L, ok ? 0 : error_.code);
     return 1;
 }
@@ -268,14 +269,14 @@ int32_t Mongo::update(lua_State *L)
 
     const char *cl_name = luaL_checkstring(L, 2);
     int32_t flags       = luaL_checkinteger32(L, 3);
-    bson_t *query       = lbson::bson_new_from_lua(L, 3, -1, array_opt_);
-    bson_t *update      = lbson::bson_new_from_lua(L, 4, -1, array_opt_, query);
-
+    bson_t *selector    = lbson::checkbson(L, 3, array_opt_);
+    bson_t *update      = lbson::checkbson(L, 4, array_opt_, selector);
 
     mongoc_collection_t *collection = get_collection(cl_name);
     bool ok = mongoc_collection_update(collection, (mongoc_update_flags_t)flags,
-                                       query, update, nullptr, &error_);
+                                       selector, update, nullptr, &error_);
 
+    lbson::bson_destory_list(selector, update);
     lua_pushinteger(L, ok ? 0 : error_.code);
     return 1;
 }
@@ -284,15 +285,15 @@ int32_t Mongo::remove(lua_State *L)
 {
     if (!client_) return luaL_error(L, "database not connect");
 
-    const char *cl_name = luaL_checkstring(L, 2);
-        int32_t flags = luaL_checkinteger32(L, 3);
-    bson_t *query = lbson::bson_new_from_lua(L, 3, -1, array_opt_);
+    const char *cl_name             = luaL_checkstring(L, 2);
+    int32_t flags                   = luaL_checkinteger32(L, 3);
+    bson_t *selector                = lbson::checkbson(L, 3, array_opt_);
     mongoc_collection_t *collection = get_collection(cl_name);
 
-    bool ok =
-        mongoc_collection_remove(collection, (mongoc_remove_flags_t)flags,
-                                 query, nullptr, &error_);
+    bool ok = mongoc_collection_remove(collection, (mongoc_remove_flags_t)flags,
+                                       selector, nullptr, &error_);
 
+    bson_destroy(selector);
     lua_pushinteger(L, ok ? 0 : error_.code);
     return 1;
 }

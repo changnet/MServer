@@ -21,19 +21,19 @@ static int32_t encode_value(lua_State *L, int32_t index, bson_t *b,
 static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
                         double opt);
 
-static void destory_bson_list()
+static void bson_destory_list()
 {
 }
 
-static void destory_bson_list(bson_t *b)
+static void bson_destory_list(bson_t *b)
 {
-    bson_destroy(b);
+    bson_destroy(b); // bson_destory里有检测b是否为nullptr
 }
 
-template <typename... Args> void destory_bson_list(bson_t *b, Args... args)
+template <typename... Args> void bson_destory_list(bson_t *b, Args... args)
 {
-    destory_bson_list(b);
-    destory_bson_list(args...);
+    bson_destory_list(b);
+    bson_destory_list(args...);
 }
 
 /**
@@ -652,16 +652,14 @@ static int decode(lua_State *L, bson_t *b, bson_error_t *e, bson_type_t type,
 }
 
 /**
- * 从lua堆栈构建一个bson对象。如果构建失败，此函数为执行luaL_error
+ * 从lua堆栈构建一个bson对象。构建出错，销毁destroy_list并执行luaL_error
  * @param L lua虚拟机
  * @param index 堆栈索引
- * @param def 如果为空，是否创建一个默认bson对象
- * @param args 需要如果构建失败，需要删除的bson对象
- * @return bson对象，可能为nullptr
+ * @param destroy_list 需要如果构建失败，需要删除的bson指针
+ * @return bson指针，可能为nullptr
  */
 template <typename... Args>
-bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double opt,
-                          Args... args)
+bson_t *tobson(lua_State *L, int32_t index, double opt, Args... destroy_list)
 {
     bson_t *bson = nullptr;
     if (lua_istable(L, index)) // 自动将lua table 转化为bson
@@ -669,7 +667,7 @@ bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double opt,
         bson_error_t e;
         if (!(bson = encode(L, index, &e, opt)))
         {
-            destory_bson_list(args...);
+            bson_destory_list(std::forward<Args>(destroy_list)...);
             luaL_error(L, "table to bson error: %s", e.message);
             return nullptr;
         }
@@ -678,13 +676,14 @@ bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double opt,
     }
     else if (lua_isstring(L, index)) // json字符串
     {
-        const char *json = lua_tostring(L, index);
+        size_t len      = 0;
+        const char *str = lua_tolstring(L, index, &len);
         bson_error_t e;
         bson =
-            bson_new_from_json(reinterpret_cast<const uint8_t *>(json), -1, &e);
+            bson_new_from_json(reinterpret_cast<const uint8_t *>(str), len, &e);
         if (!bson)
         {
-            destory_bson_list(args...);
+            bson_destory_list(std::forward<Args>(destroy_list)...);
             luaL_error(L, "json to bson error: %s", e.message);
             return nullptr;
         }
@@ -692,10 +691,43 @@ bson_t *bson_new_from_lua(lua_State *L, int32_t index, int32_t def, double opt,
         return bson;
     }
 
-    if (0 == def) return nullptr;
-    if (1 == def) return bson_new();
-
-    luaL_error(L, "argument #%d expect table or json string", index);
     return nullptr;
 }
+
+/**
+ * 从lua堆栈构建一个bson对象，不存在则创建一个空bson。构建出错，销毁destroy_list并执行luaL_error
+ * @param L lua虚拟机
+ * @param index 堆栈索引
+ * @param destroy_list 需要如果构建失败，需要删除的bson对象
+ * @return bson对象，可能为nullptr
+ */
+template <typename... Args>
+bson_t *optbson(lua_State *L, int32_t index, double opt, Args... destroy_list)
+{
+    bson_t *bson = tobson(L, index, opt, std::forward<Args>(destroy_list)...);
+    if (!bson) bson = bson_new();
+
+    return bson;
+}
+
+/**
+ * 从lua堆栈构建一个bson对象。构建出错，销毁destroy_list并执行luaL_error
+ * @param L lua虚拟机
+ * @param index 堆栈索引
+ * @param destroy_list 需要如果构建失败，需要删除的bson对象
+ * @return bson对象，可能为nullptr
+ */
+template <typename... Args>
+bson_t *checkbson(lua_State *L, int32_t index, double opt, Args... destroy_list)
+{
+    bson_t *bson = tobson(L, index, opt, std::forward<Args>(destroy_list)...);
+    if (!bson)
+    {
+        bson_destory_list(std::forward<Args>(destroy_list)...);
+        luaL_error(L, "argument #%d expect table or json string", index);
+    }
+
+    return bson;
+}
+
 } // namespace lbson
