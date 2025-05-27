@@ -27,7 +27,7 @@ static void bson_destory_list()
 
 static void bson_destory_list(bson_t *b)
 {
-    bson_destroy(b); // bson_destory里有检测b是否为nullptr
+    bson_destroy(b);
 }
 
 template <typename... Args> void bson_destory_list(bson_t *b, Args... args)
@@ -441,7 +441,7 @@ static bson_t *encode(lua_State *L, int index, bson_error_t *e, double opt)
 /// @param type bson类型
 /// @param opt 是否启用转换
 /// @return 是否需要转换数字key
-static bool is_convert_key(bson_t *b, bson_iter_t *iter, bson_type_t type,
+static bool is_convert_key(const bson_t *b, bson_iter_t *iter, bson_type_t type,
                            double opt)
 {
     if (opt < 0 || BSON_TYPE_DOCUMENT != type) return false;
@@ -636,7 +636,7 @@ static int decode_value(lua_State *L, bson_iter_t *iter, bson_error_t *e,
 /// @brief 解析bson对象到lua table
 /// @param type 指定bson的类型，如 BSON_TYPE_ARRAY
 /// @param opt 是否启用数组自动转换,-1表示不启用
-static int decode(lua_State *L, bson_t *b, bson_error_t *e, bson_type_t type,
+static int decode(lua_State *L, const bson_t *b, bson_error_t *e, bson_type_t type,
                   double opt)
 {
     bson_iter_t iter;
@@ -647,8 +647,8 @@ static int decode(lua_State *L, bson_t *b, bson_error_t *e, bson_type_t type,
         return -1;
     }
 
-    return decode_table(L, &iter, e, type, opt,
-                        is_convert_key(b, nullptr, type, opt));
+    bool convert = is_convert_key(b, nullptr, type, opt);
+    return decode_table(L, &iter, e, type, opt, convert);
 }
 
 /**
@@ -662,7 +662,8 @@ template <typename... Args>
 bson_t *tobson(lua_State *L, int32_t index, double opt, Args... destroy_list)
 {
     bson_t *bson = nullptr;
-    if (lua_istable(L, index)) // 自动将lua table 转化为bson
+    int32_t type = lua_type(L, index);
+    if (LUA_TTABLE == type) // 自动将lua table 转化为bson
     {
         bson_error_t e;
         if (!(bson = encode(L, index, &e, opt)))
@@ -674,7 +675,7 @@ bson_t *tobson(lua_State *L, int32_t index, double opt, Args... destroy_list)
 
         return bson;
     }
-    else if (lua_isstring(L, index)) // json字符串
+    else if (LUA_TSTRING == type) // json字符串
     {
         size_t len      = 0;
         const char *str = lua_tolstring(L, index, &len);

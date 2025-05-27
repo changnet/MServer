@@ -42,17 +42,25 @@ public:
     int32_t uriconnect(lua_State *L);
     // 断开连接
     void disconnect();
+    /**
+     * 设置lua table是否为数组的系数
+     * @param opt 整数部分表示最大key小于该值则为数组，
+     * 小数部分表示数组中的元素百分比小于该值则为object，-1表示不设定
+     */
+    void set_array_opt(double opt)
+    {
+        array_opt_ = opt;
+    }
 
     /**
      * 插入记录
      * @param collection 集合名，即表名
-     * @param ctx 需要插入的内容，json字符串或者lua table
+     * @param document 需要插入的内容数组，json字符串或者lua table
      * @return 错误码
      */
     int32_t insert(lua_State *L);
     /**
      * 更新记录
-     * @param id 唯一id，查询结果根据此id回调
      * @param collection 集合名，即表名
      * @param flags MONGOC_UPDATE_UPSERT等标识，按位组合
      * @param query 查询条件，json字符串或者lua table
@@ -62,7 +70,6 @@ public:
     int32_t update(lua_State *L);
     /**
      * 删除记录
-     * @param id 唯一id，查询结果根据此id回调
      * @param collection 集合名，即表名
      * @params flags MONGOC_REMOVE_SINGLE_REMOVE等标识
      * @param query 查询条件，json字符串或者lua table
@@ -98,6 +105,27 @@ public:
      * @return 错误码，结果集
      */
     int32_t find_and_modify(lua_State *L);
+    /**
+     * 删除collection(表)
+     * @param collection 集合名，即表名
+     * @return 错误码，结果集
+     */
+    int32_t drop_collection(lua_State *L);
+    /**
+     * 删除collection的索引
+     * @param collection 集合名，即表名
+     * @pstsm index_name 索引名
+     * @return 错误码
+     */
+    int32_t drop_index(lua_State *L);
+    /**
+     * 创建索引
+     * @param collection 集合名，即表名
+     * @param keys 索引
+     * @param opts 索引参数
+     * @return 错误码，结果集
+     */
+    int32_t create_index(lua_State *L);
 
 private:
     void clear_error();

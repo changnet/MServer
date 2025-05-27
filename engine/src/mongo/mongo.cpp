@@ -121,14 +121,14 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     // http://mongoc.org/libmongoc/current/lifecycle.html#databases-collections-and-related-objects
     // Each of these objects must be destroyed before the client they were
     // created from, but their lifetimes are otherwise independent
-    // 没有具体提到mongoc_collection_t能不能缓存，应该是可以的
-    // 以前做过一个版本是每次查询都创建、销毁一个mongoc_collection_t
+
     thread_local std::string name;
     name.assign(collection);
 
     auto iter = collection_.find(name);
     if (iter == collection_.end())
     {
+        // 这个只是分配内存，不存在失败
         mongoc_collection_t *cl =
             mongoc_database_get_collection(database_, collection);
         collection_.emplace(name, cl);
@@ -172,11 +172,12 @@ int32_t Mongo::find(lua_State *L)
     mongoc_cursor_t *cursor =
         mongoc_collection_find_with_opts(collection, filter, opts, nullptr);
 
+    int32_t e = 0;
     int32_t index = 0;
-    bson_t *doc   = bson_new();
+    const bson_t *doc = nullptr;
 
-    const bson_t *sub_doc = nullptr;
-    while (mongoc_cursor_next(cursor, &sub_doc))
+    lua_newtable(L);
+    while (mongoc_cursor_next(cursor, &doc))
     {
         /**
          * bson_append_document内部使用memcpy做了内存拷贝,无需使用bson_copy
@@ -184,23 +185,20 @@ int32_t Mongo::find(lua_State *L)
          * bson_append_document还是bson_append_array仅在bson_iter_type中有区别
          */
 
-        // TODO 这里每次调用snprintf效率是不是有点低，要不要做缓存
-        // TODO 直接在lua栈上创建一个table是否可行？不用append_document
-        char key[128];
-        int32_t key_len = (int32_t)snprintf(key, sizeof(key), "%d", index);
-        assert(key_len < sizeof(key));
+        int32_t e = lbson::decode(L, doc, &error_, BSON_TYPE_DOCUMENT, array_opt_);
+        if (e)
+        {
+            lua_pop(L, 1); // pop result table
+            break;
+        }
 
-        bool r = bson_append_document(doc, key, key_len, sub_doc);
         index++;
-
-        assert(r);
-        UNUSED(r);
+        lua_rawseti(L, -2, index);
     }
 
-    int32_t e = 0;
-    if (mongoc_cursor_error(cursor, &error_))
+    if (!e && mongoc_cursor_error(cursor, &error_))
     {
-        bson_destroy(doc);
+        lua_pop(L, 1); // pop result table
         e = error_.code;
     }
 
@@ -210,15 +208,7 @@ int32_t Mongo::find(lua_State *L)
     lua_pushinteger(L, e);
     if (e) return 1;
 
-    e = lbson::decode(L, doc, &error_, BSON_TYPE_ARRAY, array_opt_);
-    bson_destroy(doc);
-    if (e)
-    {
-        lua_pop(L, 1); // pop old error
-        lua_pushinteger(L, error_.code);
-        return 1;
-    }
-
+    lua_insert(L, -2); // insert error code before table
     return 2;
 }
 
@@ -238,25 +228,40 @@ int32_t Mongo::find_and_modify(lua_State *L)
 
     mongoc_collection_t *collection = get_collection(cl_name);
 
-    bson_t *reply = bson_new();
+    /*
+    https://www.mongodb.com/docs/languages/c/c-driver/current/libbson/guides/lifetimes/
+
+    Warning
+    Passing a bson_t pointer obtained from bson_new as an out parameter will
+    result in a leak of the bson_t struct.
+
+    bson_t *heap_doc = bson_new ();
+    example_get_doc (heap_doc);
+    bson_destroy (heap_doc); // Leaks the `bson_t` struct!
+
+    bson_destroy只销毁子document，通过bson_new来创建是需要bson_free来销毁的？？
+    但其他地方为什么都是只用bson_destroy
+    */
+    bson_t reply = BSON_INITIALIZER;
+
     // http://mongoc.org/libmongoc/current/mongoc_find_and_modify_opts_t.html#functions
     // mongoc_find_and_modify_opts的功能和这一样，只不过使用了opts参数，参数显示简洁一些
     // 不过需要额外构建一个mongoc_find_and_modify_opts_t类型
     bool ok = mongoc_collection_find_and_modify(collection, query, sort, update,
                                                 fields, remove, upsert, ret_new,
-                                                reply, &error_);
+                                                &reply, &error_);
     int32_t e = 0;
     lua_pushinteger(L, ok ? 0 : error_.code);
     if (ok)
     {
-        e = lbson::decode(L, reply, &error_, BSON_TYPE_ARRAY, array_opt_);
+        e = lbson::decode(L, &reply, &error_, BSON_TYPE_DOCUMENT, -1);
         if (e)
         {
             lua_pop(L, 1); // pop old error
             lua_pushinteger(L, error_.code);
         }
     }
-    lbson::bson_destory_list(query, sort, update, fields, reply);
+    lbson::bson_destory_list(query, sort, update, fields, &reply);
 
     return e ? 1 : 2;
 }
@@ -283,8 +288,8 @@ int32_t Mongo::update(lua_State *L)
 
     const char *cl_name = luaL_checkstring(L, 2);
     int32_t flags       = luaL_checkinteger32(L, 3);
-    bson_t *selector    = lbson::checkbson(L, 3, array_opt_);
-    bson_t *update      = lbson::checkbson(L, 4, array_opt_, selector);
+    bson_t *selector    = lbson::checkbson(L, 4, -1);
+    bson_t *update      = lbson::checkbson(L, 5, array_opt_, selector);
 
     mongoc_collection_t *collection = get_collection(cl_name);
     bool ok = mongoc_collection_update(collection, (mongoc_update_flags_t)flags,
@@ -301,13 +306,75 @@ int32_t Mongo::remove(lua_State *L)
 
     const char *cl_name             = luaL_checkstring(L, 2);
     int32_t flags                   = luaL_checkinteger32(L, 3);
-    bson_t *selector                = lbson::checkbson(L, 3, array_opt_);
-    mongoc_collection_t *collection = get_collection(cl_name);
+    bson_t *selector                = lbson::checkbson(L, 4, array_opt_);
 
+    mongoc_collection_t *collection = get_collection(cl_name);
     bool ok = mongoc_collection_remove(collection, (mongoc_remove_flags_t)flags,
                                        selector, nullptr, &error_);
 
     bson_destroy(selector);
     lua_pushinteger(L, ok ? 0 : error_.code);
     return 1;
+}
+
+int32_t Mongo::drop_collection(lua_State *L)
+{
+    if (!client_) return luaL_error(L, "database not connect");
+
+    const char *cl_name = luaL_checkstring(L, 2);
+    mongoc_collection_t *collection = get_collection(cl_name);
+
+    bool ok = mongoc_collection_drop(collection, &error_);
+
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    return 1;
+}
+
+int32_t Mongo::drop_index(lua_State* L)
+{
+    if (!client_) return luaL_error(L, "database not connect");
+
+    const char *cl_name = luaL_checkstring(L, 2);
+    const char *index_name = luaL_checkstring(L, 3);
+
+    mongoc_collection_t *collection = get_collection(cl_name);
+    bool ok = mongoc_collection_drop_index(collection, index_name, &error_);
+
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    return 1;
+}
+
+int32_t Mongo::create_index(lua_State *L)
+{
+    if (!client_) return luaL_error(L, "database not connect");
+
+    const char *cl_name = luaL_checkstring(L, 2);
+    bson_t *keys        = lbson::checkbson(L, 3, -1);
+    bson_t *opts        = lbson::tobson(L, 4, -1, keys);
+
+    int32_t e                         = 0;
+    bson_t reply                      = BSON_INITIALIZER;
+    mongoc_collection_t *collection   = get_collection(cl_name);
+    mongoc_index_model_t *index_model = mongoc_index_model_new(keys, opts);
+    if (!mongoc_collection_create_indexes_with_opts(collection, &index_model, 1,
+                                                    nullptr, &reply, &error_))
+    {
+        e = error_.code;
+    }
+
+    lua_pushinteger(L, e);
+    if (!e)
+    {
+        e = lbson::decode(L, &reply, &error_, BSON_TYPE_DOCUMENT, -1);
+        if (e)
+        {
+            lua_pop(L, 1); // pop old error
+            lua_pushinteger(L, error_.code);
+        }
+    }
+
+    lbson::bson_destory_list(keys, opts, &reply);
+    mongoc_index_model_destroy(index_model);
+
+    return e ? 1 : 2;
 }

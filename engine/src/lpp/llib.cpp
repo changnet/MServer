@@ -212,6 +212,7 @@ static void luaopen_mongo(lua_State *L)
     lcpp::Class<Mongo> lc(L, "engine.Mongo");
     lc.def<&Mongo::uriconnect>("uriconnect");
     lc.def<&Mongo::disconnect>("disconnect");
+    lc.def<&Mongo::set_array_opt>("set_array_opt");
 
     lc.def<&Mongo::ping>("ping");
     lc.def<&Mongo::error>("error");
@@ -219,7 +220,11 @@ static void luaopen_mongo(lua_State *L)
     lc.def<&Mongo::update>("update");
     lc.def<&Mongo::count>("count");
     lc.def<&Mongo::find>("find");
+    lc.def<&Mongo::remove>("remove");
     lc.def<&Mongo::find_and_modify>("find_and_modify");
+    lc.def<&Mongo::drop_collection>("drop_collection");
+    lc.def<&Mongo::drop_index>("drop_index");
+    lc.def<&Mongo::create_index>("create_index");
 }
 
 static void luaopen_log(lua_State *L)
