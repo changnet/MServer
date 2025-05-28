@@ -282,6 +282,66 @@ int32_t Mongo::insert(lua_State *L)
     return 1;
 }
 
+int32_t Mongo::insert_many(lua_State *L)
+{
+    if (!client_) return luaL_error(L, "database not connect");
+
+    if (!lua_istable(L, 3))
+    {
+        return luaL_error(L, "expect table at #3, got %s",
+                          lua_typename(L, lua_type(L, 3)));
+    }
+    const char *cl_name = luaL_checkstring(L, 2);
+
+    bool ok            = true;
+    size_t n_documents = 0;
+    bson_t *documents[1024];
+    int32_t top = lua_gettop(L);
+
+    bson_t **docs = documents;
+    size_t size_docs = std::size(documents);
+
+    // 允许传入hash table，无法预知数量
+    lua_pushnil(L);
+    while (lua_next(L, 3))
+    {
+        bson_t *b = lbson::encode(L, top + 2, &error_, array_opt_);
+        if (!b)
+        {
+            ok = false;
+            lua_pop(L, 2);
+            goto RETURN;
+        }
+
+        docs[n_documents] = b;
+        n_documents++;
+        if (n_documents == size_docs)
+        {
+            bson_t **new_docs = new bson_t *[size_docs * 2];
+            memcpy(new_docs, docs, sizeof(bson_t *) * n_documents);
+
+            if (docs != documents) delete[] docs;
+            docs = new_docs;
+            size_docs = size_docs * 2;
+        }
+        lua_pop(L, 1);
+    }
+
+    mongoc_collection_t *collection = get_collection(cl_name);
+    ok = mongoc_collection_insert_many(collection, (const bson_t **)docs,
+                                       n_documents, nullptr, nullptr, &error_);
+
+RETURN:
+    for (size_t i = 0; i < n_documents; i++)
+    {
+        bson_destroy(docs[i]);
+    }
+    if (docs != documents) delete[] docs;
+
+    lua_pushinteger(L, ok ? 0 : error_.code);
+    return 1;
+}
+
 int32_t Mongo::update(lua_State *L)
 {
     if (!client_) return luaL_error(L, "database not connect");
@@ -377,4 +437,50 @@ int32_t Mongo::create_index(lua_State *L)
     mongoc_index_model_destroy(index_model);
 
     return e ? 1 : 2;
+}
+
+int32_t Mongo::aggregate(lua_State *L)
+{
+    if (!client_) return luaL_error(L, "database not connect");
+
+    const char *cl_name = luaL_checkstring(L, 2);
+    bson_t *pipeline      = lbson::optbson(L, 3, -1);
+
+    mongoc_collection_t *collection = get_collection(cl_name);
+    mongoc_cursor_t *cursor = mongoc_collection_aggregate(
+        collection, MONGOC_QUERY_NONE, pipeline, nullptr, nullptr);
+
+    int32_t e         = 0;
+    int32_t index     = 0;
+    const bson_t *doc = nullptr;
+
+    lua_newtable(L);
+    while (mongoc_cursor_next(cursor, &doc))
+    {
+        int32_t e =
+            lbson::decode(L, doc, &error_, BSON_TYPE_DOCUMENT, array_opt_);
+        if (e)
+        {
+            lua_pop(L, 1); // pop result table
+            break;
+        }
+
+        index++;
+        lua_rawseti(L, -2, index);
+    }
+
+    if (!e && mongoc_cursor_error(cursor, &error_))
+    {
+        lua_pop(L, 1); // pop result table
+        e = error_.code;
+    }
+
+    mongoc_cursor_destroy(cursor);
+    bson_destroy(pipeline);
+
+    lua_pushinteger(L, e);
+    if (e) return 1;
+
+    lua_insert(L, -2); // insert error code before table
+    return 2;
 }

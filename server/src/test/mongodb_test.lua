@@ -27,6 +27,19 @@ Test.describe("mongodb test", function()
     Test.it("mongodb base test", function()
         mongodb:remove(collection, MongoDB.REMOVE_NONE, "{}") -- 清空已有数据
 
+
+        local keys = {
+            score = 1,
+            price = 1,
+            category = 1,
+        }
+        local opts = {
+            unique = true, -- 唯一索引，表示keys中的组合主键只能唯一
+            name = "abc", -- 索引名
+        }
+        Test.equal(mongodb:create_index(collection, keys, opts), 0)
+        Test.equal(mongodb:drop_index(collection, "abc"), 0)
+
         local e, row, rows
         local max_count = 10
         for i = 1, max_count do
@@ -46,6 +59,20 @@ Test.describe("mongodb test", function()
         e, rows = mongodb:find(collection, "{}")
         Test.equal(e, 0)
         Test.equal(#rows, max_count)
+
+        -- 用aggregate计算总数
+        e, rows = mongodb:aggregate(collection, {
+             -- 第一步，筛选出id > 5的记录
+            {["$match"] = {_id = {["$gt"] = 5}}},
+
+            -- 第二步，计算amount字段的和
+            -- json中$group的_id=null表示不分组，但不能不指定_id，这在lua中没法表示
+            -- 所以直接把所有数据分到组1即可
+            {["$group"] = {_id = 1, total = {["$sum"] = "$amount"}}}
+        })
+        Test.equal(e, 0)
+        Test.equal(#rows, 1)
+        Test.equal(rows[1].total, 4000)
 
         -- 通过json查询
         -- projection 表示哪些字段需要查询(1)或者不需要(0)
@@ -153,51 +180,82 @@ Test.describe("mongodb test", function()
         Test.equal(e, 0)
         Test.equal(#rows, 0)
     end)
-    --[[
-    -- 默认配置下插入大概为5000 ~ 10000条/s，没有加索引，远超mysql
+
     Test.it(string.format("mongodb json insert %d perf test", max_insert),
          function()
-        Test.async(20000)
-        for i = 1, max_insert do
-            local data = {}
-            data._id = i
-            data.amount = i * 100
-            data.array = {"abc", "def", "ghj"}
-            data.sparse = {[5] = 998}
-            data.object = {name = "xzc", {9, 8, 7, 6, 5, 4, 3, 2, 1}}
-            data.desc = "test item"
-            data.op_time = ev:time()
 
-            mongodb:insert(collection, json.encode(data))
+        mongodb:remove(collection, 0, '{}')
+
+        local data = {}
+        -- data._id = i
+        data.amount = 100
+        data.array = {"abc", "def", "ghj"}
+        data.sparse = {[5] = 998}
+        data.object = {name = "xzc", {9, 8, 7, 6, 5, 4, 3, 2, 1}}
+        data.desc = "test item"
+        data.op_time = Engine.time()
+
+        local jstr = json.encode(data)
+        local sclock = Engine.steady_clock()
+        for _ = 1, max_insert do
+            mongodb:insert(collection, jstr)
         end
+        local eclock = Engine.steady_clock()
 
-        mongodb:remove(collection, '{}', false, function(e)
-            Test.equal(e, 0)
-            Test.done()
-        end)
+        local count = mongodb:count(collection, '{}')
+        Test.equal(count, max_insert)
+        print("raw insert time", eclock - sclock)
     end)
 
     Test.it(string.format("mongodb table insert %d perf test", max_insert),
          function()
-        Test.async(20000)
-        for i = 1, max_insert do
-            local data = {}
-            data._id = i
-            data.amount = i * 100
-            data.array = {"abc", "def", "ghj"}
-            data.sparse = {[5] = 998}
-            data.object = {name = "xzc", {9, 8, 7, 6, 5, 4, 3, 2, 1}}
-            data.desc = "test item"
-            data.op_time = ev:time()
+        mongodb:remove(collection, 0, '{}')
+        local data = {}
+        -- data._id = i
+        data.amount = 100
+        data.array = {"abc", "def", "ghj"}
+        data.sparse = {[5] = 998}
+        data.object = {name = "xzc", {9, 8, 7, 6, 5, 4, 3, 2, 1}}
+        data.desc = "test item"
+        data.op_time = Engine.time()
+
+        local sclock = Engine.steady_clock()
+        for _ = 1, max_insert do
             mongodb:insert(collection, data)
         end
+        local eclock = Engine.steady_clock()
 
-        mongodb:remove(collection, "{}", false, function(e)
-            Test.equal(e, 0)
-            Test.done()
-        end)
+        local count = mongodb:count(collection, '{}')
+        Test.equal(count, max_insert)
+        print("raw insert time", eclock - sclock)
     end)
-]]
+
+    -- 单条插入，10000条需要5000ms左右，批量插入则只需要200ms，怎么和MYSQL差不多？？
+    Test.it(string.format("mongodb batch table insert %d perf test", max_insert),
+         function()
+        mongodb:remove(collection, 0, '{}')
+        local data = {}
+        -- data._id = i
+        data.amount = 100
+        data.array = {"abc", "def", "ghj"}
+        data.sparse = {[5] = 998}
+        data.object = {name = "xzc", {9, 8, 7, 6, 5, 4, 3, 2, 1}}
+        data.desc = "test item"
+        data.op_time = Engine.time()
+
+        local sclock = Engine.steady_clock()
+        local list = {}
+        for _ = 1, max_insert do
+            table.insert(list, data)
+        end
+        mongodb:insert_many(collection, list)
+        local eclock = Engine.steady_clock()
+
+        local count = mongodb:count(collection, '{}')
+        Test.equal(count, max_insert)
+        print("raw insert time", eclock - sclock)
+    end)
+
     Test.after(function()
         mongodb:drop_collection(collection)
         mongodb:disconnect()

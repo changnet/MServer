@@ -225,6 +225,8 @@ static void luaopen_mongo(lua_State *L)
     lc.def<&Mongo::drop_collection>("drop_collection");
     lc.def<&Mongo::drop_index>("drop_index");
     lc.def<&Mongo::create_index>("create_index");
+    lc.def<&Mongo::aggregate>("aggregate");
+    lc.def<&Mongo::insert_many>("insert_many");
 }
 
 static void luaopen_log(lua_State *L)

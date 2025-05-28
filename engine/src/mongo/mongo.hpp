@@ -60,6 +60,13 @@ public:
      */
     int32_t insert(lua_State *L);
     /**
+     * 批量插入
+     * @param collection 集合名，即表名
+     * @param document 需要插入的内容数组，json字符串或者lua table
+     * @return 错误码
+     */
+    int32_t insert_many(lua_State *L);
+    /**
      * 更新记录
      * @param collection 集合名，即表名
      * @param flags MONGOC_UPDATE_UPSERT等标识，按位组合
@@ -121,11 +128,18 @@ public:
     /**
      * 创建索引
      * @param collection 集合名，即表名
-     * @param keys 索引
-     * @param opts 索引参数
+     * @param keys 索引，json字符串或者lua table
+     * @param opts 索引参数，json字符串或者lua table
      * @return 错误码，结果集
      */
     int32_t create_index(lua_State *L);
+    /**
+     * 执行聚合管道操作
+     * @param collection 集合名，即表名
+     * @param pipeline 管道数组，每个元素为json字符串或者lua table
+     * @return 错误码，结果集
+     */
+    int32_t aggregate(lua_State *L);
 
 private:
     void clear_error();
