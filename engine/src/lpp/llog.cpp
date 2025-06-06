@@ -5,11 +5,62 @@
 #include "system/static_global.hpp"
 #include "ev/time.hpp"
 
+struct ThreadBuffer
+{
+    ThreadBuffer::ThreadBuffer()
+    {
+        used_   = 0;
+        buffer_ = new char[10240];
+        size_   = sizeof(buffer_);
+    }
+
+    ThreadBuffer::~ThreadBuffer()
+    {
+        delete[] buffer_;
+    }
+
+    void ThreadBuffer::reserve(size_t need_size)
+    {
+        size_            = std::max(size_ * 2, need_size);
+        char *new_buffer = new char[size_];
+        memcpy(new_buffer, buffer_, used_);
+
+        delete[] buffer_;
+        buffer_ = new_buffer;
+    }
+
+    bool ThreadBuffer::append_string(const char *str, size_t size)
+    {
+        // 单次日志打印的最大长度
+        static const size_t MAX_BUFFER = 8 * 1024 * 1024;
+
+        size_t need_size = used_ + size;
+        if (unlikely(need_size >= MAX_BUFFER)) return false;
+
+        if (unlikely(need_size > size_)) reserve(need_size);
+
+        memcpy(buffer_ + used_, str, size);
+
+        used_ = need_size;
+        return true;
+    }
+
+    size_t used_;
+    size_t size_;
+    char *buffer_;
+};
+
+// print用的线程安全缓冲区。Thread-Local-Storage也是有大小的
+// 直接用thread_local char[102400]会占用太多，这只用struct包一层
+thread_local ThreadBuffer buffer;
+
 LLog::LLog(const char *name) : AsyncLog(name ? name : "unknow")
 {
 }
 
-LLog::~LLog() {}
+LLog::~LLog()
+{
+}
 
 void LLog::stop()
 {
@@ -59,111 +110,94 @@ int32_t LLog::append(lua_State *L)
 
 int32_t LLog::print(lua_State *L)
 {
-#define CPY_STR(str, len)                      \
-    do                                         \
-    {                                          \
-        if (len > 0)                           \
-        {                                      \
-            if (used + len > sizeof(buff) - 1) \
-            {                                  \
-                len = sizeof(buff) - 1 - used; \
-            }                                  \
-            assert(len > 0);                   \
-            memcpy(buff + used, str, len);     \
-            used += len;                       \
-        }                                      \
-    } while (0)
-
-    thread_local char buff[10240];
-
     // 把栈里所有的参数都按lua的print函数打印出来
     // 不要在lua用table.concat把多个参数拼起来，效率很低
     // 一些基础类型，尽量不用tostring，那样会在lua创建一个str再gc掉
 
-    size_t used = 0;
-    int32_t n   = lua_gettop(L);
+    int32_t n    = lua_gettop(L);
     int32_t mask = luaL_checkinteger32(L, 2);
 
     // 针对print("xxx")只打印一个str的情况优化
     if (n == 3 && LUA_TSTRING == lua_type(L, 3))
     {
-        size_t len = 0;
+        size_t len      = 0;
         const char *str = lua_tolstring(L, 3, &len);
         AsyncLog::append("info", mask, timing::try_frame_time(), str, len);
         return 0;
     }
 
+    buffer.used_ = 0;
     for (int32_t i = 3; i <= n; i++)
     {
-        if (i > 1) *(buff + used++) = '\t';
+        if (i > 3) buffer.append_string(" ", 1);
+
+        bool ok;
         switch (lua_type(L, i))
         {
-        case LUA_TNIL:
-            *(buff + used++) = 'n';
-            *(buff + used++) = 'i';
-            *(buff + used++) = 'l';
-            break;
+        case LUA_TNIL: ok = buffer.append_string("nil", 3); break;
         case LUA_TBOOLEAN:
             if (lua_toboolean(L, i))
             {
-                *(buff + used++) = 't';
-                *(buff + used++) = 'r';
-                *(buff + used++) = 'u';
-                *(buff + used++) = 'e';
+                ok = buffer.append_string("true", 4);
             }
             else
             {
-                *(buff + used++) = 'f';
-                *(buff + used++) = 'a';
-                *(buff + used++) = 'l';
-                *(buff + used++) = 's';
-                *(buff + used++) = 'e';
+                ok = buffer.append_string("false", 5);
             }
             break;
         case LUA_TNUMBER:
         {
-            int32_t num = lua_isinteger(L, i)
-                              ? snprintf(buff + used, sizeof(buff) - used,
-                                         LUA_INTEGER_FMT, lua_tointeger(L, i))
-                              : snprintf(buff + used, sizeof(buff) - used, "%f",
-                                         lua_tonumber(L, i));
-            if (num <= 0)
+            static const size_t MAX_NUM_SIZE = 64;
+            if (buffer.used_ + MAX_NUM_SIZE > buffer.size_)
             {
-                ELOG("print ERROR %u", used);
+                buffer.reserve(buffer.used_ + MAX_NUM_SIZE);
+            }
+            int32_t num_size =
+                lua_isinteger(L, i)
+                    ? snprintf(buffer.buffer_ + buffer.used_, MAX_NUM_SIZE,
+                               LUA_INTEGER_FMT, lua_tointeger(L, i))
+                    : snprintf(buffer.buffer_ + buffer.used_, MAX_NUM_SIZE,
+                               "%f", lua_tonumber(L, i));
+            if (num_size <= 0 || num_size > MAX_NUM_SIZE)
+            {
+                ELOG("print ERROR %u", buffer.used_);
                 return 0;
             }
-            used += num;
+
+            ok = true;
+            buffer.used_ += num_size;
             break;
         }
         case LUA_TSTRING:
         {
-            size_t len = 0;
-            // lua_tolstring不检测元表，不能把其他他类型(table等，能转number)转成str，比luaL_tolstring快一点点
+            size_t len      = 0;
             const char *str = lua_tolstring(L, i, &len);
-            CPY_STR(str, len);
+            ok              = buffer.append_string(str, len);
             break;
         }
         default:
         {
             size_t len      = 0;
             const char *str = luaL_tolstring(L, i, &len);
-            CPY_STR(str, len);
+            ok              = buffer.append_string(str, len);
+            // luaL_tolstring会在堆栈上添加一个元素，而lua_tolstring不会
+            lua_pop(L, 1);
             break;
         }
         }
 
-        // 8是预留给nil、true、false等基础类型，他们不检测缓冲区是否已满
-        if (used > sizeof(buff) - 8)
+        if (!ok)
         {
             ELOG("print buffer overflow");
             break;
         }
     }
 
-    if (used <= 0) return 0;
+    if (buffer.used_ <= 0) return 0;
 
     // TODO 这里能不能优化下，直接使用logger那边的buff，省去一次memcpy
-    AsyncLog::append("info", mask, timing::try_frame_time(), buff, used);
+    AsyncLog::append("info", mask, timing::try_frame_time(), buffer.buffer_,
+                     buffer.used_);
 
     return 0;
 }

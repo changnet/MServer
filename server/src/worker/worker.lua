@@ -48,6 +48,12 @@ end
 
 -- 根据地址获取worker的名字，如gateway1
 function Worker.addr_name(addr)
+    local wtype, index = Engine.unmake_address(addr)
+
+    local name = Worker.type_name(wtype)
+    if index <= 0 then return name end
+
+    return string.format("%s%d", name, index)
 end
 
 -- 根据类型获取名字

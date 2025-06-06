@@ -1,6 +1,6 @@
 -- 模块加载入口
 -- 所有业务模块必须都放这里，热更会重载此文件
--- 放这里的模块都是可热更的，不能热更的放Bootstrap.preload
+-- 放这里的模块都是可热更的，不能热更的放Bootstrap.xxx_init
 
 local __require = require
 

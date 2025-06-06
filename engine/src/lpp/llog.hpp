@@ -5,7 +5,7 @@
 struct lua_State;
 
 /**
- * 异步日志
+ * @brief Lua日志接口
  */
 class LLog final : public AsyncLog
 {

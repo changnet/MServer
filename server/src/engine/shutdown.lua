@@ -1,7 +1,7 @@
--- 关服
+-- 关闭进程
 Shutdown = {}
 
--- 按指定worker类型关机顺序关半
+-- 按指定worker类型关机顺序关闭
 local Sequence = {
     WORKER.TEST, WORKER.GATEWAY, WORKER.SCENE, WORKER.GAME, WORKER.PLAYER,
     WORKER.DATA,
@@ -9,6 +9,8 @@ local Sequence = {
 
 -- 开始走关服流程
 function Shutdown.begin()
+    Cluster.close_listen()
+
     local is_shut = {}
 
     -- 根据特定的业务逻辑按顺序关闭各个worker
@@ -40,15 +42,18 @@ function Shutdown.begin()
         w:stop(true)
     end
 
+    Cluster.close()
+
     g_mthread:stop()
 end
 
 function Shutdown.worker_stop()
     print("worker stop now", LOCAL_ADDR)
+
     g_thread:stop()
 end
 
--- 终止程序(不走数据只在、清理流程)
+-- 终止程序(不走数据保存、清理流程)
 function Shutdown.terminate()
     for _, w in pairs(WorkerHash) do
         w:stop(true)

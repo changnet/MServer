@@ -64,7 +64,6 @@ local this = global_storage("Cluster", {
     node    = {}, -- 各节点已认证连接，以node_name为key
     unauth  = {}, -- unauthenticated 未认证连接，以worker对象为key
     listen  = {}, -- 监听的连接
-    addr = {}, -- 以addr为key，value为已认证cluster worker
 })
 
 -- 把gateway1拆分成gateway和1
@@ -95,6 +94,37 @@ function Cluster.listen(cluster_conf, node_name)
     printf("cluster listen %s %s:%d", node_name, conf.ip, conf.port)
 
     this.listen[addr] = worker
+end
+
+-- 关闭所有监听
+function Cluster.close_listen()
+    for addr, worker in pairs(this.listen) do
+        local node_name = Worker.addr_name(addr)
+        printf("cluster close listen %s %s:%d",
+            node_name, worker.listen_ip, worker.listen_port)
+        worker:close()
+    end
+    this.listen = {}
+end
+
+-- 关闭所有连接
+function Cluster.close()
+    for node_name, worker in pairs(this.node) do
+        printf("cluster close node %s", node_name)
+        worker:close()
+    end
+    this.node = {}
+
+    for _, worker in pairs(this.unauth) do
+        local node_name = worker.name
+        if not node_name then
+            local ip, port = worker:address()
+            node_name = string.format("%s:%s", ip, port)
+        end
+        printf("cluster close unauth node %s", node_name)
+        worker:close()
+    end
+    this.unauth = {}
 end
 
 -- 连接到其他集群节点
