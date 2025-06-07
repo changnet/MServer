@@ -1,4 +1,4 @@
--- auto export by lua-tags 152 symbols
+-- auto export by lua-tags 153 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -49,6 +49,7 @@ return {
 "MISC", -- proto/auto_cs.lua
 "MISC", -- proto/cs.lua
 "MT", -- src/modules/move/move_header.lua
+"Message", -- src/network/message.lua
 "PE", -- src/modules/event/player_event.lua
 "PE_CONN", -- src/modules/event/event_header.lua
 "PE_DEATH", -- src/modules/event/event_header.lua

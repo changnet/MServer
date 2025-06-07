@@ -41,6 +41,8 @@ end
 
 -- 消息回调
 function ScSocket:on_message(cmd, ...)
+    -- 这里回调的参数，取决于socket的类型的unpack函数
+    -- websocket stream，则是cmd, buffer, size
     return Cmd.dispatch_clt(self, cmd, ...)
 end
 

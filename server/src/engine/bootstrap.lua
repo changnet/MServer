@@ -164,8 +164,8 @@ function Bootstrap.process_init()
     require "cluster.cluster"
     require "global.debug"
 
-    Signal.mask(2, Shutdown.begin)
-    Signal.mask(15, Shutdown.begin)
+    Signal.mask(2, Shutdown.process_stop)
+    Signal.mask(15, Shutdown.process_stop)
 
     math.randomseed(os.time())
 end

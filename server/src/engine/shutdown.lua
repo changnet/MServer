@@ -8,7 +8,7 @@ local Sequence = {
 }
 
 -- 开始走关服流程
-function Shutdown.begin()
+function Shutdown.process_stop()
     Cluster.close_listen()
 
     local is_shut = {}
