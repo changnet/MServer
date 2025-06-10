@@ -5,6 +5,7 @@
 #include <shared_mutex>
 #include <condition_variable>
 #include "global/global.hpp"
+#include "pool/flexible_pool.hpp"
 
 // 线程数据交互结构
 struct ThreadMessage
