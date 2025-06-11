@@ -43,12 +43,14 @@ void EV::dispatch_message()
     {
         try
         {
-            ThreadMessage m = pop_message();
-            if (-1 == m.src_) return;
+            ThreadMessage *m = pop_message();
+            if (!m) return;
 
-            lcpp::call(L_, "main_message_dispatch", m.src_, m.dst_, m.type_,
-                       (void *)m.udata_, m.usize_);
-            m.dispose();
+            void *buffer =
+                (m->mask_ & FlexiblePool::BUFFER) ? m->buffer() : nullptr;
+            lcpp::call(L_, "main_message_dispatch", m->src_, m->dst_, m->type_,
+                       buffer, m->usize_);
+            dispose_message(m);
         }
         catch (const std::runtime_error &e)
         {

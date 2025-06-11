@@ -8,7 +8,7 @@ struct FlexibleBuffer
     int32_t mask_; // 各种标记，1表示内存通过new分配
     int32_t size_; // 缓冲区大小
     // 获取缓冲区指针
-    char* buffer() noexcept
+    char *buffer() noexcept
     {
         // C++ 不支持Flexible Array Member，直接强转.C++ 20可用std::span
         return reinterpret_cast<char *>(this + 1);
@@ -25,7 +25,7 @@ public:
     enum
     {
         MALLOC = 1, // 分配而来的内存
-        POOL   = 2, // buffer池中的内存
+        BUFFER = 2, // 是否存在buffer空间
     };
 
 public:
@@ -52,37 +52,44 @@ public:
     }
     /**
      * @param size 需要构建的缓冲区大小（不包含结构体本身）
-     * @param T 类似FlexibleBuffer，包含
      */
-    template <typename T, typename... Args> T *construct(size_t size, Args &&...args)
+    template <typename T, typename... Args>
+    T *construct(size_t size, Args &&...args)
     {
+        T *ptr;
+        uint16_t mask = size > 0 ? BUFFER : 0;
         if (size + sizeof(T) > SIZE)
         {
             T *ptr = new T(std::forward<Args>(args)...);
-            ptr->mask_ |= MALLOC;
-            return ptr;
+            mask |= MALLOC;
         }
         else
         {
             char *storage = pop();
-            T *ptr        = new(storage) T(std::forward<Args>(args)...);
-            ptr->mask_ |= POOL;
-            return ptr;
+            ptr           = new (storage) T(std::forward<Args>(args)...);
         }
+        ptr->mask_ = mask;
+        return ptr;
     }
 
     /**
      * @brief 释放对象
      */
-    template<typename T> void destruct(T* ptr)
+    template <typename T> void destruct(T *ptr)
     {
-        ptr->~T();
-        if (0 == (ptr->mask_ & POOL))
+        if constexpr (!std::is_trivially_destructible_v<T>)
         {
-            delete[] reinterpret_cast<char *>(ptr);
-            return;
+            ptr->~T();
         }
-        push(reinterpret_cast<char *>(ptr));
+
+        if (ptr->mask_ & MALLOC)
+        {
+            delete ptr;
+        }
+        else
+        {
+            push(reinterpret_cast<char *>(ptr));
+        }
     }
 
     // 释放不用的内存
@@ -96,31 +103,34 @@ public:
         // 对buffer进行排序，找出完全不用的chunk，进行释放
         std::sort(buffers_.begin(), buffers_.end(), std::less<char *>());
 
-        for (size_t i = chunks_.size() - 1; i >= 0; i--)
+        for (int32_t i = (int32_t)chunks_.size() - 1; i >= 0; i--)
         {
             char *chunk = chunks_.at(i);
-            for (size_t ii = 0; ii < buffer_size; ii++)
+            auto b      = buffers_.begin();
+            auto e      = buffers_.end();
+            // lower_bound使用二分查找算法
+            auto it = std::lower_bound(b, e, chunk);
+            if (it != e && *it == chunk)
             {
-                if (buffers_.at(ii) != chunk) continue;
-
+                size_t ii        = it - b;
                 size_t end_idx   = ii + CHUNK_SIZE / SIZE;
                 char *end_buffer = chunk + CHUNK_SIZE - SIZE;
                 if (end_idx <= buffer_size
                     && buffers_.at(end_idx - 1) == end_buffer)
                 {
-                    auto f = buffers_.begin() + ii;
-                    auto l = buffers_.begin() + end_idx;
+                    auto f = b + ii;
+                    auto l = b + end_idx;
 
+                    delete[] chunk;
                     buffers_.erase(f, l);
                     chunks_.erase(chunks_.begin() + i);
                 }
-                break;
             }
         }
     }
 
 private:
-    char* pop()
+    char *pop()
     {
         std::lock_guard<std::mutex> lg(mutex_);
         if (buffers_.empty())
@@ -140,7 +150,7 @@ private:
 
         return buffer;
     }
-    void push(char* ptr)
+    void push(char *ptr)
     {
         std::lock_guard<std::mutex> lg(mutex_);
         buffers_.push_back(ptr);
@@ -150,12 +160,14 @@ private:
      * @brief 1024大小，应该能应对游戏中90%的前端协议包和rpc调用。这个值必须是
      * alignof(std::max_align_t)的倍数，以保证对齐问题。
      */
-    static constexpr size_t SIZE = 1024;
+    static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
+    static constexpr size_t SIZE =
+        ((1024 + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
     /**
      * 单个chunk的大小，这个值必须大于new使用mmap的阈值（一般是128kb），避免分配
      * 的内存造成碎片。
      */
-    static constexpr size_t CHUNK_SIZE = 256 * 1024;
+    static constexpr size_t CHUNK_SIZE = 256 * SIZE;
     std::mutex mutex_;
     std::vector<char *> chunks_;
     std::vector<char *> buffers_;

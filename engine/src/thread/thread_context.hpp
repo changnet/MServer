@@ -8,7 +8,7 @@
 #include "pool/flexible_pool.hpp"
 
 // 线程数据交互结构
-struct ThreadMessage
+struct ThreadMessage final
 {
     enum
     {
@@ -18,24 +18,14 @@ struct ThreadMessage
         SOCKET = 3, // 网络消息
     };
 
-    // 构造函数
-    ThreadMessage(int32_t src, int32_t dst, int32_t type, void *udata,
+    ThreadMessage(int32_t src, int32_t dst, uint16_t type,
                   int32_t usize)
     {
-        src_ = src;
-        dst_ = dst;
-        type_ = type;
+        mask_  = 0;
+        src_   = src;
+        dst_   = dst;
+        type_  = type;
         usize_ = usize;
-
-        if (udata)
-        {
-            udata_ = new char[usize];
-            memcpy(udata_, udata, usize);
-        }
-        else
-        {
-            udata_ = nullptr;
-        }
     }
     ~ThreadMessage()
     {
@@ -45,39 +35,28 @@ struct ThreadMessage
         // 该数据还不需要释放
         // 或者：根据type_类型或者做一个标识来处理
     }
-    void dispose()
+
+    // 获取缓冲区指针
+    char *buffer() noexcept
     {
-        if (udata_)
-        {
-            delete[] udata_;
-            udata_ = nullptr;
-        }
+        // C++ 不支持Flexible Array Member，直接强转.C++ 20可用std::span
+        return reinterpret_cast<char *>(this + 1);
     }
 
+    uint16_t mask_; // 掩码标记 0位从内存分配
+    uint16_t type_; // 消息类型
     int32_t src_; // 来源地址
-    int32_t dst_;  // 目标地址
-    int32_t type_; // 消息类型
+    int32_t dst_; // 目标地址
     int32_t usize_; // 自定义数据长度
-    char *udata_; // 自定义数据，可能是buff也可能是其他指针
-
-    static ThreadMessage Null;
+    // 这个结构是flexible array，后面有自定义数据
 };
 
 // 线程间交互数据及唤醒的机制
 class ThreadContext
 {
 public:
-    ThreadContext()
-    {
-    }
-    virtual ~ThreadContext()
-    {
-        // 析构应该只在主线程执行，没加锁的必要了
-        for (auto& x : queue_)
-        {
-            x.dispose();
-        }
-    }
+    ThreadContext();
+    virtual ~ThreadContext();
 
     size_t message_size() const
     {
@@ -86,45 +65,37 @@ public:
         return queue_.size();
     }
 
+    // 销毁消息
+    static void dispose_message(ThreadMessage *m);
     // 从消息队列中弹出第一个消息。如果队列为空，则返回Null
-    ThreadMessage pop_message()
+    ThreadMessage *pop_message()
     {
         std::lock_guard<std::mutex> lg(mutex_);
 
-        if (queue_.empty())
-        {
-            // too slow
-            // throw std::out_of_range("empty queue");
-            return ThreadMessage::Null;
-        }
+        if (queue_.empty()) return nullptr;
 
         // ThreadMessage只有基础类型，std::mvoe现在没啥意义
-        ThreadMessage message = std::move(queue_.front());
+        ThreadMessage *message = queue_.front();
         queue_.pop_front();
 
-        return message; // copy elision
+        return message;
     }
 
     /**
      * @brief 构造一个message并push到线程消息队列，同时唤醒线程
+     * @param udata 自定义数据，长度为usize。为nullptr时，usize可以用作数据字段
      */
-    void emplace_message(int32_t src, int32_t dst, int32_t type, void *udata,
-                         int32_t usize)
-    {
-        // 这个写法没法导出到lua
-        // template <typename... Args> void emplace_message(Args &&...args)
-        // queue_.emplace_back(std::forward<Args>(args)...);
-        {
-            std::lock_guard<std::mutex> lg(mutex_);
-            queue_.emplace_back(src, dst, type, udata, usize);
-        }
-        cv_.notify_one();
-    }
+    void emplace_message(int32_t src, int32_t dst, uint16_t type, void *udata,
+                         int32_t usize);
+    /**
+     * @brief 把一个message并push到线程消息队列，同时唤醒线程。
+     * 必须要保证message生命周期在当前线程处理前一直有效。
+     */
     void push_message(ThreadMessage *message)
     {
         {
             std::lock_guard<std::mutex> lg(mutex_);
-            queue_.emplace_back(*message);
+            queue_.emplace_back(message);
         }
         cv_.notify_one();
     }
@@ -155,10 +126,8 @@ protected:
 
     /**
      * @brief 当前线程的消息队列
-     * deque内部采用多个大块（类似vector）内存连接的实现，保证不会出现太多内存碎片
-     * 另一种方式是做一个全局的message_pool，不过需要加锁管理
      */
-    std::deque<ThreadMessage> queue_;
+    std::deque<ThreadMessage *> queue_;
 };
 
 /**

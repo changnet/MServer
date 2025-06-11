@@ -35,6 +35,7 @@ public:
     inline static EVBackend *B  = nullptr; // 网络后台线程
     inline static ThreadContextMgr *M = nullptr; // worker线程管理
     inline static Buffer::ChunkPool *C = nullptr; // socket缓存池
+    inline static FlexiblePool *F      = nullptr; // 通用buffer池
 
 private:
     class initializer // 提供一个等级极高的初始化
