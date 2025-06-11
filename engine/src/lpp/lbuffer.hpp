@@ -111,6 +111,55 @@ public:
         lua_pushlightuserdata(L, (void *)(buffer + offset + size));
         return 2;
     }
+    /**
+     * 往buffer中写入一个整形（int8, int32，int64等等）
+     * @param  buffer C++的buffer指针
+     * @param size 读取的字节大小(int32=4字节，int64=8字节)
+     * @param offset 指针的偏移量（可选）
+     * @return 读取到的数值，读取后的buffer指针
+     */
+    static int32_t write_int(lua_State* L)
+    {
+        char *buffer = (char *)lua_touserdata(L, 1);
+        if (!buffer) return luaL_error(L, "invalid buffer");
+
+        size_t size   = luaL_checkinteger(L, 2);
+        int64_t value   = luaL_checkinteger(L, 3);
+        size_t offset = luaL_optinteger(L, 4, 0);
+
+        if (size < 1 || size > sizeof(int64_t))
+        {
+            return luaL_error(L, "invalid write size");
+        }
+
+        memcpy(buffer + offset, &value, size);
+
+        return 0;
+    }
+
+/**
+     * 往buffer中写入一个另一段buffer
+     * @param  buffer C++的buffer指针
+     * @param wbuffer 要写入的buffer
+     * @param size 要写入的长度
+     * @param offset 指针的偏移量（可选）
+     * @return 读取到的数值，读取后的buffer指针
+     */
+    static int32_t write_buffer(lua_State *L)
+    {
+        char *buffer = (char *)lua_touserdata(L, 1);
+        if (!buffer) return luaL_error(L, "invalid buffer");
+
+        const char *wbuffer = (const char *)lua_touserdata(L, 2);
+        if (!buffer) return luaL_error(L, "invalid write buffer");
+
+        size_t size   = luaL_checkinteger(L, 3);
+        size_t offset = luaL_optinteger(L, 4, 0);
+
+        memcpy(buffer + offset, wbuffer, size);
+
+        return 0;
+    }
 
     /**
      * 把C++中void *类型指针的buffer转换为Lua的string

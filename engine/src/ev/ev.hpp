@@ -61,6 +61,17 @@ public:
         return timer_mgr_.periodic_stop(id);
     }
 
+    /**
+     * 创建一个thread message
+     * @param size buffer的大小（不包含ThreadMessage本身）
+     * @return 消息指针，buffer指针
+     */
+    int32_t construct_message(lua_State *L);
+    /**
+     * 销毁一个thread message，非安全操作
+     */
+    int32_t destruct_message(lua_State *L);
+
 private:
     // 进入主循环，除非停服否则不返回
     void routinue();

@@ -3,6 +3,7 @@
 
 ThreadContext::ThreadContext()
 {
+    cb_message_ = nullptr;
 }
 
 ThreadContext::~ThreadContext()

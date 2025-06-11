@@ -88,8 +88,8 @@ int32_t WSStreamPacket::on_frame_end()
 
     // 这里返回ctx（包含cmd）而不是ctx + sizeof(cmd)
     // 因为脚本可能要转发整个ctx到其他线程或者其他进程
-    lua_pushlightuserdata(L_, (void *)ctx);
-    lua_pushinteger(L_, size);
+    lua_pushlightuserdata(L_, (void *)(ctx + sizeof(cmd)));
+    lua_pushinteger(L_, size - sizeof(cmd));
 
     return WPE_PAUSE;
 }

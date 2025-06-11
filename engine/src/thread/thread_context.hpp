@@ -48,7 +48,7 @@ struct ThreadMessage final
     int32_t src_; // 来源地址
     int32_t dst_; // 目标地址
     int32_t usize_; // 自定义数据长度
-    // 这个结构是flexible array，后面有自定义数据
+    // 这个结构是flexible array，后面还有自定义数据
 };
 
 // 线程间交互数据及唤醒的机制
@@ -67,6 +67,14 @@ public:
 
     // 销毁消息
     static void dispose_message(ThreadMessage *m);
+    // 夺取当前线程回调到Lua的消息（用于转发到其他线程），该消息在当前线程将不再销毁
+    void* acquire_message()
+    {
+        void *m     = cb_message_;
+        cb_message_ = nullptr;
+
+        return m;
+    }
     // 从消息队列中弹出第一个消息。如果队列为空，则返回Null
     ThreadMessage *pop_message()
     {
@@ -91,11 +99,12 @@ public:
      * @brief 把一个message并push到线程消息队列，同时唤醒线程。
      * 必须要保证message生命周期在当前线程处理前一直有效。
      */
-    void push_message(ThreadMessage *message)
+    void push_message(void *message)
     {
+        assert(message);
         {
             std::lock_guard<std::mutex> lg(mutex_);
-            queue_.emplace_back(message);
+            queue_.emplace_back((ThreadMessage *)message);
         }
         cv_.notify_one();
     }
@@ -120,6 +129,7 @@ public:
 
 protected:
 
+    ThreadMessage *cb_message_; // 当前线程回调中的消息
     mutable std::mutex mutex_;
     // TODO C＋＋20可以wait一个atomic变量，到时优化一下
     std::condition_variable cv_;

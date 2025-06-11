@@ -25,7 +25,6 @@ Test.describe("socket test", function()
     local sc_port = 2099
     local local_host = IPV4 and "127.0.0.1" or "::1"
 
-    local msg_id_len = 2 -- 一个int16的长度
     local Buffer = require "engine.Buffer"
 
     local PERF_TIMES = 10000
@@ -138,23 +137,15 @@ Test.describe("socket test", function()
         sc_srv.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
-            -- 读取一个int16
-            local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
-            Test.equal(msg_id2, msg_id)
-            local pkt = codec:decode_from_buffer(
-                "system.TestBase", codec_buffer, size - msg_id_len)
+            local pkt = codec:decode_from_buffer("system.TestBase", buffer, size)
             Test.equal(pkt, base_pkt)
 
-            self:send_pkt(msg_id, codec_buffer, size - msg_id_len)
+            self:send_pkt(msg_id, buffer, size)
         end
         sc_clt.on_message = function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
-            local msg_id2, codec_buffer = Buffer.read_int(buffer, msg_id_len)
-            Test.equal(msg_id2, msg_id)
-
-            local pkt = codec:decode_from_buffer(
-                "system.TestBase", codec_buffer, size - msg_id_len)
+            local pkt = codec:decode_from_buffer("system.TestBase", buffer, size)
             Test.equal(pkt, base_pkt)
 
             Test.done()

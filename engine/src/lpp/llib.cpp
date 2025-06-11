@@ -99,6 +99,9 @@ static void luaopen_ev(lua_State *L)
     lc.def<&EV::stop>("stop");
     lc.def<&EV::push_message>("push_message");
     lc.def<&EV::emplace_message>("emplace_message");
+    lc.def<&EV::construct_message>("construct_message");
+    lc.def<&EV::destruct_message>("destruct_message");
+    lc.def<&EV::acquire_message>("acquire_message");
     lc.def<&EV::timer_start>("timer_start");
     lc.def<&EV::timer_stop>("timer_stop");
     lc.def<&EV::periodic_start>("periodic_start");
@@ -114,6 +117,7 @@ static void luaopen_worker_thread(lua_State *L)
     lc.def<&WorkerThread::is_start>("is_start");
     lc.def<&WorkerThread::push_message>("push_message");
     lc.def<&WorkerThread::emplace_message>("emplace_message");
+    lc.def<&WorkerThread::acquire_message>("acquire_message");
     lc.def<&WorkerThread::timer_start>("timer_start");
     lc.def<&WorkerThread::timer_stop>("timer_stop");
     lc.def<&WorkerThread::periodic_start>("periodic_start");
@@ -318,6 +322,8 @@ static void luaopen_buffer(lua_State *L)
     lc.def<&LuaBuffer::get>("get");
     lc.def<&LuaBuffer::set>("set");
     lc.def<&LuaBuffer::read_int>("read_int");
+    lc.def<&LuaBuffer::write_int>("write_int");
+    lc.def<&LuaBuffer::write_buffer>("write_buffer");
     lc.def<&LuaBuffer::lightud_tostring>("lightud_tostring");
     lc.def<&LuaBuffer::fromstring>("fromstring");
     lc.def<&LuaBuffer::tostring>("tostring");

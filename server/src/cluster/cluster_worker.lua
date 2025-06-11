@@ -93,4 +93,9 @@ function ClusterWorker:on_message(src, dst, mtype, usize, udata)
     end
 end
 
+-- 对应ThreadWorker的push_message函数
+function ClusterWorker:push_message(message)
+    assert(false) -- to be implement
+end
+
 return ClusterWorker

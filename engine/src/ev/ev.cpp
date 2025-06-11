@@ -46,11 +46,17 @@ void EV::dispatch_message()
             ThreadMessage *m = pop_message();
             if (!m) return;
 
+            cb_message_ = m;
             void *buffer =
                 (m->mask_ & FlexiblePool::BUFFER) ? m->buffer() : nullptr;
             lcpp::call(L_, "main_message_dispatch", m->src_, m->dst_, m->type_,
                        buffer, m->usize_);
-            dispose_message(m);
+            // 如果这个消息被转到其他线程或者复用，则cb_message_为nullptr
+            if (cb_message_ == m)
+            {
+                cb_message_ = nullptr;
+                dispose_message(m);
+            }
         }
         catch (const std::runtime_error &e)
         {
@@ -114,4 +120,33 @@ void EV::start(int32_t argc, char **argv)
 void EV::stop()
 {
     stop_ = true;
+}
+
+int32_t EV::construct_message(lua_State *L)
+{
+    int32_t src  = luaL_checkinteger32(L, 2);
+    int32_t dst  = luaL_checkinteger32(L, 3);
+    uint16_t type  = (uint16_t)luaL_checkinteger(L, 4);
+    int32_t usize = luaL_checkinteger32(L, 5);
+
+    // 这里不允许使用usize来传数据，无buffer的直接使用emplace_message
+    if (usize <= 0) return luaL_error(L, "invalid size");
+
+    ThreadMessage *m = StaticGlobal::F->construct<ThreadMessage>(
+        (size_t)usize, src, dst, type, usize);
+
+    lua_pushlightuserdata(L, (void *)m);
+    lua_pushlightuserdata(L, (void *)m->buffer());
+
+    return 2;
+}
+
+int32_t EV::destruct_message(lua_State *L)
+{
+    if (!lua_islightuserdata(L, 2)) return luaL_error(L, "invalid message ptr");
+
+    ThreadMessage *m = (ThreadMessage *)lua_touserdata(L, 2);
+    dispose_message(m);
+
+    return 0;
 }
