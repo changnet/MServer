@@ -122,16 +122,15 @@ mongoc_collection_t *Mongo::get_collection(const char *collection)
     // Each of these objects must be destroyed before the client they were
     // created from, but their lifetimes are otherwise independent
 
-    thread_local std::string name;
-    name.assign(collection);
-
-    auto iter = collection_.find(name);
+    // C++14以后，支持透明对比(transparent comparison)，允许std::string和const char *直接对比
+    // 不会构建一个std::string来对比
+    auto iter = collection_.find(collection);
     if (iter == collection_.end())
     {
         // 这个只是分配内存，不存在失败
         mongoc_collection_t *cl =
             mongoc_database_get_collection(database_, collection);
-        collection_.emplace(name, cl);
+        collection_.emplace(collection, cl);
 
         return cl;
     }

@@ -249,14 +249,9 @@ void AsyncLog::append(const char *name, int32_t mask, int64_t time,
 {
     assert(name);
 
-    // 在thread_local上用gdb断点，会触发SIGSEGV，直到gcc 9.1才修复
-    // 不在这个位置断点程序可正常运行
-    // https://stackoverflow.com/questions/33429912/program-compiled-with-fpic-crashes-while-stepping-over-thread-local-variable-in
-    thread_local std::string str_name;
-    str_name.assign(name);
-
     std::lock_guard<std::mutex> guard(mutex_);
-    auto it = device_.find(str_name);
+    // 高版本的STL有透明对比，std::string可直接和const char *对比而无须先构建std::string
+    auto it = device_.find(name);
     if (it == device_.end())
     {
         ELOG_R("no log device found: %s", name);

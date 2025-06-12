@@ -50,9 +50,18 @@ struct ThreadBuffer
     char *buffer_;
 };
 
-// print用的线程安全缓冲区。Thread-Local-Storage也是有大小的
-// 直接用thread_local char[102400]会占用太多，这只用struct包一层
-thread_local ThreadBuffer buffer;
+ThreadBuffer &get_thread_buffer()
+{
+    // print用的线程安全缓冲区。Thread-Local-Storage也是有大小的
+    // 直接用thread_local char[102400]会占用太多，这只用struct包一层
+
+    // windows下，程序启动时，会创建很多额外的ntdll等线程
+    // 如果这个thread_local作用域放到整个cpp文件，则每个线程都会创建这个thread_local
+    // 但是一些线程并不会释放这个thread_local
+    thread_local ThreadBuffer buffer;
+
+    return buffer;
+}
 
 LLog::LLog(const char *name) : AsyncLog(name ? name : "unknow")
 {
@@ -126,6 +135,7 @@ int32_t LLog::print(lua_State *L)
         return 0;
     }
 
+    ThreadBuffer &buffer = get_thread_buffer();
     buffer.used_ = 0;
     for (int32_t i = 3; i <= n; i++)
     {
@@ -196,6 +206,7 @@ int32_t LLog::print(lua_State *L)
     if (buffer.used_ <= 0) return 0;
 
     // TODO 这里能不能优化下，直接使用logger那边的buff，省去一次memcpy
+    // 使用flexible_pool获取一个buffer，直接往logger push
     AsyncLog::append("info", mask, timing::try_frame_time(), buffer.buffer_,
                      buffer.used_);
 
