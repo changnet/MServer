@@ -160,6 +160,7 @@ target_link_libraries(master PRIVATE
 if(WINDOWS)
     target_include_directories(master PRIVATE
         ${LUA_INCLUDE_DIR}
+        # "C:\\Program Files (x86)\\Visual Leak Detector\\include"
     )
     target_link_libraries(master PRIVATE
         Rpcrt4 # uuidCreate
@@ -168,6 +169,7 @@ if(WINDOWS)
         OpenSSL::SSL OpenSSL::Crypto
         unofficial::libmariadb
         mongo::mongoc_shared
+        # "C:\\Program Files (x86)\\Visual Leak Detector\\lib\\Win64\\vld.lib"
     )
 elseif(UNIX)
     # 用system指定这些目录为系统目录，去除bson中的一些编译警告

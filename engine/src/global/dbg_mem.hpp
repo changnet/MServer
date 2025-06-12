@@ -16,6 +16,28 @@
 
 #include "types.hpp"
 
+/**
+ * VLD(Visual Leak Detector)的用法
+ * 
+ * 这个只能在win下使用，linux使用valgrind
+ * 
+ * 1. 下载安装包 https://kinddragon.github.io/vld/ 或者 https://github.com/KindDragon/vld
+ * 2. 如果是老版本的Visual Studio，安装时通常有“Add VLD directory to VS 2015”的选项，勾上后程序运行时可自动识别目录
+ * 3. 但VS 2022是没有的，而且我们用的cmake，也需要手动加依赖
+ * 4. 去cmakelist中启用VLD依赖，在下面启用VLD_ENABLE宏，重新编译程序
+ * 5. 去安装目录把bin/Win64里的文件都拷贝到程序目录
+ *      要拷贝所有文件，尤其是那个Microsoft.DTfW.DHL.manifest都要。
+ * 6. 在VS以调试模式启动程序或者附加到程序，程序结束后，在VS的输出-调试标签应该会输出结果
+ */
+// #define VLD_ENABLE
+
+#ifdef VLD_ENABLE
+    #include "vld.h"
+
+    // 关闭内存计数，避免内存泄漏时触发assert，那样vld的结果就没法输出了
+    #define NMEM_DEBUG
+#endif
+
 extern void global_mem_counter(int64_t &counter, int64_t &counters);
 
 #ifndef NDBG_MEM_TRACE
