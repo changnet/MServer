@@ -12,3 +12,5 @@ Worker.start(worker_setting)
 -- 监听game进程的连接
 Cluster.listen(g_setting.cluster, g_env:get("--node"), true)
 -- Cluster.connect("data", 1, 1)
+
+require("modules.module_loader") -- 进程负责管理protobuf等

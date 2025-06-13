@@ -1,4 +1,4 @@
--- auto export by lua-tags 153 symbols
+-- auto export by lua-tags 162 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -25,6 +25,7 @@ return {
 "DEFINE_END", -- src/global/require.lua
 "E", -- src/modules/module_header.lua
 "E", -- src/modules/module_loader.lua
+"EMPTY", -- src/modules/system/define.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
 "ET", -- src/modules/entity/entity_header.lua
@@ -49,7 +50,7 @@ return {
 "MISC", -- proto/auto_cs.lua
 "MISC", -- proto/cs.lua
 "MT", -- src/modules/move/move_header.lua
-"Message", -- src/network/message.lua
+"NetMsg", -- src/message/net_msg.lua
 "PE", -- src/modules/event/player_event.lua
 "PE_CONN", -- src/modules/event/event_header.lua
 "PE_DEATH", -- src/modules/event/event_header.lua
@@ -60,6 +61,7 @@ return {
 "PLAYER", -- proto/cs.lua
 "PROCESS_ADDR", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
+"Pbc", -- src/message/pbc.lua
 "Ping", -- src/modules/system/ping.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
@@ -89,8 +91,15 @@ return {
 "Util", -- src/engine/bootstrap.lua
 "WORKER", -- src/modules/system/define.lua
 "WSE", -- src/application/app.lua
+"W_DATA", -- src/modules/system/define.lua
+"W_GAME", -- src/modules/system/define.lua
+"W_GATEWAY", -- src/modules/system/define.lua
+"W_PLAYER", -- src/modules/system/define.lua
+"W_SCENE", -- src/modules/system/define.lua
+"W_TEST", -- src/modules/system/define.lua
 "Worker", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
+"WorkerRoute", -- src/worker/worker_route.lua
 "WorkerSetting", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua

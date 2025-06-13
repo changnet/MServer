@@ -1,5 +1,5 @@
 -- 网络消息
-Message = {}
+NetMsg = {}
 
 local Buffer = require "engine.Buffer"
 
@@ -15,41 +15,47 @@ local PLAYER = WORKER.PLAYER[1]
 local g_mthread = g_mthread
 local construct_message = g_mthread.construct_message
 
+local pbc_decode = Pbc.decode
+
 -- 注册网络消息回调
 -- @param id 协议id
 -- @param func 回调函数
--- @param wtype 仅在该类型的worker上回调
-function Message.reg(id, func, wtype)
-    if local_type ~= wtype then return end
+function NetMsg.reg(msg, func)
+    -- 默认为玩家所在worker，这个worker用的协议比较多
+    if local_type ~= (msg.t or W_PLAYER) then return end
 
+    local id = msg.i
     assert(not callback[id])
     callback[id] = {
         f = func,
-        w = wtype
+        c = msg.c,
+        s = msg.s,
     }
 end
 
 -- 注册不需要认证(未完成登录流程)的网络消息回调
 -- @param id 协议id
 -- @param func 回调函数
--- @param wtype 仅在该类型的worker上回调
 -- @param flag 认证flag，0表示未认证才可发送，1表示认证、未认证都可发送
-function Message.reg_noauth(id, func, wtype, flag)
-    if local_type ~= wtype then return end
+function NetMsg.reg_noauth(msg, func, flag)
+    if local_type ~= (msg.t or W_PLAYER) then return end
 
+    local id = msg.i
     assert(not callback[id])
     callback[id] = {
         f = func,
-        w = wtype,
+        c = msg.c,
+        s = msg.s,
         n = flag or 0, -- noauth
     }
 end
 
-local function do_callback(func, pid, buffer, size)
-    local pkt = protobuf.decode(buffer, size)
+local function do_callback(func, schema, pid, buffer, size)
+    local pkt = pbc_decode(schema, buffer, size)
 
     if PLAYER == local_type then
         -- player用玩家对象回调，避免每次处理消息再获取一次
+        local player = PlayerMgr.get_player(pid)
         return func(player, pkt)
     else
         -- 其他的以pid回调，这些worker没有玩家对象，比如竞技场
@@ -60,7 +66,7 @@ end
 -- 派发客户端网络消息
 -- @param buffer 消息二进制数据
 -- @param size 消息大小
-function Message.dispatch(socket, id, buffer, size)
+function NetMsg.dispatch(socket, id, buffer, size)
     local cb = callback[id]
     if not cb then
         printf("message dispatch no callback for %d", id)
@@ -82,7 +88,7 @@ function Message.dispatch(socket, id, buffer, size)
     local wtype = cb.w
     local pid = socket.pid
     if local_type == wtype then
-        return do_callback(cb.f, pid, buffer, size)
+        return do_callback(cb.f, cb.c, pid, buffer, size)
     end
 
     -- 对于player scene等类型的worker，存在多个，需要根据玩家当前在哪个worker进行转发
@@ -123,9 +129,9 @@ local function dispatch_clt_message(src, udata, size)
         return
     end
 
-    return do_callback(cb.f, pid, pb, size - 8 - 2)
+    return do_callback(cb.f, cb.c, pid, pb, size - 8 - 2)
 end
 
 ThreadMessage.reg(CLT_MSG, dispatch_clt_message)
 
-return Message
+return NetMsg

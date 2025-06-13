@@ -13,6 +13,14 @@ WORKER = {
     PLAYER  = {5, "player"}, -- 玩家个人逻辑
     SCENE   = {6, "scene"}, -- 场景
 }
+W_TEST    = 1 -- 单元测试
+W_GATEWAY = 2 -- 网关
+W_GAME    = 3 -- 游戏公用逻辑
+W_DATA    = 4 -- 缓存及db操作
+W_PLAYER  = 5 -- 玩家个人逻辑
+W_SCENE   = 6 -- 场景
+
+EMPTY = {} -- 一个空table，避免频繁创建空table
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"
