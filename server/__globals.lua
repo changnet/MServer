@@ -1,4 +1,4 @@
--- auto export by lua-tags 162 symbols
+-- auto export by lua-tags 161 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -77,8 +77,6 @@ return {
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
-"SYS", -- proto/auto_ss.lua
-"SYS", -- proto/ss.lua
 "Send", -- src/rpc/rpc.lua
 "Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
@@ -107,6 +105,7 @@ return {
 "__error", -- src/engine/bootstrap.lua
 "__fire_sys_ev", -- src/modules/event/system_event.lua
 "__global_storage", -- src/global/global.lua
+"__loader", -- src/engine/bootstrap.lua
 "__package_cpath", -- src/engine/bootstrap.lua
 "__package_path", -- src/engine/bootstrap.lua
 "__print", -- src/engine/bootstrap.lua

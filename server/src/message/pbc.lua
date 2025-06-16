@@ -57,6 +57,10 @@ function Pbc.load()
         count, Engine.steady_clock() - tm)
 end
 
+function Pbc.update()
+    return g_pbc:update()
+end
+
 function Pbc.decode(schema, buffer, size)
     return pbc_decode(schema, buffer, size)
 end

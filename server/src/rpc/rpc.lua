@@ -32,7 +32,8 @@ local WorkerHash = WorkerHash
 local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
 
-local name_to_func = Rtti.name_to_func
+-- 用parse_name_func而不是name_to_func，避免脚本报错时rtti失效导致rpc也失效了
+local parse_name_func = Rtti.parse_name_func
 -- local func_to_name = func_to_name
 
 local last_src -- 最后一次调用rpc的来源
@@ -116,7 +117,7 @@ send_mt =
 }
 
 local function do_request(src, session, name, ...)
-    local func = name_to_func(name)
+    local func = parse_name_func(name)
     if not func then
         print("rpc no func found", name, LOCAL_ADDR)
 

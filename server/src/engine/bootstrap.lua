@@ -33,6 +33,7 @@ __print = print
 __error = error
 __assert = assert
 __require = require
+__loader = nil -- 当前进程或者worker功能加载入口文件
 __package_path = package.path -- 保留原path
 __package_cpath = package.cpath
 
@@ -131,7 +132,7 @@ local function set_process_log()
 end
 
 -- 进程预加载必要的组件
-function Bootstrap.process_init()
+function Bootstrap.process_init(loader)
     local local_name = set_process_log()
 
     g_thread = g_mthread
@@ -168,10 +169,14 @@ function Bootstrap.process_init()
     Signal.mask(15, Shutdown.process_stop)
 
     math.randomseed(os.time())
+    if loader then
+        __loader = loader
+        Timer.timeout(0, function() require(loader) end)
+    end
 end
 
 -- worker预加载必要的组件
-function Bootstrap.worker_init(addr)
+function Bootstrap.worker_init(addr, loader)
     set_path()
 
     require "global.oo" -- 这个文件不能热更
@@ -207,6 +212,9 @@ function Bootstrap.worker_init(addr)
     require "global.debug"
 
     math.randomseed(os.time())
+
+    __loader = loader
+    Timer.timeout(0, function() require(loader) end)
 end
 
 -- 注册按优先级启动的模块

@@ -248,6 +248,19 @@ function Rtti.func_to_name(func)
     return func_names[func]
 end
 
+-- 根据函数名解析并获取名字
+-- @param name 函数名，如：Test.get_ptr
+function Rtti.parse_name_func(name)
+    local func = names_func[name]
+    if func then return func end
+
+    func = _G
+    string.gsub(name, "[^.]+", function(key)
+        func = func[key]
+    end)
+    if "function" == type(func) then return func end
+end
+
 -- 根据函数名取函数指针
 function Rtti.name_to_func(name)
     return names_func[name]
