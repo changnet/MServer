@@ -1,9 +1,6 @@
--- AUTO GENERATE, DO NOT MODIFY
-
--- client & server protocol define
-
 --[[
 定义客户端与服务器之间的通信协议，其格式必须是固定的，用于自动解析并生成协议号
+解析此文件的脚本能力有限，不要瞎写或者加特殊字符
 
 -- 定义模块号，大写。之所以没定义成全局的CHAT_CHAT而是定义成一个table是方便模块里本地化
 CHAT = {

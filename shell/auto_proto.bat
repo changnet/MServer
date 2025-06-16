@@ -2,6 +2,8 @@
 
 set WORK_DIR=..\server\src\modules\protocol
 
-lua %WORK_DIR%\auto.lua %WORK_DIR%\protocol.lua %WORK_DIR%
+cd %WORK_DIR%\
+set FULL_WORK_DIR=%CD%
+lua auto.lua protocol.lua %FULL_WORK_DIR%
 
 pause

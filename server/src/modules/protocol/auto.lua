@@ -67,15 +67,12 @@ local function load_define(def_path)
 
     io.close(f)
 
-    local define = {}
-    setmetatable(_G, {
-        __newindex = define
-    })
-    -- require(def_path) -- require不能处理带../..这种相对路径，或者固定路径
-    dofile(def_path)
-    setmetatable(_G, nil)
+    local env = {}
 
-    return define
+    -- require(def_path) -- require不能处理带../..这种相对路径，或者固定路径
+    loadfile(def_path, "bt", env)()
+
+    return env
 end
 
 local function nextLine(ctx)
@@ -173,6 +170,7 @@ CHAT = {
 
     local s = string.match(line, "s%s*=%s*([%w_%.'\"]+)")
     local c = string.match(line, "c%s*=%s*([%w_%.'\"]+)")
+    local w = string.match(line, "w%s*=%s*([%w_%.'\"]+)")
 
     -- 行尾注释
     local t = string.match(line, "%-%-%[%[(.*)%]%]")
@@ -189,9 +187,11 @@ CHAT = {
             mm = ctx.mm,
         })
     else
-        if s then ctx.symbols[ctx.m][ctx.mm].s = s end
-        if c then ctx.symbols[ctx.m][ctx.mm].c = c end
-        if t then ctx.symbols[ctx.m][ctx.mm].t = t end
+        local sym = ctx.symbols[ctx.m][ctx.mm]
+        if s then sym.s = s end
+        if c then sym.c = c end
+        if t then sym.t = t end
+        if w then sym.w = w end
 
         ctx.changes[ctx.index] = {
             m = ctx.m,
@@ -229,144 +229,31 @@ local function parse(file_path)
     return ctx
 end
 
-local function write_fields(f, val, prefix, first)
-    if not val then return first end
-
-    if not first then f:write(", ") end
-    if prefix then f:write(prefix) end
-
-    f:write(val)
-
-    return false
-end
-
--- 生成lua配置文件
-local function write_lua(file_path, ctx)
-    local f = io.open(file_path, "w")
-
-    assert(f)
-
-    f:write("-- AUTO GENERATE, DO NOT MODIFY\n\n")
-
-    local done = {}
-    for index, line in ipairs(ctx.lines) do
-        local change = ctx.changes[index]
-        if not change then
-            f:write(line)
-        else
-            local v = ctx.symbols[change.m][change.mm]
-
-            if not done[v.i] then
-                done[v.i] = true
-                local first = true
-                f:write("        ")
-                first = write_fields(f, v.s, "s = ", first)
-                first = write_fields(f, v.c, "c = ", first)
-                first = write_fields(f, v.i, "i = ", first)
-                first = write_fields(f, v.t, "-- ", first)
-            end
-        end
-        f:write("\n")
-    end
-
-    f:flush()
-    io.close(f)
-end
-
--- 生成typescript配置
-local function write_ts(file_path, ctx)
---[[
-export interface CS {
-    i: number;
-    c?: string;
-    s?: string;
-}
-
-export class PLAYER {
-
-    /**
-     * 登录
-     */
-    public static LOGIN: CS = {
-        s: "player.SLogin", i: 1
-    }
-}
-
-export const Cmd: Map<number, CS> = new Map<number, CS>([
-    [1, PLAYER.LOGIN]
-])
-]]
-    local f = io.open(path, "w")
-
-    assert(f)
-
-    f:write("// AUTO GENERATE, DO NOT MODIFY\n\n")
-    f:write("export interface CS {\n")
-    f:write("    i: number;\n")
-    f:write("    c?: string;\n")
-    f:write("    s?: string;\n")
-    f:write("}\n\n")
-
-    local cur_m
-    for _, v in ipairs(ctx.sym_list) do
-        local m = v.m
-        if cur_m ~= m then
-            -- 上一个模块结束
-            if cur_m then f:write("}\n\n") end
-            -- 当前模块开始
-            cur_m = m
-            f:write("export class " .. m .. " {\n")
-        end
-
-        local mm = v.mm
-        f:write("    public static " .. mm .. ": CS = {\n")
-        f:write("        ") -- 缩进
-
-        v = ctx.symbols[m][mm]
-
-        local first = true
-        first = write_fields(f, v.s, "s: ", first)
-        first = write_fields(f, v.c, "c: ", first)
-        first = write_fields(f, v.i, "i: ", first)
-        f:write("\n    }\n")
-    end
-
-    -- 上一个模块结束
-    if cur_m then f:write("}\n\n") end
-
-    -- 写入一个根据i获取协议信息的map
-    f:write("export const Cmd: Map<number, CS> = new Map<number, CS>([")
-    for _, v in ipairs(ctx.sym_list) do
-        local m = v.m
-        local mm = v.mm
-        v = ctx.symbols[m][mm]
-        f:write(string.format("\n    [%d, %s.%s],", v.i, m, mm))
-    end
-    f:write("\n]);\n")
-
-    f:flush()
-    io.close(f)
-    print("TODO: 导出注释到ts")
-end
-
 local function main(in_file, out_path)
-    print("dddddddddddddddddddddd", in_file, out_path)
-    if 1 then return end
     local max_id = 0
-    local old_define = load_define(s_path)
+    local id_hash = {}
+    local old_define = load_define(in_file)
     for _, m in pairs(old_define) do
         if "table" == type(m) then
             for _, mm in pairs(m) do
-                if mm.i and mm.i > max_id then max_id = mm.i end
+                local i = mm.i
+                if i then
+                    if id_hash[i] then error("id already exist: " .. i) end
+                    id_hash[i] = true
+                    if i > max_id then max_id = i end
+                end
             end
         end
     end
-    print(string.format("loading old define from %s, old = %d", s_path, max_id))
+    print(string.format("reading from %s, max = %d", in_file, max_id))
 
-    local ctx = parse(path)
+    local ctx = parse(in_file)
+
+    local count = 0
     for _, v in ipairs(ctx.sym_list) do
         local m = v.m
         local mm = v.mm
+        count = count + 1
 
         local old_m = old_define[m] or {}
         local old_mm = old_m[mm] or {}
@@ -377,21 +264,21 @@ local function main(in_file, out_path)
             ctx.symbols[m][mm].i = max_id
         end
     end
-    print(string.format("auto generating from %s, new = %d", path, max_id))
 
-    write_lua(s_path, ctx)
-    print(string.format("writing new define to %s", s_path))
+    local L = require "auto_lua"
+    L.generate(ctx, out_path .. "/protocol.lua")
 
-    if c_type == "ts" or c_type == "typescript" then
-        write_ts(c_path, ctx)
-        print(string.format("writing new define to %s", c_path))
-    elseif c_type == "lua" then
-        write_lua(c_path, ctx)
-        print(string.format("writing new define to %s", c_path))
-    end
+    -- 客户端协议
+    -- local T = require "auto_lua"
+    -- T.generate(ctx, out_path .. "/protocol.ts")
+
+    print(string.format("writting to %s, %d symbols, max = %d",
+        out_path, count, max_id))
 end
 
 -- ＠param in_file 需要解析的协议文件
 -- ＠param out_path 输出的路径
 local in_file, out_path = ...
+
+print(_VERSION, ...)
 main(in_file, out_path)
