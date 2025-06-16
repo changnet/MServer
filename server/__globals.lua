@@ -1,4 +1,4 @@
--- auto export by lua-tags 160 symbols
+-- auto export by lua-tags 167 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -12,9 +12,11 @@ return {
 "App", -- src/application/app.lua
 "BAG", -- proto/auto_cs.lua
 "BAG", -- proto/cs.lua
+"BAG", -- src/modules/protocol/protocol.lua
 "Bootstrap", -- src/engine/bootstrap.lua
 "CHAT", -- proto/auto_cs.lua
 "CHAT", -- proto/cs.lua
+"CHAT", -- src/modules/protocol/protocol.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
 "CltMgr", -- src/network/clt_mgr.lua
@@ -27,6 +29,7 @@ return {
 "EMPTY", -- src/modules/system/define.lua
 "ENTITY", -- proto/auto_cs.lua
 "ENTITY", -- proto/cs.lua
+"ENTITY", -- src/modules/protocol/protocol.lua
 "ET", -- src/modules/entity/entity_header.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
@@ -44,10 +47,12 @@ return {
 "LogDB", -- src/modules/log/log_db.lua
 "MAIL", -- proto/auto_cs.lua
 "MAIL", -- proto/cs.lua
+"MAIL", -- src/modules/protocol/protocol.lua
 "MAX_MAIL", -- src/modules/system/define.lua
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MISC", -- proto/auto_cs.lua
 "MISC", -- proto/cs.lua
+"MISC", -- src/modules/protocol/protocol.lua
 "MT", -- src/modules/move/move_header.lua
 "NetMsg", -- src/message/net_msg.lua
 "PE", -- src/modules/event/player_event.lua
@@ -58,6 +63,7 @@ return {
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- proto/auto_cs.lua
 "PLAYER", -- proto/cs.lua
+"PLAYER", -- src/modules/protocol/protocol.lua
 "PROCESS_ADDR", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Pbc", -- src/message/pbc.lua
@@ -159,6 +165,7 @@ return {
 "time", -- src/global/time.lua
 "vd", -- proto/auto.lua
 "vd", -- src/global/log.lua
+"vd", -- src/modules/protocol/auto.lua
 "warn", -- src/global/log.lua
 "warnf", -- src/global/log.lua
 }

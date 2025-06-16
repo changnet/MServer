@@ -1,11 +1,5 @@
 -- 解析协议文件并自动生成协议号
 
--- ＠param path 需要解析的文件路径
--- ＠param s_path 生成的服务器协议文件路径(包含文件名)
--- ＠param c_type 成的客户端协议文件类型，支持 lua、ts(typescript)
--- ＠param c_path 生成的客户端协议文件路径(包含文件名)
-local path, s_path, c_type, c_path = ...
-
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -355,7 +349,9 @@ export const Cmd: Map<number, CS> = new Map<number, CS>([
     print("TODO: 导出注释到ts")
 end
 
-local function main()
+local function main(in_file, out_path)
+    print("dddddddddddddddddddddd", in_file, out_path)
+    if 1 then return end
     local max_id = 0
     local old_define = load_define(s_path)
     for _, m in pairs(old_define) do
@@ -395,4 +391,7 @@ local function main()
     end
 end
 
-main()
+-- ＠param in_file 需要解析的协议文件
+-- ＠param out_path 输出的路径
+local in_file, out_path = ...
+main(in_file, out_path)
