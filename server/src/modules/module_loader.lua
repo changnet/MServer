@@ -57,12 +57,14 @@ table.const(EMPTY)
 require "modules.system.hot_fix"
 E = require "modules.system.error"
 
-require_exclude("proto.auto_cs", W_DATA)
+require_exclude("protocol.protocol", W_DATA)
 require_exclude("message.pbc", W_DATA)
+require_exclude("message.net_msg", W_DATA)
 
 -- P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0
 -- 在加载其他业务模块之前优先级p0的逻辑
 Pbc.update()
+NetMsg.load_forward_msg()
 -- P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0
 
 Rtti.collect()

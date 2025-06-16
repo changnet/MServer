@@ -5,6 +5,8 @@ local WorkerThread = require "engine.WorkerThread"
 
 WorkerHash = {} -- 以worker的addr为key，worker对象为value
 WorkerSetting = {} -- 以worker的addr为key，worker的配置为value
+WorkerTypeName = {} -- [wtype] = wname worker类型转名字
+WorkerNameType = {} -- [wname] = wtype worker名字转类型
 
 LOCAL_ADDR = 0 -- 当前worker地址
 LOCAL_TYPE = 0 -- 当前worker类型
@@ -58,14 +60,21 @@ end
 
 -- 根据类型获取名字
 function Worker.type_name(wtype)
-    for _, w in pairs(WORKER) do
-        if wtype == w[1] then return w[2] end
-    end
+    return WorkerTypeName[wtype]
 end
 
 -- 根据名字获取类型
 function Worker.name_type(name)
+    return WorkerNameType[name]
+end
+
+local function init()
     for _, w in pairs(WORKER) do
-        if name == w[2] then return w[1] end
+        local wtype = w[1]
+        local wname = w[2]
+        WorkerNameType[wname] = wtype
+        WorkerTypeName[wtype] = wname
     end
 end
+
+init()

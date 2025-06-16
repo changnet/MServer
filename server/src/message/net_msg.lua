@@ -10,7 +10,8 @@ local buffer_write_buffer = Buffer.write_buffer
 local callback = {} -- 消息回调
 local local_type = LOCAL_TYPE -- 当前worker的类型
 local CLT_MSG = ThreadMessage.CLT_MSG
-local PLAYER = WORKER.PLAYER[1]
+local DEF_DISPATCH_WTYPE = W_PLAYER -- 默认为玩家所在worker，这个worker用的协议比较多
+local forward_wtype -- [id] = wtype
 
 local g_mthread = g_mthread
 local construct_message = g_mthread.construct_message
@@ -21,8 +22,8 @@ local pbc_decode = Pbc.decode
 -- @param id 协议id
 -- @param func 回调函数
 function NetMsg.reg(msg, func)
-    -- 默认为玩家所在worker，这个worker用的协议比较多
-    if local_type ~= (msg.t or W_PLAYER) then return end
+    local wtype = WorkerNameType[msg.w] or DEF_DISPATCH_WTYPE
+    if local_type ~= wtype then return end
 
     local id = msg.i
     assert(not callback[id])
@@ -38,7 +39,8 @@ end
 -- @param func 回调函数
 -- @param flag 认证flag，0表示未认证才可发送，1表示认证、未认证都可发送
 function NetMsg.reg_noauth(msg, func, flag)
-    if local_type ~= (msg.t or W_PLAYER) then return end
+    local wtype = WorkerNameType[msg.w] or DEF_DISPATCH_WTYPE
+    if local_type ~= wtype then return end
 
     local id = msg.i
     assert(not callback[id])
@@ -48,6 +50,31 @@ function NetMsg.reg_noauth(msg, func, flag)
         s = msg.s,
         n = flag or 0, -- noauth
     }
+end
+
+-- 网关加载用于转发的协议数据
+function NetMsg.load_forward_msg()
+    if local_type ~= W_GATEWAY then return end
+
+    local path, err = package.searchpath("protocol.protocol", package.path)
+    if not path then error(err) end
+
+    local env = {}
+    loadfile(path, "bt", env)()
+
+    forward_wtype = {}
+    local wnt = WorkerNameType
+    for _, mod in pairs(env) do
+        if "table" == type(mod) then
+            for _, msg in pairs(mod) do
+                local i = msg.i
+                if "number" == type(i) then
+                    local wname = msg.w
+                    forward_wtype = wnt[wname] or DEF_DISPATCH_WTYPE
+                end
+            end
+        end
+    end
 end
 
 local function do_callback(func, schema, pid, buffer, size)
@@ -67,28 +94,33 @@ end
 -- @param buffer 消息二进制数据
 -- @param size 消息大小
 function NetMsg.dispatch(socket, id, buffer, size)
-    local cb = callback[id]
-    if not cb then
-        printf("message dispatch no callback for %d", id)
-        return
+    local pid = socket.pid
+    local auth = socket.auth
+    local wtype = forward_wtype[id]
+    if local_type == wtype then
+        local cb = callback[id]
+        if not cb then
+            printf("message dispatch no callback for %d", id)
+            return
+        end
+
+        -- 未认证的，禁止发送需要认证后的消息
+        -- 已认证的，禁止发送不需要认证的消息
+        local n = cb.n
+        if not auth and not n then
+            eprintf("%s socket not auth for message %d", socket.account, id)
+            return
+        elseif auth and 0 == n then
+            eprintf("%s socket auth for noauth message %d", socket.account, id)
+            return
+        end
+        return do_callback(cb.f, cb.c, pid, buffer, size)
     end
 
-    -- 未认证的，禁止发送需要认证后的消息
-    -- 已认证的，禁止发送不需要认证的消息
-    local n = cb.n
-    local auth = socket.auth
-    if not auth and not n then
+    -- 登录认证流程必须在网关完成，不能扩散到其他worker
+    if not auth then
         eprintf("%s socket not auth for message %d", socket.account, id)
         return
-    elseif auth and 0 == n then
-        eprintf("%s socket auth for noauth message %d", socket.account, id)
-        return
-    end
-
-    local wtype = cb.w
-    local pid = socket.pid
-    if local_type == wtype then
-        return do_callback(cb.f, cb.c, pid, buffer, size)
     end
 
     -- 对于player scene等类型的worker，存在多个，需要根据玩家当前在哪个worker进行转发
