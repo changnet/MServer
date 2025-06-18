@@ -25,9 +25,29 @@ function ThreadMessage.reg_co(mtype, func)
     type_dispatch[mtype] = function(...) return CoPool.invoke(func, ...) end
 end
 
-function ThreadMessage.forward(addr, mtype, ptr, size)
+-- 构建一个消息，并发送给目标地址
+-- @param src 来源地址
+-- @param dst 目标地址
+-- @param mtype 消息类型
+-- @param ptr 自定义数据
+-- @param size 自定义数据长度
+function ThreadMessage.emplace(src, dst, mtype, ptr, size)
+    local w = WorkerHash[dst] or g_mthread
+    return w:emplace_message(src or LOCAL_ADDR, dst, mtype, ptr, size)
+end
+
+-- 转发一个消息到目标地址（不影响原消息的所有权，数据会复制一份）
+function ThreadMessage.forward(addr, msg)
+    local _, _, mtype, ptr, size = g_mthread:unpack_message()
     local w = WorkerHash[addr] or g_mthread
     return w:emplace_message(LOCAL_ADDR, addr, mtype, ptr, size)
+end
+
+-- 转发一个消息到目标地址（夺取原消息的所有权，原线程不能销毁此消息，也不能再持有此消息)
+-- @param msg 可以通过g_mthread.construct_message或者acquire_message获取
+function ThreadMessage.transfer(addr, msg)
+    local w = WorkerHash[addr] or g_mthread
+    return w:push_message(msg)
 end
 
 -- 主线程回调函数(由C++调用)
@@ -64,6 +84,7 @@ function on_worker_message(src, mtype, udata, usize)
 end
 
 local function func_none()
+    -- 通常只用于唤醒线程，进入循环
 end
 
 ThreadMessage.reg(ThreadMessage.NONE, func_none)

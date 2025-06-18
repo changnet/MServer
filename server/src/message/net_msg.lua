@@ -144,11 +144,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     buffer_write_int(mbuffer, 2, id, 8)
     buffer_write_buffer(mbuffer, buffer, size, 10)
 
-    -- 注意： buffer里是包含cmd的
-    worker:push_message(m)
-
-    -- 如果是本进程的worker，直接持有创建的message。远程节点则在写入网络后销毁
-    if worker.cluster_worker then g_mthread:destruct_message(m) end
+    return worker:push_message(m)
 end
 
 -- 收到网关转发而来的客户端消息

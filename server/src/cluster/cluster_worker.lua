@@ -96,6 +96,7 @@ end
 -- 对应ThreadWorker的push_message函数
 function ClusterWorker:push_message(message)
     assert(false) -- to be implement
+    g_mthread:destruct_message(message)
 end
 
 return ClusterWorker
