@@ -12,6 +12,8 @@ WORKER = {
     DATA    = {4, "data"}, -- 缓存及db操作
     PLAYER  = {5, "player"}, -- 玩家个人逻辑
     SCENE   = {6, "scene"}, -- 场景
+    MYSQL   = {7, "mysql"}, -- mysql数据库读写
+    MONGODB = {8, "mongodb"}, -- mongodb数据库读写
 }
 W_TEST    = 1 -- 单元测试
 W_GATEWAY = 2 -- 网关
@@ -19,6 +21,8 @@ W_GAME    = 3 -- 游戏公用逻辑
 W_DATA    = 4 -- 缓存及db操作
 W_PLAYER  = 5 -- 玩家个人逻辑
 W_SCENE   = 6 -- 场景
+W_MYSQL   = 7 -- mysql数据库读写
+W_MONGODB = 8 -- mongodb数据库读写
 
 EMPTY = {} -- 一个空table，避免频繁创建空table
 

@@ -154,16 +154,7 @@ function Bootstrap.process_init(loader)
     LOCAL_NAME = local_name
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
-    require "engine.co_pool"
-    require "message.thread_message"
-    require "engine.signal"
-    require "engine.shutdown"
-    require "global.rtti"
-    require "rpc.rpc"
-    require "timer.timer"
-    require "network.socket_mgr"
-    require "cluster.cluster"
-    require "global.debug"
+    require "engine.preloader"
 
     Signal.mask(2, Shutdown.process_stop)
     Signal.mask(15, Shutdown.process_stop)
@@ -200,16 +191,7 @@ function Bootstrap.worker_init(addr, loader)
 
     load_setting()
 
-    require "engine.co_pool"
-    require "message.thread_message"
-    require "engine.signal"
-    require "engine.shutdown"
-    require "global.rtti"
-    require "rpc.rpc"
-    require "timer.timer"
-    require "network.socket_mgr"
-    require "cluster.cluster"
-    require "global.debug"
+    require "engine.preloader"
 
     math.randomseed(os.time())
 

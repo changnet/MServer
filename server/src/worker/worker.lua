@@ -26,8 +26,10 @@ function Worker.create(setting)
     WorkerHash[addr] = w
     WorkerSetting[addr] = setting
 
-    local srv_dir = g_env:get("srv_dir")
-    w:start(srv_dir .. "/src/worker/" .. setting.file, addr)
+    local path, err = package.searchpath(setting.file, package.path)
+    if not path then error(err) end
+
+    w:start(path, addr)
     printf("worker %s start, addr = %d", name, addr)
 end
 

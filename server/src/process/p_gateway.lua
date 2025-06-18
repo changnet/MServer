@@ -4,7 +4,7 @@ Bootstrap.process_init("modules.process_loader")
 
 -- 当前进程需要启动的worker {线程名, 入口文件名}
 local worker_setting = {
-    {file = "w_gateway.lua", type = WORKER.GATEWAY, index = 1},
+    {file = "worker.w_gateway", type = WORKER.GATEWAY, index = 1},
 }
 
 Worker.start(worker_setting)

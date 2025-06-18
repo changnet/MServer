@@ -43,12 +43,7 @@ local function require_exclude(path, wtype, ...)
 end
 
 -- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
-require "global.global"
-require "global.table"
-require "global.math"
-require "global.string"
-require "global.time"
-require "worker.worker_route"
+require "engine.preloader"
 
 print("热更只加载loader文件，rpc等文件虽然已经加载了，在这里也需要重新加载")
 

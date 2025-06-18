@@ -1,4 +1,4 @@
--- auto export by lua-tags 172 symbols
+-- auto export by lua-tags 165 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -24,7 +24,7 @@ return {
 "CoPool", -- src/engine/co_pool.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
-"E", -- src/modules/module_header.lua
+"DataMgr", -- src/data/data_mgr.lua
 "E", -- src/modules/module_loader.lua
 "EMPTY", -- src/modules/system/define.lua
 "ENTITY", -- proto/auto_cs.lua
@@ -102,6 +102,8 @@ return {
 "W_DATA", -- src/modules/system/define.lua
 "W_GAME", -- src/modules/system/define.lua
 "W_GATEWAY", -- src/modules/system/define.lua
+"W_MONGODB", -- src/modules/system/define.lua
+"W_MYSQL", -- src/modules/system/define.lua
 "W_PLAYER", -- src/modules/system/define.lua
 "W_SCENE", -- src/modules/system/define.lua
 "W_TEST", -- src/modules/system/define.lua
@@ -131,21 +133,12 @@ return {
 "eprint", -- src/global/log.lua
 "eprintf", -- src/global/log.lua
 "g_ai_mgr", -- src/android/android_boot.lua
-"g_app_setting", -- src/modules/module_header.lua
-"g_dungeon_mgr", -- src/modules/module_header.lua
-"g_httpd", -- src/modules/module_header.lua
 "g_lcodec", -- src/rpc/rpc.lua
-"g_mail_mgr", -- src/modules/module_header.lua
-"g_map_mgr", -- src/modules/module_header.lua
-"g_mongodb", -- src/modules/module_header.lua
 "g_setting", -- src/engine/bootstrap.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
-"g_setting", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/android/android_boot.lua
-"g_stat_mgr", -- src/modules/module_header.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
-"g_unique_id", -- src/modules/module_header.lua
 "global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua
 "hot_fix", -- src/modules/system/hot_fix.lua

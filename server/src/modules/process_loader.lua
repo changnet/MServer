@@ -1,7 +1,6 @@
 -- 通用的业务进程加载入口文件
 
-require "global.table"
-require "global.string"
+require "engine.preloader"
 
 require("message.pbc")
 
