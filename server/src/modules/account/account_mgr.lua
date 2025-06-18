@@ -3,23 +3,21 @@
 -- xzc
 
 -- 帐号管理
-AccMgr = {}
+AccountMgr = {}
 
-local this = global_storage("AccMgr", {
+local this = global_storage("AccountMgr", {
     account = {}, -- 三级key [sid][plat][account]
     conn_acc = {}, -- conn_id为key，帐号信息为value
     role_acc = {}, -- 玩家pid为key
 })
 
-local util = require "engine.util"
-
 -- 根据Pid获取角色数据
-function AccMgr.get_role_info(pid)
+function AccountMgr.get_role_info(pid)
     return this.role_acc[pid]
 end
 
 --  创建角色逻辑
-function AccMgr.do_create_role(role_info, pkt, pid)
+function AccountMgr.do_create_role(role_info, pkt, pid)
     local base = {}
     base.new = 1 -- 标识为新创建，未初始化用户
     base._id = pid
@@ -30,27 +28,27 @@ function AccMgr.do_create_role(role_info, pkt, pid)
     base.account = role_info.account
 
     local callback = function(...)
-        AccMgr.on_role_create(base, role_info, ...)
+        AccountMgr.on_role_create(base, role_info, ...)
     end
     g_mongodb:insert("base", base, callback)
 end
 
 -- 创建角色数据库返回
 -- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
-function AccMgr.on_role_create(base, role_info, ecode, res)
+function AccountMgr.on_role_create(base, role_info, ecode, res)
     if 0 ~= ecode then
         eprint("role create error:name = %s,account = %s,srv = %d,plat = %d",
               base.name, role_info.account, role_info.sid, role_info.plat)
-        AccMgr.send_role_create(role_info, E.UNDEFINE)
+        AccountMgr.send_role_create(role_info, E.UNDEFINE)
         return
     end
 
     -- 将角色与帐号绑定
-    return AccMgr.do_acc_create(role_info, base.name, base._id)
+    return AccountMgr.do_acc_create(role_info, base.name, base._id)
 end
 
 --  创建帐号
-function AccMgr.do_acc_create(role_info, name, pid)
+function AccountMgr.do_acc_create(role_info, name, pid)
     local acc_info = {}
     acc_info._id = pid
     acc_info.tm = ev:time()
@@ -60,15 +58,15 @@ function AccMgr.do_acc_create(role_info, name, pid)
     acc_info.account = role_info.account
 
     local callback = function(...)
-        AccMgr.on_acc_create(acc_info, role_info, ...)
+        AccountMgr.on_acc_create(acc_info, role_info, ...)
     end
     g_mongodb:insert("account", acc_info, callback)
 end
 
 -- 创建角色数据库返回
-function AccMgr.on_acc_create(acc_info, role_info, ecode, res)
+function AccountMgr.on_acc_create(acc_info, role_info, ecode, res)
     if 0 ~= ecode then -- 失败
-        AccMgr.send_role_create(role_info, E.UNDEFINE)
+        AccountMgr.send_role_create(role_info, E.UNDEFINE)
         printf("create role error:%s", acc_info.account)
         return
     end
@@ -85,12 +83,12 @@ function AccMgr.on_acc_create(acc_info, role_info, ecode, res)
     local clt_conn = CltMgr.get_conn(role_info.socket_id)
     if clt_conn then
         CltMgr.bind_role(pid, clt_conn)
-        AccMgr.send_role_create(role_info)
+        AccountMgr.send_role_create(role_info)
     end
 end
 
 -- 发送角色创建结果
-function AccMgr.send_role_create(role_info, ecode)
+function AccountMgr.send_role_create(role_info, ecode)
     -- 玩家可能断线了，这个clt_conn就不存在了
     local clt_conn = CltMgr.get_conn(role_info.socket_id)
     if not clt_conn then return end
@@ -99,7 +97,7 @@ function AccMgr.send_role_create(role_info, ecode)
 end
 
 -- 玩家下线
-function AccMgr.role_offline(socket_id)
+function AccountMgr.role_offline(socket_id)
     local role_info = this.conn_acc[socket_id]
     if not role_info then return end -- 连接上来未登录就断线
 
@@ -108,8 +106,8 @@ function AccMgr.role_offline(socket_id)
 end
 
 -- 根据pid下线
-function AccMgr.role_offline_by_pid(pid)
-    print("AccMgr.role_offline_by_pid", pid)
+function AccountMgr.role_offline_by_pid(pid)
+    print("AccountMgr.role_offline_by_pid", pid)
 
     CltMgr.close_by_pid(pid)
 
@@ -119,11 +117,11 @@ function AccMgr.role_offline_by_pid(pid)
         return
     end
 
-    AccMgr.role_offline(role_info.socket_id)
+    AccountMgr.role_offline(role_info.socket_id)
 end
 
 -- 帐号在其他地方登录
-function AccMgr.login_otherwhere(role_info)
+function AccountMgr.login_otherwhere(role_info)
     -- 告诉原连接被顶号
     local old_conn = CltMgr.get_conn(role_info.socket_id)
     old_conn:send_pkt(PLAYER.OTHER, {})
@@ -139,7 +137,7 @@ function AccMgr.login_otherwhere(role_info)
 end
 
 -- db数据加载
-function AccMgr.on_db_loaded(ecode, res)
+function AccountMgr.on_db_loaded(ecode, res)
     if 0 ~= ecode then
         eprint("account db load error")
         return
@@ -164,7 +162,7 @@ end
 
 -- 玩家登录
 local function player_login(pkt)
-    local sign = util.md5(LOGIN_KEY, pkt.time, pkt.account)
+    local sign = Util.md5(LOGIN_KEY, pkt.time, pkt.account)
     if sign ~= pkt.sign then
         eprint("clt sign error:%s", pkt.account)
         return
@@ -203,7 +201,7 @@ local function player_login(pkt)
 
     -- 当前一个帐号只能登录一个角色,处理顶号
     if role_info.socket_id then
-        AccMgr.login_otherwhere(role_info)
+        AccountMgr.login_otherwhere(role_info)
 
         -- 下面开始替换连接
         -- TODO 是否要等待其他服务器返回顶号处理成功再替换连接，防止新连接收到旧连接
@@ -241,26 +239,12 @@ local function create_role(pkt)
     -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
     local callback = function(pid)
-        return AccMgr.do_create_role(role_info, pkt, pid)
+        return AccountMgr.do_create_role(role_info, pkt, pid)
     end
     return g_unique_id:player_id(role_info.sid, callback)
 end
 
--- 加载帐号数据
-local function on_app_start(check)
-    if check then
-        return this.ok
-    end
+NetMsg.reg_noauth(PLAYER.LOGIN, player_login)
+NetMsg.reg_noauth(PLAYER.CREATE, create_role)
 
-    g_mongodb:find("account", nil, nil, AccMgr.on_db_loaded)
-    return false
-end
-
-if APP_TYPE == GATEWAY then
-    Cmd.reg(PLAYER.LOGIN, player_login, true)
-    Cmd.reg(PLAYER.CREATE, create_role, true)
-
-    App.reg_start("Account", on_app_start)
-end
-
-return AccMgr
+return AccountMgr

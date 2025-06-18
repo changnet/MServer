@@ -1,4 +1,4 @@
--- auto export by lua-tags 169 symbols
+-- auto export by lua-tags 172 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,7 +7,7 @@ return {
 "ASE", -- src/application/app.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
-"AccMgr", -- src/modules/account/account_mgr.lua
+"AccountMgr", -- src/modules/account/account_mgr.lua
 "AndroidMgr", -- src/android/android_mgr.lua
 "App", -- src/application/app.lua
 "BAG", -- proto/auto_cs.lua
@@ -67,12 +67,17 @@ return {
 "PROCESS_ADDR", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Pbc", -- src/message/pbc.lua
+"PidCall", -- src/rpc/rpc_proxy.lua
+"PidSend", -- src/rpc/rpc_proxy.lua
 "Ping", -- src/modules/system/ping.lua
+"PlayerCall", -- src/rpc/rpc_proxy.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
+"PlayerSend", -- src/rpc/rpc_proxy.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
 "RES_GOLD", -- src/modules/res/res_header.lua
 "RES_ITEM", -- src/modules/res/res_header.lua
 "Res", -- src/modules/res/res.lua
+"Rpc", -- src/rpc/rpc.lua
 "Rtti", -- src/global/rtti.lua
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
@@ -123,7 +128,6 @@ return {
 "__unrequire", -- src/global/require.lua
 "application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
-"call_mt", -- src/rpc/rpc.lua
 "eprint", -- src/global/log.lua
 "eprintf", -- src/global/log.lua
 "g_ai_mgr", -- src/android/android_boot.lua
@@ -158,7 +162,6 @@ return {
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
-"send_mt", -- src/rpc/rpc.lua
 "set_modify_metatable", -- src/global/modi_table.lua
 "sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua

@@ -254,11 +254,16 @@ function Rtti.parse_name_func(name)
     local func = names_func[name]
     if func then return func end
 
+    -- delegate的函数，需要解释，然后缓存
     func = _G
     string.gsub(name, "[^.]+", function(key)
         func = func[key]
     end)
-    if "function" == type(func) then return func end
+    if "function" == type(func) then
+        names_func[name] = func
+        func_names[func] = name
+        return func
+    end
 end
 
 -- 根据函数名取函数指针

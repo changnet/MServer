@@ -67,4 +67,7 @@ Pbc.update()
 NetMsg.load_forward_msg()
 -- P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0
 
+require("network.clt_mgr", W_GATEWAY)
+require("account.account_mgr", W_GATEWAY)
+
 Rtti.collect()

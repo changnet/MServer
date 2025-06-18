@@ -1,3 +1,6 @@
+-- 远程调用
+Rpc = {}
+
 -- rpc调用，使用协程阻塞返回
 Call = {}
 
@@ -31,12 +34,40 @@ local g_mthread = g_mthread
 local WorkerHash = WorkerHash
 local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
+local lcodec_encode_to_buffer = g_lcodec.encode_to_buffer
 
 -- 用parse_name_func而不是name_to_func，避免脚本报错时rtti失效导致rpc也失效了
 local parse_name_func = Rtti.parse_name_func
--- local func_to_name = func_to_name
 
 local last_src -- 最后一次调用rpc的来源
+
+function Rpc.set_metatable(module, factory_func)
+    local mt
+    mt =
+    {
+        __index = function(tbl, k)
+            local name = rawget(tbl, "__name")
+            if name then
+                name = name .. "." .. k
+            else
+                name = k
+            end
+            local mod = setmetatable({__name = name}, mt)
+
+            tbl[k] = mod
+            return mod
+        end,
+        __call = function(tbl, ...)
+            local name = assert(rawget(tbl, "__name"))
+            local func = factory_func(name)
+
+            tbl[name] = func
+            return func(...)
+        end
+    }
+
+    setmetatable(module, mt)
+end
 
 -- 为了获取rpc返回的第一个参数，并实现在co内报错，需要wrap一层函数
 local function call_return(ok, ...)
@@ -50,8 +81,7 @@ local function send_func_factory(name)
     return function(addr, ...)
         local w = WorkerHash[addr] or g_mthread
 
-        print("TODO c的函数是在元表里的，效率会比较慢，需要做local化")
-        local ptr, size = g_lcodec:encode_to_buffer(0, name, ...)
+        local ptr, size = lcodec_encode_to_buffer(g_lcodec, 0, name, ...)
         return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
     end
 end
@@ -62,59 +92,12 @@ local function call_func_factory(name)
 
         -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
         local session = CoPool.current_session()
-        local ptr, size = g_lcodec:encode_to_buffer(session, name, ...)
+        local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
         w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 
         return call_return(coroutine.yield())
     end
 end
-
-local call_mt
-local send_mt
-call_mt =
-{
-    __index = function(tbl, k)
-        local name = rawget(tbl, "__name")
-        if name then
-            name = name .. "." .. k
-        else
-            name = k
-        end
-        local mod = setmetatable({__name = name}, call_mt)
-
-        tbl[k] = mod
-        return mod
-    end,
-    __call = function(tbl, ...)
-        local name = assert(rawget(tbl, "__name"))
-        local func = call_func_factory(name)
-
-        tbl[name] = func
-        return func(...)
-    end
-}
-send_mt =
-{
-    __index = function(tbl, k)
-        local name = rawget(tbl, "__name")
-        if name then
-            name = name .. "." .. k
-        else
-            name = k
-        end
-        local mod = setmetatable({__name = name}, send_mt)
-
-        tbl[k] = mod
-        return mod
-    end,
-    __call = function(tbl, ...)
-        local name = assert(rawget(tbl, "__name"))
-        local func = send_func_factory(name)
-
-        tbl[name] = func
-        return func(...)
-    end
-}
 
 local function do_request(src, session, name, ...)
     local func = parse_name_func(name)
@@ -163,8 +146,12 @@ function Send.last_source()
     return last_src
 end
 
-setmetatable(Call, call_mt)
-setmetatable(Send, send_mt)
+Rpc.call_return = call_return
+
+Rpc.set_metatable(Call, call_func_factory)
+Rpc.set_metatable(Send, send_func_factory)
 
 ThreadMessage.reg(RPC_REQ, request_dispatch)
 ThreadMessage.reg(RPC_RES, response_dispatch)
+
+require "rpc.rpc_proxy"
