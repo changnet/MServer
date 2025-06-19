@@ -48,6 +48,7 @@ int32_t Mongo::uriconnect(lua_State *L)
     }
 
     client_ = mongoc_client_new_from_uri_with_error(m_uri, &error_);
+    mongoc_uri_destroy(m_uri);
     if (!client_)
     {
         lua_pushinteger(L, error_.code);

@@ -126,11 +126,12 @@ file(GLOB_RECURSE SRC_LIST "${SRC_ROOT_PATH}/src/*.cpp")
 add_executable(master ${SRC_LIST})
 
 # 这个文件里使用_TIMESTAMP_这个宏来标记编译时间，所以每次都需要更新一下才会重新编译
-add_custom_command(
-    TARGET master
+# add_custom_command可以更新时间戳，但没法保证在构建master前执行
+add_custom_target(update_build_time
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_LIST_DIR}/src/system/env.cpp
     COMMENT "update build timestamp"
 )
+add_dependencies(master update_build_time)
 
 target_include_directories(master PRIVATE
     ${SRC_ROOT_PATH}/src # 本身的源码目录添加为include，这样不同目录的文件相互引用时，不需要使用../global这种路径
@@ -159,7 +160,6 @@ target_link_libraries(master PRIVATE
 
 if(WINDOWS)
     target_include_directories(master PRIVATE
-        ${LUA_INCLUDE_DIR}
         # "C:\\Program Files (x86)\\Visual Leak Detector\\include"
     )
     target_link_libraries(master PRIVATE
