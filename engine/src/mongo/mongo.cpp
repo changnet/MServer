@@ -31,7 +31,7 @@ Mongo::~Mongo()
 
 void Mongo::clear_error()
 {
-    bson_set_error(&error_, 0, 0, "");
+    bson_set_error(&error_, 0, 0, "%s", "");
 }
 
 int32_t Mongo::uriconnect(lua_State *L)
@@ -91,22 +91,10 @@ int32_t Mongo::ping()
 {
     if (!client_) return -1;
 
-    mongoc_cursor_t *cursor = mongoc_database_command(
-        database_, (mongoc_query_flags_t)0, 0, 1, 0, &ping_, nullptr, nullptr);
+    bool ok = mongoc_database_command_simple(database_, &ping_, nullptr,
+                                             nullptr, &error_);
 
-    const bson_t *reply;
-    if (!mongoc_cursor_next(cursor, &reply))
-    {
-        mongoc_cursor_error(cursor, &error_);
-    }
-    else
-    {
-        error_.code = 0;
-    }
-
-    mongoc_cursor_destroy(cursor); // cursor总是需要释放
-
-    return error_.code;
+    return ok ? 0 : error_.code;
 }
 
 int32_t Mongo::error(lua_State *L) const
@@ -300,6 +288,8 @@ int32_t Mongo::insert_many(lua_State *L)
     bson_t **docs = documents;
     size_t size_docs = std::size(documents);
 
+    mongoc_collection_t *collection;
+
     // 允许传入hash table，无法预知数量
     lua_pushnil(L);
     while (lua_next(L, 3))
@@ -326,7 +316,7 @@ int32_t Mongo::insert_many(lua_State *L)
         lua_pop(L, 1);
     }
 
-    mongoc_collection_t *collection = get_collection(cl_name);
+    collection = get_collection(cl_name);
     ok = mongoc_collection_insert_many(collection, (const bson_t **)docs,
                                        n_documents, nullptr, nullptr, &error_);
 

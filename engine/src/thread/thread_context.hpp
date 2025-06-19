@@ -5,7 +5,6 @@
 #include <shared_mutex>
 #include <condition_variable>
 #include "global/global.hpp"
-#include "pool/flexible_pool.hpp"
 
 // 线程数据交互结构
 struct ThreadMessage final
@@ -149,7 +148,7 @@ public:
     /**
      * 把一个消息转发给指定的线程
      */
-    bool forward_message(int32_t src, int32_t dst, int32_t type, void *udata,
+    bool forward_message(int32_t src, int32_t dst, uint16_t type, void *udata,
                          int32_t usize)
     {
         std::shared_lock sl(mutex_);

@@ -89,7 +89,8 @@ bool EV::init_entry(int32_t argc, char **argv)
     if (LUA_OK != lua_pcall(L_, argc, 0, 1))
     {
         const char *err_msg = lua_tostring(L_, -1);
-        ELOG("call lua enterance file error:%s", err_msg);
+        // 入口文件加载失败，ELOG未初始化，不能使用
+        ELOG_R("call lua enterance file error:%s", err_msg);
 
         lua_pop(L_, 2); // pop error message and traceback
         return false;

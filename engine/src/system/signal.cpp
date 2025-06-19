@@ -1,5 +1,3 @@
-#pragma once
-
 #include "signal.hpp"
 #include "static_global.hpp"
 #include "global/platform.hpp"

@@ -4,6 +4,7 @@
 # sh build.sh llhttp 只编译llhttp组件
 # sh build.sh release 编译release版
 # sh build.sh debug 编译debug版
+# sh build.sh refresh 删除缓存，重新构建
 # sh build.sh 什么参数都不加，执行增量编译
 
 # TODO 可以用realpath取绝对路径，但是那样的话cmake的日志也是绝对路径，太难看了
@@ -18,8 +19,11 @@ do_make()
 		cmake $ENGINE_DIR -DCMAKE_BUILD_TYPE=Release
 	elif [ "$cmake_option" = "debug" ]; then
 		cmake $ENGINE_DIR -DCMAKE_BUILD_TYPE=Debug
-	elif [ "$cmake_option" = "cmake" ]; then
+	elif [ "$cmake_option" = "refresh" ]; then
 		# 删除文件后，要重新执行cmake。或者每次都执行cmake？
+		if [ -f "CMakeCache.txt" ]; then
+			rm -rf ./*
+		fi
 		cmake $ENGINE_DIR
 	elif [ ! -f CMakeCache.txt ]; then
 		# cmake未初始化，或者新增了cmake参数才执行cmake

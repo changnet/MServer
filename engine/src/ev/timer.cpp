@@ -162,7 +162,7 @@ int32_t TimerMgr::new_heap(HeapTimer &ht, int64_t now, int32_t id,
 
     ++ht.size_;
     int32_t index = ht.size_ + HEAP0 - 1;
-    if (unlikely(ht.capacity_ < (size_t)index + 1))
+    if (unlikely(ht.capacity_ < index + 1))
     {
         ht.capacity_ += 512;
         HeapNode *new_timers = new HeapNode[ht.capacity_]();

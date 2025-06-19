@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <cstddef> // std::max_align_t
 #include "global/global.hpp"
 
 struct FlexibleBuffer
@@ -60,7 +61,7 @@ public:
         uint16_t mask = size > 0 ? BUFFER : 0;
         if (size + sizeof(T) > SIZE)
         {
-            T *ptr = new T(std::forward<Args>(args)...);
+            ptr = new T(std::forward<Args>(args)...);
             mask |= MALLOC;
         }
         else
@@ -139,7 +140,7 @@ private:
             char *chunk = new char[CHUNK_SIZE];
             chunks_.push_back(chunk);
 
-            for (int32_t i = 0; i < CHUNK_SIZE / SIZE; i++)
+            for (size_t i = 0; i < CHUNK_SIZE / SIZE; i++)
             {
                 buffers_.push_back(chunk + SIZE * i);
             }

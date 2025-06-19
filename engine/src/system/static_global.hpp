@@ -4,6 +4,7 @@
 #include "ev/ev.hpp"
 #include "lpp/llog.hpp"
 #include "ev/ev_backend.hpp"
+#include "pool/flexible_pool.hpp"
 #include "thread/thread_context.hpp"
 
 /**

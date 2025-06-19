@@ -7,19 +7,19 @@
 
 struct ThreadBuffer
 {
-    ThreadBuffer::ThreadBuffer()
+    ThreadBuffer()
     {
         used_   = 0;
         buffer_ = new char[10240];
         size_   = sizeof(buffer_);
     }
 
-    ThreadBuffer::~ThreadBuffer()
+    ~ThreadBuffer()
     {
         delete[] buffer_;
     }
 
-    void ThreadBuffer::reserve(size_t need_size)
+    void reserve(size_t need_size)
     {
         size_            = std::max(size_ * 2, need_size);
         char *new_buffer = new char[size_];
@@ -29,7 +29,7 @@ struct ThreadBuffer
         buffer_ = new_buffer;
     }
 
-    bool ThreadBuffer::append_string(const char *str, size_t size)
+    bool append_string(const char *str, size_t size)
     {
         // 单次日志打印的最大长度
         static const size_t MAX_BUFFER = 8 * 1024 * 1024;
@@ -168,7 +168,7 @@ int32_t LLog::print(lua_State *L)
                                LUA_INTEGER_FMT, lua_tointeger(L, i))
                     : snprintf(buffer.buffer_ + buffer.used_, MAX_NUM_SIZE,
                                "%f", lua_tonumber(L, i));
-            if (num_size <= 0 || num_size > MAX_NUM_SIZE)
+            if (num_size <= 0 || num_size > (int32_t)MAX_NUM_SIZE)
             {
                 ELOG("print ERROR %u", buffer.used_);
                 return 0;
