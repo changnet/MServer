@@ -56,7 +56,7 @@ public:
      * 执行初始化接受的连接
      * @return int32_t
      */
-    virtual int32_t do_init_accept(int32_t fd)
+    virtual int32_t do_init_accept(EVIO *w)
     {
         assert(false);
         return EV_NONE;
@@ -65,7 +65,7 @@ public:
      * 执行初始化连接
      * @return int32_t
      */
-    virtual int32_t do_init_connect(int32_t fd)
+    virtual int32_t do_init_connect(EVIO *w)
     {
         assert(false);
         return EV_NONE;

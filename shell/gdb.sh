@@ -1,15 +1,37 @@
 #!/bin/bash
 
 # core文件的设置见 ./build_env.sh set_sys_env
+# ./gdb.sh core-master-1234 第一个参数带core，自动加载core文件
+# ./gdb.sh gateway 第一个参数不带--node，自动补齐并启动gateway进程
+# ./gdb.sh --node gateway，带--node，则按参数启动
 
+PROG="master"
 PWD=../server/bin
 
-if [[ ! $2 ]]; then
-    # ./gdb.sh core-master-4836 调试core文件
-    gdb $PWD/master $1
-else
-    # ./gdb.sh gateway --index=1 --id=1 启动进程进行调试
-    cd $PWD
-    P2=$2
-    gdb -args master --app=$1 ${P2:+"$P2"} $3 $4 $5
+
+# 检查是否有参数
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 [args...]"
+    exit 1
 fi
+
+# 第一个参数
+FIRST_ARG="$1"
+
+cd $PWD
+
+# 判断是否以 core- 开头
+if [[ "$FIRST_ARG" == core-* ]]; then
+    # 加载 core 文件
+    gdb "$PROG" "$FIRST_ARG" "${@:2}"
+else
+    # 检查第一个参数是否以 "--node" 开头
+    if [[ "$FIRST_ARG" == --node* ]]; then
+        # 已经是 --node 开头，直接使用
+        gdb -args "$PROG" "$@"
+    else
+        # 不是以 --node 开头，在前面插入 --node
+        gdb -args "$PROG" --node "$@"
+    fi
+fi
+

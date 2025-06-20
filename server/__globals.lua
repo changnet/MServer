@@ -1,21 +1,14 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 145 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
-"APP_TYPE", -- src/application/app.lua
-"ASE", -- src/application/app.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
 "AndroidMgr", -- src/android/android_mgr.lua
-"App", -- src/application/app.lua
-"BAG", -- proto/auto_cs.lua
-"BAG", -- proto/cs.lua
 "BAG", -- src/modules/protocol/protocol.lua
 "Bootstrap", -- src/engine/bootstrap.lua
-"CHAT", -- proto/auto_cs.lua
-"CHAT", -- proto/cs.lua
 "CHAT", -- src/modules/protocol/protocol.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
@@ -27,14 +20,11 @@ return {
 "DataMgr", -- src/data/data_mgr.lua
 "E", -- src/modules/module_loader.lua
 "EMPTY", -- src/modules/system/define.lua
-"ENTITY", -- proto/auto_cs.lua
-"ENTITY", -- proto/cs.lua
 "ENTITY", -- src/modules/protocol/protocol.lua
 "ET", -- src/modules/entity/entity_header.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "GM", -- src/modules/system/gm.lua
-"GSE", -- src/application/app.lua
 "GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
@@ -45,13 +35,9 @@ return {
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/global/log.lua
 "LogDB", -- src/modules/log/log_db.lua
-"MAIL", -- proto/auto_cs.lua
-"MAIL", -- proto/cs.lua
 "MAIL", -- src/modules/protocol/protocol.lua
 "MAX_MAIL", -- src/modules/system/define.lua
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
-"MISC", -- proto/auto_cs.lua
-"MISC", -- proto/cs.lua
 "MISC", -- src/modules/protocol/protocol.lua
 "MT", -- src/modules/move/move_header.lua
 "NetMsg", -- src/message/net_msg.lua
@@ -61,8 +47,6 @@ return {
 "PE_ENTER", -- src/modules/event/event_header.lua
 "PE_EXIT", -- src/modules/event/event_header.lua
 "PLATFORM", -- src/modules/system/define.lua
-"PLAYER", -- proto/auto_cs.lua
-"PLAYER", -- proto/cs.lua
 "PLAYER", -- src/modules/protocol/protocol.lua
 "PROCESS_ADDR", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
@@ -98,7 +82,6 @@ return {
 "UNIQUEID", -- src/modules/system/define.lua
 "Util", -- src/engine/bootstrap.lua
 "WORKER", -- src/modules/system/define.lua
-"WSE", -- src/application/app.lua
 "W_DATA", -- src/modules/system/define.lua
 "W_GAME", -- src/modules/system/define.lua
 "W_GATEWAY", -- src/modules/system/define.lua
@@ -128,7 +111,6 @@ return {
 "__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
-"application_ev", -- src/application/app.lua
 "assert", -- src/global/global.lua
 "eprint", -- src/global/log.lua
 "eprintf", -- src/global/log.lua
@@ -156,12 +138,10 @@ return {
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
 "set_modify_metatable", -- src/global/modi_table.lua
-"sig_handler", -- src/application/app.lua
 "str_split3", -- src/test/misc_test.lua
 "sys", -- src/global/sys.lua
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
-"vd", -- proto/auto.lua
 "vd", -- src/global/log.lua
 "vd", -- src/modules/protocol/auto.lua
 "warn", -- src/global/log.lua

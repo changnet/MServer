@@ -51,7 +51,7 @@ int32_t EVIO::do_init_accept()
     // lua报错，在启动socket对象后无法正常设置io参数
     if (!io_) return EV_ERROR;
 
-    return io_->do_init_accept(fd_);
+    return io_->do_init_accept(this);
 }
 
 int32_t EVIO::do_init_connect()
@@ -59,6 +59,6 @@ int32_t EVIO::do_init_connect()
     // lua报错，在启动socket对象后无法正常设置io参数
     if (!io_) return EV_ERROR;
 
-    return io_->do_init_connect(fd_);
+    return io_->do_init_connect(this);
 }
 

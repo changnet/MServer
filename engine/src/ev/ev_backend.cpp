@@ -198,7 +198,6 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
             if (w->b_kevents_ & EV_FLUSH)
             {
                 modify_later(w, EV_CLOSE);
-                ELOG_R("flush write close %d", w->fd_);
             }
             else if (w->b_kevents_ & EV_WRITE)
             {
@@ -261,6 +260,7 @@ void EVBackend::do_watcher_recv_event(EVIO *w, int32_t events)
     // 此时再收到主线程的任何数据都直接丢弃
     if (w->b_kevents_ & EV_CLOSE || w->b_pevents_ & EV_CLOSE) return;
 
+    // 这几个事件，是要立即执行
     if (events & EV_INIT_ACPT)
     {
         // 初始化新socket，只有ssl用到
@@ -281,7 +281,7 @@ void EVBackend::do_watcher_recv_event(EVIO *w, int32_t events)
         do_io_status(w, EV_WRITE, status);
     }
 
-    // 其他事件，和从poll、epoll的事件汇总后，再一起处理
+    // 其他事件，和从poll、epoll的事件汇总后，再一起处理，设置到epoll
     static const int32_t EV = EV_READ | EV_ACCEPT | EV_CONNECT | EV_CLOSE | EV_FLUSH;
 
     events &= EV;

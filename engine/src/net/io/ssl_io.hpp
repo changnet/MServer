@@ -26,15 +26,15 @@ public:
      * 执行初始化接受的连接
      * @return int32_t
      */
-    virtual int32_t do_init_accept(int32_t fd) override;
+    virtual int32_t do_init_accept(EVIO *w) override;
     /**
      * 执行初始化连接
      * @return int32_t
      */
-    virtual int32_t do_init_connect(int32_t fd) override;
+    virtual int32_t do_init_connect(EVIO *w) override;
 
 private:
-    int32_t do_handshake();
+    int32_t do_handshake(EVIO *w);
     int32_t init_ssl_ctx(int32_t fd);
 
 private:

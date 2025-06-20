@@ -158,7 +158,6 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::unpack_on_closed>("unpack_on_closed");
     lc.def<&Socket::get_errno>("get_errno");
     lc.def<&Socket::unpack>("unpack");
-    lc.def<&Socket::close>("close");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
     lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");

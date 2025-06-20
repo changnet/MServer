@@ -170,6 +170,15 @@ local function equal(got, expect)
     return true
 end
 
+-- 使用协程执行一个测试函数
+local function co_run(func, info)
+    local co = coroutine.create(func)
+    T.co = co
+
+    local ok, msg = coroutine.resume(co)
+    return ok, msg
+end
+
 -- 执行一个before函数
 local function test_one_before(b)
     local ok, msg = xpcall(b.func, error_msgh)
@@ -200,7 +209,7 @@ end
 
 local function test_one_it(i)
     local tm = T.clock()
-    local ok, msg = xpcall(i.func, error_msgh)
+    local ok, msg = co_run(i.func)
     if not ok then
         T.fail = T.fail + 1
         if not msg:find(TEST_FAIL) then append_msg(msg) end
@@ -208,8 +217,15 @@ local function test_one_it(i)
         print_msg(i)
         return
     end
+    -- 子协程进入异步等待，主协程也进入等待
+    if i.status == PEND then
+        i.status = nil
+        print("主协程 进入等待", i.title)
+        coroutine.yield()
+        print("主协程 退出等待")
+    end
 
-    -- 异步超时
+    -- 异步超时，会在Test.imeout重新设置PEND状态
     if i.status == PEND then
         T.fail = T.fail + 1
         T.R("%s%s (timeout)", FAIL, i.title)
@@ -290,8 +306,9 @@ local function run_one_describe(d)
     if not ok then T.R(msg) end
 end
 
-local function resume()
-    local ok, msg = coroutine.resume(T.co)
+local function resume(co)
+    print("resume ==============", debug.traceback())
+    local ok, msg = coroutine.resume(co or T.co)
     if not ok then error(msg) end
 end
 
@@ -302,20 +319,26 @@ function Test.print(...)
 end
 
 local function on_fail(msg)
-    -- 如果当前测试有定时器，出错时销毁定时器
-    if T.now.timer then
-        T.timer.del(T.now.timer)
-        T.now.timer = nil
-    end
-
     append_msg(msg)
 
     if "running" == coroutine.status(T.co) then
+        -- 如果当前测试有定时器，出错时销毁定时器
+        if T.now.timer then
+            T.timer.del(T.now.timer)
+            T.now.timer = nil
+        end
         -- 打断当前测试，回到xpcall(即describe或者it开始的地方)，继续执行下一个测试
         error(TEST_FAIL)
     else
         T.now.status = FAIL
-        resume()
+
+        -- 如果出错时不在测试的协程上执行，说明未使用Test.cb包一层
+        -- 这时候恢复T.main_co测试也没有用了，只能等超时
+        -- 因为等T.main_co再次挂起，还会触发下面的error
+        -- 如果不触发error，失败后继续执行的逻辑也不对的
+        -- resume(T.main_co)
+
+        error("test abort")
     end
 end
 
@@ -405,18 +428,21 @@ function Test.timeout()
 
     T.now.timer = nil
     T.now.status = PEND
-    resume()
+    resume(T.main_co)
 end
 
 -- 等待当前异步测试完成，并设置超时时间(毫秒)
 function Test.wait(timeout)
     assert(not T.now.timer, "call wait multi times")
 
+    T.now.status = PEND
     T.now.timer = T.timer.new(timeout or 2000, Test.timeout)
     coroutine.yield()
 
-    if T.now.timer then T.timer.del(T.now.timer) end
-    T.now.timer = nil
+    if T.now.timer then
+        T.timer.del(T.now.timer)
+        T.now.timer = nil
+    end
     -- T.now.status = nil -- 这里保留异步完成后的状态，需要根据状态统计成功、失败
 end
 
@@ -427,6 +453,15 @@ function Test.done()
     T.now.timer = nil
     T.now.status = nil
     resume()
+    resume(T.main_co)
+end
+
+-- 构建一个异步回调函数
+function Test.cb(func)
+    -- 一些异步测试中，比如http，其他回调是由第三方库调用，而不是由T.co执行
+    -- 如果这些回调发生错误，其错误是由第三方捕捉
+    -- Test库无法感知到出错无法打印对应的信息，也就无法继续进行测试
+    return
 end
 
 -- 测试前运行的函数
@@ -488,6 +523,8 @@ function Test.reset()
     T.pass = 0
     T.fail = 0
     T.time = 0
+    T.co = nil
+    T.main_co = nil
 end
 
 -- run current test session
@@ -521,9 +558,9 @@ end
 
 -- run current test session
 function Test.run()
-    T.co = coroutine.create(run)
+    T.main_co = coroutine.create(run)
 
-    return resume()
+    resume(T.main_co)
 end
 
 -- /////////////////////////////////////////////////////////////////////////////

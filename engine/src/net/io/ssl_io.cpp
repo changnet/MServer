@@ -24,7 +24,7 @@ SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx)
 
 int32_t SSLIO::recv(EVIO *w)
 {
-    if (!SSL_is_init_finished(ssl_)) return do_handshake();
+    if (!SSL_is_init_finished(ssl_)) return do_handshake(w);
 
     int32_t len = 0;
     while (true)
@@ -67,7 +67,7 @@ int32_t SSLIO::recv(EVIO *w)
 
 int32_t SSLIO::send(EVIO *w)
 {
-    if (!SSL_is_init_finished(ssl_)) return do_handshake();
+    if (!SSL_is_init_finished(ssl_)) return do_handshake(w);
 
     int32_t len  = 0;
     size_t bytes = 0;
@@ -105,22 +105,22 @@ int32_t SSLIO::send(EVIO *w)
     return EV_ERROR;
 }
 
-int32_t SSLIO::do_init_accept(int32_t fd)
+int32_t SSLIO::do_init_accept(EVIO *w)
 {
-    if (init_ssl_ctx(fd) < 0) return EV_ERROR;
+    if (init_ssl_ctx(w->fd_) < 0) return EV_ERROR;
 
     SSL_set_accept_state(ssl_);
 
-    return do_handshake();
+    return do_handshake(w);
 }
 
-int32_t SSLIO::do_init_connect(int32_t fd)
+int32_t SSLIO::do_init_connect(EVIO *w)
 {
-    if (init_ssl_ctx(fd) < 0) return EV_ERROR;
+    if (init_ssl_ctx(w->fd_) < 0) return EV_ERROR;
 
     SSL_set_connect_state(ssl_);
 
-    return do_handshake();
+    return do_handshake(w);
 }
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
@@ -141,7 +141,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     return 0;
 }
 
-int32_t SSLIO::do_handshake()
+int32_t SSLIO::do_handshake(EVIO *w)
 {
     int32_t ecode = SSL_do_handshake(ssl_);
     if (1 == ecode)
@@ -167,6 +167,7 @@ int32_t SSLIO::do_handshake()
     if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 
     // error
+    w->errno_ = netcompat::errorno();
     TlsCtx::dump_error(__FUNCTION__, ecode);
 
     return EV_ERROR;

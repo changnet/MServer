@@ -87,7 +87,8 @@ Socket::~Socket()
     }
     else
     {
-        ELOG("socket destructor watcher not delete %d", socket_id_);
+        ELOG("socket destructor watcher not delete id = %d, fd = %d",
+            socket_id_, w_->fd_);
     }
 
     // 如果未正常关闭。这里不能强制关闭
@@ -592,6 +593,9 @@ FAIL:
 
 int32_t Socket::close()
 {
+    // 改成backend线程处理socket读写后，这个不能直接调用函数关闭fd
+    // 否则会造成fd重复为其他类型（比如文件），从而导致backend出错
+    assert(false);
 #ifndef NDEBUG
     if (0 != (w_->ref_ > EVIO::REF_BACKEND))
     {

@@ -132,11 +132,14 @@ local function do_close(socket)
     CoPool.invoke(socket.on_disconnected, socket)
 
     socket.status = CLOSED
-    local e = socket.s:close()
+
+    socket:close()
+    local errno, errstr = socket:get_error()
     __socket_hash[socket.socket_id] = nil
 
-    if 0 ~= e then
-        print("socket close, error code", socket.socket_id, e)
+    if 0 ~= errno then
+        printf("socket(%d) close, error (%d)%s",
+            socket.socket_id, errno or 0, errstr or "")
     end
 end
 

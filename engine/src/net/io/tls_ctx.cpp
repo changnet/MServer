@@ -72,12 +72,12 @@ void TlsCtx::dump_error(const char *what, int32_t e)
     // 因此出错时，需要循环用ERR_get_error来清空错误码或者调用ERR_clear_error
 
     int32_t net_e = netcompat::errorno();
-    ELOG("%s e(%d) errno(%d:%s)", what, e, net_e, netcompat::strerror(net_e));
+    PLOG("%s ssl error(%d) errno(%d:%s)", what, e, net_e, netcompat::strerror(net_e));
 
     unsigned long eno = 0;
     while (0 != (eno = ERR_get_error()))
     {
-        ELOG("    %s", ERR_error_string(eno, NULL));
+        PLOG("    %s", ERR_error_string(eno, NULL));
     }
 }
 

@@ -54,9 +54,10 @@ Test.describe("http test", function()
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)
+
+                conn:close()
                 Test.equal(http_type, 2)
                 Test.equal(code, 200)
-                conn:close()
                 Test.done()
             end)
         end
@@ -70,9 +71,10 @@ Test.describe("http test", function()
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
+
+                conn:close()
                 Test.equal(http_type, 2)
                 Test.equal(code, 200)
-                conn:close()
                 Test.done()
             end)
         end
