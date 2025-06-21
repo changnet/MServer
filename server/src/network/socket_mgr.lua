@@ -50,7 +50,7 @@ local __socket_hash = __socket_hash
 
 -- 分配当前进程唯一的socket id
 function SocketMgr.next_id()
-    -- 需要唯多个worker生成的id不会冲突
+    -- 需要保证多个worker生成的id不会冲突
     -- 参考engine.lua中生成address的规则，低16位用作worker type和index
     -- 高16位用作自增，目前一个worker最多只能发起2^16=65535个连接
     local seed = __socket_seed

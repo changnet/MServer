@@ -34,6 +34,7 @@ EVBackend::EVBackend()
 
 EVBackend::~EVBackend()
 {
+    fd_mgr_.clear();
 }
 
 bool EVBackend::start()

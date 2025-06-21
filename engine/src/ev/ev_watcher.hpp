@@ -134,14 +134,7 @@ public:
         {
             fd_watcher_huge_.erase(fd);
         }
-        // 该watcher对应的socket已经在另一个线程销毁(正常不应该出现)
-        if (w->del_ref(EVIO::REF_BACKEND))
-        {
-            ELOG("backend delete watcher: %d - %d", w->id_, w->fd_);
-            delete w;
-            return false;
-        }
-        return true;
+        return !try_delete_watcher(w);
     }
 
     // 获取fd对应的watcher
@@ -157,18 +150,18 @@ public:
         return found == fd_watcher_huge_.end() ? nullptr : found->second;
     }
 
-    // 遍历所有watcher
-    template <typename F>
-    void for_each(F&& func)
+    void clear()
     {
         for (auto& x : fd_watcher_)
         {
-            if (x) func(x);
+            if (x) try_delete_watcher(x);
         }
         for (auto& x : fd_watcher_huge_)
         {
-            func(x.second);
+            try_delete_watcher(x.second);
         }
+        fd_watcher_.clear();
+        fd_watcher_huge_.clear();
     }
 
     // 当前fd的数量
@@ -183,6 +176,9 @@ public:
 
         return s;
     }
+
+private:
+    bool try_delete_watcher(EVIO *w);
 
 private:
     /// 小于该值的fd，可通过数组快速获取watcher
