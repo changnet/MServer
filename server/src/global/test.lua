@@ -220,9 +220,7 @@ local function test_one_it(i)
     -- 子协程进入异步等待，主协程也进入等待
     if i.status == PEND then
         i.status = nil
-        print("主协程 进入等待", i.title)
         coroutine.yield()
-        print("主协程 退出等待")
     end
 
     -- 异步超时，会在Test.imeout重新设置PEND状态
@@ -307,7 +305,6 @@ local function run_one_describe(d)
 end
 
 local function resume(co)
-    print("resume ==============", debug.traceback())
     local ok, msg = coroutine.resume(co or T.co)
     if not ok then error(msg) end
 end
@@ -321,12 +318,13 @@ end
 local function on_fail(msg)
     append_msg(msg)
 
+    -- 如果当前测试有定时器，出错时销毁定时器
+    if T.now.timer then
+        T.timer.del(T.now.timer)
+        T.now.timer = nil
+    end
+
     if "running" == coroutine.status(T.co) then
-        -- 如果当前测试有定时器，出错时销毁定时器
-        if T.now.timer then
-            T.timer.del(T.now.timer)
-            T.now.timer = nil
-        end
         -- 打断当前测试，回到xpcall(即describe或者it开始的地方)，继续执行下一个测试
         error(TEST_FAIL)
     else
@@ -338,7 +336,7 @@ local function on_fail(msg)
         -- 如果不触发error，失败后继续执行的逻辑也不对的
         -- resume(T.main_co)
 
-        error("test abort")
+        error(TEST_FAIL)
     end
 end
 
@@ -425,6 +423,10 @@ function Test.timeout()
 
     -- Timer.timeout超时会自动删除，并不需要手动删除
     -- if T.now.timer then T.timer.del(T.now.timer) end
+    if not T.now then
+        Test.R("test already finish", debug.traceback())
+        return
+    end
 
     T.now.timer = nil
     T.now.status = PEND
@@ -437,6 +439,7 @@ function Test.wait(timeout)
 
     T.now.status = PEND
     T.now.timer = T.timer.new(timeout or 2000, Test.timeout)
+
     coroutine.yield()
 
     if T.now.timer then
@@ -461,7 +464,17 @@ function Test.cb(func)
     -- 一些异步测试中，比如http，其他回调是由第三方库调用，而不是由T.co执行
     -- 如果这些回调发生错误，其错误是由第三方捕捉
     -- Test库无法感知到出错无法打印对应的信息，也就无法继续进行测试
-    return
+    return function(...)
+        local ok, msg = xpcall(func, error_msgh, ...)
+        if not ok then
+            -- Test.equal等函数设置了faild状态并抛出异常中断测试
+            if not msg:find(TEST_FAIL) then append_msg(msg) end
+
+            T.now.status = FAIL
+
+            resume(T.main_co)
+        end
+    end
 end
 
 -- 测试前运行的函数

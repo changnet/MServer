@@ -51,16 +51,16 @@ Test.describe("http test", function()
         local conn = HttpSocket()
 
         conn:connect(exp_host, 80, exp_ip)
-        conn.on_connected = function(_conn)
+        conn.on_connected = Test.cb(function(_conn)
             conn:get("/get", nil,
-                     function(__conn, http_type, code, method, url, body)
+                     Test.cb(function(__conn, http_type, code, method, url, body)
 
                 conn:close()
                 Test.equal(http_type, 2)
                 Test.equal(code, 200)
                 Test.done()
-            end)
-        end
+            end))
+        end)
         Test.wait(15000)
     end)
 
@@ -70,13 +70,13 @@ Test.describe("http test", function()
         conn:connect(exp_host, 80, exp_ip)
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
-                      function(__conn, http_type, code, method, url, body)
+                      Test.cb(function(__conn, http_type, code, method, url, body)
 
                 conn:close()
                 Test.equal(http_type, 2)
                 Test.equal(code, 200)
                 Test.done()
-            end)
+            end))
         end
         Test.wait(15000)
     end)
