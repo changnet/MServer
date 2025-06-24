@@ -104,7 +104,7 @@ void EpollBackend::do_wait_event(int32_t ev_count)
 
         EVIO *w = fd_mgr_.get(static_cast<int32_t>(fd));
         assert(w);
-        do_watcher_wait_event(w, events);
+        do_kernel_event(w, events);
     }
 }
 

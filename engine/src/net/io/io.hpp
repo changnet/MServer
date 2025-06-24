@@ -45,6 +45,13 @@ public:
      */
     virtual int32_t send(EVIO *w);
     /**
+     * @brief 执行ssl握手（必须已初始化）
+     */
+    virtual int32_t handshake(EVIO *w)
+    {
+        return 0;
+    }
+    /**
      * 接受新连接
      */
     virtual int32_t accept(EVIO *w);

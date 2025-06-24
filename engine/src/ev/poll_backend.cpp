@@ -114,7 +114,8 @@ void PollBackend::do_wait_event(int32_t ev_count)
                 if (revents & (POLLERR | POLLHUP)) events |= EV_CLOSE;
             }
 
-            do_watcher_wait_event(w, events);
+            PLOG("receive event fd = %d, event = %d", w->fd_, events);
+            do_kernel_event(w, events);
         }
 
         // poll返回值表示数组中有N个fd有事件，但只能遍历来查找哪个有事件
@@ -254,10 +255,11 @@ int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
     assert(poll_fd_[index].fd == fd);
 
     // WSAPoll或者linux poll不需要显示传入POLLHUP、POLLERR
-    int32_t events =
-        ((new_ev & EV_READ || new_ev & EV_ACCEPT) ? (int32_t)POLLIN : 0)
-        | ((new_ev & EV_WRITE || new_ev & EV_CONNECT) ? (int32_t)POLLOUT : 0);
+    int32_t events = 0;
+    if (new_ev & (EV_READ | EV_ACCEPT)) events |= (int32_t)POLLIN; 
+    if (new_ev & (EV_WRITE | EV_CONNECT)) events |= (int32_t)POLLOUT;
 
+    PLOG("modify fd = %d, events = %d", fd, events);
     poll_fd_[index].events = (int16_t)events;
 
     return 0;

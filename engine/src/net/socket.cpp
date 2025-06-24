@@ -108,7 +108,7 @@ void Socket::stop(bool flush)
     // 不过那边有处理，这里统一发送
 
     // EV_FLUSH不要和EV_CLOSE同时发送，不然EV_FLUSH会失效，这在另一个线程有特殊处理
-    StaticGlobal::B->append_event(w_, flush ? EV_FLUSH : EV_CLOSE);
+    StaticGlobal::B->add_watcher_event(w_, flush ? EV_FLUSH : EV_CLOSE);
 }
 
 int32_t Socket::send_pkt(lua_State *L)
@@ -164,7 +164,7 @@ void Socket::append(const void *data, size_t len)
 
 void Socket::flush()
 {
-    StaticGlobal::B->append_event(w_, EV_WRITE);
+    StaticGlobal::B->add_watcher_event(w_, EV_WRITE);
 }
 
 int32_t Socket::set_block(int32_t fd, int32_t flag)
@@ -374,7 +374,7 @@ bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
     w_->addr_ = addr;
     w_->ref_.fetch_or(EVIO::REF_BACKEND); // 当前worker线程一个，backend线程一个
 
-    StaticGlobal::B->append_event(w_, ev);
+    StaticGlobal::B->add_watcher_event(w_, ev);
 
     return true;
 }
@@ -595,13 +595,12 @@ int32_t Socket::close()
 {
     // 改成backend线程处理socket读写后，这个不能直接调用函数关闭fd
     // 否则会造成fd重复为其他类型（比如文件），从而导致backend出错
-    assert(false);
-#ifndef NDEBUG
     if (0 != (w_->ref_ > EVIO::REF_BACKEND))
     {
-        ELOG("socket close has backend ref: %d", socket_id_);
+        ELOG("socket close but backend still using id = %d, fd = %d",
+            socket_id_, w_->fd_);
+        return -1;
     }
-#endif
 
     // epoll、poll发现fd出错时，需要及时获取错误码并保存
     int32_t e = w_->errno_;
@@ -734,7 +733,7 @@ int32_t Socket::connect_validate()
         return -1;
     }
 
-    StaticGlobal::B->append_event(w_, EV_READ);
+    StaticGlobal::B->add_watcher_event(w_, EV_READ);
     return 0;
 }
 
@@ -803,7 +802,7 @@ int32_t Socket::io_init_accept()
     if (!w_) return -1;
 
     // set会清除旧事件，这里得保留EV_READ
-    StaticGlobal::B->append_event(w_, EV_INIT_ACPT | EV_READ);
+    StaticGlobal::B->add_watcher_event(w_, EV_INIT_ACPT | EV_READ);
 
     return 0;
 }
@@ -812,7 +811,7 @@ int32_t Socket::io_init_connect()
 {
     if (!w_) return -1;
 
-    StaticGlobal::B->append_event(w_, EV_INIT_CONN | EV_READ);
+    StaticGlobal::B->add_watcher_event(w_, EV_INIT_CONN | EV_READ);
 
     return 0;
 }

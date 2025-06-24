@@ -27,7 +27,7 @@ EVBackend *EVBackend::instance()
 
 EVBackend::EVBackend()
 {
-    done_ = false;
+    done_             = false;
     busy_             = false;
     modify_protected_ = false;
 }
@@ -86,9 +86,9 @@ void EVBackend::backend()
 
         int64_t now = timing::steady_clock();
 
-        // 对于实时性要求不高的，适当降低backend运行的帧数可以让io读写效率更高
-        // 使用#define，当数值为0时直接不编译这部分代码
-        #define min_wait 0
+// 对于实时性要求不高的，适当降低backend运行的帧数可以让io读写效率更高
+// 使用#define，当数值为0时直接不编译这部分代码
+#define min_wait 0
 #if min_wait
         int64_t diff = min_wait - (now - last);
         if (diff > 1)
@@ -115,10 +115,10 @@ void EVBackend::modify_later(EVIO *w, int32_t events)
 
 void EVBackend::do_pending_events()
 {
-    for (const auto& w : pending_events_)
+    for (const auto &w : pending_events_)
     {
         int32_t events = w->b_pevents_;
-        w->b_pevents_ = 0;
+        w->b_pevents_  = 0;
         modify_watcher(w, events);
     }
     pending_events_.clear();
@@ -149,9 +149,9 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         /**
          * 当对方关闭链接时，backend线程会从fd_mgr移除并向逻辑线程发送关闭消息
          * 逻辑线程在收到消息前也恰好关闭连接，也会向backend线程发送关闭消息
-         * 
+         *
          * 所以backend线程收到关闭消息时发现已经关闭，则无需处理
-         * 
+         *
          * 注意：backend线程从不关闭fd，所以不存在fd复用的问题
          */
         if (!fd_mgr_.get(w->fd_)) return 0;
@@ -187,7 +187,8 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     return modify_fd(fd, op, events);
 }
 
-bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
+bool EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
+                             int32_t &events, int32_t &kevents)
 {
     switch (status)
     {
@@ -198,31 +199,29 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
             // 发送完后主动关闭主动关闭
             if (w->b_kevents_ & EV_FLUSH)
             {
-                modify_later(w, EV_CLOSE);
+                kevents |= EV_CLOSE;
             }
             else if (w->b_kevents_ & EV_WRITE)
             {
                 // 发送完成，从epoll中取消EV_WRITE事件
-                modify_later(w, w->b_kevents_ & (~EV_WRITE));
+                kevents &= ~EV_WRITE;
             }
         }
         return true;
     case EV_READ:
-        // socket一般都会监听读事件，不需要做特殊处理
+        // ssl握手需要继续读取数据时，需要添加可读事件
+        kevents |= EV_READ;
         return true;
     case EV_WRITE:
-        // 未发送完，加入write事件继续发送
-        if (!(w->b_kevents_ & EV_WRITE))
-        {
-            modify_later(w, w->b_kevents_ | EV_WRITE);
-        }
+        kevents |= EV_WRITE;
         return true;
     case EV_BUSY:
         // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
         if (w->mask_ & EVIO::M_OVERFLOW_KILL)
         {
             PLOG("backend thread overflow kill fd = %d", w->fd_);
-            modify_later(w, EV_CLOSE);
+
+            kevents |= EV_CLOSE;
             return false;
         }
         else
@@ -232,20 +231,27 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
             ELOG("backend thread fd overflow sleep");
         }
         return true;
-    case EV_CLOSE:
-        modify_later(w, EV_CLOSE);
-        return false;
+    case EV_CLOSE: kevents |= EV_CLOSE; return false;
     case EV_INIT_ACPT:
     case EV_INIT_CONN:
-        dispatch_event(w, status);
-
-        // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？ Renegotiation is removed from TLS 1.3
-        //int32_t new_status = w->send();
-        //do_io_status(w, EV_WRITE, new_status);
-        return true;
+        if (0 == (status & (EV_ERROR | EV_CLOSE)))
+        {
+            events |= status;
+            kevents &= ~status;
+            // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？
+            // Renegotiation is removed from TLS 1.3
+            // int32_t new_status = w->send();
+            // do_io_status(w, EV_WRITE, new_status);
+            return true;
+        }
+        else
+        {
+            kevents |= EV_CLOSE;
+            return false;
+        }
     case EV_ERROR:
         // w->errno_ = netcompat::errorno(); // 这个已经在send、recv里设置
-        modify_later(w, EV_CLOSE);
+        kevents |= EV_CLOSE;
         return false;
     default: ELOG("unknow io status: %d", status); return false;
     }
@@ -253,85 +259,98 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, const int32_t &status)
     return false;
 }
 
-void EVBackend::do_watcher_recv_event(EVIO *w, int32_t events)
+void EVBackend::do_watcher_event(EVIO *w, int32_t revents, bool add)
 {
-    assert(events);
+    assert(revents);
 
     // epoll检测到连接已断开，会直接从backend中删除
     // 此时再收到主线程的任何数据都直接丢弃
-    if (w->b_kevents_ & EV_CLOSE || w->b_pevents_ & EV_CLOSE) return;
+    int32_t b_kevents = w->b_kevents_;
+    if (b_kevents & (EV_CLOSE | EV_CLOSE)) return;
+
+    int32_t events = 0; // 需要派发到其他线程的事件
+    int32_t kevents =
+        add ? (revents | b_kevents) : revents; // 需要设置到kernel的事件
 
     // 这几个事件，是要立即执行
-    if (events & EV_INIT_ACPT)
+    if (revents & EV_INIT_ACPT)
     {
         // 初始化新socket，只有ssl用到
         int32_t status = w->do_init_accept();
-        do_io_status(w, EV_INIT_ACPT, status);
+        do_io_status(w, EV_INIT_ACPT, status, events, kevents);
     }
-    else if (events & EV_INIT_CONN)
+    else if (revents & EV_INIT_CONN)
     {
         // 初始化新socket，只有ssl用到
         int32_t status = w->do_init_connect();
-        do_io_status(w, EV_INIT_CONN, status);
+        do_io_status(w, EV_INIT_CONN, status, events, kevents);
     }
 
     // 处理数据发送
-    if (events & EV_WRITE)
+    if (revents & EV_WRITE)
     {
         auto status = w->send();
-        do_io_status(w, EV_WRITE, status);
+        do_io_status(w, EV_WRITE, status, events, kevents);
     }
 
     // 其他事件，和从poll、epoll的事件汇总后，再一起处理，设置到epoll
-    static const int32_t EV = EV_READ | EV_ACCEPT | EV_CONNECT | EV_CLOSE | EV_FLUSH;
+    static const int32_t EV = EV_READ | EV_ACCEPT | EV_CONNECT | EV_INIT_ACPT
+                              | EV_INIT_CONN | EV_CLOSE | EV_FLUSH;
 
-    events &= EV;
+    kevents &= EV;
+    if (kevents != b_kevents) modify_later(w, kevents);
+
     if (events)
     {
-        modify_later(w, events);
+        assert(!(events & EV_CLOSE));
+        dispatch_event(w, events);
     }
 }
 
-void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
+void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
 {
     /**
      * 以前单线程的时候，事件可以先记录而不处理，等待回调处理
      * 但是事件放到独立的线程后，如果只把事件发给另一个线程而不处理，那当前线程
      * 进入epoll的wait时，由于另一个线程来不及处理，会直接再次触发事件回调，导致
      * epoll线程消耗大量的cpu
-     * 
+     *
      * 对于读写，数据可以在epoll线程读出来放缓冲区。对于accept，需要先把fd取出来
      * 存到某个地方，等待另一个线程处理
      */
-    int32_t events          = 0;             // 最终需要触发的事件
-    const int32_t kernel_ev = w->b_kevents_; // 内核事件
+
+    const int32_t b_kevents = w->b_kevents_; // 内核事件
+
+    int32_t events          = 0;             // 最终需要派发到其他线程的事件
+    int32_t kevents         = b_kevents;
+
     if (revents & EV_WRITE)
     {
-        if (kernel_ev & EV_WRITE)
+        if (b_kevents & EV_WRITE)
         {
             auto status = w->send();
-            do_io_status(w, EV_WRITE, status);
+            do_io_status(w, EV_WRITE, status, revents, kevents);
         }
 
         // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
-        if (unlikely(kernel_ev & EV_CONNECT))
+        if (unlikely(b_kevents & EV_CONNECT))
         {
-            modify_later(w, kernel_ev & (~EV_CONNECT));
+            kevents &= ~EV_CONNECT;
         }
 
         events |= (EV_WRITE | EV_CONNECT);
     }
     if (revents & EV_READ)
     {
-        if (kernel_ev & EV_READ)
+        if (b_kevents & EV_READ)
         {
             auto status = w->recv();
-            do_io_status(w, EV_READ, status);
+            do_io_status(w, EV_READ, status, revents, kevents);
         }
-        if (kernel_ev & EV_ACCEPT)
+        if (b_kevents & EV_ACCEPT)
         {
             auto status = w->io_->accept(w);
-            do_io_status(w, EV_ACCEPT, status);
+            do_io_status(w, EV_ACCEPT, status, revents, kevents);
         }
 
         events |= (EV_READ | EV_ACCEPT);
@@ -339,7 +358,6 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
 
     if (revents & (EV_ERROR | EV_CLOSE))
     {
-        events |= EV_CLOSE;
         // 如果发生错误，并且上面的READ WRITE没有设置错误码，则这里设置
         if (!w->errno_)
         {
@@ -350,39 +368,72 @@ void EVBackend::do_watcher_wait_event(EVIO *w, int32_t revents)
         }
         // 如果对方关闭，这里直接从backend移除监听，避免再从主线程通知删除
         // 注意需要清除EV_FLUSH标记，那个优先级更高
-        modify_later(w, EV_CLOSE);
+        kevents |= EV_CLOSE;
+    }
+    else
+    {
+        if (unlikely(b_kevents & EV_INIT_ACPT))
+        {
+            auto status = w->io_->handshake(w);
+            do_io_status(w, EV_INIT_ACPT, status, revents, kevents);
+        }
+        else if (unlikely(b_kevents & EV_INIT_CONN))
+        {
+            auto status = w->io_->handshake(w);
+            do_io_status(w, EV_INIT_CONN, status, revents, kevents);
+        }
     }
 
-    // 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT
-    // 用户只设置EV_CONNECT那就不要触发EV_WRITE
-    // 假如socket关闭时，用户已不希望回调任何事件，但这时对方可能会发送数据,触发EV_READ事件
-    // 关闭和错误事件不管用户是否设置，都会触发
-    int32_t expect_ev = kernel_ev | EV_ERROR | EV_CLOSE;
-    expect_ev &= events;
-    if (expect_ev) dispatch_event(w, expect_ev);
+    /**
+     * 只触发用户希望回调的事件，例如events有EV_WRITE和EV_CONNECT
+     * 用户只设置EV_CONNECT那就不要触发EV_WRITE
+     * 假如socket关闭时，用户已不希望回调任何事件，但这时对方可能会发送数据,触发EV_READ事件
+     *
+     * 关闭和错误事件不要在这里dispatch，否则backend线程未从epoll移除，主线程可能就关闭socket了
+     * 要等modify_later延迟关闭后，再独立派发一次关闭事件
+     */
+
+    int32_t expect_ev = b_kevents & events;
+    if (expect_ev)
+    {
+        assert(!(expect_ev & EV_CLOSE)); // 关闭事件必须在backend关闭socket后才能派发
+        dispatch_event(w, expect_ev);
+    }
+    if (kevents != b_kevents) modify_later(w, kevents);
 }
 
 void EVBackend::do_recv_events()
 {
     // 只循环一定次数，避免其他线程不断地发送事件，导致线程一直在处理这些事件而
     // 不再接收来自网络的事件
-    EVIO *w;
     for (int32_t i = 1; i < 1024; i++)
     {
+        EVIO *w;
+        int32_t e;
         {
             std::scoped_lock<std::mutex> sl(mutex_);
-            if (recv_events_.empty())
+            if (watcher_events_.empty())
             {
                 busy_ = false;
                 return;
             }
 
-            w = recv_events_.front();
-            recv_events_.pop_front();
+            const WatcherEvent &we = watcher_events_.front();
+
+            w = we.w_;
+            e = we.e_;
+            watcher_events_.pop_front();
         }
 
-        int32_t ev = w->b_ev_.exchange(0);
-        do_watcher_recv_event(w, ev);
+        if (e)
+        {
+            do_watcher_event(w, e, false);
+        }
+        else
+        {
+            e = w->b_ev_.exchange(0);
+            do_watcher_event(w, e, true);
+        }
     }
 
     busy_ = true;
@@ -398,14 +449,20 @@ void EVBackend::dispatch_event(EVIO *w, int32_t ev)
     if (!ok) ELOG("backend forward_message fail: %d", w->addr_);
 }
 
-void EVBackend::append_event(EVIO *w, int32_t ev)
+void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
 {
     int32_t old = w->b_ev_.fetch_or(ev);
     if (0 != old) return;
 
     {
         std::scoped_lock<std::mutex> sl(mutex_);
-        recv_events_.push_back(w);
+        watcher_events_.emplace_back(0, w);
     }
     wake();
+}
+
+void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
+{
+    std::scoped_lock<std::mutex> sl(mutex_);
+    watcher_events_.emplace_back(ev, w);
 }

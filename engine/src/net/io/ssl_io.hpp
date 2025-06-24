@@ -23,6 +23,10 @@ public:
      */
     int32_t send(EVIO *w) override;
     /**
+     * @brief 执行ssl握手（必须已初始化）
+     */
+    int32_t handshake(EVIO *w) override;
+    /**
      * 执行初始化接受的连接
      * @return int32_t
      */
@@ -34,7 +38,6 @@ public:
     virtual int32_t do_init_connect(EVIO *w) override;
 
 private:
-    int32_t do_handshake(EVIO *w);
     int32_t init_ssl_ctx(int32_t fd);
 
 private:

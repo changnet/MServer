@@ -11,7 +11,10 @@ Test.describe("http test", function()
     -- example.com不稳定，经常连不上，用postman来测试
     -- local exp_host = "www.example.com"
     local exp_host = "postman-echo.com"
+    -- postman不再提供非https测试接口，现在非https接口由httpbin.org来测试
+    local httpbin_host = "httpbin.org"
     local exp_ip
+    local httpbin_ip
 
     local local_host = IPV4 and "127.0.0.1" or "::1"
 
@@ -45,15 +48,17 @@ Test.describe("http test", function()
 
         exp_ip = util.get_addr_info(exp_host)
         Test.print(exp_host .. " address is", exp_ip)
+        httpbin_ip = util.get_addr_info(httpbin_host)
+        Test.print(httpbin_host .. " address is", httpbin_ip)
     end)
 
-    Test.it("http get " .. exp_host, function()
+    Test.it("http get " .. httpbin_host, function()
         local conn = HttpSocket()
 
-        conn:connect(exp_host, 80, exp_ip)
+        conn:connect(httpbin_host, 80, httpbin_ip)
         conn.on_connected = Test.cb(function(_conn)
             conn:get("/get", nil,
-                     Test.cb(function(__conn, http_type, code, method, url, body)
+                Test.cb(function(__conn, http_type, code, method, url, body)
 
                 conn:close()
                 Test.equal(http_type, 2)
@@ -64,13 +69,13 @@ Test.describe("http test", function()
         Test.wait(15000)
     end)
 
-    Test.it("http post " .. exp_host, function()
+    Test.it("http post " .. httpbin_host, function()
         local conn = HttpSocket()
 
-        conn:connect(exp_host, 80, exp_ip)
+        conn:connect(httpbin_host, 80, httpbin_ip)
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
-                      Test.cb(function(__conn, http_type, code, method, url, body)
+                Test.cb(function(__conn, http_type, code, method, url, body)
 
                 conn:close()
                 Test.equal(http_type, 2)
@@ -158,18 +163,18 @@ Test.describe("http test", function()
         Test.wait(10000)
     end)
 
-    Test.it("https get " .. exp_host, function()
+    Test.it("https_get " .. exp_host, function()
         local conn = HttpSocket()
 
         conn:connect_s(exp_host, 443, clt_ssl)
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
-                     function(__conn, http_type, code, method, url, body)
+                Test.cb(function(__conn, http_type, code, method, url, body)
                 Test.equal(http_type, 2)
                 Test.equal(code, 200)
                 conn:close()
                 Test.done()
-            end)
+            end))
         end
         Test.wait(15000)
     end)

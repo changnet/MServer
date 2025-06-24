@@ -24,7 +24,7 @@ SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx)
 
 int32_t SSLIO::recv(EVIO *w)
 {
-    if (!SSL_is_init_finished(ssl_)) return do_handshake(w);
+    if (!SSL_is_init_finished(ssl_)) return handshake(w);
 
     int32_t len = 0;
     while (true)
@@ -41,6 +41,7 @@ int32_t SSLIO::recv(EVIO *w)
 
     int32_t ecode = SSL_get_error(ssl_, len);
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
+    if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 
     /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
      * SSL连接关闭时，要先关闭SSL协议，再关闭socket。当一个连接直接关闭时，SSL并不能明确
@@ -67,7 +68,7 @@ int32_t SSLIO::recv(EVIO *w)
 
 int32_t SSLIO::send(EVIO *w)
 {
-    if (!SSL_is_init_finished(ssl_)) return do_handshake(w);
+    if (!SSL_is_init_finished(ssl_)) return handshake(w);
 
     int32_t len  = 0;
     size_t bytes = 0;
@@ -91,6 +92,7 @@ int32_t SSLIO::send(EVIO *w)
 
     int32_t ecode = SSL_get_error(ssl_, len);
     if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
+    if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
 
     // 非主动断开，打印错误日志
     if ((SSL_ERROR_ZERO_RETURN == ecode)
@@ -111,7 +113,7 @@ int32_t SSLIO::do_init_accept(EVIO *w)
 
     SSL_set_accept_state(ssl_);
 
-    return do_handshake(w);
+    return handshake(w);
 }
 
 int32_t SSLIO::do_init_connect(EVIO *w)
@@ -120,7 +122,7 @@ int32_t SSLIO::do_init_connect(EVIO *w)
 
     SSL_set_connect_state(ssl_);
 
-    return do_handshake(w);
+    return handshake(w);
 }
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
@@ -141,7 +143,7 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     return 0;
 }
 
-int32_t SSLIO::do_handshake(EVIO *w)
+int32_t SSLIO::handshake(EVIO *w)
 {
     int32_t ecode = SSL_do_handshake(ssl_);
     if (1 == ecode)

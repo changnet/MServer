@@ -255,6 +255,7 @@ void AsyncLog::append(const char *name, int32_t mask, int64_t time,
     if (it == device_.end())
     {
         ELOG_R("no log device found: %s", name);
+        if (len < 1024) ELOG_R("%s", str);
         return;
     }
     Device &device = it->second;

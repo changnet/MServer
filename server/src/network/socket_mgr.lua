@@ -126,18 +126,19 @@ local function do_read(socket)
     g_thread:emplace_message(0, 0, ThreadMessage.SOCKET, socket.socket_id)
 end
 
+-- 收到EV_CLOSE事件时，主动关闭socket
 local function do_close(socket)
     -- 这时候fd并没有关闭，部分逻辑还需要用到fd，因此在close之前调用on_disconnected
     -- 如果socket.status不为closing，则为对方关闭链接
     CoPool.invoke(socket.on_disconnected, socket)
 
     socket.status = CLOSED
-
-    socket:close()
-    local errno, errstr = socket:get_error()
+    local errno = socket.s:close()
     __socket_hash[socket.socket_id] = nil
 
     if 0 ~= errno then
+        local errstr
+        errno, errstr = socket:get_error()
         printf("socket(%d) close, error (%d)%s",
             socket.socket_id, errno or 0, errstr or "")
     end

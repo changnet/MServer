@@ -23,41 +23,57 @@ public:
     EVBackend();
     virtual ~EVBackend();
 
-    /// 唤醒子进程
+    // 唤醒子进程
     virtual void wake() = 0;
 
-    /// 启动backend线程
+    // 启动backend线程
     virtual bool before_start() = 0;
 
-    /// 中止backend线程
+    // 中止backend线程
     virtual void after_stop() = 0;
 
     /**
-     * 启动backend线程
+     * @brief 启动backend线程
      */
     bool start();
     /**
-     * 停止backend线程
+     * @brief 停止backend线程
      */
     void stop();
     /**
-     * 往backend发送一个事件
+     * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
+     * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题
      */
-    void append_event(EVIO *w, int32_t ev);
+    void add_watcher_event(EVIO *w, int32_t ev);
     /**
-     * 创建一个backend实例
+     * @brief 设置backend中指定watcher的事件，其他事件将会被覆盖
+     */
+    void set_watcher_event(EVIO *w, int32_t ev);
+    /**
+     * @brief 创建一个backend实例
      */
     static EVBackend *instance();
 
 protected:
+    struct WatcherEvent
+    {
+        int32_t e_;
+        EVIO *w_;
+        WatcherEvent(int32_t e, EVIO* w)
+        {
+            e_ = e;
+            w_ = w;
+        }
+    };
+protected:
     /**
-     * 处理收到的线程事件
+     * @brief 处理收到来自其他线程的事件
      */
-    void do_watcher_recv_event(EVIO *w, int32_t events);
+    void do_watcher_event(EVIO *w, int32_t revents, bool add);
     /**
-     * 处理从epoll、poll收到的事件
+     * @brief 处理从epoll、poll收到的事件
      */
-    void do_watcher_wait_event(EVIO *w, int32_t revents);
+    void do_kernel_event(EVIO *w, int32_t revents);
     /**
      * @brief 把一个fd设置到epoll内核中，该函数外部需要加锁
      * @param fd 需要设置的文件描述符
@@ -69,21 +85,21 @@ protected:
 
 private:
     /**
-     * 后台线程执行函数
+     * @brief 后台线程执行函数
      */
     void backend();
     /**
-     * 执行单次后台逻辑
+     * @brief 执行单次后台逻辑
      */
     void backend_once(int32_t ev_count, int64_t now);
     /**
-     * 等待网络数据
+     * @brief 等待网络数据
      * @param timeout 等待的时间，毫秒
      * @return 收到的网络事件数量
      */
     virtual int32_t wait(int32_t timeout) = 0;
     /**
-     * 处理从网络收到的事件
+     * @brief 处理从网络收到的事件
      */
     virtual void do_wait_event(int32_t ev_count) = 0;
     /**
@@ -95,11 +111,14 @@ private:
      * @param w 待处理的watcher
      * @param ev 当前执行的事件
      * @param status 待处理的状态
+     * @param events 需要派发到其他线程的事件
+     * @param kevents 需要设置到kernel(epoll)的事件
      * @return 是否继续执行
      */
-    bool do_io_status(EVIO *w, int32_t ev, const int32_t &status);
+    bool do_io_status(EVIO *w, int32_t ev, int32_t status, int32_t &events,
+                      int32_t &kevents);
     /**
-     * 处理待生效的事件
+     * @brief 处理待生效的事件
      */
     void do_pending_events();
     /**
@@ -126,7 +145,7 @@ protected:
     std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
 
     std::mutex mutex_;
-    std::deque<EVIO *> recv_events_; // 收到其他线程的事件
+    std::deque<WatcherEvent> watcher_events_; // 收到其他线程的事件
     WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
 };
 
