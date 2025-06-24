@@ -17,6 +17,10 @@ function CsSocket:__init(socket_id)
     WebSocket.__init(self)
 end
 
+function CsSocket:set_option()
+    self.s:set_nodelay(1)
+end
+
 -- 发送数据包
 function CsSocket:send_pkt(msg_id, buffer, size)
     return self.s:send_clt(MASK, msg_id, buffer, size)

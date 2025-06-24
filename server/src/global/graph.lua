@@ -236,7 +236,13 @@ end
 -- @param lx ly 矩形左上角坐标
 -- @param rx ry 矩形右下角坐标
 local function is_point_in_rect(px, py, lx, ly, rx, ry)
-    return px >= lx and px <= rx and py >= ly and py <= ry
+    if ly > ry then
+        -- 笛卡尔坐标系，y轴向上
+        return px >= lx and px <= rx and py <= ly and py >= ry
+    else
+        -- 屏幕坐标系，y轴向下
+        return px >= lx and px <= rx and py >= ly and py <= ry
+    end
 end
 
 -- 判断两个线段是否相交

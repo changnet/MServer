@@ -124,6 +124,23 @@ int32_t SSLIO::do_init_connect(EVIO *w)
 
     return handshake(w);
 }
+/*
+static void info_callback(const SSL *ssl, int where, int ret)
+{
+    if (where & SSL_CB_ALERT)
+    {
+        PLOG("Alert: %s - %s", SSL_alert_type_string(ret),
+               SSL_alert_desc_string(ret));
+    }
+    else if (where & SSL_CB_HANDSHAKE_START)
+    {
+        PLOG("Handshake started");
+    }
+    else if (where & SSL_CB_HANDSHAKE_DONE)
+    {
+        PLOG("Handshake done");
+    }
+}*/
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
@@ -140,12 +157,15 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
         return -1;
     }
 
+    // SSL_set_info_callback(ssl_, info_callback);
+
     return 0;
 }
 
 int32_t SSLIO::handshake(EVIO *w)
 {
     int32_t ecode = SSL_do_handshake(ssl_);
+    PLOG("handshake fd = %d, code = %d", w->fd_, ecode);
     if (1 == ecode)
     {
         // SSLMgr::dump_x509(ssl_);
@@ -163,6 +183,7 @@ int32_t SSLIO::handshake(EVIO *w)
      * handshakes.
      */
     ecode = SSL_get_error(ssl_, ecode);
+    PLOG("handshake get error fd = %d, code = %d", w->fd_, ecode);
 
     // 握手无法一次完成，必须返回事件让socket执行继续do_handshake
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;

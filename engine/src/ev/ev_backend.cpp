@@ -187,7 +187,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
     return modify_fd(fd, op, events);
 }
 
-bool EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
+void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
                              int32_t &events, int32_t &kevents)
 {
     switch (status)
@@ -207,14 +207,14 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
                 kevents &= ~EV_WRITE;
             }
         }
-        return true;
+        break;
     case EV_READ:
         // ssl握手需要继续读取数据时，需要添加可读事件
         kevents |= EV_READ;
-        return true;
+        break;
     case EV_WRITE:
         kevents |= EV_WRITE;
-        return true;
+        break;
     case EV_BUSY:
         // 正常情况不出会出缓冲区溢出的情况，客户端之间可直接kill
         if (w->mask_ & EVIO::M_OVERFLOW_KILL)
@@ -222,7 +222,6 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
             PLOG("backend thread overflow kill fd = %d", w->fd_);
 
             kevents |= EV_CLOSE;
-            return false;
         }
         else
         {
@@ -230,8 +229,10 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("backend thread fd overflow sleep");
         }
-        return true;
-    case EV_CLOSE: kevents |= EV_CLOSE; return false;
+        break;
+    case EV_CLOSE:
+        kevents |= EV_CLOSE;
+        break;
     case EV_INIT_ACPT:
     case EV_INIT_CONN:
         if (0 == (status & (EV_ERROR | EV_CLOSE)))
@@ -242,21 +243,18 @@ bool EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
             // Renegotiation is removed from TLS 1.3
             // int32_t new_status = w->send();
             // do_io_status(w, EV_WRITE, new_status);
-            return true;
         }
         else
         {
             kevents |= EV_CLOSE;
-            return false;
         }
+        break;
     case EV_ERROR:
         // w->errno_ = netcompat::errorno(); // 这个已经在send、recv里设置
         kevents |= EV_CLOSE;
-        return false;
-    default: ELOG("unknow io status: %d", status); return false;
+        break;
+    default: ELOG("unknow io status: %d", status);
     }
-
-    return false;
 }
 
 void EVBackend::do_watcher_event(EVIO *w, int32_t revents, bool add)

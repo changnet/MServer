@@ -6,7 +6,6 @@
 #include "io/io.hpp"
 #include "packet/packet.hpp"
 
-class LEV;
 class TlsCtx;
 
 /* 网络socket连接类
@@ -40,13 +39,15 @@ public:
     /**
      * 启用TCP_NODELAY选项
      */
-    static int32_t set_nodelay(int32_t fd);
+    int32_t set_nodelay(int32_t opt);
     // 启用TCP的keep alive
-    static int32_t set_keep_alive(int32_t fd);
+    int32_t set_keep_alive(int32_t time, int32_t interval, int32_t probes);
     // 启用TCP的 user timeout
-    static int32_t set_user_timeout(int32_t fd);
+    int32_t set_user_timeout(int32_t timeout);
     // 启用IPV6双栈
-    static int32_t set_non_ipv6only(int32_t fd);
+    int32_t set_non_ipv6only(int32_t fd, int32_t opt);
+    // 设置socket读写的事件
+    int32_t set_watcher_event(int32_t events);
 
     /**
      * @brief 根据域名获取ip地址，此函数会阻塞
@@ -173,7 +174,7 @@ public:
      * 验证connect是否成功
      * @return 成功0 失败返回非0错误码
      */
-    int32_t connect_validate();
+    int32_t is_connect_success();
     /**
      * 解析收到的数据，根据不同的packet类型返回不同数据
      * @return 类型编码，数据1，数据2，数据3，...

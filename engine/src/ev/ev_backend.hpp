@@ -113,9 +113,8 @@ private:
      * @param status 待处理的状态
      * @param events 需要派发到其他线程的事件
      * @param kevents 需要设置到kernel(epoll)的事件
-     * @return 是否继续执行
      */
-    bool do_io_status(EVIO *w, int32_t ev, int32_t status, int32_t &events,
+    void do_io_status(EVIO *w, int32_t ev, int32_t status, int32_t &events,
                       int32_t &kevents);
     /**
      * @brief 处理待生效的事件

@@ -145,7 +145,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::set_event>("set_event");
     lc.def<&Socket::set_io>("set_io");
     lc.def<&Socket::set_packet>("set_packet");
-    lc.def<&Socket::connect_validate>("connect_validate");
+    lc.def<&Socket::is_connect_success>("is_connect_success");
     lc.def<&Socket::set_buffer_params>("set_buffer_params");
     lc.def<&Socket::io_init_accept>("io_init_accept");
     lc.def<&Socket::io_init_connect>("io_init_connect");
@@ -159,6 +159,11 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::get_errno>("get_errno");
     lc.def<&Socket::unpack>("unpack");
     lc.def<&Socket::close>("close");
+    lc.def<&Socket::set_keep_alive>("set_keep_alive");
+    lc.def<&Socket::set_user_timeout>("set_user_timeout");
+    lc.def<&Socket::set_nodelay>("set_nodelay");
+    lc.def<&Socket::set_watcher_event>("set_watcher_event");
+    lc.def<&Socket::set_non_ipv6only>("set_non_ipv6only");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
     lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");

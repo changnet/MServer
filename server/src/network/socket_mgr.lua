@@ -162,7 +162,7 @@ local function do_listen(socket)
 end
 
 local function do_connect(socket)
-    local e = socket.s:connect_validate()
+    local e = socket.s:is_connect_success()
     if 0 ~= e then
         socket:close() -- not s:close()
     end

@@ -134,9 +134,14 @@ function Socket:on_connected()
 
 end
 
+function Socket:set_option()
+end
+
 -- io初始化完成
 function Socket:io_ready()
+    self:set_option()
     self.status = OPENED
+    self.s:set_watcher_event(SocketMgr.EV_READ)
 
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
     -- 但像websocket这种，还需要进行一次websocket握手

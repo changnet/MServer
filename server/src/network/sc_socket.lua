@@ -18,6 +18,14 @@ function ScSocket:__init(socket_id)
     WebSocket.__init(self)
 end
 
+function ScSocket:set_option()
+    self.s:set_nodelay(1)
+
+    -- 保活和超时现在一般通过心跳包实现，不用tcp的机制
+    -- self.s:set_user_timeout(60000)
+    -- self.s:set_keep_alive(60, 10, 5)
+end
+
 -- 发送数据包
 function ScSocket:send_pkt(msg_id, buffer, size)
     -- self.s:send_srv(MASK, msg_id, buffer, size) -- 这个要访问元表慢一些
