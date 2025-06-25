@@ -347,26 +347,26 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
         }
         else if (revents & EV_WRITE)
         {
-            events |= (EV_WRITE | EV_CONNECT);
-
             if (b_kevents & EV_WRITE)
             {
+                events |= EV_WRITE;
                 auto status = w->send();
-                do_io_status(w, EV_WRITE, status, revents, kevents);
+                do_io_status(w, EV_WRITE, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_CONNECT))
             {
+                events |= EV_CONNECT;
                 kevents &= ~EV_CONNECT;
             }
             else if (unlikely(b_kevents & EV_INIT_ACPT))
             {
                 auto status = w->io_->handshake(w);
-                do_io_status(w, EV_INIT_ACPT, status, revents, kevents);
+                do_io_status(w, EV_INIT_ACPT, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_INIT_CONN))
             {
                 auto status = w->io_->handshake(w);
-                do_io_status(w, EV_INIT_CONN, status, revents, kevents);
+                do_io_status(w, EV_INIT_CONN, status, events, kevents);
             }
             else
             {
@@ -378,31 +378,31 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
         {
             if (b_kevents & EV_READ)
             {
+                events |= EV_READ;
                 auto status = w->recv();
-                do_io_status(w, EV_READ, status, revents, kevents);
+                do_io_status(w, EV_READ, status, events, kevents);
             }
             else if (b_kevents & EV_ACCEPT)
             {
+                events |= EV_ACCEPT;
                 auto status = w->io_->accept(w);
-                do_io_status(w, EV_ACCEPT, status, revents, kevents);
+                do_io_status(w, EV_ACCEPT, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_INIT_ACPT))
             {
                 auto status = w->io_->handshake(w);
-                do_io_status(w, EV_INIT_ACPT, status, revents, kevents);
+                do_io_status(w, EV_INIT_ACPT, status, events, kevents);
             }
             else if (unlikely(b_kevents & EV_INIT_CONN))
             {
                 auto status = w->io_->handshake(w);
-                do_io_status(w, EV_INIT_CONN, status, revents, kevents);
+                do_io_status(w, EV_INIT_CONN, status, events, kevents);
             }
             else
             {
                 kevents &= ~EV_READ;
                 ELOG("unexpect read event, id = %d, fd = %d", w->id_, w->fd_);
             }
-
-            events |= (EV_READ | EV_ACCEPT);
         }
     }
 

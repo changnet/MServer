@@ -100,7 +100,8 @@ void EpollBackend::do_wait_event(int32_t ev_count)
 
         // EPOLLERR | EPOLLHUP和EPOLLOUT | EPOLLIN是同时存在的
         // 但有时候watcher并没有设置EV_WRITE或者EV_READ，因此需要独立检测
-        if (revents & (EPOLLERR | EPOLLHUP)) events |= EV_CLOSE;
+        if (revents & (EPOLLHUP) events |= EV_CLOSE;
+        if (revents & (EPOLLERR) events |= EV_ERROR;
 
         EVIO *w = fd_mgr_.get(static_cast<int32_t>(fd));
         assert(w);

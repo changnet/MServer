@@ -111,10 +111,11 @@ void PollBackend::do_wait_event(int32_t ev_count)
                 // https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll
                 // As of Windows 10 version 2004, when a TCP socket fails to connect, (POLLHUP | POLLERR | POLLWRNORM) is indicated
                 // Linux下则只会返回POLLOUT
-                if (revents & (POLLERR | POLLHUP)) events |= EV_CLOSE;
+                if (revents & POLLHUP) events |= EV_CLOSE;
+                if (revents & POLLERR) events |= EV_ERROR;
             }
 
-            PLOG("receive event fd = %d, event = %d", w->fd_, events);
+            PLOG("receive event fd = %d, event = %d, revents = %d", w->fd_, events, revents);
             do_kernel_event(w, events);
         }
 

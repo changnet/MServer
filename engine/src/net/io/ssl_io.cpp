@@ -124,7 +124,7 @@ int32_t SSLIO::do_init_connect(EVIO *w)
 
     return handshake(w);
 }
-/*
+
 static void info_callback(const SSL *ssl, int where, int ret)
 {
     if (where & SSL_CB_ALERT)
@@ -140,7 +140,7 @@ static void info_callback(const SSL *ssl, int where, int ret)
     {
         PLOG("Handshake done");
     }
-}*/
+}
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
@@ -157,7 +157,14 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
         return -1;
     }
 
-    // SSL_set_info_callback(ssl_, info_callback);
+    // SSL_set_tlsext_host_name(ssl_, "postman-echo.com");
+    static const unsigned char alpn_protos[] = {0x08, 'h', 't', 't', 'p',
+                                                '/',  '1', '.', '1'};
+    SSL_set_alpn_protos(ssl_, alpn_protos, sizeof(alpn_protos));
+
+#ifdef SSL_DBG
+    SSL_set_info_callback(ssl_, info_callback);
+#endif
 
     return 0;
 }

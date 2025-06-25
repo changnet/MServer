@@ -25,7 +25,8 @@ bool GridMap::set(int32_t id, int32_t width, int32_t height)
 {
     assert(nullptr == grid_set_);
 
-    if (MAX_MAP_GRID < width || MAX_MAP_GRID < height) return false;
+    assert(false); // TOFIX MAX_MAP_GRID
+    // if (MAX_MAP_GRID < width || MAX_MAP_GRID < height) return false;
 
     id_       = id;
     width_    = width;

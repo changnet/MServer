@@ -195,7 +195,7 @@ Test.describe("http test", function()
         Test.wait(15000)
     end)
 
-    Test.it("https_local server test", function()
+    Test.it("https local server test", function()
         local ctx = "hello"
 
         local port = 8183
@@ -221,7 +221,6 @@ Test.describe("http test", function()
         local clt_conn = HttpSocket()
         clt_conn:connect_s(local_host, port, clt_ssl)
         clt_conn.on_connected = function(_)
-            print("onccccccccccccccccccccccccccc")
             clt_conn:get("/get", nil,
                         function(_, http_type, code, method, url, body)
                 local header = clt_conn:get_header()
