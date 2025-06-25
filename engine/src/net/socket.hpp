@@ -45,7 +45,7 @@ public:
     // 启用TCP的 user timeout
     int32_t set_user_timeout(int32_t timeout);
     // 启用IPV6双栈
-    int32_t set_non_ipv6only(int32_t fd, int32_t opt);
+    int32_t set_ipv6only(int32_t fd, int32_t opt);
     // 设置socket读写的事件
     int32_t set_watcher_event(int32_t events);
 

@@ -163,7 +163,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::set_user_timeout>("set_user_timeout");
     lc.def<&Socket::set_nodelay>("set_nodelay");
     lc.def<&Socket::set_watcher_event>("set_watcher_event");
-    lc.def<&Socket::set_non_ipv6only>("set_non_ipv6only");
+    lc.def<&Socket::set_ipv6only>("set_ipv6only");
 
     lc.set(Packet::PT_HTTP, "PT_HTTP");
     lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");

@@ -212,15 +212,16 @@ int32_t Socket::set_keep_alive(int32_t time, int32_t interval, int32_t probes)
      */
 
     if (!w_) return -1;
+    int32_t fd = w_->fd_;
 
 #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/winsock/so-keepalive
     // windows下，keep alive的interval之类的是通过注册表来控制的
     DWORD optval = (time || interval || probes) ? 1 : 0;
-    return setsockopt(w_->fd_, SOL_SOCKET, SO_KEEPALIVE, (char *)&optval,
+    return setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&optval,
                      sizeof(optval));
 #else
-    int32_t optval = opt;
+    int32_t optval = (time || interval || probes) ? 1 : 0;
     int32_t optlen = sizeof(optval);
 
     // open keep alive
@@ -273,20 +274,20 @@ int32_t Socket::set_user_timeout(int32_t timeout)
  * 谁先超时则谁先生效
  */
 #ifdef TCP_USER_TIMEOUT
+    if (!w_) return -1;
     // 内核支持才开启，centos 6(2.6.32)就不支持 单位milliseconds
-    uint32_t timeout = timeout;
+    uint32_t tm = (uint32_t)timeout;
 
-    return setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout,
-                      sizeof(timeout));
+    return setsockopt(w_->fd_, IPPROTO_TCP, TCP_USER_TIMEOUT, &tm, sizeof(tm));
 #else
     return 0;
 #endif
 }
 
-int32_t Socket::set_non_ipv6only(int32_t fd, int32_t opt)
+int32_t Socket::set_ipv6only(int32_t fd, int32_t opt)
 {
     // 如果是listen的socket，必须在bind之前设置
-    // 如果是connect的socket，不需要设置。由目标地址决定
+    // 如果是connect的socket，不需要设置，由目标地址决定。但如果传的ip是v4-map-v6格式，必须在connect之前设置
     // 如果是accept的socket，继承listen的设置
 
     int32_t optval = opt;
@@ -373,7 +374,7 @@ bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
     w_->addr_ = addr;
     w_->ref_.fetch_or(EVIO::REF_BACKEND); // 当前worker线程一个，backend线程一个
 
-    StaticGlobal::B->add_watcher_event(w_, ev);
+    StaticGlobal::B->set_watcher_event(w_, ev);
 
     return true;
 }
@@ -399,6 +400,14 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
         ELOG("Socket create %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
+#ifndef IP_V4
+    if (set_ipv6only(fd, 0))
+    {
+        int32_t e = netcompat::errorno();
+        ELOG("Socket ipv6 %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
+        return -1;
+    }
+#endif
 
     struct sockaddr_in_x host_addr;
     memset(&host_addr, 0, sizeof(host_addr));
@@ -550,7 +559,7 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
 
 #ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    if (set_non_ipv6only(fd, 1))
+    if (set_ipv6only(fd, 0))
     {
         goto FAIL;
     }
@@ -748,8 +757,7 @@ int32_t Socket::io_init_accept()
 {
     if (!w_) return -1;
 
-    // set会清除旧事件，这里得保留EV_READ
-    StaticGlobal::B->add_watcher_event(w_, EV_INIT_ACPT | EV_READ);
+    StaticGlobal::B->set_watcher_event(w_, EV_INIT_ACPT);
 
     return 0;
 }
@@ -758,7 +766,7 @@ int32_t Socket::io_init_connect()
 {
     if (!w_) return -1;
 
-    StaticGlobal::B->add_watcher_event(w_, EV_INIT_CONN | EV_READ);
+    StaticGlobal::B->set_watcher_event(w_, EV_INIT_CONN);
 
     return 0;
 }

@@ -64,7 +64,7 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
     do_wait_event(ev_count);
     modify_protected_ = false;
 
-    do_recv_events();
+    do_watcher_events();
     do_pending_events();
 }
 
@@ -238,7 +238,9 @@ void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
         if (0 == (status & (EV_ERROR | EV_CLOSE)))
         {
             events |= status;
-            kevents &= ~status;
+            // 握手完成之前，读写事件都是无效的。握手完成后重新设置(或者在这里统一设置读事件？)。
+            // 因为现在没有区分是因为握手需要读写，还是上层逻辑设置的读写
+            kevents &= ~(status | EV_READ | EV_WRITE);
             // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？
             // Renegotiation is removed from TLS 1.3
             // int32_t new_status = w->send();
@@ -322,63 +324,85 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
     int32_t events          = 0;             // 最终需要派发到其他线程的事件
     int32_t kevents         = b_kevents;
 
-    if (revents & EV_WRITE)
+    if (revents & EV_ERROR)
     {
-        if (b_kevents & EV_WRITE)
-        {
-            auto status = w->send();
-            do_io_status(w, EV_WRITE, status, revents, kevents);
-        }
+        // 出错时，不可能再进行读写操作
+        kevents |= EV_ERROR | EV_CLOSE;
 
-        // 这些事件是一次性的，如果触发了就删除。否则导致一直触发这个事件
-        if (unlikely(b_kevents & EV_CONNECT))
-        {
-            kevents &= ~EV_CONNECT;
-        }
-
-        events |= (EV_WRITE | EV_CONNECT);
-    }
-    if (revents & EV_READ)
-    {
-        if (b_kevents & EV_READ)
-        {
-            auto status = w->recv();
-            do_io_status(w, EV_READ, status, revents, kevents);
-        }
-        if (b_kevents & EV_ACCEPT)
-        {
-            auto status = w->io_->accept(w);
-            do_io_status(w, EV_ACCEPT, status, revents, kevents);
-        }
-
-        events |= (EV_READ | EV_ACCEPT);
-    }
-
-    if (revents & (EV_ERROR | EV_CLOSE))
-    {
-        // 如果发生错误，并且上面的READ WRITE没有设置错误码，则这里设置
-        if (!w->errno_)
-        {
-            int32_t err   = 0;
-            socklen_t len = sizeof(err);
-            getsockopt(w->fd_, SOL_SOCKET, SO_ERROR, (char *)&err, &len);
-            w->errno_ = err;
-        }
-        // 如果对方关闭，这里直接从backend移除监听，避免再从主线程通知删除
-        // 注意需要清除EV_FLUSH标记，那个优先级更高
-        kevents |= EV_CLOSE;
+        int32_t err   = 0;
+        socklen_t len = sizeof(err);
+        getsockopt(w->fd_, SOL_SOCKET, SO_ERROR, (char *)&err, &len);
+        w->errno_ = err;
     }
     else
     {
-        if (unlikely(b_kevents & EV_INIT_ACPT))
+        if (revents & EV_CLOSE)
         {
-            auto status = w->io_->handshake(w);
-            do_io_status(w, EV_INIT_ACPT, status, revents, kevents);
+            // 正常关闭，无错误码，但可能有读事件，不可能有写事件
+            /**
+             * shutdown(fd, SHUT_RD) 关闭本地读功能，对方不可感知。但如果对方发数据会触发RST错误
+             * shutdown(fd, SHUT_WR) 触发EPOLLIN和EPOLLHUP，调用recv可能收到数据，也返回0
+             */
+            kevents |= EV_CLOSE;
         }
-        else if (unlikely(b_kevents & EV_INIT_CONN))
+        else if (revents & EV_WRITE)
         {
-            auto status = w->io_->handshake(w);
-            do_io_status(w, EV_INIT_CONN, status, revents, kevents);
+            events |= (EV_WRITE | EV_CONNECT);
+
+            if (b_kevents & EV_WRITE)
+            {
+                auto status = w->send();
+                do_io_status(w, EV_WRITE, status, revents, kevents);
+            }
+            else if (unlikely(b_kevents & EV_CONNECT))
+            {
+                kevents &= ~EV_CONNECT;
+            }
+            else if (unlikely(b_kevents & EV_INIT_ACPT))
+            {
+                auto status = w->io_->handshake(w);
+                do_io_status(w, EV_INIT_ACPT, status, revents, kevents);
+            }
+            else if (unlikely(b_kevents & EV_INIT_CONN))
+            {
+                auto status = w->io_->handshake(w);
+                do_io_status(w, EV_INIT_CONN, status, revents, kevents);
+            }
+            else
+            {
+                kevents &= ~EV_WRITE; // 移除，避免cpu满载
+                ELOG("unexpect write event, id = %d, fd = %d", w->id_, w->fd_);
+            }
+        }
+        if (revents & EV_READ)
+        {
+            if (b_kevents & EV_READ)
+            {
+                auto status = w->recv();
+                do_io_status(w, EV_READ, status, revents, kevents);
+            }
+            else if (b_kevents & EV_ACCEPT)
+            {
+                auto status = w->io_->accept(w);
+                do_io_status(w, EV_ACCEPT, status, revents, kevents);
+            }
+            else if (unlikely(b_kevents & EV_INIT_ACPT))
+            {
+                auto status = w->io_->handshake(w);
+                do_io_status(w, EV_INIT_ACPT, status, revents, kevents);
+            }
+            else if (unlikely(b_kevents & EV_INIT_CONN))
+            {
+                auto status = w->io_->handshake(w);
+                do_io_status(w, EV_INIT_CONN, status, revents, kevents);
+            }
+            else
+            {
+                kevents &= ~EV_READ;
+                ELOG("unexpect read event, id = %d, fd = %d", w->id_, w->fd_);
+            }
+
+            events |= (EV_READ | EV_ACCEPT);
         }
     }
 
@@ -400,7 +424,7 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
     if (kevents != b_kevents) modify_later(w, kevents);
 }
 
-void EVBackend::do_recv_events()
+void EVBackend::do_watcher_events()
 {
     // 只循环一定次数，避免其他线程不断地发送事件，导致线程一直在处理这些事件而
     // 不再接收来自网络的事件
@@ -461,6 +485,9 @@ void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
 
 void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
 {
-    std::scoped_lock<std::mutex> sl(mutex_);
-    watcher_events_.emplace_back(ev, w);
+    {
+        std::scoped_lock<std::mutex> sl(mutex_);
+        watcher_events_.emplace_back(ev, w);
+    }
+    wake();
 }
