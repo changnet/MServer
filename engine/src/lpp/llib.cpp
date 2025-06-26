@@ -144,6 +144,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::get_event>("get_event");
     lc.def<&Socket::set_event>("set_event");
     lc.def<&Socket::set_io>("set_io");
+    lc.def<&Socket::get_io>("get_io");
     lc.def<&Socket::set_packet>("set_packet");
     lc.def<&Socket::is_connect_success>("is_connect_success");
     lc.def<&Socket::set_buffer_params>("set_buffer_params");
@@ -169,6 +170,16 @@ static void luaopen_socket(lua_State *L)
     lc.set(Packet::PT_SSSTREAM, "PT_SSSTREAM");
     lc.set(Packet::PT_WEBSOCKET, "PT_WEBSOCKET");
     lc.set(Packet::PT_WSSTREAM, "PT_WSSTREAM");
+}
+
+static void luaopen_socket_io(lua_State *L)
+{
+    lcpp::Class<IO> lc(L, "engine.IO");
+
+    lc.def_pointer_call<&IO::set_ssl_sni>("set_ssl_sni");
+    lc.def_pointer_call<&IO::set_ssl_alpn>("set_ssl_alpn");
+    lc.def_pointer_call<&IO::set_ssl_cert_host>("set_ssl_cert_host");
+    lc.def_pointer_call<&IO::set_ssl_verify_mode>("set_ssl_verify_mode");
 }
 
 static void luaopen_lua_codec(lua_State *L)
@@ -375,6 +386,7 @@ void open_cpp(lua_State *L)
     luaopen_worker_thread(L);
     luaopen_tls(L);
     luaopen_socket(L);
+    luaopen_socket_io(L);
     luaopen_lua_codec(L);
     luaopen_pbc_codec(L);
     luaopen_mysql(L);

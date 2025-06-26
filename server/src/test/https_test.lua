@@ -163,7 +163,7 @@ Test.describe("http test", function()
         Test.wait(10000)
     end)
 
-    Test.it("https_get " .. exp_host, function()
+    Test.it("https get " .. exp_host, function()
         local conn = HttpSocket()
 
         conn:connect_s(exp_host, 443, clt_ssl)
@@ -219,6 +219,9 @@ Test.describe("http test", function()
         end
 
         local clt_conn = HttpSocket()
+        -- 用的自签证书，用系统根证书是没法校验通过的，所以设置为不校验
+        -- 如果要校验，就是下面的two-way双向校验测试
+        clt_conn.verify_mode = 0
         clt_conn:connect_s(local_host, port, clt_ssl)
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,

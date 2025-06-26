@@ -61,8 +61,11 @@ void TlsCtx::library_init()
     OPENSSL_init_ssl(0, nullptr);
 #endif
 
+    // OpenSSL now loads error strings automatically so these functions are not needed.
+    // www.openssl.org/docs/manmaster/man7/migration_guide.html
+    // ERR_load_BIO_strings();
+
     SSL_load_error_strings();
-    ERR_load_BIO_strings();
     OpenSSL_add_all_algorithms();
 }
 
@@ -140,18 +143,35 @@ int32_t TlsCtx::init(const char *cert_file, const char *key_file,
 
     int32_t ok = 0; // 在goto之前声明
 
+    // 调用默认函数校验对方证书的正确性，但不校验域名正确性
+    // 要校验域名正确性，需要SSL_set1_host()设置校验的域名
+    // SSL_VERIFY_NONE为完全不校验
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+    // 禁用匿名身份验证或者不安全的算法，否则SSL_VERIFY_PEER直接忽略验证
+    // If no server certificate is sent, because an anonymous cipher is used, SSL_VERIFY_PEER is ignored.
+    SSL_CTX_set_cipher_list(ctx, "HIGH:!aNULL:!kRSA:!PSK:!SRP:!3DES:!MD5:!RC4");
+
     // 一个ctx可以给多个连接使用，因此一个证书就创建一个ctx就可以了
-    // 指定了根ca证书路径，说明需要校验对方证书的正确性
+    // 指定根ca证书路径（通常用于自己签发的证书，否则用系统根证书就行）
+    int32_t ret;
     if (ca_path)
     {
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
-
-        /*加载CA FILE*/
-        if (SSL_CTX_load_verify_locations(ctx, ca_path, nullptr) != 1)
-        {
-            dump_error("load verify fail");
-            goto FAIL;
-        }
+        ret = SSL_CTX_load_verify_locations(ctx, ca_path, nullptr);
+    }
+    else
+    {
+#ifdef __windows__
+        // openssl 3.2 https://stackoverflow.com/questions/9507184/can-openssl-on-windows-use-the-system-certificate-store
+        ret = SSL_CTX_load_verify_store(ctx, "org.openssl.winstore://");
+#else
+        ret = SSL_CTX_set_default_verify_paths(ctx);
+#endif
+    }
+    if (1 != ret)
+    {
+        PLOG("load verify fail: %s", ca_path ? ca_path : "default");
+        dump_error("load verify fail");
+        goto FAIL;
     }
     ctx_ = ctx;
     // 没有证书时，默认使用DEFAULT_FILE作名字，仅客户端连接可以没有证书，服务端必须有

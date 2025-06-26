@@ -18,8 +18,7 @@ SSLIO::~SSLIO()
 SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx)
     : IO(conn_id)
 {
-    ssl_ = nullptr;
-    tls_ctx_ = tls_ctx;
+    ssl_ = SSL_new(tls_ctx->get());
 }
 
 int32_t SSLIO::recv(EVIO *w)
@@ -144,7 +143,6 @@ static void info_callback(const SSL *ssl, int where, int ret)
 
 int32_t SSLIO::init_ssl_ctx(int32_t fd)
 {
-    ssl_ = SSL_new(tls_ctx_->get());
     if (!ssl_)
     {
         ELOG("ssl io init ssl SSL_new fail");
@@ -156,11 +154,6 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
         ELOG("ssl io init ssl SSL_set_fd fail");
         return -1;
     }
-
-    // SSL_set_tlsext_host_name(ssl_, "postman-echo.com");
-    static const unsigned char alpn_protos[] = {0x08, 'h', 't', 't', 'p',
-                                                '/',  '1', '.', '1'};
-    SSL_set_alpn_protos(ssl_, alpn_protos, sizeof(alpn_protos));
 
 #ifdef SSL_DBG
     SSL_set_info_callback(ssl_, info_callback);
@@ -201,4 +194,63 @@ int32_t SSLIO::handshake(EVIO *w)
     TlsCtx::dump_error(__FUNCTION__, ecode);
 
     return EV_ERROR;
+}
+
+int32_t SSLIO::set_ssl_alpn(int32_t alpn)
+{
+    if (!ssl_) return -1;
+
+    int32_t ret = 0;
+    size_t alpn_size;
+    const unsigned char *alpn_protos;
+    switch (alpn)
+    {
+    case 1:
+        alpn_size   = 9;
+        alpn_protos = (const unsigned char *)"\x08http/1.0";
+    break;
+    case 2:
+        alpn_size   = 9;
+        alpn_protos = (const unsigned char *)"\x08http/1.1";
+        break;
+    case 3:
+        alpn_size   = 3;
+        alpn_protos = (const unsigned char *)"\x08h2"; // http/2
+        break;
+    case 4:
+        alpn_size   = 12;
+        alpn_protos = (const unsigned char *)"\x08h2\x08http/1.1"; // http/2 + http/1.1
+        break;
+    // 其他的，还有grpc等等，暂时不管
+    default: return -3;
+    }
+    return SSL_set_alpn_protos(ssl_, alpn_protos, alpn_size);
+}
+
+int32_t SSLIO::set_ssl_sni(const char *sni)
+{
+    if (!ssl_) return -1;
+
+    // sni用于指定当前连接是连到哪个服务。
+    // 在虚拟主机（Virtual Hosting）中，可以一个ip部署多个服务。
+    // postman-echo.com不指定sni时，ssl握手会失败。对方直接关闭连接，没有其他错误信息
+    return SSL_set_tlsext_host_name(ssl_, sni);
+}
+int32_t SSLIO::set_ssl_cert_host(const char *host)
+{
+    if (!ssl_) return -1;
+    // 只有指定了证书域名，ssl握手时才会验证域名和证书是否匹配
+    // 证书域名和sni一般情况下是一致的，但并不一定。
+    // 比如使用了负载均衡时，sni为负载均衡的域名lb.example.com，但证书域名可能是另一个example.com
+    return SSL_set1_host(ssl_, host);
+}
+
+int32_t SSLIO::set_ssl_verify_mode(int32_t mode)
+{
+    if (!ssl_) return -1;
+
+    // @param mode 值必须对应 SSL_VERIFY_PEER 等宏定义
+    SSL_set_verify(ssl_, mode, nullptr);
+
+    return 0;
 }

@@ -144,7 +144,11 @@ public:
         flush();
     }
 
-    int32_t set_io(int32_t io_type, TlsCtx *tls_ctx);
+    void* get_io() const
+    {
+        return w_ ? w_->io_ : nullptr;
+    }
+    void *set_io(int32_t io_type, TlsCtx *tls_ctx);
     int32_t set_packet(int32_t packet_type);
 
     inline int32_t fd() const { return fd_; }

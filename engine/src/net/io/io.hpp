@@ -91,6 +91,34 @@ public:
     {
         return send_;
     }
+    /**
+     * @brief 设置ssl的alpn
+     */
+    virtual int32_t set_ssl_alpn(int32_t alpn)
+    {
+        return 0;
+    }
+    /**
+     * @brief 设置ssl的sni(service name indicator)
+     */
+    virtual int32_t set_ssl_sni(const char *sni)
+    {
+        return 0;
+    }
+    /**
+     * @brief 设置ssl的证书host
+     */
+    virtual int32_t set_ssl_cert_host(const char *host)
+    {
+        return 0;
+    }
+    /**
+     * @brief 设置ssl的验证模式
+     */
+    virtual int32_t set_ssl_verify_mode(int32_t mode)
+    {
+        return 0;
+    }
 
 protected:
     int32_t socket_id_;   // 所属socket的id

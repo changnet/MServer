@@ -709,21 +709,26 @@ int32_t Socket::unpack_on_closed(lua_State *L)
     return packet_->unpack_on_closed(L);
 }
 
-int32_t Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
+void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 {
-    assert(w_);
+    if(!w_) return nullptr;
 
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(socket_id_); break;
-    case IO::IOT_SSL: io = new SSLIO(socket_id_, tls_ctx); break;
-    default: return -1;
+    case IO::IOT_NONE:
+        io = new IO(socket_id_);
+        break;
+    case IO::IOT_SSL:
+        if (!tls_ctx) return nullptr;
+        io = new SSLIO(socket_id_, tls_ctx);
+        break;
+    default: return nullptr;
     }
 
     w_->set_io(io);
 
-    return 0;
+    return io;
 }
 
 int32_t Socket::set_packet(int32_t packet_type)

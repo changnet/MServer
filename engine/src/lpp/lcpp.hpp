@@ -443,12 +443,55 @@ private:
             }
         }
 
+        // 允许一个lightuser指针直接调用成员函数，无法校验指针类型，慎用！！！
+        template <auto fp, size_t... I>
+        static int pointer_caller(lua_State *L, const std::index_sequence<I...> &)
+        {
+            if (!lua_islightuserdata(L, 1))
+            {
+                return luaL_error(L, "argument #1 expect lightuserdata, got %s",
+                                  luaL_typename(L, lua_type(L, 1)));
+            }
+            T *ptr = (T *)lua_touserdata(L, 1);
+            if (ptr == nullptr)
+            {
+                return luaL_error(L, "calling method with null pointer");
+            }
+
+            // 使用if constexpr替换多个模板好维护一些
+            // template <size_t... I, typename = std::enable_if_t<!std::is_void<Ret>::value>>
+
+            if constexpr (std::is_void_v<Ret>)
+            {
+                (ptr->*fp)(lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...);
+                return 0;
+            }
+            else
+            {
+                cpp_to_lua(L, (ptr->*fp)(
+                                  lua_to_cpp<remove_cvref<Args>>(L, 2 + I)...));
+                return 1;
+            }
+        }
+
     public:
         template <auto fp> static int reg(lua_State *L)
         {
             try
             {
                 return caller<fp>(L, indices);
+            }
+            catch (const std::runtime_error &e)
+            {
+                // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+                return luaL_error(L, e.what());
+            }
+        }
+        template <auto fp> static int reg_pointer(lua_State *L)
+        {
+            try
+            {
+                return pointer_caller<fp>(L, indices);
             }
             catch (const std::runtime_error &e)
             {
@@ -641,6 +684,18 @@ public:
         {
             cfp = ClassRegister<decltype(fp)>::template reg<fp>;
         }
+
+        luaL_getmetatable(L_, class_name_);
+
+        lua_pushcfunction(L_, cfp);
+        lua_setfield(L_, -2, name);
+
+        lua_pop(L_, 1); /* drop class metatable */
+    }
+    // 注册一个通过lightuserdata调用成员函数的方法，无法校验指针正确性，慎用。
+    template <auto fp> void def_pointer_call(const char *name)
+    {
+        lua_CFunction cfp = ClassRegister<decltype(fp)>::template reg_pointer<fp>;
 
         luaL_getmetatable(L_, class_name_);
 

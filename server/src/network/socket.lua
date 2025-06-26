@@ -3,6 +3,7 @@
 -- xzc
 
 local util = require "engine.util"
+local EngineIO = require "engine.IO"
 local EngineSocket = require "engine.Socket"
 
 local EV_READ = SocketMgr.EV_READ
@@ -36,6 +37,24 @@ function Socket:__init()
     SocketMgr.add(self)
 end
 
+-- 读写方式，是否使用SSL
+function Socket:set_io()
+    if self.ssl then
+        local pio = self.s:set_io(1, self.ssl)
+        assert(pio)
+
+        local sni = self.sni or self.host
+        if sni then EngineIO.set_ssl_sni(pio, sni) end
+        local cert_host = self.cert_host or self.host
+        if cert_host then EngineIO.set_ssl_cert_host(pio, cert_host) end
+        local mode = self.verify_mode
+        if mode then EngineIO.set_ssl_verify_mode(pio, mode) end
+    else
+        local pio = self.s:set_io(0)
+        assert(pio)
+    end
+end
+
 -- 设置io读写、编码、打包方式
 function Socket:set_param()
     --[[
@@ -48,25 +67,19 @@ function Socket:set_param()
         }
     ]]
 
-    local s = self.s
+
+    self:set_io()
     local param = self.default_param
 
-    -- 读写方式，是否使用SSL
-    if self.ssl then
-        s:set_io(1, self.ssl)
-    else
-        s:set_io(0)
-    end
-
     -- 打包方式，如http、自定义的tcp打包、websocket打包
-    local e = s:set_packet(param.pkt)
+    local e = self.s:set_packet(param.pkt)
     assert(0 == e)
 
     local action = param.action or 1 -- over_action，1 表示缓冲区溢出后断开
     local send_chunk_max = param.send_chunk_max or 1 -- 发送缓冲区数量
     local recv_chunk_max = param.recv_chunk_max or 1 -- 接收缓冲区数
 
-    s:set_buffer_params(send_chunk_max, recv_chunk_max, action)
+    self.s:set_buffer_params(send_chunk_max, recv_chunk_max, action)
 end
 
 -- 接受新连接

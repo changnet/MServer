@@ -424,7 +424,7 @@ function Test.timeout()
     -- Timer.timeout超时会自动删除，并不需要手动删除
     -- if T.now.timer then T.timer.del(T.now.timer) end
     if not T.now then
-        Test.R("test already finish", debug.traceback())
+        T.R("test already finish", debug.traceback())
         return
     end
 
