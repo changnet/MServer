@@ -3,8 +3,10 @@
 set -e
 set -o pipefail
 
+# 是否开启逐行命令打印
 # https://stackoverflow.com/questions/2853803/in-a-shell-script-echo-shell-commands-as-they-are-executed
 set -x
+echo -e "\033[32;1musing debug\033[0m"
 
 # openssl generate CA certificate and private key and client certificate
 
@@ -53,19 +55,76 @@ echo 01 > serial
 # 1000——指定随机数长度
 openssl rand -out private/.rand 1000
 
+# 生成临时 openssl_cnf.conf
+cat > openssl_cnf.conf <<EOF
+[ ca_dn ]
+C  = CN
+ST = Guangzhou
+L  = Guangzhou
+O  = MiniDistributedGameServer
+OU = changnet
+CN = github.com#changnet
+
+[ server_dn ]
+C  = CN
+ST = Guangzhou
+L  = Guangzhou
+O  = MiniDistributedGameServer
+OU = server
+CN = minidistributedgameserver.com
+
+[ client_dn ]
+C  = CN
+ST = Guangzhou
+L  = Guangzhou
+O  = MiniDistributedGameServer
+OU = client
+CN = minidistributedgameserver.com
+
+[ req ]
+default_bits       = $BITNUM
+prompt             = no
+default_md         = sha256
+distinguished_name = dn
+
+[ ca_ext ]
+basicConstraints = critical,CA:TRUE
+keyUsage = critical,keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+
+[ server_ext ]
+subjectAltName = @alt_names
+keyUsage = critical,digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ client_ext ]
+subjectAltName = @alt_names
+keyUsage = critical,digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+
+[ alt_names ]
+DNS.1 = localhost
+IP.1 = 127.0.0.1
+EOF
+
 ############ 根证书 ##########################
 # 普通的证书是证书颁发机构（CA）用他们的根证书签发的。现在我们不需要认证，因此需要自己
 # 先产生一个根证书，给自己签发。
 # https://zh.wikipedia.org/wiki/%E6%A0%B9%E8%AF%81%E4%B9%A6
 
 # 生成根证书私钥pem文件(Privacy Enbanced Mail)
-# genrsa——使用RSA算法产生私钥
+# genpkey——使用通用算法产生私钥 (OpenSSL 3.0 推荐使用 genpkey 替代 genrsa)
+# -algorithm RSA——指定RSA算法
 # -aes256——使用256位密钥的AES算法对私钥进行加密
 # -out——输出文件的路径
 # $BITNUM——指定私钥长度
 # -passout－密码输入方式，pass表示为明文指定密码
 # !!! 选择了加密方式，则必须要输入密码，不选择则可以无密码
-openssl genrsa -aes256 -out private/ca_key.pem -passout pass:$OPENSSLPASS $BITNUM
+openssl genpkey -algorithm RSA \
+	-aes256 \
+	-out private/ca_key.pem \
+	-pass pass:$OPENSSLPASS \
+	-pkeyopt rsa_keygen_bits:$BITNUM
 
 # 使用私钥生成根证书签发申请文件(csr文件)
 # 证书要向证书颁发机构申请的，要向他们提交申请文件。这个文件包含申请组织的信息
@@ -80,8 +139,12 @@ openssl genrsa -aes256 -out private/ca_key.pem -passout pass:$OPENSSLPASS $BITNU
 #        O  => Organization
 #        OU => Organization Unit
 #        CN => Common Name (证书所请求的域名,访问时，这个域名要匹配才能认证)
-openssl req -new -key private/ca_key.pem -passin pass:$OPENSSLPASS -out private/ca.csr -subj \
-"/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=changnet/CN=github.com#changnet"
+openssl req -new \
+	-key private/ca_key.pem \
+	-passin pass:$OPENSSLPASS \
+	-config <(cat openssl_cnf.conf; echo '[ dn ]'; cat openssl_cnf.conf | sed -n '/\[ca_dn\]/,/^$/p' | grep -v '\[ca_dn\]') \
+	-subj "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=changnet/CN=github.com#changnet" \
+	-out private/ca.csr
 
 # 上一步自己向自己提交了证书申请，现在自签
 # x509——生成x509格式证书
@@ -92,20 +155,36 @@ openssl req -new -key private/ca_key.pem -passin pass:$OPENSSLPASS -out private/
 # signkey——签发证书的私钥
 # in——要输入的csr文件
 # out——输出的cer证书文件
-openssl x509 -req -days 3650 $DIGEST -extensions v3_ca -signkey \
-private/ca_key.pem -passin pass:$OPENSSLPASS -in private/ca.csr -out public/ca.cer
+openssl x509 -req -days 3650 $DIGEST \
+	-signkey private/ca_key.pem \
+	-passin pass:$OPENSSLPASS \
+	-in private/ca.csr \
+	-extfile openssl_cnf.conf \
+	-extensions ca_ext \
+	-out public/ca.cer
 
 ##################### 根证书完成 #################################
 # 现在我们拥有一张经过签发的合法根证书了，可以给别人签发证书了
+echo -e "\033[32;1mca finish\033[0m"
 
 
 
 ################### 服务端证书 ###############################
 # 生成服务端私钥
-openssl genrsa -aes256 -out private/srv_key.pem -passout pass:$OPENSSLPASS $BITNUM
-# 申请
-openssl req -new -key private/srv_key.pem -passin pass:$OPENSSLPASS -out private/server.csr -subj \
-"/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=server/CN=minidistributedgameserver.com"
+openssl genpkey -algorithm RSA \
+	-aes256 \
+	-pass pass:$OPENSSLPASS \
+	-out private/srv_key.pem \
+	-pkeyopt rsa_keygen_bits:$BITNUM
+
+# 申请（生成 CSR）
+openssl req -new \
+    -key private/srv_key.pem \
+    -passin pass:$OPENSSLPASS \
+    -config <(cat openssl_cnf.conf; echo '[ dn ]'; cat openssl_cnf.conf | sed -n '/\[server_dn\]/,/^$/p' | grep -v '\[server_dn\]') \
+    -subj "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=server/CN=minidistributedgameserver.com" \
+    -out private/server.csr
+
 # 签发
 # CA——指定CA证书的路径
 # CAkey——指定CA证书的私钥路径
@@ -113,9 +192,18 @@ openssl req -new -key private/srv_key.pem -passin pass:$OPENSSLPASS -out private
 # CAcreateserial——表示创建证书序列号文件(即上方提到的serial文件)，创建的序列号文件默认名称为-CA，指定的证书名称后加上.srl后缀
 # 注意：这里指定的-extensions的值为v3_req，在OpenSSL的配置中，v3_req配置的basicConstraints的值为CA:FALSE
 # 而前面生成根证书时，使用的-extensions值为v3_ca，v3_ca中指定的basicConstraints的值为CA:TRUE，表示该证书是颁发给CA机构的证书
-openssl x509 -req -days 3650 $DIGEST -extensions v3_req -CA public/ca.cer -passin pass:$OPENSSLPASS -CAkey private/ca_key.pem \
--CAserial ca.srl -CAcreateserial -in private/server.csr -out public/server.cer
-
+openssl x509 -req -days 3650 $DIGEST \
+    -CA public/ca.cer \
+    -CAkey private/ca_key.pem \
+    -CAkeyform PEM \
+    -passin pass:$OPENSSLPASS \
+    -CAserial ca.srl \
+    -CAcreateserial \
+    -in private/server.csr \
+    -extfile openssl_cnf.conf \
+    -extensions server_ext \
+    -out public/server.cer
+echo -e "\033[32;1mserver finish\033[0m"
 
 ################################## 客户端证书 ###############################
 # 通常情况下，我们不需要客户端证书。比如https网站，用户只需要服务端证书来验证服务器是
@@ -124,22 +212,40 @@ openssl x509 -req -days 3650 $DIGEST -extensions v3_req -CA public/ca.cer -passi
 # 员工需要在家里登录OA系统，那服务器必须验证这个用户为公司自己的员工。
 
 # 生成客户端私钥
-openssl genrsa -aes256 -out private/clt_key.pem -passout pass:$OPENSSLPASS $BITNUM
+openssl genpkey -algorithm RSA \
+	-aes256 \
+	-pass pass:$OPENSSLPASS \
+	-out private/clt_key.pem \
+	-pkeyopt rsa_keygen_bits:$BITNUM
+
 # 申请
-openssl req -new -key private/clt_key.pem -passin pass:$OPENSSLPASS -out private/client.csr -subj \
-"/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=client/CN=minidistributedgameserver.com"
+openssl req -new \
+    -key private/clt_key.pem \
+    -passin pass:$OPENSSLPASS \
+    -config <(cat openssl_cnf.conf; echo '[ dn ]'; cat openssl_cnf.conf | sed -n '/\[client_dn\]/,/^$/p' | grep -v '\[client_dn\]') \
+    -subj "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=client/CN=minidistributedgameserver.com" \
+    -out private/client.csr
+
 # 签发
 # 注意上方签发服务端证书时已经使用-CAcreateserial生成过ca.srl文件，因此这里不需要带上这个参数了
-openssl x509 -req -days 3650 $DIGEST -extensions v3_req -CA public/ca.cer -passin pass:$OPENSSLPASS -CAkey private/ca_key.pem \
--CAserial ca.srl -in private/client.csr -out public/client.cer
+openssl x509 -req -days 3650 $DIGEST \
+    -CA public/ca.cer \
+    -passin pass:$OPENSSLPASS \
+    -CAkey private/ca_key.pem \
+    -CAserial ca.srl \
+    -in private/client.csr \
+    -extfile openssl_cnf.conf \
+    -extensions client_ext \
+    -out public/client.cer
 
+echo -e "\033[32;1mclient finish\033[0m"
 
 #可以用下面的方法测试生成的key和证书
-# openssl rsa -text -in private/srv_key.pem -passin pass:$OPENSSLPASS
+# openssl pkey -text -in private/srv_key.pem -passin pass:$OPENSSLPASS
 # openssl x509 -in public/server.cer -text
 
 # 可用以下方法去掉密码
-openssl rsa -in private/srv_key.pem -passin pass:$OPENSSLPASS -out private/srv_key_no_passwd.pem
+openssl pkey -in private/srv_key.pem -passin pass:$OPENSSLPASS -out private/srv_key_no_passwd.pem
 
 # 复制需要的文件到对应目录
 SRV_CERT=$NOW_PWD/../server/certs/
@@ -151,4 +257,8 @@ cp private/clt_key.pem $SRV_CERT
 cp private/srv_key.pem $SRV_CERT
 cp private/srv_key_no_passwd.pem $SRV_CERT
 
+echo -e "\033[32;1mcopy to $SRV_CERT\033[0m"
+
+# 删除临时配置文件和目录
+rm -f openssl_cnf.conf
 rm -r $DEMO_DIR

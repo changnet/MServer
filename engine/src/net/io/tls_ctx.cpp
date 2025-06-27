@@ -81,6 +81,8 @@ void TlsCtx::dump_error(const char *what, int32_t e)
     while (0 != (eno = ERR_get_error()))
     {
         PLOG("    %s", ERR_error_string(eno, NULL));
+        // PLOG("    lib:%s", ERR_lib_error_string(eno));
+        // PLOG("    reason:%s", ERR_reason_error_string(eno));
     }
 }
 

@@ -289,6 +289,9 @@ Test.describe("http test", function()
         end
 
         local clt_conn = HttpSocket()
+        -- 默认情况下是会校验证书域名
+        clt_conn.sni = "127.0.0.1"
+        clt_conn.cert_host = "127.0.0.1"
         clt_conn:connect_s(local_host, port, vfy_clt_ssl)
         clt_conn.on_connected = function(_)
             clt_conn:get("/get", nil,

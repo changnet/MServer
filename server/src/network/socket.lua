@@ -46,7 +46,9 @@ function Socket:set_io()
         local sni = self.sni or self.host
         if sni then EngineIO.set_ssl_sni(pio, sni) end
         local cert_host = self.cert_host or self.host
-        if cert_host then EngineIO.set_ssl_cert_host(pio, cert_host) end
+        if cert_host and cert_host ~= "" then
+            EngineIO.set_ssl_cert_host(pio, cert_host)
+        end
         local mode = self.verify_mode
         if mode then EngineIO.set_ssl_verify_mode(pio, mode) end
     else

@@ -15,8 +15,7 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx)
-    : IO(conn_id)
+SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx) : IO(conn_id)
 {
     ssl_ = SSL_new(tls_ctx->get());
 }
@@ -126,18 +125,92 @@ int32_t SSLIO::do_init_connect(EVIO *w)
 
 static void info_callback(const SSL *ssl, int where, int ret)
 {
-    if (where & SSL_CB_ALERT)
+    const char *str;
+    int32_t fd = SSL_get_fd(ssl);
+    int32_t w  = where & ~SSL_ST_MASK;
+    if (w & SSL_ST_CONNECT)
     {
-        PLOG("Alert: %s - %s", SSL_alert_type_string(ret),
-               SSL_alert_desc_string(ret));
+        str = "SSL_connect";
+    }
+    else if (w & SSL_ST_ACCEPT)
+    {
+        str = "SSL_accept";
+    }
+    else
+    {
+        str = "undefined";
+    }
+    if (where & SSL_CB_LOOP)
+    {
+        PLOG("Loop: fd = %d, %s:%s", fd, str, SSL_state_string_long(ssl));
+    }
+    else if (where & SSL_CB_ALERT)
+    {
+        str = (where & SSL_CB_READ) ? "read" : "write";
+        PLOG("Alert: fd = %d %s:%s:%s", fd, str, SSL_alert_type_string(ret),
+             SSL_alert_desc_string(ret));
+    }
+    else if (where & SSL_CB_EXIT)
+    {
+        if (0 == ret)
+        {
+            PLOG("Exit: fd = %d %s:failed in %s", fd, str,
+                 SSL_state_string_long(ssl));
+        }
+        else if (ret < 0)
+        {
+            PLOG("Exit: fd = %d %s:error in %s", fd, str,
+                 SSL_state_string_long(ssl));
+        }
     }
     else if (where & SSL_CB_HANDSHAKE_START)
     {
-        PLOG("Handshake started");
+        PLOG("Handshake: fd = %d started", fd);
     }
     else if (where & SSL_CB_HANDSHAKE_DONE)
     {
-        PLOG("Handshake done");
+        PLOG("Handshake: fd = %d done", fd);
+    }
+}
+
+static void tlsext_callback(SSL *ssl, int32_t client_server, int32_t type,
+                     const unsigned char *data, size_t len, void *arg)
+{
+    if (type == TLSEXT_TYPE_server_name)
+    {
+        if (len >= 2)
+        {
+            uint32_t sni_len = (data[0] << 8) | data[1];
+            if (sni_len + 2 <= len)
+            {
+                PLOG("SNI found, len = %zu, name = %.*s", sni_len,
+                     sni_len, data + 2);
+            }
+        }
+    }
+    else if (type == TLSEXT_TYPE_application_layer_protocol_negotiation)
+    {
+        PLOG("ALPN found, len = %zu", len);
+        if (len >= 2)
+        {
+            const unsigned char *p = data;
+            uint32_t alpn_len      = (p[0] << 8) | p[1];
+            p += 2;
+            while (alpn_len > 0 && p < data + len)
+            {
+                uint32_t proto_len = *p++;
+                if (proto_len > 0 && p + proto_len <= data + len)
+                {
+                    PLOG("    protocol: %.*s", proto_len, p);
+                    p += proto_len;
+                    alpn_len -= 1 + proto_len;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -156,7 +229,9 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     }
 
 #ifdef SSL_DBG
+    SSL_set_debug(ssl_, 1); // 启用调试
     SSL_set_info_callback(ssl_, info_callback);
+    SSL_set_tlsext_debug_callback(ssl_, tlsext_callback);
 #endif
 
     return 0;
@@ -165,9 +240,18 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
 int32_t SSLIO::handshake(EVIO *w)
 {
     int32_t ecode = SSL_do_handshake(ssl_);
+#ifdef SSL_DBG
     PLOG("handshake fd = %d, code = %d", w->fd_, ecode);
+#endif
     if (1 == ecode)
     {
+#ifdef SSL_DBG
+        uint32_t alpn_len;
+        const unsigned char *alpn;
+        SSL_get0_alpn_selected(ssl_, &alpn, &alpn_len);
+        PLOG("ssl fd = %d, SNI = %s, ALPN = %.*s", w->fd_,
+             SSL_get_servername(ssl_, TLSEXT_NAMETYPE_host_name), alpn_len, alpn);
+#endif
         // SSLMgr::dump_x509(ssl_);
         // 可能上层在握手期间发送了一些数据，握手成功要检查一下
         // 理论上来讲，SSL可以重新握手，所以这个init_ok可能会触发多次，需要上层逻辑注意
@@ -183,7 +267,9 @@ int32_t SSLIO::handshake(EVIO *w)
      * handshakes.
      */
     ecode = SSL_get_error(ssl_, ecode);
+#ifdef SSL_DBG
     PLOG("handshake get error fd = %d, code = %d", w->fd_, ecode);
+#endif
 
     // 握手无法一次完成，必须返回事件让socket执行继续do_handshake
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
@@ -208,7 +294,7 @@ int32_t SSLIO::set_ssl_alpn(int32_t alpn)
     case 1:
         alpn_size   = 9;
         alpn_protos = (const unsigned char *)"\x08http/1.0";
-    break;
+        break;
     case 2:
         alpn_size   = 9;
         alpn_protos = (const unsigned char *)"\x08http/1.1";
@@ -218,13 +304,14 @@ int32_t SSLIO::set_ssl_alpn(int32_t alpn)
         alpn_protos = (const unsigned char *)"\x08h2"; // http/2
         break;
     case 4:
-        alpn_size   = 12;
-        alpn_protos = (const unsigned char *)"\x08h2\x08http/1.1"; // http/2 + http/1.1
+        alpn_size = 12;
+        alpn_protos =
+            (const unsigned char *)"\x08h2\x08http/1.1"; // http/2 + http/1.1
         break;
     // 其他的，还有grpc等等，暂时不管
     default: return -3;
     }
-    return SSL_set_alpn_protos(ssl_, alpn_protos, alpn_size);
+    return SSL_set_alpn_protos(ssl_, alpn_protos, (uint32_t)alpn_size);
 }
 
 int32_t SSLIO::set_ssl_sni(const char *sni)

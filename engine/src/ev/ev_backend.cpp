@@ -168,7 +168,8 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         if (w->b_kevents_ & EV_KERNEL)
         {
             op = FD_OP_MOD;
-            assert(0 != events);
+            // events可能是0。在连接过程中，连接收到返回，还来不及设置数据到backend
+            // assert(0 != events);
         }
         else
         {
