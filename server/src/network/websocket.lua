@@ -74,6 +74,7 @@ WebSocket.default_param = {
 function WebSocket:on_handshake(sec_websocket_key, sec_websocket_accept)
     if sec_websocket_key then
         -- 服务器收到客户端的握手请求
+
         local sha1 = util.sha1_raw(sec_websocket_key, ws_magic)
         local base64 = util.base64(sha1)
         self.s:send_pkt(string.format(handshake_srv, base64))
@@ -104,11 +105,12 @@ function WebSocket:send_handshake(url)
     -- 随机16个字节的字符串就可以了，主要是用于服务器返回时用于验证，确保对方是一个ws而
     -- 不是一个普通的http服务器
     local r_val = tostring(math.random(1000000000000001, 9999999999999999))
-    self.ws_key = util.base64(r_val)
+    local ws_key = util.base64(r_val)
 
+    self.ws_key = ws_key
     local host = HttpSocket:fmt_host(self.host, self.port, self.ssl)
     return self.s:send_pkt(string.format(
-        handshake_clt, url or default_url, host, self.ws_key))
+        handshake_clt, url or default_url, host, ws_key))
 end
 
 -- io建立成功，开始websocket握手
