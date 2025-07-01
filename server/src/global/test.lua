@@ -171,7 +171,7 @@ local function equal(got, expect)
 end
 
 -- 使用协程执行一个测试函数
-local function co_run(func, info)
+local function co_run(func)
     local co = coroutine.create(func)
     T.co = co
 
@@ -181,12 +181,17 @@ end
 
 -- 执行一个before函数
 local function test_one_before(b)
-    local ok, msg = xpcall(b.func, error_msgh)
+    local ok, msg = co_run(b.func)
     if not ok then
         -- before函数失败，则整个describe就不用再执行了，全部失败
         T.fail = T.fail + #(T.d_now.i)
         T.R("%s%s before %s", FAIL, T.d_now.title, msg)
         return false
+    end
+    -- 子协程进入异步等待，主协程也进入等待
+    if b.status == PEND then
+        b.status = nil
+        coroutine.yield()
     end
 
     -- 异步超时

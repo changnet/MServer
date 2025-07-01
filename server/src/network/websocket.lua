@@ -90,7 +90,6 @@ function WebSocket:on_handshake(sec_websocket_key, sec_websocket_accept)
     end
 
     self.status = OPENED
-    self.s:set_watcher_event(SocketMgr.EV_READ)
     -- 握手后，连接建立成功
     self:on_connected()
 end
@@ -114,6 +113,9 @@ end
 
 -- io建立成功，开始websocket握手
 function WebSocket:io_ready()
+    -- 需要读写握手数据了
+    self.s:set_watcher_event(SocketMgr.EV_READ)
+
     -- 如果是客户端才发起握手，服务器是不处理的
     if self:is_server() then return end
     return self:send_handshake(self.url)

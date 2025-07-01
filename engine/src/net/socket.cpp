@@ -711,7 +711,7 @@ int32_t Socket::unpack_on_closed(lua_State *L)
 
 void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 {
-    if(!w_) return nullptr;
+    if(!w_ || w_->io_) return nullptr;
 
     IO *io;
     switch (io_type)

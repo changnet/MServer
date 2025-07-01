@@ -176,21 +176,32 @@ static void info_callback(const SSL *ssl, int where, int ret)
 static void tlsext_callback(SSL *ssl, int32_t client_server, int32_t type,
                      const unsigned char *data, size_t len, void *arg)
 {
+    // 可用第三方工具查看连接的sni和alpn
+    // openssl s_client -connect ws.postman-echo.com:443 -servername ws.postman-echo.com -tlsextdebug
+    // curl -v -X GET https://postman-echo.com/get
     if (type == TLSEXT_TYPE_server_name)
     {
-        if (len >= 2)
+        if (len >= 5)
         {
-            uint32_t sni_len = (data[0] << 8) | data[1];
-            if (sni_len + 2 <= len)
+            uint16_t list_len = (data[0] << 8) | data[1];
+            if ((size_t)list_len + 2 <= len)
             {
-                PLOG("SNI found, len = %zu, name = %.*s", sni_len,
-                     sni_len, data + 2);
+                uint8_t name_type = data[2];
+                if (name_type == 0)
+                { // host_name
+                    uint16_t name_len = (data[3] << 8) | data[4];
+                    if ((size_t)name_len + 5 <= len)
+                    {
+                        PLOG("ssl SNI found, len = %u, name = %.*s", name_len,
+                             name_len, data + 5);
+                    }
+                }
             }
         }
     }
     else if (type == TLSEXT_TYPE_application_layer_protocol_negotiation)
     {
-        PLOG("ALPN found, len = %zu", len);
+        PLOG("ssl ALPN found, len = %zu", len);
         if (len >= 2)
         {
             const unsigned char *p = data;
@@ -229,7 +240,6 @@ int32_t SSLIO::init_ssl_ctx(int32_t fd)
     }
 
 #ifdef SSL_DBG
-    SSL_set_debug(ssl_, 1); // 启用调试
     SSL_set_info_callback(ssl_, info_callback);
     SSL_set_tlsext_debug_callback(ssl_, tlsext_callback);
 #endif
@@ -241,7 +251,7 @@ int32_t SSLIO::handshake(EVIO *w)
 {
     int32_t ecode = SSL_do_handshake(ssl_);
 #ifdef SSL_DBG
-    PLOG("handshake fd = %d, code = %d", w->fd_, ecode);
+    PLOG("ssl handshake fd = %d, code = %d", w->fd_, ecode);
 #endif
     if (1 == ecode)
     {
@@ -249,7 +259,7 @@ int32_t SSLIO::handshake(EVIO *w)
         uint32_t alpn_len;
         const unsigned char *alpn;
         SSL_get0_alpn_selected(ssl_, &alpn, &alpn_len);
-        PLOG("ssl fd = %d, SNI = %s, ALPN = %.*s", w->fd_,
+        PLOG("ssl handshake ready fd = %d, SNI = %s, ALPN = %.*s", w->fd_,
              SSL_get_servername(ssl_, TLSEXT_NAMETYPE_host_name), alpn_len, alpn);
 #endif
         // SSLMgr::dump_x509(ssl_);
@@ -268,7 +278,7 @@ int32_t SSLIO::handshake(EVIO *w)
      */
     ecode = SSL_get_error(ssl_, ecode);
 #ifdef SSL_DBG
-    PLOG("handshake get error fd = %d, code = %d", w->fd_, ecode);
+    PLOG("ssl handshake get error fd = %d, code = %d", w->fd_, ecode);
 #endif
 
     // 握手无法一次完成，必须返回事件让socket执行继续do_handshake
@@ -286,7 +296,6 @@ int32_t SSLIO::set_ssl_alpn(int32_t alpn)
 {
     if (!ssl_) return -1;
 
-    int32_t ret = 0;
     size_t alpn_size;
     const unsigned char *alpn_protos;
     switch (alpn)
@@ -301,16 +310,28 @@ int32_t SSLIO::set_ssl_alpn(int32_t alpn)
         break;
     case 3:
         alpn_size   = 3;
-        alpn_protos = (const unsigned char *)"\x08h2"; // http/2
+        alpn_protos = (const unsigned char *)"\x02h2"; // http/2
         break;
     case 4:
         alpn_size = 12;
         alpn_protos =
-            (const unsigned char *)"\x08h2\x08http/1.1"; // http/2 + http/1.1
+            (const unsigned char *)"\x02h2\x08http/1.1"; // http/2 + http/1.1
         break;
     // 其他的，还有grpc等等，暂时不管
     default: return -3;
     }
+#ifdef SSL_DBG
+    PLOG("ssl fd = %d set alpn", SSL_get_fd(ssl_));
+    size_t index = 0;
+    while (index < alpn_size)
+    {
+        uint8_t len = (uint8_t)*(alpn_protos + index);
+        index++;
+        PLOG("    protocol: %.*s", (int32_t)len, alpn_protos + index);
+
+        index += len;
+    }
+#endif
     return SSL_set_alpn_protos(ssl_, alpn_protos, (uint32_t)alpn_size);
 }
 
@@ -318,14 +339,23 @@ int32_t SSLIO::set_ssl_sni(const char *sni)
 {
     if (!ssl_) return -1;
 
+#ifdef SSL_DBG
+    PLOG("ssl fd = %d set sni = %s", SSL_get_fd(ssl_), sni);
+#endif
+
     // sni用于指定当前连接是连到哪个服务。
     // 在虚拟主机（Virtual Hosting）中，可以一个ip部署多个服务。
     // postman-echo.com不指定sni时，ssl握手会失败。对方直接关闭连接，没有其他错误信息
-    return SSL_set_tlsext_host_name(ssl_, sni);
+    return (int32_t)SSL_set_tlsext_host_name(ssl_, sni);
 }
 int32_t SSLIO::set_ssl_cert_host(const char *host)
 {
     if (!ssl_) return -1;
+
+#ifdef SSL_DBG
+    PLOG("ssl fd = %d set certificate host = %s", SSL_get_fd(ssl_), host);
+#endif
+
     // 只有指定了证书域名，ssl握手时才会验证域名和证书是否匹配
     // 证书域名和sni一般情况下是一致的，但并不一定。
     // 比如使用了负载均衡时，sni为负载均衡的域名lb.example.com，但证书域名可能是另一个example.com

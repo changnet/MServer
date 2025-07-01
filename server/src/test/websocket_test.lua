@@ -24,14 +24,22 @@ Test.describe("websocket test", function()
 
     local clt_ssl
     local srv_ssl
+    local clt_local_ssl
 
     Test.before(function()
         clt_ssl = TlsCtx()
         srv_ssl = TlsCtx()
+        clt_local_ssl = TlsCtx()
 
         clt_ssl:init()
+        clt_local_ssl:init("../certs/client.cer",
+            "../certs/clt_key.pem",
+            "mini_distributed_game_server",
+            "../certs/ca.cer")
         srv_ssl:init("../certs/server.cer",
-            "../certs/srv_key.pem", "mini_distributed_game_server")
+            "../certs/srv_key.pem",
+            "mini_distributed_game_server",
+            "../certs/ca.cer")
     end)
 
     Test.it("websocket ssl " .. exp_host, function()
@@ -189,8 +197,10 @@ Test.describe("websocket test", function()
         listen_conn.on_disconnected = function() end
 
         local conn = WebSocket()
+        -- 自己签发的证书里指定了ip为127.0.0.1
+        conn.cert_host = "127.0.0.1"
         conn.default_param = ws_default_param
-        conn:connect_s(local_host, local_port_s, clt_ssl)
+        conn:connect_s(local_host, local_port_s, clt_local_ssl)
 
         conn.on_disconnected = function() end
         conn.on_connected = function(self)

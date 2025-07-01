@@ -55,8 +55,16 @@ echo 01 > serial
 # 1000——指定随机数长度
 openssl rand -out private/.rand 1000
 
-# 生成临时 openssl_cnf.conf
-cat > openssl_cnf.conf <<EOF
+# 生成临时 openssl.conf
+# openssl目前不支持同一个配置文件多个dn，只能通过脚本临时替换其中的dn
+# dn的值可以配置，也可通过-subj指定，它表示证书相关的用户信息(subject的缩写)，如果没有这个字段，在生成过程中会要求填写
+#        C  => Country
+#        ST => State
+#        L  => City
+#        O  => Organization
+#        OU => Organization Unit
+#        CN => Common Name (证书所请求的域名,访问时，这个域名要匹配才能认证)
+cat > openssl.conf <<EOF
 [ ca_dn ]
 C  = CN
 ST = Guangzhou
@@ -70,7 +78,7 @@ C  = CN
 ST = Guangzhou
 L  = Guangzhou
 O  = MiniDistributedGameServer
-OU = server
+OU = changnet.server
 CN = minidistributedgameserver.com
 
 [ client_dn ]
@@ -78,14 +86,14 @@ C  = CN
 ST = Guangzhou
 L  = Guangzhou
 O  = MiniDistributedGameServer
-OU = client
+OU = changnet.client
 CN = minidistributedgameserver.com
 
 [ req ]
 default_bits       = $BITNUM
 prompt             = no
 default_md         = sha256
-distinguished_name = dn
+distinguished_name = DN_NAME
 
 [ ca_ext ]
 basicConstraints = critical,CA:TRUE
@@ -132,18 +140,11 @@ openssl genpkey -algorithm RSA \
 # -new——新证书签发请求
 # -key——指定私钥路径
 # -out——输出的csr文件的路径
-# -subj——证书相关的用户信息(subject的缩写)，如果没有这个字段，在生成过程中会要求填写
-#        C  => Country
-#        ST => State
-#        L  => City
-#        O  => Organization
-#        OU => Organization Unit
-#        CN => Common Name (证书所请求的域名,访问时，这个域名要匹配才能认证)
+sed "s|DN_NAME|ca_dn|g" openssl.conf > openssl_ca.conf
 openssl req -new \
 	-key private/ca_key.pem \
 	-passin pass:$OPENSSLPASS \
-	-config <(cat openssl_cnf.conf; echo '[ dn ]'; cat openssl_cnf.conf | sed -n '/\[ca_dn\]/,/^$/p' | grep -v '\[ca_dn\]') \
-	-subj "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=changnet/CN=github.com#changnet" \
+	-config openssl_ca.conf \
 	-out private/ca.csr
 
 # 上一步自己向自己提交了证书申请，现在自签
@@ -159,7 +160,7 @@ openssl x509 -req -days 3650 $DIGEST \
 	-signkey private/ca_key.pem \
 	-passin pass:$OPENSSLPASS \
 	-in private/ca.csr \
-	-extfile openssl_cnf.conf \
+	-extfile openssl_ca.conf \
 	-extensions ca_ext \
 	-out public/ca.cer
 
@@ -178,11 +179,11 @@ openssl genpkey -algorithm RSA \
 	-pkeyopt rsa_keygen_bits:$BITNUM
 
 # 申请（生成 CSR）
+sed "s|DN_NAME|server_dn|g" openssl.conf > openssl_server.conf
 openssl req -new \
     -key private/srv_key.pem \
     -passin pass:$OPENSSLPASS \
-    -config <(cat openssl_cnf.conf; echo '[ dn ]'; cat openssl_cnf.conf | sed -n '/\[server_dn\]/,/^$/p' | grep -v '\[server_dn\]') \
-    -subj "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=server/CN=minidistributedgameserver.com" \
+    -config openssl_server.conf \
     -out private/server.csr
 
 # 签发
@@ -200,7 +201,7 @@ openssl x509 -req -days 3650 $DIGEST \
     -CAserial ca.srl \
     -CAcreateserial \
     -in private/server.csr \
-    -extfile openssl_cnf.conf \
+    -extfile openssl_server.conf \
     -extensions server_ext \
     -out public/server.cer
 echo -e "\033[32;1mserver finish\033[0m"
@@ -219,11 +220,11 @@ openssl genpkey -algorithm RSA \
 	-pkeyopt rsa_keygen_bits:$BITNUM
 
 # 申请
+sed "s|DN_NAME|client_dn|g" openssl.conf > openssl_client.conf
 openssl req -new \
     -key private/clt_key.pem \
     -passin pass:$OPENSSLPASS \
-    -config <(cat openssl_cnf.conf; echo '[ dn ]'; cat openssl_cnf.conf | sed -n '/\[client_dn\]/,/^$/p' | grep -v '\[client_dn\]') \
-    -subj "/C=CN/ST=Guangzhou/L=Guangzhou/O=MiniDistributedGameServer/OU=client/CN=minidistributedgameserver.com" \
+    -config openssl_client.conf \
     -out private/client.csr
 
 # 签发
@@ -234,7 +235,7 @@ openssl x509 -req -days 3650 $DIGEST \
     -CAkey private/ca_key.pem \
     -CAserial ca.srl \
     -in private/client.csr \
-    -extfile openssl_cnf.conf \
+    -extfile openssl_client.conf \
     -extensions client_ext \
     -out public/client.cer
 

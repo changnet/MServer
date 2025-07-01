@@ -25,13 +25,8 @@ Test.describe("http test", function()
     local vfy_clt_ssl = TlsCtx()
 
     Test.before(function()
-        clt_ssl:init() -- 客户端的ssl不需要证书
-
-        -- win下不能简单地指定capath
-        -- https://security.stackexchange.com/questions/123160/how-to-specifiy-capath-using-openssl-in-windows-to-perform-tls-handshake
-        if LINUX then
-            vfy_ssl:init(nil, nil, nil, "/etc/ssl/certs/ca-certificates.crt")
-        end
+        clt_ssl:init() -- 不传参数就是使用系统默认证书来验证
+        vfy_ssl:init()
 
         srv_ssl:init("../certs/server.cer",
             "../certs/srv_key.pem", "mini_distributed_game_server")
@@ -245,24 +240,19 @@ Test.describe("http test", function()
 
     -- 作为客户端连接到目标服务器，并利用本机的证书验证服务器证书是否有效
     Test.it("https ssl verify and get " .. exp_host, vfy_ssl, function()
-        if LINUX then
-            Test.wait(10000)
-            local conn = HttpSocket()
+        local conn = HttpSocket()
 
-            conn:connect_s(exp_host, 443, vfy_ssl)
-            conn.on_connected = function(_conn)
-                conn:get("/get", nil,
-                         function(__conn, http_type, code, method, url, body)
-                    Test.equal(http_type, 2)
-                    Test.equal(code, 200)
-                    conn:close()
-                    Test.done()
-                end)
-            end
-            Test.wait(10000)
-        else
-            Test.print("windows no capath support")
+        conn:connect_s(exp_host, 443, vfy_ssl)
+        conn.on_connected = function(_conn)
+            conn:get("/get", nil,
+                     function(__conn, http_type, code, method, url, body)
+                Test.equal(http_type, 2)
+                Test.equal(code, 200)
+                conn:close()
+                Test.done()
+            end)
         end
+        Test.wait(10000)
     end)
 
     Test.it("https two-way ssl verify local server test", function()
@@ -289,8 +279,7 @@ Test.describe("http test", function()
         end
 
         local clt_conn = HttpSocket()
-        -- 默认情况下是会校验证书域名
-        clt_conn.sni = "127.0.0.1"
+        -- 自己签发的证书里指定了ip为127.0.0.1
         clt_conn.cert_host = "127.0.0.1"
         clt_conn:connect_s(local_host, port, vfy_clt_ssl)
         clt_conn.on_connected = function(_)

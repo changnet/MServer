@@ -115,7 +115,6 @@ void PollBackend::do_wait_event(int32_t ev_count)
                 if (revents & POLLERR) events |= EV_ERROR;
             }
 
-            PLOG("receive event fd = %d, event = %d, revents = %d", w->fd_, events, revents);
             do_kernel_event(w, events);
         }
 
@@ -260,7 +259,6 @@ int32_t PollBackend::modify_fd(int32_t fd, int32_t op, int32_t new_ev)
     if (new_ev & (EV_READ | EV_ACCEPT)) events |= (int32_t)POLLIN; 
     if (new_ev & (EV_WRITE | EV_CONNECT)) events |= (int32_t)POLLOUT;
 
-    PLOG("modify fd = %d, events = %d", fd, events);
     poll_fd_[index].events = (int16_t)events;
 
     return 0;
