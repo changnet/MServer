@@ -34,6 +34,7 @@ Test.describe("socket test", function()
 
     local pingpong_b = Buffer()
     local pingpong_ud = pingpong_b:fromstring(pingpong_str)
+    _G.pingpong_b = pingpong_b -- 避免被gc掉，不引用的话即使停掉gc也无法阻止它被gc掉
 
     -- https://stackoverflow.com/questions/63821960/lua-odd-min-integer-number
     -- -9223372036854775808在lua中会被解析为一个number而不是整型
@@ -278,5 +279,6 @@ Test.describe("socket test", function()
         if ss_clt then ss_clt:close() end
         if ss_srv then ss_srv:close() end
         if ss_listen then ss_listen:close() end
+        _G.pingpong_b = nil
     end)
 end)

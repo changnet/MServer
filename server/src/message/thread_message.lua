@@ -69,7 +69,7 @@ function main_message_dispatch(src, dst, mtype, udata, usize)
     end
 
     -- 部分协议不需要以协程回调，如需要协程回调使用reg_co
-    func(src, udata, usize)
+    return func(src, udata, usize)
 end
 
 -- worker程回调函数(由C++调用)

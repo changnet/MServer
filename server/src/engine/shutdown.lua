@@ -4,7 +4,7 @@ Shutdown = {}
 -- 按指定worker类型关机顺序关闭
 local Sequence = {
     WORKER.TEST, WORKER.GATEWAY, WORKER.SCENE, WORKER.GAME, WORKER.PLAYER,
-    WORKER.DATA,
+    WORKER.DATA, WORKER.MYSQL, WORKER.MONGODB,
 }
 
 -- 开始走关服流程
