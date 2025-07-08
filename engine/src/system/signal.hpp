@@ -3,6 +3,8 @@
 #include <csignal>
 #include "global/global.hpp"
 
+namespace syssignal
+{
 // 获取信号掩码并重置原有信号掩码
 int32_t signal_mask_once();
 
@@ -15,3 +17,7 @@ void signal_mask(int32_t sig, int32_t mask);
 
 // 屏蔽常用的关闭进程信号，如SIGTERM
 void mask_comm_signal();
+
+// 终止信号处理
+void signal_stop();
+} // namespace signal

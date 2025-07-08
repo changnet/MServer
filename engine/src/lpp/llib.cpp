@@ -73,8 +73,8 @@ const char *__dbg_traceback()
 static void luaopen_engine(lua_State *L)
 {
     lcpp::module_begin(L, "Engine");
-    lcpp::module_function<&signal_mask>(L, "signal_mask");
-    lcpp::module_function<&signal_mask_once>(L, "signal_mask_once");
+    lcpp::module_function<&syssignal::signal_mask>(L, "signal_mask");
+    lcpp::module_function<&syssignal::signal_mask_once>(L, "signal_mask_once");
     lcpp::module_function<&ThreadContextMgr::add_thread_ctx>(L, "add_thread_ctx");
     lcpp::module_function<&ThreadContextMgr::del_thread_ctx>(L, "del_thread_ctx");
     lcpp::module_function<&timing::steady_clock>(L, "steady_clock");

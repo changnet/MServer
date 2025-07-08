@@ -164,12 +164,12 @@ Test.describe("socket test", function()
         local count = 0
         local msg_id = math.random(1, 65535)
 
-        sc_srv.on_message = function(self, recv_msg_id, buffer, size)
+        sc_srv.on_message = Test.cb(function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
 
             self:send_pkt(msg_id, pingpong_ud, pingpong_size)
-        end
-        sc_clt.on_message = function(self, recv_msg_id, buffer, size)
+        end)
+        sc_clt.on_message = Test.cb(function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
             count = count + 1
 
@@ -178,7 +178,7 @@ Test.describe("socket test", function()
             else
                 sc_clt:send_pkt(msg_id, pingpong_ud, pingpong_size)
             end
-        end
+        end)
 
         -- 这里本来想做类似于nginx做0kb 1kb 10kb 100kb下性能测试，但由于这里收发只能跑
         -- 在一个线程，没啥意义，所以只测试准确性

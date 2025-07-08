@@ -3,6 +3,7 @@
 extern LONG __unhandled_exception_filte(_EXCEPTION_POINTERS *exception);
 #endif
 
+#include "system/signal.hpp"
 #include "system/static_global.hpp"
 
 int32_t main(int32_t argc, char **argv)
@@ -25,6 +26,7 @@ int32_t main(int32_t argc, char **argv)
     StaticGlobal::B->start();
     StaticGlobal::E->start(argc, argv);
     StaticGlobal::B->stop();
+    syssignal::signal_stop();
 
     StaticGlobal::uninitialize();
 

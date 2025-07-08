@@ -281,6 +281,12 @@ function Rtti.name_to_obj(name)
     return names_obj[name]
 end
 
+-- 根据函数指针获取函数所在的文件和行数(仅debug用)
+function Rtti.func_location(func)
+    local info = debug.getinfo(func, "S")
+    if info then return info.source, info.linedefined end
+end
+
 -- 通过遍历全局表，生成函数及其对应的名字
 function Rtti.collect()
     -- 这个函数尽量在所有模块加载完成之后，配置、数据对象创建之前调用，避免搜索过多无效的数据

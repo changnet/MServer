@@ -2,6 +2,8 @@
 #include "static_global.hpp"
 #include "global/platform.hpp"
 
+namespace syssignal
+{
 /// 各线程收到的信号统一存这里，由主线程处理
 static std::atomic<int32_t> sig_mask(0);
 
@@ -23,18 +25,17 @@ static void sig_handler(int32_t signum)
     // std::atomic<int>在lock_free的情况下是async-signal-safe，x86架构一般都是lock_free
     // std::sig_atomic_t是能保证信号安全，但它不是线程安全
 
-
     // C++的condition_variable以及mutex都不是async-signal-safe的，因此这里调用加锁的函数唤醒另一个线程是可能会导致死锁的
     // https://www.man7.org/linux/man-pages/man7/signal-safety.7.html
-    // 
+    //
     // 一个解决方案是线程使用pipe、socket、eventfd等async-signal-safe的机制来阻塞，这样wirte一个数据去唤醒线程是安全的。但这个不好跨平台
-    // 
+    //
     // 另一个解决方案所有线程都屏蔽信号，然后创建一个独立的线程调用sigwait，这样该线程就是一个普通的线程，
     // 可以安全使用condition_variable唤醒主线程，但这个比较复杂且win下不好实现
     //      参考：https://thomastrapp.com/blog/signal-handler-for-multithreaded-c++/
     //
     // 但这些方案都太复杂
-    // 
+    //
     // 用sig_mask判断一下，如果不为0说明已经唤醒过了，不需要再次唤醒，就不需要加锁，避免死锁
     // 当然这个不是很准，可能设置完sig_mask的值另一线程刚好处理完旧信号重新进入睡眠了，导致信号丢失
     // 考虑到信号是一个使用频率很低的功能，并且基本不影响业务逻辑，这里只要不死锁即可
@@ -47,7 +48,7 @@ static void sig_handler(int32_t signum)
 }
 
 #ifdef __windows__
-BOOL WINAPI win_console_handler(DWORD event)
+static BOOL WINAPI win_console_handler(DWORD event)
 {
     // https://learn.microsoft.com/zh-cn/windows/console/setconsolectrlhandler
     // https://learn.microsoft.com/zh-cn/windows/console/handlerroutine
@@ -120,8 +121,9 @@ void mask_comm_signal()
      */
 
     /* TODO C++标准在csignal中提供了部分信号处理的接口，但没提供屏蔽信号的
-     * linux下，使用pthread_sigmask(SIG_BLOCK, &mask, NULL);应该是兼容的，但windows下的std::thread不行
-     * 
+     * linux下，使用pthread_sigmask(SIG_BLOCK, &mask,
+     * NULL);应该是兼容的，但windows下的std::thread不行
+     *
      * 因此干脆不屏蔽了，把信号统一收集起来，等主线程处理
      */
 
@@ -138,3 +140,12 @@ void mask_comm_signal()
     ::signal(SIGINT, sig_handler);
     ::signal(SIGTERM, sig_handler);
 }
+
+void signal_stop()
+{
+    // 服务器停止但进程未完全退出时，标记所有信号
+    // 不然这时候收到信号，会触发StaticGlobal::E->emplace_message，但这时候
+    // 主线程可能已经销毁了
+    sig_mask.store(0xFFFFFFFF);
+}
+} // namespace signal

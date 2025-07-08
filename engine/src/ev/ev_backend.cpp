@@ -241,7 +241,8 @@ void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
             events |= status;
             // 握手完成之前，读写事件都是无效的。握手完成后重新设置(或者在这里统一设置读事件？)。
             // 因为现在没有区分是因为握手需要读写，还是上层逻辑设置的读写
-            kevents &= ~(status | EV_READ | EV_WRITE);
+            kevents &=
+                ~(status | EV_READ | EV_WRITE | EV_INIT_ACPT | EV_INIT_CONN);
             // ssl握手未完成，不应该有数据要发送。ssl中途重新协商？？？
             // Renegotiation is removed from TLS 1.3
             // int32_t new_status = w->send();
