@@ -40,6 +40,12 @@ function Worker.start(settings)
     end
 end
 
+-- 把同一线程的worker缓存到WorkerHash，加快数据交互
+function Worker.on_other_worker_ready(addr)
+    -- local w = assert(Engine.get_thread_ctx(addr))
+    -- WorkerHash[addr] = w
+end
+
 -- 获取本地local的所有地址列表
 function Worker.local_addr_list()
     local list = {}

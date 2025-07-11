@@ -151,3 +151,9 @@ int32_t EV::destruct_message(lua_State *L)
 
     return 0;
 }
+
+int32_t EV::push(lua_State* L, bool gc)
+{
+    lcpp::Class<EV>::push(L, this, gc);
+    return 1;
+}

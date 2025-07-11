@@ -54,7 +54,11 @@ end
 function main_message_dispatch(src, dst, mtype, udata, usize)
     local worker = WorkerHash[dst]
     if worker then
-        return worker:emplace_message(src, dst, mtype, udata, usize)
+        -- 这个慢一点
+        -- return worker:emplace_message(src, dst, mtype, udata, usize)
+
+        local m = g_mthread:acquire_message()
+        return worker:push_message(m)
     end
 
     if 0 ~= dst and LOCAL_ADDR ~= dst then

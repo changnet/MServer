@@ -1,4 +1,5 @@
 #include "thread_context.hpp"
+#include "lpp/lcpp.hpp"
 #include "system/static_global.hpp"
 
 ThreadContext::ThreadContext()
@@ -46,4 +47,12 @@ void ThreadContextMgr::add_thread_ctx(int32_t addr, ThreadContext* ctx)
 void ThreadContextMgr::del_thread_ctx(int32_t addr)
 {
     StaticGlobal::M->del(addr);
+}
+int32_t ThreadContextMgr::get_thread_ctx(lua_State *L)
+{
+    int32_t addr       = (int32_t)luaL_checkinteger(L, 1);
+    ThreadContext *ctx = StaticGlobal::M->get(addr);
+    if (!ctx) return 0;
+
+    return ctx->push(L, false);
 }

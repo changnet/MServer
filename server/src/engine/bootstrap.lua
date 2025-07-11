@@ -162,7 +162,10 @@ function Bootstrap.process_init(loader)
     math.randomseed(os.time())
     if loader then
         __loader = loader
-        Timer.timeout(0, function() require(loader) end)
+        Timer.timeout(0, function()
+            require(loader)
+            Bootstrap.start()
+        end)
     end
 end
 
@@ -196,7 +199,10 @@ function Bootstrap.worker_init(addr, loader)
     math.randomseed(os.time())
 
     __loader = loader
-    Timer.timeout(0, function() require(loader) end)
+    Timer.timeout(0, function()
+        require(loader)
+        Bootstrap.start()
+    end)
 end
 
 -- 注册按优先级启动的模块
@@ -211,14 +217,33 @@ function Bootstrap.reg(mod, priority)
     boot_modules:push(mod, priority)
 end
 
-local function boot_ready()
-    print("bootstrap done")
+-- worker启动完成
+function Bootstrap.on_worker_ready(addr)
+    assert(LOCAL_ADDR == PROCESS_ADDR)
 
+    -- 同步worker到其他worker，加快worker间的消息交互
+    -- 否则都会先抛给主线程，再由主线程转发
+    for other_addr, w in pairs(WorkerHash) do
+        if other_addr ~= addr and not w.cluster_worker then
+            Send.Worker.on_other_worker_ready(other_addr, addr)
+        end
+    end
+end
+
+local function boot_ready()
     if boot_modules and boot_modules.timer then
         Timer.stop(boot_modules.timer)
     end
     boot_modules = nil
 
+    if LOCAL_ADDR ~= PROCESS_ADDR then
+        -- 同步到线程，当前worker启动完成
+        Send.Bootstrap.on_worker_ready(PROCESS_ADDR, LOCAL_ADDR)
+        printf("worker %s ready, addr = %d",
+            Worker.addr_name(LOCAL_ADDR), LOCAL_ADDR)
+    else
+        print("procsss ready")
+    end
     if SE then SE.fire_event(SE_READY) end
 end
 

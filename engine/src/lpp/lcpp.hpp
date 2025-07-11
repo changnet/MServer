@@ -615,15 +615,17 @@ public:
         lua_pop(L_, 1); /* drop class metatable */
     }
 
-    /* 将c对象push栈,gc表示lua销毁userdata时，在gc函数中是否将当前指针delete
+    /**
+     * @brief 将c对象push到lua栈。
      * 由于此函数为static，但却依赖classname，而classname在构造函数中传入。
-     * 因此，当调用类似lclass<lsocket>::push( L,backend_,false );的代码时，
-     * 请保证你之前已注册对应的类，否则metatable将为nil
+     * 因此调用此函数时，请保证你之前已注册对应的类
+     * @param gc lua销毁userdata时，在gc函数中是否将当前指针delete
      */
     static int push(lua_State *L, const T *obj, bool gc = false)
     {
         assert(obj);
         assert(class_name_);
+        int top = lua_gettop(L);
 
         /* 这里只是创建一个指针给lua管理
          */
@@ -642,7 +644,7 @@ public:
          */
         if (!gc)
         {
-            subtable(L, 2, "notgc_", "k");
+            subtable(L, top + 2, "notgc_", "k");
 
             lua_pushvalue(L, 1); /* 复制userdata到栈顶 */
             lua_pushboolean(L, 1);
@@ -652,6 +654,7 @@ public:
         }
 
         lua_setmetatable(L, -2);
+        assert(top + 1 == lua_gettop(L));
         return 0;
     }
 

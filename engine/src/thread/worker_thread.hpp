@@ -74,6 +74,9 @@ public:
     {
         return timer_mgr_.periodic_stop(id);
     }
+
+    // 把当前指针push到lua
+    int32_t push(lua_State *L, bool gc) override;
  
 protected:
 

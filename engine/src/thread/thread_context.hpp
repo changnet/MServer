@@ -6,6 +6,8 @@
 #include <condition_variable>
 #include "global/global.hpp"
 
+struct lua_State;
+
 // 线程数据交互结构
 struct ThreadMessage final
 {
@@ -56,6 +58,9 @@ class ThreadContext
 public:
     ThreadContext();
     virtual ~ThreadContext();
+
+    // 把当前对象push到lua
+    virtual int32_t push(lua_State *L, bool gc) = 0;
 
     size_t message_size() const
     {
@@ -170,6 +175,11 @@ public:
      * @param addr 线程地址
      */
     static void del_thread_ctx(int32_t addr);
+    /**
+     * 获取一个线程指针
+     * @param addr 线程地址
+     */
+    static int32_t get_thread_ctx(lua_State *L);
 
     // 添加一个线程
     void add(int32_t addr, ThreadContext* ctx)
@@ -184,6 +194,13 @@ public:
     {
         std::unique_lock ul(mutex_);
         hash_.erase(addr);
+    }
+
+    ThreadContext* get(int32_t addr)
+    {
+        std::unique_lock ul(mutex_);
+        auto iter = hash_.find(addr);
+        return iter == hash_.end() ? nullptr : iter->second;
     }
 
 private:

@@ -173,3 +173,9 @@ void WorkerThread::routine()
         return;
     }
 }
+
+int32_t WorkerThread::push(lua_State *L, bool gc)
+{
+    lcpp::Class<WorkerThread>::push(L, this, gc);
+    return 1;
+}

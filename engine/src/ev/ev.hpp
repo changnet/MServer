@@ -72,6 +72,9 @@ public:
      */
     int32_t destruct_message(lua_State *L);
 
+    // 把当前指针push到lua
+    int32_t push(lua_State *L, bool gc) override;
+
 private:
     // 进入主循环，除非停服否则不返回
     void routinue();
