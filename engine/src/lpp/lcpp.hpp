@@ -646,7 +646,7 @@ public:
         {
             subtable(L, top + 2, "notgc_", "k");
 
-            lua_pushvalue(L, 1); /* 复制userdata到栈顶 */
+            lua_pushvalue(L, top + 1); /* 复制userdata到栈顶 */
             lua_pushboolean(L, 1);
             lua_settable(L, -3); /* notgc_[userdata] = true */
 
@@ -791,10 +791,10 @@ private:
     {
         if (luaL_getmetafield(L, 1, "notgc_"))
         {
-            /* 以userdata为key取值。如果未设置该userdata的notgc_值，则将会取得nil */
+            // 以userdata为key取值。如果未设置该userdata的notgc_值，则将会取得nil
             lua_pushvalue(L, 1);
             lua_gettable(L, -2);
-            /* gc = true表示执行gc函数 */
+
             if (lua_toboolean(L, -1)) return 0;
         }
 
@@ -811,7 +811,7 @@ private:
         lua_newtable(L);
         lua_pushvalue(L, -1); // table is its own metatable
         lua_setmetatable(L, -2);
-        lua_pushliteral(L, "__mode");
+        lua_pushstring(L, "__mode");
         lua_pushstring(L, mode);
         lua_settable(L, -3); // metatable.__mode = mode
     }
@@ -821,15 +821,15 @@ private:
                          const char *mode)
     {
         lua_pushstring(L, name);
-        lua_rawget(L, index); /* 判断是否已存在t[name] */
+        lua_rawget(L, index); // 判断是否已存在t[name], stack = userdata,metable,notgc_
 
-        if (lua_isnil(L, -1)) /* 不存在，则创建 */
+        if (lua_isnil(L, -1)) // 不存在，则创建
         {
-            lua_pop(L, 1); /* drop nil */
-            weaktable(L, mode);
+            lua_pop(L, 1); // drop nil, stack = userdata,metable
+            weaktable(L, mode); // stack = userdata,metable,notgc_
             lua_pushstring(L, name);
-            lua_pushvalue(L, -2);
-            lua_rawset(L, index); /* set t[name] */
+            lua_pushvalue(L, -2); // stack = userdata,metable,notgc_, name, notgc_
+            lua_rawset(L, index); // set t[name] = notgc_, stack = userdata,metable,notgc_
         }
     }
 
