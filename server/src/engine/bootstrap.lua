@@ -160,13 +160,12 @@ function Bootstrap.process_init(loader)
     Signal.mask(15, Shutdown.process_stop)
 
     math.randomseed(os.time())
-    if loader then
-        __loader = loader
-        Timer.timeout(0, function()
-            require(loader)
-            Bootstrap.start()
-        end)
-    end
+
+    __loader = loader
+    Timer.timeout(0, function()
+        if loader then require(loader) end
+        Bootstrap.start()
+    end)
 end
 
 -- worker预加载必要的组件
@@ -225,7 +224,7 @@ function Bootstrap.on_worker_ready(addr)
     -- 否则都会先抛给主线程，再由主线程转发
     for other_addr, w in pairs(WorkerHash) do
         if other_addr ~= addr and not w.cluster_worker then
-            Send.Worker.on_other_worker_ready(other_addr, addr)
+            Send.Worker.on_ready(other_addr, addr)
         end
     end
 end
@@ -259,7 +258,7 @@ local function boot_next_modules()
     local all_ready = true
     for _, mod in ipairs(list) do
         local name = mod.name or "unknow"
-        if not mod.boot_start() then
+        if not mod.boot() then
             all_ready = false
             boot_modules.wait[mod] = true
             printf("booting %s ...", name)
@@ -279,7 +278,7 @@ local function checkModuleReady()
 
     for mod in pairs(wait) do
         local name = mod.name or "unknow"
-        if not mod.boot_ready() then
+        if not mod.ready() then
             printf("booting %s ...", name)
             return
         else

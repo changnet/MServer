@@ -58,7 +58,7 @@ bool WorkerThread::initialize()
     L_ = llib::new_state();
     timing::update();
 
-    // push一些共用的全局对象到lua，比如全局日志对象
+    // 注意，worker线程的lua虚拟机不管理线程的生命周期，而是由主线程管理
     lcpp::Class<WorkerThread>::push(L_, this, false);
     lua_setglobal(L_, "g_thread");
 

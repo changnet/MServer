@@ -9,4 +9,4 @@ local worker_setting = {
     {file = "data.w_mongodb", type = WORKER.MONGODB, index = 1},
 }
 
-Worker.start(worker_setting)
+Worker.create(worker_setting)

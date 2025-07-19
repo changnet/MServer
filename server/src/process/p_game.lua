@@ -12,7 +12,7 @@ local worker_setting = {
     -- {file = "w_scene.lua", type = WORKER.SCENE, index = 2},
 }
 
-Worker.start(worker_setting)
+Worker.create(worker_setting)
 Cluster.connect(g_setting.cluster, "gateway1")
 -- Cluster.connect("data", 1, 1)
 -- Bootstrap.start()
