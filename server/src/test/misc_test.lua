@@ -667,3 +667,11 @@ Test.describe("graph lib test", function()
         Test.equal(graph.is_line_intersect_rect(0, 3, 4, 3, 2, 2, 4, 4), true)
     end)
 end)
+
+Test.describe("stirng lib test", function()
+    require "global.string"
+    Test.it("graph base", function()
+        Test.equal(string.fmt("{0}{1}", "a", 123), "a123")
+        Test.equal(string.fmt("{{0}}{1}", "a", 123), "{0}123")
+    end)
+end)

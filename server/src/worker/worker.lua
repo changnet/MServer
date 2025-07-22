@@ -42,7 +42,7 @@ function Worker.start(setting)
 end
 
 -- 从配置创建多个worker
-function Worker.create(settings)
+function Worker.start_later(settings)
     Bootstrap.reg({
         name = "worker",
         boot = function()

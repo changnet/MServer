@@ -11,7 +11,7 @@ end
 
 -- 是否准备就绪（连接上并且握手完成）
 function ClusterWorker:is_ready()
-    return self.ready
+    return self.ready == 0x2
 end
 
 -- 接受新的连接
@@ -70,7 +70,7 @@ function ClusterWorker:do_authenticate(src, name, tm, sign, addr_list)
         end
     end
 
-    self.ready = ok
+    self.ready = 0x2
     self.name = name
     self.addr_list = addr_list
 
@@ -80,16 +80,17 @@ end
 -- 服务器之间消息回调
 function ClusterWorker:on_message(src, dst, mtype, usize, udata)
     -- 未经过认证的连接，禁止直接将消息派发到其他模块
-    if not self.ready then
+    if 0x2 == self.ready then
+        if LOCAL_ADDR == PROCESS_ADDR then
+            main_message_dispatch(src, dst, mtype, usize, udata)
+        else
+            on_worker_message(src, dst, mtype, usize, udata)
+        end
+    else
+        -- todo 0x1表示认证完成，但未握手, 0x2是握手完成，可以发送业务逻辑了
         assert(-1 == mtype)
         return self:do_authenticate(
             src, g_lcodec:decode_from_buffer(udata, usize))
-    end
-
-    if LOCAL_ADDR == PROCESS_ADDR then
-        main_message_dispatch(src, dst, mtype, usize, udata)
-    else
-        on_worker_message(src, dst, mtype, usize, udata)
     end
 end
 

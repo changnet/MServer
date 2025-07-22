@@ -9,4 +9,4 @@ local worker_setting = {
     -- {file = "w_test.lua", type = WORKER.TEST, index = 2},
 }
 
-Worker.create(worker_setting)
+Worker.start_later(worker_setting)

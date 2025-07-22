@@ -3,7 +3,7 @@
 -- xzc
 -- string library extend function
 
-local string_fill_tbl = {}
+local string_fmt_tbl = {}
 local string_fill_v = {
     "0", "1", "2", "3", "4", "5", "6", "7", "8",
     "9", "10", "11", "12", "13", "14", "15", "16", "17", "18",
@@ -160,8 +160,8 @@ function string.gescape(str)
     return str:gsub('[%^%$%(%)%%%.%[%]%*%+%-%?]', '%%%1')
 end
 
--- 类似python和C#的字符串格式化，把{0}这种placeholder填充成对应的变量
-function string.fill(fmt, ...)
+-- 类似python和C#的字符串格式化，把{0}这种placeholder填充成对应的变量，使用{{N}}转义
+function string.fmt(fmt, ...)
     local n = select("#", ...)
     if 0 == n then return fmt end
 
@@ -169,8 +169,19 @@ function string.fill(fmt, ...)
         local v = select(i, ...)
         if nil == v then v = "nil" end
 
-        string_fill_tbl[ string_fill_v[i] ] = tostring(v)
+        string_fmt_tbl[ string_fill_v[i] ] = tostring(v)
     end
 
-    return string_gsub(fmt, "{(%d)}", string_fill_tbl)
+    -- 为了减少内存分配，使用了缓存，但要清掉无用的缓存
+    for i = #string_fmt_tbl, n + 1, -1 do
+        string_fmt_tbl[i] = nil
+    end
+
+    -- 先将 转义字符{{N}} 替换为特殊标记 \0N\0，这个转义规则和C#、python一致
+    local escape
+    fmt, escape = string_gsub(fmt, "{{(%d+)}}", "\0%1\0")
+    fmt = string_gsub(fmt, "{(%d+)}", string_fmt_tbl)
+    if escape > 0 then fmt = string_gsub(fmt, "\0(%d+)\0", "{%1}") end
+
+    return fmt
 end

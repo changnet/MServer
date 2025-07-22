@@ -7,7 +7,7 @@ local worker_setting = {
     {file = "worker.w_gateway", type = WORKER.GATEWAY, index = 1},
 }
 
-Worker.create(worker_setting)
+Worker.start_later(worker_setting)
 
 -- 监听game进程的连接
 Cluster.listen(g_setting.cluster, g_env:get("--node"), true)
