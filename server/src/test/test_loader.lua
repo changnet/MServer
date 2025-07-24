@@ -58,10 +58,13 @@ Test.setup({
 
 Rtti.collect()
 
--- 测试中有不少性能测试，避免gc影响测试结果
--- 但即使设置了停止标识，也无法完全停止gc，断点luaC_step函数就可以看到
-collectgarbage("stop")
+Timer.timeout(0, function()
+    -- 测试中有不少性能测试，避免gc影响测试结果
+    -- 但即使设置了停止标识，也无法完全停止gc，断点luaC_step函数就可以看到
+    collectgarbage("stop")
 
-Test.run()
+    Test.run()
 
-collectgarbage("restart")
+    collectgarbage("restart")
+end)
+

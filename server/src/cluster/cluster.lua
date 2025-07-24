@@ -63,48 +63,71 @@ local ClusterWorker = require "cluster.cluster_worker"
 local this = global_storage("Cluster", {
     node    = {}, -- 各节点已认证连接，以node_name为key
     unauth  = {}, -- unauthenticated 未认证连接，以worker对象为key
-    listen  = {}, -- 监听的连接
+    -- listen  = cluster_worker, -- 监听的连接
 })
 
--- 把gateway1拆分成gateway和1
-local function name_index(node_name)
-    -- 注意，node可能是不带数字，不带数字默认为1
-    local name, index = string.match(node_name, "(%a+)(%d*)")
-    return name, tonumber(index) or 1
-end
-
 -- （如果存在集群配置）启动监听，等待其他节点连接
--- @param cluster_conf 集群配置
--- @param node_name 当前节点信息，如"gateway1"
-function Cluster.listen(cluster_conf, node_name)
-    -- 把gateway1拆分成gateway和1
-    local name, index = name_index(node_name)
-    local key = string.format("%s%d", name, index)
+-- @param node_conf 集群节点配置：{host = "::1", port = 20001}
+function Cluster.listen(node_conf)
+    -- 一个线程只能发起一个监听。即使有多个节点连过来，也只是通过一个监听连接
+    assert(not this.listen)
 
-    local wtype = Worker.name_type(name)
-    local addr = Engine.make_address(wtype, index)
-    assert(WorkerSetting[addr]) -- 必须是本地worker才能发起监听
-
-    local worker = ClusterWorker(addr)
-    local conf = cluster_conf[key]
-    if not worker:listen(conf.ip, conf.port) then
-        print("cluster listen error", node_name, conf.ip, conf.port)
+    local worker = ClusterWorker()
+    if not worker:listen(node_conf.ip, node_conf.port) then
+        print("cluster listen error", node_conf.ip, node_conf.port)
         return
     end
-    printf("cluster listen %s %s:%d", node_name, conf.ip, conf.port)
+    printf("cluster listen at %s:%d", node_conf.ip, node_conf.port)
 
-    this.listen[addr] = worker
+    this.listen = worker
 end
 
 -- 关闭所有监听
 function Cluster.close_listen()
-    for addr, worker in pairs(this.listen) do
-        local node_name = Worker.addr_name(addr)
-        printf("cluster close listen %s %s:%d",
-            node_name, worker.listen_ip, worker.listen_port)
-        worker:close()
-    end
-    this.listen = {}
+    local w = this.listen
+    if not w then return end
+
+    printf("cluster close listen %s:%d", w.listen_ip, w.listen_port)
+
+    w:close()
+    this.listen = nil
+end
+
+
+local function find_node_key(node_name)
+    -- 注意，node可能是不带数字，不带数字默认为1
+    local name, index = string.match(node_name, "(%a+)(%d*)")
+    index = tonumber(index) or 1
+
+    local key = string.format("%s%d", name, index)
+    return key, name, index
+end
+-- 把gateway1拆分成gateway和1
+local function find_node_conf(cluster_conf, node_name)
+    local key = find_node_key(node_name)
+    return cluster_conf[key]
+end
+
+-- 启动完成后，开启监听
+function Cluster.listen_later(cluster_conf, node_name)
+    local node_conf = assert(find_node_conf(cluster_conf, node_name))
+    Bootstrap.reg({
+        name = "cluster listen",
+        boot = function()
+            Cluster.listen(node_conf)
+        end,
+        ready = function()
+            if this.listen then return true end
+
+            return "cluster listen fail"
+        end
+
+    }, 0xFFFF)
+end
+
+-- 集群模式，启动当前进程的多个节点（每个节点为一个worker）
+function Cluster.start_later(cluster_conf, node_name)
+    assert(false) -- not implement
 end
 
 -- 关闭所有连接
@@ -128,25 +151,43 @@ function Cluster.close()
 end
 
 -- 连接到其他集群节点
--- @param cluster_conf 集群配置
--- @param node_name 当前节点信息，如"gateway1"
-function Cluster.connect(cluster_conf, node_name)
-    local name, index = name_index(node_name)
-    local key = string.format("%s%d", name, index)
-
-    local wtype = Worker.name_type(name)
-    local addr = Engine.make_address(wtype, index)
+-- @param node_conf 集群节点配置：{host = "::1", port = 20001}
+function Cluster.connect(node_conf, addr)
     assert(not WorkerSetting[addr]) -- 本地的worker不需要连接
 
     local worker = ClusterWorker(addr)
-    local conf = cluster_conf[key]
-    if not worker:connect(conf.ip, conf.port) then
-        print("cluster connect error", node_name, conf.ip, conf.port)
+    local node_name = Worker.addr_name(addr)
+    if not worker:connect(node_conf.ip, node_conf.port) then
+        print("cluster connect error", node_name, node_conf.ip, node_conf.port)
         return
     end
-    printf("cluster connect %s %s:%d", node_name, conf.ip, conf.port)
+    printf("cluster connect %s %s:%d", node_name, node_conf.ip, node_conf.port)
 
     this.unauth[worker] = worker
+end
+
+-- 连接到其他集群节点
+-- @param cluster_conf 集群配置
+-- @param node_name 当前节点信息，如"gateway1"
+function Cluster.connect_later(cluster_conf, node_name)
+    local key, name, index = find_node_key(node_name)
+
+    local wtype = Worker.name_type(name)
+    local addr = Engine.make_address(wtype, index)
+    local node_conf = assert(cluster_conf[key])
+    Bootstrap.reg({
+        name = "cluster connect",
+        boot = function()
+            Cluster.connect(node_conf, addr)
+        end,
+        ready = function()
+            local w = WorkerHash[addr]
+            if w and w.is_ready() then return true end
+
+            return string.format("cluster connecting %s%d", name, index)
+        end
+
+    }, 0xFFFF)
 end
 
 -- 其他节点连连上
