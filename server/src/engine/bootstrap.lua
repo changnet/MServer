@@ -69,8 +69,8 @@ local function load_setting()
     local path = g_env:get("--file")
     if not path then
         -- 未从命令行传设置文件路径，则读取默认路径
-        local srv_dir = g_env:get("srv_dir")
-        path = srv_dir .. "/setting/setting.lua"
+        local cwd = g_env:get("cwd")
+        path = cwd .. "/setting.lua"
     end
 
     g_setting = dofile(path)

@@ -4,9 +4,9 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 
 set DEF_PROC=(gateway game data)
 
-cd ../server/bin
-
-set BIN=%cd%/master.exe
+cd ../server
+set BIN=%cd%/bin/master.exe
+cd var
 
 if "%1" == "" (
     for %%a in %DEF_PROC% do (

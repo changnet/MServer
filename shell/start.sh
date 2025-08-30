@@ -8,10 +8,12 @@ DEF_APP="gateway world area area"
 ulimit -Sc unlimited
 ulimit -Sn 65535
 
-# 进入bin所在目录，保证工作目录在bin
-cd ../server/bin
+cd ../server
 
-BIN=`pwd`/master
+BIN=`pwd`/bin/master
+
+# 进入var所在目录，保证工作目录在var
+cd var
 
 # ./start.sh 不带任何参数表示启动服务器
 if [ ! $1 ]; then

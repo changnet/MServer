@@ -88,8 +88,9 @@ message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 # 设置的参数能被子目录继承，子目录可以选择覆盖
 set(SRC_ROOT_PATH ".")
 set(DEPS_PATH "${SRC_ROOT_PATH}/deps")
-set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin/libs")
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
+set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/var/libs")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_LIST_DIR}/../server/var")
+set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../server/bin")
 
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SRC_PATH_SIZE)
 add_definitions("-DSRC_PATH_SIZE=${SRC_PATH_SIZE}")
@@ -187,3 +188,24 @@ elseif(UNIX)
         ssl crypto dl rt pthread resolv z stdc++fs
     )
 endif()
+
+install(TARGETS master DESTINATION "${CMAKE_INSTALL_PREFIX}")
+
+# 使用GLOB只是cmake运行时生成列表，那时dll未生成，会无效
+# 其他方式，比如直接install RUNTIME或者TARGET_RUNTIME_DLLS只能安装cmake中依赖的dll
+# 所以这里直接用code来执行安装
+install(CODE "
+    file(GLOB INSTALL_FILES
+        \"${EXECUTABLE_OUTPUT_PATH}/*.dll\"
+        \"${EXECUTABLE_OUTPUT_PATH}/*.pdb\"
+    )
+
+    file(MAKE_DIRECTORY \"${CMAKE_INSTALL_PREFIX}\")
+
+    # 这里不能用install，因为install只在cmake执行时生成
+    foreach(INSTALL_FILE \${INSTALL_FILES})
+        get_filename_component(FILENAME \${INSTALL_FILE} NAME)
+        file(COPY \${INSTALL_FILE} DESTINATION \"${CMAKE_INSTALL_PREFIX}\")
+        message(STATUS \"Installed: \${FILENAME}\")
+    endforeach()
+")

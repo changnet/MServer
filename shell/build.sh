@@ -8,7 +8,7 @@
 # sh build.sh 什么参数都不加，执行增量编译
 
 # TODO 可以用realpath取绝对路径，但是那样的话cmake的日志也是绝对路径，太难看了
-BUILD_DIR=../server/bin/linux-x64
+BUILD_DIR=../server/var/linux-x64
 ENGINE_DIR=../../../engine
 mkdir -p $BUILD_DIR
 
@@ -34,6 +34,9 @@ do_make()
 	fi
 
 	make $make_option
+	if [ -f "../master" ]; then
+		make install
+	fi
 }
 
 

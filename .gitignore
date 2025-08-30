@@ -22,4 +22,5 @@ engine/include
 setting.lua
 
 server/bin
+server/var
 

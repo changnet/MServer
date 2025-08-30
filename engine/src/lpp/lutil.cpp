@@ -578,6 +578,24 @@ static int32_t getcwd(lua_State *L)
     return 1;
 }
 
+// 切换当前工作目录
+static int32_t chdir(lua_State *L)
+{
+    // C++ 17
+    // 这个接口会自动处理不同平台的路径格式，全部用linux就行
+    std::filesystem::path fs  = luaL_checkstring(L, 1);
+    try
+    {
+        std::filesystem::current_path(fs);
+    }
+    catch (const std::filesystem::filesystem_error& e)
+    {
+        luaL_error(L, "%s", e.what());
+    }
+
+    return 0;
+}
+
 static int32_t setenv(lua_State *L)
 {
     const char *name  = luaL_checkstring(L, 1);
@@ -603,6 +621,7 @@ static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"sha256", sha256},
                                    {"sha3_256", sha3_256},
                                    {"getcwd", getcwd},
+                                   {"chdir", chdir},
                                    {"setenv", setenv},
                                    {"mkdir_p", mkdir_p},
                                    {"sha1_raw", sha1_raw},

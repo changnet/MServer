@@ -66,6 +66,9 @@ local function main(cmd, ...)
         os.execute("title " .. cmd_args)
     end
 
+    local chdir = opts["--cwd"]
+    if chdir then util.chdir(chdir) end
+
     local cwd = util.getcwd()
     local srv_dir =  string.match(cwd, "(.*)[/\\]") -- 不带最后一个/
     g_env:set("cwd", cwd) -- current working directory
