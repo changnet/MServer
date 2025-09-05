@@ -43,9 +43,6 @@ Util = require "engine.util"
 -- 服务器设置文件
 g_setting = nil
 
--- 当前宽度刚好可以支持gateway1，如果名字再长就要扩展，否则日志就不对齐了
-local LOG_WIDTH = 9
-
 -- 需要按优先级启动的模块
 local boot_modules = nil
 
@@ -93,6 +90,13 @@ local function set_path()
     end
 end
 
+local function format_log_name(local_name)
+    -- 当前宽度刚好可以支持gateway1，如果名字再长就要扩展，否则日志就不对齐了
+    local fmt = string.format(" %%-%ds", 8)
+    -- local fmt = " %s"
+    g_async_log:set_name(string.format(fmt, local_name))
+end
+
 -- 设置进程的日志参数
 local function set_process_log()
     -- 设置错误日志、打印日志
@@ -126,8 +130,7 @@ local function set_process_log()
     end
 
     -- 日志中需要打印线程名，否则多个进程在同一终端开户时不好区分日志
-    g_async_log:set_name(string.format(
-        string.format("%%%ds", LOG_WIDTH), local_name))
+    format_log_name(local_name)
     return local_name
 end
 
@@ -186,8 +189,7 @@ function Bootstrap.worker_init(addr, loader)
     LOCAL_TYPE = wtype
     LOCAL_NAME = string.format("%s%d", Worker.type_name(wtype), index)
 
-    g_async_log:set_name(string.format(
-        string.format("%%%ds", LOG_WIDTH), LOCAL_NAME))
+    format_log_name(LOCAL_NAME)
 
     Engine.add_thread_ctx(addr, g_thread:toludata())
 
