@@ -55,7 +55,7 @@ function Worker.start_later(settings)
             if not addr then return true end
 
             local name = Worker.addr_name(addr)
-            return string.format("wait for %s, addr = %d", name, addr)
+            return false, string.format("wait for %s, addr = %d", name, addr)
         end
 
     }, 10)
@@ -69,8 +69,10 @@ function Worker.stop(addr)
         return
     end
 
-    for other_addr in pairs(WorkerHash) do
-        Call.Worker.on_stop(other_addr, addr)
+    for other_addr, other_w in pairs(WorkerHash) do
+        if not other_w.cluster_worker then
+            Call.Worker.on_stop(other_addr, addr)
+        end
     end
 
     w:stop(true)
@@ -83,6 +85,10 @@ function Worker.on_ready(addr)
     assert(addr ~= LOCAL_ADDR)
     local w = assert(Engine.get_thread_ctx(addr))
     WorkerHash[addr] = w
+
+    -- 如果没有这个配置，那说明当前worker不关注这个addr的状态
+    local ws = WorkerSetting[addr]
+    if ws then ws.ready = 1 end
 end
 
 -- worker线程收到主线程停止请求
@@ -105,6 +111,7 @@ function Worker.local_addr_list()
             table.insert(list, addr)
         end
     end
+    return list
 end
 
 -- 根据地址获取worker的名字，如gateway1

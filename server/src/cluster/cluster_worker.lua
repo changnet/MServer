@@ -70,6 +70,7 @@ function ClusterWorker:do_authenticate(src, name, tm, sign, addr_list)
         end
     end
 
+    self.src = src -- 如果是worker直连，则是对方的workerId，否则为PROCESS_ADDR
     self.ready = 0x2
     self.name = name
     self.addr_list = addr_list

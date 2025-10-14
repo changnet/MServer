@@ -102,6 +102,7 @@ local function find_node_key(node_name)
     local key = string.format("%s%d", name, index)
     return key, name, index
 end
+
 -- 把gateway1拆分成gateway和1
 local function find_node_conf(cluster_conf, node_name)
     local key = find_node_key(node_name)
@@ -119,7 +120,7 @@ function Cluster.listen_later(cluster_conf, node_name)
         ready = function()
             if this.listen then return true end
 
-            return "cluster listen fail"
+            return false, "cluster listen fail"
         end
 
     }, 0xFFFF)
@@ -167,27 +168,29 @@ function Cluster.connect(node_conf, addr)
 end
 
 -- 连接到其他集群节点
--- @param cluster_conf 集群配置
--- @param node_name 当前节点信息，如"gateway1"
-function Cluster.connect_later(cluster_conf, node_name)
-    local key, name, index = find_node_key(node_name)
+-- @param cluster_conf 集群配置及节点名字列表 {{cluster_conf, node_name}}
+function Cluster.connect_later(node_list)
+    for _, nl in pairs(node_list) do
+        local cluster_conf = nl[1]
+        local node_name = nl[2]
+        local key, name, index = find_node_key(node_name)
 
-    local wtype = Worker.name_type(name)
-    local addr = Engine.make_address(wtype, index)
-    local node_conf = assert(cluster_conf[key])
-    Bootstrap.reg({
-        name = "cluster connect",
-        boot = function()
-            Cluster.connect(node_conf, addr)
-        end,
-        ready = function()
-            local w = WorkerHash[addr]
-            if w and w.is_ready() then return true end
+        local wtype = Worker.name_type(name)
+        local addr = Engine.make_address(wtype, index)
+        local node_conf = assert(cluster_conf[key])
+        Bootstrap.reg({
+            name = string.format("cluster connect %s", key),
+            boot = function()
+                Cluster.connect(node_conf, addr)
+            end,
+            ready = function()
+                local w = WorkerHash[addr]
+                if w and w:is_ready() then return true end
 
-            return string.format("cluster connecting %s%d", name, index)
-        end
-
-    }, 0xFFFF)
+                return false, string.format("cluster connecting %s%d", name, index)
+            end
+        }, 0xFFFF)
+    end
 end
 
 -- 其他节点连连上
@@ -198,8 +201,30 @@ function Cluster.accept(worker)
     printf("cluster accept %s:%d", ip, port)
 end
 
+-- 把集群节点作为一个worker添加到worker hash
+local function add_to_worker(node)
+    -- 当使用进程连接时，node代表的是对应进程里所有的worker，因此有多个worker addr
+    -- 当使用worker连接时，node代表的是该worker，只有一个worker addr
+    -- 如果使用了进程连接，又对某个worker发起了独立连接，独立连接将覆盖进程连接
+
+    for _, addr in pairs(node.addr_list) do
+        local old = WorkerHash[addr]
+        if old then
+            if old.src == PROCESS_ADDR and node.src ~= PROCESS_ADDR then
+                WorkerHash[addr] = node
+                print("overwrite cluster worker, addr =", addr)
+            else
+                eprint("cluster worker already exist", addr, old.src, node.src)
+            end
+        else
+            WorkerHash[addr] = node
+            print("add cluster worker, addr =", addr)
+        end
+    end
+end
+
 -- 处理节点认证结果
-function Cluster.authenticate(node, ok, addr_list)
+function Cluster.authenticate(node, ok)
     assert(node == this.unauth[node])
 
     local name = node.name
@@ -208,33 +233,46 @@ function Cluster.authenticate(node, ok, addr_list)
     if ok then
         this.node[name] = node
         print("cluster node establish", name)
+        add_to_worker(node)
     else
         node:close()
         print("cluster node auth fail", name)
     end
 end
 
+local function remove_from_worker(node)
+    if not node.addr_list then return end -- 还没握手成功，没有映射任何worker
+
+    for addr, w in pairs(WorkerHash) do
+        if w == node then
+            WorkerHash[addr] = nil
+            print("remove cluster worker, addr =", addr)
+        end
+    end
+end
+
 -- 连接断开时，取消认证
-function Cluster.unauthenticate(worker)
-    local name = worker.name
+function Cluster.unauthenticate(node)
+    local name = node.name
     if name then
         this.node[name] = nil
     end
 
     -- 如果是server端，则直接删除
     -- client端则需要尝试重连
-    if worker:is_server() then
-        this.unauth[worker] = nil
+    if node:is_server() then
+        this.unauth[node] = nil
     else
-        this.unauth[worker] = worker
+        this.unauth[node] = node
         -- 不要直接重连，等定时器定时重连即可
         -- 否则如果是签名等问题连接失败，会不断地循环直连
         -- TODO 主动断开的，不要重连
         -- node:reconnect()
     end
 
-    if worker.status == SocketMgr.OPENING then
-        local e, str = worker:get_error()
+    remove_from_worker(node)
+    if node.status == SocketMgr.OPENING then
+        local e, str = node:get_error()
         printf("cluster node %s connect fail(%d): %s", name, e, str)
     else
         print("cluster node disconnect", name)

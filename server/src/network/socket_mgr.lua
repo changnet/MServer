@@ -133,15 +133,17 @@ local function do_close(socket)
     CoPool.invoke(socket.on_disconnected, socket)
 
     socket.status = CLOSED
-    local errno = socket.s:close()
+    -- local errno = socket.s:close()
     __socket_hash[socket.socket_id] = nil
 
-    if 0 ~= errno then
-        local errstr
-        errno, errstr = socket:get_error()
-        printf("socket(%d) close, error (%d)%s",
-            socket.socket_id, errno or 0, errstr or "")
-    end
+    -- 这里不打印日志，因为socket有可能是正常关闭
+    -- 如果有需要对应的模块在收到关闭时自己获取对应的信息打印
+    -- if 0 ~= errno then
+    --     local errstr
+    --     errno, errstr = socket:get_error()
+    --     printf("socket(%d) close, error (%d)%s",
+    --         socket.socket_id, errno or 0, errstr or "")
+    -- end
 end
 
 local function do_listen(socket)

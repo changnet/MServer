@@ -229,6 +229,7 @@ function Bootstrap.on_worker_ready(addr)
             Send.Worker.on_ready(other_addr, addr)
         end
     end
+    Send.Worker.on_ready(PROCESS_ADDR, addr)
 end
 
 local function boot_ready()
@@ -275,13 +276,18 @@ local function boot_next_modules()
     return all_ready
 end
 
-local function checkModuleReady()
+local function check_module_ready()
     local wait = boot_modules.wait
 
     for mod in pairs(wait) do
         local name = mod.name or "unknow"
-        if not mod.ready() then
-            printf("booting %s ...", name)
+        local ready, msg = mod.ready()
+        if not ready then
+            if msg then
+                print(msg)
+            else
+                printf("booting %s ...", name)
+            end
             return
         else
             wait[mod] = nil
@@ -301,5 +307,5 @@ function Bootstrap.start()
     if boot_next_modules() then return end
 
     boot_modules.timer = Timer.interval(
-        1000, 1000, -1, Rtti.temp_func(checkModuleReady))
+        1000, 1000, -1, Rtti.temp_func(check_module_ready))
 end

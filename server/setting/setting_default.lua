@@ -19,7 +19,7 @@ return
     gm = true, -- 是否启用gm
     lang = "zh", -- 简体中文
     server = 1, -- 当前服务器id
-    process = "gateway", -- 当前进程启动worker名字
+    mode = "process", -- 当前进程启动模式
 
     -- 网关配置（监听客户端连接的ip和端口）
     gateway =
@@ -33,9 +33,7 @@ return
     -- 集群
     cluster =
     {
-        -- 同一个类型的节点，只能有一个master(可以没有master)
-        -- 一个节点的port = 0表示该节点只接收master中转的数据，不开启监听
-        gateway1 = {ip = "::1", port = 20001, master = 1},
+        game1 = {ip = "::1", port = 20001},
         gateway2 = {ip = "::1", port = 20002},
         db1 = {ip = "::1", port = 20003},
         db2 = {ip = "::1", port = 20004},
