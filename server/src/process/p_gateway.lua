@@ -9,6 +9,11 @@ local worker_setting = {
 
 Worker.start_later(worker_setting)
 
--- 监听game进程的连接
-Cluster.listen(g_setting.cluster, g_env:get("--node"), true)
--- Cluster.connect("data", 1, 1)
+-- 连接game，不要让game来连接gateway。因为在gateway开启一个端口监听内部连接是很危险
+Cluster.connect_later({{g_setting.cluster, "game1"}})
+
+-- 使用process连接模式，则需要连接data节点
+Cluster.connect_later({{g_setting.cluster, "data1"}})
+
+-- 使用中转模式，则等待data节点启动完成
+-- Cluster.wait_ready({"data1"})

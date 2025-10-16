@@ -29,8 +29,13 @@ function ClusterWorker:send_signature(mask)
     local sign = Engine.make_srv_signature(tm, mask)
 
     -- 在主线程发起的连接是公用的，相互通知各自所有worker地址
-    local addr_list = Worker.local_addr_list()
-    local ptr, size = g_lcodec:encode_to_buffer(LOCAL_NAME, tm, sign, addr_list)
+    local proc_list, forward_list = Worker.make_addr_list()
+    local ptr, size = g_lcodec:encode_to_buffer(LOCAL_NAME, {
+        tm = tm,
+        sign = sign,
+        proc_list = proc_list,
+        forward_list = forward_list,
+    })
 
     -- 这时候还没认证，不能走rpc调用的
     self:send_pkt(LOCAL_ADDR, 0, -1, size, ptr)
@@ -50,8 +55,11 @@ function ClusterWorker:on_disconnected()
     Cluster.unauthenticate(self)
 end
 
-function ClusterWorker:do_authenticate(src, name, tm, sign, addr_list)
+function ClusterWorker:do_authenticate(src, name, signData)
     local ok = true
+    local tm = signData.tm
+    local sign = signData.sign
+
     if self:is_server() then
         local expect_sign = Engine.make_srv_signature(tm, "0")
         if expect_sign ~= sign then
@@ -73,7 +81,8 @@ function ClusterWorker:do_authenticate(src, name, tm, sign, addr_list)
     self.src = src -- 如果是worker直连，则是对方的workerId，否则为PROCESS_ADDR
     self.ready = 0x2
     self.name = name
-    self.addr_list = addr_list
+    self.proc_list = signData.proc_list
+    self.forward_list = signData.worward_list
 
     Cluster.authenticate(self, ok)
 end

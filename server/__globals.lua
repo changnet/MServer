@@ -91,10 +91,10 @@ return {
 "W_SCENE", -- src/modules/system/define.lua
 "W_TEST", -- src/modules/system/define.lua
 "Worker", -- src/worker/worker.lua
+"WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
 "WorkerNameType", -- src/worker/worker.lua
 "WorkerRoute", -- src/worker/worker_route.lua
-"WorkerSetting", -- src/worker/worker.lua
 "WorkerTypeName", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua

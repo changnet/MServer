@@ -1,5 +1,10 @@
 -- 集群
-Cluster = {name = "cluster"}
+Cluster = {
+    -- 集群节点类型
+    NODE_WORKER  = 0x01, -- worker直连，最快
+    NODE_PROCESS = 0x02, -- 通过process转发
+    NODE_FORWARD = 0x03, -- 通过另一个进程转发，最慢
+}
 
 --[[
 ## 在配置实现cluster配置，这个配置要保证几点：
@@ -154,7 +159,10 @@ end
 -- 连接到其他集群节点
 -- @param node_conf 集群节点配置：{host = "::1", port = 20001}
 function Cluster.connect(node_conf, addr)
-    assert(not WorkerSetting[addr]) -- 本地的worker不需要连接
+    local w = WorkerHash[addr]
+    if w and not w.cluster_worker then
+        assert(false) -- 本地的worker不需要连接
+    end
 
     local worker = ClusterWorker(addr)
     local node_name = Worker.addr_name(addr)
@@ -168,7 +176,7 @@ function Cluster.connect(node_conf, addr)
 end
 
 -- 连接到其他集群节点
--- @param cluster_conf 集群配置及节点名字列表 {{cluster_conf, node_name}}
+-- @param node_list 集群配置及节点名字列表 {{cluster_conf, node_name}}
 function Cluster.connect_later(node_list)
     for _, nl in pairs(node_list) do
         local cluster_conf = nl[1]
@@ -184,10 +192,34 @@ function Cluster.connect_later(node_list)
                 Cluster.connect(node_conf, addr)
             end,
             ready = function()
+                local d = WorkerData[addr]
+                if d and (d.node_type or 0xFFFF) < Cluster.NODE_FORWARD then
+                    return true
+                end
+
+                return false, string.format("cluster connecting %s", key)
+            end
+        }, 0xFFFF)
+    end
+end
+
+-- 等待其他节点启动完成
+function Cluster.wait_ready(node_list)
+    for _, node_name in pairs(node_list) do
+        local key, name, index = find_node_key(node_name)
+
+        local wtype = Worker.name_type(name)
+        local addr = Engine.make_address(wtype, index)
+
+        Bootstrap.reg({
+            name = string.format("cluster wait %s", key),
+            boot = function()
+            end,
+            ready = function()
                 local w = WorkerHash[addr]
                 if w and w:is_ready() then return true end
 
-                return false, string.format("cluster connecting %s%d", name, index)
+                return false, string.format("cluster waitting %s", key)
             end
         }, 0xFFFF)
     end
@@ -201,25 +233,35 @@ function Cluster.accept(worker)
     printf("cluster accept %s:%d", ip, port)
 end
 
+local function set_worker(node, addr, node_type)
+    local data = WorkerData[addr]
+    if data then
+        if node_type < data.node_type then
+            WorkerHash[addr] = node
+            data.node_type = node_type
+            print("overwrite cluster worker, addr =", addr)
+        else
+            eprint("cluster worker already exist", addr, data.src, node.src)
+        end
+    else
+        WorkerHash[addr] = node
+        print("add cluster worker, addr =", addr)
+    end
+end
+
 -- 把集群节点作为一个worker添加到worker hash
 local function add_to_worker(node)
     -- 当使用进程连接时，node代表的是对应进程里所有的worker，因此有多个worker addr
     -- 当使用worker连接时，node代表的是该worker，只有一个worker addr
     -- 如果使用了进程连接，又对某个worker发起了独立连接，独立连接将覆盖进程连接
 
-    for _, addr in pairs(node.addr_list) do
-        local old = WorkerHash[addr]
-        if old then
-            if old.src == PROCESS_ADDR and node.src ~= PROCESS_ADDR then
-                WorkerHash[addr] = node
-                print("overwrite cluster worker, addr =", addr)
-            else
-                eprint("cluster worker already exist", addr, old.src, node.src)
-            end
-        else
-            WorkerHash[addr] = node
-            print("add cluster worker, addr =", addr)
-        end
+    local node_type = node.src == PROCESS_ADDR
+        and Cluster.NODE_PROCESS or Cluster.NODE_WORKER
+    for _, addr in pairs(node.proc_list) do
+        set_worker(node, addr, node_type)
+    end
+    for _, addr in pairs(node.forward_list or EMPTY) do
+        set_worker(node, addr, Cluster.NODE_FORWARD)
     end
 end
 
@@ -241,7 +283,7 @@ function Cluster.authenticate(node, ok)
 end
 
 local function remove_from_worker(node)
-    if not node.addr_list then return end -- 还没握手成功，没有映射任何worker
+    if not node.proc_list then return end -- 还没握手成功，没有映射任何worker
 
     for addr, w in pairs(WorkerHash) do
         if w == node then

@@ -16,7 +16,7 @@ function Shutdown.process_stop()
     -- 同时避免关服中报错时，无法恢复
     for _, wt in pairs(Sequence) do
         for addr, w in pairs(WorkerHash) do
-            local s = WorkerSetting[addr]
+            local s = WorkerData[addr]
             if not w.cluster_worker and wt[1] == s.type[1] then
                 printf("worker %s shutting down, addr = %d", wt[2], addr)
                 Worker.stop(addr)

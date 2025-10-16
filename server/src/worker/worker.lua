@@ -3,21 +3,34 @@ Worker = {}
 
 local WorkerThread = require "engine.WorkerThread"
 
-WorkerHash = {} -- [addr] = worker，包含所有线程的worker
-WorkerSetting = {} -- [addr] = worker，只包含当前线程启动的worker
+WorkerHash = WorkerHash or {} -- [addr] = worker，包含所有线程的worker
+WorkerData = WorkerData or {} -- [addr] = {}，记录worker数据
 WorkerTypeName = {} -- [wtype] = wname worker类型转名字
 WorkerNameType = {} -- [wname] = wtype worker名字转类型
 
-LOCAL_ADDR = 0 -- 当前worker地址
-LOCAL_TYPE = 0 -- 当前worker类型
-LOCAL_NAME = "" -- 当前worker的名字
+LOCAL_ADDR = LOCAL_ADDR or 0 -- 当前worker地址
+LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
+LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
 
-function Worker.is_all_ready()
-    for addr, setting in pairs(WorkerSetting) do
-        if not setting.ready then
+-- 本地启动的worker是否都已启动完成
+-- @return 返回未启动完成的worker地址
+function Worker.is_local_ready()
+    for addr, data in pairs(WorkerData) do
+        if not data.node_type and not data.ready then
             return addr
         end
     end
+end
+
+-- 获取worker在WorkerData中的数据，如果不存在则创建
+function Worker.get_data(addr)
+    local data = WorkerData[addr]
+    if not data then
+        data = {}
+        WorkerData[addr] = data
+    end
+
+    return data
 end
 
 -- 从配置文件启动一个worker
@@ -32,7 +45,7 @@ function Worker.start(setting)
     local addr = Engine.make_address(setting.type[1], setting.index)
 
     WorkerHash[addr] = w
-    WorkerSetting[addr] = setting
+    WorkerData[addr] = table.copy(setting)
 
     local path, err = package.searchpath(setting.file, package.path)
     if not path then error(err) end
@@ -51,7 +64,7 @@ function Worker.start_later(settings)
             end
         end,
         ready = function()
-            local addr = Worker.is_all_ready()
+            local addr = Worker.is_local_ready()
             if not addr then return true end
 
             local name = Worker.addr_name(addr)
@@ -87,8 +100,8 @@ function Worker.on_ready(addr)
     WorkerHash[addr] = w
 
     -- 如果没有这个配置，那说明当前worker不关注这个addr的状态
-    local ws = WorkerSetting[addr]
-    if ws then ws.ready = 1 end
+    local data = Worker.get_data(addr)
+    data.ready = 1
 end
 
 -- worker线程收到主线程停止请求
@@ -104,14 +117,20 @@ function Worker.on_stop(addr)
 end
 
 -- 获取本地local的所有地址列表
-function Worker.local_addr_list()
-    local list = {}
-    for addr, w in pairs(WorkerHash) do
-        if not w.cluster_worker then
-            table.insert(list, addr)
+function Worker.make_addr_list()
+    local proc_list = {}
+    local forward_list = {}
+    for addr, data in pairs(WorkerData) do
+        local nt = data.node_type
+        if not nt  then
+            table.insert(proc_list, addr)
+        elseif nt == Cluster.NODE_PROCESS or nt == Cluster.NODE_WORKER then
+            -- 只中转和自己直连的节点。不能A-B-C-D这样多层中转
+            table.insert(forward_list, addr)
         end
     end
-    return list
+
+    return proc_list, forward_list
 end
 
 -- 根据地址获取worker的名字，如gateway1

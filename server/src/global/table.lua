@@ -364,8 +364,9 @@ function table.same(t1, t2)
 end
 
 -- 把一个table通过过元表设置为只读
-function table.const(tbl)
+function table.readonly(tbl)
     setmetatable(tbl, {
         __newindex = function() assert(false) end
     })
+    return tbl
 end

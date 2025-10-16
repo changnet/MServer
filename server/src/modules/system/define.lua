@@ -24,7 +24,7 @@ W_SCENE   = 6 -- 场景
 W_MYSQL   = 7 -- mysql数据库读写
 W_MONGODB = 8 -- mongodb数据库读写
 
-EMPTY = {} -- 一个空table，避免频繁创建空table
+EMPTY = {} -- 一个空table，避免频繁创建空table，稍后会设置为只读
 
 SRV_KEY = "a5c7434a324a6f1c0ef7cb771668695b"
 LOGIN_KEY = "409065b7570155637b95e38ca13542e0"
