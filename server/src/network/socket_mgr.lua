@@ -129,15 +129,17 @@ end
 -- 收到EV_CLOSE事件时，主动关闭socket
 local function do_close(socket)
     -- 这时候fd并没有关闭，部分逻辑还需要用到fd，因此在close之前调用on_disconnected
-    -- 如果socket.status不为closing，则为对方关闭链接
+    -- 如果socket.status不为closing，则为对方关闭链接。不过也有可能已方发起关闭的同时，对方也关闭了
+    -- 如果要准确一点，可以用is_remote_close判断
     CoPool.invoke(socket.on_disconnected, socket)
 
     socket.status = CLOSED
-    -- local errno = socket.s:close()
+    -- 不管是已方发起，还是对方关闭，收到close事件表示另一个线程已关闭。可以关闭fd了
+    socket.s:close() -- local errno = socket.s:close()
     __socket_hash[socket.socket_id] = nil
 
     -- 这里不打印日志，因为socket有可能是正常关闭
-    -- 如果有需要对应的模块在收到关闭时自己获取对应的信息打印
+    -- 如果有需要对应的模块在on_disconnected自己获取对应的信息打印
     -- if 0 ~= errno then
     --     local errstr
     --     errno, errstr = socket:get_error()

@@ -69,15 +69,17 @@ local this = global_storage("Cluster", {
     node    = {}, -- 各节点已认证连接，以node_name为key
     unauth  = {}, -- unauthenticated 未认证连接，以worker对象为key
     -- listen  = cluster_worker, -- 监听的连接
+    -- reconnect = {} -- 断线重连的节点
 })
 
 -- （如果存在集群配置）启动监听，等待其他节点连接
 -- @param node_conf 集群节点配置：{host = "::1", port = 20001}
-function Cluster.listen(node_conf)
+-- @param node_name 当前节点的名字，不是对端的名字，主要用于日志
+function Cluster.listen(node_conf, node_name)
     -- 一个线程只能发起一个监听。即使有多个节点连过来，也只是通过一个监听连接
     assert(not this.listen)
 
-    local worker = ClusterWorker()
+    local worker = ClusterWorker(node_name)
     if not worker:listen(node_conf.ip, node_conf.port) then
         print("cluster listen error", node_conf.ip, node_conf.port)
         return
@@ -98,11 +100,10 @@ function Cluster.close_listen()
     this.listen = nil
 end
 
-
 local function find_node_key(node_name)
     -- 注意，node可能是不带数字，不带数字默认为1
     local name, index = string.match(node_name, "(%a+)(%d*)")
-    index = tonumber(index) or 1
+    index = tonumber(index)
 
     local key = string.format("%s%d", name, index)
     return key, name, index
@@ -120,7 +121,7 @@ function Cluster.listen_later(cluster_conf, node_name)
     Bootstrap.reg({
         name = "cluster listen",
         boot = function()
-            Cluster.listen(node_conf)
+            Cluster.listen(node_conf, node_name)
         end,
         ready = function()
             if this.listen then return true end
@@ -156,6 +157,41 @@ function Cluster.close()
     this.unauth = {}
 end
 
+-- 重连断开的节点
+local function do_reconnect()
+    local rct = this.reconnect or EMPTY
+    local count = 0
+    for node in pairs(rct) do
+        local status = node.status
+        if SocketMgr.CLOSED == status then
+            count = count + 1
+            node:reconnect()
+        elseif SocketMgr.OPENED == status then
+            rct[node] = nil
+        else
+            count = count + 1
+        end
+    end
+    if 0 == count then
+        Timer.stop(this.rct_timer)
+        this.rct_timer = nil
+    end
+end
+
+-- 把当前节点添加到定时重连队列
+local function add_reconnect(node)
+    local rct = this.reconnect
+    if not rct then
+        rct = {}
+        this.reconnect = rct
+    end
+
+    rct[node] = 1
+    if this.rct_timer then return end
+
+    this.rct_timer = Timer.interval(3000, 3000, -1, Rtti.no_hot_fix(do_reconnect))
+end
+
 -- 连接到其他集群节点
 -- @param node_conf 集群节点配置：{host = "::1", port = 20001}
 function Cluster.connect(node_conf, addr)
@@ -164,8 +200,8 @@ function Cluster.connect(node_conf, addr)
         assert(false) -- 本地的worker不需要连接
     end
 
-    local worker = ClusterWorker(addr)
     local node_name = Worker.addr_name(addr)
+    local worker = ClusterWorker(node_name)
     if not worker:connect(node_conf.ip, node_conf.port) then
         print("cluster connect error", node_name, node_conf.ip, node_conf.port)
         return
@@ -245,6 +281,7 @@ local function set_worker(node, addr, node_type)
         end
     else
         WorkerHash[addr] = node
+        WorkerData[addr] = {node_type = node_type}
         print("add cluster worker, addr =", addr)
     end
 end
@@ -300,6 +337,8 @@ function Cluster.unauthenticate(node)
         this.node[name] = nil
     end
 
+    local is_remote_close = node.status == SocketMgr.OPENING
+
     -- 如果是server端，则直接删除
     -- client端则需要尝试重连
     if node:is_server() then
@@ -309,11 +348,11 @@ function Cluster.unauthenticate(node)
         -- 不要直接重连，等定时器定时重连即可
         -- 否则如果是签名等问题连接失败，会不断地循环直连
         -- TODO 主动断开的，不要重连
-        -- node:reconnect()
+        if is_remote_close then add_reconnect(node) end
     end
 
     remove_from_worker(node)
-    if node.status == SocketMgr.OPENING then
+    if is_remote_close then
         local e, str = node:get_error()
         printf("cluster node %s connect fail(%d): %s", name, e, str)
     else

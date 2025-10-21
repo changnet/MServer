@@ -85,6 +85,8 @@ public:
     void set_event(int32_t ev);
     // 获取当前的错误码
     int32_t get_errno() const;
+    // 远端是否已关闭链接
+    bool is_remote_close() const;
 
     /**
      * @brief 获取ip地址及端口

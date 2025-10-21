@@ -56,6 +56,7 @@ int32_t SSLIO::recv(EVIO *w)
         || (SSL_ERROR_SYSCALL == ecode
             && !netcompat::iserror(netcompat::errorno())))
     {
+        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
         return EV_CLOSE;
     }
 
@@ -97,6 +98,7 @@ int32_t SSLIO::send(EVIO *w)
         || (SSL_ERROR_SYSCALL == ecode
             && !netcompat::iserror(netcompat::errorno())))
     {
+        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
         return EV_CLOSE;
     }
 

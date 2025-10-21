@@ -346,6 +346,7 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
              * shutdown(fd, SHUT_WR) 触发EPOLLIN和EPOLLHUP，调用recv可能收到数据，也返回0
              */
             kevents |= EV_CLOSE;
+            w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
         }
         else if (revents & EV_WRITE)
         {

@@ -13,4 +13,4 @@ local worker_setting = {
 }
 
 Worker.start_later(worker_setting)
-Cluster.connect_later({{g_setting.cluster, "game"}})
+Cluster.connect_later({{g_setting.cluster, "game1"}})

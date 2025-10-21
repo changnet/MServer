@@ -147,6 +147,7 @@ static void luaopen_socket(lua_State *L)
     lc.def<&Socket::set_io>("set_io");
     lc.def<&Socket::get_io>("get_io");
     lc.def<&Socket::set_packet>("set_packet");
+    lc.def<&Socket::is_remote_close>("is_remote_close");
     lc.def<&Socket::is_connect_success>("is_connect_success");
     lc.def<&Socket::set_buffer_params>("set_buffer_params");
     lc.def<&Socket::io_init_accept>("io_init_accept");

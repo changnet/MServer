@@ -9,11 +9,13 @@ local worker_setting = {
 
 Worker.start_later(worker_setting)
 
--- 连接game，不要让game来连接gateway。因为在gateway开启一个端口监听内部连接是很危险
+-- 连接game，不要让game来连接gateway
+-- 因为在gateway开启一个端口监听内部连接是很危险，因为gateway是对外的，意味着这个内部端口和外网在一起
+-- 虽然可以配置127.0.0.1或者内部ip，但也容易暴露问题
 Cluster.connect_later({{g_setting.cluster, "game1"}})
 
 -- 使用process连接模式，则需要连接data节点
-Cluster.connect_later({{g_setting.cluster, "data1"}})
+-- Cluster.connect_later({{g_setting.cluster, "data1"}})
 
 -- 使用中转模式，则等待data节点启动完成
--- Cluster.wait_ready({"data1"})
+Cluster.wait_ready({"data1"})

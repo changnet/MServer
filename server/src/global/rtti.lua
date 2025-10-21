@@ -49,6 +49,8 @@ local names_func = {}
 local obj_names = {}
 local names_obj = {}
 
+local no_hot_fix_func = nil -- 不需要热更的函数标识
+
 local select = select
 local tableunpack = table.unpack
 
@@ -134,7 +136,7 @@ end
 function Rtti.make_func_cb(func, ...)
     local n = select("#", ...)
     if 0 == n then
-        return function() return func() end
+        return func
     elseif 1 == n then
         local p1 = ...
         return function() return func(p1) end
@@ -160,6 +162,9 @@ end
 
 -- 把一个函数调用及其参数转换为一个函数名保存起来，支持热更
 function Rtti.make_func_name_cb(func, ...)
+    if func == no_hot_fix_func then
+        return Rtti.make_func_cb(func, ...)
+    end
     local name = assert(func_names[func], "function name not found")
 
     -- 只保存函数name，不保存指针，这样热更时就能更新到回调函数
@@ -340,4 +345,10 @@ function Rtti.collect()
     end
     printf("RTTI collect done, %d functions in %.2f sec",
         count, os.clock() - tm)
+end
+
+-- 标记当前函数不需要热更，标记后的函数可用于定时器等（仅生效1次）
+function Rtti.no_hot_fix(func)
+    no_hot_fix_func = func
+    return func
 end

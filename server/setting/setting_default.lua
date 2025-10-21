@@ -34,8 +34,6 @@ return
     cluster =
     {
         game1 = {ip = "::1", port = 20001},
-        gateway2 = {ip = "::1", port = 20002},
-        db1 = {ip = "::1", port = 20003},
-        db2 = {ip = "::1", port = 20004},
+        data1 = {ip = "::1", port = 20002},
     },
 }

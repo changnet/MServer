@@ -51,6 +51,7 @@ int32_t IO::recv(EVIO *w)
 
     if (0 == len)
     {
+        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
         return EV_CLOSE; // 对方主动断开
     }
 
@@ -91,7 +92,11 @@ int32_t IO::send(EVIO *w)
         if (!next) return EV_NONE;
     }
 
-    if (0 == len) return EV_CLOSE; // 对方主动断开
+    if (0 == len)
+    {
+        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
+        return EV_CLOSE; // 对方主动断开
+    }
 
     /* error happen */
     int32_t e = netcompat::errorno();

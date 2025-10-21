@@ -186,9 +186,29 @@ function Socket:connect(host, port, ip)
     return fd > 0
 end
 
--- 重新连接，之前必须调用过connect函数
+-- 重新连接，之前必须调用过connect函数，并且完全关闭
 function Socket:reconnect()
-    assert(false, "to be implement!!!")
+    -- 1. 之前必须调用过connect，有ip和port
+    -- 2. socket必须完全关闭，包括底层的fd已完全关闭，否则会出现错误的消息回调
+
+    local ip = self.ip
+    if not ip then
+        eprint("socket no ip found")
+        return
+    end
+    if self.status ~= SocketMgr.CLOSED then
+        eprint("socket no closed")
+        return
+    end
+    if -1 ~= self.s:fd()  then
+        eprint("socket fd closed")
+        return
+    end
+
+    local fd = self.s:connect(ADDR, ip, self.port)
+
+    self.status = OPENING
+    return fd > 0
 end
 
 -- 以https试连接到其他服务器

@@ -4,7 +4,7 @@ Bootstrap.process_init("modules.process_loader")
 
 if g_setting.mode == "cluster" then
     -- 集群模式，一个进程只启动一个类型的worker
-    Cluster.start_later(g_setting.cluster, "game")
+    Cluster.start_later(g_setting.cluster, "game1")
 elseif g_setting.mode == "thread" then
     -- 多线程模式，所有worker在同一进程，不需要监听和连接
     Worker.start_later({
@@ -23,5 +23,5 @@ elseif g_setting.mode == "process" then
         -- {file = "w_scene.lua", type = WORKER.SCENE, index = 1},
         -- {file = "w_scene.lua", type = WORKER.SCENE, index = 2},
     })
-    Cluster.listen_later(g_setting.cluster, "game")
+    Cluster.listen_later(g_setting.cluster, "game1")
 end

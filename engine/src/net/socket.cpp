@@ -58,13 +58,13 @@ void Socket::library_init()
 
 Socket::Socket(int32_t socket_id)
 {
-    packet_    = nullptr;
+    packet_ = nullptr;
 
-    fd_ = netcompat::INVALID;
-    w_       = new EVIO(socket_id, 0, -1);
-    w_->ref_ = EVIO::REF_WORKER;
+    fd_       = netcompat::INVALID;
+    w_        = new EVIO(socket_id, 0, -1);
+    w_->mask_ |= EVIO::M_REF_WORKER;
 
-    socket_id_  = socket_id;
+    socket_id_ = socket_id;
 }
 
 Socket::~Socket()
@@ -80,7 +80,7 @@ Socket::~Socket()
     packet_ = nullptr;
 
     // 正常情况下应该走关闭流程。如果析构时backend线程还引用watcher，则是有问题的
-    if (w_->del_ref(EVIO::REF_WORKER))
+    if (w_->del_ref(EVIO::M_REF_WORKER))
     {
         delete w_;
         w_ = nullptr;
@@ -372,7 +372,7 @@ bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
 
     w_->fd_   = fd;
     w_->addr_ = addr;
-    w_->ref_.fetch_or(EVIO::REF_BACKEND); // 当前worker线程一个，backend线程一个
+    w_->mask_.fetch_or(EVIO::M_REF_BACKEND); // 当前worker线程一个，backend线程一个
 
     StaticGlobal::B->set_watcher_event(w_, ev);
 
@@ -594,7 +594,7 @@ int32_t Socket::close()
 {
     // 改成backend线程处理socket读写后，这个不能直接调用函数关闭fd
     // 否则会造成fd重复为其他类型（比如文件），从而导致backend出错
-    if (0 != (w_->ref_ > EVIO::REF_BACKEND))
+    if (0 != (w_->mask_ & EVIO::M_REF_BACKEND))
     {
         ELOG("socket close but backend still using id = %d, fd = %d",
             socket_id_, w_->fd_);
@@ -818,5 +818,10 @@ void Socket::set_event(int32_t ev)
 }
 int32_t Socket::get_errno() const
 {
-    return w_->errno_;
+    return w_ ? w_->errno_ : 0;
+}
+
+bool Socket::is_remote_close() const
+{
+    return w_ ? w_->mask_ & EVIO::M_REMOTE_CLOSE : 0;
 }

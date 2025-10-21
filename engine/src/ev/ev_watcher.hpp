@@ -14,14 +14,12 @@ public:
     enum Mask
     {
         M_NONE = 0, // 不做任何处理
-        M_OVERFLOW_KILL = 1, // 缓冲区溢出时断开连接，通常用于与客户端连接
-        M_OVERFLOW_PEND = 2, // 缓冲区溢出时阻塞，通用用于服务器之间连接
-    };
-
-    enum RefBit
-    {
-        REF_WORKER  = 0x01, // 第0位为1表示worker线程引用此watcher
-        REF_BACKEND = 0x02, // 第1位为1表示backend线程引用此watcher
+        M_OVERFLOW_KILL = 0x01, // 缓冲区溢出时断开连接，通常用于与客户端连接
+        M_OVERFLOW_PEND = 0x02, // 缓冲区溢出时阻塞，通用用于服务器之间连接
+        M_REF_WORKER    = 0x04, // worker线程引用此watcher
+        M_REF_BACKEND   = 0x08, // backend线程引用此watcher
+        M_ALL_REF       = M_REF_WORKER | M_REF_BACKEND,
+        M_REMOTE_CLOSE  = 0x10, // 对端是否关闭(read或recv返回0)
     };
 
 public:
@@ -58,21 +56,24 @@ public:
      */
     int32_t do_init_connect();
 
-
+    /**
+     * @brief 删除指定引用
+     * @return 不存在其他引用则返回true，其他返回false
+     */
     bool del_ref(int32_t b)
     {
-        int32_t v = ref_.fetch_and(~b);
-        return 0 == (v & (~b));
+        int32_t v = mask_.fetch_and(~b);
+        return 0 == (v & (~b) & M_ALL_REF);
     }
 
 public:
-    uint8_t mask_; // 用于设置种参数
+    
     int32_t fd_;   // 文件描述符
     int32_t id_;   // 在业务上层分配的唯一id
     int32_t addr_; // 所属worker地址
-
     int32_t errno_; // 错误码
 
+    std::atomic<int32_t> mask_; // 用于设置各种参数和标记
     std::atomic<int32_t> ev_; // backend发出，等待worker线程处理的事件
 
     // 带b_前缀的变量，都是和backend线程相关
@@ -83,8 +84,6 @@ public:
     std::atomic<int32_t> b_ev_; // worker发出，等待backend线程处理的事件
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
-
-    std::atomic<int> ref_; // 按位引用，0位是worker线程，1位是backend线程
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制
@@ -95,14 +94,14 @@ public:
     bool set(EVIO *w)
     {
         // 该watcher对应的socket已经在另一个线程销毁(正常不应该出现)
-        if (0 == (w->ref_ & EVIO::REF_WORKER))
+        if (0 == (w->mask_ & EVIO::M_REF_WORKER))
         {
             PLOG("ref delete watcher, maybe error: %d - %d", w->id_, w->fd_);
-            w->del_ref(EVIO::REF_BACKEND);
+            w->del_ref(EVIO::M_REF_BACKEND);
             delete w;
             return false;
         }
-        assert(0 != (w->ref_ & EVIO::REF_BACKEND));
+        assert(0 != (w->mask_ & EVIO::M_REF_BACKEND));
 
         int32_t fd = w->fd_;
         // win的socket是unsigned类型，可能会很大变成负数，得强转unsigned来判断
