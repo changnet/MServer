@@ -99,6 +99,7 @@ static void luaopen_ev(lua_State *L)
     lcpp::Class<EV> lc(L, "engine.EV");
     lc.def<&EV::stop>("stop");
     lc.def<&EV::push_message>("push_message");
+    lc.def<&EV::unpack_message>("unpack_message");
     lc.def<&EV::emplace_message>("emplace_message");
     lc.def<&EV::construct_message>("construct_message");
     lc.def<&EV::destruct_message>("destruct_message");

@@ -139,10 +139,11 @@ function NetMsg.dispatch(socket, id, buffer, size)
     中途报错可能会导致内存泄漏。二进制操作一不小心就宕机。
     ]]
 
-    local m, mbuffer = construct_message(g_mthread, LOCAL_ADDR, addr, CLT_MSG, size)
-    buffer_write_int(mbuffer, 8, pid)
-    buffer_write_int(mbuffer, 2, id, 8)
-    buffer_write_buffer(mbuffer, buffer, size, 10)
+    local m, mbuffer = construct_message(
+        g_mthread, LOCAL_ADDR, addr, CLT_MSG, size + 10)
+    buffer_write_int(mbuffer, 8, pid) -- 玩家id
+    buffer_write_int(mbuffer, 2, id, 8) -- 协议id
+    buffer_write_buffer(mbuffer, buffer, size, 10) -- protobuf数据
 
     return worker:push_message(m)
 end
@@ -157,7 +158,7 @@ local function dispatch_clt_message(src, udata, size)
         return
     end
 
-    return do_callback(cb.f, cb.c, pid, pb, size - 8 - 2)
+    return do_callback(cb.f, cb.c, pid, pb, size - 10)
 end
 
 ThreadMessage.reg(CLT_MSG, dispatch_clt_message)

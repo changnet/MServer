@@ -151,6 +151,19 @@ int32_t EV::destruct_message(lua_State *L)
 
     return 0;
 }
+int32_t EV::unpack_message(lua_State* L)
+{
+    if (!lua_islightuserdata(L, 2)) return luaL_error(L, "invalid message ptr");
+
+    ThreadMessage *m = (ThreadMessage *)lua_touserdata(L, 2);
+
+    lua_pushinteger(L, m->src_);
+    lua_pushinteger(L, m->dst_);
+    lua_pushinteger(L, m->type_);
+    lua_pushlightuserdata(L, m->buffer());
+    lua_pushinteger(L, m->usize_);
+    return 5;
+}
 
 int32_t EV::push(lua_State* L, bool gc)
 {

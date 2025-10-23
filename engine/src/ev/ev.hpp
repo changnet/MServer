@@ -71,6 +71,11 @@ public:
      * 销毁一个thread message，非安全操作
      */
     int32_t destruct_message(lua_State *L);
+    /**
+     * 解析一个thread message，非安全操作
+     * @return src,dst,mtype,udata,usize
+     */
+    int32_t unpack_message(lua_State *L);
 
     // 把当前指针push到lua
     int32_t push(lua_State *L, bool gc) override;

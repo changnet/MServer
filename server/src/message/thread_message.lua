@@ -38,7 +38,7 @@ end
 
 -- 转发一个消息到目标地址（不影响原消息的所有权，数据会复制一份）
 function ThreadMessage.forward(addr, msg)
-    local _, _, mtype, ptr, size = g_mthread:unpack_message()
+    local _, _, mtype, ptr, size = g_mthread:unpack_message(msg)
     local w = WorkerHash[addr] or g_mthread
     return w:emplace_message(LOCAL_ADDR, addr, mtype, ptr, size)
 end
@@ -54,7 +54,7 @@ end
 function main_message_dispatch(src, dst, mtype, udata, usize)
     local worker = WorkerHash[dst]
     if worker then
-        -- 这个慢一点
+        -- 这个慢一点，需要丢掉当前message再创建一个
         -- return worker:emplace_message(src, dst, mtype, udata, usize)
 
         local m = g_mthread:acquire_message()

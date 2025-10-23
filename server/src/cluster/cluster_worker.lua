@@ -107,12 +107,19 @@ end
 
 -- 对应ThreadWorker的push_message函数
 function ClusterWorker:push_message(message)
-    assert(false) -- to be implement
-    g_mthread:destruct_message(message)
+    local src, dst, mtype, ptr, size = g_mthread:unpack_message(message)
+    self:send_pkt(src, dst, mtype, size, ptr)
+
+    -- TODO 如果上面的代码报错，这个message将会发生内存泄漏
+    -- 用xpcall消耗太大，如果要处理，弄个last_message变量存一下
+    -- 下次调用先检测上一次的message是否有正常销毁
+
+    return g_mthread:destruct_message(message)
 end
 
 -- 对应ThreadWorker的emplace_message函数
 function ClusterWorker:emplace_message(src, addr, mtype, ptr, size)
+    return self:send_pkt(src, addr, mtype, size, ptr)
 end
 
 return ClusterWorker
