@@ -271,18 +271,37 @@ end
 
 local function set_worker(node, addr, node_type)
     local data = WorkerData[addr]
+    local old = WorkerHash[addr]
+
+    -- 如果存在，则不可能是本地启动的worker
+    assert(not old or old.cluster_worker)
+
+    local name = Worker.addr_name(addr)
     if data then
         if node_type < data.node_type then
             WorkerHash[addr] = node
             data.node_type = node_type
-            print("overwrite cluster worker, addr =", addr)
+            print("overwrite cluster worker %s, addr =", name, addr)
         else
-            eprint("cluster worker already exist", addr, data.src, node.src)
+            printf("cluster worker %s already exist, addr = %d, old src = %d, new = %d",
+                name, addr, data.src, node.src)
         end
     else
         WorkerHash[addr] = node
         WorkerData[addr] = {node_type = node_type}
-        print("add cluster worker, addr =", addr)
+        printf("add cluster worker %s, addr = %d", name, addr)
+    end
+end
+
+-- 更新可转发的worker
+function Cluster.update_forward_worker(addr, forward_list)
+    local node = WorkerHash[addr]
+    if not node or not node.cluster_worker then
+        assert(false, "forward list worker is not cluster node")
+    end
+
+    for _, remote_addr in pairs(forward_list or EMPTY) do
+        set_worker(node, remote_addr, Cluster.NODE_FORWARD)
     end
 end
 
@@ -292,13 +311,19 @@ local function add_to_worker(node)
     -- 当使用worker连接时，node代表的是该worker，只有一个worker addr
     -- 如果使用了进程连接，又对某个worker发起了独立连接，独立连接将覆盖进程连接
 
-    local node_type = node.src == PROCESS_ADDR
+    -- 通知之前已连上的worker，自己多了一个能转发的worker列表
+    local list = Worker.get_forward_addr_list()
+    for _, addr in pairs(list) do
+        Send.Cluster.update_worker(addr, node.proc_list)
+    end
+
+    local node_type = Engine.is_main_addr(node.src)
         and Cluster.NODE_PROCESS or Cluster.NODE_WORKER
     for _, addr in pairs(node.proc_list) do
         set_worker(node, addr, node_type)
     end
     for _, addr in pairs(node.forward_list or EMPTY) do
-        set_worker(node, addr, Cluster.NODE_FORWARD)
+        set_worker(node, addr, node.src, Cluster.NODE_FORWARD)
     end
 end
 

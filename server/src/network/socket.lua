@@ -205,6 +205,12 @@ function Socket:reconnect()
         return
     end
 
+    -- 底层socket包含了一些事件和标记，还有io和packet指针，缓冲区里也可能有未完成的数据
+    -- 所以直接创建一个新的比较简单，重连在后端应该是频率比较少的操作
+    -- socket_id是唯一标识，很多地方有用，所以必须用旧的
+    self.s = EngineSocket(self.socket_id)
+    SocketMgr.add(self)
+
     local fd = self.s:connect(ADDR, ip, self.port)
 
     self.status = OPENING

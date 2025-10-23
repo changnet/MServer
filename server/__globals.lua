@@ -36,6 +36,7 @@ return {
 "Log", -- src/global/log.lua
 "LogDB", -- src/modules/log/log_db.lua
 "MAIL", -- src/modules/protocol/protocol.lua
+"MAIN_ADDR", -- src/worker/worker.lua
 "MAX_MAIL", -- src/modules/system/define.lua
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MISC", -- src/modules/protocol/protocol.lua
@@ -48,7 +49,6 @@ return {
 "PE_EXIT", -- src/modules/event/event_header.lua
 "PLATFORM", -- src/modules/system/define.lua
 "PLAYER", -- src/modules/protocol/protocol.lua
-"PROCESS_ADDR", -- src/modules/system/define.lua
 "PROP", -- src/modules/property/property.lua
 "Pbc", -- src/message/pbc.lua
 "PidCall", -- src/rpc/rpc_proxy.lua

@@ -62,14 +62,22 @@ end
 -- 错误日志，写入根目录下的error文件 (参数不能带有nil参数)
 function eprint(...)
     -- 129 = MASK_C_R|MASK_S_L，参考C++中的定义
-    print(debug.traceback()) -- 错误时，打印堆栈方便查问题
-    return g_async_log:error(129, table.concat({...}, "    "))
+
+    local list = {...} -- 在5.3+版本中，数组允许包含nil，可以用#list获取长度。但pair遍历不会遍历nil
+    for i = 1, #list do
+        list[i] = tostring(list[i]) -- 转为string，不然包含nil或者bool之类的变量会报错
+    end
+
+
+    -- 错误时，打印堆栈方便查问题
+    return g_async_log:error(129,
+        table.concat(list, "    ") .. "\n" .. debug.traceback())
 end
 
 --  格式化日志并写入根目录下的lua_error.txt文件
 function eprintf(fmt, ...)
-    print(debug.traceback()) -- 错误时，打印堆栈方便查问题
-    return g_async_log:error(129, string.format(fmt, ...))
+    return g_async_log:error(129,
+        string.format(fmt, ...) .. "\n" .. debug.traceback())
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效

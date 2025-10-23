@@ -98,26 +98,13 @@ local function format_log_name(local_name)
 end
 
 -- 设置进程的日志参数
-local function set_process_log()
+local function set_process_log(node_name, node_index)
     -- 设置错误日志、打印日志
     -- 名字需要能区分不同进程名，不同节点
     -- win下文件名不支持特殊字符的，比如":"
 
-    local node = g_env:get("--node")
-    local epath
-    local ppath
-    local local_name
-    local node_name, node_id = string.match(node, "(%a+)(%d*)")
-    if node_id ~= "" then
-        -- 以集群节点启动，比如gateway10，这时候主线程的日志名和worker就会重复，转为大写
-        local_name = string.upper(node_name)
-        epath = string.format("log/%s%03d_error", node_name, tonumber(node_id))
-        ppath = string.format("log/%s%03d_info", node_name, tonumber(node_id))
-    else
-        local_name = node_name
-        epath = string.format("log/%s_error", node_name)
-        ppath = string.format("log/%s_info", node_name)
-    end
+    local epath = string.format("log/%s%03d_error", node_name, node_index)
+    local ppath = string.format("log/%s%03d_info", node_name, node_index)
 
     if g_env:get("deamon") then
         -- 后台模式运行，不需要输出日志到stdout，效率高一点点
@@ -129,23 +116,38 @@ local function set_process_log()
         g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10, "stdout")
     end
 
-    -- 日志中需要打印线程名，否则多个进程在同一终端开户时不好区分日志
-    format_log_name(local_name)
-    return local_name
+    -- 主线程的日志名字，是不带后缀的，比如game1就是game，和game1那个worker区分开来
+    format_log_name(node_name)
 end
 
 -- 进程预加载必要的组件
 function Bootstrap.process_init(loader)
-    local local_name = set_process_log()
+    set_path()
+    require "system.define" -- 基础定义
+
+    local node = g_env:get("--node")
+
+    -- game1拆分，如果game则自动补充index=1
+    local node_name, node_index = string.match(node, "(%a+)(%d*)")
+    node_index = tonumber(node_index) or 1
+
+    local wtype
+    for _, w in pairs(WORKER) do
+        if node_name == w[2] then
+            wtype = w[1]
+            break
+        end
+    end
+    assert(wtype, "no such node define")
+
+    set_process_log(node_name, node_index)
 
     g_thread = g_mthread
-    set_path()
 
     require "global.oo" -- 这个文件不能热更
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
     require "global.global" -- 加载错误处理函数
     require "global.log" -- 加载log函数
-    require "system.define" -- 基础定义
 
     log_env_info()
     load_setting()
@@ -153,8 +155,11 @@ function Bootstrap.process_init(loader)
     require "engine.engine"
     require "worker.worker"
 
-    LOCAL_ADDR = PROCESS_ADDR
-    LOCAL_NAME = local_name
+    MAIN_ADDR = Engine.make_address(wtype, node_index, 1)
+
+    LOCAL_ADDR = MAIN_ADDR
+    LOCAL_NAME = node_name
+    g_env:set("MAIN_ADDR", MAIN_ADDR)
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "engine.preloader"
@@ -189,6 +194,8 @@ function Bootstrap.worker_init(addr, loader)
     LOCAL_TYPE = wtype
     LOCAL_NAME = string.format("%s%d", Worker.type_name(wtype), index)
 
+    MAIN_ADDR = g_env:get("MAIN_ADDR")
+
     format_log_name(LOCAL_NAME)
 
     Engine.add_thread_ctx(addr, g_thread:toludata())
@@ -220,7 +227,7 @@ end
 
 -- worker启动完成
 function Bootstrap.on_worker_ready(addr)
-    assert(LOCAL_ADDR == PROCESS_ADDR)
+    assert(LOCAL_ADDR == MAIN_ADDR)
 
     -- 同步worker到其他worker，加快worker间的消息交互
     -- 否则都会先抛给主线程，再由主线程转发
@@ -229,7 +236,7 @@ function Bootstrap.on_worker_ready(addr)
             Send.Worker.on_ready(other_addr, addr)
         end
     end
-    Send.Worker.on_ready(PROCESS_ADDR, addr)
+    Send.Worker.on_ready(MAIN_ADDR, addr)
 end
 
 local function boot_ready()
@@ -238,9 +245,9 @@ local function boot_ready()
     end
     boot_modules = nil
 
-    if LOCAL_ADDR ~= PROCESS_ADDR then
+    if LOCAL_ADDR ~= MAIN_ADDR then
         -- 同步到线程，当前worker启动完成
-        Send.Bootstrap.on_worker_ready(PROCESS_ADDR, LOCAL_ADDR)
+        Send.Bootstrap.on_worker_ready(MAIN_ADDR, LOCAL_ADDR)
         printf("worker %s ready, addr = %d",
             Worker.addr_name(LOCAL_ADDR), LOCAL_ADDR)
     else

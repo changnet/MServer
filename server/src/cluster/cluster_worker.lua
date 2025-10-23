@@ -29,7 +29,8 @@ function ClusterWorker:send_signature(mask)
     local sign = Engine.make_srv_signature(tm, mask)
 
     -- 在主线程发起的连接是公用的，相互通知各自所有worker地址
-    local proc_list, forward_list = Worker.make_addr_list()
+    local proc_list = Worker.get_local_addr_list()
+    local forward_list = Worker.get_forward_addr_list()
     local ptr, size = g_lcodec:encode_to_buffer(LOCAL_NAME, {
         tm = tm,
         sign = sign,
@@ -82,7 +83,7 @@ function ClusterWorker:do_authenticate(src, name, signData)
     self.ready = 0x2
     self.name = name
     self.proc_list = signData.proc_list
-    self.forward_list = signData.worward_list
+    self.forward_list = signData.forward_list
 
     Cluster.authenticate(self, ok)
 end
@@ -91,7 +92,7 @@ end
 function ClusterWorker:on_message(src, dst, mtype, usize, udata)
     -- 未经过认证的连接，禁止直接将消息派发到其他模块
     if 0x2 == self.ready then
-        if LOCAL_ADDR == PROCESS_ADDR then
+        if LOCAL_ADDR == MAIN_ADDR then
             main_message_dispatch(src, dst, mtype, usize, udata)
         else
             on_worker_message(src, dst, mtype, usize, udata)
@@ -108,6 +109,10 @@ end
 function ClusterWorker:push_message(message)
     assert(false) -- to be implement
     g_mthread:destruct_message(message)
+end
+
+-- 对应ThreadWorker的emplace_message函数
+function ClusterWorker:emplace_message(src, addr, mtype, ptr, size)
 end
 
 return ClusterWorker

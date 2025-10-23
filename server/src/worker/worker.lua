@@ -11,6 +11,7 @@ WorkerNameType = {} -- [wname] = wtype worker名字转类型
 LOCAL_ADDR = LOCAL_ADDR or 0 -- 当前worker地址
 LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
 LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
+MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 
 -- 本地启动的worker是否都已启动完成
 -- @return 返回未启动完成的worker地址
@@ -38,7 +39,7 @@ end
 function Worker.start(setting)
     -- worker只能由主线程创建，否则主线程无法正确管理所有worker
     -- worker要启动另一个worker需要使用rpc调用
-    assert(LOCAL_ADDR == PROCESS_ADDR)
+    assert(Engine.is_main_addr(LOCAL_ADDR))
 
     local name = setting.type[2]
     local w = WorkerThread(name)
@@ -116,24 +117,31 @@ function Worker.on_stop(addr)
     end
 end
 
--- 获取本地local的所有地址列表
-function Worker.make_addr_list()
-    local proc_list = {}
+-- 获取本进程可以转发的worker列表
+function Worker.get_forward_addr_list()
     local forward_list = {}
     for addr, data in pairs(WorkerData) do
         local nt = data.node_type
-        if not nt  then
-            table.insert(proc_list, addr)
-        elseif nt == Cluster.NODE_PROCESS or nt == Cluster.NODE_WORKER then
+        if nt == Cluster.NODE_PROCESS or nt == Cluster.NODE_WORKER then
             -- 只中转和自己直连的节点。不能A-B-C-D这样多层中转
             table.insert(forward_list, addr)
         end
     end
 
-    return proc_list, forward_list
+    return forward_list
 end
 
--- 根据地址获取worker的名字，如gateway1
+-- 获取本地local的所有地址列表
+function Worker.get_local_addr_list()
+    local addr_list = {}
+    for addr, data in pairs(WorkerData) do
+        if not data.node_type  then table.insert(addr_list, addr) end
+    end
+
+    return addr_list
+end
+
+-- 根据地址获取worker的名字，包含索引，如gateway1
 function Worker.addr_name(addr)
     local wtype, index = Engine.unmake_address(addr)
 
