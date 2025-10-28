@@ -18,7 +18,6 @@ function Shutdown.process_stop()
         for addr, w in pairs(WorkerHash) do
             local s = WorkerData[addr]
             if not w.cluster_worker and wt[1] == s.type[1] then
-                printf("worker %s shutting down, addr = %d", wt[2], addr)
                 Worker.stop(addr)
             end
         end
@@ -27,7 +26,6 @@ function Shutdown.process_stop()
     -- 一些worker不需要按业务逻辑顺序关闭，这里可以按任意顺序直接关闭了
     for addr, w in pairs(WorkerHash) do
         if not w.cluster_worker then
-            printf("worker %s shutting down, addr = %d", Worker.addr_name(addr), addr)
             Worker.stop(addr)
         end
     end

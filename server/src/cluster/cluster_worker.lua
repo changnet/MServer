@@ -3,6 +3,8 @@ local SsSocket = require "network.ss_socket"
 -- 把远程集群节点伪装成本地worker，统一调用接口
 local ClusterWorker = oo.class(SsSocket)
 
+local IS_MAIN = LOCAL_ADDR == MAIN_ADDR
+
 function ClusterWorker:__init(name)
     SsSocket.__init(self)
     self.name = name -- 对端的名字
@@ -92,10 +94,10 @@ end
 function ClusterWorker:on_message(src, dst, mtype, usize, udata)
     -- 未经过认证的连接，禁止直接将消息派发到其他模块
     if 0x2 == self.ready then
-        if LOCAL_ADDR == MAIN_ADDR then
-            main_message_dispatch(src, dst, mtype, usize, udata)
+        if IS_MAIN then
+            return main_message_dispatch(src, dst, mtype, udata, usize)
         else
-            on_worker_message(src, dst, mtype, usize, udata)
+            return on_worker_message(src, dst, mtype, udata, usize)
         end
     else
         -- todo 0x1表示认证完成，但未握手, 0x2是握手完成，可以发送业务逻辑了

@@ -174,6 +174,7 @@ function Bootstrap.process_init(loader)
         if loader then require(loader) end
         Bootstrap.start()
     end)
+    print("main thread starting, addr =", MAIN_ADDR)
 end
 
 -- worker预加载必要的组件
@@ -251,7 +252,7 @@ local function boot_ready()
         printf("worker %s ready, addr = %d",
             Worker.addr_name(LOCAL_ADDR), LOCAL_ADDR)
     else
-        print("procsss ready")
+        print("main thread ready, addr =", MAIN_ADDR)
     end
     if SE then SE.fire_event(SE_READY) end
 end

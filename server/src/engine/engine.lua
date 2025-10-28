@@ -16,7 +16,7 @@ function Engine.make_address(wtype, index, main)
 end
 
 -- 解码一个地址
--- @return worker类型，第几个worker
+-- @return worker类型，第几个worker,是否主线程
 function Engine.unmake_address(addr)
     local main = 1 == (addr & 0x01)
     addr = addr >> 1

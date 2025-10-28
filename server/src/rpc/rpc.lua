@@ -102,11 +102,14 @@ end
 local function do_request(src, session, name, ...)
     local func = parse_name_func(name)
     if not func then
-        print("rpc no func found", name, LOCAL_ADDR)
+        eprint("rpc no func found", name, LOCAL_ADDR)
 
-        local ptr, size = g_lcodec:encode_to_buffer(session, false)
-        local w = WorkerHash[src] or g_mthread
-        return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
+        if 0 ~= session then
+            local ptr, size = g_lcodec:encode_to_buffer(session, false)
+            local w = WorkerHash[src] or g_mthread
+            w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
+        end
+        return
     end
 
     last_src = src

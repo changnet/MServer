@@ -284,7 +284,7 @@ local function set_worker(node, addr, node_type)
             print("overwrite cluster worker %s, addr =", name, addr)
         else
             printf("cluster worker %s already exist, addr = %d, old src = %d, new = %d",
-                name, addr, data.src, node.src)
+                name, addr, old.src, node.src)
         end
     else
         WorkerHash[addr] = node
@@ -311,16 +311,21 @@ local function add_to_worker(node)
     -- 当使用worker连接时，node代表的是该worker，只有一个worker addr
     -- 如果使用了进程连接，又对某个worker发起了独立连接，独立连接将覆盖进程连接
 
+    -- 如果是worker直连，则表示该连接是私有，将不处理转发列表
+
+    local src = node.src
+    set_worker(node, src, Cluster.NODE_WORKER)
+    if not Engine.is_main_addr(src) then return end
+
     -- 通知之前已连上的worker，自己多了一个能转发的worker列表
-    local list = Worker.get_forward_addr_list()
-    for _, addr in pairs(list) do
-        Send.Cluster.update_worker(addr, node.proc_list)
+    for _, other_node in pairs(this.node) do
+        if other_node ~= node then
+            Send.Cluster.update_forward_worker(other_node.src, node.proc_list)
+        end
     end
 
-    local node_type = Engine.is_main_addr(node.src)
-        and Cluster.NODE_PROCESS or Cluster.NODE_WORKER
     for _, addr in pairs(node.proc_list) do
-        set_worker(node, addr, node_type)
+        set_worker(node, addr, Cluster.NODE_WORKER)
     end
     for _, addr in pairs(node.forward_list or EMPTY) do
         set_worker(node, addr, node.src, Cluster.NODE_FORWARD)
@@ -349,6 +354,7 @@ local function remove_from_worker(node)
 
     for addr, w in pairs(WorkerHash) do
         if w == node then
+            WorkerData[addr] = nil
             WorkerHash[addr] = nil
             print("remove cluster worker, addr =", addr)
         end

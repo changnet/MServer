@@ -251,6 +251,8 @@ const char *Buffer::to_flat_ctx(size_t len, int32_t flag)
 {
     std::lock_guard<SpinLock> guard(lock_);
 
+    if (unlikely(!front_)) return nullptr;
+
     // 解析数据时，要求在同一个chunk才能解析。大多数情况下，是在同一个chunk的。
     // 如果不是，建议调整下chunk定义的缓冲区大小，否则影响效率
     size_t used = front_->get_used_size();

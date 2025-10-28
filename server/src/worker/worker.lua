@@ -83,22 +83,33 @@ function Worker.stop(addr)
         return
     end
 
+    printf("worker %s shutting down, addr = %d", Worker.addr_name(addr), addr)
+    -- 先从其他worker移除
     for other_addr, other_w in pairs(WorkerHash) do
-        if not other_w.cluster_worker then
+        if other_addr ~= addr and not other_w.cluster_worker then
             Call.Worker.on_stop(other_addr, addr)
         end
     end
+    -- 自己再关闭
+    -- Call.Worker.on_stop(addr, addr)
 
-    w:stop(true)
+    -- 最后由主线程移除worker记录
+    -- w:stop(true)
     WorkerHash[addr] = nil
+    WorkerData[addr] = nil
     printf("worker %s stop, addr = %d", Worker.addr_name(addr), addr)
 end
 
 -- 把同一进程的worker缓存到WorkerHash，加快数据交互
 function Worker.on_ready(addr)
     assert(addr ~= LOCAL_ADDR)
-    local w = assert(Engine.get_thread_ctx(addr))
-    WorkerHash[addr] = w
+
+    -- 主线程负责启动worker，一开始就设置了worker的，不要覆盖
+    -- 主线程最原始的worker被释放掉是会触发gc的，程序会当掉
+    if LOCAL_ADDR ~= MAIN_ADDR then
+        local w = assert(Engine.get_thread_ctx(addr))
+        WorkerHash[addr] = w
+    end
 
     -- 如果没有这个配置，那说明当前worker不关注这个addr的状态
     local data = Worker.get_data(addr)
@@ -143,10 +154,10 @@ end
 
 -- 根据地址获取worker的名字，包含索引，如gateway1
 function Worker.addr_name(addr)
-    local wtype, index = Engine.unmake_address(addr)
+    local wtype, index, main = Engine.unmake_address(addr)
 
     local name = Worker.type_name(wtype)
-    if index <= 0 then return name end
+    if index <= 0 or main then return name end
 
     return string.format("%s%d", name, index)
 end
