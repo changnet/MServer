@@ -87,18 +87,18 @@ Socket::~Socket()
     }
     else
     {
+        // 如果未正常关闭，这里不能强制关闭
+        // 强制关闭可能会导致fepoll或者poll在一个非socket上执行会报错
+        // 就只能让它泄漏了，一般情况下不会出现这种情况
+        // if (fd_ != netcompat::INVALID)
+        // {
+        //     netcompat::close(fd_);
+        //     fd_ = netcompat::INVALID;
+        //     delete w_;
+        // }
         ELOG("socket destructor watcher not delete id = %d, fd = %d",
             socket_id_, w_->fd_);
     }
-
-    // 如果未正常关闭。这里不能强制关闭
-    // 强制关闭可能会导致fd被复用，这时epoll或者poll在一个非socket上执行会报错
-    // 但后续又无法确认哪个fd有问题，也没有机制去移除
-    // if (fd_ != netcompat::INVALID)
-    // {
-    //     netcompat::close(fd_);
-    //     fd_ = netcompat::INVALID;
-    // }
 }
 
 void Socket::stop(bool flush)
@@ -372,7 +372,7 @@ bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
 
     w_->fd_   = fd;
     w_->addr_ = addr;
-    w_->mask_.fetch_or(EVIO::M_REF_BACKEND); // 当前worker线程一个，backend线程一个
+    w_->mask_ |= EVIO::M_REF_BACKEND; // 当前worker线程一个，backend线程一个
 
     StaticGlobal::B->set_watcher_event(w_, ev);
 

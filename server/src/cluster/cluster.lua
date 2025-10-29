@@ -294,6 +294,7 @@ local function set_worker(node, addr, node_type)
 end
 
 -- 更新可转发的worker
+-- @param addr 中转节点的地址
 function Cluster.update_forward_worker(addr, forward_list)
     local node = WorkerHash[addr]
     if not node or not node.cluster_worker then
@@ -320,7 +321,8 @@ local function add_to_worker(node)
     -- 通知之前已连上的worker，自己多了一个能转发的worker列表
     for _, other_node in pairs(this.node) do
         if other_node ~= node then
-            Send.Cluster.update_forward_worker(other_node.src, node.proc_list)
+            Send.Cluster.update_forward_worker(
+                other_node.src, LOCAL_ADDR, node.proc_list)
         end
     end
 
