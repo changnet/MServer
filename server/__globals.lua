@@ -1,4 +1,4 @@
--- auto export by lua-tags 145 symbols
+-- auto export by lua-tags 144 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -100,13 +100,11 @@ return {
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/engine/bootstrap.lua
 "__error", -- src/engine/bootstrap.lua
-"__fire_sys_ev", -- src/modules/event/system_event.lua
 "__global_storage", -- src/global/global.lua
 "__loader", -- src/engine/bootstrap.lua
 "__package_cpath", -- src/engine/bootstrap.lua
 "__package_path", -- src/engine/bootstrap.lua
 "__print", -- src/engine/bootstrap.lua
-"__require", -- src/engine/bootstrap.lua
 "__socket_hash", -- src/network/socket_mgr.lua
 "__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua
@@ -137,6 +135,7 @@ return {
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
+"require_worker", -- src/global/require.lua
 "set_modify_metatable", -- src/global/modi_table.lua
 "str_split3", -- src/test/misc_test.lua
 "sys", -- src/global/sys.lua

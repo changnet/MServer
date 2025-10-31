@@ -32,7 +32,6 @@ local buddha = [[
 __print = print
 __error = error
 __assert = assert
-__require = require
 __loader = nil -- 当前进程或者worker功能加载入口文件
 __package_path = package.path -- 保留原path
 __package_cpath = package.cpath
@@ -157,6 +156,7 @@ function Bootstrap.process_init(loader)
 
     MAIN_ADDR = Engine.make_address(wtype, node_index, 1)
 
+    LOCAL_TYPE = wtype
     LOCAL_ADDR = MAIN_ADDR
     LOCAL_NAME = node_name
     g_env:set("MAIN_ADDR", MAIN_ADDR)
@@ -171,7 +171,10 @@ function Bootstrap.process_init(loader)
 
     __loader = loader
     Timer.timeout(0, function()
-        if loader then require(loader) end
+        if loader then
+            require(loader)
+            SE.ready()
+        end
         Bootstrap.start()
     end)
     print("main thread starting, addr =", MAIN_ADDR)
@@ -210,6 +213,7 @@ function Bootstrap.worker_init(addr, loader)
     __loader = loader
     Timer.timeout(0, function()
         require(loader)
+        SE.ready()
         Bootstrap.start()
     end)
 end

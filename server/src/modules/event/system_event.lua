@@ -2,6 +2,7 @@
 SE = {}
 
 local ev_cb = {}
+local ready = false -- 初始化完成后，不允许再注册事件
 
 require "modules.event.event_header"
 
@@ -16,7 +17,7 @@ function SE.reg(ev, cb, pr)
         ev_cb[ev] = cbs
     end
 
-    assert(cb and not g_app.ready) -- 生成回调函数后，不允许再注册事件
+    assert(cb and not ready) -- 生成回调函数后，不允许再注册事件
 
     -- 默认优先级20
     -- 为啥是20，因为linux下top列出的就是20，照抄
@@ -36,18 +37,9 @@ function SE.fire_event(ev, ...)
     end
 end
 
--- 在make_cb之前触发系统事件，优先级不生效。仅为SCRIPT_LOADED等事件特殊调用
-function __fire_sys_ev(ev, ...)
-    local cbs = ev_cb[ev]
-    if not cbs then return end
-
-    for _, cb in pairs(cbs) do
-        cb[1](...)
-    end
-end
-
--- 生成回调函数
-local function make_cb()
+-- 标记系统事件已就绪，后续不再允许注册事件
+function SE.ready()
+    ready = true
     for ev, cbs in pairs(ev_cb) do
         -- pr值越小，优先级越高
         table.sort(cbs, function(a, b) return a[2] < b[2] end)
@@ -66,7 +58,5 @@ local function make_cb()
         ev_cb[ev] = funcs
     end
 end
-
-SE.reg(SE_SCRIPT_LOADED, make_cb, 10)
 
 return SE

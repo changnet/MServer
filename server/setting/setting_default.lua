@@ -17,6 +17,7 @@ return
     mysql_db   = "test_999",
 
     gm = true, -- 是否启用gm
+    cli = true, -- 是否启用命令行输入
     lang = "zh", -- 简体中文
     server = 1, -- 当前服务器id
     mode = "process", -- 当前进程启动模式

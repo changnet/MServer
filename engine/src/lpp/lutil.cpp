@@ -14,8 +14,11 @@
 
 #ifdef __windows__
     #include <rpc.h>
+    #include <conio.h> // _kbhit
 #else
     #include <uuid/uuid.h>
+    #include <unistd.h>
+    #include <fcntl.h>
 #endif
 
 /**

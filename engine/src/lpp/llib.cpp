@@ -22,6 +22,7 @@
 #include "mongo/mongo.hpp"
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
+#include "system/stdin_reader.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -348,6 +349,14 @@ static void luaopen_buffer(lua_State *L)
     lc.def<&LuaBuffer::tostring>("tostring");
 }
 
+static void luaopen_stdin_reader(lua_State *L)
+{
+    lcpp::Class<StdinReader> lc(L, "engine.StdinReader");
+    lc.def<&StdinReader::start>("start");
+    lc.def<&StdinReader::stop>("stop");
+    lc.def<&StdinReader::read>("read");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace llib
@@ -401,6 +410,7 @@ void open_cpp(lua_State *L)
     luaopen_grid_aoi(L);
     luaopen_list_aoi(L);
     luaopen_buffer(L);
+    luaopen_stdin_reader(L);
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
     /* when debug,make sure lua stack clean after init */

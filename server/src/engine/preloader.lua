@@ -23,3 +23,5 @@ require "global.math"
 require "global.string"
 require "global.time"
 require "worker.worker_route"
+
+require "event.system_event"
