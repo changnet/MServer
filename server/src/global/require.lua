@@ -179,6 +179,8 @@ local function require_by_wtype(path, wtype, ...)
     elseif wtype < 0 and ~wtype ~= LOCAL_TYPE then
         -- require("a.b.c", ~W_GATEWAY)表示W_GATEWAY类型不加载
         __require(path)
+    elseif wtype == (LOCAL_TYPE | W_MAIN) and Engine.is_main_addr(LOCAL_ADDR) then
+        __require(path)
     end
 
     return require_by_wtype(path, ...)

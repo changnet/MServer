@@ -1,4 +1,4 @@
--- auto export by lua-tags 144 symbols
+-- auto export by lua-tags 147 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -25,6 +25,8 @@ return {
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "GM", -- src/modules/system/gm.lua
+"GM", -- src/modules/gm/gm.lua
+"GM", -- src/modules/gm/gm%20copy.lua
 "GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
@@ -85,6 +87,7 @@ return {
 "W_DATA", -- src/modules/system/define.lua
 "W_GAME", -- src/modules/system/define.lua
 "W_GATEWAY", -- src/modules/system/define.lua
+"W_MAIN", -- src/modules/system/define.lua
 "W_MONGODB", -- src/modules/system/define.lua
 "W_MYSQL", -- src/modules/system/define.lua
 "W_PLAYER", -- src/modules/system/define.lua

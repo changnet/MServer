@@ -13,6 +13,7 @@ WORKER = {
     MYSQL   = {7, "mysql"}, -- mysql数据库读写
     MONGODB = {8, "mongodb"}, -- mongodb数据库读写
 }
+W_MAIN    = 256 -- 主线程，主线程的wtype通常和某个worker的wtype一致，如果要区分，则W_TEST | W_MAIN
 W_TEST    = 1 -- 单元测试
 W_GATEWAY = 2 -- 网关
 W_GAME    = 3 -- 游戏公用逻辑

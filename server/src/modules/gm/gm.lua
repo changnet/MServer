@@ -5,7 +5,7 @@
 -- gm处理
 GM = {}
 
-local gm_map = {}
+local gm_data = {}
 local forward_map = {}
 
 -- 检测聊天信息是否为gm，如果是就执行
@@ -64,7 +64,7 @@ function GM.raw_exec(where, player, cmd, ...)
     xpcall(print, __G__TRACKBACK, "exec gm:", where, cmd, ...)
 
     -- 优先查找注册过来的gm指令，然后是gm模块本身的指令
-    local gm_func = gm_map[cmd] or GM[cmd]
+    local gm_func = gm_data[cmd] or GM[cmd]
     if gm_func then
         local ok, msg = gm_func(player, ...)
         if ok == nil then
@@ -78,68 +78,15 @@ function GM.raw_exec(where, player, cmd, ...)
     return false, "no such gm:" .. tostring(cmd)
 end
 
--- 广播gm
-function GM.broadcast(cmd, ...)
-    -- 仅允许网关广播
-    assert(cmd and APP_TYPE == GATEWAY)
-
-    -- 可能有多个不现类型的进程连接到服务器（如中心服、连服）等
-    -- 只广播给当前服务器的进程（如场景服）
-    local DST = {
-        [GATEWAY] = true,
-        [WORLD] = true,
-        [AREA] = true,
-    }
-    local conn_list = SrvMgr.get_all_srv_conn()
-    for _, srv_conn in pairs(conn_list) do
-        if srv_conn.auth then
-            local app_type = srv_conn.app_type
-            if DST[app_type] then
-                Rpc.conn_call(srv_conn, GM.raw_exec, g_app.name, nil, cmd, ...)
-            end
-        end
-    end
-end
-
 -- 注册gm指令
--- @param app_type 真正运行该gm的服务器类型
-function GM.reg(cmd, gm_func, app_type)
-    gm_map[cmd] = gm_func
-    forward_map[cmd] = app_type
-end
-
---------------------------------------------------------------------------------
-
--- 全局热更，会更新其他进程
-function GM.hf()
-    hot_fix()
-    if GATEWAY == APP_TYPE then GM.broadcast("hf") end
-end
-
--- ping一下服务器间的延迟，看卡不卡
-function GM.ping()
-    return Ping.start(1)
-end
-
--- 添加元宝
-function GM.add_gold(player, count)
-    player:add_gold(tonumber(count), LOG.GM)
-end
-
--- 添加道具
-function GM.add_item(player, id, count)
-    local bag = player:get_module("bag")
-    bag:add(tonumber(id), tonumber(count), LOG.GM)
-end
-
--- 邮件测试
-function GM.sys_mail(player, title, ctx)
-    g_mail_mgr:send_sys_mail(title, ctx)
-end
-
--- 发送邮件测试
-function GM.send_mail(player, pid, title, ctx)
-    g_mail_mgr:send_mail(tonumber(pid), title, ctx)
+-- @param wtype 执行该gm的worker类型，默认为player
+-- @param level gm权限等级，默认为10，数值越大权限越高
+function GM.reg(cmd, func, wtype, role)
+    gm_data[cmd] = {
+        func = func,
+        wtype = wtype or W_PLAYER,
+        role = role or 10,
+    }
 end
 
 return GM

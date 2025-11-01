@@ -25,3 +25,5 @@ require "global.time"
 require "worker.worker_route"
 
 require "event.system_event"
+require "gm.gm"
+require "gm.gm_misc"
