@@ -151,6 +151,7 @@ function Bootstrap.process_init(loader)
     log_env_info()
     load_setting()
 
+    require "data.global_data"
     require "engine.engine"
     require "worker.worker"
 
@@ -190,6 +191,7 @@ function Bootstrap.worker_init(addr, loader)
     require "global.log" -- 加载log函数
     require "system.define" -- 基础定义
 
+    require "data.global_data"
     require "engine.engine"
     require "worker.worker"
 
@@ -230,20 +232,6 @@ function Bootstrap.reg(mod, priority)
     boot_modules:push(mod, priority)
 end
 
--- worker启动完成
-function Bootstrap.on_worker_ready(addr)
-    assert(LOCAL_ADDR == MAIN_ADDR)
-
-    -- 同步worker到其他worker，加快worker间的消息交互
-    -- 否则都会先抛给主线程，再由主线程转发
-    for other_addr, w in pairs(WorkerHash) do
-        if other_addr ~= addr and not w.cluster_worker then
-            Send.Worker.on_ready(other_addr, addr)
-        end
-    end
-    Send.Worker.on_ready(MAIN_ADDR, addr)
-end
-
 local function boot_ready()
     if boot_modules and boot_modules.timer then
         Timer.stop(boot_modules.timer)
@@ -252,13 +240,13 @@ local function boot_ready()
 
     if LOCAL_ADDR ~= MAIN_ADDR then
         -- 同步到线程，当前worker启动完成
-        Send.Bootstrap.on_worker_ready(MAIN_ADDR, LOCAL_ADDR)
+        Worker.set_status(LOCAL_ADDR, nil, 2)
         printf("worker %s ready, addr = %d",
             Worker.addr_name(LOCAL_ADDR), LOCAL_ADDR)
     else
         print("main thread ready, addr =", MAIN_ADDR)
     end
-    if SE then SE.fire_event(SE_READY) end
+    if SE then SE.fire(SE_READY) end
 end
 
 local function boot_next_modules()
@@ -276,9 +264,9 @@ local function boot_next_modules()
         if not mod.boot() then
             all_ready = false
             boot_modules.wait[mod] = true
-            printf("booting %s ...", name)
+            printf("starting %s ...", name)
         else
-            printf("booting %s ready", name)
+            printf("starting %s ready", name)
         end
     end
 
@@ -298,12 +286,12 @@ local function check_module_ready()
             if msg then
                 print(msg)
             else
-                printf("booting %s ...", name)
+                printf("starting %s ...", name)
             end
             return
         else
             wait[mod] = nil
-            printf("booting %s ready", name)
+            printf("starting %s ready", name)
         end
     end
 

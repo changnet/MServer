@@ -6,7 +6,7 @@
 PlayerMgr = oo.singleton()
 
 local Player = require "modules.player.player"
-local this = global_storage("PlayerMgr", {
+local this = memory("PlayerMgr", {
     player = {}, -- pid为key，Player为对象
     raw_player = {}, -- 未初始化的玩家对象
 })

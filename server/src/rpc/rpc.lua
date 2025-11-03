@@ -36,6 +36,7 @@ local RPC_REQ = ThreadMessage.RPC_REQ
 local RPC_RES = ThreadMessage.RPC_RES
 local lcodec_encode_to_buffer = g_lcodec.encode_to_buffer
 
+local func_to_name = Rtti.func_to_name
 -- 用parse_name_func而不是name_to_func，避免脚本报错时rtti失效导致rpc也失效了
 local parse_name_func = Rtti.parse_name_func
 
@@ -77,26 +78,30 @@ local function call_return(ok, ...)
     return ...
 end
 
-local function send_func_factory(name)
-    return function(addr, ...)
-        local w = WorkerHash[addr] or g_mthread
+local function send(name, addr, ...)
+    local w = WorkerHash[addr] or g_mthread
 
-        local ptr, size = lcodec_encode_to_buffer(g_lcodec, 0, name, ...)
-        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
-    end
+    local ptr, size = lcodec_encode_to_buffer(g_lcodec, 0, name, ...)
+    return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+end
+
+local function send_func_factory(name)
+    return function(addr, ...) return send(name, addr, ...) end
+end
+
+local function call(name, addr, ...)
+    local w = WorkerHash[addr] or g_mthread
+
+    -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
+    local session = CoPool.current_session()
+    local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
+    w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+
+    return call_return(coroutine.yield())
 end
 
 local function call_func_factory(name)
-    return function(addr, ...)
-        local w = WorkerHash[addr] or g_mthread
-
-        -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
-        local session = CoPool.current_session()
-        local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
-        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
-
-        return call_return(coroutine.yield())
-    end
+    return function(addr, ...) return call(name, addr, ...) end
 end
 
 local function do_request(src, session, name, ...)
@@ -144,9 +149,29 @@ function Call.last_source()
     return last_src
 end
 
+-- 根据函数指针直接调用函数
+function Call.invoke(addr, func, ...)
+    local name = func_to_name(func)
+    if not name then
+        assert(false, "no func name")
+    end
+
+    return call(name, addr, ...)
+end
+
 -- 获取上一次调用的来源
 function Send.last_source()
     return last_src
+end
+
+-- 根据函数指针直接调用函数
+function Send.invoke(addr, func, ...)
+    local name = func_to_name(func)
+    if not name then
+        assert(false, "no func name")
+    end
+
+    return send(name, addr, ...)
 end
 
 Rpc.call_return = call_return

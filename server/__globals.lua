@@ -1,4 +1,4 @@
--- auto export by lua-tags 147 symbols
+-- auto export by lua-tags 155 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -15,6 +15,7 @@ return {
 "CltMgr", -- src/network/clt_mgr.lua
 "Cluster", -- src/cluster/cluster.lua
 "CoPool", -- src/engine/co_pool.lua
+"DATA_ADDR", -- src/engine/preloader.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "DataMgr", -- src/data/data_mgr.lua
@@ -24,6 +25,8 @@ return {
 "ET", -- src/modules/entity/entity_header.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
+"GAME_ADDR", -- src/engine/preloader.lua
+"GATEWAY_ADDR", -- src/engine/preloader.lua
 "GM", -- src/modules/system/gm.lua
 "GM", -- src/modules/gm/gm.lua
 "GM", -- src/modules/gm/gm%20copy.lua
@@ -39,6 +42,7 @@ return {
 "LogDB", -- src/modules/log/log_db.lua
 "MAIL", -- src/modules/protocol/protocol.lua
 "MAIN_ADDR", -- src/worker/worker.lua
+"MASTER_ADDR", -- src/engine/preloader.lua
 "MAX_MAIL", -- src/modules/system/define.lua
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MISC", -- src/modules/protocol/protocol.lua
@@ -68,8 +72,10 @@ return {
 "SE", -- src/modules/event/system_event.lua
 "SE_READY", -- src/modules/event/event_header.lua
 "SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
-"SE_SRV_CONNTED", -- src/modules/event/event_header.lua
-"SE_SRV_DISCONNTED", -- src/modules/event/event_header.lua
+"SE_WORKER_BOTH_READY", -- src/modules/event/event_header.lua
+"SE_WORKER_ME_READY", -- src/modules/event/event_header.lua
+"SE_WORKER_START", -- src/modules/event/event_header.lua
+"SE_WORKER_STOP", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
@@ -103,7 +109,8 @@ return {
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/engine/bootstrap.lua
 "__error", -- src/engine/bootstrap.lua
-"__global_storage", -- src/global/global.lua
+"__global_memory", -- src/data/global_data.lua
+"__global_storage", -- src/data/global_data.lua
 "__loader", -- src/engine/bootstrap.lua
 "__package_cpath", -- src/engine/bootstrap.lua
 "__package_path", -- src/engine/bootstrap.lua
@@ -122,10 +129,10 @@ return {
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
-"global_storage", -- src/global/global.lua
 "graph", -- src/global/graph.lua
 "hot_fix", -- src/modules/system/hot_fix.lua
 "main_message_dispatch", -- src/message/thread_message.lua
+"memory", -- src/data/global_data.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "mysql_event", -- src/mysql/mysql_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
@@ -140,6 +147,7 @@ return {
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua
 "set_modify_metatable", -- src/global/modi_table.lua
+"storage", -- src/data/global_data.lua
 "str_split3", -- src/test/misc_test.lua
 "sys", -- src/global/sys.lua
 "test_path", -- src/test/scene_test.lua

@@ -4,8 +4,15 @@ require "global.global" -- 加载错误处理函数
 require "global.log" -- 加载log函数
 require "system.define" -- 基础定义
 
+require "data.global_data"
 require "engine.engine"
 require "worker.worker"
+
+-- 定义一些常用的地址，方便直接调用
+MASTER_ADDR = Engine.make_address(W_GAME, 1, 1) -- 单个服中，用于统一协商的地址
+GAME_ADDR = Engine.make_address(W_GAME, 1) -- 游戏逻辑的地址
+DATA_ADDR = Engine.make_address(W_DATA, 1) -- 数据读写的地址
+GATEWAY_ADDR = Engine.make_address(W_GATEWAY, 1) -- 网关的地址
 
 require "engine.co_pool"
 require "message.thread_message"

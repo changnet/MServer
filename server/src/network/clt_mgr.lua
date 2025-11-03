@@ -1,7 +1,7 @@
 -- 管理与客户端的连接
 CltMgr = {}
 
-local this = global_storage("CltMgr", {
+local this = memory("CltMgr", {
     clt = {}, -- 与客户端的连接，pid为key
     clt_conn = {}, -- 与客户端的连接，socket_id为key
 })

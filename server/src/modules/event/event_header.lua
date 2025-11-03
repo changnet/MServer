@@ -14,8 +14,9 @@ PE_DEATH = 4 -- 玩家死亡
 -- /////////////////////////////////////////////////////////////////////////////
 
 -- 系统事件定义
-
-SE_SRV_CONNTED          = 1 -- 其他服务器连接
-SE_SRV_DISCONNTED       = 2 -- 其他服务器断开连接
-SE_READY                = 3 -- 系统初始化完成
-SE_SCRIPT_LOADED        = 4 -- 脚本加载完成(通常用于热更后初始化逻辑，但不能在这里注册事件、协议)
+SE_READY                = 1 -- 系统初始化完成
+SE_SCRIPT_LOADED        = 2 -- 脚本加载完成，热更也会触发
+SE_WORKER_START         = 3 -- worker启动，但尚未初始化完成
+SE_WORKER_ME_READY      = 4 -- 当前worker启动完成，但对方开始启动未完成
+SE_WORKER_BOTH_READY    = 5 -- 双方都启动完成
+SE_WORKER_STOP          = 6 -- worker停止

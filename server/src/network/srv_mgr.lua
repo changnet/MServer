@@ -4,7 +4,7 @@ SrvMgr = {}
 local util = require "engine.util"
 
 local SsConn = require "network.ss_conn"
-local this = global_storage("SrvMgr", {
+local this = memory("SrvMgr", {
     srv = {}, -- 已认证的服务器连接
     srv_conn = {}, -- 所有连接，包括未认证，正在重连中的连接
     srv_waiting = {}, -- 正在重连中的连接
@@ -174,7 +174,7 @@ function SrvMgr.srv_conn_del(socket_id, e, is_conn)
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then this.srv_waiting[conn] = 1 end
 
-    SE.fire_event(SE_SRV_DISCONNTED, conn)
+    SE.fire(SE_SRV_DISCONNTED, conn)
 end
 
 -- 其他服务器是否初始化完成
@@ -307,7 +307,7 @@ local function handle_srv_reg(conn, pkt)
     conn:authorized(pkt)
     printf("%s register succes:session %d", conn:conn_name(), session)
 
-    SE.fire_event(SE_SRV_CONNTED, conn)
+    SE.fire(SE_SRV_CONNTED, conn)
 
     return true
 end

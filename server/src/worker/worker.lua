@@ -3,8 +3,8 @@ Worker = {}
 
 local WorkerThread = require "engine.WorkerThread"
 
-WorkerHash = WorkerHash or {} -- [addr] = worker，包含所有线程的worker
-WorkerData = WorkerData or {} -- [addr] = {}，记录worker数据
+WorkerHash = WorkerHash or {} -- [addr] = worker，包含集群节点，不包含主线程、自己及非当前线程的集群节点
+WorkerData = WorkerData or {} -- [addr] = {}，所有worker的数据，包含集群节点，不包含主主线程、自己
 WorkerTypeName = {} -- [wtype] = wname worker类型转名字
 WorkerNameType = {} -- [wname] = wtype worker名字转类型
 
@@ -77,6 +77,8 @@ end
 
 -- 关闭worker（此函数会阻塞直到worker线程安全退出）
 function Worker.stop(addr)
+    assert(LOCAL_ADDR == MAIN_ADDR) -- 仅允许主线程操作worker关闭
+
     local w = WorkerHash[addr]
     if not w then
         eprint("worker stop no such worker found", addr)
@@ -85,35 +87,16 @@ function Worker.stop(addr)
 
     printf("worker %s shutting down, addr = %d", Worker.addr_name(addr), addr)
     -- 先从其他worker移除
-    for other_addr, other_w in pairs(WorkerHash) do
-        if other_addr ~= addr and not other_w.cluster_worker then
-            Call.Worker.on_stop(other_addr, addr)
-        end
-    end
+    -- Worker.call_all(Worker.on_set_status, addr, nil, 0)
+
     -- 自己再关闭
-    -- Call.Worker.on_stop(addr, addr)
+    Call.Worker.on_stop(addr, addr)
 
     -- 最后由主线程移除worker记录
-    -- w:stop(true)
+    w:stop(true)
     WorkerHash[addr] = nil
     WorkerData[addr] = nil
     printf("worker %s stop, addr = %d", Worker.addr_name(addr), addr)
-end
-
--- 把同一进程的worker缓存到WorkerHash，加快数据交互
-function Worker.on_ready(addr)
-    assert(addr ~= LOCAL_ADDR)
-
-    -- 主线程负责启动worker，一开始就设置了worker的，不要覆盖
-    -- 主线程最原始的worker被释放掉是会触发gc的，程序会当掉
-    if LOCAL_ADDR ~= MAIN_ADDR then
-        local w = assert(Engine.get_thread_ctx(addr))
-        WorkerHash[addr] = w
-    end
-
-    -- 如果没有这个配置，那说明当前worker不关注这个addr的状态
-    local data = Worker.get_data(addr)
-    data.ready = 1
 end
 
 -- worker线程收到主线程停止请求
@@ -125,6 +108,67 @@ function Worker.on_stop(addr)
         assert(not WorkerHash[addr])
     else
         WorkerHash[addr] = nil
+    end
+end
+
+-- 标记某个worker状态，并同步到其他worker
+-- @param status 0停止 1启动 2启动完成
+function Worker.on_set_status(addr, node_type, status)
+    if 0 == status then
+        if addr == LOCAL_ADDR then
+            printf("worker %s stopping, addr = %d", Worker.addr_name(addr), addr)
+
+            g_thread:stop() -- 停止线程，但不join。join操作由主线程执行
+            assert(not WorkerHash[addr])
+        else
+            WorkerHash[addr] = nil
+        end
+        WorkerData[addr] = nil
+        SE.fire(SE_WORKER_STOP, addr, node_type)
+    elseif 1 == status then
+        SE.fire(SE_WORKER_START, addr, node_type)
+    elseif 2 == status then
+        assert(addr ~= LOCAL_ADDR)
+
+        -- 主线程负责启动worker，一开始就设置了worker的，不要覆盖
+        -- 主线程最原始的worker被释放掉是会触发gc的，程序会当掉
+        if LOCAL_ADDR ~= MAIN_ADDR then
+            local w = assert(Engine.get_thread_ctx(addr))
+            WorkerHash[addr] = w
+        end
+
+        -- 如果没有这个配置，那说明当前worker不关注这个addr的状态
+        local data = Worker.get_data(addr)
+        data.ready = 1
+    end
+end
+
+-- 标记某个worker状态，并同步到其他worker
+-- @param status 0停止 1启动 2启动完成
+function Worker.set_status(addr, node_type, status)
+    -- 主线程不走这个启动流程
+    assert(LOCAL_ADDR == MAIN_ADDR)
+
+    -- 自己本身是不触发事件的
+    -- Worker.on_set_status(addr, node_type, status)
+
+    -- 同步到其他worker，包括所有本地的worker和直连的worker
+    Worker.send_all(Worker.on_set_status, addr, node_type, status)
+end
+
+-- 以广播方式对所有worker发起rpc send调用，包括主线程，不包括自己
+function Worker.send_all(func, ...)
+    if LOCAL_ADDR ~= MAIN_ADDR then Send.invoke(MAIN_ADDR, func, ...) end
+    for addr in pairs(WorkerData) do
+        Send.invoke(addr, func, ...)
+    end
+end
+
+-- 以广播方式对所有worker发起rpc call调用，包括主线程，不包括自己
+function Worker.call_all(func, ...)
+    if LOCAL_ADDR ~= MAIN_ADDR then Send.invoke(MAIN_ADDR, func, ...) end
+    for addr in pairs(WorkerData) do
+        Send.invoke(addr, func, ...)
     end
 end
 

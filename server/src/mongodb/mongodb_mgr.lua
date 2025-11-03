@@ -4,7 +4,7 @@
 -- mongodb连接管理
 local MongoDBMgr = {}
 
-local this = global_storage("MongoDBMgr", {
+local this = memory("MongoDBMgr", {
     id = 0,
     db = {},
 })

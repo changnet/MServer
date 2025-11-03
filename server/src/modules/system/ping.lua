@@ -5,7 +5,7 @@
 
 Ping = {}
 
-local this = global_storage("Ping", {
+local this = memory("Ping", {
     seed = 1,
     pending = {},
 })

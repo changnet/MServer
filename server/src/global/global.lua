@@ -3,9 +3,6 @@
 -- xzc
 -- 常用的全局函数
 
--- 用于存储全局临时数据
-__global_storage = __global_storage or {}
-
 -- 用于底层C错误信息处理
 function __G_C_TRACKBACK(msg, co)
     local msg_list = {}
@@ -41,20 +38,4 @@ function assert(expr, ...)
     debug.tracestack(msg_list, 3)
     msg = table.concat(msg_list, "\n")
     return error(msg)
-end
-
--- 创建一块数据存储空间，仅仅是为了方便第一管理，热更，本地化
--- @param def_val 存储空间初始化时默认值
--- @param init_func 存储空间初始时执行的初始化函数
--- 复杂的初始化使用函数而不是def_val，避免热更不断创建def_val变量
-function global_storage(key, def_val, init_func)
-    local storage = __global_storage[key]
-    if not storage then
-        storage = def_val or {}
-        __global_storage[key] = storage
-
-        if init_func then init_func(storage) end
-    end
-
-    return storage
 end

@@ -19,7 +19,7 @@ local P_ALIGN = 1
 
 local LIMIT = require "global.limits"
 
-local this = global_storage("Timer", {
+local this = memory("Timer", {
     timer = {},
     next_id = 0,
 })

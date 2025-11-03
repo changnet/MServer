@@ -2,7 +2,7 @@
 AndroidMgr = {}
 
 local Android = require "android.android"
-local this = global_storage("AndroidMgr", {
+local this = memory("AndroidMgr", {
     android = {}
 })
 

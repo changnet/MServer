@@ -12,7 +12,7 @@ local Entity_npc = require "modules.entity.entity_npc"
 local EntityPlayer = require "modules.entity.entity_player"
 local Entity_monster = require "modules.entity.entity_monster"
 
-local this = global_storage("EntityMgr", nil, function(storage)
+local this = memory("EntityMgr", nil, function(storage)
     storage.entity = {} -- 以实体唯一id为key
     storage.entity_player = {} -- 以玩家id为key
     storage.id_generator = TimeId()

@@ -114,7 +114,7 @@ local SCHEDULE = {
     }
 }
 
-local this = global_storage("Log", {
+local this = memory("Log", {
     values = {}
 })
 

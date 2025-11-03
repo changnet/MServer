@@ -65,7 +65,7 @@ master通常用于调度（负载均衡）。比如场景节点开了10个，一
 
 local ClusterWorker = require "cluster.cluster_worker"
 
-local this = global_storage("Cluster", {
+local this = memory("Cluster", {
     node    = {}, -- 各节点已认证连接，以node_name为key
     unauth  = {}, -- unauthenticated 未认证连接，以worker对象为key
     -- listen  = cluster_worker, -- 监听的连接

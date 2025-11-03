@@ -5,7 +5,7 @@
 -- 帐号管理
 AccountMgr = {}
 
-local this = global_storage("AccountMgr", {
+local this = memory("AccountMgr", {
     account = {}, -- 三级key [sid][plat][account]
     conn_acc = {}, -- conn_id为key，帐号信息为value
     role_acc = {}, -- 玩家pid为key
