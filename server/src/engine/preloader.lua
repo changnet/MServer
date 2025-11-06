@@ -23,6 +23,7 @@ require "rpc.rpc"
 require "timer.timer"
 require "network.socket_mgr"
 require "cluster.cluster"
+require "cluster.cluster_proxy"
 require "global.debug"
 
 require "global.table"

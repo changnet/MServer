@@ -1,4 +1,4 @@
--- auto export by lua-tags 155 symbols
+-- auto export by lua-tags 156 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -14,6 +14,7 @@ return {
 "Call", -- src/rpc/rpc.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cluster", -- src/cluster/cluster.lua
+"ClusterProxy", -- src/cluster/cluster_proxy.lua
 "CoPool", -- src/engine/co_pool.lua
 "DATA_ADDR", -- src/engine/preloader.lua
 "DEFINE_BEG", -- src/global/require.lua
