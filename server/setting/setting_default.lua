@@ -34,7 +34,7 @@ return
     -- 集群
     cluster =
     {
-        game1 = {ip = "::1", port = 20001},
-        data1 = {ip = "::1", port = 20002},
+        game_1 = {ip = "::1", port = 20001},
+        data_1 = {ip = "::1", port = 20002},
     },
 }

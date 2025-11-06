@@ -89,11 +89,15 @@ local function set_path()
     end
 end
 
-local function format_log_name(local_name)
+local function format_log_name(name, index, is_proc)
+    local fullname
+    if is_proc then
+        fullname = string.format("%s_%d", name, index)
+    else
+        fullname = string.format("%s%d", name, index)
+    end
     -- 当前宽度刚好可以支持gateway1，如果名字再长就要扩展，否则日志就不对齐了
-    local fmt = string.format(" %%-%ds", 8)
-    -- local fmt = " %s"
-    g_async_log:set_name(string.format(fmt, local_name))
+    g_async_log:set_name(string.format(" %-8s", fullname))
 end
 
 -- 设置进程的日志参数
@@ -116,7 +120,7 @@ local function set_process_log(node_name, node_index)
     end
 
     -- 主线程的日志名字，是不带后缀的，比如game1就是game，和game1那个worker区分开来
-    format_log_name(node_name)
+    format_log_name(node_name, node_index, true)
 end
 
 -- 进程预加载必要的组件
@@ -126,9 +130,9 @@ function Bootstrap.process_init(loader)
 
     local node = g_env:get("--node")
 
-    -- game1拆分，如果game则自动补充index=1
+    -- game1拆分
     local node_name, node_index = string.match(node, "(%a+)(%d*)")
-    node_index = tonumber(node_index) or 1
+    node_index = assert(tonumber(node_index))
 
     local wtype
     for _, w in pairs(WORKER) do
@@ -196,13 +200,15 @@ function Bootstrap.worker_init(addr, loader)
     require "worker.worker"
 
     local wtype, index = Engine.unmake_address(addr)
+    local name = Worker.type_name(wtype)
+
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
-    LOCAL_NAME = string.format("%s%d", Worker.type_name(wtype), index)
+    LOCAL_NAME = string.format("%s%d", name, index)
 
     MAIN_ADDR = g_env:get("MAIN_ADDR")
 
-    format_log_name(LOCAL_NAME)
+    format_log_name(name, index)
 
     Engine.add_thread_ctx(addr, g_thread:toludata())
 
@@ -239,8 +245,7 @@ local function boot_ready()
     boot_modules = nil
 
     if LOCAL_ADDR ~= MAIN_ADDR then
-        -- 同步到线程，当前worker启动完成
-        Worker.set_status(LOCAL_ADDR, nil, 2)
+        Worker.start_ready()
         printf("worker %s ready, addr = %d",
             Worker.addr_name(LOCAL_ADDR), LOCAL_ADDR)
     else

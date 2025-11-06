@@ -1,7 +1,8 @@
 -- 集群
 Cluster = {
     -- 集群节点类型
-    NODE_WORKER  = 0x01, -- worker直连，最快
+    NODE_LOCAL   = 0x00, -- 本地worker，不通过socket通信
+    NODE_WORKER  = 0x01, -- worker直连，比process中转快
     NODE_PROCESS = 0x02, -- 通过process转发
     NODE_FORWARD = 0x03, -- 通过另一个进程转发，最慢
 }
@@ -100,24 +101,9 @@ function Cluster.close_listen()
     this.listen = nil
 end
 
-local function find_node_key(node_name)
-    -- 注意，node可能是不带数字，不带数字默认为1
-    local name, index = string.match(node_name, "(%a+)(%d*)")
-    index = tonumber(index)
-
-    local key = string.format("%s%d", name, index)
-    return key, name, index
-end
-
--- 把gateway1拆分成gateway和1
-local function find_node_conf(cluster_conf, node_name)
-    local key = find_node_key(node_name)
-    return cluster_conf[key]
-end
-
 -- 启动完成后，开启监听
 function Cluster.listen_later(cluster_conf, node_name)
-    local node_conf = assert(find_node_conf(cluster_conf, node_name))
+    local node_conf = assert(cluster_conf[node_name])
     Bootstrap.reg({
         name = "cluster listen",
         boot = function()
@@ -217,13 +203,11 @@ function Cluster.connect_later(node_list)
     for _, nl in pairs(node_list) do
         local cluster_conf = nl[1]
         local node_name = nl[2]
-        local key, name, index = find_node_key(node_name)
 
-        local wtype = Worker.name_type(name)
-        local addr = Engine.make_address(wtype, index)
-        local node_conf = assert(cluster_conf[key])
+        local addr = Worker.name_addr(node_name)
+        local node_conf = assert(cluster_conf[node_name])
         Bootstrap.reg({
-            name = string.format("cluster connect %s", key),
+            name = string.format("cluster connect %s", node_name),
             boot = function()
                 Cluster.connect(node_conf, addr)
             end,
@@ -233,7 +217,7 @@ function Cluster.connect_later(node_list)
                     return true
                 end
 
-                return false, string.format("cluster connecting %s", key)
+                return false, string.format("cluster connecting %s", node_name)
             end
         }, 0xFFFF)
     end
@@ -269,7 +253,7 @@ function Cluster.accept(worker)
     printf("cluster accept %s:%d", ip, port)
 end
 
-local function set_worker(node, addr, node_type)
+local function set_worker(node, addr, node_type, status)
     local data = WorkerData[addr]
     local old = WorkerHash[addr]
 
@@ -291,6 +275,9 @@ local function set_worker(node, addr, node_type)
         WorkerData[addr] = {node_type = node_type}
         printf("add cluster worker %s, addr = %d", name, addr)
     end
+
+    -- 同步该节点的状态到所有的本地worker
+    -- Worker.set_status(addr, node_type, 1)
 end
 
 -- 更新可转发的worker
@@ -301,8 +288,8 @@ function Cluster.update_forward_worker(addr, forward_list)
         assert(false, "forward list worker is not cluster node")
     end
 
-    for _, remote_addr in pairs(forward_list or EMPTY) do
-        set_worker(node, remote_addr, Cluster.NODE_FORWARD)
+    for _, s in pairs(forward_list or EMPTY) do
+        set_worker(node, s.addr, Cluster.NODE_FORWARD)
     end
 end
 
@@ -316,21 +303,23 @@ local function add_to_worker(node)
 
     local src = node.src
     set_worker(node, src, Cluster.NODE_WORKER)
-    if not Engine.is_main_addr(src) then return end
+
+    local forward_list = {}
+    for _, s in pairs(node.status_list) do
+        local node_type = s.node_type
+        if Cluster.NODE_PROCESS or Cluster.NODE_WORKER then
+            table.insert(forward_list, s)
+        end
+
+        set_worker(node, s.addr, node_type)
+    end
 
     -- 通知之前已连上的worker，自己多了一个能转发的worker列表
     for _, other_node in pairs(this.node) do
         if other_node ~= node then
             Send.Cluster.update_forward_worker(
-                other_node.src, LOCAL_ADDR, node.proc_list)
+                other_node.src, LOCAL_ADDR, forward_list)
         end
-    end
-
-    for _, addr in pairs(node.proc_list) do
-        set_worker(node, addr, Cluster.NODE_WORKER)
-    end
-    for _, addr in pairs(node.forward_list or EMPTY) do
-        set_worker(node, addr, node.src, Cluster.NODE_FORWARD)
     end
 end
 
@@ -361,6 +350,9 @@ local function remove_from_worker(node)
             print("remove cluster worker, addr =", addr)
         end
     end
+
+    -- 同步到远程worker
+    -- Worker.set_status(node.src, Cluster.NODE_FORWARD, 0)
 end
 
 -- 连接断开时，取消认证

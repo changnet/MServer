@@ -109,6 +109,11 @@ end
     oo.class( s3,s2,s1,s0 ) -- 多继承
 ]]
 local function create_class(new_method, ...)
+    --[[
+    类是用名字做为唯一标识，并且这个名字热更后，还必须保持一致，否则热更不到旧对象
+    使用debug.getinfo(2)获取创建类时的文件名+行数作为类名是唯一的，但热更后文件名、
+    行数可能会变（虽然比较少，但危险），所以还是只能手动传文件名
+    ]]
     local info = debug.getinfo(2)
 
     -- name保证不同路径同名文件中的类不会重复

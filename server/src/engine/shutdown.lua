@@ -7,6 +7,9 @@ local Sequence = {
     WORKER.DATA, WORKER.MYSQL, WORKER.MONGODB,
 }
 
+-- 需要按优先级关闭的模块
+local shutdown_modules = nil
+
 -- 开始走关服流程
 function Shutdown.process_stop()
     Cluster.close_listen()
@@ -38,7 +41,17 @@ end
 -- 终止程序(不走数据保存、清理流程)
 function Shutdown.terminate()
     for _, w in pairs(WorkerHash) do
-        w:stop(true)
+        if not w.cluster_worker then
+            w:stop(true)
+        end
     end
     g_mthread:stop()
+end
+
+-- 按注册的优先级关闭模块
+function Shutdown.start()
+    if not shutdown_modules then return true end
+
+
+    return true
 end
