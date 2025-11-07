@@ -280,6 +280,10 @@ local function set_worker(node, addr, node_type, status)
     -- Worker.set_status(addr, node_type, 1)
 end
 
+-- 把远程节点的worker添加到worker hash并设置状态数据
+function Cluster.set_worker_status(addr, node_type, status)
+end
+
 -- 更新可转发的worker
 -- @param addr 中转节点的地址
 function Cluster.update_forward_worker(addr, forward_list)
@@ -307,7 +311,7 @@ local function add_to_worker(node)
     local forward_list = {}
     for _, s in pairs(node.status_list) do
         local node_type = s.node_type
-        if Cluster.NODE_PROCESS or Cluster.NODE_WORKER then
+        if node_type == Cluster.NODE_PROCESS or node_type == Cluster.NODE_WORKER then
             table.insert(forward_list, s)
         end
 
@@ -320,6 +324,13 @@ local function add_to_worker(node)
             Send.Cluster.update_forward_worker(
                 other_node.src, LOCAL_ADDR, forward_list)
         end
+    end
+end
+
+-- 添加ClusterProxy的代理节点
+function Cluster.add_proxy_worker(node, status_list)
+    for _, s in pairs(node.status_list) do
+        set_worker(node, s.addr, Cluster.NODE_FORWARD)
     end
 end
 
@@ -388,6 +399,20 @@ end
 -- 所有节点是否连接完成
 function Cluster.ready()
     return table.empty(this.unauth)
+end
+
+-- 对所有cluster节点使用Send调用对应的函数
+function Cluster.send_all(func, ...)
+    for _, w in pairs(this.node) do
+        Send.invoke(w.src, func, ...)
+    end
+end
+
+-- 对所有cluster节点使用Call调用对应的函数
+function Cluster.call_all(func, ...)
+    for _, w in pairs(this.node) do
+        Call.invoke(w.src, func, ...)
+    end
 end
 
 return Cluster

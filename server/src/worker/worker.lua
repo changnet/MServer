@@ -61,6 +61,10 @@ function Worker.start(setting)
 
     w:start(path, addr)
     printf("worker %s starting, addr = %d", name, addr)
+
+    -- 同步状态到远程集群节点
+    Cluster.send_all(Cluster.set_worker_status,
+        LOCAL_ADDR, Cluster.NODE_PROCESS, Worker.STARTING)
 end
 
 -- 从配置创建多个worker
@@ -97,6 +101,9 @@ function Worker.on_start_ready(addr)
                 other_addr, addr, Cluster.NODE_LOCAL, Worker.READY)
         end
     end
+
+    Cluster.send_all(Cluster.set_worker_status,
+        LOCAL_ADDR, Cluster.NODE_PROCESS, Worker.READY)
 end
 
 -- worker启动完成
@@ -105,6 +112,10 @@ function Worker.start_ready()
 
     -- 通知主线程启动完成
     Send.Worker.on_start_ready(MAIN_ADDR, LOCAL_ADDR)
+
+    -- 同步状态到集群节点
+    Cluster.send_all(Cluster.set_worker_status,
+        LOCAL_ADDR, Cluster.NODE_WORKER, Worker.READY)
 end
 
 -- 关闭worker（此函数会阻塞直到worker线程安全退出）

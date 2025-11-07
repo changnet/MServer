@@ -88,6 +88,11 @@ function ClusterProxy.on_response(from_addr, to_addr, status_list)
         return
     end
 
-
-
+    local w = WorkerHash[from_addr]
+    if not w then
+        eprint("cluster proxy on response no worker", from_addr, to_addr)
+        return
+    end
+    assert(w.cluster_worker)
+    Cluster.add_proxy_worker(w, status_list)
 end
