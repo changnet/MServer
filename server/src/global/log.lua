@@ -1,11 +1,28 @@
 -- 基础日志接口
 Log = {}
 
+local type = type
+local tostring = tostring
 local g_async_log = g_async_log
 
 local logger_print = g_async_log.print
 
-local function to_readable(val)
+local vd_recursion = {}
+
+local function vd_insert(tbl, v, ...)
+    -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
+    if v then
+        tbl[#tbl + 1] = v -- 比table.insert(tbl, v)快点
+        return vd_insert(tbl, ...)
+    end
+end
+
+local function vd_key(k)
+    if type(k) == "string" then return k end
+    return "[" .. tostring(k) .. "]"
+end
+
+local function vd_value(val)
     if type(val) == "string" then return "\"" .. val .. "\"" end
 
     return tostring(val)
@@ -14,28 +31,29 @@ end
 --- @param var 要打印的数据
 --- @param max_level table要展开打印的计数，默认nil表示全部展开
 --- @param prefix 用于在递归时传递缩进，该参数不供用户使用于
-local recursion = {}
-local function var_dump(var, max_level, prefix)
-    if type(prefix) ~= "string" then prefix = "" end
-
+local function var_dump(vd_buffer, var, max_level, prefix)
+    -- 注意：这个函数格式化出来的日志，一定要是合法的lua代码
+    -- 即打印一个变量时，如有需要，可以直接从日志中复制去重现问题
     if type(var) ~= "table" then
-        print(prefix .. tostring(var))
-    elseif recursion[var] then
-        print(var, "dumplicate") -- 重复递归
+        return vd_insert(vd_buffer, prefix, tostring(var))
+    elseif vd_recursion[var] then
+        return vd_insert(vd_buffer, tostring(var), "dumplicate")-- 重复递归
     else
-        recursion[var] = true
+        vd_recursion[var] = true
 
         local prefix_next = prefix .. "    "
-        print(prefix .. "{")
+        vd_insert(vd_buffer, prefix, "{\n")
         for k, v in pairs(var) do
             if type(v) ~= "table" or max_level <= 1 then
-                print(prefix_next .. to_readable(k) .. " = " .. to_readable(v))
+                vd_insert(vd_buffer,
+                    prefix_next, vd_key(k), " = ", vd_value(v), ",\n")
             else
-                print(prefix_next .. to_readable(k) .. " = " .. tostring(v))
-                var_dump(v, max_level - 1, prefix_next)
+                vd_insert(vd_buffer, prefix_next, vd_key(k), " =\n")
+                var_dump(vd_buffer, v, max_level - 1, prefix_next)
+                vd_insert(vd_buffer, ",\n")
             end
         end
-        print(prefix .. "}")
+        vd_insert(vd_buffer, prefix, "}")
     end
 end
 
@@ -43,9 +61,16 @@ end
 -- @param var 需要打印的变量
 -- @param message 附加的消息，可为nil
 function vd(var, message)
-    if message then print(message) end
-    var_dump(var, 96)
-    recursion = {} -- 释放内存
+    local vd_buffer = {}
+
+    if not message then
+        local info = debug.getinfo(2)
+        message = string.format("%s:%d", info.short_src, info.currentline)
+    end
+    vd_insert(vd_buffer, message, "\n")
+    var_dump(vd_buffer, var, 96, "")
+    vd_recursion = {} -- 释放内存
+    print(table.concat(vd_buffer))
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效

@@ -223,28 +223,6 @@ function Cluster.connect_later(node_list)
     end
 end
 
--- 等待其他节点启动完成
-function Cluster.wait_ready(node_list)
-    for _, node_name in pairs(node_list) do
-        local key, name, index = find_node_key(node_name)
-
-        local wtype = Worker.name_type(name)
-        local addr = Engine.make_address(wtype, index)
-
-        Bootstrap.reg({
-            name = string.format("cluster wait %s", key),
-            boot = function()
-            end,
-            ready = function()
-                local w = WorkerHash[addr]
-                if w and w:is_ready() then return true end
-
-                return false, string.format("cluster waitting %s", key)
-            end
-        }, 0xFFFF)
-    end
-end
-
 -- 其他节点连连上
 function Cluster.accept(worker)
     this.unauth[worker] = worker
@@ -253,7 +231,22 @@ function Cluster.accept(worker)
     printf("cluster accept %s:%d", ip, port)
 end
 
-local function set_worker(node, addr, node_type, status)
+local function set_one_worker_status(src_addr, addr, node_type, status)
+    Worker.set_status(src_addr, addr, node_type, status)
+    -- 同步该节点的状态到所有的本地worker
+    Worker.send_other_local(
+        Worker.set_status, src_addr, addr, node_type, status)
+
+    printf("cluster set worker %s %s", Worker.addr_name(addr), status)
+end
+
+-- 设置集群节点worker状态
+-- @param node 负责收发数据的集群节点worker，如果是转发则node为中转的节点
+-- @param src_addr 来源地址。A连接B进程，B包含鑫个节点，则这些节点的src_addr都是B进程地址
+-- @param addr 集群节点地址
+-- @param node_type 节点类型
+-- @param status 节点状态
+local function set_worker(node, src_addr, addr, node_type, status)
     local data = WorkerData[addr]
     local old = WorkerHash[addr]
 
@@ -261,40 +254,28 @@ local function set_worker(node, addr, node_type, status)
     assert(not old or old.cluster_worker)
 
     local name = Worker.addr_name(addr)
-    if data then
-        if node_type < data.node_type then
-            WorkerHash[addr] = node
-            data.node_type = node_type
-            print("overwrite cluster worker %s, addr =", name, addr)
-        else
-            printf("cluster worker %s already exist, addr = %d, old src = %d, new = %d",
-                name, addr, old.src, node.src)
-        end
-    else
-        WorkerHash[addr] = node
-        WorkerData[addr] = {node_type = node_type}
-        printf("add cluster worker %s, addr = %d", name, addr)
+    if data and node_type >= data.node_type then
+        printf("cluster worker %s already exist, addr = %d, old src = %d, new = %d",
+            name, addr, old.addr, node.addr)
     end
 
+    WorkerHash[addr] = node
+
     -- 同步该节点的状态到所有的本地worker
-    -- Worker.set_status(addr, node_type, 1)
+    set_one_worker_status(src_addr, addr, node_type, status)
 end
 
 -- 把远程节点的worker添加到worker hash并设置状态数据
-function Cluster.set_worker_status(addr, node_type, status)
-end
+function Cluster.set_worker_status(src_addr, addr, node_type, status)
+    if not WorkerData[addr] and Worker.STOP ~= status then
+        local node = WorkerHash[src_addr]
 
--- 更新可转发的worker
--- @param addr 中转节点的地址
-function Cluster.update_forward_worker(addr, forward_list)
-    local node = WorkerHash[addr]
-    if not node or not node.cluster_worker then
-        assert(false, "forward list worker is not cluster node")
+        assert(node and node.cluster_worker)
+        set_worker(node, src_addr, addr, node_type, status)
+    else
+        set_one_worker_status(src_addr, addr, node_type, status)
     end
-
-    for _, s in pairs(forward_list or EMPTY) do
-        set_worker(node, s.addr, Cluster.NODE_FORWARD)
-    end
+    ClusterProxy.response_one(src_addr, addr, status)
 end
 
 -- 把集群节点作为一个worker添加到worker hash
@@ -305,32 +286,40 @@ local function add_to_worker(node)
 
     -- 如果是worker直连，则表示该连接是私有，将不处理转发列表
 
-    local src = node.src
-    set_worker(node, src, Cluster.NODE_WORKER)
+    local addr = node.addr
+    set_worker(node, addr, addr, Cluster.NODE_WORKER)
 
-    local forward_list = {}
     for _, s in pairs(node.status_list) do
-        local node_type = s.node_type
-        if node_type == Cluster.NODE_PROCESS or node_type == Cluster.NODE_WORKER then
-            table.insert(forward_list, s)
-        end
-
-        set_worker(node, s.addr, node_type)
+        set_worker(node, addr, s.addr, s.node_type)
     end
 
-    -- 通知之前已连上的worker，自己多了一个能转发的worker列表
-    for _, other_node in pairs(this.node) do
-        if other_node ~= node then
-            Send.Cluster.update_forward_worker(
-                other_node.src, LOCAL_ADDR, forward_list)
+    -- 如果有proxy，同步数据到proxy
+    ClusterProxy.response(addr)
+end
+
+-- 添加ClusterProxy的代理节点
+function Cluster.set_proxy_worker(node, status_list, src_addr)
+    if status_list then
+        for _, s in pairs(status_list) do
+            set_worker(node, src_addr, s.addr, Cluster.NODE_FORWARD)
+        end
+    else
+        local status = Worker.STOP
+        local node_type = Cluster.NODE_FORWARD
+        for addr, data in pairs(WorkerData) do
+            if data.src_addr == src_addr then
+                set_one_worker_status(src_addr, addr, node_type, status)
+            end
         end
     end
 end
 
 -- 添加ClusterProxy的代理节点
-function Cluster.add_proxy_worker(node, status_list)
-    for _, s in pairs(node.status_list) do
-        set_worker(node, s.addr, Cluster.NODE_FORWARD)
+function Cluster.set_one_proxy_worker(node, src_addr, addr, status)
+    if Worker.STOP == status then
+        set_one_worker_status(src_addr, addr, Cluster.NODE_FORWARD, status)
+    else
+        set_worker(node, src_addr, addr, Cluster.NODE_FORWARD)
     end
 end
 
@@ -354,16 +343,16 @@ end
 local function remove_from_worker(node)
     if not node.proc_list then return end -- 还没握手成功，没有映射任何worker
 
+    local src_addr = node.addr
+    local status = Worker.STOP
+    local node_type = Cluster.NODE_WORKER
     for addr, w in pairs(WorkerHash) do
         if w == node then
-            WorkerData[addr] = nil
-            WorkerHash[addr] = nil
-            print("remove cluster worker, addr =", addr)
+            set_one_worker_status(src_addr, addr, node_type, status)
         end
     end
 
-    -- 同步到远程worker
-    -- Worker.set_status(node.src, Cluster.NODE_FORWARD, 0)
+    ClusterProxy.response(src_addr)
 end
 
 -- 连接断开时，取消认证
@@ -404,14 +393,14 @@ end
 -- 对所有cluster节点使用Send调用对应的函数
 function Cluster.send_all(func, ...)
     for _, w in pairs(this.node) do
-        Send.invoke(w.src, func, ...)
+        Send.invoke(w.addr, func, ...)
     end
 end
 
 -- 对所有cluster节点使用Call调用对应的函数
 function Cluster.call_all(func, ...)
     for _, w in pairs(this.node) do
-        Call.invoke(w.src, func, ...)
+        Call.invoke(w.addr, func, ...)
     end
 end
 

@@ -29,6 +29,24 @@ function ClusterProxy.create(from, to)
     end
 end
 
+-- 等待其他节点启动完成
+function ClusterProxy.create_later(node_list)
+    for _, node_name in pairs(node_list) do
+        local addr = Worker.name_addr(node_name)
+        Bootstrap.reg({
+            name = string.format("cluster proxy wait %s", node_name),
+            boot = function()
+            end,
+            ready = function()
+                local w = WorkerHash[addr]
+                if w and w:is_ready() then return true end
+
+                return false, string.format("cluster proxy waitting %s", node_name)
+            end
+        }, 0xFFFF)
+    end
+end
+
 -- 代理节点收到请求，尝试寻找被代理节点，然后建立连接
 function ClusterProxy.request(request_addr, to_addr)
     local addr_proxy = this.beproxy[to_addr]
@@ -54,15 +72,19 @@ function ClusterProxy.response(addr)
         return
     end
 
+    local status_list
     local w = WorkerHash[addr]
-    assert(w.cluster_worker)
+    -- 如果w不存在，则表示断开连接
+    if w then
+        assert(w.cluster_worker)
 
-    -- 把被代理节点的worker状态数据发送给请求代理的节点
-    local status_list = {}
-    for other_addr, other_w in pairs(WorkerHash) do
-        if w == other_w then
-            local data = WorkerData[other_addr]
-            table.insert(status_list, data)
+        -- 把被代理节点的worker状态数据发送给请求代理的节点
+        status_list = {}
+        for other_addr, other_w in pairs(WorkerHash) do
+            if w == other_w then
+                local data = WorkerData[other_addr]
+                table.insert(status_list, data)
+            end
         end
     end
 
@@ -77,6 +99,7 @@ function ClusterProxy.response(addr)
 end
 
 -- 发起代理请求的节点收到目标节点的数据
+-- @param status_list 如果为nil则表示断开连接
 function ClusterProxy.on_response(from_addr, to_addr, status_list)
     local addr_proxy = this.proxy[from_addr]
     if not addr_proxy then
@@ -94,5 +117,44 @@ function ClusterProxy.on_response(from_addr, to_addr, status_list)
         return
     end
     assert(w.cluster_worker)
-    Cluster.add_proxy_worker(w, status_list)
+    Cluster.set_proxy_worker(w, status_list, to_addr)
+end
+
+-- 同步单个worker的数据发送给请求代理的节点，通常用于单个worker启动、关闭
+-- @param addr 同步的worker地址
+-- @param status 同步的worker状态
+function ClusterProxy.response_one(src_addr, addr, status)
+    local addr_proxy = this.beproxy[src_addr]
+    if not addr_proxy then
+        return
+    end
+
+    for request_addr, to_addr in pairs(addr_proxy) do
+        local request_w = WorkerHash[request_addr]
+        if request_w then
+            assert(request_w.cluster_worker)
+            Send.ClusterProxy.on_response(request_addr,
+                LOCAL_ADDR, to_addr, addr, status)
+        end
+    end
+end
+
+function ClusterProxy.on_response_one(from_addr, to_addr, addr, status)
+    local addr_proxy = this.proxy[from_addr]
+    if not addr_proxy then
+        eprint("cluster proxy on response no from addr", from_addr, to_addr)
+        return
+    end
+    if not addr_proxy[to_addr] then
+        eprint("cluster proxy on response no to addr", from_addr, to_addr)
+        return
+    end
+
+    local w = WorkerHash[from_addr]
+    if not w then
+        eprint("cluster proxy on response no worker", from_addr, to_addr)
+        return
+    end
+    assert(w.cluster_worker)
+    Cluster.set_one_proxy_worker(w, to_addr, addr, status)
 end

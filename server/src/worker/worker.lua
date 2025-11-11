@@ -64,7 +64,7 @@ function Worker.start(setting)
 
     -- 同步状态到远程集群节点
     Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, Cluster.NODE_PROCESS, Worker.STARTING)
+        LOCAL_ADDR, addr, Cluster.NODE_PROCESS, Worker.STARTING)
 end
 
 -- 从配置创建多个worker
@@ -92,18 +92,18 @@ function Worker.on_start_ready(addr)
     -- 当前worker启动完成，先通知主线程，再由主线程同步到其他worker
     -- 因为启动的时候当前worker是没有其他worker的数据，所以这时候只能由主线程同步
 
-    Worker.set_status(addr, Cluster.NODE_LOCAL, Worker.READY)
+    Worker.set_status(MAIN_ADDR, addr, Cluster.NODE_LOCAL, Worker.READY)
 
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Cluster.NODE_LOCAL == data.node_type then
             -- 同步给其他local worker
-            Send.Worker.set_status(
-                other_addr, addr, Cluster.NODE_LOCAL, Worker.READY)
+            Send.Worker.set_status(other_addr,
+                MAIN_ADDR, addr, Cluster.NODE_LOCAL, Worker.READY)
         end
     end
 
     Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, Cluster.NODE_PROCESS, Worker.READY)
+        LOCAL_ADDR, addr, Cluster.NODE_PROCESS, Worker.READY)
 end
 
 -- worker启动完成
@@ -113,9 +113,18 @@ function Worker.start_ready()
     -- 通知主线程启动完成
     Send.Worker.on_start_ready(MAIN_ADDR, LOCAL_ADDR)
 
-    -- 同步状态到集群节点
+    -- 同步状态到集群节点，注意这里main_addr不是MAIN_ADDR而是LOCAL_ADDR
+    -- main_addr是当前worker对应的线程地址
     Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, Cluster.NODE_WORKER, Worker.READY)
+        LOCAL_ADDR, LOCAL_ADDR, Cluster.NODE_WORKER, Worker.READY)
+
+    -- 触发worker启动完成事件
+    for addr, data in pairs(WorkerData) do
+        SE.fire(SE_WORKER_ME_READY, addr, data.node_type)
+        if data.status == Worker.READY then
+            SE.fire(SE_WORKER_BOTH_READY, addr, data.node_type)
+        end
+    end
 end
 
 -- 关闭worker（此函数会阻塞直到worker线程安全退出）
@@ -132,7 +141,8 @@ function Worker.stop(addr)
     -- 先通知其他worker，这个worker需要关闭
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Cluster.NODE_LOCAL == data.node_type then
-            Send.Worker.set_status(other_addr, addr, Cluster.NODE_LOCAL, Worker.STOP)
+            Send.Worker.set_status(other_addr,
+                MAIN_ADDR, addr, Cluster.NODE_LOCAL, Worker.STOP)
         end
     end
 
@@ -160,8 +170,9 @@ function Worker.stopping(addr)
 end
 
 -- 标记某个worker状态，并同步到其他worker
+-- @param src_addr 来源地址。A连接B进程，B包含鑫个节点，则这些节点的src_addr都是B进程地址
 -- @param status 0停止 1启动 2启动完成
-function Worker.set_status(addr, node_type, status)
+function Worker.set_status(src_addr, addr, node_type, status)
     assert(addr ~= LOCAL_ADDR)
 
     if Worker.STOP == status then
@@ -170,8 +181,15 @@ function Worker.set_status(addr, node_type, status)
         SE.fire(SE_WORKER_STOP, addr, node_type)
     elseif Worker.STARTING == status then
         local data = Worker.get_data(addr)
+        local old_status = data.status
         data.status = status
-        SE.fire(SE_WORKER_START, addr, node_type)
+        data.node_type = node_type
+        data.src_addr = src_addr
+
+        -- 对于集群节点，交叉和转发会导致同步多次，同一个状态只触发一次
+        if old_status ~= status then
+            SE.fire(SE_WORKER_START, addr, node_type)
+        end
     elseif Worker.READY == status then
         -- 主线程负责启动worker，一开始就设置了WorkerHash[addr]，不要覆盖
         -- 主线程最原始的worker被释放掉是会触发gc的，程序会当掉
@@ -181,25 +199,36 @@ function Worker.set_status(addr, node_type, status)
         end
 
         local data = Worker.get_data(addr)
+        local old_status = data.status
+
         data.status = status
+        data.node_type = node_type
+        data.src_addr = src_addr
+        if old_status ~= status and g_ready then
+            SE.fire(SE_WORKER_BOTH_READY, addr, node_type)
+        end
     else
         assert(false)
     end
 end
 
 -- 以广播方式对所有worker发起rpc send调用，包括主线程，不包括自己
-function Worker.send_other(func, ...)
+function Worker.send_other_local(func, ...)
     if LOCAL_ADDR ~= MAIN_ADDR then Send.invoke(MAIN_ADDR, func, ...) end
-    for addr in pairs(WorkerData) do
-        Send.invoke(addr, func, ...)
+    for addr, data in pairs(WorkerData) do
+        if data.node_type == Cluster.NODE_LOCAL then
+            Send.invoke(addr, func, ...)
+        end
     end
 end
 
 -- 以广播方式对所有worker发起rpc call调用，包括主线程，不包括自己
-function Worker.call_other(func, ...)
-    if LOCAL_ADDR ~= MAIN_ADDR then Send.invoke(MAIN_ADDR, func, ...) end
-    for addr in pairs(WorkerData) do
-        Send.invoke(addr, func, ...)
+function Worker.call_other_local(func, ...)
+    if LOCAL_ADDR ~= MAIN_ADDR then Call.invoke(MAIN_ADDR, func, ...) end
+    for addr, data in pairs(WorkerData) do
+        if data.node_type == Cluster.NODE_LOCAL then
+            Call.invoke(addr, func, ...)
+        end
     end
 end
 
@@ -251,7 +280,7 @@ end
 function Worker.name_addr(fullname)
     -- TODO 这个函数不常用，因此不做缓存
 
-    local name, main, index = string.match(fullname, "^(%w+)(_?)(%d*)$")
+    local name, main, index = string.match(fullname, "^([%a]+)(_?)(%d*)$")
 
     index = tonumber(index)
     main = main == "_" and 1 or 0

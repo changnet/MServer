@@ -41,6 +41,7 @@ Util = require "engine.util"
 
 -- 服务器设置文件
 g_setting = nil
+g_ready = false -- 当前线程是否启动完
 
 -- 需要按优先级启动的模块
 local boot_modules = nil
@@ -244,6 +245,7 @@ local function boot_ready()
     end
     boot_modules = nil
 
+    g_ready = true
     if LOCAL_ADDR ~= MAIN_ADDR then
         Worker.start_ready()
         printf("worker %s ready, addr = %d",

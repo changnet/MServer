@@ -56,7 +56,7 @@ function ClusterWorker:on_disconnected()
     Cluster.unauthenticate(self)
 end
 
-function ClusterWorker:do_authenticate(src, name, signData)
+function ClusterWorker:do_authenticate(addr, name, signData)
     local ok = true
     local tm = signData.tm
     local sign = signData.sign
@@ -79,7 +79,7 @@ function ClusterWorker:do_authenticate(src, name, signData)
         end
     end
 
-    self.src = src -- 如果是worker直连，则是对方的worker addr，否则为对方MAIN_ADDR
+    self.addr = addr -- 如果是worker直连，则是对方的worker addr，否则为对方MAIN_ADDR
     self.ready = 0x2
     self.name = name
     self.status_list = signData.status_list

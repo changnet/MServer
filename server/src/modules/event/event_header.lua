@@ -17,6 +17,6 @@ PE_DEATH = 4 -- 玩家死亡
 SE_READY                = 1 -- 系统初始化完成
 SE_SCRIPT_LOADED        = 2 -- 脚本加载完成，热更也会触发
 SE_WORKER_START         = 3 -- worker启动，但尚未初始化完成
-SE_WORKER_ME_READY      = 4 -- 当前worker启动完成，但对方开始启动未完成
+SE_WORKER_ME_READY      = 4 -- 当前worker启动完成，有数据要发送。但对方开始启动未完成
 SE_WORKER_BOTH_READY    = 5 -- 双方都启动完成
 SE_WORKER_STOP          = 6 -- worker停止
