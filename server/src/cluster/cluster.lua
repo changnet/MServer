@@ -280,17 +280,9 @@ end
 
 -- 把集群节点作为一个worker添加到worker hash
 local function add_to_worker(node)
-    -- 当使用进程连接时，node代表的是对应进程里所有的worker，因此有多个worker addr
-    -- 当使用worker连接时，node代表的是该worker，只有一个worker addr
-    -- 如果使用了进程连接，又对某个worker发起了独立连接，独立连接将覆盖进程连接
-
-    -- 如果是worker直连，则表示该连接是私有，将不处理转发列表
-
     local addr = node.addr
-    set_worker(node, addr, addr, Cluster.NODE_WORKER)
-
     for _, s in pairs(node.status_list) do
-        set_worker(node, addr, s.addr, s.node_type)
+        set_worker(node, addr, s.addr, s.node_type, s.status)
     end
 
     -- 如果有proxy，同步数据到proxy
@@ -341,9 +333,9 @@ function Cluster.authenticate(node, ok)
 end
 
 local function remove_from_worker(node)
-    if not node.proc_list then return end -- 还没握手成功，没有映射任何worker
-
     local src_addr = node.addr
+    if not WorkerData[src_addr] then return end -- 还没握手成功，没有映射任何worker
+
     local status = Worker.STOP
     local node_type = Cluster.NODE_WORKER
     for addr, w in pairs(WorkerHash) do

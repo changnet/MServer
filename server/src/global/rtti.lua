@@ -296,7 +296,7 @@ end
 function Rtti.collect()
     -- 这个函数尽量在所有模块加载完成之后，配置、数据对象创建之前调用，避免搜索过多无效的数据
     -- 这里仅处理全局函数和二级函数，其他的太多处理不过来
-    local tm = os.clock()
+    -- local tm = os.clock()
 
     -- 做名字、指针映射是为了方便rpc、定时器等回调，因此需要名字和指针一一对应
     -- 但有不少模块其实是有同名、同函数的情况（如math.atan和math.atan2是同一个函数）
@@ -343,8 +343,8 @@ function Rtti.collect()
             end
         end
     end
-    printf("RTTI collect done, %d functions in %.2f sec",
-        count, os.clock() - tm)
+    -- printf("RTTI collect done, %d functions in %.2f sec",
+    --     count, os.clock() - tm)
 end
 
 -- 标记当前函数不需要热更，标记后的函数可用于定时器等（仅生效1次）

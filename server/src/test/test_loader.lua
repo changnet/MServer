@@ -56,8 +56,6 @@ Test.setup({
     end
 })
 
-Rtti.collect()
-
 Timer.timeout(0, function()
     -- 测试中有不少性能测试，避免gc影响测试结果
     -- 但即使设置了停止标识，也无法完全停止gc，断点luaC_step函数就可以看到

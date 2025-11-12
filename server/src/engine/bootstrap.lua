@@ -99,6 +99,8 @@ local function format_log_name(name, index, is_proc)
     end
     -- 当前宽度刚好可以支持gateway1，如果名字再长就要扩展，否则日志就不对齐了
     g_async_log:set_name(string.format(" %-8s", fullname))
+
+    return fullname
 end
 
 -- 设置进程的日志参数
@@ -121,7 +123,7 @@ local function set_process_log(node_name, node_index)
     end
 
     -- 主线程的日志名字，是不带后缀的，比如game1就是game，和game1那个worker区分开来
-    format_log_name(node_name, node_index, true)
+    return format_log_name(node_name, node_index, true)
 end
 
 -- 进程预加载必要的组件
@@ -144,7 +146,7 @@ function Bootstrap.process_init(loader)
     end
     assert(wtype, "no such node define")
 
-    set_process_log(node_name, node_index)
+    local name = set_process_log(node_name, node_index)
 
     g_thread = g_mthread
 
@@ -164,7 +166,7 @@ function Bootstrap.process_init(loader)
 
     LOCAL_TYPE = wtype
     LOCAL_ADDR = MAIN_ADDR
-    LOCAL_NAME = node_name
+    LOCAL_NAME = name
     g_env:set("MAIN_ADDR", MAIN_ADDR)
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
@@ -177,13 +179,18 @@ function Bootstrap.process_init(loader)
 
     __loader = loader
     Timer.timeout(0, function()
-        if loader then
-            require(loader)
-            SE.ready()
-        end
+        -- 部分进程不需要loader，比如单元测试
+        if loader then Bootstrap.load() end
         Bootstrap.start()
     end)
     print("main thread starting, addr =", MAIN_ADDR)
+end
+
+-- 加载入口文件，将会引入所有模块
+function Bootstrap.load()
+    require(__loader)
+    Rtti.collect()
+    SE.ready()
 end
 
 -- worker预加载必要的组件
@@ -221,8 +228,7 @@ function Bootstrap.worker_init(addr, loader)
 
     __loader = loader
     Timer.timeout(0, function()
-        require(loader)
-        SE.ready()
+        Bootstrap.load()
         Bootstrap.start()
     end)
 end
@@ -254,6 +260,11 @@ local function boot_ready()
         print("main thread ready, addr =", MAIN_ADDR)
     end
     if SE then SE.fire(SE_READY) end
+
+    -- 同步状态到集群节点，注意这里main_addr不是MAIN_ADDR而是LOCAL_ADDR
+    -- main_addr是当前worker对应的线程地址
+    Cluster.send_all(Cluster.set_worker_status,
+        LOCAL_ADDR, LOCAL_ADDR, Cluster.NODE_WORKER, Worker.READY)
 end
 
 local function boot_next_modules()

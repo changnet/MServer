@@ -30,18 +30,21 @@ function ClusterProxy.create(from, to)
 end
 
 -- 等待其他节点启动完成
-function ClusterProxy.create_later(node_list)
-    for _, node_name in pairs(node_list) do
-        local addr = Worker.name_addr(node_name)
+-- @param proxy_list 代理列表，格式为{{from_name, to_name}}
+function ClusterProxy.create_later(proxy_list)
+    for _, name in pairs(proxy_list) do
+        local to_name = name[2]
+        local addr = Worker.name_addr(to_name)
         Bootstrap.reg({
-            name = string.format("cluster proxy wait %s", node_name),
+            name = string.format("cluster proxy wait %s", to_name),
             boot = function()
+                ClusterProxy.create(name[1], to_name)
             end,
             ready = function()
                 local w = WorkerHash[addr]
                 if w and w:is_ready() then return true end
 
-                return false, string.format("cluster proxy waitting %s", node_name)
+                return false, string.format("cluster proxy waitting %s", to_name)
             end
         }, 0xFFFF)
     end
@@ -67,6 +70,8 @@ end
 
 -- 把被代理节点的数据发送给请求代理的节点
 function ClusterProxy.response(addr)
+    vd(this.beproxy)
+    print("cluster proxy response ====================", addr)
     local addr_proxy = this.beproxy[addr]
     if not addr_proxy then
         return
@@ -102,6 +107,7 @@ end
 -- @param status_list 如果为nil则表示断开连接
 function ClusterProxy.on_response(from_addr, to_addr, status_list)
     local addr_proxy = this.proxy[from_addr]
+    print("cluster proxy on response ====================", from_addr, to_addr)
     if not addr_proxy then
         eprint("cluster proxy on response no from addr", from_addr, to_addr)
         return

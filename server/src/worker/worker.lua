@@ -113,11 +113,6 @@ function Worker.start_ready()
     -- 通知主线程启动完成
     Send.Worker.on_start_ready(MAIN_ADDR, LOCAL_ADDR)
 
-    -- 同步状态到集群节点，注意这里main_addr不是MAIN_ADDR而是LOCAL_ADDR
-    -- main_addr是当前worker对应的线程地址
-    Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, LOCAL_ADDR, Cluster.NODE_WORKER, Worker.READY)
-
     -- 触发worker启动完成事件
     for addr, data in pairs(WorkerData) do
         SE.fire(SE_WORKER_ME_READY, addr, data.node_type)
@@ -237,26 +232,22 @@ function Worker.get_status_list()
     local local_send_type = Engine.is_main_addr(LOCAL_ADDR)
         and Cluster.NODE_PROCESS or Cluster.NODE_WORKER
 
-    local status_list = {}
+    local local_status = g_ready and Worker.READY or Worker.STARTING
+    local status_list = {{
+        addr = LOCAL_ADDR,
+        status = local_status,
+        node_type = local_send_type
+    }}
     for addr, data in pairs(WorkerData) do
         local node_type = data.node_type
 
-        local send_type
         if node_type == Cluster.NODE_LOCAL then
-            send_type = local_send_type
-        elseif node_type == Cluster.NODE_PROCESS then
-            send_type = Cluster.NODE_FORWARD
-        -- worker与worker之间直连不走转发逻辑，就不提供转发的节点了
-        -- 数据不能多次中转，NODE_FORWARD节点也不同步
-        -- elseif node_type == Cluster.NODE_WORKER then
-        --     send_type = Cluster.NODE_FORWARD
+            table.insert(status_list, {
+                addr = addr,
+                status = data.status,
+                node_type = local_send_type,
+            })
         end
-
-        table.insert(status_list, {
-            addr = addr,
-            status = data.status,
-            node_type = send_type,
-        })
     end
 
     return status_list

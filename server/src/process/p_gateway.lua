@@ -18,4 +18,4 @@ Cluster.connect_later({{g_setting.cluster, "game_1"}})
 -- Cluster.connect_later({{g_setting.cluster, "data1"}})
 
 -- 使用中转模式，则等待data节点启动完成
-ClusterProxy.create_later({"data1"})
+ClusterProxy.create_later({{"game_1", "data_1"}})
