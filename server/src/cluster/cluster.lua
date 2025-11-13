@@ -237,7 +237,8 @@ local function set_one_worker_status(src_addr, addr, node_type, status)
     Worker.send_other_local(
         Worker.set_status, src_addr, addr, node_type, status)
 
-    printf("cluster set worker %s %s", Worker.addr_name(addr), status)
+    printf("cluster node %s addr = %d, status = %d",
+        Worker.addr_name(addr), addr, status)
 end
 
 -- 设置集群节点worker状态
@@ -287,13 +288,14 @@ local function add_to_worker(node)
 
     -- 如果有proxy，同步数据到proxy
     ClusterProxy.response(addr)
+    ClusterProxy.request(addr)
 end
 
 -- 添加ClusterProxy的代理节点
 function Cluster.set_proxy_worker(node, status_list, src_addr)
     if status_list then
         for _, s in pairs(status_list) do
-            set_worker(node, src_addr, s.addr, Cluster.NODE_FORWARD)
+            set_worker(node, src_addr, s.addr, Cluster.NODE_FORWARD, s.status)
         end
     else
         local status = Worker.STOP
@@ -354,7 +356,7 @@ function Cluster.unauthenticate(node)
         this.node[name] = nil
     end
 
-    local is_remote_close = node.status == SocketMgr.OPENING
+    local socket_stat = node.status
 
     -- 如果是server端，则直接删除
     -- client端则需要尝试重连
@@ -364,12 +366,15 @@ function Cluster.unauthenticate(node)
         this.unauth[node] = node
         -- 不要直接重连，等定时器定时重连即可
         -- 否则如果是签名等问题连接失败，会不断地循环直连
-        -- TODO 主动断开的，不要重连
-        if is_remote_close then add_reconnect(node) end
+        -- 主动断开的，不要重连
+        if socket_stat == SocketMgr.OPENED
+            or socket_stat == SocketMgr.OPENING then
+            add_reconnect(node)
+        end
     end
 
     remove_from_worker(node)
-    if is_remote_close then
+    if socket_stat == SocketMgr.OPENING then
         local e, str = node:get_error()
         printf("cluster node %s connect fail(%d): %s", name, e, str)
     else

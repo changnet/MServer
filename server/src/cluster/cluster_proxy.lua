@@ -25,7 +25,7 @@ function ClusterProxy.create(from, to)
     local w = WorkerHash[from_addr]
     if w then
         assert(w.cluster_worker)
-        Send.ClusterProxy.request(from_addr, LOCAL_ADDR, to_addr)
+        Send.ClusterProxy.on_request(from_addr, LOCAL_ADDR, to_addr)
     end
 end
 
@@ -50,16 +50,32 @@ function ClusterProxy.create_later(proxy_list)
     end
 end
 
+-- 对from_addr发起针对to_addr的代理请求
+-- @param from_addr 作为发转数据代理的节点
+function ClusterProxy.request(from_addr)
+    local addr_proxy = this.proxy[from_addr]
+    if not addr_proxy then return end
+
+    local w = WorkerHash[from_addr]
+
+    assert(w.cluster_worker)
+    for to_addr in pairs(addr_proxy) do
+        Send.ClusterProxy.on_request(from_addr, LOCAL_ADDR, to_addr)
+    end
+end
+
 -- 代理节点收到请求，尝试寻找被代理节点，然后建立连接
-function ClusterProxy.request(request_addr, to_addr)
+function ClusterProxy.on_request(request_addr, to_addr)
     local addr_proxy = this.beproxy[to_addr]
     if not addr_proxy then
         addr_proxy = {}
         this.beproxy[to_addr] = addr_proxy
     end
-    assert(not addr_proxy[request_addr])
+    local old = addr_proxy[request_addr] -- 另一端进程重启，可能会导致重复
+    assert(not old or old == to_addr)
 
     addr_proxy[request_addr] = to_addr
+    printf("accept cluster proxy request %d to %d", request_addr, to_addr)
 
     local w = WorkerHash[to_addr]
     if w then
@@ -70,8 +86,6 @@ end
 
 -- 把被代理节点的数据发送给请求代理的节点
 function ClusterProxy.response(addr)
-    vd(this.beproxy)
-    print("cluster proxy response ====================", addr)
     local addr_proxy = this.beproxy[addr]
     if not addr_proxy then
         return
@@ -88,7 +102,10 @@ function ClusterProxy.response(addr)
         for other_addr, other_w in pairs(WorkerHash) do
             if w == other_w then
                 local data = WorkerData[other_addr]
-                table.insert(status_list, data)
+                table.insert(status_list, {
+                    addr = other_addr,
+                    status = data.status
+                })
             end
         end
     end
@@ -107,7 +124,6 @@ end
 -- @param status_list 如果为nil则表示断开连接
 function ClusterProxy.on_response(from_addr, to_addr, status_list)
     local addr_proxy = this.proxy[from_addr]
-    print("cluster proxy on response ====================", from_addr, to_addr)
     if not addr_proxy then
         eprint("cluster proxy on response no from addr", from_addr, to_addr)
         return
