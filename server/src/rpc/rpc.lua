@@ -106,6 +106,7 @@ end
 
 local function do_request(src, session, name, ...)
     local func = parse_name_func(name)
+    print("ffffffffffffffffffffffffffffffffff", name)
     if not func then
         eprint("rpc no func found", name, LOCAL_ADDR)
 

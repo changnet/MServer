@@ -6,8 +6,8 @@
 
 -- 热更
 GM.reg("reload", function()
-    hot_fix()
-end, W_GAME | W_MAIN)
+    print("reload ...")
+end, -1)
 
 -- ping一下服务器间的延迟，看卡不卡
 GM.reg("ping", function()

@@ -753,7 +753,7 @@ void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)
     assert(w_ && w_->io_);
     IO *io = w_->io_;
 
-    w_->mask_ |= static_cast<uint8_t>(mask);
+    w_->mask_ |= mask;
     io->get_send_buffer().set_chunk_size(send_max);
     io->get_recv_buffer().set_chunk_size(recv_max);
 }

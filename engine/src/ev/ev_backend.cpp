@@ -161,7 +161,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         {
             dispatch_event(w, EV_CLOSE);
         }
-        w->b_kevents_ &= (~EV_WRITE);
+        w->b_kevents_ &= ~(EV_WRITE | EV_KERNEL);
     }
     else
     {

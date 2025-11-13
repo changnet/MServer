@@ -14,7 +14,17 @@
 local StdinReader = require "engine.StdinReader"
 
 local function do_cmd(cmd)
-    print("exec cmd:", cmd)
+    -- TODO 这里应该尝试找一个在线的玩家取pid，方便测试
+
+    -- 如果没有以@开关，自动补充一个
+    if not string.start_with(cmd, "@") then
+        cmd = "@" .. cmd
+    end
+
+    local ok, msg = GM.dispatch("cli", 0, cmd)
+    if not ok then
+        print("cli error", msg)
+    end
 end
 
 local function try_read()

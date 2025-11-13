@@ -156,6 +156,7 @@ end
 function Socket:io_ready()
     self:set_option()
     self.status = OPENED
+    __print("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiioready", self.socket_id, debug.traceback())
     self.s:set_watcher_event(SocketMgr.EV_READ)
 
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
