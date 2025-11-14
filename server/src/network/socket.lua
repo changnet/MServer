@@ -156,7 +156,6 @@ end
 function Socket:io_ready()
     self:set_option()
     self.status = OPENED
-    __print("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiioready", self.socket_id, debug.traceback())
     self.s:set_watcher_event(SocketMgr.EV_READ)
 
     -- 大部分socket在io(如SSL)初始化完成时整个连接就建立完成了
@@ -198,13 +197,15 @@ function Socket:reconnect()
         return
     end
     if self.status ~= SocketMgr.CLOSED then
-        eprint("socket no closed")
+        eprint("socket not closed")
         return
     end
     if -1 ~= self.s:fd()  then
         eprint("socket fd closed")
         return
     end
+
+    print("ssssssssssssssssss", self.socket_id, self.status)
 
     -- 底层socket包含了一些事件和标记，还有io和packet指针，缓冲区里也可能有未完成的数据
     -- 所以直接创建一个新的比较简单，重连在后端应该是频率比较少的操作
@@ -259,6 +260,7 @@ end
 -- @param flush 关闭前是否发送缓冲区的数据
 function Socket:close(flush)
     self.status = CLOSING
+    assert(false)
     return self.s:stop(flush)
 end
 

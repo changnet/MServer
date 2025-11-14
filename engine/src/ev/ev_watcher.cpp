@@ -59,17 +59,3 @@ int32_t EVIO::do_init_connect()
 
     return io_->do_init_connect(this);
 }
-
-bool WatcherMgr::try_delete_watcher(EVIO *w)
-{
-    // 正常情况backend线程不会销毁watch
-    // 但如果watcher所属于线程来不及处理，backend负责收尾
-    if (w->del_ref(EVIO::M_REF_BACKEND))
-    {
-        PLOG("backend delete watcher, id = %d, fd = %d", w->id_, w->fd_);
-        netcompat::close(w->fd_);
-        delete w;
-        return true;
-    }
-    return false;
-}

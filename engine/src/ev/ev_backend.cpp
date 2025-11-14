@@ -34,6 +34,16 @@ EVBackend::EVBackend()
 
 EVBackend::~EVBackend()
 {
+    fd_mgr_.iter(
+        [](EVIO *w)
+        {
+            if (w->del_ref(EVIO::M_REF_BACKEND))
+            {
+                PLOG("backend close watcher, id = %d, fd = %d", w->id_, w->fd_);
+                netcompat::close(w->fd_);
+                delete w;
+            }
+        });
     fd_mgr_.clear();
 }
 
@@ -157,7 +167,7 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         if (!fd_mgr_.get(w->fd_)) return 0;
 
         op = FD_OP_DEL;
-        if (fd_mgr_.unset(w))
+        if (del_watcher(w))
         {
             dispatch_event(w, EV_CLOSE);
         }
@@ -443,20 +453,21 @@ void EVBackend::do_watcher_events()
                 return;
             }
 
-            const WatcherEvent &we = watcher_events_.front();
-
-            w = we.w_;
-            e = we.e_;
+            w = watcher_events_.front();
             watcher_events_.pop_front();
-        }
 
-        if (e)
+            e = w->b_ev_;
+            w->b_ev_ = 0;
+        }
+        int32_t hig = e >> 16;
+        if (unlikely(0 != hig))
         {
-            do_watcher_event(w, e, false);
+            do_watcher_event(w, hig, false);
+            e = e & 0xFFFF;
+            if (0 != e) do_watcher_event(w, e, true);
         }
         else
         {
-            e = w->b_ev_.exchange(0);
             do_watcher_event(w, e, true);
         }
     }
@@ -474,14 +485,47 @@ void EVBackend::dispatch_event(EVIO *w, int32_t ev)
     if (!ok) ELOG("backend forward_message fail: %d", w->addr_);
 }
 
-void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
+bool EVBackend::del_watcher(EVIO *w)
 {
-    int32_t old = w->b_ev_.fetch_or(ev);
-    if (0 != old) return;
-
+    bool need_ev = true;
+    fd_mgr_.unset(w);
     {
         std::scoped_lock<std::mutex> sl(mutex_);
-        watcher_events_.emplace_back(0, w);
+
+        // 这个必须放到锁里，backend关闭socket，发了事件给主线程但主线程还未处理
+        // 这时候主线程往socket写入数据时，要依赖这个M_REF_BACKEND判断是否插入数据
+        if (w->del_ref(EVIO::M_REF_BACKEND)) need_ev = false;
+
+        watcher_events_.erase(std::remove_if(watcher_events_.begin(),
+                                             watcher_events_.end(),
+                                             [w](auto &x) { return x == w; }),
+                              watcher_events_.end());
+    }
+    // 正常情况backend线程不会销毁watch
+    // 但如果watcher所属于线程来不及处理，backend负责收尾
+    if (!need_ev)
+    {
+        PLOG("backend delete watcher, id = %d, fd = %d", w->id_, w->fd_);
+        netcompat::close(w->fd_);
+        delete w;
+        return true;
+    }
+
+    return need_ev;
+}
+
+void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
+{
+    {
+        std::scoped_lock<std::mutex> sl(mutex_);
+
+        int32_t old = w->b_ev_;
+        w->b_ev_ = old | ev;
+
+        // 利用old判断是否插入队列，防止同一时间多次写入时把队列写爆
+        // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
+        if (0 != old || 0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
+        watcher_events_.emplace_back(w);
     }
     wake();
 }
@@ -490,7 +534,17 @@ void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
 {
     {
         std::scoped_lock<std::mutex> sl(mutex_);
-        watcher_events_.emplace_back(ev, w);
+
+        int32_t old = w->b_ev_;
+        // 覆盖旧的，并放高位表示优先执行，低位可以继续追加他事件
+        // 现在的机制没法做到事件的增删查改，也无法做到同时set多个不同的事件
+        // 但这样可以节省一点，目前没其他需求
+        w->b_ev_    = ev << 16;
+
+        // 利用old判断是否插入队列，防止同一时间多次写入时把队列写爆
+        // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
+        if (0 != old || 0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
+        watcher_events_.emplace_back(w);
     }
     wake();
 }

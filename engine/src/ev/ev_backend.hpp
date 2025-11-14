@@ -41,6 +41,10 @@ public:
      */
     void stop();
     /**
+     * @brief 删除指定watcher在队列中的所有数据
+     */
+    bool del_watcher(EVIO *w);
+    /**
      * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
      * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题
      */
@@ -144,7 +148,7 @@ protected:
     std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
 
     std::mutex mutex_;
-    std::deque<WatcherEvent> watcher_events_; // 收到其他线程的事件
+    std::deque<EVIO *> watcher_events_; // 收到其他线程的事件
     WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
 };
 

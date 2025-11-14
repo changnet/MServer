@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include "net/io/io.hpp"
 
 /**
@@ -81,7 +82,7 @@ public:
 
     int32_t b_kevents_; // kernel(如epoll)中使用的events
     int32_t b_pevents_; // pending，backend线程等待处理的事件
-    std::atomic<int32_t> b_ev_; // worker发出，等待backend线程处理的事件
+    int32_t b_ev_; // worker发出，等待backend线程处理的事件
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
 };
@@ -121,7 +122,7 @@ public:
         return true;
     }
     // 清除fd对应的watcher
-    bool unset(EVIO* w)
+    void unset(EVIO* w)
     {
         int32_t fd   = w->fd_;
         uint32_t ufd = ((uint32_t)fd);
@@ -133,7 +134,6 @@ public:
         {
             fd_watcher_huge_.erase(fd);
         }
-        return !try_delete_watcher(w);
     }
 
     // 获取fd对应的watcher
@@ -151,13 +151,19 @@ public:
 
     void clear()
     {
-        for (auto& x : fd_watcher_)
+        fd_watcher_.clear();
+        fd_watcher_huge_.clear();
+    }
+
+    void iter(std::function<void (EVIO *)> func)
+    {
+        for (auto &x : fd_watcher_)
         {
-            if (x) try_delete_watcher(x);
+            if (x) func(x);
         }
-        for (auto& x : fd_watcher_huge_)
+        for (auto &x : fd_watcher_huge_)
         {
-            try_delete_watcher(x.second);
+            func(x.second);
         }
         fd_watcher_.clear();
         fd_watcher_huge_.clear();
@@ -175,10 +181,6 @@ public:
 
         return s;
     }
-
-private:
-    bool try_delete_watcher(EVIO *w);
-
 private:
     /// 小于该值的fd，可通过数组快速获取watcher
     static const int32_t HUGE_FD = 10240;

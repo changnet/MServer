@@ -20,5 +20,6 @@ enum
     EV_KERNEL    = 0x0800, // 2048 已经在epoll、poll中激活
     EV_BUSY      = 0x1000, // 4096 线程繁忙
 
+    // 最大不能超过65535，set_watcher_event需要用int32来拼接两个事件
 };
 
