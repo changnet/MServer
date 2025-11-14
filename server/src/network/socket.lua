@@ -104,15 +104,17 @@ function Socket:on_accepting(fd)
 
     socket.default_param = rawget(self, "default_param")
 
+    -- 必须在继承后设置参数，不然用些初始化的参数就会不对
+    socket:set_param()
+
+    -- 必须在设置好各种io参数后才能启动
+    -- 不然backend线程在set_param完成之前触发读写事件就会出错
     if not socket.s:start(LOCAL_ADDR, fd, EV_READ) then
         print("socket accept start fail", self.socket_id, fd)
         return
     end
 
     SocketMgr.add(socket)
-
-    -- 必须在继承后设置参数，不然用些初始化的参数就会不对
-    socket:set_param()
 
     -- 注意这个事件socket并未连接完成，不可发放数据，on_connected事件才完成
     socket:on_accepted()
@@ -205,8 +207,6 @@ function Socket:reconnect()
         return
     end
 
-    print("ssssssssssssssssss", self.socket_id, self.status)
-
     -- 底层socket包含了一些事件和标记，还有io和packet指针，缓冲区里也可能有未完成的数据
     -- 所以直接创建一个新的比较简单，重连在后端应该是频率比较少的操作
     -- socket_id是唯一标识，很多地方有用，所以必须用旧的
@@ -260,7 +260,6 @@ end
 -- @param flush 关闭前是否发送缓冲区的数据
 function Socket:close(flush)
     self.status = CLOSING
-    assert(false)
     return self.s:stop(flush)
 end
 

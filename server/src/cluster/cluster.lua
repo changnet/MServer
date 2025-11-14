@@ -289,7 +289,6 @@ local function add_to_worker(node)
     -- 如果有proxy，同步数据到proxy
     ClusterProxy.response(addr)
     ClusterProxy.request(addr)
-    print("ppppppppppppppppppppppppppppppp node", node.socket_id, addr)
 end
 
 -- 添加ClusterProxy的代理节点

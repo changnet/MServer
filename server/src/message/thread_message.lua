@@ -47,6 +47,7 @@ end
 -- @param msg 可以通过g_mthread.construct_message或者acquire_message获取
 function ThreadMessage.transfer(addr, msg)
     local w = WorkerHash[addr] or g_mthread
+    if not msg then assert(false) end
     return w:push_message(msg)
 end
 
@@ -58,17 +59,40 @@ function main_message_dispatch(src, dst, mtype, udata, usize)
         -- return worker:emplace_message(src, dst, mtype, udata, usize)
 
         local m = g_mthread:acquire_message()
+        if not m then assert(false) end
         return worker:push_message(m)
     end
 
     if 0 ~= dst and LOCAL_ADDR ~= dst then
-        eprint("unknow message address", dst, mtype)
+        eprint("unknow main message address", dst, mtype)
         return
     end
 
     local func = type_dispatch[mtype]
     if not func then
-        eprint("unknow message type", mtype)
+        eprint("unknow main message type", mtype)
+        return
+    end
+
+    -- 部分协议不需要以协程回调，如需要协程回调使用reg_co
+    return func(src, udata, usize)
+end
+
+function cluster_message_dispatch(src, dst, mtype, udata, usize)
+    local worker = WorkerHash[dst]
+    if worker then
+        -- 这里不能用acquire_message，因为消息是从socket解析出来的
+        return worker:emplace_message(src, dst, mtype, udata, usize)
+    end
+
+    if 0 ~= dst and LOCAL_ADDR ~= dst then
+        eprint("unknow cluster message address", dst, mtype)
+        return
+    end
+
+    local func = type_dispatch[mtype]
+    if not func then
+        eprint("unknow cluster message type", mtype)
         return
     end
 

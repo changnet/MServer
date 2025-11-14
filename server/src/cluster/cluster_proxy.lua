@@ -156,7 +156,7 @@ function ClusterProxy.response_one(src_addr, addr, status)
         if request_w then
             assert(request_w.cluster_worker)
             Send.ClusterProxy.on_response(request_addr,
-                LOCAL_ADDR, to_addr, addr, status)
+                LOCAL_ADDR, to_addr, {{addr = addr, status = status}})
         end
     end
 end

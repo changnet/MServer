@@ -77,13 +77,11 @@ end
 -- 新增socket
 function SocketMgr.add(socket)
     __socket_hash[socket.socket_id] = socket
-    __print(socket.socket_id, debug.traceback())
 end
 
 -- 删除socket
 function SocketMgr.del(socket)
     __socket_hash[socket.socket_id] = nil
-    print(socket.socket_id, debug.traceback())
 end
 
 -- 处理消息回调
@@ -139,7 +137,6 @@ local function do_close(socket)
     -- 不管是已方发起，还是对方关闭，收到close事件表示另一个线程已关闭。可以关闭fd了
     socket.s:close() -- local errno = socket.s:close()
     __socket_hash[socket.socket_id] = nil
-    print(socket.socket_id, debug.traceback())
 
     -- 这里不打印日志，因为socket有可能是正常关闭
     -- 如果有需要对应的模块在on_disconnected自己获取对应的信息打印

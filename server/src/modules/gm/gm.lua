@@ -72,7 +72,6 @@ local function query_data()
     -- 至少要热更一次，才会重新查询
 
     for other_addr in pairs(WorkerData) do
-        print("qqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", other_addr)
         local data = Call.GM.on_query_data(other_addr)
         for k, v in pairs(data or {}) do
             gm_data[k] = v
@@ -112,7 +111,6 @@ function GM.dispatch(source, pid, str)
     --     如果有玩家路由，则根据路由表查询玩家所在节点并执行(例如场景gm，在玩家当前所在场景执行)
     --     如果没有路由，则在任意一个节点执行
     local wtype = data.wtype
-    print("gggggggggggggggggggggggggggg", wtype)
     if -1 == wtype then
         GM.run(source, pid, cmd, args)
         for addr in pairs(WorkerData) do
