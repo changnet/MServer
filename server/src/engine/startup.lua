@@ -1,5 +1,5 @@
 -- 启动(此文件不热更)
-Bootstrap = {}
+Startup = {}
 
 local buddha = [[
 
@@ -44,7 +44,7 @@ g_setting = nil
 g_ready = false -- 当前线程是否启动完
 
 -- 需要按优先级启动的模块
-local boot_modules = nil
+local startup_modules = nil
 
 -- 打印运行的环境参数
 local function log_env_info()
@@ -127,7 +127,7 @@ local function set_process_log(node_name, node_index)
 end
 
 -- 进程预加载必要的组件
-function Bootstrap.process_init(loader)
+function Startup.process_init(loader)
     set_path()
     require "system.define" -- 基础定义
 
@@ -180,21 +180,21 @@ function Bootstrap.process_init(loader)
     __loader = loader
     Timer.timeout(0, function()
         -- 部分进程不需要loader，比如单元测试
-        if loader then Bootstrap.load() end
-        Bootstrap.start()
+        if loader then Startup.load() end
+        Startup.start()
     end)
     print("main thread starting, addr =", MAIN_ADDR)
 end
 
 -- 加载入口文件，将会引入所有模块
-function Bootstrap.load()
+function Startup.load()
     require(__loader)
     Rtti.collect()
     SE.ready()
 end
 
 -- worker预加载必要的组件
-function Bootstrap.worker_init(addr, loader)
+function Startup.worker_init(addr, loader)
     set_path()
 
     require "global.oo" -- 这个文件不能热更
@@ -228,28 +228,28 @@ function Bootstrap.worker_init(addr, loader)
 
     __loader = loader
     Timer.timeout(0, function()
-        Bootstrap.load()
-        Bootstrap.start()
+        Startup.load()
+        Startup.start()
     end)
 end
 
 -- 注册按优先级启动的模块
 -- @param mod 需要启动的模块，包括boot_start、boot_ready函数
 -- @param priority 启动优先级，越小优先级越高，默认20
-function Bootstrap.reg(mod, priority)
-    if not boot_modules then
+function Startup.reg(mod, priority)
+    if not startup_modules then
         local PriorityManager = require "util.priority_manager"
-        boot_modules = PriorityManager()
+        startup_modules = PriorityManager()
     end
 
-    boot_modules:push(mod, priority)
+    startup_modules:push(mod, priority)
 end
 
 local function boot_ready()
-    if boot_modules and boot_modules.timer then
-        Timer.stop(boot_modules.timer)
+    if startup_modules and startup_modules.timer then
+        Timer.stop(startup_modules.timer)
     end
-    boot_modules = nil
+    startup_modules = nil
 
     g_ready = true
     if LOCAL_ADDR ~= MAIN_ADDR then
@@ -268,20 +268,20 @@ local function boot_ready()
 end
 
 local function boot_next_modules()
-    local list = boot_modules:next()
+    local list = startup_modules:next()
     if not list then
         boot_ready()
         return true
     end
 
-    if not boot_modules.wait then boot_modules.wait = {} end
+    if not startup_modules.wait then startup_modules.wait = {} end
 
     local all_ready = true
     for _, mod in ipairs(list) do
         local name = mod.name or "unknow"
         if not mod.boot() then
             all_ready = false
-            boot_modules.wait[mod] = true
+            startup_modules.wait[mod] = true
             printf("starting %s ...", name)
         else
             printf("starting %s ready", name)
@@ -295,7 +295,7 @@ local function boot_next_modules()
 end
 
 local function check_module_ready()
-    local wait = boot_modules.wait
+    local wait = startup_modules.wait
 
     for mod in pairs(wait) do
         local name = mod.name or "unknow"
@@ -304,12 +304,12 @@ local function check_module_ready()
             if msg then
                 print(msg)
             else
-                printf("starting %s ...", name)
+                printf("starting up %s ...", name)
             end
             return
         else
             wait[mod] = nil
-            printf("starting %s ready", name)
+            printf("startup: %s", name)
         end
     end
 
@@ -317,13 +317,13 @@ local function check_module_ready()
 end
 
 -- 按优先级启动各个模块，启动完成后触发SE_READY事件
-function Bootstrap.start()
-    if not boot_modules then
+function Startup.start()
+    if not startup_modules then
         return boot_ready()
     end
 
     if boot_next_modules() then return end
 
-    boot_modules.timer = Timer.interval(
+    startup_modules.timer = Timer.interval(
         1000, 1000, -1, Rtti.temp_func(check_module_ready))
 end

@@ -5,4 +5,4 @@ local addr = ...
 local srv_dir = g_env:get("srv_dir")
 dofile(srv_dir .. "/src/engine/startup.lua")
 
-Bootstrap.worker_init(tonumber(addr), "modules.module_loader")
+Startup.worker_init(tonumber(addr), "modules.module_loader")

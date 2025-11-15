@@ -1,6 +1,6 @@
 -- 测试进程入口文件(此文件不热更)
 
-Bootstrap.process_init("engine.preloader")
+Startup.process_init("engine.preloader")
 
 -- 用了data进程，只能以多进程方式启动。集群只能用mysql或者mongodb一个worker，thread模式不用data进程
 assert(g_setting.mode == "process")

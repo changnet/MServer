@@ -35,7 +35,7 @@ function ClusterProxy.create_later(proxy_list)
     for _, name in pairs(proxy_list) do
         local to_name = name[2]
         local addr = Worker.name_addr(to_name)
-        Bootstrap.reg({
+        Startup.reg({
             name = string.format("cluster proxy wait %s", to_name),
             boot = function()
                 ClusterProxy.create(name[1], to_name)

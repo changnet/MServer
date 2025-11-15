@@ -1,6 +1,6 @@
 -- 测试进程入口文件(此文件不热更)
 
-Bootstrap.process_init("modules.process_loader")
+Startup.process_init("modules.process_loader")
 
 if g_setting.mode == "cluster" then
     -- 集群模式，一个进程只启动一个类型的worker

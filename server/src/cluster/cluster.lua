@@ -104,7 +104,7 @@ end
 -- 启动完成后，开启监听
 function Cluster.listen_later(cluster_conf, node_name)
     local node_conf = assert(cluster_conf[node_name])
-    Bootstrap.reg({
+    Startup.reg({
         name = "cluster listen",
         boot = function()
             Cluster.listen(node_conf, node_name)
@@ -206,7 +206,7 @@ function Cluster.connect_later(node_list)
 
         local addr = Worker.name_addr(node_name)
         local node_conf = assert(cluster_conf[node_name])
-        Bootstrap.reg({
+        Startup.reg({
             name = string.format("cluster connect %s", node_name),
             boot = function()
                 Cluster.connect(node_conf, addr)

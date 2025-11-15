@@ -69,7 +69,7 @@ end
 
 -- 从配置创建多个worker
 function Worker.start_later(settings)
-    Bootstrap.reg({
+    Startup.reg({
         name = "worker",
         boot = function()
             for _, s in pairs(settings) do
@@ -148,7 +148,7 @@ function Worker.stop(addr)
     w:stop(true)
     WorkerHash[addr] = nil
     WorkerData[addr] = nil
-    printf("worker %s stop, addr = %d", Worker.addr_name(addr), addr)
+    printf("worker shutdown: %s , addr = %d", Worker.addr_name(addr), addr)
 end
 
 -- worker线程收到主线程停止请求

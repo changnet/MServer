@@ -1,4 +1,4 @@
--- auto export by lua-tags 157 symbols
+-- auto export by lua-tags 167 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -85,11 +85,13 @@ return {
 "Signal", -- src/engine/signal.lua
 "SocketMgr", -- src/network/socket_mgr.lua
 "SrvMgr", -- src/network/srv_mgr.lua
+"Startup", -- src/engine/startup.lua
 "Test", -- src/global/test.lua
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "Util", -- src/engine/bootstrap.lua
+"Util", -- src/engine/startup.lua
 "WORKER", -- src/modules/system/define.lua
 "W_DATA", -- src/modules/system/define.lua
 "W_GAME", -- src/modules/system/define.lua
@@ -109,13 +111,19 @@ return {
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
 "__assert", -- src/engine/bootstrap.lua
+"__assert", -- src/engine/startup.lua
 "__error", -- src/engine/bootstrap.lua
+"__error", -- src/engine/startup.lua
 "__global_memory", -- src/data/global_data.lua
 "__global_storage", -- src/data/global_data.lua
 "__loader", -- src/engine/bootstrap.lua
+"__loader", -- src/engine/startup.lua
 "__package_cpath", -- src/engine/bootstrap.lua
+"__package_cpath", -- src/engine/startup.lua
 "__package_path", -- src/engine/bootstrap.lua
+"__package_path", -- src/engine/startup.lua
 "__print", -- src/engine/bootstrap.lua
+"__print", -- src/engine/startup.lua
 "__socket_hash", -- src/network/socket_mgr.lua
 "__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua
@@ -127,8 +135,10 @@ return {
 "g_ai_mgr", -- src/android/android_boot.lua
 "g_lcodec", -- src/rpc/rpc.lua
 "g_ready", -- src/engine/bootstrap.lua
+"g_ready", -- src/engine/startup.lua
 "g_setting", -- src/engine/bootstrap.lua
 "g_setting", -- src/modules/ai/action/loginout.lua
+"g_setting", -- src/engine/startup.lua
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
