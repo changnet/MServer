@@ -82,7 +82,7 @@ local function main(cmd, ...)
     local file_name = string.match(node, "(%a+)")
 
     -- 未设置package.path，只能用dofile不能用require
-    dofile(srv_dir .. "/src/engine/bootstrap.lua") -- 加载启动器
+    dofile(srv_dir .. "/src/engine/startup.lua") -- 加载启动器
     dofile(srv_dir .. "/src/process/p_" .. file_name .. ".lua") -- 加载进程逻辑入口
 end
 
