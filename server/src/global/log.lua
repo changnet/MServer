@@ -7,7 +7,7 @@ local g_async_log = g_async_log
 
 local logger_print = g_async_log.print
 
-local vd_recursion = {}
+local vd_recursion = nil
 
 local function vd_insert(tbl, v, ...)
     -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
@@ -62,14 +62,19 @@ end
 -- @param message 附加的消息，可为nil
 function vd(var, message)
     local vd_buffer = {}
+    vd_recursion = {}
 
     if not message then
         local info = debug.getinfo(2)
         message = string.format("%s:%d", info.short_src, info.currentline)
     end
+
+    -- TODO 这里可以直接用table.dump，但考虑到log是个基础模块，就不依赖其他代码了
+
     vd_insert(vd_buffer, message, "\n")
     var_dump(vd_buffer, var, 96, "")
-    vd_recursion = {} -- 释放内存
+
+    vd_recursion = nil -- 释放内存
     print(table.concat(vd_buffer))
 end
 

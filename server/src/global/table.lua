@@ -1,145 +1,98 @@
 -- table.lua
 -- 2015-09-14
 -- 增加部分常用table函数
-local next = next
-local raw_table_dump -- 函数前置声明
 
--- 导出缩进，pretty = true时才生效
-local function dump_table_indent(indent, dump_tbl)
-    if indent <= 0 then return end
 
-    -- TODO:这个感觉不用做缓存的吧，一来这个功能不常用，二是同一个字符串只分配一次内存
-    for _ = 1, indent do table.insert(dump_tbl, "    ") end
+local function dump_insert(tbl, v, ...)
+    -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
+    if v then
+        if v ~= "" then tbl[#tbl + 1] = v end
+        return dump_insert(tbl, ...)
+    end
 end
 
--- 导出换行，pretty = true时才生效
-local function dump_table_break(indent, dump_tbl)
-    if indent < 0 then return end
-
-    return table.insert(dump_tbl, "\n")
+local function dump_key(k)
+    if type(k) == "string" then return k end
+    return "[" .. tostring(k) .. "]"
 end
 
--- kv之间的分隔，比如"a = 9"有分隔，"a=9"无分隔
-local function dump_table_seperator(indent, dump_tbl)
-    if indent < 0 then return end
+local function dump_value(val)
+    if type(val) == "string" then return "\"" .. val .. "\"" end
 
-    return table.insert(dump_tbl, " ")
+    return tostring(val)
 end
 
--- 导出key
-local function dump_table_key(key, dump_tbl)
-    local key_type = type(key)
+--- @param tbl 要导入的数据，一般为table
+local function dump_table(ctx, tbl)
+    -- 注意：这个函数格式化出来的日志，一定要是合法的lua代码
+    -- 即打印一个变量时，如有需要，可以直接从日志中复制去重现问题
 
-    if "string" == key_type then
-        table.insert(dump_tbl, "['")
-        table.insert(dump_tbl, key)
-        table.insert(dump_tbl, "']")
-        return
+    local buffer = ctx.buffer
+
+    local recursion = ctx.recursion
+    if recursion[tbl] then
+        return -- 重复递归
     end
 
-    if "number" == key_type then
-        table.insert(dump_tbl, "[")
-        table.insert(dump_tbl, key)
-        table.insert(dump_tbl, "]")
-        return
+    recursion[tbl] = true
+
+    local indent = ctx.indent
+    if indent then
+        indent = indent .. ctx.indenter
+        ctx.indent = indent
+    else
+        indent = ""
     end
 
-    if "boolean" == key_type then
-        table.insert(dump_tbl, "[")
-        table.insert(dump_tbl, tostring(key))
-        table.insert(dump_tbl, "]")
-        return
-    end
+    dump_insert(buffer, indent, ctx.table_beg)
 
-    -- table nil thread userdata 不能作key.否则写入文件后没法还原
-    error(string.format("can NOT converte %s to string key", key_type))
-end
-
--- 导出value
-local function dump_table_val(key, val, indent, dump_tbl, dump_recursion)
-    local val_type = type(val)
-
-    if "number" == val_type then
-        dump_table_seperator(indent, dump_tbl)
-        return table.insert(dump_tbl, val)
-    end
-
-    if "boolean" == val_type then
-        dump_table_seperator(indent, dump_tbl)
-        -- table.concat不支持boolean类型的
-        return table.insert(dump_tbl, tostring(val))
-    end
-
-    if "string" == val_type then
-        dump_table_seperator(indent, dump_tbl)
-        table.insert(dump_tbl, "'")
-        table.insert(dump_tbl, val)
-        table.insert(dump_tbl, "'")
-        return
-    end
-
-    if "table" == val_type then
-        -- 不能循环引用，一是防止死循环，二是写入到文件后没法还原
-        if dump_recursion[val] then
-            error(string.format("recursion reference table at key:%s",
-                                tostring(key)))
-        end
-
-        dump_recursion[val] = true
-        return raw_table_dump(val, indent, dump_tbl, dump_recursion)
-    end
-
-    -- function thread userdata 不能作value.否则写入文件后没法还原
-    error(string.format("can NOT converte %s to string val", val_type))
-end
-
--- 导出逻辑
-function raw_table_dump(tbl, indent, dump_tbl, dump_recursion)
-    local next_indent = indent >= 0 and indent + 1 or -1 -- indent < 0 表示不缩进
-
-    -- 子table和key之间是需要换行的
-    if indent > 0 then dump_table_break(indent, dump_tbl) end
-
-    dump_table_indent(indent, dump_tbl)
-    table.insert(dump_tbl, "{")
-    dump_table_break(indent, dump_tbl)
-
-    local first = true
+    local val_end = ctx.val_end
+    local key_end = ctx.key_end
+    local max_depth = ctx.max_depth - 1
+    ctx.max_depth = max_depth
     for k, v in pairs(tbl) do
-        if not first then
-            table.insert(dump_tbl, ",")
-            dump_table_break(next_indent, dump_tbl)
+        if type(v) ~= "table" or max_depth <= 1 then
+            dump_insert(buffer, indent, dump_key(k), " = ", dump_value(v), val_end)
+        else
+            dump_insert(buffer, indent, dump_key(k), key_end)
+            dump_table(ctx, v)
+            dump_insert(buffer, val_end)
         end
-
-        first = false;
-        dump_table_indent(next_indent, dump_tbl)
-        dump_table_key(k, dump_tbl)
-        dump_table_seperator(indent, dump_tbl)
-        table.insert(dump_tbl, "=")
-        dump_table_val(k, v, next_indent, dump_tbl, dump_recursion)
     end
-
-    dump_table_break(indent, dump_tbl)
-    dump_table_indent(indent, dump_tbl)
-    table.insert(dump_tbl, "}")
-
-    return dump_tbl
+    dump_insert(buffer, indent, "}")
 end
+
 
 -- 导出table为字符串.
 -- table中不能包括thread、function、userdata，table之间不能相互引用
 -- @param pretty 是否格式化
 function table.dump(tbl, pretty)
-    local dump_tbl = {}
-    local dump_recursive = {}
+    if type(tbl) ~= "table" then
+        return tostring(tbl)
+    end
 
-    local indent = pretty and 0 or -1
-    raw_table_dump(tbl, indent, dump_tbl, dump_recursive)
+    local ctx = {
+        buffer = {},
+        recursion = {},
+        max_depth = 128,
+    }
+    if pretty then
+        ctx.indent = ""
+        ctx.indenter = "    "
+        ctx.val_end = ",\n"
+        ctx.key_end = " =\n"
+        ctx.table_beg = "{\n"
+    else
+        ctx.val_end = ","
+        ctx.key_end = "="
+        ctx.table_beg = "{"
+    end
 
-    return table.concat(dump_tbl)
+    dump_table(ctx, tbl)
+    return table.concat(ctx.buffer)
 end
 
--- 从字符串加载一个table
+-- 从字符串加载一个table.dump生成的字符串
 function table.load(str)
     -- 5.3没有dostring之类的方法了
     -- load返回一个函数，"{a = 9}"这样的字符串是不合lua语法的
@@ -151,29 +104,21 @@ end
 
 -- 计算table的大小，不计算Key为nil的情况(如果使用了rawset,value可能为nil)
 function table.size(t)
-    local ret = 0
-    local k
-    while true do
-        k = next(t, k)
-        if k == nil then break end
-        ret = ret + 1
-    end
-    return ret
+    local size = 0
+    for _ in pairs(t) do size = size + 1 end
+
+    return size
 end
 
 -- 清空一个table
 function table.clear(t)
-    local k
-    while true do
-        k = next(t, k)
-        if k == nil then return end
-        t[k] = nil
-    end
+    for k in pairs(t) do t[k] = nil end
 end
 
 -- 判断一个table是否为空
+-- @param t table，为nil时也返回true
 function table.empty(t)
-    return next(t) == nil
+    return not t or next(t) == nil
 end
 
 -- 浅拷贝
@@ -242,37 +187,6 @@ function table.random_shuffle(list)
     end
 
     return list
-end
-
--- 合并任意变量
--- table.concat并不能合并带nil、false、true之类的变量
--- table.concat_any( "|","abc",nil,true,false,999 )
-function table.concat_any(sep, ...)
-    local any = table.pack(...)
-
-    return table.concat_tbl(any, sep)
-end
-
--- 这个tbl必须指定数组大小n，通常来自table.pack
-function table.concat_tbl(tbl, sep)
-    local max_idx = tbl.n
-    for k = 1, max_idx do
-        local v = tbl[k]
-        if nil == v then
-            tbl[k] = "nil"
-        elseif true == v then
-            tbl[k] = "true"
-        elseif false == v then
-            tbl[k] = "false"
-        else
-            local s_type = type(v)
-            if "userdata" == s_type or "table" == s_type then
-                tbl[k] = tostring(v)
-            end
-        end
-    end
-
-    return table.concat(tbl, sep)
 end
 
 -- 默认排序算法(降序，与table.sort一致)
@@ -369,4 +283,10 @@ function table.readonly(tbl)
         __newindex = function() assert(false) end
     })
     return tbl
+end
+
+-- 把多个变量添加到table中，类似table.insert但支持多个变量
+function table.append(t, ...)
+    local args = {...}
+    return table.move(args, 1, #args, #t + 1, t)
 end

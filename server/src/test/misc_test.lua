@@ -675,3 +675,20 @@ Test.describe("stirng lib test", function()
         Test.equal(string.fmt("{{0}}{1}", "a", 123), "{0}123")
     end)
 end)
+
+Test.describe("table lib test", function()
+    require "global.table"
+    Test.it("table base", function()
+        local tbl = {
+            a = 1,
+            b = "bbbb",
+            c = 987653,
+            d = 123.567,
+            e = {1, 2, 3, 4, 5, true, false, "abc", 1.567},
+            f = {a = 1, b = "bbbb", c = 987653, d = 123.567},
+        }
+        local str = table.dump(tbl)
+        local tbl2 = table.load(str)
+        Test.equal(tbl2, tbl)
+    end)
+end)

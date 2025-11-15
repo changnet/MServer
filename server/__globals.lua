@@ -1,4 +1,4 @@
--- auto export by lua-tags 158 symbols
+-- auto export by lua-tags 157 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -142,7 +142,6 @@ return {
 "oo", -- src/global/oo.lua
 "print", -- src/global/log.lua
 "printf", -- src/global/log.lua
-"raw_table_dump", -- src/global/table.lua
 "require", -- src/global/require.lua
 "require_conf", -- src/global/require.lua
 "require_define", -- src/global/require.lua
