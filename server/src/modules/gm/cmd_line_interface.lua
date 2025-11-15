@@ -21,10 +21,7 @@ local function do_cmd(cmd)
         cmd = "@" .. cmd
     end
 
-    local ok, msg = GM.dispatch("cli", 0, cmd)
-    if not ok then
-        print("cli error", msg)
-    end
+    GM.run_console_gm(cmd)
 end
 
 local function try_read()

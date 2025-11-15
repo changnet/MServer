@@ -27,23 +27,112 @@ function GM.reg(cmd, func, wtype, level)
     }
 end
 
+
+function GM.on_query_data()
+    local list = {}
+    for k, v in pairs(gm_data) do
+        table.insert(list, {
+            cmd = k,
+            wtype = v.wtype,
+            level = v.level,
+        })
+    end
+    return list
+end
+
+local function query_data()
+    -- 要处理gm时，所有节点应该已启动成功，因此不考虑查询过一次后，新增节点的问题
+    -- 至少要热更一次，才会重新查询
+
+    for other_addr in pairs(WorkerData) do
+        local data = Call.GM.on_query_data(other_addr)
+        for _, v in pairs(data or {}) do
+            local k = v.cmd
+            v.cmd = nil
+            gm_data[k] = v
+        end
+    end
+
+    is_query = true
+end
+
+local function find_gm(str)
+    if string.byte(str, 1) ~= 64 then
+        return nil, "gm need to start with @: " .. str
+    end
+
+    local pos = string.find(str, " ")
+    if not pos and string.len(str) < 1 then
+        return nil, "gm invalid string: " .. str
+    end
+    local cmd = string.sub(str, 2, pos or -1) -- 去掉@
+
+    local data = gm_data[cmd]
+    if not data then
+        if is_query then
+            return nil, "no such gm: " .. tostring(cmd)
+        end
+
+        query_data()
+        return find_gm(str)
+    end
+
+    return data
+end
+
+-- 分解gm字符串
+local function split_str(str)
+    local raw_str = string.sub(str, 2) -- 去掉@
+
+    -- 分解gm指令 @level 999分解为{level,999}
+    return string.split(raw_str, " ")
+end
+
 -- 执行玩家发的gm，通常在聊天中发送并以@开头
 function GM.run_player_gm(player, str)
     -- string.byte("@") == 64
     if string.byte(str, 1) ~= 64 then return false end
 
-    local ok, msg = GM.dispatch("player", player, str)
+    local gm_lv = player.gm_level or 0
+    if gm_lv <= 0 then return false end
+
+    local data, msg = find_gm(str)
+    if not data then
+        eprint("GM error", msg)
+        return
+    end
+
+    if gm_lv < data.level then
+        print("GM error", "no enough gm level")
+        return
+    end
+
+    local args = split_str(str)
+    local ok, msg1 = GM.dispatch("player", player.pid, data, args)
     if not ok then
-        print("GM error", msg)
+        eprint("GM error", msg1)
         -- 仍然返回true表示已执行gm
     end
 
     return true
 end
 
--- 转发或者运行gm
+function GM.run_console_gm(str)
+    local data, msg = find_gm(str)
+    if not data then
+        eprint("GM error", msg)
+        return
+    end
+
+    local args = split_str(str)
+    GM.dispatch("console", 0, data, args)
+end
+
+-- 运行gm
 function GM.run(source, pid, args)
-    print("GM run", source, pid, table.unpack(args))
+    print(string.format(
+        "GM run source = %s, pid = %s: ", tostring(source), tostring(pid)),
+        table.unpack(args))
 
     local cmd = args[1]
     local data = gm_data[cmd]
@@ -63,48 +152,13 @@ function GM.run(source, pid, args)
         end
     end
 
-    table.remove(args, 1)
-    data.func(player or pid, table.unpack(args))
-end
-
-local function query_data()
-    -- 要处理gm时，所有节点应该已启动成功，因此不考虑查询过一次后，新增节点的问题
-    -- 至少要热更一次，才会重新查询
-
-    for other_addr in pairs(WorkerData) do
-        local data = Call.GM.on_query_data(other_addr)
-        for k, v in pairs(data or {}) do
-            gm_data[k] = v
-        end
-    end
-
-    is_query = true
+    data.func(player or pid, table.unpack(args, 2))
 end
 
 -- 派发gm到指定节点执行
 -- @param pid 玩家id，后台gm或者控制台可以发0
-function GM.dispatch(source, pid, str)
-    if not string.start_with(str, "@") then
-        return false, "gm need to start with@:" .. str
-    end
-
-    local raw_ctx = string.sub(str, 2) -- 去掉@
-
-    -- 分解gm指令 @level 999分解为{level,999}
-    local args = string.split(raw_ctx, " ")
-
-    local cmd = args[1]
-    local data = gm_data[cmd]
-    if not data then
-        if is_query then
-            return false, "no such gm:" .. tostring(cmd)
-        end
-
-        query_data()
-        GM.dispatch(source, pid, cmd, args)
-        return false
-    end
-
+function GM.dispatch(source, pid, data, args)
+    assert(LOCAL_ADDR == MASTER_ADDR)
     -- 查询gm所在节点
     -- 如果是-1，则广播到所有节点执行
     -- 如果是某个类型的节点
@@ -112,9 +166,9 @@ function GM.dispatch(source, pid, str)
     --     如果没有路由，则在任意一个节点执行
     local wtype = data.wtype
     if -1 == wtype then
-        GM.run(source, pid, cmd, args)
+        GM.run(source, pid, args)
         for addr in pairs(WorkerData) do
-            Send.GM.run(addr, source, pid, cmd, args)
+            Send.GM.run(addr, source, pid, args)
         end
         return
     end
@@ -122,7 +176,7 @@ function GM.dispatch(source, pid, str)
     if 0 ~= pid then
         local addr = Worker.get_player_route(pid, wtype)
         if addr then
-            Send.GM.run(addr, source, pid, cmd, args)
+            Send.GM.run(addr, source, pid, args)
             return
         end
     end
@@ -133,11 +187,11 @@ function GM.dispatch(source, pid, str)
     for addr in pairs(WorkerData) do
         local wt, _, main = Engine.unmake_address(addr)
         if wt == wtype and (is_main == main) then
-            Send.GM.run(addr, source, pid, cmd, args)
+            Send.GM.run(addr, source, pid, args)
         end
     end
 
-    return false, "no gm node addr found" .. tostring(cmd)
+    return false, "no gm node addr found" .. tostring(args[1])
 end
 
 return GM
