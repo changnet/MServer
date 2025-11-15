@@ -1,11 +1,5 @@
 -- 集群
-Cluster = {
-    -- 集群节点类型
-    NODE_LOCAL   = 0x00, -- 本地worker，不通过socket通信
-    NODE_WORKER  = 0x01, -- worker直连，比process中转快
-    NODE_PROCESS = 0x02, -- 通过process转发
-    NODE_FORWARD = 0x03, -- 通过另一个进程转发，最慢
-}
+Cluster = {}
 
 --[[
 ## 在配置实现cluster配置，这个配置要保证几点：
@@ -213,7 +207,7 @@ function Cluster.connect_later(node_list)
             end,
             ready = function()
                 local d = WorkerData[addr]
-                if d and (d.node_type or 0xFFFF) < Cluster.NODE_FORWARD then
+                if d then
                     return true
                 end
 
@@ -231,11 +225,11 @@ function Cluster.accept(worker)
     printf("cluster accept %s:%d", ip, port)
 end
 
-local function set_one_worker_status(src_addr, addr, node_type, status)
-    Worker.set_status(src_addr, addr, node_type, status)
+local function set_one_worker_status(src_addr, addr, mode, status)
+    Worker.set_status(src_addr, addr, mode, status)
     -- 同步该节点的状态到所有的本地worker
     Worker.send_other_local(
-        Worker.set_status, src_addr, addr, node_type, status)
+        Worker.set_status, src_addr, addr, mode, status)
 
     printf("cluster node %s addr = %d, status = %d",
         Worker.addr_name(addr), addr, status)
@@ -245,9 +239,9 @@ end
 -- @param node 负责收发数据的集群节点worker，如果是转发则node为中转的节点
 -- @param src_addr 来源地址。A连接B进程，B包含鑫个节点，则这些节点的src_addr都是B进程地址
 -- @param addr 集群节点地址
--- @param node_type 节点类型
+-- @param mode 节点类型
 -- @param status 节点状态
-local function set_worker(node, src_addr, addr, node_type, status)
+local function set_worker(node, src_addr, addr, mode, status)
     local data = WorkerData[addr]
     local old = WorkerHash[addr]
 
@@ -255,7 +249,7 @@ local function set_worker(node, src_addr, addr, node_type, status)
     assert(not old or old.cluster_worker)
 
     local name = Worker.addr_name(addr)
-    if data and node_type >= data.node_type then
+    if data and mode >= data.mode then
         printf("cluster worker %s already exist, addr = %d, old src = %d, new = %d",
             name, addr, old.addr, node.addr)
     end
@@ -263,18 +257,18 @@ local function set_worker(node, src_addr, addr, node_type, status)
     WorkerHash[addr] = node
 
     -- 同步该节点的状态到所有的本地worker
-    set_one_worker_status(src_addr, addr, node_type, status)
+    set_one_worker_status(src_addr, addr, mode, status)
 end
 
 -- 把远程节点的worker添加到worker hash并设置状态数据
-function Cluster.set_worker_status(src_addr, addr, node_type, status)
+function Cluster.set_worker_status(src_addr, addr, mode, status)
     if not WorkerData[addr] and Worker.STOP ~= status then
         local node = WorkerHash[src_addr]
 
         assert(node and node.cluster_worker)
-        set_worker(node, src_addr, addr, node_type, status)
+        set_worker(node, src_addr, addr, mode, status)
     else
-        set_one_worker_status(src_addr, addr, node_type, status)
+        set_one_worker_status(src_addr, addr, mode, status)
     end
     ClusterProxy.response_one(src_addr, addr, status)
 end
@@ -283,7 +277,7 @@ end
 local function add_to_worker(node)
     local addr = node.addr
     for _, s in pairs(node.status_list) do
-        set_worker(node, addr, s.addr, s.node_type, s.status)
+        set_worker(node, addr, s.addr, s.mode, s.status)
     end
 
     -- 如果有proxy，同步数据到proxy
@@ -293,16 +287,16 @@ end
 
 -- 添加ClusterProxy的代理节点
 function Cluster.set_proxy_worker(node, status_list, src_addr)
+    local mode = Worker.PROXY
     if status_list then
         for _, s in pairs(status_list) do
-            set_worker(node, src_addr, s.addr, Cluster.NODE_FORWARD, s.status)
+            set_worker(node, src_addr, s.addr, mode, s.status)
         end
     else
         local status = Worker.STOP
-        local node_type = Cluster.NODE_FORWARD
         for addr, data in pairs(WorkerData) do
             if data.src_addr == src_addr then
-                set_one_worker_status(src_addr, addr, node_type, status)
+                set_one_worker_status(src_addr, addr, mode, status)
             end
         end
     end
@@ -311,9 +305,9 @@ end
 -- 添加ClusterProxy的代理节点
 function Cluster.set_one_proxy_worker(node, src_addr, addr, status)
     if Worker.STOP == status then
-        set_one_worker_status(src_addr, addr, Cluster.NODE_FORWARD, status)
+        set_one_worker_status(src_addr, addr, Worker.PROXY, status)
     else
-        set_worker(node, src_addr, addr, Cluster.NODE_FORWARD)
+        set_worker(node, src_addr, addr, Worker.PROXY, status)
     end
 end
 
@@ -339,10 +333,10 @@ local function remove_from_worker(node)
     if not WorkerData[src_addr] then return end -- 还没握手成功，没有映射任何worker
 
     local status = Worker.STOP
-    local node_type = Cluster.NODE_WORKER
     for addr, w in pairs(WorkerHash) do
         if w == node then
-            set_one_worker_status(src_addr, addr, node_type, status)
+            local data = WorkerData[addr]
+            set_one_worker_status(src_addr, addr, data.mode, status)
         end
     end
 

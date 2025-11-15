@@ -3,6 +3,10 @@ Worker = {
     STOP     = 0, -- 关闭
     STARTING = 1, -- 启动中
     READY    = 2, -- 启动完成
+
+    THREAD  = 1, -- worker模式，本地线程
+    CLUSTER = 2, -- worker模式，集群节点，socket通信
+    PROXY   = 3, -- worker模式，需要代理转发的集群节点，最慢
 }
 
 local WorkerThread = require "engine.WorkerThread"
@@ -21,7 +25,7 @@ MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 -- @return 返回未启动完成的worker地址
 function Worker.is_local_ready()
     for addr, data in pairs(WorkerData) do
-        if not data.node_type and not data.ready then
+        if not data.mode and not data.ready then
             return addr
         end
     end
@@ -51,7 +55,7 @@ function Worker.start(setting)
 
     local data = table.copy(setting)
     data.status = Worker.STARTING
-    data.node_type = Cluster.NODE_LOCAL
+    data.mode = Worker.THREAD
 
     WorkerHash[addr] = w
     WorkerData[addr] = data
@@ -64,7 +68,7 @@ function Worker.start(setting)
 
     -- 同步状态到远程集群节点
     Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, addr, Cluster.NODE_PROCESS, Worker.STARTING)
+        LOCAL_ADDR, addr, Worker.CLUSTER, Worker.STARTING)
 end
 
 -- 从配置创建多个worker
@@ -92,18 +96,18 @@ function Worker.on_start_ready(addr)
     -- 当前worker启动完成，先通知主线程，再由主线程同步到其他worker
     -- 因为启动的时候当前worker是没有其他worker的数据，所以这时候只能由主线程同步
 
-    Worker.set_status(MAIN_ADDR, addr, Cluster.NODE_LOCAL, Worker.READY)
+    Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, Worker.READY)
 
     for other_addr, data in pairs(WorkerData) do
-        if other_addr ~= addr and Cluster.NODE_LOCAL == data.node_type then
+        if other_addr ~= addr and Worker.THREAD == data.mode then
             -- 同步给其他local worker
             Send.Worker.set_status(other_addr,
-                MAIN_ADDR, addr, Cluster.NODE_LOCAL, Worker.READY)
+                MAIN_ADDR, addr, Worker.THREAD, Worker.READY)
         end
     end
 
     Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, addr, Cluster.NODE_PROCESS, Worker.READY)
+        LOCAL_ADDR, addr, Worker.CLUSTER, Worker.READY)
 end
 
 -- worker启动完成
@@ -115,9 +119,9 @@ function Worker.start_ready()
 
     -- 触发worker启动完成事件
     for addr, data in pairs(WorkerData) do
-        SE.fire(SE_WORKER_ME_READY, addr, data.node_type)
+        SE.fire(SE_WORKER_ME_READY, addr, data.mode)
         if data.status == Worker.READY then
-            SE.fire(SE_WORKER_BOTH_READY, addr, data.node_type)
+            SE.fire(SE_WORKER_BOTH_READY, addr, data.mode)
         end
     end
 end
@@ -135,9 +139,9 @@ function Worker.stop(addr)
     printf("worker %s shutting down, addr = %d", Worker.addr_name(addr), addr)
     -- 先通知其他worker，这个worker需要关闭
     for other_addr, data in pairs(WorkerData) do
-        if other_addr ~= addr and Cluster.NODE_LOCAL == data.node_type then
+        if other_addr ~= addr and Worker.THREAD == data.mode then
             Send.Worker.set_status(other_addr,
-                MAIN_ADDR, addr, Cluster.NODE_LOCAL, Worker.STOP)
+                MAIN_ADDR, addr, Worker.THREAD, Worker.STOP)
         end
     end
 
@@ -167,28 +171,28 @@ end
 -- 标记某个worker状态，并同步到其他worker
 -- @param src_addr 来源地址。A连接B进程，B包含鑫个节点，则这些节点的src_addr都是B进程地址
 -- @param status 0停止 1启动 2启动完成
-function Worker.set_status(src_addr, addr, node_type, status)
+function Worker.set_status(src_addr, addr, mode, status)
     assert(addr ~= LOCAL_ADDR)
 
     if Worker.STOP == status then
         WorkerHash[addr] = nil
         WorkerData[addr] = nil
-        SE.fire(SE_WORKER_STOP, addr, node_type)
+        SE.fire(SE_WORKER_STOP, addr, mode)
     elseif Worker.STARTING == status then
         local data = Worker.get_data(addr)
         local old_status = data.status
         data.status = status
-        data.node_type = node_type
+        data.mode = mode
         data.src_addr = src_addr
 
         -- 对于集群节点，交叉和转发会导致同步多次，同一个状态只触发一次
         if old_status ~= status then
-            SE.fire(SE_WORKER_START, addr, node_type)
+            SE.fire(SE_WORKER_START, addr, mode)
         end
     elseif Worker.READY == status then
         -- 主线程负责启动worker，一开始就设置了WorkerHash[addr]，不要覆盖
         -- 主线程最原始的worker被释放掉是会触发gc的，程序会当掉
-        if LOCAL_ADDR ~= MAIN_ADDR and node_type == Cluster.NODE_LOCAL then
+        if LOCAL_ADDR ~= MAIN_ADDR and mode == Worker.THREAD then
             local w = assert(Engine.get_thread_ctx(addr))
             WorkerHash[addr] = w
         end
@@ -197,10 +201,10 @@ function Worker.set_status(src_addr, addr, node_type, status)
         local old_status = data.status
 
         data.status = status
-        data.node_type = node_type
+        data.mode = mode
         data.src_addr = src_addr
         if old_status ~= status and g_ready then
-            SE.fire(SE_WORKER_BOTH_READY, addr, node_type)
+            SE.fire(SE_WORKER_BOTH_READY, addr, mode)
         end
     else
         assert(false)
@@ -211,7 +215,7 @@ end
 function Worker.send_other_local(func, ...)
     if LOCAL_ADDR ~= MAIN_ADDR then Send.invoke(MAIN_ADDR, func, ...) end
     for addr, data in pairs(WorkerData) do
-        if data.node_type == Cluster.NODE_LOCAL then
+        if data.mode == Worker.THREAD then
             Send.invoke(addr, func, ...)
         end
     end
@@ -221,7 +225,7 @@ end
 function Worker.call_other_local(func, ...)
     if LOCAL_ADDR ~= MAIN_ADDR then Call.invoke(MAIN_ADDR, func, ...) end
     for addr, data in pairs(WorkerData) do
-        if data.node_type == Cluster.NODE_LOCAL then
+        if data.mode == Worker.THREAD then
             Call.invoke(addr, func, ...)
         end
     end
@@ -229,23 +233,20 @@ end
 
 -- 获取需要同步的worker状态列表
 function Worker.get_status_list()
-    local local_send_type = Engine.is_main_addr(LOCAL_ADDR)
-        and Cluster.NODE_PROCESS or Cluster.NODE_WORKER
-
     local local_status = g_ready and Worker.READY or Worker.STARTING
     local status_list = {{
         addr = LOCAL_ADDR,
         status = local_status,
-        node_type = local_send_type
+        mode = Worker.CLUSTER
     }}
     for addr, data in pairs(WorkerData) do
-        local node_type = data.node_type
+        local mode = data.mode
 
-        if node_type == Cluster.NODE_LOCAL then
+        if mode == Worker.THREAD then
             table.insert(status_list, {
                 addr = addr,
                 status = data.status,
-                node_type = local_send_type,
+                mode = Worker.CLUSTER,
             })
         end
     end

@@ -264,7 +264,7 @@ local function boot_ready()
     -- 同步状态到集群节点，注意这里main_addr不是MAIN_ADDR而是LOCAL_ADDR
     -- main_addr是当前worker对应的线程地址
     Cluster.send_all(Cluster.set_worker_status,
-        LOCAL_ADDR, LOCAL_ADDR, Cluster.NODE_WORKER, Worker.READY)
+        LOCAL_ADDR, LOCAL_ADDR, Worker.CLUSTER, Worker.READY)
 end
 
 local function boot_next_modules()
