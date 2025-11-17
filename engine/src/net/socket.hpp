@@ -24,6 +24,14 @@ public:
         CS_CLOSED  = 2 // 已关闭
     };
 
+    // ip版本
+    enum IP_VERSION
+    {
+        IPV4    = 0, // ip v4
+        IPV6    = 1, // ip v6
+        IPV6_DS = 2, // ip v6 dual stack
+    };
+
 public:
     ~Socket();
     explicit Socket(int32_t socket_id);
@@ -35,7 +43,7 @@ public:
      * 把一个文件描述符设置为非阻塞(或者阻塞)
      * @param flag 0表示非阻塞，1表示阻塞
      */
-    static int32_t set_block(int32_t fd, int32_t flag);
+    static int32_t set_nonblock(int32_t fd, int32_t flag);
     /**
      * 启用TCP_NODELAY选项
      */
@@ -45,9 +53,11 @@ public:
     // 启用TCP的 user timeout
     int32_t set_user_timeout(int32_t timeout);
     // 启用IPV6双栈
-    int32_t set_ipv6only(int32_t fd, int32_t opt);
+    int32_t set_ipv6only(int32_t fd);
     // 设置socket读写的事件
     int32_t set_watcher_event(int32_t events);
+    // 设置当前socket的版本
+    void set_ip_version(int32_t version);
 
     /**
      * @brief 根据域名获取ip地址，此函数会阻塞
@@ -189,11 +199,10 @@ public:
     // 在socket关闭时解析剩下的数据，仅http适用
     int32_t unpack_on_closed(lua_State *L);
 
-protected:
-    int32_t socket_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
-
 private:
     int32_t fd_; /// 当前socket的文件描述符
+    int32_t socket_id_; // 唯一id，用于回调到C++时区分连接。用fd或者指针地址，都存在复用可能会重复的问题
+    int32_t ip_version_; // ipv4还是ipv6
 
     EVIO *w_; /// io事件监视器
     Packet *packet_;

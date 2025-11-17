@@ -22,20 +22,6 @@
     #include <sys/socket.h>
 #endif
 
-#ifdef IP_V4
-    #define AF_INET_X     AF_INET
-    #define sin_addr_x    sin_addr
-    #define sin_port_x    sin_port
-    #define sin_family_x  sin_family
-    #define sockaddr_in_x sockaddr_in
-#else
-    #define AF_INET_X     AF_INET6
-    #define sin_addr_x    sin6_addr
-    #define sin_port_x    sin6_port
-    #define sin_family_x  sin6_family
-    #define sockaddr_in_x sockaddr_in6
-#endif
-
 void Socket::library_end()
 {
 #ifdef __windows__
@@ -60,11 +46,12 @@ Socket::Socket(int32_t socket_id)
 {
     packet_ = nullptr;
 
-    fd_       = netcompat::INVALID;
-    w_        = new EVIO(socket_id, 0, -1);
+    fd_ = netcompat::INVALID;
+    w_  = new EVIO(socket_id, 0, -1);
     w_->mask_ |= EVIO::M_REF_WORKER;
 
-    socket_id_ = socket_id;
+    socket_id_  = socket_id;
+    ip_version_ = IPV4;
 }
 
 Socket::~Socket()
@@ -97,7 +84,7 @@ Socket::~Socket()
         //     delete w_;
         // }
         ELOG("socket destructor watcher not delete id = %d, fd = %d",
-            socket_id_, w_->fd_);
+             socket_id_, w_->fd_);
     }
 }
 
@@ -167,7 +154,7 @@ void Socket::flush()
     StaticGlobal::B->add_watcher_event(w_, EV_WRITE);
 }
 
-int32_t Socket::set_block(int32_t fd, int32_t flag)
+int32_t Socket::set_nonblock(int32_t fd, int32_t flag)
 {
 #ifdef __windows__
     // https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket
@@ -219,7 +206,7 @@ int32_t Socket::set_keep_alive(int32_t time, int32_t interval, int32_t probes)
     // windows下，keep alive的interval之类的是通过注册表来控制的
     DWORD optval = (time || interval || probes) ? 1 : 0;
     return setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&optval,
-                     sizeof(optval));
+                      sizeof(optval));
 #else
     int32_t optval = (time || interval || probes) ? 1 : 0;
     int32_t optlen = sizeof(optval);
@@ -228,9 +215,9 @@ int32_t Socket::set_keep_alive(int32_t time, int32_t interval, int32_t probes)
     int32_t ret = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
     if (0 > ret) return ret;
 
-    int32_t tcp_keepalive_time     = time; //60 = 无通信后60s开始发送
-    int32_t tcp_keepalive_interval = interval; //10 = 间隔10s发送
-    int32_t tcp_keepalive_probes   = probes;  //5 = 总共发送5次
+    int32_t tcp_keepalive_time     = time; // 60 = 无通信后60s开始发送
+    int32_t tcp_keepalive_interval = interval; // 10 = 间隔10s发送
+    int32_t tcp_keepalive_probes   = probes;   // 5 = 总共发送5次
 
     optlen = sizeof(tcp_keepalive_time);
     ret    = setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &tcp_keepalive_time, optlen);
@@ -269,7 +256,7 @@ int32_t Socket::set_user_timeout(int32_t timeout)
 /* http://www.man7.org/linux/man-pages/man7/tcp.7.html
  * since linux 2.6.37
  * 网络中存在unack数据包时开始计时，超时仍未收到ack，关闭网络
- * 网络中无数据包，该计算器不会生效，此时由keep-alive负责
+ * 网络中无数据包，该计时器不会生效，此时由keep-alive负责
  * 如果keep-alive的数据包也无ack，则开始计时.这时keep-alive同时有效，
  * 谁先超时则谁先生效
  */
@@ -284,13 +271,14 @@ int32_t Socket::set_user_timeout(int32_t timeout)
 #endif
 }
 
-int32_t Socket::set_ipv6only(int32_t fd, int32_t opt)
+int32_t Socket::set_ipv6only(int32_t fd)
 {
     // 如果是listen的socket，必须在bind之前设置
     // 如果是connect的socket，不需要设置，由目标地址决定。但如果传的ip是v4-map-v6格式，必须在connect之前设置
     // 如果是accept的socket，继承listen的设置
 
-    int32_t optval = opt;
+    if (ip_version_ == IPV4) return 0;
+    int32_t optval = ip_version_ == IPV6 ? 1 : 0;
     return setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
                       sizeof(optval));
 }
@@ -368,7 +356,7 @@ bool Socket::start(int32_t addr, int32_t fd, int32_t ev)
 {
     assert(fd_ == netcompat::INVALID);
 
-    fd_     = fd;
+    fd_ = fd;
 
     w_->fd_   = fd;
     w_->addr_ = addr;
@@ -393,32 +381,50 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
     }
 
     // 创建新socket并设置为非阻塞
-    int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
-    if (fd == netcompat::INVALID || set_block(fd, 0) < 0)
+    int32_t fd = (int32_t)::socket(ip_version_ == IPV4 ? AF_INET : AF_INET6,
+                                   SOCK_STREAM, IPPROTO_IP);
+    if (fd == netcompat::INVALID || set_nonblock(fd, 0) < 0)
     {
         int32_t e = netcompat::errorno();
         ELOG("Socket create %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
-#ifndef IP_V4
-    if (set_ipv6only(fd, 0))
+
+    if (set_ipv6only(fd))
     {
         int32_t e = netcompat::errorno();
         ELOG("Socket ipv6 %s:%d %s(%d)", host, port, netcompat::strerror(e), e);
         return -1;
     }
-#endif
 
-    struct sockaddr_in_x host_addr;
-    memset(&host_addr, 0, sizeof(host_addr));
-    host_addr.sin_family_x = AF_INET_X;
-    host_addr.sin_port_x   = htons((uint16_t)port);
+    int32_t ok;
+    size_t addr_size;
+    struct sockaddr *sock_addr;
+    if (ip_version_ == IPV4)
+    {
+        struct sockaddr_in host_addr;
+        memset(&host_addr, 0, sizeof(host_addr));
+        host_addr.sin_family = AF_INET;
+        host_addr.sin_port   = htons((uint16_t)port);
+        ok                   = inet_pton(AF_INET, host, &host_addr.sin_addr);
+        addr_size            = sizeof(host_addr);
+        sock_addr            = (struct sockaddr *)&host_addr;
+    }
+    else
+    {
+        struct sockaddr_in6 host_addr;
+        memset(&host_addr, 0, sizeof(host_addr));
+        host_addr.sin6_family = AF_INET6;
+        host_addr.sin6_port   = htons((uint16_t)port);
+        ok                    = inet_pton(AF_INET6, host, &host_addr.sin6_addr);
+        addr_size             = sizeof(host_addr);
+        sock_addr             = (struct sockaddr *)&host_addr;
+    }
 
     // https://man7.org/linux/man-pages/man3/inet_pton.3.html
     // AF_INET6 does not recognize IPv4 addresses.  An explicit IPv4-mapped
     // IPv6 address must be supplied in src instead
     // 即当使用ipv6时，即使使用双栈，也不支持 127.0.0.1 这种ip，只支持::ffff:127.0.0.1这种
-    int32_t ok = inet_pton(AF_INET_X, host, &host_addr.sin_addr_x);
     if (0 == ok)
     {
         ELOG("invalid host format: %s", host);
@@ -437,7 +443,7 @@ int32_t Socket::connect(int32_t addr, const char *host, int32_t port)
     // 连接可能返回0表示已经成功，不过这里不处理这种情况
     // EV_CONNECT会转化为EV_WRITE，写事件epoll会多次通知
     // 异步允许上层逻辑在connect返回再才触发on_connected
-    if (0 != ::connect(fd, (struct sockaddr *)&host_addr, sizeof(host_addr)))
+    if (0 != ::connect(fd, sock_addr, (int32_t)addr_size))
     {
         int32_t e = netcompat::errorno();
         if (netcompat::iserror(e))
@@ -471,24 +477,45 @@ int32_t Socket::address(lua_State *L) const
 {
     if (fd_ == netcompat::INVALID) return 0;
 
-    struct sockaddr_in_x addr;
-
-    memset(&addr, 0, sizeof(addr));
-    socklen_t addr_len = sizeof(addr);
-
-    if (getpeername(fd_, (struct sockaddr *)&addr, &addr_len) < 0)
+    const char *ret;
+    int32_t port;
+    char buf[INET6_ADDRSTRLEN]; // must be at least INET6_ADDRSTRLEN bytes long
+    if (ip_version_ == IPV4)
     {
-        int32_t e = netcompat::errorno();
-        ELOG("socket::address getpeername error: %s\n", netcompat::strerror(e));
-        return 0;
+        struct sockaddr_in addr;
+
+        memset(&addr, 0, sizeof(addr));
+        socklen_t addr_len = sizeof(addr);
+
+        if (getpeername(fd_, (struct sockaddr *)&addr, &addr_len) < 0)
+        {
+            int32_t e = netcompat::errorno();
+            ELOG("socket::address getpeername error: %s\n",
+                 netcompat::strerror(e));
+            return 0;
+        }
+
+        port = ntohs(addr.sin_port);
+        ret  = inet_ntop(AF_INET, &addr.sin_addr, buf, (socklen_t)sizeof(buf));
     }
+    else
+    {
+        struct sockaddr_in6 addr;
 
+        memset(&addr, 0, sizeof(addr));
+        socklen_t addr_len = sizeof(addr);
 
-     int32_t port = ntohs(addr.sin_port_x);
+        if (getpeername(fd_, (struct sockaddr *)&addr, &addr_len) < 0)
+        {
+            int32_t e = netcompat::errorno();
+            ELOG("socket::address getpeername error: %s\n",
+                 netcompat::strerror(e));
+            return 0;
+        }
 
-     char buf[INET6_ADDRSTRLEN]; // must be at least INET6_ADDRSTRLEN bytes long
-     const char *ret = inet_ntop(
-        AF_INET_X, &addr.sin_addr_x, buf, (socklen_t)sizeof(buf));
+        port = ntohs(addr.sin6_port);
+        ret = inet_ntop(AF_INET6, &addr.sin6_addr, buf, (socklen_t)sizeof(buf));
+    }
 
     if (!ret)
     {
@@ -511,7 +538,8 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         return -1;
     }
 
-    int32_t fd = (int32_t)::socket(AF_INET_X, SOCK_STREAM, IPPROTO_IP);
+    int32_t fd = (int32_t)::socket(ip_version_ == IPV4 ? AF_INET : AF_INET6,
+                                   SOCK_STREAM, IPPROTO_IP);
     if (fd == netcompat::INVALID)
     {
         return -1;
@@ -519,14 +547,15 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
 
     int32_t ok     = 0;
     int32_t optval = 1;
-    struct sockaddr_in_x host_addr;
+    size_t addr_size;
+    struct sockaddr *sock_addr;
     /*
      * enable address reuse.it will help when the socket is in TIME_WAIT status.
      * for example:
      *     server crash down and the socket is still in TIME_WAIT status.if try
      * to restart server immediately,you need to reuse address.but note you may
      * receive the old data from last time.
-     * 
+     *
      * 注意，win下是允许多个进程绑定到同个端口，没有返回错误
      * linux下只能绑定到time wait状态的端口
      */
@@ -536,16 +565,33 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
-    if (set_block(fd, 0) < 0)
+    if (set_nonblock(fd, 0) < 0)
     {
         goto FAIL;
     }
 
-    memset(&host_addr, 0, sizeof(host_addr));
-    host_addr.sin_family_x = AF_INET_X;
-    host_addr.sin_port_x   = htons((uint16_t)port);
+    if (ip_version_ == IPV4)
+    {
+        struct sockaddr_in host_addr;
+        memset(&host_addr, 0, sizeof(host_addr));
+        host_addr.sin_family = AF_INET;
+        host_addr.sin_port   = htons((uint16_t)port);
 
-    ok = inet_pton(AF_INET_X, host, &host_addr.sin_addr_x);
+        ok        = inet_pton(AF_INET, host, &host_addr.sin_addr);
+        addr_size = sizeof(host_addr);
+        sock_addr = (struct sockaddr *)&host_addr;
+    }
+    else
+    {
+        struct sockaddr_in6 host_addr;
+        memset(&host_addr, 0, sizeof(host_addr));
+        host_addr.sin6_family = AF_INET6;
+        host_addr.sin6_port   = htons((uint16_t)port);
+
+        ok        = inet_pton(AF_INET6, host, &host_addr.sin6_addr);
+        addr_size = sizeof(host_addr);
+        sock_addr = (struct sockaddr *)&host_addr;
+    }
     if (0 == ok)
     {
         errno = EADDRNOTAVAIL; // Address not available
@@ -557,15 +603,13 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
         goto FAIL;
     }
 
-#ifndef IP_V4
     // 如果使用ip v6，把ipv6 only关掉，这样允许v4的连接以 IPv4-mapped IPv6 的形式连进来
-    if (set_ipv6only(fd, 0))
+    if (set_ipv6only(fd))
     {
         goto FAIL;
     }
-#endif
 
-    if (::bind(fd, (struct sockaddr *)&host_addr, sizeof(host_addr)) < 0)
+    if (::bind(fd, sock_addr, (int32_t)addr_size) < 0)
     {
         goto FAIL;
     }
@@ -597,7 +641,7 @@ int32_t Socket::close()
     if (0 != (w_->mask_ & EVIO::M_REF_BACKEND))
     {
         ELOG("socket close but backend still using id = %d, fd = %d",
-            socket_id_, w_->fd_);
+             socket_id_, w_->fd_);
         return -1;
     }
 
@@ -607,14 +651,15 @@ int32_t Socket::close()
     if (fd_ != netcompat::INVALID)
     {
         netcompat::close(fd_);
-        fd_ = netcompat::INVALID;
+        fd_     = netcompat::INVALID;
         w_->fd_ = netcompat::INVALID;
     }
 
     return e;
 }
 
-static int32_t push_accept_error(lua_State* L, int32_t e, const char *msg = nullptr)
+static int32_t push_accept_error(lua_State *L, int32_t e,
+                                 const char *msg = nullptr)
 {
     lua_pushinteger(L, netcompat::INVALID);
     lua_pushinteger(L, e);
@@ -647,10 +692,10 @@ int32_t Socket::accept(lua_State *L)
     no = Socket::validate();
     if (0 != no) return push_accept_error(L, no, netcompat::strerror(no));
 
-    if (set_block(fd, 0))
+    if (set_nonblock(fd, 0))
     {
         int32_t e = netcompat::errorno();
-        ELOG("fd set_block fail, fd = %d, e = %d: %s", fd, e,
+        ELOG("fd set_nonblock fail, fd = %d, e = %d: %s", fd, e,
              netcompat::strerror(e));
         netcompat::close(fd);
         return push_accept_error(L, e);
@@ -699,7 +744,7 @@ int32_t Socket::unpack(lua_State *L)
     if (unlikely(!packet_)) return Packet::unpack_error(L, "socket no packet");
 
     auto &buffer = w_->io_->get_recv_buffer();
-    int32_t ret = packet_->unpack(L, buffer);
+    int32_t ret  = packet_->unpack(L, buffer);
 
     return ret;
 }
@@ -711,14 +756,12 @@ int32_t Socket::unpack_on_closed(lua_State *L)
 
 void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
 {
-    if(!w_ || w_->io_) return nullptr;
+    if (!w_ || w_->io_) return nullptr;
 
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE:
-        io = new IO(socket_id_);
-        break;
+    case IO::IOT_NONE: io = new IO(socket_id_); break;
     case IO::IOT_SSL:
         if (!tls_ctx) return nullptr;
         io = new SSLIO(socket_id_, tls_ctx);
@@ -824,4 +867,9 @@ int32_t Socket::get_errno() const
 bool Socket::is_remote_close() const
 {
     return w_ ? w_->mask_ & EVIO::M_REMOTE_CLOSE : 0;
+}
+
+void Socket::set_ip_version(int32_t version)
+{
+    ip_version_ = version;
 }

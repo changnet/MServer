@@ -106,6 +106,7 @@ function Socket:on_accepting(fd)
 
     -- 必须在继承后设置参数，不然用些初始化的参数就会不对
     socket:set_param()
+    socket:set_ip_version(self.listen_ip)
 
     -- 必须在设置好各种io参数后才能启动
     -- 不然backend线程在set_param完成之前触发读写事件就会出错
@@ -169,6 +170,19 @@ end
 function Socket:on_accepted()
 end
 
+-- 根据ip自动设置ip版本
+function Socket:set_ip_version(ip)
+    local ipv = self.ip_version
+    if not ipv then
+        if ip:find(":") then
+            ipv = 2 -- ipv6 dual stack
+        else
+            ipv = 0
+        end
+    end
+    self.s:set_ip_version(ipv)
+end
+
 -- 连接到其他服务器
 -- @param host 目标服务器地址
 -- @param port 目标服务器端口
@@ -182,6 +196,7 @@ function Socket:connect(host, port, ip)
     self.host = host
     self.port = port
 
+    self:set_ip_version(ip)
     local fd = self.s:connect(ADDR, ip, port)
 
     self.status = OPENING
@@ -213,6 +228,7 @@ function Socket:reconnect()
     self.s = EngineSocket(self.socket_id)
     SocketMgr.add(self)
 
+    self:set_ip_version(ip)
     local fd = self.s:connect(ADDR, ip, self.port)
 
     self.status = OPENING
@@ -238,6 +254,7 @@ function Socket:listen(ip, port)
     self.listen_ip = ip
     self.listen_port = port
 
+    self:set_ip_version(ip)
     local fd = self.s:listen(ADDR, ip, port)
     if fd > 0 then
         self.status = OPENED -- 对于监听的socket，不会触io_ready，这里直接设置状态
