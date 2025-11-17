@@ -3,7 +3,7 @@
 -- xzc
 
 -- 玩家对象
-local Player = oo.class()
+local Player = oo.class("Player")
 
 local AutoId = require "modules.system.auto_id"
 

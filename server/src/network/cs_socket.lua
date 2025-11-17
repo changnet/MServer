@@ -2,7 +2,7 @@ local WebSocket = require "network.websocket"
 local EngineSocket = require "engine.Socket"
 
 -- 客户端与服务器的连接，用于机器人和单元测试
-local CsSocket = oo.class(WebSocket)
+local CsSocket = oo.class("CsSocket", WebSocket)
 
 CsSocket.default_param = {
     pkt = EngineSocket.PT_WSSTREAM, -- 打包类型

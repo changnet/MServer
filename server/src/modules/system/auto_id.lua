@@ -4,7 +4,7 @@
 -- auto increament id 一个不存库的自增id。如果达到最大值，则从1重复自增
 local LIMIT = require "global.limits"
 
-local AutoId = oo.class()
+local AutoId = oo.class("AutoId")
 
 function AutoId:__init()
     self.seed = 0

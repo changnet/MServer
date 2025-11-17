@@ -1,5 +1,5 @@
 -- 灯塔aoi
-local TowerAoi = oo.class()
+local TowerAoi = oo.class("TowerAoi")
 
 --[[
 1. 坐标允许有负数。有负数时，需要指定一个offset，把负数转换为正数

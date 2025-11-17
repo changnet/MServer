@@ -1,5 +1,5 @@
 -- 优先级管理器
-local PriorityManager = oo.class()
+local PriorityManager = oo.class("PriorityManager")
 
 --[[
     每个优先级一组，前一个优先级的完成后才进行下一个优先级

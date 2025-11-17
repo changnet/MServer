@@ -14,7 +14,7 @@ local CLOSING = SocketMgr.CLOSING
 local ADDR = LOCAL_ADDR
 
 -- 网络连接基类
-local Socket = oo.class()
+local Socket = oo.class("Socket")
 
 --[[
 on_message

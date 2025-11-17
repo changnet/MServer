@@ -1,5 +1,5 @@
 -- MongoDB读写
-local MongoDB = oo.class()
+local MongoDB = oo.class("MongoDB")
 
 local Mongo = require "engine.Mongo"
 

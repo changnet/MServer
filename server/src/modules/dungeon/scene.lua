@@ -10,7 +10,7 @@ local Aoi = require "engine.GridAoi"
 local ET = require "modules.entity.entity_header"
 local scene_conf = require "config.dungeon.scene_conf"
 
-local Scene = oo.class()
+local Scene = oo.class("Scene")
 
 -- 缓存一个table用于和底层交互，避免频繁创建table
 local tmp_list = {}

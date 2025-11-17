@@ -634,12 +634,12 @@ end)
 
 Test.describe("lua oo test", function()
     Test.it("lua oo test", function()
-        local C1 = oo.class()
+        local C1 = oo.class("C1")
         function C1:test1()
             return 444
         end
 
-        local C2 = oo.class(C1)
+        local C2 = oo.class("C2", C1)
         function C2:test2()
             return 888
         end

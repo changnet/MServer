@@ -1,5 +1,5 @@
 -- 堆数据结构（即C++的priority_queue），通过不同的compare函数实现大小堆
-local Heap = oo.class()
+local Heap = oo.class("Heap")
 
 local function alloc_id(self)
     local id = self.next_id

@@ -3,7 +3,7 @@
 -- xzc
 -- 处理一些杂七杂八的小功能，存储他们的数据
 local Module = require "modules.player.module"
-local Misc = oo.class(Module)
+local Misc = oo.class("Misc", Module)
 
 function Misc:__init(pid, player)
     Module.__init(self, pid, player)

@@ -1,7 +1,7 @@
 local SsSocket = require "network.ss_socket"
 
 -- 把远程集群节点伪装成本地worker，统一调用接口
-local ClusterWorker = oo.class(SsSocket)
+local ClusterWorker = oo.class("ClusterWorker", SsSocket)
 
 function ClusterWorker:__init(name)
     SsSocket.__init(self)

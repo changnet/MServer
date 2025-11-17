@@ -13,7 +13,7 @@ mysql数据存储处理
 
 local MySql = require "engine.MySql"
 
-local MySQL = oo.class()
+local MySQL = oo.class("MySQL")
 
 local DEBUG = true -- 是否启用调试模式
 local stmt_str = MySql.stmt_str

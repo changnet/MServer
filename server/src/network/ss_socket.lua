@@ -3,7 +3,7 @@ local Socket = require "network.socket"
 local EngineSocket = require "engine.Socket"
 
 -- 服务器之间的链接
-local SsSocket = oo.class(Socket)
+local SsSocket = oo.class("SsSocket", Socket)
 
 SsSocket.default_param = {
     pkt = EngineSocket.PT_SSSTREAM, -- 打包类型

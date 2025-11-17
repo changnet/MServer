@@ -4,7 +4,7 @@
 -- 实体基类
 -- 由于实体在场景中使用比较频繁，一开始不想用继承的，不过考虑下还是用了。
 -- 到时测试得到结果后再做处理
-local Entity = oo.class()
+local Entity = oo.class("Entity")
 
 -- @eid:实体唯一id
 -- @et :实体类型

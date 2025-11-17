@@ -2,7 +2,7 @@ local WebSocket = require "network.websocket"
 local EngineSocket = require "engine.Socket"
 
 -- 服务器与客户端的连接
-local ScSocket = oo.class(WebSocket)
+local ScSocket = oo.class("ScSocket", WebSocket)
 
 ScSocket.default_param = {
     pkt = EngineSocket.PT_WSSTREAM, -- 打包类型

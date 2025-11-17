@@ -5,7 +5,7 @@
 -- 高16位为计数，低32位为时间戳,共48位，可用double（最高52位整数）表示，每秒支持65535个id
 local LIMIT = require "global.limits"
 
-local TimeId = oo.class()
+local TimeId = oo.class("TimeId")
 
 function TimeId:__init()
     -- TODO:2038年可以修改偏移的位数或者对now作一个偏移，不再从1970年计算

@@ -108,21 +108,15 @@ end
     oo.class() -- 无继承
     oo.class( s3,s2,s1,s0 ) -- 多继承
 ]]
-local function create_class(new_method, ...)
+local function create_class(name, new_method, ...)
     --[[
     类是用名字做为唯一标识，并且这个名字热更后，还必须保持一致，否则热更不到旧对象
-    使用debug.getinfo(2)获取创建类时的文件名+行数作为类名是唯一的，但热更后文件名、
-    行数可能会变（虽然比较少，但危险），所以还是只能手动传文件名
-    ]]
+    使用debug.getinfo(2)获取创建类时的文件名+行数作为类名是唯一的，但热更后文件名、行数可能会变
+    如果使用自动生成类似限制比较多（比如热更不能改文件名），所以还是手动传类名好些
+
     local info = debug.getinfo(2)
-
-    -- name保证不同路径同名文件中的类不会重复
-    -- short_name是用来打印日志，名字太长就不好看了
-    -- 同一个文件中可声明多个类，因此需要行号
-    local name = string.format("%s_%d", info.short_src, info.currentline)
-
-    local file_name = string.match(info.short_src, "([^/\\]+)%.lua")
-    local short_name = string.format("%s_%d", file_name, info.currentline)
+    name = info.short_src
+    ]]
 
     local clz = name_class[name]
     -- 如果已经存在，则是热更，先把旧函数都清空
@@ -138,19 +132,21 @@ local function create_class(new_method, ...)
     end
 
     -- lazy_class(new_method,clz,super,...)
-    return fast_class(new_method, short_name, clz, ...)
+    return fast_class(new_method, name, clz, ...)
 end
 
 -- 声明普通类
+-- @param name 类名，必须唯一
 -- @param ... 基类，可继承多个基类
-function oo.class(...)
-    return create_class(new, ...)
+function oo.class(name, ...)
+    return create_class(name, new, ...)
 end
 
 -- 声明lua单例类
+-- @param name 类名，必须唯一
 -- @param ... 基类，可继承多个基类
-function oo.singleton(...)
-    return create_class(new_singleton, ...)
+function oo.singleton(name, ...)
+    return create_class(name, new_singleton, ...)
 end
 
 -- 把src中指定的的函数按template构建到cls中
