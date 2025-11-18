@@ -99,4 +99,28 @@ function MongoDB:connect(host, port, user, passwd, database)
         user, passwd, host, port or 27017, database))
 end
 
+-- 按优先级连接mysql
+function MongoDB:connect_later(host, port, user, password, database)
+    local name = "MongoDB:" .. database
+    Startup.reg({
+        name = name,
+        start = function()
+            local e = self:connect(host, port, user, password, database)
+            if 0 ~= e then
+                local e1, str = self:error()
+                printf("%s(%d): %s", name, e1, str)
+                return false
+            end
+            return true
+        end,
+        ready = function()
+            if 0 == self:ping() then return true end
+
+            local e, str = self:error()
+            return false, string.format("%s(%d): %s", name, e, str)
+        end
+
+    })
+end
+
 return MongoDB

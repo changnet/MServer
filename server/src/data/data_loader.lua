@@ -2,4 +2,7 @@
 
 require "engine.preloader"
 
--- local local_type = LOCAL_TYPE -- 当前worker的类型
+local require = require_worker
+
+require("mysql.mysql", W_MYSQL)
+require("mongodb.mongodb", W_MONGODB)

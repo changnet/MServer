@@ -99,7 +99,7 @@ Test.describe("socket test", function()
         sc_listen.default_param = sc_param
         sc_listen:listen(local_host, ss_port)
         sc_listen.on_accepted = function(self)
-            sc_srv = self
+            sc_srv = assert(self)
         end
         sc_listen.on_connected = function() end
         sc_listen.on_disconnected = function() end

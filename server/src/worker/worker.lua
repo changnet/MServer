@@ -75,7 +75,7 @@ end
 function Worker.start_later(settings)
     Startup.reg({
         name = "worker",
-        boot = function()
+        start = function()
             for _, s in pairs(settings) do
                 Worker.start(s)
             end

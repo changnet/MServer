@@ -15,9 +15,9 @@ Test.describe("mongodb test", function()
     Test.before(function()
         mongodb = MongoDB()
 
+        local conf = g_setting.mongodb
         local e = mongodb:connect(
-            g_setting.mongo_ip, g_setting.mongo_port,
-            g_setting.mongo_user, g_setting.mongo_pwd, g_setting.mongo_db)
+            conf.ip, conf.port, conf.user, conf.pwd, conf.db)
 
         if 0 ~= e then print(mongodb:error()) end
         Test.equal(e, 0)

@@ -106,6 +106,31 @@ function MySQL:connect(host, port, user, password, database)
     return self.mysql:connect(host, port, user, password, database)
 end
 
+-- 按优先级连接mysql
+function MySQL:connect_later(host, port, user, password, database, ssl)
+    local name = "MySQL:" .. database
+    Startup.reg({
+        name = name,
+        start = function()
+            if not ssl then self:set_ssl(false) end
+            local e = self:connect(host, port, user, password, database)
+            if 0 ~= e then
+                local e1, str = self.mysql:error()
+                printf("%s(%d): %s", name, e1, str)
+                return false
+            end
+            return true
+        end,
+        ready = function()
+            if 0 == self.mysql:ping() then return true end
+
+            local e, str = self.mysql:error()
+            return false, string.format("%s(%d): %s", name, e, str)
+        end
+
+    })
+end
+
 -- 是否启用ssl
 -- @param flag true表示启用，false表示禁用
 function MySQL:set_ssl(flag)

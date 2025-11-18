@@ -245,7 +245,7 @@ function Startup.reg(mod, priority)
     startup_modules:push(mod, priority)
 end
 
-local function boot_ready()
+local function start_ready()
     if startup_modules and startup_modules.timer then
         Timer.stop(startup_modules.timer)
     end
@@ -267,10 +267,10 @@ local function boot_ready()
         LOCAL_ADDR, LOCAL_ADDR, Worker.CLUSTER, Worker.READY)
 end
 
-local function boot_next_modules()
+local function start_next_module()
     local list = startup_modules:next()
     if not list then
-        boot_ready()
+        start_ready()
         return true
     end
 
@@ -279,7 +279,7 @@ local function boot_next_modules()
     local all_ready = true
     for _, mod in ipairs(list) do
         local name = mod.name or "unknow"
-        if not mod.boot() then
+        if not mod.start() then
             all_ready = false
             startup_modules.wait[mod] = true
             printf("starting %s ...", name)
@@ -289,7 +289,7 @@ local function boot_next_modules()
     end
 
     if all_ready then
-        return boot_next_modules()
+        return start_next_module()
     end
     return all_ready
 end
@@ -313,16 +313,16 @@ local function check_module_ready()
         end
     end
 
-    if not next(wait) then boot_next_modules() end
+    if not next(wait) then start_next_module() end
 end
 
 -- 按优先级启动各个模块，启动完成后触发SE_READY事件
 function Startup.start()
     if not startup_modules then
-        return boot_ready()
+        return start_ready()
     end
 
-    if boot_next_modules() then return end
+    if start_next_module() then return end
 
     startup_modules.timer = Timer.interval(
         1000, 1000, -1, Rtti.temp_func(check_module_ready))

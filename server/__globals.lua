@@ -1,4 +1,4 @@
--- auto export by lua-tags 167 symbols
+-- auto export by lua-tags 169 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -134,6 +134,8 @@ return {
 "eprintf", -- src/global/log.lua
 "g_ai_mgr", -- src/android/android_boot.lua
 "g_lcodec", -- src/rpc/rpc.lua
+"g_mongodb", -- src/data/w_mongodb.lua
+"g_mysql", -- src/data/w_mysql.lua
 "g_ready", -- src/engine/bootstrap.lua
 "g_ready", -- src/engine/startup.lua
 "g_setting", -- src/engine/bootstrap.lua

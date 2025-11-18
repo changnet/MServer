@@ -100,7 +100,7 @@ function Cluster.listen_later(cluster_conf, node_name)
     local node_conf = assert(cluster_conf[node_name])
     Startup.reg({
         name = "cluster listen",
-        boot = function()
+        start = function()
             Cluster.listen(node_conf, node_name)
         end,
         ready = function()
@@ -202,7 +202,7 @@ function Cluster.connect_later(node_list)
         local node_conf = assert(cluster_conf[node_name])
         Startup.reg({
             name = string.format("cluster connect %s", node_name),
-            boot = function()
+            start = function()
                 Cluster.connect(node_conf, addr)
             end,
             ready = function()

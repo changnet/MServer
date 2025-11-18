@@ -37,7 +37,7 @@ function ClusterProxy.create_later(proxy_list)
         local addr = Worker.name_addr(to_name)
         Startup.reg({
             name = string.format("cluster proxy wait %s", to_name),
-            boot = function()
+            start = function()
                 ClusterProxy.create(name[1], to_name)
             end,
             ready = function()

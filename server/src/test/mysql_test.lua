@@ -61,9 +61,8 @@ Test.describe("mysql test", function()
 
         mysql:thread_init()
         mysql:set_ssl(false)
-        local e = mysql:connect(g_setting.mysql_ip, g_setting.mysql_port,
-                    g_setting.mysql_user, g_setting.mysql_pwd,
-                    g_setting.mysql_db)
+        local conf = g_setting.mysql
+        local e = mysql:connect(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
         if 0 ~= e then
             print("mysql connect error", mysql:error())
             Test.assert(false)
