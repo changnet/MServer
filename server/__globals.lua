@@ -1,4 +1,4 @@
--- auto export by lua-tags 169 symbols
+-- auto export by lua-tags 171 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,6 +7,7 @@ return {
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
 "AndroidMgr", -- src/android/android_mgr.lua
+"Await", -- src/rpc/rpc_proxy.lua
 "BAG", -- src/modules/protocol/protocol.lua
 "Bootstrap", -- src/engine/bootstrap.lua
 "CHAT", -- src/modules/protocol/protocol.lua
@@ -68,6 +69,7 @@ return {
 "RES_GOLD", -- src/modules/res/res_header.lua
 "RES_ITEM", -- src/modules/res/res_header.lua
 "Res", -- src/modules/res/res.lua
+"Router", -- src/router/router.lua
 "Rpc", -- src/rpc/rpc.lua
 "Rtti", -- src/global/rtti.lua
 "SE", -- src/modules/event/system_event.lua

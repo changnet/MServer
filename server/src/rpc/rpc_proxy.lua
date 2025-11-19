@@ -1,41 +1,35 @@
 -- Rpc的代理和委托功能
 
 --[[
-Lua的rpc调用，现在是基于字符串来实现的。把函数名、变量名传到远端，接收方收再从_G解析
-出对应的函数和参数，进行调用。这种方法最大的优点就是不需要函数注册。
+proxy、agent、delegate的区别
 
-在接收方，要求被调用的函数必须是全局函数，或者通过某种机制能被Rpc通过字符串解析出来。而
-实际情况中，有不少函数是成员函数。这就需要一个机制，把这些成员函数转为可识别函数。这个机
-制就是委托（deletegate）
+假如现在启动了10个game worker负责游戏逻辑，3个data worker负责数据缓存，3个mongodb worker负责数据读写
+现在game需要调用mongodb读取数据，但由于mongodb是由data负责分配，因此game必须先请求data，
+再由data分配一个mongodb节点去读数据。于是
 
-而在发送方，调用远程函数通常需要传地址，还经常因为参数不匹配需要转换一次。例如：
-rcp调用为：Call.Player.get_name(WorkerRoute.get_player_addr(), pid)
-这有两个问题，一是每次都需要用get_player_addr()获取地址。另一个是因为get_name是一个成
-员函数，它需要一个player对象才能调用，于是只能再写一个函数来转换
-function get_name_by_pid(pid)
-    local player = PlayerMgr.get(pid)
-    return player:get_name()
-end
-这是十分繁琐的，需要一个机制来统一处理这些东西。这个机制称为代理（proxy）
+1. game创建一个proxy("MongoDB", W_DATA)，这样就能直接用MongoDB发起调用MongoDB.find()，
+    这个请求会发给一个data节点
+2. data本身不存在MongoDB模块，它创建一个agent("MongoDB", W_MONGODB)，
+    在收到MongoDB请求时，会根据路由机制分配一个mongodb节点并把请求转发给这个节点
+3. mongodb中，实际不存在MongoDB这个模块，它只有一个g_mongodb实例。这时候delegate("MongoDB", g_mongodb)
+    将会接管所有MongoDB的请求，将以g_mongodb实体调用find函数，然后返回结果
+
 
 Rpc.proxy_wtype("MySql", W_MYSQL)
 Mysql.insert() -- 代理之后，将可以在当前worker直接调用，默认是无返回的
 
--- 如果需要返回值，则需要用Sync来调用
--- TODO 这个写法有点坑，但我没想出更好的写法
+-- 如果需要返回值，则需要用Await来调用（TODO 这个写法有点坑，但我没想出更好的写法）
 -- Call.MySql.select()肯定不行，这个Call已经被定义为最基础的rpc调用，不能引出歧义
 -- 如果支持像ts那样的写法就完美：local data = await MySql.select()
--- 但实现不了，只能用Sync来包一层
-Sync.MySql.select()
+-- 但实现不了，只能用Await来包一层Await.MySql.select()
 ]]
 
-local g_lcodec = g_lcodec
-local g_mthread = g_mthread
-local WorkerHash = WorkerHash
-local RPC_REQ = ThreadMessage.RPC_REQ
-local lcodec_encode_to_buffer = g_lcodec.encode_to_buffer
-
+local send = Rpc.send
+local call = Rpc.call
 local name_to_func = Rtti.name_to_func
+
+-- 调用函数并等待返回值，类似Call但用于Rpc.proxy_wtype代理过后的函数
+Await = {}
 
 -- 把一个对象委托给rpc，允许通过rpc调用该对象的成员函数
 -- @param name 模块名
@@ -68,11 +62,35 @@ end
 function Rpc.proxy_waddr(name, addr)
 end
 
--- 给指定模块建立一个rpc代理
--- 调用时按worker_route自动选择一个worker，适合无状态要求的模块。
+-- 给指定模块建立一个rpc代理，调用时按路由随机选择一个worker，适合无状态要求的模块
 -- @param name 模块名，如MySql，和远端模块名一致
 -- @param addr 远端worker的类型
 function Rpc.proxy_wtype(name, wtype)
+    _G[name] = Rpc.set_metatable({}, function (fname)
+        return function(pid, ...)
+            local addr = Router.find_worker_addr(wtype)
+            if not addr then
+                error(string.format(
+                    "no suitable addr for %s, wtype = %d, func = %s",
+                    name, wtype, fname))
+            end
+
+            return send(addr, fname, pid, ...)
+        end
+    end)
+
+    Await[name] = Rpc.set_metatable({}, function (fname)
+        return function(pid, ...)
+            local addr = Router.find_worker_addr(wtype)
+            if not addr then
+                error(string.format(
+                    "no suitable addr for %s, wtype = %d, func = %s",
+                    name, wtype, fname))
+            end
+
+            return call(addr, fname, pid, ...)
+        end
+    end)
 end
 
 
@@ -92,33 +110,21 @@ PlayerSend = {}
 -- 如果玩家不在线，将会return nil，需要自己处理好异常
 PlayerCall = {}
 
-local call_return = Rpc.call_return
-
 local function pid_send_func_factory(name)
     return function(pid, ...)
-        local addr = WorkerRoute.get_player_addr(pid)
+        local addr = Router.find_player_addr(pid)
         if not addr then error("no player address found") end
 
-        local w = WorkerHash[addr] or g_mthread
-        local ptr, size = lcodec_encode_to_buffer(g_lcodec, 0, name, pid, ...)
-        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+        return send(addr, name, pid, ...)
     end
 end
 
 local function pid_call_func_factory(name)
     return function(pid, ...)
-        local addr = WorkerRoute.get_player_addr(pid)
+        local addr = Router.find_player_addr(pid)
         if not addr then error("no player address found") end
 
-        local w = WorkerHash[addr] or g_mthread
-
-        -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
-        local session = CoPool.current_session()
-        local ptr, size = lcodec_encode_to_buffer(
-            g_lcodec, session, name, pid, ...)
-        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
-
-        return call_return(coroutine.yield())
+        return call(addr, name, pid, ...)
     end
 end
 
@@ -134,30 +140,19 @@ end
 
 local function player_send_func_factory(name)
     return function(pid, ...)
-        local addr = WorkerRoute.get_player_addr(pid)
+        local addr = Router.find_player_addr(pid)
         if not addr then error("no player address found") end
 
-        local w = WorkerHash[addr] or g_mthread
-        local ptr, size = lcodec_encode_to_buffer(
-            g_lcodec, 0, "invoke_player_call", name, pid, ...)
-        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+        return send(addr, "invoke_player_call", name, pid, ...)
     end
 end
 
 local function player_call_func_factory(name)
     return function(pid, ...)
-        local addr = WorkerRoute.get_player_addr(pid)
+        local addr = Router.find_player_addr(pid)
         if not addr then error("no player address found") end
 
-        local w = WorkerHash[addr] or g_mthread
-
-        -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
-        local session = CoPool.current_session()
-        local ptr, size = lcodec_encode_to_buffer(
-            g_lcodec, session, "invoke_player_call", name, pid, ...)
-        w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
-
-        return call_return(coroutine.yield())
+        return call(addr, "invoke_player_call", name, pid, ...)
     end
 end
 

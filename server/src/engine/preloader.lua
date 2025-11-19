@@ -30,7 +30,7 @@ require "global.table"
 require "global.math"
 require "global.string"
 require "global.time"
-require "worker.worker_route"
+require "router.router"
 
 require "event.system_event"
 require "gm.gm"

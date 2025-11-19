@@ -126,124 +126,6 @@ local function set_process_log(node_name, node_index)
     return format_log_name(node_name, node_index, true)
 end
 
--- 进程预加载必要的组件
-function Startup.process_init(loader)
-    set_path()
-    require "system.define" -- 基础定义
-
-    local node = g_env:get("--node")
-
-    -- game1拆分
-    local node_name, node_index = string.match(node, "(%a+)(%d*)")
-    node_index = assert(tonumber(node_index))
-
-    local wtype
-    for _, w in pairs(WORKER) do
-        if node_name == w[2] then
-            wtype = w[1]
-            break
-        end
-    end
-    assert(wtype, "no such node define")
-
-    local name = set_process_log(node_name, node_index)
-
-    g_thread = g_mthread
-
-    require "global.oo" -- 这个文件不能热更
-    require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
-    require "global.global" -- 加载错误处理函数
-    require "global.log" -- 加载log函数
-
-    log_env_info()
-    load_setting()
-
-    require "data.global_data"
-    require "engine.engine"
-    require "worker.worker"
-
-    MAIN_ADDR = Engine.make_address(wtype, node_index, 1)
-
-    LOCAL_TYPE = wtype
-    LOCAL_ADDR = MAIN_ADDR
-    LOCAL_NAME = name
-    g_env:set("MAIN_ADDR", MAIN_ADDR)
-    Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
-
-    require "engine.preloader"
-
-    Signal.mask(2, Shutdown.process_stop)
-    Signal.mask(15, Shutdown.process_stop)
-
-    math.randomseed(os.time())
-
-    __loader = loader
-    Timer.timeout(0, function()
-        -- 部分进程不需要loader，比如单元测试
-        if loader then Startup.load() end
-        Startup.start()
-    end)
-    print("main thread starting, addr =", MAIN_ADDR)
-end
-
--- 加载入口文件，将会引入所有模块
-function Startup.load()
-    require(__loader)
-    Rtti.collect()
-    SE.ready()
-end
-
--- worker预加载必要的组件
-function Startup.worker_init(addr, loader)
-    set_path()
-
-    require "global.oo" -- 这个文件不能热更
-    require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
-    require "global.global" -- 加载错误处理函数
-    require "global.log" -- 加载log函数
-    require "system.define" -- 基础定义
-
-    require "data.global_data"
-    require "engine.engine"
-    require "worker.worker"
-
-    local wtype, index = Engine.unmake_address(addr)
-    local name = Worker.type_name(wtype)
-
-    LOCAL_ADDR = addr
-    LOCAL_TYPE = wtype
-    LOCAL_NAME = string.format("%s%d", name, index)
-
-    MAIN_ADDR = g_env:get("MAIN_ADDR")
-
-    format_log_name(name, index)
-
-    Engine.add_thread_ctx(addr, g_thread:toludata())
-
-    load_setting()
-
-    require "engine.preloader"
-
-    math.randomseed(os.time())
-
-    __loader = loader
-    Timer.timeout(0, function()
-        Startup.load()
-        Startup.start()
-    end)
-end
-
--- 注册按优先级启动的模块
--- @param mod 需要启动的模块，包括boot_start、boot_ready函数
--- @param priority 启动优先级，越小优先级越高，默认20
-function Startup.reg(mod, priority)
-    if not startup_modules then
-        local PriorityManager = require "util.priority_manager"
-        startup_modules = PriorityManager()
-    end
-
-    startup_modules:push(mod, priority)
-end
 
 local function start_ready()
     if startup_modules and startup_modules.timer then
@@ -317,7 +199,7 @@ local function check_module_ready()
 end
 
 -- 按优先级启动各个模块，启动完成后触发SE_READY事件
-function Startup.start()
+local function start_modules()
     if not startup_modules then
         return start_ready()
     end
@@ -326,4 +208,125 @@ function Startup.start()
 
     startup_modules.timer = Timer.interval(
         1000, 1000, -1, Rtti.temp_func(check_module_ready))
+end
+
+-- 进程预加载必要的组件
+function Startup.process_init(loader, func)
+    set_path()
+    require "system.define" -- 基础定义
+
+    local node = g_env:get("--node")
+
+    -- game1拆分
+    local node_name, node_index = string.match(node, "(%a+)(%d*)")
+    node_index = assert(tonumber(node_index))
+
+    local wtype
+    for _, w in pairs(WORKER) do
+        if node_name == w[2] then
+            wtype = w[1]
+            break
+        end
+    end
+    assert(wtype, "no such node define")
+
+    local name = set_process_log(node_name, node_index)
+
+    g_thread = g_mthread
+
+    require "global.oo" -- 这个文件不能热更
+    require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
+    require "global.global" -- 加载错误处理函数
+    require "global.log" -- 加载log函数
+
+    log_env_info()
+    load_setting()
+
+    require "data.global_data"
+    require "engine.engine"
+    require "worker.worker"
+
+    MAIN_ADDR = Engine.make_address(wtype, node_index, 1)
+
+    LOCAL_TYPE = wtype
+    LOCAL_ADDR = MAIN_ADDR
+    LOCAL_NAME = name
+    g_env:set("MAIN_ADDR", MAIN_ADDR)
+    Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
+
+    require "engine.preloader"
+
+    Signal.mask(2, Shutdown.process_stop)
+    Signal.mask(15, Shutdown.process_stop)
+
+    math.randomseed(os.time())
+
+    __loader = loader
+    Timer.timeout(0, function()
+        -- 部分进程不需要loader，比如单元测试
+        if loader then Startup.load() end
+        if func then func() end
+        start_modules()
+    end)
+    print("main thread starting, addr =", MAIN_ADDR)
+end
+
+-- 加载入口文件，将会引入所有模块
+function Startup.load()
+    require(__loader)
+    Rtti.collect()
+    SE.ready()
+end
+
+-- worker预加载必要的组件
+function Startup.worker_init(addr, loader, func)
+    set_path()
+
+    require "global.oo" -- 这个文件不能热更
+    require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
+    require "global.global" -- 加载错误处理函数
+    require "global.log" -- 加载log函数
+    require "system.define" -- 基础定义
+
+    require "data.global_data"
+    require "engine.engine"
+    require "worker.worker"
+
+    local wtype, index = Engine.unmake_address(addr)
+    local name = Worker.type_name(wtype)
+
+    LOCAL_ADDR = addr
+    LOCAL_TYPE = wtype
+    LOCAL_NAME = string.format("%s%d", name, index)
+
+    MAIN_ADDR = g_env:get("MAIN_ADDR")
+
+    format_log_name(name, index)
+
+    Engine.add_thread_ctx(addr, g_thread:toludata())
+
+    load_setting()
+
+    require "engine.preloader"
+
+    math.randomseed(os.time())
+
+    __loader = loader
+    Timer.timeout(0, function()
+        Startup.load()
+        if func then func() end
+        start_modules()
+    end)
+end
+
+-- 注册按优先级启动的模块
+-- @param mod 需要启动的模块，包括boot_start、boot_ready函数
+-- @param priority 启动优先级，越小优先级越高，默认20
+function Startup.reg(mod, priority)
+    if not startup_modules then
+        local PriorityManager = require "util.priority_manager"
+        startup_modules = PriorityManager()
+    end
+
+    startup_modules:push(mod, priority)
 end

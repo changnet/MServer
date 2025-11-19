@@ -35,6 +35,9 @@ function Shutdown.process_stop()
 
     Cluster.close()
 
+    -- socket模块是异步的，要等backend线程处理完再退出
+    Engine.sleep(100)
+
     g_mthread:stop()
 end
 

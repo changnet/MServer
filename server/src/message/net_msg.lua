@@ -124,7 +124,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     end
 
     -- 对于player scene等类型的worker，存在多个，需要根据玩家当前在哪个worker进行转发
-    local addr = WorkerRoute.get_player_addr(pid, wtype)
+    local addr = Router.find_player_addr(pid, wtype)
     local worker = WorkerHash[addr]
     if not worker then
         eprint("player worker not found", socket.account, pid, addr)

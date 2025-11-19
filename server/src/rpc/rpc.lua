@@ -8,22 +8,39 @@ Call = {}
 Send = {}
 
 --[[
+RPC设计
+
 1. 版本1参考其他rpc库(如python xmlrpc: https://docs.python.org/3/library/xmlrpc.html)
-   做过一个需要注册的rpc，调用时能直接通过函数名调用，并且自动识别目标链接
-   如 rpc:foo() 中的foo是注册时生成的函数名，并且自动发往注册的链接
+   需要启动一个中心服务，注册所有函数。但这种方式很麻烦，要手动注册函数，还要考虑热更维护，起服同步
+   调用方式为Rpc:func()，这种方式对代码提示也不友好
 
-   但这有几个问题
-   1. 注册过程繁琐，包括热更、多进程同名(如多个场景进程)
-   2. 代码提示、跳转不正常
+2. 版本2采用传入函数指针的方式，如Call(Test.func, 1, 2, 3)，Test.func就是远程函数
+    这种方式在不同节点共用一份代码时，效果不错，代码工具可以直接跳转到Test.func
+    但改成多个worker模式后，不同节点代码不一样，会出现要调用的函数根本没有引用的情况
 
-2. 版本2采用传入函数指针的方式。但这种方式在改成多个worker模式后，很难取到函数指针了，因此放弃
+3. 很多lua的rpc实现都是传字符串的，比如skynet.call(addr, name, ...))
+    但传字符串会出现写代码无法跳转，无法提示的问题。
+    并且只传字符串，还要在接收时按字符串处理。和古老的定协议号方式没什么区别，只是数字换成字符串
 
-3. 版本3回归Rpc.Remote.func这种方式，但不需要注册，而是通过元表获取函数名。同时加入协程
-不用考虑回调函数的问题了
+
+在经过几个版本方案的更换，也参考了其他语言的一些实现，确定了RPC的基本需求
+1. 去中心化，不需要注册函数
+2. 能直接调用函数而不需要注册回调
+3. 有代码提示、跳转
+
+对于1，lua可以根据字符串解析出函数，因此可以去中心化免注册
+对于2，只需要稍微包装下通过字符串解析出函数，比如"Test.func"从全局获取Test模块，再取func函数即可
+对于3，现有的工具都无法满足，只能通过Rpc.proxy封装，解决一部分问题
+
+因此，新的方案采用Call.Test.func(addr, ...)这种方式，同时也保留Call.invoke(addr, Test.func, ...)方式，
+也支持Call.invoke(addr, "Test.func", ...)这种方式
+
+在适当的情况下，使用Rpc.proxy_wtype("Test", W_TEST)封装后，可以直接调用Test.func()
+
 
 关于热更
-    回调函数直接存的指针，因此是不能热更的，但是单次rpc调用时间很短，也不需要考虑热更
-    协程的话，也不考虑热更
+    如果需要热更，使用RTTI模块是可以的。但实际应用过程中，单次rpc调用时间很短，
+    不需要考虑热更，单次协程异步等待也不考虑热更
 ]]
 
 local LuaCodec = require "engine.LuaCodec"
@@ -67,7 +84,7 @@ function Rpc.set_metatable(module, factory_func)
         end
     }
 
-    setmetatable(module, mt)
+    return setmetatable(module, mt)
 end
 
 -- 为了获取rpc返回的第一个参数，并实现在co内报错，需要wrap一层函数
@@ -150,10 +167,15 @@ function Call.last_source()
 end
 
 -- 根据函数指针直接调用函数
+-- @param func 函数指针，或者直接传入函数名
 function Call.invoke(addr, func, ...)
     local name = func_to_name(func)
     if not name then
-        assert(false, "no func name")
+        if "string" ~= type(func) then
+            name = func
+        else
+            assert(false, "no func name")
+        end
     end
 
     return call(name, addr, ...)
@@ -165,15 +187,22 @@ function Send.last_source()
 end
 
 -- 根据函数指针直接调用函数
+-- @param func 函数指针，或者直接传入函数名
 function Send.invoke(addr, func, ...)
     local name = func_to_name(func)
     if not name then
-        assert(false, "no func name")
+        if "string" ~= type(func) then
+            name = func
+        else
+            assert(false, "no func name")
+        end
     end
 
     return send(name, addr, ...)
 end
 
+Rpc.send = send
+Rpc.call = call
 Rpc.call_return = call_return
 
 Rpc.set_metatable(Call, call_func_factory)

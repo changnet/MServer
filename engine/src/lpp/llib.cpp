@@ -22,6 +22,7 @@
 #include "mongo/mongo.hpp"
 #include "ev/time.hpp"
 #include "lbuffer.hpp"
+#include "system/util.hpp"
 #include "system/stdin_reader.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
@@ -85,6 +86,7 @@ static void luaopen_engine(lua_State *L)
     lcpp::module_function<&timing::clock>(L, "clock");
     lcpp::module_function<&timing::time_ms>(L, "time_ms");
     lcpp::module_function<&timing::update>(L, "update");
+    lcpp::module_function<&util::sleep>(L, "sleep");
     lcpp::module_end(L);
 }
 
