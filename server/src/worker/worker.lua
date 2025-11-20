@@ -203,8 +203,9 @@ function Worker.set_status(src_addr, addr, mode, status)
         data.status = status
         data.mode = mode
         data.src_addr = src_addr
-        if old_status ~= status and g_ready then
-            SE.fire(SE_WORKER_BOTH_READY, addr, mode)
+        if old_status ~= status then
+            SE.fire(SE_WORKER_READY, addr, mode)
+            if g_ready then SE.fire(SE_WORKER_BOTH_READY, addr, mode) end
         end
     else
         assert(false)

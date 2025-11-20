@@ -1,4 +1,4 @@
--- auto export by lua-tags 171 symbols
+-- auto export by lua-tags 172 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -77,6 +77,7 @@ return {
 "SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
 "SE_WORKER_BOTH_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_ME_READY", -- src/modules/event/event_header.lua
+"SE_WORKER_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_START", -- src/modules/event/event_header.lua
 "SE_WORKER_STOP", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua

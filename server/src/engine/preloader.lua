@@ -4,6 +4,12 @@ require "global.global" -- 加载错误处理函数
 require "global.log" -- 加载log函数
 require "system.define" -- 基础定义
 
+require "global.table"
+require "global.math"
+require "global.string"
+require "global.time"
+require "global.debug"
+
 require "data.global_data"
 require "engine.engine"
 require "worker.worker"
@@ -24,14 +30,7 @@ require "timer.timer"
 require "network.socket_mgr"
 require "cluster.cluster"
 require "cluster.cluster_proxy"
-require "global.debug"
-
-require "global.table"
-require "global.math"
-require "global.string"
-require "global.time"
-require "router.router"
-
 require "event.system_event"
+require "router.router"
 require "gm.gm"
 require "gm.gm_misc"
