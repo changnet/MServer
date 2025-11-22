@@ -12,6 +12,7 @@ WORKER = {
     SCENE   = {6, "scene"}, -- 场景
     MYSQL   = {7, "mysql"}, -- mysql数据库读写
     MONGODB = {8, "mongodb"}, -- mongodb数据库读写
+    ACCOUNT = {9, "account"}, -- 帐号管理及登录
 }
 W_MAIN    = 256 -- 主线程，主线程的wtype通常和某个worker的wtype一致，如果要区分，则W_TEST | W_MAIN
 W_TEST    = 1 -- 单元测试
@@ -22,6 +23,7 @@ W_PLAYER  = 5 -- 玩家个人逻辑
 W_SCENE   = 6 -- 场景
 W_MYSQL   = 7 -- mysql数据库读写
 W_MONGODB = 8 -- mongodb数据库读写
+W_ACCOUNT = 9 -- 帐号管理及登录
 
 EMPTY = {} -- 一个空table，避免频繁创建空table，稍后会设置为只读
 

@@ -15,7 +15,7 @@ function __G_C_TRACKBACK(msg, co)
     return table.concat(msg_list, "\n")
 end
 
--- 用于lua错误信息处理
+-- 用于lua错误信息处理(直接打印错误信息)
 function __G__TRACKBACK(msg, co)
     local msg_list = {}
     debug.tracestack(msg_list, 3)

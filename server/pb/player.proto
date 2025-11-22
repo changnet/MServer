@@ -20,18 +20,23 @@ message SSOtherWhere
 // 登录
 message CLogin
 {
-    int32 sid  = 1;        // 服务器id
-    int32 time = 2;       // 时间戳
-    int32 plat = 3;       // 平台id
-    string sign = 4;    // 签名
+    int32 sid      = 1; // 服务器id
+    int32 time     = 2; // 时间戳
+    int32 pfid     = 3; // 平台id
+    string sign    = 4; // 签名
     string account = 5; // 帐户
 }
 
 // 登录返回
 message SLogin
 {
-    int32 pid = 1; // 玩家id
-    string name = 2; // 角色名字
+    message Role
+    {
+        int32 id = 1; // 角色id
+        string name = 2; // 角色名字
+    }
+    repeated Role list = 1;
+
 }
 
 // 创建角色

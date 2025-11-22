@@ -1,0 +1,8 @@
+-- 网关worker入口文件
+
+local addr = ...
+
+local srv_dir = g_env:get("srv_dir")
+dofile(srv_dir .. "/src/engine/startup.lua")
+
+Startup.worker_init(tonumber(addr), "modules.module_loader")

@@ -5,10 +5,27 @@
 -- 帐号管理
 AccountMgr = {}
 
+--[[
+网关负责和客户端通信和帐号管理，需要支持多网关
+方案1
+    多个网关负责通信，一个帐号管理负责帐号管理。这个承载也很高了，但存在一个集中式的帐号
+    管理总是不太好
+方案2
+    多个网关，每个网关都负责通信和帐号管理。但要注意多帐号管理时数据安全问题
+
+我更趋向方案2，至于数据安全问题
+    1. 创角是直接在数据库操作，是安全的
+    2. 角色缓存数据同步问题
+        1. 同步放data或者redis中，完全没必要
+        2. 放当前worker中，缓存有更新时，广播到所有网关
+        3. 放当前worker中，从某个网关登录时，移除其他网关缓存
+        考虑到缓存只有名字、等级需要更新，一般开的网关比较少，用方案2
+]]
+
 local this = memory("AccountMgr", {
-    account = {}, -- 三级key [sid][plat][account]
-    conn_acc = {}, -- conn_id为key，帐号信息为value
-    role_acc = {}, -- 玩家pid为key
+    account = {}, -- [pfid][account] = {list = {}}
+    sock_acc = {}, -- [socket_id] = role_info
+    role_acc = {}, -- [pid] = role_info
 })
 
 -- 根据Pid获取角色数据
@@ -23,7 +40,7 @@ function AccountMgr.do_create_role(role_info, pkt, pid)
     base._id = pid
     base.tm = ev:time()
     base.sid = role_info.sid
-    base.plat = role_info.plat
+    base.pfid = role_info.pfid
     base.name = pkt.name
     base.account = role_info.account
 
@@ -37,8 +54,8 @@ end
 -- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
 function AccountMgr.on_role_create(base, role_info, ecode, res)
     if 0 ~= ecode then
-        eprint("role create error:name = %s,account = %s,srv = %d,plat = %d",
-              base.name, role_info.account, role_info.sid, role_info.plat)
+        eprint("role create error:name = %s,account = %s,srv = %d,pfid = %d",
+              base.name, role_info.account, role_info.sid, role_info.pfid)
         AccountMgr.send_role_create(role_info, E.UNDEFINE)
         return
     end
@@ -53,7 +70,7 @@ function AccountMgr.do_acc_create(role_info, name, pid)
     acc_info._id = pid
     acc_info.tm = ev:time()
     acc_info.sid = role_info.sid
-    acc_info.plat = role_info.plat
+    acc_info.pfid = role_info.pfid
     acc_info.name = name
     acc_info.account = role_info.account
 
@@ -98,11 +115,11 @@ end
 
 -- 玩家下线
 function AccountMgr.role_offline(socket_id)
-    local role_info = this.conn_acc[socket_id]
+    local role_info = this.sock_acc[socket_id]
     if not role_info then return end -- 连接上来未登录就断线
 
     role_info.socket_id = nil
-    this.conn_acc[socket_id] = nil
+    this.sock_acc[socket_id] = nil
 end
 
 -- 根据pid下线
@@ -145,59 +162,62 @@ function AccountMgr.on_db_loaded(ecode, res)
 
     for _, role_info in pairs(res) do
         local sid = role_info.sid
-        local plat = role_info.plat
+        local pfid = role_info.pfid
         local account = role_info.account
 
         if not this.account[sid] then this.account[sid] = {} end
-        if not this.account[sid][plat] then this.account[sid][plat] = {} end
+        if not this.account[sid][pfid] then this.account[sid][pfid] = {} end
 
         role_info.pid = role_info._id
         this.role_acc[role_info.pid] = role_info
-        this.account[sid][plat][account] = role_info
+        this.account[sid][pfid][account] = role_info
     end
 
     this.ok = true
 end
 
+local function get_account_info(account, pfid)
+    local pfid_list = this.account[account]
+    if not pfid_list then
+        pfid_list = {}
+        this.account[account] = pfid_list
+    end
+
+    local info =  pfid_list[pfid]
+    if not info then
+        info = {}
+        pfid_list[pfid] = info
+    end
+    return info
+end
 
 -- 玩家登录
-local function player_login(pkt)
-    local sign = Util.md5(LOGIN_KEY, pkt.time, pkt.account)
-    if sign ~= pkt.sign then
-        eprint("clt sign error:%s", pkt.account)
-        return
-    end
-
-    if not PLATFORM[pkt.plat] then
-        eprint("clt platform error:%s", tostring(pkt.plat))
-        return
-    end
-
-    local clt_conn = Cmd.last_conn()
-    local socket_id = clt_conn.socket_id
-    -- 不能重复发送(不是顶号，conn_id不应该会重复)
-    if this.conn_acc[socket_id] then
-        eprint("player login pkt dumplicate send")
-        return
-    end
-
-    -- 考虑到合服，服务器sid、平台plat、帐号account才能确定一个玩家
-    local sid = pkt.sid
-    local plat = pkt.plat
+local function player_login(socket, pkt)
+    local time = pkt.time
     local account = pkt.account
 
-    if not this.account[sid] then this.account[sid] = {} end
-    if not this.account[sid][plat] then this.account[sid][plat] = {} end
-
-    local role_info = this.account[sid][plat][account]
-    if not role_info then
-        role_info = {}
-        role_info.sid = sid
-        role_info.plat = plat
-        role_info.account = account
-
-        this.account[sid][plat][account] = role_info
+    if Engine.time() - time > 1800 then
+        eprint("player login time expire", account)
+        return
     end
+
+    local sign = Util.md5(LOGIN_KEY, time, account)
+    if sign ~= pkt.sign then
+        eprint("clt sign error:", time, account, pkt.sign, sign)
+        return
+    end
+
+    local socket_id = socket.socket_id
+    -- 不能重复发送(不是顶号，顶号socket_id不应该会重复)
+    if this.sock_acc[socket_id] then
+        eprint("player login already in process", account)
+        return
+    end
+
+    -- 帐号account在不同平台会重复，还需要平台pfid才能确定一个玩家
+    local pfid = pkt.pfid
+
+    local role_info = get_account_info(account, pfid)
 
     -- 当前一个帐号只能登录一个角色,处理顶号
     if role_info.socket_id then
@@ -210,21 +230,20 @@ local function player_login(pkt)
 
     -- 连接认证成功，将帐号和连接绑定。现在可以发送其他协议了
     role_info.socket_id = socket_id
-    this.conn_acc[socket_id] = role_info
+    this.sock_acc[socket_id] = role_info
 
-    clt_conn:authorized()
-    if role_info.pid then CltMgr.bind_role(role_info.pid, clt_conn) end
+    socket:authorized()
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    clt_conn:send_pkt(PLAYER.LOGIN, role_info)
+    socket:send_pkt(PLAYER.LOGIN, role_info)
 
-    printf("client authorized success:%s--%d", pkt.account, role_info.pid or 0)
+    printf("client login success:%s--%d", pkt.account, role_info.pid or 0)
 end
 
 -- 创角
 local function create_role(pkt)
     local clt_conn = Cmd.last_conn()
-    local role_info = this.conn_acc[clt_conn.socket_id]
+    local role_info = this.sock_acc[clt_conn.socket_id]
     if not role_info then
         eprint("create role,no account info")
         return

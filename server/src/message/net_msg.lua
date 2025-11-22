@@ -77,7 +77,7 @@ function NetMsg.load_forward_msg()
     end
 end
 
-local function do_callback(func, schema, pid, buffer, size)
+local function clt_msg_callback(func, schema, pid, buffer, size)
     local pkt = pbc_decode(schema, buffer, size)
 
     if PLAYER == local_type then
@@ -104,17 +104,23 @@ function NetMsg.dispatch(socket, id, buffer, size)
             return
         end
 
-        -- 未认证的，禁止发送需要认证后的消息
-        -- 已认证的，禁止发送不需要认证的消息
         local n = cb.n
-        if not auth and not n then
-            eprintf("%s socket not auth for message %d", socket.account, id)
-            return
-        elseif auth and 0 == n then
-            eprintf("%s socket auth for noauth message %d", socket.account, id)
-            return
+        if auth then
+             -- 已认证的，禁止发送不需要认证的消息
+            if 0 == n then
+                eprintf("%s socket auth for noauth message %d", socket.account, id)
+                return
+            end
+            return clt_msg_callback(cb.f, cb.c, pid, buffer, size)
+        else
+            -- 未认证的，禁止发送需要认证后的消息
+            if not n then
+                eprintf("%s socket not auth for message %d", socket.account, id)
+                return
+            end
+            local pkt = pbc_decode(cb.c, buffer, size)
+            return cb.f(socket, pkt)
         end
-        return do_callback(cb.f, cb.c, pid, buffer, size)
     end
 
     -- 登录认证流程必须在网关完成，不能扩散到其他worker
@@ -158,7 +164,7 @@ local function dispatch_clt_message(src, udata, size)
         return
     end
 
-    return do_callback(cb.f, cb.c, pid, pb, size - 10)
+    return clt_msg_callback(cb.f, cb.c, pid, pb, size - 10)
 end
 
 ThreadMessage.reg(CLT_MSG, dispatch_clt_message)

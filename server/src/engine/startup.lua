@@ -211,7 +211,8 @@ local function start_modules()
 end
 
 -- 进程预加载必要的组件
-function Startup.process_init(loader, func)
+-- @param loader 加入模块的文件或者函数
+function Startup.process_init(loader)
     set_path()
     require "system.define" -- 基础定义
 
@@ -262,24 +263,38 @@ function Startup.process_init(loader, func)
     math.randomseed(os.time())
 
     __loader = loader
-    Timer.timeout(0, function()
-        -- 部分进程不需要loader，比如单元测试
-        if loader then Startup.load() end
-        if func then func() end
+    xpcall(function()
+        Startup.load()
         start_modules()
-    end)
-    print("main thread starting, addr =", MAIN_ADDR)
+    end, __G__TRACKBACK)
 end
 
 -- 加载入口文件，将会引入所有模块
 function Startup.load()
-    require(__loader)
+    if "string" == type(__loader) then
+        require(__loader)
+    else
+        __loader()
+    end
     Rtti.collect()
     SE.ready()
 end
 
+-- 覆盖旧的loader，并加载loader
+function Startup.use_loader(loader, nostart)
+    __loader = loader
+    if nostart then return end
+
+    if "string" == type(__loader) then
+        require(__loader)
+    else
+        __loader()
+    end
+end
+
 -- worker预加载必要的组件
-function Startup.worker_init(addr, loader, func)
+-- @param loader 加入模块的文件或者函数
+function Startup.worker_init(addr, loader)
     set_path()
 
     require "global.oo" -- 这个文件不能热更
@@ -312,11 +327,10 @@ function Startup.worker_init(addr, loader, func)
     math.randomseed(os.time())
 
     __loader = loader
-    Timer.timeout(0, function()
+    xpcall(function()
         Startup.load()
-        if func then func() end
         start_modules()
-    end)
+    end, __G__TRACKBACK)
 end
 
 -- 注册按优先级启动的模块

@@ -1,8 +1,9 @@
--- auto export by lua-tags 172 symbols
+-- auto export by lua-tags 174 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
 "ABTSYS", -- src/modules/attribute/attribute_header.lua
+"ACCOUNT_ADDR", -- src/engine/preloader.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
@@ -96,6 +97,7 @@ return {
 "Util", -- src/engine/bootstrap.lua
 "Util", -- src/engine/startup.lua
 "WORKER", -- src/modules/system/define.lua
+"W_ACCOUNT", -- src/modules/system/define.lua
 "W_DATA", -- src/modules/system/define.lua
 "W_GAME", -- src/modules/system/define.lua
 "W_GATEWAY", -- src/modules/system/define.lua

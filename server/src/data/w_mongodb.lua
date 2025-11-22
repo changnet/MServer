@@ -8,7 +8,10 @@ dofile(srv_dir .. "/src/engine/startup.lua")
 
 g_mongodb = nil
 
-Startup.worker_init(tonumber(addr), "data.data_loader", function()
+Startup.worker_init(tonumber(addr), function()
+    Startup.use_loader("modules.module_loader")
+
+
     local MongoDB = require "mongodb.mongodb"
     g_mongodb = MongoDB()
     Rpc.delegate("MongoDB", g_mongodb)
