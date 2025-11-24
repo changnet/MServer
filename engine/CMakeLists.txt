@@ -66,6 +66,7 @@ elseif(LINUX)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
     add_compile_options(-pipe -Wall -pedantic)
     # -fsanitize=address -static-libasan -g
+    # 这个选项会导致linux下占用20G VIRT内存 https://github.com/google/sanitizers/issues/704
     add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
     add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
 endif()

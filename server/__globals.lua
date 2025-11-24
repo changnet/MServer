@@ -1,4 +1,4 @@
--- auto export by lua-tags 174 symbols
+-- auto export by lua-tags 178 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,6 +7,7 @@ return {
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
+"AccountMgr", -- src/modules/account/account_mgr%20copy.lua
 "AndroidMgr", -- src/android/android_mgr.lua
 "Await", -- src/rpc/rpc_proxy.lua
 "BAG", -- src/modules/protocol/protocol.lua
@@ -14,6 +15,7 @@ return {
 "CHAT", -- src/modules/protocol/protocol.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
+"Callback", -- src/rpc/rpc.lua
 "CltMgr", -- src/network/clt_mgr.lua
 "Cluster", -- src/cluster/cluster.lua
 "ClusterProxy", -- src/cluster/cluster_proxy.lua
@@ -43,6 +45,7 @@ return {
 "LOGIN_KEY", -- src/modules/system/define.lua
 "Log", -- src/global/log.lua
 "LogDB", -- src/modules/log/log_db.lua
+"Login", -- src/modules/account/login.lua
 "MAIL", -- src/modules/protocol/protocol.lua
 "MAIN_ADDR", -- src/worker/worker.lua
 "MASTER_ADDR", -- src/engine/preloader.lua
@@ -129,6 +132,7 @@ return {
 "__package_path", -- src/engine/startup.lua
 "__print", -- src/engine/bootstrap.lua
 "__print", -- src/engine/startup.lua
+"__rpc_session", -- src/rpc/rpc.lua
 "__socket_hash", -- src/network/socket_mgr.lua
 "__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua

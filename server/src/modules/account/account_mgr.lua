@@ -11,22 +11,29 @@ AccountMgr = {}
     多个网关负责通信，一个帐号管理负责帐号管理。这个承载也很高了，但存在一个集中式的帐号
     管理总是不太好
 方案2
-    多个网关，每个网关都负责通信和帐号管理。但要注意多帐号管理时数据安全问题
+    多个网关，每个网关都负责通信和帐号管理
+    每个网关都负责帐号管理会有个数据竞争的问题要处理，需要每次登录都向所有
+    网关同步登录，把在其他网关的设备下线，还要保证在不同网关创建的角色，都有同步到所有网关，
+    这个需要用Gossip的协议来做，就很麻烦。
+方案3
+    多个网关负责通信，多个帐号管理负责帐号管理，可以在承载不高的情况下只开一个帐号管理
 
-我更趋向方案2，至于数据安全问题
-    1. 创角是直接在数据库操作，是安全的
-    2. 角色缓存数据同步问题
-        1. 同步放data或者redis中，完全没必要
-        2. 放当前worker中，缓存有更新时，广播到所有网关
-        3. 放当前worker中，从某个网关登录时，移除其他网关缓存
-        考虑到缓存只有名字、等级需要更新，一般开的网关比较少，用方案2
+开多个帐号管理时，路由策略应该使用redis cluster的一致性hash策略，即网关只根据帐号就能
+计算出该帐号在哪个帐号管理负责，直接和该帐号管理通信，而不需要考虑多个帐号管理数据竞争问题
+
+方案2中，理论上也可以使用hash来控制玩家数据在哪个网关处理，但问题是网关是对外的，无法
+控制玩家在哪个网关登录，只能在帐号管理这一层来做
 ]]
 
 local this = memory("AccountMgr", {
-    account = {}, -- [pfid][account] = {list = {}}
-    sock_acc = {}, -- [socket_id] = role_info
-    role_acc = {}, -- [pid] = role_info
+    account = {}, -- [pfid][account] = {list = {}} 帐号数据数据缓存
+    role_acc = {}, -- [pid] = role_info 当前登录的角色数据
 })
+
+Rpc.proxy_wtype("Mongodb", W_MONGODB)
+
+-- 读取帐号数据时，哪些字段要读取
+local filter = '{"projection":{"pid":1,"name":1,"sid":1}}'
 
 -- 根据Pid获取角色数据
 function AccountMgr.get_role_info(pid)
@@ -153,6 +160,10 @@ function AccountMgr.login_otherwhere(role_info)
     CltMgr.close(old_conn)
 end
 
+local function return_login_result(info, account, pfid, e)
+    Send.Login.do_result(info.addr, account, pfid, info, e)
+end
+
 -- db数据加载
 function AccountMgr.on_db_loaded(ecode, res)
     if 0 ~= ecode then
@@ -176,94 +187,59 @@ function AccountMgr.on_db_loaded(ecode, res)
     this.ok = true
 end
 
-local function get_account_info(account, pfid)
+local function get_account_info(account, pfid, sid)
     local pfid_list = this.account[account]
     if not pfid_list then
         pfid_list = {}
         this.account[account] = pfid_list
     end
 
-    local info =  pfid_list[pfid]
+    local server_list =  pfid_list[pfid]
+    if not server_list then
+        server_list = {}
+        pfid_list[pfid] = server_list
+    end
+    local info = server_list[sid]
     if not info then
-        info = {}
-        pfid_list[pfid] = info
+        info = {
+            role = {}, -- 角色列表
+        }
+        server_list[sid] = info
     end
     return info
 end
 
--- 玩家登录
-local function player_login(socket, pkt)
-    local time = pkt.time
-    local account = pkt.account
+function AccountMgr.login(addr, socket_id, account, pfid, sid)
+    -- 传nil会导致下面的数据库查询返回其他数据
+    assert(account and pfid and sid)
 
-    if Engine.time() - time > 1800 then
-        eprint("player login time expire", account)
-        return
+    local info = get_account_info(account, pfid, sid)
+    local old_addr = info.addr
+    if old_addr then
+        local old_id = info.socket_id
+        assert(old_id and old_id ~= socket_id)
+
+        -- 顶号，通知旧的下线
+        Send.Login.login_else_where(old_addr, old_id, account, pfid)
     end
 
-    local sign = Util.md5(LOGIN_KEY, time, account)
-    if sign ~= pkt.sign then
-        eprint("clt sign error:", time, account, pkt.sign, sign)
-        return
+    info.addr = addr
+    info.socket_id = socket_id
+
+    if info.loaded then
+        return return_login_result(info, account, pfid, 0)
     end
 
-    local socket_id = socket.socket_id
-    -- 不能重复发送(不是顶号，顶号socket_id不应该会重复)
-    if this.sock_acc[socket_id] then
-        eprint("player login already in process", account)
-        return
+    local db_addr = Router.find_worker_addr(W_MONGODB, "role", account)
+    info.loaded = 1
+    local e, rows = Call.MongoDB.find(db_addr,
+        "role", {account = account, pfid = pfid, sid = sid}, filter)
+    if 0 ~= e then
+        for _, row in pairs(rows) do
+            table.insert(info.role, row)
+        end
+        return_login_result(info, account, pfid, e)
     end
-
-    -- 帐号account在不同平台会重复，还需要平台pfid才能确定一个玩家
-    local pfid = pkt.pfid
-
-    local role_info = get_account_info(account, pfid)
-
-    -- 当前一个帐号只能登录一个角色,处理顶号
-    if role_info.socket_id then
-        AccountMgr.login_otherwhere(role_info)
-
-        -- 下面开始替换连接
-        -- TODO 是否要等待其他服务器返回顶号处理成功再替换连接，防止新连接收到旧连接
-        -- 的数据，看游戏需要
-    end
-
-    -- 连接认证成功，将帐号和连接绑定。现在可以发送其他协议了
-    role_info.socket_id = socket_id
-    this.sock_acc[socket_id] = role_info
-
-    socket:authorized()
-
-    -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    socket:send_pkt(PLAYER.LOGIN, role_info)
-
-    printf("client login success:%s--%d", pkt.account, role_info.pid or 0)
 end
-
--- 创角
-local function create_role(pkt)
-    local clt_conn = Cmd.last_conn()
-    local role_info = this.sock_acc[clt_conn.socket_id]
-    if not role_info then
-        eprint("create role,no account info")
-        return
-    end
-
-    -- 当前一个帐号只能创建一个角色
-    if role_info.pid then
-        eprint("role already create")
-        return
-    end
-
-    -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
-
-    local callback = function(pid)
-        return AccountMgr.do_create_role(role_info, pkt, pid)
-    end
-    return g_unique_id:player_id(role_info.sid, callback)
-end
-
-NetMsg.reg_noauth(PLAYER.LOGIN, player_login)
-NetMsg.reg_noauth(PLAYER.CREATE, create_role)
 
 return AccountMgr

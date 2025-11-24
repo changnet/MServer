@@ -4,6 +4,9 @@ Rpc = {}
 -- rpc调用，使用协程阻塞返回
 Call = {}
 
+-- rpc调用，使用回调函数异步返回
+Callback = {}
+
 -- rpc调用，无返回
 Send = {}
 
@@ -58,6 +61,9 @@ local func_to_name = Rtti.func_to_name
 local parse_name_func = Rtti.parse_name_func
 
 local last_src -- 最后一次调用rpc的来源
+
+__rpc_session = __rpc_session or {seed = 1, session = {}}
+local rpc_session = __rpc_session
 
 function Rpc.set_metatable(module, factory_func)
     local mt
@@ -121,6 +127,31 @@ local function call_func_factory(name)
     return function(addr, ...) return call(name, addr, ...) end
 end
 
+local function next_id()
+    local id = rpc_session.seed - 1
+    if id < -0x7fffffff then id = -1 end
+
+    rpc_session.seed = id
+    if not rpc_session.session[id] then
+        return id
+    else
+        return next_id()
+    end
+end
+
+local function callback_func_factory(name)
+    return function(addr, func, ...)
+        local w = WorkerHash[addr] or g_mthread
+
+        local session = next_id()
+        rpc_session.session[session] = {
+            func = func,
+        }
+        local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
+        return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
+    end
+end
+
 local function do_request(src, session, name, ...)
     local func = parse_name_func(name)
     if not func then
@@ -153,7 +184,18 @@ local function request_dispatch(src, udata, usize)
 end
 
 local function do_response(session, ...)
-    return CoPool.resume(session, ...)
+    if session > 0 then
+        return CoPool.resume(session, ...)
+    end
+
+    -- 异步回调方式
+    local info = rpc_session.session[session]
+    if not info then
+        eprint("rpc no callback found", session)
+        return
+    end
+    rpc_session.session[session] = nil
+    return CoPool.invoke(info.func, ...)
 end
 
 local function response_dispatch(src, udata, usize)
@@ -207,6 +249,7 @@ Rpc.call_return = call_return
 
 Rpc.set_metatable(Call, call_func_factory)
 Rpc.set_metatable(Send, send_func_factory)
+Rpc.set_metatable(Callback, callback_func_factory)
 
 ThreadMessage.reg(RPC_REQ, request_dispatch)
 ThreadMessage.reg(RPC_RES, response_dispatch)

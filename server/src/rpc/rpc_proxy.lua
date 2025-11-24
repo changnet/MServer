@@ -31,6 +31,8 @@ local name_to_func = Rtti.name_to_func
 -- 调用函数并等待返回值，类似Call但用于Rpc.proxy_wtype代理过后的函数
 Await = {}
 
+local proxy = {} -- 通过proxy创建的模块
+
 -- 把一个对象委托给rpc，允许通过rpc调用该对象的成员函数
 -- @param name 模块名
 -- @param self 委托的对象
@@ -62,11 +64,22 @@ end
 function Rpc.proxy_waddr(name, addr)
 end
 
--- 给指定模块建立一个rpc代理，调用时按路由随机选择一个worker，适合无状态要求的模块
+-- 给指定模块建立一个rpc代理，调用时按路由选择一个worker(需要支持默认路由)
 -- @param name 模块名，如MySql，和远端模块名一致
 -- @param addr 远端worker的类型
 function Rpc.proxy_wtype(name, wtype)
-    _G[name] = Rpc.set_metatable({}, function (fname)
+    -- 每次热更Await会重置，如果不是则返回旧模块
+    local mod = proxy[name]
+    if mod then return mod end
+
+    -- TODO 是否要放到全局，这个写法待定
+    -- 可以在对应的模块文件上 MongoDB = Rpc.proxy_wtype("MongoDB", W_MONGODB)这样写
+    -- 如果这个模块很通用，应该在module_loader中定义而不是直接在proxy里直接设置为全局
+
+    -- 另外，Await这个是不是要弄一个local MongoDB = Rpc.await_wtype(name, wtype)
+    -- 避免全局调用Await模块
+
+    mod = Rpc.set_metatable({}, function (fname)
         return function(pid, ...)
             local addr = Router.find_worker_addr(wtype)
             if not addr then
@@ -78,8 +91,15 @@ function Rpc.proxy_wtype(name, wtype)
             return send(addr, fname, pid, ...)
         end
     end)
+    proxy[name] = mod
+end
 
-    Await[name] = Rpc.set_metatable({}, function (fname)
+-- 创建同步返回模块代理，调用时按路由选择一个worker(需要支持默认路由)
+function Rpc.await_wtype(name, wtype)
+    local mod = Await[name]
+    if mod then return mod end
+
+    mod = Rpc.set_metatable({}, function (fname)
         return function(pid, ...)
             local addr = Router.find_worker_addr(wtype)
             if not addr then
@@ -91,6 +111,9 @@ function Rpc.proxy_wtype(name, wtype)
             return call(addr, fname, pid, ...)
         end
     end)
+
+    Await[name] = mod
+    return mod
 end
 
 
