@@ -42,9 +42,9 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
         s = "comm.Empty", c = "comm.Empty", i = 4
 
     },
-    -- 顶号
-    OTHER = {
-        s = "comm.Empty", i = 5
+    -- 踢下线
+    KICK = {
+        s = "comm.SKick", i = 5
     },
     -- 登录时下发基础数据
     BASE = {

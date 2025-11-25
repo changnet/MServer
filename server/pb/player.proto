@@ -52,6 +52,12 @@ message SCreateRole
     string name = 2; // 角色名字
 }
 
+// 踢下线
+message SKick
+{
+    int32 reason = 1; // 原因 1顶号 2管理员踢人
+}
+
 // 基础数据
 message SBase
 {

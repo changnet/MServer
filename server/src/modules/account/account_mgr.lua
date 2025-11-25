@@ -33,91 +33,13 @@ local this = memory("AccountMgr", {
 Rpc.proxy_wtype("Mongodb", W_MONGODB)
 
 -- 读取帐号数据时，哪些字段要读取
-local filter = '{"projection":{"pid":1,"name":1,"sid":1}}'
+local ROLE_FILTER = '{"projection":{"pid":1,"name":1,"sid":1}}'
+local ROLE_ID_FILTER = string.format('{"_id":%d}', UNIQUEID.PLAYER)
+local ROLE_ID_OPTS = '{"$inc":{"seed":1}}'
 
 -- 根据Pid获取角色数据
 function AccountMgr.get_role_info(pid)
     return this.role_acc[pid]
-end
-
---  创建角色逻辑
-function AccountMgr.do_create_role(role_info, pkt, pid)
-    local base = {}
-    base.new = 1 -- 标识为新创建，未初始化用户
-    base._id = pid
-    base.tm = ev:time()
-    base.sid = role_info.sid
-    base.pfid = role_info.pfid
-    base.name = pkt.name
-    base.account = role_info.account
-
-    local callback = function(...)
-        AccountMgr.on_role_create(base, role_info, ...)
-    end
-    g_mongodb:insert("base", base, callback)
-end
-
--- 创建角色数据库返回
--- 角色base库是由world维护的，这里创建新角色比较重要，需要入库确认.再由world加载
-function AccountMgr.on_role_create(base, role_info, ecode, res)
-    if 0 ~= ecode then
-        eprint("role create error:name = %s,account = %s,srv = %d,pfid = %d",
-              base.name, role_info.account, role_info.sid, role_info.pfid)
-        AccountMgr.send_role_create(role_info, E.UNDEFINE)
-        return
-    end
-
-    -- 将角色与帐号绑定
-    return AccountMgr.do_acc_create(role_info, base.name, base._id)
-end
-
---  创建帐号
-function AccountMgr.do_acc_create(role_info, name, pid)
-    local acc_info = {}
-    acc_info._id = pid
-    acc_info.tm = ev:time()
-    acc_info.sid = role_info.sid
-    acc_info.pfid = role_info.pfid
-    acc_info.name = name
-    acc_info.account = role_info.account
-
-    local callback = function(...)
-        AccountMgr.on_acc_create(acc_info, role_info, ...)
-    end
-    g_mongodb:insert("account", acc_info, callback)
-end
-
--- 创建角色数据库返回
-function AccountMgr.on_acc_create(acc_info, role_info, ecode, res)
-    if 0 ~= ecode then -- 失败
-        AccountMgr.send_role_create(role_info, E.UNDEFINE)
-        printf("create role error:%s", acc_info.account)
-        return
-    end
-
-    -- 完善玩家数据
-    local pid = acc_info._id
-    role_info.pid = pid
-    role_info.name = acc_info.name
-    printf("create role success:%s--%d", role_info.account, pid)
-
-    this.role_acc[pid] = role_info
-
-    -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = CltMgr.get_conn(role_info.socket_id)
-    if clt_conn then
-        CltMgr.bind_role(pid, clt_conn)
-        AccountMgr.send_role_create(role_info)
-    end
-end
-
--- 发送角色创建结果
-function AccountMgr.send_role_create(role_info, ecode)
-    -- 玩家可能断线了，这个clt_conn就不存在了
-    local clt_conn = CltMgr.get_conn(role_info.socket_id)
-    if not clt_conn then return end
-
-    clt_conn:send_pkt(PLAYER.CREATE, role_info, ecode)
 end
 
 -- 玩家下线
@@ -144,47 +66,11 @@ function AccountMgr.role_offline_by_pid(pid)
     AccountMgr.role_offline(role_info.socket_id)
 end
 
--- 帐号在其他地方登录
-function AccountMgr.login_otherwhere(role_info)
-    -- 告诉原连接被顶号
-    local old_conn = CltMgr.get_conn(role_info.socket_id)
-    old_conn:send_pkt(PLAYER.OTHER, {})
-
-    -- 通知其他服务器玩家下线
-    if role_info.pid then
-        local pkt = {pid = role_info.pid}
-        CltMgr.send_world_pkt(SYS.PLAYER_OTHERWHERE, pkt)
-    end
-
-    -- 关闭旧客户端连接
-    CltMgr.close(old_conn)
-end
-
 local function return_login_result(info, account, pfid, e)
-    Send.Login.do_result(info.addr, account, pfid, info, e)
-end
+    local socket_id = info.socket_id
+    if not socket_id then return end -- 数据加载时，已断开
 
--- db数据加载
-function AccountMgr.on_db_loaded(ecode, res)
-    if 0 ~= ecode then
-        eprint("account db load error")
-        return
-    end
-
-    for _, role_info in pairs(res) do
-        local sid = role_info.sid
-        local pfid = role_info.pfid
-        local account = role_info.account
-
-        if not this.account[sid] then this.account[sid] = {} end
-        if not this.account[sid][pfid] then this.account[sid][pfid] = {} end
-
-        role_info.pid = role_info._id
-        this.role_acc[role_info.pid] = role_info
-        this.account[sid][pfid][account] = role_info
-    end
-
-    this.ok = true
+    Send.Login.do_create_result(info.addr, socket_id, account, pfid, info, e)
 end
 
 local function get_account_info(account, pfid, sid)
@@ -202,7 +88,7 @@ local function get_account_info(account, pfid, sid)
     local info = server_list[sid]
     if not info then
         info = {
-            role = {}, -- 角色列表
+            list = {}, -- 角色列表
         }
         server_list[sid] = info
     end
@@ -226,20 +112,95 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
     info.addr = addr
     info.socket_id = socket_id
 
-    if info.loaded then
+    local loaded = info.loaded
+    if 2 == loaded then
+        -- 数据已加载完成，直接返回结果
         return return_login_result(info, account, pfid, 0)
+    elseif 1 == loaded then
+        return -- 加载中，不要重复加载
     end
 
     local db_addr = Router.find_worker_addr(W_MONGODB, "role", account)
     info.loaded = 1
     local e, rows = Call.MongoDB.find(db_addr,
-        "role", {account = account, pfid = pfid, sid = sid}, filter)
+        "role", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
+    info.loaded = 2
     if 0 ~= e then
         for _, row in pairs(rows) do
-            table.insert(info.role, row)
+            local pid = row._id
+            row.pid = pid
+            table.insert(info.list, row)
         end
-        return_login_result(info, account, pfid, e)
+    else
+        eprint("account db load error", e)
+        e = E.SRV_ERROR
     end
+    return_login_result(info, account, pfid, e)
+end
+
+local function return_create_role_result(info, account, pfid, e)
+    local socket_id = info.socket_id
+    if not socket_id then return end -- 数据加载时，已断开
+
+    Send.Login.do_result(info.addr, socket_id, account, pfid, info, e)
+end
+
+-- 创角
+function AccountMgr.create_role(addr, socket_id, account, pfid, sid, pkt)
+    assert(account and pfid and sid)
+
+    local info = get_account_info(account, pfid, sid)
+    -- 当前一个帐号只能创建一个角色
+    if #(info.list or EMPTY) > 0 then
+        eprint("role already create", socket_id, account)
+        return
+    end
+
+    -- 创角中，不要重复创建
+    if 1 == info.created then return end
+
+    info.created = 1
+
+    local db_addr = Router.find_worker_addr(W_MONGODB, "uniqueid")
+
+    -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
+    -- 如果嫌数据库慢，估计要按拼接id的方式在不同account_mgr生成
+    -- 或者弄一个id生成worker来专门处理这个事情
+    local e, row = Call.MongoDB.find_and_modify(db_addr,
+        "uniqueid", ROLE_ID_FILTER, nil, ROLE_ID_OPTS, nil, false, true, true)
+
+    info.created = nil
+    if 0 ~= e then
+        eprint("uniqueid db load error", e)
+        e = E.SRV_ERROR
+        return return_create_role_result(info, account, pfid, e)
+    end
+    local seed = assert(row.seed)
+    local real_sid = Engine.get_server_id()
+    -- 如果希望这个值比较小，可以采用protobuf的压缩机制来压缩下
+    local pid = (seed << PID_SRV_BIT) | real_sid
+    local role = {
+        account = account,
+        pfid = pfid,
+        sid = sid,
+        _id = pid,
+        name = pkt.name,
+        level = 0,
+        create_time = Engine.time(),
+    }
+
+    info.created = 1
+    e = Call.MongoDB.insert(db_addr, "role", role)
+    info.created = nil
+    if 0 == e then
+        role._id = pid
+        table.insert(info.list, role)
+    else
+        eprint("role db insert error", e)
+        e = E.SRV_ERROR
+    end
+
+    return return_create_role_result(info, account, pfid, e)
 end
 
 return AccountMgr

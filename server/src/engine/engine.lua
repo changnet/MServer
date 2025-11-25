@@ -1,5 +1,7 @@
 local Engine = require "Engine" -- C++ engine api
 
+local SERVER_ID = g_setting.server
+
 -- 给每个线程生成一个独立的地址
 -- @param wtype worker type，worker类型，如WORKER_ACCOUNT
 -- @param main 是否为主线程
@@ -39,4 +41,9 @@ end
 -- @param ... 其他用于签名的数据，字符串或者数字
 function Engine.make_srv_signature(time, ...)
     return Util.md5(SRV_KEY, time, ...)
+end
+
+-- 获取当前服务器id
+function Engine.get_server_id()
+    return SERVER_ID
 end

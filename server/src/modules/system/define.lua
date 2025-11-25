@@ -40,8 +40,7 @@ MAX_SYS_MAIL = 500
 SRV_ALIVE_INTERVAL = 5
 SRV_ALIVE_TIMES = 5
 
--- 接入平台
-PLATFORM = {[999] = "test"}
+PID_SRV_BIT = 25 -- 创角服务器占的位数
 
 UNIQUEID = {
     PLAYER = 1 -- 玩家pid

@@ -3,10 +3,29 @@ Login = {}
 
 -- 顶号处理
 function Login.login_else_where(socket_id, account, pfid)
+    local socket = CltMgr.get(socket_id)
+    -- 用户掉线
+    if not socket then
+        print("login socket not found", account, pfid)
+        return
+    end
+
+    socket:send_pkt(PLAYER.KICK, {reason = 1})
+    print("login else where", account, socket.pid)
+
+    socket:close(true)
 end
 
-function Login.do_result(account, pfid, info, e)
-    socket:authorized()
+function Login.do_login_result(socket_id, account, pfid, info, e)
+    local socket = CltMgr.get(socket_id)
+    -- 用户掉线
+    if not socket then
+        print("login socket not found", account, pfid)
+        return
+    end
+    assert(socket.login.account == account)
+
+    socket.role = info
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
     socket:send_pkt(PLAYER.LOGIN, info)
@@ -16,11 +35,20 @@ end
 
 -- 玩家登录
 local function c_player_login(socket, pkt)
-    local time = pkt.time
-    local account = pkt.account
+    local time = pkt.time or 0
+    local account = pkt.account or ""
+    -- 帐号account在不同平台会重复，因此pfid才能确定一个玩家
+    -- 可能会合服，因此sid也需要
+    local pfid = pkt.pfid or 0
+    local sid = pkt.sid or -1
+
+    local socket_id = socket.socket_id
+
+    printf("client login socketid = %d, acc = %s, pfid=%d, sid=%d",
+        socket_id, account, pfid, sid)
 
     if Engine.time() - time > 1800 then
-        eprint("player login time expire", account)
+        eprint("player login time expire", account, time)
         return
     end
 
@@ -37,37 +65,53 @@ local function c_player_login(socket, pkt)
     end
     socket.login = pkt
 
-    -- 帐号account在不同平台会重复，因此pfid才能确定一个玩家
-    -- 可能会合服，因此sid也需要
-    local pfid = pkt.pfid
-    local sid = pkt.sid
-
     -- 网关有多个，需要统一到帐号管理那边获取角色数据，处理顶号
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
-    Send.AccountMgr.login(addr, LOCAL_ADDR, socket.socket_id, account, pfid, sid)
+    Send.AccountMgr.login(addr, LOCAL_ADDR, socket_id, account, pfid, sid)
+end
+
+function Login.do_create_result(socket_id, account, pfid, info, e)
+    local socket = CltMgr.get(socket_id)
+    -- 用户掉线
+    if not socket then
+        print("login socket not found", account, pfid)
+        return
+    end
+    assert(socket.login.account == account)
+
+    socket.role = info
+    local role = assert(info.list[1])
+
+    -- 返回角色信息(如果没有角色，则pid和name都为nil)
+    socket:send_pkt(PLAYER.CREATE, role)
+
+    printf("client create role success, acc = %s, pid = %d", account, role.pid)
 end
 
 -- 创角
-local function c_create_role(pkt)
-    local clt_conn = Cmd.last_conn()
-    local role_info = this.sock_acc[clt_conn.socket_id]
-    if not role_info then
-        eprint("create role,no account info")
+local function c_create_role(socket, pkt)
+    local role_info = socket.role
+    local login_info = socket.login
+
+    local socket_id = socket.socket_id
+    if not role_info or not login_info then
+        eprint("create role no account info", socket_id)
         return
     end
 
+    local account = login_info.account
+
     -- 当前一个帐号只能创建一个角色
-    if role_info.pid then
-        eprint("role already create")
+    if #(role_info.list or EMPTY) > 0 then
+        eprint("role already create", socket_id, account)
         return
     end
 
     -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
-    local callback = function(pid)
-        return AccountMgr.do_c_create_role(role_info, pkt, pid)
-    end
-    return g_unique_id:player_id(role_info.sid, callback)
+    local addr = Router.find_worker_addr(W_ACCOUNT, account)
+    Send.AccountMgr.create_role(addr, LOCAL_ADDR,
+        socket_id, account, login_info.pfid, login_info.sid, pkt)
 end
 
 NetMsg.reg_noauth(PLAYER.LOGIN, c_player_login)

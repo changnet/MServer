@@ -303,6 +303,8 @@ function Startup.worker_init(addr, loader)
     require "global.log" -- 加载log函数
     require "system.define" -- 基础定义
 
+    load_setting()
+
     require "data.global_data"
     require "engine.engine"
     require "worker.worker"
@@ -319,8 +321,6 @@ function Startup.worker_init(addr, loader)
     format_log_name(name, index)
 
     Engine.add_thread_ctx(addr, g_thread:toludata())
-
-    load_setting()
 
     require "engine.preloader"
 

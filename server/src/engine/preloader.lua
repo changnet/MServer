@@ -3,6 +3,7 @@
 require "global.global" -- 加载错误处理函数
 require "global.log" -- 加载log函数
 require "system.define" -- 基础定义
+require "system.error" -- 错误码定义
 
 require "global.table"
 require "global.math"

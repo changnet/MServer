@@ -59,7 +59,7 @@ return {
 "PE_DEATH", -- src/modules/event/event_header.lua
 "PE_ENTER", -- src/modules/event/event_header.lua
 "PE_EXIT", -- src/modules/event/event_header.lua
-"PLATFORM", -- src/modules/system/define.lua
+"PID_SRV_BIT", -- src/modules/system/define.lua
 "PLAYER", -- src/modules/protocol/protocol.lua
 "PROP", -- src/modules/property/property.lua
 "Pbc", -- src/message/pbc.lua
