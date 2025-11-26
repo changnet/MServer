@@ -8,14 +8,16 @@ dofile(srv_dir .. "/src/engine/startup.lua")
 
 g_mongodb = nil
 
-Startup.worker_init(tonumber(addr), function()
-    Startup.use_loader("modules.module_loader")
-
-
+Startup.worker_init(tonumber(addr), function(reload)
+    require "modules.module_loader"
     local MongoDB = require "mongodb.mongodb"
-    g_mongodb = MongoDB()
-    Rpc.delegate("MongoDB", g_mongodb)
 
-    local conf = g_setting.mongodb
-    g_mongodb:connect_later(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
+    if not reload then
+        g_mongodb = MongoDB()
+
+        local conf = g_setting.mongodb
+        g_mongodb:connect_later(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
+    end
+
+    Rpc.delegate("MongoDB", g_mongodb, MongoDB.delegate_with_error)
 end)

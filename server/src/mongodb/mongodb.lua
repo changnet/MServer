@@ -123,4 +123,27 @@ function MongoDB:connect_later(host, port, user, password, database)
     })
 end
 
+local function return_with_error(self, e, ...)
+    if not e then return end
+    if 0 == e then return 0, ... end
+
+    assert("number" == type(e))
+    local _, str = self:error()
+    -- 和xpcall()一样，如果出错，则第二个参数为错误信息
+    return e, str
+end
+
+-- 用于rpc委托调用的入口函数
+function MongoDB:delegate_with_error(name, ...)
+    -- 如果在同一线程，发生错误时可以使用error()获取错误信息
+    -- 但rpc调用如果再次调用error()返回的信息就不对了
+    -- 所以只能在调用函数时返回错误信息
+
+    -- 但不是所有的函数都会返回错误码，这里只能调用第一个参数为错误码的函数
+    -- 如果有其他函数的需求，要添加其他接口
+
+    local func = self[name]
+    return return_with_error(self, func(self, ...))
+end
+
 return MongoDB

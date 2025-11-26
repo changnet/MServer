@@ -13,9 +13,8 @@
     #include <unistd.h> // for dup
 #endif
 
-IO::IO(int32_t conn_id)
+IO::IO()
 {
-    socket_id_ = conn_id;
     accept_    = nullptr;
 }
 

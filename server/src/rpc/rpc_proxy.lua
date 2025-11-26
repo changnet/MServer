@@ -36,7 +36,8 @@ local proxy = {} -- 通过proxy创建的模块
 -- 把一个对象委托给rpc，允许通过rpc调用该对象的成员函数
 -- @param name 模块名
 -- @param self 委托的对象
-function Rpc.delegate(name, self)
+-- @param interface 调用self时的接口函数，如果不指定，则直接调用self对应的函数
+function Rpc.delegate(name, self, interface)
     -- 暂不支持模块的委托，如果是模块，声明为global就可以调用，不需要委托
 
     -- 委托产生的模块不能覆盖已经存在的真实模块
@@ -46,13 +47,21 @@ function Rpc.delegate(name, self)
     end
 
     if not mod then mod = {__delegate = true, __self = self} end
-    local mt =
-    {
-        __index = function(tbl, k)
-            local func = self[k]
-            return function(...) return func(self, ...) end
-        end,
-    }
+    local mt
+    if interface then
+        mt = {
+            __index = function(tbl, k)
+                return function(...) return interface(self, name, ...) end
+            end,
+        }
+    else
+        mt = {
+            __index = function(tbl, k)
+                local func = self[k]
+                return function(...) return func(self, ...) end
+            end,
+        }
+    end
 
     setmetatable(mod, mt)
     _G[name] = mod

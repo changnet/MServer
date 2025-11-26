@@ -32,7 +32,7 @@ public:
 
 public:
     virtual ~IO();
-    explicit IO(int32_t conn_id);
+    explicit IO();
 
     /**
      * 接收数据（此函数在io线程执行）
@@ -121,7 +121,6 @@ public:
     }
 
 protected:
-    int32_t socket_id_;   // 所属socket的id
     Buffer recv_; // 接收缓冲区，由io线程写，主线程读取并处理数据
     Buffer send_; // 发送缓冲区，由主线程写，io线程发送
     AcceptBuffer *accept_; // accept缓冲区（多数socket用不到，因此用指针，用到才分配）

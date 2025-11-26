@@ -7,7 +7,7 @@
 -- 热更
 GM.reg("reload", function()
     __unrequire()
-    Startup.load()
+    Startup.load(true)
 end, -1)
 
 -- ping一下服务器间的延迟，看卡不卡

@@ -5,18 +5,6 @@ package player;
 
 import "comm.proto";
 
-/* 玩家断线 */
-message SSOffline
-{
-    int32 pid = 1;
-}
-
-// 玩家在其他地方登录
-message SSOtherWhere
-{
-    int32 pid = 1;
-}
-
 // 登录
 message CLogin
 {
@@ -32,7 +20,7 @@ message SLogin
 {
     message Role
     {
-        int32 id = 1; // 角色id
+        int64 pid = 1; // 角色id
         string name = 2; // 角色名字
     }
     repeated Role list = 1;
@@ -48,8 +36,14 @@ message CCreateRole
 // 创建角色返回
 message SCreateRole
 {
-    int32 pid = 1; // 玩家id
+    int64 pid = 1; // 玩家id
     string name = 2; // 角色名字
+}
+
+// 进入游戏
+message CEnterGame
+{
+    int64 pid = 1; // 玩家id
 }
 
 // 踢下线

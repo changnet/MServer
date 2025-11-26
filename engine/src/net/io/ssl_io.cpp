@@ -15,7 +15,7 @@ SSLIO::~SSLIO()
     }
 }
 
-SSLIO::SSLIO(int32_t conn_id, TlsCtx *tls_ctx) : IO(conn_id)
+SSLIO::SSLIO(TlsCtx *tls_ctx)
 {
     ssl_ = SSL_new(tls_ctx->get());
 }

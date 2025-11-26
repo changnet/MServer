@@ -114,5 +114,43 @@ local function c_create_role(socket, pkt)
         socket_id, account, login_info.pfid, login_info.sid, pkt)
 end
 
+-- 角色进入游戏
+local function c_enter_game(socket, pkt)
+    local role_info = socket.role
+    local login_info = socket.login
+
+    local socket_id = socket.socket_id
+    if not role_info or not login_info then
+        eprint("enter game no account info", socket_id)
+        return
+    end
+
+    local account = login_info.account
+    if socket.pid then
+        eprint("role already enter game", socket_id, account, socket.pid)
+        return
+    end
+
+    -- 角色不存在
+    local role
+    local pid = pkt.pid
+    for _, info in pairs(role_info.list or EMPTY) do
+        if info.pid == pid then
+            role = info
+            break
+        end
+    end
+    if not role then
+        eprint("role not exist", socket_id, account, pid)
+        return
+    end
+
+    socket.pid = pid
+    local addr = Router.find_worker_addr(W_ACCOUNT, account)
+    Send.AccountMgr.enter(addr, LOCAL_ADDR,
+        socket_id, account, login_info.pfid, login_info.sid, pid)
+end
+
 NetMsg.reg_noauth(PLAYER.LOGIN, c_player_login)
 NetMsg.reg_noauth(PLAYER.CREATE, c_create_role)
+NetMsg.reg_noauth(PLAYER.ENTER, c_enter_game)

@@ -270,11 +270,11 @@ function Startup.process_init(loader)
 end
 
 -- 加载入口文件，将会引入所有模块
-function Startup.load()
+function Startup.load(reload)
     if "string" == type(__loader) then
         require(__loader)
     else
-        __loader()
+        __loader(reload)
     end
     Rtti.collect()
     SE.ready()

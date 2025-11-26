@@ -70,7 +70,7 @@ local function return_login_result(info, account, pfid, e)
     local socket_id = info.socket_id
     if not socket_id then return end -- 数据加载时，已断开
 
-    Send.Login.do_create_result(info.addr, socket_id, account, pfid, info, e)
+    Send.Login.do_create_result(info.gaddr, socket_id, account, pfid, info, e)
 end
 
 local function get_account_info(account, pfid, sid)
@@ -100,7 +100,7 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
     assert(account and pfid and sid)
 
     local info = get_account_info(account, pfid, sid)
-    local old_addr = info.addr
+    local old_addr = info.gaddr
     if old_addr then
         local old_id = info.socket_id
         assert(old_id and old_id ~= socket_id)
@@ -109,7 +109,7 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
         Send.Login.login_else_where(old_addr, old_id, account, pfid)
     end
 
-    info.addr = addr
+    info.gaddr = addr
     info.socket_id = socket_id
 
     local loaded = info.loaded
@@ -125,14 +125,14 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
     local e, rows = Call.MongoDB.find(db_addr,
         "role", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
     info.loaded = 2
-    if 0 ~= e then
+    if 0 == e then
         for _, row in pairs(rows) do
             local pid = row._id
             row.pid = pid
             table.insert(info.list, row)
         end
     else
-        eprint("account db load error", e)
+        eprint("account db load error", e, rows)
         e = E.SRV_ERROR
     end
     return_login_result(info, account, pfid, e)
@@ -160,7 +160,6 @@ function AccountMgr.create_role(addr, socket_id, account, pfid, sid, pkt)
     if 1 == info.created then return end
 
     info.created = 1
-
     local db_addr = Router.find_worker_addr(W_MONGODB, "uniqueid")
 
     -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
@@ -171,9 +170,8 @@ function AccountMgr.create_role(addr, socket_id, account, pfid, sid, pkt)
 
     info.created = nil
     if 0 ~= e then
-        eprint("uniqueid db load error", e)
-        e = E.SRV_ERROR
-        return return_create_role_result(info, account, pfid, e)
+        eprint("uniqueid db load error", e, row)
+        return return_create_role_result(info, account, pfid, E.SRV_ERROR)
     end
     local seed = assert(row.seed)
     local real_sid = Engine.get_server_id()
@@ -190,17 +188,22 @@ function AccountMgr.create_role(addr, socket_id, account, pfid, sid, pkt)
     }
 
     info.created = 1
-    e = Call.MongoDB.insert(db_addr, "role", role)
+    local msg
+    e, msg = Call.MongoDB.insert(db_addr, "role", role)
     info.created = nil
     if 0 == e then
         role._id = pid
         table.insert(info.list, role)
     else
-        eprint("role db insert error", e)
+        eprint("role db insert error", e, msg)
         e = E.SRV_ERROR
     end
 
     return return_create_role_result(info, account, pfid, e)
+end
+
+-- 进入游戏
+function AccountMgr.enter(addr, socket_id, account, pfid, sid, pid)
 end
 
 return AccountMgr

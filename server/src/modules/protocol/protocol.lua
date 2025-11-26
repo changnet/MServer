@@ -39,8 +39,12 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 进入游戏
     ENTER = {
-        s = "comm.Empty", c = "comm.Empty", i = 4
+        s = "comm.Empty", c = "player.CEnterGame", i = 4
 
+    },
+    -- 登录游戏完成，所有数据已下发
+    READY = {
+        s = "comm.Empty",
     },
     -- 踢下线
     KICK = {

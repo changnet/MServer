@@ -621,7 +621,7 @@ int32_t Socket::listen(int32_t addr, const char *host, int32_t port)
 
     if (!w_->io_)
     {
-        w_->io_ = new IO(socket_id_);
+        w_->io_ = new IO();
         w_->io_->init_accept_buffer();
     }
     start(addr, fd, EV_ACCEPT);
@@ -761,10 +761,10 @@ void *Socket::set_io(int32_t io_type, TlsCtx *tls_ctx)
     IO *io;
     switch (io_type)
     {
-    case IO::IOT_NONE: io = new IO(socket_id_); break;
+    case IO::IOT_NONE: io = new IO(); break;
     case IO::IOT_SSL:
         if (!tls_ctx) return nullptr;
-        io = new SSLIO(socket_id_, tls_ctx);
+        io = new SSLIO(tls_ctx);
         break;
     default: return nullptr;
     }
