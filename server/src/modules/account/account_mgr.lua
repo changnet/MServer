@@ -28,9 +28,8 @@ AccountMgr = {}
 local this = memory("AccountMgr", {
     account = {}, -- [pfid][account] = {list = {}} 帐号数据数据缓存
     role_acc = {}, -- [pid] = role_info 当前登录的角色数据
+    wait_enter = {}, -- [info] = info 等待进入游戏的玩家
 })
-
-Rpc.proxy_wtype("Mongodb", W_MONGODB)
 
 -- 读取帐号数据时，哪些字段要读取
 local ROLE_FILTER = '{"projection":{"pid":1,"name":1,"sid":1}}'
@@ -88,6 +87,9 @@ local function get_account_info(account, pfid, sid)
     local info = server_list[sid]
     if not info then
         info = {
+            sid = sid,
+            pfid = pfid,
+            account = account,
             list = {}, -- 角色列表
         }
         server_list[sid] = info
@@ -105,6 +107,17 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
         local old_id = info.socket_id
         assert(old_id and old_id ~= socket_id)
 
+        this.wait_enter[info] = nil
+        -- 如果下线失败，超时将直接顶掉
+        if info.paddr and not info.kick_time then
+            local pid = info.pid
+            info.kick_time = Engine.time()
+            Send.PlayerMgr.kick(info.paddr, pfid)
+            print("account login kick else where", account, pfid, sid, pid)
+        else
+            print("account login else where", account, pfid, sid)
+        end
+
         -- 顶号，通知旧的下线
         Send.Login.login_else_where(old_addr, old_id, account, pfid)
     end
@@ -120,20 +133,23 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
         return -- 加载中，不要重复加载
     end
 
+    -- 如果有多个account_mgr，account_mgr的路由已经保证同一个帐号必定在同一个account_mgr处理
+    -- 因此对mongodb的路由就没有要求了
     local db_addr = Router.find_worker_addr(W_MONGODB, "role", account)
     info.loaded = 1
     local e, rows = Call.MongoDB.find(db_addr,
         "role", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
-    info.loaded = 2
     if 0 == e then
         for _, row in pairs(rows) do
             local pid = row._id
             row.pid = pid
             table.insert(info.list, row)
         end
+        info.loaded = 2
     else
         eprint("account db load error", e, rows)
         e = E.SRV_ERROR
+        info.loaded = nil
     end
     return_login_result(info, account, pfid, e)
 end
@@ -146,10 +162,14 @@ local function return_create_role_result(info, account, pfid, e)
 end
 
 -- 创角
-function AccountMgr.create_role(addr, socket_id, account, pfid, sid, pkt)
+function AccountMgr.create_role(socket_id, account, pfid, sid, pkt)
     assert(account and pfid and sid)
 
     local info = get_account_info(account, pfid, sid)
+    if 2 ~= info.loaded then
+        eprint("create role not loading", socket_id, account)
+        return
+    end
     -- 当前一个帐号只能创建一个角色
     if #(info.list or EMPTY) > 0 then
         eprint("role already create", socket_id, account)
@@ -202,8 +222,61 @@ function AccountMgr.create_role(addr, socket_id, account, pfid, sid, pkt)
     return return_create_role_result(info, account, pfid, e)
 end
 
+-- 处理进入player worker逻辑
+local function do_enter(info)
+    -- 如果存在paddr，则进入同一个player worker(这种情况一般是下线失败或者超时才会出现)
+    -- 否则按player worker路由分配一个
+
+    local pid = info.pid
+    local paddr = info.paddr or Router.find_worker_addr(W_PLAYER, pid)
+
+    -- 这个session_id现在只用于同一个玩家区分不同登录会话，因此不要求唯一
+    local session_id = info.socket_id
+    if session_id == info.session_id then session_id = session_id + 1 end
+
+    local role_info = {
+        pid = pid,
+        session_id = session_id,
+        ip = info.ip,
+    }
+    info.paddr = paddr
+    info.kick_time = nil
+    info.session_id = session_id
+
+    print("role enter", info.account, pid, paddr)
+    Send.PlayerMgr.enter(paddr, role_info)
+end
+
 -- 进入游戏
-function AccountMgr.enter(addr, socket_id, account, pfid, sid, pid)
+function AccountMgr.enter(socket_id, account, pfid, sid, pid, ip)
+    local info = get_account_info(account, pfid, sid)
+    if 2 ~= info.loaded then
+        eprint("enter game not loaded", socket_id, account)
+        return
+    end
+    local role
+    for _, v in pairs(info.list) do
+        if v.pid == pid then
+            role = v
+            break
+        end
+    end
+    if not role then
+        eprint("enter game role not found", socket_id, account, pid)
+        return
+    end
+
+    info.pid = pid
+    info.ip = ip
+    -- 如果存在paddr，则说明现在是顶号，旧的玩家还没完全下线
+    local paddr = info.paddr
+    if not paddr or Engine.time() - (info.kick_time or 0) > 120 then
+        do_enter(info)
+    else
+        -- 等待下线
+        this.wait_enter[info] = true
+        print("role wait enter", account, pid)
+    end
 end
 
 return AccountMgr

@@ -1,4 +1,4 @@
--- auto export by lua-tags 178 symbols
+-- auto export by lua-tags 180 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -12,6 +12,8 @@ return {
 "Await", -- src/rpc/rpc_proxy.lua
 "BAG", -- src/modules/protocol/protocol.lua
 "Bootstrap", -- src/engine/bootstrap.lua
+"Bot", -- src/bot/bot.lua
+"BotMgr", -- src/bot/bot_mgr.lua
 "CHAT", -- src/modules/protocol/protocol.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua

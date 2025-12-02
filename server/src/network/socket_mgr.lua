@@ -37,9 +37,6 @@ local PC_CTRL = SocketMgr.PC_CTRL
 
 local CLOSED = SocketMgr.CLOSED
 
-local LOCAL_ADDR = assert(LOCAL_ADDR)
-local LOW_BIT = LOCAL_ADDR & 0xFFFF
-
 __socket_hash = __socket_hash or {}
 __socket_seed = __socket_seed or 0
 
@@ -50,19 +47,17 @@ local __socket_hash = __socket_hash
 
 -- 分配当前进程唯一的socket id
 function SocketMgr.next_id()
-    -- 需要保证多个worker生成的id不会冲突
-    -- 参考engine.lua中生成address的规则，低16位用作worker type和index
-    -- 高16位用作自增，目前一个worker最多只能发起2^16=65535个连接
+    -- 不同worker的socket_id，是可以重复的，底层是以addr + socket_id来区分一个socket
+    -- 虽然在所有worker中唯一比较好调试，但worker_addr就用了17位，seed只用13位的话设计上限太低
     local seed = __socket_seed
 
-    for _ = 1, 0xFFFF do
+    for _ = 1, 0x7FFFFFFF do
         seed = seed + 1
-        if seed > 0xFFFF then seed = 1 end
+        if seed > 0x7FFFFFFF then seed = 1 end
 
-        local id = (seed << 16) | LOW_BIT
-        if not __socket_hash[id] then
+        if not __socket_hash[seed] then
             __socket_seed = seed
-            return id
+            return seed
         end
     end
 

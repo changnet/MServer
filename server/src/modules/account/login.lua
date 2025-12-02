@@ -11,7 +11,7 @@ function Login.login_else_where(socket_id, account, pfid)
     end
 
     socket:send_pkt(PLAYER.KICK, {reason = 1})
-    print("login else where", account, socket.pid)
+    print("login else where, socket close", account, socket.pid)
 
     socket:close(true)
 end
@@ -110,7 +110,7 @@ local function c_create_role(socket, pkt)
     -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
-    Send.AccountMgr.create_role(addr, LOCAL_ADDR,
+    Send.AccountMgr.create_role(addr,
         socket_id, account, login_info.pfid, login_info.sid, pkt)
 end
 
@@ -145,10 +145,12 @@ local function c_enter_game(socket, pkt)
         return
     end
 
+    local ip = socket:address()
+
     socket.pid = pid
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
-    Send.AccountMgr.enter(addr, LOCAL_ADDR,
-        socket_id, account, login_info.pfid, login_info.sid, pid)
+    Send.AccountMgr.enter(addr,
+        socket_id, account, login_info.pfid, login_info.sid, pid, ip)
 end
 
 NetMsg.reg_noauth(PLAYER.LOGIN, c_player_login)
