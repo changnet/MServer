@@ -7,141 +7,165 @@ g_setting = require "setting.setting" -- require_no_update
 
 -- 检查是否执行登录
 function Loginout.check_and_login(ai)
-    if (ai.login_time or 0) > ev:time() then return false end
+    if (ai.login_time or 0) > Engine.time() then return false end
 
-    local conf = g_setting.gateway[1]
-    local host = conf.cip
+    -- 有开启多个网关的话，随机选一个
+    local gateway = table.choice(g_setting.gateway)
+
+    local host = gateway.host
     if "0.0.0.0" == host then
         host = "127.0.0.1"
     elseif "::" == host then
         host = "::1"
     end
 
-    local conn = ai.entity.conn
+    local entity = ai.entity
+
+    local socket = entity.s
 
     -- 连接服务器
-    conn:connect(host, conf.cport)
-    conn.on_connected = Loginout.on_connected
-    conn.on_disconnected = Loginout.on_disconnected
+    if socket then
+        socket:close()
+    end
+
+    socket = entity.socket_driver()
+    entity.s = socket
+
+    socket.entity = ai.entity
+    socket.on_connected = Loginout.on_connected
+    socket.on_disconnected = Loginout.on_disconnected
+
+    socket:connect(host, gateway.port)
 
     ai.state = AST.LOGIN
     return true
 end
 
 -- 连接成功
-function Loginout.on_connected(conn)
-    local entity = conn.entity
+function Loginout.on_connected(socket)
+    local entity = socket.entity
 
-    printf("android(%d) connection(%d) establish", entity.index, conn.socket_id)
+    printf("bot(%d) connection(%d) establish", entity.id, socket.socket_id)
 
-    Loginout.do_login(entity)
-end
-
--- 断开连接
-function Loginout.on_disconnected(conn, e)
-    local entity = conn.entity
-
-    conn.socket_id = nil
-    entity.ai.state = AST.OFF
-    printf("android(%d) die: %s", entity.index, util.what_error(e))
-end
-
-
--- 执行登录逻辑
-function Loginout.do_login(entity)
     -- sid:int;        // 服务器id
     -- time:int;       // 时间戳
-    -- plat:int;       // 平台id
+    -- pfid:int;       // 平台id
     -- sign:string;    // 签名
     -- account:string; // 帐户
 
     local pkt = {
         sid = 1,
-        time = ev:time(),
-        plat = 999,
-        account = string.format("android_%d", entity.index)
+        time = Engine.time(),
+        pfid = 999,
+        account = string.format("bot_%d", entity.id)
     }
-    pkt.sign = util.md5(LOGIN_KEY, pkt.time, pkt.account)
+    pkt.sign = util.sha1(LOGIN_KEY, pkt.time, pkt.account)
 
     return entity:send_pkt(PLAYER.LOGIN, pkt)
 end
 
+local function do_disconnect(socket)
+    local entity = socket.entity
+
+    socket:close()
+    entity.s = nil
+    entity.ai.state = AST.OFF
+end
+
+-- 断开连接
+function Loginout.on_disconnected(socket)
+    local e, msg = socket:get_error()
+    printf("bot(%d) die: (%d)%s", socket.entity.id, e, msg)
+
+    do_disconnect(socket)
+end
 
 -- 登录返回
-function Loginout.on_login(entity, errno, pkt)
+local function s_login(entity, pkt)
+    if 0 ~= (pkt.errno or 0) then
+        printf("bot(%d) login error: %d", entity.id, pkt.errno)
+        do_disconnect(entity.s)
+        return
+    end
     -- no role,create one now
-    if 0 == (pkt.pid or 0) then
-        local _pkt = {name = string.format("android_%d", entity.index)}
+    if 0 == #(pkt.list or EMPTY) then
+        local _pkt = {name = string.format("bot_%d", entity.id)}
         entity:send_pkt(PLAYER.CREATE, _pkt)
 
         return
     end
 
     -- 如果已经存在角色，直接请求进入游戏
-    entity.pid = pkt.pid
-    entity.name = pkt.name
+    local role = pkt.list[1]
+    entity.pid = role.pid
+    entity.name = role.name
     Loginout.enter_world(entity)
 end
 
 -- 创角返回
-function Loginout.on_create_role(entity, errno, pkt)
-    if 0 ~= errno then
-        printf("android_%d unable to create role", entity.index)
+local function s_create_role(entity, pkt)
+    if 0 ~= (pkt.errno or 0) then
+        printf("bot(%d) login error: %d", entity.id, pkt.errno)
+        do_disconnect(entity.s)
         return
     end
+
+    assert(0 ~= (pkt.pid or 0))
 
     entity.pid = pkt.pid
     entity.name = pkt.name
 
     Loginout.enter_world(entity)
 
-    printf("android_%d create role success,pid = %d,name = %s", entity.index,
+    printf("bot_%d create role success,pid = %d,name = %s", entity.id,
            entity.pid, entity.name)
 end
 
 -- 请求进入游戏
 function Loginout.enter_world(entity)
-    entity:send_pkt(PLAYER.ENTER, {})
+    entity:send_pkt(PLAYER.ENTER, {pid = entity.pid})
 end
 
 -- 确认进入游戏完成
-function Loginout.on_enter_world(entity, errno, pkt)
+local function s_enter_world(entity, errno, pkt)
     entity.ai.state = AST.ON
 
     local param = entity.ai.ai_conf.param
 
     -- 记录登录时间，一段时间后自动退出
-    entity.ai.logout_time = ev:time() + math.random(60, param.logout_time)
+    entity.ai.logout_time = Engine.time() + math.random(60, param.logout_time)
 
     printf("%s enter world success", entity.name)
     -- PE.fire_event( PE_ENTER,entity )
 end
 
 -- 初始化场景属性
-function Loginout.on_init_property(entity, errno, pkt)
+local function s_init_property(entity, errno, pkt)
     -- 切换进程时，这里的数据会重新下发
 
     entity.handle = pkt.handle
 end
 
 -- 被顶号
-function Loginout.on_login_otherwhere(entity, errno, pkt)
+local function s_login_otherwhere(entity, errno, pkt)
     printf("%s login other where", entity.name)
+    -- 随后socket会被服务器断开，不需处理
 end
 
 -- ************************************************************************** --
 
 -- 是否执行退出
 function Loginout.check_and_logout(ai)
-    if ai.logout_time > ev:time() then return false end
+    local time = Engine.time()
+    if ai.logout_time > time then return false end
 
     local param = ai.ai_conf.param
 
     ai.state = AST.OFF
-    ai.login_time = ev:time() + math.random(60, param.login_time)
+    ai.login_time = time + math.random(60, param.login_time)
 
     local entity = ai.entity
-    entity.conn:close()
+    entity.socket:close()
 
     entity.handle = nil -- 要测试重登录，handle会重置
 
@@ -153,10 +177,10 @@ end
 -- ************************************************************************** --
 
 
-AndroidMgr.reg(PLAYER.LOGIN, Loginout.on_login)
-AndroidMgr.reg(PLAYER.CREATE, Loginout.on_create_role)
-AndroidMgr.reg(PLAYER.ENTER, Loginout.on_enter_world)
-AndroidMgr.reg(PLAYER.OTHER, Loginout.on_login_otherwhere)
-AndroidMgr.reg(ENTITY.PROPERTY, Loginout.on_init_property)
+BotMgr.reg(PLAYER.LOGIN, s_login)
+BotMgr.reg(PLAYER.CREATE, s_create_role)
+BotMgr.reg(PLAYER.ENTER, s_enter_world)
+BotMgr.reg(PLAYER.OTHER, s_login_otherwhere)
+BotMgr.reg(ENTITY.PROPERTY, s_init_property)
 
 return Loginout

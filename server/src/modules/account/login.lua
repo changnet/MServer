@@ -49,19 +49,20 @@ local function c_player_login(socket, pkt)
 
     if Engine.time() - time > 1800 then
         eprint("player login time expire", account, time)
-        return
+        return socket:send_pkt(PLAYER.LOGIN, {errno = E.SIGN_EXPIRE})
     end
 
-    local sign = Util.md5(LOGIN_KEY, time, account)
+    -- sha1可以直接传数字，会自动转成string。但有可能会带.0导致出错
+    local sign = Util.sha1(LOGIN_KEY, math.tointeger(time), account)
     if sign ~= pkt.sign then
         eprint("clt sign error:", time, account, pkt.sign, sign)
-        return
+        return socket:send_pkt(PLAYER.LOGIN, {errno = E.PWD_ERROR})
     end
 
     -- 不能重复发送(不是顶号，顶号socket_id不应该会重复)
     if socket.login then
         eprint("player login already in process", account)
-        return
+        return socket:send_pkt(PLAYER.LOGIN, {errno = E.UNDEFINE})
     end
     socket.login = pkt
 

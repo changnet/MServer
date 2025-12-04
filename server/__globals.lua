@@ -1,4 +1,4 @@
--- auto export by lua-tags 180 symbols
+-- auto export by lua-tags 181 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -27,6 +27,7 @@ return {
 "DEFINE_END", -- src/global/require.lua
 "DataMgr", -- src/data/data_mgr.lua
 "E", -- src/modules/module_loader.lua
+"E", -- src/modules/system/error.lua
 "EMPTY", -- src/modules/system/define.lua
 "ENTITY", -- src/modules/protocol/protocol.lua
 "ET", -- src/modules/entity/entity_header.lua

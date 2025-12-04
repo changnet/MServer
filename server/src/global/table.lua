@@ -290,3 +290,14 @@ function table.append(t, ...)
     local args = {...}
     return table.move(args, 1, #args, #t + 1, t)
 end
+
+-- 从一个table中随机选择一个元素，table可以不为数组
+function table.choice(tbl)
+    local size = table.size(tbl)
+    local index = math.random(size)
+    local i = 1
+    for _, v in pairs(tbl) do
+        if i == index then return v end
+        i = i + 1
+    end
+end

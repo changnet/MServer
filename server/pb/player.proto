@@ -24,7 +24,7 @@ message SLogin
         string name = 2; // 角色名字
     }
     repeated Role list = 1;
-
+    int32 errno = 2; // 错误码
 }
 
 // 创建角色
@@ -38,6 +38,7 @@ message SCreateRole
 {
     int64 pid = 1; // 玩家id
     string name = 2; // 角色名字
+    int32 errno = 3; // 错误码
 }
 
 // 进入游戏
