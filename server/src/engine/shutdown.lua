@@ -58,3 +58,15 @@ function Shutdown.start()
 
     return true
 end
+
+-- 注册按优先级关闭的模块
+-- @param mod 需要关闭的模块，包括start、ready函数
+-- @param priority 启动优先级，越小优先级越高，默认20
+function Shutdown.reg(mod, priority)
+    if not shutdown_modules then
+        local PriorityManager = require "util.priority_manager"
+        shutdown_modules = PriorityManager()
+    end
+
+    shutdown_modules:push(mod, priority)
+end

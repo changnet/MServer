@@ -37,21 +37,14 @@ function ScSocket:authorized()
     self.auth = true
 end
 
--- 将该链接绑定一个角色
-function ScSocket:bind_role(pid)
-    self.pid = pid
-end
-
 -- 连接断开
 function ScSocket:on_disconnected()
     return CltMgr.del(self.socket_id)
 end
 
 -- 消息回调
-function ScSocket:on_message(cmd, ...)
-    -- 这里回调的参数，取决于socket的类型的unpack函数
-    -- websocket stream，则是cmd, buffer, size
-    return Cmd.dispatch_clt(self, cmd, ...)
+function ScSocket:on_message(cmd, buffer, size)
+    return NetMsg.dispatch(self, cmd, buffer, size)
 end
 
 -- 接受新客户端连接

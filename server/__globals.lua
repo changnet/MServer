@@ -1,4 +1,4 @@
--- auto export by lua-tags 181 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,11 +7,9 @@ return {
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
-"AccountMgr", -- src/modules/account/account_mgr%20copy.lua
 "AndroidMgr", -- src/android/android_mgr.lua
 "Await", -- src/rpc/rpc_proxy.lua
 "BAG", -- src/modules/protocol/protocol.lua
-"Bootstrap", -- src/engine/bootstrap.lua
 "Bot", -- src/bot/bot.lua
 "BotMgr", -- src/bot/bot_mgr.lua
 "CHAT", -- src/modules/protocol/protocol.lua
@@ -35,9 +33,7 @@ return {
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "GAME_ADDR", -- src/engine/preloader.lua
 "GATEWAY_ADDR", -- src/engine/preloader.lua
-"GM", -- src/modules/system/gm.lua
 "GM", -- src/modules/gm/gm.lua
-"GM", -- src/modules/gm/gm%20copy.lua
 "GameTest", -- src/modules/ai/action/game_test.lua
 "HTTP", -- src/http/http_header.lua
 "LANG", -- config/lang_dev.lua
@@ -100,7 +96,6 @@ return {
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
 "UNIQUEID", -- src/modules/system/define.lua
-"Util", -- src/engine/bootstrap.lua
 "Util", -- src/engine/startup.lua
 "WORKER", -- src/modules/system/define.lua
 "W_ACCOUNT", -- src/modules/system/define.lua
@@ -117,23 +112,16 @@ return {
 "WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
 "WorkerNameType", -- src/worker/worker.lua
-"WorkerRoute", -- src/worker/worker_route.lua
 "WorkerTypeName", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G__TRACKBACK", -- src/global/global.lua
-"__assert", -- src/engine/bootstrap.lua
 "__assert", -- src/engine/startup.lua
-"__error", -- src/engine/bootstrap.lua
 "__error", -- src/engine/startup.lua
 "__global_memory", -- src/data/global_data.lua
 "__global_storage", -- src/data/global_data.lua
-"__loader", -- src/engine/bootstrap.lua
 "__loader", -- src/engine/startup.lua
-"__package_cpath", -- src/engine/bootstrap.lua
 "__package_cpath", -- src/engine/startup.lua
-"__package_path", -- src/engine/bootstrap.lua
 "__package_path", -- src/engine/startup.lua
-"__print", -- src/engine/bootstrap.lua
 "__print", -- src/engine/startup.lua
 "__rpc_session", -- src/rpc/rpc.lua
 "__socket_hash", -- src/network/socket_mgr.lua
@@ -148,11 +136,9 @@ return {
 "g_lcodec", -- src/rpc/rpc.lua
 "g_mongodb", -- src/data/w_mongodb.lua
 "g_mysql", -- src/data/w_mysql.lua
-"g_ready", -- src/engine/bootstrap.lua
 "g_ready", -- src/engine/startup.lua
-"g_setting", -- src/engine/bootstrap.lua
-"g_setting", -- src/modules/ai/action/loginout.lua
 "g_setting", -- src/engine/startup.lua
+"g_setting", -- src/modules/ai/action/loginout.lua
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
@@ -161,7 +147,6 @@ return {
 "main_message_dispatch", -- src/message/thread_message.lua
 "memory", -- src/data/global_data.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
-"mysql_event", -- src/mysql/mysql_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
 "print", -- src/global/log.lua

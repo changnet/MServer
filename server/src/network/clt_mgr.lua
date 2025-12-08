@@ -1,72 +1,108 @@
--- 管理与客户端的连接
+-- 管理服务器与客户端的连接
 CltMgr = {}
 
 local this = memory("CltMgr", {
-    clt = {}, -- 与客户端的连接，pid为key
-    clt_conn = {}, -- 与客户端的连接，socket_id为key
+    clt = {}, -- [pid] = socket, 与客户端的连接
+    clt_socket = {}, -- [socket_id] = socket，这里的socket可能未认证，未绑定角色
 })
 
--- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑)
-function CltMgr.close(conn)
-    this.clt_conn[conn.socket_id] = nil
-    if conn.pid then this.clt[conn.pid] = nil end
+-- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑，仅用于强制关服)
+function CltMgr.close(socket)
+    this.clt_socket[socket.socket_id] = nil
+    if socket.pid then this.pid_socket[socket.pid] = nil end
 
-    conn:close()
+    socket:close()
 end
 
 -- 根据pid主动关闭客户端连接
 function CltMgr.close_by_pid(pid)
-    local conn = this.clt[pid]
-    if not conn then
-        eprint("close_by_pid no conn found:%d", pid)
+    local socket = this.pid_socket[pid]
+    if not socket then
+        eprint("close_by_pid no socket found:%d", pid)
         return
     end
 
-    CltMgr.close(conn)
+    CltMgr.close(socket)
 end
 
 
 -- 设置客户端连接
-function CltMgr.bind(pid, clt_conn)
-    assert(nil == this.clt[pid], "player already have a connection")
+function CltMgr.bind(socket, pid)
+    assert(nil == this.pid_socket[pid], "player already have a connection")
 
-    clt_conn:bind_role(pid)
-    this.clt[pid] = clt_conn
+    socket.pid = pid
+    this.pid_socket[pid] = socket
 end
 
 -- 获取客户端连接
 function CltMgr.get_by_pid(pid)
-    return this.clt[pid]
+    return this.pid_socket[pid]
 end
 
 -- 根据socket_id获取连接
 function CltMgr.get(socket_id)
-    return this.clt_conn[socket_id]
+    return this.clt_socket[socket_id]
 end
 
 
 -- 新增客户端连接
-function CltMgr.add(conn)
-    local socket_id = conn.socket_id
-    this.clt_conn[socket_id] = conn
+function CltMgr.add(socket)
+    local socket_id = socket.socket_id
+    this.clt_socket[socket_id] = socket
 
     printf("client connection add: %d", socket_id)
 end
 
 -- 客户端连接断开回调
 function CltMgr.del(socket_id)
-    local conn = this.clt_conn[socket_id]
+    local socket = this.clt_socket[socket_id]
     AccMgr.role_offline(socket_id)
 
-    this.clt_conn[socket_id] = nil
+    this.clt_socket[socket_id] = nil
     -- 如果已经登录，通知其他服玩家下线
-    if conn.pid then
-        this.clt[conn.pid] = nil
-        local pkt = {pid = conn.pid}
+    if socket.pid then
+        this.pid_socket[socket.pid] = nil
+        local pkt = {pid = socket.pid}
         SrvMgr.send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
     end
 
     printf("client connect del: %d", socket_id)
 end
+
+-- 服务器启动完成才开启客户端监听
+local function on_ready()
+    local gateway = assert(g_setting.gateway[LOCAL_NAME])
+
+    -- 开启监听
+    local ScSocket = require "network.sc_socket"
+
+    local socket = ScSocket()
+    local ok = socket:listen(gateway.host, gateway.port)
+    if not ok then
+        eprint("listen client fail", socket:error())
+        return
+    end
+    this.listen_socket = socket
+    printf("listen client at %s:%d", gateway.host, gateway.port)
+end
+
+-- 关服清理数据
+local function shutdown()
+    local socket = this.listen_socket
+    if socket then
+        socket:close()
+        this.listen_socket = nil
+    end
+
+    for _, clt_socket in pairs(this.clt_socket) do
+        clt_socket:close()
+    end
+end
+
+SE.reg(SE_READY, on_ready)
+Shutdown.reg("ClgMgr", {
+    shutdown = shutdown,
+    ready = function() return true end
+})
 
 return CltMgr

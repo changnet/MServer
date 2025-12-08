@@ -148,7 +148,7 @@ local function c_enter_game(socket, pkt)
 
     local ip = socket:address()
 
-    socket.pid = pid
+    CltMgr.bind(socket, pid)
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
     Send.AccountMgr.enter(addr,
         socket_id, account, login_info.pfid, login_info.sid, pid, ip)

@@ -67,7 +67,7 @@ end
 
 local function return_login_result(info, account, pfid, e)
     local socket_id = info.socket_id
-    if not socket_id then return end -- 数据加载时，已断开
+    if not socket_id then return end -- 数据加载完成时，可能已断开
 
     Send.Login.do_create_result(info.gaddr, socket_id, account, pfid, info, e)
 end

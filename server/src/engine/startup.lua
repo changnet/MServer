@@ -334,7 +334,7 @@ function Startup.worker_init(addr, loader)
 end
 
 -- 注册按优先级启动的模块
--- @param mod 需要启动的模块，包括boot_start、boot_ready函数
+-- @param mod 需要启动的模块，包括start、ready函数
 -- @param priority 启动优先级，越小优先级越高，默认20
 function Startup.reg(mod, priority)
     if not startup_modules then
