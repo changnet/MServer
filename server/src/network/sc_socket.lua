@@ -39,7 +39,7 @@ end
 
 -- 连接断开
 function ScSocket:on_disconnected()
-    return CltMgr.del(self.socket_id)
+    return CltMgr.del(self)
 end
 
 -- 消息回调

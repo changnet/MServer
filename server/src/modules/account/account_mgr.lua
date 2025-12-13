@@ -42,12 +42,12 @@ function AccountMgr.get_role_info(pid)
 end
 
 -- 玩家下线
-function AccountMgr.role_offline(socket_id)
-    local role_info = this.sock_acc[socket_id]
+function AccountMgr.role_offline(session_id)
+    local role_info = this.sock_acc[session_id]
     if not role_info then return end -- 连接上来未登录就断线
 
-    role_info.socket_id = nil
-    this.sock_acc[socket_id] = nil
+    role_info.session_id = nil
+    this.sock_acc[session_id] = nil
 end
 
 -- 根据pid下线
@@ -62,14 +62,14 @@ function AccountMgr.role_offline_by_pid(pid)
         return
     end
 
-    AccountMgr.role_offline(role_info.socket_id)
+    AccountMgr.role_offline(role_info.session_id)
 end
 
 local function return_login_result(info, account, pfid, e)
-    local socket_id = info.socket_id
-    if not socket_id then return end -- 数据加载完成时，可能已断开
+    local session_id = info.session_id
+    if not session_id then return end -- 数据加载完成时，可能已断开
 
-    Send.Login.do_create_result(info.gaddr, socket_id, account, pfid, info, e)
+    Send.Login.do_create_result(info.gaddr, session_id, account, pfid, info, e)
 end
 
 local function get_account_info(account, pfid, sid)
@@ -97,15 +97,15 @@ local function get_account_info(account, pfid, sid)
     return info
 end
 
-function AccountMgr.login(addr, socket_id, account, pfid, sid)
+function AccountMgr.login(addr, session_id, account, pfid, sid)
     -- 传nil会导致下面的数据库查询返回其他数据
     assert(account and pfid and sid)
 
     local info = get_account_info(account, pfid, sid)
     local old_addr = info.gaddr
     if old_addr then
-        local old_id = info.socket_id
-        assert(old_id and old_id ~= socket_id)
+        local old_id = info.session_id
+        assert(old_id and old_id ~= session_id)
 
         this.wait_enter[info] = nil
         -- 如果下线失败，超时将直接顶掉
@@ -123,7 +123,7 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
     end
 
     info.gaddr = addr
-    info.socket_id = socket_id
+    info.session_id = session_id
 
     local loaded = info.loaded
     if 2 == loaded then
@@ -155,24 +155,24 @@ function AccountMgr.login(addr, socket_id, account, pfid, sid)
 end
 
 local function return_create_role_result(info, account, pfid, e)
-    local socket_id = info.socket_id
-    if not socket_id then return end -- 数据加载时，已断开
+    local session_id = info.session_id
+    if not session_id then return end -- 数据加载时，已断开
 
-    Send.Login.do_result(info.addr, socket_id, account, pfid, info, e)
+    Send.Login.do_result(info.addr, session_id, account, pfid, info, e)
 end
 
 -- 创角
-function AccountMgr.create_role(socket_id, account, pfid, sid, pkt)
+function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     assert(account and pfid and sid)
 
     local info = get_account_info(account, pfid, sid)
     if 2 ~= info.loaded then
-        eprint("create role not loading", socket_id, account)
+        eprint("create role not loading", session_id, account)
         return
     end
     -- 当前一个帐号只能创建一个角色
     if #(info.list or EMPTY) > 0 then
-        eprint("role already create", socket_id, account)
+        eprint("role already create", session_id, account)
         return
     end
 
@@ -230,9 +230,9 @@ local function do_enter(info)
     local pid = info.pid
     local paddr = info.paddr or Router.find_worker_addr(W_PLAYER, pid)
 
-    -- 这个session_id现在只用于同一个玩家区分不同登录会话，因此不要求唯一
-    local session_id = info.socket_id
-    if session_id == info.session_id then session_id = session_id + 1 end
+    -- 如果是顶号，那session_id肯定不一样
+    local session_id = info.session_id
+    assert(session_id ~= info.session_id)
 
     local role_info = {
         pid = pid,
@@ -248,10 +248,10 @@ local function do_enter(info)
 end
 
 -- 进入游戏
-function AccountMgr.enter(socket_id, account, pfid, sid, pid, ip)
+function AccountMgr.enter(session_id, account, pfid, sid, pid, ip)
     local info = get_account_info(account, pfid, sid)
     if 2 ~= info.loaded then
-        eprint("enter game not loaded", socket_id, account)
+        eprint("enter game not loaded", session_id, account)
         return
     end
     local role
@@ -262,7 +262,7 @@ function AccountMgr.enter(socket_id, account, pfid, sid, pid, ip)
         end
     end
     if not role then
-        eprint("enter game role not found", socket_id, account, pid)
+        eprint("enter game role not found", session_id, account, pid)
         return
     end
 

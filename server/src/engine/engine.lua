@@ -6,10 +6,10 @@ local SERVER_ID = g_setting.server
 -- @param wtype worker type，worker类型，如WORKER_ACCOUNT
 -- @param main 是否为主线程
 function Engine.make_address(wtype, index, main)
-    -- 返回的地址最大为int32，高8位暂时不用
-    -- wType最大为8位，一个进程里，最多只能有255个类型的worker
-    -- index最大为16位，一个进程里，同一个类型的worker最多只能有65535个
-    -- 0是个特殊的地址 当前worker
+    -- index|type|main，返回的地址最大为int32
+    -- wType最大为8位，最多只能有255个类型的worker
+    -- index最大为14位，同一个类型的worker最多只能有16384个
+    -- 0是个特殊的地址，表示当前worker
 
     -- 主线程作为一个管理和调试的特殊线程存在，它的第1位为1
     -- 在集群模式中，一个进程可能会启动多个同类型的worker，则主线程地址index为第一个worker的index
@@ -23,10 +23,10 @@ function Engine.unmake_address(addr)
     local main = 1 == (addr & 0x01)
     addr = addr >> 1
 
-    local wtype = addr & 0xFF
+    local wtype = addr & 255
     addr = addr >> 8
 
-    local index = addr & 0xFFFF
+    local index = addr & 16383 -- 2^14 - 1
 
     return wtype, index, main
 end
@@ -46,4 +46,25 @@ end
 -- 获取当前服务器id
 function Engine.get_server_id()
     return SERVER_ID
+end
+
+-- 生成一个在所有节点唯一，对json安全的唯一id
+function Engine.make_safe_id(seed, hash)
+    -- double最大可以表示53位，小于2^53在json和不支持int64的语言（比如js）中是安全的
+
+    seed = seed + 1
+    if seed > 2^53 - 1 then seed = 1 end
+
+    local id = (seed < 23) | LOCAL_ADDR
+    if not hash[id] then return id, seed end
+
+    for _ = 1, 1000000 do
+        seed = seed + 1
+        if seed > 2^53 - 1 then seed = 1 end
+
+        id = seed | LOCAL_ADDR
+        if not hash[id] then return id, seed end
+    end
+
+    assert(false)
 end

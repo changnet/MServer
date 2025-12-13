@@ -2,13 +2,14 @@
 CltMgr = {}
 
 local this = memory("CltMgr", {
-    clt = {}, -- [pid] = socket, 与客户端的连接
-    clt_socket = {}, -- [socket_id] = socket，这里的socket可能未认证，未绑定角色
+    seed = 0, -- 生成session_id的种子
+    session = {}, -- [session_id] = socket, 与客户端的连接，这里的连接可能未认证
+    pid_socket = {}, -- [pid] = socket, 与客户端的连接
 })
 
 -- 主动关闭客户端连接(只关闭连接，不处理其他帐号下线逻辑，仅用于强制关服)
 function CltMgr.close(socket)
-    this.clt_socket[socket.socket_id] = nil
+    this.session[socket.session] = nil
     if socket.pid then this.pid_socket[socket.pid] = nil end
 
     socket:close()
@@ -40,22 +41,26 @@ function CltMgr.get_by_pid(pid)
 end
 
 -- 根据socket_id获取连接
-function CltMgr.get(socket_id)
-    return this.clt_socket[socket_id]
+function CltMgr.get_by_session_id(session_id)
+    return this.session[session_id]
 end
 
 
 -- 新增客户端连接
 function CltMgr.add(socket)
-    local socket_id = socket.socket_id
-    this.clt_socket[socket_id] = socket
+    local session_id, new_seed = Engine.make_safe_id(this.seed, this.session)
+    this.seed = new_seed
 
-    printf("client connection add: %d", socket_id)
+    socket.session_id = session_id
+    this.session[session_id] = socket
+
+    printf("client connection add: %d", session_id)
 end
 
 -- 客户端连接断开回调
-function CltMgr.del(socket_id)
-    local socket = this.clt_socket[socket_id]
+function CltMgr.del(socket)
+    local session_id = socket.session_id
+    local socket = this.session[session_id]
     AccMgr.role_offline(socket_id)
 
     this.clt_socket[socket_id] = nil
@@ -66,7 +71,7 @@ function CltMgr.del(socket_id)
         SrvMgr.send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
     end
 
-    printf("client connect del: %d", socket_id)
+    printf("client connect del: %d", session_id)
 end
 
 -- 服务器启动完成才开启客户端监听

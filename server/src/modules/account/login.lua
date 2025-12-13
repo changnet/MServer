@@ -2,8 +2,8 @@
 Login = {}
 
 -- 顶号处理
-function Login.login_else_where(socket_id, account, pfid)
-    local socket = CltMgr.get(socket_id)
+function Login.login_else_where(session_id, account, pfid)
+    local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
         print("login socket not found", account, pfid)
@@ -16,8 +16,8 @@ function Login.login_else_where(socket_id, account, pfid)
     socket:close(true)
 end
 
-function Login.do_login_result(socket_id, account, pfid, info, e)
-    local socket = CltMgr.get(socket_id)
+function Login.do_login_result(session_id, account, pfid, info, e)
+    local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
         print("login socket not found", account, pfid)
@@ -42,10 +42,10 @@ local function c_player_login(socket, pkt)
     local pfid = pkt.pfid or 0
     local sid = pkt.sid or -1
 
-    local socket_id = socket.socket_id
+    local session_id = assert(socket.session_id)
 
     printf("client login socketid = %d, acc = %s, pfid=%d, sid=%d",
-        socket_id, account, pfid, sid)
+        session_id, account, pfid, sid)
 
     if Engine.time() - time > 1800 then
         eprint("player login time expire", account, time)
@@ -68,11 +68,11 @@ local function c_player_login(socket, pkt)
 
     -- 网关有多个，需要统一到帐号管理那边获取角色数据，处理顶号
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
-    Send.AccountMgr.login(addr, LOCAL_ADDR, socket_id, account, pfid, sid)
+    Send.AccountMgr.login(addr, LOCAL_ADDR, session_id, account, pfid, sid)
 end
 
-function Login.do_create_result(socket_id, account, pfid, info, e)
-    local socket = CltMgr.get(socket_id)
+function Login.do_create_result(session_id, account, pfid, info, e)
+    local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
         print("login socket not found", account, pfid)
@@ -94,9 +94,9 @@ local function c_create_role(socket, pkt)
     local role_info = socket.role
     local login_info = socket.login
 
-    local socket_id = socket.socket_id
+    local session_id = socket.session_id
     if not role_info or not login_info then
-        eprint("create role no account info", socket_id)
+        eprint("create role no account info", session_id)
         return
     end
 
@@ -104,7 +104,7 @@ local function c_create_role(socket, pkt)
 
     -- 当前一个帐号只能创建一个角色
     if #(role_info.list or EMPTY) > 0 then
-        eprint("role already create", socket_id, account)
+        eprint("role already create", session_id, account)
         return
     end
 
@@ -112,7 +112,7 @@ local function c_create_role(socket, pkt)
 
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
     Send.AccountMgr.create_role(addr,
-        socket_id, account, login_info.pfid, login_info.sid, pkt)
+        session_id, account, login_info.pfid, login_info.sid, pkt)
 end
 
 -- 角色进入游戏
@@ -120,15 +120,15 @@ local function c_enter_game(socket, pkt)
     local role_info = socket.role
     local login_info = socket.login
 
-    local socket_id = socket.socket_id
+    local session_id = socket.session_id
     if not role_info or not login_info then
-        eprint("enter game no account info", socket_id)
+        eprint("enter game no account info", session_id)
         return
     end
 
     local account = login_info.account
     if socket.pid then
-        eprint("role already enter game", socket_id, account, socket.pid)
+        eprint("role already enter game", session_id, account, socket.pid)
         return
     end
 
@@ -142,7 +142,7 @@ local function c_enter_game(socket, pkt)
         end
     end
     if not role then
-        eprint("role not exist", socket_id, account, pid)
+        eprint("role not exist", session_id, account, pid)
         return
     end
 
@@ -151,7 +151,7 @@ local function c_enter_game(socket, pkt)
     CltMgr.bind(socket, pid)
     local addr = Router.find_worker_addr(W_ACCOUNT, account)
     Send.AccountMgr.enter(addr,
-        socket_id, account, login_info.pfid, login_info.sid, pid, ip)
+        session_id, account, login_info.pfid, login_info.sid, pid, ip)
 end
 
 NetMsg.reg_noauth(PLAYER.LOGIN, c_player_login)
