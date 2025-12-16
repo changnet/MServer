@@ -60,15 +60,15 @@ end
 -- 客户端连接断开回调
 function CltMgr.del(socket)
     local session_id = socket.session_id
-    local socket = this.session[session_id]
-    AccMgr.role_offline(socket_id)
+    if not this.session[session_id] then
+        print("client delete no socket found:", session_id)
+        return
+    end
 
-    this.clt_socket[socket_id] = nil
-    -- 如果已经登录，通知其他服玩家下线
-    if socket.pid then
-        this.pid_socket[socket.pid] = nil
-        local pkt = {pid = socket.pid}
-        SrvMgr.send_world_pkt(SYS.PLAYER_OFFLINE, pkt)
+    this.session[session_id] = nil
+
+    if socket.login then
+        Send.AccountMgr.logout(socket.pid)
     end
 
     printf("client connect del: %d", session_id)

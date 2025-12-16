@@ -27,43 +27,14 @@ AccountMgr = {}
 
 local this = memory("AccountMgr", {
     account = {}, -- [pfid][account] = {list = {}} 帐号数据数据缓存
-    role_acc = {}, -- [pid] = role_info 当前登录的角色数据
     wait_enter = {}, -- [info] = info 等待进入游戏的玩家
+    session = {}, -- [session_pid] = role_info
 })
 
 -- 读取帐号数据时，哪些字段要读取
 local ROLE_FILTER = '{"projection":{"pid":1,"name":1,"sid":1}}'
 local ROLE_ID_FILTER = string.format('{"_id":%d}', UNIQUEID.PLAYER)
 local ROLE_ID_OPTS = '{"$inc":{"seed":1}}'
-
--- 根据Pid获取角色数据
-function AccountMgr.get_role_info(pid)
-    return this.role_acc[pid]
-end
-
--- 玩家下线
-function AccountMgr.role_offline(session_id)
-    local role_info = this.sock_acc[session_id]
-    if not role_info then return end -- 连接上来未登录就断线
-
-    role_info.session_id = nil
-    this.sock_acc[session_id] = nil
-end
-
--- 根据pid下线
-function AccountMgr.role_offline_by_pid(pid)
-    print("AccountMgr.role_offline_by_pid", pid)
-
-    CltMgr.close_by_pid(pid)
-
-    local role_info = this.role_acc[pid]
-    if not role_info then
-        eprint("role_offline_by_pid no role_info found:%d", pid)
-        return
-    end
-
-    AccountMgr.role_offline(role_info.session_id)
-end
 
 local function return_login_result(info, account, pfid, e)
     local session_id = info.session_id
@@ -112,7 +83,7 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
         if info.paddr and not info.kick_time then
             local pid = info.pid
             info.kick_time = Engine.time()
-            Send.PlayerMgr.kick(info.paddr, pfid)
+            Send.PlayerMgr.exit_game(info.paddr, pid, "login_else_where")
             print("account login kick else where", account, pfid, sid, pid)
         else
             print("account login else where", account, pfid, sid)
@@ -234,17 +205,21 @@ local function do_enter(info)
     local session_id = info.session_id
     assert(session_id ~= info.session_id)
 
-    local role_info = {
+    local enter_info = {
         pid = pid,
         session_id = session_id,
         ip = info.ip,
+        gaddr = info.gaddr,
     }
     info.paddr = paddr
     info.kick_time = nil
     info.session_id = session_id
 
-    print("role enter", info.account, pid, paddr)
-    Send.PlayerMgr.enter(paddr, role_info)
+    this.session[session_id] = info
+
+    printf("account %s enter role %d, paddr = %d, session = %d",
+        info.account, pid, paddr, session_id)
+    Send.PlayerMgr.enter(paddr, enter_info)
 end
 
 -- 进入游戏
@@ -276,6 +251,36 @@ function AccountMgr.enter(session_id, account, pfid, sid, pid, ip)
         -- 等待下线
         this.wait_enter[info] = true
         print("role wait enter", account, pid)
+    end
+end
+
+-- 退出游戏
+function AccountMgr.logout(session_id)
+    local role_info = this.session[session_id]
+    if not role_info then return end
+
+    local paddr = role_info.paddr
+    Send.PlayerMgr.exit_game(paddr, role_info.pid, "logout")
+end
+
+-- 玩家下线完成，数据已保存，移除account中的标记
+function AccountMgr.logout_completed(pid, session_id)
+    local info = this.session[session_id]
+    -- 可能顶号超时强制顶掉了
+    if not info then
+        print("logout completed no info", pid, session_id)
+        return
+    end
+
+    assert(info.pid == pid)
+    assert(info.session_id == session_id)
+
+    print("account logout completed", info.account, pid, session_id)
+
+    this.session[session_id] = nil
+    if this.wait_enter[info] then
+        this.wait_enter[info] = nil
+        do_enter(info)
     end
 end
 
