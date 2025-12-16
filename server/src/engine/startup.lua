@@ -159,14 +159,10 @@ local function start_next_module()
     if not startup_modules.wait then startup_modules.wait = {} end
 
     local all_ready = true
-    for _, mod in ipairs(list) do
-        local name = mod.name or "unknow"
-        if not mod.start() then
+    for _, func in ipairs(list) do
+        if not func() then
             all_ready = false
-            startup_modules.wait[mod] = true
-            printf("starting %s ...", name)
-        else
-            printf("starting %s ready", name)
+            startup_modules.wait[func] = true
         end
     end
 
@@ -179,19 +175,9 @@ end
 local function check_module_ready()
     local wait = startup_modules.wait
 
-    for mod in pairs(wait) do
-        local name = mod.name or "unknow"
-        local ready, msg = mod.ready()
-        if not ready then
-            if msg then
-                print(msg)
-            else
-                printf("starting up %s ...", name)
-            end
-            return
-        else
-            wait[mod] = nil
-            printf("startup: %s", name)
+    for func in pairs(wait) do
+        if func(true) then
+            wait[func] = nil
         end
     end
 
@@ -334,13 +320,14 @@ function Startup.worker_init(addr, loader)
 end
 
 -- 注册按优先级启动的模块
--- @param mod 需要启动的模块，包括start、ready函数
+-- @param func 需要启动的函数
 -- @param priority 启动优先级，越小优先级越高，默认20
-function Startup.reg(mod, priority)
+function Startup.reg(func, priority)
+    if g_ready then return end -- 热更时注册过来的启动模块不用处理
     if not startup_modules then
         local PriorityManager = require "util.priority_manager"
         startup_modules = PriorityManager()
     end
 
-    startup_modules:push(mod, priority)
+    startup_modules:push(func, priority)
 end

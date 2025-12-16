@@ -73,22 +73,19 @@ end
 
 -- 从配置创建多个worker
 function Worker.start_later(settings)
-    Startup.reg({
-        name = "worker",
-        start = function()
+    Startup.reg(function(retry)
+        if not retry then
             for _, s in pairs(settings) do
                 Worker.start(s)
             end
-        end,
-        ready = function()
-            local addr = Worker.is_local_ready()
-            if not addr then return true end
-
-            local name = Worker.addr_name(addr)
-            return false, string.format("wait for %s, addr = %d", name, addr)
         end
+        local addr = Worker.is_local_ready()
+        if not addr then return true end
 
-    }, 10)
+        local name = Worker.addr_name(addr)
+        printf("wait for %s, addr = %d", name, addr)
+        return false
+    end, 10)
 end
 
 -- 主线程收到worker启动完成

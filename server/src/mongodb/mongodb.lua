@@ -102,9 +102,9 @@ end
 -- 按优先级连接mysql
 function MongoDB:connect_later(host, port, user, password, database)
     local name = "MongoDB:" .. database
-    Startup.reg({
-        name = name,
-        start = function()
+    Startup.reg(function(retry)
+        if not retry then
+            printf("connect to %s", name)
             local e = self:connect(host, port, user, password, database)
             if 0 ~= e then
                 local e1, str = self:error()
@@ -112,15 +112,14 @@ function MongoDB:connect_later(host, port, user, password, database)
                 return false
             end
             return true
-        end,
-        ready = function()
-            if 0 == self:ping() then return true end
-
-            local e, str = self:error()
-            return false, string.format("%s(%d): %s", name, e, str)
         end
 
-    })
+        if 0 == self:ping() then return true end
+
+        local e, str = self:error()
+        printf("%s(%d): %s", name, e, str)
+        return false
+    end)
 end
 
 local function return_with_error(self, e, ...)

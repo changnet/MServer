@@ -75,7 +75,14 @@ function CltMgr.del(socket)
 end
 
 -- 服务器启动完成才开启客户端监听
-local function on_ready()
+local function start_listen(retry)
+    -- game那边启动完成，才会启动监听，免得玩家连上时，游戏数据都未初始化
+    local w = WorkerHash[GAME_ADDR]
+    if w and w:is_ready() then
+        print("client mgr waitting for game worker...")
+        return
+    end
+
     local gateway = assert(g_setting.gateway[LOCAL_NAME])
 
     -- 开启监听
@@ -89,6 +96,7 @@ local function on_ready()
     end
     this.listen_socket = socket
     printf("listen client at %s:%d", gateway.host, gateway.port)
+    return true
 end
 
 -- 关服清理数据
@@ -104,7 +112,7 @@ local function shutdown()
     end
 end
 
-SE.reg(SE_READY, on_ready)
+Startup.reg(start_listen, 0xFFFFFFFF)
 Shutdown.reg("ClgMgr", {
     shutdown = shutdown,
     ready = function() return true end

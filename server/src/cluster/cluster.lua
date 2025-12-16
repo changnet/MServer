@@ -98,18 +98,12 @@ end
 -- 启动完成后，开启监听
 function Cluster.listen_later(cluster_conf, node_name)
     local node_conf = assert(cluster_conf[node_name])
-    Startup.reg({
-        name = "cluster listen",
-        start = function()
+    Startup.reg(function(retry)
+        if not retry then
             Cluster.listen(node_conf, node_name)
-        end,
-        ready = function()
-            if this.listen then return true end
-
-            return false, "cluster listen fail"
         end
-
-    }, 0xFFFF)
+        return this.listen and true or false
+    end, 0xFFFF)
 end
 
 -- 集群模式，启动当前进程的多个节点（每个节点为一个worker）
@@ -200,20 +194,19 @@ function Cluster.connect_later(node_list)
 
         local addr = Worker.name_addr(node_name)
         local node_conf = assert(cluster_conf[node_name])
-        Startup.reg({
-            name = string.format("cluster connect %s", node_name),
-            start = function()
+        Startup.reg(function(retry)
+            if not retry then
                 Cluster.connect(node_conf, addr)
-            end,
-            ready = function()
-                local d = WorkerData[addr]
-                if d then
-                    return true
-                end
-
-                return false, string.format("cluster connecting %s", node_name)
+                return false
             end
-        }, 0xFFFF)
+
+            local d = WorkerData[addr]
+            if d then
+                return true
+            end
+            printf("cluster connecting %s", node_name)
+            return false
+        end, 0xFFFF)
     end
 end
 

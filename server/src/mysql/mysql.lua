@@ -109,9 +109,8 @@ end
 -- 按优先级连接mysql
 function MySQL:connect_later(host, port, user, password, database, ssl)
     local name = "MySQL:" .. database
-    Startup.reg({
-        name = name,
-        start = function()
+    Startup.reg(function(retry)
+        if not retry then
             if not ssl then self:set_ssl(false) end
             local e = self:connect(host, port, user, password, database)
             if 0 ~= e then
@@ -120,15 +119,13 @@ function MySQL:connect_later(host, port, user, password, database, ssl)
                 return false
             end
             return true
-        end,
-        ready = function()
-            if 0 == self.mysql:ping() then return true end
-
-            local e, str = self.mysql:error()
-            return false, string.format("%s(%d): %s", name, e, str)
         end
+        if 0 == self.mysql:ping() then return true end
 
-    })
+        local e, str = self.mysql:error()
+        printf("%s(%d): %s", name, e, str)
+        return false
+    end)
 end
 
 -- 是否启用ssl

@@ -35,18 +35,19 @@ function ClusterProxy.create_later(proxy_list)
     for _, name in pairs(proxy_list) do
         local to_name = name[2]
         local addr = Worker.name_addr(to_name)
-        Startup.reg({
-            name = string.format("cluster proxy wait %s", to_name),
-            start = function()
+        Startup.reg(function(retry)
+            if not retry then
+                printf("cluster proxy create %s", to_name)
                 ClusterProxy.create(name[1], to_name)
-            end,
-            ready = function()
-                local w = WorkerHash[addr]
-                if w and w:is_ready() then return true end
-
-                return false, string.format("cluster proxy waitting %s", to_name)
+                return false
             end
-        }, 0xFFFF)
+            local w = WorkerHash[addr]
+            if w and w:is_ready() then
+                return true
+            end
+            printf("cluster proxy waitting %s", to_name)
+            return false
+        end, 0xFFFF)
     end
 end
 

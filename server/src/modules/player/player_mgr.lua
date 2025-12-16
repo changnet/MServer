@@ -5,7 +5,7 @@
 -- 玩家对象管理
 PlayerMgr = {}
 
-local Player = require "modules.player.player"
+-- local Player = require "modules.player.player"
 local this = memory("PlayerMgr", {
     player = {}, -- [pid] = Player，已已初始化的玩家对象
     uninit_player = {}, -- 未初始化的玩家对象
