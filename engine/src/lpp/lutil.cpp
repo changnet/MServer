@@ -13,8 +13,7 @@
 #include "net/net_compat.hpp"
 
 #ifdef __windows__
-    #include <rpc.h>
-    #include <conio.h> // _kbhit
+    #include <rpc.h> // uuid
 #else
     #include <uuid/uuid.h>
     #include <unistd.h>
@@ -581,6 +580,27 @@ static int32_t getcwd(lua_State *L)
     return 1;
 }
 
+/**
+ * @brief 获取当前程序(executable)的路径
+ */
+static int32_t getexe(lua_State *L)
+{
+    int64_t size = 0;
+    char path[PATH_MAX];
+#ifdef __windows__
+    size = GetModuleFileNameA(nullptr, path, PATH_MAX);
+#else
+    size = readlink("/proc/self/exe", path, PATH_MAX);
+#endif
+    // GetModuleFileNameA失败返回0，缓冲区不够返回的值>=PATH_MAX
+    // readlink失败返回-1
+    if (size < 0 || size >= PATH_MAX) size = 0;
+
+    path[size] = '\0';
+    lua_pushstring(L, path);
+    return 1;
+}
+
 // 切换当前工作目录
 static int32_t chdir(lua_State *L)
 {
@@ -624,6 +644,7 @@ static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"sha256", sha256},
                                    {"sha3_256", sha3_256},
                                    {"getcwd", getcwd},
+                                   {"getexe", getexe},
                                    {"chdir", chdir},
                                    {"setenv", setenv},
                                    {"mkdir_p", mkdir_p},
