@@ -82,6 +82,10 @@ function Cluster.listen(node_conf, node_name)
     printf("cluster listen at %s:%d", node_conf.ip, node_conf.port)
 
     this.listen = worker
+    Shutdown.reg({
+        name = "cluster listen",
+        func = Cluster.close_listen,
+    }, 0)
 end
 
 -- 关闭所有监听
@@ -196,6 +200,10 @@ function Cluster.connect_later(node_list)
         local node_conf = assert(cluster_conf[node_name])
         Startup.reg(function(retry)
             if not retry then
+                Shutdown.reg({
+                    name = "cluster close",
+                    func = Cluster.close,
+                }, 65)
                 Cluster.connect(node_conf, addr)
                 return false
             end

@@ -197,6 +197,11 @@ local function start_modules()
         1000, 1000, -1, Rtti.temp_func(check_module_ready))
 end
 
+-- 对shutdown包一层，允许shutdown热更
+local function shutdown()
+    Shutdown.start()
+end
+
 -- 进程预加载必要的组件
 -- @param loader 加入模块的文件或者函数
 function Startup.process_init(loader)
@@ -244,8 +249,8 @@ function Startup.process_init(loader)
 
     require "engine.preloader"
 
-    Signal.mask(2, Shutdown.process_stop)
-    Signal.mask(15, Shutdown.process_stop)
+    Signal.mask(2, shutdown)
+    Signal.mask(15, shutdown)
 
     math.randomseed(os.time())
 

@@ -59,9 +59,12 @@ end
 
 -- 客户端连接断开回调
 function CltMgr.del(socket)
+    -- 关服时所有socket已经强制清掉
+    if g_shuttingdown then return end
+
     local session_id = socket.session_id
     if not this.session[session_id] then
-        print("client delete no socket found:", session_id)
+        print("client delete no socket found:", session_id, debug.traceback())
         return
     end
 
@@ -72,6 +75,21 @@ function CltMgr.del(socket)
     end
 
     printf("client connect del: %d", session_id)
+end
+
+-- 关服清理数据
+local function shutdown()
+    print("client mgr shutdown, listen close")
+    local socket = this.listen_socket
+    if socket then
+        socket:close()
+        this.listen_socket = nil
+    end
+
+    for _, s in pairs(this.session) do
+        s:close()
+    end
+    this.session = nil
 end
 
 -- 服务器启动完成才开启客户端监听
@@ -96,26 +114,14 @@ local function start_listen(retry)
     end
     this.listen_socket = socket
     printf("listen client at %s:%d", gateway.host, gateway.port)
+
+    Shutdown.reg({
+        name = "clt_mgr",
+        func = shutdown,
+    })
     return true
 end
 
--- 关服清理数据
-local function shutdown()
-    local socket = this.listen_socket
-    if socket then
-        socket:close()
-        this.listen_socket = nil
-    end
-
-    for _, clt_socket in pairs(this.clt_socket) do
-        clt_socket:close()
-    end
-end
-
 Startup.reg(start_listen, 0xFFFFFFFF)
-Shutdown.reg("ClgMgr", {
-    shutdown = shutdown,
-    ready = function() return true end
-})
 
 return CltMgr

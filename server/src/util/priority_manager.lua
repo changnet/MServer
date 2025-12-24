@@ -42,6 +42,21 @@ function PriorityManager:push(value, pr)
     table.insert(pr_list, value)
 end
 
+-- 删除一个元素（效率较低）
+function PriorityManager:remove(value)
+    for _, pr_list in pairs(self.map) do
+        for i, v in ipairs(pr_list) do
+            if v == value then
+                table.remove(pr_list, i)
+                self.sz = self.sz - 1
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 -- 获取当前正在执行的优先级
 function PriorityManager:current()
     local pr = self.list[ self.idx ]

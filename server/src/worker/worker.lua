@@ -21,6 +21,12 @@ LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
 LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
 MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 
+-- 按指定worker类型关机顺序关闭
+local Sequence = {
+    WORKER.GATEWAY, WORKER.SCENE, WORKER.GAME, WORKER.PLAYER,
+    WORKER.DATA, WORKER.MYSQL, WORKER.MONGODB,
+}
+
 -- 本地启动的worker是否都已启动完成
 -- @return 返回未启动完成的worker地址
 function Worker.is_local_ready()
@@ -40,6 +46,27 @@ function Worker.get_data(addr)
     end
 
     return data
+end
+
+local function shutdown()
+    -- 根据特定的业务逻辑按顺序关闭各个worker
+    -- 关闭时不要修改WorkerHash和WorkerSetting，rpc调用还在使用
+    -- 同时避免关服中报错时，无法恢复
+    for _, wt in pairs(Sequence) do
+        for addr, w in pairs(WorkerHash) do
+            local s = WorkerData[addr]
+            if not w.cluster_worker and wt[1] == s.type[1] then
+                Worker.stop(addr)
+            end
+        end
+    end
+
+    -- 一些worker不需要按业务逻辑顺序关闭，这里可以按任意顺序直接关闭了
+    for addr, w in pairs(WorkerHash) do
+        if not w.cluster_worker then
+            Worker.stop(addr)
+        end
+    end
 end
 
 -- 从配置文件启动一个worker
@@ -75,6 +102,10 @@ end
 function Worker.start_later(settings)
     Startup.reg(function(retry)
         if not retry then
+            Shutdown.reg({
+                name = "worker",
+                func = shutdown,
+            }, 64)
             for _, s in pairs(settings) do
                 Worker.start(s)
             end
