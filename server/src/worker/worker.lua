@@ -164,7 +164,6 @@ function Worker.stop(addr)
         return
     end
 
-    printf("worker %s shutting down, addr = %d", Worker.addr_name(addr), addr)
     -- 先通知其他worker，这个worker需要关闭
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Worker.THREAD == data.mode then
@@ -180,7 +179,7 @@ function Worker.stop(addr)
     w:stop(true)
     WorkerHash[addr] = nil
     WorkerData[addr] = nil
-    printf("worker shutdown: %s , addr = %d", Worker.addr_name(addr), addr)
+    printf("worker shutdown %s, addr = %d", Worker.addr_name(addr), addr)
 end
 
 -- worker线程收到主线程停止请求

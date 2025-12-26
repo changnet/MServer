@@ -1,7 +1,9 @@
 -- 机器人管理
 BotMgr = {}
 
+require("protocol.protocol")
 local Bot = require "bot.bot"
+
 
 -- 机器人不考虑热更，随便写
 local bots = {}
@@ -50,5 +52,7 @@ function BotMgr.start()
         -- 单元调试使用ai策略1
         local bot = Bot(1 << 32 | LOCAL_ADDR, 1)
         table.insert(bots, bot)
+    else
+        warn("unknow bot mode:", b)
     end
 end

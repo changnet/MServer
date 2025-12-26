@@ -44,11 +44,11 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 登录游戏完成，所有数据已下发
     READY = {
-        s = "comm.Empty",
+        s = "comm.Empty", i = 24
     },
     -- 踢下线
     KICK = {
-        s = "comm.SKick", i = 5
+        s = "player.SKick", i = 5
     },
     -- 登录时下发基础数据
     BASE = {

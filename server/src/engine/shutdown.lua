@@ -18,12 +18,14 @@ end
 
 -- 执行最终关闭清理程序
 local function shutdown_complete()
-    if LOCAL_ADDR == MAIN_ADDR then return end
+    if LOCAL_ADDR == MAIN_ADDR then
+        -- socket模块是异步的，要等backend线程处理完再退出，懒得去检测socket_mgr那边的状态
+        Engine.sleep(100)
 
-    -- socket模块是异步的，要等backend线程处理完再退出，懒得去检测socket_mgr那边的状态
-    Engine.sleep(100)
+        g_mthread:stop()
 
-    g_mthread:stop()
+        print("shutdown complete")
+    end
 end
 
 -- 按注册的优先级关闭模块

@@ -29,6 +29,49 @@ local __require_no_update = {} -- 这些文件不需要热更
 
 local conf_dir = "config."
 
+local function load_to_tbl(path, tbl)
+    local data = __require(path)
+
+    local rawset = rawset
+    for k, v in pairs(data) do
+        rawset(tbl, k, v)
+    end
+    setmetatable(tbl, nil)
+end
+
+-- luacheck: ignore require_conf
+local function require_conf(path)
+    --[[
+    实现功能时，通常需要在不同的worker中通信，同一个模块的代码，不同worker部分在不同
+    文件实现，分开加载会非常繁琐
+
+    可如果加载同一个文件，worker1需要配置，worker2不需要配置又有点浪费
+
+    因此加载配置时，只返回一个空table，通过元表__index和__pairs，仅访问时才加载
+
+    这种懒加载方式，也能缓解起服或者热更时批量加载文件IO消耗
+    ]]
+
+    local tbl = {}
+    local loaded = nil
+    setmetatable(tbl, {
+        __index = function(t, k)
+            if not loaded then load_to_tbl(path, tbl) end
+            return tbl[k]
+        end,
+        __pairs = function(t)
+            if not loaded then load_to_tbl(path, tbl) end
+            return pairs(tbl)
+        end,
+        __len = function(t)
+            if not loaded then load_to_tbl(path, tbl) end
+            return #tbl
+        end
+        -- __ipairs在新版本中已废弃，用ipairs遍历会触发__index，只要做好__index就行
+    })
+    return tbl
+end
+
 -- 重写require函数
 function require(path)
     --[[
@@ -40,6 +83,12 @@ function require(path)
         assert(nil == __require_no_update[path])
         __require_list[path] = 1
     end
+
+    -- 暂时不用这种方式，大部分配置都会加载，这样反而要增加一次拷贝，创建多个闭包
+    -- 直接用下面的require_worker就很好
+    -- if string.start_with(path, conf_dir) then
+    --     return require_conf(path)
+    -- end
     return __require(path)
 end
 
@@ -158,10 +207,7 @@ local function to_kv(list, k1, k2, k3)
     return kv_tbl
 end
 
--- 加载配置，不做任何处理
-function require_conf(path)
-    return require(conf_dir .. path)
-end
+
 
 -- 加载配置，根据key转换为kv结构
 -- @param k1,k2,k3: 多级key，有几级就传几级

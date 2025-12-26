@@ -1,4 +1,4 @@
--- auto export by lua-tags 167 symbols
+-- auto export by lua-tags 165 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -138,7 +138,6 @@ return {
 "g_mysql", -- src/data/w_mysql.lua
 "g_ready", -- src/engine/startup.lua
 "g_setting", -- src/engine/startup.lua
-"g_setting", -- src/modules/ai/action/loginout.lua
 "g_shuttingdown", -- src/engine/shutdown.lua
 "g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
@@ -153,7 +152,6 @@ return {
 "print", -- src/global/log.lua
 "printf", -- src/global/log.lua
 "require", -- src/global/require.lua
-"require_conf", -- src/global/require.lua
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua

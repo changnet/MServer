@@ -56,6 +56,7 @@ end
 function NetMsg.load_forward_msg()
     if local_type ~= W_GATEWAY then return end
 
+    -- TODO 这个要优化下，把所有协议放到一个table M中，访问协议时用M.Login
     local path, err = package.searchpath("protocol.protocol", package.path)
     if not path then error(err) end
 

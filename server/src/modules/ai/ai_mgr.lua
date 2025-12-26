@@ -1,5 +1,5 @@
 -- ai管理
-local AiMgr = oo.singleton()
+local AiMgr = {}
 
 local ai_conf = require "config.ai_base_conf"
 

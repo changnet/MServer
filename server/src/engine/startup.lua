@@ -81,8 +81,11 @@ local function set_path()
 
     local srv_dir = g_env:get("srv_dir")
 
-    -- 设置lua文件搜索路径
-    package.path = srv_dir .. "/src/?.lua;" .. srv_dir .. "/src/modules/?.lua;"
+    -- 设置lua文件搜索路径(常用的路径排前面，会影响require性能)
+    package.path = srv_dir .. "/src/modules/?.lua;"
+        .. srv_dir .. "/src/?.lua;"
+        .. srv_dir .. "/?.lua;" -- config.xxx
+
     -- 设置c库搜索路径，用于直接加载so或者dll的lua模块
     if WINDOWS then
         package.cpath = "../c_module/?.dll;"
@@ -270,6 +273,7 @@ function Startup.load(reload)
     end
     Rtti.collect()
     SE.ready()
+    SE.fire(SE_SCRIPT_LOADED)
 end
 
 -- 覆盖旧的loader，并加载loader

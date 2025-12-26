@@ -1,8 +1,8 @@
 -- 用来测试AI
 local AST = require "modules.ai.ai_header"
 
-local GameTest = require "modules.ai.action.game_test"
-local Move = require "modules.ai.action.move"
+-- local GameTest = require "modules.ai.action.game_test"
+-- local Move = require "modules.ai.action.move"
 local Loginout = require "modules.ai.action.loginout"
 
 local AiTest = oo.class("AiTest")

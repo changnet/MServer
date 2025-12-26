@@ -3,7 +3,6 @@ local Loginout = {}
 
 local util = require "engine.util"
 local AST = require "modules.ai.ai_header"
-g_setting = require "setting.setting" -- require_no_update
 
 -- 检查是否执行登录
 function Loginout.check_and_login(ai)
@@ -127,7 +126,7 @@ function Loginout.enter_world(entity)
 end
 
 -- 确认进入游戏完成
-local function s_enter_world(entity, errno, pkt)
+local function s_enter_world(entity, pkt)
     entity.ai.state = AST.ON
 
     local param = entity.ai.ai_conf.param
@@ -140,15 +139,15 @@ local function s_enter_world(entity, errno, pkt)
 end
 
 -- 初始化场景属性
-local function s_init_property(entity, errno, pkt)
+local function s_init_property(entity, pkt)
     -- 切换进程时，这里的数据会重新下发
 
     entity.handle = pkt.handle
 end
 
 -- 被顶号
-local function s_login_otherwhere(entity, errno, pkt)
-    printf("%s login other where", entity.name)
+local function s_kick(entity, pkt)
+    printf("%s kick offline", entity.name, pkt.reason)
     -- 随后socket会被服务器断开，不需处理
 end
 
@@ -176,11 +175,12 @@ end
 
 -- ************************************************************************** --
 
-
-BotMgr.reg(PLAYER.LOGIN, s_login)
-BotMgr.reg(PLAYER.CREATE, s_create_role)
-BotMgr.reg(PLAYER.ENTER, s_enter_world)
-BotMgr.reg(PLAYER.OTHER, s_login_otherwhere)
-BotMgr.reg(ENTITY.PROPERTY, s_init_property)
+SE.reg(SE_SCRIPT_LOADED, function()
+    BotMgr.reg(PLAYER.LOGIN, s_login)
+    BotMgr.reg(PLAYER.CREATE, s_create_role)
+    BotMgr.reg(PLAYER.ENTER, s_enter_world)
+    BotMgr.reg(PLAYER.KICK, s_kick)
+    BotMgr.reg(ENTITY.PROPERTY, s_init_property)
+end)
 
 return Loginout
