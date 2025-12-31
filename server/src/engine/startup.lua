@@ -113,17 +113,19 @@ local function set_process_log(node_name, node_index)
     -- 名字需要能区分不同进程名，不同节点
     -- win下文件名不支持特殊字符的，比如":"
 
+    -- 所有日志都输出到同一个文件，方便查看
+    local path = string.format("log/%s%03d", node_name, node_index)
+    -- 错误日志除了输出到通用日志文件，还单独输出error文件，用于触发运维邮件、电话
     local epath = string.format("log/%s%03d_error", node_name, node_index)
-    local ppath = string.format("log/%s%03d_info", node_name, node_index)
 
     if g_env:get("deamon") then
         -- 后台模式运行，不需要输出日志到stdout，效率高一点点
-        g_async_log:add_device("info", ppath, 1, 1)
+        g_async_log:add_device("info", path, 1, 1)
         g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10)
     else
         g_async_log:add_device("stdout", "stdout", 1, 1)
-        g_async_log:add_device("info", ppath, 1, 1, 0, "stdout")
-        g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10, "stdout")
+        g_async_log:add_device("info", path, 1, 1, 0, "stdout")
+        g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10)
     end
 
     -- 主线程的日志名字，是不带后缀的，比如game1就是game，和game1那个worker区分开来
@@ -261,12 +263,13 @@ function Startup.process_init(loader)
     xpcall(function()
         Startup.load()
         start_modules()
-    end, __G__TRACKBACK)
+    end, __G_DUMP_STACK)
 end
 
 -- 加载入口文件，将会引入所有模块
 function Startup.load(reload)
     if "string" == type(__loader) then
+        print("use loader: "..__loader)
         require(__loader)
     else
         __loader(reload)
@@ -326,7 +329,7 @@ function Startup.worker_init(addr, loader)
     xpcall(function()
         Startup.load()
         start_modules()
-    end, __G__TRACKBACK)
+    end, __G_DUMP_STACK)
 end
 
 -- 注册按优先级启动的模块

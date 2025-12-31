@@ -132,7 +132,7 @@ function Httpd:do_command(conn, http_type, code, method, url, body)
         self.exec[raw_url] = path
     end
 
-    local success, ecode, ctx = xpcall(Httpd.do_exec, __G__TRACKBACK, httpd,
+    local success, ecode, ctx = xpcall(Httpd.do_exec, __G_DUMP_STACK, httpd,
                                        path, conn, fields, body)
 
     return self:do_return(conn, success, ecode, ctx)

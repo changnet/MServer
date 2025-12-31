@@ -1,4 +1,4 @@
--- auto export by lua-tags 165 symbols
+-- auto export by lua-tags 166 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -114,7 +114,7 @@ return {
 "WorkerNameType", -- src/worker/worker.lua
 "WorkerTypeName", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
-"__G__TRACKBACK", -- src/global/global.lua
+"__G_DUMP_STACK", -- src/global/global.lua
 "__assert", -- src/engine/startup.lua
 "__error", -- src/engine/startup.lua
 "__global_memory", -- src/data/global_data.lua
@@ -123,6 +123,7 @@ return {
 "__package_cpath", -- src/engine/startup.lua
 "__package_path", -- src/engine/startup.lua
 "__print", -- src/engine/startup.lua
+"__require", -- src/global/require.lua
 "__rpc_session", -- src/rpc/rpc.lua
 "__socket_hash", -- src/network/socket_mgr.lua
 "__socket_seed", -- src/network/socket_mgr.lua

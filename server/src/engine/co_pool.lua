@@ -96,7 +96,7 @@ local function co_return(co, ok, v1, ...)
 
         session_to_co[ss] = nil
         co_to_session[co] = nil
-        __G__TRACKBACK(v1, co)
+        __G_DUMP_STACK(v1, co)
         return false
     elseif v1 == CO_IDLE then
         busy_co[co] = nil

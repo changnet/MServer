@@ -39,6 +39,8 @@ end
 
 -- 标记系统事件已就绪，后续不再允许注册事件
 function SE.ready()
+    assert(not ready)
+
     ready = true
     for ev, cbs in pairs(ev_cb) do
         -- pr值越小，优先级越高

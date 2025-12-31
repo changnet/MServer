@@ -20,7 +20,7 @@ function debug.tracestack(var_list, level)
 
             if k ~= "(C temporary)" then
                 table.insert(sub_msg,
-                    string.format("    %s:%s", tostring(k), tostring(v)))
+                    string.format("%s:%s", tostring(k), tostring(v)))
             end
         end
         if #sub_msg > 0 then
@@ -30,7 +30,7 @@ function debug.tracestack(var_list, level)
                     dbg_info.short_src, dbg_info.currentline)
             end
             table.insert(var_list, string.format(
-                "%s:\n%s", func_name, table.concat(sub_msg, "\n")))
+                "#%d [%s] %s", lv - level, func_name, table.concat(sub_msg, ";")))
         end
     end
 
@@ -51,4 +51,16 @@ function debug.tracestack(var_list, level)
                 "upvalue: %s", table.concat(sub_msg, ",")))
         end
     end
+end
+
+-- 打印stack同时打印堆栈上的变量
+function debug.dumpstack(msg)
+    local var_list = {msg}
+    debug.tracestack(var_list, 3)
+
+    local co = coroutine.running()
+    local stack_trace = debug.traceback(co)
+
+    table.insert(var_list, stack_trace)
+    warn(table.concat(var_list, "\n"))
 end

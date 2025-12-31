@@ -16,7 +16,7 @@ function __G_C_TRACKBACK(msg, co)
 end
 
 -- 用于lua错误信息处理(直接打印错误信息)
-function __G__TRACKBACK(msg, co)
+function __G_DUMP_STACK(msg, co)
     local msg_list = {}
     debug.tracestack(msg_list, 3)
 
@@ -25,7 +25,10 @@ function __G__TRACKBACK(msg, co)
     table.insert(msg_list, msg)
     table.insert(msg_list, stack_trace)
     local str = table.concat(msg_list, "\n")
-    eprint(str)
+
+    -- 这个参考eprint()写法，但不要自动附加堆栈
+    g_async_log:print(129, str)
+    g_async_log:error(129, str)
     return str
 end
 
@@ -33,9 +36,6 @@ end
 function assert(expr, ...)
     if expr then return expr end
 
-    local msg = table.concat({"assertion failed!", ...}, "    ")
-    local msg_list = {msg}
-    debug.tracestack(msg_list, 3)
-    msg = table.concat(msg_list, "\n")
-    return error(msg)
+    -- 这里不需要添加堆栈信息，触发error时会自动添加
+    return error(table.concat({"assertion failed!", ...}, "    "))
 end

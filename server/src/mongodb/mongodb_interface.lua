@@ -29,7 +29,7 @@ end
 
 function MongoDBInterface:on_data(qid, e, res)
     if self.cb[qid] then
-        xpcall(self.cb[qid], __G__TRACKBACK, e, res)
+        xpcall(self.cb[qid], __G_DUMP_STACK, e, res)
         self.cb[qid] = nil
     else
         eprint("mongo event no call back found")

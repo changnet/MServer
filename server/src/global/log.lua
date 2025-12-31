@@ -98,16 +98,22 @@ function eprint(...)
         list[i] = tostring(list[i]) -- 转为string，不然包含nil或者bool之类的变量会报错
     end
 
-
     -- 错误时，打印堆栈方便查问题
-    return g_async_log:error(129,
-        table.concat(list, "    ") .. "\n" .. debug.traceback())
+    local str = table.concat(list, "    ") .. "\n" .. debug.traceback()
+
+    -- 输出到通用日志文件
+    logger_print(g_async_log, 129, str)
+
+    -- 单独输出到error文件，用于触发运维邮件、电话
+    return g_async_log:error(129, str)
 end
 
 --  格式化日志并写入根目录下的lua_error.txt文件
 function eprintf(fmt, ...)
-    return g_async_log:error(129,
-        string.format(fmt, ...) .. "\n" .. debug.traceback())
+    local str = string.format(fmt, ...) .. "\n" .. debug.traceback()
+
+    logger_print(g_async_log, 129, str)
+    return g_async_log:error(129, str)
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效

@@ -28,7 +28,7 @@ local function try_read()
     local line = _G.cli_reader:read()
     if not line then return end
 
-    xpcall(do_cmd, __G__TRACKBACK, line)
+    xpcall(do_cmd, __G_DUMP_STACK, line)
 end
 
 local function start_cli()
