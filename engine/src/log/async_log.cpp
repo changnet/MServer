@@ -517,11 +517,16 @@ size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer)
 
 void AsyncLog::write_to_device(Device &device, const BufferList &buffers)
 {
-    Device *multi_device = device.multi_device_;
-    for (const auto buffer : buffers)
+    Device *d = &device;
+    while (d)
     {
-        write_to_one_device(&device, buffer);
-        if (multi_device) write_to_one_device(multi_device, buffer);
+        for (const auto &buffer : buffers)
+        {
+            write_to_one_device(d, buffer);
+        }
+
+        // 存在 A-B-C 这样连续输出到多个device的情况，死循环则由上层保证
+        d = d->multi_device_;
     }
 }
 

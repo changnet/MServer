@@ -27,7 +27,6 @@ function __G_DUMP_STACK(msg, co)
     local str = table.concat(msg_list, "\n")
 
     -- 这个参考eprint()写法，但不要自动附加堆栈
-    g_async_log:print(129, str)
     g_async_log:error(129, str)
     return str
 end

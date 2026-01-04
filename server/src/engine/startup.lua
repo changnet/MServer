@@ -121,12 +121,11 @@ local function set_process_log(node_name, node_index)
     if g_env:get("deamon") then
         -- 后台模式运行，不需要输出日志到stdout，效率高一点点
         g_async_log:add_device("info", path, 1, 1)
-        g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10)
     else
         g_async_log:add_device("stdout", "stdout", 1, 1)
         g_async_log:add_device("info", path, 1, 1, 0, "stdout")
-        g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10)
     end
+    g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10, "info")
 
     -- 主线程的日志名字，是不带后缀的，比如game1就是game，和game1那个worker区分开来
     return format_log_name(node_name, node_index, true)

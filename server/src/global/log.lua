@@ -101,9 +101,6 @@ function eprint(...)
     -- 错误时，打印堆栈方便查问题
     local str = table.concat(list, "    ") .. "\n" .. debug.traceback()
 
-    -- 输出到通用日志文件
-    logger_print(g_async_log, 129, str)
-
     -- 单独输出到error文件，用于触发运维邮件、电话
     return g_async_log:error(129, str)
 end
@@ -112,7 +109,6 @@ end
 function eprintf(fmt, ...)
     local str = string.format(fmt, ...) .. "\n" .. debug.traceback()
 
-    logger_print(g_async_log, 129, str)
     return g_async_log:error(129, str)
 end
 
