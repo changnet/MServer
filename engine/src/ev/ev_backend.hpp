@@ -41,7 +41,8 @@ public:
      */
     void stop();
     /**
-     * @brief 删除指定watcher在队列中的所有数据
+     * @brief 删除指定watcher在backend线程中的引用
+     * @return 该watcher是否还有效（被其他线程引用）
      */
     bool del_watcher(EVIO *w);
     /**

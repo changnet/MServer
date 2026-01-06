@@ -59,12 +59,12 @@ public:
 
     /**
      * @brief 删除指定引用
-     * @return 不存在其他引用则返回true，其他返回false
+     * @return 存在其他引用则返回true，不存在返回false
      */
     bool del_ref(int32_t b)
     {
         int32_t v = mask_.fetch_and(~b);
-        return 0 == (v & (~b) & M_ALL_REF);
+        return 0 != (v & (~b) & M_ALL_REF);
     }
 
 public:

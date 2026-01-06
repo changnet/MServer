@@ -29,13 +29,11 @@ do_make()
 		# cmake未初始化，或者新增了cmake参数才执行cmake
 		# 如果是修改了CMakeLists.txt，只执行make也是会重新执行cmake的，这里不用处理
 		cmake $ENGINE_DIR
+	elif [ -n "$cmake_option" ]; then
+		# 如果参数不是上面几种，就只能是编译某个组件，比如 make llhttp
+		make $1
 	else
-		make_option=$1
-	fi
-
-	make $make_option
-	if [ -f "../master" ]; then
-		make install
+		make install # 这个会执行增量编译并安装
 	fi
 }
 

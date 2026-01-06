@@ -1,5 +1,20 @@
 -- 扩展debug库
 
+local type = type
+local tostring = tostring
+
+local function trace_var(v)
+    -- 有时候string变量是很大的，直接打印出来会刷屏或者导致log文件超级大
+    if "string" == type(v) then
+        local len = string.len(v)
+        if len > 256 then
+            return string.sub(v, 1, 256) .. string.format("(%d)...", len)
+        end
+    end
+
+    return tostring(v)
+end
+
 -- 获取stack上各个变量
 -- @param 变量全部存放到var_list中
 -- @param level 从哪一级stack开始获取
@@ -20,7 +35,7 @@ function debug.tracestack(var_list, level)
 
             if k ~= "(C temporary)" then
                 table.insert(sub_msg,
-                    string.format("%s:%s", tostring(k), tostring(v)))
+                    string.format("%s:%s", tostring(k), trace_var(v)))
             end
         end
         if #sub_msg > 0 then
@@ -43,7 +58,7 @@ function debug.tracestack(var_list, level)
             if not k then break end
 
             table.insert(sub_msg,
-                string.format("%s:%s", tostring(k), tostring(v)))
+                string.format("%s:%s", tostring(k), trace_var(v)))
         end
 
         if #sub_msg > 0 then

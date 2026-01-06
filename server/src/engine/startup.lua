@@ -118,7 +118,7 @@ local function set_process_log(node_name, node_index)
     -- 错误日志除了输出到通用日志文件，还单独输出error文件，用于触发运维邮件、电话
     local epath = string.format("log/%s%03d_error", node_name, node_index)
 
-    if g_env:get("deamon") then
+    if g_env:get("--deamon") then
         -- 后台模式运行，不需要输出日志到stdout，效率高一点点
         g_async_log:add_device("info", path, 1, 1)
     else

@@ -37,7 +37,7 @@ EVBackend::~EVBackend()
     fd_mgr_.iter(
         [](EVIO *w)
         {
-            if (w->del_ref(EVIO::M_REF_BACKEND))
+            if (!w->del_ref(EVIO::M_REF_BACKEND))
             {
                 PLOG("backend close watcher, id = %d, fd = %d", w->id_, w->fd_);
                 netcompat::close(w->fd_);
@@ -167,11 +167,13 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
         if (!fd_mgr_.get(w->fd_)) return 0;
 
         op = FD_OP_DEL;
-        if (del_watcher(w))
-        {
-            dispatch_event(w, EV_CLOSE);
-        }
+
+        // 先派发事件，再del_watcher，否则del_watcher刚好删除了引用，另一个线程
+        // 马上就删除了watcher，再使用w就是访问不存在的内存
+        dispatch_event(w, EV_CLOSE);
         w->b_kevents_ &= ~(EV_WRITE | EV_KERNEL);
+
+        del_watcher(w);
     }
     else
     {
@@ -487,14 +489,14 @@ void EVBackend::dispatch_event(EVIO *w, int32_t ev)
 
 bool EVBackend::del_watcher(EVIO *w)
 {
-    bool need_ev = true;
+    bool has_ref = true;
     fd_mgr_.unset(w);
     {
         std::scoped_lock<std::mutex> sl(mutex_);
 
         // 这个必须放到锁里，backend关闭socket，发了事件给主线程但主线程还未处理
         // 这时候主线程往socket写入数据时，要依赖这个M_REF_BACKEND判断是否插入数据
-        if (w->del_ref(EVIO::M_REF_BACKEND)) need_ev = false;
+        if (!w->del_ref(EVIO::M_REF_BACKEND)) has_ref = false;
 
         watcher_events_.erase(std::remove_if(watcher_events_.begin(),
                                              watcher_events_.end(),
@@ -503,15 +505,15 @@ bool EVBackend::del_watcher(EVIO *w)
     }
     // 正常情况backend线程不会销毁watch
     // 但如果watcher所属于线程来不及处理，backend负责收尾
-    if (!need_ev)
+    if (!has_ref)
     {
         PLOG("backend delete watcher, id = %d, fd = %d", w->id_, w->fd_);
         netcompat::close(w->fd_);
         delete w;
-        return true;
+        return false;
     }
 
-    return need_ev;
+    return has_ref;
 }
 
 void EVBackend::add_watcher_event(EVIO *w, int32_t ev)

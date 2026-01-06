@@ -55,7 +55,6 @@ static int32_t get_addr_info(lua_State *L)
 static int32_t md5(lua_State *L)
 {
     size_t len;
-    MD5_CTX md;
     const char *ptr;
     unsigned char dgst[MD5_DIGEST_LENGTH];
 
@@ -68,28 +67,38 @@ static int32_t md5(lua_State *L)
         if (lua_toboolean(L, 1)) fmt = "%02X";
     }
 
-    MD5_Init(&md);
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    if (!ctx || 1 != EVP_DigestInit_ex(ctx, EVP_md5(), nullptr))
+    {
+        if (ctx) EVP_MD_CTX_free(ctx);
+        return luaL_error(L, "md5 init error");
+    }
+
     for (int32_t i = index; i <= lua_gettop(L); ++i)
     {
         ptr = lua_tolstring(L, i, &len);
         if (!ptr)
         {
             // not a string and can not convert to string
+            EVP_MD_CTX_free(ctx);
             return luaL_error(L, "argument #%d expect string,got %s", i,
                               lua_typename(L, lua_type(L, i)));
         }
 
-        MD5_Update(&md, ptr, len);
+        EVP_DigestUpdate(ctx, ptr, len);
     }
 
-    MD5_Final(dgst, &md);
-    char buf[MD5_DIGEST_LENGTH * 2 + 1];
-    for (int32_t i = 0; i < 16; ++i)
+    unsigned int md_len = 0;
+    EVP_DigestFinal_ex(ctx, dgst, &md_len);
+    EVP_MD_CTX_free(ctx);
+
+    char buf[MD5_DIGEST_LENGTH * 2 + 1] = {0};
+    for (unsigned int i = 0; i < md_len; ++i)
     {
         //--%02x即16进制输出，占2个字节
         snprintf(buf + i * 2, 3, fmt, dgst[i]);
     }
-    lua_pushlstring(L, buf, MD5_DIGEST_LENGTH * 2);
+    lua_pushlstring(L, buf, md_len * 2);
 
     return 1;
 }
@@ -307,9 +316,10 @@ static int32_t what_error(lua_State *L)
 static int32_t raw_sha1_(lua_State *L, int32_t index,
                   unsigned char sha1[SHA_DIGEST_LENGTH])
 {
-    SHA_CTX ctx;
-    if (!SHA1_Init(&ctx))
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    if (!ctx || 1 != EVP_DigestInit_ex(ctx, EVP_sha1(), nullptr))
     {
+        if (ctx) EVP_MD_CTX_free(ctx);
         return luaL_error(L, "sha1 init error");
     }
 
@@ -320,14 +330,22 @@ static int32_t raw_sha1_(lua_State *L, int32_t index,
         if (!ptr)
         {
             // not a string and can not convert to string
+            EVP_MD_CTX_free(ctx);
             return luaL_error(L, "argument #%d expect string,got %s", i,
                               lua_typename(L, lua_type(L, i)));
         }
 
-        SHA1_Update(&ctx, ptr, len);
+        EVP_DigestUpdate(ctx, ptr, len);
     }
 
-    SHA1_Final(sha1, &ctx);
+    unsigned int out_len = 0;
+    if (1 != EVP_DigestFinal_ex(ctx, sha1, &out_len) || out_len != SHA_DIGEST_LENGTH)
+    {
+        EVP_MD_CTX_free(ctx);
+        return luaL_error(L, "sha1 final error");
+    }
+
+    EVP_MD_CTX_free(ctx);
 
     return 0;
 }
@@ -381,9 +399,10 @@ static int32_t sha256(lua_State* L)
         if (lua_toboolean(L, 1)) fmt = "%02X";
     }
 
-    SHA256_CTX ctx;
-    if (!SHA256_Init(&ctx))
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    if (!ctx || 1 != EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr))
     {
+        if (ctx) EVP_MD_CTX_free(ctx);
         return luaL_error(L, "sha256 init error");
     }
 
@@ -394,14 +413,22 @@ static int32_t sha256(lua_State* L)
         if (!ptr)
         {
             // not a string and can not convert to string
+            EVP_MD_CTX_free(ctx);
             return luaL_error(L, "argument #%d expect string,got %s", i,
                               lua_typename(L, lua_type(L, i)));
         }
 
-        SHA256_Update(&ctx, ptr, len);
+        EVP_DigestUpdate(ctx, ptr, len);
     }
 
-    SHA256_Final(sha256, &ctx);
+    unsigned int out_len = 0;
+    if (1 != EVP_DigestFinal_ex(ctx, sha256, &out_len) || out_len != SHA256_DIGEST_LENGTH)
+    {
+        EVP_MD_CTX_free(ctx);
+        return luaL_error(L, "sha256 final error");
+    }
+
+    EVP_MD_CTX_free(ctx);
 
     char buf[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
     for (int32_t i = 0; i < SHA256_DIGEST_LENGTH; ++i)

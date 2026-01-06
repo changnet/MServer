@@ -69,11 +69,6 @@ Socket::~Socket()
     // 正常情况下应该走关闭流程。如果析构时backend线程还引用watcher，则是有问题的
     if (w_->del_ref(EVIO::M_REF_WORKER))
     {
-        delete w_;
-        w_ = nullptr;
-    }
-    else
-    {
         // 如果未正常关闭，这里不能强制关闭
         // 强制关闭可能会导致fepoll或者poll在一个非socket上执行会报错
         // 就只能让它泄漏了，一般情况下不会出现这种情况
@@ -85,6 +80,11 @@ Socket::~Socket()
         // }
         ELOG("socket destructor watcher not delete id = %d, fd = %d",
              socket_id_, w_->fd_);
+    }
+    else
+    {
+        delete w_;
+        w_ = nullptr;
     }
 }
 
