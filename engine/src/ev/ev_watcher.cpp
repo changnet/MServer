@@ -1,6 +1,9 @@
 #include "ev_watcher.hpp"
 #include "net/net_compat.hpp"
 
+static_assert(offsetof(EVIO, ev_) / 64 != offsetof(EVIO, mask_) / 64,
+    "atomic false sharing check");
+
 EVIO::EVIO(int32_t id, int32_t addr, int32_t fd)
 {
     fd_   = fd;

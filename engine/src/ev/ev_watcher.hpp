@@ -72,7 +72,6 @@ public:
     int32_t errno_; // 错误码
 
     std::atomic<int32_t> mask_; // 用于设置各种参数和标记
-    std::atomic<int32_t> ev_; // backend发出，等待worker线程处理的事件
 
     // 带b_前缀的变量，都是和backend线程相关
     // 这些变量要么只能在backend中操作，要么操作时必须加锁
@@ -82,6 +81,9 @@ public:
     int32_t b_ev_; // worker发出，等待backend线程处理的事件
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
+
+    char _pad[24]; // no used，false sharing padding
+    std::atomic<int32_t> ev_; // backend发出，等待worker线程处理的事件
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制
