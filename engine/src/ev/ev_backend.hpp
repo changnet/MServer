@@ -44,7 +44,7 @@ public:
      * @brief 删除指定watcher在backend线程中的引用
      * @return 该watcher是否还有效（被其他线程引用）
      */
-    bool del_watcher(EVIO *w);
+    bool del_watcher(EVIO *w, int32_t fd);
     /**
      * @brief 往backend给指定watcher追加一个事件，该事件和已有事件堆叠
      * 主要解决socket频繁发送数据，需要不断追加EV_WRITE事件的问题

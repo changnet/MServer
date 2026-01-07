@@ -177,7 +177,7 @@ function Socket:set_ip_version(ip)
         if ip:find(":") then
             ipv = 2 -- ipv6 dual stack
         else
-            ipv = 0
+            ipv = 0 -- ipv4 only
         end
     end
     self.s:set_ip_version(ipv)
@@ -188,7 +188,7 @@ end
 -- @param port 目标服务器端口
 -- @param ip 目标服务器的ip，如果不传从则host解析
 function Socket:connect(host, port, ip)
-    if not ip then ip = util.get_addr_info(host) end
+    if not ip then ip = util.get_addr_info(host, 0 == self.ip_version) end
     -- 这个host需要注意，对于http、ws，需要传域名而不是ip地址
     -- 这个会影响http头里的host字段
     -- 对www.example.com请求时，如果host为一个ip，是会返回404的

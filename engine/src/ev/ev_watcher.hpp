@@ -21,6 +21,7 @@ public:
         M_REF_BACKEND   = 0x08, // backend线程引用此watcher
         M_ALL_REF       = M_REF_WORKER | M_REF_BACKEND,
         M_REMOTE_CLOSE  = 0x10, // 对端是否关闭(read或recv返回0)
+        M_BACKEND_CLOSE = 0x20, // backend线程已决定关闭此watcher
     };
 
 public:
@@ -58,14 +59,10 @@ public:
     int32_t do_init_connect();
 
     /**
-     * @brief 删除指定引用
+     * @brief 删除指定引用，如果已经没有引用，则关闭fd并销毁自己
      * @return 存在其他引用则返回true，不存在返回false
      */
-    bool del_ref(int32_t b)
-    {
-        int32_t v = mask_.fetch_and(~b);
-        return 0 != (v & (~b) & M_ALL_REF);
-    }
+    bool del_ref(int32_t b);
 
 public:
     
@@ -94,12 +91,11 @@ public:
     // 设置fd对应的watcher
     bool set(EVIO *w)
     {
-        // 该watcher对应的socket已经在另一个线程销毁(正常不应该出现)
+        // 一个socket添加到backend线程时，已在另一个线程销毁(正常不应该出现)
         if (0 == (w->mask_ & EVIO::M_REF_WORKER))
         {
             PLOG("ref delete watcher, maybe error: %d - %d", w->id_, w->fd_);
             w->del_ref(EVIO::M_REF_BACKEND);
-            delete w;
             return false;
         }
         assert(0 != (w->mask_ & EVIO::M_REF_BACKEND));
@@ -122,9 +118,8 @@ public:
         return true;
     }
     // 清除fd对应的watcher
-    void unset(EVIO* w)
+    void unset(int32_t fd)
     {
-        int32_t fd   = w->fd_;
         uint32_t ufd = ((uint32_t)fd);
         if (ufd < HUGE_FD)
         {

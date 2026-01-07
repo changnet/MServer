@@ -66,24 +66,10 @@ Socket::~Socket()
     delete packet_;
     packet_ = nullptr;
 
-    // 正常情况下应该走关闭流程。如果析构时backend线程还引用watcher，则是有问题的
-    if (w_->del_ref(EVIO::M_REF_WORKER))
+    
+    if (!w_->del_ref(EVIO::M_REF_WORKER))
     {
-        // 如果未正常关闭，这里不能强制关闭
-        // 强制关闭可能会导致fepoll或者poll在一个非socket上执行会报错
-        // 就只能让它泄漏了，一般情况下不会出现这种情况
-        // if (fd_ != netcompat::INVALID)
-        // {
-        //     netcompat::close(fd_);
-        //     fd_ = netcompat::INVALID;
-        //     delete w_;
-        // }
-        ELOG("socket destructor watcher not delete id = %d, fd = %d",
-             socket_id_, w_->fd_);
-    }
-    else
-    {
-        delete w_;
+        // delete w_; // del_ref会销毁自己
         w_ = nullptr;
     }
 }
@@ -638,11 +624,17 @@ int32_t Socket::close()
 {
     // 改成backend线程处理socket读写后，这个不能直接调用函数关闭fd
     // 否则会造成fd重复为其他类型（比如文件），从而导致backend出错
+    // backend线程派发close事件后再解除引用，所以逻辑线程发现backend线程没解除
+    // 引用是正常的，但应该标记了关闭。
+    // 这里要尽可能关闭fd的原因是允许socket收到远端关闭事件后，直接关闭fd然后重连
     if (0 != (w_->mask_ & EVIO::M_REF_BACKEND))
     {
-        ELOG("socket close but backend still using id = %d, fd = %d",
-             socket_id_, w_->fd_);
-        return -1;
+        if (0 == (w_->mask_ & EVIO::M_BACKEND_CLOSE))
+        {
+            ELOG("socket close but backend still using id = %d, fd = %d",
+                 socket_id_, w_->fd_);
+            return -1;
+        }
     }
 
     // epoll、poll发现fd出错时，需要及时获取错误码并保存

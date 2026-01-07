@@ -16,7 +16,8 @@ Test.describe("http test", function()
     local exp_ip
     local httpbin_ip
 
-    local local_host = IPV4 and "127.0.0.1" or "::1"
+    local ipv4 = true -- 现在ipv6网络基本测不通
+    local local_host = "::1"
 
     local clt_ssl = TlsCtx()
     local srv_ssl = TlsCtx()
@@ -41,9 +42,9 @@ Test.describe("http test", function()
             "mini_distributed_game_server",
             "../certs/ca.cer")
 
-        exp_ip = util.get_addr_info(exp_host)
+        exp_ip = util.get_addr_info(exp_host, ipv4)
         Test.print(exp_host .. " address is", exp_ip)
-        httpbin_ip = util.get_addr_info(httpbin_host)
+        httpbin_ip = util.get_addr_info(httpbin_host, ipv4)
         Test.print(httpbin_host .. " address is", httpbin_ip)
     end)
 
@@ -161,7 +162,7 @@ Test.describe("http test", function()
     Test.it("https get " .. exp_host, function()
         local conn = HttpSocket()
 
-        conn:connect_s(exp_host, 443, clt_ssl)
+        conn:connect_s(exp_host, 443, clt_ssl, exp_ip)
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                 Test.cb(function(__conn, http_type, code, method, url, body)
@@ -177,7 +178,7 @@ Test.describe("http test", function()
     Test.it("https post " .. exp_host, function()
         local conn = HttpSocket()
 
-        conn:connect_s(exp_host, 443, clt_ssl)
+        conn:connect_s(exp_host, 443, clt_ssl, exp_ip)
         conn.on_connected = function(_conn)
             conn:post("/post", nil,
                       function(__conn, http_type, code, method, url, body)
@@ -242,7 +243,7 @@ Test.describe("http test", function()
     Test.it("https ssl verify and get " .. exp_host, vfy_ssl, function()
         local conn = HttpSocket()
 
-        conn:connect_s(exp_host, 443, vfy_ssl)
+        conn:connect_s(exp_host, 443, vfy_ssl, exp_ip)
         conn.on_connected = function(_conn)
             conn:get("/get", nil,
                      function(__conn, http_type, code, method, url, body)

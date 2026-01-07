@@ -34,16 +34,7 @@ EVBackend::EVBackend()
 
 EVBackend::~EVBackend()
 {
-    fd_mgr_.iter(
-        [](EVIO *w)
-        {
-            if (!w->del_ref(EVIO::M_REF_BACKEND))
-            {
-                PLOG("backend close watcher, id = %d, fd = %d", w->id_, w->fd_);
-                netcompat::close(w->fd_);
-                delete w;
-            }
-        });
+    fd_mgr_.iter([](EVIO *w) { w->del_ref(EVIO::M_REF_BACKEND); });
     fd_mgr_.clear();
 }
 
@@ -136,8 +127,6 @@ void EVBackend::do_pending_events()
 
 int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
 {
-    int32_t op = 0;
-
     // EV_CLOSE来自当前线程表示socket已经关闭，即使有EV_FLUSH标识也没法
     // EV_FLUSH来逻辑线程，逻辑线程不会同时发 EV_FLUSH|EV_CLOSE
     if (events & EV_FLUSH && !(events & EV_CLOSE))
@@ -162,42 +151,39 @@ int32_t EVBackend::modify_watcher(EVIO *w, int32_t events)
          *
          * 所以backend线程收到关闭消息时发现已经关闭，则无需处理
          *
-         * 注意：backend线程从不关闭fd，所以不存在fd复用的问题
+         * 注意：backend线程在确认逻辑线程还有引用时不会关闭fd，不存在fd复用的问题
          */
-        if (!fd_mgr_.get(w->fd_)) return 0;
-
-        op = FD_OP_DEL;
+        if (!fd_mgr_.get(fd)) return 0;
 
         // 先派发事件，再del_watcher，否则del_watcher刚好删除了引用，另一个线程
-        // 马上就删除了watcher，再使用w就是访问不存在的内存
-        dispatch_event(w, EV_CLOSE);
+        // 马上就删除了watcher甚于复用了fd，再使用w就是访问不存在的内存
+        w->mask_ |= EVIO::M_BACKEND_CLOSE;
         w->b_kevents_ &= ~(EV_WRITE | EV_KERNEL);
 
-        del_watcher(w);
+        int32_t e = modify_fd(fd, FD_OP_DEL, events);
+        dispatch_event(w, EV_CLOSE);
+
+        del_watcher(w, fd);
+        return e;
     }
     else
     {
-        if (w->b_kevents_ & EV_KERNEL)
+        int32_t op = FD_OP_MOD;
+        if (0 == (w->b_kevents_ & EV_KERNEL))
         {
-            op = FD_OP_MOD;
-            // events可能是0。在连接过程中，连接收到返回，还来不及设置数据到backend
-            // assert(0 != events);
-        }
-        else
-        {
-            assert(!fd_mgr_.get(w->fd_));
+            assert(!fd_mgr_.get(fd));
             assert(0 == w->b_kevents_ && 0 != events);
 
             op = FD_OP_ADD;
             if (!fd_mgr_.set(w)) return 0;
         }
 
+        // events可能是0。在连接过程中，连接收到返回，还来不及设置数据到backend
+        // assert(0 != events);
         // 即使是FD_OP_MOD，也要重新设置EV_KERNEL，因为events里不包含EV_KERNEL
         w->b_kevents_ = events | EV_KERNEL;
+        return modify_fd(fd, op, events);
     }
-
-    // 注意：到这里，w可能已经被delete
-    return modify_fd(fd, op, events);
 }
 
 void EVBackend::do_io_status(EVIO *w, int32_t ev, int32_t status,
@@ -487,10 +473,10 @@ void EVBackend::dispatch_event(EVIO *w, int32_t ev)
     if (!ok) ELOG("backend forward_message fail: %d", w->addr_);
 }
 
-bool EVBackend::del_watcher(EVIO *w)
+bool EVBackend::del_watcher(EVIO *w, int32_t fd)
 {
     bool has_ref = true;
-    fd_mgr_.unset(w);
+    fd_mgr_.unset(fd); // 这里不能取w->fd_了，因为可能已经被逻辑线程关闭
     {
         std::scoped_lock<std::mutex> sl(mutex_);
 
@@ -502,15 +488,6 @@ bool EVBackend::del_watcher(EVIO *w)
                                              watcher_events_.end(),
                                              [w](auto &x) { return x == w; }),
                               watcher_events_.end());
-    }
-    // 正常情况backend线程不会销毁watch
-    // 但如果watcher所属于线程来不及处理，backend负责收尾
-    if (!has_ref)
-    {
-        PLOG("backend delete watcher, id = %d, fd = %d", w->id_, w->fd_);
-        netcompat::close(w->fd_);
-        delete w;
-        return false;
     }
 
     return has_ref;
