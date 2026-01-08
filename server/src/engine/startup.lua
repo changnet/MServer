@@ -64,7 +64,7 @@ end
 
 -- 加载游戏设置文件
 local function load_setting()
-    local path = g_env:get("--file")
+    local path = g_env:get("--setting")
     if not path then
         -- 未从命令行传设置文件路径，则读取默认路径
         local cwd = g_env:get("cwd")
@@ -79,18 +79,18 @@ local function set_path()
     -- 这里只保留源码目录，不保留系统目录
     -- 所有的lua文件、so插件必须仅在源码目录搜索，避免版本冲突问题
 
-    local srv_dir = g_env:get("srv_dir")
+    local source = g_env:get("source")
 
     -- 设置lua文件搜索路径(常用的路径排前面，会影响require性能)
-    package.path = srv_dir .. "/src/modules/?.lua;"
-        .. srv_dir .. "/src/?.lua;"
-        .. srv_dir .. "/?.lua;" -- config.xxx
+    package.path = source .. "src/modules/?.lua;"
+        .. source .. "src/?.lua;"
+        .. source .. "?.lua;" -- config.xxx
 
     -- 设置c库搜索路径，用于直接加载so或者dll的lua模块
     if WINDOWS then
-        package.cpath = "../c_module/?.dll;"
+        package.cpath = source .. "c_module/?.dll;"
     else
-        package.cpath = "../c_module/?.so;"
+        package.cpath = source .. "c_module/?.so;"
     end
 end
 
@@ -118,7 +118,7 @@ local function set_process_log(node_name, node_index)
     -- 错误日志除了输出到通用日志文件，还单独输出error文件，用于触发运维邮件、电话
     local epath = string.format("log/%s%03d_error", node_name, node_index)
 
-    if g_env:get("--deamon") then
+    if g_setting.deamon then
         -- 后台模式运行，不需要输出日志到stdout，效率高一点点
         g_async_log:add_device("info", path, 1, 1)
     else
@@ -227,6 +227,7 @@ function Startup.process_init(loader)
     end
     assert(wtype, "no such node define")
 
+    load_setting()
     local name = set_process_log(node_name, node_index)
 
     g_thread = g_mthread
@@ -237,7 +238,6 @@ function Startup.process_init(loader)
     require "global.log" -- 加载log函数
 
     log_env_info()
-    load_setting()
 
     require "data.global_data"
     require "engine.engine"

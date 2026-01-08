@@ -20,16 +20,16 @@ function Pbc.load()
     g_pbc:reset()
 
     local count = 0
-    local srv_dir = g_env:get("srv_dir")
+    local source = g_env:get("source")
 
     -- 注意：pbc中如果一个pb文件引用了另一个pb文件中的message，则另一个文件必须优先加载
     local priority =
     {
-        "/pb/comm.pb",
+        "pb/comm.pb",
     }
     local loaded = {}
     for _, path in pairs(priority) do
-        path = srv_dir .. path
+        path = source .. path
 
         if not load_file(path) then
             printf("fail to load %s", path)
@@ -40,7 +40,7 @@ function Pbc.load()
         loaded[path] = true
     end
 
-    local files = Util.ls(srv_dir .. "/pb")
+    local files = Util.ls(source .. "pb")
     for _, path in pairs(files or {}) do
         if not loaded[path] and string.end_with(path, "pb") then
             if not load_file(path) then

@@ -2,8 +2,8 @@
 
 local addr = ...
 
-local srv_dir = g_env:get("srv_dir")
-dofile(srv_dir .. "/src/engine/startup.lua")
+local source = g_env:get("source")
+dofile(source .. "src/engine/startup.lua")
 
 
 g_mongodb = nil

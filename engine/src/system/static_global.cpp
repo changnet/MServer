@@ -63,7 +63,6 @@ void StaticGlobal::initialize()
     E           = new class EV();
     B           = EVBackend::instance();
 
-    V->init();
     // buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 }
 

@@ -22,6 +22,9 @@ return
         db   = "test_999",
     },
 
+
+    daemon = false, -- 是否以守护进程方式运行
+    source = "../", -- 默认在var目录的上一级，即server目录
     gm = true, -- 是否启用gm
     cli = true, -- 是否启用命令行输入
     lang = "zh", -- 简体中文

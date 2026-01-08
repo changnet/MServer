@@ -65,11 +65,12 @@ void EV::dispatch_message()
     }
 }
 
-bool EV::init_entry(int32_t argc, char **argv)
+bool EV::init_entry(const char *path, int32_t argc, char **argv)
 {
     lua_pushcfunction(L_, traceback);
+
     /* 加载程序入口脚本 */
-    if (LUA_OK != luaL_loadfile(L_, LUA_ENTERANCE))
+    if (LUA_OK != luaL_loadfile(L_, path))
     {
         const char *err_msg = lua_tostring(L_, -1);
         ELOG_R("load lua enterance file error:%s", err_msg);
@@ -100,12 +101,12 @@ bool EV::init_entry(int32_t argc, char **argv)
     return true;
 }
 
-void EV::start(int32_t argc, char **argv)
+void EV::start(const char *path, int32_t argc, char **argv)
 {
     L_ = llib::new_state();
 
     timing::update();
-    if (!init_entry(argc, argv))
+    if (!init_entry(path, argc, argv))
     {
         L_ = llib::delete_state(L_);
         return;

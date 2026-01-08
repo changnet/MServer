@@ -52,7 +52,7 @@ public:
         return iter == env_.end() ? nullptr : iter->second.c_str();
     }
 
-    void init();
+    void init(const char *source);
 
 private:
     mutable std::mutex mutex_;

@@ -13,7 +13,7 @@ public:
     ~EV();
 
     // 初始化主线程并进入主循环
-    void start(int32_t argc, char **argv);
+    void start(const char *path, int32_t argc, char **argv);
     // 退出主循环
     void stop();
 
@@ -84,7 +84,7 @@ private:
     // 进入主循环，除非停服否则不返回
     void routinue();
     void dispatch_message();
-    bool init_entry(int32_t argc, char **argv);
+    bool init_entry(const char* path, int32_t argc, char **argv);
 
 private:
     bool stop_; // 退出主循环

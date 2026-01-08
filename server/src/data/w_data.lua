@@ -2,8 +2,8 @@
 
 local addr = ...
 
-local srv_dir = g_env:get("srv_dir")
-dofile(srv_dir .. "/src/engine/startup.lua")
+local source = g_env:get("source")
+dofile(source .. "src/engine/startup.lua")
 
 Startup.worker_init(tonumber(addr), "data.data_loader")
 
