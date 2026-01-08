@@ -24,6 +24,7 @@
 #include "lbuffer.hpp"
 #include "system/util.hpp"
 #include "system/stdin_reader.hpp"
+#include "system/share_data.hpp"
 
 #define LUA_LIB_OPEN(name, func)         \
     do                                   \
@@ -95,6 +96,18 @@ static void luaopen_env(lua_State* L)
     lcpp::Class<Env> lc(L, "engine.Env");
     lc.def<&Env::get>("get");
     lc.def<&Env::set>("set");
+}
+
+static void luaopen_sharedata(lua_State *L)
+{
+    lcpp::Class<ShareData> lc(L, "engine.ShareData");
+    lc.def<&ShareData::get>("get");
+    lc.def<&ShareData::set>("set");
+    lc.def<&ShareData::fetch_into>("fetch_into");
+    lc.def<&ShareData::fetch_add>("fetch_add");
+    lc.def<&ShareData::keys>("keys");
+    lc.def<&ShareData::update>("update");
+    lc.def<&ShareData::memory_size>("memory_size");
 }
 
 static void luaopen_ev(lua_State *L)
@@ -381,6 +394,9 @@ void open_env(lua_State *L)
 
     lcpp::Class<Env>::push(L, StaticGlobal::V, false);
     lua_setglobal(L, "g_env");
+
+    lcpp::Class<ShareData>::push(L, StaticGlobal::S, false);
+    lua_setglobal(L, "g_sharedata");
 }
 
 void open_cpp(lua_State *L)
@@ -395,6 +411,7 @@ void open_cpp(lua_State *L)
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
     luaopen_env(L);
+    luaopen_sharedata(L);
     luaopen_engine(L);
     luaopen_ev(L);
     luaopen_worker_thread(L);

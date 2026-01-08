@@ -6,6 +6,7 @@
 #include "net/io/tls_ctx.hpp"
 #include "net/socket.hpp"
 #include "net/codec/pbc_codec.hpp"
+#include "system/share_data.hpp"
 
 // initializer最高等级初始化，在main函数之前，适合设置一些全局锁等
 class StaticGlobal::initializer StaticGlobal::initializer_;
@@ -62,6 +63,7 @@ void StaticGlobal::initialize()
     M           = new ThreadContextMgr();
     E           = new class EV();
     B           = EVBackend::instance();
+    S           = new ShareData();
 
     // buffer_chunk_pool_ = new Buffer::ChunkPool("buffer_chunk");
 }
@@ -89,6 +91,7 @@ void StaticGlobal::uninitialize()
     delete V;
     delete F;
     delete C;
+    delete S;
 
     PbcCodec::uninitialize();
 }

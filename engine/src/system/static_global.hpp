@@ -7,6 +7,8 @@
 #include "pool/flexible_pool.hpp"
 #include "thread/thread_context.hpp"
 
+class ShareData;
+
 /**
  * 控制static或者global变量，的创建、销毁顺序，避免相互依赖，影响内存泄漏计数
  * static initialization order fiasco(https://isocpp.org/wiki/faq/ctors)
@@ -37,6 +39,7 @@ public:
     inline static ThreadContextMgr *M = nullptr; // worker线程管理
     inline static Buffer::ChunkPool *C = nullptr; // socket缓存池
     inline static FlexiblePool *F      = nullptr; // 通用buffer池
+    inline static ShareData *S         = nullptr; // 数据共享
 
 private:
     class initializer // 提供一个等级极高的初始化
