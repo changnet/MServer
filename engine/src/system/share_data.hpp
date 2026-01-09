@@ -8,6 +8,22 @@
 struct lua_State;
 
 /**
+ * 实现这个模块的初衷，是让多个lua虚拟机共享数据。例如：把玩家基础数据存在这里，则
+ * 所有lua虚拟机都可以访问，不需要通过rpc调用。
+ * 
+ * 但是要理解这个共享的数据是线程安全，但不具备一致性。比如你正在for循环查找某个
+ * 等级的玩家，查询玩家A的等级后，另一个线程就修改了B的等级，这时候A、B的状态是不
+ * 处于遍历开始时的状态的。
+ * 
+ * 所以不能用它来存配置
+ * 
+ * 另外，这个模块读写数据并不快，写比lua慢了5倍左右，内存多占50%，读慢了60倍，即使
+ * 用fetch模式，也慢了30倍，具体的看share_data_test.lua
+ * 
+ * 但是用这个来交互数据，是要比rpc调用快，并且节省很多的
+ */
+
+/**
  * @brief 实现多个线程共享数据，类似一个简单的内存redis
  */
 class ShareData
@@ -15,7 +31,6 @@ class ShareData
 public:
     // Key可以是数字、字符串、双精度浮点数、布尔值
     using Key = std::variant<int64_t, std::string, double, bool>;
-
     struct KeyHash
     {
         std::size_t operator()(const Key &k) const
@@ -91,17 +106,14 @@ private:
     // Node存储实际数据
     struct Node
     {
-        enum class Type
-        {
-            NIL,
-            BOOLEAN,
-            INTEGER,
-            NUMBER,
-            STRING,
-            TABLE
-        };
-
-        Type type_ = Type::NIL;
+        // 移除 Type type_，直接使用 index 判断类型
+        // 索引对应关系：
+        // 0: std::monostate (NIL)
+        // 1: bool (BOOLEAN)
+        // 2: int64_t (INTEGER)
+        // 3: double (NUMBER)
+        // 4: std::string (STRING)
+        // 5: Table (TABLE)
         std::variant<std::monostate, bool, int64_t, double, std::string, Table> value_;
 
         Node() = default;
@@ -140,7 +152,7 @@ private:
     static std::string key_to_string(const Key &k);
 
     /**
-     * @brief 从Lua栈解析一个Key
+     * @brief 从Lua栈解析一个Key (产生 string 拷贝)
      */
     static bool try_get_key(lua_State *L, int idx, Key &key);
 

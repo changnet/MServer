@@ -5,8 +5,7 @@
 #include <iomanip>
 
 /**
- * @brief 自定义异常，用于在递归中捕获错误并返回给 Lua，避免直接使用 luaL_error
- * 导致 C++ 变量无法析构
+ * @brief 自定义异常
  */
 class ShareDataException : public std::runtime_error
 {
@@ -33,14 +32,6 @@ public:
     {
         return path_;
     }
-    const ShareData::Key &get_last_key() const
-    {
-        return last_key_;
-    }
-    bool has_key() const
-    {
-        return has_key_;
-    }
 
 private:
     std::string path_;
@@ -57,7 +48,7 @@ ShareData::Node::~Node()
 
 void ShareData::Node::clear()
 {
-    if (type_ == Type::TABLE)
+    if (std::holds_alternative<Table>(value_))
     {
         auto &map = std::get<Table>(value_);
         for (auto &pair : map)
@@ -66,36 +57,40 @@ void ShareData::Node::clear()
         }
         map.clear();
     }
-    type_  = Type::NIL;
     value_ = std::monostate{};
 }
 
 size_t ShareData::Node::calc_memory_size() const
 {
     size_t size = sizeof(Node);
-    if (type_ == Type::STRING)
-    {
-        size += std::get<std::string>(value_).capacity();
-    }
-    else if (type_ == Type::TABLE)
-    {
-        const auto &map = std::get<Table>(value_);
-        size += sizeof(Table);
-        for (const auto &[key, node] : map)
+    std::visit(
+        [&size](auto &&arg)
         {
-            std::visit(
-                [&size](auto &&arg)
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::string>)
+            {
+                size += arg.capacity();
+            }
+            else if constexpr (std::is_same_v<T, Table>)
+            {
+                size += sizeof(Table);
+                for (const auto &[key, node] : arg)
                 {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, std::string>)
-                    {
-                        size += arg.capacity();
-                    }
-                },
-                key);
-            size += node->calc_memory_size();
-        }
-    }
+                    std::visit(
+                        [&size](auto &&k_arg)
+                        {
+                            using KT = std::decay_t<decltype(k_arg)>;
+                            if constexpr (std::is_same_v<KT, std::string>)
+                            {
+                                size += k_arg.capacity();
+                            }
+                        },
+                        key);
+                    size += node->calc_memory_size();
+                }
+            }
+        },
+        value_);
     return size;
 }
 
@@ -104,7 +99,6 @@ size_t ShareData::Node::calc_memory_size() const
 ShareData::ShareData()
 {
     root_node_         = new Node();
-    root_node_->type_  = Node::Type::TABLE;
     root_node_->value_ = Table{};
 }
 
@@ -148,13 +142,9 @@ bool ShareData::try_get_key(lua_State *L, int idx, Key &key)
     if (type == LUA_TNUMBER)
     {
         if (lua_isinteger(L, idx))
-        {
             key = (int64_t)lua_tointeger(L, idx);
-        }
         else
-        {
             key = (double)lua_tonumber(L, idx);
-        }
         return true;
     }
     else if (type == LUA_TSTRING)
@@ -186,35 +176,26 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
     else if (type == LUA_TBOOLEAN)
     {
         root->clear();
-        root->type_  = Node::Type::BOOLEAN;
         root->value_ = (bool)lua_toboolean(L, index);
     }
     else if (type == LUA_TNUMBER)
     {
         root->clear();
         if (lua_isinteger(L, index))
-        {
-            root->type_  = Node::Type::INTEGER;
             root->value_ = (int64_t)lua_tointeger(L, index);
-        }
         else
-        {
-            root->type_  = Node::Type::NUMBER;
             root->value_ = (double)lua_tonumber(L, index);
-        }
     }
     else if (type == LUA_TSTRING)
     {
         root->clear();
-        root->type_  = Node::Type::STRING;
         root->value_ = std::string(lua_tostring(L, index));
     }
     else if (type == LUA_TTABLE)
     {
-        if (!is_update || root->type_ != Node::Type::TABLE)
+        if (!is_update || !std::holds_alternative<Table>(root->value_))
         {
             root->clear();
-            root->type_  = Node::Type::TABLE;
             root->value_ = Table{};
         }
 
@@ -222,11 +203,10 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
         lua_pushnil(L);
         while (lua_next(L, index) != 0)
         {
-            // key at -2, value at -1
             Key key;
             if (!try_get_key(L, -2, key))
             {
-                lua_pop(L, 1); // pop value
+                lua_pop(L, 1);
                 throw ShareDataException(
                     "ShareData table key unsupported type: "
                     + std::string(luaL_typename(L, -2)));
@@ -236,8 +216,11 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
             auto it    = map.find(key);
             if (it == map.end())
             {
-                next     = new Node();
-                map[key] = next;
+                next = new Node();
+                // Move key if possible, though here it's copy unless we are
+                // careful. map[Key] moves if we passed rvalue? Not exactly with
+                // operator[]. Use emplace for efficiency
+                map.emplace(key, next);
             }
             else
             {
@@ -251,12 +234,12 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
             catch (ShareDataException &e)
             {
                 e.prepend_path(key_to_string(key));
-                lua_pop(L, 2); // pop value and key
+                lua_pop(L, 2);
                 throw;
             }
             catch (...)
             {
-                lua_pop(L, 2); // pop value and key
+                lua_pop(L, 2);
                 throw;
             }
             lua_pop(L, 1);
@@ -271,38 +254,32 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
 
 void ShareData::push_node(lua_State *L, const Node *node)
 {
-    switch (node->type_)
-    {
-    case Node::Type::NIL: lua_pushnil(L); break;
-    case Node::Type::BOOLEAN:
-        lua_pushboolean(L, std::get<bool>(node->value_));
-        break;
-    case Node::Type::INTEGER:
-        lua_pushinteger(L, std::get<int64_t>(node->value_));
-        break;
-    case Node::Type::NUMBER:
-        lua_pushnumber(L, std::get<double>(node->value_));
-        break;
-    case Node::Type::STRING:
-    {
-        const std::string &str = std::get<std::string>(node->value_);
-        lua_pushlstring(L, str.c_str(), str.size());
-        break;
-    }
-    case Node::Type::TABLE:
-    {
-        lua_newtable(L);
-        const auto &map = std::get<Table>(node->value_);
-        for (const auto &[key, child] : map)
+    std::visit(
+        [this, L](auto &&arg)
         {
-            push_key(L, key);
-            push_node(L, child);
-            lua_settable(L, -3);
-        }
-        break;
-    }
-    default: assert(false); break;
-    }
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+                lua_pushnil(L);
+            else if constexpr (std::is_same_v<T, bool>)
+                lua_pushboolean(L, arg);
+            else if constexpr (std::is_same_v<T, int64_t>)
+                lua_pushinteger(L, arg);
+            else if constexpr (std::is_same_v<T, double>)
+                lua_pushnumber(L, arg);
+            else if constexpr (std::is_same_v<T, std::string>)
+                lua_pushlstring(L, arg.c_str(), arg.size());
+            else if constexpr (std::is_same_v<T, Table>)
+            {
+                lua_newtable(L);
+                for (const auto &[key, child] : arg)
+                {
+                    push_key(L, key);
+                    push_node(L, child);
+                    lua_settable(L, -3);
+                }
+            }
+        },
+        node->value_);
 }
 
 void ShareData::push_key(lua_State *L, const Key &key)
@@ -333,7 +310,6 @@ int ShareData::set(lua_State *L)
         std::unique_lock lock(mutex_);
         Node *curr = root_node_;
 
-        // 遍历前面的 key 进行导航
         for (int i = 2; i < top; ++i)
         {
             Key key;
@@ -345,10 +321,9 @@ int ShareData::set(lua_State *L)
                 return 2;
             }
 
-            if (curr->type_ != Node::Type::TABLE)
+            if (!std::holds_alternative<Table>(curr->value_))
             {
                 curr->clear();
-                curr->type_  = Node::Type::TABLE;
                 curr->value_ = Table{};
             }
 
@@ -357,8 +332,9 @@ int ShareData::set(lua_State *L)
             if (it == map.end())
             {
                 Node *next = new Node();
-                map[key]   = next;
-                curr       = next;
+                // Efficiently insert using move semantics
+                map.emplace(std::move(key), next);
+                curr = next;
             }
             else
             {
@@ -372,12 +348,11 @@ int ShareData::set(lua_State *L)
         }
         catch (ShareDataException &e)
         {
-            // 在这一层组装导航阶段的路径
             for (int i = top - 1; i >= 2; --i)
             {
-                Key key;
-                try_get_key(L, i, key);
-                e.prepend_path(key_to_string(key));
+                Key k;
+                try_get_key(L, i, k);
+                e.prepend_path(key_to_string(k));
             }
             throw;
         }
@@ -407,7 +382,6 @@ int ShareData::unset(lua_State *L)
     std::unique_lock lock(mutex_);
     Node *curr = root_node_;
 
-    // 遍历前面的 key 进行导航，直到倒数第 2 个 key
     for (int i = 2; i < top; ++i)
     {
         Key key;
@@ -418,7 +392,7 @@ int ShareData::unset(lua_State *L)
             return 2;
         }
 
-        if (curr->type_ != Node::Type::TABLE)
+        if (!std::holds_alternative<Table>(curr->value_))
         {
             // 如果中间路径不是 table，说明要移除的东西本来就不存在
             lua_pushboolean(L, true);
@@ -448,7 +422,7 @@ int ShareData::unset(lua_State *L)
         return 2;
     }
 
-    if (curr->type_ == Node::Type::TABLE)
+    if (std::holds_alternative<Table>(curr->value_))
     {
         auto &map = std::get<Table>(curr->value_);
         auto it   = map.find(last_key);
@@ -474,7 +448,7 @@ int ShareData::get(lua_State *L)
         Key key;
         if (!try_get_key(L, i, key)) return 0;
 
-        if (curr->type_ != Node::Type::TABLE) return 0;
+        if (!std::holds_alternative<Table>(curr->value_)) return 0;
 
         const auto &map = std::get<Table>(curr->value_);
         auto it         = map.find(key);
@@ -500,7 +474,8 @@ int ShareData::fetch_into(lua_State *L)
     for (int i = 2; i <= top - 2; ++i)
     {
         Key key;
-        if (!try_get_key(L, i, key) || curr->type_ != Node::Type::TABLE)
+        if (!try_get_key(L, i, key)
+            || !std::holds_alternative<Table>(curr->value_))
         {
             return 0;
         }
@@ -512,7 +487,7 @@ int ShareData::fetch_into(lua_State *L)
         curr = it->second;
     }
 
-    if (curr->type_ != Node::Type::TABLE) return 0;
+    if (!std::holds_alternative<Table>(curr->value_)) return 0;
 
     const auto &map = std::get<Table>(curr->value_);
 
@@ -550,7 +525,7 @@ int ShareData::fetch_add(lua_State *L)
     {
         Key key;
         if (!try_get_key(L, i, key)) return 0;
-        if (curr->type_ != Node::Type::TABLE) return 0;
+        if (!std::holds_alternative<Table>(curr->value_)) return 0;
 
         auto &map = std::get<Table>(curr->value_);
         auto it   = map.find(key);
@@ -559,7 +534,7 @@ int ShareData::fetch_add(lua_State *L)
         curr = it->second;
     }
 
-    if (curr->type_ != Node::Type::INTEGER) return 0;
+    if (!std::holds_alternative<int64_t>(curr->value_)) return 0;
 
     int64_t old_val = std::get<int64_t>(curr->value_);
     curr->value_    = old_val + add_val;
@@ -585,7 +560,8 @@ int ShareData::keys(lua_State *L)
     for (int i = 2; i <= end_idx; ++i)
     {
         Key key;
-        if (!try_get_key(L, i, key) || curr->type_ != Node::Type::TABLE)
+        if (!try_get_key(L, i, key)
+            || !std::holds_alternative<Table>(curr->value_))
         {
             lua_pushnil(L);
             return 1;
@@ -600,7 +576,7 @@ int ShareData::keys(lua_State *L)
         curr = it->second;
     }
 
-    if (curr->type_ != Node::Type::TABLE) return 0;
+    if (!std::holds_alternative<Table>(curr->value_)) return 0;
 
     if (cache_idx == 0)
     {
@@ -651,10 +627,9 @@ int ShareData::update(lua_State *L)
                 return 2;
             }
 
-            if (curr->type_ != Node::Type::TABLE)
+            if (!std::holds_alternative<Table>(curr->value_))
             {
                 curr->clear();
-                curr->type_  = Node::Type::TABLE;
                 curr->value_ = Table{};
             }
 
@@ -663,8 +638,8 @@ int ShareData::update(lua_State *L)
             if (it == map.end())
             {
                 Node *next = new Node();
-                map[key]   = next;
-                curr       = next;
+                map.emplace(std::move(key), next);
+                curr = next;
             }
             else
             {
