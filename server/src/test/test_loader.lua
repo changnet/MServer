@@ -17,6 +17,7 @@ require "test.socket_test"
 require "test.log_test"
 require "test.mysql_test"
 require "test.mongodb_test"
+require "test.share_data_test"
 
 --[[
 require "test.grid_aoi_test"

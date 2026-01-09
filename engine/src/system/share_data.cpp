@@ -59,7 +59,7 @@ void ShareData::Node::clear()
 {
     if (type_ == Type::TABLE)
     {
-        auto &map = std::get<std::unordered_map<Key, Node *, KeyHash>>(value_);
+        auto &map = std::get<Table>(value_);
         for (auto &pair : map)
         {
             delete pair.second;
@@ -79,9 +79,8 @@ size_t ShareData::Node::calc_memory_size() const
     }
     else if (type_ == Type::TABLE)
     {
-        const auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(value_);
-        size += sizeof(std::unordered_map<Key, Node *, KeyHash>);
+        const auto &map = std::get<Table>(value_);
+        size += sizeof(Table);
         for (const auto &[key, node] : map)
         {
             std::visit(
@@ -106,7 +105,7 @@ ShareData::ShareData()
 {
     root_node_         = new Node();
     root_node_->type_  = Node::Type::TABLE;
-    root_node_->value_ = std::unordered_map<Key, Node *, KeyHash>{};
+    root_node_->value_ = Table{};
 }
 
 ShareData::~ShareData()
@@ -193,8 +192,16 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
     else if (type == LUA_TNUMBER)
     {
         root->clear();
-        root->type_  = Node::Type::NUMBER;
-        root->value_ = (double)lua_tonumber(L, index);
+        if (lua_isinteger(L, index))
+        {
+            root->type_  = Node::Type::INTEGER;
+            root->value_ = (int64_t)lua_tointeger(L, index);
+        }
+        else
+        {
+            root->type_  = Node::Type::NUMBER;
+            root->value_ = (double)lua_tonumber(L, index);
+        }
     }
     else if (type == LUA_TSTRING)
     {
@@ -208,11 +215,10 @@ void ShareData::set_internal(Node *root, lua_State *L, int index, int depth,
         {
             root->clear();
             root->type_  = Node::Type::TABLE;
-            root->value_ = std::unordered_map<Key, Node *, KeyHash>{};
+            root->value_ = Table{};
         }
 
-        auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(root->value_);
+        auto &map = std::get<Table>(root->value_);
         lua_pushnil(L);
         while (lua_next(L, index) != 0)
         {
@@ -271,39 +277,50 @@ void ShareData::push_node(lua_State *L, const Node *node)
     case Node::Type::BOOLEAN:
         lua_pushboolean(L, std::get<bool>(node->value_));
         break;
+    case Node::Type::INTEGER:
+        lua_pushinteger(L, std::get<int64_t>(node->value_));
+        break;
     case Node::Type::NUMBER:
         lua_pushnumber(L, std::get<double>(node->value_));
         break;
     case Node::Type::STRING:
-        lua_pushstring(L, std::get<std::string>(node->value_).c_str());
+    {
+        const std::string &str = std::get<std::string>(node->value_);
+        lua_pushlstring(L, str.c_str(), str.size());
         break;
+    }
     case Node::Type::TABLE:
     {
         lua_newtable(L);
-        const auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(node->value_);
+        const auto &map = std::get<Table>(node->value_);
         for (const auto &[key, child] : map)
         {
-            std::visit(
-                [L](auto &&arg)
-                {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, int64_t>)
-                        lua_pushinteger(L, arg);
-                    else if constexpr (std::is_same_v<T, std::string>)
-                        lua_pushstring(L, arg.c_str());
-                    else if constexpr (std::is_same_v<T, double>)
-                        lua_pushnumber(L, arg);
-                    else if constexpr (std::is_same_v<T, bool>)
-                        lua_pushboolean(L, arg);
-                },
-                key);
+            push_key(L, key);
             push_node(L, child);
             lua_settable(L, -3);
         }
         break;
     }
+    default: assert(false); break;
     }
+}
+
+void ShareData::push_key(lua_State *L, const Key &key)
+{
+    std::visit(
+        [L](auto &&arg)
+        {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, int64_t>)
+                lua_pushinteger(L, arg);
+            else if constexpr (std::is_same_v<T, std::string>)
+                lua_pushstring(L, arg.c_str());
+            else if constexpr (std::is_same_v<T, double>)
+                lua_pushnumber(L, arg);
+            else if constexpr (std::is_same_v<T, bool>)
+                lua_pushboolean(L, arg);
+        },
+        key);
 }
 
 int ShareData::set(lua_State *L)
@@ -332,12 +349,11 @@ int ShareData::set(lua_State *L)
             {
                 curr->clear();
                 curr->type_  = Node::Type::TABLE;
-                curr->value_ = std::unordered_map<Key, Node *, KeyHash>{};
+                curr->value_ = Table{};
             }
 
-            auto &map =
-                std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-            auto it = map.find(key);
+            auto &map = std::get<Table>(curr->value_);
+            auto it   = map.find(key);
             if (it == map.end())
             {
                 Node *next = new Node();
@@ -386,8 +402,7 @@ int ShareData::set(lua_State *L)
 int ShareData::unset(lua_State *L)
 {
     int top = lua_gettop(L);
-    if (top < 2)
-        return 0;
+    if (top < 2) return 0;
 
     std::unique_lock lock(mutex_);
     Node *curr = root_node_;
@@ -410,7 +425,7 @@ int ShareData::unset(lua_State *L)
             return 1;
         }
 
-        auto &map = std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
+        auto &map = std::get<Table>(curr->value_);
         auto it   = map.find(key);
         if (it == map.end())
         {
@@ -435,7 +450,7 @@ int ShareData::unset(lua_State *L)
 
     if (curr->type_ == Node::Type::TABLE)
     {
-        auto &map = std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
+        auto &map = std::get<Table>(curr->value_);
         auto it   = map.find(last_key);
         if (it != map.end())
         {
@@ -457,26 +472,14 @@ int ShareData::get(lua_State *L)
     for (int i = 2; i <= top; ++i)
     {
         Key key;
-        if (!try_get_key(L, i, key))
-        {
-            lua_pushnil(L);
-            return 1;
-        }
+        if (!try_get_key(L, i, key)) return 0;
 
-        if (curr->type_ != Node::Type::TABLE)
-        {
-            lua_pushnil(L);
-            return 1;
-        }
+        if (curr->type_ != Node::Type::TABLE) return 0;
 
-        const auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-        auto it = map.find(key);
-        if (it == map.end())
-        {
-            lua_pushnil(L);
-            return 1;
-        }
+        const auto &map = std::get<Table>(curr->value_);
+        auto it         = map.find(key);
+        if (it == map.end()) return 0;
+
         curr = it->second;
     }
 
@@ -499,29 +502,19 @@ int ShareData::fetch_into(lua_State *L)
         Key key;
         if (!try_get_key(L, i, key) || curr->type_ != Node::Type::TABLE)
         {
-            lua_pushnil(L);
-            return 1;
+            return 0;
         }
 
-        const auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-        auto it = map.find(key);
-        if (it == map.end())
-        {
-            lua_pushnil(L);
-            return 1;
-        }
+        const auto &map = std::get<Table>(curr->value_);
+        auto it         = map.find(key);
+        if (it == map.end()) return 0;
+
         curr = it->second;
     }
 
-    if (curr->type_ != Node::Type::TABLE)
-    {
-        lua_pushnil(L);
-        return 1;
-    }
+    if (curr->type_ != Node::Type::TABLE) return 0;
 
-    const auto &map =
-        std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
+    const auto &map = std::get<Table>(curr->value_);
 
     lua_pushnil(L);
     while (lua_next(L, top - 1) != 0)
@@ -534,7 +527,7 @@ int ShareData::fetch_into(lua_State *L)
             {
                 lua_pushvalue(L, -2); // field key
                 push_node(L, it->second);
-                lua_settable(L, top + 1);
+                lua_settable(L, top);
             }
         }
         lua_pop(L, 1);
@@ -549,52 +542,29 @@ int ShareData::fetch_add(lua_State *L)
     int top = lua_gettop(L);
     if (top < 3) return 0;
 
-    double add_val = luaL_checknumber(L, top);
+    int64_t add_val = luaL_checkinteger(L, top);
 
     std::unique_lock lock(mutex_);
     Node *curr = root_node_;
     for (int i = 2; i < top; ++i)
     {
         Key key;
-        if (!try_get_key(L, i, key))
-        {
-            lua_pushnil(L);
-            return 1;
-        }
+        if (!try_get_key(L, i, key)) return 0;
+        if (curr->type_ != Node::Type::TABLE) return 0;
 
-        if (curr->type_ != Node::Type::TABLE)
-        {
-            curr->clear();
-            curr->type_  = Node::Type::TABLE;
-            curr->value_ = std::unordered_map<Key, Node *, KeyHash>{};
-        }
+        auto &map = std::get<Table>(curr->value_);
+        auto it   = map.find(key);
+        if (it == map.end()) return 0;
 
-        auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-        auto it = map.find(key);
-        if (it == map.end())
-        {
-            Node *next = new Node();
-            map[key]   = next;
-            curr       = next;
-        }
-        else
-        {
-            curr = it->second;
-        }
+        curr = it->second;
     }
 
-    double old_val = 0;
-    if (curr->type_ == Node::Type::NUMBER)
-    {
-        old_val = std::get<double>(curr->value_);
-    }
+    if (curr->type_ != Node::Type::INTEGER) return 0;
 
-    curr->clear();
-    curr->type_  = Node::Type::NUMBER;
-    curr->value_ = old_val + add_val;
+    int64_t old_val = std::get<int64_t>(curr->value_);
+    curr->value_    = old_val + add_val;
 
-    lua_pushnumber(L, old_val);
+    lua_pushinteger(L, old_val);
     return 1;
 }
 
@@ -620,9 +590,8 @@ int ShareData::keys(lua_State *L)
             lua_pushnil(L);
             return 1;
         }
-        const auto &map =
-            std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-        auto it = map.find(key);
+        const auto &map = std::get<Table>(curr->value_);
+        auto it         = map.find(key);
         if (it == map.end())
         {
             lua_pushnil(L);
@@ -631,11 +600,7 @@ int ShareData::keys(lua_State *L)
         curr = it->second;
     }
 
-    if (curr->type_ != Node::Type::TABLE)
-    {
-        lua_pushnil(L);
-        return 1;
-    }
+    if (curr->type_ != Node::Type::TABLE) return 0;
 
     if (cache_idx == 0)
     {
@@ -648,26 +613,13 @@ int ShareData::keys(lua_State *L)
         cache_idx = lua_gettop(L);
     }
 
-    const auto &map =
-        std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-    int n = 0;
+    const auto &map = std::get<Table>(curr->value_);
+    int n           = 0;
     for (const auto &[key, _] : map)
     {
         lua_pushinteger(L, ++n);
-        std::visit(
-            [L](auto &&arg)
-            {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, int64_t>)
-                    lua_pushinteger(L, arg);
-                else if constexpr (std::is_same_v<T, std::string>)
-                    lua_pushstring(L, arg.c_str());
-                else if constexpr (std::is_same_v<T, double>)
-                    lua_pushnumber(L, arg);
-                else if constexpr (std::is_same_v<T, bool>)
-                    lua_pushboolean(L, arg);
-            },
-            key);
+        push_key(L, key);
+
         lua_settable(L, cache_idx);
     }
 
@@ -703,12 +655,11 @@ int ShareData::update(lua_State *L)
             {
                 curr->clear();
                 curr->type_  = Node::Type::TABLE;
-                curr->value_ = std::unordered_map<Key, Node *, KeyHash>{};
+                curr->value_ = Table{};
             }
 
-            auto &map =
-                std::get<std::unordered_map<Key, Node *, KeyHash>>(curr->value_);
-            auto it = map.find(key);
+            auto &map = std::get<Table>(curr->value_);
+            auto it   = map.find(key);
             if (it == map.end())
             {
                 Node *next = new Node();

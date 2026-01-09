@@ -61,7 +61,7 @@ public:
     int fetch_into(lua_State *L);
 
     /**
-     * @brief 原子加法
+     * @brief 原子加法，只支持对整数操作
      * sharedata:fetch_add("user_list", 12345, "level", 1)
      */
     int fetch_add(lua_State *L);
@@ -86,6 +86,7 @@ public:
 
 private:
     struct Node;
+    using Table = std::unordered_map<Key, Node *, KeyHash>;
 
     // Node存储实际数据
     struct Node
@@ -94,15 +95,14 @@ private:
         {
             NIL,
             BOOLEAN,
+            INTEGER,
             NUMBER,
             STRING,
             TABLE
         };
 
         Type type_ = Type::NIL;
-        std::variant<std::monostate, bool, double, std::string,
-                     std::unordered_map<Key, Node *, KeyHash>>
-            value_;
+        std::variant<std::monostate, bool, int64_t, double, std::string, Table> value_;
 
         Node() = default;
         ~Node();
@@ -129,6 +129,10 @@ private:
      * @brief 内部递归将数据压入lua栈
      */
     void push_node(lua_State *L, const Node *node);
+    /**
+     * @brief 内部递归将key压入lua栈
+     */
+    void push_key(lua_State *L, const Key &key);
 
     /**
      * @brief 将Key转为字符串，用于报错信息

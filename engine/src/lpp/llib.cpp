@@ -108,6 +108,7 @@ static void luaopen_sharedata(lua_State *L)
     lc.def<&ShareData::keys>("keys");
     lc.def<&ShareData::update>("update");
     lc.def<&ShareData::memory_size>("memory_size");
+    lc.def<&ShareData::unset>("unset");
 }
 
 static void luaopen_ev(lua_State *L)
