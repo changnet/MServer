@@ -149,6 +149,8 @@ bool ShareData::try_get_key(lua_State *L, int idx, Key &key)
     }
     else if (type == LUA_TSTRING)
     {
+        // C++ 20可以用const char*构建一个map的透明对比key，避免频繁创建std::string
+        static_assert(__cplusplus < 202002L);
         key = std::string(lua_tostring(L, idx));
         return true;
     }
