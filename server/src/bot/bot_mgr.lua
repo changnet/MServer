@@ -32,8 +32,9 @@ end
 
 -- 逻辑循环
 function BotMgr.routine()
+    local ms_now = Engine.time_ms()
     for _, bot in pairs(bots) do
-        bot:routine()
+        bot:routine(ms_now)
     end
 end
 

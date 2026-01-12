@@ -8,6 +8,7 @@ local g_async_log = g_async_log
 local logger_print = g_async_log.print
 
 local vd_recursion = nil
+local enable_dbg = _G.__enable_dbg
 
 local function vd_insert(tbl, v, ...)
     -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
@@ -78,15 +79,28 @@ function vd(var, message)
     print(table.concat(vd_buffer))
 end
 
--- 异步print log,只打印，不格式化。仅在日志线程开启后有效
+-- 异步print log,只打印，不格式化
 function print(...)
     -- 128 = MASK_S_L，参考C++中的定义
     return logger_print(g_async_log, 128, ...)
 end
 
--- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
+-- 异步print format log,以第一个为format参数，格式化后面的参数
 function printf(fmt, ...)
     return logger_print(g_async_log, 128, string.format(fmt, ...))
+end
+
+-- 异步调试日志打印，不格式化
+function dbg(...)
+    if not enable_dbg then return end
+    -- 128 = MASK_S_L，参考C++中的定义
+    return logger_print(g_async_log, 130, ...)
+end
+
+-- 异步调试日志打印,以第一个为format参数，格式化后面的参数
+function dbgf(fmt, ...)
+    if not enable_dbg then return end
+    return logger_print(g_async_log, 130, string.format(fmt, ...))
 end
 
 -- 错误日志，写入根目录下的error文件 (参数不能带有nil参数)
@@ -161,4 +175,10 @@ end
 -- 以黄色格式化江打印日志
 function Log.yellowf(fmt, ...)
     return logger_print(g_async_log, 136, string.format(fmt, ...))
+end
+
+-- 启用或禁用调试日志打印
+function Log.enable_debug(enable)
+    enable_dbg = enable
+    _G.__enable_dbg = enable
 end

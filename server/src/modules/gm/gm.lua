@@ -48,8 +48,12 @@ local function query_data()
         local data = Call.GM.on_query_data(other_addr)
         for _, v in pairs(data or {}) do
             local k = v.cmd
-            v.cmd = nil
-            gm_data[k] = v
+            local wtype = v.wtype
+            -- 有些gm在多个worker注册，如果是共用的，只取其中一个就行
+            if not gm_data[k] or -1 ~= wtype then
+                v.cmd = nil
+                gm_data[k] = v
+            end
         end
     end
 
@@ -65,12 +69,12 @@ local function find_gm(str)
     if not pos and string.len(str) < 1 then
         return nil, "gm invalid string: " .. str
     end
-    local cmd = string.sub(str, 2, pos or -1) -- 去掉@
+    local cmd = string.sub(str, 2, pos and (pos - 1) or -1) -- 去掉@
 
     local data = gm_data[cmd]
     if not data then
         if is_query then
-            return nil, "no such gm: " .. tostring(cmd)
+            return nil, string.format("no such gm [%s]", cmd)
         end
 
         query_data()

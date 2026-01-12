@@ -4,7 +4,8 @@ Pbc = {}
 local PbcCodec = require "engine.PbcCodec"
 
 local g_pbc = _G.g_pbc or PbcCodec()
-local pbc_decode = g_pbc.decode
+local pbc_decode = g_pbc.decode_from_buffer
+local pbc_encode = g_pbc.encode_to_buffer
 
 local function load_file(path)
     local f = io.open(path, "rb") -- 必须以binary模式打开
@@ -62,5 +63,10 @@ function Pbc.update()
 end
 
 function Pbc.decode(schema, buffer, size)
-    return pbc_decode(schema, buffer, size)
+    return pbc_decode(g_pbc, schema, buffer, size)
+end
+
+function Pbc.encode(schema, pkt)
+    -- 这个应该只是给bot用的，直接返回buffer和size
+    return pbc_encode(g_pbc, schema, pkt)
 end

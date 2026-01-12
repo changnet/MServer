@@ -24,7 +24,7 @@ CHAT = {
 PLAYER = { -- 和玩家相关的基础协议都放在这里
     -- 登录
     LOGIN = {
-        s = "player.SLogin", c = "player.CLogin", i = 1
+        s = "player.SLogin", c = "player.CLogin", i = 1, w = "gateway"
 
     },
     -- ping后端延迟

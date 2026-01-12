@@ -55,7 +55,7 @@ function Engine.make_safe_id(seed, hash)
     seed = seed + 1
     if seed > 2^53 - 1 then seed = 1 end
 
-    local id = (seed < 23) | LOCAL_ADDR
+    local id = (seed << 23) | LOCAL_ADDR
     if not hash[id] then return id, seed end
 
     for _ = 1, 1000000 do

@@ -10,6 +10,17 @@ GM.reg("reload", function()
     Startup.load(true)
 end, -1)
 
+-- 启用调试日志打印
+GM.reg("debug", function(pid, p1)
+    if "1" == p1 then
+        Log.enable_debug(true)
+        print("enable debug log")
+    else
+        Log.enable_debug(false)
+        print("disable debug log")
+    end
+end, -1)
+
 -- ping一下服务器间的延迟，看卡不卡
 GM.reg("ping", function()
     Ping.start(1)

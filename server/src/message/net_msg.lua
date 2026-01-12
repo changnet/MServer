@@ -71,7 +71,7 @@ function NetMsg.load_forward_msg()
                 local i = msg.i
                 if "number" == type(i) then
                     local wname = msg.w
-                    forward_wtype = wnt[wname] or DEF_DISPATCH_WTYPE
+                    forward_wtype[i] = wnt[wname] or DEF_DISPATCH_WTYPE
                 end
             end
         end
@@ -98,6 +98,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     local pid = socket.pid
     local auth = socket.auth
     local wtype = forward_wtype[id]
+
     if local_type == wtype then
         local cb = callback[id]
         if not cb then
@@ -120,6 +121,8 @@ function NetMsg.dispatch(socket, id, buffer, size)
                 return
             end
             local pkt = pbc_decode(cb.c, buffer, size)
+                print("dddddddddddddddddddddddddddddddddddd", cb.c, size)
+    vd(pkt)
             return cb.f(socket, pkt)
         end
     end
