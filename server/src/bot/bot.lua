@@ -13,7 +13,7 @@ end
 
 -- 发送数据包
 function Bot:send_pkt(cmd, pkt)
-    local buffer, size = Pbc.encode(cmd.s, pkt)
+    local buffer, size = Pbc.encode(cmd.c, pkt)
     self.s:send_pkt(cmd.i, buffer, size)
 end
 

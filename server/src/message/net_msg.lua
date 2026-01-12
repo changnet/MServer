@@ -121,8 +121,6 @@ function NetMsg.dispatch(socket, id, buffer, size)
                 return
             end
             local pkt = pbc_decode(cb.c, buffer, size)
-                print("dddddddddddddddddddddddddddddddddddd", cb.c, size)
-    vd(pkt)
             return cb.f(socket, pkt)
         end
     end

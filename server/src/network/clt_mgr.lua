@@ -70,8 +70,10 @@ function CltMgr.del(socket)
 
     this.session[session_id] = nil
 
-    if socket.login then
-        Send.AccountMgr.logout(socket.pid)
+    local info = socket.login
+    if info then
+        local addr = Router.find_worker_addr(W_ACCOUNT, info.account)
+        Send.AccountMgr.logout(addr, session_id)
     end
 
     printf("client connect del: %d", session_id)

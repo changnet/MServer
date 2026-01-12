@@ -357,9 +357,11 @@ public:
         }
         catch (const std::runtime_error &e)
         {
-            // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
-            return luaL_error(L, e.what());
+            // 这里对象e还未释放，不可long jump
+            lua_pushstring(L, e.what());
         }
+        // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
+        return lua_error(L);
     }
 };
 
@@ -402,9 +404,9 @@ private:
             }
             catch (const std::runtime_error &e)
             {
-                // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
-                return luaL_error(L, e.what());
+                lua_pushstring(L, e.what());
             }
+            return lua_error(L);
         }
     };
 
@@ -483,9 +485,9 @@ private:
             }
             catch (const std::runtime_error &e)
             {
-                // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
-                return luaL_error(L, e.what());
+                lua_pushstring(L, e.what());
             }
+            return lua_error(L);
         }
         template <auto fp> static int reg_pointer(lua_State *L)
         {
@@ -495,9 +497,9 @@ private:
             }
             catch (const std::runtime_error &e)
             {
-                // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
-                return luaL_error(L, e.what());
+                lua_pushstring(L, e.what());
             }
+            return lua_error(L);
         }
     };
 
@@ -724,20 +726,13 @@ private:
     static T *class_constructor_caller(lua_State *L,
                                        const std::index_sequence<I...> &)
     {
-        try
-        {
-            return new T(lua_to_cpp<Args>(L, 2 + I)...);
-        }
-        catch (const std::runtime_error &e)
-        {
-            luaL_error(L, e.what()); // long jump, never return
-            return nullptr;
-        }
+        (void)L; // avoid Wunused-but-set-parameter
+        return new T(lua_to_cpp<Args>(L, 2 + I)...);
     }
 
     template <typename... Args> static int class_constructor(lua_State *L)
     {
-        T *obj;
+        T *obj = nullptr;
         try
         {
             obj = class_constructor_caller<Args...>(
@@ -745,8 +740,12 @@ private:
         }
         catch (const std::runtime_error &e)
         {
-            // 到了这里，本次调用所有的C++对象应该都已释放，可以安全long jump了
-            return luaL_error(L, e.what());
+            lua_pushstring(L, e.what());
+        }
+
+        if (obj == nullptr)
+        {
+            return lua_error(L);
         }
 
         // lua调用__call,第一个参数是元表

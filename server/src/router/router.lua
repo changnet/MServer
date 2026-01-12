@@ -59,11 +59,11 @@ local function default_policy(wtype)
     end
 
     local index = 1 + (this.windex[wtype] or 0)
-    local addr = list[index]
-    if not addr then
+    local winfo = list[index]
+    if not winfo then
         this.windex[wtype] = 1
-        addr = list[1]
-        if not addr then
+        winfo = list[1]
+        if not winfo then
             eprint("no suitable router for worker", wtype)
             return
         end
@@ -71,7 +71,7 @@ local function default_policy(wtype)
         this.windex[wtype] = index
     end
 
-    return addr
+    return winfo.addr
 end
 
 -- 根据worker类型查看玩家所在地址
