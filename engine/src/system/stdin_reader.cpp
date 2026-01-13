@@ -5,6 +5,9 @@
     #include <unistd.h> // STDIN_FILENO
     #include <sys/select.h>
     #include <cerrno>
+    #include <termios.h>
+    #include <vector>
+    #include <cstdio>
 #endif
 
 /*
@@ -38,44 +41,172 @@ StdinReader::~StdinReader()
     stop();
 }
 
-static int32_t select_read(std::string &input)
-{
 #ifndef __windows__
+/*
+ * windows使用powershell时，只简单的用std::getline就可以实现箭头输入历史
+ * Linux则是不行的。如果不需要输入历史，则简单的select一下直接std::getline即可
+ * 如果需要输入历史，则需要开启终端的行模式，禁用canonical模式，禁用echo模式
+ * 开启了之后就需要手动自己处理显示、回车、退格等，并且程序崩溃会导致当前终端
+ * 的回显无法还原，只能重开一个终端或者使用reset及及stty sane命令恢复
+ */
+struct LinuxInputContext
+{
+    std::string current_line;
+    std::vector<std::string> history;
+    size_t history_idx = 0;
     fd_set rfds;
-    FD_ZERO(&rfds);
-    FD_SET(STDIN_FILENO, &rfds);
+    struct timeval tv;
+    struct termios orig_termios;
+    bool termios_active = false;
 
-    // linux下没什么好办法唤醒getline的阻塞，直接等超时
-    // 如果需要快速唤醒，需要创建一个pipe加入select，主线程通过pipe写入数据唤醒
-    timeval tv;
-    tv.tv_sec  = 0;
-    tv.tv_usec = 100 * 1000; // 100ms
-
-    int rc = select(STDIN_FILENO + 1, &rfds, nullptr, nullptr, &tv);
-    if (rc < 0)
+    LinuxInputContext()
     {
-        if (errno == EINTR) return 0;
-
-        return errno;
-    }
-    else if (rc == 0)
-    {
-        return 0; // 超时
+        // 将终端设置为 raw 模式（禁用 canonical 模式和 echo），才能自定义输入的字符
+        if (tcgetattr(STDIN_FILENO, &orig_termios) == 0)
+        {
+            struct termios raw = orig_termios;
+            raw.c_lflag &= ~(ECHO | ICANON);
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+            termios_active = true;
+        }
     }
 
-    if (FD_ISSET(STDIN_FILENO, &rfds))
+    ~LinuxInputContext()
     {
-        if (!std::getline(std::cin, input)) return -1;
+        if (termios_active)
+        {
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+        }
     }
-#endif
-    return 0;
+};
+
+static bool is_readable(int32_t usec)
+{
+    // read是同步的，如果不预先select，那么read会阻塞
+    struct timeval timeout = {0, usec};
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &timeout) > 0;
 }
+
+static bool try_read_char(char &c)
+{
+    // read是同步的，如果不预先select，那么read会阻塞
+    if (!is_readable(0)) return false;
+
+    return read(STDIN_FILENO, &c, 1) == 1;
+}
+
+static void do_arrow_key(char direction, LinuxInputContext &ctx)
+{
+    if (direction == 'A') // UP
+    {
+        if (ctx.history_idx > 0)
+        {
+            ctx.history_idx--;
+            printf("\r\033[K%s", ctx.history[ctx.history_idx].c_str());
+            ctx.current_line = ctx.history[ctx.history_idx];
+            fflush(stdout);
+        }
+    }
+    else if (direction == 'B') // DOWN
+    {
+        if (ctx.history_idx < ctx.history.size())
+        {
+            ctx.history_idx++;
+            printf("\r\033[K");
+            if (ctx.history_idx < ctx.history.size())
+            {
+                ctx.current_line = ctx.history[ctx.history_idx];
+                printf("%s", ctx.current_line.c_str());
+            }
+            else
+            {
+                ctx.current_line.clear();
+            }
+            fflush(stdout);
+        }
+    }
+}
+
+static void do_escape_sequence(LinuxInputContext &ctx)
+{
+    // 向上箭头键是[A，向下箭头键是[B
+    char c2;
+    if (!try_read_char(c2) || c2 != '[') return;
+
+    char c3;
+    if (!try_read_char(c3)) return;
+
+    if (c3 == 'A' || c3 == 'B')
+    {
+        do_arrow_key(c3, ctx);
+    }
+}
+
+static bool do_input_char(char c, std::string &input, LinuxInputContext &ctx)
+{
+    if (c == 27) // ESC
+    {
+        do_escape_sequence(ctx);
+    }
+    else if (c == '\n' || c == '\r') // 回车Enter
+    {
+        printf("\n");
+        input         = ctx.current_line;
+        auto &history = ctx.history;
+        if (!input.empty() && (history.empty() || input != history.back()))
+        {
+            if (history.size() > 128) history.erase(history.begin());
+            history.push_back(input);
+        }
+        ctx.current_line.clear();
+        ctx.history_idx = history.size();
+        return true;
+    }
+    else if (c == 127 || c == 8) // Backspace
+    {
+        if (!ctx.current_line.empty())
+        {
+            ctx.current_line.pop_back();
+            printf("\b \b");
+            fflush(stdout);
+        }
+    }
+    else if (static_cast<unsigned char>(c) >= 32)
+    {
+        ctx.current_line += c;
+        putchar(c);
+        fflush(stdout);
+    }
+    return false;
+}
+
+static bool select_read(std::string &input, LinuxInputContext &ctx)
+{
+    if (!is_readable(100 * 1000)) return false;
+
+    char c;
+    if (try_read_char(c))
+    {
+        return do_input_char(c, input, ctx);
+    }
+    return false;
+}
+#endif
 
 void StdinReader::routine()
 {
     Thread::apply_thread_name("stdin_reader");
 
     std::string input;
+
+#ifndef __windows__
+    LinuxInputContext ctx;
+#endif
+
     while (!stop_)
     {
         input.clear();
@@ -84,9 +215,11 @@ void StdinReader::routine()
         // std::cin >> input不支持空格，getline支持
         std::getline(std::cin, input);
 #else
-        select_read(input);
+        if (!select_read(input, ctx))
+        {
+            continue;
+        }
 #endif
-
         // 仅仅是调试用，所以如果主线程来不及把input取走，将会被覆盖
         if (!input.empty())
         {
@@ -117,7 +250,7 @@ bool StdinReader::stop()
 #ifdef __windows__
     /*
     在读取线程阻塞于 std::getline(std::cin, ...) 时，底层会在 STD_INPUT_HANDLE
-    上做同步 ReadFile。 主线程退出时调用CancelSynchronousIo(reader_thread_handle) 
+    上做同步 ReadFile。 主线程退出时调用CancelSynchronousIo(reader_thread_handle)
     取消该线程中的同步 IO，getline 会立刻返回失败（通常映射为 ERROR_OPERATION_ABORTED），
     流置failbit，线程即可检测到并安全退出
     */

@@ -131,8 +131,8 @@ return {
 "__unrequire", -- src/global/require.lua
 "assert", -- src/global/global.lua
 "cluster_message_dispatch", -- src/message/thread_message.lua
-"dbg", -- src/global/log.lua
-"dbgf", -- src/global/log.lua
+"dprint", -- src/global/log.lua
+"dprintf", -- src/global/log.lua
 "eprint", -- src/global/log.lua
 "eprintf", -- src/global/log.lua
 "g_ai_mgr", -- src/android/android_boot.lua

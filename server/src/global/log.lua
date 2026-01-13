@@ -91,14 +91,14 @@ function printf(fmt, ...)
 end
 
 -- 异步调试日志打印，不格式化
-function dbg(...)
+function dprint(...)
     if not enable_dbg then return end
     -- 128 = MASK_S_L，参考C++中的定义
     return logger_print(g_async_log, 130, ...)
 end
 
 -- 异步调试日志打印,以第一个为format参数，格式化后面的参数
-function dbgf(fmt, ...)
+function dprintf(fmt, ...)
     if not enable_dbg then return end
     return logger_print(g_async_log, 130, string.format(fmt, ...))
 end
