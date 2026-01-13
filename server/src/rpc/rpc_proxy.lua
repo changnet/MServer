@@ -51,14 +51,18 @@ function Rpc.delegate(name, self, interface)
     if interface then
         mt = {
             __index = function(tbl, k)
-                return function(...) return interface(self, name, ...) end
+                local func = function(...) return interface(self, k, ...) end
+                mod[k] = func
+                return func
             end,
         }
     else
         mt = {
             __index = function(tbl, k)
-                local func = self[k]
-                return function(...) return func(self, ...) end
+                local mod_func = self[k]
+                local func = function(...) return mod_func(self, ...) end
+                mod[k] = func
+                return func
             end,
         }
     end

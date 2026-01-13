@@ -6,7 +6,7 @@
 -- 用于底层C错误信息处理
 function __G_C_TRACKBACK(msg, co)
     local msg_list = {}
-    debug.tracestack(msg_list, 3)
+    debug.tracestack(co, msg_list, 2)
 
     local stack_trace = debug.traceback(co)
 
@@ -18,7 +18,8 @@ end
 -- 用于lua错误信息处理(直接打印错误信息)
 function __G_DUMP_STACK(msg, co)
     local msg_list = {}
-    debug.tracestack(msg_list, 3)
+    -- 在co_pool中co_return要level=2才会打印逻辑所在的函数调用堆栈
+    debug.tracestack(co, msg_list, 2)
 
     local stack_trace = debug.traceback(co)
 

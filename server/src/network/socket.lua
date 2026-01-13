@@ -149,7 +149,10 @@ end
 
 -- 连接建立完成(包括SSL等握手完成)
 function Socket:on_connected()
+end
 
+function Socket:on_message()
+    assert(false, "derived calss MUST implement on_message") -- 子类必须实现消息回调函数
 end
 
 function Socket:set_option()

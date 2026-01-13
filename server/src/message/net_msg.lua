@@ -17,6 +17,7 @@ local g_mthread = g_mthread
 local construct_message = g_mthread.construct_message
 
 local pbc_decode = Pbc.decode
+local pbc_encode = Pbc.encode
 
 -- 注册网络消息回调
 -- @param id 协议id
@@ -126,6 +127,7 @@ function NetMsg.dispatch(socket, id, buffer, size)
     end
 
     -- 登录认证流程必须在网关完成，不能扩散到其他worker
+    -- 出现这个报错，是不是没指定协议的w字段
     if not auth then
         eprintf("%s socket not auth for message %d", socket.account, id)
         return
@@ -167,6 +169,20 @@ local function dispatch_clt_message(src, udata, size)
     end
 
     return clt_msg_callback(cb.f, cb.c, pid, pb, size - 10)
+end
+
+-- 以player对象发送消息到客户端
+function NetMsg.send(player, cmd, pkt)
+end
+
+-- 以socket对象发送消息到客户端，仅在网关可用
+function NetMsg.send_socket(socket, cmd, pkt)
+    local buffer, size = pbc_encode(cmd.s, pkt)
+    return socket:send_pkt(cmd.i, buffer, size)
+end
+
+-- 以pid发送消息到客户端
+function NetMsg.send_pid(pid, cmd, pkt)
 end
 
 ThreadMessage.reg(CLT_MSG, dispatch_clt_message)

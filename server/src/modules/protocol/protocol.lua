@@ -34,12 +34,12 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
     },
     -- 创角
     CREATE = {
-        s = "player.SCreateRole", c = "player.CCreateRole", i = 3
+        s = "player.SCreateRole", c = "player.CCreateRole", i = 3, w = "gateway"
 
     },
     -- 进入游戏
     ENTER = {
-        s = "comm.Empty", c = "player.CEnterGame", i = 4
+        s = "comm.Empty", c = "player.CEnterGame", i = 4, w = "gateway"
 
     },
     -- 登录游戏完成，所有数据已下发

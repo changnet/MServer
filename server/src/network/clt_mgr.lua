@@ -29,7 +29,10 @@ end
 
 -- 设置客户端连接
 function CltMgr.bind(socket, pid)
-    assert(nil == this.pid_socket[pid], "player already have a connection")
+    -- 顶号时，已经通知旧连接关闭，但可能还来不及关闭
+    if this.pid_socket[pid] then
+        print("player already have a socket, overwrite:", pid)
+    end
 
     socket.pid = pid
     this.pid_socket[pid] = socket
@@ -67,6 +70,9 @@ function CltMgr.del(socket)
         print("client delete no socket found:", session_id, debug.traceback())
         return
     end
+
+    local pid = socket.pid
+    if pid then this.pid_socket[pid] = nil end
 
     this.session[session_id] = nil
 

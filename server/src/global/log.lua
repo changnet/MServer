@@ -8,7 +8,7 @@ local g_async_log = g_async_log
 local logger_print = g_async_log.print
 
 local vd_recursion = nil
-local enable_dbg = _G.__enable_dbg
+local enable_dbg = g_setting and g_setting.debug
 
 local function vd_insert(tbl, v, ...)
     -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
@@ -90,20 +90,20 @@ function printf(fmt, ...)
     return logger_print(g_async_log, 128, string.format(fmt, ...))
 end
 
--- 异步调试日志打印，不格式化
+-- debug print调试日志打印，不格式化
 function dprint(...)
     if not enable_dbg then return end
     -- 128 = MASK_S_L，参考C++中的定义
     return logger_print(g_async_log, 130, ...)
 end
 
--- 异步调试日志打印,以第一个为format参数，格式化后面的参数
+-- debug print调试日志打印,以第一个为format参数，格式化后面的参数
 function dprintf(fmt, ...)
     if not enable_dbg then return end
     return logger_print(g_async_log, 130, string.format(fmt, ...))
 end
 
--- 错误日志，写入根目录下的error文件 (参数不能带有nil参数)
+-- error print错误日志，写入根目录下的error文件 (参数不能带有nil参数)
 function eprint(...)
     -- 129 = MASK_C_R|MASK_S_L，参考C++中的定义
 
@@ -119,7 +119,7 @@ function eprint(...)
     return g_async_log:error(129, str)
 end
 
---  格式化日志并写入根目录下的lua_error.txt文件
+--  error print错误日志格式化日志并写入根目录下的error文件
 function eprintf(fmt, ...)
     local str = string.format(fmt, ...) .. "\n" .. debug.traceback()
 
@@ -180,5 +180,5 @@ end
 -- 启用或禁用调试日志打印
 function Log.enable_debug(enable)
     enable_dbg = enable
-    _G.__enable_dbg = enable
+    g_setting.debug = enable
 end

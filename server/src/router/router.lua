@@ -54,7 +54,7 @@ end
 local function default_policy(wtype)
     local list = get_worker_list(wtype)
     if not list then
-        eprint("no suitable router for worker", wtype)
+        eprint("no suitable router for worker, wtype = ", wtype)
         return
     end
 

@@ -40,7 +40,7 @@ local function return_login_result(info, account, pfid, e)
     local session_id = info.session_id
     if not session_id then return end -- 数据加载完成时，可能已断开
 
-    Send.Login.do_create_result(info.gaddr, session_id, account, pfid, info, e)
+    Send.Login.do_login_result(info.gaddr, session_id, account, pfid, info, e)
 end
 
 local function get_account_info(account, pfid, sid)
@@ -96,18 +96,20 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
     info.gaddr = addr
     info.session_id = session_id
 
+    print("要检测info.create，防止上一次创角无返回导致重复创角")
+
     local loaded = info.loaded
-    if 2 == loaded then
+    if -1 == loaded then
         -- 数据已加载完成，直接返回结果
         return return_login_result(info, account, pfid, 0)
-    elseif 1 == loaded then
-        return -- 加载中，不要重复加载
+    elseif loaded and Engine.time() - loaded < 180 then
+        return -- 加载中，不要重复加载，用时间做个超时机制，防止加载逻辑出错就永远登录不上
     end
 
     -- 如果有多个account_mgr，account_mgr的路由已经保证同一个帐号必定在同一个account_mgr处理
     -- 因此对mongodb的路由就没有要求了
     local db_addr = Router.find_worker_addr(W_MONGODB, "role", account)
-    info.loaded = 1
+    info.loaded = Engine.time()
     local e, rows = Call.MongoDB.find(db_addr,
         "role", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
     if 0 == e then
@@ -116,7 +118,7 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
             row.pid = pid
             table.insert(info.list, row)
         end
-        info.loaded = 2
+        info.loaded = -1
     else
         eprint("account db load error", e, rows)
         e = E.SRV_ERROR
@@ -129,7 +131,7 @@ local function return_create_role_result(info, account, pfid, e)
     local session_id = info.session_id
     if not session_id then return end -- 数据加载时，已断开
 
-    Send.Login.do_result(info.addr, session_id, account, pfid, info, e)
+    Send.Login.do_create_result(info.gaddr, session_id, account, pfid, info, e)
 end
 
 -- 创角
@@ -137,7 +139,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     assert(account and pfid and sid)
 
     local info = get_account_info(account, pfid, sid)
-    if 2 ~= info.loaded then
+    if -1 ~= info.loaded then
         eprint("create role not loading", session_id, account)
         return
     end
@@ -147,10 +149,11 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
         return
     end
 
+    local time = Engine.time()
     -- 创角中，不要重复创建
-    if 1 == info.created then return end
+    if info.created and time - info.created < 300 then return end
 
-    info.created = 1
+    info.created = time
     local db_addr = Router.find_worker_addr(W_MONGODB, "uniqueid")
 
     -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
@@ -160,11 +163,13 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
         "uniqueid", ROLE_ID_FILTER, nil, ROLE_ID_OPTS, nil, false, true, true)
 
     info.created = nil
-    if 0 ~= e then
-        eprint("uniqueid db load error", e, row)
+    if 0 ~= e or not row or not row.value then
+        eprint("uniqueid db load error", e, table.dump(row))
         return return_create_role_result(info, account, pfid, E.SRV_ERROR)
     end
-    local seed = assert(row.seed)
+
+    time = Engine.time()
+    local seed = assert(row.value.seed)
     local real_sid = Engine.get_server_id()
     -- 如果希望这个值比较小，可以采用protobuf的压缩机制来压缩下
     local pid = (seed << PID_SRV_BIT) | real_sid
@@ -175,10 +180,10 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
         _id = pid,
         name = pkt.name,
         level = 0,
-        create_time = Engine.time(),
+        create_time = time,
     }
 
-    info.created = 1
+    info.created = time
     local msg
     e, msg = Call.MongoDB.insert(db_addr, "role", role)
     info.created = nil
@@ -201,9 +206,7 @@ local function do_enter(info)
     local pid = info.pid
     local paddr = info.paddr or Router.find_worker_addr(W_PLAYER, pid)
 
-    -- 如果是顶号，那session_id肯定不一样
     local session_id = info.session_id
-    assert(session_id ~= info.session_id)
 
     local enter_info = {
         pid = pid,
@@ -213,19 +216,18 @@ local function do_enter(info)
     }
     info.paddr = paddr
     info.kick_time = nil
-    info.session_id = session_id
 
     this.session[session_id] = info
 
     printf("account %s enter role %d, paddr = %d, session = %d",
         info.account, pid, paddr, session_id)
-    Send.PlayerMgr.enter(paddr, enter_info)
+    Send.PlayerMgr.enter_game(paddr, enter_info)
 end
 
 -- 进入游戏
 function AccountMgr.enter(session_id, account, pfid, sid, pid, ip)
     local info = get_account_info(account, pfid, sid)
-    if 2 ~= info.loaded then
+    if -1 ~= info.loaded then
         eprint("enter game not loaded", session_id, account)
         return
     end
@@ -273,13 +275,14 @@ function AccountMgr.logout_completed(pid, session_id)
     end
 
     assert(info.pid == pid)
-    assert(info.session_id == session_id)
-
     print("account logout completed", info.account, pid, session_id)
 
     this.session[session_id] = nil
     if this.wait_enter[info] then
         this.wait_enter[info] = nil
+
+        -- 顶号，两次的session_id肯定不一样
+        assert(info.session_id ~= session_id)
         do_enter(info)
     end
 end

@@ -6,11 +6,12 @@ function Login.login_else_where(session_id, account, pfid)
     local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
-        print("login socket not found", account, pfid)
+        printf("login else where socket not found, maybe offline account=%s",
+            account)
         return
     end
 
-    socket:send_pkt(PLAYER.KICK, {reason = 1})
+    NetMsg.send_socket(socket, PLAYER.KICK, {reason = 1})
     print("login else where, socket close", account, socket.pid)
 
     socket:close(true)
@@ -20,7 +21,7 @@ function Login.do_login_result(session_id, account, pfid, info, e)
     local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
-        print("login socket not found", account, pfid)
+        print("login result socket not found", account, pfid)
         return
     end
     assert(socket.login.account == account)
@@ -28,9 +29,9 @@ function Login.do_login_result(session_id, account, pfid, info, e)
     socket.role = info
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    socket:send_pkt(PLAYER.LOGIN, info)
+    NetMsg.send_socket(socket, PLAYER.LOGIN, info)
 
-    printf("client login success:%s--%d", account, pfid)
+    printf("client login success, account=%s, pfid=%d", account, pfid)
 end
 
 -- 玩家登录
@@ -49,20 +50,20 @@ local function c_player_login(socket, pkt)
 
     if Engine.time() - time > 1800 then
         eprint("player login time expire", account, time)
-        return socket:send_pkt(PLAYER.LOGIN, {errno = E.SIGN_EXPIRE})
+        return NetMsg.send_socket(socket, PLAYER.LOGIN, {errno = E.SIGN_EXPIRE})
     end
 
     -- sha1可以直接传数字，会自动转成string。但有可能会带.0导致出错
     local sign = Util.sha1(LOGIN_KEY, math.tointeger(time), account)
     if sign ~= pkt.sign then
         eprint("clt sign error:", time, account, pkt.sign, sign)
-        return socket:send_pkt(PLAYER.LOGIN, {errno = E.PWD_ERROR})
+        return NetMsg.send_socket(socket, PLAYER.LOGIN, {errno = E.PWD_ERROR})
     end
 
     -- 不能重复发送(不是顶号，顶号socket_id不应该会重复)
     if socket.login then
         eprint("player login already in process", account)
-        return socket:send_pkt(PLAYER.LOGIN, {errno = E.UNDEFINE})
+        return NetMsg.send_socket(socket, PLAYER.LOGIN, {errno = E.UNDEFINE})
     end
     socket.login = pkt
 
@@ -75,16 +76,18 @@ function Login.do_create_result(session_id, account, pfid, info, e)
     local socket = CltMgr.get_by_session_id(session_id)
     -- 用户掉线
     if not socket then
-        print("login socket not found", account, pfid)
+        print("login create socket not found", account, pfid)
         return
     end
+
+    vd(info)
     assert(socket.login.account == account)
 
     socket.role = info
     local role = assert(info.list[1])
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    socket:send_pkt(PLAYER.CREATE, role)
+    NetMsg.send_socket(socket, PLAYER.CREATE, role)
 
     printf("client create role success, acc = %s, pid = %d", account, role.pid)
 end
@@ -136,7 +139,7 @@ local function c_enter_game(socket, pkt)
     local role
     local pid = pkt.pid
     for _, info in pairs(role_info.list or EMPTY) do
-        if info.pid == pid then
+        if pid and info.pid == pid then
             role = info
             break
         end

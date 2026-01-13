@@ -31,6 +31,7 @@ function Loginout.check_and_login(ai)
     entity.s = socket
 
     socket.entity = ai.entity
+    socket.on_message = BotMgr.on_message
     socket.on_connected = Loginout.on_connected
     socket.on_disconnected = Loginout.on_disconnected
 
@@ -86,9 +87,12 @@ local function s_login(entity, pkt)
         do_disconnect(entity.s)
         return
     end
+
     -- no role,create one now
     if 0 == #(pkt.list or EMPTY) then
         local _pkt = {name = string.format("bot_%d", entity.id)}
+
+        printf("bot_%d send create role", entity.id)
         entity:send_pkt(PLAYER.CREATE, _pkt)
 
         return
@@ -96,7 +100,10 @@ local function s_login(entity, pkt)
 
     -- 如果已经存在角色，直接请求进入游戏
     local role = pkt.list[1]
-    entity.pid = role.pid
+    local pid = role.pid
+    assert(pid and 0 ~= pid)
+
+    entity.pid = pid
     entity.name = role.name
     Loginout.enter_world(entity)
 end
@@ -122,6 +129,7 @@ end
 
 -- 请求进入游戏
 function Loginout.enter_world(entity)
+    printf("bot_%d enter game,pid = %d", entity.id, entity.pid)
     entity:send_pkt(PLAYER.ENTER, {pid = entity.pid})
 end
 
