@@ -1,7 +1,7 @@
 #pragma once
 
 #include "thread/thread.hpp"
-#include "pool/object_pool.hpp"
+#include "pool/flexible_pool.hpp"
 #include "log.hpp"
 
 /// 多线程异步日志
@@ -34,20 +34,35 @@ public:
     class Buffer
     {
     public:
-        explicit Buffer(int64_t time, int32_t mask, const char *prefix)
+        explicit Buffer(int64_t time, int32_t log_mask, const char *prefix)
         {
-            time_    = time;
-            mask_    = mask;
-            prefix_  = prefix;
-            used_    = 0;
-            buff_[0] = 0;
+            time_     = time;
+            log_mask_ = log_mask;
+            prefix_   = prefix;
+            used_     = 0;
+            mask_     = 0;
+        }
+        void set_buffer(const char *str, size_t len)
+        {
+            memcpy(this->buffer(), str, len);
+            used_ = len;
+        }
+        char *buffer() noexcept
+        {
+            // C++ 不支持Flexible Array Member，直接强转.C++ 20可用std::span
+            return reinterpret_cast<char *>(this + 1);
+        }
+        const char *buffer() const noexcept
+        {
+            return reinterpret_cast<const char *>(this + 1);
         }
 
         int64_t time_;       /// 日志UTC时间戳
         size_t used_;        /// 缓冲区已使用大小
-        int32_t mask_;       /// 日志掩码，颜色等
+        //size_t size_;    /// 缓冲区容量
+        int32_t log_mask_;   /// 日志掩码，颜色等
+        int32_t mask_;       /// FlexiblePool使用的掩码
         const char *prefix_; // 前置名称
-        char buff_[512];     /// 日志缓冲区
     };
     using BufferList = std::vector<Buffer *>;
 
@@ -101,7 +116,8 @@ public:
     const char *get_thread_name();
 
 private:
-    using BufferPool = ObjectPool<Buffer, 256, 256>;
+    static constexpr size_t BLOCK_SIZE = 256;
+    using BufferPool = FlexiblePool<BLOCK_SIZE, 512>;
 
     void remove_device(Device &device);
     void trigger_size_rollover(Device &device, int64_t size);
@@ -125,14 +141,7 @@ private:
     size_t write_to_one_device(Device *device, const Buffer *buffer);
     void write_to_device(Device &device, const BufferList &buffers);
 
-    Buffer *device_reserve(Device &device, int64_t time, int32_t mask)
-    {
-        Buffer *buff = buffer_pool_.construct(time, mask, get_thread_name());
-
-        device.buff_.push_back(buff);
-
-        return buff;
-    }
+    Buffer *allocate(Device &device, size_t len, int64_t time, int32_t mask);
 
 private:
     std::mutex mutex_;

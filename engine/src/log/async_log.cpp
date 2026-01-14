@@ -12,12 +12,12 @@ thread_local const char *thread_name = nullptr;
 ////////////////////////////////////////////////////////////////////////////////
 AsyncLog::Device::Device()
 {
-    alive_time_ = 0;
-    policy_     = 0;
-    policy_ud1_ = 0;
-    policy_ud2_ = 0;
-    time_       = 0;
-    file_       = nullptr;
+    alive_time_   = 0;
+    policy_       = 0;
+    policy_ud1_   = 0;
+    policy_ud2_   = 0;
+    time_         = 0;
+    file_         = nullptr;
     multi_device_ = nullptr;
 }
 
@@ -51,6 +51,7 @@ FILE *AsyncLog::Device::open_stream()
         }
         else if (path_ == "stderr")
         {
+            // 这个基本上不会用，因为同时使用stdout和stderr的话，输出到终端的日志是乱序的
             file_ = stderr;
         }
         else
@@ -68,8 +69,7 @@ FILE *AsyncLog::Device::open_stream()
     return file_;
 }
 ////////////////////////////////////////////////////////////////////////////////
-AsyncLog::AsyncLog(const std::string &name)
-    : Thread(name), buffer_pool_("AsyncLog")
+AsyncLog::AsyncLog(const std::string &name) : Thread(name)
 {
 }
 
@@ -82,7 +82,7 @@ AsyncLog::~AsyncLog()
 }
 
 time_t AsyncLog::day_begin(time_t now)
-    {
+{
     struct tm ntm;
     ::localtime_r(&now, &ntm);
     ntm.tm_hour = 0;
@@ -103,7 +103,7 @@ bool AsyncLog::init_size_policy(Device &device)
     // 读取文件大小
     std::error_code e;
     const std::string &path = device.path_;
-    bool ok = std::filesystem::exists(device.path_, e);
+    bool ok                 = std::filesystem::exists(device.path_, e);
     if (e)
     {
         ELOG_R("init size policy check file exist file error %s %s",
@@ -128,7 +128,7 @@ bool AsyncLog::init_daily_policy(Device &device)
 {
     std::error_code e;
     const std::string &path = device.path_;
-    bool ok = std::filesystem::exists(path, e);
+    bool ok                 = std::filesystem::exists(path, e);
     if (e)
     {
         ELOG_R("rename daily initfile exist file error %s %s", path.c_str(),
@@ -147,8 +147,8 @@ bool AsyncLog::init_daily_policy(Device &device)
         static_assert(__cplusplus < 202002L);
         using namespace std::chrono_literals;
         old_time = std::chrono::duration_cast<std::chrono::seconds>(
-                    ftime.time_since_epoch() - 11644473600s)
-                    .count();
+                       ftime.time_since_epoch() - 11644473600s)
+                       .count();
 #else
         // 转换为 system_clock 时间点
         auto sctp =
@@ -181,9 +181,8 @@ void AsyncLog::remove_device(Device &device)
     }
 }
 
-void AsyncLog::add_device(const char *name, const char *path,
-                                       int32_t alive, int32_t policy,
-                                       int64_t policy_u1, const char *multi)
+void AsyncLog::add_device(const char *name, const char *path, int32_t alive,
+                          int32_t policy, int64_t policy_u1, const char *multi)
 {
     // TODO 目前只能增，不能安全删改。因为日志线程可能正在写入，这时修改device会出问题
     // 如果后续有删改需求，可能要新增一套机制
@@ -212,10 +211,10 @@ void AsyncLog::add_device(const char *name, const char *path,
     Device &device = result.first->second;
     // 路径可能有变化，先关闭文件(另一个线程可能正在写入，不能关闭)
     // device.close_stream();
-    device.alive_time_ = alive;
-    device.policy_     = policy;
-    device.policy_ud1_ = policy_u1;
-    device.path_       = path;
+    device.alive_time_   = alive;
+    device.policy_       = policy;
+    device.policy_ud1_   = policy_u1;
+    device.path_         = path;
     device.multi_device_ = multi_device;
 
     // 这里面可能会触发磁盘io操作，会比较慢
@@ -259,29 +258,42 @@ void AsyncLog::append(const char *name, int32_t mask, int64_t time,
         return;
     }
     Device &device = it->second;
-    Buffer *buff   = device_reserve(device, time, mask);
 
-    size_t cpy_len = std::min(sizeof(buff->buff_), len);
-    memcpy(buff->buff_, str, cpy_len);
-    buff->used_ += cpy_len;
-    buff->mask_ |= MASK_BEG;
+    const static size_t max_size = BLOCK_SIZE * 8;
+    const static size_t min_size = BLOCK_SIZE - sizeof(Buffer);
 
-    // 如果一个缓冲区放不下，后面接多个缓冲区，时间戳为-1
-    if (unlikely(cpy_len < len))
+    if (len <= min_size || len > max_size)
     {
-        size_t cur_len = cpy_len;
+        // 直接申请一个buffer，避免碎片和多次拷贝
+        // device_reserve会根据len来从Pool还是new分配
+        Buffer *buff = allocate(device, len, time, mask);
+
+        buff->set_buffer(str, len);
+        buff->log_mask_ |= MASK_BEG | MASK_END;
+    }
+    else
+    {
+        // 不大不小的日志，应该是比较少出现的
+        // 如果用new分配内存，容易出现碎片，把多个小buffer拼起来比较划算
+        Buffer *buff = allocate(device, min_size, time, mask);
+
+        buff->set_buffer(str, min_size);
+        buff->log_mask_ |= MASK_BEG;
+
+        size_t cur_len = min_size;
         do
         {
-            buff = device_reserve(device, -1, mask);
+            // 一个缓冲区放不下，后面接多个缓冲区，时间戳为-1
+            buff = allocate(device, 0, -1, mask);
 
-            cpy_len = std::min(sizeof(buff->buff_), len - cur_len);
-            memcpy(buff->buff_, str + cur_len, cpy_len);
+            size_t cpy_len = std::min(min_size, len - cur_len);
+            buff->set_buffer(str + cur_len, cpy_len);
 
             cur_len += cpy_len;
-            buff->used_ += cpy_len;
         } while (cur_len < len);
+
+        buff->log_mask_ |= MASK_END;
     }
-    buff->mask_ |= MASK_END;
 }
 
 void AsyncLog::trigger_daily_rollover(Device &device, int64_t now)
@@ -343,7 +355,7 @@ void AsyncLog::trigger_size_rollover(Device &device, int64_t size)
     char new_buff[1024];
 
     std::error_code e;
-    int32_t max_index = 0;
+    int32_t max_index       = 0;
     const std::string &path = device.path_;
     for (int32_t i = max_index + 1; i < 1024; i++)
     {
@@ -429,7 +441,7 @@ void AsyncLog::write_color(FILE *stream, int32_t mask)
 }
 
 size_t AsyncLog::write_prefix(FILE *stream, int32_t mask, const char *name,
-                    int64_t time)
+                              int64_t time)
 {
     // 如果无mask并且time <= 0，则不添加任何前缀，通常用于写入文件
     if (0 == mask && time <= 0) return 0;
@@ -478,7 +490,7 @@ size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer)
     if (!stream) return 0;
 
     size_t bytes = 0;
-    int32_t mask = buffer->mask_;
+    int32_t mask = buffer->log_mask_;
     if (mask & MASK_BEG)
     {
         // 只在开始和结束的时候触发日志拆分，避免同一行日志被拆分到不同文件
@@ -494,7 +506,7 @@ size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer)
         bytes += write_prefix(stream, mask, buffer->prefix_, buffer->time_);
     }
 
-    bytes += fwrite(buffer->buff_, 1, buffer->used_, stream);
+    bytes += fwrite(buffer->buffer(), 1, buffer->used_, stream);
 
     if (mask & MASK_END)
     {
@@ -542,7 +554,7 @@ void AsyncLog::routine_once(int32_t ev)
     // C++14以后，允许在循环中删除
     static_assert(__cplusplus > 201402L);
 
-    auto now  = timing::try_frame_time();
+    auto now = timing::try_frame_time();
 
     std::unique_lock<std::mutex> ul(mutex_);
 
@@ -564,8 +576,8 @@ void AsyncLog::routine_once(int32_t ev)
             }
             // 关闭长时间不使用的设备
             int64_t sec = now - device.time_;
-            // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush ??)
-            // stdout和stderr等不关闭的会设置alive_time为-1
+            // 定时关闭文件，当缓存区没满时，不关闭是不会输出到文件的(用flush
+            // ??) stdout和stderr等不关闭的会设置alive_time为-1
             if (alive_time > 0 && sec > alive_time) device.close_stream();
 
             // 当没有日志写入时，10秒检测一次日期切换
@@ -592,7 +604,7 @@ void AsyncLog::routine_once(int32_t ev)
             // 回收缓冲区
             for (auto buffer : writing_buffers_)
             {
-                buffer_pool_.destroy(buffer);
+                buffer_pool_.destruct(buffer);
             }
             writing_buffers_.clear();
         }
@@ -608,7 +620,6 @@ bool AsyncLog::uninitialize()
 
     return true;
 }
-
 
 void AsyncLog::set_thread_name(const char *name)
 {
@@ -640,4 +651,15 @@ void AsyncLog::set_thread_name(const char *name)
 const char *AsyncLog::get_thread_name()
 {
     return thread_name;
+}
+
+AsyncLog::Buffer *AsyncLog::allocate(Device &device, size_t len, int64_t time,
+                                     int32_t mask)
+{
+    Buffer *buff =
+        buffer_pool_.construct<Buffer>(len, time, mask, get_thread_name());
+
+    device.buff_.push_back(buff);
+
+    return buff;
 }
