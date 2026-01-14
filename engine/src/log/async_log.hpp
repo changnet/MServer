@@ -1,6 +1,7 @@
 #pragma once
 
 #include "thread/thread.hpp"
+#include "thread/null_mutex.hpp"
 #include "pool/flexible_pool.hpp"
 #include "log.hpp"
 
@@ -119,7 +120,7 @@ public:
 
 private:
     static constexpr size_t BLOCK_SIZE = 256;
-    using BufferPool                   = FlexiblePool<BLOCK_SIZE, 512>;
+    using BufferPool                   = FlexiblePool<BLOCK_SIZE, 512, NullMutex>;
 
     void remove_device(Device &device);
     void trigger_size_rollover(Device &device, int64_t size);

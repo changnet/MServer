@@ -655,6 +655,7 @@ AsyncLog::Buffer *AsyncLog::allocate(Device &device, size_t len, int64_t time,
 
     // 把buffer同时放到它的mutil_device中，同时用一个ref字段表示引用数量
     // 当数量为0时表示无引用然后销毁掉
+    // 因为写日志是按设备写的，这样可以保证不同设备都输出到终端时，终端的日志顺序是正确的
     Device *d = &device;
     while (d)
     {

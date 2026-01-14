@@ -28,8 +28,10 @@ enum FlexibleType
  * 则按flexible_size分配，大于则采用new分配
  * @param flexible_size 单个buffer最小值，会自动对齐到alignof(std::max_align_t)
  * @param alloc_once 单个分配的buffer数量
+ * @param Mutex 默认加锁，不加锁请用NullMutex
  */
-template <size_t flexible_size, size_t alloc_once> class FlexiblePool
+template <size_t flexible_size, size_t alloc_once, typename Mutex = std::mutex>
+class FlexiblePool
 {
 public:
     FlexiblePool()
@@ -50,7 +52,7 @@ public:
      */
     void clear()
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<Mutex> lock(mutex_);
         for (char *chunk : chunks_)
         {
             delete[] chunk;
@@ -103,7 +105,7 @@ public:
     // 释放不用的内存
     void gc()
     {
-        std::lock_guard<std::mutex> lg(mutex_);
+        std::lock_guard<Mutex> lg(mutex_);
         // <= 1个chunk不进行gc
         size_t buffer_size = buffers_.size();
         if (buffer_size <= CHUNK_SIZE / SIZE) return;
@@ -140,7 +142,7 @@ public:
 private:
     char *pop()
     {
-        std::lock_guard<std::mutex> lg(mutex_);
+        std::lock_guard<Mutex> lg(mutex_);
         if (buffers_.empty())
         {
             // 用mmap分配一块大内存，再拆成小内存，避免太多小内存形成碎片
@@ -160,7 +162,7 @@ private:
     }
     void push(char *ptr)
     {
-        std::lock_guard<std::mutex> lg(mutex_);
+        std::lock_guard<Mutex> lg(mutex_);
         buffers_.push_back(ptr);
     }
 
@@ -176,7 +178,7 @@ private:
      * 的内存造成碎片。
      */
     static constexpr size_t CHUNK_SIZE = alloc_once * SIZE;
-    std::mutex mutex_;
+    Mutex mutex_;
     std::vector<char *> chunks_;
     std::vector<char *> buffers_;
 };

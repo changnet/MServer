@@ -205,8 +205,12 @@ int32_t LLog::print(lua_State *L)
 
     if (buffer.used_ <= 0) return 0;
 
-    // TODO 这里能不能优化下，直接使用logger那边的buff，省去一次memcpy
-    // 使用flexible_pool获取一个buffer，直接往logger push
+    // 原以为从AsyncLog那边取一个buffer来替代get_thread_buffer
+    // 省去一次memcpy会快些，但实际测出来memcpy 256个字节比加锁要快得多
+    // 即使无竞争，也还是memcpy快
+    // Memcpy 256B (1000000 ops): 3.29655 ms. Avg: 3 ns/op
+    // Mutex Uncontended(1000000 ops) : 8.55687 ms.Avg : 8 ns / op
+    // Mutex Contended 4 - Threads(1000000 total ops) : 55.4425 ms.Avg : 55 ns/ op(Total Time / Total Ops)
     AsyncLog::append("info", mask, timing::try_frame_time(), buffer.buffer_,
                      buffer.used_);
 
