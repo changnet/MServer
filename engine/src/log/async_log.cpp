@@ -530,7 +530,6 @@ void AsyncLog::write_to_device(Device &device, const BufferList &buffers)
     }
 }
 
-// 线程主循环
 void AsyncLog::routine_once(int32_t ev)
 {
     UNUSED(ev);

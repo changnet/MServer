@@ -115,7 +115,7 @@ void WorkerThread::dispatch_message()
 
             cb_message_ = m;
             void *buffer =
-                (m->mask_ & FlexiblePool::BUFFER) ? m->buffer() : nullptr;
+                (m->mask_ & FlexibleType::POOL) ? m->buffer() : nullptr;
             lcpp::call(L_, "on_worker_message", m->src_, m->type_, buffer,
                        m->usize_);
             // 如果这个消息被转到其他线程或者复用，则cb_message_为nullptr

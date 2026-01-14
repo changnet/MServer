@@ -16,21 +16,28 @@ struct FlexibleBuffer
     }
 };
 
+// 分配的buffer类型
+enum FlexibleType
+{
+    MALLOC = 1, // 分配而来的内存
+    POOL   = 2, // 从内存池分配的内存
+};
+
 /**
- * @brief 任意大小的buffer池，用于线程内通信等。
- * 池只缓冲大小为1024的buffer，小于此大小会被修正为1024，大于1024会采用new分配。
+ * @brief 分配固定大小的buffer池，以减少内存碎片。请求的内存小于flexible_size，
+ * 则按flexible_size分配，大于则采用new分配
+ * @param flexible_size 单个buffer最小值，会自动对齐到alignof(std::max_align_t)
+ * @param alloc_once 单个分配的buffer数量
  */
-class FlexiblePool
+template <size_t flexible_size, size_t alloc_once> class FlexiblePool
 {
 public:
-    enum
+    FlexiblePool()
     {
-        MALLOC = 1, // 分配而来的内存
-        BUFFER = 2, // 是否存在buffer空间
-    };
-
-public:
-    FlexiblePool() = default;
+        // 单个chunk的大小，这个值必须大于new使用mmap的阈值（一般是128kb），
+        // 避免分配的内存造成碎片
+        static_assert(CHUNK_SIZE >= 128 * 1024);
+    }
     ~FlexiblePool()
     {
         clear();
@@ -58,7 +65,7 @@ public:
     T *construct(size_t size, Args &&...args)
     {
         T *ptr;
-        uint16_t mask = size > 0 ? BUFFER : 0;
+        uint16_t mask = size > 0 ? POOL : 0;
         if (size + sizeof(T) > SIZE)
         {
             ptr = new T(std::forward<Args>(args)...);
@@ -163,12 +170,12 @@ private:
      */
     static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
     static constexpr size_t SIZE =
-        ((1024 + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+        ((flexible_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
     /**
      * 单个chunk的大小，这个值必须大于new使用mmap的阈值（一般是128kb），避免分配
      * 的内存造成碎片。
      */
-    static constexpr size_t CHUNK_SIZE = 256 * SIZE;
+    static constexpr size_t CHUNK_SIZE = alloc_once * SIZE;
     std::mutex mutex_;
     std::vector<char *> chunks_;
     std::vector<char *> buffers_;

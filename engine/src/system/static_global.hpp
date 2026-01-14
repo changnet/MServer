@@ -38,7 +38,7 @@ public:
     inline static EVBackend *B  = nullptr; // 网络后台线程
     inline static ThreadContextMgr *M = nullptr; // worker线程管理
     inline static Buffer::ChunkPool *C = nullptr; // socket缓存池
-    inline static FlexiblePool *F      = nullptr; // 通用buffer池
+    inline static FlexiblePool<1024, 256> *F      = nullptr; // 通用buffer池
     inline static ShareData *S         = nullptr; // 数据共享
 
 private:
