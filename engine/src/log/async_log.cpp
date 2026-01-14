@@ -529,16 +529,9 @@ size_t AsyncLog::write_to_one_device(Device *device, const Buffer *buffer)
 
 void AsyncLog::write_to_device(Device &device, const BufferList &buffers)
 {
-    Device *d = &device;
-    while (d)
+    for (const auto &buffer : buffers)
     {
-        for (const auto &buffer : buffers)
-        {
-            write_to_one_device(d, buffer);
-        }
-
-        // 存在 A-B-C 这样连续输出到多个device的情况，死循环则由上层保证
-        d = d->multi_device_;
+        write_to_one_device(&device, buffer);
     }
 }
 
@@ -604,7 +597,8 @@ void AsyncLog::routine_once(int32_t ev)
             // 回收缓冲区
             for (auto buffer : writing_buffers_)
             {
-                buffer_pool_.destruct(buffer);
+                // 一个buffer可在多个设备引用，计数为0才回收
+                if (--buffer->ref_ <= 0) buffer_pool_.destruct(buffer);
             }
             writing_buffers_.clear();
         }
@@ -659,7 +653,16 @@ AsyncLog::Buffer *AsyncLog::allocate(Device &device, size_t len, int64_t time,
     Buffer *buff =
         buffer_pool_.construct<Buffer>(len, time, mask, get_thread_name());
 
-    device.buff_.push_back(buff);
+    // 把buffer同时放到它的mutil_device中，同时用一个ref字段表示引用数量
+    // 当数量为0时表示无引用然后销毁掉
+    Device *d = &device;
+    while (d)
+    {
+        d->buff_.push_back(buff);
+        buff->ref_++;
+
+        d = d->multi_device_;
+    }
 
     return buff;
 }

@@ -11,23 +11,23 @@ public:
     // 日志策略
     enum
     {
-        POLICY_NONE   = 0, /// 未定义
-        POLICY_DAILY  = 1, /// 每天一个文件
-        POLICY_SIZE   = 2, /// 按大小分文件
+        POLICY_NONE  = 0, /// 未定义
+        POLICY_DAILY = 1, /// 每天一个文件
+        POLICY_SIZE  = 2, /// 按大小分文件
     };
 
     // 日志掩码
     enum
     {
-        MASK_C_R  = 1, // 颜色 red
-        MASK_C_G  = 2, // 颜色 green
-        MASK_C_B  = 4, // 颜色 blue
-        MASK_C_Y  = 8, // 颜色 yellow
+        MASK_C_R = 1, // 颜色 red
+        MASK_C_G = 2, // 颜色 green
+        MASK_C_B = 4, // 颜色 blue
+        MASK_C_Y = 8, // 颜色 yellow
         MASK_CL  = MASK_C_R | MASK_C_G | MASK_C_B | MASK_C_Y,
-        MASK_S_L  = 128, // 来源 source lua
-        MASK_S_C  = 256, // 来源 source c
-        MASK_BEG  = 512, // 单次日志开始
-        MASK_END  = 1024, // 单次日志结束
+        MASK_S_L = 128,  // 来源 source lua
+        MASK_S_C = 256,  // 来源 source c
+        MASK_BEG = 512,  // 单次日志开始
+        MASK_END = 1024, // 单次日志结束
     };
 
     /// 日志缓冲区
@@ -41,11 +41,12 @@ public:
             prefix_   = prefix;
             used_     = 0;
             mask_     = 0;
+            ref_      = 0;
         }
         void set_buffer(const char *str, size_t len)
         {
             memcpy(this->buffer(), str, len);
-            used_ = len;
+            used_ = static_cast<int32_t>(len);
         }
         char *buffer() noexcept
         {
@@ -57,11 +58,12 @@ public:
             return reinterpret_cast<const char *>(this + 1);
         }
 
-        int64_t time_;       /// 日志UTC时间戳
-        size_t used_;        /// 缓冲区已使用大小
-        //size_t size_;    /// 缓冲区容量
+        int64_t time_; /// 日志UTC时间戳
+        int32_t used_; /// 缓冲区已使用大小
+        // size_t size_;    /// 缓冲区容量
         int32_t log_mask_;   /// 日志掩码，颜色等
         int32_t mask_;       /// FlexiblePool使用的掩码
+        int32_t ref_;        /// 引用计数
         const char *prefix_; // 前置名称
     };
     using BufferList = std::vector<Buffer *>;
@@ -75,14 +77,14 @@ public:
         void close_stream(); /// 关闭文件
         FILE *open_stream(); /// 获取文件流
 
-        int32_t policy_;     /// 文件切分策略
+        int32_t policy_; /// 文件切分策略
         int32_t alive_time_; // 文件保持打开的时间，0表示每次写入完就关闭
         int64_t policy_ud1_; /// 用于切分文件的参数
         int64_t policy_ud2_; /// 用于切分文件的参数
         time_t time_;        /// 上次修改时间
         FILE *file_; /// 写入的文件句柄，减少文件打开、关闭
-        std::string path_; /// 当前写入的文件路径
-        BufferList buff_;  /// 待写入的缓冲区
+        std::string path_;     /// 当前写入的文件路径
+        BufferList buff_;      /// 待写入的缓冲区
         Device *multi_device_; // 关联的多个设备（同时输出到文件和控制台），目前仅允许关联一个
     };
 
@@ -117,7 +119,7 @@ public:
 
 private:
     static constexpr size_t BLOCK_SIZE = 256;
-    using BufferPool = FlexiblePool<BLOCK_SIZE, 512>;
+    using BufferPool                   = FlexiblePool<BLOCK_SIZE, 512>;
 
     void remove_device(Device &device);
     void trigger_size_rollover(Device &device, int64_t size);
@@ -137,7 +139,8 @@ private:
 
     // 写入控制台颜色
     void write_color(FILE *stream, int32_t mask);
-    size_t write_prefix(FILE *stream, int32_t mask, const char *name, int64_t time);
+    size_t write_prefix(FILE *stream, int32_t mask, const char *name,
+                        int64_t time);
     size_t write_to_one_device(Device *device, const Buffer *buffer);
     void write_to_device(Device &device, const BufferList &buffers);
 
