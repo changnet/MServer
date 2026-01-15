@@ -125,7 +125,7 @@ int32_t SSLIO::do_init_connect(EVIO *w)
     return handshake(w);
 }
 
-static void info_callback(const SSL *ssl, int where, int ret)
+[[maybe_unused]] static void info_callback(const SSL *ssl, int where, int ret)
 {
     const char *str;
     int32_t fd = SSL_get_fd(ssl);
@@ -175,7 +175,7 @@ static void info_callback(const SSL *ssl, int where, int ret)
     }
 }
 
-static void tlsext_callback(SSL *ssl, int32_t client_server, int32_t type,
+[[maybe_unused]] static void tlsext_callback(SSL *ssl, int32_t client_server, int32_t type,
                      const unsigned char *data, size_t len, void *arg)
 {
     // 可用第三方工具查看连接的sni和alpn

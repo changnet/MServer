@@ -30,6 +30,9 @@ EVBackend::EVBackend()
     done_             = false;
     busy_             = false;
     modify_protected_ = false;
+
+    watcher_events_.reserve(256);
+    swap_watcher_events_.reserve(256);
 }
 
 EVBackend::~EVBackend()
@@ -427,26 +430,21 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
 
 void EVBackend::do_watcher_events()
 {
-    // 只循环一定次数，避免其他线程不断地发送事件，导致线程一直在处理这些事件而
-    // 不再接收来自网络的事件
-    for (int32_t i = 1; i < 1024; i++)
+    // 使用swap策略: 只加锁一次，交换整个队列到本地处理
+    // 由于b_ev_改为atomic，可以在锁外安全地读取和清零
     {
-        EVIO *w;
-        int32_t e;
-        {
-            std::scoped_lock<std::mutex> sl(mutex_);
-            if (watcher_events_.empty())
-            {
-                busy_ = false;
-                return;
-            }
+        std::scoped_lock<std::mutex> sl(mutex_);
+        std::swap(watcher_events_, swap_watcher_events_);
+        busy_ = !swap_watcher_events_.empty();
+        if (!busy_) return;
+    }
 
-            w = watcher_events_.front();
-            watcher_events_.pop_front();
+    for (auto w : swap_watcher_events_)
+    {
+        // 使用atomic exchange读取并清零事件
+        int32_t e = w->b_ev_.exchange(0, std::memory_order_acq_rel);
+        if (0 == e) continue; // 可能在swap后被其他线程清零
 
-            e = w->b_ev_;
-            w->b_ev_ = 0;
-        }
         int32_t hig = e >> 16;
         if (unlikely(0 != hig))
         {
@@ -459,8 +457,7 @@ void EVBackend::do_watcher_events()
             do_watcher_event(w, e, true);
         }
     }
-
-    busy_ = true;
+    swap_watcher_events_.clear();
 }
 
 void EVBackend::dispatch_event(EVIO *w, int32_t ev)
@@ -495,35 +492,35 @@ bool EVBackend::del_watcher(EVIO *w, int32_t fd)
 
 void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
 {
+    // 逻辑线程和EVBackend线程的数据交换，已经换了几种方案，详见project/network_threading_analysis.md
+
+    // 使用atomic fetch_or合并事件，在锁外完成，减少加锁
+    int32_t old = w->b_ev_.fetch_or(ev, std::memory_order_acq_rel);
+    if (0 != old) return; // 已有事件在队列中，无需重复入队
+
     {
         std::scoped_lock<std::mutex> sl(mutex_);
-
-        int32_t old = w->b_ev_;
-        w->b_ev_ = old | ev;
-
-        // 利用old判断是否插入队列，防止同一时间多次写入时把队列写爆
         // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
-        if (0 != old || 0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
-        watcher_events_.emplace_back(w);
+        if (0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
+        watcher_events_.push_back(w);
+        if (watcher_events_.size() > 1) return; // 大于1说明已经唤醒过线程
     }
     wake();
 }
 
 void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
 {
+    // 使用atomic exchange设置事件（高位表示优先执行），在锁外完成
+    // 覆盖旧的事件，低位可以继续追加其他事件
+    int32_t old = w->b_ev_.exchange(ev << 16, std::memory_order_acq_rel);
+    if (0 != old) return; // 已有事件在队列中，无需重复入队
+
     {
         std::scoped_lock<std::mutex> sl(mutex_);
-
-        int32_t old = w->b_ev_;
-        // 覆盖旧的，并放高位表示优先执行，低位可以继续追加他事件
-        // 现在的机制没法做到事件的增删查改，也无法做到同时set多个不同的事件
-        // 但这样可以节省一点，目前没其他需求
-        w->b_ev_    = ev << 16;
-
-        // 利用old判断是否插入队列，防止同一时间多次写入时把队列写爆
         // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
-        if (0 != old || 0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
-        watcher_events_.emplace_back(w);
+        if (0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
+        watcher_events_.push_back(w);
+        if (watcher_events_.size() > 1) return;
     }
     wake();
 }

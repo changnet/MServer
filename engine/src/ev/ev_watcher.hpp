@@ -76,9 +76,14 @@ public:
     // 带b_前缀的变量，都是和backend线程相关
     // 这些变量要么只能在backend中操作，要么操作时必须加锁
 
-    int32_t b_kevents_; // kernel(如epoll)中使用的events
-    int32_t b_pevents_; // pending，backend线程等待处理的事件
-    int32_t b_ev_; // worker发出，等待backend线程处理的事件
+    int32_t b_kevents_; // kernel(如epoll)中使用的events（仅Backend线程访问）
+    int32_t b_pevents_; // pending，backend线程等待处理的事件（仅Backend线程访问）
+
+    // false sharing padding: b_kevents_和b_pevents_仅Backend线程访问
+    // b_ev_是Worker线程写、Backend线程读，需要隔离避免缓存行竞争
+    // char _pad_bev_[64 - sizeof(int32_t) * 2];
+
+    std::atomic<int32_t> b_ev_; // Worker写、Backend读（跨线程访问）
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
 

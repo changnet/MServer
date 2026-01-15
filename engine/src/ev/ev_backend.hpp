@@ -1,6 +1,6 @@
 #pragma once
 
-#include <deque>
+#include <vector>
 #include <thread>
 #include "ev_watcher.hpp"
 
@@ -149,7 +149,8 @@ protected:
     std::vector<EVIO *> pending_events_; // backend线程自己收到，等待异步处理的事件
 
     std::mutex mutex_;
-    std::deque<EVIO *> watcher_events_; // 收到其他线程的事件
-    WatcherMgr fd_mgr_;   // 管理epoll中的所有fd
+    std::vector<EVIO *> watcher_events_;       // 收到其他线程的事件
+    std::vector<EVIO *> swap_watcher_events_; // swap用，避免临时变量分配
+    WatcherMgr fd_mgr_;                        // 管理epoll中的所有fd
 };
 
