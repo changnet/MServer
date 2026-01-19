@@ -500,8 +500,13 @@ void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
 
     {
         std::scoped_lock<std::mutex> sl(mutex_);
-        // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
-        if (0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
+        // 必须锁内检测M_REF_BACKEND，防止主线程设置完事件，backend线程刚好把watcher删除了
+        // 没了M_REF_BACKEND主线程会把w删掉，backend线程处理事件时指针就是无效的
+        // mask_和b_ev_在同一cache line，大部分情况应该和操作一个普通int变量没有太大性能差异
+        if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
+        {
+            return;
+        }
         watcher_events_.push_back(w);
         if (watcher_events_.size() > 1) return; // 大于1说明已经唤醒过线程
     }
@@ -518,7 +523,10 @@ void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
     {
         std::scoped_lock<std::mutex> sl(mutex_);
         // 没了M_REF_BACKEND说明另一个线程已经关闭当前socket，只是当前线程未处理
-        if (0 == (w->mask_ & EVIO::M_REF_BACKEND)) return;
+        if (0 == (w->mask_.load(std::memory_order_acquire) & EVIO::M_REF_BACKEND))
+        {
+            return;
+        }
         watcher_events_.push_back(w);
         if (watcher_events_.size() > 1) return;
     }

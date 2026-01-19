@@ -71,7 +71,7 @@ public:
     int32_t addr_; // 所属worker地址
     int32_t errno_; // 错误码
 
-    std::atomic<int32_t> mask_; // 用于设置各种参数和标记
+    std::atomic<int32_t> mask_; // 用于设置各种参数和标记，和b_ev_放同一cache line
 
     // 带b_前缀的变量，都是和backend线程相关
     // 这些变量要么只能在backend中操作，要么操作时必须加锁
@@ -83,12 +83,12 @@ public:
     // b_ev_是Worker线程写、Backend线程读，需要隔离避免缓存行竞争
     // char _pad_bev_[64 - sizeof(int32_t) * 2];
 
-    std::atomic<int32_t> b_ev_; // Worker写、Backend读（跨线程访问）
+    std::atomic<int32_t> b_ev_; // Worker写、Backend读的事件
 
     IO *io_; /// 负责数据读写的io对象，如ssl读写
 
     char _pad[24]; // no used，false sharing padding
-    std::atomic<int32_t> ev_; // backend发出，等待worker线程处理的事件
+    std::atomic<int32_t> ev_; // backend写，worker读的事件
 };
 
 // 通过fd提供一个快速根据fd获取watcher的机制
