@@ -25,18 +25,50 @@ int32_t SSLIO::recv(EVIO *w)
     if (!SSL_is_init_finished(ssl_)) return handshake(w);
 
     int32_t len = 0;
-    while (true)
+    // 第一次读取，尝试利用 buffer 尾部剩余空间
+    // 初始空间有8k，对于游戏来说应该是足够的，大部分情况不需要后续分配
+    Buffer::Chunk *tail = recv_.get_back();
+
+    int32_t space = tail->space();
+    if (space > 0)
     {
-        Buffer::Transaction &&ts = recv_.any_seserve(true);
-        if (ts.len_ <= 0) return EV_BUSY;
-
-        len = SSL_read(ssl_, ts.ctx_, ts.len_);
-        recv_.commit(ts, len);
-        if (unlikely(len <= 0)) break;
-
-        if (len < ts.len_) return EV_NONE;
+        len = SSL_read(ssl_, tail->write_ptr(), space);
+        if (len > 0)
+        {
+            recv_.add_used(tail, len);
+            if (len < space) return EV_NONE;
+        }
+        else
+        {
+            goto SSL_RECV_ERROR;
+        }
     }
 
+    size_t alloc_size = Buffer::CHUNK_SIZE;
+    while (true)
+    {
+        if (recv_.is_overflow()) return EV_READ;
+
+        Buffer::Chunk *chk = recv_.allocate_chunk(alloc_size);
+
+        len = SSL_read(ssl_, chk->write_ptr(), chk->capacity_);
+        if (len > 0)
+        {
+            recv_.append_chunk(chk, len);
+            if (len < chk->capacity_) return EV_NONE;
+
+            alloc_size *= 2; // 指数增长
+        }
+        else
+        {
+            recv_.deallocate_chunk(chk);
+
+            goto SSL_RECV_ERROR;
+        }
+    }
+
+    assert(false); // never reach here
+SSL_RECV_ERROR:
     int32_t ecode = SSL_get_error(ssl_, len);
     if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
     if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
@@ -71,40 +103,38 @@ int32_t SSLIO::send(EVIO *w)
 
     int32_t len  = 0;
     size_t bytes = 0;
-    bool next    = false;
     while (true)
     {
-        const char *data = send_.get_front_used(bytes, next);
+        const char *data = send_.get_front(bytes);
         if (0 == bytes) return EV_NONE;
 
         len = SSL_write(ssl_, data, (int32_t)bytes);
-        if (len <= 0) break;
+        if (len > 0)
+        {
+            send_.remove(len);
+            if (len < (int32_t)bytes) return EV_WRITE;
+        }
+        else
+        {
+            int32_t ecode = SSL_get_error(ssl_, len);
+            if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
+            if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
 
-        send_.remove(len); // 删除已发送数据
+            if ((SSL_ERROR_ZERO_RETURN == ecode)
+                || (SSL_ERROR_SYSCALL == ecode
+                    && !netcompat::iserror(netcompat::errorno())))
+            {
+                w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
+                return EV_CLOSE;
+            }
 
-        // socket发送缓冲区已满，等下次发送了
-        if (len < (int32_t)bytes) return EV_WRITE;
-
-        // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
-        if (!next) return EV_NONE;
+            w->errno_ = netcompat::errorno();
+            TlsCtx::dump_error("ssl io send");
+            return EV_ERROR;
+        }
     }
 
-    int32_t ecode = SSL_get_error(ssl_, len);
-    if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
-    if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
-
-    // 非主动断开，打印错误日志
-    if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode
-            && !netcompat::iserror(netcompat::errorno())))
-    {
-        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
-        return EV_CLOSE;
-    }
-
-    w->errno_ = netcompat::errorno();
-    TlsCtx::dump_error("ssl io send");
-    return EV_ERROR;
+    return EV_WRITE;
 }
 
 int32_t SSLIO::do_init_accept(EVIO *w)
@@ -175,12 +205,15 @@ int32_t SSLIO::do_init_connect(EVIO *w)
     }
 }
 
-[[maybe_unused]] static void tlsext_callback(SSL *ssl, int32_t client_server, int32_t type,
-                     const unsigned char *data, size_t len, void *arg)
+[[maybe_unused]] static void tlsext_callback(SSL *ssl, int32_t client_server,
+                                             int32_t type,
+                                             const unsigned char *data,
+                                             size_t len, void *arg)
 {
     // 可用第三方工具查看连接的sni和alpn
-    // openssl s_client -connect ws.postman-echo.com:443 -servername ws.postman-echo.com -tlsextdebug
-    // curl -v -X GET https://postman-echo.com/get
+    // openssl s_client -connect ws.postman-echo.com:443 -servername
+    // ws.postman-echo.com -tlsextdebug curl -v -X GET
+    // https://postman-echo.com/get
     if (type == TLSEXT_TYPE_server_name)
     {
         if (len >= 5)
@@ -327,7 +360,7 @@ int32_t SSLIO::set_ssl_alpn(int32_t alpn)
     size_t index = 0;
     while (index < alpn_size)
     {
-        uint8_t len = (uint8_t)*(alpn_protos + index);
+        uint8_t len = (uint8_t) * (alpn_protos + index);
         index++;
         PLOG("    protocol: %.*s", (int32_t)len, alpn_protos + index);
 

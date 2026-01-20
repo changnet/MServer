@@ -29,6 +29,8 @@ enum FlexibleType
  * @param flexible_size 单个buffer最小值，会自动对齐到alignof(std::max_align_t)
  * @param alloc_once 单个分配的buffer数量
  * @param Mutex 默认加锁，不加锁请用NullMutex
+ * TODO 这个内存我原本设计为一个池可分配任意类型变量，但现在因为锁是每个类型一个池，
+ * 要不要把类型T变为一个模板参数呢
  */
 template <size_t flexible_size, size_t alloc_once, typename Mutex = std::mutex>
 class FlexiblePool
@@ -61,6 +63,15 @@ public:
         buffers_.clear();
     }
     /**
+     * @brief 计算单个buffer的容量
+     * @param size 需要构建的缓冲区大小（不包含结构体本身）
+     */
+    template <typename T>
+    size_t capacity(size_t size) const
+    {
+        return size + sizeof(T) > SIZE ? size : (SIZE - sizeof(T));
+    }
+    /**
      * @param size 需要构建的缓冲区大小（不包含结构体本身）
      */
     template <typename T, typename... Args>
@@ -70,7 +81,8 @@ public:
         uint16_t mask = size > 0 ? POOL : 0;
         if (size + sizeof(T) > SIZE)
         {
-            ptr = new T(std::forward<Args>(args)...);
+            char *storage = new char[sizeof(T) + size];
+            ptr = new (storage) T(std::forward<Args>(args)...);
             mask |= MALLOC;
         }
         else
@@ -94,7 +106,7 @@ public:
 
         if (ptr->mask_ & MALLOC)
         {
-            delete ptr;
+            delete[] reinterpret_cast<char *>(ptr);
         }
         else
         {
@@ -173,6 +185,7 @@ private:
     static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
     static constexpr size_t SIZE =
         ((flexible_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+    // static constexpr size_t CAPACITY = SIZE - sizeof(T); // remove this
     /**
      * 单个chunk的大小，这个值必须大于new使用mmap的阈值（一般是128kb），避免分配
      * 的内存造成碎片。

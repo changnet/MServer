@@ -1,369 +1,210 @@
 #pragma once
 
-#include "pool/object_pool.hpp"
-#include "thread/spin_lock.hpp"
+#include "pool/flexible_pool.hpp"
+#include <atomic>
 
 /**
- * 单个chunk
- *    +---------------------------------------------------------------+
- *    |    悬空区   |        有效数据区        |      空白区(space)   |
- *    +---------------------------------------------------------------+
- * ctx_          beg_                        end_                   max_
- *
+网络收发缓冲区
+
+# 核心需求
+    1. 使用定长内存池减少内存碎片
+    2. 缓冲区使用流式而不是一个消息一个缓冲区，减少浪费
+    3. 初始8kb缓冲区足够大部分游戏连接使用，极少重新分配内存
+        10000个玩家在线约 10240 * 8k * 2 = 160M，这个是可以接受的消耗
+    4. FlexiblePool支持变长chunk，解决偶尔收发大数据效率低的问题
+    5. 以前设计过一般加锁的，网络线程和逻辑线程无法并发，改为无锁SPSC
+
+# 无锁SPSC
+SPSC即Single Producer Single Consumer，单生产者单消费者，无锁即全部用atomic操作
+
+最理想情况下，一次读包含5个atomic操作
+    1. 获取tail_指针
+    2. 计算space
+    3. 获取data指针
+    4. 把读取到的单个chunk.pos加上去
+    5. 把总len加上去
+如果一次读不完，那就需要读多次。写入也基本是这个情况。
+
+为了效率，无锁SPSC严格地使用atomic的各种内存顺序，非常容易出错，一定要小心。比如
+tail_只有Producer会修改，Consumer用的是next_来消费数据，所以tail_的读写是用relaxed。
+
+而数据总长度只用来做流量控制，能容忍不精确，所以也用的relaxed。而其他的像pos_和next_
+则必须用acquire和release。
+
+# 流量控制
+流量分为单个消息大小和总接收数据大小。单个大小和buffer没关这里不讨论。总数据接收大小
+主要分两种情况：
+1. 被恶意发包攻击
+2. 服务器卡了处理不过来（比如断点调试）
+
+每个缓冲区都可以设置总大小，以及达到最大值后是断开还是sleep等待。对于玩家直接断掉
+就行。对于服务器，直接sleep一小段时间
+
+# UDP扩展
+缓冲区使用了流式，和udp的消息模式是相反的。我本身也没预留udp，因为原生的udp会丢包
+没什么用。如果有需求考虑直接用quic或者kcp
+
+如果实在要用udp，buffer的设计可以不变。每个udp用“长度+消息”流式填充到buffer中，
+再实现对应的udp_io.cpp和udp_packet.cpp就可以。
  */
 
-/**
- * 网络收发缓冲区
- *
- * 1. 游戏的数据包一般是小包，因此这里都是按小包来设计和优化的
- *    频繁发送大包(缓冲区超过8k)会导致链表操作，有一定的效率损失
- * 
- * 2. 每条连接默认分配一个8k的收缓冲区和一个8k的发缓冲区。
- *    数据量超过时，后续的包以链表形式链在一起
- *    10240条链接，收最大64k，发64k，那最差的情况是1280M内存
- * 
- * 3. 有时候为了优化拷贝，会直接从缓冲区中预分配一块内存，把收发的数据直接写入
- *    缓冲区。这时候预分配的缓冲区必须是连续的，但缓冲区可能只能以链表提供
- *    这时候只能临时分配一块内存，再拷贝到缓冲区，效率不高
- */
+
+class Buffer;
 
 /**
  * @brief 网络收发缓冲区
-*/
+ */
 class Buffer final
 {
 public:
-    /**
-     * @brief 单个缓冲区块，多个块以链表形式组成一个完整的缓冲区
-    */
     class Chunk final
     {
     public:
-        static const size_t MAX_CTX = 8192; //8k
-    public:
-        Chunk()
+        // FlexiblePool required
+        int32_t mask_;
+
+        int32_t capacity_;          // 整个chunk的总容量
+        std::atomic<int32_t> pos_;  // 已写入的数据(write pos)
+        std::atomic<Chunk *> next_; // 下一个链表元素
+
+        explicit Chunk(int32_t cap) : capacity_(cap)
         {
-            ctx_[0]   = 0; // avoid C26495 warning
-            next_     = nullptr;
-            used_pos_ = free_pos_ = 0;
-        }
-        ~Chunk()
-        {
+            mask_ = 0;
+            pos_.store(0, std::memory_order_release);
+            next_.store(nullptr, std::memory_order_release);
         }
 
-        /**
-         * @brief 移除已使用缓冲区
-         * @param len 移除的长度
-         */
-        inline void remove_used(size_t len)
+        inline char *data()
         {
-            used_pos_ += len;
-            assert(free_pos_ >= used_pos_);
-        }
-        /**
-         * @brief 添加已使用缓冲区
-         * @param len 添加的长度
-        */
-        inline void add_used(size_t len)
-        {
-            free_pos_ += len;
-            assert(MAX_CTX >= free_pos_);
+            // Chunk后面紧接着就是数据
+            return reinterpret_cast<char *>(this + 1);
         }
 
-        /**
-         * @brief 添加缓冲区数据
-         * @param data 需要添加的数据
-         * @param len 数据的长度
-        */
-        inline void append(const void *data, const size_t len)
+        inline char *write_ptr()
         {
-            memcpy(ctx_ + free_pos_, data, len);
-            add_used(len);
+            return data() + pos_.load(std::memory_order_relaxed);
         }
 
-        /**
-         * @brief 获取已使用缓冲区数据指针
-         * @return 
-        */
-        inline const char *get_used_ctx() const
+        inline int32_t space() const
         {
-            return ctx_ + used_pos_;
+            return capacity_ - pos_.load(std::memory_order_relaxed);
         }
-
-        /**
-         * @brief 获取空闲缓冲区指针
-         * @return 
-        */
-        inline char *get_free_ctx()
-        {
-            return ctx_ + free_pos_;
-        }
-
-        /**
-         * @brief 重置整个缓冲区
-        */
-        inline void clear()
-        {
-            used_pos_ = free_pos_ = 0;
-        }
-        /**
-         * @brief 获取已使用缓冲区大小
-         * @return 
-        */
-        inline size_t get_used_size() const
-        {
-            return free_pos_ - used_pos_;
-        }
-
-        /**
-         * @brief 获取空闲缓冲区大小
-         * @return 
-        */
-        inline size_t get_free_size() const
-        {
-            return MAX_CTX - free_pos_;
-        }
-    public:
-        char ctx_[MAX_CTX]; // 缓冲区指针
-
-        size_t used_pos_; // 已使用缓冲区开始位置
-        size_t free_pos_; // 空闲缓冲区开始位置
-
-        Chunk *next_; // 链表下一节点
     };
 
-    /**
-     * @brief 一大块连续的缓冲区
-    */
-    class LargeBuffer final
-    {
-    public:
-        LargeBuffer();
-        ~LargeBuffer();
+    // 单个chunk的容量，让内存池单个元素刚好对齐8k
+    static constexpr size_t CHUNK_SIZE = 8192 - sizeof(Buffer::Chunk);
+    using ChunkPool                    = FlexiblePool<8192, 128, std::mutex>;
 
-        /**
-         * @brief 获取指定长度的连续缓冲区
-         * @param len 缓冲区的长度
-         * @return 缓冲区指针
-        */
-        char *get(size_t len);
-
-    private:
-        char *ctx_;  // 缓冲区指针
-        size_t len_; // 缓冲区长度
-    };
-
-    /**
-     * @brief 对buff执行多步操作的事件结构，可自动解锁。is movable, but not copyable 
-     */
-    class Transaction final
-    {
-    public:
-        explicit Transaction(SpinLock &lock) : ul_(lock)
-        {
-            len_ = 0;
-            ctx_ = 0;
-            internal_ = false;
-        }
-        Transaction(Transaction &&t) noexcept : ul_(std::move(t.ul_))
-        {
-            len_ = t.len_;
-            ctx_ = t.ctx_;
-            internal_ = t.internal_;
-
-            t.len_ = 0;
-            t.ctx_ = 0;
-            t.internal_ = false;
-        }
-        Transaction &operator=(Transaction &&t) noexcept
-        {
-            len_ = t.len_;
-            ctx_ = t.ctx_;
-            internal_ = t.internal_;
-            ul_  = std::move(t.ul_);
-
-            t.len_ = 0;
-            t.ctx_ = 0;
-            t.internal_ = false;
-            // t.ul_不用处理，ul_  = std::move(ul);里已经做了处理
-            return *this;
-        }
-
-        ~Transaction() = default;
-
-        Transaction() = delete;
-        Transaction(const Transaction &) = delete;
-        Transaction &operator=(const Transaction &) = delete;
-
-    public:
-        bool internal_; // 是否使用内部buff
-        char *ctx_;     // 预留的缓冲区指针
-        int32_t len_;   // 缓冲区的长度
-
-    private:
-        std::unique_lock<SpinLock> ul_;
-    };
-
-    /// 小块缓冲区对象池
-    using ChunkPool = ObjectPoolLock<Chunk, 1024, 64>;
 public:
     Buffer();
     ~Buffer();
 
     /**
      * @brief 重置当前缓冲区
-    */
+     */
     void clear();
 
     /**
-     * @brief 删除缓冲区中的数据
+     * @brief 删除缓冲区中的数据(Consumer)
      * @param len 要删除的数据长度
-     * @return 是否还有数据需要处理
-    */
-    bool remove(size_t len);
-
-    /**
-     * @brief 添加数据到缓冲区
-     * @param data 要添加的数据 
-     * @param len 要添加的数据长度
-     * @return 0成功， 1溢出
-    */
-    int32_t append(const void *data, const size_t len);
-
-    /**
-     * @brief 预分配任意空间
-     * @param no_overflow 为true表示如果当前分配空间超出则不再分配
-     * @return 一个包括锁和缓冲区指针等数据的事务对象
-    */
-    Transaction any_seserve(bool no_overflow);
-
-    /**
-     * @brief 预分配一块连续(不包含多个chunk)的缓冲区
-     * @param len 预分配的长度
-     * @param flag 标识：1读 2写
-     * @return 一个包括锁和缓冲区指针等数据的事务对象
-    */
-    Transaction flat_reserve(size_t len, int32_t flag);
-
-    /**
-     * @brief 把指定长度的缓存放到连续的缓冲区
-     * @param len 缓存的长度
-     * @param flag 标识：1读 2写
-     * @return 缓冲区的指针，如果长度不足则返回nullptr
-    */
-    const char *to_flat_ctx(size_t len, int32_t flag);
-
-    /**
-     * @brief 检测当前有效数据的大小是否 >= 指定值
-     * @param len 检测的长度
-     * @return bool 当前有效数据的大小是否 >= 指定值
-    */
-    bool check_used_size(size_t len) const;
-
-     /**
-      * @brief 把缓冲区中所有的buff都存放到一块连续的缓冲区
-      * @param len 缓冲区的数据长度
-      * @param flag 标识：1读 2写
-      * @return 连续缓冲区的指针
      */
-    const char *all_to_flat_ctx(size_t &len, int32_t flag);
-
-     /**
-      * @brief 提交flat_reserve预分配的数据
-      * @param len 最终提交数据长度
-      * @param ts 提交的缓存事务对象
-     */
-    void commit(const Transaction &ts, int32_t len);
+    void remove(size_t len);
 
     /**
-      * @brief 获取第一个chunk的数据指针及数据大小
-      * @param size 第一个chunk的数据大小
-      * @param next 是否还有下一个数据块
-      * @return 第一个chunk的数据指针
-      */
-     const char *get_front_used(size_t &size, bool &next) const;
-
-    /**
-      * @brief 只获取第一个chunk的有效数据大小
-      * @return
-      */
-     inline size_t get_front_used_size() const
-     {
-         std::lock_guard<SpinLock> guard(lock_);
-         return front_ ? front_->get_used_size() : 0;
-     }
-
-    /**
-      * @brief 获取chunk的数量
-      * @return
-      */
-     inline size_t get_chunk_size() const
-     {
-         std::lock_guard<SpinLock> guard(lock_);
-         return chunk_size_;
-     }
-
-     /**
-      * @brief 获取所有已分配chunk的大小，用于统计
-      * @return
-      */
-     inline size_t get_chunk_mem_size() const
-     {
-         std::lock_guard<SpinLock> guard(lock_);
-         return chunk_size_ * sizeof(Chunk);
-     }
-
-    /**
-      * @brief 获取当前所有的chunk数据长度
-      * @return
-      */
-     size_t get_all_used_size() const;
-
-    /**
-      * @brief 设置chunk的最大数量，超过此数量视为溢出
-      * @param max 允许的chunk最大数量
-      */
-     void set_chunk_size(int32_t max);
-
-    // 当前缓冲区是否溢出
-     inline bool is_overflow() const
-     {
-         std::lock_guard<SpinLock> guard(lock_);
-         return chunk_size_ > chunk_max_;
-     }
-
-private:
-     Chunk *new_chunk();
-    void del_chunk(Chunk *chunk);
-
-    /**
-     * @brief 预分配缓冲区空间，如果当前空间为空则分配一个新的chunk
-     * @return 返回当前可用缓冲区大小
-    */
-    size_t reserve();
-
-    /**
-     * @brief 获取连续的缓冲区
-     * @param len 缓冲区的长度
-     * @param flag 标识：1读 2写
-     * @return 
-    */
-    char *get_large_buffer(size_t len, int32_t flag);
-
-    /**
-     * @brief 同append，但不加锁，仅内部使用
+     * @brief 添加数据到缓冲区(Producer)
      * @param data 要添加的数据
      * @param len 要添加的数据长度
-    */
-    void __append(const void *data, const size_t len);
+     */
+    void append(const void *data, size_t len);
+
+    /**
+     * @brief 直接添加一个已填充数据的chunk(Producer)
+     */
+    void append_chunk(Chunk *chunk, int32_t len);
+
+    /**
+     * @brief 申请一个trunk，但不会添加到列表
+     * @param alloc_size chunk的容量大小（不需要包含chunk本身）
+     */
+    Chunk *allocate_chunk(size_t alloc_size);
+
+    /**
+     * @brief 释放一个trunk
+     */
+    void deallocate_chunk(Chunk *chunk);
+
+    /**
+     * @brief 获取连续的数数据用于发送/读取(Consumer)
+     * @param size 输出可用的数据长度
+     * @return 数据指针
+     */
+    const char *get_front(size_t &size);
+
+    /**
+     * @brief 获取所有有效数据长度
+     */
+    inline size_t get_used_size() const
+    {
+        return len_.load(std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief 设置缓冲区最大容量
+     */
+    inline void set_max_size(size_t max)
+    {
+        max_ = max;
+    }
+
+    /**
+     * @brief 是否溢出
+     */
+    inline bool is_overflow() const
+    {
+        return len_.load(std::memory_order_relaxed) > max_;
+    }
+
+    /**
+     * @brief 获取尾部chunk用于写入(Producer)
+     * @return 可能为nullptr
+     */
+    Chunk *get_back()
+    {
+        return tail_.load(std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief 获取头部chunk(Consumer)
+     */
+    Chunk *get_front()
+    {
+        return head_.load(std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief 增加有效数据长度(用于外部直接写入chunk后更新)
+     */
+    inline void add_used(Chunk *chunk, size_t len)
+    {
+        chunk->pos_.fetch_add(len, std::memory_order_release);
+        len_.fetch_add(len, std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief 把缓冲区中所有的buff都存放到一块连续的缓冲区
+     *        注意：会分配新内存，使用完需要delete[]
+     */
+    const char *all_to_flat_ctx(size_t &len);
 
 private:
-    mutable SpinLock lock_;  // 多线程锁
-    Chunk *front_;      // 数据包链表头
-    Chunk *back_;       // 数据包链表尾
+    std::atomic<Chunk *> head_;
+    std::atomic<Chunk *> tail_;
 
-    // 已申请chunk数量
-    int32_t chunk_size_;
-    // 该缓冲区允许申请chunk的最大数量，超过此数量视为缓冲区溢出
-    int32_t chunk_max_;
+    // 消费者在head_中的读取偏移
+    size_t read_offset_;
+
+    // 当前总数据量
+    std::atomic<size_t> len_;
+    // 最大限制
+    size_t max_;
 };

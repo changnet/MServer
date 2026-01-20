@@ -6,6 +6,7 @@
 #include "ev/ev_backend.hpp"
 #include "pool/flexible_pool.hpp"
 #include "thread/thread_context.hpp"
+#include "net/buffer.hpp"
 
 class ShareData;
 

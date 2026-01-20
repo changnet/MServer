@@ -98,19 +98,19 @@ void Socket::append(const void *data, size_t len)
 {
     assert(w_->io_);
     auto &send_buff = w_->io_->get_send_buffer();
-    int32_t e       = send_buff.append(data, len);
+    send_buff.append(data, len);
 
     /**
      * 一般缓冲区都设置得足够大
      * 如果都溢出了，说明接收端非常慢，比如断点调试，这时候适当处理一下
      */
-    if (likely(0 == e)) return;
+    if (likely(!send_buff.is_overflow())) return;
 
     if (w_->mask_ & EVIO::M_OVERFLOW_KILL)
     {
         // 对于客户端这种不重要的，可以断开连接
         ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
-             socket_id_, send_buff.get_all_used_size());
+             socket_id_, send_buff.get_used_size());
 
         Socket::stop();
 
@@ -128,7 +128,7 @@ void Socket::append(const void *data, size_t len)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
-                 socket_id_, send_buff.get_all_used_size());
+                 socket_id_, send_buff.get_used_size());
 
             if (!send_buff.is_overflow()) break;
         };
@@ -789,8 +789,9 @@ void Socket::set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask)
     IO *io = w_->io_;
 
     w_->mask_ |= mask;
-    io->get_send_buffer().set_chunk_size(send_max);
-    io->get_recv_buffer().set_chunk_size(recv_max);
+
+    io->get_send_buffer().set_max_size(send_max);
+    io->get_recv_buffer().set_max_size(recv_max);
 }
 
 int32_t Socket::io_init_accept()

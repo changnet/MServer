@@ -15,7 +15,7 @@
 
 IO::IO()
 {
-    accept_    = nullptr;
+    accept_ = nullptr;
 }
 
 IO::~IO()
@@ -34,36 +34,63 @@ int32_t IO::recv(EVIO *w)
     assert(fd != netcompat::INVALID);
 
     int32_t len = 0;
-    while (true)
+    // 第一次读取，尝试利用 buffer 尾部剩余空间
+    // 初始空间有8k，对于游戏来说应该是足够的，大部分情况不需要后续分配
+    Buffer::Chunk *tail = recv_.get_back();
+
+    int32_t space = tail->space();
+    if (space > 0)
     {
-        Buffer::Transaction &&ts = recv_.any_seserve(true);
-        if (0 == ts.len_) return EV_BUSY;
-
-        len = (int32_t)::recv(fd, ts.ctx_, ts.len_, 0);
-
-        recv_.commit(ts, len);
-        if (unlikely(len <= 0)) break;
-
-        // 如果没读满缓冲区，则所有数据已读出来
-        if (len < ts.len_) return EV_NONE;
+        len = (int32_t)::recv(fd, tail->write_ptr(), space, 0);
+        if (len > 0)
+        {
+            recv_.add_used(tail, len);
+            if (len < space) return EV_NONE;
+        }
+        else
+        {
+            goto RECV_ERROR;
+        }
     }
 
+    // 第二次开始，分配新chunk
+    size_t alloc_size = Buffer::CHUNK_SIZE;
+    while (true)
+    {
+        if (recv_.is_overflow()) return EV_BUSY; // 缓冲区已满
+
+        Buffer::Chunk *chk = recv_.allocate_chunk(alloc_size);
+
+        len = (int32_t)::recv(fd, chk->write_ptr(), chk->capacity_, 0);
+        if (len > 0)
+        {
+            recv_.append_chunk(chk, len);
+
+            if (len < chk->capacity_) return EV_NONE;
+
+            // 准备下一次分配
+            alloc_size *= 2;
+        }
+        else
+        {
+            recv_.deallocate_chunk(chk);
+            goto RECV_ERROR;
+        }
+    }
+    assert(false); // never reach here
+RECV_ERROR:
     if (0 == len)
     {
         w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
-        return EV_CLOSE; // 对方主动断开
+        return EV_CLOSE;
     }
 
-    /* error happen */
     int32_t e = netcompat::errorno();
-    if (netcompat::iserror(e))
-    {
-        w->errno_ = e;
-        ELOG("io recv fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
-        return EV_ERROR;
-    }
+    if (!netcompat::iserror(e)) return EV_READ; // AGAIN之类的错误码，重试
 
-    return EV_READ; // 重试
+    w->errno_ = e;
+    ELOG("io recv fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
+    return EV_ERROR;
 }
 
 int32_t IO::send(EVIO *w)
@@ -73,40 +100,35 @@ int32_t IO::send(EVIO *w)
 
     int32_t len  = 0;
     size_t bytes = 0;
-    bool next    = false;
     while (true)
     {
-        const char *data = send_.get_front_used(bytes, next);
-        if (0 == bytes) return EV_NONE;
+        const char *data = send_.get_front(bytes); // 这是消费者
+        if (0 == bytes) return EV_NONE;            // 发送完毕
 
         len = (int32_t)::send(fd, data, (int32_t)bytes, 0);
-        if (len <= 0) break;
+        if (len > 0)
+        {
+            send_.remove(len);
+            if (len < (int32_t)bytes) return EV_WRITE; // 缓冲区满
+        }
+        else
+        {
+            if (0 == len)
+            {
+                w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
+                return EV_CLOSE;
+            }
 
-        send_.remove(len); // 删除已发送数据
+            int32_t e = netcompat::errorno();
+            // AGAIN之类的错误码，重试
+            if (!netcompat::iserror(e)) return EV_WRITE;
 
-        // socket发送缓冲区已满，等下次发送了
-        if (len < (int32_t)bytes) return EV_WRITE;
-
-        // 当前chunk数据已发送完，如果有下一个chunk，则继续发送
-        if (!next) return EV_NONE;
+            w->errno_ = e;
+            ELOG("io send fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
+            return EV_ERROR;
+        }
     }
 
-    if (0 == len)
-    {
-        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
-        return EV_CLOSE; // 对方主动断开
-    }
-
-    /* error happen */
-    int32_t e = netcompat::errorno();
-    if (netcompat::iserror(e))
-    {
-        w->errno_ = e;
-        ELOG("io send fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
-        return EV_ERROR;
-    }
-
-    /* need to try again */
     return EV_WRITE;
 }
 
@@ -114,11 +136,11 @@ void IO::init_accept_buffer()
 {
     if (accept_) return;
 
-    accept_ = new AcceptBuffer();
+    accept_              = new AcceptBuffer();
     accept_->reserve_fd_ = dup(1);
 }
 
-int32_t IO::accept(EVIO* w)
+int32_t IO::accept(EVIO *w)
 {
     /**
      * 以前accept不是放在epoll线程而是放在逻辑线程的。但后来发现当逻辑线程一不及
@@ -171,7 +193,7 @@ int32_t IO::accept(EVIO* w)
                     std::scoped_lock<std::mutex> sl(accept_->mutex_);
                     // 负数参与位运算，要强转成正数
                     int64_t mask = (uint32_t)e;
-                    mask = mask << 32 | (uint32_t)netcompat::INVALID;
+                    mask         = mask << 32 | (uint32_t)netcompat::INVALID;
                     accept_->fd_queue_.emplace_back(mask);
                 }
             }

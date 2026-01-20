@@ -58,7 +58,7 @@ void StaticGlobal::initialize()
     // 先创建日志线程，保证其他模块能使用 ELOG 日志。如果在此之前需要日志用 ELOG_R
     V           = new Env();
     F           = new FlexiblePool<1024, 256>();
-    C           = new Buffer::ChunkPool("socket");
+    C           = new Buffer::ChunkPool();
     LOG  = new class LLog("g_log");
     M           = new ThreadContextMgr();
     E           = new class EV();
