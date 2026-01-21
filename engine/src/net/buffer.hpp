@@ -15,7 +15,16 @@
     5. 以前设计过一般加锁的，网络线程和逻辑线程无法并发，改为无锁SPSC
 
 # 无锁SPSC
-SPSC即Single Producer Single Consumer，单生产者单消费者，无锁即全部用atomic操作
+SPSC即Single Producer Single Consumer，单生产者单消费者。单即意味着一个Buffer对象
+只能有一个线程入，一个线程出。比如写的时候，先获取write_ptr，再把pos_加上去，这两
+个步骤不是原子性，只是针对单个线程安全，如果是多个线程写入就会出错。
+
+无锁即全部用atomic操作，为了效率，无锁SPSC严格地使用atomic的各种内存顺序，
+非常容易出错，一定要小心。
+Producer负责修改tail_和pos_，那它读取这两个值时就可以用relaxed
+Consumer负责head_和read_offset_，读取这两个值时就可以用relaxed
+
+但如果是Consumer要读取pos_，就要用acquire，用错了就会出bug，而且是不稳定重现的bug
 
 最理想情况下，一次读包含5个atomic操作
     1. 获取tail_指针
@@ -25,11 +34,6 @@ SPSC即Single Producer Single Consumer，单生产者单消费者，无锁即全
     5. 把总len加上去
 如果一次读不完，那就需要读多次。写入也基本是这个情况。
 
-为了效率，无锁SPSC严格地使用atomic的各种内存顺序，非常容易出错，一定要小心。比如
-tail_只有Producer会修改，Consumer用的是next_来消费数据，所以tail_的读写是用relaxed。
-
-而数据总长度只用来做流量控制，能容忍不精确，所以也用的relaxed。而其他的像pos_和next_
-则必须用acquire和release。
 
 # 流量控制
 流量分为单个消息大小和总接收数据大小。单个大小和buffer没关这里不讨论。总数据接收大小
@@ -80,14 +84,11 @@ public:
             return reinterpret_cast<char *>(this + 1);
         }
 
-        inline char *write_ptr()
+        inline char *write_ptr(int32_t &size)
         {
-            return data() + pos_.load(std::memory_order_relaxed);
-        }
-
-        inline int32_t space() const
-        {
-            return capacity_ - pos_.load(std::memory_order_relaxed);
+            int32_t pos = pos_.load(std::memory_order_acquire);
+            size        = capacity_ - pos;
+            return data() + pos;
         }
     };
 
@@ -134,11 +135,11 @@ public:
     void deallocate_chunk(Chunk *chunk);
 
     /**
-     * @brief 获取连续的数数据用于发送/读取(Consumer)
+     * @brief 获取第一个chunk的数据和长度用于发送/读取(Consumer)
      * @param size 输出可用的数据长度
      * @return 数据指针
      */
-    const char *get_front(size_t &size);
+    const char *get_front_data(size_t &size);
 
     /**
      * @brief 获取所有有效数据长度
@@ -174,14 +175,6 @@ public:
     }
 
     /**
-     * @brief 获取头部chunk(Consumer)
-     */
-    Chunk *get_front()
-    {
-        return head_.load(std::memory_order_relaxed);
-    }
-
-    /**
      * @brief 增加有效数据长度(用于外部直接写入chunk后更新)
      */
     inline void add_used(Chunk *chunk, size_t len)
@@ -191,20 +184,62 @@ public:
     }
 
     /**
+     * @brief 检测当前缓冲区中是否存在>=sizeof(T)的数据，如果存在则复制到对象中
+     */
+    template<typename T> bool peek(T *t)
+    {
+        Chunk *head = head_.load(std::memory_order_acquire);
+        int32_t pos = head->pos_.load(std::memory_order_acquire);
+
+        int32_t data_len = pos - read_offset_;
+        if (data_len >= sizeof(T)) // 大部分应该都会在同一个chunk中
+        {
+            memcpy(t, head->data() + read_offset_, sizeof(T));
+            return true;
+        }
+        else if (head->capacity_ > pos)
+        {
+            return false; // 没有数据了，说明接收的数据还不够
+        }
+
+        // 极少情况，数据分布在不同chunk中
+        Chunk *next = head->next_.load(std::memory_order_acquire);
+        if (!next) return false;
+
+        int32_t next_len = next->pos_.load(std::memory_order_acquire);
+        if (next_len + data_len < sizeof(T)) return false;
+
+        static_assert(sizeof(T) <= CHUNK_SIZE); // 保证最多只分布在2个chunk
+        if (data_len > 0) memcpy(t, head->data() + read_offset_, data_len);
+        memcpy(((char *)t) + data_len, head->data(), sizeof(T) - data_len);
+
+        return true;
+    }
+
+    /**
+     * @brief 检测当前缓冲区中是否存在>=size的数据
+     */
+    bool peek_size(size_t size);
+    /**
+     * @brief 从当前缓冲区中获取一段大小为size的数据
+     * @param rwflag 1读，2写，一个线程读写可能会同时存在
+     */
+    char *peek_buffer(size_t size, int32_t rwflag);
+
+    /**
      * @brief 把缓冲区中所有的buff都存放到一块连续的缓冲区
      *        注意：会分配新内存，使用完需要delete[]
      */
     const char *all_to_flat_ctx(size_t &len);
 
 private:
-    std::atomic<Chunk *> head_;
-    std::atomic<Chunk *> tail_;
+    std::atomic<Chunk *> head_; // 由Consumer修改
+    std::atomic<Chunk *> tail_; // 由Producer修改
 
-    // 消费者在head_中的读取偏移
-    size_t read_offset_;
+    size_t read_offset_; // 消费者在head_中的读取偏移，仅Consumer会读取
 
-    // 当前总数据量
+    // 当前总数据量，这个仅用于流量控制，不需要很精准所以用relaxed
     std::atomic<size_t> len_;
-    // 最大限制
-    size_t max_;
+
+    size_t max_; // 允许的最大数据，在初始化完后不会变
 };

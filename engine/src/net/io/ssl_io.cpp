@@ -29,10 +29,11 @@ int32_t SSLIO::recv(EVIO *w)
     // 初始空间有8k，对于游戏来说应该是足够的，大部分情况不需要后续分配
     Buffer::Chunk *tail = recv_.get_back();
 
-    int32_t space = tail->space();
+    int32_t space = 0;
+    char *buffer_ptr = tail->write_ptr(space);
     if (space > 0)
     {
-        len = SSL_read(ssl_, tail->write_ptr(), space);
+        len = SSL_read(ssl_, buffer_ptr, space);
         if (len > 0)
         {
             recv_.add_used(tail, len);
@@ -51,7 +52,7 @@ int32_t SSLIO::recv(EVIO *w)
 
         Buffer::Chunk *chk = recv_.allocate_chunk(alloc_size);
 
-        len = SSL_read(ssl_, chk->write_ptr(), chk->capacity_);
+        len = SSL_read(ssl_, chk->data(), chk->capacity_);
         if (len > 0)
         {
             recv_.append_chunk(chk, len);
@@ -105,7 +106,7 @@ int32_t SSLIO::send(EVIO *w)
     size_t bytes = 0;
     while (true)
     {
-        const char *data = send_.get_front(bytes);
+        const char *data = send_.get_front_data(bytes);
         if (0 == bytes) return EV_NONE;
 
         len = SSL_write(ssl_, data, (int32_t)bytes);

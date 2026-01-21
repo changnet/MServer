@@ -4,8 +4,9 @@
 #include "lua_codec.hpp"
 
 // 缓冲区的大小
-static const int32_t MIN_BUFF = 64 * 1024;
-static const int32_t MAX_BUFF = 8 * 1024 * 1024;
+static const int32_t MIN_BUFF = 256 * 1024;
+static const int32_t MAX_BUFF = 1024 * 1024;
+static const int32_t ERROR_BUFF = 1024 * 1024 * 1024;
 
 // 编码的变量最大数量
 static const int32_t MAX_VARIABLE = 255;
@@ -216,19 +217,20 @@ int32_t LuaCodec::encode_table(lua_State *L, int32_t index)
 
 void LuaCodec::check_encode_buff(size_t size)
 {
-    if (likely(sizeof(int8_t) + size + buff_len_ < encode_buff_len_)) return;
+    // 编码时，类型占一个int8_t
+    size_t need_size = sizeof(int8_t) + size + buff_len_;
+    if (likely(need_size < encode_buff_len_)) return;
 
-    if (sizeof(int8_t) + size + buff_len_ >= MAX_BUFF)
+    if (need_size >= ERROR_BUFF)
     {
         throw std::overflow_error("lua codec encode buffer overflow");
     }
 
-    // 正常来讲，rpc调用的参数都是比较小的，不会触发内存分配才对。
-    // 即使是一些比较大的变量（如string），也应该仅分配一次
+    // 指数增长，正常来讲，rpc调用的参数都是比较小的，不会触发内存分配才对。
     do
     {
         encode_buff_len_ = encode_buff_len_ * 2;
-    } while (sizeof(int8_t) + size + buff_len_ >= encode_buff_len_);
+    } while (need_size >= encode_buff_len_);
 
     char *old = encode_buff_;
     encode_buff_ = new char[encode_buff_len_];
@@ -291,6 +293,13 @@ int32_t LuaCodec::raw_encode(lua_State *L)
     {
         return luaL_error(L, "invalid stack index or too many variable %I - %I",
                           index, top);
+    }
+
+    // 不能只增不减，不然起服时几个线程发个50M的数据，直接就占去几个G的内存了
+    if (encode_buff_len_ > MAX_BUFF)
+    {
+        encode_buff_len_ = MIN_BUFF;
+        encode_buff_     = new char[encode_buff_len_];
     }
 
     buff_len_ = 0;

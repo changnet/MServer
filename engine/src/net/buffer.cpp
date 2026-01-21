@@ -1,6 +1,46 @@
 #include "buffer.hpp"
 #include "system/static_global.hpp"
 
+struct ThreadBuffer
+{
+    size_t len_;
+    char *buffer_;
+
+    ThreadBuffer()
+    {
+        len_ = 0;
+        buffer_ = nullptr;
+    }
+    ~ThreadBuffer()
+    {
+        delete[] buffer_;
+    }
+};
+
+// @param rwflag 1读，2写，一个线程读写可能会同时存在
+static char* get_thread_buffer(size_t size, int32_t rwflag)
+{
+    thread_local ThreadBuffer tb[2];
+
+    // 最小256kb，保证系统用mmap分配内存不会造成碎片
+    // 256kb足够应付绝大多数情况，偶尔发送大数据时，后续要释放重新分配
+    // 不然发个50M的数据，一台机子开20个服，200多线程，内存就直接没了
+
+    static constexpr size_t min_size = 256 * 1024;
+    static constexpr size_t max_size = 1024 * 1024;
+
+    ThreadBuffer &b = 1 == rwflag ? tb[0] : tb[1];
+    if (b.len_ < size || (size < max_size && b.len_ > max_size))
+    {
+        delete[] b.buffer_;
+        b.len_ = size > min_size ? size : min_size;
+        b.buffer_ = new char[b.len_];
+    }
+    return b.buffer_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 Buffer::Buffer()
 {
     // 预分配一个chunk，确保 tail_ 永远有效，且只由 Producer 修改
@@ -62,11 +102,12 @@ void Buffer::append(const void *data, size_t len)
     // 发送那边只用next_，不用tail_的
     Chunk *tail = tail_.load(std::memory_order_relaxed);
 
-    int32_t space = tail->space();
+    int32_t space = 0;
+    char *buffer_ptr = tail->write_ptr(space);
     if (space > 0)
     {
         int32_t write_len = std::min((int32_t)left, space);
-        memcpy(tail->write_ptr(), ptr, write_len);
+        memcpy(buffer_ptr, ptr, write_len);
 
         tail->pos_.fetch_add(write_len, std::memory_order_release);
         len_.fetch_add(write_len, std::memory_order_relaxed);
@@ -88,7 +129,7 @@ void Buffer::append(const void *data, size_t len)
         Chunk *new_chk = allocate_chunk(alloc_size);
 
         int32_t write_len = std::min((int32_t)left, new_chk->capacity_);
-        memcpy(new_chk->write_ptr(), ptr, write_len);
+        memcpy(new_chk->data(), ptr, write_len);
         new_chk->pos_.store(write_len, std::memory_order_release);
 
         len_.fetch_add(write_len, std::memory_order_relaxed);
@@ -125,28 +166,84 @@ void Buffer::deallocate_chunk(Chunk *chunk)
     StaticGlobal::C->destruct(chunk);
 }
 
+bool Buffer::peek_size(size_t size)
+{
+    // 不能用len_，len_是用做流量控制，并不精确
+    // 后面看看要不要改，大部分情况应该最多检测两个chunk
+
+    Chunk *head = head_.load(std::memory_order_acquire);
+    int32_t pos = head->pos_.load(std::memory_order_acquire);
+
+    size -= pos - read_offset_;
+    while (size > 0)
+    {
+        Chunk *next = head->next_.load(std::memory_order_acquire);
+        if (!next) return false;
+
+        size -= head->pos_.load(std::memory_order_acquire);
+        head = next;
+    }
+
+    return size <= 0;
+}
+
+char *Buffer::peek_buffer(size_t size, int32_t rwflag)
+{
+    Chunk *head = head_.load(std::memory_order_acquire);
+    int32_t pos = head->pos_.load(std::memory_order_acquire);
+
+    int32_t data_len = pos - read_offset_;
+    if (data_len >= size) return head->data() + read_offset_;
+
+    // 在多个chunk中，需要拷贝到同一段连续的缓冲区
+    char *buffer = get_thread_buffer(size, rwflag);
+
+    char *wptr = buffer;
+    if (data_len > 0)
+    {
+        memcpy(wptr, head->data() + read_offset_, data_len);
+        wptr += data_len;
+    }
+    size -= data_len;
+    while (size > 0)
+    {
+        Chunk *next = head->next_.load(std::memory_order_acquire);
+        if (!next) return nullptr;
+
+        int32_t pos = next->pos_.load(std::memory_order_acquire);
+        memcpy(wptr, next->data(), pos);
+
+        size -= pos;
+        wptr += pos;
+        head = next;
+    }
+
+    return 0 == size ? buffer : nullptr;
+}
+
 void Buffer::remove(size_t len)
 {
     if (0 == len) return;
 
-    size_t remove_len = 0;
-    Chunk *head       = head_.load(std::memory_order_acquire);
+    size_t left_len = len;
+    Chunk *head     = head_.load(std::memory_order_acquire);
 
-    while (head && remove_len < len)
+    while (left_len > 0)
     {
-        int32_t chunk_len = head->pos_.load(std::memory_order_acquire);
-        size_t used       = chunk_len - read_offset_;
+        int32_t pos = head->pos_.load(std::memory_order_acquire);
+        // read_offset_在下面切换head时会重置，总是匹配当前head的
+        size_t used       = pos - read_offset_;
 
-        if (used > (len - remove_len))
+        if (used > left_len)
         {
             // 当前chunk还有剩余数据
-            read_offset_ += (len - remove_len);
-            remove_len = len;
+            read_offset_ += left_len;
+            left_len = 0;
             break;
         }
 
         // 当前chunk数据已用完
-        remove_len += used;
+        left_len -= used;
 
         // 检查是否有下一个chunk
         Chunk *next = head->next_.load(std::memory_order_acquire);
@@ -154,7 +251,7 @@ void Buffer::remove(size_t len)
         {
             // 有下一个，删除当前 head，移动到 next
             read_offset_ = 0;
-            StaticGlobal::C->destruct(head);
+            deallocate_chunk(head);
 
             head = next;
             head_.store(head, std::memory_order_release);
@@ -162,71 +259,33 @@ void Buffer::remove(size_t len)
         else
         {
             // 没有下一个，说明 head == tail，这是最后一个 chunk
-            // 即便数据读完了也不删除，作为存根，保证 tail_ 有效
-            // 只重置读取偏移
-            // 注意：这里并不重置 pos_，因为 producer 可能还在往里写（并发）
-            // 如果 producer 还在写，pos_ 会增加，我们下次还能读
-            // 但如果 producer 写满了，分配了 next，我们下次循环会进 if(next) 分支
-
-            // 为了简单，我们只更新 read_offset_
-            // 等同于这个 chunk 变成了“空闲空间都在前面”的状态
-            // 但我们的 append 只往后追加。所以这个 chunk 废了吗？
-            // 只要 append 不复用前面的空间，这个 chunk 就只是占据内存。
-            // OK, 我们的 append 逻辑是只往 tail 追加。
-            // 当 tail 满了，producer 会 new chunk。
-            // 所以，如果 head 满了(read_offset == capacity)，且 next 为空：
-            // Producer 稍后会 new next。Consumer 下次会看到 next。
-            read_offset_ += (len - remove_len); // 此时 remove_len 应该等于 len?
-            // used = chunk_len - read_offset; remove_len += used; ==>
-            // remove_len consumes all available used. Wait, logic: `used` is
-            // amount available. `len` is amount req. If `used <= len -
-            // remove_len`: we consume all used. So `read_offset_` becomes
-            // `chunk_len`.
-            read_offset_ = chunk_len;
+            // 即便数据读完了也不删除，保证 tail_ 有效
+            // 注意：如果这个chunk还有空间，这里并不重置 pos_，因为 producer 可能还在往里写（并发）
+            if (pos >= head->capacity_)
+            {
+                read_offset_ = 0;
+                head->pos_.store(0, std::memory_order_release);
+            }
+            else
+            {
+                read_offset_ = pos;
+            }
             break;
         }
     }
 
-    len_.fetch_sub(remove_len, std::memory_order_relaxed);
+    assert(0 == left_len);
+    len_.fetch_sub(len, std::memory_order_relaxed);
 }
 
-const char *Buffer::get_front(size_t &size)
+const char *Buffer::get_front_data(size_t &size)
 {
     Chunk *head = head_.load(std::memory_order_relaxed);
 
-    while (head)
-    {
-        int32_t chunk_len = head->pos_.load(std::memory_order_acquire);
-        int32_t used      = chunk_len - (int32_t)read_offset_;
+    int32_t pos = head->pos_.load(std::memory_order_acquire);
+    size        = pos - (int32_t)read_offset_;
 
-        if (used > 0)
-        {
-            size = (size_t)used;
-            return head->data() + read_offset_;
-        }
-
-        // 当前chunk无数据，检查是否有下一个
-        Chunk *next = head->next_.load(std::memory_order_acquire);
-        if (next)
-        {
-            // 有下一个，删除当前耗尽的 head
-            StaticGlobal::C->destruct(head);
-
-            head = next;
-            head_.store(head, std::memory_order_relaxed);
-            read_offset_ = 0;
-
-            // 继续循环检查新的 head
-        }
-        else
-        {
-            // 没有下一个，真的没数据了
-            break;
-        }
-    }
-
-    size = 0;
-    return nullptr;
+    return head->data() + read_offset_;
 }
 
 const char *Buffer::all_to_flat_ctx(size_t &len)

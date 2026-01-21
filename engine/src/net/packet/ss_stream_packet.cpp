@@ -28,40 +28,38 @@ SsStreamPacket::~SsStreamPacket()
 int32_t SsStreamPacket::unpack(lua_State *L, Buffer &buffer)
 {
     // TODO 为了避免拷贝，这里会直接返回buffer中的指针并标记下次需要删除的数据
-    // 另一种方式是这里直接回调到lua，从lua返回后直接删除
-    // 但是就不太容易控制数据了。比如这个socket一直有数据到来，其他的socket数据得不到处理
+    // 另一种方式是这里直接xpcall回调到lua，从lua返回后直接删除
+    // 但直接回调到Lua不符合外部循环unpack的流程控制，不知道什么时候该中止
     if (to_remove_)
     {
         buffer.remove(to_remove_);
         to_remove_ = 0;
     }
 
-    constexpr decltype(SssHeader::size_) header_size = sizeof(struct SssHeader);
-    // 检测包头是否完整
-    const char *buf = buffer.to_flat_ctx(header_size, 1);
-    if (!buf) return unpack_return(L, PC_MORE);
+    SssHeader header;
+    if (!buffer.peek(&header)) return unpack_return(L, PC_MORE);
 
-    // 这里不能用reinterpret_cast把buf直接转换成对应的数据类型，比如reinterpret_cast<const
-    // struct base_header *>(buf) 只能用memcpy，C++ 20以后可以用std::bit_cast
-    decltype(SssHeader::size_) size = 0;
-    memcpy(&size, buf, sizeof(size));
-
-    if (!buffer.check_used_size(size)) return unpack_return(L, PC_MORE);
+    uint32_t size = header.size_;
+    if (!buffer.peek_size(size)) return unpack_return(L, PC_MORE);
 
     to_remove_ = size;
-    buf = buffer.to_flat_ctx(size, 1);
-
-    SssHeader header;
-    memcpy(&header, buf, header_size);
+    char *udata = nullptr;
+    if (size > sizeof(struct SssHeader))
+    {
+        udata = buffer.peek_buffer(size, 1);
+        udata += sizeof(struct SssHeader);
+    }
 
     lua_pushinteger(L, PC_DATA);
     lua_pushinteger(L, header.src_);
     lua_pushinteger(L, header.dst_);
     lua_pushinteger(L, header.type_);
     lua_pushinteger(L, header.usize_);
-    if (size > sizeof(struct SssHeader))
+    if (udata)
     {
-        lua_pushlightuserdata(L, (void *)(buf + sizeof(struct SssHeader)));
+        // 无论是rpc还是转发，最终都要回到C++处理，push一个string到Lua没有意义
+        // 这里用lightuserdata减少copy
+        lua_pushlightuserdata(L, (void *)udata);
         return 6;
     }
 

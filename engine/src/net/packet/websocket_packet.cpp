@@ -106,6 +106,12 @@ static int32_t on_frame_body(struct websocket_parser *parser, const char *at,
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
     if (parser->flags & WS_HAS_MASK)
     {
+        uint8_t mask_offset      = parser->mask_offset;
+        while (length > 0)
+        {
+            mask_offset = websocket_decode(ptr, at, len, parser->mask, mask_offset);
+        }
+        parser->mask_offset      = mask_offset;
         Buffer::Transaction &&ts = body.flat_reserve(length, 1);
 
         websocket_parser_decode(ts.ctx_, at, length, parser);
@@ -181,15 +187,66 @@ int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
 
     size_t len = websocket_calc_frame_size(flags, size);
 
-    Buffer &buffer           = socket_->get_send_buffer();
-    // TODO 这里是不是可以用websocket_append_frame而不需要reserve
-    Buffer::Transaction &&ts = buffer.flat_reserve(len, 2);
-
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
-    websocket_build_frame(ts.ctx_, flags, mask, ctx, size);
 
-    buffer.commit(ts, (int32_t)len);
+    Buffer &buffer = socket_->get_send_buffer();
+    Buffer::Chunk *tail = buffer.get_back();
+
+    int32_t space       = 0;
+    char *buffer_ptr    = tail->write_ptr(space);
+    if (space >= len)
+    {
+        websocket_build_frame(buffer_ptr, flags, mask, ctx, size);
+        socket_->flush();
+        return 0;
+    }
+
+    if (space >= 64)
+    {
+        // websocket的header至少需要14字节，如果space只剩下几字节要额外处理
+        size_t offset = websocket_build_frame_header(buffer_ptr, flags, mask, size);
+        space -= offset;
+        buffer_ptr += offset;
+        buffer.add_used(tail, offset);
+    }
+    else
+    {
+        char header[32];
+        size_t offset = websocket_build_frame_header(header, flags, mask, size);
+        buffer.append(header, offset);
+
+        tail = buffer.get_back();
+        buffer_ptr = tail->write_ptr(space);
+    }
+
+    uint8_t mask_offset = 0;
+    if (space > 0 && size > 0)
+    {
+        size_t data_len = std::min((size_t)space, size);
+        websocket_append_frame(buffer_ptr, flags, mask, ctx,
+                                         data_len, &mask_offset);
+        ctx += data_len;
+        size -= data_len;
+        buffer.add_used(tail, data_len);
+    }
+
+    static const size_t LARGE_SIZE = Buffer::CHUNK_SIZE * 8;
+    while (size > 0)
+    {
+        size_t alloc_size = size > LARGE_SIZE ? size : Buffer::CHUNK_SIZE;
+
+        Buffer::Chunk *new_chk = buffer.allocate_chunk(alloc_size);
+
+        size_t data_len = std::min((size_t)new_chk->capacity_, size);
+        websocket_append_frame(new_chk->data(), flags, mask,
+                                                 ctx,
+                                                 data_len, &mask_offset);
+        ctx += data_len;
+        size -= data_len;
+        buffer.append_chunk(new_chk, data_len);
+    }
+
     socket_->flush();
 
     return 0;
@@ -225,12 +282,11 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
     e_ = 0; // 重置上一次解析错误
     L_ = L;
 
-    bool next       = false;
     size_t size     = 0;
     int32_t old_top = lua_gettop(L);
 
     // 不要用 buffer.all_to_flat_ctx(size); 这个会把收到的数据都拷贝到缓冲区效率很低
-    const char *ctx = buffer.get_front_used(size, next);
+    const char *ctx = buffer.get_front_data(size);
     if (size == 0) return unpack_return(L, PC_MORE);
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
@@ -247,9 +303,6 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
     int32_t e = parser_->error;
     if (WPE_OK == e)
     {
-        // 只解析到一部分数据，还不是完整的message
-        if (!next) return unpack_return(L, PC_MORE);
-
         // 一个message的数据包含在多个缓冲区，继续解析
         return unpack(L, buffer);
     }

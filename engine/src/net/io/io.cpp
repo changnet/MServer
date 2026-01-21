@@ -38,10 +38,11 @@ int32_t IO::recv(EVIO *w)
     // 初始空间有8k，对于游戏来说应该是足够的，大部分情况不需要后续分配
     Buffer::Chunk *tail = recv_.get_back();
 
-    int32_t space = tail->space();
+    int32_t space = 0;
+    char *data_ptr = tail->write_ptr(space);
     if (space > 0)
     {
-        len = (int32_t)::recv(fd, tail->write_ptr(), space, 0);
+        len = (int32_t)::recv(fd, data_ptr, space, 0);
         if (len > 0)
         {
             recv_.add_used(tail, len);
@@ -61,7 +62,7 @@ int32_t IO::recv(EVIO *w)
 
         Buffer::Chunk *chk = recv_.allocate_chunk(alloc_size);
 
-        len = (int32_t)::recv(fd, chk->write_ptr(), chk->capacity_, 0);
+        len = (int32_t)::recv(fd, chk->data(), chk->capacity_, 0);
         if (len > 0)
         {
             recv_.append_chunk(chk, len);
@@ -102,7 +103,7 @@ int32_t IO::send(EVIO *w)
     size_t bytes = 0;
     while (true)
     {
-        const char *data = send_.get_front(bytes); // 这是消费者
+        const char *data = send_.get_front_data(bytes); // 这是消费者
         if (0 == bytes) return EV_NONE;            // 发送完毕
 
         len = (int32_t)::send(fd, data, (int32_t)bytes, 0);

@@ -185,7 +185,7 @@ private:
     static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
     static constexpr size_t SIZE =
         ((flexible_size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
-    // static constexpr size_t CAPACITY = SIZE - sizeof(T); // remove this
+
     /**
      * 单个chunk的大小，这个值必须大于new使用mmap的阈值（一般是128kb），避免分配
      * 的内存造成碎片。

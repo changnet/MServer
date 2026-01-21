@@ -30,11 +30,6 @@ struct ThreadMessage final
     }
     ~ThreadMessage()
     {
-        // TODO 这个udata它可能来源于某个内存池，有可能来源于new分配
-        // 所以不要在析构里处理它，需要手动调用dispose
-        // 尤其是消息队列使用对象时，pop一个对象给Lua就会调用析构函数，但实际
-        // 该数据还不需要释放
-        // 或者：根据type_类型或者做一个标识来处理
     }
 
     // 获取缓冲区指针

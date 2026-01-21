@@ -119,8 +119,7 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
 {
     // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况
     size_t size      = 0;
-    bool next        = false;
-    const char *data = buffer.get_front_used(size, next);
+    const char *data = buffer.get_front_data(size);
     if (size == 0) return unpack_return(L, PC_MORE);
 
     L_              = L;
@@ -143,9 +142,8 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
     {
         // 只解析到一部分数据，还不是完整的message
         buffer.remove(size); // 数据已解析完不需要旧缓冲区了
-        if (!next) return unpack_return(L, PC_MORE);
 
-        // 一个message的数据包含在多个缓冲区，继续解析
+        // 一个message的数据可能包含在多个缓冲区，继续解析
         return unpack(L, buffer);
     }
     else if (HPE_PAUSED == e)
