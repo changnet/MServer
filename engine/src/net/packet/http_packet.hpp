@@ -8,19 +8,19 @@
 #include "packet.hpp"
 
 /**
- * Http编码解码
+ * @brief Http编码解码
+ * TODO 使用std::string来解析协议容易造成内存浪费，增加内存碎片
+ * 应该做一个内存池，但游戏服务器http通常只是铺助，用得不多就不搞了
  */
 class HttpPacket : public Packet
 {
 public:
-    // TODO 使用std::string来解析协议效率不高，应该做一个内存池
-    // 但游戏服务器http通常只是铺助，要求不高
-    typedef std::map<std::string, std::string> head_map_t;
+    using HeadField = std::map<std::string, std::string>;
     struct http_info
     {
         std::string url_;
         std::string body_;
-        head_map_t head_field_;
+        HeadField head_field_;
     };
 
 public:

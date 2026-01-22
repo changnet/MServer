@@ -245,8 +245,6 @@ void HttpPacket::append_cur_value(const char *at, size_t len)
 
 int32_t HttpPacket::unpack_header(lua_State *L) const
 {
-    const head_map_t &head_field = http_info_.head_field_;
-
     // table赋值时，需要一个额外的栈
     if (!lua_checkstack(L, 2))
     {
@@ -254,12 +252,11 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
         return -1;
     }
 
-    lua_newtable(L);
-    head_map_t::const_iterator head_itr = head_field.begin();
-    for (; head_itr != head_field.end(); head_itr++)
+    lua_createtable(L, 0, http_info_.head_field_.size());
+    for (const auto &[k, v] : http_info_.head_field_)
     {
-        lua_pushstring(L, head_itr->second.c_str());
-        lua_setfield(L, -2, head_itr->first.c_str());
+        lua_pushstring(L, v.c_str());
+        lua_setfield(L, -2, k.c_str());
     }
 
     return 1;

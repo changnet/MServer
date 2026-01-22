@@ -71,8 +71,8 @@ int32_t WSStreamPacket::pack_srv(lua_State *L, int32_t index)
 
 int32_t WSStreamPacket::on_frame_end()
 {
-    size_t size     = 0;
-    const char *ctx = body_.all_to_flat_ctx(size, 1);
+    size_t size         = 0;
+    const char *payload = make_payload(size);
 
     if (size < sizeof(WssHeader))
     {
@@ -80,16 +80,14 @@ int32_t WSStreamPacket::on_frame_end()
         return WPE_PAUSE; // unpack_error返回错误在lua处理，不需要返回WPE_ERROR;
     }
 
-    decltype(WssHeader::cmd_) cmd = 0;
-    memcpy(&cmd, ctx, sizeof(cmd));
+    WssHeader header;
+    memcpy(&header, payload, sizeof(WssHeader));
 
     lua_pushinteger(L_, PC_DATA);
-    lua_pushinteger(L_, cmd);
+    lua_pushinteger(L_, header.cmd_);
 
-    // 这里返回ctx（包含cmd）而不是ctx + sizeof(cmd)
-    // 因为脚本可能要转发整个ctx到其他线程或者其他进程
-    lua_pushlightuserdata(L_, (void *)(ctx + sizeof(cmd)));
-    lua_pushinteger(L_, size - sizeof(cmd));
+    lua_pushlightuserdata(L_, (void *)(payload + sizeof(WssHeader)));
+    lua_pushinteger(L_, size - sizeof(WssHeader));
 
     return WPE_PAUSE;
 }

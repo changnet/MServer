@@ -283,7 +283,7 @@ const char *Buffer::get_front_data(size_t &size)
     Chunk *head = head_.load(std::memory_order_relaxed);
 
     int32_t pos = head->pos_.load(std::memory_order_acquire);
-    size        = pos - (int32_t)read_offset_;
+    size        = (size_t)pos - read_offset_;
 
     return head->data() + read_offset_;
 }
