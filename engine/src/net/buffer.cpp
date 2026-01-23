@@ -110,7 +110,7 @@ void Buffer::append(const void *data, size_t len)
         memcpy(buffer_ptr, ptr, write_len);
 
         tail->pos_.fetch_add(write_len, std::memory_order_release);
-        len_.fetch_add(write_len, std::memory_order_relaxed);
+        len_.fetch_add(write_len, std::memory_order_acq_rel);
 
         left -= write_len;
         ptr += write_len;
@@ -132,7 +132,7 @@ void Buffer::append(const void *data, size_t len)
         memcpy(new_chk->data(), ptr, write_len);
         new_chk->pos_.store(write_len, std::memory_order_release);
 
-        len_.fetch_add(write_len, std::memory_order_relaxed);
+        len_.fetch_add(write_len, std::memory_order_acq_rel);
         left -= write_len;
         ptr += write_len;
 
@@ -148,7 +148,7 @@ void Buffer::append_chunk(Chunk *chunk, int32_t len)
     assert(len > 0);
     chunk->pos_.store(len, std::memory_order_release);
 
-    len_.fetch_add(len, std::memory_order_relaxed);
+    len_.fetch_add(len, std::memory_order_acq_rel);
 
     Chunk *curr_tail = tail_.load(std::memory_order_relaxed);
     curr_tail->next_.store(chunk, std::memory_order_release);
@@ -157,7 +157,7 @@ void Buffer::append_chunk(Chunk *chunk, int32_t len)
 
 Buffer::Chunk *Buffer::allocate_chunk(size_t alloc_size)
 {
-    int32_t cap = StaticGlobal::C->capacity<Buffer::Chunk>(alloc_size);
+    int32_t cap = (int32_t)StaticGlobal::C->capacity<Buffer::Chunk>(alloc_size);
     return StaticGlobal::C->construct<Buffer::Chunk>(alloc_size, cap);
 }
 
@@ -166,33 +166,12 @@ void Buffer::deallocate_chunk(Chunk *chunk)
     StaticGlobal::C->destruct(chunk);
 }
 
-bool Buffer::peek_size(size_t size)
-{
-    // 不能用len_，len_是用做流量控制，并不精确
-    // 后面看看要不要改，大部分情况应该最多检测两个chunk
-
-    Chunk *head = head_.load(std::memory_order_acquire);
-    int32_t pos = head->pos_.load(std::memory_order_acquire);
-
-    size -= pos - read_offset_;
-    while (size > 0)
-    {
-        Chunk *next = head->next_.load(std::memory_order_acquire);
-        if (!next) return false;
-
-        size -= head->pos_.load(std::memory_order_acquire);
-        head = next;
-    }
-
-    return size <= 0;
-}
-
 char *Buffer::peek_buffer(size_t size, int32_t rwflag)
 {
     Chunk *head = head_.load(std::memory_order_acquire);
     int32_t pos = head->pos_.load(std::memory_order_acquire);
 
-    int32_t data_len = pos - read_offset_;
+    size_t data_len = pos - read_offset_;
     if (data_len >= size) return head->data() + read_offset_;
 
     // 在多个chunk中，需要拷贝到同一段连续的缓冲区
@@ -275,7 +254,7 @@ void Buffer::remove(size_t len)
     }
 
     assert(0 == left_len);
-    len_.fetch_sub(len, std::memory_order_relaxed);
+    len_.fetch_sub(len, std::memory_order_acq_rel);
 }
 
 const char *Buffer::get_front_data(size_t &size)
@@ -286,32 +265,4 @@ const char *Buffer::get_front_data(size_t &size)
     size        = (size_t)pos - read_offset_;
 
     return head->data() + read_offset_;
-}
-
-const char *Buffer::all_to_flat_ctx(size_t &len)
-{
-    // 这个函数会分配新内存，谨慎使用
-    len = len_.load(std::memory_order_relaxed);
-    if (0 == len) return nullptr;
-
-    char *buf     = new char[len];
-    size_t copied = 0;
-
-    Chunk *curr     = head_.load(std::memory_order_acquire);
-    size_t r_offset = read_offset_; // 第一个chunk的偏移
-
-    while (curr && copied < len)
-    {
-        int32_t chunk_len = curr->pos_.load(std::memory_order_acquire);
-        size_t used       = chunk_len - r_offset;
-
-        memcpy(buf + copied, curr->data() + r_offset, used);
-
-        copied += used;
-        r_offset = 0; // 后续chunk从0开始
-
-        curr = curr->next_.load(std::memory_order_acquire);
-    }
-
-    return buf;
 }

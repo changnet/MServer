@@ -12,10 +12,10 @@ sc_param.cdt = network_mgr.CDT_FLATBUF
 cs_param.cdt = network_mgr.CDT_FLATBUF
 
 -- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
-sc_param.send_chunk_max = 128
-sc_param.recv_chunk_max = 128
-cs_param.send_chunk_max = 128
-cs_param.recv_chunk_max = 128
+sc_param.send_byte_max = 100 * 1024 * 1024
+sc_param.recv_byte_max = 100 * 1024 * 1024
+cs_param.send_byte_max = 100 * 1024 * 1024
+cs_param.recv_byte_max = 100 * 1024 * 1024
 
 local srv_conn = nil
 local clt_conn = nil

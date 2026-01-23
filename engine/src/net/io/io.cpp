@@ -39,6 +39,7 @@ int32_t IO::recv(EVIO *w)
     Buffer::Chunk *tail = recv_.get_back();
 
     int32_t space = 0;
+    size_t alloc_size = Buffer::CHUNK_SIZE;
     char *data_ptr = tail->write_ptr(space);
     if (space > 0)
     {
@@ -55,7 +56,6 @@ int32_t IO::recv(EVIO *w)
     }
 
     // 第二次开始，分配新chunk
-    size_t alloc_size = Buffer::CHUNK_SIZE;
     while (true)
     {
         if (recv_.is_overflow()) return EV_BUSY; // 缓冲区已满

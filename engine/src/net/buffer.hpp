@@ -146,7 +146,7 @@ public:
      */
     inline size_t get_used_size() const
     {
-        return len_.load(std::memory_order_relaxed);
+        return len_.load(std::memory_order_acquire);
     }
 
     /**
@@ -162,6 +162,7 @@ public:
      */
     inline bool is_overflow() const
     {
+        // 是否溢出不需要很精准，relaxed即可
         return len_.load(std::memory_order_relaxed) > max_;
     }
 
@@ -179,8 +180,8 @@ public:
      */
     inline void add_used(Chunk *chunk, size_t len)
     {
-        chunk->pos_.fetch_add(len, std::memory_order_release);
-        len_.fetch_add(len, std::memory_order_relaxed);
+        chunk->pos_.fetch_add((int32_t)len, std::memory_order_release);
+        len_.fetch_add(len, std::memory_order_acq_rel);
     }
 
     /**
@@ -219,18 +220,16 @@ public:
     /**
      * @brief 检测当前缓冲区中是否存在>=size的数据
      */
-    bool peek_size(size_t size);
+    bool peek_size(size_t size)
+    {
+        return len_.load(std::memory_order_acquire) > size;
+    }
+
     /**
      * @brief 从当前缓冲区中获取一段大小为size的数据
      * @param rwflag 1读，2写，一个线程读写可能会同时存在
      */
     char *peek_buffer(size_t size, int32_t rwflag);
-
-    /**
-     * @brief 把缓冲区中所有的buff都存放到一块连续的缓冲区
-     *        注意：会分配新内存，使用完需要delete[]
-     */
-    const char *all_to_flat_ctx(size_t &len);
 
 private:
     std::atomic<Chunk *> head_; // 由Consumer修改
@@ -238,8 +237,7 @@ private:
 
     size_t read_offset_; // 消费者在head_中的读取偏移，仅Consumer会读取
 
-    // 当前总数据量，这个仅用于流量控制，不需要很精准所以用relaxed
-    std::atomic<size_t> len_;
+    std::atomic<size_t> len_; // 当前总数据量
 
     size_t max_; // 允许的最大数据，在初始化完后不会变
 };

@@ -1,5 +1,3 @@
-#include <websocket_parser.h>
-
 #include "lpp/ltools.hpp"
 #include "net/socket.hpp"
 #include "websocket_packet.hpp"
@@ -188,8 +186,6 @@ void WebsocketPacket::pack_frame(Buffer& buffer, websocket_flags flags,
     int32_t space    = 0;
     char *buffer_ptr = tail->write_ptr(space);
 
-
-    uint8_t mask_offset = 0;
     if (space > 0)
     {
         size_t pack_len = std::min((size_t)space, data_len);
@@ -212,7 +208,7 @@ void WebsocketPacket::pack_frame(Buffer& buffer, websocket_flags flags,
                                mask_offset);
         data += pack_len;
         data_len -= pack_len;
-        buffer.append_chunk(new_chk, pack_len);
+        buffer.append_chunk(new_chk, (int32_t)pack_len);
     }
 }
 
@@ -228,12 +224,10 @@ int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
     const char *ctx = luaL_optlstring(L, index + 1, nullptr, &size);
     // if ( !ctx ) return 0; // 允许发送空包
 
-    size_t len = websocket_calc_frame_size(flags, size);
-
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
 
-    Buffer &buffer      = socket_->get_send_buffer();
+    Buffer &buffer = socket_->get_send_buffer();
 
     pack_header(buffer, flags, mask, ctx, size);
 

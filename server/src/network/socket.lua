@@ -63,9 +63,8 @@ function Socket:set_param()
         param = {
             pkt = network_mgr.PT_NONE, -- 打包类型
             action = 1, -- over_action，1 表示缓冲区溢出后断开
-            chunk_size = 8192, -- 单个缓冲区大小
-            send_chunk_max = 128, -- 发送缓冲区数量
-            recv_chunk_max = 8 -- 接收缓冲区数
+            send_byte_max = 128, -- 发送缓冲区允许最大数量
+            recv_byte_max = 8 -- 接收缓冲区允许最大数量
         }
     ]]
 
@@ -78,10 +77,10 @@ function Socket:set_param()
     assert(0 == e)
 
     local action = param.action or 1 -- over_action，1 表示缓冲区溢出后断开
-    local send_chunk_max = param.send_chunk_max or 1 -- 发送缓冲区数量
-    local recv_chunk_max = param.recv_chunk_max or 1 -- 接收缓冲区数
+    local send_byte_max = param.send_byte_max or 1024 * 1024 -- 发送缓冲区数量
+    local recv_byte_max = param.recv_byte_max or 1024 * 1024 -- 接收缓冲区数
 
-    self.s:set_buffer_params(send_chunk_max, recv_chunk_max, action)
+    self.s:set_buffer_params(send_byte_max, recv_byte_max, action)
 end
 
 -- 接受新连接

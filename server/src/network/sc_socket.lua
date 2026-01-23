@@ -7,8 +7,8 @@ local ScSocket = oo.class("ScSocket", WebSocket)
 ScSocket.default_param = {
     pkt = EngineSocket.PT_WSSTREAM, -- 打包类型
     action = 1, -- over_action，1 表示缓冲区溢出后断开
-    send_chunk_max = 128, -- 发送缓冲区数量
-    recv_chunk_max = 8 -- 接收缓冲区数
+    send_byte_max = 1024 * 1024, -- 发送缓冲区数量
+    recv_byte_max = 1024 * 1024 -- 接收缓冲区数
 }
 
 local MASK = ScSocket.WS_OP_BINARY | ScSocket.WS_FINAL_FRAME

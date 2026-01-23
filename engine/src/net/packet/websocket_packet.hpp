@@ -1,5 +1,6 @@
 #pragma once
 
+#include <websocket_parser.h>
 #include "http_packet.hpp"
 
 struct websocket_parser;

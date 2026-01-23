@@ -8,8 +8,8 @@ local SsSocket = oo.class("SsSocket", Socket)
 SsSocket.default_param = {
     pkt = EngineSocket.PT_SSSTREAM, -- 打包类型
     action = 2, -- over_action，2 表示缓冲区满后进入自旋来发送数据
-    send_chunk_max = 1024, -- 发送缓冲区chunk数量，单个chunk8k，见C++ buffer.h定义
-    recv_chunk_max = 1024 -- 接收缓冲区chunk数量
+    send_byte_max = 96 * 1024 * 1024, -- 发送缓冲区chunk数量，单个chunk8k，见C++ buffer.h定义
+    recv_byte_max = 96 * 1024 * 1024 -- 接收缓冲区chunk数量
 }
 
 local send_srv = EngineSocket.send_srv

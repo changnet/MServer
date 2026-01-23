@@ -8,10 +8,10 @@ local sc_param = table.copy(ScSocket.default_param)
 local cs_param = table.copy(CsSocket.default_param)
 
 -- 把收发缓冲区设置得大一些，不然进行大包测试的时候溢出会断开连接
-sc_param.send_chunk_max = 256
-sc_param.recv_chunk_max = 256
-cs_param.send_chunk_max = 256
-cs_param.recv_chunk_max = 256
+sc_param.send_byte_max = 64 * 1024 * 1024
+sc_param.recv_byte_max = 64 * 1024 * 1024
+cs_param.send_byte_max = 64 * 1024 * 1024
+cs_param.recv_byte_max = 64 * 1024 * 1024
 
 Test.describe("socket test", function()
     local sc_srv = nil

@@ -1,5 +1,3 @@
-#include <websocket_parser.h>
-
 #include "lpp/ltools.hpp"
 #include "net/socket.hpp"
 #include "ws_stream_packet.hpp"
@@ -34,26 +32,16 @@ int32_t WSStreamPacket::pack_any(lua_State *L, int32_t index)
     struct WssHeader header;
     header.cmd_ = static_cast<uint16_t>(cmd);
 
-    size_t frame_size      = size + sizeof(header);
-    const char *header_ctx = reinterpret_cast<const char *>(&header);
-    size_t len             = websocket_calc_frame_size(flags, frame_size);
-
     char mask[4]             = {0};
     uint8_t mask_offset      = 0;
+    size_t frame_size        = size + sizeof(header);
     Buffer &buffer           = socket_->get_send_buffer();
-    // TODO 这里是不是可以用websocket_append_frame而不需要reserve
-    Buffer::Transaction &&ts = buffer.flat_reserve(len, 2);
 
-    if (flags & WS_HAS_MASK) new_masking_key(mask);
-
-    size_t offset =
-        websocket_build_frame_header(ts.ctx_, flags, mask, frame_size);
-    offset += websocket_append_frame(ts.ctx_ + offset, flags, mask, header_ctx,
-                                     sizeof(header), &mask_offset);
-    websocket_append_frame(ts.ctx_ + offset, flags, mask, ctx, size,
-                           &mask_offset);
-
-    buffer.commit(ts, (int32_t)len);
+    pack_header(buffer, flags, mask, ctx, frame_size);
+    pack_frame(buffer, flags, mask, reinterpret_cast<const char *>(&header),
+               sizeof(header), &mask_offset);
+    pack_frame(buffer, flags, mask, ctx, size, &mask_offset);
+ 
     socket_->flush();
 
     return 0;

@@ -30,6 +30,7 @@ int32_t SSLIO::recv(EVIO *w)
     Buffer::Chunk *tail = recv_.get_back();
 
     int32_t space = 0;
+    size_t alloc_size = Buffer::CHUNK_SIZE;
     char *buffer_ptr = tail->write_ptr(space);
     if (space > 0)
     {
@@ -45,7 +46,6 @@ int32_t SSLIO::recv(EVIO *w)
         }
     }
 
-    size_t alloc_size = Buffer::CHUNK_SIZE;
     while (true)
     {
         if (recv_.is_overflow()) return EV_READ;
