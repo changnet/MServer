@@ -67,7 +67,7 @@ Buffer::~Buffer()
 void Buffer::clear()
 {
     Chunk *chunk = head_.load(std::memory_order_relaxed);
-    // 保留最后一个chunk，避免 remove 修改 tail_
+    // 保留最后一个chunk，避免 remove_head_data 修改 tail_
     while (chunk)
     {
         Chunk *next = chunk->next_.load(std::memory_order_relaxed);
@@ -93,54 +93,10 @@ void Buffer::clear()
 
 void Buffer::append(const void *data, size_t len)
 {
-    if (0 == len) return;
-
-    const char *ptr = reinterpret_cast<const char *>(data);
-    size_t left     = len;
-
-    // 因为 tail_ 只有 producer 修改，relaxed 读取即可 (Read-Your-Own-Writes)
-    // 发送那边只用next_，不用tail_的
-    Chunk *tail = tail_.load(std::memory_order_relaxed);
-
-    int32_t space = 0;
-    char *buffer_ptr = tail->write_ptr(space);
-    if (space > 0)
-    {
-        int32_t write_len = std::min((int32_t)left, space);
-        memcpy(buffer_ptr, ptr, write_len);
-
-        tail->pos_.fetch_add(write_len, std::memory_order_release);
-        len_.fetch_add(write_len, std::memory_order_acq_rel);
-
-        left -= write_len;
-        ptr += write_len;
-    }
-
-    if (0 == left) return;
-
-    // 一般游戏的数据不会大于8kb，上面的缓冲区应该能应付完
-    // 假如是服务器卡了，则left应该是比较小，这里一个循环也能搞定
-    // 假如是发送超大数据，<= 8个chunk则用多个chunk装，否则一次性分配一个超大chunk
-    static const size_t LARGE_SIZE = Buffer::CHUNK_SIZE * 8;
-    while (left > 0)
-    {
-        size_t alloc_size = left > LARGE_SIZE ? left : Buffer::CHUNK_SIZE;
-
-        Chunk *new_chk = allocate_chunk(alloc_size);
-
-        int32_t write_len = std::min((int32_t)left, new_chk->capacity_);
-        memcpy(new_chk->data(), ptr, write_len);
-        new_chk->pos_.store(write_len, std::memory_order_release);
-
-        len_.fetch_add(write_len, std::memory_order_acq_rel);
-        left -= write_len;
-        ptr += write_len;
-
-        // 当前线程是唯一修改 tail_ 的人，relaxed 读取也是安全的
-        Chunk *curr_tail = tail_.load(std::memory_order_relaxed);
-        curr_tail->next_.store(new_chk, std::memory_order_release);
-        tail_.store(new_chk, std::memory_order_release);
-    }
+    const char *char_data = reinterpret_cast<const char *>(data);
+    append_from_processor(char_data, len,
+                          [](const char *wdata, char *wptr, int32_t space)
+                          { memcpy(wptr, wdata, space); });
 }
 
 void Buffer::append_chunk(Chunk *chunk, int32_t len)
@@ -200,7 +156,7 @@ char *Buffer::peek_buffer(size_t size, int32_t rwflag)
     return 0 == size ? buffer : nullptr;
 }
 
-void Buffer::remove(size_t len)
+void Buffer::remove_head_data(size_t len)
 {
     if (0 == len) return;
 
@@ -257,7 +213,7 @@ void Buffer::remove(size_t len)
     len_.fetch_sub(len, std::memory_order_acq_rel);
 }
 
-const char *Buffer::get_front_data(size_t &size)
+const char *Buffer::get_head_data(size_t &size)
 {
     Chunk *head = head_.load(std::memory_order_relaxed);
 

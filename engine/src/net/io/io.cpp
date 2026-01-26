@@ -33,65 +33,32 @@ int32_t IO::recv(EVIO *w)
     int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
-    int32_t len = 0;
-    // 第一次读取，尝试利用 buffer 尾部剩余空间
-    // 初始空间有8k，对于游戏来说应该是足够的，大部分情况不需要后续分配
-    Buffer::Chunk *tail = recv_.get_back();
+    int32_t ret = recv_.append_from_generator(
+        [fd](char *wptr, int32_t space)
+        { return (int32_t)::recv(fd, wptr, space, 0); });
 
-    int32_t space = 0;
-    size_t alloc_size = Buffer::CHUNK_SIZE;
-    char *data_ptr = tail->write_ptr(space);
-    if (space > 0)
+    if (ret > 0)
     {
-        len = (int32_t)::recv(fd, data_ptr, space, 0);
-        if (len > 0)
-        {
-            recv_.add_used(tail, len);
-            if (len < space) return EV_NONE;
-        }
-        else
-        {
-            goto RECV_ERROR;
-        }
+        return EV_NONE;
     }
-
-    // 第二次开始，分配新chunk
-    while (true)
-    {
-        if (recv_.is_overflow()) return EV_BUSY; // 缓冲区已满
-
-        Buffer::Chunk *chk = recv_.allocate_chunk(alloc_size);
-
-        len = (int32_t)::recv(fd, chk->data(), chk->capacity_, 0);
-        if (len > 0)
-        {
-            recv_.append_chunk(chk, len);
-
-            if (len < chk->capacity_) return EV_NONE;
-
-            // 准备下一次分配
-            alloc_size *= 2;
-        }
-        else
-        {
-            recv_.deallocate_chunk(chk);
-            goto RECV_ERROR;
-        }
-    }
-    assert(false); // never reach here
-RECV_ERROR:
-    if (0 == len)
+    else if (0 == ret)
     {
         w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
         return EV_CLOSE;
     }
+    else if (-2 == ret)
+    {
+        return EV_BUSY;
+    }
+    else
+    {
+        int32_t e = netcompat::errorno();
+        if (!netcompat::iserror(e)) return EV_READ; // AGAIN之类的错误码，重试
 
-    int32_t e = netcompat::errorno();
-    if (!netcompat::iserror(e)) return EV_READ; // AGAIN之类的错误码，重试
-
-    w->errno_ = e;
-    ELOG("io recv fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
-    return EV_ERROR;
+        w->errno_ = e;
+        ELOG("io recv fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
+        return EV_ERROR;
+    }
 }
 
 int32_t IO::send(EVIO *w)
@@ -103,13 +70,13 @@ int32_t IO::send(EVIO *w)
     size_t bytes = 0;
     while (true)
     {
-        const char *data = send_.get_front_data(bytes); // 这是消费者
-        if (0 == bytes) return EV_NONE;            // 发送完毕
+        const char *data = send_.get_head_data(bytes); // 这是消费者
+        if (0 == bytes) return EV_NONE;                 // 发送完毕
 
         len = (int32_t)::send(fd, data, (int32_t)bytes, 0);
         if (len > 0)
         {
-            send_.remove(len);
+            send_.remove_head_data(len);
             if (len < (int32_t)bytes) return EV_WRITE; // 缓冲区满
         }
         else

@@ -56,7 +56,7 @@ protected:
     void pack_header(Buffer &buffer, websocket_flags flags, const char mask[4],
                      const char *data, size_t data_len);
     void pack_frame(Buffer &buffer, websocket_flags flags, const char mask[4],
-                    const char *data, size_t data_len, uint8_t *mask_offset);
+                    const char *data, size_t data_len, uint8_t &mask_offset);
 
 private:
     int32_t pack_any(lua_State *L, int32_t index);

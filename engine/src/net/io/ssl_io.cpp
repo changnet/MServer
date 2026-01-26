@@ -24,78 +24,46 @@ int32_t SSLIO::recv(EVIO *w)
 {
     if (!SSL_is_init_finished(ssl_)) return handshake(w);
 
-    int32_t len = 0;
-    // 第一次读取，尝试利用 buffer 尾部剩余空间
-    // 初始空间有8k，对于游戏来说应该是足够的，大部分情况不需要后续分配
-    Buffer::Chunk *tail = recv_.get_back();
-
-    int32_t space = 0;
-    size_t alloc_size = Buffer::CHUNK_SIZE;
-    char *buffer_ptr = tail->write_ptr(space);
-    if (space > 0)
+    int32_t ret =
+        recv_.append_from_generator([ssl = ssl_](char *wptr, int32_t space)
+                                    { return SSL_read(ssl, wptr, space); });
+    if (ret > 0)
     {
-        len = SSL_read(ssl_, buffer_ptr, space);
-        if (len > 0)
-        {
-            recv_.add_used(tail, len);
-            if (len < space) return EV_NONE;
-        }
-        else
-        {
-            goto SSL_RECV_ERROR;
-        }
+        return EV_NONE;
     }
-
-    while (true)
+    else if (-2 == ret)
     {
-        if (recv_.is_overflow()) return EV_READ;
-
-        Buffer::Chunk *chk = recv_.allocate_chunk(alloc_size);
-
-        len = SSL_read(ssl_, chk->data(), chk->capacity_);
-        if (len > 0)
-        {
-            recv_.append_chunk(chk, len);
-            if (len < chk->capacity_) return EV_NONE;
-
-            alloc_size *= 2; // 指数增长
-        }
-        else
-        {
-            recv_.deallocate_chunk(chk);
-
-            goto SSL_RECV_ERROR;
-        }
+        return EV_BUSY;
     }
-
-    assert(false); // never reach here
-SSL_RECV_ERROR:
-    int32_t ecode = SSL_get_error(ssl_, len);
-    if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
-    if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
-
-    /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
-     * SSL连接关闭时，要先关闭SSL协议，再关闭socket。当一个连接直接关闭时，SSL并不能明确
-     * 区分开来。SSL_ERROR_ZERO_RETURN仅仅是表示SSL协议层关闭，连接并没有关闭(你可以把一
-     * 个SSL连接转化为一个非SSL连接，参考SSL_shutdown)。正常关闭下，SSL_read先收到一个
-     * SSL_ERROR_ZERO_RETURN转换为普通连接，然后read再收到一个0。如果直接关闭，则SSL返回
-     * 0，SSL_get_error检测到syscall错误(即read返回0)，这时errno为0,SSL_get_error并返
-     * 回0。
-     */
-
-    // 非主动断开，打印错误日志
-    // 在实际测试中，chrome会直接断开链接，而firefox则会关闭SSL */
-    if ((SSL_ERROR_ZERO_RETURN == ecode)
-        || (SSL_ERROR_SYSCALL == ecode
-            && !netcompat::iserror(netcompat::errorno())))
+    else
     {
-        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
-        return EV_CLOSE;
-    }
+        int32_t ecode = SSL_get_error(ssl_, ret);
+        if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
+        if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
 
-    w->errno_ = netcompat::errorno();
-    TlsCtx::dump_error("ssl io recv");
-    return EV_ERROR;
+        /* https://www.openssl.org/docs/manmaster/man3/SSL_read.html
+         * SSL连接关闭时，要先关闭SSL协议，再关闭socket。当一个连接直接关闭时，SSL并不能明确
+         * 区分开来。SSL_ERROR_ZERO_RETURN仅仅是表示SSL协议层关闭，连接并没有关闭(你可以把一
+         * 个SSL连接转化为一个非SSL连接，参考SSL_shutdown)。正常关闭下，SSL_read先收到一个
+         * SSL_ERROR_ZERO_RETURN转换为普通连接，然后read再收到一个0。如果直接关闭，则SSL返回
+         * 0，SSL_get_error检测到syscall错误(即read返回0)，这时errno为0,SSL_get_error并返
+         * 回0。
+         */
+
+        // 非主动断开，打印错误日志
+        // 在实际测试中，chrome会直接断开链接，而firefox则会关闭SSL */
+        if ((SSL_ERROR_ZERO_RETURN == ecode)
+            || (SSL_ERROR_SYSCALL == ecode
+                && !netcompat::iserror(netcompat::errorno())))
+        {
+            w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
+            return EV_CLOSE;
+        }
+
+        w->errno_ = netcompat::errorno();
+        TlsCtx::dump_error("ssl io recv");
+        return EV_ERROR;
+    }
 }
 
 int32_t SSLIO::send(EVIO *w)
@@ -106,13 +74,13 @@ int32_t SSLIO::send(EVIO *w)
     size_t bytes = 0;
     while (true)
     {
-        const char *data = send_.get_front_data(bytes);
+        const char *data = send_.get_head_data(bytes);
         if (0 == bytes) return EV_NONE;
 
         len = SSL_write(ssl_, data, (int32_t)bytes);
         if (len > 0)
         {
-            send_.remove(len);
+            send_.remove_head_data(len);
             if (len < (int32_t)bytes) return EV_WRITE;
         }
         else

@@ -32,7 +32,7 @@ int32_t SsStreamPacket::unpack(lua_State *L, Buffer &buffer)
     // 但直接回调到Lua不符合外部循环unpack的流程控制，不知道什么时候该中止
     if (to_remove_)
     {
-        buffer.remove(to_remove_);
+        buffer.remove_head_data(to_remove_);
         to_remove_ = 0;
     }
 

@@ -110,7 +110,7 @@ void Socket::append(const void *data, size_t len)
     {
         // 对于客户端这种不重要的，可以断开连接
         ELOG("socket send buffer overflow, kill conn:%d,buffer size:%d",
-             socket_id_, send_buff.get_used_size());
+             socket_id_, send_buff.length());
 
         Socket::stop();
 
@@ -128,7 +128,7 @@ void Socket::append(const void *data, size_t len)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ELOG("socket send buffer overflow, pending,conn:%d,buffer size:%d",
-                 socket_id_, send_buff.get_used_size());
+                 socket_id_, send_buff.length());
 
             if (!send_buff.is_overflow()) break;
         };

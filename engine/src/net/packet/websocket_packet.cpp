@@ -154,62 +154,20 @@ void WebsocketPacket::pack_header(Buffer &buffer, websocket_flags flags,
                                   const char mask[4], const char *data,
                                   size_t data_len)
 {
-    // websocket的header需要2~14字节，如果space只剩下几字节要额外处理
-    static constexpr int32_t min_space = 32;
-
-    Buffer::Chunk *tail       = buffer.get_back();
-
-    int32_t space     = 0;
-    char *buffer_ptr = tail->write_ptr(space);
-    if (space >= min_space)
-    {
-        size_t offset =
-            websocket_build_frame_header(buffer_ptr, flags, mask, data_len);
-        buffer.add_used(tail, offset);
-    }
-    else
-    {
-        char header[min_space];
-        size_t offset =
-            websocket_build_frame_header(header, flags, mask, data_len);
-        buffer.append(header, offset);
-    }
+    // websocket的header需要2~14字节，这几个字节没法拆开处理，不能使用append_from_processor
+    char header[32];
+    size_t offset = websocket_build_frame_header(header, flags, mask, data_len);
+    buffer.append(header, offset);
 }
 
 void WebsocketPacket::pack_frame(Buffer& buffer, websocket_flags flags,
     const char mask[4],
-    const char* data, size_t data_len, uint8_t* mask_offset)
+    const char* data, size_t data_len, uint8_t &mask_offset)
 {
-    if (0 == data_len) return;
-    Buffer::Chunk *tail = buffer.get_back();
-
-    int32_t space    = 0;
-    char *buffer_ptr = tail->write_ptr(space);
-
-    if (space > 0)
-    {
-        size_t pack_len = std::min((size_t)space, data_len);
-        websocket_append_frame(buffer_ptr, flags, mask, data, pack_len,
-                               mask_offset);
-        data += pack_len;
-        data_len -= pack_len;
-        buffer.add_used(tail, pack_len);
-    }
-
-    static const size_t LARGE_SIZE = Buffer::CHUNK_SIZE * 8;
-    while (data_len > 0)
-    {
-        size_t alloc_size = data_len > LARGE_SIZE ? data_len : Buffer::CHUNK_SIZE;
-
-        Buffer::Chunk *new_chk = buffer.allocate_chunk(alloc_size);
-
-        size_t pack_len = std::min((size_t)new_chk->capacity_, data_len);
-        websocket_append_frame(new_chk->data(), flags, mask, data, pack_len,
-                               mask_offset);
-        data += pack_len;
-        data_len -= pack_len;
-        buffer.append_chunk(new_chk, (int32_t)pack_len);
-    }
+    buffer.append_from_processor(
+        data, data_len,
+        [&mask, flags, &mask_offset](const char *wdata, char *wptr, int32_t space)
+        { websocket_append_frame(wptr, flags, mask, wdata, space, &mask_offset); });
 }
 
 int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
@@ -222,7 +180,7 @@ int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
 
     size_t size     = 0;
     const char *ctx = luaL_optlstring(L, index + 1, nullptr, &size);
-    // if ( !ctx ) return 0; // 允许发送空包
+    // if ( !data ) return 0; // 允许发送空包
 
     char mask[4] = {0}; /* 服务器发往客户端并不需要mask */
     if (flags & WS_HAS_MASK) new_masking_key(mask);
@@ -232,7 +190,7 @@ int32_t WebsocketPacket::pack_any(lua_State *L, int32_t index)
     pack_header(buffer, flags, mask, ctx, size);
 
     uint8_t mask_offset = 0;
-    pack_frame(buffer, flags, mask, ctx, size, &mask_offset);
+    pack_frame(buffer, flags, mask, ctx, size, mask_offset);
 
     socket_->flush();
 
@@ -268,7 +226,7 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
 
     if (to_remove_) // 上一个协议的数据，开始解析下一个协议前先删除旧协议
     {
-        buffer.remove(to_remove_);
+        buffer.remove_head_data(to_remove_);
         to_remove_ = 0;
         payload_   = nullptr;
     }
@@ -277,7 +235,7 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
         // 已经计算出payload的大小，如果收到的数据不完整先不解析
         // TODO 本来解析也没什么问题，只是buffer是一个多线程队列，效率很低
         // 尤其是不拷贝数据，解析时要跳过部分chunk效率更慢
-        if (buffer.get_used_size() < require_len_)
+        if (buffer.length() < require_len_)
         {
             return unpack_return(L, PC_MORE);
         }
@@ -294,31 +252,31 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
     int32_t old_top = lua_gettop(L);
 
     // 只取单个chunk的数据进行解析而不是把多个chunk复制到一个连续缓冲区再解析
-    const char *ctx = buffer.get_front_data(size);
+    const char *data = buffer.get_head_data(size);
     if (size == 0) return unpack_return(L, PC_MORE);
 
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
     // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
 
-    size_t nparser = websocket_parser_execute(parser_, &settings, ctx, size);
+    size_t nparser = websocket_parser_execute(parser_, &settings, data, size);
 
     assert(0 != nparser);
     // 未解析到payload的说明都是header，不需要保留
-    // 保证会导致buffer.get_front_data需要跳过上次的数据，非常麻烦
+    // 保留的话下次parse需要跳过上次的数据，非常麻烦
     if (!payload_)
     {
         assert(0 == to_remove_);
-        buffer.remove(nparser);
+        buffer.remove_head_data(nparser);
     }
 
     int32_t e = parser_->error;
     if (WPE_OK == e)
     {
-        // parser_解析完head时不提供已经任何方法获取head的长度，不在on_frame_body
-        // 复制数据的话，这里只能手动计算长度
+        // parser_解析完head时不提供任何方法获取head的长度，因此只能在第一次解析到
+        // payload时手动计算head长度
         if (payload_ && 0 == require_len_)
         {
-            head_len_ = payload_ - ctx;
+            head_len_ = payload_ - data;
             assert(head_len_ > 0 && parser_->length > 0);
             require_len_ = head_len_ + parser_->length;
         }

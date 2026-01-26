@@ -119,7 +119,7 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
 {
     // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况
     size_t size      = 0;
-    const char *data = buffer.get_front_data(size);
+    const char *data = buffer.get_head_data(size);
     if (size == 0) return unpack_return(L, PC_MORE);
 
     L_              = L;
@@ -141,7 +141,7 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
     if (HPE_OK == e)
     {
         // 只解析到一部分数据，还不是完整的message
-        buffer.remove(size); // 数据已解析完不需要旧缓冲区了
+        buffer.remove_head_data(size); // 数据已解析完不需要旧缓冲区了
 
         // 一个message的数据可能包含在多个缓冲区，继续解析
         return unpack(L, buffer);
@@ -150,7 +150,7 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
     {
         llhttp_resume(&parser_);
         // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈
-        buffer.remove(llhttp_get_error_pos(&parser_) - data);
+        buffer.remove_head_data(llhttp_get_error_pos(&parser_) - data);
         int32_t new_top = lua_gettop(L);
         return new_top - old_top;
     }
@@ -252,7 +252,7 @@ int32_t HttpPacket::unpack_header(lua_State *L) const
         return -1;
     }
 
-    lua_createtable(L, 0, http_info_.head_field_.size());
+    lua_createtable(L, 0, (int32_t)http_info_.head_field_.size());
     for (const auto &[k, v] : http_info_.head_field_)
     {
         lua_pushstring(L, v.c_str());

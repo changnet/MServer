@@ -39,8 +39,8 @@ int32_t WSStreamPacket::pack_any(lua_State *L, int32_t index)
 
     pack_header(buffer, flags, mask, ctx, frame_size);
     pack_frame(buffer, flags, mask, reinterpret_cast<const char *>(&header),
-               sizeof(header), &mask_offset);
-    pack_frame(buffer, flags, mask, ctx, size, &mask_offset);
+               sizeof(header), mask_offset);
+    pack_frame(buffer, flags, mask, ctx, size, mask_offset);
  
     socket_->flush();
 
