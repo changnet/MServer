@@ -130,12 +130,10 @@ static const struct websocket_parser_settings settings = {
 
 WebsocketPacket::WebsocketPacket(class Socket *sk) : HttpPacket(sk)
 {
-    e_          = 0;
     is_upgrade_ = false;
 
     require_len_ = 0;
     to_remove_   = 0;
-    head_len_    = 0;
     payload_     = nullptr;
     parser_      = new struct websocket_parser();
     websocket_parser_init(parser_);
@@ -166,7 +164,7 @@ void WebsocketPacket::pack_frame(Buffer& buffer, websocket_flags flags,
 {
     buffer.append_from_processor(
         data, data_len,
-        [&mask, flags, &mask_offset](const char *wdata, char *wptr, int32_t space)
+        [&mask, flags, &mask_offset](const char *wdata, char *wptr, int64_t space)
         { websocket_append_frame(wptr, flags, mask, wdata, space, &mask_offset); });
 }
 
@@ -217,6 +215,43 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
     return pack_any(L, index);
 }
 
+int64_t WebsocketPacket::buffer_process(bool &term,
+                                      const websocket_parser_settings *settings,
+    const char* data, int64_t len)
+{
+    // websocket_parser_execute把数据全当二进制处理，没有错误返回
+    // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
+    size_t nparser = websocket_parser_execute(parser_, settings, data, len);
+    assert(0 != nparser);
+
+    int32_t e = parser_->error;
+    if (WPE_OK == e)
+    {
+        if (payload_)
+        {
+            assert(0 == require_len_);
+            // parser_解析完head时不提供任何方法获取head的长度，
+            // 只能在第一次解析到payload时手动计算head长度
+            int64_t head_len = payload_ - data;
+            require_len_     = parser_->length;
+            assert(head_len > 0 && require_len_ > 0);
+
+            term = true;
+            return head_len;
+        }
+        return (int32_t)nparser;
+    }
+    else if (WPE_PAUSE == e)
+    {
+        term = true;
+        assert(to_remove_ == nparser);
+        return 0;
+    }
+
+    term = true;
+    return (int32_t)nparser;
+}
+
 int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
 {
     /* 未握手时，由http处理
@@ -228,68 +263,49 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
     {
         buffer.remove_head_data(to_remove_);
         to_remove_ = 0;
-        payload_   = nullptr;
     }
-    else if (require_len_ > 0)
+
+    int32_t e       = 0;
+    int32_t old_top = lua_gettop(L);
+    if (require_len_ > 0)
     {
-        // 已经计算出payload的大小，如果收到的数据不完整先不解析
-        // TODO 本来解析也没什么问题，只是buffer是一个多线程队列，效率很低
-        // 尤其是不拷贝数据，解析时要跳过部分chunk效率更慢
-        if (buffer.length() < require_len_)
-        {
-            return unpack_return(L, PC_MORE);
-        }
+        assert(payload_);
+        
+        // 已经解析到所需要的数据长度，直接判断数据长度跳过parser
+        // 因为buffer是一个链表，用parser分段解析并且保留数据在buffer避免复制
+        // 现在很低效，而且需要做额外的处理
+
+        e = WPE_OK;
     }
     else
     {
+        L_       = L;
         payload_ = nullptr;
+        buffer.iterate_to_processor(
+            [this, settings = &settings](bool &term, const char *rptr, int64_t size)
+            { return buffer_process(term, settings, rptr, size); });
+        e = parser_->error;
     }
 
-    e_ = 0; // 重置上一次解析错误
-    L_ = L;
-
-    size_t size     = 0;
-    int32_t old_top = lua_gettop(L);
-
-    // 只取单个chunk的数据进行解析而不是把多个chunk复制到一个连续缓冲区再解析
-    const char *data = buffer.get_head_data(size);
-    if (size == 0) return unpack_return(L, PC_MORE);
-
-    // websocket_parser_execute把数据全当二进制处理，没有错误返回
-    // 解析过程中，如果settings中回调返回非0值，则中断解析并返回已解析的字符数
-
-    size_t nparser = websocket_parser_execute(parser_, &settings, data, size);
-
-    assert(0 != nparser);
-    // 未解析到payload的说明都是header，不需要保留
-    // 保留的话下次parse需要跳过上次的数据，非常麻烦
-    if (!payload_)
-    {
-        assert(0 == to_remove_);
-        buffer.remove_head_data(nparser);
-    }
-
-    int32_t e = parser_->error;
     if (WPE_OK == e)
     {
-        // parser_解析完head时不提供任何方法获取head的长度，因此只能在第一次解析到
-        // payload时手动计算head长度
-        if (payload_ && 0 == require_len_)
+        if (0 == require_len_ || buffer.length() < (int64_t)require_len_)
         {
-            head_len_ = payload_ - data;
-            assert(head_len_ > 0 && parser_->length > 0);
-            require_len_ = head_len_ + parser_->length;
+            return unpack_return(L, PC_MORE);
         }
-        // 一个message的数据包含在多个缓冲区，继续解析
-        return unpack(L, buffer);
+        else
+        {
+            e = this->on_frame_end();
+        }
     }
-    else if (WPE_PAUSE == e)
+    if (WPE_PAUSE == e)
     {
         // 成功解析出数据，数据已经在on_frame_end中设置到lua的堆栈
 
         // 与llhttp不一样，websocket_parser不能用pause停下来，否则state状态不对
-        // 类似llhttp_resume，这里重置state让它能pause并继续解析
-        parser_->state  = 0;
+        // 类似llhttp_resume，这里重置让它能pause并继续解析
+        websocket_parser_init(parser_);
+
         int32_t new_top = lua_gettop(L);
         assert(new_top - old_top > 0);
         return new_top - old_top;
@@ -352,7 +368,6 @@ const char *WebsocketPacket::make_payload(size_t &size)
     if (0 != require_len_)
     {
         payload = socket_->get_recv_buffer().peek_buffer(size, 1);
-        payload += head_len_;
     }
     assert(payload);
     to_remove_   = require_len_;

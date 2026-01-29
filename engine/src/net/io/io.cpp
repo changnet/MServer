@@ -34,8 +34,11 @@ int32_t IO::recv(EVIO *w)
     assert(fd != netcompat::INVALID);
 
     int32_t ret = recv_.append_from_generator(
-        [fd](char *wptr, int32_t space)
-        { return (int32_t)::recv(fd, wptr, space, 0); });
+        [fd](char *wptr, int64_t space)
+        {
+            // win参数为int32_t，linux为size_t，都强转为int32_t避免警告
+            return ::recv(fd, wptr, (int32_t)space, 0);
+        });
 
     if (ret > 0)
     {
@@ -66,38 +69,33 @@ int32_t IO::send(EVIO *w)
     int32_t fd = w->fd_;
     assert(fd != netcompat::INVALID);
 
-    int32_t len  = 0;
-    size_t bytes = 0;
-    while (true)
+    int32_t len = send_.iterate_to_processor(
+        [fd](bool &term, const char *rptr, int64_t size)
+        {
+            return ::send(fd, rptr, (int32_t)size, 0);
+        });
+
+    if (len > 0)
     {
-        const char *data = send_.get_head_data(bytes); // 这是消费者
-        if (0 == bytes) return EV_NONE;                 // 发送完毕
-
-        len = (int32_t)::send(fd, data, (int32_t)bytes, 0);
-        if (len > 0)
-        {
-            send_.remove_head_data(len);
-            if (len < (int32_t)bytes) return EV_WRITE; // 缓冲区满
-        }
-        else
-        {
-            if (0 == len)
-            {
-                w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
-                return EV_CLOSE;
-            }
-
-            int32_t e = netcompat::errorno();
-            // AGAIN之类的错误码，重试
-            if (!netcompat::iserror(e)) return EV_WRITE;
-
-            w->errno_ = e;
-            ELOG("io send fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
-            return EV_ERROR;
-        }
+        return EV_NONE; // 数据发送完
+    }
+    else if (0 == len)
+    {
+        w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
+        return EV_CLOSE;
+    }
+    else if (-1 == len)
+    {
+        return EV_WRITE; // 缓冲区满，下次继续发送
     }
 
-    return EV_WRITE;
+    int32_t e = netcompat::errorno();
+    // AGAIN之类的错误码，重试
+    if (!netcompat::iserror(e)) return EV_WRITE;
+
+    w->errno_ = e;
+    ELOG("io send fd = %d:%s(%d)", fd, netcompat::strerror(e), e);
+    return EV_ERROR;
 }
 
 void IO::init_accept_buffer()

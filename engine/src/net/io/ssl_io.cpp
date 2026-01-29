@@ -24,9 +24,9 @@ int32_t SSLIO::recv(EVIO *w)
 {
     if (!SSL_is_init_finished(ssl_)) return handshake(w);
 
-    int32_t ret =
-        recv_.append_from_generator([ssl = ssl_](char *wptr, int32_t space)
-                                    { return SSL_read(ssl, wptr, space); });
+    int32_t ret = recv_.append_from_generator(
+        [ssl = ssl_](char *wptr, int64_t space)
+        { return SSL_read(ssl, wptr, (int32_t)space); });
     if (ret > 0)
     {
         return EV_NONE;
@@ -70,40 +70,36 @@ int32_t SSLIO::send(EVIO *w)
 {
     if (!SSL_is_init_finished(ssl_)) return handshake(w);
 
-    int32_t len  = 0;
-    size_t bytes = 0;
-    while (true)
+    int32_t len = send_.iterate_to_processor(
+        [ssl = ssl_](bool &term, const char *rptr, int64_t size)
+        { return SSL_write(ssl, rptr, (int32_t)size); });
+
+    if (len > 0)
     {
-        const char *data = send_.get_head_data(bytes);
-        if (0 == bytes) return EV_NONE;
-
-        len = SSL_write(ssl_, data, (int32_t)bytes);
-        if (len > 0)
-        {
-            send_.remove_head_data(len);
-            if (len < (int32_t)bytes) return EV_WRITE;
-        }
-        else
-        {
-            int32_t ecode = SSL_get_error(ssl_, len);
-            if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
-            if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
-
-            if ((SSL_ERROR_ZERO_RETURN == ecode)
-                || (SSL_ERROR_SYSCALL == ecode
-                    && !netcompat::iserror(netcompat::errorno())))
-            {
-                w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
-                return EV_CLOSE;
-            }
-
-            w->errno_ = netcompat::errorno();
-            TlsCtx::dump_error("ssl io send");
-            return EV_ERROR;
-        }
+        return EV_NONE;
     }
+    else if (-2 == len)
+    {
+        return EV_WRITE;
+    }
+    else
+    {
+        int32_t ecode = SSL_get_error(ssl_, len);
+        if (SSL_ERROR_WANT_WRITE == ecode) return EV_WRITE;
+        if (SSL_ERROR_WANT_READ == ecode) return EV_READ;
 
-    return EV_WRITE;
+        if ((SSL_ERROR_ZERO_RETURN == ecode)
+            || (SSL_ERROR_SYSCALL == ecode
+                && !netcompat::iserror(netcompat::errorno())))
+        {
+            w->mask_.fetch_or(EVIO::M_REMOTE_CLOSE);
+            return EV_CLOSE;
+        }
+
+        w->errno_ = netcompat::errorno();
+        TlsCtx::dump_error("ssl io send");
+        return EV_ERROR;
+    }
 }
 
 int32_t SSLIO::do_init_accept(EVIO *w)

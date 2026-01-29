@@ -117,14 +117,6 @@ HttpPacket::HttpPacket(class Socket *sk) : Packet(sk)
 
 int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
 {
-    // http是收到多少解析多少，因此不存在使用多个缓冲区chunk的情况
-    size_t size      = 0;
-    const char *data = buffer.get_head_data(size);
-    if (size == 0) return unpack_return(L, PC_MORE);
-
-    L_              = L;
-    int32_t old_top = lua_gettop(L);
-
     /**
      * 只要e(即on_message_complete等回调)不为HPE_OK，再次调用llhttp_execute总是返回之前的错误码
      * 如果返回的是HPE_PAUSE，则需要保留data缓冲区不变，下次用llhttp_resume重置错误码
@@ -136,21 +128,36 @@ int32_t HttpPacket::unpack(lua_State *L, Buffer &buffer)
      * 不过游戏中http用得不多，暂不处理
      */
 
-    enum llhttp_errno e = llhttp_execute(&parser_, data, size);
+    L_                  = L;
+    enum llhttp_errno e = HPE_OK;
+    int32_t old_top     = lua_gettop(L);
+    buffer.iterate_to_processor(
+        [parser = &parser_, &e](bool &term, const char *rptr, int64_t size)
+        {
+            e = llhttp_execute(parser, rptr, size);
+            if (HPE_OK == e)
+            {
+                return size;
+            }
+            else if (HPE_PAUSED == e)
+            {
+                term          = true;
+                int64_t rsize = llhttp_get_error_pos(parser) - rptr;
+                assert(rsize > 0);
+                return rsize;
+            }
+            return (int64_t)-1;
+        });
 
     if (HPE_OK == e)
     {
         // 只解析到一部分数据，还不是完整的message
-        buffer.remove_head_data(size); // 数据已解析完不需要旧缓冲区了
-
-        // 一个message的数据可能包含在多个缓冲区，继续解析
-        return unpack(L, buffer);
+        return unpack_return(L, PC_MORE);
     }
     else if (HPE_PAUSED == e)
     {
         llhttp_resume(&parser_);
         // 成功解析出数据，数据已经在on_message_complete中设置到lua的堆栈
-        buffer.remove_head_data(llhttp_get_error_pos(&parser_) - data);
         int32_t new_top = lua_gettop(L);
         return new_top - old_top;
     }

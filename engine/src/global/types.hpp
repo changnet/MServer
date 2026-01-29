@@ -42,3 +42,7 @@ static_assert(sizeof(int64_t) == 8, "type bit not support");
 static_assert(sizeof(uint64_t) == 8, "type bit not support");
 static_assert(sizeof(float) == 4, "type bit not support");
 static_assert(sizeof(double) == 8, "type bit not support");
+
+#ifdef __windows__
+    using ssize_t = ptrdiff_t;
+#endif

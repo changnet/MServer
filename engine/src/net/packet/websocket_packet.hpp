@@ -61,13 +61,13 @@ protected:
 private:
     int32_t pack_any(lua_State *L, int32_t index);
     virtual int32_t on_upgrade(lua_State *L) override;
+    int64_t buffer_process(bool &term, const websocket_parser_settings *settings,
+                           const char *data, int64_t len);
 
 protected:
-    int32_t e_; /// 错误码 websocket_parser没有提供错误机制，这里自己实现
     bool is_upgrade_;
-    size_t require_len_; // 需要的总长度（不是header+payload的长度）
+    size_t require_len_; // 需要的payload长度
     size_t to_remove_;   // 上一次待删除的数据
-    size_t head_len_;    // head占的大小（不一定是整个head）
     const char *payload_; // 第一次解析到数据的地方
     struct websocket_parser *parser_;
 };

@@ -52,7 +52,6 @@ Consumer负责head_和read_offset_，读取这两个值时就可以用relaxed
 再实现对应的udp_io.cpp和udp_packet.cpp就可以。
  */
 
-
 class Buffer;
 
 /**
@@ -67,11 +66,11 @@ public:
         // FlexiblePool required
         int32_t mask_;
 
-        int32_t capacity_;          // 整个chunk的总容量
-        std::atomic<int32_t> pos_;  // 已写入的数据(write pos)
+        int64_t capacity_;          // 整个chunk的总容量
+        std::atomic<int64_t> pos_;  // 已写入的数据(write pos)
         std::atomic<Chunk *> next_; // 下一个链表元素
 
-        explicit Chunk(int32_t cap) : capacity_(cap)
+        explicit Chunk(int64_t cap) : capacity_(cap)
         {
             mask_ = 0;
             pos_.store(0, std::memory_order_release);
@@ -84,17 +83,17 @@ public:
             return reinterpret_cast<char *>(this + 1);
         }
 
-        inline char *write_ptr(int32_t &size)
+        inline char *write_ptr(int64_t &size)
         {
-            int32_t pos = pos_.load(std::memory_order_acquire);
+            int64_t pos = pos_.load(std::memory_order_acquire);
             size        = capacity_ - pos;
             return data() + pos;
         }
     };
 
     // 单个chunk的容量，让内存池单个元素刚好对齐8k
-    static constexpr size_t CHUNK_SIZE = 8192 - sizeof(Buffer::Chunk);
-    using ChunkPool                    = FlexiblePool<8192, 128, std::mutex>;
+    static constexpr int64_t CHUNK_SIZE = 8192 - sizeof(Buffer::Chunk);
+    using ChunkPool                     = FlexiblePool<8192, 128, std::mutex>;
 
 public:
     Buffer();
@@ -109,14 +108,14 @@ public:
      * @brief 删除缓冲区中的数据(Consumer)
      * @param len 要删除的数据长度
      */
-    void remove_head_data(size_t len);
+    void remove_head_data(int64_t len);
 
     /**
      * @brief 添加数据到缓冲区(Producer)
      * @param data 要添加的数据
      * @param len 要添加的数据长度
      */
-    void append(const void *data, size_t len);
+    void append(const void *data, int64_t len);
 
     /**
      * @brief (Producer)按自定义方式添加数据到缓冲区
@@ -124,22 +123,22 @@ public:
      * @param len 要添加的数据长度
      * @processor 自定义数据处理函数
      */
-    template<typename F>
-    void append_from_processor(const char *data, size_t len, F &&processor)
+    template <typename F>
+    void append_from_processor(const char *data, int64_t len, F &&processor)
     {
         if (0 == len) return;
 
-        size_t left = len;
+        int64_t left = len;
 
         // 因为 tail_ 只有 producer 修改，relaxed 读取即可
         // (Read-Your-Own-Writes) 发送那边只用next_，不用tail_的
         Chunk *tail = tail_.load(std::memory_order_relaxed);
 
-        int32_t space    = 0;
+        int64_t space    = 0;
         char *buffer_ptr = tail->write_ptr(space);
         if (space > 0)
         {
-            int32_t write_len = std::min((int32_t)left, space);
+            int64_t write_len = std::min(left, space);
             processor(data, buffer_ptr, write_len);
 
             tail->pos_.fetch_add(write_len, std::memory_order_release);
@@ -154,14 +153,14 @@ public:
         // 一般游戏的数据不会大于8kb，上面的缓冲区应该能应付完
         // 假如是服务器卡了，则left应该是比较小，这里一个循环也能搞定
         // 假如是发送超大数据，<= 8个chunk则用多个chunk装，否则一次性分配一个超大chunk
-        static const size_t LARGE_SIZE = Buffer::CHUNK_SIZE * 8;
+        static const int64_t LARGE_SIZE = Buffer::CHUNK_SIZE * 8;
         while (left > 0)
         {
-            size_t alloc_size = left > LARGE_SIZE ? left : Buffer::CHUNK_SIZE;
+            int64_t alloc_size = left > LARGE_SIZE ? left : Buffer::CHUNK_SIZE;
 
             Chunk *new_chk = allocate_chunk(alloc_size);
 
-            int32_t write_len = std::min((int32_t)left, new_chk->capacity_);
+            int64_t write_len = std::min(left, new_chk->capacity_);
             processor(data, new_chk->data(), write_len);
             new_chk->pos_.store(write_len, std::memory_order_release);
 
@@ -184,22 +183,21 @@ public:
      * @generator 自定义数据处理函数(返回的值和read一致)
      * @return > 0表示读写成功，0表示断开，-1表示出错，-2表示缓冲区满
      */
-    template <typename F>
-    int32_t append_from_generator(F&& generator)
+    template <typename F> int32_t append_from_generator(F &&generator)
     {
         Buffer::Chunk *tail = tail_.load(std::memory_order_relaxed);
 
-        int32_t space     = 0;
-        char *data_ptr    = tail->write_ptr(space);
+        int64_t space  = 0;
+        char *data_ptr = tail->write_ptr(space);
         if (space > 0)
         {
-            int32_t len = (int32_t)generator(data_ptr, space);
+            int64_t len = generator(data_ptr, space);
             if (len > 0)
             {
-                tail->pos_.fetch_add((int32_t)len, std::memory_order_release);
+                tail->pos_.fetch_add(len, std::memory_order_release);
                 len_.fetch_add(len, std::memory_order_acq_rel);
 
-                if (len < space) return len;
+                if (len < space) return 1;
             }
             else
             {
@@ -208,19 +206,19 @@ public:
         }
 
         // 第二次开始，分配新chunk
-        size_t alloc_size = Buffer::CHUNK_SIZE;
+        int64_t alloc_size = Buffer::CHUNK_SIZE;
         while (true)
         {
             if (is_overflow()) return -2; // 缓冲区已满
 
             Buffer::Chunk *chk = allocate_chunk(alloc_size);
 
-            int32_t len = (int32_t)generator(chk->data(), chk->capacity_);
+            int64_t len = generator(chk->data(), chk->capacity_);
             if (len > 0)
             {
                 append_chunk(chk, len);
 
-                if (len < chk->capacity_) return len;
+                if (len < chk->capacity_) return 1;
 
                 alloc_size *= 2; // 无法预知后续大小，指数增长
             }
@@ -233,16 +231,68 @@ public:
     }
 
     /**
-     * @brief 获取第一个chunk的数据和长度用于发送/读取(Consumer)
-     * @param size 输出可用的数据长度
-     * @return 数据指针
+     * @brief (Consumer)遍历所有数据，把各个chunk的数据传给processor处理
+     * @param data 要添加的数据
+     * @param len 要添加的数据长度
+     * @processor 自定义数据处理函数(返回的值和write一致)
+     * @return >0表示读写成功，0表示断开，-1表示出错，-2表示数据无法消耗完
      */
-    const char *get_head_data(size_t &size);
+    template <typename F> int32_t iterate_to_processor(F &&processor)
+    {
+        int64_t read_offset = read_offset_;
+        Chunk *head         = head_.load(std::memory_order_acquire);
+        bool term           = false;
+        while (!term)
+        {
+            int64_t pos = head->pos_.load(std::memory_order_acquire);
+            int64_t len = pos - read_offset;
+            if (len > 0)
+            {
+                int64_t ret = processor(term, head->data() + read_offset, len);
+                if (unlikely(ret <= 0)) // 未消耗任何数据
+                {
+                    return (int32_t)ret;
+                }
+                else if (ret < len) // 数据未消耗完
+                {
+                    read_offset_ = read_offset + ret;
+                    len_.fetch_sub(ret, std::memory_order_acq_rel);
+                    return -2;
+                }
+            }
+            len_.fetch_sub(len, std::memory_order_acq_rel);
+
+            /*
+             * 这是一个无锁SPSC，head_和tail_的操作线程安全但不具备原子性
+             * Producer只能修改tail_、next、pos_，Consumer只能修改head_、read_offset_
+             * 所以这里只剩下最后一个chunk时，即使数据发送完，Consumer也不能
+             * 清空或者删除当前这个chunk，因为Producer可能已经在申请新的chunk了
+             */
+            Chunk *next = head->next_.load(std::memory_order_acquire);
+            if (next)
+            {
+                read_offset = read_offset_ = 0;
+                deallocate_chunk(head);
+
+                head = next;
+                head_.store(head, std::memory_order_release);
+            }
+            else
+            {
+                read_offset_ = pos;
+                assert(pos == head->capacity_);
+                return 1;
+            }
+
+            read_offset = 0;
+        }
+        return 1;
+    }
 
     /**
      * @brief 获取所有有效数据长度
      */
-    inline size_t length() const
+    inline int64_t length() const
     {
         return len_.load(std::memory_order_acquire);
     }
@@ -250,7 +300,7 @@ public:
     /**
      * @brief 设置缓冲区最大容量
      */
-    inline void set_max_size(size_t max)
+    inline void set_max_size(int64_t max)
     {
         max_ = max;
     }
@@ -267,30 +317,28 @@ public:
     /**
      * @brief 检测当前缓冲区中是否存在>=sizeof(T)的数据，如果存在则复制到对象中
      */
-    template<typename T> bool peek(T *t)
+    template <typename T> bool peek(T *t)
     {
-        Chunk *head = head_.load(std::memory_order_acquire);
-        int32_t pos = head->pos_.load(std::memory_order_acquire);
+        // T应该是比较小的一个类型才行，保证最多只分布在2个chunk。否则应该用peek_buffer
+        static_assert(sizeof(T) <= CHUNK_SIZE);
 
-        size_t data_len = pos - read_offset_;
-        if (data_len >= sizeof(T)) // 大部分应该都会在同一个chunk中
+        Chunk *head = head_.load(std::memory_order_acquire);
+        int64_t pos = head->pos_.load(std::memory_order_acquire);
+
+        int64_t data_len = pos - read_offset_;
+        if (data_len >= (int64_t)sizeof(T)) // 大部分应该都会在第一个chunk中
         {
             memcpy(t, head->data() + read_offset_, sizeof(T));
             return true;
         }
-        else if (head->capacity_ > pos)
-        {
-            return false; // 没有数据了，说明接收的数据还不够
-        }
 
-        // 极少情况，数据分布在不同chunk中
+        // 极少情况，数据分布在不同chunk中（第一个chunk空间可能为空）
         Chunk *next = head->next_.load(std::memory_order_acquire);
         if (!next) return false;
 
-        size_t next_len = next->pos_.load(std::memory_order_acquire);
-        if (next_len + data_len < sizeof(T)) return false;
+        int64_t next_len = next->pos_.load(std::memory_order_acquire);
+        if (next_len + data_len < (int64_t)sizeof(T)) return false;
 
-        static_assert(sizeof(T) <= CHUNK_SIZE); // 保证最多只分布在2个chunk
         if (data_len > 0) memcpy(t, head->data() + read_offset_, data_len);
         memcpy(((char *)t) + data_len, head->data(), sizeof(T) - data_len);
 
@@ -300,23 +348,23 @@ public:
     /**
      * @brief 检测当前缓冲区中是否存在>=size的数据
      */
-    bool peek_size(size_t size)
+    bool peek_size(int64_t size)
     {
-        return len_.load(std::memory_order_acquire) > size;
+        return len_.load(std::memory_order_acquire) >= size;
     }
 
     /**
      * @brief 从当前缓冲区中获取一段大小为size的数据
      * @param rwflag 1读，2写，一个线程读写可能会同时存在
      */
-    char *peek_buffer(size_t size, int32_t rwflag);
+    char *peek_buffer(int64_t size, int32_t rwflag);
 
 private:
     /**
      * @brief 申请一个trunk，但不会添加到列表
      * @param alloc_size chunk的容量大小（不需要包含chunk本身）
      */
-    Chunk *allocate_chunk(size_t alloc_size);
+    Chunk *allocate_chunk(int64_t alloc_size);
 
     /**
      * @brief 释放一个trunk
@@ -326,15 +374,15 @@ private:
     /**
      * @brief 直接添加一个已填充数据的chunk(Producer)
      */
-    void append_chunk(Chunk *chunk, int32_t len);
+    void append_chunk(Chunk *chunk, int64_t len);
 
 private:
     std::atomic<Chunk *> head_; // 由Consumer修改
     std::atomic<Chunk *> tail_; // 由Producer修改
 
-    size_t read_offset_; // 消费者在head_中的读取偏移，仅Consumer会读取
+    int64_t read_offset_; // 消费者在head_中的读取偏移，仅Consumer会读取
 
-    std::atomic<size_t> len_; // 当前总数据量
+    std::atomic<int64_t> len_; // 当前总数据量
 
-    size_t max_; // 允许的最大数据，在初始化完后不会变
+    int64_t max_; // 允许的最大数据，在初始化完后不会变
 };
