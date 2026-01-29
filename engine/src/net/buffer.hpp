@@ -12,7 +12,7 @@
     3. 初始8kb缓冲区足够大部分游戏连接使用，极少重新分配内存
         10000个玩家在线约 10240 * 8k * 2 = 160M，这个是可以接受的消耗
     4. FlexiblePool支持变长chunk，解决偶尔收发大数据效率低的问题
-    5. 以前设计过一般加锁的，网络线程和逻辑线程无法并发，改为无锁SPSC
+    5. 以前设计过一版加锁的，网络线程和逻辑线程无法并发，改为无锁SPSC
 
 # 无锁SPSC
 SPSC即Single Producer Single Consumer，单生产者单消费者。单即意味着一个Buffer对象
@@ -26,14 +26,11 @@ Consumer负责head_和read_offset_，读取这两个值时就可以用relaxed
 
 但如果是Consumer要读取pos_，就要用acquire，用错了就会出bug，而且是不稳定重现的bug
 
-最理想情况下，一次读包含5个atomic操作
+最理想情况下，一次produce包含4个atomic操作(Consume也基本是这个情况)，效率存疑
     1. 获取tail_指针
-    2. 计算space
-    3. 获取data指针
-    4. 把读取到的单个chunk.pos加上去
-    5. 把总len加上去
-如果一次读不完，那就需要读多次。写入也基本是这个情况。
-
+    2. 获取pos_计算空间
+    3. 把读取到的单个chunk.pos加上去
+    4. 把总len加上去
 
 # 流量控制
 流量分为单个消息大小和总接收数据大小。单个大小和buffer没关这里不讨论。总数据接收大小
@@ -240,7 +237,7 @@ public:
     template <typename F> int32_t iterate_to_processor(F &&processor)
     {
         int64_t read_offset = read_offset_;
-        Chunk *head         = head_.load(std::memory_order_acquire);
+        Chunk *head         = head_.load(std::memory_order_relaxed);
         bool term           = false;
         while (!term)
         {
@@ -253,14 +250,23 @@ public:
                 {
                     return (int32_t)ret;
                 }
-                else if (ret < len) // 数据未消耗完
+
+                len_.fetch_sub(len, std::memory_order_acq_rel);
+                if (ret < len) // 数据未消耗完
                 {
                     read_offset_ = read_offset + ret;
-                    len_.fetch_sub(ret, std::memory_order_acq_rel);
                     return -2;
                 }
+                else if (pos < head->capacity_) // 数据消耗完但没有数据了
+                {
+                    read_offset_ = read_offset + ret;
+                    return 1;
+                }
             }
-            len_.fetch_sub(len, std::memory_order_acq_rel);
+            else if (pos < head->capacity_)
+            {
+                return 1;
+            }
 
             /*
              * 这是一个无锁SPSC，head_和tail_的操作线程安全但不具备原子性
@@ -322,7 +328,7 @@ public:
         // T应该是比较小的一个类型才行，保证最多只分布在2个chunk。否则应该用peek_buffer
         static_assert(sizeof(T) <= CHUNK_SIZE);
 
-        Chunk *head = head_.load(std::memory_order_acquire);
+        Chunk *head = head_.load(std::memory_order_relaxed);
         int64_t pos = head->pos_.load(std::memory_order_acquire);
 
         int64_t data_len = pos - read_offset_;

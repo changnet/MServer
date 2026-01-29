@@ -239,17 +239,17 @@ int64_t WebsocketPacket::buffer_process(bool &term,
             term = true;
             return head_len;
         }
-        return (int32_t)nparser;
+        return nparser;
     }
     else if (WPE_PAUSE == e)
     {
         term = true;
-        assert(to_remove_ == nparser);
-        return 0;
+        to_remove_ = nparser;
+        return 0; // payload还在缓冲区中，不删除数据
     }
 
     term = true;
-    return (int32_t)nparser;
+    return nparser;
 }
 
 int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
@@ -367,10 +367,10 @@ const char *WebsocketPacket::make_payload(size_t &size)
     // 0 != require_len_表示数据不在同一个chunk中，需要合并
     if (0 != require_len_)
     {
+        assert(require_len_ == size);
         payload = socket_->get_recv_buffer().peek_buffer(size, 1);
     }
     assert(payload);
-    to_remove_   = require_len_;
     require_len_ = 0;
 
     // websocket的XOR算法是单个字节运算，允许在原buffer上修改
