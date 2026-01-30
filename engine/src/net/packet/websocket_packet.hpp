@@ -39,10 +39,10 @@ public:
     // 数据帧完成
     virtual int32_t on_frame_end();
 
-    // 如果是第一次解析到数据，则标记数据开始
-    void try_set_payload(const char *payload)
+    // 记录已解析的payload长度
+    void add_payload_len(size_t size)
     {
-        if (!payload_) payload_ = payload;
+        payload_len_ += size;
     }
 
     // 发送opcode等控制码
@@ -66,8 +66,7 @@ private:
 
 protected:
     bool is_upgrade_;
-    size_t require_len_; // 需要的payload长度
     size_t to_remove_;   // 上一次待删除的数据
-    const char *payload_; // 第一次解析到数据的地方
+    size_t payload_len_; // 已经解析到的payload长度
     struct websocket_parser *parser_;
 };

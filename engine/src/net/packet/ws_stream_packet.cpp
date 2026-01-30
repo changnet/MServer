@@ -64,8 +64,7 @@ int32_t WSStreamPacket::on_frame_end()
 
     if (size < sizeof(WssHeader))
     {
-        unpack_error(L_, "incomplete stream data");
-        return WPE_PAUSE; // unpack_error返回错误在lua处理，不需要返回WPE_ERROR;
+        return unpack_error(L_, "incomplete stream data");
     }
 
     WssHeader header;
@@ -77,5 +76,5 @@ int32_t WSStreamPacket::on_frame_end()
     lua_pushlightuserdata(L_, (void *)(payload + sizeof(WssHeader)));
     lua_pushinteger(L_, size - sizeof(WssHeader));
 
-    return WPE_PAUSE;
+    return 4;
 }

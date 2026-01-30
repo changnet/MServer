@@ -93,7 +93,7 @@ static int32_t on_frame_body(struct websocket_parser *parser, const char *at,
         static_cast<class WebsocketPacket *>(parser->data);
 
     // 数据保留在缓冲区中，不需要拷贝出来
-    ws_packet->try_set_payload(at);
+    ws_packet->add_payload_len(length);
 
     return 0;
 }
@@ -101,22 +101,7 @@ static int32_t on_frame_body(struct websocket_parser *parser, const char *at,
 // 数据帧完成
 static int32_t on_frame_end(struct websocket_parser *parser)
 {
-    assert(parser && parser->data);
-
-    class WebsocketPacket *ws_packet =
-        static_cast<class WebsocketPacket *>(parser->data);
-
-    /* https://tools.ietf.org/html/rfc6455#section-5.5
-     * opcode并不是按位来判断的，而是按顺序1、2、3、4...
-     * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are
-     * identified by opcodes where the most significant bit of the opcode is 1)
-     *
-     */
-    if (unlikely(parser->flags & 0x08))
-    {
-        return ws_packet->on_ctrl_end();
-    }
-    return ws_packet->on_frame_end();
+    return WPE_PAUSE; // 终止解析
 }
 
 //< init all field insted of using websocket_parser_settings_init
@@ -132,9 +117,8 @@ WebsocketPacket::WebsocketPacket(class Socket *sk) : HttpPacket(sk)
 {
     is_upgrade_ = false;
 
-    require_len_ = 0;
     to_remove_   = 0;
-    payload_     = nullptr;
+    payload_len_ = 0;
     parser_      = new struct websocket_parser();
     websocket_parser_init(parser_);
     parser_->data = this;
@@ -216,7 +200,7 @@ int32_t WebsocketPacket::pack_ctrl(lua_State *L, int32_t index)
 }
 
 int64_t WebsocketPacket::buffer_process(bool &term,
-                                      const websocket_parser_settings *settings,
+    const websocket_parser_settings *settings,
     const char* data, int64_t len)
 {
     // websocket_parser_execute把数据全当二进制处理，没有错误返回
@@ -227,14 +211,13 @@ int64_t WebsocketPacket::buffer_process(bool &term,
     int32_t e = parser_->error;
     if (WPE_OK == e)
     {
-        if (payload_)
+        if (parser_->length)
         {
-            assert(0 == require_len_);
             // parser_解析完head时不提供任何方法获取head的长度，
             // 只能在第一次解析到payload时手动计算head长度
-            int64_t head_len = payload_ - data;
-            require_len_     = parser_->length;
-            assert(head_len > 0 && require_len_ > 0);
+            int64_t head_len = nparser - payload_len_;
+
+            assert(head_len > 0);
 
             term = true;
             return head_len;
@@ -244,8 +227,9 @@ int64_t WebsocketPacket::buffer_process(bool &term,
     else if (WPE_PAUSE == e)
     {
         term = true;
-        to_remove_ = nparser;
-        return 0; // payload还在缓冲区中，不删除数据
+        int64_t remove = nparser - parser_->length;
+        assert(remove >= 0);
+        return remove; // payload还在缓冲区中，只删除head部分
     }
 
     term = true;
@@ -265,22 +249,12 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
         to_remove_ = 0;
     }
 
-    int32_t e       = 0;
-    int32_t old_top = lua_gettop(L);
-    if (require_len_ > 0)
-    {
-        assert(payload_);
-        
-        // 已经解析到所需要的数据长度，直接判断数据长度跳过parser
-        // 因为buffer是一个链表，用parser分段解析并且保留数据在buffer避免复制
-        // 现在很低效，而且需要做额外的处理
+    int32_t e       = WPE_OK;
+    L_              = L;
 
-        e = WPE_OK;
-    }
-    else
+    // 如果已经解析出了payload长度，直接对比数据长度就行，不再解析
+    if (0 == parser_->length)
     {
-        L_       = L;
-        payload_ = nullptr;
         buffer.iterate_to_processor(
             [this, settings = &settings](bool &term, const char *rptr, int64_t size)
             { return buffer_process(term, settings, rptr, size); });
@@ -289,26 +263,28 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
 
     if (WPE_OK == e)
     {
-        if (0 == require_len_ || buffer.length() < (int64_t)require_len_)
+        if (0 == parser_->length || buffer.length() < (int64_t)parser_->length)
         {
             return unpack_return(L, PC_MORE);
         }
-        else
-        {
-            e = this->on_frame_end();
-        }
+        e = WPE_PAUSE;
     }
     if (WPE_PAUSE == e)
     {
-        // 成功解析出数据，数据已经在on_frame_end中设置到lua的堆栈
+        /* https://tools.ietf.org/html/rfc6455#section-5.5
+         * opcode并不是按位来判断的，而是按顺序1、2、3、4...
+         * 它们是互斥的，只能存在其中一个,我们只需要判断最高位即可(Control frames are
+         * identified by opcodes where the most significant bit of the opcode is 1)
+         *
+         */
+        int32_t argc = (parser_->flags & 0x08) ? on_ctrl_end() : on_frame_end();
 
         // 与llhttp不一样，websocket_parser不能用pause停下来，否则state状态不对
         // 类似llhttp_resume，这里重置让它能pause并继续解析
         websocket_parser_init(parser_);
 
-        int32_t new_top = lua_gettop(L);
-        assert(new_top - old_top > 0);
-        return new_top - old_top;
+        payload_len_ = 0;
+        return argc;
     }
 
     return unpack_error(L, "websocket parse error");
@@ -356,29 +332,16 @@ int32_t WebsocketPacket::on_upgrade(lua_State *L)
 const char *WebsocketPacket::make_payload(size_t &size)
 {
     size = parser_->length;
-    if (0 == size)
-    {
-        assert(!payload_);
-        return nullptr; // 没有payload(比如只发一些ctrl帧)
-    }
+    if (0 == size) return nullptr; // 没有payload(比如只发一些ctrl帧)
 
-    const char *payload = payload_;
 
-    // 0 != require_len_表示数据不在同一个chunk中，需要合并
-    if (0 != require_len_)
-    {
-        assert(require_len_ == size);
-        payload = socket_->get_recv_buffer().peek_buffer(size, 1);
-    }
-    assert(payload);
-    require_len_ = 0;
+    char *payload = socket_->get_recv_buffer().peek_buffer(size, 1);
 
     // websocket的XOR算法是单个字节运算，允许在原buffer上修改
     // 如果带masking-key，则收到的body都需要用masking-key来解码才能得到原始数据
     if (parser_->flags & WS_HAS_MASK)
     {
-        websocket_parser_decode(const_cast<char *>(payload), payload, size,
-                                parser_);
+        websocket_parser_decode(payload, payload, size, parser_);
     }
 
     return payload;
@@ -392,7 +355,7 @@ int32_t WebsocketPacket::on_frame_end()
     lua_pushinteger(L_, PC_DATA);
     lua_pushlstring(L_, payload, size);
 
-    return WPE_PAUSE;
+    return 2;
 }
 
 int32_t WebsocketPacket::on_ctrl_end()
@@ -403,10 +366,14 @@ int32_t WebsocketPacket::on_ctrl_end()
     lua_pushinteger(L_, PC_CTRL);
     lua_pushinteger(L_, parser_->flags);
 
-    // 控制帧也是可以包含数据的
-    if (size > 0) lua_pushlstring(L_, payload, size);
+    int32_t args = 2; // 控制帧也是可以包含数据的
+    if (size > 0)
+    {
+        args++;
+        lua_pushlstring(L_, payload, size);
+    }
 
-    return WPE_PAUSE;
+    return args;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])
