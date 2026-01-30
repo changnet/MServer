@@ -128,6 +128,10 @@ char *Buffer::peek_buffer(int64_t size, int32_t rwflag)
     int64_t pos = head->pos_.load(std::memory_order_acquire);
 
     int64_t data_len = pos - read_offset_;
+
+    // 异常情况检查：read_offset_ 不应该超过 pos
+    assert(data_len >= 0);
+
     if (data_len >= size) return head->data() + read_offset_;
 
     // 在多个chunk中，需要拷贝到同一段连续的缓冲区
@@ -137,19 +141,22 @@ char *Buffer::peek_buffer(int64_t size, int32_t rwflag)
     if (data_len > 0)
     {
         memcpy(wptr, head->data() + read_offset_, data_len);
+        size -= data_len;
         wptr += data_len;
     }
-    size -= data_len;
+
     while (size > 0)
     {
         Chunk *next = head->next_.load(std::memory_order_acquire);
         if (!next) return nullptr;
 
         int64_t pos = next->pos_.load(std::memory_order_acquire);
-        memcpy(wptr, next->data(), pos);
+        // 只复制需要的数据量，避免越界写入
+        int64_t copy_len = pos > size ? size : pos;
+        memcpy(wptr, next->data(), copy_len);
 
-        size -= pos;
-        wptr += pos;
+        size -= copy_len;
+        wptr += copy_len;
         head = next;
     }
 

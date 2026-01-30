@@ -70,8 +70,9 @@ public:
         explicit Chunk(int64_t cap) : capacity_(cap)
         {
             mask_ = 0;
-            pos_.store(0, std::memory_order_release);
-            next_.store(nullptr, std::memory_order_release);
+            // 初始化时，在其他线程没有cache，可以安全使用relaxed
+            pos_.store(0, std::memory_order_relaxed);
+            next_.store(nullptr, std::memory_order_relaxed);
         }
 
         inline char *data()
@@ -251,7 +252,10 @@ public:
                     return (int32_t)ret;
                 }
 
-                len_.fetch_sub(len, std::memory_order_acq_rel);
+                // 确保消耗的数据不超过可用数据，防止 read_offset_ 越界
+                assert(ret <= len);
+
+                len_.fetch_sub(ret, std::memory_order_acq_rel);
                 if (ret < len) // 数据未消耗完
                 {
                     read_offset_ = read_offset + ret;
@@ -290,7 +294,7 @@ public:
                 return 1;
             }
 
-            read_offset = 0;
+
         }
         return 1;
     }
@@ -346,7 +350,7 @@ public:
         if (next_len + data_len < (int64_t)sizeof(T)) return false;
 
         if (data_len > 0) memcpy(t, head->data() + read_offset_, data_len);
-        memcpy(((char *)t) + data_len, head->data(), sizeof(T) - data_len);
+        memcpy(((char *)t) + data_len, next->data(), sizeof(T) - data_len);
 
         return true;
     }
