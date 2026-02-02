@@ -5,18 +5,33 @@
 #include "system/static_global.hpp"
 #include "ev/time.hpp"
 
-struct ThreadBuffer
+static constexpr size_t MIN_BUFFER_SIZE = 8 * 1024;
+
+struct ThreadLogBuffer
 {
-    ThreadBuffer()
+    ThreadLogBuffer()
     {
         used_   = 0;
-        buffer_ = new char[10240];
-        size_   = sizeof(buffer_);
+        buffer_ = new char[MIN_BUFFER_SIZE];
+        size_   = MIN_BUFFER_SIZE;
     }
 
-    ~ThreadBuffer()
+    ~ThreadLogBuffer()
     {
         delete[] buffer_;
+    }
+
+    void clear()
+    {
+        used_ = 0;
+
+        // 清掉过大的缓存，避免线程太多时，占用过多内存
+        if (size_ > MIN_BUFFER_SIZE)
+        {
+            delete[] buffer_;
+            buffer_ = new char[MIN_BUFFER_SIZE];
+            size_   = MIN_BUFFER_SIZE;
+        }
     }
 
     void reserve(size_t need_size)
@@ -50,7 +65,7 @@ struct ThreadBuffer
     char *buffer_;
 };
 
-ThreadBuffer &get_thread_buffer()
+ThreadLogBuffer &get_thread_buffer()
 {
     // print用的线程安全缓冲区。Thread-Local-Storage也是有大小的
     // 直接用thread_local char[102400]会占用太多，这只用struct包一层
@@ -58,8 +73,9 @@ ThreadBuffer &get_thread_buffer()
     // windows下，程序启动时，会创建很多额外的ntdll等线程
     // 如果这个thread_local作用域放到整个cpp文件，则每个线程都会创建这个thread_local
     // 但是一些线程并不会释放这个thread_local
-    thread_local ThreadBuffer buffer;
+    thread_local ThreadLogBuffer buffer;
 
+    buffer.clear();
     return buffer;
 }
 
@@ -135,8 +151,8 @@ int32_t LLog::print(lua_State *L)
         return 0;
     }
 
-    ThreadBuffer &buffer = get_thread_buffer();
-    buffer.used_ = 0;
+    ThreadLogBuffer &buffer = get_thread_buffer();
+
     for (int32_t i = 3; i <= n; i++)
     {
         if (i > 3) buffer.append_string(" ", 1);

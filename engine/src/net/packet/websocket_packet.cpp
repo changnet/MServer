@@ -279,11 +279,13 @@ int32_t WebsocketPacket::unpack(lua_State *L, Buffer &buffer)
          */
         int32_t argc = (parser_->flags & 0x08) ? on_ctrl_end() : on_frame_end();
 
+        payload_len_ = 0;
+        to_remove_ = parser_->length;
+
         // 与llhttp不一样，websocket_parser不能用pause停下来，否则state状态不对
         // 类似llhttp_resume，这里重置让它能pause并继续解析
         websocket_parser_init(parser_);
 
-        payload_len_ = 0;
         return argc;
     }
 
@@ -366,14 +368,14 @@ int32_t WebsocketPacket::on_ctrl_end()
     lua_pushinteger(L_, PC_CTRL);
     lua_pushinteger(L_, parser_->flags);
 
-    int32_t args = 2; // 控制帧也是可以包含数据的
+    int32_t argc = 2; // 控制帧也是可以包含数据的
     if (size > 0)
     {
-        args++;
+        argc++;
         lua_pushlstring(L_, payload, size);
     }
 
-    return args;
+    return argc;
 }
 
 void WebsocketPacket::new_masking_key(char mask[4])
