@@ -43,7 +43,7 @@ static char *get_thread_buffer(int64_t size, int32_t rwflag)
 
 Buffer::Buffer()
 {
-    // 预分配一个chunk，确保 tail_ 永远有效，且只由 Producer 修改
+    // 预分配一个chunk，确保 head_、tail_ 永远有效
     Chunk *chunk = allocate_chunk(CHUNK_SIZE);
     head_.store(chunk, std::memory_order_relaxed);
     tail_.store(chunk, std::memory_order_relaxed);
@@ -104,11 +104,12 @@ void Buffer::append_chunk(Chunk *chunk, int64_t len)
     assert(len > 0);
     chunk->pos_.store(len, std::memory_order_release);
 
-    len_.fetch_add(len, std::memory_order_acq_rel);
-
     Chunk *curr_tail = tail_.load(std::memory_order_relaxed);
     curr_tail->next_.store(chunk, std::memory_order_release);
     tail_.store(chunk, std::memory_order_release);
+
+    // 先设置好next_，再加上len_，避免消费者检查len_有数据，但却取不到数据
+    len_.fetch_add(len, std::memory_order_acq_rel);
 }
 
 Buffer::Chunk *Buffer::allocate_chunk(int64_t alloc_size)

@@ -91,6 +91,8 @@ function WebSocket:on_handshake(sec_websocket_key, sec_websocket_accept)
     end
 
     self.status = OPENED
+
+    self:set_option()
     -- 握手后，连接建立成功
     self:on_connected()
 end

@@ -22,6 +22,10 @@ function SsSocket:__init()
     self.auto_conn = false -- 是否自动重连
 end
 
+function SsSocket:set_option()
+    self.s:set_nodelay(1)
+end
+
 -- 发送数据包
 function SsSocket:send_pkt(src, dst, mtype, usize, udata)
     return send_srv(self.s, src, dst, mtype, usize, udata)

@@ -71,6 +71,7 @@ public:
         {
             mask_ = 0;
             // 初始化时，在其他线程没有cache，可以安全使用relaxed
+            // 当chunk对象指针传到另一个线程时（比如通过next_会使用release）
             pos_.store(0, std::memory_order_relaxed);
             next_.store(nullptr, std::memory_order_relaxed);
         }
@@ -162,8 +163,6 @@ public:
             processor(data, new_chk->data(), write_len);
             new_chk->pos_.store(write_len, std::memory_order_release);
 
-            len_.fetch_add(write_len, std::memory_order_acq_rel);
-
             left -= write_len;
             data += write_len;
 
@@ -171,6 +170,9 @@ public:
             Chunk *curr_tail = tail_.load(std::memory_order_relaxed);
             curr_tail->next_.store(new_chk, std::memory_order_release);
             tail_.store(new_chk, std::memory_order_release);
+
+            // 先设置好next_，再加上len_，避免消费者检查len_有数据，但却取不到数据
+            len_.fetch_add(write_len, std::memory_order_acq_rel);
         }
     }
 

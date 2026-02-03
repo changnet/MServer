@@ -166,11 +166,13 @@ Test.describe("socket test", function()
 
         sc_srv.on_message = Test.cb(function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
+            Test.equal(size, pingpong_size)
 
             self:send_pkt(msg_id, pingpong_ud, pingpong_size)
         end)
         sc_clt.on_message = Test.cb(function(self, recv_msg_id, buffer, size)
             Test.equal(recv_msg_id, msg_id)
+            Test.equal(size, pingpong_size)
             count = count + 1
 
             if count >= PERF_TIMES then
