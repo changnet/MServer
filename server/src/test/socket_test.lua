@@ -271,7 +271,7 @@ Test.describe("socket test", function()
         end
         ss_clt:send_pkt(src, dst, mtype, pingpong_size, pingpong_ud)
 
-        Test.wait()
+        Test.wait(4000)
     end)
 
     Test.after(function()

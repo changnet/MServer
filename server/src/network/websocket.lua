@@ -100,7 +100,6 @@ end
 -- 客户端发送握手请求
 -- @param url 握手时，可以像普通http get那样加参数，或者像post在body加参数
 function WebSocket:send_handshake(url)
-    -- print(debug.traceback())
     assert(not self.ws_key) -- 不应该会重复发送握手
     -- RFC 6455 4.1.7
     -- Sec-WebSocket-Key|. The value of this header field MUST be a
@@ -124,6 +123,7 @@ function WebSocket:io_ready()
 
     -- 如果是客户端才发起握手，服务器是不处理的
     if self:is_server() then return end
+
     return self:send_handshake(self.url)
 end
 

@@ -137,6 +137,7 @@ function Socket:on_connecting(e)
             self:io_ready()
         end
     end
+    -- 连接失败会自动调用close，这里不需要额外处理
 end
 
 -- 连接断开(主动断开、对方断开都会触发此事件)

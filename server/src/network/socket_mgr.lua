@@ -162,11 +162,11 @@ end
 
 local function do_connect(socket)
     local e = socket.s:is_connect_success()
+
+    CoPool.invoke(socket.on_connecting, socket, e)
     if 0 ~= e then
         socket:close() -- not s:close()
     end
-
-    return CoPool.invoke(socket.on_connecting, socket, e)
 end
 
 local function socket_dispatch(src, udata, id)

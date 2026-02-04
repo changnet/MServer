@@ -3,7 +3,7 @@
 
 struct ThreadBuffer
 {
-    int64_t len_;
+    size_t len_;
     char *buffer_;
 
     ThreadBuffer()
@@ -13,7 +13,25 @@ struct ThreadBuffer
     }
     ~ThreadBuffer()
     {
-        delete[] buffer_;
+        // delete一个nullptr是安全的，但dbg_mem.cpp那边计数会出错
+        if (buffer_) delete[] buffer_;
+    }
+    char* resize(size_t size)
+    {
+        // 最小256kb，保证系统用mmap分配内存不会造成碎片
+        // 256kb足够应付绝大多数情况，偶尔发送大数据时，后续要释放重新分配
+        // 不然发个50M的数据，一台机子开20个服，200多线程，内存就直接没了
+
+        static constexpr int64_t min_size = 256 * 1024;
+        static constexpr int64_t max_size = 1024 * 1024;
+
+        if (len_ < size || (size < max_size && len_ > max_size))
+        {
+            if (buffer_) delete[] buffer_;
+            len_    = size > min_size ? size : min_size;
+            buffer_ = new char[len_];
+        }
+        return buffer_;
     }
 };
 
@@ -22,21 +40,9 @@ static char *get_thread_buffer(int64_t size, int32_t rwflag)
 {
     thread_local ThreadBuffer tb[2];
 
-    // 最小256kb，保证系统用mmap分配内存不会造成碎片
-    // 256kb足够应付绝大多数情况，偶尔发送大数据时，后续要释放重新分配
-    // 不然发个50M的数据，一台机子开20个服，200多线程，内存就直接没了
-
-    static constexpr int64_t min_size = 256 * 1024;
-    static constexpr int64_t max_size = 1024 * 1024;
-
     ThreadBuffer &b = 1 == rwflag ? tb[0] : tb[1];
-    if (b.len_ < size || (size < max_size && b.len_ > max_size))
-    {
-        delete[] b.buffer_;
-        b.len_    = size > min_size ? size : min_size;
-        b.buffer_ = new char[b.len_];
-    }
-    return b.buffer_;
+
+    return b.resize(size);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
