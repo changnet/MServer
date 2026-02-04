@@ -211,15 +211,19 @@ int64_t WebsocketPacket::buffer_process(bool &term,
     int32_t e = parser_->error;
     if (WPE_OK == e)
     {
-        if (parser_->length)
+        // parser_解析完head时不提供任何方法获取head的长度，
+        // 只能在第一次解析到payload时手动计算head长度 4 == s_body
+        if (4 == parser_->state && parser_->length)
         {
-            // parser_解析完head时不提供任何方法获取head的长度，
-            // 只能在第一次解析到payload时手动计算head长度
             int64_t head_len = nparser - payload_len_;
 
             assert(head_len > 0);
 
             term = true;
+
+            // 这里返回head_len，那buffer那边就会执行删除只保留payload
+            // 如果head和payload不在同一块chunk，删除后效率更高
+            // 如果在同一块chunk，删除会多一次atomic操作
             return head_len;
         }
         return nparser;
