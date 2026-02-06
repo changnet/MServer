@@ -21,6 +21,8 @@ SocketMgr = {
     CLOSED  = 4, -- 已关闭
 }
 
+local EngineSocket = require "engine.Socket"
+
 local EV_READ      = SocketMgr.EV_READ
 local EV_ACCEPT    = SocketMgr.EV_ACCEPT
 local EV_CONNECT   = SocketMgr.EV_CONNECT
@@ -28,6 +30,8 @@ local EV_CLOSE     = SocketMgr.EV_CLOSE
 local EV_INIT_CONN = SocketMgr.EV_INIT_CONN
 local EV_INIT_ACPT = SocketMgr.EV_INIT_ACPT
 local ACCEPT_CONNECT = EV_INIT_CONN | EV_INIT_ACPT
+
+local get_event = EngineSocket.get_event
 
 local PC_ERROR = SocketMgr.PC_ERROR
 local PC_MORE = SocketMgr.PC_MORE
@@ -143,7 +147,7 @@ local function do_close(socket)
     -- end
 end
 
-local function do_listen(socket)
+local function do_accept(socket)
     local s = socket.s
     while true do
         local fd, e = s:accept()
@@ -152,7 +156,7 @@ local function do_listen(socket)
 
             -- 这个报错是accept报错，可能是新的fd报错，并不一定是listen这个socket的报错
             -- 比如ENFILE(Too many open files)，因此暂时不关闭，触发错误日志等待手动处理
-            eprint("socket do_listen error", e)
+            eprint("socket do_accept error", e)
             return
         end
 
@@ -176,9 +180,9 @@ local function socket_dispatch(src, udata, id)
         return
     end
 
-    -- 因为socket的设计是读写线程共用一个事件字段，多次事件直接叠加在同一个字段而不是发多个message
+    -- socket的设计是读写线程共用一个事件字段，多次相同事件直接叠加避免发多个message
     -- 所以事件是存在socket上而不放在message上
-    local revents = socket.s:get_event()
+    local revents = get_event(socket.s)
 
     --[[
     一个socket发送数据后立即关闭，则对端会同时收到EV_READ和EV_CLOSE
@@ -188,7 +192,6 @@ local function socket_dispatch(src, udata, id)
     ]]
     if 0 ~= (ACCEPT_CONNECT & revents) then
         -- 握手成功可能会直接收到消息，所以必须先回调握手成功
-        socket.ok = true
         socket:io_ready() -- 这里不要return，可能同时还有read事件
     end
     if 0 ~= (EV_READ & revents) then
@@ -200,7 +203,7 @@ local function socket_dispatch(src, udata, id)
 
     -- ACCEPT、CONNECT事件可能和READ、WRITE同时触发
     if 0 ~= (EV_ACCEPT & revents) then
-        return do_listen(socket)
+        return do_accept(socket)
     elseif 0 ~= (EV_CONNECT & revents) then
         return do_connect(socket)
     end

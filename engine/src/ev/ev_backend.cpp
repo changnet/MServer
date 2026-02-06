@@ -360,7 +360,6 @@ void EVBackend::do_kernel_event(EVIO *w, int32_t revents)
             else if (unlikely(b_kevents & EV_CONNECT))
             {
                 events |= EV_CONNECT;
-                ELOG("append connect event %d", w->id_);
                 kevents &= ~EV_CONNECT;
             }
             else if (unlikely(b_kevents & EV_INIT_ACPT))

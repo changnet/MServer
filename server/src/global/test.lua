@@ -213,6 +213,7 @@ local function test_one_before(b)
 end
 
 local function test_one_it(i)
+    T.time_update() -- 执行测试前，更新帧时间
     local tm = T.clock()
     local ok, msg = co_run(i.func)
     if not ok then
@@ -227,6 +228,8 @@ local function test_one_it(i)
         i.status = nil
         coroutine.yield()
     end
+
+    T.time_update() -- 执行测试后，更新帧时间
 
     -- 异步超时，会在Test.imeout重新设置PEND状态
     if i.status == PEND then
@@ -304,7 +307,6 @@ local function run_one_describe(d)
     end
 
     d.should_run = should_run
-    T.time_update() -- 执行测试前，更新帧时间
     local ok, msg = xpcall(d.func, error_msgh)
     if not ok then T.R(msg) end
 end

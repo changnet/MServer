@@ -32,9 +32,11 @@ do_make()
 	elif [ -n "$cmake_option" ]; then
 		# 如果参数不是上面几种，就只能是编译某个组件，比如 make llhttp
 		make $1
-	else
-		make install # 这个会执行增量编译并安装
+		return 0
 	fi
+
+	# 无参数这个会执行增量编译并安装，或者上面的选项更新cmake后也编译并安装
+	make install
 }
 
 
