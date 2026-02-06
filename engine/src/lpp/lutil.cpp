@@ -459,6 +459,7 @@ static int32_t sha3_256(lua_State* L)
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     if (!ctx || 1 != EVP_DigestInit_ex(ctx, EVP_sha3_256(), nullptr))
     {
+        if (ctx) EVP_MD_CTX_free(ctx);
         return luaL_error(L, "sha256 init error");
     }
 
@@ -469,6 +470,7 @@ static int32_t sha3_256(lua_State* L)
         if (!ptr)
         {
             // not a string and can not convert to string
+            EVP_MD_CTX_free(ctx);
             return luaL_error(L, "argument #%d expect string,got %s", i,
                               lua_typename(L, lua_type(L, i)));
         }
@@ -479,6 +481,7 @@ static int32_t sha3_256(lua_State* L)
     unsigned int sha3_256_len = 0;
     unsigned char sha256[EVP_MAX_MD_SIZE];
     EVP_DigestFinal_ex(ctx, sha256, &sha3_256_len);
+    EVP_MD_CTX_free(ctx);
 
     char buf[EVP_MAX_MD_SIZE * 2 + 1] = {0};
     for (unsigned int i = 0; i < sha3_256_len; ++i)

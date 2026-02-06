@@ -266,14 +266,18 @@ void EVBackend::do_watcher_event(EVIO *w, int32_t revents, bool add)
 {
     assert(revents);
 
+    // 先执行了epoll的事件，此时可能从b_kevents_移除了一些事件，比如EV_CONNECT
+    // 如果有b_pevents_则以b_pevents_为准
+    int32_t b_kevents = w->b_pevents_ ? w->b_pevents_ : w->b_kevents_;
+
     // epoll检测到连接已断开，会直接从backend中删除
     // 此时再收到主线程的任何数据都直接丢弃
-    int32_t b_kevents = w->b_kevents_;
     if (b_kevents & (EV_CLOSE | EV_CLOSE)) return;
 
     int32_t events = 0; // 需要派发到其他线程的事件
-    int32_t kevents =
-        add ? (revents | b_kevents) : revents; // 需要设置到kernel的事件
+
+    // add为追加，无add则为覆盖
+    int32_t kevents = add ? (revents | b_kevents) : revents;
 
     // 这几个事件，是要立即执行
     if (revents & EV_INIT_ACPT)
@@ -515,8 +519,9 @@ void EVBackend::add_watcher_event(EVIO *w, int32_t ev)
 
 void EVBackend::set_watcher_event(EVIO *w, int32_t ev)
 {
-    // 使用atomic exchange设置事件（高位表示优先执行），在锁外完成
-    // 覆盖旧的事件，低位可以继续追加其他事件
+    // 使用atomic exchange设置事件（高位表示优先执行）
+    // 覆盖旧的事件并设置在高位，低位可以继续追加其他事件
+    // TODO 不能按先后设置多个事件，但目前够用了就暂时不改
     int32_t old = w->b_ev_.exchange(ev << 16, std::memory_order_acq_rel);
     if (0 != old) return; // 已有事件在队列中，无需重复入队
 
