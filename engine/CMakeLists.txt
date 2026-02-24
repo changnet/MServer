@@ -65,7 +65,7 @@ elseif(LINUX)
     # 优先查找.a类型的静态库
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
     # 这里的参数宽松一些，编译第三方库太多警告，下面编译自己的代码会多加一些警告
-    add_compile_options(-pipe -Wall -Wodr -flto -pedantic)
+    add_compile_options(-pipe -Wall -Wodr -flto=auto -pedantic)
     # -fsanitize=address -static-libasan -g
     # 这个选项会导致linux下占用20G VIRT内存 https://github.com/google/sanitizers/issues/704
     add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address>)

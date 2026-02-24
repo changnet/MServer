@@ -140,22 +140,23 @@ int32_t LLog::print(lua_State *L)
     // 一些基础类型，尽量不用tostring，那样会在lua创建一个str再gc掉
 
     int32_t n    = lua_gettop(L);
-    int32_t mask = luaL_checkinteger32(L, 2);
+    const char *name = luaL_checkstring(L, 2);
+    int32_t mask = luaL_checkinteger32(L, 3);
 
     // 针对print("xxx")只打印一个str的情况优化
-    if (n == 3 && LUA_TSTRING == lua_type(L, 3))
+    if (n == 4 && LUA_TSTRING == lua_type(L, 4))
     {
         size_t len      = 0;
-        const char *str = lua_tolstring(L, 3, &len);
-        AsyncLog::append("info", mask, timing::try_frame_time(), str, len);
+        const char *str = lua_tolstring(L, 4, &len);
+        AsyncLog::append(name, mask, timing::try_frame_time(), str, len);
         return 0;
     }
 
     ThreadLogBuffer &buffer = get_thread_buffer();
 
-    for (int32_t i = 3; i <= n; i++)
+    for (int32_t i = 4; i <= n; i++)
     {
-        if (i > 3) buffer.append_string(" ", 1);
+        if (i > 4) buffer.append_string(" ", 1);
 
         bool ok;
         switch (lua_type(L, i))
@@ -227,20 +228,8 @@ int32_t LLog::print(lua_State *L)
     // Memcpy 256B (1000000 ops): 3.29655 ms. Avg: 3 ns/op
     // Mutex Uncontended(1000000 ops) : 8.55687 ms.Avg : 8 ns / op
     // Mutex Contended 4 - Threads(1000000 total ops) : 55.4425 ms.Avg : 55 ns/ op(Total Time / Total Ops)
-    AsyncLog::append("info", mask, timing::try_frame_time(), buffer.buffer_,
+    AsyncLog::append(name, mask, timing::try_frame_time(), buffer.buffer_,
                      buffer.used_);
-
-    return 0;
-}
-
-int32_t LLog::error(lua_State *L)
-{
-    size_t len      = 0;
-    int32_t mask    = luaL_checkinteger32(L, 2);
-    const char *str = luaL_checklstring(L, 3, &len);
-
-    // 错误日志不多，不用考虑像print那样优化
-    AsyncLog::append("error", mask, timing::try_frame_time(), str, len);
 
     return 0;
 }

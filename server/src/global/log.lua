@@ -82,25 +82,25 @@ end
 -- 异步print log,只打印，不格式化
 function print(...)
     -- 128 = MASK_S_L，参考C++中的定义
-    return logger_print(g_async_log, 128, ...)
+    return logger_print(g_async_log, "info", 128, ...)
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数
 function printf(fmt, ...)
-    return logger_print(g_async_log, 128, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 128, string.format(fmt, ...))
 end
 
 -- debug print调试日志打印，不格式化
 function dprint(...)
     if not enable_dbg then return end
     -- 128 = MASK_S_L，参考C++中的定义
-    return logger_print(g_async_log, 130, ...)
+    return logger_print(g_async_log, "info", 130, ...)
 end
 
 -- debug print调试日志打印,以第一个为format参数，格式化后面的参数
 function dprintf(fmt, ...)
     if not enable_dbg then return end
-    return logger_print(g_async_log, 130, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 130, string.format(fmt, ...))
 end
 
 -- error print错误日志，写入根目录下的error文件 (参数不能带有nil参数)
@@ -116,65 +116,65 @@ function eprint(...)
     local str = table.concat(list, "    ") .. "\n" .. debug.traceback()
 
     -- 单独输出到error文件，用于触发运维邮件、电话
-    return g_async_log:error(129, str)
+    return g_async_log:print("error", 129, str)
 end
 
 --  error print错误日志格式化日志并写入根目录下的error文件
 function eprintf(fmt, ...)
     local str = string.format(fmt, ...) .. "\n" .. debug.traceback()
 
-    return g_async_log:error(129, str)
+    return g_async_log:print("error", 129, str)
 end
 
 -- 异步print log,只打印，不格式化。仅在日志线程开启后有效
 function warn(...)
     -- 136 = MASK_C_Y | MASK_S_L，参考C++中的定义
-    return logger_print(g_async_log, 136, ...)
+    return logger_print(g_async_log, "info", 136, ...)
 end
 
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
 function warnf(fmt, ...)
-    return logger_print(g_async_log, 136, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 136, string.format(fmt, ...))
 end
 
 -- 以红色打印日志
 function Log.red(...)
-    return logger_print(g_async_log, 129, ...)
+    return logger_print(g_async_log, "info", 129, ...)
 end
 
 -- 以红色格式化江打印日志
 function Log.redf(fmt, ...)
-    return logger_print(g_async_log, 129, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 129, string.format(fmt, ...))
 end
 
 -- 以红色打印日志
 function Log.green(...)
-    return logger_print(g_async_log, 130, ...)
+    return logger_print(g_async_log, "info", 130, ...)
 end
 
 -- 以红色格式化江打印日志
 function Log.greenf(fmt, ...)
-    return logger_print(g_async_log, 130, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 130, string.format(fmt, ...))
 end
 
 -- 以蓝色打印日志
 function Log.blue(...)
-    return logger_print(g_async_log, 132, ...)
+    return logger_print(g_async_log, "info", 132, ...)
 end
 
 -- 以蓝色格式化江打印日志
 function Log.bluef(fmt, ...)
-    return logger_print(g_async_log, 132, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 132, string.format(fmt, ...))
 end
 
 -- 以黄色打印日志
 function Log.yellow(...)
-    return logger_print(g_async_log, 136, ...)
+    return logger_print(g_async_log, "info", 136, ...)
 end
 
 -- 以黄色格式化江打印日志
 function Log.yellowf(fmt, ...)
-    return logger_print(g_async_log, 136, string.format(fmt, ...))
+    return logger_print(g_async_log, "info", 136, string.format(fmt, ...))
 end
 
 -- 启用或禁用调试日志打印

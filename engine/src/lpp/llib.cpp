@@ -277,7 +277,6 @@ static void luaopen_log(lua_State *L)
     lc.def<&LLog::start>("start");
 
     lc.def<&LLog::print>("print");
-    lc.def<&LLog::error>("error");
 
     lc.def<&LLog::append>("append");
 

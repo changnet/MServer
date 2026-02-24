@@ -34,18 +34,12 @@ public:
     int32_t append(lua_State *L);
 
     /**
-     * 类似lua print函数，把多个变量同时打印到info文件和控制台
+     * 类似lua print函数，把多个变量同时打印到指定日志设备
+     * @param name 设备名字，如stdout和error等
      * @param mask 日志掩码，可指定颜色、来源等，参考async_log中的定义
      * @param ... 需要打印的变量
      */
     int32_t print(lua_State *L);
-
-    /**
-     * 打印错误日志到error文件的同时输出到控制台
-     * @param mask 日志掩码，可指定颜色、来源等，参考async_log中的定义
-     * @param str 日志内容
-     */
-    int32_t error(lua_State *L);
 
     /**
      * 设置日志设备的参数
