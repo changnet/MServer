@@ -21,7 +21,7 @@ function Pbc.load()
     g_pbc:reset()
 
     local count = 0
-    local source = g_env:get("source")
+    local source = g_sharedata:get("source")
 
     -- 注意：pbc中如果一个pb文件引用了另一个pb文件中的message，则另一个文件必须优先加载
     local priority =

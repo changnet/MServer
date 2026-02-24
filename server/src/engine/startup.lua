@@ -24,14 +24,14 @@ local startup_modules = nil
 -- 打印运行的环境参数
 local function log_env_info()
     print("#####################################################")
-    printf("## starting %s", g_env:get("cmd_args"))
-    printf("## OS: %s", g_env:get("__OS_NAME__"))
+    printf("## starting %s", g_sharedata:get("cmd_args"))
+    printf("## OS: %s", g_sharedata:get("__OS_NAME__"))
     printf("## %s", _VERSION)
-    printf("## backend: %s", g_env:get("__BACKEND__"))
-    printf("## complier: %s", g_env:get("__COMPLIER_"))
-    printf("## build time: %s", g_env:get("__TIMESTAMP__"))
-    printf("## cwd: %s", g_env:get("cwd"))
-    printf("## exe: %s", g_env:get("exe"))
+    printf("## backend: %s", g_sharedata:get("__BACKEND__"))
+    printf("## complier: %s", g_sharedata:get("__COMPLIER_"))
+    printf("## build time: %s", g_sharedata:get("__TIMESTAMP__"))
+    printf("## cwd: %s", g_sharedata:get("cwd"))
+    printf("## exe: %s", g_sharedata:get("exe"))
     print("#####################################################")
 
     local buddha = [[
@@ -64,10 +64,10 @@ end
 
 -- 加载游戏设置文件
 local function load_setting()
-    local path = g_env:get("--setting")
+    local path = g_sharedata:get("--setting")
     if not path then
         -- 未从命令行传设置文件路径，则读取默认路径
-        local cwd = g_env:get("cwd")
+        local cwd = g_sharedata:get("cwd")
         path = cwd .. "/setting.lua"
     end
 
@@ -79,7 +79,7 @@ local function set_path()
     -- 这里只保留源码目录，不保留系统目录
     -- 所有的lua文件、so插件必须仅在源码目录搜索，避免版本冲突问题
 
-    local source = g_env:get("source")
+    local source = g_sharedata:get("source")
 
     -- 设置lua文件搜索路径(常用的路径排前面，会影响require性能)
     package.path = source .. "src/modules/?.lua;"
@@ -212,7 +212,7 @@ function Startup.process_init(loader)
     set_path()
     require "system.define" -- 基础定义
 
-    local node = g_env:get("--node")
+    local node = g_sharedata:get("--node")
 
     -- game1拆分
     local node_name, node_index = string.match(node, "(%a+)(%d*)")
@@ -248,7 +248,7 @@ function Startup.process_init(loader)
     LOCAL_TYPE = wtype
     LOCAL_ADDR = MAIN_ADDR
     LOCAL_NAME = name
-    g_env:set("MAIN_ADDR", MAIN_ADDR)
+    g_sharedata:set("MAIN_ADDR", MAIN_ADDR)
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
     require "engine.preloader"
@@ -314,7 +314,7 @@ function Startup.worker_init(addr, loader)
     LOCAL_TYPE = wtype
     LOCAL_NAME = string.format("%s%d", name, index)
 
-    MAIN_ADDR = g_env:get("MAIN_ADDR")
+    MAIN_ADDR = g_sharedata:get("MAIN_ADDR")
 
     format_log_name(name, index)
 

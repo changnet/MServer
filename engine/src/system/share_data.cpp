@@ -302,6 +302,30 @@ void ShareData::push_key(lua_State *L, const Key &key)
         key);
 }
 
+int ShareData::set_kv(const char *k, const char *v)
+{
+    Key key = std::string(k);
+
+    std::unique_lock lock(mutex_);
+
+    auto &map = std::get<Table>(root_node_->value_);
+    auto it   = map.find(key);
+
+    Node *node;
+    if (it == map.end())
+    {
+        node = new Node();
+        map.emplace(std::move(key), node);
+    }
+    else
+    {
+        node = it->second;
+    }
+    node->value_ = std::string(v);
+
+    return 0;
+}
+
 int ShareData::set(lua_State *L)
 {
     int top = lua_gettop(L);

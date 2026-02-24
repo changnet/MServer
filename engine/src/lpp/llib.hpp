@@ -14,6 +14,9 @@ extern "C"
 
 namespace llib
 {
+// 初始化环境变量
+void init_env(const char *source);
+
 // 仅打开cpp库
 void open_cpp(lua_State *L);
 

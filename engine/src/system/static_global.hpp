@@ -1,6 +1,5 @@
 #pragma once
 
-#include "env.hpp"
 #include "ev/ev.hpp"
 #include "lpp/llog.hpp"
 #include "ev/ev_backend.hpp"
@@ -34,7 +33,6 @@ public:
     // 这里负责保存一些全局变量，方便StaticGlobal::X这样调用
 
     inline static LLog *LOG     = nullptr; // 日志
-    inline static Env *V        = nullptr; // 环境变量
     inline static EV *E         = nullptr; // 主线程事件循环
     inline static EVBackend *B  = nullptr; // 网络后台线程
     inline static ThreadContextMgr *M = nullptr; // worker线程管理

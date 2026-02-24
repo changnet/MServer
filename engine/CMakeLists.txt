@@ -131,7 +131,7 @@ add_executable(master ${SRC_LIST})
 # 这个文件里使用_TIMESTAMP_这个宏来标记编译时间，所以每次都需要更新一下才会重新编译
 # add_custom_command可以更新时间戳，但没法保证在构建master前执行
 add_custom_target(update_build_time
-    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_LIST_DIR}/src/system/env.cpp
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_LIST_DIR}/src/lpp/llib.cpp
     COMMENT "update build timestamp"
 )
 add_dependencies(master update_build_time)

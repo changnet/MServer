@@ -50,6 +50,11 @@ public:
     ShareData &operator=(const ShareData &) = delete;
 
     /**
+     * @brief 用于在C++简单设置数据。暂时没有复杂需求，因此不支持多级key
+     */
+    int set_kv(const char *k, const char *v);
+
+    /**
      * @brief 设置数据
      * sharedata:set("user_list", 12345, {name = "abc", level = 123})
      * @return 成功返回 true，失败返回 false, err_msg

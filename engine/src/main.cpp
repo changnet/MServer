@@ -4,6 +4,7 @@ extern LONG __unhandled_exception_filte(_EXCEPTION_POINTERS *exception);
 #endif
 
 #include "system/signal.hpp"
+#include "lpp/llib.hpp"
 #include "system/static_global.hpp"
 #include <lua.hpp>
 
@@ -80,8 +81,8 @@ int32_t main(int32_t argc, char **argv)
     auto &source = setting.source;
 
     StaticGlobal::initialize();
-
-    StaticGlobal::V->init(source.c_str());
+    llib::init_env(source.c_str());
+    
     StaticGlobal::LOG->AsyncLog::start(1000);
     StaticGlobal::B->start();
 

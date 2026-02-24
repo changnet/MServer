@@ -2,7 +2,7 @@
 
 local addr = ...
 
-local source = g_env:get("source")
+local source = g_sharedata:get("source")
 dofile(source .. "src/engine/startup.lua")
 
 

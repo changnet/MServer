@@ -75,6 +75,7 @@ const char *__dbg_traceback()
 // 全局函数放这里
 static void luaopen_engine(lua_State *L)
 {
+    // 引擎底层接口
     lcpp::module_begin(L, "Engine");
     lcpp::module_function<&syssignal::signal_mask>(L, "signal_mask");
     lcpp::module_function<&syssignal::signal_mask_once>(L, "signal_mask_once");
@@ -89,13 +90,6 @@ static void luaopen_engine(lua_State *L)
     lcpp::module_function<&timing::update>(L, "update");
     lcpp::module_function<&util::sleep>(L, "sleep");
     lcpp::module_end(L);
-}
-
-static void luaopen_env(lua_State* L)
-{
-    lcpp::Class<Env> lc(L, "engine.Env");
-    lc.def<&Env::get>("get");
-    lc.def<&Env::set>("set");
 }
 
 static void luaopen_sharedata(lua_State *L)
@@ -376,8 +370,19 @@ static void luaopen_stdin_reader(lua_State *L)
 
 namespace llib
 {
-void open_env(lua_State *L)
+void init_env(const char *source)
 {
+    auto &S = StaticGlobal::S;
+
+    S->set_kv("source", source);
+    S->set_kv("__OS_NAME__", __OS_NAME__);
+    S->set_kv("__COMPLIER_", __COMPLIER_);
+    S->set_kv("__BACKEND__", __BACKEND__);
+    S->set_kv("__TIMESTAMP__", __TIMESTAMP__); // 这个时间不准，只有被编译到才会更新
+}
+
+void open_env(lua_State *L)
+    {
 #define SET_ENV_BOOL(v)    \
     lua_pushboolean(L, 1); \
     lua_setglobal(L, v)
@@ -391,9 +396,6 @@ void open_env(lua_State *L)
 
     lcpp::Class<EV>::push(L, StaticGlobal::E, false);
     lua_setglobal(L, "g_mthread");
-
-    lcpp::Class<Env>::push(L, StaticGlobal::V, false);
-    lua_setglobal(L, "g_env");
 
     lcpp::Class<ShareData>::push(L, StaticGlobal::S, false);
     lua_setglobal(L, "g_sharedata");
@@ -410,7 +412,6 @@ void open_cpp(lua_State *L)
 
     /* ============================对象方式调用============================= */
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-    luaopen_env(L);
     luaopen_sharedata(L);
     luaopen_engine(L);
     luaopen_ev(L);

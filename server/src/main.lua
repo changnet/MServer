@@ -68,14 +68,14 @@ local function main(cmd, ...)
     if chdir then util.chdir(chdir) end
 
     local cwd = util.getcwd()
-    g_env:set("cwd", cwd) -- current working directory
-    g_env:set("exe", util.getexe()) -- executable directory
-    g_env:set("cmd_args", cmd_args) -- command line args
+    g_sharedata:set("cwd", cwd) -- current working directory
+    g_sharedata:set("exe", util.getexe()) -- executable directory
+    g_sharedata:set("cmd_args", cmd_args) -- command line args
     for k, v in pairs(opts) do
-        g_env:set(k, v)
+        g_sharedata:set(k, v)
     end
 
-    local source = g_env:get("source")
+    local source = g_sharedata:get("source")
 
     -- gateway1去数字
     local file_name = string.match(node, "(%a+)")
