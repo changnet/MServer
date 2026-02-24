@@ -14,7 +14,7 @@ read_globals =
     "engine",
     "g_mthread",
     "g_async_log",
-    "g_env",
+    "g_sharedata",
     "Engine",
     "__VERSION__",
     "__TIMESTAMP__",

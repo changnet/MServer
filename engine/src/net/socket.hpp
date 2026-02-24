@@ -45,18 +45,33 @@ public:
      */
     static int32_t set_nonblock(int32_t fd, int32_t flag);
     /**
-     * 启用TCP_NODELAY选项
+     * 启用或者关闭TCP_NODELAY选项
+     * @param opt 1启用nodelay 0关闭
      */
     int32_t set_nodelay(int32_t opt);
-    // 启用TCP的keep alive
+    /**
+     * @brief 启用TCP的keep alive
+     * @param time 多少秒无通信后开始发送keep alive包
+     * @param interval 间隔多少秒发一次
+     * @param probes 总共发多少次
+     */
     int32_t set_keep_alive(int32_t time, int32_t interval, int32_t probes);
-    // 启用TCP的 user timeout
+    /**
+     * @brief 启用TCP的 user timeout，windows无效
+     * @param timeout 单位milliseconds
+     */
     int32_t set_user_timeout(int32_t timeout);
     // 启用IPV6双栈
     int32_t set_ipv6only(int32_t fd);
-    // 设置socket读写的事件
+    /**
+     * @brief 设置socket读写的事件
+     * @param events 事件，例如EV_READ
+     */
     int32_t set_watcher_event(int32_t events);
-    // 设置当前socket的版本
+    /**
+     * @brief 设置当前socket的版本
+     * @param version 0=ipv4，1=ipv6，2=ipv6双栈
+     */
     void set_ip_version(int32_t version);
 
     /**
@@ -91,7 +106,10 @@ public:
     int32_t validate();
     // 获取当前socket的事件
     int32_t get_event();
-    // 设置当前socket的事件
+    /**
+     * @brief 设置当前socket的事件
+     * @param ev 事件，例如EV_READ
+     */
     void set_event(int32_t ev);
     // 获取当前的错误码
     int32_t get_errno() const;
@@ -103,7 +121,21 @@ public:
      * @return ip地址, 端口
      */
     int32_t address(lua_State *L) const;
+    /**
+     * @brief 开始监听链接
+     * @param addr worker的地址
+     * @param host 监听的ip
+     * @param port 监听的端口
+     * @return 文件描述符，错误返回-1
+     */
     int32_t listen(int32_t addr, const char *host, int32_t port);
+    /**
+     * @brief 发起连接
+     * @param addr worker的地址
+     * @param host 连接的ip
+     * @param port 连接的端口
+     * @return 文件描述符，错误返回-1
+     */
     int32_t connect(int32_t addr, const char *host, int32_t port);
     /**
      * 尝试接受一个fd
@@ -160,15 +192,24 @@ public:
     {
         return w_ ? w_->io_ : nullptr;
     }
+    /**
+     * @brief 设置io读写的参数
+     * @param io_type io读写方式，io或者ssl_io
+     * @param ls_ctx 如果为ssl_io，需要指定ssl指针
+     */
     void *set_io(int32_t io_type, TlsCtx *tls_ctx);
+    /**
+     * @brief 设置消息打包的类型
+     * @param packet_type PT_HTTP等类型
+     */
     int32_t set_packet(int32_t packet_type);
 
     inline int32_t fd() const { return fd_; }
 
     /**
      * @brief 设置缓冲区的参数
-     * @param send_max 发送缓冲区chunk数量
-     * @param recv_max 接收缓冲区chunk数量
+     * @param send_max 发送缓冲区大小（字节）
+     * @param recv_max 接收缓冲区大小（字节）
      * @param mask 缓冲区溢出时处理方式
     */
     void set_buffer_params(int32_t send_max, int32_t recv_max, int32_t mask);

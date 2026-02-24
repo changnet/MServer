@@ -97,6 +97,7 @@ public:
     /**
      * @brief 把一个message并push到线程消息队列，同时唤醒线程。
      * 必须要保证message生命周期在当前线程处理前一直有效。
+     * @param message 消息指针，可用acquire_message获取或者construct_message构建
      */
     void push_message(void *message)
     {

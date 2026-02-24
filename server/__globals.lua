@@ -1,4 +1,4 @@
--- auto export by lua-tags 168 symbols
+-- auto export by lua-tags 185 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -7,11 +7,14 @@ return {
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
+"Acism", -- engine/__acism.lua
 "AndroidMgr", -- src/android/android_mgr.lua
+"Astar", -- engine/__astar.lua
 "Await", -- src/rpc/rpc_proxy.lua
 "BAG", -- src/modules/protocol/protocol.lua
 "Bot", -- src/bot/bot.lua
 "BotMgr", -- src/bot/bot_mgr.lua
+"Buffer", -- engine/__buffer.lua
 "CHAT", -- src/modules/protocol/protocol.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
@@ -29,22 +32,28 @@ return {
 "EMPTY", -- src/modules/system/define.lua
 "ENTITY", -- src/modules/protocol/protocol.lua
 "ET", -- src/modules/entity/entity_header.lua
+"Engine", -- engine/__engine.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
 "GAME_ADDR", -- src/engine/preloader.lua
 "GATEWAY_ADDR", -- src/engine/preloader.lua
 "GM", -- src/modules/gm/gm.lua
 "GameTest", -- src/modules/ai/action/game_test.lua
+"GridAoi", -- engine/__gridaoi.lua
 "HTTP", -- src/http/http_header.lua
+"IO", -- engine/__io.lua
 "LANG", -- config/lang_dev.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
 "LOCAL_NAME", -- src/worker/worker.lua
 "LOCAL_TYPE", -- src/worker/worker.lua
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
+"ListAoi", -- engine/__listaoi.lua
 "Log", -- src/global/log.lua
+"Log", -- engine/__log.lua
 "LogDB", -- src/modules/log/log_db.lua
 "Login", -- src/modules/account/login.lua
+"LuaCodec", -- engine/__luacodec.lua
 "MAIL", -- src/modules/protocol/protocol.lua
 "MAIN_ADDR", -- src/worker/worker.lua
 "MASTER_ADDR", -- src/engine/preloader.lua
@@ -52,6 +61,9 @@ return {
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MISC", -- src/modules/protocol/protocol.lua
 "MT", -- src/modules/move/move_header.lua
+"Map", -- engine/__map.lua
+"Mongo", -- engine/__mongo.lua
+"MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
 "PE", -- src/modules/event/player_event.lua
 "PE_CONN", -- src/modules/event/event_header.lua
@@ -62,6 +74,7 @@ return {
 "PLAYER", -- src/modules/protocol/protocol.lua
 "PROP", -- src/modules/property/property.lua
 "Pbc", -- src/message/pbc.lua
+"PbcCodec", -- engine/__pbccodec.lua
 "PidCall", -- src/rpc/rpc_proxy.lua
 "PidSend", -- src/rpc/rpc_proxy.lua
 "Ping", -- src/modules/system/ping.lua
@@ -87,14 +100,18 @@ return {
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
 "Send", -- src/rpc/rpc.lua
+"ShareData", -- engine/__sharedata.lua
 "Shutdown", -- src/engine/shutdown.lua
 "Signal", -- src/engine/signal.lua
+"Socket", -- engine/__socket.lua
 "SocketMgr", -- src/network/socket_mgr.lua
 "SrvMgr", -- src/network/srv_mgr.lua
 "Startup", -- src/engine/startup.lua
+"StdinReader", -- engine/__stdinreader.lua
 "Test", -- src/global/test.lua
 "ThreadMessage", -- src/message/thread_message.lua
 "Timer", -- src/timer/timer.lua
+"TlsCtx", -- engine/__tlsctx.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "Util", -- src/engine/startup.lua
 "WORKER", -- src/modules/system/define.lua

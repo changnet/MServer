@@ -92,7 +92,8 @@ public:
         return send_;
     }
     /**
-     * @brief 设置ssl的alpn
+     * @brief 设置ssl的alpn(Application-Layer Protocol Negotiation )
+     * @param alpn 应该层协议协商
      */
     virtual int32_t set_ssl_alpn(int32_t alpn)
     {
@@ -100,6 +101,7 @@ public:
     }
     /**
      * @brief 设置ssl的sni(service name indicator)
+     * @param sni service name indicator
      */
     virtual int32_t set_ssl_sni(const char *sni)
     {
@@ -107,6 +109,7 @@ public:
     }
     /**
      * @brief 设置ssl的证书host
+     * @param host ssl证书对应的地址
      */
     virtual int32_t set_ssl_cert_host(const char *host)
     {
@@ -114,6 +117,7 @@ public:
     }
     /**
      * @brief 设置ssl的验证模式
+     * @param mode 值必须对应 SSL_VERIFY_PEER 等宏定义
      */
     virtual int32_t set_ssl_verify_mode(int32_t mode)
     {

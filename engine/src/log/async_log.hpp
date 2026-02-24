@@ -104,6 +104,10 @@ public:
      */
     void add_device(const char *name, const char *path, int32_t alive,
                     int32_t policy, int64_t policy_u1, const char *multi);
+    /**
+     * @brief 删除日志设备
+     * @param name 日志名字
+     */
     void del_device(const char *name);
     /**
      * @brief 追加日志到设备
