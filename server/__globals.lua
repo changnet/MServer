@@ -1,4 +1,4 @@
--- auto export by lua-tags 189 symbols
+-- auto export by lua-tags 192 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -26,6 +26,7 @@ return {
 "DATA_ADDR", -- src/engine/preloader.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
+"DataCache", -- src/data/data_cache.lua
 "DataMgr", -- src/data/data_mgr.lua
 "E", -- src/modules/module_loader.lua
 "E", -- src/modules/system/error.lua
@@ -91,8 +92,10 @@ return {
 "Rpc", -- src/rpc/rpc.lua
 "Rtti", -- src/global/rtti.lua
 "SE", -- src/modules/event/system_event.lua
+"SE_MIN_TIMER", -- src/modules/event/event_header.lua
 "SE_READY", -- src/modules/event/event_header.lua
 "SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
+"SE_SEC_TIMER", -- src/modules/event/event_header.lua
 "SE_WORKER_BOTH_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_ME_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_READY", -- src/modules/event/event_header.lua

@@ -2,6 +2,7 @@
 -- 2015-09-14
 -- 增加部分常用table函数
 
+local select = select
 
 local function dump_insert(tbl, v, ...)
     -- table.insert本身就不支持insert一个nil值，所以这里只要是nil值就表示中止
@@ -300,4 +301,31 @@ function table.choice(tbl)
         if i == index then return v end
         i = i + 1
     end
+end
+
+-- 传入多层key，获取table中对应的值
+-- @param tbl 需要获取值的table
+-- @param ... 多层key，如a,b,c表示获取tbl[a][b][c]的值
+function table.get_value(tbl, ...)
+    local len = select("#", ...)
+    for i = 1, len do
+        local key = select(i, ...)
+        tbl = tbl[key]
+    end
+    return tbl
+end
+
+-- 传入多层key，设置table中对应的值
+-- @param tbl 需要设置值的table
+-- @param value 需要设置的值
+-- @param ... 多层key，如a,b,c表示设置tbl[a][b][c] = value
+function table.set_value(tbl, value, ...)
+    local len = select("#", ...)
+    for i = 1, len - 1 do
+        local key = select(i, ...)
+        if not tbl[key] then tbl[key] = {} end
+        tbl = tbl[key]
+    end
+    local key = select(len, ...)
+    tbl[key] = value
 end
