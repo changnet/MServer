@@ -236,6 +236,7 @@ function Startup.process_init(loader)
     require "global.require" -- 重写require，后续用require加载的文件，都被标记为可热更
     require "global.global" -- 加载错误处理函数
     require "global.log" -- 加载log函数
+    require "global.rtti"
 
     log_env_info()
 
@@ -302,6 +303,7 @@ function Startup.worker_init(addr, loader)
 
     load_setting()
 
+    require "global.rtti"
     require "data.global_data"
     require "engine.engine"
     require "worker.worker"

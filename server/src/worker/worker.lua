@@ -27,6 +27,8 @@ local Sequence = {
     WORKER.DATA, WORKER.MYSQL, WORKER.MONGODB,
 }
 
+local this = memory("Worker")
+
 -- 本地启动的worker是否都已启动完成
 -- @return 返回未启动完成的worker地址
 function Worker.is_local_ready()
@@ -138,6 +140,21 @@ function Worker.on_start_ready(addr)
         LOCAL_ADDR, addr, Worker.CLUSTER, Worker.READY)
 end
 
+-- worker全局定时器
+local function do_worker_timer()
+    local now = Engine.time()
+
+    SE.fire(SE_SEC_TIMER, now)
+
+    local next_min = this.next_min
+    if now > next_min then
+        -- this.next_min = next_min + 60 在服务器卡的时候无法修正为下一分钟
+        -- 这个定时器要保证整分钟触发
+        this.next_min = time.get_next_minite(now)
+        SE.fire(SE_MIN_TIMER, now)
+    end
+end
+
 -- worker启动完成
 function Worker.start_ready()
     assert(LOCAL_ADDR ~= MAIN_ADDR)
@@ -152,6 +169,11 @@ function Worker.start_ready()
             SE.fire(SE_WORKER_BOTH_READY, addr, data.mode)
         end
     end
+
+    this.next_min = time.get_next_minite()
+
+    -- 启动worker全局定时器
+    Timer.interval(1000, 1000, -1, do_worker_timer)
 end
 
 -- 关闭worker（此函数会阻塞直到worker线程安全退出）
@@ -326,6 +348,7 @@ local function init()
         WorkerNameType[wname] = wtype
         WorkerTypeName[wtype] = wname
     end
+    Rtti.name_func("Worker.do_worker_timer", do_worker_timer)
 end
 
 init()
