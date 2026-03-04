@@ -32,6 +32,7 @@ local function load_from_db(tbl_name, keys, fields)
     if 0 == e then
         local tbl_cache = DataCache.set(tbl_name, keys, data)
         tbl_cache.fields = fields
+        tbl_cache.save_time = Engine.time()
     end
     return e, data
 end
@@ -40,6 +41,14 @@ local function save_to_db(cache, now)
     cache.modify_time = nil
     cache.save_time = now
     return DataMgr.save(cache.tbl_name, cache.keys, cache.data)
+end
+
+-- 如果缓存已经存在，则新读取的数据和缓存的fields应该是一致的
+local function valid_fields(new_fields, old_fields)
+    if new_fields and old_fields then
+        return table.same(new_fields, old_fields)
+    end
+    return not new_fields and not old_fields
 end
 
 -- 从缓存中读取数据，如果不存在则从数据库加载
@@ -64,10 +73,17 @@ function DataCache.get(tbl_name, keys, fields)
         end
     end
 
+    if not valid_fields(fields, tbl_cache.fields) then
+        eprint("cache fields not match", tbl_name,
+            table.dump(keys), table.dump(fields), table.dump(tbl_cache.fields))
+        return 1
+    end
+
+
     return 0, tbl_cache.data
 end
 
--- 从缓存中读取数据，如果不存在则从数据库加载
+-- 设置数据到缓存中，数据不会标记为修改
 --- @param tbl_name 表名
 --- @param keys 数据唯一标识的键值对，这个要做缓存key，必须按顺序。比如{"pid", 999, "type", 1}
 function DataCache.set(tbl_name, keys, value)
@@ -91,17 +107,28 @@ function DataCache.set(tbl_name, keys, value)
         tbl_cache = next_cache
     end
 
-    local last_cache = keys[keys_len]
+    -- 最后一段使用最后一个key的值作为索引，而不是直接取值当作表
+    local last_key = keys[keys_len]
+    local last_cache = tbl_cache[last_key]
     if not last_cache then
         last_cache = {
             keys = keys,
             -- fields = nil, -- 稍后设置，只在第一次加载时设置
         }
-        tbl_cache[last_cache] = last_cache
+        tbl_cache[last_key] = last_cache
     end
     last_cache.data = value
 
-    if not last_cache.modify_time then
+    return last_cache
+end
+
+-- 更新数据到缓存中，数据标记为修改
+--- @param tbl_name 表名
+--- @param keys 数据唯一标识的键值对，这个要做缓存key，必须按顺序。比如{"pid", 999, "type", 1}
+function DataCache.update(tbl_name, keys, value)
+    local tbl_cache = DataCache.set(tbl_name, keys, value)
+
+    if not tbl_cache.modify_time then
         local idx = this.save_seed + 1
         if idx > MAX_CACHE then
             assert(not this.save_list[1], "save list overflow")
@@ -109,16 +136,16 @@ function DataCache.set(tbl_name, keys, value)
         end
 
         this.save_seed = idx
-        this.save_list[idx] = last_cache
+        this.save_list[idx] = tbl_cache
 
-        last_cache.save_time = nil
-        last_cache.modify_time = Engine.time()
+        tbl_cache.save_time = nil
+        tbl_cache.modify_time = Engine.time()
     end
-
-    return last_cache
 end
 
 local function save_cache_list(now, save_count, beg_idx, end_idx)
+    assert(end_idx >= beg_idx)
+
     for i = beg_idx + 1, end_idx do
         local cache = this.save_list[i]
         local modify_time = cache.modify_time
@@ -142,15 +169,34 @@ local function save_cache_list(now, save_count, beg_idx, end_idx)
     return save_count
 end
 
+local function try_remove_cache(tbl, now)
+    if not tbl.data then
+        for k, v in pairs(tbl) do
+            if try_remove_cache(v, now) then
+                tbl[k] = nil
+            end
+        end
+        return next(tbl) == nil -- 没有子缓存了，自己也可以被移除
+    end
+
+    -- 有modify_time则表示数据被修改过未存库
+    -- 刚从数据库加载的数据没有modify_time，save_time会被标记为加载时间
+    local save_time = tbl.save_time or 0
+    if not tbl.modify_time and save_time and now - save_time >= CACHE_EXPIRE then
+        -- 过期了，直接从内存移除
+        return true
+    end
+end
+
 local function remove_expire_cache(now)
+    -- TODO 需要遍历所有，数量比较多时可能会有性能问题，得加个列表来分批遍历
+    -- 假如10000在线，5分钟遍历一次，目前来说也还好
+
     -- 可能会有多层key，找到存在data那一层就是缓存数据
     for tbl_name, tbl_cache in pairs(this.cache) do
-        for k1, v1 in pairs(tbl_cache) do
-            for k2, v2 in pairs(v1) do
-                if v2.save_time and now - v2.save_time >= CACHE_EXPIRE then
-                    v1[k2] = nil
-                end
-            end
+        if try_remove_cache(tbl_cache, now) then
+            -- 根节点也可以清理
+            this.cache[tbl_name] = nil
         end
     end
 end
@@ -167,7 +213,7 @@ local function do_cache_timer(now)
         save_count = save_cache_list(now, save_count, beg_idx, MAX_CACHE)
 
         if save_count < MAX_SAVE then
-            save_count = save_cache_list(now, save_count, 0, end_idx)
+            save_count = save_cache_list(now, save_count, this.save_index, end_idx)
         end
     end
     if save_count > 0 then print("cache timer save", save_count) end
