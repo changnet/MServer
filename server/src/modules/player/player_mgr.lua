@@ -40,7 +40,7 @@ function PlayerMgr.enter_game(info)
 
     print("player enter game", pid)
 
-    -- 玩家被顶号或者重复登录时，在验证时就会通知玩家下线
+    -- 玩家被顶号或者重复登录时，在验证时就会通知玩家下线，并且等玩家下线完成才会enter
     -- 如果这时候还存在玩家对象，说明是逻辑出错了，这里只能直接丢掉
     if this.player[pid] then
         eprint("player already exist", pid)
@@ -53,14 +53,23 @@ function PlayerMgr.enter_game(info)
 
     this.uninit_player[pid] = info
 
-    Player.login(info) -- 开始登录流程
-end
-
-function PlayerMgr.enter_completed(player)
-    local pid = player.pid
-
-    this.player[pid] = player
-    this.uninit_player[pid] = nil
+    -- 开始登录流程
+    local ok = Player.login(info)
+    -- 可能被顶号，判断session
+    local new_info = this.uninit_player[pid]
+    if new_info and new_info.session_id ~= info.session_id then
+        eprint("player enter, session not match",
+                pid, new_info.session_id, info.session_id)
+        return
+    end
+    if ok then
+        this.player[pid] = info
+        this.uninit_player[pid] = nil
+    else
+        eprint("player enter fail", pid, info.session_id)
+        this.uninit_player[pid] = nil
+        assert(not this.player[pid])
+    end
 end
 
 -- 退出游戏，保存数据销毁玩家对象

@@ -108,10 +108,10 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
 
     -- 如果有多个account_mgr，account_mgr的路由已经保证同一个帐号必定在同一个account_mgr处理
     -- 因此对mongodb的路由就没有要求了
-    local db_addr = Router.find_worker_addr(W_MONGODB, "role", account)
+    local db_addr = Router.find_worker_addr(W_MONGODB, "player", account)
     info.loaded = Engine.time()
     local e, rows = Call.MongoDB.find(db_addr,
-        "role", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
+        "player", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
     if 0 == e then
         for _, row in pairs(rows) do
             local pid = row._id
@@ -175,17 +175,16 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     local pid = (seed << PID_SRV_BIT) | real_sid
     local role = {
         account = account,
-        pfid = pfid,
-        sid = sid,
+        create_pfid = pfid,
+        create_sid = sid,
         _id = pid,
-        name = pkt.name,
-        level = 0,
+        pp = {name = pkt.name}, -- property
         create_time = time,
     }
 
     info.created = time
     local msg
-    e, msg = Call.MongoDB.insert(db_addr, "role", role)
+    e, msg = Call.MongoDB.insert(db_addr, "player", role)
     info.created = nil
     if 0 == e then
         role._id = pid
