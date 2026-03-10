@@ -80,8 +80,8 @@ MISC = {
     WELCOME = {
         s = "misc.SWelcome", i = 11
     },
-    TIPS = {
-        s = "misc.STips", i = 12
+    ALERTMSG = {
+        s = "misc.AlertMSG", i = 12
     },
     WELCOME_GET = {
         c = "misc.CWelcomeGet", i = 13

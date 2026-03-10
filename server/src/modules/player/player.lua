@@ -19,6 +19,9 @@ local __player_memory = __player_memory
 local __player_storage = __player_storage
 
 local PLAYER_KEYS = {"_id", 0}
+local PP_INT_LIST = PP_INT_LIST
+local PP_STR_LIST = PP_STR_LIST
+local PP_SAVE_LIST = PP_SAVE_LIST
 
 -- 如果存在某个模块的存储则返回
 --- @param player 玩家对象
@@ -95,7 +98,10 @@ function Player.get_property(player, key)
     return player.property[key]
 end
 
-local function init_db_data(player, e, rows)
+-- 加载玩家基础数据
+local function load_base_data(player)
+    PLAYER_KEYS[2] = player.pid
+    local e, rows = Call.DataCache.get(DATA_ADDR, "player", PLAYER_KEYS)
     if 0 ~= e or 1 ~= #rows then
         eprint("player db data error", player.pid, e)
         return false
@@ -108,18 +114,33 @@ local function init_db_data(player, e, rows)
 
     assert(player.pid == data._id)
 
-    player.pp = data.pp
+    player.property = data.property
     player.money = data.money
     player.create_pfid = data.create_pfid
     player.create_sid = data.create_sid
     player.create_time = data.create_time
 
-    -- 初始化属性集
-    for _, p in pairs(PP) do
+    return true
+end
 
+local function load_db_data(player)
+    if not load_base_data(player) then return end
+end
+
+local function init_data(player)
+    local pid = player.pid
+
+    -- 补全属性集
+    local pp = player.property
+    for _, k in pairs(PP_INT_LIST) do
+        if not pp[k] then pp[k] = 0 end
+    end
+    for _, k in pairs(PP_STR_LIST) do
+        if not pp[k] then pp[k] = 0 end
     end
 
-    return true
+    __player_memory[pid] = {}
+    __player_storage[pid] = {}
 end
 
 -- 登录
@@ -128,14 +149,9 @@ function Player.login(player)
     player.status = PlayerStatus.LOGIN -- 玩家状态，默认登录中
 
     -- 加载玩家基础数据
-    PLAYER_KEYS[2] = pid
-    local e, rows = Call.DataCache.get(DATA_ADDR, "player", PLAYER_KEYS)
-    if not init_db_data(player, e, rows) then
+    if not load_db_data(player) then
         return
     end
-
-    player.money = {} -- 虚拟货币
-    player.property = {} -- 属性集合
 
     -- 在登录过程中下线，标记为等待退出状态，等登录完成后再真正退出
     if player.status & PlayerStatus.WLOGOUT ~= 0 then
@@ -144,16 +160,52 @@ function Player.login(player)
         return
     end
 
-    __player_memory[pid] = {}
-    __player_storage[pid] = {}
+    init_data(player)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
     return true
 end
 
+local function save_base_data(player)
+    local e, rows = Call.DataCache.get(DATA_ADDR, "player", PLAYER_KEYS)
+    if 0 ~= e or 1 ~= #rows then
+        eprint("player db data error", player.pid, e)
+        return false
+    end
+
+    local property = {}
+    local pp = player.property
+    for _, key in ipairs(PP_SAVE_LIST) do
+        property[key] = pp[key]
+    end
+
+    --[[
+    pp = {name = 1, level = 2, ...}
+    money = {},
+    ]]
+    local data = {}
+
+    -- 即使一些数据不需要更新，也需要同步到缓存那边，否则下次读取缓存数据就会少了
+    data.property = property
+    data.money = player.money
+    data.create_pfid = player.create_pfid
+    data.create_sid = player.create_sid
+    data.create_time = player.create_time
+
+    Send.DataCache.update(DATA_ADDR, "player", PLAYER_KEYS, data)
+end
+
+local function save_db(player)
+    save_base_data(player)
+end
+
+
 -- 退出
 function Player.logout(player, why)
     local pid = player.pid
+
+    save_db(player)
+
     __player_memory[pid] = nil
     __player_storage[pid] = nil
 

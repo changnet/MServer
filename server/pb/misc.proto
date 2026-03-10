@@ -15,7 +15,8 @@ message CWelcomeGet
 }
 
 // 提示语
-message STips
+message AlertMSG
 {
-    string tips = 1; // 提示内容
+    string msg = 1; // 提示内容
+    int32 mask = 2; // 提示方式掩码
 }

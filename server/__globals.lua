@@ -1,4 +1,4 @@
--- auto export by lua-tags 192 symbols
+-- auto export by lua-tags 197 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -8,6 +8,7 @@ return {
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
 "AccountMgr", -- src/modules/account/account_mgr.lua
 "Acism", -- engine/__acism.lua
+"Alert", -- src/modules/misc/alert.lua
 "AndroidMgr", -- src/android/android_mgr.lua
 "Astar", -- engine/__astar.lua
 "Await", -- src/rpc/rpc_proxy.lua
@@ -43,7 +44,7 @@ return {
 "GridAoi", -- engine/__gridaoi.lua
 "HTTP", -- src/http/http_header.lua
 "IO", -- engine/__io.lua
-"LANG", -- config/lang_dev.lua
+"LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
 "LOCAL_NAME", -- src/worker/worker.lua
 "LOCAL_TYPE", -- src/worker/worker.lua
@@ -74,6 +75,10 @@ return {
 "PID_SRV_BIT", -- src/modules/system/define.lua
 "PLAYER", -- src/modules/protocol/protocol.lua
 "PP", -- src/modules/player/property.lua
+"PP_DEF", -- src/modules/player/property.lua
+"PP_INT_LIST", -- src/modules/player/property.lua
+"PP_SAVE_LIST", -- src/modules/player/property.lua
+"PP_STR_LIST", -- src/modules/player/property.lua
 "Pbc", -- src/message/pbc.lua
 "PbcCodec", -- engine/__pbccodec.lua
 "PidCall", -- src/rpc/rpc_proxy.lua

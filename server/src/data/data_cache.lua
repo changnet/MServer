@@ -126,6 +126,8 @@ end
 --- @param tbl_name 表名
 --- @param keys 数据唯一标识的键值对，这个要做缓存key，必须按顺序。比如{"pid", 999, "type", 1}
 function DataCache.update(tbl_name, keys, value)
+    -- TODO 这个缓存并不会遍历value，把字段单独update，而是直接覆盖
+    -- 因此更新缓存时，所有数据都要发过来（包括一些不需要更新的字段）
     local tbl_cache = DataCache.set(tbl_name, keys, value)
 
     if not tbl_cache.modify_time then

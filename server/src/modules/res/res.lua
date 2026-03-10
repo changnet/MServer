@@ -7,29 +7,10 @@ Res = {}
 
 local res_func = {}
 
-local RES = require_define("modules.res.res_header")
-
-local RES_MONEY = 599
-local RES_ITEM  = RES_ITEM
-
-local item_conf = nil
+require("res.res_header")
+local ItemConf = require "config.item_conf"
 
 local made = false -- 生成回调函数后，不允许再注册事件
-
--- 获取所有资源定义
-function Res.get_def()
-    return RES
-end
-
--- 判断该类资源是否为货币
-function Res.is_money(id)
-    return id <= RES_MONEY -- [1,599]为货币，具体规则见res_header定义
-end
-
--- 判断该类资源是否为道具
-function Res.is_item(id)
-    return id >= RES_ITEM
-end
 
 -- 检测两个资源能否合并
 local function can_merge(a, b)
@@ -81,12 +62,8 @@ function Res.valid(res_list)
             return false, "no id set"
         end
         if not res_func[id] then
-            if not Res.is_item(id) then
-                return false, "invalid res id = " .. tostring(id)
-            end
-
             -- 校验是否为有效道具id
-            if not item_conf[id] then
+            if not ItemConf[id] then
                 return false, "invalid item id = " .. tostring(id)
             end
 
@@ -105,18 +82,18 @@ end
 
 -- 注册资源处理函数
 -- @param id 资源类型
--- @param check_add 检测能否添加资源函数
--- @param check_dec 检测能否扣除资源函数
+-- @param get 获取当前数量，一般用于检测能否扣除
 -- @param add 添加资源函数，必须返回添加的数量
 --              < 0表示出错，> 0表示成功，如果部分成功，则会自动发邮件
 -- @param dec 删除资源函数
-function Res.reg(id, check_add, check_dec, add, dec)
+-- @param check_add 检测能否添加资源函数，一般是道具这种占用格子的才需要
+function Res.reg(id, get, add, dec, check_add)
     assert(add and dec and not made, id)
     res_func[id] = {
-        check_add = check_add,
-        check_dec = check_dec,
+        get = get,
         add = add,
         dec = dec,
+        check_add = check_add,
     }
 end
 
@@ -136,14 +113,15 @@ function Res.add(player, res_list, op, msg, ext)
 
     local mail_items = nil
     for _, res in pairs(res_list) do
-        local count = res[2]
-        local cnt = Res.add_one(player, res[1], count, res, op, msg, ext)
-        if cnt > 0 and cnt < count then
+        local num = res[2]
+        local add_num = Res.add_one(player, res, op, msg, ext)
+        -- add_num < 0表示出错，这里不再处理，对应的模块必须打印相关日志
+        if add_num > 0 and add_num < num then
             assert(Res.is_item()) -- 除了道具有背包大小限制，还有什么东西放不下？
             if not mail_items then mail_items = {} end
 
             local item = table.deep_copy(res)
-            item.count = count - cnt
+            item.num = num - add_num
             table.insert(mail_items, item)
         end
     end
@@ -156,41 +134,33 @@ function Res.add(player, res_list, op, msg, ext)
     end
 end
 
--- 扣除资源(这个函数并不检测资源是否足够)
+-- 扣除资源(这个函数并不检测资源是否足够，要检测调用check_dec)
 -- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
 -- @param op 操作代码，用于记录日志，见log_header定义
 -- @param msg 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
 function Res.dec(player, res_list, op, msg)
     for _, res in pairs(res_list) do
-        Res.dec_one(player, res[1], res[2], res, op, msg)
+        Res.dec_one(player, res, op, msg)
     end
 end
 
 -- 增加一个资源
--- @param id 资源id
--- @param count 资源数量
--- @param res 资源结构，包含绑定、星级、强化等特殊属性时需要传，否则传nil
+-- @param res 资源结构{id=1,num=2}，可包含绑定、星级、强化等特殊属性
 -- @param op 操作代码，用于记录日志，见log_header定义
 -- @param msg 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
 -- @param ext 扩展参数，如邮件标题、绑定属性、星级等
-function Res.add_one(player, id, count, res, op, msg, ext)
-    local res_m = res_func[id]
-    if not res_m then
-        if Res.is_item(id) then
-            res_m = res_func[RES_ITEM]
-        else
-            eprintf("Res.add_one no function found:%s,op %d", tostring(id), op)
-            return
-        end
-    end
+function Res.add_one(player, res, op, msg, ext)
+    local id = res.id
+    local t = ItemConf[id].type
+    local res_m = res_func[t]
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    local add_cnt = res_m.add(player, id, count, op, msg, res, ext)
-    if add_cnt < 0 then
-        eprintf("Res add error, pid = %d, id = %d, count = %d",
-            player.pid, id, count)
+    local add_num = res_m.add(player, res, op, msg, ext)
+    if add_num < 0 then
+        eprintf("Res add error, pid = %d, id = %d, num = %d",
+            player.pid, id, res.num)
     end
-    return add_cnt
+    return add_num
 end
 
 -- 扣除一个资源
@@ -199,46 +169,38 @@ end
 -- @param res 资源结构，包含绑定、星级、强化等特殊属性时需要传，否则传nil
 -- @param op 操作代码，用于记录日志，见log_header定义
 -- @param msg 额外日志信息字符串。比如op为邮件，那么sub_op可以表示哪个功能发的
-function Res.dec_one(player, id, count, res, op, msg)
-    local res_m = res_func[id]
-    if not res_m then
-        if Res.is_item(id) then
-            res_m = res_func[RES_ITEM]
-        else
-            eprintf("Res.dec_one no function found:%s,op %d", tostring(id), op)
-            return
-        end
-    end
+function Res.dec_one(player, res, op, msg)
+    local id = res.id
+    local t = ItemConf[id].type
+    local res_m = res_func[t]
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return res_m.dec(player, id, count, op, msg, res)
+    return res_m.dec(player, res, op, msg)
 end
 
 -- 检查某个资源是否足够
 -- @param id 资源id
 -- @param count 资源数量
 -- @param res 资源结构，包含绑定、星级、强化等特殊属性时需要传，否则传nil
-function Res.check_dec_one(player, id, count, res)
-    local res_m = res_func[id]
-    if not res_m then
-        if Res.is_item(id) then
-            res_m = res_func[RES_ITEM]
-        else
-            eprintf("Res.check_dec_one no function found:%s, %s",
-                    tostring(id), debug.traceback())
-            return false
-        end
-    end
+function Res.check_dec_one(player, res)
+    local id = res.id
+    local t = ItemConf[id].type
+    local res_m = res_func[t]
 
     -- 把res也传过去，有时候某些资源会有特殊属性，如强化、升星...
-    return res_m.check_dec(player, res.id, res.count, res)
+    return res_m.get(player,  res) >= res.num
 end
 
 -- 检测资源是否足够
--- @param res_list 资源数组
-function Res.check_dec(player, res_list)
+-- @param res_list 资源数组，如 {{id = 1, num = 2},{id = 2, num = 2}}
+-- @param no_alert true表示不需要发送提示，默认是会发送一条提示语
+function Res.check_dec(player, res_list, no_alert)
     for _, res in pairs(res_list) do
-        if not Res.check_dec_one(player, res[1], res[2], res) then
+        if not Res.check_dec_one(player, res) then
+            if not no_alert then
+                local name = ItemConf[res.id].name
+                Alert.send(player, string.format(LANG.comm001, name))
+            end
             return false, res
         end
     end
@@ -247,29 +209,21 @@ function Res.check_dec(player, res_list)
 end
 
 -- 检测单个资源能否放下
-function Res.check_add_one(player, id, count, res, ext)
-    local res_m = res_func[id]
-    if not res_m then
-        if Res.is_item(id) then
-            res_m = res_func[RES_ITEM]
-        else
-            eprintf("Res.check_add_one no function found:%s, %s",
-                    tostring(id), debug.traceback())
-            return false
-        end
-    end
+function Res.check_add_one(player, id, count, res)
+    local t = ItemConf[id].type
+    local res_m = res_func[t]
 
     -- 货币类一定是能放下的，没注册函数
     local check_add_func = res_m.check_add
     if not check_add_func then return true end
 
-    return check_add_func(player, res.id, res.count, res, ext)
+    return check_add_func(player, res)
 end
 
 -- 检测能否放下资源
-function Res.check_add(player, res_list, ext)
+function Res.check_add(player, res_list)
     for _, res in pairs(res_list) do
-        if not Res.check_add_one(player, res[1], res[2], res) then
+        if not Res.check_add_one(player) then
             return false, res
         end
     end
@@ -331,26 +285,5 @@ function Res.check_and_add_dec(player, add_list, dec_list, op, msg, ext)
 
     return true
 end
-
--- 生成具体的资源回调函数
-local function make_cb()
-    made = true
-    local ThisCall = require "modules.system.this_call"
-
-    local make = function (func, msg, id)
-        if not func then return nil end
-        return ThisCall.make_from_player(func, nil, msg, id) or func
-    end
-
-    local f_name = {"check_add", "check_dec", "add", "dec"}
-    for id, res in pairs(res_func) do
-        for _, name in pairs(f_name) do
-            res[name] = make(res[name], name, id)
-        end
-    end
-
-    item_conf = require "config.item_conf"
-end
-SE.reg(SE_SCRIPT_LOADED, make_cb, 10)
 
 return Res
