@@ -72,6 +72,22 @@ local function load_define(def_path)
     -- require(def_path) -- require不能处理带../..这种相对路径，或者固定路径
     loadfile(def_path, "bt", env)()
 
+    local id_hash = {}
+    for _, m in pairs(env) do
+        if type(m) == "table" then
+            for _, mm in pairs(m) do
+                if type(mm) == "table" and mm.i then
+                    if id_hash[mm.i] then
+                        mm.i = nil
+                        print("id already exist, ignore", mm.i)
+                    else
+                        id_hash[mm.i] = true
+                    end
+                end
+            end
+        end
+    end
+
     return env
 end
 
@@ -178,10 +194,31 @@ CHAT = {
         t = string.match(line, "%-%-%s*(.*)")
     end
 
+    -- 查找上一行的注释
+    local prev_t
+    if ctx.index > 1 then
+        local prev_line = ctx.lines[ctx.index - 1]
+        prev_t = string.match(prev_line, "%-%-%s*(.*)")
+        -- 如果上一行注释刚好就是被解析成了上一行的t，就不要用它
+        -- 不过考虑到协议格式一般注释是在定义上面的，例如:
+        -- -- 登录
+        -- PlayerLogin = {
+        if prev_t then
+            -- 检查是否纯粹的 -- 注释行，而不是行尾注释
+            if not string.match(prev_line, "^%s*%-%-") then
+                prev_t = nil
+            end
+        end
+    end
+
     -- 处理 s = "Chat.SChat" 放到独立行的情况
-    if "s" ~= name and "c" ~= name then
+    if "s" ~= name and "c" ~= name and "i" ~= name and "w" ~= name and "t" ~= name then
         ctx.mm = name
         ctx.symbols[ctx.m][name] = {}
+        if prev_t then
+            ctx.symbols[ctx.m][name].prev_t = prev_t
+            ctx.symbols[ctx.m][name].prev_t_line = ctx.index - 1
+        end
         table.insert(ctx.sym_list, {
             m = ctx.m,
             mm = ctx.mm,

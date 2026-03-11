@@ -2,135 +2,124 @@
 定义客户端与服务器之间的通信协议，其格式必须是固定的，用于自动解析并生成协议号
 解析此文件的脚本能力有限，不要瞎写或者加特殊字符
 
--- 定义模块号，大写。之所以没定义成全局的CHAT_CHAT而是定义成一个table是方便模块里本地化
-CHAT = {
-    -- 定义功能，大写，表示常量不可修改
-    -- s表示服务器发往客户端使用的protobuf或者flatbuffer结构名（没有可以忽略此字段）
-    -- c表示客户端发往服务器使用的protobuf或者flatbuffer结构名（没有可以忽略此字段）
-    -- i是工具自动生成的协议号，定义时无需定义该字段
-    CHAT = {
-        s = "chat.SChat", c = "chat.CChat", i = 1
-    }
-
 -- 格式要求
--- 1. 名字和等号比如在同一行，如 CHAT =
+-- 1. 名字和等号比如在同一行，如 PlayerLogin =
 -- 2. c、s字段和结构名比如在同一行，如s = "chat.SChat"，但c、s可以分开在多行写
 -- 3. 大括号必须分开在不同行
-}
-
 ]]
 
--- 玩家模块
-PLAYER = { -- 和玩家相关的基础协议都放在这里
-    -- 登录
-    LOGIN = {
+-- net message
+M = {
+    -- 1 登录
+    PlayerLogin = {
         s = "player.SLogin", c = "player.CLogin", i = 1, w = "gateway"
 
     },
-    -- ping后端延迟
-    PING = {
+    -- 2 ping后端延迟
+    PlayerPing = {
         s = "player.SPing", c = "player.CPing", i = 2
 
     },
-    -- 创角
-    CREATE = {
+    -- 3 创角
+    PlayerCreate = {
         s = "player.SCreateRole", c = "player.CCreateRole", i = 3, w = "gateway"
 
     },
-    -- 进入游戏
-    ENTER = {
+    -- 4 进入游戏
+    PlayerEnter = {
         s = "comm.Empty", c = "player.CEnterGame", i = 4, w = "gateway"
 
     },
-    -- 登录游戏完成，所有数据已下发
-    READY = {
+    -- 24 登录游戏完成，所有数据已下发
+    PlayerReady = {
         s = "comm.Empty", i = 24
     },
-    -- 踢下线
-    KICK = {
+    -- 5 踢下线
+    PlayerKick = {
         s = "player.SKick", i = 5
     },
-    -- 登录时下发基础数据
-    Base = {
+    -- 6 登录时下发基础数据
+    PlayerBase = {
         s = "player.SBase", i = 6
     },
-    -- 进入副本
-    ENTERDUNGEON = {
+    -- 8 进入副本
+    PlayerEnterDungeon = {
         c = "player.CEnterDungeon", i = 8
     },
-    -- 货币信息初始化
-    MoneyInfo = {
-        s = "player.MoneyInfo"
+    -- 25 货币信息初始化
+    PlayerMoneyInfo = {
+        s = "player.MoneyInfo", i = 25
     },
-    MoneyUpdate = {
-        s = "player.MoneyUpdate"
+    -- 26 
+    PlayerMoneyUpdate = {
+        s = "player.MoneyUpdate", i = 26
     },
-}
 
--- 聊天
-CHAT = {
-    CHATINFO = {
+    -- 9 聊天
+    ChatChatInfo = {
         s = "chat.SChatInfo", i = 9
     },
-    DOCHAT = {
+    -- 10 
+    ChatDoChat = {
         s = "chat.SDoChat", c = "chat.CDoChat", i = 10
 
     },
-}
 
--- 一些零散的功能，不必定义独立的协议，可以都放这里
-MISC = {
-    WELCOME = {
+    -- 11 一些零散的功能，不必定义独立的协议，可以都放这里
+    MiscWelcome = {
         s = "misc.SWelcome", i = 11
     },
-    ALERTMSG = {
+    -- 12 
+    MiscAlertMsg = {
         s = "misc.AlertMSG", i = 12
     },
-    WELCOME_GET = {
+    -- 13 
+    MiscWelcomeGet = {
         c = "misc.CWelcomeGet", i = 13
     },
-}
 
--- 背包模块
-BAG = {
-    INFO = {
+    -- 14 背包模块
+    BagInfo = {
         s = "bag.SBagInfo", i = 14
     },
-}
 
--- 邮件模块
-MAIL = {
-    INFO = {
+    -- 15 邮件模块
+    MailInfo = {
         s = "mail.SMailInfo", i = 15
     },
-    DEL = {
+    -- 16 
+    MailDel = {
         s = "mail.SMailDel", c = "mail.CMailDel", i = 16
 
     },
-    NEW = {
+    -- 17 
+    MailNew = {
         s = "mail.SNewMail", i = 17
     },
-}
 
--- 场景实体相关协议
-ENTITY = {
-    APPEAR = {
+    -- 18 场景实体相关协议
+    EntityAppear = {
         s = "entity.SAppear", i = 18
     },
-    DISAPPEAR = {
+    -- 19 场景中实体消失
+    EntityDisappear = {
         s = "entity.SDisappear", i = 19
     },
-    MOVE = {
+    -- 20 
+    EntityMove = {
         s = "entity.SMove", c = "entity.CMove", i = 20
 
     },
-    POS = {
+    -- 21 
+    EntityPos = {
         s = "entity.SPos", i = 21
     },
-    ENTERSCENE = {
+    -- 22 
+    EntityEnterScene = {
         s = "entity.SEnterScene", i = 22
     },
-    PROPERTY = {
+    -- 23 
+    EntityProperty = {
         s = "entity.SProperty", i = 23
     },
 }

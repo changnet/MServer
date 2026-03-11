@@ -1,4 +1,4 @@
--- auto export by lua-tags 201 symbols
+-- auto export by lua-tags 196 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -12,11 +12,9 @@ return {
 "AndroidMgr", -- src/android/android_mgr.lua
 "Astar", -- engine/__astar.lua
 "Await", -- src/rpc/rpc_proxy.lua
-"BAG", -- src/modules/protocol/protocol.lua
 "Bot", -- src/bot/bot.lua
 "BotMgr", -- src/bot/bot_mgr.lua
 "Buffer", -- engine/__buffer.lua
-"CHAT", -- src/modules/protocol/protocol.lua
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
 "Callback", -- src/rpc/rpc.lua
@@ -32,7 +30,6 @@ return {
 "E", -- src/modules/module_loader.lua
 "E", -- src/modules/system/error.lua
 "EMPTY", -- src/modules/system/define.lua
-"ENTITY", -- src/modules/protocol/protocol.lua
 "ET", -- src/modules/entity/entity_header.lua
 "Engine", -- engine/__engine.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
@@ -56,12 +53,11 @@ return {
 "LogDB", -- src/modules/log/log_db.lua
 "Login", -- src/modules/account/login.lua
 "LuaCodec", -- engine/__luacodec.lua
-"MAIL", -- src/modules/protocol/protocol.lua
+"M", -- src/modules/protocol/protocol.lua
 "MAIN_ADDR", -- src/worker/worker.lua
 "MASTER_ADDR", -- src/engine/preloader.lua
 "MAX_MAIL", -- src/modules/system/define.lua
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
-"MISC", -- src/modules/protocol/protocol.lua
 "MT", -- src/modules/move/move_header.lua
 "Map", -- engine/__map.lua
 "Money", -- src/modules/player/money.lua
@@ -74,7 +70,6 @@ return {
 "PE_LOGIN", -- src/modules/event/event_header.lua
 "PE_LOGOUT", -- src/modules/event/event_header.lua
 "PID_SRV_BIT", -- src/modules/system/define.lua
-"PLAYER", -- src/modules/protocol/protocol.lua
 "PP", -- src/modules/player/property.lua
 "PP_DEF", -- src/modules/player/property.lua
 "PP_INT_LIST", -- src/modules/player/property.lua

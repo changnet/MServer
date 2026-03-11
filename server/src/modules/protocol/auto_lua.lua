@@ -19,10 +19,45 @@ function AutoLua.generate(ctx, path)
     assert(f)
 
     local done = {}
+    local processed_comments = {}
     for index, line in ipairs(ctx.lines) do
         local change = ctx.changes[index]
-        if not change then
+        
+        -- 检查当前行是否是某个协议的上一行注释
+        local is_comment_line = false
+        local replace_line_str = nil
+        for _, sym in pairs(ctx.sym_list) do
+            local v = ctx.symbols[sym.m][sym.mm]
+            if v and v.prev_t_line == index then
+                is_comment_line = true
+                -- 提取原有注释，去掉可能已有的ID前缀
+                local old_comment = (v.prev_t or ""):gsub("^%s*%d+%s*", "")
+                replace_line_str = string.format("    -- %d %s\n", v.i, old_comment)
+                processed_comments[sym.mm] = true
+                break
+            end
+        end
+
+        if replace_line_str then
+            f:write(replace_line_str)
+        elseif not change then
+            -- 如果这行不是被修改的行，且可能是我们要补注释的行
+            local name = string.match(line, "^%s*([%w_]+)%s*=")
+            if name then
+                local found_sym = nil
+                for _, sym in pairs(ctx.sym_list) do
+                    if sym.mm == name then
+                        found_sym = ctx.symbols[sym.m][sym.mm]
+                        break
+                    end
+                end
+                if found_sym and not processed_comments[name] then
+                    local id = found_sym.i
+                    f:write(string.format("    -- %d \n", id))
+                end
+            end
             f:write(line)
+            f:write("\n")
         else
             local v = ctx.symbols[change.m][change.mm]
 
@@ -35,9 +70,9 @@ function AutoLua.generate(ctx, path)
                 first = write_fields(f, v.i, "i = ", first)
                 first = write_fields(f, v.w, "w = ", first)
                 first = write_fields(f, v.t, "-- ", first)
+                f:write("\n")
             end
         end
-        f:write("\n")
     end
 
     f:flush()
