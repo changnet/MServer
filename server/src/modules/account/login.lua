@@ -11,7 +11,7 @@ function Login.login_else_where(session_id, account, pfid)
         return
     end
 
-    NetMsg.send_socket(socket, PLAYER.KICK, {reason = 1})
+    NetMsg.send_socket(socket, M.PlayerKick, {reason = 1})
     print("login else where, socket close", account, socket.pid)
 
     socket:close(true)
@@ -29,7 +29,7 @@ function Login.do_login_result(session_id, account, pfid, info, e)
     socket.role = info
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    NetMsg.send_socket(socket, PLAYER.LOGIN, info)
+    NetMsg.send_socket(socket, M.PlayerLogin, info)
 
     printf("client login success, account=%s, pfid=%d", account, pfid)
 end
@@ -50,20 +50,20 @@ local function c_player_login(socket, pkt)
 
     if Engine.time() - time > 1800 then
         eprint("player login time expire", account, time)
-        return NetMsg.send_socket(socket, PLAYER.LOGIN, {errno = E.SIGN_EXPIRE})
+        return NetMsg.send_socket(socket, M.PlayerLogin, {errno = E.SIGN_EXPIRE})
     end
 
     -- sha1可以直接传数字，会自动转成string。但有可能会带.0导致出错
     local sign = Util.sha1(LOGIN_KEY, math.tointeger(time), account)
     if sign ~= pkt.sign then
         eprint("clt sign error:", time, account, pkt.sign, sign)
-        return NetMsg.send_socket(socket, PLAYER.LOGIN, {errno = E.PWD_ERROR})
+        return NetMsg.send_socket(socket, M.PlayerLogin, {errno = E.PWD_ERROR})
     end
 
     -- 不能重复发送(不是顶号，顶号socket_id不应该会重复)
     if socket.login then
         eprint("player login already in process", account)
-        return NetMsg.send_socket(socket, PLAYER.LOGIN, {errno = E.UNDEFINE})
+        return NetMsg.send_socket(socket, M.PlayerLogin, {errno = E.UNDEFINE})
     end
     socket.login = pkt
 
@@ -87,7 +87,7 @@ function Login.do_create_result(session_id, account, pfid, info, e)
     local role = assert(info.list[1])
 
     -- 返回角色信息(如果没有角色，则pid和name都为nil)
-    NetMsg.send_socket(socket, PLAYER.CREATE, role)
+    NetMsg.send_socket(socket, M.PlayerCreate, role)
 
     printf("client create role success, acc = %s, pid = %d", account, role.pid)
 end
@@ -157,6 +157,6 @@ local function c_enter_game(socket, pkt)
         session_id, account, login_info.pfid, login_info.sid, pid, ip)
 end
 
-NetMsg.reg_noauth(PLAYER.LOGIN, c_player_login)
-NetMsg.reg_noauth(PLAYER.CREATE, c_create_role)
-NetMsg.reg_noauth(PLAYER.ENTER, c_enter_game)
+NetMsg.reg_noauth(M.PlayerLogin, c_player_login)
+NetMsg.reg_noauth(M.PlayerCreate, c_create_role)
+NetMsg.reg_noauth(M.PlayerEnter, c_enter_game)

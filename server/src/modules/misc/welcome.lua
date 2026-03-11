@@ -33,4 +33,4 @@ local function c_get_award(player, pkt)
 end
 
 PE.reg(PE_LOGIN, on_enter)
-NetMsg.reg(MISC.WELCOME_GET, c_get_award)
+NetMsg.reg(M.WelcomeGet, c_get_award)

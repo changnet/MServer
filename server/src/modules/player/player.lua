@@ -171,7 +171,7 @@ local function send_base_data(player)
     for k, v in pairs(PP_STR_LIST) do
         pp_str[k] = property[v]
     end
-    NetMsg.send(player, PLAYER.Base, info_pkt)
+    NetMsg.send(player, M.PlayerBase, info_pkt)
 
     Money.send_info(player)
 end

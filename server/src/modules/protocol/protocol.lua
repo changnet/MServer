@@ -47,11 +47,11 @@ M = {
         c = "player.CEnterDungeon", i = 8
     },
     -- 25 货币信息初始化
-    PlayerMoneyInfo = {
+    MoneyInfo = {
         s = "player.MoneyInfo", i = 25
     },
-    -- 26 
-    PlayerMoneyUpdate = {
+    -- 26 货币更新
+    MoneyUpdate = {
         s = "player.MoneyUpdate", i = 26
     },
 
@@ -59,7 +59,7 @@ M = {
     ChatChatInfo = {
         s = "chat.SChatInfo", i = 9
     },
-    -- 10 
+    -- 10
     ChatDoChat = {
         s = "chat.SDoChat", c = "chat.CDoChat", i = 10
 
@@ -69,12 +69,12 @@ M = {
     MiscWelcome = {
         s = "misc.SWelcome", i = 11
     },
-    -- 12 
-    MiscAlertMsg = {
+    -- 12 提示消息
+    AlertMsg = {
         s = "misc.AlertMSG", i = 12
     },
-    -- 13 
-    MiscWelcomeGet = {
+    -- 13 创角欢迎邮件
+    WelcomeGet = {
         c = "misc.CWelcomeGet", i = 13
     },
 
@@ -87,12 +87,12 @@ M = {
     MailInfo = {
         s = "mail.SMailInfo", i = 15
     },
-    -- 16 
+    -- 16
     MailDel = {
         s = "mail.SMailDel", c = "mail.CMailDel", i = 16
 
     },
-    -- 17 
+    -- 17
     MailNew = {
         s = "mail.SNewMail", i = 17
     },
@@ -105,20 +105,20 @@ M = {
     EntityDisappear = {
         s = "entity.SDisappear", i = 19
     },
-    -- 20 
+    -- 20
     EntityMove = {
         s = "entity.SMove", c = "entity.CMove", i = 20
 
     },
-    -- 21 
+    -- 21
     EntityPos = {
         s = "entity.SPos", i = 21
     },
-    -- 22 
+    -- 22 实现进入场景
     EntityEnterScene = {
         s = "entity.SEnterScene", i = 22
     },
-    -- 23 
+    -- 23 场景实体属性
     EntityProperty = {
         s = "entity.SProperty", i = 23
     },

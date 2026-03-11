@@ -19,7 +19,7 @@ function Alert.send(player, msg, mask)
 
     Pkt.msg = msg
     Pkt.mask = mask
-    NetMsg.send(player, MISC.ALERTMSG, Pkt)
+    NetMsg.send(player, M.MiscAlertMsg, Pkt)
 end
 
 -- 发送提示给单个玩家

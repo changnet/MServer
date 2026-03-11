@@ -22,17 +22,19 @@ function AutoLua.generate(ctx, path)
     local processed_comments = {}
     for index, line in ipairs(ctx.lines) do
         local change = ctx.changes[index]
-        
+
         -- 检查当前行是否是某个协议的上一行注释
-        local is_comment_line = false
         local replace_line_str = nil
         for _, sym in pairs(ctx.sym_list) do
             local v = ctx.symbols[sym.m][sym.mm]
             if v and v.prev_t_line == index then
-                is_comment_line = true
                 -- 提取原有注释，去掉可能已有的ID前缀
                 local old_comment = (v.prev_t or ""):gsub("^%s*%d+%s*", "")
-                replace_line_str = string.format("    -- %d %s\n", v.i, old_comment)
+                if old_comment == "" then
+                    replace_line_str = string.format("    -- %d\n", v.i)
+                else
+                    replace_line_str = string.format("    -- %d %s\n", v.i, old_comment)
+                end
                 processed_comments[sym.mm] = true
                 break
             end
@@ -53,7 +55,7 @@ function AutoLua.generate(ctx, path)
                 end
                 if found_sym and not processed_comments[name] then
                     local id = found_sym.i
-                    f:write(string.format("    -- %d \n", id))
+                    f:write(string.format("    -- %d\n", id))
                 end
             end
             f:write(line)
