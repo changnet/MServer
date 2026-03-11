@@ -23,6 +23,15 @@ local PP_INT_LIST = PP_INT_LIST
 local PP_STR_LIST = PP_STR_LIST
 local PP_SAVE_LIST = PP_SAVE_LIST
 
+local info_pkt = {pp_int = {}, pp_str = {}}
+
+for _ in pairs(PP_INT_LIST) do
+    table.insert(info_pkt.pp_int, 0)
+end
+for _ in pairs(PP_STR_LIST) do
+    table.insert(info_pkt.pp_str, "")
+end
+
 -- 如果存在某个模块的存储则返回
 --- @param player 玩家对象
 --- @param key 模块存储key
@@ -139,8 +148,32 @@ local function init_data(player)
         if not pp[k] then pp[k] = 0 end
     end
 
+    Money.init(player)
+
     __player_memory[pid] = {}
     __player_storage[pid] = {}
+
+    -- 基础数据初始化完成，其他模块可以在PE_INIT事件里继续初始化了
+    PE.fire_event(player, PE_INIT)
+end
+
+local function send_base_data(player)
+    local property = player.property
+
+    info_pkt.create_time = player.create_time
+    info_pkt.server_time = time.game_time()
+
+    local pp_int = info_pkt.pp_int
+    for k, v in pairs(PP_INT_LIST) do
+        pp_int[k] = property[v]
+    end
+    local pp_str = info_pkt.pp_str
+    for k, v in pairs(PP_STR_LIST) do
+        pp_str[k] = property[v]
+    end
+    NetMsg.send(player, PLAYER.Base, info_pkt)
+
+    Money.send_info(player)
 end
 
 -- 登录
@@ -161,6 +194,9 @@ function Player.login(player)
     end
 
     init_data(player)
+
+    send_base_data(player)
+    PE.fire_event(player, PE_LOGIN)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
     return true
@@ -204,6 +240,7 @@ end
 function Player.logout(player, why)
     local pid = player.pid
 
+    PE.fire_event(player, PE_LOGIN)
     save_db(player)
 
     __player_memory[pid] = nil

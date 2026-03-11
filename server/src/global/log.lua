@@ -103,7 +103,7 @@ function dprintf(fmt, ...)
     return logger_print(g_async_log, "info", 130, string.format(fmt, ...))
 end
 
--- error print错误日志，写入根目录下的error文件 (参数不能带有nil参数)
+-- error print错误日志，触发运维警报，需要人工介入错误才用这个类型日志
 function eprint(...)
     -- 129 = MASK_C_R|MASK_S_L，参考C++中的定义
 
@@ -119,7 +119,7 @@ function eprint(...)
     return g_async_log:print("error", 129, str)
 end
 
---  error print错误日志格式化日志并写入根目录下的error文件
+--  error print错误日志格式化日志，触发运维警报，需要人工介入错误才用这个类型日志
 function eprintf(fmt, ...)
     local str = string.format(fmt, ...) .. "\n" .. debug.traceback()
 
@@ -135,6 +135,19 @@ end
 -- 异步print format log,以第一个为format参数，格式化后面的参数.仅在日志线程开启后有效
 function warnf(fmt, ...)
     return logger_print(g_async_log, "info", 136, string.format(fmt, ...))
+end
+
+-- 以黄色打印日志，并且带上玩家id，方便查问题
+function pwarn(player, ...)
+    -- 136 = MASK_C_Y | MASK_S_L，参考C++中的定义
+    return logger_print(g_async_log, "info", 136,
+        string.format("%s(%d), ", player.property.name, player.pid), ...)
+end
+
+function pwarnf(player, fmt, ...)
+    return logger_print(g_async_log, "info", 136,
+        string.format("%s(%d), ", player.property.name, player.pid),
+        string.format(fmt, ...))
 end
 
 -- 以红色打印日志

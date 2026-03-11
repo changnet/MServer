@@ -53,11 +53,13 @@ message SKick
     int32 reason = 1; // 原因 1顶号 2管理员踢人
 }
 
-// 基础数据
+// 登录下发玩家基础数据
 message SBase
 {
-    // pid及名字在登录时已发
-    repeated comm.Res money = 1; // 各种货币
+    int32 create_time = 1; // 创角游戏时间戳
+    int32 server_time = 2; // 服务器当前游戏时间戳
+    repeated int64 pp_int = 1; // 所有整形属性，按id从小到大排列
+    repeated string pp_str = 2; // 所有整形属性，按id从小到大排列
 }
 
 // 玩家进入副本
@@ -82,3 +84,17 @@ message SPing
     repeated SrvDelay delay = 1; // 延迟
     string verify = 2; // 用于校验包完整的字符串
 }
+
+// 虚拟货币更新
+message MoneyUpdate
+{
+    int32 type = 1; // 类型
+    int64 num  = 2; // 数量
+}
+
+// 虚拟货币初始化
+message MoneyInfo
+{
+    repeated MoneyUpdate list = 1;
+}
+

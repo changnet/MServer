@@ -51,16 +51,19 @@ PLAYER = { -- 和玩家相关的基础协议都放在这里
         s = "player.SKick", i = 5
     },
     -- 登录时下发基础数据
-    BASE = {
+    Base = {
         s = "player.SBase", i = 6
-    },
-    -- 更新通用资源
-    UPDATE_RES = {
-        s = "comm.Res", i = 7
     },
     -- 进入副本
     ENTERDUNGEON = {
         c = "player.CEnterDungeon", i = 8
+    },
+    -- 货币信息初始化
+    MoneyInfo = {
+        s = "player.MoneyInfo"
+    },
+    MoneyUpdate = {
+        s = "player.MoneyUpdate"
     },
 }
 

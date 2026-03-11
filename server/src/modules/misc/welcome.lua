@@ -1,9 +1,9 @@
 -- role_welcome.lua
 -- 2018-05-13
 -- xzc
--- 角色欢迎
+-- 新角色欢迎功能，发一封邮件
 
-
+local SKEY = "welcome"
 local WelcomConf = require "config.player.welcome_conf"
 
 -- 发送数据
@@ -13,15 +13,15 @@ end
 
 -- 登录事件
 local function on_enter(player)
-    local var = player:storage()
+    local var = Player.get_storage(player, SKEY)
     if var.welcome then return end -- 已经领取过
 
     return send_info(player, 0)
 end
 
 -- 处理前端领取奖励
-local function handle_award(player, pkt)
-    local var = player:storage()
+local function c_get_award(player, pkt)
+    local var = Player.get_storage(player, SKEY)
     if var.welcome then return end -- 已经领取过
 
     var.welcome = 1
@@ -32,5 +32,5 @@ local function handle_award(player, pkt)
     send_info(player, 1)
 end
 
-PE.reg(PE_ENTER, on_enter)
-Cmd.reg_player(MISC.WELCOME_GET, handle_award)
+PE.reg(PE_LOGIN, on_enter)
+NetMsg.reg(MISC.WELCOME_GET, c_get_award)

@@ -1,4 +1,4 @@
--- auto export by lua-tags 197 symbols
+-- auto export by lua-tags 201 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -51,8 +51,8 @@ return {
 "LOG", -- src/modules/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "ListAoi", -- engine/__listaoi.lua
-"Log", -- src/global/log.lua
 "Log", -- engine/__log.lua
+"Log", -- src/global/log.lua
 "LogDB", -- src/modules/log/log_db.lua
 "Login", -- src/modules/account/login.lua
 "LuaCodec", -- engine/__luacodec.lua
@@ -64,14 +64,15 @@ return {
 "MISC", -- src/modules/protocol/protocol.lua
 "MT", -- src/modules/move/move_header.lua
 "Map", -- engine/__map.lua
+"Money", -- src/modules/player/money.lua
+"MoneyType", -- src/modules/player/money.lua
 "Mongo", -- engine/__mongo.lua
 "MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
 "PE", -- src/modules/event/player_event.lua
-"PE_CONN", -- src/modules/event/event_header.lua
-"PE_DEATH", -- src/modules/event/event_header.lua
-"PE_ENTER", -- src/modules/event/event_header.lua
-"PE_EXIT", -- src/modules/event/event_header.lua
+"PE_INIT", -- src/modules/event/event_header.lua
+"PE_LOGIN", -- src/modules/event/event_header.lua
+"PE_LOGOUT", -- src/modules/event/event_header.lua
 "PID_SRV_BIT", -- src/modules/system/define.lua
 "PLAYER", -- src/modules/protocol/protocol.lua
 "PP", -- src/modules/player/property.lua
@@ -183,11 +184,14 @@ return {
 "oo", -- src/global/oo.lua
 "print", -- src/global/log.lua
 "printf", -- src/global/log.lua
+"pwarn", -- src/global/log.lua
+"pwarnf", -- src/global/log.lua
 "require", -- src/global/require.lua
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua
+"scall", -- src/global/global.lua
 "set_modify_metatable", -- src/global/modi_table.lua
 "storage", -- src/data/global_data.lua
 "str_split3", -- src/test/misc_test.lua

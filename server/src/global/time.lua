@@ -15,9 +15,8 @@ local OFFSET = 1577808000
 
 local engine_time = Engine.time
 
--- 获取游戏时间戳(utc时间戳-)
+-- 获取游戏时间戳(utc时间戳-1577808000，保证在int32范围内)，单位是秒
 function time.game_time()
-    assert(false)
     return engine_time() - OFFSET
 end
 

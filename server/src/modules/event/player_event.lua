@@ -5,6 +5,8 @@ local ev_cb = {}
 
 require "modules.event.event_header"
 
+local scall = scall
+
 -- 注册系统事件回调
 -- @param ev 事件id，PE_XXX，详见玩家事件定义
 -- @param cb 回调函数，回调参数取决于各个事件，可自动回调到player的子模块
@@ -16,7 +18,7 @@ function PE.reg(ev, cb, pr)
         ev_cb[ev] = cbs
     end
 
-    assert(cb and not g_app.ready)
+    assert(cb and not g_ready)
 
     -- 默认优先级20
     -- 为啥是20，因为linux下top列出的就是20，照抄
@@ -26,13 +28,12 @@ end
 -- 触发玩家事件
 -- @param ev 事件id，PE_XXX，详见玩家事件定义
 -- @param ... 自定义参数
-function PE.fire_event(ev, ...)
+function PE.fire_event(player, ev, ...)
     local cbs = ev_cb[ev]
     if not cbs then return end
 
     for _, cb in pairs(cbs) do
-        -- TODO 暂时不用xpcall，影响性能，用的话容错要好一些
-        cb(...)
+        scall(cb, player, ...)
     end
 end
 
