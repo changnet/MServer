@@ -128,6 +128,7 @@ local function load_base_data(player)
     player.create_pfid = data.create_pfid
     player.create_sid = data.create_sid
     player.create_time = data.create_time
+    player.login_time = data.login_time or 0 -- 上一次退出时间
 
     return true
 end
@@ -247,6 +248,11 @@ function Player.logout(player, why)
     __player_storage[pid] = nil
 
     PlayerMgr.exit_completed(pid, player.session_id)
+end
+
+-- 是否是新创建，第一次登录的玩家
+function Player.is_new(player)
+    return player.logout_time == 0
 end
 
 return Player

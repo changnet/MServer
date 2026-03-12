@@ -60,6 +60,7 @@ return {
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MT", -- src/modules/move/move_header.lua
 "Map", -- engine/__map.lua
+"Misc", -- src/modules/misc/misc.lua
 "Money", -- src/modules/player/money.lua
 "MoneyType", -- src/modules/player/money.lua
 "Mongo", -- engine/__mongo.lua
@@ -171,7 +172,6 @@ return {
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
 "graph", -- src/global/graph.lua
-"hot_fix", -- src/modules/system/hot_fix.lua
 "main_message_dispatch", -- src/message/thread_message.lua
 "memory", -- src/data/global_data.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua

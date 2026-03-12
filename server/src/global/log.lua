@@ -195,3 +195,57 @@ function Log.enable_debug(enable)
     enable_dbg = enable
     g_setting.debug = enable
 end
+
+-- 记录数据变动到change日志文件
+--- @param m string 模块名
+--- @param f string 功能名
+--- @param ... 需要记录的其他信息
+function Log.change(m, f, ...)
+    logger_print(g_async_log, "change", 0, m, f, ...)
+end
+
+-- 记录玩家数据变动到change日志文件
+--- @param m string 模块名
+--- @param f string 功能名
+--- @param ... 需要记录的其他信息
+function Log.pchange(player, m, f, ...)
+    return logger_print(g_async_log, "change", 0, player.pid, m, f, ...)
+end
+
+-- 追加日志到log目录下指定文件，纯lua实现会阻塞线程，仅用于特殊场景，比如调试等
+function Log.file(name, ...)
+    local path = string.format("log/%s", name)
+
+    local f = io.open(path, "ab")
+    if not f then
+        eprint("failed to open log file", path)
+        return
+    end
+
+    f:write(...)
+    f:close()
+end
+
+-- 写入日志到日志数据库
+--@param name string 日志表名
+--@param tbl table 需要写入数据库的字段，必须是一个key-value的table，key是字段名，value是字段值
+function Log.db(name, tbl)
+end
+
+-- 写入日志到日志数据库的misc表
+-- @param pid int 玩家id，如果没有玩家相关，可以传0
+-- @param op int 操作id，详见日志定义
+-- @param v1 string 自定义数据
+-- @param v2 string 自定义数据
+-- @param v3 string 自定义数据
+function Log.misc(pid, op, v1, v2, v3)
+end
+
+-- 写入日志到日志数据库的misc表
+-- @param pid int 玩家id，如果没有玩家相关，可以传0
+-- @param op int 操作id，详见日志定义
+-- @param v1 string 自定义数据
+-- @param v2 string 自定义数据
+-- @param v3 string 自定义数据
+function Log.pmisc(player, op, v1, v2, v3)
+end

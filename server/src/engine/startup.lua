@@ -126,6 +126,7 @@ local function set_process_log(node_name, node_index)
         g_async_log:add_device("info", path, 1, 1, 0, "stdout")
     end
     g_async_log:add_device("error", epath, 1, 2, 1024 * 1024 * 10, "info")
+    g_async_log:add_device("change", path, 1, 1)
 
     -- 主线程的日志名字，是不带后缀的，比如game1就是game，和game1那个worker区分开来
     return format_log_name(node_name, node_index, true)

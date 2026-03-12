@@ -133,41 +133,6 @@ end
 
 --//////////////////////////////////////////////////////////////////////////////
 
-local t_i
-local t_s
-
--- 使用日志产生时的时间，而不是插入数据库的时间，因为有缓存
-local function db_time()
-    local t = ev:time()
-
-    -- 这个时间缓存，这样同一秒插入时，就不需要频繁格式化字符串
-    if t ~= t_i then
-        t_s = "\"" .. time.date(t) .. "\""
-        t_i = t
-    end
-
-    return t_s
-end
-
--- 转换为db字段的字符串
-local function to_db_str(val)
-    if nil == val then return "null" end
-
-    -- 拼接sql时，字符串要加双引号
-    if "string" == type(val) then
-        -- https://dev.mysql.com/doc/c-api/8.0/en/mysql-real-escape-string.html
-        -- Characters encoded are \, ', ", NUL (ASCII 0), \n, \r, and Control+Z.
-        -- Strictly speaking, MySQL requires only that backslash and the quote
-        -- character used to quote the string in the query be escaped.
-        -- mysql_real_escape_string() quotes the other characters to make them
-        -- easier to read in log files
-        -- 这里做个简单的转义，防止字符串里包含特殊字符时报错
-        return "\"" .. val:gsub("[\\'\"]") .. "\""
-    end
-
-    return tostring(val)
-end
-
 -- 把多个字段折叠起来存到vals字段
 local function to_db_vals(val, ...)
     if nil == val then return "null" end
@@ -284,35 +249,5 @@ end
 function LogDB.db_misc(player, op, val, val1, val2, ...)
     return LogDB.db_pid_misc(player.pid, op, val, val1, val2, ...)
 end
-
--- /////////////////////////////////////////////////////////////////////////////
--- 初始化db日志
-local function on_app_start(check)
-    if check then
-        return this.ok
-    end
-    this.db = Mysql("MySQL Log")
-    this.db:start(g_setting.mysql_ip, g_setting.mysql_port,
-                         g_setting.mysql_user, g_setting.mysql_pwd,
-                         g_setting.mysql_db, function()
-        this.ok = true
-        Timer.reg_min_interval(exec_db)
-    end)
-end
-
--- 关闭文件日志线程及数据库日志线程
-local function on_app_stop()
-    -- self.async_file:stop()
-    if this.db then
-        exec_db()
-        this.db:stop()
-    end
-
-    return true
-end
-
-name_func("LogDB.execdb", exec_db)
-App.reg_start("Log", on_app_start)
-App.reg_stop("Log", on_app_stop, 28) -- 关闭优先级低，需要等其他模块写完日志
 
 return Log

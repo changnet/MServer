@@ -3,34 +3,36 @@
 -- xzc
 -- 新角色欢迎功能，发一封邮件
 
-local SKEY = "welcome"
 local WelcomConf = require "config.player.welcome_conf"
 
+local function get_storage(player)
+    return Player.get_storage(player, "welcome")
+end
+
 -- 发送数据
-local function send_info(player, st)
-    return player:send_pkt(MISC.WELCOME, {status = st})
+local function send_info(player, pkt)
+    return player:send_pkt(M.WelcomeGet, pkt)
 end
 
 -- 登录事件
-local function on_enter(player)
-    local var = Player.get_storage(player, SKEY)
-    if var.welcome then return end -- 已经领取过
+local function on_login(player)
+    local sg = get_storage(player)
 
-    return send_info(player, 0)
+    return send_info(player, sg)
 end
 
 -- 处理前端领取奖励
 local function c_get_award(player, pkt)
-    local var = Player.get_storage(player, SKEY)
-    if var.welcome then return end -- 已经领取过
+    local sg = get_storage(player)
+    if sg.status then return end -- 已经领取过
 
-    var.welcome = 1
+    sg.status = 1
     Res.add(player, WelcomConf.resources, LOG.WELCOME)
 
     -- TODO: 还要发封邮件
 
-    send_info(player, 1)
+    send_info(player, sg)
 end
 
-PE.reg(PE_LOGIN, on_enter)
+PE.reg(PE_LOGIN, on_login)
 NetMsg.reg(M.WelcomeGet, c_get_award)

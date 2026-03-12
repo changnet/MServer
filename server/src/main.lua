@@ -54,6 +54,9 @@ local function main(cmd, ...)
     local opts = get_opt(args)
     local node = assert(opts["--node"], "missing argument --node")
 
+    local chdir = opts["--cwd"]
+    if chdir then util.chdir(chdir) end
+
     util.mkdir_p("log") -- 创建日志目录
     util.mkdir_p("runtime") -- 创建运行时数据存储目录
     util.mkdir_p("runtime/rank") -- 创建运行时排行榜数据存储目录
@@ -63,9 +66,6 @@ local function main(cmd, ...)
         os.execute("chcp 65001")
         os.execute("title " .. cmd_args)
     end
-
-    local chdir = opts["--cwd"]
-    if chdir then util.chdir(chdir) end
 
     local cwd = util.getcwd()
     g_sharedata:set("cwd", cwd) -- current working directory
