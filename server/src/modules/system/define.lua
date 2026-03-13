@@ -4,16 +4,17 @@
 
 -- worker类型定义{类型, 名字}，名字用于打印日志
 WORKER = {
-    TEST    = {1, "test"}, -- 单元测试
-    GATEWAY = {2, "gateway"}, -- 网关
-    GAME    = {3, "game"}, -- 游戏公用逻辑
-    DATA    = {4, "data"}, -- 缓存及db操作
-    PLAYER  = {5, "player"}, -- 玩家个人逻辑
-    SCENE   = {6, "scene"}, -- 场景
-    MYSQL   = {7, "mysql"}, -- mysql数据库读写
-    MONGODB = {8, "mongodb"}, -- mongodb数据库读写
-    ACCOUNT = {9, "account"}, -- 帐号管理及登录
-    BOT     = {10, "bot"}, -- 机器人测试
+    GATEWAY = {1, "gateway"}, -- 网关
+    GAME    = {2, "game"}, -- 游戏公用逻辑
+    DATA    = {3, "data"}, -- 缓存及db操作
+    PLAYER  = {4, "player"}, -- 玩家个人逻辑
+    SCENE   = {5, "scene"}, -- 场景
+    MYSQL   = {6, "mysql"}, -- mysql数据库读写
+    MONGODB = {7, "mongodb"}, -- mongodb数据库读写
+    ACCOUNT = {8, "account"}, -- 帐号管理及登录
+    LOG     = {10, "log"}, -- 日志写入
+    TEST    = {200, "test"}, -- 单元测试
+    BOT     = {201, "bot"}, -- 机器人测试
 }
 W_MAIN    = 256 -- 主线程，主线程的wtype通常和某个worker的wtype一致，如果要区分，则W_TEST | W_MAIN
 W_TEST    = 1 -- 单元测试
@@ -25,6 +26,7 @@ W_SCENE   = 6 -- 场景
 W_MYSQL   = 7 -- mysql数据库读写
 W_MONGODB = 8 -- mongodb数据库读写
 W_ACCOUNT = 9 -- 帐号管理及登录
+W_LOG     = 10 -- 日志写入
 
 EMPTY = {} -- 一个空table，避免频繁创建空table，稍后会设置为只读
 

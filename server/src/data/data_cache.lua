@@ -145,7 +145,7 @@ function DataCache.update(tbl_name, keys, value)
     end
 end
 
-local function save_cache_list(now, save_count, beg_idx, end_idx)
+local function save_cache_list(now, save_count, max_save, beg_idx, end_idx)
     assert(end_idx >= beg_idx)
 
     for i = beg_idx + 1, end_idx do
@@ -160,7 +160,7 @@ local function save_cache_list(now, save_count, beg_idx, end_idx)
             this.save_list[i] = nil
             save_to_db(cache, now)
             save_count = save_count + 1
-            if save_count >= MAX_SAVE then break end
+            if save_count >= max_save then break end
         else
             -- 因为save_list是按添加顺序存储的，所以后面的cache还没到期
             break
@@ -209,13 +209,13 @@ local function do_cache_timer(now)
 
     local save_count = 0
     if end_idx >= beg_idx then
-        save_count = save_cache_list(now, save_count, beg_idx, end_idx)
+        save_count = save_cache_list(now, save_count, MAX_SAVE, beg_idx, end_idx)
     else
         -- save_seed回绕了，从save_index到MAX_CACHE的缓存也要存一下
-        save_count = save_cache_list(now, save_count, beg_idx, MAX_CACHE)
+        save_count = save_cache_list(now, save_count, MAX_SAVE, beg_idx, MAX_CACHE)
 
         if save_count < MAX_SAVE then
-            save_count = save_cache_list(now, save_count, this.save_index, end_idx)
+            save_count = save_cache_list(now, save_count, MAX_SAVE, this.save_index, end_idx)
         end
     end
     if save_count > 0 then print("cache timer save", save_count) end
@@ -228,6 +228,31 @@ local function do_cache_timer(now)
     end
 end
 
+-- 退出时把所有缓存存库
+local function on_worker_stop()
+    local now = Engine.time()
+
+    local beg_idx = this.save_index
+    local end_idx = this.save_seed
+
+    local num = 0
+    if end_idx >= beg_idx then
+        num = end_idx - beg_idx
+    else
+        num = MAX_CACHE - beg_idx + end_idx
+    end
+    print("shutdown save cache", num)
+    if num == 0 then return end
+
+    if end_idx >= beg_idx then
+        save_cache_list(now, save_count, num, beg_idx, end_idx)
+    else
+        save_cache_list(now, save_count, num, beg_idx, MAX_CACHE)
+        save_cache_list(now, save_count, num, 0, end_idx)
+    end
+end
+
 SE.reg(SE_SEC_TIMER, do_cache_timer)
+SE.reg(SE_WORKER_STOP, on_worker_stop)
 
 return DataCache

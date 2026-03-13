@@ -162,9 +162,10 @@ function Worker.start_ready()
     -- 通知主线程启动完成
     Send.Worker.on_start_ready(MAIN_ADDR, LOCAL_ADDR)
 
+    SE.fire(SE_WORKER_ME_READY, addr, data.mode)
+
     -- 触发其他worker启动完成事件
     for addr, data in pairs(WorkerData) do
-        SE.fire(SE_WORKER_ME_READY, addr, data.mode)
         if data.status == Worker.READY then
             SE.fire(SE_WORKER_BOTH_READY, addr, data.mode)
         end
@@ -253,7 +254,7 @@ function Worker.set_status(src_addr, addr, mode, status)
         data.mode = mode
         data.src_addr = src_addr
         if old_status ~= status then
-            SE.fire(SE_WORKER_READY, addr, mode)
+            SE.fire(SE_WORKER_OTHER_READY, addr, mode)
             if g_ready then SE.fire(SE_WORKER_BOTH_READY, addr, mode) end
         end
     else

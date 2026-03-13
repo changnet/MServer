@@ -21,6 +21,7 @@ GAME_ADDR = Engine.make_address(W_GAME, 1) -- 游戏逻辑的地址
 DATA_ADDR = Engine.make_address(W_DATA, 1) -- 数据读写的地址
 GATEWAY_ADDR = Engine.make_address(W_GATEWAY, 1) -- 网关的地址
 ACCOUNT_ADDR = Engine.make_address(W_ACCOUNT, 1) -- 帐号管理的地址
+LOG_ADDR = Engine.make_address(W_LOG, 1) -- 日志的地址
 
 require "engine.co_pool"
 require "message.thread_message"

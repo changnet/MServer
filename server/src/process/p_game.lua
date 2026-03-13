@@ -19,6 +19,7 @@ Startup.process_init(function()
             {file = "data.w_data", type = WORKER.DATA, index = 1},
             {file = "data.w_mysql", type = WORKER.MYSQL, index = 1},
             {file = "data.w_mongodb", type = WORKER.MONGODB, index = 1},
+            {file = "log.w_log", type = WORKER.LOG, index = 1},
         })
     elseif g_setting.mode == "process" then
         -- 进程模式，worker在多个进程
@@ -28,6 +29,7 @@ Startup.process_init(function()
             {file = "worker.w_player", type = WORKER.PLAYER, index = 2},
             -- {file = "w_scene.lua", type = WORKER.SCENE, index = 1},
             -- {file = "w_scene.lua", type = WORKER.SCENE, index = 2},
+            {file = "log.w_log", type = WORKER.LOG, index = 1},
         })
         Cluster.listen_later(g_setting.cluster, "game_1")
     end

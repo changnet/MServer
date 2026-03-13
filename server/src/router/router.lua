@@ -131,5 +131,5 @@ local function on_worker_ready(addr)
     table.insert(list, {addr = addr})
 end
 
-SE.reg(SE_WORKER_READY, on_worker_ready)
+SE.reg(SE_WORKER_OTHER_READY, on_worker_ready)
 SE.reg(SE_WORKER_STOP, on_worker_stop)

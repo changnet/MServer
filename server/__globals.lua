@@ -1,4 +1,4 @@
--- auto export by lua-tags 196 symbols
+-- auto export by lua-tags 195 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -9,7 +9,6 @@ return {
 "AccountMgr", -- src/modules/account/account_mgr.lua
 "Acism", -- engine/__acism.lua
 "Alert", -- src/modules/misc/alert.lua
-"AndroidMgr", -- src/android/android_mgr.lua
 "Astar", -- engine/__astar.lua
 "Await", -- src/rpc/rpc_proxy.lua
 "Bot", -- src/bot/bot.lua
@@ -45,12 +44,13 @@ return {
 "LOCAL_ADDR", -- src/worker/worker.lua
 "LOCAL_NAME", -- src/worker/worker.lua
 "LOCAL_TYPE", -- src/worker/worker.lua
-"LOG", -- src/modules/log/log_header.lua
+"LOG", -- src/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
+"LOG_ADDR", -- src/engine/preloader.lua
 "ListAoi", -- engine/__listaoi.lua
 "Log", -- engine/__log.lua
 "Log", -- src/global/log.lua
-"LogDB", -- src/modules/log/log_db.lua
+"LogMgr", -- src/log/log_mgr.lua
 "Login", -- src/modules/account/login.lua
 "LuaCodec", -- engine/__luacodec.lua
 "M", -- src/modules/protocol/protocol.lua
@@ -99,7 +99,7 @@ return {
 "SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
 "SE_SEC_TIMER", -- src/modules/event/event_header.lua
 "SE_WORKER_BOTH_READY", -- src/modules/event/event_header.lua
-"SE_WORKER_ME_READY", -- src/modules/event/event_header.lua
+"SE_WORKER_OTHER_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_START", -- src/modules/event/event_header.lua
 "SE_WORKER_STOP", -- src/modules/event/event_header.lua
@@ -126,6 +126,7 @@ return {
 "W_DATA", -- src/modules/system/define.lua
 "W_GAME", -- src/modules/system/define.lua
 "W_GATEWAY", -- src/modules/system/define.lua
+"W_LOG", -- src/modules/system/define.lua
 "W_MAIN", -- src/modules/system/define.lua
 "W_MONGODB", -- src/modules/system/define.lua
 "W_MYSQL", -- src/modules/system/define.lua
@@ -161,14 +162,12 @@ return {
 "dprintf", -- src/global/log.lua
 "eprint", -- src/global/log.lua
 "eprintf", -- src/global/log.lua
-"g_ai_mgr", -- src/android/android_boot.lua
 "g_lcodec", -- src/rpc/rpc.lua
 "g_mongodb", -- src/data/w_mongodb.lua
 "g_mysql", -- src/data/w_mysql.lua
 "g_ready", -- src/engine/startup.lua
 "g_setting", -- src/engine/startup.lua
 "g_shuttingdown", -- src/engine/shutdown.lua
-"g_stat_mgr", -- src/android/android_boot.lua
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
 "graph", -- src/global/graph.lua
