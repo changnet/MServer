@@ -17,12 +17,12 @@ local gm_data = {}
 local is_query = false -- 是否已向其他节点查询
 
 -- 注册gm指令
--- @param wtype 执行该gm的worker类型，默认为player，-1表示广播指定主线程执行：W_GAME | W_MAIN
+-- @param wtype 执行该gm的worker类型，默认为player，-1表示广播指定主线程执行：W.GAME | W.MAIN
 -- @param level 执行此gm需要的权限等级，默认为256，数值越大权限越高
 function GM.reg(cmd, func, wtype, level)
     gm_data[cmd] = {
         func = func,
-        wtype = wtype or W_PLAYER,
+        wtype = wtype or W.PLAYER,
         level = level or 256,
     }
 end
@@ -148,7 +148,7 @@ function GM.run(source, pid, args)
     -- 如果是在player worker并且存在pid，则以玩家对象为第一个参数执行gm
     -- 这个player是给玩家gm用的，如果是后台gm需要针对某个玩家操作，一般pid在args里
     local player
-    if W_PLAYER == LOCAL_TYPE and pid > 0 then
+    if W.PLAYER == LOCAL_TYPE and pid > 0 then
         player = PlayerMgr.get(pid)
         if not player then
             eprint("gm no such player", pid)
@@ -185,8 +185,8 @@ function GM.dispatch(source, pid, data, args)
         end
     end
 
-    local is_main = 0 ~= (wtype & W_MAIN)
-    wtype = wtype & ~W_MAIN
+    local is_main = 0 ~= (wtype & W.MAIN)
+    wtype = wtype & ~W.MAIN
 
     for addr in pairs(WorkerData) do
         local wt, _, main = Engine.unmake_address(addr)

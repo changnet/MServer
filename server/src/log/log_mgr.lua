@@ -22,9 +22,16 @@ end
 
 local function flush_logs()
     local mysql = this.mysql
-    if not mysql then
+
+    -- 还在startup中
+    if not mysql.connected then return end
+
+    if 0 ~= mysql:ping() then
+        local e, str = mysql:error()
+        eprintf("log mysql ping error %d %s", e, str or "")
         return
     end
+
     for table_name, rows in pairs(this.buffer) do
         if #rows > 0 then
             flush_table_logs(mysql, table_name, rows)
@@ -45,21 +52,23 @@ local function add_log(table_name, row)
 end
 
 -- 模块启动回调
-local function start()
+function LogMgr.start()
     this.mysql = MySQL()
-    this.mysql:thread_init()
-    this.mysql:set_ssl(false)
 
     local conf = g_setting.mysql
-    local e = this.mysql:connect(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
-    if e ~= 0 then
-        eprint("log mysql connect error", this.mysql:error())
-    end
+    this.mysql:connect_later(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
 
     Timer.interval(5000, 5000, -1, flush_logs)
+
+    return true
 end
 
 local function stop()
+    local mysql = this.mysql
+
+    -- 还在startup中
+    if not mysql or not mysql.connected then return end
+
     flush_logs()
 
     this.mysql:disconnect()
@@ -92,7 +101,10 @@ function LogMgr.pmisc(pid, op, v1, v2, v3)
     })
 end
 
-SE.reg(SE_WORKER_ME_READY, start)
-SE.reg(SE_WORKER_STOP, stop)
+Shutdown.reg({
+    name = "log_mgr",
+    func = stop,
+})
+Rtti.name_func("LogMgr.flush_logs", flush_logs)
 
 return LogMgr

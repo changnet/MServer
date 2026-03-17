@@ -227,9 +227,9 @@ local function require_by_wtype(path, wtype, ...)
     if LOCAL_TYPE == wtype then
         require(path)
     elseif wtype < 0 and ~wtype ~= LOCAL_TYPE then
-        -- require("a.b.c", ~W_GATEWAY)表示W_GATEWAY类型不加载
+        -- require("a.b.c", ~W.GATEWAY)表示W.GATEWAY类型不加载
         require(path)
-    elseif wtype == (LOCAL_TYPE | W_MAIN) and Engine.is_main_addr(LOCAL_ADDR) then
+    elseif wtype == (LOCAL_TYPE | W.MAIN) and Engine.is_main_addr(LOCAL_ADDR) then
         require(path)
     end
 

@@ -215,7 +215,8 @@ local function do_cache_timer(now)
         save_count = save_cache_list(now, save_count, MAX_SAVE, beg_idx, MAX_CACHE)
 
         if save_count < MAX_SAVE then
-            save_count = save_cache_list(now, save_count, MAX_SAVE, this.save_index, end_idx)
+            save_count = save_cache_list(
+                now, save_count, MAX_SAVE, this.save_index, end_idx)
         end
     end
     if save_count > 0 then print("cache timer save", save_count) end
@@ -245,14 +246,17 @@ local function on_worker_stop()
     if num == 0 then return end
 
     if end_idx >= beg_idx then
-        save_cache_list(now, save_count, num, beg_idx, end_idx)
+        save_cache_list(now, 0, num, beg_idx, end_idx)
     else
-        save_cache_list(now, save_count, num, beg_idx, MAX_CACHE)
-        save_cache_list(now, save_count, num, 0, end_idx)
+        save_cache_list(now, 0, num, beg_idx, MAX_CACHE)
+        save_cache_list(now, 0, num, 0, end_idx)
     end
 end
 
 SE.reg(SE_SEC_TIMER, do_cache_timer)
-SE.reg(SE_WORKER_STOP, on_worker_stop)
+Shutdown.reg({
+    name = "data_cache",
+    func = on_worker_stop,
+})
 
 return DataCache

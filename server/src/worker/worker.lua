@@ -21,10 +21,10 @@ LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
 LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
 MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 
--- 按指定worker类型关机顺序关闭
+-- 按指定worker类型关机顺序关闭（TODO，这个定义感觉要放到worker定义中去）
 local Sequence = {
-    WORKER.GATEWAY, WORKER.SCENE, WORKER.GAME, WORKER.PLAYER,
-    WORKER.DATA, WORKER.MYSQL, WORKER.MONGODB,
+    W.GATEWAY, W.SCENE, W.GAME, W.PLAYER,
+    W.DATA, W.MYSQL, W.MONGODB,
 }
 
 local this = memory("Worker")
@@ -56,8 +56,8 @@ local function shutdown()
     -- 同时避免关服中报错时，无法恢复
     for _, wt in pairs(Sequence) do
         for addr, w in pairs(WorkerHash) do
-            local s = WorkerData[addr]
-            if not w.cluster_worker and wt[1] == s.type[1] then
+            local d = WorkerData[addr]
+            if not w.cluster_worker and wt == d.type then
                 Worker.stop(addr)
             end
         end
@@ -78,9 +78,10 @@ function Worker.start(setting)
     -- worker要启动另一个worker需要使用rpc调用
     assert(Engine.is_main_addr(LOCAL_ADDR))
 
-    local name = setting.type[2]
+    local wtype = setting.type
+    local name = Worker.type_name(wtype)
     local w = WorkerThread(name)
-    local addr = Engine.make_address(setting.type[1], setting.index)
+    local addr = Engine.make_address(wtype, setting.index)
 
     local data = table.copy(setting)
     data.status = Worker.STARTING
@@ -161,8 +162,6 @@ function Worker.start_ready()
 
     -- 通知主线程启动完成
     Send.Worker.on_start_ready(MAIN_ADDR, LOCAL_ADDR)
-
-    SE.fire(SE_WORKER_ME_READY, addr, data.mode)
 
     -- 触发其他worker启动完成事件
     for addr, data in pairs(WorkerData) do

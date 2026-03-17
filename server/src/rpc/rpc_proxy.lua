@@ -7,15 +7,15 @@ proxy、agent、delegate的区别
 现在game需要调用mongodb读取数据，但由于mongodb是由data负责分配，因此game必须先请求data，
 再由data分配一个mongodb节点去读数据。于是
 
-1. game创建一个proxy("MongoDB", W_DATA)，这样就能直接用MongoDB发起调用MongoDB.find()，
+1. game创建一个proxy("MongoDB", W.DATA)，这样就能直接用MongoDB发起调用MongoDB.find()，
     这个请求会发给一个data节点
-2. data本身不存在MongoDB模块，它创建一个agent("MongoDB", W_MONGODB)，
+2. data本身不存在MongoDB模块，它创建一个agent("MongoDB", W.MONGODB)，
     在收到MongoDB请求时，会根据路由机制分配一个mongodb节点并把请求转发给这个节点
 3. mongodb中，实际不存在MongoDB这个模块，它只有一个g_mongodb实例。这时候delegate("MongoDB", g_mongodb)
     将会接管所有MongoDB的请求，将以g_mongodb实体调用find函数，然后返回结果
 
 
-Rpc.proxy_wtype("MySql", W_MYSQL)
+Rpc.proxy_wtype("MySql", W.MYSQL)
 Mysql.insert() -- 代理之后，将可以在当前worker直接调用，默认是无返回的
 
 -- 如果需要返回值，则需要用Await来调用（TODO 这个写法有点坑，但我没想出更好的写法）
@@ -86,7 +86,7 @@ function Rpc.proxy_wtype(name, wtype)
     if mod then return mod end
 
     -- TODO 是否要放到全局，这个写法待定
-    -- 可以在对应的模块文件上 MongoDB = Rpc.proxy_wtype("MongoDB", W_MONGODB)这样写
+    -- 可以在对应的模块文件上 MongoDB = Rpc.proxy_wtype("MongoDB", W.MONGODB)这样写
     -- 如果这个模块很通用，应该在module_loader中定义而不是直接在proxy里直接设置为全局
 
     -- 另外，Await这个是不是要弄一个local MongoDB = Rpc.await_wtype(name, wtype)

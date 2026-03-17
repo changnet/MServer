@@ -38,7 +38,7 @@ RPC设计
 因此，新的方案采用Call.Test.func(addr, ...)这种方式，同时也保留Call.invoke(addr, Test.func, ...)方式，
 也支持Call.invoke(addr, "Test.func", ...)这种方式
 
-在适当的情况下，使用Rpc.proxy_wtype("Test", W_TEST)封装后，可以直接调用Test.func()
+在适当的情况下，使用Rpc.proxy_wtype("Test", W.TEST)封装后，可以直接调用Test.func()
 
 
 关于热更

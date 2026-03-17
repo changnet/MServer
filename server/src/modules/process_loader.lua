@@ -9,5 +9,5 @@ require("message.pbc")
 Pbc.load()
 
 if g_setting.cli then
-require("gm.cmd_line_interface", W_GAME)
+require("gm.cmd_line_interface", W.GAME)
 end

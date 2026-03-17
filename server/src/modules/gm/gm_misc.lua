@@ -24,6 +24,6 @@ end, -1)
 -- ping一下服务器间的延迟，看卡不卡
 GM.reg("ping", function()
     Ping.start(1)
-end, W_GAME | W_MAIN)
+end, W.GAME | W.MAIN)
 
 return GM

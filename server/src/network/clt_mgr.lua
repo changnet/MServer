@@ -78,7 +78,7 @@ function CltMgr.del(socket)
 
     local info = socket.login
     if info then
-        local addr = Router.find_worker_addr(W_ACCOUNT, info.account)
+        local addr = Router.find_worker_addr(W.ACCOUNT, info.account)
         Send.AccountMgr.logout(addr, session_id)
     end
 

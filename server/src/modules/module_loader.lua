@@ -12,7 +12,7 @@
 4. 放loader的模块都是可热更的，不能热更的放Bootstrap.xxx_init
 ]]
 
-
+local W = W
 local require = require_worker
 
 
@@ -25,12 +25,11 @@ require_define "modules.system.define"
 
 table.readonly(EMPTY)
 
-require "modules.system.hot_fix"
 E = require "modules.system.error"
 
-require("protocol.protocol", ~W_DATA)
-require("message.pbc", ~W_DATA)
-require("message.net_msg", ~W_DATA)
+require("protocol.protocol")
+require("message.pbc")
+require("message.net_msg")
 
 -- P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0
 -- 在加载其他业务模块之前优先级p0的逻辑
@@ -38,12 +37,13 @@ Pbc.update()
 NetMsg.load_forward_msg()
 -- P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0 P0 p0
 
-require("network.clt_mgr", W_GATEWAY)
-require("account.login", W_GATEWAY)
-require("account.account_mgr", W_ACCOUNT)
+require("network.clt_mgr", W.GATEWAY)
+require("account.login", W.GATEWAY)
+require("account.account_mgr", W.ACCOUNT)
 require("player.property")
 require("misc.alert")
-require("player.player", W_PLAYER)
-require("player.player_mgr", W_PLAYER)
-require("player.player_mgr", W_PLAYER)
-require("misc.welcome", W_PLAYER)
+require("event.player_event", W.PLAYER)
+require("player.player", W.PLAYER)
+require("player.player_mgr", W.PLAYER)
+require("player.player_mgr", W.PLAYER)
+require("misc.welcome", W.PLAYER)

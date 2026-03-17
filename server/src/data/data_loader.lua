@@ -4,8 +4,8 @@ require "engine.preloader"
 
 local require = require_worker
 
-require("data.data_mgr", W_DATA)
-require("data.data_cache", W_DATA)
-require("mysql.mysql", W_MYSQL)
-require("mysql.mysql", W_MYSQL)
-require("mongodb.mongodb", W_MONGODB)
+require("data.data_mgr", W.DATA)
+require("data.data_cache", W.DATA)
+require("mysql.mysql", W.MYSQL)
+require("mysql.mysql", W.MYSQL)
+require("mongodb.mongodb", W.MONGODB)

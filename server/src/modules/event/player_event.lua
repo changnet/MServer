@@ -39,8 +39,6 @@ end
 
 -- 生成回调函数
 local function make_cb()
-    local ThisCall = require "modules.system.this_call"
-
     for ev, cbs in pairs(ev_cb) do
         -- pr值越小，优先级越高
         table.sort(cbs, function(a, b) return a[2] < b[2] end)
@@ -52,8 +50,7 @@ local function make_cb()
             assert(not check[cb_func], ev)
 
             check[cb_func] = true
-            local func = ThisCall.make_from_player(cb_func, nil, "PE", ev)
-            table.insert(funcs, func or cb_func)
+            table.insert(funcs, cb_func)
         end
 
         -- 转换为一个函数数组，避免回调时再执行一次hash取函数指针

@@ -1,4 +1,4 @@
--- auto export by lua-tags 195 symbols
+-- auto export by lua-tags 184 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -49,7 +49,7 @@ return {
 "LOG_ADDR", -- src/engine/preloader.lua
 "ListAoi", -- engine/__listaoi.lua
 "Log", -- engine/__log.lua
-"Log", -- src/global/log.lua
+"Log", -- src/log/log.lua
 "LogMgr", -- src/log/log_mgr.lua
 "Login", -- src/modules/account/login.lua
 "LuaCodec", -- engine/__luacodec.lua
@@ -100,7 +100,6 @@ return {
 "SE_SEC_TIMER", -- src/modules/event/event_header.lua
 "SE_WORKER_BOTH_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_OTHER_READY", -- src/modules/event/event_header.lua
-"SE_WORKER_READY", -- src/modules/event/event_header.lua
 "SE_WORKER_START", -- src/modules/event/event_header.lua
 "SE_WORKER_STOP", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
@@ -121,18 +120,8 @@ return {
 "TlsCtx", -- engine/__tlsctx.lua
 "UNIQUEID", -- src/modules/system/define.lua
 "Util", -- src/engine/startup.lua
+"W", -- src/modules/system/define.lua
 "WORKER", -- src/modules/system/define.lua
-"W_ACCOUNT", -- src/modules/system/define.lua
-"W_DATA", -- src/modules/system/define.lua
-"W_GAME", -- src/modules/system/define.lua
-"W_GATEWAY", -- src/modules/system/define.lua
-"W_LOG", -- src/modules/system/define.lua
-"W_MAIN", -- src/modules/system/define.lua
-"W_MONGODB", -- src/modules/system/define.lua
-"W_MYSQL", -- src/modules/system/define.lua
-"W_PLAYER", -- src/modules/system/define.lua
-"W_SCENE", -- src/modules/system/define.lua
-"W_TEST", -- src/modules/system/define.lua
 "Worker", -- src/worker/worker.lua
 "WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
@@ -158,10 +147,10 @@ return {
 "__unrequire", -- src/global/require.lua
 "assert", -- src/global/global.lua
 "cluster_message_dispatch", -- src/message/thread_message.lua
-"dprint", -- src/global/log.lua
-"dprintf", -- src/global/log.lua
-"eprint", -- src/global/log.lua
-"eprintf", -- src/global/log.lua
+"dprint", -- src/log/log.lua
+"dprintf", -- src/log/log.lua
+"eprint", -- src/log/log.lua
+"eprintf", -- src/log/log.lua
 "g_lcodec", -- src/rpc/rpc.lua
 "g_mongodb", -- src/data/w_mongodb.lua
 "g_mysql", -- src/data/w_mysql.lua
@@ -176,10 +165,10 @@ return {
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
-"print", -- src/global/log.lua
-"printf", -- src/global/log.lua
-"pwarn", -- src/global/log.lua
-"pwarnf", -- src/global/log.lua
+"print", -- src/log/log.lua
+"printf", -- src/log/log.lua
+"pwarn", -- src/log/log.lua
+"pwarnf", -- src/log/log.lua
 "require", -- src/global/require.lua
 "require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
@@ -192,8 +181,8 @@ return {
 "sys", -- src/global/sys.lua
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
-"vd", -- src/global/log.lua
 "vd", -- src/modules/protocol/auto.lua
-"warn", -- src/global/log.lua
-"warnf", -- src/global/log.lua
+"vd", -- src/log/log.lua
+"warn", -- src/log/log.lua
+"warnf", -- src/log/log.lua
 }

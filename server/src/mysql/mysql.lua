@@ -93,6 +93,7 @@ function MySQL:__init()
     -- [tbl_name] = {a = 1, b = 2}，以表名为key，记录各个字段的数据类型
     self.types = {}
     self.mysql = MySql()
+    self.connected = false
 end
 
 -- 连接数据库
@@ -120,7 +121,10 @@ function MySQL:connect_later(host, port, user, password, database, ssl)
             end
             return true
         end
-        if 0 == self.mysql:ping() then return true end
+        if 0 == self.mysql:ping() then
+            self.connected = true
+            return true
+        end
 
         local e, str = self.mysql:error()
         printf("%s(%d): %s", name, e, str)

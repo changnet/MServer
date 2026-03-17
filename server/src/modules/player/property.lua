@@ -33,7 +33,7 @@ for k, p in pairs(PP) do
 end
 
 local function comp_property(a, b)
-    return a.i < b.i
+    return PP_DEF[a].i < PP_DEF[b].i
 end
 
 table.sort(PP_INT_LIST, comp_property)

@@ -5,8 +5,8 @@ Startup.process_init(function()
 
     -- 当前进程需要启动的worker {线程名, 入口文件名}
     local worker_setting = {
-        {file = "worker.w_account", type = WORKER.ACCOUNT, index = 1},
-        {file = "worker.w_gateway", type = WORKER.GATEWAY, index = 1},
+        {file = "worker.w_account", type = W.ACCOUNT, index = 1},
+        {file = "worker.w_gateway", type = W.GATEWAY, index = 1},
     }
 
     Worker.start_later(worker_setting)

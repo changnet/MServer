@@ -38,7 +38,7 @@ local function keys_to_query(keys)
 end
 
 local function mongodb_load(tbl_name, keys, fields)
-    local addr = find_worker_addr(W_MONGODB, tbl_name, keys)
+    local addr = find_worker_addr(W.MONGODB, tbl_name, keys)
     if not addr then
         return 1
     end
@@ -64,7 +64,7 @@ local function mongodb_load(tbl_name, keys, fields)
 end
 
 local function mongodb_save(tbl_name, keys, data)
-    local addr = find_worker_addr(W_MONGODB, tbl_name, keys)
+    local addr = find_worker_addr(W.MONGODB, tbl_name, keys)
     if not addr then
         return 1
     end
@@ -80,7 +80,7 @@ end
 
 --luacheck: ignore
 local function mysql_load(tbl_name, keys, fields)
-    local addr = find_worker_addr(W_MYSQL, tbl_name, keys)
+    local addr = find_worker_addr(W.MYSQL, tbl_name, keys)
     if not addr then
         return 1
     end
@@ -101,7 +101,7 @@ end
 
 --luacheck: ignore
 local function mysql_save(tbl_name, keys, data)
-    local addr = find_worker_addr(W_MYSQL, tbl_name, keys)
+    local addr = find_worker_addr(W.MYSQL, tbl_name, keys)
     if not addr then
         return 1
     end

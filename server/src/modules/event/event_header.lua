@@ -16,10 +16,9 @@ PE_LOGOUT = 3 -- 退出游戏
 -- 系统事件定义
 SE_READY                = 1 -- 系统初始化完成
 SE_SCRIPT_LOADED        = 2 -- 脚本加载完成，热更也会触发
-SE_WORKER_START         = 3 -- worker启动，但尚未初始化完成
+SE_WORKER_START         = 3 -- [worker地址][worker]worker启动，但尚未初始化完成
 SE_WORKER_OTHER_READY   = 4 -- 触发事件的worker启动完成收到事件的worker可能未启动完成
-SE_WORKER_READY      = 4 -- 当前worker启动完成，但对方可能启动未完成
-SE_WORKER_BOTH_READY    = 5 -- 触发事件、接受事件的双方都启动完成
-SE_WORKER_STOP          = 6 -- worker停止
-SE_SEC_TIMER             = 7 -- 定时器，每秒触发一次
-SE_MIN_TIMER             = 8 -- 定时器，每分钟触发一次，在每分钟0秒时触发
+SE_WORKER_BOTH_READY    = 6 -- 触发事件、接受事件的双方都启动完成
+SE_WORKER_STOP          = 7 -- [worker地址][worker]worker停止
+SE_SEC_TIMER            = 8 -- 定时器，每秒触发一次
+SE_MIN_TIMER            = 9 -- 定时器，每分钟触发一次，在每分钟0秒时触发

@@ -3,7 +3,7 @@
 -- xzc
 
 -- worker类型定义{类型, 名字}，名字用于打印日志
-WORKER = {
+W = {
     GATEWAY = {1, "gateway"}, -- 网关
     GAME    = {2, "game"}, -- 游戏公用逻辑
     DATA    = {3, "data"}, -- 缓存及db操作
@@ -15,18 +15,16 @@ WORKER = {
     LOG     = {10, "log"}, -- 日志写入
     TEST    = {200, "test"}, -- 单元测试
     BOT     = {201, "bot"}, -- 机器人测试
+    MAIN    = {256, "main"}, -- 主线程，这个不能用来启动，则W.TEST | W.MAIN
 }
-W_MAIN    = 256 -- 主线程，主线程的wtype通常和某个worker的wtype一致，如果要区分，则W_TEST | W_MAIN
-W_TEST    = 1 -- 单元测试
-W_GATEWAY = 2 -- 网关
-W_GAME    = 3 -- 游戏公用逻辑
-W_DATA    = 4 -- 缓存及db操作
-W_PLAYER  = 5 -- 玩家个人逻辑
-W_SCENE   = 6 -- 场景
-W_MYSQL   = 7 -- mysql数据库读写
-W_MONGODB = 8 -- mongodb数据库读写
-W_ACCOUNT = 9 -- 帐号管理及登录
-W_LOG     = 10 -- 日志写入
+
+WORKER = {} -- [name] = {wtype, name}，原始的worker定义信息
+for k, v in pairs(W) do
+    -- 转为数字，方便调用W.GATEWAY = 1
+    -- 不使用WORKER为数字的原因是W用得多，有代码提示
+    W[k] = v[1]
+    WORKER[k] = v
+end
 
 EMPTY = {} -- 一个空table，避免频繁创建空table，稍后会设置为只读
 

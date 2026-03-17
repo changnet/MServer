@@ -18,7 +18,7 @@ mysql节点，玩家A的数据第一次发往节点A，第二次发往节点B，
 因此做功能时，就需要根据不同功能传入不同的参数，没法做到统一自动路由。
 
 比如
-Rpc.proxy_wtype("MongoDB", W_MONGODB)
+Rpc.proxy_wtype("MongoDB", W.MONGODB)
 MongoDB.find_and_modify(...) 这样调用，就无法自动分配到特定节点了，只能部分功能使用
 ]]
 

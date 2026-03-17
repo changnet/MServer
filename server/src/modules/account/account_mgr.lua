@@ -108,7 +108,7 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
 
     -- 如果有多个account_mgr，account_mgr的路由已经保证同一个帐号必定在同一个account_mgr处理
     -- 因此对mongodb的路由就没有要求了
-    local db_addr = Router.find_worker_addr(W_MONGODB, "player", account)
+    local db_addr = Router.find_worker_addr(W.MONGODB, "player", account)
     info.loaded = Engine.time()
     local e, rows = Call.MongoDB.find(db_addr,
         "player", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
@@ -154,7 +154,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     if info.created and time - info.created < 300 then return end
 
     info.created = time
-    local db_addr = Router.find_worker_addr(W_MONGODB, "uniqueid")
+    local db_addr = Router.find_worker_addr(W.MONGODB, "uniqueid")
 
     -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
     -- 如果嫌数据库慢，估计要按拼接id的方式在不同account_mgr生成
@@ -203,7 +203,7 @@ local function do_enter(info)
     -- 否则按player worker路由分配一个
 
     local pid = info.pid
-    local paddr = info.paddr or Router.find_worker_addr(W_PLAYER, pid)
+    local paddr = info.paddr or Router.find_worker_addr(W.PLAYER, pid)
 
     local session_id = info.session_id
 

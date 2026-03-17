@@ -10,7 +10,7 @@ local buffer_write_buffer = Buffer.write_buffer
 local callback = {} -- 消息回调
 local local_type = LOCAL_TYPE -- 当前worker的类型
 local CLT_MSG = ThreadMessage.CLT_MSG
-local DEF_DISPATCH_WTYPE = W_PLAYER -- 默认为玩家所在worker，这个worker用的协议比较多
+local DEF_DISPATCH_WTYPE = W.PLAYER -- 默认为玩家所在worker，这个worker用的协议比较多
 local forward_wtype -- [id] = wtype
 
 local g_mthread = g_mthread
@@ -55,7 +55,7 @@ end
 
 -- 网关加载用于转发的协议数据
 function NetMsg.load_forward_msg()
-    if local_type ~= W_GATEWAY then return end
+    if local_type ~= W.GATEWAY then return end
 
     -- TODO 这个要优化下，把所有协议放到一个table M中，访问协议时用M.Login
     local path, err = package.searchpath("protocol.protocol", package.path)
