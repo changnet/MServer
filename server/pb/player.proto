@@ -58,8 +58,8 @@ message SBase
 {
     int32 create_time = 1; // 创角游戏时间戳
     int32 server_time = 2; // 服务器当前游戏时间戳
-    repeated int64 pp_int = 1; // 所有整形属性，按id从小到大排列
-    repeated string pp_str = 2; // 所有整形属性，按id从小到大排列
+    repeated int64 pp_int = 3; // 所有整形属性，按id从小到大排列
+    repeated string pp_str = 4; // 所有整形属性，按id从小到大排列
 }
 
 // 玩家进入副本

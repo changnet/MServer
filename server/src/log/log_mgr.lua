@@ -58,8 +58,6 @@ function LogMgr.start()
     local conf = g_setting.mysql
     this.mysql:connect_later(conf.ip, conf.port, conf.user, conf.pwd, conf.db)
 
-    Timer.interval(5000, 5000, -1, flush_logs)
-
     return true
 end
 
@@ -105,6 +103,7 @@ Shutdown.reg({
     name = "log_mgr",
     func = stop,
 })
-Rtti.name_func("LogMgr.flush_logs", flush_logs)
+
+SE.reg(SE_MIN_TIMER, flush_logs)
 
 return LogMgr
