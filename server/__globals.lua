@@ -1,4 +1,4 @@
--- auto export by lua-tags 186 symbols
+-- auto export by lua-tags 189 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -60,7 +60,10 @@ return {
 "MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MT", -- src/modules/move/move_header.lua
 "Mail", -- src/modules/mail/mail.lua
+"MailInternal", -- src/modules/mail/mail_internal.lua
+"MailOff", -- src/modules/mail/mail_off.lua
 "MailPlayer", -- src/modules/mail/mail_player.lua
+"MailSys", -- src/modules/mail/mail_sys.lua
 "Map", -- engine/__map.lua
 "Misc", -- src/modules/misc/misc.lua
 "Money", -- src/modules/player/money.lua

@@ -47,3 +47,10 @@ require("player.player", W.PLAYER)
 require("player.player_mgr", W.PLAYER)
 require("player.player_mgr", W.PLAYER)
 require("misc.welcome", W.PLAYER)
+
+-- 邮件模块
+require("mail.mail_internal")
+require("mail.mail_off", W.GAME)
+require("mail.mail_sys", W.GAME)
+require("mail.mail_player", W.PLAYER)
+require("mail.mail")

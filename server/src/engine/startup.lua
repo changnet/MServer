@@ -196,10 +196,11 @@ local function start_modules()
         return start_ready()
     end
 
-    if start_next_module() then return end
-
+    -- 先发起定时器，因为启动函数可能会进入协程
     startup_modules.timer = Timer.interval(
         1000, 1000, -1, Rtti.temp_func(check_module_ready))
+
+    CoPool.invoke(start_next_module)
 end
 
 -- 对shutdown包一层，允许shutdown热更
@@ -335,7 +336,7 @@ function Startup.worker_init(addr, loader)
 end
 
 -- 注册按优先级启动的模块
--- @param func 需要启动的函数
+-- @param func 需要启动的函数，此函数允许使用协程，但必须能支持retry重入
 -- @param priority 启动优先级，越小优先级越高，默认20
 function Startup.reg(func, priority)
     if g_ready then return end -- 热更时注册过来的启动模块不用处理

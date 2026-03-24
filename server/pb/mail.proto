@@ -3,23 +3,17 @@
 syntax = "proto3";
 package mail;
 
-// 附件数据，和道具差不多
-message Attachment
-{
-    string uuid = 1; // 唯一id
-    int32 id    = 2; // 道具id
-    int32 count = 3; // 数量数量
-}
+import "comm.proto";
 
 // 邮件数据
 message Mail
 {
     // 所有道具通用字段
-    int32 id     = 1; // 邮件id
+    double id     = 1; // 邮件id
     string title = 2; // 标题
-    string ctx   = 3; // 内容
-    bool new     = 4; // 是否新邮件
-    repeated Attachment attachments = 5; // 附件
+    string text   = 3; // 内容
+    repeated comm.Res atts = 4; // 附件
+    // 补充状态等其他字段
 }
 
 /* 邮件列表 */
@@ -29,18 +23,56 @@ message SMailInfo
 }
 
 // 删除邮件
-message CMailDel
+message MailDel
 {
-    repeated int32 id = 1; // 要删除的邮件id
-}
-
-message SMailDel
-{
-    repeated int32 id = 1; // 成功删除的邮件Id
+    repeated double id = 1; // 要删除的邮件id
 }
 
 // 新增邮件
 message SNewMail
 {
     Mail mail = 1; // 邮件列表
+}
+
+// 邮件标记已读
+message CMailRead
+{
+    double id = 1; // 已读邮件id
+}
+
+// 邮件标记已读返回
+message SMailRead
+{
+    double id = 1; // 已读邮件id
+}
+
+// 领取附件
+message CMailClaim
+{
+    double id = 1; // 领取附件的邮件id
+}
+
+// 领取附件返回
+message SMailClaim
+{
+    double id = 1; // 已领取的邮件id
+    repeated comm.Res atts = 2; // 领取的附件
+}
+
+// 一键领取所有附件（客户端请求）
+message CMailClaimAll {}
+
+// 一键领取所有附件返回
+message SMailClaimAll
+{
+    repeated double ids = 1; // 已领取附件的邮件id列表
+}
+
+// 一键删除所有已读邮件（客户端请求）
+message CMailDelRead {}
+
+// 一键删除所有已读邮件返回
+message SMailDelRead
+{
+    repeated double ids = 1; // 已删除的邮件id列表
 }

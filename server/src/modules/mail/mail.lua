@@ -3,7 +3,13 @@
 -- xzc
 
 -- 邮件模块
-Mail = {}
+Mail = {
+    T_NONE  = 0, -- 默认类型，一般是个人邮件
+    T_SYS   = 1, -- 全服邮件
+    T_GUILD = 2, -- 帮派邮件
+}
+
+local local_type = LOCAL_TYPE
 
 ---@class MailObj 单个邮件结构
 ---@field id number 唯一id
@@ -15,13 +21,37 @@ Mail = {}
 ---@field time number 发送时间戳
 ---@field read number 是否已读
 ---@field att_stat number 是否已读
+---@field type number 邮件类型，0个人邮件，1全服邮件，2帮派邮件
+---@field tparam table 邮件类型相关参数，比如帮派邮件的帮派id
 ---@field op number 日志操作，用于跟踪附件资源产出。参考log_header
 ---@field log_str string 日志字符串，记录一些额外信息，方便日志分析
 
-function Mail.send()
+-- 发送个人邮件（支持离线）
+-- 在game线程或player线程均可调用
+-- @param pid number 玩家pid
+-- @param mail_obj MailObj 邮件对象
+function Mail.send_pid(pid, mail_obj)
+    mail_obj = MailInternal.create(mail_obj)
+    -- 路由到game线程处理（判断在线/离线）
+    Send.MailInternal.send_pid(GAME_ADDR, pid, mail_obj)
 end
 
-function Mail.send_player(player)
+--- 发送个人邮件（玩家已在当前player线程在线）
+-- @param player Player 玩家对象
+-- @param mail_obj MailObj 邮件对象
+function Mail.send_player(player, mail_obj)
+    mail_obj = MailInternal.create(mail_obj)
+    MailPlayer.receive_mail(player, mail_obj)
+end
+
+-- 发送全服邮件、帮派邮件（在game线程调用）
+-- @param mail_obj MailObj 邮件对象
+function Mail.send_sys(mail_obj)
+    if not mail_obj.type then mail_obj.type = Mail.T_SYS end
+
+    mail_obj = MailInternal.create(mail_obj)
+
+    MailSys.send_sys(mail_obj)
 end
 
 return Mail

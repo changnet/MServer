@@ -1,258 +1,128 @@
 -- mail_mgr.lua
 -- 2018-05-20
 -- xzc
--- 全服邮件 管理
-local TimeId = require "modules.system.time_id"
 
-local MailMgr = oo.singleton()
+-- 全服邮件 管理（game线程）
+MailSys = {}
 
-function MailMgr:__init()
-    self.list = {}
+local this = memory("MailSys")
 
-    -- 用这个time_id来做id，好处是不用存库，坏处是往后调时间的时候发邮件就会出错
-    self.time_id = TimeId()
-end
+-- 玩家领取全服邮件的记录，存库（{[pid] = last_claimed_id}）
+local player_storage = storage("MailPlayer")
 
--- 发送个人邮件（离线在线均可）
--- @pid:玩家pid
--- @title:邮件标题
--- @ctx:邮件内容
--- @attachment:通用奖励格式，参考res.lua
--- @op:日志操作，用于跟踪附件资源产出。参考log_header
-function MailMgr:send_mail(pid, title, ctx, attachment, op)
-    -- 邮件数据统一在world处理，不是该进程则转
-    if WORLD == APP_TYPE then
-        return Rpc.rpc_send_mail(pid, title, ctx, attachment, op)
-    end
-
-    return self:raw_send_mail(pid, title, ctx, attachment, op)
-end
-
-function MailMgr:raw_send_mail(pid, title, ctx, attachment, op)
-    local mail = {}
-    mail.id = self.time_id:next_id()
-    mail.op = op
-    mail.ctx = ctx
-    mail.title = title
-    mail.attachment = attachment
-
-    -- 个人邮件不能同时发送超过65535
-    -- 如果实在是在线人数太多,又不能发全服邮件，则考虑改一下time_id的位数，或者延迟几秒多次发
-    if mail.id < 0 then
-        eprint("raw_send_mail:can NOT allocate mail id,%s", table.dump(mail))
+local function load_mail()
+    local e, rows = Call.DataMgr.load(DATA_ADDR, "sys_mail", {})
+    if e ~= 0 then
+        eprint("load sys_mail error", e)
         return
     end
 
-    -- 检测pid是否有效
-    if not PlayerMgr.is_pid_exist(pid) then
-        eprint("raw_send_mail:pid not exist,%s", table.dump(mail))
-        return
-    end
+    local list
+    local srv_list = {}
+    local sid = Engine.get_server_id()
 
-    Log.db_pid_misc(pid, LOG.ADD_MAIL, table.dump(mail))
+    -- {sid = 1, list = {mail_obj1, mail_obj2, ...}}
+    -- sid和当前服务器一致的，为当前服务器的邮件
+    -- 存在非当前服务器邮件的，则说明进行了合服
 
-    local player = PlayerMgr.get_player(pid)
-    if player then
-        player:get_module("mail"):add_mail(mail)
-        return
-    end
-
-    self:add_offline_mail(pid, mail)
-
-    -- 正在登录中的玩家，标识一下需要重新加载邮件数据(他不一定能成功登录，可能不存库)
-    -- 另一种是完全不在线,则由他登录时再加载邮件
-    local raw_player = PlayerMgr.get_raw_player(pid)
-    if raw_player then raw_player:get_module("mail"):set_reload() end
-end
-
--- 添加个人离线邮件
-function MailMgr:add_offline_mail(pid, mail)
-    -- list.N，mongodb 2.2+版本后语法，表示list数组中第N个元素不存在时才插入(从0开始)
-    -- 防止玩家太久不上线邮箱爆了
-    local query = string.format('{"_id":%d,"list.%d":{"$exists":false}}', pid,
-                                MAX_MAIL - 1)
-    local update = {["$push"] = {["list"] = mail}}
-
-    local cb = function(ecode, res)
-        self:on_offline_mail(pid, mail, ecode, res)
-    end
-
-    -- 不能upsert,否则当邮箱满了的时候就会尝试插入新记录
-    -- 新玩家时有初始化邮箱的
-    return g_mongodb:find_and_modify("mail", query, nil, update, {list = 0},
-                                     false, false, false, cb)
-
-    -- 使用update也可以，但是就没法知道返回值了
-    -- g_mongodb:update( "mail",
-    --     query,{ ["$push"] = {["list"] = mail} },true,false,cb )
-end
-
--- 添加个个离线邮件结果
---[[
-返回的值，不带list.如果因为邮箱满了，n的值为0
-table: 0x2b8cff0
-{
-    "lastErrorObject" = table: 0x2bdde50
-    {
-        "n" = 1
-        "updatedExisting" = true
-    }
-    "value" = table: 0x2c6d110
-    {
-        "_id" = 65537
-    }
-    "ok" = 1.0
-}
-
-]]
-function MailMgr:on_offline_mail(pid, mail, ecode, res)
-    if 0 == ecode and res.lastErrorObject.n == 1 then return end
-    -- 如果插入失败，记录一下日志
-    Log.db_pid_misc(pid, LOG.ADD_MAIL, table.dump(mail), "FAIL")
-end
-
--- 发送系统邮件
--- @title:邮件标题
--- @ctx:邮件内容
-
--- 以下均为可选参数
--- @attachment:通用奖励格式，参考res.lua
--- @op:操作日志，用于跟踪附件
--- @expire:超过这个时间戳此邮件失效(已发给玩家的不影响，只是这时候登录的玩家就不会收到了)
--- @level: >= 此等级的玩家才能收到
--- @vip:达到此vip等级才能收到
-function MailMgr:send_sys_mail(title, ctx, attachment, op, expire, level, vip)
-    if not title or not ctx then
-        eprint("send sys mail,no title(%s) or ctx(%s)", title, ctx)
-        return
-    end
-
-    if WORLD == APP_TYPE then
-        return Rpc.rpc_send_sys_mail(title, ctx, attachment, op, expire,
-                                       level, vip)
-    end
-
-    return
-        self:raw_send_sys_mail(title, ctx, attachment, op, expire, level, vip)
-end
-
-function MailMgr:raw_send_sys_mail(title, ctx, attachment, op, expire, level,
-                                   vip)
-    local mail = {}
-    mail.id = self.time_id:next_id()
-    mail.op = op
-    mail.ctx = ctx
-    mail.vip = vip
-    mail.title = title
-    mail.level = level
-    mail.expire = expire
-    mail.attachment = attachment
-
-    if mail.id < 0 then
-        eprint("raw_send_sys_mail:can NOT allocate mail id,%s", table.dump(mail))
-        return
-    end
-
-    table.insert(self.list, mail)
-
-    Log.db_pid_misc(0, LOG.ADD_MAIL, table.dump(mail))
-
-    self:truncate()
-    self:db_save() -- 系统邮件不多，直接存库
-    self:dispatch_sys_mail(mail)
-end
-
--- 把新增的全服邮件派发给在线的玩家
-function MailMgr:dispatch_sys_mail(mail)
-    local players = PlayerMgr.get_all_player()
-    for _, player in pairs(players) do
-        player:get_module("mail"):add_sys_mail(mail)
-    end
-end
-
--- 存库
-function MailMgr:db_save()
-    local query = string.format('{"_id":%d}', g_app.index)
-    g_mongodb:update("sys_mail", query, {list = self.list}, true)
-end
-
--- db数据加载回调
-function MailMgr:on_db_loaded(ecode, res)
-    if 0 ~= ecode then
-        eprint("sys mail db load error")
-        return
-    end
-
-    -- 新服没有全服邮件数据
-    if res and res[1] then self.list = res[1].list end
-
-    self.ok = true
-end
-
--- 删除多出的邮件
-function MailMgr:truncate()
-    -- TODO:是不是要先找过期了的
-    while #self.list > MAX_SYS_MAIL do
-        local old_mail = self.list[1]
-        table.remove(self.list, 1)
-
-        Log.db_pid_misc(0, LOG.DEL_MAIL, table.dump(old_mail), "MAX_SYS_MAIL")
-    end
-end
-
--- 获取上一次使用的最大id
-function MailMgr:get_now_id()
-    return self.time_id:last_id()
-end
-
--- 检查是否有新的全服邮件
-function MailMgr:check_new_sys_mail(player, mail_box, sys_id)
-    local new_cnt = 0
-
-    -- 邮件是按时间倒序排列的
-    for idx = #self.list, 1, -1 do
-        local mail = self.list[idx]
-        if mail.id <= sys_id then break end
-
-        if self:check_mail_limit(mail, player) then
-            new_cnt = new_cnt + 1
-            mail_box:raw_add_sys_mail(mail)
+    for _, row in ipairs(rows) do
+        local row_sid = row.sid
+        if row_sid == sid then
+            list = row.list
+        else
+            srv_list[row_sid] = row.list
         end
     end
 
-    return new_cnt
-end
-
--- 检查邮件条件
-function MailMgr:check_mail_limit(mail, player)
-    --  过期
-    if mail.expire and ev:time() >= mail.expire then return false end
-    -- 等级限制
-    if mail.level and player:get_level() < mail.level then return false end
+    this.list = list or {}
+    this.srv_list = srv_list
 
     return true
 end
 
-local mail_mgr = MailMgr()
-
--- 读库
-local function on_app_start(check)
-    if check then
-        return mail_mgr.ok
+-- 判断玩家是否符合接收该系统邮件的条件
+-- @param pid number 玩家pid
+-- @param mail_obj MailObj 邮件对象
+-- @return boolean
+local function is_eligible(pid, mail_obj)
+    local tp = mail_obj.type
+    if tp == Mail.T_SYS then
+        -- 全服邮件，所有玩家都符合条件
+        return true
+    elseif tp == Mail.T_GUILD then
+        -- 帮派邮件，需要判断帮派id
+        local tparam = mail_obj.tparam
+        if not tparam then return false end
+        -- tparam中包含guild_id，需要判断玩家是否在该帮派
+        -- 这里假设可以通过全局函数查询，具体实现依赖帮派模块
+        -- TODO: 替换为实际的帮派归属查询
+        return false
     end
-
-    local callback = function(...)
-        mail_mgr:on_db_loaded(...)
-    end
-
-    local query = string.format('{"_id":%d}', g_app.index)
-    g_mongodb:find("sys_mail", query, nil, callback)
     return false
 end
 
--- 世界服负责处理玩家邮箱，其他app调用的话，将全部自动通过rpc转到世界服处理
-if WORLD == APP_TYPE then
-    App.reg_start("MailMgr", on_app_start)
+-- 获取符合条件的全服邮件（player线程登录/新邮件时调用）
+-- 根据邮件类型+tparam过滤，排除已领取过的邮件
+-- @param pid number 玩家pid
+-- @return list table 未领取的符合条件的全服邮件列表
+function MailSys.get_mails_for(pid)
+    local list = this.list
+    if not list then return {} end
+
+    local last_id = player_storage[pid] or 0
+    local result = {}
+
+    for _, m in ipairs(list) do
+        -- 根据id大小快速跳过已领取的邮件
+        if m.id > last_id and is_eligible(pid, m) then
+            local rm = table.clone(m)
+            rm.read = 0
+            rm.att_stat = 0
+            table.insert(result, rm)
+        end
+    end
+    return result
 end
 
-return mail_mgr
+-- 记录玩家已领取某封全服邮件
+-- 更新player_storage中玩家的最大已领取邮件id
+-- @param pid number
+-- @param mail_id number
+function MailSys.mark_claimed(pid, mail_id)
+    local last_id = player_storage[pid] or 0
+    if mail_id > last_id then
+        player_storage[pid] = mail_id
+    end
+end
+
+-- 发送全服邮件
+-- @param mail_obj MailObj 邮件对象（已create过）
+function MailSys.send_sys(mail_obj)
+    local list = this.list
+    table.insert(list, mail_obj)
+
+    -- 更新到数据库
+    local sid = Engine.get_server_id()
+    Send.DataMgr.save(DATA_ADDR, "sys_mail", {"sid", sid},
+        {sid = sid, list = list})
+
+    -- 广播到所有player线程，由player线程判断在线玩家是否符合条件
+    Worker.send_other_type(W.PLAYER,
+        MailInternal.on_sys_mail_notify, mail_obj)
+end
+
+-- 起服初始化
+local function on_startup(retry)
+    if not retry then
+        return load_mail()
+    else
+        if this.list then return true end
+
+        print("mail sys loading...")
+        return false
+    end
+end
+
+Startup.reg(on_startup)
+
+return MailSys

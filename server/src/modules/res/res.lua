@@ -100,6 +100,18 @@ end
 --//////////////////////////////////////////////////////////////////////////////
 --// 下面为玩家相关接口
 
+local function send_mail(player, mail_items, op, log_str, ext)
+    local title = (ext and ext.mail_title) or LANG.mail001
+    local text =  (ext and ext.mail_text) or LANG.mail002
+    Mail.send_player(player, {
+        title = title,
+        text = text,
+        atts = mail_items,
+        op = op,
+        log_str = log_str,
+    })
+end
+
 -- 添加资源，如果背包放不下，放不下那部分将自动发放到邮件
 -- @param res_list 资源数组{{1, 999},{100001, 9, bind = 1}}
 -- @param op 操作代码，用于记录日志，见log_header定义
@@ -128,9 +140,7 @@ function Res.add(player, res_list, op, log_str, ext)
 
     -- 放不下背包的，默认发邮件
     if mail_items then
-        local title = (ext and ext.mail_title) or LANG.mail001
-        local ctx =  (ext and ext.mail_ctx) or LANG.mail002
-        g_mail_mgr:raw_send_mail(player.pid, title, ctx, mail_items, op)
+        send_mail(player, mail_items, op, log_str, ext)
     end
 end
 
@@ -240,9 +250,7 @@ function Res.add_or_mail(player, res_list, op, log_str, ext)
     if Res.check_add(player, res_list, ext) then
         Res.add(player, res_list, op, log_str, ext)
     else
-        local title = (ext and ext.mail_title) or LANG.mail001
-        local ctx =  (ext and ext.mail_ctx) or LANG.mail002
-        g_mail_mgr:raw_send_mail(player.pid, title, ctx, res_list, op)
+        send_mail(player, res_list, op, log_str, ext)
     end
 end
 

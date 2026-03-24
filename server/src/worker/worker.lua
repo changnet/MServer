@@ -281,6 +281,15 @@ function Worker.call_other_local(func, ...)
     end
 end
 
+-- 以广播方式对所有worker发起rpc send调用，包括集群节点，不包括自己
+function Worker.send_other_type(wtype, func, ...)
+    for addr, data in pairs(WorkerData) do
+        if data.type == wtype then
+            Send.invoke(addr, func, ...)
+        end
+    end
+end
+
 -- 获取需要同步的worker状态列表
 function Worker.get_status_list()
     local local_status = g_ready and Worker.READY or Worker.STARTING

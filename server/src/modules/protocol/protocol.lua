@@ -87,14 +87,30 @@ M = {
     MailInfo = {
         s = "mail.SMailInfo", i = 15
     },
-    -- 16
+    -- 16 删除邮件
     MailDel = {
-        s = "mail.SMailDel", c = "mail.CMailDel", i = 16
+        s = "mail.MailDel", c = "mail.MailDel", i = 16
 
     },
-    -- 17
+    -- 17 新增邮件
     MailNew = {
         s = "mail.SNewMail", i = 17
+    },
+    -- 27 阅读邮件
+    MailRead = {
+        s = "mail.SMailRead", c = "mail.CMailRead", i = 27
+    },
+    -- 28 领取附件
+    MailClaim = {
+        s = "mail.SMailClaim", c = "mail.CMailClaim", i = 28
+    },
+    -- 29 一键领取所有附件
+    MailClaimAll = {
+        s = "mail.SMailClaimAll", c = "mail.CMailClaimAll", i = 29
+    },
+    -- 30 一键删除已读邮件
+    MailDelRead = {
+        s = "mail.SMailDelRead", c = "mail.CMailDelRead", i = 30
     },
 
     -- 18 场景实体相关协议

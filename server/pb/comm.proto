@@ -12,6 +12,6 @@ message Empty
 message Res
 {
     int32 id = 1;     // 类型，见资源类型定义
-    int32 val = 2;    // 数值
-    int32 unbind = 3; // 1表示非绑定
+    int32 num = 2;    // 数值
+    // int32 unbind = 3; // 1表示非绑定
 }
