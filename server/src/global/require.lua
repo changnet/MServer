@@ -131,39 +131,6 @@ function DEFINE_END(def)
     rawset(_G, "def", nil)
 end
 
--- 从文件中加载宏定义(该文件必须未被加载过，且里面的宏定义未在其他地方定义过)
--- @param path 需要加载的文件路径，同require的参数，一般用点号
--- @param no_g 不要把变量设置到全局
--- @return table,包含该文件中的所有全局变量定义
-function require_define(path, no_g)
-    -- 加载过的不要重复加载，不然会导致把数据删掉了，但require又不生效
-    if __require_list[path] then return end
-
-    local _g_defines = _G._g_defines
-    if not _g_defines then
-        _g_defines = {}
-        _G._g_defines = _g_defines
-    end
-    if _g_defines[path] then
-        -- 必须先清除旧的变量，否则__newindex不会触发
-        for k in pairs(_g_defines[path]) do _G[k] = nil end
-    end
-
-    local defines = {}
-    setmetatable(_G, {
-        __newindex = function(t, k, v)
-            rawset(defines, k, v)
-            if not no_g then rawset(t, k, v) end
-            if _G.def then rawset(_G.def, k, v) end
-        end
-    })
-    require(path)
-    setmetatable(_G, nil)
-
-    _g_defines[path] = defines
-    return _g_defines[path]
-end
-
 local function set_kv(root, val, k, nk)
     -- 校验key唯一
     local kv = val[k]

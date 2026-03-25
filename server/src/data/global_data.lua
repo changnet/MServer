@@ -24,7 +24,7 @@ end
 -- 创建一块存储空间，定时自动存库，按worker区分
 -- @param key 存储空间key
 -- @param initializer 存储空间初始化时默认值或者函数
--- @param save_key 存库时使用的key，默认多个模块的数据是合并到global中的，可用db_eky拆分
+-- @param save_key 如果需要单独存一条记录，可以指定save_key
 function storage(key, initializer, save_key)
     if not save_key then save_key = "global" end
     local save_storage = __global_storage[save_key]
@@ -46,3 +46,14 @@ function storage(key, initializer, save_key)
 
     return object
 end
+
+local function load_storage()
+    return true
+end
+
+local function save_storage()
+end
+
+Startup.reg(function()
+    load_storage()
+end)

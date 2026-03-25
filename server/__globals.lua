@@ -1,4 +1,4 @@
--- auto export by lua-tags 189 symbols
+-- auto export by lua-tags 187 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -131,7 +131,6 @@ return {
 "WorkerData", -- src/worker/worker.lua
 "WorkerHash", -- src/worker/worker.lua
 "WorkerNameType", -- src/worker/worker.lua
-"WorkerTypeName", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G_DUMP_STACK", -- src/global/global.lua
 "__assert", -- src/engine/startup.lua
@@ -175,7 +174,6 @@ return {
 "pwarn", -- src/log/log.lua
 "pwarnf", -- src/log/log.lua
 "require", -- src/global/require.lua
-"require_define", -- src/global/require.lua
 "require_kv_conf", -- src/global/require.lua
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua

@@ -21,8 +21,6 @@ require "engine.preloader"
 
 print("热更只加载loader文件，rpc等文件虽然已经加载了，在这里也需要重新加载")
 
-require_define "modules.system.define"
-
 table.readonly(EMPTY)
 
 E = require "modules.system.error"

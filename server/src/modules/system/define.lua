@@ -2,28 +2,48 @@
 -- 2017-03-28
 -- xzc
 
--- worker类型定义{类型, 名字}，名字用于打印日志
+-- @class WorkerDef worker信息定义
+-- @field type number worker类型
+-- @field name string worker名字
+-- @field sequ number 启动顺序(equence)，越小越先启动，越晚关闭
+-- @field pobj boolean 是否创建玩家对象
+-- @field paddr boolean 是否同步玩家地址路由信息
+
 W = {
-    GATEWAY = {1, "gateway"}, -- 网关
-    GAME    = {2, "game"}, -- 游戏公用逻辑
-    DATA    = {3, "data"}, -- 缓存及db操作
-    PLAYER  = {4, "player"}, -- 玩家个人逻辑
-    SCENE   = {5, "scene"}, -- 场景
-    MYSQL   = {6, "mysql"}, -- mysql数据库读写
-    MONGODB = {7, "mongodb"}, -- mongodb数据库读写
-    ACCOUNT = {8, "account"}, -- 帐号管理及登录
-    LOG     = {10, "log"}, -- 日志写入
-    TEST    = {200, "test"}, -- 单元测试
-    BOT     = {201, "bot"}, -- 机器人测试
-    MAIN    = {256, "main"}, -- 主线程，这个不能用来启动，则W.TEST | W.MAIN
+    -- 网关
+    GATEWAY = {type = 1,   sequ = 9, pobj = 0, paddr = 1, name = "gateway"},
+    -- 游戏公用逻辑
+    GAME    = {type = 2,   sequ = 2, pobj = 1, paddr = 1, name = "game"},
+    -- 缓存及db操作
+    DATA    = {type = 3,   sequ = 2, pobj = 0, paddr = 0, name = "data"},
+    -- 玩家个人逻辑
+    PLAYER  = {type = 4,   sequ = 3, pobj = 0, paddr = 1, name = "player"},
+    -- 场景
+    SCENE   = {type = 5,   sequ = 3, pobj = 1, paddr = 1, name = "scene"},
+    -- mysql数据库读写
+    MYSQL   = {type = 6,   sequ = 0, pobj = 0, paddr = 0, name = "mysql"},
+    -- mongodb数据库读写
+    MONGODB = {type = 7,   sequ = 0, pobj = 0, paddr = 0, name = "mongodb"},
+    -- 帐号管理及登录
+    ACCOUNT = {type = 8,   sequ = 2, pobj = 0, paddr = 0, name = "account"},
+    -- 日志写入
+    LOG     = {type = 10,  sequ = 0, pobj = 0, paddr = 0, name = "log"},
+    -- 单元测试
+    TEST    = {type = 200, sequ = 0, pobj = 0, paddr = 0, name = "test"},
+    -- 机器人测试
+    BOT     = {type = 201, sequ = 0, pobj = 0, paddr = 0, name = "bot"},
+    -- 主线程，这个不能用来启动，则W.TEST | W.MAIN
+    MAIN    = {type = 256, sequ = 0, pobj = 0, paddr = 0, name = "main"},
 }
 
-WORKER = {} -- [name] = {wtype, name}，原始的worker定义信息
+-- @type table<number, WorkerDef> 原始的worker定义信息
+WORKER = {}
 for k, v in pairs(W) do
     -- 转为数字，方便调用W.GATEWAY = 1
     -- 不使用WORKER为数字的原因是W用得多，有代码提示
-    W[k] = v[1]
-    WORKER[k] = v
+    local wtype = v.type
+    W[k] = wtype
+    WORKER[wtype] = v
 end
 
 EMPTY = {} -- 一个空table，避免频繁创建空table，稍后会设置为只读

@@ -13,7 +13,6 @@ local WorkerThread = require "engine.WorkerThread"
 
 WorkerHash = WorkerHash or {} -- [addr] = worker，包含集群节点，不包含主线程、自己及非当前线程的集群节点
 WorkerData = WorkerData or {} -- [addr] = {}，所有worker的数据，包含集群节点，不包含主主线程、自己
-WorkerTypeName = {} -- [wtype] = wname worker类型转名字
 WorkerNameType = {} -- [wname] = wtype worker名字转类型
 
 LOCAL_ADDR = LOCAL_ADDR or 0 -- 当前worker地址
@@ -21,22 +20,20 @@ LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
 LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
 MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 
--- 按指定worker类型关机顺序关闭（TODO，这个定义感觉要放到worker定义中去）
-local Sequence = {
-    W.GATEWAY, W.SCENE, W.GAME, W.PLAYER,
-    W.DATA, W.MYSQL, W.MONGODB,
-}
+-- 关机顺序由各个worker在定义中通过 `sequ` 指定，数字越大越先关闭
 
 local this = memory("Worker")
 
--- 本地启动的worker是否都已启动完成
+-- 所有本地启动的worker是否都已启动完成
 -- @return 返回未启动完成的worker地址
 function Worker.is_local_ready()
     for addr, data in pairs(WorkerData) do
-        if not data.mode and not data.ready then
+        if data.mode == Worker.THREAD and not data.ready then
             return addr
         end
     end
+
+    if this.start_index then return 0 end
 end
 
 -- 获取worker在WorkerData中的数据，如果不存在则创建
@@ -51,19 +48,33 @@ function Worker.get_data(addr)
 end
 
 local function shutdown()
-    -- 根据特定的业务逻辑按顺序关闭各个worker
-    -- 关闭时不要修改WorkerHash和WorkerSetting，rpc调用还在使用
-    -- 同时避免关服中报错时，无法恢复
-    for _, wt in pairs(Sequence) do
-        for addr, w in pairs(WorkerHash) do
-            local d = WorkerData[addr]
-            if not w.cluster_worker and wt == d.type then
-                Worker.stop(addr)
+    -- 根据各worker定义的 `sequ` 值来决定关闭顺序，值越大越先关闭
+    local seq_map = {}
+    for _, w in pairs(WORKER) do
+        local sequ = w.sequ or 0
+        seq_map[sequ] = seq_map[sequ] or {}
+        table.insert(seq_map[sequ], w.type)
+    end
+
+    local seq_list = {}
+    for sequ, list in pairs(seq_map) do
+        table.insert(seq_list, {sequ = sequ, list = list})
+    end
+
+    table.sort(seq_list, function(a, b) return a.sequ > b.sequ end)
+
+    for _, item in ipairs(seq_list) do
+        for _, wt in ipairs(item.list) do
+            for addr, w in pairs(WorkerHash) do
+                local d = WorkerData[addr]
+                if not w.cluster_worker and wt == d.type then
+                    Worker.stop(addr)
+                end
             end
         end
     end
 
-    -- 一些worker不需要按业务逻辑顺序关闭，这里可以按任意顺序直接关闭了
+    -- 关闭剩余的本地worker（不按特定顺序）
     for addr, w in pairs(WorkerHash) do
         if not w.cluster_worker then
             Worker.stop(addr)
@@ -101,17 +112,49 @@ function Worker.start(setting)
         LOCAL_ADDR, addr, Worker.CLUSTER, Worker.STARTING)
 end
 
+local function sort_start_sequence(settings)
+    local list = {}
+    local hash = {}
+    for _, s in ipairs(settings) do
+        local sequ = WORKER[s.type].sequ
+        if not hash[sequ] then
+            hash[sequ] = {list = {}, sequ = sequ}
+            table.insert(list, hash[sequ])
+        end
+        table.insert(hash[sequ].list, s)
+    end
+
+    table.sort(list, function(a, b) return a.sequ < b.sequ end)
+
+    return list
+end
+
+local function start_next_worker_list()
+    local index = this.start_index + 1
+    local start_list = this.start_list[index]
+    if not start_list then
+        this.start_list = nil
+        this.start_index = nil
+        return false
+    end
+
+    this.start_index = index
+    for _, s in pairs(start_list.list) do
+        Worker.start(s)
+    end
+end
+
 -- 从配置创建多个worker
 function Worker.start_later(settings)
+    this.start_list = sort_start_sequence(settings)
     Startup.reg(function(retry)
         if not retry then
             Shutdown.reg({
                 name = "worker",
                 func = shutdown,
             }, 64)
-            for _, s in pairs(settings) do
-                Worker.start(s)
-            end
+            this.start_index = 0
+            start_next_worker_list()
         end
         local addr = Worker.is_local_ready()
         if not addr then return true end
@@ -139,6 +182,8 @@ function Worker.on_start_ready(addr)
 
     Cluster.send_all(Cluster.set_worker_status,
         LOCAL_ADDR, addr, Worker.CLUSTER, Worker.READY)
+
+    start_next_worker_list()
 end
 
 -- worker全局定时器
@@ -341,7 +386,7 @@ end
 
 -- 根据类型获取名字
 function Worker.type_name(wtype)
-    return WorkerTypeName[wtype]
+    return WORKER[wtype].name
 end
 
 -- 根据名字获取类型
@@ -352,10 +397,9 @@ end
 
 local function init()
     for _, w in pairs(WORKER) do
-        local wtype = w[1]
-        local wname = w[2]
+        local wtype = w.type
+        local wname = w.name
         WorkerNameType[wname] = wtype
-        WorkerTypeName[wtype] = wname
     end
     Rtti.name_func("Worker.do_worker_timer", do_worker_timer)
 end

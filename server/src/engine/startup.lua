@@ -222,8 +222,8 @@ function Startup.process_init(loader)
 
     local wtype
     for _, w in pairs(WORKER) do
-        if node_name == w[2] then
-            wtype = w[1]
+        if node_name == w.name then
+            wtype = w.type
             break
         end
     end
