@@ -163,15 +163,19 @@ local function do_request(src, session, name, ...)
         return
     end
 
-    -- session表示不需要返回
+    -- session为0表示不需要返回
     if 0 == session then
         return CoPool.invoke(func, ...)
     else
-        local ptr, size = g_lcodec:encode_to_buffer(
-            session, CoPool.invoke(func, ...))
-
-        local w = WorkerHash[src] or g_mthread
-        return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
+        -- 使用完成回调确保 func 完全执行完毕后才发送响应
+        -- 当 func 内部有嵌套 RPC Call 时，协程中途 yield，
+        -- 回调不会被触发；只有协程最终完成或出错时才发送响应
+        return CoPool.invoke_with_completion(func, function(ok, ...)
+            local ptr, size = g_lcodec:encode_to_buffer(
+                session, ok, ...)
+            local w = WorkerHash[src] or g_mthread
+            w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
+        end, ...)
     end
 end
 

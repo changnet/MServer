@@ -6,6 +6,7 @@ local idle_co = {} -- 空闲的协程
 local busy_co = {} -- 工作的协程
 local session_to_co = {} -- 通过session查找协程
 local co_to_session = {} -- 通过协程查找session
+local co_completion = {} -- 协程完成回调 session -> handler
 local session_seed = 0
 
 local tableremove = table.remove
@@ -94,17 +95,33 @@ local function co_return(co, ok, v1, ...)
         busy_co[co] = nil
         local ss = co_to_session[co]
 
+        -- 触发完成回调（错误情况）
+        local handler = co_completion[ss]
+        if handler then
+            co_completion[ss] = nil
+            handler(false)
+        end
+
         session_to_co[ss] = nil
         co_to_session[co] = nil
         __G_DUMP_STACK(v1, co)
         return false
     elseif v1 == CO_IDLE then
         busy_co[co] = nil
-        tableinsert(idle_co, co)
 
+        -- 触发完成回调（正常完成）
+        local ss = co_to_session[co]
+        local handler = co_completion[ss]
+        if handler then
+            co_completion[ss] = nil
+            handler(true, ...)
+        end
+
+        tableinsert(idle_co, co)
         return true, ...
     end
 
+    -- 协程中途yield（如嵌套RPC等待），不触发回调
     return true, v1, ...
 end
 
@@ -118,6 +135,27 @@ function CoPool.invoke(f, ...)
         local ok = co_resume(co) -- 执行co_body，把自己放到协程池
         if not ok then co_return(co, false) end
     end
+
+    return co_return(co, co_resume(co, f, ...))
+end
+
+-- 执行函数，并在协程最终完成时调用回调
+-- 用于嵌套RPC场景：func内部可能再次Call导致yield，
+-- 此时不应立即发送响应，而是等func完全执行完毕后由回调发送
+-- @param f function 要执行的函数
+-- @param handler function 完成回调 handler(ok, ...)
+-- @return 同 CoPool.invoke
+function CoPool.invoke_with_completion(f, handler, ...)
+    local co = tableremove(idle_co)
+    if not co then
+        co = co_create(co_body)
+        local ok = co_resume(co)
+        if not ok then co_return(co, false) end
+    end
+
+    -- 注册完成回调
+    local ss = co_to_session[co]
+    co_completion[ss] = handler
 
     return co_return(co, co_resume(co, f, ...))
 end

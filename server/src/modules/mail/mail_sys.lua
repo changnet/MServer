@@ -12,7 +12,6 @@ local player_storage = storage("MailPlayer")
 
 local function load_mail()
     local e, rows = Call.DataMgr.load(DATA_ADDR, "sys_mail", {})
-    print("sssssssssssssssssssssssssssssssss", e, rows)
     if e ~= 0 then
         eprint("load sys_mail error", e)
         return
