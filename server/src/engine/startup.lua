@@ -192,6 +192,11 @@ end
 
 -- 按优先级启动各个模块，启动完成后触发SE_READY事件
 local function start_modules()
+    -- 当前启动的worker可能依赖已启动的其他worker，所以先把状态同步过来
+    if LOCAL_ADDR ~= MAIN_ADDR then
+        Worker.sync_status_from_main()
+    end
+
     if not startup_modules then
         return start_ready()
     end
@@ -200,7 +205,7 @@ local function start_modules()
     startup_modules.timer = Timer.interval(
         1000, 1000, -1, Rtti.temp_func(check_module_ready))
 
-    CoPool.invoke(start_next_module)
+    start_next_module()
 end
 
 -- 对shutdown包一层，允许shutdown热更
@@ -264,7 +269,7 @@ function Startup.process_init(loader)
     __loader = loader
     xpcall(function()
         Startup.load()
-        start_modules()
+        CoPool.invoke(start_modules)
     end, __G_DUMP_STACK)
 end
 
@@ -331,7 +336,7 @@ function Startup.worker_init(addr, loader)
     __loader = loader
     xpcall(function()
         Startup.load()
-        start_modules()
+        CoPool.invoke(start_modules)
     end, __G_DUMP_STACK)
 end
 

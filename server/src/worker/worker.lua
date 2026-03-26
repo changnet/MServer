@@ -12,7 +12,7 @@ Worker = {
 local WorkerThread = require "engine.WorkerThread"
 
 WorkerHash = WorkerHash or {} -- [addr] = worker，包含集群节点，不包含主线程、自己及非当前线程的集群节点
-WorkerData = WorkerData or {} -- [addr] = {}，所有worker的数据，包含集群节点，不包含主主线程、自己
+WorkerData = WorkerData or {} -- [addr] = {}，所有worker的数据，包含集群节点，不包含主线程、自己
 WorkerNameType = {} -- [wname] = wtype worker名字转类型
 
 LOCAL_ADDR = LOCAL_ADDR or 0 -- 当前worker地址
@@ -20,20 +20,16 @@ LOCAL_TYPE = LOCAL_TYPE or 0 -- 当前worker类型
 LOCAL_NAME = LOCAL_NAME or "" -- 当前worker的名字
 MAIN_ADDR = MAIN_ADDR or 0 -- 当前主线程对应的worker地址
 
--- 关机顺序由各个worker在定义中通过 `sequ` 指定，数字越大越先关闭
-
 local this = memory("Worker")
 
 -- 所有本地启动的worker是否都已启动完成
 -- @return 返回未启动完成的worker地址
-function Worker.is_local_ready()
+function Worker.which_local_not_ready()
     for addr, data in pairs(WorkerData) do
-        if data.mode == Worker.THREAD and not data.ready then
+        if Worker.THREAD == data.mode and Worker.READY ~= data.status then
             return addr
         end
     end
-
-    if this.start_index then return 0 end
 end
 
 -- 获取worker在WorkerData中的数据，如果不存在则创建
@@ -129,7 +125,13 @@ local function sort_start_sequence(settings)
     return list
 end
 
-local function start_next_worker_list()
+local function start_next_sequence_worker()
+    local start_index = this.start_index
+    if not start_index then return end
+
+    -- 上一个优先级的worker尚未启动完成
+    if Worker.which_local_not_ready() then return end
+
     local index = this.start_index + 1
     local start_list = this.start_list[index]
     if not start_list then
@@ -154,10 +156,17 @@ function Worker.start_later(settings)
                 func = shutdown,
             }, 64)
             this.start_index = 0
-            start_next_worker_list()
+            start_next_sequence_worker()
         end
-        local addr = Worker.is_local_ready()
-        if not addr then return true end
+        local addr = Worker.which_local_not_ready()
+        if not addr then
+            -- 还存在未启动的，这应该是有问题了
+            if this.start_index then
+                print("wait for worker start next")
+                return false
+            end
+            return true
+        end
 
         local name = Worker.addr_name(addr)
         printf("wait for %s, addr = %d", name, addr)
@@ -167,8 +176,9 @@ end
 
 -- 主线程收到worker启动完成
 function Worker.on_start_ready(addr)
-    -- 当前worker启动完成，先通知主线程，再由主线程同步到其他worker
+    -- 一个worker启动完成，先通知主线程，再由主线程同步到其他worker
     -- 因为启动的时候当前worker是没有其他worker的数据，所以这时候只能由主线程同步
+    assert(MAIN_ADDR == LOCAL_ADDR)
 
     Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, Worker.READY)
 
@@ -183,7 +193,7 @@ function Worker.on_start_ready(addr)
     Cluster.send_all(Cluster.set_worker_status,
         LOCAL_ADDR, addr, Worker.CLUSTER, Worker.READY)
 
-    start_next_worker_list()
+    start_next_sequence_worker()
 end
 
 -- worker全局定时器
@@ -201,7 +211,7 @@ local function do_worker_timer()
     end
 end
 
--- worker启动完成
+-- 非主线程worker启动完成
 function Worker.start_ready()
     assert(LOCAL_ADDR ~= MAIN_ADDR)
 
@@ -356,6 +366,21 @@ function Worker.get_status_list()
     end
 
     return status_list
+end
+
+-- 从主线程同步已有worker的状态
+function Worker.sync_status_from_main()
+    local MAIN_ADDR = MAIN_ADDR
+    local LOCAL_ADDR = LOCAL_ADDR
+    assert(LOCAL_ADDR ~= MAIN_ADDR)
+
+    local list = Call.Worker.get_status_list(MAIN_ADDR)
+    for _, s in pairs(list) do
+        local addr = s.addr
+        if addr ~= LOCAL_ADDR and addr ~= MAIN_ADDR then
+            Worker.set_status(MAIN_ADDR, addr, s.mode, s.status)
+        end
+    end
 end
 
 -- 根据地址获取worker的名字，包含索引，如gateway1

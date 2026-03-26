@@ -15,7 +15,7 @@ W = {
     -- 游戏公用逻辑
     GAME    = {type = 2,   sequ = 2, pobj = 1, paddr = 1, name = "game"},
     -- 缓存及db操作
-    DATA    = {type = 3,   sequ = 2, pobj = 0, paddr = 0, name = "data"},
+    DATA    = {type = 3,   sequ = 1, pobj = 0, paddr = 0, name = "data"},
     -- 玩家个人逻辑
     PLAYER  = {type = 4,   sequ = 3, pobj = 0, paddr = 1, name = "player"},
     -- 场景

@@ -54,6 +54,4 @@ end
 local function save_storage()
 end
 
-Startup.reg(function()
-    load_storage()
-end)
+Startup.reg(load_storage)

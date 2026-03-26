@@ -60,8 +60,6 @@ local func_to_name = Rtti.func_to_name
 -- 用parse_name_func而不是name_to_func，避免脚本报错时rtti失效导致rpc也失效了
 local parse_name_func = Rtti.parse_name_func
 
-local last_src -- 最后一次调用rpc的来源
-
 __rpc_session = __rpc_session or {seed = 1, session = {}}
 local rpc_session = __rpc_session
 
@@ -165,8 +163,6 @@ local function do_request(src, session, name, ...)
         return
     end
 
-    last_src = src
-
     -- session表示不需要返回
     if 0 == session then
         return CoPool.invoke(func, ...)
@@ -199,13 +195,7 @@ local function do_response(session, ...)
 end
 
 local function response_dispatch(src, udata, usize)
-    last_src = src
     return do_response(g_lcodec:decode_from_buffer(udata, usize))
-end
-
--- 获取上一次调用的来源
-function Call.last_source()
-    return last_src
 end
 
 -- 根据函数指针直接调用函数
@@ -221,11 +211,6 @@ function Call.invoke(addr, func, ...)
     end
 
     return call(name, addr, ...)
-end
-
--- 获取上一次调用的来源
-function Send.last_source()
-    return last_src
 end
 
 -- 根据函数指针直接调用函数

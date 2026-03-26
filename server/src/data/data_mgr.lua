@@ -52,15 +52,9 @@ local function mongodb_load(tbl_name, keys, fields)
     end
 
     local e, rows = Call.MongoDB.find(addr, tbl_name, query, opts)
-    if e ~= 0 then
-        return e, rows
-    end
-
-    if rows and #rows > 0 then
-        return 0, rows[1]
-    else
-        return 0, nil
-    end
+    print("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",e, rows)
+    -- return e, rows
+    return 0, {}
 end
 
 local function mongodb_save(tbl_name, keys, data)
