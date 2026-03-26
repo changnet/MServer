@@ -49,6 +49,9 @@ RPC设计
 local LuaCodec = require "engine.LuaCodec"
 g_lcodec = g_lcodec or LuaCodec()
 
+local xpcall = xpcall
+local __G_DUMP_STACK = __G_DUMP_STACK
+
 local g_lcodec = g_lcodec
 local g_mthread = g_mthread
 local WorkerHash = WorkerHash
@@ -150,6 +153,13 @@ local function callback_func_factory(name)
     end
 end
 
+local function do_session_request(src, session, func, ...)
+    local ptr, size = g_lcodec:encode_to_buffer(
+        session, xpcall(func, __G_DUMP_STACK, ...))
+    local w = WorkerHash[src] or g_mthread
+    return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
+end
+
 local function do_request(src, session, name, ...)
     local func = parse_name_func(name)
     if not func then
@@ -167,15 +177,10 @@ local function do_request(src, session, name, ...)
     if 0 == session then
         return CoPool.invoke(func, ...)
     else
-        -- 使用完成回调确保 func 完全执行完毕后才发送响应
-        -- 当 func 内部有嵌套 RPC Call 时，协程中途 yield，
-        -- 回调不会被触发；只有协程最终完成或出错时才发送响应
-        return CoPool.invoke_with_completion(func, function(ok, ...)
-            local ptr, size = g_lcodec:encode_to_buffer(
-                session, ok, ...)
-            local w = WorkerHash[src] or g_mthread
-            w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
-        end, ...)
+        -- 这里不能直接CoPool.invoke(func, ...)
+        -- 因为func里可能会再次调用yield，那样的话CoPool.invoke就会返回
+        -- 然后rpc就打包返回值到另一个worker了，没有等func执行完
+        return CoPool.invoke(do_session_request, src, session, func, ...)
     end
 end
 
