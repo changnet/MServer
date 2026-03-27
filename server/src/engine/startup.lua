@@ -276,13 +276,17 @@ end
 -- 加载入口文件，将会引入所有模块
 function Startup.load(reload)
     if "string" == type(__loader) then
-        print("use loader: "..__loader)
+        -- print("use loader: "..__loader)
         require(__loader)
     else
         __loader(reload)
     end
     Rtti.collect()
-    SE.ready()
+
+    for _, func in pairs(__script_loaded_funcs) do
+        func()
+    end
+
     SE.fire(SE_SCRIPT_LOADED)
 end
 

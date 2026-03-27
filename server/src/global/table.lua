@@ -329,3 +329,11 @@ function table.set_value(tbl, value, ...)
     local key = select(len, ...)
     tbl[key] = value
 end
+
+-- 获取所有key，作为一个数组返回
+function table.keys(tbl)
+    local list = {}
+    for k in pairs(tbl) do table.insert(list, k) end
+
+    return list
+end

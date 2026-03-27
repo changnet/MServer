@@ -39,7 +39,7 @@ function SE.fire(ev, ...)
 end
 
 -- 标记系统事件已就绪，后续不再允许注册事件
-function SE.ready()
+local function sort_events()
     assert(not ready)
 
     ready = true
@@ -61,5 +61,7 @@ function SE.ready()
         ev_cb[ev] = funcs
     end
 end
+
+script_loaded(sort_events)
 
 return SE

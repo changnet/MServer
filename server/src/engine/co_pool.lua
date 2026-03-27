@@ -132,6 +132,8 @@ function CoPool.resume(session, ...)
 end
 
 -- 获取当前执行的协程session
+-- 注意：此函数不能用于业务逻辑，因为一个函数里可能发起另一个协程，获取的session会变
+-- 它仅用于调试（比如当前在执行哪个协程）
 function CoPool.current_session()
     return co_to_session[current_co]
 end
@@ -143,5 +145,5 @@ end
 
 -- 获取使用中的协程数量
 function CoPool.busy_count()
-    table.size(busy_co)
+    return table.size(busy_co)
 end

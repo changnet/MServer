@@ -114,6 +114,7 @@ end
 -- 起服初始化
 local function on_startup(retry)
     if not retry then
+        print("loading mail sys ...")
         return load_mail()
     else
         if this.list then return true end

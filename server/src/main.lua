@@ -59,7 +59,6 @@ local function main(cmd, ...)
 
     util.mkdir_p("log") -- 创建日志目录
     util.mkdir_p("runtime") -- 创建运行时数据存储目录
-    util.mkdir_p("runtime/rank") -- 创建运行时排行榜数据存储目录
 
     -- win下设置cmd为utf8编码，并设置标题用于区分cmd界面
     if WINDOWS then

@@ -10,6 +10,8 @@ require "global.math"
 require "global.string"
 require "global.time"
 require "global.debug"
+require "global.sys"
+require "util.json_file"
 
 require "data.global_data"
 require "engine.engine"

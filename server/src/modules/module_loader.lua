@@ -19,8 +19,6 @@ local require = require_worker
 -- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
 require "engine.preloader"
 
-print("热更只加载loader文件，rpc等文件虽然已经加载了，在这里也需要重新加载")
-
 table.readonly(EMPTY)
 
 E = require "modules.system.error"

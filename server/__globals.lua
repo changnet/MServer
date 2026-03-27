@@ -1,4 +1,4 @@
--- auto export by lua-tags 187 symbols
+-- auto export by lua-tags 190 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -40,6 +40,7 @@ return {
 "GridAoi", -- engine/__gridaoi.lua
 "HTTP", -- src/http/http_header.lua
 "IO", -- engine/__io.lua
+"JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
 "LOCAL_NAME", -- src/worker/worker.lua
@@ -145,6 +146,7 @@ return {
 "__print", -- src/engine/startup.lua
 "__require", -- src/global/require.lua
 "__rpc_session", -- src/rpc/rpc.lua
+"__script_loaded_funcs", -- src/global/global.lua
 "__socket_hash", -- src/network/socket_mgr.lua
 "__socket_seed", -- src/network/socket_mgr.lua
 "__test", -- src/global/test.lua
@@ -178,6 +180,7 @@ return {
 "require_no_update", -- src/global/require.lua
 "require_worker", -- src/global/require.lua
 "scall", -- src/global/global.lua
+"script_loaded", -- src/global/global.lua
 "set_modify_metatable", -- src/global/modi_table.lua
 "storage", -- src/data/global_data.lua
 "str_split3", -- src/test/misc_test.lua

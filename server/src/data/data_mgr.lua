@@ -1,12 +1,13 @@
 -- 负责数据缓存、读写管理
 DataMgr = {}
 
--- we need the MongoDB class for constant values and sql workers for routing
 local MongoDB = require "mongodb.mongodb"
 
 --[[
-1. DataMgr负责数据库worker线程的分配，保证同一个玩家的数据都在同一个worker上读写。如果
-其他模块直接调用数据库接口，自己需要保证路由规则一样，否则读写玩家数据可能会不一致
+1. DataMgr负责玩家数据读写。如果某个功能直接读取数据库，可能会出现DataMgr这边的数据未落库
+
+2. DataMgr提供最基础的存取接口，能在多种数据库切换。有特殊要求（比如排序）的自己直接操作
+数据库。这种情况比较少，后续切换数据库改得也不多
 ]]
 
 -- pick a worker address of a given type based on hashing
@@ -63,7 +64,7 @@ local function mongodb_save(tbl_name, keys, data)
 
     local query = keys_to_query(keys)
     -- upsert：存在则更新，不存在则插入
-    local e = Call.MongoDB.update(addr,
+    local e = Call.MongoDB.update(addr, tbl_name,
         MongoDB.UPDATE_UPSERT, query, {["$set"] = data})
     return e
 end
