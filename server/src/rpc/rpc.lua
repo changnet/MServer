@@ -66,6 +66,8 @@ local parse_name_func = Rtti.parse_name_func
 __rpc_session = __rpc_session or {seed = 1, session = {}}
 local rpc_session = __rpc_session
 
+local last_codec_size
+
 function Rpc.set_metatable(module, factory_func)
     local mt
     mt =
@@ -106,6 +108,7 @@ local function send(name, addr, ...)
     local w = WorkerHash[addr] or g_mthread
 
     local ptr, size = lcodec_encode_to_buffer(g_lcodec, 0, name, ...)
+    last_codec_size = size
     return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 end
 
@@ -119,6 +122,7 @@ local function call(name, addr, ...)
     -- 每个协程需要分配一个session，这样返回时才知道唤醒哪个协程
     local session = CoPool.current_session()
     local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
+    last_codec_size = size
     w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 
     return call_return(coroutine.yield())
@@ -149,12 +153,13 @@ local function callback_func_factory(name)
             func = func,
         }
         local ptr, size = lcodec_encode_to_buffer(g_lcodec, session, name, ...)
+        last_codec_size = size
         return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
     end
 end
 
 local function do_session_request(src, session, func, ...)
-    local ptr, size = g_lcodec:encode_to_buffer(
+    local ptr, size = lcodec_encode_to_buffer(g_lcodec,
         session, xpcall(func, __G_DUMP_STACK, ...))
     local w = WorkerHash[src] or g_mthread
     return w:emplace_message(LOCAL_ADDR, src, RPC_RES, ptr, size)
@@ -235,6 +240,11 @@ function Send.invoke(addr, func, ...)
     end
 
     return send(name, addr, ...)
+end
+
+-- 获取上次编码的数据大小（仅调试用，如果嵌套了协程，会被其他调用覆盖）
+function Rpc.last_codec_size()
+    return last_codec_size
 end
 
 Rpc.send = send

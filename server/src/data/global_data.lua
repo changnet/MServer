@@ -95,6 +95,7 @@ end
 
 local function save_one(key)
     print("saving data:", key, "...")
+
     query_keys[6] = key
     local data = __global_storage[key]
     local e = Call.DataMgr.save(DATA_ADDR, "global_data", query_keys, {
@@ -105,6 +106,13 @@ local function save_one(key)
     if 0 ~= e then
         eprint("save global data error", key)
         JsonFile.save(string.format("%s_%s", LOCAL_NAME, key), data)
+    end
+
+    -- Call调用里嵌套了协程，可能会不准，但仍能大概反馈到问题
+    -- 或者直接用Send就准了
+    local size = Rpc.last_codec_size()
+    if size > 8 * 1024 * 1024 then
+        eprint("global data too large", key, size)
     end
 end
 
