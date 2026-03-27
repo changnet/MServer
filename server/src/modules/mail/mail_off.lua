@@ -1,4 +1,4 @@
--- mail_off.lua
+﻿-- mail_off.lua
 -- 离线邮件管理（game线程）
 -- 玩家不在线时收到的邮件存于off_mail表，不走缓存
 -- 用local内存保存一份，避免重复读库
@@ -11,10 +11,10 @@ local this = memory("MailOff") -- {[pid] = list}
 -- @param pid number
 -- @return list table 离线邮件列表
 local function load_from_db(pid)
-    local e, row = Call.DataMgr.load(DATA_ADDR, "off_mail", {"pid", pid})
+    local e, row = Call[DATA_ADDR].DataMgr.load("off_mail", {"pid", pid})
     if e == 0 and row and row.list then
         -- 删除数据库记录
-        Send.DataMgr.delete(DATA_ADDR, "off_mail", {"pid", pid})
+        Send[DATA_ADDR].DataMgr.delete("off_mail", {"pid", pid})
         return row.list
     end
     return {}
@@ -44,7 +44,7 @@ function MailOff.push(pid, mail_obj)
         this[pid] = list
     end
     table.insert(list, mail_obj)
-    Send.DataMgr.save(DATA_ADDR, "off_mail", {"pid", pid},
+    Send[DATA_ADDR].DataMgr.save("off_mail", {"pid", pid},
         {pid = pid, list = list})
 end
 

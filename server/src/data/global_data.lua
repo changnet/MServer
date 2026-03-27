@@ -1,4 +1,4 @@
--- 全局数据接口
+﻿-- 全局数据接口
 
 __global_memory  = __global_memory or {}
 __global_storage  = __global_storage or {}
@@ -54,7 +54,7 @@ local function load_one(key)
     print("loading data:", key, "...")
 
     query_keys[6] = key
-    local e, rows = Call.DataMgr.load(DATA_ADDR, "global_data", query_keys)
+    local e, rows = Call[DATA_ADDR].DataMgr.load("global_data", query_keys)
     if e ~= 0 then
         eprint("load global_data error", e, key)
         return
@@ -98,7 +98,7 @@ local function save_one(key)
 
     query_keys[6] = key
     local data = __global_storage[key]
-    local e = Call.DataMgr.save(DATA_ADDR, "global_data", query_keys, {
+    local e = Call[DATA_ADDR].DataMgr.save("global_data", query_keys, {
         sid = sid,
         name = LOCAL_NAME,
         data = data,

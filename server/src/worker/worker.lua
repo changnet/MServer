@@ -1,4 +1,4 @@
--- worker通用逻辑
+﻿-- worker通用逻辑
 Worker = {
     STOP     = 0, -- 关闭
     STARTING = 1, -- 启动中
@@ -185,8 +185,7 @@ function Worker.on_start_ready(addr)
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Worker.THREAD == data.mode then
             -- 同步给其他local worker
-            Send.Worker.set_status(other_addr,
-                MAIN_ADDR, addr, Worker.THREAD, Worker.READY)
+            Send[other_addr].Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, Worker.READY)
         end
     end
 
@@ -216,7 +215,7 @@ function Worker.start_ready()
     assert(LOCAL_ADDR ~= MAIN_ADDR)
 
     -- 通知主线程启动完成
-    Send.Worker.on_start_ready(MAIN_ADDR, LOCAL_ADDR)
+    Send[MAIN_ADDR].Worker.on_start_ready(LOCAL_ADDR)
 
     -- 触发其他worker启动完成事件
     for addr, data in pairs(WorkerData) do
@@ -244,13 +243,12 @@ function Worker.stop(addr)
     -- 先通知其他worker，这个worker需要关闭
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Worker.THREAD == data.mode then
-            Send.Worker.set_status(other_addr,
-                MAIN_ADDR, addr, Worker.THREAD, Worker.STOP)
+            Send[other_addr].Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, Worker.STOP)
         end
     end
 
     -- 通知对应的线程自己关闭
-    Call.Worker.stopping(addr, addr)
+    Call[addr].Worker.stopping(addr)
 
     -- 最后由主线程移除worker记录
     w:stop(true)
@@ -374,7 +372,7 @@ function Worker.sync_status_from_main()
     local LOCAL_ADDR = LOCAL_ADDR
     assert(LOCAL_ADDR ~= MAIN_ADDR)
 
-    local list = Call.Worker.get_status_list(MAIN_ADDR)
+    local list = Call[MAIN_ADDR].Worker.get_status_list()
     for _, s in pairs(list) do
         local addr = s.addr
         if addr ~= LOCAL_ADDR and addr ~= MAIN_ADDR then

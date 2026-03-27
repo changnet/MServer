@@ -1,4 +1,4 @@
--- mail_mgr.lua
+﻿-- mail_mgr.lua
 -- 2018-05-20
 -- xzc
 
@@ -11,7 +11,7 @@ local this = memory("MailSys")
 local player_storage = storage("MailPlayer")
 
 local function load_mail()
-    local e, rows = Call.DataMgr.load(DATA_ADDR, "sys_mail", {})
+    local e, rows = Call[DATA_ADDR].DataMgr.load("sys_mail", {})
     if e ~= 0 then
         eprint("load sys_mail error", e)
         return
@@ -103,7 +103,7 @@ function MailSys.send_sys(mail_obj)
 
     -- 更新到数据库
     local sid = Engine.get_server_id()
-    Send.DataMgr.save(DATA_ADDR, "sys_mail", {"sid", sid},
+    Send[DATA_ADDR].DataMgr.save("sys_mail", {"sid", sid},
         {sid = sid, list = list})
 
     -- 广播到所有player线程，由player线程判断在线玩家是否符合条件

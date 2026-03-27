@@ -1,4 +1,4 @@
--- 基础日志接口
+﻿-- 基础日志接口
 Log = {}
 
 local type = type
@@ -230,7 +230,7 @@ end
 --@param name string 日志表名
 --@param tbl table 需要写入数据库的字段，必须是一个key-value的table，key是字段名，value是字段值
 function Log.db(name, tbl)
-    return Send.LogMgr.db(LOG_ADDR, name, tbl)
+    return Send[LOG_ADDR].LogMgr.db(name, tbl)
 end
 
 -- 写入日志到日志数据库的misc表
@@ -240,7 +240,7 @@ end
 -- @param v2 string 自定义数据
 -- @param v3 string 自定义数据
 function Log.misc(pid, op, v1, v2, v3)
-    return Send.LogMgr.misc(LOG_ADDR, pid, op, v1, v2, v3)
+    return Send[LOG_ADDR].LogMgr.misc(pid, op, v1, v2, v3)
 end
 
 -- 写入日志到日志数据库的misc表
@@ -250,5 +250,5 @@ end
 -- @param v2 string 自定义数据
 -- @param v3 string 自定义数据
 function Log.pmisc(player, op, v1, v2, v3)
-    return Send.LogMgr.pmisc(LOG_ADDR, player.pid or 0, op, v1, v2, v3)
+    return Send[LOG_ADDR].LogMgr.pmisc(player.pid or 0, op, v1, v2, v3)
 end

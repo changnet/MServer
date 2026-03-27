@@ -1,4 +1,4 @@
--- playe.lua
+﻿-- playe.lua
 -- 2017-04-03
 -- xzc
 
@@ -110,7 +110,7 @@ end
 -- 加载玩家基础数据
 local function load_base_data(player)
     PLAYER_KEYS[2] = player.pid
-    local e, rows = Call.DataCache.get(DATA_ADDR, "player", PLAYER_KEYS)
+    local e, rows = Call[DATA_ADDR].DataCache.get("player", PLAYER_KEYS)
     if 0 ~= e or 1 ~= #rows then
         eprint("player db data error", player.pid, e)
         return false
@@ -204,7 +204,7 @@ function Player.login(player)
 end
 
 local function save_base_data(player)
-    local e, rows = Call.DataCache.get(DATA_ADDR, "player", PLAYER_KEYS)
+    local e, rows = Call[DATA_ADDR].DataCache.get("player", PLAYER_KEYS)
     if 0 ~= e or 1 ~= #rows then
         eprint("player db data error", player.pid, e)
         return false
@@ -229,7 +229,7 @@ local function save_base_data(player)
     data.create_sid = player.create_sid
     data.create_time = player.create_time
 
-    Send.DataCache.update(DATA_ADDR, "player", PLAYER_KEYS, data)
+    Send[DATA_ADDR].DataCache.update("player", PLAYER_KEYS, data)
 end
 
 local function save_db(player)

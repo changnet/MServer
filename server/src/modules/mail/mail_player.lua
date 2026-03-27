@@ -1,4 +1,4 @@
--- 玩家邮件相关逻辑（player线程）
+﻿-- 玩家邮件相关逻辑（player线程）
 MailPlayer = {}
 
 local MAX_MAIL_COUNT = 100
@@ -16,7 +16,7 @@ end
 -- 保存玩家邮件数据到缓存
 local function save_player_mail(player)
     local sg = get_mail_sg(player)
-    Send.DataCache.update(DATA_ADDR, "player_mail",
+    Send[DATA_ADDR].DataCache.update("player_mail",
         {"pid", player.pid},
         {pid = player.pid, list = sg.list})
 end
@@ -53,8 +53,7 @@ end
 
 -- 从缓存加载玩家邮件
 local function on_load_mail(player)
-    local e, rows = Call.DataCache.get(
-        DATA_ADDR, "player_mail", {"pid", player.pid})
+    local e, rows = Call[DATA_ADDR].DataCache.get("player_mail", {"pid", player.pid})
     local sg = get_mail_sg(player)
     if e == 0 and rows and #rows > 0 then
         sg.list = rows[1].list or {}
@@ -69,8 +68,7 @@ local function on_login(player)
     local pid = player.pid
 
     -- RPC调用game线程，获取离线邮件+符合条件的全服邮件
-    local e, new_list = Call.MailInternal.get_login_mails(
-        GAME_ADDR, pid)
+    local e, new_list = Call[GAME_ADDR].MailInternal.get_login_mails(pid)
 
     if e == 0 and new_list and #new_list > 0 then
         for _, m in ipairs(new_list) do
@@ -106,7 +104,7 @@ function MailPlayer.receive_or_offline(pid, mail_obj)
         MailPlayer.receive_mail(player, mail_obj)
     else
         -- 玩家不在本线程，通知game线程走离线
-        Send.MailInternal.push_offline(GAME_ADDR, pid, mail_obj)
+        Send[GAME_ADDR].MailInternal.push_offline(pid, mail_obj)
     end
 end
 
@@ -115,7 +113,7 @@ end
 -- @param mail_obj MailObj
 function MailPlayer.send(pid, mail_obj)
     -- 路由到game线程处理（game线程判断玩家在哪个player线程）
-    Send.MailInternal.send_pid(GAME_ADDR, pid, mail_obj)
+    Send[GAME_ADDR].MailInternal.send_pid(pid, mail_obj)
 end
 
 -- game线程广播全服邮件通知，player线程接收
@@ -124,8 +122,7 @@ function MailPlayer.on_sys_mail_notify(mail_obj)
     local players = PlayerMgr.get_all_player()
     for _, player in pairs(players) do
         local pid = player.pid
-        local e, list = Call.MailInternal.get_sys_mails_for(
-            GAME_ADDR, pid)
+        local e, list = Call[GAME_ADDR].MailInternal.get_sys_mails_for(pid)
         if e == 0 and list and #list > 0 then
             for _, m in ipairs(list) do
                 MailPlayer.receive_mail(player, m)
@@ -191,8 +188,7 @@ local function c_mail_claim(player, pkt)
 
                 -- 如果是全服邮件，通知game线程记录已领取
                 if m.type == Mail.T_SYS or m.type == Mail.T_GUILD then
-                    Send.MailInternal.mark_sys_claimed(
-                        GAME_ADDR, player.pid, m.id)
+                    Send[GAME_ADDR].MailInternal.mark_sys_claimed(player.pid, m.id)
                 end
 
                 NetMsg.send(player, M.MailClaim,
@@ -219,8 +215,7 @@ local function c_mail_claim_all(player, pkt)
             changed = true
 
             if m.type == Mail.T_SYS or m.type == Mail.T_GUILD then
-                Send.MailInternal.mark_sys_claimed(
-                    GAME_ADDR, player.pid, m.id)
+                Send[GAME_ADDR].MailInternal.mark_sys_claimed(player.pid, m.id)
             end
         end
     end

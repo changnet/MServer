@@ -1,4 +1,4 @@
--- 需要通信的两个节点，一般需要通过Cluster.connect()建立连接
+﻿-- 需要通信的两个节点，一般需要通过Cluster.connect()建立连接
 -- 但如果需要数据访问，又不想建立连接就需要使用代理转发
 ClusterProxy = {}
 
@@ -25,7 +25,7 @@ function ClusterProxy.create(from, to)
     local w = WorkerHash[from_addr]
     if w then
         assert(w.cluster_worker)
-        Send.ClusterProxy.on_request(from_addr, LOCAL_ADDR, to_addr)
+        Send[from_addr].ClusterProxy.on_request(LOCAL_ADDR, to_addr)
     end
 end
 
@@ -61,7 +61,7 @@ function ClusterProxy.request(from_addr)
 
     assert(w.cluster_worker)
     for to_addr in pairs(addr_proxy) do
-        Send.ClusterProxy.on_request(from_addr, LOCAL_ADDR, to_addr)
+        Send[from_addr].ClusterProxy.on_request(LOCAL_ADDR, to_addr)
     end
 end
 
@@ -115,8 +115,7 @@ function ClusterProxy.response(addr)
         local request_w = WorkerHash[request_addr]
         if request_w then
             assert(request_w.cluster_worker)
-            Send.ClusterProxy.on_response(request_addr,
-                LOCAL_ADDR, to_addr, status_list)
+            Send[request_addr].ClusterProxy.on_response(LOCAL_ADDR, to_addr, status_list)
         end
     end
 end
@@ -156,8 +155,7 @@ function ClusterProxy.response_one(src_addr, addr, status)
         local request_w = WorkerHash[request_addr]
         if request_w then
             assert(request_w.cluster_worker)
-            Send.ClusterProxy.on_response(request_addr,
-                LOCAL_ADDR, to_addr, {{addr = addr, status = status}})
+            Send[request_addr].ClusterProxy.on_response(LOCAL_ADDR, to_addr, {{addr = addr, status = status}})
         end
     end
 end

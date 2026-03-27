@@ -1,4 +1,4 @@
--- 管理服务器与客户端的连接
+﻿-- 管理服务器与客户端的连接
 CltMgr = {}
 
 local this = memory("CltMgr", {
@@ -79,7 +79,7 @@ function CltMgr.del(socket)
     local info = socket.login
     if info then
         local addr = Router.find_worker_addr(W.ACCOUNT, info.account)
-        Send.AccountMgr.logout(addr, session_id)
+        Send[addr].AccountMgr.logout(session_id)
     end
 
     printf("client connect del: %d", session_id)

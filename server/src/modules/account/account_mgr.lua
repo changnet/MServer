@@ -1,4 +1,4 @@
--- account_mgr.lua
+﻿-- account_mgr.lua
 -- 2017-04-02
 -- xzc
 
@@ -40,7 +40,7 @@ local function return_login_result(info, account, pfid, e)
     local session_id = info.session_id
     if not session_id then return end -- 数据加载完成时，可能已断开
 
-    Send.Login.do_login_result(info.gaddr, session_id, account, pfid, info, e)
+    Send[info.gaddr].Login.do_login_result(session_id, account, pfid, info, e)
 end
 
 local function get_account_info(account, pfid, sid)
@@ -83,14 +83,14 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
         if info.paddr and not info.kick_time then
             local pid = info.pid
             info.kick_time = Engine.time()
-            Send.PlayerMgr.exit_game(info.paddr, pid, "login_else_where")
+            Send[info.paddr].PlayerMgr.exit_game(pid, "login_else_where")
             print("account login kick else where", account, pfid, sid, pid)
         else
             print("account login else where", account, pfid, sid)
         end
 
         -- 顶号，通知旧的下线
-        Send.Login.login_else_where(old_addr, old_id, account, pfid)
+        Send[old_addr].Login.login_else_where(old_id, account, pfid)
     end
 
     info.gaddr = addr
@@ -110,8 +110,7 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
     -- 因此对mongodb的路由就没有要求了
     local db_addr = Router.find_worker_addr(W.MONGODB, "player", account)
     info.loaded = Engine.time()
-    local e, rows = Call.MongoDB.find(db_addr,
-        "player", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
+    local e, rows = Call[db_addr].MongoDB.find("player", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
     if 0 == e then
         for _, row in pairs(rows) do
             local pid = row._id
@@ -131,7 +130,7 @@ local function return_create_role_result(info, account, pfid, e)
     local session_id = info.session_id
     if not session_id then return end -- 数据加载时，已断开
 
-    Send.Login.do_create_result(info.gaddr, session_id, account, pfid, info, e)
+    Send[info.gaddr].Login.do_create_result(session_id, account, pfid, info, e)
 end
 
 -- 创角
@@ -159,8 +158,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
     -- 如果嫌数据库慢，估计要按拼接id的方式在不同account_mgr生成
     -- 或者弄一个id生成worker来专门处理这个事情
-    local e, row = Call.MongoDB.find_and_modify(db_addr,
-        "uniqueid", ROLE_ID_FILTER, nil, ROLE_ID_OPTS, nil, false, true, true)
+    local e, row = Call[db_addr].MongoDB.find_and_modify("uniqueid", ROLE_ID_FILTER, nil, ROLE_ID_OPTS, nil, false, true, true)
 
     info.created = nil
     if 0 ~= e or not row or not row.value then
@@ -184,7 +182,7 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
 
     info.created = time
     local msg
-    e, msg = Call.MongoDB.insert(db_addr, "player", role)
+    e, msg = Call[db_addr].MongoDB.insert("player", role)
     info.created = nil
     if 0 == e then
         role._id = pid
@@ -220,7 +218,7 @@ local function do_enter(info)
 
     printf("account %s enter role %d, paddr = %d, session = %d",
         info.account, pid, paddr, session_id)
-    Send.PlayerMgr.enter_game(paddr, enter_info)
+    Send[paddr].PlayerMgr.enter_game(enter_info)
 end
 
 -- 进入游戏
@@ -261,7 +259,7 @@ function AccountMgr.logout(session_id)
     if not role_info then return end
 
     local paddr = role_info.paddr
-    Send.PlayerMgr.exit_game(paddr, role_info.pid, "logout")
+    Send[paddr].PlayerMgr.exit_game(role_info.pid, "logout")
 end
 
 -- 玩家下线完成，数据已保存，移除account中的标记

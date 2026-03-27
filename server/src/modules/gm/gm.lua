@@ -1,4 +1,4 @@
--- gm.lua
+﻿-- gm.lua
 -- 2018-04-11
 -- xzc
 
@@ -45,7 +45,7 @@ local function query_data()
     -- 至少要热更一次，才会重新查询
 
     for other_addr in pairs(WorkerData) do
-        local data = Call.GM.on_query_data(other_addr)
+        local data = Call[other_addr].GM.on_query_data()
         for _, v in pairs(data or {}) do
             local k = v.cmd
             local wtype = v.wtype
@@ -172,7 +172,7 @@ function GM.dispatch(source, pid, data, args)
     if -1 == wtype then
         GM.run(source, pid, args)
         for addr in pairs(WorkerData) do
-            Send.GM.run(addr, source, pid, args)
+            Send[addr].GM.run(source, pid, args)
         end
         return
     end
@@ -180,7 +180,7 @@ function GM.dispatch(source, pid, data, args)
     if 0 ~= pid then
         local addr = Worker.get_player_route(pid, wtype)
         if addr then
-            Send.GM.run(addr, source, pid, args)
+            Send[addr].GM.run(source, pid, args)
             return
         end
     end
@@ -191,7 +191,7 @@ function GM.dispatch(source, pid, data, args)
     for addr in pairs(WorkerData) do
         local wt, _, main = Engine.unmake_address(addr)
         if wt == wtype and (is_main == main) then
-            Send.GM.run(addr, source, pid, args)
+            Send[addr].GM.run(source, pid, args)
         end
     end
 

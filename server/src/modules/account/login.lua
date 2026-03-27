@@ -1,4 +1,4 @@
--- 登录逻辑处理
+﻿-- 登录逻辑处理
 Login = {}
 
 -- 顶号处理
@@ -69,7 +69,7 @@ local function c_player_login(socket, pkt)
 
     -- 网关有多个，需要统一到帐号管理那边获取角色数据，处理顶号
     local addr = Router.find_worker_addr(W.ACCOUNT, account)
-    Send.AccountMgr.login(addr, LOCAL_ADDR, session_id, account, pfid, sid)
+    Send[addr].AccountMgr.login(LOCAL_ADDR, session_id, account, pfid, sid)
 end
 
 function Login.do_create_result(session_id, account, pfid, info, e)
@@ -114,8 +114,7 @@ local function c_create_role(socket, pkt)
     -- TODO: 检测一个名字是否带有数据库非法字符和敏感字,是否重复
 
     local addr = Router.find_worker_addr(W.ACCOUNT, account)
-    Send.AccountMgr.create_role(addr,
-        session_id, account, login_info.pfid, login_info.sid, pkt)
+    Send[addr].AccountMgr.create_role(session_id, account, login_info.pfid, login_info.sid, pkt)
 end
 
 -- 角色进入游戏
@@ -153,8 +152,7 @@ local function c_enter_game(socket, pkt)
 
     CltMgr.bind(socket, pid)
     local addr = Router.find_worker_addr(W.ACCOUNT, account)
-    Send.AccountMgr.enter(addr,
-        session_id, account, login_info.pfid, login_info.sid, pid, ip)
+    Send[addr].AccountMgr.enter(session_id, account, login_info.pfid, login_info.sid, pid, ip)
 end
 
 NetMsg.reg_noauth(M.PlayerLogin, c_player_login)

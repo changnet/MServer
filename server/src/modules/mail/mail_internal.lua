@@ -1,4 +1,4 @@
--- 邮件内部通用接口
+﻿-- 邮件内部通用接口
 MailInternal = {}
 
 local TimeId = require "modules.system.time_id"
@@ -79,7 +79,7 @@ function MailInternal.send_pid(pid, mail_obj)
         return
     end
     -- 发到player线程，player线程判断玩家是否在线
-    Send.MailPlayer.receive_or_offline(addr, pid, mail_obj)
+    Send[addr].MailPlayer.receive_or_offline(pid, mail_obj)
 end
 
 -- player线程則管玩家不在本线程，请求game线程小署离线邮件
@@ -105,8 +105,7 @@ function MailInternal.on_sys_mail_notify(mail_obj)
     for _, player in pairs(players) do
         local pid = player.pid
         -- RPC Call game线程获取符合条件的邮件（仅sys mail部分）
-        local e, list = Call.MailInternal.get_sys_mails_for(
-            GAME_ADDR, pid)
+        local e, list = Call[GAME_ADDR].MailInternal.get_sys_mails_for(pid)
         if e == 0 and list and #list > 0 then
             for _, m in ipairs(list) do
                 MailPlayer.receive_mail(player, m)

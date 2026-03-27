@@ -40,6 +40,9 @@ RPC设计
 
 在适当的情况下，使用Rpc.proxy_wtype("Test", W.TEST)封装后，可以直接调用Test.func()
 
+原来的实现是 Call.MongoDB.find(addr, ...)，这个缓存的闭包和地址无关
+现在的实现是 Call[addr].MongoDB.find(...)，每个地址都缓存独立闭包，预计会多上千个闭包
+
 
 关于热更
     如果需要热更，使用RTTI模块是可以的。但实际应用过程中，单次rpc调用时间很短，
@@ -73,22 +76,51 @@ function Rpc.set_metatable(module, factory_func)
     mt =
     {
         __index = function(tbl, k)
+
+            -- Call[addr].MongoDB.find()，第一层必须是addr
+            -- 模块名和函数名不可能是数字，k是数字格式，则认为是目标工作地址
+
+            if type(k) == "number" then
+                local mod = setmetatable({__addr = k}, mt)
+                tbl[k] = mod
+                return mod
+            end
+
             local name = rawget(tbl, "__name")
+            local addr = rawget(tbl, "__addr") -- proxy那边无addr
+
             if name then
                 name = name .. "." .. k
             else
                 name = k
             end
-            local mod = setmetatable({__name = name}, mt)
+
+            -- 核心：记录当该节点被生成时，它的“父节点”是谁，以及在父节点是用什么“键名”记录的？
+            local mod = setmetatable({
+                __addr = addr,
+                __name = name,
+                __parent = tbl,
+                __key = k
+            }, mt)
 
             tbl[k] = mod
             return mod
         end,
         __call = function(tbl, ...)
             local name = assert(rawget(tbl, "__name"))
-            local func = factory_func(name)
 
-            tbl[name] = func
+            -- Call和Send是有__addr的，但proxy那边则是动态传参
+            local addr = rawget(tbl, "__addr")
+
+            local func = factory_func(name, addr)
+
+            -- 获取父级引用，并将自己从父节点彻底替换为闭包实例！
+            local parent = rawget(tbl, "__parent")
+            local key = rawget(tbl, "__key")
+            if parent and key then
+                parent[key] = func
+            end
+
             return func(...)
         end
     }
@@ -112,8 +144,8 @@ local function send(name, addr, ...)
     return w:emplace_message(LOCAL_ADDR, addr, RPC_REQ, ptr, size)
 end
 
-local function send_func_factory(name)
-    return function(addr, ...) return send(name, addr, ...) end
+local function send_func_factory(name, addr)
+    return function(...) return send(name, addr, ...) end
 end
 
 local function call(name, addr, ...)
@@ -128,8 +160,8 @@ local function call(name, addr, ...)
     return call_return(coroutine.yield())
 end
 
-local function call_func_factory(name)
-    return function(addr, ...) return call(name, addr, ...) end
+local function call_func_factory(name, addr)
+    return function(...) return call(name, addr, ...) end
 end
 
 local function next_id()
@@ -144,8 +176,8 @@ local function next_id()
     end
 end
 
-local function callback_func_factory(name)
-    return function(addr, func, ...)
+local function callback_func_factory(name, addr)
+    return function(func, ...)
         local w = WorkerHash[addr] or g_mthread
 
         local session = next_id()

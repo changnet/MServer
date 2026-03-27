@@ -1,4 +1,4 @@
--- player_mgr.lua
+﻿-- player_mgr.lua
 -- 2017-04-03
 -- xzc
 
@@ -102,7 +102,7 @@ function PlayerMgr.exit_completed(pid, session_id)
     this.uninit_player[pid] = nil
 
     local addr = Router.find_worker_addr(W.ACCOUNT, pid)
-    Send.Account.logout_completed(addr, pid, session_id)
+    Send[addr].Account.logout_completed(pid, session_id)
 end
 
 return PlayerMgr

@@ -1,4 +1,4 @@
--- 负责数据缓存、读写管理
+﻿-- 负责数据缓存、读写管理
 DataMgr = {}
 
 local MongoDB = require "mongodb.mongodb"
@@ -52,7 +52,7 @@ local function mongodb_load(tbl_name, keys, fields)
         opts = {projection = proj}
     end
 
-    local e, rows = Call.MongoDB.find(addr, tbl_name, query, opts)
+    local e, rows = Call[addr].MongoDB.find(tbl_name, query, opts)
     return e, rows
 end
 
@@ -64,7 +64,7 @@ local function mongodb_save(tbl_name, keys, data)
 
     local query = keys_to_query(keys)
     -- upsert：存在则更新，不存在则插入
-    local e = Call.MongoDB.update(addr, tbl_name,
+    local e = Call[addr].MongoDB.update(tbl_name,
         MongoDB.UPDATE_UPSERT, query, {["$set"] = data})
     return e
 end
@@ -88,7 +88,7 @@ local function mysql_load(tbl_name, keys, fields)
         where = EMPTY
     end
 
-    local e, rows = Call.MySql.select(addr, fields, where)
+    local e, rows = Call[addr].MySql.select(fields, where)
     return e, rows
 end
 
@@ -105,7 +105,7 @@ local function mysql_save(tbl_name, keys, data)
         updates[k] = "values(" .. k .. ")"
     end
 
-    return Call.MySql.insert(addr, tbl_name, {data}, updates)
+    return Call[addr].MySql.insert(tbl_name, {data}, updates)
 end
 
 --- @param tbl_name 表名

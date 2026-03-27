@@ -1,4 +1,4 @@
--- mail.lua
+﻿-- mail.lua
 -- 2018-05-20
 -- xzc
 
@@ -33,7 +33,7 @@ local local_type = LOCAL_TYPE
 function Mail.send_pid(pid, mail_obj)
     mail_obj = MailInternal.create(mail_obj)
     -- 路由到game线程处理（判断在线/离线）
-    Send.MailInternal.send_pid(GAME_ADDR, pid, mail_obj)
+    Send[GAME_ADDR].MailInternal.send_pid(pid, mail_obj)
 end
 
 --- 发送个人邮件（玩家已在当前player线程在线）
