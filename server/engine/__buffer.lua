@@ -2,15 +2,17 @@
 
 -- 导出类: Buffer
 Buffer = {}
----@brief 获取数据
---- sharedata:get("user_list", 12345)
+--- 获取当前buffer保存数据的lightuserdata指针及大小
+---@return buffer指针，buffer大小
 function Buffer:get()
 end
 
----@brief 设置数据
---- sharedata:set("user_list", 12345, {name = "abc", level = 123})
----@return 成功返回 true，失败返回 false, err_msg
-function Buffer:set()
+--- 设置地图信息(用于动态创建地图)
+---@param id 地图id
+---@param width 宽，格子数
+---@param height 高，格子数
+---@return boolean，是否成功
+function Buffer:set(id, width, height)
 end
 
 --- 从buffer中读取一个整形（int8, int32，int64等等）

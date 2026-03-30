@@ -12,4 +12,11 @@ namespace util
  * @param ms 毫秒
  */
 void sleep(int32_t ms);
+
+/**
+ * @brief 设置当前线程的名字
+ * @param name 线程名字，最大16字符（包括\0结尾）
+ */
+void set_thread_name(const char *name);
+
 }; // namespace util

@@ -147,7 +147,7 @@ local function start_ready()
     else
         print("main thread ready, addr =", MAIN_ADDR)
     end
-    if SE then SE.fire(SE_READY) end
+    if SE then SE.emit(SE_READY) end
 
     -- 同步状态到集群节点，注意这里main_addr不是MAIN_ADDR而是LOCAL_ADDR
     -- main_addr是当前worker对应的线程地址
@@ -287,7 +287,7 @@ function Startup.load(reload)
         func()
     end
 
-    SE.fire(SE_SCRIPT_LOADED)
+    SE.emit(SE_SCRIPT_LOADED)
 end
 
 -- 覆盖旧的loader，并加载loader
@@ -330,6 +330,7 @@ function Startup.worker_init(addr, loader)
     MAIN_ADDR = g_sharedata:get("MAIN_ADDR")
 
     format_log_name(name, index)
+    Engine.set_thread_name(LOCAL_NAME)
 
     Engine.add_thread_ctx(addr, g_thread:toludata())
 

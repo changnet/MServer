@@ -185,7 +185,8 @@ function Worker.on_start_ready(addr)
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Worker.THREAD == data.mode then
             -- 同步给其他local worker
-            Send[other_addr].Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, Worker.READY)
+            Send[other_addr].Worker.set_status(MAIN_ADDR,
+                addr, Worker.THREAD, Worker.READY)
         end
     end
 
@@ -199,14 +200,14 @@ end
 local function do_worker_timer()
     local now = Engine.time()
 
-    SE.fire(SE_SEC_TIMER, now)
+    SE.emit(SE_SEC_TIMER, now)
 
     local next_min = this.next_min
     if now > next_min then
         -- this.next_min = next_min + 60 在服务器卡的时候无法修正为下一分钟
         -- 这个定时器要保证整分钟触发
         this.next_min = time.get_next_minite(now)
-        SE.fire(SE_MIN_TIMER, now)
+        SE.emit(SE_MIN_TIMER, now)
     end
 end
 
@@ -220,7 +221,7 @@ function Worker.start_ready()
     -- 触发其他worker启动完成事件
     for addr, data in pairs(WorkerData) do
         if data.status == Worker.READY then
-            SE.fire(SE_WORKER_BOTH_READY, addr, data.mode)
+            SE.emit(SE_WORKER_BOTH_READY, addr, data.mode)
         end
     end
 
@@ -243,7 +244,8 @@ function Worker.stop(addr)
     -- 先通知其他worker，这个worker需要关闭
     for other_addr, data in pairs(WorkerData) do
         if other_addr ~= addr and Worker.THREAD == data.mode then
-            Send[other_addr].Worker.set_status(MAIN_ADDR, addr, Worker.THREAD, Worker.STOP)
+            Send[other_addr].Worker.set_status(MAIN_ADDR,
+                addr, Worker.THREAD, Worker.STOP)
         end
     end
 
@@ -279,7 +281,7 @@ function Worker.set_status(src_addr, addr, mode, status)
     if Worker.STOP == status then
         WorkerHash[addr] = nil
         WorkerData[addr] = nil
-        SE.fire(SE_WORKER_STOP, addr, mode)
+        SE.emit(SE_WORKER_STOP, addr, mode)
     elseif Worker.STARTING == status then
         local data = Worker.get_data(addr)
         local old_status = data.status
@@ -289,7 +291,7 @@ function Worker.set_status(src_addr, addr, mode, status)
 
         -- 对于集群节点，交叉和转发会导致同步多次，同一个状态只触发一次
         if old_status ~= status then
-            SE.fire(SE_WORKER_START, addr, mode)
+            SE.emit(SE_WORKER_START, addr, mode)
         end
     elseif Worker.READY == status then
         -- 主线程负责启动worker，一开始就设置了WorkerHash[addr]，不要覆盖
@@ -306,8 +308,8 @@ function Worker.set_status(src_addr, addr, mode, status)
         data.mode = mode
         data.src_addr = src_addr
         if old_status ~= status then
-            SE.fire(SE_WORKER_OTHER_READY, addr, mode)
-            if g_ready then SE.fire(SE_WORKER_BOTH_READY, addr, mode) end
+            SE.emit(SE_WORKER_OTHER_READY, addr, mode)
+            if g_ready then SE.emit(SE_WORKER_BOTH_READY, addr, mode) end
         end
     else
         assert(false)

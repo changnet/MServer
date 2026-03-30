@@ -134,7 +134,8 @@ void WorkerThread::dispatch_message()
 
 void WorkerThread::routine()
 {
-    Thread::apply_thread_name(name_.c_str());
+    // 这里只知道名字，无法区分索引，由上层设置吧
+    // Thread::set_thread_name(name_.c_str());
 
     if (!initialize()) /* 初始化 */
     {

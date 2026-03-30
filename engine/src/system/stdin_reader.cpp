@@ -199,7 +199,7 @@ static bool select_read(std::string &input, LinuxInputContext &ctx)
 
 void StdinReader::routine()
 {
-    Thread::apply_thread_name("stdin_reader");
+    Thread::set_thread_name("stdin_reader");
 
     std::string input;
 

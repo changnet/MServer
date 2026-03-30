@@ -74,7 +74,7 @@ void EVBackend::backend_once(int32_t ev_count, int64_t now)
 
 void EVBackend::backend()
 {
-    Thread::apply_thread_name("ev_backend");
+    Thread::set_thread_name("ev_backend");
     int64_t last = timing::steady_clock();
 
     // 第一次进入wait前，可能主线程那边已经有新的io需要处理

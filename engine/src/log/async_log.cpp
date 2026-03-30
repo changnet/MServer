@@ -7,7 +7,7 @@
 // 多线程中，可能某个线程写了日志就退出了，数据存用thread_local会被立马释放掉
 // 日志线程执行写入时，就取不到数据了，只能存指针
 // thread_local char log_name[128] = {0};
-thread_local const char *thread_name = nullptr;
+thread_local const char *log_name = nullptr;
 
 ////////////////////////////////////////////////////////////////////////////////
 AsyncLog::Device::Device()
@@ -615,7 +615,7 @@ bool AsyncLog::uninitialize()
     return true;
 }
 
-void AsyncLog::set_thread_name(const char *name)
+void AsyncLog::set_log_name(const char *name)
 {
     // 某个线程写异步日志，退出后释放了thread_local
     // 因此把数据存全局，保证日志线程写日志时还能获取到名字
@@ -623,7 +623,7 @@ void AsyncLog::set_thread_name(const char *name)
     // null表示清空
     if (!name)
     {
-        thread_name = nullptr;
+        log_name = nullptr;
         return;
     }
 
@@ -633,25 +633,25 @@ void AsyncLog::set_thread_name(const char *name)
     {
         if (n == *s)
         {
-            thread_name = s->c_str();
+            log_name = s->c_str();
             return;
         }
     }
 
     name_.push_back(new std::string(name));
-    thread_name = name_.back()->c_str();
+    log_name = name_.back()->c_str();
 }
 
-const char *AsyncLog::get_thread_name()
+const char *AsyncLog::get_log_name()
 {
-    return thread_name;
+    return log_name;
 }
 
 AsyncLog::Buffer *AsyncLog::allocate(Device &device, size_t len, int64_t time,
                                      int32_t mask)
 {
     Buffer *buff =
-        buffer_pool_.construct<Buffer>(len, time, mask, get_thread_name());
+        buffer_pool_.construct<Buffer>(len, time, mask, get_log_name());
 
     // 把buffer同时放到它的mutil_device中，同时用一个ref字段表示引用数量
     // 当数量为0时表示无引用然后销毁掉

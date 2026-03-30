@@ -47,16 +47,18 @@ end
 function Engine.time_ms()
 end
 
---- 更新记录
----@param collection 集合名，即表名
----@param flags MONGOC_UPDATE_UPSERT等标识，按位组合
----@param query 查询条件，json字符串或者lua table
----@param update 更新的数据集，json字符串或者lua table
----@return 错误码
-function Engine.update(collection, flags, query, update)
+---@brief 合并更新数据
+--- sharedata:update("user_list", 12345, {name = "abc"})
+---@return 成功返回 true，失败返回 false, err_msg
+function Engine.update()
 end
 
 ---@brief 让当前线程睡眠指定时间
 ---@param ms 毫秒
 function Engine.sleep(ms)
+end
+
+---@brief 设置当前线程的名字
+---@param name 线程名字，最大16字符（包括\0结尾）
+function Engine.set_thread_name(name)
 end

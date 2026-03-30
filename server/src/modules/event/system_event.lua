@@ -28,7 +28,7 @@ end
 -- 触发系统事件
 -- @param ev 事件id，SE_XXX，详见系统事件定义
 -- @param ... 自定义参数
-function SE.fire(ev, ...)
+function SE.emit(ev, ...)
     local cbs = ev_cb[ev]
     if not cbs then return end
 

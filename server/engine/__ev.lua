@@ -40,7 +40,7 @@ end
 ---@param after N毫秒秒后第一次执行
 ---@param repeat 重复执行间隔，毫秒数
 ---@param policy 定时器重新规则时的策略
----@return 成功返回》=1,失败返回值<0
+---@return 成功返回>=1,失败返回值<0
 function EV:timer_start(id, after, repeat, policy)
 end
 
@@ -52,14 +52,14 @@ end
 
 ---@brief 启动utc定时器
 ---@param id 定时器唯一id
----@param after N秒后第一次执行
----@param repeat 重复执行间隔，秒数
+---@param after N毫秒秒后第一次执行
+---@param repeat 重复执行间隔，毫秒数
 ---@param policy 定时器重新规则时的策略
----@return 成功返回》=1,失败返回值<0
+---@return 成功返回>=1,失败返回值<0
 function EV:periodic_start(id, after, repeat, policy)
 end
 
----@brief 停止utc定时器并从管理器删除
+---@brief 停止utc定时器并从管理器中删除
 ---@param id 定时器唯一id
 ---@return 成功返回0
 function EV:periodic_stop(id)

@@ -89,6 +89,7 @@ static void luaopen_engine(lua_State *L)
     lcpp::module_function<&timing::time_ms>(L, "time_ms");
     lcpp::module_function<&timing::update>(L, "update");
     lcpp::module_function<&util::sleep>(L, "sleep");
+    lcpp::module_function<&util::set_thread_name>(L, "set_thread_name");
     lcpp::module_end(L);
 }
 

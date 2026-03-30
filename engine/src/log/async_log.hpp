@@ -119,8 +119,8 @@ public:
      */
     void append(const char *name, int32_t mask, int64_t time, const char *str,
                 size_t len);
-    void set_thread_name(const char *name);
-    const char *get_thread_name();
+    void set_log_name(const char *name);
+    const char *get_log_name();
 
 private:
     static constexpr size_t BLOCK_SIZE = 256;

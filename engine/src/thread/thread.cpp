@@ -20,7 +20,7 @@ Thread::~Thread()
     }
 }
 
-void Thread::apply_thread_name(const char *name)
+void Thread::set_thread_name(const char *name)
 {
     // 设置线程名字，只用用于调试。VS在中断时，可以方便地根据线程名知道属于哪个线程。
     // 在linux下，top -H -p xxxx（不要加-c参数）可以查看各个线程占用的cpu
@@ -124,7 +124,7 @@ void Thread::spawn(int32_t ms)
 {
     // signal_block(); /* 子线程不处理外部信号 */
 
-    apply_thread_name(name_.c_str());
+    set_thread_name(name_.c_str());
 
     if (!initialize()) /* 初始化 */
     {

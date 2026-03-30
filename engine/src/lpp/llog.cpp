@@ -252,6 +252,6 @@ int32_t LLog::set_name(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 2);
 
-    set_thread_name(name);
+    set_log_name(name);
     return 0;
 }

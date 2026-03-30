@@ -15,7 +15,7 @@ public:
     /// 获取线程名字
     inline const std::string &get_thread_name() const { return name_; }
     // 应用线程名字到底层
-    static void apply_thread_name(const char *name);
+    static void set_thread_name(const char *name);
 
     /**
      * @brief 停止线程
