@@ -47,9 +47,6 @@ end
 function Engine.time_ms()
 end
 
----@brief 合并更新数据
---- sharedata:update("user_list", 12345, {name = "abc"})
----@return 成功返回 true，失败返回 false, err_msg
 function Engine.update()
 end
 

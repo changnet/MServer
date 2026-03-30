@@ -7,12 +7,9 @@ Buffer = {}
 function Buffer:get()
 end
 
---- 设置地图信息(用于动态创建地图)
----@param id 地图id
----@param width 宽，格子数
----@param height 高，格子数
----@return boolean，是否成功
-function Buffer:set(id, width, height)
+---@param buffer any
+---@param size any
+function Buffer:set(buffer, size)
 end
 
 --- 从buffer中读取一个整形（int8, int32，int64等等）

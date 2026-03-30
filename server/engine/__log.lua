@@ -40,8 +40,3 @@ end
 ---@param multi 关联的日志设备
 function Log:add_device(name, path, alive, policy_u1, multi)
 end
-
----@brief 删除日志设备
----@param name 日志名字
-function Log:del_device(name)
-end

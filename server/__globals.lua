@@ -1,4 +1,4 @@
--- auto export by lua-tags 190 symbols
+-- auto export by lua-tags 193 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -166,6 +166,8 @@ return {
 "g_stat_mgr", -- src/test/flatbuffers_test.lua
 "g_stat_mgr", -- src/test/rpc_test.lua
 "graph", -- src/global/graph.lua
+"lua_parson", -- engine/__lua_parson.lua
+"lua_rapidxml", -- engine/__lua_rapidxml.lua
 "main_message_dispatch", -- src/message/thread_message.lua
 "memory", -- src/data/global_data.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
@@ -187,6 +189,7 @@ return {
 "sys", -- src/global/sys.lua
 "test_path", -- src/test/scene_test.lua
 "time", -- src/global/time.lua
+"util", -- engine/__util.lua
 "vd", -- src/modules/protocol/auto.lua
 "vd", -- src/log/log.lua
 "warn", -- src/log/log.lua
