@@ -143,7 +143,7 @@ local function s_enter_world(entity, pkt)
     entity.ai.logout_time = Engine.time() + math.random(60, param.logout_time)
 
     printf("%s enter world success", entity.name)
-    -- PE.fire_event( PE_ENTER,entity )
+    -- PE.emit( PE_ENTER,entity )
 end
 
 -- 初始化场景属性

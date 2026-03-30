@@ -1,4 +1,4 @@
--- auto export by lua-tags 193 symbols
+-- auto export by lua-tags 196 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -89,9 +89,12 @@ return {
 "Ping", -- src/modules/system/ping.lua
 "Player", -- src/modules/player/player.lua
 "PlayerCall", -- src/rpc/rpc_proxy.lua
+"PlayerData", -- src/modules/player/player_data.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
 "PlayerSend", -- src/rpc/rpc_proxy.lua
 "PlayerStatus", -- src/modules/player/player.lua
+"PlayerSync", -- src/modules/player/player_sync.lua
+"Property", -- src/modules/player/property.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
 "RES_GOLD", -- src/modules/res/res_header.lua
 "RES_ITEM", -- src/modules/res/res_header.lua
@@ -141,8 +144,8 @@ return {
 "__loader", -- src/engine/startup.lua
 "__package_cpath", -- src/engine/startup.lua
 "__package_path", -- src/engine/startup.lua
-"__player_memory", -- src/modules/player/player.lua
-"__player_storage", -- src/modules/player/player.lua
+"__player_memory", -- src/modules/player/player_data.lua
+"__player_storage", -- src/modules/player/player_data.lua
 "__print", -- src/engine/startup.lua
 "__require", -- src/global/require.lua
 "__rpc_session", -- src/rpc/rpc.lua

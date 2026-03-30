@@ -12,8 +12,7 @@ PlayerStatus = {
     WLOGOUT = 8 -- 等待退出，等待退出完成
 }
 
-__player_memory  = __player_memory or {} -- 玩家内存数据，不存库
-__player_storage  = __player_storage or {} -- 玩家存储数据，定时自动存库，按玩家区分
+require "player.player_data"
 
 local __player_memory = __player_memory
 local __player_storage = __player_storage
@@ -97,7 +96,11 @@ end
 -- @param key 属性key
 -- @param value 属性值
 function Player.set_property(player, key, value)
+    local old = player.property[key]
+    if old == value then return end
+
     player.property[key] = value
+    return Property.update(player, key, value)
 end
 
 -- 获取玩家属性
@@ -135,6 +138,8 @@ end
 
 local function load_db_data(player)
     if not load_base_data(player) then return end
+
+    if not PlayerData.load(player) then return end
 end
 
 local function init_data(player)
@@ -155,7 +160,7 @@ local function init_data(player)
     __player_storage[pid] = {}
 
     -- 基础数据初始化完成，其他模块可以在PE_INIT事件里继续初始化了
-    PE.fire_event(player, PE_INIT)
+    PE.emit(player, PE_INIT)
 end
 
 local function send_base_data(player)
@@ -197,7 +202,7 @@ function Player.login(player)
     init_data(player)
 
     send_base_data(player)
-    PE.fire_event(player, PE_LOGIN)
+    PE.emit(player, PE_LOGIN)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
     return true
@@ -234,6 +239,7 @@ end
 
 local function save_db(player)
     save_base_data(player)
+    PlayerData.save(player)
 end
 
 
@@ -241,7 +247,7 @@ end
 function Player.logout(player, why)
     local pid = player.pid
 
-    PE.fire_event(player, PE_LOGIN)
+    PE.emit(player, PE_LOGIN)
     save_db(player)
 
     __player_memory[pid] = nil

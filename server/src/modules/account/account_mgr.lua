@@ -110,7 +110,11 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
     -- 因此对mongodb的路由就没有要求了
     local db_addr = Router.find_worker_addr(W.MONGODB, "player", account)
     info.loaded = Engine.time()
-    local e, rows = Call[db_addr].MongoDB.find("player", {account = account, pfid = pfid, sid = sid}, ROLE_FILTER)
+    local e, rows = Call[db_addr].MongoDB.find("player", {
+        account = account,
+        pfid = pfid,
+        sid = sid
+    }, ROLE_FILTER)
     if 0 == e then
         for _, row in pairs(rows) do
             local pid = row._id
@@ -158,7 +162,8 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
     -- 如果嫌数据库慢，估计要按拼接id的方式在不同account_mgr生成
     -- 或者弄一个id生成worker来专门处理这个事情
-    local e, row = Call[db_addr].MongoDB.find_and_modify("uniqueid", ROLE_ID_FILTER, nil, ROLE_ID_OPTS, nil, false, true, true)
+    local e, row = Call[db_addr].MongoDB.find_and_modify(
+        "uniqueid", ROLE_ID_FILTER, nil, ROLE_ID_OPTS, nil, false, true, true)
 
     info.created = nil
     if 0 ~= e or not row or not row.value then

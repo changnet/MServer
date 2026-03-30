@@ -28,7 +28,7 @@ end
 -- 触发玩家事件
 -- @param ev 事件id，PE_XXX，详见玩家事件定义
 -- @param ... 自定义参数
-function PE.fire_event(player, ev, ...)
+function PE.emit(player, ev, ...)
     local cbs = ev_cb[ev]
     if not cbs then return end
 

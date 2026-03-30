@@ -1,0 +1,120 @@
+-- 玩家数据不同worker同步机制
+PlayerSync = {}
+
+--[[
+1. 哪个worker需要同步玩家对象，需要在定义worker时定义pobj = 1
+    同步玩家对象，一般只有该worker需要频繁处理玩家在线时的数据，比如“地图服务器”，需要
+    玩家的外显、属性等等
+    其他worker比如活动之类的，可以根据pid执行玩家逻辑，一般不需要同步对象
+
+2. property.lua中的属性同步到哪个worker，需要指定w字段
+    非property.lua中的数据，通过PlayerSync.reg注册要同步的数据
+
+3. property.lua中中的属性调用set函数时，会自动同步。
+    非property.lua中的数据，调用 PlayerSync.update()函数同步
+]]
+
+local funcs = {}
+
+local SYNC_WORKER = {}
+for _, w in pairs(WORKER) do
+    if 1 == w.pobj then table.insert(SYNC_WORKER, w.type) end
+end
+
+-- 注册其他模块的同步回调函数
+function PlayerSync.reg(func)
+    table.insert(funcs, func)
+end
+
+-- 登录时同步到其他worker
+function PlayerSync.login(player)
+    if 0 == #SYNC_WORKER then return true end
+
+    local pid = player.pid
+    local gaddr = player.gaddr
+
+    -- 先把所有要同步的数据构建到一个table中，再统一同步
+    -- 因为有些模块的数据会同时同步到多个worker，不用一个个模块地回调多次
+    local data = {}
+    for _, wtype in ipairs(SYNC_WORKER) do
+        data[wtype] = {
+            pid = pid,
+            gaddr = gaddr,
+        }
+    end
+
+    for _, func in pairs(funcs) do
+        func(player, data)
+    end
+
+    for _, wtype in ipairs(SYNC_WORKER) do
+        -- 如果一个worker需要分配节点(比如玩家登录回到上次的场景)，必须在这个函数之前分配
+        local addr = Router.find_player_addr(pid, wtype)
+        local ok = Call[addr].PlayerSync.on_login(data[wtype])
+        if not ok then
+            eprint("player sync login fail", pid, wtype)
+            return false
+        end
+    end
+
+    return true
+end
+
+-- 其他worker收到登录时同步的数据
+function PlayerSync.on_login(data)
+    local pid = data.pid
+
+    -- 加载数据
+    PlayerData.load(data)
+
+    PlayerMgr.set(pid, data)
+end
+
+-- 下线时，其他worker对象也要同步下线
+function PlayerSync.logout(player)
+    local pid = player.pid
+
+    for _, wtype in ipairs(SYNC_WORKER) do
+        local addr = Router.find_player_addr(pid, wtype)
+        local ok = Call[addr].PlayerSync.on_logout(pid)
+        if not ok then
+            eprint("player sync login fail", pid, wtype)
+            return false
+        end
+    end
+end
+
+-- 其他worker下线
+function PlayerSync.on_logout(pid)
+    local player = PlayerMgr.get_player(pid)
+    if not player then
+        eprint("player sync logout no player found", pid)
+        return
+    end
+
+    -- 保存数据
+    PlayerData.save(player)
+
+    PlayerMgr.set(pid)
+end
+
+-- 同步更新其他worker的数据， PlayerSync.update(GAME_ADDR, "property", "name", "abc")
+-- @param wtype worker类型
+-- @param value 需要更新的数据
+-- @param ... 需要更新的key，可以是多层key
+function PlayerSync.update(player, wtype, value, ...)
+    local pid = player.pid
+    local addr = Router.find_player_addr(pid, wtype)
+    Send[addr].PlayerSync.on_update(pid, value, ...)
+end
+
+-- 其他worker收到数据更新
+function PlayerSync.on_update(pid, value, ...)
+    local player = PlayerMgr.get_player(pid)
+    if not player then
+        eprint("player sync update no player found", pid, value, ...)
+        return
+    end
+
+    table.set_value(player, value, ...)
+end

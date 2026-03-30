@@ -11,12 +11,11 @@ local this = memory("PlayerMgr", {
     uninit_player = {}, -- 未初始化的玩家对象
 })
 
--- g_app:reg_5s_timer(self, this.check_enter_fail)
 
--- 判断玩家是否存在
-function PlayerMgr.is_pid_exist(pid)
-    -- TODO:考虑起服加载玩家基础数据
-    return true
+
+-- 设置玩家对象（仅非player worker用）
+function PlayerMgr.set(pid, player)
+    this.player[pid] = player
 end
 
 -- 获取玩家对象
