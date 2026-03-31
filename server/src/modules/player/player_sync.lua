@@ -65,9 +65,16 @@ function PlayerSync.on_login(data)
     local pid = data.pid
 
     -- 加载数据
-    PlayerData.load(data)
+    if not PlayerData.load(data) then return false end
 
     PlayerMgr.set(pid, data)
+
+    -- 其他worker除了玩家数据还需要存其他数据？后续有需求再说
+    -- if not Event.pemit_true(player, EV.LOADING) then
+    --     return false
+    -- end
+
+    return true
 end
 
 -- 下线时，其他worker对象也要同步下线
@@ -82,6 +89,8 @@ function PlayerSync.logout(player)
             return false
         end
     end
+
+    return true
 end
 
 -- 其他worker下线
@@ -89,13 +98,15 @@ function PlayerSync.on_logout(pid)
     local player = PlayerMgr.get_player(pid)
     if not player then
         eprint("player sync logout no player found", pid)
-        return
+        return false
     end
 
     -- 保存数据
     PlayerData.save(player)
 
     PlayerMgr.set(pid)
+
+    return true
 end
 
 -- 同步更新其他worker的数据， PlayerSync.update(GAME_ADDR, "property", "name", "abc")

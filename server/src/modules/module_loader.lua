@@ -41,7 +41,6 @@ require("misc.alert")
 
 require("player.player_sync", W.PLAYER, W.GAME, W.SCENE)
 require("player.property", W.PLAYER, W.GAME, W.SCENE)
-require("event.player_event", W.PLAYER)
 require("player.player", W.PLAYER, W.GAME, W.SCENE)
 require("player.player_mgr", W.PLAYER, W.GAME, W.SCENE)
 require("misc.welcome", W.PLAYER)

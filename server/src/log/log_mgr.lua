@@ -104,6 +104,6 @@ Shutdown.reg({
     func = stop,
 })
 
-SE.reg(SE_MIN_TIMER, flush_logs)
+Event.reg(EV.MIN_TIMER, flush_logs)
 
 return LogMgr

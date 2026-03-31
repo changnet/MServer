@@ -156,6 +156,6 @@ script_loaded(function()
     query_keys = {"sid", sid, "name", LOCAL_NAME, "key"}
 
     Startup.reg(load_storage, 0)
-    SE.reg(SE_MIN_TIMER, timer_save_storage)
+    Event.reg(EV.MIN_TIMER, timer_save_storage)
     Shutdown.reg({name = "global_data", func = save_storage}, 0xFFFF)
 end)

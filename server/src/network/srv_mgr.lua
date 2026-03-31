@@ -174,7 +174,7 @@ function SrvMgr.srv_conn_del(socket_id, e, is_conn)
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then this.srv_waiting[conn] = 1 end
 
-    SE.emit(SE_SRV_DISCONNTED, conn)
+    Event.emit(EV.SRV_DISCONNTED, conn)
 end
 
 -- 其他服务器是否初始化完成
@@ -307,7 +307,7 @@ local function handle_srv_reg(conn, pkt)
     conn:authorized(pkt)
     printf("%s register succes:session %d", conn:conn_name(), session)
 
-    SE.emit(SE_SRV_CONNTED, conn)
+    Event.emit(EV.SRV_CONNTED, conn)
 
     return true
 end
@@ -316,7 +316,7 @@ end
 -- 启动优先级略高于普通模块，普通模块可能需要连接来从其他服同步数据
 App.reg_start("SrvMgr", on_app_start, 15)
 
-SE.reg(SE_READY, on_srv_ready)
+Event.reg(EV.READY, on_srv_ready)
 Cmd.reg_srv(SYS.REG, handle_srv_reg, nil, true)
 
 return SrvMgr

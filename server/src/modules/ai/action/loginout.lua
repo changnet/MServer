@@ -143,7 +143,7 @@ local function s_enter_world(entity, pkt)
     entity.ai.logout_time = Engine.time() + math.random(60, param.logout_time)
 
     printf("%s enter world success", entity.name)
-    -- PE.emit( PE_ENTER,entity )
+    -- Event.emit( EV.ENTER,entity )
 end
 
 -- 初始化场景属性
@@ -183,7 +183,7 @@ end
 
 -- ************************************************************************** --
 
-SE.reg(SE_SCRIPT_LOADED, function()
+Event.reg(EV.SCRIPT_LOADED, function()
     BotMgr.reg(PLAYER.LOGIN, s_login)
     BotMgr.reg(PLAYER.CREATE, s_create_role)
     BotMgr.reg(PLAYER.ENTER, s_enter_world)

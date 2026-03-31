@@ -253,7 +253,7 @@ local function on_worker_stop()
     end
 end
 
-SE.reg(SE_SEC_TIMER, do_cache_timer)
+Event.reg(EV.SEC_TIMER, do_cache_timer)
 Shutdown.reg({
     name = "data_cache",
     func = on_worker_stop,

@@ -34,6 +34,5 @@ local function c_get_award(player, pkt)
     send_info(player, sg)
 end
 
-PE.reg(PE_LOGIN, on_login)
+Event.reg(EV.LOGIN, on_login)
 NetMsg.reg(M.WelcomeGet, c_get_award)
-

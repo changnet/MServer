@@ -1,4 +1,4 @@
--- auto export by lua-tags 196 symbols
+-- auto export by lua-tags 185 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -30,9 +30,11 @@ return {
 "E", -- src/modules/system/error.lua
 "EMPTY", -- src/modules/system/define.lua
 "ET", -- src/modules/entity/entity_header.lua
+"EV", -- src/modules/event/event_header.lua
 "Engine", -- engine/__engine.lua
 "EntityCmd", -- src/modules/entity/entity_cmd.lua
 "EntityMgr", -- src/modules/entity/entity_mgr.lua
+"Event", -- src/modules/event/event.lua
 "GAME_ADDR", -- src/engine/preloader.lua
 "GATEWAY_ADDR", -- src/engine/preloader.lua
 "GM", -- src/modules/gm/gm.lua
@@ -72,10 +74,6 @@ return {
 "Mongo", -- engine/__mongo.lua
 "MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
-"PE", -- src/modules/event/player_event.lua
-"PE_INIT", -- src/modules/event/event_header.lua
-"PE_LOGIN", -- src/modules/event/event_header.lua
-"PE_LOGOUT", -- src/modules/event/event_header.lua
 "PID_SRV_BIT", -- src/modules/system/define.lua
 "PP", -- src/modules/player/property.lua
 "PP_DEF", -- src/modules/player/property.lua
@@ -102,15 +100,6 @@ return {
 "Router", -- src/router/router.lua
 "Rpc", -- src/rpc/rpc.lua
 "Rtti", -- src/global/rtti.lua
-"SE", -- src/modules/event/system_event.lua
-"SE_MIN_TIMER", -- src/modules/event/event_header.lua
-"SE_READY", -- src/modules/event/event_header.lua
-"SE_SCRIPT_LOADED", -- src/modules/event/event_header.lua
-"SE_SEC_TIMER", -- src/modules/event/event_header.lua
-"SE_WORKER_BOTH_READY", -- src/modules/event/event_header.lua
-"SE_WORKER_OTHER_READY", -- src/modules/event/event_header.lua
-"SE_WORKER_START", -- src/modules/event/event_header.lua
-"SE_WORKER_STOP", -- src/modules/event/event_header.lua
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua

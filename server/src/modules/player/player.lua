@@ -140,11 +140,20 @@ local function load_db_data(player)
     if not load_base_data(player) then return end
 
     if not PlayerData.load(player) then return end
+
+    -- 其他模块加载数据
+    if not Event.pemit_true(player, EV.LOADING) then
+        pwarn(player, "load data event error")
+        return false
+    end
+
+    -- 所有模块加载完成后，同步数据到其他worker（比如场景)
+    if not PlayerSync.login(player) then return end
+
+    return true
 end
 
 local function init_data(player)
-    local pid = player.pid
-
     -- 补全属性集
     local pp = player.property
     for _, k in pairs(PP_INT_LIST) do
@@ -156,11 +165,8 @@ local function init_data(player)
 
     Money.init(player)
 
-    __player_memory[pid] = {}
-    __player_storage[pid] = {}
-
-    -- 基础数据初始化完成，其他模块可以在PE_INIT事件里继续初始化了
-    PE.emit(player, PE_INIT)
+    -- 基础数据初始化完成，其他模块可以在EV.INIT事件里继续初始化了
+    Event.pemit(player, EV.INIT)
 end
 
 local function send_base_data(player)
@@ -202,7 +208,7 @@ function Player.login(player)
     init_data(player)
 
     send_base_data(player)
-    PE.emit(player, PE_LOGIN)
+    Event.pemit(player, EV.LOGIN)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
     return true
@@ -237,9 +243,11 @@ local function save_base_data(player)
     Send[DATA_ADDR].DataCache.update("player", PLAYER_KEYS, data)
 end
 
-local function save_db(player)
+local function save_db_data(player)
     save_base_data(player)
     PlayerData.save(player)
+
+    Event.pemit(player, EV.SAVE)
 end
 
 
@@ -247,8 +255,8 @@ end
 function Player.logout(player, why)
     local pid = player.pid
 
-    PE.emit(player, PE_LOGIN)
-    save_db(player)
+    Event.pemit(player, EV.LOGIN)
+    save_db_data(player)
 
     __player_memory[pid] = nil
     __player_storage[pid] = nil

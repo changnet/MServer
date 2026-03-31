@@ -1,17 +1,19 @@
--- 系统事件(SystemEvent)
-SE = {}
+-- 事件(Event)
+Event = {}
 
 local ev_cb = {}-- 回调函数列表
 local reg_cb = {} -- 注册过来的回调列表
 local ready = false -- 初始化完成后，不允许再注册事件
 
+local assert = assert
+
 require "modules.event.event_header"
 
--- 注册系统事件回调
--- @param ev 事件id，SE_XXX，详见系统事件定义
--- @param cb 回调函数，回调参数取决于各个事件
--- @param pr 优先级priority，越小优先级越高，默认20
-function SE.reg(ev, cb, pr)
+-- 注册事件回调
+-- @param ev EV 事件id，详见系统事件定义
+-- @param cb func 回调函数，回调参数取决于各个事件
+-- @param pr number 优先级priority，越小优先级越高，默认20
+function Event.reg(ev, cb, pr)
     local cbs = reg_cb[ev]
     if not cbs then
         cbs = {}
@@ -25,10 +27,10 @@ function SE.reg(ev, cb, pr)
     return table.insert(cbs, {cb, pr or 20})
 end
 
--- 触发系统事件
--- @param ev 事件id，SE_XXX，详见系统事件定义
+-- 触发事件
+-- @param ev 事件id，EV.XXX，详见系统事件定义
 -- @param ... 自定义参数
-function SE.emit(ev, ...)
+function Event.emit(ev, ...)
     local cbs = ev_cb[ev]
     if not cbs then return end
 
@@ -36,6 +38,33 @@ function SE.emit(ev, ...)
         -- TODO 暂时不用xpcall，影响性能，用的话容错要好一些
         cb(...)
     end
+end
+
+-- 触发玩家事件，第一个参数为player
+-- @param ev 事件id，EV.XXX，详见系统事件定义
+-- @param ... 自定义参数
+function Event.pemit(player, ev, ...)
+    local cbs = ev_cb[ev]
+    if not cbs then return end
+
+    for _, cb in pairs(cbs) do
+        -- TODO 暂时不用xpcall，影响性能，用的话容错要好一些
+        cb(player, ...)
+    end
+end
+
+-- 触发事件，如果某个函数不返回true则终止
+-- @param ev 事件id，EV.XXX，详见玩家事件定义
+-- @param ... 自定义参数
+function Event.pemit_true(player, ev, ...)
+    local cbs = ev_cb[ev]
+    if not cbs then return true end
+
+    for _, cb in pairs(cbs) do
+        if not scall(cb, player, ...) then return false end
+    end
+
+    return true
 end
 
 -- 标记系统事件已就绪，后续不再允许注册事件
@@ -64,4 +93,4 @@ end
 
 script_loaded(sort_events)
 
-return SE
+return Event

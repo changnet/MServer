@@ -41,4 +41,4 @@ local function start_cli()
 end
 
 Rtti.name_func("cli.try_read", try_read)
-SE.reg(SE_READY, start_cli)
+Event.reg(EV.READY, start_cli)

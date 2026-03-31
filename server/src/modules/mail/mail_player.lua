@@ -251,7 +251,7 @@ local function c_mail_del_read(player, pkt)
     end
 end
 
-PE.reg(PE_LOGIN, on_login)
+Event.reg(EV.LOGIN, on_login)
 NetMsg.reg(M.MailRead, c_mail_read)
 NetMsg.reg(M.MailDel, c_mail_del)
 NetMsg.reg(M.MailClaim, c_mail_claim)
