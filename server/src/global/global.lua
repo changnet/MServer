@@ -5,6 +5,8 @@
 
 __script_loaded_funcs = {}
 
+local xpcall = xpcall
+
 -- 在加载完脚本后调用（优先级比SE_SCRIPT_LOADED高，且无文件依赖，用于基础功能初始化）
 function script_loaded(func)
     table.insert(__script_loaded_funcs, func)

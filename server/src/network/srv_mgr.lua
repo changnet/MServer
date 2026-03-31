@@ -174,7 +174,7 @@ function SrvMgr.srv_conn_del(socket_id, e, is_conn)
     -- TODO: 是否有必要检查对方是否主动关闭
     if conn.auto_conn then this.srv_waiting[conn] = 1 end
 
-    Event.emit(EV.SRV_DISCONNTED, conn)
+    Event.semit(EV.SRV_DISCONNTED, conn)
 end
 
 -- 其他服务器是否初始化完成
@@ -307,7 +307,7 @@ local function handle_srv_reg(conn, pkt)
     conn:authorized(pkt)
     printf("%s register succes:session %d", conn:conn_name(), session)
 
-    Event.emit(EV.SRV_CONNTED, conn)
+    Event.semit(EV.SRV_CONNTED, conn)
 
     return true
 end

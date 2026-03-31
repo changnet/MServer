@@ -147,7 +147,7 @@ local function start_ready()
     else
         print("main thread ready, addr =", MAIN_ADDR)
     end
-    if Event then Event.emit(EV.READY) end
+    if Event then Event.semit(EV.READY) end
 
     -- 同步状态到集群节点，注意这里main_addr不是MAIN_ADDR而是LOCAL_ADDR
     -- main_addr是当前worker对应的线程地址
@@ -287,7 +287,7 @@ function Startup.load(reload)
         func()
     end
 
-    Event.emit(EV.SCRIPT_LOADED)
+    Event.semit(EV.SCRIPT_LOADED)
 end
 
 -- 覆盖旧的loader，并加载loader

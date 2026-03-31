@@ -20,7 +20,7 @@ local I = 2 -- int
 -- 玩家属性定义(PP = player property)
 PP = {
     name  = {i = 1, t = S, c = true, s = true, f = true}, -- 名字
-    level = {i = 2, t = I, c = true, s = true, f = true, w = W.GAME}, -- 等级
+    level = {i = 2, t = I, c = true, s = true, f = true, w = {W.GAME}}, -- 等级
     vip   = {i = 3, t = I, c = true, s = true, f = true}, -- vip等级
 }
 
@@ -46,16 +46,7 @@ for k, p in pairs(PP) do
     if p.s then table.insert(PP_SAVE_LIST, k) end
 
     local w = p.w
-    if w then
-        local wlist
-        if "number" == type(w) then
-            wlist = {w}
-        else
-            wlist = w
-        end
-
-        PP_WORKER_LIST[k] = wlist
-    end
+    if w then PP_WORKER_LIST[k] = w end
 end
 
 local function comp_property(a, b)
