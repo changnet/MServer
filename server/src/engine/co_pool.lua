@@ -46,9 +46,8 @@ local function co_invoke(co, f, ...)
     -- mark as busy
     current_co = co
     busy_co[co] = 1
-
-    -- return f(...) -- 非递归方案
-    return co_invoke(co, co_yield(CO_IDLE, f(...))) -- 递归方案
+    return f(...)
+    -- return co_invoke(co, co_yield(CO_IDLE, f(...))) -- 递归方案
 end
 
 local function co_body()
@@ -66,15 +65,18 @@ local function co_body()
     在co_invoke使用递归可以，但会堆栈溢出。幸好Lua的尾调用可以解决堆栈溢出
 
     一般情况下使用协程并不需要返回值，所以用循环的方案更好？
+
+    2026更新：
+    虽然递归方案看起来能正确返回值，但那是在协程内部没有yield的情况下。
+    如果协程内部有yield，那么co_invoke的返回值就是yield的返回值，而不是f的返回值。
+    所以递归方案并不能正确返回值。因此这里也有必要使用递归方案了。
     ]]
 
-    -- 非递归方案
-    -- while true do
-    --     co_invoke(co, co_yield(CO_IDLE))
-    -- end
+    while true do
+        co_invoke(co, co_yield(CO_IDLE))
+    end
 
-    -- 递归方案
-    co_invoke(co, co_yield(CO_IDLE))
+    -- co_invoke(co, co_yield(CO_IDLE)) -- 递归方案
 end
 
 -- 处理协程resume的返回值
@@ -102,7 +104,7 @@ local function co_return(co, ok, v1, ...)
         busy_co[co] = nil
         tableinsert(idle_co, co)
 
-        return true, ...
+        return true
     end
 
     return true, v1, ...

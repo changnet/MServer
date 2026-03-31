@@ -20,12 +20,10 @@ Test.describe("coroutine test", function()
         local ok, session = CoPool.invoke(func, table.unpack(params))
         Test.assert(ok)
 
-        local rok, ret = CoPool.resume(session, table.unpack(params))
+        local rok = CoPool.resume(session, table.unpack(params))
         Test.assert(rok)
-        Test.equal(ret, params)
 
-        -- 重新测试，保证co复用时正确性(lua递归循环需要将近100万层才会溢出)
-        -- 所以这里多循环一些以测试堆栈是否地溢出
+        -- 重新测试，保证co复用时正确性
         for _ = 1, 999999 do
             local idle_count = CoPool.idle_count()
             ok, session = CoPool.invoke(func, table.unpack(params))
@@ -33,9 +31,8 @@ Test.describe("coroutine test", function()
 
             -- 保证有使用池
             Test.equal(CoPool.idle_count(), idle_count - 1)
-            rok, ret = CoPool.resume(session, table.unpack(params))
+            rok = CoPool.resume(session, table.unpack(params))
             Test.assert(rok)
-            Test.equal(ret, params)
         end
     end)
 
