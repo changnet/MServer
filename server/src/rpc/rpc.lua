@@ -294,3 +294,4 @@ ThreadMessage.reg(RPC_REQ, request_dispatch)
 ThreadMessage.reg(RPC_RES, response_dispatch)
 
 require "rpc.rpc_proxy"
+require "rpc.durable"

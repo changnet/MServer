@@ -1,4 +1,4 @@
--- auto export by lua-tags 188 symbols
+-- auto export by lua-tags 187 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -27,7 +27,6 @@ return {
 "DEFINE_END", -- src/global/require.lua
 "DataCache", -- src/data/data_cache.lua
 "DataMgr", -- src/data/data_mgr.lua
-"Duraback", -- src/rpc/durable.lua
 "Durable", -- src/rpc/durable.lua
 "E", -- src/modules/module_loader.lua
 "E", -- src/modules/system/error.lua
