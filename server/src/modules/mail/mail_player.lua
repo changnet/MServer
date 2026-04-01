@@ -84,7 +84,7 @@ local function on_login(player)
 end
 
 -- 收到个人邮件（玩家在线时，由game线程转发来）
-function MailPlayer.receive_mail(player, mail_obj)
+function MailPlayer.receive(player, mail_obj)
     local sg = get_mail_sg(player)
     table.insert(sg.list, mail_obj)
     MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
@@ -101,7 +101,7 @@ end
 function MailPlayer.receive_or_offline(pid, mail_obj)
     local player = PlayerMgr.get_player(pid)
     if player then
-        MailPlayer.receive_mail(player, mail_obj)
+        MailPlayer.receive(player, mail_obj)
     else
         -- 玩家不在本线程，通知game线程走离线
         Send[GAME_ADDR].MailInternal.push_offline(pid, mail_obj)
@@ -125,7 +125,7 @@ function MailPlayer.on_sys_mail_notify(mail_obj)
         local e, list = Call[GAME_ADDR].MailInternal.get_sys_mails_for(pid)
         if e == 0 and list and #list > 0 then
             for _, m in ipairs(list) do
-                MailPlayer.receive_mail(player, m)
+                MailPlayer.receive(player, m)
             end
         end
     end

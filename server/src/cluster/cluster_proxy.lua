@@ -115,7 +115,8 @@ function ClusterProxy.response(addr)
         local request_w = WorkerHash[request_addr]
         if request_w then
             assert(request_w.cluster_worker)
-            Send[request_addr].ClusterProxy.on_response(LOCAL_ADDR, to_addr, status_list)
+            Send[request_addr].ClusterProxy.on_response(
+                LOCAL_ADDR, to_addr, status_list)
         end
     end
 end
@@ -155,7 +156,8 @@ function ClusterProxy.response_one(src_addr, addr, status)
         local request_w = WorkerHash[request_addr]
         if request_w then
             assert(request_w.cluster_worker)
-            Send[request_addr].ClusterProxy.on_response(LOCAL_ADDR, to_addr, {{addr = addr, status = status}})
+            Send[request_addr].ClusterProxy.on_response(
+                LOCAL_ADDR, to_addr, {{addr = addr, status = status}})
         end
     end
 end

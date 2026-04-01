@@ -14,6 +14,8 @@ PlayerSync = {}
     非property.lua中的数据，调用 PlayerSync.update()函数同步
 ]]
 
+local LOCAL_ADDR = LOCAL_ADDR
+
 local funcs = {}
 
 local SYNC_WORKER = {}
@@ -40,6 +42,7 @@ function PlayerSync.login(player)
         data[wtype] = {
             pid = pid,
             gaddr = gaddr,
+            paddr = LOCAL_ADDR,
         }
     end
 

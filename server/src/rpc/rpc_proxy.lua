@@ -29,7 +29,36 @@ local call = Rpc.call
 local name_to_func = Rtti.name_to_func
 
 -- 调用函数并等待返回值，类似Call但用于Rpc.proxy_wtype代理过后的函数
+-- 用法：local ret = Await.MongoDB.find(...)
 Await = {}
+
+-- pid send，第一个参数必须为pid，被调用函数第一个参数必定是player
+-- 用法：ISend[addr].Player.set_property(pid, "name", new_name)
+-- 玩家不在线调用将会被丢弃
+ISend = {}
+
+-- pid call，第一个参数必须为pid，被调用函数第一个参数必定是player
+-- 用法：local ret = ICall[addr].Player.get_property(pid, "name")
+-- 如果玩家不在线，将会return nil，需要自己处理好异常
+ICall = {}
+
+-- player send，第一个参数必须为player，被调用函数第一个参数必定是player
+-- 用法：PSend[addr].Player.set_property(player, "name", new_name)
+-- 玩家不在线调用将会被丢弃
+PSend = {}
+
+-- player call，第一个参数必须为player，被调用函数第一个参数必定是player
+-- 如果玩家不在线，将会return nil，需要自己处理好异常
+PCall = {}
+
+-- player worker send，调用player worker函数，第一个参数必须为player，被调用函数第一个参数必定是player
+-- 用法：PWSend.Player.set_property(player, "name", new_name)
+-- 玩家不在线调用将会被丢弃
+PWSend = {}
+
+-- player worker call，调用player worker函数，第一个参数必须为player，被调用函数第一个参数必定是player
+-- 如果玩家不在线，将会return nil，需要自己处理好异常
+PWCall = {}
 
 local proxy = {} -- 通过proxy创建的模块
 
@@ -129,37 +158,14 @@ function Rpc.await_wtype(name, wtype)
     return mod
 end
 
-
--- 通过pid发起rpc调用，目标为玩家所在player worker，第一个参数必须为pid
-PidSend = {}
-
--- 通过pid发起rpc调用并获取返回值，目标为玩家所在player worker，第一个参数必须为pid
-PidCall = {}
-
--- 通过pid发起rpc调用，目标为玩家所在player worker
--- 第一个参数必须为pid，调用的函数第一个参数为player
--- 如果玩家不在线，将会return nil，需要自己处理好异常
-PlayerSend = {}
-
--- 通过pid发起rpc调用并获取返回值，目标为玩家所在player worker
--- 第一个参数必须为pid，调用的函数第一个参数为player
--- 如果玩家不在线，将会return nil，需要自己处理好异常
-PlayerCall = {}
-
-local function pid_send_func_factory(name)
+local function pid_send_func_factory(name, addr)
     return function(pid, ...)
-        local addr = Router.find_player_addr(pid)
-        if not addr then error("no player address found") end
-
         return send(addr, name, pid, ...)
     end
 end
 
-local function pid_call_func_factory(name)
+local function pid_call_func_factory(name, addr)
     return function(pid, ...)
-        local addr = Router.find_player_addr(pid)
-        if not addr then error("no player address found") end
-
         return call(addr, name, pid, ...)
     end
 end
@@ -174,27 +180,34 @@ local function invoke_player_call(name, pid, ...)
 end
 
 
-local function player_send_func_factory(name)
-    return function(pid, ...)
-        local addr = Router.find_player_addr(pid)
-        if not addr then error("no player address found") end
-
-        return send(addr, "invoke_player_call", name, pid, ...)
+local function player_send_func_factory(name, addr)
+    return function(player, ...)
+        return send(player, "invoke_player_call", name, player.pid, ...)
     end
 end
 
-local function player_call_func_factory(name)
-    return function(pid, ...)
-        local addr = Router.find_player_addr(pid)
-        if not addr then error("no player address found") end
-
-        return call(addr, "invoke_player_call", name, pid, ...)
+local function player_call_func_factory(name, addr)
+    return function(player, ...)
+        return call(addr, "invoke_player_call", name, player.pid, ...)
     end
 end
 
+local function player_worker_send_func_factory(name)
+    return function(player, ...)
+        return send(player.paddr, "invoke_player_call", name, player.pid, ...)
+    end
+end
+
+local function player_worker_call_func_factory(name)
+    return function(player, ...)
+        return call(player.paddr, "invoke_player_call", name, player.pid, ...)
+    end
+end
 
 Rtti.name_func("invoke_player_call", invoke_player_call)
-Rpc.set_metatable(PidCall, pid_call_func_factory)
-Rpc.set_metatable(PidSend, pid_send_func_factory)
-Rpc.set_metatable(PlayerCall, player_call_func_factory)
-Rpc.set_metatable(PlayerSend, player_send_func_factory)
+Rpc.set_metatable(ICall, pid_call_func_factory)
+Rpc.set_metatable(ISend, pid_send_func_factory)
+Rpc.set_metatable(PCall, player_call_func_factory)
+Rpc.set_metatable(PSend, player_send_func_factory)
+Rpc.set_metatable(PWCall, player_worker_call_func_factory)
+Rpc.set_metatable(PWSend, player_worker_send_func_factory)

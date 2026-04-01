@@ -9,7 +9,7 @@ Mail = {
     T_GUILD = 2, -- 帮派邮件
 }
 
-local local_type = LOCAL_TYPE
+local LOCAL_TYPE = LOCAL_TYPE
 
 ---@class MailObj 单个邮件结构
 ---@field id number 唯一id
@@ -41,7 +41,7 @@ end
 -- @param mail_obj MailObj 邮件对象
 function Mail.send_player(player, mail_obj)
     mail_obj = MailInternal.create(mail_obj)
-    MailPlayer.receive_mail(player, mail_obj)
+    MailPlayer.receive(player, mail_obj)
 end
 
 -- 发送全服邮件、帮派邮件（在game线程调用）
@@ -51,7 +51,11 @@ function Mail.send_sys(mail_obj)
 
     mail_obj = MailInternal.create(mail_obj)
 
-    MailSys.send_sys(mail_obj)
+    if LOCAL_TYPE == W.GAME then
+        MailSys.send(mail_obj)
+    else
+        Send[GAME_ADDR].MailSys.send(mail_obj)
+    end
 end
 
 return Mail

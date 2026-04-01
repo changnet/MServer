@@ -92,7 +92,7 @@ end
 -- player线程通知game线程发送全服邮件
 -- @param mail_obj MailObj
 function MailInternal.send_sys(mail_obj)
-    MailSys.send_sys(mail_obj)
+    MailSys.send(mail_obj)
 end
 
 -- player线程通知：全服邮件通知广播
@@ -108,7 +108,7 @@ function MailInternal.on_sys_mail_notify(mail_obj)
         local e, list = Call[GAME_ADDR].MailInternal.get_sys_mails_for(pid)
         if e == 0 and list and #list > 0 then
             for _, m in ipairs(list) do
-                MailPlayer.receive_mail(player, m)
+                MailPlayer.receive(player, m)
             end
         end
     end

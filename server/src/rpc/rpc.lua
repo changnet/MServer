@@ -2,12 +2,15 @@
 Rpc = {}
 
 -- rpc调用，使用协程阻塞返回
+-- 用法：local ret = Call[addr].MongoDB.find(...)
 Call = {}
 
 -- rpc调用，使用回调函数异步返回
+-- 用法：Callback[addr].MongoDB.find(func, ...)
 Callback = {}
 
 -- rpc调用，无返回
+-- 用法：Send[addr].MongoDB.find(...)
 Send = {}
 
 --[[

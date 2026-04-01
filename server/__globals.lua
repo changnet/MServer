@@ -1,4 +1,4 @@
--- auto export by lua-tags 185 symbols
+-- auto export by lua-tags 188 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -22,10 +22,13 @@ return {
 "ClusterProxy", -- src/cluster/cluster_proxy.lua
 "CoPool", -- src/engine/co_pool.lua
 "DATA_ADDR", -- src/engine/preloader.lua
+"DB_WARN_SIZE", -- src/modules/system/define.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "DataCache", -- src/data/data_cache.lua
 "DataMgr", -- src/data/data_mgr.lua
+"Duraback", -- src/rpc/durable.lua
+"Durable", -- src/rpc/durable.lua
 "E", -- src/modules/module_loader.lua
 "E", -- src/modules/system/error.lua
 "EMPTY", -- src/modules/system/define.lua
@@ -41,7 +44,9 @@ return {
 "GameTest", -- src/modules/ai/action/game_test.lua
 "GridAoi", -- engine/__gridaoi.lua
 "HTTP", -- src/http/http_header.lua
+"ICall", -- src/rpc/rpc_proxy.lua
 "IO", -- engine/__io.lua
+"ISend", -- src/rpc/rpc_proxy.lua
 "JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
 "LOCAL_ADDR", -- src/worker/worker.lua
@@ -59,8 +64,6 @@ return {
 "M", -- src/modules/protocol/protocol.lua
 "MAIN_ADDR", -- src/worker/worker.lua
 "MASTER_ADDR", -- src/engine/preloader.lua
-"MAX_MAIL", -- src/modules/system/define.lua
-"MAX_SYS_MAIL", -- src/modules/system/define.lua
 "MT", -- src/modules/move/move_header.lua
 "Mail", -- src/modules/mail/mail.lua
 "MailInternal", -- src/modules/mail/mail_internal.lua
@@ -74,22 +77,22 @@ return {
 "Mongo", -- engine/__mongo.lua
 "MySql", -- engine/__mysql.lua
 "NetMsg", -- src/message/net_msg.lua
+"PCall", -- src/rpc/rpc_proxy.lua
 "PID_SRV_BIT", -- src/modules/system/define.lua
 "PP", -- src/modules/player/property.lua
 "PP_DEF", -- src/modules/player/property.lua
 "PP_INT_LIST", -- src/modules/player/property.lua
 "PP_SAVE_LIST", -- src/modules/player/property.lua
 "PP_STR_LIST", -- src/modules/player/property.lua
+"PSend", -- src/rpc/rpc_proxy.lua
+"PWCall", -- src/rpc/rpc_proxy.lua
+"PWSend", -- src/rpc/rpc_proxy.lua
 "Pbc", -- src/message/pbc.lua
 "PbcCodec", -- engine/__pbccodec.lua
-"PidCall", -- src/rpc/rpc_proxy.lua
-"PidSend", -- src/rpc/rpc_proxy.lua
 "Ping", -- src/modules/system/ping.lua
 "Player", -- src/modules/player/player.lua
-"PlayerCall", -- src/rpc/rpc_proxy.lua
 "PlayerData", -- src/modules/player/player_data.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
-"PlayerSend", -- src/rpc/rpc_proxy.lua
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
 "Property", -- src/modules/player/property.lua

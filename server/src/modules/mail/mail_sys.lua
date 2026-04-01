@@ -2,7 +2,7 @@
 -- 2018-05-20
 -- xzc
 
--- 全服邮件 管理（game线程）
+-- 系统邮件 （包括帮派邮件，game线程处理）
 MailSys = {}
 
 local this = memory("MailSys")
@@ -97,14 +97,11 @@ end
 
 -- 发送全服邮件
 -- @param mail_obj MailObj 邮件对象（已create过）
-function MailSys.send_sys(mail_obj)
+function MailSys.send(mail_obj)
     local list = this.list
     table.insert(list, mail_obj)
 
-    -- 更新到数据库
-    local sid = Engine.get_server_id()
-    Send[DATA_ADDR].DataMgr.save("sys_mail", {"sid", sid},
-        {sid = sid, list = list})
+    this.modify = true
 
     -- 广播到所有player线程，由player线程判断在线玩家是否符合条件
     Worker.send_other_type(W.PLAYER,
@@ -124,6 +121,47 @@ local function on_startup(retry)
     end
 end
 
+local function save_mail_sys()
+    if not this.modify then return end
+
+    local sid = Engine.get_server_id()
+    local query_keys = {"sid", sid}
+    local e = Call[DATA_ADDR].DataMgr.save("mail_sys", query_keys, {
+        sid = sid,
+        list = this.list,
+    })
+    if 0 ~= e then
+        eprint("save mail sys error", e)
+        JsonFile.save("mail_sys", this.list)
+    end
+
+    -- Call调用里嵌套了协程，可能会不准，但仍能大概反馈到问题
+    -- 或者直接用Send就准了
+    local size = Rpc.last_codec_size()
+    if size > DB_WARN_SIZE then
+        eprint("mail sys too large", size)
+    end
+
+    this.modify = nil
+    print("saving mail sys ...", size)
+end
+
+local function timer_save_mail_sys(now)
+    local last = this.last
+    if not last then
+        this.last = now
+        return
+    elseif now - last < 30 * 60 then
+        return
+    end
+
+    save_mail_sys()
+    this.last = now
+end
+
 Startup.reg(on_startup)
+
+Event.reg(EV.MIN_TIMER, timer_save_mail_sys)
+Shutdown.reg({name = "mail_sys", func = save_mail_sys}, 65534)
 
 return MailSys

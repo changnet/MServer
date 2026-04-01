@@ -111,7 +111,7 @@ local function save_one(key)
     -- Call调用里嵌套了协程，可能会不准，但仍能大概反馈到问题
     -- 或者直接用Send就准了
     local size = Rpc.last_codec_size()
-    if size > 8 * 1024 * 1024 then
+    if size > DB_WARN_SIZE then
         eprint("global data too large", key, size)
     end
 end
