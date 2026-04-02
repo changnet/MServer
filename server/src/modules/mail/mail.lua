@@ -32,8 +32,17 @@ local LOCAL_TYPE = LOCAL_TYPE
 -- @param mail_obj MailObj 邮件对象
 function Mail.send_pid(pid, mail_obj)
     mail_obj = MailInternal.create(mail_obj)
+    if LOCAL_TYPE == W.PLAYER then
+        local player = PlayerMgr and PlayerMgr.get_player(pid)
+        if player then
+            MailPlayer.receive(player, mail_obj)
+            return
+        end
+    end
+
+    local addr = Router.find_worker_addr(W.GAME, "pid", pid)
     -- 路由到game线程处理（判断在线/离线）
-    Send[GAME_ADDR].MailInternal.send_pid(pid, mail_obj)
+    Durable[addr].MailInternal.send_pid(pid, mail_obj)
 end
 
 --- 发送个人邮件（玩家已在当前player线程在线）
@@ -54,7 +63,16 @@ function Mail.send_sys(mail_obj)
     if LOCAL_TYPE == W.GAME then
         MailSys.send(mail_obj)
     else
-        Send[GAME_ADDR].MailSys.send(mail_obj)
+        local addr
+        local sid = mail_obj.sid
+        if sid then
+            -- 跨服，要先转到对应的服务器
+            -- TODO 跨服发到所有服务器呢？
+            addr = Router.find_worker_addr(W.GAME, "sid", sid)
+        else
+            addr = GAME_ADDR
+        end
+        Durable[addr].MailSys.send(mail_obj)
     end
 end
 

@@ -141,6 +141,6 @@ local function sort_events()
     end
 end
 
-script_loaded(sort_events)
+script_loaded(sort_events, 2)
 
 return Event

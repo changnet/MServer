@@ -5,6 +5,7 @@ __global_storage  = __global_storage or {}
 
 local sid
 local query_keys
+local is_storage = WORKER[LOCAL_TYPE].storage
 
 -- 创建一块存储空间，不存库
 -- @param key 存储空间key
@@ -29,6 +30,9 @@ end
 -- @param initializer 存储空间初始化时默认值或者函数
 -- @param save_key 如果需要单独存一条记录，可以指定save_key
 function storage(key, initializer, save_key)
+    -- 很多线程没有全局数据，但会统一加载这个文件
+    if not is_storage then return end
+
     if not save_key then save_key = "global" end
     local save_storage = __global_storage[save_key]
     if not save_storage then
@@ -151,11 +155,13 @@ local function timer_save_storage(now)
     end
 end
 
-script_loaded(function()
-    sid = Engine.get_server_id()
-    query_keys = {"sid", sid, "name", LOCAL_NAME, "key"}
+if is_storage then
+    script_loaded(function()
+        sid = Engine.get_server_id()
+        query_keys = {"sid", sid, "name", LOCAL_NAME, "key"}
 
-    Startup.reg(load_storage, 0)
-    Event.reg(EV.MIN_TIMER, timer_save_storage)
-    Shutdown.reg({name = "global_data", func = save_storage}, 0xFFFF)
-end)
+        Startup.reg(load_storage, 0)
+        Event.reg(EV.MIN_TIMER, timer_save_storage)
+        Shutdown.reg({name = "global_data", func = save_storage}, 0xFFFF)
+    end)
+end

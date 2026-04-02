@@ -3,13 +3,15 @@
 -- xzc
 -- 常用的全局函数
 
-__script_loaded_funcs = {}
+__script_loaded_funcs = {{}, {}}
 
 local xpcall = xpcall
 
 -- 在加载完脚本后调用（优先级比SE_SCRIPT_LOADED高，且无文件依赖，用于基础功能初始化）
-function script_loaded(func)
-    table.insert(__script_loaded_funcs, func)
+-- @param priority number 优先级，值越小，优先级越高，支持1~2，默认为1
+function script_loaded(func, priority)
+    if not priority then priority = 1 end
+    table.insert(__script_loaded_funcs[priority], func)
 end
 
 -- 用于底层C错误信息处理

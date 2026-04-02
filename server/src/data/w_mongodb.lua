@@ -9,7 +9,7 @@ dofile(source .. "src/engine/startup.lua")
 g_mongodb = nil
 
 Startup.worker_init(tonumber(addr), function(reload)
-    require "modules.module_loader"
+    require "data.data_loader"
     local MongoDB = require "mongodb.mongodb"
 
     if not reload then

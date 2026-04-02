@@ -33,19 +33,21 @@ local this = storage("Durable", {
     counter = 0,  -- 当前计数器
 })
 
+local BIT = 20
+local MAX_COUNTER = 2 ^ BIT - 1
+
 -- 生成唯一index
 -- @return string "epoch_counter"
 local function next_index()
     local counter = this.counter + 1
-    if counter > 0xFFFFFFFF then
+    if counter > MAX_COUNTER then
         this.epoch = this.epoch + 1
         counter = 1
     end
 
     this.counter = counter
 
-    -- 字符串避免溢出以及json序列化精度丢失，这个调用应该不算很频繁
-    return string.format("%d_%d", this.epoch, this.counter)
+    return (this.epoch << BIT | this.counter)
 end
 
 -- 判断新index是否比已记录的更新
@@ -55,10 +57,7 @@ end
 local function is_newer(new_index, old_index)
     if not old_index then return true end
 
-    local epoch1, counter1 = string.match(new_index, "^(%d+)_(%d+)$")
-    local epoch2, counter2 = string.match(old_index, "^(%d+)_(%d+)$")
-
-    return epoch1 > epoch2 or (epoch1 == epoch2 and counter1 > counter2)
+    return new_index > old_index
 end
 
 -- 判断目标地址是否需要持久化（仅跨进程需要）
@@ -180,7 +179,9 @@ local function on_ready()
 end
 
 Rpc.set_metatable(Durable, durable_func_factory)
-script_loaded(function()
-    Event.reg(EV.READY, on_ready)
-    Event.reg(EV.WORKER_BOTH_READY, on_worker_ready, 0xFFFF)
-end)
+if this then
+    script_loaded(function()
+        Event.reg(EV.READY, on_ready)
+        Event.reg(EV.WORKER_BOTH_READY, on_worker_ready, 0xFFFF)
+    end)
+end

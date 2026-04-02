@@ -8,13 +8,10 @@ local MongoDB = require "mongodb.mongodb"
 
 2. DataMgr提供最基础的存取接口，能在多种数据库切换。有特殊要求（比如排序）的自己直接操作
 数据库。这种情况比较少，后续切换数据库改得也不多
-]]
 
--- pick a worker address of a given type based on hashing
-local function find_worker_addr(wtype, tbl_name, keys)
-    -- keys的第一个参数为主键（比如id或者pid），第二个为主键值
-    return Router.find_worker_addr(wtype, tbl_name, keys[2])
-end
+3. keys是查询条件，通常为{"pid", 123}或者{"_id", 123}，无论这个查询条件是怎么样的，只
+要保证字段顺序不变，路由规则就不会出错
+]]
 
 -- mongodb operations --------------------------------------------------------
 
@@ -29,17 +26,11 @@ local function keys_to_query(keys)
         q[keys[i]] = keys[i + 1]
     end
 
-    -- mongo习惯将玩家id存为_id，可接受pid作为简写
-    if q.pid and q._id == nil then
-        q._id = q.pid
-        q.pid = nil
-    end
-
     return q
 end
 
 local function mongodb_load(tbl_name, keys, fields)
-    local addr = find_worker_addr(W.MONGODB, tbl_name, keys)
+    local addr = Router.find_worker_addr(W.MONGODB, keys[1], keys[2] or 0)
     if not addr then
         return 1
     end
@@ -57,7 +48,7 @@ local function mongodb_load(tbl_name, keys, fields)
 end
 
 local function mongodb_save(tbl_name, keys, data)
-    local addr = find_worker_addr(W.MONGODB, tbl_name, keys)
+    local addr = Router.find_worker_addr(W.MONGODB, keys[1], keys[2] or 0)
     if not addr then
         return 1
     end
@@ -73,7 +64,7 @@ end
 
 --luacheck: ignore
 local function mysql_load(tbl_name, keys, fields)
-    local addr = find_worker_addr(W.MYSQL, tbl_name, keys)
+    local addr = Router.find_worker_addr(W.MYSQL, keys[1], keys[2] or 0)
     if not addr then
         return 1
     end
@@ -94,7 +85,7 @@ end
 
 --luacheck: ignore
 local function mysql_save(tbl_name, keys, data)
-    local addr = find_worker_addr(W.MYSQL, tbl_name, keys)
+    local addr = Router.find_worker_addr(W.MYSQL, keys[1], keys[2] or 0)
     if not addr then
         return 1
     end

@@ -692,3 +692,49 @@ Test.describe("table lib test", function()
         Test.equal(tbl2, tbl)
     end)
 end)
+
+Test.describe("hash test", function()
+    Test.it("hash base", function()
+        local count = 1000000
+        local buckets = 10
+
+        -- 1. hashstr 测试
+        local str_buckets = {}
+        for i = 0, buckets - 1 do str_buckets[i] = 0 end
+
+        local str_start = Test.clock()
+        for i = 1, count do
+            local str = "user_router_id_" .. i
+            local hash = util.hashstr(str)
+            local idx = hash % buckets
+            str_buckets[idx] = str_buckets[idx] + 1
+        end
+        local str_time = Test.clock() - str_start
+
+        local str_dist = ""
+        for i = 0, buckets - 1 do
+            str_dist = str_dist .. string.format("[%d]=%d ", i, str_buckets[i])
+        end
+        Test.print(string.format(
+            "hashstr %d次耗时: %d, 分布: %s", count, str_time, str_dist))
+
+        -- 2. hashint 测试
+        local int_buckets = {}
+        for i = 0, buckets - 1 do int_buckets[i] = 0 end
+
+        local int_start = Test.clock()
+        for i = 1, count do
+            local hash = util.hashint(i)
+            local idx = hash % buckets
+            int_buckets[idx] = int_buckets[idx] + 1
+        end
+        local int_time = Test.clock() - int_start
+
+        local int_dist = ""
+        for i = 0, buckets - 1 do
+            int_dist = int_dist .. string.format("[%d]=%d ", i, int_buckets[i])
+        end
+        Test.print(string.format(
+            "hashint %d次耗时: %d, 分布: %s", count, int_time, int_dist))
+    end)
+end)

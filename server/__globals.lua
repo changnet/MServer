@@ -1,4 +1,4 @@
--- auto export by lua-tags 187 symbols
+-- auto export by lua-tags 188 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -105,6 +105,7 @@ return {
 "SRV_ALIVE_INTERVAL", -- src/modules/system/define.lua
 "SRV_ALIVE_TIMES", -- src/modules/system/define.lua
 "SRV_KEY", -- src/modules/system/define.lua
+"SRV_TYPE", -- src/modules/system/define.lua
 "Send", -- src/rpc/rpc.lua
 "ShareData", -- engine/__sharedata.lua
 "Shutdown", -- src/engine/shutdown.lua

@@ -20,6 +20,15 @@ mysql节点，玩家A的数据第一次发往节点A，第二次发往节点B，
 比如
 Rpc.proxy_wtype("MongoDB", W.MONGODB)
 MongoDB.find_and_modify(...) 这样调用，就无法自动分配到特定节点了，只能部分功能使用
+
+路由规则
+1. 在线玩家是由负载均衡分配，或者玩家自己选（比如选场景分线），必须用find_player_addr
+
+2. 其他用find_worker_addr(wtype, key, value)，key-value有几下组合
+    1. key="pid" value=pid 根据玩家分配
+    2. key="sid" value=sid 根据服务器分配，用于跨服通信
+    3. 无key value 根据轮询分配，这种通常是无状态的worker，或者本来就只有一个节点的worker
+    4. 如果传其他值的，必定在set_policy里自定义了路由规则，根据这个值来分配
 ]]
 
 local this = memory("Router", {
@@ -28,23 +37,34 @@ local this = memory("Router", {
     windex = {}, -- [wtype] = 上一次分配的worker索引
 })
 
-local function get_worker_list(wtype)
+-- 只开启一个worker的类型，直接返回这个worker地址，不需要负载均衡了
+local only_one_worker_hash
+
+local is_game_srv = g_sharedata:get("server_type") == SRV_TYPE.GAME
+
+local function init_worker_list()
+    local wtypes = {}
+    for addr, data in pairs(WorkerData) do
+        if data.status == Worker.READY then
+            local wt = Engine.unmake_address(addr)
+            local list = wtypes[wt]
+            if not list then
+                list = {}
+                wtypes[wt] = list
+            end
+            table.insert(list, {addr = addr})
+        end
+    end
+
+    return wtypes
+end
+
+function Router.get_worker_list(wtype)
     -- 可能在起服的时候，就需要用router来发送数据了，因此这个列表不能依赖
     -- 系统是否启动完成，或者worker是否连上
     local wtypes = this.wtypes
     if not wtypes then
-        wtypes = {}
-        for addr, data in pairs(WorkerData) do
-            if data.status == Worker.READY then
-                local wt = Engine.unmake_address(addr)
-                local list = wtypes[wt]
-                if not list then
-                    list = {}
-                    wtypes[wt] = list
-                end
-                table.insert(list, {addr = addr})
-            end
-        end
+       wtypes = init_worker_list()
         this.wtypes = wtypes
     end
     return wtypes[wtype]
@@ -52,7 +72,7 @@ end
 
 -- 默认的负载均衡策略（通过轮询依次分配到各个worker，适用于无状态的worker）
 local function default_policy(wtype)
-    local list = get_worker_list(wtype)
+    local list = Router.get_worker_list(wtype)
     if not list then
         eprint("no suitable router for worker, wtype = ", wtype)
         return
@@ -74,22 +94,52 @@ local function default_policy(wtype)
     return winfo.addr
 end
 
+local function only_one_worker(wtype)
+    -- 不确定哪些worker开多个，多加一个定义比较麻烦
+    -- 直接实时判断。如果逻辑未同步pid_map会返回nil出错
+    if not only_one_worker_hash then
+        only_one_worker_hash = {}
+        local list = Router.get_worker_list(wtype)
+        if list and #list == 1 then
+            only_one_worker_hash[wtype] = list[1].addr
+        end
+    end
+
+    return only_one_worker_hash[wtype]
+end
+
 -- 根据worker类型查看玩家所在地址
 function Router.find_player_addr(pid, wtype)
+    if is_game_srv then
+        -- player scene等多个线程的，需要根据pid找到对应线程地址
+        local map = this.pid_map[pid]
+        if map then
+            return map[wtype]
+        end
+        -- game、data等单线程的，直接返回该类型的地址
+        return only_one_worker(wtype)
+    else
+        error("跨服未实现")
+    end
 end
 
 -- 更新玩家所在worker地址
-function Router.update_worker_addr(pid, addr)
+function Router.update_player_addr(pid, addr)
 end
 
 -- 根据worker类型，查找一个可用worker地址
--- @param ... 用来自定义路由的参数，比如玩家id，副本id等
-function Router.find_worker_addr(wtype, ...)
-    local func = this.wpolicy[wtype]
-    if func then
-        return func(wtype, ...)
+-- @param key string 用来自定义路由的参数类型，比如"pid"、"sid"
+-- @param value number|string 用来自定义路由的值，比如玩家id，服务器id等
+function Router.find_worker_addr(wtype, key, value)
+    if is_game_srv then
+        local func = this.wpolicy[wtype]
+        if func then
+            return func(wtype, key, value)
+        else
+            return default_policy(wtype)
+        end
     else
-        return default_policy(wtype)
+        error("跨服未实现")
     end
 end
 
@@ -113,6 +163,8 @@ local function on_worker_stop(addr)
 end
 
 local function on_worker_ready(addr)
+    only_one_worker_hash = nil
+
     local wtypes = this.wtypes
     if not wtypes then return end
 

@@ -32,6 +32,8 @@ local function log_env_info()
     printf("## build time: %s", g_sharedata:get("__TIMESTAMP__"))
     printf("## cwd: %s", g_sharedata:get("cwd"))
     printf("## exe: %s", g_sharedata:get("exe"))
+    printf("## source: %s", g_sharedata:get("source"))
+    printf("## server type: %s", g_sharedata:get("server_type"))
     print("#####################################################")
 
     local buddha = [[
@@ -235,6 +237,8 @@ function Startup.process_init(loader)
     assert(wtype, "no such node define")
 
     load_setting()
+    g_sharedata:set("server_type", g_setting.server_type)
+
     local name = set_process_log(node_name, node_index)
 
     g_thread = g_mthread
@@ -244,12 +248,9 @@ function Startup.process_init(loader)
     require "global.global" -- 加载错误处理函数
     require "log.log" -- 加载log函数
     require "global.rtti"
+    require "engine.engine"
 
     log_env_info()
-
-    require "data.global_data"
-    require "engine.engine"
-    require "worker.worker"
 
     MAIN_ADDR = Engine.make_address(wtype, node_index, 1)
 
@@ -259,6 +260,8 @@ function Startup.process_init(loader)
     g_sharedata:set("MAIN_ADDR", MAIN_ADDR)
     Engine.add_thread_ctx(LOCAL_ADDR, g_mthread:toludata())
 
+    require "data.global_data"
+    require "worker.worker"
     require "engine.preloader"
 
     Signal.mask(2, shutdown)
@@ -283,8 +286,10 @@ function Startup.load(reload)
     end
     Rtti.collect()
 
-    for _, func in pairs(__script_loaded_funcs) do
-        func()
+    for _, func_list in ipairs(__script_loaded_funcs) do
+        for _, func in ipairs(func_list) do
+            func()
+        end
     end
 
     Event.semit(EV.SCRIPT_LOADED)
@@ -315,16 +320,19 @@ function Startup.worker_init(addr, loader)
     load_setting()
 
     require "global.rtti"
-    require "data.global_data"
     require "engine.engine"
-    require "worker.worker"
+
     require "log.log" -- 加载log函数
 
     local wtype, index = Engine.unmake_address(addr)
-    local name = Worker.type_name(wtype)
-
     LOCAL_ADDR = addr
     LOCAL_TYPE = wtype
+
+    require "data.global_data"
+    require "worker.worker"
+    local name = Worker.type_name(wtype)
+
+
     LOCAL_NAME = string.format("%s%d", name, index)
 
     MAIN_ADDR = g_sharedata:get("MAIN_ADDR")

@@ -106,9 +106,8 @@ function AccountMgr.login(addr, session_id, account, pfid, sid)
         return -- 加载中，不要重复加载，用时间做个超时机制，防止加载逻辑出错就永远登录不上
     end
 
-    -- 如果有多个account_mgr，account_mgr的路由已经保证同一个帐号必定在同一个account_mgr处理
-    -- 因此对mongodb的路由就没有要求了
-    local db_addr = Router.find_worker_addr(W.MONGODB, "player", account)
+    -- -- 未创角按pid=0取路由，保证路由一致性即可
+    local db_addr = Router.find_worker_addr(W.MONGODB, "pid", 0)
     info.loaded = Engine.time()
     local e, rows = Call[db_addr].MongoDB.find("player", {
         account = account,
@@ -157,7 +156,8 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     if info.created and time - info.created < 300 then return end
 
     info.created = time
-    local db_addr = Router.find_worker_addr(W.MONGODB, "uniqueid")
+    -- 未创角按pid=0取路由，保证路由一致性即可
+    local db_addr = Router.find_worker_addr(W.MONGODB, "pid", 0)
 
     -- 直接从数据库获取自增id，保证在多个account_mgr下角色id是唯一的
     -- 如果嫌数据库慢，估计要按拼接id的方式在不同account_mgr生成
@@ -200,13 +200,28 @@ function AccountMgr.create_role(session_id, account, pfid, sid, pkt)
     return return_create_role_result(info, account, pfid, e)
 end
 
+-- 根据进入player线程人数的数量，选择一个负载最小的player线程
+local function assign_player_worker()
+    local player_list = Router.get_worker_list(W.PLAYER)
+    local lowest
+    for _, v in pairs(player_list) do
+        local count = v.count or 0
+        if not lowest or count < lowest.count then
+            lowest = v
+        end
+    end
+
+    lowest.count = (lowest.count or 0) + 1
+    return lowest.addr
+end
+
 -- 处理进入player worker逻辑
 local function do_enter(info)
-    -- 如果存在paddr，则进入同一个player worker(这种情况一般是下线失败或者超时才会出现)
-    -- 否则按player worker路由分配一个
+    -- 如果存在paddr，则进入同一个player worker顶掉旧的(这种情况一般是下线失败或者超时才会出现)
+    -- 否则按负载分配一个
 
     local pid = info.pid
-    local paddr = info.paddr or Router.find_worker_addr(W.PLAYER, pid)
+    local paddr = info.paddr or assign_player_worker()
 
     local session_id = info.session_id
 
@@ -267,6 +282,17 @@ function AccountMgr.logout(session_id)
     Send[paddr].PlayerMgr.exit_game(role_info.pid, "logout")
 end
 
+-- 移除对应player线程的负载记录
+local function unassign_player_worker(paddr)
+    local player_list = Router.get_worker_list(W.PLAYER)
+    for _, v in pairs(player_list) do
+        if v.addr == paddr then
+            v.count = math.max((v.count or 1) - 1, 0)
+            return
+        end
+    end
+end
+
 -- 玩家下线完成，数据已保存，移除account中的标记
 function AccountMgr.logout_completed(pid, session_id)
     local info = this.session[session_id]
@@ -287,6 +313,8 @@ function AccountMgr.logout_completed(pid, session_id)
         assert(info.session_id ~= session_id)
         do_enter(info)
     end
+
+    unassign_player_worker(info.paddr)
 end
 
 return AccountMgr

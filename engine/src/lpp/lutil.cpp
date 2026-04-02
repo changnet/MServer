@@ -666,11 +666,58 @@ static int32_t setenv(lua_State *L)
     return 1;
 }
 
+/**
+ * 计算字符串的哈希值(使用 FNV-1a 算法)
+ * 算法快速且分布均匀，适合作为一致性哈希、消息路由等场景的计算
+ * @param str 需要计算哈希的字符串
+ * @return 返回一个正整数哈希值
+ */
+static int32_t hashstr(lua_State *L)
+{
+    size_t len = 0;
+    const char *str = luaL_checklstring(L, 1, &len);
+
+    uint32_t hash = 2166136261u; // FNV_offset_basis
+    for (size_t i = 0; i < len; ++i)
+    {
+        hash ^= (uint32_t)(uint8_t)str[i];
+        hash *= 16777619u;       // FNV_prime
+    }
+
+    // 默认转换为lua整数
+    lua_pushinteger(L, (lua_Integer)hash);
+    return 1;
+}
+
+/**
+ * 普通的取余路由（ID % 节点数），并且 ID 是自增的，那直接取余就可以了，因为自增的 ID 取余后本身就很均匀
+ * 整数的快速均匀哈希 (基于 MurmurHash3 的 fmix64)
+ * 用于解决连续ID在一致性哈希中聚集导致热点的问题
+ */
+static int32_t hashint(lua_State *L)
+{
+    lua_Integer key = luaL_checkinteger(L, 1);
+    uint64_t k = (uint64_t)key;
+
+    // fmix64 (实现强雪崩效应)
+    k ^= k >> 33;
+    k *= 0xff51afd7ed558ccdULL;
+    k ^= k >> 33;
+    k *= 0xc4ceb9fe1a85ec53ULL;
+    k ^= k >> 33;
+
+    // 转回Lua使用的整数并保证正数
+    lua_pushinteger(L, (lua_Integer)(k & 0x7FFFFFFFFFFFFFFFULL));
+    return 1;
+}
+
 static const luaL_Reg utillib[] = {{"ls", ls},
                                    {"md5", md5},
                                    {"uuid", uuid},
                                    {"sha1", sha1},
                                    {"base64", base64},
+                                   {"hashstr", hashstr},
+                                   {"hashint", hashint},
                                    {"sha256", sha256},
                                    {"sha3_256", sha3_256},
                                    {"getcwd", getcwd},

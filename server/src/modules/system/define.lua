@@ -8,12 +8,13 @@
 -- @field sequ number 启动顺序(equence)，越小越先启动，越晚关闭
 -- @field pobj boolean 是否创建玩家对象
 -- @field paddr boolean 是否同步玩家地址路由信息
+-- @field storage boolean 是否使用storage存储数据
 
 W = {
     -- 网关
     GATEWAY = {type = 1,   sequ = 9, pobj = 0, paddr = 1, name = "gateway"},
     -- 游戏公用逻辑
-    GAME    = {type = 2,   sequ = 2, pobj = 1, paddr = 1, name = "game"},
+    GAME    = {type = 2,   sequ = 2, pobj = 1, paddr = 1, storage = 1, name = "game"},
     -- 缓存及db操作
     DATA    = {type = 3,   sequ = 1, pobj = 0, paddr = 0, name = "data"},
     -- 玩家个人逻辑
@@ -45,6 +46,13 @@ for k, v in pairs(W) do
     W[k] = wtype
     WORKER[wtype] = v
 end
+
+-- 服务器类型定义
+SRV_TYPE = {
+    GAME   = 1, -- 游戏服务器
+    CROSS  = 2, -- 跨服服务器
+    CENTER = 3, -- 中心服务器
+}
 
 EMPTY = {} -- 一个空table，避免频繁创建空table，稍后会设置为只读
 

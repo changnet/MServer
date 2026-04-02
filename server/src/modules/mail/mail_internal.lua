@@ -72,7 +72,6 @@ end
 -- @param mail_obj MailObj
 function MailInternal.send_pid(pid, mail_obj)
     -- 通过路由找到对应的player worker地址
-    local addr = Router.find_worker_addr(W.PLAYER, "player", pid)
     if not addr then
         -- 没有找到worker，直接存离线
         MailOff.push(pid, mail_obj)

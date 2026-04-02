@@ -7,6 +7,7 @@ Worker = {
     THREAD  = 1, -- worker模式，本地线程
     CLUSTER = 2, -- worker模式，集群节点，socket通信
     PROXY   = 3, -- worker模式，需要代理转发的集群节点，最慢
+    SERVER  = 4, -- 跨服务器连接，用于跨服、中心服通信
 }
 
 local WorkerThread = require "engine.WorkerThread"

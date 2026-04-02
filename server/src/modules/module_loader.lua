@@ -19,6 +19,7 @@ local require = require_worker
 
 -- 引用一起基础文件。其他逻辑初始化时可能会用到这些库
 require "engine.preloader"
+require "rpc.durable"
 
 table.readonly(EMPTY)
 
