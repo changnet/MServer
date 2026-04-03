@@ -3,6 +3,9 @@ MailInternal = {}
 
 local TimeId = require "modules.system.time_id"
 
+assert = assert
+local LOCAL_TYPE = LOCAL_TYPE
+
 local this = memory("MailInternal")
 if not this.time_id then
     this.time_id = TimeId()
@@ -66,19 +69,22 @@ function MailInternal.get_login_mails(pid)
     return list
 end
 
--- 处理发送个人邮件（player线程RPC调用）
+-- 转发个人邮件到玩家
 -- 如果玩家在线，转发到player线程；否则存入离线邮件
 -- @param pid number
 -- @param mail_obj MailObj
-function MailInternal.send_pid(pid, mail_obj)
-    -- 通过路由找到对应的player worker地址
-    if not addr then
-        -- 没有找到worker，直接存离线
+function MailInternal.forward_player_mail(pid, mail_obj)
+    assert(LOCAL_TYPE == W.GAME)
+
+    local player = PlayerMgr.get_player(pid)
+    if player then
+        -- 不在线了，存离线
         MailOff.push(pid, mail_obj)
         return
     end
-    -- 发到player线程，player线程判断玩家是否在线
-    Send[addr].MailPlayer.receive_or_offline(pid, mail_obj)
+
+    -- 直接发给玩家玩家
+    Send[player.paddr].MailPlayer.receive_or_offline(pid, mail_obj)
 end
 
 -- player线程則管玩家不在本线程，请求game线程小署离线邮件

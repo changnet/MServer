@@ -108,14 +108,6 @@ function MailPlayer.receive_or_offline(pid, mail_obj)
     end
 end
 
--- 发送邮件（对外接口，player线程调用）
--- @param pid number
--- @param mail_obj MailObj
-function MailPlayer.send(pid, mail_obj)
-    -- 路由到game线程处理（game线程判断玩家在哪个player线程）
-    Send[GAME_ADDR].MailInternal.send_pid(pid, mail_obj)
-end
-
 -- game线程广播全服邮件通知，player线程接收
 -- 遍历本线程在线玩家，RPC拉取符合条件的全服邮件
 function MailPlayer.on_sys_mail_notify(mail_obj)

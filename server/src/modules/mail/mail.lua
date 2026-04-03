@@ -42,15 +42,15 @@ function Mail.send_pid(pid, mail_obj)
 
     local addr = Router.find_worker_addr(W.GAME, "pid", pid)
     -- 路由到game线程处理（判断在线/离线）
-    Durable[addr].MailInternal.send_pid(pid, mail_obj)
+    Durable[addr].MailInternal.forward_player_mail(pid, mail_obj)
 end
 
 --- 发送个人邮件（玩家已在当前player线程在线）
 -- @param player Player 玩家对象
 -- @param mail_obj MailObj 邮件对象
 function Mail.send_player(player, mail_obj)
-    mail_obj = MailInternal.create(mail_obj)
-    MailPlayer.receive(player, mail_obj)
+    -- 当前player对象不一定在player线程，还是以pid路由为主
+    return Mail.send_pid(player.pid, mail_obj)
 end
 
 -- 发送全服邮件、帮派邮件（在game线程调用）

@@ -1,4 +1,4 @@
--- auto export by lua-tags 188 symbols
+-- auto export by lua-tags 189 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -147,6 +147,7 @@ return {
 "__test", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
 "assert", -- src/global/global.lua
+"assert", -- src/modules/mail/mail_internal.lua
 "cluster_message_dispatch", -- src/message/thread_message.lua
 "dprint", -- src/log/log.lua
 "dprintf", -- src/log/log.lua
