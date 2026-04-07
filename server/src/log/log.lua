@@ -137,6 +137,22 @@ function warnf(fmt, ...)
     return logger_print(g_async_log, "info", 136, string.format(fmt, ...))
 end
 
+--//////////////////////////////////////////////////////////////////////////////
+-- 下面是常用的player相关接口
+
+-- 同print，但会带上玩家id和名字
+function pinfo(player, ...)
+    return logger_print(g_async_log, "info", 128,
+        string.format("%s(%d), ", player.property.name, player.pid), ...)
+end
+
+-- 同printf，但会带上玩家id和名字
+function pinfof(player, fmt, ...)
+    return logger_print(g_async_log, "info", 128,
+        string.format("%s(%d), ", player.property.name, player.pid),
+        string.format(fmt, ...))
+end
+
 -- 以黄色打印日志，并且带上玩家id，方便查问题
 function pwarn(player, ...)
     -- 136 = MASK_C_Y | MASK_S_L，参考C++中的定义
@@ -149,6 +165,9 @@ function pwarnf(player, fmt, ...)
         string.format("%s(%d), ", player.property.name, player.pid),
         string.format(fmt, ...))
 end
+
+--//////////////////////////////////////////////////////////////////////////////
+-- 下面是不常用的LOG基础接口
 
 -- 以红色打印日志
 function Log.red(...)
@@ -195,6 +214,9 @@ function Log.enable_debug(enable)
     enable_dbg = enable
     g_setting.debug = enable
 end
+
+--//////////////////////////////////////////////////////////////////////////////
+-- 下面是常用的db日志接口
 
 -- 记录数据变动到change日志文件
 --- @param m string 模块名

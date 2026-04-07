@@ -1,4 +1,4 @@
--- auto export by lua-tags 189 symbols
+-- auto export by lua-tags 194 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -91,7 +91,9 @@ return {
 "Ping", -- src/modules/system/ping.lua
 "Player", -- src/modules/player/player.lua
 "PlayerData", -- src/modules/player/player_data.lua
+"PlayerDurable", -- src/rpc/PlayerDurable.lua
 "PlayerMgr", -- src/modules/player/player_mgr.lua
+"PlayerOff", -- src/modules/player/player_off.lua
 "PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
 "Property", -- src/modules/player/property.lua
@@ -137,6 +139,7 @@ return {
 "__package_cpath", -- src/engine/startup.lua
 "__package_path", -- src/engine/startup.lua
 "__player_memory", -- src/modules/player/player_data.lua
+"__player_off", -- src/modules/player/player_off.lua
 "__player_storage", -- src/modules/player/player_data.lua
 "__print", -- src/engine/startup.lua
 "__require", -- src/global/require.lua
@@ -169,6 +172,8 @@ return {
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
+"pinfo", -- src/log/log.lua
+"pinfof", -- src/log/log.lua
 "print", -- src/log/log.lua
 "printf", -- src/log/log.lua
 "pwarn", -- src/log/log.lua

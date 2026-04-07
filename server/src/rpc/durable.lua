@@ -77,7 +77,7 @@ function Durable.on_recv(src, index, name, ...)
     local recv = this.recv
     local old = recv[src]
 
-    if not is_newer(index, old) then
+    if is_newer(index, old) then
         recv[src] = index
 
         local func = parse_name_func(name)
@@ -179,7 +179,7 @@ local function on_ready()
 end
 
 Rpc.set_metatable(Durable, durable_func_factory)
-if this then
+if this then -- 部分worker没有storage功能，不需要durable模块
     script_loaded(function()
         Event.reg(EV.READY, on_ready)
         Event.reg(EV.WORKER_BOTH_READY, on_worker_ready, 0xFFFF)

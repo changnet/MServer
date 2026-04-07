@@ -208,7 +208,9 @@ function Player.login(player)
     init_data(player)
 
     send_base_data(player)
-    Event.pemit(player, EV.LOGIN)
+
+    local is_new = Player.is_new(player)
+    Event.pemit(player, EV.LOGIN, is_new)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
     return true
@@ -255,7 +257,7 @@ end
 function Player.logout(player, why)
     local pid = player.pid
 
-    Event.pemit(player, EV.LOGIN)
+    Event.pemit(player, EV.LOGOUT)
     save_db_data(player)
 
     __player_memory[pid] = nil
