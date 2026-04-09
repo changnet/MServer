@@ -9,7 +9,7 @@ PlayerStatus = {
     LOGIN   = 1, -- 登录中，正在加载数据
     LOGOUT  = 2, -- 退出中，正在保存数据
     NORMAL  = 4, -- 正常状态
-    WLOGOUT = 8 -- 等待退出，等待退出完成
+    WLOGOUT = 8, -- 已标记退出，但处于加载数据或者保存数据中，等待退出完成
 }
 
 require "player.player_data"
@@ -44,6 +44,11 @@ end
 --- @param key 模块存储key
 function Player.get_storage(player, key)
     return __player_storage[player.pid][key]
+end
+
+-- 一些零碎不需要独立key的数据放这里
+function Player.get_data(player)
+    return Player.get_storage(player, "data")
 end
 
 -- 如果存在内存数据的存储则返回
@@ -148,7 +153,7 @@ local function load_db_data(player)
     end
 
     -- 所有模块加载完成后，同步数据到其他worker（比如场景)
-    if not PlayerSync.login(player) then return end
+    if not PlayerSync.init(player) then return end
 
     return true
 end
@@ -211,6 +216,8 @@ function Player.login(player)
 
     local is_new = Player.is_new(player)
     Event.pemit(player, EV.LOGIN, is_new)
+
+    PlayerSync.login(player)
 
     player.status = PlayerStatus.NORMAL -- 玩家状态，登录完成
     return true

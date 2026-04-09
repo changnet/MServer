@@ -1,4 +1,4 @@
-﻿-- mail.lua
+-- mail.lua
 -- 2018-05-20
 -- xzc
 

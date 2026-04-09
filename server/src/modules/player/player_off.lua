@@ -37,3 +37,11 @@ function PlayerOff.get_modify(pid)
     s.modified = true
     return s.storage
 end
+
+-- 标记玩家离线数据有变动
+function PlayerOff.set_modify(pid)
+    local s = PlayerOff.get_storage(pid)
+    s.modified = true
+end
+
+-- TODO 加载和保存逻辑要实现

@@ -77,14 +77,17 @@ function MailInternal.forward_player_mail(pid, mail_obj)
     assert(LOCAL_TYPE == W.GAME)
 
     local player = PlayerMgr.get_player(pid)
-    if player then
+    if not player then
         -- 不在线了，存离线
         MailOff.push(pid, mail_obj)
         return
     end
 
-    -- 直接发给玩家玩家
-    Send[player.paddr].MailPlayer.receive_or_offline(pid, mail_obj)
+    -- 玩家在线，正常来讲发到对应的player线程玩家对象肯定是存在的
+    -- 但考虑到集群部署，网络可能会断，必须得用Durable保证邮件不丢
+    -- 但在宕机情况下，Durable虽然可以保证数据不丢，但player对象可能就不存在了
+    -- 用PlayerDurable可以同时处理这两种情况
+    PlayerDurable[GAME_ADDR].MailPlayer.receive(pid, mail_obj)
 end
 
 -- player线程則管玩家不在本线程，请求game线程小署离线邮件

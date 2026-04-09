@@ -1,4 +1,5 @@
 -- 针对单个玩家的可靠RPC调用
+-- 用法：
 PlayerDurable = {}
 
 --[[
@@ -26,7 +27,6 @@ local this = memory("PlayerDurable", {
 local BIT = 20
 local MAX_COUNTER = 2 ^ BIT - 1
 
-local send = Rpc.send
 local parse_name_func = Rtti.parse_name_func
 
 -- 生成唯一index
@@ -53,20 +53,10 @@ local function is_newer(new_index, old_index)
     return new_index > old_index
 end
 
--- 判断目标地址是否需要持久化（仅跨进程需要）
--- @param addr number 目标地址
--- @return boolean
-local function need_durable(addr)
-    local data = WorkerData[addr]
-    if not data then return true end
-    return data.mode ~= Worker.THREAD
-end
-
 -- 接收durable消息（Send类型），由对端通过RPC调用
 -- @param src number 发送方地址
--- @param index string 唯一index（用于ack和去重）
 -- @param name string 函数名
-function PlayerDurable.on_recv(src, index, name, pid, ...)
+function PlayerDurable.on_recv(src, name, pid, ...)
     if "number" ~= type(pid) then
         error("PlayerDurable.on_recv invalid pid")
     end
@@ -82,107 +72,109 @@ function PlayerDurable.on_recv(src, index, name, pid, ...)
         s.durable = durable
     end
 
-    local old = durable.recv[src]
-    if is_newer(index, old) then
-        durable.recv[src] = index
-        table.insert(durable.pending, {
-            index = index,
-            name = name,
-            params = {...},
-        })
-
-        local func = parse_name_func(name)
-        if func then
-            func(...)
-        else
-            eprint("player durable on_recv no func", name)
-        end
-    else
-        print("durable drop", name, index, old)
-    end
-
-    -- 无论是否重复都发ack（之前的ack可能丢失）
-    Send[src].PlayerDurable.on_ack(index)
+    local index = next_index()
+    table.insert(durable.pending, {
+        index = index,
+        name = name,
+        params = {...},
+    })
 
     -- 当前必定是玩家所在服务器的game线程，数据放到playeroff模块就算调用成功(从发起端的Durable移除数据)
     -- 至于什么时候真正调用，得看玩家什么时候在线
     local player = PlayerMgr.get_player(pid)
-    if player then
-    end
+    if not player then return end
+
+    Send[player.paddr].PlayerDurable.on_invoke(pid, index, name, ...)
 end
 
 -- 收到发送确认，清理待确认记录
 -- @param index string 唯一index
-function PlayerDurable.on_ack(index)
-    this.send[index] = nil
+function PlayerDurable.on_ack(pid, index)
+    local s = PlayerOff.get_modify(pid)
+
+    local durable = s.durable
+    if not durable then
+        eprint("PlayerDurable.on_ack no durable data", pid)
+        return
+    end
+
+    local pending = durable.pending
+    if not pending then
+        eprint("PlayerDurable.on_ack no pending data", pid)
+        return
+    end
+
+    for i, p in ipairs(pending) do
+        if p.index == index then
+            table.remove(pending, i)
+            return
+        end
+    end
 end
 
--- 发送一条durable消息
--- @param addr number 目标地址
--- @param name string 函数名
--- @param index string 唯一index
-local function durable_do_send(addr, name, ...)
-    local index = next_index()
+-- player线程收到调用
+function PlayerDurable.on_invoke(pid, index, name, ...)
+    local player = PlayerMgr.get_player(pid)
+    -- 不在线直接丢掉，等下次登录再重发
+    if not player then return end
 
-    this.send[index] = {
-        addr = addr,
-        name = name,
-        params = {...},
-    }
-    Send[addr].PlayerDurable.on_recv(
-        LOCAL_ADDR, index, name, ...)
+    -- 数据已收到，回复确认，清理playeroff模块的待确认记录
+    -- 如果下面的逻辑出错，也不能重发，那样会造成奖励重复发放
+    Send[GAME_ADDR].PlayerDurable.on_ack(pid, index)
+
+    local s = Player.get_data(player)
+
+    local old = s.durable_idx
+    if not is_newer(index, old) then
+        -- 已经处理过了，可能是重复消息，直接丢掉
+        print("PlayerDurable.on_invoke duplicate msg", player, index, old)
+        return
+    end
+
+    s.durable_idx = index
+    local func = parse_name_func(name)
+    if not func then
+        eprint("PlayerDurable.on_invoke invalid func", name)
+        return
+    end
+
+    func(player, ...)
 end
 
 -- Durable factory函数
 local function durable_func_factory(name, addr)
-    if not need_durable(addr) then
-        -- 同进程退化为普通Send
-        return function(...)
-            return send(name, addr, ...)
-        end
-    end
-
     return function(...)
-        return durable_do_send(addr, name, ...)
+        Durable[addr].PlayerDurable.on_recv(LOCAL_ADDR, name, ...)
     end
 end
 
 local function on_login(player, is_new)
     if is_new then return end
 
-    local s = PlayerOff.has_storage(player.pid)
+    local pid = player.pid
+    local s = PlayerOff.has_storage(pid)
     if not s or not s.durable then return end
 
-    -- 收集需要重发的消息
-    local pending = {}
-    for index, info in pairs(s.durable) do
-        pending[#pending + 1] = {
-            index = index, info = info
-        }
-    end
-
-    if #pending == 0 then return end
-
-    -- 按index字符串排序即可保证有序到达
-    table.sort(pending, function(a, b)
-        return is_newer(b.index, a.index)
-    end)
+    local pending = s.durable.pending
+    if not pending or #pending == 0 then return end
 
     pinfof("player durable resend %d msgs", player, #pending)
+
+    local addr = player.paddr
     for _, p in ipairs(pending) do
         local info = p.info
-        Send[addr].PlayerDurable.on_recv(
-            LOCAL_ADDR, p.index, info.name, table.unpack(info.params))
+        Send[addr].PlayerDurable.on_invoke(
+            pid, p.index, info.name, table.unpack(info.params))
     end
 end
 
 Rpc.set_metatable(PlayerDurable, durable_func_factory)
 script_loaded(function()
-    Event.reg(EV.LOGIN, on_login)
+    Event.reg(EV.LOGIN, on_login, 65535)
 
     if LOCAL_ADDR ~= GAME_ADDR then
         PlayerDurable.on_recv = function()
-            error("PlayerDurable should only be used in game thread")
+            error("PlayerDurable addr should only be game thread")
         end
     end
 end)

@@ -29,7 +29,7 @@ function PlayerSync.reg(func)
 end
 
 -- 登录时同步到其他worker
-function PlayerSync.login(player)
+function PlayerSync.init(player)
     if 0 == #SYNC_WORKER then return true end
 
     local pid = player.pid
@@ -53,9 +53,9 @@ function PlayerSync.login(player)
     for _, wtype in ipairs(SYNC_WORKER) do
         -- 如果一个worker需要分配节点(比如玩家登录回到上次的场景)，必须在这个函数之前分配
         local addr = Router.find_player_addr(pid, wtype)
-        local ok = Call[addr].PlayerSync.on_login(data[wtype])
+        local ok = Call[addr].PlayerSync.on_init(data[wtype])
         if not ok then
-            eprint("player sync login fail", pid, wtype)
+            eprint("player sync init fail", pid, wtype)
             return false
         end
     end
@@ -63,19 +63,60 @@ function PlayerSync.login(player)
     return true
 end
 
+-- 登录时同步到其他worker
+function PlayerSync.login(player, is_new)
+    if 0 == #SYNC_WORKER then return true end
+
+    local pid = player.pid
+    for _, wtype in ipairs(SYNC_WORKER) do
+        -- 如果一个worker需要分配节点(比如玩家登录回到上次的场景)，必须在这个函数之前分配
+        local addr = Router.find_player_addr(pid, wtype)
+        local ok = Call[addr].PlayerSync.on_login(pid, is_new)
+        if not ok then
+            eprint("player sync login fail", pid, wtype)
+            return false
+        end
+    end
+end
+
 -- 其他worker收到登录时同步的数据
-function PlayerSync.on_login(data)
+function PlayerSync.on_init(data)
     local pid = data.pid
+
+    -- 正常不会有玩家，有就是之前逻辑出错，直接顶掉
+    local old = PlayerMgr.get_player(pid)
+    if old then
+        eprint("player sync init player already exist", pid)
+    end
 
     -- 加载数据
     if not PlayerData.load(data) then return false end
 
-    PlayerMgr.set(pid, data)
+    -- 现在还不能设置为在线，因为其他线程模块还可能会加载数据
+    -- 如果标记为在线会导致一些模块认为玩家在线从而触发在线逻辑，但取不到数据
+    player.status = PlayerStatus.LOGIN
+    PlayerMgr.set_unint(pid, data)
 
     -- 其他worker除了玩家数据还需要存其他数据？后续有需求再说
     -- if not Event.pemit_true(player, EV.LOADING) then
     --     return false
     -- end
+
+    return true
+end
+
+-- 非player线程登录逻辑
+function PlayerSync.on_login(pid, is_new)
+    local player = PlayerMgr.get_uninit_player(pid)
+    if not player then
+        eprint("player sync login no player found", pid)
+        return false
+    end
+
+    Event.pemit(player, EV.LOGIN, is_new)
+
+    player.status = PlayerStatus.NORMAL
+    PlayerMgr.set(pid, player)
 
     return true
 end

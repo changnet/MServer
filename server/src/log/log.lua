@@ -1,4 +1,4 @@
-﻿-- 基础日志接口
+-- 基础日志接口
 Log = {}
 
 local type = type

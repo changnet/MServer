@@ -77,6 +77,10 @@ function Durable.on_recv(src, index, name, ...)
     local recv = this.recv
     local old = recv[src]
 
+    -- 确认有收到数据就回包
+    -- 如果下面的逻辑出错也不能重发，避免重复调用造成奖励被刷
+    Send[src].Durable.on_ack(index)
+
     if is_newer(index, old) then
         recv[src] = index
 
@@ -90,30 +94,13 @@ function Durable.on_recv(src, index, name, ...)
         print("durable drop", name, index, old)
     end
 
-    -- 无论是否重复都发ack（之前的ack可能丢失）
-    Send[src].Durable.on_ack(index)
+
 end
 
 -- 收到发送确认，清理待确认记录
 -- @param index string 唯一index
 function Durable.on_ack(index)
     this.send[index] = nil
-end
-
--- 发送一条durable消息
--- @param addr number 目标地址
--- @param name string 函数名
--- @param index string 唯一index
-local function durable_do_send(addr, name, ...)
-    local index = next_index()
-
-    this.send[index] = {
-        addr = addr,
-        name = name,
-        params = {...},
-    }
-    Send[addr].Durable.on_recv(
-        LOCAL_ADDR, index, name, ...)
 end
 
 -- Durable factory函数
@@ -126,7 +113,15 @@ local function durable_func_factory(name, addr)
     end
 
     return function(...)
-        return durable_do_send(addr, name, ...)
+        local index = next_index()
+
+        this.send[index] = {
+            addr = addr,
+            name = name,
+            params = {...},
+        }
+        Send[addr].Durable.on_recv(
+            LOCAL_ADDR, index, name, ...)
     end
 end
 

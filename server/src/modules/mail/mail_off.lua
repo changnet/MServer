@@ -5,47 +5,42 @@
 
 MailOff = {}
 
-local this = memory("MailOff") -- {[pid] = list}
-
--- 从数据库加载离线邮件，加载后删除数据库记录
--- @param pid number
--- @return list table 离线邮件列表
-local function load_from_db(pid)
-    local e, row = Call[DATA_ADDR].DataMgr.load("off_mail", {"pid", pid})
-    if e == 0 and row and row.list then
-        -- 删除数据库记录
-        Send[DATA_ADDR].DataMgr.delete("off_mail", {"pid", pid})
-        return row.list
-    end
-    return {}
-end
-
--- 获取并清除玩家离线邮件（登录时调用）
--- 如果内存中已有记录，直接返回并清除；否则查数据库
--- @param pid number
--- @return list table 离线邮件列表
-function MailOff.pop(pid)
-    local list = this[pid]
-    if list then
-        this[pid] = nil
-        return list
-    end
-    return load_from_db(pid)
-end
-
 -- 推入一封离线邮件（玩家不在线时）
 -- @param pid number
 -- @param mail_obj MailObj
 function MailOff.push(pid, mail_obj)
-    local list = this[pid]
+    local s = PlayerOff.get_modify(pid)
+    local list = s.mail_off
     if not list then
-        -- 先尝试从数据库加载，以防之前没加载过
-        list = load_from_db(pid)
-        this[pid] = list
+        list = {}
+        s.mail_off = list
     end
     table.insert(list, mail_obj)
-    Send[DATA_ADDR].DataMgr.save("off_mail", {"pid", pid},
-        {pid = pid, list = list})
+
+    MailInternal.log(pid, LOG.ADD_OFF_MAIL, mail_obj)
 end
+
+local function fetch_off_mail(pid)
+    local s = PlayerOff.get_storage(pid)
+    local list = s.mail_off
+    if not list then return end
+
+    s.mail_off = nil
+    PlayerOff.set_modify(pid)
+
+    return list
+end
+
+-- game线程登录时调用，获取玩家离线邮件和符合条件的全服邮件
+local function on_login(player)
+    local pid = player.pid
+    local list = fetch_off_mail(pid)
+
+    if not list then return end
+
+    PlayerDurable[player.paddr].MailPlayer.receive(pid, list)
+end
+
+Event.register(EV.LOGIN, on_login)
 
 return MailOff

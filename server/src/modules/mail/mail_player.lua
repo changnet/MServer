@@ -95,17 +95,15 @@ function MailPlayer.receive(player, mail_obj)
     NetMsg.send(player, M.MailNew, {mail = mail_obj})
 end
 
--- game线程路由个人邮件时，如果玩家在线直接投递，否则存离线
--- @param pid number
--- @param mail_obj MailObj
-function MailPlayer.receive_or_offline(pid, mail_obj)
-    local player = PlayerMgr.get_player(pid)
-    if player then
-        MailPlayer.receive(player, mail_obj)
-    else
-        -- 玩家不在本线程，通知game线程走离线
-        Send[GAME_ADDR].MailInternal.push_offline(pid, mail_obj)
+function MailPlayer.receive_list(player, list)
+    local sg = get_mail_sg(player)
+    for _, mail_obj in ipairs(list) do
+        table.insert(sg.list, mail_obj)
+        MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
     end
+
+    check_mail_limit(player)
+    save_player_mail(player)
 end
 
 -- game线程广播全服邮件通知，player线程接收

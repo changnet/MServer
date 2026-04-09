@@ -11,11 +11,16 @@ local this = memory("PlayerMgr", {
     uninit_player = {}, -- 未初始化的玩家对象
 })
 
-
+-- 设置玩家对象（仅非player worker用）
+function PlayerMgr.set_unint(pid, player)
+    this.player[pid] = nil
+    this.uninit_player[pid] = player
+end
 
 -- 设置玩家对象（仅非player worker用）
 function PlayerMgr.set(pid, player)
     this.player[pid] = player
+    this.uninit_player[pid] = nil
 end
 
 -- 获取玩家对象
