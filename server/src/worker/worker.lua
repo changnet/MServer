@@ -1,4 +1,4 @@
-﻿-- worker通用逻辑
+-- worker通用逻辑
 Worker = {
     STOP     = 0, -- 关闭
     STARTING = 1, -- 启动中

@@ -1,4 +1,4 @@
-﻿-- player_mgr.lua
+-- player_mgr.lua
 -- 2017-04-03
 -- xzc
 

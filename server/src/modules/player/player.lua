@@ -1,4 +1,4 @@
-﻿-- playe.lua
+-- playe.lua
 -- 2017-04-03
 -- xzc
 

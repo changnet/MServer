@@ -1,4 +1,4 @@
-﻿-- account_mgr.lua
+-- account_mgr.lua
 -- 2017-04-02
 -- xzc
 

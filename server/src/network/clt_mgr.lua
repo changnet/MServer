@@ -1,4 +1,4 @@
-﻿-- 管理服务器与客户端的连接
+-- 管理服务器与客户端的连接
 CltMgr = {}
 
 local this = memory("CltMgr", {

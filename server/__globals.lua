@@ -1,4 +1,4 @@
--- auto export by lua-tags 170 symbols
+-- auto export by lua-tags 194 symbols
 
 return {
 "ABT", -- src/modules/attribute/attribute_header.lua
@@ -6,6 +6,7 @@ return {
 "ACCOUNT_ADDR", -- src/engine/preloader.lua
 "AST", -- src/modules/ai/ai_header.lua
 "ASYNC", -- src/modules/async_worker/async_worker_header.lua
+"AccountMgr", -- src/modules/account/account_mgr.lua
 "Acism", -- engine/__acism.lua
 "Alert", -- src/modules/misc/alert.lua
 "Astar", -- engine/__astar.lua
@@ -16,13 +17,16 @@ return {
 "CLTCAST", -- src/modules/system/define.lua
 "Call", -- src/rpc/rpc.lua
 "Callback", -- src/rpc/rpc.lua
+"CltMgr", -- src/network/clt_mgr.lua
 "Cluster", -- src/cluster/cluster.lua
+"ClusterProxy", -- src/cluster/cluster_proxy.lua
 "CoPool", -- src/engine/co_pool.lua
 "DATA_ADDR", -- src/engine/preloader.lua
 "DB_WARN_SIZE", -- src/modules/system/define.lua
 "DEFINE_BEG", -- src/global/require.lua
 "DEFINE_END", -- src/global/require.lua
 "DataCache", -- src/data/data_cache.lua
+"DataMgr", -- src/data/data_mgr.lua
 "Durable", -- src/rpc/durable.lua
 "E", -- src/modules/module_loader.lua
 "E", -- src/modules/system/error.lua
@@ -35,6 +39,7 @@ return {
 "Event", -- src/modules/event/event.lua
 "GAME_ADDR", -- src/engine/preloader.lua
 "GATEWAY_ADDR", -- src/engine/preloader.lua
+"GM", -- src/modules/gm/gm.lua
 "GameTest", -- src/modules/ai/action/game_test.lua
 "GridAoi", -- engine/__gridaoi.lua
 "HTTP", -- src/http/http_header.lua
@@ -43,6 +48,9 @@ return {
 "ISend", -- src/rpc/rpc_proxy.lua
 "JsonFile", -- src/util/json_file.lua
 "LANG", -- config/lang.lua
+"LOCAL_ADDR", -- src/worker/worker.lua
+"LOCAL_NAME", -- src/worker/worker.lua
+"LOCAL_TYPE", -- src/worker/worker.lua
 "LOG", -- src/log/log_header.lua
 "LOGIN_KEY", -- src/modules/system/define.lua
 "LOG_ADDR", -- src/engine/preloader.lua
@@ -50,11 +58,15 @@ return {
 "Log", -- engine/__log.lua
 "Log", -- src/log/log.lua
 "LogMgr", -- src/log/log_mgr.lua
+"Login", -- src/modules/account/login.lua
 "LuaCodec", -- engine/__luacodec.lua
 "M", -- src/modules/protocol/protocol.lua
+"MAIN_ADDR", -- src/worker/worker.lua
 "MASTER_ADDR", -- src/engine/preloader.lua
 "MT", -- src/modules/move/move_header.lua
 "Mail", -- src/modules/mail/mail.lua
+"MailInternal", -- src/modules/mail/mail_internal.lua
+"MailOff", -- src/modules/mail/mail_off.lua
 "MailPlayer", -- src/modules/mail/mail_player.lua
 "MailSys", -- src/modules/mail/mail_sys.lua
 "Map", -- engine/__map.lua
@@ -77,9 +89,12 @@ return {
 "Pbc", -- src/message/pbc.lua
 "PbcCodec", -- engine/__pbccodec.lua
 "Ping", -- src/modules/system/ping.lua
+"Player", -- src/modules/player/player.lua
 "PlayerData", -- src/modules/player/player_data.lua
 "PlayerDurable", -- src/rpc/PlayerDurable.lua
+"PlayerMgr", -- src/modules/player/player_mgr.lua
 "PlayerOff", -- src/modules/player/player_off.lua
+"PlayerStatus", -- src/modules/player/player.lua
 "PlayerSync", -- src/modules/player/player_sync.lua
 "Property", -- src/modules/player/property.lua
 "RES_COPPER", -- src/modules/res/res_header.lua
@@ -110,10 +125,16 @@ return {
 "Util", -- src/engine/startup.lua
 "W", -- src/modules/system/define.lua
 "WORKER", -- src/modules/system/define.lua
+"Worker", -- src/worker/worker.lua
+"WorkerData", -- src/worker/worker.lua
+"WorkerHash", -- src/worker/worker.lua
+"WorkerNameType", -- src/worker/worker.lua
 "__G_C_TRACKBACK", -- src/global/global.lua
 "__G_DUMP_STACK", -- src/global/global.lua
 "__assert", -- src/engine/startup.lua
 "__error", -- src/engine/startup.lua
+"__global_memory", -- src/data/global_data.lua
+"__global_storage", -- src/data/global_data.lua
 "__loader", -- src/engine/startup.lua
 "__package_cpath", -- src/engine/startup.lua
 "__package_path", -- src/engine/startup.lua
@@ -129,6 +150,7 @@ return {
 "__test", -- src/global/test.lua
 "__unrequire", -- src/global/require.lua
 "assert", -- src/global/global.lua
+"assert", -- src/modules/mail/mail_internal.lua
 "cluster_message_dispatch", -- src/message/thread_message.lua
 "dprint", -- src/log/log.lua
 "dprintf", -- src/log/log.lua
@@ -146,6 +168,7 @@ return {
 "lua_parson", -- engine/__lua_parson.lua
 "lua_rapidxml", -- engine/__lua_rapidxml.lua
 "main_message_dispatch", -- src/message/thread_message.lua
+"memory", -- src/data/global_data.lua
 "mongodb_event", -- src/mongodb/mongodb_mgr.lua
 "on_worker_message", -- src/message/thread_message.lua
 "oo", -- src/global/oo.lua
@@ -162,6 +185,7 @@ return {
 "scall", -- src/global/global.lua
 "script_loaded", -- src/global/global.lua
 "set_modify_metatable", -- src/global/modi_table.lua
+"storage", -- src/data/global_data.lua
 "str_split3", -- src/test/misc_test.lua
 "sys", -- src/global/sys.lua
 "test_path", -- src/test/scene_test.lua

@@ -1,24 +1,25 @@
-﻿-- 玩家邮件相关逻辑（player线程）
+-- 玩家邮件相关逻辑（player线程）
 MailPlayer = {}
 
+local new_pkt = {}
 local MAX_MAIL_COUNT = 100
 
 -- 获取玩家邮件存储（player线程本地，存缓存）
-local function get_mail_sg(player)
-    local sg = Player.get_storage(player, "mail")
-    if not sg then
-        sg = {list = {}}
-        Player.set_storage(player, "mail", sg)
+local function get_storage(player)
+    local stg = Player.get_storage(player, "mail")
+    if not stg then
+        stg = {list = {}}
+        Player.set_storage(player, "mail", stg)
     end
-    return sg
+    return stg
 end
 
 -- 保存玩家邮件数据到缓存
 local function save_player_mail(player)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     Send[DATA_ADDR].DataCache.update("player_mail",
         {"pid", player.pid},
-        {pid = player.pid, list = sg.list})
+        {pid = player.pid, list = stg.list})
 end
 
 -- 邮件权重计算（越小越容易被删除）
@@ -33,8 +34,8 @@ end
 
 -- 检查并清理超过最大值的邮件
 local function check_mail_limit(player)
-    local sg = get_mail_sg(player)
-    local list = sg.list
+    local stg = get_storage(player)
+    local list = stg.list
     if #list <= MAX_MAIL_COUNT then return end
 
     table.sort(list, function(a, b)
@@ -53,10 +54,11 @@ end
 
 -- 从缓存加载玩家邮件
 local function on_load_mail(player)
-    local e, rows = Call[DATA_ADDR].DataCache.get("player_mail", {"pid", player.pid})
-    local sg = get_mail_sg(player)
+    local e, rows = Call[DATA_ADDR].DataCache.get(
+        "player_mail", {"pid", player.pid})
+    local stg = get_storage(player)
     if e == 0 and rows and #rows > 0 then
-        sg.list = rows[1].list or {}
+        stg.list = rows[1].list or {}
     end
 end
 
@@ -64,42 +66,36 @@ end
 local function on_login(player)
     on_load_mail(player)
 
-    local sg = get_mail_sg(player)
-    local pid = player.pid
-
-    -- RPC调用game线程，获取离线邮件+符合条件的全服邮件
-    local e, new_list = Call[GAME_ADDR].MailInternal.get_login_mails(pid)
-
-    if e == 0 and new_list and #new_list > 0 then
-        for _, m in ipairs(new_list) do
-            table.insert(sg.list, m)
-            MailInternal.log(pid, LOG.ADD_MAIL, m)
-        end
-        check_mail_limit(player)
-        save_player_mail(player)
-    end
+    local stg = get_storage(player)
 
     -- 下发邮件列表
-    NetMsg.send(player, M.MailInfo, {mails = sg.list})
+    NetMsg.send(player, M.MailInfo, {mails = stg.list})
+end
+
+local function send_new(player, mail_obj)
+    new_pkt.mail = mail_obj
+    return NetMsg.send(player, M.MailNew, new_pkt)
 end
 
 -- 收到个人邮件（玩家在线时，由game线程转发来）
 function MailPlayer.receive(player, mail_obj)
-    local sg = get_mail_sg(player)
-    table.insert(sg.list, mail_obj)
+    local stg = get_storage(player)
+    table.insert(stg.list, mail_obj)
     MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
 
     check_mail_limit(player)
     save_player_mail(player)
 
-    NetMsg.send(player, M.MailNew, {mail = mail_obj})
+    send_new(player, mail_obj)
 end
 
 function MailPlayer.receive_list(player, list)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     for _, mail_obj in ipairs(list) do
-        table.insert(sg.list, mail_obj)
+        table.insert(stg.list, mail_obj)
         MailInternal.log(player.pid, LOG.ADD_MAIL, mail_obj)
+
+        send_new(player, mail_obj)
     end
 
     check_mail_limit(player)
@@ -123,9 +119,9 @@ end
 
 -- 客户端读取邮件
 local function c_mail_read(player, pkt)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     local target_id = pkt.id
-    for _, m in ipairs(sg.list) do
+    for _, m in ipairs(stg.list) do
         if m.id == target_id then
             if m.read == 0 then
                 m.read = 1
@@ -139,14 +135,14 @@ end
 
 -- 客户端删除邮件
 local function c_mail_del(player, pkt)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     local target_ids = pkt.id
     local ids_map = {}
     for _, tid in ipairs(target_ids) do ids_map[tid] = true end
 
     local left = {}
     local changed = false
-    for _, m in ipairs(sg.list) do
+    for _, m in ipairs(stg.list) do
         if ids_map[m.id] then
             MailInternal.log(player.pid, LOG.DEL_MAIL, m)
             changed = true
@@ -156,7 +152,7 @@ local function c_mail_del(player, pkt)
     end
 
     if changed then
-        sg.list = left
+        stg.list = left
         save_player_mail(player)
         NetMsg.send(player, M.MailDel, {id = target_ids})
     end
@@ -164,9 +160,9 @@ end
 
 -- 客户端领取附件
 local function c_mail_claim(player, pkt)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     local target_id = pkt.id
-    for _, m in ipairs(sg.list) do
+    for _, m in ipairs(stg.list) do
         if m.id == target_id then
             if m.atts and #m.atts > 0 and m.att_stat == 0 then
                 m.att_stat = 1
@@ -191,11 +187,11 @@ end
 
 -- 一键领取所有邮件附件
 local function c_mail_claim_all(player, pkt)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     local changed = false
     local claimed_ids = {}
 
-    for _, m in ipairs(sg.list) do
+    for _, m in ipairs(stg.list) do
         if m.atts and #m.atts > 0 and m.att_stat == 0 then
             m.att_stat = 1
             m.read = 1
@@ -218,11 +214,11 @@ end
 
 -- 一键删除所有已读邮件
 local function c_mail_del_read(player, pkt)
-    local sg = get_mail_sg(player)
+    local stg = get_storage(player)
     local left = {}
     local del_ids = {}
 
-    for _, m in ipairs(sg.list) do
+    for _, m in ipairs(stg.list) do
         -- 已读且无未领附件的才可删（有未领附件不删）
         local has_unclaimed = m.atts and #m.atts > 0
             and m.att_stat == 0
@@ -235,7 +231,7 @@ local function c_mail_del_read(player, pkt)
     end
 
     if #del_ids > 0 then
-        sg.list = left
+        stg.list = left
         save_player_mail(player)
         NetMsg.send(player, M.MailDelRead, {ids = del_ids})
     end

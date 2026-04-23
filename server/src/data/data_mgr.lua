@@ -1,4 +1,4 @@
-﻿-- 负责数据缓存、读写管理
+-- 负责数据缓存、读写管理
 DataMgr = {}
 
 local MongoDB = require "mongodb.mongodb"

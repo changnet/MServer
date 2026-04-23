@@ -1,4 +1,4 @@
-﻿-- mail_off.lua
+-- mail_off.lua
 -- 离线邮件管理（game线程）
 -- 玩家不在线时收到的邮件存于off_mail表，不走缓存
 -- 用local内存保存一份，避免重复读库

@@ -1,4 +1,4 @@
-﻿-- 邮件内部通用接口
+-- 邮件内部通用接口
 MailInternal = {}
 
 local TimeId = require "modules.system.time_id"

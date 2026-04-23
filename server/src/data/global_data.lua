@@ -1,4 +1,4 @@
-﻿-- 全局数据接口
+-- 全局数据接口
 
 __global_memory  = __global_memory or {}
 __global_storage  = __global_storage or {}
